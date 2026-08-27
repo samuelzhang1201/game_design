@@ -1,0 +1,50 @@
+key,value,notes
+start_treasury,500,gold at campaign start
+start_grain,120,
+start_tax_rate,5,scale 1-10
+start_tariff_rate,3,scale 0-10
+start_metric_default,50,legitimacy/unrest-style baselines start here
+court_upkeep,18,gold per tick
+tax_income_factor,0.8,income = tax_rate * admin_capacity * factor
+tariff_income_factor,3.0,income += tariff_rate * factor
+admin_base,5.0,before chancellor bonus
+chancellor_vacancy_penalty,3.0,
+harvest_gain,30,grain per autumn tick
+grain_drain,4,per non-winter tick
+grain_drain_winter,6,
+unrest_tax_pressure,0.3,per point of tax_rate above 5
+unrest_decay,0.2,toward 0
+unrest_famine,2.0,per tick while grain <= 0
+contentment_drift,0.2,toward 50
+legitimacy_drift,0.1,toward 50
+church_drift,0.2,toward 50
+army_decay,0.3,per tick
+army_floor,20,
+concern_treasury_low,100,steward fires below this
+concern_grain_low,30,steward
+concern_unrest_high,40,chancellor
+concern_church_low,35,chaplain
+concern_army_low,50,marshal
+concern_legitimacy_low,40,spymaster (rumors)
+event_base_chance,0.35,reserved for events slice
+tone_delta_cap,3,
+reward_gold_cost,30,
+reward_opinion,8,
+reward_opinion_vain_bonus,4,
+punish_opinion,-10,
+confide_opinion,4,
+levy_cost,40,
+levy_army_gain,8,
+levy_unrest,2,
+church_endow_cost,30,
+church_endow_gain,8,
+church_tithe_gain,25,
+church_tithe_opinion,-6,
+spy_cost,15,
+spy_legitimacy_gain,1,
+build_cost,60,
+justice_unrest_per_point,-2.0,
+justice_contentment_per_point,-2.0,
+grain_release_amount,20,
+grain_release_contentment,5,
+grain_ration_contentment,-3,
