@@ -66,9 +66,9 @@ tests/engine/  tests/llm/          # mirror structure
 **Interfaces:**
 - Produces: a bootable Godot 4.7 project; `run_tests.sh` at repo root that later tasks call verbatim.
 
-- [ ] **Step 1: Create the Godot project file with pixel settings**
+- [ ] **Step 1: Verify the Godot project file's pixel settings**
 
-Write `project.godot`:
+`project.godot` already exists at the repo root (created 2026-08-28 when the project was flattened; it also carries the `gdai-mcp-plugin-godot` autoload + editor plugin, GL Compatibility renderer, and `data/*.csv.import` files with `importer="keep"` so Godot never re-imports the design CSVs as translations — leave all of that in place). Verify it contains the settings below and add any that are missing; do not remove the existing sections:
 
 ```ini
 ; Engine configuration file.
