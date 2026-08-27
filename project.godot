@@ -11,8 +11,9 @@ config_version=5
 [application]
 
 config/name="Crown and Council"
-config/features=PackedStringArray("4.7", "GL Compatibility")
+config/features=PackedStringArray("4.7")
 config/icon="res://icon.svg"
+run/main_scene=""
 
 [autoload]
 
@@ -30,7 +31,7 @@ window/stretch/scale_mode="integer"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gdai-mcp-plugin-godot/plugin.cfg")
+enabled=PackedStringArray("res://addons/gdai-mcp-plugin-godot/plugin.cfg", "res://addons/gut/plugin.cfg")
 
 [physics]
 
@@ -38,7 +39,7 @@ enabled=PackedStringArray("res://addons/gdai-mcp-plugin-godot/plugin.cfg")
 
 [rendering]
 
+textures/canvas_textures/default_texture_filter=0
+rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-rendering_device/driver.windows="d3d12"
-textures/canvas_textures/default_texture_filter=0
