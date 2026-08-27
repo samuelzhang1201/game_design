@@ -1,0 +1,42 @@
+trait_code,category,label,ambition,loyalty,integrity,boldness,piety,compassion,vanity,temper,sk_admin,sk_martial,sk_intrigue,sk_diplomacy,sk_steward,special_flag,exclusive_group,incompatible_with,inherit_chance,notes
+amb_ruthless,personality,Ruthlessly Ambitious,30,-15,-10,15,0,-15,10,5,0,0,2,0,0,faction_seed,,amb_content,0.25,Actively seeks the throne. Will found a faction given any grievance.
+amb_content,personality,Content,-20,10,5,-5,0,5,-10,-5,0,0,0,0,0,,,amb_ruthless,0.15,Never initiates a faction. Can still be recruited into one.
+loyal_devoted,personality,Devoted,-10,35,10,0,5,5,0,0,0,0,0,1,0,loyalty_floor,,treacherous,0.20,Loyalty cannot fall below 30 unless you execute their kin.
+treacherous,personality,Treacherous,20,-25,-20,10,-5,-10,0,0,0,0,3,0,0,double_agent,,loyal_devoted,0.20,May leak council decisions to a rival kingdom.
+honest,personality,Honest,0,10,30,0,5,5,-5,0,1,0,-2,0,1,truthful_advice,,venal,0.25,Advice never conceals bad news. Corruption gain near zero.
+venal,personality,Venal,10,-10,-30,0,-5,-5,10,0,0,0,1,0,-1,skims_treasury,,honest,0.25,Siphons a share of any budget passing through their domain.
+bold,personality,Bold,10,0,0,30,0,-5,5,10,0,2,0,0,0,,,cautious,0.30,Advice skews to high-risk high-reward. Favours assault over siege.
+cautious,personality,Cautious,-5,5,5,-30,0,5,-5,-10,1,0,0,1,1,,,bold,0.30,Advice skews conservative. Reduces critical failure chance in their domain.
+pious,personality,Pious,-5,5,15,0,35,10,-5,0,0,0,-1,1,0,,,cynical,0.35,Opposes taxing or seizing from the church. Improves clergy opinion.
+cynical,personality,Worldly,5,-5,-5,5,-30,-5,5,0,1,0,2,0,0,,,pious,0.20,Indifferent to religious concerns. Better at realpolitik.
+compassionate,personality,Compassionate,-10,10,15,-5,5,35,-5,-5,0,-1,-1,2,0,,,cruel,0.25,Pushes hard for famine relief. Opposes harsh justice.
+cruel,personality,Cruel,10,-5,-10,10,-5,-35,5,15,0,2,1,-2,0,,,compassionate,0.25,Suppression is more effective under them. Peasant contentment suffers.
+vain,personality,Vain,15,-5,-5,5,0,0,35,10,0,0,0,1,0,honour_hungry,,humble,0.20,Responds strongly to titles and public honours. Cheap to buy off.
+humble,personality,Humble,-15,10,10,-5,10,10,-30,-10,1,0,-1,0,1,,,vain,0.20,Honours have little effect. Harder to appease without real concessions.
+wrathful,personality,Wrathful,5,-10,0,15,0,-10,5,35,-1,1,0,-2,0,duel_prone,,patient,0.30,May escalate a council argument into a personal feud.
+patient,personality,Patient,0,5,5,-10,5,5,-5,-30,2,0,1,2,1,,,wrathful,0.25,Slow to form grievances. Grudges last far longer once formed.
+paranoid,personality,Paranoid,10,-10,0,-10,0,-10,0,15,0,0,3,-2,0,detects_plots,,trusting,0.20,Higher chance to uncover conspiracies. Also invents ones that do not exist.
+trusting,personality,Trusting,-5,10,10,5,0,10,0,-5,0,0,-3,2,0,,,paranoid,0.20,Vulnerable to being recruited by a faction without realising it.
+brilliant,ability,Brilliant,5,0,0,5,0,0,10,0,4,2,3,3,4,,,slow_witted,0.10,Exceptional across the board. Rare. Dangerous if disloyal.
+slow_witted,ability,Slow,-10,5,5,-5,0,0,-5,0,-3,-2,-3,-2,-3,,,brilliant,0.15,Loyal but ineffective. Cheap to keep. Costs you outcomes.
+gifted_admin,ability,Gifted Administrator,0,0,5,-5,0,0,0,0,5,-1,0,0,2,,,,0.20,Plus admin capacity when seated as Chancellor.
+born_soldier,ability,Born Soldier,5,5,0,15,0,-5,5,5,-1,5,0,0,-1,,,,0.25,Large battle bonus when commanding personally.
+schemer,ability,Schemer,15,-10,-10,0,0,-5,0,-5,0,-1,5,1,0,,,forthright,0.20,Excellent spymaster. Will eventually plot against someone.
+forthright,ability,Forthright,-5,10,15,10,0,5,0,5,0,1,-4,1,0,,,schemer,0.20,Terrible at intrigue. Impossible to bribe.
+silver_tongued,ability,Silver Tongued,5,0,-5,5,0,0,10,-5,0,-1,1,5,0,,,blunt,0.20,Major bonus to diplomacy and to swaying council debates.
+blunt,ability,Blunt,0,5,10,10,0,-5,-5,10,0,1,-1,-4,1,,,silver_tongued,0.20,Offends foreign envoys. Never lies to you.
+shrewd_trader,ability,Shrewd Trader,5,0,-5,0,-5,0,0,0,1,-1,1,2,5,,,,0.20,Improves trade income and loan terms as Steward.
+learned,ability,Learned,0,0,5,-5,5,5,5,-5,3,0,0,1,1,research_bonus,,,0.15,Accelerates the tech category they are set to oversee.
+noble_born,background,High Nobility,15,-5,0,5,0,-5,15,5,1,2,0,2,0,noble_support,origin,,0.90,Brings noble loyalty. Expects privileges. Furious if passed over.
+lowborn,background,Lowborn,10,15,0,0,0,10,-5,0,1,0,1,0,1,owes_you,origin,,0.05,Loyal because you raised them. Nobles resent their presence.
+clergy_trained,background,Church Trained,-5,0,10,-10,25,5,-5,-5,3,-2,0,1,1,,,,0.05,Bridges crown and church. Cannot inherit secular titles.
+foreign_born,background,Foreign Born,5,-10,0,0,0,0,0,0,0,0,2,3,0,foreign_ties,,,0.30,Excellent at diplomacy with their homeland. Trusted by no one else.
+merchant_family,background,Merchant Family,10,0,-5,0,-5,0,5,0,1,-1,1,1,4,burgher_support,origin,,0.60,Burgher favour bonus. Nobles view them as an upstart.
+veteran,background,War Veteran,0,10,5,15,0,-10,5,5,0,4,0,0,0,,,,0.10,Battle-tested. Suffers a morale penalty if you lose badly.
+kin_of_king,background,Royal Blood,25,10,0,5,0,0,15,0,1,1,0,1,0,claimant,origin,,0.95,Has a real claim. The most dangerous faction leader in the game.
+disgraced,acquired,Disgraced,10,-25,-5,0,0,0,-10,10,-1,0,1,-2,0,grievance_permanent,,honoured,0.00,Acquired after public humiliation. Never fully forgives.
+honoured,acquired,Honoured,-5,20,0,5,0,0,10,0,1,1,0,1,1,,,disgraced,0.00,Acquired after a major public reward. Decays over about ten years.
+grieving,acquired,Grieving,-10,-10,0,-10,10,5,-10,10,-2,-1,0,-2,-1,temporary,,,0.00,Acquired on death of close kin. Fades after roughly two years.
+maimed,physical,Maimed,-5,0,0,-5,5,0,-15,10,0,-4,0,-1,0,,,,0.00,Cannot command in battle. Acquired from war or a failed duel.
+sickly,physical,Sickly,-10,0,0,-10,5,0,-5,0,-1,-2,-1,-1,-1,early_death_risk,,vigorous,0.30,Elevated annual death chance. Worsens sharply past fifty.
+vigorous,physical,Vigorous,5,0,0,10,0,0,5,0,0,2,0,1,0,long_life,,sickly,0.30,Reduced death chance. Likely to outlive several of your reigns.
