@@ -1,0 +1,7 @@
+stage,stage_code,label,min_faction_power,min_ticks_at_stage,telegraph_level,visible_without_spymaster,effects,player_counters,escalates_to,deescalates_to,notes
+1,grumbling,Private Grumbling,5,4,low,no,"council_debate_frequency_+50pct",listen|concede_minor|ignore,petition,none,"Only visible as sharper dialogue. No mechanical penalty yet."
+2,petition,Formal Petition,15,6,high,yes,"admin_capacity_-0.5",concede|refuse|negotiate|bribe_leader|dismiss_leader,obstruction,grumbling,"Explicit demand delivered in council. This is your clearest warning."
+3,obstruction,Open Obstruction,25,8,high,yes,"admin_capacity_-2.0|tax_income_-10pct|policy_execution_failure_chance_20pct",concede|purge|arrest_leader|split_faction|grant_honours,conspiracy,petition,"Orders start failing. Players who ignore stage 2 land here."
+4,conspiracy,Conspiracy,40,10,medium,no,"admin_capacity_-2.5|secret_army_accumulating|assassination_plot_possible",spymaster_uncover|arrest|concede_fully|preempt_strike,open_revolt,obstruction,"Hidden without a Spymaster. This is where a bad appointment kills you."
+5,open_revolt,Open Revolt,55,0,none,yes,"civil_war|provinces_defect|levy_unavailable_in_rebel_lands",fight|negotiate_terms|abdicate_partial,deposition,obstruction,"Rebel armies spawn from defecting provinces. Full civil war."
+6,deposition,Deposition,75,0,none,yes,"game_over_or_forced_abdication",final_battle|flee_into_exile,none,open_revolt,"Terminal. Player either wins the battle or the campaign ends."
