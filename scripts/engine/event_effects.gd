@@ -2,7 +2,14 @@ class_name EventEffects
 extends RefCounted
 ## Executes an event choice's effect ops (spec §4.1). Deterministic, no RNG.
 
-static func apply(ops: String, state: GameState, data: DataRepository) -> Array:
+## `reason_label`: FIX 2(a) — when non-empty (EventSystem.apply_choice passes
+## the resolved choice's label), metric/gold results carry it as "reason" so
+## council_screen can narrate them the same way ActionSystem outcomes already
+## are (see _narrate_effects). Left "" for callers (e.g. direct unit tests)
+## that don't need narration; those results simply omit the "reason" key, as
+## before this fix.
+static func apply(ops: String, state: GameState, data: DataRepository,
+		reason_label: String = "") -> Array:
 	var results: Array = []
 	for raw in ops.split(";", false):
 		var op := raw.strip_edges()
@@ -12,10 +19,16 @@ static func apply(ops: String, state: GameState, data: DataRepository) -> Array:
 		match p[0]:
 			"metric":
 				state.metrics[p[1]] = float(state.metrics.get(p[1], 0.0)) + float(p[2])
-				results.append({"kind": "metric", "metric": p[1], "delta": float(p[2])})
+				var r := {"kind": "metric", "metric": p[1], "delta": float(p[2])}
+				if reason_label != "":
+					r["reason"] = reason_label
+				results.append(r)
 			"gold":
 				state.metrics["treasury"] = float(state.metrics["treasury"]) + float(p[1])
-				results.append({"kind": "metric", "metric": "treasury", "delta": float(p[1])})
+				var r2 := {"kind": "metric", "metric": "treasury", "delta": float(p[1])}
+				if reason_label != "":
+					r2["reason"] = reason_label
+				results.append(r2)
 			"opinion":
 				var id := _resolve(p[1], state)
 				if id != "":

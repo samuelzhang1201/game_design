@@ -80,6 +80,20 @@ func test_apply_choice_runs_effects_and_signature_drift() -> void:
 	# tax_incidence +20 signature drifts seated ministers (e.g. Mirella -40 axis)
 	assert_gt(out["drift"].size(), 0)
 
+## FIX 2(a): a resolved choice's metric effects must carry a human reason
+## (the choice's own label) so council_screen can narrate them — see
+## council_screen._finish_event / _narrate_effects.
+func test_apply_choice_metric_effect_carries_choice_label_as_reason() -> void:
+	s.pending_event = {}
+	es._fire("ev_a", s)
+	var out := es.apply_choice("accept", s)
+	var found := false
+	for e in out["effects"]:
+		if String(e.get("kind", "")) == "metric":
+			found = true
+			assert_eq(String(e.get("reason", "")), "Accept the geese")
+	assert_true(found, "ev_a accept has a metric effect to check")
+
 func test_scheduled_event_fires_regardless_of_roll() -> void:
 	EventEffects.apply("schedule:ev_once:2", s, data)
 	s.tick += 1

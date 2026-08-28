@@ -86,7 +86,10 @@ func apply_choice(choice_id: String, state: GameState) -> Dictionary:
 		return {}
 	for c in data.event_choices:
 		if String(c["event_id"]) == event_id and String(c["choice_id"]) == choice_id:
-			var effects := EventEffects.apply(String(c["effects"]), state, data)
+			# FIX 2(a): pass the choice's own label as the effects' narration
+			# reason (council_screen._finish_event narrates metric effects via
+			# _narrate_effects — see event_effects.gd).
+			var effects := EventEffects.apply(String(c["effects"]), state, data, String(c["label"]))
 			var sig := {}
 			for ax in OpinionDrift.AXES:
 				sig[ax] = float(c[ax])

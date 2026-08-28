@@ -19,6 +19,13 @@ var free_text: LineEdit
 var end_turn: Button
 var calendar_overlay: CalendarOverlay
 var _pending_report: TickReport
+## FIX 2(d): the last report rendered, kept so _finish_event can re-run
+## _render_metrics after an event choice changes state.metrics — the metrics
+## strip's numbers are read live from Game.state.metrics so they refresh
+## correctly, but its tooltips carry _last_report.metric_deltas' reasons, so
+## an event-choice metric change keeps last tick's tooltip text until the
+## next full tick report (acceptable per the fix wave's ruling).
+var _last_report: TickReport = TickReport.new()
 var _suggestion_buttons: Array = []
 var _event_buttons: Array = []
 
@@ -110,6 +117,7 @@ func _on_interlude_finished() -> void:
 		_render_report(report)
 
 func _render_report(report: TickReport) -> void:
+	_last_report = report
 	_render_metrics(report)
 	_render_portraits()
 	for line in TemplateVoicer.render_outcomes(report, Game.state, Game.data):
@@ -117,15 +125,30 @@ func _render_report(report: TickReport) -> void:
 	for pe in report.promise_events:
 		var key := "promise_" + String(pe["status"])
 		_say({"speaker": "Herald", "text": TemplateVoicer.line_for(Game.data, key, [], report.tick)})
-	# Briefing lines arrive via Game.voice_briefing's callback, which is
-	# asynchronous even offline (Voicer's busy-guard/fallback path still
-	# goes through a signal). Suggestions below render synchronously, so
-	# they may appear in the transcript before the briefing text — ordering
-	# is outcomes first, then briefing, then suggestions is not guaranteed
-	# relative to briefing; that's acceptable (see FIX 4 in the fix wave).
-	Game.voice_briefing(func(res: Dictionary):
-		for line in res["lines"]:
-			_say(line))
+	if report.event.is_empty():
+		# Briefing lines arrive via Game.voice_briefing's callback, which is
+		# asynchronous even offline (Voicer's busy-guard/fallback path still
+		# goes through a signal). Suggestions below render synchronously, so
+		# they may appear in the transcript before the briefing text — ordering
+		# is outcomes first, then briefing, then suggestions is not guaranteed
+		# relative to briefing; that's acceptable (see FIX 4 in the fix wave).
+		Game.voice_briefing(func(res: Dictionary):
+			for line in res["lines"]:
+				_say(line))
+	else:
+		# FIX 1 (voicer busy-collision starves event voicing): Voicer._busy is
+		# a single in-flight slot shared by voice_briefing/voice_event/
+		# parse_player_text. The old code always called Game.voice_briefing
+		# first, which held _busy for the length of its async round-trip, so
+		# the voice_event_scene call inside _render_event below would always
+		# hit the busy guard and degrade to template — mini/flagship event
+		# scenes could never actually voice in integrated play. An event
+		# tick's spotlight belongs to the event, so this tick it gets the
+		# Voicer uncontested: the briefing renders straight from the template
+		# path (no LLM call, no _busy contention) instead of through
+		# Game.voice_briefing.
+		for line in TemplateVoicer.render_briefing(report, Game.state, Game.data):
+			_say(line)
 	_render_suggestions(report)
 	if not report.event.is_empty():
 		_render_event(report.event)
@@ -240,6 +263,16 @@ func _chancellor_name() -> String:
 func _narrate_effects(outcome: Dictionary) -> void:
 	var chancellor_name := _chancellor_name()
 	for e in outcome["effects"]:
+		# FIX 2(b): also reused for an event choice's effects (see
+		# _finish_event), which carry a "kind" tag (EventEffects.apply) that
+		# ActionSystem.execute's effects never set. Opinion/schedule/flag/
+		# promise entries stay silent here — opinion already narrates via the
+		# drift lines _finish_event prints separately, and flags/schedules
+		# have no reader-facing metric to report. Entries with no "kind" key
+		# (every ActionSystem effect) default to "metric" so that path is
+		# unchanged.
+		if String(e.get("kind", "metric")) != "metric":
+			continue
 		_say({"speaker": chancellor_name, "text":
 			"%s: %+d — %s" % [e["metric"], int(e["delta"]), e["reason"]]})
 
@@ -311,6 +344,10 @@ func _finish_event(event_id: String, choice_id: String, out: Dictionary) -> void
 	_event_buttons = []
 	_say({"speaker": "Herald", "text": TemplateVoicer.line_for(Game.data,
 		"event_%s_%s" % [event_id, choice_id], [], Game.state.tick)})
+	# FIX 2(b): event-choice effects were never narrated (unlike suggestion
+	# actions, via _on_suggestion -> _narrate_effects). Reuse the same
+	# "metric: +N — reason" format via a pseudo-outcome wrapping out["effects"].
+	_narrate_effects({"effects": out["effects"]})
 	for d in out["drift"]:
 		var c: Character = Game.state.characters[d["character_id"]]
 		_say({"speaker": c.display_name, "text": "%+d — %s" % [int(d["delta"]), d["reason"]]})
@@ -319,6 +356,11 @@ func _finish_event(event_id: String, choice_id: String, out: Dictionary) -> void
 	end_turn.disabled = false
 	free_text.placeholder_text = "Give an order..."
 	_render_portraits()
+	# FIX 2(d): the event choice's metric effects already landed in
+	# Game.state.metrics (EventEffects.apply mutates it directly) — refresh
+	# the strip so the displayed numbers aren't stale until next tick. See
+	# _last_report's doc comment for the tooltip caveat.
+	_render_metrics(_last_report)
 
 func _on_free_text_submitted(text: String) -> void:
 	if text.strip_edges() == "":

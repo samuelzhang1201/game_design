@@ -131,7 +131,13 @@ func submit_free_text(text: String, cb: Callable) -> void:
 					if ev_out.is_empty():
 						rejected.append({"request": req, "error": "no such choice awaits"})
 					else:
-						executed.append({"action_code": "EVENT_CHOICE", "ok": true, "effects": [],
+						# FIX 2(c): was hardcoded to [] — the button path
+						# (apply_event_choice, see council_screen._on_event_choice)
+						# already surfaces ev_out["effects"], so the free-text
+						# EVENT_CHOICE path must too, or council_screen's
+						# _finish_event narration silently sees nothing to say.
+						executed.append({"action_code": "EVENT_CHOICE", "ok": true,
+							"effects": ev_out["effects"],
 							"notes": String(ev_out["label"]), "drift": ev_out["drift"],
 							"event_id": String(ev_out["event_id"]),
 							"choice_id": String(ev_out["choice_id"])})

@@ -29,6 +29,19 @@ func test_schedule_flag_promise_ops() -> void:
 	assert_eq(String(s.promises[0]["character_id"]), "char_marshal")
 	assert_eq(int(s.promises[0]["tick_due"]), 11)
 
+## FIX 2(a): optional reason_label param stamps metric/gold results with a
+## human reason (used by EventSystem.apply_choice to pass the choice label);
+## omitted entirely (as before this fix) when the caller doesn't pass one.
+func test_reason_label_stamps_metric_and_gold_results() -> void:
+	var res := EventEffects.apply("gold:-5; metric:unrest:1", s, data, "a choice's doing")
+	for r in res:
+		assert_eq(String(r["reason"]), "a choice's doing")
+
+func test_no_reason_label_omits_reason_key() -> void:
+	var res := EventEffects.apply("gold:-5; metric:unrest:1", s, data)
+	for r in res:
+		assert_false(r.has("reason"))
+
 func test_unknown_op_is_loud_but_safe() -> void:
 	var res := EventEffects.apply("frobnicate:9", s, data)
 	assert_eq(res.size(), 0)

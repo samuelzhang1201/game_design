@@ -206,6 +206,87 @@ func test_free_text_event_choice_invalid_id_is_rejected_and_event_stays_pending(
 	assert_string_contains(got["rejected"][0]["error"], "no such choice awaits")
 	assert_false(Game.state.pending_event.is_empty(), "event still awaits a valid choice")
 
+## Reads back each _say frame as a {speaker, text} dict, in transcript order.
+## _say's structure is frame(PanelContainer) > row(HBoxContainer) >
+## [pic?, col(VBoxContainer)] > col > [name_label, text_label] — col is
+## always row's LAST child (the optional portrait, when present, comes
+## first), so indexing from the end avoids assuming a portrait is present.
+## Deliberately narrower than a blind recursive Label search: CharacterPortrait
+## itself contains Labels (initials/badges — see character_portrait.gd), so
+## scanning all descendant Labels for a bare text match risks false
+## positives/negatives; pairing each frame's own name+text label does not.
+func _transcript_lines(screen: Node) -> Array:
+	var out: Array = []
+	for frame in screen.transcript_box.get_children():
+		var row: Node = frame.get_child(0)
+		var col: Node = row.get_child(row.get_child_count() - 1)
+		var name_label: Label = col.get_child(0)
+		var text_label: Label = col.get_child(1)
+		out.append({"speaker": name_label.text, "text": text_label.text})
+	return out
+
+## FIX 1 (voicer busy-collision starves event voicing): drives the real
+## _render_report path (not _render_event directly, like the older event
+## tests above) with a FakeClient wired for a canned response, and a pending
+## mini-voice event (ev_02) forced onto the report ahead of Game.next_tick()
+## so EventSystem.roll's pending_event short-circuit hands it straight back
+## as report.event, deterministically (no dependence on the RNG roll).
+## Before the fix, _render_report voiced the LLM briefing first, which held
+## Voicer._busy for the whole async round-trip, so voice_event_scene's call
+## below would always hit the busy guard and degrade to template — the
+## Herald's event line would carry template text, not the canned client text.
+## Asserted specifically as (speaker "Herald", text == canned_text): the
+## FakeClient hands back the same canned text to ANY caller, so on the old
+## buggy path the briefing call (which went first and won the race) would
+## itself surface that same string under speaker "Council" — a bare
+## "does this text appear anywhere in the transcript" check would false-pass
+## on that coincidence. Pairing speaker+text closes that hole.
+func test_event_voicing_reaches_client_not_starved_by_briefing() -> void:
+	Game.start_campaign(42)
+	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = "The rider speaks of dark omens."
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	Game.engine.events._fire("ev_02", Game.state)  # mini-voice event
+	var screen: Node = load("res://scenes/council.tscn").instantiate()
+	add_child_autofree(screen)
+	var report := Game.next_tick()
+	assert_eq(String(report.event.get("event_id", "")), "ev_02",
+		"pre-set pending_event must short-circuit the roll")
+	screen._render_report(report)
+	await wait_frames(3)
+	var found := false
+	for line in _transcript_lines(screen):
+		if line["speaker"] == "Herald" and line["text"] == "The rider speaks of dark omens.":
+			found = true
+	assert_true(found,
+		"voice_event_scene's canned client text must reach the Herald's transcript line, not degrade to template")
+
+## FIX 2 (event-choice effects are never narrated): resolving ev_01's
+## "accept" choice via its button must narrate the metric effect
+## (peasant_contentment) in the Chancellor's voice, the same way
+## _on_suggestion already narrates ordinary action effects.
+func test_event_choice_effects_are_narrated_after_resolution() -> void:
+	Game.start_campaign(42)
+	var screen: Node = load("res://scenes/council.tscn").instantiate()
+	add_child_autofree(screen)
+	screen.begin()
+	await wait_frames(2)
+	Game.engine.events._fire("ev_01", Game.state)
+	screen._render_event(Game.state.pending_event)
+	await wait_frames(2)
+	# ev_01's choices load in CSV order (data/event_choices.csv): accept,
+	# feast, refuse — button 0 is "accept" (effects: metric:peasant_contentment:2).
+	screen.event_buttons()[0].pressed.emit()
+	await wait_frames(2)
+	var found := false
+	for line in _transcript_lines(screen):
+		if "peasant_contentment" in line["text"]:
+			found = true
+	assert_true(found,
+		"the accept choice's metric effect (peasant_contentment) must be narrated")
+
 func test_roster_shows_opinion_and_reasons() -> void:
 	Game.start_campaign(42)
 	var screen: Node = load("res://scenes/council.tscn").instantiate()
