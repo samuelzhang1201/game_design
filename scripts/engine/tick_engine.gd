@@ -34,7 +34,7 @@ func _drift(state: GameState, r: TickReport) -> void:
 	else:
 		cap -= data.bal("chancellor_vacancy_penalty")
 	_set_metric(r, m, "admin_capacity", cap, "council administration")
-	var income := m["tax_rate"] * cap * data.bal("tax_income_factor") \
+	var income: float = m["tax_rate"] * cap * data.bal("tax_income_factor") \
 		+ m["tariff_rate"] * data.bal("tariff_income_factor") + m["road_income_bonus"]
 	_set_metric(r, m, "tax_income", income, "taxes and tariffs collected")
 	_apply(r, m, "treasury", income - data.bal("court_upkeep"), "income minus court upkeep")
@@ -46,7 +46,7 @@ func _drift(state: GameState, r: TickReport) -> void:
 			drain *= 0.5
 		_apply(r, m, "grain", -drain, "the realm eats")
 	m["grain"] = clampf(m["grain"], 0.0, 200.0 + m["grain_capacity_bonus"])
-	var unrest_delta := (m["tax_rate"] - 5.0) * data.bal("unrest_tax_pressure") - data.bal("unrest_decay")
+	var unrest_delta: float = (m["tax_rate"] - 5.0) * data.bal("unrest_tax_pressure") - data.bal("unrest_decay")
 	if m["grain"] <= 0.0:
 		unrest_delta += data.bal("unrest_famine")
 	_apply(r, m, "unrest", unrest_delta, "tax pressure and the mood of the villages")
