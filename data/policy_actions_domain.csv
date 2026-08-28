@@ -1,0 +1,9 @@
+action_code,domain,label,target_type,admin_cost,gold_cost_formula,cooldown_ticks,min_era,unlock_req,effect_handler,max_per_turn,reversible,notes
+TAX_RATE_ADJUST,economy,Adjust the tax rate,none,1.0,none,2,0,,tax_rate_adjust,1,yes,"params: delta (int -3..3). New rate clamped 1-10."
+TARIFF_ADJUST,economy,Adjust tariffs,none,1.0,none,2,0,,tariff_adjust,1,yes,"params: delta (int -3..3). New rate clamped 0-10."
+LEVY_RAISE,military,Raise fresh levies,none,1.5,levy_cost,4,0,,levy_raise,1,no,"Improves army quality; costs gold and goodwill."
+GRAIN_POLICY_SET,economy,Set grain policy,none,1.0,none,2,0,,grain_policy_set,1,yes,"params: mode (market|ration|release)."
+CHURCH_POLICY,religion,Set church policy,none,1.0,none,4,0,,church_policy,1,yes,"params: mode (endow|tithe)."
+JUSTICE_SEVERITY,justice,Adjust severity of justice,none,1.0,none,4,0,,justice_severity,1,yes,"params: delta (int -2..2)."
+BUILD_ECONOMIC,economy,Commission a public work,none,1.5,build_cost,6,0,,build_economic,1,no,"params: project (granary|road)."
+SPY_MISSION,intrigue,Send out the whisperers,none,1.0,spy_cost,4,0,,spy_mission,1,no,"Quiets rumors; costs gold."
