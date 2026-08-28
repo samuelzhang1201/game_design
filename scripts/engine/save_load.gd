@@ -6,7 +6,7 @@ static func save_game(state: GameState, path: String) -> bool:
 	if f == null:
 		push_error("SaveLoad: cannot write " + path)
 		return false
-	f.store_string(JSON.stringify(state.to_dict(), "\t", true))
+	f.store_string(JSON.stringify(state.to_dict(), "\t", true, true))
 	return true
 
 static func load_game(path: String) -> GameState:
@@ -21,5 +21,5 @@ static func load_game(path: String) -> GameState:
 	return GameState.from_dict(parsed)
 
 static func state_hash(state: GameState) -> String:
-	var canonical := JSON.stringify(state.to_dict(), "", true)
+	var canonical := JSON.stringify(state.to_dict(), "", true, true)
 	return canonical.sha256_text()

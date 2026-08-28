@@ -51,18 +51,8 @@ func to_dict() -> Dictionary:
 	var normalized_cooldowns := {}
 	for k in cooldowns:
 		normalized_cooldowns[k] = float(cooldowns[k])
-	# Round metrics to 10 decimal places to ensure consistent precision
-	# across save/reload boundaries (floating-point arithmetic drifts slightly)
-	var normalized_metrics := {}
-	for k in metrics:
-		var v = metrics[k]
-		if v is float:
-			# Round to 10 decimal places to eliminate floating-point noise
-			normalized_metrics[k] = round(v * 10000000000.0) / 10000000000.0
-		else:
-			normalized_metrics[k] = v
 	return {
-		"tick": float(tick), "rng": rng.to_dict(), "metrics": normalized_metrics,
+		"tick": float(tick), "rng": rng.to_dict(), "metrics": metrics.duplicate(),
 		"characters": chars, "council": council.duplicate(),
 		"cooldowns": normalized_cooldowns, "recent_outcomes": recent_outcomes.duplicate(true),
 		"promises": promises.duplicate(true),
