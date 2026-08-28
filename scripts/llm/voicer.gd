@@ -36,6 +36,33 @@ func voice_briefing(report: TickReport, state: GameState, data: DataRepository,
 	client.request_completion(p["system"], p["user"],
 		String(_config["model_voice"]), false)
 
+## Voices one event scene. The "template" tier IS the intended voice for that
+## event (not a degraded fallback) — its callback fires deferred without ever
+## touching client. mini/flagship tiers ask the model to rewrite the same
+## template line; any model failure (or a busy Voicer) degrades back to it.
+func voice_event(ev: Dictionary, state: GameState, data: DataRepository, cb: Callable) -> void:
+	var fallback := TemplateVoicer.line_for(data, String(ev["title_key"]), [], state.tick)
+	var tier := String(ev.get("voice", "template"))
+	if tier == "template":
+		cb.call_deferred({"ok": true, "degraded": false, "text": fallback})
+		return
+	if _busy:
+		push_warning("Voicer busy — event scene degraded to template")
+		cb.call({"ok": true, "degraded": true, "text": fallback})
+		return
+	_busy = true
+	var model := String(_config.get("model_flagship", "gpt-5.6-sol")) if tier == "flagship" \
+		else String(_config["model_voice"])
+	var p := PromptBuilder.briefing_prompts_for_event(ev, state, fallback)
+	client.completed.connect(func(ok: bool, text: String):
+		_busy = false
+		if ok and text != "":
+			cb.call({"ok": true, "degraded": false, "text": text})
+		else:
+			cb.call({"ok": true, "degraded": true, "text": fallback}),
+		CONNECT_ONE_SHOT)
+	client.request_completion(p["system"], p["user"], model, false)
+
 func parse_player_text(text: String, report: TickReport, state: GameState,
 		data: DataRepository, cb: Callable) -> void:
 	if _busy:

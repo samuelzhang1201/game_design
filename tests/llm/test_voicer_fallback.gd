@@ -98,3 +98,30 @@ func test_overlapping_briefing_calls_both_fire_exactly_once() -> void:
 	assert_true(got_a["ok"])
 	assert_false(got_a["degraded"])
 	assert_eq(got_a["lines"][0]["text"], "hear ye, the harvest is good")
+
+func test_voice_event_template_tier_no_client_call() -> void:
+	var fake := FakeClient.new()
+	add_child_autofree(fake)
+	var v := Voicer.new(fake)
+	add_child_autofree(v)
+	var s := GameState.new_campaign(data, 42)
+	var ev := {"event_id": "ev_01", "title_key": "event_ev_01", "voice": "template", "choices": []}
+	got = {}
+	v.voice_event(ev, s, data, func(res): got = res)
+	await wait_frames(3)
+	assert_true(got["ok"])
+	assert_ne(String(got["text"]), "")
+
+func test_voice_event_mini_falls_back_on_failure() -> void:
+	var fake := FakeClient.new()  # canned_ok=false -> failure path
+	add_child_autofree(fake)
+	var v := Voicer.new(fake)
+	add_child_autofree(v)
+	var s := GameState.new_campaign(data, 42)
+	var ev := {"event_id": "ev_01", "title_key": "event_ev_01", "voice": "mini", "choices": []}
+	got = {}
+	v.voice_event(ev, s, data, func(res): got = res)
+	await wait_frames(3)
+	assert_true(got["ok"])
+	assert_true(got["degraded"])
+	assert_ne(String(got["text"]), "")

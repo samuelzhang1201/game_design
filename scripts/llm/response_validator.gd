@@ -17,11 +17,14 @@ static func parse(json_text: String, data: DataRepository) -> Dictionary:
 		if not a is Dictionary or not a.get("action_code") is String:
 			return fail.call("malformed action entry")
 		var code: String = a["action_code"]
-		if not data.actions.has(code):
-			return fail.call("unknown action: " + code)
 		var params = a.get("params", {})
 		if not params is Dictionary:
 			return fail.call("params must be an object")
+		if code == "EVENT_CHOICE":
+			actions.append(ActionRequest.make(code, params, String(a.get("target", ""))))
+			continue
+		if not data.actions.has(code):
+			return fail.call("unknown action: " + code)
 		actions.append(ActionRequest.make(code, params, String(a.get("target", ""))))
 	var cr = parsed.get("court_reaction", null)
 	var reaction := _neutral()

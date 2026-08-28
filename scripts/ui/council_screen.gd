@@ -95,6 +95,8 @@ func end_turn_button() -> Button:
 ## End Turn advances the engine immediately (state is authoritative at once),
 ## then plays the calendar interlude; the new report renders when it finishes.
 func _on_end_turn() -> void:
+	if not Game.state.pending_event.is_empty():
+		return
 	end_turn.disabled = true
 	_pending_report = Game.next_tick()
 	calendar_overlay.play(_pending_report.tick)
@@ -275,8 +277,8 @@ func _render_event(ev: Dictionary) -> void:
 		child.visible = false
 	end_turn.disabled = true
 	free_text.placeholder_text = "The court waits on your decision..."
-	var scene_text := TemplateVoicer.line_for(Game.data, String(ev["title_key"]), [], Game.state.tick)
-	_say({"speaker": "Herald", "text": scene_text})
+	Game.voice_event_scene(ev, func(res: Dictionary):
+		_say({"speaker": "Herald", "text": String(res["text"])}))
 	for ch in ev["choices"]:
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
@@ -290,10 +292,22 @@ func _on_event_choice(choice_id: String) -> void:
 	var out: Dictionary = Game.apply_event_choice(choice_id)
 	if out.is_empty():
 		return
+	_say({"speaker": "You", "text": String(out["label"])})
+	_finish_event(event_id, choice_id, out)
+
+## Shared post-resolution cleanup for a pending event, regardless of whether
+## the choice arrived by button click (_on_event_choice) or was parsed out of
+## free text as the EVENT_CHOICE pseudo-action (_on_free_text_submitted):
+## narrates the outcome, hides the (now stale) choice buttons, restores
+## suggestions/placeholder/End Turn, and re-renders portraits so drifted
+## opinions show. `out` is the apply_event_choice/apply_choice result
+## ({event_id, choice_id, label, effects, drift}) — event_id/choice_id are
+## passed separately since the button path captures event_id before the
+## resolved pending_event is cleared.
+func _finish_event(event_id: String, choice_id: String, out: Dictionary) -> void:
 	for b in _event_buttons:
 		b.queue_free()
 	_event_buttons = []
-	_say({"speaker": "You", "text": String(out["label"])})
 	_say({"speaker": "Herald", "text": TemplateVoicer.line_for(Game.data,
 		"event_%s_%s" % [event_id, choice_id], [], Game.state.tick)})
 	for d in out["drift"]:
@@ -312,19 +326,29 @@ func _on_free_text_submitted(text: String) -> void:
 	end_turn.disabled = true
 	_say({"speaker": "You", "text": text})
 	Game.submit_free_text(text, func(res: Dictionary):
+		# free_text itself always re-enables; End Turn only when no event is
+		# pending — a free-text NORMAL action must not let the player skip
+		# past an event that's still awaiting a choice (controller ruling,
+		# Task 7 review). If this free text WAS the EVENT_CHOICE that
+		# resolved the event, _finish_event below has already cleared
+		# pending_event, so this still re-enables End Turn correctly.
 		free_text.editable = true
-		end_turn.disabled = false
 		free_text.clear()
 		if not res["ok"]:
 			_say({"speaker": "Herald", "text":
 				"The Chancellor frowns — the council doesn't follow. (%s)" % res["error"]})
-			return
-		for outcome in res["executed"]:
-			_say({"speaker": "Herald", "text": "It is done: " + outcome["notes"]})
-			_narrate_effects(outcome)
-		for rej in res["rejected"]:
-			_say({"speaker": "Herald", "text":
-				"The council cannot: " + rej["error"]}))
+		else:
+			for outcome in res["executed"]:
+				if outcome["action_code"] == "EVENT_CHOICE":
+					_finish_event(String(outcome["event_id"]), String(outcome["choice_id"]), outcome)
+					continue
+				_say({"speaker": "Herald", "text": "It is done: " + outcome["notes"]})
+				_narrate_effects(outcome)
+			for rej in res["rejected"]:
+				_say({"speaker": "Herald", "text":
+					"The council cannot: " + rej["error"]})
+		if Game.state.pending_event.is_empty():
+			end_turn.disabled = false)
 
 func _apply_font() -> void:
 	if not FileAccess.file_exists(PIXEL_FONT_PATH):

@@ -76,6 +76,13 @@ func voice_briefing(cb: Callable) -> void:
 	_ensure_llm()
 	voicer.voice_briefing(current_report, state, data, cb)
 
+## Voices a pending event's scene through the Voicer (see Voicer.voice_event).
+## UI callers should route through here rather than calling TemplateVoicer
+## directly, so a configured key is actually used for mini/flagship events.
+func voice_event_scene(ev: Dictionary, cb: Callable) -> void:
+	_ensure_llm()
+	voicer.voice_event(ev, state, data, cb)
+
 ## Test-only seam: swap in a fake client (same signal/method surface as
 ## OpenAIClient) so tests exercise Voicer's real parsing/validation path
 ## without a network call. See tests/ui/test_council_screen.gd.
@@ -95,6 +102,16 @@ func submit_free_text(text: String, cb: Callable) -> void:
 			var executed: Array = []
 			var rejected: Array = []
 			for req in res["actions"]:
+				if req.action_code == "EVENT_CHOICE":
+					var ev_out := apply_event_choice(String(req.params.get("choice_id", "")))
+					if ev_out.is_empty():
+						rejected.append({"request": req, "error": "no such choice awaits"})
+					else:
+						executed.append({"action_code": "EVENT_CHOICE", "ok": true, "effects": [],
+							"notes": String(ev_out["label"]), "drift": ev_out["drift"],
+							"event_id": String(ev_out["event_id"]),
+							"choice_id": String(ev_out["choice_id"])})
+					continue
 				var attempt := try_execute(req)
 				if attempt["ok"]:
 					executed.append(attempt["outcome"])

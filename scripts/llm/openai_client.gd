@@ -7,7 +7,7 @@ const CONFIG_PATH := "user://config.json"
 
 static func load_config() -> Dictionary:
 	var defaults := {"api_key": "", "model_parse": "gpt-5.6-luna",
-		"model_voice": "gpt-5.6-terra", "offline_mode": true}
+		"model_voice": "gpt-5.6-terra", "model_flagship": "gpt-5.6-sol", "offline_mode": true}
 	if not FileAccess.file_exists(CONFIG_PATH):
 		return defaults
 	var f := FileAccess.open(CONFIG_PATH, FileAccess.READ)

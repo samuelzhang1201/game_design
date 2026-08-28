@@ -21,3 +21,13 @@ func test_briefing_prompt_carries_personas_and_report() -> void:
 	var p := PromptBuilder.briefing_prompts(r, s)
 	assert_string_contains(p["system"], "Aldwin Reeve")
 	assert_string_contains(p["user"], "grain")
+
+func test_parse_prompt_lists_event_choices_and_promise_rule() -> void:
+	var s := GameState.new_campaign(data, 42)
+	var r := TickEngine.new(data).advance(s)
+	s.pending_event = {"event_id": "ev_01", "title_key": "event_ev_01", "voice": "template",
+		"choices": [{"choice_id": "accept", "label": "Accept them with thanks"}]}
+	var p := PromptBuilder.parse_prompts("take the geese", r, s, data)
+	assert_string_contains(p["system"], "EVENT_CHOICE")
+	assert_string_contains(p["system"], "accept")
+	assert_string_contains(p["system"], "promise_code")

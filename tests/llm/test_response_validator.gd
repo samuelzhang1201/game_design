@@ -85,3 +85,9 @@ func test_promise_code_must_be_real_action() -> void:
 	var out := ResponseValidator.parse(text, data)
 	assert_false(out["ok"])
 	assert_string_contains(out["error"], "GRANT_UNICORN")
+
+func test_event_choice_pseudo_action_accepted() -> void:
+	var out := ResponseValidator.parse(JSON.stringify({"actions":
+		[{"action_code": "EVENT_CHOICE", "params": {"choice_id": "accept"}, "target": ""}]}), data)
+	assert_true(out["ok"])
+	assert_eq(out["actions"][0].action_code, "EVENT_CHOICE")
