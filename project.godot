@@ -13,11 +13,12 @@ config_version=5
 config/name="Crown and Council"
 config/features=PackedStringArray("4.7")
 config/icon="res://icon.svg"
-run/main_scene=""
+run/main_scene="res://scenes/council.tscn"
 
 [autoload]
 
 GDAIMCPRuntime="*uid://dcne7ryelpxmn"
+Game="*res://scripts/ui/game.gd"
 
 [display]
 
