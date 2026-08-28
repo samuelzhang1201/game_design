@@ -13,3 +13,14 @@ func test_malformed_row_fails_loud_with_location() -> void:
 	assert_eq(rows, [])
 	assert_string_contains(DataRepository.last_error, "bad_balance.csv")
 	assert_string_contains(DataRepository.last_error, "row 3")
+
+## Regression: founding_council.csv is a live-data file (not a genuinely-absent
+## optional one), so a truncated row must fail load_all loudly instead of
+## silently loading a partial/malformed founding council. Fixture dir has a
+## valid balance/traits/seats/court_additions set and a founding_council.csv
+## whose only data row is missing the "seat" column.
+func test_founding_council_truncated_row_fails_loud() -> void:
+	var repo := DataRepository.load_all("res://tests/fixtures/bad_founding")
+	assert_null(repo)
+	assert_string_contains(DataRepository.last_error, "founding_council.csv")
+	assert_string_contains(DataRepository.last_error, "row 2")

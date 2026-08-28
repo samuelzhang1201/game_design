@@ -48,3 +48,8 @@ justice_contentment_per_point,-2.0,
 grain_release_amount,20,
 grain_release_contentment,5,
 grain_ration_contentment,-3,
+grain_cap_base,200,grain storage cap before granary bonus
+unrest_tax_pivot,5,tax_rate above this drives unrest pressure
+drift_baseline,50,peasant_contentment/legitimacy/church_opinion drift toward this
+granary_capacity_gain,50,grain_capacity_bonus added per granary built
+road_income_gain,2,road_income_bonus added per road built

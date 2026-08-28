@@ -54,9 +54,32 @@ func to_dict() -> Dictionary:
 	return {
 		"tick": float(tick), "rng": rng.to_dict(), "metrics": metrics.duplicate(),
 		"characters": chars, "council": council.duplicate(),
-		"cooldowns": normalized_cooldowns, "recent_outcomes": recent_outcomes.duplicate(true),
-		"promises": promises.duplicate(true),
+		"cooldowns": normalized_cooldowns,
+		"recent_outcomes": _normalize_ints(recent_outcomes),
+		"promises": _normalize_ints(promises),
 	}
+
+## Recursively casts int values to float throughout an arbitrarily-nested
+## Dictionary/Array structure, for canonical JSON serialization (JSON
+## round-trips ints as floats, so to_dict() must cast consistently). Unlike
+## metrics/attributes/skills (flat dicts of known numeric keys), recent_outcomes
+## and promises hold engine-created ints at unpredictable depths (e.g.
+## outcome.params.delta, promise.made_tick/tick_due) — same normalization
+## philosophy as Character.to_dict(), generalized to handle that shape.
+static func _normalize_ints(value):
+	if value is Dictionary:
+		var out := {}
+		for k in value:
+			out[k] = _normalize_ints(value[k])
+		return out
+	elif value is Array:
+		var out := []
+		for v in value:
+			out.append(_normalize_ints(v))
+		return out
+	elif typeof(value) == TYPE_INT:
+		return float(value)
+	return value
 
 static func from_dict(d: Dictionary) -> GameState:
 	var s := GameState.new()

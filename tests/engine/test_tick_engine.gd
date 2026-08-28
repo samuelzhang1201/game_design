@@ -22,7 +22,8 @@ func test_tax_income_formula() -> void:
 	engine.advance(s)
 	# income = tax_rate(5) * admin_capacity * 0.8 + tariff_rate(3) * 3.0 + road bonus(0)
 	var chancellor: Character = s.characters[s.council["chancellor"]]
-	var cap: float = data.bal("admin_base") + chancellor.skills["sk_admin"] * 0.10
+	var capacity_bonus_per_skill: float = float(data.seats["chancellor"]["capacity_bonus_per_skill"])
+	var cap: float = data.bal("admin_base") + chancellor.skills["sk_admin"] * capacity_bonus_per_skill
 	var expected: float = 5.0 * cap * data.bal("tax_income_factor") + 3.0 * data.bal("tariff_income_factor")
 	assert_almost_eq(s.metrics["tax_income"], expected, 0.001)
 

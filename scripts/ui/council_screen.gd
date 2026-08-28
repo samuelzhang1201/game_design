@@ -82,8 +82,15 @@ func _render_report(report: TickReport) -> void:
 	_render_portraits()
 	for line in TemplateVoicer.render_outcomes(report, Game.state, Game.data):
 		_say(line)
-	for line in TemplateVoicer.render_briefing(report, Game.state, Game.data):
-		_say(line)
+	# Briefing lines arrive via Game.voice_briefing's callback, which is
+	# asynchronous even offline (Voicer's busy-guard/fallback path still
+	# goes through a signal). Suggestions below render synchronously, so
+	# they may appear in the transcript before the briefing text — ordering
+	# is outcomes first, then briefing, then suggestions is not guaranteed
+	# relative to briefing; that's acceptable (see FIX 4 in the fix wave).
+	Game.voice_briefing(func(res: Dictionary):
+		for line in res["lines"]:
+			_say(line))
 	_render_suggestions(report)
 
 func _say(line: Dictionary) -> void:
@@ -179,9 +186,11 @@ func _on_free_text_submitted(text: String) -> void:
 	if text.strip_edges() == "":
 		return
 	free_text.editable = false
+	end_turn.disabled = true
 	_say({"speaker": "You", "text": text})
 	Game.submit_free_text(text, func(res: Dictionary):
 		free_text.editable = true
+		end_turn.disabled = false
 		free_text.clear()
 		if not res["ok"]:
 			_say({"speaker": "Herald", "text":

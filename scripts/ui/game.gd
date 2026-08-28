@@ -15,6 +15,7 @@ func _ready() -> void:
 	assert(data != null, "data load failed: " + DataRepository.last_error)
 
 func start_campaign(seed_value: int = 42) -> void:
+	_reset_llm()
 	state = GameState.new_campaign(data, seed_value)
 	engine = TickEngine.new(data)
 
@@ -46,6 +47,31 @@ func _ensure_llm() -> void:
 	add_child(client)
 	voicer = Voicer.new(client)
 	add_child(voicer)
+
+## Tears down any LLM seam (real OpenAIClient, or a test-injected fake — see
+## use_client_for_tests) left over from a previous campaign, so a new
+## campaign starts with a clean _ensure_llm(). Without this, Game (an
+## autoload, so its state outlives any one test) could hold a Voicer wrapping
+## a client Node a *previous* test already freed (e.g. via
+## add_child_autofree), and the next call that touches the LLM seam
+## (voice_briefing/submit_free_text) would connect a signal on a freed
+## object.
+func _reset_llm() -> void:
+	if voicer != null:
+		voicer.queue_free()
+		voicer = null
+	if client != null:
+		client.queue_free()
+		client = null
+
+## Voices the current tick's briefing through the Voicer (LLM-voiced when an
+## API key is configured, template-fallback with degraded=true otherwise —
+## see Voicer.voice_briefing). UI callers should route through here rather
+## than calling TemplateVoicer.render_briefing directly, so a configured key
+## is actually used.
+func voice_briefing(cb: Callable) -> void:
+	_ensure_llm()
+	voicer.voice_briefing(current_report, state, data, cb)
 
 ## Test-only seam: swap in a fake client (same signal/method surface as
 ## OpenAIClient) so tests exercise Voicer's real parsing/validation path

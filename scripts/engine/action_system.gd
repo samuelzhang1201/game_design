@@ -99,9 +99,9 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			_apply(state, effects, "peasant_contentment", data.bal("justice_contentment_per_point") * d, "harsher courts")
 		"BUILD_ECONOMIC":
 			if req.params["project"] == "granary":
-				_apply(state, effects, "grain_capacity_bonus", 50.0, "granary raised")
+				_apply(state, effects, "grain_capacity_bonus", data.bal("granary_capacity_gain"), "granary raised")
 			else:
-				_apply(state, effects, "road_income_bonus", 2.0, "road improves trade")
+				_apply(state, effects, "road_income_bonus", data.bal("road_income_gain"), "road improves trade")
 		"SPY_MISSION":
 			_apply(state, effects, "legitimacy", data.bal("spy_legitimacy_gain"), "rumors quietly answered")
 		"COUNCIL_CONSULT":

@@ -64,16 +64,32 @@ func _load(dir: String) -> bool:
 		return false
 	for r in court_rows:
 		actions[r["action_code"]] = r
-	_load_optional(dir + "/policy_actions_domain.csv", func(r): actions[r["action_code"]] = r)
-	_load_optional(dir + "/founding_council.csv", func(r): founding.append(r))
-	_load_optional(dir + "/templates.csv", func(r): templates.append(r))
+	if not _load_if_present(dir + "/policy_actions_domain.csv", ["action_code"],
+			func(r): actions[r["action_code"]] = r):
+		return false
+	if not _load_if_present(dir + "/founding_council.csv", ["id", "display_name", "seat"],
+			func(r): founding.append(r)):
+		return false
+	if not _load_if_present(dir + "/templates.csv", ["key", "trait", "text"],
+			func(r): templates.append(r)):
+		return false
 	return true
 
-func _load_optional(path: String, sink: Callable) -> void:
+## Loads a live-gameplay CSV that is nonetheless allowed to be genuinely
+## absent (future saves/mods may not ship it yet). A missing file is not an
+## error. A present-but-malformed file is: unlike the old _load_optional,
+## this cannot silently swallow a parse failure — it fails loud through
+## parse_csv's required_cols/last_error contract, same as the always-required
+## files above.
+func _load_if_present(path: String, required_cols: Array, sink: Callable) -> bool:
 	if not FileAccess.file_exists(path):
-		return
-	for r in DataRepository.parse_csv(path, []):
+		return true
+	var rows := DataRepository.parse_csv(path, required_cols)
+	if DataRepository.last_error != "":
+		return false
+	for r in rows:
 		sink.call(r)
+	return true
 
 func bal(key: String) -> float:
 	assert(balance.has(key), "balance.csv missing key: " + key)

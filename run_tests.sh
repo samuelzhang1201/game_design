@@ -2,6 +2,7 @@
 set -e
 
 TEST_OUTPUT="/tmp/gut_test_output_$$.txt"
+trap 'rm -f "$TEST_OUTPUT"' EXIT
 
 # Root cause of GUT's "Errors 2": The gdai-mcp-plugin-godot GExtension registers
 # native classes (GDAIBaseTool, GDAIConfig, GDAIToolGetGodotErrors) at engine startup.
@@ -22,9 +23,13 @@ if [ "$code" != "0" ] && [ "$code" != "134" ]; then
   exit "$code"
 fi
 
-# Run tests. Capture output to validate error count.
+# Run tests. Redirect (not pipe) to a file so we can capture Godot/GUT's own
+# exit code: piping into `tee` under /bin/sh yields the pipeline's status,
+# which is tee's exit code, not Godot's — a red suite would exit 0.
+code=0
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-  -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit 2>&1 | tee "$TEST_OUTPUT"
+  -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit > "$TEST_OUTPUT" 2>&1 || code=$?
+cat "$TEST_OUTPUT"
 
 # Validate error count: exactly 2 known errors from GExtension class database issues.
 # Any other count indicates new errors or broken tests.
@@ -36,4 +41,11 @@ if [ "$ERROR_COUNT" != "2" ]; then
   exit 1
 fi
 
-rm -f "$TEST_OUTPUT"
+# GUT sets a nonzero exit code when any test fails (see
+# addons/gut/gui/GutRunner.gd:_handle_quit). Propagate it so a red suite
+# fails the script.
+if [ "$code" != "0" ]; then
+  echo ""
+  echo "FATAL: GUT exited with code $code (test failures)"
+  exit "$code"
+fi
