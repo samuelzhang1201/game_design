@@ -23,6 +23,13 @@ func test_no_spoken_numbers_in_new_templates() -> void:
 		var key := String(t["key"])
 		if key.begins_with("reply_") or key.begins_with("council_summary"):
 			assert_false("{value}" in String(t["text"]), key)
+			var text := String(t["text"])
+			var has_digit := false
+			for c in text:
+				if c >= "0" and c <= "9":
+					has_digit = true
+					break
+			assert_false(has_digit, key + " contains a literal digit: " + text)
 
 func test_round_table_portrait_resolves() -> void:
 	assert_true(FileAccess.file_exists("res://assets/portraits/round_table.png"))

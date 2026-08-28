@@ -45,7 +45,11 @@ scripts/engine/  # deterministic sim: tick, actions, characters, opinion, factio
 scripts/llm/     # OpenAI client, prompt builders, response schema validation
 scripts/ui/      # scenes and view scripts
 tests/           # GUT tests, mirror engine structure
+scenes/game_root.tscn (state machine: MENU→CONVERSATION→COURT→DAY_RUN), main_menu,
+  conversation, court, day_run, kingdom_card, characters/*
 ```
+
+UI screens are self-contained scenes signaling up to GameRoot; state mutations only via Game.
 
 ## Conventions
 

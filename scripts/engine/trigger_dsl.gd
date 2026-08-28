@@ -1,6 +1,6 @@
 class_name TriggerDsl
 extends RefCounted
-## Deterministic trigger evaluator for random_events.csv (spec §4.1). No RNG.
+## Deterministic trigger evaluator for events.csv (spec §4.1). No RNG.
 
 static func evaluate(expr: String, state: GameState, data: DataRepository) -> bool:
 	if expr.strip_edges() == "always":

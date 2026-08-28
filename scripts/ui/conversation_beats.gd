@@ -8,8 +8,8 @@ static func build(report: TickReport, state: GameState, data: DataRepository) ->
 		beats.append({"kind": "event", "portrait_id": "round_table",
 			"speaker": "The Council", "event": report.event})
 	# FIX 1 (post-Task-5 review): broken/kept promises were narrated nowhere
-	# under the conversation flow (report.promise_events only ever fed the
-	# retired council_screen.begin_with path). The wronged/vindicated
+	# under the conversation flow (report.promise_events only ever fed a
+	# now-retired pre-Task-5 screen's begin-turn path). The wronged/vindicated
 	# minister speaks about it, before their (or anyone's) concern/pitch
 	# beat, so it reads as the first thing said about them this session.
 	for pe in report.promise_events:

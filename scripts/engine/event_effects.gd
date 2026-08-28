@@ -4,8 +4,9 @@ extends RefCounted
 
 ## `reason_label`: FIX 2(a) — when non-empty (EventSystem.apply_choice passes
 ## the resolved choice's label), metric/gold results carry it as "reason" so
-## council_screen can narrate them the same way ActionSystem outcomes already
-## are (see _narrate_effects). Left "" for callers (e.g. direct unit tests)
+## the conversation and court screens can narrate them the same way
+## ActionSystem outcomes already are (see ConversationScene._on_event_choice /
+## CourtScreen's outcome logging). Left "" for callers (e.g. direct unit tests)
 ## that don't need narration; those results simply omit the "reason" key, as
 ## before this fix.
 static func apply(ops: String, state: GameState, data: DataRepository,
