@@ -24,6 +24,9 @@ func next_tick() -> TickReport:
 	report_ready.emit(current_report)
 	return current_report
 
+func apply_event_choice(choice_id: String) -> Dictionary:
+	return engine.events.apply_choice(choice_id, state)
+
 func try_execute(req: ActionRequest) -> Dictionary:
 	var err := engine.actions.validate(req, state)
 	if err != "":

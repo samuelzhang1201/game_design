@@ -13,12 +13,14 @@ var metrics_box: HBoxContainer
 var portraits_box: HBoxContainer
 var transcript_scroll: ScrollContainer
 var transcript_box: VBoxContainer
+var event_box: VBoxContainer
 var suggestions_box: VBoxContainer
 var free_text: LineEdit
 var end_turn: Button
 var calendar_overlay: CalendarOverlay
 var _pending_report: TickReport
 var _suggestion_buttons: Array = []
+var _event_buttons: Array = []
 
 func _ready() -> void:
 	var bg := ColorRect.new()
@@ -42,6 +44,8 @@ func _ready() -> void:
 	transcript_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	transcript_box.add_theme_constant_override("separation", 6)
 	transcript_scroll.add_child(transcript_box)
+	event_box = VBoxContainer.new()
+	root.add_child(event_box)
 	suggestions_box = VBoxContainer.new()
 	root.add_child(suggestions_box)
 	var input_row := HBoxContainer.new()
@@ -76,11 +80,14 @@ func begin() -> void:
 ## consumes Enter itself, so this only fires from unhandled input).
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_accept") and not end_turn.disabled \
-			and not calendar_overlay.playing():
+			and not calendar_overlay.playing() and Game.state.pending_event.is_empty():
 		_on_end_turn()
 
 func suggestion_buttons() -> Array:
 	return _suggestion_buttons
+
+func event_buttons() -> Array:
+	return _event_buttons
 
 func end_turn_button() -> Button:
 	return end_turn
@@ -117,6 +124,8 @@ func _render_report(report: TickReport) -> void:
 		for line in res["lines"]:
 			_say(line))
 	_render_suggestions(report)
+	if not report.event.is_empty():
+		_render_event(report.event)
 
 ## One conversation frame per spoken line: the speaker's pixel portrait on the
 ## left, name + wrapped speech beside it, framed in the speaker's seat colour.
@@ -254,6 +263,47 @@ func _on_suggestion(req: ActionRequest) -> void:
 	_narrate_effects(result["outcome"])
 	for b in _suggestion_buttons:
 		b.disabled = true
+
+## While Game.state.pending_event is non-empty, End Turn/Enter and the
+## suggestion buttons are gated off and a scene frame + one Button per choice
+## render in event_box; picking a choice restores normal input.
+func _render_event(ev: Dictionary) -> void:
+	for child in event_box.get_children():
+		child.queue_free()
+	_event_buttons = []
+	for child in suggestions_box.get_children():
+		child.visible = false
+	end_turn.disabled = true
+	free_text.placeholder_text = "The court waits on your decision..."
+	var scene_text := TemplateVoicer.line_for(Game.data, String(ev["title_key"]), [], Game.state.tick)
+	_say({"speaker": "Herald", "text": scene_text})
+	for ch in ev["choices"]:
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.text = String(ch["label"])
+		b.pressed.connect(_on_event_choice.bind(String(ch["choice_id"])))
+		event_box.add_child(b)
+		_event_buttons.append(b)
+
+func _on_event_choice(choice_id: String) -> void:
+	var event_id := String(Game.state.pending_event.get("event_id", ""))
+	var out: Dictionary = Game.apply_event_choice(choice_id)
+	if out.is_empty():
+		return
+	for b in _event_buttons:
+		b.queue_free()
+	_event_buttons = []
+	_say({"speaker": "You", "text": String(out["label"])})
+	_say({"speaker": "Herald", "text": TemplateVoicer.line_for(Game.data,
+		"event_%s_%s" % [event_id, choice_id], [], Game.state.tick)})
+	for d in out["drift"]:
+		var c: Character = Game.state.characters[d["character_id"]]
+		_say({"speaker": c.display_name, "text": "%+d — %s" % [int(d["delta"]), d["reason"]]})
+	for child in suggestions_box.get_children():
+		child.visible = true
+	end_turn.disabled = false
+	free_text.placeholder_text = "Give an order..."
+	_render_portraits()
 
 func _on_free_text_submitted(text: String) -> void:
 	if text.strip_edges() == "":

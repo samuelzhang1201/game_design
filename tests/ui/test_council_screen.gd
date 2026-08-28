@@ -84,6 +84,25 @@ func test_end_turn_disabled_while_free_text_parse_in_flight() -> void:
 	assert_false(screen.end_turn_button().disabled, "re-enabled once the parse resolves")
 	assert_true(screen.free_text.editable)
 
+func test_pending_event_gates_turn_and_choice_resolves() -> void:
+	Game.start_campaign(42)
+	var screen: Node = load("res://scenes/council.tscn").instantiate()
+	add_child_autofree(screen)
+	screen.begin()
+	await wait_frames(2)
+	# Force a known event deterministically (bypasses the roll)
+	Game.engine.events._fire("ev_01", Game.state)
+	screen._render_event(Game.state.pending_event)
+	await wait_frames(2)
+	assert_true(screen.end_turn_button().disabled)
+	assert_gt(screen.event_buttons().size(), 1)
+	var pc0: float = Game.state.metrics["peasant_contentment"]
+	screen.event_buttons()[0].pressed.emit()
+	await wait_frames(2)
+	assert_true(Game.state.pending_event.is_empty())
+	assert_false(screen.end_turn_button().disabled)
+	assert_ne(Game.state.metrics["peasant_contentment"], pc0)
+
 func test_roster_shows_opinion_and_reasons() -> void:
 	Game.start_campaign(42)
 	var screen: Node = load("res://scenes/council.tscn").instantiate()
