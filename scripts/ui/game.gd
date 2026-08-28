@@ -90,8 +90,21 @@ func voice_event_scene(ev: Dictionary, cb: Callable) -> void:
 func use_client_for_tests(fake: Node) -> void:
 	if voicer != null:
 		voicer.queue_free()
+	if client != null:
+		client.queue_free()
+		client = null
 	voicer = Voicer.new(fake)
 	add_child(voicer)
+
+## Game is an autoload, so it is never freed mid-run — but GUT can tear down
+## the SceneTree between full test-suite runs, and any leftover client/voicer
+## Nodes must go with it or GUT's ObjectDB leak check at exit fires. Mirrors
+## _reset_llm's teardown.
+func _exit_tree() -> void:
+	if voicer != null:
+		voicer.queue_free()
+	if client != null:
+		client.queue_free()
 
 ## LLM parse calls per tick are capped (balance: prompt_calls_per_tick) so a
 ## player cannot burn unbounded API spend; over-cap orders are refused

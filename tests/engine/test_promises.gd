@@ -27,6 +27,19 @@ func test_kept_when_action_executes_before_due() -> void:
 	assert_true(found)
 	assert_gt(s.characters["char_marshal"].opinion, before)
 
+## Kept promises apply +15 opinion but, before this fix, never narrated: the
+## kept-check only called change_opinion, leaving nothing in the outcome's
+## `effects` array for _narrate_effects (council_screen.gd) to pick up.
+func test_kept_promise_outcome_carries_narratable_effect() -> void:
+	_promise("LEVY_RAISE", s.tick + 4)
+	var outcome := engine.actions.execute(ActionRequest.make("LEVY_RAISE"), s)
+	var found := false
+	for e in outcome["effects"]:
+		if String(e["metric"]) == "promise" and int(e["delta"]) == 15 \
+				and "a promise kept:" in String(e["reason"]):
+			found = true
+	assert_true(found, "kept-promise outcome should carry a narratable 'promise' effect")
+
 func test_targeted_promise_needs_matching_target() -> void:
 	_promise("CHARACTER_REWARD", s.tick + 4)
 	engine.actions.execute(ActionRequest.make("CHARACTER_REWARD", {"mode": "gold"}, "char_steward"), s)

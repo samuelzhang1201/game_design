@@ -87,7 +87,7 @@ Slice 1 logs promises; slice 2 makes them matter.
 
 ### 4.1 Data
 
-**`data/random_events.csv`** — one row per event:
+**`data/events.csv`** — one row per event:
 `event_id, category, trigger, weight, cooldown_ticks, once, voice, title_key`
 - `trigger` DSL: `always` | clauses joined by `&`: `metric<NN`, `metric>NN`, `season=autumn`,
   `year>=N`, `trait_at_court=venal`, `seat_filled=marshal`, `action_since=TARIFF_ADJUST:24`
@@ -95,7 +95,7 @@ Slice 1 logs promises; slice 2 makes them matter.
 - `voice`: `template` | `mini` | `flagship` — mini/flagship route through `Voicer` (template
   fallback offline, as briefings already do); template renders directly.
 
-**`data/random_event_choices.csv`** — one row per choice:
+**`data/event_choices.csv`** — one row per choice:
 `event_id, choice_id, label, centralism, militarism, orthodoxy, tax_incidence, expansionism, effects, requires`
 - The 5 axis columns are the choice's ideology signature → minister reactions come free via
   `OpinionDrift` (PRD EV-2).

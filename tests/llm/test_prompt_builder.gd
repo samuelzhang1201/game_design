@@ -31,3 +31,17 @@ func test_parse_prompt_lists_event_choices_and_promise_rule() -> void:
 	assert_string_contains(p["system"], "EVENT_CHOICE")
 	assert_string_contains(p["system"], "accept")
 	assert_string_contains(p["system"], "promise_code")
+
+## Negative counterpart: with no pending_event, the parse prompt must not
+## mention EVENT_CHOICE at all (it isn't a legal action_code in the catalog —
+## see data/action_signatures.csv — so it can only ever appear via event_ctx,
+## which is built solely when state.pending_event is non-empty).
+func test_parse_prompt_omits_event_choice_when_no_pending_event() -> void:
+	var s := GameState.new_campaign(data, 42)
+	var r := TickEngine.new(data).advance(s)
+	# Seed 42's first tick can itself roll a pending event (see
+	# tests/ui/test_council_screen.gd) — force the empty condition explicitly
+	# rather than relying on incidental non-firing.
+	s.pending_event = {}
+	var p := PromptBuilder.parse_prompts("cut taxes by one", r, s, data)
+	assert_false(p["system"].contains("EVENT_CHOICE"))

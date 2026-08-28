@@ -136,6 +136,16 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		if state.characters.has(who):
 			state.characters[who].change_opinion(int(data.bal("promise_kept_opinion")),
 				"a promise kept: " + String(row["label"]), state.tick)
+			# Kept promises apply the opinion delta above but, unlike every
+			# other opinion-affecting branch here, had no corresponding entry
+			# in `effects` — so _narrate_effects (council_screen.gd, both the
+			# click and free-text paths) never voiced it and the
+			# promise_kept template row went unreachable. This pseudo-effect
+			# isn't a real metric mutation (nothing named "promise" lives in
+			# state.metrics); it exists solely so the existing effects-driven
+			# narration path picks it up for free.
+			effects.append({"metric": "promise", "delta": data.bal("promise_kept_opinion"),
+				"reason": "a promise kept: " + String(row["label"])})
 	state.event_state["last_action_tick"][req.action_code] = state.tick
 	var outcome := {"action_code": req.action_code, "ok": true, "effects": effects,
 		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate(),

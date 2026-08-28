@@ -102,7 +102,7 @@ Build strictly in this order; each step is independently playtestable.
 
 Full design in `RANDOM_EVENTS.md`. Events make ticks unpredictable and give traits, seats, and the opinion system moments to matter.
 
-- **EV-1** Data-driven pool (ships with 20 events; converts to `data/random_events.csv` at implementation). Per-tick roll on the seeded RNG: 35% base chance, max one event per tick, 6-tick pity timer, weight-sampled from the eligible set (triggers, cooldowns, `once` flags).
+- **EV-1** Data-driven pool (ships with 20 events; converts to `data/events.csv` + `data/event_choices.csv` at implementation). Per-tick roll on the seeded RNG: 35% base chance, max one event per tick, 6-tick pity timer, weight-sampled from the eligible set (triggers, cooldowns, `once` flags).
 - **EV-2** Choices are buttons bundling concrete engine effects; every choice carries an ideology signature so minister reactions flow through the existing opinion-drift math with reason strings — no special-case code.
 - **EV-3** Fairness rule: no single event may cripple a campaign; severe outcomes only arrive at the end of a visible, chosen-into chain. Trait-gated options are shown/hidden deterministically — never hidden dice.
 - **EV-4** Voicing follows the cost posture: template tier free, mini model for routine scenes, flagship only for rare set-pieces (2 of 20 in the starter pool).

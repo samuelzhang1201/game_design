@@ -181,6 +181,31 @@ func test_free_text_event_choice_resolves_and_cleans_up_event_panel() -> void:
 	assert_eq(screen.event_buttons().size(), 0, "event panel cleaned up")
 	assert_true(screen.free_text.editable)
 
+## Game-level coverage (no screen needed) for Game.submit_free_text's
+## EVENT_CHOICE branch when the parsed choice_id doesn't match any of the
+## pending event's actual choices: apply_event_choice returns {} (see
+## EventSystem.apply_choice), which submit_free_text must surface as a
+## rejected entry rather than silently dropping it or clearing the event.
+func test_free_text_event_choice_invalid_id_is_rejected_and_event_stays_pending() -> void:
+	Game.start_campaign(42)
+	Game.engine.events._fire("ev_01", Game.state)
+	assert_false(Game.state.pending_event.is_empty())
+	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"actions":
+		[{"action_code": "EVENT_CHOICE", "params": {"choice_id": "not_a_real_choice"}, "target": ""}],
+		"court_reaction": {}})
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	got = {}
+	Game.submit_free_text("do something not offered", func(res): got = res)
+	await wait_frames(3)
+	assert_true(got["ok"])
+	assert_eq(got["executed"].size(), 0)
+	assert_eq(got["rejected"].size(), 1)
+	assert_string_contains(got["rejected"][0]["error"], "no such choice awaits")
+	assert_false(Game.state.pending_event.is_empty(), "event still awaits a valid choice")
+
 func test_roster_shows_opinion_and_reasons() -> void:
 	Game.start_campaign(42)
 	var screen: Node = load("res://scenes/council.tscn").instantiate()

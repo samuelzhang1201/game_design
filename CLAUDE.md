@@ -7,7 +7,7 @@ Text-first, LLM-narrated grand strategy game: rule a kingdom for ~60 years throu
 - `PRD.md` — scope of the first playable build. Build order lives here; follow it.
 - `COUNCIL_SYSTEM.md` — the council design doc; source of truth for mechanics and formulas.
 - `RANDOM_EVENTS.md` — random-events system: triggering rules + the event pool. The "Your event seeds" section at the top is the owner's inbox for raw ideas — when new seeds appear there, expand each into a fully spec'd event (trigger, weight, choices with signatures, chain) in the pool below it.
-- `council_seats.csv`, `character_traits.csv`, `faction_escalation.csv`, `policy_actions_court_additions.csv` — game data, loaded at runtime. **Design values live in these CSVs, never hardcoded in scripts.** Add columns/rows rather than embedding constants.
+- `council_seats.csv`, `character_traits.csv`, `faction_escalation.csv`, `policy_actions_court_additions.csv`, `action_signatures.csv`, `events.csv`, `event_choices.csv` — game data, loaded at runtime. **Design values live in these CSVs, never hardcoded in scripts.** Add columns/rows rather than embedding constants.
 
 ## Stack
 
@@ -15,7 +15,8 @@ Text-first, LLM-narrated grand strategy game: rule a kingdom for ~60 years throu
 - **GUT** (Godot Unit Test) for tests. The simulation engine must be unit-testable headless.
 - **OpenAI API via raw HTTP** (`HTTPRequest` node) — there is no GDScript SDK. Model IDs and prices live in one config table (see PRD §7), not scattered through code.
 - **Run:** `/Applications/Godot.app/Contents/MacOS/Godot --path .`
-- **Test:** `./run_tests.sh` (runs the full GUT suite headless; "Errors 2" in the summary is a documented, expected condition from a vendored GExtension's class-database probing, not a real failure — any other error count is treated as fatal).
+- **Test:** `./run_tests.sh` (runs the full GUT suite headless; "Errors 2" in the summary is a documented, expected condition from a vendored GExtension's class-database probing, not a real failure — any other error count is treated as fatal). `run_tests.sh` exports `CC_FORCE_OFFLINE=1` so the suite can never make a live API call even with a real `.env` present.
+- **`.env`** (git-ignored, dev-convenience source for `OpenAIClient.load_config()`; `.env.example` documents the keys — `OPENAI_API_KEY`, `LLM_MODEL`/per-tier overrides, `LLM_MAX_OUTPUT_TOKENS`) overlays defaults and is itself overlaid by `user://config.json` (player override); a missing key or `CC_FORCE_OFFLINE=1` fails closed to `offline_mode: true`.
 - **`user://config.json`** (git-ignored, read by `OpenAIClient.load_config()`; missing/unreadable/malformed file, or an empty `api_key`, all fail closed to `offline_mode: true`):
   ```json
   {

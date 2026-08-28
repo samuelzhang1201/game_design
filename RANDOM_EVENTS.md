@@ -26,7 +26,7 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 3. Build the **eligible set**: every event whose `trigger` conditions are true, whose `cooldown` has elapsed, and whose `once` flag is unspent. Sample by `weight`.
 4. If the eligible set is empty, nothing fires — never pad with an ill-fitting event.
 
-**Event anatomy** (one row per event when this converts to `random_events.csv` at implementation):
+**Event anatomy** (one row per event when this converts to `data/events.csv` at implementation):
 
 | Field | Meaning |
 |---|---|
@@ -140,4 +140,4 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 - **Voicing spread:** 3 template (free), 15 mini, 2 flagship (EV-10 debate, EV-19 orphan) — consistent with the cost posture in PRD §7.
 - **Chain-starters:** 7 events schedule follow-ups, so campaigns accumulate history instead of resetting each tick.
 - **Every seat gets events in its domain**; `venal`, `honest`, `bold`, `vain`, `wrathful`, `cynical`, `pious`, `merchant_family`, `noble_born` traits all have at least one moment to matter.
-- At implementation this converts to `data/random_events.csv` + per-event effect handlers, per the data-driven convention in `CLAUDE.md`.
+- At implementation this converts to `data/events.csv` + `data/event_choices.csv` + per-event effect handlers, per the data-driven convention in `CLAUDE.md`.
