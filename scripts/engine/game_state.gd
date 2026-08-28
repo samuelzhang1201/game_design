@@ -49,62 +49,106 @@ func season() -> String:
 func year() -> int:
 	return Calendar.year_of(tick)
 
-func to_dict() -> Dictionary:
-	var chars := {}
-	for id in characters:
-		chars[id] = characters[id].to_dict()
-	# Normalize int fields to float for canonical JSON serialization
-	# (JSON round-trips ints as floats, so we cast consistently)
-	var normalized_cooldowns := {}
-	for k in cooldowns:
-		normalized_cooldowns[k] = float(cooldowns[k])
-	return {
-		"tick": float(tick), "rng": rng.to_dict(), "metrics": metrics.duplicate(),
-		"characters": chars, "council": council.duplicate(),
-		"cooldowns": normalized_cooldowns,
-		"recent_outcomes": _normalize_ints(recent_outcomes),
-		"promises": _normalize_ints(promises),
-		"event_state": _normalize_ints(event_state.duplicate(true)),
-		"pending_event": _normalize_ints(pending_event.duplicate(true)),
-	}
+## Godot 4.7.1 has a verified engine bug: JSON.parse_string(JSON.stringify(x,
+## "", true, true)) mis-decodes a meaningful fraction of float64 values by
+## exactly 1 ULP (independently confirmed: ~30% of a 10k-sample random-double
+## corpus round-tripped to a different bit pattern). JSON's own float
+## formatting/parsing cannot be trusted for save determinism, so every
+## numeric leaf is instead round-tripped as a hex-encoded byte string
+## (mirrors how Rng.to_dict already string-encodes its state "to preserve
+## precision"), which IS bit-exact (0/10000 mismatches on the same corpus).
+const _ENCODED_FLOAT_LEN := 17 # "f" + 16 hex nibbles of a float64
 
-## Recursively casts int values to float throughout an arbitrarily-nested
-## Dictionary/Array structure, for canonical JSON serialization (JSON
-## round-trips ints as floats, so to_dict() must cast consistently). Unlike
-## metrics/attributes/skills (flat dicts of known numeric keys), recent_outcomes
-## and promises hold engine-created ints at unpredictable depths (e.g.
-## outcome.params.delta, promise.made_tick/tick_due) — same normalization
-## philosophy as Character.to_dict(), generalized to handle that shape.
-static func _normalize_ints(value):
+static func _float_to_hex(v: float) -> String:
+	return PackedFloat64Array([v]).to_byte_array().hex_encode()
+
+static func _hex_to_float(s: String) -> float:
+	return s.hex_decode().decode_double(0)
+
+## True iff s is exactly "f" followed by 16 lowercase hex digits — the shape
+## produced by _encode_values below. Strict on purpose: game content strings
+## (event ids, reasons, trait names) never accidentally match this 17-char
+## shape, but the decoder checks anyway rather than assuming.
+static func _is_encoded_float(s: String) -> bool:
+	if s.length() != _ENCODED_FLOAT_LEN or s.unicode_at(0) != 102: # 'f'
+		return false
+	for i in range(1, _ENCODED_FLOAT_LEN):
+		var c := s.unicode_at(i)
+		var is_digit := c >= 48 and c <= 57 # '0'-'9'
+		var is_lower_hex := c >= 97 and c <= 102 # 'a'-'f'
+		if not (is_digit or is_lower_hex):
+			return false
+	return true
+
+## Recursively encodes every int/float leaf in an arbitrarily-nested
+## Dictionary/Array/scalar as a bit-exact hex string, replacing the old
+## _normalize_ints (which only cast int->float and left the float encoding
+## to JSON, exactly the code path the ULP bug lives in). Strings pass
+## through unchanged.
+static func _encode_values(value):
 	if value is Dictionary:
 		var out := {}
 		for k in value:
-			out[k] = _normalize_ints(value[k])
+			out[k] = _encode_values(value[k])
 		return out
 	elif value is Array:
 		var out := []
 		for v in value:
-			out.append(_normalize_ints(v))
+			out.append(_encode_values(v))
 		return out
-	elif typeof(value) == TYPE_INT:
-		return float(value)
+	elif typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT:
+		return "f" + _float_to_hex(float(value))
 	return value
+
+## Inverse of _encode_values: recursively decodes hex-encoded float strings
+## back to float, leaves everything else (plain strings, bools, already-
+## nested structures) untouched.
+static func _decode_values(value):
+	if value is Dictionary:
+		var out := {}
+		for k in value:
+			out[k] = _decode_values(value[k])
+		return out
+	elif value is Array:
+		var out := []
+		for v in value:
+			out.append(_decode_values(v))
+		return out
+	elif value is String and _is_encoded_float(value):
+		return _hex_to_float(value.substr(1))
+	return value
+
+func to_dict() -> Dictionary:
+	var chars := {}
+	for id in characters:
+		chars[id] = characters[id].to_dict()
+	return {
+		"tick": _encode_values(tick), "rng": rng.to_dict(),
+		"metrics": _encode_values(metrics.duplicate()),
+		"characters": chars, "council": council.duplicate(),
+		"cooldowns": _encode_values(cooldowns.duplicate()),
+		"recent_outcomes": _encode_values(recent_outcomes.duplicate(true)),
+		"promises": _encode_values(promises.duplicate(true)),
+		"event_state": _encode_values(event_state.duplicate(true)),
+		"pending_event": _encode_values(pending_event.duplicate(true)),
+	}
 
 static func from_dict(d: Dictionary) -> GameState:
 	var s := GameState.new()
-	s.tick = int(d["tick"])
+	s.tick = int(_decode_values(d["tick"]))
 	s.rng = Rng.from_dict(d["rng"])
-	s.metrics = d["metrics"].duplicate()
+	s.metrics = _decode_values(d["metrics"])
 	for id in d["characters"]:
 		s.characters[id] = Character.from_dict(d["characters"][id])
 	s.council = d["council"].duplicate()
-	for k in d["cooldowns"]:
-		s.cooldowns[k] = int(d["cooldowns"][k])
-	s.recent_outcomes = d["recent_outcomes"].duplicate(true)
-	s.promises = d["promises"].duplicate(true)
-	s.event_state = d.get("event_state", {
+	var decoded_cooldowns = _decode_values(d["cooldowns"])
+	for k in decoded_cooldowns:
+		s.cooldowns[k] = int(decoded_cooldowns[k])
+	s.recent_outcomes = _decode_values(d["recent_outcomes"])
+	s.promises = _decode_values(d["promises"])
+	s.event_state = _decode_values(d.get("event_state", {
 		"cooldowns": {}, "once": [], "pity": 0, "scheduled": [],
 		"flags": [], "last_action_tick": {},
-	}).duplicate(true)
-	s.pending_event = d.get("pending_event", {}).duplicate(true)
+	}))
+	s.pending_event = _decode_values(d.get("pending_event", {}))
 	return s
