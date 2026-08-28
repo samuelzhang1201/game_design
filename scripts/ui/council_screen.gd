@@ -17,11 +17,13 @@ const DEFAULT_SEAT_COLOR := Color("555555")
 
 var metrics_box: HBoxContainer
 var portraits_box: HBoxContainer
-var transcript: RichTextLabel
+var transcript_scroll: ScrollContainer
+var transcript_box: VBoxContainer
 var suggestions_box: VBoxContainer
 var free_text: LineEdit
 var end_turn: Button
 var _suggestion_buttons: Array = []
+var _portrait_cache: Dictionary = {}
 
 func _ready() -> void:
 	var bg := ColorRect.new()
@@ -37,11 +39,14 @@ func _ready() -> void:
 	portraits_box = HBoxContainer.new()
 	portraits_box.add_theme_constant_override("separation", 4)
 	root.add_child(portraits_box)
-	transcript = RichTextLabel.new()
-	transcript.bbcode_enabled = true
-	transcript.scroll_following = true
-	transcript.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(transcript)
+	transcript_scroll = ScrollContainer.new()
+	transcript_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	transcript_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	root.add_child(transcript_scroll)
+	transcript_box = VBoxContainer.new()
+	transcript_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	transcript_box.add_theme_constant_override("separation", 6)
+	transcript_scroll.add_child(transcript_box)
 	suggestions_box = VBoxContainer.new()
 	root.add_child(suggestions_box)
 	var input_row := HBoxContainer.new()
@@ -93,8 +98,90 @@ func _render_report(report: TickReport) -> void:
 			_say(line))
 	_render_suggestions(report)
 
+## One conversation frame per spoken line: the speaker's pixel portrait on the
+## left, name + wrapped speech beside it, framed in the speaker's seat colour.
 func _say(line: Dictionary) -> void:
-	transcript.append_text("[b]%s:[/b] %s\n" % [line["speaker"], line["text"]])
+	var speaker: String = line["speaker"]
+	var frame := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("241c33")
+	style.border_color = _speaker_color(speaker)
+	style.set_border_width_all(2)
+	style.set_content_margin_all(8)
+	frame.add_theme_stylebox_override("panel", style)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	frame.add_child(row)
+	var tex := _speaker_texture(speaker)
+	if tex != null:
+		var pic := TextureRect.new()
+		pic.texture = tex
+		pic.custom_minimum_size = PORTRAIT_SIZE
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		pic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		row.add_child(pic)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(col)
+	var name_label := Label.new()
+	name_label.text = speaker
+	name_label.add_theme_color_override("font_color", _speaker_color(speaker))
+	col.add_child(name_label)
+	var text_label := Label.new()
+	text_label.text = line["text"]
+	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_child(text_label)
+	transcript_box.add_child(frame)
+	_scroll_to_bottom.call_deferred()
+
+func _scroll_to_bottom() -> void:
+	await get_tree().process_frame
+	transcript_scroll.scroll_vertical = int(transcript_scroll.get_v_scroll_bar().max_value)
+
+func _speaker_char_id(speaker: String) -> String:
+	if Game.state == null:
+		return ""
+	for id in Game.state.characters:
+		if Game.state.characters[id].display_name == speaker:
+			return id
+	return ""
+
+func _speaker_color(speaker: String) -> Color:
+	if speaker == "You":
+		return Color("deba54")
+	var char_id := _speaker_char_id(speaker)
+	if char_id != "":
+		return SEAT_COLORS.get(Game.state.characters[char_id].seat, DEFAULT_SEAT_COLOR)
+	return Color("8c5a5a")  # Herald / Council / system voices
+
+func _speaker_texture(speaker: String) -> Texture2D:
+	var key: String
+	if speaker == "You":
+		key = "you"
+	elif speaker == "Herald" or speaker == "Council":
+		key = "herald"
+	else:
+		key = _speaker_char_id(speaker)
+	if key == "":
+		return null
+	return _portrait_texture("res://assets/portraits/%s.png" % key)
+
+## Loads a portrait PNG directly from the filesystem (import-pipeline
+## independent, so headless runs and fresh checkouts need no editor import),
+## cached per path. Returns null when the file is absent.
+func _portrait_texture(path: String) -> Texture2D:
+	if _portrait_cache.has(path):
+		return _portrait_cache[path]
+	var tex: Texture2D = null
+	if FileAccess.file_exists(path):
+		var img := Image.load_from_file(path)
+		if img != null:
+			tex = ImageTexture.create_from_image(img)
+	_portrait_cache[path] = tex
+	return tex
 
 func _render_metrics(report: TickReport) -> void:
 	for child in metrics_box.get_children():
@@ -125,14 +212,15 @@ func _build_portrait(char_id: String, seat: String) -> Control:
 	var panel := Control.new()
 	panel.custom_minimum_size = PORTRAIT_SIZE
 	panel.tooltip_text = Game.state.characters[char_id].display_name
-	var portrait_path := "res://assets/portraits/%s.png" % char_id
-	if FileAccess.file_exists(portrait_path):
-		var tex := TextureRect.new()
-		tex.texture = load(portrait_path)
-		tex.set_anchors_preset(Control.PRESET_FULL_RECT)
-		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tex.stretch_mode = TextureRect.STRETCH_SCALE
-		panel.add_child(tex)
+	var tex := _portrait_texture("res://assets/portraits/%s.png" % char_id)
+	if tex != null:
+		var pic := TextureRect.new()
+		pic.texture = tex
+		pic.set_anchors_preset(Control.PRESET_FULL_RECT)
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_SCALE
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		panel.add_child(pic)
 	else:
 		var bg := ColorRect.new()
 		bg.color = SEAT_COLORS.get(seat, DEFAULT_SEAT_COLOR)
