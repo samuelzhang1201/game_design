@@ -37,10 +37,12 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	return s
 
 func season() -> String:
-	return SEASONS[(tick % 24) / 6]
+	# Delegates to Calendar so tick 1..24 is year 1 with 6 ticks per season
+	# (fixes the old 0-based off-by-one where tick 24 read as spring, year 2).
+	return Calendar.season_name(tick).to_lower()
 
 func year() -> int:
-	return tick / 24 + 1
+	return Calendar.year_of(tick)
 
 func to_dict() -> Dictionary:
 	var chars := {}

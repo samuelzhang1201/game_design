@@ -29,7 +29,7 @@ func test_tax_income_formula() -> void:
 
 func test_grain_seasonal() -> void:
 	var s := GameState.new_campaign(data, 42)
-	s.tick = 11  # advance() makes it 12 -> autumn
+	s.tick = 12  # advance() makes it 13 -> autumn (1-based season blocks)
 	var g0: float = s.metrics["grain"]
 	engine.advance(s)
 	assert_gt(s.metrics["grain"], g0)  # harvest

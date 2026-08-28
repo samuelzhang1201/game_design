@@ -22,6 +22,8 @@ var transcript_box: VBoxContainer
 var suggestions_box: VBoxContainer
 var free_text: LineEdit
 var end_turn: Button
+var calendar_overlay: CalendarOverlay
+var _pending_report: TickReport
 var _suggestion_buttons: Array = []
 var _portrait_cache: Dictionary = {}
 
@@ -59,8 +61,12 @@ func _ready() -> void:
 	input_row.add_child(free_text)
 	end_turn = Button.new()
 	end_turn.text = "End Turn"
+	end_turn.focus_mode = Control.FOCUS_NONE  # activated by click or Enter (unhandled)
 	end_turn.pressed.connect(_on_end_turn)
 	input_row.add_child(end_turn)
+	calendar_overlay = CalendarOverlay.new()
+	calendar_overlay.finished.connect(_on_interlude_finished)
+	add_child(calendar_overlay)
 	_apply_font()
 	# Only auto-start when running as the main scene. Under a test harness the
 	# screen is added beneath a test node, so this guard is false and the test
@@ -73,14 +79,32 @@ func _ready() -> void:
 func begin() -> void:
 	_render_report(Game.next_tick())
 
+## Enter ends the turn (when the order box isn't focused - a focused LineEdit
+## consumes Enter itself, so this only fires from unhandled input).
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_accept") and not end_turn.disabled \
+			and not calendar_overlay.playing():
+		_on_end_turn()
+
 func suggestion_buttons() -> Array:
 	return _suggestion_buttons
 
 func end_turn_button() -> Button:
 	return end_turn
 
+## End Turn advances the engine immediately (state is authoritative at once),
+## then plays the calendar interlude; the new report renders when it finishes.
 func _on_end_turn() -> void:
-	_render_report(Game.next_tick())
+	end_turn.disabled = true
+	_pending_report = Game.next_tick()
+	calendar_overlay.play(_pending_report.tick)
+
+func _on_interlude_finished() -> void:
+	end_turn.disabled = false
+	if _pending_report != null:
+		var report := _pending_report
+		_pending_report = null
+		_render_report(report)
 
 func _render_report(report: TickReport) -> void:
 	_render_metrics(report)
@@ -195,6 +219,12 @@ func _render_metrics(report: TickReport) -> void:
 		l.tooltip_text = reasons.get(m, "no change")
 		l.mouse_filter = Control.MOUSE_FILTER_STOP
 		metrics_box.add_child(l)
+	var date := Label.new()
+	date.text = Calendar.date_string(Game.state.tick)
+	date.add_theme_color_override("font_color", Color("deba54"))
+	date.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	date.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	metrics_box.add_child(date)
 
 ## Placeholder pixel portraits (spec §6 / carried Task 11 acceptance criterion):
 ## one 48x48 panel per seated minister, in seat order, rebuilt whenever the
@@ -253,6 +283,7 @@ func _render_suggestions(report: TickReport) -> void:
 	_suggestion_buttons = []
 	for sug in report.suggestions:
 		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE  # Enter is reserved for End Turn
 		var sp: String = Game.state.characters[Game.state.council[sug["seat"]]].display_name \
 			if Game.state.council.has(sug["seat"]) else sug["seat"]
 		b.text = "%s: %s" % [sp, sug["request"].action_code]

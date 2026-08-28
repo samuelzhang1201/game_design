@@ -21,6 +21,9 @@ func test_seasons_and_years() -> void:
 	s.tick = 23
 	assert_eq(s.season(), "winter")
 	s.tick = 24
+	assert_eq(s.season(), "winter")
+	assert_eq(s.year(), 1)
+	s.tick = 25
 	assert_eq(s.season(), "spring")
 	assert_eq(s.year(), 2)
 
