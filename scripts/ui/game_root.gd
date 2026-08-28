@@ -46,7 +46,7 @@ func _on_start_requested() -> void:
 	Game.start_campaign(42)
 	_pending_report = Game.next_tick()
 	_switch_to(State.CONVERSATION)
-	current_screen.start(ConversationBeats.build(_pending_report, Game.state, Game.data))
+	current_screen.start(ConversationBeats.build(_pending_report, Game.state, Game.data), _pending_report)
 
 func _on_end_turn_requested() -> void:
 	_pending_report = Game.next_tick()
@@ -55,7 +55,7 @@ func _on_end_turn_requested() -> void:
 
 func _on_day_run_finished() -> void:
 	_switch_to(State.CONVERSATION)
-	current_screen.start(ConversationBeats.build(_pending_report, Game.state, Game.data))
+	current_screen.start(ConversationBeats.build(_pending_report, Game.state, Game.data), _pending_report)
 
 ## The conversation stage already spoke the event/concerns/pitches/outcomes
 ## (spec §3, R2); COURT re-entered after it shows only the order-bar state

@@ -7,6 +7,7 @@ signal finished
 
 var _beats: Array = []
 var _index := -1
+var _report: TickReport
 var _portrait_holder: Control
 var _name_label: Label
 var _text_label: Label
@@ -61,8 +62,14 @@ func _ready() -> void:
 	_continue_btn.pressed.connect(_advance)
 	col.add_child(_continue_btn)
 
-func start(beats: Array) -> void:
+## `report` is the TickReport the beats were built from - kept so the summary
+## beat can compose its text at display time (see ConversationBeats.summary_text)
+## rather than baking it in at build time, since a quick-reply/free-text order
+## taken earlier in THIS conversation can change what "resolved this session"
+## means by the time the player reaches the summary (FIX 2, post-Task-5 review).
+func start(beats: Array, report: TickReport) -> void:
 	_beats = beats
+	_report = report
 	_index = -1
 	_advance()
 
@@ -112,7 +119,7 @@ func _advance() -> void:
 				_add_reply(label, _on_quick_reply.bind(sug))
 		"summary":
 			_continue_btn.visible = true
-			_text_label.text = String(b["text"])
+			_text_label.text = ConversationBeats.summary_text(_report, Game.state, Game.data)
 	_free_text.visible = String(b["kind"]) == "minister"
 
 func _add_reply(label: String, handler: Callable) -> void:
@@ -140,7 +147,20 @@ func _on_quick_reply(sug: Dictionary) -> void:
 	for child in _replies_box.get_children():
 		child.queue_free()
 	_text_label.text = TemplateVoicer.line_for(Game.data,
-		"outcome_" + String(sug["request"].action_code), [], Game.state.tick)
+		"outcome_" + String(sug["request"].action_code), [], Game.state.tick) \
+		+ _promise_kept_suffix(result["outcome"]["effects"])
+
+## Post-Task-5 review "also": a kept promise rides along as a pseudo-effect
+## on the outcome (metric == "promise" - see ActionSystem.execute's promise
+## loop), with no template lookup of its own; its reason string IS the line
+## ("a promise kept: <label>"), so it's appended verbatim rather than routed
+## through TemplateVoicer.line_for like the rest of this file's speech.
+func _promise_kept_suffix(effects: Array) -> String:
+	var suffix := ""
+	for e in effects:
+		if String(e.get("metric", "")) == "promise":
+			suffix += " " + String(e["reason"])
+	return suffix
 
 func _on_event_choice(choice_id: String) -> void:
 	var out: Dictionary = Game.apply_event_choice(choice_id)
@@ -167,6 +187,7 @@ func _on_free_text(text: String) -> void:
 		var spoken := ""
 		for outcome in res["executed"]:
 			spoken += TemplateVoicer.line_for(Game.data,
-				"outcome_" + String(outcome["action_code"]), [], Game.state.tick) + " "
+				"outcome_" + String(outcome["action_code"]), [], Game.state.tick)
+			spoken += _promise_kept_suffix(outcome["effects"]) + " "
 		_text_label.text = spoken if spoken != "" else "So noted."
 	)

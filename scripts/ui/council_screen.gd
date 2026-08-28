@@ -86,10 +86,14 @@ func begin_with(report: TickReport) -> void:
 	_render_report(report)
 
 ## Post-conversation court entry: numbers + orders only; speech already
-## happened on the conversation stage (R2).
+## happened on the conversation stage (R2). FIX 3 (post-Task-5 review):
+## also renders the date label - _render_portraits normally hosts it, but
+## enter_court deliberately skips the portraits row, so it's called directly
+## here; portraits_box remains its host until Task 6's real court screen.
 func enter_court(report: TickReport) -> void:
 	_render_metrics(report)
 	_render_suggestions(report)
+	_render_date()
 
 ## Enter ends the turn (when the order box isn't focused - a focused LineEdit
 ## consumes Enter itself, so this only fires from unhandled input).
