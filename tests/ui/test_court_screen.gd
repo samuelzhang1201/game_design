@@ -186,3 +186,29 @@ func _gold_row_text(screen: CourtScreen) -> String:
 		if String(l.text).begins_with("Gold"):
 			return String(l.text)
 	return ""
+
+## Migration-map item 16 (guard-holds): the End-Turn pending-event guard
+## lives entirely inside CourtScreen._on_end_turn's early return - proven
+## here in isolation, with no free-text order involved (the free-text path's
+## own re-enable interaction with the guard is already covered by
+## test_free_text_during_pending_event_keeps_end_turn_gated above). Asserts
+## on the signal + tick, not on end_turn.disabled: the early return leaves
+## `disabled` at whatever it already was (false here, since nothing has
+## disabled it yet), so `disabled` is not a reliable witness of the guard -
+## the guard's only observable effect is that end_turn_requested never fires
+## and the tick never advances.
+func test_end_turn_guard_holds_with_pending_event_no_free_text() -> void:
+	Game.start_campaign(42)
+	var report := _report_after_resolving_pending_event()
+	var screen := _screen()
+	screen.enter_court(report)
+	await wait_frames(2)
+	Game.engine.events._fire("ev_01", Game.state)
+	assert_false(Game.state.pending_event.is_empty())
+	var tick_before := Game.state.tick
+	_end_turn_emitted = false
+	screen.end_turn_requested.connect(func(): _end_turn_emitted = true)
+	screen.end_turn_button().pressed.emit()
+	await wait_frames(1)
+	assert_false(_end_turn_emitted, "End Turn must not fire while an event is pending")
+	assert_eq(Game.state.tick, tick_before, "the guard must not let a tick slip through")
