@@ -85,6 +85,9 @@ func reply_buttons() -> Array:
 func dialogue_text() -> String:
 	return _text_label.text
 
+func free_text_field() -> LineEdit:
+	return _free_text
+
 func _advance() -> void:
 	_index += 1
 	if _index >= _beats.size():
@@ -107,6 +110,13 @@ func _advance() -> void:
 			_continue_btn.visible = false
 			_text_label.text = "..."
 			Game.voice_event_scene(b["event"], func(res: Dictionary):
+				# F2 (final-review fix wave): choice buttons render immediately
+				# while this call is in flight. With real latency the player can
+				# resolve the event (via button or free text) before this
+				# callback returns; without this guard the late scene-setting
+				# narration would overwrite the outcome line already shown.
+				if _resolved_event:
+					return
 				_text_label.text = String(res["text"]))
 			for ch in b["event"]["choices"]:
 				_add_reply(String(ch["label"]), _on_event_choice.bind(String(ch["choice_id"])))
@@ -120,7 +130,12 @@ func _advance() -> void:
 		"summary":
 			_continue_btn.visible = true
 			_text_label.text = ConversationBeats.summary_text(_report, Game.state, Game.data)
-	_free_text.visible = String(b["kind"]) == "minister"
+	# F1 (final-review fix wave): event beats must accept free text too - it's
+	# the only path back to EVENT_CHOICE via typed orders (Game.submit_free_text's
+	# EVENT_CHOICE branch was otherwise unreachable). Shown alongside the choice
+	# buttons while the event is unresolved; _resolve_event hides it again once
+	# either path (button or free text) resolves the event.
+	_free_text.visible = String(b["kind"]) in ["minister", "event"]
 
 func _add_reply(label: String, handler: Callable) -> void:
 	var btn := Button.new()
@@ -166,13 +181,21 @@ func _on_event_choice(choice_id: String) -> void:
 	var out: Dictionary = Game.apply_event_choice(choice_id)
 	if out.is_empty():
 		return
+	_resolve_event(String(out["event_id"]), String(out["choice_id"]))
+
+## Shared by the choice-button path (_on_event_choice) and the free-text path
+## (_on_free_text, F1 final-review fix wave) so both resolve an event
+## identically: clear the choice buttons, mark resolved (also guards the
+## in-flight voice callback - see F2 above), re-enable Continue, hide the
+## free-text box, and speak the same per-choice outcome line.
+func _resolve_event(event_id: String, choice_id: String) -> void:
 	for child in _replies_box.get_children():
 		child.queue_free()
 	_resolved_event = true
 	_continue_btn.visible = true
+	_free_text.visible = false
 	_text_label.text = TemplateVoicer.line_for(Game.data,
-		"event_%s_%s" % [String(out["event_id"]), String(out["choice_id"])], [],
-		Game.state.tick)
+		"event_%s_%s" % [event_id, choice_id], [], Game.state.tick)
 
 func _on_free_text(text: String) -> void:
 	if text.strip_edges() == "":
@@ -184,6 +207,17 @@ func _on_free_text(text: String) -> void:
 		if not res["ok"]:
 			_text_label.text = "The council doesn't follow. (%s)" % String(res["error"])
 			return
+		# F1: a free-text reply that parses to EVENT_CHOICE and actually
+		# resolves the pending event must resolve it exactly as the button
+		# path does (Game.submit_free_text already ran apply_event_choice -
+		# see game.gd's EVENT_CHOICE branch). A parse that rejects (no such
+		# choice awaits) or resolves to a normal action instead falls through
+		# to the existing spoken-outcome loop below, leaving the event
+		# pending and the free-text box visible.
+		for outcome in res["executed"]:
+			if String(outcome["action_code"]) == "EVENT_CHOICE":
+				_resolve_event(String(outcome["event_id"]), String(outcome["choice_id"]))
+				return
 		var spoken := ""
 		for outcome in res["executed"]:
 			spoken += TemplateVoicer.line_for(Game.data,

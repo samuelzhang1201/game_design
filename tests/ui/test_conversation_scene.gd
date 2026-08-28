@@ -138,3 +138,92 @@ func test_event_beat_voices_canned_text_non_degraded() -> void:
 	await wait_frames(3)
 	assert_eq(c.dialogue_text(), "A rider brings word of omens.",
 		"the canned text must surface verbatim, not degrade to the template fallback")
+
+## F1 (final-review fix wave): Game.submit_free_text's EVENT_CHOICE branch was
+## unreachable in real play because the free-text box was hidden on event
+## beats. Proves the box is shown while the event is unresolved, and that a
+## free-text reply parsing to EVENT_CHOICE for a real choice of the pending
+## event resolves it exactly as clicking the matching choice button does:
+## outcome line shown, buttons cleared, advance enabled, pending_event clear.
+func test_event_beat_free_text_resolves_via_event_choice() -> void:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	Game.engine.events._fire("ev_01", Game.state)
+	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"actions":
+		[{"action_code": "EVENT_CHOICE", "params": {"choice_id": "accept"}, "target": ""}],
+		"court_reaction": {}})
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	var beats := [{"kind": "event", "portrait_id": "round_table",
+		"speaker": "The Council", "event": Game.state.pending_event.duplicate(true)}]
+	var c := _scene_with(beats, report)
+	await wait_frames(3)
+	assert_true(c.free_text_field().visible,
+		"free text must be reachable on an unresolved event beat")
+	c.free_text_field().text_submitted.emit("I shall accept them with thanks")
+	await wait_frames(3)
+	assert_true(Game.state.pending_event.is_empty(), "event resolves via free text")
+	assert_string_contains(c.dialogue_text(), "thanks")  # event_ev_01_accept template line
+	assert_false(c.free_text_field().visible, "free text hides once the event resolves")
+	assert_true(c.continue_button().visible, "advance re-enabled once resolved")
+	assert_eq(c.reply_buttons().size(), 0, "choice buttons cleared once resolved")
+
+## F1 "must NOT resolve" half of the ruling: a free-text reply during an event
+## beat that parses to a rejected EVENT_CHOICE (no such choice awaits) leaves
+## the event pending and the free-text box reachable - same shape as the
+## existing minister-beat free-text behavior (result line shown, no state
+## mutation beyond that).
+func test_event_beat_free_text_invalid_choice_leaves_event_pending() -> void:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	Game.engine.events._fire("ev_01", Game.state)
+	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"actions":
+		[{"action_code": "EVENT_CHOICE", "params": {"choice_id": "not_a_real_choice"}, "target": ""}],
+		"court_reaction": {}})
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	var beats := [{"kind": "event", "portrait_id": "round_table",
+		"speaker": "The Council", "event": Game.state.pending_event.duplicate(true)}]
+	var c := _scene_with(beats, report)
+	await wait_frames(3)
+	c.free_text_field().text_submitted.emit("do something not offered")
+	await wait_frames(3)
+	assert_false(Game.state.pending_event.is_empty(), "event still awaits a valid choice")
+	assert_true(c.free_text_field().visible, "free text stays reachable while the event is pending")
+	assert_false(c.continue_button().visible, "advance stays gated while the event is pending")
+
+## F2 (final-review fix wave): choice buttons render while the event's voice
+## call is still in flight. If the player resolves the event before that call
+## returns, the late callback must not overwrite the outcome line already
+## shown with stale scene-setting narration.
+func test_event_voice_callback_ignored_after_event_resolved() -> void:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	Game.engine.events._fire("ev_02", Game.state)  # mini-voice: client call stays in flight
+	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = "A rider brings word of omens."
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	var beats := [{"kind": "event", "portrait_id": "round_table",
+		"speaker": "The Council", "event": Game.state.pending_event.duplicate(true)}]
+	var c := _scene_with(beats, report)
+	# Resolve synchronously, before the FakeClient's deferred `completed` signal
+	# (scheduled by voice_event_scene above) has a chance to fire.
+	c.reply_buttons()[0].pressed.emit()
+	var resolved_text := c.dialogue_text()
+	assert_ne(resolved_text, "...", "the event must already show its outcome line")
+	await wait_frames(3)  # let the stale voice callback fire
+	assert_eq(c.dialogue_text(), resolved_text,
+		"the stale voice callback must not overwrite the already-shown outcome")
+	assert_false("omens" in c.dialogue_text())
