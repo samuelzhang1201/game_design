@@ -13,7 +13,7 @@ config_version=5
 config/name="Crown and Council"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
-run/main_scene="res://scenes/council.tscn"
+run/main_scene="res://scenes/game_root.tscn"
 
 [autoload]
 

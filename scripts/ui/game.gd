@@ -44,6 +44,15 @@ func load_campaign(path: String = "user://save.json") -> bool:
 	state = loaded
 	return true
 
+## Restart flow (R12): return to MENU with a clean sim + LLM seam. Called by
+## GameRoot's global R handler.
+func restart() -> void:
+	_reset_llm()
+	state = null
+	engine = null
+	current_report = null
+	_prompts_this_tick = 0
+
 func _ensure_llm() -> void:
 	if voicer != null:
 		return

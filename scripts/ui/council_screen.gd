@@ -73,10 +73,12 @@ func _ready() -> void:
 	calendar_overlay.finished.connect(_on_interlude_finished)
 	add_child(calendar_overlay)
 	_apply_font()
-	# Only auto-start when running as the main scene. Under a test harness the
-	# screen is added beneath a test node, so this guard is false and the test
-	# fully controls the lifecycle (start_campaign + begin are called explicitly).
-	if get_parent() == get_tree().root:
+	# Only auto-start when running as the main scene, or (interim, until Tasks
+	# 4-6 move tick orchestration into GameRoot) when GameRoot instantiates us
+	# for COURT. Under a test harness the screen is added beneath a plain test
+	# node, so this guard is false and the test fully controls the lifecycle
+	# (start_campaign + begin are called explicitly).
+	if get_parent() == get_tree().root or get_parent() is GameRoot:
 		if Game.state == null:
 			Game.start_campaign(42)
 		begin.call_deferred()
