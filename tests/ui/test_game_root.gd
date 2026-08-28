@@ -18,7 +18,12 @@ func test_space_starts_campaign() -> void:
 	await wait_frames(2)
 	assert_ne(r.state, GameRoot.State.MENU)
 	assert_not_null(Game.state)
-	assert_gt(Game.state.tick, 0)
+	# Regression: council_screen's old auto-start guard used to advance the
+	# tick a second time on top of GameRoot's own next_tick() call (Task 3's
+	# interim double-advance defect), silently discarding tick 1's report.
+	# GameRoot now drives the single next_tick() and renders it via
+	# begin_with, so campaign start lands on exactly tick 1.
+	assert_eq(Game.state.tick, 1)
 
 func test_r_restarts_to_menu() -> void:
 	var r := _root()

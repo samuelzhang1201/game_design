@@ -1,6 +1,10 @@
 extends Control
 ## Council screen: metrics strip / transcript / input row. Built in code.
 
+## Emitted instead of self-driving the turn cycle: GameRoot owns advancing
+## the tick and playing the DAY_RUN interlude (Task 4). See begin_with.
+signal end_turn_requested
+
 const PIXEL_FONT_PATH := "res://assets/fonts/pixel.ttf"  # optional; falls back to default
 ## Character visuals live in their own scenes (scenes/characters/*) with
 ## script scripts/ui/character_portrait.gd - swap art there, not here.
@@ -17,8 +21,6 @@ var event_box: VBoxContainer
 var suggestions_box: VBoxContainer
 var free_text: LineEdit
 var end_turn: Button
-var calendar_overlay: CalendarOverlay
-var _pending_report: TickReport
 ## FIX 2(d): the last report rendered, kept so _finish_event can re-run
 ## _render_metrics after an event choice changes state.metrics — the metrics
 ## strip's numbers are read live from Game.state.metrics so they refresh
@@ -69,28 +71,25 @@ func _ready() -> void:
 	end_turn.focus_mode = Control.FOCUS_NONE  # activated by click or Enter (unhandled)
 	end_turn.pressed.connect(_on_end_turn)
 	input_row.add_child(end_turn)
-	calendar_overlay = CalendarOverlay.new()
-	calendar_overlay.finished.connect(_on_interlude_finished)
-	add_child(calendar_overlay)
 	_apply_font()
-	# Only auto-start when running as the main scene, or (interim, until Tasks
-	# 4-6 move tick orchestration into GameRoot) when GameRoot instantiates us
-	# for COURT. Under a test harness the screen is added beneath a plain test
-	# node, so this guard is false and the test fully controls the lifecycle
-	# (start_campaign + begin are called explicitly).
-	if get_parent() == get_tree().root or get_parent() is GameRoot:
-		if Game.state == null:
-			Game.start_campaign(42)
-		begin.call_deferred()
 
+## GameRoot always drives this screen's lifecycle now (see game_root.gd's
+## begin_with calls after MENU->COURT and DAY_RUN->COURT transitions). Old
+## tests that instantiate council.tscn directly still call this explicitly.
 func begin() -> void:
-	_render_report(Game.next_tick())
+	begin_with(Game.next_tick())
+
+## Renders a report without advancing the engine - called by GameRoot after
+## it has already advanced the tick and played the DAY_RUN interlude (or, at
+## campaign start, after the first next_tick()).
+func begin_with(report: TickReport) -> void:
+	_render_report(report)
 
 ## Enter ends the turn (when the order box isn't focused - a focused LineEdit
 ## consumes Enter itself, so this only fires from unhandled input).
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_accept") and not end_turn.disabled \
-			and not calendar_overlay.playing() and Game.state.pending_event.is_empty():
+			and Game.state.pending_event.is_empty():
 		_on_end_turn()
 
 func suggestion_buttons() -> Array:
@@ -102,21 +101,15 @@ func event_buttons() -> Array:
 func end_turn_button() -> Button:
 	return end_turn
 
-## End Turn advances the engine immediately (state is authoritative at once),
-## then plays the calendar interlude; the new report renders when it finishes.
+## End Turn no longer advances the engine itself - GameRoot owns the tick
+## advance and the DAY_RUN interlude (Task 4); this screen just signals that
+## the player is done for the fortnight. A fresh CouncilScreen instance is
+## rebuilt with End Turn enabled by default once GameRoot returns to COURT.
 func _on_end_turn() -> void:
 	if not Game.state.pending_event.is_empty():
 		return
 	end_turn.disabled = true
-	_pending_report = Game.next_tick()
-	calendar_overlay.play(_pending_report.tick)
-
-func _on_interlude_finished() -> void:
-	end_turn.disabled = false
-	if _pending_report != null:
-		var report := _pending_report
-		_pending_report = null
-		_render_report(report)
+	end_turn_requested.emit()
 
 func _render_report(report: TickReport) -> void:
 	_last_report = report

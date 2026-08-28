@@ -8,7 +8,8 @@ extends Control
 
 signal finished
 
-const DAY_SECONDS := 0.09
+## R6: pacing comes from balance (dayrun_day_seconds); slower, readable.
+var day_seconds := 0.22
 const NEWS_DAYS := [4, 9, 14]
 
 var date_label: Label
@@ -30,6 +31,8 @@ static func news_line(data: DataRepository, tick: int, day: int) -> String:
 	return pool[(tick * 31 + day * 7) % pool.size()]
 
 func _ready() -> void:
+	if Game.data != null:
+		day_seconds = Game.data.bal("dayrun_day_seconds")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -88,7 +91,7 @@ func play(tick: int) -> void:
 	season_label.text = "the days pass..."
 	date_label.text = Calendar.date_string(_tick, 1)
 	visible = true
-	_timer.start(DAY_SECONDS)
+	_timer.start(day_seconds)
 
 func playing() -> bool:
 	return visible

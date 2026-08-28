@@ -6,6 +6,7 @@ extends GutTest
 # Reassigning a member variable through the implicit `self` does propagate.
 # (Same reasoning as tests/llm/test_voicer_fallback.gd's `got`.)
 var got: Dictionary = {}
+var _end_turn_emitted := false
 
 func test_screen_builds_and_click_executes() -> void:
 	var screen: Node = load("res://scenes/council.tscn").instantiate()
@@ -25,9 +26,12 @@ func test_screen_builds_and_click_executes() -> void:
 	if not Game.state.pending_event.is_empty():
 		screen.event_buttons()[0].pressed.emit()
 		await wait_frames(2)
+	_end_turn_emitted = false
+	screen.end_turn_requested.connect(func(): _end_turn_emitted = true)
 	screen.end_turn_button().pressed.emit()
 	await wait_frames(2)
-	assert_eq(Game.state.tick, 2)
+	assert_true(_end_turn_emitted)
+	assert_eq(Game.state.tick, 1)  # GameRoot owns advancing now
 
 func test_free_text_path_executes_via_fake_client() -> void:
 	Game.start_campaign(42)

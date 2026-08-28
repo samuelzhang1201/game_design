@@ -10,6 +10,7 @@ const COURT_SCENE := "res://scenes/council.tscn"  # interim: Task 6 swaps to cou
 
 var state: State = State.MENU
 var current_screen: Node
+var _pending_report: TickReport
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -32,8 +33,10 @@ func _switch_to(new_state: State) -> void:
 			current_screen.start_requested.connect(_on_start_requested)
 		State.COURT:
 			current_screen = load(COURT_SCENE).instantiate()
-			# interim flow: council.tscn drives its own tick/interlude until
-			# Tasks 4-6 move that orchestration here.
+			current_screen.end_turn_requested.connect(_on_end_turn_requested)
+		State.DAY_RUN:
+			current_screen = load("res://scenes/day_run.tscn").instantiate()
+			current_screen.finished.connect(_on_day_run_finished)
 	add_child(current_screen)
 
 func _on_start_requested() -> void:
@@ -41,3 +44,15 @@ func _on_start_requested() -> void:
 	Game.next_tick()
 	# interim: straight to COURT; Task 5 inserts CONVERSATION here.
 	_switch_to(State.COURT)
+	current_screen.begin_with(Game.current_report)
+
+func _on_end_turn_requested() -> void:
+	_pending_report = Game.next_tick()
+	_switch_to(State.DAY_RUN)
+	current_screen.run(_pending_report)
+
+func _on_day_run_finished() -> void:
+	# interim: back to COURT with the new report; Task 5 routes to CONVERSATION.
+	_switch_to(State.COURT)
+	current_screen.begin_with(_pending_report)
+	_pending_report = null
