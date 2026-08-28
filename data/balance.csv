@@ -20,6 +20,9 @@ legitimacy_drift,0.1,toward 50
 church_drift,0.2,toward 50
 army_decay,0.3,per tick
 army_floor,20,
+promise_kept_opinion,15,
+promise_broken_opinion,-25,largest single penalty in the game by design
+promise_default_ticks,24,due when the parser omits tick_due
 concern_treasury_low,100,steward fires below this
 concern_grain_low,30,steward
 concern_unrest_high,40,chancellor

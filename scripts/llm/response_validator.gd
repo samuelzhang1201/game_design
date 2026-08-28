@@ -44,9 +44,12 @@ static func parse(json_text: String, data: DataRepository) -> Dictionary:
 				return fail.call("promises must be a list")
 			for p in promises:
 				if p is Dictionary and p.has("character_id") and p.has("promise_code"):
+					var promise_code: String = String(p["promise_code"])
+					if not data.actions.has(promise_code):
+						return fail.call("unknown promise action: " + promise_code)
 					reaction["promises"].append({
 						"character_id": String(p["character_id"]),
-						"promise_code": String(p["promise_code"]),
+						"promise_code": promise_code,
 						"tick_due": int(p.get("tick_due", 0)),
 					})
 	return {"ok": true, "error": "", "actions": actions, "court_reaction": reaction}

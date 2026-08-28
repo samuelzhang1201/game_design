@@ -77,3 +77,11 @@ func test_promises_as_string_fails() -> void:
 	var out: Dictionary = ResponseValidator.parse(text, data)
 	assert_false(out["ok"])
 	assert_string_contains(out["error"], "promises must be a list")
+
+func test_promise_code_must_be_real_action() -> void:
+	var text := JSON.stringify({"actions": [], "court_reaction": {"addressed": [],
+		"tone": "neutral", "promises": [{"character_id": "char_marshal",
+		"promise_code": "GRANT_UNICORN", "tick_due": 30}]}})
+	var out := ResponseValidator.parse(text, data)
+	assert_false(out["ok"])
+	assert_string_contains(out["error"], "GRANT_UNICORN")

@@ -31,8 +31,8 @@ static func _speaker_for_seat(seat: String, state: GameState) -> Dictionary:
 		return {"name": c.display_name, "traits": c.traits}
 	return {"name": "The court clerk", "traits": []}
 
-static func _line(data: DataRepository, key: String, speaker_traits: Array,
-		tick: int, vars: Dictionary) -> String:
+static func line_for(data: DataRepository, key: String, speaker_traits: Array,
+		tick: int, vars: Dictionary = {}) -> String:
 	var generic: Array = []
 	var tinted: Array = []
 	for row in data.templates:
@@ -46,3 +46,7 @@ static func _line(data: DataRepository, key: String, speaker_traits: Array,
 	if pool.is_empty():
 		return "[missing template: %s]" % key
 	return String(pool[tick % pool.size()]).format(vars)
+
+static func _line(data: DataRepository, key: String, speaker_traits: Array,
+		tick: int, vars: Dictionary) -> String:
+	return line_for(data, key, speaker_traits, tick, vars)

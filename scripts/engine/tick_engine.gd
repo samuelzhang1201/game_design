@@ -19,6 +19,18 @@ func advance(state: GameState) -> TickReport:
 	r.outcomes = state.recent_outcomes
 	state.recent_outcomes = []
 	_drift(state, r)
+	for pr in state.promises:
+		if String(pr["status"]) == "open" and state.tick > int(pr["tick_due"]):
+			pr["status"] = "broken"
+			var who: String = String(pr["character_id"])
+			if state.characters.has(who):
+				var c: Character = state.characters[who]
+				c.change_opinion(int(data.bal("promise_broken_opinion")),
+					"a promise broken: " + String(pr["promise_code"]), state.tick)
+				if not "grudge" in c.flags:
+					c.flags.append("grudge")
+			r.promise_events.append({"character_id": who,
+				"promise_code": String(pr["promise_code"]), "status": "broken"})
 	r.concerns = ConcernScanner.scan(state, data)
 	r.suggestions = suggestions.generate(state, r.concerns)
 	return r

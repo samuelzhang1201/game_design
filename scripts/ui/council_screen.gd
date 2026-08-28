@@ -111,6 +111,9 @@ func _render_report(report: TickReport) -> void:
 	_render_portraits()
 	for line in TemplateVoicer.render_outcomes(report, Game.state, Game.data):
 		_say(line)
+	for pe in report.promise_events:
+		var key := "promise_" + String(pe["status"])
+		_say({"speaker": "Herald", "text": TemplateVoicer.line_for(Game.data, key, [], report.tick)})
 	# Briefing lines arrive via Game.voice_briefing's callback, which is
 	# asynchronous even offline (Voicer's busy-guard/fallback path still
 	# goes through a signal). Suggestions below render synchronously, so

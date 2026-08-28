@@ -10,6 +10,7 @@ var ideology: Dictionary = {}
 var traits: Array = []
 var opinion: int = 0
 var opinion_log: Array = []
+var flags: Array = []
 
 func change_opinion(delta: int, reason: String, tick: int) -> void:
 	opinion = clampi(opinion + delta, -100, 100)
@@ -39,6 +40,7 @@ func to_dict() -> Dictionary:
 		"attributes": normalized_attributes, "skills": normalized_skills,
 		"ideology": normalized_ideology, "traits": traits.duplicate(),
 		"opinion": float(opinion), "opinion_log": normalized_log,
+		"flags": flags.duplicate(),
 	}
 
 static func from_dict(d: Dictionary) -> Character:
@@ -47,4 +49,5 @@ static func from_dict(d: Dictionary) -> Character:
 	c.attributes = d["attributes"].duplicate(); c.skills = d["skills"].duplicate()
 	c.ideology = d["ideology"].duplicate(); c.traits = d["traits"].duplicate()
 	c.opinion = int(d["opinion"]); c.opinion_log = d["opinion_log"].duplicate(true)
+	c.flags = d.get("flags", []).duplicate()
 	return c

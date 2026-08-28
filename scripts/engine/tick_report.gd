@@ -8,6 +8,7 @@ var metric_deltas: Array = []
 var concerns: Array = []
 var suggestions: Array = []
 var outcomes: Array = []
+var promise_events: Array = []
 
 func to_dict() -> Dictionary:
 	var sug_dicts: Array = []
@@ -16,4 +17,5 @@ func to_dict() -> Dictionary:
 			"pitch_key": s["pitch_key"], "tradeoff": s["tradeoff"]})
 	return {"tick": tick, "season": season, "year": year,
 		"metric_deltas": metric_deltas.duplicate(true), "concerns": concerns.duplicate(true),
-		"suggestions": sug_dicts, "outcomes": outcomes.duplicate(true)}
+		"suggestions": sug_dicts, "outcomes": outcomes.duplicate(true),
+		"promise_events": promise_events.duplicate(true)}

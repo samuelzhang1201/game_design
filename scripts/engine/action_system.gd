@@ -124,6 +124,18 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	var drift := OpinionDrift.apply(data, state,
 		OpinionDrift.signature_for(data, req.action_code, req.params),
 		String(row["label"]))
+	for pr in state.promises:
+		if String(pr["status"]) != "open":
+			continue
+		if String(pr["promise_code"]) != req.action_code:
+			continue
+		if req.target != "" and req.target != String(pr["character_id"]):
+			continue
+		pr["status"] = "kept"
+		var who: String = String(pr["character_id"])
+		if state.characters.has(who):
+			state.characters[who].change_opinion(int(data.bal("promise_kept_opinion")),
+				"a promise kept: " + String(row["label"]), state.tick)
 	var outcome := {"action_code": req.action_code, "ok": true, "effects": effects,
 		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate(),
 		"drift": drift}
@@ -146,6 +158,9 @@ func apply_court_reaction(cr: Dictionary, state: GameState) -> void:
 		if state.characters.has(id) and delta != 0:
 			state.characters[id].change_opinion(delta, "tone: " + cr["tone"], state.tick)
 	for p in cr.get("promises", []):
+		var due := int(p["tick_due"])
+		if due <= 0:
+			due = state.tick + int(data.bal("promise_default_ticks"))
 		state.promises.append({"character_id": p["character_id"],
 			"promise_code": p["promise_code"], "made_tick": state.tick,
-			"tick_due": p["tick_due"], "status": "open"})
+			"tick_due": due, "status": "open"})
