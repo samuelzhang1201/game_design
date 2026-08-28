@@ -14,6 +14,17 @@ Text-first, LLM-narrated grand strategy game: rule a kingdom for ~60 years throu
 - **Godot 4.x + GDScript** (typed GDScript everywhere: type hints on vars, params, returns).
 - **GUT** (Godot Unit Test) for tests. The simulation engine must be unit-testable headless.
 - **OpenAI API via raw HTTP** (`HTTPRequest` node) — there is no GDScript SDK. Model IDs and prices live in one config table (see PRD §7), not scattered through code.
+- **Run:** `/Applications/Godot.app/Contents/MacOS/Godot --path .`
+- **Test:** `./run_tests.sh` (runs the full GUT suite headless; "Errors 2" in the summary is a documented, expected condition from a vendored GExtension's class-database probing, not a real failure — any other error count is treated as fatal).
+- **`user://config.json`** (git-ignored, read by `OpenAIClient.load_config()`; missing/unreadable/malformed file, or an empty `api_key`, all fail closed to `offline_mode: true`):
+  ```json
+  {
+    "api_key": "",
+    "model_parse": "gpt-5.6-luna",
+    "model_voice": "gpt-5.6-terra",
+    "offline_mode": true
+  }
+  ```
 
 ## Architecture invariants (do not violate)
 
