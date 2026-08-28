@@ -4,24 +4,70 @@ extends Node
 signal completed(ok: bool, text: String)
 
 const CONFIG_PATH := "user://config.json"
+const ENV_PATH := "res://.env"
 
-static func load_config() -> Dictionary:
-	var defaults := {"api_key": "", "model_parse": "gpt-5.6-luna",
-		"model_voice": "gpt-5.6-terra", "model_flagship": "gpt-5.6-sol", "offline_mode": true}
-	if not FileAccess.file_exists(CONFIG_PATH):
-		return defaults
-	var f := FileAccess.open(CONFIG_PATH, FileAccess.READ)
+## Config precedence: defaults -> res://.env (dev convenience, git-ignored)
+## -> user://config.json (player override). CC_FORCE_OFFLINE=1 in the OS
+## environment forces offline regardless (set by run_tests.sh so the test
+## suite can never make live API calls even with a real .env present).
+static func load_config(env_path: String = ENV_PATH,
+		json_path: String = CONFIG_PATH) -> Dictionary:
+	var cfg := {"api_key": "", "model_parse": "gpt-5.6-luna",
+		"model_voice": "gpt-5.6-terra", "model_flagship": "gpt-5.6-sol",
+		"offline_mode": true, "llm_max_output_tokens": 600}
+	_overlay_env(cfg, env_path)
+	_overlay_json(cfg, json_path)
+	if String(cfg["api_key"]) == "" or OS.get_environment("CC_FORCE_OFFLINE") == "1":
+		cfg["offline_mode"] = true
+	return cfg
+
+## Parses KEY=VALUE lines ('#' comments, blanks skipped). Recognized keys:
+## OPENAI_API_KEY, LLM_MODEL (sets all three tiers), LLM_MODEL_PARSE/_VOICE/
+## _FLAGSHIP (per-tier overrides), LLM_MAX_OUTPUT_TOKENS.
+static func _overlay_env(cfg: Dictionary, path: String) -> void:
+	if not FileAccess.file_exists(path):
+		return
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
-		return defaults
+		return
+	while not f.eof_reached():
+		var line := f.get_line().strip_edges()
+		if line == "" or line.begins_with("#") or not "=" in line:
+			continue
+		var eq := line.find("=")
+		var key := line.substr(0, eq).strip_edges()
+		var value := line.substr(eq + 1).strip_edges()
+		if value == "":
+			continue
+		match key:
+			"OPENAI_API_KEY":
+				cfg["api_key"] = value
+				cfg["offline_mode"] = false
+			"LLM_MODEL":
+				cfg["model_parse"] = value
+				cfg["model_voice"] = value
+				cfg["model_flagship"] = value
+			"LLM_MODEL_PARSE":
+				cfg["model_parse"] = value
+			"LLM_MODEL_VOICE":
+				cfg["model_voice"] = value
+			"LLM_MODEL_FLAGSHIP":
+				cfg["model_flagship"] = value
+			"LLM_MAX_OUTPUT_TOKENS":
+				cfg["llm_max_output_tokens"] = int(value)
+
+static func _overlay_json(cfg: Dictionary, path: String) -> void:
+	if not FileAccess.file_exists(path):
+		return
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return
 	var parsed = JSON.parse_string(f.get_as_text())
 	if not parsed is Dictionary:
-		return defaults
-	for k in defaults:
-		if not parsed.has(k):
-			parsed[k] = defaults[k]
-	if String(parsed["api_key"]) == "":
-		parsed["offline_mode"] = true
-	return parsed
+		return
+	for k in cfg:
+		if parsed.has(k):
+			cfg[k] = parsed[k]
 
 var _config: Dictionary
 var _retried := false
@@ -74,7 +120,8 @@ func _build_body(system_prompt: String, user_prompt: String,
 		model: String, force_json: bool) -> String:
 	var body := {"model": model, "messages": [
 		{"role": "system", "content": system_prompt},
-		{"role": "user", "content": user_prompt}]}
+		{"role": "user", "content": user_prompt}],
+		"max_tokens": int(_config.get("llm_max_output_tokens", 600))}
 	if force_json:
 		body["response_format"] = {"type": "json_object"}
 	return JSON.stringify(body)

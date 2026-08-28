@@ -58,3 +58,5 @@ drift_baseline,50,peasant_contentment/legitimacy/church_opinion drift toward thi
 granary_capacity_gain,50,grain_capacity_bonus added per granary built
 road_income_gain,2,road_income_bonus added per road built
 opinion_drift_scale,20,scales alignment x sensitivity x (1-pragmatism) into opinion points
+prompt_max_chars,200,free-text order length cap (resource limit)
+prompt_calls_per_tick,3,LLM parse calls allowed per tick (resource limit)

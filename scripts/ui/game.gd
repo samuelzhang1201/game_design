@@ -20,6 +20,7 @@ func start_campaign(seed_value: int = 42) -> void:
 	engine = TickEngine.new(data)
 
 func next_tick() -> TickReport:
+	_prompts_this_tick = 0
 	current_report = engine.advance(state)
 	report_ready.emit(current_report)
 	return current_report
@@ -92,7 +93,17 @@ func use_client_for_tests(fake: Node) -> void:
 	voicer = Voicer.new(fake)
 	add_child(voicer)
 
+## LLM parse calls per tick are capped (balance: prompt_calls_per_tick) so a
+## player cannot burn unbounded API spend; over-cap orders are refused
+## in-fiction without any API call. Clicked buttons remain free and unlimited.
+var _prompts_this_tick := 0
+
 func submit_free_text(text: String, cb: Callable) -> void:
+	if _prompts_this_tick >= int(data.bal("prompt_calls_per_tick")):
+		cb.call({"ok": false, "executed": [], "rejected": [],
+			"error": "the council will hear no more orders this fortnight"})
+		return
+	_prompts_this_tick += 1
 	_ensure_llm()
 	voicer.parse_player_text(text, current_report, state, data,
 		func(res: Dictionary):

@@ -1,0 +1,4 @@
+# fixture env for test_llm_config.gd — fake values only
+OPENAI_API_KEY=sk-test-not-a-real-key
+LLM_MODEL=test-model-1
+LLM_MAX_OUTPUT_TOKENS=123

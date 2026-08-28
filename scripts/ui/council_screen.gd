@@ -51,6 +51,7 @@ func _ready() -> void:
 	var input_row := HBoxContainer.new()
 	root.add_child(input_row)
 	free_text = LineEdit.new()
+	free_text.max_length = int(Game.data.bal("prompt_max_chars"))
 	free_text.placeholder_text = "Give an order..."
 	free_text.editable = true
 	free_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL

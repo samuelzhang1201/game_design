@@ -1,4 +1,6 @@
 #!/bin/sh
+# Tests must never make live API calls, even with a real .env present.
+export CC_FORCE_OFFLINE=1
 set -e
 
 TEST_OUTPUT="/tmp/gut_test_output_$$.txt"
