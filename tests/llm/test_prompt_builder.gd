@@ -40,7 +40,7 @@ func test_parse_prompt_omits_event_choice_when_no_pending_event() -> void:
 	var s := GameState.new_campaign(data, 42)
 	var r := TickEngine.new(data).advance(s)
 	# Seed 42's first tick can itself roll a pending event (see
-	# tests/ui/test_council_screen.gd) — force the empty condition explicitly
+	# tests/ui/test_court_screen.gd) — force the empty condition explicitly
 	# rather than relying on incidental non-firing.
 	s.pending_event = {}
 	var p := PromptBuilder.parse_prompts("cut taxes by one", r, s, data)

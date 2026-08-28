@@ -95,7 +95,7 @@ func voice_event_scene(ev: Dictionary, cb: Callable) -> void:
 
 ## Test-only seam: swap in a fake client (same signal/method surface as
 ## OpenAIClient) so tests exercise Voicer's real parsing/validation path
-## without a network call. See tests/ui/test_council_screen.gd.
+## without a network call. See tests/ui/test_court_screen.gd.
 func use_client_for_tests(fake: Node) -> void:
 	if voicer != null:
 		voicer.queue_free()
@@ -141,10 +141,10 @@ func submit_free_text(text: String, cb: Callable) -> void:
 						rejected.append({"request": req, "error": "no such choice awaits"})
 					else:
 						# FIX 2(c): was hardcoded to [] — the button path
-						# (apply_event_choice, see council_screen._on_event_choice)
+						# (apply_event_choice, see conversation_scene._on_event_choice)
 						# already surfaces ev_out["effects"], so the free-text
-						# EVENT_CHOICE path must too, or council_screen's
-						# _finish_event narration silently sees nothing to say.
+						# EVENT_CHOICE path must too, or the UI's outcome
+						# narration silently sees nothing to say.
 						executed.append({"action_code": "EVENT_CHOICE", "ok": true,
 							"effects": ev_out["effects"],
 							"notes": String(ev_out["label"]), "drift": ev_out["drift"],

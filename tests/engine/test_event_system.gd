@@ -81,8 +81,8 @@ func test_apply_choice_runs_effects_and_signature_drift() -> void:
 	assert_gt(out["drift"].size(), 0)
 
 ## FIX 2(a): a resolved choice's metric effects must carry a human reason
-## (the choice's own label) so council_screen can narrate them — see
-## council_screen._finish_event / _narrate_effects.
+## (the choice's own label) so the UI layer can narrate them — see
+## conversation_scene._on_event_choice / court_screen's EVENT_CHOICE log line.
 func test_apply_choice_metric_effect_carries_choice_label_as_reason() -> void:
 	s.pending_event = {}
 	es._fire("ev_a", s)

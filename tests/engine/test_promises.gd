@@ -29,7 +29,8 @@ func test_kept_when_action_executes_before_due() -> void:
 
 ## Kept promises apply +15 opinion but, before this fix, never narrated: the
 ## kept-check only called change_opinion, leaving nothing in the outcome's
-## `effects` array for _narrate_effects (council_screen.gd) to pick up.
+## `effects` array for the promise-kept suffix helpers (conversation_scene.gd/
+## court_screen.gd) to pick up.
 func test_kept_promise_outcome_carries_narratable_effect() -> void:
 	_promise("LEVY_RAISE", s.tick + 4)
 	var outcome := engine.actions.execute(ActionRequest.make("LEVY_RAISE"), s)

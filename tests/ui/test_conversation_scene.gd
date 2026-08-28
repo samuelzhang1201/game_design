@@ -97,7 +97,7 @@ func test_summary_shows_this_session_resolution_after_quick_reply() -> void:
 ## "Also" item (post-Task-5 review): a quick-reply that fulfills an open
 ## promise carries a "promise" pseudo-effect (ActionSystem.execute) whose
 ## reason string ("a promise kept: ...") must reach the spoken dialogue, the
-## same narration parity council_screen already had via _narrate_effects.
+## same narration parity the old council screen already had via _narrate_effects.
 func test_quick_reply_narrates_kept_promise_effect() -> void:
 	Game.start_campaign(42)
 	Game.state.promises.append({"character_id": "char_marshal", "promise_code": "LEVY_RAISE",

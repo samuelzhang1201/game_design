@@ -6,7 +6,7 @@ extends Control
 enum State {MENU, CONVERSATION, COURT, DAY_RUN}
 
 const MENU_SCENE := "res://scenes/main_menu.tscn"
-const COURT_SCENE := "res://scenes/council.tscn"  # interim: Task 6 swaps to court.tscn
+const COURT_SCENE := "res://scenes/court.tscn"
 
 var state: State = State.MENU
 var current_screen: Node
