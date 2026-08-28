@@ -7,12 +7,10 @@ var suggestions: SuggestionGenerator
 
 func _init(d: DataRepository) -> void:
 	data = d
+	actions = ActionSystem.new(d)
+	suggestions = SuggestionGenerator.new(d, actions)
 
 func advance(state: GameState) -> TickReport:
-	if actions == null:
-		actions = ActionSystem.new(data)
-	if suggestions == null:
-		suggestions = SuggestionGenerator.new(data, actions)
 	state.tick += 1
 	var r := TickReport.new()
 	r.tick = state.tick
