@@ -927,17 +927,17 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		"TAX_RATE_ADJUST":
 			var d := int(req.params["delta"])
 			var new_rate := clampf(state.metrics["tax_rate"] + d, 1.0, 10.0)
-			_set(state, effects, "tax_rate", new_rate, "adjusted the tax rate")
+			_set_metric(state, effects, "tax_rate", new_rate, "adjusted the tax rate")
 		"TARIFF_ADJUST":
 			var d := int(req.params["delta"])
 			var new_rate := clampf(state.metrics["tariff_rate"] + d, 0.0, 10.0)
-			_set(state, effects, "tariff_rate", new_rate, "adjusted tariffs")
+			_set_metric(state, effects, "tariff_rate", new_rate, "adjusted tariffs")
 		"LEVY_RAISE":
 			_apply(state, effects, "army_quality", data.bal("levy_army_gain"), "fresh levies drilled")
 			_apply(state, effects, "unrest", data.bal("levy_unrest"), "villages resent the levy")
 		"GRAIN_POLICY_SET":
 			var mode: String = req.params["mode"]
-			_set(state, effects, "grain_ration", 1.0 if mode == "ration" else 0.0, "grain policy: " + mode)
+			_set_metric(state, effects, "grain_ration", 1.0 if mode == "ration" else 0.0, "grain policy: " + mode)
 			if mode == "ration":
 				_apply(state, effects, "peasant_contentment", data.bal("grain_ration_contentment"), "rationing bites")
 			elif mode == "release":
@@ -987,7 +987,7 @@ func _apply(state: GameState, effects: Array, metric: String, delta: float, reas
 	state.metrics[metric] = state.metrics[metric] + delta
 	effects.append({"metric": metric, "delta": delta, "reason": reason})
 
-func _set(state: GameState, effects: Array, metric: String, value: float, reason: String) -> void:
+func _set_metric(state: GameState, effects: Array, metric: String, value: float, reason: String) -> void:
 	var delta := value - state.metrics[metric]
 	state.metrics[metric] = value
 	effects.append({"metric": metric, "delta": delta, "reason": reason})
@@ -1311,11 +1311,11 @@ func _drift(state: GameState, r: TickReport) -> void:
 		cap += ch.skills["sk_admin"] * 0.10
 	else:
 		cap -= data.bal("chancellor_vacancy_penalty")
-	_set(r, m, "admin_capacity", cap, "council administration")
+	_set_metric(r, m, "admin_capacity", cap, "council administration")
 	# income
 	var income := m["tax_rate"] * cap * data.bal("tax_income_factor") \
 		+ m["tariff_rate"] * data.bal("tariff_income_factor") + m["road_income_bonus"]
-	_set(r, m, "tax_income", income, "taxes and tariffs collected")
+	_set_metric(r, m, "tax_income", income, "taxes and tariffs collected")
 	_apply(r, m, "treasury", income - data.bal("court_upkeep"), "income minus court upkeep")
 	# grain
 	if state.season() == "autumn":
@@ -1346,7 +1346,7 @@ func _apply(r: TickReport, m: Dictionary, metric: String, delta: float, reason: 
 	m[metric] = m[metric] + delta
 	r.metric_deltas.append({"metric": metric, "delta": delta, "reason": reason})
 
-func _set(r: TickReport, m: Dictionary, metric: String, value: float, reason: String) -> void:
+func _set_metric(r: TickReport, m: Dictionary, metric: String, value: float, reason: String) -> void:
 	var delta: float = value - m[metric]
 	m[metric] = value
 	if not is_zero_approx(delta):
