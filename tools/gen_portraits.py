@@ -180,6 +180,31 @@ PORTRAITS = {
             "................",
         ],
     },
+    # The Council - round table with the five ministers as colored figures
+    "round_table": {
+        "palette": {"t": (122, 86, 58, 255), "r": (90, 62, 42, 255),
+                    "b": (74, 111, 165, 255), "m": (165, 74, 74, 255),
+                    "g": (74, 165, 113, 255), "p": (107, 74, 165, 255),
+                    "y": (165, 140, 74, 255), "s": SKIN},
+        "rows": [
+            "................",
+            "......ss........",
+            "..s...mm...s....",
+            ".bb..mmmm..gg...",
+            ".bbb.mmmm.ggg...",
+            "..b..rrrr..g....",
+            "...rrttttrr.....",
+            "..rttttttttr....",
+            "..rttttttttr....",
+            "..rttttttttr....",
+            "..rttttttttr....",
+            "...rrttttrr.....",
+            "..p...rr...y....",
+            ".ppp......yyy...",
+            ".ppp......yyy...",
+            "................",
+        ],
+    },
 }
 
 
