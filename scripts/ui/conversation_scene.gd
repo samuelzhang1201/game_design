@@ -204,6 +204,14 @@ func _on_free_text(text: String) -> void:
 	Game.submit_free_text(text, func(res: Dictionary):
 		_free_text.editable = true
 		_free_text.clear()
+		# Re-review (final fix wave): both choice buttons and free text are
+		# live on an unresolved event beat, so a button click can resolve the
+		# event while this parse is still in flight. The stale callback must
+		# restore the field (above) but never touch the dialogue line - the
+		# same bug class as the F2 voice-callback guard. _resolved_event
+		# resets at each _advance, so minister-beat replies are unaffected.
+		if _resolved_event:
+			return
 		if not res["ok"]:
 			_text_label.text = "The council doesn't follow. (%s)" % String(res["error"])
 			return

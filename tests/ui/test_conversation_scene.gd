@@ -227,3 +227,36 @@ func test_event_voice_callback_ignored_after_event_resolved() -> void:
 	assert_eq(c.dialogue_text(), resolved_text,
 		"the stale voice callback must not overwrite the already-shown outcome")
 	assert_false("omens" in c.dialogue_text())
+
+## Re-review of the final fix wave: with both input paths live on an event
+## beat, a choice button can resolve the event while a free-text parse is
+## still in flight. The stale parse callback must not clobber the outcome
+## line (it would otherwise fall through to "So noted." on the rejected
+## re-apply), and must still restore the field for later beats.
+func test_stale_free_text_callback_ignored_after_button_resolves_event() -> void:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	Game.engine.events._fire("ev_01", Game.state)  # template-voiced: only the parse hits the client
+	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"actions":
+		[{"action_code": "EVENT_CHOICE", "params": {"choice_id": "accept"}, "target": ""}],
+		"court_reaction": {}})
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	var beats := [{"kind": "event", "portrait_id": "round_table",
+		"speaker": "The Council", "event": Game.state.pending_event.duplicate(true)}]
+	var c := _scene_with(beats, report)
+	await wait_frames(3)
+	c.free_text_field().text_submitted.emit("I shall accept them with thanks")
+	# The parse is now in flight (FakeClient replies deferred). Resolve via the
+	# button first, synchronously.
+	c.reply_buttons()[0].pressed.emit()
+	var resolved_text := c.dialogue_text()
+	await wait_frames(3)  # let the stale parse callback fire
+	assert_eq(c.dialogue_text(), resolved_text,
+		"the stale free-text parse callback must not overwrite the resolution line")
+	assert_true(c.free_text_field().editable,
+		"the field must be restored for later beats")
