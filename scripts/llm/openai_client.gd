@@ -10,7 +10,10 @@ static func load_config() -> Dictionary:
 		"model_voice": "gpt-5.6-terra", "offline_mode": true}
 	if not FileAccess.file_exists(CONFIG_PATH):
 		return defaults
-	var parsed = JSON.parse_string(FileAccess.open(CONFIG_PATH, FileAccess.READ).get_as_text())
+	var f := FileAccess.open(CONFIG_PATH, FileAccess.READ)
+	if f == null:
+		return defaults
+	var parsed = JSON.parse_string(f.get_as_text())
 	if not parsed is Dictionary:
 		return defaults
 	for k in defaults:
@@ -76,8 +79,24 @@ func _build_body(system_prompt: String, user_prompt: String,
 		body["response_format"] = {"type": "json_object"}
 	return JSON.stringify(body)
 
-func _extract_text(raw: String) -> String:
+## Static (and defensive) so it can be unit-tested with canned strings and no
+## network: any shape short of a full {"choices":[{"message":{"content":str}}]}
+## must return "" rather than crash the request_completed callback — a crash
+## there would mean `completed` never emits and cb never fires.
+static func _extract_text(raw: String) -> String:
 	var parsed = JSON.parse_string(raw)
-	if parsed is Dictionary and parsed.has("choices") and parsed["choices"].size() > 0:
-		return String(parsed["choices"][0]["message"]["content"])
-	return ""
+	if not parsed is Dictionary:
+		return ""
+	var choices = parsed.get("choices")
+	if not choices is Array or choices.is_empty():
+		return ""
+	var choice = choices[0]
+	if not choice is Dictionary:
+		return ""
+	var message = choice.get("message")
+	if not message is Dictionary:
+		return ""
+	var content = message.get("content")
+	if not content is String:
+		return ""
+	return content

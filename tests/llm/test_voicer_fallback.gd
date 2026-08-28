@@ -16,6 +16,12 @@ var data: DataRepository
 # Reassigning a member variable through the implicit `self` does propagate.
 var got: Dictionary = {}
 
+# For the overlapping-call test below; same by-value-capture reasoning as `got`.
+var got_a: Dictionary = {}
+var got_b: Dictionary = {}
+var calls_a := 0
+var calls_b := 0
+
 func before_each() -> void:
 	data = DataRepository.load_all("res://data")
 
@@ -63,3 +69,32 @@ func test_parse_bad_model_output_reports_error_not_crash() -> void:
 	await wait_frames(3)
 	assert_false(got["ok"])
 	assert_ne(got["error"], "")
+
+func test_overlapping_briefing_calls_both_fire_exactly_once() -> void:
+	var fake := FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = "hear ye, the harvest is good"
+	add_child_autofree(fake)
+	var v := Voicer.new(fake)
+	add_child_autofree(v)
+	var s := GameState.new_campaign(data, 42)
+	var r := TickEngine.new(data).advance(s)
+	got_a = {}
+	got_b = {}
+	calls_a = 0
+	calls_b = 0
+	v.voice_briefing(r, s, data, func(res): got_a = res; calls_a += 1)
+	# Second call arrives while the first is still in flight (FakeClient's
+	# completed signal is call_deferred, so no frame has passed yet). The
+	# busy guard must resolve it immediately with a degraded fallback rather
+	# than let it cross-fire with the first call's one-shot listener.
+	v.voice_briefing(r, s, data, func(res): got_b = res; calls_b += 1)
+	assert_eq(calls_b, 1)
+	assert_true(got_b["ok"])
+	assert_true(got_b["degraded"])
+	assert_gt(got_b["lines"].size(), 0)
+	await wait_frames(3)
+	assert_eq(calls_a, 1)
+	assert_true(got_a["ok"])
+	assert_false(got_a["degraded"])
+	assert_eq(got_a["lines"][0]["text"], "hear ye, the harvest is good")
