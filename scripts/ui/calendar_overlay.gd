@@ -12,6 +12,12 @@ signal finished
 var day_seconds := 0.22
 const NEWS_DAYS := [4, 9, 14]
 
+## Set BEFORE the overlay enters the tree to shift the centered date panel
+## up/down (e.g. DayRunScreen offsets it clear of the bottom-anchored
+## KingdomCard). Default 0 keeps the overlay's standalone centered layout
+## unchanged.
+var panel_vertical_offset := 0.0
+
 var date_label: Label
 var season_label: Label
 var news_box: VBoxContainer
@@ -55,6 +61,7 @@ func _ready() -> void:
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.position.y += panel_vertical_offset
 	add_child(panel)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)

@@ -26,3 +26,16 @@ func test_overlay_speed_comes_from_balance() -> void:
 	add_child_autofree(d)
 	await wait_frames(1)
 	assert_almost_eq(d.overlay.day_seconds, Game.data.bal("dayrun_day_seconds"), 0.001)
+
+## Guard against the card being hidden behind the overlay's full-rect dim
+## ColorRect (defeats R9 - the numbers must stay visible while the days
+## pass): the card must draw above the overlay, and the overlay's centered
+## date panel must be shifted clear of the bottom-anchored card.
+func test_card_draws_above_overlay_dim_and_panel_is_offset() -> void:
+	Game.start_campaign(42)
+	var d: DayRunScreen = load("res://scenes/day_run.tscn").instantiate()
+	add_child_autofree(d)
+	await wait_frames(1)
+	assert_gt(d.card.get_index(), d.overlay.get_index(),
+		"card must draw above the overlay's dim so it stays visible")
+	assert_almost_eq(d.overlay.panel_vertical_offset, -80.0, 0.1)
