@@ -31,6 +31,9 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 		"road_income_bonus": 0.0,
 		"grain_ration": 0.0,
 	}
+	s.characters = CharacterFactory.build_founding(data)
+	for id in s.characters:
+		s.council[s.characters[id].seat] = id
 	return s
 
 func season() -> String:
