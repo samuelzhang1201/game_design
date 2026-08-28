@@ -65,17 +65,17 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		"TAX_RATE_ADJUST":
 			var d := int(req.params["delta"])
 			var new_rate := clampf(state.metrics["tax_rate"] + d, 1.0, 10.0)
-			_set(state, effects, "tax_rate", new_rate, "adjusted the tax rate")
+			_set_metric(state, effects, "tax_rate", new_rate, "adjusted the tax rate")
 		"TARIFF_ADJUST":
 			var d := int(req.params["delta"])
 			var new_rate := clampf(state.metrics["tariff_rate"] + d, 0.0, 10.0)
-			_set(state, effects, "tariff_rate", new_rate, "adjusted tariffs")
+			_set_metric(state, effects, "tariff_rate", new_rate, "adjusted tariffs")
 		"LEVY_RAISE":
 			_apply(state, effects, "army_quality", data.bal("levy_army_gain"), "fresh levies drilled")
 			_apply(state, effects, "unrest", data.bal("levy_unrest"), "villages resent the levy")
 		"GRAIN_POLICY_SET":
 			var mode: String = req.params["mode"]
-			_set(state, effects, "grain_ration", 1.0 if mode == "ration" else 0.0, "grain policy: " + mode)
+			_set_metric(state, effects, "grain_ration", 1.0 if mode == "ration" else 0.0, "grain policy: " + mode)
 			if mode == "ration":
 				_apply(state, effects, "peasant_contentment", data.bal("grain_ration_contentment"), "rationing bites")
 			elif mode == "release":
@@ -125,7 +125,7 @@ func _apply(state: GameState, effects: Array, metric: String, delta: float, reas
 	state.metrics[metric] = state.metrics[metric] + delta
 	effects.append({"metric": metric, "delta": delta, "reason": reason})
 
-func _set(state: GameState, effects: Array, metric: String, value: float, reason: String) -> void:
-	var delta := value - state.metrics[metric]
+func _set_metric(state: GameState, effects: Array, metric: String, value: float, reason: String) -> void:
+	var delta: float = value - state.metrics[metric]
 	state.metrics[metric] = value
 	effects.append({"metric": metric, "delta": delta, "reason": reason})
