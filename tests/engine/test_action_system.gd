@@ -47,3 +47,12 @@ func test_bad_params_rejected() -> void:
 	assert_string_contains(sys.validate(ActionRequest.make("GRAIN_POLICY_SET", {"mode": "feast"}), s), "mode")
 	assert_string_contains(
 		sys.validate(ActionRequest.make("CHARACTER_REWARD", {"mode": "gold"}, "char_nobody"), s), "target")
+
+func test_execute_applies_ideology_drift() -> void:
+	var odo_before: int = s.characters["char_chaplain"].opinion
+	var out := sys.execute(ActionRequest.make("CHURCH_POLICY", {"mode": "tithe"}), s)
+	assert_eq(s.characters["char_chaplain"].opinion, odo_before - 6)
+	assert_true(out.has("drift"))
+	assert_gt(out["drift"].size(), 0)
+	assert_string_contains(
+		s.characters["char_chaplain"].opinion_log[-1]["reason"], "opposes, orthodoxy")

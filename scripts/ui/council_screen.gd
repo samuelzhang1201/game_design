@@ -241,7 +241,6 @@ func _render_portraits() -> void:
 func _build_portrait(char_id: String, seat: String) -> Control:
 	var panel := Control.new()
 	panel.custom_minimum_size = PORTRAIT_SIZE
-	panel.tooltip_text = Game.state.characters[char_id].display_name
 	var tex := _portrait_texture("res://assets/portraits/%s.png" % char_id)
 	if tex != null:
 		var pic := TextureRect.new()
@@ -262,6 +261,21 @@ func _build_portrait(char_id: String, seat: String) -> Control:
 		initial.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		initial.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		panel.add_child(initial)
+	var c: Character = Game.state.characters[char_id]
+	var badge := Label.new()
+	badge.text = str(c.opinion)
+	badge.add_theme_font_size_override("font_size", 12)
+	badge.add_theme_color_override("font_color",
+		Color("7fd47f") if c.opinion >= 0 else Color("d47f7f"))
+	badge.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.add_child(badge)
+	var recent := ""
+	var log := c.opinion_log
+	for i in range(maxi(0, log.size() - 5), log.size()):
+		recent += "\n%+d %s" % [int(log[i]["delta"]), log[i]["reason"]]
+	panel.tooltip_text = c.display_name + recent
 	return panel
 
 func _chancellor_name() -> String:

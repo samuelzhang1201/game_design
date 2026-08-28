@@ -77,3 +77,17 @@ func test_end_turn_disabled_while_free_text_parse_in_flight() -> void:
 	await wait_frames(3)
 	assert_false(screen.end_turn_button().disabled, "re-enabled once the parse resolves")
 	assert_true(screen.free_text.editable)
+
+func test_roster_shows_opinion_and_reasons() -> void:
+	Game.start_campaign(42)
+	var screen: Node = load("res://scenes/council.tscn").instantiate()
+	add_child_autofree(screen)
+	Game.next_tick()
+	Game.try_execute(ActionRequest.make("CHURCH_POLICY", {"mode": "tithe"}))
+	screen._render_portraits()
+	await wait_frames(2)
+	var found_reason := false
+	for p in screen.portraits_box.get_children():
+		if "opposes, orthodoxy" in p.tooltip_text:
+			found_reason = true
+	assert_true(found_reason)

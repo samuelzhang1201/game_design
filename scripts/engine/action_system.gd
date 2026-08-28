@@ -121,8 +121,12 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	var cd := int(row.get("cooldown_ticks", 0))
 	if cd > 0:
 		state.cooldowns[req.action_code] = state.tick + cd
+	var drift := OpinionDrift.apply(data, state,
+		OpinionDrift.signature_for(data, req.action_code, req.params),
+		String(row["label"]))
 	var outcome := {"action_code": req.action_code, "ok": true, "effects": effects,
-		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate()}
+		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate(),
+		"drift": drift}
 	state.recent_outcomes.append(outcome)
 	return outcome
 
