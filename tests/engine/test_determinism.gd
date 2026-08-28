@@ -25,11 +25,11 @@ func _run_campaign(seed_value: int, reload_at: int = -1) -> String:
 		engine.advance(s)
 		if inputs.has(s.tick) and engine.actions.validate(inputs[s.tick], s) == "":
 			engine.actions.execute(inputs[s.tick], s)
-		if not s.pending_event.is_empty():
-			engine.events.apply_choice(String(s.pending_event["choices"][0]["choice_id"]), s)
 		if s.tick == reload_at:
 			SaveLoad.save_game(s, "user://det_test.json")
 			s = SaveLoad.load_game("user://det_test.json")
+		if not s.pending_event.is_empty():
+			engine.events.apply_choice(String(s.pending_event["choices"][0]["choice_id"]), s)
 	return SaveLoad.state_hash(s)
 
 func test_twin_runs_identical() -> void:

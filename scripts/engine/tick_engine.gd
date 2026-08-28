@@ -35,7 +35,7 @@ func advance(state: GameState) -> TickReport:
 				"promise_code": String(pr["promise_code"]), "status": "broken"})
 	r.concerns = ConcernScanner.scan(state, data)
 	r.suggestions = suggestions.generate(state, r.concerns)
-	r.event = events.roll(state)
+	r.event = events.roll(state).duplicate(true)
 	return r
 
 func _drift(state: GameState, r: TickReport) -> void:

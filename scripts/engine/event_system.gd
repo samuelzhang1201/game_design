@@ -15,9 +15,12 @@ func roll(state: GameState) -> Dictionary:
 	var remaining: Array = []
 	var due_id := ""
 	for sc in state.event_state["scheduled"]:
-		if due_id == "" and int(sc["due_tick"]) <= state.tick \
-				and data.events_by_id.has(String(sc["event_id"])):
-			due_id = String(sc["event_id"])
+		var event_id := String(sc["event_id"])
+		if not data.events_by_id.has(event_id):
+			printerr("EventSystem: scheduled event %s not in events_by_id — dropped" % event_id)
+			continue
+		if due_id == "" and int(sc["due_tick"]) <= state.tick:
+			due_id = event_id
 		else:
 			remaining.append(sc)
 	state.event_state["scheduled"] = remaining
@@ -45,10 +48,7 @@ func roll(state: GameState) -> Dictionary:
 
 func _fire(event_id: String, state: GameState) -> Dictionary:
 	var row: Dictionary = data.events_by_id[event_id]
-	state.event_state["pity"] = 0
-	state.event_state["cooldowns"][event_id] = state.tick + int(row["cooldown_ticks"])
-	if String(row["once"]) == "1":
-		state.event_state["once"].append(event_id)
+	# Build choices FIRST to detect if any are eligible
 	var choices: Array = []
 	for c in data.event_choices:
 		if String(c["event_id"]) != event_id:
@@ -56,6 +56,15 @@ func _fire(event_id: String, state: GameState) -> Dictionary:
 		if not _requires_met(String(c.get("requires", "")), state):
 			continue
 		choices.append({"choice_id": String(c["choice_id"]), "label": String(c["label"])})
+	# If no eligible choices, return empty without mutating state
+	if choices.is_empty():
+		printerr("EventSystem: event %s fired with no eligible choices — skipped" % event_id)
+		return {}
+	# Now mutate state
+	state.event_state["pity"] = 0
+	state.event_state["cooldowns"][event_id] = state.tick + int(row["cooldown_ticks"])
+	if String(row["once"]) == "1":
+		state.event_state["once"].append(event_id)
 	state.pending_event = {"event_id": event_id, "title_key": String(row["title_key"]),
 		"voice": String(row["voice"]), "choices": choices}
 	return state.pending_event

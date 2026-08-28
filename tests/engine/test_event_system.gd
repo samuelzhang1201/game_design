@@ -94,3 +94,64 @@ func test_pending_event_round_trip() -> void:
 	var s2 := GameState.from_dict(s.to_dict())
 	assert_eq(SaveLoad.state_hash(s2), SaveLoad.state_hash(s))
 	assert_eq(String(s2.pending_event.get("event_id", "")), "ev_a")
+
+func test_reload_with_pending_event_is_bit_identical() -> void:
+	# Force an event, save/load, then resolve on both independently: both should diverge identically
+	es._fire("ev_a", s)
+	var s_hash_before_save := SaveLoad.state_hash(s)
+	SaveLoad.save_game(s, "user://ev_test.json")
+	var loaded := SaveLoad.load_game("user://ev_test.json")
+
+	# (i) Hash is preserved through save/load
+	assert_eq(SaveLoad.state_hash(loaded), s_hash_before_save)
+
+	# (ii) pending_event matches exactly
+	assert_eq(loaded.pending_event, s.pending_event)
+
+	# (iii) Resolve independently on both; hashes diverge by the same effects
+	var s_es := EventSystem.new(data)
+	var loaded_es := EventSystem.new(data)
+	var outcome_s := s_es.apply_choice("accept", s)
+	var outcome_loaded := loaded_es.apply_choice("accept", loaded)
+	assert_eq(SaveLoad.state_hash(s), SaveLoad.state_hash(loaded))
+
+	# (iv) One subsequent roll on each (same tick) yields same result
+	s.tick += 1
+	loaded.tick += 1
+	var roll_s := s_es.roll(s)
+	var roll_loaded := loaded_es.roll(loaded)
+	# Both should be empty or both should have the same event_id (deterministic via pity/weights)
+	if roll_s.is_empty() and roll_loaded.is_empty():
+		pass  # both empty: OK
+	else:
+		assert_eq(String(roll_s.get("event_id", "")), String(roll_loaded.get("event_id", "")))
+
+func test_no_eligible_choices_returns_empty() -> void:
+	# Add an event with no eligible choices (requires unfilled seat)
+	var ev_no_choice := {
+		"event_id": "ev_no_choice", "category": "folk", "trigger": "always", "weight": "1",
+		"cooldown_ticks": "0", "once": "0", "voice": "template", "title_key": "event_none"
+	}
+	data.events.append(ev_no_choice)
+	data.events_by_id["ev_no_choice"] = ev_no_choice
+	data.event_choices.append({
+		"event_id": "ev_no_choice", "choice_id": "gated_choice", "label": "Gated",
+		"centralism": "0", "militarism": "0", "orthodoxy": "0",
+		"tax_incidence": "0", "expansionism": "0", "effects": "", "requires": "seat_filled=admiral"
+	})
+
+	# Try to fire this event; should return {} and leave state unchanged
+	var pity_before := int(s.event_state["pity"])
+	var cooldowns_before: Dictionary = s.event_state["cooldowns"].duplicate(true)
+	var once_before: Array = s.event_state["once"].duplicate(true)
+	var pending_before: Dictionary = s.pending_event.duplicate(true)
+
+	var result := es._fire("ev_no_choice", s)
+
+	# Should return empty dict
+	assert_true(result.is_empty())
+	# State should be unchanged
+	assert_eq(int(s.event_state["pity"]), pity_before)
+	assert_eq(s.event_state["cooldowns"], cooldowns_before)
+	assert_eq(s.event_state["once"], once_before)
+	assert_eq(s.pending_event, pending_before)
