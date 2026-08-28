@@ -53,7 +53,13 @@ func test_portraits_render_one_per_seated_minister() -> void:
 	Game.start_campaign(42)
 	screen.begin()
 	await wait_frames(2)
-	assert_eq(screen.portraits_box.get_child_count(), Game.state.council.size())
+	# The row holds one portrait per seated minister plus the DateLabel
+	# (calendar feature); count only the portrait panels.
+	var portrait_count := 0
+	for child in screen.portraits_box.get_children():
+		if child.name != "DateLabel":
+			portrait_count += 1
+	assert_eq(portrait_count, Game.state.council.size())
 	assert_gt(Game.state.council.size(), 0)  # guard against a vacuous pass
 
 ## FIX 6: End Turn must not be clickable while a free-text order is being

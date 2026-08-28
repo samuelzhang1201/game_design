@@ -14,6 +14,10 @@ const SEAT_COLORS := {
 	"court_physician": Color("a54a8c"),
 }
 const DEFAULT_SEAT_COLOR := Color("555555")
+## Short metric display names: the full names overflow the 640px canvas
+## once six metrics render, pushing End Turn off-screen (live bug).
+const METRIC_NAMES := {"treasury": "Gold", "grain": "Grain", "unrest": "Unrest",
+	"legitimacy": "Legit", "army_quality": "Army", "church_opinion": "Church"}
 
 var metrics_box: HBoxContainer
 var portraits_box: HBoxContainer
@@ -218,16 +222,24 @@ func _render_metrics(report: TickReport) -> void:
 		reasons[d["metric"]] = "%+.1f: %s" % [d["delta"], d["reason"]]
 	for m in ["treasury", "grain", "unrest", "legitimacy", "army_quality", "church_opinion"]:
 		var l := Label.new()
-		l.text = "%s %d" % [m.capitalize(), int(Game.state.metrics[m])]
-		l.tooltip_text = reasons.get(m, "no change")
+		l.text = "%s %d" % [METRIC_NAMES[m], int(Game.state.metrics[m])]
+		l.tooltip_text = "%s\n%s" % [m.capitalize(), reasons.get(m, "no change")]
 		l.mouse_filter = Control.MOUSE_FILTER_STOP
 		metrics_box.add_child(l)
+
+
+func _render_date() -> void:
+	for child in portraits_box.get_children():
+		if child.name == "DateLabel":
+			child.queue_free()
 	var date := Label.new()
+	date.name = "DateLabel"
 	date.text = Calendar.date_string(Game.state.tick)
 	date.add_theme_color_override("font_color", Color("deba54"))
 	date.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	date.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	metrics_box.add_child(date)
+	date.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	portraits_box.add_child(date)
 
 ## Placeholder pixel portraits (spec §6 / carried Task 11 acceptance criterion):
 ## one 48x48 panel per seated minister, in seat order, rebuilt whenever the
@@ -240,6 +252,8 @@ func _render_portraits() -> void:
 	for seat in Game.state.council:
 		var char_id: String = Game.state.council[seat]
 		portraits_box.add_child(_build_portrait(char_id, seat))
+	# Date lives at the right of the portraits row (plenty of free width).
+	_render_date()
 
 func _build_portrait(char_id: String, seat: String) -> Control:
 	var panel := Control.new()
