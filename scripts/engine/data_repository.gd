@@ -9,6 +9,7 @@ var seats: Dictionary = {}
 var actions: Dictionary = {}
 var founding: Array[Dictionary] = []
 var templates: Array[Dictionary] = []
+var signatures: Array[Dictionary] = []
 
 ## Parses a CSV with a header row into an Array of row Dictionaries.
 ## Returns [] and sets last_error if any row is shorter than required_cols
@@ -72,6 +73,11 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/templates.csv", ["key", "trait", "text"],
 			func(r): templates.append(r)):
+		return false
+	if not _load_if_present(dir + "/action_signatures.csv",
+			["action_code", "variant", "centralism", "militarism", "orthodoxy",
+			"tax_incidence", "expansionism"],
+			func(r): signatures.append(r)):
 		return false
 	return true
 

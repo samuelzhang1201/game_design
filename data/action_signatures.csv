@@ -1,0 +1,19 @@
+action_code,variant,centralism,militarism,orthodoxy,tax_incidence,expansionism,notes
+TAX_RATE_ADJUST,delta_pos,10,0,0,-30,0,raising tax burdens the commons
+TAX_RATE_ADJUST,delta_neg,-5,0,0,30,0,
+TARIFF_ADJUST,delta_pos,0,0,0,15,-15,tariffs squeeze trade
+TARIFF_ADJUST,delta_neg,0,0,0,-10,15,
+LEVY_RAISE,,0,40,0,-10,10,
+GRAIN_POLICY_SET,mode=ration,10,0,0,-15,0,
+GRAIN_POLICY_SET,mode=release,0,0,0,20,0,
+GRAIN_POLICY_SET,mode=market,0,0,0,0,0,
+CHURCH_POLICY,mode=endow,0,0,50,0,0,
+CHURCH_POLICY,mode=tithe,10,0,-50,0,0,
+JUSTICE_SEVERITY,delta_pos,30,0,10,-10,0,
+JUSTICE_SEVERITY,delta_neg,-20,0,-5,10,0,
+BUILD_ECONOMIC,,0,-20,0,0,-10,butter over guns
+SPY_MISSION,,20,5,0,0,0,
+CHARACTER_PUNISH,,20,0,0,0,0,asserting royal authority
+COUNCIL_CONSULT,,0,0,0,0,0,
+CHARACTER_REWARD,,0,0,0,0,0,interpersonal; direct deltas already exist
+CHARACTER_CONFIDE,,0,0,0,0,0,
