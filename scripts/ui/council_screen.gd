@@ -85,6 +85,12 @@ func begin() -> void:
 func begin_with(report: TickReport) -> void:
 	_render_report(report)
 
+## Post-conversation court entry: numbers + orders only; speech already
+## happened on the conversation stage (R2).
+func enter_court(report: TickReport) -> void:
+	_render_metrics(report)
+	_render_suggestions(report)
+
 ## Enter ends the turn (when the order box isn't focused - a focused LineEdit
 ## consumes Enter itself, so this only fires from unhandled input).
 func _unhandled_input(event: InputEvent) -> void:

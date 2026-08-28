@@ -31,6 +31,9 @@ func _switch_to(new_state: State) -> void:
 		State.MENU:
 			current_screen = load(MENU_SCENE).instantiate()
 			current_screen.start_requested.connect(_on_start_requested)
+		State.CONVERSATION:
+			current_screen = load("res://scenes/conversation.tscn").instantiate()
+			current_screen.finished.connect(_on_conversation_finished)
 		State.COURT:
 			current_screen = load(COURT_SCENE).instantiate()
 			current_screen.end_turn_requested.connect(_on_end_turn_requested)
@@ -41,10 +44,9 @@ func _switch_to(new_state: State) -> void:
 
 func _on_start_requested() -> void:
 	Game.start_campaign(42)
-	Game.next_tick()
-	# interim: straight to COURT; Task 5 inserts CONVERSATION here.
-	_switch_to(State.COURT)
-	current_screen.begin_with(Game.current_report)
+	_pending_report = Game.next_tick()
+	_switch_to(State.CONVERSATION)
+	current_screen.start(ConversationBeats.build(_pending_report, Game.state, Game.data))
 
 func _on_end_turn_requested() -> void:
 	_pending_report = Game.next_tick()
@@ -52,7 +54,13 @@ func _on_end_turn_requested() -> void:
 	current_screen.run(_pending_report)
 
 func _on_day_run_finished() -> void:
-	# interim: back to COURT with the new report; Task 5 routes to CONVERSATION.
+	_switch_to(State.CONVERSATION)
+	current_screen.start(ConversationBeats.build(_pending_report, Game.state, Game.data))
+
+## The conversation stage already spoke the event/concerns/pitches/outcomes
+## (spec §3, R2); COURT re-entered after it shows only the order-bar state
+## (metrics + suggestions), not a re-rendered briefing/outcome transcript.
+func _on_conversation_finished() -> void:
 	_switch_to(State.COURT)
-	current_screen.begin_with(_pending_report)
+	current_screen.enter_court(_pending_report)
 	_pending_report = null
