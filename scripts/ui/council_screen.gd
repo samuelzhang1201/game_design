@@ -2,18 +2,8 @@ extends Control
 ## Council screen: metrics strip / transcript / input row. Built in code.
 
 const PIXEL_FONT_PATH := "res://assets/fonts/pixel.ttf"  # optional; falls back to default
-const PORTRAIT_SIZE := Vector2(48, 48)
-
-## Placeholder pixel portraits: distinct flat color per seat until real art
-## lands (see assets/portraits/<character_id>.png escape hatch in _build_portrait).
-const SEAT_COLORS := {
-	"chancellor": Color("4a6fa5"), "marshal": Color("a54a4a"),
-	"steward": Color("4aa571"), "spymaster": Color("6b4aa5"),
-	"chaplain": Color("a58c4a"), "chief_justice": Color("4aa5a0"),
-	"master_of_works": Color("8c8c8c"), "admiral": Color("2f5f8f"),
-	"court_physician": Color("a54a8c"),
-}
-const DEFAULT_SEAT_COLOR := Color("555555")
+## Character visuals live in their own scenes (scenes/characters/*) with
+## script scripts/ui/character_portrait.gd - swap art there, not here.
 ## Short metric display names: the full names overflow the 640px canvas
 ## once six metrics render, pushing End Turn off-screen (live bug).
 const METRIC_NAMES := {"treasury": "Gold", "grain": "Grain", "unrest": "Unrest",
@@ -29,7 +19,6 @@ var end_turn: Button
 var calendar_overlay: CalendarOverlay
 var _pending_report: TickReport
 var _suggestion_buttons: Array = []
-var _portrait_cache: Dictionary = {}
 
 func _ready() -> void:
 	var bg := ColorRect.new()
@@ -143,14 +132,9 @@ func _say(line: Dictionary) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	frame.add_child(row)
-	var tex := _speaker_texture(speaker)
-	if tex != null:
-		var pic := TextureRect.new()
-		pic.texture = tex
-		pic.custom_minimum_size = PORTRAIT_SIZE
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var portrait_id := _speaker_portrait_id(speaker)
+	if portrait_id != "":
+		var pic := CharacterPortrait.instantiate_for(portrait_id, false)
 		pic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		row.add_child(pic)
 	var col := VBoxContainer.new()
@@ -185,34 +169,16 @@ func _speaker_color(speaker: String) -> Color:
 		return Color("deba54")
 	var char_id := _speaker_char_id(speaker)
 	if char_id != "":
-		return SEAT_COLORS.get(Game.state.characters[char_id].seat, DEFAULT_SEAT_COLOR)
+		return CharacterPortrait.SEAT_COLORS.get(
+			Game.state.characters[char_id].seat, CharacterPortrait.DEFAULT_SEAT_COLOR)
 	return Color("8c5a5a")  # Herald / Council / system voices
 
-func _speaker_texture(speaker: String) -> Texture2D:
-	var key: String
+func _speaker_portrait_id(speaker: String) -> String:
 	if speaker == "You":
-		key = "you"
-	elif speaker == "Herald" or speaker == "Council":
-		key = "herald"
-	else:
-		key = _speaker_char_id(speaker)
-	if key == "":
-		return null
-	return _portrait_texture("res://assets/portraits/%s.png" % key)
-
-## Loads a portrait PNG directly from the filesystem (import-pipeline
-## independent, so headless runs and fresh checkouts need no editor import),
-## cached per path. Returns null when the file is absent.
-func _portrait_texture(path: String) -> Texture2D:
-	if _portrait_cache.has(path):
-		return _portrait_cache[path]
-	var tex: Texture2D = null
-	if FileAccess.file_exists(path):
-		var img := Image.load_from_file(path)
-		if img != null:
-			tex = ImageTexture.create_from_image(img)
-	_portrait_cache[path] = tex
-	return tex
+		return "you"
+	if speaker == "Herald" or speaker == "Council":
+		return "herald"
+	return _speaker_char_id(speaker)
 
 func _render_metrics(report: TickReport) -> void:
 	for child in metrics_box.get_children():
@@ -241,59 +207,16 @@ func _render_date() -> void:
 	date.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	portraits_box.add_child(date)
 
-## Placeholder pixel portraits (spec §6 / carried Task 11 acceptance criterion):
-## one 48x48 panel per seated minister, in seat order, rebuilt whenever the
-## council might have changed (mirrors _render_metrics' rebuild-on-every-call
-## approach). Swappable for real art: drop a PNG at
-## assets/portraits/<character_id>.png and _build_portrait picks it up.
+## One CharacterPortrait scene instance per seated minister, in seat order,
+## rebuilt each render. Per-character art is edited in scenes/characters/.
 func _render_portraits() -> void:
 	for child in portraits_box.get_children():
 		child.queue_free()
 	for seat in Game.state.council:
-		var char_id: String = Game.state.council[seat]
-		portraits_box.add_child(_build_portrait(char_id, seat))
+		portraits_box.add_child(
+			CharacterPortrait.instantiate_for(Game.state.council[seat]))
 	# Date lives at the right of the portraits row (plenty of free width).
 	_render_date()
-
-func _build_portrait(char_id: String, seat: String) -> Control:
-	var panel := Control.new()
-	panel.custom_minimum_size = PORTRAIT_SIZE
-	var tex := _portrait_texture("res://assets/portraits/%s.png" % char_id)
-	if tex != null:
-		var pic := TextureRect.new()
-		pic.texture = tex
-		pic.set_anchors_preset(Control.PRESET_FULL_RECT)
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_SCALE
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		panel.add_child(pic)
-	else:
-		var bg := ColorRect.new()
-		bg.color = SEAT_COLORS.get(seat, DEFAULT_SEAT_COLOR)
-		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-		panel.add_child(bg)
-		var initial := Label.new()
-		initial.text = Game.state.characters[char_id].display_name.left(1).to_upper()
-		initial.set_anchors_preset(Control.PRESET_FULL_RECT)
-		initial.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		initial.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		panel.add_child(initial)
-	var c: Character = Game.state.characters[char_id]
-	var badge := Label.new()
-	badge.text = str(c.opinion)
-	badge.add_theme_font_size_override("font_size", 12)
-	badge.add_theme_color_override("font_color",
-		Color("7fd47f") if c.opinion >= 0 else Color("d47f7f"))
-	badge.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	panel.add_child(badge)
-	var recent := ""
-	var log := c.opinion_log
-	for i in range(maxi(0, log.size() - 5), log.size()):
-		recent += "\n%+d %s" % [int(log[i]["delta"]), log[i]["reason"]]
-	panel.tooltip_text = c.display_name + recent
-	return panel
 
 func _chancellor_name() -> String:
 	if Game.state.council.has("chancellor"):
