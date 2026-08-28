@@ -30,6 +30,7 @@ concern_church_low,35,chaplain
 concern_army_low,50,marshal
 concern_legitimacy_low,40,spymaster (rumors)
 event_base_chance,0.35,reserved for events slice
+event_pity_ticks,6,force an event after this many quiet ticks
 tone_delta_cap,3,
 reward_gold_cost,30,
 reward_opinion,8,

@@ -13,6 +13,7 @@ var event_state: Dictionary = {
 	"cooldowns": {}, "once": [], "pity": 0, "scheduled": [],
 	"flags": [], "last_action_tick": {},
 }
+var pending_event: Dictionary = {}
 
 const SEASONS := ["spring", "summer", "autumn", "winter"]
 
@@ -64,6 +65,7 @@ func to_dict() -> Dictionary:
 		"recent_outcomes": _normalize_ints(recent_outcomes),
 		"promises": _normalize_ints(promises),
 		"event_state": _normalize_ints(event_state.duplicate(true)),
+		"pending_event": _normalize_ints(pending_event.duplicate(true)),
 	}
 
 ## Recursively casts int values to float throughout an arbitrarily-nested
@@ -104,4 +106,5 @@ static func from_dict(d: Dictionary) -> GameState:
 		"cooldowns": {}, "once": [], "pity": 0, "scheduled": [],
 		"flags": [], "last_action_tick": {},
 	}).duplicate(true)
+	s.pending_event = d.get("pending_event", {}).duplicate(true)
 	return s

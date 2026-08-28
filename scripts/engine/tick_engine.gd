@@ -4,11 +4,13 @@ extends RefCounted
 var data: DataRepository
 var actions: ActionSystem
 var suggestions: SuggestionGenerator
+var events: EventSystem
 
 func _init(d: DataRepository) -> void:
 	data = d
 	actions = ActionSystem.new(d)
 	suggestions = SuggestionGenerator.new(d, actions)
+	events = EventSystem.new(d)
 
 func advance(state: GameState) -> TickReport:
 	state.tick += 1
@@ -33,6 +35,7 @@ func advance(state: GameState) -> TickReport:
 				"promise_code": String(pr["promise_code"]), "status": "broken"})
 	r.concerns = ConcernScanner.scan(state, data)
 	r.suggestions = suggestions.generate(state, r.concerns)
+	r.event = events.roll(state)
 	return r
 
 func _drift(state: GameState, r: TickReport) -> void:

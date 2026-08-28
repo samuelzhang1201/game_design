@@ -25,6 +25,8 @@ func _run_campaign(seed_value: int, reload_at: int = -1) -> String:
 		engine.advance(s)
 		if inputs.has(s.tick) and engine.actions.validate(inputs[s.tick], s) == "":
 			engine.actions.execute(inputs[s.tick], s)
+		if not s.pending_event.is_empty():
+			engine.events.apply_choice(String(s.pending_event["choices"][0]["choice_id"]), s)
 		if s.tick == reload_at:
 			SaveLoad.save_game(s, "user://det_test.json")
 			s = SaveLoad.load_game("user://det_test.json")
@@ -37,4 +39,5 @@ func test_save_load_mid_run_changes_nothing() -> void:
 	assert_eq(_run_campaign(1234), _run_campaign(1234, 24))
 
 func test_different_seeds_diverge() -> void:
+	# Different seeds diverge through gameplay (events consume rng, affecting random rolls)
 	assert_ne(_run_campaign(1234), _run_campaign(9999))

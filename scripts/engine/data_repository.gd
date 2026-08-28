@@ -10,6 +10,9 @@ var actions: Dictionary = {}
 var founding: Array[Dictionary] = []
 var templates: Array[Dictionary] = []
 var signatures: Array[Dictionary] = []
+var events: Array[Dictionary] = []
+var events_by_id: Dictionary = {}
+var event_choices: Array[Dictionary] = []
 
 ## Parses a CSV with a header row into an Array of row Dictionaries.
 ## Returns [] and sets last_error if any row is shorter than required_cols
@@ -78,6 +81,18 @@ func _load(dir: String) -> bool:
 			["action_code", "variant", "centralism", "militarism", "orthodoxy",
 			"tax_incidence", "expansionism"],
 			func(r): signatures.append(r)):
+		return false
+	if not _load_if_present(dir + "/events.csv",
+			["event_id", "category", "trigger", "weight", "cooldown_ticks", "once",
+			"voice", "title_key"],
+			func(r): events.append(r)):
+		return false
+	for row in events:
+		events_by_id[row["event_id"]] = row
+	if not _load_if_present(dir + "/event_choices.csv",
+			["event_id", "choice_id", "label", "centralism", "militarism", "orthodoxy",
+			"tax_incidence", "expansionism", "effects", "requires"],
+			func(r): event_choices.append(r)):
 		return false
 	return true
 
