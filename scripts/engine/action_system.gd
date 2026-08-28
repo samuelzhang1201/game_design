@@ -9,6 +9,11 @@ const COST_KEYS := {
 	"formula_reward_cost": "reward_gold_cost",
 }
 
+const TONE_DELTAS := {
+	"respectful": 2, "neutral": 0, "curt": -2, "flattering": 2,
+	"threatening": -3, "dismissive": -3,
+}
+
 func _init(d: DataRepository) -> void:
 	data = d
 
@@ -129,3 +134,14 @@ func _set_metric(state: GameState, effects: Array, metric: String, value: float,
 	var delta: float = value - state.metrics[metric]
 	state.metrics[metric] = value
 	effects.append({"metric": metric, "delta": delta, "reason": reason})
+
+func apply_court_reaction(cr: Dictionary, state: GameState) -> void:
+	var cap := int(data.bal("tone_delta_cap"))
+	var delta: int = clampi(TONE_DELTAS.get(cr.get("tone", "neutral"), 0), -cap, cap)
+	for id in cr.get("addressed", []):
+		if state.characters.has(id) and delta != 0:
+			state.characters[id].change_opinion(delta, "tone: " + cr["tone"], state.tick)
+	for p in cr.get("promises", []):
+		state.promises.append({"character_id": p["character_id"],
+			"promise_code": p["promise_code"], "made_tick": state.tick,
+			"tick_due": p["tick_due"], "status": "open"})
