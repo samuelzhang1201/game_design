@@ -136,6 +136,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		if state.characters.has(who):
 			state.characters[who].change_opinion(int(data.bal("promise_kept_opinion")),
 				"a promise kept: " + String(row["label"]), state.tick)
+	state.event_state["last_action_tick"][req.action_code] = state.tick
 	var outcome := {"action_code": req.action_code, "ok": true, "effects": effects,
 		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate(),
 		"drift": drift}

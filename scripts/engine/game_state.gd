@@ -9,6 +9,10 @@ var council: Dictionary = {}
 var cooldowns: Dictionary = {}
 var recent_outcomes: Array = []
 var promises: Array = []
+var event_state: Dictionary = {
+	"cooldowns": {}, "once": [], "pity": 0, "scheduled": [],
+	"flags": [], "last_action_tick": {},
+}
 
 const SEASONS := ["spring", "summer", "autumn", "winter"]
 
@@ -59,6 +63,7 @@ func to_dict() -> Dictionary:
 		"cooldowns": normalized_cooldowns,
 		"recent_outcomes": _normalize_ints(recent_outcomes),
 		"promises": _normalize_ints(promises),
+		"event_state": _normalize_ints(event_state.duplicate(true)),
 	}
 
 ## Recursively casts int values to float throughout an arbitrarily-nested
@@ -95,4 +100,8 @@ static func from_dict(d: Dictionary) -> GameState:
 		s.cooldowns[k] = int(d["cooldowns"][k])
 	s.recent_outcomes = d["recent_outcomes"].duplicate(true)
 	s.promises = d["promises"].duplicate(true)
+	s.event_state = d.get("event_state", {
+		"cooldowns": {}, "once": [], "pity": 0, "scheduled": [],
+		"flags": [], "last_action_tick": {},
+	}).duplicate(true)
 	return s
