@@ -16,11 +16,29 @@ func change_opinion(delta: int, reason: String, tick: int) -> void:
 	opinion_log.append({"tick": tick, "delta": delta, "reason": reason})
 
 func to_dict() -> Dictionary:
+	# Normalize numeric dictionaries to float for canonical JSON serialization
+	# (JSON round-trips ints as floats, so we cast consistently)
+	var normalized_attributes := {}
+	for k in attributes:
+		normalized_attributes[k] = float(attributes[k])
+	var normalized_skills := {}
+	for k in skills:
+		normalized_skills[k] = float(skills[k])
+	var normalized_ideology := {}
+	for k in ideology:
+		normalized_ideology[k] = float(ideology[k])
+	var normalized_log := []
+	for entry in opinion_log:
+		normalized_log.append({
+			"tick": float(entry["tick"]),
+			"delta": float(entry["delta"]),
+			"reason": entry["reason"],
+		})
 	return {
 		"id": id, "display_name": display_name, "seat": seat,
-		"attributes": attributes.duplicate(), "skills": skills.duplicate(),
-		"ideology": ideology.duplicate(), "traits": traits.duplicate(),
-		"opinion": opinion, "opinion_log": opinion_log.duplicate(true),
+		"attributes": normalized_attributes, "skills": normalized_skills,
+		"ideology": normalized_ideology, "traits": traits.duplicate(),
+		"opinion": float(opinion), "opinion_log": normalized_log,
 	}
 
 static func from_dict(d: Dictionary) -> Character:

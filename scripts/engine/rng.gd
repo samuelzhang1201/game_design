@@ -28,9 +28,10 @@ func pick_weighted(weights: Array) -> int:
 	return weights.size() - 1
 
 func to_dict() -> Dictionary:
-	return {"seed": _rng.seed, "state": _rng.state}
+	# Serialize state as string to preserve precision through JSON round-trip
+	return {"seed": int(_rng.seed), "state": str(_rng.state)}
 
 static func from_dict(d: Dictionary) -> Rng:
 	var r := Rng.new(int(d["seed"]))
-	r._rng.state = int(d["state"])
+	r._rng.state = int(d["state"])  # String is auto-converted to int
 	return r

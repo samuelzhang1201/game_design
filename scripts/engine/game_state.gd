@@ -46,10 +46,25 @@ func to_dict() -> Dictionary:
 	var chars := {}
 	for id in characters:
 		chars[id] = characters[id].to_dict()
+	# Normalize int fields to float for canonical JSON serialization
+	# (JSON round-trips ints as floats, so we cast consistently)
+	var normalized_cooldowns := {}
+	for k in cooldowns:
+		normalized_cooldowns[k] = float(cooldowns[k])
+	# Round metrics to 10 decimal places to ensure consistent precision
+	# across save/reload boundaries (floating-point arithmetic drifts slightly)
+	var normalized_metrics := {}
+	for k in metrics:
+		var v = metrics[k]
+		if v is float:
+			# Round to 10 decimal places to eliminate floating-point noise
+			normalized_metrics[k] = round(v * 10000000000.0) / 10000000000.0
+		else:
+			normalized_metrics[k] = v
 	return {
-		"tick": tick, "rng": rng.to_dict(), "metrics": metrics.duplicate(),
+		"tick": float(tick), "rng": rng.to_dict(), "metrics": normalized_metrics,
 		"characters": chars, "council": council.duplicate(),
-		"cooldowns": cooldowns.duplicate(), "recent_outcomes": recent_outcomes.duplicate(true),
+		"cooldowns": normalized_cooldowns, "recent_outcomes": recent_outcomes.duplicate(true),
 		"promises": promises.duplicate(true),
 	}
 
