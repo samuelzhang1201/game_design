@@ -49,3 +49,31 @@ func test_tone_applied_clamped_with_reason() -> void:
 	var c: Character = s.characters["char_marshal"]
 	assert_between(before - c.opinion, 1, int(data.bal("tone_delta_cap")))
 	assert_string_contains(c.opinion_log[-1]["reason"], "tone")
+
+# Regression tests for security fixes
+func test_missing_action_code_fails() -> void:
+	var text := JSON.stringify({"actions": [{}]})
+	var out: Dictionary = ResponseValidator.parse(text, data)
+	assert_false(out["ok"])
+	assert_string_contains(out["error"], "malformed")
+
+func test_court_reaction_as_string_fails() -> void:
+	var text := JSON.stringify({"actions": [],
+		"court_reaction": "not an object"})
+	var out: Dictionary = ResponseValidator.parse(text, data)
+	assert_false(out["ok"])
+	assert_string_contains(out["error"], "court_reaction must be an object")
+
+func test_addressed_as_string_fails() -> void:
+	var text := JSON.stringify({"actions": [],
+		"court_reaction": {"addressed": "not a list", "tone": "neutral", "promises": []}})
+	var out: Dictionary = ResponseValidator.parse(text, data)
+	assert_false(out["ok"])
+	assert_string_contains(out["error"], "addressed must be a list")
+
+func test_promises_as_string_fails() -> void:
+	var text := JSON.stringify({"actions": [],
+		"court_reaction": {"addressed": [], "tone": "neutral", "promises": "not a list"}})
+	var out: Dictionary = ResponseValidator.parse(text, data)
+	assert_false(out["ok"])
+	assert_string_contains(out["error"], "promises must be a list")
