@@ -1,22 +1,19 @@
 class_name CalendarOverlay
 extends Control
-## Full-screen interlude played when a turn ends: the date runs day by day
-## through the fortnight that just passed, with placeholder news flashes.
-## Pure presentation - the engine tick already advanced before play() is
-## called, and news selection is hash-based (never touches the campaign RNG,
-## so headless runs and UI runs stay identical). Click anywhere to skip.
+## The "ROYAL CHRONICLE" live ticker (game_ui.png, user ruling 2026-08-31):
+## a TRANSPARENT window that rolls the fortnight day by day after End Turn -
+## dated news entries appended as the days pass, surroundings visible through
+## it, nothing dimmed. Pure presentation - the engine tick already advanced
+## before play() is called, and news selection is hash-based (never touches
+## the campaign RNG, so headless runs and UI runs stay identical). Click
+## anywhere to skip. The window's placement belongs to the owning screen via
+## place_panel(); standalone it sits centered.
 
 signal finished
 
 ## R6: pacing comes from balance (dayrun_day_seconds); slower, readable.
 var day_seconds := 0.22
 const NEWS_DAYS := [4, 9, 14]
-
-## Set BEFORE the overlay enters the tree to shift the centered date panel
-## up/down (e.g. DayRunScreen offsets it clear of the bottom-anchored
-## KingdomCard). Default 0 keeps the overlay's standalone centered layout
-## unchanged.
-var panel_vertical_offset := 0.0
 
 var date_label: Label
 var season_label: Label
@@ -42,39 +39,46 @@ func _ready() -> void:
 		day_seconds = Game.data.bal("dayrun_day_seconds")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	visible = false
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	var dim := ColorRect.new()
-	dim.color = UiPalette.DIM_OVERLAY
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(dim)
+	mouse_filter = Control.MOUSE_FILTER_STOP  # click anywhere skips
 	_panel = PanelContainer.new()
-	_panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.GOLD, 2, 24))
-	# 320 (not wider): keeps the centered panel clear of the top-left
-	# KingdomCard's corner on every gameplay window aspect (user ruling
-	# 2026-08-29 - the card and this panel must never overlap).
-	_panel.custom_minimum_size = Vector2(320, 0)
-	# Centered via anchors + grow-both so the auto-sizing panel stays centered
-	# without a container (containers override their children's anchors).
+	var style := StyleBoxFlat.new()
+	style.bg_color = UiPalette.GLASS_BG
+	style.border_color = UiPalette.BORDER_GOLD
+	style.set_border_width_all(1)
+	style.set_content_margin_all(8)
+	_panel.add_theme_stylebox_override("panel", style)
+	# Centered by default; the owning screen calls place_panel().
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_panel.custom_minimum_size = Vector2(250, 0)
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_panel.position.y += panel_vertical_offset
 	add_child(_panel)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
+	col.add_theme_constant_override("separation", 5)
 	_panel.add_child(col)
-	season_label = Label.new()
-	season_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	season_label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	season_label.add_theme_font_size_override("font_size", 10)
-	col.add_child(season_label)
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 6)
+	col.add_child(header)
+	var title := Label.new()
+	title.text = "ROYAL CHRONICLE"
+	UiPalette.style_header(title, 9)
+	header.add_child(title)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(spacer)
+	var live := Label.new()
+	live.text = "LIVE"
+	live.add_theme_font_size_override("font_size", 8)
+	live.add_theme_color_override("font_color", UiPalette.POSITIVE)
+	header.add_child(live)
 	date_label = Label.new()
-	date_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_header(date_label, 22)
+	UiPalette.style_header(date_label, 11)
 	col.add_child(date_label)
+	season_label = Label.new()
+	season_label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	season_label.add_theme_font_size_override("font_size", 9)
+	col.add_child(season_label)
 	news_box = VBoxContainer.new()
 	news_box.add_theme_constant_override("separation", 4)
 	col.add_child(news_box)
@@ -82,12 +86,19 @@ func _ready() -> void:
 	hint.text = "click to skip"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
-	hint.add_theme_font_size_override("font_size", 10)
+	hint.add_theme_font_size_override("font_size", 9)
 	col.add_child(hint)
 	_timer = Timer.new()
 	_timer.timeout.connect(_advance_day)
 	add_child(_timer)
 	gui_input.connect(_on_gui_input)
+
+## Anchor the ticker window to a screen-space rect (top-left + width; height
+## grows with content). game_ui.png places it at the map's lower left.
+func place_panel(pos: Vector2, width: float) -> void:
+	_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_panel.position = pos
+	_panel.custom_minimum_size = Vector2(width, 0)
 
 ## tick: the tick that just BEGAN (engine already advanced) - the interlude
 ## replays the fortnight belonging to that tick, days 1..15.
@@ -116,14 +127,23 @@ func _advance_day() -> void:
 	if _day in NEWS_DAYS:
 		_add_news(CalendarOverlay.news_line(Game.data, _tick, _day))
 
+## One dated chronicle entry (game_ui.png: gold date line, soft text below).
 func _add_news(text: String) -> void:
 	if text == "":
 		return
+	var entry := VBoxContainer.new()
+	entry.add_theme_constant_override("separation", 1)
+	var date := Label.new()
+	date.text = Calendar.date_string(_tick, _day).to_upper()
+	UiPalette.style_header(date, 8)
+	entry.add_child(date)
 	var l := Label.new()
-	l.text = "* " + text
+	l.text = text
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
-	news_box.add_child(l)
+	l.add_theme_font_size_override("font_size", 10)
+	entry.add_child(l)
+	news_box.add_child(entry)
 
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:

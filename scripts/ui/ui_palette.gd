@@ -18,9 +18,22 @@ const TEXT_DIM := Color("6a6557")      # de-emphasized hints ("click to skip")
 const POSITIVE := Color("7fd47f")      # metric gains, opinion up
 const NEGATIVE := Color("d4756a")      # metric losses, opinion down
 const DIM_OVERLAY := Color(0.04, 0.04, 0.07, 0.84)
-## Light tone over the map on gameplay screens (user ruling 2026-08-30: the
-## map stays bright and clear at all times; panels are opaque anyway).
-const MAP_TINT := Color(0.02, 0.02, 0.05, 0.18)
+## Translucent ground for the chronicle ticker (game_ui.png: a transparent
+## window whose surroundings stay visible through it).
+const GLASS_BG := Color(0.03, 0.03, 0.06, 0.78)
+
+## Per-skill bar colors, matching the mock's attribute rows (diplomacy green,
+## martial red, stewardship gold, intrigue purple, admin/learning blue).
+const SKILL_COLORS := {
+	"sk_diplomacy": Color("6fbf73"), "sk_martial": Color("c05b5b"),
+	"sk_steward": Color("c9a45c"), "sk_intrigue": Color("8b6bb5"),
+	"sk_admin": Color("5b8fc0"),
+}
+const SKILL_NAMES := {
+	"sk_admin": "Admin", "sk_martial": "Martial", "sk_intrigue": "Intrigue",
+	"sk_diplomacy": "Diplomacy", "sk_steward": "Steward",
+}
+const SKILL_MAX := 20.0  # CharacterFactory clamps skills to 0..20
 
 ## OFL-licensed faces (assets/fonts/, licenses alongside): EB Garamond for
 ## body text, Cinzel (Roman inscription capitals) for headers, names, dates.
@@ -50,27 +63,32 @@ static func setup_frame(rect: TextureRect) -> void:
 	rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-## Nine-patch frame for gameplay screens (user ruling 2026-08-30: the frame
-## sits in the MIDDLE map area between the two UI columns and must cover no
-## UI element). The pre-scaled texture (assets/ui/frame_small.png, 591x333)
-## keeps the corner kings at their native aspect while the rails tile to fit
-## whatever middle rect the screen gives the node. Margins bound the kings:
-## young king + chessboard bottom-left, old king top-right.
-const FRAME_SMALL_PATH := "res://assets/ui/frame_small.png"
+## The framed map view on gameplay screens (user ruling 2026-08-31): the map
+## sits in a gold-trimmed panel between the two columns at the EXACT
+## landscape ratio of game_ui.png's map region, never distorted (the image
+## cover-crops, it never stretches). The kings frame lives on the menu only:
+## its corner figures are ~40% of the frame's own size, so inside a
+## ratio-locked map window they would swallow the map.
+static func setup_map_view(rect: TextureRect) -> void:
+	rect.texture = backdrop()
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	rect.clip_contents = true
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-static func setup_frame_nine(patch: NinePatchRect) -> void:
-	patch.texture = load_art(FRAME_SMALL_PATH)
-	patch.patch_margin_left = 130
-	patch.patch_margin_top = 57
-	patch.patch_margin_right = 92
-	patch.patch_margin_bottom = 71
-	# Plain stretch on both axes: the bands hold pictorial content (the
-	# kings, the rails' center pendant) that tiling would duplicate or
-	# shred into stripes; a smooth compression reads far better.
-	patch.axis_stretch_horizontal = NinePatchRect.AXIS_STRETCH_MODE_STRETCH
-	patch.axis_stretch_vertical = NinePatchRect.AXIS_STRETCH_MODE_STRETCH
-	patch.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	patch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+## Flat bar styles for attribute/opinion bars (no chip margins).
+static func bar_fill(color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	return style
+
+static func bar_bg() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("0f1017")
+	style.border_color = BORDER_GOLD
+	style.set_border_width_all(1)
+	return style
 
 static var _art_cache: Dictionary = {}
 

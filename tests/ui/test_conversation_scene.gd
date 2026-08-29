@@ -74,11 +74,11 @@ func test_event_beat_gates_continue_until_choice() -> void:
 	await wait_frames(2)
 	assert_true(_finished)
 
-## User ruling (2026-08-30, game_ui.png): the dialogue panel is the RIGHT
-## column, the dossier the LEFT column, and the middle map area between them
-## stays clear - the kings frame (nine-patched into that middle area) and
-## the dialogue box must cover no other UI element.
-func test_dialogue_right_column_clear_of_dossier_and_frame() -> void:
+## User ruling (2026-08-31, game_ui.png): the dialogue panel is the RIGHT
+## column, the dossier the LEFT column, and between them the framed map view
+## at the mock map region's EXACT landscape ratio - never distorted, never
+## covered by any UI element.
+func test_dialogue_right_column_and_map_ratio_clear_of_ui() -> void:
 	Game.start_campaign(42)
 	var beats := [
 		{"kind": "minister", "portrait_id": "char_marshal", "speaker": "Ser Brandt of Harrow",
@@ -93,16 +93,15 @@ func test_dialogue_right_column_clear_of_dossier_and_frame() -> void:
 		"the marshal's art fills the dossier portrait box")
 	assert_false(c.minister_panel().get_global_rect().intersects(panel.get_global_rect()),
 		"the dialogue column must never cover the dossier column")
-	var frame: NinePatchRect = c.find_child("Frame", true, false)
-	assert_not_null(frame.texture, "the kings frame is mounted")
-	assert_eq(frame.mouse_filter, Control.MOUSE_FILTER_IGNORE,
-		"the frame never intercepts input")
-	assert_false(frame.get_global_rect().intersects(panel.get_global_rect()),
-		"the frame stays in the middle area, off the dialogue column")
-	assert_false(frame.get_global_rect().intersects(c.minister_panel().get_global_rect()),
-		"the frame stays in the middle area, off the dossier column")
-	assert_false(frame.get_global_rect().intersects(c.top_bar().get_global_rect()),
-		"the frame stays below the metrics bar")
+	var map := c.map_panel()
+	assert_almost_eq(map.size.x / map.size.y, 380.0 / 196.0, 0.03,
+		"the map view keeps the mock map region's landscape ratio")
+	assert_false(map.get_global_rect().intersects(panel.get_global_rect()),
+		"the map is never covered by the dialogue column")
+	assert_false(map.get_global_rect().intersects(c.minister_panel().get_global_rect()),
+		"the map is never covered by the dossier column")
+	assert_false(map.get_global_rect().intersects(c.top_bar().get_global_rect()),
+		"the map sits below the metrics bar")
 
 ## Same ruling, worst case: a long event text plus three choice buttons must
 ## scroll inside the fixed box rather than grow it over the portrait.
@@ -157,6 +156,10 @@ func test_top_bar_and_dossier_reflect_speaker_and_order() -> void:
 	assert_eq(title_label.text, "MARSHAL", "the dossier shows the seat title")
 	assert_gt(c.find_child("TraitChips", true, false).get_child_count(), 0,
 		"the dossier shows the minister's trait chips")
+	var rows: VBoxContainer = c.find_child("SkillRows", true, false)
+	assert_true(rows.visible, "a minister's dossier shows the skill bars")
+	assert_eq(rows.get_child_count(), CharacterFactory.SKILLS.size(),
+		"one colored bar per council skill, mock-style")
 	var gold_before := c.top_bar().metric_text("treasury")
 	c.reply_buttons()[0].pressed.emit()
 	await wait_frames(2)

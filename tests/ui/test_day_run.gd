@@ -25,20 +25,21 @@ func test_overlay_speed_comes_from_balance() -> void:
 	await wait_frames(1)
 	assert_almost_eq(d.overlay.day_seconds, Game.data.bal("dayrun_day_seconds"), 0.001)
 
-## Guard against the numbers being hidden behind the overlay's full-rect dim
-## ColorRect (defeats R9 - they must stay visible while the days pass): the
-## TopBar must draw above the overlay, clear of its centered date panel.
-func test_top_bar_draws_above_overlay_dim_clear_of_panel() -> void:
+## game_ui.png (user ruling 2026-08-31): the chronicle is a transparent
+## ticker window at the map area's lower left - it must sit below the map,
+## clear of the TopBar, and the TopBar draws above the overlay layer so the
+## numbers stay visible while the days pass (R9).
+func test_chronicle_ticker_sits_bottom_left_clear_of_bar() -> void:
 	Game.start_campaign(42)
 	var d: DayRunScreen = load("res://scenes/day_run.tscn").instantiate()
 	add_child_autofree(d)
 	await wait_frames(2)
 	assert_gt(d.top_bar.get_index(), d.overlay.get_index(),
-		"TopBar must draw above the overlay's dim so it stays visible")
-	assert_almost_eq(d.overlay.panel_vertical_offset, 0.0, 0.1,
-		"the centered date panel needs no offset")
+		"TopBar must draw above the overlay layer")
 	d.run(Game.next_tick())
 	await wait_frames(2)
-	assert_false(d.top_bar.get_global_rect().intersects(
-		d.overlay.date_panel().get_global_rect()),
-		"the TopBar must not overlap the overlay's centered date panel")
+	var panel := d.overlay.date_panel()
+	assert_lt(panel.global_position.x, 200.0, "ticker sits at the left")
+	assert_gt(panel.global_position.y, 200.0, "ticker sits low, under the map")
+	assert_false(d.top_bar.get_global_rect().intersects(panel.get_global_rect()),
+		"the ticker never overlaps the metrics bar")

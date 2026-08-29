@@ -1,11 +1,12 @@
 class_name ConversationScene
 extends Control
-## VN stage (R3/R4/R5), game_ui.png chrome (user ruling 2026-08-30): two UI
-## columns with the BRIGHT map in between, never covered - dossier card fills
-## the LEFT column (portrait, name, seat, opinion bar, trait chips), the
-## dialogue/response panel fills the RIGHT column (mock's "your response"
-## panel; long content scrolls), and the kings frame sits nine-patched in
-## the middle map area only. Beats advance on Continue / reply / choice.
+## VN stage (R3/R4/R5), game_ui.png chrome (user ruling 2026-08-31): two
+## mock-proportioned UI columns; between them the framed MAP VIEW at the
+## exact landscape ratio of the mock's map region (380x196 ~ 1.94:1),
+## cover-cropped, never distorted, always bright. Dossier fills the LEFT
+## column (portrait, identity, opinion, per-skill colored bars, traits);
+## dialogue/responses fill the RIGHT column. Beats advance on Continue /
+## reply / choice.
 
 signal finished
 
@@ -26,18 +27,17 @@ var _resolved_event := false
 ## and wires signals. Dynamic content (portraits, trait chips, reply
 ## buttons) is spawned at runtime below.
 func _ready() -> void:
-	%Backdrop.texture = UiPalette.backdrop()
-	%Backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	%Backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	%Shade.color = UiPalette.MAP_TINT
-	UiPalette.setup_frame_nine(%Frame)
+	%Bg.color = UiPalette.BG_SCREEN
+	%MapPanel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 2))
+	UiPalette.setup_map_view(%MapView)
 	%MinisterPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	UiPalette.style_header(%MinisterName, 11)
-	UiPalette.style_header(%MinisterTitle, 8, UiPalette.TEXT_MUTED)
-	%OpinionBar.add_theme_stylebox_override("background",
-		UiPalette.chip_style(Color("0f1017"), UiPalette.BORDER_GOLD))
-	%OpinionValue.add_theme_font_size_override("font_size", 9)
+	UiPalette.style_header(%MinisterTitle, 9, UiPalette.TEXT_MUTED)
+	%OpinionBar.add_theme_stylebox_override("background", UiPalette.bar_bg())
+	%OpinionValue.add_theme_font_size_override("font_size", 10)
+	_build_skill_rows()
 	_panel = %DialoguePanel
 	_panel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
@@ -89,6 +89,43 @@ func top_bar() -> TopBar:
 
 func minister_panel() -> PanelContainer:
 	return %MinisterPanel
+
+func map_panel() -> PanelContainer:
+	return %MapPanel
+
+## One row per council skill, mock-style: muted name, a bar in that skill's
+## own color (see UiPalette.SKILL_COLORS), the value. Built once; values set
+## per speaker in _show_speaker.
+var _skill_bars: Dictionary = {}
+var _skill_values: Dictionary = {}
+
+func _build_skill_rows() -> void:
+	for sk in CharacterFactory.SKILLS:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 4)
+		var name_l := Label.new()
+		name_l.text = String(UiPalette.SKILL_NAMES[sk]).to_upper()
+		name_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+		name_l.add_theme_font_size_override("font_size", 8)
+		name_l.custom_minimum_size = Vector2(42, 0)
+		row.add_child(name_l)
+		var bar := ProgressBar.new()
+		bar.max_value = UiPalette.SKILL_MAX
+		bar.show_percentage = false
+		bar.custom_minimum_size = Vector2(0, 5)
+		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bar.add_theme_stylebox_override("background", UiPalette.bar_bg())
+		bar.add_theme_stylebox_override("fill",
+			UiPalette.bar_fill(UiPalette.SKILL_COLORS[sk]))
+		row.add_child(bar)
+		_skill_bars[sk] = bar
+		var value_l := Label.new()
+		value_l.add_theme_font_size_override("font_size", 9)
+		value_l.add_theme_color_override("font_color", UiPalette.SKILL_COLORS[sk])
+		row.add_child(value_l)
+		_skill_values[sk] = value_l
+		%SkillRows.add_child(row)
 
 func _advance() -> void:
 	_index += 1
@@ -209,19 +246,23 @@ func _show_speaker(b: Dictionary) -> void:
 	%MinisterName.text = c.display_name if c != null else String(b.get("speaker", ""))
 	%MinisterTitle.visible = c != null
 	%OpinionRow.visible = c != null
+	%SkillRows.visible = c != null
 	if c == null:
 		return
 	%MinisterTitle.text = String(Game.data.seats[c.seat]["label"]).to_upper() \
 		if Game.data.seats.has(c.seat) else String(c.seat).to_upper()
 	%OpinionBar.value = c.opinion
 	var tone: Color = UiPalette.POSITIVE if c.opinion >= 0 else UiPalette.NEGATIVE
-	%OpinionBar.add_theme_stylebox_override("fill", UiPalette.chip_style(tone, tone))
+	%OpinionBar.add_theme_stylebox_override("fill", UiPalette.bar_fill(tone))
 	%OpinionValue.text = "%+d" % c.opinion
 	%OpinionValue.add_theme_color_override("font_color", tone)
+	for sk in CharacterFactory.SKILLS:
+		_skill_bars[sk].value = int(c.skills.get(sk, 0))
+		_skill_values[sk].text = str(int(c.skills.get(sk, 0)))
 	for t in c.traits:
 		var chip := Label.new()
 		chip.text = String(Game.data.traits[t]["label"]) if Game.data.traits.has(t) else String(t)
-		chip.add_theme_font_size_override("font_size", 7)
+		chip.add_theme_font_size_override("font_size", 9)
 		chip.add_theme_color_override("font_color", UiPalette.GOLD)
 		chip.add_theme_stylebox_override("normal", UiPalette.chip_style())
 		%TraitChips.add_child(chip)

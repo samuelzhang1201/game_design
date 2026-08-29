@@ -33,17 +33,16 @@ var _suggestion_buttons: Array = []
 ## signals; log lines and suggestion buttons are spawned at runtime below.
 ## The TopBar instance wires itself to Game's signals.
 func _ready() -> void:
-	%Backdrop.texture = UiPalette.backdrop()
-	%Backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	%Backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	%Shade.color = UiPalette.MAP_TINT
-	UiPalette.setup_frame_nine(%Frame)
+	%Bg.color = UiPalette.BG_SCREEN
+	%MapPanel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 2))
+	UiPalette.setup_map_view(%MapView)
 	%LogPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
-	UiPalette.style_header(%LogHeader, 8)
+	UiPalette.style_header(%LogHeader, 9)
 	%SidePanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
-	UiPalette.style_header(%SideHeader, 8)
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
+	UiPalette.style_header(%SideHeader, 9)
 	_log_scroll = %LogScroll
 	log_box = %LogBox
 	suggestions_box = %SuggestionsBox
