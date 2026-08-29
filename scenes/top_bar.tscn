@@ -29,11 +29,7 @@ theme_override_constants/separation = 14
 [node name="RightSpacer" type="Control" parent="Bar/Row"]
 size_flags_horizontal = 3
 
-[node name="EventChip" type="Label" parent="."]
+[node name="EventChip" type="Label" parent="Bar/Row"]
 unique_name_in_owner = true
 visible = false
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -66.0
-offset_top = 30.0
 text = "1 EVENT"

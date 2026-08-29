@@ -1,11 +1,11 @@
 class_name ConversationScene
 extends Control
-## VN stage (R3/R4/R5), UI_example.png chrome (user ruling 2026-08-29): map
-## backdrop behind a dark shade, the TopBar metrics strip along the top, a
-## minister dossier card on the LEFT (portrait, name, seat, opinion bar,
-## trait chips), and the FIXED-height dialogue strip pinned to the bottom
-## right of the card - long content scrolls inside it, never over the card.
-## Beats advance on Continue / reply / event choice.
+## VN stage (R3/R4/R5), game_ui.png chrome (user ruling 2026-08-30): two UI
+## columns with the BRIGHT map in between, never covered - dossier card fills
+## the LEFT column (portrait, name, seat, opinion bar, trait chips), the
+## dialogue/response panel fills the RIGHT column (mock's "your response"
+## panel; long content scrolls), and the kings frame sits nine-patched in
+## the middle map area only. Beats advance on Continue / reply / choice.
 
 signal finished
 
@@ -29,8 +29,8 @@ func _ready() -> void:
 	%Backdrop.texture = UiPalette.backdrop()
 	%Backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	%Backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	%Shade.color = UiPalette.DIM_OVERLAY
-	UiPalette.setup_frame(%Frame)
+	%Shade.color = UiPalette.MAP_TINT
+	UiPalette.setup_frame_nine(%Frame)
 	%MinisterPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	UiPalette.style_header(%MinisterName, 11)
@@ -142,12 +142,14 @@ func _advance() -> void:
 	# A fresh beat reads from the top of the fixed-height strip.
 	_scroll.set_deferred("scroll_vertical", 0)
 
-## Mock-style lettered responses ("A. Distribute reserves"), left-aligned.
+## Mock-style lettered responses ("A. Distribute reserves"), left-aligned,
+## wrapping inside the response column instead of overflowing it.
 func _add_reply(label: String, handler: Callable) -> void:
 	var btn := Button.new()
 	btn.text = "%s.  %s" % [char(65 + _next_reply_letter), label]
 	_next_reply_letter += 1
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.pressed.connect(handler)
 	_replies_box.add_child(btn)

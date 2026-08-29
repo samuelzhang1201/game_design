@@ -18,6 +18,9 @@ const TEXT_DIM := Color("6a6557")      # de-emphasized hints ("click to skip")
 const POSITIVE := Color("7fd47f")      # metric gains, opinion up
 const NEGATIVE := Color("d4756a")      # metric losses, opinion down
 const DIM_OVERLAY := Color(0.04, 0.04, 0.07, 0.84)
+## Light tone over the map on gameplay screens (user ruling 2026-08-30: the
+## map stays bright and clear at all times; panels are opaque anyway).
+const MAP_TINT := Color(0.02, 0.02, 0.05, 0.18)
 
 ## OFL-licensed faces (assets/fonts/, licenses alongside): EB Garamond for
 ## body text, Cinzel (Roman inscription capitals) for headers, names, dates.
@@ -38,14 +41,36 @@ const FRAME_PATH := "res://assets/ui/frame.png"
 static func frame() -> Texture2D:
 	return load_art(FRAME_PATH)
 
-## Standard setup for the frame layer: stretches edge-to-edge (the art and
-## the design viewport are both 16:9) and never intercepts input.
+## Standard setup for the full-bleed frame layer (menu only): stretches
+## edge-to-edge (art and design viewport are both 16:9), never takes input.
 static func setup_frame(rect: TextureRect) -> void:
 	rect.texture = frame()
 	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	rect.stretch_mode = TextureRect.STRETCH_SCALE
 	rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+## Nine-patch frame for gameplay screens (user ruling 2026-08-30: the frame
+## sits in the MIDDLE map area between the two UI columns and must cover no
+## UI element). The pre-scaled texture (assets/ui/frame_small.png, 591x333)
+## keeps the corner kings at their native aspect while the rails tile to fit
+## whatever middle rect the screen gives the node. Margins bound the kings:
+## young king + chessboard bottom-left, old king top-right.
+const FRAME_SMALL_PATH := "res://assets/ui/frame_small.png"
+
+static func setup_frame_nine(patch: NinePatchRect) -> void:
+	patch.texture = load_art(FRAME_SMALL_PATH)
+	patch.patch_margin_left = 130
+	patch.patch_margin_top = 57
+	patch.patch_margin_right = 92
+	patch.patch_margin_bottom = 71
+	# Plain stretch on both axes: the bands hold pictorial content (the
+	# kings, the rails' center pendant) that tiling would duplicate or
+	# shred into stripes; a smooth compression reads far better.
+	patch.axis_stretch_horizontal = NinePatchRect.AXIS_STRETCH_MODE_STRETCH
+	patch.axis_stretch_vertical = NinePatchRect.AXIS_STRETCH_MODE_STRETCH
+	patch.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	patch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 static var _art_cache: Dictionary = {}
 

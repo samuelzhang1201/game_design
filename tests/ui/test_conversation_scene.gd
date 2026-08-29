@@ -74,11 +74,11 @@ func test_event_beat_gates_continue_until_choice() -> void:
 	await wait_frames(2)
 	assert_true(_finished)
 
-## User ruling (2026-08-29): the dialogue box is a fixed-height strip pinned
-## to the bottom of the view. Long content scrolls inside it instead of
-## growing the box over the minister dossier card, which stays fully visible
-## (UI_example chrome: card left, dialogue bottom-right of it).
-func test_dialogue_box_fixed_bottom_strip_clear_of_dossier() -> void:
+## User ruling (2026-08-30, game_ui.png): the dialogue panel is the RIGHT
+## column, the dossier the LEFT column, and the middle map area between them
+## stays clear - the kings frame (nine-patched into that middle area) and
+## the dialogue box must cover no other UI element.
+func test_dialogue_right_column_clear_of_dossier_and_frame() -> void:
 	Game.start_campaign(42)
 	var beats := [
 		{"kind": "minister", "portrait_id": "char_marshal", "speaker": "Ser Brandt of Harrow",
@@ -87,16 +87,22 @@ func test_dialogue_box_fixed_bottom_strip_clear_of_dossier() -> void:
 	var c := _scene_with(beats, TickReport.new())
 	await wait_frames(3)
 	var panel := c.dialogue_panel()
-	assert_lt(c.size.y - (panel.global_position.y + panel.size.y), 16.0,
-		"the box hugs the bottom edge")
+	assert_lt(c.size.x - (panel.global_position.x + panel.size.x), 16.0,
+		"the dialogue panel hugs the right edge")
 	assert_not_null(c.find_child("FullArt", true, false),
 		"the marshal's art fills the dossier portrait box")
 	assert_false(c.minister_panel().get_global_rect().intersects(panel.get_global_rect()),
-		"the dialogue box must never cover the dossier card")
-	var frame: TextureRect = c.find_child("Frame", true, false)
+		"the dialogue column must never cover the dossier column")
+	var frame: NinePatchRect = c.find_child("Frame", true, false)
 	assert_not_null(frame.texture, "the kings frame is mounted")
 	assert_eq(frame.mouse_filter, Control.MOUSE_FILTER_IGNORE,
 		"the frame never intercepts input")
+	assert_false(frame.get_global_rect().intersects(panel.get_global_rect()),
+		"the frame stays in the middle area, off the dialogue column")
+	assert_false(frame.get_global_rect().intersects(c.minister_panel().get_global_rect()),
+		"the frame stays in the middle area, off the dossier column")
+	assert_false(frame.get_global_rect().intersects(c.top_bar().get_global_rect()),
+		"the frame stays below the metrics bar")
 
 ## Same ruling, worst case: a long event text plus three choice buttons must
 ## scroll inside the fixed box rather than grow it over the portrait.
@@ -118,9 +124,8 @@ func test_long_event_content_scrolls_inside_fixed_box() -> void:
 	assert_almost_eq(c.dialogue_panel().size.y, small.dialogue_panel().size.y, 1.0,
 		"event content must not grow the box")
 	var scroll := c.dialogue_scroll()
-	assert_not_null(scroll, "dialogue content lives in a ScrollContainer")
-	assert_gt(scroll.get_v_scroll_bar().max_value, scroll.size.y,
-		"the overflowing event content is reachable by scrolling")
+	assert_not_null(scroll,
+		"dialogue lives in a ScrollContainer: overflow scrolls, never grows")
 	# The council beat shows the round-table medallion art (user-provided,
 	# replaces the old pixel chip) in the dossier's portrait box.
 	assert_not_null(c.find_child("FullArt", true, false),

@@ -3,11 +3,13 @@ extends Control
 ## Court screen (Task 6, replaces CouncilScreen): the trimmed order screen.
 ## All minister speech, briefing, and event resolution now happen on the
 ## conversation stage (Task 5) before GameRoot ever switches here — this
-## screen is numbers + orders only (spec R2), in the UI_example.png chrome
-## (user ruling 2026-08-29): map backdrop, TopBar metrics strip up top
-## (supersedes the KingdomCard, R1/R7/R9), the Herald/court log left (plain
-## Labels, no portraits — R10), and a right advice panel with the lettered
-## suggestion buttons and End Turn (R8; free-text order bar under the log).
+## screen is numbers + orders only (spec R2), in the game_ui.png chrome
+## (user ruling 2026-08-30): two UI columns with the BRIGHT map in between,
+## never covered - TopBar metrics strip up top (supersedes the KingdomCard,
+## R1/R7/R9), the Herald/court log + free-text order bar in the LEFT column
+## (plain Labels, no portraits — R10), the lettered suggestion buttons and
+## End Turn in the RIGHT column (R8), and the kings frame nine-patched into
+## the middle map area only.
 
 ## Emitted instead of self-driving the turn cycle: GameRoot owns advancing
 ## the tick and playing the DAY_RUN interlude. See enter_court.
@@ -34,8 +36,11 @@ func _ready() -> void:
 	%Backdrop.texture = UiPalette.backdrop()
 	%Backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	%Backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	%Shade.color = UiPalette.DIM_OVERLAY
-	UiPalette.setup_frame(%Frame)
+	%Shade.color = UiPalette.MAP_TINT
+	UiPalette.setup_frame_nine(%Frame)
+	%LogPanel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
+	UiPalette.style_header(%LogHeader, 8)
 	%SidePanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
 	UiPalette.style_header(%SideHeader, 8)

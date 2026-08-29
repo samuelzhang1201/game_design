@@ -21,52 +21,47 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="Frame" type="TextureRect" parent="."]
+[node name="Frame" type="NinePatchRect" parent="."]
 unique_name_in_owner = true
-anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 156.0
+offset_top = 28.0
+offset_right = -184.0
+offset_bottom = -4.0
 
 [node name="TopBar" parent="." instance=ExtResource("2")]
 unique_name_in_owner = true
 anchor_right = 1.0
-offset_left = 44.0
-offset_top = 2.0
-offset_right = -70.0
 
 [node name="MinisterPanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
-offset_left = 84.0
-offset_top = 44.0
-custom_minimum_size = Vector2(204, 0)
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 28.0
+offset_right = 152.0
+offset_bottom = -4.0
 
 [node name="MVBox" type="VBoxContainer" parent="MinisterPanel"]
 theme_override_constants/separation = 5
 
-[node name="TopRow" type="HBoxContainer" parent="MinisterPanel/MVBox"]
-theme_override_constants/separation = 8
-
-[node name="PortraitBox" type="Control" parent="MinisterPanel/MVBox/TopRow"]
+[node name="PortraitBox" type="Control" parent="MinisterPanel/MVBox"]
 unique_name_in_owner = true
 clip_contents = true
-custom_minimum_size = Vector2(56, 72)
+custom_minimum_size = Vector2(128, 150)
 
-[node name="IdBox" type="VBoxContainer" parent="MinisterPanel/MVBox/TopRow"]
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-
-[node name="MinisterName" type="Label" parent="MinisterPanel/MVBox/TopRow/IdBox"]
+[node name="MinisterName" type="Label" parent="MinisterPanel/MVBox"]
 unique_name_in_owner = true
 autowrap_mode = 3
 
-[node name="MinisterTitle" type="Label" parent="MinisterPanel/MVBox/TopRow/IdBox"]
+[node name="MinisterTitle" type="Label" parent="MinisterPanel/MVBox"]
 unique_name_in_owner = true
 
-[node name="OpinionRow" type="HBoxContainer" parent="MinisterPanel/MVBox/TopRow/IdBox"]
+[node name="OpinionRow" type="HBoxContainer" parent="MinisterPanel/MVBox"]
 unique_name_in_owner = true
 theme_override_constants/separation = 6
 
-[node name="OpinionBar" type="ProgressBar" parent="MinisterPanel/MVBox/TopRow/IdBox/OpinionRow"]
+[node name="OpinionBar" type="ProgressBar" parent="MinisterPanel/MVBox/OpinionRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(70, 6)
 size_flags_horizontal = 3
@@ -75,7 +70,7 @@ min_value = -100.0
 max_value = 100.0
 show_percentage = false
 
-[node name="OpinionValue" type="Label" parent="MinisterPanel/MVBox/TopRow/IdBox/OpinionRow"]
+[node name="OpinionValue" type="Label" parent="MinisterPanel/MVBox/OpinionRow"]
 unique_name_in_owner = true
 
 [node name="TraitChips" type="HFlowContainer" parent="MinisterPanel/MVBox"]
@@ -85,21 +80,20 @@ theme_override_constants/v_separation = 4
 
 [node name="DialoguePanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
-anchor_top = 1.0
+anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 170.0
-offset_top = -168.0
-offset_right = -46.0
-offset_bottom = -8.0
-grow_horizontal = 2
-grow_vertical = 0
+offset_left = -180.0
+offset_top = 28.0
+offset_right = -4.0
+offset_bottom = -4.0
 
 [node name="Col" type="VBoxContainer" parent="DialoguePanel"]
-theme_override_constants/separation = 4
+theme_override_constants/separation = 5
 
 [node name="NameLabel" type="Label" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
+autowrap_mode = 3
 
 [node name="DialogueScroll" type="ScrollContainer" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
@@ -108,7 +102,7 @@ horizontal_scroll_mode = 0
 
 [node name="Content" type="VBoxContainer" parent="DialoguePanel/Col/DialogueScroll"]
 size_flags_horizontal = 3
-theme_override_constants/separation = 4
+theme_override_constants/separation = 5
 
 [node name="TextLabel" type="Label" parent="DialoguePanel/Col/DialogueScroll/Content"]
 unique_name_in_owner = true
@@ -119,15 +113,11 @@ autowrap_mode = 3
 unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="InputRow" type="HBoxContainer" parent="DialoguePanel/Col"]
-theme_override_constants/separation = 6
-
-[node name="FreeText" type="LineEdit" parent="DialoguePanel/Col/InputRow"]
+[node name="FreeText" type="LineEdit" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
-size_flags_horizontal = 3
 placeholder_text = "Speak your mind..."
 
-[node name="ContinueButton" type="Button" parent="DialoguePanel/Col/InputRow"]
+[node name="ContinueButton" type="Button" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
 focus_mode = 0
 text = "Wave them on"

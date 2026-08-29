@@ -21,23 +21,25 @@ func _ready() -> void:
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
 	var shade := ColorRect.new()
-	shade.color = UiPalette.DIM_OVERLAY
+	shade.color = UiPalette.MAP_TINT
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(shade)
-	var frame := TextureRect.new()
-	UiPalette.setup_frame(frame)
+	# Same middle-area nine-patch frame as the conversation screen (user
+	# ruling 2026-08-30: the frame never covers UI; the map stays bright).
+	var frame := NinePatchRect.new()
+	UiPalette.setup_frame_nine(frame)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.offset_left = 156
+	frame.offset_top = 28
+	frame.offset_right = -184
+	frame.offset_bottom = -4
 	add_child(frame)
 	overlay = CalendarOverlay.new()
 	overlay.finished.connect(func(): finished.emit())
 	add_child(overlay)
-	# After the overlay so its dim never hides the numbers (R9); inset into
-	# the frame's interior like every screen's bar.
+	# After the overlay so its dim never hides the numbers (R9).
 	top_bar = TOP_BAR_SCENE.instantiate()
 	top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	top_bar.offset_left = 44
-	top_bar.offset_top = 2
-	top_bar.offset_right = -70
 	add_child(top_bar)
 
 func run(report: TickReport) -> void:
