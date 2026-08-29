@@ -68,7 +68,7 @@ func _ready() -> void:
 	_panel.add_child(col)
 	season_label = Label.new()
 	season_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	season_label.add_theme_color_override("font_color", UiPalette.BORDER_MUTED)
+	season_label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	col.add_child(season_label)
 	date_label = Label.new()
 	date_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

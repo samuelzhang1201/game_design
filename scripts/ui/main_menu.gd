@@ -5,8 +5,14 @@ extends Control
 signal start_requested
 
 func _ready() -> void:
+	var backdrop := TextureRect.new()
+	backdrop.texture = UiPalette.backdrop()
+	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(backdrop)
 	var bg := ColorRect.new()
-	bg.color = UiPalette.BG_SCREEN
+	bg.color = UiPalette.DIM_OVERLAY
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	var col := VBoxContainer.new()
@@ -23,7 +29,7 @@ func _ready() -> void:
 	var hint := Label.new()
 	hint.text = "press Space to take the throne"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_color_override("font_color", UiPalette.BORDER_MUTED)
+	hint.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	col.add_child(hint)
 
 func _unhandled_input(event: InputEvent) -> void:

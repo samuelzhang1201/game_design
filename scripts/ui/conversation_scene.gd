@@ -1,20 +1,17 @@
 class_name ConversationScene
 extends Control
-## VN stage (R3/R4/R5): one big portrait, name plate, dialogue box pinned to
-## the bottom. Beats advance on Continue / reply / event choice.
-##
-## User ruling (2026-08-29, supersedes the brief's "mid-bottom" auto-sizing
-## box): the dialogue box is a FIXED-height full-width strip at the bottom of
-## the view; long content (event text, many choices) scrolls inside it, so the
-## box never grows over the portrait, which stands fully above it. The
-## KingdomCard sits top-left here too, same corner as every gameplay screen.
+## VN stage (R3/R4/R5), UI_example.png chrome (user ruling 2026-08-29): map
+## backdrop behind a dark shade, the TopBar metrics strip along the top, a
+## minister dossier card on the LEFT (portrait, name, seat, opinion bar,
+## trait chips), and the FIXED-height dialogue strip pinned to the bottom
+## right of the card - long content scrolls inside it, never over the card.
+## Beats advance on Continue / reply / event choice.
 
 signal finished
 
 var _beats: Array = []
 var _index := -1
 var _report: TickReport
-var _portrait_holder: Control
 var _name_label: Label
 var _text_label: Label
 var _replies_box: VBoxContainer
@@ -22,19 +19,29 @@ var _free_text: LineEdit
 var _continue_btn: Button
 var _panel: PanelContainer
 var _scroll: ScrollContainer
-var _card: KingdomCard
 var _resolved_event := false
 
 ## Static structure and layout live in scenes/conversation.tscn (editable in
 ## the editor); _ready only fetches the nodes, paints them from UiPalette,
-## and wires signals. Dynamic content (portraits, reply buttons) is spawned
-## at runtime below.
+## and wires signals. Dynamic content (portraits, trait chips, reply
+## buttons) is spawned at runtime below.
 func _ready() -> void:
-	%Bg.color = UiPalette.BG_STAGE
-	_portrait_holder = %PortraitHolder
+	%Backdrop.texture = UiPalette.backdrop()
+	%Backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	%Backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	%Shade.color = UiPalette.DIM_OVERLAY
+	%MinisterPanel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
+	%MinisterName.add_theme_color_override("font_color", UiPalette.GOLD)
+	%MinisterName.add_theme_font_size_override("font_size", 12)
+	%MinisterTitle.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	%MinisterTitle.add_theme_font_size_override("font_size", 9)
+	%OpinionBar.add_theme_stylebox_override("background",
+		UiPalette.chip_style(Color("0f1017"), UiPalette.BORDER_GOLD))
+	%OpinionValue.add_theme_font_size_override("font_size", 10)
 	_panel = %DialoguePanel
 	_panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_MUTED, 2, 10))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
 	_name_label = %NameLabel
 	_name_label.add_theme_color_override("font_color", UiPalette.GOLD)
 	_scroll = %DialogueScroll
@@ -45,12 +52,6 @@ func _ready() -> void:
 	_free_text.text_submitted.connect(_on_free_text)
 	_continue_btn = %ContinueButton
 	_continue_btn.pressed.connect(_advance)
-	_card = %KingdomCard
-	Game.state_changed.connect(_refresh_card)
-
-func _refresh_card() -> void:
-	if Game.state != null:
-		_card.show_values(Game.state)
 
 ## `report` is the TickReport the beats were built from - kept so the summary
 ## beat can compose its text at display time (see ConversationBeats.summary_text)
@@ -61,7 +62,6 @@ func start(beats: Array, report: TickReport) -> void:
 	_beats = beats
 	_report = report
 	_index = -1
-	_refresh_card()
 	_advance()
 
 func current_beat() -> Dictionary:
@@ -85,8 +85,11 @@ func dialogue_panel() -> PanelContainer:
 func dialogue_scroll() -> ScrollContainer:
 	return _scroll
 
-func kingdom_card() -> KingdomCard:
-	return _card
+func top_bar() -> TopBar:
+	return %TopBar
+
+func minister_panel() -> PanelContainer:
+	return %MinisterPanel
 
 func _advance() -> void:
 	_index += 1
@@ -94,7 +97,7 @@ func _advance() -> void:
 		finished.emit()
 		return
 	var b := current_beat()
-	_show_portrait(String(b["portrait_id"]))
+	_show_speaker(b)
 	_name_label.text = String(b["speaker"])
 	# Deviation from the brief (pre-approved): the brief's literal `child.free()`
 	# here frees while iterating the container's own get_children() snapshot -
@@ -104,6 +107,7 @@ func _advance() -> void:
 	# since every test awaits frames before asserting on reply_buttons().
 	for child in _replies_box.get_children():
 		child.queue_free()
+	_next_reply_letter = 0
 	_resolved_event = false
 	match String(b["kind"]):
 		"event":
@@ -139,25 +143,31 @@ func _advance() -> void:
 	# A fresh beat reads from the top of the fixed-height strip.
 	_scroll.set_deferred("scroll_vertical", 0)
 
+## Mock-style lettered responses ("A. Distribute reserves"), left-aligned.
 func _add_reply(label: String, handler: Callable) -> void:
 	var btn := Button.new()
-	btn.text = label
+	btn.text = "%s.  %s" % [char(65 + _next_reply_letter), label]
+	_next_reply_letter += 1
+	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.pressed.connect(handler)
 	_replies_box.add_child(btn)
 
-# Portrait sizes, sharing the PORTRAIT_FLOOR line so both kinds stand fully
-# above the fixed dialogue strip (user ruling 2026-08-29): full-body art
-# 176 tall (top at y=10), the 48px chip scaled 3.5x to 168.
-const FULL_ART_HEIGHT := 176.0
-const CHIP_SCALE := 3.5
+var _next_reply_letter := 0
 
-func _show_portrait(portrait_id: String) -> void:
-	# Deviation from the brief (pre-approved): same queue_free() reasoning as
-	# _advance above - the new portrait is added immediately after, so the
-	# outgoing one is only pending-delete for the rest of this frame.
-	for child in _portrait_holder.get_children():
+## Fills the left dossier card for this beat's speaker: portrait (full-body
+## art fitted into the box, chip fallback), name, seat title, opinion bar,
+## and trait chips. Non-character beats (round table, herald) show just the
+## portrait and name.
+func _show_speaker(b: Dictionary) -> void:
+	var portrait_id := String(b["portrait_id"])
+	# Same queue_free() reasoning as _advance: the replacement is added
+	# immediately, the outgoing node is pending-delete for one frame.
+	for child in %PortraitBox.get_children():
 		child.queue_free()
+	for chip in %TraitChips.get_children():
+		chip.queue_free()
+	var box_size: Vector2 = %PortraitBox.custom_minimum_size
 	var full := CharacterPortrait.full_texture_for(portrait_id)
 	if full != null:
 		var pic := TextureRect.new()
@@ -166,16 +176,36 @@ func _show_portrait(portrait_id: String) -> void:
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-		var w := FULL_ART_HEIGHT * full.get_width() / full.get_height()
-		pic.size = Vector2(w, FULL_ART_HEIGHT)
-		pic.position = Vector2(-w / 2.0, -FULL_ART_HEIGHT)
-		_portrait_holder.add_child(pic)
+		pic.set_anchors_preset(Control.PRESET_FULL_RECT)
+		%PortraitBox.add_child(pic)
+	else:
+		var p := CharacterPortrait.instantiate_for(portrait_id, false)
+		var side := CharacterPortrait.PORTRAIT_SIZE.x * 2.5
+		p.scale = Vector2(2.5, 2.5)
+		p.position = Vector2((box_size.x - side) / 2.0, (box_size.y - side) / 2.0)
+		%PortraitBox.add_child(p)
+	var c: Character = null
+	if Game.state != null and Game.state.characters.has(portrait_id):
+		c = Game.state.characters[portrait_id]
+	%MinisterName.text = c.display_name if c != null else String(b.get("speaker", ""))
+	%MinisterTitle.visible = c != null
+	%OpinionRow.visible = c != null
+	if c == null:
 		return
-	var p := CharacterPortrait.instantiate_for(portrait_id, false)
-	p.scale = Vector2(CHIP_SCALE, CHIP_SCALE)
-	var side := CharacterPortrait.PORTRAIT_SIZE.x * CHIP_SCALE
-	p.position = Vector2(-side / 2.0, -side)
-	_portrait_holder.add_child(p)
+	%MinisterTitle.text = String(Game.data.seats[c.seat]["label"]).to_upper() \
+		if Game.data.seats.has(c.seat) else String(c.seat).to_upper()
+	%OpinionBar.value = c.opinion
+	var tone: Color = UiPalette.POSITIVE if c.opinion >= 0 else UiPalette.NEGATIVE
+	%OpinionBar.add_theme_stylebox_override("fill", UiPalette.chip_style(tone, tone))
+	%OpinionValue.text = "%+d" % c.opinion
+	%OpinionValue.add_theme_color_override("font_color", tone)
+	for t in c.traits:
+		var chip := Label.new()
+		chip.text = String(Game.data.traits[t]["label"]) if Game.data.traits.has(t) else String(t)
+		chip.add_theme_font_size_override("font_size", 8)
+		chip.add_theme_color_override("font_color", UiPalette.GOLD)
+		chip.add_theme_stylebox_override("normal", UiPalette.chip_style())
+		%TraitChips.add_child(chip)
 
 func _on_quick_reply(sug: Dictionary) -> void:
 	var result: Dictionary = Game.try_execute(sug["request"])

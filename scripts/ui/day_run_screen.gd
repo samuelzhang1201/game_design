@@ -1,34 +1,36 @@
 class_name DayRunScreen
 extends Control
-## DAY_RUN state screen: the calendar interlude with the KingdomCard showing
-## what changed while the days pass (R6, R9).
+## DAY_RUN state screen: the calendar interlude, with the TopBar metrics
+## strip showing what changed while the days pass (R6, R9 - the TopBar's
+## delta column supersedes the old KingdomCard changes mode; user ruling
+## 2026-08-29, UI_example.png chrome).
 
 signal finished
 
-const KINGDOM_CARD_SCENE := preload("res://scenes/kingdom_card.tscn")
+const TOP_BAR_SCENE := preload("res://scenes/top_bar.tscn")
 
 var overlay: CalendarOverlay
-var card: KingdomCard
+var top_bar: TopBar
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var bg := ColorRect.new()
-	bg.color = UiPalette.BG_SCREEN
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-	# overlay before card: the overlay's full-rect dim ColorRect would
-	# otherwise paint over the card and hide it for the whole interlude
-	# (defeats R9 - the numbers are meant to stay visible while the days
-	# pass). Card pinned top-left (user ruling 2026-08-29), clear of the
-	# overlay's centered date panel, which therefore keeps its default
-	# centered position (panel_vertical_offset 0).
+	var backdrop := TextureRect.new()
+	backdrop.texture = UiPalette.backdrop()
+	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(backdrop)
+	var shade := ColorRect.new()
+	shade.color = UiPalette.DIM_OVERLAY
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(shade)
 	overlay = CalendarOverlay.new()
 	overlay.finished.connect(func(): finished.emit())
 	add_child(overlay)
-	card = KINGDOM_CARD_SCENE.instantiate()
-	card.position = Vector2(8, 8)
-	add_child(card)
+	# After the overlay so its dim never hides the numbers (R9).
+	top_bar = TOP_BAR_SCENE.instantiate()
+	top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	add_child(top_bar)
 
 func run(report: TickReport) -> void:
-	card.show_changes(Game.state, report.metric_deltas)
 	overlay.play(report.tick)

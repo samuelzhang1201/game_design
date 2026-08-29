@@ -3,9 +3,11 @@ extends Control
 ## Court screen (Task 6, replaces CouncilScreen): the trimmed order screen.
 ## All minister speech, briefing, and event resolution now happen on the
 ## conversation stage (Task 5) before GameRoot ever switches here — this
-## screen is numbers + orders only (spec R2): a KingdomCard docked right
-## (R1/R7/R9), a short Herald/court log (plain Labels, no portraits — R10),
-## and the free-text/suggestion order bar (R8).
+## screen is numbers + orders only (spec R2), in the UI_example.png chrome
+## (user ruling 2026-08-29): map backdrop, TopBar metrics strip up top
+## (supersedes the KingdomCard, R1/R7/R9), the Herald/court log left (plain
+## Labels, no portraits — R10), and a right advice panel with the lettered
+## suggestion buttons and End Turn (R8; free-text order bar under the log).
 
 ## Emitted instead of self-driving the turn cycle: GameRoot owns advancing
 ## the tick and playing the DAY_RUN interlude. See enter_court.
@@ -16,7 +18,6 @@ signal end_turn_requested
 ## full conversation transcript.
 const LOG_CAP := 8
 
-var card: KingdomCard
 var log_box: VBoxContainer
 var suggestions_box: VBoxContainer
 var free_text: LineEdit
@@ -26,15 +27,18 @@ var _log_scroll: ScrollContainer
 var _suggestion_buttons: Array = []
 
 ## Static structure and layout live in scenes/court.tscn (editable in the
-## editor): KingdomCard docked top-LEFT as the root HBox's first child (user
-## ruling 2026-08-29, supersedes R1's right dock), an 8px screen inset, and
-## the log/suggestions/order-bar column. _ready fetches nodes, paints them
-## from UiPalette, and wires signals; log lines and suggestion buttons are
-## spawned at runtime below.
+## editor); _ready fetches nodes, paints them from UiPalette, and wires
+## signals; log lines and suggestion buttons are spawned at runtime below.
+## The TopBar instance wires itself to Game's signals.
 func _ready() -> void:
-	%Bg.color = UiPalette.BG_SCREEN
-	card = %KingdomCard
-	Game.state_changed.connect(_refresh_card)
+	%Backdrop.texture = UiPalette.backdrop()
+	%Backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	%Backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	%Shade.color = UiPalette.DIM_OVERLAY
+	%SidePanel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
+	%SideHeader.add_theme_color_override("font_color", UiPalette.GOLD)
+	%SideHeader.add_theme_font_size_override("font_size", 9)
 	_log_scroll = %LogScroll
 	log_box = %LogBox
 	suggestions_box = %SuggestionsBox
@@ -48,12 +52,10 @@ func _ready() -> void:
 ## happened on the conversation stage. Called by GameRoot after the
 ## conversation scene finishes (see game_root.gd's _on_conversation_finished).
 func enter_court(report: TickReport) -> void:
-	_refresh_card()
 	_render_suggestions(report)
 
-func _refresh_card() -> void:
-	if Game.state != null:
-		card.show_values(Game.state)
+func top_bar() -> TopBar:
+	return %TopBar
 
 ## Enter ends the turn (when the order box isn't focused - a focused LineEdit
 ## consumes Enter itself, so this only fires from unhandled input).
@@ -88,11 +90,16 @@ func _render_suggestions(report: TickReport) -> void:
 	for child in suggestions_box.get_children():
 		child.queue_free()
 	_suggestion_buttons = []
-	for sug in report.suggestions:
+	for i in report.suggestions.size():
+		var sug: Dictionary = report.suggestions[i]
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE  # Enter is reserved for End Turn
-		b.text = TemplateVoicer.line_for(Game.data, "pitch_" + String(sug["pitch_key"]), [],
-			Game.state.tick, {"tradeoff": ""}).strip_edges()
+		# Mock-style lettered response ("A. Raise the levies"), left-aligned.
+		b.text = "%s.  %s" % [char(65 + i), TemplateVoicer.line_for(Game.data,
+			"pitch_" + String(sug["pitch_key"]), [],
+			Game.state.tick, {"tradeoff": ""}).strip_edges()]
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.tooltip_text = String(sug["tradeoff"])
 		b.pressed.connect(_on_suggestion.bind(sug, b))
 		suggestions_box.add_child(b)

@@ -159,25 +159,27 @@ func test_free_text_event_choice_invalid_id_rejected_and_logged() -> void:
 			found = true
 	assert_true(found, "the rejection must reach the court log")
 
-## User ruling (2026-08-29, supersedes R1's right dock): the KingdomCard
-## docks top-LEFT so the realm's numbers sit in the same corner on every
-## gameplay screen.
-func test_kingdom_card_docked_top_left() -> void:
+## User ruling (2026-08-29, UI_example chrome, supersedes R1's card dock):
+## metrics live in the TopBar strip along the top edge; the lettered
+## suggestion buttons live in the right advice panel with End Turn.
+func test_top_bar_up_top_and_lettered_suggestions_in_side_panel() -> void:
 	Game.start_campaign(42)
 	var report := _report_after_resolving_pending_event()
 	var screen := _screen()
 	screen.enter_court(report)
 	await wait_frames(2)
-	assert_eq(screen.card.get_index(), 0,
-		"card is the root HBox's first (leftmost) child")
-	assert_lt(screen.card.global_position.x, 20.0)
-	assert_lt(screen.card.global_position.y, 20.0)
+	assert_not_null(screen.top_bar())
+	assert_lt(screen.top_bar().global_position.y, 5.0, "TopBar hugs the top edge")
+	assert_gt(screen.suggestion_buttons().size(), 0)
+	assert_true(String(screen.suggestion_buttons()[0].text).begins_with("A."),
+		"suggestions are lettered like the mock's responses")
+	var side: Control = screen.find_child("SidePanel", true, false)
+	assert_true(side.is_ancestor_of(screen.end_turn_button()),
+		"End Turn lives in the right advice panel")
 
-## New CourtScreen-specific coverage (R1/R7/R9): the docked KingdomCard must
-## reflect state immediately after an executed order, not just at
-## enter_court time - the old council screen had no KingdomCard to refresh,
-## so there's no old test to migrate for this one.
-func test_kingdom_card_refreshes_after_suggestion_executes() -> void:
+## New CourtScreen-specific coverage (R1/R7/R9): the TopBar must reflect
+## state immediately after an executed order, not just at enter_court time.
+func test_top_bar_refreshes_after_suggestion_executes() -> void:
 	Game.start_campaign(42)
 	var report := _report_after_resolving_pending_event()
 	var screen := _screen()
@@ -185,21 +187,15 @@ func test_kingdom_card_refreshes_after_suggestion_executes() -> void:
 	await wait_frames(2)
 	var idx := -1
 	for i in report.suggestions.size():
-		if String(report.suggestions[i]["pitch_key"]) == "raise_levies":
+		if "raise_levies" in String(report.suggestions[i]["pitch_key"]):
 			idx = i
 			break
 	assert_ne(idx, -1, "seed 42's standing menu always offers LEVY_RAISE")
-	var gold_before := _gold_row_text(screen)
+	var gold_before := screen.top_bar().metric_text("treasury")
 	screen.suggestion_buttons()[idx].pressed.emit()
 	await wait_frames(2)
-	var gold_after := _gold_row_text(screen)
-	assert_ne(gold_before, gold_after, "KingdomCard's Gold row must refresh after the order executes")
-
-func _gold_row_text(screen: CourtScreen) -> String:
-	for l in screen.card.find_children("*", "Label", true, false):
-		if String(l.text).begins_with("Gold"):
-			return String(l.text)
-	return ""
+	assert_ne(screen.top_bar().metric_text("treasury"), gold_before,
+		"the TopBar's Gold value must refresh after the order executes")
 
 ## Migration-map item 16 (guard-holds): the End-Turn pending-event guard
 ## lives entirely inside CourtScreen._on_end_turn's early return - proven

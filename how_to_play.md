@@ -14,3 +14,7 @@ System Requriements:
 13. create an easy main scene, hit space to start the game.
 14. the conversation box is a fixed-size strip at the very bottom of the view; long content scrolls inside it, and the box never covers the minister portrait (supersedes the "mid bottom" box in 4)
 15. the kingdom info card is compact and always pinned to the top-left corner of every gameplay screen (conversation, court, day run)
+16. the whole UI follows the UI_example.png mock (dark ground, thin gold trim, parchment text): a top strip with date + the six metrics and their per-tick deltas + a pending-event chip replaces the kingdom card (supersedes 15)
+17. the conversation scene shows a minister dossier card on the left (portrait, name, seat title, opinion bar, trait chips); the full-body artworks provided are used for all five ministers (reused by archetype until per-minister art lands)
+18. the court screen puts the lettered suggestion buttons and End Turn in a right-side advice panel; response buttons everywhere are lettered "A. / B. / C." like the mock
+19. map_example.jpeg is the static 2D map placeholder shown (dimmed) behind every screen

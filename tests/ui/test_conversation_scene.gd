@@ -75,8 +75,9 @@ func test_event_beat_gates_continue_until_choice() -> void:
 
 ## User ruling (2026-08-29): the dialogue box is a fixed-height strip pinned
 ## to the bottom of the view. Long content scrolls inside it instead of
-## growing the box upward over the portrait, which stays fully visible.
-func test_dialogue_box_fixed_bottom_strip_clear_of_portrait() -> void:
+## growing the box over the minister dossier card, which stays fully visible
+## (UI_example chrome: card left, dialogue bottom-right of it).
+func test_dialogue_box_fixed_bottom_strip_clear_of_dossier() -> void:
 	Game.start_campaign(42)
 	var beats := [
 		{"kind": "minister", "portrait_id": "char_marshal", "speaker": "Ser Brandt of Harrow",
@@ -87,9 +88,10 @@ func test_dialogue_box_fixed_bottom_strip_clear_of_portrait() -> void:
 	var panel := c.dialogue_panel()
 	assert_lt(c.size.y - (panel.global_position.y + panel.size.y), 16.0,
 		"the box hugs the bottom edge")
-	var art: Control = c.find_child("FullArt", true, false)
-	assert_lt(art.global_position.y + art.size.y, panel.global_position.y,
-		"the portrait must end above the dialogue box, never behind it")
+	assert_not_null(c.find_child("FullArt", true, false),
+		"the marshal's full-body art fills the dossier portrait box")
+	assert_false(c.minister_panel().get_global_rect().intersects(panel.get_global_rect()),
+		"the dialogue box must never cover the dossier card")
 
 ## Same ruling, worst case: a long event text plus three choice buttons must
 ## scroll inside the fixed box rather than grow it over the portrait.
@@ -114,16 +116,16 @@ func test_long_event_content_scrolls_inside_fixed_box() -> void:
 	assert_not_null(scroll, "dialogue content lives in a ScrollContainer")
 	assert_gt(scroll.get_v_scroll_bar().max_value, scroll.size.y,
 		"the overflowing event content is reachable by scrolling")
-	# The widest portrait (the scaled round-table chip) must clear the
-	# top-left KingdomCard, not slide underneath it.
-	var chip: Control = c.find_children("*", "CharacterPortrait", true, false)[0]
-	assert_false(c.kingdom_card().get_global_rect().intersects(chip.get_global_rect()),
-		"the portrait must not overlap the kingdom card")
+	# Non-character beats (the round table) fall back to ONE chip portrait
+	# inside the dossier card's portrait box.
+	assert_eq(c.find_children("*", "CharacterPortrait", true, false).size(), 1)
 
-## User ruling (2026-08-29): the KingdomCard is pinned top-left on every
-## gameplay screen, the conversation stage included, and refreshes when an
-## order taken here changes the realm's numbers.
-func test_kingdom_card_pinned_top_left_and_refreshes_after_order() -> void:
+## User ruling (2026-08-29, UI_example chrome): the TopBar metrics strip
+## spans the top of every gameplay screen, the conversation stage included,
+## the dossier card shows the speaker's identity, and both reflect an order
+## taken here (dossier via the trait/opinion fields, TopBar via
+## Game.state_changed).
+func test_top_bar_and_dossier_reflect_speaker_and_order() -> void:
 	Game.start_campaign(42)
 	var report := Game.next_tick()
 	if not Game.state.pending_event.is_empty():
@@ -135,21 +137,19 @@ func test_kingdom_card_pinned_top_left_and_refreshes_after_order() -> void:
 		"suggestions": [sug]}]
 	var c := _scene_with(beats, report)
 	await wait_frames(2)
-	var card := c.kingdom_card()
-	assert_not_null(card)
-	assert_lt(card.global_position.x, 20.0, "card sits at the left edge")
-	assert_lt(card.global_position.y, 20.0, "card sits at the top edge")
-	var gold_before := _card_gold_row(card)
+	assert_lt(c.top_bar().global_position.y, 5.0, "TopBar hugs the top edge")
+	var name_label: Label = c.find_child("MinisterName", true, false)
+	assert_eq(name_label.text, Game.state.characters["char_marshal"].display_name,
+		"the dossier names the speaking minister")
+	var title_label: Label = c.find_child("MinisterTitle", true, false)
+	assert_eq(title_label.text, "MARSHAL", "the dossier shows the seat title")
+	assert_gt(c.find_child("TraitChips", true, false).get_child_count(), 0,
+		"the dossier shows the minister's trait chips")
+	var gold_before := c.top_bar().metric_text("treasury")
 	c.reply_buttons()[0].pressed.emit()
 	await wait_frames(2)
-	assert_ne(_card_gold_row(card), gold_before,
-		"the card's Gold row must refresh after the order executes")
-
-func _card_gold_row(card: KingdomCard) -> String:
-	for l in card.find_children("*", "Label", true, false):
-		if String(l.text).begins_with("Gold"):
-			return String(l.text)
-	return ""
+	assert_ne(c.top_bar().metric_text("treasury"), gold_before,
+		"the TopBar's Gold value must refresh after the order executes")
 
 ## FIX 2 (post-Task-5 review): a quick-reply taken earlier in THIS
 ## conversation must show up in the summary as "resolved this session"

@@ -38,8 +38,6 @@ const DEFAULT_SEAT_COLOR := Color("555555")
 @export var character_id: String = ""
 @export var show_badge: bool = true
 
-static var _texture_cache: Dictionary = {}
-
 static func instantiate_for(id: String, with_badge: bool = true) -> CharacterPortrait:
 	var path := SCENE_DIR + id + ".tscn"
 	if not ResourceLoader.exists(path):
@@ -143,18 +141,4 @@ static func full_texture_for(id: String) -> Texture2D:
 	return _load_png(FULL_PNG_DIR + id + ".png")
 
 static func _load_png(path: String) -> Texture2D:
-	if _texture_cache.has(path):
-		return _texture_cache[path]
-	var tex: Texture2D = null
-	# Prefer the import pipeline: exported builds pack only imported
-	# resources (raw-file reads below fail inside a PCK). The raw-file
-	# route stays as the fallback for art dropped in without an editor
-	# import yet, and for headless runs without an import step.
-	if ResourceLoader.exists(path):
-		tex = load(path) as Texture2D
-	elif FileAccess.file_exists(path):
-		var img := Image.load_from_file(path)
-		if img != null:
-			tex = ImageTexture.create_from_image(img)
-	_texture_cache[path] = tex
-	return tex
+	return UiPalette.load_art(path)

@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/conversation_scene.gd" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/kingdom_card.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/top_bar.tscn" id="2"]
 
 [node name="ConversationScene" type="Control"]
 anchors_preset = 15
@@ -9,29 +9,72 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1")
 
-[node name="Bg" type="ColorRect" parent="."]
+[node name="Backdrop" type="TextureRect" parent="."]
 unique_name_in_owner = true
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="PortraitHolder" type="Control" parent="."]
+[node name="Shade" type="ColorRect" parent="."]
 unique_name_in_owner = true
-anchor_top = 1.0
+anchors_preset = 15
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 260.0
-offset_top = -174.0
-offset_right = 260.0
-offset_bottom = -174.0
+
+[node name="TopBar" parent="." instance=ExtResource("2")]
+unique_name_in_owner = true
+anchor_right = 1.0
+
+[node name="MinisterPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+offset_left = 8.0
+offset_top = 36.0
+custom_minimum_size = Vector2(154, 0)
+
+[node name="MVBox" type="VBoxContainer" parent="MinisterPanel"]
+theme_override_constants/separation = 5
+
+[node name="PortraitBox" type="Control" parent="MinisterPanel/MVBox"]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(132, 168)
+
+[node name="MinisterName" type="Label" parent="MinisterPanel/MVBox"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="MinisterTitle" type="Label" parent="MinisterPanel/MVBox"]
+unique_name_in_owner = true
+
+[node name="OpinionRow" type="HBoxContainer" parent="MinisterPanel/MVBox"]
+unique_name_in_owner = true
+theme_override_constants/separation = 6
+
+[node name="OpinionBar" type="ProgressBar" parent="MinisterPanel/MVBox/OpinionRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(96, 6)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = -100.0
+max_value = 100.0
+show_percentage = false
+
+[node name="OpinionValue" type="Label" parent="MinisterPanel/MVBox/OpinionRow"]
+unique_name_in_owner = true
+
+[node name="TraitChips" type="HFlowContainer" parent="MinisterPanel/MVBox"]
+unique_name_in_owner = true
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
 
 [node name="DialoguePanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 12.0
+offset_left = 170.0
 offset_top = -168.0
-offset_right = -12.0
+offset_right = -8.0
 offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 0
@@ -72,8 +115,3 @@ placeholder_text = "Speak your mind..."
 unique_name_in_owner = true
 focus_mode = 0
 text = "Wave them on"
-
-[node name="KingdomCard" parent="." instance=ExtResource("2")]
-unique_name_in_owner = true
-offset_left = 8.0
-offset_top = 8.0
