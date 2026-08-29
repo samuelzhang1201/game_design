@@ -1,9 +1,60 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/court_screen.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/kingdom_card.tscn" id="2"]
 
 [node name="CourtScreen" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1")
+
+[node name="Bg" type="ColorRect" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Root" type="HBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
+theme_override_constants/separation = 8
+
+[node name="KingdomCard" parent="Root" instance=ExtResource("2")]
+unique_name_in_owner = true
+size_flags_vertical = 0
+
+[node name="Main" type="VBoxContainer" parent="Root"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="LogScroll" type="ScrollContainer" parent="Root/Main"]
+unique_name_in_owner = true
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="LogBox" type="VBoxContainer" parent="Root/Main/LogScroll"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="SuggestionsBox" type="VBoxContainer" parent="Root/Main"]
+unique_name_in_owner = true
+theme_override_constants/separation = 2
+
+[node name="InputRow" type="HBoxContainer" parent="Root/Main"]
+
+[node name="FreeText" type="LineEdit" parent="Root/Main/InputRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+placeholder_text = "Give an order..."
+
+[node name="EndTurn" type="Button" parent="Root/Main/InputRow"]
+unique_name_in_owner = true
+focus_mode = 0
+text = "End Turn"

@@ -159,6 +159,20 @@ func test_free_text_event_choice_invalid_id_rejected_and_logged() -> void:
 			found = true
 	assert_true(found, "the rejection must reach the court log")
 
+## User ruling (2026-08-29, supersedes R1's right dock): the KingdomCard
+## docks top-LEFT so the realm's numbers sit in the same corner on every
+## gameplay screen.
+func test_kingdom_card_docked_top_left() -> void:
+	Game.start_campaign(42)
+	var report := _report_after_resolving_pending_event()
+	var screen := _screen()
+	screen.enter_court(report)
+	await wait_frames(2)
+	assert_eq(screen.card.get_index(), 0,
+		"card is the root HBox's first (leftmost) child")
+	assert_lt(screen.card.global_position.x, 20.0)
+	assert_lt(screen.card.global_position.y, 20.0)
+
 ## New CourtScreen-specific coverage (R1/R7/R9): the docked KingdomCard must
 ## reflect state immediately after an executed order, not just at
 ## enter_court time - the old council screen had no KingdomCard to refresh,

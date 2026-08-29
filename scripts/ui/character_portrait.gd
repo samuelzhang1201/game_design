@@ -14,11 +14,17 @@ extends Control
 ##
 ## Instantiate via CharacterPortrait.instantiate_for(id) - it picks the
 ## character's own scene when one exists, else the base scene.
+##
+## FULL-BODY ART: drop a real-alpha PNG at assets/portraits/full/<id>.png
+## (tools/clean_portrait_art.py turns raw exports into one) and the VN
+## conversation stage uses it instead of the 4x-scaled chip. The 48x48 chip
+## above is still what council/court screens show.
 
 const PORTRAIT_SIZE := Vector2(48, 48)
 const SCENE_DIR := "res://scenes/characters/"
 const BASE_SCENE := SCENE_DIR + "character_portrait.tscn"
 const PNG_DIR := "res://assets/portraits/"
+const FULL_PNG_DIR := "res://assets/portraits/full/"
 
 const SEAT_COLORS := {
 	"chancellor": Color("4a6fa5"), "marshal": Color("a54a4a"),
@@ -115,7 +121,7 @@ func _build_badge_and_tooltip() -> void:
 		badge.text = str(c.opinion)
 		badge.add_theme_font_size_override("font_size", 12)
 		badge.add_theme_color_override("font_color",
-			Color("7fd47f") if c.opinion >= 0 else Color("d47f7f"))
+			UiPalette.POSITIVE if c.opinion >= 0 else UiPalette.NEGATIVE)
 		badge.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 		badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 		badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -126,14 +132,27 @@ func _build_badge_and_tooltip() -> void:
 		recent += "\n%+d %s" % [int(log[i]["delta"]), log[i]["reason"]]
 	tooltip_text = c.display_name + recent
 
-## Loads a portrait PNG directly from the filesystem (import-pipeline
-## independent), cached per path. Null when no PNG exists for the id.
+## Loads a portrait PNG, cached per path. Null when no PNG exists for the id.
 static func texture_for(id: String) -> Texture2D:
-	var path := PNG_DIR + id + ".png"
+	return _load_png(PNG_DIR + id + ".png")
+
+## Full-body art for the VN conversation stage (assets/portraits/full/<id>.png,
+## produced by tools/clean_portrait_art.py). Null when the character has none;
+## callers fall back to the 48x48 chip.
+static func full_texture_for(id: String) -> Texture2D:
+	return _load_png(FULL_PNG_DIR + id + ".png")
+
+static func _load_png(path: String) -> Texture2D:
 	if _texture_cache.has(path):
 		return _texture_cache[path]
 	var tex: Texture2D = null
-	if FileAccess.file_exists(path):
+	# Prefer the import pipeline: exported builds pack only imported
+	# resources (raw-file reads below fail inside a PCK). The raw-file
+	# route stays as the fallback for art dropped in without an editor
+	# import yet, and for headless runs without an import step.
+	if ResourceLoader.exists(path):
+		tex = load(path) as Texture2D
+	elif FileAccess.file_exists(path):
 		var img := Image.load_from_file(path)
 		if img != null:
 			tex = ImageTexture.create_from_image(img)

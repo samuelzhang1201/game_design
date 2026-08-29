@@ -29,13 +29,22 @@ func test_overlay_speed_comes_from_balance() -> void:
 
 ## Guard against the card being hidden behind the overlay's full-rect dim
 ## ColorRect (defeats R9 - the numbers must stay visible while the days
-## pass): the card must draw above the overlay, and the overlay's centered
-## date panel must be shifted clear of the bottom-anchored card.
-func test_card_draws_above_overlay_dim_and_panel_is_offset() -> void:
+## pass): the card must draw above the overlay. User ruling (2026-08-29):
+## the card is pinned top-left, clear of the overlay's centered date panel
+## (which therefore needs no vertical offset any more).
+func test_card_draws_above_overlay_dim_at_top_left() -> void:
 	Game.start_campaign(42)
 	var d: DayRunScreen = load("res://scenes/day_run.tscn").instantiate()
 	add_child_autofree(d)
-	await wait_frames(1)
+	await wait_frames(2)
 	assert_gt(d.card.get_index(), d.overlay.get_index(),
 		"card must draw above the overlay's dim so it stays visible")
-	assert_almost_eq(d.overlay.panel_vertical_offset, -80.0, 0.1)
+	assert_lt(d.card.position.x, 20.0, "card sits at the left edge")
+	assert_lt(d.card.position.y, 20.0, "card sits at the top edge")
+	assert_almost_eq(d.overlay.panel_vertical_offset, 0.0, 0.1,
+		"no offset needed once the card is out of the panel's way")
+	d.run(Game.next_tick())
+	await wait_frames(2)
+	assert_false(d.card.get_global_rect().intersects(
+		d.overlay.date_panel().get_global_rect()),
+		"the card must not overlap the overlay's centered date panel")

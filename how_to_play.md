@@ -12,3 +12,5 @@ System Requriements:
 11. please advice me a good and scalable architecture of scenes strucures and implement.
 12. create a input function that when I hit R then restart the game
 13. create an easy main scene, hit space to start the game.
+14. the conversation box is a fixed-size strip at the very bottom of the view; long content scrolls inside it, and the box never covers the minister portrait (supersedes the "mid bottom" box in 4)
+15. the kingdom info card is compact and always pinned to the top-left corner of every gameplay screen (conversation, court, day run)

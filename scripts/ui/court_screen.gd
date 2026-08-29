@@ -11,7 +11,6 @@ extends Control
 ## the tick and playing the DAY_RUN interlude. See enter_court.
 signal end_turn_requested
 
-const PIXEL_FONT_PATH := "res://assets/fonts/pixel.ttf"  # optional; falls back to default
 ## Log cap (R10-adjacent polish, ported from the old council screen's transcript):
 ## keeps the court log short since it only ever holds order results, not a
 ## full conversation transcript.
@@ -26,65 +25,35 @@ var end_turn: Button
 var _log_scroll: ScrollContainer
 var _suggestion_buttons: Array = []
 
+## Static structure and layout live in scenes/court.tscn (editable in the
+## editor): KingdomCard docked top-LEFT as the root HBox's first child (user
+## ruling 2026-08-29, supersedes R1's right dock), an 8px screen inset, and
+## the log/suggestions/order-bar column. _ready fetches nodes, paints them
+## from UiPalette, and wires signals; log lines and suggestion buttons are
+## spawned at runtime below.
 func _ready() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color("1a1423")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-
-	var root := HBoxContainer.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_theme_constant_override("separation", 8)
-	add_child(root)
-
-	var left := VBoxContainer.new()
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.add_theme_constant_override("separation", 4)
-	root.add_child(left)
-
-	_log_scroll = ScrollContainer.new()
-	_log_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_log_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	left.add_child(_log_scroll)
-	log_box = VBoxContainer.new()
-	log_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	log_box.add_theme_constant_override("separation", 4)
-	_log_scroll.add_child(log_box)
-
-	suggestions_box = VBoxContainer.new()
-	suggestions_box.add_theme_constant_override("separation", 2)
-	left.add_child(suggestions_box)
-
-	var input_row := HBoxContainer.new()
-	left.add_child(input_row)
-	free_text = LineEdit.new()
+	%Bg.color = UiPalette.BG_SCREEN
+	card = %KingdomCard
+	Game.state_changed.connect(_refresh_card)
+	_log_scroll = %LogScroll
+	log_box = %LogBox
+	suggestions_box = %SuggestionsBox
+	free_text = %FreeText
 	free_text.max_length = int(Game.data.bal("prompt_max_chars"))
-	free_text.placeholder_text = "Give an order..."
-	free_text.editable = true
-	free_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	free_text.text_submitted.connect(_on_free_text_submitted)
-	input_row.add_child(free_text)
-	end_turn = Button.new()
-	end_turn.text = "End Turn"
-	end_turn.focus_mode = Control.FOCUS_NONE  # activated by click or Enter (unhandled)
+	end_turn = %EndTurn
 	end_turn.pressed.connect(_on_end_turn)
-	input_row.add_child(end_turn)
-
-	# KingdomCard docked right (R1): last child of the root HBoxContainer, so
-	# it hugs the right edge while `left` absorbs all remaining width.
-	card = load("res://scenes/kingdom_card.tscn").instantiate()
-	card.custom_minimum_size = Vector2(180, 0)
-	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	root.add_child(card)
-
-	_apply_font()
 
 ## Post-conversation court entry (R2): numbers + orders only, speech already
 ## happened on the conversation stage. Called by GameRoot after the
 ## conversation scene finishes (see game_root.gd's _on_conversation_finished).
 func enter_court(report: TickReport) -> void:
-	card.show_values(Game.state)
+	_refresh_card()
 	_render_suggestions(report)
+
+func _refresh_card() -> void:
+	if Game.state != null:
+		card.show_values(Game.state)
 
 ## Enter ends the turn (when the order box isn't focused - a focused LineEdit
 ## consumes Enter itself, so this only fires from unhandled input).
@@ -138,7 +107,6 @@ func _on_suggestion(sug: Dictionary, btn: Button) -> void:
 		"outcome_" + String(sug["request"].action_code), [], Game.state.tick)
 	_log("Herald", line + _promise_kept_suffix(result["outcome"]["effects"]))
 	btn.disabled = true  # only this button - the rest are still valid orders
-	card.show_values(Game.state)
 
 func _on_free_text_submitted(text: String) -> void:
 	if text.strip_edges() == "":
@@ -168,7 +136,6 @@ func _on_free_text_submitted(text: String) -> void:
 				_log("Herald", line + _promise_kept_suffix(outcome["effects"]))
 			for rej in res["rejected"]:
 				_log("Herald", "The council cannot: " + String(rej["error"]))
-			card.show_values(Game.state)
 		if Game.state.pending_event.is_empty():
 			end_turn.disabled = false)
 
@@ -201,12 +168,3 @@ func _log(speaker: String, text: String) -> void:
 func _scroll_log_to_bottom() -> void:
 	await get_tree().process_frame
 	_log_scroll.scroll_vertical = int(_log_scroll.get_v_scroll_bar().max_value)
-
-func _apply_font() -> void:
-	if not FileAccess.file_exists(PIXEL_FONT_PATH):
-		return
-	var font := load(PIXEL_FONT_PATH)
-	if font:
-		theme = Theme.new()
-		theme.default_font = font
-		theme.default_font_size = 16

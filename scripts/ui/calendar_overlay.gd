@@ -21,6 +21,7 @@ var panel_vertical_offset := 0.0
 var date_label: Label
 var season_label: Label
 var news_box: VBoxContainer
+var _panel: PanelContainer
 var _timer: Timer
 var _tick := 0
 var _day := 0
@@ -43,37 +44,36 @@ func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
-	dim.color = Color(0.05, 0.03, 0.09, 0.82)
+	dim.color = UiPalette.DIM_OVERLAY
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
-	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("241c33")
-	style.border_color = Color("deba54")
-	style.set_border_width_all(2)
-	style.set_content_margin_all(24)
-	panel.add_theme_stylebox_override("panel", style)
-	panel.custom_minimum_size = Vector2(380, 0)
+	_panel = PanelContainer.new()
+	_panel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.GOLD, 2, 24))
+	# 320 (not wider): keeps the centered panel clear of the top-left
+	# KingdomCard's corner on every gameplay window aspect (user ruling
+	# 2026-08-29 - the card and this panel must never overlap).
+	_panel.custom_minimum_size = Vector2(320, 0)
 	# Centered via anchors + grow-both so the auto-sizing panel stays centered
 	# without a container (containers override their children's anchors).
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.position.y += panel_vertical_offset
-	add_child(panel)
+	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panel.position.y += panel_vertical_offset
+	add_child(_panel)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)
-	panel.add_child(col)
+	_panel.add_child(col)
 	season_label = Label.new()
 	season_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	season_label.add_theme_color_override("font_color", Color("8c86a0"))
+	season_label.add_theme_color_override("font_color", UiPalette.BORDER_MUTED)
 	col.add_child(season_label)
 	date_label = Label.new()
 	date_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	date_label.add_theme_font_size_override("font_size", 28)
-	date_label.add_theme_color_override("font_color", Color("deba54"))
+	date_label.add_theme_color_override("font_color", UiPalette.GOLD)
 	col.add_child(date_label)
 	news_box = VBoxContainer.new()
 	news_box.add_theme_constant_override("separation", 4)
@@ -81,7 +81,7 @@ func _ready() -> void:
 	var hint := Label.new()
 	hint.text = "click to skip"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_color_override("font_color", Color("5c5670"))
+	hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
 	col.add_child(hint)
 	_timer = Timer.new()
 	_timer.timeout.connect(_advance_day)
@@ -103,6 +103,9 @@ func play(tick: int) -> void:
 func playing() -> bool:
 	return visible
 
+func date_panel() -> PanelContainer:
+	return _panel
+
 func _advance_day() -> void:
 	_day += 1
 	if _day >= Calendar.DAYS_PER_TICK:
@@ -118,7 +121,7 @@ func _add_news(text: String) -> void:
 	var l := Label.new()
 	l.text = "* " + text
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.add_theme_color_override("font_color", Color("b8b2c8"))
+	l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
 	news_box.add_child(l)
 
 func _on_gui_input(event: InputEvent) -> void:

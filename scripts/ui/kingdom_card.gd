@@ -9,15 +9,18 @@ const ORDER := ["treasury", "grain", "unrest", "legitimacy", "army_quality", "ch
 
 var _box: VBoxContainer
 
+## Compact corner card (user ruling 2026-08-29): small fonts, thin border,
+## tight margins - it sits in the top-left of every gameplay screen and must
+## not crowd the content beside it.
+const DATE_FONT_SIZE := 12
+const ROW_FONT_SIZE := 11
+
 func _ready() -> void:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("241c33")
-	style.border_color = Color("deba54")
-	style.set_border_width_all(2)
-	style.set_content_margin_all(10)
-	add_theme_stylebox_override("panel", style)
+	add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.GOLD, 1, 6))
+	custom_minimum_size = Vector2(140, 0)
 	_box = VBoxContainer.new()
-	_box.add_theme_constant_override("separation", 4)
+	_box.add_theme_constant_override("separation", 2)
 	add_child(_box)
 
 func show_values(state: GameState) -> void:
@@ -38,19 +41,21 @@ func _rebuild(state: GameState, changes: Dictionary) -> void:
 		child.queue_free()
 	var date := Label.new()
 	date.text = Calendar.date_string(state.tick)
-	date.add_theme_color_override("font_color", Color("deba54"))
+	date.add_theme_color_override("font_color", UiPalette.GOLD)
+	date.add_theme_font_size_override("font_size", DATE_FONT_SIZE)
 	date.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_box.add_child(date)
 	for m in ORDER:
 		var now := int(state.metrics[m])
 		var l := Label.new()
+		l.add_theme_font_size_override("font_size", ROW_FONT_SIZE)
 		if changes.has(m) and int(changes[m]["delta"]) != 0:
 			var delta := int(changes[m]["delta"])
 			l.text = "%s %d → %d (%+d)" % [METRIC_NAMES[m], now - delta, now, delta]
 			l.tooltip_text = changes[m]["reason"]
 			l.mouse_filter = Control.MOUSE_FILTER_STOP
 			l.add_theme_color_override("font_color",
-				Color("7fd47f") if delta > 0 else Color("d47f7f"))
+				UiPalette.POSITIVE if delta > 0 else UiPalette.NEGATIVE)
 		else:
 			l.text = "%s %d" % [METRIC_NAMES[m], now]
 		_box.add_child(l)

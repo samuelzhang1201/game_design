@@ -5,8 +5,10 @@ extends Control
 
 enum State {MENU, CONVERSATION, COURT, DAY_RUN}
 
-const MENU_SCENE := "res://scenes/main_menu.tscn"
-const COURT_SCENE := "res://scenes/court.tscn"
+const MENU_SCENE := preload("res://scenes/main_menu.tscn")
+const CONVERSATION_SCENE := preload("res://scenes/conversation.tscn")
+const COURT_SCENE := preload("res://scenes/court.tscn")
+const DAY_RUN_SCENE := preload("res://scenes/day_run.tscn")
 
 var state: State = State.MENU
 var current_screen: Node
@@ -14,11 +16,12 @@ var _pending_report: TickReport
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# One game-wide Theme, inherited by every screen (see UiPalette).
+	theme = UiPalette.build_theme()
 	_switch_to(State.MENU)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_R \
-			and state != State.MENU:
+	if event.is_action_pressed("restart") and state != State.MENU:
 		Game.restart()
 		_switch_to(State.MENU)
 
@@ -29,16 +32,16 @@ func _switch_to(new_state: State) -> void:
 	state = new_state
 	match new_state:
 		State.MENU:
-			current_screen = load(MENU_SCENE).instantiate()
+			current_screen = MENU_SCENE.instantiate()
 			current_screen.start_requested.connect(_on_start_requested)
 		State.CONVERSATION:
-			current_screen = load("res://scenes/conversation.tscn").instantiate()
+			current_screen = CONVERSATION_SCENE.instantiate()
 			current_screen.finished.connect(_on_conversation_finished)
 		State.COURT:
-			current_screen = load(COURT_SCENE).instantiate()
+			current_screen = COURT_SCENE.instantiate()
 			current_screen.end_turn_requested.connect(_on_end_turn_requested)
 		State.DAY_RUN:
-			current_screen = load("res://scenes/day_run.tscn").instantiate()
+			current_screen = DAY_RUN_SCENE.instantiate()
 			current_screen.finished.connect(_on_day_run_finished)
 	add_child(current_screen)
 

@@ -1,7 +1,13 @@
 class_name ConversationScene
 extends Control
-## VN stage (R3/R4/R5): one big portrait, name plate, dialogue box mid-bottom,
-## replies inside the box. Beats advance on Continue / reply / event choice.
+## VN stage (R3/R4/R5): one big portrait, name plate, dialogue box pinned to
+## the bottom. Beats advance on Continue / reply / event choice.
+##
+## User ruling (2026-08-29, supersedes the brief's "mid-bottom" auto-sizing
+## box): the dialogue box is a FIXED-height full-width strip at the bottom of
+## the view; long content (event text, many choices) scrolls inside it, so the
+## box never grows over the portrait, which stands fully above it. The
+## KingdomCard sits top-left here too, same corner as every gameplay screen.
 
 signal finished
 
@@ -14,53 +20,37 @@ var _text_label: Label
 var _replies_box: VBoxContainer
 var _free_text: LineEdit
 var _continue_btn: Button
+var _panel: PanelContainer
+var _scroll: ScrollContainer
+var _card: KingdomCard
 var _resolved_event := false
 
+## Static structure and layout live in scenes/conversation.tscn (editable in
+## the editor); _ready only fetches the nodes, paints them from UiPalette,
+## and wires signals. Dynamic content (portraits, reply buttons) is spawned
+## at runtime below.
 func _ready() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var bg := ColorRect.new()
-	bg.color = Color("161020")
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-	_portrait_holder = Control.new()
-	_portrait_holder.set_anchors_and_offsets_preset(Control.PRESET_CENTER_LEFT)
-	_portrait_holder.position += Vector2(90, -40)
-	add_child(_portrait_holder)
-	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("241c33")
-	style.border_color = Color("8c86a0")
-	style.set_border_width_all(2)
-	style.set_content_margin_all(12)
-	panel.add_theme_stylebox_override("panel", style)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	panel.position.y -= 16
-	panel.custom_minimum_size = Vector2(420, 0)
-	add_child(panel)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 6)
-	panel.add_child(col)
-	_name_label = Label.new()
-	_name_label.add_theme_color_override("font_color", Color("deba54"))
-	col.add_child(_name_label)
-	_text_label = Label.new()
-	_text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_text_label.custom_minimum_size = Vector2(400, 0)
-	col.add_child(_text_label)
-	_replies_box = VBoxContainer.new()
-	col.add_child(_replies_box)
-	_free_text = LineEdit.new()
-	_free_text.placeholder_text = "Speak your mind..."
+	%Bg.color = UiPalette.BG_STAGE
+	_portrait_holder = %PortraitHolder
+	_panel = %DialoguePanel
+	_panel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.BORDER_MUTED, 2, 10))
+	_name_label = %NameLabel
+	_name_label.add_theme_color_override("font_color", UiPalette.GOLD)
+	_scroll = %DialogueScroll
+	_text_label = %TextLabel
+	_replies_box = %RepliesBox
+	_free_text = %FreeText
 	_free_text.max_length = int(Game.data.bal("prompt_max_chars"))
 	_free_text.text_submitted.connect(_on_free_text)
-	col.add_child(_free_text)
-	_continue_btn = Button.new()
-	_continue_btn.text = "Wave them on"
-	_continue_btn.focus_mode = Control.FOCUS_NONE
+	_continue_btn = %ContinueButton
 	_continue_btn.pressed.connect(_advance)
-	col.add_child(_continue_btn)
+	_card = %KingdomCard
+	Game.state_changed.connect(_refresh_card)
+
+func _refresh_card() -> void:
+	if Game.state != null:
+		_card.show_values(Game.state)
 
 ## `report` is the TickReport the beats were built from - kept so the summary
 ## beat can compose its text at display time (see ConversationBeats.summary_text)
@@ -71,6 +61,7 @@ func start(beats: Array, report: TickReport) -> void:
 	_beats = beats
 	_report = report
 	_index = -1
+	_refresh_card()
 	_advance()
 
 func current_beat() -> Dictionary:
@@ -87,6 +78,15 @@ func dialogue_text() -> String:
 
 func free_text_field() -> LineEdit:
 	return _free_text
+
+func dialogue_panel() -> PanelContainer:
+	return _panel
+
+func dialogue_scroll() -> ScrollContainer:
+	return _scroll
+
+func kingdom_card() -> KingdomCard:
+	return _card
 
 func _advance() -> void:
 	_index += 1
@@ -136,6 +136,8 @@ func _advance() -> void:
 	# buttons while the event is unresolved; _resolve_event hides it again once
 	# either path (button or free text) resolves the event.
 	_free_text.visible = String(b["kind"]) in ["minister", "event"]
+	# A fresh beat reads from the top of the fixed-height strip.
+	_scroll.set_deferred("scroll_vertical", 0)
 
 func _add_reply(label: String, handler: Callable) -> void:
 	var btn := Button.new()
@@ -144,14 +146,35 @@ func _add_reply(label: String, handler: Callable) -> void:
 	btn.pressed.connect(handler)
 	_replies_box.add_child(btn)
 
+# Portrait sizes, sharing the PORTRAIT_FLOOR line so both kinds stand fully
+# above the fixed dialogue strip (user ruling 2026-08-29): full-body art
+# 176 tall (top at y=10), the 48px chip scaled 3.5x to 168.
+const FULL_ART_HEIGHT := 176.0
+const CHIP_SCALE := 3.5
+
 func _show_portrait(portrait_id: String) -> void:
 	# Deviation from the brief (pre-approved): same queue_free() reasoning as
 	# _advance above - the new portrait is added immediately after, so the
 	# outgoing one is only pending-delete for the rest of this frame.
 	for child in _portrait_holder.get_children():
 		child.queue_free()
+	var full := CharacterPortrait.full_texture_for(portrait_id)
+	if full != null:
+		var pic := TextureRect.new()
+		pic.name = "FullArt"
+		pic.texture = full
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		var w := FULL_ART_HEIGHT * full.get_width() / full.get_height()
+		pic.size = Vector2(w, FULL_ART_HEIGHT)
+		pic.position = Vector2(-w / 2.0, -FULL_ART_HEIGHT)
+		_portrait_holder.add_child(pic)
+		return
 	var p := CharacterPortrait.instantiate_for(portrait_id, false)
-	p.scale = Vector2(4, 4)
+	p.scale = Vector2(CHIP_SCALE, CHIP_SCALE)
+	var side := CharacterPortrait.PORTRAIT_SIZE.x * CHIP_SCALE
+	p.position = Vector2(-side / 2.0, -side)
 	_portrait_holder.add_child(p)
 
 func _on_quick_reply(sug: Dictionary) -> void:

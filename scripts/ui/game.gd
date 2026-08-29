@@ -2,6 +2,10 @@ extends Node
 ## Autoload "Game": owns the sim; UI talks only to this.
 
 signal report_ready(report: TickReport)
+## Emitted after any mutation of Game.state (orders, event choices, court
+## reactions, tick advance, load). UI that mirrors live state (e.g. the
+## KingdomCard) subscribes to this instead of refreshing at call sites.
+signal state_changed
 
 var data: DataRepository
 var state: GameState
@@ -23,16 +27,22 @@ func next_tick() -> TickReport:
 	_prompts_this_tick = 0
 	current_report = engine.advance(state)
 	report_ready.emit(current_report)
+	state_changed.emit()
 	return current_report
 
 func apply_event_choice(choice_id: String) -> Dictionary:
-	return engine.events.apply_choice(choice_id, state)
+	var out := engine.events.apply_choice(choice_id, state)
+	if not out.is_empty():
+		state_changed.emit()
+	return out
 
 func try_execute(req: ActionRequest) -> Dictionary:
 	var err := engine.actions.validate(req, state)
 	if err != "":
 		return {"ok": false, "error": err, "outcome": null}
-	return {"ok": true, "error": "", "outcome": engine.actions.execute(req, state)}
+	var outcome := engine.actions.execute(req, state)
+	state_changed.emit()
+	return {"ok": true, "error": "", "outcome": outcome}
 
 func save_campaign(path: String = "user://save.json") -> bool:
 	return SaveLoad.save_game(state, path)
@@ -42,6 +52,7 @@ func load_campaign(path: String = "user://save.json") -> bool:
 	if loaded == null:
 		return false
 	state = loaded
+	state_changed.emit()
 	return true
 
 ## Restart flow (R12): return to MENU with a clean sim + LLM seam. Called by
@@ -157,4 +168,5 @@ func submit_free_text(text: String, cb: Callable) -> void:
 				else:
 					rejected.append({"request": req, "error": attempt["error"]})
 			engine.actions.apply_court_reaction(res["court_reaction"], state)
+			state_changed.emit()
 			cb.call({"ok": true, "executed": executed, "rejected": rejected, "error": ""}))

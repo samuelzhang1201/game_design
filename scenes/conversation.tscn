@@ -1,9 +1,79 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/conversation_scene.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/kingdom_card.tscn" id="2"]
 
 [node name="ConversationScene" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1")
+
+[node name="Bg" type="ColorRect" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="PortraitHolder" type="Control" parent="."]
+unique_name_in_owner = true
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 260.0
+offset_top = -174.0
+offset_right = 260.0
+offset_bottom = -174.0
+
+[node name="DialoguePanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -168.0
+offset_right = -12.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Col" type="VBoxContainer" parent="DialoguePanel"]
+theme_override_constants/separation = 4
+
+[node name="NameLabel" type="Label" parent="DialoguePanel/Col"]
+unique_name_in_owner = true
+
+[node name="DialogueScroll" type="ScrollContainer" parent="DialoguePanel/Col"]
+unique_name_in_owner = true
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Content" type="VBoxContainer" parent="DialoguePanel/Col/DialogueScroll"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="TextLabel" type="Label" parent="DialoguePanel/Col/DialogueScroll/Content"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="RepliesBox" type="VBoxContainer" parent="DialoguePanel/Col/DialogueScroll/Content"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+
+[node name="InputRow" type="HBoxContainer" parent="DialoguePanel/Col"]
+theme_override_constants/separation = 6
+
+[node name="FreeText" type="LineEdit" parent="DialoguePanel/Col/InputRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+placeholder_text = "Speak your mind..."
+
+[node name="ContinueButton" type="Button" parent="DialoguePanel/Col/InputRow"]
+unique_name_in_owner = true
+focus_mode = 0
+text = "Wave them on"
+
+[node name="KingdomCard" parent="." instance=ExtResource("2")]
+unique_name_in_owner = true
+offset_left = 8.0
+offset_top = 8.0

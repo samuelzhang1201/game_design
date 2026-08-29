@@ -118,11 +118,16 @@ static func _decode_values(value):
 		return _hex_to_float(value.substr(1))
 	return value
 
+## Bump when the save shape changes incompatibly; from_dict refuses saves
+## newer than it knows (write the matching migration when bumping).
+const SAVE_VERSION := 1
+
 func to_dict() -> Dictionary:
 	var chars := {}
 	for id in characters:
 		chars[id] = characters[id].to_dict()
 	return {
+		"version": SAVE_VERSION,
 		"tick": _encode_values(tick), "rng": rng.to_dict(),
 		"metrics": _encode_values(metrics.duplicate()),
 		"characters": chars, "council": council.duplicate(),
@@ -134,6 +139,14 @@ func to_dict() -> Dictionary:
 	}
 
 static func from_dict(d: Dictionary) -> GameState:
+	# Pre-versioning saves carry no field and count as version 1. A newer
+	# save fails closed (null) rather than half-loading; push_warning (not
+	# push_error) so the refusal path stays testable under run_tests.sh's
+	# exact engine-error count.
+	if int(d.get("version", 1)) > SAVE_VERSION:
+		push_warning("GameState: save version %d is newer than this build's %d"
+			% [int(d.get("version", 1)), SAVE_VERSION])
+		return null
 	var s := GameState.new()
 	s.tick = int(_decode_values(d["tick"]))
 	s.rng = Rng.from_dict(d["rng"])

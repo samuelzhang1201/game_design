@@ -20,11 +20,17 @@ func test_one_portrait_per_beat_and_continue_advances() -> void:
 	var c := _scene_with(beats, TickReport.new())
 	await wait_frames(2)
 	assert_eq(String(c.current_beat()["portrait_id"]), "char_marshal")
-	assert_eq(c.find_children("*", "CharacterPortrait", true, false).size(), 1)  # R4: ONE portrait
+	# R4: ONE portrait - char_marshal has full-body art, so the stage shows a
+	# single FullArt TextureRect instead of the pixel-chip CharacterPortrait.
+	assert_not_null(c.find_child("FullArt", true, false))
+	assert_eq(c.find_children("*", "CharacterPortrait", true, false).size(), 0)
 	assert_string_contains(c.dialogue_text(), "levies")
 	c.continue_button().pressed.emit()
 	await wait_frames(2)
 	assert_eq(String(c.current_beat()["portrait_id"]), "round_table")
+	# round_table has no full-body art: falls back to ONE pixel-chip portrait.
+	assert_null(c.find_child("FullArt", true, false))
+	assert_eq(c.find_children("*", "CharacterPortrait", true, false).size(), 1)
 	c.continue_button().pressed.emit()
 	await wait_frames(2)
 	assert_true(_finished)
@@ -66,6 +72,84 @@ func test_event_beat_gates_continue_until_choice() -> void:
 	c.continue_button().pressed.emit()
 	await wait_frames(2)
 	assert_true(_finished)
+
+## User ruling (2026-08-29): the dialogue box is a fixed-height strip pinned
+## to the bottom of the view. Long content scrolls inside it instead of
+## growing the box upward over the portrait, which stays fully visible.
+func test_dialogue_box_fixed_bottom_strip_clear_of_portrait() -> void:
+	Game.start_campaign(42)
+	var beats := [
+		{"kind": "minister", "portrait_id": "char_marshal", "speaker": "Ser Brandt of Harrow",
+			"text": "The levies grow soft.", "suggestions": []},
+	]
+	var c := _scene_with(beats, TickReport.new())
+	await wait_frames(3)
+	var panel := c.dialogue_panel()
+	assert_lt(c.size.y - (panel.global_position.y + panel.size.y), 16.0,
+		"the box hugs the bottom edge")
+	var art: Control = c.find_child("FullArt", true, false)
+	assert_lt(art.global_position.y + art.size.y, panel.global_position.y,
+		"the portrait must end above the dialogue box, never behind it")
+
+## Same ruling, worst case: a long event text plus three choice buttons must
+## scroll inside the fixed box rather than grow it over the portrait.
+func test_long_event_content_scrolls_inside_fixed_box() -> void:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	Game.engine.events._fire("ev_01", Game.state)
+	var beats := [{"kind": "event", "portrait_id": "round_table",
+		"speaker": "The Council", "event": Game.state.pending_event.duplicate(true)}]
+	var c := _scene_with(beats, report)
+	# A second stage showing only a one-line minister beat: the box height
+	# must be content-independent, so both must measure identical.
+	var small := _scene_with([{"kind": "minister", "portrait_id": "char_marshal",
+		"speaker": "Ser Brandt of Harrow", "text": "Aye.", "suggestions": []}],
+		TickReport.new())
+	await wait_frames(3)
+	assert_almost_eq(c.dialogue_panel().size.y, small.dialogue_panel().size.y, 1.0,
+		"event content must not grow the box")
+	var scroll := c.dialogue_scroll()
+	assert_not_null(scroll, "dialogue content lives in a ScrollContainer")
+	assert_gt(scroll.get_v_scroll_bar().max_value, scroll.size.y,
+		"the overflowing event content is reachable by scrolling")
+	# The widest portrait (the scaled round-table chip) must clear the
+	# top-left KingdomCard, not slide underneath it.
+	var chip: Control = c.find_children("*", "CharacterPortrait", true, false)[0]
+	assert_false(c.kingdom_card().get_global_rect().intersects(chip.get_global_rect()),
+		"the portrait must not overlap the kingdom card")
+
+## User ruling (2026-08-29): the KingdomCard is pinned top-left on every
+## gameplay screen, the conversation stage included, and refreshes when an
+## order taken here changes the realm's numbers.
+func test_kingdom_card_pinned_top_left_and_refreshes_after_order() -> void:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	var sug := {"seat": "marshal", "request": ActionRequest.make("LEVY_RAISE"),
+		"pitch_key": "raise_levies", "tradeoff": "Gold and grumbling."}
+	var beats := [{"kind": "minister", "portrait_id": "char_marshal",
+		"speaker": "Ser Brandt of Harrow", "text": "Fresh levies, my lord?",
+		"suggestions": [sug]}]
+	var c := _scene_with(beats, report)
+	await wait_frames(2)
+	var card := c.kingdom_card()
+	assert_not_null(card)
+	assert_lt(card.global_position.x, 20.0, "card sits at the left edge")
+	assert_lt(card.global_position.y, 20.0, "card sits at the top edge")
+	var gold_before := _card_gold_row(card)
+	c.reply_buttons()[0].pressed.emit()
+	await wait_frames(2)
+	assert_ne(_card_gold_row(card), gold_before,
+		"the card's Gold row must refresh after the order executes")
+
+func _card_gold_row(card: KingdomCard) -> String:
+	for l in card.find_children("*", "Label", true, false):
+		if String(l.text).begins_with("Gold"):
+			return String(l.text)
+	return ""
 
 ## FIX 2 (post-Task-5 review): a quick-reply taken earlier in THIS
 ## conversation must show up in the summary as "resolved this session"

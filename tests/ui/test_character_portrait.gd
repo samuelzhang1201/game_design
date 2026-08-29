@@ -31,6 +31,15 @@ func test_non_character_portrait_has_no_badge() -> void:
 	assert_null(p.get_node_or_null("Gen_Badge"))
 	assert_ne(p.get_child_count(), 0)  # default visual built
 
+func test_full_art_exists_for_chancellor_and_marshal() -> void:
+	assert_not_null(CharacterPortrait.full_texture_for("char_chancellor"),
+		"assets/portraits/full/char_chancellor.png should load")
+	assert_not_null(CharacterPortrait.full_texture_for("char_marshal"),
+		"assets/portraits/full/char_marshal.png should load")
+
+func test_full_art_null_for_character_without_it() -> void:
+	assert_null(CharacterPortrait.full_texture_for("char_chaplain"))
+
 func test_custom_art_node_suppresses_default_visual() -> void:
 	var p := CharacterPortrait.instantiate_for("char_steward")
 	var custom := Node2D.new()
