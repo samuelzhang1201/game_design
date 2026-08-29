@@ -28,9 +28,10 @@ func test_one_portrait_per_beat_and_continue_advances() -> void:
 	c.continue_button().pressed.emit()
 	await wait_frames(2)
 	assert_eq(String(c.current_beat()["portrait_id"]), "round_table")
-	# round_table has no full-body art: falls back to ONE pixel-chip portrait.
-	assert_null(c.find_child("FullArt", true, false))
-	assert_eq(c.find_children("*", "CharacterPortrait", true, false).size(), 1)
+	# round_table shows the council medallion art (user-provided, replaces
+	# the old pixel chip) - still exactly ONE portrait, no chip.
+	assert_not_null(c.find_child("FullArt", true, false))
+	assert_eq(c.find_children("*", "CharacterPortrait", true, false).size(), 0)
 	c.continue_button().pressed.emit()
 	await wait_frames(2)
 	assert_true(_finished)
@@ -120,9 +121,11 @@ func test_long_event_content_scrolls_inside_fixed_box() -> void:
 	assert_not_null(scroll, "dialogue content lives in a ScrollContainer")
 	assert_gt(scroll.get_v_scroll_bar().max_value, scroll.size.y,
 		"the overflowing event content is reachable by scrolling")
-	# Non-character beats (the round table) fall back to ONE chip portrait
-	# inside the dossier card's portrait box.
-	assert_eq(c.find_children("*", "CharacterPortrait", true, false).size(), 1)
+	# The council beat shows the round-table medallion art (user-provided,
+	# replaces the old pixel chip) in the dossier's portrait box.
+	assert_not_null(c.find_child("FullArt", true, false),
+		"the council medallion fills the dossier portrait box")
+	assert_eq(c.find_children("*", "CharacterPortrait", true, false).size(), 0)
 
 ## User ruling (2026-08-29, UI_example chrome): the TopBar metrics strip
 ## spans the top of every gameplay screen, the conversation stage included,

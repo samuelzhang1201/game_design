@@ -161,20 +161,31 @@ var _next_reply_letter := 0
 func _show_speaker(b: Dictionary) -> void:
 	var portrait_id := String(b["portrait_id"])
 	# Same queue_free() reasoning as _advance: the replacement is added
-	# immediately, the outgoing node is pending-delete for one frame.
+	# immediately, the outgoing node is pending-delete for one frame. Rename
+	# it first so the incoming node can take the "FullArt" name instead of
+	# being auto-renamed around the still-pending sibling.
 	for child in %PortraitBox.get_children():
+		child.name = "OutgoingPortrait"
 		child.queue_free()
 	for chip in %TraitChips.get_children():
 		chip.queue_free()
 	var box_size: Vector2 = %PortraitBox.custom_minimum_size
 	var full := CharacterPortrait.full_texture_for(portrait_id)
 	if full != null:
-		# Head-and-shoulders crop of the full-body art: a region cut from the
-		# top of the figure at the portrait box's aspect ratio.
+		# Cover-crop at the portrait box's aspect: tall figure art is cut from
+		# the top (head and shoulders); wide/square art (the council
+		# medallion) is centered.
+		var img := Vector2(full.get_width(), full.get_height())
+		var box_aspect := box_size.x / box_size.y
+		var region: Rect2
+		if img.x / img.y > box_aspect:
+			var rw := img.y * box_aspect
+			region = Rect2((img.x - rw) / 2.0, 0, rw, img.y)
+		else:
+			region = Rect2(0, 0, img.x, img.x / box_aspect)
 		var atlas := AtlasTexture.new()
 		atlas.atlas = full
-		atlas.region = Rect2(0, 0, full.get_width(),
-			full.get_width() * box_size.y / box_size.x)
+		atlas.region = region
 		var pic := TextureRect.new()
 		pic.name = "FullArt"
 		pic.texture = atlas

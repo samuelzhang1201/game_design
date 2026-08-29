@@ -27,10 +27,12 @@ import numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage
 
-# Background pixels are bright (both checker tones) and colour-neutral
-# (r==g==b give or take JPEG noise). Character outlines are darker, so the
-# flood fill stops at them even where the figure itself contains light greys.
+# Background pixels are colour-neutral checker tones (r==g==b give or take
+# JPEG noise) within a brightness band. Defaults fit the common LIGHT
+# checkerboard; pass --bg-min/--bg-max for a dark one (e.g. 40..100). The
+# flood fill stops at the subject's outline either way.
 MIN_BACKGROUND_VALUE = 185
+MAX_BACKGROUND_VALUE = 255
 MAX_CHANNEL_SPREAD = 20
 
 # Enclosed-pocket test: region counts as checkerboard when this share of its
@@ -40,10 +42,13 @@ TONE_TOLERANCE = 8
 MIN_TONE_MATCH_SHARE = 0.8
 
 
-def clean(src: str, dst: str, height: int) -> None:
+def clean(src: str, dst: str, height: int,
+          bg_min: int = MIN_BACKGROUND_VALUE,
+          bg_max: int = MAX_BACKGROUND_VALUE,
+          pockets: bool = True) -> None:
     rgb = np.asarray(Image.open(src).convert("RGB")).astype(np.int16)
 
-    candidate = (rgb.min(axis=2) >= MIN_BACKGROUND_VALUE) & \
+    candidate = (rgb.min(axis=2) >= bg_min) & (rgb.max(axis=2) <= bg_max) & \
         ((rgb.max(axis=2) - rgb.min(axis=2)) <= MAX_CHANNEL_SPREAD)
     border_seed = np.zeros_like(candidate)
     border_seed[0, :] = candidate[0, :]
@@ -60,14 +65,18 @@ def clean(src: str, dst: str, height: int) -> None:
     dark = np.median(bg_values[bg_values < bg_values.mean()])
     tone_match = (np.abs(gray - light) <= TONE_TOLERANCE) | \
         (np.abs(gray - dark) <= TONE_TOLERANCE)
-    pockets, pocket_count = ndimage.label(candidate & ~background)
+    # Convex subjects (a medallion) have no real enclosed pockets; --no-pockets
+    # skips this so in-art shadows matching the checker tones are never eaten.
+    pocket_labels, pocket_count = ndimage.label(candidate & ~background)
+    if not pockets:
+        pocket_count = 0
     if pocket_count > 0:
-        sizes = np.bincount(pockets.ravel(), minlength=pocket_count + 1)
-        shares = ndimage.mean(tone_match, pockets, range(1, pocket_count + 1))
+        sizes = np.bincount(pocket_labels.ravel(), minlength=pocket_count + 1)
+        shares = ndimage.mean(tone_match, pocket_labels, range(1, pocket_count + 1))
         is_checker = np.zeros(pocket_count + 1, dtype=bool)
         is_checker[1:] = (sizes[1:] >= MIN_POCKET_PIXELS) & \
             (np.asarray(shares) >= MIN_TONE_MATCH_SHARE)
-        background |= is_checker[pockets]
+        background |= is_checker[pocket_labels]
 
     foreground = ~background
     labels, count = ndimage.label(foreground)
@@ -95,8 +104,12 @@ def main() -> None:
     parser.add_argument("src")
     parser.add_argument("dst")
     parser.add_argument("--height", type=int, default=660)
+    parser.add_argument("--bg-min", type=int, default=MIN_BACKGROUND_VALUE)
+    parser.add_argument("--bg-max", type=int, default=MAX_BACKGROUND_VALUE)
+    parser.add_argument("--no-pockets", action="store_true")
     args = parser.parse_args()
-    clean(args.src, args.dst, args.height)
+    clean(args.src, args.dst, args.height, args.bg_min, args.bg_max,
+          not args.no_pockets)
 
 
 if __name__ == "__main__":
