@@ -89,9 +89,13 @@ func test_dialogue_box_fixed_bottom_strip_clear_of_dossier() -> void:
 	assert_lt(c.size.y - (panel.global_position.y + panel.size.y), 16.0,
 		"the box hugs the bottom edge")
 	assert_not_null(c.find_child("FullArt", true, false),
-		"the marshal's full-body art fills the dossier portrait box")
+		"the marshal's art fills the dossier portrait box")
 	assert_false(c.minister_panel().get_global_rect().intersects(panel.get_global_rect()),
 		"the dialogue box must never cover the dossier card")
+	var frame: TextureRect = c.find_child("Frame", true, false)
+	assert_not_null(frame.texture, "the kings frame is mounted")
+	assert_eq(frame.mouse_filter, Control.MOUSE_FILTER_IGNORE,
+		"the frame never intercepts input")
 
 ## Same ruling, worst case: a long event text plus three choice buttons must
 ## scroll inside the fixed box rather than grow it over the portrait.

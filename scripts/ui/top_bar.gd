@@ -1,9 +1,11 @@
 class_name TopBar
-extends PanelContainer
+extends Control
 ## Mock-style top resource strip (UI_example.png, supersedes the corner
 ## KingdomCard): date left, the six realm metrics with this tick's deltas in
-## the middle, and a pending-event chip right. Self-wiring: subscribes to
-## Game.state_changed / report_ready, so screens just instance it.
+## the middle, and a pending-event badge floating just below the bar's right
+## end (outside the strip, so a visible badge never widens the bar past its
+## frame inset). Self-wiring: subscribes to Game.state_changed /
+## report_ready, so screens just instance it.
 
 const METRIC_NAMES := {"treasury": "Gold", "grain": "Grain", "unrest": "Unrest",
 	"legitimacy": "Legit", "army_quality": "Army", "church_opinion": "Church"}
@@ -13,7 +15,7 @@ var _value_labels: Dictionary = {}
 var _delta_labels: Dictionary = {}
 
 func _ready() -> void:
-	add_theme_stylebox_override("panel",
+	%Bar.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 6))
 	%DateLabel.add_theme_color_override("font_color", UiPalette.GOLD)
 	%DateLabel.add_theme_font_size_override("font_size", 11)

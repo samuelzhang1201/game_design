@@ -15,6 +15,10 @@ func _ready() -> void:
 	bg.color = UiPalette.DIM_OVERLAY
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+	var frame := TextureRect.new()
+	UiPalette.setup_frame(frame)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(frame)
 	var col := VBoxContainer.new()
 	col.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	col.grow_horizontal = Control.GROW_DIRECTION_BOTH

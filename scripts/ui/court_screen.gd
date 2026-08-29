@@ -35,6 +35,7 @@ func _ready() -> void:
 	%Backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	%Backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	%Shade.color = UiPalette.DIM_OVERLAY
+	UiPalette.setup_frame(%Frame)
 	%SidePanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
 	%SideHeader.add_theme_color_override("font_color", UiPalette.GOLD)

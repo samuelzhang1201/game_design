@@ -30,8 +30,9 @@ func _ready() -> void:
 	%Backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	%Backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	%Shade.color = UiPalette.DIM_OVERLAY
+	UiPalette.setup_frame(%Frame)
 	%MinisterPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	%MinisterName.add_theme_color_override("font_color", UiPalette.GOLD)
 	%MinisterName.add_theme_font_size_override("font_size", 12)
 	%MinisterTitle.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
@@ -170,19 +171,26 @@ func _show_speaker(b: Dictionary) -> void:
 	var box_size: Vector2 = %PortraitBox.custom_minimum_size
 	var full := CharacterPortrait.full_texture_for(portrait_id)
 	if full != null:
+		# Head-and-shoulders crop of the full-body art: a region cut from the
+		# top of the figure at the portrait box's aspect ratio.
+		var atlas := AtlasTexture.new()
+		atlas.atlas = full
+		atlas.region = Rect2(0, 0, full.get_width(),
+			full.get_width() * box_size.y / box_size.x)
 		var pic := TextureRect.new()
 		pic.name = "FullArt"
-		pic.texture = full
+		pic.texture = atlas
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.stretch_mode = TextureRect.STRETCH_SCALE
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		pic.set_anchors_preset(Control.PRESET_FULL_RECT)
 		%PortraitBox.add_child(pic)
 	else:
 		var p := CharacterPortrait.instantiate_for(portrait_id, false)
-		var side := CharacterPortrait.PORTRAIT_SIZE.x * 2.5
-		p.scale = Vector2(2.5, 2.5)
-		p.position = Vector2((box_size.x - side) / 2.0, (box_size.y - side) / 2.0)
+		var scale_factor := box_size.y / CharacterPortrait.PORTRAIT_SIZE.y
+		var side := CharacterPortrait.PORTRAIT_SIZE.x * scale_factor
+		p.scale = Vector2(scale_factor, scale_factor)
+		p.position = Vector2((box_size.x - side) / 2.0, 0)
 		%PortraitBox.add_child(p)
 	var c: Character = null
 	if Game.state != null and Game.state.characters.has(portrait_id):

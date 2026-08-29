@@ -24,12 +24,20 @@ func _ready() -> void:
 	shade.color = UiPalette.DIM_OVERLAY
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(shade)
+	var frame := TextureRect.new()
+	UiPalette.setup_frame(frame)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(frame)
 	overlay = CalendarOverlay.new()
 	overlay.finished.connect(func(): finished.emit())
 	add_child(overlay)
-	# After the overlay so its dim never hides the numbers (R9).
+	# After the overlay so its dim never hides the numbers (R9); inset into
+	# the frame's interior like every screen's bar.
 	top_bar = TOP_BAR_SCENE.instantiate()
 	top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	top_bar.offset_left = 44
+	top_bar.offset_top = 2
+	top_bar.offset_right = -70
 	add_child(top_bar)
 
 func run(report: TickReport) -> void:

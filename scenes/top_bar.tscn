@@ -2,27 +2,38 @@
 
 [ext_resource type="Script" path="res://scripts/ui/top_bar.gd" id="1"]
 
-[node name="TopBar" type="PanelContainer"]
+[node name="TopBar" type="Control"]
 anchor_right = 1.0
+offset_bottom = 26.0
 script = ExtResource("1")
 
-[node name="Row" type="HBoxContainer" parent="."]
+[node name="Bar" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Row" type="HBoxContainer" parent="Bar"]
 theme_override_constants/separation = 12
 
-[node name="DateLabel" type="Label" parent="Row"]
+[node name="DateLabel" type="Label" parent="Bar/Row"]
 unique_name_in_owner = true
 
-[node name="LeftSpacer" type="Control" parent="Row"]
+[node name="LeftSpacer" type="Control" parent="Bar/Row"]
 size_flags_horizontal = 3
 
-[node name="MetricsRow" type="HBoxContainer" parent="Row"]
+[node name="MetricsRow" type="HBoxContainer" parent="Bar/Row"]
 unique_name_in_owner = true
 theme_override_constants/separation = 14
 
-[node name="RightSpacer" type="Control" parent="Row"]
+[node name="RightSpacer" type="Control" parent="Bar/Row"]
 size_flags_horizontal = 3
 
-[node name="EventChip" type="Label" parent="Row"]
+[node name="EventChip" type="Label" parent="."]
 unique_name_in_owner = true
 visible = false
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -66.0
+offset_top = 30.0
 text = "1 EVENT"

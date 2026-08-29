@@ -21,18 +21,27 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+[node name="Frame" type="TextureRect" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
 [node name="TopBar" parent="." instance=ExtResource("2")]
 unique_name_in_owner = true
 anchor_right = 1.0
+offset_left = 44.0
+offset_top = 2.0
+offset_right = -70.0
 
 [node name="Root" type="HBoxContainer" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 8.0
+offset_left = 46.0
 offset_top = 36.0
-offset_right = -8.0
-offset_bottom = -8.0
+offset_right = -54.0
+offset_bottom = -82.0
 theme_override_constants/separation = 8
 
 [node name="Main" type="VBoxContainer" parent="Root"]

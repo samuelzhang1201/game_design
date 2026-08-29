@@ -18,3 +18,4 @@ System Requriements:
 17. the conversation scene shows a minister dossier card on the left (portrait, name, seat title, opinion bar, trait chips); the full-body artworks provided are used for all five ministers (reused by archetype until per-minister art lands)
 18. the court screen puts the lettered suggestion buttons and End Turn in a right-side advice panel; response buttons everywhere are lettered "A. / B. / C." like the mock
 19. map_example.jpeg is the static 2D map placeholder shown (dimmed) behind every screen
+20. frame.jpg (young king bottom-left, old king top-right, at a chess game) frames every screen; the UI is inset into its interior so the kings and rails stay visible, and the interior was keyed transparent via tools/key_frame_interior.py into assets/ui/frame.png

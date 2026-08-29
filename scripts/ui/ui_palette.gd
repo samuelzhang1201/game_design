@@ -26,6 +26,23 @@ const PIXEL_FONT_PATH := "res://assets/fonts/pixel.ttf"  # optional; default fon
 const MAP_BACKDROP_PATH := "res://assets/portraits/full/map_example.jpeg"
 const MAP_EDGE_CROP := 34.0
 
+## Decorative screen frame (two kings at a chess game, user-provided art;
+## tools/key_frame_interior.py produced the real-alpha PNG). Drawn above the
+## map backdrop, below the UI panels, on every screen.
+const FRAME_PATH := "res://assets/ui/frame.png"
+
+static func frame() -> Texture2D:
+	return load_art(FRAME_PATH)
+
+## Standard setup for the frame layer: stretches edge-to-edge (the art and
+## the design viewport are both 16:9) and never intercepts input.
+static func setup_frame(rect: TextureRect) -> void:
+	rect.texture = frame()
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 static var _art_cache: Dictionary = {}
 
 static func panel_style(border: Color, border_width: int = 2,
