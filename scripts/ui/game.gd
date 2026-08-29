@@ -4,8 +4,11 @@ extends Node
 signal report_ready(report: TickReport)
 ## Emitted after any mutation of Game.state (orders, event choices, court
 ## reactions, tick advance, load). UI that mirrors live state (e.g. the
-## KingdomCard) subscribes to this instead of refreshing at call sites.
+## TopBar) subscribes to this instead of refreshing at call sites.
 signal state_changed
+## Cross-cutting UI signal: the TopBar's MENU button asks for the pause
+## menu; GameRoot (the flow owner) listens and shows it.
+signal menu_requested
 
 var data: DataRepository
 var state: GameState

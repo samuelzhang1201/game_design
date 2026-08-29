@@ -14,7 +14,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="Row" type="HBoxContainer" parent="Bar"]
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 
 [node name="DateLabel" type="Label" parent="Bar/Row"]
 unique_name_in_owner = true
@@ -24,7 +24,7 @@ size_flags_horizontal = 3
 
 [node name="MetricsRow" type="HBoxContainer" parent="Bar/Row"]
 unique_name_in_owner = true
-theme_override_constants/separation = 14
+theme_override_constants/separation = 9
 
 [node name="RightSpacer" type="Control" parent="Bar/Row"]
 size_flags_horizontal = 3
@@ -33,3 +33,8 @@ size_flags_horizontal = 3
 unique_name_in_owner = true
 visible = false
 text = "1 EVENT"
+
+[node name="MenuButton" type="Button" parent="Bar/Row"]
+unique_name_in_owner = true
+focus_mode = 0
+text = "MENU"

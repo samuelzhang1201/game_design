@@ -54,8 +54,16 @@ func _ready() -> void:
 
 ## Post-conversation court entry (R2): numbers + orders only, speech already
 ## happened on the conversation stage. Called by GameRoot after the
-## conversation scene finishes (see game_root.gd's _on_conversation_finished).
+## conversation scene finishes (see game_root.gd's _on_conversation_finished),
+## and with null after loading a save (no report survives a save: the court
+## reconvenes without suggestions until the next tick).
 func enter_court(report: TickReport) -> void:
+	if report == null:
+		for child in suggestions_box.get_children():
+			child.queue_free()
+		_suggestion_buttons = []
+		_log("Herald", "The court reconvenes.")
+		return
 	_render_suggestions(report)
 
 func top_bar() -> TopBar:

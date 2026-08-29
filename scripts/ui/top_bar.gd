@@ -20,9 +20,11 @@ func _ready() -> void:
 	UiPalette.style_header(%DateLabel, 11)
 	%EventChip.add_theme_stylebox_override("normal", UiPalette.chip_style())
 	UiPalette.style_header(%EventChip, 9)
+	%MenuButton.add_theme_font_size_override("font_size", 9)
+	%MenuButton.pressed.connect(func() -> void: Game.menu_requested.emit())
 	for m in ORDER:
 		var cell := HBoxContainer.new()
-		cell.add_theme_constant_override("separation", 4)
+		cell.add_theme_constant_override("separation", 3)
 		var name_l := Label.new()
 		name_l.text = String(METRIC_NAMES[m]).to_upper()
 		name_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)

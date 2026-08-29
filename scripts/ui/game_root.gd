@@ -2,6 +2,9 @@ class_name GameRoot
 extends Control
 ## Flow state machine (spec §2). Owns exactly one screen scene at a time;
 ## screens signal upward, GameRoot decides what comes next. R restarts (R12).
+## Also owns the pause menu (user ruling 2026-08-31): the TopBar's MENU
+## button (via Game.menu_requested) or Esc opens Resume / Save / Load /
+## Restart / Quit to Desktop.
 
 enum State {MENU, CONVERSATION, COURT, DAY_RUN}
 
@@ -13,17 +16,113 @@ const DAY_RUN_SCENE := preload("res://scenes/day_run.tscn")
 var state: State = State.MENU
 var current_screen: Node
 var _pending_report: TickReport
+var _pause_menu: Control
+var _pause_status: Label
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# One game-wide Theme, inherited by every screen (see UiPalette).
 	theme = UiPalette.build_theme()
+	Game.menu_requested.connect(toggle_pause_menu)
+	_build_pause_menu()
 	_switch_to(State.MENU)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("restart") and state != State.MENU:
+	if state == State.MENU:
+		return
+	if event.is_action_pressed("restart") and not _pause_menu.visible:
 		Game.restart()
 		_switch_to(State.MENU)
+	elif event.is_action_pressed("ui_cancel"):
+		toggle_pause_menu()
+
+## The pause menu lives above every screen (built last, kept as a sibling
+## that survives _switch_to's screen swaps).
+func _build_pause_menu() -> void:
+	_pause_menu = Control.new()
+	_pause_menu.name = "PauseMenu"
+	_pause_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_pause_menu.visible = false
+	_pause_menu.mouse_filter = Control.MOUSE_FILTER_STOP  # swallow clicks under it
+	var dim := ColorRect.new()
+	dim.color = UiPalette.DIM_OVERLAY
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pause_menu.add_child(dim)
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.GOLD, 1, 14))
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	panel.custom_minimum_size = Vector2(150, 0)
+	_pause_menu.add_child(panel)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	panel.add_child(col)
+	var title := Label.new()
+	title.text = "COUNCIL IN RECESS"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UiPalette.style_header(title, 10)
+	col.add_child(title)
+	col.add_child(_menu_button("Resume", toggle_pause_menu))
+	col.add_child(_menu_button("Save Game", _on_menu_save))
+	col.add_child(_menu_button("Load Game", _on_menu_load))
+	col.add_child(_menu_button("Restart", _on_menu_restart))
+	col.add_child(_menu_button("Quit to Desktop", func() -> void: get_tree().quit()))
+	_pause_status = Label.new()
+	_pause_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pause_status.add_theme_font_size_override("font_size", 9)
+	_pause_status.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	col.add_child(_pause_status)
+	add_child(_pause_menu)
+
+func _menu_button(label: String, handler: Callable) -> Button:
+	var btn := Button.new()
+	btn.name = label.replace(" ", "")
+	btn.text = label
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.pressed.connect(handler)
+	return btn
+
+func toggle_pause_menu() -> void:
+	if state == State.MENU:
+		return
+	_pause_status.text = ""
+	_pause_menu.visible = not _pause_menu.visible
+
+func pause_menu() -> Control:
+	return _pause_menu
+
+func _on_menu_save() -> void:
+	if Game.state == null:
+		_pause_status.text = "No realm to preserve."
+		return
+	_pause_status.text = "The realm is preserved." if Game.save_campaign() \
+		else "The scribes failed us."
+
+func _on_menu_load() -> void:
+	if not Game.load_campaign():
+		_pause_status.text = "No saved realm found."
+		return
+	_pause_menu.visible = false
+	_pending_report = null
+	# A loaded save with a decision still pending resumes on the conversation
+	# stage (the only screen that renders event choices); otherwise the court
+	# reconvenes on the loaded state, suggestions returning next tick.
+	if not Game.state.pending_event.is_empty():
+		_switch_to(State.CONVERSATION)
+		current_screen.start([{"kind": "event", "portrait_id": "round_table",
+			"speaker": "The Council",
+			"event": Game.state.pending_event.duplicate(true)}], TickReport.new())
+	else:
+		_switch_to(State.COURT)
+		current_screen.enter_court(null)
+
+func _on_menu_restart() -> void:
+	_pause_menu.visible = false
+	Game.restart()
+	_switch_to(State.MENU)
 
 func _switch_to(new_state: State) -> void:
 	if current_screen != null:
@@ -44,6 +143,9 @@ func _switch_to(new_state: State) -> void:
 			current_screen = DAY_RUN_SCENE.instantiate()
 			current_screen.finished.connect(_on_day_run_finished)
 	add_child(current_screen)
+	# The pause menu stays the topmost child across screen swaps.
+	if _pause_menu != null:
+		move_child(_pause_menu, get_child_count() - 1)
 
 func _on_start_requested() -> void:
 	Game.start_campaign(42)
