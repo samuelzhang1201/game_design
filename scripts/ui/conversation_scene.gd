@@ -33,18 +33,16 @@ func _ready() -> void:
 	UiPalette.setup_frame(%Frame)
 	%MinisterPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
-	%MinisterName.add_theme_color_override("font_color", UiPalette.GOLD)
-	%MinisterName.add_theme_font_size_override("font_size", 12)
-	%MinisterTitle.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	%MinisterTitle.add_theme_font_size_override("font_size", 9)
+	UiPalette.style_header(%MinisterName, 11)
+	UiPalette.style_header(%MinisterTitle, 8, UiPalette.TEXT_MUTED)
 	%OpinionBar.add_theme_stylebox_override("background",
 		UiPalette.chip_style(Color("0f1017"), UiPalette.BORDER_GOLD))
-	%OpinionValue.add_theme_font_size_override("font_size", 10)
+	%OpinionValue.add_theme_font_size_override("font_size", 9)
 	_panel = %DialoguePanel
 	_panel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
 	_name_label = %NameLabel
-	_name_label.add_theme_color_override("font_color", UiPalette.GOLD)
+	UiPalette.style_header(_name_label, 12)
 	_scroll = %DialogueScroll
 	_text_label = %TextLabel
 	_replies_box = %RepliesBox
@@ -210,7 +208,7 @@ func _show_speaker(b: Dictionary) -> void:
 	for t in c.traits:
 		var chip := Label.new()
 		chip.text = String(Game.data.traits[t]["label"]) if Game.data.traits.has(t) else String(t)
-		chip.add_theme_font_size_override("font_size", 8)
+		chip.add_theme_font_size_override("font_size", 7)
 		chip.add_theme_color_override("font_color", UiPalette.GOLD)
 		chip.add_theme_stylebox_override("normal", UiPalette.chip_style())
 		%TraitChips.add_child(chip)

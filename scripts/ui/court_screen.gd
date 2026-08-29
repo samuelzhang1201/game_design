@@ -38,8 +38,7 @@ func _ready() -> void:
 	UiPalette.setup_frame(%Frame)
 	%SidePanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
-	%SideHeader.add_theme_color_override("font_color", UiPalette.GOLD)
-	%SideHeader.add_theme_font_size_override("font_size", 9)
+	UiPalette.style_header(%SideHeader, 8)
 	_log_scroll = %LogScroll
 	log_box = %LogBox
 	suggestions_box = %SuggestionsBox

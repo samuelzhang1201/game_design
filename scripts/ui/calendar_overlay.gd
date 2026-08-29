@@ -69,11 +69,11 @@ func _ready() -> void:
 	season_label = Label.new()
 	season_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	season_label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	season_label.add_theme_font_size_override("font_size", 10)
 	col.add_child(season_label)
 	date_label = Label.new()
 	date_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	date_label.add_theme_font_size_override("font_size", 28)
-	date_label.add_theme_color_override("font_color", UiPalette.GOLD)
+	UiPalette.style_header(date_label, 22)
 	col.add_child(date_label)
 	news_box = VBoxContainer.new()
 	news_box.add_theme_constant_override("separation", 4)
@@ -82,6 +82,7 @@ func _ready() -> void:
 	hint.text = "click to skip"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+	hint.add_theme_font_size_override("font_size", 10)
 	col.add_child(hint)
 	_timer = Timer.new()
 	_timer.timeout.connect(_advance_day)

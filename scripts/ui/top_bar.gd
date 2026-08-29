@@ -17,25 +17,23 @@ var _delta_labels: Dictionary = {}
 func _ready() -> void:
 	%Bar.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 6))
-	%DateLabel.add_theme_color_override("font_color", UiPalette.GOLD)
-	%DateLabel.add_theme_font_size_override("font_size", 11)
+	UiPalette.style_header(%DateLabel, 10)
 	%EventChip.add_theme_stylebox_override("normal", UiPalette.chip_style())
-	%EventChip.add_theme_color_override("font_color", UiPalette.GOLD)
-	%EventChip.add_theme_font_size_override("font_size", 9)
+	UiPalette.style_header(%EventChip, 8)
 	for m in ORDER:
 		var cell := HBoxContainer.new()
 		cell.add_theme_constant_override("separation", 4)
 		var name_l := Label.new()
 		name_l.text = String(METRIC_NAMES[m]).to_upper()
 		name_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-		name_l.add_theme_font_size_override("font_size", 9)
+		name_l.add_theme_font_size_override("font_size", 8)
 		cell.add_child(name_l)
 		var value_l := Label.new()
-		value_l.add_theme_font_size_override("font_size", 11)
+		value_l.add_theme_font_size_override("font_size", 10)
 		cell.add_child(value_l)
 		_value_labels[m] = value_l
 		var delta_l := Label.new()
-		delta_l.add_theme_font_size_override("font_size", 9)
+		delta_l.add_theme_font_size_override("font_size", 8)
 		cell.add_child(delta_l)
 		_delta_labels[m] = delta_l
 		%MetricsRow.add_child(cell)

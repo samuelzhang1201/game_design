@@ -19,7 +19,11 @@ const POSITIVE := Color("7fd47f")      # metric gains, opinion up
 const NEGATIVE := Color("d4756a")      # metric losses, opinion down
 const DIM_OVERLAY := Color(0.04, 0.04, 0.07, 0.84)
 
-const PIXEL_FONT_PATH := "res://assets/fonts/pixel.ttf"  # optional; default font otherwise
+## OFL-licensed faces (assets/fonts/, licenses alongside): EB Garamond for
+## body text, Cinzel (Roman inscription capitals) for headers, names, dates.
+const BODY_FONT_PATH := "res://assets/fonts/EBGaramond.ttf"
+const DISPLAY_FONT_PATH := "res://assets/fonts/Cinzel.ttf"
+const BODY_FONT_SIZE := 12
 
 ## Static 2D map placeholder shown behind the gameplay screens (user-provided
 ## screenshot; the crop trims the foreign UI chrome baked into its edges).
@@ -99,9 +103,37 @@ static func backdrop() -> Texture2D:
 	_art_cache[key] = tex
 	return tex
 
+static func body_font() -> Font:
+	return _load_font(BODY_FONT_PATH)
+
+static func display_font() -> Font:
+	return _load_font(DISPLAY_FONT_PATH)
+
+static func _load_font(path: String) -> Font:
+	if _art_cache.has(path):
+		return _art_cache[path]
+	var font: Font = null
+	if ResourceLoader.exists(path):
+		font = load(path) as Font
+	elif FileAccess.file_exists(path):
+		var file_font := FontFile.new()
+		if file_font.load_dynamic_font(path) == OK:
+			font = file_font
+	_art_cache[path] = font
+	return font
+
+## Header treatment: Cinzel in gold (or the given color) at a small size -
+## used for speaker names, dates, section headers, the menu title.
+static func style_header(label: Label, size: int, color: Color = GOLD) -> void:
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_font_size_override("font_size", size)
+	var font := display_font()
+	if font != null:
+		label.add_theme_font_override("font", font)
+
 ## Game-wide Theme, applied once at GameRoot and inherited by every screen:
-## parchment labels, gold-trimmed dark buttons and inputs, plus the optional
-## pixel font when present.
+## EB Garamond parchment body text at a compact size, gold-trimmed dark
+## buttons and inputs.
 static func build_theme() -> Theme:
 	var theme := Theme.new()
 	theme.set_color("font_color", "Label", TEXT_SOFT)
@@ -115,9 +147,8 @@ static func build_theme() -> Theme:
 	theme.set_stylebox("normal", "LineEdit", chip_style(Color("0f1017")))
 	theme.set_color("font_color", "LineEdit", TEXT_SOFT)
 	theme.set_color("font_placeholder_color", "LineEdit", TEXT_DIM)
-	if FileAccess.file_exists(PIXEL_FONT_PATH):
-		var font: Font = load(PIXEL_FONT_PATH)
-		if font != null:
-			theme.default_font = font
-			theme.default_font_size = 16
+	var body := body_font()
+	if body != null:
+		theme.default_font = body
+	theme.default_font_size = BODY_FONT_SIZE
 	return theme

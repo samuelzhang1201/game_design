@@ -26,14 +26,14 @@ func _ready() -> void:
 	add_child(col)
 	var title := Label.new()
 	title.text = "Crown and Council"
-	title.add_theme_font_size_override("font_size", 32)
-	title.add_theme_color_override("font_color", UiPalette.GOLD)
+	UiPalette.style_header(title, 26)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(title)
 	var hint := Label.new()
 	hint.text = "press Space to take the throne"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	hint.add_theme_font_size_override("font_size", 10)
 	col.add_child(hint)
 
 func _unhandled_input(event: InputEvent) -> void:
