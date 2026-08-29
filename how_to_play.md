@@ -15,7 +15,7 @@ System Requriements:
 14. the conversation box is a fixed-size strip at the very bottom of the view; long content scrolls inside it, and the box never covers the minister portrait (supersedes the "mid bottom" box in 4)
 15. the kingdom info card is compact and always pinned to the top-left corner of every gameplay screen (conversation, court, day run)
 16. the whole UI follows the UI_example.png mock (dark ground, thin gold trim, parchment text): a top strip with date + the six metrics and their per-tick deltas + a pending-event chip replaces the kingdom card (supersedes 15)
-17. the conversation scene shows a minister dossier card on the left (portrait, name, seat title, opinion bar, trait chips); the full-body artworks provided are used for all five ministers (reused by archetype until per-minister art lands)
+17. the conversation scene shows a minister dossier card on the left (portrait, name, seat title, opinion bar, trait chips); every minister has full-body art — chancellor (minister_1), marshal (minister_2), steward (char_new, the taxes ledger), spymaster (char_new2, the hooded courier), chaplain duplicates char_new until own art lands; king.jpg is installed as the player's (you) art for a future player card
 18. the court screen puts the lettered suggestion buttons and End Turn in a right-side advice panel; response buttons everywhere are lettered "A. / B. / C." like the mock
 19. map_example.jpeg is the static 2D map placeholder shown (dimmed) behind every screen
 20. frame.jpg (young king bottom-left, old king top-right, at a chess game) frames every screen; the UI is inset into its interior so the kings and rails stay visible, and the interior was keyed transparent via tools/key_frame_interior.py into assets/ui/frame.png
