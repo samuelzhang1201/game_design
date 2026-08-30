@@ -6,6 +6,7 @@ var season: String = ""
 var year: int = 1
 var metric_deltas: Array = []
 var relationship_deltas: Array = []
+var claim_resolutions: Array = []
 var concerns: Array = []
 var suggestions: Array = []
 var outcomes: Array = []
@@ -20,6 +21,7 @@ func to_dict() -> Dictionary:
 	return {"tick": tick, "season": season, "year": year,
 		"metric_deltas": metric_deltas.duplicate(true),
 		"relationship_deltas": relationship_deltas.duplicate(true),
+		"claim_resolutions": claim_resolutions.duplicate(true),
 		"concerns": concerns.duplicate(true),
 		"suggestions": sug_dicts, "outcomes": outcomes.duplicate(true),
 		"promise_events": promise_events.duplicate(true), "event": event.duplicate(true)}

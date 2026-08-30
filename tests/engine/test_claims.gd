@@ -156,3 +156,33 @@ func test_a_claim_resolves_only_once() -> void:
 	KnowledgeBase.learn(state, "char_lord_malvern", "fact_eastmarch_empty", 90.0)
 	assert_eq(ClaimLedger.resolve_due(data, state, 9).size(), 1)
 	assert_eq(ClaimLedger.resolve_due(data, state, 10).size(), 0, "no double jeopardy")
+
+## --- Task 7: tick integration ---
+
+func test_tick_engine_resolves_claims_and_reports_them() -> void:
+	_tell_lie_to_malvern()
+	KnowledgeBase.add_fact(state, "fact_eastmarch_empty", {
+		"kind": "public", "subject": "eastmarch", "claim_type": "grain",
+		"text": "The eastmarch granaries stand empty.", "truth": true})
+	KnowledgeBase.learn(state, "char_lord_malvern", "fact_eastmarch_empty", 90.0)
+	var report := TickEngine.new(data).advance(state)
+	assert_eq(report.claim_resolutions.size(), 1)
+	assert_eq(String(report.claim_resolutions[0]["status"]), "caught")
+	assert_true(report.to_dict().has("claim_resolutions"))
+
+func test_quiet_tick_reports_no_resolutions() -> void:
+	var report := TickEngine.new(data).advance(state)
+	assert_eq(report.claim_resolutions.size(), 0)
+
+func test_reckoning_is_deterministic_across_identical_states() -> void:
+	_tell_lie_to_malvern()
+	KnowledgeBase.add_fact(state, "fact_eastmarch_empty", {
+		"kind": "public", "subject": "eastmarch", "claim_type": "grain",
+		"text": "The eastmarch granaries stand empty.", "truth": true})
+	KnowledgeBase.learn(state, "char_lord_malvern", "fact_eastmarch_empty", 90.0)
+	var twin := GameState.from_dict(state.to_dict())
+	var a := TickEngine.new(data).advance(state)
+	var b := TickEngine.new(data).advance(twin)
+	assert_eq(a.claim_resolutions.size(), b.claim_resolutions.size())
+	assert_eq(SourceTrust.get_trust(data, state, "you", "char_lord_malvern"),
+		SourceTrust.get_trust(data, twin, "you", "char_lord_malvern"))
