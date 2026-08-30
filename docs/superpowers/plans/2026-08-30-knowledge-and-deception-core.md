@@ -99,7 +99,7 @@ onto_resurrection,ontology,,raised the dead|back from the dead|resurrect,0,0,imp
 onto_magic,ontology,,cast a spell|sorcery|enchanted|immortal,0,0,impossible,This court has no working magic.
 era_gunpowder,era,,cannon|gunpowder|musket|rifle,0,0,impossible,Anachronism: no gunpowder in this age.
 era_optics,era,,telescope|microscope|printing press,0,0,impossible,Anachronism: not yet invented.
-mag_army,magnitude,army_size,,0,40000,impossible,A realm of this age fields thousands, never millions.
+mag_army,magnitude,army_size,,0,40000,impossible,"A realm of this age fields thousands, never millions."
 mag_treasury,magnitude,treasury,,0,100000,impossible,Coin beyond this scale is not credible.
 mag_grain,magnitude,grain,,0,5000,impossible,No granary in the realm holds this much.
 ```
@@ -527,7 +527,7 @@ git commit -m "feat(knowledge): per-character facts with knower lists"
 
 **Interfaces:**
 - Consumes: `RelationshipGraph.edge`, `GameState.relationships`, `DataRepository.bal`.
-- Produces: `GameState.source_trust: Dictionary`; on `SourceTrust`: `key(speaker, listener) -> String`, `init_from_relationships(data, state) -> Dictionary`, `get_trust(data, state, speaker, listener) -> float`, `adjust(state, speaker, listener, delta, reason, tick) -> void`.
+- Produces: `GameState.source_trust: Dictionary`; on `SourceTrust`: `key(speaker, listener) -> String`, `init_from_relationships(data, state) -> Dictionary`, `get_trust(data, state, speaker, listener) -> float`, `adjust(data, state, speaker, listener, delta, reason, tick) -> void`.
 
 Stored per key `"speaker>listener"`: `{"value": float, "log": Array}`.
 
@@ -575,24 +575,24 @@ func test_pair_with_no_edge_uses_the_default() -> void:
 		50.0, 0.001)
 
 func test_adjust_clamps_and_logs_a_reason() -> void:
-	SourceTrust.adjust(state, "you", "char_lord_malvern", -25.0, "caught in a lie", 7)
+	SourceTrust.adjust(data, state, "you", "char_lord_malvern", -25.0, "caught in a lie", 7)
 	assert_almost_eq(SourceTrust.get_trust(data, state, "you", "char_lord_malvern"),
 		62.5, 0.001)
 	var entry: Dictionary = state.source_trust[SourceTrust.key("you", "char_lord_malvern")]
 	var last: Dictionary = entry["log"][entry["log"].size() - 1]
 	assert_eq(String(last["reason"]), "caught in a lie")
 	assert_eq(int(last["tick"]), 7)
-	SourceTrust.adjust(state, "you", "char_lord_malvern", -999.0, "utter ruin", 8)
+	SourceTrust.adjust(data, state, "you", "char_lord_malvern", -999.0, "utter ruin", 8)
 	assert_almost_eq(SourceTrust.get_trust(data, state, "you", "char_lord_malvern"),
 		0.0, 0.001)
 
 func test_adjust_on_an_underived_pair_starts_from_default() -> void:
-	SourceTrust.adjust(state, "you", "char_bard_corvin", 10.0, "a kindness", 3)
+	SourceTrust.adjust(data, state, "you", "char_bard_corvin", 10.0, "a kindness", 3)
 	assert_almost_eq(SourceTrust.get_trust(data, state, "you", "char_bard_corvin"),
 		60.0, 0.001)
 
 func test_trust_survives_save_round_trip() -> void:
-	SourceTrust.adjust(state, "you", "char_lord_malvern", -25.0, "caught in a lie", 7)
+	SourceTrust.adjust(data, state, "you", "char_lord_malvern", -25.0, "caught in a lie", 7)
 	var restored := GameState.from_dict(state.to_dict())
 	assert_almost_eq(SourceTrust.get_trust(data, restored, "you", "char_lord_malvern"),
 		62.5, 0.001)
@@ -662,18 +662,28 @@ static func get_trust(data: DataRepository, state: GameState, speaker: String,
 
 ## Moves trust and logs why. A reason is mandatory, same rule as
 ## Character.change_opinion and RelationshipGraph.adjust.
-static func adjust(state: GameState, speaker: String, listener: String,
-		delta: float, reason: String, tick: int) -> void:
+static func adjust(data: DataRepository, state: GameState, speaker: String,
+		listener: String, delta: float, reason: String, tick: int) -> void:
 	assert(reason != "", "source trust change requires a reason")
 	var k := key(speaker, listener)
 	if not state.source_trust.has(k):
-		state.source_trust[k] = {"value": 50.0, "log": []}
+		# Seed from the same derivation get_trust would have returned for this
+		# pair, so the two can never disagree — including after a designer
+		# retunes source_trust_default in balance.csv.
+		state.source_trust[k] = {
+			"value": derive(data, state, speaker, listener), "log": [],
+		}
 	var entry: Dictionary = state.source_trust[k]
 	entry["value"] = clampf(float(entry["value"]) + delta, 0.0, 100.0)
 	entry["log"].append({"tick": tick, "delta": delta, "reason": reason})
 ```
 
-Note the `adjust` default of `50.0` rather than a derived value: an unseeded pair being adjusted is always a pair the campaign seeded at derivation time, so the two agree. The test `test_adjust_on_an_underived_pair_starts_from_default` pins this.
+`adjust` takes `data` so its seed for an unseeded pair comes from `derive`,
+never a literal. Not every pair is seeded: `init_from_relationships` only
+covers pairs that have a relationship edge, and characters like
+`char_bard_corvin` have none — so this path is reachable, and a hardcoded
+default here would silently diverge from `balance.csv` the moment
+`source_trust_default` is tuned.
 
 - [ ] **Step 5: Wire into GameState**
 
@@ -1250,13 +1260,13 @@ static func _resolve(data: DataRepository, state: GameState, claim: Dictionary,
 	if bool(claim["truth"]):
 		claim["status"] = "kept"
 		trust_delta = data.bal("truth_told_trust_gain")
-		SourceTrust.adjust(state, claimant, listener, trust_delta,
+		SourceTrust.adjust(data, state, claimant, listener, trust_delta,
 			"told the truth about " + String(claim["subject"]), tick)
 	else:
 		claim["status"] = "caught"
 		trust_delta = -data.bal("lie_caught_trust_penalty")
 		var reason := "lied about " + String(claim["subject"])
-		SourceTrust.adjust(state, claimant, listener, trust_delta, reason, tick)
+		SourceTrust.adjust(data, state, claimant, listener, trust_delta, reason, tick)
 		RelationshipGraph.adjust(state, listener, claimant,
 			-data.bal("lie_relationship_penalty"), reason, tick)
 		betrayal = "%s%d" % [BETRAYAL_PREFIX, state.claims.size() + state.knowledge.size()]
@@ -1397,7 +1407,9 @@ Add a section after "Locations and regions":
 `data/facts.csv` seeds what each character knows — public facts, secrets with
 knower lists, and common sense everyone holds at credibility 100. Knowledge is
 per-character: the Chancellor's graft is one fact known only to Mirella and
-Quill, and the prompt builder never shows a fact to someone who does not know it.
+Quill. `KnowledgeBase.knows` is the single authority on who knows what, so that
+once the prompt builder is wired to it (a later phase), no character can be
+shown a fact they were never told.
 
 Anyone may assert anything. `Belief` scores an assertion from its plausibility,
 the listener's trust in the speaker (derived from how the listener feels about
