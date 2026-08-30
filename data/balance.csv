@@ -67,3 +67,6 @@ belief_threshold,55,claims at or above this belief are swallowed as fact
 belief_corroboration_bonus,8,per agreeing fact the listener already knows; also the penalty per contradicting fact
 belief_trait_paranoid,-10,paranoid listeners discount every claim
 belief_trait_trusting,10,trusting listeners inflate every claim
+truth_told_trust_gain,3,source trust gained when a claim is borne out
+lie_caught_trust_penalty,25,source trust lost when a lie is exposed
+lie_relationship_penalty,12,relationship sentiment lost when a lie is exposed

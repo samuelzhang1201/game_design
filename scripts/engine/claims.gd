@@ -47,3 +47,65 @@ static func open_claims(state: GameState) -> Array:
 		if String(c["status"]) == "open":
 			out.append(c)
 	return out
+
+const BETRAYAL_PREFIX := "betrayal_"
+
+## Resolves every open claim whose listener has since learned a contradicting
+## true fact (spec §6, "The reckoning"). Returns one entry per resolution:
+##   {"claim", "status", "trust_delta", "betrayal_fact"}
+## Deterministic and idempotent: a resolved claim leaves the open list.
+static func resolve_due(data: DataRepository, state: GameState, tick: int) -> Array:
+	var out: Array = []
+	for claim in open_claims(state):
+		if not _reality_known(state, claim):
+			continue
+		out.append(_resolve(data, state, claim, tick))
+	return out
+
+## True when the listener knows a true fact on the same claim_type and
+## subject that is not the claim's own fact — reality has caught up with what
+## they were told. Named for reality rather than contradiction because it
+## fires for honest claims too, which is how truth-telling earns trust.
+static func _reality_known(state: GameState, claim: Dictionary) -> bool:
+	for fact in KnowledgeBase.facts_about(state, String(claim["listener"]),
+			String(claim["claim_type"]), String(claim["subject"])):
+		if String(fact["code"]) == String(claim["fact_code"]):
+			continue
+		if bool(fact["truth"]):
+			return true
+	return false
+
+static func _resolve(data: DataRepository, state: GameState, claim: Dictionary,
+		tick: int) -> Dictionary:
+	var claimant := String(claim["claimant"])
+	var listener := String(claim["listener"])
+	var betrayal := ""
+	var trust_delta := 0.0
+	if bool(claim["truth"]):
+		claim["status"] = "kept"
+		trust_delta = data.bal("truth_told_trust_gain")
+		SourceTrust.adjust(data, state, claimant, listener, trust_delta,
+			"told the truth about " + String(claim["subject"]), tick)
+	else:
+		claim["status"] = "caught"
+		trust_delta = -data.bal("lie_caught_trust_penalty")
+		var reason := "lied about " + String(claim["subject"])
+		SourceTrust.adjust(data, state, claimant, listener, trust_delta, reason, tick)
+		RelationshipGraph.adjust(state, listener, claimant,
+			-data.bal("lie_relationship_penalty"), reason, tick)
+		betrayal = "%s%d" % [BETRAYAL_PREFIX, state.claims.size() + state.knowledge.size()]
+		KnowledgeBase.add_fact(state, betrayal, {
+			"kind": "secret", "subject": claimant, "claim_type": "loyalty",
+			"text": "%s lied about %s." % [_display_name(state, claimant),
+				String(claim["subject"])],
+			"truth": true,
+		})
+		# The wronged character knows it firsthand; propagation spreads it.
+		KnowledgeBase.learn(state, listener, betrayal, 100.0)
+	return {"claim": claim, "status": String(claim["status"]),
+		"trust_delta": trust_delta, "betrayal_fact": betrayal}
+
+static func _display_name(state: GameState, char_id: String) -> String:
+	if state.characters.has(char_id):
+		return state.characters[char_id].display_name
+	return char_id
