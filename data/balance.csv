@@ -63,3 +63,7 @@ prompt_calls_per_tick,6,LLM parse calls allowed per tick (resource limit; raised
 dayrun_day_seconds,0.22,seconds per day in the end-turn day-run (R6)
 relationship_drift_per_tick,0.5,edges heal toward their founding value with time
 source_trust_default,50,trust in a speaker with no relationship edge to the listener
+belief_threshold,55,claims at or above this belief are swallowed as fact
+belief_corroboration_bonus,8,per agreeing fact the listener already knows; also the penalty per contradicting fact
+belief_trait_paranoid,-10,paranoid listeners discount every claim
+belief_trait_trusting,10,trusting listeners inflate every claim
