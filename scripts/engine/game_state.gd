@@ -8,6 +8,8 @@ var characters: Dictionary = {}
 var council: Dictionary = {}
 ## Role-to-role edges; shape and mutation API in RelationshipGraph.
 var relationships: Array = []
+## Facts and who knows them; shape and API in KnowledgeBase.
+var knowledge: Dictionary = {}
 ## Character creation (main menu): {"first_name", "family_name", "flag"}.
 ## Applied by apply_player_setup; kept so saves restore the chosen identity.
 var player_setup: Dictionary = {}
@@ -49,6 +51,7 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 		if s.characters[id].seat != "":
 			s.council[s.characters[id].seat] = id
 	s.relationships = RelationshipGraph.init_from_data(data)
+	s.knowledge = KnowledgeBase.init_from_data(data, s)
 	return s
 
 ## Applies the player's chosen identity: the player's display name becomes
@@ -168,6 +171,7 @@ func to_dict() -> Dictionary:
 		"metrics": _encode_values(metrics.duplicate()),
 		"characters": chars, "council": council.duplicate(),
 		"relationships": _encode_values(relationships.duplicate(true)),
+		"knowledge": _encode_values(knowledge.duplicate(true)),
 		"player_setup": player_setup.duplicate(true),
 		"current_location": current_location,
 		"cooldowns": _encode_values(cooldowns.duplicate()),
@@ -194,6 +198,7 @@ static func from_dict(d: Dictionary) -> GameState:
 		s.characters[id] = Character.from_dict(d["characters"][id])
 	s.council = d["council"].duplicate()
 	s.relationships = _decode_values(d.get("relationships", []))
+	s.knowledge = _decode_values(d.get("knowledge", {}))
 	s.player_setup = d.get("player_setup", {}).duplicate(true)
 	s.current_location = String(d.get("current_location", LocationSystem.DEFAULT_LOCATION))
 	var decoded_cooldowns = _decode_values(d["cooldowns"])

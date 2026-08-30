@@ -19,6 +19,7 @@ var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
 var world_rules: Dictionary = {}
 var claim_types: Dictionary = {}
+var facts: Array[Dictionary] = []
 
 ## Parses a CSV with a header row into an Array of row Dictionaries.
 ## Returns [] and sets last_error if any row is shorter than required_cols
@@ -93,6 +94,10 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/claim_types.csv", ["claim_type", "label"],
 			func(r): claim_types[r["claim_type"]] = r):
+		return false
+	if not _load_if_present(dir + "/facts.csv",
+			["fact_code", "kind", "subject", "claim_type", "text", "truth"],
+			func(r): facts.append(r)):
 		return false
 	if not _load_if_present(dir + "/regions.csv", ["region_code", "label"],
 			func(r): regions[r["region_code"]] = r):
