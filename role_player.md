@@ -207,7 +207,9 @@ Street (Cassian, Corvin), The Mustering Field (Nora).
 `data/facts.csv` seeds what each character knows — public facts, secrets with
 knower lists, and common sense everyone holds at credibility 100. Knowledge is
 per-character: the Chancellor's graft is one fact known only to Mirella and
-Quill, and the prompt builder never shows a fact to someone who does not know it.
+Quill. `KnowledgeBase.knows` is the single authority on who knows what, so that
+once the prompt builder is wired to it (a later phase), no character can be
+shown a fact they were never told.
 
 Anyone may assert anything. `Belief` scores an assertion from its plausibility,
 the listener's trust in the speaker (derived from how the listener feels about
