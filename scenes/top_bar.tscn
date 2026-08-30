@@ -34,6 +34,11 @@ unique_name_in_owner = true
 visible = false
 text = "1 EVENT"
 
+[node name="RelationsButton" type="Button" parent="Bar/Row"]
+unique_name_in_owner = true
+focus_mode = 0
+text = "RELATIONS"
+
 [node name="MenuButton" type="Button" parent="Bar/Row"]
 unique_name_in_owner = true
 focus_mode = 0

@@ -314,6 +314,13 @@ func _on_free_text(text: String) -> void:
 	if text.strip_edges() == "":
 		return
 	_free_text.editable = false
+	# The current beat's minister is who the player is facing — conversational
+	# text ("who are you") is answered by them unless the parse says the
+	# player addressed someone else (see Game._converse_speaker).
+	var facing := ""
+	var beat := current_beat()
+	if String(beat.get("kind", "")) == "minister":
+		facing = String(beat.get("portrait_id", ""))
 	Game.submit_free_text(text, func(res: Dictionary):
 		_free_text.editable = true
 		_free_text.clear()
@@ -344,5 +351,12 @@ func _on_free_text(text: String) -> void:
 			spoken += TemplateVoicer.line_for(Game.data,
 				"outcome_" + String(outcome["action_code"]), [], Game.state.tick)
 			spoken += _promise_kept_suffix(outcome["effects"]) + " "
+		# Conversational text gets the role's in-character reply (converse
+		# ride-along) rather than the old silent "So noted.". A reply from
+		# someone other than the minister on stage is prefixed with their name.
+		if spoken == "" and res.has("reply"):
+			var reply: Dictionary = res["reply"]
+			spoken = String(reply["text"]) if String(reply["speaker_id"]) == facing \
+				else "%s: %s" % [String(reply["speaker"]), String(reply["text"])]
 		_text_label.text = spoken if spoken != "" else "So noted."
-	)
+	, facing)

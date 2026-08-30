@@ -1,0 +1,50 @@
+from_id,to_id,rel_type,sentiment,reason
+you,char_queen,marriage,55,a marriage that merged crown and counting-house
+char_queen,you,marriage,50,a king whose treasury her family keeps
+you,char_princess,kin,35,"his only child, grown distant since her mother died"
+char_princess,you,kin,-10,a father who was king before he was family
+char_queen,char_princess,kin,-15,a stepdaughter who counts Weighhouse coin with suspicion
+char_princess,char_queen,kin,-25,the woman who sits in her mother's place
+you,char_duke_tomas,kin,-35,a half-brother who covets the throne and does not hide it
+char_duke_tomas,you,kin,-45,the half-blood who took the crown he was born beside
+char_duke_tomas,char_princess,rival,-35,the girl-general stands between him and the succession
+char_princess,char_duke_tomas,rival,-40,she knows exactly what her uncle wants
+you,char_lord_malvern,ally,70,the one voice he trusts entire
+char_lord_malvern,you,liege,75,he set the crown on this king's head and means to keep it there
+char_lord_malvern,char_duke_tomas,rival,-40,blocked the duke's road to the throne once already
+char_duke_tomas,char_lord_malvern,rival,-35,the old man who cost him a crown and is finally dying
+char_chancellor,char_steward,grudge,-55,she holds the ledger that could hang him
+char_steward,char_chancellor,grudge,-60,his greed stains every budget she signs
+char_steward,char_queen,kin,50,"her kinswoman the queen, the Weighhouse's proudest coup"
+char_queen,char_steward,kin,45,"her cousin at the treasury, the clan's steady hand"
+char_chancellor,char_queen,rival,-20,the queen's audits circle ever closer
+char_spymaster,char_chancellor,rival,-30,keeps a file on the chancellor's appetites
+char_lady_corina,char_duke_tomas,ally,40,the duke promises the nobility a looser leash
+char_duke_tomas,char_lady_corina,ally,35,every parlor she rules leans his way
+char_marshal,char_lord_edgar,kin,35,elder brother and head of House Harrow
+char_lord_edgar,char_marshal,kin,30,his brother carries the family sword at council
+char_lord_edgar,char_lady_corina,rival,-30,an old border feud between Harrow and Ashvale
+char_lady_corina,char_lord_edgar,rival,-30,Harrow cattle graze Ashvale meadows and pay nothing
+char_marshal,char_princess,ally,30,his fiercest young general
+char_princess,char_marshal,ally,25,"the marshal gives her commands, not compliments"
+char_captain_hale,you,liege,65,sworn to your person before the old king died
+char_captain_hale,char_marshal,ally,30,served under him at the border
+char_princess,char_captain_hale,admires,40,the man who first put a sword in her hand
+char_prophet_cassian,you,grudge,-40,demands grain relief and the heads of corrupt officials
+char_prophet_cassian,char_chancellor,grudge,-55,"names him thief from the market square, and the crowd repeats it"
+char_chaplain,char_prophet_cassian,rival,-45,a barefoot heretic who empties his pews
+char_prophet_cassian,char_chaplain,rival,-35,a fat shepherd grown comfortable among wolves
+char_king_osric,you,rival,-60,sharpening spears in Doncaster for a raid southward
+you,char_king_osric,rival,-45,burned two of your border granaries unavenged
+char_queen_isabeau,you,rival,-50,her annexations creep toward your eastern border
+you,char_queen_isabeau,rival,-40,the regent who swallows city-states whole
+char_envoy_petra,char_queen_isabeau,liege,60,her ambassador at your court
+char_envoy_petra,char_chancellor,ally,25,a greedy minister makes a fine listening post
+char_chancellor,char_envoy_petra,ally,20,Bentleigh gold spends like any other
+char_queen_isabeau,char_emperor,puppet,20,the emperor signs what she writes
+char_emperor,char_queen_isabeau,grudge,-60,the regent who reduced him to a seal and a chair
+char_steward,char_guildmaster_tessa,ally,40,guild credit has saved the treasury more than once
+char_guildmaster_tessa,char_steward,ally,45,the one courtier who reads a ledger before signing it
+char_guildmaster_tessa,char_queen,rival,-20,the Weighhouse squeezes guilds that will not kneel
+char_bard_corvin,char_lady_ysolde,admires,50,composes ballads for her salons
+char_lady_ysolde,char_bard_corvin,patron,45,keeps him fashionable at court

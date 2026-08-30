@@ -8,9 +8,13 @@ extends Control
 ##   2. Add your art as a child node named exactly "CustomArt" (Sprite2D,
 ##      AnimatedSprite2D, TextureRect - anything).
 ##   3. Done. When a "CustomArt" node exists, this script skips building the
-##      default pixel-PNG visual and only maintains the opinion badge and
+##      default chip visual and only maintains the opinion badge and
 ##      tooltip. Remember Sprite2D positions from its center: place it at
 ##      (24, 24) to sit inside the 48x48 portrait box.
+##
+## CHIP ART: assets/portraits/<id>.png are 96x96 head crops derived from the
+## user-provided art by tools/make_portrait_chips.gd (the old pixel art is
+## retired). Roles without provided art fall back to a seat-colored initial.
 ##
 ## Instantiate via CharacterPortrait.instantiate_for(id) - it picks the
 ## character's own scene when one exists, else the base scene.
@@ -92,7 +96,7 @@ func _build_default_visual() -> void:
 		pic.set_anchors_preset(Control.PRESET_FULL_RECT)
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_SCALE
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		add_child(pic)
 	else:
 		var bg := ColorRect.new()

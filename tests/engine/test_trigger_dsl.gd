@@ -25,7 +25,10 @@ func test_season_year_seat_trait() -> void:
 	assert_true(TriggerDsl.evaluate("seat_filled=marshal", s, data))
 	assert_false(TriggerDsl.evaluate("seat_filled=admiral", s, data))
 	assert_true(TriggerDsl.evaluate("trait_at_court=paranoid", s, data))   # Quill
-	assert_false(TriggerDsl.evaluate("trait_at_court=venal", s, data))
+	# The story rework (game_start.md) makes the Chancellor venal — greedy,
+	# cunning, devious — so venal IS at court now; maimed is held by no one.
+	assert_true(TriggerDsl.evaluate("trait_at_court=venal", s, data))
+	assert_false(TriggerDsl.evaluate("trait_at_court=maimed", s, data))
 
 func test_action_since_and_flags() -> void:
 	s.event_state["last_action_tick"]["TARIFF_ADJUST"] = 3

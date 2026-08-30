@@ -12,9 +12,10 @@ const ENV_PATH := "res://.env"
 ## suite can never make live API calls even with a real .env present).
 static func load_config(env_path: String = ENV_PATH,
 		json_path: String = CONFIG_PATH) -> Dictionary:
-	var cfg := {"api_key": "", "model_parse": "gpt-5.6-luna",
+	var cfg := {"api_key": "", "api_name": "", "model_parse": "gpt-5.6-luna",
 		"model_voice": "gpt-5.6-terra", "model_flagship": "gpt-5.6-sol",
-		"offline_mode": true, "llm_max_output_tokens": 600}
+		"offline_mode": true, "llm_max_output_tokens": 600,
+		"llm_reasoning_effort": "", "llm_store_requests": false}
 	_overlay_env(cfg, env_path)
 	_overlay_json(cfg, json_path)
 	if String(cfg["api_key"]) == "" or OS.get_environment("CC_FORCE_OFFLINE") == "1":
@@ -22,8 +23,19 @@ static func load_config(env_path: String = ENV_PATH,
 	return cfg
 
 ## Parses KEY=VALUE lines ('#' comments, blanks skipped). Recognized keys:
-## OPENAI_API_KEY, LLM_MODEL (sets all three tiers), LLM_MODEL_PARSE/_VOICE/
-## _FLAGSHIP (per-tier overrides), LLM_MAX_OUTPUT_TOKENS.
+## OPENAI_API_KEY, OPENAI_API_NAME (informational label for which key/project
+## this config is — logged/shown only, never sent to the API), LLM_MODEL
+## (sets all three tiers), LLM_MODEL_PARSE/_VOICE/_FLAGSHIP (per-tier
+## overrides), LLM_MAX_OUTPUT_TOKENS, LLM_REASONING_EFFORT (reasoning-model
+## budget, e.g. "minimal" — REQUIRED with gpt-5-family models, whose default
+## effort can spend the whole output cap on hidden reasoning and return empty
+## dialogue, verified live 2026-08-30; sent only to models that accept it —
+## see _supports_reasoning_effort — so it is safe to leave set when switching
+## LLM_MODEL to a non-reasoning model), LLM_STORE_REQUESTS (1/true: send
+## "store": true so requests appear on the platform's Logs page — OpenAI
+## does not store chat completions by default, which is why an unstored
+## request shows up only as aggregate Usage, never in Logs; stored requests
+## are retained by OpenAI ~30 days).
 static func _overlay_env(cfg: Dictionary, path: String) -> void:
 	if not FileAccess.file_exists(path):
 		return
@@ -43,6 +55,8 @@ static func _overlay_env(cfg: Dictionary, path: String) -> void:
 			"OPENAI_API_KEY":
 				cfg["api_key"] = value
 				cfg["offline_mode"] = false
+			"OPENAI_API_NAME":
+				cfg["api_name"] = value
 			"LLM_MODEL":
 				cfg["model_parse"] = value
 				cfg["model_voice"] = value
@@ -55,6 +69,10 @@ static func _overlay_env(cfg: Dictionary, path: String) -> void:
 				cfg["model_flagship"] = value
 			"LLM_MAX_OUTPUT_TOKENS":
 				cfg["llm_max_output_tokens"] = int(value)
+			"LLM_REASONING_EFFORT":
+				cfg["llm_reasoning_effort"] = value
+			"LLM_STORE_REQUESTS":
+				cfg["llm_store_requests"] = value == "1" or value.to_lower() == "true"
 
 static func _overlay_json(cfg: Dictionary, path: String) -> void:
 	if not FileAccess.file_exists(path):
@@ -118,13 +136,37 @@ func _headers_list() -> PackedStringArray:
 
 func _build_body(system_prompt: String, user_prompt: String,
 		model: String, force_json: bool) -> String:
+	# max_completion_tokens, not the legacy max_tokens: the gpt-5 family
+	# rejects max_tokens with HTTP 400 ("Unsupported parameter", verified
+	# live 2026-08-30), and every current chat-completions model accepts
+	# max_completion_tokens.
 	var body := {"model": model, "messages": [
 		{"role": "system", "content": system_prompt},
 		{"role": "user", "content": user_prompt}],
-		"max_tokens": int(_config.get("llm_max_output_tokens", 600))}
+		"max_completion_tokens": int(_config.get("llm_max_output_tokens", 600))}
+	# Only sent when configured AND the model is a reasoning model:
+	# non-reasoning models (gpt-4.1-mini verified live 2026-08-30) reject the
+	# parameter with HTTP 400, so gating here lets LLM_MODEL switch freely
+	# without .env surgery.
+	var effort := String(_config.get("llm_reasoning_effort", ""))
+	if effort != "" and _supports_reasoning_effort(model):
+		body["reasoning_effort"] = effort
+	# Opt-in observability: stored requests show on the platform Logs page.
+	if bool(_config.get("llm_store_requests", false)):
+		body["store"] = true
 	if force_json:
 		body["response_format"] = {"type": "json_object"}
 	return JSON.stringify(body)
+
+## Reasoning-capable model families (accept reasoning_effort): the gpt-5
+## family and the o-series (o1/o3/o4...). Everything else rejects it.
+static func _supports_reasoning_effort(model: String) -> bool:
+	if model.begins_with("gpt-5"):
+		return true
+	for prefix in ["o1", "o3", "o4"]:
+		if model.begins_with(prefix):
+			return true
+	return false
 
 ## Static (and defensive) so it can be unit-tested with canned strings and no
 ## network: any shape short of a full {"choices":[{"message":{"content":str}}]}

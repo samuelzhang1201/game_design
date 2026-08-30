@@ -21,6 +21,7 @@ func advance(state: GameState) -> TickReport:
 	r.outcomes = state.recent_outcomes
 	state.recent_outcomes = []
 	_drift(state, r)
+	r.relationship_deltas = RelationshipGraph.drift(state, data)
 	for pr in state.promises:
 		if String(pr["status"]) == "open" and state.tick > int(pr["tick_due"]):
 			pr["status"] = "broken"

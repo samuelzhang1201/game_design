@@ -22,6 +22,15 @@ func test_briefing_prompt_carries_personas_and_report() -> void:
 	assert_string_contains(p["system"], "Aldwin Reeve")
 	assert_string_contains(p["user"], "grain")
 
+func test_converse_prompt_carries_persona_and_speech_only_rule() -> void:
+	var s := GameState.new_campaign(data, 42)
+	var p := PromptBuilder.converse_prompts("char_marshal", "who are you", s, data)
+	assert_string_contains(p["system"], "Ser Brandt of Harrow")
+	assert_string_contains(p["system"], "House Harrow")
+	assert_string_contains(p["system"], "Relationships:")
+	assert_string_contains(p["system"], "you may only speak")
+	assert_eq(p["user"], "who are you")
+
 func test_parse_prompt_lists_event_choices_and_promise_rule() -> void:
 	var s := GameState.new_campaign(data, 42)
 	var r := TickEngine.new(data).advance(s)

@@ -33,6 +33,25 @@ code=0
   -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit > "$TEST_OUTPUT" 2>&1 || code=$?
 cat "$TEST_OUTPUT"
 
+# GUT silently SKIPS a test script that fails to parse ("Ignoring script ...
+# because it does not extend GutTest") and still reports the suite green —
+# verified 2026-08-30 when a parse error in test_llm_config.gd dropped 6
+# tests without failing the run. Treat any skipped script, and any mismatch
+# between test scripts on disk and scripts GUT ran, as fatal.
+if grep -q "Ignoring script" "$TEST_OUTPUT"; then
+  echo ""
+  echo "FATAL: GUT ignored a test script (parse error?):"
+  grep "Ignoring script" "$TEST_OUTPUT"
+  exit 1
+fi
+DISK_SCRIPTS=$(find tests -name "test_*.gd" | wc -l | tr -d ' ')
+RAN_SCRIPTS=$(grep "^Scripts" "$TEST_OUTPUT" | awk '{print $NF}')
+if [ "$DISK_SCRIPTS" != "$RAN_SCRIPTS" ]; then
+  echo ""
+  echo "FATAL: $DISK_SCRIPTS test scripts on disk but GUT ran $RAN_SCRIPTS"
+  exit 1
+fi
+
 # Validate error count: exactly 2 known errors from GExtension class database issues.
 # Any other count indicates new errors or broken tests.
 ERROR_COUNT=$(grep "^Errors" "$TEST_OUTPUT" | awk '{print $NF}')

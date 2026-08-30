@@ -9,6 +9,9 @@ signal state_changed
 ## Cross-cutting UI signal: the TopBar's MENU button asks for the pause
 ## menu; GameRoot (the flow owner) listens and shows it.
 signal menu_requested
+## The TopBar's RELATIONS button asks for the relationship graph overlay;
+## GameRoot listens and toggles it.
+signal relations_requested
 
 var data: DataRepository
 var state: GameState
@@ -134,7 +137,11 @@ func _exit_tree() -> void:
 ## in-fiction without any API call. Clicked buttons remain free and unlimited.
 var _prompts_this_tick := 0
 
-func submit_free_text(text: String, cb: Callable) -> void:
+## `speaker_hint`: the character the player is literally facing (the
+## conversation stage passes its current beat's minister) — used to pick who
+## answers conversational text; the court screen passes none and the
+## Chancellor, "your primary voice" (council_seats.csv), answers instead.
+func submit_free_text(text: String, cb: Callable, speaker_hint: String = "") -> void:
 	if _prompts_this_tick >= int(data.bal("prompt_calls_per_tick")):
 		cb.call({"ok": false, "executed": [], "rejected": [],
 			"error": "the council will hear no more orders this fortnight"})
@@ -172,4 +179,26 @@ func submit_free_text(text: String, cb: Callable) -> void:
 					rejected.append({"request": req, "error": attempt["error"]})
 			engine.actions.apply_court_reaction(res["court_reaction"], state)
 			state_changed.emit()
+			# Conversational ride-along: text that parsed to no action at all
+			# ("who are you") is a question, not an order — a role answers it
+			# in character instead of the court falling silent. Shares this
+			# submission's single prompt-cap increment (at most one extra call).
+			if executed.is_empty() and rejected.is_empty():
+				var speaker := _converse_speaker(res["court_reaction"], speaker_hint)
+				if speaker != "":
+					voicer.converse(speaker, text, state, data,
+						func(reply: Dictionary):
+							cb.call({"ok": true, "executed": [], "rejected": [],
+								"error": "", "reply": reply}))
+					return
 			cb.call({"ok": true, "executed": executed, "rejected": rejected, "error": ""}))
+
+## Who answers conversational text: whoever the parse says was addressed,
+## else the minister the player is facing, else the Chancellor.
+func _converse_speaker(court_reaction: Dictionary, hint: String) -> String:
+	for id in court_reaction.get("addressed", []):
+		if state.characters.has(String(id)) and String(id) != "you":
+			return String(id)
+	if state.characters.has(hint) and hint != "you":
+		return hint
+	return String(state.council.get("chancellor", ""))

@@ -5,11 +5,33 @@ var data: DataRepository
 func before_each() -> void:
 	data = DataRepository.load_all("res://data")
 
-func test_builds_five_ministers_seated() -> void:
+func test_builds_full_roster_with_five_seated() -> void:
 	var s := GameState.new_campaign(data, 42)
-	assert_eq(s.characters.size(), 5)
+	# 5 founding council + 16 extended roles (data/roles.csv).
+	assert_eq(s.characters.size(), 21)
+	assert_eq(s.council.size(), 5, "only seated ministers occupy council")
 	for seat in ["chancellor", "marshal", "steward", "spymaster", "chaplain"]:
 		assert_true(s.council.has(seat), seat + " seated")
+
+func test_roster_roles_carry_taxonomy_and_role_metrics() -> void:
+	var s := GameState.new_campaign(data, 42)
+	var king: Character = s.characters["you"]
+	assert_eq(king.category, "player")
+	assert_eq(king.family_name, "Valorin")
+	assert_eq(king.kingdom, "averlain")
+	assert_eq(int(king.attributes["prestige"]), 85)
+	assert_eq(int(king.attributes["influence"]), 90)
+	# Personal data from the story background (game_start.md): the king is 40,
+	# his general daughter 19.
+	assert_eq(int(king.attributes["age"]), 40)
+	assert_eq(int(s.characters["char_princess"].attributes["age"]), 19)
+	var osric: Character = s.characters["char_king_osric"]
+	assert_eq(osric.category, "foreign")
+	assert_eq(osric.kingdom, "doncaster")
+	# Founding rows gained the same columns.
+	var aldwin: Character = s.characters["char_chancellor"]
+	assert_eq(aldwin.category, "council")
+	assert_eq(int(aldwin.attributes["influence"]), 70)
 
 func test_trait_modifiers_applied() -> void:
 	var s := GameState.new_campaign(data, 42)

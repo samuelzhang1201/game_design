@@ -1,0 +1,220 @@
+# Roles of the Court — Crown and Council
+
+Design/persona layer for every role in the game, grounded in the story
+background at [game_story/background/game_start.md](game_story/background/game_start.md).
+**Numeric truth lives in the CSVs** (`data/founding_council.csv`,
+`data/roles.csv`, `data/relationships.csv`, `data/character_traits.csv`) and is
+loaded by the engine; this document is the human-readable view and the source
+the LLM persona prompts are written from. Skills vocabulary:
+[role_skills.md](role_skills.md). Personality vocabulary:
+[role_personality.md](role_personality.md).
+
+## The player
+
+- **Title:** King Aldric Valorin, King of Averlain, Protector of the Northern Marches
+- **Role played:** the newly crowned monarch (`id: you`), **age 40**, just
+  ascended with grand ambitions — and a court already running with hidden
+  currents. You never speak through the LLM — you type or click; every other
+  role answers you in character.
+- **House:** Valorin, the royal line of Averlain. Your first wife, of House
+  O-kala, died years ago; your second marriage merged the crown with the
+  Weighhouse banking clan.
+- Portrait: `assets/portraits/you.png` (chip) / `assets/portraits/full/you.png` (full).
+
+## Numeric attributes (all roles)
+
+Stored in the CSVs, per role:
+
+| Group | Metrics |
+|---|---|
+| Personality axes, 0–100 (drive engine formulas) | ambition, loyalty, integrity, boldness, piety, compassion, vanity, temper, pragmatism |
+| Role-level metrics, 0–100 (stakes; engine-visible, wired post-MVP) | health, wealth, prestige, influence |
+| Personal data | age (story-canonical where given: the king 40, Nora 19, Malvern 71) |
+
+Skills are a separate 0–20 scale (`sk_admin`, `sk_martial`, `sk_intrigue`,
+`sk_diplomacy`, `sk_steward`) — see [role_skills.md](role_skills.md).
+Trait rows in `character_traits.csv` shift both at build time.
+
+## The roster (21 roles)
+
+### The royal family (category: player/family/relative)
+
+| id | Name | Age | Station | Signature traits |
+|---|---|---|---|---|
+| `you` | King Aldric Valorin | 40 | The player — newly crowned | Vigorous |
+| `char_queen` | Queen Victoria | 36 | Queen consort of the Weighhouse banking clan; oversees the kingdom's finances and steadily expands her family's reach | Merchant Family, Shrewd Trader, Silver Tongued, Patient |
+| `char_princess` | Princess Nora O-kala | 19 | Your daughter by your late first wife — a fierce, formidable general serving with the army; your relationship is strained | Born Soldier, Bold, Master Duelist, Wrathful |
+| `char_duke_tomas` | Duke Tomas Valorin | 44 | Your half-brother. Openly covets the throne — an open secret. Close to the great nobles; controls the kingdom's technology development | Royal Blood, Ruthlessly Ambitious, Learned, Silver Tongued |
+| `char_lady_ysolde` | Lady Ysolde Valorin | 27 | Cousin; the court's social sun | Vain, Beloved of the Crowds, Trusting |
+
+### Council of ministers (category: council)
+
+| id | Name | Age | Seat | Story role |
+|---|---|---|---|---|
+| `char_chancellor` | Aldwin Reeve | 58 | Chancellor | The Chief Minister of Internal Affairs: greedy, cunning, devious — and something incriminating hangs over him | 
+| `char_steward` | Mirella of the Weighhouse | 41 | Steward | The Minister of Finance — the queen's kinswoman. She knows the Chancellor's secret; the two are notoriously at odds |
+| `char_marshal` | Ser Brandt of Harrow | 45 | Marshal | Nora's commander; House Harrow's sword |
+| `char_spymaster` | Quill | 37 | Spymaster | Keeps a file on the Chancellor's appetites |
+| `char_chaplain` | Father Odo | 63 | Chaplain | Losing his flock to a barefoot preacher |
+
+### Officers, nobles, and the trusted adviser
+
+| id | Name | Age | Station | Signature traits |
+|---|---|---|---|---|
+| `char_lord_malvern` | Lord Malvern | 71 | Your most trusted adviser — instrumental in securing your throne, hugely influential at court, but aged and in failing health (health 20) | Devoted, Patient, Learned, Sickly |
+| `char_captain_hale` | Captain Hale Fenwick | 52 | Captain of the royal guard; first put a sword in Nora's hand | War Veteran, Devoted, Blunt, Humble |
+| `char_lady_corina` | Lady Corina Ashvale | 43 | High noble power broker — her parlors lean toward Duke Tomas | High Nobility, Silver Tongued, Schemer, Patient |
+| `char_lord_edgar` | Lord Edgar Harrow | 49 | Head of House Harrow, the Marshal's elder brother | High Nobility, Blunt, Bold, War Veteran |
+
+### Enemies within (category: enemy)
+
+| id | Name | Age | Station |
+|---|---|---|---|
+| `char_prophet_cassian` | Cassian the Barefoot | 33 | The voice of the food crisis: rallies demonstrations demanding grain relief and the punishment of corrupt officials — the Chancellor by name |
+
+### Foreign powers (category: foreign)
+
+| id | Name | Age | Station | Realm |
+|---|---|---|---|---|
+| `char_king_osric` | Warchief Osric | 47 | Warchief of the northern barbarians — restless, preparing to raid south | Doncaster |
+| `char_queen_isabeau` | Queen Isabeau | 45 | Queen of the Duchy of Bentleigh: holds the Empire's Emperor as a puppet, annexes the minor city-states, openly hostile to Averlain | Bentleigh |
+| `char_envoy_petra` | Envoy Petra Kolev | 38 | Bentleigh's ambassador at your court — and quietly cultivating your greedy Chancellor | Bentleigh |
+| `char_emperor` | Emperor Constans | 24 | The Empire's young Emperor — a seal and a chair in Isabeau's hands (prestige 90, influence 15) | The Empire |
+
+### Public celebrities (category: celebrity)
+
+| id | Name | Age | Station |
+|---|---|---|---|
+| `char_bard_corvin` | Master Corvin Lute | 31 | The realm's most sung bard; Lady Ysolde's protégé |
+| `char_guildmaster_tessa` | Guildmaster Tessa Marden | 39 | Merchant princess of the weavers' guild — the Weighhouse squeezes guilds that will not kneel |
+
+## Relationships
+
+Starting edges live in `data/relationships.csv` (directed:
+`from_id,to_id,rel_type,sentiment,reason` — every edge carries a reason, the
+same rule as opinion deltas). At campaign start they are copied into the save
+(`GameState.relationships`) and from then on the graph is **dynamic**:
+
+- **Shocks** — event choices can carry a `rel:<from>:<to>:<delta>:<reason>`
+  effect op (see `EventEffects`); each shock is clamped ±100 and logged with
+  its reason.
+- **Healing** — each tick every edge drifts `relationship_drift_per_tick`
+  (balance.csv) back toward its founding baseline: grudges cool, honeymoons fade.
+- **LLM feed** — `PromptBuilder.persona_context(id, …)` serializes a role's
+  current strongest edges (via `RelationshipGraph.describe_for`) into that
+  role's context window, so what the model roleplays always matches live state.
+- **In-game visual** — the TopBar's RELATIONS button opens the live node-edge
+  overlay (`RelationshipGraphScreen`): the king at center, the court ringed
+  around him, kin edges gold, friendships green, feuds red, thickness =
+  strength. It redraws on every state change.
+
+### Starting graph
+
+```mermaid
+graph TD
+    YOU[King Aldric, 40]
+    VICTORIA[Queen Victoria]
+    NORA[Princess Nora O-kala]
+    TOMAS[Duke Tomas]
+    YSOLDE[Lady Ysolde]
+    MALVERN[Lord Malvern]
+    ALDWIN[Aldwin Reeve - Chancellor]
+    BRANDT[Ser Brandt - Marshal]
+    MIRELLA[Mirella - Steward]
+    QUILL[Quill - Spymaster]
+    ODO[Father Odo - Chaplain]
+    HALE[Captain Hale]
+    CORINA[Lady Corina Ashvale]
+    EDGAR[Lord Edgar Harrow]
+    CASSIAN[Cassian the Barefoot]
+    OSRIC[Warchief Osric of Doncaster]
+    ISABEAU[Queen Isabeau of Bentleigh]
+    PETRA[Envoy Petra]
+    CONSTANS[Emperor Constans]
+    CORVIN[Master Corvin]
+    TESSA[Guildmaster Tessa]
+
+    YOU ---|marriage +55| VICTORIA
+    YOU -.-|kin +35/-10 strained| NORA
+    YOU -.-|kin -35/-45| TOMAS
+    YOU ---|ally +70/+75| MALVERN
+    VICTORIA -.-|kin -15/-25 stepmother| NORA
+    VICTORIA ---|kin +45| MIRELLA
+    TOMAS -.-|rival -35/-40| NORA
+    TOMAS -.-|rival -35/-40| MALVERN
+    TOMAS ---|ally +40| CORINA
+    ALDWIN -.-|grudge -55/-60 the ledger| MIRELLA
+    ALDWIN -.-|rival -20| VICTORIA
+    ALDWIN ---|ally +20/+25| PETRA
+    QUILL -.-|rival -30| ALDWIN
+    BRANDT ---|kin +35| EDGAR
+    BRANDT ---|ally +30| NORA
+    EDGAR -.-|rival -30| CORINA
+    HALE ---|liege +65| YOU
+    HALE ---|ally +30| BRANDT
+    NORA ---|admires +40| HALE
+    CASSIAN -.-|grudge -40 food crisis| YOU
+    CASSIAN -.-|grudge -55 corruption| ALDWIN
+    ODO -.-|rival -45| CASSIAN
+    OSRIC -.-|rival -60 raid coming| YOU
+    ISABEAU -.-|rival -50 annexations| YOU
+    PETRA ---|liege +60| ISABEAU
+    ISABEAU ---|puppet +20/-60| CONSTANS
+    MIRELLA ---|ally +40| TESSA
+    TESSA -.-|rival -20| VICTORIA
+    CORVIN ---|admires +50| YSOLDE
+```
+
+(Solid = positive/kin, dotted = negative. Numbers are starting sentiments;
+the live values are in the save and on the RELATIONS screen.)
+
+## Story tensions the graph encodes
+
+1. **The succession** — Tomas covets the throne; Nora (19, a general, no
+   brothers) stands between him and it; the dying Malvern is the wall that
+   blocked him once.
+2. **The purse** — Victoria and her Weighhouse kin (Mirella at the treasury)
+   expand clan power; the guilds (Tessa) chafe; the Chancellor fears the
+   queen's audits.
+3. **The scandal** — Mirella holds proof that could hang the Chancellor;
+   Quill keeps the file; Petra buys the leaks; Cassian shouts it in the square.
+4. **The food crisis** — Cassian's demonstrations demand grain relief and
+   corrupt heads; unrest is already smoldering (engine metrics: grain, unrest).
+5. **Two borders** — Doncaster sharpens spears in the north; Bentleigh
+   annexes toward you in the east with a puppet Emperor's seal.
+
+## When the player meets these roles
+
+Roles interact with the player through the two existing loops — no new flow:
+
+1. **The decision process (COURT):** ministers brief, warn, and pitch real
+   `action_code` suggestions; free-text orders are parsed against the legal
+   action catalog, and any role can be a `target` or be `addressed` in the
+   court reaction (all 21 ids are in the parse prompt). Conversational text
+   ("who are you") gets an in-character LLM reply from whoever you addressed.
+2. **Events (CONVERSATION):** the event pool casts non-council roles via
+   `opinion:` and `rel:` effect ops and scene text — a demand from Tomas, a
+   sermon by Cassian, an embassy from Petra, ill news of Malvern's health.
+
+## LLM context contract
+
+The engine decides; the LLM only performs. For any speaking role the prompt
+contains, in order:
+
+1. `PromptBuilder.persona_context(id)` — identity (with age), house, kingdom,
+   the numeric attributes, skills, trait labels, opinion of the ruler, and
+   their live relationship lines (strongest first, capped at 6).
+2. The scene facts (tick report / event scene) — the model may voice only these.
+3. The legal-options menu — action codes, event choice ids, tone enum. The
+   model *chooses among them* and writes dialogue; `ResponseValidator` rejects
+   anything off-menu and clamps tone. That is the whole extent of "LLM directs
+   behaviour."
+
+## Portraits
+
+Provided art only — pixel art is retired (generator and herald chip deleted).
+Chips (`assets/portraits/<id>.png`, 96×96 head crops) are derived from
+`assets/portraits/full/*.png` by `tools/make_portrait_chips.gd`. Roles without
+provided art render as seat-colored initial chips until art arrives — drop a
+full-body PNG in `assets/portraits/full/<id>.png` and rerun the tool to
+promote one.

@@ -8,6 +8,8 @@ var traits: Dictionary = {}
 var seats: Dictionary = {}
 var actions: Dictionary = {}
 var founding: Array[Dictionary] = []
+var roles: Array[Dictionary] = []
+var relationships: Array[Dictionary] = []
 var templates: Array[Dictionary] = []
 var signatures: Array[Dictionary] = []
 var events: Array[Dictionary] = []
@@ -73,6 +75,13 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/founding_council.csv", ["id", "display_name", "seat"],
 			func(r): founding.append(r)):
+		return false
+	if not _load_if_present(dir + "/roles.csv", ["id", "display_name", "seat"],
+			func(r): roles.append(r)):
+		return false
+	if not _load_if_present(dir + "/relationships.csv",
+			["from_id", "to_id", "rel_type", "sentiment", "reason"],
+			func(r): relationships.append(r)):
 		return false
 	if not _load_if_present(dir + "/templates.csv", ["key", "trait", "text"],
 			func(r): templates.append(r)):

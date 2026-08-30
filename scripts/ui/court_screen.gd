@@ -155,6 +155,10 @@ func _on_free_text_submitted(text: String) -> void:
 				_log("Herald", line + _promise_kept_suffix(outcome["effects"]))
 			for rej in res["rejected"]:
 				_log("Herald", "The council cannot: " + String(rej["error"]))
+			# Conversational text (no action parsed): a minister answers in
+			# character — see Game.submit_free_text's converse ride-along.
+			if res.has("reply"):
+				_log(String(res["reply"]["speaker"]), String(res["reply"]["text"]))
 		if Game.state.pending_event.is_empty():
 			end_turn.disabled = false)
 

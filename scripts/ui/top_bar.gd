@@ -22,6 +22,8 @@ func _ready() -> void:
 	UiPalette.style_header(%EventChip, 9)
 	%MenuButton.add_theme_font_size_override("font_size", 9)
 	%MenuButton.pressed.connect(func() -> void: Game.menu_requested.emit())
+	%RelationsButton.add_theme_font_size_override("font_size", 9)
+	%RelationsButton.pressed.connect(func() -> void: Game.relations_requested.emit())
 	for m in ORDER:
 		var cell := HBoxContainer.new()
 		cell.add_theme_constant_override("separation", 3)

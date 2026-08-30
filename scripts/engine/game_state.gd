@@ -6,6 +6,8 @@ var rng: Rng
 var metrics: Dictionary = {}
 var characters: Dictionary = {}
 var council: Dictionary = {}
+## Role-to-role edges; shape and mutation API in RelationshipGraph.
+var relationships: Array = []
 var cooldowns: Dictionary = {}
 var recent_outcomes: Array = []
 var promises: Array = []
@@ -36,9 +38,11 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 		"road_income_bonus": 0.0,
 		"grain_ration": 0.0,
 	}
-	s.characters = CharacterFactory.build_founding(data)
+	s.characters = CharacterFactory.build_roster(data)
 	for id in s.characters:
-		s.council[s.characters[id].seat] = id
+		if s.characters[id].seat != "":
+			s.council[s.characters[id].seat] = id
+	s.relationships = RelationshipGraph.init_from_data(data)
 	return s
 
 func season() -> String:
@@ -131,6 +135,7 @@ func to_dict() -> Dictionary:
 		"tick": _encode_values(tick), "rng": rng.to_dict(),
 		"metrics": _encode_values(metrics.duplicate()),
 		"characters": chars, "council": council.duplicate(),
+		"relationships": _encode_values(relationships.duplicate(true)),
 		"cooldowns": _encode_values(cooldowns.duplicate()),
 		"recent_outcomes": _encode_values(recent_outcomes.duplicate(true)),
 		"promises": _encode_values(promises.duplicate(true)),
@@ -154,6 +159,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	for id in d["characters"]:
 		s.characters[id] = Character.from_dict(d["characters"][id])
 	s.council = d["council"].duplicate()
+	s.relationships = _decode_values(d.get("relationships", []))
 	var decoded_cooldowns = _decode_values(d["cooldowns"])
 	for k in decoded_cooldowns:
 		s.cooldowns[k] = int(decoded_cooldowns[k])

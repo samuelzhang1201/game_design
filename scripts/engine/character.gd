@@ -4,6 +4,11 @@ extends RefCounted
 var id: String = ""
 var display_name: String = ""
 var seat: String = ""
+## Role taxonomy (data/roles.csv): player|family|relative|council|officer|
+## noble|enemy|foreign|celebrity. Empty for pre-roster saves.
+var category: String = ""
+var family_name: String = ""
+var kingdom: String = ""
 var attributes: Dictionary = {}
 var skills: Dictionary = {}
 var ideology: Dictionary = {}
@@ -22,6 +27,7 @@ func to_dict() -> Dictionary:
 	# float round-trip has a verified ~1-ULP bug; see GameState._encode_values).
 	return {
 		"id": id, "display_name": display_name, "seat": seat,
+		"category": category, "family_name": family_name, "kingdom": kingdom,
 		"attributes": GameState._encode_values(attributes.duplicate()),
 		"skills": GameState._encode_values(skills.duplicate()),
 		"ideology": GameState._encode_values(ideology.duplicate()),
@@ -34,6 +40,9 @@ func to_dict() -> Dictionary:
 static func from_dict(d: Dictionary) -> Character:
 	var c := Character.new()
 	c.id = d["id"]; c.display_name = d["display_name"]; c.seat = d["seat"]
+	c.category = String(d.get("category", ""))
+	c.family_name = String(d.get("family_name", ""))
+	c.kingdom = String(d.get("kingdom", ""))
 	c.attributes = GameState._decode_values(d["attributes"])
 	c.skills = GameState._decode_values(d["skills"])
 	c.ideology = GameState._decode_values(d["ideology"])

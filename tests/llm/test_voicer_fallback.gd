@@ -70,6 +70,57 @@ func test_parse_bad_model_output_reports_error_not_crash() -> void:
 	assert_false(got["ok"])
 	assert_ne(got["error"], "")
 
+func test_converse_returns_in_character_reply() -> void:
+	var fake := FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = "I am Aldwin Reeve, my lord, your Chancellor these eleven years."
+	add_child_autofree(fake)
+	var v := Voicer.new(fake)
+	add_child_autofree(v)
+	var s := GameState.new_campaign(data, 42)
+	got = {}
+	v.converse("char_chancellor", "who are you", s, data, func(res): got = res)
+	await wait_frames(3)
+	assert_true(got["ok"])
+	assert_false(got["degraded"])
+	assert_eq(got["speaker_id"], "char_chancellor")
+	assert_eq(got["speaker"], "Aldwin Reeve")
+	assert_string_contains(got["text"], "Chancellor")
+
+func test_converse_falls_back_to_template_on_failure() -> void:
+	var fake := FakeClient.new()  # canned_ok=false: the "offline"/error path
+	add_child_autofree(fake)
+	var v := Voicer.new(fake)
+	add_child_autofree(v)
+	var s := GameState.new_campaign(data, 42)
+	got = {}
+	v.converse("char_chancellor", "who are you", s, data, func(res): got = res)
+	await wait_frames(3)
+	assert_true(got["ok"])
+	assert_true(got["degraded"])
+	# converse_fallback templates all name the speaker.
+	assert_string_contains(got["text"], "Aldwin Reeve")
+
+func test_submit_free_text_conversational_ride_along_replies() -> void:
+	# "who are you" parses to no action; the addressed minister answers in
+	# character instead of the court staying silent (Game.submit_free_text).
+	Game.start_campaign(42)
+	var fake := FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"actions": [],
+		"court_reaction": {"addressed": ["char_marshal"], "tone": "neutral"}})
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	Game.next_tick()
+	got = {}
+	Game.submit_free_text("who are you", func(res): got = res)
+	await wait_frames(4)
+	assert_true(got["ok"])
+	assert_eq(got["executed"], [])
+	assert_true(got.has("reply"), "conversational text carries a reply")
+	assert_eq(String(got["reply"]["speaker_id"]), "char_marshal")
+	assert_ne(String(got["reply"]["text"]), "")
+
 func test_overlapping_briefing_calls_both_fire_exactly_once() -> void:
 	var fake := FakeClient.new()
 	fake.canned_ok = true

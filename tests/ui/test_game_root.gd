@@ -11,6 +11,19 @@ func test_boots_to_menu() -> void:
 	assert_eq(r.state, GameRoot.State.MENU)
 	assert_not_null(r.current_screen)
 
+func test_bgm_plays_from_startup_and_loops() -> void:
+	var r := _root()
+	await wait_frames(2)
+	var bgm := r.bgm_player()
+	assert_not_null(bgm, "BGM player exists from app start")
+	assert_not_null(bgm.stream, "assets/BGM.mp3 loaded")
+	assert_true((bgm.stream as AudioStreamMP3).loop, "track loops")
+	assert_true(bgm.playing, "music is playing on the menu")
+	# Survives screen swaps: GameRoot owns it, screens come and go.
+	r.current_screen.start_requested.emit()
+	await wait_frames(2)
+	assert_true(bgm.playing, "music continues into the campaign")
+
 func test_space_starts_campaign() -> void:
 	var r := _root()
 	await wait_frames(2)

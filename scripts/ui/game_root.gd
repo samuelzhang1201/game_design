@@ -13,18 +13,38 @@ const CONVERSATION_SCENE := preload("res://scenes/conversation.tscn")
 const COURT_SCENE := preload("res://scenes/court.tscn")
 const DAY_RUN_SCENE := preload("res://scenes/day_run.tscn")
 
+const BGM_PATH := "res://assets/BGM.mp3"
+const BGM_VOLUME_DB := -12.0
+
 var state: State = State.MENU
 var current_screen: Node
 var _pending_report: TickReport
 var _pause_menu: Control
 var _pause_status: Label
+var _relations_screen: RelationshipGraphScreen
+var _bgm: AudioStreamPlayer
+
+## The design viewport (project.godot window/size): all UI is authored
+## against this and scaled to the player's screen by the canvas_items+expand
+## stretch. The OS window may never shrink below it, or panels would clip.
+const MIN_WINDOW_SIZE := Vector2i(640, 360)
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# Fit-any-screen guarantee: fullscreen scales the whole UI to the monitor
+	# (stretch settings in project.godot); a windowed player cannot drag the
+	# window smaller than the design size.
+	get_window().min_size = MIN_WINDOW_SIZE
 	# One game-wide Theme, inherited by every screen (see UiPalette).
 	theme = UiPalette.build_theme()
 	Game.menu_requested.connect(toggle_pause_menu)
+	Game.relations_requested.connect(toggle_relations)
+	_relations_screen = RelationshipGraphScreen.new()
+	_relations_screen.name = "RelationsScreen"
+	_relations_screen.visible = false
+	add_child(_relations_screen)
 	_build_pause_menu()
+	_start_bgm()
 	_switch_to(State.MENU)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -77,6 +97,34 @@ func _build_pause_menu() -> void:
 	col.add_child(_pause_status)
 	add_child(_pause_menu)
 
+## Background music from app start, looping across every screen (GameRoot
+## outlives all screen swaps, so the track never restarts on navigation).
+## Loads via the import pipeline with a raw-file fallback (same reasoning as
+## UiPalette.load_art: exported builds pack imports, fresh checkouts and
+## headless runs may not have imported yet). Missing file = silent, no error.
+func _start_bgm() -> void:
+	var stream: AudioStream = null
+	if ResourceLoader.exists(BGM_PATH):
+		stream = load(BGM_PATH) as AudioStream
+	elif FileAccess.file_exists(BGM_PATH):
+		var mp3 := AudioStreamMP3.new()
+		mp3.data = FileAccess.get_file_as_bytes(BGM_PATH)
+		stream = mp3
+	if stream == null:
+		return
+	if stream is AudioStreamMP3:
+		stream.loop = true
+	_bgm = AudioStreamPlayer.new()
+	_bgm.name = "Bgm"
+	_bgm.stream = stream
+	_bgm.volume_db = BGM_VOLUME_DB
+	add_child(_bgm)
+	_bgm.play()
+
+## Test seam.
+func bgm_player() -> AudioStreamPlayer:
+	return _bgm
+
 func _menu_button(label: String, handler: Callable) -> Button:
 	var btn := Button.new()
 	btn.name = label.replace(" ", "")
@@ -93,6 +141,15 @@ func toggle_pause_menu() -> void:
 
 func pause_menu() -> Control:
 	return _pause_menu
+
+## The relationship graph overlay sits below the pause menu, above screens.
+func toggle_relations() -> void:
+	if state == State.MENU:
+		return
+	_relations_screen.visible = not _relations_screen.visible
+
+func relations_screen() -> RelationshipGraphScreen:
+	return _relations_screen
 
 func _on_menu_save() -> void:
 	if Game.state == null:
@@ -143,7 +200,10 @@ func _switch_to(new_state: State) -> void:
 			current_screen = DAY_RUN_SCENE.instantiate()
 			current_screen.finished.connect(_on_day_run_finished)
 	add_child(current_screen)
-	# The pause menu stays the topmost child across screen swaps.
+	# Overlays stay above screens across swaps: relations below the pause menu.
+	if _relations_screen != null:
+		_relations_screen.visible = false
+		move_child(_relations_screen, get_child_count() - 1)
 	if _pause_menu != null:
 		move_child(_pause_menu, get_child_count() - 1)
 

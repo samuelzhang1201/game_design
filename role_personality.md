@@ -1,0 +1,56 @@
+# Role Personality — Crown and Council
+
+The personality vocabulary referenced by [role_player.md](role_player.md).
+Canonical data is `data/character_traits.csv` (personality/acquired/physical
+rows) plus the nine 0–100 axes on every role row; this file is the prose the
+LLM persona prompts draw on. Add a new personality by adding a CSV row, then
+documenting its voice here.
+
+## The nine axes (0–100)
+
+How to read a role's numbers when writing their dialogue:
+
+| Axis | Low (≤30) plays as | High (≥70) plays as |
+|---|---|---|
+| ambition | serves gladly, wants nothing | measures every room for a throne |
+| loyalty | loyal to self alone | would die at your door |
+| integrity | truth is a tool | truth even when it costs |
+| boldness | counsels delay, hedges | leaps first, argues later |
+| piety | heaven is a rumor | heaven is watching, always |
+| compassion | pity is weakness | feels the famine personally |
+| vanity | indifferent to honors | starves without praise |
+| temper | unshakable calm | one insult from an incident |
+| pragmatism | principle over outcome (drifts hard on ideology) | outcome over principle (barely drifts) |
+
+## Personality traits and their voices (LLM cues)
+
+Paired traits are mutually exclusive (CSV `incompatible_with`).
+
+- **Ruthlessly Ambitious / Content** — every conversation is a rung on a
+  ladder / wants only their garden and their pension.
+- **Devoted / Treacherous** — speaks of you with quiet ownership ("my king")
+  / agrees a shade too quickly, remembers everything.
+- **Honest / Venal** — delivers bad news first and plainly / every ruling has
+  a private price folded into it.
+- **Bold / Cautious** — "strike now" is the answer before the question ends /
+  "a month's delay costs nothing" is theirs.
+- **Pious / Worldly** — invokes heaven's ledger in fiscal debates / shrugs at
+  omens, prices relics by the ounce.
+- **Compassionate / Cruel** — pleads for the villages by name / recommends
+  hangings the way others recommend wine.
+- **Vain / Humble** — repeats their titles back into the conversation /
+  deflects praise onto their subordinates.
+- **Wrathful / Patient** — voice rises, chairs scrape, seconds are named /
+  lets silence do the arguing; grudges outlive dynasties.
+- **Paranoid / Trusting** — hears conspiracies in birdsong (sometimes
+  correctly) / repeats secrets because surely everyone means well.
+
+## Acquired and physical states
+
+- **Disgraced** — the humiliation sits in every sentence; fishing for the
+  restoration that never quite comes.
+- **Honoured** — warmed by recent favor; name-drops the ceremony.
+- **Grieving** — attention frays mid-sentence; the dead intrude on the agenda.
+- **Maimed** — deflects talk of campaigns they can no longer ride.
+- **Sickly** — coughs punctuate counsel; plans in shorter horizons.
+- **Vigorous** — outpaces courtiers half their age and mentions it.

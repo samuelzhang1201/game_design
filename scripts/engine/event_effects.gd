@@ -36,6 +36,15 @@ static func apply(ops: String, state: GameState, data: DataRepository,
 					state.characters[id].change_opinion(int(p[2]), p[3], state.tick)
 					results.append({"kind": "opinion", "character_id": id,
 						"delta": int(p[2]), "reason": p[3]})
+			"rel":
+				# rel:<from>:<to>:<delta>:<reason> — a relationship shock
+				# between two roles (seat codes resolve like opinion's do).
+				var rf := _resolve(p[1], state)
+				var rt := _resolve(p[2], state)
+				if rf != "" and rt != "":
+					RelationshipGraph.adjust(state, rf, rt, float(p[3]), p[4], state.tick)
+					results.append({"kind": "relationship", "from": rf, "to": rt,
+						"delta": float(p[3]), "reason": p[4]})
 			"schedule":
 				state.event_state["scheduled"].append(
 					{"event_id": p[1], "due_tick": state.tick + int(p[2])})
