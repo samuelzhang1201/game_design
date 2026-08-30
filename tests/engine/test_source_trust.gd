@@ -29,24 +29,24 @@ func test_pair_with_no_edge_uses_the_default() -> void:
 		50.0, 0.001)
 
 func test_adjust_clamps_and_logs_a_reason() -> void:
-	SourceTrust.adjust(state, "you", "char_lord_malvern", -25.0, "caught in a lie", 7)
+	SourceTrust.adjust(data, state, "you", "char_lord_malvern", -25.0, "caught in a lie", 7)
 	assert_almost_eq(SourceTrust.get_trust(data, state, "you", "char_lord_malvern"),
 		62.5, 0.001)
 	var entry: Dictionary = state.source_trust[SourceTrust.key("you", "char_lord_malvern")]
 	var last: Dictionary = entry["log"][entry["log"].size() - 1]
 	assert_eq(String(last["reason"]), "caught in a lie")
 	assert_eq(int(last["tick"]), 7)
-	SourceTrust.adjust(state, "you", "char_lord_malvern", -999.0, "utter ruin", 8)
+	SourceTrust.adjust(data, state, "you", "char_lord_malvern", -999.0, "utter ruin", 8)
 	assert_almost_eq(SourceTrust.get_trust(data, state, "you", "char_lord_malvern"),
 		0.0, 0.001)
 
 func test_adjust_on_an_underived_pair_starts_from_default() -> void:
-	SourceTrust.adjust(state, "you", "char_bard_corvin", 10.0, "a kindness", 3)
+	SourceTrust.adjust(data, state, "you", "char_bard_corvin", 10.0, "a kindness", 3)
 	assert_almost_eq(SourceTrust.get_trust(data, state, "you", "char_bard_corvin"),
 		60.0, 0.001)
 
 func test_trust_survives_save_round_trip() -> void:
-	SourceTrust.adjust(state, "you", "char_lord_malvern", -25.0, "caught in a lie", 7)
+	SourceTrust.adjust(data, state, "you", "char_lord_malvern", -25.0, "caught in a lie", 7)
 	var restored := GameState.from_dict(state.to_dict())
 	assert_almost_eq(SourceTrust.get_trust(data, restored, "you", "char_lord_malvern"),
 		62.5, 0.001)

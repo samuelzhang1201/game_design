@@ -44,12 +44,17 @@ static func get_trust(data: DataRepository, state: GameState, speaker: String,
 
 ## Moves trust and logs why. A reason is mandatory, same rule as
 ## Character.change_opinion and RelationshipGraph.adjust.
-static func adjust(state: GameState, speaker: String, listener: String,
-		delta: float, reason: String, tick: int) -> void:
+static func adjust(data: DataRepository, state: GameState, speaker: String,
+		listener: String, delta: float, reason: String, tick: int) -> void:
 	assert(reason != "", "source trust change requires a reason")
 	var k := key(speaker, listener)
 	if not state.source_trust.has(k):
-		state.source_trust[k] = {"value": 50.0, "log": []}
+		# Seed from the same derivation get_trust would have returned for this
+		# pair, so the two can never disagree — including after a designer
+		# retunes source_trust_default in balance.csv.
+		state.source_trust[k] = {
+			"value": derive(data, state, speaker, listener), "log": [],
+		}
 	var entry: Dictionary = state.source_trust[k]
 	entry["value"] = clampf(float(entry["value"]) + delta, 0.0, 100.0)
 	entry["log"].append({"tick": tick, "delta": delta, "reason": reason})
