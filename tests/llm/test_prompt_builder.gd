@@ -29,7 +29,12 @@ func test_converse_prompt_carries_persona_and_speech_only_rule() -> void:
 	assert_string_contains(p["system"], "House Harrow")
 	assert_string_contains(p["system"], "Relationships:")
 	assert_string_contains(p["system"], "you may only speak")
-	assert_eq(p["user"], "who are you")
+	# Realm facts ground answers like "how is my army?" in engine truth.
+	s.metrics["army_quality"] = 47.0
+	p = PromptBuilder.converse_prompts("char_marshal", "how is my army?", s, data)
+	assert_string_contains(p["system"], "army_quality 47")
+	assert_string_contains(p["system"], "treasury")
+	assert_eq(p["user"], "how is my army?")
 
 func test_parse_prompt_lists_event_choices_and_promise_rule() -> void:
 	var s := GameState.new_campaign(data, 42)

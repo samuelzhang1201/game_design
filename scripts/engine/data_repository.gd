@@ -10,6 +10,8 @@ var actions: Dictionary = {}
 var founding: Array[Dictionary] = []
 var roles: Array[Dictionary] = []
 var relationships: Array[Dictionary] = []
+var regions: Dictionary = {}
+var locations: Dictionary = {}
 var templates: Array[Dictionary] = []
 var signatures: Array[Dictionary] = []
 var events: Array[Dictionary] = []
@@ -82,6 +84,13 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/relationships.csv",
 			["from_id", "to_id", "rel_type", "sentiment", "reason"],
 			func(r): relationships.append(r)):
+		return false
+	if not _load_if_present(dir + "/regions.csv", ["region_code", "label"],
+			func(r): regions[r["region_code"]] = r):
+		return false
+	if not _load_if_present(dir + "/locations.csv",
+			["location_code", "region_code", "label", "kind", "occupants"],
+			func(r): locations[r["location_code"]] = r):
 		return false
 	if not _load_if_present(dir + "/templates.csv", ["key", "trait", "text"],
 			func(r): templates.append(r)):

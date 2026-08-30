@@ -8,6 +8,12 @@ var characters: Dictionary = {}
 var council: Dictionary = {}
 ## Role-to-role edges; shape and mutation API in RelationshipGraph.
 var relationships: Array = []
+## Character creation (main menu): {"first_name", "family_name", "flag"}.
+## Applied by apply_player_setup; kept so saves restore the chosen identity.
+var player_setup: Dictionary = {}
+## Where the player stands (data/locations.csv). Moving within a region is
+## free (LocationSystem); saved with everything else.
+var current_location: String = LocationSystem.DEFAULT_LOCATION
 var cooldowns: Dictionary = {}
 var recent_outcomes: Array = []
 var promises: Array = []
@@ -44,6 +50,32 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 			s.council[s.characters[id].seat] = id
 	s.relationships = RelationshipGraph.init_from_data(data)
 	return s
+
+## Applies the player's chosen identity: the player's display name becomes
+## "King <first> <family>", and the royal family name is inherited by every
+## role of the player's house (family_name match), in both their family_name
+## and display_name. Deterministic string work only — no RNG.
+func apply_player_setup(setup: Dictionary) -> void:
+	player_setup = setup.duplicate(true)
+	var first := String(setup.get("first_name", "")).strip_edges()
+	var family := String(setup.get("family_name", "")).strip_edges()
+	if first == "" and family == "":
+		return
+	var you: Character = characters.get("you")
+	if you == null:
+		return
+	var old_family := you.family_name
+	if first == "":
+		first = you.display_name.get_slice(" ", 1)
+	if family == "":
+		family = old_family
+	for id in characters:
+		var c: Character = characters[id]
+		if c.family_name == old_family and old_family != "":
+			c.family_name = family
+			c.display_name = c.display_name.replace(old_family, family)
+	you.family_name = family
+	you.display_name = "King %s %s" % [first, family]
 
 func season() -> String:
 	# Delegates to Calendar so tick 1..24 is year 1 with 6 ticks per season
@@ -136,6 +168,8 @@ func to_dict() -> Dictionary:
 		"metrics": _encode_values(metrics.duplicate()),
 		"characters": chars, "council": council.duplicate(),
 		"relationships": _encode_values(relationships.duplicate(true)),
+		"player_setup": player_setup.duplicate(true),
+		"current_location": current_location,
 		"cooldowns": _encode_values(cooldowns.duplicate()),
 		"recent_outcomes": _encode_values(recent_outcomes.duplicate(true)),
 		"promises": _encode_values(promises.duplicate(true)),
@@ -160,6 +194,8 @@ static func from_dict(d: Dictionary) -> GameState:
 		s.characters[id] = Character.from_dict(d["characters"][id])
 	s.council = d["council"].duplicate()
 	s.relationships = _decode_values(d.get("relationships", []))
+	s.player_setup = d.get("player_setup", {}).duplicate(true)
+	s.current_location = String(d.get("current_location", LocationSystem.DEFAULT_LOCATION))
 	var decoded_cooldowns = _decode_values(d["cooldowns"])
 	for k in decoded_cooldowns:
 		s.cooldowns[k] = int(decoded_cooldowns[k])

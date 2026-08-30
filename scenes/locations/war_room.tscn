@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/locations/base_location.tscn" id="1"]
+
+[node name="war_room" instance=ExtResource("1")]
+location_code = "war_room"

@@ -24,9 +24,15 @@ func _ready() -> void:
 	data = DataRepository.load_all("res://data")
 	assert(data != null, "data load failed: " + DataRepository.last_error)
 
+## Set by the main menu's character creation before start_requested fires;
+## applied to the fresh campaign, then kept in the save via GameState.
+var player_setup: Dictionary = {}
+
 func start_campaign(seed_value: int = 42) -> void:
 	_reset_llm()
 	state = GameState.new_campaign(data, seed_value)
+	if not player_setup.is_empty():
+		state.apply_player_setup(player_setup)
 	engine = TickEngine.new(data)
 
 func next_tick() -> TickReport:
@@ -49,6 +55,16 @@ func try_execute(req: ActionRequest) -> Dictionary:
 	var outcome := engine.actions.execute(req, state)
 	state_changed.emit()
 	return {"ok": true, "error": "", "outcome": outcome}
+
+## Free movement within the current region (user ruling 2026-08-30: no time
+## cost). Returns false (and moves nothing) for an unknown or out-of-region
+## location. No tick advances.
+func move_to(location_code: String) -> bool:
+	if state == null or not LocationSystem.can_move(data, state, location_code):
+		return false
+	state.current_location = location_code
+	state_changed.emit()
+	return true
 
 func save_campaign(path: String = "user://save.json") -> bool:
 	return SaveLoad.save_game(state, path)
@@ -180,25 +196,66 @@ func submit_free_text(text: String, cb: Callable, speaker_hint: String = "") -> 
 			engine.actions.apply_court_reaction(res["court_reaction"], state)
 			state_changed.emit()
 			# Conversational ride-along: text that parsed to no action at all
-			# ("who are you") is a question, not an order — a role answers it
-			# in character instead of the court falling silent. Shares this
-			# submission's single prompt-cap increment (at most one extra call).
-			if executed.is_empty() and rejected.is_empty():
-				var speaker := _converse_speaker(res["court_reaction"], speaker_hint)
+			# ("who are you"), or ONLY to COUNCIL_CONSULT ("how is my army?" —
+			# the free ask-for-advice action whose voice was never wired, see
+			# ActionSystem's "the Voicer renders the consult"), is a question —
+			# a role answers it in character instead of a canned template.
+			# Shares this submission's single prompt-cap increment.
+			var only_questions := rejected.is_empty()
+			for o in executed:
+				if String(o["action_code"]) != "COUNCIL_CONSULT":
+					only_questions = false
+			if only_questions:
+				var speaker := _converse_speaker(res["court_reaction"], speaker_hint,
+					_consult_target(res["actions"]))
 				if speaker != "":
 					voicer.converse(speaker, text, state, data,
 						func(reply: Dictionary):
-							cb.call({"ok": true, "executed": [], "rejected": [],
+							cb.call({"ok": true, "executed": executed, "rejected": [],
 								"error": "", "reply": reply}))
 					return
+				# The player named someone who is NOT at this location (or no
+				# one is here at all): no API call, a herald note instead —
+				# conversation requires being in the same place.
+				cb.call({"ok": true, "executed": executed, "rejected": [], "error": "",
+					"reply": {"speaker": "Herald", "speaker_id": "", "degraded": true,
+						"text": TemplateVoicer.line_for(data, "converse_no_one",
+							[], state.tick)}})
+				return
 			cb.call({"ok": true, "executed": executed, "rejected": rejected, "error": ""}))
 
-## Who answers conversational text: whoever the parse says was addressed,
-## else the minister the player is facing, else the Chancellor.
-func _converse_speaker(court_reaction: Dictionary, hint: String) -> String:
+## A COUNCIL_CONSULT's target (seat code or character id) names who was asked.
+func _consult_target(actions: Array) -> String:
+	for req in actions:
+		if req.action_code == "COUNCIL_CONSULT" and req.target != "":
+			return String(req.target)
+	return ""
+
+## Who answers conversational text. Only someone AT THE PLAYER'S LOCATION
+## may answer (user ruling 2026-08-30: no conversations with the absent).
+## Priority among those present: the consult's target / whoever the parse
+## says was addressed; if someone was explicitly named but none of them are
+## here, NOBODY answers (""). With no one named: the person the player is
+## facing, else the Chancellor if present, else anyone present.
+func _converse_speaker(court_reaction: Dictionary, hint: String,
+		consult_target: String = "") -> String:
+	var present := LocationSystem.occupants(data, state, state.current_location)
+	var named: Array = []
+	if state.council.has(consult_target):
+		named.append(String(state.council[consult_target]))
+	elif state.characters.has(consult_target) and consult_target != "you":
+		named.append(consult_target)
 	for id in court_reaction.get("addressed", []):
 		if state.characters.has(String(id)) and String(id) != "you":
-			return String(id)
-	if state.characters.has(hint) and hint != "you":
+			named.append(String(id))
+	if not named.is_empty():
+		for id in named:
+			if id in present:
+				return String(id)
+		return ""
+	if hint in present:
 		return hint
-	return String(state.council.get("chancellor", ""))
+	var chancellor := String(state.council.get("chancellor", ""))
+	if chancellor in present:
+		return chancellor
+	return String(present[0]) if not present.is_empty() else ""

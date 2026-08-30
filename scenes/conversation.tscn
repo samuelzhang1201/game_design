@@ -35,28 +35,39 @@ anchor_bottom = 1.0
 offset_left = 4.0
 offset_top = 28.0
 offset_right = 104.0
-offset_bottom = -4.0
+offset_bottom = -24.0
 
 [node name="MVBox" type="VBoxContainer" parent="MinisterPanel"]
+theme_override_constants/separation = 4
+
+[node name="TabsRow" type="HBoxContainer" parent="MinisterPanel/MVBox"]
+unique_name_in_owner = true
+theme_override_constants/separation = 2
+
+[node name="BioTab" type="VBoxContainer" parent="MinisterPanel/MVBox"]
+unique_name_in_owner = true
+size_flags_vertical = 3
 theme_override_constants/separation = 5
 
-[node name="PortraitBox" type="Control" parent="MinisterPanel/MVBox"]
+[node name="PortraitBox" type="Control" parent="MinisterPanel/MVBox/BioTab"]
 unique_name_in_owner = true
 clip_contents = true
 custom_minimum_size = Vector2(84, 96)
 
-[node name="MinisterName" type="Label" parent="MinisterPanel/MVBox"]
+[node name="MinisterName" type="Label" parent="MinisterPanel/MVBox/BioTab"]
 unique_name_in_owner = true
 autowrap_mode = 3
 
-[node name="MinisterTitle" type="Label" parent="MinisterPanel/MVBox"]
+[node name="MinisterTitle" type="Label" parent="MinisterPanel/MVBox/BioTab"]
 unique_name_in_owner = true
 
-[node name="OpinionRow" type="HBoxContainer" parent="MinisterPanel/MVBox"]
+[node name="BioSep" type="HSeparator" parent="MinisterPanel/MVBox/BioTab"]
+
+[node name="OpinionRow" type="HBoxContainer" parent="MinisterPanel/MVBox/BioTab"]
 unique_name_in_owner = true
 theme_override_constants/separation = 5
 
-[node name="OpinionBar" type="ProgressBar" parent="MinisterPanel/MVBox/OpinionRow"]
+[node name="OpinionBar" type="ProgressBar" parent="MinisterPanel/MVBox/BioTab/OpinionRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 6)
 size_flags_horizontal = 3
@@ -65,17 +76,36 @@ min_value = -100.0
 max_value = 100.0
 show_percentage = false
 
-[node name="OpinionValue" type="Label" parent="MinisterPanel/MVBox/OpinionRow"]
+[node name="OpinionValue" type="Label" parent="MinisterPanel/MVBox/BioTab/OpinionRow"]
 unique_name_in_owner = true
 
-[node name="SkillRows" type="VBoxContainer" parent="MinisterPanel/MVBox"]
+[node name="SkillsTab" type="VBoxContainer" parent="MinisterPanel/MVBox"]
+unique_name_in_owner = true
+visible = false
+size_flags_vertical = 3
+theme_override_constants/separation = 5
+
+[node name="SkillRows" type="VBoxContainer" parent="MinisterPanel/MVBox/SkillsTab"]
 unique_name_in_owner = true
 theme_override_constants/separation = 3
 
-[node name="TraitChips" type="HFlowContainer" parent="MinisterPanel/MVBox"]
+[node name="SkillsSep" type="HSeparator" parent="MinisterPanel/MVBox/SkillsTab"]
+
+[node name="TraitChips" type="HFlowContainer" parent="MinisterPanel/MVBox/SkillsTab"]
 unique_name_in_owner = true
 theme_override_constants/h_separation = 3
 theme_override_constants/v_separation = 3
+
+[node name="TiesTab" type="VBoxContainer" parent="MinisterPanel/MVBox"]
+unique_name_in_owner = true
+visible = false
+size_flags_vertical = 3
+theme_override_constants/separation = 5
+
+[node name="TiesText" type="Label" parent="MinisterPanel/MVBox/TiesTab"]
+unique_name_in_owner = true
+autowrap_mode = 3
+size_flags_vertical = 3
 
 [node name="DialoguePanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -85,10 +115,31 @@ anchor_bottom = 1.0
 offset_left = -144.0
 offset_top = 28.0
 offset_right = -4.0
-offset_bottom = -4.0
+offset_bottom = -24.0
 
 [node name="Col" type="VBoxContainer" parent="DialoguePanel"]
 theme_override_constants/separation = 5
+
+[node name="LocationBox" type="VBoxContainer" parent="DialoguePanel/Col"]
+unique_name_in_owner = true
+theme_override_constants/separation = 3
+
+[node name="LocationSlot" type="Control" parent="DialoguePanel/Col/LocationBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 26)
+clip_contents = true
+
+[node name="OccupantsRow" type="HFlowContainer" parent="DialoguePanel/Col/LocationBox"]
+unique_name_in_owner = true
+theme_override_constants/h_separation = 3
+theme_override_constants/v_separation = 3
+
+[node name="MoveButton" type="Button" parent="DialoguePanel/Col/LocationBox"]
+unique_name_in_owner = true
+focus_mode = 0
+text = "MOVE"
+
+[node name="LocSep" type="HSeparator" parent="DialoguePanel/Col"]
 
 [node name="NameLabel" type="Label" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
@@ -103,10 +154,12 @@ horizontal_scroll_mode = 0
 size_flags_horizontal = 3
 theme_override_constants/separation = 5
 
-[node name="TextLabel" type="Label" parent="DialoguePanel/Col/DialogueScroll/Content"]
+[node name="TextLabel" type="RichTextLabel" parent="DialoguePanel/Col/DialogueScroll/Content"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
-autowrap_mode = 3
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
 
 [node name="RepliesBox" type="VBoxContainer" parent="DialoguePanel/Col/DialogueScroll/Content"]
 unique_name_in_owner = true
@@ -120,3 +173,58 @@ placeholder_text = "Speak your mind..."
 unique_name_in_owner = true
 focus_mode = 0
 text = "Wave them on"
+
+[node name="EventPopup" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="PopupDim" type="ColorRect" parent="EventPopup"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="PopupPanel" type="PanelContainer" parent="EventPopup"]
+unique_name_in_owner = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PopupCol" type="VBoxContainer" parent="EventPopup/PopupPanel"]
+theme_override_constants/separation = 6
+
+[node name="PopupTitle" type="Label" parent="EventPopup/PopupPanel/PopupCol"]
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="PopupArt" type="PanelContainer" parent="EventPopup/PopupPanel/PopupCol"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 70)
+
+[node name="PopupArtText" type="Label" parent="EventPopup/PopupPanel/PopupCol/PopupArt"]
+unique_name_in_owner = true
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="PopupScroll" type="ScrollContainer" parent="EventPopup/PopupPanel/PopupCol"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 120)
+horizontal_scroll_mode = 0
+
+[node name="PopupText" type="Label" parent="EventPopup/PopupPanel/PopupCol/PopupScroll"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="PopupChoices" type="VBoxContainer" parent="EventPopup/PopupPanel/PopupCol"]
+unique_name_in_owner = true
+theme_override_constants/separation = 4

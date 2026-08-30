@@ -1,0 +1,11 @@
+location_code,region_code,label,kind,occupants,notes
+council_chamber,crown_district,Council Chamber,court,char_chancellor|char_marshal|char_steward|char_spymaster|char_chaplain,"Where the council convenes; the default scene of a reign."
+war_room,crown_district,War Room,martial,char_marshal|char_captain_hale,"Maps, musters, and the men who read them."
+royal_apartments,crown_district,Falconspire Keep,home,char_queen|char_lady_ysolde,"The royal family's home above the court."
+envoy_wing,crown_district,Envoys' Wing,court,char_envoy_petra,"Foreign ambassadors kept close enough to watch."
+malvern_study,crown_district,Malvern's Study,private,char_lord_malvern,"The old kingmaker receives few visitors now."
+tomas_manor,crown_district,Duke Tomas's Manor,private,char_duke_tomas,"Your half-brother's court within your capital."
+ashvale_parlor,crown_district,Ashvale Parlor,private,char_lady_corina|char_lord_edgar,"Where the nobility trades favors over wine."
+guildhall,crown_district,The Guildhall,city,char_guildmaster_tessa,"Ledgers, looms, and guild politics."
+high_street,crown_district,The High Street,city,char_prophet_cassian|char_bard_corvin,"The crowd's voice — sermons and ballads."
+mustering_field,crown_district,The Mustering Field,field,char_princess,"Where Princess Nora drills with the levies."

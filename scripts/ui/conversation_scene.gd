@@ -12,15 +12,29 @@ signal finished
 
 var _beats: Array = []
 var _index := -1
+## Running transcript of the conversation ("Name: line"), newest last —
+## the dialogue box shows the whole exchange, not just the latest line
+## (user requirement 2026-08-30). Reset per conversation, capped.
+var _history: Array = []
+const HISTORY_CAP := 60
 var _report: TickReport
 var _name_label: Label
-var _text_label: Label
+var _text_label: RichTextLabel
 var _replies_box: VBoxContainer
 var _free_text: LineEdit
 var _continue_btn: Button
 var _panel: PanelContainer
 var _scroll: ScrollContainer
 var _resolved_event := false
+var _tab_pages: Array = []
+var _tab_buttons: Array = []
+
+## Dossier tabs (user ruling 2026-08-30: the left column is tabbed info about
+## whoever you're talking with — no scrolling, separators between sections).
+const TAB_NAMES := ["BIO", "SKILLS", "TIES"]
+## Seconds between reply buttons appearing (user ruling 2026-08-30: orders
+## and suggestions surface in sequence, not all at once).
+const REPLY_REVEAL_STEP := 0.3
 
 ## Static structure and layout live in scenes/conversation.tscn (editable in
 ## the editor); _ready only fetches the nodes, paints them from UiPalette,
@@ -38,6 +52,17 @@ func _ready() -> void:
 	%OpinionBar.add_theme_stylebox_override("background", UiPalette.bar_bg())
 	%OpinionValue.add_theme_font_size_override("font_size", 10)
 	_build_skill_rows()
+	_build_dossier_tabs()
+	%TiesText.add_theme_font_size_override("font_size", 8)
+	%PopupPanel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.GOLD, 1, 12))
+	UiPalette.style_header(%PopupTitle, 11)
+	%PopupArt.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 6))
+	%PopupArtText.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+	%PopupArtText.add_theme_font_size_override("font_size", 8)
+	var popup_dim: ColorRect = %EventPopup.get_node("PopupDim")
+	popup_dim.color = UiPalette.DIM_OVERLAY
 	_panel = %DialoguePanel
 	_panel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
@@ -50,7 +75,13 @@ func _ready() -> void:
 	_free_text.max_length = int(Game.data.bal("prompt_max_chars"))
 	_free_text.text_submitted.connect(_on_free_text)
 	_continue_btn = %ContinueButton
-	_continue_btn.pressed.connect(_advance)
+	_continue_btn.pressed.connect(_on_continue)
+	%MoveButton.add_theme_font_size_override("font_size", 8)
+	%MoveButton.pressed.connect(_open_move_popup)
+	Game.state_changed.connect(func() -> void:
+		if is_inside_tree():
+			_refresh_location())
+	_refresh_location()
 
 ## `report` is the TickReport the beats were built from - kept so the summary
 ## beat can compose its text at display time (see ConversationBeats.summary_text)
@@ -61,7 +92,64 @@ func start(beats: Array, report: TickReport) -> void:
 	_beats = beats
 	_report = report
 	_index = -1
+	_history = []
 	_advance()
+
+## Appends one line to the transcript and shows the full history, scrolled
+## to the newest line. Every piece of dialogue routes through here. Speaker
+## names render in per-speaker colors (user ruling 2026-08-30).
+func _say(speaker: String, text: String) -> void:
+	if text.strip_edges() == "":
+		return
+	var escaped := text.replace("[", "[lb]")
+	if speaker != "":
+		_history.append("[color=#%s]%s:[/color] %s" % [
+			_speaker_color(speaker).to_html(false), speaker, escaped])
+	else:
+		_history.append("[i]%s[/i]" % escaped)
+	while _history.size() > HISTORY_CAP:
+		_history.pop_front()
+	_text_label.text = "\n".join(_history)
+	_scroll.set_deferred("scroll_vertical", 1000000)
+
+## Deterministic per-speaker name color: fixed for You/Herald, hashed into a
+## small palette for everyone else so each courtier keeps one color.
+const SPEAKER_PALETTE := [Color("6fbf73"), Color("c05b5b"), Color("8b6bb5"),
+	Color("5b8fc0"), Color("bf8f5f"), Color("6bb5ab"), Color("b56b9d")]
+
+static func _speaker_color(speaker: String) -> Color:
+	if speaker == "You":
+		return UiPalette.GOLD
+	if speaker == "Herald" or speaker == "The Council":
+		return UiPalette.TEXT_MUTED
+	return SPEAKER_PALETTE[speaker.hash() % SPEAKER_PALETTE.size()]
+
+## Dossier tab strip: BIO | SKILLS | TIES, clicked to swap pages.
+func _build_dossier_tabs() -> void:
+	_tab_pages = [%BioTab, %SkillsTab, %TiesTab]
+	for i in TAB_NAMES.size():
+		var btn := Button.new()
+		btn.name = "Tab" + TAB_NAMES[i]
+		btn.text = TAB_NAMES[i]
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.add_theme_font_size_override("font_size", 7)
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.pressed.connect(_select_tab.bind(i))
+		%TabsRow.add_child(btn)
+		_tab_buttons.append(btn)
+	_select_tab(0)
+
+func _select_tab(index: int) -> void:
+	for i in _tab_pages.size():
+		_tab_pages[i].visible = i == index
+		_tab_buttons[i].add_theme_color_override("font_color",
+			UiPalette.GOLD if i == index else UiPalette.TEXT_MUTED)
+
+func select_tab(index: int) -> void:
+	_select_tab(index)
+
+func tab_page(index: int) -> Control:
+	return _tab_pages[index]
 
 func current_beat() -> Dictionary:
 	return {} if _index < 0 or _index >= _beats.size() else _beats[_index]
@@ -70,10 +158,130 @@ func continue_button() -> Button:
 	return _continue_btn
 
 func reply_buttons() -> Array:
-	return _replies_box.get_children()
+	# Minister replies live in the right column; event/narration choices live
+	# in the centered popup — one seam covers both.
+	return _replies_box.get_children() + %PopupChoices.get_children()
 
 func dialogue_text() -> String:
-	return _text_label.text
+	return _text_label.get_parsed_text()
+
+func event_popup() -> Control:
+	return %EventPopup
+
+## --- Location panel (right column, upper container) -------------------
+## Where the player stands, who is present (click a face to seek them out),
+## and MOVE — free movement within the region (LocationSystem).
+
+## Set while the player has sought out an occupant: they become the dossier
+## subject and the free-text addressee until the next beat.
+var _visiting_id := ""
+
+func _refresh_location() -> void:
+	if Game.state == null:
+		return
+	# Same rename-then-free dance as _show_speaker: replacements arrive this
+	# frame while the outgoing nodes are still pending delete, and a name
+	# collision would permanently auto-rename the new nodes.
+	for child in %LocationSlot.get_children():
+		child.name = "OutgoingLocation"
+		child.queue_free()
+	%LocationSlot.add_child(LocationView.instantiate_for(Game.state.current_location))
+	for child in %OccupantsRow.get_children():
+		child.name = "OutgoingOccupant" + str(child.get_index())
+		child.queue_free()
+	for id in LocationSystem.occupants(Game.data, Game.state, Game.state.current_location):
+		var btn := Button.new()
+		btn.name = "Occupant_" + String(id)
+		btn.custom_minimum_size = Vector2(26, 26)
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.tooltip_text = Game.state.characters[id].display_name
+		btn.pressed.connect(_visit.bind(String(id)))
+		var chip := CharacterPortrait.instantiate_for(id, false)
+		chip.scale = Vector2(0.5, 0.5)
+		chip.position = Vector2(1, 1)
+		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		btn.add_child(chip)
+		%OccupantsRow.add_child(btn)
+
+## Seek out someone present here: the dialogue box becomes YOUR conversation
+## with them (user ruling 2026-08-30) — their dossier fills the left column,
+## typed words go to them, the beat's replies step aside, and Continue turns
+## into "Take your leave" (ending the visit, NOT advancing the council flow).
+func _visit(id: String) -> void:
+	_visiting_id = id
+	var c: Character = Game.state.characters[id]
+	_show_speaker({"portrait_id": id, "speaker": c.display_name})
+	_name_label.text = c.display_name
+	_replies_box.visible = false
+	_free_text.visible = true
+	_continue_btn.visible = true
+	_continue_btn.text = "Take your leave"
+	_say("", "You seek out %s." % c.display_name)
+
+## Ends a visit and restores the current beat's stage; advances beats only
+## when not visiting.
+func _on_continue() -> void:
+	if _visiting_id != "":
+		_end_visit()
+	else:
+		_advance()
+
+func _end_visit() -> void:
+	_visiting_id = ""
+	_replies_box.visible = true
+	_continue_btn.text = "Wave them on"
+	var b := current_beat()
+	if b.is_empty():
+		_advance()
+		return
+	_show_speaker(b)
+	_name_label.text = String(b.get("speaker", ""))
+	_continue_btn.visible = String(b["kind"]) in ["minister", "summary"]
+	_free_text.visible = String(b["kind"]) in ["minister", "event"]
+
+func _open_move_popup() -> void:
+	%EventPopup.visible = true
+	%PopupTitle.visible = true
+	%PopupTitle.text = "MOVE — " + String(Game.data.regions.get(
+		LocationSystem.region_of(Game.data, Game.state.current_location),
+		{}).get("label", ""))
+	%PopupArt.visible = false
+	%PopupText.text = "Movement within the region costs no time."
+	for child in %PopupChoices.get_children():
+		child.queue_free()
+	for code in LocationSystem.reachable(Game.data, Game.state):
+		var row := LocationSystem.location(Game.data, code)
+		var here: bool = String(code) == Game.state.current_location
+		var btn := Button.new()
+		btn.name = "Move_" + String(code)
+		btn.text = "%s (%d here)%s" % [String(row["label"]),
+			LocationSystem.occupants(Game.data, Game.state, code).size(),
+			"  — you are here" if here else ""]
+		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.disabled = here
+		btn.pressed.connect(func() -> void:
+			Game.move_to(String(code))
+			%EventPopup.visible = false
+			_say("", "You make your way to %s." % String(row["label"])))
+		%PopupChoices.add_child(btn)
+	var cancel := Button.new()
+	cancel.name = "MoveCancel"
+	cancel.text = "Stay"
+	cancel.focus_mode = Control.FOCUS_NONE
+	cancel.pressed.connect(func() -> void: %EventPopup.visible = false)
+	%PopupChoices.add_child(cancel)
+
+func visiting_id() -> String:
+	return _visiting_id
+
+## True when the beat's speaker stands where the player stands. Non-character
+## speakers (the round table, the herald) are location-free.
+func _speaker_present(portrait_id: String) -> bool:
+	if Game.state == null or not Game.state.characters.has(portrait_id):
+		return true
+	return portrait_id in LocationSystem.occupants(
+		Game.data, Game.state, Game.state.current_location)
 
 func free_text_field() -> LineEdit:
 	return _free_text
@@ -133,8 +341,18 @@ func _advance() -> void:
 		finished.emit()
 		return
 	var b := current_beat()
+	# Location gating (user ruling 2026-08-30): a minister who is not where
+	# the player stands cannot hold this conversation — their beat is skipped
+	# with a note (their advice still waits in the court's side panel).
+	# Events and narration always show.
+	if String(b["kind"]) == "minister" and not _speaker_present(String(b["portrait_id"])):
+		_say("", "(You are elsewhere; %s's counsel waits with the council.)" %
+			String(b["speaker"]))
+		_advance()
+		return
 	_show_speaker(b)
 	_name_label.text = String(b["speaker"])
+	_continue_btn.text = "Wave them on"
 	# Deviation from the brief (pre-approved): the brief's literal `child.free()`
 	# here frees while iterating the container's own get_children() snapshot -
 	# a crash hazard idiom. queue_free() defers the actual removal to end of
@@ -143,53 +361,106 @@ func _advance() -> void:
 	# since every test awaits frames before asserting on reply_buttons().
 	for child in _replies_box.get_children():
 		child.queue_free()
+	for child in %PopupChoices.get_children():
+		child.queue_free()
+	%EventPopup.visible = false
 	_next_reply_letter = 0
 	_resolved_event = false
+	_visiting_id = ""
+	_replies_box.visible = true
+	# The move popup shares the centered popup with events/narration — no
+	# moving while one is on stage (resolve or continue first).
+	%MoveButton.disabled = String(b["kind"]) in ["event", "narration"]
 	match String(b["kind"]):
 		"event":
 			_continue_btn.visible = false
-			_text_label.text = "..."
+			# Events pop centered (user ruling 2026-08-30: the old in-column
+			# rendering distorted the top of the UI): title, an art
+			# placeholder carrying the scene description until real event art
+			# exists, the narration, and the choices.
+			%EventPopup.visible = true
+			%PopupTitle.visible = true
+			%PopupTitle.text = "AN EVENT AT COURT"
+			%PopupArt.visible = true
+			%PopupArtText.text = "[ event art ]\n" + TemplateVoicer.line_for(
+				Game.data, String(b["event"]["title_key"]), [], Game.state.tick)
+			%PopupText.text = "..."
 			Game.voice_event_scene(b["event"], func(res: Dictionary):
 				# F2 (final-review fix wave): choice buttons render immediately
 				# while this call is in flight. With real latency the player can
 				# resolve the event (via button or free text) before this
 				# callback returns; without this guard the late scene-setting
-				# narration would overwrite the outcome line already shown.
+				# narration would land after the outcome line already shown.
 				if _resolved_event:
 					return
-				_text_label.text = String(res["text"]))
+				%PopupText.text = String(res["text"])
+				_say(String(b["speaker"]), String(res["text"])))
 			for ch in b["event"]["choices"]:
-				_add_reply(String(ch["label"]), _on_event_choice.bind(String(ch["choice_id"])))
+				_add_reply(String(ch["label"]),
+					_on_event_choice.bind(String(ch["choice_id"])), %PopupChoices)
+		"narration":
+			# The nameless opening narration (game background): centered like
+			# an event, no speaker, no title, one continue button.
+			_continue_btn.visible = false
+			%EventPopup.visible = true
+			%PopupTitle.visible = false
+			%PopupArt.visible = false
+			%PopupText.text = String(b["text"])
+			_say("", String(b["text"]))
+			_add_reply("I am ready. Let the reign begin.",
+				_advance, %PopupChoices)
 		"minister":
 			_continue_btn.visible = true
-			_text_label.text = String(b["text"])
+			_say(String(b["speaker"]), String(b["text"]))
 			for sug in b["suggestions"]:
 				var label := TemplateVoicer.line_for(Game.data,
 					"reply_" + String(sug["pitch_key"]), [], Game.state.tick)
 				_add_reply(label, _on_quick_reply.bind(sug))
 		"summary":
 			_continue_btn.visible = true
-			_text_label.text = ConversationBeats.summary_text(_report, Game.state, Game.data)
+			_say(String(b["speaker"]),
+				ConversationBeats.summary_text(_report, Game.state, Game.data))
+	_reveal_replies_staggered()
 	# F1 (final-review fix wave): event beats must accept free text too - it's
 	# the only path back to EVENT_CHOICE via typed orders (Game.submit_free_text's
 	# EVENT_CHOICE branch was otherwise unreachable). Shown alongside the choice
 	# buttons while the event is unresolved; _resolve_event hides it again once
 	# either path (button or free text) resolves the event.
 	_free_text.visible = String(b["kind"]) in ["minister", "event"]
-	# A fresh beat reads from the top of the fixed-height strip.
-	_scroll.set_deferred("scroll_vertical", 0)
+	# The transcript keeps growing; a fresh beat reads from its newest line.
+	_scroll.set_deferred("scroll_vertical", 1000000)
 
 ## Mock-style lettered responses ("A. Distribute reserves"), left-aligned,
-## wrapping inside the response column instead of overflowing it.
-func _add_reply(label: String, handler: Callable) -> void:
+## wrapping inside their column. Buttons start hidden; _reveal_replies_staggered
+## surfaces them one by one.
+func _add_reply(label: String, handler: Callable,
+		into: Container = null) -> void:
 	var btn := Button.new()
 	btn.text = "%s.  %s" % [char(65 + _next_reply_letter), label]
 	_next_reply_letter += 1
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	btn.focus_mode = Control.FOCUS_NONE
+	btn.visible = false
 	btn.pressed.connect(handler)
-	_replies_box.add_child(btn)
+	(into if into != null else _replies_box).add_child(btn)
+
+## Replies surface in sequence (REPLY_REVEAL_STEP apart), not all at once.
+## Buttons stay clickable-by-signal for tests even while hidden; a freed
+## button (beat advanced early) is skipped safely.
+func _reveal_replies_staggered() -> void:
+	var i := 0
+	for btn in reply_buttons():
+		if not btn.visible:
+			# weakref: a freed button (beat advanced early) must not leave a
+			# dangling lambda capture behind the pending timer.
+			var ref: WeakRef = weakref(btn)
+			get_tree().create_timer(REPLY_REVEAL_STEP * i).timeout.connect(
+				func() -> void:
+					var b: Button = ref.get_ref()
+					if b != null:
+						b.visible = true)
+			i += 1
 
 var _next_reply_letter := 0
 
@@ -247,6 +518,9 @@ func _show_speaker(b: Dictionary) -> void:
 	%MinisterTitle.visible = c != null
 	%OpinionRow.visible = c != null
 	%SkillRows.visible = c != null
+	# TIES tab: who this person loves and hates, live from the graph.
+	%TiesText.text = RelationshipGraph.describe_for(Game.state, portrait_id) \
+		if c != null and Game.state != null else ""
 	if c == null:
 		return
 	%MinisterTitle.text = String(Game.data.seats[c.seat]["label"]).to_upper() \
@@ -270,13 +544,13 @@ func _show_speaker(b: Dictionary) -> void:
 func _on_quick_reply(sug: Dictionary) -> void:
 	var result: Dictionary = Game.try_execute(sug["request"])
 	if not result["ok"]:
-		_text_label.text = String(result["error"])
+		_say("Herald", String(result["error"]))
 		return
 	for child in _replies_box.get_children():
 		child.queue_free()
-	_text_label.text = TemplateVoicer.line_for(Game.data,
+	_say("Herald", TemplateVoicer.line_for(Game.data,
 		"outcome_" + String(sug["request"].action_code), [], Game.state.tick) \
-		+ _promise_kept_suffix(result["outcome"]["effects"])
+		+ _promise_kept_suffix(result["outcome"]["effects"]))
 
 ## Post-Task-5 review "also": a kept promise rides along as a pseudo-effect
 ## on the outcome (metric == "promise" - see ActionSystem.execute's promise
@@ -304,11 +578,15 @@ func _on_event_choice(choice_id: String) -> void:
 func _resolve_event(event_id: String, choice_id: String) -> void:
 	for child in _replies_box.get_children():
 		child.queue_free()
+	for child in %PopupChoices.get_children():
+		child.queue_free()
 	_resolved_event = true
 	_continue_btn.visible = true
 	_free_text.visible = false
-	_text_label.text = TemplateVoicer.line_for(Game.data,
-		"event_%s_%s" % [event_id, choice_id], [], Game.state.tick)
+	%EventPopup.visible = false
+	%MoveButton.disabled = false
+	_say("Herald", TemplateVoicer.line_for(Game.data,
+		"event_%s_%s" % [event_id, choice_id], [], Game.state.tick))
 
 func _on_free_text(text: String) -> void:
 	if text.strip_edges() == "":
@@ -321,19 +599,27 @@ func _on_free_text(text: String) -> void:
 	var beat := current_beat()
 	if String(beat.get("kind", "")) == "minister":
 		facing = String(beat.get("portrait_id", ""))
+	# Seeking someone out (location panel) overrides the beat's speaker:
+	# typed words go to whoever the player walked up to.
+	if _visiting_id != "":
+		facing = _visiting_id
+	_say("You", text)
+	# Stale-callback bookkeeping: only text aimed at a then-UNRESOLVED event
+	# can go stale (a button click resolving it while the parse flies).
+	var aimed_at_open_event := String(beat.get("kind", "")) == "event" \
+		and not _resolved_event
 	Game.submit_free_text(text, func(res: Dictionary):
 		_free_text.editable = true
 		_free_text.clear()
-		# Re-review (final fix wave): both choice buttons and free text are
-		# live on an unresolved event beat, so a button click can resolve the
-		# event while this parse is still in flight. The stale callback must
-		# restore the field (above) but never touch the dialogue line - the
-		# same bug class as the F2 voice-callback guard. _resolved_event
-		# resets at each _advance, so minister-beat replies are unaffected.
-		if _resolved_event:
+		# Swallow ONLY the genuinely stale case above. The old blanket
+		# `if _resolved_event: return` also ate every conversational reply
+		# typed AFTER an event was resolved on this beat (user bug
+		# 2026-08-30: greeted Malvern, reply never shown) — chat after
+		# resolution must display normally.
+		if aimed_at_open_event and _resolved_event:
 			return
 		if not res["ok"]:
-			_text_label.text = "The council doesn't follow. (%s)" % String(res["error"])
+			_say("Herald", "The council doesn't follow. (%s)" % String(res["error"]))
 			return
 		# F1: a free-text reply that parses to EVENT_CHOICE and actually
 		# resolves the pending event must resolve it exactly as the button
@@ -348,15 +634,20 @@ func _on_free_text(text: String) -> void:
 				return
 		var spoken := ""
 		for outcome in res["executed"]:
+			# The in-character reply IS the consult's voice — skip its
+			# canned "leans in and speaks freely" outcome template.
+			if res.has("reply") and String(outcome["action_code"]) == "COUNCIL_CONSULT":
+				continue
 			spoken += TemplateVoicer.line_for(Game.data,
 				"outcome_" + String(outcome["action_code"]), [], Game.state.tick)
 			spoken += _promise_kept_suffix(outcome["effects"]) + " "
-		# Conversational text gets the role's in-character reply (converse
-		# ride-along) rather than the old silent "So noted.". A reply from
-		# someone other than the minister on stage is prefixed with their name.
-		if spoken == "" and res.has("reply"):
-			var reply: Dictionary = res["reply"]
-			spoken = String(reply["text"]) if String(reply["speaker_id"]) == facing \
-				else "%s: %s" % [String(reply["speaker"]), String(reply["text"])]
-		_text_label.text = spoken if spoken != "" else "So noted."
+		if spoken != "":
+			_say("Herald", spoken)
+		# Conversational text ("who are you", "how is my army?") gets the
+		# role's in-character LLM reply (converse ride-along), spoken under
+		# their own name in the transcript.
+		if res.has("reply"):
+			_say(String(res["reply"]["speaker"]), String(res["reply"]["text"]))
+		elif spoken == "":
+			_say("Herald", "So noted.")
 	, facing)

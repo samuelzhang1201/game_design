@@ -62,7 +62,8 @@ static func parse_prompts(player_text: String, report: TickReport, state: GameSt
 		var choice_ids := []
 		for ch in state.pending_event["choices"]:
 			choice_ids.append("%s (%s)" % [ch["choice_id"], ch["label"]])
-		event_ctx = "\nAn event awaits a decision. To resolve it use action_code EVENT_CHOICE with params {\"choice_id\": one of: %s}." % ", ".join(choice_ids)
+		event_ctx = ("\nAn event awaits a decision. To resolve it use action_code"
+			+ " EVENT_CHOICE with params {\"choice_id\": one of: %s}.") % ", ".join(choice_ids)
 	var promise_rule := "\npromise_code in promises MUST be one of the legal action codes above."
 	var system := """You translate a ruler's plain-language order into game actions.
 Output ONLY a JSON object, no prose, shaped exactly:
@@ -85,13 +86,26 @@ static func converse_prompts(speaker_id: String, player_text: String,
 	var system := """You roleplay one character at a medieval royal court, speaking to the ruler.
 Your character:
 %s
+The realm today (engine truth — quote these numbers, never invent others):
+%s
 Answer the ruler in character, first person, 1-3 sentences of plain prose.
 You cannot perform actions, issue orders, or change anything — you may only speak.
-Never invent events, numbers, or people beyond your character sheet.""" % \
-		persona_context(speaker_id, state, data)
+Never invent events, numbers, or people beyond your character sheet and the realm facts.""" % \
+		[persona_context(speaker_id, state, data), realm_facts(state)]
 	return {"system": system, "user": player_text}
 
-static func briefing_prompts_for_event(ev: Dictionary, state: GameState, template_line: String) -> Dictionary:
+## Compact engine-truth snapshot for conversational answers ("how is my
+## army?" must be answered from these, not hallucinated).
+static func realm_facts(state: GameState) -> String:
+	var parts: Array = []
+	for m in ["treasury", "grain", "unrest", "legitimacy", "army_quality",
+			"church_opinion", "peasant_contentment", "tax_income", "tax_rate"]:
+		if state.metrics.has(m):
+			parts.append("%s %d" % [m, int(state.metrics[m])])
+	return ", ".join(parts) + ". Season: %s, year %d." % [state.season(), state.year()]
+
+static func briefing_prompts_for_event(_ev: Dictionary, state: GameState,
+		template_line: String) -> Dictionary:
 	var system := """You narrate a single scene at a medieval royal court.
 Rewrite the scene below in 2-3 vivid sentences, second person, present tense.
 Do not add choices, numbers, or events beyond what the scene states."""

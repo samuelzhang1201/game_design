@@ -121,6 +121,27 @@ func test_submit_free_text_conversational_ride_along_replies() -> void:
 	assert_eq(String(got["reply"]["speaker_id"]), "char_marshal")
 	assert_ne(String(got["reply"]["text"]), "")
 
+func test_submit_free_text_consult_gets_in_character_reply() -> void:
+	# "how is my army?" parses to COUNCIL_CONSULT (the free ask-for-advice
+	# action): the consulted minister must answer in character, not the
+	# canned outcome template (user report 2026-08-30).
+	Game.start_campaign(42)
+	var fake := FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"actions":
+		[{"action_code": "COUNCIL_CONSULT", "params": {}, "target": "marshal"}]})
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	Game.next_tick()
+	got = {}
+	Game.submit_free_text("how is my army?", func(res): got = res)
+	await wait_frames(4)
+	assert_true(got["ok"])
+	assert_eq(got["executed"].size(), 1, "the consult still executes")
+	assert_true(got.has("reply"), "the consulted minister answers")
+	assert_eq(String(got["reply"]["speaker_id"]), "char_marshal",
+		"the consult's target seat answers")
+
 func test_overlapping_briefing_calls_both_fire_exactly_once() -> void:
 	var fake := FakeClient.new()
 	fake.canned_ok = true

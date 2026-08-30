@@ -16,6 +16,10 @@ anchor_bottom = 1.0
 [node name="Row" type="HBoxContainer" parent="Bar"]
 theme_override_constants/separation = 8
 
+[node name="FlagLabel" type="Label" parent="Bar/Row"]
+unique_name_in_owner = true
+visible = false
+
 [node name="DateLabel" type="Label" parent="Bar/Row"]
 unique_name_in_owner = true
 
@@ -29,17 +33,18 @@ theme_override_constants/separation = 9
 [node name="RightSpacer" type="Control" parent="Bar/Row"]
 size_flags_horizontal = 3
 
-[node name="EventChip" type="Label" parent="Bar/Row"]
-unique_name_in_owner = true
-visible = false
-text = "1 EVENT"
-
-[node name="RelationsButton" type="Button" parent="Bar/Row"]
-unique_name_in_owner = true
-focus_mode = 0
-text = "RELATIONS"
-
 [node name="MenuButton" type="Button" parent="Bar/Row"]
 unique_name_in_owner = true
 focus_mode = 0
 text = "MENU"
+
+[node name="EventChip" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -60.0
+offset_top = 28.0
+offset_right = -4.0
+offset_bottom = 40.0
+text = "1 EVENT"

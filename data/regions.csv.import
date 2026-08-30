@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://cb5vh3o6bvsms"
+
+[deps]
+
+files=["res://data/regions.label.translation", "res://data/regions.notes.translation"]
+
+source_file="res://data/regions.csv"
+dest_files=["res://data/regions.label.translation", "res://data/regions.notes.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

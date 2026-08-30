@@ -22,6 +22,8 @@ var _pending_report: TickReport
 var _pause_menu: Control
 var _pause_status: Label
 var _relations_screen: RelationshipGraphScreen
+var _bottom_bar: BottomBar
+var _info_screen: InfoScreen
 var _bgm: AudioStreamPlayer
 
 ## The design viewport (project.godot window/size): all UI is authored
@@ -43,6 +45,14 @@ func _ready() -> void:
 	_relations_screen.name = "RelationsScreen"
 	_relations_screen.visible = false
 	add_child(_relations_screen)
+	_info_screen = InfoScreen.new()
+	_info_screen.name = "InfoScreen"
+	add_child(_info_screen)
+	_bottom_bar = BottomBar.new()
+	_bottom_bar.name = "BottomBar"
+	_bottom_bar.visible = false
+	_bottom_bar.tab_selected.connect(_on_bottom_tab)
+	add_child(_bottom_bar)
 	_build_pause_menu()
 	_start_bgm()
 	_switch_to(State.MENU)
@@ -151,6 +161,26 @@ func toggle_relations() -> void:
 func relations_screen() -> RelationshipGraphScreen:
 	return _relations_screen
 
+## Bottom bar routing: MAP is the default view (close every overlay),
+## RELATIONSHIP toggles the graph, the rest open their info table.
+func _on_bottom_tab(tab: String) -> void:
+	match tab:
+		"MAP":
+			_info_screen.hide()
+			_relations_screen.visible = false
+		"RELATIONSHIP":
+			_info_screen.hide()
+			toggle_relations()
+		_:
+			_relations_screen.visible = false
+			_info_screen.show_tab(tab)
+
+func bottom_bar() -> BottomBar:
+	return _bottom_bar
+
+func info_screen() -> InfoScreen:
+	return _info_screen
+
 func _on_menu_save() -> void:
 	if Game.state == null:
 		_pause_status.text = "No realm to preserve."
@@ -190,6 +220,7 @@ func _switch_to(new_state: State) -> void:
 		State.MENU:
 			current_screen = MENU_SCENE.instantiate()
 			current_screen.start_requested.connect(_on_start_requested)
+			current_screen.load_requested.connect(_on_menu_load_from_title)
 		State.CONVERSATION:
 			current_screen = CONVERSATION_SCENE.instantiate()
 			current_screen.finished.connect(_on_conversation_finished)
@@ -200,18 +231,64 @@ func _switch_to(new_state: State) -> void:
 			current_screen = DAY_RUN_SCENE.instantiate()
 			current_screen.finished.connect(_on_day_run_finished)
 	add_child(current_screen)
-	# Overlays stay above screens across swaps: relations below the pause menu.
+	# Overlays stay above screens across swaps: bottom bar, then info and
+	# relations, with the pause menu topmost.
+	if _bottom_bar != null:
+		_bottom_bar.visible = new_state != State.MENU
+		move_child(_bottom_bar, get_child_count() - 1)
+	if _info_screen != null:
+		_info_screen.hide()
+		move_child(_info_screen, get_child_count() - 1)
 	if _relations_screen != null:
 		_relations_screen.visible = false
 		move_child(_relations_screen, get_child_count() - 1)
 	if _pause_menu != null:
 		move_child(_pause_menu, get_child_count() - 1)
 
+const BACKGROUND_STORY_PATH := "res://game_story/background/game_start.md"
+
 func _on_start_requested() -> void:
 	Game.start_campaign(42)
 	_pending_report = Game.next_tick()
 	_switch_to(State.CONVERSATION)
-	current_screen.start(ConversationBeats.build(_pending_report, Game.state, Game.data), _pending_report)
+	# The reign opens with the game background as a nameless narration beat
+	# (user ruling 2026-08-30) so the player knows the challenge ahead.
+	var beats := ConversationBeats.build(_pending_report, Game.state, Game.data)
+	var story := _load_background_story()
+	if story != "":
+		beats.push_front({"kind": "narration", "portrait_id": "round_table",
+			"speaker": "", "text": story})
+	current_screen.start(beats, _pending_report)
+
+## The story background (game_story/background/game_start.md) with markdown
+## chrome stripped for in-game narration. Empty when the file is absent.
+func _load_background_story() -> String:
+	if not FileAccess.file_exists(BACKGROUND_STORY_PATH):
+		return ""
+	var raw := FileAccess.get_file_as_string(BACKGROUND_STORY_PATH)
+	var lines: Array = []
+	for line in raw.split("\n"):
+		var l := String(line).strip_edges()
+		if l.begins_with("#"):
+			continue
+		lines.append(l.replace("**", ""))
+	return "\n".join(lines).strip_edges()
+
+## Load Game from the title screen: same resume rules as the pause menu.
+func _on_menu_load_from_title() -> void:
+	if not Game.load_campaign():
+		if current_screen is MainMenu:
+			current_screen.show_load_failed()
+		return
+	_pending_report = null
+	if not Game.state.pending_event.is_empty():
+		_switch_to(State.CONVERSATION)
+		current_screen.start([{"kind": "event", "portrait_id": "round_table",
+			"speaker": "The Council",
+			"event": Game.state.pending_event.duplicate(true)}], TickReport.new())
+	else:
+		_switch_to(State.COURT)
+		current_screen.enter_court(null)
 
 func _on_end_turn_requested() -> void:
 	_pending_report = Game.next_tick()

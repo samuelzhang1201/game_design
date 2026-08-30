@@ -145,3 +145,5 @@ council_summary_idle,,"Nothing was ordered, and nothing resolved. The realm drif
 converse_fallback,,"{name} weighs the question in silence, and the moment passes."
 converse_fallback,,"{name} inclines their head. ""Another time, my lord — the court has ears."""
 converse_fallback,blunt,"{name} shrugs. ""Ask me something I can act on, my lord."""
+converse_no_one,,"The words find no ear. Whoever you seek is not here — seek them where they keep."
+converse_no_one,,"The herald coughs. ""None you address are present, my lord."""

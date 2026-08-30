@@ -183,6 +183,25 @@ the live values are in the save and on the RELATIONS screen.)
 5. **Two borders** — Doncaster sharpens spears in the north; Bentleigh
    annexes toward you in the east with a puppet Emperor's seal.
 
+## Locations and regions
+
+`data/regions.csv` and `data/locations.csv` place the roster in the world.
+One region for now — **The Crown District**: Falconspire Keep (the royal
+home) and the capital around it. Its locations and who is found there:
+Council Chamber (the five ministers), War Room (Brandt, Hale), Falconspire
+Keep (Victoria, Ysolde), Envoys' Wing (Petra), Malvern's Study, Duke Tomas's
+Manor, Ashvale Parlor (Corina, Edgar), The Guildhall (Tessa), The High
+Street (Cassian, Corvin), The Mustering Field (Nora).
+
+- Each location is a scene (`scenes/locations/<code>.tscn`, CustomArt
+  override pattern like character portraits).
+- The conversation screen's upper-right panel shows where you stand and who
+  is present; click a face to seek them out (dossier + typed words go to
+  them), MOVE to go elsewhere.
+- **Movement within a region costs no time** (`Game.move_to`, no tick);
+  travel between regions is post-MVP and will cost time. The current
+  location rides the save.
+
 ## When the player meets these roles
 
 Roles interact with the player through the two existing loops — no new flow:

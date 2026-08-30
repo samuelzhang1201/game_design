@@ -22,8 +22,7 @@ func _ready() -> void:
 	UiPalette.style_header(%EventChip, 9)
 	%MenuButton.add_theme_font_size_override("font_size", 9)
 	%MenuButton.pressed.connect(func() -> void: Game.menu_requested.emit())
-	%RelationsButton.add_theme_font_size_override("font_size", 9)
-	%RelationsButton.pressed.connect(func() -> void: Game.relations_requested.emit())
+	%FlagLabel.add_theme_font_size_override("font_size", 12)
 	for m in ORDER:
 		var cell := HBoxContainer.new()
 		cell.add_theme_constant_override("separation", 3)
@@ -49,6 +48,13 @@ func refresh() -> void:
 	if Game.state == null:
 		return
 	%DateLabel.text = Calendar.date_string(Game.state.tick)
+	# The chosen family flag (character creation) flies beside the date.
+	var flag_id := String(Game.state.player_setup.get("flag", ""))
+	%FlagLabel.visible = flag_id != ""
+	if flag_id != "":
+		var f := UiPalette.flag_by_id(flag_id)
+		%FlagLabel.text = String(f["symbol"])
+		%FlagLabel.add_theme_color_override("font_color", f["color"])
 	var deltas := {}
 	if Game.current_report != null:
 		for d in Game.current_report.metric_deltas:

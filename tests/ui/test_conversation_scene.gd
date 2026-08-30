@@ -23,7 +23,9 @@ func test_one_portrait_per_beat_and_continue_advances() -> void:
 	# R4: ONE portrait - char_marshal has full-body art, so the stage shows a
 	# single FullArt TextureRect instead of the pixel-chip CharacterPortrait.
 	assert_not_null(c.find_child("FullArt", true, false))
-	assert_eq(c.find_children("*", "CharacterPortrait", true, false).size(), 0)
+	# Scoped to the dossier stage: the location panel's occupant chips
+	# (2026-08-30) are CharacterPortraits by design and don't count.
+	assert_eq(c.find_child("PortraitBox", true, false).find_children("*", "CharacterPortrait", true, false).size(), 0)
 	assert_string_contains(c.dialogue_text(), "levies")
 	c.continue_button().pressed.emit()
 	await wait_frames(2)
@@ -31,7 +33,9 @@ func test_one_portrait_per_beat_and_continue_advances() -> void:
 	# round_table shows the council medallion art (user-provided, replaces
 	# the old pixel chip) - still exactly ONE portrait, no chip.
 	assert_not_null(c.find_child("FullArt", true, false))
-	assert_eq(c.find_children("*", "CharacterPortrait", true, false).size(), 0)
+	# Scoped to the dossier stage: the location panel's occupant chips
+	# (2026-08-30) are CharacterPortraits by design and don't count.
+	assert_eq(c.find_child("PortraitBox", true, false).find_children("*", "CharacterPortrait", true, false).size(), 0)
 	c.continue_button().pressed.emit()
 	await wait_frames(2)
 	assert_true(_finished)
@@ -129,7 +133,9 @@ func test_long_event_content_scrolls_inside_fixed_box() -> void:
 	# replaces the old pixel chip) in the dossier's portrait box.
 	assert_not_null(c.find_child("FullArt", true, false),
 		"the council medallion fills the dossier portrait box")
-	assert_eq(c.find_children("*", "CharacterPortrait", true, false).size(), 0)
+	# Scoped to the dossier stage: the location panel's occupant chips
+	# (2026-08-30) are CharacterPortraits by design and don't count.
+	assert_eq(c.find_child("PortraitBox", true, false).find_children("*", "CharacterPortrait", true, false).size(), 0)
 
 ## User ruling (2026-08-29, UI_example chrome): the TopBar metrics strip
 ## spans the top of every gameplay screen, the conversation stage included,
@@ -235,8 +241,10 @@ func test_event_beat_voices_canned_text_non_degraded() -> void:
 		"speaker": "The Council", "event": Game.state.pending_event.duplicate(true)}]
 	var c := _scene_with(beats, report)
 	await wait_frames(3)
-	assert_eq(c.dialogue_text(), "A rider brings word of omens.",
-		"the canned text must surface verbatim, not degrade to the template fallback")
+	# The transcript prefixes the speaker ("The Council: ..."); the canned
+	# text itself must surface verbatim, not degrade to the template fallback.
+	assert_eq(c.dialogue_text(), "The Council: A rider brings word of omens.",
+		"the canned text must surface verbatim under the speaker's name")
 
 ## F1 (final-review fix wave): Game.submit_free_text's EVENT_CHOICE branch was
 ## unreachable in real play because the free-text box was hidden on event

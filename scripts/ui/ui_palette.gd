@@ -35,11 +35,32 @@ const SKILL_NAMES := {
 }
 const SKILL_MAX := 20.0  # CharacterFactory clamps skills to 0..20
 
+## Family flag choices for character creation (simple icons for now — art
+## comes later): a font glyph on a heraldic field color, picked in the main
+## menu and shown beside the date in the TopBar.
+const FLAGS := [
+	{"id": "sun", "symbol": "☀", "color": Color("c9a45c")},
+	{"id": "moon", "symbol": "☾", "color": Color("5b8fc0")},
+	{"id": "blade", "symbol": "†", "color": Color("c05b5b")},
+	{"id": "leaf", "symbol": "❦", "color": Color("6fbf73")},
+	{"id": "star", "symbol": "✶", "color": Color("8b6bb5")},
+	{"id": "tower", "symbol": "♜", "color": Color("8a8578")},
+]
+
+static func flag_by_id(id: String) -> Dictionary:
+	for f in FLAGS:
+		if String(f["id"]) == id:
+			return f
+	return FLAGS[0]
+
 ## OFL-licensed faces (assets/fonts/, licenses alongside): EB Garamond for
 ## body text, Cinzel (Roman inscription capitals) for headers, names, dates.
 const BODY_FONT_PATH := "res://assets/fonts/EBGaramond.ttf"
 const DISPLAY_FONT_PATH := "res://assets/fonts/Cinzel.ttf"
-const BODY_FONT_SIZE := 12
+## Reduced 12 -> 10 with tight line spacing (user ruling 2026-08-30: smaller
+## text, less space between lines — the transcript box must hold history).
+const BODY_FONT_SIZE := 10
+const LINE_SPACING := 0
 
 ## Static 2D map placeholder shown behind the gameplay screens (user-provided
 ## screenshot; the crop trims the foreign UI chrome baked into its edges).
@@ -190,6 +211,7 @@ static func build_theme() -> Theme:
 	theme.set_stylebox("normal", "LineEdit", chip_style(Color("0f1017")))
 	theme.set_color("font_color", "LineEdit", TEXT_SOFT)
 	theme.set_color("font_placeholder_color", "LineEdit", TEXT_DIM)
+	theme.set_constant("line_spacing", "Label", LINE_SPACING)
 	var body := body_font()
 	if body != null:
 		theme.default_font = body

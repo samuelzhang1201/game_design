@@ -114,6 +114,15 @@ func _render_suggestions(report: TickReport) -> void:
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.tooltip_text = String(sug["tradeoff"])
 		b.pressed.connect(_on_suggestion.bind(sug, b))
+		# Suggestions surface in sequence, not all at once (user ruling
+		# 2026-08-30); hidden buttons still answer pressed() in tests.
+		# weakref: freed buttons must not leave dangling lambda captures.
+		b.visible = false
+		var ref: WeakRef = weakref(b)
+		get_tree().create_timer(0.3 * i).timeout.connect(func() -> void:
+			var btn: Button = ref.get_ref()
+			if btn != null:
+				btn.visible = true)
 		suggestions_box.add_child(b)
 		_suggestion_buttons.append(b)
 
@@ -149,6 +158,10 @@ func _on_free_text_submitted(text: String) -> void:
 			for outcome in res["executed"]:
 				if String(outcome["action_code"]) == "EVENT_CHOICE":
 					_log("Herald", String(outcome["notes"]))
+					continue
+				# The in-character reply IS the consult's voice — skip its
+				# canned outcome template.
+				if res.has("reply") and String(outcome["action_code"]) == "COUNCIL_CONSULT":
 					continue
 				var line: String = TemplateVoicer.line_for(Game.data,
 					"outcome_" + String(outcome["action_code"]), [], Game.state.tick)
