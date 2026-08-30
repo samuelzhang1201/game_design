@@ -20,7 +20,7 @@ static func score(data: DataRepository, state: GameState, listener: String,
 			"rule_code": String(veto["rule_code"]), "corroboration": 0,
 			"reason": "impossible on its face: " + String(veto["reason"])}
 	var trust := SourceTrust.get_trust(data, state, speaker, listener)
-	var corroboration := _corroboration(state, listener, claim)
+	var corroboration := _corroboration(state, listener, speaker, claim)
 	var trait_mod := _trait_modifier(data, state, listener)
 	var raw := plausibility * (trust / 100.0) \
 		+ trait_mod \
@@ -32,13 +32,20 @@ static func score(data: DataRepository, state: GameState, listener: String,
 			int(plausibility), int(trust), corroboration],
 	}
 
-## Net count of the listener's known facts on the same claim_type and subject:
-## +1 each when their truth agrees with the claim, -1 each when it does not.
-static func _corroboration(state: GameState, listener: String, claim: Dictionary) -> int:
+## Net count of the listener's known facts on the same claim_type and subject
+## that did not come from this same speaker: +1 each when their truth agrees
+## with the claim, -1 each when it does not. A speaker's own earlier claims on
+## the same subject are excluded — corroboration must come from an
+## independent source, or a speaker could corroborate himself by repetition
+## (spec §6).
+static func _corroboration(state: GameState, listener: String, speaker: String,
+		claim: Dictionary) -> int:
 	var net := 0
 	var claim_truth := bool(claim.get("truth", true))
 	for fact in KnowledgeBase.facts_about(state, listener,
 			String(claim["claim_type"]), String(claim["subject"])):
+		if String(fact.get("source", "")) == speaker:
+			continue
 		net += 1 if bool(fact["truth"]) == claim_truth else -1
 	return net
 

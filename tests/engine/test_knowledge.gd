@@ -14,10 +14,17 @@ func test_seed_facts_load_into_state() -> void:
 	assert_true(state.knowledge.has("fact_chancellor_graft"))
 
 func test_every_seed_knower_exists_in_the_roster() -> void:
-	for code in state.knowledge:
-		for id in state.knowledge[code]["knowers"]:
+	# init_from_data silently `continue`s past any id not in the roster, so
+	# asserting against state.knowledge (post-filter) can never fail. Assert
+	# against data.facts.csv rows directly so a typo in initial_knowers is
+	# actually caught.
+	for row in data.facts:
+		var raw := String(row.get("initial_knowers", ""))
+		if raw == KnowledgeBase.ALL_KNOWERS:
+			continue
+		for id in raw.split("|", false):
 			assert_true(state.characters.has(String(id)),
-				"%s knower %s is a real character" % [code, id])
+				"%s knower %s is a real character" % [String(row["fact_code"]), id])
 
 func test_secret_is_known_only_to_its_knowers() -> void:
 	assert_true(KnowledgeBase.knows(state, "char_steward", "fact_chancellor_graft"))

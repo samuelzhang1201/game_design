@@ -27,9 +27,10 @@ static func record(data: DataRepository, state: GameState, claimant: String,
 			"kind": "rumor", "subject": String(claim["subject"]),
 			"claim_type": String(claim["claim_type"]),
 			"text": String(claim["text"]), "truth": bool(claim["truth"]),
+			"source": claimant,
 		})
 		KnowledgeBase.learn(state, listener, fact_code, belief)
-	var record := {
+	var rec := {
 		"claimant": claimant, "listener": listener,
 		"claim_type": String(claim["claim_type"]),
 		"subject": String(claim["subject"]), "text": String(claim["text"]),
@@ -37,8 +38,8 @@ static func record(data: DataRepository, state: GameState, claimant: String,
 		"tick": tick, "status": "open" if believed else "disbelieved",
 		"fact_code": fact_code,
 	}
-	state.claims.append(record)
-	return record
+	state.claims.append(rec)
+	return rec
 
 ## Believed claims still awaiting their reckoning, in record order.
 static func open_claims(state: GameState) -> Array:
@@ -63,13 +64,19 @@ static func resolve_due(data: DataRepository, state: GameState, tick: int) -> Ar
 	return out
 
 ## True when the listener knows a true fact on the same claim_type and
-## subject that is not the claim's own fact — reality has caught up with what
-## they were told. Named for reality rather than contradiction because it
-## fires for honest claims too, which is how truth-telling earns trust.
+## subject that is not the claim's own fact, and did not arrive via this same
+## claimant — reality has caught up with what they were told, through an
+## independent route (spec §6: a lie is exposed by an independent route, not
+## by the speaker's own earlier word). Named for reality rather than
+## contradiction because it fires for honest claims too, which is how
+## truth-telling earns trust.
 static func _reality_known(state: GameState, claim: Dictionary) -> bool:
+	var claimant := String(claim["claimant"])
 	for fact in KnowledgeBase.facts_about(state, String(claim["listener"]),
 			String(claim["claim_type"]), String(claim["subject"])):
 		if String(fact["code"]) == String(claim["fact_code"]):
+			continue
+		if String(fact.get("source", "")) == claimant:
 			continue
 		if bool(fact["truth"]):
 			return true
@@ -93,6 +100,9 @@ static func _resolve(data: DataRepository, state: GameState, claim: Dictionary,
 		SourceTrust.adjust(data, state, claimant, listener, trust_delta, reason, tick)
 		RelationshipGraph.adjust(state, listener, claimant,
 			-data.bal("lie_relationship_penalty"), reason, tick)
+		var claim_fact_code := String(claim["fact_code"])
+		if claim_fact_code != "":
+			KnowledgeBase.unlearn(state, listener, claim_fact_code)
 		betrayal = "%s%d" % [BETRAYAL_PREFIX, state.claims.size() + state.knowledge.size()]
 		KnowledgeBase.add_fact(state, betrayal, {
 			"kind": "secret", "subject": claimant, "claim_type": "loyalty",

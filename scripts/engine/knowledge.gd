@@ -6,8 +6,12 @@ extends RefCounted
 ##
 ## GameState.knowledge maps fact_code to:
 ##   {"kind": public|secret|rumor|common_sense, "subject": String,
-##    "claim_type": String, "text": String, "truth": bool,
+##    "claim_type": String, "text": String, "truth": bool, "source": String,
 ##    "knowers": Array[String], "credibility": {char_id: float}}
+## "source" is the char_id who planted this fact via a claim, or "" when the
+## fact is authored (CSV-seeded) or arrived independently of any speaker —
+## the provenance ClaimLedger._reality_known and Belief._corroboration use to
+## tell an independent route to the truth from a speaker corroborating himself.
 ##
 ## text/truth are stored in state, not read back from CSV, because the
 ## reckoning (ClaimLedger) creates facts at runtime that no CSV authored.
@@ -35,7 +39,7 @@ static func init_from_data(data: DataRepository, state: GameState) -> Dictionary
 		out[code] = {
 			"kind": String(row["kind"]), "subject": String(row["subject"]),
 			"claim_type": String(row["claim_type"]), "text": String(row["text"]),
-			"truth": String(row["truth"]).to_lower() == "true",
+			"truth": String(row["truth"]).to_lower() == "true", "source": "",
 			"knowers": knowers, "credibility": credibility,
 		}
 	return out
@@ -62,8 +66,24 @@ static func learn(state: GameState, char_id: String, fact_code: String,
 		fact["knowers"].append(char_id)
 	fact["credibility"][char_id] = clampf(credibility, 0.0, 100.0)
 
-## Creates a fact at runtime (the reckoning's betrayal facts). No knowers
-## until learn() is called.
+## Reverses learn(): the character no longer knows this fact. A no-op when
+## they never knew it or the fact does not exist (spec §6, a caught lie stops
+## being knowledge — the listener cannot simultaneously hold the lie and the
+## truth that exposed it).
+static func unlearn(state: GameState, char_id: String, fact_code: String) -> void:
+	if not state.knowledge.has(fact_code):
+		return
+	var fact: Dictionary = state.knowledge[fact_code]
+	var knowers: Array = fact["knowers"]
+	if char_id in knowers:
+		knowers.erase(char_id)
+	var credibility: Dictionary = fact["credibility"]
+	if credibility.has(char_id):
+		credibility.erase(char_id)
+
+## Creates a fact at runtime (the reckoning's betrayal facts, or a claim's
+## own believed fact). No knowers until learn() is called. "source" is the
+## char_id who spoke this into being, or "" for an authored/independent fact.
 static func add_fact(state: GameState, fact_code: String, fields: Dictionary) -> void:
 	state.knowledge[fact_code] = {
 		"kind": String(fields.get("kind", "secret")),
@@ -71,17 +91,25 @@ static func add_fact(state: GameState, fact_code: String, fields: Dictionary) ->
 		"claim_type": String(fields.get("claim_type", "")),
 		"text": String(fields.get("text", "")),
 		"truth": bool(fields.get("truth", true)),
+		"source": String(fields.get("source", "")),
 		"knowers": [], "credibility": {},
 	}
 
-## Every fact this character knows, each as the stored fact plus its "code".
+## Every fact this character knows, each as the stored fact plus its "code",
+## sorted by fact_code. Insertion order into state.knowledge is not stable
+## across a save round-trip (SaveLoad stringifies with sort_keys=true), so
+## this sorts defensively rather than relying on Dictionary iteration order.
 static func known_facts(state: GameState, char_id: String) -> Array:
-	var out: Array = []
+	var codes: Array = []
 	for code in state.knowledge:
 		if knows(state, char_id, String(code)):
-			var entry: Dictionary = state.knowledge[code].duplicate(true)
-			entry["code"] = String(code)
-			out.append(entry)
+			codes.append(String(code))
+	codes.sort()
+	var out: Array = []
+	for code in codes:
+		var entry: Dictionary = state.knowledge[code].duplicate(true)
+		entry["code"] = String(code)
+		out.append(entry)
 	return out
 
 ## Known facts narrowed to one claim_type and subject — the corroboration

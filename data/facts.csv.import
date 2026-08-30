@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bffby7e8i6j8a"
+
+[deps]
+
+files=["res://data/facts.kind.translation", "res://data/facts.subject.translation", "res://data/facts.claim.translation", "res://data/facts.text.translation", "res://data/facts.truth.translation", "res://data/facts.base.translation", "res://data/facts.initial.translation", "res://data/facts.notes.translation"]
+
+source_file="res://data/facts.csv"
+dest_files=["res://data/facts.kind.translation", "res://data/facts.subject.translation", "res://data/facts.claim.translation", "res://data/facts.text.translation", "res://data/facts.truth.translation", "res://data/facts.base.translation", "res://data/facts.initial.translation", "res://data/facts.notes.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

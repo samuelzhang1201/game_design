@@ -62,3 +62,28 @@ func test_belief_is_clamped_to_the_range() -> void:
 func test_result_always_carries_a_reason() -> void:
 	var c := _claim("grain", "eastmarch", "The granaries are full", 400.0, true)
 	assert_ne(String(Belief.score(data, state, "char_lord_malvern", "you", c, 80.0)["reason"]), "")
+
+func test_trusting_listener_inflates_the_same_claim() -> void:
+	# char_lady_ysolde (trusting) and char_lord_edgar (no belief traits) both
+	# have no relationship edge with "you", so both trust at the default 50:
+	# 80 * 0.5 = 40.0. Trusting adds +10 -> 50.0; the neutral listener stays 40.0.
+	var c := _claim("grain", "eastmarch", "The eastmarch granaries are full", 400.0, true)
+	var trusting := Belief.score(data, state, "char_lady_ysolde", "you", c, 80.0)
+	var neutral := Belief.score(data, state, "char_lord_edgar", "you", c, 80.0)
+	assert_almost_eq(float(neutral["belief"]), 40.0, 0.001)
+	assert_almost_eq(float(trusting["belief"]), 50.0, 0.001)
+	assert_gt(float(trusting["belief"]), float(neutral["belief"]))
+
+func test_repetition_does_not_corroborate() -> void:
+	# The same speaker's own earlier believed claim mints a fact with
+	# "source" set to that speaker, so it must not count as corroboration for
+	# a second telling of the same thing (spec §6 — corroboration must come
+	# from an independent source). Malvern knows nothing about grain in
+	# eastmarch beforehand, so any corroboration here can only come from the
+	# king's own first telling.
+	var c := _claim("grain", "eastmarch", "The eastmarch granaries are full", 400.0, false)
+	var first := ClaimLedger.record(data, state, "you", "char_lord_malvern", c, 90.0, 1)
+	assert_true(bool(first["believed"]), "the first telling is believed and minted as a fact")
+	var second := Belief.score(data, state, "char_lord_malvern", "you", c, 90.0)
+	assert_eq(int(second["corroboration"]), 0,
+		"the speaker's own earlier claim does not corroborate this one")

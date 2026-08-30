@@ -157,6 +157,37 @@ func test_a_claim_resolves_only_once() -> void:
 	assert_eq(ClaimLedger.resolve_due(data, state, 9).size(), 1)
 	assert_eq(ClaimLedger.resolve_due(data, state, 10).size(), 0, "no double jeopardy")
 
+func test_repeated_true_claims_from_the_same_speaker_do_not_resolve_each_other() -> void:
+	# Asserting the same true thing to Malvern twice must not let either claim
+	# stand in as "reality" for the other — the fact each mints carries
+	# "source": "you", so it is excluded from the other's reality check.
+	var honest := _claim("grain", "eastmarch", "The eastmarch granaries stand empty", 0.0, true)
+	var first := ClaimLedger.record(data, state, "you", "char_lord_malvern", honest, 90.0, 4)
+	var second := ClaimLedger.record(data, state, "you", "char_lord_malvern", honest, 90.0, 5)
+	assert_true(bool(first["believed"]))
+	assert_true(bool(second["believed"]))
+	var trust_before := SourceTrust.get_trust(data, state, "you", "char_lord_malvern")
+	var resolved := ClaimLedger.resolve_due(data, state, 9)
+	assert_eq(resolved.size(), 0, "a speaker's own earlier claim is not independent reality")
+	assert_eq(ClaimLedger.open_claims(state).size(), 2)
+	assert_almost_eq(SourceTrust.get_trust(data, state, "you", "char_lord_malvern"),
+		trust_before, 0.001, "trust does not move when nothing has actually resolved")
+
+func test_caught_lie_is_unlearned() -> void:
+	var rec := _tell_lie_to_malvern()
+	var claim_fact_code := String(rec["fact_code"])
+	assert_true(KnowledgeBase.knows(state, "char_lord_malvern", claim_fact_code))
+	KnowledgeBase.add_fact(state, "fact_eastmarch_empty", {
+		"kind": "public", "subject": "eastmarch", "claim_type": "grain",
+		"text": "The eastmarch granaries stand empty.", "truth": true})
+	KnowledgeBase.learn(state, "char_lord_malvern", "fact_eastmarch_empty", 90.0)
+	var resolved := ClaimLedger.resolve_due(data, state, 9)
+	assert_false(KnowledgeBase.knows(state, "char_lord_malvern", claim_fact_code),
+		"the listener stops believing the exposed lie")
+	var betrayal := String(resolved[0]["betrayal_fact"])
+	assert_true(KnowledgeBase.knows(state, "char_lord_malvern", betrayal),
+		"the betrayal fact itself is still known")
+
 ## --- Task 7: tick integration ---
 
 func test_tick_engine_resolves_claims_and_reports_them() -> void:

@@ -35,3 +35,23 @@ func test_plausible_claim_is_not_vetoed() -> void:
 func test_magnitude_rule_ignores_other_claim_types() -> void:
 	# A huge number in a claim type with no magnitude rule must pass.
 	assert_false(WorldRules.veto(data, "intent", "I mean to build much", 100000000.0)["vetoed"])
+
+func test_resurrection_claim_is_vetoed() -> void:
+	var v := WorldRules.veto(data, "event_report", "He came back from the dead", 0.0)
+	assert_true(v["vetoed"])
+	assert_eq(String(v["rule_code"]), "onto_resurrection")
+
+func test_magic_claim_is_vetoed() -> void:
+	var v := WorldRules.veto(data, "identity", "She is immortal", 0.0)
+	assert_true(v["vetoed"])
+	assert_eq(String(v["rule_code"]), "onto_magic")
+
+func test_gunpowder_anachronism_is_vetoed() -> void:
+	var v := WorldRules.veto(data, "event_report", "They fired a cannon", 0.0)
+	assert_true(v["vetoed"])
+	assert_eq(String(v["rule_code"]), "era_gunpowder")
+
+func test_optics_anachronism_is_vetoed() -> void:
+	var v := WorldRules.veto(data, "event_report", "He watched through a telescope", 0.0)
+	assert_true(v["vetoed"])
+	assert_eq(String(v["rule_code"]), "era_optics")
