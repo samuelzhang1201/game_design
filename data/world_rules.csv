@@ -1,0 +1,9 @@
+rule_code,kind,claim_type,pattern,bound_min,bound_max,verdict,notes
+onto_dragon,ontology,,dragon|wyrm|drake,0,0,impossible,Dragons are stories. No one believes a man is one.
+onto_resurrection,ontology,,raised the dead|back from the dead|resurrect,0,0,impossible,The dead stay dead.
+onto_magic,ontology,,cast a spell|sorcery|enchanted|immortal,0,0,impossible,This court has no working magic.
+era_gunpowder,era,,cannon|gunpowder|musket|rifle,0,0,impossible,Anachronism: no gunpowder in this age.
+era_optics,era,,telescope|microscope|printing press,0,0,impossible,Anachronism: not yet invented.
+mag_army,magnitude,army_size,,0,40000,impossible,"A realm of this age fields thousands, never millions."
+mag_treasury,magnitude,treasury,,0,100000,impossible,Coin beyond this scale is not credible.
+mag_grain,magnitude,grain,,0,5000,impossible,No granary in the realm holds this much.

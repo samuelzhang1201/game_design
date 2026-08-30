@@ -17,6 +17,8 @@ var signatures: Array[Dictionary] = []
 var events: Array[Dictionary] = []
 var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
+var world_rules: Dictionary = {}
+var claim_types: Dictionary = {}
 
 ## Parses a CSV with a header row into an Array of row Dictionaries.
 ## Returns [] and sets last_error if any row is shorter than required_cols
@@ -84,6 +86,13 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/relationships.csv",
 			["from_id", "to_id", "rel_type", "sentiment", "reason"],
 			func(r): relationships.append(r)):
+		return false
+	if not _load_if_present(dir + "/world_rules.csv",
+			["rule_code", "kind", "verdict"],
+			func(r): world_rules[r["rule_code"]] = r):
+		return false
+	if not _load_if_present(dir + "/claim_types.csv", ["claim_type", "label"],
+			func(r): claim_types[r["claim_type"]] = r):
 		return false
 	if not _load_if_present(dir + "/regions.csv", ["region_code", "label"],
 			func(r): regions[r["region_code"]] = r):

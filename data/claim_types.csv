@@ -1,0 +1,8 @@
+claim_type,label,magnitude_unit,notes
+army_size,Army strength,soldiers,Claims about how many troops someone commands.
+treasury,Treasury,gold,Claims about coin held or owed.
+grain,Grain stores,measures,Claims about food supply.
+identity,Identity,,Claims about who or what someone is.
+intent,Intent,,Claims about what someone means to do.
+loyalty,Loyalty,,Claims about where someone's allegiance lies.
+event_report,Event report,,Claims that something happened.
