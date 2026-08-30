@@ -7,7 +7,7 @@ Text-first, LLM-narrated grand strategy game: rule a kingdom for ~60 years throu
 - `PRD.md` — scope of the first playable build. Build order lives here; follow it.
 - `COUNCIL_SYSTEM.md` — the council design doc; source of truth for mechanics and formulas.
 - `RANDOM_EVENTS.md` — random-events system: triggering rules + the event pool. The "Your event seeds" section at the top is the owner's inbox for raw ideas — when new seeds appear there, expand each into a fully spec'd event (trigger, weight, choices with signatures, chain) in the pool below it.
-- `council_seats.csv`, `character_traits.csv`, `faction_escalation.csv`, `policy_actions_court_additions.csv`, `action_signatures.csv`, `events.csv`, `event_choices.csv` — game data, loaded at runtime. **Design values live in these CSVs, never hardcoded in scripts.** Add columns/rows rather than embedding constants.
+- `council_seats.csv`, `character_traits.csv`, `faction_escalation.csv`, `policy_actions_court_additions.csv`, `action_signatures.csv`, `events.csv`, `event_choices.csv`, `world_rules.csv`, `claim_types.csv`, `facts.csv` — game data, loaded at runtime. **Design values live in these CSVs, never hardcoded in scripts.** Add columns/rows rather than embedding constants.
 
 ## Stack
 

@@ -202,6 +202,26 @@ Street (Cassian, Corvin), The Mustering Field (Nora).
   travel between regions is post-MVP and will cost time. The current
   location rides the save.
 
+## Knowledge, belief, and deception
+
+`data/facts.csv` seeds what each character knows — public facts, secrets with
+knower lists, and common sense everyone holds at credibility 100. Knowledge is
+per-character: the Chancellor's graft is one fact known only to Mirella and
+Quill, and the prompt builder never shows a fact to someone who does not know it.
+
+Anyone may assert anything. `Belief` scores an assertion from its plausibility,
+the listener's trust in the speaker (derived from how the listener feels about
+them), the listener's traits, and corroboration with what they already know.
+`data/world_rules.csv` vetoes the impossible outright — no one believes you are
+a dragon, whatever else is true.
+
+A believed claim becomes a fact the listener knows, so a swallowed lie behaves
+exactly like knowledge. `ClaimLedger` keeps the engine's ground truth beside it;
+when the listener later learns a contradicting truth, the reckoning fires: a
+truth told earns a little trust, a lie caught costs a lot of it, costs
+relationship sentiment, and mints a secret — "the king lied about X" — that the
+wronged character knows and the court will eventually learn.
+
 ## When the player meets these roles
 
 Roles interact with the player through the two existing loops — no new flow:
