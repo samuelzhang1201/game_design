@@ -70,3 +70,4 @@ belief_trait_trusting,10,trusting listeners inflate every claim
 truth_told_trust_gain,3,source trust gained when a claim is borne out
 lie_caught_trust_penalty,25,source trust lost when a lie is exposed
 lie_relationship_penalty,12,relationship sentiment lost when a lie is exposed
+memory_exchanges_kept,8,conversational exchanges each character remembers (oldest fall off)

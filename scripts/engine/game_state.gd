@@ -14,6 +14,8 @@ var knowledge: Dictionary = {}
 var source_trust: Dictionary = {}
 ## Claim records; shape and API in ClaimLedger.
 var claims: Array = []
+## What each character remembers being told; shape and API in AgentMemory.
+var agent_memory: Dictionary = {}
 ## Character creation (main menu): {"first_name", "family_name", "flag"}.
 ## Applied by apply_player_setup; kept so saves restore the chosen identity.
 var player_setup: Dictionary = {}
@@ -179,6 +181,7 @@ func to_dict() -> Dictionary:
 		"knowledge": _encode_values(knowledge.duplicate(true)),
 		"source_trust": _encode_values(source_trust.duplicate(true)),
 		"claims": _encode_values(claims.duplicate(true)),
+		"agent_memory": _encode_values(agent_memory.duplicate(true)),
 		"player_setup": player_setup.duplicate(true),
 		"current_location": current_location,
 		"cooldowns": _encode_values(cooldowns.duplicate()),
@@ -208,6 +211,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.knowledge = _decode_values(d.get("knowledge", {}))
 	s.source_trust = _decode_values(d.get("source_trust", {}))
 	s.claims = _decode_values(d.get("claims", []))
+	s.agent_memory = _decode_values(d.get("agent_memory", {}))
 	s.player_setup = d.get("player_setup", {}).duplicate(true)
 	s.current_location = String(d.get("current_location", LocationSystem.DEFAULT_LOCATION))
 	var decoded_cooldowns = _decode_values(d["cooldowns"])
