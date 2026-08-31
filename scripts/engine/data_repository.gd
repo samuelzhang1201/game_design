@@ -19,6 +19,8 @@ var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
 var world_rules: Dictionary = {}
 var claim_types: Dictionary = {}
+## event_id -> authored scene prose, from RANDOM_EVENTS.md (see StorySource).
+var event_scenes: Dictionary = {}
 var facts: Array[Dictionary] = []
 
 ## Parses a CSV with a header row into an Array of row Dictionaries.
@@ -121,6 +123,9 @@ func _load(dir: String) -> bool:
 		return false
 	for row in events:
 		events_by_id[row["event_id"]] = row
+	# Event prose is authored, not generated: it comes from the story
+	# document, and templates.csv no longer carries a copy to drift from it.
+	event_scenes = StorySource.load_scenes()
 	if not _load_if_present(dir + "/event_choices.csv",
 			["event_id", "choice_id", "label", "centralism", "militarism", "orthodoxy",
 			"tax_incidence", "expansionism", "effects", "requires"],
