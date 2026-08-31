@@ -5,7 +5,11 @@ class FakeClient:
 	signal completed(ok: bool, text: String)
 	var canned_ok := false
 	var canned_text := ""
+	## Counts requests so a test can assert an API call did NOT happen —
+	## needed since event stories must never reach a model.
+	var calls := 0
 	func request_completion(_s: String, _u: String, _m: String, _j: bool) -> void:
+		calls += 1
 		completed.emit.call_deferred(canned_ok, canned_text)
 
 var data: DataRepository
@@ -171,29 +175,54 @@ func test_overlapping_briefing_calls_both_fire_exactly_once() -> void:
 	assert_false(got_a["degraded"])
 	assert_eq(got_a["lines"][0]["text"], "hear ye, the harvest is good")
 
-func test_voice_event_template_tier_no_client_call() -> void:
+## The two former tier tests (template short-circuits, mini degrades on
+## failure) collapse into one stronger guarantee: NO event reaches a model,
+## whatever its data says. The old `voice` values are passed deliberately —
+## a surviving tier branch would make this fail.
+func test_voice_event_never_calls_the_model_whatever_the_voice_value() -> void:
+	var s := GameState.new_campaign(data, 42)
+	for tier in ["template", "mini", "flagship"]:
+		var fake := FakeClient.new()
+		fake.canned_ok = true
+		fake.canned_text = "MODEL WORDS"
+		add_child_autofree(fake)
+		var v := Voicer.new(fake)
+		add_child_autofree(v)
+		var ev := {"event_id": "ev_01", "title_key": "event_ev_01",
+			"voice": tier, "choices": []}
+		got = {}
+		v.voice_event(ev, s, data, func(res): got = res)
+		await wait_frames(3)
+		assert_true(got["ok"], tier)
+		assert_false(got["degraded"], tier + ": authored prose cannot degrade")
+		assert_ne(String(got["text"]), "", tier)
+		assert_false(String(got["text"]).contains("MODEL WORDS"),
+			tier + ": no model text may reach an event scene")
+		assert_eq(fake.calls, 0, tier + ": no API call")
+
+func test_voice_event_serves_the_authored_scene() -> void:
 	var fake := FakeClient.new()
 	add_child_autofree(fake)
 	var v := Voicer.new(fake)
 	add_child_autofree(v)
 	var s := GameState.new_campaign(data, 42)
-	var ev := {"event_id": "ev_01", "title_key": "event_ev_01", "voice": "template", "choices": []}
+	var ev := {"event_id": "ev_01", "title_key": "event_ev_01", "choices": []}
 	got = {}
 	v.voice_event(ev, s, data, func(res): got = res)
 	await wait_frames(3)
-	assert_true(got["ok"])
-	assert_ne(String(got["text"]), "")
+	assert_eq(String(got["text"]), String(data.event_scenes["ev_01"]),
+		"the scene is exactly what RANDOM_EVENTS.md says")
 
-func test_voice_event_mini_falls_back_on_failure() -> void:
-	var fake := FakeClient.new()  # canned_ok=false -> failure path
+func test_voice_event_marks_an_unauthored_scene_rather_than_inventing_one() -> void:
+	var fake := FakeClient.new()
 	add_child_autofree(fake)
 	var v := Voicer.new(fake)
 	add_child_autofree(v)
 	var s := GameState.new_campaign(data, 42)
-	var ev := {"event_id": "ev_01", "title_key": "event_ev_01", "voice": "mini", "choices": []}
 	got = {}
-	v.voice_event(ev, s, data, func(res): got = res)
+	v.voice_event({"event_id": "ev_nonexistent", "choices": []}, s, data,
+		func(res): got = res)
 	await wait_frames(3)
-	assert_true(got["ok"])
-	assert_true(got["degraded"])
-	assert_ne(String(got["text"]), "")
+	assert_string_contains(String(got["text"]), "missing scene",
+		"a gap in the story document is visible, never papered over")
+	assert_eq(fake.calls, 0)

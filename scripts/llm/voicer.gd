@@ -40,28 +40,34 @@ func voice_briefing(report: TickReport, state: GameState, data: DataRepository,
 ## event (not a degraded fallback) — its callback fires deferred without ever
 ## touching client. mini/flagship tiers ask the model to rewrite the same
 ## template line; any model failure (or a busy Voicer) degrades back to it.
+## Delivers an event's scene. NO MODEL IS INVOLVED, ever (user ruling
+## 2026-08-31: every event story is fixed, authored prose). The text is the
+## author's own, read from RANDOM_EVENTS.md via StorySource; templates.csv
+## keeps only the per-choice outcome lines.
+##
+## This makes the guarantee structural rather than a data value: there is no
+## branch a CSV edit could take to reach the client, and no event prompt
+## exists to send. `degraded` is always false because nothing can degrade —
+## the authored text either exists or the story document is missing a scene,
+## which the suite catches.
 func voice_event(ev: Dictionary, state: GameState, data: DataRepository, cb: Callable) -> void:
-	var fallback := TemplateVoicer.line_for(data, String(ev["title_key"]), [], state.tick)
-	var tier := String(ev.get("voice", "template"))
-	if tier == "template":
-		cb.call_deferred({"ok": true, "degraded": false, "text": fallback})
-		return
-	if _busy:
-		push_warning("Voicer busy — event scene degraded to template")
-		cb.call({"ok": true, "degraded": true, "text": fallback})
-		return
-	_busy = true
-	var model := String(_config.get("model_flagship", "gpt-5.6-sol")) if tier == "flagship" \
-		else String(_config["model_voice"])
-	var p := PromptBuilder.briefing_prompts_for_event(ev, state, fallback)
-	client.completed.connect(func(ok: bool, text: String):
-		_busy = false
-		if ok and text != "":
-			cb.call({"ok": true, "degraded": false, "text": text})
-		else:
-			cb.call({"ok": true, "degraded": true, "text": fallback}),
-		CONNECT_ONE_SHOT)
-	client.request_completion(p["system"], p["user"], model, false)
+	cb.call_deferred({"ok": true, "degraded": false,
+		"text": scene_text(ev, state, data)})
+
+## The authored scene for an event, or a visible marker when the story
+## document has no entry for it — never invented text, and never silence.
+static func scene_text(ev: Dictionary, state: GameState, data: DataRepository) -> String:
+	var id := String(ev.get("event_id", ""))
+	if data.event_scenes.has(id):
+		return String(data.event_scenes[id])
+	# Legacy saves and hand-built test fixtures may carry a title_key whose
+	# line still lives in templates.csv; fall back to it before giving up.
+	var key := String(ev.get("title_key", ""))
+	if key != "":
+		var line := TemplateVoicer.line_for(data, key, [], state.tick)
+		if not line.begins_with("[missing template"):
+			return line
+	return "[missing scene: %s]" % id
 
 ## In-character reply from one role to conversational free text (no legal
 ## action matched — see Game.submit_free_text's ride-along). Failure/offline

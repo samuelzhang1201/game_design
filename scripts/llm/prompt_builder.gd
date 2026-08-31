@@ -109,9 +109,7 @@ static func realm_facts(state: GameState) -> String:
 			parts.append("%s %d" % [m, int(state.metrics[m])])
 	return ", ".join(parts) + ". Season: %s, year %d." % [state.season(), state.year()]
 
-static func briefing_prompts_for_event(_ev: Dictionary, state: GameState,
-		template_line: String) -> Dictionary:
-	var system := """You narrate a single scene at a medieval royal court.
-Rewrite the scene below in 2-3 vivid sentences, second person, present tense.
-Do not add choices, numbers, or events beyond what the scene states."""
-	return {"system": system, "user": "Scene (tick %d): %s" % [state.tick, template_line]}
+# No event prompt exists by design (user ruling 2026-08-31). Event stories
+# are fixed authored prose from RANDOM_EVENTS.md, delivered by
+# Voicer.voice_event without a model. Do not add one back: if an event needs
+# different words, write them in the story document.

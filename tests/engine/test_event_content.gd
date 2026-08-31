@@ -17,20 +17,25 @@ func test_pool_inventory() -> void:
 		assert_true(String(row["voice"]) in ["template", "mini", "flagship"], id + " voice")
 		assert_gt(float(row["weight"]), 0.0, id)
 
-func test_voice_tier_distribution() -> void:
-	var flagship := 0
+## No event may be model-voiced (user ruling 2026-08-31): event stories are
+## fixed authored prose. This asserts the data agrees with the code, which
+## has no branch to a model at all.
+func test_no_event_is_model_voiced() -> void:
 	for row in data.events:
-		if String(row["voice"]) == "flagship":
-			flagship += 1
-	assert_eq(flagship, 2)  # ev_10 prophet debate, ev_19 orphan (spec/PRD cost posture)
+		assert_eq(String(row["voice"]), "template",
+			String(row["event_id"]) + " must not be model-voiced")
 
-func test_every_template_key_exists() -> void:
+## Scene prose now lives in RANDOM_EVENTS.md, not templates.csv — the CSV
+## keeps only the per-choice outcome lines. Both halves still have to exist.
+func test_every_event_has_authored_scene_and_outcome_lines() -> void:
 	var keys := {}
 	for t in data.templates:
 		keys[String(t["key"])] = true
 	for row in data.events:
-		assert_true(keys.has("event_" + String(row["event_id"])),
-			"missing scene template for " + String(row["event_id"]))
+		var id := String(row["event_id"])
+		assert_true(data.event_scenes.has(id), "missing authored scene for " + id)
+		assert_false(keys.has("event_" + id),
+			id + "'s scene must not also sit in templates.csv, or the two will drift")
 	for c in data.event_choices:
 		assert_true(keys.has("event_%s_%s" % [c["event_id"], c["choice_id"]]),
 			"missing outcome template for %s/%s" % [c["event_id"], c["choice_id"]])

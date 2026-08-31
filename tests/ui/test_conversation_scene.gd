@@ -218,15 +218,13 @@ func test_quick_reply_narrates_kept_promise_effect() -> void:
 	await wait_frames(2)
 	assert_string_contains(c.dialogue_text(), "a promise kept")
 
-## Migrates the real gap in the deleted council-screen test
-## test_event_voicing_reaches_client_not_starved_by_briefing: proves the
-## conversation stage's event beat surfaces the LLM's canned text verbatim
-## (non-degraded), not the template fallback, when the voicer is free to
-## call the client. ev_02 is voice=mini (see data/events.csv), so
-## Voicer.voice_event actually calls the client rather than short-circuiting
-## to the template tier - this is the successful non-degraded path, not the
-## busy/fallback path already covered elsewhere.
-func test_event_beat_voices_canned_text_non_degraded() -> void:
+## The author's own scene reaches the stage, and no model is consulted to get
+## it there (user ruling 2026-08-31). This replaces the former
+## test_event_beat_voices_canned_text_non_degraded, which proved the opposite
+## guarantee — that the LLM's rewrite surfaced — a behaviour deliberately
+## removed. A canned reply is armed here precisely so that its ABSENCE from
+## the transcript is meaningful: if any model path survived, this fails.
+func test_event_beat_shows_authored_scene_without_calling_the_model() -> void:
 	Game.start_campaign(42)
 	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
 	fake.canned_ok = true
@@ -236,15 +234,16 @@ func test_event_beat_voices_canned_text_non_degraded() -> void:
 	var report := Game.next_tick()
 	if not Game.state.pending_event.is_empty():
 		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
-	Game.engine.events._fire("ev_02", Game.state)  # mini-voice event: the client IS called
+	Game.engine.events._fire("ev_02", Game.state)
 	var beats := [{"kind": "event", "portrait_id": "round_table",
 		"speaker": "The Council", "event": Game.state.pending_event.duplicate(true)}]
 	var c := _scene_with(beats, report)
 	await wait_frames(3)
-	# The transcript prefixes the speaker ("The Council: ..."); the canned
-	# text itself must surface verbatim, not degrade to the template fallback.
-	assert_eq(c.dialogue_text(), "The Council: A rider brings word of omens.",
-		"the canned text must surface verbatim under the speaker's name")
+	assert_string_contains(c.dialogue_text(), "fur-lined cloak",
+		"the scene is the prose written in RANDOM_EVENTS.md")
+	assert_false(c.dialogue_text().contains("A rider brings word of omens."),
+		"the model's words must never appear in an event scene")
+	assert_eq(fake.calls, 0, "an event scene costs no API call at all")
 
 ## F1 (final-review fix wave): Game.submit_free_text's EVENT_CHOICE branch was
 ## unreachable in real play because the free-text box was hidden on event
