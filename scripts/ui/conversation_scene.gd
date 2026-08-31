@@ -172,13 +172,25 @@ func event_popup() -> Control:
 ## Where the player stands, who is present (click a face to seek them out),
 ## and MOVE — free movement within the region (LocationSystem).
 
-## Set while the player has sought out an occupant: they become the dossier
-## subject and the free-text addressee until the next beat.
-var _visiting_id := ""
+## Who the player is addressing (user request 2026-08-31). Empty means the
+## whole room: speaking with nobody selected addresses everyone present.
+## Clicking a portrait toggles membership; the dossier follows the most
+## recent click. Cleared on a move, since a selection cannot outlive being
+## in the same place as the people in it.
+var _selected_ids: Array = []
+
+## Tracks where the panel last rendered, so a location change can clear the
+## address list wherever the move came from — the move popup, an event, or a
+## script. Clearing only in the popup handler would leave stale targets on
+## every other path.
+var _last_location := ""
 
 func _refresh_location() -> void:
 	if Game.state == null:
 		return
+	if Game.state.current_location != _last_location:
+		_last_location = Game.state.current_location
+		_selected_ids.clear()
 	# Same rename-then-free dance as _show_speaker: replacements arrive this
 	# frame while the outgoing nodes are still pending delete, and a name
 	# collision would permanently auto-rename the new nodes.
@@ -195,49 +207,72 @@ func _refresh_location() -> void:
 		btn.custom_minimum_size = Vector2(26, 26)
 		btn.focus_mode = Control.FOCUS_NONE
 		btn.tooltip_text = Game.state.characters[id].display_name
-		btn.pressed.connect(_visit.bind(String(id)))
+		btn.toggle_mode = true
+		btn.button_pressed = String(id) in _selected_ids
+		btn.add_theme_stylebox_override("pressed",
+			UiPalette.chip_style(UiPalette.CHIP_BG, UiPalette.GOLD))
+		btn.pressed.connect(_toggle_target.bind(String(id)))
 		var chip := CharacterPortrait.instantiate_for(id, false)
 		chip.scale = Vector2(0.5, 0.5)
 		chip.position = Vector2(1, 1)
 		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		btn.add_child(chip)
 		%OccupantsRow.add_child(btn)
+	_refresh_target_hint()
 
-## Seek out someone present here: the dialogue box becomes YOUR conversation
-## with them (user ruling 2026-08-30) — their dossier fills the left column,
-## typed words go to them, the beat's replies step aside, and Continue turns
-## into "Take your leave" (ending the visit, NOT advancing the council flow).
-func _visit(id: String) -> void:
-	_visiting_id = id
-	var c: Character = Game.state.characters[id]
-	_show_speaker({"portrait_id": id, "speaker": c.display_name})
-	_name_label.text = c.display_name
-	_replies_box.visible = false
-	_free_text.visible = true
-	_continue_btn.visible = true
-	_continue_btn.text = "Take your leave"
-	_say("", "You seek out %s." % c.display_name)
-
-## Ends a visit and restores the current beat's stage; advances beats only
-## when not visiting.
-func _on_continue() -> void:
-	if _visiting_id != "":
-		_end_visit()
+## Adds or removes someone from the address list. Selecting nobody means the
+## whole room, so deselecting the last target quietly returns to addressing
+## everyone. The dossier follows the click so you still see who you are
+## dealing with.
+func _toggle_target(id: String) -> void:
+	if id in _selected_ids:
+		_selected_ids.erase(id)
 	else:
-		_advance()
+		_selected_ids.append(id)
+	if not _selected_ids.is_empty():
+		var focus := String(_selected_ids[_selected_ids.size() - 1])
+		var c: Character = Game.state.characters[focus]
+		_show_speaker({"portrait_id": focus, "speaker": c.display_name})
+		_name_label.text = c.display_name
+	else:
+		var b := current_beat()
+		if not b.is_empty():
+			_show_speaker(b)
+			_name_label.text = String(b.get("speaker", ""))
+	_refresh_target_hint()
 
-func _end_visit() -> void:
-	_visiting_id = ""
-	_replies_box.visible = true
-	_continue_btn.text = "Wave them on"
-	var b := current_beat()
-	if b.is_empty():
-		_advance()
-		return
-	_show_speaker(b)
-	_name_label.text = String(b.get("speaker", ""))
-	_continue_btn.visible = String(b["kind"]) in ["minister", "summary"]
-	_free_text.visible = String(b["kind"]) in ["minister", "event"]
+func _on_continue() -> void:
+	_advance()
+
+## Everyone the next typed line reaches: the explicit selection, or the whole
+## room when nothing is selected. Filtered against who is actually here, so a
+## stale id can never be addressed.
+func audience() -> Array:
+	if Game.state == null:
+		return []
+	var present := LocationSystem.occupants(
+		Game.data, Game.state, Game.state.current_location)
+	if _selected_ids.is_empty():
+		return present
+	var out: Array = []
+	for id in _selected_ids:
+		if id in present:
+			out.append(String(id))
+	return out
+
+func selected_ids() -> Array:
+	return _selected_ids.duplicate()
+
+## The input box states who it will reach, so the player is never guessing.
+func _refresh_target_hint() -> void:
+	var who := audience()
+	if _selected_ids.is_empty():
+		_free_text.placeholder_text = "Talk to everyone here..."
+	elif who.size() == 1:
+		_free_text.placeholder_text = "Talk to %s..." % \
+			Game.state.characters[who[0]].display_name
+	else:
+		_free_text.placeholder_text = "Talk to %d people..." % who.size()
 
 func _open_move_popup() -> void:
 	%EventPopup.visible = true
@@ -261,6 +296,8 @@ func _open_move_popup() -> void:
 		btn.focus_mode = Control.FOCUS_NONE
 		btn.disabled = here
 		btn.pressed.connect(func() -> void:
+			# The address list is cleared by _refresh_location on the location
+			# change itself, so every route into move_to is covered.
 			Game.move_to(String(code))
 			%EventPopup.visible = false
 			_say("", "You make your way to %s." % String(row["label"])))
@@ -272,8 +309,10 @@ func _open_move_popup() -> void:
 	cancel.pressed.connect(func() -> void: %EventPopup.visible = false)
 	%PopupChoices.add_child(cancel)
 
-func visiting_id() -> String:
-	return _visiting_id
+## Test seam: who the dossier is focused on, or "" when it follows the beat.
+func focused_id() -> String:
+	return String(_selected_ids[_selected_ids.size() - 1]) \
+		if not _selected_ids.is_empty() else ""
 
 ## True when the beat's speaker stands where the player stands. Non-character
 ## speakers (the round table, the herald) are location-free.
@@ -366,7 +405,6 @@ func _advance() -> void:
 	%EventPopup.visible = false
 	_next_reply_letter = 0
 	_resolved_event = false
-	_visiting_id = ""
 	_replies_box.visible = true
 	# The move popup shares the centered popup with events/narration — no
 	# moving while one is on stage (resolve or continue first).
@@ -599,10 +637,11 @@ func _on_free_text(text: String) -> void:
 	var beat := current_beat()
 	if String(beat.get("kind", "")) == "minister":
 		facing = String(beat.get("portrait_id", ""))
-	# Seeking someone out (location panel) overrides the beat's speaker:
-	# typed words go to whoever the player walked up to.
-	if _visiting_id != "":
-		facing = _visiting_id
+	# An explicit selection overrides the beat's speaker: typed words go to
+	# whoever the player picked out of the room.
+	var addressed := audience()
+	if not _selected_ids.is_empty() and not addressed.is_empty():
+		facing = String(addressed[0])
 	_say("You", text)
 	# Stale-callback bookkeeping: only text aimed at a then-UNRESOLVED event
 	# can go stale (a button click resolving it while the parse flies).
@@ -650,4 +689,4 @@ func _on_free_text(text: String) -> void:
 			_say(String(res["reply"]["speaker"]), String(res["reply"]["text"]))
 		elif spoken == "":
 			_say("Herald", "So noted.")
-	, facing)
+	, facing, addressed)

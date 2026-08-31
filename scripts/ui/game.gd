@@ -157,12 +157,25 @@ var _prompts_this_tick := 0
 ## conversation stage passes its current beat's minister) — used to pick who
 ## answers conversational text; the court screen passes none and the
 ## Chancellor, "your primary voice" (council_seats.csv), answers instead.
-func submit_free_text(text: String, cb: Callable, speaker_hint: String = "") -> void:
+## `audience`: everyone the words reach — the conversation screen's explicit
+## selection, or the whole room when nothing is selected. All of them
+## remember hearing it (AgentMemory); exactly one of them answers, so cost
+## stays at one call per utterance however many people are listening.
+## Empty audience falls back to whoever is at the player's location.
+func submit_free_text(text: String, cb: Callable, speaker_hint: String = "",
+		audience: Array = []) -> void:
 	if _prompts_this_tick >= int(data.bal("prompt_calls_per_tick")):
 		cb.call({"ok": false, "executed": [], "rejected": [],
 			"error": "the council will hear no more orders this fortnight"})
 		return
 	_prompts_this_tick += 1
+	var heard_by: Array = audience if not audience.is_empty() \
+		else LocationSystem.occupants(data, state, state.current_location)
+	for id in heard_by:
+		AgentMemory.remember(data, state, String(id), "you", text,
+			heard_by, state.current_location, state.tick)
+	if not heard_by.is_empty():
+		state_changed.emit()
 	_ensure_llm()
 	voicer.parse_player_text(text, current_report, state, data,
 		func(res: Dictionary):
@@ -207,7 +220,7 @@ func submit_free_text(text: String, cb: Callable, speaker_hint: String = "") -> 
 					only_questions = false
 			if only_questions:
 				var speaker := _converse_speaker(res["court_reaction"], speaker_hint,
-					_consult_target(res["actions"]))
+					_consult_target(res["actions"]), heard_by)
 				if speaker != "":
 					voicer.converse(speaker, text, state, data,
 						func(reply: Dictionary):
@@ -238,8 +251,11 @@ func _consult_target(actions: Array) -> String:
 ## here, NOBODY answers (""). With no one named: the person the player is
 ## facing, else the Chancellor if present, else anyone present.
 func _converse_speaker(court_reaction: Dictionary, hint: String,
-		consult_target: String = "") -> String:
-	var present := LocationSystem.occupants(data, state, state.current_location)
+		consult_target: String = "", audience: Array = []) -> String:
+	# Only someone the words actually reached may answer: the explicit
+	# selection when there is one, else everyone at the player's location.
+	var present: Array = audience if not audience.is_empty() \
+		else LocationSystem.occupants(data, state, state.current_location)
 	var named: Array = []
 	if state.council.has(consult_target):
 		named.append(String(state.council[consult_target]))

@@ -223,6 +223,105 @@ func test_absent_addressee_gets_herald_note_not_api_reply() -> void:
 
 var _got: Dictionary = {}
 
+## --- Talk-to-whom targeting (user request 2026-08-31) ---
+
+func _conversation_at(location: String) -> ConversationScene:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	Game.state.current_location = location
+	var r := _root()
+	await wait_frames(2)
+	r._switch_to(GameRoot.State.CONVERSATION)
+	var scene: ConversationScene = r.current_screen
+	scene.start([{"kind": "minister", "portrait_id": "char_chancellor",
+		"speaker": "Aldwin Reeve", "text": "My lord.", "suggestions": []}], report)
+	await wait_frames(2)
+	return scene
+
+func test_no_selection_addresses_everyone_present() -> void:
+	var scene := await _conversation_at("council_chamber")
+	assert_eq(scene.selected_ids().size(), 0, "nothing selected by default")
+	assert_eq(scene.audience().size(), 5, "the whole council chamber is addressed")
+	assert_string_contains(scene.free_text_field().placeholder_text, "everyone")
+
+func test_selecting_one_character_narrows_the_audience_and_names_them() -> void:
+	var scene := await _conversation_at("council_chamber")
+	scene.find_child("Occupant_char_marshal", true, false).pressed.emit()
+	await wait_frames(1)
+	assert_eq(scene.audience(), ["char_marshal"])
+	assert_string_contains(scene.free_text_field().placeholder_text,
+		"Ser Brandt of Harrow", "the box names who you are addressing")
+
+func test_selecting_several_reports_a_count() -> void:
+	var scene := await _conversation_at("council_chamber")
+	scene.find_child("Occupant_char_marshal", true, false).pressed.emit()
+	scene.find_child("Occupant_char_steward", true, false).pressed.emit()
+	await wait_frames(1)
+	assert_eq(scene.audience().size(), 2)
+	assert_string_contains(scene.free_text_field().placeholder_text, "2 people")
+
+func test_clicking_a_selected_character_deselects_and_returns_to_everyone() -> void:
+	var scene := await _conversation_at("council_chamber")
+	var btn: Button = scene.find_child("Occupant_char_marshal", true, false)
+	btn.pressed.emit()
+	await wait_frames(1)
+	assert_eq(scene.audience(), ["char_marshal"])
+	btn.pressed.emit()
+	await wait_frames(1)
+	assert_eq(scene.selected_ids().size(), 0)
+	assert_eq(scene.audience().size(), 5, "back to addressing the room")
+	assert_string_contains(scene.free_text_field().placeholder_text, "everyone")
+
+func test_moving_location_clears_the_selection() -> void:
+	var scene := await _conversation_at("council_chamber")
+	scene.find_child("Occupant_char_marshal", true, false).pressed.emit()
+	await wait_frames(1)
+	assert_eq(scene.selected_ids().size(), 1)
+	Game.move_to("mustering_field")
+	await wait_frames(2)
+	assert_eq(scene.selected_ids().size(), 0,
+		"a selection cannot survive walking away from the people in it")
+
+func test_everyone_addressed_remembers_but_only_one_answers() -> void:
+	# The point of the feature: you told the room, so the room remembers —
+	# while cost discipline keeps it to a single reply.
+	var scene := await _conversation_at("council_chamber")
+	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"actions": [],
+		"court_reaction": {"addressed": [], "tone": "neutral"}})
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	scene.free_text_field().text_submitted.emit("the granaries are full")
+	await wait_frames(4)
+	var heard := 0
+	for id in LocationSystem.occupants(Game.data, Game.state, "council_chamber"):
+		var log := AgentMemory.exchanges_for(Game.state, String(id))
+		if log.size() == 1 and String(log[0]["text"]) == "the granaries are full":
+			heard += 1
+	assert_eq(heard, 5, "every minister present remembers being told")
+	assert_eq(AgentMemory.exchanges_for(Game.state, "char_lord_malvern").size(), 0,
+		"Malvern is in his study and hears nothing")
+
+func test_selected_targets_alone_remember() -> void:
+	var scene := await _conversation_at("council_chamber")
+	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"actions": [],
+		"court_reaction": {"addressed": [], "tone": "neutral"}})
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	scene.find_child("Occupant_char_spymaster", true, false).pressed.emit()
+	await wait_frames(1)
+	scene.free_text_field().text_submitted.emit("a word in your ear")
+	await wait_frames(4)
+	assert_eq(AgentMemory.exchanges_for(Game.state, "char_spymaster").size(), 1,
+		"the one you singled out remembers")
+	assert_eq(AgentMemory.exchanges_for(Game.state, "char_chancellor").size(), 0,
+		"the rest of the room does not overhear a targeted word")
+	var log := AgentMemory.exchanges_for(Game.state, "char_spymaster")
+	assert_eq(log[0]["audience"], ["char_spymaster"], "recorded as a private word")
+
 func test_chat_after_event_resolution_shows_reply() -> void:
 	# User bug 2026-08-30 ("why I still cannot see response?"): resolve an
 	# event, then seek someone out and greet them — the old blanket

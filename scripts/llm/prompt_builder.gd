@@ -33,6 +33,11 @@ static func persona_context(id: String, state: GameState, data: DataRepository) 
 	var rels := RelationshipGraph.describe_for(state, id)
 	if rels != "":
 		lines += "\nRelationships:\n" + rels
+	# What the ruler has actually said to them, so they can refer back to it
+	# rather than meeting the player fresh every time (AgentMemory).
+	var memory := AgentMemory.describe_for(state, id)
+	if memory != "":
+		lines += "\nWhat the ruler has said to you:\n" + memory
 	return lines
 
 static func briefing_prompts(report: TickReport, state: GameState) -> Dictionary:
