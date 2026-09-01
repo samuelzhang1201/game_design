@@ -93,11 +93,18 @@ func _ready() -> void:
 	add_child(_timer)
 	gui_input.connect(_on_gui_input)
 
-## Anchor the ticker window to a screen-space rect (top-left + width; height
-## grows with content). game_ui.png places it at the map's lower left.
-func place_panel(pos: Vector2, width: float) -> void:
-	_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_panel.position = pos
+## Anchor the chronicle window to the bottom of the screen (user request
+## 2026-08-31: the day-run window always sits at the bottom of the UI):
+## left edge at `left`, bottom edge `bottom_margin` px above the screen
+## bottom, growing UPWARD as entries are added so it never slides under the
+## bottom chrome.
+func place_panel_bottom(left: float, bottom_margin: float, width: float) -> void:
+	_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_panel.offset_left = left
+	_panel.offset_right = left + width
+	_panel.offset_top = -bottom_margin
+	_panel.offset_bottom = -bottom_margin
 	_panel.custom_minimum_size = Vector2(width, 0)
 
 ## tick: the tick that just BEGAN (engine already advanced) - the interlude
@@ -128,9 +135,12 @@ func _advance_day() -> void:
 		_add_news(CalendarOverlay.news_line(Game.data, _tick, _day))
 
 ## One dated chronicle entry (game_ui.png: gold date line, soft text below).
+## Every entry also feeds the persistent bottom news strip via
+## Game.publish_news (user request 2026-08-31).
 func _add_news(text: String) -> void:
 	if text == "":
 		return
+	Game.publish_news("%s — %s" % [Calendar.date_string(_tick, _day), text])
 	var entry := VBoxContainer.new()
 	entry.add_theme_constant_override("separation", 1)
 	var date := Label.new()

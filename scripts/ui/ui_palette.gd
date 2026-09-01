@@ -21,6 +21,9 @@ const DIM_OVERLAY := Color(0.04, 0.04, 0.07, 0.84)
 ## Translucent ground for the chronicle ticker (game_ui.png: a transparent
 ## window whose surroundings stay visible through it).
 const GLASS_BG := Color(0.03, 0.03, 0.06, 0.78)
+## Softer glass for the always-on bottom news strip (user request
+## 2026-08-31: the ticker is transparent, the screen stays visible under it).
+const GLASS_BG_SOFT := Color(0.03, 0.03, 0.06, 0.5)
 
 ## Per-skill bar colors, matching the mock's attribute rows (diplomacy green,
 ## martial red, stewardship gold, intrigue purple, admin/learning blue).
@@ -34,6 +37,12 @@ const SKILL_NAMES := {
 	"sk_diplomacy": "Diplomacy", "sk_steward": "Steward",
 }
 const SKILL_MAX := 20.0  # CharacterFactory clamps skills to 0..20
+
+## Dossier SKILLS-tab tool colors (user request 2026-08-31): gold for a
+## seat's kingdom operations, teal for person-to-person tools, so the two
+## kinds read apart at a glance.
+const TOOL_KINGDOM := GOLD
+const TOOL_PERSONAL := Color("6bb5ab")
 
 ## Family flag choices for character creation (simple icons for now — art
 ## comes later): a font glyph on a heraldic field color, picked in the main

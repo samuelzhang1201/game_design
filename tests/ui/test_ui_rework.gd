@@ -170,19 +170,16 @@ func test_location_panel_shows_occupants_and_moves_freely() -> void:
 	assert_eq(Game.state.tick, tick_before, "no time cost")
 	assert_eq(scene.find_child("OccupantsRow", true, false).get_child_count(), 1,
 		"Nora alone on the field")
-	# Clicking an occupant seeks them out: the box becomes YOUR conversation
-	# with them — beat replies step aside, Continue becomes "Take your leave".
+	# Clicking an occupant singles them out (the old "visit" flow became the
+	# selection model, user request 2026-08-31): typed words go to them and
+	# the dossier follows the click.
 	scene.find_child("Occupant_char_princess", true, false).pressed.emit()
 	await wait_frames(1)
-	assert_eq(scene.visiting_id(), "char_princess")
-	assert_string_contains(scene.dialogue_text(), "You seek out Princess Nora")
-	assert_eq(scene.continue_button().text, "Take your leave")
-	var beat_before := scene.current_beat()
-	scene.continue_button().pressed.emit()
+	assert_eq(scene.audience(), ["char_princess"])
+	assert_eq(scene.focused_id(), "char_princess")
+	scene.find_child("Occupant_char_princess", true, false).pressed.emit()
 	await wait_frames(1)
-	assert_eq(scene.visiting_id(), "", "leave ends the visit")
-	assert_eq(scene.current_beat(), beat_before,
-		"taking your leave does NOT advance the council flow")
+	assert_eq(scene.focused_id(), "", "clicking again releases them")
 
 func test_minister_beats_skip_when_minister_is_elsewhere() -> void:
 	Game.start_campaign(42)
@@ -297,9 +294,17 @@ func test_everyone_addressed_remembers_but_only_one_answers() -> void:
 	var heard := 0
 	for id in LocationSystem.occupants(Game.data, Game.state, "council_chamber"):
 		var log := AgentMemory.exchanges_for(Game.state, String(id))
-		if log.size() == 1 and String(log[0]["text"]) == "the granaries are full":
+		if log.size() >= 1 and String(log[0]["text"]) == "the granaries are full":
 			heard += 1
 	assert_eq(heard, 5, "every minister present remembers being told")
+	# Review finding 2026-09-01: the answer is spoken in the same room, so
+	# the room remembers it too — speaker recorded by character id.
+	var chancellor_log := AgentMemory.exchanges_for(Game.state, "char_chancellor")
+	assert_eq(chancellor_log.size(), 2, "the answerer also remembers his own reply")
+	assert_eq(String(chancellor_log[1]["speaker"]), "char_chancellor")
+	var marshal_log := AgentMemory.exchanges_for(Game.state, "char_marshal")
+	assert_eq(marshal_log.size(), 2, "bystanders remember the reply they overheard")
+	assert_eq(String(marshal_log[1]["speaker"]), "char_chancellor")
 	assert_eq(AgentMemory.exchanges_for(Game.state, "char_lord_malvern").size(), 0,
 		"Malvern is in his study and hears nothing")
 
@@ -315,12 +320,15 @@ func test_selected_targets_alone_remember() -> void:
 	await wait_frames(1)
 	scene.free_text_field().text_submitted.emit("a word in your ear")
 	await wait_frames(4)
-	assert_eq(AgentMemory.exchanges_for(Game.state, "char_spymaster").size(), 1,
-		"the one you singled out remembers")
+	var log := AgentMemory.exchanges_for(Game.state, "char_spymaster")
+	assert_eq(log.size(), 2,
+		"the one you singled out remembers the word AND their own reply")
+	assert_eq(String(log[0]["text"]), "a word in your ear")
+	assert_eq(log[0]["audience"], ["char_spymaster"], "recorded as a private word")
+	assert_eq(String(log[1]["speaker"]), "char_spymaster",
+		"the reply is remembered under the speaker's own id (2026-09-01)")
 	assert_eq(AgentMemory.exchanges_for(Game.state, "char_chancellor").size(), 0,
 		"the rest of the room does not overhear a targeted word")
-	var log := AgentMemory.exchanges_for(Game.state, "char_spymaster")
-	assert_eq(log[0]["audience"], ["char_spymaster"], "recorded as a private word")
 
 func test_chat_after_event_resolution_shows_reply() -> void:
 	# User bug 2026-08-30 ("why I still cannot see response?"): resolve an

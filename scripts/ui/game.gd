@@ -12,6 +12,10 @@ signal menu_requested
 ## The TopBar's RELATIONS button asks for the relationship graph overlay;
 ## GameRoot listens and toggles it.
 signal relations_requested
+## A chronicle headline for the persistent bottom news strip (user request
+## 2026-08-31). Emitted via publish_news — the CalendarOverlay feeds it as
+## the day-run rolls; the NewsTicker (GameRoot-owned) displays it.
+signal news_published(text: String)
 
 var data: DataRepository
 var state: GameState
@@ -65,6 +69,13 @@ func move_to(location_code: String) -> bool:
 	state.current_location = location_code
 	state_changed.emit()
 	return true
+
+## Routes one headline to whatever is showing news (currently the bottom
+## ticker). Presentation-only: no sim state is touched.
+func publish_news(text: String) -> void:
+	if text.strip_edges() == "":
+		return
+	news_published.emit(text)
 
 func save_campaign(path: String = "user://save.json") -> bool:
 	return SaveLoad.save_game(state, path)
@@ -224,6 +235,7 @@ func submit_free_text(text: String, cb: Callable, speaker_hint: String = "",
 				if speaker != "":
 					voicer.converse(speaker, text, state, data,
 						func(reply: Dictionary):
+							_remember_reply(reply, heard_by)
 							cb.call({"ok": true, "executed": executed, "rejected": [],
 								"error": "", "reply": reply}))
 					return
@@ -236,6 +248,21 @@ func submit_free_text(text: String, cb: Callable, speaker_hint: String = "",
 							[], state.tick)}})
 				return
 			cb.call({"ok": true, "executed": executed, "rejected": rejected, "error": ""}))
+
+## A conversational reply is itself words spoken aloud: everyone who heard
+## the question heard the answer — the speaker included, so a character
+## remembers what they themselves said (review finding 2026-09-01: memory
+## recorded only the ruler's voice). Herald fallbacks (speaker_id "") are
+## out-of-fiction notes and are not remembered.
+func _remember_reply(reply: Dictionary, heard_by: Array) -> void:
+	var sid := String(reply.get("speaker_id", ""))
+	if sid == "" or not state.characters.has(sid):
+		return
+	for id in heard_by:
+		AgentMemory.remember(data, state, String(id), sid,
+			String(reply.get("text", "")), heard_by, state.current_location,
+			state.tick)
+	state_changed.emit()
 
 ## A COUNCIL_CONSULT's target (seat code or character id) names who was asked.
 func _consult_target(actions: Array) -> String:

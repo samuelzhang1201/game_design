@@ -30,9 +30,10 @@ func _ready() -> void:
 	overlay = CalendarOverlay.new()
 	overlay.finished.connect(func(): finished.emit())
 	add_child(overlay)
-	# game_ui.png: the chronicle window sits at the map area's lower left,
-	# below the map so it covers nothing.
-	overlay.place_panel(Vector2(110, 232), 250.0)
+	# User request 2026-08-31: the chronicle window always sits at the BOTTOM
+	# of the UI — left-aligned with the map, growing upward, clear of the
+	# news ticker strip and bottom tab bar.
+	overlay.place_panel_bottom(110.0, NewsTicker.STRIP_HEIGHT + BottomBar.BAR_HEIGHT + 4.0, 250.0)
 	top_bar = TOP_BAR_SCENE.instantiate()
 	top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	add_child(top_bar)

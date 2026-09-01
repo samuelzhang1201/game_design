@@ -35,7 +35,7 @@ anchor_bottom = 1.0
 offset_left = 4.0
 offset_top = 28.0
 offset_right = 104.0
-offset_bottom = -24.0
+offset_bottom = -42.0
 
 [node name="MVBox" type="VBoxContainer" parent="MinisterPanel"]
 theme_override_constants/separation = 4
@@ -96,6 +96,16 @@ unique_name_in_owner = true
 theme_override_constants/h_separation = 3
 theme_override_constants/v_separation = 3
 
+[node name="ToolsSep" type="HSeparator" parent="MinisterPanel/MVBox/SkillsTab"]
+
+[node name="ToolsTitle" type="Label" parent="MinisterPanel/MVBox/SkillsTab"]
+unique_name_in_owner = true
+text = "TOOLS"
+
+[node name="ToolsList" type="VBoxContainer" parent="MinisterPanel/MVBox/SkillsTab"]
+unique_name_in_owner = true
+theme_override_constants/separation = 2
+
 [node name="TiesTab" type="VBoxContainer" parent="MinisterPanel/MVBox"]
 unique_name_in_owner = true
 visible = false
@@ -115,7 +125,7 @@ anchor_bottom = 1.0
 offset_left = -144.0
 offset_top = 28.0
 offset_right = -4.0
-offset_bottom = -24.0
+offset_bottom = -42.0
 
 [node name="Col" type="VBoxContainer" parent="DialoguePanel"]
 theme_override_constants/separation = 5

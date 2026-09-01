@@ -38,3 +38,19 @@ func test_quiet_tick_still_offers_something() -> void:
 	var s := GameState.new_campaign(data, 42)
 	var sugs := gen.generate(s, [])
 	assert_between(sugs.size(), 2, 3)
+
+## User request 2026-08-31: every suggestion says where it came from, so the
+## conversation stage can offer only topic-raised options while the court
+## order bar keeps the standing menu too.
+func test_suggestions_carry_their_source() -> void:
+	var s := GameState.new_campaign(data, 42)
+	for sug in gen.generate(s, []):
+		assert_eq(String(sug["source"]), "standing",
+			"a quiet tick offers only standing-menu fillers")
+	s.metrics["grain"] = 10.0
+	var concern_sugs := gen.generate(s, ConcernScanner.scan(s, data))
+	var found_concern := false
+	for sug in concern_sugs:
+		if String(sug["source"]) == "concern":
+			found_concern = true
+	assert_true(found_concern, "a raised concern yields concern-tagged suggestions")

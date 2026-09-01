@@ -38,4 +38,6 @@ func test_round_table_portrait_resolves() -> void:
 	assert_string_contains(p.scene_file_path, "round_table.tscn")
 
 func test_dayrun_speed_key() -> void:
-	assert_almost_eq(data.bal("dayrun_day_seconds"), 0.22, 0.001)
+	# Slowed 0.22 -> 0.35 (user request 2026-08-31: the chronicle reads as
+	# rolling news, not a flicker).
+	assert_almost_eq(data.bal("dayrun_day_seconds"), 0.35, 0.001)

@@ -78,6 +78,100 @@ func test_event_beat_gates_continue_until_choice() -> void:
 	await wait_frames(2)
 	assert_true(_finished)
 
+## User request 2026-08-31 (change 1): a beat's default reply options belong
+## to the minister who raised them — selecting people who do NOT include that
+## minister hides the options; adding them back restores them.
+func test_selection_gates_the_beats_reply_options() -> void:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	var sug := {"seat": "marshal", "request": ActionRequest.make("LEVY_RAISE"),
+		"pitch_key": "raise_levies", "tradeoff": "Gold and grumbling.",
+		"source": "concern"}
+	var beats := [{"kind": "minister", "portrait_id": "char_marshal",
+		"speaker": "Ser Brandt of Harrow", "text": "Fresh levies, my lord?",
+		"suggestions": [sug]}]
+	var c := _scene_with(beats, report)
+	await wait_frames(2)
+	var box: Control = c.find_child("RepliesBox", true, false)
+	assert_true(box.visible, "no selection: the minister's options stand")
+	c.find_child("Occupant_char_steward", true, false).pressed.emit()
+	await wait_frames(1)
+	assert_false(box.visible,
+		"talking to the steward: the marshal's options step aside")
+	c.find_child("Occupant_char_marshal", true, false).pressed.emit()
+	await wait_frames(1)
+	assert_true(box.visible, "the marshal joins the selection: options return")
+
+## User request 2026-08-31 ("the prompt input box disappeared"): a quiet
+## tick opens straight on the summary beat (standing suggestions no longer
+## manufacture minister beats), and the box must still be there to talk to
+## whoever is in the room.
+func test_prompt_box_available_on_summary_beat() -> void:
+	Game.start_campaign(42)
+	var beats := [{"kind": "summary", "portrait_id": "round_table",
+		"speaker": "The Council"}]
+	var c := _scene_with(beats, TickReport.new())
+	await wait_frames(2)
+	assert_true(c.free_text_field().visible,
+		"the prompt box stays on the summary beat")
+
+## User request 2026-08-31 (change 2): with a person singled out, the box
+## shows only the conversation between them and the player.
+func test_transcript_narrows_to_the_selected_person() -> void:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	var beats := [{"kind": "minister", "portrait_id": "char_chancellor",
+		"speaker": "Aldwin Reeve", "text": "The ledgers weigh heavy, my lord.",
+		"suggestions": []}]
+	var c := _scene_with(beats, report)
+	await wait_frames(2)
+	c._say("You", "how stand the borders?")
+	c._say("Ser Brandt of Harrow", "The border holds.")
+	assert_string_contains(c.dialogue_text(), "ledgers")
+	c.find_child("Occupant_char_marshal", true, false).pressed.emit()
+	await wait_frames(1)
+	assert_string_contains(c.dialogue_text(), "The border holds.")
+	assert_string_contains(c.dialogue_text(), "how stand the borders?")
+	assert_false("ledgers" in c.dialogue_text(),
+		"only the selected person's exchange with you is shown")
+	c._say("Herald", "It is done, my lord.")
+	assert_string_contains(c.dialogue_text(), "It is done, my lord.",
+		"the Herald's outcome narration is never swallowed by the filter")
+	c.find_child("Occupant_char_marshal", true, false).pressed.emit()
+	await wait_frames(1)
+	assert_string_contains(c.dialogue_text(), "ledgers",
+		"deselecting widens the box back to the whole room")
+
+## User request 2026-08-31 (change 5): the SKILLS tab lists the tools this
+## courtier can be called on to use, human-readable, kingdom operations in
+## gold and personal tools in teal.
+func test_skills_tab_lists_tools_with_kind_colors() -> void:
+	Game.start_campaign(42)
+	var beats := [{"kind": "minister", "portrait_id": "char_marshal",
+		"speaker": "Ser Brandt of Harrow", "text": "My lord.", "suggestions": []}]
+	var c := _scene_with(beats, TickReport.new())
+	await wait_frames(2)
+	var tools: VBoxContainer = c.find_child("ToolsList", true, false)
+	assert_gt(tools.get_child_count(), 0, "a minister's dossier lists tools")
+	var kingdom_color := Color.TRANSPARENT
+	var personal_color := Color.TRANSPARENT
+	for row in tools.get_children():
+		if row.text == "Raise fresh levies":
+			kingdom_color = row.get_theme_color("font_color")
+		if row.text == "Confide in a courtier":
+			personal_color = row.get_theme_color("font_color")
+		assert_false("_" in row.text, "labels are human-readable, never codes")
+	assert_eq(kingdom_color, UiPalette.TOOL_KINGDOM,
+		"the seat's kingdom operation shows in the kingdom color")
+	assert_eq(personal_color, UiPalette.TOOL_PERSONAL,
+		"the personal tool shows in the personal color")
+	assert_ne(UiPalette.TOOL_KINGDOM, UiPalette.TOOL_PERSONAL,
+		"the two kinds are visually distinct")
+
 ## User ruling (2026-08-31, game_ui.png): the dialogue panel is the RIGHT
 ## column, the dossier the LEFT column, and between them the framed map view
 ## at the mock map region's EXACT landscape ratio - never distorted, never
@@ -274,7 +368,8 @@ func test_event_beat_free_text_resolves_via_event_choice() -> void:
 	await wait_frames(3)
 	assert_true(Game.state.pending_event.is_empty(), "event resolves via free text")
 	assert_string_contains(c.dialogue_text(), "thanks")  # event_ev_01_accept template line
-	assert_false(c.free_text_field().visible, "free text hides once the event resolves")
+	assert_true(c.free_text_field().visible,
+		"free text stays after resolution — the player can keep talking (user request 2026-08-31)")
 	assert_true(c.continue_button().visible, "advance re-enabled once resolved")
 	assert_eq(c.reply_buttons().size(), 0, "choice buttons cleared once resolved")
 

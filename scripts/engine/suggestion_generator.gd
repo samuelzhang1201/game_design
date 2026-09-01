@@ -8,6 +8,11 @@ func _init(d: DataRepository, a: ActionSystem) -> void:
 	data = d
 	actions = a
 
+## Each suggestion carries its `source`: "concern" when a scanned concern
+## raised the topic this tick, "standing" for the always-available menu
+## fillers. The conversation stage offers only concern-driven suggestions as
+## reply options (user request 2026-08-31: no default options for topics
+## nobody raised); the court order bar shows both.
 func generate(state: GameState, concerns: Array) -> Array:
 	var out: Array = []
 	for concern in concerns:
@@ -15,11 +20,13 @@ func generate(state: GameState, concerns: Array) -> Array:
 			if out.size() >= 3:
 				break
 			if actions.validate(cand["request"], state) == "" and not _duplicate(out, cand):
+				cand["source"] = "concern"
 				out.append(cand)
 	for cand in _standing_menu(state):
 		if out.size() >= 3:
 			break
 		if out.size() < 2 and actions.validate(cand["request"], state) == "" and not _duplicate(out, cand):
+			cand["source"] = "standing"
 			out.append(cand)
 	return out
 

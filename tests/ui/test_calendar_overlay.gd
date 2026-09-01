@@ -22,7 +22,7 @@ func test_interlude_runs_days_and_finishes() -> void:
 	overlay.play(2)
 	assert_true(overlay.playing())
 	assert_string_contains(overlay.date_label.text, "Spring")
-	await wait_for_signal(overlay.finished, 6.0)
+	await wait_for_signal(overlay.finished, 9.0)
 	assert_false(overlay.playing())
 	assert_eq(_finished_count, 1)
 	assert_gt(overlay.news_box.get_child_count(), 0)

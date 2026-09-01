@@ -12,9 +12,11 @@ signal finished
 
 var _beats: Array = []
 var _index := -1
-## Running transcript of the conversation ("Name: line"), newest last —
-## the dialogue box shows the whole exchange, not just the latest line
-## (user requirement 2026-08-30). Reset per conversation, capped.
+## Running transcript of the conversation, newest last — each entry
+## {"speaker": name, "line": bbcode}. The dialogue box shows the whole
+## exchange, not just the latest line (user requirement 2026-08-30); when
+## the player has singled people out, only lines between them and the player
+## are shown (user request 2026-08-31). Reset per conversation, capped.
 var _history: Array = []
 const HISTORY_CAP := 60
 var _report: TickReport
@@ -53,6 +55,7 @@ func _ready() -> void:
 	%OpinionValue.add_theme_font_size_override("font_size", 10)
 	_build_skill_rows()
 	_build_dossier_tabs()
+	UiPalette.style_header(%ToolsTitle, 8, UiPalette.TEXT_MUTED)
 	%TiesText.add_theme_font_size_override("font_size", 8)
 	%PopupPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.GOLD, 1, 12))
@@ -70,6 +73,10 @@ func _ready() -> void:
 	UiPalette.style_header(_name_label, 12)
 	_scroll = %DialogueScroll
 	_text_label = %TextLabel
+	# User request 2026-08-31: the conversation reads smaller — compact body
+	# text keeps the box from dominating the column.
+	_text_label.add_theme_font_size_override("normal_font_size", 8)
+	_text_label.add_theme_font_size_override("italics_font_size", 8)
 	_replies_box = %RepliesBox
 	_free_text = %FreeText
 	_free_text.max_length = int(Game.data.bal("prompt_max_chars"))
@@ -95,21 +102,42 @@ func start(beats: Array, report: TickReport) -> void:
 	_history = []
 	_advance()
 
-## Appends one line to the transcript and shows the full history, scrolled
-## to the newest line. Every piece of dialogue routes through here. Speaker
-## names render in per-speaker colors (user ruling 2026-08-30).
+## Appends one line to the transcript and re-renders it, scrolled to the
+## newest line. Every piece of dialogue routes through here. Speaker names
+## render in per-speaker colors (user ruling 2026-08-30).
 func _say(speaker: String, text: String) -> void:
 	if text.strip_edges() == "":
 		return
 	var escaped := text.replace("[", "[lb]")
-	if speaker != "":
-		_history.append("[color=#%s]%s:[/color] %s" % [
-			_speaker_color(speaker).to_html(false), speaker, escaped])
-	else:
-		_history.append("[i]%s[/i]" % escaped)
+	var line := "[i]%s[/i]" % escaped if speaker == "" else \
+		"[color=#%s]%s:[/color] %s" % [
+			_speaker_color(speaker).to_html(false), speaker, escaped]
+	_history.append({"speaker": speaker, "line": line})
 	while _history.size() > HISTORY_CAP:
 		_history.pop_front()
-	_text_label.text = "\n".join(_history)
+	_render_history()
+
+## Renders the transcript. With people singled out, the box shows only the
+## conversation between the player and them (user request 2026-08-31) —
+## other speakers, herald notes and narration step aside until the selection
+## is cleared.
+func _render_history() -> void:
+	var shown: Array = []
+	if _selected_ids.is_empty():
+		for e in _history:
+			shown.append(e["line"])
+	else:
+		# The Herald stays: he narrates the outcome of orders the player just
+		# typed — hiding him would swallow the response to your own words
+		# (the exact bug class fixed 2026-08-30).
+		var allowed := {"You": true, "Herald": true}
+		for id in _selected_ids:
+			if Game.state != null and Game.state.characters.has(id):
+				allowed[Game.state.characters[id].display_name] = true
+		for e in _history:
+			if allowed.has(e["speaker"]):
+				shown.append(e["line"])
+	_text_label.text = "\n".join(shown)
 	_scroll.set_deferred("scroll_vertical", 1000000)
 
 ## Deterministic per-speaker name color: fixed for You/Herald, hashed into a
@@ -191,6 +219,10 @@ func _refresh_location() -> void:
 	if Game.state.current_location != _last_location:
 		_last_location = Game.state.current_location
 		_selected_ids.clear()
+		# The cleared selection widens the transcript back to the whole room
+		# and restores the beat's reply options.
+		_render_history()
+		_update_reply_relevance()
 	# Same rename-then-free dance as _show_speaker: replacements arrive this
 	# frame while the outgoing nodes are still pending delete, and a name
 	# collision would permanently auto-rename the new nodes.
@@ -240,6 +272,20 @@ func _toggle_target(id: String) -> void:
 			_show_speaker(b)
 			_name_label.text = String(b.get("speaker", ""))
 	_refresh_target_hint()
+	_render_history()
+	_update_reply_relevance()
+
+## The beat's default reply options belong to the minister who raised them:
+## once the player singles out people that do NOT include that minister, the
+## options step aside (user request 2026-08-31 — no "Raise the levies" while
+## talking to someone else about something else). An empty selection means
+## the whole room, minister included, so the options stand.
+func _update_reply_relevance() -> void:
+	var b := current_beat()
+	if String(b.get("kind", "")) != "minister":
+		return
+	_replies_box.visible = _selected_ids.is_empty() \
+		or String(b.get("portrait_id", "")) in _selected_ids
 
 func _on_continue() -> void:
 	_advance()
@@ -459,12 +505,19 @@ func _advance() -> void:
 			_say(String(b["speaker"]),
 				ConversationBeats.summary_text(_report, Game.state, Game.data))
 	_reveal_replies_staggered()
+	# A selection surviving from the previous beat still gates whose reply
+	# options may show (user request 2026-08-31).
+	_update_reply_relevance()
 	# F1 (final-review fix wave): event beats must accept free text too - it's
 	# the only path back to EVENT_CHOICE via typed orders (Game.submit_free_text's
-	# EVENT_CHOICE branch was otherwise unreachable). Shown alongside the choice
-	# buttons while the event is unresolved; _resolve_event hides it again once
-	# either path (button or free text) resolves the event.
-	_free_text.visible = String(b["kind"]) in ["minister", "event"]
+	# EVENT_CHOICE branch was otherwise unreachable).
+	# User request 2026-08-31 ("the prompt input box disappeared"): the box
+	# stays available on EVERY beat where people can be spoken to — minister,
+	# event and summary alike (a quiet tick now opens directly on the summary
+	# beat, since standing suggestions no longer manufacture minister beats).
+	# Only the modal opening narration, which has its own continue button and
+	# no one to talk to, hides it.
+	_free_text.visible = String(b["kind"]) != "narration"
 	# The transcript keeps growing; a fresh beat reads from its newest line.
 	_scroll.set_deferred("scroll_vertical", 1000000)
 
@@ -556,6 +609,10 @@ func _show_speaker(b: Dictionary) -> void:
 	%MinisterTitle.visible = c != null
 	%OpinionRow.visible = c != null
 	%SkillRows.visible = c != null
+	%ToolsTitle.visible = c != null
+	%ToolsList.visible = c != null
+	for child in %ToolsList.get_children():
+		child.queue_free()
 	# TIES tab: who this person loves and hates, live from the graph.
 	%TiesText.text = RelationshipGraph.describe_for(Game.state, portrait_id) \
 		if c != null and Game.state != null else ""
@@ -578,6 +635,21 @@ func _show_speaker(b: Dictionary) -> void:
 		chip.add_theme_color_override("font_color", UiPalette.GOLD)
 		chip.add_theme_stylebox_override("normal", UiPalette.chip_style())
 		%TraitChips.add_child(chip)
+	# SKILLS tab tools (user request 2026-08-31): the calls this courtier can
+	# be asked to make, by their human-readable labels — seat-bound kingdom
+	# operations in gold, person-to-person tools in teal (CharacterTools).
+	for entry in CharacterTools.kingdom_tools(Game.data, c):
+		%ToolsList.add_child(_tool_row(String(entry["label"]), UiPalette.TOOL_KINGDOM))
+	for entry in CharacterTools.personal_tools(Game.data, c):
+		%ToolsList.add_child(_tool_row(String(entry["label"]), UiPalette.TOOL_PERSONAL))
+
+func _tool_row(label_text: String, color: Color) -> Label:
+	var l := Label.new()
+	l.text = label_text
+	l.add_theme_font_size_override("font_size", 7)
+	l.add_theme_color_override("font_color", color)
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	return l
 
 func _on_quick_reply(sug: Dictionary) -> void:
 	var result: Dictionary = Game.try_execute(sug["request"])
@@ -620,7 +692,8 @@ func _resolve_event(event_id: String, choice_id: String) -> void:
 		child.queue_free()
 	_resolved_event = true
 	_continue_btn.visible = true
-	_free_text.visible = false
+	# The box stays after resolution (user request 2026-08-31): the player
+	# can keep talking to the room before waving the council on.
 	%EventPopup.visible = false
 	%MoveButton.disabled = false
 	_say("Herald", TemplateVoicer.line_for(Game.data,

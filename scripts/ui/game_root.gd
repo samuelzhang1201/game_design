@@ -23,6 +23,7 @@ var _pause_menu: Control
 var _pause_status: Label
 var _relations_screen: RelationshipGraphScreen
 var _bottom_bar: BottomBar
+var _news_ticker: NewsTicker
 var _info_screen: InfoScreen
 var _bgm: AudioStreamPlayer
 
@@ -53,6 +54,12 @@ func _ready() -> void:
 	_bottom_bar.visible = false
 	_bottom_bar.tab_selected.connect(_on_bottom_tab)
 	add_child(_bottom_bar)
+	# The persistent transparent news strip (user request 2026-08-31): pinned
+	# just above the bottom tab bar on every gameplay screen.
+	_news_ticker = NewsTicker.new()
+	_news_ticker.name = "NewsTicker"
+	_news_ticker.visible = false
+	add_child(_news_ticker)
 	_build_pause_menu()
 	_start_bgm()
 	_switch_to(State.MENU)
@@ -178,6 +185,9 @@ func _on_bottom_tab(tab: String) -> void:
 func bottom_bar() -> BottomBar:
 	return _bottom_bar
 
+func news_ticker() -> NewsTicker:
+	return _news_ticker
+
 func info_screen() -> InfoScreen:
 	return _info_screen
 
@@ -236,6 +246,9 @@ func _switch_to(new_state: State) -> void:
 	if _bottom_bar != null:
 		_bottom_bar.visible = new_state != State.MENU
 		move_child(_bottom_bar, get_child_count() - 1)
+	if _news_ticker != null:
+		_news_ticker.visible = new_state != State.MENU
+		move_child(_news_ticker, get_child_count() - 1)
 	if _info_screen != null:
 		_info_screen.hide()
 		move_child(_info_screen, get_child_count() - 1)

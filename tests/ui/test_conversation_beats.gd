@@ -26,6 +26,29 @@ func test_minister_beats_group_concern_with_pitch() -> void:
 	assert_eq(beats[-1]["kind"], "summary")
 	assert_eq(beats[-1]["portrait_id"], "round_table")
 
+## User request 2026-08-31: a standing-menu suggestion raises no topic, so it
+## neither speaks a pitch line nor renders a reply option in conversation —
+## the court screen's order bar is its home.
+func test_standing_suggestions_stay_off_the_conversation_stage() -> void:
+	var s := GameState.new_campaign(data, 42)
+	var r := TickReport.new()
+	r.tick = 1
+	r.suggestions = [{"seat": "marshal", "request": ActionRequest.make("LEVY_RAISE"),
+		"pitch_key": "raise_levies", "tradeoff": "Gold and grumbling.",
+		"source": "standing"}]
+	var beats := ConversationBeats.build(r, s, data)
+	for b in beats:
+		if b["kind"] == "minister":
+			assert_eq(b["suggestions"].size(), 0,
+				"no beat may carry a standing suggestion as a reply option")
+	# The same suggestion tagged as concern-driven does reach the stage.
+	r.suggestions[0]["source"] = "concern"
+	var found := false
+	for b in ConversationBeats.build(r, s, data):
+		if b["kind"] == "minister" and b["portrait_id"] == "char_marshal":
+			found = b["suggestions"].size() == 1
+	assert_true(found, "a concern-driven suggestion renders on its minister's beat")
+
 func test_event_beat_first_when_pending() -> void:
 	var s := GameState.new_campaign(data, 42)
 	var engine := TickEngine.new(data)

@@ -31,6 +31,11 @@ static func build(report: TickReport, state: GameState, data: DataRepository) ->
 		entry["texts"].append(TemplateVoicer.line_for(data, "concern_" + String(c["metric"]),
 			state.characters[id].traits, report.tick, {"value": int(c["value"])}))
 	for sug in report.suggestions:
+		# Standing-menu fillers raise no topic of their own, so they neither
+		# speak a pitch line nor render a reply option here (user request
+		# 2026-08-31); they stay available on the court screen's order bar.
+		if String(sug.get("source", "concern")) == "standing":
+			continue
 		var id := _seat_char(sug["seat"], state)
 		if id == "":
 			continue

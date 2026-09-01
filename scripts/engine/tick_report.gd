@@ -17,7 +17,8 @@ func to_dict() -> Dictionary:
 	var sug_dicts: Array = []
 	for s in suggestions:
 		sug_dicts.append({"seat": s["seat"], "request": s["request"].to_dict(),
-			"pitch_key": s["pitch_key"], "tradeoff": s["tradeoff"]})
+			"pitch_key": s["pitch_key"], "tradeoff": s["tradeoff"],
+			"source": s.get("source", "concern")})
 	return {"tick": tick, "season": season, "year": year,
 		"metric_deltas": metric_deltas.duplicate(true),
 		"relationship_deltas": relationship_deltas.duplicate(true),
