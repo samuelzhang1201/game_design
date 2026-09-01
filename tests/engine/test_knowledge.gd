@@ -67,6 +67,44 @@ func test_facts_about_filters_by_type_and_subject_for_one_knower() -> void:
 	assert_eq(KnowledgeBase.facts_about(state, "char_chaplain", "army_size", "doncaster").size(), 0,
 		"the chaplain knows nothing of Doncaster's muster")
 
+## Review finding 2026-09-01: what a character knows must reach their voice.
+## describe_for phrases each fact at the character's OWN credibility and
+## never exposes the engine's hidden truth flag.
+func test_describe_for_speaks_confidence_never_truth() -> void:
+	var text := KnowledgeBase.describe_for(data, state, "char_steward")
+	assert_string_contains(text, "skimmed the treasury",
+		"a knower's sheet carries the secret")
+	assert_string_contains(text, "a secret — do not reveal it lightly")
+	assert_false("true" in text.to_lower().replace("treasury", ""),
+		"the hidden truth flag never appears")
+	assert_false("skimmed" in KnowledgeBase.describe_for(data, state, "char_marshal"),
+		"a non-knower's sheet never carries it")
+
+func test_describe_for_confidence_bands_follow_balance_thresholds() -> void:
+	KnowledgeBase.learn(state, "char_marshal", "fact_chancellor_graft", 80.0)
+	assert_string_contains(KnowledgeBase.describe_for(data, state, "char_marshal"),
+		"You know: The Chancellor has skimmed")
+	KnowledgeBase.learn(state, "char_marshal", "fact_chancellor_graft", 60.0)
+	assert_string_contains(KnowledgeBase.describe_for(data, state, "char_marshal"),
+		"You believe: The Chancellor has skimmed")
+	KnowledgeBase.learn(state, "char_marshal", "fact_chancellor_graft", 30.0)
+	assert_string_contains(KnowledgeBase.describe_for(data, state, "char_marshal"),
+		"You have heard, though you doubt it: The Chancellor has skimmed")
+
+func test_describe_for_marks_a_believed_claim_as_hearsay() -> void:
+	# The shape ClaimLedger.record mints for a believed claim: a rumor-kind
+	# fact taught to the listener. A swallowed lie must read as hearsay, at
+	# the listener's credibility — never as firsthand knowledge.
+	KnowledgeBase.add_fact(state, "claim_test", {"kind": "rumor",
+		"subject": "eastmarch", "claim_type": "grain",
+		"text": "The granaries of Eastmarch are full.", "truth": false,
+		"source": "char_chancellor"})
+	KnowledgeBase.learn(state, "char_marshal", "claim_test", 60.0)
+	var text := KnowledgeBase.describe_for(data, state, "char_marshal")
+	assert_string_contains(text, "You believe: The granaries of Eastmarch are full.")
+	assert_string_contains(text, "(hearsay)",
+		"a swallowed claim reads as hearsay, not firsthand knowledge")
+
 func test_knowledge_survives_save_round_trip() -> void:
 	KnowledgeBase.learn(state, "char_marshal", "fact_chancellor_graft", 42.0)
 	var restored := GameState.from_dict(state.to_dict())

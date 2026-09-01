@@ -40,12 +40,24 @@ static func remember(data: DataRepository, state: GameState, char_id: String,
 static func exchanges_for(state: GameState, char_id: String) -> Array:
 	return state.agent_memory.get(char_id, [])
 
-## Prompt-ready recap for this character's LLM context: what they were told,
-## and whether it was said to them alone or in company.
+## Prompt-ready recap for this character's LLM context: what was said in
+## their hearing — the ruler's words, their own replies, and other speakers
+## — and whether it was said in private or in company (review finding
+## 2026-09-01: memory used to hold only the ruler's voice).
 static func describe_for(state: GameState, char_id: String) -> String:
 	var lines: Array = []
 	for entry in exchanges_for(state, char_id):
 		var audience: Array = entry["audience"]
 		var company := "privately" if audience.size() <= 1 else "with others present"
-		lines.append('You were told, %s: "%s"' % [company, String(entry["text"])])
+		var speaker := String(entry["speaker"])
+		var quoted := String(entry["text"])
+		if speaker == "you":
+			lines.append('You were told, %s: "%s"' % [company, quoted])
+		elif speaker == char_id:
+			lines.append('You replied, %s: "%s"' % [company, quoted])
+		else:
+			var who: String = speaker
+			if state.characters.has(speaker):
+				who = state.characters[speaker].display_name
+			lines.append('%s said, %s: "%s"' % [who, company, quoted])
 	return "\n".join(lines)

@@ -69,6 +69,21 @@ func test_describe_for_is_prompt_ready_and_names_the_company() -> void:
 func test_describe_for_is_empty_when_nothing_was_said() -> void:
 	assert_eq(AgentMemory.describe_for(state, "char_marshal"), "")
 
+## Review finding 2026-09-01: memory used to hold only the ruler's voice.
+## Replies and other speakers now render under who actually said them.
+func test_describe_for_renders_replies_and_other_speakers() -> void:
+	AgentMemory.remember(data, state, "char_marshal", "you",
+		"Hold the border.", ["char_marshal"], "war_room", 4)
+	AgentMemory.remember(data, state, "char_marshal", "char_marshal",
+		"It holds, my lord.", ["char_marshal"], "war_room", 4)
+	AgentMemory.remember(data, state, "char_marshal", "char_chancellor",
+		"The cost worries me.", ["char_marshal", "char_chancellor"], "war_room", 5)
+	var text := AgentMemory.describe_for(state, "char_marshal")
+	assert_string_contains(text, 'You were told, privately: "Hold the border."')
+	assert_string_contains(text, 'You replied, privately: "It holds, my lord."')
+	assert_string_contains(text,
+		'Aldwin Reeve said, with others present: "The cost worries me."')
+
 func test_memory_survives_save_round_trip() -> void:
 	AgentMemory.remember(data, state, "char_chancellor", "you",
 		"The granaries are full.", ["char_chancellor"], "council_chamber", 4)

@@ -112,6 +112,31 @@ static func known_facts(state: GameState, char_id: String) -> Array:
 		out.append(entry)
 	return out
 
+## Prompt-ready recap of what this character knows and how firmly they hold
+## it, for their LLM persona sheet (review finding 2026-09-01: knowledge
+## never reached the voiced character, so a minister could not speak of
+## secrets they know). Confidence phrasing comes from the character's OWN
+## credibility for each fact — never from the engine's hidden truth flag,
+## which must stay invisible to the model (a believed lie reads exactly like
+## knowledge here; that is the point).
+static func describe_for(data: DataRepository, state: GameState, char_id: String) -> String:
+	var lines: Array = []
+	for fact in known_facts(state, char_id):
+		var cred := float(fact["credibility"].get(char_id, 0.0))
+		var opener := "You know"
+		if cred < data.bal("knowledge_doubt_threshold"):
+			opener = "You have heard, though you doubt it"
+		elif cred < data.bal("knowledge_sure_threshold"):
+			opener = "You believe"
+		var marker := ""
+		match String(fact["kind"]):
+			"secret":
+				marker = " (a secret — do not reveal it lightly)"
+			"rumor":
+				marker = " (hearsay)"
+		lines.append("%s: %s%s" % [opener, String(fact["text"]), marker])
+	return "\n".join(lines)
+
 ## Known facts narrowed to one claim_type and subject — the corroboration
 ## lookup used by Belief.
 static func facts_about(state: GameState, char_id: String, claim_type: String,

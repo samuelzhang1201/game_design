@@ -37,7 +37,12 @@ static func persona_context(id: String, state: GameState, data: DataRepository) 
 	# rather than meeting the player fresh every time (AgentMemory).
 	var memory := AgentMemory.describe_for(state, id)
 	if memory != "":
-		lines += "\nWhat the ruler has said to you:\n" + memory
+		lines += "\nWhat you remember being said:\n" + memory
+	# What they know and believe (KnowledgeBase) — only THEIR facts, at THEIR
+	# credibility. The engine's hidden truth flags never enter any prompt.
+	var knowledge := KnowledgeBase.describe_for(data, state, id)
+	if knowledge != "":
+		lines += "\nWhat you know and believe:\n" + knowledge
 	return lines
 
 static func briefing_prompts(report: TickReport, state: GameState) -> Dictionary:
