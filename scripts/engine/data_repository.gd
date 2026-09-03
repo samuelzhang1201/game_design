@@ -22,6 +22,10 @@ var claim_types: Dictionary = {}
 ## event_id -> authored scene prose, from RANDOM_EVENTS.md (see StorySource).
 var event_scenes: Dictionary = {}
 var facts: Array[Dictionary] = []
+## Azgaar world import (tools/import_azgaar.py), keyed by *_code.
+var kingdoms: Dictionary = {}
+var provinces: Dictionary = {}
+var burgs: Dictionary = {}
 
 ## Parses a CSV with a header row into an Array of row Dictionaries.
 ## Returns [] and sets last_error if any row is shorter than required_cols
@@ -107,6 +111,18 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/locations.csv",
 			["location_code", "region_code", "label", "kind", "occupants"],
 			func(r): locations[r["location_code"]] = r):
+		return false
+	if not _load_if_present(dir + "/kingdoms.csv",
+			["kingdom_code", "state_id", "label", "capital_burg"],
+			func(r): kingdoms[r["kingdom_code"]] = r):
+		return false
+	if not _load_if_present(dir + "/provinces.csv",
+			["province_code", "label", "kingdom_code"],
+			func(r): provinces[r["province_code"]] = r):
+		return false
+	if not _load_if_present(dir + "/burgs.csv",
+			["burg_code", "label", "province_code", "kingdom_code"],
+			func(r): burgs[r["burg_code"]] = r):
 		return false
 	if not _load_if_present(dir + "/templates.csv", ["key", "trait", "text"],
 			func(r): templates.append(r)):
