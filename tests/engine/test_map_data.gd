@@ -51,7 +51,12 @@ func test_index_bitmap_matches_map_and_kingdoms() -> void:
 	var idx_tex: Texture2D = load("res://assets/maps/world_state_index.png")
 	assert_not_null(map_tex)
 	assert_not_null(idx_tex)
-	assert_eq(idx_tex.get_size(), map_tex.get_size(), "bitmap sizes match")
+	# The render may be an integer-scale export (see tools/import_azgaar.gd);
+	# the index bitmap stays at native scale.
+	var k := int(map_tex.get_width()) / int(idx_tex.get_width())
+	assert_gt(k, 0, "render at least native size")
+	assert_eq(map_tex.get_size(), idx_tex.get_size() * float(k),
+		"render is an integer multiple of the index bitmap")
 	var img: Image = idx_tex.get_image()
 	for code: String in repo.kingdoms:
 		var row: Dictionary = repo.kingdoms[code]

@@ -26,6 +26,10 @@ const CARD_WIDTH := 150.0
 
 var _map_texture: Texture2D
 var _index_image: Image
+## world_map.png may be a sharper integer-scale render of the map (see
+## tools/import_azgaar.gd); the index bitmap and CSV coordinates stay at
+## native scale, so texture coords = native coords * _render_scale.
+var _render_scale := 1.0
 var _by_state_id: Dictionary = {}
 var _card: PanelContainer
 var _card_title: Label
@@ -52,6 +56,8 @@ func _ready() -> void:
 	if ResourceLoader.exists(INDEX_TEXTURE_PATH):
 		var idx: Texture2D = load(INDEX_TEXTURE_PATH)
 		_index_image = idx.get_image()
+	if _map_texture != null and _index_image != null:
+		_render_scale = float(_map_texture.get_width()) / float(_index_image.get_width())
 	for code: String in Game.data.kingdoms:
 		var row: Dictionary = Game.data.kingdoms[code]
 		_by_state_id[int(row["state_id"])] = row
@@ -100,14 +106,15 @@ func _build_card() -> void:
 	col.add_child(close)
 	_card.hide()
 
-## Initial framing: native pixels, centered on the player's home kingdom
-## (the `you` role's realm), falling back to the map's middle.
+## Initial framing: one view px per native map unit (regardless of the
+## render scale), centered on the player's home kingdom (the `you` role's
+## realm), falling back to the map's middle.
 func _go_home() -> void:
-	_zoom = 1.0
+	_zoom = 1.0 / _render_scale
 	var center := _map_texture.get_size() / 2.0
 	var home := _home_kingdom()
 	if not home.is_empty():
-		center = Vector2(float(home["center_x"]), float(home["center_y"]))
+		center = Vector2(float(home["center_x"]), float(home["center_y"])) * _render_scale
 	_offset = size / 2.0 - center * _zoom
 	_clamp_offset()
 	_homed = true
@@ -202,7 +209,7 @@ func _clamp_offset() -> void:
 	_offset.y = clampf(_offset.y, size.y - scaled.y, 0.0)
 
 func _select_at(pos: Vector2) -> void:
-	var map_px := ((pos - _offset) / _zoom).floor()
+	var map_px := ((pos - _offset) / _zoom / _render_scale).floor()
 	select_state(MapIndex.state_at(_index_image, Vector2i(map_px)))
 
 ## Public for tests: open the info card for the kingdom with this Azgaar

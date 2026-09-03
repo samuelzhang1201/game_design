@@ -34,9 +34,10 @@ func test_water_click_closes_the_card() -> void:
 func test_opens_zoomed_on_the_players_kingdom() -> void:
 	var v := _view()
 	await wait_frames(2)
-	assert_eq(v._zoom, 1.0, "native scale: only a window of the map shows")
+	assert_almost_eq(v._zoom * v._render_scale, 1.0, 0.001,
+		"one view px per native map unit: only a window of the map shows")
 	var home: Dictionary = Game.data.kingdoms["hetalia"]
 	var center := Vector2(float(home["center_x"]), float(home["center_y"]))
-	var on_screen := center * v._zoom + v._offset
+	var on_screen := center * v._render_scale * v._zoom + v._offset
 	assert_almost_eq(on_screen.x, v.size.x / 2.0, 1.0, "home centered x")
 	assert_almost_eq(on_screen.y, v.size.y / 2.0, 1.0, "home centered y")

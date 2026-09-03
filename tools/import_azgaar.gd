@@ -177,10 +177,18 @@ func _run() -> int:
 	var info: Dictionary = world["info"]
 	var width := int(info["width"])
 	var height := int(info["height"])
-	if _png_dimensions(png_path) != Vector2i(width, height):
-		push_error("error: JSON says %dx%d but PNG is %s" % [
-			width, height, _png_dimensions(png_path)])
+	# The render may be exported at an integer scale (2x, 3x...) for
+	# sharper zoom; the index bitmap and all coordinates stay at the
+	# JSON's native scale, and WorldMapView converts at runtime.
+	var png_dims := _png_dimensions(png_path)
+	@warning_ignore("integer_division")
+	var render_scale := png_dims.x / width
+	if render_scale < 1 or png_dims != Vector2i(width * render_scale, height * render_scale):
+		push_error("error: PNG must be the JSON's %dx%d at an integer scale, got %s" % [
+			width, height, png_dims])
 		return 1
+	if render_scale > 1:
+		print("render scale: %dx" % render_scale)
 
 	var pack: Dictionary = world["pack"]
 	var rate := float((world["settings"] as Dictionary).get("populationRate", 1000))
