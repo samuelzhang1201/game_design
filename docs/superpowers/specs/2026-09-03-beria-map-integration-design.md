@@ -17,7 +17,7 @@ The game's fiction already names four kingdoms in `roles.csv`: `averlain` (the p
 ### Owner rulings (2026-09-03)
 
 1. **Scope:** map screen **and** world-data import (not display-only).
-2. **Name reconciliation:** the owner will reopen the `.map` in Azgaar, rename four chosen states to Averlain / Bentleigh / Doncaster / Empire, and re-export PNG + JSON. The import pipeline must be re-runnable so the renamed export is a re-run, not a rework.
+2. **Name reconciliation:** ~~the owner will reopen the `.map` in Azgaar, rename four chosen states to Averlain / Bentleigh / Doncaster / Empire, and re-export PNG + JSON~~ **Reversed later on 2026-09-03: the fiction adopted the Azgaar names instead.** averlain→hetalia (player realm), doncaster→tsalutia (Osric's khanate, west), bentleigh→snere (north), empire→brampia — migrated across data CSVs, tests, and story prose (directions updated to match the map). No Azgaar re-export needed; the importer now warns if a re-export loses one of these four states.
 3. **Map entry point:** the bottom bar's MAP tab is repurposed to toggle a full-screen map overlay (supersedes the 2026-08-30 ruling that MAP only closes overlays; other tabs still close the map).
 4. **Import depth:** states + provinces + burgs (full depth).
 5. **Interactivity:** pan/zoom viewer with clickable **states** (not provinces) opening an info panel.
