@@ -22,6 +22,7 @@ var _pending_report: TickReport
 var _pause_menu: Control
 var _pause_status: Label
 var _relations_screen: RelationshipGraphScreen
+var _map_screen: MapScreen
 var _bottom_bar: BottomBar
 var _news_ticker: NewsTicker
 var _info_screen: InfoScreen
@@ -46,6 +47,10 @@ func _ready() -> void:
 	_relations_screen.name = "RelationsScreen"
 	_relations_screen.visible = false
 	add_child(_relations_screen)
+	_map_screen = MapScreen.new()
+	_map_screen.name = "MapScreen"
+	_map_screen.visible = false
+	add_child(_map_screen)
 	_info_screen = InfoScreen.new()
 	_info_screen.name = "InfoScreen"
 	add_child(_info_screen)
@@ -168,19 +173,32 @@ func toggle_relations() -> void:
 func relations_screen() -> RelationshipGraphScreen:
 	return _relations_screen
 
-## Bottom bar routing: MAP is the default view (close every overlay),
-## RELATIONSHIP toggles the graph, the rest open their info table.
+## Bottom bar routing: MAP toggles the world-map overlay (user ruling
+## 2026-09-03, supersedes "MAP closes overlays"), RELATIONSHIP toggles the
+## graph, the rest open their info table; each closes the others.
 func _on_bottom_tab(tab: String) -> void:
 	match tab:
 		"MAP":
 			_info_screen.hide()
 			_relations_screen.visible = false
+			toggle_map()
 		"RELATIONSHIP":
 			_info_screen.hide()
+			_map_screen.hide()
 			toggle_relations()
 		_:
 			_relations_screen.visible = false
+			_map_screen.hide()
 			_info_screen.show_tab(tab)
+
+## The world-map overlay sits with the other overlays, below the pause menu.
+func toggle_map() -> void:
+	if state == State.MENU:
+		return
+	_map_screen.visible = not _map_screen.visible
+
+func map_screen() -> MapScreen:
+	return _map_screen
 
 func bottom_bar() -> BottomBar:
 	return _bottom_bar
@@ -255,6 +273,9 @@ func _switch_to(new_state: State) -> void:
 	if _relations_screen != null:
 		_relations_screen.visible = false
 		move_child(_relations_screen, get_child_count() - 1)
+	if _map_screen != null:
+		_map_screen.visible = false
+		move_child(_map_screen, get_child_count() - 1)
 	if _pause_menu != null:
 		move_child(_pause_menu, get_child_count() - 1)
 
