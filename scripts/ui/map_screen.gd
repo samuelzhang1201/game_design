@@ -3,7 +3,7 @@ extends Control
 ## Full-screen world-map overlay toggled by the bottom bar's MAP tab (user
 ## ruling 2026-09-03, supersedes 2026-08-30's "MAP closes overlays"): a
 ## pan/zoom view of assets/maps/world_map.png with clickable kingdoms,
-## resolved through the world_state_index.png bitmap (tools/import_azgaar.py)
+## resolved through the world_state_index.png bitmap (tools/import_azgaar.gd)
 ## via MapIndex. View-only: reads Game.data, never mutates game state.
 
 const MAP_TEXTURE_PATH := "res://assets/maps/world_map.png"
@@ -95,7 +95,7 @@ func _build_panel() -> void:
 func _draw_view() -> void:
 	if _map_texture == null:
 		_view.draw_string(get_theme_default_font(),
-			Vector2(16, 24), "No map imported — run tools/import_azgaar.py")
+			Vector2(16, 24), "No map imported — run tools/import_azgaar.gd")
 		return
 	if not _fitted:
 		_fit_view()

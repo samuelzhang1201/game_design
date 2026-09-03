@@ -1,5 +1,5 @@
 extends GutTest
-## MapIndex decodes tools/import_azgaar.py's state-index bitmap:
+## MapIndex decodes tools/import_azgaar.gd's state-index bitmap:
 ## state id = R | (G << 8); pure white = water / no state.
 
 func test_decode_small_id() -> void:

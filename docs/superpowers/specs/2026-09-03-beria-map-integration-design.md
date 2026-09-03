@@ -40,7 +40,11 @@ The engine's behavior does not change: the imported tables are static reference 
 
 ## Components
 
-### 1. Importer — `tools/import_azgaar.py`
+### 1. Importer — `tools/import_azgaar.gd`
+
+> **Amendment (2026-09-03, owner request):** the importer is a headless GDScript tool (`extends SceneTree`), not Python, so the whole repo speaks one language. Run:
+> `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tools/import_azgaar.gd [-- --json PATH --png PATH]`
+> Everything below (inputs, outputs, columns, encoding, warnings, determinism) is unchanged; the original Python version produced byte-identical CSVs and a pixel-identical bitmap before being removed. Section text below still says "Python" where it describes the original plan.
 
 Python 3, stdlib + Pillow (Pillow is already used by the existing `tools/*.py`). Deterministic: same inputs ⇒ byte-identical outputs.
 

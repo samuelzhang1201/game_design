@@ -1,5 +1,5 @@
 extends GutTest
-## The Azgaar-imported world tables (see tools/import_azgaar.py) load and
+## The Azgaar-imported world tables (see tools/import_azgaar.gd) load and
 ## cross-reference cleanly, and the hit-test bitmap agrees with them.
 
 var repo: DataRepository

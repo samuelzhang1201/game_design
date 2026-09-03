@@ -22,7 +22,7 @@ var claim_types: Dictionary = {}
 ## event_id -> authored scene prose, from RANDOM_EVENTS.md (see StorySource).
 var event_scenes: Dictionary = {}
 var facts: Array[Dictionary] = []
-## Azgaar world import (tools/import_azgaar.py), keyed by *_code.
+## Azgaar world import (tools/import_azgaar.gd), keyed by *_code.
 var kingdoms: Dictionary = {}
 var provinces: Dictionary = {}
 var burgs: Dictionary = {}
