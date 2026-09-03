@@ -45,7 +45,7 @@
 
 There is no Python test runner in this repo; the tool's test cycle is: run it, then run the verification commands in Step 3 (Task 2's GUT tests then pin the outputs permanently).
 
-- [ ] **Step 1: Write the importer**
+- [x] **Step 1: Write the importer**
 
 ```python
 #!/usr/bin/env python3
@@ -289,12 +289,12 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `python3 tools/import_azgaar.py`
 Expected: prints the chosen json/png names, the WARNING about the four fiction kingdoms (current export still has Azgaar names), and `wrote 16 kingdoms, 250 provinces, 841 burgs, ...`.
 
-- [ ] **Step 3: Verify outputs**
+- [x] **Step 3: Verify outputs**
 
 Run:
 
@@ -342,16 +342,16 @@ EOF
 
 Expected: `all import checks pass`.
 
-- [ ] **Step 4: Determinism check**
+- [x] **Step 4: Determinism check**
 
 Run: `python3 tools/import_azgaar.py && shasum data/kingdoms.csv assets/maps/world_state_index.png > /tmp/a && python3 tools/import_azgaar.py && shasum data/kingdoms.csv assets/maps/world_state_index.png | diff /tmp/a -`
 Expected: no diff output (byte-identical re-run).
 
-- [ ] **Step 5: Update CLAUDE.md's data list**
+- [x] **Step 5: Update CLAUDE.md's data list**
 
 In `CLAUDE.md`'s Key documents bullet listing the CSVs, add `kingdoms.csv`, `provinces.csv`, `burgs.csv` to the list and append one sentence: "`kingdoms.csv`/`provinces.csv`/`burgs.csv` (plus `assets/maps/world_map.png` and the `world_state_index.png` hit-test bitmap) are **generated** by `tools/import_azgaar.py` from the Azgaar exports in `assets/maps/` — hand-edits are overwritten on re-import; lasting changes belong in Azgaar."
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tools/import_azgaar.py data/kingdoms.csv data/provinces.csv data/burgs.csv "assets/maps/world_map.png" "assets/maps/world_state_index.png" CLAUDE.md
@@ -370,7 +370,7 @@ git commit -m "feat(map): import Azgaar Beria export into kingdoms/provinces/bur
 - Consumes: Task 1's committed CSVs and PNGs; the index-bitmap encoding contract from Task 1.
 - Produces: `MapIndex.decode(c: Color) -> int` and `MapIndex.state_at(img: Image, px: Vector2i) -> int` (both static; −1 = water/no state/out of bounds); `DataRepository.kingdoms/provinces/burgs: Dictionary` keyed by `kingdom_code`/`province_code`/`burg_code`, values = raw CSV row Dictionaries (all string values). Task 3 relies on these exact names.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/engine/test_map_index.gd`:
 
@@ -453,12 +453,12 @@ func test_index_bitmap_matches_map_and_kingdoms() -> void:
 			"%s center pixel decodes to its state_id" % code)
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `./run_tests.sh`
 Expected: the two new test files fail — `MapIndex` not declared, and `repo.kingdoms` etc. don't exist. (Baseline "Errors 2" is expected and not a failure.)
 
-- [ ] **Step 3: Implement `MapIndex` and the repository fields**
+- [x] **Step 3: Implement `MapIndex` and the repository fields**
 
 `scripts/engine/map_index.gd`:
 
@@ -507,12 +507,12 @@ and in `_load`, directly after the `locations.csv` block:
 		return false
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `./run_tests.sh`
 Expected: full suite green (plus the documented "Errors 2").
 
-- [ ] **Step 5: Commit (including the generated `.import` files)**
+- [x] **Step 5: Commit (including the generated `.import` files)**
 
 Running the suite makes headless Godot import the two new PNGs, generating `assets/maps/world_map.png.import` and `assets/maps/world_state_index.png.import`. Godot's default PNG import is `compress/mode=0` (lossless), which the index bitmap requires — the center-pixel test above is the guard: if anyone ever flips the index PNG to a lossy/VRAM mode, that test fails. Commit the `.import` files so the setting is pinned.
 
@@ -533,7 +533,7 @@ git commit -m "feat(map): load kingdoms/provinces/burgs tables and decode the st
 - Consumes: `MapIndex.state_at`, `Game.data.kingdoms/provinces/burgs`, `Game.data.roles` (rows with `kingdom` and `display_name` columns), `UiPalette` helpers (`panel_style`, `style_header`, `DIM_OVERLAY`, `TEXT_MUTED`, `GOLD`), the committed `world_map.png`/`world_state_index.png`.
 - Produces: `MapScreen` (a `Control`; `select_state(sid: int)` public for tests, plus `panel_title() -> Label` test seam); `GameRoot.toggle_map() -> void` and `GameRoot.map_screen() -> MapScreen`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/ui/test_map_screen.gd`:
 
@@ -596,12 +596,12 @@ func test_selecting_a_kingdom_fills_the_panel() -> void:
 	assert_eq(screen.panel_title().text, "", "water click clears the panel")
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `./run_tests.sh`
 Expected: `test_map_screen.gd` fails — `map_screen`/`toggle_map` don't exist on GameRoot.
 
-- [ ] **Step 3: Implement `MapScreen`**
+- [x] **Step 3: Implement `MapScreen`**
 
 `scripts/ui/map_screen.gd`:
 
@@ -812,7 +812,7 @@ func panel_title() -> Label:
 	return _panel_title
 ```
 
-- [ ] **Step 4: Wire it into GameRoot**
+- [x] **Step 4: Wire it into GameRoot**
 
 In `scripts/ui/game_root.gd`:
 
@@ -871,17 +871,17 @@ func map_screen() -> MapScreen:
 
 (before the `_pause_menu` lines, so the pause menu stays topmost).
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `./run_tests.sh`
 Expected: full suite green (plus the documented "Errors 2"), including all Task 2 and Task 3 tests.
 
-- [ ] **Step 6: Eyeball it in the running game**
+- [x] **Step 6: Eyeball it in the running game**
 
 Run: `/Applications/Godot.app/Contents/MacOS/Godot --path .`
 Start a campaign, press MAP: the Beria map appears fitted to height; wheel zooms toward the cursor, drag pans, clicking a kingdom fills the right panel with its name/capital/counts, clicking the sea clears it, MAP or CLOSE dismisses it. (Skip if no display is available; the GUT suite is the gate.)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add scripts/ui/map_screen.gd scripts/ui/game_root.gd tests/ui/test_map_screen.gd
