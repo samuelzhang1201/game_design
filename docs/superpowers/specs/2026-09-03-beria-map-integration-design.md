@@ -83,6 +83,8 @@ Required columns: `kingdoms.csv` → `kingdom_code,label,capital_burg`; `provinc
 
 ### 4. UI — `scripts/ui/map_screen.gd` (`MapScreen`)
 
+> **Amendment (2026-09-03, owner request, supersedes this section and ruling 3):** not an overlay. The map lives IN the court screen's middle zone (`%MapPanel`, stretched to fill it) as `scripts/ui/world_map_view.gd` (`WorldMapView`), RTS-style: opens at native scale centered on the player's kingdom so only a window of the map is visible, pans when the mouse rides the frame's edge (plus drag and wheel-zoom toward cursor, min zoom = map covers frame), and clicking a kingdom opens a floating info card inside the view. The bottom bar's MAP tab reverted to its original "close every overlay" meaning. `MapScreen` was deleted; `MapIndex`, the bitmap, and the CSVs are unchanged.
+
 A full-rect `Control` overlay, built in code like `InfoScreen`/`RelationshipGraphScreen`, owned by `GameRoot`, hidden by default, sitting below the pause menu and above screens.
 
 - **Routing (`GameRoot._on_bottom_tab`):** `"MAP"` toggles the map overlay (and hides the info screen / relations graph); every other tab hides the map. ESC/close button hides it. Not available in `State.MENU` (same guard as the relations graph).
