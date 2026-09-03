@@ -27,6 +27,11 @@ func _ready() -> void:
 	var map_view := TextureRect.new()
 	UiPalette.setup_map_view(map_view)
 	map_panel.add_child(map_view)
+	# Live world map over the backdrop, same as court/conversation (user
+	# ruling 2026-09-03).
+	var world_map := WorldMapView.new()
+	world_map.name = "WorldMap"
+	map_panel.add_child(world_map)
 	overlay = CalendarOverlay.new()
 	overlay.finished.connect(func(): finished.emit())
 	add_child(overlay)

@@ -1,9 +1,10 @@
 class_name WorldMapView
 extends Control
-## RTS-style viewport into assets/maps/world_map.png, embedded in the court
-## screen's middle map zone (user ruling 2026-09-03: the world map IS the
-## middle view — it replaces UiPalette's static backdrop there, and the
-## bottom bar's MAP tab goes back to meaning "close overlays"). The map
+## RTS-style viewport into assets/maps/world_map.png, embedded in the
+## middle map zone of every gameplay screen — court, conversation, day run
+## (user ruling 2026-09-03: the world map IS the middle view — it replaces
+## UiPalette's static backdrop there, and the bottom bar's MAP tab goes
+## back to meaning "close overlays"). The map
 ## opens at native scale centered on the player's kingdom, so only a small
 ## window of Beria is visible; the view pans when the mouse rides an edge
 ## of the frame (plus drag and wheel-zoom), and clicking a kingdom opens a
