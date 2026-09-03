@@ -18,7 +18,7 @@ func test_roster_roles_carry_taxonomy_and_role_metrics() -> void:
 	var king: Character = s.characters["you"]
 	assert_eq(king.category, "player")
 	assert_eq(king.family_name, "Valorin")
-	assert_eq(king.kingdom, "averlain")
+	assert_eq(king.kingdom, "hetalia")
 	assert_eq(int(king.attributes["prestige"]), 85)
 	assert_eq(int(king.attributes["influence"]), 90)
 	# Personal data from the story background (game_start.md): the king is 40,
@@ -27,7 +27,7 @@ func test_roster_roles_carry_taxonomy_and_role_metrics() -> void:
 	assert_eq(int(s.characters["char_princess"].attributes["age"]), 19)
 	var osric: Character = s.characters["char_king_osric"]
 	assert_eq(osric.category, "foreign")
-	assert_eq(osric.kingdom, "doncaster")
+	assert_eq(osric.kingdom, "tsalutia")
 	# Founding rows gained the same columns.
 	var aldwin: Character = s.characters["char_chancellor"]
 	assert_eq(aldwin.category, "council")

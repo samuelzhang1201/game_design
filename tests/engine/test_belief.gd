@@ -38,16 +38,16 @@ func test_paranoid_listener_discounts_the_same_claim() -> void:
 	assert_almost_eq(float(r["belief"]), 30.0, 0.001)
 
 func test_corroboration_raises_belief() -> void:
-	# Quill knows fact_doncaster_muster (army_size / doncaster, truth true).
+	# Quill knows fact_tsalutia_muster (army_size / tsalutia, truth true).
 	# An agreeing claim: 80 * 0.5 = 40.0, -10 paranoid, +8 corroboration = 38.0
-	var c := _claim("army_size", "doncaster", "Doncaster masses for a raid", 9000.0, true)
+	var c := _claim("army_size", "tsalutia", "Tsalutia masses for a raid", 9000.0, true)
 	var r := Belief.score(data, state, "char_spymaster", "you", c, 80.0)
 	assert_eq(int(r["corroboration"]), 1)
 	assert_almost_eq(float(r["belief"]), 38.0, 0.001)
 
 func test_contradiction_lowers_belief() -> void:
 	# Same known fact, but the claim asserts the opposite: 40.0 - 10 - 8 = 22.0
-	var c := _claim("army_size", "doncaster", "Doncaster is at peace", 0.0, false)
+	var c := _claim("army_size", "tsalutia", "Tsalutia is at peace", 0.0, false)
 	var r := Belief.score(data, state, "char_spymaster", "you", c, 80.0)
 	assert_eq(int(r["corroboration"]), -1)
 	assert_almost_eq(float(r["belief"]), 22.0, 0.001)

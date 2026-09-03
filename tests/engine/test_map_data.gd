@@ -35,6 +35,17 @@ func test_every_kingdom_capital_and_neighbors_resolve() -> void:
 		for n: String in String(row["neighbor_codes"]).split("|", false):
 			assert_true(repo.kingdoms.has(n), "%s neighbor %s" % [code, n])
 
+## The cast's realms (roles.csv kingdom column) must exist on the map
+## (owner ruling 2026-09-03: the fiction adopted the Azgaar state names).
+func test_fiction_kingdoms_are_on_the_map() -> void:
+	for code in ["brampia", "hetalia", "snere", "tsalutia"]:
+		assert_true(repo.kingdoms.has(code), "%s is a map kingdom" % code)
+	for role in repo.roles:
+		var kingdom := String(role.get("kingdom", ""))
+		if kingdom != "":
+			assert_true(repo.kingdoms.has(kingdom),
+				"%s's kingdom %s is on the map" % [role["id"], kingdom])
+
 func test_index_bitmap_matches_map_and_kingdoms() -> void:
 	var map_tex: Texture2D = load("res://assets/maps/world_map.png")
 	var idx_tex: Texture2D = load("res://assets/maps/world_state_index.png")

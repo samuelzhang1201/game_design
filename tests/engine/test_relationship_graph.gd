@@ -107,7 +107,7 @@ func test_relationships_survive_save_round_trip() -> void:
 	assert_eq(String(e["log"][e["log"].size() - 1]["reason"]), "quarrel")
 	var c: Character = restored.characters["char_king_osric"]
 	assert_eq(c.category, "foreign")
-	assert_eq(c.kingdom, "doncaster")
+	assert_eq(c.kingdom, "tsalutia")
 
 func test_pre_roster_save_loads_with_empty_graph() -> void:
 	var d := state.to_dict()

@@ -22,7 +22,10 @@ extends SceneTree
 
 const MAPS := "res://assets/maps"
 const DATA := "res://data"
-const FICTION_KINGDOMS: Array[String] = ["averlain", "bentleigh", "doncaster", "empire"]
+## The four realms the game's cast lives in (owner ruling 2026-09-03: the
+## fiction adopted these Azgaar names — hetalia is the player's kingdom).
+## A re-export that renames or deletes one of them breaks roles.csv, so warn.
+const FICTION_KINGDOMS: Array[String] = ["brampia", "hetalia", "snere", "tsalutia"]
 const GENERATED_PNGS: Array[String] = ["world_map.png", "world_state_index.png"]
 
 var _slug_regex := RegEx.create_from_string("[^a-z0-9]+")

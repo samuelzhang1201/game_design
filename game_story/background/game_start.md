@@ -12,9 +12,9 @@ Your daughter, **Princess Nora O-kala**, is 19 years old. A fierce and formidabl
 
 The **Chief Minister of Internal Affairs** is greedy, cunning, and devious. He appears to have something incriminating hanging over him, which is apparently known to the **Minister of Finance**. The two have a notoriously poor relationship and are constantly at odds with each other.
 
-To the north, the barbarians of **Doncaster** are becoming increasingly restless and appear to be preparing to raid southward.
+To the west, the riders of the **Khanate of Tsalutia** are becoming increasingly restless and appear to be preparing to raid eastward.
 
-To the east, the **Queen of the Duchy of Bentleigh** has seized control of the Empire’s Emperor, reducing him to little more than a puppet. She has also been steadily annexing surrounding minor city-states and harbors openly hostile intentions toward your kingdom.
+To the north, the **Queen of Snere** has seized control of Brampia’s Emperor, reducing him to little more than a puppet. She has also been steadily annexing surrounding minor city-states and harbors openly hostile intentions toward your kingdom.
 
 Among your advisers, the person you trust most is **Lord Malvern**. He was instrumental in securing your position on the throne and wields considerable influence among the court. However, he is advanced in age and in poor health.
 

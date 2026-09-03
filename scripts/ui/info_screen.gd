@@ -103,7 +103,7 @@ func _rows_for(tab: String) -> Array:
 				rows.append(["Guard captain", hale.display_name])
 			var osric: Character = Game.state.characters.get("char_king_osric")
 			if osric != null:
-				rows.append(["Doncaster threat", "hostile (%d)" % osric.opinion])
+				rows.append(["Tsalutia threat", "hostile (%d)" % osric.opinion])
 			return rows
 		"LAWS":
 			return [

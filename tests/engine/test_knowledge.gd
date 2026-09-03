@@ -61,11 +61,11 @@ func test_add_fact_creates_a_runtime_fact() -> void:
 		"The king lied about the granaries.")
 
 func test_facts_about_filters_by_type_and_subject_for_one_knower() -> void:
-	var found := KnowledgeBase.facts_about(state, "char_spymaster", "army_size", "doncaster")
+	var found := KnowledgeBase.facts_about(state, "char_spymaster", "army_size", "tsalutia")
 	assert_eq(found.size(), 1)
-	assert_eq(String(found[0]["code"]), "fact_doncaster_muster")
-	assert_eq(KnowledgeBase.facts_about(state, "char_chaplain", "army_size", "doncaster").size(), 0,
-		"the chaplain knows nothing of Doncaster's muster")
+	assert_eq(String(found[0]["code"]), "fact_tsalutia_muster")
+	assert_eq(KnowledgeBase.facts_about(state, "char_chaplain", "army_size", "tsalutia").size(), 0,
+		"the chaplain knows nothing of Tsalutia's muster")
 
 ## Review finding 2026-09-01: what a character knows must reach their voice.
 ## describe_for phrases each fact at the character's OWN credibility and
