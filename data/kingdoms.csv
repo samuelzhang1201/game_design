@@ -1,0 +1,17 @@
+kingdom_code,state_id,label,capital_burg,neighbor_codes,color,area,population,center_x,center_y
+axalalamotco,1,Axalalamotco,tenochtitla,xalcotetco|throrionia|chiosmia|laoricea,#66c2a5,41530,2374092,2205.5,387.7
+hitia,2,Hitia,ororeanes,cocalomo|tsalutia,#fc8d62,71388,3958126,478.2,324.3
+pala,3,Pala,kauha,tsalutia|hetalia,#8da0cb,46015,2554031,862.05,734.99
+throrionia,4,Throrionia,marga,xalcotetco|nalia|axalalamotco|laoricea,#e78ac3,69864,3959283,1867.1,312.2
+chiosmia,5,Chiosmia,ampliosa,axalalamotco|laoricea|askroicia,#a6d854,35911,2342853,2084.33,435.5
+hetalia,6,Hetalia,kuojarpan,snere|tsalutia|pala,#ffd92f,51182,3545719,1122.6,683.3
+askroicia,7,Askroicia,bhryzanti,chiosmia|laoricea,#65cfc5,19819,1133670,2116.6,713.9
+tonkh,8,Tonkh,khalag,tsalutia,#fd8b7e,6897,531620,375.21,587.78
+laoricea,9,Laoricea,askleia,throrionia|chiosmia|axalalamotco|nalia|askroicia,#b0b8bf,71150,4387932,1905.14,575.41
+nalia,10,Nalia,arnalion,throrionia|laoricea|hena,#c1ce72,87988,5441987,1587.18,593.09
+snere,11,Snere,dichivan,brampia|tsalutia|hetalia,#abcf73,46363,2363475,1135.7,275.6
+xalcotetco,12,Xalcotetco,tlaconati,throrionia|axalalamotco,#e9ef52,23979,1222073,2272.9,278
+hena,13,Hena,spargy,nalia,#70bfbf,41101,2902651,1458.2,624.79
+brampia,14,Brampia,chilton,cocalomo|snere|tsalutia,#f09789,56929,2928699,964.29,265.89
+tsalutia,15,Tsalutia,morotsi,cocalomo|brampia|hitia|snere|hetalia|tonkh|pala,#d3a5db,98607,3990305,596.21,580.12
+cocalomo,16,Cocalomo,cocalomo,brampia|hitia|tsalutia,#9aef73,72553,3110956,662.25,275.93
