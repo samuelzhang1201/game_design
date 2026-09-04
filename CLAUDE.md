@@ -13,7 +13,7 @@ Text-first, LLM-narrated grand strategy game: rule a kingdom for ~60 years throu
 
 - **Godot 4.x + GDScript** (typed GDScript everywhere: type hints on vars, params, returns).
 - **GUT** (Godot Unit Test) for tests. The simulation engine must be unit-testable headless.
-- **OpenAI API via raw HTTP** (`HTTPRequest` node) — there is no GDScript SDK. Model IDs and prices live in one config table (see PRD §7), not scattered through code.
+- **OpenAI API via raw HTTP** (`HTTPRequest` node) — there is no GDScript SDK. Model IDs and prices live in one config table (see PRD §8), not scattered through code.
 - **Run:** `/Applications/Godot.app/Contents/MacOS/Godot --path .`
 - **Test:** `./run_tests.sh` (runs the full GUT suite headless; "Errors 2" in the summary is a documented, expected condition from a vendored GExtension's class-database probing, not a real failure — any other error count is treated as fatal). `run_tests.sh` exports `CC_FORCE_OFFLINE=1` so the suite can never make a live API call even with a real `.env` present.
 - **`.env`** (git-ignored, dev-convenience source for `OpenAIClient.load_config()`; `.env.example` documents the keys — `OPENAI_API_KEY`, `LLM_MODEL`/per-tier overrides, `LLM_MAX_OUTPUT_TOKENS`) overlays defaults and is itself overlaid by `user://config.json` (player override); a missing key or `CC_FORCE_OFFLINE=1` fails closed to `offline_mode: true`.
@@ -56,4 +56,4 @@ UI screens are self-contained scenes signaling up to GameRoot; state mutations o
 - GDScript style: `snake_case` files/functions/vars, `PascalCase` classes, signals named in past tense (`opinion_changed`).
 - The API key is read from a local git-ignored config file — never committed, never shipped in a build.
 - Every engine formula (opinion drift, faction power, cohesion) gets a GUT test with hand-computed expected values before UI work uses it.
-- Build order is PRD §6, strictly: briefings/suggestions → opinion drift → debates → recruitment → factions to stage 3. Stop there; stages 4–6 are post-MVP.
+- Build order is PRD §6, strictly: briefings/suggestions → opinion drift → debates → recruitment → factions to stage 3 → chapter framework → faction stages 4–6 (Tomas's faction only, data-capped) → raid defense → chapter-1 event chains → art integration. The MVP is a complete Chapter 1 (PRD v2.0, §7); succession/assassination/aging and stages 4–6 for other factions remain post-MVP.
