@@ -21,14 +21,13 @@ func _ready() -> void:
 	var map_panel := PanelContainer.new()
 	map_panel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 2))
-	map_panel.position = Vector2(110, 28)
-	map_panel.size = Vector2(380, 196)
+	map_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	map_panel.offset_left = 110.0
+	map_panel.offset_top = 28.0
+	map_panel.offset_right = -150.0
+	map_panel.offset_bottom = -(NewsTicker.STRIP_HEIGHT + BottomBar.BAR_HEIGHT + 8.0)
 	add_child(map_panel)
-	var map_view := TextureRect.new()
-	UiPalette.setup_map_view(map_view)
-	map_panel.add_child(map_view)
-	# Live world map over the backdrop, same as court/conversation (user
-	# ruling 2026-09-03).
+	# Live world map, same as court/conversation (user ruling 2026-09-03).
 	var world_map := WorldMapView.new()
 	world_map.name = "WorldMap"
 	map_panel.add_child(world_map)

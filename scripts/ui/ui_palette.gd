@@ -93,20 +93,6 @@ static func setup_frame(rect: TextureRect) -> void:
 	rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-## The framed map view on gameplay screens (user ruling 2026-08-31): the map
-## sits in a gold-trimmed panel between the two columns at the EXACT
-## landscape ratio of game_ui.png's map region, never distorted (the image
-## cover-crops, it never stretches). The kings frame lives on the menu only:
-## its corner figures are ~40% of the frame's own size, so inside a
-## ratio-locked map window they would swallow the map.
-static func setup_map_view(rect: TextureRect) -> void:
-	rect.texture = backdrop()
-	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	rect.clip_contents = true
-	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
 ## Flat bar styles for attribute/opinion bars (no chip margins).
 static func bar_fill(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

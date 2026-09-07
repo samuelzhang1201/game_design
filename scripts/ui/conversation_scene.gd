@@ -46,10 +46,8 @@ func _ready() -> void:
 	%Bg.color = UiPalette.BG_SCREEN
 	%MapPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 2))
-	UiPalette.setup_map_view(%MapView)
 	# The live world map fills the middle zone on every gameplay screen
-	# (user ruling 2026-09-03); portraits and dialogue draw above it, and
-	# the static backdrop shows through if no map is imported.
+	# (user ruling 2026-09-03); portraits and dialogue draw above it.
 	var world_map := WorldMapView.new()
 	world_map.name = "WorldMap"
 	%MapPanel.add_child(world_map)

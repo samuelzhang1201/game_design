@@ -37,10 +37,7 @@ func _ready() -> void:
 	%Bg.color = UiPalette.BG_SCREEN
 	%MapPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 2))
-	UiPalette.setup_map_view(%MapView)
-	# The live world map fills the middle zone (user ruling 2026-09-03),
-	# drawn over the static backdrop; if no map is imported it hides itself
-	# and the backdrop shows through.
+	# The live world map fills the middle zone (user ruling 2026-09-03).
 	_world_map = WorldMapView.new()
 	_world_map.name = "WorldMap"
 	%MapPanel.add_child(_world_map)

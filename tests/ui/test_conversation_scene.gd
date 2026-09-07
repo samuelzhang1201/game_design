@@ -173,9 +173,10 @@ func test_skills_tab_lists_tools_with_kind_colors() -> void:
 		"the two kinds are visually distinct")
 
 ## User ruling (2026-08-31, game_ui.png): the dialogue panel is the RIGHT
-## column, the dossier the LEFT column, and between them the framed map view
-## at the mock map region's EXACT landscape ratio - never distorted, never
-## covered by any UI element.
+## column, the dossier the LEFT column, and between them the framed map
+## view, never covered by any UI element. The map's fixed 380:196 region
+## ratio is superseded (user ruling 2026-09-07): it now fills the whole
+## middle column, so no dead band is left under it.
 func test_dialogue_right_column_and_map_ratio_clear_of_ui() -> void:
 	Game.start_campaign(42)
 	var beats := [
@@ -192,8 +193,14 @@ func test_dialogue_right_column_and_map_ratio_clear_of_ui() -> void:
 	assert_false(c.minister_panel().get_global_rect().intersects(panel.get_global_rect()),
 		"the dialogue column must never cover the dossier column")
 	var map := c.map_panel()
-	assert_almost_eq(map.size.x / map.size.y, 380.0 / 196.0, 0.03,
-		"the map view keeps the mock map region's landscape ratio")
+	var dossier := c.minister_panel().get_global_rect()
+	var map_rect := map.get_global_rect()
+	assert_lt(map_rect.position.x - dossier.end.x, 16.0,
+		"the map starts where the dossier column ends")
+	assert_lt(panel.get_global_rect().position.x - map_rect.end.x, 16.0,
+		"the map runs up to the dialogue column")
+	assert_lt(absf(map_rect.end.y - dossier.end.y), 16.0,
+		"the map reaches the bottom of the column, no dead band under it")
 	assert_false(map.get_global_rect().intersects(panel.get_global_rect()),
 		"the map is never covered by the dialogue column")
 	assert_false(map.get_global_rect().intersects(c.minister_panel().get_global_rect()),

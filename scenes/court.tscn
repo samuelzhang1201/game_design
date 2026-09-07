@@ -24,9 +24,6 @@ offset_top = 28.0
 offset_right = -134.0
 offset_bottom = -24.0
 
-[node name="MapView" type="TextureRect" parent="MapPanel"]
-unique_name_in_owner = true
-
 [node name="TopBar" parent="." instance=ExtResource("2")]
 unique_name_in_owner = true
 anchor_right = 1.0

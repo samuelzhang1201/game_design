@@ -5,8 +5,8 @@ extends Control
 ## (user ruling 2026-09-03: the world map IS the middle view — it replaces
 ## UiPalette's static backdrop there, and the bottom bar's MAP tab goes
 ## back to meaning "close overlays"). The map
-## opens zoomed all the way out, showing the whole world centered in the
-## frame; the view pans when the mouse rides an edge
+## opens covering the frame, and zooms out to the whole world; the view
+## pans when the mouse rides an edge
 ## of the frame (plus drag and wheel-zoom), and clicking a kingdom opens a
 ## floating info card resolved through the world_state_index.png bitmap
 ## (tools/import_azgaar.gd) via MapIndex. View-only: reads Game.data,
@@ -106,13 +106,24 @@ func _build_card() -> void:
 	col.add_child(close)
 	_card.hide()
 
-## Initial framing: the whole map, centered, zoomed all the way out. Wheel
-## zoom then works up from there to inspect a region.
+## Initial framing: the map covers the frame edge to edge, so the middle
+## column never shows dead gutter. The map is far wider in proportion than
+## the column (2.76:1 into roughly 1.3:1), so a contain fit here would waste
+## about half the column's height on empty bands — this crops the outer
+## ocean instead, and one wheel-down reaches _zoom_min where the whole world
+## is visible.
 func _go_home() -> void:
-	_zoom = _zoom_min()
+	_zoom = _zoom_cover()
 	_offset = (size - _map_texture.get_size() * _zoom) / 2.0
 	_clamp_offset()
 	_homed = true
+
+## Fill both axes, cropping whichever one overflows.
+func _zoom_cover() -> float:
+	var tex := _map_texture.get_size()
+	if tex.x <= 0.0 or tex.y <= 0.0 or size.x <= 0.0 or size.y <= 0.0:
+		return 0.1
+	return maxf(size.x / tex.x, size.y / tex.y)
 
 func _draw() -> void:
 	if _map_texture == null:
