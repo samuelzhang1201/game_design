@@ -1,6 +1,6 @@
 class_name WorldMapView
 extends Control
-## RTS-style viewport into assets/maps/world_map.png, embedded in the
+## RTS-style viewport into the loaded map pack's render, embedded in the
 ## middle map zone of every gameplay screen — court, conversation, day run
 ## (user ruling 2026-09-03: the world map IS the middle view — it replaces
 ## UiPalette's static backdrop there, and the bottom bar's MAP tab goes
@@ -12,8 +12,6 @@ extends Control
 ## (tools/import_azgaar.gd) via MapIndex. View-only: reads Game.data,
 ## never mutates game state.
 
-const MAP_TEXTURE_PATH := "res://assets/maps/world_map.png"
-const INDEX_TEXTURE_PATH := "res://assets/maps/world_state_index.png"
 const ZOOM_MAX := 8.0
 const ZOOM_STEP := 1.2
 ## A press/release pair further apart than this is a drag, not a click.
@@ -51,10 +49,14 @@ func _ready() -> void:
 	# map wants smooth scaling. The card resets to nearest so its text
 	# matches the rest of the UI.
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	if ResourceLoader.exists(MAP_TEXTURE_PATH):
-		_map_texture = load(MAP_TEXTURE_PATH)
-	if ResourceLoader.exists(INDEX_TEXTURE_PATH):
-		var idx: Texture2D = load(INDEX_TEXTURE_PATH)
+	# Which map is loaded is data (data/maps.csv), not a constant here — the
+	# view renders whichever pack DataRepository.load_map put in place.
+	var map_path := Game.data.map_texture_path
+	var index_path := Game.data.index_texture_path
+	if map_path != "" and ResourceLoader.exists(map_path):
+		_map_texture = load(map_path)
+	if index_path != "" and ResourceLoader.exists(index_path):
+		var idx: Texture2D = load(index_path)
 		_index_image = idx.get_image()
 	if _map_texture != null and _index_image != null:
 		_render_scale = float(_map_texture.get_width()) / float(_index_image.get_width())

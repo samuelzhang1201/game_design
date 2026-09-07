@@ -1,6 +1,6 @@
 id,display_name,seat,ambition,loyalty,integrity,boldness,piety,compassion,vanity,temper,pragmatism,sk_admin,sk_martial,sk_intrigue,sk_diplomacy,sk_steward,centralism,militarism,orthodoxy,tax_incidence,expansionism,policy_sensitivity,traits,opinion,category,family_name,kingdom,health,wealth,prestige,influence,age
-char_chancellor,Aldwin Reeve,chancellor,55,45,30,35,25,35,40,30,60,12,2,5,8,8,40,-10,10,20,-20,60,gifted_admin|venal|schemer|cynical,20,council,Reeve,hetalia,62,60,40,70,58
-char_marshal,Ser Brandt of Harrow,marshal,55,55,45,70,35,30,50,65,35,4,13,3,5,3,-20,70,10,-30,50,70,noble_born|born_soldier|bold|wrathful,10,council,Harrow,hetalia,78,55,60,55,45
-char_steward,Mirella of the Weighhouse,steward,45,50,45,40,25,40,35,45,75,8,2,6,7,12,10,-60,-20,10,-40,55,merchant_family|shrewd_trader|blunt|cynical,10,council,Weighhouse,hetalia,70,75,35,50,41
-char_spymaster,Quill,spymaster,50,55,40,30,30,30,20,45,55,6,3,13,7,4,50,10,-30,0,0,50,lowborn|schemer|paranoid,15,council,,hetalia,55,30,20,45,37
-char_chaplain,Father Odo,chaplain,25,65,70,25,80,70,20,40,30,9,1,3,10,5,10,-30,70,20,-20,80,clergy_trained|pious|compassionate,15,council,,hetalia,48,15,50,40,63
+char_chancellor,Aldwin Reeve,chancellor,55,45,30,35,25,35,40,30,60,12,2,5,8,8,40,-10,10,20,-20,60,gifted_admin|venal|schemer|cynical,20,council,Reeve,player_realm,62,60,40,70,58
+char_marshal,Ser Brandt of Harrow,marshal,55,55,45,70,35,30,50,65,35,4,13,3,5,3,-20,70,10,-30,50,70,noble_born|born_soldier|bold|wrathful,10,council,Harrow,player_realm,78,55,60,55,45
+char_steward,Mirella of the Weighhouse,steward,45,50,45,40,25,40,35,45,75,8,2,6,7,12,10,-60,-20,10,-40,55,merchant_family|shrewd_trader|blunt|cynical,10,council,Weighhouse,player_realm,70,75,35,50,41
+char_spymaster,Quill,spymaster,50,55,40,30,30,30,20,45,55,6,3,13,7,4,50,10,-30,0,0,50,lowborn|schemer|paranoid,15,council,,player_realm,55,30,20,45,37
+char_chaplain,Father Odo,chaplain,25,65,70,25,80,70,20,40,30,9,1,3,10,5,10,-30,70,20,-20,80,clergy_trained|pious|compassionate,15,council,,player_realm,48,15,50,40,63

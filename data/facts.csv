@@ -6,5 +6,5 @@ fact_chancellor_graft,secret,char_chancellor,loyalty,The Chancellor has skimmed 
 fact_tomas_claim,public,char_duke_tomas,intent,Duke Tomas covets the throne.,true,90,you|char_chancellor|char_marshal|char_steward|char_spymaster|char_chaplain|char_lord_malvern|char_lady_corina,An open secret per game_start.md.
 fact_malvern_dying,secret,char_lord_malvern,event_report,Lord Malvern's health is failing badly.,true,70,you|char_lord_malvern|char_chaplain,He hides how bad it is.
 fact_food_shortage,public,realm,grain,The realm's granaries are running short.,true,85,you|char_chancellor|char_steward|char_chaplain|char_prophet_cassian|char_guildmaster_tessa,Unrest is beginning.
-fact_tsalutia_muster,secret,tsalutia,army_size,Tsalutia is massing for a raid eastward.,true,60,char_spymaster|char_marshal,Quill's scouts brought word.
+fact_tsalutia_muster,secret,raider_realm,army_size,Tsalutia is massing for a raid eastward.,true,60,char_spymaster|char_marshal,Quill's scouts brought word.
 fact_snere_puppet,public,char_emperor,intent,Queen Isabeau rules the Emperor as a puppet.,true,75,you|char_chancellor|char_envoy_petra,Widely known at court.

@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://br001u343u2fi"
+
+[deps]
+
+files=["res://data/maps/beria/provinces.label.translation", "res://data/maps/beria/provinces.kingdom.translation", "res://data/maps/beria/provinces.capital.translation", "res://data/maps/beria/provinces.area.translation", "res://data/maps/beria/provinces.population.translation"]
+
+source_file="res://data/maps/beria/provinces.csv"
+dest_files=["res://data/maps/beria/provinces.label.translation", "res://data/maps/beria/provinces.kingdom.translation", "res://data/maps/beria/provinces.capital.translation", "res://data/maps/beria/provinces.area.translation", "res://data/maps/beria/provinces.population.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

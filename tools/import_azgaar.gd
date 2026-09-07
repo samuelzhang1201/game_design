@@ -4,11 +4,11 @@ extends SceneTree
 ## Reads the newest "*Full*.json" and newest map render PNG in assets/maps/
 ## and writes (all committed to git; re-run after every re-export):
 ##
-##   data/kingdoms.csv    one row per state (state 0 "Neutrals" excluded)
+##   data/maps/<map-id>/kingdoms.csv   one row per state (0 "Neutrals" excluded)
 ##   data/provinces.csv   one row per province
 ##   data/burgs.csv       one row per burg
-##   assets/maps/world_map.png          byte copy under a stable name
-##   assets/maps/world_state_index.png  hit-test bitmap: each land cell's
+##   assets/maps/<map-id>/world_map.png byte copy under a stable name
+##   assets/maps/<map-id>/world_state_index.png  hit-test bitmap: each cell's
 ##       polygon filled with R = state_id & 0xFF, G = state_id >> 8, B = 0;
 ##       untouched pixels stay white (255,255,255) = water / no state
 ##
@@ -18,14 +18,16 @@ extends SceneTree
 ##
 ## Usage:
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-##     --script res://tools/import_azgaar.gd [-- --json PATH --png PATH]
+##     --script res://tools/import_azgaar.gd \\
+##       [-- --map-id ID --json PATH --png PATH]
 
 const MAPS := "res://assets/maps"
 const DATA := "res://data"
-## The four realms the game's cast lives in (owner ruling 2026-09-03: the
-## fiction adopted these Azgaar names — hetalia is the player's kingdom).
-## A re-export that renames or deletes one of them breaks roles.csv, so warn.
-const FICTION_KINGDOMS: Array[String] = ["brampia", "hetalia", "snere", "tsalutia"]
+## Which pack this import writes. Authored content no longer names Azgaar
+## kingdoms directly — it names realm slots, and the pack's
+## realm_bindings.csv binds each slot to one of that map's kingdoms — so the
+## check below is against those bindings, per map, not a global list.
+const DEFAULT_MAP_ID := "beria"
 const GENERATED_PNGS: Array[String] = ["world_map.png", "world_state_index.png"]
 
 var _slug_regex := RegEx.create_from_string("[^a-z0-9]+")
@@ -142,10 +144,29 @@ func _write_text(path: String, text: String) -> bool:
 	return true
 
 
+## The kingdom_codes a pack's realm_bindings.csv expects to exist. Empty when
+## the pack has no bindings yet (a brand new map), which is not an error.
+func _bound_kingdoms(path: String) -> Array[String]:
+	var out: Array[String] = []
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return out
+	var header := f.get_csv_line()
+	var col := header.find("kingdom_code")
+	if col < 0:
+		return out
+	while not f.eof_reached():
+		var line := f.get_csv_line()
+		if line.size() > col and line[col].strip_edges() != "":
+			out.append(line[col])
+	return out
+
+
 func _run() -> int:
 	# --- input selection --------------------------------------------------
 	var json_path := ""
 	var png_path := ""
+	var map_id := DEFAULT_MAP_ID
 	var user_args := OS.get_cmdline_user_args()
 	var i := 0
 	while i < user_args.size() - 1:
@@ -153,7 +174,13 @@ func _run() -> int:
 			json_path = user_args[i + 1]
 		elif user_args[i] == "--png":
 			png_path = user_args[i + 1]
+		elif user_args[i] == "--map-id":
+			map_id = user_args[i + 1]
 		i += 1
+	var out_data := DATA + "/maps/" + map_id
+	var out_art := MAPS + "/" + map_id
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_data))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_art))
 	var jsons: Array[String] = []
 	var pngs: Array[String] = []
 	for file in DirAccess.get_files_at(MAPS):
@@ -268,7 +295,7 @@ func _run() -> int:
 			str(int(s.get("area", 0))),
 			str(int(round((float(s.get("rural", 0)) + float(s.get("urban", 0))) * rate))),
 			_num2(float(center[0])), _num2(float(center[1]))])
-	if not _write_text(DATA + "/kingdoms.csv", out):
+	if not _write_text(out_data + "/kingdoms.csv", out):
 		return 1
 
 	# --- provinces.csv ----------------------------------------------------
@@ -280,7 +307,7 @@ func _run() -> int:
 			String(burg_code.get(int(p.get("burg", 0)), "")),
 			str(int(prov_area[int(p["i"])])),
 			str(int(round(float(prov_pop[int(p["i"])]) * rate)))])
-	if not _write_text(DATA + "/provinces.csv", out):
+	if not _write_text(out_data + "/provinces.csv", out):
 		return 1
 
 	# --- burgs.csv --------------------------------------------------------
@@ -293,12 +320,12 @@ func _run() -> int:
 			str(int(round(float(b.get("population", 0)) * rate))),
 			"1" if b.get("capital") else "0", "1" if b.get("port") else "0",
 			_num2(float(b["x"])), _num2(float(b["y"]))])
-	if not _write_text(DATA + "/burgs.csv", out):
+	if not _write_text(out_data + "/burgs.csv", out):
 		return 1
 
 	# --- bitmaps ----------------------------------------------------------
 	DirAccess.copy_absolute(ProjectSettings.globalize_path(png_path),
-		ProjectSettings.globalize_path(MAPS + "/world_map.png"))
+		ProjectSettings.globalize_path(out_art + "/world_map.png"))
 	var buf := PackedByteArray()
 	buf.resize(width * height * 3)
 	buf.fill(255)
@@ -314,18 +341,20 @@ func _run() -> int:
 			_fill_polygon(buf, width, height, px, py, sid)
 	var index_img := Image.create_from_data(width, height, false, Image.FORMAT_RGB8, buf)
 	if index_img.save_png(
-			ProjectSettings.globalize_path(MAPS + "/world_state_index.png")) != OK:
+			ProjectSettings.globalize_path(out_art + "/world_state_index.png")) != OK:
 		push_error("error: cannot write world_state_index.png")
 		return 1
 
 	# --- report -----------------------------------------------------------
 	var missing: Array[String] = []
-	for wanted in FICTION_KINGDOMS:
-		if not unique_codes.has(wanted):
-			missing.append(wanted)
+	for bound in _bound_kingdoms(out_data + "/realm_bindings.csv"):
+		if not unique_codes.has(bound):
+			missing.append(bound)
 	if not missing.is_empty():
-		print("WARNING: fiction kingdoms not on the map yet: %s" % ", ".join(missing))
-		print("         (expected until states are renamed in Azgaar and re-exported)")
-	print("wrote %d kingdoms, %d provinces, %d burgs, world_map.png, world_state_index.png"
-		% [states.size(), provinces.size(), burgs.size()])
+		print("WARNING: realm_bindings.csv binds slots to kingdoms this export")
+		print("         does not contain: %s" % ", ".join(missing))
+		print("         Fix the bindings or rename the states in Azgaar —")
+		print("         until then the cast has no home on this map.")
+	print("map '%s': wrote %d kingdoms, %d provinces, %d burgs into %s, art into %s"
+		% [map_id, states.size(), provinces.size(), burgs.size(), out_data, out_art])
 	return 0

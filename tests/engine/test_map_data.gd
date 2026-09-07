@@ -47,8 +47,10 @@ func test_fiction_kingdoms_are_on_the_map() -> void:
 				"%s's kingdom %s is on the map" % [role["id"], kingdom])
 
 func test_index_bitmap_matches_map_and_kingdoms() -> void:
-	var map_tex: Texture2D = load("res://assets/maps/world_map.png")
-	var idx_tex: Texture2D = load("res://assets/maps/world_state_index.png")
+	# Paths come from the loaded map pack, so this test follows whichever
+	# map data/maps.csv points at rather than pinning one export's filenames.
+	var map_tex: Texture2D = load(Game.data.map_texture_path)
+	var idx_tex: Texture2D = load(Game.data.index_texture_path)
 	assert_not_null(map_tex)
 	assert_not_null(idx_tex)
 	# The render may be an integer-scale export (see tools/import_azgaar.gd);

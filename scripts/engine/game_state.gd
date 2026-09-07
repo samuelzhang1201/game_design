@@ -35,6 +35,7 @@ const SEASONS := ["spring", "summer", "autumn", "winter"]
 
 static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	var s := GameState.new()
+	s.map_id = data.map_id
 	s.rng = Rng.new(seed_value)
 	s.metrics = {
 		"treasury": data.bal("start_treasury"),
@@ -166,14 +167,19 @@ static func _decode_values(value):
 
 ## Bump when the save shape changes incompatibly; from_dict refuses saves
 ## newer than it knows (write the matching migration when bumping).
-const SAVE_VERSION := 1
+## The map pack this campaign is played on (data/maps.csv). Part of the
+## world definition, so it is saved: reloading must restore the same world,
+## not whichever map happens to be default.
+var map_id: String = ""
+
+const SAVE_VERSION := 2
 
 func to_dict() -> Dictionary:
 	var chars := {}
 	for id in characters:
 		chars[id] = characters[id].to_dict()
 	return {
-		"version": SAVE_VERSION,
+		"version": SAVE_VERSION, "map_id": map_id,
 		"tick": _encode_values(tick), "rng": rng.to_dict(),
 		"metrics": _encode_values(metrics.duplicate()),
 		"characters": chars, "council": council.duplicate(),
@@ -201,6 +207,7 @@ static func from_dict(d: Dictionary) -> GameState:
 			% [int(d.get("version", 1)), SAVE_VERSION])
 		return null
 	var s := GameState.new()
+	s.map_id = String(d.get("map_id", ""))
 	s.tick = int(_decode_values(d["tick"]))
 	s.rng = Rng.from_dict(d["rng"])
 	s.metrics = _decode_values(d["metrics"])

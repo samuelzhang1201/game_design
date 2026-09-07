@@ -18,7 +18,10 @@ func test_roster_roles_carry_taxonomy_and_role_metrics() -> void:
 	var king: Character = s.characters["you"]
 	assert_eq(king.category, "player")
 	assert_eq(king.family_name, "Valorin")
-	assert_eq(king.kingdom, "hetalia")
+	# Not a literal: the king lives in whatever kingdom the loaded map binds
+	# player_realm to, so this survives a map swap.
+	assert_eq(king.kingdom, data.resolve_realm("player_realm"))
+	assert_true(data.kingdoms.has(king.kingdom), "and it is a real kingdom")
 	assert_eq(int(king.attributes["prestige"]), 85)
 	assert_eq(int(king.attributes["influence"]), 90)
 	# Personal data from the story background (game_start.md): the king is 40,

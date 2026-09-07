@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://e6cw1thrbp0v"
+
+[deps]
+
+files=["res://data/maps/beria/realm_bindings.kingdom.translation", "res://data/maps/beria/realm_bindings.notes.translation"]
+
+source_file="res://data/maps/beria/realm_bindings.csv"
+dest_files=["res://data/maps/beria/realm_bindings.kingdom.translation", "res://data/maps/beria/realm_bindings.notes.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

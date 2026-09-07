@@ -84,6 +84,14 @@ func load_campaign(path: String = "user://save.json") -> bool:
 	var loaded := SaveLoad.load_game(path)
 	if loaded == null:
 		return false
+	# The save names its world. Swap the pack in before the state goes live,
+	# and refuse rather than silently drop the player into a different map
+	# than the one they saved in. Pre-map_id saves ("") keep the default.
+	if loaded.map_id != "" and loaded.map_id != data.map_id:
+		if not data.load_map(loaded.map_id):
+			push_error("load_campaign: save needs map '%s' which is not installed"
+				% loaded.map_id)
+			return false
 	state = loaded
 	state_changed.emit()
 	return true

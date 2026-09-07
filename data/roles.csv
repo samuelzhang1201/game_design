@@ -1,17 +1,17 @@
 id,display_name,seat,ambition,loyalty,integrity,boldness,piety,compassion,vanity,temper,pragmatism,sk_admin,sk_martial,sk_intrigue,sk_diplomacy,sk_steward,centralism,militarism,orthodoxy,tax_incidence,expansionism,policy_sensitivity,traits,opinion,category,family_name,kingdom,health,wealth,prestige,influence,age
-you,King Aldric Valorin,,75,100,55,55,40,50,45,40,55,8,7,5,8,6,30,10,0,0,20,0,vigorous,0,player,Valorin,hetalia,82,70,85,90,40
-char_queen,Queen Victoria,,60,55,45,40,30,45,45,25,75,9,1,8,11,13,10,-40,0,-30,-10,45,merchant_family|shrewd_trader|silver_tongued|patient,40,family,Weighhouse,hetalia,76,95,75,75,36
-char_princess,Princess Nora O-kala,,50,60,60,65,25,40,30,60,35,3,11,3,4,2,10,50,-10,0,30,55,born_soldier|bold|master_duelist|wrathful,-5,family,O-kala,hetalia,92,35,60,45,19
-char_duke_tomas,Duke Tomas Valorin,,65,25,40,50,25,30,50,40,70,10,5,9,9,6,-40,10,-10,-30,10,70,kin_of_king|amb_ruthless|learned|silver_tongued,-30,relative,Valorin,hetalia,74,80,70,75,44
-char_lady_ysolde,Lady Ysolde Valorin,,35,55,45,40,35,50,55,35,45,3,1,5,9,5,0,-10,0,-20,0,30,vain|beloved_of_crowds|trusting,30,relative,Valorin,hetalia,80,60,55,45,27
-char_captain_hale,Captain Hale Fenwick,,15,60,65,55,45,45,20,45,50,4,12,4,2,2,30,40,10,20,0,30,veteran|loyal_devoted|blunt|humble,50,officer,Fenwick,hetalia,68,25,45,35,52
-char_lady_corina,Lady Corina Ashvale,,55,40,40,40,30,35,50,25,75,8,2,10,11,8,-50,0,10,-40,0,65,noble_born|silver_tongued|schemer|patient,10,noble,Ashvale,hetalia,70,85,70,75,43
-char_lord_edgar,Lord Edgar Harrow,,45,45,55,45,40,30,45,55,40,6,9,2,4,7,-30,50,20,-30,40,55,noble_born|blunt|bold|veteran,10,noble,Harrow,hetalia,66,75,65,55,49
-char_lord_malvern,Lord Malvern,,25,80,70,30,50,55,30,25,65,13,4,8,12,7,40,0,20,0,-10,40,loyal_devoted|patient|learned|sickly,70,noble,Malvern,hetalia,20,70,80,85,71
-char_prophet_cassian,Cassian the Barefoot,,40,15,65,55,60,55,30,50,20,2,1,5,9,1,-20,-40,60,40,-30,85,firebrand_preacher|pious|compassionate|lowborn,-40,enemy,,hetalia,55,5,50,60,33
-char_king_osric,Warchief Osric of Tsalutia,,60,5,30,70,25,20,45,65,45,4,14,6,4,4,20,80,0,20,70,40,crowned_head|bold|cruel|born_soldier,-60,foreign,Tsalutia,tsalutia,78,60,70,75,47
-char_envoy_petra,Envoy Petra Kolev,,45,25,40,30,30,40,35,25,80,7,2,11,13,6,0,20,0,0,30,45,foreign_born|schemer|silver_tongued|cautious,-15,foreign,Kolev,snere,72,50,45,55,38
-char_queen_isabeau,Queen Isabeau of Snere,,80,10,30,45,30,25,50,30,80,11,5,12,12,10,50,30,10,20,60,35,crowned_head|amb_ruthless|schemer|patient,-50,foreign,Snere,snere,64,90,85,90,45
-char_emperor,Emperor Constans,,20,30,50,15,50,50,35,20,40,4,2,2,6,3,0,-10,20,0,-10,30,crowned_head|cautious|trusting,10,foreign,Constans,brampia,52,85,90,15,24
-char_bard_corvin,Master Corvin Lute,,30,40,45,35,20,50,50,30,50,1,1,6,12,3,-10,-30,-30,0,-10,50,beloved_of_crowds|silver_tongued|vain|cynical,25,celebrity,,hetalia,75,35,65,55,31
-char_guildmaster_tessa,Guildmaster Tessa Marden,,40,45,60,40,30,45,35,30,75,8,1,6,9,13,10,-40,-10,-50,20,60,merchant_family|shrewd_trader|honest|amb_content,20,celebrity,Marden,hetalia,74,90,60,65,39
+you,King Aldric Valorin,,75,100,55,55,40,50,45,40,55,8,7,5,8,6,30,10,0,0,20,0,vigorous,0,player,Valorin,player_realm,82,70,85,90,40
+char_queen,Queen Victoria,,60,55,45,40,30,45,45,25,75,9,1,8,11,13,10,-40,0,-30,-10,45,merchant_family|shrewd_trader|silver_tongued|patient,40,family,Weighhouse,player_realm,76,95,75,75,36
+char_princess,Princess Nora O-kala,,50,60,60,65,25,40,30,60,35,3,11,3,4,2,10,50,-10,0,30,55,born_soldier|bold|master_duelist|wrathful,-5,family,O-kala,player_realm,92,35,60,45,19
+char_duke_tomas,Duke Tomas Valorin,,65,25,40,50,25,30,50,40,70,10,5,9,9,6,-40,10,-10,-30,10,70,kin_of_king|amb_ruthless|learned|silver_tongued,-30,relative,Valorin,player_realm,74,80,70,75,44
+char_lady_ysolde,Lady Ysolde Valorin,,35,55,45,40,35,50,55,35,45,3,1,5,9,5,0,-10,0,-20,0,30,vain|beloved_of_crowds|trusting,30,relative,Valorin,player_realm,80,60,55,45,27
+char_captain_hale,Captain Hale Fenwick,,15,60,65,55,45,45,20,45,50,4,12,4,2,2,30,40,10,20,0,30,veteran|loyal_devoted|blunt|humble,50,officer,Fenwick,player_realm,68,25,45,35,52
+char_lady_corina,Lady Corina Ashvale,,55,40,40,40,30,35,50,25,75,8,2,10,11,8,-50,0,10,-40,0,65,noble_born|silver_tongued|schemer|patient,10,noble,Ashvale,player_realm,70,85,70,75,43
+char_lord_edgar,Lord Edgar Harrow,,45,45,55,45,40,30,45,55,40,6,9,2,4,7,-30,50,20,-30,40,55,noble_born|blunt|bold|veteran,10,noble,Harrow,player_realm,66,75,65,55,49
+char_lord_malvern,Lord Malvern,,25,80,70,30,50,55,30,25,65,13,4,8,12,7,40,0,20,0,-10,40,loyal_devoted|patient|learned|sickly,70,noble,Malvern,player_realm,20,70,80,85,71
+char_prophet_cassian,Cassian the Barefoot,,40,15,65,55,60,55,30,50,20,2,1,5,9,1,-20,-40,60,40,-30,85,firebrand_preacher|pious|compassionate|lowborn,-40,enemy,,player_realm,55,5,50,60,33
+char_king_osric,Warchief Osric of Tsalutia,,60,5,30,70,25,20,45,65,45,4,14,6,4,4,20,80,0,20,70,40,crowned_head|bold|cruel|born_soldier,-60,foreign,Tsalutia,raider_realm,78,60,70,75,47
+char_envoy_petra,Envoy Petra Kolev,,45,25,40,30,30,40,35,25,80,7,2,11,13,6,0,20,0,0,30,45,foreign_born|schemer|silver_tongued|cautious,-15,foreign,Kolev,neighbor_realm,72,50,45,55,38
+char_queen_isabeau,Queen Isabeau of Snere,,80,10,30,45,30,25,50,30,80,11,5,12,12,10,50,30,10,20,60,35,crowned_head|amb_ruthless|schemer|patient,-50,foreign,Snere,neighbor_realm,64,90,85,90,45
+char_emperor,Emperor Constans,,20,30,50,15,50,50,35,20,40,4,2,2,6,3,0,-10,20,0,-10,30,crowned_head|cautious|trusting,10,foreign,Constans,empire_realm,52,85,90,15,24
+char_bard_corvin,Master Corvin Lute,,30,40,45,35,20,50,50,30,50,1,1,6,12,3,-10,-30,-30,0,-10,50,beloved_of_crowds|silver_tongued|vain|cynical,25,celebrity,,player_realm,75,35,65,55,31
+char_guildmaster_tessa,Guildmaster Tessa Marden,,40,45,60,40,30,45,35,30,75,8,1,6,9,13,10,-40,-10,-50,20,60,merchant_family|shrewd_trader|honest|amb_content,20,celebrity,Marden,player_realm,74,90,60,65,39
