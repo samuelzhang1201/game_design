@@ -19,9 +19,9 @@ anchor_bottom = 1.0
 unique_name_in_owner = true
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
+offset_left = 170.0
 offset_top = 28.0
-offset_right = -4.0
+offset_right = -134.0
 offset_bottom = -24.0
 
 [node name="MapView" type="TextureRect" parent="MapPanel"]
@@ -36,7 +36,7 @@ unique_name_in_owner = true
 anchor_bottom = 1.0
 offset_left = 4.0
 offset_top = 28.0
-offset_right = 180.0
+offset_right = 164.0
 offset_bottom = -24.0
 
 [node name="LVBox" type="VBoxContainer" parent="LogPanel"]
@@ -65,7 +65,7 @@ unique_name_in_owner = true
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -144.0
+offset_left = -128.0
 offset_top = 28.0
 offset_right = -4.0
 offset_bottom = -24.0

@@ -31,16 +31,40 @@ func test_water_click_closes_the_card() -> void:
 	v.select_state(-1)
 	assert_false(v.card().visible, "water/no-state closes the card")
 
+## Asserts the observable property, not the formula: a cover-fit floor
+## (maxf) satisfies "_zoom == _zoom_min()" while cropping a quarter of the
+## map off the sides, so that spelling of this test proved nothing.
 func test_opens_showing_the_whole_map() -> void:
 	var v := _view()
 	await wait_frames(2)
-	# New behavior: map fits to screen, showing the entire world
-	var zoom_min := v._zoom_min()
-	assert_almost_eq(v._zoom, zoom_min, 0.001,
-		"starts at fit-to-screen zoom showing the entire map")
-	# Map should be centered in the viewport
-	var tex := v._map_texture.get_size()
-	var expected_x := (v.size.x - tex.x * v._zoom) / 2.0
-	var expected_y := (v.size.y - tex.y * v._zoom) / 2.0
-	assert_almost_eq(v._offset.x, expected_x, 1.0, "map centered x")
-	assert_almost_eq(v._offset.y, expected_y, 1.0, "map centered y")
+	var drawn := Rect2(v._offset, v._map_texture.get_size() * v._zoom)
+	assert_true(drawn.position.x >= -1.0, "nothing cropped off the left")
+	assert_true(drawn.position.y >= -1.0, "nothing cropped off the top")
+	assert_true(drawn.end.x <= v.size.x + 1.0, "nothing cropped off the right")
+	assert_true(drawn.end.y <= v.size.y + 1.0, "nothing cropped off the bottom")
+	assert_almost_eq(drawn.get_center().x, v.size.x / 2.0, 1.0, "centered x")
+	assert_almost_eq(drawn.get_center().y, v.size.y / 2.0, 1.0, "centered y")
+
+func test_wheel_zoom_runs_from_whole_map_to_close_up() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var whole := v._zoom
+	v._zoom_at(v.size / 2.0, 4.0)
+	assert_gt(v._zoom, whole, "wheel up zooms in past the whole-map view")
+	v._zoom_at(v.size / 2.0, 0.0001)
+	assert_almost_eq(v._zoom, whole, 0.0001,
+		"zoom-out floors at the whole map, never smaller")
+
+## Regression guard: the map shares the court screen with the log and
+## council columns. If it ever covers or hides them there is no way to
+## issue an order or end the turn.
+func test_court_keeps_the_order_panels_beside_the_map() -> void:
+	var screen: CourtScreen = load("res://scenes/court.tscn").instantiate()
+	add_child_autofree(screen)
+	await wait_frames(1)
+	assert_true(screen.get_node("%LogPanel").is_visible_in_tree(),
+		"court log column stays visible")
+	assert_true(screen.get_node("%SidePanel").is_visible_in_tree(),
+		"council column stays visible")
+	assert_true(screen.end_turn_button().is_visible_in_tree(),
+		"End Turn stays reachable")

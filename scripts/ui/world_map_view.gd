@@ -5,8 +5,8 @@ extends Control
 ## (user ruling 2026-09-03: the world map IS the middle view — it replaces
 ## UiPalette's static backdrop there, and the bottom bar's MAP tab goes
 ## back to meaning "close overlays"). The map
-## opens at native scale centered on the player's kingdom, so only a small
-## window of Beria is visible; the view pans when the mouse rides an edge
+## opens zoomed all the way out, showing the whole world centered in the
+## frame; the view pans when the mouse rides an edge
 ## of the frame (plus drag and wheel-zoom), and clicking a kingdom opens a
 ## floating info card resolved through the world_state_index.png bitmap
 ## (tools/import_azgaar.gd) via MapIndex. View-only: reads Game.data,
@@ -106,20 +106,13 @@ func _build_card() -> void:
 	col.add_child(close)
 	_card.hide()
 
-## Initial framing: fit the entire map to screen, centered.
-## The view can then zoom in/out from this "see the whole map" starting point.
+## Initial framing: the whole map, centered, zoomed all the way out. Wheel
+## zoom then works up from there to inspect a region.
 func _go_home() -> void:
 	_zoom = _zoom_min()
-	var tex := _map_texture.get_size()
-	_offset = (size - tex * _zoom) / 2.0
+	_offset = (size - _map_texture.get_size() * _zoom) / 2.0
 	_clamp_offset()
 	_homed = true
-
-func _home_kingdom() -> Dictionary:
-	for role: Dictionary in Game.data.roles:
-		if String(role.get("id", "")) == "you":
-			return Game.data.kingdoms.get(String(role.get("kingdom", "")), {})
-	return {}
 
 func _draw() -> void:
 	if _map_texture == null:
@@ -188,21 +181,32 @@ func _zoom_at(pos: Vector2, factor: float) -> void:
 	_clamp_offset()
 	queue_redraw()
 
-## Never zoom out past "map covers the frame": no empty gutters, and the
-## clamp below can always pin the map to the frame's edges.
+## Zoom-out floor: the whole map fits inside the frame (contain fit), so the
+## default framing shows the entire world and the slack axis letterboxes.
+## size.y is guarded too — a zero there would make minf return 0, and _zoom_at
+## divides by _zoom.
 func _zoom_min() -> float:
 	var tex := _map_texture.get_size()
-	if tex.x <= 0.0 or tex.y <= 0.0 or size.x <= 0.0:
+	if tex.x <= 0.0 or tex.y <= 0.0 or size.x <= 0.0 or size.y <= 0.0:
 		return 0.1
-	return maxf(size.x / tex.x, size.y / tex.y)
+	return minf(size.x / tex.x, size.y / tex.y)
 
+## Pan limits: an axis the map overflows stays pinned to the frame edges, so
+## no gutter opens where map could have been; an axis it underfills (the
+## letterboxed one at low zoom) is centered instead.
 func _clamp_offset() -> void:
 	if _map_texture == null:
 		return
 	_zoom = maxf(_zoom, _zoom_min())
 	var scaled := _map_texture.get_size() * _zoom
-	_offset.x = clampf(_offset.x, size.x - scaled.x, 0.0)
-	_offset.y = clampf(_offset.y, size.y - scaled.y, 0.0)
+	if scaled.x < size.x:
+		_offset.x = (size.x - scaled.x) / 2.0
+	else:
+		_offset.x = clampf(_offset.x, size.x - scaled.x, 0.0)
+	if scaled.y < size.y:
+		_offset.y = (size.y - scaled.y) / 2.0
+	else:
+		_offset.y = clampf(_offset.y, size.y - scaled.y, 0.0)
 
 func _select_at(pos: Vector2) -> void:
 	var map_px := ((pos - _offset) / _zoom / _render_scale).floor()
