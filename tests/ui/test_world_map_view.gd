@@ -31,13 +31,16 @@ func test_water_click_closes_the_card() -> void:
 	v.select_state(-1)
 	assert_false(v.card().visible, "water/no-state closes the card")
 
-func test_opens_zoomed_on_the_players_kingdom() -> void:
+func test_opens_showing_the_whole_map() -> void:
 	var v := _view()
 	await wait_frames(2)
-	assert_almost_eq(v._zoom * v._render_scale, 1.0, 0.001,
-		"one view px per native map unit: only a window of the map shows")
-	var home: Dictionary = Game.data.kingdoms["hetalia"]
-	var center := Vector2(float(home["center_x"]), float(home["center_y"]))
-	var on_screen := center * v._render_scale * v._zoom + v._offset
-	assert_almost_eq(on_screen.x, v.size.x / 2.0, 1.0, "home centered x")
-	assert_almost_eq(on_screen.y, v.size.y / 2.0, 1.0, "home centered y")
+	# New behavior: map fits to screen, showing the entire world
+	var zoom_min := v._zoom_min()
+	assert_almost_eq(v._zoom, zoom_min, 0.001,
+		"starts at fit-to-screen zoom showing the entire map")
+	# Map should be centered in the viewport
+	var tex := v._map_texture.get_size()
+	var expected_x := (v.size.x - tex.x * v._zoom) / 2.0
+	var expected_y := (v.size.y - tex.y * v._zoom) / 2.0
+	assert_almost_eq(v._offset.x, expected_x, 1.0, "map centered x")
+	assert_almost_eq(v._offset.y, expected_y, 1.0, "map centered y")

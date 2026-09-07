@@ -14,7 +14,7 @@ extends Control
 
 const MAP_TEXTURE_PATH := "res://assets/maps/world_map.png"
 const INDEX_TEXTURE_PATH := "res://assets/maps/world_state_index.png"
-const ZOOM_MAX := 4.0
+const ZOOM_MAX := 8.0
 const ZOOM_STEP := 1.2
 ## A press/release pair further apart than this is a drag, not a click.
 const CLICK_SLOP := 5.0
@@ -106,16 +106,12 @@ func _build_card() -> void:
 	col.add_child(close)
 	_card.hide()
 
-## Initial framing: one view px per native map unit (regardless of the
-## render scale), centered on the player's home kingdom (the `you` role's
-## realm), falling back to the map's middle.
+## Initial framing: fit the entire map to screen, centered.
+## The view can then zoom in/out from this "see the whole map" starting point.
 func _go_home() -> void:
-	_zoom = 1.0 / _render_scale
-	var center := _map_texture.get_size() / 2.0
-	var home := _home_kingdom()
-	if not home.is_empty():
-		center = Vector2(float(home["center_x"]), float(home["center_y"])) * _render_scale
-	_offset = size / 2.0 - center * _zoom
+	_zoom = _zoom_min()
+	var tex := _map_texture.get_size()
+	_offset = (size - tex * _zoom) / 2.0
 	_clamp_offset()
 	_homed = true
 
