@@ -39,6 +39,7 @@ const PIN_VILLAGE := 1.5
 const PIN_MARKER := 3.0
 const PIN_OUTLINE := Color(0.05, 0.04, 0.02, 0.9)
 const TOOLTIP_OFFSET := Vector2(10.0, 12.0)
+const SCENE_PATH := "res://scenes/world_map.tscn"
 
 var _map_texture: Texture2D
 var _index_image: Image
@@ -67,6 +68,13 @@ var _press_pos := Vector2.ZERO
 ## mouse_entered events — the headless test runner's phantom (0,0) mouse
 ## must never pan the view).
 var _mouse_inside := false
+
+## Every screen builds the map through here (user request 2026-09-08): it is a
+## scene like the character portraits and location views, so it can be opened
+## in the editor and decorated with child nodes. Those children draw beneath
+## the info card and tooltip, which _ready appends after them.
+static func create() -> WorldMapView:
+	return load(SCENE_PATH).instantiate()
 
 func _ready() -> void:
 	clip_contents = true

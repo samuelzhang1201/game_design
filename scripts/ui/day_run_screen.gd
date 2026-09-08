@@ -28,8 +28,7 @@ func _ready() -> void:
 	map_panel.offset_bottom = -(NewsTicker.STRIP_HEIGHT + BottomBar.BAR_HEIGHT + 8.0)
 	add_child(map_panel)
 	# Live world map, same as court/conversation (user ruling 2026-09-03).
-	var world_map := WorldMapView.new()
-	world_map.name = "WorldMap"
+	var world_map := WorldMapView.create()
 	map_panel.add_child(world_map)
 	overlay = CalendarOverlay.new()
 	overlay.finished.connect(func(): finished.emit())

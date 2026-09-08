@@ -4,7 +4,7 @@ extends GutTest
 ## to "close overlays" — that behavior is pinned by test_ui_rework).
 
 func _view() -> WorldMapView:
-	var v := WorldMapView.new()
+	var v := WorldMapView.create()
 	v.size = Vector2(320, 180)
 	add_child_autofree(v)
 	return v
@@ -200,3 +200,24 @@ func test_tooltip_stays_inside_the_view_at_the_edge() -> void:
 	var r := v.tooltip_rect()
 	assert_true(Rect2(Vector2.ZERO, v.size).encloses(r),
 		"tooltip %s stays inside the view %s" % [r, v.size])
+
+## The map is a scene like every other view (character portraits, locations,
+## user request 2026-09-08), not a bare .new() — so it can be opened and
+## decorated in the editor, and every screen gets the same one.
+func test_create_instantiates_from_the_scene_file() -> void:
+	var v := WorldMapView.create()
+	add_child_autofree(v)
+	await wait_frames(1)
+	assert_eq(v.scene_file_path, WorldMapView.SCENE_PATH, "came from the scene file")
+	assert_not_null(v.card(), "and is fully wired")
+
+func test_every_gameplay_screen_uses_the_map_scene() -> void:
+	for path in ["res://scenes/court.tscn", "res://scenes/conversation.tscn",
+			"res://scenes/day_run.tscn"]:
+		var screen: Control = load(path).instantiate()
+		add_child_autofree(screen)
+		await wait_frames(1)
+		var map: WorldMapView = screen.find_child("WorldMap", true, false)
+		assert_not_null(map, "%s embeds the map" % path.get_file())
+		assert_eq(map.scene_file_path, WorldMapView.SCENE_PATH,
+			"%s builds it from the scene, not .new()" % path.get_file())

@@ -49,8 +49,7 @@ func _ready() -> void:
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 2))
 	# The live world map fills the middle zone on every gameplay screen
 	# (user ruling 2026-09-03); portraits and dialogue draw above it.
-	_world_map = WorldMapView.new()
-	_world_map.name = "WorldMap"
+	_world_map = WorldMapView.create()
 	%MapPanel.add_child(_world_map)
 	# Ask on a map card pre-fills the talk box (spec 2026-09-08); never sends.
 	_world_map.set_ask_enabled(true)

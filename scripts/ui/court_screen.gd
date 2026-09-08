@@ -38,8 +38,7 @@ func _ready() -> void:
 	%MapPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 2))
 	# The live world map fills the middle zone (user ruling 2026-09-03).
-	_world_map = WorldMapView.new()
-	_world_map.name = "WorldMap"
+	_world_map = WorldMapView.create()
 	%MapPanel.add_child(_world_map)
 	# The map's Ask button drops its question into the order box (spec
 	# 2026-09-08); the player still presses Enter, so no order or API call
