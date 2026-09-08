@@ -1,0 +1,14 @@
+biome_id,label,color,habitability
+0,Marine,#466eab,0
+1,Hot desert,#fbe79f,4
+2,Cold desert,#b5b887,10
+3,Savanna,#d2d082,22
+4,Grassland,#c8d68f,30
+5,Tropical seasonal forest,#b6d95d,50
+6,Temperate deciduous forest,#29bc56,100
+7,Tropical rainforest,#7dcb35,80
+8,Temperate rainforest,#409c43,90
+9,Taiga,#4b6b32,12
+10,Tundra,#96784b,4
+11,Glacier,#d5e7eb,0
+12,Wetland,#0b9131,12

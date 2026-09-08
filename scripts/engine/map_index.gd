@@ -14,3 +14,18 @@ static func state_at(img: Image, px: Vector2i) -> int:
 			or px.x >= img.get_width() or px.y >= img.get_height():
 		return -1
 	return decode(img.get_pixelv(px))
+
+## Generic decode for any two-byte index bitmap (states, provinces): the same
+## encoding as state_at, which stays as the named alias.
+static func id_at(img: Image, px: Vector2i) -> int:
+	return state_at(img, px)
+
+## The biome bitmap carries its id in R alone (13 biomes); white = none.
+static func biome_at(img: Image, px: Vector2i) -> int:
+	if img == null or px.x < 0 or px.y < 0 \
+			or px.x >= img.get_width() or px.y >= img.get_height():
+		return -1
+	var c := img.get_pixelv(px)
+	if c.r8 == 255 and c.g8 == 255 and c.b8 == 255:
+		return -1
+	return c.r8

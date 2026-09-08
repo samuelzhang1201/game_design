@@ -31,12 +31,24 @@ var burgs: Dictionary = {}
 ## loops in native map coordinates (borders.csv, drawn by WorldMapView on
 ## hover).
 var borders: Dictionary = {}
+## Map objects (spec 2026-09-08), keyed by *_code. Route and river rows carry
+## two derived fields set at load: polyline (PackedVector2Array) and bbox
+## (Rect2), so hit-testing never re-parses text.
+var routes: Dictionary = {}
+var rivers: Dictionary = {}
+var markers: Dictionary = {}
+## biome_id (int) -> row.
+var biomes: Dictionary = {}
+## width/height/distance_unit/distance_scale/population_rate as strings.
+var map_info: Dictionary = {}
 ## Available map packs from data/maps.csv, keyed by map_id.
 var maps: Dictionary = {}
 ## The currently loaded pack (load_map).
 var map_id: String = ""
 var map_texture_path: String = ""
 var index_texture_path: String = ""
+var province_texture_path: String = ""
+var biome_texture_path: String = ""
 ## realm slot -> this map's kingdom_code (maps/<id>/realm_bindings.csv).
 var realm_bindings: Dictionary = {}
 
@@ -178,6 +190,11 @@ func load_map(id: String) -> bool:
 	provinces.clear()
 	burgs.clear()
 	borders.clear()
+	routes.clear()
+	rivers.clear()
+	markers.clear()
+	biomes.clear()
+	map_info.clear()
 	realm_bindings.clear()
 	if not _load_if_present(dir + "/kingdoms.csv",
 			["kingdom_code", "state_id", "label", "capital_burg"],
@@ -194,12 +211,32 @@ func load_map(id: String) -> bool:
 	if not _load_if_present(dir + "/borders.csv", ["kingdom_code", "loop", "points"],
 			func(r): _add_border_loop(r)):
 		return false
+	if not _load_if_present(dir + "/routes.csv",
+			["route_code", "label", "group", "from_burg", "to_burg", "length", "points"],
+			func(r): routes[r["route_code"]] = _with_polyline(r)):
+		return false
+	if not _load_if_present(dir + "/rivers.csv",
+			["river_code", "label", "type", "length", "kingdom_codes", "points"],
+			func(r): rivers[r["river_code"]] = _with_polyline(r)):
+		return false
+	if not _load_if_present(dir + "/markers.csv",
+			["marker_code", "label", "type", "x", "y", "legend"],
+			func(r): markers[r["marker_code"]] = r):
+		return false
+	if not _load_if_present(dir + "/biomes.csv", ["biome_id", "label"],
+			func(r): biomes[int(r["biome_id"])] = r):
+		return false
+	if not _load_if_present(dir + "/map_info.csv", ["key", "value"],
+			func(r): map_info[r["key"]] = r["value"]):
+		return false
 	if not _load_if_present(dir + "/realm_bindings.csv", ["slot", "kingdom_code"],
 			func(r): realm_bindings[r["slot"]] = r["kingdom_code"]):
 		return false
 	map_id = id
 	map_texture_path = String(m["map_texture"])
 	index_texture_path = String(m["index_texture"])
+	province_texture_path = String(m.get("province_texture", ""))
+	biome_texture_path = String(m.get("biome_texture", ""))
 	_resolve_realm_slots()
 	return true
 
@@ -208,6 +245,12 @@ func _add_border_loop(r: Dictionary) -> void:
 	if not borders.has(code):
 		borders[code] = []
 	(borders[code] as Array).append(MapGeometry.parse_points(String(r["points"])))
+
+func _with_polyline(r: Dictionary) -> Dictionary:
+	var pts := MapGeometry.parse_points(String(r["points"]))
+	r["polyline"] = pts
+	r["bbox"] = MapGeometry.bounds(pts)
+	return r
 
 ## A realm slot resolved through the loaded map. Anything that is not a slot
 ## passes through unchanged — a literal kingdom_code, or facts.csv subjects

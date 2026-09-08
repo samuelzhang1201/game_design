@@ -13,3 +13,11 @@ func test_parse_points_reads_space_and_pipe_separated_pairs() -> void:
 
 func test_parse_points_of_empty_string_is_empty() -> void:
 	assert_eq(MapGeometry.parse_points("").size(), 0)
+
+func test_bounds_wraps_every_point() -> void:
+	var r := MapGeometry.bounds(PackedVector2Array([Vector2(1, 2), Vector2(3, -1), Vector2(2, 0)]))
+	assert_eq(r.position, Vector2(1, -1))
+	assert_eq(r.end, Vector2(3, 2))
+
+func test_bounds_of_nothing_is_empty() -> void:
+	assert_eq(MapGeometry.bounds(PackedVector2Array()), Rect2())

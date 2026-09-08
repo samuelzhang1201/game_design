@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bicycjbf332ak"
+
+[deps]
+
+files=["res://data/maps/beria/biomes.label.translation", "res://data/maps/beria/biomes.color.translation", "res://data/maps/beria/biomes.habitability.translation"]
+
+source_file="res://data/maps/beria/biomes.csv"
+dest_files=["res://data/maps/beria/biomes.label.translation", "res://data/maps/beria/biomes.color.translation", "res://data/maps/beria/biomes.habitability.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

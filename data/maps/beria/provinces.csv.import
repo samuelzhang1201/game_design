@@ -6,10 +6,10 @@ uid="uid://br001u343u2fi"
 
 [deps]
 
-files=["res://data/maps/beria/provinces.label.translation", "res://data/maps/beria/provinces.kingdom.translation", "res://data/maps/beria/provinces.capital.translation", "res://data/maps/beria/provinces.area.translation", "res://data/maps/beria/provinces.population.translation"]
+files=["res://data/maps/beria/provinces.label.translation", "res://data/maps/beria/provinces.kingdom.translation", "res://data/maps/beria/provinces.capital.translation", "res://data/maps/beria/provinces.area.translation", "res://data/maps/beria/provinces.population.translation", "res://data/maps/beria/provinces.province.translation", "res://data/maps/beria/provinces.center.translation", "res://data/maps/beria/provinces.center.translation"]
 
 source_file="res://data/maps/beria/provinces.csv"
-dest_files=["res://data/maps/beria/provinces.label.translation", "res://data/maps/beria/provinces.kingdom.translation", "res://data/maps/beria/provinces.capital.translation", "res://data/maps/beria/provinces.area.translation", "res://data/maps/beria/provinces.population.translation"]
+dest_files=["res://data/maps/beria/provinces.label.translation", "res://data/maps/beria/provinces.kingdom.translation", "res://data/maps/beria/provinces.capital.translation", "res://data/maps/beria/provinces.area.translation", "res://data/maps/beria/provinces.population.translation", "res://data/maps/beria/provinces.province.translation", "res://data/maps/beria/provinces.center.translation", "res://data/maps/beria/provinces.center.translation"]
 
 [params]
 

@@ -6,10 +6,10 @@ uid="uid://5kufqp7i7vm6"
 
 [deps]
 
-files=["res://data/maps/beria/burgs.label.translation", "res://data/maps/beria/burgs.province.translation", "res://data/maps/beria/burgs.kingdom.translation", "res://data/maps/beria/burgs.population.translation", "res://data/maps/beria/burgs.is.translation", "res://data/maps/beria/burgs.is.translation", "res://data/maps/beria/burgs.x.translation", "res://data/maps/beria/burgs.y.translation"]
+files=["res://data/maps/beria/burgs.label.translation", "res://data/maps/beria/burgs.province.translation", "res://data/maps/beria/burgs.kingdom.translation", "res://data/maps/beria/burgs.population.translation", "res://data/maps/beria/burgs.is.translation", "res://data/maps/beria/burgs.is.translation", "res://data/maps/beria/burgs.x.translation", "res://data/maps/beria/burgs.y.translation", "res://data/maps/beria/burgs.type.translation", "res://data/maps/beria/burgs.features.translation"]
 
 source_file="res://data/maps/beria/burgs.csv"
-dest_files=["res://data/maps/beria/burgs.label.translation", "res://data/maps/beria/burgs.province.translation", "res://data/maps/beria/burgs.kingdom.translation", "res://data/maps/beria/burgs.population.translation", "res://data/maps/beria/burgs.is.translation", "res://data/maps/beria/burgs.is.translation", "res://data/maps/beria/burgs.x.translation", "res://data/maps/beria/burgs.y.translation"]
+dest_files=["res://data/maps/beria/burgs.label.translation", "res://data/maps/beria/burgs.province.translation", "res://data/maps/beria/burgs.kingdom.translation", "res://data/maps/beria/burgs.population.translation", "res://data/maps/beria/burgs.is.translation", "res://data/maps/beria/burgs.is.translation", "res://data/maps/beria/burgs.x.translation", "res://data/maps/beria/burgs.y.translation", "res://data/maps/beria/burgs.type.translation", "res://data/maps/beria/burgs.features.translation"]
 
 [params]
 

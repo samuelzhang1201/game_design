@@ -5,15 +5,23 @@ extends SceneTree
 ## and writes (all committed to git; re-run after every re-export):
 ##
 ##   data/maps/<map-id>/kingdoms.csv   one row per state (0 "Neutrals" excluded)
-##   data/provinces.csv   one row per province
-##   data/burgs.csv       one row per burg
-##   data/maps/<map-id>/borders.csv   one row per closed border loop per kingdom:
+##   data/maps/<map-id>/provinces.csv  one row per province (+ province_id, center)
+##   data/maps/<map-id>/burgs.csv      one row per burg (+ type, features)
+##   data/maps/<map-id>/borders.csv    one row per closed border loop per kingdom:
 ##       kingdom_code,loop,points — points as "x y|x y|..." in native map
 ##       coordinates, so WorldMapView can outline the hovered kingdom
+##   data/maps/<map-id>/routes.csv     roads/trails/sea routes as polylines,
+##       endpoints snapped to a burg within SNAP_RADIUS px
+##   data/maps/<map-id>/rivers.csv     named rivers as polylines through their cells
+##   data/maps/<map-id>/markers.csv    points of interest with their legend notes
+##   data/maps/<map-id>/biomes.csv     biome id -> label, color, habitability
+##   data/maps/<map-id>/map_info.csv   width, height, distance unit/scale, population rate
 ##   assets/maps/<map-id>/world_map.png byte copy under a stable name
-##   assets/maps/<map-id>/world_state_index.png  hit-test bitmap: each cell's
+##   assets/maps/<map-id>/world_state_index.png     hit-test bitmap: each cell's
 ##       polygon filled with R = state_id & 0xFF, G = state_id >> 8, B = 0;
 ##       untouched pixels stay white (255,255,255) = water / no state
+##   assets/maps/<map-id>/world_province_index.png  same encoding, province id
+##   assets/maps/<map-id>/world_biome_index.png     R = biome id (land cells only)
 ##
 ## Polygons are filled with an even-odd scanline rasterizer. Deterministic:
 ## same inputs => byte-identical outputs. Hand-edits to the generated CSVs
@@ -31,9 +39,13 @@ const DATA := "res://data"
 ## realm_bindings.csv binds each slot to one of that map's kingdoms — so the
 ## check below is against those bindings, per map, not a global list.
 const DEFAULT_MAP_ID := "beria"
-const GENERATED_PNGS: Array[String] = ["world_map.png", "world_state_index.png"]
+const GENERATED_PNGS: Array[String] = ["world_map.png", "world_state_index.png",
+	"world_province_index.png", "world_biome_index.png"]
+## A route endpoint this close (native px) to a burg is "at" that burg.
+const SNAP_RADIUS := 3.0
 
 var _slug_regex := RegEx.create_from_string("[^a-z0-9]+")
+var _ws_regex := RegEx.create_from_string("\\s+")
 
 
 func _init() -> void:
@@ -51,6 +63,59 @@ func _take_slug(used: Dictionary, name: String) -> String:
 	var n := int(used.get(base, 0)) + 1
 	used[base] = n
 	return base if n == 1 else "%s_%d" % [base, n]
+
+
+## "hot-springs" -> "Hot springs" (first letter only; the rest stays as authored).
+func _humanize(kind: String) -> String:
+	var t := kind.replace("-", " ").replace("_", " ")
+	return t.substr(0, 1).to_upper() + t.substr(1) if t != "" else ""
+
+
+func _collapse_ws(text: String) -> String:
+	return _ws_regex.sub(text, " ", true).strip_edges()
+
+
+## The nearest burg id within `radius` native px of (x, y), else -1. Ties go
+## to the earlier burg, so output is stable.
+func _burg_within(burgs: Array[Dictionary], x: float, y: float, radius: float) -> int:
+	var best := -1
+	var best_d := radius * radius
+	for b in burgs:
+		var dx := float(b["x"]) - x
+		var dy := float(b["y"]) - y
+		var d := dx * dx + dy * dy
+		if d < best_d or (d == best_d and best < 0):
+			best_d = d
+			best = int(b["i"])
+	return best
+
+
+## Rasterize every cell whose id_of(cell) >= 0 into an RGB8 image with the
+## two-byte encoding (R = id & 0xFF, G = id >> 8); untouched pixels white.
+func _rasterize(cells: Array, vertices: Array, width: int, height: int,
+		id_of: Callable) -> Image:
+	var buf := PackedByteArray()
+	buf.resize(width * height * 3)
+	buf.fill(255)
+	for c: Dictionary in cells:
+		var id := int(id_of.call(c))
+		if id < 0:
+			continue
+		var px := PackedFloat64Array()
+		var py := PackedFloat64Array()
+		for v in (c["v"] as Array):
+			var vp: Array = (vertices[int(v)] as Dictionary)["p"]
+			px.append(float(vp[0]))
+			py.append(float(vp[1]))
+		_fill_polygon(buf, width, height, px, py, id)
+	return Image.create_from_data(width, height, false, Image.FORMAT_RGB8, buf)
+
+
+func _save_png(img: Image, path: String) -> bool:
+	if img.save_png(ProjectSettings.globalize_path(path)) != OK:
+		push_error("error: cannot write %s" % path)
+		return false
+	return true
 
 
 func _newest(candidates: Array[String], what: String) -> String:
@@ -360,26 +425,33 @@ func _run() -> int:
 
 	# --- provinces.csv ----------------------------------------------------
 	out = _csv_line(["province_code", "label", "kingdom_code", "capital_burg",
-		"area", "population"])
+		"area", "population", "province_id", "center_x", "center_y"])
 	for p in provinces:
+		var pcenter: Array = (cells[int(p["center"])] as Dictionary)["p"]
 		out += _csv_line([String(prov_code[int(p["i"])]), String(p["name"]),
 			String(state_code[int(p["state"])]),
 			String(burg_code.get(int(p.get("burg", 0)), "")),
 			str(int(prov_area[int(p["i"])])),
-			str(int(round(float(prov_pop[int(p["i"])]) * rate)))])
+			str(int(round(float(prov_pop[int(p["i"])]) * rate))),
+			str(int(p["i"])), _num2(float(pcenter[0])), _num2(float(pcenter[1]))])
 	if not _write_text(out_data + "/provinces.csv", out):
 		return 1
 
 	# --- burgs.csv --------------------------------------------------------
 	out = _csv_line(["burg_code", "label", "province_code", "kingdom_code",
-		"population", "is_capital", "is_port", "x", "y"])
+		"population", "is_capital", "is_port", "x", "y", "type", "features"])
 	for b in burgs:
+		var feats: Array[String] = []
+		for flag in ["walls", "citadel", "temple", "plaza", "shanty"]:
+			if b.get(flag):
+				feats.append(flag)
 		out += _csv_line([String(burg_code[int(b["i"])]), String(b["name"]),
 			String(prov_code[burg_province[int(b["i"])]]),
 			String(state_code[int(b["state"])]),
 			str(int(round(float(b.get("population", 0)) * rate))),
 			"1" if b.get("capital") else "0", "1" if b.get("port") else "0",
-			_num2(float(b["x"])), _num2(float(b["y"]))])
+			_num2(float(b["x"])), _num2(float(b["y"])),
+			String(b.get("type", "Generic")), "|".join(feats)])
 	if not _write_text(out_data + "/burgs.csv", out):
 		return 1
 
@@ -397,26 +469,133 @@ func _run() -> int:
 	if not _write_text(out_data + "/borders.csv", out):
 		return 1
 
+	# --- routes.csv -------------------------------------------------------
+	out = _csv_line(["route_code", "label", "group", "from_burg", "to_burg", "length", "points"])
+	var route_slugs: Dictionary = {}
+	var routes := _active(pack.get("routes", []))
+	for r in routes:
+		var raw: Array = r.get("points", [])
+		if raw.size() < 2:
+			push_error("error: route %d has fewer than 2 points" % int(r.get("i", -1)))
+			return 1
+		var pts: Array[String] = []
+		var length := 0.0
+		var lx := 0.0
+		var ly := 0.0
+		for pi in raw.size():
+			var pt: Array = raw[pi]
+			var x := float(pt[0])
+			var y := float(pt[1])
+			if pi > 0:
+				length += sqrt((x - lx) * (x - lx) + (y - ly) * (y - ly))
+			lx = x
+			ly = y
+			pts.append("%s %s" % [_num2(x), _num2(y)])
+		var first: Array = raw[0]
+		var last: Array = raw[raw.size() - 1]
+		var from_id := _burg_within(burgs, float(first[0]), float(first[1]), SNAP_RADIUS)
+		var to_id := _burg_within(burgs, float(last[0]), float(last[1]), SNAP_RADIUS)
+		var label := String(r.get("name", ""))
+		out += _csv_line([_take_slug(route_slugs, label), label, String(r.get("group", "")),
+			String(burg_code.get(from_id, "")), String(burg_code.get(to_id, "")),
+			String.num(length, 1), "|".join(pts)])
+	if not _write_text(out_data + "/routes.csv", out):
+		return 1
+
+	# --- rivers.csv -------------------------------------------------------
+	out = _csv_line(["river_code", "label", "type", "length", "kingdom_codes", "points"])
+	var river_slugs: Dictionary = {}
+	var river_count := 0
+	for rv in _active(pack.get("rivers", [])):
+		var rcells: Array = rv.get("cells", [])
+		if rcells.size() < 2:
+			continue  # a one-cell river has no line to draw
+		var pts: Array[String] = []
+		var through: Array[String] = []
+		var length := 0.0
+		var lx := 0.0
+		var ly := 0.0
+		for ci in rcells.size():
+			var c: Dictionary = cells[int(rcells[ci])]
+			var cp: Array = c["p"]
+			var x := float(cp[0])
+			var y := float(cp[1])
+			if ci > 0:
+				length += sqrt((x - lx) * (x - lx) + (y - ly) * (y - ly))
+			lx = x
+			ly = y
+			pts.append("%s %s" % [_num2(x), _num2(y)])
+			var sid := int(c.get("state", 0))
+			if state_code.has(sid) and not through.has(String(state_code[sid])):
+				through.append(String(state_code[sid]))
+		var label := String(rv.get("name", ""))
+		out += _csv_line([_take_slug(river_slugs, label), label, String(rv.get("type", "River")),
+			String.num(length, 1), "|".join(through), "|".join(pts)])
+		river_count += 1
+	if not _write_text(out_data + "/rivers.csv", out):
+		return 1
+
+	# --- markers.csv ------------------------------------------------------
+	var notes: Dictionary = {}
+	for n in (world.get("notes", []) as Array):
+		if n is Dictionary:
+			notes[String((n as Dictionary).get("id", ""))] = n
+	out = _csv_line(["marker_code", "label", "type", "x", "y", "legend"])
+	var marker_slugs: Dictionary = {}
+	var unnoted := 0
+	var markers := _active(pack.get("markers", []))
+	for m in markers:
+		if not m.has("x") or not m.has("y"):
+			push_error("error: marker %d has no coordinates" % int(m.get("i", -1)))
+			return 1
+		var note: Dictionary = notes.get("marker%d" % int(m["i"]), {})
+		if note.is_empty():
+			unnoted += 1
+		var label := String(note.get("name", _humanize(String(m.get("type", "marker")))))
+		out += _csv_line([_take_slug(marker_slugs, label), label, String(m.get("type", "")),
+			_num2(float(m["x"])), _num2(float(m["y"])),
+			_collapse_ws(String(note.get("legend", "")))])
+	if not _write_text(out_data + "/markers.csv", out):
+		return 1
+	if unnoted > 0:
+		print("WARNING: %d markers have no note; their type stands in as the label" % unnoted)
+
+	# --- biomes.csv -------------------------------------------------------
+	out = _csv_line(["biome_id", "label", "color", "habitability"])
+	for bm in _active(pack.get("biomes", [])):
+		out += _csv_line([str(int(bm["i"])), String(bm["name"]), String(bm.get("color", "")),
+			str(int(bm.get("habitability", 0)))])
+	if not _write_text(out_data + "/biomes.csv", out):
+		return 1
+
+	# --- map_info.csv -----------------------------------------------------
+	var settings: Dictionary = world["settings"]
+	out = _csv_line(["key", "value"])
+	out += _csv_line(["width", str(width)])
+	out += _csv_line(["height", str(height)])
+	out += _csv_line(["distance_unit", String(settings.get("distanceUnit", "km"))])
+	out += _csv_line(["distance_scale", _num2(float(settings.get("distanceScale", 1)))])
+	out += _csv_line(["population_rate", _num2(rate)])
+	if not _write_text(out_data + "/map_info.csv", out):
+		return 1
+
 	# --- bitmaps ----------------------------------------------------------
 	DirAccess.copy_absolute(ProjectSettings.globalize_path(png_path),
 		ProjectSettings.globalize_path(out_art + "/world_map.png"))
-	var buf := PackedByteArray()
-	buf.resize(width * height * 3)
-	buf.fill(255)
-	for c: Dictionary in cells:
+	var state_img := _rasterize(cells, vertices, width, height, func(c: Dictionary) -> int:
 		var sid := int(c.get("state", 0))
-		if state_code.has(sid):
-			var px := PackedFloat64Array()
-			var py := PackedFloat64Array()
-			for v in (c["v"] as Array):
-				var vp: Array = (vertices[int(v)] as Dictionary)["p"]
-				px.append(float(vp[0]))
-				py.append(float(vp[1]))
-			_fill_polygon(buf, width, height, px, py, sid)
-	var index_img := Image.create_from_data(width, height, false, Image.FORMAT_RGB8, buf)
-	if index_img.save_png(
-			ProjectSettings.globalize_path(out_art + "/world_state_index.png")) != OK:
-		push_error("error: cannot write world_state_index.png")
+		return sid if state_code.has(sid) else -1)
+	if not _save_png(state_img, out_art + "/world_state_index.png"):
+		return 1
+	var province_img := _rasterize(cells, vertices, width, height, func(c: Dictionary) -> int:
+		var pid := int(c.get("province", 0))
+		return pid if prov_code.has(pid) else -1)
+	if not _save_png(province_img, out_art + "/world_province_index.png"):
+		return 1
+	var biome_img := _rasterize(cells, vertices, width, height, func(c: Dictionary) -> int:
+		var bid := int(c.get("biome", 0))
+		return bid if bid > 0 else -1)
+	if not _save_png(biome_img, out_art + "/world_biome_index.png"):
 		return 1
 
 	# --- report -----------------------------------------------------------
@@ -429,6 +608,7 @@ func _run() -> int:
 		print("         does not contain: %s" % ", ".join(missing))
 		print("         Fix the bindings or rename the states in Azgaar —")
 		print("         until then the cast has no home on this map.")
-	print("map '%s': wrote %d kingdoms, %d provinces, %d burgs, %d border loops into %s, art into %s"
-		% [map_id, states.size(), provinces.size(), burgs.size(), loop_total, out_data, out_art])
+	print("map '%s': wrote %d kingdoms, %d provinces, %d burgs, %d border loops, %d routes, %d rivers, %d markers into %s, art into %s"
+		% [map_id, states.size(), provinces.size(), burgs.size(), loop_total,
+			routes.size(), river_count, markers.size(), out_data, out_art])
 	return 0

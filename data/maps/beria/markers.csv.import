@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://5k72omm5pga4"
+
+[deps]
+
+files=["res://data/maps/beria/markers.label.translation", "res://data/maps/beria/markers.type.translation", "res://data/maps/beria/markers.x.translation", "res://data/maps/beria/markers.y.translation", "res://data/maps/beria/markers.legend.translation"]
+
+source_file="res://data/maps/beria/markers.csv"
+dest_files=["res://data/maps/beria/markers.label.translation", "res://data/maps/beria/markers.type.translation", "res://data/maps/beria/markers.x.translation", "res://data/maps/beria/markers.y.translation", "res://data/maps/beria/markers.legend.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

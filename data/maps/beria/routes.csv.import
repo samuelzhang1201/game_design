@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bcj2vokaqyr7w"
+
+[deps]
+
+files=["res://data/maps/beria/routes.label.translation", "res://data/maps/beria/routes.group.translation", "res://data/maps/beria/routes.from.translation", "res://data/maps/beria/routes.to.translation", "res://data/maps/beria/routes.length.translation", "res://data/maps/beria/routes.points.translation"]
+
+source_file="res://data/maps/beria/routes.csv"
+dest_files=["res://data/maps/beria/routes.label.translation", "res://data/maps/beria/routes.group.translation", "res://data/maps/beria/routes.from.translation", "res://data/maps/beria/routes.to.translation", "res://data/maps/beria/routes.length.translation", "res://data/maps/beria/routes.points.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

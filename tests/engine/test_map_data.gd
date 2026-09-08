@@ -97,3 +97,69 @@ func _touches_state(img: Image, p: Vector2, sid: int) -> bool:
 			if MapIndex.state_at(img, c + Vector2i(dx, dy)) == sid:
 				return true
 	return false
+
+## Map objects (spec 2026-09-08): routes, rivers, markers, biomes, map info,
+## plus the province and biome index bitmaps, all from tools/import_azgaar.gd.
+func test_map_object_tables_load() -> void:
+	assert_gt(repo.routes.size(), 0, "routes.csv loaded")
+	assert_gt(repo.rivers.size(), 0, "rivers.csv loaded")
+	assert_gt(repo.markers.size(), 0, "markers.csv loaded")
+	assert_gt(repo.biomes.size(), 0, "biomes.csv loaded")
+	assert_eq(String(repo.map_info.get("distance_unit", "")), "km", "map_info.csv carries the unit")
+
+func test_burgs_carry_type_and_features() -> void:
+	var k: Dictionary = repo.burgs["kuojarpan"]
+	assert_eq(String(k["type"]), "Naval")
+	assert_eq(String(k["features"]), "walls|citadel|temple|plaza")
+
+func test_route_and_river_references_resolve() -> void:
+	for code: String in repo.routes:
+		var r: Dictionary = repo.routes[code]
+		for end in ["from_burg", "to_burg"]:
+			var b := String(r[end])
+			assert_true(b == "" or repo.burgs.has(b), "%s %s -> '%s'" % [code, end, b])
+		assert_gte((r["polyline"] as PackedVector2Array).size(), 2, "%s is drawable" % code)
+		assert_true((r["bbox"] as Rect2).has_area(), "%s has a bounding box" % code)
+	for code: String in repo.rivers:
+		var rv: Dictionary = repo.rivers[code]
+		assert_gte((rv["polyline"] as PackedVector2Array).size(), 2, "%s is drawable" % code)
+		for k: String in String(rv["kingdom_codes"]).split("|", false):
+			assert_true(repo.kingdoms.has(k), "%s flows through %s" % [code, k])
+
+func test_a_known_road_snaps_to_its_towns() -> void:
+	var r: Dictionary = repo.routes["ororeanian_road"]
+	assert_eq(String(r["group"]), "roads")
+	assert_eq(String(r["from_burg"]), "cocalomo")
+	assert_eq(String(r["to_burg"]), "ororeanes")
+
+func test_markers_lie_inside_the_map_and_carry_legends() -> void:
+	var w := float(repo.map_info["width"])
+	var h := float(repo.map_info["height"])
+	for code: String in repo.markers:
+		var m: Dictionary = repo.markers[code]
+		var x := float(m["x"])
+		var y := float(m["y"])
+		assert_true(x >= 0.0 and x <= w and y >= 0.0 and y <= h, "%s at (%s, %s)" % [code, x, y])
+		assert_false(String(m["legend"]).contains("\n"), "%s legend is one line" % code)
+	assert_true(repo.markers.has("the_orange_jackal"), "a named inn imported")
+
+func test_province_bitmap_decodes_each_province_at_its_center() -> void:
+	var img: Image = (load(repo.province_texture_path) as Texture2D).get_image()
+	var state_img: Image = (load(repo.index_texture_path) as Texture2D).get_image()
+	assert_eq(img.get_size(), state_img.get_size(), "province bitmap matches the state bitmap")
+	for code: String in repo.provinces:
+		var p: Dictionary = repo.provinces[code]
+		var px := Vector2i(int(float(p["center_x"])), int(float(p["center_y"])))
+		assert_eq(MapIndex.id_at(img, px), int(p["province_id"]),
+			"%s center pixel decodes to its province_id" % code)
+
+func test_biome_bitmap_marks_land_with_a_real_biome() -> void:
+	var img: Image = (load(repo.biome_texture_path) as Texture2D).get_image()
+	var state_img: Image = (load(repo.index_texture_path) as Texture2D).get_image()
+	assert_eq(img.get_size(), state_img.get_size(), "biome bitmap matches the state bitmap")
+	for code: String in repo.kingdoms:
+		var row: Dictionary = repo.kingdoms[code]
+		var px := Vector2i(int(float(row["center_x"])), int(float(row["center_y"])))
+		var biome := MapIndex.biome_at(img, px)
+		assert_true(biome > 0 and repo.biomes.has(biome),
+			"%s center is land with a named biome, got %d" % [code, biome])
