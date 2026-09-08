@@ -7,6 +7,9 @@ extends SceneTree
 ##   data/maps/<map-id>/kingdoms.csv   one row per state (0 "Neutrals" excluded)
 ##   data/provinces.csv   one row per province
 ##   data/burgs.csv       one row per burg
+##   data/maps/<map-id>/borders.csv   one row per closed border loop per kingdom:
+##       kingdom_code,loop,points — points as "x y|x y|..." in native map
+##       coordinates, so WorldMapView can outline the hovered kingdom
 ##   assets/maps/<map-id>/world_map.png byte copy under a stable name
 ##   assets/maps/<map-id>/world_state_index.png  hit-test bitmap: each cell's
 ##       polygon filled with R = state_id & 0xFF, G = state_id >> 8, B = 0;
@@ -111,6 +114,63 @@ func _fill_polygon(buf: PackedByteArray, width: int, height: int,
 				buf[o + 1] = g
 				buf[o + 2] = 0
 			j += 2
+
+
+## A state's outline: every cell edge (undirected vertex pair) that belongs
+## to exactly ONE of the state's cells lies on its border — whether the far
+## side is another state, water, or the map edge. Those edges are chained
+## into closed loops (one polyline each; a pinch vertex simply joins two
+## loops into one figure-eight, which draws fine). Deterministic: cells and
+## edges are visited in JSON order.
+func _state_border_loops(cells: Array, vertices: Array, sid: int) -> Array[PackedVector2Array]:
+	var edge_count: Dictionary = {}
+	var edge_order: Array[Vector2i] = []
+	for c: Dictionary in cells:
+		if int(c.get("state", 0)) != sid:
+			continue
+		var vs: Array = c["v"]
+		for i in vs.size():
+			var a := int(vs[i])
+			var b := int(vs[(i + 1) % vs.size()])
+			var key := Vector2i(mini(a, b), maxi(a, b))
+			if edge_count.has(key):
+				edge_count[key] = int(edge_count[key]) + 1
+			else:
+				edge_count[key] = 1
+				edge_order.append(key)
+	var adjacent: Dictionary = {}
+	var boundary: Array[Vector2i] = []
+	for key in edge_order:
+		if int(edge_count[key]) != 1:
+			continue
+		boundary.append(key)
+		for v in [key.x, key.y]:
+			if not adjacent.has(v):
+				adjacent[v] = []
+			(adjacent[v] as Array).append(key)
+	var used: Dictionary = {}
+	var loops: Array[PackedVector2Array] = []
+	for start in boundary:
+		if used.has(start):
+			continue
+		var loop := PackedVector2Array()
+		var edge := start
+		var v := start.x
+		while true:
+			used[edge] = true
+			var vp: Array = (vertices[v] as Dictionary)["p"]
+			loop.append(Vector2(float(vp[0]), float(vp[1])))
+			v = edge.y if edge.x == v else edge.x
+			var next_edge := Vector2i(-1, -1)
+			for e: Vector2i in (adjacent[v] as Array):
+				if not used.has(e):
+					next_edge = e
+					break
+			if next_edge.x < 0:
+				break
+			edge = next_edge
+		loops.append(loop)
+	return loops
 
 
 ## Minimal-quoting CSV (matches Python csv.writer): quote only when needed.
@@ -323,6 +383,20 @@ func _run() -> int:
 	if not _write_text(out_data + "/burgs.csv", out):
 		return 1
 
+	# --- borders.csv ------------------------------------------------------
+	out = _csv_line(["kingdom_code", "loop", "points"])
+	var loop_total := 0
+	for s in states:
+		var loops := _state_border_loops(cells, vertices, int(s["i"]))
+		for li in loops.size():
+			var pts: Array[String] = []
+			for p in loops[li]:
+				pts.append("%s %s" % [_num2(p.x), _num2(p.y)])
+			out += _csv_line([String(state_code[int(s["i"])]), str(li), "|".join(pts)])
+		loop_total += loops.size()
+	if not _write_text(out_data + "/borders.csv", out):
+		return 1
+
 	# --- bitmaps ----------------------------------------------------------
 	DirAccess.copy_absolute(ProjectSettings.globalize_path(png_path),
 		ProjectSettings.globalize_path(out_art + "/world_map.png"))
@@ -355,6 +429,6 @@ func _run() -> int:
 		print("         does not contain: %s" % ", ".join(missing))
 		print("         Fix the bindings or rename the states in Azgaar —")
 		print("         until then the cast has no home on this map.")
-	print("map '%s': wrote %d kingdoms, %d provinces, %d burgs into %s, art into %s"
-		% [map_id, states.size(), provinces.size(), burgs.size(), out_data, out_art])
+	print("map '%s': wrote %d kingdoms, %d provinces, %d burgs, %d border loops into %s, art into %s"
+		% [map_id, states.size(), provinces.size(), burgs.size(), loop_total, out_data, out_art])
 	return 0

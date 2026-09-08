@@ -65,3 +65,35 @@ func test_index_bitmap_matches_map_and_kingdoms() -> void:
 		var px := Vector2i(int(float(row["center_x"])), int(float(row["center_y"])))
 		assert_eq(MapIndex.state_at(img, px), int(row["state_id"]),
 			"%s center pixel decodes to its state_id" % code)
+
+## Border loops (borders.csv, from tools/import_azgaar.gd): every kingdom has
+## at least one closed loop, and every loop point actually lies on that
+## kingdom's edge — within two pixels of a bitmap pixel carrying its state.
+func test_every_kingdom_has_border_loops() -> void:
+	for code: String in repo.kingdoms:
+		var loops: Array = repo.borders.get(code, [])
+		assert_gt(loops.size(), 0, "%s has at least one border loop" % code)
+		for loop: PackedVector2Array in loops:
+			assert_gte(loop.size(), 3, "%s: a loop needs 3+ points" % code)
+
+func test_border_points_hug_their_kingdom_in_the_bitmap() -> void:
+	var img: Image = (load(repo.index_texture_path) as Texture2D).get_image()
+	for code: String in repo.kingdoms:
+		var sid := int(repo.kingdoms[code]["state_id"])
+		var off := 0
+		var total := 0
+		for loop: PackedVector2Array in repo.borders.get(code, []):
+			for p: Vector2 in loop:
+				total += 1
+				if not _touches_state(img, p, sid):
+					off += 1
+		assert_eq(off, 0, "%s: %d of %d border points are not adjacent to the kingdom"
+			% [code, off, total])
+
+func _touches_state(img: Image, p: Vector2, sid: int) -> bool:
+	var c := Vector2i(p.floor())
+	for dy in range(-2, 3):
+		for dx in range(-2, 3):
+			if MapIndex.state_at(img, c + Vector2i(dx, dy)) == sid:
+				return true
+	return false

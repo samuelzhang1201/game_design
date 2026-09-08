@@ -82,3 +82,26 @@ func test_court_keeps_the_order_panels_beside_the_map() -> void:
 		"council column stays visible")
 	assert_true(screen.end_turn_button().is_visible_in_tree(),
 		"End Turn stays reachable")
+
+## Hover: the kingdom under the mouse gets its border outlined (user request
+## 2026-09-08). Loops come from the pack's borders.csv; -1 (water/no state)
+## clears the outline.
+func test_hovering_a_kingdom_outlines_its_border() -> void:
+	var v := _view()
+	await wait_frames(1)
+	var sid := int(Game.data.kingdoms["hetalia"]["state_id"])
+	v.hover_state(sid)
+	assert_eq(v.hovered_state(), sid)
+	assert_gt(v.hover_loops().size(), 0, "hovered kingdom has border loops to draw")
+	v.hover_state(-1)
+	assert_eq(v.hovered_state(), -1, "water/no-state clears the hover")
+	assert_eq(v.hover_loops().size(), 0)
+
+func test_mouse_motion_over_a_kingdom_sets_the_hover() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var row: Dictionary = Game.data.kingdoms["hetalia"]
+	var mm := InputEventMouseMotion.new()
+	mm.position = v.map_to_screen(Vector2(float(row["center_x"]), float(row["center_y"])))
+	v._gui_input(mm)
+	assert_eq(v.hovered_state(), int(row["state_id"]))

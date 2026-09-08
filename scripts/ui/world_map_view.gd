@@ -7,7 +7,8 @@ extends Control
 ## back to meaning "close overlays"). The map
 ## opens covering the frame, and zooms out to the whole world; the view
 ## pans when the mouse rides an edge
-## of the frame (plus drag and wheel-zoom), and clicking a kingdom opens a
+## of the frame (plus drag and wheel-zoom), the kingdom under the mouse
+## gets its border outlined (borders.csv), and clicking a kingdom opens a
 ## floating info card resolved through the world_state_index.png bitmap
 ## (tools/import_azgaar.gd) via MapIndex. View-only: reads Game.data,
 ## never mutates game state.
@@ -21,6 +22,11 @@ const EDGE_MARGIN := 12.0
 ## Edge-scroll speed in screen px/s.
 const EDGE_SPEED := 260.0
 const CARD_WIDTH := 150.0
+## Hover outline: a dark halo under a gold line so it reads on both the
+## pale land fills and the ocean.
+const HOVER_WIDTH := 2.0
+const HOVER_HALO_WIDTH := 4.0
+const HOVER_HALO := Color(0.05, 0.04, 0.02, 0.55)
 
 var _map_texture: Texture2D
 var _index_image: Image
@@ -29,6 +35,9 @@ var _index_image: Image
 ## native scale, so texture coords = native coords * _render_scale.
 var _render_scale := 1.0
 var _by_state_id: Dictionary = {}
+## Azgaar state id under the mouse (-1: water/nothing); its border loops
+## are outlined in _draw.
+var _hover_sid := -1
 var _card: PanelContainer
 var _card_title: Label
 var _card_body: Label
@@ -65,7 +74,9 @@ func _ready() -> void:
 		_by_state_id[int(row["state_id"])] = row
 	_build_card()
 	mouse_entered.connect(func() -> void: _mouse_inside = true)
-	mouse_exited.connect(func() -> void: _mouse_inside = false)
+	mouse_exited.connect(func() -> void:
+		_mouse_inside = false
+		hover_state(-1))
 	resized.connect(func() -> void:
 		_clamp_offset()
 		queue_redraw())
@@ -134,6 +145,14 @@ func _draw() -> void:
 		_go_home()
 	draw_texture_rect(_map_texture,
 		Rect2(_offset, _map_texture.get_size() * _zoom), false)
+	for loop: PackedVector2Array in hover_loops():
+		var pts := PackedVector2Array()
+		pts.resize(loop.size() + 1)
+		for i in loop.size():
+			pts[i] = map_to_screen(loop[i])
+		pts[loop.size()] = pts[0]  # close the ring
+		draw_polyline(pts, HOVER_HALO, HOVER_HALO_WIDTH, true)
+		draw_polyline(pts, UiPalette.GOLD, HOVER_WIDTH, true)
 
 ## Homing + RTS edge scrolling: pan while the mouse rides the frame's edge.
 ## (Homing lives here, not only in _draw, so it also runs headless in tests.)
@@ -160,6 +179,7 @@ func _process(delta: float) -> void:
 	if dir != Vector2.ZERO:
 		_offset += dir * EDGE_SPEED * delta
 		_clamp_offset()
+		_update_hover(m)
 		queue_redraw()
 
 func _gui_input(ev: InputEvent) -> void:
@@ -179,6 +199,7 @@ func _gui_input(ev: InputEvent) -> void:
 				_select_at(mb.position)
 	elif ev is InputEventMouseMotion:
 		var mm := ev as InputEventMouseMotion
+		_update_hover(mm.position)
 		if mm.button_mask & MOUSE_BUTTON_MASK_LEFT:
 			if _press_pos.distance_to(mm.position) > CLICK_SLOP:
 				_dragging = true
@@ -221,9 +242,43 @@ func _clamp_offset() -> void:
 	else:
 		_offset.y = clampf(_offset.y, size.y - scaled.y, 0.0)
 
+## View transform: native map coordinates (index bitmap, CSV x/y) <-> screen.
+func map_to_screen(native: Vector2) -> Vector2:
+	return _offset + native * _render_scale * _zoom
+
+func screen_to_map(pos: Vector2) -> Vector2:
+	return (pos - _offset) / _zoom / _render_scale
+
+func _state_under(pos: Vector2) -> int:
+	return MapIndex.state_at(_index_image, Vector2i(screen_to_map(pos).floor()))
+
 func _select_at(pos: Vector2) -> void:
-	var map_px := ((pos - _offset) / _zoom / _render_scale).floor()
-	select_state(MapIndex.state_at(_index_image, Vector2i(map_px)))
+	select_state(_state_under(pos))
+
+func _update_hover(pos: Vector2) -> void:
+	hover_state(_state_under(pos))
+
+## Outline the kingdom with this Azgaar state id (user request 2026-09-08:
+## the country under the mouse shows its border). -1 / unknown ids clear
+## the outline. Public for tests.
+func hover_state(sid: int) -> void:
+	if not _by_state_id.has(sid):
+		sid = -1
+	if sid == _hover_sid:
+		return
+	_hover_sid = sid
+	queue_redraw()
+
+func hovered_state() -> int:
+	return _hover_sid
+
+## The hovered kingdom's border loops in native map coordinates ([] when
+## nothing is hovered or the pack ships no borders.csv).
+func hover_loops() -> Array:
+	var row: Dictionary = _by_state_id.get(_hover_sid, {})
+	if row.is_empty():
+		return []
+	return Game.data.borders.get(String(row["kingdom_code"]), [])
 
 ## Public for tests: open the info card for the kingdom with this Azgaar
 ## state id; -1 / unknown ids (water, stale bitmap) close the card.

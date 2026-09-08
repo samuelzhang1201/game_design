@@ -27,6 +27,10 @@ var facts: Array[Dictionary] = []
 var kingdoms: Dictionary = {}
 var provinces: Dictionary = {}
 var burgs: Dictionary = {}
+## kingdom_code -> Array of PackedVector2Array: each kingdom's closed border
+## loops in native map coordinates (borders.csv, drawn by WorldMapView on
+## hover).
+var borders: Dictionary = {}
 ## Available map packs from data/maps.csv, keyed by map_id.
 var maps: Dictionary = {}
 ## The currently loaded pack (load_map).
@@ -173,6 +177,7 @@ func load_map(id: String) -> bool:
 	kingdoms.clear()
 	provinces.clear()
 	burgs.clear()
+	borders.clear()
 	realm_bindings.clear()
 	if not _load_if_present(dir + "/kingdoms.csv",
 			["kingdom_code", "state_id", "label", "capital_burg"],
@@ -186,6 +191,9 @@ func load_map(id: String) -> bool:
 			["burg_code", "label", "province_code", "kingdom_code"],
 			func(r): burgs[r["burg_code"]] = r):
 		return false
+	if not _load_if_present(dir + "/borders.csv", ["kingdom_code", "loop", "points"],
+			func(r): _add_border_loop(r)):
+		return false
 	if not _load_if_present(dir + "/realm_bindings.csv", ["slot", "kingdom_code"],
 			func(r): realm_bindings[r["slot"]] = r["kingdom_code"]):
 		return false
@@ -194,6 +202,12 @@ func load_map(id: String) -> bool:
 	index_texture_path = String(m["index_texture"])
 	_resolve_realm_slots()
 	return true
+
+func _add_border_loop(r: Dictionary) -> void:
+	var code := String(r["kingdom_code"])
+	if not borders.has(code):
+		borders[code] = []
+	(borders[code] as Array).append(MapGeometry.parse_points(String(r["points"])))
 
 ## A realm slot resolved through the loaded map. Anything that is not a slot
 ## passes through unchanged — a literal kingdom_code, or facts.csv subjects
