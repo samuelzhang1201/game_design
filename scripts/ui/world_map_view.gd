@@ -336,7 +336,14 @@ func _object_under(pos: Vector2) -> Dictionary:
 func _update_hover(pos: Vector2) -> void:
 	hover_state(_state_under(pos))
 	hover_object(_object_under(pos))
-	_tooltip.position = pos + TOOLTIP_OFFSET
+	_place_tooltip(pos)
+
+## Beside the cursor, pushed back inside the frame at the edges so a pin
+## in a corner still shows its whole name.
+func _place_tooltip(pos: Vector2) -> void:
+	var tip := _tooltip.get_combined_minimum_size()
+	var limit := (size - tip).max(Vector2.ZERO)
+	_tooltip.position = (pos + TOOLTIP_OFFSET).clamp(Vector2.ZERO, limit)
 
 ## Public for tests: the same path a mouse-motion event takes.
 func hover_at(pos: Vector2) -> void:
@@ -357,6 +364,10 @@ func hovered_object() -> Dictionary:
 ## The tooltip's text while a named object is hovered ("" otherwise).
 func hover_tooltip() -> String:
 	return _tooltip.text if _tooltip.visible else ""
+
+## Test seam: where the tooltip sits, in view coordinates.
+func tooltip_rect() -> Rect2:
+	return Rect2(_tooltip.position, _tooltip.get_combined_minimum_size())
 
 ## Test seam: how many burgs pass the LOD rule at the current zoom.
 func visible_burg_count() -> int:

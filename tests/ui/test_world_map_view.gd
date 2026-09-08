@@ -184,3 +184,19 @@ func test_ask_emits_the_question_for_the_selected_place() -> void:
 	v.select_object({"kind": "burg", "code": "kuojarpan"})
 	v.card().ask_button().pressed.emit()
 	assert_eq(_asked, "What do we know of Kuojarpan?")
+
+## The tooltip must stay readable at the frame's edge: a pin hovered in the
+## bottom-right corner gets its label pushed back inside the view.
+func test_tooltip_stays_inside_the_view_at_the_edge() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v._zoom_at(v.size / 2.0, 1000.0)  # deep zoom: the map overflows every side
+	var k: Dictionary = Game.data.burgs["kuojarpan"]
+	var kp := Vector2(float(k["x"]), float(k["y"]))
+	var corner := v.size - Vector2(2.0, 2.0)
+	v._offset = corner - kp * v.view_scale()  # park the capital in the corner
+	v.hover_at(corner)
+	assert_eq(v.hover_tooltip(), "Kuojarpan")
+	var r := v.tooltip_rect()
+	assert_true(Rect2(Vector2.ZERO, v.size).encloses(r),
+		"tooltip %s stays inside the view %s" % [r, v.size])
