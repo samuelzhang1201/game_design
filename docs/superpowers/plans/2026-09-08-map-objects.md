@@ -1196,7 +1196,7 @@ Claude-Session: https://claude.ai/code/session_019HggsFraqfeKGW6RHNys5E"
 
 **Interfaces:**
 - Consumes: `MapObjects.object_at/min_burg_pop_for_scale/burg_visible/label_of`, repository fields from Task 1.
-- Produces on `WorldMapView`: `view_scale() -> float`, `hover_at(pos: Vector2) -> void` (screen coords; runs the same path as mouse motion), `hovered_object() -> Dictionary`, `tooltip_text() -> String`, `visible_burg_count() -> int`.
+- Produces on `WorldMapView`: `view_scale() -> float`, `hover_at(pos: Vector2) -> void` (screen coords; runs the same path as mouse motion), `hovered_object() -> Dictionary`, `hover_tooltip() -> String`, `visible_burg_count() -> int`.
 
 - [ ] **Step 1: Write the failing view tests**
 
@@ -1390,7 +1390,7 @@ func hover_object(obj: Dictionary) -> void:
 func hovered_object() -> Dictionary:
 	return _hover_obj
 
-func tooltip_text() -> String:
+func hover_tooltip() -> String:
 	return _tooltip.text if _tooltip.visible else ""
 
 ## Test seam: how many burgs pass the LOD rule at the current zoom.

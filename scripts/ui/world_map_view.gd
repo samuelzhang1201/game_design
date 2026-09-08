@@ -8,7 +8,9 @@ extends Control
 ## opens covering the frame, and zooms out to the whole world; the view
 ## pans when the mouse rides an edge
 ## of the frame (plus drag and wheel-zoom), the kingdom under the mouse
-## gets its border outlined (borders.csv), and clicking a kingdom opens a
+## gets its border outlined (borders.csv), towns and points of interest show
+## as pins (LOD by zoom, MapObjects), hovering a pin or road names it,
+## and clicking a kingdom opens a
 ## floating info card resolved through the world_state_index.png bitmap
 ## (tools/import_azgaar.gd) via MapIndex. View-only: reads Game.data,
 ## never mutates game state.
@@ -27,6 +29,13 @@ const CARD_WIDTH := 150.0
 const HOVER_WIDTH := 2.0
 const HOVER_HALO_WIDTH := 4.0
 const HOVER_HALO := Color(0.05, 0.04, 0.02, 0.55)
+## Pin sizes in screen px (constant at any zoom; LOD hides the small ones).
+const PIN_CAPITAL := 4.0
+const PIN_TOWN := 2.5
+const PIN_VILLAGE := 1.5
+const PIN_MARKER := 3.0
+const PIN_OUTLINE := Color(0.05, 0.04, 0.02, 0.9)
+const TOOLTIP_OFFSET := Vector2(10.0, 12.0)
 
 var _map_texture: Texture2D
 var _index_image: Image
@@ -38,6 +47,11 @@ var _by_state_id: Dictionary = {}
 ## Azgaar state id under the mouse (-1: water/nothing); its border loops
 ## are outlined in _draw.
 var _hover_sid := -1
+var _province_image: Image
+var _biome_image: Image
+## The pin/line/land under the mouse (MapObjects.object_at); {} before any hover.
+var _hover_obj: Dictionary = {}
+var _tooltip: Label
 var _card: PanelContainer
 var _card_title: Label
 var _card_body: Label
@@ -67,21 +81,41 @@ func _ready() -> void:
 	if index_path != "" and ResourceLoader.exists(index_path):
 		var idx: Texture2D = load(index_path)
 		_index_image = idx.get_image()
+	_province_image = _load_image(Game.data.province_texture_path)
+	_biome_image = _load_image(Game.data.biome_texture_path)
 	if _map_texture != null and _index_image != null:
 		_render_scale = float(_map_texture.get_width()) / float(_index_image.get_width())
 	for code: String in Game.data.kingdoms:
 		var row: Dictionary = Game.data.kingdoms[code]
 		_by_state_id[int(row["state_id"])] = row
 	_build_card()
+	_build_tooltip()
 	mouse_entered.connect(func() -> void: _mouse_inside = true)
 	mouse_exited.connect(func() -> void:
 		_mouse_inside = false
-		hover_state(-1))
+		hover_state(-1)
+		hover_object({}))
 	resized.connect(func() -> void:
 		_clamp_offset()
 		queue_redraw())
 	# No imported map: stay invisible so the styled backdrop shows instead.
 	visible = _map_texture != null
+
+func _load_image(path: String) -> Image:
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	return (load(path) as Texture2D).get_image()
+
+func _build_tooltip() -> void:
+	_tooltip = Label.new()
+	_tooltip.name = "Tooltip"
+	_tooltip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tooltip.add_theme_stylebox_override("normal", UiPalette.chip_style())
+	_tooltip.add_theme_font_size_override("font_size", 8)
+	_tooltip.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+	_tooltip.hide()
+	add_child(_tooltip)
 
 func _build_card() -> void:
 	_card = PanelContainer.new()
@@ -153,6 +187,71 @@ func _draw() -> void:
 		pts[loop.size()] = pts[0]  # close the ring
 		draw_polyline(pts, HOVER_HALO, HOVER_HALO_WIDTH, true)
 		draw_polyline(pts, UiPalette.GOLD, HOVER_WIDTH, true)
+	_draw_pins()
+	_draw_hover()
+
+## Screen px per native map px — the LOD and pick radii are defined on it.
+func view_scale() -> float:
+	return _zoom * _render_scale
+
+func _pin_radius(b: Dictionary) -> float:
+	if String(b["is_capital"]) == "1":
+		return PIN_CAPITAL
+	return PIN_TOWN if int(float(b["population"])) >= int(Game.data.bal("map_lod_town_pop")) else PIN_VILLAGE
+
+## Towns as gold circles sized by tier (ringed for capitals), points of
+## interest as teal diamonds — all in screen px, gated by the LOD rule.
+func _draw_pins() -> void:
+	var s := view_scale()
+	var min_pop := MapObjects.min_burg_pop_for_scale(Game.data, s)
+	var on_screen := Rect2(Vector2.ZERO, size).grow(PIN_CAPITAL * 2.0)
+	for code: String in Game.data.burgs:
+		var b: Dictionary = Game.data.burgs[code]
+		if not MapObjects.burg_visible(b, min_pop):
+			continue
+		var sp := map_to_screen(Vector2(float(b["x"]), float(b["y"])))
+		if not on_screen.has_point(sp):
+			continue
+		var r := _pin_radius(b)
+		draw_circle(sp, r + 1.0, PIN_OUTLINE)
+		draw_circle(sp, r, UiPalette.GOLD)
+		if String(b["is_capital"]) == "1":
+			draw_arc(sp, r + 2.5, 0.0, TAU, 24, UiPalette.GOLD, 1.0, true)
+	if s >= Game.data.bal("map_lod_marker_scale"):
+		for code: String in Game.data.markers:
+			var m: Dictionary = Game.data.markers[code]
+			var sp := map_to_screen(Vector2(float(m["x"]), float(m["y"])))
+			if on_screen.has_point(sp):
+				_draw_diamond(sp, PIN_MARKER + 1.0, PIN_OUTLINE)
+				_draw_diamond(sp, PIN_MARKER, UiPalette.TOOL_PERSONAL)
+
+func _draw_diamond(center: Vector2, r: float, color: Color) -> void:
+	draw_colored_polygon(PackedVector2Array([center + Vector2(0, -r), center + Vector2(r, 0),
+		center + Vector2(0, r), center + Vector2(-r, 0)]), color)
+
+## Ring around the hovered pin; halo + gold line along the hovered road/river.
+func _draw_hover() -> void:
+	_draw_object_highlight(_hover_obj)
+
+func _draw_object_highlight(obj: Dictionary) -> void:
+	match String(obj.get("kind", "")):
+		"burg":
+			var b: Dictionary = Game.data.burgs[obj["code"]]
+			var sp := map_to_screen(Vector2(float(b["x"]), float(b["y"])))
+			draw_arc(sp, _pin_radius(b) + 4.0, 0.0, TAU, 32, UiPalette.GOLD, 1.5, true)
+		"marker":
+			var m: Dictionary = Game.data.markers[obj["code"]]
+			var sp := map_to_screen(Vector2(float(m["x"]), float(m["y"])))
+			draw_arc(sp, PIN_MARKER + 4.0, 0.0, TAU, 32, UiPalette.GOLD, 1.5, true)
+		"route", "river":
+			var table: Dictionary = Game.data.routes if obj["kind"] == "route" else Game.data.rivers
+			var pts: PackedVector2Array = table[obj["code"]]["polyline"]
+			var screen := PackedVector2Array()
+			screen.resize(pts.size())
+			for i in pts.size():
+				screen[i] = map_to_screen(pts[i])
+			draw_polyline(screen, HOVER_HALO, HOVER_HALO_WIDTH, true)
+			draw_polyline(screen, UiPalette.GOLD, HOVER_WIDTH, true)
 
 ## Homing + RTS edge scrolling: pan while the mouse rides the frame's edge.
 ## (Homing lives here, not only in _draw, so it also runs headless in tests.)
@@ -255,8 +354,45 @@ func _state_under(pos: Vector2) -> int:
 func _select_at(pos: Vector2) -> void:
 	select_state(_state_under(pos))
 
+func _object_under(pos: Vector2) -> Dictionary:
+	var s := view_scale()
+	return MapObjects.object_at(Game.data, _index_image, _province_image, _biome_image,
+		screen_to_map(pos), Game.data.bal("map_pick_radius_px") / s,
+		Game.data.bal("map_line_pick_px") / s, MapObjects.min_burg_pop_for_scale(Game.data, s))
+
 func _update_hover(pos: Vector2) -> void:
 	hover_state(_state_under(pos))
+	hover_object(_object_under(pos))
+	_tooltip.position = pos + TOOLTIP_OFFSET
+
+## Public for tests: the same path a mouse-motion event takes.
+func hover_at(pos: Vector2) -> void:
+	_update_hover(pos)
+
+func hover_object(obj: Dictionary) -> void:
+	if obj == _hover_obj:
+		return
+	_hover_obj = obj
+	var label := MapObjects.label_of(Game.data, obj)
+	_tooltip.text = label
+	_tooltip.visible = label != ""
+	queue_redraw()
+
+func hovered_object() -> Dictionary:
+	return _hover_obj
+
+## The tooltip's text while a named object is hovered ("" otherwise).
+func hover_tooltip() -> String:
+	return _tooltip.text if _tooltip.visible else ""
+
+## Test seam: how many burgs pass the LOD rule at the current zoom.
+func visible_burg_count() -> int:
+	var min_pop := MapObjects.min_burg_pop_for_scale(Game.data, view_scale())
+	var n := 0
+	for b: Dictionary in Game.data.burgs.values():
+		if MapObjects.burg_visible(b, min_pop):
+			n += 1
+	return n
 
 ## Outline the kingdom with this Azgaar state id (user request 2026-09-08:
 ## the country under the mouse shows its border). -1 / unknown ids clear

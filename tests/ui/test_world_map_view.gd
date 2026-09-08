@@ -105,3 +105,35 @@ func test_mouse_motion_over_a_kingdom_sets_the_hover() -> void:
 	mm.position = v.map_to_screen(Vector2(float(row["center_x"]), float(row["center_y"])))
 	v._gui_input(mm)
 	assert_eq(v.hovered_state(), int(row["state_id"]))
+
+## Pins: capitals always; towns and villages appear as the player zooms in
+## (thresholds in balance.csv, rule in MapObjects).
+func test_town_pins_appear_as_the_view_zooms_in() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v._zoom_at(v.size / 2.0, 0.0001)
+	var far := v.visible_burg_count()
+	assert_eq(far, 16, "zoomed all the way out: one pin per capital")
+	v._zoom_at(v.size / 2.0, 1000.0)
+	assert_gt(v.view_scale(), Game.data.bal("map_lod_village_scale"))
+	assert_eq(v.visible_burg_count(), Game.data.burgs.size(), "zoomed in: every burg")
+
+func test_hovering_a_capital_names_it() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var k: Dictionary = Game.data.burgs["kuojarpan"]
+	v.hover_at(v.map_to_screen(Vector2(float(k["x"]), float(k["y"]))))
+	assert_eq(v.hovered_object().get("kind", ""), "burg")
+	assert_eq(v.hovered_object().get("code", ""), "kuojarpan")
+	assert_eq(v.hover_tooltip(), "Kuojarpan")
+	assert_eq(v.hovered_state(), int(Game.data.kingdoms["hetalia"]["state_id"]),
+		"the kingdom outline stays on under a pin")
+
+func test_hovering_open_sea_clears_the_tooltip() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var k: Dictionary = Game.data.burgs["kuojarpan"]
+	v.hover_at(v.map_to_screen(Vector2(float(k["x"]), float(k["y"]))))
+	v.hover_at(v.map_to_screen(Vector2(5.0, 5.0)))  # top-left ocean corner
+	assert_eq(v.hovered_object().get("kind", ""), "water")
+	assert_eq(v.hover_tooltip(), "")
