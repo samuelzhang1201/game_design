@@ -43,6 +43,8 @@ const GENERATED_PNGS: Array[String] = ["world_map.png", "world_state_index.png",
 	"world_province_index.png", "world_biome_index.png"]
 ## A route endpoint this close (native px) to a burg is "at" that burg.
 const SNAP_RADIUS := 3.0
+## Title words for routes Azgaar left nameless (most trails and sea routes).
+const ROUTE_WORDS := {"roads": "Road", "trails": "Trail", "searoutes": "Sea route"}
 
 var _slug_regex := RegEx.create_from_string("[^a-z0-9]+")
 var _ws_regex := RegEx.create_from_string("\\s+")
@@ -73,6 +75,17 @@ func _humanize(kind: String) -> String:
 
 func _collapse_ws(text: String) -> String:
 	return _ws_regex.sub(text, " ", true).strip_edges()
+
+
+## Azgaar leaves most trails and sea routes nameless; the card and tooltip
+## still need a title, so build one from the group and the snapped endpoints.
+func _route_fallback_label(group: String, from_name: String, to_name: String) -> String:
+	var kind := String(ROUTE_WORDS.get(group, "Route"))
+	if from_name != "" and to_name != "":
+		return "%s from %s to %s" % [kind, from_name, to_name]
+	if from_name != "" or to_name != "":
+		return "%s to %s" % [kind, from_name if from_name != "" else to_name]
+	return kind
 
 
 ## The nearest burg id within `radius` native px of (x, y), else -1. Ties go
@@ -472,6 +485,9 @@ func _run() -> int:
 	# --- routes.csv -------------------------------------------------------
 	out = _csv_line(["route_code", "label", "group", "from_burg", "to_burg", "length", "points"])
 	var route_slugs: Dictionary = {}
+	var burg_name: Dictionary = {}
+	for b in burgs:
+		burg_name[int(b["i"])] = String(b["name"])
 	var routes := _active(pack.get("routes", []))
 	for r in routes:
 		var raw: Array = r.get("points", [])
@@ -496,6 +512,9 @@ func _run() -> int:
 		var from_id := _burg_within(burgs, float(first[0]), float(first[1]), SNAP_RADIUS)
 		var to_id := _burg_within(burgs, float(last[0]), float(last[1]), SNAP_RADIUS)
 		var label := String(r.get("name", ""))
+		if label == "":
+			label = _route_fallback_label(String(r.get("group", "")),
+				String(burg_name.get(from_id, "")), String(burg_name.get(to_id, "")))
 		out += _csv_line([_take_slug(route_slugs, label), label, String(r.get("group", "")),
 			String(burg_code.get(from_id, "")), String(burg_code.get(to_id, "")),
 			String.num(length, 1), "|".join(pts)])

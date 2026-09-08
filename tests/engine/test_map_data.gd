@@ -126,6 +126,11 @@ func test_route_and_river_references_resolve() -> void:
 		for k: String in String(rv["kingdom_codes"]).split("|", false):
 			assert_true(repo.kingdoms.has(k), "%s flows through %s" % [code, k])
 
+## Azgaar leaves most trails/sea routes nameless; the importer titles them.
+func test_every_route_has_a_label() -> void:
+	for code: String in repo.routes:
+		assert_ne(String(repo.routes[code]["label"]), "", "%s has a title for its card" % code)
+
 func test_a_known_road_snaps_to_its_towns() -> void:
 	var r: Dictionary = repo.routes["ororeanian_road"]
 	assert_eq(String(r["group"]), "roads")

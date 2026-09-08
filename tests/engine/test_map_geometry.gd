@@ -21,3 +21,19 @@ func test_bounds_wraps_every_point() -> void:
 
 func test_bounds_of_nothing_is_empty() -> void:
 	assert_eq(MapGeometry.bounds(PackedVector2Array()), Rect2())
+
+func test_polyline_length_sums_the_segments() -> void:
+	var pts := PackedVector2Array([Vector2(0, 0), Vector2(3, 4), Vector2(3, 10)])
+	assert_almost_eq(MapGeometry.polyline_length(pts), 11.0, 0.0001)
+	assert_eq(MapGeometry.polyline_length(PackedVector2Array([Vector2(1, 1)])), 0.0)
+
+func test_distance_to_polyline_is_to_the_nearest_segment() -> void:
+	var pts := PackedVector2Array([Vector2(0, 0), Vector2(2, 0), Vector2(2, 2)])
+	assert_almost_eq(MapGeometry.distance_to_polyline(Vector2(1, 1), pts), 1.0, 0.0001,
+		"one unit above the first segment (and one left of the second)")
+	assert_almost_eq(MapGeometry.distance_to_polyline(Vector2(5, 0), pts), 3.0, 0.0001,
+		"past the corner: distance to the corner vertex")
+	assert_almost_eq(MapGeometry.distance_to_polyline(Vector2(2, 1), pts), 0.0, 0.0001, "on the line")
+
+func test_distance_to_nothing_is_infinite() -> void:
+	assert_eq(MapGeometry.distance_to_polyline(Vector2.ZERO, PackedVector2Array()), INF)
