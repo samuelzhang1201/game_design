@@ -24,6 +24,7 @@ var _name_label: Label
 var _text_label: RichTextLabel
 var _replies_box: VBoxContainer
 var _free_text: LineEdit
+var _world_map: WorldMapView
 var _continue_btn: Button
 var _panel: PanelContainer
 var _scroll: ScrollContainer
@@ -48,9 +49,15 @@ func _ready() -> void:
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 2))
 	# The live world map fills the middle zone on every gameplay screen
 	# (user ruling 2026-09-03); portraits and dialogue draw above it.
-	var world_map := WorldMapView.new()
-	world_map.name = "WorldMap"
-	%MapPanel.add_child(world_map)
+	_world_map = WorldMapView.new()
+	_world_map.name = "WorldMap"
+	%MapPanel.add_child(_world_map)
+	# Ask on a map card pre-fills the talk box (spec 2026-09-08); never sends.
+	_world_map.set_ask_enabled(true)
+	_world_map.place_asked.connect(func(text: String) -> void:
+		_free_text.text = text
+		_free_text.caret_column = text.length()
+		_free_text.grab_focus())
 	%MinisterPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	UiPalette.style_header(%MinisterName, 11)

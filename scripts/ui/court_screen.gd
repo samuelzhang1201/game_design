@@ -41,6 +41,11 @@ func _ready() -> void:
 	_world_map = WorldMapView.new()
 	_world_map.name = "WorldMap"
 	%MapPanel.add_child(_world_map)
+	# The map's Ask button drops its question into the order box (spec
+	# 2026-09-08); the player still presses Enter, so no order or API call
+	# happens without them.
+	_world_map.set_ask_enabled(true)
+	_world_map.place_asked.connect(_on_place_asked)
 	%LogPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	UiPalette.style_header(%LogHeader, 9)
@@ -182,6 +187,11 @@ func _on_free_text_submitted(text: String) -> void:
 				_log(String(res["reply"]["speaker"]), String(res["reply"]["text"]))
 		if Game.state.pending_event.is_empty():
 			end_turn.disabled = false)
+
+func _on_place_asked(text: String) -> void:
+	free_text.text = text
+	free_text.caret_column = text.length()
+	free_text.grab_focus()
 
 ## Ported from conversation_scene.gd: a kept promise rides along as a
 ## pseudo-effect on the outcome (metric == "promise" - see

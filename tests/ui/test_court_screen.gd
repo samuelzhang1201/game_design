@@ -222,3 +222,15 @@ func test_end_turn_guard_holds_with_pending_event_no_free_text() -> void:
 	await wait_frames(1)
 	assert_false(_end_turn_emitted, "End Turn must not fire while an event is pending")
 	assert_eq(Game.state.tick, tick_before, "the guard must not let a tick slip through")
+
+## The map's ASK THE COUNCIL button fills the order box with the card's
+## question; nothing is submitted until the player presses Enter.
+func test_map_ask_fills_the_order_box_without_sending() -> void:
+	var screen := _screen()
+	await wait_frames(1)
+	var map := screen.world_map()
+	map.select_object({"kind": "burg", "code": "kuojarpan"})
+	assert_true(map.card().ask_button().visible, "court owns an order box, so Ask shows")
+	map.card().ask_button().pressed.emit()
+	assert_eq(screen.free_text.text, "What do we know of Kuojarpan?")
+	assert_eq(screen.log_box.get_child_count(), 0, "nothing was sent")

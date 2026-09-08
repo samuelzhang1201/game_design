@@ -468,3 +468,16 @@ func test_stale_free_text_callback_ignored_after_button_resolves_event() -> void
 		"the stale free-text parse callback must not overwrite the resolution line")
 	assert_true(c.free_text_field().editable,
 		"the field must be restored for later beats")
+
+## Same Ask hook on the conversation stage: the card's question lands in the
+## talk box for the player to send or edit.
+func test_map_ask_fills_the_talk_box() -> void:
+	Game.start_campaign(42)
+	var c := _scene_with([{"kind": "summary", "portrait_id": "round_table", "speaker": "The Council"}],
+		TickReport.new())
+	await wait_frames(1)
+	var map: WorldMapView = c.get_node("%MapPanel/WorldMap")
+	map.select_object({"kind": "burg", "code": "kuojarpan"})
+	assert_true(map.card().ask_button().visible, "the stage owns a talk box, so Ask shows")
+	map.card().ask_button().pressed.emit()
+	assert_eq(c.free_text_field().text, "What do we know of Kuojarpan?")

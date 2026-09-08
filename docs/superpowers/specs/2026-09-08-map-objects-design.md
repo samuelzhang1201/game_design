@@ -16,6 +16,7 @@ The Azgaar full export (`assets/maps/*Full*.json`) carries everything needed as 
 2. No new sprite assets: the PNG stays the single visual layer; pins and highlights are drawn in `_draw`.
 3. Terrain scope: a land card (biome + province + kingdom + nearest town) plus rivers and markers as discrete objects. Lakes and mountain ranges as objects are out of scope.
 4. Click payoff: an **Ask the council** button on every card that pre-fills the order/talk box with a question about the place. It never sends by itself (no surprise API spend) and rides the existing free-text path.
+5. **Implementation amendments (2026-09-08):** the two new bitmaps are named in `data/maps.csv` (`province_texture`, `biome_texture` columns) rather than derived from the index path; `provinces.csv` also gains `center_x`/`center_y` so the province bitmap can be verified at each province's center; the land card appends the kingdom overview after its local lines so the old kingdom card stays one click away; Azgaar leaves most trails and sea routes nameless, so the importer titles them from group and endpoints ("Trail from Sains to Hordoshigo"); lines at equal distance resolve road > trail > sea route > river; the view's tooltip seam is `hover_tooltip()` because Control already owns `tooltip_text`.
 
 ## Architecture
 
