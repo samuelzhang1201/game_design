@@ -58,7 +58,7 @@
 **Interfaces:**
 - Produces: `MapIndex.id_at(img: Image, px: Vector2i) -> int` (R | G<<8, white → -1), `MapIndex.biome_at(img: Image, px: Vector2i) -> int` (R, white → -1); `MapGeometry.bounds(pts: PackedVector2Array) -> Rect2`; on `DataRepository`: `routes: Dictionary`, `rivers: Dictionary` (rows carry `polyline: PackedVector2Array` and `bbox: Rect2`), `markers: Dictionary`, `biomes: Dictionary` (int id → row), `map_info: Dictionary` (String → String), `province_texture_path: String`, `biome_texture_path: String`. Burg rows gain `type`, `features`; province rows gain `province_id`, `center_x`, `center_y`.
 
-- [ ] **Step 1: Write the failing decoder and geometry tests**
+- [x] **Step 1: Write the failing decoder and geometry tests**
 
 Append to `tests/engine/test_map_index.gd`:
 
@@ -96,7 +96,7 @@ func test_bounds_of_nothing_is_empty() -> void:
 	assert_eq(MapGeometry.bounds(PackedVector2Array()), Rect2())
 ```
 
-- [ ] **Step 2: Write the failing data tests**
+- [x] **Step 2: Write the failing data tests**
 
 Append to `tests/engine/test_map_data.gd`:
 
@@ -169,12 +169,12 @@ func test_biome_bitmap_marks_land_with_a_real_biome() -> void:
 			"%s center is land with a named biome, got %d" % [code, biome])
 ```
 
-- [ ] **Step 3: Run the map tests to verify they fail**
+- [x] **Step 3: Run the map tests to verify they fail**
 
 Run: `gut.sh map`
 Expected: failures/errors naming `id_at`, `biome_at`, `bounds`, `routes`, `province_texture_path` as missing.
 
-- [ ] **Step 4: Add the decoders and `bounds`**
+- [x] **Step 4: Add the decoders and `bounds`**
 
 Append to `scripts/engine/map_index.gd`:
 
@@ -210,7 +210,7 @@ static func bounds(pts: PackedVector2Array) -> Rect2:
 	return r
 ```
 
-- [ ] **Step 5: Extend the importer**
+- [x] **Step 5: Extend the importer**
 
 In `tools/import_azgaar.gd`:
 
@@ -484,7 +484,7 @@ func _save_png(img: Image, path: String) -> bool:
 			routes.size(), river_count, markers.size(), out_data, out_art])
 ```
 
-- [ ] **Step 6: Point maps.csv at the new bitmaps**
+- [x] **Step 6: Point maps.csv at the new bitmaps**
 
 Replace `data/maps.csv` with:
 
@@ -493,7 +493,7 @@ map_id,label,map_texture,index_texture,province_texture,biome_texture,data_dir,i
 beria,Beria,res://assets/maps/beria/world_map.png,res://assets/maps/beria/world_state_index.png,res://assets/maps/beria/world_province_index.png,res://assets/maps/beria/world_biome_index.png,res://data/maps/beria,1,The founding world. Azgaar export 2026-09-03.
 ```
 
-- [ ] **Step 7: Load the new tables in DataRepository**
+- [x] **Step 7: Load the new tables in DataRepository**
 
 In `scripts/engine/data_repository.gd`, after `var borders: Dictionary = {}` add:
 
@@ -567,7 +567,7 @@ func _with_polyline(r: Dictionary) -> Dictionary:
 	return r
 ```
 
-- [ ] **Step 8: Regenerate the pack and verify byte-identical untouched outputs**
+- [x] **Step 8: Regenerate the pack and verify byte-identical untouched outputs**
 
 Run:
 ```bash
@@ -578,12 +578,12 @@ Expected: the report line lists 16 kingdoms, 249 provinces, 840 burgs, 33 border
 
 Then run `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --import` and confirm the generated `assets/maps/beria/world_province_index.png.import` and `world_biome_index.png.import` contain `compress/mode=0` and `mipmaps/generate=false` (lossless, so `get_image()` returns exact ids). If either differs, copy the `[params]` section from `world_state_index.png.import` into it and re-run `--import`.
 
-- [ ] **Step 9: Run the map tests to verify they pass**
+- [x] **Step 9: Run the map tests to verify they pass**
 
 Run: `gut.sh map`
 Expected: `All tests passed!`.
 
-- [ ] **Step 10: Full suite, then commit**
+- [x] **Step 10: Full suite, then commit**
 
 Run: `./run_tests.sh` → `All tests passed!`, exit 0.
 
@@ -631,7 +631,7 @@ Claude-Session: https://claude.ai/code/session_019HggsFraqfeKGW6RHNys5E"
   - `MapObjects.describe(repo, obj: Dictionary) -> Dictionary` — `{title: String, lines: Array[String], ask: String}`, `{}` for water/unknown.
   - Balance keys: `map_lod_town_scale`, `map_lod_village_scale`, `map_lod_marker_scale`, `map_lod_town_pop`, `map_pick_radius_px`, `map_line_pick_px`.
 
-- [ ] **Step 1: Write the failing geometry tests**
+- [x] **Step 1: Write the failing geometry tests**
 
 Append to `tests/engine/test_map_geometry.gd`:
 
@@ -654,7 +654,7 @@ func test_distance_to_nothing_is_infinite() -> void:
 	assert_eq(MapGeometry.distance_to_polyline(Vector2.ZERO, PackedVector2Array()), INF)
 ```
 
-- [ ] **Step 2: Write the failing MapObjects tests**
+- [x] **Step 2: Write the failing MapObjects tests**
 
 Create `tests/engine/test_map_objects.gd`:
 
@@ -829,12 +829,12 @@ func test_real_capital_and_road_resolve() -> void:
 	assert_eq(d["lines"][0], "Capital of Onjormaa, Hetalia")
 ```
 
-- [ ] **Step 3: Run to verify failure**
+- [x] **Step 3: Run to verify failure**
 
 Run: `gut.sh map_`
 Expected: `test_map_objects.gd` ignored with "MapGeometry.polyline_length"/"MapObjects" parse errors; geometry tests fail on missing functions.
 
-- [ ] **Step 4: Add the balance rows**
+- [x] **Step 4: Add the balance rows**
 
 Append to `data/balance.csv`:
 
@@ -847,7 +847,7 @@ map_pick_radius_px,6,world map: screen px within which a click/hover picks a pin
 map_line_pick_px,4,world map: screen px within which a click/hover picks a road or river
 ```
 
-- [ ] **Step 5: Add the geometry functions**
+- [x] **Step 5: Add the geometry functions**
 
 Append to `scripts/engine/map_geometry.gd`:
 
@@ -872,7 +872,7 @@ static func distance_to_polyline(p: Vector2, pts: PackedVector2Array) -> float:
 	return best
 ```
 
-- [ ] **Step 6: Create MapObjects**
+- [x] **Step 6: Create MapObjects**
 
 Create `scripts/engine/map_objects.gd`:
 
@@ -1160,12 +1160,12 @@ static func humanize(kind: String) -> String:
 	return t.substr(0, 1).to_upper() + t.substr(1) if t != "" else ""
 ```
 
-- [ ] **Step 7: Import (new class), run, verify pass**
+- [x] **Step 7: Import (new class), run, verify pass**
 
 Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --import` then `gut.sh map_`
 Expected: `All tests passed!`. If `test_real_capital_and_road_resolve` fails on the route code, print `repo.routes.keys()` filtered for "ororeanian" and use the actual code in both the test and Task 1's `test_a_known_road_snaps_to_its_towns`.
 
-- [ ] **Step 8: Full suite, then commit**
+- [x] **Step 8: Full suite, then commit**
 
 Run: `./run_tests.sh` → green.
 
@@ -1198,7 +1198,7 @@ Claude-Session: https://claude.ai/code/session_019HggsFraqfeKGW6RHNys5E"
 - Consumes: `MapObjects.object_at/min_burg_pop_for_scale/burg_visible/label_of`, repository fields from Task 1.
 - Produces on `WorldMapView`: `view_scale() -> float`, `hover_at(pos: Vector2) -> void` (screen coords; runs the same path as mouse motion), `hovered_object() -> Dictionary`, `hover_tooltip() -> String`, `visible_burg_count() -> int`.
 
-- [ ] **Step 1: Write the failing view tests**
+- [x] **Step 1: Write the failing view tests**
 
 Append to `tests/ui/test_world_map_view.gd`:
 
@@ -1237,12 +1237,12 @@ func test_hovering_open_sea_clears_the_tooltip() -> void:
 	assert_eq(v.tooltip_text(), "")
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `gut.sh world_map`
 Expected: errors for missing `visible_burg_count`, `hover_at`, `hovered_object`, `tooltip_text`, `view_scale`.
 
-- [ ] **Step 3: Implement pins, hover object, tooltip**
+- [x] **Step 3: Implement pins, hover object, tooltip**
 
 In `scripts/ui/world_map_view.gd`:
 
@@ -1407,12 +1407,12 @@ func visible_burg_count() -> int:
 
 3g. Update the class doc comment: after "gets its border outlined (borders.csv)," add "towns and points of interest show as pins (LOD by zoom, MapObjects), hovering a pin or road names it,".
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `gut.sh world_map`
 Expected: `All tests passed!` (the existing hover/select tests still pass).
 
-- [ ] **Step 5: Full suite, then commit**
+- [x] **Step 5: Full suite, then commit**
 
 ```bash
 git add scripts/ui/world_map_view.gd tests/ui/test_world_map_view.gd
@@ -1444,7 +1444,7 @@ Claude-Session: https://claude.ai/code/session_019HggsFraqfeKGW6RHNys5E"
 - Consumes: `MapObjects.describe`.
 - Produces: `MapInfoCard` (`PanelContainer`) with `show_entry(entry: Dictionary) -> void`, `ask_enabled: bool`, `title_label() -> Label`, `body_label() -> Label`, `ask_button() -> Button`, signals `ask_requested(text: String)`, `closed`. On `WorldMapView`: `select_object(obj: Dictionary) -> void`, `selected_object() -> Dictionary`, `set_ask_enabled(on: bool) -> void`, `signal place_asked(text: String)`; existing `select_state(sid)`, `card() -> MapInfoCard`, `card_title() -> Label` keep working.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/ui/test_world_map_view.gd`:
 
@@ -1498,12 +1498,12 @@ func test_ask_emits_the_question_for_the_selected_place() -> void:
 	assert_eq(_asked, "What do we know of Kuojarpan?")
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `gut.sh world_map`
 Expected: errors for missing `select_object`, `body_label`, `ask_button`, `set_ask_enabled`, `place_asked`.
 
-- [ ] **Step 3: Create MapInfoCard**
+- [x] **Step 3: Create MapInfoCard**
 
 Create `scripts/ui/map_info_card.gd`:
 
@@ -1593,7 +1593,7 @@ func ask_button() -> Button:
 	return _ask
 ```
 
-- [ ] **Step 4: Move WorldMapView onto the card**
+- [x] **Step 4: Move WorldMapView onto the card**
 
 In `scripts/ui/world_map_view.gd`:
 
@@ -1663,12 +1663,12 @@ func card_title() -> Label:
 
 4e. In `_draw`, after `_draw_hover()` add `_draw_object_highlight(_selected_obj)` so the selected pin/line stays marked while its card is open.
 
-- [ ] **Step 5: Import (new class), run, verify pass**
+- [x] **Step 5: Import (new class), run, verify pass**
 
 Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --import` then `gut.sh world_map`
 Expected: `All tests passed!` including the pre-existing `test_selecting_a_kingdom_opens_the_card` and `test_water_click_closes_the_card`.
 
-- [ ] **Step 6: Full suite, then commit**
+- [x] **Step 6: Full suite, then commit**
 
 ```bash
 git add scripts/ui/map_info_card.gd scripts/ui/map_info_card.gd.uid scripts/ui/world_map_view.gd tests/ui/test_world_map_view.gd
@@ -1697,7 +1697,7 @@ Claude-Session: https://claude.ai/code/session_019HggsFraqfeKGW6RHNys5E"
 **Interfaces:**
 - Consumes: `WorldMapView.set_ask_enabled`, `place_asked`, `select_object`, `card().ask_button()`.
 
-- [ ] **Step 1: Write the failing screen tests**
+- [x] **Step 1: Write the failing screen tests**
 
 Append to `tests/ui/test_court_screen.gd`:
 
@@ -1734,12 +1734,12 @@ func test_map_ask_fills_the_talk_box() -> void:
 
 (If `_scene_with([], null)` cannot take a null report in this file's helper, look at how its first test builds a scene and copy that call exactly.)
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `gut.sh court_screen` and `gut.sh conversation_scene`
 Expected: `assert_true(... ask_button().visible)` fails (Ask not enabled), and the text assertions fail with "".
 
-- [ ] **Step 3: Wire the screens**
+- [x] **Step 3: Wire the screens**
 
 In `scripts/ui/court_screen.gd`, right after `%MapPanel.add_child(_world_map)` add:
 
@@ -1782,11 +1782,11 @@ and replace the three lines that create and add the map with:
 
 Check `_free_text` is assigned before the map is created in `_ready` (it is assigned at line ~85; the map at ~51). If the map comes first, the lambda still works because it dereferences `_free_text` only when fired — but confirm `_free_text` is non-null at fire time by keeping the assignment in `_ready`.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `gut.sh court_screen` and `gut.sh conversation_scene` → `All tests passed!`.
 
-- [ ] **Step 5: Docs**
+- [x] **Step 5: Docs**
 
 In `CLAUDE.md`, replace the generated-files parenthetical `(\`kingdoms.csv\`, \`provinces.csv\`, \`burgs.csv\`, \`borders.csv\`)` with `(\`kingdoms.csv\`, \`provinces.csv\`, \`burgs.csv\`, \`borders.csv\`, \`routes.csv\`, \`rivers.csv\`, \`markers.csv\`, \`biomes.csv\`, \`map_info.csv\`)` and `and the \`world_state_index.png\` hit-test bitmap` with `and the \`world_state_index.png\` / \`world_province_index.png\` / \`world_biome_index.png\` hit-test bitmaps`.
 
@@ -1796,7 +1796,7 @@ In the spec, add under "Owner rulings" a fifth item:
 5. **Implementation amendments (2026-09-08):** the two new bitmaps are named in `data/maps.csv` (`province_texture`, `biome_texture` columns) rather than derived from the index path; `provinces.csv` also gains `center_x`/`center_y` so the province bitmap can be verified at each province's center; the land card appends the kingdom overview after its local lines so the old kingdom card stays one click away.
 ```
 
-- [ ] **Step 6: Full suite, then commit**
+- [x] **Step 6: Full suite, then commit**
 
 Run: `./run_tests.sh` → green.
 
