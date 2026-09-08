@@ -137,3 +137,50 @@ func test_hovering_open_sea_clears_the_tooltip() -> void:
 	v.hover_at(v.map_to_screen(Vector2(5.0, 5.0)))  # top-left ocean corner
 	assert_eq(v.hovered_object().get("kind", ""), "water")
 	assert_eq(v.hover_tooltip(), "")
+
+## Cards per object kind (MapInfoCard renders what MapObjects.describe says).
+func test_selecting_a_town_opens_its_card() -> void:
+	var v := _view()
+	await wait_frames(1)
+	v.select_object({"kind": "burg", "code": "kuojarpan"})
+	assert_true(v.card().visible)
+	assert_eq(v.card_title().text, "Kuojarpan")
+	assert_true(v.card().body_label().text.begins_with("Capital of Onjormaa, Hetalia"))
+
+func test_selecting_land_leads_with_province_and_terrain() -> void:
+	var v := _view()
+	await wait_frames(1)
+	var k: Dictionary = Game.data.burgs["kuojarpan"]
+	v.select_object({"kind": "land", "state_id": int(Game.data.kingdoms["hetalia"]["state_id"]),
+		"province_id": 72, "biome_id": 6, "x": float(k["x"]), "y": float(k["y"])})
+	assert_eq(v.card_title().text, "Onjormaa")
+	var body := v.card().body_label().text
+	assert_true(body.begins_with("Hetalia\nTerrain: Temperate deciduous forest"), body)
+	assert_true(body.contains("Capital: Kuojarpan"), "kingdom overview follows")
+
+func test_selecting_water_closes_the_card() -> void:
+	var v := _view()
+	await wait_frames(1)
+	v.select_object({"kind": "burg", "code": "kuojarpan"})
+	v.select_object({"kind": "water"})
+	assert_false(v.card().visible)
+
+func test_ask_button_is_off_until_a_screen_enables_it() -> void:
+	var v := _view()
+	await wait_frames(1)
+	v.select_object({"kind": "burg", "code": "kuojarpan"})
+	assert_false(v.card().ask_button().visible, "no input box wired: no Ask")
+	v.set_ask_enabled(true)
+	v.select_object({"kind": "burg", "code": "kuojarpan"})
+	assert_true(v.card().ask_button().visible)
+
+var _asked := ""
+
+func test_ask_emits_the_question_for_the_selected_place() -> void:
+	var v := _view()
+	await wait_frames(1)
+	v.set_ask_enabled(true)
+	v.place_asked.connect(func(text: String) -> void: _asked = text)
+	v.select_object({"kind": "burg", "code": "kuojarpan"})
+	v.card().ask_button().pressed.emit()
+	assert_eq(_asked, "What do we know of Kuojarpan?")

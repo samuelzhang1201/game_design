@@ -15,6 +15,10 @@ extends Control
 ## (tools/import_azgaar.gd) via MapIndex. View-only: reads Game.data,
 ## never mutates game state.
 
+## A card's ASK THE COUNCIL button: the screen owning an input box puts this
+## text in it (nothing is sent until the player presses Enter).
+signal place_asked(text: String)
+
 const ZOOM_MAX := 8.0
 const ZOOM_STEP := 1.2
 ## A press/release pair further apart than this is a drag, not a click.
@@ -23,7 +27,6 @@ const CLICK_SLOP := 5.0
 const EDGE_MARGIN := 12.0
 ## Edge-scroll speed in screen px/s.
 const EDGE_SPEED := 260.0
-const CARD_WIDTH := 150.0
 ## Hover outline: a dark halo under a gold line so it reads on both the
 ## pale land fills and the ocean.
 const HOVER_WIDTH := 2.0
@@ -52,9 +55,9 @@ var _biome_image: Image
 ## The pin/line/land under the mouse (MapObjects.object_at); {} before any hover.
 var _hover_obj: Dictionary = {}
 var _tooltip: Label
-var _card: PanelContainer
-var _card_title: Label
-var _card_body: Label
+var _card: MapInfoCard
+## What the open card describes ({} when closed); drawn highlighted.
+var _selected_obj: Dictionary = {}
 var _offset := Vector2.ZERO
 var _zoom := 1.0
 var _homed := false
@@ -88,7 +91,12 @@ func _ready() -> void:
 	for code: String in Game.data.kingdoms:
 		var row: Dictionary = Game.data.kingdoms[code]
 		_by_state_id[int(row["state_id"])] = row
-	_build_card()
+	_card = MapInfoCard.new()
+	_card.ask_requested.connect(func(text: String) -> void: place_asked.emit(text))
+	_card.closed.connect(func() -> void:
+		_selected_obj = {}
+		queue_redraw())
+	add_child(_card)
 	_build_tooltip()
 	mouse_entered.connect(func() -> void: _mouse_inside = true)
 	mouse_exited.connect(func() -> void:
@@ -116,42 +124,6 @@ func _build_tooltip() -> void:
 	_tooltip.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
 	_tooltip.hide()
 	add_child(_tooltip)
-
-func _build_card() -> void:
-	_card = PanelContainer.new()
-	_card.name = "InfoCard"
-	_card.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_card.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.GOLD, 1, 8))
-	_card.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	_card.offset_left = -(CARD_WIDTH + 4.0)
-	_card.offset_top = 4.0
-	_card.offset_right = -4.0
-	_card.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(_card)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 4)
-	_card.add_child(col)
-	_card_title = Label.new()
-	_card_title.name = "CardTitle"
-	_card_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_header(_card_title, 10)
-	col.add_child(_card_title)
-	col.add_child(HSeparator.new())
-	_card_body = Label.new()
-	_card_body.name = "CardBody"
-	_card_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_card_body.add_theme_font_size_override("font_size", 8)
-	_card_body.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	col.add_child(_card_body)
-	var close := Button.new()
-	close.name = "CardClose"
-	close.text = "CLOSE"
-	close.focus_mode = Control.FOCUS_NONE
-	close.add_theme_font_size_override("font_size", 8)
-	close.pressed.connect(func() -> void: _card.hide())
-	col.add_child(close)
-	_card.hide()
 
 ## Initial framing: the map covers the frame edge to edge, so the middle
 ## column never shows dead gutter. The map is far wider in proportion than
@@ -189,6 +161,7 @@ func _draw() -> void:
 		draw_polyline(pts, UiPalette.GOLD, HOVER_WIDTH, true)
 	_draw_pins()
 	_draw_hover()
+	_draw_object_highlight(_selected_obj)
 
 ## Screen px per native map px — the LOD and pick radii are defined on it.
 func view_scale() -> float:
@@ -352,7 +325,7 @@ func _state_under(pos: Vector2) -> int:
 	return MapIndex.state_at(_index_image, Vector2i(screen_to_map(pos).floor()))
 
 func _select_at(pos: Vector2) -> void:
-	select_state(_state_under(pos))
+	select_object(_object_under(pos))
 
 func _object_under(pos: Vector2) -> Dictionary:
 	var s := view_scale()
@@ -416,49 +389,32 @@ func hover_loops() -> Array:
 		return []
 	return Game.data.borders.get(String(row["kingdom_code"]), [])
 
-## Public for tests: open the info card for the kingdom with this Azgaar
-## state id; -1 / unknown ids (water, stale bitmap) close the card.
+## Public for tests: open the kingdom card for this Azgaar state id; -1 /
+## unknown ids (water, stale bitmap) close the card.
 func select_state(sid: int) -> void:
-	var row: Dictionary = _by_state_id.get(sid, {})
-	if row.is_empty():
-		_card.hide()
-		return
-	_show_kingdom(row)
-	_card.show()
+	select_object({"kind": "kingdom", "state_id": sid})
 
-func _show_kingdom(row: Dictionary) -> void:
-	var code := String(row["kingdom_code"])
-	var province_count := 0
-	for p: Dictionary in Game.data.provinces.values():
-		if String(p["kingdom_code"]) == code:
-			province_count += 1
-	var town_count := 0
-	for b: Dictionary in Game.data.burgs.values():
-		if String(b["kingdom_code"]) == code:
-			town_count += 1
-	var capital: Dictionary = Game.data.burgs.get(String(row["capital_burg"]), {})
-	var neighbors: Array[String] = []
-	for n: String in String(row["neighbor_codes"]).split("|", false):
-		neighbors.append(String(Game.data.kingdoms.get(n, {}).get("label", n)))
-	var court: Array[String] = []
-	for role: Dictionary in Game.data.roles:
-		if String(role.get("kingdom", "")) == code:
-			court.append(String(role["display_name"]))
-	_card_title.text = String(row["label"])
-	var lines: Array[String] = [
-		"Capital: %s" % capital.get("label", "—"),
-		"Provinces: %d" % province_count,
-		"Towns: %d" % town_count,
-		"Population: %s" % row["population"],
-		"Neighbors: %s" % (", ".join(neighbors) if not neighbors.is_empty() else "—"),
-	]
-	if not court.is_empty():
-		lines.append("Court: %s" % ", ".join(court))
-	_card_body.text = "\n".join(lines)
+## Open the card for any map object (MapObjects.object_at shape). Water or
+## an unknown object closes it.
+func select_object(obj: Dictionary) -> void:
+	var entry := MapObjects.describe(Game.data, obj)
+	if entry.is_empty():
+		_selected_obj = {}
+		_card.hide()
+	else:
+		_selected_obj = obj
+		_card.show_entry(entry)
+	queue_redraw()
+
+func selected_object() -> Dictionary:
+	return _selected_obj
+
+func set_ask_enabled(on: bool) -> void:
+	_card.ask_enabled = on
 
 ## Test seams.
-func card() -> PanelContainer:
+func card() -> MapInfoCard:
 	return _card
 
 func card_title() -> Label:
-	return _card_title
+	return _card.title_label()
