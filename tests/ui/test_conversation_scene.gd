@@ -172,39 +172,49 @@ func test_skills_tab_lists_tools_with_kind_colors() -> void:
 	assert_ne(UiPalette.TOOL_KINGDOM, UiPalette.TOOL_PERSONAL,
 		"the two kinds are visually distinct")
 
-## Layout (user rulings 2026-09-09, ScreenLayout): the dossier column on the
-## left, the map in the middle with the dialogue strip UNDER it, and no
-## right column until a map element is selected — then the detail column
-## appears and the map and strip give it room.
-func test_left_column_map_and_strip_with_the_detail_column_on_demand() -> void:
+## Layout (user rulings 2026-09-09, ScreenLayout): the dossier/dashboard
+## column on the left, the map in the middle running to the right edge, and
+## nothing on the right until the player enters the council (the handle) or
+## clicks a map element (the detail column); the two share the slot.
+func test_right_slot_is_empty_until_the_council_or_a_map_click_takes_it() -> void:
 	Game.start_campaign(42)
 	var report := Game.next_tick()
 	var c := _scene_with([{"kind": "summary", "portrait_id": "round_table",
 		"speaker": "The Council"}], report)
 	await wait_frames(2)
-	var dossier := c.minister_panel().get_global_rect()
+	var left := c.minister_panel().get_global_rect()
 	var map_rect := c.map_panel().get_global_rect()
-	var strip := c.dialogue_panel().get_global_rect()
 	var top := c.top_bar().get_global_rect().end.y
-	assert_gte(dossier.position.y, top, "the dossier starts under the top bar, never over it")
+	assert_gte(left.position.y, top, "the left column starts under the top bar, never over it")
 	assert_gte(map_rect.position.y, top, "so does the map")
-	assert_lt(map_rect.position.x - dossier.end.x, 16.0, "the map starts where the dossier ends")
-	assert_almost_eq(strip.position.x, map_rect.position.x, 1.0, "the strip is under the map")
-	assert_almost_eq(strip.end.x, map_rect.end.x, 1.0, "and as wide as it")
-	assert_gte(strip.position.y, map_rect.end.y, "below it, never over it")
-	assert_false(c.detail_panel().visible, "nothing selected: no right column")
+	assert_lt(map_rect.position.x - left.end.x, 16.0, "the map starts where the left column ends")
+	assert_false(c.dialogue_panel().visible, "the council column is hidden by default")
+	assert_false(c.detail_panel().visible, "nothing selected: no detail column")
+	assert_true(c.council_handle().visible, "the ENTER THE COUNCIL handle shows on the right")
 	var wide := map_rect.end.x
+	assert_gt(wide, c.size.x - 12.0, "the map runs to the right edge")
+	c.council_handle().pressed.emit()
+	await wait_frames(2)
+	assert_true(c.council_open())
+	assert_true(c.dialogue_panel().visible, "the handle opens the council column")
+	assert_false(c.council_handle().visible, "and the handle steps aside")
+	assert_lt(c.map_panel().get_global_rect().end.x, wide, "the map gives it room")
+	assert_lt(c.map_panel().get_global_rect().end.x,
+		c.dialogue_panel().get_global_rect().position.x + 1.0, "and never runs under it")
 	var capital: Dictionary = Game.data.burgs[String(
 		Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
 	c.world_map().select_object({"kind": "burg", "code": String(capital["burg_code"])})
 	await wait_frames(2)
-	assert_true(c.detail_panel().visible, "a map click opens the detail column")
-	assert_lt(c.map_panel().get_global_rect().end.x, wide, "the map gives it room")
-	assert_lt(c.map_panel().get_global_rect().end.x, c.detail_panel().get_global_rect().position.x + 1.0,
-		"and never runs under it")
+	assert_true(c.detail_panel().visible, "a map click takes the slot for the detail column")
+	assert_false(c.dialogue_panel().visible, "the council steps behind it")
 	c.detail_panel().close_button().pressed.emit()
 	await wait_frames(2)
-	assert_false(c.detail_panel().visible, "CLOSE hides it")
+	assert_false(c.detail_panel().visible, "CLOSE hides the detail column")
+	assert_true(c.dialogue_panel().visible, "and the council comes back")
+	c.find_child("LeaveButton", true, false).pressed.emit()
+	await wait_frames(2)
+	assert_false(c.dialogue_panel().visible, "LEAVE hides the council")
+	assert_true(c.council_handle().visible)
 	assert_almost_eq(c.map_panel().get_global_rect().end.x, wide, 1.0, "and the map widens again")
 
 ## Same ruling, worst case: a long event text plus three choice buttons must
@@ -487,7 +497,8 @@ func test_hovering_a_country_borrows_the_minister_column() -> void:
 	panel.show_country("")
 	assert_false(panel.visible, "and hands it back")
 
-## The detail column's Ask pre-fills the talk box and never sends.
+## The detail column's Ask pre-fills the talk box, brings the council up so
+## it can be sent, and never sends by itself.
 func test_map_ask_fills_the_talk_box() -> void:
 	Game.start_campaign(42)
 	var report := Game.next_tick()
@@ -500,6 +511,8 @@ func test_map_ask_fills_the_talk_box() -> void:
 	await wait_frames(1)
 	assert_true(c.detail_panel().ask_button().visible, "the stage owns a talk box, so Ask shows")
 	c.detail_panel().ask_button().pressed.emit()
+	await wait_frames(1)
+	assert_true(c.council_open(), "Ask brings the council up to send from")
 	assert_eq(c.free_text_field().text, "What do we know of %s?" % String(capital["label"]))
 	assert_false(c.dialogue_text().contains("What do we know"), "nothing was sent")
 ## The two-part order on the conversation stage (spec 2026-09-09 §4): the

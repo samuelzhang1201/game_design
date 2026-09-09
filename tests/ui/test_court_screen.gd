@@ -363,3 +363,25 @@ func test_selecting_a_province_shows_its_account_in_the_detail_column() -> void:
 	map.select_province("")
 	await wait_frames(1)
 	assert_false(panel.visible, "clearing the selection closes the column")
+
+## The court's council column (record, order box, suggestions, End Turn) is
+## hidden until the player enters it (user ruling 2026-09-09).
+func test_council_column_opens_from_the_handle_and_leaves() -> void:
+	Game.start_campaign(42)
+	var report := _report_after_resolving_pending_event()
+	var screen := _screen()
+	screen.enter_court(report)
+	await wait_frames(2)
+	var side: Control = screen.find_child("SidePanel", true, false)
+	assert_false(side.visible, "hidden by default")
+	assert_true(screen.council_handle().visible)
+	var wide: float = screen.find_child("MapPanel", true, false).get_global_rect().end.x
+	screen.council_handle().pressed.emit()
+	await wait_frames(2)
+	assert_true(side.visible, "the handle opens it")
+	assert_true(side.is_ancestor_of(screen.end_turn_button()), "End Turn lives in it")
+	assert_lt(screen.find_child("MapPanel", true, false).get_global_rect().end.x, wide)
+	screen.find_child("LeaveButton", true, false).pressed.emit()
+	await wait_frames(2)
+	assert_false(side.visible, "LEAVE hides it")
+	assert_almost_eq(screen.find_child("MapPanel", true, false).get_global_rect().end.x, wide, 1.0)

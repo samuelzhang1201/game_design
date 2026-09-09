@@ -1,11 +1,12 @@
 class_name ConversationScene
 extends Control
 ## VN stage (R3/R4/R5). Layout (user rulings 2026-09-09, ScreenLayout): the
-## dossier fills the LEFT column (portrait, identity, opinion, per-skill
-## colored bars, traits); the MAP fills the middle with the dialogue strip
-## under it (where you stand and who is present, the transcript, replies,
-## the talk box); a RIGHT detail column exists only while something on the
-## map is selected. Beats advance on Continue / reply / choice.
+## LEFT column is the realm dashboard, or the dossier while a person speaks;
+## the MAP fills the middle; the RIGHT slot is empty by default — the
+## council column (where you stand and who is present, the transcript,
+## replies, the talk box) opens from the ENTER THE COUNCIL handle on the
+## right edge, and the detail column takes the slot while a map element is
+## selected. Beats advance on Continue / reply / choice.
 
 signal finished
 
@@ -68,8 +69,15 @@ func _ready() -> void:
 	_detail.ask_enabled = true
 	_detail.ask_requested.connect(_fill_talk_box)
 	_detail.closed.connect(_world_map.clear_selection)
-	_detail.visibility_changed.connect(_layout)
+	_detail.visibility_changed.connect(_on_detail_visibility)
 	_world_map.place_asked.connect(_fill_talk_box)
+	# The council column is hidden until the player enters it (user ruling
+	# 2026-09-09): a handle on the right edge opens it, LEAVE closes it.
+	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
+	_handle.pressed.connect(enter_council)
+	add_child(_handle)
+	%LeaveButton.add_theme_font_size_override("font_size", 7)
+	%LeaveButton.pressed.connect(leave_council)
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the minister returns when the cursor leaves.
 	_country_panel = CountryPanel.attach(%MinisterPanel.get_node("MVBox"), _world_map)
@@ -120,14 +128,59 @@ func _ready() -> void:
 		if is_inside_tree():
 			_refresh_location())
 	_refresh_location()
+	_set_right("")
+
+## What holds the right slot: "" (nothing, the map runs to the edge),
+## "council", or "detail".
+var _right := ""
+## Whether the council was open when a map click took the slot, so closing
+## the detail column gives the council back.
+var _council_behind_detail := false
+var _handle: Button
+
+func _set_right(mode: String) -> void:
+	_right = mode
+	%DialoguePanel.visible = mode == "council"
+	if _detail != null and mode != "detail" and _detail.visible:
+		_detail.hide()
+	_handle.visible = mode == ""
 	_layout()
 
-## Columns, map, strip, and the detail column when it is up (ScreenLayout).
+## Columns, map, and whichever panel holds the right slot (ScreenLayout).
 func _layout() -> void:
-	ScreenLayout.apply(%TopBar.bar_height() + 3.0, %MinisterPanel, %MapPanel,
-		%DialoguePanel, _detail, _detail != null and _detail.visible)
+	var top: float = %TopBar.bar_height() + 3.0
+	ScreenLayout.apply(top, %MinisterPanel, %MapPanel, [%DialoguePanel, _detail], _right != "")
+	ScreenLayout.place_handle(_handle, top)
 
+func enter_council() -> void:
+	_set_right("council")
+
+func leave_council() -> void:
+	if _right == "council":
+		_set_right("")
+
+func council_open() -> bool:
+	return _right == "council"
+
+func council_handle() -> Button:
+	return _handle
+
+## A map click takes the slot; closing the detail column gives it back to
+## whatever held it.
+func _on_detail_visibility() -> void:
+	if _detail.visible:
+		if _right != "detail":
+			_council_behind_detail = _right == "council"
+			_set_right("detail")
+	elif _right == "detail":
+		_set_right("council" if _council_behind_detail else "")
+
+## Ask on a card pre-fills the talk box and brings the council up so the
+## player can send it.
 func _fill_talk_box(text: String) -> void:
+	_world_map.clear_selection()
+	_council_behind_detail = false
+	_set_right("council")
 	_free_text.text = text
 	_free_text.caret_column = text.length()
 	_free_text.grab_focus()
@@ -241,7 +294,7 @@ func dialogue_text() -> String:
 func event_popup() -> Control:
 	return %EventPopup
 
-## --- Location panel (the strip's left part) ----------------------------
+## --- Location panel (the council column, upper container) --------------
 ## Where the player stands, who is present (click a face to seek them out),
 ## and MOVE — free movement within the region (LocationSystem).
 

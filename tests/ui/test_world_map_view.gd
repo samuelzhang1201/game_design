@@ -203,19 +203,25 @@ func test_wheel_zoom_in_magnifies_and_out_floors_at_the_whole_map() -> void:
 		"wheel down floors at the whole map, never smaller")
 	assert_lt(v._zoom, opening, "the whole map sits wider out than the opening")
 
-## Regression guard: the map shares the court screen with the log and
-## council columns. If it ever covers or hides them there is no way to
-## issue an order or end the turn.
-func test_court_keeps_the_order_panels_beside_the_map() -> void:
+## Regression guard: the map shares the court screen with the left column
+## and the council column. The council column hides by default (user ruling
+## 2026-09-09) but must stay reachable through the handle — if the map ever
+## covered or lost them there would be no way to issue an order or end the
+## turn.
+func test_court_keeps_the_order_panels_reachable_beside_the_map() -> void:
 	var screen: CourtScreen = load("res://scenes/court.tscn").instantiate()
 	add_child_autofree(screen)
 	await wait_frames(1)
 	assert_true(screen.get_node("%LogPanel").is_visible_in_tree(),
-		"court log column stays visible")
+		"the left column stays visible")
+	assert_true(screen.council_handle().is_visible_in_tree(),
+		"the ENTER THE COUNCIL handle is there")
+	screen.council_handle().pressed.emit()
+	await wait_frames(1)
 	assert_true(screen.get_node("%SidePanel").is_visible_in_tree(),
-		"council column stays visible")
+		"the council column opens")
 	assert_true(screen.end_turn_button().is_visible_in_tree(),
-		"End Turn stays reachable")
+		"End Turn is reachable inside it")
 
 ## Hover: the kingdom under the mouse gets its border outlined (user request
 ## 2026-09-08). Loops come from the pack's borders.csv; -1 (water/no state)

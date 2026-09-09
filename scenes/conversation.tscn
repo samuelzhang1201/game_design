@@ -22,7 +22,7 @@ anchor_bottom = 1.0
 offset_left = 128.0
 offset_top = 30.0
 offset_right = -4.0
-offset_bottom = -136.0
+offset_bottom = -40.0
 
 [node name="TopBar" parent="." instance=ExtResource("2")]
 unique_name_in_owner = true
@@ -118,75 +118,73 @@ size_flags_vertical = 3
 
 [node name="DialoguePanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
-anchor_top = 1.0
+visible = false
+anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 128.0
-offset_top = -132.0
+offset_left = -154.0
+offset_top = 30.0
 offset_right = -4.0
 offset_bottom = -40.0
 
-[node name="Strip" type="HBoxContainer" parent="DialoguePanel"]
-theme_override_constants/separation = 6
+[node name="Col" type="VBoxContainer" parent="DialoguePanel"]
+theme_override_constants/separation = 4
 
-[node name="LocationBox" type="VBoxContainer" parent="DialoguePanel/Strip"]
+[node name="LeaveButton" type="Button" parent="DialoguePanel/Col"]
+unique_name_in_owner = true
+focus_mode = 0
+text = "LEAVE THE COUNCIL"
+
+[node name="LocationBox" type="VBoxContainer" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
 theme_override_constants/separation = 3
 
-[node name="LocationSlot" type="Control" parent="DialoguePanel/Strip/LocationBox"]
+[node name="LocationSlot" type="Control" parent="DialoguePanel/Col/LocationBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(104, 22)
+custom_minimum_size = Vector2(128, 22)
 clip_contents = true
 
-[node name="OccupantsRow" type="HFlowContainer" parent="DialoguePanel/Strip/LocationBox"]
+[node name="OccupantsRow" type="HFlowContainer" parent="DialoguePanel/Col/LocationBox"]
 unique_name_in_owner = true
 theme_override_constants/h_separation = 3
 theme_override_constants/v_separation = 3
 
-[node name="MoveButton" type="Button" parent="DialoguePanel/Strip/LocationBox"]
+[node name="MoveButton" type="Button" parent="DialoguePanel/Col/LocationBox"]
 unique_name_in_owner = true
 focus_mode = 0
 text = "MOVE"
 
-[node name="StripSep" type="VSeparator" parent="DialoguePanel/Strip"]
+[node name="LocSep" type="HSeparator" parent="DialoguePanel/Col"]
 
-[node name="Col" type="VBoxContainer" parent="DialoguePanel/Strip"]
-size_flags_horizontal = 3
-theme_override_constants/separation = 3
-
-[node name="NameLabel" type="Label" parent="DialoguePanel/Strip/Col"]
+[node name="NameLabel" type="Label" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
 autowrap_mode = 3
 
-[node name="DialogueScroll" type="ScrollContainer" parent="DialoguePanel/Strip/Col"]
+[node name="DialogueScroll" type="ScrollContainer" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="Content" type="VBoxContainer" parent="DialoguePanel/Strip/Col/DialogueScroll"]
+[node name="Content" type="VBoxContainer" parent="DialoguePanel/Col/DialogueScroll"]
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
 
-[node name="TextLabel" type="RichTextLabel" parent="DialoguePanel/Strip/Col/DialogueScroll/Content"]
+[node name="TextLabel" type="RichTextLabel" parent="DialoguePanel/Col/DialogueScroll/Content"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 
-[node name="RepliesBox" type="VBoxContainer" parent="DialoguePanel/Strip/Col/DialogueScroll/Content"]
+[node name="RepliesBox" type="VBoxContainer" parent="DialoguePanel/Col/DialogueScroll/Content"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="InputRow" type="HBoxContainer" parent="DialoguePanel/Strip/Col"]
-theme_override_constants/separation = 4
-
-[node name="FreeText" type="LineEdit" parent="DialoguePanel/Strip/Col/InputRow"]
+[node name="FreeText" type="LineEdit" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
-size_flags_horizontal = 3
 placeholder_text = "Speak your mind..."
 
-[node name="ContinueButton" type="Button" parent="DialoguePanel/Strip/Col/InputRow"]
+[node name="ContinueButton" type="Button" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
 focus_mode = 0
 text = "Wave them on"

@@ -5,10 +5,11 @@ extends Control
 ## conversation stage (Task 5) before GameRoot ever switches here — this
 ## screen is numbers + orders only (spec R2). Layout (user rulings
 ## 2026-09-09, ScreenLayout): the realm's own information in the LEFT
-## column, the BRIGHT map in the middle with the strip under it (the court
-## record and the order box on its left, the lettered suggestions and End
-## Turn on its right — R8/R10), and a RIGHT detail column only while a map
-## element is selected.
+## column, the BRIGHT map in the middle, and a RIGHT slot that is empty by
+## default — the council column (the court record, the order box, the
+## lettered suggestions, End Turn — R8/R10) opens from the ENTER THE
+## COUNCIL handle on the right edge, and the detail column takes the slot
+## while a map element is selected.
 
 ## Emitted instead of self-driving the turn cycle: GameRoot owns advancing
 ## the tick and playing the DAY_RUN interlude. See enter_court.
@@ -57,8 +58,13 @@ func _ready() -> void:
 	_detail.ask_enabled = true
 	_detail.ask_requested.connect(_on_place_asked)
 	_detail.closed.connect(_world_map.clear_selection)
-	_detail.visibility_changed.connect(_layout)
+	_detail.visibility_changed.connect(_on_detail_visibility)
 	_world_map.place_asked.connect(_on_place_asked)
+	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
+	_handle.pressed.connect(enter_council)
+	add_child(_handle)
+	%LeaveButton.add_theme_font_size_override("font_size", 7)
+	%LeaveButton.pressed.connect(leave_council)
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the column's own content returns when it leaves.
 	_country_panel = CountryPanel.attach(%LogPanel.get_node("LVBox"), _world_map)
@@ -66,7 +72,7 @@ func _ready() -> void:
 	_dashboard = RealmDashboard.attach(%LogPanel.get_node("LVBox"))
 	%LogPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
-	%StripPanel.add_theme_stylebox_override("panel",
+	%SidePanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	UiPalette.style_header(%LogHeader, 7)
 	UiPalette.style_header(%SideHeader, 7)
@@ -78,12 +84,47 @@ func _ready() -> void:
 	free_text.text_submitted.connect(_on_free_text_submitted)
 	end_turn = %EndTurn
 	end_turn.pressed.connect(_on_end_turn)
+	_set_right("")
+
+## What holds the right slot: "" (nothing), "council", or "detail".
+var _right := ""
+var _council_behind_detail := false
+var _handle: Button
+
+func _set_right(mode: String) -> void:
+	_right = mode
+	%SidePanel.visible = mode == "council"
+	if _detail != null and mode != "detail" and _detail.visible:
+		_detail.hide()
+	_handle.visible = mode == ""
 	_layout()
 
-## Columns, map, strip, and the detail column when it is up (ScreenLayout).
+## Columns, map, and whichever panel holds the right slot (ScreenLayout).
 func _layout() -> void:
-	ScreenLayout.apply(%TopBar.bar_height() + 3.0, %LogPanel, %MapPanel,
-		%StripPanel, _detail, _detail != null and _detail.visible)
+	var top: float = %TopBar.bar_height() + 3.0
+	ScreenLayout.apply(top, %LogPanel, %MapPanel, [%SidePanel, _detail], _right != "")
+	ScreenLayout.place_handle(_handle, top)
+
+func enter_council() -> void:
+	_set_right("council")
+
+func leave_council() -> void:
+	if _right == "council":
+		_set_right("")
+
+func council_open() -> bool:
+	return _right == "council"
+
+func council_handle() -> Button:
+	return _handle
+
+func _on_detail_visibility() -> void:
+	if _detail.visible:
+		if _right != "detail":
+			_council_behind_detail = _right == "council"
+			_set_right("detail")
+	elif _right == "detail":
+		_set_right("council" if _council_behind_detail else "")
 
 ## Test seam.
 func world_map() -> WorldMapView:
@@ -222,7 +263,12 @@ func _on_free_text_submitted(text: String) -> void:
 		if Game.state.pending_event.is_empty():
 			end_turn.disabled = false)
 
+## Ask on a card pre-fills the order box and brings the council up so the
+## player can send it.
 func _on_place_asked(text: String) -> void:
+	_world_map.clear_selection()
+	_council_behind_detail = false
+	_set_right("council")
 	free_text.text = text
 	free_text.caret_column = text.length()
 	free_text.grab_focus()
