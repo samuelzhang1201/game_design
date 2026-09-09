@@ -775,7 +775,11 @@ func _on_free_text(text: String) -> void:
 		# their own name in the transcript.
 		if res.has("reply"):
 			_say(String(res["reply"]["speaker"]), String(res["reply"]["text"]))
-		elif spoken == "":
+		# The ledger lines beneath the narrative (spec 2026-09-09 §4.2).
+		var ledger: Array = res.get("ledger", [])
+		for line in ledger:
+			_say("Ledger", String(line))
+		if not res.has("reply") and spoken == "" and ledger.is_empty():
 			_say("Herald", "So noted.")
 	, facing, addressed)
 

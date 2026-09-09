@@ -501,3 +501,28 @@ func test_map_ask_fills_the_talk_box() -> void:
 	assert_true(map.card().ask_button().visible, "the stage owns a talk box, so Ask shows")
 	map.card().ask_button().pressed.emit()
 	assert_eq(c.free_text_field().text, "What do we know of %s?" % String(capital["label"]))
+
+## The two-part order on the conversation stage (spec 2026-09-09 §4): the
+## narrative under the speaker's name, then the ledger lines.
+func test_free_text_prints_narrative_then_ledger_on_the_stage() -> void:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"narrative": "Coin for the whisperers, then.",
+		"impacts": {"actions": [{"action_code": "SPY_MISSION", "params": {}, "target": ""}],
+		"world": [], "court_reaction": {}}})
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	var beats := [{"kind": "summary", "portrait_id": "round_table", "speaker": "The Council",
+		"text": "The court waits."}]
+	var c := _scene_with(beats, report)
+	await wait_frames(3)
+	var gold: float = Game.state.metrics["treasury"]
+	c.free_text_field().text_submitted.emit("send out the whisperers")
+	await wait_frames(3)
+	assert_lt(Game.state.metrics["treasury"], gold, "the mission was paid for")
+	assert_string_contains(c.dialogue_text(), "Coin for the whisperers, then.")
+	assert_string_contains(c.dialogue_text(), "treasury -")

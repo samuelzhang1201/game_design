@@ -60,7 +60,7 @@ tick advances
 - **BG-1 Tick engine.** Advances game state one tick at a time; 24 ticks/year; campaign clock, season/year display.
 - **BG-2 Kingdom state.** The metrics the council data references: treasury/gold, admin capacity, tax income, legitimacy, unrest, grain stores, army quality, church opinion, peasant contentment. Simple drift/production formulas — just enough signal for advisor concern scans to fire.
 - **BG-3 Action system.** Data-driven action taxonomy: `action_code`, params, admin cost, gold cost formula, cooldown, effect handler (pattern per `policy_actions_court_additions.csv`). Ships the 13 court actions plus the domain actions the founding five advise on (at minimum: `TAX_RATE_ADJUST`, `LEVY_RAISE`, `GRAIN_POLICY_SET`, `TARIFF_ADJUST`, `CHURCH_POLICY`, `JUSTICE_SEVERITY`, `BUILD_ECONOMIC`, `SPY_MISSION`). Full taxonomy is open design work (§11).
-- **BG-4 Parse → execute → narrate.** Free-text input parsed by LLM into `{actions: [...], court_reaction: {...}}` against a strict schema; engine validates every action and rejects anything invalid — the model can never invent an action the engine can't do.
+- **BG-4 Parse → execute → narrate.** Free-text input parsed by LLM in one call into `{narrative, impacts: {actions, world, court_reaction}}` against a strict schema; the engine validates every action, clamps every world delta to `data/world_schema.csv`, and rejects anything else — the model can never invent an action the engine can't do or move a field the schema does not list. The narrative and the ledger of what applied print together (owner ruling 2026-09-09).
 - **BG-5 Save/load.** Entire game state — including chapter-arc state — serializes to one JSON save. All in-memory objects; no database.
 - **BG-6 Determinism.** Single seeded RNG owned by the engine; identical save + identical inputs ⇒ identical state. LLM output never mutates state except through validated action codes and clamped enums.
 
@@ -169,7 +169,7 @@ Outcome-keyed authored prose (CH-2): one paragraph per arc reflecting its resolu
 
 | Call | Model | Frequency | Notes |
 |---|---|---|---|
-| Free-text parse → action JSON | `gpt-5.6-luna` ($0.20/$1.20 per MTok) | every free-text turn | Strict JSON schema; cheap tier |
+| Free-text order → narrative + impacts JSON | `gpt-5.6-luna` ($0.20/$1.20 per MTok), `LLM_MODEL_ORDER` | every free-text turn | One call; strict two-part schema; replaces the old parse + converse pair |
 | Routine narration | `gpt-5.6-luna` | most ticks | Template-voiced with **no LLM at all** when low-stakes |
 | Council briefing | `gpt-5.6-terra` ($2/$12) | ~40% of ticks | One batched call, all speaking ministers |
 | Debate scene | `gpt-5.6-terra` | ~5% of ticks | One call, both sides |

@@ -139,11 +139,12 @@ func test_order_clamps_a_delta_beyond_the_cap() -> void:
 	assert_eq(float(out["world"][0]["delta"]), WorldLedger.llm_cap(data, "metrics.treasury"))
 	assert_true(out["world"][0]["clamped"])
 
-func test_order_narrative_is_required_unless_something_acts() -> void:
+func test_order_empty_reply_is_ok_but_carries_nothing_and_long_ones_are_capped() -> void:
 	var s := GameState.new_campaign(data, 42)
-	assert_false(ResponseValidator.parse_order(_order("", []), data, s)["ok"])
-	assert_true(ResponseValidator.parse_order(_order("", [],
-		[{"action_code": "SPY_MISSION", "params": {}, "target": ""}]), data, s)["ok"])
+	var empty := ResponseValidator.parse_order(_order("", []), data, s)
+	assert_true(empty["ok"], "silence is not an error; the screens say 'So noted.'")
+	assert_eq(empty["narrative"], "")
+	assert_true(empty["actions"].is_empty() and empty["world"].is_empty())
 	var long := "x".repeat(2000)
 	var out := ResponseValidator.parse_order(_order(long, []), data, s)
 	assert_eq(out["narrative"].length(), int(data.bal("order_narrative_max_chars")))

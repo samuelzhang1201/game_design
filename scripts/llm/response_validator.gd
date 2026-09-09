@@ -52,8 +52,8 @@ static func parse_order(json_text: String, data: DataRepository, state: GameStat
 				world_rejected.append(checked)
 			else:
 				world.append(checked)
-	if narrative == "" and acts["actions"].is_empty() and world.is_empty():
-		return fail.call("an empty reply")
+	# An empty reply (no words, no actions, no impacts) is not an error: the
+	# screens fall back to "So noted." — the same as a legacy no-action parse.
 	return {"ok": true, "error": "", "narrative": narrative, "actions": acts["actions"],
 		"world": world, "world_rejected": world_rejected, "court_reaction": cr["reaction"]}
 

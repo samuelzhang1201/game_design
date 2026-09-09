@@ -276,3 +276,50 @@ func test_map_ask_fills_the_order_box_without_sending() -> void:
 	map.card().ask_button().pressed.emit()
 	assert_eq(screen.free_text.text, "What do we know of %s?" % String(capital["label"]))
 	assert_eq(screen.log_box.get_child_count(), 0, "nothing was sent")
+
+## The two-part order (spec 2026-09-09 §4): the speaker's narrative prints
+## under their name, then the ledger lines that actually applied.
+func test_free_text_prints_the_narrative_and_the_ledger() -> void:
+	Game.start_campaign(42)
+	var screen := _screen()
+	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"narrative": "The granaries open a crack.",
+		"impacts": {"actions": [], "world": [{"path": "metrics.grain", "delta": 5,
+		"reason": "a gift"}], "court_reaction": {}}})
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	Game.next_tick()
+	var grain: float = Game.state.metrics["grain"]
+	screen.free_text.text_submitted.emit("open the granaries a little")
+	await wait_frames(3)
+	assert_eq(fake.calls, 1, "one call carries the narrative and the impacts")
+	assert_eq(Game.state.metrics["grain"], grain + 5.0)
+	var texts: Array[String] = []
+	for l in screen.log_box.get_children():
+		texts.append((l as Label).text)
+	var joined := "\n".join(texts)
+	assert_string_contains(joined, "The granaries open a crack.")
+	assert_string_contains(joined, "grain +5")
+	assert_string_contains(joined, "clerks", "a gift with no cost is charged the generic cost")
+
+## Who answers is chosen before the call: a present character named in the
+## text speaks, else the Chancellor.
+func test_free_text_names_the_speaker_before_the_call() -> void:
+	Game.start_campaign(42)
+	var screen := _screen()
+	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"narrative": "The levies will hold.",
+		"impacts": {"actions": [], "world": [], "court_reaction": {}}})
+	add_child_autofree(fake)
+	Game.use_client_for_tests(fake)
+	Game.next_tick()
+	var marshal: Character = Game.state.characters[Game.state.council["marshal"]]
+	screen.free_text.text_submitted.emit("Marshal, how stand the levies?")
+	await wait_frames(3)
+	var found := false
+	for l in screen.log_box.get_children():
+		if (l as Label).text.begins_with(marshal.display_name + ":"):
+			found = true
+	assert_true(found, "the marshal answered under his own name")

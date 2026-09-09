@@ -196,66 +196,45 @@ func submit_free_text(text: String, cb: Callable, speaker_hint: String = "",
 	if not heard_by.is_empty():
 		state_changed.emit()
 	_ensure_llm()
-	voicer.parse_player_text(text, current_report, state, data,
+	# One call, two parts (spec 2026-09-09 §4): the engine picks who answers
+	# BEFORE the call so the model speaks in one persona; the reply's
+	# narrative is printed under that name and its impacts go through the
+	# ledger, the actions through ActionSystem, both via OrderPipeline.
+	var speaker := _order_speaker(text, speaker_hint, heard_by)
+	voicer.order(text, speaker, current_report, state, data,
 		func(res: Dictionary):
 			if not res["ok"]:
 				cb.call({"ok": false, "executed": [], "rejected": [], "error": res["error"]})
 				return
-			var executed: Array = []
-			var rejected: Array = []
-			for req in res["actions"]:
-				if req.action_code == "EVENT_CHOICE":
-					var ev_out := apply_event_choice(String(req.params.get("choice_id", "")))
-					if ev_out.is_empty():
-						rejected.append({"request": req, "error": "no such choice awaits"})
-					else:
-						# FIX 2(c): was hardcoded to [] — the button path
-						# (apply_event_choice, see conversation_scene._on_event_choice)
-						# already surfaces ev_out["effects"], so the free-text
-						# EVENT_CHOICE path must too, or the UI's outcome
-						# narration silently sees nothing to say.
-						executed.append({"action_code": "EVENT_CHOICE", "ok": true,
-							"effects": ev_out["effects"],
-							"notes": String(ev_out["label"]), "drift": ev_out["drift"],
-							"event_id": String(ev_out["event_id"]),
-							"choice_id": String(ev_out["choice_id"])})
-					continue
-				var attempt := try_execute(req)
-				if attempt["ok"]:
-					executed.append(attempt["outcome"])
-				else:
-					rejected.append({"request": req, "error": attempt["error"]})
-			engine.actions.apply_court_reaction(res["court_reaction"], state)
+			var out := OrderPipeline.apply_order(data, state, engine, res["actions"],
+				res["world"], res["court_reaction"], "order")
 			state_changed.emit()
-			# Conversational ride-along: text that parsed to no action at all
-			# ("who are you"), or ONLY to COUNCIL_CONSULT ("how is my army?" —
-			# the free ask-for-advice action whose voice was never wired, see
-			# ActionSystem's "the Voicer renders the consult"), is a question —
-			# a role answers it in character instead of a canned template.
-			# Shares this submission's single prompt-cap increment.
-			var only_questions := rejected.is_empty()
-			for o in executed:
-				if String(o["action_code"]) != "COUNCIL_CONSULT":
-					only_questions = false
-			if only_questions:
-				var speaker := _converse_speaker(res["court_reaction"], speaker_hint,
-					_consult_target(res["actions"]), heard_by)
-				if speaker != "":
-					voicer.converse(speaker, text, state, data,
-						func(reply: Dictionary):
-							_remember_reply(reply, heard_by)
-							cb.call({"ok": true, "executed": executed, "rejected": [],
-								"error": "", "reply": reply}))
-					return
-				# The player named someone who is NOT at this location (or no
-				# one is here at all): no API call, a herald note instead —
-				# conversation requires being in the same place.
-				cb.call({"ok": true, "executed": executed, "rejected": [], "error": "",
-					"reply": {"speaker": "Herald", "speaker_id": "", "degraded": true,
-						"text": TemplateVoicer.line_for(data, "converse_no_one",
-							[], state.tick)}})
-				return
-			cb.call({"ok": true, "executed": executed, "rejected": rejected, "error": ""}))
+			var result := {"ok": true, "executed": out["executed"], "rejected": out["rejected"],
+				"error": "", "ledger": out["ledger"], "world_effects": out["world_effects"],
+				"world_rejected": out["world_rejected"]}
+			var narrative := String(res.get("narrative", ""))
+			if _addressed_absent(res["court_reaction"], heard_by):
+				# The player named someone who is NOT here (user ruling
+				# 2026-08-30: no conversations with the absent): a herald note
+				# replaces whatever voice the model used.
+				result["reply"] = {"speaker": "Herald", "speaker_id": "", "degraded": true,
+					"text": TemplateVoicer.line_for(data, "converse_no_one", [], state.tick)}
+			elif narrative != "":
+				var reply := {"speaker": _speaker_name(speaker), "speaker_id": speaker,
+					"text": narrative, "degraded": false}
+				_remember_reply(reply, heard_by)
+				result["reply"] = reply
+			cb.call(result))
+
+## True when the reply addressed real characters and none of them heard it.
+func _addressed_absent(court_reaction: Dictionary, heard_by: Array) -> bool:
+	var named := 0
+	for id in court_reaction.get("addressed", []):
+		if state.characters.has(String(id)) and String(id) != "you":
+			named += 1
+			if String(id) in heard_by:
+				return false
+	return named > 0
 
 ## A conversational reply is itself words spoken aloud: everyone who heard
 ## the question heard the answer — the speaker included, so a character
@@ -272,41 +251,55 @@ func _remember_reply(reply: Dictionary, heard_by: Array) -> void:
 			state.tick)
 	state_changed.emit()
 
-## A COUNCIL_CONSULT's target (seat code or character id) names who was asked.
-func _consult_target(actions: Array) -> String:
-	for req in actions:
-		if req.action_code == "COUNCIL_CONSULT" and req.target != "":
-			return String(req.target)
-	return ""
+func _speaker_name(id: String) -> String:
+	return (state.characters[id] as Character).display_name if state.characters.has(id) else "Herald"
 
-## Who answers conversational text. Only someone AT THE PLAYER'S LOCATION
-## may answer (user ruling 2026-08-30: no conversations with the absent).
-## Priority among those present: the consult's target / whoever the parse
-## says was addressed; if someone was explicitly named but none of them are
-## here, NOBODY answers (""). With no one named: the person the player is
-## facing, else the Chancellor if present, else anyone present.
-func _converse_speaker(court_reaction: Dictionary, hint: String,
-		consult_target: String = "", audience: Array = []) -> String:
-	# Only someone the words actually reached may answer: the explicit
-	# selection when there is one, else everyone at the player's location.
+## Who answers, chosen BEFORE the call so the model speaks in one persona:
+## the character the player faces; else someone present whose name or seat
+## the text mentions; else the present holder of the seat whose topics the
+## text touches; else the Chancellor if present; else anyone present; else ""
+## for the herald. Only someone at the player's location may answer
+## (user ruling 2026-08-30: no conversations with the absent).
+func _order_speaker(text: String, hint: String, audience: Array) -> String:
 	var present: Array = audience if not audience.is_empty() \
 		else LocationSystem.occupants(data, state, state.current_location)
-	var named: Array = []
-	if state.council.has(consult_target):
-		named.append(String(state.council[consult_target]))
-	elif state.characters.has(consult_target) and consult_target != "you":
-		named.append(consult_target)
-	for id in court_reaction.get("addressed", []):
-		if state.characters.has(String(id)) and String(id) != "you":
-			named.append(String(id))
-	if not named.is_empty():
-		for id in named:
-			if id in present:
-				return String(id)
-		return ""
 	if hint in present:
 		return hint
+	var lower := text.to_lower()
+	for id in present:
+		var c: Character = state.characters.get(String(id))
+		if c == null or String(id) == "you":
+			continue
+		for token in c.display_name.split(" ", false):
+			if token.length() > 3 and lower.contains(token.to_lower()):
+				return String(id)
+		if c.seat != "" and lower.contains(c.seat.to_lower()):
+			return String(id)
+	# A question in a seat's domain goes to that seat's holder when present
+	# ("how is my army?" -> the Marshal): council_seats.csv `topics`.
+	for seat: String in data.seats:
+		var holder := String(state.council.get(seat, ""))
+		if holder == "" or not holder in present:
+			continue
+		for word in String(data.seats[seat].get("topics", "")).split("|", false):
+			if _mentions(lower, word):
+				return holder
 	var chancellor := String(state.council.get("chancellor", ""))
 	if chancellor in present:
 		return chancellor
 	return String(present[0]) if not present.is_empty() else ""
+
+## Whole-word match, so "port" does not fire on "important".
+func _mentions(lower: String, word: String) -> bool:
+	var at := lower.find(word)
+	while at >= 0:
+		var before_ok := at == 0 or not _is_word_char(lower.unicode_at(at - 1))
+		var end := at + word.length()
+		var after_ok := end >= lower.length() or not _is_word_char(lower.unicode_at(end))
+		if before_ok and after_ok:
+			return true
+		at = lower.find(word, at + 1)
+	return false
+
+func _is_word_char(c: int) -> bool:
+	return (c >= 97 and c <= 122) or (c >= 48 and c <= 57) or c == 95

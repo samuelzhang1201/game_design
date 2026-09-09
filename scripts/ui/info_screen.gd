@@ -98,7 +98,7 @@ func _rows_for(tab: String) -> Array:
 	var m: Dictionary = Game.state.metrics
 	match tab:
 		"REALM":
-			return [
+			var realm_rows := [
 				["Treasury", "%d gold" % int(m["treasury"])],
 				["Tax income", "%d / tick" % int(m["tax_income"])],
 				["Grain", str(int(m["grain"]))],
@@ -107,9 +107,23 @@ func _rows_for(tab: String) -> Array:
 				["Peasant contentment", str(int(m["peasant_contentment"]))],
 				["Admin capacity", str(int(m["admin_capacity"]))],
 			]
+			# The pack's population, live through the ledger (spec 2026-09-09).
+			for spec in [["Urban population", "urban_population"],
+					["Rural population", "rural_population"]]:
+				var v: Variant = WorldLedger.value_of(Game.data, Game.state,
+					"economy.kingdoms.player_realm." + String(spec[1]))
+				if v != null:
+					realm_rows.append([String(spec[0]), str(int(v))])
+			return realm_rows
 		"MILITARY":
 			var marshal := _seat_holder("marshal")
 			var rows := [["Army quality", str(int(m["army_quality"]))]]
+			# Unit counts from the pack's regiments, live through the ledger.
+			for unit: String in Game.data.world_table("military", "unit_types"):
+				var n: Variant = WorldLedger.value_of(Game.data, Game.state,
+					"military.kingdoms.player_realm." + unit)
+				if n != null:
+					rows.append([unit.capitalize(), str(int(n))])
 			if marshal != null:
 				rows.append(["Marshal", "%s (martial %d)" %
 					[marshal.display_name, int(marshal.skills["sk_martial"])]])

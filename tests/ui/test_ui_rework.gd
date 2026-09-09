@@ -331,8 +331,8 @@ func test_everyone_addressed_remembers_but_only_one_answers() -> void:
 	var scene := await _conversation_at("council_chamber")
 	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
 	fake.canned_ok = true
-	fake.canned_text = JSON.stringify({"actions": [],
-		"court_reaction": {"addressed": [], "tone": "neutral"}})
+	fake.canned_text = JSON.stringify({"narrative": "Full they are, my lord.", "impacts": {
+		"actions": [], "world": [], "court_reaction": {"addressed": [], "tone": "neutral"}}})
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)
 	scene.free_text_field().text_submitted.emit("the granaries are full")
@@ -358,8 +358,8 @@ func test_selected_targets_alone_remember() -> void:
 	var scene := await _conversation_at("council_chamber")
 	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
 	fake.canned_ok = true
-	fake.canned_text = JSON.stringify({"actions": [],
-		"court_reaction": {"addressed": [], "tone": "neutral"}})
+	fake.canned_text = JSON.stringify({"narrative": "I am listening, my lord.", "impacts": {
+		"actions": [], "world": [], "court_reaction": {"addressed": [], "tone": "neutral"}}})
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)
 	scene.find_child("Occupant_char_spymaster", true, false).pressed.emit()
@@ -384,7 +384,8 @@ func test_chat_after_event_resolution_shows_reply() -> void:
 	var report := Game.next_tick()
 	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
 	fake.canned_ok = true
-	fake.canned_text = JSON.stringify({"actions": []})
+	fake.canned_text = JSON.stringify({"narrative": "Greetings, my lord.",
+		"impacts": {"actions": []}})
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)
 	var r := _root()

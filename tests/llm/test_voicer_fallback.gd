@@ -106,18 +106,21 @@ func test_converse_falls_back_to_template_on_failure() -> void:
 	assert_string_contains(got["text"], "Aldwin Reeve")
 
 func test_submit_free_text_conversational_ride_along_replies() -> void:
-	# "who are you" parses to no action; the addressed minister answers in
-	# character instead of the court staying silent (Game.submit_free_text).
+	# "Marshal, who are you" parses to no action; the minister the player
+	# named answers in character instead of the court staying silent — the
+	# speaker is chosen BEFORE the single order call (spec 2026-09-09 §4.3),
+	# so the narrative comes back in that persona's voice.
 	Game.start_campaign(42)
 	var fake := FakeClient.new()
 	fake.canned_ok = true
-	fake.canned_text = JSON.stringify({"actions": [],
-		"court_reaction": {"addressed": ["char_marshal"], "tone": "neutral"}})
+	fake.canned_text = JSON.stringify({"narrative": "Ser Brandt of Harrow, my lord.",
+		"impacts": {"actions": [],
+		"court_reaction": {"addressed": ["char_marshal"], "tone": "neutral"}}})
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)
 	Game.next_tick()
 	got = {}
-	Game.submit_free_text("who are you", func(res): got = res)
+	Game.submit_free_text("Marshal, who are you?", func(res): got = res)
 	await wait_frames(4)
 	assert_true(got["ok"])
 	assert_eq(got["executed"], [])
@@ -128,12 +131,14 @@ func test_submit_free_text_conversational_ride_along_replies() -> void:
 func test_submit_free_text_consult_gets_in_character_reply() -> void:
 	# "how is my army?" parses to COUNCIL_CONSULT (the free ask-for-advice
 	# action): the consulted minister must answer in character, not the
-	# canned outcome template (user report 2026-08-30).
+	# canned outcome template (user report 2026-08-30). The Marshal is chosen
+	# before the call from council_seats.csv `topics` ("army").
 	Game.start_campaign(42)
 	var fake := FakeClient.new()
 	fake.canned_ok = true
-	fake.canned_text = JSON.stringify({"actions":
-		[{"action_code": "COUNCIL_CONSULT", "params": {}, "target": "marshal"}]})
+	fake.canned_text = JSON.stringify({"narrative": "Soft, my lord, but drilling.",
+		"impacts": {"actions":
+		[{"action_code": "COUNCIL_CONSULT", "params": {}, "target": "marshal"}]}})
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)
 	Game.next_tick()
