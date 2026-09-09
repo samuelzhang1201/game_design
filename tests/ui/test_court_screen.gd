@@ -223,14 +223,56 @@ func test_end_turn_guard_holds_with_pending_event_no_free_text() -> void:
 	assert_false(_end_turn_emitted, "End Turn must not fire while an event is pending")
 	assert_eq(Game.state.tick, tick_before, "the guard must not let a tick slip through")
 
+## Hovering a country swaps the left column to its card and restores the
+## council log on the way out (user request 2026-09-09).
+func test_hovering_a_country_swaps_the_left_column() -> void:
+	var screen := _screen()
+	await wait_frames(1)
+	var panel := screen.country_panel()
+	assert_not_null(panel, "court owns a country panel")
+	assert_false(panel.visible, "nothing hovered: the log has the column")
+	var log_visible: bool = screen.log_box.get_parent().visible
+	var mine := Game.data.resolve_realm("player_realm")
+	panel.show_country(mine)
+	assert_true(panel.visible, "hovering a country shows its card")
+	assert_eq(panel.title_label().text, String(Game.data.kingdoms[mine]["label"]))
+	assert_gt(panel.rows().get_child_count(), 0, "with its facts")
+	panel.show_country("")
+	assert_false(panel.visible, "leaving the country puts the log back")
+	assert_eq(screen.log_box.get_parent().visible, log_visible,
+		"and the log is exactly as it was")
+
+## The card reports who holds the land now, not the pack's starting map.
+func test_the_country_card_follows_conquest() -> void:
+	var screen := _screen()
+	await wait_frames(1)
+	var panel := screen.country_panel()
+	var mine := Game.data.resolve_realm("player_realm")
+	panel.show_country(mine)
+	var before: Array[String] = []
+	for child in panel.rows().get_children():
+		before.append(child.text)
+	var held := MapOwnership.provinces_of(Game.data, Game.state, mine)
+	MapOwnership.set_owner(Game.data, Game.state, held[0],
+		Game.data.resolve_realm("raider_realm"), "test")
+	# No leave/re-enter: the card must notice the conquest on its own.
+	panel.show_country(mine)
+	var after: Array[String] = []
+	for child in panel.rows().get_children():
+		after.append(child.text)
+	assert_ne(after, before, "losing a province changed the card")
+
 ## The map's ASK THE COUNCIL button fills the order box with the card's
 ## question; nothing is submitted until the player presses Enter.
 func test_map_ask_fills_the_order_box_without_sending() -> void:
 	var screen := _screen()
 	await wait_frames(1)
 	var map := screen.world_map()
-	map.select_object({"kind": "burg", "code": "kuojarpan"})
+	# The pack is generated: ask about the bound realm's own capital.
+	var capital: Dictionary = Game.data.burgs[String(
+		Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
+	map.select_object({"kind": "burg", "code": String(capital["burg_code"])})
 	assert_true(map.card().ask_button().visible, "court owns an order box, so Ask shows")
 	map.card().ask_button().pressed.emit()
-	assert_eq(screen.free_text.text, "What do we know of Kuojarpan?")
+	assert_eq(screen.free_text.text, "What do we know of %s?" % String(capital["label"]))
 	assert_eq(screen.log_box.get_child_count(), 0, "nothing was sent")

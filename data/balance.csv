@@ -80,3 +80,10 @@ map_lod_marker_scale,0.5,world map: scale at/above which points of interest get 
 map_lod_town_pop,5000,world map: population a non-capital needs for a pin between the town and village scales
 map_pick_radius_px,6,world map: screen px within which a click/hover picks a pin
 map_line_pick_px,4,world map: screen px within which a click/hover picks a road or river
+map_pinch_zoom_gain,1.0,"world map: how strongly a trackpad pinch zooms — 1.0 follows the gesture exactly, higher is faster"
+map_pan_gesture_speed,2.0,world map: screen px panned per unit of two-finger trackpad scroll
+map_label_scale_px,45.0,world map: kingdom label height in native map px — it scales with zoom like printed lettering
+map_label_min_px,8.0,world map: smallest kingdom label in screen px (below this the label is hidden)
+map_label_max_px,30.0,world map: largest kingdom label in screen px
+map_label_tracking,0.35,world map: extra letter spacing on kingdom labels as a fraction of font size
+map_label_alpha,0.5,world map: kingdom label opacity — faint enough to read as part of the map

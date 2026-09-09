@@ -35,11 +35,15 @@ func test_every_kingdom_capital_and_neighbors_resolve() -> void:
 		for n: String in String(row["neighbor_codes"]).split("|", false):
 			assert_true(repo.kingdoms.has(n), "%s neighbor %s" % [code, n])
 
-## The cast's realms (roles.csv kingdom column) must exist on the map
-## (owner ruling 2026-09-03: the fiction adopted the Azgaar state names).
+## The cast's realms (roles.csv kingdom column) must exist on the map.
+## Every slot the pack binds, not a list of names: authored content names
+## slots, so a re-export that renames the world only touches the bindings.
 func test_fiction_kingdoms_are_on_the_map() -> void:
-	for code in ["brampia", "hetalia", "snere", "tsalutia"]:
-		assert_true(repo.kingdoms.has(code), "%s is a map kingdom" % code)
+	assert_false(repo.realm_bindings.is_empty(), "the pack binds its realm slots")
+	for slot: String in repo.realm_bindings:
+		var code := repo.resolve_realm(slot)
+		assert_true(repo.kingdoms.has(code),
+			"slot %s binds to %s, a map kingdom" % [slot, code])
 	for role in repo.roles:
 		var kingdom := String(role.get("kingdom", ""))
 		if kingdom != "":
@@ -108,9 +112,16 @@ func test_map_object_tables_load() -> void:
 	assert_eq(String(repo.map_info.get("distance_unit", "")), "km", "map_info.csv carries the unit")
 
 func test_burgs_carry_type_and_features() -> void:
-	var k: Dictionary = repo.burgs["kuojarpan"]
-	assert_eq(String(k["type"]), "Naval")
-	assert_eq(String(k["features"]), "walls|citadel|temple|plaza")
+	# The capital of whichever realm the pack binds the player to — Azgaar
+	# always gives a capital a type and some walls or a citadel.
+	var realm: Dictionary = repo.kingdoms[repo.resolve_realm("player_realm")]
+	var k: Dictionary = repo.burgs[String(realm["capital_burg"])]
+	assert_ne(String(k["type"]), "", "the capital has a settlement type")
+	var features := String(k["features"]).split("|", false)
+	assert_gt(features.size(), 0, "the capital carries features")
+	for f: String in features:
+		assert_true(f in ["walls", "citadel", "temple", "plaza", "shanty"],
+			"%s is a known burg feature" % f)
 
 func test_route_and_river_references_resolve() -> void:
 	for code: String in repo.routes:
@@ -131,11 +142,23 @@ func test_every_route_has_a_label() -> void:
 	for code: String in repo.routes:
 		assert_ne(String(repo.routes[code]["label"]), "", "%s has a title for its card" % code)
 
-func test_a_known_road_snaps_to_its_towns() -> void:
-	var r: Dictionary = repo.routes["ororeanian_road"]
-	assert_eq(String(r["group"]), "roads")
-	assert_eq(String(r["from_burg"]), "cocalomo")
-	assert_eq(String(r["to_burg"]), "ororeanes")
+## Structural, not a named road: the importer snaps route endpoints to the
+## burg within SNAP_RADIUS, and whichever roads a given export happens to
+## contain, the ones that snapped must name burgs this pack actually has.
+func test_roads_snap_their_endpoints_to_real_towns() -> void:
+	var snapped := 0
+	for code: String in repo.routes:
+		var r: Dictionary = repo.routes[code]
+		if String(r["group"]) != "roads":
+			continue
+		for end_col in ["from_burg", "to_burg"]:
+			var burg := String(r[end_col])
+			if burg == "":
+				continue
+			snapped += 1
+			assert_true(repo.burgs.has(burg),
+				"road %s %s is the burg %s" % [code, end_col, burg])
+	assert_gt(snapped, 0, "some road snapped to a town")
 
 func test_markers_lie_inside_the_map_and_carry_legends() -> void:
 	var w := float(repo.map_info["width"])
@@ -146,7 +169,13 @@ func test_markers_lie_inside_the_map_and_carry_legends() -> void:
 		var y := float(m["y"])
 		assert_true(x >= 0.0 and x <= w and y >= 0.0 and y <= h, "%s at (%s, %s)" % [code, x, y])
 		assert_false(String(m["legend"]).contains("\n"), "%s legend is one line" % code)
-	assert_true(repo.markers.has("the_orange_jackal"), "a named inn imported")
+	# Named markers carry their legend through, whichever ones an export has.
+	var named := 0
+	for code: String in repo.markers:
+		if String(repo.markers[code]["label"]) != "" \
+				and String(repo.markers[code]["legend"]) != "":
+			named += 1
+	assert_gt(named, 0, "markers imported with both a name and a legend")
 
 func test_province_bitmap_decodes_each_province_at_its_center() -> void:
 	var img: Image = (load(repo.province_texture_path) as Texture2D).get_image()

@@ -124,7 +124,7 @@ Full design in `RANDOM_EVENTS.md`.
 
 ### Step 8 — Raid defense (new)
 
-- **RD-1** A thin, deterministic raid resolution — not a wargame: when the Tsalutia arc's raid beat fires, outcome tier = f(army quality, levies raised, fortification/readiness actions taken, warning heeded) → {repelled clean, repelled with losses, border burned, disaster}. Formula in data, hand-computed GUT fixtures.
+- **RD-1** A thin, deterministic raid resolution — not a wargame: when the {raider_realm} arc's raid beat fires, outcome tier = f(army quality, levies raised, fortification/readiness actions taken, warning heeded) → {repelled clean, repelled with losses, border burned, disaster}. Formula in data, hand-computed GUT fixtures.
 - **RD-2** Readiness actions (`LEVY_RAISE`, `FORTIFY_BORDER`, `MUSTER_DRILL` — the latter two added to the action set) are useful *before* the raid and visibly referenced by the outcome narration ("the levies Hale drilled all winter held the ford").
 - **RD-3** Every outcome is survivable; "disaster" scars metrics and the Chronicle but never ends the campaign (the fairness rule EV-3 extended to raids).
 
@@ -151,15 +151,15 @@ Chapter 1 is the authored opening situation of `game_story/background/game_start
 |---|---|---|---|
 | **The Half-Brother** — Duke Tomas covets the throne | Coronation narration; Tomas's opinion and ambition | Faction stages 1–6 (FS-1): grievance → petition → obstruction → conspiracy → revolt | Reconciled (opinion + kept promises), marginalized (faction dissolved/split, Tomas isolated), crushed (conspiracy exposed and punished), **or you are deposed — game over** |
 | **The Hungry Crowd** — food crisis, Cassian's demonstrations | Low grain + unrest narration; Cassian's rallies | Grain/contentment metrics, protest events, Cassian chain (prophet events), justice/grain actions | Fed (grain + contentment restored ≥ thresholds for N ticks), suppressed (unrest crushed — lasting contentment/church scars carried into the close), or co-opted (Cassian chain's reconciliation ending) |
-| **Spears in the West** — Tsalutia prepares to raid | Quill's muster report (`fact_tsalutia_muster`) | Warning events, readiness actions (RD-2), diplomatic feelers via Petra/envoys | Raid resolved at any RD-1 tier; or deterred entirely (readiness above threshold before the raid beat — the hardest, most expensive resolution) |
+| **Spears in the West** — {raider_realm} prepares to raid | Quill's muster report (`fact_raider_muster`) | Warning events, readiness actions (RD-2), diplomatic feelers via Petra/envoys | Raid resolved at any RD-1 tier; or deterred entirely (readiness above threshold before the raid beat — the hardest, most expensive resolution) |
 
 ### 7.2 Chapter-close scene
 
-Outcome-keyed authored prose (CH-2): one paragraph per arc reflecting its resolution, then a hook paragraph for Chapter 2 (Snere and the puppet Emperor are watching). Deposition instead shows the game-over card (AR-3) with its own authored scene.
+Outcome-keyed authored prose (CH-2): one paragraph per arc reflecting its resolution, then a hook paragraph for Chapter 2 ({neighbor_realm} and the puppet Emperor are watching). Deposition instead shows the game-over card (AR-3) with its own authored scene.
 
 ### 7.3 What chapter 1 deliberately does not resolve
 
-Snere/Brampia (Isabeau's designs), the Emperor's fate, succession, Malvern's decline, the Chancellor's graft file — these are seeded, referenced, and left loaded for later chapters.
+{neighbor_realm}/{empire_realm} (Isabeau's designs), the Emperor's fate, succession, Malvern's decline, the Chancellor's graft file — these are seeded, referenced, and left loaded for later chapters.
 
 ## 8. LLM integration
 
@@ -193,7 +193,7 @@ Validated with ~5 fresh playtesters on the Chapter 1 MVP:
 
 ## 10. Post-MVP roadmap (explicitly out of Chapter 1)
 
-1. **Chapter 2+**: Snere/Brampia arc, the Emperor, escalating faction play for the full cast.
+1. **Chapter 2+**: {neighbor_realm}/{empire_realm} arc, the Emperor, escalating faction play for the full cast.
 2. **Assassination** under the five hard rules from the design doc.
 3. **Aging, death, inheritance**; succession as the answer to deposition beyond chapter 1.
 4. **Faction stages 4–6 for all factions** (chapter 1 caps them to Tomas's).

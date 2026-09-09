@@ -1,67 +1,65 @@
 marker_code,label,type,x,y,legend
-stymphinia,Stymphinia,volcanoes,1884.88,386.53,Erupting volcano. Height: 2916m.
-toyucalpan,Toyucalpan,hot-springs,2032.42,316.66,A geothermal springs with naturally heated water that provide relaxation and medicinal benefits. Average temperature is 45°C.
-taurion_healing_spring,Taurion Healing Spring,water-sources,2226.31,507.06,"This legendary water source is whispered about in ancient tales and believed to possess mystical properties. The spring emanates crystal-clear water, shimmering with an otherworldly iridescence that sparkles even in the dimmest light."
-delphi_salt_mining_town,Delphi — salt mining town,mines,1849.25,373.24,Delphi is a mining town of 10733 people just nearby the salt mine.
-cuaxochitlan_silver_mining_town,Cuaxochitlan — silver mining town,mines,1917.19,343.08,Cuaxochitlan is a mining town of 2556 people just nearby the silver mine.
-mylos_lead_mining_town,Mylos — lead mining town,mines,2060.67,651.24,Mylos is a mining town of 1978 people just nearby the lead mine.
-lolea_tin_mining_town,Lolea — tin mining town,mines,432.92,441.1,Lolea is a mining town of 1110 people just nearby the tin mine.
-athrela_salt_mining_town,Athrela — salt mining town,mines,2030.66,528.99,Athrela is a mining town of 25147 people just nearby the salt mine.
-athapolo_bridge,Athapolo Bridge,bridges,2110.46,704.67,A stone bridge spans over the Amplios River near Athapolo.
-the_pink_wolverine,The Pink Wolverine,inns,931.4,482.31,A big and famous roadside tavern. Delicious dressed peas with sparkling water is served here.
-the_favorable_camel,The Favorable Camel,inns,446.24,531.25,A big and famous roadside inn. Delicious fried camel with white sap is served here.
-the_lucky_mantis,The Lucky Mantis,inns,1751.25,592.2,A big and famous roadside tavern. Delicious stuffed mantis with brown tequila is served here.
-the_distant_inn,The Distant Inn,inns,684.02,227.85,A big and famous roadside inn. Delicious jugged hare with cold water is served here.
-the_dark_lark,The Dark Lark,inns,2076.94,431.92,A big and famous roadside inn. Delicious fried lark with green sap is served here.
-the_dark_tiger,The Dark Tiger,inns,1842.74,281.86,A big and famous roadside tavern. Delicious stewed tiger with orange rom is served here.
-the_dark_cat,The Dark Cat,inns,794.38,706.77,A big and famous roadside inn. Delicious stewed beaver with bitter vodka is served here.
-the_orange_jackal,The Orange Jackal,inns,1062.82,727.96,A big and famous roadside tavern. Delicious dry-aged pepper with white wine is served here.
-the_brown_scorpion,The Brown Scorpion,inns,1429.48,476.87,A big and famous roadside tavern. Delicious spit-roasted rat tails with purple water is served here.
-the_distant_tavern,The Distant Tavern,inns,1762.25,284.8,A big and famous roadside tavern. Delicious jugged bread with purple tequila is served here.
-the_pink_ox,The Pink Ox,inns,2013.6,382.7,A big and famous roadside tavern. Delicious dry-aged potato with orange tea is served here.
-cuautzalman_waterfall,Cuautzalman Waterfall,waterfalls,1987.8,393.34,A gorgeous waterfall flows here.
-boldachind_battlefield,Boldachind Battlefield,battlefields,1964.2,250.18,"A historical battle of the Nalian Campaign. Date: October 17, 1138 South Era."
-khishig_ger_battlefield,Khishig Ger Battlefield,battlefields,666.32,482.32,"A historical battle of the Tsalutia-Snerian War. Date: November 8, 1124 South Era."
-rouerdonneau_battlefield,Rouerdonneau Battlefield,battlefields,1647.97,387.87,"A historical battle of the Papsan War. Date: February 12, 1038 South Era."
-dungeon,Dungeon,dungeons,752.42,137.7,"<div>Undiscovered dungeon. See <a href=""https://watabou.github.io/one-page-dungeon/?seed=376739552129"" target=""_blank"">One page dungeon</a></div><iframe style=""pointer-events: none;"" src=""https://watabou.github.io/one-page-dungeon/?seed=376739552129"" sandbox=""allow-scripts allow-same-origin""></iframe>"
-dungeon_2,Dungeon,dungeons,636.13,188.28,"<div>Undiscovered dungeon. See <a href=""https://watabou.github.io/one-page-dungeon/?seed=376739552490"" target=""_blank"">One page dungeon</a></div><iframe style=""pointer-events: none;"" src=""https://watabou.github.io/one-page-dungeon/?seed=376739552490"" sandbox=""allow-scripts allow-same-origin""></iframe>"
-dungeon_3,Dungeon,dungeons,870.5,176.43,"<div>Undiscovered dungeon. See <a href=""https://watabou.github.io/one-page-dungeon/?seed=376739552384"" target=""_blank"">One page dungeon</a></div><iframe style=""pointer-events: none;"" src=""https://watabou.github.io/one-page-dungeon/?seed=376739552384"" sandbox=""allow-scripts allow-same-origin""></iframe>"
-dungeon_4,Dungeon,dungeons,1891,781.6,"<div>Undiscovered dungeon. See <a href=""https://watabou.github.io/one-page-dungeon/?seed=3767395525913"" target=""_blank"">One page dungeon</a></div><iframe style=""pointer-events: none;"" src=""https://watabou.github.io/one-page-dungeon/?seed=3767395525913"" sandbox=""allow-scripts allow-same-origin""></iframe>"
-nikkaki_monster,Nikkaki Monster,lake-monsters,1081.12,664.82,"Tipplers say a relic monster of 13 m long inhabits Nikkaki Lake. Truth or lie, folks are afraid to fish in the lake."
-manmouth_monster,Manmouth Monster,sea-monsters,219.34,346.63,Old sailors tell stories of a gigantic sea monster inhabiting these dangerous waters. Rumors say it can be 15 m long.
-penkham_monster,Penkham Monster,sea-monsters,1178.39,481.79,Old sailors tell stories of a gigantic sea monster inhabiting these dangerous waters. Rumors say it can be 25 m long.
-crosiaros_dragon,Crosiaros Dragon,hill-monsters,1818,423.34,Locals speak of a proud Dragon who inhabits Crosiaros hills and prefers eating children.
-rauri_forest,Rauri Forest,sacred-forests,984.02,735.07,A forest sacred to local Soumi Spirits.
-hicyontion_forest,Hicyontion Forest,sacred-forests,2007.93,661.88,A forest sacred to local Elladan Ancestors.
-sinzburg_pinery,Sinzburg Pinery,sacred-pineries,2063.85,273.61,A pinery sacred to local Shwazen Ancestors.
-michia_foxes,Michia Foxes,brigands,2253.35,319.18,A gang of forest brigands.
-paris_hawks,Paris Hawks,brigands,1905.6,575.02,A gang of forest brigands.
-gavichilov_jackals,Gavichilov Jackals,brigands,1181.1,420.5,A gang of forest bandits.
-nuormoki_bears,Nuormoki Bears,brigands,1146,506.5,A gang of forest bandits.
-pirates,Pirates,pirates,1104.81,551.9,Pirate ships have been spotted in these waters.
-pirates_2,Pirates,pirates,2244.76,180.03,Pirate ships have been spotted in these waters.
-pirates_3,Pirates,pirates,1755.6,253.9,Pirate ships have been spotted in these waters.
-khishar_megalith,Khishar Megalith,statues,365.56,660.64,"An ancient megalith. It has an inscription, but no one can translate it: <div style=""font-size: 1.8em; line-break: anywhere;"">ⳤⲼⳂⳜⲼⳐⳭⳬⳜⳢⳒⳁⳎⳒⳢⳖ⳪ⲲⳭⳞⳆ ⳹ⳲⲴⳫⲶⳭⳖ ⲴⳊⳃⲾⲸⳤⳁ⳹ ⳩ ⳬⳠⳔⳂⳤⳭⳚⳭ⳩Ⳁ⳩ⳖⳎ ⳔⳀⲺⲸⳖⳚⳒⳈ⳩ⳭⳔⳘⳔⳤⳲ ⳚⳁⲴⳀⲸ⳪ⲾⲺⳁⳎⳖⳚⳤ⳧ ⲴⳤⲶⲶⲸ⳾ⳤⳭ⳧Ⲷⳃ</div>"
-khovoovoo_megalith,Khovoovoo Megalith,statues,475.33,577.88,"An ancient megalith. It has an inscription, but no one can translate it: <div style=""font-size: 1.8em; line-break: anywhere;"">༒ༀ༪༤༃་༦༓༾༚ༀ༃༄༤༂༸༙༖༐༂༅༬༰༁༚༹༥༨༑༃༷༔༯༴༈༕༠༵༱༑༿༗༠༽༽༵༕༂༒༇༴༃༢༰ༀ༶༾༂༧༗༡༗</div>"
-thuriassos_statue,Thuriassos Statue,statues,2011.35,626.37,"An ancient statue. It has an inscription, but no one can translate it: <div style=""font-size: 1.8em; line-break: anywhere;"">ደሠለሠሠየወጸፀለገረ ሰአአረአሀሰዘአፈወፀተ ሰከኀ ጠዘነዐፀዘ ፀዐጸመፀተነቀፈዐደሠጰአጠመ</div>"
-ruined_city,Ruined City,ruins,1159.45,358.44,Ruins of an ancient city. Untold riches may lie within.
-ruined_fort,Ruined Fort,ruins,590.09,760.12,Ruins of an ancient fort. Untold riches may lie within.
-ruined_fort_2,Ruined Fort,ruins,926.03,391.95,Ruins of an ancient fort. Untold riches may lie within.
-ruined_pyramid,Ruined Pyramid,ruins,455.55,603.42,Ruins of an ancient pyramid. Untold riches may lie within.
-dunstone_library,Dunstone Library,libraries,1084.94,232.36,"A vast collection of knowledge, including many rare and ancient tomes."
-travelling_breathtaking_circus,Travelling Breathtaking Circus,circuses,721.7,747.8,"Roll up, roll up, this breathtaking circus is here for a limited time only."
-travelling_world_famous_circus,Travelling World-famous Circus,circuses,2044.03,674.79,"Roll up, roll up, this world-famous circus is here for a limited time only."
-khantuluut_joust,Khantuluut Joust,jousts,1042.66,618.77,"Warriors from around the land gather for a joust of the greats in Khantuluut, with fame, fortune and favour on offer to the victor."
-naurion_fair,Naurion Fair,fairs,1655.28,481.62,"A fair is being held in Naurion, with all manner of local and foreign goods and services on offer."
-minor_jetty,Minor Jetty,canoes,1775.72,309.61,"A small location along the Itria River to launch boats from sits here, along with a weary looking owner, willing to sell passage along the river."
-panthers_migration,Panthers migration,migration,563.4,201.9,"A huge group of panthers are migrating, whether part of their annual routine, or something more extraordinary."
-maganilla_grotto,Maganilla Grotto,caves,402.43,398.71,The Maganilla Grotto. Locals claim that it is completely flooded.
-ormstowbig_necropolis,Ormstowbig Necropolis,necropolises,756.45,113.55,"A desolate necropolis where an eerie stillness reigns. Time seems frozen amidst the decaying mausoleums, and the silence is broken only by the whispers of the wind and the rustle of tattered banners."
-random_encounter,Random encounter,encounters,726.7,656.52,"<div>You have encountered a character.</div><iframe src=""https://deorum.vercel.app/encounter/5051"" width=""375"" height=""600"" sandbox=""allow-scripts allow-same-origin allow-popups""></iframe>"
-random_encounter_2,Random encounter,encounters,966.48,256.6,"<div>You have encountered a character.</div><iframe src=""https://deorum.vercel.app/encounter/1142"" width=""375"" height=""600"" sandbox=""allow-scripts allow-same-origin allow-popups""></iframe>"
-random_encounter_3,Random encounter,encounters,998.39,625.52,"<div>You have encountered a character.</div><iframe src=""https://deorum.vercel.app/encounter/4770"" width=""375"" height=""600"" sandbox=""allow-scripts allow-same-origin allow-popups""></iframe>"
-random_encounter_4,Random encounter,encounters,781.3,612.37,"<div>You have encountered a character.</div><iframe src=""https://deorum.vercel.app/encounter/4594"" width=""375"" height=""600"" sandbox=""allow-scripts allow-same-origin allow-popups""></iframe>"
-random_encounter_5,Random encounter,encounters,372.73,490.05,"<div>You have encountered a character.</div><iframe src=""https://deorum.vercel.app/encounter/3404"" width=""375"" height=""600"" sandbox=""allow-scripts allow-same-origin allow-popups""></iframe>"
-random_encounter_6,Random encounter,encounters,1971.04,480.13,"<div>You have encountered a character.</div><iframe src=""https://deorum.vercel.app/encounter/3517"" width=""375"" height=""600"" sandbox=""allow-scripts allow-same-origin allow-popups""></iframe>"
-random_encounter_7,Random encounter,encounters,554.32,204.51,"<div>You have encountered a character.</div><iframe src=""https://deorum.vercel.app/encounter/625"" width=""375"" height=""600"" sandbox=""allow-scripts allow-same-origin allow-popups""></iframe>"
-the_party,The Party,party,1144.86,620.52,Current location of the adventuring party.
+hinckseytes_volcano,Hinckseytes Volcano,volcanoes,1815.44,417.72,Erupting volcano. Height: 5041m.
+swabingford_hot_springs,Swabingford Hot Springs,hot-springs,1369.79,615.59,A geothermal springs with naturally heated water that provide relaxation and medicinal benefits. Average temperature is 66°C.
+wiverham_purifying_well,Wiverham Purifying Well,water-sources,1925.84,560.59,"This legendary water source is whispered about in ancient tales and believed to possess mystical properties. The spring emanates crystal-clear water, shimmering with an otherworldly iridescence that sparkles even in the dimmest light."
+charton_copper_mining_town,Charton — copper mining town,mines,1784.77,566.84,Charton is a mining town of 11159 people just nearby the copper mine.
+yeorough_tin_mining_town,Yeorough — tin mining town,mines,1340.14,411.89,Yeorough is a mining town of 12512 people just nearby the tin mine.
+harhamburgh_silver_mining_town,Harhamburgh — silver mining town,mines,1736.25,458.1,Harhamburgh is a mining town of 6577 people just nearby the silver mine.
+bokegoreley_iron_mining_town,Bokegoreley — iron mining town,mines,965.89,502.8,Bokegoreley is a mining town of 3871 people just nearby the iron mine.
+pickingle_iron_mining_town,Pickingle — iron mining town,mines,905.72,398.32,Pickingle is a mining town of 14371 people just nearby the iron mine.
+sholeshole_salt_mining_town,Sholeshole — salt mining town,mines,1042.61,334.75,Sholeshole is a mining town of 5652 people just nearby the salt mine.
+besokewich_salt_mining_town,Besokewich — salt mining town,mines,1102.71,336.67,Besokewich is a mining town of 1849 people just nearby the salt mine.
+southam_gold_mining_town,Southam — gold mining town,mines,1861.8,566.91,Southam is a mining town of 1564 people just nearby the gold mine.
+newcesbury_bridge,Newcesbury Bridge,bridges,1289.9,288.48,A lengthy bridge spans over the Tazion River near Newcesbury.
+browey_bridge,Browey Bridge,bridges,1617.51,294.94,A stone bridge spans over the Extedbume Fork near Browey.
+ashampound_bridge,Ashampound Bridge,bridges,1276.32,273.83,"An old crossing of the Ashampound River, rarely used since the old waypoints crumbled."
+the_new_tavern,The New Tavern,inns,1674.56,585,A big and famous roadside tavern. Delicious stewed spinach with black liquor is served here.
+the_divine_inn,The Divine Inn,inns,1206.39,235.73,A big and famous roadside inn. Delicious smoked turkey with brown juice is served here.
+the_proud_inn,The Proud Inn,inns,1977.01,314.42,A big and famous roadside inn. Delicious boiled sturgeon with smelly beer is served here.
+the_old_goose,The Old Goose,inns,1625.23,469.2,A big and famous roadside tavern. Delicious dried badger with smelly beer is served here.
+the_old_crocodile,The Old Crocodile,inns,1561.73,250.39,A big and famous roadside tavern. Delicious steamed crocodile with amber tequila is served here.
+the_honest_snake,The Honest Snake,inns,1050.28,291.26,A big and famous roadside inn. Delicious boiled snake with fire tea is served here.
+the_fat_tavern,The Fat Tavern,inns,1563.82,317.49,A big and famous roadside tavern. Delicious marinated beans with fire wine is served here.
+the_brave_elk,The Brave Elk,inns,897.98,558.12,A big and famous roadside tavern. Delicious syrupped elk with shiny liquor is served here.
+carfordan_lighthouse,Carfordan Lighthouse,lighthouses,1572.55,693.72,A lighthouse to serve as a beacon for ships in the open sea.
+daldockhamp_lighthouse,Daldockhamp Lighthouse,lighthouses,1884.38,198.62,A lighthouse to serve as a beacon for ships in the open sea.
+halcesham_waterfall,Halcesham Waterfall,waterfalls,1166.1,278.54,The cascades of a stunning waterfall.
+clifordge_battlefield,Clifordge Battlefield,battlefields,1619.96,362.38,"A historical battle of the Watchian War. Date: October 16, 1155 Titlan Era."
+castford_battlefield,Castford Battlefield,battlefields,1731.77,311.2,"A historical battle of the Yeoroughian Campaign. Date: July 25, 1518 Titlan Era."
+ateston_battlefield,Ateston Battlefield,battlefields,904.89,597.25,"A historical battle of the Stotresian War. Date: June 2, 1390 Titlan Era."
+dungeon,Dungeon,dungeons,1153.9,592.9,"<div>Undiscovered dungeon. See <a href=""https://watabou.github.io/one-page-dungeon/?seed=9541594973331"" target=""_blank"">One page dungeon</a></div><iframe style=""pointer-events: none;"" src=""https://watabou.github.io/one-page-dungeon/?seed=9541594973331"" sandbox=""allow-scripts allow-same-origin""></iframe>"
+dungeon_2,Dungeon,dungeons,1640.5,384.2,"<div>Undiscovered dungeon. See <a href=""https://watabou.github.io/one-page-dungeon/?seed=9541594971779"" target=""_blank"">One page dungeon</a></div><iframe style=""pointer-events: none;"" src=""https://watabou.github.io/one-page-dungeon/?seed=9541594971779"" sandbox=""allow-scripts allow-same-origin""></iframe>"
+dungeon_3,Dungeon,dungeons,1700.9,797.6,"<div>Undiscovered dungeon. See <a href=""https://watabou.github.io/one-page-dungeon/?seed=9541594974735"" target=""_blank"">One page dungeon</a></div><iframe style=""pointer-events: none;"" src=""https://watabou.github.io/one-page-dungeon/?seed=9541594974735"" sandbox=""allow-scripts allow-same-origin""></iframe>"
+sealister_monster,Sealister Monster,lake-monsters,1322.39,368.61,"Locals say a relic monster of 15 m long inhabits Sealister Lake. Truth or lie, folks are afraid to fish in the lake."
+totford_monster,Totford Monster,sea-monsters,436.5,411.63,Old sailors tell stories of a gigantic sea monster inhabiting these dangerous waters. Rumors say it can be 22 m long.
+lexeters_monster,Lexeters Monster,hill-monsters,839.56,575.98,Rumors speak of a golden Monster who inhabits Lexeters hills and steals cattle at night.
+waling_vampire,Waling Vampire,hill-monsters,1019.59,512.74,Journeying folk speak of a giant Vampire who inhabits Waling hills and prefers eating children.
+binelis_forest,Binelis Forest,sacred-forests,1473.68,628.5,A forest sacred to local Old Manch Pantheon.
+barden_forest,Barden Forest,sacred-forests,1645.52,345.1,A forest sacred to local Old Manch Pantheon.
+wivermouth_pinery,Wivermouth Pinery,sacred-pineries,1917.38,782.46,A pinery sacred to local Manch Religion.
+clifnaltash_jaguars,Clifnaltash Jaguars,brigands,1007.62,260.01,A gang of forest bandits.
+berley_jaguars,Berley Jaguars,brigands,1029.78,248.03,A gang of forest brigands.
+pirates,Pirates,pirates,1820.74,780.21,Pirate ships have been spotted in these waters.
+pirates_2,Pirates,pirates,936.44,196.6,Pirate ships have been spotted in these waters.
+pirates_3,Pirates,pirates,700.55,805.57,Pirate ships have been spotted in these waters.
+loutham_column,Loutham Column,statues,1587.11,206.73,"An ancient column. It has an inscription, but no one can translate it: <div style=""font-size: 1.8em; line-break: anywhere;"">ᡳᠩᡆᡑᢒᠾᡐᡗᢟᠩᠮᠰᡍᢁᠡᡭᡱᡁᡁ᠑ᢟᠩᡞᡟᠾᠪᡲᠲᠩᢦᠦᠰ᠑ᢞᡟᡰᢛᢂᠼᠿᢞᡞᡡᡴᡆᠳᠻᡁᠵᢥ᠀ᠵᡔᡯᡲᡐᡟᢟᡖᠻᢓᠧᠵᢟᢀᢦᡴᢢᡆᡔᢦᡖᢤᢀᠦᡯᠼᡴᡀᢐᢜᢁᢁᢤᡠᡲᢦᡴᡏᢠ</div>"
+yeomerden_megalith,Yeomerden Megalith,statues,1987.58,690.91,"An ancient megalith. It has an inscription, but no one can translate it: <div style=""font-size: 1.8em; line-break: anywhere;"">𐠚 𐠟𐠎𐠳𐠠 𐠖𐠝𐠗 𐠅𐠴 𐠩𐠸 </div>"
+ruined_outpost,Ruined Outpost,ruins,985.23,567.72,Ruins of an ancient outpost. Untold riches may lie within.
+ruined_fortress,Ruined Fortress,ruins,1055.89,321.28,Ruins of an ancient fortress. Untold riches may lie within.
+ruined_town,Ruined Town,ruins,1274.83,568.27,Ruins of an ancient town. Untold riches may lie within.
+swacury_collection,Swacury Collection,libraries,881.5,670.06,"A vast collection of knowledge, including many rare and ancient tomes."
+travelling_breathtaking_circus,Travelling Breathtaking Circus,circuses,1288.88,414.43,"Roll up, roll up, this breathtaking circus is here for a limited time only."
+travelling_incomprehensible_circus,Travelling Incomprehensible Circus,circuses,980.29,279.15,"Roll up, roll up, this incomprehensible circus is here for a limited time only."
+portscom_contest,Portscom Contest,jousts,844.23,722.21,"Warriors from around the land gather for a contest of the greats in Portscom, with fame, fortune and favour on offer to the victor."
+baford_fair,Baford Fair,fairs,1575,320.9,"A fair is being held in Baford, with all manner of local and foreign goods and services on offer."
+minor_jetty,Minor Jetty,canoes,761.19,504.36,"A small location along the Cocheapton River to launch boats from sits here, along with a weary looking owner, willing to sell passage along the river."
+mooses_migration,Mooses migration,migration,915.46,420.7,"A huge group of mooses are migrating, whether part of their annual routine, or something more extraordinary."
+felton_grotto,Felton Grotto,caves,943.66,496.91,The Felton Grotto. Locals claim that it is completely flooded.
+badeton_graveyard,Badeton Graveyard,necropolises,1025.55,212.46,"A labyrinthine necropolis where each step echoes with haunting murmurs. The walls are adorned with ancient runes, and restless spirits guide or hinder those who dare to delve into its depths."
+poachers_of_lympscom,Poachers of Lympscom,encounters,2026.47,443.24,Poachers have been active in the wetland of Lympscom lands.
+a_pilgrim_of_hornley,A pilgrim of Hornley,encounters,1256.36,564.01,A pilgrim walks the road in the grassland of Hornley lands.
+mercenaries_of_cokerewen,Mercenaries of Cokerewen,encounters,1053.22,694.94,Mercenaries ride through in the temperate deciduous forest of Cokerewen lands.
+cultists_of_preshamber,Cultists of Preshamber,encounters,1112.41,638.54,Cultists gather in secret in the grassland of Preshamber lands.
+mercenaries_of_boshead,Mercenaries of Boshead,encounters,1493,361.23,Mercenaries ride through in the savanna of Boshead lands.
+a_pilgrim_of_kingraford,A pilgrim of Kingraford,encounters,1531.15,456.03,A pilgrim walks the road in the tropical seasonal forest of Kingraford lands.
+the_party,The Party,party,657.5,664.12,Current location of the adventuring party.

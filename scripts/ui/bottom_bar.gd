@@ -1,14 +1,16 @@
 class_name BottomBar
 extends Control
 ## Bottom tab strip on every gameplay screen (user ruling 2026-08-30),
-## outside the map: MAP | REALM | MILITARY | LAWS | RELIGION | RELATIONSHIP.
+## outside the map: MAP | REALM | MILITARY | FAMILIES | LAWS | RELIGION |
+## RELATIONSHIP.
 ## Pure chrome — GameRoot owns it and decides what each tab opens (MAP
 ## closes overlays, RELATIONSHIP toggles the graph, the rest open the
 ## matching InfoScreen table). Replaces the TopBar's RELATIONS button.
 
 signal tab_selected(tab: String)
 
-const TABS := ["MAP", "REALM", "MILITARY", "LAWS", "RELIGION", "RELATIONSHIP"]
+const TABS := ["MAP", "REALM", "MILITARY", "FAMILIES", "LAWS", "RELIGION",
+	"RELATIONSHIP"]
 const BAR_HEIGHT := 18.0
 
 var _buttons: Dictionary = {}

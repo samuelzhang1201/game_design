@@ -132,6 +132,52 @@ func test_bottom_bar_tabs_and_info_tables() -> void:
 	await wait_frames(1)
 	assert_false(r.relations_screen().visible, "MAP closes overlays")
 
+## FAMILIES (user request 2026-09-09): the noble houses of the player's own
+## realm, with the seats they hold and how they regard the king. Four columns,
+## so the table widens for it — the name/value tabs are unaffected.
+func test_families_tab_lists_the_houses_of_the_realm() -> void:
+	Game.start_campaign(42)
+	var r := _root()
+	await wait_frames(2)
+	r._switch_to(GameRoot.State.COURT)
+	r.current_screen.enter_court(null)
+	await wait_frames(2)
+	r.bottom_bar().button("FAMILIES").pressed.emit()
+	await wait_frames(2)
+	assert_true(r.info_screen().visible)
+	assert_eq(r.info_screen().current_tab(), "FAMILIES")
+	var table := r.info_screen().table()
+	assert_eq(table.columns, 4, "House / Members / Seats / Standing")
+	var cells: Array[String] = []
+	for child in table.get_children():
+		cells.append(child.text)
+	for header in ["House", "Members", "Seats", "Standing"]:
+		assert_has(cells, header, "the table is headed")
+	# The king's own house is in the realm, so it must be listed.
+	var king: Character = Game.state.characters["you"]
+	assert_has(cells, king.family_name, "the royal house is listed")
+	assert_has(cells, "Crown", "and the king holds the crown")
+	# A foreign house must not be: this is the realm's own nobility.
+	var petra: Character = Game.state.characters.get("char_envoy_petra")
+	if petra != null and petra.family_name != "":
+		assert_does_not_have(cells, petra.family_name,
+			"a foreign envoy's house is not one of the realm's")
+
+## Every row must have one cell per column, or the grid shears.
+func test_families_rows_are_complete() -> void:
+	Game.start_campaign(42)
+	var r := _root()
+	await wait_frames(2)
+	r._switch_to(GameRoot.State.COURT)
+	r.current_screen.enter_court(null)
+	await wait_frames(2)
+	r.bottom_bar().button("FAMILIES").pressed.emit()
+	await wait_frames(2)
+	var table := r.info_screen().table()
+	assert_eq(table.get_child_count() % 4, 0,
+		"%d cells is not a whole number of 4-column rows" % table.get_child_count())
+	assert_gt(table.get_child_count() / 4, 1, "at least one house beyond the header")
+
 func test_top_bar_has_no_relations_button_and_chip_off_row() -> void:
 	var bar: TopBar = load("res://scenes/top_bar.tscn").instantiate()
 	add_child_autofree(bar)

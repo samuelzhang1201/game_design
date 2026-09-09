@@ -9,9 +9,9 @@ char_lady_corina,Lady Corina Ashvale,,55,40,40,40,30,35,50,25,75,8,2,10,11,8,-50
 char_lord_edgar,Lord Edgar Harrow,,45,45,55,45,40,30,45,55,40,6,9,2,4,7,-30,50,20,-30,40,55,noble_born|blunt|bold|veteran,10,noble,Harrow,player_realm,66,75,65,55,49
 char_lord_malvern,Lord Malvern,,25,80,70,30,50,55,30,25,65,13,4,8,12,7,40,0,20,0,-10,40,loyal_devoted|patient|learned|sickly,70,noble,Malvern,player_realm,20,70,80,85,71
 char_prophet_cassian,Cassian the Barefoot,,40,15,65,55,60,55,30,50,20,2,1,5,9,1,-20,-40,60,40,-30,85,firebrand_preacher|pious|compassionate|lowborn,-40,enemy,,player_realm,55,5,50,60,33
-char_king_osric,Warchief Osric of Tsalutia,,60,5,30,70,25,20,45,65,45,4,14,6,4,4,20,80,0,20,70,40,crowned_head|bold|cruel|born_soldier,-60,foreign,Tsalutia,raider_realm,78,60,70,75,47
+char_king_osric,Warchief Osric of {raider_realm},,60,5,30,70,25,20,45,65,45,4,14,6,4,4,20,80,0,20,70,40,crowned_head|bold|cruel|born_soldier,-60,foreign,{raider_realm},raider_realm,78,60,70,75,47
 char_envoy_petra,Envoy Petra Kolev,,45,25,40,30,30,40,35,25,80,7,2,11,13,6,0,20,0,0,30,45,foreign_born|schemer|silver_tongued|cautious,-15,foreign,Kolev,neighbor_realm,72,50,45,55,38
-char_queen_isabeau,Queen Isabeau of Snere,,80,10,30,45,30,25,50,30,80,11,5,12,12,10,50,30,10,20,60,35,crowned_head|amb_ruthless|schemer|patient,-50,foreign,Snere,neighbor_realm,64,90,85,90,45
+char_queen_isabeau,Queen Isabeau of {neighbor_realm},,80,10,30,45,30,25,50,30,80,11,5,12,12,10,50,30,10,20,60,35,crowned_head|amb_ruthless|schemer|patient,-50,foreign,{neighbor_realm},neighbor_realm,64,90,85,90,45
 char_emperor,Emperor Constans,,20,30,50,15,50,50,35,20,40,4,2,2,6,3,0,-10,20,0,-10,30,crowned_head|cautious|trusting,10,foreign,Constans,empire_realm,52,85,90,15,24
 char_bard_corvin,Master Corvin Lute,,30,40,45,35,20,50,50,30,50,1,1,6,12,3,-10,-30,-30,0,-10,50,beloved_of_crowds|silver_tongued|vain|cynical,25,celebrity,,player_realm,75,35,65,55,31
 char_guildmaster_tessa,Guildmaster Tessa Marden,,40,45,60,40,30,45,35,30,75,8,1,6,9,13,10,-40,-10,-50,20,60,merchant_family|shrewd_trader|honest|amb_content,20,celebrity,Marden,player_realm,74,90,60,65,39

@@ -38,7 +38,7 @@ static func burg_visible(b: Dictionary, min_pop: int) -> bool:
 ## under the point (ids from the three bitmaps), else water.
 static func object_at(repo: DataRepository, state_img: Image, province_img: Image,
 		biome_img: Image, native: Vector2, pick_radius: float, line_radius: float,
-		min_burg_pop: int) -> Dictionary:
+		min_burg_pop: int, state: GameState = null) -> Dictionary:
 	var pin := nearest_pin(repo, native, pick_radius, min_burg_pop)
 	if not pin.is_empty():
 		return pin
@@ -46,13 +46,28 @@ static func object_at(repo: DataRepository, state_img: Image, province_img: Imag
 	if not line.is_empty():
 		return line
 	var px := Vector2i(native.floor())
+	# The bitmaps are geometry and never go stale — provinces do not move.
+	# Ownership does, so the kingdom here is the province's CURRENT holder
+	# rather than the state id baked into the pack at import.
 	var sid := MapIndex.state_at(state_img, px)
 	if sid < 0:
 		return {"kind": "water"}
-	return {"kind": "land", "state_id": sid,
-		"province_id": MapIndex.id_at(province_img, px),
+	var pid := MapIndex.id_at(province_img, px)
+	return {"kind": "land", "state_id": owner_state_id(repo, state, pid, sid),
+		"province_id": pid,
 		"biome_id": MapIndex.biome_at(biome_img, px),
 		"x": native.x, "y": native.y}
+
+## The state id of whoever holds province `pid` now; `fallback` when the
+## province is unknown (an older pack, or a pixel outside every province).
+static func owner_state_id(repo: DataRepository, state: GameState, pid: int,
+		fallback: int) -> int:
+	var prov: Dictionary = repo.province_by_id(pid)
+	if prov.is_empty():
+		return fallback
+	var owner := MapOwnership.owner_of(repo, state, String(prov["province_code"]))
+	var king: Dictionary = repo.kingdoms.get(owner, {})
+	return int(king["state_id"]) if not king.is_empty() else fallback
 
 static func nearest_pin(repo: DataRepository, native: Vector2, radius: float,
 		min_burg_pop: int) -> Dictionary:
@@ -136,10 +151,12 @@ static func label_of(repo: DataRepository, obj: Dictionary) -> String:
 	return ""
 
 ## Card text per kind: {title, lines, ask}. {} means "nothing to show".
-static func describe(repo: DataRepository, obj: Dictionary) -> Dictionary:
+static func describe(repo: DataRepository, obj: Dictionary,
+		state: GameState = null) -> Dictionary:
 	match String(obj.get("kind", "")):
 		"kingdom":
-			return _describe_kingdom(repo, _kingdom_by_state(repo, int(obj.get("state_id", -1))))
+			return _describe_kingdom(repo,
+				_kingdom_by_state(repo, int(obj.get("state_id", -1))), state)
 		"burg":
 			return _describe_burg(repo, String(obj["code"]))
 		"route":
@@ -149,7 +166,7 @@ static func describe(repo: DataRepository, obj: Dictionary) -> Dictionary:
 		"marker":
 			return _describe_marker(repo, String(obj["code"]))
 		"land":
-			return _describe_land(repo, obj)
+			return _describe_land(repo, obj, state)
 	return {}
 
 static func _kingdom_by_state(repo: DataRepository, sid: int) -> Dictionary:
@@ -159,10 +176,7 @@ static func _kingdom_by_state(repo: DataRepository, sid: int) -> Dictionary:
 	return {}
 
 static func _province_by_id(repo: DataRepository, pid: int) -> Dictionary:
-	for row: Dictionary in repo.provinces.values():
-		if int(row.get("province_id", -1)) == pid:
-			return row
-	return {}
+	return repo.province_by_id(pid)
 
 static func _label(table: Dictionary, code: String) -> String:
 	return String(table.get(code, {}).get("label", code))
@@ -174,15 +188,19 @@ static func format_distance(repo: DataRepository, native_px: float) -> String:
 	return "%d %s" % [roundi(native_px * scale), unit]
 
 ## The kingdom overview lines (the pre-2026-09-08 card, unchanged in content).
-static func _kingdom_lines(repo: DataRepository, row: Dictionary) -> Array[String]:
+static func _kingdom_lines(repo: DataRepository, row: Dictionary,
+		state: GameState = null) -> Array[String]:
 	var code := String(row["kingdom_code"])
-	var province_count := 0
-	for p: Dictionary in repo.provinces.values():
-		if String(p["kingdom_code"]) == code:
-			province_count += 1
+	# Counted from who holds what NOW, not from the pack's starting map, so a
+	# conquered province leaves one card and appears on the other's.
+	var held := MapOwnership.provinces_of(repo, state, code)
+	var province_count := held.size()
+	var held_set: Dictionary = {}
+	for pc in held:
+		held_set[pc] = true
 	var town_count := 0
 	for b: Dictionary in repo.burgs.values():
-		if String(b["kingdom_code"]) == code:
+		if held_set.has(String(b["province_code"])):
 			town_count += 1
 	var neighbors: Array[String] = []
 	for n: String in String(row.get("neighbor_codes", "")).split("|", false):
@@ -202,11 +220,12 @@ static func _kingdom_lines(repo: DataRepository, row: Dictionary) -> Array[Strin
 		lines.append("Court: %s" % ", ".join(court))
 	return lines
 
-static func _describe_kingdom(repo: DataRepository, row: Dictionary) -> Dictionary:
+static func _describe_kingdom(repo: DataRepository, row: Dictionary,
+		state: GameState = null) -> Dictionary:
 	if row.is_empty():
 		return {}
 	var label := String(row["label"])
-	return {"title": label, "lines": _kingdom_lines(repo, row),
+	return {"title": label, "lines": _kingdom_lines(repo, row, state),
 		"ask": "What do we know of %s?" % label}
 
 static func _describe_burg(repo: DataRepository, code: String) -> Dictionary:
@@ -276,7 +295,8 @@ static func _describe_marker(repo: DataRepository, code: String) -> Dictionary:
 
 ## Land: the province first, then terrain and the nearest town, then the
 ## kingdom overview so the old kingdom card stays one click away.
-static func _describe_land(repo: DataRepository, obj: Dictionary) -> Dictionary:
+static func _describe_land(repo: DataRepository, obj: Dictionary,
+		state: GameState = null) -> Dictionary:
 	var kingdom := _kingdom_by_state(repo, int(obj.get("state_id", -1)))
 	if kingdom.is_empty():
 		return {}
@@ -292,7 +312,7 @@ static func _describe_land(repo: DataRepository, obj: Dictionary) -> Dictionary:
 		var b: Dictionary = repo.burgs[near]
 		var dist := here.distance_to(Vector2(float(b["x"]), float(b["y"])))
 		lines.append("Nearest town: %s (%s)" % [b["label"], format_distance(repo, dist)])
-	lines.append_array(_kingdom_lines(repo, kingdom))
+	lines.append_array(_kingdom_lines(repo, kingdom, state))
 	return {"title": title, "lines": lines, "ask": "What do we know of %s?" % title}
 
 ## "hot-springs" -> "Hot springs".

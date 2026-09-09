@@ -11,12 +11,12 @@ the LLM persona prompts are written from. Skills vocabulary:
 
 ## The player
 
-- **Title:** King Aldric Valorin, King of Hetalia, Protector of the Northern Marches
+- **Title:** King Aldric Valorin, King of {player_realm}, Protector of the Northern Marches
 - **Role played:** the newly crowned monarch (`id: you`), **age 40**, just
   ascended with grand ambitions — and a court already running with hidden
   currents. You never speak through the LLM — you type or click; every other
   role answers you in character.
-- **House:** Valorin, the royal line of Hetalia. Your first wife, of House
+- **House:** Valorin, the royal line of {player_realm}. Your first wife, of House
   O-kala, died years ago; your second marriage merged the crown with the
   Weighhouse banking clan.
 - Portrait: `assets/portraits/you.png` (chip) / `assets/portraits/full/you.png` (full).
@@ -76,10 +76,10 @@ Trait rows in `character_traits.csv` shift both at build time.
 
 | id | Name | Age | Station | Realm |
 |---|---|---|---|---|
-| `char_king_osric` | Warchief Osric | 47 | Warchief of the western steppe riders — restless, preparing to raid east | Tsalutia |
-| `char_queen_isabeau` | Queen Isabeau | 45 | Queen of Snere: holds Brampia's Emperor as a puppet, annexes the minor city-states, openly hostile to Hetalia | Snere |
-| `char_envoy_petra` | Envoy Petra Kolev | 38 | Snere's ambassador at your court — and quietly cultivating your greedy Chancellor | Snere |
-| `char_emperor` | Emperor Constans | 24 | Brampia's young Emperor — a seal and a chair in Isabeau's hands (prestige 90, influence 15) | Brampia |
+| `char_king_osric` | Warchief Osric | 47 | Warchief of the western steppe riders — restless, preparing to raid east | {raider_realm} |
+| `char_queen_isabeau` | Queen Isabeau | 45 | Queen of {neighbor_realm}: holds {empire_realm}'s Emperor as a puppet, annexes the minor city-states, openly hostile to {player_realm} | {neighbor_realm} |
+| `char_envoy_petra` | Envoy Petra Kolev | 38 | {neighbor_realm}'s ambassador at your court — and quietly cultivating your greedy Chancellor | {neighbor_realm} |
+| `char_emperor` | Emperor Constans | 24 | {empire_realm}'s young Emperor — a seal and a chair in Isabeau's hands (prestige 90, influence 15) | {empire_realm} |
 
 ### Public celebrities (category: celebrity)
 
@@ -127,8 +127,8 @@ graph TD
     CORINA[Lady Corina Ashvale]
     EDGAR[Lord Edgar Harrow]
     CASSIAN[Cassian the Barefoot]
-    OSRIC[Warchief Osric of Tsalutia]
-    ISABEAU[Queen Isabeau of Snere]
+    OSRIC[Warchief Osric of {raider_realm}]
+    ISABEAU[Queen Isabeau of {neighbor_realm}]
     PETRA[Envoy Petra]
     CONSTANS[Emperor Constans]
     CORVIN[Master Corvin]
@@ -180,7 +180,7 @@ the live values are in the save and on the RELATIONS screen.)
    Quill keeps the file; Petra buys the leaks; Cassian shouts it in the square.
 4. **The food crisis** — Cassian's demonstrations demand grain relief and
    corrupt heads; unrest is already smoldering (engine metrics: grain, unrest).
-5. **Two borders** — Tsalutia sharpens spears in the west; Snere
+5. **Two borders** — {raider_realm} sharpens spears in the west; {neighbor_realm}
    annexes toward you in the north with a puppet Emperor's seal.
 
 ## Locations and regions

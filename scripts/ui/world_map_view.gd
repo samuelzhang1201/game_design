@@ -18,6 +18,10 @@ extends Control
 ## A card's ASK THE COUNCIL button: the screen owning an input box puts this
 ## text in it (nothing is sent until the player presses Enter).
 signal place_asked(text: String)
+## The kingdom under the cursor changed — its kingdom_code, or "" for water,
+## open sea, or no map. Screens use it to swap their left column to the
+## country's card while the cursor is over that terrain.
+signal country_hovered(kingdom_code: String)
 
 const ZOOM_MAX := 8.0
 const ZOOM_STEP := 1.2
@@ -27,11 +31,15 @@ const CLICK_SLOP := 5.0
 const EDGE_MARGIN := 12.0
 ## Edge-scroll speed in screen px/s.
 const EDGE_SPEED := 260.0
-## Hover outline: a dark halo under a gold line so it reads on both the
-## pale land fills and the ocean.
-const HOVER_WIDTH := 2.0
-const HOVER_HALO_WIDTH := 4.0
-const HOVER_HALO := Color(0.05, 0.04, 0.02, 0.55)
+## The hovered kingdom's outline: a single hairline in black. It sits on top
+## of Azgaar's own printed border, so anything heavier reads as a second,
+## thicker border rather than a highlight (user ruling 2026-09-09).
+## How strongly a conquered province is repainted in its new owner's colour.
+const TERRITORY_TINT_ALPHA := 0.55
+## Debug-build shortcut for the territory demo (dev_flip_hovered_province).
+const DEV_FLIP_KEY := KEY_T
+const HOVER_WIDTH := 1.0
+const HOVER_COLOR := Color(0.0, 0.0, 0.0, 0.9)
 ## Pin sizes in screen px (constant at any zoom; LOD hides the small ones).
 const PIN_CAPITAL := 4.0
 const PIN_TOWN := 2.5
@@ -45,8 +53,14 @@ var _map_texture: Texture2D
 var _index_image: Image
 ## world_map.png may be a sharper integer-scale render of the map (see
 ## tools/import_azgaar.gd); the index bitmap and CSV coordinates stay at
-## native scale, so texture coords = native coords * _render_scale.
+## native scale, so texture coords = native coords * _render_scale. Any
+## zoom the render was exported at is a separate, per-pack correction —
+## see DataRepository.render_scale.
 var _render_scale := 1.0
+## The loaded pack's render calibration, cached off Game.data so _draw can
+## place hundreds of points a frame without going through the autoload.
+var _cal_scale := 1.0
+var _cal_offset := Vector2.ZERO
 var _by_state_id: Dictionary = {}
 ## Azgaar state id under the mouse (-1: water/nothing); its border loops
 ## are outlined in _draw.
@@ -96,6 +110,8 @@ func _ready() -> void:
 	_biome_image = _load_image(Game.data.biome_texture_path)
 	if _map_texture != null and _index_image != null:
 		_render_scale = float(_map_texture.get_width()) / float(_index_image.get_width())
+	_cal_scale = Game.data.render_scale
+	_cal_offset = Game.data.render_offset
 	for code: String in Game.data.kingdoms:
 		var row: Dictionary = Game.data.kingdoms[code]
 		_by_state_id[int(row["state_id"])] = row
@@ -165,15 +181,16 @@ func _draw() -> void:
 		for i in loop.size():
 			pts[i] = map_to_screen(loop[i])
 		pts[loop.size()] = pts[0]  # close the ring
-		draw_polyline(pts, HOVER_HALO, HOVER_HALO_WIDTH, true)
-		draw_polyline(pts, UiPalette.GOLD, HOVER_WIDTH, true)
+		draw_polyline(pts, HOVER_COLOR, HOVER_WIDTH, true)
+	_draw_territory_tint()
+	_draw_kingdom_labels()
 	_draw_pins()
 	_draw_hover()
 	_draw_object_highlight(_selected_obj)
 
 ## Screen px per native map px — the LOD and pick radii are defined on it.
 func view_scale() -> float:
-	return _zoom * _render_scale
+	return _zoom * _render_scale * _cal_scale
 
 func _pin_radius(b: Dictionary) -> float:
 	if String(b["is_capital"]) == "1":
@@ -206,11 +223,92 @@ func _draw_pins() -> void:
 				_draw_diamond(sp, PIN_MARKER + 1.0, PIN_OUTLINE)
 				_draw_diamond(sp, PIN_MARKER, UiPalette.TOOL_PERSONAL)
 
+## Repaint the provinces that have changed hands in their new owner's colour.
+##
+## Only the moved ones: the render carries Azgaar's own political colours
+## baked in, so unchanged land is already the right colour and painting over
+## it would only dull it. Once the pack ships a politically neutral render
+## (terrain only), the same pass widens to every province and the game owns
+## all the political colour.
+func _draw_territory_tint() -> void:
+	if Game.state == null or Game.state.province_owner.is_empty():
+		return
+	for code: String in Game.state.province_owner:
+		var king: Dictionary = Game.data.kingdoms.get(
+			String(Game.state.province_owner[code]), {})
+		if king.is_empty():
+			continue
+		var tint := Color(String(king.get("color", "#ffffff")))
+		tint.a = TERRITORY_TINT_ALPHA
+		for loop: PackedVector2Array in Game.data.province_borders.get(code, []):
+			var screen := PackedVector2Array()
+			screen.resize(loop.size())
+			for i in loop.size():
+				screen[i] = map_to_screen(loop[i])
+			# Province outlines are concave, so fan-filling them would bleed
+			# outside the shape — triangulate instead.
+			var tris := Geometry2D.triangulate_polygon(screen)
+			for t in range(0, tris.size(), 3):
+				draw_colored_polygon(PackedVector2Array([screen[tris[t]],
+					screen[tris[t + 1]], screen[tris[t + 2]]]), tint)
+
+## Kingdom names set into the terrain like printed map lettering: the display
+## face (Cinzel), widely letter-spaced, faint, and scaled with the zoom so
+## they belong to the map rather than floating over it as UI. Drawn under the
+## pins, and anchored on the territory a kingdom holds NOW, so a label
+## recentres when its owner gains or loses provinces.
+func _draw_kingdom_labels() -> void:
+	var font := UiPalette.display_font()
+	if font == null:
+		return
+	var px := Game.data.bal("map_label_scale_px") * view_scale()
+	if px < Game.data.bal("map_label_min_px"):
+		return
+	px = minf(px, Game.data.bal("map_label_max_px"))
+	var size := int(px)
+	var tracking := px * Game.data.bal("map_label_tracking")
+	var color := UiPalette.GOLD
+	color.a = Game.data.bal("map_label_alpha")
+	var frame := Rect2(Vector2.ZERO, self.size)
+	for code: String in Game.data.kingdoms:
+		var text := String(Game.data.kingdoms[code]["label"]).to_upper()
+		var anchor := MapOwnership.label_anchor(Game.data, Game.state, code)
+		var at := map_to_screen(anchor)
+		var width := _tracked_width(font, text, size, tracking)
+		var origin := at - Vector2(width * 0.5, -px * 0.35)
+		if not frame.intersects(Rect2(origin - Vector2(0, px), Vector2(width, px * 1.4))):
+			continue
+		_draw_tracked(font, text, origin, size, tracking, color)
+
+## draw_string has no letter-spacing, and tracking is most of what makes a
+## label read as engraved rather than typed — so the glyphs are placed one at
+## a time with the extra advance added between them.
+func _draw_tracked(font: Font, text: String, origin: Vector2, size: int,
+		tracking: float, color: Color) -> void:
+	var pen := origin
+	for i in text.length():
+		var ch := text.substr(i, 1)
+		font.draw_string(get_canvas_item(), pen, ch, HORIZONTAL_ALIGNMENT_LEFT,
+			-1.0, size, color)
+		pen.x += font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x \
+			+ tracking
+
+func _tracked_width(font: Font, text: String, size: int, tracking: float) -> float:
+	if text.is_empty():
+		return 0.0
+	var w := 0.0
+	for i in text.length():
+		w += font.get_string_size(text.substr(i, 1), HORIZONTAL_ALIGNMENT_LEFT,
+			-1.0, size).x + tracking
+	return w - tracking
+
 func _draw_diamond(center: Vector2, r: float, color: Color) -> void:
 	draw_colored_polygon(PackedVector2Array([center + Vector2(0, -r), center + Vector2(r, 0),
 		center + Vector2(0, r), center + Vector2(-r, 0)]), color)
 
-## Ring around the hovered pin; halo + gold line along the hovered road/river.
+## Ring around the hovered pin. Roads and rivers are named by the tooltip and
+## the card but are NOT traced (user ruling 2026-09-09): the render already
+## draws them, and a gold line over the top only obscured them.
 func _draw_hover() -> void:
 	_draw_object_highlight(_hover_obj)
 
@@ -224,15 +322,6 @@ func _draw_object_highlight(obj: Dictionary) -> void:
 			var m: Dictionary = Game.data.markers[obj["code"]]
 			var sp := map_to_screen(Vector2(float(m["x"]), float(m["y"])))
 			draw_arc(sp, PIN_MARKER + 4.0, 0.0, TAU, 32, UiPalette.GOLD, 1.5, true)
-		"route", "river":
-			var table: Dictionary = Game.data.routes if obj["kind"] == "route" else Game.data.rivers
-			var pts: PackedVector2Array = table[obj["code"]]["polyline"]
-			var screen := PackedVector2Array()
-			screen.resize(pts.size())
-			for i in pts.size():
-				screen[i] = map_to_screen(pts[i])
-			draw_polyline(screen, HOVER_HALO, HOVER_HALO_WIDTH, true)
-			draw_polyline(screen, UiPalette.GOLD, HOVER_WIDTH, true)
 
 ## Homing + RTS edge scrolling: pan while the mouse rides the frame's edge.
 ## (Homing lives here, not only in _draw, so it also runs headless in tests.)
@@ -264,6 +353,27 @@ func _process(delta: float) -> void:
 
 func _gui_input(ev: InputEvent) -> void:
 	if _map_texture == null:
+		return
+	# macOS trackpad: pinch zooms, two-finger drag pans. Godot delivers these
+	# as their own events, so they are handled beside the wheel rather than
+	# instead of it — a mouse still works exactly as before.
+	if ev is InputEventMagnifyGesture:
+		var mg := ev as InputEventMagnifyGesture
+		var gain := Game.data.bal("map_pinch_zoom_gain")
+		# factor is the frame's pinch ratio (>1 apart, <1 together); gain
+		# bends it around 1.0 without changing the direction.
+		_zoom_at(mg.position, 1.0 + (mg.factor - 1.0) * gain)
+		return
+	if ev is InputEventPanGesture:
+		var pg := ev as InputEventPanGesture
+		_offset -= pg.delta * Game.data.bal("map_pan_gesture_speed")
+		_clamp_offset()
+		queue_redraw()
+		return
+	if ev is InputEventKey and (ev as InputEventKey).pressed \
+			and (ev as InputEventKey).keycode == DEV_FLIP_KEY \
+			and OS.is_debug_build():
+		dev_flip_hovered_province()
 		return
 	if ev is InputEventMouseButton:
 		var mb := ev as InputEventMouseButton
@@ -323,11 +433,19 @@ func _clamp_offset() -> void:
 		_offset.y = clampf(_offset.y, size.y - scaled.y, 0.0)
 
 ## View transform: native map coordinates (index bitmap, CSV x/y) <-> screen.
+## Native (pack/CSV/index-bitmap) coordinates -> screen. Two steps: the pack's
+## calibration places the world on the render (identity unless the PNG was
+## exported from a zoomed Azgaar view), then _render_scale/_zoom place the
+## render on screen.
 func map_to_screen(native: Vector2) -> Vector2:
-	return _offset + native * _render_scale * _zoom
+	var on_render := native * _cal_scale + _cal_offset
+	return _offset + on_render * _render_scale * _zoom
 
+## The exact inverse — hit-testing samples the index bitmaps, which are in
+## native coordinates, so this has to undo the calibration too.
 func screen_to_map(pos: Vector2) -> Vector2:
-	return (pos - _offset) / _zoom / _render_scale
+	var on_render := (pos - _offset) / _zoom / _render_scale
+	return (on_render - _cal_offset) / _cal_scale
 
 func _state_under(pos: Vector2) -> int:
 	return MapIndex.state_at(_index_image, Vector2i(screen_to_map(pos).floor()))
@@ -339,12 +457,34 @@ func _object_under(pos: Vector2) -> Dictionary:
 	var s := view_scale()
 	return MapObjects.object_at(Game.data, _index_image, _province_image, _biome_image,
 		screen_to_map(pos), Game.data.bal("map_pick_radius_px") / s,
-		Game.data.bal("map_line_pick_px") / s, MapObjects.min_burg_pop_for_scale(Game.data, s))
+		Game.data.bal("map_line_pick_px") / s,
+		MapObjects.min_burg_pop_for_scale(Game.data, s), Game.state)
 
 func _update_hover(pos: Vector2) -> void:
-	hover_state(_state_under(pos))
-	hover_object(_object_under(pos))
+	var obj := _object_under(pos)
+	hover_state(_state_of(obj, pos))
+	hover_object(obj)
 	_place_tooltip(pos)
+
+## The kingdom to outline while `obj` is hovered. A burg or route names its
+## own kingdom, which matters for the coastal ones: a port sits on the
+## shoreline, so the index pixel under its pin is often open water and
+## reading the bitmap alone would drop the outline the moment the player
+## touches the pin. Anything else falls back to the pixel under the cursor.
+func _state_of(obj: Dictionary, pos: Vector2) -> int:
+	var code := String(obj.get("code", ""))
+	if code != "":
+		var owner := ""
+		match String(obj.get("kind", "")):
+			"burg":
+				var b: Dictionary = Game.data.burgs.get(code, {})
+				owner = MapOwnership.owner_of(Game.data, Game.state,
+					String(b.get("province_code", "")))
+			"province":
+				owner = MapOwnership.owner_of(Game.data, Game.state, code)
+		if owner != "" and Game.data.kingdoms.has(owner):
+			return int((Game.data.kingdoms[owner] as Dictionary)["state_id"])
+	return _state_under(pos)
 
 ## Beside the cursor, pushed back inside the frame at the edges so a pin
 ## in a corner still shows its whole name.
@@ -352,6 +492,30 @@ func _place_tooltip(pos: Vector2) -> void:
 	var tip := _tooltip.get_combined_minimum_size()
 	var limit := (size - tip).max(Vector2.ZERO)
 	_tooltip.position = (pos + TOOLTIP_OFFSET).clamp(Vector2.ZERO, limit)
+
+## Dev demo (debug builds, the T key): hand the hovered province to the
+## player's realm, or back to whoever the pack gave it to if it is already
+## theirs. Proves the dynamic-territory path end to end — the border redraws,
+## the province repaints in the new colour, the kingdom labels recentre, and
+## the hover card reports the new owner. Public so a test can drive it
+## without a keyboard.
+func dev_flip_hovered_province() -> Dictionary:
+	var prov := Game.data.province_by_id(int(_hover_obj.get("province_id", -1)))
+	if prov.is_empty() or Game.state == null:
+		return {}
+	var code := String(prov["province_code"])
+	var mine := Game.data.resolve_realm("player_realm")
+	var now := MapOwnership.owner_of(Game.data, Game.state, code)
+	var to := String(prov["kingdom_code"]) if now == mine else mine
+	if not MapOwnership.set_owner(Game.data, Game.state, code, to,
+			"dev: flipped on the map"):
+		return {}
+	_hover_sid = -1  # force the hover to re-resolve against the new owner
+	_update_hover(get_local_mouse_position())
+	# The card in the left column is showing counts from before the transfer.
+	country_hovered.emit(String(_by_state_id.get(_hover_sid, {}).get("kingdom_code", "")))
+	queue_redraw()
+	return {"province": code, "from": now, "to": to}
 
 ## Public for tests: the same path a mouse-motion event takes.
 func hover_at(pos: Vector2) -> void:
@@ -395,18 +559,21 @@ func hover_state(sid: int) -> void:
 	if sid == _hover_sid:
 		return
 	_hover_sid = sid
+	var row: Dictionary = _by_state_id.get(sid, {})
+	country_hovered.emit(String(row.get("kingdom_code", "")))
 	queue_redraw()
 
 func hovered_state() -> int:
 	return _hover_sid
 
 ## The hovered kingdom's border loops in native map coordinates ([] when
-## nothing is hovered or the pack ships no borders.csv).
+## nothing is hovered). Built from the provinces it holds NOW (MapOwnership),
+## so the outline follows conquest instead of the pack's starting map.
 func hover_loops() -> Array:
 	var row: Dictionary = _by_state_id.get(_hover_sid, {})
 	if row.is_empty():
 		return []
-	return Game.data.borders.get(String(row["kingdom_code"]), [])
+	return MapOwnership.outline_of(Game.data, Game.state, String(row["kingdom_code"]))
 
 ## Public for tests: open the kingdom card for this Azgaar state id; -1 /
 ## unknown ids (water, stale bitmap) close the card.
@@ -416,7 +583,7 @@ func select_state(sid: int) -> void:
 ## Open the card for any map object (MapObjects.object_at shape). Water or
 ## an unknown object closes it.
 func select_object(obj: Dictionary) -> void:
-	var entry := MapObjects.describe(Game.data, obj)
+	var entry := MapObjects.describe(Game.data, obj, Game.state)
 	if entry.is_empty():
 		_selected_obj = {}
 		_card.hide()

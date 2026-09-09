@@ -276,7 +276,8 @@ func _on_start_requested() -> void:
 	current_screen.start(beats, _pending_report)
 
 ## The story background (game_story/background/game_start.md) with markdown
-## chrome stripped for in-game narration. Empty when the file is absent.
+## chrome stripped for in-game narration and {player_realm}-style tokens
+## filled from the loaded pack. Empty when the file is absent.
 func _load_background_story() -> String:
 	if not FileAccess.file_exists(BACKGROUND_STORY_PATH):
 		return ""
@@ -287,7 +288,7 @@ func _load_background_story() -> String:
 		if l.begins_with("#"):
 			continue
 		lines.append(l.replace("**", ""))
-	return "\n".join(lines).strip_edges()
+	return Game.data.fill_realms("\n".join(lines).strip_edges())
 
 ## Load Game from the title screen: same resume rules as the pause menu.
 func _on_menu_load_from_title() -> void:

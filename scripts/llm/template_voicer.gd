@@ -45,7 +45,12 @@ static func line_for(data: DataRepository, key: String, speaker_traits: Array,
 	var pool := tinted if not tinted.is_empty() else generic
 	if pool.is_empty():
 		return "[missing template: %s]" % key
-	return String(pool[tick % pool.size()]).format(vars)
+	# Realm labels ride along with {season}/{year} so a template can name a
+	# kingdom as {raider_realm} rather than spelling this map's name. Caller
+	# vars win, so a beat can still override one.
+	var all_vars := data.realm_vars()
+	all_vars.merge(vars, true)
+	return String(pool[tick % pool.size()]).format(all_vars)
 
 static func _line(data: DataRepository, key: String, speaker_traits: Array,
 		tick: int, vars: Dictionary) -> String:

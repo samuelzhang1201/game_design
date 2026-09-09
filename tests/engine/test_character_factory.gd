@@ -30,7 +30,7 @@ func test_roster_roles_carry_taxonomy_and_role_metrics() -> void:
 	assert_eq(int(s.characters["char_princess"].attributes["age"]), 19)
 	var osric: Character = s.characters["char_king_osric"]
 	assert_eq(osric.category, "foreign")
-	assert_eq(osric.kingdom, "tsalutia")
+	assert_eq(osric.kingdom, data.resolve_realm("raider_realm"))
 	# Founding rows gained the same columns.
 	var aldwin: Character = s.characters["char_chancellor"]
 	assert_eq(aldwin.category, "council")

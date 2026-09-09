@@ -2,7 +2,8 @@ extends SceneTree
 ## Import an Azgaar Fantasy Map Generator full export into game data.
 ##
 ## Reads the newest "*Full*.json" and newest map render PNG in assets/maps/
-## and writes (all committed to git; re-run after every re-export):
+## (or in any pack folder under it) and writes (all committed to git; re-run
+## after every re-export):
 ##
 ##   data/maps/<map-id>/kingdoms.csv   one row per state (0 "Neutrals" excluded)
 ##   data/maps/<map-id>/provinces.csv  one row per province (+ province_id, center)
@@ -10,6 +11,9 @@ extends SceneTree
 ##   data/maps/<map-id>/borders.csv    one row per closed border loop per kingdom:
 ##       kingdom_code,loop,points — points as "x y|x y|..." in native map
 ##       coordinates, so WorldMapView can outline the hovered kingdom
+##   data/maps/<map-id>/province_borders.csv  the same, per province — the
+##       unit ownership moves in, so a kingdom's live border is the merge of
+##       the loops of the provinces it holds
 ##   data/maps/<map-id>/routes.csv     roads/trails/sea routes as polylines,
 ##       endpoints snapped to a burg within SNAP_RADIUS px
 ##   data/maps/<map-id>/rivers.csv     named rivers as polylines through their cells
@@ -22,6 +26,17 @@ extends SceneTree
 ##       untouched pixels stay white (255,255,255) = water / no state
 ##   assets/maps/<map-id>/world_province_index.png  same encoding, province id
 ##   assets/maps/<map-id>/world_biome_index.png     R = biome id (land cells only)
+##
+## Azgaar's PNG export captures the CURRENT VIEW, so a render exported while
+## the map is zoomed or panned is a scaled, shifted picture of the same
+## world — the file is still exactly graphWidth x graphHeight at an integer
+## scale, so the dimension check below passes and nothing looks wrong until
+## the computed borders miss the coastline by tens of pixels. Reset the zoom
+## before exporting the PNG. If you cannot re-export, measure the transform
+## and put it in data/maps.csv as render_scale / render_offset_x / _y; the
+## easiest measurement is to match the JSON's lakes (pack.features of type
+## "lake") against the lakes visible in the render and least-squares fit
+## render = native * scale + offset.
 ##
 ## Polygons are filled with an even-odd scanline rasterizer. Deterministic:
 ## same inputs => byte-identical outputs. Hand-edits to the generated CSVs
@@ -151,6 +166,51 @@ func _active(entries: Array) -> Array[Dictionary]:
 	return out
 
 
+## Azgaar (1.151) sometimes writes marker legends containing astral-plane
+## glyphs as *unpaired* \\uD800-\\uDFFF escapes, which Godot's JSON parser
+## rejects outright ("unpaired trail surrogate") — one bad marker would
+## otherwise cost the whole import. Drop the lone halves; keep well-formed
+## pairs, which decode normally.
+func _drop_lone_surrogates(text: String) -> String:
+	var out := ""
+	var i := 0
+	while true:
+		var at := text.find("\\u", i)
+		if at < 0:
+			out += text.substr(i)
+			return out
+		out += text.substr(i, at - i)
+		var esc := text.substr(at, 6)
+		if esc.length() < 6 or not _is_surrogate_escape(esc):
+			out += text.substr(at, 2)
+			i = at + 2
+			continue
+		var next := text.substr(at + 6, 6)
+		if _is_high_surrogate(esc) and _is_surrogate_escape(next) \
+				and not _is_high_surrogate(next):
+			out += esc + next
+			i = at + 12
+		else:
+			i = at + 6
+	return out
+
+
+func _is_surrogate_escape(esc: String) -> bool:
+	if esc.length() != 6 or not esc.begins_with("\\u"):
+		return false
+	if not esc.substr(2).is_valid_hex_number():
+		return false
+	var cp := esc.substr(2).hex_to_int()
+	return cp >= 0xD800 and cp <= 0xDFFF
+
+
+func _is_high_surrogate(esc: String) -> bool:
+	if not _is_surrogate_escape(esc):
+		return false
+	var cp := esc.substr(2).hex_to_int()
+	return cp <= 0xDBFF
+
+
 func _png_dimensions(path: String) -> Vector2i:
 	var img := Image.new()
 	if img.load(ProjectSettings.globalize_path(path)) != OK:
@@ -194,17 +254,24 @@ func _fill_polygon(buf: PackedByteArray, width: int, height: int,
 			j += 2
 
 
-## A state's outline: every cell edge (undirected vertex pair) that belongs
-## to exactly ONE of the state's cells lies on its border — whether the far
-## side is another state, water, or the map edge. Those edges are chained
-## into closed loops (one polyline each; a pinch vertex simply joins two
-## loops into one figure-eight, which draws fine). Deterministic: cells and
-## edges are visited in JSON order.
-func _state_border_loops(cells: Array, vertices: Array, sid: int) -> Array[PackedVector2Array]:
+## The outline of a group of cells: every cell edge (undirected vertex pair)
+## that belongs to exactly ONE cell of the group lies on its border — whether
+## the far side is another group, water, or the map edge. Those edges are
+## chained into closed loops (one polyline each; a pinch vertex simply joins
+## two loops into one figure-eight, which draws fine). Deterministic: cells
+## and edges are visited in JSON order.
+##
+## `field` is the cell property that names the group — "state" for a kingdom
+## outline, "province" for a province one. Provinces tile their kingdom
+## exactly (every cell of a state carries a province), so merging a
+## kingdom's province loops reproduces its border: that is what lets the
+## game redraw a border after a province changes hands.
+func _cell_group_loops(cells: Array, vertices: Array, field: String,
+		id: int) -> Array[PackedVector2Array]:
 	var edge_count: Dictionary = {}
 	var edge_order: Array[Vector2i] = []
 	for c: Dictionary in cells:
-		if int(c.get("state", 0)) != sid:
+		if int(c.get(field, 0)) != id:
 			continue
 		var vs: Array = c["v"]
 		for i in vs.size():
@@ -319,14 +386,21 @@ func _run() -> int:
 	var out_art := MAPS + "/" + map_id
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_data))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_art))
+	# Raw exports may sit directly in assets/maps/ or inside the pack's own
+	# folder next to the generated art; scan both so a re-import needs no
+	# arguments either way. Generated PNGs are excluded by name.
 	var jsons: Array[String] = []
 	var pngs: Array[String] = []
-	for file in DirAccess.get_files_at(MAPS):
-		var path := MAPS + "/" + file
-		if file.contains("Full") and file.ends_with(".json"):
-			jsons.append(path)
-		elif file.ends_with(".png") and file not in GENERATED_PNGS:
-			pngs.append(path)
+	var dirs: Array[String] = [MAPS]
+	for sub in DirAccess.get_directories_at(MAPS):
+		dirs.append(MAPS + "/" + sub)
+	for dir_path in dirs:
+		for file in DirAccess.get_files_at(dir_path):
+			var path: String = dir_path + "/" + file
+			if file.contains("Full") and file.ends_with(".json"):
+				jsons.append(path)
+			elif file.ends_with(".png") and file not in GENERATED_PNGS:
+				pngs.append(path)
 	if json_path == "":
 		json_path = _newest(jsons, "Azgaar full export (*Full*.json)")
 	if png_path == "":
@@ -335,7 +409,8 @@ func _run() -> int:
 		return 1
 	print("json: %s\npng:  %s" % [json_path.get_file(), png_path.get_file()])
 
-	var world: Variant = JSON.parse_string(FileAccess.get_file_as_string(json_path))
+	var world: Variant = JSON.parse_string(
+			_drop_lone_surrogates(FileAccess.get_file_as_string(json_path)))
 	if world == null:
 		push_error("error: cannot parse %s" % json_path)
 		return 1
@@ -364,7 +439,15 @@ func _run() -> int:
 		if int(s["i"]) != 0:
 			states.append(s)
 	var provinces := _active(pack["provinces"])
-	var burgs := _active(pack["burgs"])
+	# State 0 ("Neutrals") is not a kingdom, so neither are the burgs standing
+	# on its land — they have no state and no province to belong to. Drop them
+	# rather than fail the import; routes ending at one just lose their snap.
+	var burgs: Array[Dictionary] = []
+	for b in _active(pack["burgs"]):
+		if int(b["state"]) == 0:
+			print("skipping neutral burg %d (%s)" % [int(b["i"]), String(b["name"])])
+			continue
+		burgs.append(b)
 
 	# --- codes ------------------------------------------------------------
 	var state_code: Dictionary = {}
@@ -472,7 +555,7 @@ func _run() -> int:
 	out = _csv_line(["kingdom_code", "loop", "points"])
 	var loop_total := 0
 	for s in states:
-		var loops := _state_border_loops(cells, vertices, int(s["i"]))
+		var loops := _cell_group_loops(cells, vertices, "state", int(s["i"]))
 		for li in loops.size():
 			var pts: Array[String] = []
 			for p in loops[li]:
@@ -480,6 +563,23 @@ func _run() -> int:
 			out += _csv_line([String(state_code[int(s["i"])]), str(li), "|".join(pts)])
 		loop_total += loops.size()
 	if not _write_text(out_data + "/borders.csv", out):
+		return 1
+
+	# --- province_borders.csv --------------------------------------------
+	# The kingdom outlines above are the pack's *starting* borders. Ownership
+	# moves at province granularity, so the game rebuilds a kingdom's outline
+	# from the loops of the provinces it currently holds.
+	out = _csv_line(["province_code", "loop", "points"])
+	var prov_loop_total := 0
+	for p in provinces:
+		var loops := _cell_group_loops(cells, vertices, "province", int(p["i"]))
+		for li in loops.size():
+			var pts: Array[String] = []
+			for pt in loops[li]:
+				pts.append("%s %s" % [_num2(pt.x), _num2(pt.y)])
+			out += _csv_line([String(prov_code[int(p["i"])]), str(li), "|".join(pts)])
+		prov_loop_total += loops.size()
+	if not _write_text(out_data + "/province_borders.csv", out):
 		return 1
 
 	# --- routes.csv -------------------------------------------------------
@@ -627,7 +727,8 @@ func _run() -> int:
 		print("         does not contain: %s" % ", ".join(missing))
 		print("         Fix the bindings or rename the states in Azgaar —")
 		print("         until then the cast has no home on this map.")
-	print("map '%s': wrote %d kingdoms, %d provinces, %d burgs, %d border loops, %d routes, %d rivers, %d markers into %s, art into %s"
+	print("map '%s': wrote %d kingdoms, %d provinces, %d burgs, %d border loops (+%d province loops), %d routes, %d rivers, %d markers into %s, art into %s"
 		% [map_id, states.size(), provinces.size(), burgs.size(), loop_total,
-			routes.size(), river_count, markers.size(), out_data, out_art])
+			prov_loop_total, routes.size(), river_count, markers.size(), out_data,
+			out_art])
 	return 0

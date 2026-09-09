@@ -471,13 +471,33 @@ func test_stale_free_text_callback_ignored_after_button_resolves_event() -> void
 
 ## Same Ask hook on the conversation stage: the card's question lands in the
 ## talk box for the player to send or edit.
+## The conversation stage's left column is the minister dossier; a hovered
+## country borrows it and gives it straight back.
+func test_hovering_a_country_borrows_the_minister_column() -> void:
+	Game.start_campaign(42)
+	var c := _scene_with([{"kind": "summary", "portrait_id": "round_table",
+		"speaker": "The Council"}], TickReport.new())
+	await wait_frames(1)
+	var panel := c.country_panel()
+	assert_not_null(panel, "the stage owns a country panel")
+	assert_false(panel.visible)
+	var mine := Game.data.resolve_realm("player_realm")
+	panel.show_country(mine)
+	assert_true(panel.visible, "the country card takes the column")
+	assert_eq(panel.shown_country(), mine)
+	panel.show_country("")
+	assert_false(panel.visible, "and hands it back")
+
 func test_map_ask_fills_the_talk_box() -> void:
 	Game.start_campaign(42)
 	var c := _scene_with([{"kind": "summary", "portrait_id": "round_table", "speaker": "The Council"}],
 		TickReport.new())
 	await wait_frames(1)
 	var map: WorldMapView = c.get_node("%MapPanel/WorldMap")
-	map.select_object({"kind": "burg", "code": "kuojarpan"})
+	# The pack is generated: ask about the bound realm's own capital.
+	var capital: Dictionary = Game.data.burgs[String(
+		Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
+	map.select_object({"kind": "burg", "code": String(capital["burg_code"])})
 	assert_true(map.card().ask_button().visible, "the stage owns a talk box, so Ask shows")
 	map.card().ask_button().pressed.emit()
-	assert_eq(c.free_text_field().text, "What do we know of Kuojarpan?")
+	assert_eq(c.free_text_field().text, "What do we know of %s?" % String(capital["label"]))

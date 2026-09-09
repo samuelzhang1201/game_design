@@ -25,6 +25,8 @@ var _text_label: RichTextLabel
 var _replies_box: VBoxContainer
 var _free_text: LineEdit
 var _world_map: WorldMapView
+## The hovered country's card, overlaying the minister column.
+var _country_panel: CountryPanel
 var _continue_btn: Button
 var _panel: PanelContainer
 var _scroll: ScrollContainer
@@ -57,6 +59,9 @@ func _ready() -> void:
 		_free_text.text = text
 		_free_text.caret_column = text.length()
 		_free_text.grab_focus())
+	# Hovering a country swaps the left column to its card and back again
+	# (user request 2026-09-09); the minister returns when the cursor leaves.
+	_country_panel = CountryPanel.attach(%MinisterPanel.get_node("MVBox"), _world_map)
 	%MinisterPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	UiPalette.style_header(%MinisterName, 11)
@@ -773,3 +778,7 @@ func _on_free_text(text: String) -> void:
 		elif spoken == "":
 			_say("Herald", "So noted.")
 	, facing, addressed)
+
+## Test seam.
+func country_panel() -> CountryPanel:
+	return _country_panel

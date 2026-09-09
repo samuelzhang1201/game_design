@@ -61,11 +61,14 @@ func test_add_fact_creates_a_runtime_fact() -> void:
 		"The king lied about the granaries.")
 
 func test_facts_about_filters_by_type_and_subject_for_one_knower() -> void:
-	var found := KnowledgeBase.facts_about(state, "char_spymaster", "army_size", "tsalutia")
+	# Not a literal kingdom: the muster fact names the raider_realm slot, so
+	# this follows whatever kingdom the loaded map binds it to.
+	var raider := data.resolve_realm("raider_realm")
+	var found := KnowledgeBase.facts_about(state, "char_spymaster", "army_size", raider)
 	assert_eq(found.size(), 1)
-	assert_eq(String(found[0]["code"]), "fact_tsalutia_muster")
-	assert_eq(KnowledgeBase.facts_about(state, "char_chaplain", "army_size", "tsalutia").size(), 0,
-		"the chaplain knows nothing of Tsalutia's muster")
+	assert_eq(String(found[0]["code"]), "fact_raider_muster")
+	assert_eq(KnowledgeBase.facts_about(state, "char_chaplain", "army_size", raider).size(), 0,
+		"the chaplain knows nothing of the raiders' muster")
 
 ## Review finding 2026-09-01: what a character knows must reach their voice.
 ## describe_for phrases each fact at the character's OWN credibility and

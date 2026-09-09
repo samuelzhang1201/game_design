@@ -167,15 +167,60 @@ func test_real_capital_and_road_resolve() -> void:
 	var state_img: Image = (load(real.index_texture_path) as Texture2D).get_image()
 	var prov_img: Image = (load(real.province_texture_path) as Texture2D).get_image()
 	var biome_img: Image = (load(real.biome_texture_path) as Texture2D).get_image()
-	var k: Dictionary = real.burgs["kuojarpan"]
+	# No literal town or road: the pack is generated, so this takes the realm
+	# the bindings point at, its own capital, and the map's longest road.
+	var realm: Dictionary = real.kingdoms[real.resolve_realm("player_realm")]
+	var capital_code := String(realm["capital_burg"])
+	var k: Dictionary = real.burgs[capital_code]
 	var at_capital := MapObjects.object_at(real, state_img, prov_img, biome_img,
 		Vector2(float(k["x"]), float(k["y"])), 6.0, 4.0, MapObjects.CAPITALS_ONLY)
 	assert_eq(at_capital["kind"], "burg")
-	assert_eq(at_capital["code"], "kuojarpan")
+	assert_eq(at_capital["code"], capital_code)
+	var road_code := _longest_road(real)
 	var on_road := MapObjects.object_at(real, state_img, prov_img, biome_img,
-		Vector2(560.33, 322.71), 0.5, 4.0, MapObjects.CAPITALS_ONLY)
-	assert_eq(on_road["kind"], "route")
-	assert_eq(on_road["code"], "ororeanian_road")
+		_open_point_on(real, road_code), 0.5, 4.0, MapObjects.CAPITALS_ONLY)
+	assert_eq(on_road["kind"], "route", "a point on a road hits that road")
+	assert_eq(on_road["code"], road_code)
 	var d := MapObjects.describe(real, at_capital)
-	assert_eq(d["title"], "Kuojarpan")
-	assert_eq(d["lines"][0], "Capital of Onjormaa, Hetalia")
+	assert_eq(d["title"], String(k["label"]))
+	assert_eq(d["lines"][0], "Capital of %s, %s" % [
+		String(real.provinces[String(k["province_code"])]["label"]),
+		String(realm["label"])])
+
+## The vertex of `code` that is farthest from every town and marker, so the
+## point is unambiguously on the road: burgs and markers win the pick over
+## routes, and on a generated map a road often runs right past one.
+func _open_point_on(repo: DataRepository, code: String) -> Vector2:
+	var line: PackedVector2Array = repo.routes[code]["polyline"]
+	var rivals: Array[Vector2] = []
+	for b: String in repo.burgs:
+		rivals.append(Vector2(float(repo.burgs[b]["x"]), float(repo.burgs[b]["y"])))
+	for m: String in repo.markers:
+		rivals.append(Vector2(float(repo.markers[m]["x"]), float(repo.markers[m]["y"])))
+	var best := line[0]
+	var best_d := -1.0
+	for p in line:
+		var d := INF
+		for r in rivals:
+			d = minf(d, p.distance_squared_to(r))
+		if d > best_d:
+			best_d = d
+			best = p
+	return best
+
+## The road with the most points, ties going to the earlier code — a stable
+## pick on any export, and long enough to have a vertex out in open country.
+func _longest_road(repo: DataRepository) -> String:
+	var best := ""
+	var best_n := 0
+	var codes := repo.routes.keys()
+	codes.sort()
+	for code: String in codes:
+		var r: Dictionary = repo.routes[code]
+		if String(r["group"]) != "roads":
+			continue
+		var n := (r["polyline"] as PackedVector2Array).size()
+		if n > best_n:
+			best_n = n
+			best = code
+	return best

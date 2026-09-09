@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dhg60xf5ums4s"
+
+[deps]
+
+files=["res://data/maps/beria/province_borders.loop.translation", "res://data/maps/beria/province_borders.points.translation"]
+
+source_file="res://data/maps/beria/province_borders.csv"
+dest_files=["res://data/maps/beria/province_borders.loop.translation", "res://data/maps/beria/province_borders.points.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

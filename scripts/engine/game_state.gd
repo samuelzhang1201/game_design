@@ -171,6 +171,14 @@ static func _decode_values(value):
 ## world definition, so it is saved: reloading must restore the same world,
 ## not whichever map happens to be default.
 var map_id: String = ""
+## province_code -> kingdom_code, holding ONLY the provinces that have changed
+## hands. An absent province still belongs to whoever the pack says, so an
+## untouched campaign carries nothing here and a pack swap re-reads starting
+## ownership. Read it through MapOwnership, never directly.
+var province_owner: Dictionary = {}
+## One entry per transfer: {tick, province, from, to, reason}. Same rule as
+## opinion deltas — a border that moved must be able to say why.
+var territory_log: Array = []
 
 const SAVE_VERSION := 2
 
@@ -195,6 +203,8 @@ func to_dict() -> Dictionary:
 		"promises": _encode_values(promises.duplicate(true)),
 		"event_state": _encode_values(event_state.duplicate(true)),
 		"pending_event": _encode_values(pending_event.duplicate(true)),
+		"province_owner": province_owner.duplicate(),
+		"territory_log": _encode_values(territory_log.duplicate(true)),
 	}
 
 static func from_dict(d: Dictionary) -> GameState:
@@ -231,4 +241,9 @@ static func from_dict(d: Dictionary) -> GameState:
 		"flags": [], "last_action_tick": {},
 	}))
 	s.pending_event = _decode_values(d.get("pending_event", {}))
+	# Saves written before territory could move carry neither key; an empty
+	# override dict is exactly "everything still belongs to the pack".
+	s.province_owner = d.get("province_owner", {}).duplicate()
+	s.territory_log = _decode_values(d.get("territory_log", []))
+	MapOwnership.invalidate()
 	return s

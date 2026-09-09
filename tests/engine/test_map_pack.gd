@@ -72,6 +72,70 @@ func test_reloading_a_pack_re_resolves_from_the_authored_slot() -> void:
 	assert_true(repo.kingdoms.has(String(player["kingdom"])),
 		"and still resolves to a real kingdom")
 
+## Prose says {raider_realm}, never a kingdom's name, so a re-export that
+## renames the world touches realm_bindings.csv and nothing else.
+func test_realm_tokens_in_prose_fill_from_the_pack() -> void:
+	var repo := _fresh()
+	var raider := repo.realm_label("raider_realm")
+	assert_ne(raider, "raider_realm", "the slot resolves to a real label")
+	assert_eq(repo.fill_realms("{raider_realm} musters."), "%s musters." % raider)
+	assert_eq(repo.fill_realms("no tokens here"), "no tokens here",
+		"text without tokens is returned untouched")
+	assert_eq(repo.fill_realms("It is {season} of year {year}."),
+		"It is {season} of year {year}.",
+		"non-realm placeholders are left for their own formatter")
+	assert_eq(repo.fill_realms("{not_a_slot}"), "{not_a_slot}",
+		"an unknown token is left alone rather than blanked")
+
+## The muster fact is authored with a token; what the engine hands the UI is
+## the bound kingdom's name.
+func test_authored_prose_reaches_the_engine_already_filled() -> void:
+	var repo := _fresh()
+	var muster := {}
+	for r in repo.facts:
+		if String(r["fact_code"]) == "fact_raider_muster":
+			muster = r
+	assert_false(muster.is_empty(), "facts.csv still carries the muster fact")
+	assert_string_contains(String(muster["_authored"]["text"]), "{raider_realm}")
+	assert_string_contains(String(muster["text"]), repo.realm_label("raider_realm"))
+	assert_false(String(muster["text"]).contains("{"), "no token survives to the UI")
+
+## Filling must start from the authored text every time, or a second pack
+## would substitute into map one's already-substituted prose.
+func test_reloading_a_pack_refills_prose_from_the_authored_text() -> void:
+	var repo := _fresh()
+	assert_true(repo.load_map(repo.map_id), "same pack reloads")
+	for r in repo.facts:
+		if String(r["fact_code"]) == "fact_raider_muster":
+			assert_eq(String(r["text"]), "%s is massing for a raid eastward."
+				% repo.realm_label("raider_realm"))
+
+## maps.csv carries a free-text notes column; an unquoted comma in it once
+## shifted every column after it, silently reading the notes tail as the
+## render calibration. Every row must parse to the full header width.
+func test_maps_csv_rows_parse_to_the_full_header() -> void:
+	var f := FileAccess.open("res://data/maps.csv", FileAccess.READ)
+	assert_not_null(f, "maps.csv opens")
+	var header := f.get_csv_line()
+	var seen := 0
+	while not f.eof_reached():
+		var row := f.get_csv_line()
+		if row.size() == 1 and String(row[0]).strip_edges() == "":
+			continue
+		seen += 1
+		assert_eq(row.size(), header.size(),
+			"row '%s' has %d fields for %d columns — quote any field with a comma"
+				% [row[0], row.size(), header.size()])
+	assert_gt(seen, 0, "maps.csv lists at least one pack")
+
+## A pack's render calibration must be usable: screen_to_map divides by the
+## scale, so a zero would put every hit test at infinity.
+func test_render_calibration_is_usable() -> void:
+	var repo := _fresh()
+	assert_gt(repo.render_scale, 0.0, "render_scale is positive")
+	assert_true(is_finite(repo.render_offset.x) and is_finite(repo.render_offset.y),
+		"render_offset is a real point")
+
 func test_unknown_map_fails_loudly() -> void:
 	var repo := _fresh()
 	var before := repo.map_id

@@ -34,13 +34,13 @@ char_prophet_cassian,you,grudge,-40,demands grain relief and the heads of corrup
 char_prophet_cassian,char_chancellor,grudge,-55,"names him thief from the market square, and the crowd repeats it"
 char_chaplain,char_prophet_cassian,rival,-45,a barefoot heretic who empties his pews
 char_prophet_cassian,char_chaplain,rival,-35,a fat shepherd grown comfortable among wolves
-char_king_osric,you,rival,-60,sharpening spears in Tsalutia for a raid eastward
+char_king_osric,you,rival,-60,sharpening spears in {raider_realm} for a raid eastward
 you,char_king_osric,rival,-45,burned two of your border granaries unavenged
 char_queen_isabeau,you,rival,-50,her annexations creep toward your eastern border
 you,char_queen_isabeau,rival,-40,the regent who swallows city-states whole
 char_envoy_petra,char_queen_isabeau,liege,60,her ambassador at your court
 char_envoy_petra,char_chancellor,ally,25,a greedy minister makes a fine listening post
-char_chancellor,char_envoy_petra,ally,20,Snere gold spends like any other
+char_chancellor,char_envoy_petra,ally,20,{neighbor_realm} gold spends like any other
 char_queen_isabeau,char_emperor,puppet,20,the emperor signs what she writes
 char_emperor,char_queen_isabeau,grudge,-60,the regent who reduced him to a seal and a chair
 char_steward,char_guildmaster_tessa,ally,40,guild credit has saved the treasury more than once

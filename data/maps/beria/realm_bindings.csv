@@ -1,5 +1,5 @@
 slot,kingdom_code,notes
-player_realm,hetalia,The throne the player inherits.
-raider_realm,tsalutia,Musters for raids eastward; King Osric's seat.
-neighbor_realm,snere,Sends envoys; Queen Isabeau's seat.
-empire_realm,brampia,The Emperor's realm.
+player_realm,kelvarn,The throne the player inherits. Central; borders all three others.
+raider_realm,corwyn,Musters for raids eastward; Warchief Osric's seat. West of the player.
+neighbor_realm,brackmoor,Sends envoys; Queen Isabeau's seat. North of the player.
+empire_realm,farhold,The Emperor's realm. Largest on the map; borders the neighbor.

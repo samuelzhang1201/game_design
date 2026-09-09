@@ -19,8 +19,12 @@ var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
 var world_rules: Dictionary = {}
 var claim_types: Dictionary = {}
-## event_id -> authored scene prose, from RANDOM_EVENTS.md (see StorySource).
+## event_id -> scene prose from RANDOM_EVENTS.md (see StorySource), with
+## {player_realm}-style tokens filled from the loaded pack. Read this one.
 var event_scenes: Dictionary = {}
+## The same scenes exactly as authored, tokens unfilled — the source every
+## re-fill starts from, so loading a second pack cannot compound substitutions.
+var event_scenes_authored: Dictionary = {}
 var facts: Array[Dictionary] = []
 ## Azgaar world import (tools/import_azgaar.gd), keyed by *_code. These
 ## belong to the LOADED MAP PACK, not to data/ — see load_map.
@@ -31,6 +35,14 @@ var burgs: Dictionary = {}
 ## loops in native map coordinates (borders.csv, drawn by WorldMapView on
 ## hover).
 var borders: Dictionary = {}
+## province_code -> Array[PackedVector2Array]: each province's own outline.
+## A kingdom's CURRENT border is the merge of the ones it holds — see
+## MapOwnership. `borders` above stays the pack's starting kingdom outlines.
+var province_borders: Dictionary = {}
+## Azgaar province_id (int) -> the same row as `provinces`. Hit-testing reads
+## a province id out of the index bitmap on every mouse move, so this saves
+## a linear scan there.
+var provinces_by_id: Dictionary = {}
 ## Map objects (spec 2026-09-08), keyed by *_code. Route and river rows carry
 ## two derived fields set at load: polyline (PackedVector2Array) and bbox
 ## (Rect2), so hit-testing never re-parses text.
@@ -51,6 +63,13 @@ var province_texture_path: String = ""
 var biome_texture_path: String = ""
 ## realm slot -> this map's kingdom_code (maps/<id>/realm_bindings.csv).
 var realm_bindings: Dictionary = {}
+## How the map render sits on the pack's coordinates (maps.csv). Azgaar's PNG
+## export captures the CURRENT view, so a map exported while zoomed or panned
+## is a scaled, shifted picture of the same world: render = native * scale +
+## offset, in native units. 1 / (0, 0) means the render was taken at the
+## default view and needs no correction — the normal case.
+var render_scale := 1.0
+var render_offset := Vector2.ZERO
 
 ## Parses a CSV with a header row into an Array of row Dictionaries.
 ## Returns [] and sets last_error if any row is shorter than required_cols
@@ -158,7 +177,8 @@ func _load(dir: String) -> bool:
 		return false
 	# Event prose is authored, not generated: it comes from the story
 	# document, and templates.csv no longer carries a copy to drift from it.
-	event_scenes = StorySource.load_scenes()
+	event_scenes_authored = StorySource.load_scenes()
+	event_scenes = event_scenes_authored.duplicate()
 	if not _load_if_present(dir + "/event_choices.csv",
 			["event_id", "choice_id", "label", "centralism", "militarism", "orthodoxy",
 			"tax_incidence", "expansionism", "effects", "requires"],
@@ -190,6 +210,9 @@ func load_map(id: String) -> bool:
 	provinces.clear()
 	burgs.clear()
 	borders.clear()
+	province_borders.clear()
+	provinces_by_id.clear()
+	MapOwnership.invalidate()
 	routes.clear()
 	rivers.clear()
 	markers.clear()
@@ -202,7 +225,7 @@ func load_map(id: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/provinces.csv",
 			["province_code", "label", "kingdom_code"],
-			func(r): provinces[r["province_code"]] = r):
+			func(r): _add_province(r)):
 		return false
 	if not _load_if_present(dir + "/burgs.csv",
 			["burg_code", "label", "province_code", "kingdom_code"],
@@ -210,6 +233,10 @@ func load_map(id: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/borders.csv", ["kingdom_code", "loop", "points"],
 			func(r): _add_border_loop(r)):
+		return false
+	if not _load_if_present(dir + "/province_borders.csv",
+			["province_code", "loop", "points"],
+			func(r): _add_province_border_loop(r)):
 		return false
 	if not _load_if_present(dir + "/routes.csv",
 			["route_code", "label", "group", "from_burg", "to_burg", "length", "points"],
@@ -233,12 +260,40 @@ func load_map(id: String) -> bool:
 			func(r): realm_bindings[r["slot"]] = r["kingdom_code"]):
 		return false
 	map_id = id
+	render_scale = float(m.get("render_scale", 1.0)) if String(m.get("render_scale", "")) != "" else 1.0
+	render_offset = Vector2(
+		float(m.get("render_offset_x", 0.0)) if String(m.get("render_offset_x", "")) != "" else 0.0,
+		float(m.get("render_offset_y", 0.0)) if String(m.get("render_offset_y", "")) != "" else 0.0)
 	map_texture_path = String(m["map_texture"])
 	index_texture_path = String(m["index_texture"])
 	province_texture_path = String(m.get("province_texture", ""))
 	biome_texture_path = String(m.get("biome_texture", ""))
 	_resolve_realm_slots()
 	return true
+
+## province_code -> Array[PackedVector2Array], the same shape as `borders`.
+## MapOwnership merges the loops of the provinces a kingdom holds into its
+## live outline, so this is what makes a border able to move.
+## The province row carrying this Azgaar province_id, or {}. Rebuilds the
+## index when it has fallen out of step with `provinces` — a repo assembled
+## by hand (test fixtures, a future mod loader) sets `provinces` wholesale
+## and would otherwise silently look empty here.
+func province_by_id(pid: int) -> Dictionary:
+	if provinces_by_id.size() != provinces.size():
+		provinces_by_id.clear()
+		for row: Dictionary in provinces.values():
+			provinces_by_id[int(row.get("province_id", -1))] = row
+	return provinces_by_id.get(pid, {})
+
+func _add_province(r: Dictionary) -> void:
+	provinces[r["province_code"]] = r
+	provinces_by_id[int(r.get("province_id", -1))] = r
+
+func _add_province_border_loop(r: Dictionary) -> void:
+	var code := String(r["province_code"])
+	if not province_borders.has(code):
+		province_borders[code] = []
+	(province_borders[code] as Array).append(MapGeometry.parse_points(String(r["points"])))
 
 func _add_border_loop(r: Dictionary) -> void:
 	var code := String(r["kingdom_code"])
@@ -258,6 +313,39 @@ func _with_polyline(r: Dictionary) -> Dictionary:
 func resolve_realm(slot: String) -> String:
 	return String(realm_bindings.get(slot, slot))
 
+## The display name of the kingdom a slot binds to — "player_realm" ->
+## "Kelvarn". Falls back to the kingdom_code, then to the slot itself, so an
+## unbound slot degrades to something readable instead of blank.
+func realm_label(slot: String) -> String:
+	var code := resolve_realm(slot)
+	var row: Dictionary = kingdoms.get(code, {})
+	var label := String(row.get("label", ""))
+	if label != "":
+		return label
+	return code if code != "" else slot
+
+## Substitutes {player_realm}, {raider_realm}, ... in authored prose with the
+## bound kingdom's label. Authored text never spells a kingdom's name, so a
+## re-export that renames the world only touches realm_bindings.csv. Follows
+## the {season}/{year} convention templates.csv already uses. Unknown tokens
+## are left alone — nothing here can fail on a typo.
+func fill_realms(text: String) -> String:
+	if text.find("{") < 0:
+		return text
+	var out := text
+	for slot: String in realm_bindings:
+		out = out.replace("{%s}" % slot, realm_label(slot))
+	return out
+
+## The realm labels as format() vars, for template text that already goes
+## through String.format (see TemplateVoicer).
+func realm_vars() -> Dictionary:
+	var out: Dictionary = {}
+	for slot: String in realm_bindings:
+		out[slot] = realm_label(slot)
+	return out
+
+
 ## Authored content names slots (player_realm, raider_realm, ...) rather than
 ## the codes a particular Azgaar export happened to generate. Resolving once
 ## here keeps every consumer downstream seeing a concrete kingdom_code. The
@@ -273,6 +361,36 @@ func _resolve_realm_slots() -> void:
 	for r in facts:
 		r["subject_slot"] = r.get("subject_slot", r.get("subject", ""))
 		r["subject"] = resolve_realm(String(r["subject_slot"]))
+	# Any authored cell may name a realm by slot, so fill every table that
+	# reaches the player rather than listing columns — a new prose column
+	# should not have to be remembered here. Cells with no "{" are untouched,
+	# so ids and numbers cannot be caught by this.
+	for rows in [roles, founding, facts, relationships, templates, events,
+			event_choices]:
+		for r: Dictionary in rows:
+			_fill_row_realms(r)
+	# RANDOM_EVENTS.md scenes are loaded before any map is, so they are filled
+	# here rather than at parse time — and from the authored copy, so swapping
+	# packs mid-session re-fills rather than compounding.
+	for id: String in event_scenes_authored:
+		event_scenes[id] = fill_realms(String(event_scenes_authored[id]))
+
+## Fills realm tokens in every string cell of one row, keeping the authored
+## text under "_authored" so a second load_map re-fills from the original
+## rather than substituting into already-substituted text.
+func _fill_row_realms(r: Dictionary) -> void:
+	var authored: Dictionary = r.get("_authored", {})
+	if authored.is_empty():
+		for col: String in r:
+			if col == "_authored" or not (r[col] is String):
+				continue
+			if String(r[col]).find("{") >= 0:
+				authored[col] = String(r[col])
+		if authored.is_empty():
+			return
+		r["_authored"] = authored
+	for col: String in authored:
+		r[col] = fill_realms(String(authored[col]))
 
 ## Loads a live-gameplay CSV that is nonetheless allowed to be genuinely
 ## absent (future saves/mods may not ship it yet). A missing file is not an

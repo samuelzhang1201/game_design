@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://30xcmb45bov0"
-path="res://.godot/imported/Beria 2026-09-03-20-03.png-817b89d2c5da1e92697e3caccd074cff.ctex"
+uid="uid://bhoyq7lwfoyty"
+path="res://.godot/imported/world_map_state.png-591a93722d19e22dacdc995151bcf8df.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/maps/Beria 2026-09-03-20-03.png"
-dest_files=["res://.godot/imported/Beria 2026-09-03-20-03.png-817b89d2c5da1e92697e3caccd074cff.ctex"]
+source_file="res://assets/maps/beria/world_map_state.png"
+dest_files=["res://.godot/imported/world_map_state.png-591a93722d19e22dacdc995151bcf8df.ctex"]
 
 [params]
 
