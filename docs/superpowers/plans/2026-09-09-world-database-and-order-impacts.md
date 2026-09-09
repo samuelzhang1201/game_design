@@ -67,7 +67,7 @@
 - Produces: `DataRepository.world_tables: Dictionary` — `world_tables[domain][area][code] -> row: Dictionary`. Domains: `geography` (areas `biomes` int-keyed, `rivers`, `markers`, `routes`), `political` (`kingdoms`, `provinces`, `burgs`, `diplomacy` keyed `"<kingdom_code>><other_code>"`, `campaigns` keyed `"<kingdom_code>:<label>"`), `economy` (`kingdoms`, `provinces`, `burgs`, `goods`, `markets` keyed by `market_id` string, `market_goods` keyed `"<market_id>:<good_code>"`, `production` keyed `"<burg_code>:<good_code>"`), `military` (`kingdoms`, `regiments`, `unit_types`), `society` (`cultures`, `religions`, `zones`). The existing named fields (`kingdoms`, `provinces`, `burgs`, `routes`, `rivers`, `markers`, `biomes`) are the same Dictionary objects.
 - Produces: `DataRepository.world_table(domain: String, area: String) -> Dictionary` (`{}` when absent) and `world_row(domain, area, code) -> Dictionary`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/engine/test_world_tables.gd`:
 
@@ -194,11 +194,11 @@ func test_absent_table_reads_as_empty() -> void:
 	assert_eq(repo.world_row("economy", "kingdoms", "no_such_kingdom"), {})
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run the one-selector command with `-gselect=test_world_tables`. Expected: parse error / failures on `world_table` not found.
 
-- [ ] **Step 3: Move the existing generated files and drop their sidecars**
+- [x] **Step 3: Move the existing generated files and drop their sidecars**
 
 ```bash
 cd data/maps/beria
@@ -213,7 +213,7 @@ for d in geography political economy military society; do touch $d/.gdignore; do
 
 (Only the moved tables lose their sidecars; the root files keep theirs.)
 
-- [ ] **Step 4: Importer — domain folders and the new tables**
+- [x] **Step 4: Importer — domain folders and the new tables**
 
 In `tools/import_azgaar.gd`, add near the constants:
 
@@ -455,7 +455,7 @@ After `# --- province_borders.csv` (before routes) add the domain tables:
 
 Update the header comment's file list to the domain layout. Run the importer; confirm `git status` shows only the expected files under `data/maps/beria/`.
 
-- [ ] **Step 5: Loader — `world_tables`**
+- [x] **Step 5: Loader — `world_tables`**
 
 In `scripts/engine/data_repository.gd` add the fields and spec:
 
@@ -515,15 +515,15 @@ In `load_map`: `world_tables.clear()` beside the other clears; change the paths 
 		_register_table(String(spec[0]), String(spec[1]), table)
 ```
 
-- [ ] **Step 6: Run the new tests and the map tests**
+- [x] **Step 6: Run the new tests and the map tests**
 
 Run with `-gselect=test_world_tables`, then `-gselect=test_map`. Expected: all pass. Fix any path the tests still expect at the root (`test_map_pack.gd` reads `res://data/maps.csv` only; `test_map_data.gd` reads through the repo).
 
-- [ ] **Step 7: CLAUDE.md**
+- [x] **Step 7: CLAUDE.md**
 
 In the "Key documents" bullet, replace the flat list of map pack tables with: "the map pack tables under `data/maps/<id>/` — `map_info.csv`, `realm_bindings.csv` at the root and, by domain, `geography/` (`biomes`, `rivers`, `markers`, `routes`), `political/` (`kingdoms`, `provinces`, `burgs`, `borders`, `province_borders`, `diplomacy`, `campaigns`), `economy/` (`kingdoms`, `provinces`, `burgs`, `goods`, `markets`, `market_goods`, `production`), `military/` (`kingdoms`, `regiments`, `unit_types`), `society/` (`cultures`, `religions`, `zones`)". Add: "Each domain folder carries a `.gdignore` so Godot does not import game tables as translations; `FileAccess` reads them regardless, and a future export preset must include `data/**` explicitly."
 
-- [ ] **Step 8: Full suite and commit**
+- [x] **Step 8: Full suite and commit**
 
 ```bash
 ./run_tests.sh
@@ -547,7 +547,7 @@ git commit -m "feat(data): import the export's economy, military, politics, and 
 - Consumes: `DataRepository.world_table/world_row`, `realm_bindings`, `bal`.
 - Produces: `DataRepository.world_schema: Array[Dictionary]`; `GameState.world: Dictionary`, `GameState.world_log: Array`; `Character.change_attribute(name: String, delta: int, reason: String, tick: int) -> void`, `Character.attribute_log: Array`; `WorldLedger.resolve(data, path) -> String`, `schema_for(data, path) -> Dictionary`, `value_of(data, state, path) -> Variant`, `apply(data, state, path, delta: float, reason: String, source: String) -> Dictionary` (`{path, delta, value, reason, source}` or `{error}`), `set_enum(data, state, path, value: String, reason, source) -> Dictionary`, `polarity_of(data, path) -> int`, `llm_cap(data, path) -> float`, `belongs_to_player(data, state, path) -> bool`, `prompt_catalog(data, state) -> String`.
 
-- [ ] **Step 1: The schema file**
+- [x] **Step 1: The schema file**
 
 `data/world_schema.csv` (the caps are the largest delta the model may move a field by in one order; `0` is engine-only):
 
@@ -616,7 +616,7 @@ Load them in `DataRepository._load` after `event_choices`:
 
 with `var world_schema: Array[Dictionary] = []` declared beside `signatures`.
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 `tests/engine/test_world_ledger.gd`:
 
@@ -750,11 +750,11 @@ func test_prompt_catalog_lists_writable_fields_with_caps() -> void:
 	assert_string_contains(cat, "Your provinces:")
 ```
 
-- [ ] **Step 3: Run to verify it fails**
+- [x] **Step 3: Run to verify it fails**
 
 `-gselect=test_world_ledger` → parse error: `WorldLedger` not declared.
 
-- [ ] **Step 4: Character and GameState**
+- [x] **Step 4: Character and GameState**
 
 `scripts/engine/character.gd`: add `var attribute_log: Array = []` and
 
@@ -782,7 +782,7 @@ var world_log: Array = []
 
 `SAVE_VERSION := 3`; in `to_dict` add `"world": _encode_values(world.duplicate())` and `"world_log": _encode_values(world_log.duplicate(true))`; in `from_dict` add `s.world = _decode_values(d.get("world", {}))` and `s.world_log = _decode_values(d.get("world_log", []))`.
 
-- [ ] **Step 5: WorldLedger**
+- [x] **Step 5: WorldLedger**
 
 `scripts/engine/world_ledger.gd`:
 
@@ -1023,7 +1023,7 @@ static func _fmt(v: float) -> String:
 
 Run the import pass (new `class_name`), then `-gselect=test_world_ledger` and `-gselect=test_game_state`. Expected: pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 ./run_tests.sh
@@ -1043,7 +1043,7 @@ git commit -m "feat(engine): the world ledger — schema-clamped, reasoned write
 **Interfaces:**
 - Produces: `WorldLedger.seed_metrics(data, state) -> void`; `EventEffects` ops `world:<path>:<delta>:<reason>`, `attribute:<who>:<name>:<delta>:<reason>`, and optional trailing reasons on `gold:<amount>[:<reason>]` and `metric:<name>:<delta>[:<reason>]`.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 Replace `test_new_campaign_reads_balance` in `tests/engine/test_game_state.gd`:
 
@@ -1093,9 +1093,9 @@ func test_gold_and_metric_ops_take_an_optional_reason() -> void:
 	assert_eq(String(results[1]["reason"]), "a gift")
 ```
 
-- [ ] **Step 2: Run to verify they fail** (`-gselect=test_game_state`, `-gselect=test_event_effects`).
+- [x] **Step 2: Run to verify they fail** (`-gselect=test_game_state`, `-gselect=test_event_effects`).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `WorldLedger`:
 
@@ -1137,7 +1137,7 @@ static func seed_metrics(data: DataRepository, state: GameState) -> void:
 
 Grep the tests for other literal `500` treasury assumptions (`grep -rn "500" tests`) and switch any to `data.bal(...)`/state-derived values.
 
-- [ ] **Step 4: Run, then commit**
+- [x] **Step 4: Run, then commit**
 
 ```bash
 ./run_tests.sh
@@ -1158,7 +1158,7 @@ git commit -m "feat(engine): seed the player's realm from the pack; ledger ops f
 **Interfaces:**
 - Produces: `DataRepository.metric_polarity: Dictionary` (metric → int), `DataRepository.order_costs: Dictionary` (action_code → row `{action_code, cost, always, notes}`); `OrderCosts.snapshot_opinions(state) -> Dictionary`, `OrderCosts.has_cost(data, state, effects: Array, drift: Array, opinions_before: Dictionary) -> bool`, `OrderCosts.charge(data, state, action_code: String, target: String) -> Array` (EventEffects-shaped results with `reason`), `OrderCosts.ensure(data, state, effects: Array, drift: Array, opinions_before: Dictionary, action_code: String, target: String) -> Array` (the charged effects, already appended to `effects`), `OrderCosts.gold_of(data, action_code) -> float`.
 
-- [ ] **Step 1: Data**
+- [x] **Step 1: Data**
 
 `data/metric_polarity.csv`:
 
@@ -1218,7 +1218,7 @@ Load in `DataRepository._load` (fields `var metric_polarity: Dictionary = {}`, `
 		return false
 ```
 
-- [ ] **Step 2: Failing tests**
+- [x] **Step 2: Failing tests**
 
 `tests/engine/test_order_costs.gd`:
 
@@ -1327,9 +1327,9 @@ func test_affordability_counts_the_cost_rows_gold() -> void:
 	assert_string_contains(sys.validate(ActionRequest.make("RECRUIT_COURTIER", {}, "char_bard_corvin"), state), "afford")
 ```
 
-- [ ] **Step 3: Run to verify failure** (`-gselect=test_order_costs`).
+- [x] **Step 3: Run to verify failure** (`-gselect=test_order_costs`).
 
-- [ ] **Step 4: OrderCosts**
+- [x] **Step 4: OrderCosts**
 
 `scripts/engine/order_costs.gd`:
 
@@ -1427,7 +1427,7 @@ static func ensure(data: DataRepository, state: GameState, effects: Array, drift
 
 Run the import pass, then `-gselect=test_order_costs`, `-gselect=test_action_system`, `-gselect=test_concerns` (suggestions must still validate as affordable). Fix `test_action_system.gd` expectations only where an outcome now carries the extra cost entry.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 ./run_tests.sh
@@ -1447,7 +1447,7 @@ git commit -m "feat(engine): every order carries a cost, explicit or hidden"
 **Interfaces:**
 - Produces: config key `model_order` (`LLM_MODEL_ORDER`; `LLM_MODEL` sets it too; default `gpt-5.6-luna`); `PromptBuilder.order_prompts(player_text: String, speaker_id: String, report: TickReport, state: GameState, data: DataRepository) -> Dictionary {system, user}`; `ResponseValidator.parse_order(json_text: String, data: DataRepository, state: GameState) -> Dictionary {ok, error, narrative: String, actions: Array[ActionRequest], world: Array[{path, delta, reason, clamped}], world_rejected: Array[{path, error}], court_reaction}`; `Voicer.order(text, speaker_id, report, state, data, cb)`.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 `tests/llm/test_llm_config.gd` — add `LLM_MODEL_ORDER=test-order-model` to `tests/fixtures/test_env` and:
 
@@ -1572,9 +1572,9 @@ func test_order_returns_both_parts_through_one_call() -> void:
 	assert_eq(got["actions"][0].action_code, "TAX_RATE_ADJUST")
 ```
 
-- [ ] **Step 2: Run to verify failure** (`-gselect=test_llm_config`, `test_prompt_builder`, `test_response_validator`, `test_voicer_fallback`).
+- [x] **Step 2: Run to verify failure** (`-gselect=test_llm_config`, `test_prompt_builder`, `test_response_validator`, `test_voicer_fallback`).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `openai_client.gd`: default `"model_order": "gpt-5.6-luna"` in `load_config`'s cfg; in `_overlay_env` `"LLM_MODEL"` also sets `cfg["model_order"]`, add `"LLM_MODEL_ORDER": cfg["model_order"] = value`. Document the key in the `_overlay_env` comment and in `.env.example` (`#LLM_MODEL_ORDER=` under the per-tier overrides, "the two-part order call; defaults to the parse tier").
 
@@ -1720,7 +1720,7 @@ func order(text: String, speaker_id: String, report: TickReport, state: GameStat
 	client.request_completion(p["system"], p["user"], String(_config["model_order"]), true)
 ```
 
-- [ ] **Step 4: Run, then commit**
+- [x] **Step 4: Run, then commit**
 
 ```bash
 ./run_tests.sh
@@ -1741,7 +1741,7 @@ git commit -m "feat(llm): one order call returns a narrative and the impacts it 
 **Interfaces:**
 - Produces: `OrderPipeline.apply_order(data, state, engine: TickEngine, actions: Array, world: Array, court_reaction: Dictionary, source: String) -> Dictionary {executed, rejected, world_effects, world_rejected, cost_effects, ledger: Array[String]}`; `OrderPipeline.describe_effects(effects: Array, state) -> String`; `Game.submit_free_text` result gains `ledger: Array[String]`, `world_effects`, `world_rejected`, and `reply` is present whenever the narrative is non-empty.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 `tests/engine/test_order_pipeline.gd`:
 
@@ -1841,9 +1841,9 @@ func test_free_text_prints_the_narrative_and_the_ledger() -> void:
 
 Update the existing conversational test in `test_court_screen.gd` that expected a second (converse) call: with the single call, the canned reply's `narrative` is the spoken line; assert on it and on `fake.calls == 1`. Do the same in `tests/ui/test_conversation_scene.gd` for its free-text reply test (canned `{"narrative": "...", "impacts": {...}}`, expect `_say` to print the narrative under the speaker and the ledger lines under "Ledger").
 
-- [ ] **Step 2: Run to verify failure** (`-gselect=test_order_pipeline`, `-gselect=test_court_screen`, `-gselect=test_conversation_scene`).
+- [x] **Step 2: Run to verify failure** (`-gselect=test_order_pipeline`, `-gselect=test_court_screen`, `-gselect=test_conversation_scene`).
 
-- [ ] **Step 3: OrderPipeline**
+- [x] **Step 3: OrderPipeline**
 
 `scripts/engine/order_pipeline.gd`:
 
@@ -1941,7 +1941,7 @@ static func _name(state: GameState, id: String) -> String:
 	return (state.characters[id] as Character).display_name if state.characters.has(id) else id
 ```
 
-- [ ] **Step 4: Game**
+- [x] **Step 4: Game**
 
 Replace the body of `submit_free_text` after the `AgentMemory` loop and `_ensure_llm()`:
 
@@ -2001,17 +2001,17 @@ func _order_speaker(text: String, hint: String, audience: Array) -> String:
 
 Delete `_converse_speaker` and `_consult_target` (the only callers were in the old body). Keep `_remember_reply`.
 
-- [ ] **Step 5: Screens and tabs**
+- [x] **Step 5: Screens and tabs**
 
 `court_screen.gd` `_on_free_text_submitted` callback: after the `rejected` loop, keep the `reply` print, then `for line in res.get("ledger", []): _log("Ledger", String(line))`. Drop the `for rej in res["rejected"]` loop (the ledger names them). `conversation_scene.gd` `_on_free_text` callback: after the reply print, `for line in res.get("ledger", []): _say("Ledger", String(line))`; keep the `elif spoken == "": _say("Herald", "So noted.")` fallback only when the ledger is also empty.
 
 `info_screen.gd` `_rows_for`: in `"REALM"` append `["Urban population", str(int(WorldLedger.value_of(Game.data, Game.state, "economy.kingdoms.player_realm.urban_population")))]` and the rural line when the value is not null; in `"MILITARY"` append one row per unit in `Game.data.world_table("military", "unit_types")` reading `military.kingdoms.player_realm.<unit_code>` when not null.
 
-- [ ] **Step 6: Docs**
+- [x] **Step 6: Docs**
 
 `CLAUDE.md` invariants: amend 1 to end "…Never let the model invent actions. The model may also propose **world deltas**, but only on paths listed in `data/world_schema.csv`, each clamped to that path's `llm_cap` and carrying a reason (owner ruling 2026-09-09); the engine still picks the speaker and applies everything." Amend 2's last sentence to "LLM output enters the engine only as validated action codes, clamped enums (e.g. `tone` deltas capped at ±3), and schema-listed world deltas clamped to their caps." Add to the data list: `world_schema.csv`, `metric_polarity.csv`, `order_costs.csv`. Add a bullet under Architecture invariants: "**Every order carries a cost.** `OrderCosts` guarantees an explicit (gold, grain, population) or hidden (opinion, relationship, attribute) cost per executed order from `data/order_costs.csv`; `COUNCIL_CONSULT` and `EVENT_CHOICE` are the listed exemptions." `PRD.md` BG-4: "…parsed by LLM into `{narrative, impacts: {actions, world, court_reaction}}` against a strict schema; the engine validates every action and clamps every world delta to `world_schema.csv`". §8 table: the parse row becomes "Order (narrative + impacts)" on the order tier, replacing the parse and converse rows.
 
-- [ ] **Step 7: Run, then commit**
+- [x] **Step 7: Run, then commit**
 
 ```bash
 ./run_tests.sh
@@ -2030,7 +2030,7 @@ git commit -m "feat(order): narrative and ledger together — orders apply throu
 **Interfaces:**
 - Produces: `MapOwnership.seams_of(data, state, kingdom_code) -> Array` of two-point `PackedVector2Array`; `WorldMapView.show_provinces: bool`, `toggle_provinces() -> void`, `province_chip() -> Button` (test seam), `visible_seam_count() -> int` (test seam).
 
-- [ ] **Step 1: Balance values**
+- [x] **Step 1: Balance values**
 
 ```csv
 map_province_min_scale,0.6,world map: screen px per native map px at/above which the province view draws seams
@@ -2039,7 +2039,7 @@ map_province_line_width,1.0,world map: width of province seams in screen px
 map_province_dash_px,4.0,world map: dash length of province seams in screen px
 ```
 
-- [ ] **Step 2: Failing tests**
+- [x] **Step 2: Failing tests**
 
 `tests/engine/test_map_ownership.gd`:
 
@@ -2098,9 +2098,9 @@ func test_province_seams_draw_only_when_zoomed_in_enough() -> void:
 	assert_eq(v.visible_seam_count(), 0, "off means none")
 ```
 
-- [ ] **Step 3: Run to verify failure** (`-gselect=test_map_ownership`, `-gselect=test_world_map_view`).
+- [x] **Step 3: Run to verify failure** (`-gselect=test_map_ownership`, `-gselect=test_world_map_view`).
 
-- [ ] **Step 4: MapOwnership**
+- [x] **Step 4: MapOwnership**
 
 Refactor `_merge_loops` so the edge count is reusable:
 
@@ -2149,7 +2149,7 @@ static func _count_edges(loops: Array) -> Dictionary:
 
 `_merge_loops` starts with `var counted := _count_edges(loops)` and reads `counted["count"]`, `counted["order"]`, `counted["point"]` in place of its own three locals. `invalidate()` also clears `_seam_cache`.
 
-- [ ] **Step 5: WorldMapView**
+- [x] **Step 5: WorldMapView**
 
 Add after the constants:
 
@@ -2220,7 +2220,7 @@ func _draw_province_seams() -> void:
 
 Call `_draw_province_seams()` in `_draw` after `_draw_territory_tint()`. In `_gui_input`, beside the T key: `if ev is InputEventKey and (ev as InputEventKey).pressed and (ev as InputEventKey).keycode == DEV_PROVINCE_KEY: toggle_provinces(); return`. The chip must not steal the map's mouse: `_province_chip.mouse_filter = Control.MOUSE_FILTER_STOP` is the default and correct (clicks on it go to it; the map underneath ignores them).
 
-- [ ] **Step 6: Run, then commit**
+- [x] **Step 6: Run, then commit**
 
 ```bash
 ./run_tests.sh
