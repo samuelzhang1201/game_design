@@ -28,7 +28,7 @@ func test_tax_adjust_moves_rate_with_reason() -> void:
 	assert_eq(s.metrics["tax_rate"], 7.0)
 	var found := false
 	for e in out["effects"]:
-		if e["metric"] == "tax_rate":
+		if String(e.get("metric", "")) == "tax_rate":
 			found = true
 			assert_string_contains(e["reason"], "tax")
 	assert_true(found)

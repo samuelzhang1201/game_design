@@ -17,6 +17,11 @@ var signatures: Array[Dictionary] = []
 ## data/world_schema.csv: every field the world ledger can address, its type,
 ## range, polarity, and the cap the model may move it by (WorldLedger).
 var world_schema: Array[Dictionary] = []
+## data/metric_polarity.csv: metric -> which direction is good for the crown
+## (1, -1, or 0 for neutral rates). OrderCosts reads it to tell a cost from a gain.
+var metric_polarity: Dictionary = {}
+## data/order_costs.csv: action_code -> {cost (EventEffects ops), always, notes}.
+var order_costs: Dictionary = {}
 var events: Array[Dictionary] = []
 var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
@@ -226,6 +231,12 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/world_schema.csv",
 			["path", "type", "good_direction", "llm_cap"],
 			func(r): world_schema.append(r)):
+		return false
+	if not _load_if_present(dir + "/metric_polarity.csv", ["metric", "good_direction"],
+			func(r): metric_polarity[r["metric"]] = int(float(r["good_direction"]))):
+		return false
+	if not _load_if_present(dir + "/order_costs.csv", ["action_code", "cost", "always"],
+			func(r): order_costs[r["action_code"]] = r):
 		return false
 	# A campaign always has a world under it; which one is data, not code.
 	if not maps.is_empty() and not load_map(default_map_id()):

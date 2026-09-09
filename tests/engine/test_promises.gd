@@ -36,7 +36,7 @@ func test_kept_promise_outcome_carries_narratable_effect() -> void:
 	var outcome := engine.actions.execute(ActionRequest.make("LEVY_RAISE"), s)
 	var found := false
 	for e in outcome["effects"]:
-		if String(e["metric"]) == "promise" and int(e["delta"]) == 15 \
+		if String(e.get("metric", "")) == "promise" and int(e["delta"]) == 15 \
 				and "a promise kept:" in String(e["reason"]):
 			found = true
 	assert_true(found, "kept-promise outcome should carry a narratable 'promise' effect")

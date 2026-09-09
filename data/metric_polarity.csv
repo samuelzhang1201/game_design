@@ -1,0 +1,15 @@
+metric,good_direction,notes
+treasury,1,
+tax_rate,0,a rate is neither good nor bad in itself
+tariff_rate,0,
+tax_income,1,
+admin_capacity,1,
+legitimacy,1,
+unrest,-1,
+grain,1,
+army_quality,1,
+church_opinion,1,
+peasant_contentment,1,
+grain_capacity_bonus,1,
+road_income_bonus,1,
+grain_ration,0,

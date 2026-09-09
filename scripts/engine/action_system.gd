@@ -31,8 +31,11 @@ func validate(req: ActionRequest, state: GameState) -> String:
 	var row: Dictionary = data.actions[req.action_code]
 	if state.cooldowns.get(req.action_code, 0) > state.tick:
 		return "%s is on cooldown until tick %d" % [req.action_code, state.cooldowns[req.action_code]]
-	if state.metrics["treasury"] < gold_cost(row):
-		return "Cannot afford %s (needs %d gold)" % [req.action_code, int(gold_cost(row))]
+	# The cost row's gold counts too (RECRUIT_COURTIER's retainer, the dowry...),
+	# so an order never leaves the chest below zero.
+	var needs := gold_cost(row) + OrderCosts.gold_of(data, req.action_code)
+	if state.metrics["treasury"] < needs:
+		return "Cannot afford %s (needs %d gold)" % [req.action_code, int(needs)]
 	if row.get("target_type", "none") == "character" and not state.characters.has(req.target):
 		return "No such target character for " + req.action_code
 	match req.action_code:
@@ -62,6 +65,9 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	var err := validate(req, state)
 	assert(err == "", "execute called with invalid request: " + err)
 	var row: Dictionary = data.actions[req.action_code]
+	# Opinions before, so a direct loss (a punishment) counts as this order's
+	# cost without changing the effects shape (OrderCosts).
+	var before := OrderCosts.snapshot_opinions(state)
 	var effects: Array = []
 	var cost := gold_cost(row)
 	if cost > 0.0:
@@ -147,6 +153,12 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			# narration path picks it up for free.
 			effects.append({"metric": "promise", "delta": data.bal("promise_kept_opinion"),
 				"reason": "a promise kept: " + String(row["label"])})
+	# Every order carries a cost (spec 2026-09-09 §3): always-rows ride along
+	# every time, the fallback row only when nothing above cost anything.
+	if OrderCosts.always(data, req.action_code):
+		effects.append_array(OrderCosts.charge(data, state, req.action_code, req.target))
+	else:
+		OrderCosts.ensure(data, state, effects, drift, before, req.action_code, req.target)
 	state.event_state["last_action_tick"][req.action_code] = state.tick
 	var outcome := {"action_code": req.action_code, "ok": true, "effects": effects,
 		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate(),

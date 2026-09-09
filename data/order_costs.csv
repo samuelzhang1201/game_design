@@ -1,0 +1,23 @@
+action_code,cost,always,notes
+generic_order,gold:-5:the chancery's clerks and couriers,0,an order that executes no action and whose impacts carried no cost
+TAX_RATE_ADJUST,opinion:steward:-2:re-cutting the tax rolls,0,
+TARIFF_ADJUST,opinion:char_guildmaster_tessa:-2:the guilds re-price their wares,0,
+LEVY_RAISE,world:economy.kingdoms.player_realm.rural_population:-2000:levies drawn from the villages,1,explicit population cost beside the gold
+GRAIN_POLICY_SET,opinion:steward:-1:the granary clerks grumble at new orders,0,
+CHURCH_POLICY,opinion:chaplain:-1:the church dislikes being managed,0,
+JUSTICE_SEVERITY,opinion:chancellor:-1:the courts resent being retuned,0,
+BUILD_ECONOMIC,opinion:steward:-1:the treasury frets over the outlay,0,
+SPY_MISSION,attribute:you:prestige:-1:whispers about the crown's whisperers,0,
+COUNCIL_CONSULT,none,0,a question is not an order
+COUNCIL_DEBATE_RULE,attribute:you:influence:-1:a ruling spends the crown's authority,0,
+RECRUIT_COURTIER,gold:-40:a courtier's retainer,0,formula_recruit_cost is not a real formula yet
+CHARACTER_REWARD,attribute:you:wealth:-1:the privy purse thins,0,
+CHARACTER_PUNISH,opinion:target:-2:the punished nurse the grudge,0,
+CHARACTER_INVESTIGATE,gold:-15:the spymaster's informants are paid,0,formula_investigate is not a real formula yet
+CHARACTER_CONFIDE,attribute:you:prestige:-1:a king who confides shows his need,0,
+FACTION_NEGOTIATE,attribute:you:influence:-2:bargaining with subjects spends authority,0,
+FACTION_SPLIT,gold:-30:silver for the waverers,0,
+COURT_MARRIAGE,gold:-25:the dowry,0,
+GUARD_ADJUST,gold:-10:the guard's wages,0,
+SEAT_UNLOCK,gold:-80:a new seat's furnishings and stipend,0,formula_seat_unlock is not a real formula yet
+EVENT_CHOICE,none,0,event choices carry their own authored effects
