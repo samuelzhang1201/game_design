@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://cuyt4thwbk1xv"
+
+[deps]
+
+files=["res://data/resource_icons.label.translation", "res://data/resource_icons.icon.translation", "res://data/resource_icons.tooltip.translation"]
+
+source_file="res://data/resource_icons.csv"
+dest_files=["res://data/resource_icons.label.translation", "res://data/resource_icons.icon.translation", "res://data/resource_icons.tooltip.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
