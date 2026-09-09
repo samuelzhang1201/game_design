@@ -14,6 +14,9 @@ var regions: Dictionary = {}
 var locations: Dictionary = {}
 var templates: Array[Dictionary] = []
 var signatures: Array[Dictionary] = []
+## data/world_schema.csv: every field the world ledger can address, its type,
+## range, polarity, and the cap the model may move it by (WorldLedger).
+var world_schema: Array[Dictionary] = []
 var events: Array[Dictionary] = []
 var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
@@ -219,6 +222,10 @@ func _load(dir: String) -> bool:
 			["event_id", "choice_id", "label", "centralism", "militarism", "orthodoxy",
 			"tax_incidence", "expansionism", "effects", "requires"],
 			func(r): event_choices.append(r)):
+		return false
+	if not _load_if_present(dir + "/world_schema.csv",
+			["path", "type", "good_direction", "llm_cap"],
+			func(r): world_schema.append(r)):
 		return false
 	# A campaign always has a world under it; which one is data, not code.
 	if not maps.is_empty() and not load_map(default_map_id()):

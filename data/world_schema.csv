@@ -1,0 +1,42 @@
+path,type,min,max,enum_values,good_direction,llm_cap,alias_to,alias_scale_key,label,notes
+metrics.treasury,float,-100000,100000,,1,60,,,Treasury,gold in the crown's chest
+metrics.grain,float,0,100000,,1,30,,,Grain,stores in the royal granaries
+metrics.unrest,float,0,100,,-1,5,,,Unrest,
+metrics.legitimacy,float,0,100,,1,3,,,Legitimacy,
+metrics.army_quality,float,0,100,,1,3,,,Army quality,
+metrics.church_opinion,float,0,100,,1,3,,,Church opinion,
+metrics.peasant_contentment,float,0,100,,1,5,,,Peasant contentment,
+metrics.tax_rate,float,1,10,,0,0,,,Tax rate,engine-only: TAX_RATE_ADJUST moves it
+metrics.tariff_rate,float,0,10,,0,0,,,Tariff rate,engine-only: TARIFF_ADJUST moves it
+metrics.tax_income,float,-100000,100000,,1,0,,,Tax income,recomputed every tick
+metrics.admin_capacity,float,0,1000,,1,0,,,Admin capacity,recomputed every tick
+metrics.grain_capacity_bonus,float,0,100000,,1,0,,,Granary capacity,
+metrics.road_income_bonus,float,0,100000,,1,0,,,Road income,
+metrics.grain_ration,float,0,1,,0,0,,,Grain rationing,
+opinion.*,int,-100,100,,1,3,,,Opinion of the ruler,the same cap as tone
+attribute.*.health,int,0,100,,1,2,,,Health,
+attribute.*.wealth,int,0,100,,1,2,,,Wealth,
+attribute.*.prestige,int,0,100,,1,2,,,Prestige,
+attribute.*.influence,int,0,100,,1,2,,,Influence,
+economy.kingdoms.player_realm.treasury,float,-100000,100000,,1,60,metrics.treasury,,Treasury,the player's row IS the metric (one truth)
+economy.kingdoms.player_realm.poll_tax,float,0,1,,0,0,metrics.tax_rate,tax_rate_per_poll_tax,Poll tax,derived from the tax rate
+economy.kingdoms.player_realm.sales_tax,float,0,1,,0,0,metrics.tariff_rate,tariff_rate_per_sales_tax,Sales tax,derived from the tariff rate
+economy.kingdoms.*.treasury,float,-100000,1000000,,1,0,,,Treasury,foreign treasuries are engine-only
+economy.kingdoms.*.poll_tax,float,0,1,,0,0,,,Poll tax,
+economy.kingdoms.*.sales_tax,float,0,1,,0,0,,,Sales tax,
+economy.kingdoms.*.urban_population,int,0,100000000,,1,2000,,,Urban population,
+economy.kingdoms.*.rural_population,int,0,100000000,,1,5000,,,Rural population,
+economy.provinces.*.urban_population,int,0,100000000,,1,1000,,,Urban population,
+economy.provinces.*.rural_population,int,0,100000000,,1,2000,,,Rural population,
+economy.burgs.*.treasury,float,0,1000000,,1,20,,,Town treasury,
+economy.burgs.*.product,float,0,1000000,,1,0,,,Town product,
+political.provinces.*.kingdom_code,enum,,,,0,0,,,Owner,engine-only: MapOwnership.set_owner moves territory
+political.diplomacy.*.stance,enum,,,Ally|Friendly|Neutral|Suspicion|Rival|Enemy|Vassal|Suzerain|Unknown,0,0,,,Stance,engine-only for now
+military.kingdoms.*.infantry,int,0,10000000,,1,500,,,Infantry,
+military.kingdoms.*.archers,int,0,10000000,,1,500,,,Archers,
+military.kingdoms.*.cavalry,int,0,10000000,,1,300,,,Cavalry,
+military.kingdoms.*.artillery,int,0,10000000,,1,10,,,Artillery,
+military.kingdoms.*.fleet,int,0,10000000,,1,2,,,Fleet,
+military.kingdoms.*.alert,float,0,10,,0,0,,,Alert,engine-only
+society.religions.*.urban_population,int,0,100000000,,1,0,,,Urban faithful,
+society.religions.*.rural_population,int,0,100000000,,1,0,,,Rural faithful,

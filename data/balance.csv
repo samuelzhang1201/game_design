@@ -87,3 +87,8 @@ map_label_min_px,8.0,world map: smallest kingdom label in screen px (below this 
 map_label_max_px,30.0,world map: largest kingdom label in screen px
 map_label_tracking,0.35,world map: extra letter spacing on kingdom labels as a fraction of font size
 map_label_alpha,0.5,world map: kingdom label opacity — faint enough to read as part of the map
+pack_treasury_scale,1.0,gold per unit of the export's state treasury when seeding the player's realm (owner ruling 2026-09-09: one truth)
+tax_rate_per_poll_tax,36,tax_rate (1-10) = round(export pollTax x this); also the alias scale for the player's poll_tax row
+tariff_rate_per_sales_tax,60,tariff_rate (0-10) = round(export salesTax x this); also the alias scale for the player's sales_tax row
+order_prompt_max_burgs,12,largest towns of the player's realm listed in the order prompt
+order_narrative_max_chars,600,longest narrative the validator keeps from an order reply

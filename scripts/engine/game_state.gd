@@ -179,8 +179,15 @@ var province_owner: Dictionary = {}
 ## One entry per transfer: {tick, province, from, to, reason}. Same rule as
 ## opinion deltas — a border that moved must be able to say why.
 var territory_log: Array = []
+## The world ledger's overrides: resolved path -> value, holding ONLY fields
+## that have moved (WorldLedger, spec 2026-09-09 §2). An absent path still
+## reads the pack's starting value. Read and write it through WorldLedger,
+## never directly.
+var world: Dictionary = {}
+## One entry per ledger write: {tick, path, delta, reason, source}.
+var world_log: Array = []
 
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
 
 func to_dict() -> Dictionary:
 	var chars := {}
@@ -205,6 +212,8 @@ func to_dict() -> Dictionary:
 		"pending_event": _encode_values(pending_event.duplicate(true)),
 		"province_owner": province_owner.duplicate(),
 		"territory_log": _encode_values(territory_log.duplicate(true)),
+		"world": _encode_values(world.duplicate()),
+		"world_log": _encode_values(world_log.duplicate(true)),
 	}
 
 static func from_dict(d: Dictionary) -> GameState:
@@ -245,5 +254,8 @@ static func from_dict(d: Dictionary) -> GameState:
 	# override dict is exactly "everything still belongs to the pack".
 	s.province_owner = d.get("province_owner", {}).duplicate()
 	s.territory_log = _decode_values(d.get("territory_log", []))
+	# Saves from before the ledger carry neither key: nothing has moved.
+	s.world = _decode_values(d.get("world", {}))
+	s.world_log = _decode_values(d.get("world_log", []))
 	MapOwnership.invalidate()
 	return s
