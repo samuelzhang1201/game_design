@@ -47,10 +47,10 @@ extends SceneTree
 ## scale, so the dimension check below passes and nothing looks wrong until
 ## the computed borders miss the coastline by tens of pixels. Reset the zoom
 ## before exporting the PNG. If you cannot re-export, measure the transform
-## and put it in data/maps.csv as render_scale / render_offset_x / _y; the
-## easiest measurement is to match the JSON's lakes (pack.features of type
-## "lake") against the lakes visible in the render and least-squares fit
-## render = native * scale + offset.
+## with tools/calibrate_render.py (--write puts render_scale /
+## render_offset_x / _y into data/maps.csv); it registers the pack's
+## coastline against the render's water, and test_map_data guards the
+## result. Never eyeball it: an eyeballed fit was 8 native px off.
 ##
 ## Polygons are filled with an even-odd scanline rasterizer. Deterministic:
 ## same inputs => byte-identical outputs. Hand-edits to the generated CSVs

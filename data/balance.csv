@@ -96,3 +96,6 @@ map_province_min_scale,0.6,world map: screen px per native map px at/above which
 map_province_line_alpha,0.55,world map: opacity of province seams in the province view
 map_province_line_width,1.0,world map: width of province seams in screen px
 map_province_dash_px,4.0,world map: dash length of province seams in screen px
+map_calibration_window_px,6,render calibration test: a coast point must find both land and water within this many render px
+map_calibration_water_brightness,164,render calibration test: render pixels whose brightest channel is below this (0-255) read as water
+map_calibration_min_hit_share,0.9,render calibration test: share of sampled coast points that must sit on the render's coastline
