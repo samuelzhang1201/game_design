@@ -40,3 +40,31 @@ static func distance_to_polyline(p: Vector2, pts: PackedVector2Array) -> float:
 		var q := Geometry2D.get_closest_point_to_segment(p, pts[i - 1], pts[i])
 		best = minf(best, p.distance_to(q))
 	return best
+
+## A closed polygon as the uniform cubic B-spline through its vertices —
+## the curve Azgaar draws its coasts and borders with (d3 curveBasisClosed),
+## so an outline drawn this way sits on the render's line instead of cutting
+## its corners. `steps` samples per segment; the result has steps * n points
+## and stays inside the polygon's convex hull.
+static func smooth_closed(pts: PackedVector2Array, steps: int) -> PackedVector2Array:
+	var n := pts.size()
+	if n < 3 or steps < 1:
+		return pts
+	var out := PackedVector2Array()
+	out.resize(n * steps)
+	var k := 0
+	for i in n:
+		var p0 := pts[(i - 1 + n) % n]
+		var p1 := pts[i]
+		var p2 := pts[(i + 1) % n]
+		var p3 := pts[(i + 2) % n]
+		for j in steps:
+			var t := float(j) / float(steps)
+			var t2 := t * t
+			var t3 := t2 * t
+			out[k] = (p0 * (1.0 - 3.0 * t + 3.0 * t2 - t3)
+				+ p1 * (4.0 - 6.0 * t2 + 3.0 * t3)
+				+ p2 * (1.0 + 3.0 * t + 3.0 * t2 - 3.0 * t3)
+				+ p3 * t3) / 6.0
+			k += 1
+	return out

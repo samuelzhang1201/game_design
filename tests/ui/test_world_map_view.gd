@@ -383,21 +383,31 @@ func test_province_view_toggles_by_key_and_announces_it() -> void:
 	assert_false(v.show_provinces, "P turns it off again")
 	assert_eq(seen, [true, false], "each flip is announced once")
 
-## Province names show in the province view once the zoom makes them legible.
-func test_province_names_show_only_in_the_view_and_zoomed_in() -> void:
+## Kingdom outlines are drawn as the B-spline Azgaar drew the render with:
+## one smooth ring per outline loop, steps points per vertex, following
+## ownership.
+func test_border_rings_are_smoothed_outlines_that_follow_conquest() -> void:
+	Game.start_campaign(42)
 	var v := _view()
 	await wait_frames(2)
-	var realm: Dictionary = _realm()
-	var centre := Vector2(float(realm["center_x"]), float(realm["center_y"]))
-	v.show_provinces = true
-	v._zoom_at(v.size / 2.0, 0.00001)
-	assert_eq(v.visible_province_label_count(), 0, "zoomed out, names hide")
-	v._zoom_at(v.size / 2.0, 1000.0)
-	v._offset += v.size / 2.0 - v.map_to_screen(centre)
-	v._clamp_offset()
-	assert_gt(v.visible_province_label_count(), 0, "zoomed in on the realm, names show")
-	v.show_provinces = false
-	assert_eq(v.visible_province_label_count(), 0, "off means none")
+	var mine := Game.data.resolve_realm("player_realm")
+	var loops := MapOwnership.outline_of(Game.data, Game.state, mine)
+	var rings := v.border_rings(mine)
+	assert_eq(rings.size(), loops.size(), "one ring per loop")
+	var steps := int(Game.data.bal("map_border_smoothing_steps"))
+	for i in loops.size():
+		assert_eq((rings[i] as PackedVector2Array).size(), (loops[i] as PackedVector2Array).size() * steps)
+	var before: int = (rings[0] as PackedVector2Array).size()
+	var lost: String = MapOwnership.provinces_of(Game.data, Game.state, mine)[0]
+	MapOwnership.set_owner(Game.data, Game.state, lost, Game.data.resolve_realm("raider_realm"), "raid")
+	var after := v.border_rings(mine)
+	var total_before := 0
+	for l in loops:
+		total_before += (l as PackedVector2Array).size() * steps
+	var total_after := 0
+	for r in after:
+		total_after += (r as PackedVector2Array).size()
+	assert_ne(total_after, total_before, "the rings were rebuilt for the new border")
 
 ## In the province view a click names the province under it for the left
 ## column, and bare land opens no floating card; water clears the selection.

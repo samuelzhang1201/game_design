@@ -37,3 +37,20 @@ func test_distance_to_polyline_is_to_the_nearest_segment() -> void:
 
 func test_distance_to_nothing_is_infinite() -> void:
 	assert_eq(MapGeometry.distance_to_polyline(Vector2.ZERO, PackedVector2Array()), INF)
+
+## The uniform cubic B-spline through a closed polygon (Azgaar's
+## curveBasisClosed): steps points per vertex, each segment's first point the
+## (1, 4, 1)/6 blend of its neighbours, and the curve never leaves the hull.
+func test_smooth_closed_is_the_uniform_cubic_b_spline() -> void:
+	var square := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10)])
+	var curve := MapGeometry.smooth_closed(square, 4)
+	assert_eq(curve.size(), 16)
+	# At t = 0 on segment i the point is (P[i-1] + 4 P[i] + P[i+1]) / 6.
+	assert_almost_eq(curve[0].x, (0.0 + 4.0 * 0.0 + 10.0) / 6.0, 0.0001)
+	assert_almost_eq(curve[0].y, (10.0 + 4.0 * 0.0 + 0.0) / 6.0, 0.0001)
+	assert_almost_eq(curve[4].x, (0.0 + 4.0 * 10.0 + 10.0) / 6.0, 0.0001)
+	for p in curve:
+		assert_true(p.x >= 0.0 and p.x <= 10.0 and p.y >= 0.0 and p.y <= 10.0,
+			"%s stays inside the square" % p)
+	assert_eq(MapGeometry.smooth_closed(PackedVector2Array([Vector2.ZERO, Vector2.ONE]), 4).size(), 2,
+		"too few points: returned as is")

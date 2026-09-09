@@ -55,8 +55,8 @@ const SCENE_PATH := "res://scenes/world_map.tscn"
 ## Province view (user request 2026-09-09): every kingdom's internal seams as
 ## light dashed lines, computed from the provinces it holds NOW
 ## (MapOwnership.seams_of), so they follow conquest where the render's
-## printed dots cannot; province names at their centres; and a click names
-## the province under it (province_selected) for the screen's left column.
+## printed dots cannot (no names on the map, user ruling 2026-09-09); a click
+## names the province under it (province_selected) for the screen's left column.
 ## Toggled by the bottom bar's PROVINCES tab or the P key.
 const PROVINCE_KEY := KEY_P
 var show_provinces: bool = false:
@@ -210,7 +210,6 @@ func _draw() -> void:
 	_draw_state_borders()
 	_draw_hovered_outline()
 	_draw_kingdom_labels()
-	_draw_province_labels()
 	_draw_pins()
 	_draw_hover()
 	_draw_object_highlight(_selected_obj)
@@ -308,25 +307,49 @@ func _draw_political_wash() -> void:
 			colors.fill(fill["color"])
 			RenderingServer.canvas_item_add_triangle_array(rid, indices, pts, colors)
 
-## Every kingdom's live border, solid, in the palette's border colour.
+## A kingdom's live outline as smooth closed curves in native coordinates:
+## the same uniform cubic B-spline Azgaar drew the render's coasts and
+## borders with (user request 2026-09-09: the straight-segment outline cut
+## the shore's corners). Cached against the ownership version.
+var _ring_cache: Dictionary = {}
+var _ring_version := -1
+
+func border_rings(kingdom_code: String) -> Array:
+	var version := 0 if Game.state == null else Game.state.province_owner.size()
+	if version != _ring_version:
+		_ring_cache.clear()
+		_ring_version = version
+	if _ring_cache.has(kingdom_code):
+		return _ring_cache[kingdom_code]
+	var steps := int(Game.data.bal("map_border_smoothing_steps"))
+	var rings: Array = []
+	for loop: PackedVector2Array in MapOwnership.outline_of(Game.data, Game.state, kingdom_code):
+		rings.append(MapGeometry.smooth_closed(loop, steps))
+	_ring_cache[kingdom_code] = rings
+	return rings
+
+## Every kingdom's live border, thin and light, in the palette's border colour.
 func _draw_state_borders() -> void:
 	var color := MapPalette.named(Game.data, "state_border")
 	color.a = Game.data.bal("map_state_border_alpha")
 	var width := Game.data.bal("map_state_border_width")
 	var frame := Rect2(Vector2.ZERO, size).grow(width * 2.0)
 	for code: String in Game.data.kingdoms:
-		for loop: PackedVector2Array in MapOwnership.outline_of(Game.data, Game.state, code):
-			var pts := _closed_screen_ring(loop)
+		for ring: PackedVector2Array in border_rings(code):
+			var pts := _closed_screen_ring(ring)
 			if _ring_touches(pts, frame):
 				draw_polyline(pts, color, width, true)
 
 ## The hovered kingdom's outline in the palette's hover colour, over the
 ## border it already has.
 func _draw_hovered_outline() -> void:
+	var row: Dictionary = _by_state_id.get(_hover_sid, {})
+	if row.is_empty():
+		return
 	var color := MapPalette.named(Game.data, "hover_border")
 	var width := Game.data.bal("map_hover_border_width")
-	for loop: PackedVector2Array in hover_loops():
-		draw_polyline(_closed_screen_ring(loop), color, width, true)
+	for ring: PackedVector2Array in border_rings(String(row["kingdom_code"])):
+		draw_polyline(_closed_screen_ring(ring), color, width, true)
 
 func _closed_screen_ring(loop: PackedVector2Array) -> PackedVector2Array:
 	var pts := PackedVector2Array()
@@ -656,44 +679,6 @@ func _draw_selected_province() -> void:
 			draw_colored_polygon(PackedVector2Array([screen[tris[t]],
 				screen[tris[t + 1]], screen[tris[t + 2]]]), tint)
 
-## Province names in the province view: smaller than kingdom names, hidden
-## below a minimum size, placed at each province's centre.
-func _visible_province_labels() -> Array:
-	if not show_provinces or _map_texture == null:
-		return []
-	var px := Game.data.bal("map_province_label_scale_px") * view_scale()
-	if px < Game.data.bal("map_province_label_min_px"):
-		return []
-	px = minf(px, Game.data.bal("map_province_label_max_px"))
-	var frame := Rect2(Vector2.ZERO, size).grow(px * 4.0)
-	var out: Array = []
-	for code: String in Game.data.provinces:
-		var row: Dictionary = Game.data.provinces[code]
-		var at := map_to_screen(Vector2(float(row.get("center_x", 0.0)), float(row.get("center_y", 0.0))))
-		if frame.has_point(at):
-			out.append({"code": code, "text": String(row["label"]), "at": at, "px": px})
-	return out
-
-## Test seam: how many province names are on screen right now.
-func visible_province_label_count() -> int:
-	return _visible_province_labels().size()
-
-func _draw_province_labels() -> void:
-	var labels := _visible_province_labels()
-	if labels.is_empty():
-		return
-	var font := UiPalette.display_font()
-	if font == null:
-		return
-	var color := UiPalette.TEXT_SOFT
-	color.a = Game.data.bal("map_province_label_alpha")
-	for l in labels:
-		var size := int(l["px"])
-		var width := font.get_string_size(String(l["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
-		var at: Vector2 = l["at"]
-		font.draw_string(get_canvas_item(), at - Vector2(width * 0.5, -size * 0.35),
-			String(l["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, color)
-
 ## The seam segments the province view would draw right now, in screen
 ## coordinates: nothing when the view is off or the zoom is below the
 ## balance floor, and only segments touching the frame.
@@ -715,6 +700,7 @@ func _visible_seams() -> Array:
 func visible_seam_count() -> int:
 	return _visible_seams().size()
 
+## Province seams as thin, dense dashes in the palette's seam colour.
 func _draw_province_seams() -> void:
 	var seams := _visible_seams()
 	if seams.is_empty():
