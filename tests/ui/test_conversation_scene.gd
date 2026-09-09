@@ -526,3 +526,22 @@ func test_free_text_prints_narrative_then_ledger_on_the_stage() -> void:
 	assert_lt(Game.state.metrics["treasury"], gold, "the mission was paid for")
 	assert_string_contains(c.dialogue_text(), "Coin for the whisperers, then.")
 	assert_string_contains(c.dialogue_text(), "treasury -")
+
+## The left column shows the realm dashboard by default and the dossier only
+## while a person speaks or is singled out (user ruling 2026-09-09).
+func test_left_column_is_the_dashboard_unless_a_person_speaks() -> void:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	var c := _scene_with([
+		{"kind": "summary", "portrait_id": "round_table", "speaker": "The Council"},
+		{"kind": "minister", "portrait_id": "char_marshal", "speaker": "Ser Brandt",
+			"text": "hm", "suggestions": []},
+	], report)
+	await wait_frames(2)
+	assert_true(c.dashboard().visible, "the council beat shows the realm")
+	assert_false(c.dossier_up())
+	c.continue_button().pressed.emit()
+	await wait_frames(2)
+	assert_true(c.dossier_up(), "a minister speaking brings the dossier")
+	assert_false(c.dashboard().visible)
+	assert_true(c.tab_page(0).visible, "on its BIO tab")

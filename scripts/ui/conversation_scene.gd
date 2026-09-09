@@ -28,6 +28,9 @@ var _world_map: WorldMapView
 var _country_panel: CountryPanel
 ## The right detail column: the clicked map element (MapDetailPanel).
 var _detail: MapDetailPanel
+## The left column's default content, and the dossier nodes it alternates with.
+var _dashboard: RealmDashboard
+var _dossier_up := false
 var _continue_btn: Button
 var _panel: PanelContainer
 var _scroll: ScrollContainer
@@ -70,6 +73,11 @@ func _ready() -> void:
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the minister returns when the cursor leaves.
 	_country_panel = CountryPanel.attach(%MinisterPanel.get_node("MVBox"), _world_map)
+	# The left column shows the realm at a glance by default (user ruling
+	# 2026-09-09); the dossier takes the column while a person is speaking or
+	# singled out — see _show_speaker.
+	_dashboard = RealmDashboard.attach(%MinisterPanel.get_node("MVBox"))
+	_show_dossier(false)
 	%MinisterPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	UiPalette.style_header(%MinisterName, 9)
@@ -201,9 +209,12 @@ func _build_dossier_tabs() -> void:
 		_tab_buttons.append(btn)
 	_select_tab(0)
 
+var _tab_index := 0
+
 func _select_tab(index: int) -> void:
+	_tab_index = index
 	for i in _tab_pages.size():
-		_tab_pages[i].visible = i == index
+		_tab_pages[i].visible = _dossier_up and i == index
 		_tab_buttons[i].add_theme_color_override("font_color",
 			UiPalette.GOLD if i == index else UiPalette.TEXT_MUTED)
 
@@ -639,6 +650,7 @@ func _show_speaker(b: Dictionary) -> void:
 	var c: Character = null
 	if Game.state != null and Game.state.characters.has(portrait_id):
 		c = Game.state.characters[portrait_id]
+	_show_dossier(c != null)
 	%MinisterName.text = c.display_name if c != null else String(b.get("speaker", ""))
 	%MinisterTitle.visible = c != null
 	%OpinionRow.visible = c != null
@@ -808,6 +820,24 @@ func country_panel() -> CountryPanel:
 
 func detail_panel() -> MapDetailPanel:
 	return _detail
+
+func dashboard() -> RealmDashboard:
+	return _dashboard
+
+## Whether the dossier (a person) or the dashboard (the realm) holds the
+## left column right now.
+func dossier_up() -> bool:
+	return _dossier_up
+
+## The dossier for a person, the dashboard for everything else (the round
+## table, the herald, narration). The country card, when up, keeps covering
+## whichever one is shown. The dossier's tab selection survives being hidden.
+func _show_dossier(up: bool) -> void:
+	_dossier_up = up
+	_dashboard.visible = not up
+	%TabsRow.visible = up
+	for i in _tab_pages.size():
+		_tab_pages[i].visible = up and i == _tab_index
 
 ## Test seam and GameRoot's handle on this screen's map.
 func world_map() -> WorldMapView:

@@ -31,6 +31,8 @@ var _world_map: WorldMapView
 var _country_panel: CountryPanel
 ## The right detail column: the clicked map element (MapDetailPanel).
 var _detail: MapDetailPanel
+## The left column's default content: the realm dashboard.
+var _dashboard: RealmDashboard
 
 ## Static structure and layout live in scenes/court.tscn (editable in the
 ## editor); _ready fetches nodes, paints them from UiPalette, and wires
@@ -60,6 +62,8 @@ func _ready() -> void:
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the column's own content returns when it leaves.
 	_country_panel = CountryPanel.attach(%LogPanel.get_node("LVBox"), _world_map)
+	# The left column's own content: the realm at a glance (user ruling 2026-09-09).
+	_dashboard = RealmDashboard.attach(%LogPanel.get_node("LVBox"))
 	%LogPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	%StripPanel.add_theme_stylebox_override("panel",
@@ -87,6 +91,9 @@ func world_map() -> WorldMapView:
 
 func detail_panel() -> MapDetailPanel:
 	return _detail
+
+func dashboard() -> RealmDashboard:
+	return _dashboard
 
 ## Post-conversation court entry (R2): numbers + orders only, speech already
 ## happened on the conversation stage. Called by GameRoot after the

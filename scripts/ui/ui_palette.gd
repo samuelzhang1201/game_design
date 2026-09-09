@@ -181,6 +181,17 @@ static func _load_font(path: String) -> Font:
 	_art_cache[path] = font
 	return font
 
+## A chart colour by key (data/chart_palette.csv); cat_N falls back to the
+## last categorical step rather than a made-up hue.
+static func chart_color(key: String) -> Color:
+	var hex := String(Game.data.chart_palette.get(key, ""))
+	if hex == "" and key.begins_with("cat_"):
+		var n := 1
+		while Game.data.chart_palette.has("cat_%d" % (n + 1)):
+			n += 1
+		hex = String(Game.data.chart_palette.get("cat_%d" % n, ""))
+	return Color(hex) if hex != "" else TEXT_MUTED
+
 ## Header treatment: Cinzel in gold (or the given color) at a small size -
 ## used for speaker names, dates, section headers, the menu title.
 static func style_header(label: Label, size: int, color: Color = GOLD) -> void:
@@ -207,6 +218,11 @@ static func build_theme() -> Theme:
 	theme.set_color("font_color", "LineEdit", TEXT_SOFT)
 	theme.set_color("font_placeholder_color", "LineEdit", TEXT_DIM)
 	theme.set_constant("line_spacing", "Label", LINE_SPACING)
+	# Floating tooltips (user request 2026-09-09: icons explain themselves on
+	# hover) in the same chip chrome as everything else.
+	theme.set_stylebox("panel", "TooltipPanel", chip_style(PANEL_BG, GOLD))
+	theme.set_color("font_color", "TooltipLabel", TEXT_SOFT)
+	theme.set_font_size("font_size", "TooltipLabel", 8)
 	var body := body_font()
 	if body != null:
 		theme.default_font = body

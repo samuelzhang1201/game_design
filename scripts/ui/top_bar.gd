@@ -13,6 +13,7 @@ const ORDER := ["treasury", "grain", "unrest", "legitimacy", "army_quality", "ch
 
 var _value_labels: Dictionary = {}
 var _delta_labels: Dictionary = {}
+var _icons: Dictionary = {}
 
 func _ready() -> void:
 	%Bar.add_theme_stylebox_override("panel",
@@ -26,11 +27,12 @@ func _ready() -> void:
 	for m in ORDER:
 		var cell := HBoxContainer.new()
 		cell.add_theme_constant_override("separation", 3)
-		var name_l := Label.new()
-		name_l.text = String(METRIC_NAMES[m]).to_upper()
-		name_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-		name_l.add_theme_font_size_override("font_size", 7)
-		cell.add_child(name_l)
+		# A glyph with a floating tooltip instead of a word (user request
+		# 2026-09-09); the value keeps the same test seam as before.
+		var icon := ResourceIcon.create(m)
+		icon.name = "Icon_" + m
+		cell.add_child(icon)
+		_icons[m] = icon
 		var value_l := Label.new()
 		value_l.add_theme_font_size_override("font_size", 9)
 		cell.add_child(value_l)
@@ -83,3 +85,7 @@ func metric_text(metric: String) -> String:
 
 func delta_text(metric: String) -> String:
 	return String(_delta_labels[metric].text) if _delta_labels.has(metric) else ""
+
+## Test seam: the icon standing in for a metric's name.
+func icon_for(metric: String) -> ResourceIcon:
+	return _icons.get(metric)

@@ -1,0 +1,15 @@
+key,label,icon,tooltip
+treasury,Gold,coin,Gold in the crown's chest. Taxes and tariffs fill it each fortnight; the court's upkeep and your orders empty it.
+grain,Grain,grain,Grain in the royal granaries. The harvest fills them each autumn; the realm eats from them the rest of the year.
+population,People,people,Everyone in the realm's towns and countryside. Levies are drawn from them.
+army,Host,swords,The realm's soldiers under arms, by regiment.
+army_quality,Army,swords,How well drilled the levies are. Drills lapse without fresh levies.
+unrest,Unrest,flame,How close the villages are to rioting. Tax pressure and famine raise it.
+legitimacy,Legitimacy,crown,How firmly the court believes the crown is yours by right.
+peasant_contentment,Contentment,sun,The mood of the common folk.
+church_opinion,Church,cross,How the pulpits regard the crown.
+infantry,Infantry,shield,Foot soldiers: the bulk of any host.
+archers,Archers,bow,Bowmen who thin a charge before it lands.
+cavalry,Cavalry,horseshoe,Mounted troops: costly, and decisive on open ground.
+artillery,Artillery,cannon,Siege engines and guns; slow, but walls fear them.
+fleet,Fleet,sail,Warships crewed from the coast towns.

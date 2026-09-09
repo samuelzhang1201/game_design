@@ -26,6 +26,12 @@ var order_costs: Dictionary = {}
 ## unbound kingdoms, and the named line colours (MapPalette). The render is
 ## terrain only; the game paints every political colour from this table.
 var palette: Dictionary = {}
+## data/chart_palette.csv: key -> "#rrggbb" for the dashboard's charts
+## (cat_1.. in fixed order, sequential, track); validated CVD-safe.
+var chart_palette: Dictionary = {}
+## data/resource_icons.csv: key -> {label, icon, tooltip} for every resource
+## and unit the UI shows as a glyph with a floating tooltip.
+var resource_icons: Dictionary = {}
 var events: Array[Dictionary] = []
 var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
@@ -248,6 +254,12 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/political_palette.csv", ["key", "color"],
 			func(r): palette[r["key"]] = r["color"]):
+		return false
+	if not _load_if_present(dir + "/chart_palette.csv", ["key", "color"],
+			func(r): chart_palette[r["key"]] = r["color"]):
+		return false
+	if not _load_if_present(dir + "/resource_icons.csv", ["key", "label", "icon", "tooltip"],
+			func(r): resource_icons[r["key"]] = r):
 		return false
 	# A campaign always has a world under it; which one is data, not code.
 	if not maps.is_empty() and not load_map(default_map_id()):

@@ -42,3 +42,15 @@ func test_event_chip_tracks_pending_event() -> void:
 	await wait_frames(1)
 	assert_false(t.find_child("EventChip", true, false).visible,
 		"resolving the event (state_changed) hides the chip again")
+
+## Icons instead of words (user request 2026-09-09), each with a floating
+## tooltip; the values keep their seams.
+func test_metrics_show_as_icons_with_tooltips() -> void:
+	Game.start_campaign(42)
+	var t := _bar()
+	await wait_frames(1)
+	for m in TopBar.ORDER:
+		var icon := t.icon_for(m)
+		assert_not_null(icon, "%s has an icon" % m)
+		assert_ne(icon.tooltip_text, "", "%s explains itself on hover" % m)
+	assert_eq(t.icon_for("treasury").glyph(), "coin")

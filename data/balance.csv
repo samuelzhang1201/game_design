@@ -106,3 +106,4 @@ map_state_border_width,1.0,world map: width of every kingdom's border in screen 
 map_state_border_alpha,0.6,world map: opacity of kingdom borders
 map_hover_border_width,1.8,world map: width of the hovered kingdom's outline in screen px
 map_border_smoothing_steps,4,world map: B-spline samples per segment when drawing kingdom outlines (Azgaar draws its lines the same way)
+dashboard_max_provinces,4,realm dashboard: how many of the realm's largest provinces the bar chart lists
