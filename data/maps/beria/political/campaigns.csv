@@ -1,0 +1,23 @@
+kingdom_code,label,start_year,end_year,attacker_code,defender_code
+irongate,Chawian War,1380,1388,irongate,kelvarn
+irongate,Blandian Crusade,1465,1468,irongate,brackmoor
+irongate,Kenbeck Conquest,1472,1477,irongate,
+irongate,Warlish Conflict,1550,1551,irongate,corwyn
+irongate,Stotresia-Warlandian War,1556,0,irongate,corwyn
+corwyn,Chawian Conquest,1170,1176,corwyn,kelvarn
+corwyn,Chich Expedition,1442,1451,corwyn,
+corwyn,Stotresian Intervention,1550,1555,corwyn,irongate
+corwyn,Stotresia-Warlandian War,1556,0,irongate,corwyn
+farhold,Blandian Crusade,1265,1273,farhold,brackmoor
+farhold,Chawian Crusade,1496,1499,farhold,kelvarn
+farhold,Cudian Campaign,1509,1515,farhold,yorwald
+kelvarn,Warlish Campaign,1157,1158,kelvarn,corwyn
+kelvarn,Guildan War,1339,1340,kelvarn,irongate
+kelvarn,Dunsbury Rebellion,1396,1407,kelvarn,
+kelvarn,Blandian War,1407,1412,kelvarn,brackmoor
+kelvarn,Kirian War,1542,1543,kelvarn,farhold
+brackmoor,Preshaman Crusade,1367,1368,brackmoor,irongate
+brackmoor,Kirian Campaign,1419,1420,brackmoor,farhold
+brackmoor,Bingtonese Campaign,1550,1552,brackmoor,kelvarn
+yorwald,Dunstery Invasion,1266,1267,yorwald,farhold
+valmoor,Bronean Intervention,1483,1485,valmoor,

@@ -1,0 +1,5 @@
+culture_code,culture_id,label,type,expansionism,color
+wildlands,0,Wildlands,Generic,0,
+merton,1,Merton,River,1.8,#fb8072
+marsh,2,Marsh,Generic,1.5,#dababf
+manch,3,Manch,Generic,1.5,#80b1d3

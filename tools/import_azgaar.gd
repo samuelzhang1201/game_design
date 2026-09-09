@@ -5,21 +5,35 @@ extends SceneTree
 ## (or in any pack folder under it) and writes (all committed to git; re-run
 ## after every re-export):
 ##
-##   data/maps/<map-id>/kingdoms.csv   one row per state (0 "Neutrals" excluded)
-##   data/maps/<map-id>/provinces.csv  one row per province (+ province_id, center)
-##   data/maps/<map-id>/burgs.csv      one row per burg (+ type, features)
-##   data/maps/<map-id>/borders.csv    one row per closed border loop per kingdom:
+## Tables are grouped by domain (spec 2026-09-09 §1.1); <pack> = data/maps/<map-id>:
+##   <pack>/map_info.csv               width, height, distance unit/scale, population rate
+##   <pack>/political/kingdoms.csv     one row per state (0 "Neutrals" excluded):
+##       identity, capital, neighbors, area, population, form, culture, majority religion
+##   <pack>/political/provinces.csv    one row per province (+ province_id, center, form)
+##   <pack>/political/burgs.csv        one row per burg (+ type, features, group, culture)
+##   <pack>/political/borders.csv      one row per closed border loop per kingdom:
 ##       kingdom_code,loop,points — points as "x y|x y|..." in native map
 ##       coordinates, so WorldMapView can outline the hovered kingdom
-##   data/maps/<map-id>/province_borders.csv  the same, per province — the
+##   <pack>/political/province_borders.csv  the same, per province — the
 ##       unit ownership moves in, so a kingdom's live border is the merge of
 ##       the loops of the provinces it holds
-##   data/maps/<map-id>/routes.csv     roads/trails/sea routes as polylines,
+##   <pack>/political/diplomacy.csv    every ordered pair of kingdoms and its stance
+##   <pack>/political/campaigns.csv    the wars Azgaar generated as history
+##   <pack>/economy/kingdoms.csv       treasury, sales/poll tax, urban/rural population
+##   <pack>/economy/provinces.csv      urban/rural population
+##   <pack>/economy/burgs.csv          treasury, product, market; production.csv what
+##       each burg makes; goods.csv, markets.csv, market_goods.csv the trade tables
+##   <pack>/military/kingdoms.csv      unit totals, regiment count, strength, alert
+##   <pack>/military/regiments.csv     one row per regiment with its unit counts
+##   <pack>/military/unit_types.csv    the unit definitions (rates, crew, power)
+##   <pack>/society/cultures.csv, religions.csv, zones.csv (hazards -> provinces)
+##   <pack>/geography/routes.csv       roads/trails/sea routes as polylines,
 ##       endpoints snapped to a burg within SNAP_RADIUS px
-##   data/maps/<map-id>/rivers.csv     named rivers as polylines through their cells
-##   data/maps/<map-id>/markers.csv    points of interest with their legend notes
-##   data/maps/<map-id>/biomes.csv     biome id -> label, color, habitability
-##   data/maps/<map-id>/map_info.csv   width, height, distance unit/scale, population rate
+##   <pack>/geography/rivers.csv       named rivers as polylines through their cells
+##   <pack>/geography/markers.csv      points of interest with their legend notes
+##   <pack>/geography/biomes.csv       biome id -> label, color, habitability
+## Each domain folder carries a .gdignore so Godot does not import the tables
+## as translations; FileAccess reads them regardless.
 ##   assets/maps/<map-id>/world_map.png byte copy under a stable name
 ##   assets/maps/<map-id>/world_state_index.png     hit-test bitmap: each cell's
 ##       polygon filled with R = state_id & 0xFF, G = state_id >> 8, B = 0;
@@ -60,6 +74,38 @@ const GENERATED_PNGS: Array[String] = ["world_map.png", "world_state_index.png",
 const SNAP_RADIUS := 3.0
 ## Title words for routes Azgaar left nameless (most trails and sea routes).
 const ROUTE_WORDS := {"roads": "Road", "trails": "Trail", "searoutes": "Sea route"}
+## Pack tables are grouped by domain (spec 2026-09-09 §1.1). Each folder carries
+## a .gdignore so Godot does not import game tables as translations; FileAccess
+## reads them regardless. An export preset must include data/** explicitly.
+const DOMAINS: Array[String] = ["geography", "political", "economy", "military", "society"]
+
+
+func _ensure_domains(out_data: String) -> void:
+	for d in DOMAINS:
+		var dir := out_data + "/" + d
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
+		if not FileAccess.file_exists(dir + "/.gdignore"):
+			_write_text(dir + "/.gdignore", "")
+
+
+## Majority religion of a state's cells by rural population; ties go to the
+## lower religion id so output is stable.
+func _majority_religion(cells: Array, sid: int) -> int:
+	var pop: Dictionary = {}
+	for c: Dictionary in cells:
+		if int(c.get("state", 0)) != sid:
+			continue
+		var rid := int(c.get("religion", 0))
+		pop[rid] = float(pop.get(rid, 0.0)) + float(c.get("pop", 0))
+	var best := 0
+	var best_pop := -1.0
+	var ids := pop.keys()
+	ids.sort()
+	for rid in ids:
+		if float(pop[rid]) > best_pop:
+			best_pop = float(pop[rid])
+			best = int(rid)
+	return best
 
 var _slug_regex := RegEx.create_from_string("[^a-z0-9]+")
 var _ws_regex := RegEx.create_from_string("\\s+")
@@ -386,6 +432,7 @@ func _run() -> int:
 	var out_art := MAPS + "/" + map_id
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_data))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_art))
+	_ensure_domains(out_data)
 	# Raw exports may sit directly in assets/maps/ or inside the pack's own
 	# folder next to the generated art; scan both so a re-import needs no
 	# arguments either way. Generated PNGs are excluded by name.
@@ -501,9 +548,32 @@ func _run() -> int:
 	for b in burgs:  # urban population on top of the cells' rural points
 		prov_pop[burg_province[int(b["i"])]] += float(b.get("population", 0))
 
-	# --- kingdoms.csv -----------------------------------------------------
+	# --- codes for cultures, religions, goods -----------------------------
+	var culture_code: Dictionary = {}
+	var culture_slugs: Dictionary = {}
+	for cu in _active(pack.get("cultures", [])):
+		culture_code[int(cu["i"])] = _take_slug(culture_slugs, String(cu["name"]))
+	var religion_code: Dictionary = {}
+	var religion_slugs: Dictionary = {}
+	for rl in _active(pack.get("religions", [])):
+		religion_code[int(rl["i"])] = _take_slug(religion_slugs, String(rl["name"]))
+	var good_code: Dictionary = {}
+	var good_slugs: Dictionary = {}
+	for g in _active(pack.get("goods", [])):
+		good_code[int(g["i"])] = _take_slug(good_slugs, String(g["name"]))
+	var options: Dictionary = (world["settings"] as Dictionary).get("options", {})
+	var unit_defs: Array = options.get("military", [])
+	var unit_names: Array[String] = []
+	var unit_power: Dictionary = {}
+	for u in unit_defs:
+		if u is Dictionary:
+			unit_names.append(String(u["name"]))
+			unit_power[String(u["name"])] = float(u.get("power", 1))
+
+	# --- political/kingdoms.csv -------------------------------------------
 	var out := _csv_line(["kingdom_code", "state_id", "label", "capital_burg",
-		"neighbor_codes", "color", "area", "population", "center_x", "center_y"])
+		"neighbor_codes", "color", "area", "population", "center_x", "center_y",
+		"form", "form_name", "full_name", "culture_code", "religion_code"])
 	for s in states:
 		var center: Array = (cells[int(s["center"])] as Dictionary)["p"]
 		var neighbor_codes: Array[String] = []
@@ -515,13 +585,18 @@ func _run() -> int:
 			"|".join(neighbor_codes), String(s.get("color", "")),
 			str(int(s.get("area", 0))),
 			str(int(round((float(s.get("rural", 0)) + float(s.get("urban", 0))) * rate))),
-			_num2(float(center[0])), _num2(float(center[1]))])
-	if not _write_text(out_data + "/kingdoms.csv", out):
+			_num2(float(center[0])), _num2(float(center[1])),
+			String(s.get("form", "")), String(s.get("formName", "")),
+			String(s.get("fullName", "")),
+			String(culture_code.get(int(s.get("culture", 0)), "")),
+			String(religion_code.get(_majority_religion(cells, int(s["i"])), ""))])
+	if not _write_text(out_data + "/political/kingdoms.csv", out):
 		return 1
 
-	# --- provinces.csv ----------------------------------------------------
+	# --- political/provinces.csv ------------------------------------------
 	out = _csv_line(["province_code", "label", "kingdom_code", "capital_burg",
-		"area", "population", "province_id", "center_x", "center_y"])
+		"area", "population", "province_id", "center_x", "center_y",
+		"form_name", "full_name", "color"])
 	for p in provinces:
 		var pcenter: Array = (cells[int(p["center"])] as Dictionary)["p"]
 		out += _csv_line([String(prov_code[int(p["i"])]), String(p["name"]),
@@ -529,13 +604,16 @@ func _run() -> int:
 			String(burg_code.get(int(p.get("burg", 0)), "")),
 			str(int(prov_area[int(p["i"])])),
 			str(int(round(float(prov_pop[int(p["i"])]) * rate))),
-			str(int(p["i"])), _num2(float(pcenter[0])), _num2(float(pcenter[1]))])
-	if not _write_text(out_data + "/provinces.csv", out):
+			str(int(p["i"])), _num2(float(pcenter[0])), _num2(float(pcenter[1])),
+			String(p.get("formName", "")), String(p.get("fullName", "")),
+			String(p.get("color", ""))])
+	if not _write_text(out_data + "/political/provinces.csv", out):
 		return 1
 
-	# --- burgs.csv --------------------------------------------------------
+	# --- political/burgs.csv ----------------------------------------------
 	out = _csv_line(["burg_code", "label", "province_code", "kingdom_code",
-		"population", "is_capital", "is_port", "x", "y", "type", "features"])
+		"population", "is_capital", "is_port", "x", "y", "type", "features",
+		"group", "culture_code"])
 	for b in burgs:
 		var feats: Array[String] = []
 		for flag in ["walls", "citadel", "temple", "plaza", "shanty"]:
@@ -547,11 +625,13 @@ func _run() -> int:
 			str(int(round(float(b.get("population", 0)) * rate))),
 			"1" if b.get("capital") else "0", "1" if b.get("port") else "0",
 			_num2(float(b["x"])), _num2(float(b["y"])),
-			String(b.get("type", "Generic")), "|".join(feats)])
-	if not _write_text(out_data + "/burgs.csv", out):
+			String(b.get("type", "Generic")), "|".join(feats),
+			String(b.get("group", "")),
+			String(culture_code.get(int(b.get("culture", 0)), ""))])
+	if not _write_text(out_data + "/political/burgs.csv", out):
 		return 1
 
-	# --- borders.csv ------------------------------------------------------
+	# --- political/borders.csv --------------------------------------------
 	out = _csv_line(["kingdom_code", "loop", "points"])
 	var loop_total := 0
 	for s in states:
@@ -562,10 +642,10 @@ func _run() -> int:
 				pts.append("%s %s" % [_num2(p.x), _num2(p.y)])
 			out += _csv_line([String(state_code[int(s["i"])]), str(li), "|".join(pts)])
 		loop_total += loops.size()
-	if not _write_text(out_data + "/borders.csv", out):
+	if not _write_text(out_data + "/political/borders.csv", out):
 		return 1
 
-	# --- province_borders.csv --------------------------------------------
+	# --- political/province_borders.csv -----------------------------------
 	# The kingdom outlines above are the pack's *starting* borders. Ownership
 	# moves at province granularity, so the game rebuilds a kingdom's outline
 	# from the loops of the provinces it currently holds.
@@ -579,10 +659,194 @@ func _run() -> int:
 				pts.append("%s %s" % [_num2(pt.x), _num2(pt.y)])
 			out += _csv_line([String(prov_code[int(p["i"])]), str(li), "|".join(pts)])
 		prov_loop_total += loops.size()
-	if not _write_text(out_data + "/province_borders.csv", out):
+	if not _write_text(out_data + "/political/province_borders.csv", out):
 		return 1
 
-	# --- routes.csv -------------------------------------------------------
+	# --- political/diplomacy.csv, political/campaigns.csv -----------------
+	# Azgaar's diplomacy row is indexed by state id; index 0 (neutrals) and the
+	# state's own slot hold "x", and state 0's row is a list of war notes.
+	out = _csv_line(["kingdom_code", "other_code", "stance"])
+	for s in states:
+		var dip: Array = s.get("diplomacy", [])
+		for j in dip.size():
+			if j == int(s["i"]) or not state_code.has(j) or not (dip[j] is String):
+				continue
+			out += _csv_line([String(state_code[int(s["i"])]), String(state_code[j]),
+				String(dip[j])])
+	if not _write_text(out_data + "/political/diplomacy.csv", out):
+		return 1
+	out = _csv_line(["kingdom_code", "label", "start_year", "end_year", "attacker_code",
+		"defender_code"])
+	for s in states:
+		for cp in (s.get("campaigns", []) as Array):
+			if not cp is Dictionary:
+				continue
+			out += _csv_line([String(state_code[int(s["i"])]), String(cp.get("name", "")),
+				str(int(cp.get("start", 0))), str(int(cp.get("end", 0))),
+				String(state_code.get(int(cp.get("attacker", 0)), "")),
+				String(state_code.get(int(cp.get("defender", 0)), ""))])
+	if not _write_text(out_data + "/political/campaigns.csv", out):
+		return 1
+
+	# --- economy/* --------------------------------------------------------
+	out = _csv_line(["kingdom_code", "treasury", "sales_tax", "poll_tax",
+		"urban_population", "rural_population"])
+	for s in states:
+		out += _csv_line([String(state_code[int(s["i"])]), _num2(float(s.get("treasury", 0))),
+			_num2(float(s.get("salesTax", 0))), _num2(float(s.get("pollTax", 0))),
+			str(int(round(float(s.get("urban", 0)) * rate))),
+			str(int(round(float(s.get("rural", 0)) * rate)))])
+	if not _write_text(out_data + "/economy/kingdoms.csv", out):
+		return 1
+	out = _csv_line(["province_code", "urban_population", "rural_population"])
+	for p in provinces:
+		out += _csv_line([String(prov_code[int(p["i"])]),
+			str(int(round(float(p.get("urban", 0)) * rate))),
+			str(int(round(float(p.get("rural", 0)) * rate)))])
+	if not _write_text(out_data + "/economy/provinces.csv", out):
+		return 1
+	out = _csv_line(["burg_code", "treasury", "product", "market_id"])
+	var production := _csv_line(["burg_code", "good_code", "units"])
+	for b in burgs:
+		out += _csv_line([String(burg_code[int(b["i"])]), _num2(float(b.get("treasury", 0))),
+			_num2(float(b.get("product", 0))), str(int(b.get("market", 0)))])
+		for pe in (b.get("production", []) as Array):
+			if pe is Dictionary and pe.has("goodId") and good_code.has(int(pe["goodId"])):
+				production += _csv_line([String(burg_code[int(b["i"])]),
+					String(good_code[int(pe["goodId"])]), _num2(float(pe.get("units", 0)))])
+	if not _write_text(out_data + "/economy/burgs.csv", out):
+		return 1
+	if not _write_text(out_data + "/economy/production.csv", production):
+		return 1
+	out = _csv_line(["good_code", "good_id", "label", "value", "tags", "unit"])
+	for g in _active(pack.get("goods", [])):
+		var tags: Array[String] = []
+		for t in (g.get("tags", []) as Array):
+			tags.append(String(t))
+		out += _csv_line([String(good_code[int(g["i"])]), str(int(g["i"])), String(g["name"]),
+			_num2(float(g.get("value", 0))), "|".join(tags), String(g.get("unit", ""))])
+	if not _write_text(out_data + "/economy/goods.csv", out):
+		return 1
+	out = _csv_line(["market_id", "center_burg"])
+	var market_goods := _csv_line(["market_id", "good_code", "stock", "price"])
+	for mk in _active(pack.get("markets", [])):
+		out += _csv_line([str(int(mk["i"])),
+			String(burg_code.get(int(mk.get("centerBurgId", 0)), ""))])
+		var goods: Dictionary = mk.get("goods", {})
+		var gids: Array = []
+		for k in goods:
+			gids.append(int(k))
+		gids.sort()
+		for gid in gids:
+			if not good_code.has(gid):
+				continue
+			var entry: Dictionary = goods[str(gid)]
+			market_goods += _csv_line([str(int(mk["i"])), String(good_code[gid]),
+				_num2(float(entry.get("stock", 0))), _num2(float(entry.get("price", 0)))])
+	if not _write_text(out_data + "/economy/markets.csv", out):
+		return 1
+	if not _write_text(out_data + "/economy/market_goods.csv", market_goods):
+		return 1
+
+	# --- military/* -------------------------------------------------------
+	out = _csv_line(["unit_code", "label", "type", "rural_rate", "urban_rate", "crew",
+		"power", "separate"])
+	for u in unit_defs:
+		if not u is Dictionary:
+			continue
+		out += _csv_line([String(u["name"]), String(u["name"]).capitalize(),
+			String(u.get("type", "")), _num2(float(u.get("rural", 0))),
+			_num2(float(u.get("urban", 0))), str(int(u.get("crew", 1))),
+			_num2(float(u.get("power", 1))), "1" if u.get("separate") else "0"])
+	if not _write_text(out_data + "/military/unit_types.csv", out):
+		return 1
+	var reg_header: Array[String] = ["regiment_code", "kingdom_code", "label", "x", "y"]
+	reg_header.append_array(unit_names)
+	reg_header.append("is_naval")
+	out = _csv_line(reg_header)
+	var king_header: Array[String] = ["kingdom_code"]
+	king_header.append_array(unit_names)
+	king_header.append_array(["regiments", "strength", "alert", "expansionism"])
+	var military := _csv_line(king_header)
+	var regiment_slugs: Dictionary = {}
+	for s in states:
+		var totals: Dictionary = {}
+		var regs: Array = s.get("military", [])
+		var strength := 0.0
+		var reg_count := 0
+		for rg in regs:
+			if not rg is Dictionary:
+				continue
+			reg_count += 1
+			var units: Dictionary = rg.get("u", {})
+			var fields: Array[String] = [
+				_take_slug(regiment_slugs, "%s %s" % [String(s["name"]), String(rg.get("name", ""))]),
+				String(state_code[int(s["i"])]), String(rg.get("name", "")),
+				_num2(float(rg.get("x", 0))), _num2(float(rg.get("y", 0)))]
+			for u in unit_names:
+				var n := int(units.get(u, 0))
+				fields.append(str(n))
+				totals[u] = int(totals.get(u, 0)) + n
+				strength += n * float(unit_power.get(u, 1.0))
+			fields.append("1" if int(rg.get("n", 0)) == 1 else "0")
+			out += _csv_line(fields)
+		var kfields: Array[String] = [String(state_code[int(s["i"])])]
+		for u in unit_names:
+			kfields.append(str(int(totals.get(u, 0))))
+		kfields.append_array([str(reg_count), _num2(strength), _num2(float(s.get("alert", 0))),
+			_num2(float(s.get("expansionism", 0)))])
+		military += _csv_line(kfields)
+	if not _write_text(out_data + "/military/regiments.csv", out):
+		return 1
+	if not _write_text(out_data + "/military/kingdoms.csv", military):
+		return 1
+
+	# --- society/* --------------------------------------------------------
+	out = _csv_line(["culture_code", "culture_id", "label", "type", "expansionism", "color"])
+	for cu in _active(pack.get("cultures", [])):
+		out += _csv_line([String(culture_code[int(cu["i"])]), str(int(cu["i"])),
+			String(cu["name"]), String(cu.get("type", "")),
+			_num2(float(cu.get("expansionism", 0))), String(cu.get("color", ""))])
+	if not _write_text(out_data + "/society/cultures.csv", out):
+		return 1
+	out = _csv_line(["religion_code", "religion_id", "label", "type", "form", "culture_code",
+		"deity", "urban_population", "rural_population", "area"])
+	for rl in _active(pack.get("religions", [])):
+		out += _csv_line([String(religion_code[int(rl["i"])]), str(int(rl["i"])),
+			String(rl["name"]), String(rl.get("type", "")), String(rl.get("form", "")),
+			String(culture_code.get(int(rl.get("culture", -1)), "")),
+			String(rl.get("deity", "")),
+			str(int(round(float(rl.get("urban", 0)) * rate))),
+			str(int(round(float(rl.get("rural", 0)) * rate))), str(int(rl.get("area", 0)))])
+	if not _write_text(out_data + "/society/religions.csv", out):
+		return 1
+	out = _csv_line(["zone_code", "label", "type", "cells", "center_x", "center_y",
+		"province_codes", "kingdom_codes"])
+	var zone_slugs: Dictionary = {}
+	for z in _active(pack.get("zones", [])):
+		var zcells: Array = z.get("cells", [])
+		var sx := 0.0
+		var sy := 0.0
+		var provs: Array[String] = []
+		var kings: Array[String] = []
+		for ci in zcells:
+			var c: Dictionary = cells[int(ci)]
+			sx += float((c["p"] as Array)[0])
+			sy += float((c["p"] as Array)[1])
+			var pc := String(prov_code.get(int(c.get("province", 0)), ""))
+			if pc != "" and not provs.has(pc):
+				provs.append(pc)
+			var kc := String(state_code.get(int(c.get("state", 0)), ""))
+			if kc != "" and not kings.has(kc):
+				kings.append(kc)
+		var n := maxi(zcells.size(), 1)
+		out += _csv_line([_take_slug(zone_slugs, String(z.get("name", ""))),
+			String(z.get("name", "")), String(z.get("type", "")), str(zcells.size()),
+			_num2(sx / n), _num2(sy / n), "|".join(provs), "|".join(kings)])
+	if not _write_text(out_data + "/society/zones.csv", out):
+		return 1
+
+	# --- geography/routes.csv ---------------------------------------------
 	out = _csv_line(["route_code", "label", "group", "from_burg", "to_burg", "length", "points"])
 	var route_slugs: Dictionary = {}
 	var burg_name: Dictionary = {}
@@ -618,10 +882,10 @@ func _run() -> int:
 		out += _csv_line([_take_slug(route_slugs, label), label, String(r.get("group", "")),
 			String(burg_code.get(from_id, "")), String(burg_code.get(to_id, "")),
 			String.num(length, 1), "|".join(pts)])
-	if not _write_text(out_data + "/routes.csv", out):
+	if not _write_text(out_data + "/geography/routes.csv", out):
 		return 1
 
-	# --- rivers.csv -------------------------------------------------------
+	# --- geography/rivers.csv ---------------------------------------------
 	out = _csv_line(["river_code", "label", "type", "length", "kingdom_codes", "points"])
 	var river_slugs: Dictionary = {}
 	var river_count := 0
@@ -651,10 +915,10 @@ func _run() -> int:
 		out += _csv_line([_take_slug(river_slugs, label), label, String(rv.get("type", "River")),
 			String.num(length, 1), "|".join(through), "|".join(pts)])
 		river_count += 1
-	if not _write_text(out_data + "/rivers.csv", out):
+	if not _write_text(out_data + "/geography/rivers.csv", out):
 		return 1
 
-	# --- markers.csv ------------------------------------------------------
+	# --- geography/markers.csv --------------------------------------------
 	var notes: Dictionary = {}
 	for n in (world.get("notes", []) as Array):
 		if n is Dictionary:
@@ -674,17 +938,17 @@ func _run() -> int:
 		out += _csv_line([_take_slug(marker_slugs, label), label, String(m.get("type", "")),
 			_num2(float(m["x"])), _num2(float(m["y"])),
 			_collapse_ws(String(note.get("legend", "")))])
-	if not _write_text(out_data + "/markers.csv", out):
+	if not _write_text(out_data + "/geography/markers.csv", out):
 		return 1
 	if unnoted > 0:
 		print("WARNING: %d markers have no note; their type stands in as the label" % unnoted)
 
-	# --- biomes.csv -------------------------------------------------------
+	# --- geography/biomes.csv ---------------------------------------------
 	out = _csv_line(["biome_id", "label", "color", "habitability"])
 	for bm in _active(pack.get("biomes", [])):
 		out += _csv_line([str(int(bm["i"])), String(bm["name"]), String(bm.get("color", "")),
 			str(int(bm.get("habitability", 0)))])
-	if not _write_text(out_data + "/biomes.csv", out):
+	if not _write_text(out_data + "/geography/biomes.csv", out):
 		return 1
 
 	# --- map_info.csv -----------------------------------------------------

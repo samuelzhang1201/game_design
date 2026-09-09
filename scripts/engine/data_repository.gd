@@ -70,6 +70,42 @@ var realm_bindings: Dictionary = {}
 ## default view and needs no correction — the normal case.
 var render_scale := 1.0
 var render_offset := Vector2.ZERO
+## Every pack table by domain and area: world_tables[domain][area][code] -> row
+## (spec 2026-09-09 §1). The named fields above (kingdoms, provinces, burgs,
+## routes, rivers, markers, biomes) are the SAME Dictionary objects, so the
+## old callers and the world ledger see one set of rows.
+var world_tables: Dictionary = {}
+
+## [domain, area, required columns, key columns, key separator]. A table absent
+## from a pack simply loads as {} (the ledger reads null for its paths).
+const WORLD_TABLE_SPECS := [
+	["political", "diplomacy", ["kingdom_code", "other_code", "stance"], ["kingdom_code", "other_code"], ">"],
+	["political", "campaigns", ["kingdom_code", "label"], ["kingdom_code", "label"], ":"],
+	["economy", "kingdoms", ["kingdom_code", "treasury", "sales_tax", "poll_tax"], ["kingdom_code"], ""],
+	["economy", "provinces", ["province_code"], ["province_code"], ""],
+	["economy", "burgs", ["burg_code"], ["burg_code"], ""],
+	["economy", "goods", ["good_code", "label"], ["good_code"], ""],
+	["economy", "markets", ["market_id", "center_burg"], ["market_id"], ""],
+	["economy", "market_goods", ["market_id", "good_code"], ["market_id", "good_code"], ":"],
+	["economy", "production", ["burg_code", "good_code"], ["burg_code", "good_code"], ":"],
+	["military", "kingdoms", ["kingdom_code"], ["kingdom_code"], ""],
+	["military", "regiments", ["regiment_code", "kingdom_code"], ["regiment_code"], ""],
+	["military", "unit_types", ["unit_code"], ["unit_code"], ""],
+	["society", "cultures", ["culture_code", "label"], ["culture_code"], ""],
+	["society", "religions", ["religion_code", "label"], ["religion_code"], ""],
+	["society", "zones", ["zone_code", "label", "type"], ["zone_code"], ""],
+]
+
+func world_table(domain: String, area: String) -> Dictionary:
+	return (world_tables.get(domain, {}) as Dictionary).get(area, {})
+
+func world_row(domain: String, area: String, code: String) -> Dictionary:
+	return world_table(domain, area).get(code, {})
+
+func _register_table(domain: String, area: String, table: Dictionary) -> void:
+	if not world_tables.has(domain):
+		world_tables[domain] = {}
+	world_tables[domain][area] = table
 
 ## Parses a CSV with a header row into an Array of row Dictionaries.
 ## Returns [] and sets last_error if any row is shorter than required_cols
@@ -219,43 +255,64 @@ func load_map(id: String) -> bool:
 	biomes.clear()
 	map_info.clear()
 	realm_bindings.clear()
-	if not _load_if_present(dir + "/kingdoms.csv",
+	world_tables.clear()
+	if not _load_if_present(dir + "/political/kingdoms.csv",
 			["kingdom_code", "state_id", "label", "capital_burg"],
 			func(r): kingdoms[r["kingdom_code"]] = r):
 		return false
-	if not _load_if_present(dir + "/provinces.csv",
+	if not _load_if_present(dir + "/political/provinces.csv",
 			["province_code", "label", "kingdom_code"],
 			func(r): _add_province(r)):
 		return false
-	if not _load_if_present(dir + "/burgs.csv",
+	if not _load_if_present(dir + "/political/burgs.csv",
 			["burg_code", "label", "province_code", "kingdom_code"],
 			func(r): burgs[r["burg_code"]] = r):
 		return false
-	if not _load_if_present(dir + "/borders.csv", ["kingdom_code", "loop", "points"],
+	if not _load_if_present(dir + "/political/borders.csv", ["kingdom_code", "loop", "points"],
 			func(r): _add_border_loop(r)):
 		return false
-	if not _load_if_present(dir + "/province_borders.csv",
+	if not _load_if_present(dir + "/political/province_borders.csv",
 			["province_code", "loop", "points"],
 			func(r): _add_province_border_loop(r)):
 		return false
-	if not _load_if_present(dir + "/routes.csv",
+	if not _load_if_present(dir + "/geography/routes.csv",
 			["route_code", "label", "group", "from_burg", "to_burg", "length", "points"],
 			func(r): routes[r["route_code"]] = _with_polyline(r)):
 		return false
-	if not _load_if_present(dir + "/rivers.csv",
+	if not _load_if_present(dir + "/geography/rivers.csv",
 			["river_code", "label", "type", "length", "kingdom_codes", "points"],
 			func(r): rivers[r["river_code"]] = _with_polyline(r)):
 		return false
-	if not _load_if_present(dir + "/markers.csv",
+	if not _load_if_present(dir + "/geography/markers.csv",
 			["marker_code", "label", "type", "x", "y", "legend"],
 			func(r): markers[r["marker_code"]] = r):
 		return false
-	if not _load_if_present(dir + "/biomes.csv", ["biome_id", "label"],
+	if not _load_if_present(dir + "/geography/biomes.csv", ["biome_id", "label"],
 			func(r): biomes[int(r["biome_id"])] = r):
 		return false
 	if not _load_if_present(dir + "/map_info.csv", ["key", "value"],
 			func(r): map_info[r["key"]] = r["value"]):
 		return false
+	# The named tables above and the domain store are one set of rows.
+	_register_table("political", "kingdoms", kingdoms)
+	_register_table("political", "provinces", provinces)
+	_register_table("political", "burgs", burgs)
+	_register_table("geography", "routes", routes)
+	_register_table("geography", "rivers", rivers)
+	_register_table("geography", "markers", markers)
+	_register_table("geography", "biomes", biomes)
+	for spec in WORLD_TABLE_SPECS:
+		var table: Dictionary = {}
+		var key_cols: Array = spec[3]
+		var sep := String(spec[4])
+		if not _load_if_present("%s/%s/%s.csv" % [dir, spec[0], spec[1]], spec[2],
+				func(r: Dictionary) -> void:
+					var parts: Array[String] = []
+					for k in key_cols:
+						parts.append(String(r[k]))
+					table[sep.join(parts)] = r):
+			return false
+		_register_table(String(spec[0]), String(spec[1]), table)
 	if not _load_if_present(dir + "/realm_bindings.csv", ["slot", "kingdom_code"],
 			func(r): realm_bindings[r["slot"]] = r["kingdom_code"]):
 		return false

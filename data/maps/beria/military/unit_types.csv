@@ -1,0 +1,6 @@
+unit_code,label,type,rural_rate,urban_rate,crew,power,separate
+infantry,Infantry,melee,0.25,0.2,1,1,0
+archers,Archers,ranged,0.12,0.2,1,1,0
+cavalry,Cavalry,mounted,0.12,0.03,2,2,0
+artillery,Artillery,machinery,0,0.03,8,12,0
+fleet,Fleet,naval,0,0.01,100,50,1

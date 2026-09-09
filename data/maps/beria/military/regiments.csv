@@ -1,0 +1,69 @@
+regiment_code,kingdom_code,label,x,y,infantry,archers,cavalry,artillery,fleet,is_naval
+irongate_1st_bomyardmin_regiment,irongate,1st (Bomyardmin) Regiment,998.77,326.99,3672,1480,1253,43,0,0
+irongate_2nd_winchton_regiment,irongate,2nd (Winchton) Regiment,718.92,346.5,2505,1856,1130,41,0,0
+irongate_3rd_stotreso_regiment,irongate,3rd (Stotreso) Regiment,967.83,351.84,2348,1239,898,61,0,0
+irongate_4th_berley_regiment,irongate,4th (Berley) Regiment,1082.4,298.48,1844,1313,384,25,0,0
+irongate_5th_stotreso_regiment,irongate,5th (Stotreso) Regiment,946.56,347.32,1392,626,1439,5,0,0
+irongate_6th_presteria_regiment,irongate,6th (Presteria) Regiment,881.82,265.05,1683,1497,212,15,0,0
+irongate_7th_presteria_regiment,irongate,7th (Presteria) Regiment,903.13,281.27,1553,873,789,28,0,0
+irongate_8th_barestia_regiment,irongate,8th (Barestia) Regiment,976.05,223.63,1608,1388,219,18,0,0
+irongate_9th_dunsburia_regiment,irongate,9th (Dunsburia) Regiment,575.7,317.7,1661,1048,415,30,0,0
+irongate_10th_berley_regiment,irongate,10th (Berley) Regiment,1067.94,274.68,1605,1197,289,22,0,0
+irongate_11th_thatckingia_regiment,irongate,11th (Thatckingia) Regiment,826.05,309.65,964,522,808,14,0,0
+irongate_12th_stothia_regiment,irongate,12th (Stothia) Regiment,666.01,408.86,741,357,627,16,0,0
+irongate_13th_calter_regiment,irongate,13th (Calter) Regiment,613.25,454.2,913,381,358,10,0,0
+irongate_14th_penknethia_regiment,irongate,14th (Penknethia) Regiment,484.54,348.73,898,449,258,11,0,0
+irongate_15th_winchton_regiment,irongate,15th (Winchton) Regiment,783.85,284.18,735,506,224,21,0,0
+irongate_1st_fleet,irongate,1st Fleet,652.56,286.65,0,0,0,0,11,1
+irongate_2nd_fleet,irongate,2nd Fleet,753.64,257.52,0,0,0,0,4,1
+irongate_3rd_fleet,irongate,3rd Fleet,466.93,312.97,0,0,0,0,3,1
+irongate_4th_fleet,irongate,4th Fleet,1085.84,173.27,0,0,0,0,1,1
+irongate_5th_fleet,irongate,5th Fleet,1000.17,196.6,0,0,0,0,1,1
+irongate_6th_fleet,irongate,6th Fleet,563.79,434.53,0,0,0,0,1,1
+irongate_7th_fleet,irongate,7th Fleet,394.44,428.54,0,0,0,0,1,1
+corwyn_1st_witham_regiment,corwyn,1st (Witham) Regiment,681.62,619.62,1813,1651,726,45,0,0
+corwyn_2nd_betfieldia_regiment,corwyn,2nd (Betfieldia) Regiment,796.66,683.79,1594,1795,357,35,0,0
+corwyn_3rd_horstony_regiment,corwyn,3rd (Horstony) Regiment,1034.94,730.46,1538,951,781,24,0,0
+corwyn_4th_oshamia_regiment,corwyn,4th (Oshamia) Regiment,628.71,556.62,969,837,1064,26,0,0
+corwyn_5th_cocking_regiment,corwyn,5th (Cocking) Regiment,906.26,657.37,1321,809,728,18,0,0
+corwyn_6th_portscom_regiment,corwyn,6th (Portscom) Regiment,844.23,722.21,961,914,544,21,0,0
+corwyn_7th_chister_regiment,corwyn,7th (Chister) Regiment,581.71,609.45,1141,719,473,12,0,0
+corwyn_8th_blandbury_regiment,corwyn,8th (Blandbury) Regiment,1074.2,697.39,1060,733,420,12,0,0
+corwyn_9th_flokhamp_regiment,corwyn,9th (Flokhamp) Regiment,907.34,723.34,865,867,222,18,0,0
+corwyn_10th_lympsdon_regiment,corwyn,10th (Lympsdon) Regiment,943.72,557.82,515,306,587,2,0,0
+corwyn_1st_fleet,corwyn,1st Fleet,669.52,707.33,0,0,0,0,3,1
+corwyn_2nd_fleet,corwyn,2nd Fleet,860.79,774.15,0,0,0,0,3,1
+corwyn_3rd_fleet,corwyn,3rd Fleet,536.53,640.41,0,0,0,0,3,1
+corwyn_4th_fleet,corwyn,4th Fleet,1160.9,758.6,0,0,0,0,1,1
+farhold_1st_carden_regiment,farhold,1st (Carden) Regiment,1688.8,530.65,1941,1438,727,29,0,0
+farhold_2nd_seatesia_regiment,farhold,2nd (Seatesia) Regiment,1563.06,487.88,1061,780,569,12,0,0
+farhold_3rd_harkia_regiment,farhold,3rd (Harkia) Regiment,1373.96,581.09,1022,685,600,21,0,0
+farhold_4th_wismouth_regiment,farhold,4th (Wismouth) Regiment,1674.42,360.63,774,525,554,14,0,0
+farhold_5th_rompoundia_regiment,farhold,5th (Rompoundia) Regiment,1657.77,434.29,735,437,583,5,0,0
+farhold_6th_redcke_regiment,farhold,6th (Redcke) Regiment,1897.45,646.37,757,811,167,23,0,0
+farhold_7th_alerid_regiment,farhold,7th (Alerid) Regiment,1959.43,505.24,563,693,92,8,0,0
+farhold_8th_wiverton_regiment,farhold,8th (Wiverton) Regiment,1570.27,311.13,515,455,289,14,0,0
+farhold_9th_swamerby_regiment,farhold,9th (Swamerby) Regiment,1784.83,299.76,476,373,307,6,0,0
+farhold_10th_guiland_regiment,farhold,10th (Guiland) Regiment,1800.46,604.81,514,436,164,7,0,0
+farhold_1st_fleet,farhold,1st Fleet,1445.09,672.51,0,0,0,0,3,1
+farhold_2nd_fleet,farhold,2nd Fleet,1559.3,326.4,0,0,0,0,3,1
+farhold_3rd_fleet,farhold,3rd Fleet,1710.19,559.99,0,0,0,0,1,1
+farhold_4th_fleet,farhold,4th Fleet,1838.69,723.31,0,0,0,0,1,1
+farhold_5th_fleet,farhold,5th Fleet,1527.63,236.28,0,0,0,0,1,1
+farhold_6th_fleet,farhold,6th Fleet,1570.5,641.4,0,0,0,0,1,1
+kelvarn_1st_axbrigh_regiment,kelvarn,1st (Axbrigh) Regiment,1240.57,516.09,1623,1220,1691,30,0,0
+kelvarn_2nd_somerlis_regiment,kelvarn,2nd (Somerlis) Regiment,1121.94,491.69,262,250,1220,0,0,0
+kelvarn_3rd_framp_regiment,kelvarn,3rd (Framp) Regiment,1170.15,695.18,491,443,451,15,0,0
+kelvarn_4th_crafthamia_regiment,kelvarn,4th (Crafthamia) Regiment,1032.2,594.62,162,178,809,1,0,0
+kelvarn_5th_penkburgh_regiment,kelvarn,5th (Penkburgh) Regiment,1208.26,488.19,139,82,114,2,0,0
+kelvarn_1st_fleet,kelvarn,1st Fleet,1215.57,607.76,0,0,0,0,6,1
+kelvarn_2nd_fleet,kelvarn,2nd Fleet,1381.9,484.94,0,0,0,0,1,1
+brackmoor_1st_neton_regiment,brackmoor,1st (Neton) Regiment,1219.91,272.57,1072,603,712,17,0,0
+brackmoor_2nd_hertle_regiment,brackmoor,2nd (Hertle) Regiment,1412.32,249.28,222,106,241,4,0,0
+yorwald_1st_felney_regiment,yorwald,1st (Felney) Regiment,1916.45,376.32,767,867,152,19,0,0
+yorwald_2nd_swalisland_regiment,yorwald,2nd (Swalisland) Regiment,1976.78,313.87,615,519,199,9,0,0
+yorwald_3rd_berbotland_regiment,yorwald,3rd (Berbotland) Regiment,2094.49,218.07,83,107,11,4,0,0
+yorwald_1st_fleet,yorwald,1st Fleet,2106.31,206.75,0,0,0,0,2,1
+yorwald_2nd_fleet,yorwald,2nd Fleet,2057.97,264.84,0,0,0,0,1,1
+valmoor_1st_bolingham_regiment,valmoor,1st (Bolingham) Regiment,2007.21,737.69,237,302,38,10,0,0
+valmoor_1st_fleet,valmoor,1st Fleet,1994.83,683.58,0,0,0,0,2,1

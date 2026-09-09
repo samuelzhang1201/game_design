@@ -1,8 +1,0 @@
-kingdom_code,state_id,label,capital_burg,neighbor_codes,color,area,population,center_x,center_y
-irongate,1,Irongate,stotreso,brackmoor|kelvarn|corwyn,#66c2a5,164172,7841756,967.83,351.84
-corwyn,2,Corwyn,portscom,irongate|kelvarn,#fc8d62,115018,6902185,844.23,722.21
-farhold,3,Farhold,carden,brackmoor|yorwald|kelvarn,#8da0cb,222904,13925126,1688.8,530.65
-kelvarn,4,Kelvarn,walbover,irongate|brackmoor|farhold|corwyn,#e78ac3,109566,4102026,1221.8,597.3
-brackmoor,5,Brackmoor,coclifnal_2,irongate|farhold|kelvarn,#a6d854,63343,2859645,1309.22,306.12
-yorwald,6,Yorwald,bolingley,farhold,#ffd92f,42397,3137533,2076.54,243.92
-valmoor,7,Valmoor,bolingham_2,,#72e4a8,8462,585345,2007.21,737.69

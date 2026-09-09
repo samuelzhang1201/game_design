@@ -1,0 +1,7 @@
+religion_code,religion_id,label,type,form,culture_code,deity,urban_population,rural_population,area
+no_religion,0,No religion,,,,,0,512098,21526
+old_merton_spirits,1,Old Merton Spirits,Folk,Shamanism,merton,"Knutsford, The Crimson Drake",320350,2996713,58799
+marsh_beliefs,2,Marsh Beliefs,Folk,Shamanism,marsh,"Wacurymock, The Mother of Home",1407476,11711943,270301
+old_manch_pantheon,3,Old Manch Pantheon,Folk,Polytheism,manch,"Betford, The Golden Maker",2056869,14438595,254945
+merton_religion,4,Merton Religion,Organized,Syncretism,merton,"Staping, The Secret Guardian",540525,4821000,117485
+manch_religion,5,Manch Religion,Organized,Dualism,manch,"Biverton, The Plum Lark",117796,467549,8462
