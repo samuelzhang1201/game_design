@@ -278,3 +278,50 @@ func test_the_province_account_follows_conquest() -> void:
 	var gained := MapObjects.describe_province(Game.data, Game.state, won)
 	assert_eq(String(gained["known"]), "full")
 	assert_string_contains("\n".join(gained["lines"]), "Changed hands:")
+
+# --- info cards after Azgaar's burg editor (user request 2026-09-09) --------
+
+func test_burg_card_carries_the_towns_facts_and_goods() -> void:
+	Game.start_campaign(42)
+	var realm: Dictionary = Game.data.kingdoms[_player_realm()]
+	var code := String(realm["capital_burg"])
+	var card := MapObjects.burg_card(Game.data, Game.state, code)
+	assert_eq(String(card["kind"]), "burg")
+	assert_eq(String(card["title"]), String(Game.data.burgs[code]["label"]))
+	assert_string_contains(String(card["subtitle"]), String(realm["label"]))
+	var labels: Array = []
+	for f in card["fields"]:
+		labels.append(String(f[0]))
+	for want in ["Group", "Type", "Culture", "Population", "Climate", "Elevation"]:
+		assert_has(labels, want)
+	assert_true(card["features"].size() > 0, "a capital has walls or a citadel")
+	for f in card["features"]:
+		assert_true(Game.data.resource_icons.has(String(f)), "%s has a glyph" % f)
+	assert_true(card["production"].size() > 0, "the capital makes something")
+	assert_gt(float(card["treasury"]), 0.0)
+	assert_eq(card["center"], Vector2(float(Game.data.burgs[code]["x"]), float(Game.data.burgs[code]["y"])))
+
+func test_province_card_is_full_at_home_and_basic_abroad() -> void:
+	Game.start_campaign(42)
+	var mine := MapObjects.province_card(Game.data, Game.state, _own_province())
+	assert_eq(String(mine["known"]), "full")
+	var labels: Array = []
+	for f in mine["fields"]:
+		labels.append(String(f[0]))
+	for want in ["Held by", "Seat", "Population", "Area", "Terrain", "Towns"]:
+		assert_has(labels, want)
+	assert_true(mine["production"].size() > 0, "the province's towns make goods")
+	var theirs := MapObjects.province_card(Game.data, Game.state, _foreign_province())
+	assert_eq(String(theirs["known"]), "basic")
+	assert_eq(theirs["fields"].size(), 2, "house and seat, nothing more")
+	assert_true(theirs["production"].is_empty())
+
+func test_goods_are_shown_under_a_tag_with_a_glyph() -> void:
+	Game.start_campaign(42)
+	var goods := Game.data.world_table("economy", "goods")
+	assert_eq(MapObjects.good_tag(Game.data, "grain"), "tag_food")
+	var tagged := 0
+	for g: String in goods:
+		if MapObjects.good_tag(Game.data, g) != "":
+			tagged += 1
+	assert_gt(tagged, goods.size() / 2, "most goods fall under a tagged glyph")

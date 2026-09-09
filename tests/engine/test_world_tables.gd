@@ -146,3 +146,10 @@ func test_provinces_carry_a_majority_biome() -> void:
 	for code: String in repo.provinces:
 		var bid := int(float(repo.provinces[code].get("biome_id", "0")))
 		assert_true(repo.biomes.has(bid), "%s has a named biome" % code)
+
+func test_burgs_carry_climate_and_elevation() -> void:
+	for code: String in repo.burgs:
+		var b: Dictionary = repo.burgs[code]
+		assert_ne(String(b.get("elevation_m", "")), "", "%s has an elevation" % code)
+		assert_ne(String(b.get("temperature_c", "")), "", "%s has a temperature" % code)
+		assert_gte(int(b["elevation_m"]), 0, "%s stands on land" % code)

@@ -792,6 +792,7 @@ func select_object(obj: Dictionary) -> void:
 		_card.hide()
 	else:
 		_selected_obj = obj
+		entry["obj"] = obj
 		if use_card:
 			_card.show_entry(entry)
 	object_selected.emit(entry)

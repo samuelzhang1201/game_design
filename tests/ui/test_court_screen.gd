@@ -326,9 +326,10 @@ func test_free_text_names_the_speaker_before_the_call() -> void:
 	assert_true(found, "the marshal answered under his own name")
 
 ## Province view (user request 2026-09-09): selecting one of the player's own
-## provinces shows its full account in the right detail column; a foreign one
-## shows only what is commonly known; water clears the column.
-func test_selecting_a_province_shows_its_account_in_the_detail_column() -> void:
+## provinces shows its CARD in the right detail column (a field grid after
+## Azgaar's burg editor); a foreign one shows only what is commonly known;
+## water clears the column.
+func test_selecting_a_province_shows_its_card_in_the_detail_column() -> void:
 	Game.start_campaign(42)
 	var screen := _screen()
 	await wait_frames(2)
@@ -341,11 +342,11 @@ func test_selecting_a_province_shows_its_account_in_the_detail_column() -> void:
 	assert_true(panel.visible, "the detail column opens")
 	assert_eq(panel.shown_province(), mine)
 	var texts: Array[String] = []
-	for l in panel.rows().get_children():
+	for l in panel.fields().get_children():
 		texts.append((l as Label).text)
-	var joined := "\n".join(texts)
-	assert_string_contains(joined, "Population:")
-	assert_string_contains(joined, "Held by House")
+	assert_has(texts, "Population")
+	assert_has(texts, "Held by")
+	assert_true(panel.preview().visible, "a window onto the province")
 	var foreign := ""
 	for code: String in Game.data.provinces:
 		if String(Game.data.provinces[code]["kingdom_code"]) != Game.data.resolve_realm("player_realm"):
@@ -354,12 +355,11 @@ func test_selecting_a_province_shows_its_account_in_the_detail_column() -> void:
 	map.select_province(foreign)
 	await wait_frames(1)
 	texts.clear()
-	for l in panel.rows().get_children():
+	for l in panel.fields().get_children():
 		texts.append((l as Label).text)
-	joined = "\n".join(texts)
-	assert_false(joined.contains("Population:"), "no details abroad")
-	assert_string_contains(joined, "Held by House")
-	assert_string_contains(joined, "Little more is known")
+	assert_false(texts.has("Population"), "no details abroad")
+	assert_has(texts, "Held by")
+	assert_string_contains(panel.hint_label().text, "Little more is known")
 	map.select_province("")
 	await wait_frames(1)
 	assert_false(panel.visible, "clearing the selection closes the column")

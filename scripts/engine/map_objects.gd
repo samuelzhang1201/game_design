@@ -420,3 +420,155 @@ static func describe_province(repo: DataRepository, state: GameState,
 					int(t["tick"]), String(t["reason"])])
 				break
 	return {"title": title, "lines": lines, "ask": ask, "known": "full"}
+
+## --- Info cards (user request 2026-09-09, after Azgaar's burg editor) ------
+## A card is structured, not lines: {title, subtitle, kingdom_code, initial,
+## fields: [[label, value], ...], features: [feature keys], production:
+## [{label, units, tag}], wealth, treasury, center: Vector2, known}. The
+## detail column renders it with heraldry, a field grid, glyph rows, and a
+## map preview around `center`.
+
+## The tag a good is shown under: the first of its tags that has a glyph row
+## (tag_<name> in resource_icons.csv), else "".
+static func good_tag(repo: DataRepository, good_code: String) -> String:
+	var g: Dictionary = repo.world_row("economy", "goods", good_code)
+	for t: String in String(g.get("tags", "")).split("|", false):
+		if repo.resource_icons.has("tag_" + t):
+			return "tag_" + t
+	return ""
+
+## Goods produced by these burgs, summed by good, largest first.
+static func production_of(repo: DataRepository, burg_codes: Array) -> Array:
+	var units: Dictionary = {}
+	var wanted: Dictionary = {}
+	for b in burg_codes:
+		wanted[String(b)] = true
+	for row: Dictionary in repo.world_table("economy", "production").values():
+		if not wanted.has(String(row["burg_code"])):
+			continue
+		var g := String(row["good_code"])
+		units[g] = float(units.get(g, 0.0)) + float(row.get("units", 0))
+	var out: Array = []
+	for g: String in units:
+		out.append({"good": g, "label": _label(repo.world_table("economy", "goods"), g),
+			"units": float(units[g]), "tag": good_tag(repo, g)})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return float(a["units"]) > float(b["units"]) \
+			or (float(a["units"]) == float(b["units"]) and String(a["good"]) < String(b["good"])))
+	return out
+
+static func burg_card(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	var b: Dictionary = repo.burgs.get(code, {})
+	if b.is_empty():
+		return {}
+	var prov: Dictionary = repo.provinces.get(String(b["province_code"]), {})
+	var owner := MapOwnership.owner_of(repo, state, String(b["province_code"]))
+	var kingdom: Dictionary = repo.kingdoms.get(owner, {})
+	var econ: Dictionary = repo.world_row("economy", "burgs", code)
+	var culture: Dictionary = repo.world_row("society", "cultures", String(b.get("culture_code", "")))
+	var fields: Array = [
+		["Group", String(b.get("group", "")).replace("_", " ").capitalize()],
+		["Type", String(b.get("type", ""))],
+		["Culture", String(culture.get("label", b.get("culture_code", "")))],
+		["Population", String(b.get("population", "—"))],
+	]
+	if String(b.get("temperature_c", "")) != "":
+		fields.append(["Climate", "%s °C" % b["temperature_c"]])
+	if String(b.get("elevation_m", "")) != "":
+		fields.append(["Elevation", "%s m above the sea" % b["elevation_m"]])
+	var features: Array = []
+	if String(b.get("is_port", "0")) == "1":
+		features.append("port")
+	for f: String in String(b.get("features", "")).split("|", false):
+		features.append(f)
+	var label := String(b["label"])
+	return {
+		"kind": "burg", "code": code, "title": label,
+		"subtitle": "%s, %s" % [String(prov.get("full_name", prov.get("label", ""))),
+			String(kingdom.get("full_name", kingdom.get("label", "")))],
+		"kingdom_code": owner, "initial": label.substr(0, 1),
+		"fields": fields, "features": features,
+		"production": production_of(repo, [code]),
+		"wealth": float(econ.get("product", 0.0)), "treasury": float(econ.get("treasury", 0.0)),
+		"center": Vector2(float(b["x"]), float(b["y"])),
+		"ask": "What do we know of %s?" % label, "known": "full",
+	}
+
+## The player's own province in full; foreign land only by what is commonly
+## known (name, kingdom, house, seat).
+static func province_card(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	var prov: Dictionary = repo.provinces.get(code, {})
+	if prov.is_empty():
+		return {}
+	var owner := MapOwnership.owner_of(repo, state, code)
+	var kingdom: Dictionary = repo.kingdoms.get(owner, {})
+	var label := String(prov["label"])
+	var title := String(prov.get("full_name", ""))
+	if title == "":
+		title = label
+	var card := {
+		"kind": "province", "code": code, "title": title,
+		"subtitle": String(kingdom.get("full_name", kingdom.get("label", ""))),
+		"kingdom_code": owner, "initial": label.substr(0, 1),
+		"fields": [["Held by", house_of(repo, code)],
+			["Seat", _label(repo.burgs, String(prov.get("capital_burg", "")))]],
+		"features": [], "production": [], "wealth": 0.0, "treasury": 0.0,
+		"center": Vector2(float(prov.get("center_x", 0.0)), float(prov.get("center_y", 0.0))),
+		"ask": "What do we know of %s?" % label,
+		"known": "full" if province_is_players(repo, state, code) else "basic",
+	}
+	if card["known"] == "basic":
+		return card
+	var towns: Array = []
+	for b: Dictionary in repo.burgs.values():
+		if String(b["province_code"]) == code:
+			towns.append(b)
+	towns.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(float(a["population"])) > int(float(b["population"])))
+	var names: Array[String] = []
+	var codes: Array = []
+	for t: Dictionary in towns:
+		codes.append(String(t["burg_code"]))
+	for i in mini(towns.size(), int(repo.bal("province_card_max_towns"))):
+		names.append(String(towns[i]["label"]))
+	var urban: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.urban_population" % code)
+	var rural: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.rural_population" % code)
+	var fields: Array = card["fields"]
+	if urban != null and rural != null:
+		fields.append(["Population", "%d (%d in towns)" % [int(urban) + int(rural), int(urban)]])
+	else:
+		fields.append(["Population", String(prov.get("population", "—"))])
+	var scale := float(repo.map_info.get("distance_scale", "1"))
+	fields.append(["Area", "%d %s²" % [roundi(float(prov.get("area", 0)) * scale * scale),
+		String(repo.map_info.get("distance_unit", "px"))]])
+	var biome: Dictionary = repo.biomes.get(int(float(prov.get("biome_id", "0"))), {})
+	if not biome.is_empty():
+		fields.append(["Terrain", String(biome["label"])])
+	fields.append(["Towns", "%d%s" % [towns.size(), (": " + ", ".join(names)) if not names.is_empty() else ""]])
+	var regs: Array[String] = []
+	for row: Dictionary in repo.world_table("military", "regiments").values():
+		if String(row.get("province_code", "")) == code:
+			regs.append(String(row["label"]))
+	if not regs.is_empty():
+		fields.append(["Regiments", ", ".join(regs)])
+	for row: Dictionary in repo.world_table("society", "zones").values():
+		if code in String(row.get("province_codes", "")).split("|", false):
+			fields.append(["Hazard", "%s (%s)" % [row["label"], String(row["type"]).to_lower()]])
+	if state != null:
+		for i in range(state.territory_log.size() - 1, -1, -1):
+			var t: Dictionary = state.territory_log[i]
+			if String(t["province"]) == code:
+				fields.append(["Changed hands", "from %s to %s, tick %d (%s)" % [
+					_label(repo.kingdoms, String(t["from"])), _label(repo.kingdoms, String(t["to"])),
+					int(t["tick"]), String(t["reason"])]])
+				break
+	var wealth := 0.0
+	var treasury := 0.0
+	for c in codes:
+		var e: Dictionary = repo.world_row("economy", "burgs", String(c))
+		wealth += float(e.get("product", 0.0))
+		treasury += float(e.get("treasury", 0.0))
+	card["production"] = production_of(repo, codes)
+	card["wealth"] = wealth
+	card["treasury"] = treasury
+	return card

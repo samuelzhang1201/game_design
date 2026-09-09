@@ -94,5 +94,37 @@ static func draw_glyph(ci: CanvasItem, name: String, c: Vector2, s: float, color
 			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-0.4, -4.2) * u, c + Vector2(3.4, 1.4) * u,
 				c + Vector2(-0.4, 1.4) * u]), color)
 			ci.draw_line(c + Vector2(-3.8, 2.6) * u, c + Vector2(3.8, 2.6) * u, color, 1.2 * u, true)
+		"wall":
+			ci.draw_rect(Rect2(c + Vector2(-4, -1) * u, Vector2(8, 5) * u), color)
+			for dx in [-4.0, -1.0, 2.0]:
+				ci.draw_rect(Rect2(c + Vector2(dx, -3.5) * u, Vector2(2, 2.5) * u), color)
+		"tower":
+			ci.draw_rect(Rect2(c + Vector2(-2, -2) * u, Vector2(4, 6.2) * u), color)
+			for dx in [-2.5, 0.5]:
+				ci.draw_rect(Rect2(c + Vector2(dx, -4.2) * u, Vector2(1.6, 2.2) * u), color)
+		"market":
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-4.2, -0.5) * u,
+				c + Vector2(0, -4.0) * u, c + Vector2(4.2, -0.5) * u]), color)
+			ci.draw_line(c + Vector2(-3.0, -0.5) * u, c + Vector2(-3.0, 4.0) * u, color, 1.0 * u, true)
+			ci.draw_line(c + Vector2(3.0, -0.5) * u, c + Vector2(3.0, 4.0) * u, color, 1.0 * u, true)
+		"huts":
+			for dx in [-2.6, 1.2]:
+				ci.draw_colored_polygon(PackedVector2Array([c + Vector2(dx - 1.8, 1.0) * u,
+					c + Vector2(dx, -2.2) * u, c + Vector2(dx + 1.8, 1.0) * u]), color)
+				ci.draw_rect(Rect2(c + Vector2(dx - 1.4, 1.0) * u, Vector2(2.8, 2.6) * u), color)
+		"anchor":
+			ci.draw_circle(c + Vector2(0, -3.2 * u), 1.1 * u, color)
+			ci.draw_line(c + Vector2(0, -2.0) * u, c + Vector2(0, 3.8) * u, color, 1.0 * u, true)
+			ci.draw_line(c + Vector2(-2.6, -0.4) * u, c + Vector2(2.6, -0.4) * u, color, 1.0 * u, true)
+			ci.draw_arc(c + Vector2(0, 0.8 * u), 3.0 * u, PI * 0.15, PI * 0.85, 10, color, 1.0 * u, true)
+		"pick":
+			ci.draw_line(c + Vector2(-3.4, 3.6) * u, c + Vector2(2.0, -1.8) * u, color, 1.0 * u, true)
+			ci.draw_arc(c + Vector2(1.6, 0.2) * u, 3.4 * u, -PI * 0.95, -PI * 0.25, 10, color, 1.2 * u, true)
+		"gem":
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-3.8, -1.2) * u, c + Vector2(-1.8, -3.6) * u,
+				c + Vector2(1.8, -3.6) * u, c + Vector2(3.8, -1.2) * u, c + Vector2(0, 4.0) * u]), color)
+		"cloth":
+			ci.draw_rect(Rect2(c + Vector2(-3.6, -3.0) * u, Vector2(7.2, 6.0) * u), color)
+			ci.draw_line(c + Vector2(-3.6, -1.0) * u, c + Vector2(3.6, 1.0) * u, UiPalette.PANEL_BG, 0.8 * u, true)
 		_:
 			ci.draw_rect(Rect2(c - Vector2(3, 3) * u, Vector2(6, 6) * u), color, false, 1.0 * u)

@@ -13,3 +13,22 @@ archers,Archers,bow,Bowmen who thin a charge before it lands.
 cavalry,Cavalry,horseshoe,Mounted troops: costly, and decisive on open ground.
 artillery,Artillery,cannon,Siege engines and guns; slow, but walls fear them.
 fleet,Fleet,sail,Warships crewed from the coast towns.
+walls,Walls,wall,A walled town: harder to take, and its market is taxed at the gate.
+citadel,Citadel,tower,A citadel commands the town; a garrison can hold it.
+temple,Temple,cross,A temple: the church has a house here.
+plaza,Market,market,A market square: goods change hands and the town grows.
+shanty,Shanty town,huts,A shanty town outside the walls: the poor crowd in.
+port,Port,anchor,A harbour: ships and sea trade come and go.
+tag_food,Food,grain,Food goods.
+tag_ore,Ore,pick,Ores and metals.
+tag_mineral,Mineral,pick,Quarried and mined minerals.
+tag_construction,Building,wall,Building materials.
+tag_luxury,Luxury,gem,Luxuries the wealthy pay for.
+tag_military,Arms,swords,Goods of war.
+tag_naval,Naval,sail,Goods for ships.
+tag_clothing,Cloth,cloth,Cloth and clothing.
+tag_fuel,Fuel,flame,Fuel.
+tag_currency,Coin,coin,Coin.
+tag_supply,Supply,horseshoe,Beasts and supplies.
+wealth,Wealth,coin,What the town produces in a season.
+town_treasury,Treasury,coin,Coin in the town's own chest.

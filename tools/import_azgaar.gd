@@ -12,7 +12,8 @@ extends SceneTree
 ##   <pack>/political/kingdoms.csv     one row per state (0 "Neutrals" excluded):
 ##       identity, capital, neighbors, area, population, form, culture, majority religion
 ##   <pack>/political/provinces.csv    one row per province (+ province_id, center, form, majority biome)
-##   <pack>/political/burgs.csv        one row per burg (+ type, features, group, culture)
+##   <pack>/political/burgs.csv        one row per burg (+ type, features, group, culture,
+##       elevation in metres, temperature in °C)
 ##   <pack>/political/borders.csv      one row per closed border loop per kingdom:
 ##       kingdom_code,loop,points — points as "x y|x y|..." in native map
 ##       coordinates, so WorldMapView can outline the hovered kingdom
@@ -493,7 +494,8 @@ func _run() -> int:
 		print("render scale: %dx" % render_scale)
 
 	var pack: Dictionary = world["pack"]
-	var rate := float((world["settings"] as Dictionary).get("populationRate", 1000))
+	var settings: Dictionary = world["settings"]
+	var rate := float(settings.get("populationRate", 1000))
 	var cells: Array = pack["cells"]
 	var vertices: Array = pack["vertices"]
 	var states: Array[Dictionary] = []
@@ -632,14 +634,25 @@ func _run() -> int:
 		return 1
 
 	# --- political/burgs.csv ----------------------------------------------
+	# Elevation in metres the way Azgaar prints it (height 20+ is land:
+	# (h - 18) ^ heightExponent); temperature from the grid cell under the burg.
+	var height_exponent := float(settings.get("heightExponent", 2))
+	var grid_cells: Array = (world.get("grid", {}) as Dictionary).get("cells", [])
 	out = _csv_line(["burg_code", "label", "province_code", "kingdom_code",
 		"population", "is_capital", "is_port", "x", "y", "type", "features",
-		"group", "culture_code"])
+		"group", "culture_code", "elevation_m", "temperature_c"])
 	for b in burgs:
 		var feats: Array[String] = []
 		for flag in ["walls", "citadel", "temple", "plaza", "shanty"]:
 			if b.get(flag):
 				feats.append(flag)
+		var cell: Dictionary = cells[int(b["cell"])]
+		var h := float(cell.get("h", 0))
+		var elevation := pow(h - 18.0, height_exponent) if h >= 20.0 else 0.0
+		var g := int(cell.get("g", -1))
+		var temp := 0.0
+		if g >= 0 and g < grid_cells.size() and grid_cells[g] is Dictionary:
+			temp = float((grid_cells[g] as Dictionary).get("temp", 0))
 		out += _csv_line([String(burg_code[int(b["i"])]), String(b["name"]),
 			String(prov_code[burg_province[int(b["i"])]]),
 			String(state_code[int(b["state"])]),
@@ -648,7 +661,8 @@ func _run() -> int:
 			_num2(float(b["x"])), _num2(float(b["y"])),
 			String(b.get("type", "Generic")), "|".join(feats),
 			String(b.get("group", "")),
-			String(culture_code.get(int(b.get("culture", 0)), ""))])
+			String(culture_code.get(int(b.get("culture", 0)), "")),
+			str(int(round(elevation))), str(int(round(temp)))])
 	if not _write_text(out_data + "/political/burgs.csv", out):
 		return 1
 
@@ -976,7 +990,6 @@ func _run() -> int:
 		return 1
 
 	# --- map_info.csv -----------------------------------------------------
-	var settings: Dictionary = world["settings"]
 	out = _csv_line(["key", "value"])
 	out += _csv_line(["width", str(width)])
 	out += _csv_line(["height", str(height)])
