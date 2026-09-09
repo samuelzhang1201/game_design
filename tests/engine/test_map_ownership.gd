@@ -111,3 +111,27 @@ func test_describe_counts_follow_ownership() -> void:
 	var after := MapObjects.describe(data, obj, state)
 	assert_ne(after["lines"], before["lines"],
 		"the kingdom card reports what it holds now, not the pack's map")
+
+## Province seams (spec 2026-09-09 §5): the edges two held provinces share,
+## and never an edge on the kingdom's outline.
+func test_seams_are_shared_edges_inside_the_kingdom() -> void:
+	var seams := MapOwnership.seams_of(data, state, _player())
+	assert_gt(seams.size(), 0, "a kingdom with several provinces has seams")
+	var outline_edges: Dictionary = {}
+	for loop: PackedVector2Array in MapOwnership.outline_of(data, state, _player()):
+		for i in loop.size():
+			outline_edges[_edge_key(loop[i], loop[(i + 1) % loop.size()])] = true
+	for seg: PackedVector2Array in seams:
+		assert_eq(seg.size(), 2, "a seam is one segment")
+		assert_false(outline_edges.has(_edge_key(seg[0], seg[1])), "seams are never outline edges")
+
+func test_a_transfer_removes_the_moved_provinces_seams_from_the_old_owner() -> void:
+	var before := MapOwnership.seams_of(data, state, _player()).size()
+	var mine := MapOwnership.provinces_of(data, state, _player())
+	MapOwnership.set_owner(data, state, mine[0], _raider(), "raid")
+	assert_lt(MapOwnership.seams_of(data, state, _player()).size(), before)
+
+func _edge_key(a: Vector2, b: Vector2) -> String:
+	var ka := "%d,%d" % [roundi(a.x * 100.0), roundi(a.y * 100.0)]
+	var kb := "%d,%d" % [roundi(b.x * 100.0), roundi(b.y * 100.0)]
+	return ka + "|" + kb if ka < kb else kb + "|" + ka

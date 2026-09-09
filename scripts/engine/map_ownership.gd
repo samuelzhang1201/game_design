@@ -23,6 +23,8 @@ extends RefCounted
 static var _outline_cache: Dictionary = {}
 ## The state the cache was built against; a different one invalidates it.
 static var _cache_owner_version := -1
+## Cached province seams per kingdom (seams_of), dropped with the outlines.
+static var _seam_cache: Dictionary = {}
 
 
 ## The kingdom holding `province_code` right now: the campaign's override if
@@ -70,6 +72,7 @@ static func set_owner(data: DataRepository, state: GameState,
 ## swap or a load can clear outlines built for the previous world.
 static func invalidate() -> void:
 	_outline_cache.clear()
+	_seam_cache.clear()
 	_cache_owner_version = -1
 
 
@@ -79,10 +82,7 @@ static func invalidate() -> void:
 ## pack still draws.
 static func outline_of(data: DataRepository, state: GameState,
 		kingdom_code: String) -> Array:
-	var version := 0 if state == null else state.province_owner.size()
-	if _cache_owner_version != version:
-		_outline_cache.clear()
-		_cache_owner_version = version
+	_refresh_caches(state)
 	if _outline_cache.has(kingdom_code):
 		return _outline_cache[kingdom_code]
 	var loops: Array = []
@@ -92,6 +92,33 @@ static func outline_of(data: DataRepository, state: GameState,
 		loops = _merge_loops(_held_loops(data, state, kingdom_code))
 	_outline_cache[kingdom_code] = loops
 	return loops
+
+
+## The seams inside a kingdom (spec 2026-09-09 §5): every edge walked by
+## exactly two of the loops of the provinces it holds NOW, as one two-point
+## segment each — the province view draws them dashed. The outline's edges
+## are walked once and never appear here, so a conquered province's former
+## seams vanish from its old owner and it draws none against new neighbours
+## until it shares an owner with them. Cached beside the outlines.
+static func seams_of(data: DataRepository, state: GameState, kingdom_code: String) -> Array:
+	_refresh_caches(state)
+	if _seam_cache.has(kingdom_code):
+		return _seam_cache[kingdom_code]
+	var counted := _count_edges(_held_loops(data, state, kingdom_code))
+	var out: Array = []
+	for e in counted["order"]:
+		if int(counted["count"][e]) == 2:
+			out.append(PackedVector2Array([counted["point"][e[0]], counted["point"][e[1]]]))
+	_seam_cache[kingdom_code] = out
+	return out
+
+
+static func _refresh_caches(state: GameState) -> void:
+	var version := 0 if state == null else state.province_owner.size()
+	if _cache_owner_version != version:
+		_outline_cache.clear()
+		_seam_cache.clear()
+		_cache_owner_version = version
 
 
 ## Where a kingdom's name belongs: the area-weighted centre of the provinces
@@ -132,23 +159,10 @@ static func _held_loops(data: DataRepository, state: GameState,
 ## mesh), so edges are matched on their quantised endpoints rather than by
 ## identity.
 static func _merge_loops(loops: Array) -> Array:
-	var edge_count: Dictionary = {}
-	var edge_order: Array = []
-	var point_of: Dictionary = {}
-	for loop: PackedVector2Array in loops:
-		for i in loop.size():
-			var a := _key(loop[i])
-			var b := _key(loop[(i + 1) % loop.size()])
-			if a == b:
-				continue
-			point_of[a] = loop[i]
-			point_of[b] = loop[(i + 1) % loop.size()]
-			var e := _edge(a, b)
-			if edge_count.has(e):
-				edge_count[e] = int(edge_count[e]) + 1
-			else:
-				edge_count[e] = 1
-				edge_order.append(e)
+	var counted := _count_edges(loops)
+	var edge_count: Dictionary = counted["count"]
+	var edge_order: Array = counted["order"]
+	var point_of: Dictionary = counted["point"]
 	# Adjacency over the edges walked exactly once — the union's boundary.
 	var adjacent: Dictionary = {}
 	var boundary: Array = []
@@ -183,6 +197,30 @@ static func _merge_loops(loops: Array) -> Array:
 		if ring.size() >= 3:
 			out.append(ring)
 	return out
+
+
+## How many loops walk each undirected edge, in first-seen order, with a
+## representative point per vertex key. Once = the union's boundary, twice
+## = a seam between two provinces of the same owner.
+static func _count_edges(loops: Array) -> Dictionary:
+	var edge_count: Dictionary = {}
+	var edge_order: Array = []
+	var point_of: Dictionary = {}
+	for loop: PackedVector2Array in loops:
+		for i in loop.size():
+			var a := _key(loop[i])
+			var b := _key(loop[(i + 1) % loop.size()])
+			if a == b:
+				continue
+			point_of[a] = loop[i]
+			point_of[b] = loop[(i + 1) % loop.size()]
+			var e := _edge(a, b)
+			if edge_count.has(e):
+				edge_count[e] = int(edge_count[e]) + 1
+			else:
+				edge_count[e] = 1
+				edge_order.append(e)
+	return {"count": edge_count, "order": edge_order, "point": point_of}
 
 
 ## Vertex identity: Azgaar coordinates carry two decimals, so a hundredth of

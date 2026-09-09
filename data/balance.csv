@@ -92,3 +92,7 @@ tax_rate_per_poll_tax,36,tax_rate (1-10) = round(export pollTax x this); also th
 tariff_rate_per_sales_tax,60,tariff_rate (0-10) = round(export salesTax x this); also the alias scale for the player's sales_tax row
 order_prompt_max_burgs,12,largest towns of the player's realm listed in the order prompt
 order_narrative_max_chars,600,longest narrative the validator keeps from an order reply
+map_province_min_scale,0.6,world map: screen px per native map px at/above which the province view draws seams
+map_province_line_alpha,0.55,world map: opacity of province seams in the province view
+map_province_line_width,1.0,world map: width of province seams in screen px
+map_province_dash_px,4.0,world map: dash length of province seams in screen px

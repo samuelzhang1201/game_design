@@ -48,6 +48,18 @@ const PIN_MARKER := 3.0
 const PIN_OUTLINE := Color(0.05, 0.04, 0.02, 0.9)
 const TOOLTIP_OFFSET := Vector2(10.0, 12.0)
 const SCENE_PATH := "res://scenes/world_map.tscn"
+## Province view (user request 2026-09-09): every kingdom's internal seams as
+## light dashed lines, computed from the provinces it holds NOW
+## (MapOwnership.seams_of), so they follow conquest where the render's
+## printed dots cannot. Toggled by the PROVINCES chip or the P key.
+const PROVINCE_KEY := KEY_P
+var show_provinces: bool = false:
+	set(v):
+		show_provinces = v
+		if _province_chip != null:
+			_province_chip.button_pressed = v
+		queue_redraw()
+var _province_chip: Button
 
 var _map_texture: Texture2D
 var _index_image: Image
@@ -121,6 +133,16 @@ func _ready() -> void:
 		_selected_obj = {}
 		queue_redraw())
 	add_child(_card)
+	_province_chip = Button.new()
+	_province_chip.name = "ProvinceChip"
+	_province_chip.text = "PROVINCES"
+	_province_chip.toggle_mode = true
+	_province_chip.focus_mode = Control.FOCUS_NONE
+	_province_chip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_province_chip.add_theme_font_size_override("font_size", 8)
+	_province_chip.position = Vector2(6, 6)
+	_province_chip.pressed.connect(toggle_provinces)
+	add_child(_province_chip)
 	_build_tooltip()
 	mouse_entered.connect(func() -> void: _mouse_inside = true)
 	mouse_exited.connect(func() -> void:
@@ -183,6 +205,7 @@ func _draw() -> void:
 		pts[loop.size()] = pts[0]  # close the ring
 		draw_polyline(pts, HOVER_COLOR, HOVER_WIDTH, true)
 	_draw_territory_tint()
+	_draw_province_seams()
 	_draw_kingdom_labels()
 	_draw_pins()
 	_draw_hover()
@@ -371,6 +394,10 @@ func _gui_input(ev: InputEvent) -> void:
 		queue_redraw()
 		return
 	if ev is InputEventKey and (ev as InputEventKey).pressed \
+			and (ev as InputEventKey).keycode == PROVINCE_KEY:
+		toggle_provinces()
+		return
+	if ev is InputEventKey and (ev as InputEventKey).pressed \
 			and (ev as InputEventKey).keycode == DEV_FLIP_KEY \
 			and OS.is_debug_build():
 		dev_flip_hovered_province()
@@ -516,6 +543,45 @@ func dev_flip_hovered_province() -> Dictionary:
 	country_hovered.emit(String(_by_state_id.get(_hover_sid, {}).get("kingdom_code", "")))
 	queue_redraw()
 	return {"province": code, "from": now, "to": to}
+
+func toggle_provinces() -> void:
+	show_provinces = not show_provinces
+
+## Test seam: the PROVINCES chip.
+func province_chip() -> Button:
+	return _province_chip
+
+## The seam segments the province view would draw right now, in screen
+## coordinates: nothing when the view is off or the zoom is below the
+## balance floor, and only segments touching the frame.
+func _visible_seams() -> Array:
+	if not show_provinces or _map_texture == null \
+			or view_scale() < Game.data.bal("map_province_min_scale"):
+		return []
+	var frame := Rect2(Vector2.ZERO, size)
+	var out: Array = []
+	for code: String in Game.data.kingdoms:
+		for seg: PackedVector2Array in MapOwnership.seams_of(Game.data, Game.state, code):
+			var a := map_to_screen(seg[0])
+			var b := map_to_screen(seg[1])
+			if frame.intersects(Rect2(a, Vector2.ZERO).expand(b).grow(1.0)):
+				out.append(PackedVector2Array([a, b]))
+	return out
+
+## Test seam: how many seam segments are on screen right now.
+func visible_seam_count() -> int:
+	return _visible_seams().size()
+
+func _draw_province_seams() -> void:
+	var seams := _visible_seams()
+	if seams.is_empty():
+		return
+	var color := UiPalette.GOLD
+	color.a = Game.data.bal("map_province_line_alpha")
+	var width := Game.data.bal("map_province_line_width")
+	var dash := Game.data.bal("map_province_dash_px")
+	for seg: PackedVector2Array in seams:
+		draw_dashed_line(seg[0], seg[1], color, width, dash, true)
 
 ## Public for tests: the same path a mouse-motion event takes.
 func hover_at(pos: Vector2) -> void:

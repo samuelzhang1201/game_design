@@ -365,3 +365,36 @@ func test_every_gameplay_screen_uses_the_map_scene() -> void:
 		assert_not_null(map, "%s embeds the map" % path.get_file())
 		assert_eq(map.scene_file_path, WorldMapView.SCENE_PATH,
 			"%s builds it from the scene, not .new()" % path.get_file())
+
+## Province view (user request 2026-09-09): a toggle draws every kingdom's
+## internal province seams as light dashed lines, above a minimum zoom.
+func test_province_view_toggles_by_chip_and_key() -> void:
+	var v := _view()
+	await wait_frames(2)
+	assert_false(v.show_provinces, "off by default")
+	v.province_chip().pressed.emit()
+	assert_true(v.show_provinces, "the chip turns it on")
+	var key := InputEventKey.new()
+	key.pressed = true
+	key.keycode = KEY_P
+	v._gui_input(key)
+	assert_false(v.show_provinces, "P turns it off again")
+
+func test_province_seams_draw_only_when_zoomed_in_enough() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v.show_provinces = true
+	v._zoom_at(v.size / 2.0, 0.00001)
+	assert_eq(v.visible_seam_count(), 0, "zoomed out, no seams")
+	# Zoom to the ceiling and centre the frame on one of the realm's own
+	# seams — the frame is a few native px wide at that zoom, so it has to
+	# be looking at a seam to show one.
+	var seams := MapOwnership.seams_of(Game.data, Game.state, String(_realm()["kingdom_code"]))
+	assert_gt(seams.size(), 0, "the realm has seams to draw")
+	var mid: Vector2 = (seams[0][0] + seams[0][1]) / 2.0
+	v._zoom_at(v.size / 2.0, 1000.0)
+	v._offset += v.size / 2.0 - v.map_to_screen(mid)
+	v._clamp_offset()
+	assert_gt(v.visible_seam_count(), 0, "zoomed in on a seam, it is on screen")
+	v.show_provinces = false
+	assert_eq(v.visible_seam_count(), 0, "off means none")
