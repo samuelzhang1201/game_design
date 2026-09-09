@@ -3,7 +3,8 @@ extends Control
 ## A small horizontal bar chart drawn in the panel: a muted label, a thin bar
 ## on a dark track, the value in text ink (dataviz rules: thin marks, text
 ## never wears the series colour, a legend is the labels themselves).
-## rows = [{label, value, color, text}]; the bar runs to max_value.
+## rows = [{label, value, color, text, icon?}]; the bar runs to max_value. A
+## row with an icon key draws that glyph before its label.
 
 const ROW_H := 9.0
 const LABEL_W := 34.0
@@ -27,8 +28,14 @@ func _draw() -> void:
 	for i in rows.size():
 		var r: Dictionary = rows[i]
 		var y := ROW_H * i
-		draw_string(font, Vector2(0, y + 7.0), String(r.get("label", "")),
-			HORIZONTAL_ALIGNMENT_LEFT, LABEL_W, 7, UiPalette.TEXT_MUTED)
+		var lx := 0.0
+		var glyph := String(r.get("icon", ""))
+		if glyph != "":
+			ResourceIcon.draw_glyph(self, glyph, Vector2(4.0, y + ROW_H / 2.0), 7.0,
+				r.get("color", UiPalette.GOLD))
+			lx = 9.0
+		draw_string(font, Vector2(lx, y + 7.0), String(r.get("label", "")),
+			HORIZONTAL_ALIGNMENT_LEFT, LABEL_W - lx, 7, UiPalette.TEXT_MUTED)
 		var x0 := LABEL_W + 2.0
 		var x1 := maxf(size.x - VALUE_W, x0 + 4.0)
 		var yb := y + (ROW_H - BAR_H) / 2.0

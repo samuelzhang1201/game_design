@@ -6,6 +6,8 @@ extends Control
 
 var _title: Label
 var _grid: GridContainer
+## The MILITARY tab is charts, not a table (user request 2026-09-09).
+var _military: MilitaryPanel
 var _current_tab := ""
 
 func _ready() -> void:
@@ -39,6 +41,9 @@ func _ready() -> void:
 	_grid.add_theme_constant_override("h_separation", 16)
 	_grid.add_theme_constant_override("v_separation", 2)
 	col.add_child(_grid)
+	_military = MilitaryPanel.new()
+	_military.visible = false
+	col.add_child(_military)
 	col.add_child(HSeparator.new())
 	var close := Button.new()
 	close.name = "CloseButton"
@@ -60,6 +65,11 @@ func _render() -> void:
 	if Game.state == null:
 		return
 	_title.text = _current_tab
+	_military.visible = _current_tab == "MILITARY"
+	_grid.visible = not _military.visible
+	if _military.visible:
+		_military.refresh()
+		return
 	for child in _grid.get_children():
 		child.queue_free()
 	# Most tabs are a name/value pair; a tab that needs more (FAMILIES) says
@@ -199,6 +209,9 @@ func _family_rows() -> Array:
 ## Test seams.
 func current_tab() -> String:
 	return _current_tab
+
+func military_panel() -> MilitaryPanel:
+	return _military
 
 func table() -> GridContainer:
 	return _grid
