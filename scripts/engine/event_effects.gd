@@ -19,17 +19,41 @@ static func apply(ops: String, state: GameState, data: DataRepository,
 		var p := op.split(":")
 		match p[0]:
 			"metric":
+				# metric:<name>:<delta>[:<reason>] — an op's own reason wins
+				# over the choice label, so a cost row can say why.
 				state.metrics[p[1]] = float(state.metrics.get(p[1], 0.0)) + float(p[2])
 				var r := {"kind": "metric", "metric": p[1], "delta": float(p[2])}
-				if reason_label != "":
+				if p.size() > 3 and p[3] != "":
+					r["reason"] = p[3]
+				elif reason_label != "":
 					r["reason"] = reason_label
 				results.append(r)
 			"gold":
+				# gold:<amount>[:<reason>]
 				state.metrics["treasury"] = float(state.metrics["treasury"]) + float(p[1])
 				var r2 := {"kind": "metric", "metric": "treasury", "delta": float(p[1])}
-				if reason_label != "":
+				if p.size() > 2 and p[2] != "":
+					r2["reason"] = p[2]
+				elif reason_label != "":
 					r2["reason"] = reason_label
 				results.append(r2)
+			"world":
+				# world:<path>:<delta>:<reason> — any ledger field (spec
+				# 2026-09-09 §2); the ledger clamps, logs, and refuses the unlisted.
+				var w := WorldLedger.apply(data, state, p[1], float(p[2]),
+					p[3] if p.size() > 3 else reason_label, "event")
+				if w.has("error"):
+					push_error("EventEffects: " + String(w["error"]))
+				else:
+					results.append({"kind": "world", "path": w["path"], "delta": w["delta"],
+						"reason": w["reason"]})
+			"attribute":
+				# attribute:<who>:<name>:<delta>:<reason> — a role-level metric.
+				var who := _resolve(p[1], state)
+				if who != "":
+					state.characters[who].change_attribute(p[2], int(p[3]), p[4], state.tick)
+					results.append({"kind": "attribute", "character_id": who, "attribute": p[2],
+						"delta": int(p[3]), "reason": p[4]})
 			"opinion":
 				var id := _resolve(p[1], state)
 				if id != "":

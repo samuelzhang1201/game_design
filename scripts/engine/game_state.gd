@@ -53,6 +53,9 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 		"road_income_bonus": 0.0,
 		"grain_ration": 0.0,
 	}
+	# One truth (owner ruling 2026-09-09): the pack's economy row seeds the
+	# player's treasury and rates over the balance defaults above.
+	WorldLedger.seed_metrics(data, s)
 	s.characters = CharacterFactory.build_roster(data)
 	for id in s.characters:
 		if s.characters[id].seat != "":

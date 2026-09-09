@@ -51,3 +51,21 @@ func test_event_state_round_trip() -> void:
 	var s2 := GameState.from_dict(s.to_dict())
 	assert_eq(SaveLoad.state_hash(s2), SaveLoad.state_hash(s))
 	assert_true("f1" in s2.event_state["flags"])
+
+## Ledger ops (spec 2026-09-09 §2.3): events reach the same fields orders do.
+func test_world_and_attribute_ops_go_through_the_ledger() -> void:
+	var before := int(WorldLedger.value_of(data, s, "military.kingdoms.player_realm.infantry"))
+	var results := EventEffects.apply(
+		"world:military.kingdoms.player_realm.infantry:-200:a plague in the barracks;"
+		+ "attribute:you:prestige:-1:the court whispers", s, data)
+	assert_eq(int(WorldLedger.value_of(data, s, "military.kingdoms.player_realm.infantry")),
+		before - 200)
+	assert_eq(String(results[0]["kind"]), "world")
+	assert_eq(String(results[0]["reason"]), "a plague in the barracks")
+	assert_eq(String(results[1]["kind"]), "attribute")
+	assert_eq(String(s.characters["you"].attribute_log[-1]["reason"]), "the court whispers")
+
+func test_gold_and_metric_ops_take_an_optional_reason() -> void:
+	var results := EventEffects.apply("gold:-5:the clerks;metric:grain:3:a gift", s, data)
+	assert_eq(String(results[0]["reason"]), "the clerks")
+	assert_eq(String(results[1]["reason"]), "a gift")

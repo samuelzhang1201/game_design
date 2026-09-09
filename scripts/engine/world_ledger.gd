@@ -229,5 +229,18 @@ static func prompt_catalog(data: DataRepository, state: GameState) -> String:
 	lines.append("Your largest towns: " + ", ".join(names))
 	return "\n".join(lines)
 
+## One truth (owner ruling 2026-09-09): the player's realm starts with the
+## pack's own treasury and tax rates, converted by balance factors. A pack
+## without an economy row leaves balance.csv's start values in place.
+static func seed_metrics(data: DataRepository, state: GameState) -> void:
+	var row: Dictionary = data.world_row("economy", "kingdoms", data.resolve_realm("player_realm"))
+	if row.is_empty():
+		return
+	state.metrics["treasury"] = roundf(float(row["treasury"]) * data.bal("pack_treasury_scale"))
+	state.metrics["tax_rate"] = clampf(
+		roundf(float(row["poll_tax"]) * data.bal("tax_rate_per_poll_tax")), 1.0, 10.0)
+	state.metrics["tariff_rate"] = clampf(
+		roundf(float(row["sales_tax"]) * data.bal("tariff_rate_per_sales_tax")), 0.0, 10.0)
+
 static func _fmt(v: float) -> String:
 	return str(int(v)) if v == floorf(v) else String.num(v, 2)
