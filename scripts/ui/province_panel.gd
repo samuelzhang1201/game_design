@@ -61,7 +61,7 @@ func show_province(province_code: String) -> void:
 		return
 	_title.text = String(entry["title"])
 	var owner := MapOwnership.owner_of(Game.data, Game.state, province_code)
-	_swatch.color = Color(String(Game.data.kingdoms.get(owner, {}).get("color", "#ffffff")))
+	_swatch.color = MapPalette.color_of(Game.data, owner)
 	for child in _rows.get_children():
 		child.queue_free()
 	for line: String in entry["lines"]:

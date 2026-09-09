@@ -7,8 +7,9 @@ extends Control
 ## back to meaning "close overlays"). The map
 ## opens covering the frame, and zooms out to the whole world; the view
 ## pans when the mouse rides an edge
-## of the frame (plus drag and wheel-zoom), the kingdom under the mouse
-## gets its border outlined (borders.csv), towns and points of interest show
+## of the frame (plus drag and wheel-zoom), every kingdom is washed in its
+## palette colour with its live border drawn (the render is terrain only),
+## the kingdom under the mouse gets its outline lit, towns and points of interest show
 ## as pins (LOD by zoom, MapObjects), hovering a pin or road names it,
 ## and clicking a kingdom opens a
 ## floating info card resolved through the world_state_index.png bitmap
@@ -36,15 +37,13 @@ const CLICK_SLOP := 5.0
 const EDGE_MARGIN := 12.0
 ## Edge-scroll speed in screen px/s.
 const EDGE_SPEED := 260.0
-## The hovered kingdom's outline: a single hairline in black. It sits on top
-## of Azgaar's own printed border, so anything heavier reads as a second,
-## thicker border rather than a highlight (user ruling 2026-09-09).
-## How strongly a conquered province is repainted in its new owner's colour.
-const TERRITORY_TINT_ALPHA := 0.55
+## The render is terrain only (user ruling 2026-09-09): the game paints every
+## province in its live owner's colour (MapPalette, data/political_palette.csv)
+## and draws every kingdom's border itself, so conquest repaints and redraws
+## with no new art. The hovered kingdom's outline is drawn over that in the
+## palette's hover colour; widths and opacities live in balance.csv.
 ## Debug-build shortcut for the territory demo (dev_flip_hovered_province).
 const DEV_FLIP_KEY := KEY_T
-const HOVER_WIDTH := 1.0
-const HOVER_COLOR := Color(0.0, 0.0, 0.0, 0.9)
 ## Pin sizes in screen px (constant at any zoom; LOD hides the small ones).
 const PIN_CAPITAL := 4.0
 const PIN_TOWN := 2.5
@@ -72,6 +71,11 @@ var show_provinces: bool = false:
 		queue_redraw()
 ## The province selected in the province view ("" when none); drawn tinted.
 var _selected_province := ""
+## Per province loop: its triangle indices (native coordinates, so they never
+## change with the view) and bounding box, built once so the political wash
+## costs one triangle-array call per loop per frame.
+var _province_tris: Dictionary = {}
+var _province_bbox: Dictionary = {}
 
 var _map_texture: Texture2D
 var _index_image: Image
@@ -139,6 +143,7 @@ func _ready() -> void:
 	for code: String in Game.data.kingdoms:
 		var row: Dictionary = Game.data.kingdoms[code]
 		_by_state_id[int(row["state_id"])] = row
+	_build_province_meshes()
 	_card = MapInfoCard.new()
 	_card.ask_requested.connect(func(text: String) -> void: place_asked.emit(text))
 	_card.closed.connect(func() -> void:
@@ -199,16 +204,11 @@ func _draw() -> void:
 		_go_home()
 	draw_texture_rect(_map_texture,
 		Rect2(_offset, _map_texture.get_size() * _zoom), false)
-	for loop: PackedVector2Array in hover_loops():
-		var pts := PackedVector2Array()
-		pts.resize(loop.size() + 1)
-		for i in loop.size():
-			pts[i] = map_to_screen(loop[i])
-		pts[loop.size()] = pts[0]  # close the ring
-		draw_polyline(pts, HOVER_COLOR, HOVER_WIDTH, true)
-	_draw_territory_tint()
+	_draw_political_wash()
 	_draw_province_seams()
 	_draw_selected_province()
+	_draw_state_borders()
+	_draw_hovered_outline()
 	_draw_kingdom_labels()
 	_draw_province_labels()
 	_draw_pins()
@@ -250,34 +250,97 @@ func _draw_pins() -> void:
 				_draw_diamond(sp, PIN_MARKER + 1.0, PIN_OUTLINE)
 				_draw_diamond(sp, PIN_MARKER, UiPalette.TOOL_PERSONAL)
 
-## Repaint the provinces that have changed hands in their new owner's colour.
-##
-## Only the moved ones: the render carries Azgaar's own political colours
-## baked in, so unchanged land is already the right colour and painting over
-## it would only dull it. Once the pack ships a politically neutral render
-## (terrain only), the same pass widens to every province and the game owns
-## all the political colour.
-func _draw_territory_tint() -> void:
-	if Game.state == null or Game.state.province_owner.is_empty():
-		return
-	for code: String in Game.state.province_owner:
-		var king: Dictionary = Game.data.kingdoms.get(
-			String(Game.state.province_owner[code]), {})
-		if king.is_empty():
+## Triangulate every province loop once, in native coordinates. Province
+## outlines are concave, so a fan fill would bleed outside the shape; the
+## indices are transform-invariant, so each frame only moves the points.
+func _build_province_meshes() -> void:
+	_province_tris.clear()
+	_province_bbox.clear()
+	for code: String in Game.data.province_borders:
+		var tris: Array = []
+		var bbox := Rect2()
+		var first := true
+		for loop: PackedVector2Array in Game.data.province_borders[code]:
+			tris.append(Geometry2D.triangulate_polygon(loop))
+			var b := MapGeometry.bounds(loop)
+			bbox = b if first else bbox.merge(b)
+			first = false
+		_province_tris[code] = tris
+		_province_bbox[code] = bbox
+
+## The provinces whose wash would touch the frame right now, with their
+## owner's colour: {code, color}. Public for tests.
+func political_fills() -> Array:
+	if _map_texture == null:
+		return []
+	var alpha := Game.data.bal("map_political_alpha")
+	var frame := Rect2(Vector2.ZERO, size)
+	var out: Array = []
+	for code: String in _province_bbox:
+		var b: Rect2 = _province_bbox[code]
+		var screen := Rect2(map_to_screen(b.position), b.size * view_scale())
+		if not frame.intersects(screen):
 			continue
-		var tint := Color(String(king.get("color", "#ffffff")))
-		tint.a = TERRITORY_TINT_ALPHA
-		for loop: PackedVector2Array in Game.data.province_borders.get(code, []):
-			var screen := PackedVector2Array()
-			screen.resize(loop.size())
-			for i in loop.size():
-				screen[i] = map_to_screen(loop[i])
-			# Province outlines are concave, so fan-filling them would bleed
-			# outside the shape — triangulate instead.
-			var tris := Geometry2D.triangulate_polygon(screen)
-			for t in range(0, tris.size(), 3):
-				draw_colored_polygon(PackedVector2Array([screen[tris[t]],
-					screen[tris[t + 1]], screen[tris[t + 2]]]), tint)
+		var owner := MapOwnership.owner_of(Game.data, Game.state, code)
+		var color := MapPalette.color_of(Game.data, owner)
+		color.a = alpha
+		out.append({"code": code, "color": color})
+	return out
+
+## Paint every province in its live owner's colour over the terrain.
+func _draw_political_wash() -> void:
+	var rid := get_canvas_item()
+	for fill in political_fills():
+		var code: String = fill["code"]
+		var loops: Array = Game.data.province_borders[code]
+		var tris: Array = _province_tris[code]
+		for i in loops.size():
+			var indices: PackedInt32Array = tris[i]
+			if indices.is_empty():
+				continue
+			var loop: PackedVector2Array = loops[i]
+			var pts := PackedVector2Array()
+			pts.resize(loop.size())
+			for j in loop.size():
+				pts[j] = map_to_screen(loop[j])
+			var colors := PackedColorArray()
+			colors.resize(loop.size())
+			colors.fill(fill["color"])
+			RenderingServer.canvas_item_add_triangle_array(rid, indices, pts, colors)
+
+## Every kingdom's live border, solid, in the palette's border colour.
+func _draw_state_borders() -> void:
+	var color := MapPalette.named(Game.data, "state_border")
+	color.a = Game.data.bal("map_state_border_alpha")
+	var width := Game.data.bal("map_state_border_width")
+	var frame := Rect2(Vector2.ZERO, size).grow(width * 2.0)
+	for code: String in Game.data.kingdoms:
+		for loop: PackedVector2Array in MapOwnership.outline_of(Game.data, Game.state, code):
+			var pts := _closed_screen_ring(loop)
+			if _ring_touches(pts, frame):
+				draw_polyline(pts, color, width, true)
+
+## The hovered kingdom's outline in the palette's hover colour, over the
+## border it already has.
+func _draw_hovered_outline() -> void:
+	var color := MapPalette.named(Game.data, "hover_border")
+	var width := Game.data.bal("map_hover_border_width")
+	for loop: PackedVector2Array in hover_loops():
+		draw_polyline(_closed_screen_ring(loop), color, width, true)
+
+func _closed_screen_ring(loop: PackedVector2Array) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	pts.resize(loop.size() + 1)
+	for i in loop.size():
+		pts[i] = map_to_screen(loop[i])
+	pts[loop.size()] = pts[0]  # close the ring
+	return pts
+
+func _ring_touches(pts: PackedVector2Array, frame: Rect2) -> bool:
+	for p in pts:
+		if frame.has_point(p):
+			return true
+	return false
 
 ## Kingdom names set into the terrain like printed map lettering: the display
 ## face (Cinzel), widely letter-spaced, faint, and scaled with the zoom so
@@ -656,7 +719,7 @@ func _draw_province_seams() -> void:
 	var seams := _visible_seams()
 	if seams.is_empty():
 		return
-	var color := UiPalette.GOLD
+	var color := MapPalette.named(Game.data, "province_line")
 	color.a = Game.data.bal("map_province_line_alpha")
 	var width := Game.data.bal("map_province_line_width")
 	var dash := Game.data.bal("map_province_dash_px")

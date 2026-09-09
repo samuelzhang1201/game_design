@@ -78,7 +78,7 @@ func show_country(kingdom_code: String) -> void:
 		_restore()
 		return
 	_title.text = String(entry["title"])
-	_swatch.color = Color(String(row.get("color", "#ffffff")))
+	_swatch.color = MapPalette.color_of(Game.data, kingdom_code)
 	for child in _rows.get_children():
 		child.queue_free()
 	for line: String in entry["lines"]:

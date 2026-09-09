@@ -22,6 +22,10 @@ var world_schema: Array[Dictionary] = []
 var metric_polarity: Dictionary = {}
 ## data/order_costs.csv: action_code -> {cost (EventEffects ops), always, notes}.
 var order_costs: Dictionary = {}
+## data/political_palette.csv: key -> "#rrggbb". Realm slots, other_N for the
+## unbound kingdoms, and the named line colours (MapPalette). The render is
+## terrain only; the game paints every political colour from this table.
+var palette: Dictionary = {}
 var events: Array[Dictionary] = []
 var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
@@ -241,6 +245,9 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/order_costs.csv", ["action_code", "cost", "always"],
 			func(r): order_costs[r["action_code"]] = r):
+		return false
+	if not _load_if_present(dir + "/political_palette.csv", ["key", "color"],
+			func(r): palette[r["key"]] = r["color"]):
 		return false
 	# A campaign always has a world under it; which one is data, not code.
 	if not maps.is_empty() and not load_map(default_map_id()):

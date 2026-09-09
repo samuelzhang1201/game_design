@@ -441,3 +441,41 @@ func test_province_seams_draw_only_when_zoomed_in_enough() -> void:
 	assert_gt(v.visible_seam_count(), 0, "zoomed in on a seam, it is on screen")
 	v.show_provinces = false
 	assert_eq(v.visible_seam_count(), 0, "off means none")
+
+## The render is terrain only (user ruling 2026-09-09): the view paints every
+## province in its live owner's palette colour and draws every kingdom's
+## border itself, so conquest repaints without new art.
+func test_every_province_on_screen_is_washed_in_its_owners_colour() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v._zoom_at(v.size / 2.0, 0.00001)  # the whole world in the frame
+	var fills := v.political_fills()
+	assert_eq(fills.size(), Game.data.province_borders.size(), "every province is painted")
+	var mine := Game.data.resolve_realm("player_realm")
+	var want := MapPalette.color_of(Game.data, mine)
+	var checked := 0
+	for f in fills:
+		if MapOwnership.owner_of(Game.data, Game.state, String(f["code"])) == mine:
+			var c: Color = f["color"]
+			assert_eq(Color(c.r, c.g, c.b), Color(want.r, want.g, want.b),
+				"%s wears the crown's colour" % String(f["code"]))
+			assert_almost_eq(c.a, Game.data.bal("map_political_alpha"), 0.001)
+			checked += 1
+	assert_gt(checked, 0)
+
+func test_a_conquered_province_is_repainted_for_its_new_owner() -> void:
+	Game.start_campaign(42)
+	var v := _view()
+	await wait_frames(2)
+	v._zoom_at(v.size / 2.0, 0.00001)
+	var mine := Game.data.resolve_realm("player_realm")
+	var raider := Game.data.resolve_realm("raider_realm")
+	var lost: String = MapOwnership.provinces_of(Game.data, Game.state, mine)[0]
+	MapOwnership.set_owner(Game.data, Game.state, lost, raider, "a raid")
+	var want := MapPalette.color_of(Game.data, raider)
+	for f in v.political_fills():
+		if String(f["code"]) == lost:
+			var c: Color = f["color"]
+			assert_eq(Color(c.r, c.g, c.b), Color(want.r, want.g, want.b), "the raiders' colour now")
+			return
+	fail_test("the lost province was not painted at all")
