@@ -116,3 +116,26 @@ func parse_player_text(text: String, report: TickReport, state: GameState,
 		CONNECT_ONE_SHOT)
 	client.request_completion(p["system"], p["user"],
 		String(_config["model_parse"]), true)
+
+## The two-part order call (spec 2026-09-09 §4): one request returns the
+## speaker's narrative and the impacts. Busy or failing degrades exactly as
+## the parse does — no state moves without a validated reply.
+func order(text: String, speaker_id: String, report: TickReport, state: GameState,
+		data: DataRepository, cb: Callable) -> void:
+	if _busy:
+		cb.call({"ok": false, "error": "voicer busy", "narrative": "", "actions": [],
+			"world": [], "world_rejected": [], "court_reaction": {}, "degraded": true})
+		return
+	_busy = true
+	var p := PromptBuilder.order_prompts(text, speaker_id, report, state, data)
+	client.completed.connect(func(ok: bool, raw: String):
+		_busy = false
+		if not ok:
+			cb.call({"ok": false, "error": "couriers unavailable", "narrative": "", "actions": [],
+				"world": [], "world_rejected": [], "court_reaction": {}, "degraded": true})
+			return
+		var out := ResponseValidator.parse_order(raw, data, state)
+		out["degraded"] = false
+		cb.call(out),
+		CONNECT_ONE_SHOT)
+	client.request_completion(p["system"], p["user"], String(_config["model_order"]), true)

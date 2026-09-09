@@ -13,6 +13,7 @@ const ENV_PATH := "res://.env"
 static func load_config(env_path: String = ENV_PATH,
 		json_path: String = CONFIG_PATH) -> Dictionary:
 	var cfg := {"api_key": "", "api_name": "", "model_parse": "gpt-5.6-luna",
+		"model_order": "gpt-5.6-luna",
 		"model_voice": "gpt-5.6-terra", "model_flagship": "gpt-5.6-sol",
 		"offline_mode": true, "llm_max_output_tokens": 600,
 		"llm_reasoning_effort": "", "llm_store_requests": false}
@@ -25,8 +26,9 @@ static func load_config(env_path: String = ENV_PATH,
 ## Parses KEY=VALUE lines ('#' comments, blanks skipped). Recognized keys:
 ## OPENAI_API_KEY, OPENAI_API_NAME (informational label for which key/project
 ## this config is — logged/shown only, never sent to the API), LLM_MODEL
-## (sets all three tiers), LLM_MODEL_PARSE/_VOICE/_FLAGSHIP (per-tier
-## overrides), LLM_MAX_OUTPUT_TOKENS, LLM_REASONING_EFFORT (reasoning-model
+## (sets all four tiers), LLM_MODEL_PARSE/_ORDER/_VOICE/_FLAGSHIP (per-tier
+## overrides; the order tier is the two-part order call, spec 2026-09-09 §4,
+## and defaults to the parse tier), LLM_MAX_OUTPUT_TOKENS, LLM_REASONING_EFFORT (reasoning-model
 ## budget, e.g. "minimal" — REQUIRED with gpt-5-family models, whose default
 ## effort can spend the whole output cap on hidden reasoning and return empty
 ## dialogue, verified live 2026-08-30; sent only to models that accept it —
@@ -59,10 +61,13 @@ static func _overlay_env(cfg: Dictionary, path: String) -> void:
 				cfg["api_name"] = value
 			"LLM_MODEL":
 				cfg["model_parse"] = value
+				cfg["model_order"] = value
 				cfg["model_voice"] = value
 				cfg["model_flagship"] = value
 			"LLM_MODEL_PARSE":
 				cfg["model_parse"] = value
+			"LLM_MODEL_ORDER":
+				cfg["model_order"] = value
 			"LLM_MODEL_VOICE":
 				cfg["model_voice"] = value
 			"LLM_MODEL_FLAGSHIP":

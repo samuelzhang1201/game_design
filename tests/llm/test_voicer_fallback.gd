@@ -226,3 +226,24 @@ func test_voice_event_marks_an_unauthored_scene_rather_than_inventing_one() -> v
 	assert_string_contains(String(got["text"]), "missing scene",
 		"a gap in the story document is visible, never papered over")
 	assert_eq(fake.calls, 0)
+
+## The two-part order call (spec 2026-09-09 §4): narrative and impacts in ONE
+## request, validated before anything reaches the caller.
+func test_order_returns_both_parts_through_one_call() -> void:
+	var fake := FakeClient.new()
+	fake.canned_ok = true
+	fake.canned_text = JSON.stringify({"narrative": "The rolls are cut.", "impacts": {"actions":
+		[{"action_code": "TAX_RATE_ADJUST", "params": {"delta": -1}, "target": ""}],
+		"world": [], "court_reaction": {}}})
+	add_child_autofree(fake)
+	var v := Voicer.new(fake)
+	add_child_autofree(v)
+	var s := GameState.new_campaign(data, 42)
+	var r := TickEngine.new(data).advance(s)
+	got = {}
+	v.order("lower taxes", "char_steward", r, s, data, func(res): got = res)
+	await wait_frames(3)
+	assert_true(got["ok"])
+	assert_eq(fake.calls, 1, "one call carries narrative and impacts")
+	assert_eq(got["narrative"], "The rolls are cut.")
+	assert_eq(got["actions"][0].action_code, "TAX_RATE_ADJUST")

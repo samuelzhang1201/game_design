@@ -94,3 +94,10 @@ func test_prompt_cap_refuses_without_api_call() -> void:
 			_refusals += 1)
 	await wait_frames(2)
 	assert_eq(_refusals, 0, "cap resets on a new tick")
+
+## The two-part order call has its own tier (spec 2026-09-09 §4.3).
+func test_order_tier_reads_its_own_key_and_falls_back_to_llm_model() -> void:
+	var cfg := OpenAIClient.load_config(FIXTURE_ENV, "user://does_not_exist.json")
+	assert_eq(cfg["model_order"], "test-order-model")
+	var bare := OpenAIClient.load_config("res://no_such.env", "user://no_such.json")
+	assert_eq(bare["model_order"], bare["model_parse"], "defaults to the parse tier")

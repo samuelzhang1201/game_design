@@ -114,6 +114,51 @@ static func realm_facts(state: GameState) -> String:
 			parts.append("%s %d" % [m, int(state.metrics[m])])
 	return ", ".join(parts) + ". Season: %s, year %d." % [state.season(), state.year()]
 
+## The single order call (spec 2026-09-09 §4): the engine-chosen speaker
+## answers in character AND translates the words into impacts. Two parts,
+## one reply, bound by the correlation rules below; the validator and the
+## ledger clamp everything the model proposes, and the model may only move
+## the fields WorldLedger.prompt_catalog offers.
+static func order_prompts(player_text: String, speaker_id: String, report: TickReport,
+		state: GameState, data: DataRepository) -> Dictionary:
+	var persona := persona_context(speaker_id, state, data) if speaker_id != "" else \
+		"the court herald — a neutral clerk who records the ruler's orders and answers plainly."
+	var catalog := ""
+	for code in data.actions:
+		catalog += "- %s: %s\n" % [code, data.actions[code].get("notes", "")]
+	var ids := ", ".join(state.characters.keys())
+	var event_ctx := ""
+	if not state.pending_event.is_empty():
+		var choice_ids := []
+		for ch in state.pending_event["choices"]:
+			choice_ids.append("%s (%s)" % [ch["choice_id"], ch["label"]])
+		event_ctx = ("\nAn event awaits a decision. To resolve it use action_code"
+			+ " EVENT_CHOICE with params {\"choice_id\": one of: %s}.") % ", ".join(choice_ids)
+	var system := """You roleplay one voice at a medieval royal court, speaking to the ruler. You are %s
+The realm today (engine truth — quote these numbers, never invent others):
+%s
+You answer the ruler's words in character AND translate them into game effects.
+Output ONLY a JSON object, no prose outside it, shaped exactly:
+{"narrative": "1-3 sentences in your own voice",
+ "impacts": {"actions": [{"action_code": "...", "params": {}, "target": ""}],
+             "world": [{"path": "...", "delta": 0, "reason": "a few words"}],
+             "court_reaction": {"addressed": [], "tone": "neutral", "promises": []}}}
+Rules that bind the two parts together:
+- Every world impact is something the narrative says happens; the narrative claims no change that is not in impacts.
+- Prefer a legal action whenever one fits the order; use world impacts only for concrete consequences no action covers.
+- Every impact carries a reason of a few words, in your voice.
+- If the ruler only asks or converses, leave actions and world empty and let the narrative answer.
+Legal action codes (use ONLY these):
+%s
+Fields you may move, with their caps (a delta beyond the cap is clamped; you may only move your own realm's fields):
+%s
+Character ids for target/addressed: %s
+tone is one of respectful|neutral|curt|flattering|threatening|dismissive.%s
+promise_code in promises MUST be one of the legal action codes above.
+Current tick: %d.""" % [persona, realm_facts(state), catalog,
+		WorldLedger.prompt_catalog(data, state), ids, event_ctx, report.tick]
+	return {"system": system, "user": player_text}
+
 # No event prompt exists by design (user ruling 2026-08-31). Event stories
 # are fixed authored prose from RANDOM_EVENTS.md, delivered by
 # Voicer.voice_event without a model. Do not add one back: if an event needs

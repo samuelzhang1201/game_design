@@ -80,3 +80,24 @@ func test_parse_prompt_omits_event_choice_when_no_pending_event() -> void:
 	s.pending_event = {}
 	var p := PromptBuilder.parse_prompts("cut taxes by one", r, s, data)
 	assert_false(p["system"].contains("EVENT_CHOICE"))
+
+## The two-part order call (spec 2026-09-09 §4): one persona, the action
+## catalog, the ledger's writable fields, and the rule binding narrative to
+## impacts.
+func test_order_prompt_carries_persona_catalog_and_the_correlation_rule() -> void:
+	var s := GameState.new_campaign(data, 42)
+	var r := TickEngine.new(data).advance(s)
+	var p := PromptBuilder.order_prompts("raise the levies", "char_marshal", r, s, data)
+	assert_string_contains(p["system"], "Ser Brandt of Harrow")
+	assert_string_contains(p["system"], "LEVY_RAISE")
+	assert_string_contains(p["system"], "\"narrative\"")
+	assert_string_contains(p["system"], "\"impacts\"")
+	assert_string_contains(p["system"], "metrics.grain")
+	assert_string_contains(p["system"], "narrative claims no change")
+	assert_eq(p["user"], "raise the levies")
+
+func test_order_prompt_with_no_speaker_uses_the_herald() -> void:
+	var s := GameState.new_campaign(data, 42)
+	var r := TickEngine.new(data).advance(s)
+	var p := PromptBuilder.order_prompts("hm", "", r, s, data)
+	assert_string_contains(p["system"], "herald")
