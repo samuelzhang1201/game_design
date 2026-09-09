@@ -219,6 +219,22 @@ func _newest(candidates: Array[String], what: String) -> String:
 	return best
 
 
+## The newest PNG that is the world at an integer scale; anything else in the
+## folder (a reference screenshot, a town preview) is named and skipped.
+func _newest_render(candidates: Array[String], width: int, height: int) -> String:
+	var sorted := candidates.duplicate()
+	sorted.sort_custom(func(a: String, b: String) -> bool:
+		return FileAccess.get_modified_time(a) > FileAccess.get_modified_time(b))
+	for path in sorted:
+		var dims := _png_dimensions(path)
+		if dims.x > 0 and dims.x % width == 0 and dims == Vector2i(width * (dims.x / width), height * (dims.x / width)):
+			return path
+		print("skipping %s: %s is not the %dx%d world at an integer scale" % [
+			path.get_file(), dims, width, height])
+	push_error("error: no map render PNG found in %s" % MAPS)
+	return ""
+
+
 ## Azgaar lists start with a literal 0 and may flag removed rows.
 func _active(entries: Array) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
@@ -466,12 +482,8 @@ func _run() -> int:
 				pngs.append(path)
 	if json_path == "":
 		json_path = _newest(jsons, "Azgaar full export (*Full*.json)")
-	if png_path == "":
-		png_path = _newest(pngs, "map render PNG")
-	if json_path == "" or png_path == "":
+	if json_path == "":
 		return 1
-	print("json: %s\npng:  %s" % [json_path.get_file(), png_path.get_file()])
-
 	var world: Variant = JSON.parse_string(
 			_drop_lone_surrogates(FileAccess.get_file_as_string(json_path)))
 	if world == null:
@@ -482,10 +494,18 @@ func _run() -> int:
 	var height := int(info["height"])
 	# The render may be exported at an integer scale (2x, 3x...) for
 	# sharper zoom; the index bitmap and all coordinates stay at the
-	# JSON's native scale, and WorldMapView converts at runtime.
+	# JSON's native scale, and WorldMapView converts at runtime. Other PNGs
+	# dropped beside the packs (references, previews) are skipped by their
+	# dimensions rather than mistaken for the render.
+	var render_scale := 0
+	if png_path == "":
+		png_path = _newest_render(pngs, width, height)
+	if png_path == "":
+		return 1
+	print("json: %s\npng:  %s" % [json_path.get_file(), png_path.get_file()])
 	var png_dims := _png_dimensions(png_path)
 	@warning_ignore("integer_division")
-	var render_scale := png_dims.x / width
+	render_scale = png_dims.x / width
 	if render_scale < 1 or png_dims != Vector2i(width * render_scale, height * render_scale):
 		push_error("error: PNG must be the JSON's %dx%d at an integer scale, got %s" % [
 			width, height, png_dims])
