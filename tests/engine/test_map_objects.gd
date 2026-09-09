@@ -224,3 +224,57 @@ func _longest_road(repo: DataRepository) -> String:
 			best_n = n
 			best = code
 	return best
+
+# --- the province panel (user request 2026-09-09) ----------------------------
+
+func _player_realm() -> String:
+	return Game.data.resolve_realm("player_realm")
+
+func _own_province() -> String:
+	return MapOwnership.provinces_of(Game.data, Game.state, _player_realm())[0]
+
+func _foreign_province() -> String:
+	for code: String in Game.data.provinces:
+		if String(Game.data.provinces[code]["kingdom_code"]) != _player_realm():
+			return code
+	return ""
+
+func test_house_of_uses_the_binding_then_the_capital_town() -> void:
+	Game.start_campaign(42)
+	assert_false(Game.data.house_bindings.is_empty(), "the pack binds houses to land")
+	var bound: String = Game.data.house_bindings.keys()[0]
+	assert_eq(MapObjects.house_of(Game.data, bound),
+		"House " + String(Game.data.house_bindings[bound]))
+	var unbound := _foreign_province()
+	var cap: Dictionary = Game.data.burgs[String(Game.data.provinces[unbound]["capital_burg"])]
+	assert_eq(MapObjects.house_of(Game.data, unbound), "House " + String(cap["label"]),
+		"an unbound province is held by the house of its seat")
+
+func test_own_province_is_described_in_full_and_a_foreign_one_barely() -> void:
+	Game.start_campaign(42)
+	var mine := MapObjects.describe_province(Game.data, Game.state, _own_province())
+	assert_eq(String(mine["known"]), "full")
+	var joined := "\n".join(mine["lines"])
+	for word in ["Province of", "Held by House", "Seat:", "Towns:", "Population:", "Area:"]:
+		assert_string_contains(joined, word)
+	var theirs := MapObjects.describe_province(Game.data, Game.state, _foreign_province())
+	assert_eq(String(theirs["known"]), "basic")
+	var basic := "\n".join(theirs["lines"])
+	assert_string_contains(basic, "Province of")
+	assert_string_contains(basic, "Held by House")
+	assert_string_contains(basic, "Seat:")
+	assert_false(basic.contains("Population"), "no details abroad")
+	assert_false(basic.contains("Towns"), "no details abroad")
+	assert_eq(theirs["lines"].size(), 3, "name, kingdom, house, seat and nothing more")
+
+func test_the_province_account_follows_conquest() -> void:
+	Game.start_campaign(42)
+	var lost := _own_province()
+	MapOwnership.set_owner(Game.data, Game.state, lost, Game.data.resolve_realm("raider_realm"), "a raid")
+	var after := MapObjects.describe_province(Game.data, Game.state, lost)
+	assert_eq(String(after["known"]), "basic", "lost land is foreign land")
+	var won := _foreign_province()
+	MapOwnership.set_owner(Game.data, Game.state, won, _player_realm(), "conquest")
+	var gained := MapObjects.describe_province(Game.data, Game.state, won)
+	assert_eq(String(gained["known"]), "full")
+	assert_string_contains("\n".join(gained["lines"]), "Changed hands:")

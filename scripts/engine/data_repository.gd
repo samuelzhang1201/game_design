@@ -71,6 +71,10 @@ var province_texture_path: String = ""
 var biome_texture_path: String = ""
 ## realm slot -> this map's kingdom_code (maps/<id>/realm_bindings.csv).
 var realm_bindings: Dictionary = {}
+## province_code -> the authored house holding it (maps/<id>/house_bindings.csv,
+## hand-maintained like realm_bindings). Unbound provinces are held by a house
+## named after their capital town — see MapObjects.house_of.
+var house_bindings: Dictionary = {}
 ## How the map render sits on the pack's coordinates (maps.csv). Azgaar's PNG
 ## export captures the CURRENT view, so a map exported while zoomed or panned
 ## is a scaled, shifted picture of the same world: render = native * scale +
@@ -273,6 +277,7 @@ func load_map(id: String) -> bool:
 	biomes.clear()
 	map_info.clear()
 	realm_bindings.clear()
+	house_bindings.clear()
 	world_tables.clear()
 	if not _load_if_present(dir + "/political/kingdoms.csv",
 			["kingdom_code", "state_id", "label", "capital_burg"],
@@ -333,6 +338,11 @@ func load_map(id: String) -> bool:
 		_register_table(String(spec[0]), String(spec[1]), table)
 	if not _load_if_present(dir + "/realm_bindings.csv", ["slot", "kingdom_code"],
 			func(r): realm_bindings[r["slot"]] = r["kingdom_code"]):
+		return false
+	if not _load_if_present(dir + "/house_bindings.csv", ["family_name", "province_codes"],
+			func(r: Dictionary) -> void:
+				for pc in String(r["province_codes"]).split("|", false):
+					house_bindings[pc] = String(r["family_name"])):
 		return false
 	map_id = id
 	render_scale = float(m.get("render_scale", 1.0)) if String(m.get("render_scale", "")) != "" else 1.0

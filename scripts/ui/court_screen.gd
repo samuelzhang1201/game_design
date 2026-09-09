@@ -30,6 +30,8 @@ var _suggestion_buttons: Array = []
 var _world_map: WorldMapView
 ## The hovered country's card, overlaying the council log.
 var _country_panel: CountryPanel
+## The selected province's account (province view), overlaying the log.
+var _province_panel: ProvincePanel
 
 ## Static structure and layout live in scenes/court.tscn (editable in the
 ## editor); _ready fetches nodes, paints them from UiPalette, and wires
@@ -50,6 +52,8 @@ func _ready() -> void:
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the council log returns when it leaves.
 	_country_panel = CountryPanel.attach(%LogPanel.get_node("LVBox"), _world_map)
+	# A province clicked in the province view shows its account here too.
+	_province_panel = ProvincePanel.attach(%LogPanel.get_node("LVBox"), _world_map)
 	%LogPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	UiPalette.style_header(%LogHeader, 9)
@@ -234,3 +238,6 @@ func _scroll_log_to_bottom() -> void:
 ## Test seam.
 func country_panel() -> CountryPanel:
 	return _country_panel
+
+func province_panel() -> ProvincePanel:
+	return _province_panel

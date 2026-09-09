@@ -118,3 +118,31 @@ func test_burgs_carry_group_and_culture() -> void:
 func test_absent_table_reads_as_empty() -> void:
 	assert_eq(repo.world_table("economy", "no_such_area"), {})
 	assert_eq(repo.world_row("economy", "kingdoms", "no_such_kingdom"), {})
+
+## house_bindings.csv binds the court's houses to provinces of the player's
+## realm (spec addendum 2026-09-09): every code must be real and start in the
+## player's realm, every house must be a house of the roster.
+func test_house_bindings_name_real_land_of_the_realm_and_real_houses() -> void:
+	assert_false(repo.house_bindings.is_empty(), "the pack binds houses")
+	var houses: Dictionary = {}
+	for role in repo.roles:
+		houses[String(role.get("family_name", ""))] = true
+	for code: String in repo.house_bindings:
+		assert_true(repo.provinces.has(code), "%s is a province" % code)
+		assert_eq(String(repo.provinces[code]["kingdom_code"]), _player(),
+			"%s starts in the player's realm" % code)
+		assert_true(houses.has(String(repo.house_bindings[code])),
+			"%s is a house of the roster" % String(repo.house_bindings[code]))
+
+func test_regiments_stand_in_a_province_of_their_kingdom() -> void:
+	for code: String in repo.world_table("military", "regiments"):
+		var r: Dictionary = repo.world_row("military", "regiments", code)
+		var pc := String(r.get("province_code", ""))
+		assert_true(repo.provinces.has(pc), "%s stands in a province" % code)
+		assert_eq(String(repo.provinces[pc]["kingdom_code"]), String(r["kingdom_code"]),
+			"%s stands on its own kingdom's land" % code)
+
+func test_provinces_carry_a_majority_biome() -> void:
+	for code: String in repo.provinces:
+		var bid := int(float(repo.provinces[code].get("biome_id", "0")))
+		assert_true(repo.biomes.has(bid), "%s has a named biome" % code)

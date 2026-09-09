@@ -323,3 +323,42 @@ func test_free_text_names_the_speaker_before_the_call() -> void:
 		if (l as Label).text.begins_with(marshal.display_name + ":"):
 			found = true
 	assert_true(found, "the marshal answered under his own name")
+
+## Province view (user request 2026-09-09): selecting one of the player's own
+## provinces shows its full account in the left column; a foreign one shows
+## only what is commonly known; water clears the panel.
+func test_selecting_a_province_shows_its_account_in_the_left_column() -> void:
+	Game.start_campaign(42)
+	var screen := _screen()
+	await wait_frames(2)
+	var map := screen.world_map()
+	map.show_provinces = true
+	var mine := MapOwnership.provinces_of(Game.data, Game.state, Game.data.resolve_realm("player_realm"))[0]
+	map.select_province(mine)
+	await wait_frames(1)
+	var panel := screen.province_panel()
+	assert_true(panel.visible, "the panel covers the log")
+	assert_eq(panel.shown_province(), mine)
+	var texts: Array[String] = []
+	for l in panel.rows().get_children():
+		texts.append((l as Label).text)
+	var joined := "\n".join(texts)
+	assert_string_contains(joined, "Population:")
+	assert_string_contains(joined, "Held by House")
+	var foreign := ""
+	for code: String in Game.data.provinces:
+		if String(Game.data.provinces[code]["kingdom_code"]) != Game.data.resolve_realm("player_realm"):
+			foreign = code
+			break
+	map.select_province(foreign)
+	await wait_frames(1)
+	texts.clear()
+	for l in panel.rows().get_children():
+		texts.append((l as Label).text)
+	joined = "\n".join(texts)
+	assert_false(joined.contains("Population:"), "no details abroad")
+	assert_string_contains(joined, "Held by House")
+	assert_string_contains(joined, "Little more is known")
+	map.select_province("")
+	await wait_frames(1)
+	assert_false(panel.visible, "clearing the selection restores the log")

@@ -7,9 +7,11 @@ extends SceneTree
 ##
 ## Tables are grouped by domain (spec 2026-09-09 §1.1); <pack> = data/maps/<map-id>:
 ##   <pack>/map_info.csv               width, height, distance unit/scale, population rate
+##   (<pack>/realm_bindings.csv and house_bindings.csv are hand-maintained,
+##    never written here: they bind authored realms and houses to this map)
 ##   <pack>/political/kingdoms.csv     one row per state (0 "Neutrals" excluded):
 ##       identity, capital, neighbors, area, population, form, culture, majority religion
-##   <pack>/political/provinces.csv    one row per province (+ province_id, center, form)
+##   <pack>/political/provinces.csv    one row per province (+ province_id, center, form, majority biome)
 ##   <pack>/political/burgs.csv        one row per burg (+ type, features, group, culture)
 ##   <pack>/political/borders.csv      one row per closed border loop per kingdom:
 ##       kingdom_code,loop,points — points as "x y|x y|..." in native map
@@ -24,7 +26,7 @@ extends SceneTree
 ##   <pack>/economy/burgs.csv          treasury, product, market; production.csv what
 ##       each burg makes; goods.csv, markets.csv, market_goods.csv the trade tables
 ##   <pack>/military/kingdoms.csv      unit totals, regiment count, strength, alert
-##   <pack>/military/regiments.csv     one row per regiment with its unit counts
+##   <pack>/military/regiments.csv     one row per regiment: its province and unit counts
 ##   <pack>/military/unit_types.csv    the unit definitions (rates, crew, power)
 ##   <pack>/society/cultures.csv, religions.csv, zones.csv (hazards -> provinces)
 ##   <pack>/geography/routes.csv       roads/trails/sea routes as polylines,
@@ -86,6 +88,19 @@ func _ensure_domains(out_data: String) -> void:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
 		if not FileAccess.file_exists(dir + "/.gdignore"):
 			_write_text(dir + "/.gdignore", "")
+
+
+## The key with the largest weight; ties go to the lower key so output is stable.
+func _majority_key(weights: Dictionary) -> int:
+	var best := 0
+	var best_w := -1.0
+	var ids := weights.keys()
+	ids.sort()
+	for k in ids:
+		if float(weights[k]) > best_w:
+			best_w = float(weights[k])
+			best = int(k)
+	return best
 
 
 ## Majority religion of a state's cells by rural population; ties go to the
@@ -540,11 +555,17 @@ func _run() -> int:
 	for pid: int in prov_code:
 		prov_area[pid] = 0.0
 		prov_pop[pid] = 0.0
+	var prov_biome_area: Dictionary = {}  # pid -> {biome_id: area}
 	for c: Dictionary in cells:
 		var pid := int(c.get("province", 0))
 		if prov_area.has(pid):
 			prov_area[pid] += float(c.get("area", 0))
 			prov_pop[pid] += float(c.get("pop", 0))
+			if not prov_biome_area.has(pid):
+				prov_biome_area[pid] = {}
+			var by: Dictionary = prov_biome_area[pid]
+			var bid := int(c.get("biome", 0))
+			by[bid] = float(by.get(bid, 0.0)) + float(c.get("area", 0))
 	for b in burgs:  # urban population on top of the cells' rural points
 		prov_pop[burg_province[int(b["i"])]] += float(b.get("population", 0))
 
@@ -596,7 +617,7 @@ func _run() -> int:
 	# --- political/provinces.csv ------------------------------------------
 	out = _csv_line(["province_code", "label", "kingdom_code", "capital_burg",
 		"area", "population", "province_id", "center_x", "center_y",
-		"form_name", "full_name", "color"])
+		"form_name", "full_name", "color", "biome_id"])
 	for p in provinces:
 		var pcenter: Array = (cells[int(p["center"])] as Dictionary)["p"]
 		out += _csv_line([String(prov_code[int(p["i"])]), String(p["name"]),
@@ -606,7 +627,7 @@ func _run() -> int:
 			str(int(round(float(prov_pop[int(p["i"])]) * rate))),
 			str(int(p["i"])), _num2(float(pcenter[0])), _num2(float(pcenter[1])),
 			String(p.get("formName", "")), String(p.get("fullName", "")),
-			String(p.get("color", ""))])
+			String(p.get("color", "")), str(_majority_key(prov_biome_area.get(int(p["i"]), {})))])
 	if not _write_text(out_data + "/political/provinces.csv", out):
 		return 1
 
@@ -760,7 +781,7 @@ func _run() -> int:
 			_num2(float(u.get("power", 1))), "1" if u.get("separate") else "0"])
 	if not _write_text(out_data + "/military/unit_types.csv", out):
 		return 1
-	var reg_header: Array[String] = ["regiment_code", "kingdom_code", "label", "x", "y"]
+	var reg_header: Array[String] = ["regiment_code", "kingdom_code", "province_code", "label", "x", "y"]
 	reg_header.append_array(unit_names)
 	reg_header.append("is_naval")
 	out = _csv_line(reg_header)
@@ -779,9 +800,12 @@ func _run() -> int:
 				continue
 			reg_count += 1
 			var units: Dictionary = rg.get("u", {})
+			var reg_cell: Dictionary = cells[int(rg.get("cell", 0))]
 			var fields: Array[String] = [
 				_take_slug(regiment_slugs, "%s %s" % [String(s["name"]), String(rg.get("name", ""))]),
-				String(state_code[int(s["i"])]), String(rg.get("name", "")),
+				String(state_code[int(s["i"])]),
+				String(prov_code.get(int(reg_cell.get("province", 0)), "")),
+				String(rg.get("name", "")),
 				_num2(float(rg.get("x", 0))), _num2(float(rg.get("y", 0)))]
 			for u in unit_names:
 				var n := int(units.get(u, 0))

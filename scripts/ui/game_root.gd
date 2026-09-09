@@ -26,6 +26,9 @@ var _bottom_bar: BottomBar
 var _news_ticker: NewsTicker
 var _info_screen: InfoScreen
 var _bgm: AudioStreamPlayer
+## The PROVINCES tab's state (user request 2026-09-09): root-owned so it
+## survives moving between screens, applied to whichever screen's map shows.
+var _province_view := false
 
 ## The design viewport (project.godot window/size): all UI is authored
 ## against this and scaled to the player's screen by the canvas_items+expand
@@ -177,12 +180,35 @@ func _on_bottom_tab(tab: String) -> void:
 		"MAP":
 			_info_screen.hide()
 			_relations_screen.visible = false
+		"PROVINCES":
+			_info_screen.hide()
+			_relations_screen.visible = false
+			set_province_view(not _province_view)
 		"RELATIONSHIP":
 			_info_screen.hide()
 			toggle_relations()
 		_:
 			_relations_screen.visible = false
 			_info_screen.show_tab(tab)
+
+## Turn the province view on or off everywhere: the tab lights up and the
+## current screen's map draws seams, names, and takes province clicks.
+func set_province_view(on: bool) -> void:
+	_province_view = on
+	if _bottom_bar != null:
+		_bottom_bar.set_toggled("PROVINCES", on)
+	var map := _current_map()
+	if map != null and map.show_provinces != on:
+		map.show_provinces = on
+
+func province_view() -> bool:
+	return _province_view
+
+## The map of the screen that is showing, if it has one.
+func _current_map() -> WorldMapView:
+	if current_screen != null and current_screen.has_method("world_map"):
+		return current_screen.world_map()
+	return null
 
 func bottom_bar() -> BottomBar:
 	return _bottom_bar
@@ -243,6 +269,12 @@ func _switch_to(new_state: State) -> void:
 			current_screen = DAY_RUN_SCENE.instantiate()
 			current_screen.finished.connect(_on_day_run_finished)
 	add_child(current_screen)
+	# The province view follows the player across screens: the new screen's
+	# map takes the tab's state, and the map's own P key reports back.
+	var map := _current_map()
+	if map != null:
+		map.show_provinces = _province_view
+		map.province_view_changed.connect(set_province_view)
 	# Overlays stay above screens across swaps: bottom bar, then info and
 	# relations, with the pause menu topmost.
 	if _bottom_bar != null:

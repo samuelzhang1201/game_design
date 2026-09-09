@@ -1,16 +1,19 @@
 class_name BottomBar
 extends Control
 ## Bottom tab strip on every gameplay screen (user ruling 2026-08-30),
-## outside the map: MAP | REALM | MILITARY | FAMILIES | LAWS | RELIGION |
-## RELATIONSHIP.
+## outside the map: MAP | PROVINCES | REALM | MILITARY | FAMILIES | LAWS |
+## RELIGION | RELATIONSHIP.
 ## Pure chrome — GameRoot owns it and decides what each tab opens (MAP
 ## closes overlays, RELATIONSHIP toggles the graph, the rest open the
 ## matching InfoScreen table). Replaces the TopBar's RELATIONS button.
 
 signal tab_selected(tab: String)
 
-const TABS := ["MAP", "REALM", "MILITARY", "FAMILIES", "LAWS", "RELIGION",
+const TABS := ["MAP", "PROVINCES", "REALM", "MILITARY", "FAMILIES", "LAWS", "RELIGION",
 	"RELATIONSHIP"]
+## Tabs that stay lit while their view is on (PROVINCES toggles the map's
+## province view, user request 2026-09-09) rather than opening an overlay.
+const TOGGLES := ["PROVINCES"]
 const BAR_HEIGHT := 18.0
 
 var _buttons: Dictionary = {}
@@ -33,6 +36,7 @@ func _ready() -> void:
 		btn.name = tab.capitalize()
 		btn.text = tab
 		btn.focus_mode = Control.FOCUS_NONE
+		btn.toggle_mode = tab in TOGGLES
 		btn.add_theme_font_size_override("font_size", 8)
 		btn.pressed.connect(func() -> void: tab_selected.emit(tab))
 		row.add_child(btn)
@@ -41,3 +45,9 @@ func _ready() -> void:
 ## Test seam.
 func button(tab: String) -> Button:
 	return _buttons.get(tab)
+
+## Light or unlight a toggle tab without emitting tab_selected.
+func set_toggled(tab: String, on: bool) -> void:
+	var btn: Button = _buttons.get(tab)
+	if btn != null:
+		btn.set_pressed_no_signal(on)

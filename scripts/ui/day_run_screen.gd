@@ -12,6 +12,9 @@ const TOP_BAR_SCENE := preload("res://scenes/top_bar.tscn")
 var overlay: CalendarOverlay
 var top_bar: TopBar
 
+## The live map in the middle zone; GameRoot applies the province view to it.
+var _world_map: WorldMapView
+
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
@@ -28,8 +31,8 @@ func _ready() -> void:
 	map_panel.offset_bottom = -(NewsTicker.STRIP_HEIGHT + BottomBar.BAR_HEIGHT + 8.0)
 	add_child(map_panel)
 	# Live world map, same as court/conversation (user ruling 2026-09-03).
-	var world_map := WorldMapView.create()
-	map_panel.add_child(world_map)
+	_world_map = WorldMapView.create()
+	map_panel.add_child(_world_map)
 	overlay = CalendarOverlay.new()
 	overlay.finished.connect(func(): finished.emit())
 	add_child(overlay)
@@ -43,3 +46,7 @@ func _ready() -> void:
 
 func run(report: TickReport) -> void:
 	overlay.play(report.tick)
+
+## GameRoot's handle on this screen's map (the province view follows it).
+func world_map() -> WorldMapView:
+	return _world_map

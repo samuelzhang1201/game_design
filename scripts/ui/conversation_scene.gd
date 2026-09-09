@@ -27,6 +27,7 @@ var _free_text: LineEdit
 var _world_map: WorldMapView
 ## The hovered country's card, overlaying the minister column.
 var _country_panel: CountryPanel
+var _province_panel: ProvincePanel
 var _continue_btn: Button
 var _panel: PanelContainer
 var _scroll: ScrollContainer
@@ -62,6 +63,7 @@ func _ready() -> void:
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the minister returns when the cursor leaves.
 	_country_panel = CountryPanel.attach(%MinisterPanel.get_node("MVBox"), _world_map)
+	_province_panel = ProvincePanel.attach(%MinisterPanel.get_node("MVBox"), _world_map)
 	%MinisterPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	UiPalette.style_header(%MinisterName, 11)
@@ -786,3 +788,10 @@ func _on_free_text(text: String) -> void:
 ## Test seam.
 func country_panel() -> CountryPanel:
 	return _country_panel
+
+func province_panel() -> ProvincePanel:
+	return _province_panel
+
+## Test seam and GameRoot's handle on this screen's map.
+func world_map() -> WorldMapView:
+	return _world_map

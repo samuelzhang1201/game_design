@@ -319,3 +319,104 @@ static func _describe_land(repo: DataRepository, obj: Dictionary,
 static func humanize(kind: String) -> String:
 	var t := kind.replace("-", " ").replace("_", " ")
 	return t.substr(0, 1).to_upper() + t.substr(1) if t != "" else ""
+
+## The house holding a province: the pack's house_bindings.csv when it binds
+## one, else a house named after the province's capital town (so foreign
+## land always has a holder without authoring anything).
+static func house_of(repo: DataRepository, province_code: String) -> String:
+	var bound := String(repo.house_bindings.get(province_code, ""))
+	if bound != "":
+		return "House " + bound
+	var prov: Dictionary = repo.provinces.get(province_code, {})
+	var cap: Dictionary = repo.burgs.get(String(prov.get("capital_burg", "")), {})
+	return "House " + String(cap.get("label", prov.get("label", province_code)))
+
+## Whether the player's realm holds the province NOW.
+static func province_is_players(repo: DataRepository, state: GameState,
+		province_code: String) -> bool:
+	return MapOwnership.owner_of(repo, state, province_code) == repo.resolve_realm("player_realm")
+
+## The province panel's text (user request 2026-09-09). The player's own
+## provinces get the full account; a foreign province shows only what is
+## commonly known — its name, its kingdom, its house, its seat. "known" says
+## which ("full" / "basic"). Follows live ownership.
+static func describe_province(repo: DataRepository, state: GameState,
+		province_code: String) -> Dictionary:
+	var prov: Dictionary = repo.provinces.get(province_code, {})
+	if prov.is_empty():
+		return {}
+	var label := String(prov["label"])
+	var title := String(prov.get("full_name", ""))
+	if title == "":
+		title = label
+	var owner := MapOwnership.owner_of(repo, state, province_code)
+	var lines: Array[String] = [
+		"Province of %s" % _label(repo.kingdoms, owner),
+		"Held by %s" % house_of(repo, province_code),
+		"Seat: %s" % _label(repo.burgs, String(prov.get("capital_burg", ""))),
+	]
+	var ask := "What do we know of %s?" % label
+	if not province_is_players(repo, state, province_code):
+		return {"title": title, "lines": lines, "ask": ask, "known": "basic"}
+	# Towns, largest first.
+	var towns: Array = []
+	for b: Dictionary in repo.burgs.values():
+		if String(b["province_code"]) == province_code:
+			towns.append(b)
+	towns.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(float(a["population"])) > int(float(b["population"])))
+	var names: Array[String] = []
+	for i in mini(towns.size(), int(repo.bal("province_card_max_towns"))):
+		names.append(String(towns[i]["label"]))
+	lines.append("Towns: %d%s" % [towns.size(), (" — " + ", ".join(names)) if not names.is_empty() else ""])
+	# Population, live through the ledger.
+	var urban: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.urban_population" % province_code)
+	var rural: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.rural_population" % province_code)
+	if urban != null and rural != null:
+		lines.append("Population: %d (%d in towns, %d rural)" % [int(urban) + int(rural), int(urban), int(rural)])
+	else:
+		lines.append("Population: %s" % prov.get("population", "—"))
+	var scale := float(repo.map_info.get("distance_scale", "1"))
+	var unit := String(repo.map_info.get("distance_unit", "px"))
+	lines.append("Area: %d %s²" % [roundi(float(prov.get("area", 0)) * scale * scale), unit])
+	var biome: Dictionary = repo.biomes.get(int(float(prov.get("biome_id", "0"))), {})
+	if not biome.is_empty():
+		lines.append("Terrain: %s" % biome["label"])
+	# Goods the province's towns produce, by units.
+	var goods_units: Dictionary = {}
+	for row: Dictionary in repo.world_table("economy", "production").values():
+		var b: Dictionary = repo.burgs.get(String(row["burg_code"]), {})
+		if String(b.get("province_code", "")) != province_code:
+			continue
+		var g := String(row["good_code"])
+		goods_units[g] = float(goods_units.get(g, 0.0)) + float(row.get("units", 0))
+	if not goods_units.is_empty():
+		var gs := goods_units.keys()
+		gs.sort_custom(func(a: String, b: String) -> bool:
+			return float(goods_units[a]) > float(goods_units[b]) \
+				or (float(goods_units[a]) == float(goods_units[b]) and a < b))
+		var top: Array[String] = []
+		for i in mini(gs.size(), int(repo.bal("province_card_max_goods"))):
+			top.append(_label(repo.world_table("economy", "goods"), String(gs[i])))
+		lines.append("Produces: %s" % ", ".join(top))
+	# Regiments quartered here.
+	var regs: Array[String] = []
+	for row: Dictionary in repo.world_table("military", "regiments").values():
+		if String(row.get("province_code", "")) == province_code:
+			regs.append(String(row["label"]))
+	if not regs.is_empty():
+		lines.append("Regiments: %s" % ", ".join(regs))
+	# Hazard zones touching it.
+	for row: Dictionary in repo.world_table("society", "zones").values():
+		if province_code in String(row.get("province_codes", "")).split("|", false):
+			lines.append("Hazard: %s (%s)" % [row["label"], String(row["type"]).to_lower()])
+	# The last time it changed hands.
+	if state != null:
+		for i in range(state.territory_log.size() - 1, -1, -1):
+			var t: Dictionary = state.territory_log[i]
+			if String(t["province"]) == province_code:
+				lines.append("Changed hands: from %s to %s, tick %d (%s)" % [
+					_label(repo.kingdoms, String(t["from"])), _label(repo.kingdoms, String(t["to"])),
+					int(t["tick"]), String(t["reason"])])
+				break
+	return {"title": title, "lines": lines, "ask": ask, "known": "full"}

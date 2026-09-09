@@ -22,6 +22,11 @@ signal place_asked(text: String)
 ## open sea, or no map. Screens use it to swap their left column to the
 ## country's card while the cursor is over that terrain.
 signal country_hovered(kingdom_code: String)
+## The province view was switched on or off (the P key, or a screen).
+signal province_view_changed(on: bool)
+## In the province view, the province under a click — its province_code, or
+## "" for water / nothing — so a screen's left column can show its account.
+signal province_selected(province_code: String)
 
 const ZOOM_MAX := 8.0
 const ZOOM_STEP := 1.2
@@ -51,15 +56,22 @@ const SCENE_PATH := "res://scenes/world_map.tscn"
 ## Province view (user request 2026-09-09): every kingdom's internal seams as
 ## light dashed lines, computed from the provinces it holds NOW
 ## (MapOwnership.seams_of), so they follow conquest where the render's
-## printed dots cannot. Toggled by the PROVINCES chip or the P key.
+## printed dots cannot; province names at their centres; and a click names
+## the province under it (province_selected) for the screen's left column.
+## Toggled by the bottom bar's PROVINCES tab or the P key.
 const PROVINCE_KEY := KEY_P
 var show_provinces: bool = false:
 	set(v):
+		if v == show_provinces:
+			return
 		show_provinces = v
-		if _province_chip != null:
-			_province_chip.button_pressed = v
+		if not v and _selected_province != "":
+			_selected_province = ""
+			province_selected.emit("")
+		province_view_changed.emit(v)
 		queue_redraw()
-var _province_chip: Button
+## The province selected in the province view ("" when none); drawn tinted.
+var _selected_province := ""
 
 var _map_texture: Texture2D
 var _index_image: Image
@@ -133,16 +145,6 @@ func _ready() -> void:
 		_selected_obj = {}
 		queue_redraw())
 	add_child(_card)
-	_province_chip = Button.new()
-	_province_chip.name = "ProvinceChip"
-	_province_chip.text = "PROVINCES"
-	_province_chip.toggle_mode = true
-	_province_chip.focus_mode = Control.FOCUS_NONE
-	_province_chip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_province_chip.add_theme_font_size_override("font_size", 8)
-	_province_chip.position = Vector2(6, 6)
-	_province_chip.pressed.connect(toggle_provinces)
-	add_child(_province_chip)
 	_build_tooltip()
 	mouse_entered.connect(func() -> void: _mouse_inside = true)
 	mouse_exited.connect(func() -> void:
@@ -206,7 +208,9 @@ func _draw() -> void:
 		draw_polyline(pts, HOVER_COLOR, HOVER_WIDTH, true)
 	_draw_territory_tint()
 	_draw_province_seams()
+	_draw_selected_province()
 	_draw_kingdom_labels()
+	_draw_province_labels()
 	_draw_pins()
 	_draw_hover()
 	_draw_object_highlight(_selected_obj)
@@ -478,7 +482,33 @@ func _state_under(pos: Vector2) -> int:
 	return MapIndex.state_at(_index_image, Vector2i(screen_to_map(pos).floor()))
 
 func _select_at(pos: Vector2) -> void:
-	select_object(_object_under(pos))
+	var obj := _object_under(pos)
+	if show_provinces:
+		# The province view: every click names the province under it (a pin
+		# still opens its own card; bare land does not).
+		var prov := Game.data.province_by_id(
+			MapIndex.id_at(_province_image, Vector2i(screen_to_map(pos).floor())) \
+			if _province_image != null else -1)
+		select_province(String(prov.get("province_code", "")))
+		if String(obj.get("kind", "")) in ["land", "water"]:
+			return
+	select_object(obj)
+
+## Select a province by code ("" clears); public for tests and screens.
+func select_province(province_code: String) -> void:
+	if not Game.data.provinces.has(province_code):
+		province_code = ""
+	if province_code == _selected_province:
+		return
+	_selected_province = province_code
+	if province_code != "":
+		_selected_obj = {}
+		_card.hide()
+	province_selected.emit(province_code)
+	queue_redraw()
+
+func selected_province() -> String:
+	return _selected_province
 
 func _object_under(pos: Vector2) -> Dictionary:
 	var s := view_scale()
@@ -547,9 +577,59 @@ func dev_flip_hovered_province() -> Dictionary:
 func toggle_provinces() -> void:
 	show_provinces = not show_provinces
 
-## Test seam: the PROVINCES chip.
-func province_chip() -> Button:
-	return _province_chip
+## The selected province, washed in gold so the selection reads on the map.
+func _draw_selected_province() -> void:
+	if _selected_province == "" or not show_provinces:
+		return
+	var tint := UiPalette.GOLD
+	tint.a = 0.22
+	for loop: PackedVector2Array in Game.data.province_borders.get(_selected_province, []):
+		var screen := PackedVector2Array()
+		screen.resize(loop.size())
+		for i in loop.size():
+			screen[i] = map_to_screen(loop[i])
+		var tris := Geometry2D.triangulate_polygon(screen)
+		for t in range(0, tris.size(), 3):
+			draw_colored_polygon(PackedVector2Array([screen[tris[t]],
+				screen[tris[t + 1]], screen[tris[t + 2]]]), tint)
+
+## Province names in the province view: smaller than kingdom names, hidden
+## below a minimum size, placed at each province's centre.
+func _visible_province_labels() -> Array:
+	if not show_provinces or _map_texture == null:
+		return []
+	var px := Game.data.bal("map_province_label_scale_px") * view_scale()
+	if px < Game.data.bal("map_province_label_min_px"):
+		return []
+	px = minf(px, Game.data.bal("map_province_label_max_px"))
+	var frame := Rect2(Vector2.ZERO, size).grow(px * 4.0)
+	var out: Array = []
+	for code: String in Game.data.provinces:
+		var row: Dictionary = Game.data.provinces[code]
+		var at := map_to_screen(Vector2(float(row.get("center_x", 0.0)), float(row.get("center_y", 0.0))))
+		if frame.has_point(at):
+			out.append({"code": code, "text": String(row["label"]), "at": at, "px": px})
+	return out
+
+## Test seam: how many province names are on screen right now.
+func visible_province_label_count() -> int:
+	return _visible_province_labels().size()
+
+func _draw_province_labels() -> void:
+	var labels := _visible_province_labels()
+	if labels.is_empty():
+		return
+	var font := UiPalette.display_font()
+	if font == null:
+		return
+	var color := UiPalette.TEXT_SOFT
+	color.a = Game.data.bal("map_province_label_alpha")
+	for l in labels:
+		var size := int(l["px"])
+		var width := font.get_string_size(String(l["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
+		var at: Vector2 = l["at"]
+		font.draw_string(get_canvas_item(), at - Vector2(width * 0.5, -size * 0.35),
+			String(l["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, color)
 
 ## The seam segments the province view would draw right now, in screen
 ## coordinates: nothing when the view is off or the zoom is below the

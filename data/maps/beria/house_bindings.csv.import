@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bhm3q0dm4hcv"
+
+[deps]
+
+files=["res://data/maps/beria/house_bindings.province.translation", "res://data/maps/beria/house_bindings.notes.translation"]
+
+source_file="res://data/maps/beria/house_bindings.csv"
+dest_files=["res://data/maps/beria/house_bindings.province.translation", "res://data/maps/beria/house_bindings.notes.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

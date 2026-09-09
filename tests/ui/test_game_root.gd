@@ -117,3 +117,27 @@ func test_load_with_pending_event_resumes_on_conversation() -> void:
 		"a pending event resumes on the conversation stage")
 	assert_gt(r.current_screen.reply_buttons().size(), 0,
 		"the loaded event's choices are live")
+
+## The PROVINCES tab (user request 2026-09-09) is a toggle in the bottom bar
+## that drives the current screen's map and follows the player to the next
+## screen; the map's own P key keeps the tab in step.
+func test_provinces_tab_toggles_the_maps_province_view_across_screens() -> void:
+	Game.start_campaign(42)
+	Game.next_tick()
+	var r := _root()
+	await wait_frames(2)
+	r._switch_to(GameRoot.State.COURT)
+	r.current_screen.enter_court(null)
+	await wait_frames(2)
+	assert_false(r.province_view(), "off by default")
+	r.bottom_bar().button("PROVINCES").pressed.emit()
+	await wait_frames(1)
+	assert_true(r.province_view())
+	assert_true(r.current_screen.world_map().show_provinces, "the court's map follows the tab")
+	assert_true(r.bottom_bar().button("PROVINCES").button_pressed, "the tab stays lit")
+	r._switch_to(GameRoot.State.CONVERSATION)
+	await wait_frames(2)
+	assert_true(r.current_screen.world_map().show_provinces, "the next screen's map inherits it")
+	r.current_screen.world_map().toggle_provinces()
+	assert_false(r.province_view(), "the map's P key reports back to the root")
+	assert_false(r.bottom_bar().button("PROVINCES").button_pressed)

@@ -368,17 +368,60 @@ func test_every_gameplay_screen_uses_the_map_scene() -> void:
 
 ## Province view (user request 2026-09-09): a toggle draws every kingdom's
 ## internal province seams as light dashed lines, above a minimum zoom.
-func test_province_view_toggles_by_chip_and_key() -> void:
+func test_province_view_toggles_by_key_and_announces_it() -> void:
 	var v := _view()
 	await wait_frames(2)
 	assert_false(v.show_provinces, "off by default")
-	v.province_chip().pressed.emit()
-	assert_true(v.show_provinces, "the chip turns it on")
+	var seen: Array = []
+	v.province_view_changed.connect(func(on: bool) -> void: seen.append(on))
 	var key := InputEventKey.new()
 	key.pressed = true
 	key.keycode = KEY_P
 	v._gui_input(key)
+	assert_true(v.show_provinces, "P turns it on")
+	v._gui_input(key)
 	assert_false(v.show_provinces, "P turns it off again")
+	assert_eq(seen, [true, false], "each flip is announced once")
+
+## Province names show in the province view once the zoom makes them legible.
+func test_province_names_show_only_in_the_view_and_zoomed_in() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var realm: Dictionary = _realm()
+	var centre := Vector2(float(realm["center_x"]), float(realm["center_y"]))
+	v.show_provinces = true
+	v._zoom_at(v.size / 2.0, 0.00001)
+	assert_eq(v.visible_province_label_count(), 0, "zoomed out, names hide")
+	v._zoom_at(v.size / 2.0, 1000.0)
+	v._offset += v.size / 2.0 - v.map_to_screen(centre)
+	v._clamp_offset()
+	assert_gt(v.visible_province_label_count(), 0, "zoomed in on the realm, names show")
+	v.show_provinces = false
+	assert_eq(v.visible_province_label_count(), 0, "off means none")
+
+## In the province view a click names the province under it for the left
+## column, and bare land opens no floating card; water clears the selection.
+func test_clicking_land_in_the_province_view_selects_the_province() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var picked: Array = []
+	v.province_selected.connect(func(code: String) -> void: picked.append(code))
+	var code := String(Game.data.burgs[_capital_code()]["province_code"])
+	var row: Dictionary = Game.data.provinces[code]
+	var centre := Vector2(float(row["center_x"]), float(row["center_y"]))
+	v._select_at(v.map_to_screen(centre))
+	assert_eq(v.selected_province(), "", "no selection while the view is off")
+	assert_true(picked.is_empty())
+	v.show_provinces = true
+	v._select_at(v.map_to_screen(centre))
+	assert_eq(v.selected_province(), code, "the province under the click")
+	assert_eq(picked, [code])
+	v._select_at(v.map_to_screen(Vector2(2.0, 2.0)))
+	assert_eq(v.selected_province(), "", "water clears it")
+	assert_eq(picked, [code, ""])
+	v._select_at(v.map_to_screen(centre))
+	v.show_provinces = false
+	assert_eq(v.selected_province(), "", "turning the view off clears it too")
 
 func test_province_seams_draw_only_when_zoomed_in_enough() -> void:
 	var v := _view()
