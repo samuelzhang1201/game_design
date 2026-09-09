@@ -107,3 +107,6 @@ map_state_border_alpha,0.6,world map: opacity of kingdom borders
 map_hover_border_width,1.8,world map: width of the hovered kingdom's outline in screen px
 map_border_smoothing_steps,4,world map: B-spline samples per segment when drawing kingdom outlines (Azgaar draws its lines the same way)
 dashboard_max_provinces,4,realm dashboard: how many of the realm's largest provinces the bar chart lists
+map_sprite_scale,0.5,world map: settlement art height in screen px per screen px of view scale x 100 (a capital tile is ~500 px tall; 0.5 gives 25 px at scale 0.1)
+map_sprite_min_px,10.0,world map: below this screen height a settlement draws as a pin, not art
+map_sprite_max_px,90.0,world map: settlement art never grows taller than this on screen

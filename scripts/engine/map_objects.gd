@@ -472,10 +472,6 @@ static func burg_card(repo: DataRepository, state: GameState, code: String) -> D
 		["Culture", String(culture.get("label", b.get("culture_code", "")))],
 		["Population", String(b.get("population", "—"))],
 	]
-	if String(b.get("temperature_c", "")) != "":
-		fields.append(["Climate", "%s °C" % b["temperature_c"]])
-	if String(b.get("elevation_m", "")) != "":
-		fields.append(["Elevation", "%s m above the sea" % b["elevation_m"]])
 	var features: Array = []
 	if String(b.get("is_port", "0")) == "1":
 		features.append("port")
@@ -572,3 +568,17 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 	card["wealth"] = wealth
 	card["treasury"] = treasury
 	return card
+
+## The settlement drawing for a burg (data/settlement_art.csv): its group,
+## and for groups that distinguish it, whether it has walls. {} when the
+## pack's group has no art.
+static func settlement_art(repo: DataRepository, b: Dictionary) -> Dictionary:
+	var group := String(b.get("group", ""))
+	var walled := "walls" in String(b.get("features", "")).split("|", false)
+	for row: Dictionary in repo.settlement_art:
+		if String(row["group"]) != group:
+			continue
+		var want := String(row.get("walled", ""))
+		if want == "" or (want == "1") == walled:
+			return row
+	return {}

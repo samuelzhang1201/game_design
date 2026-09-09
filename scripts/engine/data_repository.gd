@@ -32,6 +32,9 @@ var chart_palette: Dictionary = {}
 ## data/resource_icons.csv: key -> {label, icon, tooltip} for every resource
 ## and unit the UI shows as a glyph with a floating tooltip.
 var resource_icons: Dictionary = {}
+## data/settlement_art.csv rows: which settlement drawing a burg group (and
+## whether it has walls) is shown with on the map (MapObjects.settlement_art).
+var settlement_art: Array[Dictionary] = []
 var events: Array[Dictionary] = []
 var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
@@ -260,6 +263,9 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/resource_icons.csv", ["key", "label", "icon", "tooltip"],
 			func(r): resource_icons[r["key"]] = r):
+		return false
+	if not _load_if_present(dir + "/settlement_art.csv", ["group", "walled", "tier", "texture"],
+			func(r): settlement_art.append(r)):
 		return false
 	# A campaign always has a world under it; which one is data, not code.
 	if not maps.is_empty() and not load_map(default_map_id()):

@@ -227,13 +227,83 @@ func _pin_radius(b: Dictionary) -> float:
 		return PIN_CAPITAL
 	return PIN_TOWN if int(float(b["population"])) >= int(Game.data.bal("map_lod_town_pop")) else PIN_VILLAGE
 
-## Towns as gold circles sized by tier (ringed for capitals), points of
-## interest as teal diamonds — all in screen px, gated by the LOD rule.
+## Settlement art (user request 2026-09-09): each town drawn as its tier's
+## picture (data/settlement_art.csv) standing on its point, scaled with the
+## zoom between map_sprite_min_px and map_sprite_max_px; below the minimum
+## the town falls back to its pin. Textures are cached per path.
+var _sprite_cache: Dictionary = {}
+
+func _sprite_texture(path: String) -> Texture2D:
+	if not _sprite_cache.has(path):
+		_sprite_cache[path] = UiPalette.load_art(path)
+	return _sprite_cache[path]
+
+## The on-screen height a settlement drawing takes at the current zoom, or
+## 0 when it is too small to draw and the pin stands in.
+func sprite_height() -> float:
+	var h := Game.data.bal("map_sprite_scale") * view_scale() * 100.0
+	if h < Game.data.bal("map_sprite_min_px"):
+		return 0.0
+	return minf(h, Game.data.bal("map_sprite_max_px"))
+
+## The settlement drawings on screen right now: {code, rect, texture}.
+## Public for tests and for hit-testing (a drawing is picked by its rect).
+func settlement_sprites() -> Array:
+	var out: Array = []
+	var h := sprite_height()
+	if h <= 0.0 or _map_texture == null:
+		return out
+	var s := view_scale()
+	var min_pop := MapObjects.min_burg_pop_for_scale(Game.data, s)
+	var frame := Rect2(Vector2.ZERO, size).grow(h)
+	for code: String in Game.data.burgs:
+		var b: Dictionary = Game.data.burgs[code]
+		if not MapObjects.burg_visible(b, min_pop):
+			continue
+		var art := MapObjects.settlement_art(Game.data, b)
+		if art.is_empty():
+			continue
+		var tex := _sprite_texture(String(art["texture"]))
+		if tex == null:
+			continue
+		var sp := map_to_screen(Vector2(float(b["x"]), float(b["y"])))
+		if not frame.has_point(sp):
+			continue
+		# Smaller tiers stay smaller: scale each tile by its own height so a
+		# hamlet is a fraction of a capital, the way the sheet drew them.
+		var scale := h / float(_tallest_tile())
+		var size_px := Vector2(tex.get_width(), tex.get_height()) * scale
+		out.append({"code": code, "texture": tex,
+			"rect": Rect2(sp - Vector2(size_px.x / 2.0, size_px.y * 0.8), size_px)})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return (a["rect"] as Rect2).end.y < (b["rect"] as Rect2).end.y)
+	return out
+
+var _tallest := 0
+func _tallest_tile() -> int:
+	if _tallest == 0:
+		for row: Dictionary in Game.data.settlement_art:
+			var tex := _sprite_texture(String(row["texture"]))
+			if tex != null:
+				_tallest = maxi(_tallest, tex.get_height())
+		_tallest = maxi(_tallest, 1)
+	return _tallest
+
+## Towns as their drawings when the zoom allows, else gold circles sized by
+## tier (ringed for capitals); points of interest as teal diamonds — pins in
+## screen px, gated by the LOD rule.
 func _draw_pins() -> void:
 	var s := view_scale()
 	var min_pop := MapObjects.min_burg_pop_for_scale(Game.data, s)
 	var on_screen := Rect2(Vector2.ZERO, size).grow(PIN_CAPITAL * 2.0)
+	var sprites := settlement_sprites()
+	var drawn: Dictionary = {}
+	for sp_entry in sprites:
+		draw_texture_rect(sp_entry["texture"], sp_entry["rect"], false)
+		drawn[sp_entry["code"]] = true
 	for code: String in Game.data.burgs:
+		if drawn.has(code):
+			continue
 		var b: Dictionary = Game.data.burgs[code]
 		if not MapObjects.burg_visible(b, min_pop):
 			continue
@@ -434,7 +504,12 @@ func _draw_object_highlight(obj: Dictionary) -> void:
 		"burg":
 			var b: Dictionary = Game.data.burgs[obj["code"]]
 			var sp := map_to_screen(Vector2(float(b["x"]), float(b["y"])))
-			draw_arc(sp, _pin_radius(b) + 4.0, 0.0, TAU, 32, UiPalette.GOLD, 1.5, true)
+			var radius := _pin_radius(b) + 4.0
+			for sp_entry in settlement_sprites():
+				if String(sp_entry["code"]) == String(obj["code"]):
+					radius = maxf(radius, (sp_entry["rect"] as Rect2).size.x * 0.45)
+					break
+			draw_arc(sp, radius, 0.0, TAU, 32, UiPalette.GOLD, 1.5, true)
 		"marker":
 			var m: Dictionary = Game.data.markers[obj["code"]]
 			var sp := map_to_screen(Vector2(float(m["x"]), float(m["y"])))
@@ -601,6 +676,12 @@ func selected_province() -> String:
 	return _selected_province
 
 func _object_under(pos: Vector2) -> Dictionary:
+	# A settlement drawing is picked anywhere on its picture (the last drawn
+	# is on top), before the point-and-radius rules.
+	var sprites := settlement_sprites()
+	for i in range(sprites.size() - 1, -1, -1):
+		if (sprites[i]["rect"] as Rect2).has_point(pos):
+			return {"kind": "burg", "code": String(sprites[i]["code"])}
 	var s := view_scale()
 	return MapObjects.object_at(Game.data, _index_image, _province_image, _biome_image,
 		screen_to_map(pos), Game.data.bal("map_pick_radius_px") / s,

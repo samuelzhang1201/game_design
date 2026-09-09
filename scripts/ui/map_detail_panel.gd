@@ -27,7 +27,7 @@ var _subtitle: Label
 var _fields: GridContainer
 var _features: HBoxContainer
 var _production: VBoxContainer
-var _money: HBoxContainer
+var _money: VBoxContainer
 var _preview: TextureRect
 var _lines: VBoxContainer
 var _hint: Label
@@ -81,9 +81,9 @@ func _ready() -> void:
 	_production.name = "Production"
 	_production.add_theme_constant_override("separation", 1)
 	col.add_child(_production)
-	_money = HBoxContainer.new()
+	_money = VBoxContainer.new()
 	_money.name = "Money"
-	_money.add_theme_constant_override("separation", 6)
+	_money.add_theme_constant_override("separation", 1)
 	col.add_child(_money)
 	_lines = VBoxContainer.new()
 	_lines.name = "Rows"
@@ -203,13 +203,17 @@ func show_card(card: Dictionary) -> void:
 				row.add_child(_line("%s %s" % [String(p["label"]), _num(float(p["units"]))],
 					UiPalette.TEXT_SOFT))
 				_production.add_child(row)
+		# One row per sum, never two labels squeezed into one line (user report
+		# 2026-09-09: they wrapped letter by letter).
 		for spec in [["wealth", "wealth"], ["town_treasury", "treasury"]]:
 			var cell := HBoxContainer.new()
 			cell.add_theme_constant_override("separation", 3)
 			cell.add_child(ResourceIcon.create(String(spec[0])))
-			cell.add_child(_line("%s %s" % [
+			var text := _line("%s %s" % [
 				String((Game.data.resource_icons.get(String(spec[0]), {}) as Dictionary).get("label", spec[1])),
-				_num(float(card.get(String(spec[1]), 0.0)))], UiPalette.TEXT_SOFT))
+				_num(float(card.get(String(spec[1]), 0.0)))], UiPalette.TEXT_SOFT)
+			text.autowrap_mode = TextServer.AUTOWRAP_OFF
+			cell.add_child(text)
 			_money.add_child(cell)
 		_set_preview(card.get("center", Vector2.ZERO))
 	else:

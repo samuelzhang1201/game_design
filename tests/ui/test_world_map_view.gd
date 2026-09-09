@@ -495,3 +495,32 @@ func test_a_conquered_province_is_repainted_for_its_new_owner() -> void:
 			assert_eq(Color(c.r, c.g, c.b), Color(want.r, want.g, want.b), "the raiders' colour now")
 			return
 	fail_test("the lost province was not painted at all")
+
+## Settlement art (user request 2026-09-09): zoomed in, towns draw as their
+## tier's picture standing on their point and are picked anywhere on it;
+## zoomed out they fall back to pins.
+func test_towns_draw_as_art_when_zoomed_in_and_pins_when_out() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v._zoom_at(v.size / 2.0, 0.00001)
+	assert_eq(v.sprite_height(), 0.0, "zoomed out, no art")
+	assert_eq(v.settlement_sprites().size(), 0)
+	var k: Dictionary = _capital()
+	var at := Vector2(float(k["x"]), float(k["y"]))
+	v._zoom_at(v.size / 2.0, 1000.0)
+	v._offset += v.size / 2.0 - v.map_to_screen(at)
+	v._clamp_offset()
+	assert_gt(v.sprite_height(), 0.0, "zoomed in, art")
+	assert_lte(v.sprite_height(), Game.data.bal("map_sprite_max_px"))
+	var found: Dictionary = {}
+	for sp in v.settlement_sprites():
+		if String(sp["code"]) == _capital_code():
+			found = sp
+	assert_false(found.is_empty(), "the capital is drawn")
+	var rect: Rect2 = found["rect"]
+	var base := v.map_to_screen(at)
+	assert_almost_eq(rect.position.x + rect.size.x / 2.0, base.x, 0.5, "standing on its point")
+	assert_true(rect.end.y >= base.y, "its feet reach the point")
+	var obj := v._object_under(rect.get_center())
+	assert_eq(String(obj.get("kind", "")), "burg")
+	assert_eq(String(obj.get("code", "")), _capital_code(), "picked anywhere on the picture")

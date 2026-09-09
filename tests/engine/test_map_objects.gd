@@ -292,7 +292,7 @@ func test_burg_card_carries_the_towns_facts_and_goods() -> void:
 	var labels: Array = []
 	for f in card["fields"]:
 		labels.append(String(f[0]))
-	for want in ["Group", "Type", "Culture", "Population", "Climate", "Elevation"]:
+	for want in ["Group", "Type", "Culture", "Population"]:
 		assert_has(labels, want)
 	assert_true(card["features"].size() > 0, "a capital has walls or a citadel")
 	for f in card["features"]:
@@ -325,3 +325,32 @@ func test_goods_are_shown_under_a_tag_with_a_glyph() -> void:
 		if MapObjects.good_tag(Game.data, g) != "":
 			tagged += 1
 	assert_gt(tagged, goods.size() / 2, "most goods fall under a tagged glyph")
+
+## Settlement art (user request 2026-09-09): every burg group in the pack has
+## a drawing, walled towns draw behind walls, and every drawing exists.
+func test_settlement_art_covers_the_packs_groups() -> void:
+	Game.start_campaign(42)
+	var seen: Dictionary = {}
+	for code: String in Game.data.burgs:
+		var b: Dictionary = Game.data.burgs[code]
+		var art := MapObjects.settlement_art(Game.data, b)
+		assert_false(art.is_empty(), "%s (%s) has a drawing" % [code, b.get("group", "")])
+		seen[String(art["tier"])] = true
+	assert_true(seen.has("capital") and seen.has("city") and seen.has("town"))
+	for row: Dictionary in Game.data.settlement_art:
+		assert_true(ResourceLoader.exists(String(row["texture"])) or FileAccess.file_exists(String(row["texture"])),
+			"%s exists" % String(row["texture"]))
+	var walled := {"group": "town", "features": "walls|citadel"}
+	assert_eq(String(MapObjects.settlement_art(Game.data, walled)["tier"]), "walled_town")
+	var open := {"group": "town", "features": "plaza"}
+	assert_eq(String(MapObjects.settlement_art(Game.data, open)["tier"]), "town")
+	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
+	assert_eq(String(MapObjects.settlement_art(Game.data, Game.data.burgs[String(realm["capital_burg"])])["tier"]),
+		"capital")
+
+func test_burg_card_has_no_climate_or_elevation() -> void:
+	Game.start_campaign(42)
+	var realm: Dictionary = Game.data.kingdoms[_player_realm()]
+	var card := MapObjects.burg_card(Game.data, Game.state, String(realm["capital_burg"]))
+	for f in card["fields"]:
+		assert_false(String(f[0]) in ["Climate", "Elevation"], "%s is not on the card" % String(f[0]))
