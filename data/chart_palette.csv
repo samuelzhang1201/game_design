@@ -1,0 +1,8 @@
+key,color,notes
+cat_1,#b98d3a,categorical 1 (gold) — assigned in fixed order; validated CVD-safe on the panel surface 2026-09-09
+cat_2,#4b8ddb,categorical 2 (blue)
+cat_3,#58a85a,categorical 3 (green)
+cat_4,#9a6fd0,categorical 4 (purple)
+cat_5,#cf5a50,categorical 5 (red)
+sequential,#b98d3a,single-hue magnitude bars
+track,#1f2230,the empty part of a bar

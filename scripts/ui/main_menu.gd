@@ -90,7 +90,7 @@ func _build_setup_panel() -> void:
 	var title := Label.new()
 	title.text = "FOUND YOUR DYNASTY"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_header(title, 11)
+	UiPalette.style_header(title, 9)
 	col.add_child(title)
 	col.add_child(HSeparator.new())
 	col.add_child(_field_label("Given name"))

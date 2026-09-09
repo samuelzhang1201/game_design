@@ -52,7 +52,7 @@ func refresh() -> void:
 	label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	UiPalette.style_header(label, 9)
+	UiPalette.style_header(label, 8)
 	add_child(label)
 	tooltip_text = String(row.get("notes", ""))
 

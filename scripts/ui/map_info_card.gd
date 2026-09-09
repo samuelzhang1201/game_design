@@ -37,7 +37,7 @@ func _init() -> void:
 	_title.name = "CardTitle"
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiPalette.style_header(_title, 10)
+	UiPalette.style_header(_title, 8)
 	col.add_child(_title)
 	col.add_child(HSeparator.new())
 	_body = Label.new()

@@ -262,8 +262,7 @@ func test_the_country_card_follows_conquest() -> void:
 		after.append(child.text)
 	assert_ne(after, before, "losing a province changed the card")
 
-## The map's ASK THE COUNCIL button fills the order box with the card's
-## question; nothing is submitted until the player presses Enter.
+## The detail column's Ask drops the question into the order box; nothing sends.
 func test_map_ask_fills_the_order_box_without_sending() -> void:
 	var screen := _screen()
 	await wait_frames(1)
@@ -272,11 +271,13 @@ func test_map_ask_fills_the_order_box_without_sending() -> void:
 	var capital: Dictionary = Game.data.burgs[String(
 		Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
 	map.select_object({"kind": "burg", "code": String(capital["burg_code"])})
-	assert_true(map.card().ask_button().visible, "court owns an order box, so Ask shows")
-	map.card().ask_button().pressed.emit()
+	await wait_frames(1)
+	assert_true(screen.detail_panel().visible, "the click opens the detail column")
+	assert_false(map.card().visible, "and not the floating card")
+	assert_true(screen.detail_panel().ask_button().visible, "court owns an order box, so Ask shows")
+	screen.detail_panel().ask_button().pressed.emit()
 	assert_eq(screen.free_text.text, "What do we know of %s?" % String(capital["label"]))
 	assert_eq(screen.log_box.get_child_count(), 0, "nothing was sent")
-
 ## The two-part order (spec 2026-09-09 §4): the speaker's narrative prints
 ## under their name, then the ledger lines that actually applied.
 func test_free_text_prints_the_narrative_and_the_ledger() -> void:
@@ -325,9 +326,9 @@ func test_free_text_names_the_speaker_before_the_call() -> void:
 	assert_true(found, "the marshal answered under his own name")
 
 ## Province view (user request 2026-09-09): selecting one of the player's own
-## provinces shows its full account in the left column; a foreign one shows
-## only what is commonly known; water clears the panel.
-func test_selecting_a_province_shows_its_account_in_the_left_column() -> void:
+## provinces shows its full account in the right detail column; a foreign one
+## shows only what is commonly known; water clears the column.
+func test_selecting_a_province_shows_its_account_in_the_detail_column() -> void:
 	Game.start_campaign(42)
 	var screen := _screen()
 	await wait_frames(2)
@@ -336,8 +337,8 @@ func test_selecting_a_province_shows_its_account_in_the_left_column() -> void:
 	var mine := MapOwnership.provinces_of(Game.data, Game.state, Game.data.resolve_realm("player_realm"))[0]
 	map.select_province(mine)
 	await wait_frames(1)
-	var panel := screen.province_panel()
-	assert_true(panel.visible, "the panel covers the log")
+	var panel := screen.detail_panel()
+	assert_true(panel.visible, "the detail column opens")
 	assert_eq(panel.shown_province(), mine)
 	var texts: Array[String] = []
 	for l in panel.rows().get_children():
@@ -361,4 +362,4 @@ func test_selecting_a_province_shows_its_account_in_the_left_column() -> void:
 	assert_string_contains(joined, "Little more is known")
 	map.select_province("")
 	await wait_frames(1)
-	assert_false(panel.visible, "clearing the selection restores the log")
+	assert_false(panel.visible, "clearing the selection closes the column")

@@ -17,32 +17,40 @@ var _delta_labels: Dictionary = {}
 func _ready() -> void:
 	%Bar.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 6))
-	UiPalette.style_header(%DateLabel, 11)
+	UiPalette.style_header(%DateLabel, 9)
 	%EventChip.add_theme_stylebox_override("normal", UiPalette.chip_style())
-	UiPalette.style_header(%EventChip, 9)
-	%MenuButton.add_theme_font_size_override("font_size", 9)
+	UiPalette.style_header(%EventChip, 7)
+	%MenuButton.add_theme_font_size_override("font_size", 8)
 	%MenuButton.pressed.connect(func() -> void: Game.menu_requested.emit())
-	%FlagLabel.add_theme_font_size_override("font_size", 12)
+	%FlagLabel.add_theme_font_size_override("font_size", 10)
 	for m in ORDER:
 		var cell := HBoxContainer.new()
 		cell.add_theme_constant_override("separation", 3)
 		var name_l := Label.new()
 		name_l.text = String(METRIC_NAMES[m]).to_upper()
 		name_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-		name_l.add_theme_font_size_override("font_size", 9)
+		name_l.add_theme_font_size_override("font_size", 7)
 		cell.add_child(name_l)
 		var value_l := Label.new()
-		value_l.add_theme_font_size_override("font_size", 11)
+		value_l.add_theme_font_size_override("font_size", 9)
 		cell.add_child(value_l)
 		_value_labels[m] = value_l
 		var delta_l := Label.new()
-		delta_l.add_theme_font_size_override("font_size", 9)
+		delta_l.add_theme_font_size_override("font_size", 7)
 		cell.add_child(delta_l)
 		_delta_labels[m] = delta_l
 		%MetricsRow.add_child(cell)
 	Game.state_changed.connect(refresh)
 	Game.report_ready.connect(func(_r: TickReport) -> void: refresh())
 	refresh()
+	# The bar is exactly as tall as its content, so the columns below can
+	# start under it instead of guessing (user report 2026-09-09: the left
+	# column overlapped the header).
+	offset_bottom = bar_height()
+
+## The strip's real height: its panel's minimum, never less than the scene's.
+func bar_height() -> float:
+	return maxf(offset_bottom, %Bar.get_combined_minimum_size().y)
 
 func refresh() -> void:
 	if Game.state == null:

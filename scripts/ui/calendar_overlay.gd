@@ -62,7 +62,7 @@ func _ready() -> void:
 	col.add_child(header)
 	var title := Label.new()
 	title.text = "ROYAL CHRONICLE"
-	UiPalette.style_header(title, 9)
+	UiPalette.style_header(title, 8)
 	header.add_child(title)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -73,7 +73,7 @@ func _ready() -> void:
 	live.add_theme_color_override("font_color", UiPalette.POSITIVE)
 	header.add_child(live)
 	date_label = Label.new()
-	UiPalette.style_header(date_label, 11)
+	UiPalette.style_header(date_label, 9)
 	col.add_child(date_label)
 	season_label = Label.new()
 	season_label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)

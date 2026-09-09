@@ -172,41 +172,40 @@ func test_skills_tab_lists_tools_with_kind_colors() -> void:
 	assert_ne(UiPalette.TOOL_KINGDOM, UiPalette.TOOL_PERSONAL,
 		"the two kinds are visually distinct")
 
-## User ruling (2026-08-31, game_ui.png): the dialogue panel is the RIGHT
-## column, the dossier the LEFT column, and between them the framed map
-## view, never covered by any UI element. The map's fixed 380:196 region
-## ratio is superseded (user ruling 2026-09-07): it now fills the whole
-## middle column, so no dead band is left under it.
-func test_dialogue_right_column_and_map_ratio_clear_of_ui() -> void:
+## Layout (user rulings 2026-09-09, ScreenLayout): the dossier column on the
+## left, the map in the middle with the dialogue strip UNDER it, and no
+## right column until a map element is selected — then the detail column
+## appears and the map and strip give it room.
+func test_left_column_map_and_strip_with_the_detail_column_on_demand() -> void:
 	Game.start_campaign(42)
-	var beats := [
-		{"kind": "minister", "portrait_id": "char_marshal", "speaker": "Ser Brandt of Harrow",
-			"text": "The levies grow soft.", "suggestions": []},
-	]
-	var c := _scene_with(beats, TickReport.new())
-	await wait_frames(3)
-	var panel := c.dialogue_panel()
-	assert_lt(c.size.x - (panel.global_position.x + panel.size.x), 16.0,
-		"the dialogue panel hugs the right edge")
-	assert_not_null(c.find_child("FullArt", true, false),
-		"the marshal's art fills the dossier portrait box")
-	assert_false(c.minister_panel().get_global_rect().intersects(panel.get_global_rect()),
-		"the dialogue column must never cover the dossier column")
-	var map := c.map_panel()
+	var report := Game.next_tick()
+	var c := _scene_with([{"kind": "summary", "portrait_id": "round_table",
+		"speaker": "The Council"}], report)
+	await wait_frames(2)
 	var dossier := c.minister_panel().get_global_rect()
-	var map_rect := map.get_global_rect()
-	assert_lt(map_rect.position.x - dossier.end.x, 16.0,
-		"the map starts where the dossier column ends")
-	assert_lt(panel.get_global_rect().position.x - map_rect.end.x, 16.0,
-		"the map runs up to the dialogue column")
-	assert_lt(absf(map_rect.end.y - dossier.end.y), 16.0,
-		"the map reaches the bottom of the column, no dead band under it")
-	assert_false(map.get_global_rect().intersects(panel.get_global_rect()),
-		"the map is never covered by the dialogue column")
-	assert_false(map.get_global_rect().intersects(c.minister_panel().get_global_rect()),
-		"the map is never covered by the dossier column")
-	assert_false(map.get_global_rect().intersects(c.top_bar().get_global_rect()),
-		"the map sits below the metrics bar")
+	var map_rect := c.map_panel().get_global_rect()
+	var strip := c.dialogue_panel().get_global_rect()
+	var top := c.top_bar().get_global_rect().end.y
+	assert_gte(dossier.position.y, top, "the dossier starts under the top bar, never over it")
+	assert_gte(map_rect.position.y, top, "so does the map")
+	assert_lt(map_rect.position.x - dossier.end.x, 16.0, "the map starts where the dossier ends")
+	assert_almost_eq(strip.position.x, map_rect.position.x, 1.0, "the strip is under the map")
+	assert_almost_eq(strip.end.x, map_rect.end.x, 1.0, "and as wide as it")
+	assert_gte(strip.position.y, map_rect.end.y, "below it, never over it")
+	assert_false(c.detail_panel().visible, "nothing selected: no right column")
+	var wide := map_rect.end.x
+	var capital: Dictionary = Game.data.burgs[String(
+		Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
+	c.world_map().select_object({"kind": "burg", "code": String(capital["burg_code"])})
+	await wait_frames(2)
+	assert_true(c.detail_panel().visible, "a map click opens the detail column")
+	assert_lt(c.map_panel().get_global_rect().end.x, wide, "the map gives it room")
+	assert_lt(c.map_panel().get_global_rect().end.x, c.detail_panel().get_global_rect().position.x + 1.0,
+		"and never runs under it")
+	c.detail_panel().close_button().pressed.emit()
+	await wait_frames(2)
+	assert_false(c.detail_panel().visible, "CLOSE hides it")
+	assert_almost_eq(c.map_panel().get_global_rect().end.x, wide, 1.0, "and the map widens again")
 
 ## Same ruling, worst case: a long event text plus three choice buttons must
 ## scroll inside the fixed box rather than grow it over the portrait.
@@ -488,20 +487,21 @@ func test_hovering_a_country_borrows_the_minister_column() -> void:
 	panel.show_country("")
 	assert_false(panel.visible, "and hands it back")
 
+## The detail column's Ask pre-fills the talk box and never sends.
 func test_map_ask_fills_the_talk_box() -> void:
 	Game.start_campaign(42)
-	var c := _scene_with([{"kind": "summary", "portrait_id": "round_table", "speaker": "The Council"}],
-		TickReport.new())
-	await wait_frames(1)
-	var map: WorldMapView = c.get_node("%MapPanel/WorldMap")
-	# The pack is generated: ask about the bound realm's own capital.
+	var report := Game.next_tick()
+	var c := _scene_with([{"kind": "summary", "portrait_id": "round_table",
+		"speaker": "The Council"}], report)
+	await wait_frames(2)
 	var capital: Dictionary = Game.data.burgs[String(
 		Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
-	map.select_object({"kind": "burg", "code": String(capital["burg_code"])})
-	assert_true(map.card().ask_button().visible, "the stage owns a talk box, so Ask shows")
-	map.card().ask_button().pressed.emit()
+	c.world_map().select_object({"kind": "burg", "code": String(capital["burg_code"])})
+	await wait_frames(1)
+	assert_true(c.detail_panel().ask_button().visible, "the stage owns a talk box, so Ask shows")
+	c.detail_panel().ask_button().pressed.emit()
 	assert_eq(c.free_text_field().text, "What do we know of %s?" % String(capital["label"]))
-
+	assert_false(c.dialogue_text().contains("What do we know"), "nothing was sent")
 ## The two-part order on the conversation stage (spec 2026-09-09 §4): the
 ## narrative under the speaker's name, then the ledger lines.
 func test_free_text_prints_narrative_then_ledger_on_the_stage() -> void:

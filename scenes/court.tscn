@@ -19,10 +19,10 @@ anchor_bottom = 1.0
 unique_name_in_owner = true
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 170.0
-offset_top = 28.0
-offset_right = -134.0
-offset_bottom = -24.0
+offset_left = 128.0
+offset_top = 30.0
+offset_right = -4.0
+offset_bottom = -136.0
 
 [node name="TopBar" parent="." instance=ExtResource("2")]
 unique_name_in_owner = true
@@ -32,57 +32,71 @@ anchor_right = 1.0
 unique_name_in_owner = true
 anchor_bottom = 1.0
 offset_left = 4.0
-offset_top = 28.0
-offset_right = 164.0
-offset_bottom = -24.0
+offset_top = 30.0
+offset_right = 124.0
+offset_bottom = -40.0
 
 [node name="LVBox" type="VBoxContainer" parent="LogPanel"]
 theme_override_constants/separation = 5
 
-[node name="LogHeader" type="Label" parent="LogPanel/LVBox"]
+[node name="StripPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 128.0
+offset_top = -132.0
+offset_right = -4.0
+offset_bottom = -40.0
+
+[node name="Strip" type="HBoxContainer" parent="StripPanel"]
+theme_override_constants/separation = 6
+
+[node name="RecordBox" type="VBoxContainer" parent="StripPanel/Strip"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 3.0
+theme_override_constants/separation = 3
+
+[node name="LogHeader" type="Label" parent="StripPanel/Strip/RecordBox"]
 unique_name_in_owner = true
 text = "THE COURT RECORD"
 
-[node name="LogScroll" type="ScrollContainer" parent="LogPanel/LVBox"]
+[node name="LogScroll" type="ScrollContainer" parent="StripPanel/Strip/RecordBox"]
 unique_name_in_owner = true
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="LogBox" type="VBoxContainer" parent="LogPanel/LVBox/LogScroll"]
+[node name="LogBox" type="VBoxContainer" parent="StripPanel/Strip/RecordBox/LogScroll"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
-theme_override_constants/separation = 4
+theme_override_constants/separation = 3
 
-[node name="FreeText" type="LineEdit" parent="LogPanel/LVBox"]
+[node name="FreeText" type="LineEdit" parent="StripPanel/Strip/RecordBox"]
 unique_name_in_owner = true
 placeholder_text = "Give an order..."
 
-[node name="SidePanel" type="PanelContainer" parent="."]
+[node name="StripSep" type="VSeparator" parent="StripPanel/Strip"]
+
+[node name="SidePanel" type="VBoxContainer" parent="StripPanel/Strip"]
 unique_name_in_owner = true
-anchor_left = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -128.0
-offset_top = 28.0
-offset_right = -4.0
-offset_bottom = -24.0
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+theme_override_constants/separation = 4
 
-[node name="SVBox" type="VBoxContainer" parent="SidePanel"]
-theme_override_constants/separation = 6
-
-[node name="SideHeader" type="Label" parent="SidePanel/SVBox"]
+[node name="SideHeader" type="Label" parent="StripPanel/Strip/SidePanel"]
 unique_name_in_owner = true
 autowrap_mode = 3
 text = "THE COUNCIL ADVISES"
 
-[node name="SuggestionsBox" type="VBoxContainer" parent="SidePanel/SVBox"]
+[node name="SuggestionsBox" type="VBoxContainer" parent="StripPanel/Strip/SidePanel"]
 unique_name_in_owner = true
-theme_override_constants/separation = 4
+theme_override_constants/separation = 3
 
-[node name="SideSpacer" type="Control" parent="SidePanel/SVBox"]
+[node name="SideSpacer" type="Control" parent="StripPanel/Strip/SidePanel"]
 size_flags_vertical = 3
 
-[node name="EndTurn" type="Button" parent="SidePanel/SVBox"]
+[node name="EndTurn" type="Button" parent="StripPanel/Strip/SidePanel"]
 unique_name_in_owner = true
 focus_mode = 0
 text = "End Turn"

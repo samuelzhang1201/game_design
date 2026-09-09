@@ -26,8 +26,12 @@ signal country_hovered(kingdom_code: String)
 ## The province view was switched on or off (the P key, or a screen).
 signal province_view_changed(on: bool)
 ## In the province view, the province under a click — its province_code, or
-## "" for water / nothing — so a screen's left column can show its account.
+## "" for water / nothing — so a screen's detail column can show its account.
 signal province_selected(province_code: String)
+## The described entry of the object under a click ({title, lines, ask}), or
+## {} when water / nothing was clicked. Screens with a detail column take
+## this and switch the floating card off (use_card).
+signal object_selected(entry: Dictionary)
 
 const ZOOM_MAX := 8.0
 const ZOOM_STEP := 1.2
@@ -777,6 +781,10 @@ func select_state(sid: int) -> void:
 
 ## Open the card for any map object (MapObjects.object_at shape). Water or
 ## an unknown object closes it.
+## Whether a click opens the map's own floating card. A screen with a
+## detail column turns this off and listens to object_selected instead.
+var use_card := true
+
 func select_object(obj: Dictionary) -> void:
 	var entry := MapObjects.describe(Game.data, obj, Game.state)
 	if entry.is_empty():
@@ -784,7 +792,18 @@ func select_object(obj: Dictionary) -> void:
 		_card.hide()
 	else:
 		_selected_obj = obj
-		_card.show_entry(entry)
+		if use_card:
+			_card.show_entry(entry)
+	object_selected.emit(entry)
+	queue_redraw()
+
+## Clear whatever is selected (a detail column's CLOSE).
+func clear_selection() -> void:
+	_selected_obj = {}
+	_card.hide()
+	if _selected_province != "":
+		_selected_province = ""
+		province_selected.emit("")
 	queue_redraw()
 
 func selected_object() -> Dictionary:

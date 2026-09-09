@@ -43,6 +43,7 @@ func _ready() -> void:
 	top_bar = TOP_BAR_SCENE.instantiate()
 	top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	add_child(top_bar)
+	map_panel.offset_top = top_bar.bar_height() + 3.0
 
 func run(report: TickReport) -> void:
 	overlay.play(report.tick)

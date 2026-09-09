@@ -3,13 +3,12 @@ extends Control
 ## Court screen (Task 6, replaces CouncilScreen): the trimmed order screen.
 ## All minister speech, briefing, and event resolution now happen on the
 ## conversation stage (Task 5) before GameRoot ever switches here — this
-## screen is numbers + orders only (spec R2), in the game_ui.png chrome
-## (user ruling 2026-08-30): two UI columns with the BRIGHT map in between,
-## never covered - TopBar metrics strip up top (supersedes the KingdomCard,
-## R1/R7/R9), the Herald/court log + free-text order bar in the LEFT column
-## (plain Labels, no portraits — R10), the lettered suggestion buttons and
-## End Turn in the RIGHT column (R8), and the kings frame nine-patched into
-## the middle map area only.
+## screen is numbers + orders only (spec R2). Layout (user rulings
+## 2026-09-09, ScreenLayout): the realm's own information in the LEFT
+## column, the BRIGHT map in the middle with the strip under it (the court
+## record and the order box on its left, the lettered suggestions and End
+## Turn on its right — R8/R10), and a RIGHT detail column only while a map
+## element is selected.
 
 ## Emitted instead of self-driving the turn cycle: GameRoot owns advancing
 ## the tick and playing the DAY_RUN interlude. See enter_court.
@@ -28,10 +27,10 @@ var end_turn: Button
 var _log_scroll: ScrollContainer
 var _suggestion_buttons: Array = []
 var _world_map: WorldMapView
-## The hovered country's card, overlaying the council log.
+## The hovered country's card, overlaying the left column.
 var _country_panel: CountryPanel
-## The selected province's account (province view), overlaying the log.
-var _province_panel: ProvincePanel
+## The right detail column: the clicked map element (MapDetailPanel).
+var _detail: MapDetailPanel
 
 ## Static structure and layout live in scenes/court.tscn (editable in the
 ## editor); _ready fetches nodes, paints them from UiPalette, and wires
@@ -44,22 +43,29 @@ func _ready() -> void:
 	# The live world map fills the middle zone (user ruling 2026-09-03).
 	_world_map = WorldMapView.create()
 	%MapPanel.add_child(_world_map)
-	# The map's Ask button drops its question into the order box (spec
-	# 2026-09-08); the player still presses Enter, so no order or API call
-	# happens without them.
-	_world_map.set_ask_enabled(true)
+	# A click on the map opens the right detail column, not the floating
+	# card (user ruling 2026-09-09); its Ask drops the question into the
+	# order box and the player still presses Enter, so no order or API call
+	# happens without them (spec 2026-09-08).
+	_world_map.use_card = false
+	_detail = MapDetailPanel.new()
+	_detail.name = "DetailPanel"
+	add_child(_detail)
+	_detail.follow(_world_map)
+	_detail.ask_enabled = true
+	_detail.ask_requested.connect(_on_place_asked)
+	_detail.closed.connect(_world_map.clear_selection)
+	_detail.visibility_changed.connect(_layout)
 	_world_map.place_asked.connect(_on_place_asked)
 	# Hovering a country swaps the left column to its card and back again
-	# (user request 2026-09-09); the council log returns when it leaves.
+	# (user request 2026-09-09); the column's own content returns when it leaves.
 	_country_panel = CountryPanel.attach(%LogPanel.get_node("LVBox"), _world_map)
-	# A province clicked in the province view shows its account here too.
-	_province_panel = ProvincePanel.attach(%LogPanel.get_node("LVBox"), _world_map)
 	%LogPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
-	UiPalette.style_header(%LogHeader, 9)
-	%SidePanel.add_theme_stylebox_override("panel",
+	%StripPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
-	UiPalette.style_header(%SideHeader, 9)
+	UiPalette.style_header(%LogHeader, 7)
+	UiPalette.style_header(%SideHeader, 7)
 	_log_scroll = %LogScroll
 	log_box = %LogBox
 	suggestions_box = %SuggestionsBox
@@ -68,10 +74,19 @@ func _ready() -> void:
 	free_text.text_submitted.connect(_on_free_text_submitted)
 	end_turn = %EndTurn
 	end_turn.pressed.connect(_on_end_turn)
+	_layout()
+
+## Columns, map, strip, and the detail column when it is up (ScreenLayout).
+func _layout() -> void:
+	ScreenLayout.apply(%TopBar.bar_height() + 3.0, %LogPanel, %MapPanel,
+		%StripPanel, _detail, _detail != null and _detail.visible)
 
 ## Test seam.
 func world_map() -> WorldMapView:
 	return _world_map
+
+func detail_panel() -> MapDetailPanel:
+	return _detail
 
 ## Post-conversation court entry (R2): numbers + orders only, speech already
 ## happened on the conversation stage. Called by GameRoot after the
@@ -238,6 +253,3 @@ func _scroll_log_to_bottom() -> void:
 ## Test seam.
 func country_panel() -> CountryPanel:
 	return _country_panel
-
-func province_panel() -> ProvincePanel:
-	return _province_panel

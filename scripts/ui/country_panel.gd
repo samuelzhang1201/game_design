@@ -40,7 +40,7 @@ func _init() -> void:
 	head.add_child(_swatch)
 	_title = Label.new()
 	_title.name = "Title"
-	UiPalette.style_header(_title, 10)
+	UiPalette.style_header(_title, 8)
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_title)

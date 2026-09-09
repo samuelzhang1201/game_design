@@ -1,12 +1,11 @@
 class_name ConversationScene
 extends Control
-## VN stage (R3/R4/R5), game_ui.png chrome (user ruling 2026-08-31): two
-## mock-proportioned UI columns; between them the framed MAP VIEW at the
-## exact landscape ratio of the mock's map region (380x196 ~ 1.94:1),
-## cover-cropped, never distorted, always bright. Dossier fills the LEFT
-## column (portrait, identity, opinion, per-skill colored bars, traits);
-## dialogue/responses fill the RIGHT column. Beats advance on Continue /
-## reply / choice.
+## VN stage (R3/R4/R5). Layout (user rulings 2026-09-09, ScreenLayout): the
+## dossier fills the LEFT column (portrait, identity, opinion, per-skill
+## colored bars, traits); the MAP fills the middle with the dialogue strip
+## under it (where you stand and who is present, the transcript, replies,
+## the talk box); a RIGHT detail column exists only while something on the
+## map is selected. Beats advance on Continue / reply / choice.
 
 signal finished
 
@@ -27,7 +26,8 @@ var _free_text: LineEdit
 var _world_map: WorldMapView
 ## The hovered country's card, overlaying the minister column.
 var _country_panel: CountryPanel
-var _province_panel: ProvincePanel
+## The right detail column: the clicked map element (MapDetailPanel).
+var _detail: MapDetailPanel
 var _continue_btn: Button
 var _panel: PanelContainer
 var _scroll: ScrollContainer
@@ -54,29 +54,35 @@ func _ready() -> void:
 	# (user ruling 2026-09-03); portraits and dialogue draw above it.
 	_world_map = WorldMapView.create()
 	%MapPanel.add_child(_world_map)
-	# Ask on a map card pre-fills the talk box (spec 2026-09-08); never sends.
-	_world_map.set_ask_enabled(true)
-	_world_map.place_asked.connect(func(text: String) -> void:
-		_free_text.text = text
-		_free_text.caret_column = text.length()
-		_free_text.grab_focus())
+	# A click on the map opens the right detail column, not the floating
+	# card (user ruling 2026-09-09); its Ask pre-fills the talk box and
+	# never sends (spec 2026-09-08).
+	_world_map.use_card = false
+	_detail = MapDetailPanel.new()
+	_detail.name = "DetailPanel"
+	add_child(_detail)
+	_detail.follow(_world_map)
+	_detail.ask_enabled = true
+	_detail.ask_requested.connect(_fill_talk_box)
+	_detail.closed.connect(_world_map.clear_selection)
+	_detail.visibility_changed.connect(_layout)
+	_world_map.place_asked.connect(_fill_talk_box)
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the minister returns when the cursor leaves.
 	_country_panel = CountryPanel.attach(%MinisterPanel.get_node("MVBox"), _world_map)
-	_province_panel = ProvincePanel.attach(%MinisterPanel.get_node("MVBox"), _world_map)
 	%MinisterPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
-	UiPalette.style_header(%MinisterName, 11)
-	UiPalette.style_header(%MinisterTitle, 9, UiPalette.TEXT_MUTED)
+	UiPalette.style_header(%MinisterName, 9)
+	UiPalette.style_header(%MinisterTitle, 7, UiPalette.TEXT_MUTED)
 	%OpinionBar.add_theme_stylebox_override("background", UiPalette.bar_bg())
-	%OpinionValue.add_theme_font_size_override("font_size", 10)
+	%OpinionValue.add_theme_font_size_override("font_size", 8)
 	_build_skill_rows()
 	_build_dossier_tabs()
-	UiPalette.style_header(%ToolsTitle, 8, UiPalette.TEXT_MUTED)
+	UiPalette.style_header(%ToolsTitle, 7, UiPalette.TEXT_MUTED)
 	%TiesText.add_theme_font_size_override("font_size", 8)
 	%PopupPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.GOLD, 1, 12))
-	UiPalette.style_header(%PopupTitle, 11)
+	UiPalette.style_header(%PopupTitle, 9)
 	%PopupArt.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 6))
 	%PopupArtText.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
@@ -87,7 +93,7 @@ func _ready() -> void:
 	_panel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
 	_name_label = %NameLabel
-	UiPalette.style_header(_name_label, 12)
+	UiPalette.style_header(_name_label, 8)
 	_scroll = %DialogueScroll
 	_text_label = %TextLabel
 	# User request 2026-08-31: the conversation reads smaller — compact body
@@ -106,6 +112,17 @@ func _ready() -> void:
 		if is_inside_tree():
 			_refresh_location())
 	_refresh_location()
+	_layout()
+
+## Columns, map, strip, and the detail column when it is up (ScreenLayout).
+func _layout() -> void:
+	ScreenLayout.apply(%TopBar.bar_height() + 3.0, %MinisterPanel, %MapPanel,
+		%DialoguePanel, _detail, _detail != null and _detail.visible)
+
+func _fill_talk_box(text: String) -> void:
+	_free_text.text = text
+	_free_text.caret_column = text.length()
+	_free_text.grab_focus()
 
 ## `report` is the TickReport the beats were built from - kept so the summary
 ## beat can compose its text at display time (see ConversationBeats.summary_text)
@@ -213,7 +230,7 @@ func dialogue_text() -> String:
 func event_popup() -> Control:
 	return %EventPopup
 
-## --- Location panel (right column, upper container) -------------------
+## --- Location panel (the strip's left part) ----------------------------
 ## Where the player stands, who is present (click a face to seek them out),
 ## and MOVE — free movement within the region (LocationSystem).
 
@@ -789,8 +806,8 @@ func _on_free_text(text: String) -> void:
 func country_panel() -> CountryPanel:
 	return _country_panel
 
-func province_panel() -> ProvincePanel:
-	return _province_panel
+func detail_panel() -> MapDetailPanel:
+	return _detail
 
 ## Test seam and GameRoot's handle on this screen's map.
 func world_map() -> WorldMapView:
