@@ -35,25 +35,19 @@ extends SceneTree
 ##   <pack>/geography/rivers.csv       named rivers as polylines through their cells
 ##   <pack>/geography/markers.csv      points of interest with their legend notes
 ##   <pack>/geography/biomes.csv       biome id -> label, color, habitability
+##   <pack>/geography/vertices.csv     every Voronoi vertex: vertex_id,x,y
+##   <pack>/geography/cells.csv        every cell: its vertex ids, height (0-100),
+##       biome, water kind ("" land / ocean / lake), neighbour cell ids —
+##       MapTerrain builds the terrain mesh from these; no render PNG exists
+##   <pack>/geography/coasts.csv       closed shore loops: the outline of all
+##       land ("land") and of each lake ("lake")
 ## Each domain folder carries a .gdignore so Godot does not import the tables
 ## as translations; FileAccess reads them regardless.
-##   assets/maps/<map-id>/world_map.png byte copy under a stable name
 ##   assets/maps/<map-id>/world_state_index.png     hit-test bitmap: each cell's
 ##       polygon filled with R = state_id & 0xFF, G = state_id >> 8, B = 0;
 ##       untouched pixels stay white (255,255,255) = water / no state
 ##   assets/maps/<map-id>/world_province_index.png  same encoding, province id
 ##   assets/maps/<map-id>/world_biome_index.png     R = biome id (land cells only)
-##
-## Azgaar's PNG export captures the CURRENT VIEW, so a render exported while
-## the map is zoomed or panned is a scaled, shifted picture of the same
-## world — the file is still exactly graphWidth x graphHeight at an integer
-## scale, so the dimension check below passes and nothing looks wrong until
-## the computed borders miss the coastline by tens of pixels. Reset the zoom
-## before exporting the PNG. If you cannot re-export, measure the transform
-## with tools/calibrate_render.py (--write puts render_scale /
-## render_offset_x / _y into data/maps.csv); it registers the pack's
-## coastline against the render's water, and test_map_data guards the
-## result. Never eyeball it: an eyeballed fit was 8 native px off.
 ##
 ## Polygons are filled with an even-odd scanline rasterizer. Deterministic:
 ## same inputs => byte-identical outputs. Hand-edits to the generated CSVs
@@ -62,7 +56,7 @@ extends SceneTree
 ## Usage:
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
 ##     --script res://tools/import_azgaar.gd \\
-##       [-- --map-id ID --json PATH --png PATH]
+##       [-- --map-id ID --json PATH]
 
 const MAPS := "res://assets/maps"
 const DATA := "res://data"
@@ -71,8 +65,6 @@ const DATA := "res://data"
 ## realm_bindings.csv binds each slot to one of that map's kingdoms — so the
 ## check below is against those bindings, per map, not a global list.
 const DEFAULT_MAP_ID := "beria"
-const GENERATED_PNGS: Array[String] = ["world_map.png", "world_state_index.png",
-	"world_province_index.png", "world_biome_index.png"]
 ## A route endpoint this close (native px) to a burg is "at" that burg.
 const SNAP_RADIUS := 3.0
 ## Title words for routes Azgaar left nameless (most trails and sea routes).
@@ -81,6 +73,8 @@ const ROUTE_WORDS := {"roads": "Road", "trails": "Trail", "searoutes": "Sea rout
 ## a .gdignore so Godot does not import game tables as translations; FileAccess
 ## reads them regardless. An export preset must include data/** explicitly.
 const DOMAINS: Array[String] = ["geography", "political", "economy", "military", "society"]
+## Azgaar's convention: a cell with h below this is water.
+const SEA_LEVEL := 20
 
 
 func _ensure_domains(out_data: String) -> void:
@@ -219,22 +213,6 @@ func _newest(candidates: Array[String], what: String) -> String:
 	return best
 
 
-## The newest PNG that is the world at an integer scale; anything else in the
-## folder (a reference screenshot, a town preview) is named and skipped.
-func _newest_render(candidates: Array[String], width: int, height: int) -> String:
-	var sorted := candidates.duplicate()
-	sorted.sort_custom(func(a: String, b: String) -> bool:
-		return FileAccess.get_modified_time(a) > FileAccess.get_modified_time(b))
-	for path in sorted:
-		var dims := _png_dimensions(path)
-		if dims.x > 0 and dims.x % width == 0 and dims == Vector2i(width * (dims.x / width), height * (dims.x / width)):
-			return path
-		print("skipping %s: %s is not the %dx%d world at an integer scale" % [
-			path.get_file(), dims, width, height])
-	push_error("error: no map render PNG found in %s" % MAPS)
-	return ""
-
-
 ## Azgaar lists start with a literal 0 and may flag removed rows.
 func _active(entries: Array) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
@@ -289,14 +267,6 @@ func _is_high_surrogate(esc: String) -> bool:
 	return cp <= 0xDBFF
 
 
-func _png_dimensions(path: String) -> Vector2i:
-	var img := Image.new()
-	if img.load(ProjectSettings.globalize_path(path)) != OK:
-		push_error("error: %s is not a loadable PNG" % path)
-		return Vector2i.ZERO
-	return Vector2i(img.get_width(), img.get_height())
-
-
 ## Even-odd scanline fill sampling pixel centers (x+0.5, y+0.5), writing
 ## into an RGB8 byte buffer. Mirrors the committed bitmap's encoding.
 ## Coordinates stay in 64-bit floats (not Vector2, which is 32-bit).
@@ -346,10 +316,18 @@ func _fill_polygon(buf: PackedByteArray, width: int, height: int,
 ## game redraw a border after a province changes hands.
 func _cell_group_loops(cells: Array, vertices: Array, field: String,
 		id: int) -> Array[PackedVector2Array]:
+	return _cell_set_loops(cells, vertices, func(c: Dictionary) -> bool:
+		return int(c.get(field, 0)) == id)
+
+
+## The outline of every cell `member` accepts — the same edge-count walk as
+## _cell_group_loops, over an arbitrary set (all land, one lake's cells).
+func _cell_set_loops(cells: Array, vertices: Array,
+		member: Callable) -> Array[PackedVector2Array]:
 	var edge_count: Dictionary = {}
 	var edge_order: Array[Vector2i] = []
 	for c: Dictionary in cells:
-		if int(c.get(field, 0)) != id:
+		if not member.call(c):
 			continue
 		var vs: Array = c["v"]
 		for i in vs.size():
@@ -394,6 +372,14 @@ func _cell_group_loops(cells: Array, vertices: Array, field: String,
 			edge = next_edge
 		loops.append(loop)
 	return loops
+
+
+## A loop as the "x y|x y|..." text the pack tables carry.
+func _loop_points(loop: PackedVector2Array) -> String:
+	var pts: Array[String] = []
+	for p in loop:
+		pts.append("%s %s" % [_num2(p.x), _num2(p.y)])
+	return "|".join(pts)
 
 
 ## Minimal-quoting CSV (matches Python csv.writer): quote only when needed.
@@ -448,15 +434,12 @@ func _bound_kingdoms(path: String) -> Array[String]:
 func _run() -> int:
 	# --- input selection --------------------------------------------------
 	var json_path := ""
-	var png_path := ""
 	var map_id := DEFAULT_MAP_ID
 	var user_args := OS.get_cmdline_user_args()
 	var i := 0
 	while i < user_args.size() - 1:
 		if user_args[i] == "--json":
 			json_path = user_args[i + 1]
-		elif user_args[i] == "--png":
-			png_path = user_args[i + 1]
 		elif user_args[i] == "--map-id":
 			map_id = user_args[i + 1]
 		i += 1
@@ -467,9 +450,8 @@ func _run() -> int:
 	_ensure_domains(out_data)
 	# Raw exports may sit directly in assets/maps/ or inside the pack's own
 	# folder next to the generated art; scan both so a re-import needs no
-	# arguments either way. Generated PNGs are excluded by name.
+	# arguments either way.
 	var jsons: Array[String] = []
-	var pngs: Array[String] = []
 	var dirs: Array[String] = [MAPS]
 	for sub in DirAccess.get_directories_at(MAPS):
 		dirs.append(MAPS + "/" + sub)
@@ -478,8 +460,6 @@ func _run() -> int:
 			var path: String = dir_path + "/" + file
 			if file.contains("Full") and file.ends_with(".json"):
 				jsons.append(path)
-			elif file.ends_with(".png") and file not in GENERATED_PNGS:
-				pngs.append(path)
 	if json_path == "":
 		json_path = _newest(jsons, "Azgaar full export (*Full*.json)")
 	if json_path == "":
@@ -492,26 +472,7 @@ func _run() -> int:
 	var info: Dictionary = world["info"]
 	var width := int(info["width"])
 	var height := int(info["height"])
-	# The render may be exported at an integer scale (2x, 3x...) for
-	# sharper zoom; the index bitmap and all coordinates stay at the
-	# JSON's native scale, and WorldMapView converts at runtime. Other PNGs
-	# dropped beside the packs (references, previews) are skipped by their
-	# dimensions rather than mistaken for the render.
-	var render_scale := 0
-	if png_path == "":
-		png_path = _newest_render(pngs, width, height)
-	if png_path == "":
-		return 1
-	print("json: %s\npng:  %s" % [json_path.get_file(), png_path.get_file()])
-	var png_dims := _png_dimensions(png_path)
-	@warning_ignore("integer_division")
-	render_scale = png_dims.x / width
-	if render_scale < 1 or png_dims != Vector2i(width * render_scale, height * render_scale):
-		push_error("error: PNG must be the JSON's %dx%d at an integer scale, got %s" % [
-			width, height, png_dims])
-		return 1
-	if render_scale > 1:
-		print("render scale: %dx" % render_scale)
+	print("json: %s" % json_path.get_file())
 
 	var pack: Dictionary = world["pack"]
 	var settings: Dictionary = world["settings"]
@@ -944,7 +905,7 @@ func _run() -> int:
 		return 1
 
 	# --- geography/rivers.csv ---------------------------------------------
-	out = _csv_line(["river_code", "label", "type", "length", "kingdom_codes", "points"])
+	out = _csv_line(["river_code", "label", "type", "length", "discharge", "kingdom_codes", "points"])
 	var river_slugs: Dictionary = {}
 	var river_count := 0
 	for rv in _active(pack.get("rivers", [])):
@@ -971,7 +932,7 @@ func _run() -> int:
 				through.append(String(state_code[sid]))
 		var label := String(rv.get("name", ""))
 		out += _csv_line([_take_slug(river_slugs, label), label, String(rv.get("type", "River")),
-			String.num(length, 1), "|".join(through), "|".join(pts)])
+			String.num(length, 1), str(int(rv.get("discharge", 0))), "|".join(through), "|".join(pts)])
 		river_count += 1
 	if not _write_text(out_data + "/geography/rivers.csv", out):
 		return 1
@@ -1009,6 +970,62 @@ func _run() -> int:
 	if not _write_text(out_data + "/geography/biomes.csv", out):
 		return 1
 
+	# --- geography/vertices.csv -------------------------------------------
+	out = _csv_line(["vertex_id", "x", "y"])
+	for v in vertices:
+		if not (v is Dictionary):
+			continue
+		var vp: Array = (v as Dictionary)["p"]
+		out += _csv_line([str(int((v as Dictionary)["i"])), _num2(float(vp[0])), _num2(float(vp[1]))])
+	if not _write_text(out_data + "/geography/vertices.csv", out):
+		return 1
+
+	# --- geography/cells.csv ----------------------------------------------
+	# The terrain itself (spec 2026-09-11): MapTerrain fans every cell into a
+	# mesh, shades land by its neighbours' heights, and grades the sea by depth.
+	var feat_type: Dictionary = {}
+	for f in (pack.get("features", []) as Array):
+		if f is Dictionary:
+			feat_type[int((f as Dictionary).get("i", -1))] = String((f as Dictionary).get("type", ""))
+	out = _csv_line(["cell_id", "vertex_ids", "height", "biome_id", "water", "neighbor_ids"])
+	for c: Dictionary in cells:
+		var h := int(round(float(c.get("h", 0))))
+		var water := ""
+		if h < SEA_LEVEL:
+			water = "lake" if String(feat_type.get(int(c.get("f", 0)), "")) == "lake" else "ocean"
+		var vids: Array[String] = []
+		for v in (c.get("v", []) as Array):
+			vids.append(str(int(v)))
+		var nids: Array[String] = []
+		for n in (c.get("c", []) as Array):
+			nids.append(str(int(n)))
+		out += _csv_line([str(int(c["i"])), "|".join(vids), str(h),
+			str(int(c.get("biome", 0))), water, "|".join(nids)])
+	if not _write_text(out_data + "/geography/cells.csv", out):
+		return 1
+
+	# --- geography/coasts.csv ---------------------------------------------
+	# Shores as closed loops: the outline of all land (every island, plus an
+	# inner loop around any lake inside it) and each lake's own shore.
+	out = _csv_line(["kind", "feature_id", "loop", "points"])
+	var coast_total := 0
+	var land_loops := _cell_set_loops(cells, vertices, func(c: Dictionary) -> bool:
+		return float(c.get("h", 0)) >= SEA_LEVEL)
+	for li in land_loops.size():
+		out += _csv_line(["land", "0", str(li), _loop_points(land_loops[li])])
+	coast_total += land_loops.size()
+	for f in (pack.get("features", []) as Array):
+		if not (f is Dictionary) or String((f as Dictionary).get("type", "")) != "lake":
+			continue
+		var fid := int((f as Dictionary)["i"])
+		var lake_loops := _cell_set_loops(cells, vertices, func(c: Dictionary) -> bool:
+			return int(c.get("f", 0)) == fid)
+		for li in lake_loops.size():
+			out += _csv_line(["lake", str(fid), str(li), _loop_points(lake_loops[li])])
+		coast_total += lake_loops.size()
+	if not _write_text(out_data + "/geography/coasts.csv", out):
+		return 1
+
 	# --- map_info.csv -----------------------------------------------------
 	out = _csv_line(["key", "value"])
 	out += _csv_line(["width", str(width)])
@@ -1020,8 +1037,6 @@ func _run() -> int:
 		return 1
 
 	# --- bitmaps ----------------------------------------------------------
-	DirAccess.copy_absolute(ProjectSettings.globalize_path(png_path),
-		ProjectSettings.globalize_path(out_art + "/world_map.png"))
 	var state_img := _rasterize(cells, vertices, width, height, func(c: Dictionary) -> int:
 		var sid := int(c.get("state", 0))
 		return sid if state_code.has(sid) else -1)
@@ -1048,8 +1063,8 @@ func _run() -> int:
 		print("         does not contain: %s" % ", ".join(missing))
 		print("         Fix the bindings or rename the states in Azgaar —")
 		print("         until then the cast has no home on this map.")
-	print("map '%s': wrote %d kingdoms, %d provinces, %d burgs, %d border loops (+%d province loops), %d routes, %d rivers, %d markers into %s, art into %s"
+	print("map '%s': wrote %d kingdoms, %d provinces, %d burgs, %d border loops (+%d province loops), %d routes, %d rivers, %d markers, %d coast loops into %s, art into %s"
 		% [map_id, states.size(), provinces.size(), burgs.size(), loop_total,
-			prov_loop_total, routes.size(), river_count, markers.size(), out_data,
-			out_art])
+			prov_loop_total, routes.size(), river_count, markers.size(), coast_total,
+			out_data, out_art])
 	return 0
