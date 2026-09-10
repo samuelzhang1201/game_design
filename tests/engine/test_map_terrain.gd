@@ -174,15 +174,21 @@ func test_shared_mesh_is_built_once_per_repo() -> void:
 	assert_true(a == MapTerrain.shared_mesh(r), "the same repo gets the same mesh")
 	assert_false(a == MapTerrain.shared_mesh(_shore()), "another repo gets its own")
 
-## The committed pack builds, in native coordinates, covering the map.
-func test_the_pack_builds_a_mesh_that_spans_the_map() -> void:
+## The committed pack builds, in native coordinates. Azgaar's packed graph
+## drops the deep ocean far from any coast, so the cells stop short of the
+## canvas; the view paints what lies outside as deep sea. The mesh must stay
+## inside the canvas and hold every kingdom's centre.
+func test_the_pack_builds_a_mesh_inside_the_canvas_that_covers_the_land() -> void:
 	var repo := DataRepository.load_all("res://data")
 	assert_not_null(repo, DataRepository.last_error)
 	var built := MapTerrain.build(repo)
 	var b := MapGeometry.bounds(built["vertices"])
-	assert_lte(b.position.x, 1.0)
-	assert_lte(b.position.y, 1.0)
-	assert_gte(b.end.x, float(repo.map_info["width"]) - 1.0)
-	assert_gte(b.end.y, float(repo.map_info["height"]) - 1.0)
+	var canvas := Rect2(Vector2.ZERO,
+		Vector2(float(repo.map_info["width"]), float(repo.map_info["height"])))
+	assert_true(canvas.encloses(b), "the mesh lies inside the canvas, got %s" % b)
+	for code: String in repo.kingdoms:
+		var row: Dictionary = repo.kingdoms[code]
+		var center := Vector2(float(row["center_x"]), float(row["center_y"]))
+		assert_true(b.has_point(center), "%s's centre is on the mesh" % code)
 	assert_eq((built["colors"] as PackedColorArray).size(),
 		(built["vertices"] as PackedVector2Array).size())
