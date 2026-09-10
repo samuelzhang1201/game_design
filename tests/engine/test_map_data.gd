@@ -251,3 +251,58 @@ func _is_coast(biome: Image, x: int, y: int) -> bool:
 func _is_land(biome: Image, x: int, y: int) -> bool:
 	var c := biome.get_pixel(x, y)
 	return not (c.r == 1.0 and c.g == 1.0 and c.b == 1.0)
+
+## The terrain tables (spec 2026-09-11): the game draws the map from these,
+## so every reference in them must resolve.
+func test_terrain_tables_load_and_cross_reference() -> void:
+	assert_gt(repo.vertices.size(), 0, "vertices.csv loaded")
+	assert_gt(repo.cells.size(), 0, "cells.csv loaded")
+	assert_gt(repo.coasts.size(), 0, "coasts.csv loaded")
+	var land := 0
+	for id: int in repo.cells:
+		var c: Dictionary = repo.cells[id]
+		var vids: PackedInt32Array = c["vertex_ids"]
+		assert_gte(vids.size(), 3, "cell %d has a polygon" % id)
+		for v in vids:
+			assert_true(repo.vertices.has(v), "cell %d vertex %d exists" % [id, v])
+		for n in (c["neighbor_ids"] as PackedInt32Array):
+			assert_true(repo.cells.has(n), "cell %d neighbour %d exists" % [id, n])
+		var water := String(c["water"])
+		if water == "":
+			land += 1
+			assert_true(repo.biomes.has(int(c["biome_id"])),
+				"land cell %d has a named biome" % id)
+			assert_gte(float(c["height"]), 20.0, "land is at or above sea level")
+		else:
+			assert_true(water == "ocean" or water == "lake", "cell %d water kind %s" % [id, water])
+			assert_lt(float(c["height"]), 20.0, "water is below sea level")
+	assert_gt(land, 0, "some cells are land")
+
+## The committed pack (Game_dev, seed 954159497) has 12 islands and 4 lakes.
+func test_coast_loops_match_the_packs_features() -> void:
+	var land := 0
+	var lakes := 0
+	for row: Dictionary in repo.coasts:
+		assert_gte((row["polyline"] as PackedVector2Array).size(), 3,
+			"%s loop %s has 3+ points" % [row["kind"], row["loop"]])
+		match String(row["kind"]):
+			"land": land += 1
+			"lake": lakes += 1
+	assert_eq(lakes, 4, "one shore per lake")
+	assert_gte(land, 12, "at least one land loop per island")
+
+func test_terrain_palette_names_every_colour_the_map_draws() -> void:
+	for key in ["sea_deep", "sea_shallow", "lake", "coast_line", "river", "road", "trail"]:
+		assert_true(repo.terrain_palette.has(key), key)
+	for id: int in repo.biomes:
+		if id == 0:
+			continue
+		assert_true(repo.terrain_palette.has("biome_%d" % id),
+			"biome %d (%s) has a land tint" % [id, repo.biomes[id]["label"]])
+
+func test_terrain_balance_keys_are_present() -> void:
+	for key in ["map_relief_strength", "map_relief_min", "map_relief_max", "map_light_x",
+			"map_light_y", "map_altitude_gain", "map_sea_depth_gamma", "map_coast_width",
+			"map_river_min_px", "map_river_discharge_scale", "map_road_width",
+			"map_trail_width", "map_trail_min_scale"]:
+		assert_true(repo.balance.has(key), key)

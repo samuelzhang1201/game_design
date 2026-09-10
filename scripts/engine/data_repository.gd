@@ -35,6 +35,9 @@ var resource_icons: Dictionary = {}
 ## data/settlement_art.csv rows: which settlement drawing a burg group (and
 ## whether it has walls) is shown with on the map (MapObjects.settlement_art).
 var settlement_art: Array[Dictionary] = []
+## data/terrain_palette.csv: key -> "#rrggbb" for the terrain the game draws
+## itself (MapTerrain): land tints per biome, sea, lake, and line colours.
+var terrain_palette: Dictionary = {}
 var events: Array[Dictionary] = []
 var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
@@ -74,6 +77,15 @@ var markers: Dictionary = {}
 var biomes: Dictionary = {}
 ## width/height/distance_unit/distance_scale/population_rate as strings.
 var map_info: Dictionary = {}
+## The pack's terrain geometry (spec 2026-09-11, geography/vertices.csv and
+## cells.csv): vertex_id -> Vector2, and cell_id -> row with vertex_ids and
+## neighbor_ids as PackedInt32Array, height as float, biome_id as int, water
+## as "" (land) / "ocean" / "lake". MapTerrain builds the mesh from these.
+var vertices: Dictionary = {}
+var cells: Dictionary = {}
+## geography/coasts.csv rows (kind land|lake, feature_id, loop, points) with
+## polyline and bbox set at load, like routes and rivers.
+var coasts: Array[Dictionary] = []
 ## Available map packs from data/maps.csv, keyed by map_id.
 var maps: Dictionary = {}
 ## The currently loaded pack (load_map).
@@ -267,6 +279,9 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/settlement_art.csv", ["group", "walled", "tier", "texture"],
 			func(r): settlement_art.append(r)):
 		return false
+	if not _load_if_present(dir + "/terrain_palette.csv", ["key", "color"],
+			func(r): terrain_palette[r["key"]] = r["color"]):
+		return false
 	# A campaign always has a world under it; which one is data, not code.
 	if not maps.is_empty() and not load_map(default_map_id()):
 		return false
@@ -301,6 +316,9 @@ func load_map(id: String) -> bool:
 	markers.clear()
 	biomes.clear()
 	map_info.clear()
+	vertices.clear()
+	cells.clear()
+	coasts.clear()
 	realm_bindings.clear()
 	house_bindings.clear()
 	world_tables.clear()
@@ -337,6 +355,17 @@ func load_map(id: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/geography/biomes.csv", ["biome_id", "label"],
 			func(r): biomes[int(r["biome_id"])] = r):
+		return false
+	if not _load_if_present(dir + "/geography/vertices.csv", ["vertex_id", "x", "y"],
+			func(r): vertices[int(r["vertex_id"])] = Vector2(float(r["x"]), float(r["y"]))):
+		return false
+	if not _load_if_present(dir + "/geography/cells.csv",
+			["cell_id", "vertex_ids", "height", "biome_id", "water", "neighbor_ids"],
+			func(r): cells[int(r["cell_id"])] = _typed_cell(r)):
+		return false
+	if not _load_if_present(dir + "/geography/coasts.csv",
+			["kind", "feature_id", "loop", "points"],
+			func(r): coasts.append(_with_polyline(r))):
 		return false
 	if not _load_if_present(dir + "/map_info.csv", ["key", "value"],
 			func(r): map_info[r["key"]] = r["value"]):
@@ -416,6 +445,21 @@ func _with_polyline(r: Dictionary) -> Dictionary:
 	r["polyline"] = pts
 	r["bbox"] = MapGeometry.bounds(pts)
 	return r
+
+## A cells.csv row with its id lists and numbers parsed once, so the mesh
+## builder never re-splits text.
+func _typed_cell(r: Dictionary) -> Dictionary:
+	r["vertex_ids"] = _id_list(String(r["vertex_ids"]))
+	r["neighbor_ids"] = _id_list(String(r["neighbor_ids"]))
+	r["height"] = float(r["height"])
+	r["biome_id"] = int(r["biome_id"])
+	return r
+
+static func _id_list(text: String) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	for part in text.split("|", false):
+		out.append(int(part))
+	return out
 
 ## A realm slot resolved through the loaded map. Anything that is not a slot
 ## passes through unchanged — a literal kingdom_code, or facts.csv subjects

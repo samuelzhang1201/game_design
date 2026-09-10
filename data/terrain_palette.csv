@@ -1,0 +1,20 @@
+key,color,notes
+biome_1,#d6c48f,hot desert: pale sand
+biome_2,#c6bfa0,cold desert: grey sand
+biome_3,#c7c288,savanna: dry straw
+biome_4,#b8c78c,grassland: light green
+biome_5,#9fba75,tropical seasonal forest
+biome_6,#8fb07a,temperate deciduous forest: the common green
+biome_7,#7ea86a,tropical rainforest
+biome_8,#7aa274,temperate rainforest
+biome_9,#6f8e6a,taiga: dark conifer green
+biome_10,#a69f88,tundra: grey brown
+biome_11,#dfe5e5,glacier: ice
+biome_12,#8aa78a,wetland: dull green
+sea_deep,#3f5f78,open sea
+sea_shallow,#7fa3b6,shelf water next to the shore
+lake,#6f96ad,freshwater
+coast_line,#2e3a40,the shore stroke
+river,#5b86a3,river strokes
+road,#7a6247,roads
+trail,#8f7a62,trails and sea routes
