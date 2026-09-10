@@ -1,13 +1,14 @@
 class_name InfoScreen
 extends Control
-## Centered table overlay for the bottom bar's REALM / MILITARY / LAWS /
-## RELIGION tabs: a titled two-column table of engine truth (metrics and
+## Centered table overlay for the bottom bar's REALM / LAWS / RELIGION /
+## FAMILIES tabs: a titled two-column table of engine truth (metrics and
 ## office holders), refreshed live on state_changed while visible.
+##
+## MILITARY is no longer one of them (user request 2026-09-10): it is a map
+## layer plus the host in the screen's left column, so it never dims the map.
 
 var _title: Label
 var _grid: GridContainer
-## The MILITARY tab is charts, not a table (user request 2026-09-09).
-var _military: MilitaryPanel
 var _current_tab := ""
 
 func _ready() -> void:
@@ -41,9 +42,6 @@ func _ready() -> void:
 	_grid.add_theme_constant_override("h_separation", 16)
 	_grid.add_theme_constant_override("v_separation", 2)
 	col.add_child(_grid)
-	_military = MilitaryPanel.new()
-	_military.visible = false
-	col.add_child(_military)
 	col.add_child(HSeparator.new())
 	var close := Button.new()
 	close.name = "CloseButton"
@@ -65,11 +63,7 @@ func _render() -> void:
 	if Game.state == null:
 		return
 	_title.text = _current_tab
-	_military.visible = _current_tab == "MILITARY"
-	_grid.visible = not _military.visible
-	if _military.visible:
-		_military.refresh()
-		return
+	_grid.visible = true
 	for child in _grid.get_children():
 		child.queue_free()
 	# Most tabs are a name/value pair; a tab that needs more (FAMILIES) says
@@ -125,26 +119,6 @@ func _rows_for(tab: String) -> Array:
 				if v != null:
 					realm_rows.append([String(spec[0]), str(int(v))])
 			return realm_rows
-		"MILITARY":
-			var marshal := _seat_holder("marshal")
-			var rows := [["Army quality", str(int(m["army_quality"]))]]
-			# Unit counts from the pack's regiments, live through the ledger.
-			for unit: String in Game.data.world_table("military", "unit_types"):
-				var n: Variant = WorldLedger.value_of(Game.data, Game.state,
-					"military.kingdoms.player_realm." + unit)
-				if n != null:
-					rows.append([unit.capitalize(), str(int(n))])
-			if marshal != null:
-				rows.append(["Marshal", "%s (martial %d)" %
-					[marshal.display_name, int(marshal.skills["sk_martial"])]])
-			var hale: Character = Game.state.characters.get("char_captain_hale")
-			if hale != null:
-				rows.append(["Guard captain", hale.display_name])
-			var osric: Character = Game.state.characters.get("char_king_osric")
-			if osric != null:
-				rows.append(["%s threat" % Game.data.realm_label("raider_realm"),
-					"hostile (%d)" % osric.opinion])
-			return rows
 		"FAMILIES":
 			return _family_rows()
 		"LAWS":
@@ -209,9 +183,6 @@ func _family_rows() -> Array:
 ## Test seams.
 func current_tab() -> String:
 	return _current_tab
-
-func military_panel() -> MilitaryPanel:
-	return _military
 
 func table() -> GridContainer:
 	return _grid

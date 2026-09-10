@@ -4,10 +4,11 @@ extends VBoxContainer
 ## the cursor is over that country's terrain (user request 2026-09-09).
 ##
 ## It overlays whatever the column normally holds — the minister on the
-## conversation stage, the council log in court — and gets out of the way the
+## conversation stage, the dashboard in court — and gets out of the way the
 ## moment the cursor leaves, so nothing is lost and the column needs no extra
-## room. `attach` wires it to a panel and a map; the host screen does not
-## have to manage the swap itself.
+## room. `attach` wires it to a panel and a map; the host screen decides what
+## it covers (owner ruling 2026-09-10: a card the player CLICKED outranks the
+## country the cursor happens to be over, so the screen orders the column).
 ##
 ## Content is MapObjects.describe's kingdom entry, so this renders exactly
 ## what the click-through card would, and follows live ownership.
@@ -17,8 +18,6 @@ const SWATCH := 6.0
 var _title: Label
 var _rows: VBoxContainer
 var _swatch: ColorRect
-## The siblings hidden while this is up, so they can be restored exactly.
-var _covered: Array[Control] = []
 var _shown_code := ""
 ## How many provinces had changed hands when the card was last drawn. The
 ## demo key flips the province under the cursor, so the card would otherwise
@@ -51,8 +50,8 @@ func _init() -> void:
 	add_child(_rows)
 
 
-## Put the panel in `column` and have it follow `map`'s hover. The column's
-## existing children are remembered so they can be hidden and restored.
+## Put the panel in `column` and have it follow `map`'s hover. The screen
+## connects to the same signal to re-order the column around it.
 static func attach(column: BoxContainer, map: WorldMapView) -> CountryPanel:
 	var panel := CountryPanel.new()
 	column.add_child(panel)
@@ -70,12 +69,12 @@ func show_country(kingdom_code: String) -> void:
 	_shown_version = version
 	var row: Dictionary = Game.data.kingdoms.get(kingdom_code, {})
 	if row.is_empty():
-		_restore()
+		_clear()
 		return
 	var entry := MapObjects.describe(Game.data,
 		{"kind": "kingdom", "state_id": int(row["state_id"])}, Game.state)
 	if entry.is_empty():
-		_restore()
+		_clear()
 		return
 	_title.text = String(entry["title"])
 	_swatch.color = MapPalette.color_of(Game.data, kingdom_code)
@@ -88,34 +87,18 @@ func show_country(kingdom_code: String) -> void:
 		l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_rows.add_child(l)
-	_cover()
-
-
-## Hide the column's normal contents behind this panel. Only siblings that
-## are currently visible are touched, so restoring cannot reveal something
-## the screen had deliberately hidden.
-func _cover() -> void:
-	if visible:
-		return
-	_covered.clear()
-	for sibling in get_parent().get_children():
-		if sibling == self or not (sibling is Control):
-			continue
-		var c := sibling as Control
-		if c.visible:
-			c.visible = false
-			_covered.append(c)
 	visible = true
 
 
-func _restore() -> void:
-	if not visible:
-		return
+## Whether a country is under the cursor right now. The screen's left column
+## asks this to decide who holds the column.
+func has_content() -> bool:
+	return _shown_code != ""
+
+
+func _clear() -> void:
+	_shown_code = ""
 	visible = false
-	for c in _covered:
-		if is_instance_valid(c):
-			c.visible = true
-	_covered.clear()
 
 
 ## Test seam.

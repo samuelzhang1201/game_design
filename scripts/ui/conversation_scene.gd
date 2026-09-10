@@ -5,7 +5,10 @@ extends Control
 ## the MAP fills the middle; the RIGHT slot is empty by default — the
 ## council column (where you stand and who is present, the transcript,
 ## replies, the talk box) opens from the ENTER THE COUNCIL handle on the
-## right edge, and the detail column takes the slot while a map element is
+## right edge. The columns divide by kind (owner ruling 2026-09-10): the
+## RIGHT column is PEOPLE AND TALK — the speaker's dossier stands at the top
+## of it, over their words — and the LEFT column is FACTS, which is where a
+## clicked map element is
 ## selected. Beats advance on Continue / reply / choice.
 
 signal finished
@@ -27,11 +30,15 @@ var _free_text: LineEdit
 var _world_map: WorldMapView
 ## The hovered country's card, overlaying the minister column.
 var _country_panel: CountryPanel
-## The right detail column: the clicked map element (MapDetailPanel).
+## The clicked map element's fact card, in the left column (MapDetailPanel).
 var _detail: MapDetailPanel
 ## The left column's default content, and the dossier nodes it alternates with.
 var _dashboard: RealmDashboard
 var _dossier_up := false
+## The realm's host, in the left column while the MILITARY layer is on.
+var _military: MilitaryPanel
+## Whether the MILITARY tab is lit (GameRoot owns the state; this follows).
+var _military_view := false
 var _continue_btn: Button
 var _panel: PanelContainer
 var _scroll: ScrollContainer
@@ -58,18 +65,10 @@ func _ready() -> void:
 	# (user ruling 2026-09-03); portraits and dialogue draw above it.
 	_world_map = WorldMapView.create()
 	%MapPanel.add_child(_world_map)
-	# A click on the map opens the right detail column, not the floating
-	# card (user ruling 2026-09-09); its Ask pre-fills the talk box and
-	# never sends (spec 2026-09-08).
+	# A click on the map opens the fact card in the left column, not the
+	# floating card (user ruling 2026-09-09); its Ask pre-fills the talk box
+	# and never sends (spec 2026-09-08).
 	_world_map.use_card = false
-	_detail = MapDetailPanel.new()
-	_detail.name = "DetailPanel"
-	add_child(_detail)
-	_detail.follow(_world_map)
-	_detail.ask_enabled = true
-	_detail.ask_requested.connect(_fill_talk_box)
-	_detail.closed.connect(_world_map.clear_selection)
-	_detail.visibility_changed.connect(_on_detail_visibility)
 	_world_map.place_asked.connect(_fill_talk_box)
 	# The council column is hidden until the player enters it (user ruling
 	# 2026-09-09): a handle on the right edge opens it, LEAVE closes it.
@@ -78,13 +77,26 @@ func _ready() -> void:
 	add_child(_handle)
 	%LeaveButton.add_theme_font_size_override("font_size", 7)
 	%LeaveButton.pressed.connect(leave_council)
-	# Hovering a country swaps the left column to its card and back again
-	# (user request 2026-09-09); the minister returns when the cursor leaves.
+	# %MinisterPanel is the LEFT column — the facts column now (owner ruling
+	# 2026-09-10); the minister it was named for moved to the right, over
+	# their own words. Hovering a country swaps the column to its card and
+	# back again (user request 2026-09-09).
 	_country_panel = CountryPanel.attach(%MinisterPanel.get_node("MVBox"), _world_map)
+	_world_map.country_hovered.connect(func(_code: String) -> void: _refresh_left())
 	# The left column shows the realm at a glance by default (user ruling
-	# 2026-09-09); the dossier takes the column while a person is speaking or
-	# singled out — see _show_speaker.
+	# 2026-09-09).
 	_dashboard = RealmDashboard.attach(%MinisterPanel.get_node("MVBox"))
+	# The rest of the facts column (owner ruling 2026-09-10): the host while
+	# the military layer is on, and the card of whatever was clicked.
+	_military = MilitaryPanel.attach(%MinisterPanel.get_node("MVBox"))
+	_detail = MapDetailPanel.new()
+	_detail.name = "DetailPanel"
+	%MinisterPanel.get_node("MVBox").add_child(_detail)
+	_detail.follow(_world_map)
+	_detail.ask_enabled = true
+	_detail.ask_requested.connect(_fill_talk_box)
+	_detail.closed.connect(_world_map.clear_selection)
+	_detail.visibility_changed.connect(_refresh_left)
 	_show_dossier(false)
 	%MinisterPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
@@ -129,27 +141,47 @@ func _ready() -> void:
 			_refresh_location())
 	_refresh_location()
 	_set_right("")
+	_refresh_left()
 
-## What holds the right slot: "" (nothing, the map runs to the edge),
-## "council", or "detail".
+## What holds the right slot: "" (nothing, the map runs to the edge) or
+## "council". The fact card lives in the left column, so it never competes
+## for this slot (owner ruling 2026-09-10: left = facts, right = people).
 var _right := ""
-## Whether the council was open when a map click took the slot, so closing
-## the detail column gives the council back.
-var _council_behind_detail := false
 var _handle: Button
 
 func _set_right(mode: String) -> void:
 	_right = mode
 	%DialoguePanel.visible = mode == "council"
-	if _detail != null and mode != "detail" and _detail.visible:
-		_detail.hide()
 	_handle.visible = mode == ""
 	_layout()
+
+## Who holds the left column, highest claim first: the card of a clicked
+## object, the country under the cursor, the host while the military layer
+## is on, then the realm dashboard. The dossier is not among them any more
+## (owner ruling 2026-09-10): a person belongs in the right column, with
+## their words — see _refresh_dossier.
+func _refresh_left() -> void:
+	if _detail == null:
+		return
+	var card := _detail.has_content()
+	var country := not card and _country_panel.has_content()
+	_detail.visible = card
+	_country_panel.visible = country
+	_military.visible = _military_view and not card and not country
+	_dashboard.visible = not (card or country or _military_view)
+
+## The MILITARY tab (GameRoot): the host takes the left column while the
+## regiments are drawn on the map.
+func set_military_view(on: bool) -> void:
+	_military_view = on
+	if on:
+		_military.refresh()
+	_refresh_left()
 
 ## Columns, map, and whichever panel holds the right slot (ScreenLayout).
 func _layout() -> void:
 	var top: float = %TopBar.bar_height() + 3.0
-	ScreenLayout.apply(top, %MinisterPanel, %MapPanel, [%DialoguePanel, _detail], _right != "")
+	ScreenLayout.apply(top, %MinisterPanel, %MapPanel, [%DialoguePanel], _right != "")
 	ScreenLayout.place_handle(_handle, top)
 
 func enter_council() -> void:
@@ -165,21 +197,10 @@ func council_open() -> bool:
 func council_handle() -> Button:
 	return _handle
 
-## A map click takes the slot; closing the detail column gives it back to
-## whatever held it.
-func _on_detail_visibility() -> void:
-	if _detail.visible:
-		if _right != "detail":
-			_council_behind_detail = _right == "council"
-			_set_right("detail")
-	elif _right == "detail":
-		_set_right("council" if _council_behind_detail else "")
-
 ## Ask on a card pre-fills the talk box and brings the council up so the
 ## player can send it.
 func _fill_talk_box(text: String) -> void:
 	_world_map.clear_selection()
-	_council_behind_detail = false
 	_set_right("council")
 	_free_text.text = text
 	_free_text.caret_column = text.length()
@@ -260,16 +281,20 @@ func _build_dossier_tabs() -> void:
 		btn.pressed.connect(_select_tab.bind(i))
 		%TabsRow.add_child(btn)
 		_tab_buttons.append(btn)
-	_select_tab(0)
+	_refresh_dossier()
 
-var _tab_index := 0
+## Which page is open, or -1 when they are all closed — the resting state,
+## so the talk has the column until the player asks for a page.
+var _tab_index := -1
 
+## Pressing a tab opens its page under the head; pressing the open one
+## closes it again and hands the room back to the talk.
 func _select_tab(index: int) -> void:
-	_tab_index = index
+	_tab_index = -1 if index == _tab_index else index
 	for i in _tab_pages.size():
-		_tab_pages[i].visible = _dossier_up and i == index
 		_tab_buttons[i].add_theme_color_override("font_color",
-			UiPalette.GOLD if i == index else UiPalette.TEXT_MUTED)
+			UiPalette.GOLD if i == _tab_index else UiPalette.TEXT_MUTED)
+	_refresh_dossier()
 
 func select_tab(index: int) -> void:
 	_select_tab(index)
@@ -334,7 +359,9 @@ func _refresh_location() -> void:
 	for id in LocationSystem.occupants(Game.data, Game.state, Game.state.current_location):
 		var btn := Button.new()
 		btn.name = "Occupant_" + String(id)
-		btn.custom_minimum_size = Vector2(26, 26)
+		# 20px keeps a full council on ONE row of the right column; two rows
+		# cost the talk a fifth of its height (owner ruling 2026-09-10).
+		btn.custom_minimum_size = Vector2(20, 20)
 		btn.focus_mode = Control.FOCUS_NONE
 		btn.tooltip_text = Game.state.characters[id].display_name
 		btn.toggle_mode = true
@@ -343,7 +370,7 @@ func _refresh_location() -> void:
 			UiPalette.chip_style(UiPalette.CHIP_BG, UiPalette.GOLD))
 		btn.pressed.connect(_toggle_target.bind(String(id)))
 		var chip := CharacterPortrait.instantiate_for(id, false)
-		chip.scale = Vector2(0.5, 0.5)
+		chip.scale = Vector2(0.38, 0.38)
 		chip.position = Vector2(1, 1)
 		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		btn.add_child(chip)
@@ -657,18 +684,16 @@ var _next_reply_letter := 0
 ## art fitted into the box, chip fallback), name, seat title, opinion bar,
 ## and trait chips. Non-character beats (round table, herald) show just the
 ## portrait and name.
-func _show_speaker(b: Dictionary) -> void:
-	var portrait_id := String(b["portrait_id"])
-	# Same queue_free() reasoning as _advance: the replacement is added
-	# immediately, the outgoing node is pending-delete for one frame. Rename
-	# it first so the incoming node can take the "FullArt" name instead of
-	# being auto-renamed around the still-pending sibling.
-	for child in %PortraitBox.get_children():
+## Put `portrait_id`'s face in `box`, cropped to the box's own aspect.
+## Same queue_free() reasoning as _advance: the replacement is added
+## immediately, the outgoing node is pending-delete for one frame. Rename it
+## first so the incoming node can take the "FullArt" name instead of being
+## auto-renamed around the still-pending sibling.
+func _fill_portrait(box: Control, portrait_id: String) -> void:
+	for child in box.get_children():
 		child.name = "OutgoingPortrait"
 		child.queue_free()
-	for chip in %TraitChips.get_children():
-		chip.queue_free()
-	var box_size: Vector2 = %PortraitBox.custom_minimum_size
+	var box_size: Vector2 = box.custom_minimum_size
 	var full := CharacterPortrait.full_texture_for(portrait_id)
 	if full != null:
 		# Cover-crop at the portrait box's aspect: tall figure art is cut from
@@ -692,14 +717,24 @@ func _show_speaker(b: Dictionary) -> void:
 		pic.stretch_mode = TextureRect.STRETCH_SCALE
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		pic.set_anchors_preset(Control.PRESET_FULL_RECT)
-		%PortraitBox.add_child(pic)
+		box.add_child(pic)
 	else:
 		var p := CharacterPortrait.instantiate_for(portrait_id, false)
 		var scale_factor := box_size.y / CharacterPortrait.PORTRAIT_SIZE.y
 		var side := CharacterPortrait.PORTRAIT_SIZE.x * scale_factor
 		p.scale = Vector2(scale_factor, scale_factor)
 		p.position = Vector2((box_size.x - side) / 2.0, 0)
-		%PortraitBox.add_child(p)
+		box.add_child(p)
+
+func _show_speaker(b: Dictionary) -> void:
+	var portrait_id := String(b["portrait_id"])
+	for chip in %TraitChips.get_children():
+		chip.queue_free()
+	# Two boxes wear the same face now (owner ruling 2026-09-10): the
+	# thumbnail in the dossier head, which stands over the talk, and the
+	# full-size art on the BIO page the head's tab expands.
+	_fill_portrait(%PortraitBox, portrait_id)
+	_fill_portrait(%BioArt, portrait_id)
 	var c: Character = null
 	if Game.state != null and Game.state.characters.has(portrait_id):
 		c = Game.state.characters[portrait_id]
@@ -877,20 +912,36 @@ func detail_panel() -> MapDetailPanel:
 func dashboard() -> RealmDashboard:
 	return _dashboard
 
-## Whether the dossier (a person) or the dashboard (the realm) holds the
-## left column right now.
+func military_panel() -> MilitaryPanel:
+	return _military
+
 func dossier_up() -> bool:
 	return _dossier_up
 
-## The dossier for a person, the dashboard for everything else (the round
-## table, the herald, narration). The country card, when up, keeps covering
-## whichever one is shown. The dossier's tab selection survives being hidden.
+## The dossier stands at the top of the RIGHT column while a person holds
+## the stage — a thumbnail, their name, seat and standing over their words
+## (owner ruling 2026-09-10). Everything else (the round table, the herald,
+## narration) has no dossier, and the talk takes the whole column.
 func _show_dossier(up: bool) -> void:
 	_dossier_up = up
-	_dashboard.visible = not up
-	%TabsRow.visible = up
+	_refresh_dossier()
+
+## The head is up whenever a person is; the BIO / SKILLS / TIES pages are
+## closed until a tab is pressed, so the talk keeps the column and only
+## gives room back while the player is reading the page.
+func _refresh_dossier() -> void:
+	%DossierHead.visible = _dossier_up
+	%TabsRow.visible = _dossier_up
+	var page_open := _dossier_up and _tab_index >= 0
+	# The column is 150x278 and the head, the room and the reply box already
+	# claim most of it: a page and the talk cannot both have room, so the
+	# open page TAKES the talk's space and gives it straight back when the
+	# tab closes. Nobody reads a skill table and a speech at once.
+	%DossierPages.visible = page_open
+	%NameLabel.visible = not page_open
+	%DialogueScroll.visible = not page_open
 	for i in _tab_pages.size():
-		_tab_pages[i].visible = up and i == _tab_index
+		_tab_pages[i].visible = _dossier_up and i == _tab_index
 
 ## Test seam and GameRoot's handle on this screen's map.
 func world_map() -> WorldMapView:

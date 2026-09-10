@@ -201,16 +201,22 @@ func test_right_slot_is_empty_until_the_council_or_a_map_click_takes_it() -> voi
 	assert_lt(c.map_panel().get_global_rect().end.x, wide, "the map gives it room")
 	assert_lt(c.map_panel().get_global_rect().end.x,
 		c.dialogue_panel().get_global_rect().position.x + 1.0, "and never runs under it")
+	# Owner ruling 2026-09-10: the fact card belongs to the LEFT column, so a
+	# map click never displaces the council on the right.
 	var capital: Dictionary = Game.data.burgs[String(
 		Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
 	c.world_map().select_object({"kind": "burg", "code": String(capital["burg_code"])})
 	await wait_frames(2)
-	assert_true(c.detail_panel().visible, "a map click takes the slot for the detail column")
-	assert_false(c.dialogue_panel().visible, "the council steps behind it")
+	assert_true(c.detail_panel().visible, "a map click opens the card")
+	assert_true(c.dialogue_panel().visible, "and the council stays where it is")
+	assert_lt(c.detail_panel().get_global_rect().position.x,
+		c.map_panel().get_global_rect().position.x, "the card is in the left column")
+	assert_false(c.dashboard().visible, "which the card takes from the dashboard")
 	c.detail_panel().close_button().pressed.emit()
 	await wait_frames(2)
-	assert_false(c.detail_panel().visible, "CLOSE hides the detail column")
-	assert_true(c.dialogue_panel().visible, "and the council comes back")
+	assert_false(c.detail_panel().visible, "CLOSE closes the card")
+	assert_true(c.dashboard().visible, "and the left column goes back to the realm")
+	assert_true(c.dialogue_panel().visible, "the council never moved")
 	c.find_child("LeaveButton", true, false).pressed.emit()
 	await wait_frames(2)
 	assert_false(c.dialogue_panel().visible, "LEAVE hides the council")
@@ -272,8 +278,10 @@ func test_top_bar_and_dossier_reflect_speaker_and_order() -> void:
 	assert_eq(title_label.text, "MARSHAL", "the dossier shows the seat title")
 	assert_gt(c.find_child("TraitChips", true, false).get_child_count(), 0,
 		"the dossier shows the minister's trait chips")
+	c.select_tab(1)
+	await wait_frames(1)
 	var rows: VBoxContainer = c.find_child("SkillRows", true, false)
-	assert_true(rows.visible, "a minister's dossier shows the skill bars")
+	assert_true(rows.visible, "a minister's dossier shows the skill bars on its SKILLS page")
 	assert_eq(rows.get_child_count(), CharacterFactory.SKILLS.size(),
 		"one colored bar per council skill, mock-style")
 	var gold_before := c.top_bar().metric_text("treasury")
@@ -556,5 +564,57 @@ func test_left_column_is_the_dashboard_unless_a_person_speaks() -> void:
 	c.continue_button().pressed.emit()
 	await wait_frames(2)
 	assert_true(c.dossier_up(), "a minister speaking brings the dossier")
-	assert_false(c.dashboard().visible)
-	assert_true(c.tab_page(0).visible, "on its BIO tab")
+	# Owner ruling 2026-09-10: the dossier is a person, so it stands in the
+	# RIGHT column over their words; the left column keeps the realm.
+	assert_true(c.dashboard().visible, "and the left column still holds the realm")
+	assert_false(c.tab_page(0).visible, "its pages rest closed over the talk")
+	var head: Control = c.find_child("DossierHead", true, false)
+	assert_true(head.visible, "the head is up")
+	assert_gt(head.get_global_rect().position.x,
+		c.map_panel().get_global_rect().position.x,
+		"on the right of the map, not the left")
+
+## Owner ruling 2026-09-10: the dossier is a person, so it stands at the top
+## of the RIGHT column over their words, and its pages take the talk's space
+## only while one is open — the reply box is never pushed off the column.
+func test_the_dossier_stands_over_the_talk_in_the_right_column() -> void:
+	Game.start_campaign(42)
+	var report := Game.next_tick()
+	var c := _scene_with([{"kind": "minister", "portrait_id": "char_marshal",
+		"speaker": "Ser Brandt", "text": "hm", "suggestions": []}], report)
+	c.enter_council()
+	await wait_frames(2)
+	var head: Control = c.find_child("DossierHead", true, false)
+	var pages: Control = c.find_child("DossierPages", true, false)
+	var panel := c.dialogue_panel()
+	assert_true(head.visible, "a person on stage brings the head up")
+	assert_true(panel.get_global_rect().encloses(head.get_global_rect()),
+		"inside the right column, with their words")
+	assert_false(pages.visible, "the pages rest closed")
+	assert_true(c.dialogue_scroll().visible, "so the talk has the room")
+	# A page takes the talk's space, and hands it back.
+	c.select_tab(1)
+	await wait_frames(2)
+	assert_true(pages.visible, "SKILLS opens")
+	assert_false(c.dialogue_scroll().visible, "the talk stands aside for it")
+	assert_true(head.visible, "the head stays: you still see who you are dealing with")
+	c.select_tab(1)
+	await wait_frames(2)
+	assert_false(pages.visible, "the same tab closes it")
+	assert_true(c.dialogue_scroll().visible, "and the talk is back")
+	# Nothing was pushed out of the column at any point.
+	var col: Control = panel.get_node("Col")
+	assert_lte(col.get_combined_minimum_size().y, col.size.y + 1.0,
+		"the column still fits what it holds")
+
+## A narration or council beat has no person, so no dossier — the talk takes
+## the whole right column.
+func test_no_dossier_without_a_person() -> void:
+	Game.start_campaign(42)
+	var c := _scene_with([{"kind": "summary", "portrait_id": "round_table",
+		"speaker": "The Council"}], Game.next_tick())
+	c.enter_council()
+	await wait_frames(2)
+	assert_false(c.find_child("DossierHead", true, false).visible)
+	assert_false(c.find_child("TabsRow", true, false).visible)
+	assert_true(c.dialogue_scroll().visible)

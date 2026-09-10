@@ -110,3 +110,8 @@ dashboard_max_provinces,4,realm dashboard: how many of the realm's largest provi
 map_sprite_scale,0.5,world map: settlement art height in screen px per screen px of view scale x 100 (a capital tile is ~500 px tall; 0.5 gives 25 px at scale 0.1)
 map_sprite_min_px,10.0,world map: below this screen height a settlement draws as a pin, not art
 map_sprite_max_px,90.0,world map: settlement art never grows taller than this on screen
+map_army_plaque_px,11.0,"military layer: the banner plaque under a regiment's arm glyph, in screen px (fixed size, so armies stay readable at any zoom)"
+map_army_bar_w,14.0,military layer: width of a regiment's strength bar in screen px
+map_army_bar_h,2.5,military layer: height of a regiment's strength bar in screen px
+map_army_bar_gap,1.5,military layer: gap between the plaque and its strength bar in screen px
+map_army_pick_px,8.0,military layer: screen px within which a click or hover picks a regiment

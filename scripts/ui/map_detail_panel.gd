@@ -1,17 +1,23 @@
 class_name MapDetailPanel
 extends PanelContainer
-## The right detail column (user rulings 2026-09-09): what the player clicked
-## on the map. Towns and the player's own provinces get a CARD after
-## Azgaar's burg editor — heraldry, a field grid, feature and goods glyphs,
-## wealth and treasury, and a preview of the map around the place; other
-## objects (kingdoms, roads, rivers, points of interest, foreign provinces)
-## get their lines. ASK THE COUNCIL and CLOSE below. Content comes from
-## MapObjects; this renders.
+## The fact card for what the player clicked on the map. Towns and the
+## player's own provinces get a CARD after Azgaar's burg editor — heraldry, a
+## field grid, feature and goods glyphs, wealth and treasury, and a preview
+## of the map around the place; other objects (kingdoms, roads, rivers,
+## points of interest, regiments, foreign provinces) get their lines. ASK THE
+## COUNCIL and CLOSE below. Content comes from MapObjects; this renders.
+##
+## It lives in the screen's LEFT column (owner ruling 2026-09-10: the left
+## column holds the facts of an object, the right column holds characters and
+## conversations), taking the column from whatever it normally shows until
+## CLOSE. The column draws the frame, so the card itself has no border.
 
 signal ask_requested(text: String)
 signal closed
 
-const PREVIEW_SIZE := Vector2(134, 76)
+## Sized for the left column's content width (ScreenLayout.LEFT_WIDTH less
+## the column panel's margins).
+const PREVIEW_SIZE := Vector2(104, 59)
 ## How much of the world the preview shows, in native map px.
 const PREVIEW_SPAN := Vector2(90, 51)
 
@@ -36,18 +42,38 @@ var _close: Button
 var _ask_text := ""
 var _shown_province := ""
 var _shown_card: Dictionary = {}
+## Whether a card is open (distinct from `visible`, which the left column
+## sets: a hovered country never closes the card, it only covers it).
+var _open := false
 
 
 func _ready() -> void:
 	name = "DetailPanel" if name == "" else name
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
+	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# It is a child of the column's box now, so it has to ask for the room:
+	# without this the scrolling body collapses to nothing.
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 4)
 	add_child(col)
+	# The column is 120 design px wide and no taller than the screen, so a
+	# full town card does not fit: the body scrolls and ASK / CLOSE stay
+	# pinned at the bottom where the player can always reach them.
+	var scroll := ScrollContainer.new()
+	scroll.name = "CardScroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_child(scroll)
+	var body := VBoxContainer.new()
+	body.name = "CardBody"
+	body.add_theme_constant_override("separation", 4)
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(body)
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 5)
-	col.add_child(head)
+	body.add_child(head)
 	_shield = HeraldicShield.new()
 	_shield.name = "Shield"
 	head.add_child(_shield)
@@ -66,35 +92,35 @@ func _ready() -> void:
 	_subtitle.add_theme_font_size_override("font_size", 7)
 	_subtitle.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	titles.add_child(_subtitle)
-	col.add_child(HSeparator.new())
+	body.add_child(HSeparator.new())
 	_fields = GridContainer.new()
 	_fields.name = "Fields"
 	_fields.columns = 2
 	_fields.add_theme_constant_override("h_separation", 6)
 	_fields.add_theme_constant_override("v_separation", 1)
-	col.add_child(_fields)
+	body.add_child(_fields)
 	_features = HBoxContainer.new()
 	_features.name = "Features"
 	_features.add_theme_constant_override("separation", 4)
-	col.add_child(_features)
+	body.add_child(_features)
 	_production = VBoxContainer.new()
 	_production.name = "Production"
 	_production.add_theme_constant_override("separation", 1)
-	col.add_child(_production)
+	body.add_child(_production)
 	_money = VBoxContainer.new()
 	_money.name = "Money"
 	_money.add_theme_constant_override("separation", 1)
-	col.add_child(_money)
+	body.add_child(_money)
 	_lines = VBoxContainer.new()
 	_lines.name = "Rows"
 	_lines.add_theme_constant_override("separation", 1)
-	col.add_child(_lines)
+	body.add_child(_lines)
 	_hint = Label.new()
 	_hint.name = "Hint"
 	_hint.add_theme_font_size_override("font_size", 7)
 	_hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(_hint)
+	body.add_child(_hint)
 	_preview = TextureRect.new()
 	_preview.name = "Preview"
 	_preview.custom_minimum_size = PREVIEW_SIZE
@@ -102,10 +128,7 @@ func _ready() -> void:
 	_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	_preview.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_preview.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	col.add_child(_preview)
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(spacer)
+	body.add_child(_preview)
 	_ask = Button.new()
 	_ask.name = "DetailAsk"
 	_ask.text = "ASK THE COUNCIL"
@@ -120,11 +143,27 @@ func _ready() -> void:
 	_close.focus_mode = Control.FOCUS_NONE
 	_close.add_theme_font_size_override("font_size", 7)
 	_close.pressed.connect(func() -> void:
-		hide()
+		_close_panel()
 		closed.emit())
 	col.add_child(_close)
-	# Nothing is selected when a screen opens: the column starts hidden and
-	# the map has the whole width (user ruling 2026-09-09).
+	# Nothing is selected when a screen opens: the card is closed and the
+	# column shows its own content (user ruling 2026-09-09).
+	_close_panel()
+
+
+## Whether a card is open. The screen's left column asks this rather than
+## reading `visible`, which it owns.
+func has_content() -> bool:
+	return _open
+
+
+func _open_panel() -> void:
+	_open = true
+	show()
+
+
+func _close_panel() -> void:
+	_open = false
 	hide()
 
 
@@ -139,7 +178,7 @@ func follow(map: WorldMapView) -> void:
 ## everything else its lines; {} hides.
 func show_entry(entry: Dictionary) -> void:
 	if entry.is_empty():
-		hide()
+		_close_panel()
 		return
 	_shown_province = ""
 	var obj: Dictionary = entry.get("obj", {})
@@ -153,7 +192,7 @@ func show_entry(entry: Dictionary) -> void:
 	for line in entry.get("lines", []):
 		_lines.add_child(_line(String(line), UiPalette.TEXT_SOFT))
 	_set_ask(String(entry.get("ask", "")))
-	show()
+	_open_panel()
 
 
 ## The province card: full for the player's own land, basic abroad; "" hides.
@@ -163,7 +202,7 @@ func show_province(province_code: String) -> void:
 		if province_code != "" else {}
 	if card.is_empty():
 		_shown_province = ""
-		hide()
+		_close_panel()
 		return
 	show_card(card)
 
@@ -171,7 +210,7 @@ func show_province(province_code: String) -> void:
 ## Render a MapObjects card (burg_card / province_card).
 func show_card(card: Dictionary) -> void:
 	if card.is_empty():
-		hide()
+		_close_panel()
 		return
 	_shown_card = card
 	_clear()
@@ -220,7 +259,7 @@ func show_card(card: Dictionary) -> void:
 		_hint.text = "Little more is known of foreign land."
 		_hint.visible = true
 	_set_ask(String(card.get("ask", "")))
-	show()
+	_open_panel()
 
 
 ## A window onto the world map around a place: an atlas region of the render

@@ -4,26 +4,48 @@ extends VBoxContainer
 ## an icon per type and a bar for its size, every regiment with the arm it
 ## is mostly made of, and the neighbours' strength as far as it is commonly
 ## known. Engine truth through the ledger and the pack; refreshed on show.
+##
+## It lives in the LEFT column (owner ruling 2026-09-10: the left column is
+## the facts column) while the MILITARY layer is on, in place of the realm
+## dashboard, with the regiments themselves drawn on the map beside it.
 
-const MAX_WIDTH := 300.0
-
+var _title: Label
 var _summary: Label
 var _arms: BarChart
 var _regiments: BarChart
 var _neighbours: BarChart
 var _officers: Label
 
+## Put the panel in a screen's left column, hidden until the tab lights it.
+static func attach(column: BoxContainer) -> MilitaryPanel:
+	var p := MilitaryPanel.new()
+	p.visible = false
+	column.add_child(p)
+	return p
+
 func _init() -> void:
 	name = "MilitaryPanel"
 	add_theme_constant_override("separation", 3)
-	custom_minimum_size = Vector2(MAX_WIDTH, 0)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_title = Label.new()
+	_title.name = "Title"
+	_title.text = "THE HOST"
+	UiPalette.style_header(_title, 8)
+	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	add_child(_title)
+	add_child(HSeparator.new())
 	_summary = Label.new()
 	_summary.name = "Summary"
-	_summary.add_theme_font_size_override("font_size", 8)
+	_summary.add_theme_font_size_override("font_size", 7)
+	_summary.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+	_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_summary)
-	_arms = _section("THE HOST BY ARM", "Arms")
+	# Short headings, and every one of them wraps: the left column is a fixed
+	# 120 design px (ScreenLayout.LEFT_WIDTH) and a label that cannot wrap
+	# sets a minimum width, which would push the column over the map.
+	_arms = _section("BY ARM", "Arms")
 	_regiments = _section("REGIMENTS", "Regiments")
-	_neighbours = _section("NEIGHBOURS' STRENGTH, AS REPORTED", "Neighbours")
+	_neighbours = _section("NEIGHBOURS, AS REPORTED", "Neighbours")
 	_officers = Label.new()
 	_officers.name = "Officers"
 	_officers.add_theme_font_size_override("font_size", 7)
@@ -31,10 +53,18 @@ func _init() -> void:
 	_officers.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_officers)
 
+func _ready() -> void:
+	# The MILITARY table it replaced refreshed live while it was up; so does
+	# this, so a battle or a muster shows in the column as it happens.
+	Game.state_changed.connect(func() -> void:
+		if visible:
+			refresh())
+
 func _section(heading: String, chart_name: String) -> BarChart:
 	var h := Label.new()
 	h.text = heading
 	UiPalette.style_header(h, 7, UiPalette.TEXT_MUTED)
+	h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(h)
 	var chart := BarChart.new()
 	chart.name = chart_name
@@ -73,16 +103,10 @@ func refresh() -> void:
 	var reg_rows: Array = []
 	var reg_top := 1.0
 	for r: Dictionary in _regiments_of(mine):
-		var size := 0.0
-		var main_arm := ""
-		var main_n := -1.0
-		for i in units.size():
-			var u: String = units[i]
-			var n := float(r.get(u, 0))
-			size += n
-			if n > main_n:
-				main_n = n
-				main_arm = u
+		# The same arithmetic the map's markers use, so the bar here and the
+		# bar under the marker read the same regiment the same way.
+		var size := MapObjects.regiment_size(data, r)
+		var main_arm := MapObjects.regiment_arm(data, r)
 		reg_top = maxf(reg_top, size)
 		reg_rows.append({"label": _short(String(r["label"])), "value": size, "icon": _glyph(main_arm),
 			"color": UiPalette.chart_color("cat_%d" % (units.find(main_arm) + 1)),
@@ -114,14 +138,15 @@ func refresh() -> void:
 	var hale: Character = state.characters.get("char_captain_hale")
 	if hale != null:
 		lines.append("Guard captain: %s" % hale.display_name)
+	# What the old MILITARY table said about the threat, kept when the table
+	# gave way to this column (user request 2026-09-10).
+	var osric: Character = state.characters.get("char_king_osric")
+	if osric != null:
+		lines.append("%s: hostile (%d)" % [data.realm_label("raider_realm"), osric.opinion])
 	_officers.text = "\n".join(lines)
 
 func _regiments_of(kingdom_code: String) -> Array:
-	var out: Array = []
-	for r: Dictionary in Game.data.world_table("military", "regiments").values():
-		if String(r["kingdom_code"]) == kingdom_code:
-			out.append(r)
-	return out
+	return MapObjects.regiments_of(Game.data, kingdom_code)
 
 func _label(unit: String) -> String:
 	return String((Game.data.resource_icons.get(unit, {}) as Dictionary).get("label", unit.capitalize()))

@@ -98,11 +98,17 @@ func test_dossier_tabs_switch_pages() -> void:
 	scene.start([{"kind": "minister", "portrait_id": "char_marshal",
 		"speaker": "Ser Brandt", "text": "hm", "suggestions": []}], report)
 	await wait_frames(2)
-	assert_true(scene.tab_page(0).visible, "BIO tab default")
+	# Owner ruling 2026-09-10: the dossier stands over the talk in the right
+	# column, so its pages rest closed and a tab opens one at a time.
+	assert_false(scene.tab_page(0).visible, "the pages rest closed")
 	assert_false(scene.tab_page(1).visible)
+	scene.select_tab(0)
+	assert_true(scene.tab_page(0).visible, "BIO opens on its tab")
 	scene.select_tab(2)
 	assert_false(scene.tab_page(0).visible)
 	assert_true(scene.tab_page(2).visible, "TIES tab selected")
+	scene.select_tab(2)
+	assert_false(scene.tab_page(2).visible, "the same tab again closes it")
 
 func test_bottom_bar_tabs_and_info_tables() -> void:
 	Game.start_campaign(42)

@@ -524,3 +524,90 @@ func test_towns_draw_as_art_when_zoomed_in_and_pins_when_out() -> void:
 	var obj := v._object_under(rect.get_center())
 	assert_eq(String(obj.get("kind", "")), "burg")
 	assert_eq(String(obj.get("code", "")), _capital_code(), "picked anywhere on the picture")
+
+## The military layer (user request 2026-09-10): the realm's own regiments,
+## each wearing the arm it is mostly made of, standing on a bar that reads
+## its strength against the largest regiment of the host.
+func test_the_military_layer_draws_the_realms_regiments_with_strength_bars() -> void:
+	var v := _view()
+	await wait_frames(2)
+	assert_eq(v.army_markers().size(), 0, "nothing is drawn while the layer is off")
+	v.show_armies = true
+	var mine := Game.data.resolve_realm("player_realm")
+	var regiments := MapObjects.regiments_of(Game.data, mine)
+	assert_gt(regiments.size(), 0, "the pack quarters regiments in the realm")
+	var markers := v.army_markers()
+	assert_eq(markers.size(), regiments.size(), "one marker per regiment of the realm")
+	# Owner ruling 2026-09-10: the player's host only.
+	var codes: Dictionary = {}
+	for m: Dictionary in markers:
+		codes[String(m["code"])] = true
+	for r: Dictionary in Game.data.world_table("military", "regiments").values():
+		if String(r["kingdom_code"]) != mine:
+			assert_false(codes.has(String(r["regiment_code"])),
+				"a foreign regiment is not drawn")
+	var biggest: Dictionary = regiments[0]
+	for r: Dictionary in regiments:
+		if MapObjects.regiment_size(Game.data, r) > MapObjects.regiment_size(Game.data, biggest):
+			biggest = r
+	var seen := false
+	for m: Dictionary in markers:
+		assert_between(float(m["frac"]), 0.0, 1.0, "the bar fills within its track")
+		assert_ne(String(m["glyph"]), "", "each marker wears its arm's glyph")
+		if String(m["code"]) == String(biggest["regiment_code"]):
+			seen = true
+			assert_almost_eq(float(m["frac"]), 1.0, 0.001, "the largest fills its bar")
+			assert_almost_eq(float(m["size"]),
+				MapObjects.regiment_size(Game.data, biggest), 0.5, "and reads its headcount")
+	assert_true(seen, "the largest regiment is on screen")
+	v.show_armies = false
+	assert_eq(v.army_markers().size(), 0, "the layer clears")
+
+## The markers are counters on the map: fixed screen size at any zoom, and
+## each stands on the point the pack quarters its regiment at.
+func test_regiment_markers_stand_on_their_point_at_a_fixed_size() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v.show_armies = true
+	var r: Dictionary = MapObjects.regiments_of(Game.data,
+		Game.data.resolve_realm("player_realm"))[0]
+	var at := Vector2(float(r["x"]), float(r["y"]))
+	v._offset += v.size / 2.0 - v.map_to_screen(at)
+	v._clamp_offset()
+	var found: Dictionary = {}
+	for m: Dictionary in v.army_markers():
+		if String(m["code"]) == String(r["regiment_code"]):
+			found = m
+	assert_false(found.is_empty(), "the regiment is drawn")
+	var plaque: Rect2 = found["plaque"]
+	assert_almost_eq(plaque.size.y, Game.data.bal("map_army_plaque_px"), 0.01)
+	assert_almost_eq(plaque.get_center().x, v.map_to_screen(at).x, 0.5, "standing on its point")
+	assert_gt((found["bar"] as Rect2).position.y, plaque.end.y, "the bar hangs under it")
+	# Zooming does not grow it — an army is a counter, not terrain.
+	v._zoom_at(v.size / 2.0, 4.0)
+	for m: Dictionary in v.army_markers():
+		if String(m["code"]) == String(r["regiment_code"]):
+			assert_almost_eq((m["plaque"] as Rect2).size.y,
+				Game.data.bal("map_army_plaque_px"), 0.01, "the same size zoomed in")
+
+## Clicking a regiment names it in the fact card, like any other map object.
+func test_clicking_a_regiment_opens_its_card() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v.show_armies = true
+	var r: Dictionary = MapObjects.regiments_of(Game.data,
+		Game.data.resolve_realm("player_realm"))[0]
+	var at := Vector2(float(r["x"]), float(r["y"]))
+	v._offset += v.size / 2.0 - v.map_to_screen(at)
+	v._clamp_offset()
+	var obj := v._object_under(v.map_to_screen(at))
+	assert_eq(String(obj.get("kind", "")), "army", "the marker is picked over the land")
+	assert_eq(String(obj.get("code", "")), String(r["regiment_code"]))
+	assert_eq(MapObjects.label_of(Game.data, obj), String(r["label"]), "the tooltip names it")
+	var entry := MapObjects.describe(Game.data, obj, Game.state)
+	assert_eq(String(entry["title"]), String(r["label"]))
+	var text := "\n".join(entry["lines"])
+	assert_string_contains(text, "Under arms: %d" % int(MapObjects.regiment_size(Game.data, r)))
+	# With the layer off the same point is land again, not a regiment.
+	v.show_armies = false
+	assert_ne(String(v._object_under(v.map_to_screen(at)).get("kind", "")), "army")

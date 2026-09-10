@@ -54,6 +54,22 @@ Text-first, LLM-narrated grand strategy game: rule a kingdom for ~60 years throu
 7. **Save = one JSON file.** All state in memory, serialized whole. No database, no partial saves.
 8. **Every order carries a cost.** `OrderCosts` guarantees an explicit (gold, grain, population) or hidden (opinion, relationship, attribute) cost per executed order from `data/order_costs.csv` (polarity per metric in `data/metric_polarity.csv`); `COUNCIL_CONSULT` and `EVENT_CHOICE` are the listed exemptions. A typed order is ONE model call returning `{narrative, impacts}`; the screens print the narrative and then the ledger lines that actually applied, so a narrative that overreaches is visible as such.
 9. **Cost discipline.** Clicked suggestions bypass the LLM entirely. Low-stakes minister lines use trait-tinted templates with no API call. Reserve the flagship model for rare confrontation/betrayal scenes only.
+10. **The columns divide by kind** (owner ruling 2026-09-10). The LEFT
+    column is FACTS: the realm dashboard, the country under the cursor, the
+    host while the military layer is on, and the fact card of whatever the
+    player clicks on the map — clicking an object replaces the left column,
+    never the right. The RIGHT slot is PEOPLE AND TALK: the council column,
+    the dialogue panel, and the speaker's dossier, which stands at the top
+    of it over their words — a thumbnail, name, seat and standing, with
+    BIO / SKILLS / TIES pages that open in the talk's space and hand it
+    straight back, because the column cannot hold both. So a map click
+    never displaces the council, and the map only narrows for the council.
+    The left column's width is fixed
+    (`ScreenLayout.LEFT_WIDTH`, 120 design px): anything put in it must wrap
+    — a label that cannot wrap sets a minimum width and pushes the column
+    over the map — and scroll rather than grow. Each screen owns one
+    `_refresh_left()` that applies the precedence (card > hovered country >
+    military > the column's own content); no panel hides its own siblings.
 
 ## Planned layout (create as needed)
 

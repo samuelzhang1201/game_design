@@ -26,10 +26,10 @@ signal country_hovered(kingdom_code: String)
 ## The province view was switched on or off (the P key, or a screen).
 signal province_view_changed(on: bool)
 ## In the province view, the province under a click — its province_code, or
-## "" for water / nothing — so a screen's detail column can show its account.
+## "" for water / nothing — so a screen's left column can show its account.
 signal province_selected(province_code: String)
 ## The described entry of the object under a click ({title, lines, ask}), or
-## {} when water / nothing was clicked. Screens with a detail column take
+## {} when water / nothing was clicked. Screens with a fact column take
 ## this and switch the floating card off (use_card).
 signal object_selected(entry: Dictionary)
 
@@ -72,6 +72,18 @@ var show_provinces: bool = false:
 			_selected_province = ""
 			province_selected.emit("")
 		province_view_changed.emit(v)
+		queue_redraw()
+## The military layer (user request 2026-09-10): the player's own regiments
+## drawn where the pack quarters them, each wearing the glyph of the arm it
+## is mostly made of and standing on a bar that reads its strength against
+## the largest regiment of the realm. Only the player's host shows (owner
+## ruling 2026-09-10) — a king knows his own musters, not everyone's.
+## Toggled by the bottom bar's MILITARY tab.
+var show_armies: bool = false:
+	set(v):
+		if v == show_armies:
+			return
+		show_armies = v
 		queue_redraw()
 ## The province selected in the province view ("" when none); drawn tinted.
 var _selected_province := ""
@@ -215,6 +227,7 @@ func _draw() -> void:
 	_draw_hovered_outline()
 	_draw_kingdom_labels()
 	_draw_pins()
+	_draw_armies()
 	_draw_hover()
 	_draw_object_highlight(_selected_obj)
 
@@ -322,6 +335,70 @@ func _draw_pins() -> void:
 			if on_screen.has_point(sp):
 				_draw_diamond(sp, PIN_MARKER + 1.0, PIN_OUTLINE)
 				_draw_diamond(sp, PIN_MARKER, UiPalette.TOOL_PERSONAL)
+
+## The regiment markers on screen right now, topmost last:
+## {code, pos, plaque, bar, size, frac, glyph, color, naval}. `plaque` and
+## `bar` are screen rects, `frac` the regiment's strength against the largest
+## of the realm. [] while the layer is off. Public for tests and hit-testing.
+func army_markers() -> Array:
+	if not show_armies or _map_texture == null or Game.data == null:
+		return []
+	var repo := Game.data
+	var mine := repo.resolve_realm("player_realm")
+	var regiments := MapObjects.regiments_of(repo, mine)
+	var top := 1.0
+	for r: Dictionary in regiments:
+		top = maxf(top, MapObjects.regiment_size(repo, r))
+	var plaque := repo.bal("map_army_plaque_px")
+	var bar_w := repo.bal("map_army_bar_w")
+	var bar_h := repo.bal("map_army_bar_h")
+	var gap := repo.bal("map_army_bar_gap")
+	var color := MapPalette.color_of(repo, mine)
+	var frame := Rect2(Vector2.ZERO, size).grow(maxf(plaque, bar_w))
+	var out: Array = []
+	for r: Dictionary in regiments:
+		var sp := map_to_screen(Vector2(float(r["x"]), float(r["y"])))
+		if not frame.has_point(sp):
+			continue
+		var strength := MapObjects.regiment_size(repo, r)
+		# The plaque sits on the point; the bar hangs just under it, so the
+		# marker reads as a banner planted where the regiment is quartered.
+		var rect := Rect2(sp - Vector2(plaque, plaque) / 2.0, Vector2(plaque, plaque))
+		out.append({"code": String(r["regiment_code"]), "pos": sp, "plaque": rect,
+			"bar": Rect2(sp.x - bar_w / 2.0, rect.end.y + gap, bar_w, bar_h),
+			"size": strength, "frac": clampf(strength / top, 0.0, 1.0),
+			"glyph": _arm_glyph(MapObjects.regiment_arm(repo, r)),
+			"color": color, "naval": String(r.get("is_naval", "0")) == "1"})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return (a["pos"] as Vector2).y < (b["pos"] as Vector2).y)
+	return out
+
+func _arm_glyph(unit: String) -> String:
+	return String((Game.data.resource_icons.get(unit, {}) as Dictionary).get("icon", ""))
+
+## Each regiment as a banner plaque in the realm's colour wearing its arm's
+## glyph, standing on a strength bar. Fixed screen px: an army is a counter
+## on the map, not part of the terrain, so it stays readable at every zoom.
+func _draw_armies() -> void:
+	var markers := army_markers()
+	if markers.is_empty():
+		return
+	var track := UiPalette.chart_color("track")
+	for m: Dictionary in markers:
+		# A dark counter trimmed in the realm's colour: the political wash
+		# under it is pale, so the plaque has to be the dark shape and the
+		# glyph the bright one, not the other way round.
+		var rect: Rect2 = m["plaque"]
+		draw_rect(rect.grow(1.0), m["color"])
+		draw_rect(rect, PIN_OUTLINE)
+		ResourceIcon.draw_glyph(self, String(m["glyph"]), rect.get_center(),
+			rect.size.y * 0.7, UiPalette.GOLD)
+		var bar: Rect2 = m["bar"]
+		draw_rect(bar.grow(1.0), PIN_OUTLINE)
+		draw_rect(bar, track)
+		var filled := Rect2(bar.position, Vector2(bar.size.x * float(m["frac"]), bar.size.y))
+		if filled.size.x > 0.0:
+			draw_rect(filled, UiPalette.GOLD)
 
 ## Triangulate every province loop once, in native coordinates. Province
 ## outlines are concave, so a fan fill would bleed outside the shape; the
@@ -514,6 +591,11 @@ func _draw_object_highlight(obj: Dictionary) -> void:
 			var m: Dictionary = Game.data.markers[obj["code"]]
 			var sp := map_to_screen(Vector2(float(m["x"]), float(m["y"])))
 			draw_arc(sp, PIN_MARKER + 4.0, 0.0, TAU, 32, UiPalette.GOLD, 1.5, true)
+		"army":
+			for marker: Dictionary in army_markers():
+				if String(marker["code"]) == String(obj["code"]):
+					draw_rect((marker["plaque"] as Rect2).grow(2.0), UiPalette.GOLD, false, 1.0)
+					break
 
 ## Homing + RTS edge scrolling: pan while the mouse rides the frame's edge.
 ## (Homing lives here, not only in _draw, so it also runs headless in tests.)
@@ -676,6 +758,16 @@ func selected_province() -> String:
 	return _selected_province
 
 func _object_under(pos: Vector2) -> Dictionary:
+	# The military layer draws over everything, so it is picked first: a
+	# marker takes a click on its plaque, its bar, or within the pick radius
+	# of the point it stands on.
+	var armies := army_markers()
+	for i in range(armies.size() - 1, -1, -1):
+		var m: Dictionary = armies[i]
+		var reach: float = Game.data.bal("map_army_pick_px")
+		if (m["plaque"] as Rect2).has_point(pos) or (m["bar"] as Rect2).has_point(pos) \
+				or (m["pos"] as Vector2).distance_to(pos) <= reach:
+			return {"kind": "army", "code": String(m["code"])}
 	# A settlement drawing is picked anywhere on its picture (the last drawn
 	# is on top), before the point-and-radius rules.
 	var sprites := settlement_sprites()
@@ -863,7 +955,8 @@ func select_state(sid: int) -> void:
 ## Open the card for any map object (MapObjects.object_at shape). Water or
 ## an unknown object closes it.
 ## Whether a click opens the map's own floating card. A screen with a
-## detail column turns this off and listens to object_selected instead.
+## fact card in its left column turns this off and listens to
+## object_selected instead.
 var use_card := true
 
 func select_object(obj: Dictionary) -> void:
@@ -879,10 +972,16 @@ func select_object(obj: Dictionary) -> void:
 	object_selected.emit(entry)
 	queue_redraw()
 
-## Clear whatever is selected (a detail column's CLOSE).
+## Clear whatever is selected (the fact card's CLOSE).
 func clear_selection() -> void:
+	# The card lives in the screen's left column now, so clearing the
+	# selection has to say so: an empty entry closes it (owner ruling
+	# 2026-09-10).
+	var had := not _selected_obj.is_empty()
 	_selected_obj = {}
 	_card.hide()
+	if had:
+		object_selected.emit({})
 	if _selected_province != "":
 		_selected_province = ""
 		province_selected.emit("")

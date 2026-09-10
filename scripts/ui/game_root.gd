@@ -29,6 +29,9 @@ var _bgm: AudioStreamPlayer
 ## The PROVINCES tab's state (user request 2026-09-09): root-owned so it
 ## survives moving between screens, applied to whichever screen's map shows.
 var _province_view := false
+## The MILITARY tab's state (user request 2026-09-10), owned here for the
+## same reason: the layer follows the player from screen to screen.
+var _army_view := false
 
 ## The design viewport (project.godot window/size): all UI is authored
 ## against this and scaled to the player's screen by the canvas_items+expand
@@ -184,6 +187,10 @@ func _on_bottom_tab(tab: String) -> void:
 			_info_screen.hide()
 			_relations_screen.visible = false
 			set_province_view(not _province_view)
+		"MILITARY":
+			_info_screen.hide()
+			_relations_screen.visible = false
+			set_army_view(not _army_view)
 		"RELATIONSHIP":
 			_info_screen.hide()
 			toggle_relations()
@@ -203,6 +210,22 @@ func set_province_view(on: bool) -> void:
 
 func province_view() -> bool:
 	return _province_view
+
+## Turn the military layer on or off everywhere (user request 2026-09-10):
+## the tab lights up, the current screen's map draws the realm's regiments
+## with their strength bars, and the screen's LEFT column shows the host.
+func set_army_view(on: bool) -> void:
+	_army_view = on
+	if _bottom_bar != null:
+		_bottom_bar.set_toggled("MILITARY", on)
+	var map := _current_map()
+	if map != null:
+		map.show_armies = on
+	if current_screen != null and current_screen.has_method("set_military_view"):
+		current_screen.set_military_view(on)
+
+func army_view() -> bool:
+	return _army_view
 
 ## The map of the screen that is showing, if it has one.
 func _current_map() -> WorldMapView:
@@ -274,7 +297,10 @@ func _switch_to(new_state: State) -> void:
 	var map := _current_map()
 	if map != null:
 		map.show_provinces = _province_view
+		map.show_armies = _army_view
 		map.province_view_changed.connect(set_province_view)
+	if current_screen != null and current_screen.has_method("set_military_view"):
+		current_screen.set_military_view(_army_view)
 	# Overlays stay above screens across swaps: bottom bar, then info and
 	# relations, with the pause menu topmost.
 	if _bottom_bar != null:

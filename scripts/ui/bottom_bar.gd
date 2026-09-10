@@ -11,9 +11,10 @@ signal tab_selected(tab: String)
 
 const TABS := ["MAP", "PROVINCES", "REALM", "MILITARY", "FAMILIES", "LAWS", "RELIGION",
 	"RELATIONSHIP"]
-## Tabs that stay lit while their view is on (PROVINCES toggles the map's
-## province view, user request 2026-09-09) rather than opening an overlay.
-const TOGGLES := ["PROVINCES"]
+## Tabs that stay lit while their view is on rather than opening an overlay:
+## PROVINCES toggles the map's province view (user request 2026-09-09) and
+## MILITARY its army layer (user request 2026-09-10).
+const TOGGLES := ["PROVINCES", "MILITARY"]
 const BAR_HEIGHT := 18.0
 
 var _buttons: Dictionary = {}

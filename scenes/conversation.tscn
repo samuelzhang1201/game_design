@@ -39,83 +39,6 @@ offset_bottom = -40.0
 [node name="MVBox" type="VBoxContainer" parent="MinisterPanel"]
 theme_override_constants/separation = 4
 
-[node name="TabsRow" type="HBoxContainer" parent="MinisterPanel/MVBox"]
-unique_name_in_owner = true
-theme_override_constants/separation = 2
-
-[node name="BioTab" type="VBoxContainer" parent="MinisterPanel/MVBox"]
-unique_name_in_owner = true
-size_flags_vertical = 3
-theme_override_constants/separation = 5
-
-[node name="PortraitBox" type="Control" parent="MinisterPanel/MVBox/BioTab"]
-unique_name_in_owner = true
-clip_contents = true
-custom_minimum_size = Vector2(84, 96)
-
-[node name="MinisterName" type="Label" parent="MinisterPanel/MVBox/BioTab"]
-unique_name_in_owner = true
-autowrap_mode = 3
-
-[node name="MinisterTitle" type="Label" parent="MinisterPanel/MVBox/BioTab"]
-unique_name_in_owner = true
-
-[node name="BioSep" type="HSeparator" parent="MinisterPanel/MVBox/BioTab"]
-
-[node name="OpinionRow" type="HBoxContainer" parent="MinisterPanel/MVBox/BioTab"]
-unique_name_in_owner = true
-theme_override_constants/separation = 5
-
-[node name="OpinionBar" type="ProgressBar" parent="MinisterPanel/MVBox/BioTab/OpinionRow"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 6)
-size_flags_horizontal = 3
-size_flags_vertical = 4
-min_value = -100.0
-max_value = 100.0
-show_percentage = false
-
-[node name="OpinionValue" type="Label" parent="MinisterPanel/MVBox/BioTab/OpinionRow"]
-unique_name_in_owner = true
-
-[node name="SkillsTab" type="VBoxContainer" parent="MinisterPanel/MVBox"]
-unique_name_in_owner = true
-visible = false
-size_flags_vertical = 3
-theme_override_constants/separation = 5
-
-[node name="SkillRows" type="VBoxContainer" parent="MinisterPanel/MVBox/SkillsTab"]
-unique_name_in_owner = true
-theme_override_constants/separation = 3
-
-[node name="SkillsSep" type="HSeparator" parent="MinisterPanel/MVBox/SkillsTab"]
-
-[node name="TraitChips" type="HFlowContainer" parent="MinisterPanel/MVBox/SkillsTab"]
-unique_name_in_owner = true
-theme_override_constants/h_separation = 3
-theme_override_constants/v_separation = 3
-
-[node name="ToolsSep" type="HSeparator" parent="MinisterPanel/MVBox/SkillsTab"]
-
-[node name="ToolsTitle" type="Label" parent="MinisterPanel/MVBox/SkillsTab"]
-unique_name_in_owner = true
-text = "TOOLS"
-
-[node name="ToolsList" type="VBoxContainer" parent="MinisterPanel/MVBox/SkillsTab"]
-unique_name_in_owner = true
-theme_override_constants/separation = 2
-
-[node name="TiesTab" type="VBoxContainer" parent="MinisterPanel/MVBox"]
-unique_name_in_owner = true
-visible = false
-size_flags_vertical = 3
-theme_override_constants/separation = 5
-
-[node name="TiesText" type="Label" parent="MinisterPanel/MVBox/TiesTab"]
-unique_name_in_owner = true
-autowrap_mode = 3
-size_flags_vertical = 3
-
 [node name="DialoguePanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 visible = false
@@ -156,12 +79,109 @@ text = "MOVE"
 
 [node name="LocSep" type="HSeparator" parent="DialoguePanel/Col"]
 
+[node name="DossierHead" type="HBoxContainer" parent="DialoguePanel/Col"]
+unique_name_in_owner = true
+theme_override_constants/separation = 4
+
+[node name="PortraitBox" type="Control" parent="DialoguePanel/Col/DossierHead"]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(34, 40)
+
+[node name="HeadText" type="VBoxContainer" parent="DialoguePanel/Col/DossierHead"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+
+[node name="MinisterName" type="Label" parent="DialoguePanel/Col/DossierHead/HeadText"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="MinisterTitle" type="Label" parent="DialoguePanel/Col/DossierHead/HeadText"]
+unique_name_in_owner = true
+
+[node name="OpinionRow" type="HBoxContainer" parent="DialoguePanel/Col/DossierHead/HeadText"]
+unique_name_in_owner = true
+theme_override_constants/separation = 5
+
+[node name="OpinionBar" type="ProgressBar" parent="DialoguePanel/Col/DossierHead/HeadText/OpinionRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 6)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = -100.0
+max_value = 100.0
+show_percentage = false
+
+[node name="OpinionValue" type="Label" parent="DialoguePanel/Col/DossierHead/HeadText/OpinionRow"]
+unique_name_in_owner = true
+
+[node name="TabsRow" type="HBoxContainer" parent="DialoguePanel/Col"]
+unique_name_in_owner = true
+theme_override_constants/separation = 2
+
+[node name="DossierPages" type="ScrollContainer" parent="DialoguePanel/Col"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 44)
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="PagesBox" type="VBoxContainer" parent="DialoguePanel/Col/DossierPages"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="BioTab" type="VBoxContainer" parent="DialoguePanel/Col/DossierPages/PagesBox"]
+unique_name_in_owner = true
+visible = false
+theme_override_constants/separation = 5
+
+[node name="BioArt" type="Control" parent="DialoguePanel/Col/DossierPages/PagesBox/BioTab"]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(84, 96)
+
+[node name="SkillsTab" type="VBoxContainer" parent="DialoguePanel/Col/DossierPages/PagesBox"]
+unique_name_in_owner = true
+visible = false
+theme_override_constants/separation = 5
+
+[node name="SkillRows" type="VBoxContainer" parent="DialoguePanel/Col/DossierPages/PagesBox/SkillsTab"]
+unique_name_in_owner = true
+theme_override_constants/separation = 3
+
+[node name="SkillsSep" type="HSeparator" parent="DialoguePanel/Col/DossierPages/PagesBox/SkillsTab"]
+
+[node name="TraitChips" type="HFlowContainer" parent="DialoguePanel/Col/DossierPages/PagesBox/SkillsTab"]
+unique_name_in_owner = true
+theme_override_constants/h_separation = 3
+theme_override_constants/v_separation = 3
+
+[node name="ToolsSep" type="HSeparator" parent="DialoguePanel/Col/DossierPages/PagesBox/SkillsTab"]
+
+[node name="ToolsTitle" type="Label" parent="DialoguePanel/Col/DossierPages/PagesBox/SkillsTab"]
+unique_name_in_owner = true
+text = "TOOLS"
+
+[node name="ToolsList" type="VBoxContainer" parent="DialoguePanel/Col/DossierPages/PagesBox/SkillsTab"]
+unique_name_in_owner = true
+theme_override_constants/separation = 2
+
+[node name="TiesTab" type="VBoxContainer" parent="DialoguePanel/Col/DossierPages/PagesBox"]
+unique_name_in_owner = true
+visible = false
+theme_override_constants/separation = 5
+
+[node name="TiesText" type="Label" parent="DialoguePanel/Col/DossierPages/PagesBox/TiesTab"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
 [node name="NameLabel" type="Label" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
 autowrap_mode = 3
 
 [node name="DialogueScroll" type="ScrollContainer" parent="DialoguePanel/Col"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 

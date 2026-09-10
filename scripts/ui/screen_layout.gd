@@ -1,12 +1,17 @@
 class_name ScreenLayout
 extends RefCounted
 ## The gameplay screens' shared frame (user rulings 2026-09-09): a left
-## column that is always on (the realm dashboard, or the dossier on the
-## stage), the map filling the middle, and ONE right slot that is empty by
-## default — the council column takes it when the player enters the council
-## (the ENTER THE COUNCIL handle on the right edge), the detail column takes
-## it while a map element is selected — and the map widens to the edge when
-## the slot is empty.
+## column that is always on, the map filling the middle, and ONE right slot
+## that is empty by default — the council column takes it when the player
+## enters the council (the ENTER THE COUNCIL handle on the right edge) — and
+## the map widens to the edge when the slot is empty.
+##
+## The columns divide by kind (owner ruling 2026-09-10): the left column is
+## the FACTS column (the realm dashboard, the dossier on the stage, the
+## hovered country, the host, the fact card of a clicked map element) and
+## the right slot is PEOPLE AND TALK. Each screen orders its own left column
+## (_refresh_left); this only places the two of them. LEFT_WIDTH is fixed,
+## so what goes in the column wraps and scrolls rather than widening it.
 ##
 ## Everything is placed in the 640x360 design viewport; the scenes carry the
 ## same offsets as a starting state and call `apply` whenever the slot

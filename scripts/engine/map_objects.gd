@@ -148,6 +148,9 @@ static func label_of(repo: DataRepository, obj: Dictionary) -> String:
 			return String(repo.routes.get(obj["code"], {}).get("label", ""))
 		"river":
 			return String(repo.rivers.get(obj["code"], {}).get("label", ""))
+		"army":
+			return String(repo.world_table("military", "regiments")
+				.get(obj["code"], {}).get("label", ""))
 	return ""
 
 ## Card text per kind: {title, lines, ask}. {} means "nothing to show".
@@ -165,6 +168,8 @@ static func describe(repo: DataRepository, obj: Dictionary,
 			return _describe_river(repo, String(obj["code"]))
 		"marker":
 			return _describe_marker(repo, String(obj["code"]))
+		"army":
+			return _describe_army(repo, String(obj["code"]))
 		"land":
 			return _describe_land(repo, obj, state)
 	return {}
@@ -582,3 +587,55 @@ static func settlement_art(repo: DataRepository, b: Dictionary) -> Dictionary:
 		if want == "" or (want == "1") == walled:
 			return row
 	return {}
+
+## --- Regiments (user request 2026-09-10) -------------------------------
+## The military layer draws the realm's own regiments where the pack puts
+## them. The counts per arm live in data/maps/<id>/military/regiments.csv;
+## these read them so the map and the MILITARY panel agree on every number.
+
+## Every regiment of a kingdom, in the pack's order.
+static func regiments_of(repo: DataRepository, kingdom_code: String) -> Array:
+	var out: Array = []
+	for r: Dictionary in repo.world_table("military", "regiments").values():
+		if String(r["kingdom_code"]) == kingdom_code:
+			out.append(r)
+	return out
+
+## Heads under a regiment's banner: every arm in unit_types added up.
+static func regiment_size(repo: DataRepository, regiment: Dictionary) -> float:
+	var total := 0.0
+	for unit: String in repo.world_table("military", "unit_types"):
+		total += float(regiment.get(unit, 0))
+	return total
+
+## The arm a regiment is mostly made of — what its map marker wears. Ties go
+## to the earlier arm in unit_types, so the choice is data-ordered.
+static func regiment_arm(repo: DataRepository, regiment: Dictionary) -> String:
+	var best := ""
+	var most := -1.0
+	for unit: String in repo.world_table("military", "unit_types"):
+		var n := float(regiment.get(unit, 0))
+		if n > most:
+			most = n
+			best = unit
+	return best
+
+static func _describe_army(repo: DataRepository, code: String) -> Dictionary:
+	var r: Dictionary = repo.world_table("military", "regiments").get(code, {})
+	if r.is_empty():
+		return {}
+	var label := String(r["label"])
+	var lines: Array[String] = ["%s of %s" % [
+		"Fleet" if String(r.get("is_naval", "0")) == "1" else "Regiment",
+		_label(repo.kingdoms, String(r["kingdom_code"]))]]
+	var province := String(r.get("province_code", ""))
+	if province != "":
+		lines.append("Quartered in %s" % _label(repo.provinces, province))
+	for unit: String in repo.world_table("military", "unit_types"):
+		var n := float(r.get(unit, 0))
+		if n > 0.0:
+			lines.append("%s: %d" % [String((repo.resource_icons.get(unit, {}) as Dictionary)
+				.get("label", unit.capitalize())), int(n)])
+	lines.append("Under arms: %d" % int(regiment_size(repo, r)))
+	return {"title": label, "lines": lines,
+		"ask": "What is the state of the %s?" % label}

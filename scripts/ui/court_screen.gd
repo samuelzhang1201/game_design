@@ -8,8 +8,14 @@ extends Control
 ## column, the BRIGHT map in the middle, and a RIGHT slot that is empty by
 ## default — the council column (the court record, the order box, the
 ## lettered suggestions, End Turn — R8/R10) opens from the ENTER THE
-## COUNCIL handle on the right edge, and the detail column takes the slot
-## while a map element is selected.
+## COUNCIL handle on the right edge.
+##
+## The columns divide by kind (owner ruling 2026-09-10): the LEFT column
+## holds FACTS — the realm dashboard, the hovered country, the host while
+## the military layer is on, and the card of whatever the player clicks on
+## the map — and the RIGHT slot holds PEOPLE AND TALK, the council. So a
+## map click never displaces the council, and _refresh_left decides which
+## of the four holds the left column.
 
 ## Emitted instead of self-driving the turn cycle: GameRoot owns advancing
 ## the tick and playing the DAY_RUN interlude. See enter_court.
@@ -30,10 +36,14 @@ var _suggestion_buttons: Array = []
 var _world_map: WorldMapView
 ## The hovered country's card, overlaying the left column.
 var _country_panel: CountryPanel
-## The right detail column: the clicked map element (MapDetailPanel).
+## The clicked map element's fact card, in the left column.
 var _detail: MapDetailPanel
+## The realm's host, in the left column while the MILITARY layer is on.
+var _military: MilitaryPanel
 ## The left column's default content: the realm dashboard.
 var _dashboard: RealmDashboard
+## Whether the MILITARY tab is lit (GameRoot owns the state; this follows).
+var _military_view := false
 
 ## Static structure and layout live in scenes/court.tscn (editable in the
 ## editor); _ready fetches nodes, paints them from UiPalette, and wires
@@ -46,19 +56,11 @@ func _ready() -> void:
 	# The live world map fills the middle zone (user ruling 2026-09-03).
 	_world_map = WorldMapView.create()
 	%MapPanel.add_child(_world_map)
-	# A click on the map opens the right detail column, not the floating
-	# card (user ruling 2026-09-09); its Ask drops the question into the
+	# A click on the map opens the fact card in the left column, not the
+	# floating card (user ruling 2026-09-09); its Ask drops the question into the
 	# order box and the player still presses Enter, so no order or API call
 	# happens without them (spec 2026-09-08).
 	_world_map.use_card = false
-	_detail = MapDetailPanel.new()
-	_detail.name = "DetailPanel"
-	add_child(_detail)
-	_detail.follow(_world_map)
-	_detail.ask_enabled = true
-	_detail.ask_requested.connect(_on_place_asked)
-	_detail.closed.connect(_world_map.clear_selection)
-	_detail.visibility_changed.connect(_on_detail_visibility)
 	_world_map.place_asked.connect(_on_place_asked)
 	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
 	_handle.pressed.connect(enter_council)
@@ -68,8 +70,20 @@ func _ready() -> void:
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the column's own content returns when it leaves.
 	_country_panel = CountryPanel.attach(%LogPanel.get_node("LVBox"), _world_map)
+	_world_map.country_hovered.connect(func(_code: String) -> void: _refresh_left())
 	# The left column's own content: the realm at a glance (user ruling 2026-09-09).
 	_dashboard = RealmDashboard.attach(%LogPanel.get_node("LVBox"))
+	# The rest of the facts column: the host while the military layer is on,
+	# and the card of whatever was clicked on the map (owner ruling 2026-09-10).
+	_military = MilitaryPanel.attach(%LogPanel.get_node("LVBox"))
+	_detail = MapDetailPanel.new()
+	_detail.name = "DetailPanel"
+	%LogPanel.get_node("LVBox").add_child(_detail)
+	_detail.follow(_world_map)
+	_detail.ask_enabled = true
+	_detail.ask_requested.connect(_on_place_asked)
+	_detail.closed.connect(_world_map.clear_selection)
+	_detail.visibility_changed.connect(_refresh_left)
 	%LogPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
 	%SidePanel.add_theme_stylebox_override("panel",
@@ -85,24 +99,46 @@ func _ready() -> void:
 	end_turn = %EndTurn
 	end_turn.pressed.connect(_on_end_turn)
 	_set_right("")
+	_refresh_left()
 
-## What holds the right slot: "" (nothing), "council", or "detail".
+## What holds the right slot: "" (nothing) or "council". The detail card
+## lives in the left column, so it never competes for this (owner ruling
+## 2026-09-10).
 var _right := ""
-var _council_behind_detail := false
 var _handle: Button
 
 func _set_right(mode: String) -> void:
 	_right = mode
 	%SidePanel.visible = mode == "council"
-	if _detail != null and mode != "detail" and _detail.visible:
-		_detail.hide()
 	_handle.visible = mode == ""
 	_layout()
+
+## Who holds the left column, highest claim first: the card of a clicked
+## object, the country under the cursor, the host while the military layer
+## is on, then the realm dashboard. A deliberate click outranks a hover, so
+## moving the mouse never takes the card away.
+func _refresh_left() -> void:
+	if _detail == null:
+		return
+	var card := _detail.has_content()
+	var country := not card and _country_panel.has_content()
+	_detail.visible = card
+	_country_panel.visible = country
+	_military.visible = _military_view and not card and not country
+	_dashboard.visible = not (card or country or _military_view)
+
+## The MILITARY tab (GameRoot): the host takes the left column while the
+## regiments are drawn on the map.
+func set_military_view(on: bool) -> void:
+	_military_view = on
+	if on:
+		_military.refresh()
+	_refresh_left()
 
 ## Columns, map, and whichever panel holds the right slot (ScreenLayout).
 func _layout() -> void:
 	var top: float = %TopBar.bar_height() + 3.0
-	ScreenLayout.apply(top, %LogPanel, %MapPanel, [%SidePanel, _detail], _right != "")
+	ScreenLayout.apply(top, %LogPanel, %MapPanel, [%SidePanel], _right != "")
 	ScreenLayout.place_handle(_handle, top)
 
 func enter_council() -> void:
@@ -118,20 +154,15 @@ func council_open() -> bool:
 func council_handle() -> Button:
 	return _handle
 
-func _on_detail_visibility() -> void:
-	if _detail.visible:
-		if _right != "detail":
-			_council_behind_detail = _right == "council"
-			_set_right("detail")
-	elif _right == "detail":
-		_set_right("council" if _council_behind_detail else "")
-
 ## Test seam.
 func world_map() -> WorldMapView:
 	return _world_map
 
 func detail_panel() -> MapDetailPanel:
 	return _detail
+
+func military_panel() -> MilitaryPanel:
+	return _military
 
 func dashboard() -> RealmDashboard:
 	return _dashboard
@@ -267,7 +298,6 @@ func _on_free_text_submitted(text: String) -> void:
 ## player can send it.
 func _on_place_asked(text: String) -> void:
 	_world_map.clear_selection()
-	_council_behind_detail = false
 	_set_right("council")
 	free_text.text = text
 	free_text.caret_column = text.length()
