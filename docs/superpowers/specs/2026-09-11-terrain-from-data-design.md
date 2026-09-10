@@ -45,6 +45,8 @@ No save, RNG, or LLM change. The terrain is static reference geometry; ownership
 | `cells.csv` | `cell_id,vertex_ids,height,biome_id,water,neighbor_ids` | one row per `pack.cells` entry. `vertex_ids` and `neighbor_ids` are `\|`-separated ids. `height` is Azgaar's 0–100. `water` is `""` for land (`h >= 20`), `ocean` or `lake` from the feature's `type` for water |
 | `coasts.csv` | `kind,feature_id,loop,points` | closed loops as `x y\|x y\|...`. `kind` is `land` (the outline of all land cells: every island's shore, plus an inner loop wherever a lake sits inside land) or `lake` (each lake feature's own shore; `feature_id` is the lake's feature id, 0 for `land`). Built with the existing `_cell_group_loops`. A lake shore therefore appears twice, once per kind; the view draws both in the same colour, so nothing shows |
 
+`geography/rivers.csv` gains a `discharge` column (after `length`) for river stroke widths.
+
 The importer no longer needs a PNG: the PNG discovery (`_newest_render`), the dimension check, `_png_dimensions`, `render_scale`, and the `world_map.png` copy are removed. The `--png` flag is removed. The three hit-test bitmaps are still generated at native resolution.
 
 Deterministic as before: same JSON ⇒ byte-identical CSVs.
@@ -68,7 +70,7 @@ A biome without a row falls back to the `biomes.csv` colour, so a re-export with
 | `map_altitude_gain` | extra brightening from sea level to the summit |
 | `map_sea_depth_gamma` | exponent on `h/20` for the deep→shallow gradient |
 | `map_coast_width` | coast stroke width in screen px |
-| `map_river_min_px`, `map_river_width_scale` | river stroke: `max(min_px, width_scale × width)` where `width` is the river row's width |
+| `map_river_min_px`, `map_river_discharge_scale` | river stroke: `max(min_px, discharge_scale × sqrt(discharge) × view_scale)`; the importer writes Azgaar's `discharge` into `rivers.csv` (its `width` is a mouth width of 0.02–0.86, too flat to grade strokes by) |
 | `map_road_width`, `map_trail_width` | route stroke widths in screen px |
 | `map_trail_min_scale` | view scale at/above which trails and sea routes draw (roads always draw) |
 
@@ -86,8 +88,8 @@ Pure functions over a `DataRepository`; no Nodes, no RNG, so GUT pins the formul
 
 - `cell_color(repo, cell) -> Color`:
   - land: `tint(biome) × shade(cell)`, where `tint` is `terrain_palette.biome_<id>` (fallback: `biomes.csv` colour), and
-    `shade = clamp(1 + strength × dot(slope, light), relief_min, relief_max) × (1 + altitude_gain × (h − 20) / 80)`.
-    `slope = Σ_n (h_n − h_c) · unit(p_n − p_c) / N` over the cell's neighbours (a 2-D vector pointing uphill; `p` is the cell centre, `N` the neighbour count; a cell with no neighbours has slope zero). `light` is the normalised `(map_light_x, map_light_y)`.
+    `shade = clamp(1 − strength × dot(uphill, light), relief_min, relief_max) × (1 + altitude_gain × (h − 20) / 80)`.
+    `uphill = Σ_n (h_n − h_c) · unit(p_n − p_c) / N` over the cell's LAND neighbours (a 2-D vector pointing uphill; `p` is the cell centre, `N` the land-neighbour count; a cell with no land neighbours has uphill zero — water neighbours are left out so a coast is not a cliff on every shore). The minus sign makes a slope whose downhill side faces the light brighten. `light` is the normalised `(map_light_x, map_light_y)`.
   - ocean: `lerp(sea_deep, sea_shallow, (h / 20)^gamma)`.
   - lake: `lake`.
 - Centre vertex colour = `cell_color(cell)`.
@@ -98,14 +100,14 @@ Pure functions over a `DataRepository`; no Nodes, no RNG, so GUT pins the formul
 ## 4. Data loading — `DataRepository`
 
 - `load_all`: `terrain_palette.csv` → `terrain_palette: Dictionary` (`key -> hex string`).
-- `load_map`: `geography/vertices.csv` → `vertices: Dictionary` (`vertex_id (int) -> Vector2`); `geography/cells.csv` → `cells: Dictionary` (`cell_id (int) -> row`, with `vertex_ids` and `neighbor_ids` parsed to `PackedInt32Array` at load); `geography/coasts.csv` → `coasts: Array[Dictionary]` with `polyline` parsed. All registered in `world_tables["geography"]` like the other geography tables. Absent tables load empty (a pack without terrain still loads; the map view then stays hidden, as it did without a PNG).
+- `load_map`: `geography/vertices.csv` → `vertices: Dictionary` (`vertex_id (int) -> Vector2`); `geography/cells.csv` → `cells: Dictionary` (`cell_id (int) -> row`, with `vertex_ids` and `neighbor_ids` parsed to `PackedInt32Array` at load); `geography/coasts.csv` → `coasts: Array[Dictionary]` with `polyline` parsed. Not registered in `world_tables` (they are int-keyed geometry, not ledger data). Absent tables load empty (a pack without terrain still loads; the map view then stays hidden, as it did without a PNG).
 - Removed: `map_texture_path`, `render_scale`, `render_offset`. `data/maps.csv` loses `map_texture`, `render_scale`, `render_offset_x`, `render_offset_y`; the required-columns check drops `map_texture`.
 - Map size comes from `map_info.csv` (`width`, `height`), already loaded.
 
 ## 5. View — `WorldMapView`
 
 - `_ready`: `_terrain_mesh` is an `ArrayMesh` built from `MapTerrain.build`; `_map_size` is `Vector2(map_info.width, map_info.height)`. `visible = _terrain_mesh != null`. Every use of `_map_texture.get_size()` becomes `_map_size`.
-- `_draw` order: `draw_rect(frame, sea_deep)`; `draw_mesh(_terrain_mesh, null, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset))`; `_draw_coasts()` (land rings then lake rings, `coast_line` colour, `map_coast_width`, only rings touching the frame, same culling helper as borders); `_draw_rivers()` (`river` colour, width per §2, frame-culled by the row's `bbox`); `_draw_routes()` (`road` always, `trail` and `searoutes` at/above `map_trail_min_scale`); then the existing overlays in their current order.
+- `_draw` order: `draw_rect(frame, sea_deep)`; `draw_mesh(_terrain_mesh, null, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset))`; `_draw_coasts()` (every ring in `coasts.csv` order, `coast_line` colour, `map_coast_width`, only rings touching the frame, same culling helper as borders); `_draw_rivers()` (`river` colour, width per §2, frame-culled by the row's `bbox`); `_draw_routes()` (`road` always, `trail` and `searoutes` at/above `map_trail_min_scale`); then the existing overlays in their current order.
 - Coordinates: `map_to_screen(p) = _offset + p * _zoom`; `screen_to_map(s) = (s − _offset) / _zoom`; `view_scale() = _zoom`. `_render_scale`, `_cal_scale`, `_cal_offset` are deleted.
 - Rivers and routes are now drawn by the game. The 2026-09-09 ruling not to trace them was because the render printed them; with no render there is nothing else to print them. Hover and card behaviour for lines is unchanged.
 - Test seams: `visible_river_count()` (rivers whose bbox touches the frame), `terrain_mesh()`.
