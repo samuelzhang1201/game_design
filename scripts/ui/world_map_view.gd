@@ -284,8 +284,8 @@ func settlement_sprites() -> Array:
 			continue
 		# Smaller tiers stay smaller: scale each tile by its own height so a
 		# hamlet is a fraction of a capital, the way the sheet drew them.
-		var scale := h / float(_tallest_tile())
-		var size_px := Vector2(tex.get_width(), tex.get_height()) * scale
+		var tile_scale := h / float(_tallest_tile())
+		var size_px := Vector2(tex.get_width(), tex.get_height()) * tile_scale
 		out.append({"code": code, "texture": tex,
 			"rect": Rect2(sp - Vector2(size_px.x / 2.0, size_px.y * 0.8), size_px)})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -431,8 +431,8 @@ func political_fills() -> Array:
 		var screen := Rect2(map_to_screen(b.position), b.size * view_scale())
 		if not frame.intersects(screen):
 			continue
-		var owner := MapOwnership.owner_of(Game.data, Game.state, code)
-		var color := MapPalette.color_of(Game.data, owner)
+		var holder := MapOwnership.owner_of(Game.data, Game.state, code)
+		var color := MapPalette.color_of(Game.data, holder)
 		color.a = alpha
 		out.append({"code": code, "color": color})
 	return out
@@ -529,7 +529,7 @@ func _draw_kingdom_labels() -> void:
 	if px < Game.data.bal("map_label_min_px"):
 		return
 	px = minf(px, Game.data.bal("map_label_max_px"))
-	var size := int(px)
+	var font_px := int(px)
 	var tracking := px * Game.data.bal("map_label_tracking")
 	var color := UiPalette.GOLD
 	color.a = Game.data.bal("map_label_alpha")
@@ -538,32 +538,32 @@ func _draw_kingdom_labels() -> void:
 		var text := String(Game.data.kingdoms[code]["label"]).to_upper()
 		var anchor := MapOwnership.label_anchor(Game.data, Game.state, code)
 		var at := map_to_screen(anchor)
-		var width := _tracked_width(font, text, size, tracking)
+		var width := _tracked_width(font, text, font_px, tracking)
 		var origin := at - Vector2(width * 0.5, -px * 0.35)
 		if not frame.intersects(Rect2(origin - Vector2(0, px), Vector2(width, px * 1.4))):
 			continue
-		_draw_tracked(font, text, origin, size, tracking, color)
+		_draw_tracked(font, text, origin, font_px, tracking, color)
 
 ## draw_string has no letter-spacing, and tracking is most of what makes a
 ## label read as engraved rather than typed — so the glyphs are placed one at
 ## a time with the extra advance added between them.
-func _draw_tracked(font: Font, text: String, origin: Vector2, size: int,
+func _draw_tracked(font: Font, text: String, origin: Vector2, font_px: int,
 		tracking: float, color: Color) -> void:
 	var pen := origin
 	for i in text.length():
 		var ch := text.substr(i, 1)
 		font.draw_string(get_canvas_item(), pen, ch, HORIZONTAL_ALIGNMENT_LEFT,
-			-1.0, size, color)
-		pen.x += font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x \
+			-1.0, font_px, color)
+		pen.x += font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_px).x \
 			+ tracking
 
-func _tracked_width(font: Font, text: String, size: int, tracking: float) -> float:
+func _tracked_width(font: Font, text: String, font_px: int, tracking: float) -> float:
 	if text.is_empty():
 		return 0.0
 	var w := 0.0
 	for i in text.length():
 		w += font.get_string_size(text.substr(i, 1), HORIZONTAL_ALIGNMENT_LEFT,
-			-1.0, size).x + tracking
+			-1.0, font_px).x + tracking
 	return w - tracking
 
 func _draw_diamond(center: Vector2, r: float, color: Color) -> void:
@@ -794,16 +794,16 @@ func _update_hover(pos: Vector2) -> void:
 func _state_of(obj: Dictionary, pos: Vector2) -> int:
 	var code := String(obj.get("code", ""))
 	if code != "":
-		var owner := ""
+		var holder := ""
 		match String(obj.get("kind", "")):
 			"burg":
 				var b: Dictionary = Game.data.burgs.get(code, {})
-				owner = MapOwnership.owner_of(Game.data, Game.state,
+				holder = MapOwnership.owner_of(Game.data, Game.state,
 					String(b.get("province_code", "")))
 			"province":
-				owner = MapOwnership.owner_of(Game.data, Game.state, code)
-		if owner != "" and Game.data.kingdoms.has(owner):
-			return int((Game.data.kingdoms[owner] as Dictionary)["state_id"])
+				holder = MapOwnership.owner_of(Game.data, Game.state, code)
+		if holder != "" and Game.data.kingdoms.has(holder):
+			return int((Game.data.kingdoms[holder] as Dictionary)["state_id"])
 	return _state_under(pos)
 
 ## Beside the cursor, pushed back inside the frame at the edges so a pin
@@ -986,9 +986,6 @@ func clear_selection() -> void:
 		_selected_province = ""
 		province_selected.emit("")
 	queue_redraw()
-
-func selected_object() -> Dictionary:
-	return _selected_obj
 
 func set_ask_enabled(on: bool) -> void:
 	_card.ask_enabled = on

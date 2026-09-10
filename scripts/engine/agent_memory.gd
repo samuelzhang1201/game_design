@@ -26,14 +26,14 @@ static func remember(data: DataRepository, state: GameState, char_id: String,
 		return
 	if not state.agent_memory.has(char_id):
 		state.agent_memory[char_id] = []
-	var log: Array = state.agent_memory[char_id]
-	log.append({
+	var entries: Array = state.agent_memory[char_id]
+	entries.append({
 		"tick": tick, "location": location, "speaker": speaker,
 		"text": text.strip_edges(), "audience": audience.duplicate(),
 	})
 	var cap := int(data.bal("memory_exchanges_kept"))
-	while log.size() > cap:
-		log.pop_front()
+	while entries.size() > cap:
+		entries.pop_front()
 
 ## This character's remembered exchanges, oldest first. Empty when they have
 ## never been spoken to.

@@ -18,13 +18,13 @@ func test_remember_stores_what_was_said_and_who_heard_it() -> void:
 	AgentMemory.remember(data, state, "char_chancellor",
 		"you", "The granaries are full.", ["char_chancellor", "char_marshal"],
 		"council_chamber", 4)
-	var log := AgentMemory.exchanges_for(state, "char_chancellor")
-	assert_eq(log.size(), 1)
-	assert_eq(String(log[0]["speaker"]), "you")
-	assert_eq(String(log[0]["text"]), "The granaries are full.")
-	assert_eq(String(log[0]["location"]), "council_chamber")
-	assert_eq(int(log[0]["tick"]), 4)
-	assert_eq(log[0]["audience"], ["char_chancellor", "char_marshal"],
+	var entries := AgentMemory.exchanges_for(state, "char_chancellor")
+	assert_eq(entries.size(), 1)
+	assert_eq(String(entries[0]["speaker"]), "you")
+	assert_eq(String(entries[0]["text"]), "The granaries are full.")
+	assert_eq(String(entries[0]["location"]), "council_chamber")
+	assert_eq(int(entries[0]["tick"]), 4)
+	assert_eq(entries[0]["audience"], ["char_chancellor", "char_marshal"],
 		"a character knows whether they were told privately or in company")
 
 func test_memory_is_per_character() -> void:
@@ -39,11 +39,11 @@ func test_memory_caps_at_the_balance_value_keeping_the_newest() -> void:
 	for i in cap + 3:
 		AgentMemory.remember(data, state, "char_chancellor", "you",
 			"line %d" % i, ["char_chancellor"], "council_chamber", i)
-	var log := AgentMemory.exchanges_for(state, "char_chancellor")
-	assert_eq(log.size(), cap, "capped at memory_exchanges_kept")
-	assert_eq(String(log[log.size() - 1]["text"]), "line %d" % (cap + 2),
+	var entries := AgentMemory.exchanges_for(state, "char_chancellor")
+	assert_eq(entries.size(), cap, "capped at memory_exchanges_kept")
+	assert_eq(String(entries[entries.size() - 1]["text"]), "line %d" % (cap + 2),
 		"the newest line survives")
-	assert_eq(String(log[0]["text"]), "line 3", "the oldest lines fall off the front")
+	assert_eq(String(entries[0]["text"]), "line 3", "the oldest lines fall off the front")
 
 func test_remember_ignores_an_unknown_character() -> void:
 	AgentMemory.remember(data, state, "char_nobody", "you", "hello", [],
@@ -88,10 +88,10 @@ func test_memory_survives_save_round_trip() -> void:
 	AgentMemory.remember(data, state, "char_chancellor", "you",
 		"The granaries are full.", ["char_chancellor"], "council_chamber", 4)
 	var restored := GameState.from_dict(state.to_dict())
-	var log := AgentMemory.exchanges_for(restored, "char_chancellor")
-	assert_eq(log.size(), 1)
-	assert_eq(String(log[0]["text"]), "The granaries are full.")
-	assert_eq(String(log[0]["location"]), "council_chamber")
+	var entries := AgentMemory.exchanges_for(restored, "char_chancellor")
+	assert_eq(entries.size(), 1)
+	assert_eq(String(entries[0]["text"]), "The granaries are full.")
+	assert_eq(String(entries[0]["location"]), "council_chamber")
 
 func test_pre_feature_save_loads_with_no_memory() -> void:
 	var d := state.to_dict()

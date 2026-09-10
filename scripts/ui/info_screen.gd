@@ -171,11 +171,11 @@ func _family_rows() -> Array:
 	names.sort()
 	names.sort_custom(func(a, b): return int(houses[a]["members"]) > int(houses[b]["members"]))
 	var rows: Array = []
-	for name: String in names:
-		var h: Dictionary = houses[name]
+	for house_name: String in names:
+		var h: Dictionary = houses[house_name]
 		var seats: Array = h["seats"]
 		var rated := int(h["rated"])
-		rows.append([name, str(int(h["members"])),
+		rows.append([house_name, str(int(h["members"])),
 			", ".join(seats) if not seats.is_empty() else "—",
 			"—" if rated == 0 else "%+d" % roundi(float(h["opinion"]) / float(rated))])
 	return rows

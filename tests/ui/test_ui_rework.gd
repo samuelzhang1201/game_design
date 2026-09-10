@@ -345,8 +345,8 @@ func test_everyone_addressed_remembers_but_only_one_answers() -> void:
 	await wait_frames(4)
 	var heard := 0
 	for id in LocationSystem.occupants(Game.data, Game.state, "council_chamber"):
-		var log := AgentMemory.exchanges_for(Game.state, String(id))
-		if log.size() >= 1 and String(log[0]["text"]) == "the granaries are full":
+		var entries := AgentMemory.exchanges_for(Game.state, String(id))
+		if entries.size() >= 1 and String(entries[0]["text"]) == "the granaries are full":
 			heard += 1
 	assert_eq(heard, 5, "every minister present remembers being told")
 	# Review finding 2026-09-01: the answer is spoken in the same room, so
@@ -372,12 +372,12 @@ func test_selected_targets_alone_remember() -> void:
 	await wait_frames(1)
 	scene.free_text_field().text_submitted.emit("a word in your ear")
 	await wait_frames(4)
-	var log := AgentMemory.exchanges_for(Game.state, "char_spymaster")
-	assert_eq(log.size(), 2,
+	var entries := AgentMemory.exchanges_for(Game.state, "char_spymaster")
+	assert_eq(entries.size(), 2,
 		"the one you singled out remembers the word AND their own reply")
-	assert_eq(String(log[0]["text"]), "a word in your ear")
-	assert_eq(log[0]["audience"], ["char_spymaster"], "recorded as a private word")
-	assert_eq(String(log[1]["speaker"]), "char_spymaster",
+	assert_eq(String(entries[0]["text"]), "a word in your ear")
+	assert_eq(entries[0]["audience"], ["char_spymaster"], "recorded as a private word")
+	assert_eq(String(entries[1]["speaker"]), "char_spymaster",
 		"the reply is remembered under the speaker's own id (2026-09-01)")
 	assert_eq(AgentMemory.exchanges_for(Game.state, "char_chancellor").size(), 0,
 		"the rest of the room does not overhear a targeted word")

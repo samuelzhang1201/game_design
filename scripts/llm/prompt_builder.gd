@@ -141,8 +141,8 @@ You answer the ruler's words in character AND translate them into game effects.
 Output ONLY a JSON object, no prose outside it, shaped exactly:
 {"narrative": "1-3 sentences in your own voice",
  "impacts": {"actions": [{"action_code": "...", "params": {}, "target": ""}],
-             "world": [{"path": "...", "delta": 0, "reason": "a few words"}],
-             "court_reaction": {"addressed": [], "tone": "neutral", "promises": []}}}
+			 "world": [{"path": "...", "delta": 0, "reason": "a few words"}],
+			 "court_reaction": {"addressed": [], "tone": "neutral", "promises": []}}}
 Rules that bind the two parts together:
 - Every world impact is something the narrative says happens; the narrative claims no change that is not in impacts.
 - Prefer a legal action whenever one fits the order; use world impacts only for concrete consequences no action covers.

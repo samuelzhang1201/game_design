@@ -92,5 +92,5 @@ static func describe_for(state: GameState, id: String, cap: int = 6) -> String:
 	return "\n".join(lines)
 
 static func _latest_reason(e: Dictionary) -> String:
-	var log: Array = e["log"]
-	return String(log[log.size() - 1]["reason"]) if not log.is_empty() else ""
+	var entries: Array = e["log"]
+	return String(entries[entries.size() - 1]["reason"]) if not entries.is_empty() else ""

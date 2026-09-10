@@ -115,6 +115,16 @@ static func _float_to_hex(v: float) -> String:
 static func _hex_to_float(s: String) -> float:
 	return s.hex_decode().decode_double(0)
 
+## True iff s is "i" followed by the canonical rendering of a 64-bit int —
+## the shape _encode_values gives ints. The check is a str() round trip, so
+## it rejects "i007", "i+5", "i1e3" and any game content string that merely
+## starts with an i: only what the encoder wrote ever decodes back.
+static func _is_encoded_int(s: String) -> bool:
+	if s.length() < 2 or s.unicode_at(0) != 105: # 'i'
+		return false
+	var body := s.substr(1)
+	return body.is_valid_int() and str(body.to_int()) == body
+
 ## True iff s is exactly "f" followed by 16 lowercase hex digits — the shape
 ## produced by _encode_values below. Strict on purpose: game content strings
 ## (event ids, reasons, trait names) never accidentally match this 17-char
@@ -131,10 +141,16 @@ static func _is_encoded_float(s: String) -> bool:
 	return true
 
 ## Recursively encodes every int/float leaf in an arbitrarily-nested
-## Dictionary/Array/scalar as a bit-exact hex string, replacing the old
-## _normalize_ints (which only cast int->float and left the float encoding
-## to JSON, exactly the code path the ULP bug lives in). Strings pass
-## through unchanged.
+## Dictionary/Array/scalar, replacing the old _normalize_ints (which only
+## cast int->float and left the float encoding to JSON, exactly the code
+## path the ULP bug lives in). Strings pass through unchanged.
+##
+## Ints and floats encode differently on purpose (save version 4): JSON.parse
+## hands back EVERY number as a float — verified 4.7.2, and ints above 2^53
+## come back rounded — so an int written as a bare number, or as the float
+## hex the encoder used to give it, loaded as a float. Attributes, skills and
+## ideology are ints, so a loaded campaign disagreed in type with a fresh one
+## everywhere but `opinion`, which from_dict happened to cast back.
 static func _encode_values(value):
 	if value is Dictionary:
 		var out := {}
@@ -146,13 +162,17 @@ static func _encode_values(value):
 		for v in value:
 			out.append(_encode_values(v))
 		return out
-	elif typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT:
-		return "f" + _float_to_hex(float(value))
+	elif typeof(value) == TYPE_INT:
+		return "i" + str(value)
+	elif typeof(value) == TYPE_FLOAT:
+		return "f" + _float_to_hex(value)
 	return value
 
-## Inverse of _encode_values: recursively decodes hex-encoded float strings
-## back to float, leaves everything else (plain strings, bools, already-
-## nested structures) untouched.
+## Inverse of _encode_values: recursively decodes hex-encoded floats back to
+## float and encoded ints back to int, leaving everything else (plain
+## strings, bools, already-nested structures) untouched. Saves written before
+## version 4 carry ints in the float encoding; those still load, as floats —
+## the same values this build produced before, so no migration is needed.
 static func _decode_values(value):
 	if value is Dictionary:
 		var out := {}
@@ -166,6 +186,8 @@ static func _decode_values(value):
 		return out
 	elif value is String and _is_encoded_float(value):
 		return _hex_to_float(value.substr(1))
+	elif value is String and _is_encoded_int(value):
+		return value.substr(1).to_int()
 	return value
 
 ## Bump when the save shape changes incompatibly; from_dict refuses saves
@@ -190,7 +212,7 @@ var world: Dictionary = {}
 ## One entry per ledger write: {tick, path, delta, reason, source}.
 var world_log: Array = []
 
-const SAVE_VERSION := 3
+const SAVE_VERSION := 4
 
 func to_dict() -> Dictionary:
 	var chars := {}

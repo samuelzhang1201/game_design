@@ -105,12 +105,12 @@ func refresh() -> void:
 	for r: Dictionary in _regiments_of(mine):
 		# The same arithmetic the map's markers use, so the bar here and the
 		# bar under the marker read the same regiment the same way.
-		var size := MapObjects.regiment_size(data, r)
+		var reg_size := MapObjects.regiment_size(data, r)
 		var main_arm := MapObjects.regiment_arm(data, r)
-		reg_top = maxf(reg_top, size)
-		reg_rows.append({"label": _short(String(r["label"])), "value": size, "icon": _glyph(main_arm),
+		reg_top = maxf(reg_top, reg_size)
+		reg_rows.append({"label": _short(String(r["label"])), "value": reg_size, "icon": _glyph(main_arm),
 			"color": UiPalette.chart_color("cat_%d" % (units.find(main_arm) + 1)),
-			"text": RealmDashboard._compact(size)})
+			"text": RealmDashboard._compact(reg_size)})
 	reg_rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["value"] > b["value"])
 	_regiments.set_rows(reg_rows, reg_top)
 	# Neighbours: what is commonly known — their totals, in their own colours.

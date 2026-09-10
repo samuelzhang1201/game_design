@@ -55,10 +55,6 @@ func _ready() -> void:
 	custom_minimum_size = PORTRAIT_SIZE
 	refresh()
 
-func set_character(id: String) -> void:
-	character_id = id
-	refresh()
-
 func refresh() -> void:
 	_clear_generated()
 	if not has_node("CustomArt"):
@@ -129,9 +125,9 @@ func _build_badge_and_tooltip() -> void:
 		badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
 		add_child(badge)
 	var recent := ""
-	var log := c.opinion_log
-	for i in range(maxi(0, log.size() - 5), log.size()):
-		recent += "\n%+d %s" % [int(log[i]["delta"]), log[i]["reason"]]
+	var entries := c.opinion_log
+	for i in range(maxi(0, entries.size() - 5), entries.size()):
+		recent += "\n%+d %s" % [int(entries[i]["delta"]), entries[i]["reason"]]
 	tooltip_text = c.display_name + recent
 
 ## Loads a portrait PNG, cached per path. Null when no PNG exists for the id.

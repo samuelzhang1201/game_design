@@ -8,9 +8,11 @@ signal report_ready(report: TickReport)
 signal state_changed
 ## Cross-cutting UI signal: the TopBar's MENU button asks for the pause
 ## menu; GameRoot (the flow owner) listens and shows it.
+@warning_ignore("unused_signal")
 signal menu_requested
 ## The TopBar's RELATIONS button asks for the relationship graph overlay;
 ## GameRoot listens and toggles it.
+@warning_ignore("unused_signal")
 signal relations_requested
 ## A chronicle headline for the persistent bottom news strip (user request
 ## 2026-08-31). Emitted via publish_news — the CalendarOverlay feeds it as

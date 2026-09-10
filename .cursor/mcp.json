@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "comfy-mcp": {
+      "command": "/Library/Frameworks/Python.framework/Versions/3.14/bin/comfy-mcp",
+      "env": {
+        "COMFY_BIN": "/Library/Frameworks/Python.framework/Versions/3.14/bin/comfy"
+      }
+    }
+  }
+}

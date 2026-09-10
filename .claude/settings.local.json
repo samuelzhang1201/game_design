@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(gd|tscn\\)$\")",
+      "Bash(/Applications/Godot.app/Contents/MacOS/Godot --version)",
+      "mcp__gdai__open_scene",
+      "mcp__gdai__get_editor_screenshot",
+      "mcp__gdai__play_scene",
+      "Bash(CC_FORCE_OFFLINE=1 ./run_tests.sh)",
+      "Bash(pkill *)"
+    ]
+  }
+}

@@ -145,10 +145,3 @@ func _draw_edges() -> void:
 		var side := 1.0 if e["from"] < e["to"] else -1.0
 		var offset := (b - a).orthogonal().normalized() * 2.0 * side
 		_canvas.draw_line(a + offset, b + offset, color, 1.0 + absf(s) / 40.0, true)
-
-## Test seams.
-func node_count() -> int:
-	return _nodes.size()
-
-func has_node_for(id: String) -> bool:
-	return _nodes.has(id)

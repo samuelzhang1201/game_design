@@ -6,7 +6,6 @@ extends RefCounted
 ## structure; every color, panel style, and the map backdrop come from here.
 ## Stateless statics on purpose - no autoload, no tree presence needed.
 
-const BG_STAGE := Color("0b0c11")      # conversation backdrop ground
 const BG_SCREEN := Color("0b0c11")     # menu / court / day-run ground
 const PANEL_BG := Color("12141d")
 const CHIP_BG := Color("1a1c26")       # buttons, trait chips, input fields

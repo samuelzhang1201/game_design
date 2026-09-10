@@ -28,7 +28,9 @@ func _init() -> void:
 			push_error("cannot load " + src)
 			continue
 		var side := mini(img.get_width(), img.get_height())
+		@warning_ignore("integer_division")
 		var x := (img.get_width() - side) / 2
+		@warning_ignore("integer_division")
 		var y := 0 if SOURCES[id] == "top" else (img.get_height() - side) / 2
 		var chip := img.get_region(Rect2i(x, y, side, side))
 		chip.resize(CHIP_SIZE, CHIP_SIZE, Image.INTERPOLATE_LANCZOS)

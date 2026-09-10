@@ -45,9 +45,9 @@ static func build(row: Dictionary, data: DataRepository) -> Character:
 	c.traits = Array(row["traits"].split("|"))
 	for t in c.traits:
 		assert(data.traits.has(t), "unknown trait: " + t)
-		var tr: Dictionary = data.traits[t]
+		var trait_row: Dictionary = data.traits[t]
 		for a in ATTRS:
-			c.attributes[a] = clampi(c.attributes[a] + int(tr[a]), 0, 100)
+			c.attributes[a] = clampi(c.attributes[a] + int(trait_row[a]), 0, 100)
 		for sk in SKILLS:
-			c.skills[sk] = clampi(c.skills[sk] + int(tr[sk]), 0, 20)
+			c.skills[sk] = clampi(c.skills[sk] + int(trait_row[sk]), 0, 20)
 	return c

@@ -7,8 +7,6 @@ extends Control
 ## frame inset). Self-wiring: subscribes to Game.state_changed /
 ## report_ready, so screens just instance it.
 
-const METRIC_NAMES := {"treasury": "Gold", "grain": "Grain", "unrest": "Unrest",
-	"legitimacy": "Legit", "army_quality": "Army", "church_opinion": "Church"}
 const ORDER := ["treasury", "grain", "unrest", "legitimacy", "army_quality", "church_opinion"]
 
 var _value_labels: Dictionary = {}

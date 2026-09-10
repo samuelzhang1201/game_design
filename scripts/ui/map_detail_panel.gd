@@ -41,14 +41,14 @@ var _ask: Button
 var _close: Button
 var _ask_text := ""
 var _shown_province := ""
-var _shown_card: Dictionary = {}
 ## Whether a card is open (distinct from `visible`, which the left column
 ## sets: a hovered country never closes the card, it only covers it).
 var _open := false
 
 
 func _ready() -> void:
-	name = "DetailPanel" if name == "" else name
+	if name == "":
+		name = "DetailPanel"
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -212,7 +212,6 @@ func show_card(card: Dictionary) -> void:
 	if card.is_empty():
 		_close_panel()
 		return
-	_shown_card = card
 	_clear()
 	_shield.visible = true
 	_shield.set_arms(MapPalette.color_of(Game.data, String(card.get("kingdom_code", ""))),
@@ -354,7 +353,3 @@ func close_button() -> Button:
 
 func shown_province() -> String:
 	return _shown_province
-
-
-func shown_card() -> Dictionary:
-	return _shown_card
