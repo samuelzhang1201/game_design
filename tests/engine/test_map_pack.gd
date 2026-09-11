@@ -14,8 +14,6 @@ func test_default_pack_loads_with_its_world_and_art() -> void:
 	assert_false(repo.kingdoms.is_empty(), "pack supplies kingdoms")
 	assert_false(repo.provinces.is_empty(), "pack supplies provinces")
 	assert_false(repo.burgs.is_empty(), "pack supplies burgs")
-	assert_true(ResourceLoader.exists(repo.map_texture_path),
-		"map render exists at the path maps.csv gives: " + repo.map_texture_path)
 	assert_true(ResourceLoader.exists(repo.index_texture_path),
 		"hit-test bitmap exists: " + repo.index_texture_path)
 
@@ -112,7 +110,7 @@ func test_reloading_a_pack_refills_prose_from_the_authored_text() -> void:
 
 ## maps.csv carries a free-text notes column; an unquoted comma in it once
 ## shifted every column after it, silently reading the notes tail as the
-## render calibration. Every row must parse to the full header width.
+## next column. Every row must parse to the full header width.
 func test_maps_csv_rows_parse_to_the_full_header() -> void:
 	var f := FileAccess.open("res://data/maps.csv", FileAccess.READ)
 	assert_not_null(f, "maps.csv opens")
@@ -127,14 +125,6 @@ func test_maps_csv_rows_parse_to_the_full_header() -> void:
 			"row '%s' has %d fields for %d columns — quote any field with a comma"
 				% [row[0], row.size(), header.size()])
 	assert_gt(seen, 0, "maps.csv lists at least one pack")
-
-## A pack's render calibration must be usable: screen_to_map divides by the
-## scale, so a zero would put every hit test at infinity.
-func test_render_calibration_is_usable() -> void:
-	var repo := _fresh()
-	assert_gt(repo.render_scale, 0.0, "render_scale is positive")
-	assert_true(is_finite(repo.render_offset.x) and is_finite(repo.render_offset.y),
-		"render_offset is a real point")
 
 func test_unknown_map_fails_loudly() -> void:
 	var repo := _fresh()

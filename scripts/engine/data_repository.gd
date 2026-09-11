@@ -90,7 +90,6 @@ var coasts: Array[Dictionary] = []
 var maps: Dictionary = {}
 ## The currently loaded pack (load_map).
 var map_id: String = ""
-var map_texture_path: String = ""
 var index_texture_path: String = ""
 var province_texture_path: String = ""
 var biome_texture_path: String = ""
@@ -100,13 +99,6 @@ var realm_bindings: Dictionary = {}
 ## hand-maintained like realm_bindings). Unbound provinces are held by a house
 ## named after their capital town — see MapObjects.house_of.
 var house_bindings: Dictionary = {}
-## How the map render sits on the pack's coordinates (maps.csv). Azgaar's PNG
-## export captures the CURRENT view, so a map exported while zoomed or panned
-## is a scaled, shifted picture of the same world: render = native * scale +
-## offset, in native units. 1 / (0, 0) means the render was taken at the
-## default view and needs no correction — the normal case.
-var render_scale := 1.0
-var render_offset := Vector2.ZERO
 ## Every pack table by domain and area: world_tables[domain][area][code] -> row
 ## (spec 2026-09-09 §1). The named fields above (kingdoms, provinces, burgs,
 ## routes, rivers, markers, biomes) are the SAME Dictionary objects, so the
@@ -245,7 +237,7 @@ func _load(dir: String) -> bool:
 	for row in events:
 		events_by_id[row["event_id"]] = row
 	if not _load_if_present(dir + "/maps.csv",
-			["map_id", "label", "map_texture", "index_texture", "data_dir"],
+			["map_id", "label", "index_texture", "data_dir"],
 			func(r): maps[r["map_id"]] = r):
 		return false
 	# Event prose is authored, not generated: it comes from the story
@@ -399,11 +391,6 @@ func load_map(id: String) -> bool:
 					house_bindings[pc] = String(r["family_name"])):
 		return false
 	map_id = id
-	render_scale = float(m.get("render_scale", 1.0)) if String(m.get("render_scale", "")) != "" else 1.0
-	render_offset = Vector2(
-		float(m.get("render_offset_x", 0.0)) if String(m.get("render_offset_x", "")) != "" else 0.0,
-		float(m.get("render_offset_y", 0.0)) if String(m.get("render_offset_y", "")) != "" else 0.0)
-	map_texture_path = String(m["map_texture"])
 	index_texture_path = String(m["index_texture"])
 	province_texture_path = String(m.get("province_texture", ""))
 	biome_texture_path = String(m.get("biome_texture", ""))

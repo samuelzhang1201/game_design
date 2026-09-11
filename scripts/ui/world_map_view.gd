@@ -1,6 +1,6 @@
 class_name WorldMapView
 extends Control
-## RTS-style viewport into the loaded map pack's render, embedded in the
+## RTS-style viewport into the loaded map pack's terrain, embedded in the
 ## middle map zone of every gameplay screen — court, conversation, day run
 ## (user ruling 2026-09-03: the world map IS the middle view — it replaces
 ## UiPalette's static backdrop there, and the bottom bar's MAP tab goes
@@ -42,7 +42,7 @@ const CLICK_SLOP := 5.0
 const EDGE_MARGIN := 12.0
 ## Edge-scroll speed in screen px/s.
 const EDGE_SPEED := 260.0
-## The render is terrain only (user ruling 2026-09-09): the game paints every
+## The terrain is drawn from data (spec 2026-09-11): the game paints every
 ## province in its live owner's colour (MapPalette, data/political_palette.csv)
 ## and draws every kingdom's border itself, so conquest repaints and redraws
 ## with no new art. The hovered kingdom's outline is drawn over that in the
@@ -134,8 +134,8 @@ static func create() -> WorldMapView:
 func _ready() -> void:
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	# The project default is nearest (crisp pixel fonts); the photographic
-	# map wants smooth scaling. The card resets to nearest so its text
+	# The project default is nearest (crisp pixel fonts); the settlement art
+	# and the mesh want smooth scaling. The card resets to nearest so its text
 	# matches the rest of the UI.
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	# Which map is loaded is data (data/maps.csv), not a constant here — the

@@ -50,19 +50,11 @@ func test_fiction_kingdoms_are_on_the_map() -> void:
 			assert_true(repo.kingdoms.has(kingdom),
 				"%s's kingdom %s is on the map" % [role["id"], kingdom])
 
-func test_index_bitmap_matches_map_and_kingdoms() -> void:
+func test_index_bitmap_decodes_each_kingdom_at_its_center() -> void:
 	# Paths come from the loaded map pack, so this test follows whichever
 	# map data/maps.csv points at rather than pinning one export's filenames.
-	var map_tex: Texture2D = load(Game.data.map_texture_path)
 	var idx_tex: Texture2D = load(Game.data.index_texture_path)
-	assert_not_null(map_tex)
 	assert_not_null(idx_tex)
-	# The render may be an integer-scale export (see tools/import_azgaar.gd);
-	# the index bitmap stays at native scale.
-	var k := int(map_tex.get_width()) / int(idx_tex.get_width())
-	assert_gt(k, 0, "render at least native size")
-	assert_eq(map_tex.get_size(), idx_tex.get_size() * float(k),
-		"render is an integer multiple of the index bitmap")
 	var img: Image = idx_tex.get_image()
 	for code: String in repo.kingdoms:
 		var row: Dictionary = repo.kingdoms[code]
@@ -197,60 +189,6 @@ func test_biome_bitmap_marks_land_with_a_real_biome() -> void:
 		var biome := MapIndex.biome_at(img, px)
 		assert_true(biome > 0 and repo.biomes.has(biome),
 			"%s center is land with a named biome, got %d" % [code, biome])
-
-## The pack's render calibration (maps.csv render_scale / render_offset_*)
-## must put the pack's coastline ON the render's coastline (user report
-## 2026-09-09: borders drawn from the JSON sat beside the printed ones).
-## Sampled coast pixels of the biome bitmap, pushed through the calibration
-## and the render's integer scale, must land within a few render px of a
-## land/water brightness change; a calibration off by a handful of native px
-## fails this by a wide margin.
-func test_render_calibration_puts_the_coast_on_the_render_coastline() -> void:
-	var render: Image = (load(repo.map_texture_path) as Texture2D).get_image()
-	var biome: Image = (load(repo.biome_texture_path) as Texture2D).get_image()
-	var k := render.get_width() / biome.get_width()
-	var window := int(repo.bal("map_calibration_window_px"))
-	var threshold := repo.bal("map_calibration_water_brightness")
-	var stride := 5
-	var tested := 0
-	var hits := 0
-	for y in range(1, biome.get_height() - 1, stride):
-		for x in range(1, biome.get_width() - 1, stride):
-			if not _is_coast(biome, x, y):
-				continue
-			tested += 1
-			var on_render := Vector2(x + 0.5, y + 0.5) * repo.render_scale + repo.render_offset
-			var rx := int(on_render.x * k)
-			var ry := int(on_render.y * k)
-			var saw_water := false
-			var saw_land := false
-			for dy in range(-window, window + 1):
-				for dx in range(-window, window + 1):
-					var px := rx + dx
-					var py := ry + dy
-					if px < 0 or py < 0 or px >= render.get_width() or py >= render.get_height():
-						continue
-					var c := render.get_pixel(px, py)
-					if maxf(c.r, maxf(c.g, c.b)) * 255.0 < threshold:
-						saw_water = true
-					else:
-						saw_land = true
-			if saw_water and saw_land:
-				hits += 1
-	assert_gt(tested, 200, "enough coast samples to judge")
-	var share := float(hits) / float(maxi(tested, 1))
-	assert_gte(share, repo.bal("map_calibration_min_hit_share"),
-		"%.1f%% of %d sampled coast points sit on the render's coastline" % [share * 100.0, tested])
-
-func _is_coast(biome: Image, x: int, y: int) -> bool:
-	if not _is_land(biome, x, y):
-		return false
-	return not _is_land(biome, x - 1, y) or not _is_land(biome, x + 1, y) \
-		or not _is_land(biome, x, y - 1) or not _is_land(biome, x, y + 1)
-
-func _is_land(biome: Image, x: int, y: int) -> bool:
-	var c := biome.get_pixel(x, y)
-	return not (c.r == 1.0 and c.g == 1.0 and c.b == 1.0)
 
 ## The terrain tables (spec 2026-09-11): the game draws the map from these,
 ## so every reference in them must resolve.
