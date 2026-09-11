@@ -25,39 +25,31 @@ func _capital() -> Dictionary:
 func _capital_name() -> String:
 	return String(_capital()["label"])
 
-## Azgaar's PNG export captures the current view, so a render taken while
-## zoomed is a scaled, shifted picture of the same world. maps.csv carries
-## the correction; map_to_screen applies it and screen_to_map undoes it.
-func test_screen_and_map_coordinates_round_trip_through_the_calibration() -> void:
+## The map is drawn from the pack's own cells (spec 2026-09-11), so native
+## coordinates go to the screen through the pan and zoom alone.
+func test_screen_and_map_coordinates_round_trip() -> void:
 	var v := _view()
 	await wait_frames(2)
 	for native in [Vector2(0, 0), Vector2(1216.79, 601.05), Vector2(2559, 928)]:
 		var back := v.screen_to_map(v.map_to_screen(native))
 		assert_almost_eq(back.x, native.x, 0.01, "x round-trips at %s" % native)
 		assert_almost_eq(back.y, native.y, 0.01, "y round-trips at %s" % native)
+	var native := Vector2(1000, 400)
+	var want := v.map_to_screen(Vector2.ZERO) + native * v.view_scale()
+	assert_almost_eq(v.map_to_screen(native).x, want.x, 0.01, "x is offset + native * zoom")
+	assert_almost_eq(v.map_to_screen(native).y, want.y, 0.01, "y is offset + native * zoom")
 
-## The calibration must actually be applied, not silently dropped. Checked
-## against the mapping written out longhand, so a change to map_to_screen
-## that forgets the calibration fails here.
-func test_the_calibration_is_applied_to_the_render_mapping() -> void:
+func test_the_terrain_is_a_mesh_built_from_the_pack() -> void:
 	var v := _view()
 	await wait_frames(2)
-	var s := Game.data.render_scale
-	var off := Game.data.render_offset
-	assert_gt(s, 0.0, "the pack carries a usable render scale")
-	var native := Vector2(1000, 400)
-	var want := v.map_to_screen(Vector2.ZERO) \
-		+ native * s * (v.view_scale() / s)
-	assert_almost_eq(v.map_to_screen(native).x, want.x, 0.01, "x")
-	assert_almost_eq(v.map_to_screen(native).y, want.y, 0.01, "y")
-	# And the offset really moves the origin off the texture's corner.
-	var origin := v.map_to_screen(Vector2.ZERO) - v._offset
-	assert_almost_eq(origin.x, off.x * v.view_scale() / s, 0.01, "origin x")
-	assert_almost_eq(origin.y, off.y * v.view_scale() / s, 0.01, "origin y")
+	assert_not_null(v.terrain_mesh(), "the terrain mesh is built from cells.csv")
+	assert_eq(v.map_size(), Vector2(float(Game.data.map_info["width"]),
+		float(Game.data.map_info["height"])), "the map's size is the pack's canvas")
+	assert_true(v.visible)
 
 ## Hit-testing samples the index bitmaps, which are in native coordinates:
 ## the capital's own pixel must resolve to the capital's own kingdom.
-func test_the_index_bitmap_agrees_with_the_calibrated_mapping() -> void:
+func test_the_index_bitmap_agrees_with_the_mapping() -> void:
 	var v := _view()
 	await wait_frames(2)
 	var k: Dictionary = _capital()
@@ -65,6 +57,17 @@ func test_the_index_bitmap_agrees_with_the_calibrated_mapping() -> void:
 	var back := v.screen_to_map(v.map_to_screen(native))
 	assert_almost_eq(back.x, native.x, 0.01, "capital survives the round trip")
 	assert_almost_eq(back.y, native.y, 0.01, "capital survives the round trip")
+
+## Rivers are drawn by the game now that no render prints them: every river
+## is in view with the whole world; none is when the view is zoomed into the
+## open sea at the map's corner.
+func test_rivers_draw_where_the_view_is() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v._zoom_at(v.size / 2.0, 0.0001)
+	assert_eq(v.visible_river_count(), Game.data.rivers.size(), "the whole world shows every river")
+	v._zoom_at(Vector2.ZERO, 1000.0)
+	assert_eq(v.visible_river_count(), 0, "open sea in the corner shows none")
 
 ## macOS trackpad (user request 2026-09-09): pinch zooms, two-finger drag
 ## pans. Both arrive as their own event types, beside the wheel.
@@ -171,7 +174,7 @@ func test_water_click_closes_the_card() -> void:
 func test_opens_filling_the_frame() -> void:
 	var v := _view()
 	await wait_frames(2)
-	var drawn := Rect2(v._offset, v._map_texture.get_size() * v._zoom)
+	var drawn := Rect2(v._offset, v.map_size() * v._zoom)
 	assert_true(drawn.position.x <= 1.0, "no gutter on the left")
 	assert_true(drawn.position.y <= 1.0, "no gutter on the top")
 	assert_true(drawn.end.x >= v.size.x - 1.0, "no gutter on the right")
@@ -184,7 +187,7 @@ func test_zooming_out_reaches_the_whole_map() -> void:
 	var v := _view()
 	await wait_frames(2)
 	v._zoom_at(v.size / 2.0, 0.0001)
-	var drawn := Rect2(v._offset, v._map_texture.get_size() * v._zoom)
+	var drawn := Rect2(v._offset, v.map_size() * v._zoom)
 	assert_true(drawn.position.x >= -1.0, "nothing cropped off the left")
 	assert_true(drawn.position.y >= -1.0, "nothing cropped off the top")
 	assert_true(drawn.end.x <= v.size.x + 1.0, "nothing cropped off the right")

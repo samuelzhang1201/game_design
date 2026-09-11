@@ -8,7 +8,8 @@ extends Control
 ## opens covering the frame, and zooms out to the whole world; the view
 ## pans when the mouse rides an edge
 ## of the frame (plus drag and wheel-zoom), every kingdom is washed in its
-## palette colour with its live border drawn (the render is terrain only),
+## palette colour with its live border drawn (the terrain is a mesh built
+## from the pack's cells, MapTerrain),
 ## the kingdom under the mouse gets its outline lit, towns and points of interest show
 ## as pins (LOD by zoom, MapObjects), hovering a pin or road names it,
 ## and clicking a kingdom opens a
@@ -93,18 +94,14 @@ var _selected_province := ""
 var _province_tris: Dictionary = {}
 var _province_bbox: Dictionary = {}
 
-var _map_texture: Texture2D
+## The terrain (spec 2026-09-11): one vertex-coloured mesh of every cell,
+## built once from the pack (MapTerrain) and drawn with the view transform.
+## No render PNG exists; the map's extent is the pack's canvas.
+var _terrain_mesh: ArrayMesh
+var _map_size := Vector2.ZERO
+## Shore loops (coasts.csv) smoothed once, drawn over the mesh.
+var _coast_rings: Array = []
 var _index_image: Image
-## world_map.png may be a sharper integer-scale render of the map (see
-## tools/import_azgaar.gd); the index bitmap and CSV coordinates stay at
-## native scale, so texture coords = native coords * _render_scale. Any
-## zoom the render was exported at is a separate, per-pack correction —
-## see DataRepository.render_scale.
-var _render_scale := 1.0
-## The loaded pack's render calibration, cached off Game.data so _draw can
-## place hundreds of points a frame without going through the autoload.
-var _cal_scale := 1.0
-var _cal_offset := Vector2.ZERO
 var _by_state_id: Dictionary = {}
 ## Azgaar state id under the mouse (-1: water/nothing); its border loops
 ## are outlined in _draw.
@@ -143,19 +140,17 @@ func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	# Which map is loaded is data (data/maps.csv), not a constant here — the
 	# view renders whichever pack DataRepository.load_map put in place.
-	var map_path := Game.data.map_texture_path
+	_map_size = Vector2(float(Game.data.map_info.get("width", "0")),
+		float(Game.data.map_info.get("height", "0")))
+	if _map_size.x > 0.0 and _map_size.y > 0.0:
+		_terrain_mesh = MapTerrain.shared_mesh(Game.data)
 	var index_path := Game.data.index_texture_path
-	if map_path != "" and ResourceLoader.exists(map_path):
-		_map_texture = load(map_path)
 	if index_path != "" and ResourceLoader.exists(index_path):
 		var idx: Texture2D = load(index_path)
 		_index_image = idx.get_image()
 	_province_image = _load_image(Game.data.province_texture_path)
 	_biome_image = _load_image(Game.data.biome_texture_path)
-	if _map_texture != null and _index_image != null:
-		_render_scale = float(_map_texture.get_width()) / float(_index_image.get_width())
-	_cal_scale = Game.data.render_scale
-	_cal_offset = Game.data.render_offset
+	_build_coast_rings()
 	for code: String in Game.data.kingdoms:
 		var row: Dictionary = Game.data.kingdoms[code]
 		_by_state_id[int(row["state_id"])] = row
@@ -176,7 +171,7 @@ func _ready() -> void:
 		_clamp_offset()
 		queue_redraw())
 	# No imported map: stay invisible so the styled backdrop shows instead.
-	visible = _map_texture != null
+	visible = _terrain_mesh != null
 
 func _load_image(path: String) -> Image:
 	if path == "" or not ResourceLoader.exists(path):
@@ -202,24 +197,28 @@ func _build_tooltip() -> void:
 ## is visible.
 func _go_home() -> void:
 	_zoom = _zoom_cover()
-	_offset = (size - _map_texture.get_size() * _zoom) / 2.0
+	_offset = (size - _map_size * _zoom) / 2.0
 	_clamp_offset()
 	_homed = true
 
 ## Fill both axes, cropping whichever one overflows.
 func _zoom_cover() -> float:
-	var tex := _map_texture.get_size()
+	var tex := _map_size
 	if tex.x <= 0.0 or tex.y <= 0.0 or size.x <= 0.0 or size.y <= 0.0:
 		return 0.1
 	return maxf(size.x / tex.x, size.y / tex.y)
 
 func _draw() -> void:
-	if _map_texture == null:
+	if _terrain_mesh == null:
 		return
 	if not _homed and size.y > 0.0:
 		_go_home()
-	draw_texture_rect(_map_texture,
-		Rect2(_offset, _map_texture.get_size() * _zoom), false)
+	draw_rect(Rect2(Vector2.ZERO, size),
+		MapTerrain.palette_color(Game.data, "sea_deep", MapTerrain.FALLBACK))
+	draw_mesh(_terrain_mesh, null, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset))
+	_draw_coasts()
+	_draw_rivers()
+	_draw_routes()
 	_draw_political_wash()
 	_draw_province_seams()
 	_draw_selected_province()
@@ -233,7 +232,7 @@ func _draw() -> void:
 
 ## Screen px per native map px — the LOD and pick radii are defined on it.
 func view_scale() -> float:
-	return _zoom * _render_scale * _cal_scale
+	return _zoom
 
 func _pin_radius(b: Dictionary) -> float:
 	if String(b["is_capital"]) == "1":
@@ -264,7 +263,7 @@ func sprite_height() -> float:
 func settlement_sprites() -> Array:
 	var out: Array = []
 	var h := sprite_height()
-	if h <= 0.0 or _map_texture == null:
+	if h <= 0.0 or _terrain_mesh == null:
 		return out
 	var s := view_scale()
 	var min_pop := MapObjects.min_burg_pop_for_scale(Game.data, s)
@@ -341,7 +340,7 @@ func _draw_pins() -> void:
 ## `bar` are screen rects, `frac` the regiment's strength against the largest
 ## of the realm. [] while the layer is off. Public for tests and hit-testing.
 func army_markers() -> Array:
-	if not show_armies or _map_texture == null or Game.data == null:
+	if not show_armies or _terrain_mesh == null or Game.data == null:
 		return []
 	var repo := Game.data
 	var mine := repo.resolve_realm("player_realm")
@@ -421,7 +420,7 @@ func _build_province_meshes() -> void:
 ## The provinces whose wash would touch the frame right now, with their
 ## owner's colour: {code, color}. Public for tests.
 func political_fills() -> Array:
-	if _map_texture == null:
+	if _terrain_mesh == null:
 		return []
 	var alpha := Game.data.bal("map_political_alpha")
 	var frame := Rect2(Vector2.ZERO, size)
@@ -516,6 +515,82 @@ func _ring_touches(pts: PackedVector2Array, frame: Rect2) -> bool:
 			return true
 	return false
 
+func _build_coast_rings() -> void:
+	_coast_rings.clear()
+	var steps := int(Game.data.bal("map_border_smoothing_steps"))
+	for row: Dictionary in Game.data.coasts:
+		_coast_rings.append(MapGeometry.smooth_closed(row["polyline"], steps))
+
+## Every shore (islands and lakes) as a smooth stroke in the palette's
+## coast colour — the same B-spline as the kingdom borders, so a border
+## along a coast sits on the drawn shore.
+func _draw_coasts() -> void:
+	var color := MapTerrain.palette_color(Game.data, "coast_line", MapTerrain.FALLBACK)
+	var width := Game.data.bal("map_coast_width")
+	var frame := Rect2(Vector2.ZERO, size).grow(width * 2.0)
+	for ring: PackedVector2Array in _coast_rings:
+		var pts := _closed_screen_ring(ring)
+		if _ring_touches(pts, frame):
+			draw_polyline(pts, color, width, true)
+
+func _screen_polyline(pts: PackedVector2Array) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	out.resize(pts.size())
+	for i in pts.size():
+		out[i] = map_to_screen(pts[i])
+	return out
+
+func _line_in_frame(row: Dictionary) -> bool:
+	var b: Rect2 = row["bbox"]
+	var on_screen := Rect2(map_to_screen(b.position), b.size * view_scale()).grow(2.0)
+	return Rect2(Vector2.ZERO, size).intersects(on_screen)
+
+## The river rows whose extent touches the frame. Public for tests.
+func visible_rivers() -> Array:
+	if _terrain_mesh == null:
+		return []
+	var out: Array = []
+	for code: String in Game.data.rivers:
+		if _line_in_frame(Game.data.rivers[code]):
+			out.append(Game.data.rivers[code])
+	return out
+
+func visible_river_count() -> int:
+	return visible_rivers().size()
+
+## Rivers widen with their discharge (native px per sqrt(discharge), so a
+## great river is a few px across at native scale) and never thinner than
+## map_river_min_px on screen.
+func _draw_rivers() -> void:
+	var rivers := visible_rivers()
+	if rivers.is_empty():
+		return
+	var color := MapTerrain.palette_color(Game.data, "river", MapTerrain.FALLBACK)
+	var min_px := Game.data.bal("map_river_min_px")
+	var k := Game.data.bal("map_river_discharge_scale")
+	for r: Dictionary in rivers:
+		var width := maxf(min_px, k * sqrt(float(r.get("discharge", "0"))) * view_scale())
+		draw_polyline(_screen_polyline(r["polyline"]), color, width, true)
+
+## Roads always; trails and sea routes once the view is close enough.
+func _draw_routes() -> void:
+	if _terrain_mesh == null:
+		return
+	var show_trails := view_scale() >= Game.data.bal("map_trail_min_scale")
+	var road := MapTerrain.palette_color(Game.data, "road", MapTerrain.FALLBACK)
+	var trail := MapTerrain.palette_color(Game.data, "trail", MapTerrain.FALLBACK)
+	var road_w := Game.data.bal("map_road_width")
+	var trail_w := Game.data.bal("map_trail_width")
+	for code: String in Game.data.routes:
+		var r: Dictionary = Game.data.routes[code]
+		var is_road := String(r["group"]) == "roads"
+		if not is_road and not show_trails:
+			continue
+		if not _line_in_frame(r):
+			continue
+		draw_polyline(_screen_polyline(r["polyline"]), road if is_road else trail,
+			road_w if is_road else trail_w, true)
+
 ## Kingdom names set into the terrain like printed map lettering: the display
 ## face (Cinzel), widely letter-spaced, faint, and scaled with the zoom so
 ## they belong to the map rather than floating over it as UI. Drawn under the
@@ -570,9 +645,9 @@ func _draw_diamond(center: Vector2, r: float, color: Color) -> void:
 	draw_colored_polygon(PackedVector2Array([center + Vector2(0, -r), center + Vector2(r, 0),
 		center + Vector2(0, r), center + Vector2(-r, 0)]), color)
 
-## Ring around the hovered pin. Roads and rivers are named by the tooltip and
-## the card but are NOT traced (user ruling 2026-09-09): the render already
-## draws them, and a gold line over the top only obscured them.
+## Ring around the hovered pin. Roads and rivers are drawn by the terrain
+## layer in their own colours and are not re-traced on hover: the tooltip
+## and the card name them.
 func _draw_hover() -> void:
 	_draw_object_highlight(_hover_obj)
 
@@ -600,7 +675,7 @@ func _draw_object_highlight(obj: Dictionary) -> void:
 ## Homing + RTS edge scrolling: pan while the mouse rides the frame's edge.
 ## (Homing lives here, not only in _draw, so it also runs headless in tests.)
 func _process(delta: float) -> void:
-	if _map_texture == null or not is_visible_in_tree() or size.x <= 0.0:
+	if _terrain_mesh == null or not is_visible_in_tree() or size.x <= 0.0:
 		return
 	if not _homed:
 		_go_home()
@@ -626,7 +701,7 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 func _gui_input(ev: InputEvent) -> void:
-	if _map_texture == null:
+	if _terrain_mesh == null:
 		return
 	# macOS trackpad: pinch zooms, two-finger drag pans. Godot delivers these
 	# as their own events, so they are handled beside the wheel rather than
@@ -688,7 +763,7 @@ func _zoom_at(pos: Vector2, factor: float) -> void:
 ## size.y is guarded too — a zero there would make minf return 0, and _zoom_at
 ## divides by _zoom.
 func _zoom_min() -> float:
-	var tex := _map_texture.get_size()
+	var tex := _map_size
 	if tex.x <= 0.0 or tex.y <= 0.0 or size.x <= 0.0 or size.y <= 0.0:
 		return 0.1
 	return minf(size.x / tex.x, size.y / tex.y)
@@ -697,10 +772,10 @@ func _zoom_min() -> float:
 ## no gutter opens where map could have been; an axis it underfills (the
 ## letterboxed one at low zoom) is centered instead.
 func _clamp_offset() -> void:
-	if _map_texture == null:
+	if _terrain_mesh == null:
 		return
 	_zoom = maxf(_zoom, _zoom_min())
-	var scaled := _map_texture.get_size() * _zoom
+	var scaled := _map_size * _zoom
 	if scaled.x < size.x:
 		_offset.x = (size.x - scaled.x) / 2.0
 	else:
@@ -710,20 +785,19 @@ func _clamp_offset() -> void:
 	else:
 		_offset.y = clampf(_offset.y, size.y - scaled.y, 0.0)
 
-## View transform: native map coordinates (index bitmap, CSV x/y) <-> screen.
-## Native (pack/CSV/index-bitmap) coordinates -> screen. Two steps: the pack's
-## calibration places the world on the render (identity unless the PNG was
-## exported from a zoomed Azgaar view), then _render_scale/_zoom place the
-## render on screen.
+## Native map coordinates (pack tables, index bitmaps) -> screen.
 func map_to_screen(native: Vector2) -> Vector2:
-	var on_render := native * _cal_scale + _cal_offset
-	return _offset + on_render * _render_scale * _zoom
+	return _offset + native * _zoom
 
-## The exact inverse — hit-testing samples the index bitmaps, which are in
-## native coordinates, so this has to undo the calibration too.
+## The exact inverse — hit-testing samples the index bitmaps in native space.
 func screen_to_map(pos: Vector2) -> Vector2:
-	var on_render := (pos - _offset) / _zoom / _render_scale
-	return (on_render - _cal_offset) / _cal_scale
+	return (pos - _offset) / _zoom
+
+func map_size() -> Vector2:
+	return _map_size
+
+func terrain_mesh() -> ArrayMesh:
+	return _terrain_mesh
 
 func _state_under(pos: Vector2) -> int:
 	return MapIndex.state_at(_index_image, Vector2i(screen_to_map(pos).floor()))
@@ -860,7 +934,7 @@ func _draw_selected_province() -> void:
 ## coordinates: nothing when the view is off or the zoom is below the
 ## balance floor, and only segments touching the frame.
 func _visible_seams() -> Array:
-	if not show_provinces or _map_texture == null \
+	if not show_provinces or _terrain_mesh == null \
 			or view_scale() < Game.data.bal("map_province_min_scale"):
 		return []
 	var frame := Rect2(Vector2.ZERO, size)
