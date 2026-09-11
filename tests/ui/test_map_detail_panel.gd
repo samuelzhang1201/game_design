@@ -33,7 +33,7 @@ func test_a_town_gets_a_card() -> void:
 	assert_gt(p.features_row().get_child_count(), 1, "feature glyphs after their label")
 	assert_gt(p.production_box().get_child_count(), 1, "goods rows after their label")
 	assert_true(p.preview().visible, "a window onto the map")
-	assert_not_null(p.preview().texture)
+	assert_not_null(p.preview().mesh, "drawn from the terrain mesh, not a picture")
 	assert_true(p.ask_button().visible)
 	assert_eq(p.rows().get_child_count(), 0, "no plain lines on a card")
 

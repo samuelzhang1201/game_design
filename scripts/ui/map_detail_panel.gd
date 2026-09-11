@@ -34,7 +34,7 @@ var _fields: GridContainer
 var _features: HBoxContainer
 var _production: VBoxContainer
 var _money: VBoxContainer
-var _preview: TextureRect
+var _preview: TerrainPreview
 var _lines: VBoxContainer
 var _hint: Label
 var _ask: Button
@@ -121,12 +121,9 @@ func _ready() -> void:
 	_hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(_hint)
-	_preview = TextureRect.new()
+	_preview = TerrainPreview.new()
 	_preview.name = "Preview"
 	_preview.custom_minimum_size = PREVIEW_SIZE
-	_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	_preview.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_preview.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	body.add_child(_preview)
 	_ask = Button.new()
@@ -261,23 +258,10 @@ func show_card(card: Dictionary) -> void:
 	_open_panel()
 
 
-## A window onto the world map around a place: an atlas region of the render
-## at the pack's calibration, PREVIEW_SPAN native px across.
+## A window onto the world map around a place, PREVIEW_SPAN native px
+## across, drawn from the same terrain mesh as the map (no render exists).
 func _set_preview(center: Vector2) -> void:
-	var tex: Texture2D = UiPalette.load_art(Game.data.map_texture_path)
-	if tex == null:
-		_preview.visible = false
-		return
-	var k := float(tex.get_width()) / float(Game.data.map_info.get("width", "2560"))
-	var on_render := (center * Game.data.render_scale + Game.data.render_offset) * k
-	var span := PREVIEW_SPAN * k
-	var region := Rect2(on_render - span / 2.0, span)
-	region.position = region.position.clamp(Vector2.ZERO, tex.get_size() - span)
-	var atlas := AtlasTexture.new()
-	atlas.atlas = tex
-	atlas.region = region
-	_preview.texture = atlas
-	_preview.visible = true
+	_preview.show_place(center)
 
 
 func _clear() -> void:
@@ -288,7 +272,6 @@ func _clear() -> void:
 	_hint.visible = false
 	_hint.text = ""
 	_preview.visible = false
-	_preview.texture = null
 
 
 func _set_ask(ask: String) -> void:
@@ -331,7 +314,7 @@ func production_box() -> VBoxContainer:
 	return _production
 
 
-func preview() -> TextureRect:
+func preview() -> TerrainPreview:
 	return _preview
 
 
@@ -353,3 +336,44 @@ func close_button() -> Button:
 
 func shown_province() -> String:
 	return _shown_province
+
+
+## The card's map window: the terrain mesh and the shores, scaled so
+## `span` native px cover the rect (cover fit, like the old atlas) and
+## centred on the place. Reads Game.data only.
+class TerrainPreview extends Control:
+	var mesh: ArrayMesh
+	var span: Vector2 = MapDetailPanel.PREVIEW_SPAN
+	var _center := Vector2.ZERO
+
+	func _init() -> void:
+		clip_contents = true
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func show_place(center: Vector2) -> void:
+		mesh = MapTerrain.shared_mesh(Game.data)
+		_center = center
+		visible = mesh != null
+		queue_redraw()
+
+	func _draw() -> void:
+		if mesh == null:
+			return
+		var k := maxf(size.x / span.x, size.y / span.y)
+		var origin := size / 2.0 - _center * k
+		draw_rect(Rect2(Vector2.ZERO, size),
+			MapTerrain.palette_color(Game.data, "sea_deep", MapTerrain.FALLBACK))
+		draw_mesh(mesh, null, Transform2D(0.0, Vector2(k, k), 0.0, origin))
+		var coast := MapTerrain.palette_color(Game.data, "coast_line", MapTerrain.FALLBACK)
+		var frame := Rect2(Vector2.ZERO, size).grow(2.0)
+		for row: Dictionary in Game.data.coasts:
+			var b: Rect2 = row["bbox"]
+			if not frame.intersects(Rect2(origin + b.position * k, b.size * k)):
+				continue
+			var loop: PackedVector2Array = row["polyline"]
+			var pts := PackedVector2Array()
+			pts.resize(loop.size() + 1)
+			for i in loop.size():
+				pts[i] = origin + loop[i] * k
+			pts[loop.size()] = pts[0]
+			draw_polyline(pts, coast, 1.0, true)
