@@ -1,14 +1,14 @@
 key,color,notes
-player_realm,#c9a84c,the crown's realm: warm gold
-raider_realm,#b5553f,the raiders in the west: rust
-neighbor_realm,#6f9a5e,the neighbour in the north: moss
-empire_realm,#6d7fae,the empire: slate blue
-other_1,#8f6f9e,plum — unbound kingdoms take these in state order
-other_2,#5f9aa0,dusty teal
-other_3,#a89a5a,olive sand
-other_4,#b07a8a,dusty rose
-other_5,#7f9f7a,sage
-other_6,#9c8060,leather
-state_border,#2e2418,solid kingdom borders (always drawn)
-province_line,#f4efe4,dashed province seams in the province view (drawn translucent)
-hover_border,#f0c86a,the hovered kingdom's outline
+player_realm,#4E7A6B,the crown's realm: verdigris — own faction (library 1.4)
+raider_realm,#7A2E2B,the raiders in the west: oxblood — hostile (library 1.4)
+neighbor_realm,#C8973F,the neighbour in the north: yellow ochre (library 1.4)
+empire_realm,#5A6B7C,the empire: slate blue (library 1.4)
+other_1,#9C5A34,burnt sienna — unbound kingdoms take these in state order
+other_2,#8A7360,raw umber lightened
+other_3,#B4A27A,yellow ochre desaturated
+other_4,#7E8B98,slate blue lightened
+other_5,#7FA093,verdigris lightened
+other_6,#A35A55,oxblood lightened
+state_border,#5B4636,solid kingdom borders: raw umber
+province_line,#EDE3CE,dashed province seams in the province view: cream laid (drawn translucent)
+hover_border,#C8973F,the hovered kingdom's outline: yellow ochre

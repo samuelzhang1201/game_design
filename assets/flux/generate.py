@@ -1,0 +1,339 @@
+#!/usr/bin/env python3
+"""Bulk Flux generation for the art prompt library, through a local ComfyUI.
+
+    python3 assets/flux/generate.py --build-csv           # re-parse the library into prompts.csv
+    python3 assets/flux/generate.py --ids C-01,T-01,I-04  # generate a few entries
+    python3 assets/flux/generate.py --chapter T --variants 5   # every tile, 5 seeds each
+    python3 assets/flux/generate.py --ids C-01 --dry-run  # print the assembled prompt only
+
+Every prompt is assembled as  STYLE_CORE + subject + CANVAS  from the files
+beside this script, never typed by hand (prompt library §0.1 / §10.8). The
+ComfyUI graph is flux_template.json; this script only fills its slots and
+talks to the server's HTTP API (queue, history, view). Outputs are copied to
+assets/flux/out/<chapter dir>/<ID>_<slug>_<model>_s<seed>.png.
+
+Stdlib only (json, csv, urllib); no ComfyUI SDK needed.
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import re
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent.parent
+LIBRARY = ROOT / "assets" / "GameArts" / "中世纪大战略游戏_AI美术Prompt库.md"
+PROMPTS_CSV = HERE / "prompts.csv"
+STYLE_CORE = HERE / "STYLE_CORE.txt"
+NEGATIVE = HERE / "NEGATIVE.txt"
+OUT_DIR = HERE / "out"
+SERVER = "http://127.0.0.1:8188"
+
+# Prompt library §0.3: where each ID prefix is filed.
+CHAPTER_DIR = {
+    "C": "characters", "E": "expressions", "P": "expressions", "M": "map",
+    "T": "terrain", "I": "icons", "W": "tactical", "V": "events", "U": "ui",
+}
+# Table-driven chapters carry their canvas per chapter (§5, §6, §7, §9);
+# E/P rows are fragments layered onto a character, not assets on their own.
+TABLE_CANVAS = {"T": "C-TILE", "I": "C-ICON", "W": "C-SYMBOL", "U": "C-ICON", "E": "", "P": ""}
+# Prompt library §10.7 target sizes per canvas, generated at Flux's native
+# 1024-class resolution (icons and tiles are downscaled afterwards).
+CANVAS_SIZE = {
+    "C-PORTRAIT": (1024, 1024), "C-BUST": (1024, 1024), "C-FULL": (1024, 1536),
+    "C-ICON": (1024, 1024), "C-TILE": (1024, 1024), "C-MAP": (1536, 1024),
+    "C-SCENE": (1536, 1024), "C-SYMBOL": (1024, 1024),
+}
+# One preset per model: which template graph to fill and the sampler values
+# the prompt library recommends (§1.5). schnell is a 4-step distilled Flux.1
+# that ignores guidance (Apache 2.0). klein is Flux.2 [klein] 4B base
+# (Apache 2.0): undistilled, so CFG and NEGATIVE.txt apply. Flux.1 dev is
+# non-commercial and is deliberately NOT listed.
+MODEL_PRESETS = {
+    "schnell": {"template": "flux_template.json", "unet": "flux1-schnell.safetensors",
+                "steps": 4, "guidance": 3.0, "cfg": 1.0},
+    "klein": {"template": "flux2_klein_template.json", "unet": "flux-2-klein-base-4b.safetensors",
+              "steps": 20, "guidance": 3.0, "cfg": 4.0},
+}
+
+
+# ---------------------------------------------------------------- parsing
+
+def _canvas_fragments(text: str) -> dict[str, str]:
+    """§1.3 table: [C-XXX] code -> its verbatim fragment."""
+    out = {}
+    for m in re.finditer(r"^\| `\[(C-[A-Z]+)\]` \| [^|]+ \| `([^`]+)` \|", text, re.M):
+        out[m.group(1)] = m.group(2).strip()
+    return out
+
+
+def parse_library(text: str) -> list[dict]:
+    rows = []
+    # Headed entries (C-, V-, M-): a heading line, then a fenced block that
+    # starts with [S] and ends with the canvas code.
+    for m in re.finditer(r"^#{3,4} `([A-Z]-\d\d)` ([^\n]*)\n(?:[^\n]*\n)*?```\n(.*?)```",
+                         text, re.M | re.S):
+        entry_id, title, block = m.group(1), m.group(2).strip(), " ".join(m.group(3).split())
+        canvas = re.search(r"\[(C-[A-Z]+)\]", block)
+        subject = re.sub(r"\[S\]|\[C-[A-Z]+\]", "", block).strip(" ,")
+        # Optional **外貌** line between the heading and the block: looks and
+        # clothing only, for the full-body and bust tiers (library §2 note).
+        look = re.search(r"\*\*外貌\*\*：`([^`]+)`", m.group(0))
+        rows.append({"id": entry_id, "chapter": entry_id[0], "title": title,
+                     "canvas": canvas.group(1) if canvas else "", "subject": subject,
+                     "appearance": " ".join(look.group(1).split()) if look else ""})
+    # Table entries (T-, I-, W-, U-, E-, P-): one row each, canvas by chapter.
+    for m in re.finditer(r"^\| `([A-Z]-\d\d)` \| ([^|]+) \| `([^`]+)` \|", text, re.M):
+        entry_id, title, subject = m.group(1), m.group(2).strip(), " ".join(m.group(3).split())
+        rows.append({"id": entry_id, "chapter": entry_id[0], "title": title,
+                     "canvas": TABLE_CANVAS.get(entry_id[0], ""), "subject": subject,
+                     "appearance": ""})
+    rows.sort(key=lambda r: (list(CHAPTER_DIR).index(r["chapter"]), r["id"]))
+    for r in rows:
+        w, h = CANVAS_SIZE.get(r["canvas"], (0, 0))
+        r["width"], r["height"] = w, h
+        r["dir"] = CHAPTER_DIR[r["chapter"]]
+    return rows
+
+
+def build_csv() -> None:
+    text = LIBRARY.read_text(encoding="utf-8")
+    rows = parse_library(text)
+    with PROMPTS_CSV.open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["id", "chapter", "dir", "title", "canvas", "width", "height", "subject", "appearance"])
+        w.writeheader()
+        for r in rows:
+            w.writerow({k: r[k] for k in w.fieldnames})
+    frags = _canvas_fragments(text)
+    (HERE / "canvas.json").write_text(json.dumps(frags, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    by = {}
+    for r in rows:
+        by[r["chapter"]] = by.get(r["chapter"], 0) + 1
+    print(f"wrote {PROMPTS_CSV.name}: {len(rows)} entries {by}; canvas.json: {len(frags)} fragments")
+
+
+# ---------------------------------------------------------------- prompts
+
+def load_rows() -> list[dict]:
+    if not PROMPTS_CSV.exists():
+        build_csv()
+    with PROMPTS_CSV.open(encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def assemble(row: dict, canvas: dict[str, str], style: str, small: bool = False,
+             fragments: list[str] | None = None) -> str:
+    """STYLE_CORE + subject + canvas. For the full-body and bust tiers a row
+    with an **外貌** line uses that (looks only) plus the pose/expression
+    fragments (P-/E- rows) instead of the portrait prompt with its props."""
+    if not row["canvas"]:
+        raise ValueError(f"{row['id']} is a fragment (chapter {row['chapter']}), not a standalone asset")
+    subject = row["subject"]
+    if row["canvas"] in ("C-FULL", "C-BUST") and row.get("appearance"):
+        subject = row["appearance"]
+    for frag in fragments or []:
+        subject += ", " + frag
+    if small:  # §6: the 64 px icon tier gets a simplification suffix
+        subject += ", extremely simplified, bold readable silhouette, minimal internal detail"
+    return f"{style}, {subject}, {canvas[row['canvas']]}"
+
+
+def slug(title: str, subject: str) -> str:
+    """The English half of a headed title, else the subject's first words
+    (table rows are titled in Chinese only)."""
+    ascii_part = re.sub(r"[^A-Za-z0-9]+", "-", title.split("·")[-1]).strip("-").lower()
+    if len(ascii_part) >= 3:
+        return ascii_part
+    words = [w for w in re.findall(r"[A-Za-z]+", subject) if w.lower() not in {"a", "an", "the", "of"}]
+    return "-".join(words[:4]).lower() or "asset"
+
+
+# ---------------------------------------------------------------- comfy api
+
+def _post(path: str, payload: dict) -> dict:
+    req = urllib.request.Request(SERVER + path, data=json.dumps(payload).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.load(r)
+
+
+def _get(path: str) -> bytes:
+    with urllib.request.urlopen(SERVER + path, timeout=60) as r:
+        return r.read()
+
+
+def make_graph(template: dict, values: dict) -> dict:
+    """Fill the template's _slots (slot name -> [[node id, input name], ...])
+    with `values`; slots the template does not declare are ignored, so one
+    driver serves graphs with different node sets."""
+    g = json.loads(json.dumps({k: v for k, v in template.items() if not k.startswith("_")}))
+    for slot, targets in template.get("_slots", {}).items():
+        if slot not in values:
+            continue
+        for node_id, input_name in targets:
+            g[node_id]["inputs"][input_name] = values[slot]
+    return g
+
+
+def wait_for(prompt_id: str, timeout: float) -> list[dict]:
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        hist = json.loads(_get(f"/history/{prompt_id}"))
+        if prompt_id in hist:
+            entry = hist[prompt_id]
+            status = entry.get("status", {})
+            if status.get("status_str") == "error":
+                msgs = [m for m in status.get("messages", []) if m[0] == "execution_error"]
+                raise RuntimeError(f"ComfyUI error: {msgs[-1][1].get('exception_message') if msgs else status}")
+            images = []
+            for node_out in entry.get("outputs", {}).values():
+                images.extend(node_out.get("images", []))
+            if images:
+                return images
+        time.sleep(2.0)
+    raise TimeoutError(f"job {prompt_id} did not finish in {timeout:.0f}s")
+
+
+def download(image: dict, dest: Path) -> None:
+    q = urllib.parse.urlencode({"filename": image["filename"], "subfolder": image.get("subfolder", ""),
+                                "type": image.get("type", "output")})
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(_get("/view?" + q))
+
+
+# ---------------------------------------------------------------- main
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--build-csv", action="store_true", help="re-parse the prompt library into prompts.csv")
+    ap.add_argument("--ids", default="", help="comma-separated IDs, e.g. C-01,T-01")
+    ap.add_argument("--chapter", default="", help="one chapter letter: C V M T I W U")
+    ap.add_argument("--limit", type=int, default=0, help="stop after N entries")
+    ap.add_argument("--variants", type=int, default=1, help="seeds per entry (tiles want 4-6)")
+    ap.add_argument("--seed", type=int, default=954159497, help="base seed; variant i uses seed + i")
+    ap.add_argument("--model", choices=MODEL_PRESETS, default="klein")
+    ap.add_argument("--steps", type=int, default=0, help="override the preset's steps")
+    ap.add_argument("--guidance", type=float, default=0.0, help="override the preset's guidance (Flux.1)")
+    ap.add_argument("--cfg", type=float, default=0.0, help="override the preset's CFG (klein)")
+    ap.add_argument("--small", action="store_true", help="icons: add the §6 small-tier suffix")
+    ap.add_argument("--canvas", default="", help="override the canvas fragment, e.g. C-FULL or C-BUST for characters")
+    ap.add_argument("--pose", default="", help="P-xx pose fragment appended to the subject (full-body tier)")
+    ap.add_argument("--expression", default="", help="E-xx expression fragment appended to the subject (bust tier)")
+    ap.add_argument("--style-file", default="", help="use another STYLE_CORE file (A/B tests), e.g. STYLE_CORE_v1_antique.txt")
+    ap.add_argument("--dry-run", action="store_true", help="print prompts, queue nothing")
+    ap.add_argument("--timeout", type=float, default=900.0, help="seconds to wait per image")
+    args = ap.parse_args()
+
+    if args.build_csv:
+        build_csv()
+        if not (args.ids or args.chapter):
+            return 0
+
+    rows = load_rows()
+    canvas = json.loads((HERE / "canvas.json").read_text(encoding="utf-8"))
+    by_id = {r["id"]: r for r in rows}
+    fragments: list[str] = []
+    for code in (args.pose, args.expression):
+        if code:
+            frag = by_id.get(code.upper())
+            if frag is None or frag["chapter"] not in ("P", "E"):
+                print(f"{code} is not a P-/E- fragment row", file=sys.stderr)
+                return 2
+            fragments.append(frag["subject"])
+    style_path = (HERE / args.style_file) if args.style_file else STYLE_CORE
+    style = " ".join(style_path.read_text(encoding="utf-8").split())
+    wanted = [s.strip().upper() for s in args.ids.split(",") if s.strip()]
+    if wanted:
+        rows = [r for r in rows if r["id"] in wanted]
+        missing = set(wanted) - {r["id"] for r in rows}
+        if missing:
+            print(f"unknown ids: {sorted(missing)}", file=sys.stderr)
+            return 2
+    if args.chapter:
+        rows = [r for r in rows if r["chapter"] == args.chapter.upper()]
+    rows = [r for r in rows if r["canvas"]]
+    if args.canvas:
+        code = args.canvas.upper()
+        if code not in canvas or code not in CANVAS_SIZE:
+            print(f"unknown canvas {code}; choose from {sorted(canvas)}", file=sys.stderr)
+            return 2
+        for r in rows:
+            r["canvas"] = code
+            r["width"], r["height"] = CANVAS_SIZE[code]
+    if args.limit:
+        rows = rows[: args.limit]
+    if not rows:
+        print("nothing selected (use --ids or --chapter; E/P rows are fragments)", file=sys.stderr)
+        return 2
+
+    preset = dict(MODEL_PRESETS[args.model])
+    if args.steps:
+        preset["steps"] = args.steps
+    if args.guidance:
+        preset["guidance"] = args.guidance
+    if args.cfg:
+        preset["cfg"] = args.cfg
+    template = json.loads((HERE / preset["template"]).read_text(encoding="utf-8"))
+    negative = " ".join(NEGATIVE.read_text(encoding="utf-8").split())
+    uses_negative = "negative" in template.get("_slots", {})
+    print(f"model {preset['unet']}  template {preset['template']}  steps {preset['steps']}  "
+          f"{'cfg ' + str(preset['cfg']) if uses_negative else 'guidance ' + str(preset['guidance'])}  "
+          f"{len(rows)} entries x {args.variants} variant(s)")
+    if not uses_negative:
+        print("note: Flux.1 has no negative-prompt path; NEGATIVE.txt is not applied by this template")
+
+    jobs = []
+    for r in rows:
+        prompt = assemble(r, canvas, style, args.small, fragments)
+        for i in range(args.variants):
+            seed = args.seed + i
+            tag = f"_{args.canvas.lower()}" if args.canvas else ""
+            for code in (args.pose, args.expression):
+                if code:
+                    tag += f"_{code.lower()}"
+            if args.style_file:
+                tag += "_" + Path(args.style_file).stem.replace("STYLE_CORE_", "").lower()
+            name = f"{r['id']}_{slug(r['title'], r['subject'])}{tag}_{args.model}_s{seed}"
+            prefix = f"flux/{r['dir']}/{name}"
+            if args.dry_run:
+                print(f"\n[{r['id']}] {r['dir']}/{name}.png  {r['width']}x{r['height']}\n{prompt}")
+                continue
+            graph = make_graph(template, {
+                "unet": preset["unet"], "prompt": prompt, "negative": negative,
+                "guidance": preset["guidance"], "cfg": preset["cfg"], "steps": preset["steps"],
+                "width": int(r["width"]), "height": int(r["height"]), "seed": seed, "prefix": prefix})
+            try:
+                res = _post("/prompt", {"prompt": graph, "client_id": uuid.uuid4().hex})
+            except urllib.error.HTTPError as e:
+                print(f"queue failed for {r['id']}: {e.read().decode()[:500]}", file=sys.stderr)
+                return 1
+            jobs.append((res["prompt_id"], r, name))
+            print(f"queued {r['id']} seed {seed} -> {res['prompt_id'][:8]}")
+    if args.dry_run:
+        return 0
+
+    failures = 0
+    for prompt_id, r, name in jobs:
+        try:
+            images = wait_for(prompt_id, args.timeout)
+        except (RuntimeError, TimeoutError) as e:
+            print(f"FAILED {r['id']}: {e}", file=sys.stderr)
+            failures += 1
+            continue
+        for k, img in enumerate(images):
+            dest = OUT_DIR / r["dir"] / (f"{name}.png" if k == 0 else f"{name}_{k}.png")
+            download(img, dest)
+            print(f"saved {dest.relative_to(ROOT)}")
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

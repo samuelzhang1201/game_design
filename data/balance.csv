@@ -112,13 +112,13 @@ map_army_bar_w,14.0,military layer: width of a regiment's strength bar in screen
 map_army_bar_h,2.5,military layer: height of a regiment's strength bar in screen px
 map_army_bar_gap,1.5,military layer: gap between the plaque and its strength bar in screen px
 map_army_pick_px,8.0,military layer: screen px within which a click or hover picks a regiment
-map_relief_strength,0.02,terrain: shade change per unit of mean height difference to land neighbours (not distance-normalised) facing the light
+map_relief_strength,0,terrain: shade change per unit of mean height difference to land neighbours (not distance-normalised) facing the light — 0 = no relief on the map (owner 2026-09-11); 0.02 was the tuned value
 map_relief_min,0.6,terrain: darkest relief factor
 map_relief_max,1.35,terrain: brightest relief factor
 map_light_x,-0.7,terrain: light direction x (toward the light; negative = from the west)
 map_light_y,-0.7,terrain: light direction y (negative = from the north)
-map_altitude_gain,0.25,terrain: extra brightening from sea level to the summit
-map_sea_depth_gamma,0.6,terrain: exponent on h/20 for the deep-to-shallow sea gradient
+map_altitude_gain,0,terrain: extra brightening from sea level to the summit — 0 = flat (owner 2026-09-11); 0.25 was the tuned value
+map_sea_depth_gamma,6.0,terrain: exponent on h/20 for the deep-to-shallow sea gradient (high: only the last few units before the shore lighten, so the packed ocean's outer rim matches the deep-sea fill beyond it)
 map_coast_width,1.0,terrain: shore stroke width in screen px
 map_river_min_px,0.8,terrain: thinnest river stroke in screen px
 map_river_discharge_scale,0.06,terrain: river stroke width in native px per sqrt(discharge)

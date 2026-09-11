@@ -1,0 +1,44 @@
+{
+  "_comment": "CC Post Cutout — turns a generated portrait into a game asset: BiRefNet foreground mask -> alpha -> lanczos resize -> PNG with transparency. post.py uploads the source image to ComfyUI's input folder and fills the slots. width/height: one of them 0 keeps the aspect ratio (ImageScale).",
+  "_slots": {
+    "image": [["1", "image"]],
+    "width": [["6", "width"]],
+    "height": [["6", "height"]],
+    "prefix": [["7", "filename_prefix"]]
+  },
+  "1": {
+    "class_type": "LoadImage",
+    "_meta": {"title": "Generated image (uploaded to input/)"},
+    "inputs": {"image": "{{IMAGE}}"}
+  },
+  "2": {
+    "class_type": "LoadBackgroundRemovalModel",
+    "_meta": {"title": "BiRefNet"},
+    "inputs": {"bg_removal_name": "birefnet.safetensors"}
+  },
+  "3": {
+    "class_type": "RemoveBackground",
+    "_meta": {"title": "Foreground mask"},
+    "inputs": {"bg_removal_model": ["2", 0], "image": ["1", 0]}
+  },
+  "4": {
+    "class_type": "InvertMask",
+    "_meta": {"title": "Foreground -> transparency (JoinImageWithAlpha takes 1 = transparent)"},
+    "inputs": {"mask": ["3", 0]}
+  },
+  "5": {
+    "class_type": "JoinImageWithAlpha",
+    "_meta": {"title": "RGBA"},
+    "inputs": {"image": ["1", 0], "alpha": ["4", 0]}
+  },
+  "6": {
+    "class_type": "ImageScale",
+    "_meta": {"title": "Resize to the game size (lanczos)"},
+    "inputs": {"upscale_method": "lanczos", "width": 0, "height": 660, "crop": "disabled", "image": ["5", 0]}
+  },
+  "7": {
+    "class_type": "SaveImage",
+    "_meta": {"title": "Save RGBA PNG"},
+    "inputs": {"filename_prefix": "{{PREFIX}}", "images": ["6", 0]}
+  }
+}

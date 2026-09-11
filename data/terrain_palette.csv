@@ -1,20 +1,20 @@
 key,color,notes
-biome_1,#d6c48f,hot desert: pale sand
-biome_2,#c6bfa0,cold desert: grey sand
-biome_3,#c7c288,savanna: dry straw
-biome_4,#b8c78c,grassland: light green
-biome_5,#9fba75,tropical seasonal forest
-biome_6,#8fb07a,temperate deciduous forest: the common green
-biome_7,#7ea86a,tropical rainforest
-biome_8,#7aa274,temperate rainforest
-biome_9,#6f8e6a,taiga: dark conifer green
-biome_10,#a69f88,tundra: grey brown
-biome_11,#dfe5e5,glacier: ice
-biome_12,#8aa78a,wetland: dull green
-sea_deep,#3f5f78,open sea
-sea_shallow,#7fa3b6,shelf water next to the shore
-lake,#6f96ad,freshwater
-coast_line,#2e3a40,the shore stroke
-river,#5b86a3,river strokes
-road,#7a6247,roads
-trail,#8f7a62,trails and sea routes
+biome_1,#E1CFA3,hot desert: cream laid toward yellow ochre
+biome_2,#CFC3A4,cold desert: cream laid greyed
+biome_3,#D3BE86,savanna: yellow ochre lightened
+biome_4,#AEB58A,grassland: moss green lightened
+biome_5,#96A26E,tropical seasonal forest: moss green lightened a step
+biome_6,#6B7A4B,temperate deciduous forest: moss green (library 1.4)
+biome_7,#5F6E44,tropical rainforest: moss green darkened
+biome_8,#5A6942,temperate rainforest: moss green darkened a step
+biome_9,#535F3F,taiga: moss green darkest
+biome_10,#B9AE95,tundra: cream laid greyed toward umber
+biome_11,#E9E4D7,glacier: cream laid lightened
+biome_12,#7E8A68,wetland: moss green toward slate
+sea_deep,#6F93B8,open sea: brighter blue (owner 2026-09-11); flat — equals sea_shallow so no depth reads on the map
+sea_shallow,#6F93B8,shelf water: same as sea_deep (no depth gradient by default)
+lake,#7FA1C4,freshwater: the sea blue lightened a step
+coast_line,#5B4636,the shore stroke: raw umber (library 1.4)
+river,#5D82A8,river strokes: the sea blue darkened so they read on land
+road,#9C5A34,roads: burnt sienna (library 1.4)
+trail,#B98B6F,trails and sea routes: burnt sienna lightened
