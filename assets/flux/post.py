@@ -13,6 +13,7 @@ Tiers (sizes follow the game's existing art: scripts/ui/character_portrait.gd
 draws 48x48 design px chips from 96x96 files, and full-body art is 660 px tall):
     full  -> height 660, width by aspect   (from a [C-FULL] render)
     chip  -> 96 x 96                        (from a [C-BUST] render)
+    icon  -> 256 x 256                      (I-/U-/W- renders; the large tier of library §6)
 The tier is read from the filename tag (_c-full_ / _c-bust_) unless --tier
 is given. Stdlib only.
 """
@@ -32,7 +33,7 @@ import generate as gen  # noqa: E402  (shared ComfyUI helpers)
 HERE = Path(__file__).resolve().parent
 TEMPLATE = HERE / "post_cutout_template.json"
 OUT_DIR = HERE / "out" / "game"
-TIERS = {"full": (0, 660), "chip": (96, 96)}
+TIERS = {"full": (0, 660), "chip": (96, 96), "icon": (256, 256)}
 
 
 def upload(path: Path) -> str:
@@ -65,6 +66,8 @@ def tier_of(path: Path, forced: str) -> str:
         return "full"
     if "_c-bust_" in path.name:
         return "chip"
+    if re.match(r"[IUW]-\d\d_", path.name):  # map icons, UI pieces, tactical symbols
+        return "icon"
     raise ValueError(f"{path.name}: no _c-full_/_c-bust_ tag in the name; pass --tier")
 
 

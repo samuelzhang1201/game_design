@@ -1,5 +1,5 @@
 {
- "id": "97c76510-ec8d-4ca6-91d4-c3524bd6ab10",
+ "id": "fd0a242f-e1f4-4eca-bec6-ad5ac688ad7a",
  "revision": 0,
  "last_node_id": 11,
  "last_link_id": 10,
@@ -139,7 +139,7 @@
     "Node name for S&R": "CLIPTextEncode"
    },
    "widgets_values": [
-    "clean colored pencil illustration on bright smooth cream paper, crisp confident contour lines in dark umber pencil, light decorative directional hatching used only for shading, fabrics rendered as smooth woven cloth with clean folds and no fibrous or fuzzy texture, smooth evenly blended skin, fresh and luminous, flat clean paper background with no grain and no aging, muted earthen palette of raw umber, yellow ochre, burnt sienna, moss green, slate blue and oxblood red, restrained color, warm diffuse overcast daylight, historically accurate 12th to 14th century European material culture, naturalistic anatomy and proportion, appealing idealised faces with fine features, youthful where the age allows, contemporary character concept illustration quality, matte finish, a walled medieval city with crenellated stone curtain walls, a gatehouse with twin drum towers, dense tiled rooftops, a cathedral rising above them, a river gate, single isolated object, orthographic three-quarter overhead view, no background, no scene, no ground plane, centred, generous margin, 1:1 square"
+    "clean colored pencil illustration on bright smooth cream paper, crisp confident contour lines in dark umber pencil, light decorative directional hatching used only for shading, fabrics rendered as smooth woven cloth with clean folds and no fibrous or fuzzy texture, smooth evenly blended skin, every surface fully coloured with solid local colour and soft shading, the same painted treatment for buildings, objects and terrain as for people, no bare unpainted linework, fresh and luminous, flat clean paper background with no grain and no aging, muted earthen palette of raw umber, yellow ochre, burnt sienna, moss green, slate blue and oxblood red, restrained color, warm diffuse overcast daylight, historically accurate 12th to 14th century European material culture, naturalistic anatomy and proportion, appealing idealised faces with fine features, youthful where the age allows, contemporary character concept illustration quality, matte finish, a walled medieval city with crenellated stone curtain walls, a gatehouse with twin drum towers, dense tiled rooftops, a cathedral rising above them, a river gate, single isolated object, orthographic three-quarter overhead view, no background, no scene, no ground plane, centred, generous margin, 1:1 square"
    ],
    "title": "Prompt = STYLE_CORE + subject + canvas"
   },

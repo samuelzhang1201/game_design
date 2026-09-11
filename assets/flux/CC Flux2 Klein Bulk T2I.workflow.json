@@ -1,5 +1,5 @@
 {
- "id": "d90678d4-e298-4c73-b948-f9cf0d196613",
+ "id": "821b8c2e-4797-48b1-be57-5e68d4be9f6e",
  "revision": 0,
  "last_node_id": 14,
  "last_link_id": 13,
@@ -138,7 +138,7 @@
     "Node name for S&R": "CLIPTextEncode"
    },
    "widgets_values": [
-    "clean colored pencil illustration on bright smooth cream paper, crisp confident contour lines in dark umber pencil, light decorative directional hatching used only for shading, fabrics rendered as smooth woven cloth with clean folds and no fibrous or fuzzy texture, smooth evenly blended skin, fresh and luminous, flat clean paper background with no grain and no aging, muted earthen palette of raw umber, yellow ochre, burnt sienna, moss green, slate blue and oxblood red, restrained color, warm diffuse overcast daylight, historically accurate 12th to 14th century European material culture, naturalistic anatomy and proportion, appealing idealised faces with fine features, youthful where the age allows, contemporary character concept illustration quality, matte finish, a walled medieval city with crenellated stone curtain walls, a gatehouse with twin drum towers, dense tiled rooftops, a cathedral rising above them, a river gate, single isolated object, orthographic three-quarter overhead view, no background, no scene, no ground plane, centred, generous margin, 1:1 square"
+    "clean colored pencil illustration on bright smooth cream paper, crisp confident contour lines in dark umber pencil, light decorative directional hatching used only for shading, fabrics rendered as smooth woven cloth with clean folds and no fibrous or fuzzy texture, smooth evenly blended skin, every surface fully coloured with solid local colour and soft shading, the same painted treatment for buildings, objects and terrain as for people, no bare unpainted linework, fresh and luminous, flat clean paper background with no grain and no aging, muted earthen palette of raw umber, yellow ochre, burnt sienna, moss green, slate blue and oxblood red, restrained color, warm diffuse overcast daylight, historically accurate 12th to 14th century European material culture, naturalistic anatomy and proportion, appealing idealised faces with fine features, youthful where the age allows, contemporary character concept illustration quality, matte finish, a walled medieval city with crenellated stone curtain walls, a gatehouse with twin drum towers, dense tiled rooftops, a cathedral rising above them, a river gate, single isolated object, orthographic three-quarter overhead view, no background, no scene, no ground plane, centred, generous margin, 1:1 square"
    ],
    "title": "Prompt = STYLE_CORE + subject + canvas"
   },
@@ -176,7 +176,7 @@
     "Node name for S&R": "CLIPTextEncode"
    },
    "widgets_values": [
-    "digital airbrush, glossy, smooth gradient, neon, oversaturated, high contrast, anime, manga, cel shading, comic book, 3d render, cgi, plastic, vector art, flat color fill, thick ink outline, oil painting impasto, watercolor bleed, photograph, modern clothing, zipper, buttons on medieval garments, eyeglasses, wristwatch, printed typography, lettering, watermark, signature, logo, lens flare, bokeh, HDR, fisheye, extra fingers, deformed hands, plate armour before 1400, full gothic plate, horned helmet, longsword crossguard anachronism, aged paper, foxing, yellowed paper, heavy grain, smudged graphite, antique print, sepia, coarse features, haggard, fuzzy fabric, fibrous texture, felted wool, furry cloth"
+    "digital airbrush, glossy, smooth gradient, neon, oversaturated, high contrast, anime, manga, cel shading, comic book, 3d render, cgi, plastic, vector art, flat color fill, thick ink outline, oil painting impasto, watercolor bleed, photograph, modern clothing, zipper, buttons on medieval garments, eyeglasses, wristwatch, printed typography, lettering, watermark, signature, logo, lens flare, bokeh, HDR, fisheye, extra fingers, deformed hands, plate armour before 1400, full gothic plate, horned helmet, longsword crossguard anachronism, aged paper, foxing, yellowed paper, heavy grain, smudged graphite, antique print, sepia, coarse features, haggard, fuzzy fabric, fibrous texture, felted wool, furry cloth, bare line drawing, unpainted sketch, outline only, pale washed-out, architectural line art"
    ],
    "title": "Negative = NEGATIVE.txt"
   },

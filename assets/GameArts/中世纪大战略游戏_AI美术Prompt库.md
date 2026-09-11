@@ -83,8 +83,10 @@
 clean colored pencil illustration on bright smooth cream paper, crisp confident
 contour lines in dark umber pencil, light decorative directional hatching used
 only for shading, fabrics rendered as smooth woven cloth with clean folds and
-no fibrous or fuzzy texture, smooth evenly blended skin, fresh and
-luminous, flat clean paper background with no grain and no aging, muted earthen
+no fibrous or fuzzy texture, smooth evenly blended skin, every surface
+fully coloured with solid local colour and soft shading, the same painted
+treatment for buildings, objects and terrain as for people, no bare unpainted
+linework, fresh and luminous, flat clean paper background with no grain and no aging, muted earthen
 palette of raw umber, yellow ochre, burnt sienna, moss green, slate blue and
 oxblood red, restrained color, warm diffuse overcast daylight, historically
 accurate 12th to 14th century European material culture, naturalistic anatomy
@@ -104,7 +106,8 @@ printed typography, lettering, watermark, signature, logo, lens flare, bokeh, HD
 fisheye, extra fingers, deformed hands, plate armour before 1400, full gothic
 plate, horned helmet, longsword crossguard anachronism, aged paper, foxing,
 yellowed paper, heavy grain, smudged graphite, antique print, sepia, coarse
-features, haggard, fuzzy fabric, fibrous texture, felted wool, furry cloth
+features, haggard, fuzzy fabric, fibrous texture, felted wool, furry cloth, bare line
+drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 ```
 
 ### 1.3 `[C]` 画幅与构图片段
@@ -1666,8 +1669,10 @@ v2（当前）：
 clean colored pencil illustration on bright smooth cream paper, crisp confident
 contour lines in dark umber pencil, light decorative directional hatching used
 only for shading, fabrics rendered as smooth woven cloth with clean folds and
-no fibrous or fuzzy texture, smooth evenly blended skin, fresh and
-luminous, flat clean paper background with no grain and no aging, muted earthen
+no fibrous or fuzzy texture, smooth evenly blended skin, every surface
+fully coloured with solid local colour and soft shading, the same painted
+treatment for buildings, objects and terrain as for people, no bare unpainted
+linework, fresh and luminous, flat clean paper background with no grain and no aging, muted earthen
 palette of raw umber, yellow ochre, burnt sienna, moss green, slate blue and
 oxblood red, restrained color, warm diffuse overcast daylight, historically
 accurate 12th to 14th century European material culture, naturalistic anatomy
@@ -1701,6 +1706,7 @@ printed typography, lettering, watermark, signature, logo, lens flare, bokeh, HD
 fisheye, extra fingers, deformed hands, plate armour before 1400, full gothic
 plate, horned helmet, longsword crossguard anachronism, aged paper, foxing,
 yellowed paper, heavy grain, smudged graphite, antique print, sepia, coarse
-features, haggard, fuzzy fabric, fibrous texture, felted wool, furry cloth
+features, haggard, fuzzy fabric, fibrous texture, felted wool, furry cloth, bare line
+drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 ```
 
