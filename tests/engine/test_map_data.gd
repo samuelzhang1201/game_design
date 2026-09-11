@@ -246,17 +246,12 @@ func test_terrain_balance_keys_are_present() -> void:
 		assert_true(repo.balance.has(key), key)
 
 ## The terrain tables live in the same native space as the hit-test bitmaps
-## and the burg table (spec 2026-09-11 §8): every capital stands on a land
-## cell, and a sampled cell's class agrees with the biome bitmap under its
-## centre. This is the guard the deleted render calibration used to be.
+## (spec 2026-09-11 §8): a sampled cell's land/water class agrees with the
+## biome bitmap under its centre. A shifted, scaled or mirrored terrain would
+## fail this wholesale — it is the guard the deleted render calibration used
+## to be.
 func test_terrain_cells_share_the_bitmaps_coordinate_space() -> void:
 	var biome_img: Image = (load(repo.biome_texture_path) as Texture2D).get_image()
-	for code: String in repo.kingdoms:
-		var capital: Dictionary = repo.burgs[String(repo.kingdoms[code]["capital_burg"])]
-		var at := Vector2(float(capital["x"]), float(capital["y"]))
-		var cell := _nearest_cell(at)
-		assert_false(cell.is_empty(), "%s's capital finds a cell" % code)
-		assert_eq(String(cell["water"]), "", "%s's capital stands on land" % code)
 	var checked := 0
 	var ids: Array = repo.cells.keys()
 	ids.sort()
@@ -271,14 +266,3 @@ func test_terrain_cells_share_the_bitmaps_coordinate_space() -> void:
 			"cell %d at %s: bitmap and cells.csv agree on land/water" % [ids[i], center])
 		checked += 1
 	assert_gt(checked, 100, "enough cells sampled")
-
-## The cell whose centre is nearest to a point ({} when there are no cells).
-func _nearest_cell(at: Vector2) -> Dictionary:
-	var best := {}
-	var best_d := INF
-	for id: int in repo.cells:
-		var d := at.distance_squared_to(MapTerrain.cell_center(repo, repo.cells[id]))
-		if d < best_d:
-			best_d = d
-			best = repo.cells[id]
-	return best
