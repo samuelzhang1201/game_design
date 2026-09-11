@@ -131,6 +131,10 @@ static func build(repo: DataRepository) -> Dictionary:
 	for id in ids:
 		colors[id] = cell_color(repo, repo.cells[id])
 	var touching := vertex_cells(repo)
+	# map_terrain_blend 1: ring vertices average the cells around them, so
+	# tints flow across cell edges (a soft, painterly land). 0: every cell is
+	# one flat colour with a crisp edge (a mosaic of the pack's cells).
+	var blend := repo.bal("map_terrain_blend") != 0.0
 	var verts := PackedVector2Array()
 	var cols := PackedColorArray()
 	var idx := PackedInt32Array()
@@ -146,7 +150,7 @@ static func build(repo: DataRepository) -> Dictionary:
 		cols.append(own)
 		for v in ring:
 			verts.append(repo.vertices[v] as Vector2)
-			cols.append(_ring_color(touching[v], colors, repo.cells, water, own))
+			cols.append(_ring_color(touching[v], colors, repo.cells, water, own) if blend else own)
 		var n := ring.size()
 		for i in n:
 			idx.append(base)

@@ -1,6 +1,6 @@
 # assets/flux — Flux 批量出图模板
 
-把 `assets/GameArts/中世纪大战略游戏_AI美术Prompt库.md` 的 249 条资源 prompt 喂给本地 ComfyUI 的 Flux 批量生成。**不手写任何 prompt**：每条都是 `STYLE_CORE + 主体 + 画幅片段` 自动拼出来的（库 §0.1 / §10.8）。
+把 `development/Visuals/中世纪大战略游戏_AI美术Prompt库.md` 的 249 条资源 prompt 喂给本地 ComfyUI 的 Flux 批量生成。**不手写任何 prompt**：每条都是 `STYLE_CORE + 主体 + 画幅片段` 自动拼出来的（库 §0.1 / §10.8）。
 
 ## 文件
 
@@ -37,6 +37,7 @@ python3 assets/flux/generate.py --build-csv                   # 库改了之后�
   - `klein` = Flux.2 [klein] 4B **base**，Apache 2.0 可商用，未蒸馏，20 步、CFG 4.0（`--cfg` 可调，库建议 3.5–4.5），负面词生效。模型文件：`diffusion_models/flux-2-klein-base-4b.safetensors`、`text_encoders/qwen_3_4b.safetensors`、`vae/flux2-vae.safetensors`（Comfy-Org 的 HF 仓库 `flux2-klein` / `flux2-dev`）。
   - **不要用 Flux.1 dev、Flux.2 dev、klein 9B**：都是非商用许可，不能做游戏资产的生产底模。
 - seed 固定为 `--seed`（默认 954159497，与地图同源）+ 变体序号，同一 ID 重跑结果可复现；表情差分（E-）务必锁 seed 只换表情词。
+- **地图上的图标**：聚落贴图（`assets/settlements/`，`settlement_art.csv`）和兴趣点图标（`assets/markers/`，`marker_art.csv` 把地图包的 29 种标记类型映射到 13 个库图标）都来自这条流水线：`generate.py --ids I-xx` → `post.py --tier icon --size N --out-dir …` → 复制进 assets。聚落按档 256→136 px，兴趣点 64 px（地图上按 `map_marker_px` 固定 16 屏幕像素画）。
 - **方案 C（2026-09-11 决定）**：人物和事件插图走彩铅风；人物按 `[C-FULL]`（全身，档案栏）和 `[C-BUST]`（头肩，头像格）两档生成再经 `post.py` 去底缩放；地图和 UI 维持现状，只统一调色板（待定）。库默认的 `[C-PORTRAIT]` 半身像只用来定风格。
 - 全身/头肩两档用库里人物条目下的 `**外貌**` 行（只有长相和衣着）拼 prompt，再加 `--pose P-xx` / `--expression E-xx` 片段；没有 `**外貌**` 行的人物会退回用主 prompt（会带道具，效果差）。给一个人物补 `**外貌**` 行后 `--build-csv` 重建即可。目前只有 C-01、C-04 有。
 - `E-` / `P-` 行是片段（表情/姿态），不是独立资源，脚本会跳过；做差分时把片段接到对应 `C-` 的主体后面。

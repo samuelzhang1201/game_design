@@ -9,7 +9,7 @@ func _two_cells(light: Vector2 = Vector2(-1, 0), strength := 0.02,
 	var r := DataRepository.new()
 	r.balance = {"map_relief_strength": strength, "map_relief_min": 0.5,
 		"map_relief_max": 1.5, "map_light_x": light.x, "map_light_y": light.y,
-		"map_altitude_gain": altitude_gain, "map_sea_depth_gamma": 1.0}
+		"map_altitude_gain": altitude_gain, "map_sea_depth_gamma": 1.0, "map_terrain_blend": 1.0}
 	r.terrain_palette = {"biome_1": "#808080", "sea_deep": "#000000",
 		"sea_shallow": "#ffffff", "lake": "#0000ff"}
 	r.biomes = {1: {"biome_id": "1", "label": "Test", "color": "#ff0000"}}
@@ -117,7 +117,7 @@ func _shore() -> DataRepository:
 	var r := DataRepository.new()
 	r.balance = {"map_relief_strength": 0.02, "map_relief_min": 0.5,
 		"map_relief_max": 1.5, "map_light_x": -1.0, "map_light_y": 0.0,
-		"map_altitude_gain": 0.0, "map_sea_depth_gamma": 1.0}
+		"map_altitude_gain": 0.0, "map_sea_depth_gamma": 1.0, "map_terrain_blend": 1.0}
 	r.terrain_palette = {"biome_1": "#ffffff", "biome_2": "#000000",
 		"sea_deep": "#0000ff", "sea_shallow": "#ffffff", "lake": "#00ff00"}
 	r.biomes = {1: {"color": "#ff0000"}, 2: {"color": "#ff0000"}}
@@ -204,3 +204,12 @@ func test_reloading_a_pack_rebuilds_the_shared_mesh() -> void:
 	var after := MapTerrain.shared_mesh(repo)
 	assert_not_null(after)
 	assert_false(before == after, "the mesh was rebuilt after load_map")
+
+## map_terrain_blend 0: every ring vertex keeps its own cell's colour, so
+## vertex 0 on A's fan is white (A), not the A/B grey blend.
+func test_blend_off_keeps_each_cell_flat() -> void:
+	var r := _shore()
+	r.balance["map_terrain_blend"] = 0.0
+	var cols: PackedColorArray = MapTerrain.build(r)["colors"]
+	assert_eq(cols[1], Color(1, 1, 1, 1), "A's ring vertex is A's own white")
+	assert_eq(cols[5], Color(0, 0, 0, 1), "B's ring vertex is B's own black")

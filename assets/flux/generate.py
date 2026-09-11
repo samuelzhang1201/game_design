@@ -30,7 +30,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
-LIBRARY = ROOT / "assets" / "GameArts" / "中世纪大战略游戏_AI美术Prompt库.md"
+LIBRARY = ROOT / "development" / "Visuals" / "中世纪大战略游戏_AI美术Prompt库.md"
 PROMPTS_CSV = HERE / "prompts.csv"
 STYLE_CORE = HERE / "STYLE_CORE.txt"
 NEGATIVE = HERE / "NEGATIVE.txt"

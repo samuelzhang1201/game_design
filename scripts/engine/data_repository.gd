@@ -35,6 +35,9 @@ var resource_icons: Dictionary = {}
 ## data/settlement_art.csv rows: which settlement drawing a burg group (and
 ## whether it has walls) is shown with on the map (MapObjects.settlement_art).
 var settlement_art: Array[Dictionary] = []
+## data/marker_art.csv: marker type -> {texture, notes}, the point-of-interest
+## icon drawn for that type on the map (MapObjects.marker_art).
+var marker_art: Dictionary = {}
 ## data/terrain_palette.csv: key -> "#rrggbb" for the terrain the game draws
 ## itself (MapTerrain): land tints per biome, sea, lake, and line colours.
 var terrain_palette: Dictionary = {}
@@ -270,6 +273,9 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/settlement_art.csv", ["group", "walled", "tier", "texture"],
 			func(r): settlement_art.append(r)):
+		return false
+	if not _load_if_present(dir + "/marker_art.csv", ["type", "texture"],
+			func(r): marker_art[r["type"]] = r):
 		return false
 	if not _load_if_present(dir + "/terrain_palette.csv", ["key", "color"],
 			func(r): terrain_palette[r["key"]] = r["color"]):

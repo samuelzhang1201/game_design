@@ -302,8 +302,8 @@ func _tallest_tile() -> int:
 	return _tallest
 
 ## Towns as their drawings when the zoom allows, else gold circles sized by
-## tier (ringed for capitals); points of interest as teal diamonds — pins in
-## screen px, gated by the LOD rule.
+## tier (ringed for capitals); points of interest as their icons (teal
+## diamonds when a type has none) — pins in screen px, gated by the LOD rule.
 func _draw_pins() -> void:
 	var s := view_scale()
 	var min_pop := MapObjects.min_burg_pop_for_scale(Game.data, s)
@@ -328,12 +328,44 @@ func _draw_pins() -> void:
 		if String(b["is_capital"]) == "1":
 			draw_arc(sp, r + 2.5, 0.0, TAU, 24, UiPalette.GOLD, 1.0, true)
 	if s >= Game.data.bal("map_lod_marker_scale"):
+		var drawn_markers: Dictionary = {}
+		for sp_entry in marker_sprites():
+			draw_texture_rect(sp_entry["texture"], sp_entry["rect"], false)
+			drawn_markers[sp_entry["code"]] = true
 		for code: String in Game.data.markers:
+			if drawn_markers.has(code):
+				continue
 			var m: Dictionary = Game.data.markers[code]
 			var sp := map_to_screen(Vector2(float(m["x"]), float(m["y"])))
 			if on_screen.has_point(sp):
 				_draw_diamond(sp, PIN_MARKER + 1.0, PIN_OUTLINE)
 				_draw_diamond(sp, PIN_MARKER, UiPalette.TOOL_PERSONAL)
+
+## Points of interest as their icons (data/marker_art.csv), a fixed
+## map_marker_px square centred on the point — counters like the pins, not
+## part of the terrain — once the zoom passes map_lod_marker_scale. A type
+## without art keeps its diamond. {code, texture, rect}; public for tests
+## and hit-testing.
+func marker_sprites() -> Array:
+	var out: Array = []
+	if _terrain_mesh == null or view_scale() < Game.data.bal("map_lod_marker_scale"):
+		return out
+	var px := Game.data.bal("map_marker_px")
+	var frame := Rect2(Vector2.ZERO, size).grow(px)
+	for code: String in Game.data.markers:
+		var m: Dictionary = Game.data.markers[code]
+		var art := MapObjects.marker_art(Game.data, m)
+		if art.is_empty():
+			continue
+		var tex := _sprite_texture(String(art["texture"]))
+		if tex == null:
+			continue
+		var sp := map_to_screen(Vector2(float(m["x"]), float(m["y"])))
+		if not frame.has_point(sp):
+			continue
+		out.append({"code": code, "texture": tex,
+			"rect": Rect2(sp - Vector2(px, px) / 2.0, Vector2(px, px))})
+	return out
 
 ## The regiment markers on screen right now, topmost last:
 ## {code, pos, plaque, bar, size, frac, glyph, color, naval}. `plaque` and
@@ -665,7 +697,12 @@ func _draw_object_highlight(obj: Dictionary) -> void:
 		"marker":
 			var m: Dictionary = Game.data.markers[obj["code"]]
 			var sp := map_to_screen(Vector2(float(m["x"]), float(m["y"])))
-			draw_arc(sp, PIN_MARKER + 4.0, 0.0, TAU, 32, UiPalette.GOLD, 1.5, true)
+			var radius := PIN_MARKER + 4.0
+			for sp_entry in marker_sprites():
+				if String(sp_entry["code"]) == String(obj["code"]):
+					radius = (sp_entry["rect"] as Rect2).size.x * 0.65
+					break
+			draw_arc(sp, radius, 0.0, TAU, 32, UiPalette.GOLD, 1.5, true)
 		"army":
 			for marker: Dictionary in army_markers():
 				if String(marker["code"]) == String(obj["code"]):

@@ -614,3 +614,28 @@ func test_clicking_a_regiment_opens_its_card() -> void:
 	# With the layer off the same point is land again, not a regiment.
 	v.show_armies = false
 	assert_ne(String(v._object_under(v.map_to_screen(at)).get("kind", "")), "army")
+
+## Points of interest draw as their icons (data/marker_art.csv) once the
+## zoom passes the marker LOD: a fixed map_marker_px square on the point,
+## none while zoomed out.
+func test_points_of_interest_draw_as_icons_when_zoomed_in() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v._zoom_at(v.size / 2.0, 0.0001)
+	assert_eq(v.marker_sprites().size(), 0, "zoomed out, no marker icons")
+	var code: String = Game.data.markers.keys()[0]
+	var m: Dictionary = Game.data.markers[code]
+	var at := Vector2(float(m["x"]), float(m["y"]))
+	v._zoom_at(v.size / 2.0, 1000.0)
+	v._offset += v.size / 2.0 - v.map_to_screen(at)
+	v._clamp_offset()
+	var found: Dictionary = {}
+	for sp in v.marker_sprites():
+		if String(sp["code"]) == code:
+			found = sp
+	assert_false(found.is_empty(), "the marker under the view is drawn as an icon")
+	var rect: Rect2 = found["rect"]
+	var px := Game.data.bal("map_marker_px")
+	assert_almost_eq(rect.size.x, px, 0.01, "fixed screen size")
+	assert_almost_eq(rect.get_center().x, v.map_to_screen(at).x, 0.5, "centred on the point")
+	assert_almost_eq(rect.get_center().y, v.map_to_screen(at).y, 0.5, "centred on the point")

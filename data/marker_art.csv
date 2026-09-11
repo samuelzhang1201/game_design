@@ -1,0 +1,30 @@
+type,texture,notes
+mines,res://assets/markers/I-22_mine.png,library I-22 mine head
+inns,res://assets/markers/I-39_inn.png,library I-39 roadside inn
+ruins,res://assets/markers/I-30_ruins.png,library I-30 Roman ruins
+bridges,res://assets/markers/I-34_bridge.png,library I-34 stone bridge
+battlefields,res://assets/markers/I-31_battlefield.png,library I-31 old battlefield
+lighthouses,res://assets/markers/I-38_lighthouse.png,library I-38 lighthouse
+hot-springs,res://assets/markers/I-33_hot_spring.png,library I-33 bathhouse over a hot spring
+water-sources,res://assets/markers/I-33_hot_spring.png,a spring: the bathhouse icon stands in
+sacred-forests,res://assets/markers/I-32_sacred_site.png,library I-32 pre-Christian sacred site
+sacred-pineries,res://assets/markers/I-32_sacred_site.png,library I-32 pre-Christian sacred site
+libraries,res://assets/markers/I-28_university.png,library I-28 university college
+encounters,res://assets/markers/I-43_danger.png,library I-43 danger: lair
+brigands,res://assets/markers/I-43_danger.png,library I-43 danger: lair
+pirates,res://assets/markers/I-43_danger.png,library I-43 danger: lair
+hill-monsters,res://assets/markers/I-43_danger.png,library I-43 danger: lair
+sea-monsters,res://assets/markers/I-43_danger.png,library I-43 danger: lair
+lake-monsters,res://assets/markers/I-43_danger.png,library I-43 danger: lair
+dungeons,res://assets/markers/I-43_danger.png,library I-43 danger: lair
+statues,res://assets/markers/I-44_monument.png,library I-44 monument and graveyard
+necropolises,res://assets/markers/I-44_monument.png,library I-44 monument and graveyard
+caves,res://assets/markers/I-45_wonder.png,library I-45 natural wonder
+volcanoes,res://assets/markers/I-45_wonder.png,library I-45 natural wonder
+waterfalls,res://assets/markers/I-45_wonder.png,library I-45 natural wonder
+circuses,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering
+jousts,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering
+fairs,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering
+party,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering: a travelling party
+migration,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering: a migration on the move
+canoes,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering: a river gathering

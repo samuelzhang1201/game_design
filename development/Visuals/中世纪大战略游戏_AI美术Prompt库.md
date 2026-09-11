@@ -17,13 +17,13 @@
 | [3. 表情与姿态差分](#3-表情与姿态差分-e--p) | `E-01`~`E-16`, `P-01`~`P-12` | 28 |
 | [4. 世界地图底图](#4-世界地图底图-m) | `M-01` ~ `M-14` | 14 |
 | [5. 地形平铺贴图](#5-地形平铺贴图-t) | `T-01` ~ `T-20` | 20 |
-| [6. 地图元素与图标](#6-地图元素与图标-i) | `I-01` ~ `I-42` | 42 |
+| [6. 地图元素与图标](#6-地图元素与图标-i) | `I-01` ~ `I-46` | 46 |
 | [7. 战术地图元素](#7-战术地图元素-w) | `W-01` ~ `W-38` | 38 |
 | [8. 事件插图](#8-事件插图-v) | `V-01` ~ `V-34` | 34 |
 | [9. UI 框架件](#9-ui-框架件-u) | `U-01` ~ `U-18` | 18 |
 | [10. 生产流程与质检](#10-生产流程与质检) | 工作流、排期、checklist | — |
 
-**总计 249 个资源对象。**
+**总计 253 个资源对象。**
 
 ---
 
@@ -1116,6 +1116,17 @@ background, no numerals, no text [C-ICON]
 | `I-38` | 灯塔 | `a medieval lighthouse, a squat round stone tower on a headland with an open fire platform at the top` |
 | `I-39` | 驿站客栈 | `a roadside medieval inn, a timber-framed building with a projecting upper floor, a hanging painted sign bracket with a blank board, a stable and a horse trough` |
 
+### 6.8 地图标记（兴趣点，2026-09-11 新增）
+
+> 地图包里的标记类型比 6.5/6.6 多（Azgaar 的 markers：encounters、brigands、pirates、monsters、dungeons、statues、necropolises、caves、volcanoes、waterfalls、circuses、jousts、fairs…）。按类别归并成四个通用标记，具体类型到图标的映射在 `data/marker_art.csv`。
+
+| ID | 对象 | Prompt 主体 |
+|---|---|---|
+| `I-43` | 危险之地 | `a bandit lair, a dark cave mouth in a rocky outcrop ringed by skulls on stakes, a broken cart and scattered bones before it, ominous and deserted` |
+| `I-44` | 纪念碑与墓地 | `a weathered stone monument, a tall carved cross on a stepped plinth beside a small walled graveyard with leaning headstones and a yew tree` |
+| `I-45` | 自然奇观 | `a natural wonder, a waterfall dropping from a rock ledge into a clear pool beside a cave mouth, mist, ferns and wet stone` |
+| `I-46` | 集会与庆典 | `a fairground gathering, striped canvas tents and pennants around a tilting field with a wooden grandstand and a small crowd` |
+
 ### 6.7 资源图标
 
 > 这一组用于资源栏和贸易界面，画幅仍是 `[C-ICON]`，但**主体是静物而不是建筑**，追加片段：`arranged as a small still-life group on bare paper, no container beyond what is described`
@@ -1639,19 +1650,25 @@ above, cold slate blue with the comet in pale ochre [C-SCENE]
 - [ ] **文字**：AI 生成的任何文字都是乱码。旗帜、书页、招牌、地图标注上的字**全部手动重画或用矢量文字层叠加**
 - [ ] **族群刻画**：异邦角色（`C-51`~`C-55`）一律按有尊严的专业人士刻画，避免刻板化脸谱
 
-### 10.7 技术规格
+### 10.7 技术规格（2026-09-11 按游戏实际改写）
 
-| 资源类型 | 尺寸 | 格式 | 备注 |
-|---|---|---|---|
-| 人物立绘（半身） | 1024×1024 | PNG | 透明背景版另出 |
-| 人物立绘（全身） | 1024×1536 | PNG | 透明背景 |
-| 对话头像 | 512×512 | PNG | 圆形裁切在引擎里做 |
-| 事件插图 | 1536×1024 | PNG / WebP | 引擎内可压 |
-| 地形贴图 | 512×512 | PNG | **必须验证四方连续无缝** |
-| 地图图标 | 256 / 128 / 64 | PNG 带 alpha | 三档分别生成 |
-| 战术符号 | 256×256 | PNG 带 alpha | 中性色，代码染色 |
-| UI 件 | 按需 | PNG 带 alpha | 标注 9-slice 边距 |
-| 地图瓦片 | 256×256 | PMTiles 打包 | 见前一份地图架构文档 |
+游戏的设计视口是 **640×360**，窗口 1280×720（2×，`canvas_items` 拉伸），像素字体、nearest 过滤。所有资源都按「Flux 原生 1024 级生成 → 去底 → 缩到游戏尺寸」走，缩放和去底由 `assets/flux/post.py` 做，不手工。数字是**交付给引擎的尺寸**，不是生成尺寸。
+
+| 资源类型 | 生成 | 交付 | 格式 | 备注 |
+|---|---|---|---|---|
+| 对话头像 `[C-BUST]` | 1024×1024 | **96×96** | PNG 带 alpha | 头像格 48 设计像素，2× 即 96；`post.py --tier chip` |
+| 全身立绘 `[C-FULL]` | 1024×1536 | **高 660**，宽按比例 | PNG 带 alpha | 档案栏立绘，与现有资产同高；`post.py --tier full` |
+| 半身立绘 `[C-PORTRAIT]` | 1024×1024 | 不交付 | PNG | 只用于定风格、训 LoRA，游戏里不用 |
+| 事件插图 `[C-SCENE]` | 1536×1024 | **1024×683** | WebP | 事件弹窗约 265×170 设计像素（2× 即 530×340），1024 宽留一倍余量给放大缩放 |
+| 地图底图 `[C-MAP]` | — | 不交付 | — | 地图由引擎从 `cells.csv` 画矢量网格，不用图片底图 |
+| 地形贴图 `[C-TILE]` | 1024×1024 | 暂不交付 | PNG | 地图目前是平涂 biome 色；将来做纹理层时再按 512 无缝出 |
+| 聚落贴图 `I-01`～`I-05` | 1024×1024 | **256 / 224 / 200 / 168 / 136**（大都会→农庄） | PNG 带 alpha | 按档位缩小，让小聚落在地图上更小；`post.py --tier icon --size N` |
+| 兴趣点图标 `I-22`～`I-46` | 1024×1024 | **64×64** | PNG 带 alpha | 地图上按 16 屏幕像素固定大小绘制（`map_marker_px`），映射在 `data/marker_art.csv` |
+| 其他图标 `I-`（经济、宗教、防御） | 1024×1024 | 64×64 | PNG 带 alpha | 卡片和面板用；需要更大时再出 128 |
+| 战术符号 `W-` | 1024×1024 | 64×64 | PNG 带 alpha | 中性色，引擎按势力染色 |
+| UI 件 `U-` | 1024×1024 | 按件，设计尺寸 ×2 | PNG 带 alpha | 9-slice；现有 UI 是深色底 + 金色像素字，U- 系列是否采用另议 |
+
+**去掉的条目**：地图瓦片 / PMTiles（不做 GIS，地图是矢量的）；图标"三档分别生成"（游戏只需要一档小尺寸，缩放由 `post.py` 做，铅笔纹在 64 px 下本来就看不到）；头像 512×512（游戏里是 96）。
 
 ### 10.8 三条会毁掉项目的做法
 

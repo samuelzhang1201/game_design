@@ -266,3 +266,18 @@ func test_terrain_cells_share_the_bitmaps_coordinate_space() -> void:
 			"cell %d at %s: bitmap and cells.csv agree on land/water" % [ids[i], center])
 		checked += 1
 	assert_gt(checked, 100, "enough cells sampled")
+
+## Points of interest draw as icons (data/marker_art.csv): every marker type
+## the pack uses has a row, and the row's texture exists.
+func test_every_marker_type_has_an_icon() -> void:
+	assert_gt(repo.marker_art.size(), 0, "marker_art.csv loaded")
+	var types: Dictionary = {}
+	for code: String in repo.markers:
+		types[String(repo.markers[code]["type"])] = true
+	assert_gt(types.size(), 5, "the pack has several marker types")
+	for t: String in types:
+		var art := MapObjects.marker_art(repo, {"type": t})
+		assert_false(art.is_empty(), "marker type %s has an icon row" % t)
+		if not art.is_empty():
+			assert_true(ResourceLoader.exists(String(art["texture"])),
+				"%s's icon exists: %s" % [t, art["texture"]])

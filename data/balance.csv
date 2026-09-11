@@ -77,6 +77,7 @@ knowledge_doubt_threshold,50,credibility below which a persona sheet says the ch
 map_lod_town_scale,0.5,world map: screen px per native map px at/above which towns with map_lod_town_pop+ people get a pin (below: capitals only)
 map_lod_village_scale,1.25,world map: scale at/above which every burg gets a pin
 map_lod_marker_scale,0.5,world map: scale at/above which points of interest get a pin
+map_marker_px,16.0,world map: point-of-interest icon size in screen px (fixed at any zoom, like the pins; the icons are data/marker_art.csv)
 map_lod_town_pop,12000,world map: population a non-capital needs for a pin between the town and village scales
 map_pick_radius_px,6,world map: screen px within which a click/hover picks a pin
 map_line_pick_px,4,world map: screen px within which a click/hover picks a road or river
@@ -118,6 +119,7 @@ map_relief_max,1.35,terrain: brightest relief factor
 map_light_x,-0.7,terrain: light direction x (toward the light; negative = from the west)
 map_light_y,-0.7,terrain: light direction y (negative = from the north)
 map_altitude_gain,0,terrain: extra brightening from sea level to the summit — 0 = flat (owner 2026-09-11); 0.25 was the tuned value
+map_terrain_blend,1,terrain: 1 = ring vertices blend the cells around them (soft painterly land); 0 = flat colour per cell with crisp edges
 map_sea_depth_gamma,6.0,terrain: exponent on h/20 for the deep-to-shallow sea gradient (high: only the last few units before the shore lighten, so the packed ocean's outer rim matches the deep-sea fill beyond it)
 map_coast_width,1.0,terrain: shore stroke width in screen px
 map_river_min_px,0.8,terrain: thinnest river stroke in screen px

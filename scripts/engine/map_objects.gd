@@ -588,6 +588,12 @@ static func settlement_art(repo: DataRepository, b: Dictionary) -> Dictionary:
 			return row
 	return {}
 
+## The point-of-interest icon for a marker row (data/marker_art.csv by the
+## marker's type), or {} when the type has none and the view falls back to
+## its diamond.
+static func marker_art(repo: DataRepository, m: Dictionary) -> Dictionary:
+	return repo.marker_art.get(String(m.get("type", "")), {})
+
 ## --- Regiments (user request 2026-09-10) -------------------------------
 ## The military layer draws the realm's own regiments where the pack puts
 ## them. The counts per arm live in data/maps/<id>/military/regiments.csv;
