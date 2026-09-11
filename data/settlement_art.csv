@@ -1,10 +1,10 @@
 group,walled,tier,texture,notes
-capital,,capital,res://assets/settlements/capital.png,a realm's seat: the castle city
-city,,city,res://assets/settlements/city.png,the cathedral city
-town,1,walled_town,res://assets/settlements/walled_town.png,a town behind walls
-town,0,town,res://assets/settlements/town.png,a market town
-village,,village,res://assets/settlements/village.png,a ring of farms
-hamlet,,hamlet,res://assets/settlements/hamlet.png,a few houses
+capital,,capital,res://assets/settlements/capital.png,a realm's seat: library I-05 metropolis (256 px)
+city,,city,res://assets/settlements/city.png,library I-04 walled city (224 px)
+town,1,walled_town,res://assets/settlements/walled_town.png,library I-03 market town (200 px) — a fortified variant can replace it later (library 6.2)
+town,0,town,res://assets/settlements/town.png,library I-03 market town (200 px)
+village,,village,res://assets/settlements/village.png,library I-02 village (168 px)
+hamlet,,hamlet,res://assets/settlements/hamlet.png,library I-01 farmstead (136 px)
 fort,,walled_town,res://assets/settlements/walled_town.png,a fort draws as a walled town
 monastery,,village,res://assets/settlements/village.png,a monastery draws as a village
 caravanserai,,town,res://assets/settlements/town.png,

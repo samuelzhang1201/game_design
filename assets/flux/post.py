@@ -75,6 +75,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("files", nargs="+", help="generated PNGs")
     ap.add_argument("--tier", choices=TIERS, default="", help="force the output tier")
+    ap.add_argument("--size", type=int, default=0, help="override the tier's square size (icons: map sprite tiers)")
+    ap.add_argument("--out-dir", default="", help="save here instead of out/game/<tier>/")
     ap.add_argument("--timeout", type=float, default=300.0)
     args = ap.parse_args()
     template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
@@ -88,6 +90,8 @@ def main() -> int:
         for tag in re.findall(r"_(klein|schnell|v1_antique|[a-z0-9]+_antique)_", path.name):
             stem += "_" + tag
         width, height = TIERS[tier]
+        if args.size:
+            width, height = args.size, args.size
         name = upload(path)
         graph = gen.make_graph(template, {"image": name, "width": width, "height": height,
                                           "prefix": f"flux/game/{tier}/{stem}"})
@@ -102,9 +106,10 @@ def main() -> int:
             print(f"FAILED {stem}: {e}", file=sys.stderr)
             failures += 1
             continue
-        dest = OUT_DIR / tier / f"{stem}.png"
+        dest = (Path(args.out_dir) if args.out_dir else OUT_DIR / tier) / f"{stem}.png"
         gen.download(images[0], dest)
-        print(f"saved {dest.relative_to(gen.ROOT)}")
+        shown = dest.relative_to(gen.ROOT) if dest.is_relative_to(gen.ROOT) else dest
+        print(f"saved {shown}")
     return 1 if failures else 0
 
 
