@@ -1,5 +1,5 @@
 {
- "id": "b7558fbe-5d7f-4f44-a47f-809e813ed903",
+ "id": "905c95a3-bd63-4e86-8650-3f4c51b5bb04",
  "revision": 0,
  "last_node_id": 8,
  "last_link_id": 7,
@@ -12,8 +12,8 @@
     80
    ],
    "size": [
-    320,
-    340
+    380,
+    200
    ],
    "flags": {},
    "order": 0,
@@ -40,18 +40,19 @@
    "widgets_values": [
     "example.png",
     "image"
-   ]
+   ],
+   "title": "Generated image (uploaded to input/)"
   },
   {
    "id": 2,
    "type": "LoadBackgroundRemovalModel",
    "pos": [
     -260,
-    480
+    310
    ],
    "size": [
-    320,
-    60
+    380,
+    160
    ],
    "flags": {},
    "order": 1,
@@ -71,18 +72,19 @@
    },
    "widgets_values": [
     "birefnet.safetensors"
-   ]
+   ],
+   "title": "BiRefNet"
   },
   {
    "id": 3,
    "type": "RemoveBackground",
    "pos": [
-    120,
-    480
+    160,
+    80
    ],
    "size": [
-    300,
-    80
+    380,
+    120
    ],
    "flags": {},
    "order": 2,
@@ -111,18 +113,19 @@
    "properties": {
     "Node name for S&R": "RemoveBackground"
    },
-   "widgets_values": []
+   "widgets_values": [],
+   "title": "Foreground mask"
   },
   {
    "id": 4,
    "type": "InvertMask",
    "pos": [
-    460,
-    480
+    580,
+    80
    ],
    "size": [
-    220,
-    60
+    380,
+    120
    ],
    "flags": {},
    "order": 3,
@@ -146,18 +149,19 @@
    "properties": {
     "Node name for S&R": "InvertMask"
    },
-   "widgets_values": []
+   "widgets_values": [],
+   "title": "Foreground -> transparency (JoinImageWithAlpha takes 1 = transparent)"
   },
   {
    "id": 5,
    "type": "JoinImageWithAlpha",
    "pos": [
-    720,
+    1000,
     80
    ],
    "size": [
-    260,
-    80
+    380,
+    120
    ],
    "flags": {},
    "order": 4,
@@ -186,18 +190,19 @@
    "properties": {
     "Node name for S&R": "JoinImageWithAlpha"
    },
-   "widgets_values": []
+   "widgets_values": [],
+   "title": "RGBA"
   },
   {
    "id": 6,
    "type": "ImageScale",
    "pos": [
-    1020,
+    1420,
     80
    ],
    "size": [
-    320,
-    130
+    380,
+    280
    ],
    "flags": {},
    "order": 5,
@@ -226,18 +231,19 @@
     0,
     660,
     "disabled"
-   ]
+   ],
+   "title": "Resize to the game size (lanczos)"
   },
   {
    "id": 7,
    "type": "SaveImage",
    "pos": [
-    1380,
+    1840,
     80
    ],
    "size": [
-    420,
-    460
+    380,
+    160
    ],
    "flags": {},
    "order": 6,
@@ -249,24 +255,31 @@
      "link": 7
     }
    ],
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "images",
+     "type": "IMAGE",
+     "links": []
+    }
+   ],
    "properties": {
     "Node name for S&R": "SaveImage"
    },
    "widgets_values": [
-    "flux/game/manual"
-   ]
+    "flux/manual/test"
+   ],
+   "title": "Save RGBA PNG"
   },
   {
    "id": 8,
    "type": "Note",
    "pos": [
-    120,
-    600
+    -260,
+    540
    ],
    "size": [
-    560,
-    160
+    380,
+    200
    ],
    "flags": {},
    "order": 7,
@@ -277,7 +290,7 @@
     "Node name for S&R": "Note"
    },
    "widgets_values": [
-    "CC Post Cutout — a generated portrait becomes a game asset.\nBiRefNet foreground mask -> InvertMask (JoinImageWithAlpha takes 1 = transparent) -> RGBA -> lanczos resize -> PNG.\nfull-body: height 660, width 0 (keeps aspect). chip: 96 x 96.\nDriven by assets/flux/post.py; outputs go to assets/flux/out/game/<tier>/, never straight into assets/portraits/."
+    "CC Post Cutout\nA generated portrait becomes a game asset: BiRefNet mask -> InvertMask -> RGBA ->\nlanczos resize (full: height 660; chip: 96x96). Driven by assets/flux/post.py.\nPrompt = STYLE_CORE.txt + subject + [C-...] canvas, never typed by hand."
    ]
   }
  ],
@@ -341,24 +354,24 @@
  ],
  "groups": [
   {
-   "title": "CC Post Cutout — driven by assets/flux/post.py",
+   "title": "CC Post Cutout — filled by assets/flux/generate.py / post.py",
    "bounding": [
     -280,
     0,
-    2100,
-    800
+    2580,
+    780
    ],
-   "color": "#8a5a3f",
+   "color": "#3f789e",
    "font_size": 20
   }
  ],
  "config": {},
  "extra": {
   "ds": {
-   "scale": 0.7,
+   "scale": 0.6,
    "offset": [
     300,
-    60
+    80
    ]
   }
  },

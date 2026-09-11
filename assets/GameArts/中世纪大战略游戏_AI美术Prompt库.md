@@ -159,7 +159,7 @@ features, haggard, fuzzy fabric, fibrous texture, felted wool, furry cloth
 
 #### `C-01` 年迈的国王 · The Aging King
 **性格**：多疑、疲惫、拒绝放权 | **画幅**：`[C-PORTRAIT]`
-**外貌**：`a gaunt European king in his late sixties, deeply lined face, sunken grey eyes under heavy lids, thin white hair pressed flat by a simple open gold circlet, sparse white beard, wearing a heavy oxblood wool mantle lined with worn miniver fur over a long embroidered tunic, mouth set in a hard downward line, eyes narrowed with suspicion, exhausted but unyielding`
+**外貌**：`a gaunt European king of sixty-eight, deeply lined face, sunken grey eyes under heavy lids, thin white hair under a simple open gold circlet, a sparse white beard, wearing an oxblood wool mantle lined with miniver over a long embroidered tunic with a round neck closed by a gold brooch, a gilded belt, dark hose and black leather turnshoes`
 ```
 [S] a gaunt European king in his late sixties, deeply lined face, sunken grey eyes
 under heavy lids, thin white hair pressed flat by a simple open gold circlet, sparse
@@ -172,6 +172,7 @@ unyielding [C-PORTRAIT]
 
 #### `C-02` 算计的王后 · The Calculating Queen
 **性格**：冷静、耐心、手腕比国王更硬
+**外貌**：`a composed European queen of forty-two, pale oval face with a high plucked forehead, dark steady eyes, hair concealed under a white linen wimple and barbette with a gold fillet, wearing a close-fitted slate blue wool gown with tight buttoned sleeves and a high collar laced at the throat, a woven girdle, long skirts and black leather turnshoes`
 ```
 [S] a composed European queen in her early forties, pale oval face with high forehead
 plucked in the fashion of the period, dark eyes steady and unblinking, hair entirely
@@ -183,6 +184,7 @@ knowing half smile that does not reach her eyes, absolutely still [C-PORTRAIT]
 
 #### `C-03` 傲慢的王储 · The Impatient Heir
 **性格**：自负、暴躁、能力不配野心
+**外貌**：`a European crown prince of twenty-two, flushed cheeks, curled chestnut hair to the jaw, a thin moustache, wearing a fashionable parti-coloured cotehardie in ochre and oxblood with dagged sleeves and a high buttoned collar, a jewelled belt slung low on the hips, parti-coloured hose, a sheathed sword at the hip and pointed leather ankle boots`
 ```
 [S] a European crown prince of twenty-two, handsome in a soft unearned way, flushed
 cheeks, curled chestnut hair to the jaw, thin moustache, wearing a fashionable parti
@@ -194,7 +196,7 @@ irritation, leaning back [C-PORTRAIT]
 
 #### `C-04` 私生子 · The Bastard Son
 **性格**：阴郁、观察者、被排除在外
-**外貌**：`a young man of nineteen with the king's exact bone structure but plain undyed clothing, dark hair cut bluntly at the neck, guarded resentful eyes, wearing a plain undyed linen tunic with a narrow leather belt, brown hose and soft plain leather turnshoes without laces or decoration, no jewellery whatsoever, jaw tight`
+**外貌**：`a young man of nineteen with the king's exact bone structure but plain undyed clothing, dark hair cut bluntly at the neck, wearing a plain undyed linen tunic with a keyhole neck slit tied by a drawstring and a narrow leather belt, brown hose and soft plain leather turnshoes without laces or decoration, no jewellery whatsoever`
 ```
 [S] a young man of nineteen with the king's exact bone structure but plain undyed
 clothing, dark hair cut bluntly at the neck, one shoulder turned away from the viewer as
@@ -206,6 +208,7 @@ frame with more empty paper on the side he is turning toward [C-PORTRAIT]
 
 #### `C-05` 独眼老公爵 · The One-Eyed Duke
 **性格**：暴烈、忠诚、活在过去的战争里
+**外貌**：`a broad-shouldered European duke of sixty, weathered red face, a livid scar from the left temple through a milky blind eye to the jaw, iron-grey hair and full beard, wearing a mail hauberk under a faded heraldic surcoat with a neck slit laced at the throat, a sword belt, dark hose and leather riding boots`
 ```
 [S] a broad shouldered European duke of sixty, thick neck, weathered red face, a livid
 puckered scar running from left temple through a milky blind eye down to the jaw, iron
@@ -217,6 +220,7 @@ into the frame [C-PORTRAIT]
 
 #### `C-06` 掌权的寡妇伯爵 · The Widowed Countess Regnant
 **性格**：精算、克制、不容置疑
+**外貌**：`a European noblewoman of fifty, sharp intelligent face, thin lips, crow's feet, dressed entirely in undyed black wool, a black veil over a white linen wimple, a high round neckline fastened with a small jet brooch, a plain leather girdle, long skirts over black hose and black leather turnshoes, a single iron ring on her thumb`
 ```
 [S] a European noblewoman of fifty in mourning, sharp intelligent face, thin lips,
 crow's feet, entirely dressed in undyed black wool with a black veil over a white
@@ -228,6 +232,7 @@ impatience, spine straight [C-PORTRAIT]
 
 #### `C-07` 幼年继承人 · The Child Heir
 **性格**：惊惶、被推上位、渴望躲藏
+**外貌**：`a European boy of eight, small pale face, wide brown eyes, fine blond hair, an adult gold circlet slipped too low over his forehead nearly to the eyebrows, swamped in an oversized ermine-trimmed crimson wool mantle, its keyhole neck slit gaping at the throat over a cream silk tunic, a soft gilded belt, red hose and leather turnshoes`
 ```
 [S] a European boy of eight seated on an adult sized carved wooden throne, small pale
 face, wide frightened brown eyes, fine blond hair, an adult gold circlet slipped down
@@ -239,6 +244,7 @@ ears [C-PORTRAIT]
 
 #### `C-08` 政治联姻的公主 · The Bride of Alliance
 **性格**：认命、体面、内里崩溃
+**外貌**：`a European princess of sixteen, round young face, grey eyes with reddened rims, loose unbound fair hair to the waist under a circlet of flowers, wearing a pale gold silk bridal gown with a wide round neckline edged in pearls and tight laced sleeves, a jewelled girdle at the hips, long skirts, cream hose and silk-covered turnshoes`
 ```
 [S] a European princess of sixteen in bridal dress, round young face, reddened rims
 around clear grey eyes, loose unbound fair hair falling past the waist crowned with a
@@ -250,6 +256,7 @@ lips pressed into a courteous smile [C-PORTRAIT]
 
 #### `C-09` 铁腕摄政太后 · The Iron Regent
 **性格**：绝对权威、政治动物、不带感情
+**外貌**：`a European dowager queen of fifty-five, severe handsome face, strong nose, heavy-lidded pale eyes, a widow's black barbette and veil under a narrow gold coronet, wearing a dark slate blue wool surcoat with fur trim and a high round collar over a black gown, a plain girdle, long skirts, black leather turnshoes, one heavy signet ring worn inward`
 ```
 [S] a European dowager queen of fifty five, severe handsome face with a strong nose,
 heavy lidded pale eyes, wearing a widow's black barbette and veil with a narrow gold
@@ -261,6 +268,7 @@ symmetrical composition suggesting authority [C-PORTRAIT]
 
 #### `C-10` 流亡贵族 · The Exiled Lord
 **性格**：怨毒、体面尽失、随时反扑
+**外貌**：`a European nobleman of thirty-eight in decline, hollow unshaven cheeks, long unkempt dark hair, wearing a once-fine burgundy velvet houppelande now stained and frayed at the cuffs with its fur trim torn away, the high collar hanging open at the throat, a fine sword belt with an empty scabbard, patched dark hose and cracked leather riding boots`
 ```
 [S] a European nobleman of thirty eight in decline, hollow unshaven cheeks, long unkempt
 dark hair, wearing a once fine burgundy velvet houppelande now stained, frayed at the
@@ -274,6 +282,7 @@ a hunched defensive posture [C-PORTRAIT]
 
 #### `C-11` 大法官 · The Chancellor
 **性格**：滴水不漏、真正的权力经纪人
+**外貌**：`a European chancellor of forty-five, clean-shaven ascetic face, thin arched eyebrows, close-cropped greying hair with a tonsure, wearing sober dark slate wool scholar's robes with a fur-lined hood pushed back from a high collar, a narrow leather belt, long skirts over black hose and plain leather turnshoes, a wax seal matrix on a cord at his neck`
 ```
 [S] a European chancellor of forty five, clean shaven ascetic face, thin arched
 eyebrows, close cropped greying hair with a clerical tonsure, wearing sober dark slate
@@ -285,6 +294,7 @@ completely unreadable [C-PORTRAIT]
 
 #### `C-12` 内府总管 · The Steward
 **性格**：和善、事无巨细、绝不亏空
+**外貌**：`a plump European household steward of fifty, ruddy round face, close-trimmed grey beard, thinning hair, wearing a practical dark green wool tunic with a keyhole neck slit closed by a drawstring, a broad leather belt carrying a heavy iron ring of a dozen keys, brown hose and sturdy leather ankle boots`
 ```
 [S] a plump European household steward of fifty, ruddy cheerful face, close trimmed grey
 beard, thinning hair, wearing a practical dark green wool tunic with a broad leather belt
@@ -295,6 +305,7 @@ friendly smile with a shrewd edge to it, slight forward bow of the head [C-PORTR
 
 #### `C-13` 密探首领 · The Spymaster
 **性格**：无表情、无姓名、无痕迹
+**外貌**：`a European figure of indeterminate age, deliberately forgettable features, a straight mouth and plain jaw, a brown hooded wool cloak drawn up over the head so the upper face lies in deep shadow, beneath it a dark tunic with a plain round neck, a narrow leather belt, dark hose and soft leather turnshoes, no ornament`
 ```
 [S] a European figure of indeterminate age in dark unremarkable clothing, a plain brown
 hooded cloak drawn up so the upper face is in deep shadow with only a straight mouth and
@@ -306,6 +317,7 @@ portrait [C-PORTRAIT]
 
 #### `C-14` 宫廷医师 · The Court Physician
 **性格**：博学、审慎、地位微妙
+**外貌**：`a Jewish physician of sixty in a medieval European court, dignified narrow face, long white beard, deep-set eyes, wearing a pointed scholar's cap and a long dark blue wool robe with a high round collar fastened at the throat, a narrow leather belt at the waist, the skirts falling to dark leather turnshoes`
 ```
 [S] a Jewish physician of sixty in a medieval European court, dignified narrow face,
 long white beard, deep set thoughtful eyes, wearing a long belted dark blue robe with a
@@ -317,6 +329,7 @@ gravity [C-PORTRAIT]
 
 #### `C-15` 御前书记 · The Royal Scribe
 **性格**：近视、迂腐、记得每一件事
+**外貌**：`a European monastic scribe of thirty-five, pale indoor complexion, permanently squinting watery eyes, ink stains on the fingers and a smudge on one cheek, a small tonsure, wearing an undyed wool habit with a wide keyhole neck opening and a knotted cord belt, the long skirts over plain leather turnshoes, no jewellery`
 ```
 [S] a European monastic scribe of thirty five, pale indoor complexion, permanently
 squinting watery eyes, ink stains on the fingers and one smudge on the cheek, a slightly
@@ -327,6 +340,7 @@ concentration, shoulders rounded from decades at a writing desk [C-PORTRAIT]
 
 #### `C-16` 使节 · The Envoy
 **性格**：油滑、多语、忠于出价最高者
+**外貌**：`a European diplomat of forty, olive complexion, a neat pointed black beard, quick dark eyes, wearing a fur-trimmed chaperon hat and a well-cut travelling houppelande in verdigris green with a high collar laced at the throat, a narrow belt at the waist, dark hose and fine leather ankle boots, a gold chain of office across the chest`
 ```
 [S] a European diplomat of forty, olive complexion, neat pointed black beard, quick
 mobile dark eyes, wearing a well cut travelling houppelande in verdigris green with a
@@ -337,6 +351,7 @@ broad charming smile showing teeth, eyebrows raised in practised delight [C-PORT
 
 #### `C-17` 弄臣 · The Fool
 **性格**：唯一敢说真话的人
+**外貌**：`a European court fool of forty-five, sharp asymmetrical face, one shoulder higher than the other, thinning red hair, wearing a soft hood with two limp points over a faded parti-coloured tunic in ochre and moss green, small tarnished bells at the hem, a round neck slit laced with a cord, mismatched hose and worn leather turnshoes`
 ```
 [S] a European court fool of forty five, sharp asymmetrical face, one shoulder visibly
 higher than the other, thinning red hair, wearing a faded parti coloured tunic in ochre
@@ -348,6 +363,7 @@ flat, cold and entirely serious [C-PORTRAIT]
 
 #### `C-18` 税吏 · The Tax Collector
 **性格**：冷漠、精确、被所有人憎恨
+**外貌**：`a European tax official of forty-eight, thin bloodless face, small close-set eyes, a downturned mouth, wearing a clerk's flat cap and plain well-maintained dark brown wool with a round neck closed by a small bronze brooch, a leather scrip purse on the belt, brown hose and neat leather ankle boots`
 ```
 [S] a European tax official of forty eight, thin bloodless face, small close set eyes,
 downturned mouth, wearing plain but well maintained dark brown wool with a clerk's flat
@@ -358,6 +374,7 @@ the tablet, expression of complete bureaucratic indifference [C-PORTRAIT]
 
 #### `C-19` 王后侍女 · The Lady-in-Waiting
 **性格**：谨慎、观察一切、消息的枢纽
+**外貌**：`a European noblewoman of twenty-six, delicate features, alert dark eyes, hair coiled in netted cauls either side of the head under a light linen veil, wearing a modest but fine moss green wool gown with tight laced sleeves and a round neckline edged with narrow braid, a slim girdle, long skirts, cream hose and soft leather turnshoes`
 ```
 [S] a European noblewoman of twenty six, delicate features, alert dark eyes, hair coiled
 in netted cauls either side of the head under a light veil, wearing a modest but fine
@@ -369,6 +386,7 @@ expression that is one degree too watchful [C-PORTRAIT]
 
 #### `C-20` 匠师建筑师 · The Master Builder
 **性格**：固执、专业、只服从结构
+**外貌**：`a European master mason of fifty-two, weathered square face, grey stubble, broad scarred hands with cracked nails, wearing an undyed linen coif tied under the chin and a sturdy brown wool tunic with rolled sleeves and a keyhole neck slit laced at the throat, a wide leather belt, brown hose and heavy leather ankle boots`
 ```
 [S] a European master mason of fifty two, weathered square face, grey stubble, broad
 scarred hands with cracked nails, wearing a practical undyed linen coif tied under the
@@ -380,6 +398,7 @@ viewer with blunt appraising directness, one eyebrow slightly raised, unimpresse
 
 #### `C-21` 宫廷大臣的女儿 · The Ambitious Daughter
 **性格**：野心勃勃、二十岁、比父亲更懂时局
+**外貌**：`a European young noblewoman of twenty, sharp clever face, amber eyes, auburn hair in two netted braids under a fine linen veil, wearing an elegantly cut slate blue gown with a wide round neckline and tight laced sleeves, a silver girdle, long skirts, pale hose and soft leather turnshoes, a small pendant at her throat`
 ```
 [S] a European young noblewoman of twenty, sharp clever face, quick amber eyes, auburn
 hair in two netted braids under a fine linen veil, wearing an elegantly cut slate blue
@@ -392,6 +411,7 @@ looking directly and confidently into the viewer's eyes without deference [C-POR
 
 #### `C-22` 老元帅 · The Old Marshal
 **性格**：沉稳、经验、不再热血
+**外貌**：`a European marshal of sixty-two, close-cropped white hair, heavy jaw, a network of old scars on the cheek and the bridge of the nose, steady grey eyes, wearing a mail hauberk and coif with a plain undecorated linen surcoat slit at the round neck, a simple sword belt with a sheathed longsword, mail chausses and leather riding boots`
 ```
 [S] a European marshal of sixty two, close cropped white hair, heavy jaw, a network of
 old scars on the cheek and the bridge of the nose, calm steady grey eyes, wearing a mail
@@ -403,6 +423,7 @@ counted the dead [C-PORTRAIT]
 
 #### `C-23` 少壮骑士 · The Young Banneret
 **性格**：意气风发、荣誉至上、必将被现实教育
+**外貌**：`a European knight of twenty-four, bright open face, wide blue eyes, fair hair damp at the temples from a helmet, wearing a mail hauberk with the coif pushed back to the shoulders over a fresh oxblood and gold heraldic surcoat with a neck slit laced at the throat, a gilded sword belt, mail chausses and gilt-spurred leather riding boots`
 ```
 [S] a European knight of twenty four, bright open face flushed with excitement, blue
 eyes wide, fair hair damp at the temples from a helmet, wearing a mail hauberk and coif
@@ -413,6 +434,7 @@ and chin up in an eager forward lean, grinning with unguarded enthusiasm [C-PORT
 
 #### `C-24` 老军士长 · The Grizzled Sergeant
 **性格**：粗野、务实、真正带兵的人
+**外貌**：`a European infantry sergeant of forty-five, broken nose, an upper tooth missing, heavy stubble, sun-darkened skin, wearing an iron kettle hat pushed back on the head, a padded linen gambeson with a mail collar over its laced round neck, a broad leather belt, dark hose and scuffed leather ankle boots`
 ```
 [S] a European infantry sergeant of forty five, broken nose, missing an upper tooth,
 heavy stubble, sun darkened skin, wearing a padded gambeson with a mail collar and an
@@ -423,6 +445,7 @@ order, eyes hard and completely unimpressed [C-PORTRAIT]
 
 #### `C-25` 长弓手 · The Longbowman
 **性格**：沉默、耐心、致命
+**外貌**：`a spare European archer of thirty, weathered narrow face, a sparse beard, an overdeveloped left shoulder and back from a lifetime at the bow, wearing a simple hood over an undyed linen shirt with rolled sleeves and a laced keyhole neck opening, a leather bracer on the left forearm, a narrow belt, brown hose and plain leather turnshoes`
 ```
 [S] a lean European archer of thirty, weathered narrow face, sparse beard, an
 overdeveloped left shoulder and back from a lifetime at the bow, wearing an undyed linen
@@ -434,6 +457,7 @@ holding absolutely still [C-PORTRAIT]
 
 #### `C-26` 弩手 · The Crossbowman
 **性格**：技术工种、冷静、按流程做事
+**外貌**：`a stocky European crossbowman of thirty-four, square unremarkable face, a short dark beard, wearing a mail collar over a quilted linen gambeson laced at the round neck, a large pavise shield slung on his back, a heavy belt with a spanning hook, dark hose and stout leather ankle boots`
 ```
 [S] a stocky European crossbowman of thirty four, square unremarkable face, short dark
 beard, wearing a mail collar over a quilted gambeson with a large pavise shield slung on
@@ -444,6 +468,7 @@ the mechanism, a workmanlike expression of pure mechanical focus [C-PORTRAIT]
 
 #### `C-27` 雇佣兵队长 · The Mercenary Captain
 **性格**：贪婪、可靠到合同结束为止
+**外貌**：`a European mercenary captain of thirty-eight, hard handsome face, dark hair tied back, a gold ring in one ear, wearing a jumble of fine mismatched equipment, an Italian mail shirt with one odd pauldron under a scavenged heraldic surcoat with the arms defaced and its neck slit laced askew, a sword belt, dark hose and worn riding boots`
 ```
 [S] a European mercenary captain of thirty eight, hard handsome face, a gold ring in one
 ear, dark hair tied back, a jumble of mismatched high quality equipment taken from
@@ -455,6 +480,7 @@ sword hilt, one eyebrow raised, a thin amused smile [C-PORTRAIT]
 
 #### `C-28` 扈从少年 · The Squire
 **性格**：崇拜、笨拙、还没杀过人
+**外貌**：`a European squire of fifteen, round unfinished face, freckles across the nose, ears too large, unruly straw-coloured hair, cheeks smudged, wearing a plain oversized wool tunic belted twice to make it fit, its keyhole neck slit gaping at the throat, brown hose sagging at the knee and scuffed leather turnshoes, no jewellery`
 ```
 [S] a European squire of fifteen, round unfinished face, freckles across the nose, ears
 too large, unruly straw coloured hair, wearing a plain oversized wool tunic belted twice
@@ -465,6 +491,7 @@ smudged, an eager anxious to please expression [C-PORTRAIT]
 
 #### `C-29` 攻城工程师 · The Siege Engineer
 **性格**：数学脑、对人命不感兴趣
+**外貌**：`a European siege engineer of forty, gaunt narrow face, wild greying hair escaping a linen coif, burn scars on the backs of both hands, wearing a filthy leather apron over an undyed wool tunic with a laced round neck, a belt of small tools at the waist, dark hose and heavy leather ankle boots`
 ```
 [S] a European siege engineer of forty, gaunt intense face, wild greying hair escaping a
 linen coif, burn scars on the backs of both hands, wearing a filthy leather apron over
@@ -476,6 +503,7 @@ viewer, eyebrows raised in the delighted absorbed expression of a man solving a 
 
 #### `C-30` 守城的女领主 · The Lady Holding the Walls
 **性格**：临危受命、寸步不让（历史有据）
+**外貌**：`a European noblewoman of thirty-five, strong-boned face streaked with soot, hair bound up tightly under a plain linen kerchief rather than a courtly veil, wearing a man's mail collar over the shoulders of a practical dark wool gown with a high laced neckline, the skirts hitched and belted up at the hip over dark hose and leather ankle boots`
 ```
 [S] a European noblewoman of thirty five directing a castle's defence, strong boned
 determined face streaked with soot, hair bound up tightly under a plain linen kerchief
@@ -487,6 +515,7 @@ blazing with absolute refusal [C-PORTRAIT]
 
 #### `C-31` 残废老兵 · The Maimed Veteran
 **性格**：被遗忘、酗酒、还在打上一场仗
+**外貌**：`a European veteran of fifty, prematurely aged, deeply hollowed cheeks, a milky scar across the forehead, an empty left sleeve pinned up at the shoulder, wearing the rotted remains of a military gambeson under a patched beggar's cloak with a hood, the neck opening tied with a scrap of cord, frayed hose and broken leather turnshoes`
 ```
 [S] a European veteran of fifty, prematurely aged, deeply hollowed cheeks, an empty left
 sleeve pinned up at the shoulder, a milky scar across the forehead, wearing the rotted
@@ -497,6 +526,7 @@ yard gaze, mouth slightly open, entirely still [C-PORTRAIT]
 
 #### `C-32` 骑兵队长 · The Cavalry Captain
 **性格**：华丽、冲动、爱马胜过爱人
+**外貌**：`a European cavalry captain of twenty-nine, sun-browned aquiline face, a well-kept moustache, long dark hair, wearing a mail hauberk under a well-fitted verdigris surcoat with a laced round neck, a fine sword belt, mail chausses, gilt spurs and tall leather riding boots`
 ```
 [S] a European cavalry captain of twenty nine, sun browned aquiline face, a well kept
 moustache, long dark hair, wearing a mail hauberk under a well fitted verdigris surcoat
@@ -510,6 +540,7 @@ over the shoulder at the viewer with a reckless confident grin, body already tur
 
 #### `C-33` 主教 · The Bishop
 **性格**：世俗、富有、政治动物
+**外貌**：`a well-fed European bishop of fifty-five, smooth heavy-jowled face, small shrewd eyes, soft pink hands, wearing a tall white mitre and a richly embroidered silk cope clasped at the breast with a jewelled morse over a white linen alb with an embroidered round collar, a knotted cincture, red silk slippers, an enormous amethyst ring`
 ```
 [S] a well fed European bishop of fifty five, smooth heavy jowled face, small shrewd
 eyes, soft pink hands, wearing a rich embroidered cope over a white alb with a tall
@@ -520,6 +551,7 @@ on his own stomach, expression benign, complacent and entirely worldly [C-PORTRA
 
 #### `C-34` 苦修隐士 · The Ascetic Hermit
 **性格**：狂热、真诚、危险
+**外貌**：`an emaciated European hermit of sixty, skeletal face with every bone visible, a wild matted white beard to the chest, fever-bright eyes, sun-blackened skin, wearing only a rope-belted undyed linen robe, threadbare and ragged at the hem, its slit neck open at the collarbone, a knotted cord scourge at the waist, and bare dirty feet`
 ```
 [S] an emaciated European hermit of sixty, skeletal face with every bone visible, a wild
 matted white beard to the chest, burning fever bright eyes, sun blackened skin, wearing
@@ -531,6 +563,7 @@ transported [C-PORTRAIT]
 
 #### `C-35` 修道院长 · The Abbot
 **性格**：务实、经营者、比多数领主更懂账
+**外貌**：`a European Benedictine abbot of forty-eight, broad even face, clean-shaven with a neat tonsure, mild brown eyes, wearing a plain black wool habit with a hood lying flat over the shoulders and a round neck opening, a leather cincture at the waist, long skirts over black hose and plain leather turnshoes, a pectoral cross on a cord`
 ```
 [S] a European Benedictine abbot of forty eight, calm broad face, clean shaven with a
 neat tonsure, mild but shrewd brown eyes, wearing a plain black wool habit with a
@@ -541,6 +574,7 @@ faint pragmatic smile, the unhurried expression of a competent administrator [C-
 
 #### `C-36` 女修道院长 · The Abbess
 **性格**：严厉、博学、比主教更有原则
+**外貌**：`a European abbess of fifty-seven, austere finely boned face, pale eyes, completely veiled in black over a white linen wimple drawn close around the face, wearing an undyed wool habit with a high round neck under a black scapular, a knotted cincture, long skirts over plain leather turnshoes, a plain silver ring of office`
 ```
 [S] a European abbess of fifty seven, austere finely boned face, pale unwavering eyes,
 completely veiled in black over a white wimple that frames the face tightly, wearing an
@@ -551,6 +585,7 @@ authority and no warmth whatsoever [C-PORTRAIT]
 
 #### `C-37` 托钵修士 · The Mendicant Friar
 **性格**：亲民、走遍天下、真信
+**外貌**：`a European friar of thirty-three, open weathered face, laugh lines around warm brown eyes, a rough tonsure grown out, dusty from the road, wearing a patched grey-brown wool habit with a pointed hood and a round neck opening, a rope cincture with a battered wooden bowl hanging from it, and bare dirty feet`
 ```
 [S] a European friar of thirty three, open weathered kind face, dusty from the road,
 laugh lines around warm brown eyes, a rough tonsure grown out, wearing a patched grey
@@ -561,6 +596,7 @@ head tilted back slightly, mouth open in a broad genuine laugh [C-PORTRAIT]
 
 #### `C-38` 异端审判官 · The Inquisitor
 **性格**：冷静、有条理、毫无恶意——这才可怕
+**外貌**：`a European Dominican inquisitor of forty-two, still symmetrical face, pale grey eyes, thin colourless lips, a precise tonsure, wearing a spotless black cappa with a hood over a white wool habit with a round neck opening, a leather cincture, the long skirts falling to black leather turnshoes, no ornament but a small plain cross`
 ```
 [S] a European Dominican inquisitor of forty two, still symmetrical face, absolutely calm
 pale grey eyes, thin colourless lips, a precise tonsure, wearing a spotless black cappa
@@ -572,6 +608,7 @@ all [C-PORTRAIT]
 
 #### `C-39` 抄经僧 · The Illuminator
 **性格**：眼睛快瞎了、活在颜料里
+**外貌**：`an elderly European monastic illuminator of seventy, tiny stooped body, a milky cataract clouding one eye and the other squinted almost shut, a deeply wrinkled face, fingertips stained ultramarine and vermilion, a worn tonsure, wearing an undyed wool habit with a round neck and an ink-spotted scapular, a cord belt, plain leather turnshoes`
 ```
 [S] an elderly European monastic illuminator of seventy, tiny stooped frame, milky
 cataract clouding one eye, the other squinted almost shut, deeply wrinkled face, stained
@@ -583,6 +620,7 @@ concentration [C-PORTRAIT]
 
 #### `C-40` 随军教士 · The Crusade Preacher
 **性格**：煽动、雄辩、送别人去死
+**外貌**：`a European crusade preacher of forty-five, gaunt magnetic face, deep-set fanatical eyes, a shock of dark hair, wearing a plain undyed wool habit with a large red cloth cross sewn onto the breast, a wide keyhole neck slit at the throat, a rope cincture, the dusty skirts over plain leather turnshoes`
 ```
 [S] a European crusade preacher of forty five, gaunt magnetic face, deep set fanatical
 eyes, a shock of dark hair, wearing a coarse habit with a large red cloth cross sewn onto
@@ -595,6 +633,7 @@ entire body straining upward [C-PORTRAIT]
 
 #### `C-41` 铁匠 · The Blacksmith
 **性格**：沉默、力量、村里真正被需要的人
+**外貌**：`a European village blacksmith of forty, enormous corded forearms, soot-blackened skin, a singed beard, thick burn scars on the hands, wearing a heavy leather apron over a bare chest with its neck strap crossing one shoulder, rough linen braies at the hip, and plain leather ankle boots`
 ```
 [S] a European village blacksmith of forty, enormous corded forearms, soot blackened
 skin, sweat running through the grime, a singed beard, thick burn scars on the hands,
@@ -605,6 +644,7 @@ viewer with a neutral incurious glance, unbothered [C-PORTRAIT]
 
 #### `C-42` 行会长 · The Guild Master
 **性格**：暴富、讲究排场、政治上很危险
+**外貌**：`a prosperous European guild master of fifty-two, heavy well-fed face, a neatly forked grey beard, wearing an expensive fur-trimmed burgundy wool gown far finer than his birth entitles, its high collar closed at the throat, a broad tooled belt, dark hose and fine leather ankle boots, rings on four fingers and a guild chain of office over the shoulders`
 ```
 [S] a prosperous European guild master of fifty two, heavy well fed face, neatly forked
 grey beard, rings on four fingers, wearing an expensive fur trimmed burgundy gown far
@@ -616,6 +656,7 @@ tucked, looking down his nose at the viewer with proprietary self satisfaction
 
 #### `C-43` 客栈老板娘 · The Innkeeper
 **性格**：泼辣、见多识广、知道所有八卦
+**外貌**：`a European alewife of forty-four, broad ruddy face, strong bare forearms, greying brown hair escaping a linen kerchief, wearing a practical moss green kirtle with the sleeves pushed up and a round neck laced across the breast, a stained linen apron over the long skirts, wool hose and stout leather turnshoes`
 ```
 [S] a European alewife of forty four, broad ruddy face, strong bare forearms, greying
 brown hair escaping a linen kerchief, wearing a practical moss green kirtle with the
@@ -626,6 +667,7 @@ mouth twisted in a sceptical amused smirk, sizing the viewer up [C-PORTRAIT]
 
 #### `C-44` 老农 · The Old Ploughman
 **性格**：沉默、耐劳、见过三次饥荒
+**外貌**：`a European peasant farmer of fifty-eight who looks seventy, deeply seamed sun-blackened face, white stubble, a permanently bent spine, enormous knotted arthritic hands, wearing a shapeless undyed wool tunic with a frayed hem and a plain slit neck tied with cord, a rope belt, bare legs wrapped in linen strips, and crude leather turnshoes`
 ```
 [S] a European peasant farmer of fifty eight who looks seventy, deeply seamed sun
 blackened face, white stubble, permanently bent spine, enormous knotted arthritic hands,
@@ -636,6 +678,7 @@ from under his brows with patient exhausted resignation [C-PORTRAIT]
 
 #### `C-45` 磨坊主 · The Miller
 **性格**：狡黠、缺斤短两、人人都恨他
+**外貌**：`a European miller of forty-one, round dusty face, small darting eyes, everything from hair to eyebrows to clothing coated in a fine white film of flour, wearing a floury soft cap and a light-coloured wool tunic with a round neck slit tied at the throat, a leather belt, pale hose and dusty leather turnshoes`
 ```
 [S] a European miller of forty one, round dusty face, everything from hair to eyebrows to
 clothing coated in a fine white film of flour, small darting eyes, wearing a light coloured
@@ -646,6 +689,7 @@ grinning ingratiatingly, eyes sliding away from the viewer [C-PORTRAIT]
 
 #### `C-46` 草药婆与接生婆 · The Herbwife
 **性格**：智慧、被需要也被恐惧
+**外貌**：`a European village midwife of sixty-three, sharp knowing face, one clouded eye, deep lines, silver hair under a plain dark kerchief, wearing a worn undyed kirtle with a round neckline laced across the breast, a wide belt hung with small linen pouches, long skirts over dark hose and old leather turnshoes`
 ```
 [S] a European village midwife of sixty three, sharp knowing face, one clouded eye, deep
 lines, silver hair under a plain dark kerchief, wearing a worn undyed kirtle with a wide
@@ -656,6 +700,7 @@ assessment, mouth pursed, quietly formidable [C-PORTRAIT]
 
 #### `C-47` 乞丐 · The Beggar
 **性格**：绝望、隐形、社会的底
+**外貌**：`a European beggar of indeterminate age between thirty and sixty, filthy matted hair and beard, one leg twisted and useless, sores visible on the shin, wearing layered rags tied with cord over a torn tunic with a gaping slit neck, a scrap of sacking as a hood, and both feet bound in rag strips`
 ```
 [S] a European beggar of indeterminate age between thirty and sixty, filthy matted hair
 and beard, one leg twisted and useless, sores visible on the shin, wearing layered rags
@@ -666,6 +711,7 @@ looking up with hopeless practised supplication [C-PORTRAIT]
 
 #### `C-48` 小偷 · The Cutpurse
 **性格**：敏捷、机会主义、随时准备跑
+**外貌**：`a wiry European thief of twenty-three, thin quick face, sharp cheekbones, dark eyes, a knife scar through one eyebrow, wearing close-fitting dark nondescript clothing, a hood half up over a plain round-necked tunic laced at the throat, a narrow belt with a small sheathed blade, dark hose and soft leather shoes`
 ```
 [S] a wiry European thief of twenty three, thin quick face, sharp cheekbones, dark eyes
 already looking at the exit, a knife scar through one eyebrow, wearing close fitting dark
@@ -677,6 +723,7 @@ grin [C-PORTRAIT]
 
 #### `C-49` 游吟诗人 · The Minstrel
 **性格**：表演型人格、消息贩子、不可信
+**外貌**：`a European minstrel of twenty-seven, mobile youthful face, long dark curls, a theatrical arched eyebrow, wearing a feathered cap at a rakish angle over a jaunty parti-coloured tunic in ochre and verdigris with a laced round neck, a slim belt, mismatched hose and pointed leather ankle boots`
 ```
 [S] a European minstrel of twenty seven, animated expressive face, long dark curls, a
 theatrical arched eyebrow, wearing a jaunty parti coloured tunic in ochre and verdigris
@@ -687,6 +734,7 @@ back, mouth wide open singing, one leg forward, entire body in motion [C-PORTRAI
 
 #### `C-50` 伦巴第银行家 · The Lombard Banker
 **性格**：算计、跨国、比国王更懂钱
+**外貌**：`a northern Italian banker of forty-six in medieval Europe, olive complexion, a neat short dark beard, heavy-lidded eyes, wearing a plain flat cap and a sober but extremely fine dark red wool gown with a fur collar clasped at the throat, a narrow belt with a purse, dark hose and fine leather turnshoes`
 ```
 [S] a northern Italian banker of forty six in medieval Europe, olive complexion, neat
 short dark beard, heavy lidded patient eyes, wearing a sober but extremely fine dark red
@@ -700,6 +748,7 @@ polite immovable expression [C-PORTRAIT]
 
 #### `C-51` 诺斯首领 · The Norse Jarl
 **性格**：豪迈、暴力、重誓言
+**外貌**：`a Scandinavian jarl of forty-two, weather-beaten face, a thick red-blond beard braided into two forks, hair shaved at the sides and long on top, wearing a fur mantle over a mail shirt and a blue wool tunic whose round neck is pinned by a penannular brooch, a wide belt, silver arm rings, dark trousers and leather ankle boots`
 ```
 [S] a Scandinavian jarl of forty two, broad weather beaten face, pale blue eyes, a thick
 red blond beard braided into two forks with small silver rings, hair shaved at the sides
@@ -710,6 +759,7 @@ before him, feet planted wide, head tilted back, roaring with laughter [C-PORTRA
 
 #### `C-52` 拜占庭将军 · The Byzantine Strategos
 **性格**：文明、傲慢、视西欧人为蛮族
+**外貌**：`a Byzantine general of fifty, olive-skinned face, an oiled square-cut black and grey beard, dark eyes, wearing a lamellar klibanion over a purple and gold silk tunic with a high embroidered collar, a jewelled pteruges skirt, a cloak fastened at the right shoulder by a gold fibula, a sword belt with a sheathed spathion and tall red leather boots`
 ```
 [S] a Byzantine general of fifty, refined olive skinned face, an oiled square cut black
 and grey beard, dark intelligent eyes, wearing a lamellar klibanion over a rich purple
@@ -721,6 +771,7 @@ condescension [C-PORTRAIT]
 
 #### `C-53` 安达卢西亚学者 · The Andalusi Scholar
 **性格**：沉静、渊博、被三方争抢
+**外貌**：`an Andalusi scholar of fifty-five, thoughtful ascetic face, a closely trimmed grey beard, dark eyes, wearing an elegantly wound cream turban and a fine sober robe of cream linen and indigo silk whose high round neck is closed at the throat with a small cloth knot, a narrow sash at the waist, and soft leather slippers`
 ```
 [S] an Andalusi scholar of fifty five, thoughtful ascetic face, closely trimmed grey
 beard, calm dark eyes, wearing a fine but sober cream and indigo robe with an elegantly
@@ -731,6 +782,7 @@ of intellectual pleasure, treated with full scholarly dignity [C-PORTRAIT]
 
 #### `C-54` 草原弓骑 · The Steppe Horse-Archer
 **性格**：风霜、寡言、来去如风
+**外貌**：`a steppe nomad horse archer of thirty, broad high-cheekboned wind-burned face, a thin drooping moustache, narrow dark eyes, hair in a long braid under a fur-trimmed pointed cap, wearing a padded silk deel coat over lamellar, crossed and fastened high at the collar, a wide sash, a gorytos quiver at the hip, loose trousers and soft leather riding boots`
 ```
 [S] a steppe nomad horse archer of thirty, broad high cheekboned wind burned face, thin
 drooping moustache, narrow watchful dark eyes, hair in a long braid under a fur trimmed
@@ -742,6 +794,7 @@ alert [C-PORTRAIT]
 
 #### `C-55` 黎凡特香料商 · The Levantine Spice Merchant
 **性格**：世故、多语、和所有人做生意
+**外貌**：`a Levantine merchant of forty-eight, warm brown skin, a full well-groomed dark beard going grey at the chin, crow's feet, wearing a wrapped headcloth and layered robes of fine linen and striped silk with a round neck opening slit at the throat, a wide sash at the waist, and soft leather slippers`
 ```
 [S] a Levantine merchant of forty eight, warm brown skin, a full well groomed dark beard
 going grey at the chin, crow's feet from smiling, wearing layered fine linen and striped

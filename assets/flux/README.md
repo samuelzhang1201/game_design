@@ -14,6 +14,7 @@
 | `prompts.csv` | 由库解析出的 249 条：`id, chapter, dir, title, canvas, width, height, subject`。改库后 `--build-csv` 重建，不要手改。 |
 | `canvas.json` | 库 §1.3 的 8 个 `[C-…]` 画幅片段。 |
 | `generate.py` | 出图驱动脚本，纯标准库，走 `127.0.0.1:8188` 的 HTTP API。 |
+| `export_ui_workflows.py` | 把三张 API 模板图连同当前的 STYLE_CORE / NEGATIVE 导出成 ComfyUI 界面格式，并装进本机的 `user/default/workflows/`。改了风格文本或模板后跑一次，侧栏里的图就是最新的。 |
 | `post_cutout_template.json` + `post.py` | 后处理（方案 C，2026-09-11）：BiRefNet 去底 → alpha → lanczos 缩放。`full` 档高 660 透明全身像（对应 `assets/portraits/full/`），`chip` 档 96×96 头像（对应 `assets/portraits/`，游戏按 48 设计像素显示）。输出到 `out/game/<tier>/<ID>.png`，不直接覆盖游戏资产。需要 `models/background_removal/birefnet.safetensors`（Comfy-Org/BiRefNet，423 MB）。 |
 | `out/<chapter>/` | 产出，按 §0.3 的目录分：characters / map / terrain / icons / tactical / events / ui。文件名 `ID_slug_<model>_s<seed>.png`（同一 ID 不同模型的结果并排保存，便于对比）。 |
 

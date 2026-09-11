@@ -1,5 +1,5 @@
 {
- "id": "33b8887f-8b60-4b3d-9bdc-94f774a4e7ba",
+ "id": "d90678d4-e298-4c73-b948-f9cf0d196613",
  "revision": 0,
  "last_node_id": 14,
  "last_link_id": 13,
@@ -13,7 +13,7 @@
    ],
    "size": [
     380,
-    106
+    200
    ],
    "flags": {},
    "order": 0,
@@ -34,18 +34,19 @@
    "widgets_values": [
     "flux-2-klein-base-4b.safetensors",
     "default"
-   ]
+   ],
+   "title": "Flux.2 klein 4B base"
   },
   {
    "id": 2,
    "type": "CLIPLoader",
    "pos": [
     -260,
-    240
+    310
    ],
    "size": [
     380,
-    110
+    240
    ],
    "flags": {},
    "order": 1,
@@ -68,18 +69,19 @@
     "qwen_3_4b.safetensors",
     "flux2",
     "default"
-   ]
+   ],
+   "title": "Qwen3 4B text encoder"
   },
   {
    "id": 3,
    "type": "VAELoader",
    "pos": [
     -260,
-    400
+    540
    ],
    "size": [
     380,
-    80
+    160
    ],
    "flags": {},
    "order": 2,
@@ -99,21 +101,22 @@
    },
    "widgets_values": [
     "flux2-vae.safetensors"
-   ]
+   ],
+   "title": "Flux.2 VAE"
   },
   {
    "id": 4,
    "type": "CLIPTextEncode",
    "pos": [
-    180,
+    160,
     80
    ],
    "size": [
-    480,
-    200
+    380,
+    160
    ],
    "flags": {},
-   "order": 3,
+   "order": 7,
    "mode": 0,
    "inputs": [
     {
@@ -135,22 +138,23 @@
     "Node name for S&R": "CLIPTextEncode"
    },
    "widgets_values": [
-    "colored pencil illustration, hand-drawn on warm cream toned laid paper, visible directional pencil hatching and cross-hatching, layered translucent pigment with granular tooth texture, soft graphite underdrawing showing at contours, no ink outlines, muted earthen palette of raw umber, yellow ochre, burnt sienna, moss green, slate blue and oxblood red, desaturated and restrained color, warm diffuse overcast daylight, historically accurate 12th to 14th century European material culture, naturalistic anatomy and proportion, understated realism, antique sketchbook plate quality, matte finish, a walled medieval city with crenellated stone curtain walls, a gatehouse with twin drum towers, dense tiled rooftops, a cathedral rising above them, a river gate, single isolated object, orthographic three-quarter overhead view, no background, no scene, no ground plane, centred, generous margin, 1:1 square"
-   ]
+    "clean colored pencil illustration on bright smooth cream paper, crisp confident contour lines in dark umber pencil, light decorative directional hatching used only for shading, fabrics rendered as smooth woven cloth with clean folds and no fibrous or fuzzy texture, smooth evenly blended skin, fresh and luminous, flat clean paper background with no grain and no aging, muted earthen palette of raw umber, yellow ochre, burnt sienna, moss green, slate blue and oxblood red, restrained color, warm diffuse overcast daylight, historically accurate 12th to 14th century European material culture, naturalistic anatomy and proportion, appealing idealised faces with fine features, youthful where the age allows, contemporary character concept illustration quality, matte finish, a walled medieval city with crenellated stone curtain walls, a gatehouse with twin drum towers, dense tiled rooftops, a cathedral rising above them, a river gate, single isolated object, orthographic three-quarter overhead view, no background, no scene, no ground plane, centred, generous margin, 1:1 square"
+   ],
+   "title": "Prompt = STYLE_CORE + subject + canvas"
   },
   {
    "id": 5,
    "type": "CLIPTextEncode",
    "pos": [
-    180,
-    320
+    160,
+    310
    ],
    "size": [
-    480,
+    380,
     160
    ],
    "flags": {},
-   "order": 4,
+   "order": 8,
    "mode": 0,
    "inputs": [
     {
@@ -172,22 +176,23 @@
     "Node name for S&R": "CLIPTextEncode"
    },
    "widgets_values": [
-    "digital airbrush, glossy, smooth gradient, neon, oversaturated, high contrast, anime, manga, cel shading, comic book, 3d render, cgi, plastic, vector art, flat color fill, thick ink outline, oil painting impasto, watercolor bleed, photograph, modern clothing, zipper, buttons on medieval garments, eyeglasses, wristwatch, printed typography, lettering, watermark, signature, logo, lens flare, bokeh, HDR, fisheye, extra fingers, deformed hands, plate armour before 1400, full gothic plate, horned helmet, longsword crossguard anachronism"
-   ]
+    "digital airbrush, glossy, smooth gradient, neon, oversaturated, high contrast, anime, manga, cel shading, comic book, 3d render, cgi, plastic, vector art, flat color fill, thick ink outline, oil painting impasto, watercolor bleed, photograph, modern clothing, zipper, buttons on medieval garments, eyeglasses, wristwatch, printed typography, lettering, watermark, signature, logo, lens flare, bokeh, HDR, fisheye, extra fingers, deformed hands, plate armour before 1400, full gothic plate, horned helmet, longsword crossguard anachronism, aged paper, foxing, yellowed paper, heavy grain, smudged graphite, antique print, sepia, coarse features, haggard, fuzzy fabric, fibrous texture, felted wool, furry cloth"
+   ],
+   "title": "Negative = NEGATIVE.txt"
   },
   {
    "id": 6,
    "type": "CFGGuider",
    "pos": [
-    720,
+    580,
     80
    ],
    "size": [
-    300,
-    120
+    380,
+    160
    ],
    "flags": {},
-   "order": 5,
+   "order": 9,
    "mode": 0,
    "inputs": [
     {
@@ -220,21 +225,22 @@
    },
    "widgets_values": [
     4.0
-   ]
+   ],
+   "title": "CFG (library: 3.5-4.5 for a CFG model)"
   },
   {
    "id": 7,
    "type": "Flux2Scheduler",
    "pos": [
-    720,
-    240
+    -260,
+    770
    ],
    "size": [
-    300,
-    110
+    380,
+    240
    ],
    "flags": {},
-   "order": 6,
+   "order": 3,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -253,21 +259,22 @@
     20,
     1024,
     1024
-   ]
+   ],
+   "title": "Sigmas"
   },
   {
    "id": 8,
    "type": "EmptyFlux2LatentImage",
    "pos": [
-    720,
-    390
+    -260,
+    1000
    ],
    "size": [
-    300,
-    110
+    380,
+    240
    ],
    "flags": {},
-   "order": 7,
+   "order": 4,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -286,21 +293,22 @@
     1024,
     1024,
     1
-   ]
+   ],
+   "title": "Canvas"
   },
   {
    "id": 9,
    "type": "RandomNoise",
    "pos": [
-    720,
-    540
+    -260,
+    1230
    ],
    "size": [
-    300,
-    80
+    380,
+    200
    ],
    "flags": {},
-   "order": 8,
+   "order": 5,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -318,21 +326,22 @@
    "widgets_values": [
     954159497,
     "fixed"
-   ]
+   ],
+   "title": "Seed"
   },
   {
    "id": 10,
    "type": "KSamplerSelect",
    "pos": [
-    720,
-    660
+    -260,
+    1460
    ],
    "size": [
-    300,
-    60
+    380,
+    160
    ],
    "flags": {},
-   "order": 9,
+   "order": 6,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -349,18 +358,19 @@
    },
    "widgets_values": [
     "euler"
-   ]
+   ],
+   "title": "Sampler"
   },
   {
    "id": 11,
    "type": "SamplerCustomAdvanced",
    "pos": [
-    1080,
+    1000,
     80
    ],
    "size": [
-    320,
-    200
+    380,
+    120
    ],
    "flags": {},
    "order": 10,
@@ -409,18 +419,19 @@
    "properties": {
     "Node name for S&R": "SamplerCustomAdvanced"
    },
-   "widgets_values": []
+   "widgets_values": [],
+   "title": "Sample"
   },
   {
    "id": 12,
    "type": "VAEDecode",
    "pos": [
-    1460,
+    1420,
     80
    ],
    "size": [
-    220,
-    60
+    380,
+    120
    ],
    "flags": {},
    "order": 11,
@@ -449,18 +460,19 @@
    "properties": {
     "Node name for S&R": "VAEDecode"
    },
-   "widgets_values": []
+   "widgets_values": [],
+   "title": "Decode"
   },
   {
    "id": 13,
    "type": "SaveImage",
    "pos": [
-    1740,
+    1840,
     80
    ],
    "size": [
-    420,
-    460
+    380,
+    160
    ],
    "flags": {},
    "order": 12,
@@ -472,23 +484,30 @@
      "link": 13
     }
    ],
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "images",
+     "type": "IMAGE",
+     "links": []
+    }
+   ],
    "properties": {
     "Node name for S&R": "SaveImage"
    },
    "widgets_values": [
-    "flux/manual/klein-test"
-   ]
+    "flux/manual/test"
+   ],
+   "title": "Save (prefix = chapter/ID)"
   },
   {
    "id": 14,
    "type": "Note",
    "pos": [
-    180,
-    520
+    -260,
+    1690
    ],
    "size": [
-    480,
+    380,
     200
    ],
    "flags": {},
@@ -500,7 +519,7 @@
     "Node name for S&R": "Note"
    },
    "widgets_values": [
-    "CC Flux2 Klein Bulk T2I — Flux.2 [klein] 4B base (Apache 2.0, commercial OK).\nUndistilled: CFG works, so the negative box carries NEGATIVE.txt.\nPrompt = STYLE_CORE.txt + subject + [C-...] canvas; filled by assets/flux/generate.py --model klein.\nDefaults: 20 steps, cfg 4.0, euler, Flux2Scheduler. Do not use klein 9B (non-commercial)."
+    "CC Flux2 Klein Bulk T2I\nFlux.2 [klein] 4B base (Apache 2.0, commercial OK). Undistilled: CFG works and the\nnegative box carries NEGATIVE.txt. 20 steps, cfg 4.0. Never klein 9B (non-commercial).\nBulk: python3 assets/flux/generate.py --model klein --ids C-01 --canvas C-FULL --pose P-05\nPrompt = STYLE_CORE.txt + subject + [C-...] canvas, never typed by hand."
    ]
   }
  ],
@@ -612,12 +631,12 @@
  ],
  "groups": [
   {
-   "title": "CC Flux2 Klein Bulk T2I — filled by assets/flux/generate.py --model klein",
+   "title": "CC Flux2 Klein Bulk T2I — filled by assets/flux/generate.py / post.py",
    "bounding": [
     -280,
     0,
-    2460,
-    760
+    2580,
+    1930
    ],
    "color": "#3f789e",
    "font_size": 20
