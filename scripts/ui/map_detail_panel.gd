@@ -365,6 +365,7 @@ class TerrainPreview extends Control:
 			MapTerrain.palette_color(Game.data, "sea_deep", MapTerrain.FALLBACK))
 		draw_mesh(mesh, null, Transform2D(0.0, Vector2(k, k), 0.0, origin))
 		var coast := MapTerrain.palette_color(Game.data, "coast_line", MapTerrain.FALLBACK)
+		var coast_width: float = Game.data.bal("map_coast_width")
 		var frame := Rect2(Vector2.ZERO, size).grow(2.0)
 		for row: Dictionary in Game.data.coasts:
 			var b: Rect2 = row["bbox"]
@@ -376,4 +377,4 @@ class TerrainPreview extends Control:
 			for i in loop.size():
 				pts[i] = origin + loop[i] * k
 			pts[loop.size()] = pts[0]
-			draw_polyline(pts, coast, 1.0, true)
+			draw_polyline(pts, coast, coast_width, true)

@@ -346,7 +346,7 @@ func test_tooltip_stays_inside_the_view_at_the_edge() -> void:
 	var kp := Vector2(float(k["x"]), float(k["y"]))
 	var corner := v.size - Vector2(2.0, 2.0)
 	# Park the capital in the corner through the view's own mapping, so this
-	# stays right whatever render calibration the pack carries.
+	# stays right whatever framing the view opens with.
 	v._offset += corner - v.map_to_screen(kp)
 	v.hover_at(corner)
 	assert_eq(v.hover_tooltip(), _capital_name())

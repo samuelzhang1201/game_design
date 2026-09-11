@@ -112,7 +112,7 @@ map_army_bar_w,14.0,military layer: width of a regiment's strength bar in screen
 map_army_bar_h,2.5,military layer: height of a regiment's strength bar in screen px
 map_army_bar_gap,1.5,military layer: gap between the plaque and its strength bar in screen px
 map_army_pick_px,8.0,military layer: screen px within which a click or hover picks a regiment
-map_relief_strength,0.02,terrain: shade change per unit of slope (height units per native px) facing the light
+map_relief_strength,0.02,terrain: shade change per unit of mean height difference to land neighbours (not distance-normalised) facing the light
 map_relief_min,0.6,terrain: darkest relief factor
 map_relief_max,1.35,terrain: brightest relief factor
 map_light_x,-0.7,terrain: light direction x (toward the light; negative = from the west)

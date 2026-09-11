@@ -192,3 +192,15 @@ func test_the_pack_builds_a_mesh_inside_the_canvas_that_covers_the_land() -> voi
 		assert_true(b.has_point(center), "%s's centre is on the mesh" % code)
 	assert_eq((built["colors"] as PackedColorArray).size(),
 		(built["vertices"] as PackedVector2Array).size())
+
+## A repo that loads a pack again must rebuild its mesh: load_map clears the
+## terrain tables and the cache with them.
+func test_reloading_a_pack_rebuilds_the_shared_mesh() -> void:
+	var repo := DataRepository.load_all("res://data")
+	assert_not_null(repo, DataRepository.last_error)
+	var before := MapTerrain.shared_mesh(repo)
+	assert_not_null(before)
+	assert_true(repo.load_map(repo.map_id), DataRepository.last_error)
+	var after := MapTerrain.shared_mesh(repo)
+	assert_not_null(after)
+	assert_false(before == after, "the mesh was rebuilt after load_map")

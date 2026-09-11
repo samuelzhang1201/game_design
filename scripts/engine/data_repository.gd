@@ -303,6 +303,7 @@ func load_map(id: String) -> bool:
 	province_borders.clear()
 	provinces_by_id.clear()
 	MapOwnership.invalidate()
+	MapTerrain.invalidate()
 	routes.clear()
 	rivers.clear()
 	markers.clear()
@@ -338,7 +339,7 @@ func load_map(id: String) -> bool:
 			func(r): routes[r["route_code"]] = _with_polyline(r)):
 		return false
 	if not _load_if_present(dir + "/geography/rivers.csv",
-			["river_code", "label", "type", "length", "kingdom_codes", "points"],
+			["river_code", "label", "type", "length", "discharge", "kingdom_codes", "points"],
 			func(r): rivers[r["river_code"]] = _with_polyline(r)):
 		return false
 	if not _load_if_present(dir + "/geography/markers.csv",

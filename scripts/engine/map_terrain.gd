@@ -17,6 +17,11 @@ const FALLBACK := Color(0.6, 0.6, 0.6)
 ## while a repo lives, so the view and every panel share one mesh).
 static var _mesh_cache: Dictionary = {}
 
+## Forget every built mesh. DataRepository.load_map calls this: a repo that
+## swaps packs must not keep drawing the old world.
+static func invalidate() -> void:
+	_mesh_cache.clear()
+
 static func is_water(cell: Dictionary) -> bool:
 	return String(cell.get("water", "")) != ""
 
