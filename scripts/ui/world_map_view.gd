@@ -963,7 +963,9 @@ func realm_tint(province_code: String, strength: float) -> Color:
 ## pack's cells (MapObjects.terrain_decor). They belong to the drawing, so
 ## they scale with the zoom like the coastline rather than holding a fixed
 ## screen size, and they are skipped below map_decor_min_scale where the
-## whole sheet would turn into a carpet of specks.
+## whole sheet would turn into a carpet of specks. Since the decor rework
+## (2026-09-13) this is a TEST SEAM — the marks that would be on screen —
+## not the drawing path, which is decor_mesh().
 func terrain_sprites() -> Array:
 	# A thematic view shows its theme: woods and hills are decoration, and
 	# with the realm tint gone they read as pale specks over the wash.
@@ -1056,23 +1058,86 @@ func _draw_sea_decor() -> void:
 	for d in sprites:
 		draw_texture_rect(d["texture"], d["rect"], false, ink)
 
-func _draw_terrain_decor() -> void:
-	var sprites := terrain_sprites()
-	if sprites.is_empty():
-		return
+## The terrain decor is ONE mesh (owner 2026-09-13, the decor rework):
+## every symbol a quad in native px over one atlas of the terrain art
+## (MarkAtlas / MarkMesh), drawn with a single draw_mesh whose transform
+## is the view's offset and zoom. The mesh is rebuilt only when a tint
+## changes — ownership, since conquest recolours a wood — never per frame
+## or per zoom; the GPU clips what is off screen. It replaced one
+## draw_texture_rect per mark: ~7.5 ms of _draw and ~10 ms of the
+## renderer's canvas-command CPU a frame on the beria pack.
+var _decor_atlas: MarkAtlas = null
+var _decor_mesh_cache: ArrayMesh = null
+var _decor_mesh_sig := 0
+
+## Whether the decor layer draws at all: not under a theme, not below
+## map_decor_min_scale.
+func decor_visible() -> bool:
+	if show_heights or show_economy or show_manors:
+		return false
+	return _terrain_mesh != null and view_scale() >= Game.data.bal("map_decor_min_scale")
+
+func decor_atlas() -> MarkAtlas:
+	if _decor_atlas == null:
+		var textures: Dictionary = {}
+		for d: Dictionary in MapObjects.terrain_decor(Game.data):
+			var path := String(d["texture"])
+			if not textures.has(path):
+				var tex := _sprite_texture(path)
+				if tex != null:
+					textures[path] = tex
+		_decor_atlas = MarkAtlas.build(textures)
+	return _decor_atlas
+
+## The decor mesh for the current ownership: one tint per province,
+## resolved once per build, carried as vertex colour.
+func decor_mesh() -> ArrayMesh:
+	var sig := hash([_ownership_sig(), Game.data.bal("map_decor_alpha"), Game.data.bal("map_decor_tint")])
+	if _decor_mesh_cache != null and _decor_mesh_sig == sig:
+		return _decor_mesh_cache
 	var alpha := Game.data.bal("map_decor_alpha")
 	var strength := Game.data.bal("map_decor_tint")
-	# Thousands of marks share a few dozen provinces, so the tint is resolved
-	# once per province per frame rather than once per mark. Per frame, not
-	# cached across frames: the OWNER is live, and conquest must recolour.
 	var tints: Dictionary = {}
-	for d in sprites:
-		var province := String(d["province"])
+	var marks: Array = []
+	for d: Dictionary in MapObjects.terrain_decor(Game.data):
+		var pos: Vector2 = d["pos"]
+		var province := _decor_province(pos)
 		if not tints.has(province):
-			tints[province] = realm_tint(province, strength)
-		var tint: Color = tints[province]
-		tint.a = alpha
-		draw_texture_rect(d["texture"], d["rect"], false, tint)
+			var tint := _realm_tint_plain(province, strength)
+			tint.a = alpha
+			tints[province] = tint
+		marks.append({"pos": pos, "texture": String(d["texture"]),
+			"height": float(d["height"]), "color": tints[province]})
+	_decor_mesh_cache = MarkMesh.build(marks, decor_atlas())
+	_decor_mesh_sig = sig
+	return _decor_mesh_cache
+
+## The province under a mark, resolved once per mark and kept: geometry.
+var _decor_province_cache: Dictionary = {}
+
+func _decor_province(pos: Vector2) -> String:
+	if not _decor_province_cache.has(pos):
+		_decor_province_cache[pos] = province_at(pos)
+	return _decor_province_cache[pos]
+
+## realm_tint without the thematic-view guard: the mesh is built for the
+## political map, whatever view is up when it is first asked for.
+func _realm_tint_plain(province_code: String, strength: float) -> Color:
+	if province_code == "" or strength <= 0.0:
+		return Color.WHITE
+	var holder := MapOwnership.owner_of(Game.data, Game.state, province_code)
+	if holder == "":
+		return Color.WHITE
+	return Color.WHITE.lerp(MapPalette.color_of(Game.data, holder), strength)
+
+func _draw_terrain_decor() -> void:
+	if not decor_visible():
+		return
+	var mesh := decor_mesh()
+	if mesh.get_surface_count() == 0:
+		return
+	draw_mesh(mesh, decor_atlas().texture,
+		Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset))
 
 ## The scale bar in the bottom-right corner (owner request 2026-09-12). The
 ## pack carries its own scale — map_info's distance_scale world units per

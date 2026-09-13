@@ -1051,6 +1051,32 @@ func test_thematic_views_leave_the_symbols_untinted() -> void:
 	v.show_economy = false
 	assert_ne(v.realm_tint(held, 1.0), Color.WHITE, "and tinted again after")
 
+## The decor is one mesh (owner 2026-09-13): every mark a quad over one
+## atlas, rebuilt when ownership changes and otherwise kept, hidden under a
+## theme.
+func test_the_woods_are_one_mesh_over_one_atlas() -> void:
+	var v := _view()
+	await wait_frames(2)
+	assert_true(v.decor_visible())
+	var atlas := v.decor_atlas()
+	assert_not_null(atlas.texture)
+	assert_gt(atlas.uv.size(), 3, "the terrain art is on one sheet")
+	var mesh := v.decor_mesh()
+	assert_eq(mesh.get_surface_count(), 1, "one surface, one draw call")
+	assert_eq(MarkMesh.quad_count(mesh), MapObjects.terrain_decor(Game.data).size(),
+		"every mark is a quad")
+	assert_true(v.decor_mesh() == mesh, "kept between frames")
+	var realm := Game.data.resolve_realm("player_realm")
+	var foreign := ""
+	for code: String in Game.data.provinces:
+		if MapOwnership.owner_of(Game.data, Game.state, code) != realm:
+			foreign = code
+			break
+	MapOwnership.set_owner(Game.data, Game.state, foreign, realm, "test: conquest")
+	assert_false(v.decor_mesh() == mesh, "conquest recolours: a new mesh")
+	v.show_heights = true
+	assert_false(v.decor_visible(), "hidden under a theme")
+
 ## A thematic view drops the terrain decoration: a wood is not what the view
 ## is about. The HEIGHTS view keeps the town drawings — a town is still a
 ## place — while the ECONOMY view marks its places with manor badges instead
