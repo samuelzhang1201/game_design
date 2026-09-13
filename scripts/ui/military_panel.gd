@@ -92,7 +92,7 @@ func refresh() -> void:
 	var arm_rows: Array = []
 	for i in units.size():
 		var u: String = units[i]
-		arm_rows.append({"label": _label(u), "value": counts[u], "icon": _glyph(u),
+		arm_rows.append({"label": _label(u), "value": counts[u], "dimension": u,
 			"color": UiPalette.chart_color("cat_%d" % (i + 1)), "text": RealmDashboard._compact(counts[u])})
 	_arms.set_rows(arm_rows, top)
 	var strength: Variant = WorldLedger.value_of(data, state, "military.kingdoms.%s.strength" % mine)

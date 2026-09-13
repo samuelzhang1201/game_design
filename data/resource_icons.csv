@@ -1,39 +1,41 @@
-key,label,icon,tooltip
-treasury,Gold,coin,Gold in the crown's chest. Taxes and tariffs fill it each fortnight; the court's upkeep and your orders empty it.
-grain,Grain,grain,Grain in the royal granaries. The harvest fills them each autumn; the realm eats from them the rest of the year.
-population,People,people,Everyone in the realm's towns and countryside. Levies are drawn from them.
-army,Host,swords,The realm's soldiers under arms, by regiment.
-army_quality,Army,swords,How well drilled the levies are. Drills lapse without fresh levies.
-unrest,Unrest,flame,How close the villages are to rioting. Tax pressure and famine raise it.
-legitimacy,Legitimacy,crown,How firmly the court believes the crown is yours by right.
-peasant_contentment,Contentment,sun,The mood of the common folk.
-church_opinion,Church,cross,How the pulpits regard the crown.
-infantry,Infantry,shield,Foot soldiers: the bulk of any host.
-archers,Archers,bow,Bowmen who thin a charge before it lands.
-cavalry,Cavalry,horseshoe,Mounted troops: costly, and decisive on open ground.
-artillery,Artillery,cannon,Siege engines and guns; slow, but walls fear them.
-fleet,Fleet,sail,Warships crewed from the coast towns.
-walls,Walls,wall,A walled town: harder to take, and its market is taxed at the gate.
-citadel,Citadel,tower,A citadel commands the town; a garrison can hold it.
-temple,Temple,cross,A temple: the church has a house here.
-plaza,Market,market,A market square: goods change hands and the town grows.
-shanty,Shanty town,huts,A shanty town outside the walls: the poor crowd in.
-port,Port,anchor,A harbour: ships and sea trade come and go.
-tag_food,Food,grain,Food goods.
-tag_ore,Ore,pick,Ores and metals.
-tag_mineral,Mineral,pick,Quarried and mined minerals.
-tag_construction,Building,wall,Building materials.
-tag_luxury,Luxury,gem,Luxuries the wealthy pay for.
-tag_military,Arms,swords,Goods of war.
-tag_naval,Naval,sail,Goods for ships.
-tag_clothing,Cloth,cloth,Cloth and clothing.
-tag_fuel,Fuel,flame,Fuel.
-tag_currency,Coin,coin,Coin.
-tag_supply,Supply,horseshoe,Beasts and supplies.
-tag_preservative,Preserving,market,"Salt and what keeps food from spoiling."
-tag_ritual,Ritual,cross,Goods for the church and its rites.
-tag_storage,Storage,wall,Barrels and what goods are kept in.
-tag_aquatic,Fishing,anchor,What the waters give.
-tag_educational,Learning,tower,Books and the tools of learning.
-wealth,Wealth,coin,What the town produces in a season.
-town_treasury,Treasury,coin,Coin in the town's own chest.
+key,label,icon,tooltip,texture
+treasury,Gold,coin,Gold in the crown's chest. Taxes and tariffs fill it each fortnight; the court's upkeep and your orders empty it.,res://assets/icons/treasury.png
+grain,Grain,grain,Grain in the royal granaries. The harvest fills them each autumn; the realm eats from them the rest of the year.,res://assets/icons/grain.png
+population,People,people,Everyone in the realm's towns and countryside. Levies are drawn from them.,res://assets/icons/population.png
+army,Host,swords,"The realm's soldiers under arms, by regiment.",res://assets/icons/army.png
+army_quality,Army,swords,How well drilled the levies are. Drills lapse without fresh levies.,res://assets/icons/army_quality.png
+unrest,Unrest,flame,How close the villages are to rioting. Tax pressure and famine raise it.,res://assets/icons/unrest.png
+legitimacy,Legitimacy,crown,How firmly the court believes the crown is yours by right.,res://assets/icons/legitimacy.png
+peasant_contentment,Contentment,sun,The mood of the common folk.,res://assets/icons/peasant_contentment.png
+church_opinion,Church,cross,How the pulpits regard the crown.,res://assets/icons/church_opinion.png
+infantry,Infantry,shield,Foot soldiers: the bulk of any host.,res://assets/icons/infantry.png
+archers,Archers,bow,Bowmen who thin a charge before it lands.,res://assets/icons/archers.png
+cavalry,Cavalry,horseshoe,"Mounted troops: costly, and decisive on open ground.",res://assets/icons/cavalry.png
+artillery,Artillery,cannon,"Siege engines and guns; slow, but walls fear them.",res://assets/icons/artillery.png
+fleet,Fleet,sail,Warships crewed from the coast towns.,res://assets/icons/fleet.png
+walls,Walls,wall,"A walled town: harder to take, and its market is taxed at the gate.",
+citadel,Citadel,tower,A citadel commands the town; a garrison can hold it.,
+temple,Temple,cross,A temple: the church has a house here.,
+plaza,Market,market,A market square: goods change hands and the town grows.,
+shanty,Shanty town,huts,A shanty town outside the walls: the poor crowd in.,
+port,Port,anchor,A harbour: ships and sea trade come and go.,
+tag_food,Food,grain,Food goods.,
+tag_ore,Ore,pick,Ores and metals.,
+tag_mineral,Mineral,pick,Quarried and mined minerals.,
+tag_construction,Building,wall,Building materials.,
+tag_luxury,Luxury,gem,Luxuries the wealthy pay for.,
+tag_military,Arms,swords,Goods of war.,
+tag_naval,Naval,sail,Goods for ships.,
+tag_clothing,Cloth,cloth,Cloth and clothing.,
+tag_fuel,Fuel,flame,Fuel.,
+tag_currency,Coin,coin,Coin.,
+tag_supply,Supply,horseshoe,Beasts and supplies.,
+tag_preservative,Preserving,market,Salt and what keeps food from spoiling.,
+tag_ritual,Ritual,cross,Goods for the church and its rites.,
+tag_storage,Storage,wall,Barrels and what goods are kept in.,
+tag_aquatic,Fishing,anchor,What the waters give.,
+tag_educational,Learning,tower,Books and the tools of learning.,
+wealth,Wealth,coin,What the town produces in a season.,
+town_treasury,Treasury,coin,Coin in the town's own chest.,
+towns,Towns,huts,The realm's townsfolk: everyone living inside a burg's walls or streets.,res://assets/icons/towns.png
+country,Country,grain,"The realm's country folk: everyone on the land, in villages and on farms.",res://assets/icons/country.png

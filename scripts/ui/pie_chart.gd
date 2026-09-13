@@ -2,17 +2,39 @@ class_name PieChart
 extends Control
 ## A small pie for a part-to-whole with a few slices: the disc on the left,
 ## a legend of swatch + label + value on the right so no reading depends on
-## colour alone. slices = [{label, value, color}].
+## colour alone. slices = [{label, value, color, dimension?}]. A slice with a
+## `dimension` (a data/resource_icons.csv key) shows that key's art in the
+## legend instead of its label, which becomes the floating tooltip (owner
+## 2026-09-13).
 
 const HEIGHT := 60.0
 const RADIUS := 26.0
 const LEGEND_X := 64.0
+const LEGEND_ROW := 22.0
+const ICON_PX := 22.0
 
 var slices: Array = []
 
+func _init() -> void:
+	mouse_filter = Control.MOUSE_FILTER_PASS
+
+## The legend row under a point, or -1.
+func legend_row_at(at_position: Vector2) -> int:
+	if at_position.x < LEGEND_X:
+		return -1
+	var i := int(floor((at_position.y - 2.0) / LEGEND_ROW))
+	return i if i >= 0 and i < slices.size() else -1
+
+func _get_tooltip(at_position: Vector2) -> String:
+	var i := legend_row_at(at_position)
+	if i < 0:
+		return ""
+	var key := String((slices[i] as Dictionary).get("dimension", ""))
+	return ResourceIcon.tooltip_of(key) if key != "" else ""
+
 func set_slices(new_slices: Array) -> void:
 	slices = new_slices
-	custom_minimum_size = Vector2(0, maxf(HEIGHT, 18.0 * slices.size()))
+	custom_minimum_size = Vector2(0, maxf(HEIGHT, LEGEND_ROW * slices.size()))
 	queue_redraw()
 
 func total() -> float:
@@ -45,9 +67,17 @@ func _draw() -> void:
 		return
 	for i in slices.size():
 		var s: Dictionary = slices[i]
-		var y := 8.0 + 18.0 * i
+		var y := 8.0 + LEGEND_ROW * i
 		draw_rect(Rect2(LEGEND_X, y - 1.0, 10.0, 10.0), s.get("color", UiPalette.GOLD))
 		var pct := 0.0 if t <= 0.0 else 100.0 * maxf(float(s.get("value", 0.0)), 0.0) / t
-		draw_string(font, Vector2(LEGEND_X + 16.0, y + 9.0),
-			"%s %d%%" % [String(s.get("label", "")), roundi(pct)],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.TEXT_SOFT)
+		var dimension := String(s.get("dimension", ""))
+		if dimension != "":
+			# The swatch keeps colour and slice together; the art says which.
+			ResourceIcon.draw_icon(self, dimension, Vector2(LEGEND_X + 16.0 + ICON_PX / 2.0, y + 4.0),
+				ICON_PX, UiPalette.GOLD)
+			draw_string(font, Vector2(LEGEND_X + 20.0 + ICON_PX, y + 9.0), "%d%%" % roundi(pct),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.TEXT_SOFT)
+		else:
+			draw_string(font, Vector2(LEGEND_X + 16.0, y + 9.0),
+				"%s %d%%" % [String(s.get("label", "")), roundi(pct)],
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.TEXT_SOFT)

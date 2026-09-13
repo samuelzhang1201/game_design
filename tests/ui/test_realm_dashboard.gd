@@ -68,3 +68,40 @@ func test_compact_numbers() -> void:
 	assert_eq(RealmDashboard._compact(4567.0), "4.6k")
 	assert_eq(RealmDashboard._compact(45678.0), "46k")
 	assert_eq(RealmDashboard._compact(1234567.0), "1.2M")
+
+## Icons, not words (owner 2026-09-13): every temper gauge, host bar and
+## people slice carries its dimension key, the charts draw that key's art in
+## place of the label, and the label comes back as the row's floating tooltip.
+func test_the_cards_dimensions_are_icons_with_tooltips() -> void:
+	Game.start_campaign(42)
+	var d := _dashboard()
+	await wait_frames(1)
+	for row: Dictionary in d.temper_chart().rows:
+		assert_true(RealmDashboard.TEMPER.has(String(row["dimension"])), "a temper key")
+	for row: Dictionary in d.host_chart().rows:
+		assert_true(Game.data.resource_icons.has(String(row["dimension"])), "a unit key with a row")
+	var slices: Array = d.people_chart().slices
+	assert_eq(String(slices[0]["dimension"]), "towns")
+	assert_eq(String(slices[1]["dimension"]), "country")
+	for row: Dictionary in d.provinces_chart().rows:
+		assert_false(row.has("dimension"), "a province is a name, not a dimension")
+	# The first temper row is unrest: hovering it names it.
+	var tip := d.temper_chart()._get_tooltip(Vector2(10.0, BarChart.ROW_H * 0.5))
+	assert_true(tip.begins_with("Unrest"), "the tooltip starts with the label: " + tip)
+	assert_eq(d.temper_chart()._get_tooltip(Vector2(10.0, BarChart.ROW_H * 40.0)), "", "past the rows")
+	var legend := d.people_chart()._get_tooltip(Vector2(PieChart.LEGEND_X + 4.0, 10.0))
+	assert_true(legend.begins_with("Towns"), legend)
+	assert_eq(d.people_chart()._get_tooltip(Vector2(2.0, 10.0)), "", "the disc has no tooltip")
+
+## Every dimension the interface shows has its art installed, and the icon
+## draws it (a missing file would silently fall back to the glyph).
+func test_every_dimension_has_its_art() -> void:
+	Game.start_campaign(42)
+	for key: String in Game.data.resource_icons:
+		var path := String(Game.data.resource_icons[key].get("texture", ""))
+		if path == "":
+			continue
+		assert_true(ResourceLoader.exists(path), "%s's art exists: %s" % [key, path])
+		assert_not_null(ResourceIcon.texture_of(key), key)
+	for key: String in RealmDashboard.RESOURCES + RealmDashboard.TEMPER + ["towns", "country"]:
+		assert_ne(String(Game.data.resource_icons[key].get("texture", "")), "", key + " names its art")

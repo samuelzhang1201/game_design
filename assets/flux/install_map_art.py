@@ -3,6 +3,7 @@
 
     python3 assets/flux/install_map_art.py goods    # G-xx -> assets/goods/
     python3 assets/flux/install_map_art.py decor    # D-xx -> assets/decor/ (sea ships, whale)
+    python3 assets/flux/install_map_art.py ui       # post.py icon tier -> assets/icons/ (resource strip, realm card)
     python3 assets/flux/install_map_art.py cast     # K-xx -> assets/portraits/
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
@@ -103,6 +104,76 @@ def install_decor(height: int = 256, lighten: float = 0.45) -> int:
     return install_marks(codes, "decor", ROOT / "assets" / "decor", height, lighten)
 
 
+## The interface's dimension icons (data/resource_icons.csv texture column,
+## owner 2026-09-13): library I-40 and I-47..I-61, cut out by post.py
+## (--tier icon: a coloured still-life needs BiRefNet, not the blue-channel
+## key), trimmed and fitted under their dimension's key. They KEEP
+## their colour — an icon is looked at, not tinted.
+## The strip and the card draw these at 20-24 design px, so the installed file
+## is 64 px (24 x the ~3x largest window scale, rounded to a power of two;
+## owner 2026-09-13: an installed file is sized by its use). [C-ICON] leaves a
+## generous margin and BiRefNet keeps it, so the cut-out is first TRIMMED to
+## its alpha box and only then fitted into the square: the subject fills the
+## icon instead of floating small in the middle of it.
+UI_ICON_PX = 64
+UI_ALPHA_MIN = 8
+
+
+def install_ui() -> int:
+    codes = {r["art_id"]: r["key"] for r in csv.DictReader((HERE / "ui_icon_art.csv").open())}
+    dest = ROOT / "assets" / "icons"
+    dest.mkdir(parents=True, exist_ok=True)
+    done = 0
+    for art_id, key in sorted(codes.items()):
+        # post.py names its cut-outs <ID>_<model>.png; the newest model wins.
+        hits = sorted((HERE / "out" / "game" / "icon").glob("%s_*.png" % art_id))
+        if not hits:
+            print("  (no cut-out for %s / %s — run post.py --tier icon first)" % (art_id, key))
+            continue
+        w, h, ch, px = decode_png(hits[-1])
+        if ch != 4:
+            print("  (%s is not RGBA — post.py --tier icon writes a cut-out)" % hits[-1].name)
+            continue
+        cw, chh, rgba = trim_alpha(w, h, bytearray(px))
+        scale = UI_ICON_PX / max(cw, chh)
+        tw, th = max(1, round(cw * scale)), max(1, round(chh * scale))
+        small = resize_rgba(cw, chh, rgba, tw, th)
+        canvas = pad_square(tw, th, small, UI_ICON_PX)
+        encode_png(dest / ("%s.png" % key), UI_ICON_PX, UI_ICON_PX, 4, bytes(canvas))
+        print("  %-6s %-20s %dx%d in %d" % (art_id, key, tw, th, UI_ICON_PX))
+        done += 1
+    return done
+
+
+def trim_alpha(w: int, h: int, px: bytearray) -> tuple[int, int, bytearray]:
+    """RGBA cropped to the pixels whose alpha clears UI_ALPHA_MIN."""
+    x0, y0, x1, y1 = w, h, -1, -1
+    for y in range(h):
+        row = y * w * 4
+        for x in range(w):
+            if px[row + x * 4 + 3] > UI_ALPHA_MIN:
+                x0, y0 = min(x0, x), min(y0, y)
+                x1, y1 = max(x1, x), max(y1, y)
+    if x1 < 0:
+        return w, h, px
+    cw, chh = x1 - x0 + 1, y1 - y0 + 1
+    out = bytearray(cw * chh * 4)
+    for y in range(chh):
+        src = ((y0 + y) * w + x0) * 4
+        out[y * cw * 4:(y + 1) * cw * 4] = px[src:src + cw * 4]
+    return cw, chh, out
+
+
+def pad_square(w: int, h: int, px: bytearray, side: int) -> bytearray:
+    """The image centred on a transparent side x side canvas."""
+    out = bytearray(side * side * 4)
+    ox, oy = (side - w) // 2, (side - h) // 2
+    for y in range(h):
+        dst = ((oy + y) * side + ox) * 4
+        out[dst:dst + w * 4] = px[y * w * 4:(y + 1) * w * 4]
+    return out
+
+
 def install_marks(codes: dict, chapter: str, dest, height: int, lighten: float) -> int:
     dest.mkdir(parents=True, exist_ok=True)
     done = 0
@@ -172,7 +243,8 @@ def _install_cast_tier(codes: dict, tag: str, tier: str, size: int, dest: Path) 
 
 
 def main() -> int:
-    chapters = {"goods": install_goods, "decor": install_decor, "cast": install_cast}
+    chapters = {"goods": install_goods, "decor": install_decor, "cast": install_cast,
+                "ui": install_ui}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2

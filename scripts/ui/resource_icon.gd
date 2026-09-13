@@ -1,11 +1,16 @@
 class_name ResourceIcon
 extends Control
-## A small drawn glyph for a resource or a unit type (user request
-## 2026-09-09: icons instead of words, with a floating tooltip). The glyphs
-## are simple strokes in the UI's gold so they match the chrome at any scale;
-## which glyph and what the tooltip says come from data/resource_icons.csv.
+## A small icon for a resource, a dimension of the realm or a unit type
+## (user request 2026-09-09: icons instead of words, with a floating
+## tooltip). Since 2026-09-13 (owner) the icon is GAME ART where
+## data/resource_icons.csv names a texture — library I-40 and I-47..I-61,
+## one still-life per dimension, rendered through assets/flux and installed
+## by install_map_art.py ui into assets/icons/ — and the art keeps its
+## colour: it is looked at, not tinted. A key without art falls back to the
+## drawn glyph, simple strokes in the UI's gold. Which art or glyph, and
+## what the tooltip says, are all data in that CSV.
 
-const SIDE := 18.0
+const SIDE := 24.0
 
 var key := ""
 var color: Color = UiPalette.GOLD
@@ -22,10 +27,20 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 
 func _ready() -> void:
-	var row: Dictionary = Game.data.resource_icons.get(key, {})
-	if not row.is_empty():
-		tooltip_text = "%s — %s" % [String(row["label"]), String(row["tooltip"])]
+	tooltip_text = tooltip_of(key)
 	queue_redraw()
+
+## The tooltip a key carries: "Label — what it means", or "" for no row.
+static func tooltip_of(resource_key: String) -> String:
+	var row: Dictionary = Game.data.resource_icons.get(resource_key, {})
+	if row.is_empty():
+		return ""
+	return "%s — %s" % [String(row["label"]), String(row["tooltip"])]
+
+## The key's art, or null when the CSV names none (or it is not on disk).
+static func texture_of(resource_key: String) -> Texture2D:
+	var path := String((Game.data.resource_icons.get(resource_key, {}) as Dictionary).get("texture", ""))
+	return UiPalette.load_art(path) if path != "" else null
 
 ## The glyph name this key draws (data), or the key itself.
 func glyph() -> String:
@@ -35,7 +50,26 @@ func _draw() -> void:
 	var s := minf(size.x, size.y)
 	if s <= 0.0:
 		s = SIDE
-	draw_glyph(self, glyph(), Vector2(size.x, size.y) / 2.0, s, color)
+	draw_icon(self, key, Vector2(size.x, size.y) / 2.0, s, color)
+
+## Draw a key's icon on any canvas item: its art when it has any, else its
+## glyph in `tint`. `name` may also be a bare glyph name (the goods chart's
+## category marks): a name with no CSV row is drawn as that glyph.
+static func draw_icon(ci: CanvasItem, name: String, c: Vector2, s: float, tint: Color) -> void:
+	var tex := texture_of(name)
+	if tex != null:
+		draw_icon_texture(ci, tex, c, s)
+		return
+	var row: Dictionary = Game.data.resource_icons.get(name, {})
+	draw_glyph(ci, String(row.get("icon", name)), c, s, tint)
+
+## The art fitted inside an s x s box centred on c, keeping its aspect.
+static func draw_icon_texture(ci: CanvasItem, tex: Texture2D, c: Vector2, s: float) -> void:
+	var w := float(tex.get_width())
+	var h := float(tex.get_height())
+	var k := s / maxf(maxf(w, h), 1.0)
+	var box := Vector2(w * k, h * k)
+	ci.draw_texture_rect(tex, Rect2(c - box * 0.5, box), false)
 
 ## Draw one glyph on any canvas item (bars draw them at row starts): centred
 ## on `c`, `s` px across, in `tint`.

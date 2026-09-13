@@ -1367,6 +1367,26 @@ background, no numerals, no text [C-ICON]
 | `I-41` | 葡萄酒 | `an oak wine barrel on its side with an iron-banded rim, a wooden bung and a dark bunch of grapes on the vine leaf beside it` |
 | `I-42` | 羊毛 | `a tied fleece of raw cream wool with a pair of iron shears and a wooden drop spindle wound with yarn` |
 
+> **界面维度图标**（2026-09-13，owner：顶栏资源和国家卡的各维度全部改用图标，文字退到悬停提示）：同一画幅、同一风格核、同一静物片段，所以一整套读起来是一家的。对应关系在 `data/resource_icons.csv` 的 `texture` 列（谷物直接用 `I-40`）。图标在界面里只有 20 设计像素，主体要**一眼可辨的大剪影**，配件不超过两三样。
+
+| ID | 维度 | Prompt 主体 |
+|---|---|---|
+| `I-47` | 金库 · Treasury | `a small open leather purse spilling a heap of gold coins, three coins stacked beside it, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-48` | 人口 · People | `three small painted wooden figures of townsfolk standing side by side, a man in a hood, a woman in a white wimple and a child, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-49` | 军队 · Host | `a round wooden shield with an iron boss and two swords crossed behind it, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-50` | 军队素质 · Drill | `a bright sword laid across a grey whetstone with a folded rag and a small oil flask, freshly sharpened, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-51` | 动荡 · Unrest | `a burning torch and a wooden pitchfork crossed, a few sparks rising, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-52` | 正统 · Legitimacy | `a golden crown resting on a red velvet cushion with gold tassels, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-53` | 民心 · Contentment | `a round loaf of brown bread on a wooden board beside a wooden mug of ale and a wedge of cheese, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-54` | 教会 · Church | `a gilded processional cross on a short staff beside a small bronze hand bell, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-55` | 步兵 · Infantry | `a kettle helmet, a spear and a kite shield leaning together, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-56` | 弓手 · Archers | `a strung longbow beside a leather quiver of grey-fletched arrows, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-57` | 骑兵 · Cavalry | `a warhorse's head in a leather bridle with a steel chamfron, a lance with a pennant beside it, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-58` | 炮兵 · Artillery | `a small bronze bombard cannon on a wooden carriage with three stone balls stacked beside it, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-59` | 舰队 · Fleet | `a small medieval cog ship with one square sail and a pennant, seen from the side, on a short curl of water, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-60` | 城镇 · Towns | `a cluster of three timber-framed town houses with steep red tile roofs behind a low stone wall` |
+| `I-61` | 乡村 · Country | `a thatched farmhouse beside a small field of ripe wheat and an apple tree` |
+
 > **补充资源图标**（同样格式，按需生成）：`铁 — a stack of rough iron blooms and a pair of tongs`；`盐 — a heaped cone of white salt on a coarse cloth with a wooden scoop`；`银 — a small pile of hammered silver pennies and an ingot`；`木材 — a stacked cord of split oak logs with a felling axe`；`战马 — a coiled leather bridle, a curb bit and a horseshoe`；`香料 — three small open sacks of saffron, pepper and cinnamon bark with a brass scale pan`；`毛皮 — a rolled bundle of marten and fox pelts tied with cord`；`蜂蜜与蜡 — a woven straw skep, a honeycomb section and a beeswax candle`。
 
 ### 6.9 手绘地图装饰件 `D-`（2026-09-12 新增）

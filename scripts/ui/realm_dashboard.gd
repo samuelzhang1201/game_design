@@ -44,7 +44,7 @@ func _init() -> void:
 		var v := Label.new()
 		v.name = "Value_" + key
 		v.add_theme_font_size_override("font_size", 16)
-		v.custom_minimum_size = Vector2(76, 0)
+		v.custom_minimum_size = Vector2(66, 0)
 		grid.add_child(v)
 		_resource_values[key] = v
 	_temper = _section("TEMPER OF THE REALM", BarChart.new(), "Temper")
@@ -93,11 +93,16 @@ func refresh() -> void:
 		var color := UiPalette.chart_color("sequential")
 		if key == "unrest" and value >= data.bal("concern_unrest_high"):
 			color = UiPalette.NEGATIVE
-		temper.append({"label": label, "value": value, "color": color, "text": str(int(value))})
+		# The dimension's art stands for the label on the card; the label is
+		# the tooltip (owner 2026-09-13).
+		temper.append({"label": label, "dimension": key, "value": value, "color": color,
+			"text": str(int(value))})
 	_temper.set_rows(temper, 100.0)
 	_people.set_slices([
-		{"label": "Towns", "value": pop["urban"], "color": UiPalette.chart_color("cat_1")},
-		{"label": "Country", "value": pop["rural"], "color": UiPalette.chart_color("cat_2")},
+		{"label": "Towns", "dimension": "towns", "value": pop["urban"],
+			"color": UiPalette.chart_color("cat_1")},
+		{"label": "Country", "dimension": "country", "value": pop["rural"],
+			"color": UiPalette.chart_color("cat_2")},
 	])
 	var host_rows: Array = []
 	var top := 1.0
@@ -106,6 +111,7 @@ func refresh() -> void:
 		i += 1
 		top = maxf(top, float(host[u]))
 		host_rows.append({"label": String((data.resource_icons.get(u, {}) as Dictionary).get("label", u)),
+			"dimension": u,
 			"value": float(host[u]), "color": UiPalette.chart_color("cat_%d" % i),
 			"text": _compact(float(host[u]))})
 	_host.set_rows(host_rows, top)
