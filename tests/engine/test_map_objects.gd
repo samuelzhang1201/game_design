@@ -388,10 +388,10 @@ func _decor_repo(clump: int, spread: float) -> DataRepository:
 ## spread over a sea cell by its area, kept by the hash against
 ## map_sea_decor_density, and only beyond the row's min_shore_px from the
 ## land coast. A 200x200 sea square east of a shore running down x = 10.
-func _sea_repo(take: float, min_shore: float) -> DataRepository:
+func _sea_repo(take: float, min_shore: float, gap: float = 0.0) -> DataRepository:
 	var r := DataRepository.new()
 	r.balance = {"map_sea_decor_density": take, "map_sea_decor_scale": 1.0,
-		"map_sea_decor_spacing_px": 40.0}
+		"map_sea_decor_spacing_px": 40.0, "map_sea_decor_min_gap_px": gap}
 	r.vertices = {0: Vector2(0, 0), 1: Vector2(10, 0), 2: Vector2(10, 200), 3: Vector2(0, 200),
 		4: Vector2(210, 0), 5: Vector2(210, 200)}
 	r.cells = {
@@ -421,6 +421,20 @@ func test_sea_marks_keep_off_the_shore_and_inside_the_water() -> void:
 	MapObjects.forget_decor()
 	assert_eq(MapObjects.sea_decor(_sea_repo(1.0, 500.0)).size(), 0,
 		"a shore margin wider than the sea: nothing fits")
+
+## Spread out and never overlapping (owner 2026-09-13): with a minimum gap
+## no two marks come closer than it, and the sea still gets its share.
+func test_sea_marks_keep_their_distance_from_each_other() -> void:
+	MapObjects.forget_decor()
+	var crowded := MapObjects.sea_decor(_sea_repo(1.0, 0.0, 0.0)).size()
+	MapObjects.forget_decor()
+	var marks := MapObjects.sea_decor(_sea_repo(1.0, 0.0, 60.0))
+	assert_gt(marks.size(), 1, "more than one still fits a 200x200 sea at 60 px apart")
+	assert_lt(marks.size(), crowded, "the gap thinned the crowd")
+	for a in marks.size():
+		for b in range(a + 1, marks.size()):
+			assert_gte((marks[a]["pos"] as Vector2).distance_to(marks[b]["pos"]), 60.0,
+				"no two marks within the gap")
 
 func test_sea_marks_stand_in_the_same_place_every_time() -> void:
 	MapObjects.forget_decor()

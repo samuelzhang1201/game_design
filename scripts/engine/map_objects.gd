@@ -161,7 +161,10 @@ static func terrain_decor(repo: DataRepository) -> Array:
 ## per map_sea_decor_spacing_px square of its bounding box, hashed from the
 ## cell id, kept inside the polygon, thinned by map_sea_decor_density, and
 ## dropped within the row's min_shore_px of the land coast so they stay off
-## the hatching. The row is drawn by weight. The same determinism as
+## the hatching, and kept map_sea_decor_min_gap_px apart from one another
+## (owner 2026-09-13: spread out, never overlapping) — a candidate too
+## near any mark already placed is dropped, in cell order, so the result
+## is still the same every run. The row is drawn by weight. The same determinism as
 ## terrain_decor: nothing to seed or store. No monsters (owner ruling
 ## 2026-09-12): a whale is an animal. Cached per repository.
 static var _sea_decor_cache: Dictionary = {}
@@ -175,6 +178,7 @@ static func sea_decor(repo: DataRepository) -> Array:
 		_sea_decor_cache[key] = out
 		return out
 	var spacing := maxf(repo.bal("map_sea_decor_spacing_px"), 1.0)
+	var gap_sq := pow(repo.bal("map_sea_decor_min_gap_px"), 2.0)
 	var take := repo.bal("map_sea_decor_density")
 	var scale := repo.bal("map_sea_decor_scale")
 	var shore := shore_points(repo)
@@ -208,6 +212,8 @@ static func sea_decor(repo: DataRepository) -> Array:
 					break
 			if _to_shore(p, shore) < float(row["min_shore_px"]):
 				continue
+			if _crowded(p, out, gap_sq):
+				continue
 			out.append({"pos": p, "texture": String(row["texture"]),
 				"height": float(row["height_px"]) * scale})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -223,6 +229,13 @@ static func shore_points(repo: DataRepository) -> PackedVector2Array:
 		if String(row.get("kind", "land")) == "land":
 			out.append_array(row["polyline"])
 	return out
+
+## Whether a spot lies within the minimum gap of a mark already placed.
+static func _crowded(p: Vector2, placed: Array, gap_sq: float) -> bool:
+	for m: Dictionary in placed:
+		if p.distance_squared_to(m["pos"]) < gap_sq:
+			return true
+	return false
 
 static func _to_shore(p: Vector2, shore: PackedVector2Array) -> float:
 	var best := INF

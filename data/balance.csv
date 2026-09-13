@@ -95,8 +95,9 @@ map_decor_tint,1.0,"world map: how far a terrain symbol takes on the colour of t
 map_sprite_inland,0.55,"world map: how far a coastal settlement's drawing slides back onto the land, as a fraction of its own half-width (owner report 2026-09-13: seaside towns had half their picture out on the water). 0 leaves every drawing centred on its point"
 map_sprite_tint,1.0,world map: the same, for the settlement drawings
 map_decor_density,1.0,world map: one knob over HOW MANY of them — multiplies the density column of data/terrain_art.csv
-map_sea_decor_density,0.14,"world map: the share of the open sea's candidate spots that get a ship or a whale (owner request 2026-09-13) — the spots are one per map_sea_decor_spacing_px square of sea, so 0.1 puts a mark on every tenth"
-map_sea_decor_spacing_px,60.0,"world map: how densely the sea is sampled for those spots, in NATIVE px — one candidate per square this wide"
+map_sea_decor_density,0.2,"world map: the share of the open sea's candidate spots that get a ship or a whale (owner request 2026-09-13) — the spots are one per map_sea_decor_spacing_px square of sea, so 0.1 puts a mark on every tenth"
+map_sea_decor_spacing_px,80.0,"world map: how densely the sea is sampled for those spots, in NATIVE px — one candidate per square this wide"
+map_sea_decor_min_gap_px,110.0,"world map: no two ships or whales closer than this, centre to centre, in NATIVE px (owner 2026-09-13: spread out, never overlapping) — wider than the widest mark, the whale at about twice its height_px"
 map_sea_decor_scale,1.0,"world map: one knob over their SIZE — multiplies the height_px column of data/sea_art.csv (native px, so they scale with the zoom like the woods)"
 map_sea_decor_alpha,0.36,"world map: opacity of the ships and whales — they are printed on the water, and the sea shows through them"
 map_home_scale,1.1,"world map: the zoom the map opens at, centred on the player's capital — above map_province_min_scale so the province seams are there from the first frame (owner 2026-09-12)"
