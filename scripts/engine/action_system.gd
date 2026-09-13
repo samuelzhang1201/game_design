@@ -59,6 +59,60 @@ func validate(req: ActionRequest, state: GameState) -> String:
 		"CHARACTER_REWARD":
 			if not req.params.get("mode", "gold") in ["gold"]:
 				return "mode must be gold (slice 1)"
+		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE":
+			return _validate_manor(req, state, needs)
+	return ""
+
+## The manor an order names: params.manor (a code, a label in any case, or
+## a cell id) or params.cell. -1 for none.
+func manor_of(req: ActionRequest) -> int:
+	var named := str(req.params.get("manor", req.params.get("cell", "")))
+	return MapManors.find(data, named)
+
+## MANOR_SYSTEM.md §5: a manor must exist and lie in the crown's realm; the
+## crown buys or seizes what it does not hold and sells or builds on what it
+## does; a purchase or a building must be affordable on top of the order's
+## own cost; seizing is gated by manor_seize_enabled until the military
+## system can resolve it.
+func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> String:
+	var cell := manor_of(req)
+	if cell < 0:
+		return "No such manor: %s" % str(req.params.get("manor", req.params.get("cell", "")))
+	var label := MapManors.label_of(data, cell)
+	var realm := data.resolve_realm("player_realm")
+	if MapOwnership.owner_of(data, state, MapManors.province_of(data, cell)) != realm:
+		return "%s lies outside the realm" % label
+	var crowns := MapManors.is_crowns(data, state, cell)
+	match req.action_code:
+		"MANOR_BUY":
+			if crowns:
+				return "The crown already holds %s" % label
+			var price := MapManors.price_of(data, state, cell)
+			if state.metrics["treasury"] < price + needs:
+				return "Cannot afford %s (House %s asks %d gold)" % [label,
+					MapManors.owner_of(data, state, cell), int(price)]
+		"MANOR_SEIZE":
+			if data.bal("manor_seize_enabled") <= 0.0:
+				return "Seizing manors is not permitted"
+			if crowns:
+				return "The crown already holds %s" % label
+		"MANOR_SELL":
+			if not crowns:
+				return "The crown does not hold %s" % label
+			var buyer := MapManors.default_owner(data, state, cell)
+			if buyer == "" or buyer == MapManors.crown(state):
+				return "No house to sell %s to" % label
+		"MANOR_BUILD":
+			if not crowns:
+				return "The crown does not hold %s" % label
+			var building := String(req.params.get("building", ""))
+			if not data.manor_buildings.has(building):
+				return "No such building: " + building
+			if MapManors.has_building(state, cell, building):
+				return "%s already has a %s" % [label, String(data.manor_buildings[building]["label"]).to_lower()]
+			var cost := float(data.manor_buildings[building]["cost_gold"])
+			if state.metrics["treasury"] < cost + needs:
+				return "Cannot afford a %s (%d gold)" % [String(data.manor_buildings[building]["label"]).to_lower(), int(cost)]
 	return ""
 
 func execute(req: ActionRequest, state: GameState) -> Dictionary:
@@ -124,6 +178,60 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		"CHARACTER_CONFIDE":
 			state.characters[req.target].change_opinion(
 				int(data.bal("confide_opinion")), "you confided in them", state.tick)
+		"MANOR_BUY":
+			var cell := manor_of(req)
+			var label := MapManors.label_of(data, cell)
+			var seller := MapManors.owner_of(data, state, cell)
+			var price := MapManors.price_of(data, state, cell)
+			_apply(state, effects, "treasury", -price, "bought %s from House %s" % [label, seller])
+			MapManors.set_owner(data, state, cell, MapManors.crown(state),
+				"bought from House %s for %d gold" % [seller, int(price)])
+			# A house paid well thinks better of the crown, and its councillor
+			# is the richer for it.
+			for c: Character in _house_members(state, seller):
+				c.change_opinion(int(data.bal("manor_trade_goodwill")),
+					"the crown paid well for %s" % label, state.tick)
+				if state.council.values().has(c.id):
+					c.change_attribute("wealth", int(data.bal("manor_trade_wealth")),
+						"sold %s to the crown" % label, state.tick)
+			effects.append({"metric": "manor", "delta": 1.0,
+				"reason": "%s is the crown's, bought from House %s" % [label, seller]})
+		"MANOR_SELL":
+			var cell := manor_of(req)
+			var label := MapManors.label_of(data, cell)
+			var buyer := MapManors.default_owner(data, state, cell)
+			var price := MapManors.sell_price_of(data, state, cell)
+			_apply(state, effects, "treasury", price, "sold %s to House %s" % [label, buyer])
+			MapManors.set_owner(data, state, cell, buyer, "sold to House %s for %d gold" % [buyer, int(price)])
+			effects.append({"metric": "manor", "delta": -1.0,
+				"reason": "%s passed to House %s" % [label, buyer]})
+		"MANOR_BUILD":
+			var cell := manor_of(req)
+			var building := String(req.params["building"])
+			var row_b: Dictionary = data.manor_buildings[building]
+			var label := MapManors.label_of(data, cell)
+			_apply(state, effects, "treasury", -float(row_b["cost_gold"]),
+				"raised a %s at %s" % [String(row_b["label"]).to_lower(), label])
+			MapManors.build(data, state, cell, building, "raised by the crown")
+			effects.append({"metric": "manor", "delta": 0.0,
+				"reason": "a %s stands at %s" % [String(row_b["label"]).to_lower(), label]})
+		"MANOR_SEIZE":
+			# The skeleton (MANOR_SYSTEM.md §5): the outcome is automatic success
+			# until the military system can roll defence against the host.
+			var cell := manor_of(req)
+			var label := MapManors.label_of(data, cell)
+			var victim := MapManors.owner_of(data, state, cell)
+			MapManors.set_owner(data, state, cell, MapManors.crown(state),
+				"seized by force from House %s" % victim)
+			_apply(state, effects, "legitimacy", -data.bal("manor_seize_legitimacy"),
+				"took %s by force" % label)
+			_apply(state, effects, "unrest", data.bal("manor_seize_unrest"),
+				"the seizure of %s" % label)
+			for c: Character in _house_members(state, victim):
+				c.change_opinion(-int(data.bal("manor_seize_outrage")),
+					"the crown seized %s from their house" % label, state.tick)
+			effects.append({"metric": "manor", "delta": 1.0,
+				"reason": "%s taken from House %s by force" % [label, victim]})
 	var cd := int(row.get("cooldown_ticks", 0))
 	if cd > 0:
 		state.cooldowns[req.action_code] = state.tick + cd
@@ -165,6 +273,17 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		"drift": drift}
 	state.recent_outcomes.append(outcome)
 	return outcome
+
+## Every character of a house, for a trade's goodwill or a seizure's outrage.
+func _house_members(state: GameState, family: String) -> Array:
+	var out: Array = []
+	if family == "":
+		return out
+	for id in state.characters:
+		var c: Character = state.characters[id]
+		if c.family_name == family:
+			out.append(c)
+	return out
 
 func _apply(state: GameState, effects: Array, metric: String, delta: float, reason: String) -> void:
 	state.metrics[metric] = state.metrics[metric] + delta

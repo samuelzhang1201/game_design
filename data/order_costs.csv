@@ -21,3 +21,7 @@ COURT_MARRIAGE,gold:-25:the dowry,0,
 GUARD_ADJUST,gold:-10:the guard's wages,0,
 SEAT_UNLOCK,gold:-80:a new seat's furnishings and stipend,0,formula_seat_unlock is not a real formula yet
 EVENT_CHOICE,none,0,event choices carry their own authored effects
+MANOR_BUY,gold:-2:the notary and the seal,1,the price itself is charged by the order; this is the paperwork
+MANOR_SELL,gold:-2:the notary and the seal,1,a sale earns gold; the fee still goes out
+MANOR_BUILD,gold:-1:the surveyor,1,
+MANOR_SEIZE,gold:-10:the men-at-arms' pay,1,soldiers are paid whether the yard falls or not

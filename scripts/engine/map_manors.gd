@@ -89,19 +89,32 @@ static func manors_of_province(repo: DataRepository, province_code: String) -> A
 
 # ---- ownership --------------------------------------------------------------
 
-## The player's family: the crown.
+## The player's family: the crown. The player character's LIVE family name
+## (character creation may have renamed the house), else the setup's.
 static func crown(state: GameState) -> String:
+	if state == null:
+		return ""
+	var you: Character = state.characters.get("you", null)
+	if you != null and you.family_name.strip_edges() != "":
+		return you.family_name.strip_edges()
 	return String(state.player_setup.get("family_name", "")).strip_edges()
 
-## The house a manor belongs to when nobody has moved it: its province's.
-static func default_owner(repo: DataRepository, cell_id: int) -> String:
+## The house a manor belongs to when nobody has moved it: its province's —
+## and when that is the royal house under the name it had before character
+## creation renamed it (player_setup.house_was), it is the crown's.
+static func default_owner(repo: DataRepository, state: GameState, cell_id: int) -> String:
 	var province := province_of(repo, cell_id)
-	return MapObjects.house_name_of(repo, province) if province != "" else ""
+	if province == "":
+		return ""
+	var house := MapObjects.house_name_of(repo, province)
+	if state != null and house != "" and house == String(state.player_setup.get("house_was", "")):
+		return crown(state)
+	return house
 
 static func owner_of(repo: DataRepository, state: GameState, cell_id: int) -> String:
 	if state != null and state.manor_owner.has(str(cell_id)):
 		return String(state.manor_owner[str(cell_id)])
-	return default_owner(repo, cell_id)
+	return default_owner(repo, state, cell_id)
 
 static func is_crowns(repo: DataRepository, state: GameState, cell_id: int) -> bool:
 	var c := crown(state)

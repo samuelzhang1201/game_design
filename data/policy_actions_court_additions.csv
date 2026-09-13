@@ -11,3 +11,7 @@ FACTION_SPLIT,court,Buy off part of a faction,faction,2.0,formula_faction_split,
 COURT_MARRIAGE,court,Arrange a marriage at court,character,1.0,formula_dowry_domestic,4,0,,court_marriage,2,no,yes,"Binds two courtiers. Creates a kinship link that transmits grievance."
 GUARD_ADJUST,court,Adjust your personal guard,none,0.5,formula_guard_cost,4,0,,court_guard_adjust,1,yes,,"Direct reduction in assassination success chance. Ongoing upkeep."
 SEAT_UNLOCK,court,Establish a new council seat,seat,2.5,formula_seat_unlock,12,1,,court_seat_unlock,1,no,,"One-off cost to open a seat beyond the founding five."
+MANOR_BUY,economy,Buy a manor,none,0.5,none,0,0,,manor_buy,3,no,no,"MANOR_SYSTEM.md §5. params: manor (code, label or cell id). Buys the manor from its house at MapManors.price_of; the house's people warm to the crown."
+MANOR_SELL,economy,Sell a manor,none,0.5,none,0,0,,manor_sell,3,no,no,"params: manor. Sells a crown manor back to its province's house at the sell-back price."
+MANOR_BUILD,economy,Build on a manor,none,0.5,none,0,0,,manor_build,3,no,no,"params: manor, building (data/manor_buildings.csv). Raises one building on a crown manor for its cost."
+MANOR_SEIZE,military,Seize a manor by force,none,1.5,none,4,0,,manor_seize,1,no,no,"Skeleton: gated by manor_seize_enabled; automatic success until the military system resolves it. Costs legitimacy, unrest and the house's regard."

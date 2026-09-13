@@ -88,6 +88,10 @@ func apply_player_setup(setup: Dictionary) -> void:
 		if c.family_name == old_family and old_family != "":
 			c.family_name = family
 			c.display_name = c.display_name.replace(old_family, family)
+	# The pack's house_bindings still name the royal house as it was; the
+	# manors bound to that name are the crown's (MapManors.default_owner).
+	if old_family != "" and old_family != family:
+		player_setup["house_was"] = old_family
 	you.family_name = family
 	you.display_name = "King %s %s" % [first, family]
 

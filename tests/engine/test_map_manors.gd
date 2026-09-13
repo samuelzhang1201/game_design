@@ -143,6 +143,21 @@ func test_set_owner_needs_a_manor_a_known_house_a_change_and_a_reason() -> void:
 	assert_true(MapManors.is_known_house(r, s, "Valorin"))
 	assert_false(MapManors.is_known_house(r, s, ""))
 
+## Character creation renames the royal house; the pack still binds the
+## demesne to the old name, so those manors are the crown's under the new.
+func test_a_renamed_royal_house_keeps_its_manors() -> void:
+	var r := _repo()
+	var s := _state()
+	s.player_setup["house_was"] = "Valorin"
+	assert_eq(MapManors.owner_of(r, s, 1), "Rex", "bound to Valorin, which the crown was")
+	assert_true(MapManors.is_crowns(r, s, 1))
+	assert_eq(MapManors.owner_of(r, s, 4), "Wick", "another house is untouched")
+	var you := Character.new()
+	you.id = "you"
+	you.family_name = "Regis"
+	s.characters["you"] = you
+	assert_eq(MapManors.crown(s), "Regis", "the player character's live name wins")
+
 ## Province p: 3 000 country folk split by weight (both 80 -> 1 500 each),
 ## 1 000 townsfolk to the one burg cell. The manors sum to the province.
 func test_people_are_the_provinces_shared_by_land_and_town() -> void:
