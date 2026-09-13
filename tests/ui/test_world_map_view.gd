@@ -1077,12 +1077,15 @@ func test_the_woods_are_one_mesh_over_one_atlas() -> void:
 	v.show_heights = true
 	assert_false(v.decor_visible(), "hidden under a theme")
 
-## The manors' marks are meshes by zoom tier (owner 2026-09-13): nothing
-## at the world zoom, the farmsteads at the home zoom, the fields closer
-## in; none under a theme.
-func test_the_manor_marks_come_in_by_zoom_tier() -> void:
+## The manors' marks are meshes by zoom tier, in the MANORS view only
+## (owner 2026-09-13: not the default map): nothing at the world zoom,
+## the farmsteads at the home zoom, the fields closer in.
+func test_the_manor_marks_come_in_by_zoom_tier_in_the_manors_view() -> void:
 	var v := _view()
 	await wait_frames(2)
+	v._zoom = 3.0
+	assert_eq(v.manor_decor_tiers_shown(), [], "the default map carries none")
+	v.show_manors = true
 	var meshes := v.manor_decor_meshes()
 	assert_eq(meshes.size(), 2, "two tiers in data/manor_decor.csv")
 	var tiers: Array = meshes.keys()
@@ -1096,8 +1099,9 @@ func test_the_manor_marks_come_in_by_zoom_tier() -> void:
 	v._zoom = float(tiers[1]) + 0.5
 	assert_eq(v.manor_decor_tiers_shown(), tiers, "close in: every tier")
 	assert_true(v.manor_decor_meshes() == meshes, "kept between frames")
-	v.show_manors = true
-	assert_eq(v.manor_decor_tiers_shown(), [], "none under a theme")
+	v.show_manors = false
+	v.show_economy = true
+	assert_eq(v.manor_decor_tiers_shown(), [], "none in the economy view either")
 
 ## A thematic view drops the terrain decoration: a wood is not what the view
 ## is about. The HEIGHTS view keeps the town drawings — a town is still a

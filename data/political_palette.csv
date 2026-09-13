@@ -31,3 +31,4 @@ army_outline,#1E2530,military layer: the outline round a regiment's counter
 army_icon_bg,#2E3A46,military layer: the square behind a counter's glyph
 army_glyph,#FFFFFF,military layer: the glyph itself
 army_count_ink,#FFFFFF,military layer: the headcount in the realm-coloured box
+manor_mark,#C4CBD2,"manors view: the ink of the farmsteads and chief-good marks every manor carries (data/manor_decor.csv) — one dark ink, since the manors wear their houses' colours"

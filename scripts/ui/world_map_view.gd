@@ -1136,46 +1136,41 @@ func _realm_tint_plain(province_code: String, strength: float) -> Color:
 		return Color.WHITE
 	return Color.WHITE.lerp(MapPalette.color_of(Game.data, holder), strength)
 
-## The manors' own marks (MapObjects.manor_decor, owner 2026-09-13): one
-## mesh per min_scale tier, so the farmsteads come in at the home zoom
-## and the fields closer in — a tier is a single draw call or nothing.
-## Rebuilt when the ledger, the focuses or the owners change.
+## The manors' own marks (MapObjects.manor_decor, owner 2026-09-13), in
+## the MANORS view only (owner: not the default map): one mesh per
+## min_scale tier, so the farmsteads come in at the home zoom and the
+## fields closer in — a tier is a single draw call or nothing. The marks
+## wear one ink (palette manor_mark) since the manors wear their houses'
+## colours. Rebuilt when the ledger or the focuses change.
 var _manor_decor_meshes: Dictionary = {}
 var _manor_decor_sig := 0
 
 func manor_decor_meshes() -> Dictionary:
 	var state := Game.state
-	var sig := hash([_ownership_sig(), 0 if state == null else state.world.hash(),
-		0 if state == null else state.manor_focus.hash(),
-		Game.data.bal("map_decor_alpha"), Game.data.bal("map_decor_tint")])
+	var sig := hash([0 if state == null else state.world.hash(),
+		0 if state == null else state.manor_focus.hash(), Game.data.bal("map_decor_alpha")])
 	if _manor_decor_sig == sig and not _manor_decor_meshes.is_empty():
 		return _manor_decor_meshes
-	var alpha := Game.data.bal("map_decor_alpha")
-	var strength := Game.data.bal("map_decor_tint")
-	var tints: Dictionary = {}
+	var ink := MapPalette.named(Game.data, "manor_mark")
+	ink.a = Game.data.bal("map_decor_alpha")
 	var by_tier: Dictionary = {}
 	for d: Dictionary in MapObjects.manor_decor(Game.data, state):
-		var pos: Vector2 = d["pos"]
-		var province := _decor_province(pos)
-		if not tints.has(province):
-			var tint := _realm_tint_plain(province, strength)
-			tint.a = alpha
-			tints[province] = tint
 		var tier := float(d["min_scale"])
 		if not by_tier.has(tier):
 			by_tier[tier] = []
-		(by_tier[tier] as Array).append({"pos": pos, "texture": String(d["texture"]),
-			"height": float(d["height"]), "color": tints[province]})
+		(by_tier[tier] as Array).append({"pos": d["pos"], "texture": String(d["texture"]),
+			"height": float(d["height"]), "color": ink})
 	_manor_decor_meshes = {}
 	for tier: float in by_tier:
 		_manor_decor_meshes[tier] = MarkMesh.build(by_tier[tier], decor_atlas())
 	_manor_decor_sig = sig
 	return _manor_decor_meshes
 
-## The tiers that draw at the current zoom, ascending. Test seam.
+## The tiers that draw at the current zoom in the MANORS view, ascending;
+## none in any other view. Test seam.
 func manor_decor_tiers_shown() -> Array:
 	var out: Array = []
-	if not decor_visible():
+	if not show_manors or _terrain_mesh == null:
 		return out
 	for tier: float in manor_decor_meshes():
 		if view_scale() >= tier:
@@ -1184,15 +1179,17 @@ func manor_decor_tiers_shown() -> Array:
 	return out
 
 func _draw_terrain_decor() -> void:
-	if not decor_visible():
-		return
 	var xf := Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)
 	var atlas := decor_atlas()
-	var mesh := decor_mesh()
-	if mesh.get_surface_count() > 0:
-		draw_mesh(mesh, atlas.texture, xf)
+	if decor_visible():
+		var mesh := decor_mesh()
+		if mesh.get_surface_count() > 0:
+			draw_mesh(mesh, atlas.texture, xf)
+	var tiers := manor_decor_tiers_shown()
+	if tiers.is_empty():
+		return
 	var meshes := manor_decor_meshes()
-	for tier: float in manor_decor_tiers_shown():
+	for tier: float in tiers:
 		var m: ArrayMesh = meshes[tier]
 		if m.get_surface_count() > 0:
 			draw_mesh(m, atlas.texture, xf)
