@@ -36,7 +36,7 @@ func _init() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_title = Label.new()
 	_title.name = "Title"
-	_title.text = "WHAT THE REALM MAKES"
+	_title.text = "WHAT YOUR LAND MAKES"
 	UiPalette.style_header(_title, 16)
 	# Every heading wraps: the left column is a fixed width and a label that
 	# cannot wrap sets a minimum width, which would push it over the map.

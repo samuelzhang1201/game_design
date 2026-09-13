@@ -221,4 +221,4 @@ map_manor_crown_deep,0.25,"manors view: how far the crown's manors deepen from t
 map_manor_foreign_pale,0.65,"manors view: how far manors outside the crown's realm fade toward manor_pale"
 map_manor_shade_levels,5,"manor views (owner 2026-09-13): how many shade levels neighbouring provinces are told apart with — no two provinces that touch share one; 1 turns it off"
 map_manor_shade_step,0.12,"manor views: how far each shade level moves a manor's colour toward white or black (level 1 lighter, 2 darker, 3 lighter still...)"
-manor_focus_yield_scale,1.0,"manors §3 (owner 2026-09-13): multiplier on every manor focus yield — one knob for how much a manor's chief good adds to the economy column"
+manor_focus_yield_scale,0.05,"manors §3 (owner 2026-09-13): multiplier on every manor focus yield — one knob for how much a manor's chief good adds to the economy column; 0.05 puts a 20 000-people manor at ~10 units, the scale of the pack's town production"

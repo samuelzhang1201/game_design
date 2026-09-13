@@ -51,6 +51,9 @@ var _speaker := ""
 ## --tab 0|1|2 opens the dossier's BIO / SKILLS / TIES page over the talk,
 ## which is where the full-body art is shown at size.
 var _tab := -1
+## --manor <code|label|cell id> opens that manor's card in the left column
+## (its fields and order buttons) and centres the map on it.
+var _manor := ""
 
 
 func _ready() -> void:
@@ -71,6 +74,8 @@ func _ready() -> void:
 			_speaker = args[i + 1]
 		elif args[i] == "--tab":
 			_tab = int(args[i + 1])
+		elif args[i] == "--manor":
+			_manor = args[i + 1]
 		elif args[i] == "--resolution":
 			var wh := args[i + 1].split("x")
 			if wh.size() == 2:
@@ -143,6 +148,13 @@ func _process(_delta: float) -> void:
 		_root.current_screen.enter_court(null)
 		if _layer != "":
 			_root._on_bottom_tab(_layer.to_upper())
+		if _manor != "" and _root.current_screen.has_method("detail_panel"):
+			var cell := MapManors.find(Game.data, _manor)
+			if cell < 0:
+				push_error("no such manor: " + _manor)
+			else:
+				_root.current_screen.world_map().highlight_manor(cell)
+				_root.current_screen.detail_panel().show_manor(cell)
 	if _frames == 40:
 		var img := (get_viewport() if _viewport == null else _viewport).get_texture().get_image()
 		var abs := ProjectSettings.globalize_path(_out)

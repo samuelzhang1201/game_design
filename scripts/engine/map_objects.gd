@@ -894,6 +894,15 @@ static func manor_actions(repo: DataRepository, state: GameState, cell: int) -> 
 	if MapManors.is_crowns(repo, state, cell):
 		specs.append({"action_code": "MANOR_SELL", "params": {"manor": code},
 			"label": "SELL — %d gold" % roundi(MapManors.sell_price_of(repo, state, cell))})
+		# The chief goods the land allows, less the one it works (2026-09-13),
+		# ahead of the buildings: the choice the economy turns on.
+		var working := MapManors.focus_of(repo, state, cell)
+		for f: String in MapManors.focuses_for(repo, cell):
+			if f == working:
+				continue
+			var row_f: Dictionary = repo.manor_focus[f]
+			specs.append({"action_code": "MANOR_FOCUS", "params": {"manor": code, "focus": f},
+				"label": "WORK %s — %d gold" % [String(row_f["label"]).to_upper(), int(float(row_f["switch_cost_gold"]))]})
 		var codes: Array = repo.manor_buildings.keys()
 		codes.sort()
 		for b: String in codes:
@@ -902,14 +911,6 @@ static func manor_actions(repo: DataRepository, state: GameState, cell: int) -> 
 			var row: Dictionary = repo.manor_buildings[b]
 			specs.append({"action_code": "MANOR_BUILD", "params": {"manor": code, "building": b},
 				"label": "BUILD %s — %d gold" % [String(row["label"]).to_upper(), int(float(row["cost_gold"]))]})
-		# The chief goods the land allows, less the one it works (2026-09-13).
-		var working := MapManors.focus_of(repo, state, cell)
-		for f: String in MapManors.focuses_for(repo, cell):
-			if f == working:
-				continue
-			var row_f: Dictionary = repo.manor_focus[f]
-			specs.append({"action_code": "MANOR_FOCUS", "params": {"manor": code, "focus": f},
-				"label": "WORK %s — %d gold" % [String(row_f["label"]).to_upper(), int(float(row_f["switch_cost_gold"]))]})
 	else:
 		specs.append({"action_code": "MANOR_BUY", "params": {"manor": code},
 			"label": "BUY — %d gold" % roundi(MapManors.price_of(repo, state, cell))})
