@@ -38,6 +38,9 @@ var settlement_art: Array[Dictionary] = []
 ## data/terrain_art.csv rows: which symbol a land cell is decorated with, by
 ## height band or biome, and how thickly (MapObjects.terrain_decor).
 var terrain_art: Array[Dictionary] = []
+## data/sea_art.csv rows: the ships and whales printed on the open sea
+## (MapObjects.sea_decor): texture, density, height_px, min_hops from shore.
+var sea_art: Array[Dictionary] = []
 ## data/goods_art.csv: good_code -> the produce icon the ECONOMY view draws.
 var goods_art: Dictionary = {}
 ## data/goods_palette.csv: a good's first tag -> the colour its province wears
@@ -289,6 +292,10 @@ func _load(dir: String) -> bool:
 			["key", "biome_id", "min_height", "max_height", "texture", "density",
 			"height_px", "clump", "spread"],
 			func(r): terrain_art.append(r)):
+		return false
+	if not _load_if_present("res://data/sea_art.csv",
+			["key", "texture", "density", "height_px", "min_hops"],
+			func(r): sea_art.append(r)):
 		return false
 	if not _load_if_present(dir + "/settlement_art.csv", ["group", "walled", "tier", "texture", "size"],
 			func(r): settlement_art.append(r)):

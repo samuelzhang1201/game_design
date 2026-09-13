@@ -9,7 +9,8 @@ func _two_cells(light: Vector2 = Vector2(-1, 0), strength := 0.02,
 	var r := DataRepository.new()
 	r.balance = {"map_relief_strength": strength, "map_relief_min": 0.5,
 		"map_relief_max": 1.5, "map_light_x": light.x, "map_light_y": light.y,
-		"map_altitude_gain": altitude_gain, "map_sea_depth_gamma": 1.0, "map_terrain_blend": 1.0}
+		"map_altitude_gain": altitude_gain, "map_sea_shelf_cells": 2.0,
+		"map_sea_shelf_gamma": 1.0, "map_terrain_blend": 1.0}
 	r.terrain_palette = {"biome_1": "#808080", "sea_deep": "#000000",
 		"sea_shallow": "#ffffff", "lake": "#0000ff"}
 	r.biomes = {1: {"biome_id": "1", "label": "Test", "color": "#ff0000"}}
@@ -90,23 +91,55 @@ func test_unlisted_biome_falls_back_to_the_pack_colour() -> void:
 
 ## Ocean grades from sea_deep at h 0 to sea_shallow at h 20 (gamma 1 here);
 ## a lake is the lake colour whatever its height.
+## The shelf is a distance from the shore in cell hops, not a height class
+## (owner 2026-09-13): shallow at the shore, deep map_sea_shelf_cells out,
+## linear between at gamma 1. A cell that is in no repo is open sea.
 func test_water_colours() -> void:
 	var r := _two_cells()
 	var deep := {"vertex_ids": PackedInt32Array([0, 1, 2]), "height": 0.0,
 		"biome_id": 0, "water": "ocean", "neighbor_ids": PackedInt32Array()}
-	var half := deep.duplicate()
-	half["height"] = 10.0
-	var shelf := deep.duplicate()
-	shelf["height"] = 20.0
 	var lake := deep.duplicate()
 	lake["water"] = "lake"
 	lake["height"] = 15.0
-	assert_almost_eq(MapTerrain.cell_color(r, deep).r, 0.0, 0.0001)
-	assert_almost_eq(MapTerrain.cell_color(r, half).r, 0.5, 0.0001)
-	assert_almost_eq(MapTerrain.cell_color(r, shelf).r, 1.0, 0.0001)
+	assert_almost_eq(MapTerrain.sea_color(r, 0.0).r, 1.0, 0.0001, "shallow at the shore")
+	assert_almost_eq(MapTerrain.sea_color(r, 1.0).r, 0.5, 0.0001, "half way out")
+	assert_almost_eq(MapTerrain.sea_color(r, 2.0).r, 0.0, 0.0001, "deep at the shelf's edge")
+	assert_almost_eq(MapTerrain.sea_color(r, 9.0).r, 0.0, 0.0001, "and beyond")
+	assert_almost_eq(MapTerrain.cell_color(r, deep).r, 0.0, 0.0001, "a cell in no repo is open sea")
 	assert_eq(MapTerrain.cell_color(r, lake), Color("#0000ff"))
 	assert_true(MapTerrain.is_water(lake))
+	assert_true(MapTerrain.is_sea(deep))
+	assert_false(MapTerrain.is_sea(lake))
 	assert_false(MapTerrain.is_water(r.cells[1]))
+
+## Gamma bends the fade: at 2 the half-way cell is a quarter shallow.
+func test_shelf_gamma_shapes_the_fade() -> void:
+	var r := _two_cells()
+	r.balance["map_sea_shelf_gamma"] = 2.0
+	assert_almost_eq(MapTerrain.sea_color(r, 1.0).r, 0.25, 0.0001)
+
+## A chain of sea cells off a shore: land 1 - sea 3 - sea 4 - sea 5, and a
+## lake 6 beside 4 that neither counts as shore nor carries the walk.
+## Hops: 3 -> 0, 4 -> 1, 5 -> 2; the lake is absent. The cells are coloured
+## by those hops through cell_color, which reads the cell's own id.
+func test_shore_hops_walk_out_from_the_land() -> void:
+	var r := _two_cells()
+	r.cells[1]["neighbor_ids"] = PackedInt32Array([2, 3])
+	r.cells[3] = {"cell_id": "3", "vertex_ids": PackedInt32Array([0, 1, 2]), "height": 15.0,
+		"biome_id": 0, "water": "ocean", "neighbor_ids": PackedInt32Array([1, 4])}
+	r.cells[4] = {"cell_id": "4", "vertex_ids": PackedInt32Array([0, 1, 2]), "height": 5.0,
+		"biome_id": 0, "water": "ocean", "neighbor_ids": PackedInt32Array([3, 5, 6])}
+	r.cells[5] = {"cell_id": "5", "vertex_ids": PackedInt32Array([0, 1, 2]), "height": 19.0,
+		"biome_id": 0, "water": "ocean", "neighbor_ids": PackedInt32Array([4])}
+	r.cells[6] = {"cell_id": "6", "vertex_ids": PackedInt32Array([0, 1, 2]), "height": 15.0,
+		"biome_id": 0, "water": "lake", "neighbor_ids": PackedInt32Array([4])}
+	var hops := MapTerrain.shore_hops(r)
+	assert_eq(hops, {3: 0, 4: 1, 5: 2})
+	assert_almost_eq(MapTerrain.cell_color(r, r.cells[3]).r, 1.0, 0.0001, "the shore cell is shallow")
+	assert_almost_eq(MapTerrain.cell_color(r, r.cells[4]).r, 0.5, 0.0001, "one out, half")
+	assert_almost_eq(MapTerrain.cell_color(r, r.cells[5]).r, 0.0, 0.0001,
+		"two out is the shelf's edge: deep, whatever its height says")
+	assert_same(MapTerrain.shore_hops(r), hops, "walked once per repo")
 
 ## Three triangles sharing vertex 0: land A (tint white), land B (tint
 ## black), ocean C (h 0, sea_deep blue). All flat. A ring vertex blends only
@@ -117,7 +150,8 @@ func _shore() -> DataRepository:
 	var r := DataRepository.new()
 	r.balance = {"map_relief_strength": 0.02, "map_relief_min": 0.5,
 		"map_relief_max": 1.5, "map_light_x": -1.0, "map_light_y": 0.0,
-		"map_altitude_gain": 0.0, "map_sea_depth_gamma": 1.0, "map_terrain_blend": 1.0}
+		"map_altitude_gain": 0.0, "map_sea_shelf_cells": 2.0,
+		"map_sea_shelf_gamma": 1.0, "map_terrain_blend": 1.0}
 	r.terrain_palette = {"biome_1": "#ffffff", "biome_2": "#000000",
 		"sea_deep": "#0000ff", "sea_shallow": "#ffffff", "lake": "#00ff00"}
 	r.biomes = {1: {"color": "#ff0000"}, 2: {"color": "#ff0000"}}

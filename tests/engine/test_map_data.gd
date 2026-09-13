@@ -240,7 +240,8 @@ func test_terrain_palette_names_every_colour_the_map_draws() -> void:
 
 func test_terrain_balance_keys_are_present() -> void:
 	for key in ["map_relief_strength", "map_relief_min", "map_relief_max", "map_light_x",
-			"map_light_y", "map_altitude_gain", "map_sea_depth_gamma", "map_coast_width",
+			"map_light_y", "map_altitude_gain", "map_sea_shelf_cells", "map_sea_shelf_gamma",
+			"map_coast_width",
 			"map_river_min_px", "map_river_discharge_scale", "map_road_width",
 			"map_trail_width", "map_trail_min_scale"]:
 		assert_true(repo.balance.has(key), key)

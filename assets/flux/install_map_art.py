@@ -2,6 +2,7 @@
 """Turn a chapter's renders into game assets.
 
     python3 assets/flux/install_map_art.py goods    # G-xx -> assets/goods/
+    python3 assets/flux/install_map_art.py decor    # D-xx -> assets/decor/ (sea ships, whale)
     python3 assets/flux/install_map_art.py cast     # K-xx -> assets/portraits/
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
@@ -90,11 +91,23 @@ def grey_and_lighten(px: bytearray, k: float) -> None:
 
 def install_goods(height: int = 128, lighten: float = 0.45) -> int:
     codes = {r["art_id"]: r["good_code"] for r in csv.DictReader((HERE / "goods_art.csv").open())}
-    dest = ROOT / "assets" / "goods"
+    return install_marks(codes, "goods", ROOT / "assets" / "goods", height, lighten)
+
+
+## The sea's decoration (data/sea_art.csv, owner request 2026-09-13): the
+## D- renders named in decor_art.csv, cut out, greyed and lightened like the
+## goods — the game prints them on the water in sea_ink at map_sea_decor_alpha
+## — at 256 px, the mark tier of post.py.
+def install_decor(height: int = 256, lighten: float = 0.45) -> int:
+    codes = {r["art_id"]: r["key"] for r in csv.DictReader((HERE / "decor_art.csv").open())}
+    return install_marks(codes, "decor", ROOT / "assets" / "decor", height, lighten)
+
+
+def install_marks(codes: dict, chapter: str, dest, height: int, lighten: float) -> int:
     dest.mkdir(parents=True, exist_ok=True)
     done = 0
     for art_id, code in sorted(codes.items()):
-        hits = sorted((HERE / "out" / "goods").glob("%s_*.png" % art_id))
+        hits = sorted((HERE / "out" / chapter).glob("%s_*.png" % art_id))
         if not hits:
             print("  (no render for %s / %s)" % (art_id, code))
             continue
@@ -159,10 +172,11 @@ def _install_cast_tier(codes: dict, tag: str, tier: str, size: int, dest: Path) 
 
 
 def main() -> int:
-    if len(sys.argv) < 2 or sys.argv[1] not in ("goods", "cast"):
+    chapters = {"goods": install_goods, "decor": install_decor, "cast": install_cast}
+    if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2
-    n = install_goods() if sys.argv[1] == "goods" else install_cast()
+    n = chapters[sys.argv[1]]()
     print("%d asset(s) installed" % n)
     return 0
 

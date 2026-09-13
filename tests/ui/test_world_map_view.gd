@@ -79,17 +79,77 @@ func test_rivers_draw_where_the_view_is() -> void:
 
 ## macOS trackpad (user request 2026-09-09): pinch zooms, two-finger drag
 ## pans. Both arrive as their own event types, beside the wheel.
-## Rivers (owner request 2026-09-13): widest at the source, thinning as
-## (1 - t)^gamma to a point. n = 5, half_max 4, gamma 1.5:
-##   t = 0, .25, .5, .75, 1  ->  (1-t)^1.5 = 1, .6495, .35355, .125, 0
-func test_a_river_is_widest_at_its_source_and_tapers_to_a_point() -> void:
+## Rivers (owner 2026-09-13, reversing the morning's ruling): a point at the
+## source, swelling as t^gamma to full width at the mouth. n = 5, half_max
+## 4, gamma 1.5:  t = 0, .25, .5, .75, 1  ->  t^1.5 = 0, .125, .35355, .6495, 1
+func test_a_river_rises_as_a_point_and_is_widest_at_its_mouth() -> void:
 	var half := WorldMapView.river_taper(5, 4.0, 1.5)
 	assert_eq(half.size(), 5)
-	assert_almost_eq(half[0], 4.0, 0.001, "full width at the source")
-	assert_almost_eq(half[1], 2.598, 0.001)
+	assert_almost_eq(half[0], 0.0, 0.001, "a point at the source")
+	assert_almost_eq(half[1], 0.5, 0.001)
 	assert_almost_eq(half[2], 1.414, 0.001)
-	assert_almost_eq(half[3], 0.5, 0.001)
-	assert_almost_eq(half[4], 0.0, 0.001, "a point at the end")
+	assert_almost_eq(half[3], 2.598, 0.001)
+	assert_almost_eq(half[4], 4.0, 0.001, "full width at the mouth")
+
+## The pack's point order is the flow (source first, mouth last) and is
+## kept; every drawn river begins and ends on land, and a river the pack
+## runs out to sea is cut at the shoreline: its mouth is on land, and the
+## next step along the crossing segment is water (owner 2026-09-13).
+func test_every_river_runs_from_land_to_the_shoreline() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var steps := int(Game.data.bal("map_river_smoothing_steps"))
+	var to_sea := 0
+	for code: String in Game.data.rivers:
+		var raw: PackedVector2Array = Game.data.rivers[code]["polyline"]
+		var curve := v.river_curve(code, raw)
+		if curve.size() < 2:
+			continue
+		assert_false(v._is_water(curve[0]), "%s rises on land" % code)
+		var mouth := curve[curve.size() - 1]
+		assert_false(v._is_water(mouth), "%s ends on land" % code)
+		var smooth := MapGeometry.smooth_open(raw, steps)
+		if not v._is_water(raw[0]):
+			assert_eq(curve[0], smooth[0], "%s keeps the pack's source" % code)
+		if not v._is_water(smooth[smooth.size() - 1]):
+			continue
+		to_sea += 1
+		# The last land sample of the smoothed course and the first water one
+		# after it bracket the drawn mouth, which sits on their segment.
+		var last := smooth.size() - 1
+		while last > 0 and v._is_water(smooth[last]):
+			last -= 1
+		var a := smooth[last]
+		var b := smooth[last + 1]
+		assert_almost_eq(a.distance_to(mouth) + mouth.distance_to(b), a.distance_to(b), 0.01,
+			"%s's mouth lies on the crossing segment" % code)
+		# The land is pixels: the water begins within a px or so along the
+		# course, not at an exact real-valued edge.
+		var dir := (b - mouth).normalized()
+		var wet := false
+		for px: float in [0.5, 1.0, 1.5]:
+			wet = wet or v._is_water(mouth + dir * px)
+		assert_true(wet, "%s's mouth is at the water's edge" % code)
+	assert_gt(to_sea, 100, "most of the pack's rivers reach the sea")
+
+## The compass rose (owner request 2026-09-13) is the sheet's furniture: a
+## box in the top-right corner, fixed in screen px, and gone at alpha 0.
+func test_the_compass_sits_in_the_top_right_corner() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var rect := v.compass_rect()
+	var margin := Game.data.bal("map_compass_margin_px")
+	assert_almost_eq(rect.end.x, v.size.x - margin, 0.001, "inset from the right edge")
+	assert_almost_eq(rect.position.y, margin, 0.001, "inset from the top")
+	assert_eq(rect.size.x, Game.data.bal("map_compass_size_px"))
+	assert_true(Rect2(Vector2.ZERO, v.size).encloses(rect), "inside the view")
+	v._zoom_at(v.size / 2.0, 2.0)
+	v._offset += Vector2(-30.0, -20.0)
+	assert_eq(v.compass_rect(), rect, "neither zooms nor pans")
+	var alpha: float = Game.data.balance["map_compass_alpha"]
+	Game.data.balance["map_compass_alpha"] = 0.0
+	assert_eq(v.compass_rect(), Rect2(), "hidden at alpha 0")
+	Game.data.balance["map_compass_alpha"] = alpha
 
 func test_pinch_gesture_zooms() -> void:
 	var v := _view()

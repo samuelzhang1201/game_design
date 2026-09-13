@@ -83,6 +83,7 @@ static var _decor_cache: Dictionary = {}
 
 static func forget_decor() -> void:
 	_decor_cache.clear()
+	_sea_decor_cache.clear()
 
 ## A stable float in [0, 1) for an integer — an integer hash, masked to 32
 ## bits at every step so it cannot drift with the word size.
@@ -150,6 +151,52 @@ static func terrain_decor(repo: DataRepository) -> Array:
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return (a["pos"] as Vector2).y < (b["pos"] as Vector2).y)
 	_decor_cache[key] = out
+	return out
+
+## The sea's decoration — ships and a whale, the way an old chart fills its
+## open water (owner request 2026-09-13): [{pos, texture, height}] in native
+## coordinates from data/sea_art.csv, one mark at most per sea cell, on
+## cells at least the row's min_hops from any shore (MapTerrain.shore_hops)
+## and chosen by the cell id's hash against the row's density x
+## map_sea_decor_density — the same determinism as terrain_decor, nothing
+## to seed or store. Rows are tried in table order; the first that takes
+## the cell wins. No monsters (owner ruling 2026-09-12): a whale is an
+## animal. Cached per repository.
+static var _sea_decor_cache: Dictionary = {}
+
+static func sea_decor(repo: DataRepository) -> Array:
+	var key := repo.get_instance_id()
+	if _sea_decor_cache.has(key):
+		return _sea_decor_cache[key]
+	var out: Array = []
+	var hops := MapTerrain.shore_hops(repo)
+	var knob := repo.bal("map_sea_decor_density")
+	var scale := repo.bal("map_sea_decor_scale")
+	for id: int in repo.cells:
+		var cell: Dictionary = repo.cells[id]
+		if not MapTerrain.is_sea(cell):
+			continue
+		var away := int(hops.get(id, 1 << 30))
+		var k := 0
+		for row: Dictionary in repo.sea_art:
+			k += 1
+			if away < int(row["min_hops"]):
+				continue
+			if hash01(id * 6700417 + k * 999983) >= float(row["density"]) * knob:
+				continue
+			# Off the cell's centre by a hashed nudge, so the marks do not sit
+			# on the Voronoi lattice.
+			var centre := MapTerrain.cell_center(repo, cell)
+			var reach := MapTerrain.cell_radius(repo, cell) * 0.5
+			var a := hash01(id * 7919 + k * 104729) * TAU
+			var dist := sqrt(hash01(id * 31337 + k * 15485863)) * reach
+			out.append({"pos": centre + Vector2(cos(a), sin(a)) * dist,
+				"texture": String(row["texture"]),
+				"height": float(row["height_px"]) * scale})
+			break
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return (a["pos"] as Vector2).y < (b["pos"] as Vector2).y)
+	_sea_decor_cache[key] = out
 	return out
 
 ## Whether the pack's points of interest are on the sheet at all. Owner

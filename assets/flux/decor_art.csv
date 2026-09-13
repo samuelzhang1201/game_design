@@ -1,0 +1,4 @@
+art_id,key,notes
+D-19,carrack,three-masted carrack -> assets/decor/carrack.png (data/sea_art.csv)
+D-20,cog,single-masted cog -> assets/decor/cog.png
+D-22,whale,a real whale (no monster) -> assets/decor/whale.png

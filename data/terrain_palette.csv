@@ -12,7 +12,7 @@ biome_10,#EFF0E9,tundra
 biome_11,#F9FAF7,glacier — the palest land tone
 biome_12,#DFE7D5,wetland
 sea_deep,#6FB4E0,"open sea: a clear bright azure (2026-09-13; was the parchment slate #7E98A8)"
-sea_shallow,#CFEBFA,"shelf water: lighter, so the shore keeps a shallow band the way a drawn chart does"
+sea_shallow,#B4DDF4,"shelf water: lighter, so the shore keeps a shallow band the way a drawn chart does"
 lake,#9DD3F2,freshwater: between the two
 coast_line,#3E5566,"the shore stroke, and the ink of the map's kingdom lettering and paper grain: dark slate"
 river,#1E6FB5,"river water: a deep blue — the lighter #3F97D4 disappeared on the player realm's sky-blue wash"
@@ -22,6 +22,7 @@ sea_route,#2F80C2,"sea lanes (owner request 2026-09-12): a blue dashed line — 
 contour,#8A6A46,the HEIGHTS view's iso-lines
 scale_bar,#334155,the scale bar in the bottom-right corner
 wave,#3F8FC9,"the water hatching that rings a shore (owner request 2026-09-13): the sea blue deepened, drawn faint"
+sea_ink,#2F5F86,"the ink the ships and whales are printed on the sea in (owner request 2026-09-13): the sea blue deepened, like the hatching"
 heat_1,#6DBE6A,"the HEIGHTS view's height ramp (owner 2026-09-13): lowland green at sea level — brightened with the theme"
 heat_2,#C4D35E,rising ground
 heat_3,#F0C04E,upland yellow

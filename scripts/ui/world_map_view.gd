@@ -294,6 +294,7 @@ func _draw() -> void:
 	_layer("heights", _draw_heights)
 	_layer("paper", _draw_paper_grain)
 	_layer("waves", _draw_waves)
+	_layer("sea_decor", _draw_sea_decor)
 	# The wash goes UNDER the water and the roads (owner 2026-09-12, after
 	# mapSample.jpg): painted over them it muted every river and track on
 	# claimed land, which is most of the map.
@@ -325,6 +326,7 @@ func _draw() -> void:
 	_draw_object_highlight(_selected_obj)
 	_layer("vignette", _draw_paper_vignette)
 	_layer("scale", _draw_scale_bar)
+	_layer("compass", _draw_compass)
 
 ## Screen px per native map px — the LOD and pick radii are defined on it.
 func view_scale() -> float:
@@ -985,6 +987,48 @@ func _prepared_decor() -> Array:
 			"province": province_at(pos)})
 	return _prepared_decor_cache
 
+## The sea's own decoration — ships and a whale (MapObjects.sea_decor,
+## data/sea_art.csv; owner request 2026-09-13) — drawn like the terrain
+## symbols: sized in native px so they belong to the drawing, skipped below
+## map_decor_min_scale, hidden by the thematic views. They are PRINTED on
+## the water: the greyscale art is tinted with the palette's sea_ink and
+## drawn at map_sea_decor_alpha, so the sea shows through them the way the
+## paper shows through a light impression. Public for tests.
+var _prepared_sea_decor: Array = []
+
+func sea_sprites() -> Array:
+	if show_heights or show_economy:
+		return []
+	if _terrain_mesh == null or view_scale() < Game.data.bal("map_decor_min_scale"):
+		return []
+	if _prepared_sea_decor.is_empty():
+		for d: Dictionary in MapObjects.sea_decor(Game.data):
+			var tex := _sprite_texture(String(d["texture"]))
+			if tex == null:
+				continue
+			_prepared_sea_decor.append({"pos": d["pos"], "texture": tex,
+				"aspect": float(tex.get_width()) / float(tex.get_height()),
+				"height": float(d["height"])})
+	var s := view_scale()
+	var frame := Rect2(Vector2.ZERO, size)
+	var out: Array = []
+	for d: Dictionary in _prepared_sea_decor:
+		var h: float = d["height"] * s
+		var w: float = h * d["aspect"]
+		var rect := Rect2(map_to_screen(d["pos"]) - Vector2(w, h) * 0.5, Vector2(w, h))
+		if frame.intersects(rect):
+			out.append({"rect": rect, "texture": d["texture"]})
+	return out
+
+func _draw_sea_decor() -> void:
+	var sprites := sea_sprites()
+	if sprites.is_empty():
+		return
+	var ink := MapTerrain.palette_color(Game.data, "sea_ink", MapTerrain.FALLBACK)
+	ink.a = Game.data.bal("map_sea_decor_alpha")
+	for d in sprites:
+		draw_texture_rect(d["texture"], d["rect"], false, ink)
+
 func _draw_terrain_decor() -> void:
 	var sprites := terrain_sprites()
 	if sprites.is_empty():
@@ -1066,6 +1110,64 @@ func _draw_scale_bar() -> void:
 	var text_w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px).x
 	draw_string(font, Vector2(right - text_w, brow - 6.0), text,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, color)
+
+## A compass rose fixed in the top-right corner (owner request 2026-09-13),
+## in the manner of library M-13: a sixteen-point star whose limbs are
+## shaded dark on one side and pale on the other, inside a graduated ring,
+## north marked with an N. It is the sheet's furniture like the scale bar —
+## fixed in screen px, neither zooming nor panning — and all vector, in the
+## scale bar's ink, so it is crisp at any window size. The box it occupies,
+## or Rect2() when hidden (map_compass_alpha or size 0). Public for tests.
+func compass_rect() -> Rect2:
+	var d := Game.data.bal("map_compass_size_px")
+	if d <= 0.0 or Game.data.bal("map_compass_alpha") <= 0.0:
+		return Rect2()
+	var margin := Game.data.bal("map_compass_margin_px")
+	return Rect2(Vector2(size.x - margin - d, margin), Vector2(d, d))
+
+## The limbs: [count, reach as a share of the radius, first angle in degrees
+## clockwise from north], shortest first so the longer overlap them.
+const COMPASS_TIERS := [[8, 0.42, 22.5], [4, 0.66, 45.0], [4, 1.0, 0.0]]
+const COMPASS_TICKS := 32
+
+func _draw_compass() -> void:
+	var rect := compass_rect()
+	if rect.size.x <= 0.0:
+		return
+	var ink := MapTerrain.palette_color(Game.data, "scale_bar", MapTerrain.FALLBACK)
+	ink.a = Game.data.bal("map_compass_alpha")
+	var pale := Color(1.0, 1.0, 1.0, ink.a)
+	var d := rect.size.x
+	# The star sits a little low in its box to leave the N its room above.
+	var c := rect.get_center() + Vector2(0.0, d * 0.1)
+	var r := d * 0.36
+	# The graduated ring, under the limbs.
+	draw_arc(c, r * 0.56, 0.0, TAU, 96, ink, 1.4, true)
+	draw_arc(c, r * 0.48, 0.0, TAU, 96, ink, 0.8, true)
+	for i in COMPASS_TICKS:
+		var u := Vector2.from_angle(TAU * float(i) / float(COMPASS_TICKS))
+		var inner := r * (0.48 if i % 4 == 0 else 0.51)
+		draw_line(c + u * inner, c + u * r * 0.56, ink, 1.0, true)
+	for tier: Array in COMPASS_TIERS:
+		var count: int = tier[0]
+		var reach: float = r * float(tier[1])
+		for i in count:
+			var deg: float = float(tier[2]) + 360.0 / float(count) * float(i)
+			var u := Vector2.from_angle(deg_to_rad(deg) - PI * 0.5)
+			var v := u.orthogonal() * reach * 0.16
+			var tip := c + u * reach
+			# Each limb is a rhombus split down its length: the near half in
+			# ink, the far half in the paper's white, as a rose is engraved.
+			draw_colored_polygon(PackedVector2Array([c, c - v, tip]), ink)
+			draw_colored_polygon(PackedVector2Array([c, tip, c + v]), pale)
+			draw_polyline(PackedVector2Array([c - v, tip, c + v]), ink, 1.0, true)
+	var font := UiPalette.display_font()
+	if font == null:
+		return
+	var font_px := maxi(int(r * 0.42), 8)
+	var w := font.get_string_size("N", HORIZONTAL_ALIGNMENT_LEFT, -1, font_px).x
+	draw_string(font, Vector2(c.x - w * 0.5, c.y - r - 3.0), "N",
+		HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, ink)
 
 ## Every shore (islands and lakes) as a smooth stroke in the palette's
 ## coast colour — the same B-spline as the kingdom borders, so a border
@@ -1195,50 +1297,70 @@ func visible_river_count() -> int:
 ## stores rivers as raw polylines, whose corners read as hard kinks (owner
 ## 2026-09-12). Cached per river — the courses never move.
 ##
-## The course is also ORIENTED source -> mouth, because the taper has to know
-## which end is which and the pack does not promise a direction. The end
-## nearer the coast is the mouth; a river tapered the wrong way would widen
-## as it climbed into the hills.
+## The pack's point order IS the flow: Azgaar writes a river's cells from
+## source to mouth and the importer keeps them (checked 2026-09-13 on beria:
+## 134 of 180 rivers end in the sea and one begins in a lake, none the other
+## way round). The earlier guess — "the end nearer the coast is the mouth",
+## measured against a coarse cloud of coast points — turned a dozen short
+## coastal rivers round, so they rose out of the sea (owner report
+## 2026-09-13). The order is trusted; nothing is reversed.
 var _river_curves: Dictionary = {}
-var _coast_points := PackedVector2Array()
-
-func _coast_cloud() -> PackedVector2Array:
-	if _coast_points.is_empty():
-		for row: Dictionary in Game.data.coasts:
-			var loop: PackedVector2Array = row["polyline"]
-			var step := maxi(1, loop.size() / 48)
-			for i in range(0, loop.size(), step):
-				_coast_points.append(loop[i])
-	return _coast_points
-
-func _to_coast(p: Vector2) -> float:
-	var best := INF
-	for c: Vector2 in _coast_cloud():
-		best = minf(best, p.distance_squared_to(c))
-	return best
 
 func river_curve(code: String, pts: PackedVector2Array) -> PackedVector2Array:
 	if not _river_curves.has(code):
-		var curve := MapGeometry.smooth_open(
-			pts, int(Game.data.bal("map_river_smoothing_steps")))
-		if curve.size() >= 2 and _to_coast(curve[0]) < _to_coast(curve[curve.size() - 1]):
-			curve.reverse()
-		_river_curves[code] = _trim_to_land(curve)
+		_river_curves[code] = _trim_to_land(MapGeometry.smooth_open(
+			pts, int(Game.data.bal("map_river_smoothing_steps"))))
 	return _river_curves[code]
 
-## Drop the tail points that have left the land. Smoothing cuts corners, and
-## near the shore that can push the last samples out over the water, where a
-## river reads as a stub laid on the sea (owner report 2026-09-12). The
-## province index is land: no province id, no land.
+## Whether a native point is water: no province under it. The province index
+## is land, and it is the bitmap the hit-testing reads, so the drawing and
+## the picking agree on where the shore is.
+func _is_water(p: Vector2) -> bool:
+	return _province_image == null or MapIndex.id_at(_province_image, Vector2i(p.floor())) <= 0
+
+## The course clipped to the land at BOTH ends, each cut carried exactly to
+## the shore. Azgaar runs a river's mouth one cell out into the sea, and
+## smoothing cuts corners near the shore, so a course's last samples sat on
+## the water and read as a stub laid on the sea (owner reports 2026-09-12 and
+## 2026-09-13: a river must begin at the land/sea edge, never in the sea).
+## The points over water are dropped and the crossing segment is bisected
+## to the edge (_shore_between), which becomes the new end point. A river
+## rising in a lake is trimmed the same way at its head. Empty when the
+## course never touches land.
 func _trim_to_land(curve: PackedVector2Array) -> PackedVector2Array:
-	if _province_image == null or curve.size() < 3:
+	if _province_image == null or curve.size() < 2:
 		return curve
+	var first := 0
+	while first < curve.size() and _is_water(curve[first]):
+		first += 1
+	if first == curve.size():
+		return PackedVector2Array()
 	var last := curve.size() - 1
-	while last > 1 and MapIndex.id_at(_province_image, Vector2i(curve[last].floor())) <= 0:
+	while last > first and _is_water(curve[last]):
 		last -= 1
-	if last == curve.size() - 1:
-		return curve
-	return curve.slice(0, last + 1)
+	var out := PackedVector2Array()
+	if first > 0:
+		out.append(_shore_between(curve[first], curve[first - 1]))
+	out.append_array(curve.slice(first, last + 1))
+	if last < curve.size() - 1:
+		out.append(_shore_between(curve[last], curve[last + 1]))
+	return out
+
+## The land/water edge on the segment from a land point to a water point:
+## bisected SHORE_STEPS times, to well under a native px, and the LAND side
+## of the last cut is returned, so the end point is never on the water.
+const SHORE_STEPS := 8
+
+func _shore_between(land: Vector2, water: Vector2) -> Vector2:
+	var a := land
+	var b := water
+	for i in SHORE_STEPS:
+		var m := (a + b) * 0.5
+		if _is_water(m):
+			b = m
+		else:
+			a = m
+	return a
 
 ## A triangle LIST filled flat. RenderingServer wants indices, and a list is
 ## just 0, 1, 2, ...
@@ -1263,8 +1385,8 @@ func _draw_rivers() -> void:
 	var min_px := Game.data.bal("map_river_min_px")
 	var k := Game.data.bal("map_river_discharge_scale")
 	# SOLID (owner request 2026-09-13): the soft halo band is gone, and the
-	# taper is strong — widest at the source, narrowing along the course to a
-	# point where the river ends (river_taper).
+	# taper is strong — a thread at the source, swelling along the course to
+	# its full width at the mouth (river_taper).
 	var gamma := Game.data.bal("map_river_taper_gamma")
 	for r: Dictionary in rivers:
 		var width := maxf(min_px, k * sqrt(float(r.get("discharge", "0"))) * view_scale())
@@ -1274,23 +1396,23 @@ func _draw_rivers() -> void:
 		if n < 2:
 			continue
 		var half := river_taper(n, width * 0.5, gamma)
+		# No caps: the source has tapered to a point, and the mouth's flat cut
+		# lies ON the shoreline (_trim_to_land), where the sea takes over.
 		_fill_tris(MapGeometry.ribbon(pts, half), color)
-		# Round the source, where the ribbon is widest: a ribbon ends on a flat
-		# cut across its width, and at full width that reads as a stub. The far
-		# end has already tapered to a point and needs no cap.
-		draw_circle(pts[0], half[0], color)
 
 ## A river's half-width at each of its `n` course points, source first:
-## half_max * (1 - t)^gamma, t running 0 at the source to 1 at the end — so
-## the river starts at full width and thins to nothing. A larger gamma thins
-## it sooner. Pure; public for tests.
+## half_max * t^gamma, t running 0 at the source to 1 at the mouth — a
+## thread in the hills that swells to its full width where it meets the
+## sea, the way a river is (owner 2026-09-13, reversing the taper of the
+## same morning, which had it widest at the source). A larger gamma keeps
+## it thin for longer. Pure; public for tests.
 static func river_taper(n: int, half_max: float, gamma: float) -> PackedFloat32Array:
 	var half := PackedFloat32Array()
 	half.resize(n)
 	var g := maxf(gamma, 0.01)
 	for i in n:
 		var t := float(i) / float(maxi(n - 1, 1))
-		half[i] = half_max * pow(1.0 - t, g)
+		half[i] = half_max * pow(t, g)
 	return half
 
 ## Roads always; trails and sea routes once the view is close enough.

@@ -95,6 +95,9 @@ map_decor_tint,1.0,"world map: how far a terrain symbol takes on the colour of t
 map_sprite_inland,0.55,"world map: how far a coastal settlement's drawing slides back onto the land, as a fraction of its own half-width (owner report 2026-09-13: seaside towns had half their picture out on the water). 0 leaves every drawing centred on its point"
 map_sprite_tint,1.0,world map: the same, for the settlement drawings
 map_decor_density,1.0,world map: one knob over HOW MANY of them — multiplies the density column of data/terrain_art.csv
+map_sea_decor_density,1.0,"world map: one knob over HOW MANY ships and whales the open sea carries — multiplies the density column of data/sea_art.csv (owner request 2026-09-13)"
+map_sea_decor_scale,1.0,"world map: one knob over their SIZE — multiplies the height_px column of data/sea_art.csv (native px, so they scale with the zoom like the woods)"
+map_sea_decor_alpha,0.4,"world map: opacity of the ships and whales — they are printed on the water, and the sea shows through them"
 map_home_scale,1.1,"world map: the zoom the map opens at, centred on the player's capital — above map_province_min_scale so the province seams are there from the first frame (owner 2026-09-12)"
 map_lod_town_scale,1.0,world map: screen px per native map px at/above which towns with map_lod_town_pop+ people get a pin (below: capitals only)
 map_lod_village_scale,2.5,world map: scale at/above which every burg gets a pin
@@ -136,6 +139,9 @@ map_scale_bar_height_px,8.0,world map: height of the scale bar in screen px
 map_scale_bar_margin_px,20.0,world map: inset of the scale bar from the bottom-right corner in screen px
 map_scale_bar_font_px,16,world map: size of the scale bar's distance label in screen px
 map_scale_bar_alpha,0.8,world map: opacity of the scale bar (0 hides it)
+map_compass_size_px,88.0,"world map: the box the compass rose in the top-right corner fills, in screen px (owner request 2026-09-13); 0 hides it"
+map_compass_margin_px,20.0,world map: inset of the compass rose from the top-right corner in screen px
+map_compass_alpha,0.85,world map: opacity of the compass rose (0 hides it)
 map_border_smoothing_steps,8,"world map: Catmull-Rom samples per segment on a kingdom outline and a coast — the curve runs THROUGH the pack's points, so it is smooth without drifting off the real boundary (owner 2026-09-13)"
 ui_panel_art,0,"UI: 1 draws every panel as the nine-sliced vellum plate (assets/ui/panel_vellum.png, library U-01); 0 draws the flat rounded card of UiPalette.panel_style — the bright modern theme (owner 2026-09-13: the parchment look read old and dim)"
 dashboard_max_provinces,4,realm dashboard: how many of the realm's largest provinces the bar chart lists
@@ -165,7 +171,8 @@ map_paper_octaves,4,terrain: octaves of the parchment grain — more gives finer
 map_paper_seed,954159497,terrain: seed of the parchment grain (the map's own seed; the grain is a look, never simulation)
 map_paper_vignette,0,"terrain: how dark the sheet's edges go (0 = off), drawn over everything like the shadow on a rolled scroll. Off in the bright theme (owner 2026-09-13); 0.22 was the parchment value"
 map_terrain_blend,1,terrain: 1 = ring vertices blend the cells around them (soft painterly land); 0 = flat colour per cell with crisp edges
-map_sea_depth_gamma,3.0,terrain: exponent on h/20 for the deep-to-shallow sea gradient (high: only the last few units before the shore lighten, so the packed ocean's outer rim matches the deep-sea fill beyond it)
+map_sea_shelf_cells,2.0,"terrain: how far the shallow band reaches out from the shore, in CELL HOPS (a cell touching land is 0). The shelf is a distance from land, not a height class (owner 2026-09-13: the sea graded too much and the deep/shallow edge was abrupt) — the tint runs from sea_shallow at the shore to sea_deep this many cells out"
+map_sea_shelf_gamma,1.6,"terrain: shape of that fade — 1 is linear, above 1 keeps the band narrow and lets it melt into the deep sooner"
 map_wave_rings,3,"world map: how many lines of water hatching ring each shore (0 = none)"
 map_wave_spacing_px,7,world map: gap between those rings in NATIVE map px — they belong to the drawing and scale with the zoom
 map_wave_width,0.9,world map: width of a hatching line in screen px
