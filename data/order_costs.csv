@@ -25,3 +25,4 @@ MANOR_BUY,gold:-2:the notary and the seal,1,the price itself is charged by the o
 MANOR_SELL,gold:-2:the notary and the seal,1,a sale earns gold; the fee still goes out
 MANOR_BUILD,gold:-1:the surveyor,1,
 MANOR_SEIZE,gold:-10:the men-at-arms' pay,1,soldiers are paid whether the yard falls or not
+MANOR_FOCUS,gold:-1:the reeve's ledger,1,the switch itself is charged by the order

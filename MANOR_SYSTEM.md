@@ -126,6 +126,39 @@ no new ledger.
 Signatures: BUY centralism +1, expansionism +1; SELL centralism −1; BUILD
 centralism +1; SEIZE militarism +2, centralism +2, orthodoxy −1.
 
+### 5a. Control and the chief good (owner 2026-09-13)
+
+The player is the king of the realm AND the lord of one province. A
+province is **controlled** by the house holding the most of its manors
+(`MapManors.controller_of`; a tie goes to the province's own house). The
+crown starts controlling the capital's province alone (`house_bindings.csv`
+binds the royal house to it and nothing else) and gains or loses provinces
+manor by manor. Everything that reads as "the crown's economy" is the
+controlled provinces: the seeded treasury (their towns' treasuries), the
+dashboard's people and provinces, the ECONOMY column, the ledger paths the
+model may write (`WorldLedger.belongs_to_player`) and the order prompt's
+"Your provinces". The host stays the realm's. BUY and SEIZE work anywhere
+in the realm; BUILD and FOCUS need a province the crown controls.
+
+Every manor works one **chief good** (`data/manor_focus.csv`): a focus is
+allowed by the cell's biome (and, for fisheries, a sea neighbour); the
+default is the first the land allows, and `GameState.manor_focus` holds
+only manors whose focus was chosen (`{focus, since}`), logged in
+`manor_log` with a `focus` field. Yield a year = people / 1000 ×
+`yield_per_1000` × land value × the settling-in ramp (0 on the tick of
+the switch, 1 after `transition_ticks`) × (1 + buildings' `output_bonus`)
+× `manor_focus_yield_scale`. The focus adds `rent_bonus` (× ramp) to the
+rent, its units count in the value like town trade, and
+`MapEconomy.output_of_provinces(repo, provinces, state)` adds every
+manor's yield to the pack's town production for the ECONOMY column.
+
+| Order | Params | Legal when | Effect | Costs |
+|---|---|---|---|---|
+| `MANOR_FOCUS` | `manor, focus` | crown-held, province crown-controlled, focus allowed on the land, not the one it works, treasury ≥ `switch_cost_gold` | `manor_focus[cell] = {focus, since: tick}`; treasury −`switch_cost_gold` | `switch_cost_gold` + the reeve's fee |
+
+The card shows "Chief good" and one `WORK <focus> — N gold` button per
+allowed focus it does not work; the Manor Master's tooltip names it.
+
 ## 6. Map and views
 
 - **Click**: `MapObjects.object_at` gains a `manor` kind. It is picked when

@@ -21,3 +21,4 @@ MANOR_BUY,,20,0,0,0,10,the crown gathers land into its own hands
 MANOR_SELL,,-10,0,0,0,-5,land let go to a house
 MANOR_BUILD,,10,0,0,0,0,the crown improves its own estate
 MANOR_SEIZE,,30,40,-10,0,20,land taken by force
+MANOR_FOCUS,,5,0,0,0,0,the crown sets its estate to work

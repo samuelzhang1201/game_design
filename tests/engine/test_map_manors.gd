@@ -292,3 +292,67 @@ func test_the_house_with_most_manors_controls_the_province() -> void:
 	assert_true(MapManors.set_owner(r, s, 2, "Wick", "sold"))
 	assert_eq(MapManors.controller_of(r, s, "p"), "Wick")
 	assert_eq(MapManors.controlled_provinces(r, s), [], "and the crown lost it")
+
+## The chief good (owner 2026-09-13). Focus rows are added here so the
+## hand-computed prices and rents above stay as they were. Cell 1 (biome 1,
+## touching the sea cell 3, 1 500 people, land 0.8) may work grain or fish;
+## cell 2 (biome 2, inland) grain or ore; the default is the first allowed.
+## Grain: 1.5 x 10 x 0.8 = 12 units. Switched to fish at tick 3 with two
+## ticks to settle: 0 at tick 3, half of 1.5 x 8 x 0.8 = 9.6 at tick 4, all
+## at tick 5. Rent on cell 2 (1.0 base) with grain's 0.1 bonus is 1.1.
+func test_a_manor_works_a_chief_good_its_land_allows() -> void:
+	var r := _repo()
+	r.balance["manor_focus_yield_scale"] = 1.0
+	r.manor_focus = {
+		"grain": {"focus_code": "grain", "label": "Grain fields", "good_code": "grain", "biomes": "1|2",
+			"coast": "0", "yield_per_1000": "10", "rent_bonus": "0.1", "switch_cost_gold": "20",
+			"transition_ticks": "2"},
+		"fish": {"focus_code": "fish", "label": "Fisheries", "good_code": "fish", "biomes": "any",
+			"coast": "1", "yield_per_1000": "8", "rent_bonus": "0.05", "switch_cost_gold": "15",
+			"transition_ticks": "2"},
+		"ore": {"focus_code": "ore", "label": "Iron workings", "good_code": "iron", "biomes": "2",
+			"coast": "0", "yield_per_1000": "2", "rent_bonus": "0.2", "switch_cost_gold": "60",
+			"transition_ticks": "0"},
+	}
+	var s := _state()
+	assert_true(MapManors.is_coastal(r, 1))
+	assert_false(MapManors.is_coastal(r, 2))
+	assert_eq(MapManors.focuses_for(r, 1), ["grain", "fish"])
+	assert_eq(MapManors.focuses_for(r, 2), ["grain", "ore"])
+	assert_eq(MapManors.focuses_for(r, 3), [], "the sea works nothing")
+	assert_eq(MapManors.default_focus(r, 1), "grain")
+	assert_eq(MapManors.focus_of(r, s, 1), "grain")
+	var grain := MapManors.focus_output_of(r, s, 1)
+	assert_eq(String(grain["good"]), "grain")
+	assert_almost_eq(float(grain["units"]), 12.0, 0.001)
+	assert_almost_eq(MapManors.rent_of(r, s, 2), 1.1, 0.0001, "grain adds a tenth to the rent")
+	assert_almost_eq(MapManors.base_value_of(r, s, 1), (60.0 + 12.0 * 2.0) * 1.18, 0.001,
+		"the yield counts in the value like town trade does")
+	assert_false(MapManors.set_focus(r, s, 2, "fish", "turned"), "no sea at cell 2")
+	assert_false(MapManors.set_focus(r, s, 1, "grain", "turned"), "already works it")
+	assert_false(MapManors.set_focus(r, s, 1, "fish", ""), "no reason")
+	assert_true(MapManors.set_focus(r, s, 1, "fish", "turned to the sea"))
+	assert_eq(s.manor_focus, {"1": {"focus": "fish", "since": 3}})
+	assert_eq(String(s.manor_log[0]["focus"]), "fish")
+	assert_almost_eq(MapManors.focus_ramp(r, s, 1), 0.0, 0.001, "nothing on the tick it turns")
+	assert_almost_eq(float(MapManors.focus_output_of(r, s, 1)["units"]), 0.0, 0.001)
+	s.tick = 4
+	assert_almost_eq(float(MapManors.focus_output_of(r, s, 1)["units"]), 4.8, 0.001, "half settled")
+	s.tick = 5
+	assert_almost_eq(float(MapManors.focus_output_of(r, s, 1)["units"]), 9.6, 0.001)
+	assert_eq(String(MapManors.focus_output_of(r, s, 1)["good"]), "fish")
+	assert_true(MapManors.set_focus(r, s, 2, "ore", "dug"))
+	assert_almost_eq(MapManors.focus_ramp(r, s, 2), 1.0, 0.001, "no transition: at once")
+	assert_almost_eq(MapManors.rent_of(r, s, 2), 1.2, 0.0001)
+	# The crown's column: cell 1's fish and cell 2's ore, no town trade in
+	# this fixture.
+	var column := MapEconomy.output_of_provinces(r, ["p"], s)
+	assert_eq(column.size(), 2)
+	assert_eq(String(column[0]["good"]), "fish")
+	assert_almost_eq(float(column[1]["units"]), 2.5 * 2.0 * 0.4, 0.001, "ore: 2 500 people, poor land")
+	assert_eq(MapEconomy.output_of_provinces(r, ["p"]).size(), 0, "without a state, town trade only")
+	# It survives a save.
+	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	assert_eq(String(back.manor_focus["1"]["focus"]), "fish")
+	assert_eq(int(back.manor_focus["1"]["since"]), 3)
+	assert_eq(MapManors.focus_of(r, back, 1), "fish")

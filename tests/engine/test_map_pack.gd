@@ -204,3 +204,23 @@ func test_the_crown_starts_with_the_capitals_province_only() -> void:
 	assert_gt(state.metrics["treasury"], 0.0, "seeded from the capital province's towns")
 	assert_almost_eq(state.metrics["treasury"],
 		roundf(WorldLedger.crown_town_treasury(repo, state) * repo.bal("pack_treasury_scale")), 0.001)
+
+## data/manor_focus.csv (owner 2026-09-13): every focus names a good the
+## pack trades and biomes the pack has, and every manor of the capital's
+## province can work something.
+func test_the_manor_focus_table_fits_the_pack() -> void:
+	var repo := _fresh()
+	assert_gt(repo.manor_focus.size(), 5, "a real choice of chief goods")
+	for code: String in repo.manor_focus:
+		var row: Dictionary = repo.manor_focus[code]
+		assert_false(repo.world_row("economy", "goods", String(row["good_code"])).is_empty(),
+			"%s: the pack trades %s" % [code, String(row["good_code"])])
+		var biomes := String(row["biomes"])
+		if biomes != "any":
+			for b: String in biomes.split("|"):
+				assert_true(repo.biomes.has(int(b)), "%s: biome %s exists" % [code, b])
+		assert_gt(float(row["yield_per_1000"]), 0.0)
+	var state := GameState.new_campaign(repo, 42)
+	for province: String in MapManors.controlled_provinces(repo, state):
+		for cell: int in MapManors.manors_of_province(repo, province):
+			assert_ne(MapManors.default_focus(repo, cell), "", "%s works something" % MapManors.label_of(repo, cell))

@@ -277,7 +277,8 @@ func show_card(card: Dictionary) -> void:
 		_set_preview(card.get("center", Vector2.ZERO))
 		for a: Dictionary in card.get("actions", []):
 			var button := Button.new()
-			button.name = String(a["action_code"]) + "_" + String((a["params"] as Dictionary).get("building", ""))
+			button.name = String(a["action_code"]) + "_" + String((a["params"] as Dictionary).get("building",
+				(a["params"] as Dictionary).get("focus", "")))
 			button.text = String(a["label"])
 			button.focus_mode = Control.FOCUS_NONE
 			button.add_theme_font_size_override("font_size", 13)

@@ -529,8 +529,9 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	for f in card["fields"]:
 		fields[String(f[0])] = String(f[1])
 	assert_eq(fields["Held by"], "The crown")
-	for key in ["Province", "Land", "Area", "People", "Rent", "Defence", "Buildings", "Value", "Sells for"]:
+	for key in ["Province", "Land", "Area", "People", "Rent", "Chief good", "Defence", "Buildings", "Value", "Sells for"]:
 		assert_true(fields.has(key), key + " is on the card")
+	assert_string_contains(fields["Chief good"], " a year", "the focus and its yield")
 	var codes: Array = []
 	for a: Dictionary in card["actions"]:
 		codes.append(String(a["action_code"]))
@@ -541,6 +542,8 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	assert_has(codes, "MANOR_BUILD")
 	assert_does_not_have(codes, "MANOR_BUY")
 	assert_eq(codes.count("MANOR_BUILD"), real.manor_buildings.size(), "one BUILD per building not raised")
+	assert_eq(codes.count("MANOR_FOCUS"), MapManors.focuses_for(real, own).size() - 1,
+		"one WORK per chief good the land allows, less the one it works")
 	# Another house's manor in the realm: buy, no seize while the flag is off.
 	var theirs := _manor_where(state, false)
 	var other := MapObjects.manor_card(real, state, theirs)

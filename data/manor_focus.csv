@@ -1,0 +1,13 @@
+focus_code,label,good_code,biomes,coast,yield_per_1000,rent_bonus,switch_cost_gold,transition_ticks,notes
+grain,Grain fields,grain,3|4|5|6|12,0,12,0.10,20,3,"the chief good a manor works at (owner 2026-09-13): biomes are geography/biomes.csv ids the focus is allowed on (any = every land biome); coast 1 needs a sea neighbour; yield_per_1000 is units a year per 1 000 people at land value 1 (x manor_focus_yield_scale); rent_bonus is the share added to the manor's rent; switching costs switch_cost_gold and ramps up over transition_ticks"
+cattle,Cattle pasture,cattle,3|4|6|12,0,4,0.10,25,4,
+sheep,Sheep runs,sheep,2|3|4|9|10,0,6,0.08,20,3,
+wood,Timber,wood,5|6|7|8|9,0,10,0.05,15,2,
+honey,Bee yards,honey,4|6|8|12,0,2,0.06,10,2,
+wine,Vineyards,wine,3|5|6,0,3,0.15,50,6,
+dates,Date groves,dates,1|3,0,5,0.08,20,3,
+furs,Trapping,furs,8|9|10,0,2,0.12,20,3,
+fish,Fisheries,fish,any,1,8,0.06,15,2,
+salt,Salt pans,salt,1|2|12,0,3,0.10,30,4,
+stone,Quarry,stone,any,0,3,0.05,40,5,
+iron,Iron workings,iron,6|8|9|10,0,2,0.20,60,6,

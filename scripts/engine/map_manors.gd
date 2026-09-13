@@ -407,12 +407,112 @@ static func building_cost(repo: DataRepository, state: GameState, cell_id: int) 
 		sum += float((repo.manor_buildings.get(code, {}) as Dictionary).get("cost_gold", 0))
 	return sum
 
+# ---- focus: the chief good a manor works at (owner 2026-09-13) ---------------
+
+## Whether a manor touches the sea — what a fishery needs.
+static func is_coastal(repo: DataRepository, cell_id: int) -> bool:
+	var row: Dictionary = repo.cells.get(cell_id, {})
+	for n: int in (row.get("neighbor_ids", PackedInt32Array()) as PackedInt32Array):
+		if MapTerrain.is_sea(repo.cells.get(n, {})):
+			return true
+	return false
+
+## Whether a focus may be worked on a manor: its biome is listed (or the
+## row says any) and, for a coastal focus, the sea is next door.
+static func focus_allowed(repo: DataRepository, cell_id: int, focus_code: String) -> bool:
+	var row: Dictionary = repo.manor_focus.get(focus_code, {})
+	if row.is_empty() or not is_manor(repo, cell_id):
+		return false
+	if int(float(row.get("coast", 0))) > 0 and not is_coastal(repo, cell_id):
+		return false
+	var biomes := String(row.get("biomes", "")).strip_edges()
+	if biomes == "any":
+		return true
+	var mine := str(int((repo.cells.get(cell_id, {}) as Dictionary).get("biome_id", -1)))
+	return mine in biomes.split("|")
+
+## The focuses a manor may work, in manor_focus.csv order — the choices
+## its card offers. Geometry, cached per repo.
+static func focuses_for(repo: DataRepository, cell_id: int) -> Array:
+	var c := _repo_cache(repo)
+	if not c.has("focuses"):
+		c["focuses"] = {}
+	if not c["focuses"].has(cell_id):
+		var out: Array = []
+		for code: String in repo.manor_focus:
+			if focus_allowed(repo, cell_id, code):
+				out.append(code)
+		c["focuses"][cell_id] = out
+	return c["focuses"][cell_id]
+
+## What a manor works at when nobody has chosen: the first focus its
+## terrain allows, "" for land that allows none.
+static func default_focus(repo: DataRepository, cell_id: int) -> String:
+	var allowed := focuses_for(repo, cell_id)
+	return String(allowed[0]) if not allowed.is_empty() else ""
+
+## The focus a manor works at now: the one set, else the default.
+static func focus_of(repo: DataRepository, state: GameState, cell_id: int) -> String:
+	if state != null and state.manor_focus.has(str(cell_id)):
+		return String((state.manor_focus[str(cell_id)] as Dictionary).get("focus", ""))
+	return default_focus(repo, cell_id)
+
+## How far a set focus has settled in, 0..1: a switch yields nothing on
+## the tick it is made and everything transition_ticks later, linearly
+## between. A default (never switched) focus is 1.
+static func focus_ramp(repo: DataRepository, state: GameState, cell_id: int) -> float:
+	if state == null or not state.manor_focus.has(str(cell_id)):
+		return 1.0
+	var entry: Dictionary = state.manor_focus[str(cell_id)]
+	var row: Dictionary = repo.manor_focus.get(String(entry.get("focus", "")), {})
+	var ticks := float(row.get("transition_ticks", 0))
+	if ticks <= 0.0:
+		return 1.0
+	return clampf(float(state.tick - int(entry.get("since", state.tick))) / ticks, 0.0, 1.0)
+
+## Set a manor's focus. Refuses an unknown manor or focus, one the land
+## does not allow, the focus it already works, and an empty reason; logs
+## into manor_log with a "focus" field.
+static func set_focus(repo: DataRepository, state: GameState, cell_id: int, focus_code: String,
+		reason: String) -> bool:
+	if not focus_allowed(repo, cell_id, focus_code) or reason.strip_edges() == "":
+		return false
+	if focus_of(repo, state, cell_id) == focus_code:
+		return false
+	state.manor_focus[str(cell_id)] = {"focus": focus_code, "since": state.tick}
+	state.manor_log.append({"tick": state.tick, "cell": cell_id, "focus": focus_code,
+		"reason": reason})
+	return true
+
+## What the manor's focus yields: {focus, good, label, units} — units a
+## year = people / 1000 x yield_per_1000 x land value x the settling-in
+## ramp x (1 + the buildings' output bonus) x manor_focus_yield_scale.
+## Empty-handed ({} with units 0) for land that works nothing.
+static func focus_output_of(repo: DataRepository, state: GameState, cell_id: int,
+		people: float = -1.0) -> Dictionary:
+	var code := focus_of(repo, state, cell_id)
+	var row: Dictionary = repo.manor_focus.get(code, {})
+	if row.is_empty():
+		return {"focus": "", "good": "", "label": "", "units": 0.0}
+	var pop: float = people if people >= 0.0 else population_of(repo, state, cell_id)["total"]
+	var units := pop / 1000.0 * float(row.get("yield_per_1000", 0)) * land_value_of(repo, cell_id) \
+		* focus_ramp(repo, state, cell_id) * (1.0 + building_bonus(repo, state, cell_id, "output_bonus")) \
+		* repo.bal("manor_focus_yield_scale")
+	return {"focus": code, "good": String(row.get("good_code", "")),
+		"label": String(row.get("label", code)), "units": units}
+
+## The share the focus adds to the rent, settled in.
+static func focus_rent_bonus(repo: DataRepository, state: GameState, cell_id: int) -> float:
+	var row: Dictionary = repo.manor_focus.get(focus_of(repo, state, cell_id), {})
+	return float(row.get("rent_bonus", 0)) * focus_ramp(repo, state, cell_id)
+
 ## Gold per tick the manor yields its holder. `people` may be handed in by
 ## a caller that already has it (population_table); below zero it is read.
+## The buildings' tax bonus and the focus's rent bonus both raise it.
 static func rent_of(repo: DataRepository, state: GameState, cell_id: int, people: float = -1.0) -> float:
 	var pop: float = people if people >= 0.0 else population_of(repo, state, cell_id)["total"]
 	return pop / 1000.0 * repo.bal("manor_rent_per_1000") \
-		* (1.0 + building_bonus(repo, state, cell_id, "tax_bonus"))
+		* (1.0 + building_bonus(repo, state, cell_id, "tax_bonus") + focus_rent_bonus(repo, state, cell_id))
 
 ## Gold per tick from every manor the crown holds in its realm — what
 ## TickEngine pays into the treasury as "manor rents" (MANOR_SYSTEM.md §3).
@@ -451,7 +551,8 @@ static func house_opinion(repo: DataRepository, state: GameState, family: String
 static func base_value_of(repo: DataRepository, state: GameState, cell_id: int, people: float = -1.0) -> float:
 	var pop: float = people if people >= 0.0 else population_of(repo, state, cell_id)["total"]
 	var base := pop / 1000.0 * repo.bal("manor_price_per_1000") \
-		+ output_of(repo, cell_id) * repo.bal("manor_price_per_unit") \
+		+ (output_of(repo, cell_id) + float(focus_output_of(repo, state, cell_id, pop)["units"])) \
+			* repo.bal("manor_price_per_unit") \
 		+ building_cost(repo, state, cell_id) * repo.bal("manor_price_building_ratio")
 	var land := 1.0 + (land_value_of(repo, cell_id) - 0.5) * repo.bal("manor_price_land_swing")
 	return base * land

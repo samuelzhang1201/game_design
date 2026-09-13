@@ -209,3 +209,43 @@ func test_building_needs_a_province_the_crown_controls() -> void:
 			MapManors.set_owner(data, s, other, MapManors.crown(s), "test: taken")
 	assert_true(MapManors.crown_controls(data, s, province))
 	assert_eq(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "mill"}), s), "")
+
+## The chief good (owner 2026-09-13): a crown manor in a province the crown
+## controls may be turned to any good its land allows, for the focus's
+## switch cost and the reeve's fee; the same focus twice, or a manor in a
+## province the crown does not control, is refused.
+func test_turning_a_manor_to_a_chief_good() -> void:
+	var cell := _crown_manor()
+	assert_true(MapManors.crown_controls(data, s, MapManors.province_of(data, cell)))
+	var allowed := MapManors.focuses_for(data, cell)
+	assert_gt(allowed.size(), 1, "the capital's land allows a choice")
+	var working := MapManors.focus_of(data, s, cell)
+	assert_eq(working, String(allowed[0]), "the default is the first the land allows")
+	assert_string_contains(sys.validate(ActionRequest.make("MANOR_FOCUS", {"manor": cell, "focus": working}), s),
+		"already works")
+	assert_string_contains(sys.validate(ActionRequest.make("MANOR_FOCUS", {"manor": cell, "focus": "moon_dust"}), s),
+		"No such focus")
+	var target := String(allowed[1])
+	var req := ActionRequest.make("MANOR_FOCUS", {"manor": cell, "focus": target})
+	s.metrics["treasury"] = 0.0
+	assert_string_contains(sys.validate(req, s), "afford")
+	s.metrics["treasury"] = 1000.0
+	assert_eq(sys.validate(req, s), "")
+	var out := sys.execute(req, s)
+	assert_true(out["ok"])
+	assert_eq(MapManors.focus_of(data, s, cell), target)
+	assert_almost_eq(s.metrics["treasury"],
+		1000.0 - float(data.manor_focus[target]["switch_cost_gold"]) - 1.0, 0.001,
+		"the switch cost and the reeve's fee (order_costs.csv)")
+	assert_eq(int(s.manor_focus[str(cell)]["since"]), s.tick)
+	assert_string_contains(String(s.manor_log[0]["reason"]), "turned from")
+	assert_string_contains(sys.validate(req, s), "already works")
+	# Elsewhere in the realm the crown holds nothing it controls.
+	var foreign := _foreign_manor()
+	s.metrics["treasury"] = 100000.0
+	sys.execute(ActionRequest.make("MANOR_BUY", {"manor": foreign}), s)
+	if not MapManors.crown_controls(data, s, MapManors.province_of(data, foreign)):
+		var f_allowed := MapManors.focuses_for(data, foreign)
+		if f_allowed.size() > 1:
+			assert_string_contains(sys.validate(ActionRequest.make("MANOR_FOCUS",
+				{"manor": foreign, "focus": String(f_allowed[1])}), s), "does not control")

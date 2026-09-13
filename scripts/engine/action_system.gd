@@ -59,7 +59,7 @@ func validate(req: ActionRequest, state: GameState) -> String:
 		"CHARACTER_REWARD":
 			if not req.params.get("mode", "gold") in ["gold"]:
 				return "mode must be gold (slice 1)"
-		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE":
+		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE", "MANOR_FOCUS":
 			return _validate_manor(req, state, needs)
 	return ""
 
@@ -117,6 +117,22 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			var cost := float(data.manor_buildings[building]["cost_gold"])
 			if state.metrics["treasury"] < cost + needs:
 				return "Cannot afford a %s (%d gold)" % [String(data.manor_buildings[building]["label"]).to_lower(), int(cost)]
+		"MANOR_FOCUS":
+			if not crowns:
+				return "The crown does not hold %s" % label
+			if not MapManors.crown_controls(data, state, MapManors.province_of(data, cell)):
+				return "%s lies in a province the crown does not control" % label
+			var focus := String(req.params.get("focus", ""))
+			if not data.manor_focus.has(focus):
+				return "No such focus: " + focus
+			var name := String(data.manor_focus[focus]["label"]).to_lower()
+			if not MapManors.focus_allowed(data, cell, focus):
+				return "%s cannot work %s on its land" % [label, name]
+			if MapManors.focus_of(data, state, cell) == focus:
+				return "%s already works %s" % [label, name]
+			var fee := float(data.manor_focus[focus]["switch_cost_gold"])
+			if state.metrics["treasury"] < fee + needs:
+				return "Cannot afford to turn %s to %s (%d gold)" % [label, name, int(fee)]
 	return ""
 
 func execute(req: ActionRequest, state: GameState) -> Dictionary:
@@ -219,6 +235,17 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			MapManors.build(data, state, cell, building, "raised by the crown")
 			effects.append({"metric": "manor", "delta": 0.0,
 				"reason": "a %s stands at %s" % [String(row_b["label"]).to_lower(), label]})
+		"MANOR_FOCUS":
+			var cell := manor_of(req)
+			var focus := String(req.params["focus"])
+			var row_f: Dictionary = data.manor_focus[focus]
+			var label := MapManors.label_of(data, cell)
+			var was := String((data.manor_focus.get(MapManors.focus_of(data, state, cell), {}) as Dictionary).get("label", "nothing")).to_lower()
+			_apply(state, effects, "treasury", -float(row_f["switch_cost_gold"]),
+				"turned %s to %s" % [label, String(row_f["label"]).to_lower()])
+			MapManors.set_focus(data, state, cell, focus, "turned from %s to %s by the crown" % [was, String(row_f["label"]).to_lower()])
+			effects.append({"metric": "manor", "delta": 0.0,
+				"reason": "%s turns to %s; %d ticks to settle in" % [label, String(row_f["label"]).to_lower(), int(float(row_f["transition_ticks"]))]})
 		"MANOR_SEIZE":
 			# The skeleton (MANOR_SYSTEM.md §5): the outcome is automatic success
 			# until the military system can roll defence against the host.

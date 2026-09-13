@@ -179,13 +179,23 @@ static func realm_output(repo: DataRepository, state: GameState, kingdom_code: S
 	return output_of_provinces(repo, MapOwnership.provinces_of(repo, state, kingdom_code))
 
 ## The same over any provinces — the crown's controlled ones for its own
-## column (MapManors.controlled_provinces).
-static func output_of_provinces(repo: DataRepository, provinces: Array) -> Array:
+## column (MapManors.controlled_provinces). Given a state, every manor's
+## focus (owner 2026-09-13: the chief good it works at) is added on top of
+## the pack's town production.
+static func output_of_provinces(repo: DataRepository, provinces: Array, state: GameState = null) -> Array:
 	var totals: Dictionary = {}
 	var per_province := province_output(repo)
 	for province: String in provinces:
 		for good: String in per_province.get(province, {}):
 			totals[good] = float(totals.get(good, 0.0)) + float(per_province[province][good])
+		if state == null:
+			continue
+		var cells := MapManors.manors_of_province(repo, province)
+		var people := MapManors.population_table(repo, state, cells)
+		for cell: int in cells:
+			var f := MapManors.focus_output_of(repo, state, cell, float((people[cell] as Dictionary)["total"]))
+			if float(f["units"]) > 0.0:
+				totals[f["good"]] = float(totals.get(f["good"], 0.0)) + float(f["units"])
 	var out: Array = []
 	for good: String in totals:
 		out.append({"good": good, "units": float(totals[good]),

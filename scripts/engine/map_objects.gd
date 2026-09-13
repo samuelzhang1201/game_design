@@ -843,6 +843,18 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	else:
 		fields.append(["People", str(roundi(float(people["total"])))])
 	fields.append(["Rent", "%.2f gold a tick" % MapManors.rent_of(repo, state, cell)])
+	# The chief good (owner 2026-09-13): what the manor works at, its yield,
+	# and how far a switch has settled in.
+	var focus := MapManors.focus_output_of(repo, state, cell, float(people["total"]))
+	if String(focus["focus"]) != "":
+		var text := "%s — %d %s a year" % [String(focus["label"]), roundi(float(focus["units"])),
+			String(repo.world_row("economy", "goods", String(focus["good"])).get("label", focus["good"])).to_lower()]
+		var ramp := MapManors.focus_ramp(repo, state, cell)
+		if ramp < 1.0:
+			text += " (settling in, %d%%)" % roundi(ramp * 100.0)
+		fields.append(["Chief good", text])
+	else:
+		fields.append(["Chief good", "none the land allows"])
 	fields.append(["Defence", str(roundi(MapManors.defence_of(repo, state, cell)))])
 	var built: Array = MapManors.buildings_of(state, cell)
 	card["buildings"] = built
@@ -890,6 +902,14 @@ static func manor_actions(repo: DataRepository, state: GameState, cell: int) -> 
 			var row: Dictionary = repo.manor_buildings[b]
 			specs.append({"action_code": "MANOR_BUILD", "params": {"manor": code, "building": b},
 				"label": "BUILD %s — %d gold" % [String(row["label"]).to_upper(), int(float(row["cost_gold"]))]})
+		# The chief goods the land allows, less the one it works (2026-09-13).
+		var working := MapManors.focus_of(repo, state, cell)
+		for f: String in MapManors.focuses_for(repo, cell):
+			if f == working:
+				continue
+			var row_f: Dictionary = repo.manor_focus[f]
+			specs.append({"action_code": "MANOR_FOCUS", "params": {"manor": code, "focus": f},
+				"label": "WORK %s — %d gold" % [String(row_f["label"]).to_upper(), int(float(row_f["switch_cost_gold"]))]})
 	else:
 		specs.append({"action_code": "MANOR_BUY", "params": {"manor": code},
 			"label": "BUY — %d gold" % roundi(MapManors.price_of(repo, state, cell))})

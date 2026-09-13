@@ -480,7 +480,7 @@ func test_the_economy_column_lists_what_the_realm_makes() -> void:
 	# The column is the crown's OWN produce (2026-09-13): the provinces it
 	# controls, not the whole realm's.
 	var own := MapManors.controlled_provinces(Game.data, Game.state)
-	var output := MapEconomy.output_of_provinces(Game.data, own)
+	var output := MapEconomy.output_of_provinces(Game.data, own, Game.state)
 	assert_gt(output.size(), 0, "the crown's land produces something")
 	assert_string_contains(panel.summary_text(), "%d kinds" % output.size())
 	assert_string_contains(panel.summary_text(), "%d province" % own.size())

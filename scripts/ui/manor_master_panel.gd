@@ -204,7 +204,8 @@ func refresh() -> void:
 			"province": String(repo.provinces.get(MapManors.province_of(repo, cell), {}).get("label", "")),
 			"people": pop, "rent": rent, "value": MapManors.base_value_of(repo, state, cell, pop),
 			"buildings": MapManors.buildings_of(state, cell).size(),
-			"output": MapManors.output_of(repo, cell)})
+			"output": MapManors.output_of(repo, cell),
+			"focus": MapManors.focus_output_of(repo, state, cell, pop)})
 	rows.sort_custom(_compare)
 	var cap := int(repo.bal("manor_master_max_rows"))
 	_left_out = maxi(rows.size() - cap, 0)
@@ -259,10 +260,13 @@ func _fill_tree() -> void:
 		item.set_text(2, str(roundi(float(r["value"]))))
 		item.set_text_alignment(2, HORIZONTAL_ALIGNMENT_RIGHT)
 		item.set_metadata(0, int(r["cell"]))
-		var tip := "%s — %s\nPeople %d · rent %.2f a tick · value %d gold\n%d building%s · %s" % [
+		var focus: Dictionary = r["focus"]
+		var works := ("works %s, %d units a year" % [String(focus["label"]).to_lower(), roundi(float(focus["units"]))]) \
+			if String(focus["focus"]) != "" else "subsistence"
+		var tip := "%s — %s\nPeople %d · rent %.2f a tick · value %d gold\n%d building%s · %s%s" % [
 			String(r["label"]), String(r["province"]), roundi(float(r["people"])), float(r["rent"]),
 			roundi(float(r["value"])), int(r["buildings"]), "" if int(r["buildings"]) == 1 else "s",
-			("%d units of goods" % roundi(float(r["output"]))) if float(r["output"]) > 0.0 else "subsistence"]
+			works, (" · town trade %d units" % roundi(float(r["output"]))) if float(r["output"]) > 0.0 else ""]
 		for i in COLUMNS.size():
 			item.set_tooltip_text(i, tip)
 

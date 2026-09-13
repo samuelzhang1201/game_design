@@ -82,7 +82,7 @@ func refresh() -> void:
 	# The crown's economy is the provinces it controls (owner 2026-09-13), not
 	# the whole kingdom's.
 	var controlled := MapManors.controlled_provinces(data, Game.state)
-	var output := MapEconomy.output_of_provinces(data, controlled)
+	var output := MapEconomy.output_of_provinces(data, controlled, Game.state)
 	if output.is_empty():
 		_summary.text = "The crown's land trades in nothing the ledgers record."
 		_goods.set_rows([], 1.0)
