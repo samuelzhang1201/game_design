@@ -214,6 +214,51 @@ static func set_owner(repo: DataRepository, state: GameState, cell_id: int, fami
 		"reason": reason})
 	return true
 
+## Who CONTROLS a province (owner 2026-09-13): the house holding the most
+## of its manors; a tie goes to the province's own house (the crown's, if
+## that is the royal house), else to the first by name. The crown starts
+## with the capital's province and gains or loses others manor by manor.
+static func controller_of(repo: DataRepository, state: GameState, province_code: String) -> String:
+	var counts := holdings_of_province(repo, state, province_code)
+	if counts.is_empty():
+		return ""
+	var best := ""
+	var most := -1
+	var home := MapObjects.house_name_of(repo, province_code)
+	if state != null and home == String(state.player_setup.get("house_was", "")):
+		home = crown(state)
+	var houses: Array = counts.keys()
+	houses.sort()
+	for h: String in houses:
+		var n := int(counts[h])
+		if n > most or (n == most and h == home):
+			most = n
+			best = h
+	return best
+
+static func crown_controls(repo: DataRepository, state: GameState, province_code: String) -> bool:
+	var c := crown(state)
+	return c != "" and controller_of(repo, state, province_code) == c
+
+## The provinces the crown controls, in code order — the crown's economy,
+## the land it may build on, the ledger the model may touch. Cached per
+## manor ownership, which is the only thing that moves it.
+static func controlled_provinces(repo: DataRepository, state: GameState) -> Array:
+	if state == null:
+		return []
+	var c := _repo_cache(repo)
+	var sig := hash([state.manor_owner.hash(), crown(state), String(state.player_setup.get("house_was", ""))])
+	if c.has("control") and int(c["control"]["sig"]) == sig:
+		return c["control"]["provinces"]
+	var out: Array = []
+	var codes: Array = repo.provinces.keys()
+	codes.sort()
+	for code: String in codes:
+		if crown_controls(repo, state, code):
+			out.append(code)
+	c["control"] = {"sig": sig, "provinces": out}
+	return out
+
 ## {family: count} over a province's manors, live.
 static func holdings_of_province(repo: DataRepository, state: GameState, province_code: String) -> Dictionary:
 	var out: Dictionary = {}

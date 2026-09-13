@@ -138,6 +138,10 @@ func test_selling_and_building_need_a_crown_manor() -> void:
 	s.metrics["treasury"] = MapManors.price_of(data, s, cell) + 1000.0
 	sys.execute(ActionRequest.make("MANOR_BUY", {"manor": cell}), s)
 	var house := MapManors.default_owner(data, s, cell)
+	# Building needs the province (2026-09-13): take the rest of it first.
+	for other: int in MapManors.manors_of_province(data, MapManors.province_of(data, cell)):
+		if not MapManors.is_crowns(data, s, other):
+			MapManors.set_owner(data, s, other, MapManors.crown(s), "test: taken")
 	# Build a mill: its cost and the surveyor's fee leave the chest.
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "castle"}), s),
 		"No such building")
@@ -184,3 +188,24 @@ func test_seizing_is_gated_and_costs_legitimacy_unrest_and_the_houses_regard() -
 	assert_string_contains(String(s.manor_log[0]["reason"]), "seized by force")
 	assert_string_contains(sys.validate(req, s), "cooldown")
 	data.balance["manor_seize_enabled"] = 0.0
+
+## Building needs the province, not just the manor (owner 2026-09-13): a
+## manor bought in another house's province cannot be built on until the
+## crown controls the province.
+func test_building_needs_a_province_the_crown_controls() -> void:
+	var cell := _foreign_manor()
+	s.metrics["treasury"] = 100000.0
+	sys.execute(ActionRequest.make("MANOR_BUY", {"manor": cell}), s)
+	assert_true(MapManors.is_crowns(data, s, cell))
+	var province := MapManors.province_of(data, cell)
+	if MapManors.crown_controls(data, s, province):
+		pass_test("a one-manor province: buying it took it")
+		return
+	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "mill"}), s),
+		"does not control")
+	# Take the province manor by manor; then the mill may rise.
+	for other: int in MapManors.manors_of_province(data, province):
+		if not MapManors.is_crowns(data, s, other):
+			MapManors.set_owner(data, s, other, MapManors.crown(s), "test: taken")
+	assert_true(MapManors.crown_controls(data, s, province))
+	assert_eq(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "mill"}), s), "")

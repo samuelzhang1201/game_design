@@ -269,3 +269,26 @@ func test_manor_state_survives_a_save() -> void:
 	var old := GameState.from_dict(JSON.parse_string(JSON.stringify(before)))
 	assert_true(old.manor_owner.is_empty(), "a save without manors loads as nothing moved")
 	assert_true(old.manor_log.is_empty())
+
+## Control (owner 2026-09-13): the house with the most manors in a province
+## controls it; a tie goes to the province's own house. Buying one manor of
+## two ties; buying both takes the province.
+func test_the_house_with_most_manors_controls_the_province() -> void:
+	var r := _repo()
+	var s := _state()
+	assert_eq(MapManors.controller_of(r, s, "p"), "Valorin")
+	assert_eq(MapManors.controller_of(r, s, "q"), "Wick")
+	assert_false(MapManors.crown_controls(r, s, "p"))
+	assert_eq(MapManors.controlled_provinces(r, s), [])
+	assert_true(MapManors.set_owner(r, s, 1, "Rex", "bought"))
+	assert_eq(MapManors.controller_of(r, s, "p"), "Valorin", "one each: the province's own house keeps it")
+	assert_true(MapManors.set_owner(r, s, 2, "Rex", "bought"))
+	assert_eq(MapManors.controller_of(r, s, "p"), "Rex")
+	assert_true(MapManors.crown_controls(r, s, "p"))
+	assert_eq(MapManors.controlled_provinces(r, s), ["p"])
+	assert_true(MapManors.set_owner(r, s, 1, "Wick", "sold"))
+	assert_eq(MapManors.controller_of(r, s, "p"), "Rex",
+		"a tie between strangers: the first by name")
+	assert_true(MapManors.set_owner(r, s, 2, "Wick", "sold"))
+	assert_eq(MapManors.controller_of(r, s, "p"), "Wick")
+	assert_eq(MapManors.controlled_provinces(r, s), [], "and the crown lost it")

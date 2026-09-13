@@ -105,6 +105,10 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 		"MANOR_BUILD":
 			if not crowns:
 				return "The crown does not hold %s" % label
+			# Building needs the province, not just the manor (owner 2026-09-13):
+			# the crown improves the land it controls.
+			if not MapManors.crown_controls(data, state, MapManors.province_of(data, cell)):
+				return "%s lies in a province the crown does not control" % label
 			var building := String(req.params.get("building", ""))
 			if not data.manor_buildings.has(building):
 				return "No such building: " + building

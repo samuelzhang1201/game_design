@@ -94,15 +94,23 @@ func test_polarity_and_caps_read_from_the_schema() -> void:
 	assert_eq(WorldLedger.llm_cap(data, "opinion.char_marshal"), data.bal("tone_delta_cap"))
 	assert_eq(WorldLedger.llm_cap(data, "metrics.tax_rate"), 0.0, "engine-only")
 
-func test_only_the_players_own_land_belongs_to_them() -> void:
+## The crown's economy is the provinces it CONTROLS (owner 2026-09-13):
+## the capital's at the start, not the kingdom's; the host stays the realm's.
+func test_only_the_crowns_own_land_belongs_to_them() -> void:
 	assert_true(WorldLedger.belongs_to_player(data, state, "metrics.grain"))
+	assert_false(WorldLedger.belongs_to_player(data, state,
+		"economy.kingdoms.player_realm.rural_population"), "the kingdom's people are not the crown's")
 	assert_true(WorldLedger.belongs_to_player(data, state,
-		"economy.kingdoms.player_realm.rural_population"))
-	assert_true(WorldLedger.belongs_to_player(data, state,
-		"economy.kingdoms.%s.rural_population" % _player()))
-	var mine := MapOwnership.provinces_of(data, state, _player())
+		"military.kingdoms.player_realm.infantry"), "the host is the realm's")
+	var mine := MapManors.controlled_provinces(data, state)
+	assert_eq(mine.size(), 1, "the capital's province alone at the start")
 	assert_true(WorldLedger.belongs_to_player(data, state,
 		"economy.provinces.%s.rural_population" % mine[0]))
+	for code: String in MapOwnership.provinces_of(data, state, _player()):
+		if code != mine[0]:
+			assert_false(WorldLedger.belongs_to_player(data, state,
+				"economy.provinces.%s.rural_population" % code), "another house's province")
+			break
 	var foreign := ""
 	for code: String in data.provinces:
 		if String(data.provinces[code]["kingdom_code"]) != _player():

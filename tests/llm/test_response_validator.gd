@@ -100,8 +100,11 @@ func _order(narrative: String, world: Array, actions: Array = []) -> String:
 
 func test_order_parses_narrative_actions_and_world_impacts() -> void:
 	var s := GameState.new_campaign(data, 42)
+	# The model may touch the crown's own provinces (2026-09-13), not the
+	# kingdom's figures.
+	var own: String = MapManors.controlled_provinces(data, s)[0]
 	var out := ResponseValidator.parse_order(_order("We march.",
-		[{"path": "economy.kingdoms.player_realm.rural_population", "delta": -100,
+		[{"path": "economy.provinces.%s.rural_population" % own, "delta": -100,
 		"reason": "levies"}],
 		[{"action_code": "LEVY_RAISE", "params": {}, "target": ""}]), data, s)
 	assert_true(out["ok"], out["error"])

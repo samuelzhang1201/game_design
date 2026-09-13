@@ -747,6 +747,9 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 	# Who holds the province's manors (MANOR_SYSTEM.md §4) — the crown's
 	# own land is known in this detail; abroad it is not.
 	fields.append(["Manors", holdings_text(repo, state, code)])
+	var controller := MapManors.controller_of(repo, state, code)
+	fields.append(["Controlled by", "the crown" if controller == MapManors.crown(state)
+		else ("House " + controller if controller != "" else "no one")])
 	if urban != null and rural != null:
 		fields.append(["Population", "%d (%d in towns)" % [int(urban) + int(rural), int(urban)]])
 	else:

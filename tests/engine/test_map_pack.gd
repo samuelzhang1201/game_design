@@ -190,3 +190,17 @@ func test_the_cell_index_finds_each_land_cell_under_its_centre() -> void:
 			hits += 1
 	# A centroid can fall outside a very concave cell; nearly all land in.
 	assert_gt(float(hits) / float(checked), 0.97, "%d of %d centres decode to their cell" % [hits, checked])
+
+## The crown starts with the capital's province and nothing more (owner
+## 2026-09-13): the king rules the realm, the crown holds one province.
+func test_the_crown_starts_with_the_capitals_province_only() -> void:
+	var repo := _fresh()
+	var state := GameState.new_campaign(repo, 42)
+	var realm: Dictionary = repo.kingdoms[repo.resolve_realm("player_realm")]
+	var capital_province := String(repo.burgs[String(realm["capital_burg"])]["province_code"])
+	assert_eq(MapManors.controlled_provinces(repo, state), [capital_province])
+	assert_gt(MapOwnership.provinces_of(repo, state, repo.resolve_realm("player_realm")).size(), 1,
+		"the realm itself is larger")
+	assert_gt(state.metrics["treasury"], 0.0, "seeded from the capital province's towns")
+	assert_almost_eq(state.metrics["treasury"],
+		roundf(WorldLedger.crown_town_treasury(repo, state) * repo.bal("pack_treasury_scale")), 0.001)

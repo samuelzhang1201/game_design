@@ -5,15 +5,18 @@ var data: DataRepository
 func before_each() -> void:
 	data = DataRepository.load_all("res://data")
 
-## One truth (owner ruling 2026-09-09): the player's treasury and rates are
-## seeded from the pack's economy row through balance factors; grain and the
-## drift baselines still come from balance.csv.
+## One truth (owner ruling 2026-09-09): the player's rates are seeded from
+## the pack's economy row through balance factors, and the treasury (owner
+## 2026-09-13) from the towns of the provinces the crown controls; grain and
+## the drift baselines still come from balance.csv.
 func test_new_campaign_seeds_from_the_pack_and_balance() -> void:
 	var s := GameState.new_campaign(data, 42)
 	assert_eq(s.tick, 0)
 	var row: Dictionary = data.world_row("economy", "kingdoms", data.resolve_realm("player_realm"))
 	assert_false(row.is_empty(), "the pack has the player's economy row")
-	assert_eq(s.metrics["treasury"], roundf(float(row["treasury"]) * data.bal("pack_treasury_scale")))
+	assert_gt(WorldLedger.crown_town_treasury(data, s), 0.0, "the crown's towns hold something")
+	assert_eq(s.metrics["treasury"],
+		roundf(WorldLedger.crown_town_treasury(data, s) * data.bal("pack_treasury_scale")))
 	assert_eq(s.metrics["tax_rate"],
 		clampf(roundf(float(row["poll_tax"]) * data.bal("tax_rate_per_poll_tax")), 1.0, 10.0))
 	assert_eq(s.metrics["tariff_rate"],

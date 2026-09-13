@@ -176,9 +176,14 @@ static func dominant(repo: DataRepository, province_code: String) -> Dictionary:
 ## Everything a realm makes, biggest first: [{good, label, units}]. Reads
 ## ownership live, so a province changing hands moves its output with it.
 static func realm_output(repo: DataRepository, state: GameState, kingdom_code: String) -> Array:
+	return output_of_provinces(repo, MapOwnership.provinces_of(repo, state, kingdom_code))
+
+## The same over any provinces — the crown's controlled ones for its own
+## column (MapManors.controlled_provinces).
+static func output_of_provinces(repo: DataRepository, provinces: Array) -> Array:
 	var totals: Dictionary = {}
 	var per_province := province_output(repo)
-	for province: String in MapOwnership.provinces_of(repo, state, kingdom_code):
+	for province: String in provinces:
 		for good: String in per_province.get(province, {}):
 			totals[good] = float(totals.get(good, 0.0)) + float(per_province[province][good])
 	var out: Array = []

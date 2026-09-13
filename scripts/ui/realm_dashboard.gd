@@ -76,7 +76,7 @@ func refresh() -> void:
 	var mine := data.resolve_realm("player_realm")
 	_title.text = String(data.kingdoms.get(mine, {}).get("label", "The realm"))
 	var m := state.metrics
-	var pop := _people_of(mine)
+	var pop := _people_of_crown()
 	_resource_values["treasury"].text = str(int(m["treasury"]))
 	_resource_values["grain"].text = str(int(m["grain"]))
 	_resource_values["population"].text = _compact(pop["urban"] + pop["rural"])
@@ -116,7 +116,7 @@ func refresh() -> void:
 			"text": _compact(float(host[u]))})
 	_host.set_rows(host_rows, top)
 	var provs: Array = []
-	for code in MapOwnership.provinces_of(data, state, mine):
+	for code in MapManors.controlled_provinces(data, state):
 		var p: Dictionary = data.provinces[code]
 		var v: Variant = WorldLedger.value_of(data, state, "economy.provinces.%s.rural_population" % code)
 		var w: Variant = WorldLedger.value_of(data, state, "economy.provinces.%s.urban_population" % code)
@@ -134,13 +134,16 @@ func refresh() -> void:
 		shown.append(row)
 	_provinces.set_rows(shown, prov_top)
 
-## Urban and rural population of the realm, live through the ledger.
-func _people_of(kingdom_code: String) -> Dictionary:
+## Urban and rural population of the provinces the crown controls (owner
+## 2026-09-13: the crown's economy is its own land, not the kingdom's),
+## live through the ledger.
+func _people_of_crown() -> Dictionary:
 	var out := {"urban": 0.0, "rural": 0.0}
-	for key in ["urban", "rural"]:
-		var v: Variant = WorldLedger.value_of(Game.data, Game.state,
-			"economy.kingdoms.%s.%s_population" % [kingdom_code, key])
-		out[key] = float(v) if v != null else 0.0
+	for province: String in MapManors.controlled_provinces(Game.data, Game.state):
+		for key in ["urban", "rural"]:
+			var v: Variant = WorldLedger.value_of(Game.data, Game.state,
+				"economy.provinces.%s.%s_population" % [province, key])
+			out[key] += float(v) if v != null else 0.0
 	return out
 
 ## Troops by unit type for the player's realm (unit_types order), via the ledger.

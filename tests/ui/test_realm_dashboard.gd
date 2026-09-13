@@ -24,16 +24,23 @@ func test_charts_carry_engine_truth() -> void:
 	await wait_frames(1)
 	assert_eq(d.temper_chart().rows.size(), RealmDashboard.TEMPER.size(), "four gauges")
 	assert_eq(d.temper_chart().max_value, 100.0)
-	var urban := float(WorldLedger.value_of(Game.data, Game.state,
-		"economy.kingdoms.player_realm.urban_population"))
-	var rural := float(WorldLedger.value_of(Game.data, Game.state,
+	# The people and the provinces are the crown's OWN (2026-09-13): the
+	# provinces it controls, one at the start; the host is the realm's.
+	var own := MapManors.controlled_provinces(Game.data, Game.state)
+	var people := 0.0
+	for code: String in own:
+		for key in ["urban", "rural"]:
+			people += float(WorldLedger.value_of(Game.data, Game.state,
+				"economy.provinces.%s.%s_population" % [code, key]))
+	var realm_rural := float(WorldLedger.value_of(Game.data, Game.state,
 		"economy.kingdoms.player_realm.rural_population"))
 	assert_eq(d.people_chart().slices.size(), 2, "towns and country")
-	assert_almost_eq(d.people_chart().total(), urban + rural, 0.5)
+	assert_almost_eq(d.people_chart().total(), people, 0.5)
+	assert_lt(people, realm_rural, "the crown's people are fewer than the realm's")
 	assert_eq(d.host_chart().rows.size(), Game.data.world_table("military", "unit_types").size(),
 		"one bar per unit type")
 	var provs := d.provinces_chart().rows
-	assert_eq(provs.size(), int(Game.data.bal("dashboard_max_provinces")))
+	assert_eq(provs.size(), mini(own.size(), int(Game.data.bal("dashboard_max_provinces"))))
 	for i in provs.size() - 1:
 		assert_gte(float(provs[i]["value"]), float(provs[i + 1]["value"]), "largest first")
 

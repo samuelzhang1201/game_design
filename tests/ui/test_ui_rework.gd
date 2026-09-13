@@ -477,10 +477,15 @@ func test_the_economy_column_lists_what_the_realm_makes() -> void:
 	assert_true(r.economy_view(), "the tab drives it")
 	assert_true(panel.visible, "and the column shows the produce")
 	assert_true(r.current_screen.world_map().show_economy, "with the map washed to match")
-	var mine := Game.data.resolve_realm("player_realm")
-	var output := MapEconomy.realm_output(Game.data, Game.state, mine)
-	assert_gt(output.size(), 0, "the realm produces something")
+	# The column is the crown's OWN produce (2026-09-13): the provinces it
+	# controls, not the whole realm's.
+	var own := MapManors.controlled_provinces(Game.data, Game.state)
+	var output := MapEconomy.output_of_provinces(Game.data, own)
+	assert_gt(output.size(), 0, "the crown's land produces something")
 	assert_string_contains(panel.summary_text(), "%d kinds" % output.size())
+	assert_string_contains(panel.summary_text(), "%d province" % own.size())
+	assert_lt(output.size(), MapEconomy.realm_output(Game.data, Game.state,
+		Game.data.resolve_realm("player_realm")).size(), "fewer kinds than the whole realm")
 	assert_gt(panel.goods_chart().rows.size(), 0, "the biggest goods are charted")
 	assert_lte(panel.goods_chart().rows.size(), EconomyPanel.MAX_GOODS)
 	assert_eq(String(panel.goods_chart().rows[0]["label"]), String(output[0]["label"]),

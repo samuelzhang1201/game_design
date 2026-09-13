@@ -183,14 +183,17 @@ static func belongs_to_player(data: DataRepository, state: GameState, path: Stri
 	if p.size() != 4:
 		return false
 	var mine := data.resolve_realm("player_realm")
+	# The crown's economy is the provinces it CONTROLS (owner 2026-09-13:
+	# the king starts with the capital's province and nothing more); the
+	# host is the realm's, so military figures stay the kingdom's.
 	match p[1]:
 		"kingdoms":
-			return p[2] == mine
+			return p[2] == mine and p[0] == "military"
 		"provinces":
-			return MapOwnership.owner_of(data, state, p[2]) == mine
+			return MapManors.crown_controls(data, state, p[2])
 		"burgs":
 			var b: Dictionary = data.burgs.get(p[2], {})
-			return MapOwnership.owner_of(data, state, String(b.get("province_code", ""))) == mine
+			return MapManors.crown_controls(data, state, String(b.get("province_code", "")))
 	return false
 
 ## The model-writable fields for the order prompt: one line per field with
@@ -215,7 +218,12 @@ static func prompt_catalog(data: DataRepository, state: GameState) -> String:
 			continue
 		lines.append("- %s = %s (cap %s)" % [pat, _fmt(float(v)), _fmt(cap)])
 	var mine := data.resolve_realm("player_realm")
-	lines.append("Your provinces: " + ", ".join(MapOwnership.provinces_of(data, state, mine)))
+	# The crown's own provinces are the ones the model may write to; the
+	# rest of the realm is named so the model does not think them foreign.
+	lines.append("Your provinces: " + ", ".join(MapManors.controlled_provinces(data, state)))
+	lines.append("Other provinces of your realm (not yours to change): " + ", ".join(
+		MapOwnership.provinces_of(data, state, mine).filter(
+			func(c: String) -> bool: return not MapManors.crown_controls(data, state, c))))
 	var towns: Array = []
 	for code: String in data.burgs:
 		var b: Dictionary = data.burgs[code]
@@ -236,11 +244,23 @@ static func seed_metrics(data: DataRepository, state: GameState) -> void:
 	var row: Dictionary = data.world_row("economy", "kingdoms", data.resolve_realm("player_realm"))
 	if row.is_empty():
 		return
-	state.metrics["treasury"] = roundf(float(row["treasury"]) * data.bal("pack_treasury_scale"))
+	# The chest holds what the crown's OWN provinces' towns hold (owner
+	# 2026-09-13: the starting economy is the capital province's), scaled
+	# like the pack's kingdom treasury was; the rates are still the realm's.
+	state.metrics["treasury"] = roundf(crown_town_treasury(data, state) * data.bal("pack_treasury_scale"))
 	state.metrics["tax_rate"] = clampf(
 		roundf(float(row["poll_tax"]) * data.bal("tax_rate_per_poll_tax")), 1.0, 10.0)
 	state.metrics["tariff_rate"] = clampf(
 		roundf(float(row["sales_tax"]) * data.bal("tariff_rate_per_sales_tax")), 0.0, 10.0)
+
+## The pack's treasuries of every town in a province the crown controls.
+static func crown_town_treasury(data: DataRepository, state: GameState) -> float:
+	var total := 0.0
+	var mine := MapManors.controlled_provinces(data, state)
+	for code: String in data.burgs:
+		if String(data.burgs[code].get("province_code", "")) in mine:
+			total += float(data.world_row("economy", "burgs", code).get("treasury", 0.0))
+	return total
 
 static func _fmt(v: float) -> String:
 	return str(int(v)) if v == floorf(v) else String.num(v, 2)

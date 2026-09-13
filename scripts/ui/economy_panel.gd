@@ -79,10 +79,12 @@ func refresh() -> void:
 	if Game.state == null:
 		return
 	var data := Game.data
-	var mine := data.resolve_realm("player_realm")
-	var output := MapEconomy.realm_output(data, Game.state, mine)
+	# The crown's economy is the provinces it controls (owner 2026-09-13), not
+	# the whole kingdom's.
+	var controlled := MapManors.controlled_provinces(data, Game.state)
+	var output := MapEconomy.output_of_provinces(data, controlled)
 	if output.is_empty():
-		_summary.text = "The realm trades in nothing the ledgers record."
+		_summary.text = "The crown's land trades in nothing the ledgers record."
 		_goods.set_rows([], 1.0)
 		_categories.set_rows([], 1.0)
 		return
@@ -92,9 +94,9 @@ func refresh() -> void:
 		total += float(row["units"])
 		var tag := MapEconomy.good_tag(data, String(row["good"]))
 		by_tag[tag] = float(by_tag.get(tag, 0.0)) + float(row["units"])
-	_summary.text = "%s of goods a year, in %d kinds across %d provinces." % [
-		RealmDashboard._compact(total), output.size(),
-		MapOwnership.provinces_of(data, Game.state, mine).size()]
+	_summary.text = "%s of goods a year, in %d kinds across %d province%s the crown controls." % [
+		RealmDashboard._compact(total), output.size(), controlled.size(),
+		"" if controlled.size() == 1 else "s"]
 
 	var rows: Array = []
 	var top := 1.0
