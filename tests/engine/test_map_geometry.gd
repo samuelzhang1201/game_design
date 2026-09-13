@@ -218,37 +218,6 @@ func test_ribbon_of_a_mismatched_or_degenerate_line_is_empty() -> void:
 	assert_eq(MapGeometry.ribbon(PackedVector2Array([Vector2(0, 0), Vector2(1, 0)]),
 		PackedFloat32Array([1.0])).size(), 0, "one width per point or nothing")
 
-## offset_closed: a closed loop pushed OUTWARD — the wave lines that ring a
-## coast are the shore drawn again a little further out to sea. The direction
-## cannot be assumed from the winding (the pack's loops run either way, and
-## screen y points down), so the function measures whether the ring actually
-## grew and flips if it did not.
-
-func test_offset_closed_grows_the_ring() -> void:
-	var square := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10)])
-	var out := MapGeometry.offset_closed(square, 2.0)
-	assert_eq(out.size(), 4)
-	# Every corner moves diagonally away from the centre by 2 along each axis.
-	for p: Vector2 in out:
-		assert_gt(p.distance_to(Vector2(5, 5)), Vector2(0, 0).distance_to(Vector2(5, 5)),
-			"further from the middle than the original corner")
-	assert_almost_eq(out[0].x, -2.0, 0.001)
-	assert_almost_eq(out[0].y, -2.0, 0.001)
-	assert_almost_eq(out[2].x, 12.0, 0.001)
-	assert_almost_eq(out[2].y, 12.0, 0.001)
-
-func test_offset_closed_grows_whichever_way_the_loop_is_wound() -> void:
-	var cw := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10)])
-	var ccw := PackedVector2Array([Vector2(0, 10), Vector2(10, 10), Vector2(10, 0), Vector2(0, 0)])
-	for loop: PackedVector2Array in [cw, ccw]:
-		var out := MapGeometry.offset_closed(loop, 3.0)
-		for p: Vector2 in out:
-			assert_gt(p.distance_to(Vector2(5, 5)), 7.0, "outward, both windings")
-
-func test_offset_closed_leaves_a_degenerate_loop_alone() -> void:
-	var two := PackedVector2Array([Vector2(0, 0), Vector2(1, 1)])
-	assert_eq(MapGeometry.offset_closed(two, 2.0), two)
-
 ## smooth_closed_through: a Catmull-Rom ring. smooth_closed uses a uniform
 ## cubic B-spline, which APPROXIMATES — it cuts every corner, so a kingdom's
 ## border drifted off the province boundary it is supposed to be (owner

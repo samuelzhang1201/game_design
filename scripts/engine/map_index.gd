@@ -29,3 +29,70 @@ static func biome_at(img: Image, px: Vector2i) -> int:
 	if c.r8 == 255 and c.g8 == 255 and c.b8 == 255:
 		return -1
 	return c.r8
+
+## --- The sea's distance field (owner 2026-09-13, after the reference chart) --
+## Every pixel's distance to the nearest LAND pixel, in px: a two-pass
+## chamfer (1 across, sqrt 2 diagonal — within 8% of Euclidean), 0 on land.
+## `land` is one byte per pixel, row-major, non-zero for land. Pure.
+const DIAG := 1.4142135
+const FAR := 1.0e9
+
+static func distance_to_land(land: PackedByteArray, w: int, h: int) -> PackedFloat32Array:
+	var d := PackedFloat32Array()
+	d.resize(w * h)
+	for i in w * h:
+		d[i] = 0.0 if land[i] != 0 else FAR
+	# Forward: from the neighbours above and to the left.
+	for y in h:
+		for x in w:
+			var i := y * w + x
+			var best := d[i]
+			if best == 0.0:
+				continue
+			if x > 0:
+				best = minf(best, d[i - 1] + 1.0)
+			if y > 0:
+				best = minf(best, d[i - w] + 1.0)
+				if x > 0:
+					best = minf(best, d[i - w - 1] + DIAG)
+				if x < w - 1:
+					best = minf(best, d[i - w + 1] + DIAG)
+			d[i] = best
+	# Backward: from the neighbours below and to the right.
+	for y in range(h - 1, -1, -1):
+		for x in range(w - 1, -1, -1):
+			var i := y * w + x
+			var best := d[i]
+			if best == 0.0:
+				continue
+			if x < w - 1:
+				best = minf(best, d[i + 1] + 1.0)
+			if y < h - 1:
+				best = minf(best, d[i + w] + 1.0)
+				if x < w - 1:
+					best = minf(best, d[i + w + 1] + DIAG)
+				if x > 0:
+					best = minf(best, d[i + w - 1] + DIAG)
+			d[i] = best
+	return d
+
+## The biome index (land pixels carry an id, water is white) baked into an
+## L8 image: each pixel its distance to land in px, capped at 255. Written
+## by tools/import_azgaar.gd as world_sea_distance.png (and by
+## tools/bake_sea_distance.gd from an existing index); SeaLayer's shader
+## reads it. Slow in GDScript over a whole canvas — seconds — which is why
+## it is baked, never built at runtime.
+static func bake_sea_distance(biome: Image) -> Image:
+	var w := biome.get_width()
+	var h := biome.get_height()
+	var land := PackedByteArray()
+	land.resize(w * h)
+	for y in h:
+		for x in w:
+			land[y * w + x] = 1 if biome_at(biome, Vector2i(x, y)) >= 0 else 0
+	var d := distance_to_land(land, w, h)
+	var bytes := PackedByteArray()
+	bytes.resize(w * h)
+	for i in w * h:
+		bytes[i] = mini(int(d[i] + 0.5), 255)
+	return Image.create_from_data(w, h, false, Image.FORMAT_L8, bytes)

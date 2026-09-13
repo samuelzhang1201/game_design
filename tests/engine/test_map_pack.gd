@@ -16,6 +16,13 @@ func test_default_pack_loads_with_its_world_and_art() -> void:
 	assert_false(repo.burgs.is_empty(), "pack supplies burgs")
 	assert_true(ResourceLoader.exists(repo.index_texture_path),
 		"hit-test bitmap exists: " + repo.index_texture_path)
+	# The sea's distance field (2026-09-13) is baked by the importer beside
+	# the index bitmaps, at the canvas size, so the bands line up with the land.
+	assert_true(ResourceLoader.exists(repo.sea_texture_path),
+		"sea distance field exists: " + repo.sea_texture_path)
+	var field: Image = (load(repo.sea_texture_path) as Texture2D).get_image()
+	assert_eq(field.get_width(), int(repo.map_info["width"]), "field is canvas-wide")
+	assert_eq(field.get_height(), int(repo.map_info["height"]), "field is canvas-high")
 
 func test_every_binding_points_at_a_kingdom_this_pack_has() -> void:
 	var repo := _fresh()

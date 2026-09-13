@@ -132,6 +132,27 @@ func test_every_river_runs_from_land_to_the_shoreline() -> void:
 		assert_true(wet, "%s's mouth is at the water's edge" % code)
 	assert_gt(to_sea, 100, "most of the pack's rivers reach the sea")
 
+## The sea (owner 2026-09-13, after the reference chart) is a SeaLayer
+## behind the view: one quad over the pack's distance field, first child,
+## drawn behind the parent, following the view's offset and zoom.
+func test_the_sea_is_a_field_of_bands_behind_the_land() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var sea := v.sea_layer()
+	assert_not_null(sea)
+	assert_true(sea.show_behind_parent, "drawn under the land mesh")
+	assert_eq(sea.get_index(), 0, "under every other child too")
+	assert_true(sea.has_field(), "the pack's world_sea_distance.png loaded")
+	assert_eq(sea.field_size(), v.map_size(), "the field is the map's canvas")
+	assert_not_null(sea.material, "the band shader")
+	v._zoom_at(v.size / 2.0, 1.5)
+	v._offset += Vector2(-30.0, -20.0)
+	v._clamp_offset()
+	v.queue_redraw()
+	await wait_frames(2)
+	assert_eq(sea.position, v._offset, "pans with the view")
+	assert_eq(sea.scale, Vector2(v._zoom, v._zoom), "zooms with it")
+
 ## The compass rose (owner request 2026-09-13) is the sheet's furniture: a
 ## box in the top-right corner, fixed in screen px, and gone at alpha 0.
 func test_the_compass_sits_in_the_top_right_corner() -> void:

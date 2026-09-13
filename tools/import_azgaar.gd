@@ -48,6 +48,7 @@ extends SceneTree
 ##       untouched pixels stay white (255,255,255) = water / no state
 ##   assets/maps/<map-id>/world_province_index.png  same encoding, province id
 ##   assets/maps/<map-id>/world_biome_index.png     R = biome id (land cells only)
+##   assets/maps/<map-id>/world_sea_distance.png    L8: distance to land in px, capped at 255
 ##
 ## Polygons are filled with an even-odd scanline rasterizer. Deterministic:
 ## same inputs => byte-identical outputs. Hand-edits to the generated CSVs
@@ -1080,6 +1081,10 @@ func _run() -> int:
 		var bid := int(c.get("biome", 0))
 		return bid if bid > 0 else -1)
 	if not _save_png(biome_img, out_art + "/world_biome_index.png"):
+		return 1
+	# The sea's distance field (2026-09-13): every pixel its distance to land
+	# in native px, for SeaLayer's bands. Seconds of GDScript, once.
+	if not _save_png(MapIndex.bake_sea_distance(biome_img), out_art + "/world_sea_distance.png"):
 		return 1
 
 	# --- report -----------------------------------------------------------

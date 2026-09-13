@@ -230,7 +230,7 @@ func test_coast_loops_match_the_packs_features() -> void:
 	assert_gte(land, 12, "at least one land loop per island")
 
 func test_terrain_palette_names_every_colour_the_map_draws() -> void:
-	for key in ["sea_deep", "sea_shallow", "lake", "coast_line", "river", "road", "trail"]:
+	for key in ["sea_deep", "sea_far", "sea_nearer", "sea_near", "lake", "coast_line", "river", "road", "trail"]:
 		assert_true(repo.terrain_palette.has(key), key)
 	for id: int in repo.biomes:
 		if id == 0:
@@ -240,7 +240,7 @@ func test_terrain_palette_names_every_colour_the_map_draws() -> void:
 
 func test_terrain_balance_keys_are_present() -> void:
 	for key in ["map_relief_strength", "map_relief_min", "map_relief_max", "map_light_x",
-			"map_light_y", "map_altitude_gain", "map_sea_shelf_cells", "map_sea_shelf_gamma",
+			"map_light_y", "map_altitude_gain", "map_sea_band_near_px", "map_sea_band_far_px",
 			"map_coast_width",
 			"map_river_min_px", "map_river_discharge_scale", "map_road_width",
 			"map_trail_width", "map_trail_min_scale"]:

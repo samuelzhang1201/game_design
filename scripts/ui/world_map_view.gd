@@ -135,6 +135,9 @@ var _terrain_mesh: ArrayMesh
 var _map_size := Vector2.ZERO
 ## Shore loops (coasts.csv) smoothed once, drawn over the mesh.
 var _coast_rings: Array = []
+## The sea: four bands over the pack's distance field, drawn behind this
+## item (SeaLayer, owner 2026-09-13). Test seam: sea_layer().
+var _sea: SeaLayer
 ## Every dashed line on the sheet — borders, hatching, seams, lanes — cut
 ## once per zoom in native px and kept (MapDashCache); a frame transforms
 ## and draws each set as ONE polyline. Test seam: dash_cache().
@@ -184,6 +187,11 @@ func _ready() -> void:
 		float(Game.data.map_info.get("height", "0")))
 	if _map_size.x > 0.0 and _map_size.y > 0.0:
 		_terrain_mesh = MapTerrain.shared_mesh(Game.data)
+	_sea = SeaLayer.new()
+	_sea.name = "Sea"
+	add_child(_sea)
+	move_child(_sea, 0)
+	_sea.setup(Game.data)
 	var index_path := Game.data.index_texture_path
 	if index_path != "" and ResourceLoader.exists(index_path):
 		var idx: Texture2D = load(index_path)
@@ -288,12 +296,13 @@ func _draw() -> void:
 	if not _homed and size.y > 0.0:
 		_go_home()
 	_layer("terrain", func() -> void:
-		draw_rect(Rect2(Vector2.ZERO, size),
-			MapTerrain.palette_color(Game.data, "sea_deep", MapTerrain.FALLBACK))
+		# The sea is the SeaLayer child behind this item; it follows the
+		# view's transform. The land mesh is drawn over it.
+		_sea.position = _offset
+		_sea.scale = Vector2(_zoom, _zoom)
 		draw_mesh(_terrain_mesh, null, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)))
 	_layer("heights", _draw_heights)
 	_layer("paper", _draw_paper_grain)
-	_layer("waves", _draw_waves)
 	_layer("sea_decor", _draw_sea_decor)
 	# The wash goes UNDER the water and the roads (owner 2026-09-12, after
 	# mapSample.jpg): painted over them it muted every river and track on
@@ -1172,79 +1181,6 @@ func _draw_compass() -> void:
 ## Every shore (islands and lakes) as a smooth stroke in the palette's
 ## coast colour — the same B-spline as the kingdom borders, so a border
 ## along a coast sits on the drawn shore.
-## Water hatching (owner request 2026-09-13): the shore drawn again a few
-## times further out to sea, each ring fainter. The rings are the LAND coast
-## loops offset outward (MapGeometry.offset_closed) — a lake's "outward" is
-## the land, so lake shores are left alone. Built once in native coordinates
-## and kept; the spacing is native px, so the hatching belongs to the drawing
-## and grows with the zoom the way the coast does.
-var _wave_rings: Array = []
-
-func wave_rings() -> Array:
-	if not _wave_rings.is_empty():
-		return _wave_rings
-	var count := int(Game.data.bal("map_wave_rings"))
-	var gap := Game.data.bal("map_wave_spacing_px")
-	if count <= 0 or gap <= 0.0:
-		return _wave_rings
-	var steps := int(Game.data.bal("map_border_smoothing_steps"))
-	for row: Dictionary in Game.data.coasts:
-		if String(row.get("kind", "")) != "land":
-			continue
-		var loop: PackedVector2Array = MapGeometry.smooth_closed_through(row["polyline"], steps)
-		for r in count:
-			_wave_rings.append({"ring": MapGeometry.offset_closed(loop, gap * float(r + 1)),
-				"fade": 1.0 - float(r) / float(count)})
-	return _wave_rings
-
-## The hatching as PIECES of each ring — map_wave_chunk_pts points apiece,
-## sharing an end point so no gap opens — each with its fade, cut and drawn
-## on its own so only the pieces in the frame cost it anything. Whole, the
-## mainland ring touches every frame and a close zoom paid for all of it
-## (bench 2026-09-13: 100k hatching vertices a frame). The dash pattern
-## restarts at a piece boundary, which hatching can afford.
-var _wave_lines: Array = []
-
-func _wave_line_list() -> Array:
-	if not _wave_lines.is_empty():
-		return _wave_lines
-	var chunk := int(Game.data.bal("map_wave_chunk_pts"))
-	var rings := wave_rings()
-	for i in rings.size():
-		var entry: Dictionary = rings[i]
-		var ring: PackedVector2Array = (entry["ring"] as PackedVector2Array).duplicate()
-		if ring.size() < 2:
-			continue
-		ring.append(ring[0])
-		var n := ring.size()
-		var start := 0
-		var k := 0
-		while start < n - 1:
-			var stop := n - 1 if chunk <= 0 else mini(start + chunk, n - 1)
-			_wave_lines.append({"key": "waves:%d:%d" % [i, k], "fade": float(entry["fade"]),
-				"rings": [ring.slice(start, stop + 1)]})
-			start = stop
-			k += 1
-	return _wave_lines
-
-func _draw_waves() -> void:
-	var lines := _wave_line_list()
-	if lines.is_empty():
-		return
-	var base := MapTerrain.palette_color(Game.data, "wave", MapTerrain.FALLBACK)
-	var alpha := Game.data.bal("map_wave_alpha")
-	var width := Game.data.bal("map_wave_width")
-	var dash := Game.data.bal("map_wave_dash_px")
-	var gap := Game.data.bal("map_wave_gap_px")
-	var frame := Rect2(Vector2.ZERO, size).grow(width * 2.0)
-	var version := _ownership_sig()
-	var step := Game.data.bal("map_dash_min_step_px")
-	for wl: Dictionary in lines:
-		var entry := _dashes.cut(String(wl["key"]), _zoom, version, wl["rings"], dash, gap, step)
-		var color := base
-		color.a = alpha * float(wl["fade"])
-		_draw_dashes(entry, frame, color, Color(color, 0.0), width)
-
 func _draw_coasts() -> void:
 	var width := Game.data.bal("map_coast_width")
 	if width <= 0.0:
@@ -1267,6 +1203,10 @@ func _view_xform() -> Transform2D:
 ## Whether a native-px bounding box lands in a screen-px frame.
 func _bbox_touches(bbox: Rect2, frame: Rect2) -> bool:
 	return frame.intersects(Rect2(map_to_screen(bbox.position), bbox.size * _zoom))
+
+## Test seam: the sea layer behind the land.
+func sea_layer() -> SeaLayer:
+	return _sea
 
 ## Test seam: the dash cache, to see that a frame cut nothing new.
 func dash_cache() -> MapDashCache:

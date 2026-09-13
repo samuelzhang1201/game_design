@@ -107,6 +107,9 @@ var map_id: String = ""
 var index_texture_path: String = ""
 var province_texture_path: String = ""
 var biome_texture_path: String = ""
+## data/maps.csv sea_texture: world_sea_distance.png, every pixel its
+## distance to land in native px (MapIndex.bake_sea_distance); SeaLayer.
+var sea_texture_path: String = ""
 ## realm slot -> this map's kingdom_code (maps/<id>/realm_bindings.csv).
 var realm_bindings: Dictionary = {}
 ## province_code -> the authored house holding it (maps/<id>/house_bindings.csv,
@@ -430,6 +433,7 @@ func load_map(id: String) -> bool:
 	index_texture_path = String(m["index_texture"])
 	province_texture_path = String(m.get("province_texture", ""))
 	biome_texture_path = String(m.get("biome_texture", ""))
+	sea_texture_path = String(m.get("sea_texture", ""))
 	_resolve_realm_slots()
 	return true
 

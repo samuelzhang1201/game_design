@@ -221,64 +221,6 @@ static func ribbon(pts: PackedVector2Array, half: PackedFloat32Array) -> PackedV
 	return tris
 
 
-## A closed loop pushed OUTWARD by `distance`: each point moved along the
-## bisector of its two edges. The wave lines that ring a coast are the shore
-## drawn again a little further out to sea, and "further out" cannot be read
-## off the winding — the pack's loops run either way and screen y points down
-## — so the ring is built one way, measured, and flipped if it shrank.
-static func offset_closed(loop: PackedVector2Array, distance: float) -> PackedVector2Array:
-	if loop.size() < 3:
-		return loop
-	var grown := _offset_signed(loop, distance)
-	if _area(grown) > _area(loop):
-		return grown
-	return _offset_signed(loop, -distance)
-
-## A true PARALLEL offset, not a bisector nudge: at a corner the point has to
-## travel distance / sin(half-angle) for the two EDGES to end up `distance`
-## away. A plain bisector step leaves the edges closer than asked and the
-## rings bunch at every headland. Mitred, with a limit so a hairpin in the
-## coastline cannot throw a spike out to sea.
-const MITRE_LIMIT := 4.0
-
-static func _offset_signed(loop: PackedVector2Array, distance: float) -> PackedVector2Array:
-	var n := loop.size()
-	var out := PackedVector2Array()
-	out.resize(n)
-	for i in n:
-		var prev: Vector2 = loop[(i - 1 + n) % n]
-		var next: Vector2 = loop[(i + 1) % n]
-		var into := (loop[i] - prev).normalized()
-		var away := (next - loop[i]).normalized()
-		if into.length_squared() == 0.0:
-			into = away
-		if away.length_squared() == 0.0:
-			away = into
-		if into.length_squared() == 0.0:
-			out[i] = loop[i]
-			continue
-		var n1 := into.orthogonal()
-		var n2 := away.orthogonal()
-		var m := (n1 + n2)
-		if m.length_squared() == 0.0:  # a perfect reversal: no parallel exists
-			out[i] = loop[i] + n1 * distance
-			continue
-		m = m.normalized()
-		var reach := distance / maxf(m.dot(n1), 1.0 / MITRE_LIMIT)
-		out[i] = loop[i] + m * reach
-	return out
-
-## Twice the shoelace area, unsigned — only its size is compared.
-static func _area(loop: PackedVector2Array) -> float:
-	var n := loop.size()
-	var sum := 0.0
-	for i in n:
-		var a: Vector2 = loop[i]
-		var b: Vector2 = loop[(i + 1) % n]
-		sum += a.x * b.y - b.x * a.y
-	return absf(sum)
-
-
 ## smooth_closed's interpolating sibling: a closed Catmull-Rom ring that runs
 ## THROUGH every control point instead of cutting the corners off.
 ##

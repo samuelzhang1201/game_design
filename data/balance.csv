@@ -173,16 +173,15 @@ map_paper_octaves,4,terrain: octaves of the parchment grain — more gives finer
 map_paper_seed,954159497,terrain: seed of the parchment grain (the map's own seed; the grain is a look, never simulation)
 map_paper_vignette,0,"terrain: how dark the sheet's edges go (0 = off), drawn over everything like the shadow on a rolled scroll. Off in the bright theme (owner 2026-09-13); 0.22 was the parchment value"
 map_terrain_blend,1,terrain: 1 = ring vertices blend the cells around them (soft painterly land); 0 = flat colour per cell with crisp edges
-map_sea_shelf_cells,2.0,"terrain: how far the shallow band reaches out from the shore, in CELL HOPS (a cell touching land is 0). The shelf is a distance from land, not a height class (owner 2026-09-13: the sea graded too much and the deep/shallow edge was abrupt) — the tint runs from sea_shallow at the shore to sea_deep this many cells out"
-map_sea_shelf_gamma,1.6,"terrain: shape of that fade — 1 is linear, above 1 keeps the band narrow and lets it melt into the deep sooner"
-map_wave_rings,3,"world map: how many lines of water hatching ring each shore (0 = none)"
-map_wave_spacing_px,7,world map: gap between those rings in NATIVE map px — they belong to the drawing and scale with the zoom
-map_wave_width,0.9,world map: width of a hatching line in screen px
-map_wave_alpha,0.3,world map: opacity of the innermost ring; each one out is fainter
-map_wave_dash_px,6,world map: dash length of the hatching in screen px (0 draws it solid)
-map_wave_gap_px,5,world map: gap between those dashes in screen px
+map_sea_band_near_px,12,"terrain: the NEAR band — sea within this many native px of the shore, in sea_near (owner 2026-09-13, after the reference chart: four flat bands by distance from land over a fixed wave grain, drawn by SeaLayer from the pack's world_sea_distance.png)"
+map_sea_band_nearer_px,55,"terrain: out to here is the NEARER band, sea_nearer"
+map_sea_band_far_px,200,"terrain: out to here is the FAR band, sea_far; beyond is the deep, sea_deep (the field caps at 255)"
+map_sea_band_soft_px,8,"terrain: half-width of the fade between two bands, in native px — 0 is a hard edge"
+map_sea_wave_alpha,0.12,"terrain: strength of the fixed wave grain over the sea (0 = flat)"
+map_sea_wave_tile_px,96,"terrain: height of one tile of the grain in native px — it belongs to the drawing and scales with the zoom"
+map_sea_wave_stretch,6,"terrain: how much wider than tall the grain is drawn, so it reads as horizontal wave streaks"
+map_sea_wave_seed,954159497,"terrain: seed of the wave grain (the map's own seed); a look, never simulation"
 map_dash_min_step_px,3,"world map: no two vertices of a dashed line (borders, hatching, lanes) closer than this in SCREEN px once cut for the zoom — the rings are sampled about a native px apart, so zoomed out they carried several vertices per screen px and the strip builder paid for every one (bench 2026-09-13). 0 keeps every vertex"
-map_wave_chunk_pts,256,"world map: a hatching ring is drawn in pieces of this many points, each only when its box touches the frame — zoomed in, most of a long shore is off screen, and whole the mainland ring touched every frame (bench 2026-09-13). 0 draws each ring whole"
 map_coast_width,0,"terrain: shore stroke width in screen px. 0 = NO coast line at all (owner request 2026-09-13): the land colour, the political wash and the sea tell you where the shore is, and a drawn outline over them only fought the kingdom borders. Above 0 the stroke comes back"
 map_river_min_px,1.2,"terrain: the least a river's SOURCE width may be in screen px. It floors only the widest point: the course still tapers to nothing from there (map_river_taper_gamma), so rivers no longer all draw one width at this floor the way they did when it floored the whole course (0.44 then, owner 2026-09-12)"
 map_river_alpha,1.0,"terrain: opacity of a river — 1, SOLID (owner request 2026-09-13): below 1 the ribbon's overlapping triangles on a tight bend show as darker blots"

@@ -3,8 +3,8 @@ extends RefCounted
 ## The terrain the game draws itself (spec 2026-09-11): the pack's Voronoi
 ## cells (DataRepository.cells / vertices) fanned into one vertex-coloured
 ## mesh. Land is its biome's palette tint times a relief shade computed from
-## the neighbours' heights; the sea grades from deep to shallow by height;
-## lakes are flat. Ring vertices blend the cells around them, but only within
+## the neighbours' heights; the sea is NOT here — SeaLayer draws it under
+## the land from the pack's distance field — and lakes are flat. Ring vertices blend the cells around them, but only within
 ## their own class (land with land, water with water), so the shore stays a
 ## crisp edge while everything inland is smooth. Pure functions over the
 ## repository — no Nodes, no RNG — so GUT pins every formula headless.
@@ -21,7 +21,6 @@ static var _mesh_cache: Dictionary = {}
 ## swaps packs must not keep drawing the old world.
 static func invalidate() -> void:
 	_mesh_cache.clear()
-	_hops_cache.clear()
 	forget_heat()
 
 static func is_water(cell: Dictionary) -> bool:
@@ -106,67 +105,13 @@ static func cell_color(repo: DataRepository, cell: Dictionary) -> Color:
 	if kind == "lake":
 		return palette_color(repo, "lake", FALLBACK)
 	if kind != "":
-		# A cell that is not in the repo (a bare fixture) has no shore near
-		# it and is open sea.
-		return sea_color(repo, float(shore_hops(repo).get(int(cell.get("cell_id", -1)), INF)))
+		# The sea is not in the mesh (build skips it): SeaLayer draws it as
+		# bands from the distance field. Its flat colour is only ever asked
+		# for by a caller that has no field.
+		return palette_color(repo, "sea_deep", FALLBACK)
 	var s := shade_of(repo, cell)
 	var tint := _land_tint(repo, cell)
 	return Color(tint.r * s, tint.g * s, tint.b * s, 1.0)
-
-## --- The shelf ---------------------------------------------------------
-## Shallow water is a BAND along the shore, not a height class (owner
-## 2026-09-13: the sea graded too much, and the deep/shallow edge was
-## abrupt). The pack's sea heights form broad shelves and stray pools, and
-## colouring by height painted the ocean in hard-edged pale blotches far
-## from any coast. Instead every sea cell's distance from land is counted
-## in CELL HOPS — 0 for a cell touching land — by one breadth-first walk
-## over the neighbour lists, and the tint runs from sea_shallow at the
-## shore to sea_deep map_sea_shelf_cells hops out, shaped by
-## map_sea_shelf_gamma; the ring-vertex blending then smooths the steps
-## between cells into a gradient. Lakes stay flat and take no part.
-static var _hops_cache: Dictionary = {}
-
-## sea cell id -> hops from the nearest land cell. Sea with no land
-## reachable through sea (none, on a real pack) is absent: open sea.
-static func shore_hops(repo: DataRepository) -> Dictionary:
-	var key := repo.get_instance_id()
-	if _hops_cache.has(key):
-		return _hops_cache[key]
-	var hops: Dictionary = {}
-	var frontier: Array[int] = []
-	for id: int in _sorted_ids(repo):
-		var cell: Dictionary = repo.cells[id]
-		if not is_sea(cell):
-			continue
-		for n: int in (cell["neighbor_ids"] as PackedInt32Array):
-			var other: Dictionary = repo.cells.get(n, {})
-			if not other.is_empty() and not is_water(other):
-				hops[id] = 0
-				frontier.append(id)
-				break
-	var head := 0
-	while head < frontier.size():
-		var id: int = frontier[head]
-		head += 1
-		var next: int = int(hops[id]) + 1
-		for n: int in ((repo.cells[id] as Dictionary)["neighbor_ids"] as PackedInt32Array):
-			if hops.has(n):
-				continue
-			var other: Dictionary = repo.cells.get(n, {})
-			if other.is_empty() or not is_sea(other):
-				continue
-			hops[n] = next
-			frontier.append(n)
-	_hops_cache[key] = hops
-	return hops
-
-## The sea's tint `hops` cells out from the shore: sea_shallow at 0, sea_deep
-## from map_sea_shelf_cells on, (1 - hops / shelf)^gamma between.
-static func sea_color(repo: DataRepository, hops: float) -> Color:
-	var shelf := maxf(repo.bal("map_sea_shelf_cells"), 0.000001)
-	var t := pow(clampf(1.0 - hops / shelf, 0.0, 1.0), maxf(repo.bal("map_sea_shelf_gamma"), 0.01))
-	return palette_color(repo, "sea_deep", FALLBACK).lerp(
-		palette_color(repo, "sea_shallow", FALLBACK), t)
 
 static func _sorted_ids(repo: DataRepository) -> Array:
 	var ids: Array = repo.cells.keys()
@@ -218,6 +163,11 @@ static func build(repo: DataRepository, tint: Callable = Callable()) -> Dictiona
 		var cell: Dictionary = repo.cells[id]
 		var ring: PackedInt32Array = cell["vertex_ids"]
 		if ring.size() < 3:
+			continue
+		# The SEA is not in the mesh (owner 2026-09-13): SeaLayer draws it
+		# under the land as bands from the distance field, and the land's
+		# own edge is the shore. Lakes stay: they are flat cells of the land.
+		if is_sea(cell):
 			continue
 		var water := is_water(cell)
 		var own: Color = colors[id]
