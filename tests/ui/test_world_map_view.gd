@@ -3,6 +3,14 @@ extends GutTest
 ## (user ruling 2026-09-03: the map IS the middle view; MAP tab returned
 ## to "close overlays" — that behavior is pinned by test_ui_rework).
 
+
+## The zoom-out floor stops at map_max_scale_bar_km (owner request
+## 2026-09-12), so a test that needs the whole world framed lifts the cap
+## first and says why. Restored by GutTest's per-test repo reload.
+func _whole_world(v: WorldMapView) -> void:
+	Game.data.balance["map_max_scale_bar_km"] = 0.0
+	v._zoom_at(v.size / 2.0, 0.00001)
+
 func _view() -> WorldMapView:
 	var v := WorldMapView.create()
 	v.size = Vector2(320, 180)
@@ -64,13 +72,25 @@ func test_the_index_bitmap_agrees_with_the_mapping() -> void:
 func test_rivers_draw_where_the_view_is() -> void:
 	var v := _view()
 	await wait_frames(2)
-	v._zoom_at(v.size / 2.0, 0.0001)
+	_whole_world(v)
 	assert_eq(v.visible_river_count(), Game.data.rivers.size(), "the whole world shows every river")
 	v._zoom_at(Vector2.ZERO, 1000.0)
 	assert_eq(v.visible_river_count(), 0, "open sea in the corner shows none")
 
 ## macOS trackpad (user request 2026-09-09): pinch zooms, two-finger drag
 ## pans. Both arrive as their own event types, beside the wheel.
+## Rivers (owner request 2026-09-13): widest at the source, thinning as
+## (1 - t)^gamma to a point. n = 5, half_max 4, gamma 1.5:
+##   t = 0, .25, .5, .75, 1  ->  (1-t)^1.5 = 1, .6495, .35355, .125, 0
+func test_a_river_is_widest_at_its_source_and_tapers_to_a_point() -> void:
+	var half := WorldMapView.river_taper(5, 4.0, 1.5)
+	assert_eq(half.size(), 5)
+	assert_almost_eq(half[0], 4.0, 0.001, "full width at the source")
+	assert_almost_eq(half[1], 2.598, 0.001)
+	assert_almost_eq(half[2], 1.414, 0.001)
+	assert_almost_eq(half[3], 0.5, 0.001)
+	assert_almost_eq(half[4], 0.0, 0.001, "a point at the end")
+
 func test_pinch_gesture_zooms() -> void:
 	var v := _view()
 	await wait_frames(2)
@@ -108,7 +128,7 @@ func test_kingdom_labels_hide_when_too_small_to_read() -> void:
 	assert_gt(scale_px, 0.0, "the label size is data-driven")
 	v._zoom_at(v.size / 2.0, 1000.0)
 	assert_gt(scale_px * v.view_scale(), min_px, "zoomed in, labels show")
-	v._zoom_at(v.size / 2.0, 0.00001)
+	_whole_world(v)
 	assert_lt(scale_px * v.view_scale(), min_px, "zoomed out, they drop away")
 
 ## Hovering land tells the screens which country it is, so the left column
@@ -376,21 +396,23 @@ func test_every_gameplay_screen_uses_the_map_scene() -> void:
 			"%s builds it from the scene, not .new()" % path.get_file())
 
 ## Province view (user request 2026-09-09): a toggle draws every kingdom's
-## internal province seams as light dashed lines, above a minimum zoom.
+## internal province seams as light dashed lines, above a minimum zoom. ON
+## from the first frame since 2026-09-12 — the map opens on the realm, and
+## the seams are part of what it opens showing.
 func test_province_view_toggles_by_key_and_announces_it() -> void:
 	var v := _view()
 	await wait_frames(2)
-	assert_false(v.show_provinces, "off by default")
+	assert_true(v.show_provinces, "on by default")
 	var seen: Array = []
 	v.province_view_changed.connect(func(on: bool) -> void: seen.append(on))
 	var key := InputEventKey.new()
 	key.pressed = true
 	key.keycode = KEY_P
 	v._gui_input(key)
-	assert_true(v.show_provinces, "P turns it on")
+	assert_false(v.show_provinces, "P turns it off")
 	v._gui_input(key)
-	assert_false(v.show_provinces, "P turns it off again")
-	assert_eq(seen, [true, false], "each flip is announced once")
+	assert_true(v.show_provinces, "P turns it on again")
+	assert_eq(seen, [false, true], "each flip is announced once")
 
 ## Kingdom outlines are drawn as the B-spline Azgaar drew the render with:
 ## one smooth ring per outline loop, steps points per vertex, following
@@ -428,6 +450,7 @@ func test_clicking_land_in_the_province_view_selects_the_province() -> void:
 	var code := String(Game.data.burgs[_capital_code()]["province_code"])
 	var row: Dictionary = Game.data.provinces[code]
 	var centre := Vector2(float(row["center_x"]), float(row["center_y"]))
+	v.show_provinces = false
 	v._select_at(v.map_to_screen(centre))
 	assert_eq(v.selected_province(), "", "no selection while the view is off")
 	assert_true(picked.is_empty())
@@ -446,7 +469,7 @@ func test_province_seams_draw_only_when_zoomed_in_enough() -> void:
 	var v := _view()
 	await wait_frames(2)
 	v.show_provinces = true
-	v._zoom_at(v.size / 2.0, 0.00001)
+	_whole_world(v)
 	assert_eq(v.visible_seam_count(), 0, "zoomed out, no seams")
 	# Zoom to the ceiling and centre the frame on one of the realm's own
 	# seams — the frame is a few native px wide at that zoom, so it has to
@@ -467,7 +490,7 @@ func test_province_seams_draw_only_when_zoomed_in_enough() -> void:
 func test_every_province_on_screen_is_washed_in_its_owners_colour() -> void:
 	var v := _view()
 	await wait_frames(2)
-	v._zoom_at(v.size / 2.0, 0.00001)  # the whole world in the frame
+	_whole_world(v)
 	var fills := v.political_fills()
 	assert_eq(fills.size(), Game.data.province_borders.size(), "every province is painted")
 	var mine := Game.data.resolve_realm("player_realm")
@@ -482,11 +505,40 @@ func test_every_province_on_screen_is_washed_in_its_owners_colour() -> void:
 			checked += 1
 	assert_gt(checked, 0)
 
+## Owner ruling 2026-09-12 (second pass, after development/exmaples/
+## mapSample.jpg): every realm wears its own muted wash again — the
+## monochrome sheet was dropped — and the wash is what carries the colour, so
+## the land underneath stays a pale neutral that does not tint it.
+func test_every_realm_is_washed_in_its_own_colour() -> void:
+	var v := _view()
+	await wait_frames(2)
+	assert_gt(Game.data.bal("map_political_alpha"), 0.0,
+		"the political wash is on in balance.csv")
+	assert_true(v.political_wash_visible(), "so the view paints it")
+	_whole_world(v)
+	var seen: Dictionary = {}
+	for f in v.political_fills():
+		seen[MapOwnership.owner_of(Game.data, Game.state, String(f["code"]))] = f["color"]
+	assert_gt(seen.size(), 1, "more than one realm is on screen")
+	var hues: Dictionary = {}
+	for code: String in seen:
+		var c: Color = seen[code]
+		hues["%02x%02x%02x" % [int(c.r * 255), int(c.g * 255), int(c.b * 255)]] = true
+	assert_eq(hues.size(), seen.size(), "and no two of them share a colour")
+
+func test_the_map_is_drawn_on_paper() -> void:
+	var v := _view()
+	await wait_frames(2)
+	assert_true(v.paper_grain_visible(), "a trace of paper grain is on")
+	# The bright modern theme (owner 2026-09-13) dropped the rolled-scroll
+	# shadow; balance.csv map_paper_vignette brings it back.
+	assert_false(v.paper_vignette_visible(), "but not the scroll's edge shadow")
+
 func test_a_conquered_province_is_repainted_for_its_new_owner() -> void:
 	Game.start_campaign(42)
 	var v := _view()
 	await wait_frames(2)
-	v._zoom_at(v.size / 2.0, 0.00001)
+	_whole_world(v)
 	var mine := Game.data.resolve_realm("player_realm")
 	var raider := Game.data.resolve_realm("raider_realm")
 	var lost: String = MapOwnership.provinces_of(Game.data, Game.state, mine)[0]
@@ -499,13 +551,73 @@ func test_a_conquered_province_is_repainted_for_its_new_owner() -> void:
 			return
 	fail_test("the lost province was not painted at all")
 
+## The ECONOMY view (owner request 2026-09-13, after
+## development/exmaples/economyView.png): the land drawn as manors — the
+## pack's cells — in their holders' colours, and the working manors badged
+## with the good they make most of and how many units.
+func test_the_economy_view_draws_the_land_as_manors() -> void:
+	var v := _view()
+	await wait_frames(2)
+	assert_null(v.manor_mesh(), "no manors outside the economy view")
+	assert_eq(v.manor_badges().size(), 0)
+	v.show_economy = true
+	assert_not_null(v.manor_mesh(), "the manors are one mesh")
+	assert_false(v.political_wash_visible(), "standing in for the political wash")
+	assert_gt(v.manor_edges().size(), 0, "with their edges ruled in")
+	# Close on the capital, where every settlement passes the LOD rule.
+	var at := Vector2(float(_capital()["x"]), float(_capital()["y"]))
+	v._zoom_at(v.size / 2.0, 3.0)
+	v._offset += v.size / 2.0 - v.map_to_screen(at)
+	v._clamp_offset()
+	var badges := v.manor_badges()
+	assert_gt(badges.size(), 0, "working manors around the capital carry badges")
+	var manors := MapEconomy.manors(Game.data)
+	for b: Dictionary in badges:
+		var m: Dictionary = manors[int(b["cell"])]
+		assert_eq(String(b["good"]), String(m["good"]), "a badge shows its manor's chief good")
+		assert_eq(String(b["text"]), v._trim_zeros(float(m["units"])), "and how many units")
+		assert_true((m["burgs"] as Array).has(String(b["burg"])), "for a settlement in that manor")
+	for i in badges.size():
+		for j in range(i + 1, badges.size()):
+			assert_false((badges[i]["rect"] as Rect2).intersects(badges[j]["rect"]),
+				"badges never overlap")
+	assert_eq(v.settlement_sprites().size(), 0, "the badges stand in for the town drawings")
+	var first: Dictionary = badges[0]
+	var obj := v._object_under((first["badge"] as Rect2).get_center())
+	assert_eq(String(obj.get("kind", "")), "burg", "clicking a badge picks its settlement")
+	assert_eq(String(obj.get("code", "")), String(first["burg"]))
+	v.show_economy = false
+	assert_gt(v.settlement_sprites().size(), 0, "and the towns come back with the layer off")
+
+func test_a_conquered_manor_takes_its_new_holders_colour() -> void:
+	Game.start_campaign(42)
+	var v := _view()
+	await wait_frames(2)
+	v.show_economy = true
+	var mine := Game.data.resolve_realm("player_realm")
+	var raider := Game.data.resolve_realm("raider_realm")
+	var ids: Array = Game.data.cells.keys()
+	ids.sort()
+	var cell := -1
+	for id: int in ids:
+		if not MapTerrain.is_water(Game.data.cells[id]) and v.cell_owner(id) == mine:
+			cell = id
+			break
+	assert_gte(cell, 0, "the realm holds land cells")
+	var before := v.manor_color(cell)
+	var mesh_before := v.manor_mesh()
+	MapOwnership.set_owner(Game.data, Game.state, v.cell_province(cell), raider, "a raid")
+	assert_eq(v.cell_owner(cell), raider, "the manor is the raiders' now")
+	assert_ne(v.manor_color(cell), before, "and wears their colour")
+	assert_ne(v.manor_mesh(), mesh_before, "the manor mesh is rebuilt for the new holder")
+
 ## Settlement art (user request 2026-09-09): zoomed in, towns draw as their
 ## tier's picture standing on their point and are picked anywhere on it;
 ## zoomed out they fall back to pins.
 func test_towns_draw_as_art_when_zoomed_in_and_pins_when_out() -> void:
 	var v := _view()
 	await wait_frames(2)
-	v._zoom_at(v.size / 2.0, 0.00001)
+	_whole_world(v)
 	assert_eq(v.sprite_height(), 0.0, "zoomed out, no art")
 	assert_eq(v.settlement_sprites().size(), 0)
 	var k: Dictionary = _capital()
@@ -522,16 +634,22 @@ func test_towns_draw_as_art_when_zoomed_in_and_pins_when_out() -> void:
 	assert_false(found.is_empty(), "the capital is drawn")
 	var rect: Rect2 = found["rect"]
 	var base := v.map_to_screen(at)
-	assert_almost_eq(rect.position.x + rect.size.x / 2.0, base.x, 0.5, "standing on its point")
-	assert_true(rect.end.y >= base.y, "its feet reach the point")
+	# A seaside drawing is slid back onto its own land (owner 2026-09-13), so
+	# it stands on its point PLUS that push and no further.
+	var push := v.inland_bias(_capital_code(), at, rect.size.x * 0.5 / v.view_scale()) \
+		* rect.size.x * Game.data.bal("map_sprite_inland")
+	assert_almost_eq(rect.position.x + rect.size.x / 2.0, base.x + push.x, 0.5,
+		"standing on its point, nudged inland")
+	assert_true(rect.end.y >= base.y + push.y, "its feet reach the point")
 	var obj := v._object_under(rect.get_center())
 	assert_eq(String(obj.get("kind", "")), "burg")
 	assert_eq(String(obj.get("code", "")), _capital_code(), "picked anywhere on the picture")
 
-## The military layer (user request 2026-09-10): the realm's own regiments,
-## each wearing the arm it is mostly made of, standing on a bar that reads
-## its strength against the largest regiment of the host.
-func test_the_military_layer_draws_the_realms_regiments_with_strength_bars() -> void:
+## The military layer (owner request 2026-09-13, after
+## development/exmaples/MilitaryView.png): the realm's own regiments as
+## counters — a glyph square joined to a box stating the headcount. Swords
+## for a regiment, a crown for the one nearest the capital, waves for a fleet.
+func test_the_military_layer_draws_the_realms_regiments_as_counters() -> void:
 	var v := _view()
 	await wait_frames(2)
 	assert_eq(v.army_markers().size(), 0, "nothing is drawn while the layer is off")
@@ -539,30 +657,40 @@ func test_the_military_layer_draws_the_realms_regiments_with_strength_bars() -> 
 	var mine := Game.data.resolve_realm("player_realm")
 	var regiments := MapObjects.regiments_of(Game.data, mine)
 	assert_gt(regiments.size(), 0, "the pack quarters regiments in the realm")
+	# The map opens on the capital now, so only part of the realm is framed:
+	# pull back to the whole world before counting.
+	v._zoom_at(v.size / 2.0, 0.0001)
 	var markers := v.army_markers()
-	assert_eq(markers.size(), regiments.size(), "one marker per regiment of the realm")
+	assert_eq(markers.size(), regiments.size(), "one counter per regiment of the realm")
 	# Owner ruling 2026-09-10: the player's host only.
-	var codes: Dictionary = {}
+	var by_code: Dictionary = {}
 	for m: Dictionary in markers:
-		codes[String(m["code"])] = true
+		by_code[String(m["code"])] = m
 	for r: Dictionary in Game.data.world_table("military", "regiments").values():
 		if String(r["kingdom_code"]) != mine:
-			assert_false(codes.has(String(r["regiment_code"])),
+			assert_false(by_code.has(String(r["regiment_code"])),
 				"a foreign regiment is not drawn")
-	var biggest: Dictionary = regiments[0]
+	var royal := MapObjects.royal_regiment(Game.data, mine)
+	assert_ne(royal, "", "the realm has a land regiment to fly the crown over")
+	var capital := _capital()
+	var seat := Vector2(float(capital["x"]), float(capital["y"]))
+	var royal_row: Dictionary = Game.data.world_table("military", "regiments")[royal]
+	var royal_d := seat.distance_to(Vector2(float(royal_row["x"]), float(royal_row["y"])))
 	for r: Dictionary in regiments:
-		if MapObjects.regiment_size(Game.data, r) > MapObjects.regiment_size(Game.data, biggest):
-			biggest = r
-	var seen := false
-	for m: Dictionary in markers:
-		assert_between(float(m["frac"]), 0.0, 1.0, "the bar fills within its track")
-		assert_ne(String(m["glyph"]), "", "each marker wears its arm's glyph")
-		if String(m["code"]) == String(biggest["regiment_code"]):
-			seen = true
-			assert_almost_eq(float(m["frac"]), 1.0, 0.001, "the largest fills its bar")
-			assert_almost_eq(float(m["size"]),
-				MapObjects.regiment_size(Game.data, biggest), 0.5, "and reads its headcount")
-	assert_true(seen, "the largest regiment is on screen")
+		var code := String(r["regiment_code"])
+		var m: Dictionary = by_code[code]
+		assert_eq(String(m["text"]), str(int(MapObjects.regiment_size(Game.data, r))),
+			"%s states its headcount" % code)
+		var naval := String(r.get("is_naval", "0")) == "1"
+		assert_eq(String(m["glyph"]), "waves" if naval else ("crown" if code == royal else "swords"))
+		if not naval:
+			assert_gte(seat.distance_to(Vector2(float(r["x"]), float(r["y"]))), royal_d,
+				"no land regiment lies nearer the capital than the royal one")
+	# Zoomed out the counters crowd together; the stacked ones are pushed clear.
+	for i in markers.size():
+		for j in range(i + 1, markers.size()):
+			assert_false((markers[i]["rect"] as Rect2).intersects(markers[j]["rect"]),
+				"counters never overlap")
 	v.show_armies = false
 	assert_eq(v.army_markers().size(), 0, "the layer clears")
 
@@ -582,16 +710,28 @@ func test_regiment_markers_stand_on_their_point_at_a_fixed_size() -> void:
 		if String(m["code"]) == String(r["regiment_code"]):
 			found = m
 	assert_false(found.is_empty(), "the regiment is drawn")
-	var plaque: Rect2 = found["plaque"]
-	assert_almost_eq(plaque.size.y, Game.data.bal("map_army_plaque_px"), 0.01)
-	assert_almost_eq(plaque.get_center().x, v.map_to_screen(at).x, 0.5, "standing on its point")
-	assert_gt((found["bar"] as Rect2).position.y, plaque.end.y, "the bar hangs under it")
-	# Zooming does not grow it — an army is a counter, not terrain.
-	v._zoom_at(v.size / 2.0, 4.0)
-	for m: Dictionary in v.army_markers():
-		if String(m["code"]) == String(r["regiment_code"]):
-			assert_almost_eq((m["plaque"] as Rect2).size.y,
-				Game.data.bal("map_army_plaque_px"), 0.01, "the same size zoomed in")
+	var rect: Rect2 = found["rect"]
+	var icon: Rect2 = found["icon"]
+	var count: Rect2 = found["count"]
+	var h := v.army_badge_height()
+	assert_almost_eq(rect.size.y, h, 0.01)
+	assert_almost_eq(icon.size.x, h, 0.01, "the glyph sits in a square")
+	assert_almost_eq(count.position.x, icon.end.x, 0.01, "joined to the headcount box")
+	assert_almost_eq(icon.size.x + count.size.x, rect.size.x, 0.01)
+	assert_almost_eq(rect.get_center().x, v.map_to_screen(at).x, 0.5, "standing on its point")
+	assert_gte(rect.get_center().y, v.map_to_screen(at).y - 0.5, "never pushed ABOVE its point")
+	# Owner request 2026-09-13: smaller than the towns, and never over one.
+	for zoom in [1.0, 4.0]:
+		v._zoom_at(v.size / 2.0, zoom)
+		assert_gt(v.sprite_height(), 0.0, "the towns are drawings at this zoom")
+		assert_lt(v.army_badge_height(), v.sprite_height(),
+			"a counter is smaller than the largest settlement drawing")
+		assert_lte(v.army_badge_height(), Game.data.bal("map_army_badge_max_px"))
+		var marks := v.settlement_marks()
+		for m: Dictionary in v.army_markers():
+			for mark: Rect2 in marks:
+				assert_false((m["rect"] as Rect2).intersects(mark),
+					"%s covers no settlement" % m["code"])
 
 ## Clicking a regiment names it in the fact card, like any other map object.
 func test_clicking_a_regiment_opens_its_card() -> void:
@@ -615,12 +755,25 @@ func test_clicking_a_regiment_opens_its_card() -> void:
 	v.show_armies = false
 	assert_ne(String(v._object_under(v.map_to_screen(at)).get("kind", "")), "army")
 
-## Points of interest draw as their icons (data/marker_art.csv) once the
-## zoom passes the marker LOD: a fixed map_marker_px square on the point,
-## none while zoomed out.
-func test_points_of_interest_draw_as_icons_when_zoomed_in() -> void:
+## Owner ruling 2026-09-12: the pack's points of interest are off the sheet.
+## The code that drew them stays, switched off by map_show_markers, so this
+## turns it back on and checks it still works — and checks that with the
+## switch at 0 nothing is drawn however far in the view is zoomed.
+func test_points_of_interest_are_off() -> void:
 	var v := _view()
 	await wait_frames(2)
+	assert_eq(Game.data.bal("map_show_markers"), 0.0, "switched off in balance.csv")
+	assert_false(MapObjects.markers_visible(Game.data))
+	v._zoom_at(v.size / 2.0, 1000.0)
+	assert_eq(v.marker_sprites().size(), 0, "nothing drawn at any zoom")
+
+## With the switch on they draw as their icons (data/marker_art.csv) once the
+## zoom passes the marker LOD: a fixed map_marker_px square on the point,
+## none while zoomed out.
+func test_points_of_interest_draw_as_icons_when_shown_and_zoomed_in() -> void:
+	var v := _view()
+	await wait_frames(2)
+	Game.data.balance["map_show_markers"] = 1.0
 	v._zoom_at(v.size / 2.0, 0.0001)
 	assert_eq(v.marker_sprites().size(), 0, "zoomed out, no marker icons")
 	var code: String = Game.data.markers.keys()[0]
@@ -639,3 +792,200 @@ func test_points_of_interest_draw_as_icons_when_zoomed_in() -> void:
 	assert_almost_eq(rect.size.x, px, 0.01, "fixed screen size")
 	assert_almost_eq(rect.get_center().x, v.map_to_screen(at).x, 0.5, "centred on the point")
 	assert_almost_eq(rect.get_center().y, v.map_to_screen(at).y, 0.5, "centred on the point")
+
+## The scale bar (owner request 2026-09-12): the pack's own distance_scale
+## turned into the largest round distance whose bar still fits, restated at
+## every zoom so the bar always means something.
+func test_the_scale_bar_fits_its_allowance_and_reads_round() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var bar := v.scale_bar()
+	assert_false(bar.is_empty(), "the pack carries a distance scale")
+	assert_lte(float(bar["width_px"]), Game.data.bal("map_scale_bar_max_px") + 0.001,
+		"the bar never runs past its allowance")
+	assert_almost_eq(float(bar["distance"]),
+		MapGeometry.nice_step(float(bar["distance"])), 0.0001,
+		"the distance is on the 1-2-5 ladder")
+	assert_true(String(bar["text"]).ends_with(String(Game.data.map_info["distance_unit"])),
+		"and is labelled in the pack's unit")
+
+func test_zooming_in_shrinks_the_distance_the_scale_bar_states() -> void:
+	var v := _view()
+	await wait_frames(2)
+	# _zoom_at takes a FACTOR, and the floor clamps it: start at the floor
+	# (the whole world) and multiply in.
+	v._zoom_at(v.size / 2.0, 0.0001)
+	var far := float(v.scale_bar()["distance"])
+	v._zoom_at(v.size / 2.0, 20.0)
+	var near := float(v.scale_bar()["distance"])
+	assert_lt(near, far, "a closer view measures a shorter distance")
+
+## Rivers are smoothed once in native coordinates and kept (owner 2026-09-12:
+## the pack's raw polylines read as hard kinks).
+func test_a_river_is_smoothed_and_still_meets_both_its_ends() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var code: String = Game.data.rivers.keys()[0]
+	var raw: PackedVector2Array = Game.data.rivers[code]["polyline"]
+	if raw.size() < 3:
+		return
+	var curve := v.river_curve(code, raw)
+	assert_gt(curve.size(), raw.size(), "the course carries more points than the pack stored")
+	# The clamped B-spline lands on the endpoints through a sum of basis
+	# weights, so compare within float error rather than bit for bit.
+	assert_almost_eq(curve[0].distance_to(raw[0]), 0.0, 0.001,
+		"it still starts where the river rises")
+	assert_almost_eq(curve[curve.size() - 1].distance_to(raw[raw.size() - 1]), 0.0, 0.001,
+		"and ends where it meets the water")
+	assert_eq(v.river_curve(code, raw), curve, "and is computed once")
+
+## The tier hierarchy is data (owner request 2026-09-12): a capital towers
+## over a hamlet at the SAME zoom, and the ratio lives in the size column of
+## data/settlement_art.csv — it used to be baked into each PNG's pixel
+## height, where tuning it meant regenerating art.
+func test_a_capital_draws_taller_than_every_smaller_tier() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v._zoom_at(v.size / 2.0, 0.0001)
+	v._zoom_at(v.size / 2.0, 40.0)  # close enough that every tier draws its art
+	var tallest := v.sprite_height()
+	assert_gt(tallest, 0.0, "settlement art is drawn at this zoom")
+	var by_tier: Dictionary = {}
+	for row: Dictionary in Game.data.settlement_art:
+		by_tier[String(row["tier"])] = float(row["size"])
+	var order := ["capital", "city", "walled_town", "village", "hamlet"]
+	for i in order.size():
+		assert_true(by_tier.has(order[i]), "%s has a size" % order[i])
+	assert_eq(by_tier["capital"], 1.0, "the capital sets the scale")
+	for i in range(1, order.size()):
+		assert_lte(float(by_tier[order[i]]), float(by_tier[order[i - 1]]),
+			"%s is no bigger than %s" % [order[i], order[i - 1]])
+	assert_lt(float(by_tier["hamlet"]), float(by_tier["capital"]) * 0.5,
+		"and a hamlet is less than half a capital, not a hair shorter")
+
+func test_a_settlement_sprite_is_drawn_at_its_tiers_share_of_the_tallest() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v._zoom_at(v.size / 2.0, 0.0001)
+	v._zoom_at(v.size / 2.0, 40.0)
+	var tallest := v.sprite_height()
+	var seen := 0
+	for sp in v.settlement_sprites():
+		var b: Dictionary = Game.data.burgs[sp["code"]]
+		var art := MapObjects.settlement_art(Game.data, b)
+		var want := tallest * float(art["size"])
+		assert_almost_eq((sp["rect"] as Rect2).size.y, want, 0.01,
+			"%s draws at its tier's share" % String(sp["code"]))
+		seen += 1
+	assert_gt(seen, 0, "some settlements are on screen")
+
+## Owner request 2026-09-12: a settlement and every terrain symbol wear the
+## colour of the realm that holds their province, so they sit in the wash
+## instead of on it — and because the OWNER is looked up live while the
+## province is fixed geometry, a conquest recolours them with no new art.
+func test_symbols_wear_their_realms_colour_and_follow_conquest() -> void:
+	Game.start_campaign(42)
+	var v := _view()
+	await wait_frames(2)
+	var mine := Game.data.resolve_realm("player_realm")
+	var raider := Game.data.resolve_realm("raider_realm")
+	var lost: String = MapOwnership.provinces_of(Game.data, Game.state, mine)[0]
+	var strength := Game.data.bal("map_sprite_tint")
+	assert_gt(strength, 0.0, "the tint is on in balance.csv")
+
+	var before := v.realm_tint(lost, strength)
+	assert_ne(before, Color.WHITE, "the symbol takes the crown's colour")
+	MapOwnership.set_owner(Game.data, Game.state, lost, raider, "a raid")
+	var after := v.realm_tint(lost, strength)
+	assert_ne(after, before, "and the raiders' once they hold it")
+	assert_eq(after, Color.WHITE.lerp(MapPalette.color_of(Game.data, raider), strength))
+
+func test_an_unheld_point_is_left_untinted() -> void:
+	var v := _view()
+	await wait_frames(2)
+	assert_eq(v.realm_tint("", 0.8), Color.WHITE, "no province, no tint")
+	assert_eq(v.realm_tint("anything", 0.0), Color.WHITE, "tint strength 0 is off")
+
+## The inland nudge is self-scaling (owner 2026-09-13): twelve probes on a
+## ring around the point, each landward one adding its direction. In open
+## country they cancel and the drawing does not move at all; on a coast they
+## do not, and it slides toward the land.
+func test_an_inland_town_is_not_nudged_but_a_coastal_one_is() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var far_from_sea := Vector2.ZERO
+	var on_the_sea := Vector2.ZERO
+	var far_code := ""
+	var sea_code := ""
+	for code: String in Game.data.burgs:
+		var b: Dictionary = Game.data.burgs[code]
+		var at := Vector2(float(b["x"]), float(b["y"]))
+		if String(b.get("is_port", "0")) == "1" and sea_code == "":
+			sea_code = code
+			on_the_sea = at
+		elif String(b.get("is_port", "0")) == "0" and far_code == "":
+			far_code = code
+			far_from_sea = at
+	assert_ne(sea_code, "", "the pack has a port")
+	assert_ne(far_code, "", "and an inland town")
+	var inland := v.inland_bias(far_code, far_from_sea, 12.0)
+	var coastal := v.inland_bias(sea_code, on_the_sea, 12.0)
+	assert_lt(inland.length(), coastal.length(),
+		"land all round cancels out; a shore does not")
+
+## A thematic map shows one theme: the HEIGHTS view drops the political wash,
+## because a height ramp cannot be read through a realm colour.
+func test_the_heights_view_drops_the_political_wash() -> void:
+	var v := _view()
+	await wait_frames(2)
+	assert_true(v.political_wash_visible(), "the wash is on by default")
+	v.show_heights = true
+	assert_false(v.political_wash_visible(), "and off under the height ramp")
+	assert_not_null(v.heat_mesh(), "which is what is drawn instead")
+	v.show_heights = false
+	assert_true(v.political_wash_visible(), "and back when the view closes")
+
+## Every chief good a manor can badge has a category colour for its ring and
+## something to draw inside it: its own picture, or its category's glyph.
+func test_every_manor_badge_has_a_ring_colour_and_a_picture() -> void:
+	for id: int in MapEconomy.manors(Game.data):
+		var good := String(MapEconomy.manors(Game.data)[id]["good"])
+		var tag := MapEconomy.good_tag(Game.data, good)
+		assert_true(Game.data.goods_palette.has(tag), "goods_palette.csv covers '%s'" % tag)
+		assert_true(Game.data.goods_art.has(good) or Game.data.resource_icons.has("tag_" + tag),
+			"'%s' has art or its category '%s' has a glyph" % [good, tag])
+
+## A thematic view drops the realm tint from the symbols too: a blue-teal
+## wood standing on an economy wash is a third colour that means nothing.
+func test_thematic_views_leave_the_symbols_untinted() -> void:
+	Game.start_campaign(42)
+	var v := _view()
+	await wait_frames(2)
+	var mine := Game.data.resolve_realm("player_realm")
+	var held: String = MapOwnership.provinces_of(Game.data, Game.state, mine)[0]
+	assert_ne(v.realm_tint(held, 1.0), Color.WHITE, "tinted on the political map")
+	for layer in ["heights", "economy"]:
+		v.show_heights = layer == "heights"
+		v.show_economy = layer == "economy"
+		assert_eq(v.realm_tint(held, 1.0), Color.WHITE, "untinted under %s" % layer)
+	v.show_heights = false
+	v.show_economy = false
+	assert_ne(v.realm_tint(held, 1.0), Color.WHITE, "and tinted again after")
+
+## A thematic view drops the terrain decoration: a wood is not what the view
+## is about. The HEIGHTS view keeps the town drawings — a town is still a
+## place — while the ECONOMY view marks its places with manor badges instead
+## (economyView.png), which a town drawing would cover.
+func test_thematic_views_drop_the_woods() -> void:
+	var v := _view()
+	await wait_frames(2)
+	assert_gt(v.terrain_sprites().size(), 0, "woods on the political map")
+	var towns := v.settlement_sprites().size()
+	assert_gt(towns, 0)
+	v.show_heights = true
+	assert_eq(v.terrain_sprites().size(), 0, "no woods under the height ramp")
+	assert_eq(v.settlement_sprites().size(), towns, "the towns are still there")
+	v.show_heights = false
+	v.show_economy = true
+	assert_eq(v.terrain_sprites().size(), 0, "no woods under the manors")
+	assert_eq(v.settlement_sprites().size(), 0, "the manor badges stand in for the towns")

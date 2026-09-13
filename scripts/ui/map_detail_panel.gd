@@ -17,7 +17,7 @@ signal closed
 
 ## Sized for the left column's content width (ScreenLayout.LEFT_WIDTH less
 ## the column panel's margins).
-const PREVIEW_SIZE := Vector2(104, 59)
+const PREVIEW_SIZE := Vector2(208, 118)
 ## How much of the world the preview shows, in native map px.
 const PREVIEW_SPAN := Vector2(90, 51)
 
@@ -56,7 +56,7 @@ func _ready() -> void:
 	# without this the scrolling body collapses to nothing.
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 4)
+	col.add_theme_constant_override("separation", 8)
 	add_child(col)
 	# The column is 120 design px wide and no taller than the screen, so a
 	# full town card does not fit: the body scrolls and ASK / CLOSE stay
@@ -68,56 +68,56 @@ func _ready() -> void:
 	col.add_child(scroll)
 	var body := VBoxContainer.new()
 	body.name = "CardBody"
-	body.add_theme_constant_override("separation", 4)
+	body.add_theme_constant_override("separation", 8)
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(body)
 	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 5)
+	head.add_theme_constant_override("separation", 10)
 	body.add_child(head)
 	_shield = HeraldicShield.new()
 	_shield.name = "Shield"
 	head.add_child(_shield)
 	var titles := VBoxContainer.new()
-	titles.add_theme_constant_override("separation", 1)
+	titles.add_theme_constant_override("separation", 2)
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(titles)
 	_title = Label.new()
 	_title.name = "Title"
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiPalette.style_header(_title, 8)
+	UiPalette.style_header(_title, 16)
 	titles.add_child(_title)
 	_subtitle = Label.new()
 	_subtitle.name = "Subtitle"
 	_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_subtitle.add_theme_font_size_override("font_size", 7)
+	_subtitle.add_theme_font_size_override("font_size", 14)
 	_subtitle.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	titles.add_child(_subtitle)
 	body.add_child(HSeparator.new())
 	_fields = GridContainer.new()
 	_fields.name = "Fields"
 	_fields.columns = 2
-	_fields.add_theme_constant_override("h_separation", 6)
-	_fields.add_theme_constant_override("v_separation", 1)
+	_fields.add_theme_constant_override("h_separation", 12)
+	_fields.add_theme_constant_override("v_separation", 2)
 	body.add_child(_fields)
 	_features = HBoxContainer.new()
 	_features.name = "Features"
-	_features.add_theme_constant_override("separation", 4)
+	_features.add_theme_constant_override("separation", 8)
 	body.add_child(_features)
 	_production = VBoxContainer.new()
 	_production.name = "Production"
-	_production.add_theme_constant_override("separation", 1)
+	_production.add_theme_constant_override("separation", 2)
 	body.add_child(_production)
 	_money = VBoxContainer.new()
 	_money.name = "Money"
-	_money.add_theme_constant_override("separation", 1)
+	_money.add_theme_constant_override("separation", 2)
 	body.add_child(_money)
 	_lines = VBoxContainer.new()
 	_lines.name = "Rows"
-	_lines.add_theme_constant_override("separation", 1)
+	_lines.add_theme_constant_override("separation", 2)
 	body.add_child(_lines)
 	_hint = Label.new()
 	_hint.name = "Hint"
-	_hint.add_theme_font_size_override("font_size", 7)
+	_hint.add_theme_font_size_override("font_size", 14)
 	_hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(_hint)
@@ -130,7 +130,7 @@ func _ready() -> void:
 	_ask.name = "DetailAsk"
 	_ask.text = "ASK THE COUNCIL"
 	_ask.focus_mode = Control.FOCUS_NONE
-	_ask.add_theme_font_size_override("font_size", 7)
+	_ask.add_theme_font_size_override("font_size", 14)
 	_ask.pressed.connect(func() -> void: ask_requested.emit(_ask_text))
 	_ask.visible = false
 	col.add_child(_ask)
@@ -138,7 +138,7 @@ func _ready() -> void:
 	_close.name = "DetailClose"
 	_close.text = "CLOSE"
 	_close.focus_mode = Control.FOCUS_NONE
-	_close.add_theme_font_size_override("font_size", 7)
+	_close.add_theme_font_size_override("font_size", 14)
 	_close.pressed.connect(func() -> void:
 		_close_panel()
 		closed.emit())
@@ -232,7 +232,7 @@ func show_card(card: Dictionary) -> void:
 			for i in mini(production.size(), int(Game.data.bal("province_card_max_goods"))):
 				var p: Dictionary = production[i]
 				var row := HBoxContainer.new()
-				row.add_theme_constant_override("separation", 4)
+				row.add_theme_constant_override("separation", 8)
 				if String(p.get("tag", "")) != "":
 					row.add_child(ResourceIcon.create(String(p["tag"])))
 				row.add_child(_line("%s %s" % [String(p["label"]), _num(float(p["units"]))],
@@ -242,7 +242,7 @@ func show_card(card: Dictionary) -> void:
 		# 2026-09-09: they wrapped letter by letter).
 		for spec in [["wealth", "wealth"], ["town_treasury", "treasury"]]:
 			var cell := HBoxContainer.new()
-			cell.add_theme_constant_override("separation", 3)
+			cell.add_theme_constant_override("separation", 6)
 			cell.add_child(ResourceIcon.create(String(spec[0])))
 			var text := _line("%s %s" % [
 				String((Game.data.resource_icons.get(String(spec[0]), {}) as Dictionary).get("label", spec[1])),
@@ -282,7 +282,7 @@ func _set_ask(ask: String) -> void:
 func _line(text: String, color: Color) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 7)
+	l.add_theme_font_size_override("font_size", 14)
 	l.add_theme_color_override("font_color", color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -366,7 +366,7 @@ class TerrainPreview extends Control:
 		draw_mesh(mesh, null, Transform2D(0.0, Vector2(k, k), 0.0, origin))
 		var coast := MapTerrain.palette_color(Game.data, "coast_line", MapTerrain.FALLBACK)
 		var coast_width: float = Game.data.bal("map_coast_width")
-		var frame := Rect2(Vector2.ZERO, size).grow(2.0)
+		var frame := Rect2(Vector2.ZERO, size).grow(4.0)
 		for row: Dictionary in Game.data.coasts:
 			var b: Rect2 = row["bbox"]
 			if not frame.intersects(Rect2(origin + b.position * k, b.size * k)):

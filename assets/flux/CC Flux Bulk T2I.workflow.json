@@ -1,5 +1,5 @@
 {
- "id": "fd0a242f-e1f4-4eca-bec6-ad5ac688ad7a",
+ "id": "b6128f13-2b33-4558-a306-68a94edf43f9",
  "revision": 0,
  "last_node_id": 11,
  "last_link_id": 10,
@@ -407,7 +407,7 @@
     "Node name for S&R": "Note"
    },
    "widgets_values": [
-    "CC Flux Bulk T2I\nFlux.1 schnell (Apache 2.0). No negative-prompt path: node 6 zeroes the conditioning.\nschnell: 4 steps, guidance ignored. Bulk: python3 assets/flux/generate.py --model schnell ...\nPrompt = STYLE_CORE.txt + subject + [C-...] canvas, never typed by hand."
+    "CC Flux Bulk T2I\nFlux.1 schnell (Apache 2.0). No negative-prompt path: node 6 zeroes the conditioning.\nschnell: 4 steps, guidance ignored. Bulk: python3 assets/flux/generate.py --model schnell ...\nPrompt = a STYLE_CORE file + subject + [C-...] canvas, never typed by hand."
    ]
   }
  ],

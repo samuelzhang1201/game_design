@@ -413,6 +413,24 @@ func _write_text(path: String, text: String) -> bool:
 	return true
 
 
+## The point-of-interest types data/marker_types.csv admits. Empty when the
+## file is missing, which means "admit everything" rather than "admit
+## nothing" — a missing table must not silently empty the map.
+func _admitted_marker_types() -> Dictionary:
+	var out: Dictionary = {}
+	var f := FileAccess.open("res://data/marker_types.csv", FileAccess.READ)
+	if f == null:
+		return out
+	while not f.eof_reached():
+		var line := f.get_csv_line()
+		if line.is_empty():
+			continue
+		var key := line[0].strip_edges()
+		if key == "" or key == "type" or key.begins_with("#"):
+			continue
+		out[key] = true
+	return out
+
 ## The kingdom_codes a pack's realm_bindings.csv expects to exist. Empty when
 ## the pack has no bindings yet (a brand new map), which is not an error.
 func _bound_kingdoms(path: String) -> Array[String]:
@@ -946,10 +964,19 @@ func _run() -> int:
 	var marker_slugs: Dictionary = {}
 	var unnoted := 0
 	var markers := _active(pack.get("markers", []))
+	var admitted := _admitted_marker_types()
+	var dropped := 0
 	for m in markers:
 		if not m.has("x") or not m.has("y"):
 			push_error("error: marker %d has no coordinates" % int(m.get("i", -1)))
 			return 1
+		# Owner ruling 2026-09-12: this world is medieval and hard. Azgaar
+		# ships monsters, dungeons and an adventuring party by default, so a
+		# marker whose type is not in data/marker_types.csv never enters the
+		# pack — and a re-export cannot bring it back.
+		if not admitted.is_empty() and not admitted.has(String(m.get("type", ""))):
+			dropped += 1
+			continue
 		var note: Dictionary = notes.get("marker%d" % int(m["i"]), {})
 		if note.is_empty():
 			unnoted += 1
@@ -961,6 +988,8 @@ func _run() -> int:
 		return 1
 	if unnoted > 0:
 		print("WARNING: %d markers have no note; their type stands in as the label" % unnoted)
+	if dropped > 0:
+		print("dropped %d marker(s) whose type data/marker_types.csv does not admit" % dropped)
 
 	# --- geography/biomes.csv ---------------------------------------------
 	out = _csv_line(["biome_id", "label", "color", "habitability"])

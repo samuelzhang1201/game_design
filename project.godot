@@ -17,13 +17,12 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-GDAIMCPRuntime="*uid://dcne7ryelpxmn"
 Game="*res://scripts/ui/game.gd"
 
 [display]
 
-window/size/viewport_width=640
-window/size/viewport_height=360
+window/size/viewport_width=1280
+window/size/viewport_height=720
 window/size/mode=3
 window/size/window_width_override=1280
 window/size/window_height_override=720
@@ -33,7 +32,13 @@ window/size/mode.debug=0
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gdai-mcp-plugin-godot/plugin.cfg", "res://addons/gut/plugin.cfg")
+enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+
+[importer_defaults]
+
+texture={
+"mipmaps/generate": true
+}
 
 [input]
 
@@ -55,7 +60,7 @@ start_game={
 
 [rendering]
 
-textures/canvas_textures/default_texture_filter=0
+textures/canvas_textures/default_texture_filter=3
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"

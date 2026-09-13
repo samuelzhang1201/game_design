@@ -1,0 +1,17 @@
+tag,color,notes
+food,#6CBF4F,"a good's CATEGORY colour (owner request 2026-09-13): the ring on an ECONOMY badge and the bar in the left column — 16 categories are legible at a glance where 38 goods are not. Brightened 2026-09-13 with the modern theme"
+clothing,#D673AE,wool, cloth, leather, boots
+ore,#8A93A6,iron, tin, copper, silver
+mineral,#C9A15F,sand, clay, marble
+construction,#D8903F,wood, stone, glass
+fuel,#56606E,coal, charcoal
+luxury,#E6AE2E,wine, jewelry, perfume, dyes
+military,#DB4F4A,arms, harnesses, artillery
+naval,#3E9AD6,sails, hemp, rope
+ritual,#9A72E3,candles, ink, incense
+educational,#4C82E3,books, paper
+storage,#B5AE4C,ceramics, barrels
+preservative,#4DBFA0,salt, vinegar
+currency,#EBC03C,coins
+aquatic,#22B2CC,fish and the sea's catch
+supply,#B0875A,everything a host eats on the march

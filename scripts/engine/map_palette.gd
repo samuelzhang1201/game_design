@@ -14,9 +14,28 @@ static func named(data: DataRepository, key: String) -> Color:
 	var hex := String(data.palette.get(key, ""))
 	return Color(hex) if hex != "" else FALLBACK
 
+## A kingdom's colour cannot change while a pack is loaded — it is read from
+## realm_bindings, the palette and the pack's own kingdoms, all load-time data
+## — but resolving one sorts the kingdom list and rescans the bindings once per
+## kingdom, and the map asks for a colour once per terrain mark per frame
+## (~11k marks on the beria pack). Memoised per repository, so a pack swap in
+## the same process cannot be served a stale colour.
+static var _color_cache: Dictionary = {}
+
+static func forget_colors() -> void:
+	_color_cache.clear()
+
 ## The colour of a kingdom: its realm slot's colour when it is bound to one,
 ## else the next other_N in state order, else the pack's own colour.
 static func color_of(data: DataRepository, kingdom_code: String) -> Color:
+	var key := "%d:%s" % [data.get_instance_id(), kingdom_code]
+	if _color_cache.has(key):
+		return _color_cache[key]
+	var c := _resolve_color(data, kingdom_code)
+	_color_cache[key] = c
+	return c
+
+static func _resolve_color(data: DataRepository, kingdom_code: String) -> Color:
 	var slot := slot_of(data, kingdom_code)
 	if slot != "" and data.palette.has(slot):
 		return named(data, slot)

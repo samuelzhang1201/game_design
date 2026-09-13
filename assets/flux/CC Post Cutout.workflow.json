@@ -1,5 +1,5 @@
 {
- "id": "7eb912d8-0f20-43df-be5f-8cac68f73f6d",
+ "id": "608907c9-b8a3-49bc-967a-414d5b050d8d",
  "revision": 0,
  "last_node_id": 8,
  "last_link_id": 7,
@@ -290,7 +290,7 @@
     "Node name for S&R": "Note"
    },
    "widgets_values": [
-    "CC Post Cutout\nA generated portrait becomes a game asset: BiRefNet mask -> InvertMask -> RGBA ->\nlanczos resize (full: height 660; chip: 96x96). Driven by assets/flux/post.py.\nPrompt = STYLE_CORE.txt + subject + [C-...] canvas, never typed by hand."
+    "CC Post Cutout\nA generated portrait becomes a game asset: BiRefNet mask -> InvertMask -> RGBA ->\nlanczos resize (full: height 660; chip: 96x96). Driven by assets/flux/post.py.\nPrompt = a STYLE_CORE file + subject + [C-...] canvas, never typed by hand."
    ]
   }
  ],

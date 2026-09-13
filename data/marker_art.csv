@@ -13,10 +13,6 @@ libraries,res://assets/markers/I-28_university.png,library I-28 university colle
 encounters,res://assets/markers/I-43_danger.png,library I-43 danger: lair
 brigands,res://assets/markers/I-43_danger.png,library I-43 danger: lair
 pirates,res://assets/markers/I-43_danger.png,library I-43 danger: lair
-hill-monsters,res://assets/markers/I-43_danger.png,library I-43 danger: lair
-sea-monsters,res://assets/markers/I-43_danger.png,library I-43 danger: lair
-lake-monsters,res://assets/markers/I-43_danger.png,library I-43 danger: lair
-dungeons,res://assets/markers/I-43_danger.png,library I-43 danger: lair
 statues,res://assets/markers/I-44_monument.png,library I-44 monument and graveyard
 necropolises,res://assets/markers/I-44_monument.png,library I-44 monument and graveyard
 caves,res://assets/markers/I-45_wonder.png,library I-45 natural wonder
@@ -25,6 +21,5 @@ waterfalls,res://assets/markers/I-45_wonder.png,library I-45 natural wonder
 circuses,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering
 jousts,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering
 fairs,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering
-party,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering: a travelling party
 migration,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering: a migration on the move
 canoes,res://assets/markers/I-46_gathering.png,library I-46 fairground gathering: a river gathering

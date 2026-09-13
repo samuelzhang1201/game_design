@@ -28,7 +28,9 @@ var _info_screen: InfoScreen
 var _bgm: AudioStreamPlayer
 ## The PROVINCES tab's state (user request 2026-09-09): root-owned so it
 ## survives moving between screens, applied to whichever screen's map shows.
-var _province_view := false
+var _province_view := true  # the map opens with the seams on (owner 2026-09-12)
+var _height_view := false
+var _economy_view := false
 ## The MILITARY tab's state (user request 2026-09-10), owned here for the
 ## same reason: the layer follows the player from screen to screen.
 var _army_view := false
@@ -36,7 +38,7 @@ var _army_view := false
 ## The design viewport (project.godot window/size): all UI is authored
 ## against this and scaled to the player's screen by the canvas_items+expand
 ## stretch. The OS window may never shrink below it, or panels would clip.
-const MIN_WINDOW_SIZE := Vector2i(640, 360)
+const MIN_WINDOW_SIZE := Vector2i(1280, 720)
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -94,19 +96,19 @@ func _build_pause_menu() -> void:
 	_pause_menu.add_child(dim)
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.GOLD, 1, 14))
+		UiPalette.panel_style(UiPalette.GOLD, 2, 28))
 	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.custom_minimum_size = Vector2(150, 0)
+	panel.custom_minimum_size = Vector2(300, 0)
 	_pause_menu.add_child(panel)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 6)
+	col.add_theme_constant_override("separation", 12)
 	panel.add_child(col)
 	var title := Label.new()
 	title.text = "COUNCIL IN RECESS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_header(title, 9)
+	UiPalette.style_header(title, 18)
 	col.add_child(title)
 	col.add_child(_menu_button("Resume", toggle_pause_menu))
 	col.add_child(_menu_button("Save Game", _on_menu_save))
@@ -115,7 +117,7 @@ func _build_pause_menu() -> void:
 	col.add_child(_menu_button("Quit to Desktop", func() -> void: get_tree().quit()))
 	_pause_status = Label.new()
 	_pause_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_pause_status.add_theme_font_size_override("font_size", 9)
+	_pause_status.add_theme_font_size_override("font_size", 18)
 	_pause_status.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	col.add_child(_pause_status)
 	add_child(_pause_menu)
@@ -187,6 +189,14 @@ func _on_bottom_tab(tab: String) -> void:
 			_info_screen.hide()
 			_relations_screen.visible = false
 			set_province_view(not _province_view)
+		"HEIGHTS":
+			_info_screen.hide()
+			_relations_screen.visible = false
+			set_height_view(not _height_view)
+		"ECONOMY":
+			_info_screen.hide()
+			_relations_screen.visible = false
+			set_economy_view(not _economy_view)
 		"MILITARY":
 			_info_screen.hide()
 			_relations_screen.visible = false
@@ -210,6 +220,38 @@ func set_province_view(on: bool) -> void:
 
 func province_view() -> bool:
 	return _province_view
+
+## Turn the relief view on or off everywhere (owner request 2026-09-12): the
+## tab lights up and the current screen's map ramps the land by height. The
+## default sheet stays flat — height is a layer you ask for, not a tint
+## baked into the land.
+func set_height_view(on: bool) -> void:
+	_height_view = on
+	if _bottom_bar != null:
+		_bottom_bar.set_toggled("HEIGHTS", on)
+	var map := _current_map()
+	if map != null and map.show_heights != on:
+		map.show_heights = on
+
+func height_view() -> bool:
+	return _height_view
+
+## Turn the economy view on or off everywhere (owner request 2026-09-13): the
+## tab lights up, the map washes every province in the category of what it
+## makes most of, and the screen's LEFT column lists what the realm produces
+## — the same pattern the military layer follows.
+func set_economy_view(on: bool) -> void:
+	_economy_view = on
+	if _bottom_bar != null:
+		_bottom_bar.set_toggled("ECONOMY", on)
+	var map := _current_map()
+	if map != null and map.show_economy != on:
+		map.show_economy = on
+	if current_screen != null and current_screen.has_method("set_economy_view"):
+		current_screen.set_economy_view(on)
+
+func economy_view() -> bool:
+	return _economy_view
 
 ## Turn the military layer on or off everywhere (user request 2026-09-10):
 ## the tab lights up, the current screen's map draws the realm's regiments

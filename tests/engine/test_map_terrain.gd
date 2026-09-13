@@ -213,3 +213,34 @@ func test_blend_off_keeps_each_cell_flat() -> void:
 	var cols: PackedColorArray = MapTerrain.build(r)["colors"]
 	assert_eq(cols[1], Color(1, 1, 1, 1), "A's ring vertex is A's own white")
 	assert_eq(cols[5], Color(0, 0, 0, 1), "B's ring vertex is B's own black")
+
+## The HEIGHTS view (owner request 2026-09-13): contour lines read badly, so
+## the relief is a heat map — land ramped through the palette's heat_N stops
+## between sea level and the pack's OWN summit, water left alone.
+func _ramped() -> DataRepository:
+	var r := _two_cells()
+	r.terrain_palette["heat_1"] = "#000000"
+	r.terrain_palette["heat_2"] = "#ffffff"
+	return r
+
+func test_the_ramp_runs_from_sea_level_to_the_packs_own_summit() -> void:
+	var repo := _ramped()
+	assert_almost_eq(MapTerrain.summit(repo), 60.0, 0.001, "the taller of the two cells")
+	# heights 50 and 60 over a range of 20..60: t = 0.75 and 1.0.
+	var low := MapTerrain.heat_color(repo, repo.cells[1])
+	var high := MapTerrain.heat_color(repo, repo.cells[2])
+	assert_almost_eq(low.r, 0.75, 0.01, "three quarters of the way up a black->white ramp")
+	assert_almost_eq(high.r, 1.0, 0.01, "the summit is the top stop")
+
+func test_water_keeps_its_own_colour_under_the_ramp() -> void:
+	var repo := _ramped()
+	repo.cells[2]["water"] = "ocean"
+	assert_eq(MapTerrain.heat_color(repo, repo.cells[2]),
+		MapTerrain.cell_color(repo, repo.cells[2]),
+		"the coastline still reads in the HEIGHTS view")
+
+func test_without_heat_stops_the_ramp_falls_back_to_the_normal_tint() -> void:
+	var repo := _two_cells()
+	assert_eq(MapTerrain.heat_stops(repo).size(), 0)
+	assert_eq(MapTerrain.heat_color(repo, repo.cells[1]),
+		MapTerrain.cell_color(repo, repo.cells[1]))

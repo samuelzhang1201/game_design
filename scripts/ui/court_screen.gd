@@ -44,6 +44,8 @@ var _military: MilitaryPanel
 var _dashboard: RealmDashboard
 ## Whether the MILITARY tab is lit (GameRoot owns the state; this follows).
 var _military_view := false
+var _economy: EconomyPanel
+var _economy_view := false
 
 ## Static structure and layout live in scenes/court.tscn (editable in the
 ## editor); _ready fetches nodes, paints them from UiPalette, and wires
@@ -52,7 +54,7 @@ var _military_view := false
 func _ready() -> void:
 	%Bg.color = UiPalette.BG_SCREEN
 	%MapPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 2))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4))
 	# The live world map fills the middle zone (user ruling 2026-09-03).
 	_world_map = WorldMapView.create()
 	%MapPanel.add_child(_world_map)
@@ -65,7 +67,7 @@ func _ready() -> void:
 	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
 	_handle.pressed.connect(enter_council)
 	add_child(_handle)
-	%LeaveButton.add_theme_font_size_override("font_size", 7)
+	%LeaveButton.add_theme_font_size_override("font_size", 14)
 	%LeaveButton.pressed.connect(leave_council)
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the column's own content returns when it leaves.
@@ -76,6 +78,7 @@ func _ready() -> void:
 	# The rest of the facts column: the host while the military layer is on,
 	# and the card of whatever was clicked on the map (owner ruling 2026-09-10).
 	_military = MilitaryPanel.attach(%LogPanel.get_node("LVBox"))
+	_economy = EconomyPanel.attach(%LogPanel.get_node("LVBox"))
 	_detail = MapDetailPanel.new()
 	_detail.name = "DetailPanel"
 	%LogPanel.get_node("LVBox").add_child(_detail)
@@ -85,11 +88,11 @@ func _ready() -> void:
 	_detail.closed.connect(_world_map.clear_selection)
 	_detail.visibility_changed.connect(_refresh_left)
 	%LogPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24))
 	%SidePanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
-	UiPalette.style_header(%LogHeader, 7)
-	UiPalette.style_header(%SideHeader, 7)
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24))
+	UiPalette.style_header(%LogHeader, 14)
+	UiPalette.style_header(%SideHeader, 14)
 	_log_scroll = %LogScroll
 	log_box = %LogBox
 	suggestions_box = %SuggestionsBox
@@ -125,7 +128,10 @@ func _refresh_left() -> void:
 	_detail.visible = card
 	_country_panel.visible = country
 	_military.visible = _military_view and not card and not country
-	_dashboard.visible = not (card or country or _military_view)
+	# The economy column yields to the military one: two layers can be lit at
+	# once, but the column holds one set of facts.
+	_economy.visible = _economy_view and not _military_view and not card and not country
+	_dashboard.visible = not (card or country or _military_view or _economy_view)
 
 ## The MILITARY tab (GameRoot): the host takes the left column while the
 ## regiments are drawn on the map.
@@ -134,6 +140,18 @@ func set_military_view(on: bool) -> void:
 	if on:
 		_military.refresh()
 	_refresh_left()
+
+## The ECONOMY tab (GameRoot): what the realm makes takes the left column
+## while the same categories are washed across the map.
+func set_economy_view(on: bool) -> void:
+	_economy_view = on
+	if on:
+		_economy.refresh()
+	_refresh_left()
+
+## Test seam.
+func economy_panel() -> EconomyPanel:
+	return _economy
 
 ## Columns, map, and whichever panel holds the right slot (ScreenLayout).
 func _layout() -> void:

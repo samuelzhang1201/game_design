@@ -1,11 +1,13 @@
 extends GutTest
 ## Locks the fit-any-screen guarantee (user requirement 2026-08-30): the UI
-## is authored at a 640x360 design viewport and must scale to fill whatever
+## is authored at a 1280x720 design viewport (raised from 640x360 on
+## 2026-09-12 so UI art gets a full pixel per design pixel at the default
+## window) and must scale to fill whatever
 ## screen the player has — fullscreen by default, proportional canvas_items
 ## stretch, expand aspect (no cropping, no distortion, no dead bars), and a
 ## window that can never shrink below the design size.
 
-const DESIGN := Vector2i(640, 360)
+const DESIGN := Vector2i(1280, 720)
 
 var _original_size: Vector2i
 

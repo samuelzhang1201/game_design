@@ -54,3 +54,230 @@ func test_smooth_closed_is_the_uniform_cubic_b_spline() -> void:
 			"%s stays inside the square" % p)
 	assert_eq(MapGeometry.smooth_closed(PackedVector2Array([Vector2.ZERO, Vector2.ONE]), 4).size(), 2,
 		"too few points: returned as is")
+
+## dash_polyline: the dash pattern is measured along the line's own length,
+## so it survives a vertex instead of restarting there (draw_dashed_line
+## restarts per call, which turned the smoothed borders into mush).
+
+func test_dash_polyline_cuts_a_straight_line_into_dashes() -> void:
+	var pieces := MapGeometry.dash_polyline(
+		PackedVector2Array([Vector2(0, 0), Vector2(10, 0)]), 2.0, 2.0)
+	assert_eq(pieces.size(), 3, "10 long, 2 on 2 off: dashes at 0-2, 4-6, 8-10")
+	assert_eq(pieces[0], PackedVector2Array([Vector2(0, 0), Vector2(2, 0)]))
+	assert_eq(pieces[1], PackedVector2Array([Vector2(4, 0), Vector2(6, 0)]))
+	assert_eq(pieces[2], PackedVector2Array([Vector2(8, 0), Vector2(10, 0)]))
+
+func test_dash_polyline_keeps_its_phase_across_a_corner() -> void:
+	# (0,0)->(3,0)->(3,3), 2 on 2 off. The first dash ends at (2,0); the gap
+	# runs 2 more units — one to the corner, one up the second leg — so the
+	# next dash starts at (3,1) and the line ends mid-dash at (3,3).
+	var pieces := MapGeometry.dash_polyline(
+		PackedVector2Array([Vector2(0, 0), Vector2(3, 0), Vector2(3, 3)]), 2.0, 2.0)
+	assert_eq(pieces.size(), 2)
+	assert_eq(pieces[0], PackedVector2Array([Vector2(0, 0), Vector2(2, 0)]))
+	assert_eq(pieces[1], PackedVector2Array([Vector2(3, 1), Vector2(3, 3)]))
+
+func test_a_dash_that_spans_a_corner_keeps_the_corner_point() -> void:
+	# 5 on 5 off over (0,0)->(3,0)->(3,3): one dash the whole way, bending
+	# at the corner, so the piece carries three points.
+	var pieces := MapGeometry.dash_polyline(
+		PackedVector2Array([Vector2(0, 0), Vector2(3, 0), Vector2(3, 3)]), 5.0, 5.0)
+	assert_eq(pieces.size(), 1)
+	assert_eq(pieces[0], PackedVector2Array([Vector2(0, 0), Vector2(3, 0), Vector2(3, 2)]),
+		"the dash runs out one unit short of the end")
+
+func test_dash_polyline_of_a_degenerate_line_is_nothing() -> void:
+	assert_eq(MapGeometry.dash_polyline(PackedVector2Array([Vector2(1, 1)]), 2.0, 2.0).size(), 0)
+	assert_eq(MapGeometry.dash_polyline(PackedVector2Array(), 2.0, 2.0).size(), 0)
+
+func test_a_dash_length_of_zero_draws_the_line_solid() -> void:
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(10, 0)])
+	assert_eq(MapGeometry.dash_polyline(line, 0.0, 2.0), [line], "no dash: one solid piece")
+	assert_eq(MapGeometry.dash_polyline(line, 2.0, 0.0), [line], "no gap: one solid piece")
+
+func test_dash_segments_flattens_the_pieces_into_draw_multiline_pairs() -> void:
+	# draw_multiline takes a flat array of point pairs, one draw call for a
+	# whole dashed border instead of one per dash.
+	var pairs := MapGeometry.dash_segments(
+		PackedVector2Array([Vector2(0, 0), Vector2(3, 0), Vector2(3, 3)]), 5.0, 5.0)
+	assert_eq(pairs, PackedVector2Array([
+		Vector2(0, 0), Vector2(3, 0),
+		Vector2(3, 0), Vector2(3, 2)]), "the bent dash becomes two pairs")
+
+## nice_step: the 1-2-5 ladder a map's scale bar is allowed to land on, so
+## the bar reads "200 km", never "187 km".
+
+func test_nice_step_falls_to_the_ladder_below_the_raw_value() -> void:
+	assert_almost_eq(MapGeometry.nice_step(1.0), 1.0, 0.0001)
+	assert_almost_eq(MapGeometry.nice_step(1.9), 1.0, 0.0001)
+	assert_almost_eq(MapGeometry.nice_step(3.7), 2.0, 0.0001)
+	assert_almost_eq(MapGeometry.nice_step(9.9), 5.0, 0.0001)
+	assert_almost_eq(MapGeometry.nice_step(10.0), 10.0, 0.0001)
+
+func test_nice_step_holds_the_ladder_at_every_magnitude() -> void:
+	assert_almost_eq(MapGeometry.nice_step(370.0), 200.0, 0.0001)
+	assert_almost_eq(MapGeometry.nice_step(520.0), 500.0, 0.0001)
+	assert_almost_eq(MapGeometry.nice_step(1000.0), 1000.0, 0.0001)
+	assert_almost_eq(MapGeometry.nice_step(0.7), 0.5, 0.0001)
+	assert_almost_eq(MapGeometry.nice_step(0.04), 0.02, 0.0001)
+
+func test_nice_step_of_nothing_is_nothing() -> void:
+	assert_eq(MapGeometry.nice_step(0.0), 0.0)
+	assert_eq(MapGeometry.nice_step(-5.0), 0.0)
+
+## smooth_open: the same uniform cubic B-spline as smooth_closed, for a line
+## with two ends. The ends are clamped by repeating the endpoint, so the
+## curve starts and finishes exactly on them — a river must still meet its
+## coast after smoothing.
+
+func test_smooth_open_keeps_both_endpoints() -> void:
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(20, 0)])
+	var out := MapGeometry.smooth_open(line, 1)
+	assert_eq(out.size(), 5, "(n + 1) spans of one sample, plus the final point")
+	assert_eq(out[0], Vector2(0, 0), "starts on the first point")
+	assert_eq(out[out.size() - 1], Vector2(20, 0), "ends on the last")
+
+func test_smooth_open_of_a_straight_line_stays_straight() -> void:
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(20, 0)])
+	var out := MapGeometry.smooth_open(line, 1)
+	for p: Vector2 in out:
+		assert_almost_eq(p.y, 0.0, 0.0001, "no wander off the axis")
+	# Hand-computed from the B-spline basis at t = 0 over the clamped spans:
+	# (p0 + 4p1 + p2) / 6 for each of [0,0,0,10], [0,0,10,20], [0,10,20,20],
+	# [10,20,20,20], then the endpoint.
+	assert_almost_eq(out[1].x, 10.0 / 6.0, 0.0001)
+	assert_almost_eq(out[2].x, 10.0, 0.0001)
+	assert_almost_eq(out[3].x, 110.0 / 6.0, 0.0001)
+
+func test_smooth_open_rounds_a_corner_inward() -> void:
+	# A right angle: the smoothed line must cut inside the corner, not touch it.
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10)])
+	var out := MapGeometry.smooth_open(line, 4)
+	var nearest := INF
+	for p: Vector2 in out:
+		nearest = minf(nearest, p.distance_to(Vector2(10, 0)))
+	assert_gt(nearest, 0.5, "the hard corner is gone")
+
+func test_smooth_open_leaves_a_line_too_short_to_bend_alone() -> void:
+	var two := PackedVector2Array([Vector2(0, 0), Vector2(5, 5)])
+	assert_eq(MapGeometry.smooth_open(two, 3), two)
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(2, 0)])
+	assert_eq(MapGeometry.smooth_open(line, 0), line, "no samples asked for")
+
+## dash_runs: the same walk as dash_polyline but it hands back the gaps too,
+## so a border can be drawn as a chequered ribbon — dark run, light run —
+## instead of dash-and-nothing (owner request 2026-09-12, matching the
+## alternating frame band of development/exmaples).
+
+func test_dash_runs_returns_both_phases_in_order() -> void:
+	var runs := MapGeometry.dash_runs(
+		PackedVector2Array([Vector2(0, 0), Vector2(10, 0)]), 2.0, 2.0)
+	assert_eq(runs.size(), 5, "10 long, 2 on 2 off: on off on off on")
+	for i in runs.size():
+		assert_eq(bool(runs[i]["on"]), i % 2 == 0, "run %d alternates" % i)
+	assert_eq(runs[0]["points"], PackedVector2Array([Vector2(0, 0), Vector2(2, 0)]))
+	assert_eq(runs[1]["points"], PackedVector2Array([Vector2(2, 0), Vector2(4, 0)]))
+	assert_eq(runs[4]["points"], PackedVector2Array([Vector2(8, 0), Vector2(10, 0)]))
+
+func test_dash_polyline_is_the_on_runs_of_dash_runs() -> void:
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(3, 0), Vector2(3, 3)])
+	var on: Array = []
+	for run: Dictionary in MapGeometry.dash_runs(line, 2.0, 2.0):
+		if bool(run["on"]):
+			on.append(run["points"])
+	assert_eq(on, MapGeometry.dash_polyline(line, 2.0, 2.0))
+
+## ribbon: a polyline swollen into a filled band whose half-width varies from
+## point to point — what draw_polyline cannot do, and what a drawn river
+## needs: a hairline at the source widening to its mouth.
+
+func test_ribbon_offsets_each_point_by_its_own_half_width() -> void:
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(20, 0)])
+	var tris := MapGeometry.ribbon(line, PackedFloat32Array([1.0, 2.0, 3.0]))
+	assert_eq(tris.size(), 12, "two spans, two triangles each, three points each")
+	# The band runs along the x axis, so every offset is purely vertical and
+	# its size is that point's own half-width.
+	var ys: Dictionary = {}
+	for p: Vector2 in tris:
+		ys["%.0f:%.1f" % [p.x, p.y]] = true
+	assert_true(ys.has("0:1.0") and ys.has("0:-1.0"), "the source is 1 either side")
+	assert_true(ys.has("20:3.0") and ys.has("20:-3.0"), "the mouth is 3")
+
+func test_ribbon_turns_the_corner_on_the_bisector() -> void:
+	# A right angle: the offset at the corner follows the average of the two
+	# leg directions, so the band does not pinch or overshoot.
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10)])
+	var tris := MapGeometry.ribbon(line, PackedFloat32Array([1.0, 1.0, 1.0]))
+	assert_eq(tris.size(), 12)
+	for p: Vector2 in tris:
+		assert_lte(p.distance_to(Vector2(10, 0)), 12.0, "nothing flies off at the bend")
+
+func test_ribbon_of_a_mismatched_or_degenerate_line_is_empty() -> void:
+	assert_eq(MapGeometry.ribbon(PackedVector2Array([Vector2(0, 0)]),
+		PackedFloat32Array([1.0])).size(), 0)
+	assert_eq(MapGeometry.ribbon(PackedVector2Array([Vector2(0, 0), Vector2(1, 0)]),
+		PackedFloat32Array([1.0])).size(), 0, "one width per point or nothing")
+
+## offset_closed: a closed loop pushed OUTWARD — the wave lines that ring a
+## coast are the shore drawn again a little further out to sea. The direction
+## cannot be assumed from the winding (the pack's loops run either way, and
+## screen y points down), so the function measures whether the ring actually
+## grew and flips if it did not.
+
+func test_offset_closed_grows_the_ring() -> void:
+	var square := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10)])
+	var out := MapGeometry.offset_closed(square, 2.0)
+	assert_eq(out.size(), 4)
+	# Every corner moves diagonally away from the centre by 2 along each axis.
+	for p: Vector2 in out:
+		assert_gt(p.distance_to(Vector2(5, 5)), Vector2(0, 0).distance_to(Vector2(5, 5)),
+			"further from the middle than the original corner")
+	assert_almost_eq(out[0].x, -2.0, 0.001)
+	assert_almost_eq(out[0].y, -2.0, 0.001)
+	assert_almost_eq(out[2].x, 12.0, 0.001)
+	assert_almost_eq(out[2].y, 12.0, 0.001)
+
+func test_offset_closed_grows_whichever_way_the_loop_is_wound() -> void:
+	var cw := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10)])
+	var ccw := PackedVector2Array([Vector2(0, 10), Vector2(10, 10), Vector2(10, 0), Vector2(0, 0)])
+	for loop: PackedVector2Array in [cw, ccw]:
+		var out := MapGeometry.offset_closed(loop, 3.0)
+		for p: Vector2 in out:
+			assert_gt(p.distance_to(Vector2(5, 5)), 7.0, "outward, both windings")
+
+func test_offset_closed_leaves_a_degenerate_loop_alone() -> void:
+	var two := PackedVector2Array([Vector2(0, 0), Vector2(1, 1)])
+	assert_eq(MapGeometry.offset_closed(two, 2.0), two)
+
+## smooth_closed_through: a Catmull-Rom ring. smooth_closed uses a uniform
+## cubic B-spline, which APPROXIMATES — it cuts every corner, so a kingdom's
+## border drifted off the province boundary it is supposed to be (owner
+## 2026-09-13). Catmull-Rom passes through every control point and is still
+## smooth between them: the border hugs the real edge AND stops being angular.
+
+func test_smooth_closed_through_keeps_every_control_point() -> void:
+	var square := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10)])
+	var out := MapGeometry.smooth_closed_through(square, 4)
+	assert_eq(out.size(), 16, "four spans of four samples")
+	for p: Vector2 in square:
+		var hit := false
+		for q: Vector2 in out:
+			if q.distance_to(p) < 0.0001:
+				hit = true
+		assert_true(hit, "the curve runs through %s" % p)
+
+func test_the_b_spline_does_not_keep_them() -> void:
+	# The contrast this change is about, pinned so nobody "simplifies" the two
+	# back into one.
+	var square := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10)])
+	var out := MapGeometry.smooth_closed(square, 4)
+	var nearest := INF
+	for q: Vector2 in out:
+		nearest = minf(nearest, q.distance_to(Vector2(0, 0)))
+	assert_gt(nearest, 0.5, "the B-spline cuts the corner off")
+
+func test_smooth_closed_through_of_a_degenerate_ring_is_itself() -> void:
+	var two := PackedVector2Array([Vector2(0, 0), Vector2(1, 1)])
+	assert_eq(MapGeometry.smooth_closed_through(two, 4), two)
+	var sq := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)])
+	assert_eq(MapGeometry.smooth_closed_through(sq, 0), sq, "no samples asked for")

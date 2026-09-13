@@ -1,20 +1,30 @@
 key,color,notes
-biome_1,#E1CFA3,hot desert: cream laid toward yellow ochre
-biome_2,#CFC3A4,cold desert: cream laid greyed
-biome_3,#D3BE86,savanna: yellow ochre lightened
-biome_4,#AEB58A,grassland: moss green lightened
-biome_5,#96A26E,tropical seasonal forest: moss green lightened a step
-biome_6,#6B7A4B,temperate deciduous forest: moss green (library 1.4)
-biome_7,#5F6E44,tropical rainforest: moss green darkened
-biome_8,#5A6942,temperate rainforest: moss green darkened a step
-biome_9,#535F3F,taiga: moss green darkest
-biome_10,#B9AE95,tundra: cream laid greyed toward umber
-biome_11,#E9E4D7,glacier: cream laid lightened
-biome_12,#7E8A68,wetland: moss green toward slate
-sea_deep,#6F93B8,open sea: brighter blue (owner 2026-09-11); flat — equals sea_shallow so no depth reads on the map
-sea_shallow,#6F93B8,shelf water: same as sea_deep (no depth gradient by default)
-lake,#7FA1C4,freshwater: the sea blue lightened a step
-coast_line,#5B4636,the shore stroke: raw umber (library 1.4)
-river,#5D82A8,river strokes: the sea blue darkened so they read on land
-road,#9C5A34,roads: burnt sienna (library 1.4)
-trail,#B98B6F,trails and sea routes: burnt sienna lightened
+biome_1,#F6F3E8,"land is a light NEUTRAL ground (owner ruling 2026-09-12): the political wash carries the colour, so the land underneath must not tint it. Brightened 2026-09-13 for the modern theme. Hot desert, the palest"
+biome_2,#F1EFE4,cold desert
+biome_3,#F0EDDF,savanna
+biome_4,#EBEEDD,grassland
+biome_5,#E6ECD9,tropical seasonal forest
+biome_6,#E1E9D4,temperate deciduous forest
+biome_7,#DEE7D1,tropical rainforest
+biome_8,#DCE5CF,temperate rainforest
+biome_9,#D8E1CB,taiga — the darkest land tone
+biome_10,#EFF0E9,tundra
+biome_11,#F9FAF7,glacier — the palest land tone
+biome_12,#DFE7D5,wetland
+sea_deep,#6FB4E0,"open sea: a clear bright azure (2026-09-13; was the parchment slate #7E98A8)"
+sea_shallow,#CFEBFA,"shelf water: lighter, so the shore keeps a shallow band the way a drawn chart does"
+lake,#9DD3F2,freshwater: between the two
+coast_line,#3E5566,"the shore stroke, and the ink of the map's kingdom lettering and paper grain: dark slate"
+river,#1E6FB5,"river water: a deep blue — the lighter #3F97D4 disappeared on the player realm's sky-blue wash"
+road,#4B5563,"roads: a thin solid slate line over the coloured washes"
+trail,#6B7280,land trails: the road line thinned and greyed
+sea_route,#2F80C2,"sea lanes (owner request 2026-09-12): a blue dashed line — a shipping route is not a road and must not be drawn like one"
+contour,#8A6A46,the HEIGHTS view's iso-lines
+scale_bar,#334155,the scale bar in the bottom-right corner
+wave,#3F8FC9,"the water hatching that rings a shore (owner request 2026-09-13): the sea blue deepened, drawn faint"
+heat_1,#6DBE6A,"the HEIGHTS view's height ramp (owner 2026-09-13): lowland green at sea level — brightened with the theme"
+heat_2,#C4D35E,rising ground
+heat_3,#F0C04E,upland yellow
+heat_4,#E08A45,hill orange
+heat_5,#B55A3C,mountain
+heat_6,#FFFFFF,the summit, snow

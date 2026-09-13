@@ -35,6 +35,14 @@ var resource_icons: Dictionary = {}
 ## data/settlement_art.csv rows: which settlement drawing a burg group (and
 ## whether it has walls) is shown with on the map (MapObjects.settlement_art).
 var settlement_art: Array[Dictionary] = []
+## data/terrain_art.csv rows: which symbol a land cell is decorated with, by
+## height band or biome, and how thickly (MapObjects.terrain_decor).
+var terrain_art: Array[Dictionary] = []
+## data/goods_art.csv: good_code -> the produce icon the ECONOMY view draws.
+var goods_art: Dictionary = {}
+## data/goods_palette.csv: a good's first tag -> the colour its province wears
+## in the ECONOMY view.
+var goods_palette: Dictionary = {}
 ## data/marker_art.csv: marker type -> {texture, notes}, the point-of-interest
 ## icon drawn for that type on the map (MapObjects.marker_art).
 var marker_art: Dictionary = {}
@@ -271,7 +279,18 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/resource_icons.csv", ["key", "label", "icon", "tooltip"],
 			func(r): resource_icons[r["key"]] = r):
 		return false
-	if not _load_if_present(dir + "/settlement_art.csv", ["group", "walled", "tier", "texture"],
+	if not _load_if_present("res://data/goods_palette.csv", ["tag", "color"],
+			func(r): goods_palette[String(r["tag"])] = String(r["color"])):
+		return false
+	if not _load_if_present("res://data/goods_art.csv", ["good_code", "texture"],
+			func(r): goods_art[String(r["good_code"])] = String(r["texture"])):
+		return false
+	if not _load_if_present("res://data/terrain_art.csv",
+			["key", "biome_id", "min_height", "max_height", "texture", "density",
+			"height_px", "clump", "spread"],
+			func(r): terrain_art.append(r)):
+		return false
+	if not _load_if_present(dir + "/settlement_art.csv", ["group", "walled", "tier", "texture", "size"],
 			func(r): settlement_art.append(r)):
 		return false
 	if not _load_if_present(dir + "/marker_art.csv", ["type", "texture"],
@@ -310,6 +329,9 @@ func load_map(id: String) -> bool:
 	provinces_by_id.clear()
 	MapOwnership.invalidate()
 	MapTerrain.invalidate()
+	MapObjects.forget_decor()
+	MapEconomy.forget()
+	MapPalette.forget_colors()
 	routes.clear()
 	rivers.clear()
 	markers.clear()

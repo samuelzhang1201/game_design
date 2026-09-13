@@ -1,11 +1,11 @@
-group,walled,tier,texture,notes
-capital,,capital,res://assets/settlements/capital.png,a realm's seat: library I-05 metropolis (256 px)
-city,,city,res://assets/settlements/city.png,library I-04 walled city (224 px)
-town,1,walled_town,res://assets/settlements/walled_town.png,library I-03 market town (200 px) — a fortified variant can replace it later (library 6.2)
-town,0,town,res://assets/settlements/town.png,library I-03 market town (200 px)
-village,,village,res://assets/settlements/village.png,library I-02 village (168 px)
-hamlet,,hamlet,res://assets/settlements/hamlet.png,library I-01 farmstead (136 px)
-fort,,walled_town,res://assets/settlements/walled_town.png,a fort draws as a walled town
-monastery,,village,res://assets/settlements/village.png,a monastery draws as a village
-caravanserai,,town,res://assets/settlements/town.png,
-trading_post,,town,res://assets/settlements/town.png,
+group,walled,tier,texture,size,notes
+capital,,capital,res://assets/settlements/capital.png,1.0,a realm's seat: library D-31 great city as a sepia map symbol
+city,,city,res://assets/settlements/city.png,0.7,library D-30 walled city as a sepia map symbol
+town,1,walled_town,res://assets/settlements/walled_town.png,0.5,library D-29 market town as a sepia map symbol — a fortified variant can replace it later (library 6.2)
+town,0,town,res://assets/settlements/town.png,0.5,library D-29 market town as a sepia map symbol
+village,,village,res://assets/settlements/village.png,0.36,library D-28 village as a sepia map symbol
+hamlet,,hamlet,res://assets/settlements/hamlet.png,0.25,library D-27 farmstead as a sepia map symbol
+fort,,walled_town,res://assets/settlements/walled_town.png,0.5,a fort draws as a walled town
+monastery,,village,res://assets/settlements/village.png,0.36,a monastery draws as a village
+caravanserai,,town,res://assets/settlements/town.png,0.5,
+trading_post,,town,res://assets/settlements/town.png,0.5,

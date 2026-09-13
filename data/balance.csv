@@ -71,59 +71,121 @@ truth_told_trust_gain,3,source trust gained when a claim is borne out
 lie_caught_trust_penalty,25,source trust lost when a lie is exposed
 lie_relationship_penalty,12,relationship sentiment lost when a lie is exposed
 memory_exchanges_kept,8,conversational exchanges each character remembers (oldest fall off)
-news_ticker_speed,18,pixels per second the bottom chronicle strip crawls (user request 2026-08-31)
-knowledge_sure_threshold,75,credibility at/above which a persona sheet says "You know" (review finding 2026-09-01)
+news_ticker_speed,36,pixels per second the bottom chronicle strip crawls (user request 2026-08-31)
+knowledge_sure_threshold,75,"credibility at/above which a persona sheet says ""You know"" (review finding 2026-09-01)"
 knowledge_doubt_threshold,50,credibility below which a persona sheet says the character doubts what they heard
-map_lod_town_scale,0.5,world map: screen px per native map px at/above which towns with map_lod_town_pop+ people get a pin (below: capitals only)
-map_lod_village_scale,1.25,world map: scale at/above which every burg gets a pin
-map_lod_marker_scale,0.5,world map: scale at/above which points of interest get a pin
-map_marker_px,16.0,world map: point-of-interest icon size in screen px (fixed at any zoom, like the pins; the icons are data/marker_art.csv)
+map_decor_min_scale,0.45,"world map: screen px per native map px at/above which the terrain symbols (woods, hills, reeds) are drawn — below it the sheet would be a carpet of specks"
+map_decor_alpha,1.0,world map: opacity of the terrain symbols
+map_decor_scale,1.0,"world map: one knob over the SIZE of every terrain symbol — multiplies the height_px column of data/terrain_art.csv, so the whole sheet thins or thickens together"
+map_manor_alpha,0.92,"economy view: opacity of the manor wash — every land cell (a manor) in its holder's colour, over the terrain (owner request 2026-09-13, after development/exmaples/economyView.png)"
+map_manor_pale,0.32,"economy view: how far the POOREST land's manor is taken from its realm colour toward manor_pale (political_palette.csv)"
+map_manor_deep,0.22,economy view: how far the RICHEST land's manor is taken toward manor_rich — a manor's land value is its biome's habitability
+map_manor_jitter,0.35,"economy view: a fixed per-manor nudge along that pale-to-deep ramp, so neighbouring manors of one biome still read as separate estates (0 = none)"
+map_manor_rich,0.72,economy view: how far a WORKING manor (a settlement producing in it) is taken from its realm colour toward manor_rich
+map_manor_line_min_scale,0.9,economy view: screen px per native map px at/above which the manor edges are ruled in
+map_manor_line_alpha,0.4,economy view: opacity of the manor edges
+map_manor_line_width,1.0,economy view: width of the manor edges in screen px
+map_manor_badge_px,26,"economy view: diameter of a working manor's produce badge in screen px (fixed at any zoom, a counter like the pins; which manors get one follows the town LOD rule)"
+map_manor_ring_px,2,economy view: width of the badge's ring in the produce's category colour (data/goods_palette.csv) in screen px
+map_manor_icon_frac,0.82,economy view: the produce icon's height as a fraction of the badge
+map_manor_label_font_px,14,economy view: size of the units chip under a badge in screen px
+map_manor_label_pad_px,4,economy view: side padding of that chip in screen px
+map_manor_label_min_scale,1.0,economy view: screen px per native map px at/above which the units chip is drawn under the badge
+map_decor_tint,1.0,"world map: how far a terrain symbol takes on the colour of the realm that holds it, 0 = its own sepia, 1 = fully the realm's wash (owner request 2026-09-12). Follows conquest: the province is fixed geometry, the owner is looked up live"
+map_sprite_inland,0.55,"world map: how far a coastal settlement's drawing slides back onto the land, as a fraction of its own half-width (owner report 2026-09-13: seaside towns had half their picture out on the water). 0 leaves every drawing centred on its point"
+map_sprite_tint,1.0,world map: the same, for the settlement drawings
+map_decor_density,1.0,world map: one knob over HOW MANY of them — multiplies the density column of data/terrain_art.csv
+map_home_scale,1.1,"world map: the zoom the map opens at, centred on the player's capital — above map_province_min_scale so the province seams are there from the first frame (owner 2026-09-12)"
+map_lod_town_scale,1.0,world map: screen px per native map px at/above which towns with map_lod_town_pop+ people get a pin (below: capitals only)
+map_lod_village_scale,2.5,world map: scale at/above which every burg gets a pin
+map_show_markers,0,"world map: 1 draws the pack's points of interest, 0 leaves them off (owner 2026-09-12: the sheet is for realms and settlements)"
+map_lod_marker_scale,1.0,world map: scale at/above which points of interest get a pin
+map_marker_px,32.0,world map: point-of-interest icon size in screen px (fixed at any zoom, like the pins; the icons are data/marker_art.csv)
 map_lod_town_pop,12000,world map: population a non-capital needs for a pin between the town and village scales
-map_pick_radius_px,6,world map: screen px within which a click/hover picks a pin
-map_line_pick_px,4,world map: screen px within which a click/hover picks a road or river
+map_pick_radius_px,12,world map: screen px within which a click/hover picks a pin
+map_line_pick_px,8,world map: screen px within which a click/hover picks a road or river
 map_pinch_zoom_gain,1.0,"world map: how strongly a trackpad pinch zooms — 1.0 follows the gesture exactly, higher is faster"
-map_pan_gesture_speed,2.0,world map: screen px panned per unit of two-finger trackpad scroll
+map_pan_gesture_speed,4.0,world map: screen px panned per unit of two-finger trackpad scroll
 map_label_scale_px,45.0,world map: kingdom label height in native map px — it scales with zoom like printed lettering
-map_label_min_px,8.0,world map: smallest kingdom label in screen px (below this the label is hidden)
-map_label_max_px,30.0,world map: largest kingdom label in screen px
-map_label_tracking,0.35,world map: extra letter spacing on kingdom labels as a fraction of font size
-map_label_alpha,0.5,world map: kingdom label opacity — faint enough to read as part of the map
+map_label_min_px,16.0,world map: smallest kingdom label in screen px (below this the label is hidden)
+map_label_max_px,60.0,world map: largest kingdom label in screen px
+map_label_tracking,0.05,"world map: extra letter spacing on kingdom labels as a fraction of font size — 0.35 suited spaced Roman capitals; the names are blackletter now (owner 2026-09-13), which wants its letters close"
+map_label_alpha,0.72,world map: kingdom label opacity — faint enough to read as part of the map
 pack_treasury_scale,1.0,gold per unit of the export's state treasury when seeding the player's realm (owner ruling 2026-09-09: one truth)
 tax_rate_per_poll_tax,36,tax_rate (1-10) = round(export pollTax x this); also the alias scale for the player's poll_tax row
 tariff_rate_per_sales_tax,60,tariff_rate (0-10) = round(export salesTax x this); also the alias scale for the player's sales_tax row
 order_prompt_max_burgs,12,largest towns of the player's realm listed in the order prompt
 order_narrative_max_chars,600,longest narrative the validator keeps from an order reply
-map_province_min_scale,0.6,world map: screen px per native map px at/above which the province view draws seams
-map_province_line_alpha,0.85,world map: opacity of province seams in the province view
-map_province_line_width,0.8,world map: width of province seams in screen px
-map_province_dash_px,3.0,world map: dash length of province seams in screen px
+map_province_min_scale,0.9,world map: screen px per native map px at/above which the province view draws seams
+map_province_line_alpha,0.38,world map: opacity of province seams — soft, they are an internal hint not a boundary (owner 2026-09-12)
+map_province_line_width,1.2,world map: width of province seams in screen px
+map_province_dash_px,3.0,world map: dash length of province seams in screen px (0 draws them solid)
+map_province_gap_px,5.0,world map: gap between the dashes of a province seam in screen px
 province_card_max_towns,5,province panel: how many town names to list
 province_card_max_goods,4,province panel: how many produced goods to list
-map_political_alpha,0.42,world map: opacity of the political wash over the terrain render
-map_state_border_width,1.0,world map: width of every kingdom's border in screen px
-map_state_border_alpha,0.6,world map: opacity of kingdom borders
-map_hover_border_width,1.8,world map: width of the hovered kingdom's outline in screen px
-map_border_smoothing_steps,4,world map: B-spline samples per segment when drawing kingdom outlines (Azgaar draws its lines the same way)
+map_political_alpha,0.72,"world map: opacity of the political wash over the terrain — 0 turns the coloured country areas off (owner 2026-09-12: the parchment sheet carries no fills, only lines); 0.42 was the tuned value"
+map_state_border_width,1.6,world map: width of every kingdom's border in screen px — it is a chequered ribbon now, so it needs the body to read as a band
+map_state_border_dash_px,9,world map: length of the DARK run of a kingdom border in screen px (0 draws it solid)
+map_state_border_gap_px,9,"world map: length of the PALE run between them — not a gap any more: it is drawn in state_border_light, so the two alternate like a chequered map band"
+map_state_border_alpha,0.9,world map: opacity of kingdom borders
+map_hover_border_width,2.8,world map: width of the hovered kingdom's outline in screen px
+map_max_scale_bar_km,150,"world map: how far out the player may zoom, stated as the largest distance the scale bar is allowed to read (owner request 2026-09-12). The bar lands on the 1-2-5 ladder, so a cap of 150 means it stops at 100. 0 lifts the cap and the floor goes back to fitting the whole map"
+map_scale_bar_max_px,220.0,world map: the longest the scale bar may run in screen px — the bar takes the biggest round distance that fits inside it
+map_scale_bar_divisions,4,world map: alternating filled and open segments along the scale bar (library M-14)
+map_scale_bar_height_px,8.0,world map: height of the scale bar in screen px
+map_scale_bar_margin_px,20.0,world map: inset of the scale bar from the bottom-right corner in screen px
+map_scale_bar_font_px,16,world map: size of the scale bar's distance label in screen px
+map_scale_bar_alpha,0.8,world map: opacity of the scale bar (0 hides it)
+map_border_smoothing_steps,8,"world map: Catmull-Rom samples per segment on a kingdom outline and a coast — the curve runs THROUGH the pack's points, so it is smooth without drifting off the real boundary (owner 2026-09-13)"
+ui_panel_art,0,"UI: 1 draws every panel as the nine-sliced vellum plate (assets/ui/panel_vellum.png, library U-01); 0 draws the flat rounded card of UiPalette.panel_style — the bright modern theme (owner 2026-09-13: the parchment look read old and dim)"
 dashboard_max_provinces,4,realm dashboard: how many of the realm's largest provinces the bar chart lists
-map_sprite_scale,0.32,world map: settlement art height in screen px per screen px of view scale x 100 (a capital tile is ~500 px tall; 0.5 gives 25 px at scale 0.1)
-map_sprite_min_px,8.0,world map: below this screen height a settlement draws as a pin, not art
-map_sprite_max_px,72.0,world map: settlement art never grows taller than this on screen
-map_army_plaque_px,11.0,"military layer: the banner plaque under a regiment's arm glyph, in screen px (fixed size, so armies stay readable at any zoom)"
-map_army_bar_w,14.0,military layer: width of a regiment's strength bar in screen px
-map_army_bar_h,2.5,military layer: height of a regiment's strength bar in screen px
-map_army_bar_gap,1.5,military layer: gap between the plaque and its strength bar in screen px
-map_army_pick_px,8.0,military layer: screen px within which a click or hover picks a regiment
+map_sprite_scale,0.18,world map: settlement art height in screen px per screen px of view scale x 100 (owner 2026-09-12: 0.32 drew the towns far too large over the parchment)
+map_sprite_min_px,12.0,world map: below this screen height a settlement draws as a pin, not art
+map_sprite_max_px,80.0,world map: settlement art never grows taller than this on screen
+map_army_badge_frac,0.55,"military layer: height of a regiment's counter — a glyph square joined to its headcount box (after development/exmaples/MilitaryView.png) — as a share of the LARGEST settlement drawing's height, so a counter always reads smaller than the town it sits under (owner request 2026-09-13)"
+map_army_badge_min_px,11.0,military layer: the smallest a counter gets in screen px (also its height while the towns are pins)
+map_army_badge_max_px,16.0,military layer: the largest a counter gets in screen px however far the map zooms in
+map_army_font_frac,0.78,military layer: the headcount's font size as a share of the counter's height
+map_army_count_pad_px,3.0,military layer: side padding inside the headcount box in screen px
+map_army_outline_px,1.0,military layer: width of the dark outline round a counter in screen px
+map_army_glyph_frac,0.8,military layer: the glyph's size as a fraction of its square
+map_army_stack_gap_px,2.0,military layer: gap left between counters stacked because they would overlap
+map_army_count_sat,0.6,military layer: the least saturation the headcount box's realm colour is pushed to
+map_army_count_val,0.78,military layer: the brightness the headcount box's realm colour is set to
+map_army_pick_px,16.0,military layer: screen px within which a click or hover picks a regiment
 map_relief_strength,0,terrain: shade change per unit of mean height difference to land neighbours (not distance-normalised) facing the light — 0 = no relief on the map (owner 2026-09-11); 0.02 was the tuned value
 map_relief_min,0.6,terrain: darkest relief factor
 map_relief_max,1.35,terrain: brightest relief factor
 map_light_x,-0.7,terrain: light direction x (toward the light; negative = from the west)
 map_light_y,-0.7,terrain: light direction y (negative = from the north)
 map_altitude_gain,0,terrain: extra brightening from sea level to the summit — 0 = flat (owner 2026-09-11); 0.25 was the tuned value
+map_paper_strength,0.03,"terrain: how dark the paper grain gets over the sheet (0 = off) — fixed in screen px, does not zoom. 0.1 was the parchment value; the bright theme (owner 2026-09-13) keeps only a trace"
+map_paper_grain_px,380.0,terrain: size of one parchment mottle in screen px (the noise tile is drawn at this scale)
+map_paper_octaves,4,terrain: octaves of the parchment grain — more gives finer fibre inside the mottling
+map_paper_seed,954159497,terrain: seed of the parchment grain (the map's own seed; the grain is a look, never simulation)
+map_paper_vignette,0,"terrain: how dark the sheet's edges go (0 = off), drawn over everything like the shadow on a rolled scroll. Off in the bright theme (owner 2026-09-13); 0.22 was the parchment value"
 map_terrain_blend,1,terrain: 1 = ring vertices blend the cells around them (soft painterly land); 0 = flat colour per cell with crisp edges
-map_sea_depth_gamma,6.0,terrain: exponent on h/20 for the deep-to-shallow sea gradient (high: only the last few units before the shore lighten, so the packed ocean's outer rim matches the deep-sea fill beyond it)
-map_coast_width,1.0,terrain: shore stroke width in screen px
-map_river_min_px,0.8,terrain: thinnest river stroke in screen px
-map_river_discharge_scale,0.06,terrain: river stroke width in native px per sqrt(discharge)
-map_road_width,1.2,terrain: road stroke width in screen px
-map_trail_width,0.8,terrain: trail and sea-route stroke width in screen px
-map_trail_min_scale,0.6,terrain: view scale at/above which trails and sea routes draw (roads always draw)
+map_sea_depth_gamma,3.0,terrain: exponent on h/20 for the deep-to-shallow sea gradient (high: only the last few units before the shore lighten, so the packed ocean's outer rim matches the deep-sea fill beyond it)
+map_wave_rings,3,"world map: how many lines of water hatching ring each shore (0 = none)"
+map_wave_spacing_px,7,world map: gap between those rings in NATIVE map px — they belong to the drawing and scale with the zoom
+map_wave_width,0.9,world map: width of a hatching line in screen px
+map_wave_alpha,0.3,world map: opacity of the innermost ring; each one out is fainter
+map_wave_dash_px,6,world map: dash length of the hatching in screen px (0 draws it solid)
+map_wave_gap_px,5,world map: gap between those dashes in screen px
+map_coast_width,0,"terrain: shore stroke width in screen px. 0 = NO coast line at all (owner request 2026-09-13): the land colour, the political wash and the sea tell you where the shore is, and a drawn outline over them only fought the kingdom borders. Above 0 the stroke comes back"
+map_river_min_px,1.2,"terrain: the least a river's SOURCE width may be in screen px. It floors only the widest point: the course still tapers to nothing from there (map_river_taper_gamma), so rivers no longer all draw one width at this floor the way they did when it floored the whole course (0.44 then, owner 2026-09-12)"
+map_river_alpha,1.0,"terrain: opacity of a river — 1, SOLID (owner request 2026-09-13): below 1 the ribbon's overlapping triangles on a tight bend show as darker blots"
+map_river_taper_gamma,1.4,"terrain: how a river thins along its course (owner request 2026-09-13): full width at the source, half_width x (1 - t)^gamma, to a point at the end. 1 thins evenly; higher thins sooner and leaves a longer fine tail"
+map_river_smoothing_steps,3,terrain: B-spline samples per segment on a river — the pack stores rivers as raw polylines and the corners read as hard kinks without this (owner 2026-09-12)
+map_river_discharge_scale,0.11,"terrain: a river's SOURCE width in native px per sqrt(discharge) — raised from 0.05 with the solid taper (owner 2026-09-13), since a river now spends most of its course thinner than this"
+map_road_width,1.3,"terrain: road stroke width in screen px — a road is a worn track, and in the reference it reads by width and a soft edge rather than by a dark line (owner 2026-09-12)"
+map_road_soft_ratio,0,terrain: how far a road's soft shoulder reaches past its body, as a multiple of the body's own width on each side (0 = a hard edge)
+map_road_soft_alpha,0.45,terrain: opacity of that shoulder as a fraction of the body's
+map_road_alpha,0.85,terrain: opacity of a road's body
+map_route_smoothing_steps,3,terrain: B-spline samples per segment on a road or trail — the pack stores routes as raw polylines and a wide stroke makes every kink obvious
+map_sea_route_width,1.8,world map: width of a sea lane in screen px
+map_sea_route_dash_px,7,world map: dash length of a sea lane in screen px
+map_sea_route_gap_px,7,world map: gap between those dashes in screen px
+map_sea_route_alpha,0.55,world map: opacity of a sea lane
+map_trail_width,0.9,terrain: trail and sea-route stroke width in screen px
+map_trail_min_scale,2.4,terrain: view scale at/above which trails and sea routes draw (roads always draw)

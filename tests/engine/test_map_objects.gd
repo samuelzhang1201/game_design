@@ -18,7 +18,8 @@ func _tiny() -> DataRepository:
 	var repo := DataRepository.new()
 	repo.balance = {"map_lod_town_scale": 0.5, "map_lod_village_scale": 1.0,
 		"map_lod_marker_scale": 0.5, "map_lod_town_pop": 5000.0,
-		"map_pick_radius_px": 6.0, "map_line_pick_px": 4.0}
+		"map_pick_radius_px": 6.0, "map_line_pick_px": 4.0,
+		"map_show_markers": 0.0}
 	repo.map_info = {"distance_unit": "km", "distance_scale": "2", "width": "4", "height": "4"}
 	repo.kingdoms = {"k": {"kingdom_code": "k", "state_id": "6", "label": "Kingdom", "capital_burg": "cap",
 		"neighbor_codes": "", "population": "9000", "center_x": "0", "center_y": "0"}}
@@ -75,8 +76,21 @@ func test_burg_visible_respects_capitals_and_population() -> void:
 	assert_false(MapObjects.burg_visible(repo.burgs["vil"], 5000))
 	assert_true(MapObjects.burg_visible(repo.burgs["vil"], 0))
 
-func test_marker_beats_a_burg_at_the_same_spot() -> void:
-	var hit := _at(_tiny(), Vector2(1.5, 2.5), 0)
+## Owner ruling 2026-09-12: the pack's points of interest are off the sheet,
+## and MapObjects.markers_visible is the one place that decides — so a click
+## can never pick something that is not drawn. With them on, a marker still
+## outranks a burg sharing its point.
+func test_a_hidden_marker_cannot_be_picked() -> void:
+	var repo := _tiny()
+	assert_false(MapObjects.markers_visible(repo), "points of interest are off")
+	var hit := _at(repo, Vector2(1.5, 2.5), 0)
+	assert_eq(hit["kind"], "burg", "the village under it is picked instead")
+	assert_eq(hit["code"], "vil")
+
+func test_marker_beats_a_burg_at_the_same_spot_when_shown() -> void:
+	var repo := _tiny()
+	repo.balance["map_show_markers"] = 1.0
+	var hit := _at(repo, Vector2(1.5, 2.5), 0)
 	assert_eq(hit["kind"], "marker")
 	assert_eq(hit["code"], "inn")
 
@@ -354,3 +368,54 @@ func test_burg_card_has_no_climate_or_elevation() -> void:
 	var card := MapObjects.burg_card(Game.data, Game.state, String(realm["capital_burg"]))
 	for f in card["fields"]:
 		assert_false(String(f[0]) in ["Climate", "Elevation"], "%s is not on the card" % String(f[0]))
+
+## One tree is not a forest and one peak is not a range (owner request
+## 2026-09-12): a chosen cell yields `clump` small marks scattered inside it,
+## not one big mark on its centre — and the scatter comes from the cell id, so
+## the same wood stands in the same place every run.
+func _decor_repo(clump: int, spread: float) -> DataRepository:
+	var r := DataRepository.new()
+	r.balance = {"map_decor_density": 1.0, "map_decor_scale": 1.0}
+	r.vertices = {0: Vector2(0, 0), 1: Vector2(10, 0), 2: Vector2(10, 10), 3: Vector2(0, 10)}
+	r.cells = {1: {"vertex_ids": PackedInt32Array([0, 1, 2, 3]), "height": 30.0,
+		"biome_id": 6, "water": "", "neighbor_ids": PackedInt32Array()}}
+	r.terrain_art = [{"key": "wood", "biome_id": "6", "min_height": "", "max_height": "",
+		"texture": "res://x.png", "density": "1.0", "height_px": "4", "clump": str(clump),
+		"spread": str(spread)}]
+	return r
+
+func test_a_wood_is_several_marks_scattered_inside_its_cell() -> void:
+	MapObjects.forget_decor()
+	var repo := _decor_repo(5, 0.8)
+	var marks := MapObjects.terrain_decor(repo)
+	assert_eq(marks.size(), 5, "five marks, not one")
+	# The cell is the square (0,0)-(10,10): centre (5,5), mean vertex distance
+	# 7.071, so the marks fall within 0.8 of that.
+	var reach := 7.0711 * 0.8
+	var distinct: Dictionary = {}
+	for m: Dictionary in marks:
+		var p: Vector2 = m["pos"]
+		assert_lte(p.distance_to(Vector2(5, 5)), reach + 0.001, "inside the cell's reach")
+		distinct[p] = true
+	assert_eq(distinct.size(), 5, "and no two land on the same spot")
+
+func test_the_same_cell_decorates_the_same_way_every_time() -> void:
+	MapObjects.forget_decor()
+	var first := MapObjects.terrain_decor(_decor_repo(4, 0.7)).duplicate(true)
+	MapObjects.forget_decor()
+	var second := MapObjects.terrain_decor(_decor_repo(4, 0.7))
+	assert_eq(first.size(), second.size())
+	for i in first.size():
+		assert_eq(first[i]["pos"], second[i]["pos"], "no RNG: the scatter is the cell id")
+
+func test_marks_vary_in_size_around_the_rows_height() -> void:
+	MapObjects.forget_decor()
+	var marks := MapObjects.terrain_decor(_decor_repo(6, 0.8))
+	var lo := INF
+	var hi := 0.0
+	for m: Dictionary in marks:
+		lo = minf(lo, float(m["height"]))
+		hi = maxf(hi, float(m["height"]))
+	assert_gte(lo, 4.0 * 0.8 - 0.001, "no mark smaller than 0.8 of the row")
+	assert_lte(hi, 4.0 * 1.2 + 0.001, "none larger than 1.2 of it")
+	assert_gt(hi - lo, 0.0, "and they are not all the same size")

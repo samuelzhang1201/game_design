@@ -22,25 +22,25 @@ func _ready() -> void:
 	var panel := PanelContainer.new()
 	panel.name = "Panel"
 	panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.GOLD, 1, 12))
+		UiPalette.panel_style(UiPalette.GOLD, 2, 24))
 	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.custom_minimum_size = Vector2(200, 0)
+	panel.custom_minimum_size = Vector2(400, 0)
 	add_child(panel)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 5)
+	col.add_theme_constant_override("separation", 10)
 	panel.add_child(col)
 	_title = Label.new()
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_header(_title, 9)
+	UiPalette.style_header(_title, 18)
 	col.add_child(_title)
 	col.add_child(HSeparator.new())
 	_grid = GridContainer.new()
 	_grid.name = "Table"
 	_grid.columns = 2
-	_grid.add_theme_constant_override("h_separation", 16)
-	_grid.add_theme_constant_override("v_separation", 2)
+	_grid.add_theme_constant_override("h_separation", 32)
+	_grid.add_theme_constant_override("v_separation", 4)
 	col.add_child(_grid)
 	col.add_child(HSeparator.new())
 	var close := Button.new()

@@ -6,15 +6,6 @@ set -e
 TEST_OUTPUT="/tmp/gut_test_output_$$.txt"
 trap 'rm -f "$TEST_OUTPUT"' EXIT
 
-# Root cause of GUT's "Errors 2": The gdai-mcp-plugin-godot GExtension registers
-# native classes (GDAIBaseTool, GDAIConfig, GDAIToolGetGodotErrors) at engine startup.
-# In headless mode, GUT's stubber attempts to build a class database including all
-# global classes, and fails with error 43 (parse error) twice when generating a dynamic
-# script that references these unavailable native classes. Attempts to remove the
-# autoload or editor_plugins don't help because the GExtension registers classes
-# at Godot startup regardless. The 2 errors are unavoidable without modifying the
-# vendored plugins or GExtension binary.
-
 # Import assets headless. Exit code 134 (SIGABRT on macOS) is expected due to a Godot
 # shutdown issue, but the import completes successfully before the crash. Exit code 0
 # is also acceptable (no crash on other platforms). Show diagnostics on real failure.
@@ -52,12 +43,16 @@ if [ "$DISK_SCRIPTS" != "$RAN_SCRIPTS" ]; then
   exit 1
 fi
 
-# Validate error count: exactly 2 known errors from GExtension class database issues.
-# Any other count indicates new errors or broken tests.
+# Validate error count: the suite must be clean. This expected 2 for as long as
+# the gdai-mcp-plugin-godot GExtension was vendored (it registered native
+# classes that GUT's stubber could not resolve headless); the plugin was removed
+# 2026-09-13, and with it the last known-good errors. GUT omits the line
+# entirely when there are none, so an absent line counts as 0.
 ERROR_COUNT=$(grep "^Errors" "$TEST_OUTPUT" | awk '{print $NF}')
-if [ "$ERROR_COUNT" != "2" ]; then
+[ -z "$ERROR_COUNT" ] && ERROR_COUNT=0
+if [ "$ERROR_COUNT" != "0" ]; then
   echo ""
-  echo "FATAL: Unexpected error count: $ERROR_COUNT (expected 2 known GExtension class DB errors)"
+  echo "FATAL: Unexpected error count: $ERROR_COUNT (expected a clean suite)"
   echo "       Check for new errors or broken tests"
   exit 1
 fi

@@ -1,0 +1,179 @@
+{
+  "_comment": "CC Post Sepia Alpha — turns a [C-MAPMARK] render (sepia ink on pure white) into a transparent map sprite. The blue channel separates warm brown ink from white paper better than luminance does: paper ~1.0, umber ink ~0.15. InvertMask gives ink coverage, MaskComposite add doubles it so mid-tone washes go fully opaque and only the paper stays clear, InvertMask again because JoinImageWithAlpha reads 1 = transparent. No BiRefNet: a line drawing has no silhouette for a cutout model to find, and the doubled coverage keeps the brush's soft edges semi-transparent. ImageCrop then trims to the drawing's own alpha bounding box (post.py scans the render and fills the slots) — a side-elevation symbol fills anywhere from 47% to 77% of the square, so without the trim the frame's empty margin, not the drawing, would set how big it lands on the map. ImageScale takes width 0 to keep the trimmed aspect and size by height. post.py --tier mark drives it.",
+  "_slots": {
+    "image": [
+      [
+        "1",
+        "image"
+      ]
+    ],
+    "crop_x": [
+      [
+        "7",
+        "x"
+      ]
+    ],
+    "crop_y": [
+      [
+        "7",
+        "y"
+      ]
+    ],
+    "crop_w": [
+      [
+        "7",
+        "width"
+      ]
+    ],
+    "crop_h": [
+      [
+        "7",
+        "height"
+      ]
+    ],
+    "width": [
+      [
+        "8",
+        "width"
+      ]
+    ],
+    "height": [
+      [
+        "8",
+        "height"
+      ]
+    ],
+    "prefix": [
+      [
+        "9",
+        "filename_prefix"
+      ]
+    ]
+  },
+  "1": {
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Generated symbol (uploaded to input/)"
+    },
+    "inputs": {
+      "image": "{{IMAGE}}"
+    }
+  },
+  "2": {
+    "class_type": "ImageToMask",
+    "_meta": {
+      "title": "Blue channel: white paper 1.0, umber ink ~0.15"
+    },
+    "inputs": {
+      "image": [
+        "1",
+        0
+      ],
+      "channel": "blue"
+    }
+  },
+  "3": {
+    "class_type": "InvertMask",
+    "_meta": {
+      "title": "Ink coverage"
+    },
+    "inputs": {
+      "mask": [
+        "2",
+        0
+      ]
+    }
+  },
+  "4": {
+    "class_type": "MaskComposite",
+    "_meta": {
+      "title": "Coverage x2 (clamped): mid-tone fills go opaque, paper stays clear"
+    },
+    "inputs": {
+      "destination": [
+        "3",
+        0
+      ],
+      "source": [
+        "3",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "operation": "add"
+    }
+  },
+  "5": {
+    "class_type": "InvertMask",
+    "_meta": {
+      "title": "Coverage -> transparency (JoinImageWithAlpha takes 1 = transparent)"
+    },
+    "inputs": {
+      "mask": [
+        "4",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "JoinImageWithAlpha",
+    "_meta": {
+      "title": "RGBA"
+    },
+    "inputs": {
+      "image": [
+        "1",
+        0
+      ],
+      "alpha": [
+        "5",
+        0
+      ]
+    }
+  },
+  "7": {
+    "class_type": "ImageCrop",
+    "_meta": {
+      "title": "Trim to the drawing's alpha bounding box"
+    },
+    "inputs": {
+      "image": [
+        "6",
+        0
+      ],
+      "width": 1024,
+      "height": 1024,
+      "x": 0,
+      "y": 0
+    }
+  },
+  "8": {
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Resize by height, width 0 keeps the trimmed aspect (lanczos)"
+    },
+    "inputs": {
+      "upscale_method": "lanczos",
+      "width": 0,
+      "height": 256,
+      "crop": "disabled",
+      "image": [
+        "7",
+        0
+      ]
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save RGBA PNG"
+    },
+    "inputs": {
+      "filename_prefix": "{{PREFIX}}",
+      "images": [
+        "8",
+        0
+      ]
+    }
+  }
+}

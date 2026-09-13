@@ -25,18 +25,18 @@ static func attach(column: BoxContainer) -> MilitaryPanel:
 
 func _init() -> void:
 	name = "MilitaryPanel"
-	add_theme_constant_override("separation", 3)
+	add_theme_constant_override("separation", 6)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_title = Label.new()
 	_title.name = "Title"
 	_title.text = "THE HOST"
-	UiPalette.style_header(_title, 8)
+	UiPalette.style_header(_title, 16)
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_title)
 	add_child(HSeparator.new())
 	_summary = Label.new()
 	_summary.name = "Summary"
-	_summary.add_theme_font_size_override("font_size", 7)
+	_summary.add_theme_font_size_override("font_size", 14)
 	_summary.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
 	_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_summary)
@@ -48,7 +48,7 @@ func _init() -> void:
 	_neighbours = _section("NEIGHBOURS, AS REPORTED", "Neighbours")
 	_officers = Label.new()
 	_officers.name = "Officers"
-	_officers.add_theme_font_size_override("font_size", 7)
+	_officers.add_theme_font_size_override("font_size", 14)
 	_officers.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	_officers.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_officers)
@@ -63,7 +63,7 @@ func _ready() -> void:
 func _section(heading: String, chart_name: String) -> BarChart:
 	var h := Label.new()
 	h.text = heading
-	UiPalette.style_header(h, 7, UiPalette.TEXT_MUTED)
+	UiPalette.style_header(h, 14, UiPalette.TEXT_MUTED)
 	h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(h)
 	var chart := BarChart.new()

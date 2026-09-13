@@ -27,6 +27,9 @@ HERE = Path(__file__).resolve().parent
 COMFY_WORKFLOWS = Path.home() / "ComfyUI-Installs/GameDev/ComfyUI/user/default/workflows"
 SAMPLE_ID = "I-04"
 
+# Overrides may carry two private keys besides the slot values: "model" picks
+# the sampler preset, "style" a STYLE_CORE file (its paired NEGATIVE follows)
+# and "id" the library row the sample prompt is built from.
 # name, template, preset / slot overrides, note
 EXPORTS = [
     ("CC Flux Bulk T2I", "flux_template.json", {"model": "schnell"},
@@ -39,6 +42,19 @@ EXPORTS = [
     ("CC Post Cutout", "post_cutout_template.json", {"width": 0, "height": 660},
      "A generated portrait becomes a game asset: BiRefNet mask -> InvertMask -> RGBA ->\n"
      "lanczos resize (full: height 660; chip: 96x96). Driven by assets/flux/post.py."),
+    ("CC Sepia Map Mark T2I", "flux2_klein_template.json",
+     {"model": "klein", "style": "STYLE_CORE_map_sepia.txt", "id": "D-16"},
+     "Library 6.9 map symbols (D-): monochrome sepia hand-drawn map vignettes on PURE WHITE,\n"
+     "for the world map. Style core STYLE_CORE_map_sepia.txt + NEGATIVE_map_sepia.txt (the\n"
+     "default negative bans sepia and aged paper, so it cannot be used here) + [C-MAPMARK].\n"
+     "The white ground is not decoration: CC Post Sepia Alpha keys transparency off it.\n"
+     "Bulk: python3 assets/flux/generate.py --chapter D --style-file STYLE_CORE_map_sepia.txt"),
+    ("CC Post Sepia Alpha", "sepia_alpha_template.json", {"width": 256, "height": 256},
+     "A D- symbol becomes a transparent map sprite: blue channel (white paper 1.0, umber ink\n"
+     "~0.15) -> InvertMask -> MaskComposite add with itself (coverage x2, clamped) -> InvertMask\n"
+     "-> RGBA -> lanczos 256. No BiRefNet: a line drawing has no silhouette to cut, and the\n"
+     "doubled coverage keeps brush edges soft while mid-tone fills go opaque.\n"
+     "Driven by assets/flux/post.py --tier mark."),
 ]
 
 
@@ -50,14 +66,16 @@ def object_info(class_type: str) -> dict:
 def sample_values(overrides: dict) -> dict:
     rows = {r["id"]: r for r in gen.load_rows()}
     canvas = json.loads((HERE / "canvas.json").read_text(encoding="utf-8"))
-    style = " ".join(gen.STYLE_CORE.read_text(encoding="utf-8").split())
-    negative = " ".join(gen.NEGATIVE.read_text(encoding="utf-8").split())
+    style_path = HERE / overrides["style"] if "style" in overrides else gen.STYLE_CORE
+    style = " ".join(style_path.read_text(encoding="utf-8").split())
+    negative = " ".join(gen.negative_for(style_path).read_text(encoding="utf-8").split())
     preset = gen.MODEL_PRESETS[overrides.get("model", "klein")]
-    values = {"unet": preset["unet"], "prompt": gen.assemble(rows[SAMPLE_ID], canvas, style),
+    row = rows[overrides.get("id", SAMPLE_ID)]
+    values = {"unet": preset["unet"], "prompt": gen.assemble(row, canvas, style),
               "negative": negative, "guidance": preset["guidance"], "cfg": preset["cfg"],
               "steps": preset["steps"], "width": 1024, "height": 1024, "seed": 954159497,
               "prefix": "flux/manual/test", "image": "example.png"}
-    values.update({k: v for k, v in overrides.items() if k != "model"})
+    values.update({k: v for k, v in overrides.items() if k not in ("model", "style", "id")})
     return values
 
 
@@ -137,7 +155,7 @@ def to_ui(api: dict, note: str, title: str) -> dict:
     ui_nodes.append({"id": len(nodes_api) + 1, "type": "Note", "pos": [-260, 80 + 230 * len(columns.get(0, []))],
                      "size": [380, 200], "flags": {}, "order": len(ui_nodes), "mode": 0, "inputs": [], "outputs": [],
                      "properties": {"Node name for S&R": "Note"},
-                     "widgets_values": [f"{title}\n{note}\nPrompt = STYLE_CORE.txt + subject + [C-...] canvas, never typed by hand."]})
+                     "widgets_values": [f"{title}\n{note}\nPrompt = a STYLE_CORE file + subject + [C-...] canvas, never typed by hand."]})
     width = 420 * (max(depth.values()) + 1) + 60
     return {"id": str(uuid.uuid4()), "revision": 0, "last_node_id": len(ui_nodes), "last_link_id": len(links),
             "nodes": ui_nodes, "links": links,

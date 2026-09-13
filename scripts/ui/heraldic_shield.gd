@@ -8,7 +8,7 @@ var color: Color = UiPalette.GOLD
 var initial := ""
 
 func _init() -> void:
-	custom_minimum_size = Vector2(22, 26)
+	custom_minimum_size = Vector2(44, 52)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func set_arms(kingdom_color: Color, letter: String) -> void:
@@ -19,10 +19,10 @@ func set_arms(kingdom_color: Color, letter: String) -> void:
 func _draw() -> void:
 	var w := size.x
 	var h := size.y
-	var shape := PackedVector2Array([Vector2(1, 1), Vector2(w - 1, 1), Vector2(w - 1, h * 0.55),
-		Vector2(w / 2.0, h - 1), Vector2(1, h * 0.55)])
+	var shape := PackedVector2Array([Vector2(2, 2), Vector2(w - 2, 2), Vector2(w - 2, h * 0.55),
+		Vector2(w / 2.0, h - 2), Vector2(2, h * 0.55)])
 	draw_colored_polygon(shape, color)
-	draw_polyline(shape + PackedVector2Array([shape[0]]), UiPalette.GOLD, 1.0, true)
+	draw_polyline(shape + PackedVector2Array([shape[0]]), UiPalette.GOLD, 2.0, true)
 	var font := UiPalette.display_font()
 	if font == null or initial == "":
 		return

@@ -27,13 +27,6 @@ halcesham_waterfall,Halcesham Waterfall,waterfalls,1166.1,278.54,The cascades of
 clifordge_battlefield,Clifordge Battlefield,battlefields,1619.96,362.38,"A historical battle of the Watchian War. Date: October 16, 1155 Titlan Era."
 castford_battlefield,Castford Battlefield,battlefields,1731.77,311.2,"A historical battle of the Yeoroughian Campaign. Date: July 25, 1518 Titlan Era."
 ateston_battlefield,Ateston Battlefield,battlefields,904.89,597.25,"A historical battle of the Stotresian War. Date: June 2, 1390 Titlan Era."
-dungeon,Dungeon,dungeons,1153.9,592.9,"<div>Undiscovered dungeon. See <a href=""https://watabou.github.io/one-page-dungeon/?seed=9541594973331"" target=""_blank"">One page dungeon</a></div><iframe style=""pointer-events: none;"" src=""https://watabou.github.io/one-page-dungeon/?seed=9541594973331"" sandbox=""allow-scripts allow-same-origin""></iframe>"
-dungeon_2,Dungeon,dungeons,1640.5,384.2,"<div>Undiscovered dungeon. See <a href=""https://watabou.github.io/one-page-dungeon/?seed=9541594971779"" target=""_blank"">One page dungeon</a></div><iframe style=""pointer-events: none;"" src=""https://watabou.github.io/one-page-dungeon/?seed=9541594971779"" sandbox=""allow-scripts allow-same-origin""></iframe>"
-dungeon_3,Dungeon,dungeons,1700.9,797.6,"<div>Undiscovered dungeon. See <a href=""https://watabou.github.io/one-page-dungeon/?seed=9541594974735"" target=""_blank"">One page dungeon</a></div><iframe style=""pointer-events: none;"" src=""https://watabou.github.io/one-page-dungeon/?seed=9541594974735"" sandbox=""allow-scripts allow-same-origin""></iframe>"
-sealister_monster,Sealister Monster,lake-monsters,1322.39,368.61,"Locals say a relic monster of 15 m long inhabits Sealister Lake. Truth or lie, folks are afraid to fish in the lake."
-totford_monster,Totford Monster,sea-monsters,436.5,411.63,Old sailors tell stories of a gigantic sea monster inhabiting these dangerous waters. Rumors say it can be 22 m long.
-lexeters_monster,Lexeters Monster,hill-monsters,839.56,575.98,Rumors speak of a golden Monster who inhabits Lexeters hills and steals cattle at night.
-waling_vampire,Waling Vampire,hill-monsters,1019.59,512.74,Journeying folk speak of a giant Vampire who inhabits Waling hills and prefers eating children.
 binelis_forest,Binelis Forest,sacred-forests,1473.68,628.5,A forest sacred to local Old Manch Pantheon.
 barden_forest,Barden Forest,sacred-forests,1645.52,345.1,A forest sacred to local Old Manch Pantheon.
 wivermouth_pinery,Wivermouth Pinery,sacred-pineries,1917.38,782.46,A pinery sacred to local Manch Religion.
@@ -62,4 +55,3 @@ mercenaries_of_cokerewen,Mercenaries of Cokerewen,encounters,1053.22,694.94,Merc
 cultists_of_preshamber,Cultists of Preshamber,encounters,1112.41,638.54,Cultists gather in secret in the grassland of Preshamber lands.
 mercenaries_of_boshead,Mercenaries of Boshead,encounters,1493,361.23,Mercenaries ride through in the savanna of Boshead lands.
 a_pilgrim_of_kingraford,A pilgrim of Kingraford,encounters,1531.15,456.03,A pilgrim walks the road in the tropical seasonal forest of Kingraford lands.
-the_party,The Party,party,657.5,664.12,Current location of the adventuring party.

@@ -39,18 +39,22 @@ SERVER = "http://127.0.0.1:8188"
 
 # Prompt library §0.3: where each ID prefix is filed.
 CHAPTER_DIR = {
-    "C": "characters", "E": "expressions", "P": "expressions", "M": "map",
-    "T": "terrain", "I": "icons", "W": "tactical", "V": "events", "U": "ui",
+    "C": "characters", "K": "cast", "E": "expressions", "P": "expressions", "M": "map",
+    "T": "terrain", "I": "icons", "D": "decor", "G": "goods", "W": "tactical",
+    "V": "events", "U": "ui",
 }
 # Table-driven chapters carry their canvas per chapter (§5, §6, §7, §9);
 # E/P rows are fragments layered onto a character, not assets on their own.
-TABLE_CANVAS = {"T": "C-TILE", "I": "C-ICON", "W": "C-SYMBOL", "U": "C-ICON", "E": "", "P": ""}
+TABLE_CANVAS = {"T": "C-TILE", "I": "C-ICON", "D": "C-MAPMARK", "G": "C-MAPMARK",
+                "W": "C-SYMBOL",
+                "U": "C-UIPIECE", "E": "", "P": ""}
 # Prompt library §10.7 target sizes per canvas, generated at Flux's native
 # 1024-class resolution (icons and tiles are downscaled afterwards).
 CANVAS_SIZE = {
     "C-PORTRAIT": (1024, 1024), "C-BUST": (1024, 1024), "C-FULL": (1024, 1536),
     "C-ICON": (1024, 1024), "C-TILE": (1024, 1024), "C-MAP": (1536, 1024),
-    "C-SCENE": (1536, 1024), "C-SYMBOL": (1024, 1024),
+    "C-SCENE": (1536, 1024), "C-SYMBOL": (1024, 1024), "C-MAPMARK": (1024, 1024),
+    "C-UIPIECE": (1024, 1024), "C-UIWIDE": (1536, 512), "C-FRAME": (1792, 1008),
 }
 # One preset per model: which template graph to fill and the sampler values
 # the prompt library recommends (§1.5). schnell is a 4-step distilled Flux.1
@@ -146,6 +150,16 @@ def assemble(row: dict, canvas: dict[str, str], style: str, small: bool = False,
     return f"{style}, {subject}, {canvas[row['canvas']]}"
 
 
+def negative_for(style_path: Path) -> Path:
+    """The negative list that belongs to a style core. A non-default style may
+    ship its own: STYLE_CORE_map_sepia.txt pairs with NEGATIVE_map_sepia.txt.
+    It has to — the default list bans sepia and aged paper, which is exactly
+    what the map-symbol style asks for (library appendix B)."""
+    suffix = style_path.stem.replace("STYLE_CORE", "", 1).lstrip("_")
+    paired = style_path.with_name(f"NEGATIVE_{suffix}.txt") if suffix else NEGATIVE
+    return paired if paired.exists() else NEGATIVE
+
+
 def slug(title: str, subject: str) -> str:
     """The English half of a headed title, else the subject's first words
     (table rows are titled in Chinese only)."""
@@ -215,7 +229,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--build-csv", action="store_true", help="re-parse the prompt library into prompts.csv")
     ap.add_argument("--ids", default="", help="comma-separated IDs, e.g. C-01,T-01")
-    ap.add_argument("--chapter", default="", help="one chapter letter: C V M T I W U")
+    ap.add_argument("--chapter", default="", help="one chapter letter: C V M T I D W U")
     ap.add_argument("--limit", type=int, default=0, help="stop after N entries")
     ap.add_argument("--variants", type=int, default=1, help="seeds per entry (tiles want 4-6)")
     ap.add_argument("--seed", type=int, default=954159497, help="base seed; variant i uses seed + i")
@@ -227,7 +241,10 @@ def main() -> int:
     ap.add_argument("--canvas", default="", help="override the canvas fragment, e.g. C-FULL or C-BUST for characters")
     ap.add_argument("--pose", default="", help="P-xx pose fragment appended to the subject (full-body tier)")
     ap.add_argument("--expression", default="", help="E-xx expression fragment appended to the subject (bust tier)")
-    ap.add_argument("--style-file", default="", help="use another STYLE_CORE file (A/B tests), e.g. STYLE_CORE_v1_antique.txt")
+    ap.add_argument("--style-file", default="", help="use another STYLE_CORE file (A/B tests), e.g. STYLE_CORE_map_sepia.txt")
+    ap.add_argument("--negative-file", default="", help="override the negative list; by default the one paired with --style-file")
+    ap.add_argument("--res", type=int, default=0,
+                    help="sample resolution: scale the canvas so its longer side is N px (e.g. 512), keeping the aspect")
     ap.add_argument("--dry-run", action="store_true", help="print prompts, queue nothing")
     ap.add_argument("--timeout", type=float, default=900.0, help="seconds to wait per image")
     args = ap.parse_args()
@@ -250,6 +267,7 @@ def main() -> int:
             fragments.append(frag["subject"])
     style_path = (HERE / args.style_file) if args.style_file else STYLE_CORE
     style = " ".join(style_path.read_text(encoding="utf-8").split())
+    negative_path = (HERE / args.negative_file) if args.negative_file else negative_for(style_path)
     wanted = [s.strip().upper() for s in args.ids.split(",") if s.strip()]
     if wanted:
         rows = [r for r in rows if r["id"] in wanted]
@@ -268,6 +286,14 @@ def main() -> int:
         for r in rows:
             r["canvas"] = code
             r["width"], r["height"] = CANVAS_SIZE[code]
+    if args.res:
+        # Sample passes run small and cheap. Both sides stay multiples of 16
+        # so the VAE is happy, and the aspect the canvas asked for survives.
+        for r in rows:
+            w, h = int(r["width"]), int(r["height"])
+            k = float(args.res) / float(max(w, h))
+            r["width"] = max(128, int(round(w * k / 16.0)) * 16)
+            r["height"] = max(128, int(round(h * k / 16.0)) * 16)
     if args.limit:
         rows = rows[: args.limit]
     if not rows:
@@ -282,8 +308,9 @@ def main() -> int:
     if args.cfg:
         preset["cfg"] = args.cfg
     template = json.loads((HERE / preset["template"]).read_text(encoding="utf-8"))
-    negative = " ".join(NEGATIVE.read_text(encoding="utf-8").split())
+    negative = " ".join(negative_path.read_text(encoding="utf-8").split())
     uses_negative = "negative" in template.get("_slots", {})
+    print(f"style {style_path.name}  negative {negative_path.name}")
     print(f"model {preset['unet']}  template {preset['template']}  steps {preset['steps']}  "
           f"{'cfg ' + str(preset['cfg']) if uses_negative else 'guidance ' + str(preset['guidance'])}  "
           f"{len(rows)} entries x {args.variants} variant(s)")
@@ -301,6 +328,8 @@ def main() -> int:
                     tag += f"_{code.lower()}"
             if args.style_file:
                 tag += "_" + Path(args.style_file).stem.replace("STYLE_CORE_", "").lower()
+            if args.res:
+                tag += "_r%d" % args.res
             name = f"{r['id']}_{slug(r['title'], r['subject'])}{tag}_{args.model}_s{seed}"
             prefix = f"flux/{r['dir']}/{name}"
             if args.dry_run:

@@ -17,12 +17,14 @@ extends RefCounted
 ## same offsets as a starting state and call `apply` whenever the slot
 ## changes. Stateless.
 
-const MARGIN := 4.0
-const GAP := 4.0
-const LEFT_WIDTH := 120.0
-const RIGHT_WIDTH := 150.0
-const HANDLE_LENGTH := 96.0
-const HANDLE_THICKNESS := 14.0
+const MARGIN := 8.0
+const GAP := 8.0
+const LEFT_WIDTH := 240.0
+## The council and dialogue column. 300 left the talk a narrow strip once the
+## transcript went back to a readable size (owner 2026-09-13).
+const RIGHT_WIDTH := 400.0
+const HANDLE_LENGTH := 192.0
+const HANDLE_THICKNESS := 28.0
 
 ## Room the bottom chrome needs: the news strip and the tab bar.
 static func bottom_inset() -> float:
@@ -52,7 +54,7 @@ static func make_handle(text: String) -> Button:
 	b.name = "CouncilHandle"
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_size_override("font_size", 7)
+	UiPalette.style_tab(b, 14)
 	b.size = Vector2(HANDLE_LENGTH, HANDLE_THICKNESS)
 	b.pivot_offset = Vector2.ZERO
 	b.rotation = -PI / 2.0

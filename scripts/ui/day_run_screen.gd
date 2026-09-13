@@ -23,11 +23,11 @@ func _ready() -> void:
 	add_child(bg)
 	var map_panel := PanelContainer.new()
 	map_panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 2))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4))
 	map_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	map_panel.offset_left = 110.0
-	map_panel.offset_top = 28.0
-	map_panel.offset_right = -150.0
+	map_panel.offset_left = 220.0
+	map_panel.offset_top = 56.0
+	map_panel.offset_right = -300.0
 	map_panel.offset_bottom = -(NewsTicker.STRIP_HEIGHT + BottomBar.BAR_HEIGHT + 8.0)
 	add_child(map_panel)
 	# Live world map, same as court/conversation (user ruling 2026-09-03).

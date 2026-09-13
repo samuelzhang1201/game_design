@@ -24,7 +24,7 @@ extends Control
 ## conversation stage uses it instead of the 4x-scaled chip. The 48x48 chip
 ## above is still what council/court screens show.
 
-const PORTRAIT_SIZE := Vector2(48, 48)
+const PORTRAIT_SIZE := Vector2(96, 96)
 const SCENE_DIR := "res://scenes/characters/"
 const BASE_SCENE := SCENE_DIR + "character_portrait.tscn"
 const PNG_DIR := "res://assets/portraits/"
@@ -117,7 +117,7 @@ func _build_badge_and_tooltip() -> void:
 		var badge := Label.new()
 		badge.name = "Gen_Badge"
 		badge.text = str(c.opinion)
-		badge.add_theme_font_size_override("font_size", 12)
+		badge.add_theme_font_size_override("font_size", 24)
 		badge.add_theme_color_override("font_color",
 			UiPalette.POSITIVE if c.opinion >= 0 else UiPalette.NEGATIVE)
 		badge.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)

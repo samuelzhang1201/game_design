@@ -21,6 +21,7 @@ static var _mesh_cache: Dictionary = {}
 ## swaps packs must not keep drawing the old world.
 static func invalidate() -> void:
 	_mesh_cache.clear()
+	forget_heat()
 
 static func is_water(cell: Dictionary) -> bool:
 	return String(cell.get("water", "")) != ""
@@ -39,6 +40,19 @@ static func cell_center(repo: DataRepository, cell: Dictionary) -> Vector2:
 	var sum := Vector2.ZERO
 	for id in ids:
 		sum += repo.vertices[id] as Vector2
+	return sum / float(ids.size())
+
+## How far the cell reaches from its hub, on average: the mean distance from
+## the centre to its own vertices. Used to scatter a clump of symbols INSIDE
+## a cell rather than stacking them on its centre point.
+static func cell_radius(repo: DataRepository, cell: Dictionary) -> float:
+	var ids: PackedInt32Array = cell["vertex_ids"]
+	if ids.is_empty():
+		return 0.0
+	var here := cell_center(repo, cell)
+	var sum := 0.0
+	for id in ids:
+		sum += here.distance_to(repo.vertices[id] as Vector2)
 	return sum / float(ids.size())
 
 ## The uphill vector: sum over LAND neighbours of (h_n - h_c) * unit(p_n - p_c),
@@ -125,11 +139,13 @@ static func _ring_color(touching: Array, colors: Dictionary, cells: Dictionary,
 ## The mesh arrays in native map coordinates: per cell (in id order) one
 ## centre vertex then one ring vertex per polygon vertex, and a triangle
 ## (centre, ring[i], ring[i + 1]) per edge.
-static func build(repo: DataRepository) -> Dictionary:
+## `tint` overrides how a cell is coloured (the HEIGHTS view passes a height
+## ramp); the blending, fanning and indexing are the same either way.
+static func build(repo: DataRepository, tint: Callable = Callable()) -> Dictionary:
 	var ids := _sorted_ids(repo)
 	var colors: Dictionary = {}
 	for id in ids:
-		colors[id] = cell_color(repo, repo.cells[id])
+		colors[id] = tint.call(repo, repo.cells[id]) if tint.is_valid() else cell_color(repo, repo.cells[id])
 	var touching := vertex_cells(repo)
 	# map_terrain_blend 1: ring vertices average the cells around them, so
 	# tints flow across cell edges (a soft, painterly land). 0: every cell is
@@ -177,3 +193,61 @@ static func shared_mesh(repo: DataRepository) -> ArrayMesh:
 	if not _mesh_cache.has(key):
 		_mesh_cache[key] = to_mesh(build(repo))
 	return _mesh_cache[key]
+
+
+## --- The HEIGHTS view (owner request 2026-09-13) ------------------------
+## Contour lines read badly on this sheet, so the relief is a HEAT MAP: land
+## ramped through the heat_N stops of data/terrain_palette.csv by where its
+## height falls between sea level and the pack's own summit. Water keeps its
+## normal colour, so the coastline still tells you where the land starts.
+static var _heat_cache: Dictionary = {}
+static var _summit_cache: Dictionary = {}
+
+static func forget_heat() -> void:
+	_heat_cache.clear()
+	_summit_cache.clear()
+
+## The pack's highest land cell — the top of the ramp. Nothing is assumed
+## about the scale: a flat map ramps across its own flat range.
+static func summit(repo: DataRepository) -> float:
+	var key := repo.get_instance_id()
+	if not _summit_cache.has(key):
+		var top := SEA_LEVEL
+		for id: int in repo.cells:
+			var cell: Dictionary = repo.cells[id]
+			if not is_water(cell):
+				top = maxf(top, float(cell["height"]))
+		_summit_cache[key] = maxf(top, SEA_LEVEL + 1.0)
+	return _summit_cache[key]
+
+## The heat_N stops in order. Empty when the palette carries none.
+static func heat_stops(repo: DataRepository) -> Array:
+	var out: Array = []
+	var n := 1
+	while repo.terrain_palette.has("heat_%d" % n):
+		out.append(palette_color(repo, "heat_%d" % n, FALLBACK))
+		n += 1
+	return out
+
+## Where a cell sits on that ramp. Water is left as it is.
+static func heat_color(repo: DataRepository, cell: Dictionary) -> Color:
+	if is_water(cell):
+		return cell_color(repo, cell)
+	var stops := heat_stops(repo)
+	if stops.is_empty():
+		return cell_color(repo, cell)
+	if stops.size() == 1:
+		return stops[0]
+	var t := clampf((float(cell["height"]) - SEA_LEVEL)
+		/ (summit(repo) - SEA_LEVEL), 0.0, 1.0)
+	var span := t * float(stops.size() - 1)
+	var i := mini(int(span), stops.size() - 2)
+	return (stops[i] as Color).lerp(stops[i + 1], span - float(i))
+
+static func heat_mesh(repo: DataRepository) -> ArrayMesh:
+	if repo.cells.is_empty():
+		return null
+	var key := repo.get_instance_id()
+	if not _heat_cache.has(key):
+		_heat_cache[key] = to_mesh(build(repo, Callable(MapTerrain, "heat_color")))
+	return _heat_cache[key]

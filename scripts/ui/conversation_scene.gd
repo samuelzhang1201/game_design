@@ -39,6 +39,8 @@ var _dossier_up := false
 var _military: MilitaryPanel
 ## Whether the MILITARY tab is lit (GameRoot owns the state; this follows).
 var _military_view := false
+var _economy: EconomyPanel
+var _economy_view := false
 var _continue_btn: Button
 var _panel: PanelContainer
 var _scroll: ScrollContainer
@@ -60,7 +62,7 @@ const REPLY_REVEAL_STEP := 0.3
 func _ready() -> void:
 	%Bg.color = UiPalette.BG_SCREEN
 	%MapPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 2))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4))
 	# The live world map fills the middle zone on every gameplay screen
 	# (user ruling 2026-09-03); portraits and dialogue draw above it.
 	_world_map = WorldMapView.create()
@@ -75,7 +77,7 @@ func _ready() -> void:
 	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
 	_handle.pressed.connect(enter_council)
 	add_child(_handle)
-	%LeaveButton.add_theme_font_size_override("font_size", 7)
+	%LeaveButton.add_theme_font_size_override("font_size", 14)
 	%LeaveButton.pressed.connect(leave_council)
 	# %MinisterPanel is the LEFT column — the facts column now (owner ruling
 	# 2026-09-10); the minister it was named for moved to the right, over
@@ -89,6 +91,7 @@ func _ready() -> void:
 	# The rest of the facts column (owner ruling 2026-09-10): the host while
 	# the military layer is on, and the card of whatever was clicked.
 	_military = MilitaryPanel.attach(%MinisterPanel.get_node("MVBox"))
+	_economy = EconomyPanel.attach(%MinisterPanel.get_node("MVBox"))
 	_detail = MapDetailPanel.new()
 	_detail.name = "DetailPanel"
 	%MinisterPanel.get_node("MVBox").add_child(_detail)
@@ -99,42 +102,49 @@ func _ready() -> void:
 	_detail.visibility_changed.connect(_refresh_left)
 	_show_dossier(false)
 	%MinisterPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8))
-	UiPalette.style_header(%MinisterName, 9)
-	UiPalette.style_header(%MinisterTitle, 7, UiPalette.TEXT_MUTED)
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16))
+	UiPalette.style_header(%MinisterName, 18)
+	UiPalette.style_header(%MinisterTitle, 14, UiPalette.TEXT_MUTED)
 	%OpinionBar.add_theme_stylebox_override("background", UiPalette.bar_bg())
-	%OpinionValue.add_theme_font_size_override("font_size", 8)
+	%OpinionValue.add_theme_font_size_override("font_size", 16)
 	_build_skill_rows()
 	_build_dossier_tabs()
-	UiPalette.style_header(%ToolsTitle, 7, UiPalette.TEXT_MUTED)
-	%TiesText.add_theme_font_size_override("font_size", 8)
+	UiPalette.style_header(%ToolsTitle, 14, UiPalette.TEXT_MUTED)
+	%TiesText.add_theme_font_size_override("font_size", 16)
 	%PopupPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.GOLD, 1, 12))
-	UiPalette.style_header(%PopupTitle, 9)
+		UiPalette.panel_style(UiPalette.GOLD, 2, 24))
+	UiPalette.style_header(%PopupTitle, 18)
 	%PopupArt.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 6))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 12))
 	%PopupArtText.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
-	%PopupArtText.add_theme_font_size_override("font_size", 8)
+	%PopupArtText.add_theme_font_size_override("font_size", 16)
 	var popup_dim: ColorRect = %EventPopup.get_node("PopupDim")
 	popup_dim.color = UiPalette.DIM_OVERLAY
 	_panel = %DialoguePanel
 	_panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 20))
 	_name_label = %NameLabel
-	UiPalette.style_header(_name_label, 8)
+	UiPalette.style_header(_name_label, 16)
 	_scroll = %DialogueScroll
 	_text_label = %TextLabel
-	# User request 2026-08-31: the conversation reads smaller — compact body
-	# text keeps the box from dominating the column.
-	_text_label.add_theme_font_size_override("normal_font_size", 8)
-	_text_label.add_theme_font_size_override("italics_font_size", 8)
+	# Owner report 2026-09-13: the 8 px transcript (user request 2026-08-31)
+	# was unreadable and drew in the default white. The size and the ink now
+	# come from the theme (UiPalette.build_theme); set here too so the box
+	# reads right even under a screen that was built without that theme.
+	_text_label.add_theme_font_size_override("normal_font_size", UiPalette.DIALOGUE_FONT_SIZE)
+	_text_label.add_theme_font_size_override("bold_font_size", UiPalette.DIALOGUE_FONT_SIZE)
+	_text_label.add_theme_font_size_override("italics_font_size", UiPalette.DIALOGUE_FONT_SIZE)
+	_text_label.add_theme_color_override("default_color", UiPalette.TEXT_SOFT)
+	# The event popup is a dialogue box as well: room for a paragraph.
+	%PopupArt.custom_minimum_size = Vector2(440, 120)
+	%PopupScroll.custom_minimum_size = Vector2(560, 240)
 	_replies_box = %RepliesBox
 	_free_text = %FreeText
 	_free_text.max_length = int(Game.data.bal("prompt_max_chars"))
 	_free_text.text_submitted.connect(_on_free_text)
 	_continue_btn = %ContinueButton
 	_continue_btn.pressed.connect(_on_continue)
-	%MoveButton.add_theme_font_size_override("font_size", 8)
+	%MoveButton.add_theme_font_size_override("font_size", 16)
 	%MoveButton.pressed.connect(_open_move_popup)
 	Game.state_changed.connect(func() -> void:
 		if is_inside_tree():
@@ -168,7 +178,10 @@ func _refresh_left() -> void:
 	_detail.visible = card
 	_country_panel.visible = country
 	_military.visible = _military_view and not card and not country
-	_dashboard.visible = not (card or country or _military_view)
+	# The economy column yields to the military one: two layers can be lit at
+	# once, but the column holds one set of facts.
+	_economy.visible = _economy_view and not _military_view and not card and not country
+	_dashboard.visible = not (card or country or _military_view or _economy_view)
 
 ## The MILITARY tab (GameRoot): the host takes the left column while the
 ## regiments are drawn on the map.
@@ -177,6 +190,18 @@ func set_military_view(on: bool) -> void:
 	if on:
 		_military.refresh()
 	_refresh_left()
+
+## The ECONOMY tab (GameRoot): what the realm makes takes the left column
+## while the same categories are washed across the map.
+func set_economy_view(on: bool) -> void:
+	_economy_view = on
+	if on:
+		_economy.refresh()
+	_refresh_left()
+
+## Test seam.
+func economy_panel() -> EconomyPanel:
+	return _economy
 
 ## Columns, map, and whichever panel holds the right slot (ScreenLayout).
 func _layout() -> void:
@@ -258,8 +283,10 @@ func _render_history() -> void:
 
 ## Deterministic per-speaker name color: fixed for You/Herald, hashed into a
 ## small palette for everyone else so each courtier keeps one color.
-const SPEAKER_PALETTE := [Color("6fbf73"), Color("c05b5b"), Color("8b6bb5"),
-	Color("5b8fc0"), Color("bf8f5f"), Color("6bb5ab"), Color("b56b9d")]
+## Picked to read on the bright panel (2026-09-13); the old light tints were
+## made for a near-black box.
+const SPEAKER_PALETTE := [Color("2f8a3e"), Color("c43c3c"), Color("6d42c8"),
+	Color("2468c0"), Color("b86e0e"), Color("11806f"), Color("b3367f")]
 
 static func _speaker_color(speaker: String) -> Color:
 	if speaker == "You":
@@ -276,7 +303,7 @@ func _build_dossier_tabs() -> void:
 		btn.name = "Tab" + TAB_NAMES[i]
 		btn.text = TAB_NAMES[i]
 		btn.focus_mode = Control.FOCUS_NONE
-		btn.add_theme_font_size_override("font_size", 7)
+		UiPalette.style_tab(btn, 14)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.pressed.connect(_select_tab.bind(i))
 		%TabsRow.add_child(btn)
@@ -361,7 +388,7 @@ func _refresh_location() -> void:
 		btn.name = "Occupant_" + String(id)
 		# 20px keeps a full council on ONE row of the right column; two rows
 		# cost the talk a fifth of its height (owner ruling 2026-09-10).
-		btn.custom_minimum_size = Vector2(20, 20)
+		btn.custom_minimum_size = Vector2(40, 40)
 		btn.focus_mode = Control.FOCUS_NONE
 		btn.tooltip_text = Game.state.characters[id].display_name
 		btn.toggle_mode = true
@@ -520,17 +547,17 @@ var _skill_values: Dictionary = {}
 func _build_skill_rows() -> void:
 	for sk in CharacterFactory.SKILLS:
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 4)
+		row.add_theme_constant_override("separation", 8)
 		var name_l := Label.new()
 		name_l.text = String(UiPalette.SKILL_NAMES[sk]).to_upper()
 		name_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-		name_l.add_theme_font_size_override("font_size", 8)
-		name_l.custom_minimum_size = Vector2(42, 0)
+		name_l.add_theme_font_size_override("font_size", 16)
+		name_l.custom_minimum_size = Vector2(84, 0)
 		row.add_child(name_l)
 		var bar := ProgressBar.new()
 		bar.max_value = UiPalette.SKILL_MAX
 		bar.show_percentage = false
-		bar.custom_minimum_size = Vector2(0, 5)
+		bar.custom_minimum_size = Vector2(0, 10)
 		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		bar.add_theme_stylebox_override("background", UiPalette.bar_bg())
@@ -539,7 +566,7 @@ func _build_skill_rows() -> void:
 		row.add_child(bar)
 		_skill_bars[sk] = bar
 		var value_l := Label.new()
-		value_l.add_theme_font_size_override("font_size", 9)
+		value_l.add_theme_font_size_override("font_size", 18)
 		value_l.add_theme_color_override("font_color", UiPalette.SKILL_COLORS[sk])
 		row.add_child(value_l)
 		_skill_values[sk] = value_l
@@ -765,7 +792,7 @@ func _show_speaker(b: Dictionary) -> void:
 	for t in c.traits:
 		var chip := Label.new()
 		chip.text = String(Game.data.traits[t]["label"]) if Game.data.traits.has(t) else String(t)
-		chip.add_theme_font_size_override("font_size", 9)
+		chip.add_theme_font_size_override("font_size", 18)
 		chip.add_theme_color_override("font_color", UiPalette.GOLD)
 		chip.add_theme_stylebox_override("normal", UiPalette.chip_style())
 		%TraitChips.add_child(chip)
@@ -780,7 +807,7 @@ func _show_speaker(b: Dictionary) -> void:
 func _tool_row(label_text: String, color: Color) -> Label:
 	var l := Label.new()
 	l.text = label_text
-	l.add_theme_font_size_override("font_size", 7)
+	l.add_theme_font_size_override("font_size", 14)
 	l.add_theme_color_override("font_color", color)
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	return l

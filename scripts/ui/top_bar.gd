@@ -15,16 +15,16 @@ var _icons: Dictionary = {}
 
 func _ready() -> void:
 	%Bar.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 6))
-	UiPalette.style_header(%DateLabel, 9)
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24))
+	UiPalette.style_header(%DateLabel, 18)
 	%EventChip.add_theme_stylebox_override("normal", UiPalette.chip_style())
-	UiPalette.style_header(%EventChip, 7)
-	%MenuButton.add_theme_font_size_override("font_size", 8)
+	UiPalette.style_header(%EventChip, 14)
+	%MenuButton.add_theme_font_size_override("font_size", 16)
 	%MenuButton.pressed.connect(func() -> void: Game.menu_requested.emit())
-	%FlagLabel.add_theme_font_size_override("font_size", 10)
+	%FlagLabel.add_theme_font_size_override("font_size", 20)
 	for m in ORDER:
 		var cell := HBoxContainer.new()
-		cell.add_theme_constant_override("separation", 3)
+		cell.add_theme_constant_override("separation", 6)
 		# A glyph with a floating tooltip instead of a word (user request
 		# 2026-09-09); the value keeps the same test seam as before.
 		var icon := ResourceIcon.create(m)
@@ -32,11 +32,11 @@ func _ready() -> void:
 		cell.add_child(icon)
 		_icons[m] = icon
 		var value_l := Label.new()
-		value_l.add_theme_font_size_override("font_size", 9)
+		value_l.add_theme_font_size_override("font_size", 18)
 		cell.add_child(value_l)
 		_value_labels[m] = value_l
 		var delta_l := Label.new()
-		delta_l.add_theme_font_size_override("font_size", 7)
+		delta_l.add_theme_font_size_override("font_size", 14)
 		cell.add_child(delta_l)
 		_delta_labels[m] = delta_l
 		%MetricsRow.add_child(cell)

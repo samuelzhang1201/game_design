@@ -69,11 +69,101 @@ static func owner_state_id(repo: DataRepository, state: GameState, pid: int,
 	var king: Dictionary = repo.kingdoms.get(owner, {})
 	return int(king["state_id"]) if not king.is_empty() else fallback
 
+## --- Terrain symbols (owner request 2026-09-12) -------------------------
+## The land tells its biome through SYMBOLS — a wood, a hill, a stand of
+## reeds — rather than through its tint, the way a drawn map does. Which
+## symbol and how thickly is data/terrain_art.csv: the FIRST row whose height
+## band or biome matches a cell wins, so "a summit is a summit whatever grows
+## on it" comes before the biome rules.
+##
+## Placement is derived from the cell id, never from RNG: the same pack always
+## decorates the same way, across runs and across saves, with nothing to seed
+## and nothing to store.
+static var _decor_cache: Dictionary = {}
+
+static func forget_decor() -> void:
+	_decor_cache.clear()
+
+## A stable float in [0, 1) for an integer — an integer hash, masked to 32
+## bits at every step so it cannot drift with the word size.
+static func hash01(n: int) -> float:
+	var x := (n * 0x9E3779B1) & 0xFFFFFFFF
+	x = ((x ^ (x >> 15)) * 0x85EBCA6B) & 0xFFFFFFFF
+	x = ((x ^ (x >> 13)) * 0xC2B2AE35) & 0xFFFFFFFF
+	x = x ^ (x >> 16)
+	return float(x & 0xFFFFFF) / 16777216.0
+
+## The terrain_art row a land cell takes, or {} for bare ground.
+## Rows carry `clump` (how many marks) and `spread` (how far across the cell
+## they scatter, as a fraction of its radius) alongside the size.
+static func decor_row(repo: DataRepository, cell: Dictionary) -> Dictionary:
+	var h := float(cell["height"])
+	var biome := int(cell["biome_id"])
+	for row: Dictionary in repo.terrain_art:
+		var lo := String(row["min_height"])
+		var hi := String(row["max_height"])
+		if lo != "" and h < float(lo):
+			continue
+		if hi != "" and h >= float(hi):
+			continue
+		var want := String(row["biome_id"])
+		if want != "" and int(want) != biome:
+			continue
+		if lo == "" and hi == "" and want == "":
+			continue  # a row that matches everything is a mistake, not a rule
+		return row
+	return {}
+
+## Every terrain symbol on the sheet: [{pos, texture, height}] in native
+## coordinates, sorted back to front so the nearer one overlaps. Cached per
+## repository — the pack's cells never move.
+static func terrain_decor(repo: DataRepository) -> Array:
+	var key := repo.get_instance_id()
+	if _decor_cache.has(key):
+		return _decor_cache[key]
+	var out: Array = []
+	for id: int in repo.cells:
+		var cell: Dictionary = repo.cells[id]
+		if MapTerrain.is_water(cell):
+			continue
+		var row := decor_row(repo, cell)
+		if row.is_empty():
+			continue
+		if hash01(id) >= float(row["density"]) * repo.bal("map_decor_density"):
+			continue
+		# One tree is not a forest and one peak is not a range (owner request
+		# 2026-09-12): a chosen cell gets `clump` SMALL marks scattered inside
+		# it, not one big one on its centre. Offsets and per-mark size come
+		# from the cell id, so the wood stands in the same place every run.
+		var centre := MapTerrain.cell_center(repo, cell)
+		var reach := MapTerrain.cell_radius(repo, cell) * float(row["spread"])
+		var base := float(row["height_px"]) * repo.bal("map_decor_scale")
+		for k in maxi(int(row["clump"]), 1):
+			var a := hash01(id * 7919 + k * 104729) * TAU
+			# sqrt spreads the marks evenly over the disc instead of bunching
+			# them in the middle.
+			var d := sqrt(hash01(id * 31337 + k * 15485863)) * reach
+			out.append({
+				"pos": centre + Vector2(cos(a), sin(a)) * d,
+				"texture": String(row["texture"]),
+				"height": base * (0.8 + 0.4 * hash01(id * 2654435761 + k * 40503))})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return (a["pos"] as Vector2).y < (b["pos"] as Vector2).y)
+	_decor_cache[key] = out
+	return out
+
+## Whether the pack's points of interest are on the sheet at all. Owner
+## ruling 2026-09-12: they are off — the map is for realms and settlements —
+## and this is the ONE place that decides, so a click can never pick
+## something that is not drawn.
+static func markers_visible(repo: DataRepository) -> bool:
+	return repo.bal("map_show_markers") > 0.0
+
 static func nearest_pin(repo: DataRepository, native: Vector2, radius: float,
 		min_burg_pop: int) -> Dictionary:
 	var best := {}
 	var best_d := radius
-	for code: String in repo.markers:
+	for code: String in (repo.markers if markers_visible(repo) else {}):
 		var m: Dictionary = repo.markers[code]
 		var d := native.distance_to(Vector2(float(m["x"]), float(m["y"])))
 		if d <= best_d:
@@ -624,6 +714,28 @@ static func regiment_arm(repo: DataRepository, regiment: Dictionary) -> String:
 		if n > most:
 			most = n
 			best = unit
+	return best
+
+## The regiment the crown's own banner flies over: the LAND regiment quartered
+## nearest the kingdom's capital (ties to the earlier code). "" when the
+## kingdom has no land regiment or no capital. The military layer draws it
+## with a crown.
+static func royal_regiment(repo: DataRepository, kingdom_code: String) -> String:
+	var realm: Dictionary = repo.kingdoms.get(kingdom_code, {})
+	var capital: Dictionary = repo.burgs.get(String(realm.get("capital_burg", "")), {})
+	if capital.is_empty():
+		return ""
+	var seat := Vector2(float(capital["x"]), float(capital["y"]))
+	var best := ""
+	var best_d := INF
+	for r: Dictionary in regiments_of(repo, kingdom_code):
+		if String(r.get("is_naval", "0")) == "1":
+			continue
+		var code := String(r["regiment_code"])
+		var d := seat.distance_squared_to(Vector2(float(r["x"]), float(r["y"])))
+		if d < best_d or (d == best_d and code < best):
+			best_d = d
+			best = code
 	return best
 
 static func _describe_army(repo: DataRepository, code: String) -> Dictionary:

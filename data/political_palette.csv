@@ -1,14 +1,33 @@
 key,color,notes
-player_realm,#4E7A6B,the crown's realm: verdigris — own faction (library 1.4)
-raider_realm,#7A2E2B,the raiders in the west: oxblood — hostile (library 1.4)
-neighbor_realm,#C8973F,the neighbour in the north: yellow ochre (library 1.4)
-empire_realm,#5A6B7C,the empire: slate blue (library 1.4)
-other_1,#9C5A34,burnt sienna — unbound kingdoms take these in state order
-other_2,#8A7360,raw umber lightened
-other_3,#B4A27A,yellow ochre desaturated
-other_4,#7E8B98,slate blue lightened
-other_5,#7FA093,verdigris lightened
-other_6,#A35A55,oxblood lightened
-state_border,#5B4636,solid kingdom borders: raw umber
-province_line,#EDE3CE,dashed province seams in the province view: cream laid (drawn translucent)
-hover_border,#C8973F,the hovered kingdom's outline: yellow ochre
+player_realm,#58B4E3,"the crown's realm: a clear sky blue. Every realm wears its own wash (owner ruling 2026-09-12); brightened from the muted CK3-style washes to a modern bright set (owner request 2026-09-13: the old palette read dim)"
+raider_realm,#EE7B6E,the raiders in the west: coral — hostile
+neighbor_realm,#F2C04C,the neighbour in the north: sunflower
+empire_realm,#9D8BE0,the empire: lavender
+other_1,#7CCB8B,green — unbound kingdoms take these in state order
+other_2,#F09A5B,orange
+other_3,#B98FE0,violet
+other_4,#6FA8E8,cornflower
+other_5,#B5D35A,lime
+other_6,#F28CA0,pink
+other_7,#4FC1B6,teal
+other_8,#D5A6E3,orchid
+other_9,#A7D86F,spring green
+other_10,#6C8EE0,royal blue
+other_11,#F0B37E,apricot
+other_12,#8F92E6,periwinkle
+other_13,#6DD1A8,mint
+other_14,#EE8FB0,rose
+state_border,#2E3A46,"the dark half of the kingdom border: a THIN chequered ribbon (owner request 2026-09-12), alternating with state_border_light along the wash's edge. map_state_border_dash_px 0 would make it a plain solid line"
+state_border_light,#FFFFFF,the pale half of that ribbon; unused while the border is solid
+province_line,#5F6F80,thin dashed province seams: slate so it reads over any wash
+hover_border,#F2A93B,the hovered kingdom's outline: amber
+manor_pale,#FFFFFF,"economy view: the white a poor manor's colour fades toward (map_manor_pale)"
+manor_rich,#7A4A22,"economy view: the brown a rich manor deepens toward, and a working manor's fill (map_manor_deep, map_manor_rich)"
+manor_line,#55616E,economy view: the manor edges
+manor_badge,#2E3A46,economy view: the dark disc behind a produce icon
+manor_label_bg,#FFFFFF,economy view: the units chip under a badge
+manor_label_ink,#1E2530,economy view: the chip's number and every badge's outline
+army_outline,#1E2530,military layer: the outline round a regiment's counter
+army_icon_bg,#2E3A46,military layer: the square behind a counter's glyph
+army_glyph,#FFFFFF,military layer: the glyph itself
+army_count_ink,#FFFFFF,military layer: the headcount in the realm-coloured box

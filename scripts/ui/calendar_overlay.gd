@@ -51,42 +51,42 @@ func _ready() -> void:
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	_panel.custom_minimum_size = Vector2(250, 0)
+	_panel.custom_minimum_size = Vector2(500, 0)
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 5)
+	col.add_theme_constant_override("separation", 10)
 	_panel.add_child(col)
 	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 6)
+	header.add_theme_constant_override("separation", 12)
 	col.add_child(header)
 	var title := Label.new()
 	title.text = "ROYAL CHRONICLE"
-	UiPalette.style_header(title, 8)
+	UiPalette.style_header(title, 16)
 	header.add_child(title)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
 	var live := Label.new()
 	live.text = "LIVE"
-	live.add_theme_font_size_override("font_size", 8)
+	live.add_theme_font_size_override("font_size", 16)
 	live.add_theme_color_override("font_color", UiPalette.POSITIVE)
 	header.add_child(live)
 	date_label = Label.new()
-	UiPalette.style_header(date_label, 9)
+	UiPalette.style_header(date_label, 18)
 	col.add_child(date_label)
 	season_label = Label.new()
 	season_label.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	season_label.add_theme_font_size_override("font_size", 9)
+	season_label.add_theme_font_size_override("font_size", 18)
 	col.add_child(season_label)
 	news_box = VBoxContainer.new()
-	news_box.add_theme_constant_override("separation", 4)
+	news_box.add_theme_constant_override("separation", 8)
 	col.add_child(news_box)
 	var hint := Label.new()
 	hint.text = "click to skip"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
-	hint.add_theme_font_size_override("font_size", 9)
+	hint.add_theme_font_size_override("font_size", 18)
 	col.add_child(hint)
 	_timer = Timer.new()
 	_timer.timeout.connect(_advance_day)
@@ -142,16 +142,16 @@ func _add_news(text: String) -> void:
 		return
 	Game.publish_news("%s — %s" % [Calendar.date_string(_tick, _day), text])
 	var entry := VBoxContainer.new()
-	entry.add_theme_constant_override("separation", 1)
+	entry.add_theme_constant_override("separation", 2)
 	var date := Label.new()
 	date.text = Calendar.date_string(_tick, _day).to_upper()
-	UiPalette.style_header(date, 8)
+	UiPalette.style_header(date, 16)
 	entry.add_child(date)
 	var l := Label.new()
 	l.text = text
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
-	l.add_theme_font_size_override("font_size", 10)
+	l.add_theme_font_size_override("font_size", 20)
 	entry.add_child(l)
 	news_box.add_child(entry)
 

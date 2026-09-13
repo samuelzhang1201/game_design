@@ -8,7 +8,7 @@ extends Control
 ## Overlay owned by GameRoot (like the pause menu); toggled by the TopBar's
 ## RELATIONS button via Game.relations_requested.
 
-const NODE_SIZE := Vector2(48, 48)
+const NODE_SIZE := Vector2(96, 96)
 const CATEGORY_ORDER := ["player", "family", "relative", "council", "officer",
 	"noble", "celebrity", "enemy", "foreign"]
 const KIN_TYPES := ["kin", "marriage"]
@@ -36,17 +36,17 @@ func _ready() -> void:
 	title.text = "THE WEB OF THE COURT"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	title.offset_top = 10.0
-	UiPalette.style_header(title, 10)
+	title.offset_top = 20.0
+	UiPalette.style_header(title, 20)
 	add_child(title)
 	var close := Button.new()
 	close.name = "CloseButton"
 	close.text = "CLOSE"
 	close.focus_mode = Control.FOCUS_NONE
 	close.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	close.offset_left = -70.0
-	close.offset_top = 8.0
-	close.offset_right = -10.0
+	close.offset_left = -140.0
+	close.offset_top = 16.0
+	close.offset_right = -20.0
 	close.pressed.connect(func() -> void: hide())
 	add_child(close)
 	resized.connect(_layout)
@@ -76,7 +76,7 @@ func refresh() -> void:
 		_nodes[id] = chip
 		var name_l := Label.new()
 		name_l.text = Game.state.characters[id].display_name
-		name_l.add_theme_font_size_override("font_size", 8)
+		name_l.add_theme_font_size_override("font_size", 16)
 		name_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 		_canvas.add_child(name_l)
 		_labels[id] = name_l
@@ -102,8 +102,8 @@ func _layout() -> void:
 	if _nodes.is_empty():
 		return
 	var center := size / 2.0
-	var radius := Vector2(maxf(size.x / 2.0 - 90.0, 100.0),
-		maxf(size.y / 2.0 - 70.0, 80.0))
+	var radius := Vector2(maxf(size.x / 2.0 - 180.0, 200.0),
+		maxf(size.y / 2.0 - 140.0, 160.0))
 	var ring: Array = []
 	for id in _ordered_ids():
 		if not _nodes.has(id):
@@ -120,8 +120,8 @@ func _layout() -> void:
 func _place(id: String, pos: Vector2) -> void:
 	_nodes[id].position = pos - NODE_SIZE / 2.0
 	var name_l: Label = _labels[id]
-	name_l.position = Vector2(pos.x - 60.0, pos.y + NODE_SIZE.y / 2.0 + 1.0)
-	name_l.custom_minimum_size.x = 120.0
+	name_l.position = Vector2(pos.x - 120.0, pos.y + NODE_SIZE.y / 2.0 + 2.0)
+	name_l.custom_minimum_size.x = 240.0
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 ## Kin/marriage edges draw gold; everything else by sentiment sign. Width and
@@ -144,4 +144,4 @@ func _draw_edges() -> void:
 		color.a = clampf(0.25 + absf(s) / 130.0, 0.25, 0.95)
 		var side := 1.0 if e["from"] < e["to"] else -1.0
 		var offset := (b - a).orthogonal().normalized() * 2.0 * side
-		_canvas.draw_line(a + offset, b + offset, color, 1.0 + absf(s) / 40.0, true)
+		_canvas.draw_line(a + offset, b + offset, color, 2.0 + absf(s) / 20.0, true)

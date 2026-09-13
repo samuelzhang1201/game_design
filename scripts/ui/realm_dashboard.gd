@@ -25,26 +25,26 @@ static func attach(column: BoxContainer) -> RealmDashboard:
 
 func _init() -> void:
 	name = "RealmDashboard"
-	add_theme_constant_override("separation", 3)
+	add_theme_constant_override("separation", 6)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	_title = Label.new()
 	_title.name = "Title"
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiPalette.style_header(_title, 8)
+	UiPalette.style_header(_title, 16)
 	add_child(_title)
 	add_child(HSeparator.new())
 	var grid := GridContainer.new()
 	grid.name = "Resources"
 	grid.columns = 4
-	grid.add_theme_constant_override("h_separation", 3)
-	grid.add_theme_constant_override("v_separation", 2)
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 4)
 	add_child(grid)
 	for key in RESOURCES:
 		grid.add_child(ResourceIcon.create(key))
 		var v := Label.new()
 		v.name = "Value_" + key
-		v.add_theme_font_size_override("font_size", 8)
-		v.custom_minimum_size = Vector2(38, 0)
+		v.add_theme_font_size_override("font_size", 16)
+		v.custom_minimum_size = Vector2(76, 0)
 		grid.add_child(v)
 		_resource_values[key] = v
 	_temper = _section("TEMPER OF THE REALM", BarChart.new(), "Temper")
@@ -55,7 +55,7 @@ func _init() -> void:
 func _section(heading: String, chart: Control, chart_name: String) -> Control:
 	var h := Label.new()
 	h.text = heading
-	UiPalette.style_header(h, 7, UiPalette.TEXT_MUTED)
+	UiPalette.style_header(h, 14, UiPalette.TEXT_MUTED)
 	add_child(h)
 	chart.name = chart_name
 	chart.size_flags_horizontal = Control.SIZE_EXPAND_FILL

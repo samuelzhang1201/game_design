@@ -13,7 +13,7 @@ extends VBoxContainer
 ## Content is MapObjects.describe's kingdom entry, so this renders exactly
 ## what the click-through card would, and follows live ownership.
 
-const SWATCH := 6.0
+const SWATCH := 12.0
 
 var _title: Label
 var _rows: VBoxContainer
@@ -27,11 +27,11 @@ var _shown_version := -1
 
 func _init() -> void:
 	name = "CountryPanel"
-	add_theme_constant_override("separation", 3)
+	add_theme_constant_override("separation", 6)
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 4)
+	head.add_theme_constant_override("separation", 8)
 	add_child(head)
 	_swatch = ColorRect.new()
 	_swatch.custom_minimum_size = Vector2(SWATCH, SWATCH)
@@ -39,14 +39,14 @@ func _init() -> void:
 	head.add_child(_swatch)
 	_title = Label.new()
 	_title.name = "Title"
-	UiPalette.style_header(_title, 8)
+	UiPalette.style_header(_title, 16)
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_title)
 	add_child(HSeparator.new())
 	_rows = VBoxContainer.new()
 	_rows.name = "Rows"
-	_rows.add_theme_constant_override("separation", 1)
+	_rows.add_theme_constant_override("separation", 2)
 	add_child(_rows)
 
 
@@ -83,7 +83,7 @@ func show_country(kingdom_code: String) -> void:
 	for line: String in entry["lines"]:
 		var l := Label.new()
 		l.text = line
-		l.add_theme_font_size_override("font_size", 7)
+		l.add_theme_font_size_override("font_size", 14)
 		l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_rows.add_child(l)

@@ -7,7 +7,7 @@ extends Control
 ## day-run rolls) and never touches sim state or the campaign RNG. Crawl
 ## speed is balance data (news_ticker_speed), not a hardcoded constant.
 
-const STRIP_HEIGHT := 16.0
+const STRIP_HEIGHT := 32.0
 const MAX_ITEMS := 12
 const SEPARATOR := "      +      "
 
@@ -31,7 +31,7 @@ func _ready() -> void:
 	add_child(bg)
 	_label = Label.new()
 	_label.name = "CrawlLabel"
-	_label.add_theme_font_size_override("font_size", 8)
+	_label.add_theme_font_size_override("font_size", 16)
 	_label.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
 	_label.position = Vector2(size.x, 3)
 	add_child(_label)

@@ -1,0 +1,15 @@
+colour, full colour illustration, blue, green, red, saturated, polychrome,
+multicoloured, colour photograph, digital airbrush, glossy, smooth gradient,
+glow, neon, 3d render, cgi, isometric game asset, plastic, photograph,
+photorealistic, anime, manga, cel shading, comic book, thick uniform vector
+outline, heavy black ink, blotchy solid black fill, oil painting, watercolour
+bleed, faint thin outline, pale washed-out line, low contrast, light grey
+line, outline the same tone as the fill, perspective grid, vanishing point,
+three-quarter overhead view, aerial view, landscape scene, horizon, sky,
+background scenery, parchment background, paper texture background, ground
+plate, base plinth, grass base, ground line, baseline, horizontal line
+beneath the object, drop shadow, contact shadow, shadow cast on the ground,
+decorative frame, border, vignette, printed typography, lettering, labels,
+numerals, watermark, signature, logo, modern buildings, chimney stacks of
+brick, plate glass, gothic plate armour before 1400, cluttered illegible
+detail

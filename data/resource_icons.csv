@@ -30,5 +30,10 @@ tag_clothing,Cloth,cloth,Cloth and clothing.
 tag_fuel,Fuel,flame,Fuel.
 tag_currency,Coin,coin,Coin.
 tag_supply,Supply,horseshoe,Beasts and supplies.
+tag_preservative,Preserving,market,"Salt and what keeps food from spoiling."
+tag_ritual,Ritual,cross,Goods for the church and its rites.
+tag_storage,Storage,wall,Barrels and what goods are kept in.
+tag_aquatic,Fishing,anchor,What the waters give.
+tag_educational,Learning,tower,Books and the tools of learning.
 wealth,Wealth,coin,What the town produces in a season.
 town_treasury,Treasury,coin,Coin in the town's own chest.

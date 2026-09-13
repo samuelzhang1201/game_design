@@ -6,10 +6,14 @@ extends Control
 ## rows = [{label, value, color, text, icon?}]; the bar runs to max_value. A
 ## row with an icon key draws that glyph before its label.
 
-const ROW_H := 9.0
-const LABEL_W := 34.0
-const VALUE_W := 22.0
-const BAR_H := 4.0
+const ROW_H := 18.0
+## Widened 68 -> 92 with the label 14 -> 13 px for Cinzel Decorative
+## (2026-09-13), which runs far wider than EB Garamond did and cut
+## "Legitimacy" to "Legitima".
+const LABEL_W := 92.0
+const LABEL_PX := 13
+const VALUE_W := 44.0
+const BAR_H := 8.0
 
 var rows: Array = []
 var max_value := 1.0
@@ -31,18 +35,18 @@ func _draw() -> void:
 		var lx := 0.0
 		var glyph := String(r.get("icon", ""))
 		if glyph != "":
-			ResourceIcon.draw_glyph(self, glyph, Vector2(4.0, y + ROW_H / 2.0), 7.0,
+			ResourceIcon.draw_glyph(self, glyph, Vector2(8.0, y + ROW_H / 2.0), 14.0,
 				r.get("color", UiPalette.GOLD))
-			lx = 9.0
-		draw_string(font, Vector2(lx, y + 7.0), String(r.get("label", "")),
-			HORIZONTAL_ALIGNMENT_LEFT, LABEL_W - lx, 7, UiPalette.TEXT_MUTED)
-		var x0 := LABEL_W + 2.0
-		var x1 := maxf(size.x - VALUE_W, x0 + 4.0)
+			lx = 18.0
+		draw_string(font, Vector2(lx, y + 14.0), String(r.get("label", "")),
+			HORIZONTAL_ALIGNMENT_LEFT, LABEL_W - lx, LABEL_PX, UiPalette.TEXT_MUTED)
+		var x0 := LABEL_W + 4.0
+		var x1 := maxf(size.x - VALUE_W, x0 + 8.0)
 		var yb := y + (ROW_H - BAR_H) / 2.0
 		draw_rect(Rect2(x0, yb, x1 - x0, BAR_H), track)
 		var frac := clampf(float(r.get("value", 0.0)) / max_value, 0.0, 1.0)
 		if frac > 0.0:
 			draw_rect(Rect2(x0, yb, (x1 - x0) * frac, BAR_H), r.get("color", UiPalette.GOLD))
 		var text := String(r.get("text", str(int(float(r.get("value", 0.0))))))
-		draw_string(font, Vector2(x1 + 2.0, y + 7.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 7,
+		draw_string(font, Vector2(x1 + 4.0, y + 14.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14,
 			UiPalette.TEXT_SOFT)

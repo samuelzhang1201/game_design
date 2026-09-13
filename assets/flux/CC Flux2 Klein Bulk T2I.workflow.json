@@ -1,5 +1,5 @@
 {
- "id": "821b8c2e-4797-48b1-be57-5e68d4be9f6e",
+ "id": "c34e958c-cee6-45b8-87c4-aa6a7dee6ccb",
  "revision": 0,
  "last_node_id": 14,
  "last_link_id": 13,
@@ -519,7 +519,7 @@
     "Node name for S&R": "Note"
    },
    "widgets_values": [
-    "CC Flux2 Klein Bulk T2I\nFlux.2 [klein] 4B base (Apache 2.0, commercial OK). Undistilled: CFG works and the\nnegative box carries NEGATIVE.txt. 20 steps, cfg 4.0. Never klein 9B (non-commercial).\nBulk: python3 assets/flux/generate.py --model klein --ids C-01 --canvas C-FULL --pose P-05\nPrompt = STYLE_CORE.txt + subject + [C-...] canvas, never typed by hand."
+    "CC Flux2 Klein Bulk T2I\nFlux.2 [klein] 4B base (Apache 2.0, commercial OK). Undistilled: CFG works and the\nnegative box carries NEGATIVE.txt. 20 steps, cfg 4.0. Never klein 9B (non-commercial).\nBulk: python3 assets/flux/generate.py --model klein --ids C-01 --canvas C-FULL --pose P-05\nPrompt = a STYLE_CORE file + subject + [C-...] canvas, never typed by hand."
    ]
   }
  ],

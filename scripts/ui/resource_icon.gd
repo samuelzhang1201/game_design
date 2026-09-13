@@ -5,7 +5,7 @@ extends Control
 ## are simple strokes in the UI's gold so they match the chrome at any scale;
 ## which glyph and what the tooltip says come from data/resource_icons.csv.
 
-const SIDE := 9.0
+const SIDE := 18.0
 
 var key := ""
 var color: Color = UiPalette.GOLD
@@ -94,6 +94,13 @@ static func draw_glyph(ci: CanvasItem, glyph_name: String, c: Vector2, s: float,
 			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-0.4, -4.2) * u, c + Vector2(3.4, 1.4) * u,
 				c + Vector2(-0.4, 1.4) * u]), tint)
 			ci.draw_line(c + Vector2(-3.8, 2.6) * u, c + Vector2(3.8, 2.6) * u, tint, 1.2 * u, true)
+		"waves":
+			for dy in [-2.2, 0.8, 3.8]:
+				var pts := PackedVector2Array()
+				for i in 9:
+					var x := -4.0 + float(i)
+					pts.append(c + Vector2(x, dy + 0.9 * sin(x * PI / 2.0)) * u)
+				ci.draw_polyline(pts, tint, 1.0 * u, true)
 		"wall":
 			ci.draw_rect(Rect2(c + Vector2(-4, -1) * u, Vector2(8, 5) * u), tint)
 			for dx in [-4.0, -1.0, 2.0]:

@@ -39,14 +39,14 @@ func _ready() -> void:
 func _build_menu() -> void:
 	_menu_col = VBoxContainer.new()
 	_menu_col.name = "MenuCol"
-	_menu_col.add_theme_constant_override("separation", 6)
+	_menu_col.add_theme_constant_override("separation", 12)
 	_menu_col.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_menu_col.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_menu_col.grow_vertical = Control.GROW_DIRECTION_BOTH
 	add_child(_menu_col)
 	var title := Label.new()
 	title.text = "Crown and Council"
-	UiPalette.style_header(title, 26)
+	UiPalette.style_header(title, 52)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_menu_col.add_child(title)
 	_menu_col.add_child(_menu_button("Start Game", _open_setup))
@@ -54,14 +54,14 @@ func _build_menu() -> void:
 	_menu_col.add_child(_menu_button("Quit", func() -> void: get_tree().quit()))
 	_status = Label.new()
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status.add_theme_font_size_override("font_size", 9)
+	_status.add_theme_font_size_override("font_size", 18)
 	_status.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	_menu_col.add_child(_status)
 	var hint := Label.new()
 	hint.text = "Space: take the throne with the founding name"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
-	hint.add_theme_font_size_override("font_size", 8)
+	hint.add_theme_font_size_override("font_size", 16)
 	_menu_col.add_child(hint)
 
 func _menu_button(label: String, handler: Callable) -> Button:
@@ -78,19 +78,19 @@ func _build_setup_panel() -> void:
 	_setup_panel.name = "SetupPanel"
 	_setup_panel.visible = false
 	_setup_panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.GOLD, 1, 12))
+		UiPalette.panel_style(UiPalette.GOLD, 2, 24))
 	_setup_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_setup_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_setup_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	_setup_panel.custom_minimum_size = Vector2(190, 0)
+	_setup_panel.custom_minimum_size = Vector2(380, 0)
 	add_child(_setup_panel)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 5)
+	col.add_theme_constant_override("separation", 10)
 	_setup_panel.add_child(col)
 	var title := Label.new()
 	title.text = "FOUND YOUR DYNASTY"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_header(title, 9)
+	UiPalette.style_header(title, 18)
 	col.add_child(title)
 	col.add_child(HSeparator.new())
 	col.add_child(_field_label("Given name"))
@@ -108,7 +108,7 @@ func _build_setup_panel() -> void:
 	col.add_child(_field_label("Family flag"))
 	var flags := HBoxContainer.new()
 	flags.name = "FlagRow"
-	flags.add_theme_constant_override("separation", 4)
+	flags.add_theme_constant_override("separation", 8)
 	col.add_child(flags)
 	for i in UiPalette.FLAGS.size():
 		var f: Dictionary = UiPalette.FLAGS[i]
@@ -116,9 +116,9 @@ func _build_setup_panel() -> void:
 		btn.name = "Flag_" + String(f["id"])
 		btn.text = String(f["symbol"])
 		btn.focus_mode = Control.FOCUS_NONE
-		btn.custom_minimum_size = Vector2(24, 24)
+		btn.custom_minimum_size = Vector2(48, 48)
 		btn.add_theme_color_override("font_color", f["color"])
-		btn.add_theme_font_size_override("font_size", 14)
+		btn.add_theme_font_size_override("font_size", 28)
 		btn.pressed.connect(_select_flag.bind(i))
 		flags.add_child(btn)
 		_flag_buttons.append(btn)
@@ -134,7 +134,7 @@ func _build_setup_panel() -> void:
 func _field_label(text: String) -> Label:
 	var l := Label.new()
 	l.text = text.to_upper()
-	l.add_theme_font_size_override("font_size", 8)
+	l.add_theme_font_size_override("font_size", 16)
 	l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	return l
 

@@ -129,11 +129,17 @@ func test_provinces_tab_toggles_the_maps_province_view_across_screens() -> void:
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
 	await wait_frames(2)
-	assert_false(r.province_view(), "off by default")
+	# ON from the first frame since 2026-09-12, so the tab's first press is
+	# the one that turns it OFF.
+	assert_true(r.province_view(), "on by default")
+	r.bottom_bar().button("PROVINCES").pressed.emit()
+	await wait_frames(1)
+	assert_false(r.province_view())
+	assert_false(r.current_screen.world_map().show_provinces, "the court's map follows the tab")
+	assert_false(r.bottom_bar().button("PROVINCES").button_pressed, "the tab goes dark")
 	r.bottom_bar().button("PROVINCES").pressed.emit()
 	await wait_frames(1)
 	assert_true(r.province_view())
-	assert_true(r.current_screen.world_map().show_provinces, "the court's map follows the tab")
 	assert_true(r.bottom_bar().button("PROVINCES").button_pressed, "the tab stays lit")
 	r._switch_to(GameRoot.State.CONVERSATION)
 	await wait_frames(2)
@@ -141,3 +147,22 @@ func test_provinces_tab_toggles_the_maps_province_view_across_screens() -> void:
 	r.current_screen.world_map().toggle_provinces()
 	assert_false(r.province_view(), "the map's P key reports back to the root")
 	assert_false(r.bottom_bar().button("PROVINCES").button_pressed)
+
+## The HEIGHTS tab (owner request 2026-09-12): the relief is a layer you ask
+## for, so it starts off and the tab drives it the same way PROVINCES does.
+func test_heights_tab_toggles_the_maps_height_ramp() -> void:
+	Game.start_campaign(42)
+	Game.next_tick()
+	var r := _root()
+	await wait_frames(2)
+	r._switch_to(GameRoot.State.COURT)
+	r.current_screen.enter_court(null)
+	await wait_frames(2)
+	assert_false(r.height_view(), "off by default")
+	assert_null(r.current_screen.world_map().heat_mesh(), "and nothing built")
+	r.bottom_bar().button("HEIGHTS").pressed.emit()
+	await wait_frames(1)
+	assert_true(r.height_view())
+	assert_true(r.current_screen.world_map().show_heights, "the map follows the tab")
+	assert_not_null(r.current_screen.world_map().heat_mesh(),
+		"the pack's heights give the sheet a ramp to draw")

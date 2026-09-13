@@ -17,13 +17,13 @@
 | [3. 表情与姿态差分](#3-表情与姿态差分-e--p) | `E-01`~`E-16`, `P-01`~`P-12` | 28 |
 | [4. 世界地图底图](#4-世界地图底图-m) | `M-01` ~ `M-14` | 14 |
 | [5. 地形平铺贴图](#5-地形平铺贴图-t) | `T-01` ~ `T-20` | 20 |
-| [6. 地图元素与图标](#6-地图元素与图标-i) | `I-01` ~ `I-46` | 46 |
+| [6. 地图元素与图标](#6-地图元素与图标-i) | `I-01` ~ `I-46`，`D-01` ~ `D-31`（§6.9 手绘装饰件），`G-01` ~ `G-38`（§6.10 经济产物） | 115 |
 | [7. 战术地图元素](#7-战术地图元素-w) | `W-01` ~ `W-38` | 38 |
 | [8. 事件插图](#8-事件插图-v) | `V-01` ~ `V-34` | 34 |
 | [9. UI 框架件](#9-ui-框架件-u) | `U-01` ~ `U-18` | 18 |
 | [10. 生产流程与质检](#10-生产流程与质检) | 工作流、排期、checklist | — |
 
-**总计 253 个资源对象。**
+**总计 284 个资源对象。**
 
 ---
 
@@ -122,6 +122,10 @@ drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 | `[C-MAP]` | 地图底图 | `top-down orthographic cartographic view, north up, no perspective, even lighting, antique map plate` |
 | `[C-SCENE]` | 事件插图 | `narrative illustration, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 3:2 horizontal` |
 | `[C-SYMBOL]` | 战术符号 | `flat cartographic symbol, drawn as if inked onto a military campaign map, isolated on transparent background, no scene, no perspective, 1:1 square` |
+| `[C-UIPIECE]` | UI 部件（`U-`，2026-09-12） | `a single user interface piece drawn flat and face-on with no perspective, filling the frame edge to edge with only a thin even margin all round, straight true horizontal and vertical edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 1:1 square` |
+| `[C-UIWIDE]` | UI 长条部件（`U-03`/`U-08`/`U-13`/`U-17`，用 `--canvas C-UIWIDE`） | `a single wide user interface strip drawn flat and face-on with no perspective, running the full width of the frame with only a thin even margin at each end, straight true horizontal edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 3:1 horizontal` |
+| `[C-FRAME]` | 满屏装饰画框（`U-19`，2026-09-12） | `a full-bleed decorative screen border, the ornament confined to a band around the four edges and the corners, the entire middle two thirds left as plain unmarked cream vellum with absolutely nothing drawn on it, symmetrical left to right, no text, 16:9 horizontal` |
+| `[C-MAPMARK]` | 手绘地图符号（`D-`，2026-09-12） | `single map symbol drawn in flat side elevation, pure white background, no parchment, nothing at all beneath the object, no ground line, no ground plate, no cast shadow, centred with generous margin, 1:1 square` |
 
 ### 1.4 调色板（写进美术规范，别让 AI 自由发挥）
 
@@ -809,6 +813,230 @@ leaning in confidentially, eyebrows raised, a broad genuinely warm salesman's sm
 
 ---
 
+## 2.6 本作角色 `K-`（2026-09-13 新增）
+
+> §2 的 `C-01`~`C-55` 是**泛型原型**（年迈的国王、算计的王后…），而游戏里实际存在的是 `data/founding_council.csv` 和 `data/roles.csv` 里这 **21 个有名有姓的人**。头像格和档案栏要的是后者，所以这里一人一条。
+>
+> **每条都有 `**外貌**` 行**（只写长相和衣着，不写道具）——这是 `[C-BUST]` 和 `[C-FULL]` 两档的必要条件，没有它脚本会退回用带道具的主 prompt，效果差。
+>
+> **角色 id** 那一行把条目接回游戏：`data/cast_art.csv` 按它把 `K-` 编号映射到 `assets/portraits/<id>.png`。
+>
+> 年龄、性格、身份都取自那两张 CSV，不是编的——例如马尔文领主七十一岁且 `sickly`，所以外貌写的是佝偻、消瘦、穿着不合时令的厚皮袍。
+>
+> **不出现任何王国名**（架构约束 5）：外邦人物只写"来自西部丘陵"「来自东方宫廷」这类说法。
+
+#### `K-01` 国王阿尔德里克 · King Aldric Valorin
+
+**角色 id**：`you`
+
+**外貌**：`a European king of forty, strong-jawed and clean-browed, short dark hair greying at the temples under a plain open gold circlet, a close-trimmed dark beard, wearing a deep blue wool mantle lined with miniver over a long embroidered tunic closed at the throat by a gold brooch, a gilded belt, dark hose and black leather turnshoes`
+
+```
+[S], a European king of forty in his prime, strong-jawed, short dark hair greying at the temples under a plain gold circlet, a close-trimmed beard, wearing a deep blue mantle over an embroidered tunic, one hand resting on the arm of a wooden throne, steady and unhurried, meeting the viewer's eye, [C-PORTRAIT]
+```
+
+#### `K-02` 大法官奥德温·里夫 · Chancellor Aldwin Reeve
+
+**角色 id**：`char_chancellor`
+
+**外貌**：`a European man of fifty-eight, narrow-faced and dry, thinning grey hair cut level at the ears, deep lines from nose to mouth, wearing a long dark green gown of fine wool with wide sleeves and a fur-trimmed collar over a black undertunic, a soft flat cap, and a plain leather belt`
+
+```
+[S], a European chancellor of fifty-eight, narrow-faced, thinning grey hair, wearing a long fur-collared green gown and a soft flat cap, hands folded one over the other at his waist, chin slightly lowered, watching with an appraising half-smile, [C-PORTRAIT]
+```
+
+#### `K-03` 元帅布兰特 · Ser Brandt of Harrow
+
+**角色 id**：`char_marshal`
+
+**外貌**：`a European knight of forty-five, heavy-browed and weather-beaten, short iron-grey hair and a cropped beard, an old white scar through one eyebrow, wearing a padded arming coat of oxblood wool over a mail hauberk, a broad belt with a sword hanger, mail chausses and leather boots`
+
+```
+[S], a European marshal of forty-five, weather-beaten, iron-grey cropped hair and beard, a scar through one eyebrow, in a padded oxblood arming coat over mail, one fist on his belt, shoulders squared, jaw set hard, [C-PORTRAIT]
+```
+
+#### `K-04` 内府总管米蕾拉 · Mirella of the Weighhouse
+
+**角色 id**：`char_steward`
+
+**外貌**：`a European woman of forty-one, square-faced and plain, brown hair drawn back entirely under a white linen coif and wimple, level brows, wearing a practical slate-grey wool gown with tight buttoned sleeves and a broad woven girdle hung with a ring of keys, dark hose and flat leather shoes`
+
+```
+[S], a European stewardess of forty-one, square-faced, hair under a white linen coif, in a slate-grey gown with a girdle of keys, arms folded, looking straight out with a flat unimpressed expression, [C-PORTRAIT]
+```
+
+#### `K-05` 密探首领奎尔 · Quill
+
+**角色 id**：`char_spymaster`
+
+**外貌**：`a wiry European of thirty-seven, sharp-featured and sallow, lank black hair to the jaw, restless dark eyes set close, wearing an unremarkable brown hooded cloak over a close-fitting grey doublet with no badge or ornament of any kind, dark hose and soft quiet shoes`
+
+```
+[S], a wiry European spymaster of thirty-seven, sharp-featured, lank black hair, in a plain brown hooded cloak, half turned away with the hood pushed back, glancing sideways at the viewer without moving his head, [C-PORTRAIT]
+```
+
+#### `K-06` 随军教士奥多神父 · Father Odo
+
+**角色 id**：`char_chaplain`
+
+**外貌**：`a European priest of sixty-three, round-faced and softened by age, a fringe of white hair around a shaved tonsure, heavy pouched eyes, wearing a plain undyed woollen habit belted with a knotted cord, a wooden cross on a leather thong, and worn sandals`
+
+```
+[S], a European priest of sixty-three, round-faced, white fringe around a tonsure, in a plain belted woollen habit with a wooden cross, both hands closed around the cross at his chest, eyes lowered, calm and tired, [C-PORTRAIT]
+```
+
+#### `K-07` 王后维多利亚 · Queen Victoria
+
+**角色 id**：`char_queen`
+
+**外貌**：`a European queen of thirty-six, oval-faced with a high plucked forehead, dark steady eyes, hair entirely concealed under a white linen wimple and barbette with a narrow gold fillet, wearing a close-fitted deep red gown with tight buttoned sleeves, a woven girdle, long skirts and black leather turnshoes`
+
+```
+[S], a European queen of thirty-six, composed, hair under a white wimble and gold fillet, in a close-fitted deep red gown, standing very still with her hands lightly clasped, a faint knowing half-smile that does not reach her eyes, [C-PORTRAIT]
+```
+
+#### `K-08` 公主诺拉 · Princess Nora O-kala
+
+**角色 id**：`char_princess`
+
+**外貌**：`a young European woman of nineteen with warm brown skin, strong straight brows and close-cropped black curls uncovered, an athletic build, wearing a short riding cotehardie of dark green wool cut for movement over hose and calf boots, a narrow belt, and no jewellery but a small gold ring`
+
+```
+[S], a young woman of nineteen with warm brown skin and cropped black curls, athletic, in a short green riding cotehardie and boots, weight on one leg with her chin up, restless and openly impatient, [C-PORTRAIT]
+```
+
+#### `K-09` 托马斯公爵 · Duke Tomas Valorin
+
+**角色 id**：`char_duke_tomas`
+
+**外貌**：`a European nobleman of forty-four, handsome and sharp-boned, dark hair worn to the collar and swept back, a thin moustache, wearing a fashionable parti-coloured cotehardie in black and gold with dagged sleeves, a jewelled belt slung low, parti-coloured hose and pointed leather ankle boots`
+
+```
+[S], a European duke of forty-four, handsome and sharp-boned, dark swept-back hair, in a black-and-gold parti-coloured cotehardie with a jewelled belt, leaning back at ease with one eyebrow raised, entirely pleased with himself, [C-PORTRAIT]
+```
+
+#### `K-10` 伊索尔德夫人 · Lady Ysolde Valorin
+
+**角色 id**：`char_lady_ysolde`
+
+**外貌**：`a European woman of twenty-seven, pretty and soft-featured, fair hair dressed in two coiled braids over the ears under a fine gold net, wearing a pale rose gown of light wool with long trailing sleeves, a jewelled girdle high at the waist, and soft embroidered shoes`
+
+```
+[S], a European lady of twenty-seven, pretty and soft-featured, fair hair in coiled braids under a gold net, in a pale rose gown with trailing sleeves, one hand at her throat, smiling for an audience that is not the viewer, [C-PORTRAIT]
+```
+
+#### `K-11` 海尔上尉 · Captain Hale Fenwick
+
+**角色 id**：`char_captain_hale`
+
+**外貌**：`a European soldier of fifty-two, broad and thickset, close-cropped grey hair, a broken nose and a jaw of stubble, wearing a plain leather brigandine over a russet tunic, a soldier's wide belt, sturdy hose and heavy marching boots`
+
+```
+[S], a European captain of fifty-two, broad and thickset, cropped grey hair and a broken nose, in a plain leather brigandine, standing squarely at rest with his hands behind his back, patient and entirely unimpressed, [C-PORTRAIT]
+```
+
+#### `K-12` 科琳娜夫人 · Lady Corina Ashvale
+
+**角色 id**：`char_lady_corina`
+
+**外貌**：`a European noblewoman of forty-three, fine-boned with a long neck, dark hair smoothed back under a crespine of gold net and a sheer veil, hooded watchful eyes, wearing a deep violet gown with a fitted bodice and a fur-lined surcoat, a slender jewelled girdle`
+
+```
+[S], a European noblewoman of forty-three, fine-boned, dark hair under a gold crespine and veil, in a deep violet gown and fur-lined surcoat, standing three-quarters away and looking back over one shoulder, measuring the viewer, [C-PORTRAIT]
+```
+
+#### `K-13` 埃德加领主 · Lord Edgar Harrow
+
+**角色 id**：`char_lord_edgar`
+
+**外貌**：`a European lord of forty-nine, square and ruddy, thick sandy hair going grey and a full short beard, wearing a heavy russet houppelande with wide fur-lined sleeves over a dark tunic, a broad worked belt, and stout riding boots`
+
+```
+[S], a European lord of forty-nine, square and ruddy, sandy greying hair and a short beard, in a russet fur-lined houppelande, feet planted wide and both thumbs hooked in his belt, blunt and unbothered, [C-PORTRAIT]
+```
+
+#### `K-14` 马尔文领主 · Lord Malvern
+
+**角色 id**：`char_lord_malvern`
+
+**外貌**：`a European lord of seventy-one, gaunt and stooped, sparse white hair over a spotted scalp, sunken eyes and hollow cheeks, wearing a long dark brown furred gown far too heavy for the season, a soft cap, and thick lined shoes`
+
+```
+[S], a European lord of seventy-one, gaunt and stooped, sparse white hair, in a long furred gown too heavy for the season, one hand closed on the head of a walking stick, upright by effort, lucid and unhurried, [C-PORTRAIT]
+```
+
+#### `K-15` 赤足者卡西安 · Cassian the Barefoot
+
+**角色 id**：`char_prophet_cassian`
+
+**外貌**：`a European man of thirty-three, lean and sun-blackened, wild dark hair to the shoulders and an untrimmed beard, burning deep-set eyes, wearing a single coarse undyed woollen robe belted with rope, sleeves pushed back over thin forearms, and bare dirty feet`
+
+```
+[S], a European preacher of thirty-three, lean and sun-blackened, wild dark hair and beard, in a rope-belted undyed robe and bare feet, one arm half raised mid-sentence, eyes fixed on something past the viewer, [C-PORTRAIT]
+```
+
+#### `K-16` 战酋奥斯里克 · Warchief Osric
+
+**角色 id**：`char_king_osric`
+
+**外貌**：`a European warlord of forty-seven from the western hills, huge and thick-necked, long red-brown hair in plaits and a heavy braided beard, pale scarred skin, wearing a wolfskin mantle over a mail shirt, iron arm rings, rough woollen trews and cross-gartered boots`
+
+```
+[S], a European warlord of forty-seven, huge and thick-necked, plaited red-brown hair and a braided beard, in a wolfskin mantle over mail with iron arm rings, filling the frame, chin down and staring flatly out, [C-PORTRAIT]
+```
+
+#### `K-17` 使节佩特拉 · Envoy Petra Kolev
+
+**角色 id**：`char_envoy_petra`
+
+**外貌**：`a European woman of thirty-eight from the eastern courts, olive-skinned and neat-featured, black hair coiled and pinned under a small embroidered cap, wearing a high-collared travelling gown of dark teal wool with fitted sleeves, a short fur-lined mantle clasped at the shoulder, and riding boots`
+
+```
+[S], a European envoy of thirty-eight, olive-skinned and neat, black coiled hair under an embroidered cap, in a dark teal travelling gown and fur-lined mantle, standing straight with her hands quiet in front of her, pleasant and telling nothing, [C-PORTRAIT]
+```
+
+#### `K-18` 王后伊莎博 · Queen Isabeau
+
+**角色 id**：`char_queen_isabeau`
+
+**外貌**：`a European queen of forty-five, handsome and hard-eyed, fair hair drawn severely back under an elaborate horned headdress with a sheer veil, wearing a stiff cloth-of-gold gown with a long trailing train and a jewelled collar at the shoulders`
+
+```
+[S], a European queen of forty-five, handsome and hard-eyed, fair hair under a horned headdress and veil, in a stiff cloth-of-gold gown and jewelled collar, drawn to full height with her hands clasped low, looking down at the viewer, [C-PORTRAIT]
+```
+
+#### `K-19` 皇帝康斯坦斯 · Emperor Constans
+
+**角色 id**：`char_emperor`
+
+**外貌**：`a European young man of twenty-four, pale and slight with a soft unformed face, fine light hair to the jaw and no beard, wearing an enormous jewelled imperial mantle of purple and gold that overwhelms his shoulders, a heavy closed crown, and embroidered shoes`
+
+```
+[S], a European emperor of twenty-four, pale and slight with a soft unformed face, in an enormous jewelled purple mantle and a heavy crown that overwhelm him, sitting very upright, uncertain and trying not to show it, [C-PORTRAIT]
+```
+
+#### `K-20` 乐师科尔文 · Master Corvin Lute
+
+**角色 id**：`char_bard_corvin`
+
+**外貌**：`a European man of thirty-one, lively and good-looking, chestnut hair curling to the collar, a neat moustache, wearing a bright particoloured doublet in blue and saffron with slashed sleeves, a soft feathered cap at an angle, tight hose and pointed shoes`
+
+```
+[S], a European minstrel of thirty-one, lively and good-looking, curling chestnut hair and a feathered cap at an angle, in a blue-and-saffron particoloured doublet, mid-flourish with one hand open, grinning straight at the viewer, [C-PORTRAIT]
+```
+
+#### `K-21` 行会长苔莎 · Guildmaster Tessa Marden
+
+**角色 id**：`char_guildmaster_tessa`
+
+**外貌**：`a European woman of thirty-nine, broad-shouldered and capable, brown hair plaited and pinned under a simple white linen cap, strong hands, wearing a sober dark brown gown of good cloth with a fur-trimmed collar, a guild badge at the breast, and a heavy purse on a plain girdle`
+
+```
+[S], a European guildmaster of thirty-nine, broad-shouldered and capable, plaited brown hair under a linen cap, in a sober fur-collared brown gown with a guild badge, one hand resting on her purse, direct and businesslike, [C-PORTRAIT]
+```
+
+---
+
 ## 3. 表情与姿态差分 `E-` / `P-`
 
 > **⚠️ 关键规则：表情差分绝对不要重新生成整张图。**
@@ -1118,11 +1346,13 @@ background, no numerals, no text [C-ICON]
 
 ### 6.8 地图标记（兴趣点，2026-09-11 新增）
 
-> 地图包里的标记类型比 6.5/6.6 多（Azgaar 的 markers：encounters、brigands、pirates、monsters、dungeons、statues、necropolises、caves、volcanoes、waterfalls、circuses、jousts、fairs…）。按类别归并成四个通用标记，具体类型到图标的映射在 `data/marker_art.csv`。
+> 地图包里的标记类型比 6.5/6.6 多（Azgaar 的 markers：encounters、brigands、pirates、statues、necropolises、caves、volcanoes、waterfalls、circuses、jousts、fairs…）。具体类型到图标的映射在 `data/marker_art.csv`。
+>
+> **没有怪物、地牢和冒险小队**（owner 裁定 2026-09-12：这是中世纪写实硬核战略）。Azgaar 默认会生成 `hill-monsters` / `sea-monsters` / `lake-monsters` / `dungeons` / `party`，全部不收——`data/marker_types.csv` 列出这个世界承认的类型，导入器丢掉其余的，**所以重新导出地图也带不回来**（2026-09-12 重跑导入器验证：只有 markers.csv 变了，少 8 行，其余表逐字节不变）。同理删掉了 §6.9 的 `D-22 海怪`，`D-16` 从「童话城堡」改成一座真实石堡，`I-43` 从「插着骷髅的匪巢」改成一座普通的匪徒营地。
 
 | ID | 对象 | Prompt 主体 |
 |---|---|---|
-| `I-43` | 危险之地 | `a bandit lair, a dark cave mouth in a rocky outcrop ringed by skulls on stakes, a broken cart and scattered bones before it, ominous and deserted` |
+| `I-43` | 匪患之地 | `an outlaw camp in the woods, a lean-to of branches against a rock outcrop, a dead campfire, a plundered cart tipped on its side and a rope strung between two trees` |
 | `I-44` | 纪念碑与墓地 | `a weathered stone monument, a tall carved cross on a stepped plinth beside a small walled graveyard with leaning headstones and a yew tree` |
 | `I-45` | 自然奇观 | `a natural wonder, a waterfall dropping from a rock ledge into a clear pool beside a cave mouth, mist, ferns and wet stone` |
 | `I-46` | 集会与庆典 | `a fairground gathering, striped canvas tents and pennants around a tilting field with a wooden grandstand and a small crowd` |
@@ -1138,6 +1368,104 @@ background, no numerals, no text [C-ICON]
 | `I-42` | 羊毛 | `a tied fleece of raw cream wool with a pair of iron shears and a wooden drop spindle wound with yarn` |
 
 > **补充资源图标**（同样格式，按需生成）：`铁 — a stack of rough iron blooms and a pair of tongs`；`盐 — a heaped cone of white salt on a coarse cloth with a wooden scoop`；`银 — a small pile of hammered silver pennies and an ingot`；`木材 — a stacked cord of split oak logs with a felling axe`；`战马 — a coiled leather bridle, a curb bit and a horseshoe`；`香料 — three small open sacks of saffron, pepper and cinnamon bark with a brass scale pan`；`毛皮 — a rolled bundle of marten and fox pelts tied with cord`；`蜂蜜与蜡 — a woven straw skep, a honeycomb section and a beeswax candle`。
+
+### 6.9 手绘地图装饰件 `D-`（2026-09-12 新增）
+
+> **这一组不属于 `I-`，风格核也不一样。** owner 2026-09-12 定的方向：地图上的符号走单色深褐的手绘故事书地图风，人物和事件插图继续用 §1.1 的 v2 彩铅风。所以 `D-` 用 `STYLE_CORE_map_sepia.txt`（附录 A 第二段）配 `NEGATIVE_map_sepia.txt`（附录 B 第二段），画幅用 `[C-MAPMARK]`（平侧立面、纯白底），不是 `[C-ICON]` 的正交俯视 3/4 角。
+>
+> **纯白底是硬要求**：白纸经 `assets/flux/sepia_alpha_template.json` 的亮度转 alpha 变成透明，褐色笔触的毛边天然保留半透明。生成时底一旦带羊皮纸色或画框，去底就会连着底一起留下。
+>
+> **自然件要另配一份负面词**（2026-09-12 踩到的坑）：第一批 `D-01`~`D-18` 跑出来，针叶林里长出教堂、山脚杵着城堡、连沼泽和岩堆都带塔楼。原因在风格核自己——它原来写着 `steep exaggerated roofs, tall slender towers and oversized doorways`，那是为聚落写的，套到树和山上模型就把被要求画的塔楼塞进来。风格核里那句已经换成不指定题材的措辞，另外给自然件配了 `NEGATIVE_map_sepia_natural.txt`（在通用负面词前面加禁掉一切建筑），跑 `D-01`~`D-12`、`D-17`~`D-26` 时用 `--negative-file NEGATIVE_map_sepia_natural.txt`；聚落五档 `D-27`~`D-31` 和 `D-13`~`D-16` 本来就是建筑，用通用那份。
+>
+> `D-` 收散布装饰件和聚落五档。桥（`I-34`）、灯塔（`I-38`）、风磨坊（`I-21`）、教堂（`I-12`）这类单体不重复立条目——同一条 `I-` 主体换 `--style-file STYLE_CORE_map_sepia.txt --canvas C-MAPMARK` 重出一张就够用。但**聚落五档不能这么复用**，见下表前的说明。
+
+| ID | 对象 | Prompt 主体 |
+|---|---|---|
+| `D-01` | 针叶树（单株） | `a single conifer drawn as a map symbol, a narrow spire of stacked drooping branch tiers with a short bare trunk, tiny and simple` |
+| `D-02` | 针叶林丛 | `a clump of five conifers of staggered heights standing close together as one map symbol, their crowns overlapping, a suggestion of undergrowth at the base` |
+| `D-03` | 阔叶树（单株） | `a single broadleaf tree drawn as a map symbol, a stout short trunk splitting into two limbs under a wide billowing crown of scalloped foliage clumps, a few exposed roots` |
+| `D-04` | 阔叶树丛 | `a clump of three broadleaf trees of different sizes standing as one map symbol, their rounded crowns overlapping into a single billowing mass` |
+| `D-05` | 枯树 | `a dead tree drawn as a map symbol, a gnarled leafless trunk with a hollow knot and two clawing bare branches, bark peeling, sinister and twisted` |
+| `D-06` | 灌丛与荆棘 | `a low thicket of bramble and scrub drawn as a map symbol, a tangled rounded mass of thin arching stems with small leaves and a few thorns` |
+| `D-07` | 丘陵鼓包 | `a pair of low rolling hills drawn as a map symbol, two overlapping smooth humps with a soft crease between them, hatching only along the lower slope` |
+| `D-08` | 单峰山 | `a single mountain peak drawn as a map symbol, a steep angular cone with a notched ridge line and a shaded facet on one flank, hatched cliffs` |
+| `D-09` | 连绵山脉 | `a short mountain range drawn as one map symbol, four angular peaks of descending height overlapping in a row, each with one shaded flank` |
+| `D-10` | 耕地条田格 | `a block of ploughed strip fields drawn as a map symbol, a rectangle divided into narrow furrowed strips by fine parallel lines, a low hedge along one edge` |
+| `D-11` | 葡萄园架 | `a vineyard plot drawn as a map symbol, rows of low staked vines on a rectangle of sloping ground, each row a line of small tied bundles` |
+| `D-12` | 路牌指路柱 | `a wooden wayside signpost drawn as a map symbol, a leaning post carrying two blank pointing boards, a stone at its foot and a tuft of grass` |
+| `D-13` | 独立农舍 | `a lone thatched cottage drawn as a map symbol, a small steep-roofed cob building with a low door, one shuttered window and a thin line of smoke` |
+| `D-14` | 木架市镇屋 | `a timber-framed town house drawn as a map symbol, a tall narrow building with an exposed frame, a jettied upper floor, a steep tiled gable facing front and small shuttered windows` |
+| `D-15` | 双塔城门楼 | `a town gatehouse drawn as a map symbol, a crenellated stone block pierced by a tall arched gateway, flanked by two round towers with conical caps and a short stub of wall on each side` |
+| `D-16` | 城堡 | `a stone castle drawn as a map symbol, a square keep behind a crenellated curtain wall with round corner towers under conical roofs and a gatehouse, a pennant on the keep, plainly built and defensible` |
+| `D-17` | 岩露头 | `a rocky outcrop drawn as a map symbol, three angular boulders stacked on a low shelf of fractured stone with hatched shadow faces` |
+| `D-18` | 沼泽草丛 | `a patch of marsh drawn as a map symbol, tufts of tall reed and sedge rising from short horizontal water dashes with one standing pool` |
+| `D-19` | 大帆船 | `a three-masted medieval carrack drawn as a map symbol, a high stern castle, bellied square sails, a pennant streaming from the mainmast and a small bow wave` |
+| `D-20` | 小帆船 | `a single-masted cog drawn as a map symbol, a broad clinker hull with a steering oar, one square sail on a yard and a small pennant` |
+| `D-21` | 沉船残骸 | `a shipwreck drawn as a map symbol, a broken hull half sunk at an angle with a snapped mast and torn rigging trailing in the water, exposed ribs` |
+| `D-22` | 鲸 | `a whale drawn as a map symbol, a great smooth-backed whale breaching among short water dashes with a spout above it, the way a real animal is drawn on an old chart — no monster, no tentacles, no teeth` |
+| `D-23` | 礁石小岛 | `a tiny rocky islet drawn as a map symbol, a low mound of stone ringed by short water dashes with two leaning palms and a spar of driftwood` |
+| `D-24` | 棕榈树 | `a single palm drawn as a map symbol, a slender curving ringed trunk under a crown of long drooping fronds, a small tuft of grass at its foot` |
+| `D-25` | 高脚屋 | `a stilt hut drawn as a map symbol, a small thatched shack raised on timber legs above the shallows with a plank walkway and a beached dugout canoe below` |
+| `D-26` | 海面波纹记号 | `a small group of cartographic wave marks, three short shallow open curves like flattened birds scattered at different angles, the standard filler mark of an old sea chart, extremely simple` |
+
+**聚落五档**（2026-09-12 补）：第一批试图证明 `I-01`~`I-05` 的主体压不住立体感——那五条是当年为 `[C-ICON]` 的俯视 3/4 角写的，本身就在描述一个立体沙盘，换画幅也改不掉。所以这里按平侧立面另写五条，`data/settlement_art.csv` 的五档对应到这里，不再复用 `I-`。
+
+| ID | 对象 | Prompt 主体 |
+|---|---|---|
+| `D-27` | 农庄（1 级） | `a single thatched longhouse drawn as a map symbol, one steep straw roof over a low cob wall, a small plank door, a leaning wattle fence and a haystack beside it, one thin curl of smoke` |
+| `D-28` | 村庄（2 级） | `a village drawn as one map symbol, four small thatched cottages of staggered heights standing in a row, a squat church tower with a short spire rising behind them, a low hedge running along the front` |
+| `D-29` | 集镇（3 级） | `a market town drawn as one map symbol, a row of timber-framed houses with exposed frames, jettied upper floors and steep tiled gables, a stone market cross before them, a church spire behind, a stub of wooden palisade at each end` |
+| `D-30` | 城市（4 级） | `a walled city drawn as one map symbol, a crenellated stone wall across the front pierced by an arched gate between two round towers, steep tiled roofs crowded behind the wall and a cathedral with twin towers rising above them` |
+| `D-31` | 大都会（5 级） | `a great city drawn as one map symbol, a long crenellated wall with many towers across the front, behind it a dense rank of steep roofs and slender spires and one tall cathedral, a bridge lined with houses running out to one side` |
+
+### 6.10 经济产物图标 `G-`（2026-09-13 新增）
+
+> **为什么另立一章**：地图包的 `economy/production.csv` 把产出记到每个市镇，按省汇总后，**199 个省里共有 38 种主导货物**——这就是 ECONOMY 视图要画的那批图标，数量由数据定，不是拍脑袋定的。`data/goods_art.csv` 把 `good_code` 映射到这里的 `G-` 编号。
+>
+> **风格**：和 `D-` 同一套——`STYLE_CORE_map_sepia.txt` + `[C-MAPMARK]`，出完**去色成灰度**，由引擎按货物类别染色（`data/goods_palette.csv`）。所以主体只写形状和质感，不写颜色。
+>
+> **主体是静物**：`I-` 是建筑和地点，这里是**物**。追加片段由画幅负责，条目本身只描述摆在一起的几样东西。
+
+| ID | 货物 | Prompt 主体 |
+|---|---|---|
+| `G-01` | 腌制食品 | `a salted side of bacon hanging from a hook beside a crock of preserved meat sealed with cloth and cord` |
+| `G-02` | 布匹 | `a bolt of woven woollen cloth partly unrolled, with a pair of shears laid across it` |
+| `G-03` | 玻璃 | `three blown glass vessels of uneven thickness, a flask, a beaker and a small bottle, standing together` |
+| `G-04` | 谷物 | `a bound sheaf of wheat with a few loose ears fallen beside it and a wooden measuring scoop` |
+| `G-05` | 烈酒 | `a squat earthenware jar with a wooden stopper beside a small copper still with a coiled pipe` |
+| `G-06` | 靴 | `a pair of turned leather ankle boots side by side, worn at the heel, with a cobbler's awl beside them` |
+| `G-07` | 墨水 | `a stoppered ink bottle beside a cut quill pen and a small horn inkwell` |
+| `G-08` | 大麻纤维 | `a bundle of raw hemp stalks tied at the middle beside a coil of laid rope` |
+| `G-09` | 蜡烛 | `three tallow candles of different lengths standing in a simple iron pricket holder` |
+| `G-10` | 蜂蜜 | `a woven straw skep beside a dripping honeycomb section and a small sealed pot` |
+| `G-11` | 煤 | `a heaped basket of rough coal lumps with a short shovel leaning against it` |
+| `G-12` | 铁 | `a stack of rough iron blooms with a pair of blacksmith's tongs laid across them` |
+| `G-13` | 木材 | `a stacked cord of split oak logs with a felling axe struck into the top one` |
+| `G-14` | 奶酪 | `a whole round cheese with a wedge cut from it, resting on a slatted wooden drying board` |
+| `G-15` | 白银 | `a small pile of hammered silver pennies beside a cast ingot with an assay mark` |
+| `G-16` | 染料 | `three small open sacks of ground dyestuff, madder red, woad blue and weld yellow, with a stirring stick` |
+| `G-17` | 纸 | `a stack of cut rag paper sheets weighted by a smooth stone, with one sheet curling at the corner` |
+| `G-18` | 奴隶 | `a set of heavy iron shackles and a coil of rope on bare ground, grim and plain, no figures` |
+| `G-19` | 陶器 | `three unglazed earthenware pots of different sizes nested together beside a potter's rib` |
+| `G-20` | 陶土 | `a heaped mound of wet clay on a plank with a wire cutter and the mark of a thumb pressed into it` |
+| `G-21` | 宝石 | `four cut and uncut gemstones on a folded cloth beside a pair of small brass tweezers` |
+| `G-22` | 牛 | `a standing ox in profile with a yoke resting against its shoulder` |
+| `G-23` | 白砂 | `a conical heap of pale sand on a coarse cloth with a wooden scoop pushed into it` |
+| `G-24` | 葡萄酒 | `an oak wine barrel on its side with an iron-banded rim and a dark bunch of grapes on the vine leaf beside it` |
+| `G-25` | 皮革 | `a rolled hide of tanned leather tied with cord beside a curved paring knife` |
+| `G-26` | 锡 | `a stack of cast tin ingots with one stood on end to show its dull sheen` |
+| `G-27` | 甘蔗 | `a bundle of cut sugarcane stalks tied at both ends beside a shallow boiling pan` |
+| `G-28` | 大理石 | `two squared blocks of veined marble, one part dressed, with a mason's point chisel and mallet` |
+| `G-29` | 毛皮 | `a rolled bundle of marten and fox pelts tied with cord, the tails hanging free` |
+| `G-30` | 象 | `a working elephant in profile wearing a plain harness, standing calmly` |
+| `G-31` | 猎物 | `a brace of hares and a plucked wildfowl hung from a stick with a hunting horn beside them` |
+| `G-32` | 皂 | `four cut blocks of hard soap stacked in a pyramid beside a wooden mould` |
+| `G-33` | 挽具 | `a coiled leather bridle, a curb bit and a horseshoe laid together` |
+| `G-34` | 琥珀 | `a handful of rough amber pieces of different sizes on a dark cloth, one with an insect inside` |
+| `G-35` | 工具 | `a hammer, a pair of pincers and a hand saw laid in a fan on a workbench` |
+| `G-36` | 首饰 | `a chased silver brooch, a ring and a short strand of beads laid on a folded cloth` |
+| `G-37` | 铜 | `a coil of drawn copper wire beside a beaten copper sheet with a hammered surface` |
+| `G-38` | 羊 | `a standing sheep in heavy fleece in profile, with a pair of iron shears beside it` |
 
 ---
 
@@ -1547,30 +1875,53 @@ above, cold slate blue with the comet in pale ochre [C-SCENE]
 
 ## 9. UI 框架件 `U-`
 
-> **切图要求**：所有面板、按钮、边框都必须做成 **9-slice（九宫格）** 可拉伸资源。生成时在 prompt 里明确 `with a wide plain undecorated centre area so it can be stretched`，否则拉伸会把花纹拉变形。
+> **风格核**：`STYLE_CORE_ui_vellum.txt` + `NEGATIVE_ui_vellum.txt`（附录 A / B 第三段），不是 §1.1 的 v2。2026-09-12 出过一批样张，两个现成风格核都不成立：v2 明确要求"干净纸底、不做旧"，和条目里的 `aged vellum` 直接打架；v1 做旧核把物件和底色染成同一个色调，没有剪影可抠，做不成 9-slice。
 >
-> 所有 UI 件使用 `[C-ICON]` 画幅（无背景、正面视角）。
+> **画幅**：方件用 `[C-UIPIECE]`，长条件（`U-03`/`U-08`/`U-13`/`U-17`）跑的时候加 `--canvas C-UIWIDE`。两者都把物件**铺满画框**——`[C-ICON]` 的"generous margin"会让按钮和分隔线这种小物件缩成画框中央的一个小点（同一批样张里 `U-04`、`U-08` 就是这么废的），也都把底色定成**中性灰**，而不是纸色：UI 件本身就是一张纸，底色再是纸色就抠不出来了（`D-` 那条白底转 alpha 的路子在这里不成立，要走 BiRefNet）。
+>
+> **切图要求**：所有面板、按钮、边框都必须做成 **9-slice（九宫格）** 可拉伸资源。所以条目里**不能出现** `irregular hand-cut edges` / `deckled edge` / `hand-drawn edge` 这类词——手工毛边和九宫格拉伸是互斥的：四个角必须能互换，中间必须能无痕重复。风格核里已经写死了 `straight true edges` 和 `exactly repeating spacing`。
+>
+> **`U-19` 的中间要画满、不要留黑**（2026-09-12）：上一版画框走的是「黑心 + `tools/key_frame_interior.py` 抠成透明」，为的是透出背后的地图底。羊皮纸主题下不需要了——中间就是一张米色羊皮，标题和按钮直接压在上面，抠图那一步整个省掉。
+>
+> **这一章有一半不该出图**（2026-09-12 结论）：`U-08` 分隔线、`U-10`/`U-11` 圆头像框、`U-13` 进度槽、`U-14` 滚动条、`U-18` 纹章盾全是几何形，代码画又准又能随时改色、随分辨率清晰，位图反而更死——`scripts/ui/heraldic_shield.gd` 已经是这么做的。下表里这些条目标了 **代码绘制**，保留只是为了留个设计描述，不要拿去跑批。真正值得出图的是有材质和手工感的那几件：`U-01`、`U-03`、`U-12`、`U-17`。
+>
+> **这一章分三类跑**（2026-09-12 逐条试出来的）：
+>
+> | 类 | 条目 | 怎么跑 |
+> |---|---|---|
+> | 可拉伸的羊皮纸部件 · 方 | `U-01` `U-02` `U-12` | `--style-file STYLE_CORE_ui_vellum.txt`（画幅取默认的 `[C-UIPIECE]`）|
+> | 可拉伸的羊皮纸部件 · 长条 | `U-03` `U-04` `U-07` | 同上，加 `--canvas C-UIWIDE` |
+> | 独立物件（不拉伸） | `U-09` 角饰、`U-15` 提示纸条、`U-16` 蜡封、`U-17` 缎带 | **默认 v2 核**，`--canvas C-ICON`（`U-15`/`U-17` 用 `C-UIWIDE`）|
+> | 满屏画框 | `U-19` 主菜单画框 | **默认 v2 核**，`--canvas C-FRAME`，出完过 `post.py --tone` |
+> | 代码绘制 | `U-05` `U-06` `U-08` `U-10` `U-11` `U-13` `U-14` `U-18` | 不出图 |
 
-| ID | 对象 | Prompt 主体（前接 `[S]`，后接 `[C-ICON]`） |
+> **按钮三态只出一张**（2026-09-12）：`U-05` 按下态和 `U-06` 禁用态**不要生成**。条目文本写的是"同一个按钮，倒过来打光/褪色"，klein 4B 读不出这种差分——三张跑出来肉眼无法区分。按下=`U-04` 压暗加一两像素偏移，禁用=去饱和降透明度，在 Godot 里是 `StyleBoxTexture` 的 `modulate_color`，两行的事，而且永远和常态对得上。条目保留作设计描述。
+
+> **方长之分不是美观问题**：`[C-UIPIECE]` 会把物件铺满整个方画框，按钮和标签页跑成方的就没有"边"可以打斜面了——`U-04` 用方画幅出来是一整块平板，改成 `[C-UIWIDE]` 才有上下两道斜面带。`U-09` 角饰同理：它是一个小母题，铺满画框只会变成"一张带角饰的面板"，得当独立物件跑。
+>
+> 第二类是硬碰出来的结论，不是口味问题：UI 风格核里的 `manuscript furniture`、`the centre of any panel left plain`、`every run that will be stretched` 这些词专门为九宫格服务，套到不拉伸的物件上会把它们拉平——`U-16` 被画成了一张证书面板，`U-17` 的燕尾缺口连换四个 seed 都被压成方盒子。换回 v2 核，同样的 seed 一次就对。
+
+| ID | 对象 | Prompt 主体（前接 `[S]`，后接 `[C-UIPIECE]`） |
 |---|---|---|
-| `U-01` | 主面板 | `a rectangular panel of aged vellum with slightly irregular hand-cut edges, a fine double-ruled umber border inset from the edge, small foliate ornaments only at the four corners, the entire centre left as plain empty cream vellum` |
-| `U-02` | 次级面板 | `a smaller plain vellum panel with a single thin ruled border and a soft deckled edge, no ornament at all, the centre completely empty` |
-| `U-03` | 卷轴条 | `a horizontal strip of parchment with both ends rolled into tight scrolls around thin wooden rods with turned finials, the flat centre span left blank` |
-| `U-04` | 按钮 · 常态 | `a small rectangular tab of stiff vellum with a fine ruled edge and a subtle raised bevel indicated by soft pencil shading along the top and left, centre plain` |
-| `U-05` | 按钮 · 按下 | `the same small vellum tab pressed inward, the bevel shading inverted to the bottom and right, slightly darker overall, centre plain` |
-| `U-06` | 按钮 · 禁用 | `the same small vellum tab drawn in flat pale grey umber with no bevel shading and a faded washed-out edge, centre plain` |
-| `U-07` | 标签页 | `a small parchment index tab with a rounded outer edge, a fine ruled outline and a tiny leather lacing hole at one side, blank face` |
-| `U-08` | 分隔线 | `a slender horizontal rule consisting of a fine umber line with a small centred diamond lozenge and two tiny opposing leaf forms, symmetrical` |
-| `U-09` | 角饰 | `a single small foliate corner ornament of curling acanthus in raw umber with one verdigris accent leaf, drawn for the top-left corner` |
-| `U-10` | 头像框 · 平民 | `a plain circular frame of a single thin umber ruled line with a slightly irregular hand-drawn edge, the interior empty` |
-| `U-11` | 头像框 · 贵族 | `a circular frame of a double ruled line with a narrow band of running foliate scroll between the rules and four small bosses at the cardinal points, interior empty` |
-| `U-12` | 头像框 · 王室 | `an ornate circular frame with a double rule, a dense band of interlaced foliate ornament, four jewelled bosses and a small open crown cresting the top, interior empty` |
-| `U-13` | 进度条 | `a long narrow horizontal trough drawn as a double ruled channel with small tick divisions along its length, the interior left entirely empty` |
-| `U-14` | 滚动条 | `a slender vertical channel with a small oval sliding thumb rendered as a polished bone bead, drawn simply` |
-| `U-15` | 提示气泡 | `a small parchment slip with one softly torn edge and a slight curl at one corner, casting a very faint shadow, the face completely blank` |
-| `U-16` | 蜡封印章 | `a round blob of deep oxblood sealing wax with irregular squeezed edges and a pressed intaglio device of a blank shield, slightly glossy against the matte paper` |
-| `U-17` | 缎带标题条 | `a horizontal banderole ribbon with the ends folded back and notched into swallowtails, gently waving, the broad flat centre band left completely blank` |
-| `U-18` | 空白纹章盾 | `an empty heraldic shield of classic heater shape with a fine umber outline and a very subtle interior shading suggesting slight convexity, the field left entirely blank for programmatic colouring` |
+| `U-01` | 主面板 | `a rectangular panel of pale vellum with straight true edges, a fine double-ruled umber border inset evenly from the edge, small matching foliate ornaments at the four corners only, the entire centre left as plain empty vellum` |
+| `U-02` | 次级面板 | `a smaller plain vellum panel with a single thin ruled border set evenly inside a straight clean edge, no ornament at all, the centre completely empty` |
+| `U-03` | 卷轴条 | `a horizontal strip of vellum with both ends rolled into tight scrolls around thin turned wooden rods, the long flat centre span left blank and perfectly even in height` |
+| `U-04` | 按钮 · 常态 | `a rectangular tab of stiff vellum with a fine ruled edge and a raised bevel indicated by even shading along the top and left, straight edges, centre plain` |
+| `U-05` | 按钮 · 按下 | `the same rectangular vellum tab pressed inward, the bevel shading inverted to the bottom and right, slightly darker overall, straight edges, centre plain` |
+| `U-06` | 按钮 · 禁用 | `the same rectangular vellum tab in flat pale grey umber with no bevel shading and a faded edge, straight edges, centre plain` |
+| `U-07` | 标签页 | `a vellum index tab with straight sides, a squared outer edge, a fine ruled outline and a small leather lacing hole at one side, blank face` |
+| `U-08` | 分隔线 · **代码绘制** | `a slender horizontal rule consisting of a fine umber line with a small centred diamond lozenge and two tiny opposing leaf forms, symmetrical` |
+| `U-09` | 角饰 | `a single foliate corner ornament of curling acanthus in raw umber with one verdigris accent leaf, drawn for the top-left corner, its two straight outer edges meeting at a true right angle` |
+| `U-10` | 头像框 · 平民 · **代码绘制** | `a plain circular frame of a single thin umber ruled line, the interior empty` |
+| `U-11` | 头像框 · 贵族 · **代码绘制** | `a circular frame of a double ruled line with a narrow band of evenly repeating foliate scroll between the rules and four small bosses at the cardinal points, interior empty` |
+| `U-12` | 头像框 · 王室 | `an ornate circular frame drawn as flat inked vellum ornament, a double rule enclosing a dense band of evenly repeating interlaced foliage, four small jewelled bosses and a small open crown cresting the top, interior empty` |
+| `U-13` | 进度条 · **代码绘制** | `a long narrow horizontal trough drawn as a double ruled channel with evenly spaced tick divisions along its length, the interior left entirely empty` |
+| `U-14` | 滚动条 · **代码绘制** | `a slender vertical channel with a small oval sliding thumb rendered as a polished bone bead, drawn simply` |
+| `U-15` | 提示气泡 | `a small vellum slip with one softly torn edge and a slight curl at one corner, the face completely blank` |
+| `U-16` | 蜡封印章 | `a round blob of deep oxblood sealing wax with irregular squeezed edges and a pressed intaglio device of a blank shield` |
+| `U-17` | 缎带标题条 | `a horizontal banderole ribbon of vellum, each end folded sharply back on itself and cut into a deep V-notched swallowtail point, the broad flat centre band between the folds left completely blank and even in height` |
+| `U-19` | 主菜单画框 | `a deliberately asymmetric illuminated border. A handsome middle-aged crowned king occupies the BOTTOM LEFT corner alone — a strong-jawed man of about forty-five, short dark hair greying at the temples under a gold circlet, a close-trimmed beard, seated and turned three-quarters, his head tilted up and back so that he looks UP the diagonal, one small carved chess piece held between finger and thumb at chin height, brow drawn, deep in thought — his head reaching no higher than the middle of the frame. A much older grey-bearded lord occupies the TOP RIGHT corner alone, seated high with his chin resting on his hand, his head close to the top edge, looking back down at the younger man. There is no table, no board, no chessboard anywhere in the frame — only the two men, the single piece in the king's hand, and the ornament. The top left corner and the bottom right corner hold nothing but vine scrollwork and a heraldic lion. A small open crown at the top centre` | 主菜单画框 | `a deliberately asymmetric illuminated border. A young clean-shaven crowned lord occupies the BOTTOM LEFT corner alone, seated low and leaning forward on one elbow, his head reaching no higher than the middle of the frame. A much older grey-bearded lord occupies the TOP RIGHT corner alone, seated high with his chin resting on his hand, his head close to the top edge. The two look steadily at each other along the diagonal across the empty middle, two players caught between moves. There is no table, no board, no chessboard and no game pieces of any kind anywhere in the frame — only the two men and the ornament. The top left corner and the bottom right corner hold nothing but vine scrollwork and a heraldic lion. A small open crown at the top centre` | 主菜单画框 | `a deliberately asymmetric illuminated border. A young clean-shaven crowned lord occupies the BOTTOM LEFT corner alone, seated low over a chessboard on the table in front of him, his head reaching no higher than the middle of the frame. A much older grey-bearded lord occupies the TOP RIGHT corner alone, seated high with his own carved pieces before him, his head close to the top edge. The two look at each other along the diagonal across the empty middle. The top left corner and the bottom right corner hold nothing but vine scrollwork, a heraldic lion and a few scattered carved chess pieces. A small open crown at the top centre` | 主菜单画框 | `a young crowned lord seated in the LOWER LEFT corner and a much older bearded lord seated in the UPPER RIGHT corner, the two of them playing one long game of chess against each other diagonally across the empty middle of the frame, each leaning over the chessboard on the small table before him and looking toward the other, the young one clean-shaven in a bright mantle and the old one grey-bearded and heavy-browed, both worked into the border ornament rather than staged as a scene, the rails between them filled with running vine scrollwork, a heraldic lion in the upper left corner and another in the lower right, a small open crown at the top centre` | 主菜单画框 | `two seated medieval lords facing one another across one single chessboard standing in the middle of the bottom rail, one lord to the left of that board and one to its right and no other board anywhere, both drawn small and absorbed into the border ornament rather than staged as a scene, the side rails filled with running vine scrollwork, a heraldic lion at each of the two top corners, a small open crown at the top centre` |
+| `U-18` | 空白纹章盾 · **代码绘制** | `an empty heraldic shield of classic heater shape with a fine umber outline and a very subtle interior shading suggesting slight convexity, the field left entirely blank for programmatic colouring` |
 
 ---
 
@@ -1632,7 +1983,7 @@ above, cold slate blue with the comet in pale ochre [C-SCENE]
 ### 10.5 风格一致性 checklist（每批图过一遍）
 
 - [ ] `[S]` 是否逐字来自 `STYLE_CORE.txt`，没有任何人手改过
-- [ ] 纸底色是否统一为 Cream Laid `#EDE3CE`（把整批图并排铺开看，色温飘的一眼可见）
+- [ ] 纸底色是否统一为 Cream Laid `#EDE3CE`（把整批图并排铺开看，色温飘的一眼可见）。**2026-09-12 起这条有自动化**：`post.py --tone` 量出源图的纸底、算逐通道增益、白平衡到 `#EDE3CE`。不同风格核之间飘得很厉害——§9 的 UI 部件量到 `#DEC5A3`，同一章的独立物件量到 `#FBF7E7`，亮度差 48 级、暖度（R−B）差三倍，肉眼在单张上看不出来，并排就炸。
 - [ ] 是否出现了 1.4 调色板之外的主色相
 - [ ] 铅笔颗粒感是否还在（放大器最容易把它抹平）
 - [ ] 线条是否仍无墨线轮廓（负面词失效时 AI 会偷偷加黑边）
@@ -1712,6 +2063,52 @@ culture, naturalistic anatomy and proportion, understated realism, antique
 sketchbook plate quality, matte finish
 ```
 
+### `STYLE_CORE_map_sepia.txt` —— 地图符号专用（2026-09-12）
+
+只给 §6.9 的 `D-` 和任何用 `[C-MAPMARK]` 重出的 `I-` 用。人物、事件插图、UI 一律仍用上面的 v2。
+
+```
+hand-drawn pictorial map symbol in the manner of an illustrated storybook
+atlas, monochrome sepia: one warm brown hue and nothing else, no other colour
+anywhere, bold dark sepia ink contour of uneven hand-pressed weight drawn
+freehand with a slightly wobbling line, the outline almost black-brown and
+far darker than anything it encloses, strong contrast between that dark
+outline and the pale tan tone filling the shapes, shaded only by fine
+parallel hatching and short cross-hatching in the same dark ink on the side
+away from the light, gently stylised and charming rather than technical,
+massing simplified to a few bold shapes with its one characteristic feature
+exaggerated, and nothing in the frame that the subject line did not ask for,
+drawn in flat side elevation as a symbol cut out and
+floating free with nothing whatsoever underneath it, not as a scale drawing,
+no perspective recession, even flat lighting
+with the shade thrown consistently to the lower right, historically accurate
+12th to 14th century European material culture, heavy readable line weight
+that still reads at thumbnail size, matte
+```
+
+### `STYLE_CORE_ui_vellum.txt` —— UI 部件专用（2026-09-12）
+
+只给 §9 的 `U-` 用。v2 禁做旧、v1 做旧到没有剪影，两个都套不上一件"要被切成九宫格拉伸的羊皮纸部件"。
+
+```
+a single piece of manuscript furniture drawn as a clean game interface
+element, cut from smooth vellum in a pale warm sand tone — a light
+greyish tan, clearly warmer than paper white but never golden, never
+yellow, never saturated — with an even unmarked surface, crisp confident contour and ruled lines in
+dark raw umber ink of steady even weight — a greyed chocolate brown with no
+red and no pink in it, brown rather than black, and no heavier than the
+ornament it encloses — ornament rendered as fine flat
+linework filled with a thin wash of raw umber and at most one verdigris or
+oxblood accent, soft even shading only where a real edge is bevelled or a
+real surface curls, straight true horizontal and vertical edges along
+every run that will be stretched, and exactly repeating spacing along every
+run of ornament, so the piece can be cut into a nine-slice without the
+pattern tearing — an end that folds, rolls or is notched keeps its shape, the centre of any
+panel left as plain unmarked cream vellum, historically accurate 12th to
+14th century manuscript and leatherwork ornament, flat even frontal light,
+clean and unaged, matte
+```
+
 ## 附录 B · `NEGATIVE.txt` 完整内容
 
 ```
@@ -1727,3 +2124,46 @@ features, haggard, fuzzy fabric, fibrous texture, felted wool, furry cloth, bare
 drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 ```
 
+### `NEGATIVE_map_sepia.txt` —— 地图符号专用（2026-09-12）
+
+**必须另立一份**：上面那份把 `sepia`、`aged paper`、`antique print` 全禁了，正是 `D-` 要的东西。这份改禁彩色、透视、地台和画框。
+
+```
+colour, full colour illustration, blue, green, red, saturated, polychrome,
+multicoloured, colour photograph, digital airbrush, glossy, smooth gradient,
+glow, neon, 3d render, cgi, isometric game asset, plastic, photograph,
+photorealistic, anime, manga, cel shading, comic book, thick uniform vector
+outline, heavy black ink, blotchy solid black fill, oil painting, watercolour
+bleed, faint thin outline, pale washed-out line, low contrast, light grey
+line, outline the same tone as the fill, perspective grid, vanishing point,
+three-quarter overhead view, aerial view, landscape scene, horizon, sky,
+background scenery, parchment background, paper texture background, ground
+plate, base plinth, grass base, ground line, baseline, horizontal line
+beneath the object, drop shadow, contact shadow, shadow cast on the ground,
+decorative frame, border, vignette, printed typography, lettering, labels,
+numerals, watermark, signature, logo, modern buildings, chimney stacks of
+brick, plate glass, gothic plate armour before 1400, cluttered illegible
+detail
+```
+
+### `NEGATIVE_ui_vellum.txt` —— UI 部件专用（2026-09-12）
+
+三件事要禁：做旧和毛边（和 9-slice 打架）、镀金立体画框（样张里 `U-12` 被画成了一只 3D 金相框）、以及纸色背景（底色和部件同色就抠不出来）。
+
+```
+white, pure white, bleached, cold grey, bluish white, desaturated to
+grey, colourless, golden, gold, amber, mustard, lemon, saturated yellow,
+bright ochre field, orange, pink, rose, terracotta ink, red ink, aged paper, foxing, stains, yellowed with
+damage, water damage, burnt edges, torn edges, deckled edge, irregular
+hand-cut edge, ragged outline, crumpled, creased, heavy grain, fibrous
+texture, thick black outline, heavy uniform outline, bold cartoon outline,
+vector art, sticker, clip art, gilded picture frame, carved gilt wood,
+ornate 3d moulding, polished metal, gold leaf shine, 3d render, cgi,
+bevelled glass, perspective, vanishing point, tilted view, angled view,
+isometric, drop shadow, cast shadow, glow, digital airbrush, smooth
+gradient, neon, oversaturated, photograph, cream paper background,
+parchment background, paper filling the frame, background the same colour as
+the piece, scene, props, hands, furniture, desk, table, printed typography,
+lettering, numerals, text, watermark, signature, logo, cluttered ornament,
+asymmetrical ornament, the centre of the panel decorated
+```

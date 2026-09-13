@@ -12,12 +12,15 @@ extends Node
 
 ## The game's design viewport; the PNG is upscaled 2x (nearest) so it shows
 ## what a 1280x720 window shows, pins and labels at their real size.
-const WIDTH := 640
-const HEIGHT := 360
-const UPSCALE := 2
+const WIDTH := 1280
+const HEIGHT := 720
+const UPSCALE := 1
 
 var _out := "user://map_snapshot.png"
 var _zoom_mul := 1.0
+var _heights := false
+var _economy := false
+var _armies := false
 var _viewport: SubViewport
 var _view: WorldMapView
 var _frames := 0
@@ -31,6 +34,12 @@ func _ready() -> void:
 			_out = args[i + 1]
 		elif args[i] == "--zoom":
 			_zoom_mul = float(args[i + 1])
+		elif args[i] == "--heights":
+			_heights = args[i + 1] == "1"
+		elif args[i] == "--economy":
+			_economy = args[i + 1] == "1"
+		elif args[i] == "--armies":
+			_armies = args[i + 1] == "1"
 		i += 1
 	Game.start_campaign(42)
 	_viewport = SubViewport.new()
@@ -49,6 +58,9 @@ func _ready() -> void:
 		_view._zoom_at(_view.map_to_screen(at), _zoom_mul)
 		_view._offset += Vector2(WIDTH, HEIGHT) / 2.0 - _view.map_to_screen(at)
 		_view._clamp_offset()
+	_view.show_heights = _heights
+	_view.show_economy = _economy
+	_view.show_armies = _armies
 	_view.queue_redraw()
 
 

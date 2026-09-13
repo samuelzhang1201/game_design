@@ -1,0 +1,31 @@
+# The point-of-interest types this world admits (owner ruling 2026-09-12:
+# medieval and hard — no fantasy, no magic, no monsters). The importer
+# drops every marker whose type is not listed here, so a re-export of the
+# Azgaar map cannot smuggle them back in. Azgaar's own defaults include
+# hill-monsters, sea-monsters, lake-monsters, dungeons and an adventuring
+# party; those are the ones deliberately missing below.
+type,notes
+mines,a mine head
+inns,a roadside inn
+ruins,Roman or older ruins
+bridges,a river crossing
+battlefields,an old battlefield
+lighthouses,a lighthouse
+hot-springs,a bathhouse over a hot spring
+water-sources,a spring
+sacred-forests,a grove sacred to a local pre-Christian rite — historical religion, not magic
+sacred-pineries,as above
+libraries,a college or library
+encounters,poachers / pilgrims / mercenaries / cultists on the road — people, not creatures
+brigands,a gang of forest bandits
+pirates,pirate ships in these waters
+statues,a wayside monument
+necropolises,a burial ground
+caves,a cave or grotto
+volcanoes,a volcano
+waterfalls,a waterfall
+circuses,a travelling fair
+jousts,a tournament
+fairs,a fair
+migration,a herd on the move
+canoes,a river jetty
