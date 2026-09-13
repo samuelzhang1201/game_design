@@ -2,6 +2,10 @@ class_name GameState
 extends RefCounted
 
 var tick: int = 0
+## The day within the tick, 1..Calendar.DAYS_PER_TICK (owner 2026-09-13:
+## the smallest unit of time is a day; the clock advances it, and the
+## fifteenth day's end is the tick). Saved; an old save loads at day 1.
+var day: int = 1
 var rng: Rng
 var metrics: Dictionary = {}
 var characters: Dictionary = {}
@@ -97,6 +101,11 @@ func apply_player_setup(setup: Dictionary) -> void:
 		player_setup["house_was"] = old_family
 	you.family_name = family
 	you.display_name = "King %s %s" % [first, family]
+
+## The day counted from the reign's first: what works in progress are
+## measured against.
+func absolute_day() -> int:
+	return Calendar.absolute_day(tick, day)
 
 func season() -> String:
 	# Delegates to Calendar so tick 1..24 is year 1 with 6 ticks per season
@@ -224,6 +233,11 @@ var world_log: Array = []
 var manor_owner: Dictionary = {}
 ## cell id (String) -> [building codes] raised on it (data/manor_buildings.csv).
 var manor_buildings: Dictionary = {}
+## cell id (String) -> [{building, start, days}]: works in progress on a
+## manor (owner 2026-09-13: building takes time) — start is the absolute
+## day the work began, days its build_days; MapManors.advance_works moves
+## a finished one into manor_buildings.
+var manor_works: Dictionary = {}
 ## cell id (String) -> {focus, since}: the chief good a manor was SET to
 ## work at (data/manor_focus.csv) and the tick it was set, ONLY for manors
 ## whose focus was chosen — an absent manor works its terrain's default.
@@ -232,7 +246,7 @@ var manor_focus: Dictionary = {}
 ## {tick, cell, building, reason}: a manor that changed must say why.
 var manor_log: Array = []
 
-const SAVE_VERSION := 4
+const SAVE_VERSION := 5
 
 func to_dict() -> Dictionary:
 	var chars := {}
@@ -240,7 +254,7 @@ func to_dict() -> Dictionary:
 		chars[id] = characters[id].to_dict()
 	return {
 		"version": SAVE_VERSION, "map_id": map_id,
-		"tick": _encode_values(tick), "rng": rng.to_dict(),
+		"tick": _encode_values(tick), "day": _encode_values(day), "rng": rng.to_dict(),
 		"metrics": _encode_values(metrics.duplicate()),
 		"characters": chars, "council": council.duplicate(),
 		"relationships": _encode_values(relationships.duplicate(true)),
@@ -262,6 +276,7 @@ func to_dict() -> Dictionary:
 		"manor_owner": manor_owner.duplicate(),
 		"manor_buildings": manor_buildings.duplicate(true),
 		"manor_focus": manor_focus.duplicate(true),
+		"manor_works": _encode_values(manor_works.duplicate(true)),
 		"manor_log": _encode_values(manor_log.duplicate(true)),
 	}
 
@@ -277,6 +292,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	var s := GameState.new()
 	s.map_id = String(d.get("map_id", ""))
 	s.tick = int(_decode_values(d["tick"]))
+	s.day = clampi(int(_decode_values(d.get("day", 1))), 1, Calendar.DAYS_PER_TICK)
 	s.rng = Rng.from_dict(d["rng"])
 	s.metrics = _decode_values(d["metrics"])
 	for id in d["characters"]:
@@ -310,6 +326,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.manor_owner = d.get("manor_owner", {}).duplicate()
 	s.manor_buildings = d.get("manor_buildings", {}).duplicate(true)
 	s.manor_focus = d.get("manor_focus", {}).duplicate(true)
+	s.manor_works = _decode_values(d.get("manor_works", {}))
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	MapOwnership.invalidate()
 	return s

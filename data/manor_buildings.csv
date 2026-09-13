@@ -1,7 +1,7 @@
-building_code,label,cost_gold,tax_bonus,output_bonus,defence_bonus,church_bonus,notes
-manor_house,Manor house,60,0.10,0,5,0,"a stone hall for the steward: rents are collected in full and the yard can be held"
-mill,Mill,40,0.05,0.15,0,0,"a water or wind mill: the manor grinds its own grain and takes a toll on its neighbours'"
-granary,Granary,35,0,0.05,0,0,"a stone granary: the harvest keeps, and a bad year is survived"
-chapel,Chapel,30,0,0,0,0.05,"a chapel with its own priest: the pulpit speaks well of the house that built it"
-palisade,Palisade,45,0,0,10,0,"a ditch and timber wall around the yard: a raid has to work for it"
-market,Market,50,0.15,0,0,0,"a weekly market by charter: tolls and stall rents"
+building_code,label,cost_gold,build_days,tax_bonus,output_bonus,defence_bonus,church_bonus,gold_per_tick,grain_per_tick,contentment_per_tick,unrest_per_tick,produce_good,produce_units,notes
+manor_house,Manor house,60,60,0.10,0,5,0,0,0,0.2,0,,0,"a stone hall for the steward: rents are collected in full, the yard can be held, and a lord in residence settles the villages (owner 2026-09-13: build_days is how long the work takes at one day a step; the *_per_tick columns are what a finished building adds to the crown's metrics each tick; church_bonus is church_opinion per tick; produce_good/units join the ECONOMY column)"
+mill,Mill,40,30,0.05,0.15,0,0,0,2,0,0,,0,"a water or wind mill: the manor grinds its own grain, takes a toll on its neighbours', and sends flour to the royal granaries"
+granary,Granary,35,25,0,0.05,0,0,0,3,0,0,,0,"a stone granary: the harvest keeps, and a bad year is survived"
+chapel,Chapel,30,40,0,0,0,0.3,0,0,0,0,,0,"a chapel with its own priest: the pulpit speaks well of the house that built it"
+palisade,Palisade,45,20,0,0,10,0,0,0,0,-0.1,,0,"a ditch and timber wall around the yard: a raid has to work for it, and the villages sleep easier"
+market,Market,50,45,0.15,0,0,0,3,0,0,0,cloth,1,"a weekly market by charter: tolls and stall rents, and cloth changes hands"

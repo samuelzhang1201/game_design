@@ -12,6 +12,8 @@ var suggestions: Array = []
 var outcomes: Array = []
 var promise_events: Array = []
 var event: Dictionary = {}
+## Works finished on the tick's first day: [{cell, building}].
+var finished_works: Array = []
 
 func to_dict() -> Dictionary:
 	var sug_dicts: Array = []

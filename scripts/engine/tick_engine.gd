@@ -12,9 +12,19 @@ func _init(d: DataRepository) -> void:
 	suggestions = SuggestionGenerator.new(d, actions)
 	events = EventSystem.new(d)
 
+## One day (owner 2026-09-13: the smallest unit of time). Works in
+## progress step; the fifteenth day's end is a tick, which the caller
+## (Game.advance_day) runs through advance(). Returns the works finished
+## today, [{cell, building}].
+func advance_day(state: GameState) -> Array:
+	state.day = mini(state.day + 1, Calendar.DAYS_PER_TICK)
+	return MapManors.advance_works(data, state)
+
 func advance(state: GameState) -> TickReport:
 	state.tick += 1
+	state.day = 1
 	var r := TickReport.new()
+	r.finished_works = MapManors.advance_works(data, state)
 	r.tick = state.tick
 	r.season = state.season()
 	r.year = state.year()
@@ -60,6 +70,14 @@ func _drift(state: GameState, r: TickReport) -> void:
 	_set_metric(r, m, "manor_rents", rents, "rents from the crown's manors")
 	if rents > 0.0:
 		_apply(r, m, "treasury", rents, "rents from the crown's manors")
+	# What the crown's finished buildings do each tick (2026-09-13): a
+	# market's tolls, a mill's flour, a chapel's sermons, a hall's order.
+	var built := MapManors.crown_building_effects(data, state)
+	_apply(r, m, "treasury", float(built["treasury"]), "tolls and rents of the crown's buildings")
+	_apply(r, m, "grain", float(built["grain"]), "the crown's mills and granaries")
+	_apply(r, m, "church_opinion", float(built["church_opinion"]), "the crown's chapels")
+	_apply(r, m, "peasant_contentment", float(built["peasant_contentment"]), "lords in residence")
+	_apply(r, m, "unrest", float(built["unrest"]), "the crown's walls")
 	if state.season() == "autumn":
 		_apply(r, m, "grain", data.bal("harvest_gain"), "the harvest comes in")
 	else:

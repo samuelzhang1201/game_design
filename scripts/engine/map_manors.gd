@@ -394,6 +394,154 @@ static func build(repo: DataRepository, state: GameState, cell_id: int, building
 		"reason": reason})
 	return true
 
+# ---- slots and works (owner 2026-09-13: building takes time and room) ----------
+
+## How many buildings a manor has room for: manor_slots_base, and
+## manor_slots_burg_bonus more when a town stands in it.
+static func slots_of(repo: DataRepository, cell_id: int) -> int:
+	var n := int(repo.bal("manor_slots_base"))
+	if burg_of(repo, cell_id) != "":
+		n += int(repo.bal("manor_slots_burg_bonus"))
+	return n
+
+## Works in progress on a manor: [{building, start, days}], copies.
+static func works_of(state: GameState, cell_id: int) -> Array:
+	return (state.manor_works.get(str(cell_id), []) as Array).duplicate(true)
+
+static func is_building(state: GameState, cell_id: int, building_code: String) -> bool:
+	for w: Dictionary in works_of(state, cell_id):
+		if String(w["building"]) == building_code:
+			return true
+	return false
+
+## Slots taken: finished buildings and works alike.
+static func slots_used(state: GameState, cell_id: int) -> int:
+	return buildings_of(state, cell_id).size() + works_of(state, cell_id).size()
+
+static func free_slots(repo: DataRepository, state: GameState, cell_id: int) -> int:
+	return slots_of(repo, cell_id) - slots_used(state, cell_id)
+
+## Begin a building: it takes build_days (data/manor_buildings.csv) from
+## today and a slot until it stands. Refuses an unknown manor or building,
+## one already standing or begun, a full manor, and an empty reason; logs
+## into manor_log with a "begun" field.
+static func start_work(repo: DataRepository, state: GameState, cell_id: int, building_code: String,
+		reason: String) -> bool:
+	if not is_manor(repo, cell_id) or not repo.manor_buildings.has(building_code):
+		return false
+	if reason.strip_edges() == "" or has_building(state, cell_id, building_code) \
+			or is_building(state, cell_id, building_code) or free_slots(repo, state, cell_id) <= 0:
+		return false
+	var key := str(cell_id)
+	if not state.manor_works.has(key):
+		state.manor_works[key] = []
+	var days := maxi(int(float((repo.manor_buildings[building_code] as Dictionary).get("build_days", 0))), 0)
+	(state.manor_works[key] as Array).append({"building": building_code,
+		"start": state.absolute_day(), "days": days})
+	state.manor_log.append({"tick": state.tick, "cell": cell_id, "building": building_code,
+		"begun": days, "reason": reason})
+	return true
+
+## Days a work still needs, 0 when it is done; -1 for no such work.
+static func work_days_left(state: GameState, cell_id: int, building_code: String) -> int:
+	for w: Dictionary in works_of(state, cell_id):
+		if String(w["building"]) == building_code:
+			return maxi(int(w["start"]) + int(w["days"]) - state.absolute_day(), 0)
+	return -1
+
+## How far along a work is, 0..1.
+static func work_progress(state: GameState, cell_id: int, building_code: String) -> float:
+	for w: Dictionary in works_of(state, cell_id):
+		if String(w["building"]) == building_code:
+			var days := int(w["days"])
+			if days <= 0:
+				return 1.0
+			return clampf(float(state.absolute_day() - int(w["start"])) / float(days), 0.0, 1.0)
+	return 0.0
+
+## The day's step for every work: those whose days are up become
+## buildings. Returns [{cell, building}] finished today, cell order.
+static func advance_works(repo: DataRepository, state: GameState) -> Array:
+	var done: Array = []
+	var today := state.absolute_day()
+	var keys: Array = state.manor_works.keys()
+	keys.sort_custom(func(a: String, b: String) -> bool: return int(a) < int(b))
+	for key: String in keys:
+		var left: Array = []
+		for w: Dictionary in state.manor_works[key]:
+			if today - int(w["start"]) >= int(w["days"]):
+				var code := String(w["building"])
+				if build(repo, state, int(key), code, "finished after %d days" % int(w["days"])):
+					done.append({"cell": int(key), "building": code})
+			else:
+				left.append(w)
+		if left.is_empty():
+			state.manor_works.erase(key)
+		else:
+			state.manor_works[key] = left
+	return done
+
+## Pull a building down, or stop a work: the slot frees and
+## manor_demolish_refund of the cost comes back. Returns the refund, or
+## -1 when there was nothing to pull down (or no reason).
+static func demolish(repo: DataRepository, state: GameState, cell_id: int, building_code: String,
+		reason: String) -> float:
+	if reason.strip_edges() == "" or not repo.manor_buildings.has(building_code):
+		return -1.0
+	var key := str(cell_id)
+	var found := false
+	if has_building(state, cell_id, building_code):
+		(state.manor_buildings[key] as Array).erase(building_code)
+		if (state.manor_buildings[key] as Array).is_empty():
+			state.manor_buildings.erase(key)
+		found = true
+	elif is_building(state, cell_id, building_code):
+		var left: Array = []
+		for w: Dictionary in state.manor_works[key]:
+			if String(w["building"]) != building_code:
+				left.append(w)
+		if left.is_empty():
+			state.manor_works.erase(key)
+		else:
+			state.manor_works[key] = left
+		found = true
+	if not found:
+		return -1.0
+	var refund := float((repo.manor_buildings[building_code] as Dictionary).get("cost_gold", 0)) \
+		* repo.bal("manor_demolish_refund")
+	state.manor_log.append({"tick": state.tick, "cell": cell_id, "building": building_code,
+		"demolished": refund, "reason": reason})
+	return refund
+
+## What finished buildings on these manors add to the crown's metrics
+## each tick: {treasury, grain, church_opinion, peasant_contentment, unrest}
+## from the *_per_tick columns (church_bonus is church_opinion's).
+static func building_effects(repo: DataRepository, state: GameState, cells: Array) -> Dictionary:
+	var out := {"treasury": 0.0, "grain": 0.0, "church_opinion": 0.0,
+		"peasant_contentment": 0.0, "unrest": 0.0}
+	for cell: int in cells:
+		out["treasury"] += building_bonus(repo, state, cell, "gold_per_tick")
+		out["grain"] += building_bonus(repo, state, cell, "grain_per_tick")
+		out["church_opinion"] += building_bonus(repo, state, cell, "church_bonus")
+		out["peasant_contentment"] += building_bonus(repo, state, cell, "contentment_per_tick")
+		out["unrest"] += building_bonus(repo, state, cell, "unrest_per_tick")
+	return out
+
+static func crown_building_effects(repo: DataRepository, state: GameState) -> Dictionary:
+	return building_effects(repo, state,
+		manors_of_house(repo, state, crown(state), repo.resolve_realm("player_realm")))
+
+## Goods a manor's finished buildings make: {good: units}.
+static func building_output_of(repo: DataRepository, state: GameState, cell_id: int) -> Dictionary:
+	var out: Dictionary = {}
+	for code: String in buildings_of(state, cell_id):
+		var row: Dictionary = repo.manor_buildings.get(code, {})
+		var good := String(row.get("produce_good", "")).strip_edges()
+		var units := float(row.get("produce_units", 0))
+		if good != "" and units > 0.0:
+			out[good] = float(out.get(good, 0.0)) + units
+	return out
+
 ## The sum of one bonus column over a manor's buildings.
 static func building_bonus(repo: DataRepository, state: GameState, cell_id: int, column: String) -> float:
 	var sum := 0.0

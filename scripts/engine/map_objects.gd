@@ -813,7 +813,7 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		"fields": [["Held by", "The crown" if crowns else ("House " + house if house != "" else "no one")],
 			["Province", String(prov.get("label", province))]],
 		"features": [], "production": [], "wealth": 0.0, "treasury": 0.0,
-		"buildings": [], "actions": [],
+		"buildings": [], "works": [], "slots": 0, "slot_actions": [], "actions": [],
 		"center": MapTerrain.cell_center(repo, repo.cells.get(cell, {"vertex_ids": PackedInt32Array()})),
 		"ask": "What do we know of %s?" % label,
 		"known": "full" if (province != "" and province_is_players(repo, state, province)) else "basic",
@@ -861,7 +861,20 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	var names: Array[String] = []
 	for b: String in built:
 		names.append(String((repo.manor_buildings.get(b, {}) as Dictionary).get("label", b)))
+	# Works in progress (2026-09-13): the slot row draws them dim with the
+	# days left; the field names them too.
+	var works: Array = []
+	for w: Dictionary in MapManors.works_of(state, cell):
+		var b := String(w["building"])
+		var left := MapManors.work_days_left(state, cell, b)
+		var name := String((repo.manor_buildings.get(b, {}) as Dictionary).get("label", b))
+		works.append({"building": b, "label": name, "days_left": left,
+			"progress": MapManors.work_progress(state, cell, b)})
+		names.append("%s (%d days to go)" % [name, left])
+	card["works"] = works
+	card["slots"] = MapManors.slots_of(repo, cell)
 	fields.append(["Buildings", ", ".join(names) if not names.is_empty() else "none"])
+	fields.append(["Slots", "%d of %d taken" % [MapManors.slots_used(state, cell), MapManors.slots_of(repo, cell)]])
 	fields.append(["Value", "%d gold" % roundi(MapManors.base_value_of(repo, state, cell))])
 	if crowns:
 		fields.append(["Sells for", "%d gold" % roundi(MapManors.sell_price_of(repo, state, cell))])
@@ -881,7 +894,30 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		card["wealth"] = float(e.get("product", 0.0))
 		card["treasury"] = float(e.get("treasury", 0.0))
 	card["actions"] = manor_actions(repo, state, cell)
+	card["slot_actions"] = slot_actions(repo, state, cell)
 	return card
+
+## One DEMOLISH order per building standing or begun on a crown manor,
+## validated — the slot row's cross buttons. [{action_code, params,
+## building, label, refund, error}].
+static func slot_actions(repo: DataRepository, state: GameState, cell: int) -> Array:
+	if state == null or not MapManors.is_crowns(repo, state, cell):
+		return []
+	var code := MapManors.code_of(repo, cell)
+	var specs: Array = []
+	var all: Array = MapManors.buildings_of(state, cell)
+	for w: Dictionary in MapManors.works_of(state, cell):
+		all.append(String(w["building"]))
+	var actions := ActionSystem.new(repo)
+	for b: String in all:
+		var row: Dictionary = repo.manor_buildings.get(b, {})
+		var refund := float(row.get("cost_gold", 0)) * repo.bal("manor_demolish_refund")
+		var spec := {"action_code": "MANOR_DEMOLISH", "params": {"manor": code, "building": b},
+			"building": b, "refund": refund,
+			"label": "Pull down the %s — %d gold back" % [String(row.get("label", b)).to_lower(), roundi(refund)]}
+		spec["error"] = actions.validate(ActionRequest.make("MANOR_DEMOLISH", spec["params"]), state)
+		specs.append(spec)
+	return specs
 
 ## The orders the crown could give for a manor, each validated: [{action_code,
 ## label, params, error}]. Buy or seize what another house holds; sell or
@@ -906,11 +942,12 @@ static func manor_actions(repo: DataRepository, state: GameState, cell: int) -> 
 		var codes: Array = repo.manor_buildings.keys()
 		codes.sort()
 		for b: String in codes:
-			if MapManors.has_building(state, cell, b):
+			if MapManors.has_building(state, cell, b) or MapManors.is_building(state, cell, b):
 				continue
 			var row: Dictionary = repo.manor_buildings[b]
 			specs.append({"action_code": "MANOR_BUILD", "params": {"manor": code, "building": b},
-				"label": "BUILD %s — %d gold" % [String(row["label"]).to_upper(), int(float(row["cost_gold"]))]})
+				"label": "BUILD %s — %d gold, %d days" % [String(row["label"]).to_upper(),
+					int(float(row["cost_gold"])), int(float(row.get("build_days", 0)))]})
 	else:
 		specs.append({"action_code": "MANOR_BUY", "params": {"manor": code},
 			"label": "BUY — %d gold" % roundi(MapManors.price_of(repo, state, cell))})

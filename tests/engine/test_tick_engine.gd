@@ -76,3 +76,62 @@ func test_the_crowns_manors_pay_rent_each_tick() -> void:
 	assert_true(MapManors.set_owner(data, s, bought, MapManors.crown(s), "bought"))
 	engine.advance(s)
 	assert_almost_eq(s.metrics["manor_rents"], expected + MapManors.rent_of(data, s, bought), 0.001)
+
+## The day (owner 2026-09-13): advance_day steps the works and the day;
+## the fifteenth day's end is a tick, which resets the day and steps the
+## works again, so a work takes exactly its build_days days.
+func test_days_step_works_and_the_fifteenth_is_a_tick() -> void:
+	var s := GameState.new_campaign(data, 42)
+	engine.advance(s)
+	assert_eq(s.tick, 1)
+	assert_eq(s.day, 1)
+	assert_eq(s.absolute_day(), 1)
+	var cell := -1
+	for c: int in MapManors.manors_of_house(data, s, MapManors.crown(s), data.resolve_realm("player_realm")):
+		cell = c
+		break
+	assert_gt(cell, -1)
+	var days := int(float(data.manor_buildings["palisade"]["build_days"]))
+	assert_gt(days, Calendar.DAYS_PER_TICK, "a palisade outlasts a tick")
+	assert_true(MapManors.start_work(data, s, cell, "palisade", "test"))
+	for i in Calendar.DAYS_PER_TICK - 1:
+		assert_eq(engine.advance_day(s), [])
+	assert_eq(s.day, Calendar.DAYS_PER_TICK)
+	assert_eq(engine.advance_day(s), [], "the day does not pass the tick's end on its own")
+	assert_eq(s.day, Calendar.DAYS_PER_TICK)
+	var r := engine.advance(s)
+	assert_eq(s.tick, 2)
+	assert_eq(s.day, 1)
+	assert_eq(s.absolute_day(), Calendar.DAYS_PER_TICK + 1)
+	assert_eq(r.finished_works, [])
+	var stepped := Calendar.DAYS_PER_TICK
+	while stepped < days:
+		if s.day >= Calendar.DAYS_PER_TICK:
+			r = engine.advance(s)
+			if not r.finished_works.is_empty():
+				break
+		else:
+			if not engine.advance_day(s).is_empty():
+				break
+		stepped += 1
+	assert_eq(s.absolute_day(), 1 + days, "it stands on the day its days are up")
+	assert_eq(MapManors.buildings_of(s, cell), ["palisade"])
+
+## A finished building works each tick (owner 2026-09-13): a market's tolls
+## are a treasury line of their own.
+func test_the_crowns_buildings_pay_each_tick() -> void:
+	var s := GameState.new_campaign(data, 42)
+	var cell := -1
+	for c: int in MapManors.manors_of_house(data, s, MapManors.crown(s), data.resolve_realm("player_realm")):
+		cell = c
+		break
+	assert_true(MapManors.build(data, s, cell, "market", "test"))
+	var r := engine.advance(s)
+	var tolls := float(data.manor_buildings["market"]["gold_per_tick"])
+	assert_gt(tolls, 0.0)
+	var found := false
+	for d in r.metric_deltas:
+		if d["metric"] == "treasury" and String(d["reason"]).contains("buildings"):
+			found = true
+			assert_almost_eq(float(d["delta"]), tolls, 0.001)
+	assert_true(found, "the tolls are a line of their own")

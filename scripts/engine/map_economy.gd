@@ -196,6 +196,9 @@ static func output_of_provinces(repo: DataRepository, provinces: Array, state: G
 			var f := MapManors.focus_output_of(repo, state, cell, float((people[cell] as Dictionary)["total"]))
 			if float(f["units"]) > 0.0:
 				totals[f["good"]] = float(totals.get(f["good"], 0.0)) + float(f["units"])
+			var made := MapManors.building_output_of(repo, state, cell)
+			for good: String in made:
+				totals[good] = float(totals.get(good, 0.0)) + float(made[good])
 	var out: Array = []
 	for good: String in totals:
 		out.append({"good": good, "units": float(totals[good]),

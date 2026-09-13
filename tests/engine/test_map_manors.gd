@@ -356,3 +356,100 @@ func test_a_manor_works_a_chief_good_its_land_allows() -> void:
 	assert_eq(String(back.manor_focus["1"]["focus"]), "fish")
 	assert_eq(int(back.manor_focus["1"]["since"]), 3)
 	assert_eq(MapManors.focus_of(r, back, 1), "fish")
+
+## Building takes time and room (owner 2026-09-13): a manor has
+## manor_slots_base slots (one more with a town), a work takes build_days
+## from the day it begins, and a building or a work can be pulled down for
+## manor_demolish_refund of its cost. Cell 2 holds Shole, so 3 slots; cell 1
+## has 2. The fixture's tick 3 is absolute day 31..45.
+func test_works_take_days_and_slots_and_can_be_pulled_down() -> void:
+	var r := _repo()
+	r.balance["manor_slots_base"] = 2.0
+	r.balance["manor_slots_burg_bonus"] = 1.0
+	r.balance["manor_demolish_refund"] = 0.5
+	r.manor_buildings["mill"]["build_days"] = "4"
+	r.manor_buildings["palisade"]["build_days"] = "0"
+	r.manor_buildings["chapel"] = {"building_code": "chapel", "label": "Chapel", "cost_gold": "30",
+		"build_days": "10", "tax_bonus": "0", "output_bonus": "0", "defence_bonus": "0", "church_bonus": "0.3"}
+	var s := _state()
+	s.day = 1
+	assert_eq(MapManors.slots_of(r, 1), 2)
+	assert_eq(MapManors.slots_of(r, 2), 3, "a town adds a slot")
+	assert_eq(s.absolute_day(), 31)
+	assert_false(MapManors.start_work(r, s, 1, "castle", "no such"), "no such building")
+	assert_false(MapManors.start_work(r, s, 1, "mill", ""), "no reason")
+	assert_true(MapManors.start_work(r, s, 1, "mill", "begun"))
+	assert_false(MapManors.start_work(r, s, 1, "mill", "begun"), "one mill, begun or standing")
+	assert_true(MapManors.is_building(s, 1, "mill"))
+	assert_eq(MapManors.buildings_of(s, 1), [], "not standing yet")
+	assert_eq(MapManors.free_slots(r, s, 1), 1)
+	assert_eq(MapManors.work_days_left(s, 1, "mill"), 4)
+	assert_almost_eq(MapManors.work_progress(s, 1, "mill"), 0.0, 0.001)
+	assert_true(MapManors.start_work(r, s, 1, "chapel", "begun"))
+	assert_eq(MapManors.free_slots(r, s, 1), 0)
+	assert_false(MapManors.start_work(r, s, 1, "palisade", "begun"), "no room")
+	assert_eq(int(s.manor_log[0]["begun"]), 4)
+	# Two days on: half a mill.
+	s.day = 3
+	assert_eq(MapManors.advance_works(r, s), [], "nothing done yet")
+	assert_almost_eq(MapManors.work_progress(s, 1, "mill"), 0.5, 0.001)
+	assert_eq(MapManors.work_days_left(s, 1, "mill"), 2)
+	s.day = 5
+	assert_eq(MapManors.advance_works(r, s), [{"cell": 1, "building": "mill"}])
+	assert_eq(MapManors.buildings_of(s, 1), ["mill"])
+	assert_false(MapManors.is_building(s, 1, "mill"))
+	assert_true(MapManors.is_building(s, 1, "chapel"), "the chapel still rises")
+	assert_string_contains(String(s.manor_log[2]["reason"]), "finished after 4 days")
+	# A work with no days stands the day it is begun.
+	assert_true(MapManors.start_work(r, s, 2, "palisade", "dug"))
+	assert_eq(MapManors.advance_works(r, s), [{"cell": 2, "building": "palisade"}])
+	# Pull the mill down: half its 40 back; stop the chapel: half its 30.
+	assert_almost_eq(MapManors.demolish(r, s, 1, "castle", "x"), -1.0, 0.001, "no such building")
+	assert_almost_eq(MapManors.demolish(r, s, 1, "palisade", "x"), -1.0, 0.001, "nothing there")
+	assert_almost_eq(MapManors.demolish(r, s, 1, "mill", "pulled down"), 20.0, 0.001)
+	assert_eq(MapManors.buildings_of(s, 1), [])
+	assert_almost_eq(MapManors.demolish(r, s, 1, "chapel", "stopped"), 15.0, 0.001)
+	assert_eq(MapManors.works_of(s, 1), [])
+	assert_eq(MapManors.free_slots(r, s, 1), 2)
+	assert_almost_eq(float(s.manor_log[-1]["demolished"]), 15.0, 0.001)
+	# It all survives a save.
+	assert_true(MapManors.start_work(r, s, 1, "chapel", "begun again"))
+	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	assert_eq(back.day, 5)
+	assert_eq(back.manor_works.keys(), ["1"])
+	assert_eq(String(back.manor_works["1"][0]["building"]), "chapel")
+	assert_eq(int(back.manor_works["1"][0]["start"]), 35)
+	assert_eq(MapManors.work_days_left(back, 1, "chapel"), 10)
+
+## What buildings do each tick (owner 2026-09-13): the *_per_tick columns
+## summed over the crown's finished buildings, works not counting.
+func test_finished_buildings_add_to_the_crowns_metrics_each_tick() -> void:
+	var r := _repo()
+	r.manor_buildings["market"] = {"building_code": "market", "label": "Market", "cost_gold": "50",
+		"build_days": "0", "tax_bonus": "0.15", "output_bonus": "0", "defence_bonus": "0",
+		"church_bonus": "0", "gold_per_tick": "3", "grain_per_tick": "0", "contentment_per_tick": "0",
+		"unrest_per_tick": "0", "produce_good": "cloth", "produce_units": "1"}
+	r.manor_buildings["mill"]["grain_per_tick"] = "2"
+	r.manor_buildings["mill"]["build_days"] = "9"
+	r.balance["manor_slots_base"] = 3.0
+	r.balance["manor_slots_burg_bonus"] = 1.0
+	var s := _state()
+	assert_true(MapManors.set_owner(r, s, 1, "Rex", "bought"))
+	assert_true(MapManors.build(r, s, 1, "market", "raised"))
+	assert_true(MapManors.start_work(r, s, 1, "mill", "begun"))
+	var fx := MapManors.building_effects(r, s, [1, 2])
+	assert_almost_eq(float(fx["treasury"]), 3.0, 0.001, "the market's tolls")
+	assert_almost_eq(float(fx["grain"]), 0.0, 0.001, "the mill is not built yet")
+	assert_eq(MapManors.building_output_of(r, s, 1), {"cloth": 1.0})
+	assert_eq(MapManors.building_output_of(r, s, 2), {})
+	s.day = 10
+	MapManors.advance_works(r, s)
+	assert_almost_eq(float(MapManors.building_effects(r, s, [1])["grain"]), 2.0, 0.001, "and now it is")
+	# Only the crown's: cell 2 is Valorin's, so its palisade counts for nothing.
+	assert_true(MapManors.build(r, s, 2, "palisade", "dug"))
+	r.manor_buildings["palisade"]["unrest_per_tick"] = "-0.1"
+	r.provinces["p"]["kingdom_code"] = "k"
+	r.realm_bindings = {"player_realm": "k"}
+	var crown := MapManors.crown_building_effects(r, s)
+	assert_almost_eq(float(crown["treasury"]), 3.0, 0.001)
+	assert_almost_eq(float(crown["unrest"]), 0.0, 0.001, "another house's wall")

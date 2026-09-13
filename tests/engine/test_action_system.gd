@@ -149,8 +149,14 @@ func test_selling_and_building_need_a_crown_manor() -> void:
 	var build := ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "mill"})
 	assert_eq(sys.validate(build, s), "")
 	sys.execute(build, s)
-	assert_eq(MapManors.buildings_of(s, cell), ["mill"])
+	# Begun, not standing (2026-09-13): the mill takes its build_days.
+	assert_eq(MapManors.buildings_of(s, cell), [])
+	assert_true(MapManors.is_building(s, cell, "mill"))
 	assert_almost_eq(s.metrics["treasury"], before - float(data.manor_buildings["mill"]["cost_gold"]) - 1.0, 0.001)
+	assert_string_contains(sys.validate(build, s), "already being built")
+	s.tick += int(ceili(float(data.manor_buildings["mill"]["build_days"]) / float(Calendar.DAYS_PER_TICK))) + 1
+	assert_eq(MapManors.advance_works(data, s), [{"cell": cell, "building": "mill"}])
+	assert_eq(MapManors.buildings_of(s, cell), ["mill"])
 	assert_string_contains(sys.validate(build, s), "already has")
 	# Sell it back: the house takes it, the crown gets the sell-back price
 	# less the notary's fee.
@@ -249,3 +255,38 @@ func test_turning_a_manor_to_a_chief_good() -> void:
 		if f_allowed.size() > 1:
 			assert_string_contains(sys.validate(ActionRequest.make("MANOR_FOCUS",
 				{"manor": foreign, "focus": String(f_allowed[1])}), s), "does not control")
+
+## Room and demolition (owner 2026-09-13): a manor takes manor_slots_base
+## works, no more; a building or a work can be pulled down for
+## manor_demolish_refund of its cost, less the wreckers' fee.
+func test_building_needs_a_free_slot_and_can_be_pulled_down() -> void:
+	var cell := _crown_manor()
+	s.metrics["treasury"] = 100000.0
+	var slots := MapManors.slots_of(data, cell)
+	var codes: Array = data.manor_buildings.keys()
+	codes.sort()
+	assert_gt(codes.size(), slots, "more kinds of building than room")
+	for i in slots:
+		var out := sys.execute(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": codes[i]}), s)
+		assert_true(out["ok"])
+	assert_eq(MapManors.free_slots(data, s, cell), 0)
+	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": codes[slots]}), s),
+		"no room")
+	assert_string_contains(sys.validate(ActionRequest.make("MANOR_DEMOLISH", {"manor": cell, "building": codes[slots]}), s),
+		"There is no")
+	var before: float = s.metrics["treasury"]
+	var stop := ActionRequest.make("MANOR_DEMOLISH", {"manor": cell, "building": codes[0]})
+	assert_eq(sys.validate(stop, s), "")
+	var out := sys.execute(stop, s)
+	assert_true(out["ok"])
+	var refund := float(data.manor_buildings[codes[0]]["cost_gold"]) * data.bal("manor_demolish_refund")
+	assert_almost_eq(s.metrics["treasury"], before + refund - 1.0, 0.001, "the refund less the wreckers' fee")
+	assert_false(MapManors.is_building(s, cell, codes[0]))
+	assert_eq(MapManors.free_slots(data, s, cell), 1)
+	assert_eq(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": codes[slots]}), s), "")
+	# A standing building comes down the same way.
+	assert_true(MapManors.build(data, s, cell, codes[0], "test: stood"))
+	assert_eq(MapManors.free_slots(data, s, cell), 0)
+	assert_true(sys.execute(ActionRequest.make("MANOR_DEMOLISH", {"manor": cell, "building": codes[0]}), s)["ok"])
+	assert_false(MapManors.has_building(s, cell, codes[0]))
+	assert_string_contains(String(s.manor_log[-1]["reason"]), "pulled down")

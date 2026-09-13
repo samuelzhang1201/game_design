@@ -529,7 +529,7 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	for f in card["fields"]:
 		fields[String(f[0])] = String(f[1])
 	assert_eq(fields["Held by"], "The crown")
-	for key in ["Province", "Land", "Area", "People", "Rent", "Chief good", "Defence", "Buildings", "Value", "Sells for"]:
+	for key in ["Province", "Land", "Area", "People", "Rent", "Chief good", "Defence", "Buildings", "Slots", "Value", "Sells for"]:
 		assert_true(fields.has(key), key + " is on the card")
 	assert_string_contains(fields["Chief good"], " a year", "the focus and its yield")
 	var codes: Array = []
@@ -542,6 +542,26 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	assert_has(codes, "MANOR_BUILD")
 	assert_does_not_have(codes, "MANOR_BUY")
 	assert_eq(codes.count("MANOR_BUILD"), real.manor_buildings.size(), "one BUILD per building not raised")
+	assert_eq(int(card["slots"]), MapManors.slots_of(real, own))
+	assert_true((card["slot_actions"] as Array).is_empty(), "nothing to pull down yet")
+	for a: Dictionary in card["actions"]:
+		if String(a["action_code"]) == "MANOR_BUILD":
+			assert_string_contains(String(a["label"]), " days", "a building says how long it takes")
+	# A work begun (2026-09-13): the card carries it with its days, and a
+	# cross to stop it.
+	assert_true(MapManors.start_work(real, state, own, "mill", "test"))
+	var begun := MapObjects.manor_card(real, state, own)
+	assert_eq((begun["works"] as Array).size(), 1)
+	assert_eq(String(begun["works"][0]["building"]), "mill")
+	assert_eq(int(begun["works"][0]["days_left"]), int(float(real.manor_buildings["mill"]["build_days"])))
+	assert_eq((begun["slot_actions"] as Array).size(), 1)
+	assert_eq(String(begun["slot_actions"][0]["action_code"]), "MANOR_DEMOLISH")
+	assert_eq(String(begun["slot_actions"][0]["error"]), "")
+	var begun_fields: Dictionary = {}
+	for f in begun["fields"]:
+		begun_fields[String(f[0])] = String(f[1])
+	assert_string_contains(begun_fields["Buildings"], "days to go")
+	assert_string_contains(begun_fields["Slots"], "1 of")
 	assert_eq(codes.count("MANOR_FOCUS"), MapManors.focuses_for(real, own).size() - 1,
 		"one WORK per chief good the land allows, less the one it works")
 	# Another house's manor in the realm: buy, no seize while the flag is off.

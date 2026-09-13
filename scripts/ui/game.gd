@@ -41,6 +41,17 @@ func start_campaign(seed_value: int = 42) -> void:
 		state.apply_player_setup(player_setup)
 	engine = TickEngine.new(data)
 
+## One day of the clock (owner 2026-09-13). Works step; when the day is the
+## tick's last, the tick itself runs and its report goes out. Returns
+## {ticked, finished: [{cell, building}]}.
+func advance_day() -> Dictionary:
+	if state.day >= Calendar.DAYS_PER_TICK:
+		var r := next_tick()
+		return {"ticked": true, "finished": r.finished_works}
+	var finished := engine.advance_day(state)
+	state_changed.emit()
+	return {"ticked": false, "finished": finished}
+
 func next_tick() -> TickReport:
 	_prompts_this_tick = 0
 	current_report = engine.advance(state)
