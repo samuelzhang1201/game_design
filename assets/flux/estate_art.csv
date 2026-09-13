@@ -1,11 +1,37 @@
 art_id,key,seed,notes
-D-32,estate_1,954159497,tier 1: a cottage and one strip field
-D-33,estate_2,954159497,tier 2
-D-34,estate_3,954159497,tier 3
-D-35,estate_4,954159497,tier 4
-D-36,estate_5,954159497,tier 5
-D-37,estate_6,954159497,tier 6
-D-38,estate_7,954159498,tier 7
-D-39,estate_8,954159497,tier 8
-D-40,estate_9,954159497,tier 9
-D-41,estate_10,954159497,tier 10: seed 497 reads as an estate; 498 as a town
+D-43,grain_1,,
+D-44,grain_2,,
+D-45,grain_3,,
+D-46,cattle_1,,
+D-47,cattle_2,,
+D-48,cattle_3,,
+D-49,sheep_1,,
+D-50,sheep_2,,
+D-51,sheep_3,,
+D-52,wood_1,,
+D-53,wood_2,,
+D-54,wood_3,,
+D-55,honey_1,,
+D-56,honey_2,,
+D-57,honey_3,,
+D-58,wine_1,,
+D-59,wine_2,,
+D-60,wine_3,,
+D-61,dates_1,,
+D-62,dates_2,,
+D-63,dates_3,,
+D-64,furs_1,,
+D-65,furs_2,,
+D-66,furs_3,,
+D-67,fish_1,,
+D-68,fish_2,,
+D-69,fish_3,,
+D-70,salt_1,,
+D-71,salt_2,,
+D-72,salt_3,,
+D-73,stone_1,,
+D-74,stone_2,,
+D-75,stone_3,,
+D-76,iron_1,,
+D-77,iron_2,,
+D-78,iron_3,,

@@ -1136,10 +1136,10 @@ func _realm_tint_plain(province_code: String, strength: float) -> Color:
 		return Color.WHITE
 	return Color.WHITE.lerp(MapPalette.color_of(Game.data, holder), strength)
 
-## The MANORS view's estates (MapObjects.manor_estates, owner 2026-09-13):
-## one drawing per manor by its people, ONE mesh, each quad tinted its
-## manor's colour. Rebuilt when the ledger, the manor owners or the
-## province owners change.
+## The MANORS view's estates (MapObjects.manor_estates, owner 2026-09-14):
+## one drawing per manor by its industry and its people, ONE mesh, each
+## quad tinted its manor's colour. Rebuilt when the ledger, the focuses,
+## the manor owners or the province owners change.
 var _estate_mesh: ArrayMesh = null
 var _estate_sig := 0
 
@@ -1147,6 +1147,7 @@ func estate_mesh() -> ArrayMesh:
 	var state := Game.state
 	var sig := hash([0 if state == null else state.world.hash(),
 		0 if state == null else state.manor_owner.hash(), _ownership_sig(),
+		0 if state == null else state.manor_focus.hash(),
 		Game.data.bal("map_manor_mark_alpha")])
 	if _estate_mesh != null and _estate_sig == sig:
 		return _estate_mesh

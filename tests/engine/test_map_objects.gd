@@ -598,20 +598,23 @@ func test_the_province_card_counts_its_manors_by_house() -> void:
 	assert_true(fields.has("Manors"))
 	assert_true(String(fields["Manors"]).begins_with(str(MapManors.manors_of_province(real, province).size())))
 
-## The estates (owner 2026-09-13): one drawing per manor without a town,
-## its tier the last whose min_people its people reach, sized by tier but
-## never taller than the cell allows; a manor with a town carries none.
-func test_every_manor_without_a_town_wears_an_estate_by_its_people() -> void:
+## The estates (owner 2026-09-14): one drawing per manor without a town, by
+## its industry (the chief good it works) and its size (the last tier whose
+## min_people its people reach); one height for all, centred; a manor with
+## a town carries none; a change of focus or of people changes the drawing.
+func test_every_manor_without_a_town_wears_its_industrys_estate() -> void:
 	var state := _campaign()
-	assert_eq(real.manor_estates.size(), 10, "ten tiers")
-	for i in range(1, real.manor_estates.size()):
-		assert_gt(float(real.manor_estates[i]["min_people"]), float(real.manor_estates[i - 1]["min_people"]),
-			"tiers ascend")
-	assert_eq(int(float(MapObjects.estate_tier(real, 0.0)["tier"])), 1)
-	assert_eq(int(float(MapObjects.estate_tier(real, 1e9)["tier"])), 10)
-	var second := float(real.manor_estates[1]["min_people"])
-	assert_eq(int(float(MapObjects.estate_tier(real, second)["tier"])), 2, "reaching a threshold is enough")
-	assert_eq(int(float(MapObjects.estate_tier(real, second - 1.0)["tier"])), 1)
+	assert_eq(real.manor_estates.size(), 36, "twelve industries, three sizes")
+	for code: String in real.manor_focus:
+		assert_eq(MapObjects.estate_rows(real, code).size(), 3, "%s has three sizes" % code)
+	assert_eq(int(float(MapObjects.estate_tier(real, "grain", 0.0)["tier"])), 1)
+	assert_eq(int(float(MapObjects.estate_tier(real, "grain", 1e9)["tier"])), 3)
+	var second := float(MapObjects.estate_rows(real, "grain")[1]["min_people"])
+	assert_eq(int(float(MapObjects.estate_tier(real, "grain", second)["tier"])), 2, "reaching a threshold is enough")
+	assert_eq(int(float(MapObjects.estate_tier(real, "grain", second - 1.0)["tier"])), 1)
+	assert_eq(String(MapObjects.estate_tier(real, "fish", 0.0)["focus_code"]), "fish")
+	assert_eq(String(MapObjects.estate_tier(real, "moon_dust", 0.0)["focus_code"]),
+		String(real.manor_estates[0]["focus_code"]), "an industry with no art wears the first")
 	var estates := MapObjects.manor_estates(real, state)
 	var without_town := 0
 	for id: int in real.manors:
@@ -619,31 +622,51 @@ func test_every_manor_without_a_town_wears_an_estate_by_its_people() -> void:
 			without_town += 1
 	assert_eq(estates.size(), without_town, "one per manor without a town")
 	var people := MapManors.population_table(real, state, real.manors.keys())
-	var tiers_seen: Dictionary = {}
+	var px := real.bal("map_manor_estate_px") * real.bal("map_decor_scale")
 	var fit := real.bal("map_manor_estate_fit")
+	var industries: Dictionary = {}
+	var tiers_seen: Dictionary = {}
 	for e: Dictionary in estates:
 		var cell := int(e["cell"])
 		assert_eq(MapManors.burg_of(real, cell), "")
 		var pop := float((people[cell] as Dictionary)["total"])
-		assert_eq(int(e["tier"]), int(float(MapObjects.estate_tier(real, pop)["tier"])))
-		assert_eq(e["pos"], MapTerrain.cell_center(real, real.cells[cell]), "on the cell's centre")
-		assert_lte(float(e["height"]), MapTerrain.cell_radius(real, real.cells[cell]) * fit + 0.001)
-		assert_gt(float(e["height"]), 0.0)
+		var focus := MapManors.focus_of(real, state, cell)
+		var row := MapObjects.estate_tier(real, focus, pop)
+		assert_eq(String(e["texture"]), String(row["texture"]))
+		assert_eq(int(e["tier"]), int(float(row["tier"])))
+		assert_eq(e["pos"], MapTerrain.cell_center(real, real.cells[cell]), "centred on the cell")
+		assert_almost_eq(float(e["height"]), minf(px, MapTerrain.cell_radius(real, real.cells[cell]) * fit), 0.001,
+			"one height for all, unless the cell is too small")
+		assert_almost_eq(float(e["foot"]), real.bal("map_manor_estate_foot"), 0.001)
+		industries[String(e["focus"])] = true
 		tiers_seen[int(e["tier"])] = true
-	assert_gte(tiers_seen.size(), 8, "the pack's people spread across most tiers")
+	assert_gte(industries.size(), 4, "the pack's land works several industries")
+	assert_eq(tiers_seen.size(), 3, "all three sizes occur")
 	assert_eq(MapObjects.manor_estates(real, state), estates, "the same every call")
-	# The card names the tier (a full card: a manor of the player's realm).
+	# A change of focus changes the drawing; the card names the industry.
 	var realm := real.resolve_realm("player_realm")
 	var own: Dictionary = {}
 	for e: Dictionary in estates:
-		if MapOwnership.owner_of(real, state, MapManors.province_of(real, int(e["cell"]))) == realm:
+		if MapOwnership.owner_of(real, state, MapManors.province_of(real, int(e["cell"]))) == realm \
+				and MapManors.focuses_for(real, int(e["cell"])).size() > 1:
 			own = e
 			break
 	assert_false(own.is_empty())
-	var card := MapObjects.manor_card(real, state, int(own["cell"]))
+	var cell := int(own["cell"])
+	var card := MapObjects.manor_card(real, state, cell)
 	var found := false
 	for f in card["fields"]:
 		if String(f[0]) == "Estate":
 			found = true
-			assert_string_contains(String(f[1]), "tier %d of 10" % int(own["tier"]))
-	assert_true(found, "the card says the estate's tier")
+			assert_string_contains(String(f[1]), "size %d of 3" % int(own["tier"]))
+	assert_true(found, "the card says the estate's industry and size")
+	var other := ""
+	for f: String in MapManors.focuses_for(real, cell):
+		if f != String(own["focus"]):
+			other = f
+			break
+	assert_true(MapManors.set_focus(real, state, cell, other, "test"))
+	for e: Dictionary in MapObjects.manor_estates(real, state):
+		if int(e["cell"]) == cell:
+			assert_eq(String(e["focus"]), other, "the new industry's drawing")
+			assert_ne(String(e["texture"]), String(own["texture"]))

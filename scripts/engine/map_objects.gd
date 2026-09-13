@@ -93,6 +93,7 @@ static func forget_decor() -> void:
 	_decor_cache.clear()
 	_sea_decor_cache.clear()
 	_estate_cache.clear()
+	_estate_rows_cache.clear()
 
 ## A stable float in [0, 1) for an integer — an integer hash, masked to 32
 ## bits at every step so it cannot drift with the word size.
@@ -162,30 +163,57 @@ static func terrain_decor(repo: DataRepository) -> Array:
 	_decor_cache[key] = out
 	return out
 
-## The estate a manor wears in the MANORS view (owner 2026-09-13: ONE
-## drawing per manor, house and fields together, by its people — the
-## scattered houses-and-fields marks it replaced were the owner's veto).
-## The tier is the last row of data/manor_estates.csv whose min_people
-## the manor's ledger people reach: {} for no rows.
-static func estate_tier(repo: DataRepository, people: float) -> Dictionary:
+## The estate a manor wears in the MANORS view (owner 2026-09-13/14: ONE
+## drawing per manor, its house and its INDUSTRY's workplace together —
+## the scattered houses-and-fields marks it replaced were the owner's
+## veto). The rows of data/manor_estates.csv for the manor's focus (the
+## first industry's rows when its focus has none), and among them the
+## last whose min_people the manor's ledger people reach: {} for no rows.
+static func estate_tier(repo: DataRepository, focus_code: String, people: float) -> Dictionary:
+	var rows := estate_rows(repo, focus_code)
 	var out: Dictionary = {}
-	for row: Dictionary in repo.manor_estates:
+	for row: Dictionary in rows:
 		if people >= float(row["min_people"]):
 			out = row
-		else:
-			break
 	return out
 
-## [{pos, texture, height, cell, tier, flip, foot}] in native coordinates:
-## every manor without a town, its estate drawing on its cell's centre,
-## sized by tier (height_px x map_decor_scale) but never taller than
-## map_manor_estate_fit of the cell's radius, mirrored by the cell id's
-## hash for variety. A manor with a town carries none (the town drawing
-## is there). Cached on the ledger, whose people set the tiers.
+## An industry's rows ascending by min_people; the first industry's when
+## the code has none. Cached per repo.
+static var _estate_rows_cache: Dictionary = {}
+
+static func estate_rows(repo: DataRepository, focus_code: String) -> Array:
+	var rkey := repo.get_instance_id()
+	if not _estate_rows_cache.has(rkey):
+		var by: Dictionary = {}
+		var order: Array = []
+		for row: Dictionary in repo.manor_estates:
+			var code := String(row["focus_code"])
+			if not by.has(code):
+				by[code] = []
+				order.append(code)
+			(by[code] as Array).append(row)
+		for code: String in by:
+			(by[code] as Array).sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+				return float(a["min_people"]) < float(b["min_people"]))
+		_estate_rows_cache[rkey] = {"by": by, "first": String(order[0]) if not order.is_empty() else ""}
+	var cache: Dictionary = _estate_rows_cache[rkey]
+	var by: Dictionary = cache["by"]
+	if by.has(focus_code):
+		return by[focus_code]
+	return by.get(String(cache["first"]), [])
+
+## [{pos, texture, height, cell, tier, focus, flip, foot}] in native
+## coordinates: every manor without a town, its estate drawing centred on
+## its cell, ONE height for all (map_manor_estate_px x map_decor_scale,
+## never taller than map_manor_estate_fit of the cell's radius), mirrored
+## by the cell id's hash for variety. A manor with a town carries none
+## (the town drawing is there). Cached on the ledger, whose people set the
+## sizes, and the chosen focuses, which set the industries.
 static var _estate_cache: Dictionary = {}
 
 static func manor_estates(repo: DataRepository, state: GameState) -> Array:
-	var key := hash([repo.get_instance_id(), 0 if state == null else state.world.hash()])
+	var key := hash([repo.get_instance_id(), 0 if state == null else state.world.hash(),
+		0 if state == null else state.manor_focus.hash()])
 	if _estate_cache.has(key):
 		return _estate_cache[key]
 	var out: Array = []
@@ -195,7 +223,7 @@ static func manor_estates(repo: DataRepository, state: GameState) -> Array:
 	var ids: Array = repo.manors.keys()
 	ids.sort()
 	var people := MapManors.population_table(repo, state, ids)
-	var scale := repo.bal("map_decor_scale")
+	var px := repo.bal("map_manor_estate_px") * repo.bal("map_decor_scale")
 	var fit := repo.bal("map_manor_estate_fit")
 	var foot := repo.bal("map_manor_estate_foot")
 	for id: int in ids:
@@ -205,15 +233,16 @@ static func manor_estates(repo: DataRepository, state: GameState) -> Array:
 		if cell.is_empty():
 			continue
 		var pop := float((people.get(id, {}) as Dictionary).get("total", 0.0))
-		var row := estate_tier(repo, pop)
+		var focus := MapManors.focus_of(repo, state, id)
+		var row := estate_tier(repo, focus, pop)
 		if row.is_empty():
 			continue
 		var radius := MapTerrain.cell_radius(repo, cell)
 		out.append({
 			"pos": MapTerrain.cell_center(repo, cell),
 			"texture": String(row["texture"]),
-			"height": minf(float(row["height_px"]) * scale, radius * fit),
-			"cell": id, "tier": int(float(row["tier"])),
+			"height": minf(px, radius * fit),
+			"cell": id, "tier": int(float(row["tier"])), "focus": String(row["focus_code"]),
 			"flip": hash01(id * 48271) > 0.5, "foot": foot})
 	_estate_cache[key] = out
 	return out
@@ -914,9 +943,11 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		fields.append(["Chief good", "none the land allows"])
 	var tier := MapManors.burg_of(repo, cell) == ""
 	if tier and not repo.manor_estates.is_empty():
-		var est := estate_tier(repo, float(people["total"]))
+		var est := estate_tier(repo, MapManors.focus_of(repo, state, cell), float(people["total"]))
 		if not est.is_empty():
-			fields.append(["Estate", "tier %d of %d" % [int(float(est["tier"])), repo.manor_estates.size()]])
+			var industry := String((repo.manor_focus.get(String(est["focus_code"]), {}) as Dictionary).get("label", est["focus_code"])).to_lower()
+			fields.append(["Estate", "%s, size %d of %d" % [industry, int(float(est["tier"])),
+				estate_rows(repo, String(est["focus_code"])).size()]])
 	fields.append(["Defence", str(roundi(MapManors.defence_of(repo, state, cell)))])
 	var built: Array = MapManors.buildings_of(state, cell)
 	card["buildings"] = built
