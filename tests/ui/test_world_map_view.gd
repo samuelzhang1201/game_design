@@ -1077,50 +1077,22 @@ func test_the_woods_are_one_mesh_over_one_atlas() -> void:
 	v.show_heights = true
 	assert_false(v.decor_visible(), "hidden under a theme")
 
-## The manors' marks are meshes by zoom tier, in the MANORS view only
-## (owner 2026-09-13: not the default map): nothing at the world zoom,
-## the farmsteads at the home zoom, the fields closer in.
-func test_the_manor_marks_come_in_by_zoom_tier_in_the_manors_view() -> void:
+## In the MANORS view every element follows one colour strategy (owner
+## 2026-09-13): a town drawing wears its own manor's colour at
+## map_manor_mark_alpha, the realm's on the default map.
+func test_town_drawings_wear_their_manors_colour_in_the_manors_view() -> void:
 	var v := _view()
 	await wait_frames(2)
-	v._zoom = 3.0
-	assert_eq(v.manor_decor_tiers_shown(), [], "the default map carries none")
-	v.show_manors = true
-	var meshes := v.manor_decor_meshes()
-	assert_eq(meshes.size(), 2, "two tiers in data/manor_decor.csv: farmsteads, then fields")
-	var tiers: Array = meshes.keys()
-	tiers.sort()
-	for tier: float in tiers:
-		assert_gt(MarkMesh.quad_count(meshes[tier]), 0, "tier %.1f has marks" % tier)
-	v._zoom = float(tiers[0]) - 0.1
-	assert_eq(v.manor_decor_tiers_shown(), [], "below the first tier: none")
-	v._zoom = float(tiers[0])
-	assert_eq(v.manor_decor_tiers_shown(), [tiers[0]])
-	v._zoom = float(tiers[1]) + 0.5
-	assert_eq(v.manor_decor_tiers_shown(), tiers, "close in: every tier")
-	assert_true(v.manor_decor_meshes() == meshes, "kept between frames")
-	# Every element wears its manor's colour there (owner 2026-09-13): the
-	# marks and the town drawings alike, at map_manor_mark_alpha.
-	var cell := -1
-	for c: int in Game.data.manors:
-		if MapManors.burg_of(Game.data, c) == "" and v.house_manor_color(c).a > 0.0:
-			cell = c
-			break
-	assert_gt(cell, -1)
-	var tint := v.manor_mark_tint(cell)
-	assert_almost_eq(tint.a, Game.data.bal("map_manor_mark_alpha"), 0.001)
-	var wash := v.house_manor_color(cell)
-	assert_almost_eq(tint.r, wash.r, 0.001, "the manor's own colour")
 	var burg: String = Game.data.burgs.keys()[0]
 	var burg_cell := int(MapEconomy.burg_cells(Game.data).get(burg, -1))
 	assert_gt(burg_cell, -1)
-	assert_eq(v.sprite_tint(burg, String(Game.data.burgs[burg]["province_code"]), 1.0),
-		v.manor_mark_tint(burg_cell), "a town drawing wears its manor's colour too")
+	var province := String(Game.data.burgs[burg]["province_code"])
+	v.show_manors = true
+	var tint := v.manor_mark_tint(burg_cell)
+	assert_almost_eq(tint.a, Game.data.bal("map_manor_mark_alpha"), 0.001)
+	assert_eq(v.sprite_tint(burg, province, 1.0), tint, "the manor's own colour")
 	v.show_manors = false
-	assert_ne(v.sprite_tint(burg, String(Game.data.burgs[burg]["province_code"]), 1.0),
-		v.manor_mark_tint(burg_cell), "and the realm's on the default map")
-	v.show_economy = true
-	assert_eq(v.manor_decor_tiers_shown(), [], "none in the economy view either")
+	assert_ne(v.sprite_tint(burg, province, 1.0), tint, "the realm's on the default map")
 
 ## A thematic view drops the terrain decoration: a wood is not what the view
 ## is about. The HEIGHTS view keeps the town drawings — a town is still a

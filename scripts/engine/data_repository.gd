@@ -52,9 +52,6 @@ var goods_art: Dictionary = {}
 ## yield_per_1000, rent_bonus, switch_cost_gold, transition_ticks} — the
 ## chief goods a manor may work at (owner 2026-09-13), in file order.
 var manor_focus: Dictionary = {}
-## data/manor_decor.csv rows: the marks a manor carries on the map —
-## farmsteads by its people, its chief good's fields (owner 2026-09-13).
-var manor_decor: Array[Dictionary] = []
 ## data/goods_palette.csv: a good's first tag -> the colour its province wears
 ## in the ECONOMY view.
 var goods_palette: Dictionary = {}
@@ -330,11 +327,6 @@ func _load(dir: String) -> bool:
 			["focus_code", "label", "good_code", "biomes", "coast", "yield_per_1000",
 			"rent_bonus", "switch_cost_gold", "transition_ticks"],
 			func(r): manor_focus[String(r["focus_code"])] = r):
-		return false
-	if not _load_if_present("res://data/manor_decor.csv",
-			["key", "kind", "texture", "aspect", "height_px", "min_scale",
-			"per_people", "max_count", "focus_code", "flip", "rotate_deg"],
-			func(r): manor_decor.append(r)):
 		return false
 	if not _load_if_present("res://data/sea_art.csv",
 			["key", "texture", "weight", "height_px", "min_shore_px"],

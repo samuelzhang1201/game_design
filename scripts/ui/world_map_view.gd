@@ -1086,12 +1086,6 @@ func decor_atlas() -> MarkAtlas:
 				var tex := _sprite_texture(path)
 				if tex != null:
 					textures[path] = tex
-		for row: Dictionary in Game.data.manor_decor:
-			var path := String(row["texture"])
-			if not textures.has(path):
-				var tex := _sprite_texture(path)
-				if tex != null:
-					textures[path] = tex
 		_decor_atlas = MarkAtlas.build(textures)
 	return _decor_atlas
 
@@ -1136,46 +1130,10 @@ func _realm_tint_plain(province_code: String, strength: float) -> Color:
 		return Color.WHITE
 	return Color.WHITE.lerp(MapPalette.color_of(Game.data, holder), strength)
 
-## The manors' own marks (MapObjects.manor_decor, owner 2026-09-13), in
-## the MANORS view only (owner: not the default map): one mesh per
-## min_scale tier, so the farmsteads come in at the home zoom and the
-## fields closer in — a tier is a single draw call or nothing. The marks
-## wear one ink (palette manor_mark) since the manors wear their houses'
-## colours. Rebuilt when the ledger or the focuses change.
-var _manor_decor_meshes: Dictionary = {}
-var _manor_decor_sig := 0
-
-func manor_decor_meshes() -> Dictionary:
-	var state := Game.state
-	var sig := hash([0 if state == null else state.world.hash(),
-		0 if state == null else state.manor_focus.hash(),
-		0 if state == null else state.manor_owner.hash(), _ownership_sig(),
-		Game.data.bal("map_manor_mark_alpha")])
-	if _manor_decor_sig == sig and not _manor_decor_meshes.is_empty():
-		return _manor_decor_meshes
-	# Each mark wears its own manor's colour (owner 2026-09-13), the way the
-	# default map's symbols wear the realm's: the art multiplies the wash.
-	var tints: Dictionary = {}
-	var by_tier: Dictionary = {}
-	for d: Dictionary in MapObjects.manor_decor(Game.data, state):
-		var cell := int(d["cell"])
-		if not tints.has(cell):
-			tints[cell] = manor_mark_tint(cell)
-		var tier := float(d["min_scale"])
-		if not by_tier.has(tier):
-			by_tier[tier] = []
-		(by_tier[tier] as Array).append({"pos": d["pos"], "texture": String(d["texture"]),
-			"height": float(d["height"]), "color": tints[cell],
-			"flip": bool(d.get("flip", false)), "angle": float(d.get("angle", 0.0)),
-			"foot": float(d.get("foot", 0.85))})
-	_manor_decor_meshes = {}
-	for tier: float in by_tier:
-		_manor_decor_meshes[tier] = MarkMesh.build(by_tier[tier], decor_atlas())
-	_manor_decor_sig = sig
-	return _manor_decor_meshes
-
-## The tint a mark or a town drawing wears in the MANORS view: its own
-## manor's colour at map_manor_mark_alpha; the mark's art multiplies it.
+## The tint a town drawing wears in the MANORS view (owner 2026-09-13:
+## every element there follows one colour strategy): its own manor's
+## colour at map_manor_mark_alpha; the art multiplies it. The per-manor
+## estate art (library D-32..D-41, by people) will wear it too.
 func manor_mark_tint(cell_id: int) -> Color:
 	var c := house_manor_color(cell_id)
 	if c.a <= 0.0:
@@ -1195,33 +1153,12 @@ func sprite_tint(burg_code: String, province_code: String, strength: float) -> C
 		return Color.WHITE
 	return realm_tint(province_code, strength)
 
-## The tiers that draw at the current zoom in the MANORS view, ascending;
-## none in any other view. Test seam.
-func manor_decor_tiers_shown() -> Array:
-	var out: Array = []
-	if not show_manors or _terrain_mesh == null:
-		return out
-	for tier: float in manor_decor_meshes():
-		if view_scale() >= tier:
-			out.append(tier)
-	out.sort()
-	return out
-
 func _draw_terrain_decor() -> void:
-	var xf := Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)
-	var atlas := decor_atlas()
-	if decor_visible():
-		var mesh := decor_mesh()
-		if mesh.get_surface_count() > 0:
-			draw_mesh(mesh, atlas.texture, xf)
-	var tiers := manor_decor_tiers_shown()
-	if tiers.is_empty():
+	if not decor_visible():
 		return
-	var meshes := manor_decor_meshes()
-	for tier: float in tiers:
-		var m: ArrayMesh = meshes[tier]
-		if m.get_surface_count() > 0:
-			draw_mesh(m, atlas.texture, xf)
+	var mesh := decor_mesh()
+	if mesh.get_surface_count() > 0:
+		draw_mesh(mesh, decor_atlas().texture, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset))
 
 ## The scale bar in the bottom-right corner (owner request 2026-09-12). The
 ## pack carries its own scale — map_info's distance_scale world units per
