@@ -143,6 +143,30 @@ func test_set_owner_needs_a_manor_a_known_house_a_change_and_a_reason() -> void:
 	assert_true(MapManors.is_known_house(r, s, "Valorin"))
 	assert_false(MapManors.is_known_house(r, s, ""))
 
+## Neighbouring provinces get different shade levels (owner 2026-09-13):
+## cells 1 (p) and 4 (q) do not touch, so p and q may share a level; make
+## them touch and they must not. shade() moves a colour by level.
+func test_provinces_that_touch_take_different_shades() -> void:
+	var r := _repo()
+	assert_eq(MapManors.province_neighbours(r), {}, "p and q do not touch")
+	var apart := MapManors.province_shades(r, 5)
+	assert_eq(int(apart["p"]), 0)
+	assert_eq(int(apart["q"]), 0, "apart, both take the first level")
+	MapManors.invalidate()
+	r.cells[2]["neighbor_ids"] = PackedInt32Array([1, 4])
+	r.cells[4]["neighbor_ids"] = PackedInt32Array([2])
+	var touching := MapManors.province_neighbours(r)
+	assert_eq(touching["p"], ["q"])
+	assert_eq(touching["q"], ["p"])
+	var shades := MapManors.province_shades(r, 5)
+	assert_ne(int(shades["p"]), int(shades["q"]), "touching, they differ")
+	var base := Color(0.5, 0.5, 0.5, 0.8)
+	assert_eq(MapManors.shade(base, 0, 0.1), base)
+	assert_almost_eq(MapManors.shade(base, 1, 0.1).r, 0.55, 0.001, "1: a step lighter")
+	assert_almost_eq(MapManors.shade(base, 2, 0.1).r, 0.45, 0.001, "2: a step darker")
+	assert_almost_eq(MapManors.shade(base, 3, 0.1).r, 0.6, 0.001, "3: two steps lighter")
+	assert_almost_eq(MapManors.shade(base, 2, 0.1).a, 0.8, 0.001, "alpha kept")
+
 ## Character creation renames the royal house; the pack still binds the
 ## demesne to the old name, so those manors are the crown's under the new.
 func test_a_renamed_royal_house_keeps_its_manors() -> void:

@@ -1903,9 +1903,20 @@ func manor_color(cell_id: int) -> Color:
 		+ (MapObjects.hash01(cell_id) - 0.5) * repo.bal("map_manor_jitter"), 0.0, 1.0)
 	var pale := realm.lerp(MapPalette.named(repo, "manor_pale"), repo.bal("map_manor_pale"))
 	var deep := realm.lerp(MapPalette.named(repo, "manor_rich"), repo.bal("map_manor_deep"))
-	var c := pale.lerp(deep, t)
+	var c := _province_shaded(cell_id, pale.lerp(deep, t))
 	c.a = repo.bal("map_manor_alpha")
 	return c
+
+## Neighbouring provinces told apart (owner 2026-09-13): the manor's colour
+## shifted by its province's shade level (MapManors.province_shades), so
+## two provinces of one house or one realm that touch never look alike.
+func _province_shaded(cell_id: int, color: Color) -> Color:
+	var repo := Game.data
+	var levels := int(repo.bal("map_manor_shade_levels"))
+	if levels <= 1:
+		return color
+	var level := int(MapManors.province_shades(repo, levels).get(MapManors.province_of(repo, cell_id), 0))
+	return MapManors.shade(color, level, repo.bal("map_manor_shade_step"))
 
 ## The MANORS view's wash: the holding house's colour — the crown its
 ## realm's, deepened map_manor_crown_deep toward manor_rich; another house
@@ -1925,6 +1936,7 @@ func house_manor_color(cell_id: int) -> Color:
 		c = MapPalette.house_color(repo, family)
 	if cell_owner(cell_id) != mine:
 		c = c.lerp(MapPalette.named(repo, "manor_pale"), repo.bal("map_manor_foreign_pale"))
+	c = _province_shaded(cell_id, c)
 	c.a = repo.bal("map_manor_alpha")
 	return c
 

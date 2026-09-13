@@ -87,6 +87,65 @@ static func manors_of_province(repo: DataRepository, province_code: String) -> A
 			(c["by_province"][p] as Array).append(id)
 	return (c["by_province"] as Dictionary).get(province_code, [])
 
+# ---- shades: neighbouring provinces told apart ------------------------------
+
+## Provinces that touch: province code -> Array of province codes, from the
+## cells' neighbour lists (two land cells of different provinces sharing an
+## edge). Geometry, cached per repo.
+static func province_neighbours(repo: DataRepository) -> Dictionary:
+	var c := _repo_cache(repo)
+	if not c.has("neighbours"):
+		var out: Dictionary = {}
+		for id: int in repo.manors:
+			var mine := province_of(repo, id)
+			if mine == "":
+				continue
+			for n: int in ((repo.cells.get(id, {}) as Dictionary).get("neighbor_ids", PackedInt32Array()) as PackedInt32Array):
+				var other := province_of(repo, n)
+				if other == "" or other == mine:
+					continue
+				if not out.has(mine):
+					out[mine] = []
+				if not (out[mine] as Array).has(other):
+					(out[mine] as Array).append(other)
+		c["neighbours"] = out
+	return c["neighbours"]
+
+## A shade level per province, 0..levels-1, such that no two provinces that
+## touch share one (owner 2026-09-13: neighbouring provinces' manors must
+## not look alike, even under one house or one realm). Greedy over the
+## provinces in code order — deterministic, and a planar map rarely needs
+## more than a handful of levels. Cached per repo.
+static func province_shades(repo: DataRepository, levels: int) -> Dictionary:
+	var c := _repo_cache(repo)
+	var key := "shades_%d" % levels
+	if not c.has(key):
+		var adjacent := province_neighbours(repo)
+		var codes: Array = repo.provinces.keys()
+		codes.sort()
+		var shades: Dictionary = {}
+		for code: String in codes:
+			var taken: Dictionary = {}
+			for other: String in adjacent.get(code, []):
+				if shades.has(other):
+					taken[int(shades[other])] = true
+			var level := 0
+			while taken.has(level) and level < maxi(levels, 1) - 1:
+				level += 1
+			shades[code] = level
+		c[key] = shades
+	return c[key]
+
+## A colour taken to a shade level: 0 as it is, then lighter and darker
+## by turns, each step `step` further from the colour toward white or
+## black — so 1 is a touch lighter, 2 a touch darker, 3 lighter still.
+static func shade(color: Color, level: int, step: float) -> Color:
+	if level <= 0:
+		return color
+	var amount := step * float((level + 1) / 2)
+	var toward := Color(1, 1, 1, color.a) if level % 2 == 1 else Color(0, 0, 0, color.a)
+	return color.lerp(toward, clampf(amount, 0.0, 0.9))
+
 # ---- ownership --------------------------------------------------------------
 
 ## The player's family: the crown. The player character's LIVE family name

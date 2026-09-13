@@ -219,3 +219,5 @@ map_manor_house_sat,0.45,"manors view (MANOR_SYSTEM.md §6): saturation of a hou
 map_manor_house_val,0.88,"manors view: value (brightness) of a house's colour"
 map_manor_crown_deep,0.25,"manors view: how far the crown's manors deepen from the realm colour toward manor_rich"
 map_manor_foreign_pale,0.65,"manors view: how far manors outside the crown's realm fade toward manor_pale"
+map_manor_shade_levels,5,"manor views (owner 2026-09-13): how many shade levels neighbouring provinces are told apart with — no two provinces that touch share one; 1 turns it off"
+map_manor_shade_step,0.12,"manor views: how far each shade level moves a manor's colour toward white or black (level 1 lighter, 2 darker, 3 lighter still...)"
