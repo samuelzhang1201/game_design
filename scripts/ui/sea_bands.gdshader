@@ -17,7 +17,10 @@ uniform float band_far = 150.0;
 uniform float soft = 6.0;
 // The wave grain: a seamless noise tile, stretched into horizontal streaks.
 uniform sampler2D waves : repeat_enable, filter_linear;
-uniform float wave_alpha = 0.12;
+uniform float wave_alpha = 0.08;
+// Only noise above this (0..1) becomes a streak; the rest of the sea keeps
+// its band's flat tint. Higher is sparser.
+uniform float wave_cut = 0.6;
 // Native px covered by one tile of the grain (width, height).
 uniform vec2 wave_scale = vec2(576.0, 96.0);
 // Native px covered by the whole field, so UV becomes native px.
@@ -28,9 +31,11 @@ void fragment() {
 	vec3 c = mix(sea_near.rgb, sea_nearer.rgb, smoothstep(band_near - soft, band_near + soft, d));
 	c = mix(c, sea_far.rgb, smoothstep(band_nearer - soft, band_nearer + soft, d));
 	c = mix(c, sea_deep.rgb, smoothstep(band_far - soft, band_far + soft, d));
-	// The grain is centred on 0.5: it darkens the troughs and lightens the
-	// crests by wave_alpha at most, and averages out to the band's own tint.
+	// Only the CRESTS of the grain become streaks — thin, sparse, and faint
+	// — and the rest of the sea stays its band's flat tint (owner 2026-09-13:
+	// the sea must not draw the eye; the land is the picture).
 	float w = texture(waves, UV * field_px / wave_scale).r;
-	c *= 1.0 + wave_alpha * (w - 0.5) * 2.0;
+	float streak = smoothstep(wave_cut, wave_cut + 0.12, w);
+	c *= 1.0 - wave_alpha * streak;
 	COLOR = vec4(c, 1.0);
 }

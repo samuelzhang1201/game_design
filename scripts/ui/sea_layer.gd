@@ -49,6 +49,7 @@ func setup(repo: DataRepository) -> void:
 	mat.set_shader_parameter("wave_scale",
 		Vector2(tile * maxf(repo.bal("map_sea_wave_stretch"), 1.0), tile))
 	mat.set_shader_parameter("wave_alpha", repo.bal("map_sea_wave_alpha"))
+	mat.set_shader_parameter("wave_cut", repo.bal("map_sea_wave_cut"))
 	mat.set_shader_parameter("field_px", _size)
 	_grain = _make_grain(int(repo.bal("map_sea_wave_seed")))
 	mat.set_shader_parameter("waves", _grain)
