@@ -110,12 +110,24 @@ var biome_texture_path: String = ""
 ## data/maps.csv sea_texture: world_sea_distance.png, every pixel its
 ## distance to land in native px (MapIndex.bake_sea_distance); SeaLayer.
 var sea_texture_path: String = ""
+## data/maps.csv cell_texture: world_cell_index.png, R | G<<8 = the land
+## cell under a pixel (white = water) — how a click finds its manor.
+var cell_texture_path: String = ""
 ## realm slot -> this map's kingdom_code (maps/<id>/realm_bindings.csv).
 var realm_bindings: Dictionary = {}
 ## province_code -> the authored house holding it (maps/<id>/house_bindings.csv,
 ## hand-maintained like realm_bindings). Unbound provinces are held by a house
 ## named after their capital town — see MapObjects.house_of.
 var house_bindings: Dictionary = {}
+## maps/<id>/political/manors.csv: cell_id (int) -> {manor_code, label,
+## province_code, burg_code, culture_code} — one named manor per land cell,
+## forged by the importer (ManorNames); maps/<id>/manor_name_overrides.csv
+## (cell_id,label), hand-maintained, replaces labels last. MANOR_SYSTEM.md §1.
+var manors: Dictionary = {}
+## manor_code -> cell_id, and lower-cased label -> cell_id, for orders that
+## name a manor ("buy Ashcombe").
+var manor_by_code: Dictionary = {}
+var manor_by_label: Dictionary = {}
 ## Every pack table by domain and area: world_tables[domain][area][code] -> row
 ## (spec 2026-09-09 §1). The named fields above (kingdoms, provinces, burgs,
 ## routes, rivers, markers, biomes) are the SAME Dictionary objects, so the
@@ -352,6 +364,9 @@ func load_map(id: String) -> bool:
 	coasts.clear()
 	realm_bindings.clear()
 	house_bindings.clear()
+	manors.clear()
+	manor_by_code.clear()
+	manor_by_label.clear()
 	world_tables.clear()
 	if not _load_if_present(dir + "/political/kingdoms.csv",
 			["kingdom_code", "state_id", "label", "capital_burg"],
@@ -429,11 +444,28 @@ func load_map(id: String) -> bool:
 				for pc in String(r["province_codes"]).split("|", false):
 					house_bindings[pc] = String(r["family_name"])):
 		return false
+	if not _load_if_present(dir + "/political/manors.csv",
+			["cell_id", "manor_code", "label", "province_code", "burg_code", "culture_code"],
+			func(r: Dictionary) -> void:
+				r["cell_id"] = int(r["cell_id"])
+				manors[int(r["cell_id"])] = r):
+		return false
+	if not _load_if_present(dir + "/manor_name_overrides.csv", ["cell_id", "label"],
+			func(r: Dictionary) -> void:
+				var cell := int(r["cell_id"])
+				if manors.has(cell):
+					manors[cell]["label"] = String(r["label"])):
+		return false
+	for cell: int in manors:
+		var row: Dictionary = manors[cell]
+		manor_by_code[String(row["manor_code"])] = cell
+		manor_by_label[String(row["label"]).to_lower()] = cell
 	map_id = id
 	index_texture_path = String(m["index_texture"])
 	province_texture_path = String(m.get("province_texture", ""))
 	biome_texture_path = String(m.get("biome_texture", ""))
 	sea_texture_path = String(m.get("sea_texture", ""))
+	cell_texture_path = String(m.get("cell_texture", ""))
 	_resolve_realm_slots()
 	return true
 

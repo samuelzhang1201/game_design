@@ -66,3 +66,19 @@ func test_bake_sea_distance_writes_capped_bytes() -> void:
 	assert_eq(baked.get_pixel(2, 0).r8, 2)
 	assert_eq(baked.get_pixel(255, 0).r8, 255)
 	assert_eq(baked.get_pixel(299, 0).r8, 255, "capped")
+
+## rasterize: a polygon filled with its id in the two-byte encoding, the
+## rest white, decodable by id_at — the importer's own fill, so a baked
+## bitmap matches an imported one. A 4x4 square from (1,1) to (5,5) on an
+## 8x8 canvas covers pixels 1..4 on each axis (centre sampling).
+func test_rasterize_fills_a_polygon_with_its_id() -> void:
+	var square := PackedVector2Array([Vector2(1, 1), Vector2(5, 1), Vector2(5, 5), Vector2(1, 5)])
+	var img := MapIndex.rasterize([square], PackedInt32Array([300]), 8, 8)
+	assert_eq(img.get_width(), 8)
+	assert_eq(MapIndex.id_at(img, Vector2i(0, 0)), -1, "outside is white")
+	assert_eq(MapIndex.id_at(img, Vector2i(1, 1)), 300)
+	assert_eq(MapIndex.id_at(img, Vector2i(4, 4)), 300)
+	assert_eq(MapIndex.id_at(img, Vector2i(5, 5)), -1, "the far edge is exclusive")
+	assert_eq(MapIndex.id_at(img, Vector2i(3, 6)), -1)
+	assert_eq(img.get_pixel(2, 2).g8, 1, "300 = 44 | 1 << 8")
+	assert_eq(img.get_pixel(2, 2).r8, 44)

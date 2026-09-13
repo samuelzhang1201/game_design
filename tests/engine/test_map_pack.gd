@@ -147,3 +147,46 @@ func test_save_carries_the_map_id() -> void:
 	assert_eq(Game.state.map_id, Game.data.map_id, "a campaign records its map")
 	var round_tripped := GameState.from_dict(Game.state.to_dict())
 	assert_eq(round_tripped.map_id, Game.state.map_id, "and it survives the save")
+
+## The manor system (MANOR_SYSTEM.md §1): the pack names every land cell
+## once, codes and labels are unique, a burg's cell carries the burg's name,
+## and the cell index returns each land cell's id under its centre.
+func test_the_pack_names_every_land_cell_as_a_manor() -> void:
+	var repo := _fresh()
+	var land := 0
+	for id: int in repo.cells:
+		if not MapTerrain.is_water(repo.cells[id]):
+			land += 1
+			assert_true(repo.manors.has(id), "cell %d has a manor row" % id)
+	assert_eq(repo.manors.size(), land, "one manor per land cell, none for water")
+	var labels: Dictionary = {}
+	for id: int in repo.manors:
+		var row: Dictionary = repo.manors[id]
+		var label := String(row["label"]).to_lower()
+		assert_false(labels.has(label), "unique label: " + label)
+		labels[label] = true
+		assert_eq(repo.manor_by_code[String(row["manor_code"])], id)
+		assert_eq(repo.manor_by_label[label], id)
+		var burg := String(row["burg_code"])
+		if burg != "":
+			assert_true(String(row["label"]).begins_with(String(repo.burgs[burg]["label"])),
+				"%s is named after its burg" % row["label"])
+	assert_eq(repo.manor_by_code.size(), repo.manors.size(), "codes are unique")
+
+func test_the_cell_index_finds_each_land_cell_under_its_centre() -> void:
+	var repo := _fresh()
+	assert_true(ResourceLoader.exists(repo.cell_texture_path), "cell index exists: " + repo.cell_texture_path)
+	var img: Image = (load(repo.cell_texture_path) as Texture2D).get_image()
+	assert_eq(img.get_width(), int(repo.map_info["width"]))
+	assert_eq(img.get_height(), int(repo.map_info["height"]))
+	var checked := 0
+	var hits := 0
+	for id: int in repo.cells:
+		var cell: Dictionary = repo.cells[id]
+		if MapTerrain.is_water(cell):
+			continue
+		checked += 1
+		if MapIndex.id_at(img, Vector2i(MapTerrain.cell_center(repo, cell).floor())) == id:
+			hits += 1
+	# A centroid can fall outside a very concave cell; nearly all land in.
+	assert_gt(float(hits) / float(checked), 0.97, "%d of %d centres decode to their cell" % [hits, checked])

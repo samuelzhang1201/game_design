@@ -96,3 +96,51 @@ static func bake_sea_distance(biome: Image) -> Image:
 	for i in w * h:
 		bytes[i] = mini(int(d[i] + 0.5), 255)
 	return Image.create_from_data(w, h, false, Image.FORMAT_L8, bytes)
+
+## --- Rasterising an index bitmap (2026-09-13) --------------------------------
+## `polys[i]` filled with `ids[i]` in the two-byte encoding id_at reads (R =
+## id & 0xFF, G = id >> 8), untouched pixels white — the same even-odd
+## scanline fill tools/import_azgaar.gd uses for the state, province and
+## biome indexes, so a bitmap baked from a pack matches one the importer
+## wrote. Ids must be below 65536. Pure; slow in GDScript over a whole
+## canvas (a second or two), so it is a bake, never a runtime step.
+static func rasterize(polys: Array, ids: PackedInt32Array, w: int, h: int) -> Image:
+	var buf := PackedByteArray()
+	buf.resize(w * h * 3)
+	buf.fill(255)
+	for i in polys.size():
+		var poly: PackedVector2Array = polys[i]
+		if poly.size() < 3:
+			continue
+		var id := ids[i]
+		if id < 0:
+			continue
+		_fill(buf, w, h, poly, id)
+	return Image.create_from_data(w, h, false, Image.FORMAT_RGB8, buf)
+
+static func _fill(buf: PackedByteArray, w: int, h: int, poly: PackedVector2Array, id: int) -> void:
+	var r := id & 0xFF
+	var g := (id >> 8) & 0xFF
+	var y_min := poly[0].y
+	var y_max := poly[0].y
+	for p in poly:
+		y_min = minf(y_min, p.y)
+		y_max = maxf(y_max, p.y)
+	var n := poly.size()
+	for y in range(maxi(0, int(y_min)), mini(h - 1, int(y_max) + 1) + 1):
+		var yc := float(y) + 0.5
+		var xs: Array[float] = []
+		for i in n:
+			var a := poly[i]
+			var b := poly[(i + 1) % n]
+			if (a.y <= yc and yc < b.y) or (b.y <= yc and yc < a.y):
+				xs.append(a.x + (yc - a.y) / (b.y - a.y) * (b.x - a.x))
+		xs.sort()
+		var j := 0
+		while j + 1 < xs.size():
+			for x in range(maxi(0, int(xs[j] + 0.5)), mini(w - 1, int(xs[j + 1] - 0.5)) + 1):
+				var o := (y * w + x) * 3
+				buf[o] = r
+				buf[o + 1] = g
+				buf[o + 2] = 0
+			j += 2

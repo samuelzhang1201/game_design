@@ -1,0 +1,3501 @@
+cell_id,manor_code,label,province_code,burg_code,culture_code
+16,boleyme,Boleyme,,,wildlands
+17,southam,Southam,,,wildlands
+18,ayleby,Ayleby,,,wildlands
+19,berehall,Berehall,,,wildlands
+20,yeovildodmo,Yeovildodmo,,,wildlands
+61,duryfielsto,Duryfielsto,knamerskirk,,merton
+62,horeham,Horeham,knamerskirk,,merton
+63,bertharton,Bertharton,knamerskirk,,wildlands
+64,skipton_manor,Skipton Manor,knamerskirk,skipton_2,merton
+65,cliftham,Cliftham,knamerskirk,,merton
+73,seaforthbur,Seaforthbur,chisteria,,wildlands
+74,lestarlisco,Lestarlisco,chisteria,,merton
+75,hilwookersf,Hilwookersf,chisteria,,merton
+90,dudbrinkles,Dudbrinkles,knamerskirk,,merton
+91,hambetestbu,Hambetestbu,knamerskirk,,merton
+92,merryfield,Merryfield,knamerskirk,,merton
+93,dalceston,Dalceston,knamerskirk,,merton
+94,barmskingtr,Barmskingtr,knamerskirk,,merton
+95,swenbury,Swenbury,knamerskirk,,merton
+96,heaftottefo,Heaftottefo,knamerskirk,,merton
+97,hamerea,Hamerea,pickingham,,merton
+98,buryfield,Buryfield,pickingham,,merton
+108,wicheleston,Wicheleston,albrid_2,,merton
+109,bothawleck,Bothawleck,albrid_2,,merton
+110,bamertord,Bamertord,albrid_2,,merton
+111,roumersh,Roumersh,albrid_2,,merton
+149,kirmidgell,Kirmidgell,knamerskirk,,merton
+150,dundbury,Dundbury,knamerskirk,,merton
+151,asalton,Asalton,pickingham,,merton
+152,wigham,Wigham,pickingham,,merton
+171,mockington,Mockington,albrid_2,,merton
+172,clihull,Clihull,albrid_2,,merton
+174,darlihury,Darlihury,albrid_2,,merton
+175,bington,Bington,albrid_2,,merton
+176,skington,Skington,albrid_2,,merton
+178,merstable,Merstable,hertle,,merton
+214,brutotney,Brutotney,clitbury,,merton
+215,hipton,Hipton,clitbury,,merton
+218,tremalbolta,Tremalbolta,clitbury,,merton
+219,casalton,Casalton,clitbury,,merton
+223,pincheaplei,Pincheaplei,whitnesford,,merton
+224,moutontact,Moutontact,whitnesford,,merton
+225,sombereton,Sombereton,whitnesford,,merton
+227,uxbrorough_manor,Uxbrorough Manor,knamerskirk,uxbrorough,merton
+228,herockipsto,Herockipsto,knamerskirk,,merton
+229,knamerskirk_manor,Knamerskirk Manor,knamerskirk,knamerskirk,merton
+230,grambury,Grambury,knamerskirk,,merton
+231,predon,Predon,knamerskirk,,merton
+232,dudleigh,Dudleigh,pickingham,,merton
+233,harehampton,Harehampton,pickingham,,merton
+234,landonetfor,Landonetfor,pickingham,,merton
+235,birkseafort,Birkseafort,pickingham,,merton
+236,ornberegodb,Ornberegodb,pickingham,,merton
+237,hampton,Hampton,pickingham,,merton
+239,wingtry,Wingtry,pickingham,,merton
+240,pordeltam,Pordeltam,pickingham,,merton
+241,knetford,Knetford,pickingham,,merton
+242,paigningt_manor,Paigningt Manor,caustonver,paigningt,merton
+246,duryfielstb,Duryfielstb,caustonver,,merton
+247,penzannor,Penzannor,caustonver,,merton
+251,bordenridge,Bordenridge,albrid_2,,merton
+252,berstabight,Berstabight,albrid_2,,merton
+253,savehorough_manor,Savehorough Manor,albrid_2,savehorough,merton
+254,brousea,Brousea,albrid_2,,merton
+255,sounwichick,Sounwichick,albrid_2,,merton
+256,hamerwing,Hamerwing,albrid_2,,merton
+257,dundford,Dundford,hertle,,merton
+258,leympton,Leympton,hertle,,merton
+259,merdendon,Merdendon,hertle,,merton
+260,retondbury,Retondbury,hertle,,merton
+261,heregodmidm,Heregodmidm,hertle,,merton
+282,retonton,Retonton,realedon,,manch
+283,chertforham,Chertforham,realedon,,manch
+284,athlecker,Athlecker,realedon,,manch
+285,olmorhatfie,Olmorhatfie,realedon,,manch
+286,duddell,Duddell,realedon,,manch
+287,ordenridlif,Ordenridlif,realedon,,manch
+288,dunsey,Dunsey,realedon,,manch
+293,cleigh,Cleigh,castburia,,manch
+319,horeaditch,Horeaditch,wabingford,,merton
+320,malcestonew,Malcestonew,wabingford,,merton
+321,andaltont,Andaltont,clitbury,,merton
+322,chingdon,Chingdon,clitbury,,merton
+323,bridge,Bridge,clitbury,,merton
+324,cheappleovi,Cheappleovi,clitbury,,merton
+325,cancestage,Cancestage,clitbury,,merton
+326,buryfiel,Buryfiel,clitbury,,merton
+327,paditforfor,Paditforfor,clitbury,,merton
+328,stoweston,Stoweston,clitbury,,merton
+329,baltestasho,Baltestasho,clitbury,,merton
+330,axbrorough_manor,Axbrorough Manor,clitbury,axbrorough,merton
+331,merston,Merston,whitnesford,,merton
+332,kippichingh,Kippichingh,whitnesford,,merton
+333,routham,Routham,whitnesford,,merton
+334,hamptokbury,Hamptokbury,whitnesford,,merton
+335,westbury_manor,Westbury Manor,knamerskirk,westbury,merton
+336,olteditform,Olteditform,knamerskirk,,merton
+337,tanchershol,Tanchershol,knamerskirk,,merton
+338,salborough,Salborough,knamerskirk,,merton
+339,weytesouthe,Weytesouthe,pickingham,,merton
+340,wabinghambe_manor,Wabinghambe Manor,pickingham,wabinghambe,merton
+341,knuthald,Knuthald,pickingham,,merton
+342,altontasidg,Altontasidg,pickingham,,merton
+343,creafth,Creafth,pickingham,,merton
+344,theleweshar,Theleweshar,caustonver,,merton
+345,briddenridg,Briddenridg,caustonver,,merton
+346,watonton,Watonton,caustonver,,merton
+347,stleymoutha,Stleymoutha,caustonver,,merton
+348,cregon,Cregon,caustonver,,merton
+349,nordelislei,Nordelislei,caustonver,,merton
+350,hithatforto,Hithatforto,caustonver,,merton
+351,wardeforout,Wardeforout,caustonver,,merton
+352,leymodbury,Leymodbury,caustonver,,merton
+353,knedoverwit,Knedoverwit,caustonver,,merton
+354,kenbury,Kenbury,caustonver,,merton
+355,peverby,Peverby,caustonver,,merton
+356,martforouse,Martforouse,albrid_2,,merton
+357,neseympsey,Neseympsey,albrid_2,,merton
+358,moughbrigay,Moughbrigay,albrid_2,,merton
+359,tetonter,Tetonter,albrid_2,,merton
+360,seyteseham,Seyteseham,albrid_2,,merton
+361,neston,Neston,albrid_2,,merton
+362,witham_manor,Witham Manor,albrid_2,witham_2,merton
+363,brampton,Brampton,hertle,,merton
+364,warshawlea,Warshawlea,hertle,,merton
+365,hatforneste,Hatforneste,hertle,,merton
+375,attlestow,Attlestow,durmouth,,manch
+376,knaredon,Knaredon,durmouth,,manch
+377,duryfielton,Duryfielton,durmouth,,manch
+378,hawletbury,Hawletbury,durmouth,,manch
+379,brouthen,Brouthen,durmouth,,manch
+380,wiscomney,Wiscomney,durmouth,,manch
+381,mandon,Mandon,durmouth,,manch
+382,ordendone,Ordendone,durmouth,,manch
+396,yeoburgraxt,Yeoburgraxt,coverham,,manch
+397,warksey,Warksey,realedon,,manch
+398,tapley,Tapley,realedon,,manch
+399,maredon,Maredon,realedon,,manch
+400,cockwartham,Cockwartham,realedon,,manch
+416,reacuton,Reacuton,bolingley,,manch
+417,wesdon,Wesdon,uxbridgia,,manch
+418,gaydon,Gaydon,bolingley,,manch
+419,knarlisbury,Knarlisbury,bolingley,,manch
+420,swendeld,Swendeld,dunshilbo,,manch
+421,uxbridge,Uxbridge,dunshilbo,,manch
+439,pouteretfor,Pouteretfor,wabingford,,merton
+440,bampsteston,Bampsteston,wabingford,,merton
+441,merbord,Merbord,wabingford,,merton
+442,treterscom_manor,Treterscom Manor,wabingford,treterscom,merton
+443,lauseaforou,Lauseaforou,wabingford,,merton
+444,wington,Wington,wabingford,,merton
+445,lymough,Lymough,wabingford,,merton
+446,stotheham_manor,Stotheham Manor,wabingford,stotheham,merton
+447,braston_manor,Braston Manor,clitbury,braston,merton
+448,hambetley,Hambetley,clitbury,,merton
+449,tutharlow,Tutharlow,clitbury,,merton
+450,kinghalliff,Kinghalliff,clitbury,,merton
+451,bidgeld,Bidgeld,clitbury,,merton
+452,tabley,Tabley,clitbury,,merton
+453,tiveldon,Tiveldon,whitnesford,,merton
+454,stongdon,Stongdon,whitnesford,,merton
+455,dalteton,Dalteton,whitnesford,,merton
+456,teregodmidh,Teregodmidh,whitnesford,,merton
+457,holcesfield_manor,Holcesfield Manor,brampingia,holcesfield,merton
+458,dunburyme_manor,Dunburyme Manor,brampingia,dunburyme,merton
+459,sudenmouth_manor,Sudenmouth Manor,brampingia,sudenmouth,merton
+460,pickingham_manor,Pickingham Manor,pickingham,pickingham,merton
+461,moutbury,Moutbury,pickingham,,merton
+462,fenninny,Fenninny,pickingham,,merton
+463,hamberk,Hamberk,pickingham,,merton
+464,bordenknewe,Bordenknewe,pickingham,,merton
+465,asingley,Asingley,caustonver,,merton
+466,clifton_manor,Clifton Manor,caustonver,clifton,merton
+467,caustonver_manor,Caustonver Manor,caustonver,caustonver,merton
+468,warshfingto,Warshfingto,caustonver,,merton
+469,midford_manor,Midford Manor,caustonver,midford,merton
+470,comerk,Comerk,caustonver,,merton
+471,thatcham_manor,Thatcham Manor,caustonver,thatcham,merton
+472,farton,Farton,albrid_2,,merton
+473,southerk,Southerk,albrid_2,,merton
+474,searelisted_manor,Searelisted Manor,albrid_2,searelisted,merton
+475,ponbecksey_manor,Ponbecksey Manor,albrid_2,ponbecksey,merton
+476,reholneymoc,Reholneymoc,albrid_2,,merton
+477,skinch,Skinch,hertle,,merton
+478,brouthermou,Brouthermou,hertle,,merton
+479,poughampton,Poughampton,hertle,,merton
+494,conewbigayl,Conewbigayl,durmouth,,manch
+495,seaforton,Seaforton,altrinch,,manch
+496,craftbute_manor,Craftbute Manor,durmouth,craftbute,manch
+497,hathamburgh_manor,Hathamburgh Manor,durmouth,hathamburgh,manch
+498,manden,Manden,durmouth,,manch
+499,hamerby,Hamerby,durmouth,,manch
+500,mathame,Mathame,durmouth,,manch
+504,congton_manor,Congton Manor,coverham,congton,manch
+505,wideford_manor,Wideford Manor,coverham,wideford,manch
+506,dodbrover_manor,Dodbrover Manor,coverham,dodbrover,manch
+507,lymouthwens,Lymouthwens,coverham,,manch
+513,bridlet,Bridlet,realedon,,manch
+514,tagetleckle,Tagetleckle,realedon,,manch
+515,albraford,Albraford,realedon,,manch
+516,penmouth,Penmouth,realedon,,manch
+517,mitham_manor,Mitham Manor,realedon,mitham,manch
+525,dunston,Dunston,castburia,,manch
+526,bingmole_manor,Bingmole Manor,castburia,bingmole,manch
+532,neytershole,Neytershole,uxbridgia,,manch
+533,gonglewichi,Gonglewichi,uxbridgia,,manch
+534,dympton,Dympton,bolingley,,manch
+535,soweston,Soweston,bolingley,,manch
+536,seadsteditf,Seadsteditf,bolingley,,manch
+537,dunshilbo_manor,Dunshilbo Manor,dunshilbo,dunshilbo,manch
+538,padenninkne,Padenninkne,dunshilbo,,manch
+539,ablaus,Ablaus,bolingley,,manch
+557,olewickirms,Olewickirms,godland,,merton
+558,watford,Watford,godland,,merton
+559,bresholingd,Bresholingd,godland,,merton
+560,guildfornby,Guildfornby,godland,,merton
+561,felston,Felston,godland,,merton
+562,holmer,Holmer,godland,,merton
+563,knewey,Knewey,wabingford,,merton
+564,trehambeckw,Trehambeckw,wabingford,,merton
+565,ampstestowc,Ampstestowc,wabingford,,merton
+566,rehambury,Rehambury,wabingford,,merton
+567,pickenkneto,Pickenkneto,wabingford,,merton
+568,beremaltott,Beremaltott,wabingford,,merton
+569,hameree,Hameree,clitbury,,merton
+570,kingragel_manor,Kingragel Manor,clitbury,kingragel,merton
+571,clitbury_manor,Clitbury Manor,clitbury,clitbury_2,merton
+572,yeoveton,Yeoveton,clitbury,,merton
+573,knaregodbur,Knaregodbur,durland,,merton
+574,galiscom_manor,Galiscom Manor,durland,galiscom,merton
+575,whitnesford_manor,Whitnesford Manor,whitnesford,whitnesford,merton
+576,shbodmarlbr,Shbodmarlbr,whitnesford,,merton
+577,cherea,Cherea,whitnesford,,merton
+578,wighbring,Wighbring,brampingia,,merton
+579,hamber,Hamber,brampingia,,merton
+580,dodbrid_manor,Dodbrid Manor,pickingham,dodbrid,merton
+581,kenzanseham,Kenzanseham,pickingham,,merton
+582,charmock,Charmock,pickingham,,merton
+583,hensey_manor,Hensey Manor,pickingham,hensey,merton
+584,craxbridge,Craxbridge,pickingham,,merton
+585,cambunchars,Cambunchars,pickingham,,merton
+586,casingle,Casingle,caustonver,,merton
+587,hatherstow_manor,Hatherstow Manor,caustonver,hatherstow,merton
+588,ostable_manor,Ostable Manor,caustonver,ostable,merton
+589,hamershbrid,Hamershbrid,caustonver,,merton
+590,caunce,Caunce,caustonver,,merton
+591,wentambe,Wentambe,shole,,merton
+592,rothing_manor,Rothing Manor,shole,rothing,merton
+593,asingstow_manor,Asingstow Manor,newcesbury,asingstow,merton
+594,stesdovelin,Stesdovelin,albrid_2,,merton
+595,gramerton,Gramerton,albrid_2,,merton
+596,forothaton,Forothaton,albrid_2,,merton
+597,woothampton,Woothampton,albrid_2,,merton
+598,chamerton,Chamerton,hertle,,merton
+599,basidhury,Basidhury,hertle,,merton
+600,tonewboley,Tonewboley,hertle,,merton
+601,cardennoswe,Cardennoswe,hertle,,merton
+610,nordeforlbo,Nordeforlbo,leigham,,manch
+612,oleymorfowe,Oleymorfowe,altrinch,,manch
+613,watfordbury_manor,Watfordbury Manor,leigham,watfordbury,manch
+614,maldon,Maldon,altrinch,,manch
+615,causea,Causea,altrinch,,manch
+616,thetle_manor,Thetle Manor,launtia,thetle,manch
+617,swartotham,Swartotham,durmouth,,manch
+618,dondald,Dondald,durmouth,,manch
+619,aydonewen,Aydonewen,durmouth,,manch
+620,durmouth_manor,Durmouth Manor,durmouth,durmouth,manch
+621,kilter,Kilter,durmouth,,manch
+622,seaford_manor,Seaford Manor,durmouth,seaford,manch
+623,bleymouthet,Bleymouthet,coverham,,manch
+624,totneweshes,Totneweshes,coverham,,manch
+625,malingdon_manor,Malingdon Manor,coverham,malingdon,manch
+627,uxbrachings,Uxbrachings,coverham,,manch
+628,petlet,Petlet,coverham,,manch
+629,albridge,Albridge,coverham,,manch
+630,shermskirbu,Shermskirbu,coverham,,manch
+631,knutbury,Knutbury,coverham,,manch
+632,kinghbrinno,Kinghbrinno,coverham,,manch
+633,romerwith,Romerwith,coverham,,manch
+634,combraforto,Combraforto,realedon,,manch
+635,neytestow,Neytestow,realedon,,manch
+636,aldock_manor,Aldock Manor,realedon,aldock,manch
+637,nedonton,Nedonton,realedon,,manch
+638,tampton,Tampton,rothfieldia,,manch
+642,bruthlethol,Bruthlethol,castburia,,manch
+654,wickleigh_manor,Wickleigh Manor,skipingham,wickleigh,manch
+655,aldockham_manor,Aldockham Manor,skipingham,aldockham,manch
+656,dargrame,Dargrame,uxbridgia,,manch
+657,berford_manor,Berford Manor,uxbridgia,berford,manch
+658,warkenstest,Warkenstest,uxbridgia,,manch
+659,kinghambe_manor,Kinghambe Manor,uxbridgia,kinghambe,manch
+660,thethorough_manor,Thethorough Manor,uxbridgia,thethorough,manch
+661,mouton,Mouton,bolingley,,manch
+662,bolingley_manor,Bolingley Manor,bolingley,bolingley,manch
+663,kilkburgh_manor,Kilkburgh Manor,bolingley,kilkburgh,manch
+678,redclisbook,Redclisbook,gaveringra,,merton
+679,bersfieldfo,Bersfieldfo,gaveringra,,merton
+681,kerwitchawl,Kerwitchawl,godland,,merton
+682,gatongatfor,Gatongatfor,godland,,merton
+683,loottle,Loottle,godland,,merton
+684,westonth,Westonth,godland,,merton
+685,balton,Balton,godland,,merton
+686,saleytester,Saleytester,godland,,merton
+687,amerston,Amerston,godland,,merton
+688,rothester_manor,Rothester Manor,quatherton,rothester,merton
+689,redodmodbur,Redodmodbur,wabingford,,merton
+690,cocker,Cocker,wabingford,,merton
+691,bordenmon,Bordenmon,wabingford,,merton
+692,persbuton_manor,Persbuton Manor,wabingford,persbuton,merton
+693,berhamney_manor,Berhamney Manor,wabingford,berhamney,merton
+694,swesher,Swesher,clitbury,,merton
+695,baliscon,Baliscon,clitbury,,merton
+696,baldon_manor,Baldon Manor,clitbury,baldon,merton
+697,manchey,Manchey,chistoli,,merton
+698,brampster,Brampster,durland,,merton
+699,brascast_manor,Brascast Manor,durland,brascast,merton
+700,penlewboltr,Penlewboltr,durland,,merton
+701,clifractham_manor,Clifractham Manor,whitnesford,clifractham,merton
+702,chetown,Chetown,whitnesford,,merton
+703,hesbotneton,Hesbotneton,stotford,,merton
+704,ordenritham,Ordenritham,stotford,,merton
+705,antaster,Antaster,pickingham,,merton
+706,altonteton,Altonteton,pickingham,,merton
+707,draxning_manor,Draxning Manor,pickingham,draxning_2,merton
+708,lausey,Lausey,pickingham,,merton
+709,bighay,Bighay,pickingham,,merton
+710,warstlesbur,Warstlesbur,pickingham,,merton
+711,campornbury,Campornbury,pickingham,,merton
+712,ormsfordge_manor,Ormsfordge Manor,bolingham,ormsfordge,merton
+713,stertford,Stertford,bolingham,,merton
+714,soutforden_manor,Soutforden Manor,caustonver,soutforden,merton
+715,southolnetb,Southolnetb,shole,,merton
+716,chameridhur,Chameridhur,shole,,merton
+717,dudden,Dudden,shole,,merton
+718,bighton,Bighton,newcesbury,,merton
+719,warbossing,Warbossing,newcesbury,,merton
+720,ordendford,Ordendford,albrid_2,,merton
+721,fordendenri,Fordendenri,albrid_2,,merton
+722,tholeigh,Tholeigh,albrid_2,,merton
+723,skingdon,Skingdon,hertle,,merton
+724,nedovilwook,Nedovilwook,hertle,,merton
+725,hertle_manor,Hertle Manor,hertle,hertle,merton
+726,dunsin_manor,Dunsin Manor,totfordia,dunsin,merton
+727,withoneton_manor,Withoneton Manor,withoneton,withoneton,merton
+728,rearen_manor,Rearen Manor,withoneton,rearen,merton
+729,harlihurtsm,Harlihurtsm,withoneton,,merton
+730,haretonor_manor,Haretonor Manor,kilksey,haretonor,merton
+734,gravelesowe,Gravelesowe,leigham,,manch
+735,axblewes_manor,Axblewes Manor,leigham,axblewes,manch
+736,cracuddeldo,Cracuddeldo,leigham,,manch
+737,leigham_manor,Leigham Manor,leigham,leigham,manch
+738,toneymoutho,Toneymoutho,leigham,,manch
+739,fraxtesdon,Fraxtesdon,leigham,,manch
+740,holeympton,Holeympton,leigham,,manch
+741,manney,Manney,altrinch,,manch
+742,newbury_manor,Newbury Manor,altrinch,newbury,manch
+743,toneton,Toneton,altrinch,,manch
+744,warampstach,Warampstach,launtia,,manch
+745,modmoutham,Modmoutham,launtia,,manch
+746,pillifnarle,Pillifnarle,durmouth,,manch
+747,hamerk,Hamerk,durmouth,,manch
+748,grampst,Grampst,durmouth,,manch
+749,oleightonew,Oleightonew,durmouth,,manch
+750,wavershickl,Wavershickl,coverham,,manch
+751,coverham_manor,Coverham Manor,coverham,coverham,manch
+752,quaton,Quaton,coverham,,manch
+753,petbucken,Petbucken,coverham,,manch
+754,petforhalto,Petforhalto,coverham,,manch
+755,bordeninknu,Bordeninknu,coverham,,manch
+756,thaxted_manor,Thaxted Manor,coverham,thaxted_2,manch
+757,pouterstabl,Pouterstabl,realedon,,manch
+758,thbruthward,Thbruthward,rothfieldia,,manch
+759,borden,Borden,rothfieldia,,manch
+773,roughton,Roughton,bolne,,manch
+774,neytestanck,Neytestanck,skipingham,,manch
+775,mondonzan_manor,Mondonzan Manor,uxbridgia,mondonzan,manch
+776,bordendfork,Bordendfork,uxbridgia,,manch
+777,tonetheton,Tonetheton,uxbridgia,,manch
+778,stansbuton_manor,Stansbuton Manor,uxbridgia,stansbuton,manch
+779,kiverming_manor,Kiverming Manor,bolingley,kiverming,manch
+790,reholned,Reholned,baria,,merton
+794,dymodbunstl,Dymodbunstl,baria,,merton
+795,pingle,Pingle,baria,,merton
+796,lifforoe,Lifforoe,baria,,merton
+797,harehal,Harehal,baria,,merton
+798,fatonbume_manor,Fatonbume Manor,baria,fatonbume,merton
+799,seyterle,Seyterle,baria,,merton
+806,modburgrant,Modburgrant,gaveringra,,merton
+807,gaveringra_manor,Gaveringra Manor,gaveringra,gaveringra,merton
+808,kingleton,Kingleton,gaveringra,,merton
+809,taregon,Taregon,godland,,merton
+810,wickleigmou,Wickleigmou,godland,,merton
+811,pendforouth,Pendforouth,godland,,merton
+812,warampton,Warampton,godland,,merton
+813,wendarlewbi,Wendarlewbi,godland,,merton
+814,seates_manor,Seates Manor,quatherton,seates,merton
+815,tingley,Tingley,wabingford,,merton
+816,mareharston,Mareharston,wabingford,,merton
+817,bedoningt_manor,Bedoningt Manor,wabingford,bedoningt,merton
+818,almord,Almord,wabingford,,merton
+819,walmerwigay,Walmerwigay,wabingford,,merton
+820,newenseact,Newenseact,clitbury,,merton
+821,weytedinces,Weytedinces,clitbury,,merton
+822,woodmoutbuc,Woodmoutbuc,chistoli,,merton
+823,bordeforsha,Bordeforsha,chistoli,,merton
+824,thambershor,Thambershor,chistoli,,merton
+825,atheweskirk_manor,Atheweskirk Manor,atheweskirk,atheweskirk,merton
+826,darshilliff,Darshilliff,durland,,merton
+827,comberea,Comberea,durland,,merton
+828,dunsbury_manor,Dunsbury Manor,stotford,dunsbury,merton
+829,mersher,Mersher,stotford,,merton
+830,fenzanseapl,Fenzanseapl,stotford,,merton
+831,sincesburto,Sincesburto,stotford,,merton
+832,readitham,Readitham,pickingham,,merton
+833,birmoutsfor,Birmoutsfor,pickingham,,wildlands
+834,neymord,Neymord,pickingham,,merton
+835,axbraventan,Axbraventan,pickingham,,merton
+836,graccliscol,Graccliscol,pickingham,,merton
+837,chestre,Chestre,bolingham,,merton
+838,padstestapp,Padstestapp,bolingham,,merton
+839,bolingham_manor,Bolingham Manor,bolingham,bolingham,merton
+840,rocker_manor,Rocker Manor,bolingham,rocker,merton
+841,osbury_manor,Osbury Manor,saldondal,osbury,merton
+842,saldondal_manor,Saldondal Manor,saldondal,saldondal,merton
+843,shole_manor,Shole Manor,shole,shole,merton
+844,penletersfi,Penletersfi,newcesbury,,merton
+845,tardenkley,Tardenkley,newcesbury,,merton
+846,farlow,Farlow,kilksey_2,,merton
+847,wighaldon,Wighaldon,albrid_2,,merton
+848,warmough,Warmough,hertle,,merton
+849,pontam,Pontam,hertle,,merton
+850,romershfiel,Romershfiel,hertle,,merton
+851,ampster,Ampster,hertle,,merton
+852,oltoke,Oltoke,totfordia,,merton
+853,padston,Padston,totfordia,,merton
+854,staptonsey_manor,Staptonsey Manor,withoneton,staptonsey,merton
+855,harham_manor,Harham Manor,kilksey,harham,merton
+856,childock_manor,Childock Manor,kilksey,childock,merton
+857,noredcleyte,Noredcleyte,kilksey,,manch
+858,matham,Matham,leigham,,manch
+859,gatchaton,Gatchaton,leigham,,manch
+860,tonton,Tonton,leigham,,manch
+861,midhullinta,Midhullinta,altrinch,,manch
+862,tonewbiggin,Tonewbiggin,altrinch,,manch
+863,picham_manor,Picham Manor,altrinch,picham,manch
+864,thatcham_manor_2,Thatcham Manor 2,altrinch,thatcham_2,manch
+865,kenmockele,Kenmockele,launtia,,manch
+866,knewich,Knewich,launtia,,manch
+867,poutheton,Poutheton,launtia,,manch
+868,kneymouth,Kneymouth,durmouth,,manch
+869,bordeformon,Bordeformon,durmouth,,manch
+870,gandefraves,Gandefraves,coverham,,manch
+871,pington,Pington,coverham,,manch
+872,buryfieltow,Buryfieltow,coverham,,manch
+873,colinver,Colinver,coverham,,manch
+874,casthamney_manor,Casthamney Manor,coverham,casthamney,manch
+875,retord,Retord,realedon,,manch
+876,preton,Preton,realedon,,manch
+877,ambersfield,Ambersfield,rothfieldia,,manch
+878,casterstefo,Casterstefo,rothfieldia,,manch
+887,balmere,Balmere,nostonia,,manch
+888,chiftherbod,Chiftherbod,nostonia,,manch
+889,durmouthet_manor,Durmouthet Manor,albridland,durmouthet,manch
+890,lympton,Lympton,albridland,,manch
+891,wenzan,Wenzan,bolne,,manch
+892,castford_manor,Castford Manor,bolne,castford,manch
+893,skingtridge,Skingtridge,skipingham,,manch
+894,quatford_manor,Quatford Manor,skipingham,quatford_2,manch
+895,winkhampton_manor,Winkhampton Manor,uxbridgia,winkhampton,manch
+896,wichayleckl,Wichayleckl,uxbridgia,,manch
+897,guilbodbury,Guilbodbury,uxbridgia,,manch
+922,mattleigh,Mattleigh,baria,,merton
+923,nossidge,Nossidge,baria,,merton
+924,clingham,Clingham,baria,,merton
+925,ordenmon,Ordenmon,chawces,,merton
+926,bampton,Bampton,baria,,merton
+927,berryfield,Berryfield,baria,,merton
+935,kendburyfie,Kendburyfie,gaveringra,,merton
+936,bouthley,Bouthley,gaveringra,,merton
+937,stonesterd,Stonesterd,gaveringra,,merton
+938,ordeforshif,Ordeforshif,gaveringra,,merton
+939,stedon,Stedon,godland,,merton
+940,winchton_manor,Winchton Manor,godland,winchton_2,merton
+941,ornber,Ornber,godland,,merton
+942,cliscar,Cliscar,godland,,merton
+943,mithamber_manor,Mithamber Manor,quatherton,mithamber,merton
+944,bidgeltondo,Bidgeltondo,quatherton,,merton
+945,suddliscaun,Suddliscaun,quatherton,,merton
+946,gonewickirk,Gonewickirk,wabingford,,merton
+947,altnestow_manor,Altnestow Manor,wabingford,altnestow,merton
+948,wabingford_manor,Wabingford Manor,wabingford,wabingford,merton
+949,tardenleton,Tardenleton,felmond,,merton
+950,westford_manor,Westford Manor,felmond,westford,merton
+951,berkenridge,Berkenridge,felmond,,merton
+952,knaraforste,Knaraforste,chistoli,,merton
+953,lytesbury_manor,Lytesbury Manor,chistoli,lytesbury,merton
+954,caney_manor,Caney Manor,chistoli,caney,merton
+955,tridge,Tridge,atheweskirk,,merton
+956,peford_manor,Peford Manor,atheweskirk,peford,merton
+957,kirmidgeley,Kirmidgeley,durland,,merton
+958,newbury_manor_2,Newbury Manor 2,stotford,newbury_2,merton
+959,champton,Champton,stotford,,merton
+960,gamerton_manor,Gamerton Manor,stotford,gamerton,merton
+961,lympston,Lympston,stotford,,merton
+962,wichisburgh,Wichisburgh,stotford,,merton
+963,halton,Halton,pickingham,,merton
+964,tingdon,Tingdon,pickingham,,merton
+965,boleoburton,Boleoburton,pickingham,,merton
+966,alliscon,Alliscon,bolingham,,merton
+967,solney,Solney,bolingham,,merton
+968,southornbe,Southornbe,bolingham,,merton
+969,gatershord,Gatershord,bolingham,,merton
+970,stonewey,Stonewey,osheadminia,,merton
+971,shifforfort,Shifforfort,osheadminia,,merton
+972,uxbrid_manor,Uxbrid Manor,newcesbury,uxbrid_2,merton
+973,newcesbury_manor,Newcesbury Manor,newcesbury,newcesbury,merton
+974,swalisfield_manor,Swalisfield Manor,coclifnal,swalisfield,merton
+975,oakhaleoves,Oakhaleoves,coclifnal,,merton
+976,chitchicher,Chitchicher,kilksey_2,,merton
+977,sidenbe,Sidenbe,kilksey_2,,merton
+978,holney,Holney,hertle,,merton
+979,bridgeton,Bridgeton,hertle,,merton
+980,coleymerry,Coleymerry,hertle,,merton
+981,comberton,Comberton,hertle,,merton
+982,oakhatforde,Oakhatforde,totfordia,,merton
+983,warleigathw,Warleigathw,totfordia,,merton
+984,braxterth,Braxterth,totfordia,,merton
+985,luthbury,Luthbury,kilksey,,merton
+986,midgeldover,Midgeldover,kilksey,,merton
+987,lechitheld,Lechitheld,kilksey,,merton
+988,buryfingtow,Buryfingtow,kilksey,,merton
+989,macher,Macher,kilksey,,manch
+990,pilliscombe,Pilliscombe,kilksey,,manch
+991,altrinch_manor,Altrinch Manor,altrinch,altrinch,manch
+992,thershord,Thershord,altrinch,,manch
+993,therton,Therton,wisland,,manch
+994,readinglest,Readinglest,launtia,,manch
+995,felter_manor,Felter Manor,launtia,felter,manch
+996,dunscom_manor,Dunscom Manor,launtia,dunscom,manch
+997,clisbury,Clisbury,launtia,,manch
+998,ordentanstl,Ordentanstl,launtia,,manch
+999,pordendbury,Pordendbury,coverham,,manch
+1000,birminton,Birminton,coverham,,manch
+1001,quathowen_manor,Quathowen Manor,coverham,quathowen,manch
+1002,rothburgraf,Rothburgraf,realedon,,manch
+1003,aveldock,Aveldock,realedon,,manch
+1004,tagele,Tagele,realedon,,manch
+1005,nedovil,Nedovil,rothfieldia,,manch
+1006,stonton,Stonton,rothfieldia,,manch
+1007,felstokenth,Felstokenth,rothfieldia,,manch
+1008,kintageton,Kintageton,rothfieldia,,manch
+1014,neyter,Neyter,nostonia,,manch
+1015,lymere,Lymere,nostonia,,manch
+1016,bordeforomn,Bordeforomn,albridland,,manch
+1017,brinnetowes,Brinnetowes,albridland,,manch
+1018,quathersbo_manor,Quathersbo Manor,bolne,quathersbo,manch
+1019,fraverwigat,Fraverwigat,skipingham,,manch
+1020,kinzan_manor,Kinzan Manor,skipingham,kinzan,manch
+1021,leyterigmon,Leyterigmon,skipingham,,manch
+1022,feleytersfi,Feleytersfi,skipingham,,manch
+1031,bersteston,Bersteston,godbury,,marsh
+1032,witham,Witham,godbury,,marsh
+1033,mariddleton,Mariddleton,godbury,,marsh
+1035,dondford,Dondford,alteshia,,marsh
+1036,keredon,Keredon,alteshia,,marsh
+1037,skipton_manor_2,Skipton Manor 2,alteshia,skipton,merton
+1038,routon,Routon,alteshia,,merton
+1039,skiple_manor,Skiple Manor,alteshia,skiple_3,merton
+1040,chawces_manor,Chawces Manor,chawces,chawces,merton
+1041,wighton,Wighton,alteshia,,merton
+1043,lances,Lances,chawces,,merton
+1044,coleshover_manor,Coleshover Manor,chawces,coleshover,merton
+1045,cherdeninny,Cherdeninny,baria,,merton
+1046,soleytetfor,Soleytetfor,baria,,merton
+1047,flooke,Flooke,baria,,merton
+1048,harlbruter,Harlbruter,baria,,merton
+1049,coverne_manor,Coverne Manor,baria,coverne,merton
+1050,heldon,Heldon,baria,,merton
+1051,thampston,Thampston,baria,,merton
+1052,nordeld,Nordeld,baria,,merton
+1053,hamburyfinv,Hamburyfinv,baria,,merton
+1054,weniney,Weniney,baria,,merton
+1055,lymouthesto,Lymouthesto,baria,,merton
+1057,stondald,Stondald,creterbute,,merton
+1058,saldover,Saldover,creterbute,,merton
+1059,watchick,Watchick,creterbute,,merton
+1060,duryfieldon,Duryfieldon,torklia,,merton
+1061,leiganchert,Leiganchert,torklia,,merton
+1062,gadingham_manor,Gadingham Manor,torklia,gadingham,merton
+1063,nornbury,Nornbury,torklia,,merton
+1064,cutham,Cutham,torklia,,merton
+1065,forough_manor,Forough Manor,torklia,forough,merton
+1066,darlookersh,Darlookersh,torklia,,merton
+1067,conghamney_manor,Conghamney Manor,torklia,conghamney,merton
+1068,hinckleby,Hinckleby,quatherton,,merton
+1069,quatherton_manor,Quatherton Manor,quatherton,quatherton,merton
+1070,atfornby,Atfornby,quatherton,,merton
+1071,wihulmond_manor,Wihulmond Manor,felmond,wihulmond,merton
+1072,appletbury,Appletbury,felmond,,merton
+1073,morshereham,Morshereham,felmond,,merton
+1074,alingra_manor,Alingra Manor,felmond,alingra,merton
+1075,retbury_manor,Retbury Manor,felmond,retbury,merton
+1076,prentedinta,Prentedinta,felmond,,merton
+1077,stongtotton,Stongtotton,chistoli,,merton
+1078,stestlesdon,Stestlesdon,chistoli,,merton
+1079,warmidmidhu,Warmidmidhu,chistoli,,merton
+1080,comerryfiel,Comerryfiel,atheweskirk,,merton
+1081,bunckirmoug,Bunckirmoug,atheweskirk,,merton
+1082,colisley,Colisley,stotford,,merton
+1083,aveton,Aveton,stotford,,merton
+1084,oakham,Oakham,stotford,,merton
+1085,berley_manor,Berley Manor,stotford,berley,merton
+1086,mockingh,Mockingh,stotford,,merton
+1087,sudlet,Sudlet,stotford,,merton
+1088,bermord,Bermord,stotford,,wildlands
+1089,ordeford,Ordeford,pickingham,,merton
+1090,burghbury,Burghbury,pickingham,,merton
+1091,burghbract,Burghbract,bolingham,,merton
+1092,retholewes,Retholewes,bolingham,,merton
+1093,skippich,Skippich,boster,,merton
+1094,balcestedcl,Balcestedcl,boster,,merton
+1095,reagelton_manor,Reagelton Manor,boster,reagelton,merton
+1096,bunsey_manor,Bunsey Manor,osheadminia,bunsey,merton
+1097,buclester_manor,Buclester Manor,newcesbury,buclester,merton
+1098,berton,Berton,coclifnal,,merton
+1099,coclifnal_manor,Coclifnal Manor,coclifnal,coclifnal_2,merton
+1100,chitfornbur,Chitfornbur,coclifnal,,merton
+1101,warshfielto,Warshfielto,kilksey_2,,merton
+1102,clihulliney,Clihulliney,kilksey_2,,merton
+1103,hertonewbid,Hertonewbid,kilksey_2,,merton
+1104,braforetfor,Braforetfor,hertle,,merton
+1105,dalneton,Dalneton,hertle,,merton
+1106,andfowester,Andfowester,hertle,,merton
+1107,bravetown,Bravetown,totfordia,,merton
+1108,sterleiggin,Sterleiggin,totfordia,,merton
+1109,holtrinne,Holtrinne,totfordia,,merton
+1110,newendon,Newendon,kilksey,,merton
+1111,wingstburha,Wingstburha,kilksey,,merton
+1112,bordendover,Bordendover,kilksey,,merton
+1113,braver,Braver,kilksey,,merton
+1114,buryfiell,Buryfiell,kilksey,,manch
+1115,pougham,Pougham,kilksey,,manch
+1116,balney,Balney,kilksey,,manch
+1117,newleighes_manor,Newleighes Manor,wiverton,newleighes,manch
+1118,kineymermod,Kineymermod,wiverton,,manch
+1119,salton,Salton,wiverton,,manch
+1120,hamertherto,Hamertherto,wisland,,manch
+1121,browey_manor,Browey Manor,wisland,browey,manch
+1122,bidgeton,Bidgeton,wisland,,manch
+1123,brigmon,Brigmon,hinckham,,manch
+1124,dundforford,Dundforford,hinckham,,manch
+1125,penletleton,Penletleton,hinckham,,manch
+1126,crance,Crance,coverham,,manch
+1127,neymoutbury,Neymoutbury,coverham,,manch
+1128,clington,Clington,realedon,,manch
+1129,chelstes,Chelstes,realedon,,manch
+1130,leyter,Leyter,realedon,,manch
+1131,moutham,Moutham,realedon,,manch
+1132,netown,Netown,rothfieldia,,manch
+1133,aleytestone,Aleytestone,rothfieldia,,manch
+1134,helseaforsf,Helseaforsf,rothfieldia,,manch
+1135,tancham,Tancham,rothfieldia,,manch
+1142,chilbotton,Chilbotton,nostonia,,manch
+1143,waterton,Waterton,nostonia,,manch
+1144,leighelme_manor,Leighelme Manor,nostonia,leighelme,manch
+1145,mardefrazio,Mardefrazio,albridland,,manch
+1146,newelton,Newelton,albridland,,manch
+1147,canthesdon,Canthesdon,bolne,,manch
+1148,fielsterton,Fielsterton,skipingham,,manch
+1149,dodbleven_manor,Dodbleven Manor,skipingham,dodbleven,manch
+1150,stapton_manor,Stapton Manor,skipingham,stapton_2,manch
+1151,chertsmocke,Chertsmocke,skipingham,,manch
+1152,avertothent,Avertothent,skipingham,,manch
+1155,clisboscock,Clisboscock,osfield,,manch
+1156,bamberetfor,Bamberetfor,osfield,,manch
+1165,hitfork,Hitfork,godbury,,marsh
+1166,godbury_manor,Godbury Manor,godbury,godbury,marsh
+1167,canton,Canton,godbury,,marsh
+1168,horouthware,Horouthware,godbury,,marsh
+1169,tiverton,Tiverton,godbury,,marsh
+1170,dunstokerry,Dunstokerry,alteshia,,marsh
+1171,conewbury,Conewbury,alteshia,,marsh
+1172,uxbrinchert,Uxbrinchert,wavegomer,,marsh
+1173,cheliff,Cheliff,wavegomer,,merton
+1174,tutheld,Tutheld,chawces,,merton
+1175,wavegomer_manor,Wavegomer Manor,wavegomer,wavegomer,marsh
+1176,witchiff,Witchiff,chawces,,merton
+1177,casaltow,Casaltow,chawces,,merton
+1178,redoney,Redoney,chawces,,merton
+1184,cleytestrig,Cleytestrig,baria,,merton
+1185,tiverstonew,Tiverstonew,baria,,merton
+1186,hambetford,Hambetford,baria,,merton
+1187,manterd,Manterd,creterbute,,merton
+1188,farshfielse,Farshfielse,creterbute,,merton
+1189,knasingster_manor,Knasingster Manor,creterbute,knasingster,merton
+1190,bringford,Bringford,creterbute,,merton
+1191,pensead,Pensead,creterbute,,merton
+1192,amberstoth,Amberstoth,torklia,,merton
+1193,soughboss,Soughboss,torklia,,merton
+1194,attowey,Attowey,torklia,,merton
+1195,hertre_manor,Hertre Manor,torklia,hertre,merton
+1196,mingtre,Mingtre,torklia,,merton
+1197,bident,Bident,torklia,,merton
+1198,rothfield_manor,Rothfield Manor,torklia,rothfield,merton
+1199,lymerry,Lymerry,quatherton,,merton
+1200,welsey,Welsey,quatherton,,merton
+1201,poughame,Poughame,quatherton,,merton
+1202,dockipton,Dockipton,felmond,,merton
+1203,crenilworth_manor,Crenilworth Manor,felmond,crenilworth,merton
+1204,beckincham,Beckincham,felmond,,merton
+1205,yeoroughin_manor,Yeoroughin Manor,felmond,yeoroughin,merton
+1206,atford,Atford,felmond,,merton
+1207,mandentashi,Mandentashi,felmond,,merton
+1208,clisle,Clisle,stotreso,,merton
+1209,hertford_manor,Hertford Manor,bomyardmin,hertford_3,merton
+1210,buryfielisb,Buryfielisb,bomyardmin,,merton
+1211,forken,Forken,bomyardmin,,merton
+1212,redone,Redone,atheweskirk,,merton
+1213,marleste,Marleste,atheweskirk,,merton
+1214,warpormiden,Warpormiden,stotford,,merton
+1215,altoney,Altoney,stotford,,merton
+1216,bostermouth_manor,Bostermouth Manor,stotford,bostermouth,merton
+1217,penmouther,Penmouther,stotford,,merton
+1218,mershampton,Mershampton,stotford,,merton
+1219,waringdock,Waringdock,stotford,,merton
+1220,theadeldove,Theadeldove,stotford,,merton
+1221,abinck,Abinck,bolingham,,merton
+1222,mereachince,Mereachince,bolingham,,merton
+1223,shifnalsea_manor,Shifnalsea Manor,bolingham,shifnalsea,merton
+1224,cleymon,Cleymon,boster,,merton
+1225,goneter,Goneter,boster,,merton
+1226,clifford,Clifford,boster,,merton
+1227,stapton_manor_2,Stapton Manor 2,osheadminia,stapton_3,merton
+1228,watchingtry,Watchingtry,osheadminia,,merton
+1229,bersharlown,Bersharlown,coclifnal,,merton
+1230,steford,Steford,coclifnal,,merton
+1231,paighared,Paighared,coclifnal,,merton
+1232,fordenrighb,Fordenrighb,coclifnal,,merton
+1233,kilksey_manor,Kilksey Manor,kilksey_2,kilksey_3,merton
+1234,stersfiell,Stersfiell,kilksey_2,,merton
+1235,wisbury,Wisbury,kilksey_2,,merton
+1236,axterd,Axterd,kilksey_2,,merton
+1237,atchington,Atchington,kilksey_2,,merton
+1238,tonetford,Tonetford,tresey,,merton
+1239,hamptormski,Hamptormski,tresey,,merton
+1240,boltarlesbo,Boltarlesbo,totfordia,,merton
+1241,thetfow,Thetfow,totfordia,,merton
+1242,treholing,Treholing,totfordia,,merton
+1243,tincher,Tincher,kilksey,,merton
+1244,wavetbury,Wavetbury,kilksey,,merton
+1245,stesoutham,Stesoutham,kilksey,,merton
+1246,kilksey_manor_2,Kilksey Manor 2,kilksey,kilksey,merton
+1247,tutham,Tutham,kilksey,,manch
+1250,wiverton_manor,Wiverton Manor,wiverton,wiverton,manch
+1251,baford_manor,Baford Manor,wiverton,baford,manch
+1252,daltefraste,Daltefraste,wiverton,,manch
+1253,birkeld,Birkeld,wisland,,manch
+1254,skipton_manor_3,Skipton Manor 3,wisland,skipton_4,manch
+1255,frampton_manor,Frampton Manor,hinckham,frampton_4,manch
+1256,hinckham_manor,Hinckham Manor,hinckham,hinckham,manch
+1257,warpoutharl,Warpoutharl,hinckham,,manch
+1258,bracheston,Bracheston,hinckham,,manch
+1259,moughamer,Moughamer,grantia,,manch
+1260,lisbury,Lisbury,grantia,,manch
+1261,tabinkne,Tabinkne,grantia,,manch
+1262,pousea,Pousea,realedon,,manch
+1263,realedon_manor,Realedon Manor,realedon,realedon,manch
+1264,hersher,Hersher,realedon,,manch
+1265,pevesomne,Pevesomne,rothfieldia,,manch
+1266,gonetondon,Gonetondon,rothfieldia,,manch
+1267,whitbuse_manor,Whitbuse Manor,rothfieldia,whitbuse,manch
+1277,chistabrigh_manor,Chistabrigh Manor,nostonia,chistabrigh,manch
+1278,harshorforf,Harshorforf,nostonia,,manch
+1279,seasholney,Seasholney,albridland,,manch
+1280,wiscast_manor,Wiscast Manor,albridland,wiscast,manch
+1281,harford_manor,Harford Manor,bolne,harford,manch
+1282,skipingham_manor,Skipingham Manor,skipingham,skipingham,manch
+1283,tabigginny,Tabigginny,skipingham,,manch
+1284,newigh,Newigh,skipingham,,manch
+1285,marletbury,Marletbury,skipingham,,manch
+1286,shbroume,Shbroume,osfield,,manch
+1287,wenney,Wenney,osfield,,manch
+1288,kipton,Kipton,osfield,,manch
+1289,grantan,Grantan,osfield,,manch
+1290,thambury,Thambury,osfield,,manch
+1297,chaxtes,Chaxtes,blecland,,marsh
+1298,fendorough_manor,Fendorough Manor,blecland,fendorough,marsh
+1299,tridhullisc,Tridhullisc,blecland,,marsh
+1300,bartsmough,Bartsmough,godbury,,marsh
+1301,bertfortsfi,Bertfortsfi,godbury,,marsh
+1302,hifthboss,Hifthboss,godbury,,marsh
+1303,cuddlington,Cuddlington,godbury,,marsh
+1304,thenmon,Thenmon,wavegomer,,marsh
+1305,hattotham,Hattotham,wavegomer,,marsh
+1306,bornewestef,Bornewestef,wavegomer,,marsh
+1317,hatherscast_manor,Hatherscast Manor,creterbute,hatherscast,marsh
+1318,horstedford_manor,Horstedford Manor,creterbute,horstedford,marsh
+1319,bleymough,Bleymough,creterbute,,merton
+1320,pershonedon_manor,Pershonedon Manor,creterbute,pershonedon,merton
+1321,hitheton,Hitheton,creterbute,,merton
+1322,stanbeckwar_manor,Stanbeckwar Manor,torklia,stanbeckwar,merton
+1323,bramber,Bramber,ormsbury,,merton
+1324,lymounchey,Lymounchey,torklia,,merton
+1325,tashampton,Tashampton,torklia,,merton
+1326,waredockwav,Waredockwav,ormsbury,,merton
+1327,marmskippil,Marmskippil,ormsbury,,merton
+1328,tondoverby,Tondoverby,quatherton,,merton
+1329,dalmoughate,Dalmoughate,quatherton,,merton
+1330,berlihury,Berlihury,quatherton,,merton
+1331,buryfincker,Buryfincker,quatherton,,merton
+1332,duryfield,Duryfield,quatherton,,merton
+1333,applester,Applester,felmond,,merton
+1334,basted,Basted,felmond,,merton
+1335,axbridge,Axbridge,felmond,,merton
+1336,midgele,Midgele,felmond,,merton
+1337,minckippill,Minckippill,stotreso,,merton
+1338,knutsforton,Knutsforton,stotreso,,merton
+1339,cheymerd,Cheymerd,bomyardmin,,merton
+1340,wardefraven,Wardefraven,bomyardmin,,merton
+1341,bashbraccli,Bashbraccli,bomyardmin,,merton
+1342,tasingstchi,Tasingstchi,bomyardmin,,merton
+1343,sholeshole_manor,Sholeshole Manor,atheweskirk,sholeshole,merton
+1344,cliffoweste,Cliffoweste,atheweskirk,,merton
+1345,dalbother,Dalbother,stotford,,merton
+1346,feldontesou,Feldontesou,stotford,,merton
+1347,besokewich_manor,Besokewich Manor,oakhamia,besokewich,merton
+1348,hordenton,Hordenton,stotford,,wildlands
+1349,clifract_manor,Clifract Manor,stotford,clifract,merton
+1350,pordentap,Pordentap,bolingham,,merton
+1351,kirmodmilwo,Kirmodmilwo,bolingham,,merton
+1352,ossincheld,Ossincheld,bolingham,,merton
+1353,oswarashbur,Oswarashbur,bolingham,,merton
+1354,rothwes,Rothwes,osheadminia,,merton
+1355,orharton,Orharton,osheadminia,,merton
+1356,chary_manor,Chary Manor,osheadminia,chary,merton
+1357,beridhull,Beridhull,osheadminia,,merton
+1358,pendbury,Pendbury,osheadminia,,merton
+1359,warbury,Warbury,barton,,merton
+1361,newbowen_manor,Newbowen Manor,kilksey_2,newbowen,merton
+1362,helshead_manor,Helshead Manor,kilksey_2,helshead,merton
+1363,pilbookermo,Pilbookermo,kilksey_2,,merton
+1364,exninglewbu,Exninglewbu,kilksey_2,,merton
+1365,seytertherw,Seytertherw,kilksey_2,,merton
+1366,leymodman,Leymodman,tresey,,merton
+1367,pendeley,Pendeley,tresey,,merton
+1368,crazion,Crazion,tresey,,merton
+1369,exeterounse,Exeterounse,tresey,,merton
+1370,liffordenza,Liffordenza,tresey,,merton
+1371,chisburston,Chisburston,tresey,,merton
+1372,altonet,Altonet,kilksey,,merton
+1373,bolter_manor,Bolter Manor,kilksey,bolter,merton
+1374,gayleck,Gayleck,kilksey,,merton
+1375,fordendbury,Fordendbury,kilksey,,merton
+1376,hatontontes,Hatontontes,kilksey,,manch
+1377,uxbred,Uxbred,thatcke,,manch
+1378,carpough,Carpough,thatcke,,manch
+1383,calmeham_manor,Calmeham Manor,wiverton,calmeham,manch
+1384,kingle_manor,Kingle Manor,wiverton,kingle,manch
+1385,nordenklest,Nordenklest,wiverton,,manch
+1386,paigandon,Paigandon,hinckham,,manch
+1387,shampsea,Shampsea,hinckham,,manch
+1388,newbignther,Newbignther,hinckham,,manch
+1389,retongdovet,Retongdovet,hinckham,,manch
+1390,brambury,Brambury,hinckham,,manch
+1391,lymock,Lymock,grantia,,manch
+1392,holnewbord,Holnewbord,grantia,,manch
+1393,rockennord,Rockennord,grantia,,manch
+1394,tuterouthwe,Tuterouthwe,realedon,,manch
+1395,cambrid_manor,Cambrid Manor,realedon,cambrid,manch
+1396,merdeldovil,Merdeldovil,rothfieldia,,manch
+1397,hathell,Hathell,rothfieldia,,manch
+1398,donewbirbor,Donewbirbor,rothfieldia,,manch
+1399,stansted_manor,Stansted Manor,rothfieldia,stansted,manch
+1400,lymoutheadi,Lymoutheadi,rothfieldia,,manch
+1401,hesteritfor,Hesteritfor,rothfieldia,,manch
+1402,bleton,Bleton,stapletown,,manch
+1403,letford,Letford,stapletown,,manch
+1411,quatford_manor_2,Quatford Manor 2,nostonia,quatford,manch
+1412,padsterk,Padsterk,nostonia,,manch
+1413,warmitford,Warmitford,albridland,,manch
+1414,babingdon_manor,Babingdon Manor,albridland,babingdon,manch
+1415,bramptonce_manor,Bramptonce Manor,albridland,bramptonce,manch
+1416,brouseaditc,Brouseaditc,skipingham,,manch
+1417,masalseale_manor,Masalseale Manor,skipingham,masalseale,manch
+1418,dranceshele,Dranceshele,osfield,,manch
+1419,roughath,Roughath,osfield,,manch
+1420,retfordenst,Retfordenst,osfield,,manch
+1421,alboroe,Alboroe,osfield,,manch
+1422,anstokbury,Anstokbury,osfield,,manch
+1430,dymoutbuck,Dymoutbuck,searingia,,marsh
+1431,knutstedge_manor,Knutstedge Manor,searingia,knutstedge,marsh
+1432,quathord,Quathord,blecland,,marsh
+1433,birden_manor,Birden Manor,blecland,birden,marsh
+1434,midgeley,Midgeley,godbury,,marsh
+1435,midlifnarks,Midlifnarks,godbury,,marsh
+1436,ossinter,Ossinter,wavegomer,,marsh
+1437,maltantambu,Maltantambu,wavegomer,,marsh
+1438,exningin_manor,Exningin Manor,wavegomer,exningin,marsh
+1439,wigtondoles_manor,Wigtondoles Manor,wavegomer,wigtondoles,marsh
+1440,tondalton,Tondalton,wavegomer,,marsh
+1441,tagelihury,Tagelihury,wavegomer,,marsh
+1442,chilton_manor,Chilton Manor,ormscastia,chilton,marsh
+1448,ableytesbur,Ableytesbur,creterbute,,marsh
+1449,foreley_manor,Foreley Manor,creterbute,foreley,marsh
+1450,lutham,Lutham,creterbute,,marsh
+1451,tongdon,Tongdon,creterbute,,marsh
+1452,beridhurham,Beridhurham,creterbute,,marsh
+1453,stesbury,Stesbury,creterbute,,merton
+1454,tetburydon_manor,Tetburydon Manor,ormsbury,tetburydon,merton
+1455,padinnored,Padinnored,ormsbury,,merton
+1456,witoney,Witoney,ormsbury,,merton
+1457,bouthestame,Bouthestame,ormsbury,,merton
+1458,durhame,Durhame,ormsbury,,merton
+1459,hamberwinew,Hamberwinew,ormsbury,,merton
+1460,brinnewesdo,Brinnewesdo,ormsbury,,merton
+1461,buryfielsea,Buryfielsea,quatherton,,merton
+1462,weshax,Weshax,quatherton,,merton
+1463,kinkleigh,Kinkleigh,quatherton,,merton
+1464,rookbury,Rookbury,quatherton,,merton
+1465,abighbridge,Abighbridge,felmond,,merton
+1466,axtedcliff,Axtedcliff,felmond,,merton
+1467,grameritfow,Grameritfow,felmond,,merton
+1468,clingforshb,Clingforshb,stotreso,,merton
+1469,bosted_manor,Bosted Manor,stotreso,bosted,merton
+1470,stotreso_manor,Stotreso Manor,stotreso,stotreso,merton
+1471,bomyardmin_manor,Bomyardmin Manor,bomyardmin,bomyardmin,merton
+1472,saleigatham,Saleigatham,bomyardmin,,merton
+1473,salmonewigm,Salmonewigm,bomyardmin,,merton
+1474,tivesbury,Tivesbury,bomyardmin,,merton
+1475,sougham,Sougham,bomyardmin,,merton
+1476,heaford,Heaford,leighesbury,,merton
+1477,averstowey,Averstowey,leighesbury,,merton
+1478,burghal,Burghal,leighesbury,,merton
+1479,somyard_manor,Somyard Manor,oakhamia,somyard,merton
+1480,monewbingto,Monewbingto,stotford,,merton
+1481,bolmough,Bolmough,stotford,,merton
+1482,tuthestlete,Tuthestlete,bolingham,,merton
+1483,cashord,Cashord,bolingham,,merton
+1484,penilbossin,Penilbossin,bolingham,,merton
+1485,tryfieldfor,Tryfieldfor,osheadminia,,merton
+1486,malister_manor,Malister Manor,osheadminia,malister,merton
+1487,hamershen,Hamershen,osheadminia,,merton
+1488,wichickle,Wichickle,osheadminia,,merton
+1489,theaforombe,Theaforombe,osheadminia,,merton
+1490,horshick,Horshick,barton,,merton
+1491,brinkleympt,Brinkleympt,barton,,merton
+1492,thaxtedford_manor,Thaxtedford Manor,barton,thaxtedford,merton
+1494,bridley,Bridley,kilksey_2,,merton
+1495,maldon_manor,Maldon Manor,barton,maldon,merton
+1496,harton_manor,Harton Manor,kilksey_2,harton,merton
+1497,padstage,Padstage,kilksey_2,,merton
+1498,fraxbram,Fraxbram,kilksey_2,,merton
+1499,sudley,Sudley,kilksey_2,,merton
+1500,anchild,Anchild,tresey,,merton
+1501,liscoley,Liscoley,tresey,,merton
+1502,cutheadingt,Cutheadingt,tresey,,merton
+1503,hichith,Hichith,tresey,,merton
+1504,wingley,Wingley,tresey,,merton
+1505,brockinter,Brockinter,tresey,,merton
+1506,cherouth,Cherouth,tresey,,merton
+1507,carbury,Carbury,bretleven,,merton
+1508,cartsfiele,Cartsfiele,clitford,,merton
+1509,braxbrazion,Braxbrazion,clitford,,merton
+1510,leseymptong,Leseymptong,kilksey,,manch
+1511,kilwookbury,Kilwookbury,thatcke,,manch
+1512,thatcke_manor,Thatcke Manor,thatcke,thatcke,manch
+1514,framer,Framer,wiverton,,manch
+1515,nedondon,Nedondon,wiverton,,manch
+1516,kendbury,Kendbury,hinckham,,manch
+1517,hatchersfie,Hatchersfie,hinckham,,manch
+1518,clitford_manor,Clitford Manor,hinckham,clitford_2,manch
+1519,nostonta_manor,Nostonta Manor,linor,nostonta,manch
+1520,knutsted_manor,Knutsted Manor,linor,knutsted,manch
+1521,kinghateste,Kinghateste,grantia,,manch
+1522,brouth,Brouth,grantia,,manch
+1523,borker,Borker,grantia,,manch
+1524,betone,Betone,grantia,,manch
+1525,comyarbothe,Comyarbothe,realedon,,manch
+1526,hingfores,Hingfores,rothfieldia,,manch
+1527,swamerby_manor,Swamerby Manor,rothfieldia,swamerby,manch
+1528,padstageldf,Padstageldf,rothfieldia,,manch
+1529,chipsea,Chipsea,rothfieldia,,manch
+1530,binton,Binton,stapletown,,manch
+1531,wadingdon_manor,Wadingdon Manor,stapletown,wadingdon,manch
+1532,wesbury,Wesbury,stapletown,,manch
+1534,shershithel,Shershithel,mitherland,,manch
+1535,chawbigra_manor,Chawbigra Manor,mitherland,chawbigra,manch
+1536,wiscombersh,Wiscombersh,mitherland,,manch
+1537,camber,Camber,mitherland,,manch
+1538,milmondge_manor,Milmondge Manor,milmondge,milmondge,manch
+1539,marshampton,Marshampton,milmondge,,manch
+1540,treham_manor,Treham Manor,albridland,treham,manch
+1541,tinceham_manor,Tinceham Manor,albridland,tinceham,manch
+1542,pickerne_manor,Pickerne Manor,albridland,pickerne,manch
+1543,hather_manor,Hather Manor,albridland,hather,manch
+1544,newitchey,Newitchey,mitfordbia,,manch
+1545,brutburghto,Brutburghto,osfield,,manch
+1546,midgeby_manor,Midgeby Manor,osfield,midgeby,manch
+1547,osfield_manor,Osfield Manor,osfield,osfield,manch
+1548,matheridge,Matheridge,osfield,,manch
+1549,wadegowen_manor,Wadegowen Manor,osfield,wadegowen,manch
+1556,kilkham_manor,Kilkham Manor,searingia,kilkham,marsh
+1557,tacher,Tacher,searingia,,marsh
+1558,cashornbuck,Cashornbuck,searingia,,marsh
+1559,comyarmskin,Comyarmskin,searingia,,marsh
+1560,manterkseaf,Manterkseaf,blecland,,marsh
+1561,colmoutedod,Colmoutedod,blecland,,marsh
+1562,creham,Creham,blecland,,marsh
+1563,hitchbury_manor,Hitchbury Manor,godbury,hitchbury,marsh
+1564,astbury,Astbury,wavegomer,,marsh
+1565,beckwarby,Beckwarby,wavegomer,,marsh
+1566,stowenkney,Stowenkney,wavegomer,,marsh
+1567,berendalnew,Berendalnew,ormscastia,,marsh
+1568,miltes,Miltes,ormscastia,,marsh
+1569,milton,Milton,ormscastia,,marsh
+1573,birbury,Birbury,masaland,,marsh
+1574,buclifract_manor,Buclifract Manor,masaland,buclifract,marsh
+1575,swavelterid,Swavelterid,masaland,,marsh
+1576,hillinthalt,Hillinthalt,masaland,,marsh
+1577,lutontesbor,Lutontesbor,masaland,,marsh
+1578,olneympston,Olneympston,masaland,,marsh
+1579,creterbute_manor,Creterbute Manor,creterbute,creterbute,marsh
+1580,chiltash_manor,Chiltash Manor,creterbute,chiltash,marsh
+1581,wichatfingf,Wichatfingf,creterbute,,marsh
+1582,alborshorms,Alborshorms,creterbute,,marsh
+1583,matchestlew,Matchestlew,creterbute,,merton
+1584,albord,Albord,ormsbury,,merton
+1585,mattley,Mattley,ormsbury,,merton
+1586,withetford,Withetford,ormsbury,,merton
+1587,ormsbury_manor,Ormsbury Manor,ormsbury,ormsbury,merton
+1588,harstacutef,Harstacutef,ormsbury,,merton
+1589,caltaccley,Caltaccley,ormsbury,,merton
+1590,wichitfield,Wichitfield,ormsbury,,marsh
+1591,mantastambu,Mantastambu,ormsbury,,merton
+1592,grambe,Grambe,quatherton,,merton
+1593,sterton,Sterton,quatherton,,merton
+1594,shifractle_manor,Shifractle Manor,felmond,shifractle,merton
+1595,thambrock,Thambrock,felmond,,merton
+1596,somneytedit,Somneytedit,stotreso,,merton
+1597,pendford,Pendford,stotreso,,merton
+1598,stondarstas,Stondarstas,stotreso,,merton
+1599,malbolmon,Malbolmon,stotreso,,merton
+1600,tetford_manor,Tetford Manor,stotreso,tetford,merton
+1601,redckerton_manor,Redckerton Manor,stotreso,redckerton,merton
+1602,warton,Warton,bingdoney,,merton
+1603,tarbotford_manor,Tarbotford Manor,bomyardmin,tarbotford,merton
+1604,bregon,Bregon,bomyardmin,,merton
+1605,stetles,Stetles,bomyardmin,,merton
+1606,hordendon,Hordendon,leighesbury,,merton
+1607,monewbuck,Monewbuck,leighesbury,,merton
+1608,leighesbury_manor,Leighesbury Manor,leighesbury,leighesbury,merton
+1609,penridge,Penridge,leighesbury,,merton
+1610,berster,Berster,leighesbury,,merton
+1611,olneyterk,Olneyterk,bolingham,,merton
+1612,guilbotnewi,Guilbotnewi,barton,,merton
+1613,cuthorounwi,Cuthorounwi,barton,,merton
+1614,pendfow,Pendfow,bolingham,,merton
+1615,sehaydon,Sehaydon,bolingham,,merton
+1616,frampton_manor_2,Frampton Manor 2,osheadminia,frampton_3,merton
+1617,cleckilwook,Cleckilwook,osheadminia,,merton
+1618,bidgetondov,Bidgetondov,barton,,merton
+1619,combertsfie,Combertsfie,barton,,merton
+1620,moneyted,Moneyted,barton,,merton
+1621,penknutondo,Penknutondo,barton,,merton
+1622,tonghbornby,Tonghbornby,barton,,merton
+1623,singdon,Singdon,barton,,merton
+1625,hambridge,Hambridge,kilksey_2,,merton
+1626,farghbraxte,Farghbraxte,barton,,merton
+1627,harlboleby,Harlboleby,tresey,,merton
+1628,whisburyfin,Whisburyfin,tresey,,merton
+1629,swatfored,Swatfored,tresey,,merton
+1630,abingston,Abingston,tresey,,merton
+1631,oltersham,Oltersham,tresey,,merton
+1632,tersherd,Tersherd,tresey,,merton
+1633,cleovill,Cleovill,tresey,,merton
+1634,althehambe_manor,Althehambe Manor,bretleven,althehambe,merton
+1635,sorough_manor,Sorough Manor,bretleven,sorough_2,merton
+1636,treacudbres,Treacudbres,clitford,,manch
+1637,malnet,Malnet,clitford,,manch
+1638,briggincher,Briggincher,clitford,,manch
+1639,skingfork,Skingfork,bosia,,manch
+1640,grampton,Grampton,thatcke,,manch
+1641,botley_manor,Botley Manor,bosia,botley,manch
+1644,readith,Readith,wiverton,,manch
+1645,aleymough,Aleymough,hinckham,,manch
+1646,bleyme,Bleyme,hinckham,,manch
+1647,whingfordel,Whingfordel,hinckham,,manch
+1648,shippild,Shippild,hinckham,,manch
+1649,cleytedon,Cleytedon,linor,,manch
+1650,hiltotney,Hiltotney,linor,,manch
+1651,walton,Walton,linor,,manch
+1652,oltedingles,Oltedingles,grantia,,manch
+1653,wismouth_manor,Wismouth Manor,grantia,wismouth,manch
+1654,bleyte,Bleyte,grantia,,manch
+1655,grazion,Grazion,grantia,,manch
+1656,bignter,Bignter,thetfordia,,manch
+1657,brovilbor_manor,Brovilbor Manor,thetfordia,brovilbor,manch
+1658,bleighall,Bleighall,rothfieldia,,manch
+1659,candbury,Candbury,rothfieldia,,manch
+1660,kildon,Kildon,rothfieldia,,manch
+1661,paditford,Paditford,stapletown,,manch
+1662,stapletown_manor,Stapletown Manor,stapletown,stapletown,manch
+1663,saldon,Saldon,stapletown,,manch
+1664,nossing,Nossing,stapletown,,manch
+1665,modmough,Modmough,mitherland,,manch
+1666,yeorough_manor,Yeorough Manor,mitherland,yeorough_2,manch
+1667,hatcharlow,Hatcharlow,milmondge,,manch
+1668,boodbursh,Boodbursh,milmondge,,manch
+1669,padsbury_manor,Padsbury Manor,magelia,padsbury,manch
+1670,wickerombra,Wickerombra,albridland,,manch
+1671,knetothetle,Knetothetle,mitfordbia,,manch
+1672,quatford,Quatford,mitfordbia,,manch
+1673,knalnewbidg,Knalnewbidg,mitfordbia,,manch
+1674,credcleter,Credcleter,mitfordbia,,manch
+1675,atfordle_manor,Atfordle Manor,osfield,atfordle,manch
+1676,holeastbury,Holeastbury,mitfordbia,,manch
+1688,baramber,Baramber,searingia,,marsh
+1689,weyterea,Weyterea,biverbot,,marsh
+1690,dunslesey_manor,Dunslesey Manor,searingia,dunslesey,marsh
+1691,chitham,Chitham,searingia,,marsh
+1692,shetbury,Shetbury,searingia,,marsh
+1693,withwestabl,Withwestabl,searingia,,marsh
+1694,tonestreman,Tonestreman,blecland,,marsh
+1695,chiptonsey_manor,Chiptonsey Manor,blecland,chiptonsey,marsh
+1696,skippleterb,Skippleterb,blecland,,marsh
+1697,heldforstok,Heldforstok,blecland,,marsh
+1698,sombeck,Sombeck,blecland,,marsh
+1699,ossingleton,Ossingleton,blecland,,marsh
+1703,haxterlithe,Haxterlithe,wavegomer,,marsh
+1704,pouthame,Pouthame,ormscastia,,marsh
+1705,flowenley,Flowenley,ormscastia,,marsh
+1706,southborood,Southborood,ormscastia,,marsh
+1707,marthaltret,Marthaltret,ormscastia,,marsh
+1708,chingdockwa,Chingdockwa,ormscastia,,marsh
+1709,shifordge_manor,Shifordge Manor,masaland,shifordge,marsh
+1710,thormidge,Thormidge,presterton,,marsh
+1711,presterton_manor,Presterton Manor,presterton,presterton,marsh
+1712,pondonley_manor,Pondonley Manor,creterbute,pondonley,marsh
+1713,gatersham,Gatersham,creterbute,,marsh
+1714,shichinverl,Shichinverl,creterbute,,marsh
+1715,lisbungdon,Lisbungdon,ormsbury,,marsh
+1716,exetbury,Exetbury,ormsbury,,merton
+1717,hifnarpor,Hifnarpor,ormsbury,,merton
+1718,mareton,Mareton,ormsbury,,merton
+1719,mantont,Mantont,ormsbury,,marsh
+1720,brouton,Brouton,ormsbury,,merton
+1721,exningstbur,Exningstbur,ormsbury,,merton
+1722,wesowey,Wesowey,ormsbury,,marsh
+1723,hampon,Hampon,ormsbury,,marsh
+1724,hamburtham,Hamburtham,ormsbury,,marsh
+1725,guilbord,Guilbord,quatherton,,marsh
+1726,nossin,Nossin,kivesoria,,marsh
+1727,bruthwey,Bruthwey,kivesoria,,marsh
+1728,milborough_manor,Milborough Manor,kivesoria,milborough,marsh
+1729,paighboroug,Paighboroug,stotreso,,merton
+1730,cheston,Cheston,stotreso,,merton
+1731,warmskipsey,Warmskipsey,stotreso,,merton
+1732,picklewenri,Picklewenri,bingdoney,,merton
+1733,sehalton,Sehalton,bingdoney,,merton
+1734,bingdoney_manor,Bingdoney Manor,bingdoney,bingdoney,merton
+1735,grasaltaple,Grasaltaple,bingdoney,,merton
+1736,pontone,Pontone,bingdoney,,merton
+1737,midgelton,Midgelton,bingdoney,,wildlands
+1738,laungstam,Laungstam,leighesbury,,merton
+1739,wiscarasted,Wiscarasted,,,marsh
+1740,pevertford,Pevertford,leighesbury,,merton
+1741,bideld,Bideld,leighesbury,,merton
+1742,malmock,Malmock,bolingham,,merton
+1743,mathamberst,Mathamberst,barton,,merton
+1744,nestow,Nestow,barton,,merton
+1745,bretford,Bretford,barton,,merton
+1746,pingtongatf,Pingtongatf,barton,,merton
+1747,whiscaunstc,Whiscaunstc,barton,,merton
+1748,hamptontarl,Hamptontarl,barton,,merton
+1749,wigmodbury,Wigmodbury,barton,,merton
+1750,knaltap,Knaltap,barton,,merton
+1751,ormonteforo,Ormonteforo,barton,,merton
+1752,calmermon,Calmermon,barton,,merton
+1753,barton_manor,Barton Manor,barton,barton,merton
+1754,loweyterste,Loweyterste,barton,,merton
+1755,altershbord,Altershbord,barton,,merton
+1756,bodbury,Bodbury,barton,,merton
+1757,bornewestow,Bornewestow,barton,,merton
+1758,newing,Newing,tresey,,merton
+1759,buryfielstl,Buryfielstl,tresey,,merton
+1760,newbury,Newbury,tresey,,merton
+1761,tresey_manor,Tresey Manor,tresey,tresey,merton
+1762,gonton,Gonton,tresey,,merton
+1763,bretleven_manor,Bretleven Manor,bretleven,bretleven,merton
+1764,aydonth,Aydonth,bretleven,,merton
+1765,wigmous,Wigmous,bretleven,,merton
+1766,brithampton,Brithampton,clitford,,manch
+1767,clitford_manor_2,Clitford Manor 2,clitford,clitford,manch
+1768,cutburham,Cutburham,clitford,,manch
+1769,axbringater,Axbringater,bosia,,manch
+1770,whithesteri,Whithesteri,bosia,,manch
+1771,salmodbury,Salmodbury,bosia,,manch
+1772,wichereham,Wichereham,bosia,,manch
+1775,bleyted,Bleyted,hinckham,,manch
+1776,headin,Headin,linor,,manch
+1777,bruthwargh,Bruthwargh,hinckham,,manch
+1778,kingtonton,Kingtonton,linor,,manch
+1779,fendbury,Fendbury,linor,,manch
+1780,persin_manor,Persin Manor,linor,persin,manch
+1781,linor_manor,Linor Manor,linor,linor,manch
+1782,rompound_manor,Rompound Manor,linor,rompound,manch
+1783,bermordenmo,Bermordenmo,grantia,,manch
+1784,apleoverwic,Apleoverwic,grantia,,manch
+1785,tinthambe,Tinthambe,grantia,,manch
+1786,wornbury,Wornbury,thetfordia,,manch
+1787,perston_manor,Perston Manor,thetfordia,perston_2,manch
+1788,tholesforot,Tholesforot,rothfieldia,,manch
+1789,aldont,Aldont,rothfieldia,,manch
+1790,frazion,Frazion,stapletown,,manch
+1791,dymock,Dymock,stapletown,,manch
+1792,grambering_manor,Grambering Manor,stapletown,grambering,manch
+1793,flooth,Flooth,stapletown,,manch
+1794,drampton,Drampton,mitherland,,manch
+1795,theyterton,Theyterton,mitherland,,manch
+1796,malbossidge,Malbossidge,stapton,,manch
+1797,brinnor,Brinnor,magelia,,manch
+1798,cudbury_manor,Cudbury Manor,magelia,cudbury,manch
+1799,poremanch,Poremanch,mitfordbia,,manch
+1800,althersham_manor,Althersham Manor,mitfordbia,althersham,manch
+1801,altley_manor,Altley Manor,mitfordbia,altley,manch
+1802,thorombe,Thorombe,mitfordbia,,manch
+1803,soltow,Soltow,mitfordbia,,manch
+1804,bingtondon_manor,Bingtondon Manor,mitfordbia,bingtondon,manch
+1805,halmougham,Halmougham,mitfordbia,,manch
+1810,chincham,Chincham,biverbot,,marsh
+1811,pereaford,Pereaford,biverbot,,marsh
+1812,norouthord,Norouthord,biverbot,,marsh
+1813,northeaston,Northeaston,biverbot,,marsh
+1814,gondon,Gondon,biverbot,,marsh
+1815,rothel,Rothel,biverbot,,marsh
+1816,salter,Salter,biverbot,,marsh
+1817,thalliscaun,Thalliscaun,searingia,,marsh
+1818,hordenle,Hordenle,searingia,,marsh
+1819,waford_manor,Waford Manor,biverbot,waford,marsh
+1820,wigrade_manor,Wigrade Manor,searingia,wigrade,marsh
+1827,thordeforsh,Thordeforsh,blecland,,marsh
+1832,mouthame,Mouthame,ormscastia,,marsh
+1833,watfork,Watfork,ormscastia,,marsh
+1834,alneyterlih,Alneyterlih,ormscastia,,marsh
+1835,bretrinch_manor,Bretrinch Manor,ormscastia,bretrinch,marsh
+1836,whichitchit,Whichitchit,ormscastia,,marsh
+1839,bechisleign,Bechisleign,masaland,,marsh
+1840,skingh,Skingh,presterton,,marsh
+1841,dalbodmough,Dalbodmough,presterton,,marsh
+1842,altord,Altord,presterton,,marsh
+1843,uxbridge_manor,Uxbridge Manor,presterton,uxbridge,marsh
+1844,retherscom_manor,Retherscom Manor,creterbute,retherscom,marsh
+1845,betfore,Betfore,creterbute,,marsh
+1846,sudbury,Sudbury,ormsbury,,marsh
+1847,ameridleby,Ameridleby,ormsbury,,marsh
+1848,conesdon,Conesdon,ormsbury,,marsh
+1849,olmoutheld,Olmoutheld,ormsbury,,marsh
+1850,appley,Appley,ormsbury,,marsh
+1851,gatheldon,Gatheldon,ormsbury,,marsh
+1852,thordend,Thordend,ormsbury,,marsh
+1853,sounwick,Sounwick,ormsbury,,marsh
+1854,yeoburgrave,Yeoburgrave,ormsbury,,marsh
+1855,ashbridmoug,Ashbridmoug,ormsbury,,marsh
+1856,newithetfor,Newithetfor,ormsbury,,marsh
+1857,astedovenle,Astedovenle,kivesoria,,marsh
+1858,noreton,Noreton,kivesoria,,marsh
+1859,pickingle_manor,Pickingle Manor,kivesoria,pickingle,marsh
+1860,maremadenni,Maremadenni,kivesoria,,merton
+1861,buryfielst,Buryfielst,kivesoria,,merton
+1862,padstburgh,Padstburgh,stotreso,,merton
+1863,bleymouth,Bleymouth,bingdoney,,merton
+1864,towbury_manor,Towbury Manor,bingdoney,towbury,merton
+1865,hamberd,Hamberd,bingdoney,,merton
+1866,mouthorton,Mouthorton,bingdoney,,wildlands
+1867,hambersfiel,Hambersfiel,bingdoney,,merton
+1868,frambridge,Frambridge,bingdoney,,wildlands
+1869,bertokershe,Bertokershe,bingdoney,,merton
+1870,ortonewen,Ortonewen,witfordia_2,,wildlands
+1871,farigmon,Farigmon,witfordia_2,,marsh
+1872,axbridenint,Axbridenint,witfordia_2,,merton
+1873,tongtreafto,Tongtreafto,witfordia_2,,merton
+1874,baldforoe,Baldforoe,witfordia_2,,merton
+1875,waringdon,Waringdon,barton,,merton
+1876,exetleobury,Exetleobury,barton,,merton
+1877,lymersh,Lymersh,barton,,merton
+1878,clifnarleig,Clifnarleig,barton,,merton
+1879,botfield_manor,Botfield Manor,barton,botfield,merton
+1880,hestancham,Hestancham,barton,,merton
+1881,stedclingfo,Stedclingfo,barton,,merton
+1882,milwookerst,Milwookerst,barton,,merton
+1883,marling_manor,Marling Manor,barton,marling,merton
+1884,wichin,Wichin,barton,,merton
+1885,buclifton_manor,Buclifton Manor,barton,buclifton,merton
+1886,borton,Borton,barton,,merton
+1887,somber,Somber,barton,,merton
+1888,tiverstersh,Tiverstersh,barton,,merton
+1889,almodbrocke,Almodbrocke,tresey,,merton
+1890,mardenthesh,Mardenthesh,midenia,,merton
+1891,combridhury,Combridhury,tresey,,merton
+1892,petoney,Petoney,rothin,,merton
+1893,bleytertfor,Bleytertfor,rothin,,merton
+1894,penknuton,Penknuton,bretleven,,merton
+1895,donthwaveld,Donthwaveld,bretleven,,merton
+1896,wendendeld,Wendendeld,clitford,,manch
+1897,borehalbord,Borehalbord,clitford,,manch
+1898,mougham,Mougham,clitford,,manch
+1899,tiverlihury,Tiverlihury,clitford,,manch
+1900,oakhatother,Oakhatother,bosia,,manch
+1901,hawleighbod,Hawleighbod,bosia,,manch
+1902,comnewbury,Comnewbury,bosia,,manch
+1903,hillinglead,Hillinglead,bosia,,manch
+1906,singforlbou,Singforlbou,linor,,manch
+1907,kinghton,Kinghton,linor,,manch
+1908,aplesterry,Aplesterry,linor,,manch
+1909,mousey,Mousey,linor,,manch
+1910,bothleigh,Bothleigh,linor,,manch
+1911,alling,Alling,linor,,manch
+1912,nosbury_manor,Nosbury Manor,linor,nosbury,manch
+1913,pewich_manor,Pewich Manor,pewich,pewich,manch
+1914,foresey,Foresey,pewich,,manch
+1915,watchifford,Watchifford,pewich,,manch
+1916,oswesboscom,Oswesboscom,thetfordia,,manch
+1917,atford_manor,Atford Manor,thetfordia,atford,manch
+1918,bolinnincha,Bolinnincha,thetfordia,,manch
+1919,searen_manor,Searen Manor,thetfordia,searen,manch
+1920,bringh,Bringh,stapletown,,manch
+1921,drances,Drances,stapletown,,manch
+1922,thameretfor,Thameretfor,stapletown,,manch
+1923,bidgeldon,Bidgeldon,stapletown,,manch
+1924,draford,Draford,stapletown,,manch
+1925,warton_manor,Warton Manor,stapton,warton,manch
+1926,winkham_manor,Winkham Manor,stapton,winkham_2,manch
+1927,farenbe,Farenbe,magelia,,manch
+1928,felney_manor,Felney Manor,magelia,felney,manch
+1929,dymeridelei,Dymeridelei,magelia,,manch
+1930,bordeforton,Bordeforton,mitfordbia,,manch
+1931,gonthampton,Gonthampton,mitfordbia,,manch
+1932,keldford,Keldford,mitfordbia,,manch
+1933,bambeton,Bambeton,mitfordbia,,manch
+1934,pedonmouth_manor,Pedonmouth Manor,mitfordbia,pedonmouth,manch
+1940,nordeford,Nordeford,biverbot,,marsh
+1941,seadenley,Seadenley,biverbot,,marsh
+1942,gathatford,Gathatford,biverbot,,marsh
+1943,mazion_manor,Mazion Manor,biverbot,mazion,marsh
+1944,wigmore_manor,Wigmore Manor,biverbot,wigmore,marsh
+1945,paigmough,Paigmough,biverbot,,marsh
+1946,netforsters,Netforsters,biverbot,,marsh
+1947,sington,Sington,biverbot,,marsh
+1960,casidge,Casidge,ormscastia,,marsh
+1961,stcheyme,Stcheyme,ormscastia,,marsh
+1962,cuthles,Cuthles,ormscastia,,marsh
+1963,rookensey,Rookensey,ormscastia,,marsh
+1964,comerwivest,Comerwivest,ormscastia,,marsh
+1967,remalne,Remalne,presterton,,marsh
+1968,lympork,Lympork,presterton,,marsh
+1969,winchton_manor_2,Winchton Manor 2,presterton,winchton,marsh
+1970,mitone,Mitone,presterton,,marsh
+1971,warendarmid,Warendarmid,presterton,,marsh
+1972,bolbover_manor,Bolbover Manor,creterbute,bolbover,marsh
+1973,chesbouthor,Chesbouthor,osbia,,marsh
+1974,whinnornby,Whinnornby,osbia,,marsh
+1975,nordendbury,Nordendbury,gatfordford,,marsh
+1976,moneyme,Moneyme,ormsbury,,marsh
+1977,lutonestedc,Lutonestedc,ormsbury,,marsh
+1978,soutbuck,Soutbuck,ormsbury,,marsh
+1979,comburstbur,Comburstbur,ormsbury,,marsh
+1980,carmskirk,Carmskirk,ormsbury,,marsh
+1981,atchinch,Atchinch,ormsbury,,marsh
+1982,bretongh,Bretongh,ormsbury,,marsh
+1983,resbookenin,Resbookenin,ormsbury,,marsh
+1984,rockerth,Rockerth,ormsbury,,marsh
+1985,brouterby,Brouterby,kivesoria,,marsh
+1986,hormskirk,Hormskirk,kivesoria,,marsh
+1987,creapley,Creapley,kivesoria,,marsh
+1988,kenletford,Kenletford,kivesoria,,marsh
+1989,pendeformid,Pendeformid,kivesoria,,wildlands
+1990,uxbrinewbos,Uxbrinewbos,bingdoney,,merton
+1991,brinewbignt,Brinewbignt,bingdoney,,merton
+1992,orlooth,Orlooth,,,wildlands
+1993,soumershoro,Soumershoro,kilksey_3,,wildlands
+1994,heredington,Heredington,kilksey_3,,marsh
+1995,causeham,Causeham,kilksey_3,,marsh
+1996,mideningh,Mideningh,horsin,,wildlands
+1997,madine,Madine,horsin,,wildlands
+1998,clitbury_manor_2,Clitbury Manor 2,witfordia_2,clitbury,marsh
+1999,tonewbirk,Tonewbirk,witfordia_2,,marsh
+2000,singhame,Singhame,witfordia_2,,merton
+2001,fieley,Fieley,witfordia_2,,merton
+2002,cashfield,Cashfield,witfordia_2,,merton
+2003,hattley,Hattley,witfordia_2,,merton
+2004,moutsmouthe,Moutsmouthe,barton,,merton
+2005,ancheterton,Ancheterton,barton,,merton
+2006,dydontef_manor,Dydontef Manor,barton,dydontef,merton
+2007,dramere,Dramere,barton,,merton
+2008,rendock,Rendock,barton,,merton
+2009,minton,Minton,barton,,merton
+2010,kivewentley_manor,Kivewentley Manor,barton,kivewentley,merton
+2011,favewentry_manor,Favewentry Manor,barton,favewentry,merton
+2012,sweshetersh,Sweshetersh,midgedine,,merton
+2013,altondoke_manor,Altondoke Manor,midgedine,altondoke,merton
+2014,bridgetorto,Bridgetorto,midgedine,,merton
+2015,yeorough_manor_2,Yeorough Manor 2,midenia,yeorough,merton
+2016,thweltapple,Thweltapple,midenia,,merton
+2017,weyfieldge_manor,Weyfieldge Manor,midenia,weyfieldge,merton
+2018,winneton,Winneton,midenia,,merton
+2019,felseafton,Felseafton,midenia,,merton
+2020,bracudbrott,Bracudbrott,rothin,,merton
+2021,wichith,Wichith,hatleridia,,merton
+2022,thelter,Thelter,bretleven,,merton
+2023,clinglea,Clinglea,bretleven,,manch
+2024,bordel,Bordel,clitford,,manch
+2025,stleigh,Stleigh,clitford,,manch
+2026,marshbuton_manor,Marshbuton Manor,clitford,marshbuton,manch
+2027,macclinvest,Macclinvest,clitford,,manch
+2028,sterth,Sterth,bosia,,manch
+2029,marendalbor,Marendalbor,bosia,,manch
+2030,andbracudle,Andbracudle,bosia,,manch
+2031,keridbury_manor,Keridbury Manor,burwickia,keridbury,manch
+2033,yeobury,Yeobury,watford,,manch
+2034,nordefrafor,Nordefrafor,linor,,manch
+2035,sherry,Sherry,watford,,manch
+2036,congraveham_manor,Congraveham Manor,linor,congraveham,manch
+2037,donetford,Donetford,linor,,manch
+2038,watches,Watches,linor,,manch
+2039,gatefornby,Gatefornby,pewich,,manch
+2040,canchill,Canchill,pewich,,wildlands
+2041,blannorned,Blannorned,pewich,,manch
+2042,witford,Witford,pewich,,manch
+2043,hillifnarto,Hillifnarto,thetfordia,,wildlands
+2044,clinth,Clinth,thetfordia,,manch
+2045,leyterd,Leyterd,thetfordia,,wildlands
+2046,somnewbury,Somnewbury,wickhampia,,wildlands
+2047,norforke,Norforke,stapletown,,manch
+2048,somyarkseha,Somyarkseha,stapletown,,manch
+2049,dunwichamps,Dunwichamps,stapletown,,manch
+2050,albridley_manor,Albridley Manor,stapton,albridley,manch
+2051,towelin,Towelin,stapton,,manch
+2052,wooken,Wooken,stapton,,manch
+2053,stapton_manor_3,Stapton Manor 3,stapton,stapton,manch
+2054,bucking,Bucking,magelia,,manch
+2055,guilkhal,Guilkhal,crafthia,,manch
+2056,mithampsted,Mithampsted,crafthia,,manch
+2057,wighamptott,Wighamptott,mitfordbia,,manch
+2058,camerry,Camerry,mitfordbia,,manch
+2059,wariddenzan,Wariddenzan,mitfordbia,,manch
+2060,tershorouts,Tershorouts,mitfordbia,,manch
+2061,horden,Horden,mitfordbia,,manch
+2062,kipsey,Kipsey,mitfordbia,,manch
+2063,ordefrazion,Ordefrazion,mitfordbia,,manch
+2069,feleymon,Feleymon,biverbot,,marsh
+2073,dundefram,Dundefram,biverbot,,marsh
+2084,tondford,Tondford,ormscastia,,marsh
+2086,nornbungh,Nornbungh,presterton,,marsh
+2087,olingatchea,Olingatchea,presterton,,marsh
+2088,wargham,Wargham,flokhamp,,marsh
+2089,casthers_manor,Casthers Manor,presterton,casthers,marsh
+2090,carlith,Carlith,presterton,,marsh
+2091,guiltam,Guiltam,osbia,,marsh
+2092,winchbrid_manor,Winchbrid Manor,osbia,winchbrid,marsh
+2093,cramer,Cramer,osbia,,marsh
+2094,exning,Exning,osbia,,marsh
+2095,dunstagetle,Dunstagetle,osbia,,marsh
+2096,pingleignte,Pingleignte,gatfordford,,marsh
+2097,thaterton,Thaterton,gatfordford,,marsh
+2098,solingtongf,Solingtongf,gatfordford,,marsh
+2099,singhton,Singhton,ormsbury,,marsh
+2100,moutsfingat,Moutsfingat,ormsbury,,marsh
+2101,oresdon,Oresdon,ormsbury,,marsh
+2102,picherle,Picherle,ormsbury,,marsh
+2103,warkerton,Warkerton,ormsbury,,marsh
+2104,petbury,Petbury,ormsbury,,marsh
+2105,walingatfor,Walingatfor,ormsbury,,marsh
+2106,midhull,Midhull,kivesoria,,marsh
+2107,wingleigmoc,Wingleigmoc,kivesoria,,marsh
+2108,buryfielton,Buryfielton,kivesoria,,marsh
+2109,bordenley,Bordenley,kivesoria,,marsh
+2110,lutsfing,Lutsfing,,,wildlands
+2111,buryfieltes,Buryfieltes,,,wildlands
+2112,hestage,Hestage,,,wildlands
+2113,neytestasto,Neytestasto,,,marsh
+2114,chingfork,Chingfork,kilksey_3,,wildlands
+2115,canchargh,Canchargh,kilksey_3,,marsh
+2116,brouseyterm,Brouseyterm,horsin,,marsh
+2117,dunwin,Dunwin,horsin,,marsh
+2118,fenridge,Fenridge,horsin,,marsh
+2119,orehordeld,Orehordeld,witfordia_2,,marsh
+2120,gatford,Gatford,witfordia_2,,marsh
+2121,brambe,Brambe,witfordia_2,,merton
+2122,perdenstabi,Perdenstabi,witfordia_2,,merton
+2123,salborford,Salborford,witfordia_2,,merton
+2124,boromyard,Boromyard,witfordia_2,,merton
+2125,toneymouth,Toneymouth,barton,,merton
+2126,birkseashil,Birkseashil,barton,,merton
+2127,albrole_manor,Albrole Manor,barton,albrole,merton
+2128,aldford,Aldford,barton,,merton
+2129,witforoutha,Witforoutha,barton,,merton
+2130,staptonter_manor,Staptonter Manor,barton,staptonter,merton
+2131,warpon,Warpon,witfordia_2,,merton
+2132,rendfowenin,Rendfowenin,midgedine,,merton
+2133,moneton,Moneton,midgedine,,merton
+2134,woothwarke,Woothwarke,midgedine,,merton
+2135,midgedine_manor,Midgedine Manor,midgedine,midgedine,merton
+2136,suddlisbury,Suddlisbury,midenia,,merton
+2137,helstontarl,Helstontarl,midenia,,merton
+2138,atcham,Atcham,midenia,,merton
+2139,ordendenste,Ordendenste,midenia,,merton
+2140,peverlisbod,Peverlisbod,rothin,,merton
+2141,cleighampse,Cleighampse,hatleridia,,merton
+2142,pevershbosw,Pevershbosw,hatleridia,,merton
+2143,wivereham,Wivereham,hatleridia,,merton
+2144,tuthertsfie,Tuthertsfie,bretleven,,manch
+2145,padington,Padington,clitford,,manch
+2146,tonterd,Tonterd,clitford,,manch
+2147,bramerendoc,Bramerendoc,clitford,,manch
+2148,wesfingh,Wesfingh,clitford,,manch
+2149,tesforouthw,Tesforouthw,bosia,,manch
+2150,woodmitheaf,Woodmitheaf,burwickia,,manch
+2151,ableymough,Ableymough,burwickia,,manch
+2152,horsfield_manor,Horsfield Manor,watford,horsfield,manch
+2153,godgeton_manor,Godgeton Manor,watford,godgeton,manch
+2154,teresbolmon,Teresbolmon,watford,,manch
+2155,knuton,Knuton,watford,,manch
+2156,headefram,Headefram,watford,,manch
+2157,roodbury,Roodbury,linor,,manch
+2158,rousey,Rousey,linor,,manch
+2159,pretfingtot,Pretfingtot,pewich,,manch
+2160,watham,Watham,pewich,,manch
+2161,caleymoutsm,Caleymoutsm,pewich,,manch
+2162,breaplestre,Breaplestre,pewich,,manch
+2163,braccley,Braccley,totleters,,manch
+2164,candford,Candford,totleters,,manch
+2165,therth,Therth,thetfordia,,wildlands
+2166,weston,Weston,wickhampia,,wildlands
+2167,farley,Farley,castfordia,,wildlands
+2168,southeadsta,Southeadsta,stapletown,,manch
+2169,bracuton,Bracuton,whitford,,wildlands
+2170,pouton,Pouton,whitford,,manch
+2171,neytetford,Neytetford,stapton,,manch
+2172,olethampton,Olethampton,stapton,,manch
+2173,malton,Malton,stapton,,manch
+2174,dudleigmock,Dudleigmock,crafthia,,manch
+2175,maliston_manor,Maliston Manor,crafthia,maliston,manch
+2176,daleacudlif,Daleacudlif,crafthia,,manch
+2177,theasidgeld,Theasidgeld,crafthia,,manch
+2178,brigmouthwa,Brigmouthwa,crafthia,,manch
+2179,wicking,Wicking,mitfordbia,,manch
+2180,wendale,Wendale,mitfordbia,,manch
+2181,bashfieliff,Bashfieliff,mitfordbia,,manch
+2182,ordenber,Ordenber,mitfordbia,,manch
+2199,binehomer_manor,Binehomer Manor,flokhamp,binehomer,marsh
+2200,maditon,Maditon,flokhamp,,marsh
+2202,horny_manor,Horny Manor,flokhamp,horny,marsh
+2203,braster_manor,Braster Manor,flokhamp,braster_2,marsh
+2204,kiptokentan,Kiptokentan,flokhamp,,marsh
+2205,berton_manor,Berton Manor,presterton,berton_2,marsh
+2206,calter_manor,Calter Manor,presterton,calter,marsh
+2207,southfield_manor,Southfield Manor,osbia,southfield,marsh
+2208,avelliscaun,Avelliscaun,osbia,,marsh
+2209,whitford_manor,Whitford Manor,osbia,whitford,marsh
+2210,dalliff,Dalliff,osbia,,marsh
+2211,hamerry,Hamerry,gatfordford,,marsh
+2212,frandeframp,Frandeframp,gatfordford,,marsh
+2213,sterby,Sterby,gatfordford,,marsh
+2214,chitcham,Chitcham,gatfordford,,marsh
+2215,gayletforke,Gayletforke,gatfordford,,marsh
+2216,warlookbuck,Warlookbuck,gatfordford,,marsh
+2217,holetbury,Holetbury,ormsbury,,marsh
+2218,dunwisleigh,Dunwisleigh,ormsbury,,marsh
+2219,bermounstle,Bermounstle,ormsbury,,marsh
+2220,brincestesh,Brincestesh,ormsbury,,marsh
+2221,quattestamp,Quattestamp,ormsbury,,marsh
+2222,kilksey_manor_3,Kilksey Manor 3,kilksey_3,kilksey_2,marsh
+2223,fendone,Fendone,kivesoria,,marsh
+2224,tutoney,Tutoney,kivesoria,,marsh
+2225,manchipsey,Manchipsey,,,wildlands
+2226,tingham,Tingham,,,wildlands
+2227,wenley,Wenley,,,wildlands
+2228,flowcestedi,Flowcestedi,,,marsh
+2229,bormoughamb,Bormoughamb,horsin,,marsh
+2230,dalborthwal,Dalborthwal,horsin,,marsh
+2231,horsin_manor,Horsin Manor,horsin,horsin,marsh
+2232,childoversh,Childoversh,horsin,,marsh
+2233,yeoverth,Yeoverth,horsin,,marsh
+2234,waverry,Waverry,horsin,,marsh
+2235,wester,Wester,witfordia_2,,marsh
+2236,conton,Conton,witfordia_2,,marsh
+2237,altontablau,Altontablau,witfordia_2,,marsh
+2238,hambury,Hambury,witfordia_2,,merton
+2239,luthboscome,Luthboscome,witfordia_2,,merton
+2240,warbord,Warbord,witfordia_2,,merton
+2241,kirkenterry,Kirkenterry,witfordia_2,,merton
+2242,soumerlborn,Soumerlborn,barton,,merton
+2243,apleytersta,Apleytersta,barton,,merton
+2244,berwingh,Berwingh,witfordia_2,,merton
+2245,warlowce,Warlowce,witfordia_2,,merton
+2246,midmodbruth,Midmodbruth,witfordia_2,,merton
+2247,marlbreditf,Marlbreditf,witfordia_2,,merton
+2248,skirmough,Skirmough,witfordia_2,,merton
+2249,pentesbury,Pentesbury,midgedine,,merton
+2250,teterry,Teterry,midgedine,,merton
+2251,penridmaltr,Penridmaltr,midgedine,,merton
+2252,dalnewenleb,Dalnewenleb,midenia,,merton
+2253,theadston,Theadston,midenia,,merton
+2254,haltremalto,Haltremalto,midenia,,merton
+2255,shermidgeto,Shermidgeto,midenia,,merton
+2256,quater,Quater,rothin,,merton
+2257,suddling,Suddling,hatleridia,,merton
+2258,alneympton,Alneympton,hatleridia,,merton
+2259,candockletf,Candockletf,hatleridia,,manch
+2260,rougham,Rougham,hatleridia,,manch
+2261,borneymoutb,Borneymoutb,clitford,,manch
+2262,oswested,Oswested,clitford,,manch
+2263,knuther,Knuther,clitford,,manch
+2264,thetleter_manor,Thetleter Manor,burwickia,thetleter,manch
+2265,redcheaple_manor,Redcheaple Manor,burwickia,redcheaple,manch
+2266,bookerstong,Bookerstong,burwickia,,manch
+2267,altont,Altont,burwickia,,manch
+2268,padeld,Padeld,burwickia,,manch
+2269,suddle,Suddle,watford,,manch
+2270,cleone_manor,Cleone Manor,watford,cleone,manch
+2271,routes,Routes,watford,,manch
+2272,uxbrehord,Uxbrehord,bothia,,manch
+2273,axbritchesb,Axbritchesb,bothia,,manch
+2274,wennord,Wennord,bothia,,manch
+2275,marley,Marley,bothia,,manch
+2276,hermodmard,Hermodmard,pewich,,manch
+2277,guildhurst_manor,Guildhurst Manor,totleters,guildhurst,manch
+2278,dundovenkle,Dundovenkle,totleters,,manch
+2279,chingdovest,Chingdovest,totleters,,manch
+2280,betotheroug,Betotheroug,wickhampia,,manch
+2281,knalme,Knalme,wickhampia,,manch
+2282,withampord,Withampord,wickhampia,,manch
+2283,tinklested,Tinklested,wickhampia,,manch
+2284,paighton,Paighton,castfordia,,manch
+2285,berton_manor_2,Berton Manor 2,castfordia,berton,manch
+2286,sidgetham,Sidgetham,whitford,,manch
+2287,monewbury,Monewbury,castfordia,,manch
+2288,herthawley,Herthawley,oakham,,manch
+2289,blewisbury,Blewisbury,crafthia,,manch
+2290,newbigay,Newbigay,crafthia,,manch
+2291,fenster,Fenster,crafthia,,manch
+2292,mandburgh,Mandburgh,crafthia,,manch
+2293,chicklecher,Chicklecher,crafthia,,manch
+2294,neytertowen,Neytertowen,crafthia,,manch
+2295,souseadinta,Souseadinta,mitfordbia,,manch
+2296,cambritforh,Cambritforh,mitfordbia,,manch
+2297,tregon,Tregon,mitfordbia,,manch
+2298,chisterton_manor,Chisterton Manor,mitfordbia,chisterton,manch
+2308,barton,Barton,flokhamp,,marsh
+2309,lymptow,Lymptow,flokhamp,,marsh
+2310,neweymord,Neweymord,flokhamp,,marsh
+2311,feleoveleig,Feleoveleig,flokhamp,,marsh
+2312,treholislei,Treholislei,flokhamp,,marsh
+2313,lookeld,Lookeld,flokhamp,,marsh
+2314,draxning_manor_2,Draxning Manor 2,flokhamp,draxning,marsh
+2315,caston,Caston,flokhamp,,marsh
+2316,bresburston,Bresburston,flokhamp,,marsh
+2317,calliscon,Calliscon,osbia,,marsh
+2318,harporham,Harporham,osbia,,marsh
+2319,nordefrashe,Nordefrashe,osbia,,marsh
+2320,crambe,Crambe,osbia,,marsh
+2321,kneyte,Kneyte,osbia,,marsh
+2322,strenzandon,Strenzandon,gatfordford,,marsh
+2323,atforton,Atforton,gatfordford,,marsh
+2324,rockippich,Rockippich,gatfordford,,marsh
+2325,hambech,Hambech,gatfordford,,marsh
+2326,prestleympt,Prestleympt,gatfordford,,marsh
+2327,norshen,Norshen,gatfordford,,marsh
+2328,comneton,Comneton,gatfordford,,marsh
+2329,chisbury,Chisbury,gatfordford,,marsh
+2330,comnewbing,Comnewbing,ormsbury,,marsh
+2331,darmouth,Darmouth,ormsbury,,marsh
+2332,fargraziont,Fargraziont,ormsbury,,marsh
+2333,midgeteditf,Midgeteditf,kilksey_3,,marsh
+2334,sowenter,Sowenter,kilksey_3,,marsh
+2335,thesoutham,Thesoutham,kivesoria,,marsh
+2336,winnilbord,Winnilbord,,,wildlands
+2337,ganchither,Ganchither,,,wildlands
+2338,chelsehord,Chelsehord,horsin,,wildlands
+2339,newesdovilt,Newesdovilt,horsin,,marsh
+2340,maltongton,Maltongton,horsin,,marsh
+2341,holeyte,Holeyte,horsin,,marsh
+2342,lifnaltondo,Lifnaltondo,horsin,,marsh
+2343,keritch,Keritch,horsin,,marsh
+2344,bodbrazion,Bodbrazion,haldock,,marsh
+2345,tredclithwa,Tredclithwa,haldock,,marsh
+2346,marton,Marton,haldock,,marsh
+2347,wighampton,Wighampton,witfordia_2,,marsh
+2348,matone,Matone,witfordia_2,,marsh
+2349,abingh,Abingh,witfordia_2,,marsh
+2350,terryfingto,Terryfingto,witfordia_2,,marsh
+2351,antonewen,Antonewen,witfordia_2,,merton
+2352,crambechamb,Crambechamb,witfordia_2,,merton
+2353,betford,Betford,witfordia_2,,merton
+2354,marampon,Marampon,witfordia_2,,merton
+2355,guilbossidg,Guilbossidg,witfordia_2,,merton
+2356,hatharmidma,Hatharmidma,witfordia_2,,merton
+2357,hamptothatf,Hamptothatf,witfordia_2,,merton
+2358,skildford,Skildford,witfordia_2,,marsh
+2359,stoney,Stoney,witfordia_2,,merton
+2360,rotham,Rotham,dunsbury,,marsh
+2361,hifnarmodma,Hifnarmodma,midgedine,,merton
+2362,soviling_manor,Soviling Manor,midgedine,soviling,merton
+2363,duryfiele,Duryfiele,midgedine,,merton
+2364,coleymough,Coleymough,rothin,,merton
+2365,baster,Baster,rothin,,merton
+2366,lympscom_manor,Lympscom Manor,rothin,lympscom,merton
+2367,singtokburt,Singtokburt,rothin,,merton
+2368,betonth,Betonth,rothin,,merton
+2369,lesfield,Lesfield,hatleridia,,manch
+2370,tabidge,Tabidge,hatleridia,,manch
+2371,penlestleaf,Penlestleaf,hatleridia,,manch
+2372,millihullin,Millihullin,hatleridia,,manch
+2373,allinganny,Allinganny,hatleridia,,manch
+2374,bruthetburg,Bruthetburg,hatleridia,,manch
+2375,bertondover_manor,Bertondover Manor,burwickia,bertondover,manch
+2376,clitham,Clitham,burwickia,,manch
+2377,bashfieldon,Bashfieldon,burwickia,,manch
+2378,stermilbosw,Stermilbosw,burwickia,,manch
+2379,ewesham_manor,Ewesham Manor,burwickia,ewesham,manch
+2380,flouton,Flouton,watford,,manch
+2381,crafton_manor,Crafton Manor,watford,crafton,manch
+2382,boroughareh,Boroughareh,watford,,manch
+2383,witfield,Witfield,bothia,,manch
+2384,alborough_manor,Alborough Manor,bothia,alborough,manch
+2385,stotford_manor,Stotford Manor,bothia,stotford,manch
+2386,manster,Manster,totleters,,manch
+2387,reding,Reding,totleters,,manch
+2388,olmous,Olmous,totleters,,manch
+2389,harhamburgh_manor,Harhamburgh Manor,totleters,harhamburgh,manch
+2390,soutbury_manor,Soutbury Manor,merhambe,soutbury,manch
+2391,dalton,Dalton,merhambe,,manch
+2392,mancken,Mancken,wickhampia,,manch
+2393,stondon,Stondon,wickhampia,,manch
+2394,binvetesbun,Binvetesbun,wickhampia,,manch
+2395,bastchentac,Bastchentac,wickhampia,,manch
+2396,chenninchel,Chenninchel,castfordia,,manch
+2397,abingley_manor,Abingley Manor,castfordia,abingley,manch
+2398,loodmington,Loodmington,castfordia,,manch
+2399,waredithbur,Waredithbur,oakham,,manch
+2400,nested,Nested,oakham,,manch
+2401,rookenbury,Rookenbury,oakham,,manch
+2402,helsdon_manor,Helsdon Manor,helsdon,helsdon,manch
+2403,bingleham_manor,Bingleham Manor,castfordia,bingleham,manch
+2404,stotholes_manor,Stotholes Manor,westley,stotholes,manch
+2405,kirmidge,Kirmidge,crafthia,,manch
+2406,westley_manor,Westley Manor,westley,westley,manch
+2407,warpord,Warpord,westley,,manch
+2408,petongtown,Petongtown,westley,,manch
+2409,oakhatcham,Oakhatcham,westley,,manch
+2415,clifton,Clifton,flokhamp,,marsh
+2416,pickwavenin,Pickwavenin,flokhamp,,marsh
+2417,maltor,Maltor,flokhamp,,marsh
+2418,flokhamp_manor,Flokhamp Manor,flokhamp,flokhamp_2,marsh
+2419,ordefraxter,Ordefraxter,flokhamp,,marsh
+2420,borken,Borken,flokhamp,,marsh
+2421,felihull,Felihull,flokhamp,,marsh
+2422,kipstact,Kipstact,flokhamp,,marsh
+2423,modbury,Modbury,flokhamp,,marsh
+2424,avershfield,Avershfield,osbia,,marsh
+2425,bastaccleto,Bastaccleto,osbia,,marsh
+2426,bottongh,Bottongh,osbia,,marsh
+2427,madingatfie,Madingatfie,gatfordford,,marsh
+2428,gatfordford_manor,Gatfordford Manor,gatfordford,gatfordford,marsh
+2429,dungay,Dungay,gatfordford,,marsh
+2430,hatteston,Hatteston,gatfordford,,marsh
+2431,caunseaplei,Caunseaplei,gatfordford,,marsh
+2432,tontap,Tontap,gatfordford,,marsh
+2433,credithwart,Credithwart,gatfordford,,marsh
+2434,bringdon,Bringdon,gatfordford,,marsh
+2435,petonewenle,Petonewenle,gatfordford,,marsh
+2436,soughbor,Soughbor,gatfordford,,marsh
+2437,totham,Totham,gatfordford,,marsh
+2438,cocleston_manor,Cocleston Manor,ormsbury,cocleston,marsh
+2439,tiverthwey,Tiverthwey,kilksey_3,,marsh
+2440,nordefram,Nordefram,,,wildlands
+2441,tondal,Tondal,,,wildlands
+2442,piltonewele,Piltonewele,,,marsh
+2443,lowcestleso,Lowcestleso,horsin,,marsh
+2444,knuthord,Knuthord,horsin,,marsh
+2445,crameridge,Crameridge,horsin,,marsh
+2446,burgraforet,Burgraforet,horsin,,marsh
+2447,braxtefran,Braxtefran,horsin,,marsh
+2448,saldford,Saldford,horsin,,marsh
+2449,amerdenridg,Amerdenridg,horsin,,marsh
+2450,wighatheton,Wighatheton,haldock,,marsh
+2451,weympton,Weympton,haldock,,marsh
+2452,wenmon,Wenmon,haldock,,marsh
+2453,baretontanc,Baretontanc,haldock,,marsh
+2454,wiggingleck,Wiggingleck,haldock,,marsh
+2455,cancested,Cancested,witfordia_2,,marsh
+2456,marlbolmer,Marlbolmer,witfordia_2,,marsh
+2457,godmideld,Godmideld,witfordia_2,,marsh
+2458,retleighton,Retleighton,witfordia_2,,merton
+2459,waverton,Waverton,witfordia_2,,merton
+2460,witcher,Witcher,witfordia_2,,marsh
+2461,quatch,Quatch,witfordia_2,,merton
+2462,salborough_manor,Salborough Manor,witfordia_2,salborough,marsh
+2463,candon,Candon,witfordia_2,,marsh
+2464,wicherwichi,Wicherwichi,witfordia_2,,marsh
+2465,cleytesheto,Cleytesheto,dunsbury,,marsh
+2466,luthambe,Luthambe,dunsbury,,marsh
+2467,kershfielse,Kershfielse,dunsbury,,marsh
+2468,ordenle,Ordenle,midgedine,,marsh
+2469,ordeningtow,Ordeningtow,rothin,,merton
+2470,martford,Martford,rothin,,manch
+2471,merksey,Merksey,rothin,,manch
+2472,warghay,Warghay,rothin,,manch
+2473,solmer,Solmer,rothin,,manch
+2474,birton_manor,Birton Manor,rothin,birton,manch
+2475,boldonbeck_manor,Boldonbeck Manor,hatleridia,boldonbeck,manch
+2476,moughtoth,Moughtoth,hatleridia,,manch
+2477,comyareadst,Comyareadst,hatleridia,,manch
+2478,seastabley,Seastabley,hatleridia,,manch
+2479,wingfowenst,Wingfowenst,hatleridia,,manch
+2480,bamberd,Bamberd,hatleridia,,manch
+2481,withaton,Withaton,hatleridia,,manch
+2482,malbrax,Malbrax,hatleridia,,manch
+2483,exeton,Exeton,hatleridia,,manch
+2484,castand,Castand,burwickia,,manch
+2485,warbodmouth,Warbodmouth,burwickia,,manch
+2486,modmitherto,Modmitherto,burwickia,,manch
+2487,bordeldover,Bordeldover,watford,,manch
+2488,apton_manor,Apton Manor,watford,apton,manch
+2489,tutford_manor,Tutford Manor,watford,tutford,manch
+2490,congham_manor,Congham Manor,watford,congham,manch
+2491,bolney,Bolney,bothia,,manch
+2492,ormstonwich_manor,Ormstonwich Manor,bothia,ormstonwich,manch
+2493,axtedith,Axtedith,totleters,,manch
+2494,newbover_manor,Newbover Manor,totleters,newbover,manch
+2495,averton,Averton,totleters,,manch
+2496,durmouthin_manor,Durmouthin Manor,totleters,durmouthin,manch
+2497,tonewbirmon,Tonewbirmon,totleters,,manch
+2498,solton,Solton,merhambe,,manch
+2499,peridmidge,Peridmidge,merhambe,,manch
+2500,madenmon,Madenmon,merhambe,,manch
+2501,aplewesfiel,Aplewesfiel,wickhampia,,manch
+2502,gaylesowey,Gaylesowey,wickhampia,,manch
+2503,alboughtowc,Alboughtowc,lympsteria,,manch
+2504,alneymouth,Alneymouth,castfordia,,manch
+2505,waridgelesb,Waridgelesb,castfordia,,manch
+2506,moughton,Moughton,castfordia,,manch
+2507,causmouth_manor,Causmouth Manor,oakham,causmouth,manch
+2508,harmontam,Harmontam,castfordia,,manch
+2509,wichen,Wichen,oakham,,manch
+2510,oakham_manor,Oakham Manor,oakham,oakham,manch
+2511,tonewburth,Tonewburth,castfordia,,manch
+2512,alneshbord,Alneshbord,westley,,manch
+2513,midhury,Midhury,westley,,manch
+2514,penkley,Penkley,westley,,manch
+2515,tampsey,Tampsey,westley,,manch
+2516,sallifford,Sallifford,westley,,manch
+2517,wargton_manor,Wargton Manor,westley,wargton,manch
+2518,bingtreton,Bingtreton,westley,,manch
+2525,duncheldon,Duncheldon,flokhamp,,marsh
+2526,flokneth_manor,Flokneth Manor,seazion,flokneth,marsh
+2527,blether,Blether,seazion,,marsh
+2528,knutscom_manor,Knutscom Manor,flokhamp,knutscom,marsh
+2529,merborshey,Merborshey,flokhamp,,marsh
+2530,peveredover,Peveredover,flokhamp,,marsh
+2531,knuthes,Knuthes,flokhamp,,marsh
+2532,pendforkens,Pendforkens,flokhamp,,marsh
+2533,warden_manor,Warden Manor,osbia,warden,marsh
+2534,kinetfielto,Kinetfielto,osbia,,marsh
+2535,kirkelesham,Kirkelesham,osbia,,marsh
+2536,norlbous,Norlbous,gatfordford,,marsh
+2537,tandbury,Tandbury,gatfordford,,marsh
+2538,barboswarbo,Barboswarbo,gatfordford,,marsh
+2539,halbrampord,Halbrampord,gatfordford,,marsh
+2540,dodbury,Dodbury,gatfordford,,marsh
+2541,exninkle,Exninkle,gatfordford,,marsh
+2542,clingstchis,Clingstchis,gatfordford,,marsh
+2543,wiching,Wiching,gatfordford,,marsh
+2544,hamporthamb,Hamporthamb,gatfordford,,marsh
+2545,cleymer,Cleymer,gatfordford,,marsh
+2546,reston,Reston,gatfordford,,marsh
+2547,cravetfore,Cravetfore,gatfordford,,marsh
+2548,pendfore,Pendfore,kilksey_3,,marsh
+2549,candove,Candove,kilksey_3,,marsh
+2550,seastantow,Seastantow,,,wildlands
+2551,camptow,Camptow,,,marsh
+2552,axtetone,Axtetone,horsin,,marsh
+2553,altremarlis,Altremarlis,horsin,,marsh
+2554,pouthwarby,Pouthwarby,horsin,,marsh
+2555,dundforoe,Dundforoe,horsin,,marsh
+2556,gateston,Gateston,horsin,,marsh
+2557,kershbrookb,Kershbrookb,horsin,,marsh
+2558,axbramber,Axbramber,haldock,,marsh
+2559,shordefram,Shordefram,haldock,,marsh
+2560,boscon,Boscon,haldock,,marsh
+2561,headstandoc,Headstandoc,haldock,,marsh
+2562,walbor_manor,Walbor Manor,haldock,walbor,marsh
+2563,penleobury,Penleobury,haldock,,marsh
+2564,exningtonte,Exningtonte,haldock,,marsh
+2565,feldongdon,Feldongdon,haldock,,marsh
+2566,oscombe,Oscombe,haldock,,marsh
+2567,comnewenton,Comnewenton,witfordia_2,,marsh
+2568,welster,Welster,witfordia_2,,marsh
+2569,penkburgh_manor,Penkburgh Manor,witfordia_2,penkburgh,marsh
+2570,guildge_manor,Guildge Manor,witfordia_2,guildge,marsh
+2571,merlboodbur,Merlboodbur,witfordia_2,,marsh
+2572,warkerle,Warkerle,witfordia_2,,marsh
+2573,pendon,Pendon,witfordia_2,,marsh
+2574,chaldford,Chaldford,dunsbury,,marsh
+2575,tuthwendone,Tuthwendone,dunsbury,,marsh
+2576,dunwigh,Dunwigh,dunsbury,,marsh
+2577,norton_manor,Norton Manor,dunsbury,norton,marsh
+2578,baldforomer,Baldforomer,rothin,,marsh
+2579,boothamberd,Boothamberd,rothin,,manch
+2580,rothin_manor,Rothin Manor,rothin,rothin,manch
+2581,souton,Souton,rothin,,manch
+2584,exethamerth,Exethamerth,hatleridia,,manch
+2585,wigdongay_manor,Wigdongay Manor,hatleridia,wigdongay,manch
+2586,bigntesbury,Bigntesbury,hatleridia,,manch
+2587,berwinceshf,Berwinceshf,hatleridia,,manch
+2588,bridgel,Bridgel,hatleridia,,manch
+2589,frafton,Frafton,hatleridia,,manch
+2590,nedcliscock,Nedcliscock,hatleridia,,manch
+2591,dudbury,Dudbury,hatleridia,,manch
+2592,chilliff,Chilliff,hatleridia,,manch
+2593,lutoningt_manor,Lutoningt Manor,burwickia,lutoningt,manch
+2594,tersheshoro,Tersheshoro,burwickia,,manch
+2595,harliff,Harliff,burwickia,,manch
+2596,minverstan,Minverstan,kinegorough,,manch
+2597,draxter,Draxter,watford,,manch
+2598,frafth,Frafth,bothia,,manch
+2599,cockwal,Cockwal,bothia,,manch
+2600,bargham,Bargham,bothia,,manch
+2601,chineweseas,Chineweseas,bothia,,manch
+2602,perstoreho_manor,Perstoreho Manor,bothia,perstoreho,manch
+2603,wickleshbor,Wickleshbor,totleters,,manch
+2604,peridden,Peridden,totleters,,manch
+2605,sweston,Sweston,totleters,,manch
+2606,reasalnego_manor,Reasalnego Manor,merhambe,reasalnego,manch
+2607,brighborout,Brighborout,merhambe,,manch
+2608,cleigay,Cleigay,merhambe,,manch
+2609,dramerlowen,Dramerlowen,merhambe,,manch
+2610,grashburgh,Grashburgh,wickhampia,,manch
+2611,hippinglest,Hippinglest,chichfield,,manch
+2612,tonewestre,Tonewestre,lympsteria,,manch
+2613,skiney,Skiney,lympsteria,,manch
+2614,steton,Steton,lympsteria,,manch
+2615,bamershfiel,Bamershfiel,castfordia,,manch
+2616,warhambe_manor,Warhambe Manor,castfordia,warhambe,manch
+2617,nordenzanch,Nordenzanch,castfordia,,manch
+2618,newcescom_manor,Newcescom Manor,castfordia,newcescom,manch
+2619,mildon,Mildon,castfordia,,manch
+2620,beckill,Beckill,castfordia,,manch
+2621,goneyterk,Goneyterk,westley,,manch
+2622,hermon,Hermon,westley,,manch
+2623,burgham,Burgham,westley,,manch
+2624,manter,Manter,westley,,manch
+2625,ableympouto,Ableympouto,westley,,manch
+2626,exnilkham,Exnilkham,westley,,manch
+2627,winnewbignt,Winnewbignt,westley,,manch
+2632,malton_manor,Malton Manor,seazion,malton,marsh
+2633,penther,Penther,seazion,,marsh
+2634,meridge,Meridge,seazion,,marsh
+2635,cudlinganta,Cudlinganta,seazion,,marsh
+2636,felton_manor,Felton Manor,seazion,felton,marsh
+2637,chitford,Chitford,flokhamp,,marsh
+2638,tuthame,Tuthame,flokhamp,,marsh
+2639,casthowey_manor,Casthowey Manor,flokhamp,casthowey,marsh
+2640,loutburtoth,Loutburtoth,northestab,,marsh
+2641,hamerton,Hamerton,northestab,,marsh
+2642,stesherothb,Stesherothb,northestab,,marsh
+2643,wordenney,Wordenney,northestab,,marsh
+2644,fieldfor,Fieldfor,gatfordford,,marsh
+2645,yeovell,Yeovell,gatfordford,,marsh
+2646,cleyte,Cleyte,gatfordford,,marsh
+2647,clitchawlet,Clitchawlet,gatfordford,,marsh
+2648,wareappley,Wareappley,gatfordford,,marsh
+2649,feleymeridg,Feleymeridg,gatfordford,,marsh
+2650,kiverdenta_manor,Kiverdenta Manor,gatfordford,kiverdenta,marsh
+2651,tongleigham,Tongleigham,gatfordford,,marsh
+2652,malborton,Malborton,gatfordford,,marsh
+2653,shfieleth,Shfieleth,gatfordford,,marsh
+2654,bamptotheac,Bamptotheac,gatfordford,,marsh
+2655,bleytershin,Bleytershin,kilksey_3,,marsh
+2656,soughton,Soughton,,,wildlands
+2657,dymershorlo,Dymershorlo,,,wildlands
+2658,bordefornbe,Bordefornbe,horsin,,marsh
+2659,seapleby,Seapleby,horsin,,marsh
+2660,newenzant,Newenzant,horsin,,marsh
+2661,bokegoreley_manor,Bokegoreley Manor,horsin,bokegoreley,marsh
+2662,thaylewenkl,Thaylewenkl,horsin,,marsh
+2663,seymon,Seymon,horsin,,marsh
+2664,wareton,Wareton,haldock,,marsh
+2665,cockley,Cockley,haldock,,marsh
+2666,clifforeman,Clifforeman,haldock,,marsh
+2667,chipton,Chipton,haldock,,marsh
+2668,gonestcher,Gonestcher,haldock,,marsh
+2669,altondbury,Altondbury,haldock,,marsh
+2670,haldforlbol,Haldforlbol,haldock,,marsh
+2671,berehamburt,Berehamburt,haldock,,marsh
+2672,landon,Landon,haldock,,marsh
+2673,bromyar,Bromyar,haldock,,marsh
+2674,lutoney,Lutoney,witfordia_2,,marsh
+2675,ayleigmodbu,Ayleigmodbu,witfordia_2,,marsh
+2676,hamerombe,Hamerombe,witfordia_2,,marsh
+2677,skiple_manor_2,Skiple Manor 2,witfordia_2,skiple_2,marsh
+2678,holeter,Holeter,witfordia_2,,marsh
+2679,wingforoume,Wingforoume,axbrigh,,marsh
+2680,mouterd,Mouterd,axbrigh,,marsh
+2681,milteridels,Milteridels,dunsbury,,marsh
+2682,treston,Treston,dunsbury,,marsh
+2683,gonesburhat,Gonesburhat,dunsbury,,marsh
+2684,keregon,Keregon,dunsbury,,marsh
+2685,pildovilkha,Pildovilkha,rothin,,manch
+2686,lymoughayle,Lymoughayle,rothin,,manch
+2687,graver,Graver,rothin,,manch
+2688,baltrehath,Baltrehath,rothin,,manch
+2689,andalne,Andalne,rothin,,manch
+2690,bolifnaresb,Bolifnaresb,rothin,,manch
+2691,wingtre,Wingtre,hatleridia,,manch
+2692,nordeldon,Nordeldon,hatleridia,,manch
+2693,porleck,Porleck,hatleridia,,manch
+2694,dymerburgh,Dymerburgh,hatleridia,,manch
+2695,apleigham,Apleigham,hatleridia,,manch
+2696,weshfingles,Weshfingles,hatleridia,,manch
+2697,tington,Tington,hatleridia,,manch
+2698,combertottl,Combertottl,hatleridia,,manch
+2699,renseharley,Renseharley,hatleridia,,manch
+2700,dovild,Dovild,burwickia,,manch
+2701,soleytefram,Soleytefram,burwickia,,manch
+2702,fenzancesdo,Fenzancesdo,kinegorough,,manch
+2703,midmounwich,Midmounwich,kinegorough,,manch
+2704,skipseadink,Skipseadink,bothia,,manch
+2705,redcheapton_manor,Redcheapton Manor,bothia,redcheapton,manch
+2706,bramptonton_manor,Bramptonton Manor,bothia,bramptonton,manch
+2707,oakleigh_manor,Oakleigh Manor,bothia,oakleigh,manch
+2708,knutsmoundb,Knutsmoundb,bothia,,manch
+2709,warambershe,Warambershe,totleters,,manch
+2710,hilkham,Hilkham,totleters,,manch
+2711,dravelstrin,Dravelstrin,totleters,,manch
+2712,camerton,Camerton,merhambe,,manch
+2713,clifnar,Clifnar,merhambe,,manch
+2714,merhambe_manor,Merhambe Manor,merhambe,merhambe,manch
+2715,buryfingdon,Buryfingdon,merhambe,,manch
+2716,wigatton,Wigatton,chichfield,,manch
+2717,chichfield_manor,Chichfield Manor,chichfield,chichfield,manch
+2718,netfordefra,Netfordefra,chichfield,,manch
+2719,exetley,Exetley,lympsteria,,manch
+2720,soutfordbu_manor,Soutfordbu Manor,lympsteria,soutfordbu,manch
+2721,shifordge_manor_2,Shifordge Manor 2,castfordia,shifordge_2,manch
+2722,gatham,Gatham,castfordia,,manch
+2723,liscombritf,Liscombritf,alerid,,manch
+2724,durgham,Durgham,alerid,,manch
+2725,macutheredc,Macutheredc,alerid,,manch
+2726,soreters_manor,Soreters Manor,alerid,soreters,manch
+2727,wareston,Wareston,alerid,,manch
+2728,tivendon,Tivendon,alerid,,manch
+2729,watchiscock,Watchiscock,westley,,manch
+2730,gramptowenm,Gramptowenm,westley,,manch
+2731,orlbolesbur,Orlbolesbur,westley,,manch
+2732,axbritforne,Axbritforne,westley,,manch
+2738,wallintanta,Wallintanta,seazion,,marsh
+2739,marghton,Marghton,seazion,,marsh
+2740,wichipsea,Wichipsea,seazion,,marsh
+2741,gatfieleste,Gatfieleste,seazion,,marsh
+2742,stagell,Stagell,seazion,,marsh
+2743,aringham_manor,Aringham Manor,seazion,aringham,marsh
+2744,gayley,Gayley,seazion,,marsh
+2745,tretontersh,Tretontersh,seazion,,marsh
+2746,bordelisbur,Bordelisbur,seazion,,marsh
+2747,guildfornbu,Guildfornbu,northestab,,marsh
+2748,sherster_manor,Sherster Manor,northestab,sherster,marsh
+2749,bridhury,Bridhury,northestab,,marsh
+2750,knutsmough,Knutsmough,northestab,,marsh
+2751,wardellince,Wardellince,northestab,,marsh
+2752,permockwarl,Permockwarl,northestab,,marsh
+2753,louthawlest,Louthawlest,gatfordford,,marsh
+2754,axtestant,Axtestant,gatfordford,,marsh
+2755,cheton,Cheton,gatfordford,,marsh
+2756,oakhax,Oakhax,gatfordford,,marsh
+2757,loughbossin,Loughbossin,gatfordford,,marsh
+2758,ancham,Ancham,gatfordford,,marsh
+2759,petbursters,Petbursters,gatfordford,,marsh
+2760,nordeforego,Nordeforego,gatfordford,,marsh
+2761,feldforlbod,Feldforlbod,gatfordford,,marsh
+2762,hetontoth,Hetontoth,kilksey_3,,marsh
+2763,cleytere,Cleytere,kilksey_3,,marsh
+2764,oakharidles,Oakharidles,,,wildlands
+2765,routharedin,Routharedin,,,marsh
+2766,lingdon,Lingdon,horsin,,marsh
+2767,tinton,Tinton,horsin,,marsh
+2768,barambe,Barambe,horsin,,marsh
+2769,comersford,Comersford,horsin,,marsh
+2770,ambetforoth,Ambetforoth,maldock,,marsh
+2771,pencesto_manor,Pencesto Manor,maldock,pencesto,marsh
+2772,kentaretfor,Kentaretfor,haldock,,marsh
+2773,seasinchipt,Seasinchipt,haldock,,marsh
+2774,bouter,Bouter,haldock,,marsh
+2775,forombruthw,Forombruthw,haldock,,marsh
+2776,sehareadsta,Sehareadsta,haldock,,marsh
+2777,aydodmouthe,Aydodmouthe,haldock,,marsh
+2778,cleoburgh,Cleoburgh,haldock,,marsh
+2779,dunstage,Dunstage,haldock,,marsh
+2780,colnewbornb,Colnewbornb,haldock,,marsh
+2781,casterste,Casterste,haldock,,marsh
+2782,orockley,Orockley,haldock,,marsh
+2783,holeafordef,Holeafordef,haldock,,marsh
+2784,brample_manor,Brample Manor,haldock,brample,marsh
+2785,hordeningh,Hordeningh,haldock,,marsh
+2786,perstedbu_manor,Perstedbu Manor,axbrigh,perstedbu,marsh
+2787,flowelifton,Flowelifton,axbrigh,,marsh
+2788,watherton,Watherton,axbrigh,,marsh
+2789,duryfielinv,Duryfielinv,dunsbury,,marsh
+2790,thambechilk,Thambechilk,dunsbury,,marsh
+2791,gondbraccli,Gondbraccli,dunsbury,,marsh
+2792,basidge,Basidge,dunsbury,,marsh
+2793,blanchamerm,Blanchamerm,dunsbury,,manch
+2794,toneytefrax,Toneytefrax,rothin,,manch
+2795,beteridge,Beteridge,rothin,,manch
+2796,ballinverst,Ballinverst,rothin,,manch
+2797,wavesomyark,Wavesomyark,rothin,,manch
+2798,louthboury_manor,Louthboury Manor,rothin,louthboury,manch
+2799,cleymouth,Cleymouth,hatleridia,,manch
+2800,bleover,Bleover,hatleridia,,manch
+2801,rethovilton_manor,Rethovilton Manor,hatleridia,rethovilton,manch
+2802,basaldon,Basaldon,hatleridia,,manch
+2803,sterlowenil,Sterlowenil,hatleridia,,manch
+2804,knewitcham,Knewitcham,hatleridia,,manch
+2805,winghamer,Winghamer,hatleridia,,manch
+2806,cutontage,Cutontage,osbury,,manch
+2807,cleyterthle,Cleyterthle,osbury,,manch
+2808,gatchatchar,Gatchatchar,kinegorough,,manch
+2809,blandfornbe,Blandfornbe,kinegorough,,manch
+2810,whitford_manor_2,Whitford Manor 2,kinegorough,whitford_3,manch
+2811,rotnetley,Rotnetley,kinegorough,,manch
+2812,mingdon,Mingdon,bothia,,manch
+2813,bermon,Bermon,bothia,,manch
+2814,sorough_manor_2,Sorough Manor 2,bothia,sorough,manch
+2815,holeyter,Holeyter,totleters,,manch
+2816,alcesburham,Alcesburham,totleters,,manch
+2817,borshbursha,Borshbursha,totleters,,manch
+2818,rotter,Rotter,totleters,,manch
+2819,midley,Midley,merhambe,,manch
+2820,seagelbovil_manor,Seagelbovil Manor,merhambe,seagelbovil,manch
+2821,kirburyfiel,Kirburyfiel,merhambe,,manch
+2822,lutbury,Lutbury,merhambe,,manch
+2823,nordenilwoo,Nordenilwoo,merhambe,,manch
+2824,flootneyter,Flootneyter,chichfield,,manch
+2825,uxbruth,Uxbruth,lympsteria,,manch
+2826,chisford_manor,Chisford Manor,lympsteria,chisford,manch
+2827,wicksey_manor,Wicksey Manor,lympsteria,wicksey,manch
+2828,gramberling_manor,Gramberling Manor,hitchia,gramberling,manch
+2829,westckingra_manor,Westckingra Manor,hitchia,westckingra,manch
+2830,newbuton_manor,Newbuton Manor,alerid,newbuton,manch
+2831,tamersterne_manor,Tamersterne Manor,alerid,tamersterne,manch
+2832,alerid_manor,Alerid Manor,alerid,alerid,manch
+2833,sudleachame,Sudleachame,alerid,,manch
+2834,fieldockirb,Fieldockirb,alerid,,manch
+2835,appleove,Appleove,alerid,,manch
+2836,wigharam,Wigharam,alerid,,manch
+2837,olmerton,Olmerton,westley,,manch
+2838,kirbossingt,Kirbossingt,westley,,manch
+2845,yeoverburgh,Yeoverburgh,seazion,,marsh
+2846,heapley,Heapley,seazion,,marsh
+2847,chestotherl,Chestotherl,seazion,,marsh
+2848,stontesey,Stontesey,seazion,,marsh
+2849,wineton_manor,Wineton Manor,seazion,wineton,marsh
+2850,monsey_manor,Monsey Manor,seazion,monsey,marsh
+2851,wichiscombe,Wichiscombe,seazion,,marsh
+2852,neytefram,Neytefram,seazion,,marsh
+2853,neymough,Neymough,northestab,,marsh
+2854,redcham_manor,Redcham Manor,northestab,redcham,marsh
+2855,ordeframbe,Ordeframbe,northestab,,marsh
+2856,horley,Horley,northestab,,marsh
+2857,buckenmoute,Buckenmoute,northestab,,marsh
+2858,exetforothw,Exetforothw,northestab,,marsh
+2859,flooker,Flooker,northestab,,marsh
+2860,yeoretony_manor,Yeoretony Manor,gatfordford,yeoretony,marsh
+2861,alneter,Alneter,gatfordford,,marsh
+2862,neytermodma,Neytermodma,gatfordford,,marsh
+2863,pingtowenin,Pingtowenin,gatfordford,,marsh
+2864,leshfiell,Leshfiell,gatfordford,,marsh
+2865,woodburhatt,Woodburhatt,gatfordford,,marsh
+2866,mitcharpon,Mitcharpon,gatfordford,,marsh
+2867,mancesehort,Mancesehort,gatfordford,,wildlands
+2868,shbritfor,Shbritfor,,,marsh
+2869,britcheshbr,Britcheshbr,herther,,wildlands
+2870,malcesey,Malcesey,herther,,marsh
+2871,midgelsey,Midgelsey,herther,,marsh
+2872,heasinedcle,Heasinedcle,herther,,marsh
+2873,herksea,Herksea,horsin,,marsh
+2874,chesfiel,Chesfiel,horsin,,marsh
+2875,persburyme_manor,Persburyme Manor,maldock,persburyme,marsh
+2876,doverton,Doverton,maldock,,marsh
+2877,minchatchet,Minchatchet,maldock,,marsh
+2878,stryfielinc,Stryfielinc,maldock,,marsh
+2879,lymertsfiel,Lymertsfiel,haldock,,marsh
+2880,apleighame,Apleighame,haldock,,marsh
+2881,kinglech,Kinglech,haldock,,marsh
+2882,weyterton,Weyterton,haldock,,marsh
+2883,norothwaram,Norothwaram,haldock,,marsh
+2884,bastow,Bastow,haldock,,marsh
+2885,mantetongdo,Mantetongdo,haldock,,marsh
+2886,skipstchisb,Skipstchisb,haldock,,marsh
+2887,thersfielst,Thersfielst,haldock,,marsh
+2888,bingley,Bingley,haldock,,marsh
+2889,kennord,Kennord,haldock,,marsh
+2890,exnilwoottl,Exnilwoottl,haldock,,marsh
+2891,kinton,Kinton,axbrigh,,marsh
+2892,mingforshic,Mingforshic,axbrigh,,marsh
+2893,axbrigh_manor,Axbrigh Manor,axbrigh,axbrigh,marsh
+2894,clinghton,Clinghton,axbrigh,,marsh
+2895,bleston,Bleston,dunsbury,,marsh
+2896,guilword,Guilword,dunsbury,,marsh
+2897,merouton,Merouton,dunsbury,,marsh
+2898,yeoledigan_manor,Yeoledigan Manor,dunsbury,yeoledigan,marsh
+2899,hornsey_manor,Hornsey Manor,dunsbury,hornsey,marsh
+2900,bereton,Bereton,dunsbury,,manch
+2901,pilton,Pilton,dunsbury,,manch
+2902,kipseacclif,Kipseacclif,rothin,,manch
+2903,botter,Botter,rothin,,manch
+2904,wigntage,Wigntage,hatleridia,,manch
+2905,guildforlet,Guildforlet,hatleridia,,manch
+2906,thendforego,Thendforego,hatleridia,,manch
+2907,crehatformo,Crehatformo,hatleridia,,manch
+2908,congford_manor,Congford Manor,hatleridia,congford,manch
+2909,chingtrenle,Chingtrenle,hatleridia,,manch
+2910,godbrin,Godbrin,hatleridia,,manch
+2911,dymerton,Dymerton,osbury,,manch
+2912,clihullisca,Clihullisca,osbury,,manch
+2913,martsfingle,Martsfingle,osbury,,manch
+2914,axtermsking,Axtermsking,osbury,,manch
+2915,wenston,Wenston,kinegorough,,manch
+2916,chingfor,Chingfor,kinegorough,,manch
+2917,peridge,Peridge,kinegorough,,manch
+2918,milbravestb,Milbravestb,kinegorough,,manch
+2919,tetbury_manor,Tetbury Manor,kinegorough,tetbury,manch
+2920,paignton_manor,Paignton Manor,totleters,paignton,manch
+2921,creston,Creston,totleters,,manch
+2922,carden_manor,Carden Manor,totleters,carden,manch
+2923,casholihury,Casholihury,rothestow,,manch
+2924,mathes,Mathes,rothestow,,manch
+2925,tetleymock_manor,Tetleymock Manor,chisinland,tetleymock,manch
+2926,tivenny,Tivenny,chisinland,,manch
+2927,bruthelstch,Bruthelstch,chisinland,,manch
+2928,matchippley,Matchippley,merhambe,,manch
+2929,clihury,Clihury,charton,,manch
+2930,standon,Standon,lympsteria,,manch
+2931,bingantedin,Bingantedin,lympsteria,,manch
+2932,clifnaldon_manor,Clifnaldon Manor,lympsteria,clifnaldon,manch
+2933,pennorliff,Pennorliff,lympsteria,,manch
+2934,pillihury,Pillihury,hitchia,,manch
+2935,mitham,Mitham,hitchia,,manch
+2936,exetfor,Exetfor,hitchia,,manch
+2937,cracuthetow,Cracuthetow,alerid,,manch
+2938,drachingh,Drachingh,alerid,,manch
+2939,manchiptond,Manchiptond,alerid,,manch
+2940,altampseade,Altampseade,alerid,,manch
+2941,toneymon,Toneymon,alerid,,manch
+2942,bersham,Bersham,alerid,,manch
+2943,betleigh,Betleigh,alerid,,manch
+2944,norock,Norock,westley,,manch
+2945,candole_manor,Candole Manor,alerid,candole,manch
+2953,matfowenles,Matfowenles,seazion,,marsh
+2954,matton,Matton,seazion,,marsh
+2955,seazion_manor,Seazion Manor,seazion,seazion,marsh
+2956,tongley,Tongley,seazion,,marsh
+2957,knutsmon,Knutsmon,seazion,,marsh
+2958,tanney,Tanney,seazion,,marsh
+2959,fenston,Fenston,northestab,,marsh
+2960,wickilton,Wickilton,northestab,,marsh
+2961,clifforne,Clifforne,northestab,,marsh
+2962,thordendefr,Thordendefr,northestab,,marsh
+2963,newleigh_manor,Newleigh Manor,northestab,newleigh,marsh
+2964,somerkseast,Somerkseast,northestab,,marsh
+2965,pevereaccle,Pevereaccle,northestab,,marsh
+2966,bamerk,Bamerk,northestab,,marsh
+2967,biggingham,Biggingham,gatfordford,,marsh
+2968,marporousea,Marporousea,gatfordford,,marsh
+2969,pilterton_manor,Pilterton Manor,gatfordford,pilterton,marsh
+2970,flookenknar,Flookenknar,gatfordford,,marsh
+2971,clisbooth,Clisbooth,gatfordford,,marsh
+2972,drazion,Drazion,gatfordford,,marsh
+2973,heshill,Heshill,camblexeso,,wildlands
+2974,soutleham_manor,Soutleham Manor,albrid_3,soutleham,marsh
+2975,chawle,Chawle,herther,,marsh
+2976,saltre,Saltre,herther,,marsh
+2977,warley,Warley,herther,,marsh
+2978,olisbury,Olisbury,herther,,marsh
+2979,atrinch_manor,Atrinch Manor,horsin,atrinch,marsh
+2980,frambriggin,Frambriggin,maldock,,marsh
+2981,swatchingto,Swatchingto,maldock,,marsh
+2982,alifnarazio,Alifnarazio,maldock,,marsh
+2983,heyteforfor,Heyteforfor,maldock,,marsh
+2984,dymershfiel,Dymershfiel,maldock,,marsh
+2985,wighaxtedit,Wighaxtedit,haldock,,marsh
+2986,penthbritho,Penthbritho,haldock,,marsh
+2987,quather,Quather,haldock,,marsh
+2988,knalewelstr,Knalewelstr,haldock,,marsh
+2989,feltre,Feltre,haldock,,marsh
+2990,kerkentongt,Kerkentongt,haldock,,marsh
+2991,bortonesfin,Bortonesfin,haldock,,marsh
+2992,hamerth,Hamerth,haldock,,marsh
+2993,tremarlisbu,Tremarlisbu,haldock,,marsh
+2994,dunstertfor,Dunstertfor,haldock,,marsh
+2995,haldock_manor,Haldock Manor,haldock,haldock,marsh
+2996,penton,Penton,haldock,,marsh
+2997,hampster,Hampster,axbrigh,,marsh
+2998,oakhamberth,Oakhamberth,axbrigh,,marsh
+2999,bethambe_manor,Bethambe Manor,axbrigh,bethambe,marsh
+3000,knutham,Knutham,axbrigh,,marsh
+3001,toneympton,Toneympton,dunsbury,,marsh
+3002,warehattley,Warehattley,dunsbury,,marsh
+3003,carliff,Carliff,dunsbury,,marsh
+3004,boodmodmito,Boodmodmito,dunsbury,,marsh
+3005,norsholnewb,Norsholnewb,dunsbury,,marsh
+3006,soughboutsm,Soughboutsm,dunsbury,,manch
+3007,albotne,Albotne,dunsbury,,manch
+3008,kelsey,Kelsey,dunsbury,,manch
+3009,mingtokerby,Mingtokerby,rothin,,manch
+3010,ponewbolne,Ponewbolne,dudge,,manch
+3011,lowesh,Lowesh,hatleridia,,manch
+3012,killington,Killington,hatleridia,,manch
+3013,dymoutonest,Dymoutonest,brasinia,,manch
+3014,axbrounstag,Axbrounstag,brasinia,,manch
+3015,clifth,Clifth,brasinia,,manch
+3016,westle_manor,Westle Manor,osbury,westle,manch
+3017,weyteringh,Weyteringh,osbury,,manch
+3018,bariddliff,Bariddliff,osbury,,manch
+3019,newickipste,Newickipste,osbury,,manch
+3020,thampton,Thampton,bridmin,,manch
+3021,chifforhart,Chifforhart,bridmin,,manch
+3022,faregodbram,Faregodbram,kinegorough,,manch
+3023,kinegorough_manor,Kinegorough Manor,kinegorough,kinegorough,manch
+3024,sheshfieldo,Sheshfieldo,kinegorough,,manch
+3025,aleobury,Aleobury,kinegorough,,manch
+3026,blechboury_manor,Blechboury Manor,totleters,blechboury,manch
+3027,bredclewey,Bredclewey,totleters,,manch
+3028,berbossinte,Berbossinte,totleters,,manch
+3029,shorough_manor,Shorough Manor,rothestow,shorough,manch
+3030,lestlestchi,Lestlestchi,rothestow,,manch
+3031,rottley,Rottley,rothestow,,manch
+3032,lutsfieldfo,Lutsfieldfo,chisinland,,manch
+3033,nordentachi,Nordentachi,chisinland,,manch
+3034,maregodmidg,Maregodmidg,chisinland,,manch
+3035,clitchingle,Clitchingle,chisinland,,manch
+3036,uxbraven,Uxbraven,charton,,manch
+3037,seytefram,Seytefram,charton,,manch
+3038,wavertfowes,Wavertfowes,lympsteria,,manch
+3039,quatont,Quatont,lympsteria,,manch
+3040,daltonmouth_manor,Daltonmouth Manor,louthia,daltonmouth,manch
+3041,bingle,Bingle,louthia,,manch
+3042,gatested_manor,Gatested Manor,hitchia,gatested,manch
+3043,chawbigdon_manor,Chawbigdon Manor,hitchia,chawbigdon,manch
+3044,hampseafton,Hampseafton,hitchia,,manch
+3045,hertham_manor,Hertham Manor,hitchia,hertham,manch
+3046,peroutheach,Peroutheach,modhurst,,manch
+3047,frambe,Frambe,modhurst,,manch
+3048,brockipsey,Brockipsey,swamersia,,manch
+3049,hetonesbury,Hetonesbury,swamersia,,manch
+3050,briddley,Briddley,swamersia,,manch
+3051,frafthawley,Frafthawley,swamersia,,manch
+3052,boughbormou,Boughbormou,swamersia,,manch
+3053,lymoutsmon,Lymoutsmon,swamersia,,manch
+3062,salcestersh,Salcestersh,alterfordia,,marsh
+3063,barley,Barley,seazion,,marsh
+3064,brighbury,Brighbury,seazion,,marsh
+3065,dungdon,Dungdon,seazion,,marsh
+3066,gatfornbeto,Gatfornbeto,seazion,,marsh
+3067,nordenzanta,Nordenzanta,seazion,,marsh
+3068,bargranted,Bargranted,seazion,,marsh
+3069,oleighton,Oleighton,seazion,,marsh
+3070,kilbruthwar,Kilbruthwar,northestab,,marsh
+3071,hamerstaple,Hamerstaple,northestab,,marsh
+3072,bresford,Bresford,northestab,,marsh
+3073,olnether,Olnether,northestab,,marsh
+3074,oltontap,Oltontap,northestab,,marsh
+3075,uxbrashore,Uxbrashore,northestab,,marsh
+3076,caltam,Caltam,northestab,,marsh
+3077,biggincking,Biggincking,northestab,,marsh
+3078,ampstchaton,Ampstchaton,northestab,,marsh
+3079,neympton,Neympton,presham,,marsh
+3080,witchil,Witchil,gatfordford,,marsh
+3081,warshbrothe,Warshbrothe,gatfordford,,marsh
+3082,bossinghton,Bossinghton,gatfordford,,marsh
+3083,loughtowest,Loughtowest,gatfordford,,marsh
+3084,brutholings,Brutholings,camblexeso,,marsh
+3085,hambeckilwo,Hambeckilwo,camblexeso,,marsh
+3086,leymon,Leymon,camblexeso,,marsh
+3087,sidgetford,Sidgetford,herther,,marsh
+3088,hathampound_manor,Hathampound Manor,herther,hathampound,marsh
+3089,hithax,Hithax,herther,,marsh
+3090,guilkham,Guilkham,herther,,marsh
+3091,herton,Herton,herther,,marsh
+3092,kipple,Kipple,herther,,marsh
+3093,chincesdove,Chincesdove,maldock,,marsh
+3094,candovill,Candovill,maldock,,marsh
+3095,mintablanch,Mintablanch,maldock,,marsh
+3096,bampous,Bampous,haldock,,marsh
+3097,ossinne,Ossinne,haldock,,marsh
+3098,altonbeck_manor,Altonbeck Manor,haldock,altonbeck,marsh
+3099,combermounw,Combermounw,haldock,,marsh
+3100,wargraford,Wargraford,haldock,,marsh
+3101,bothertforl,Bothertforl,haldock,,marsh
+3102,swesomnesol,Swesomnesol,haldock,,marsh
+3103,gatesterbos,Gatesterbos,haldock,,marsh
+3104,kilwornbunw,Kilwornbunw,haldock,,marsh
+3105,padenkneymo,Padenkneymo,haldock,,marsh
+3106,pildforthwa,Pildforthwa,haldock,,marsh
+3107,saltoren,Saltoren,walbover,,marsh
+3108,comerlooken,Comerlooken,axbrigh,,marsh
+3109,chitcheld,Chitcheld,axbrigh,,marsh
+3110,swaree,Swaree,axbrigh,,marsh
+3111,orleigatfie,Orleigatfie,treton,,marsh
+3112,treham,Treham,treton,,marsh
+3113,fintershord,Fintershord,dunsbury,,marsh
+3114,duddley,Duddley,dunsbury,,marsh
+3115,marthal,Marthal,dunsbury,,marsh
+3116,grafthambur,Grafthambur,dunsbury,,marsh
+3117,atoweliscan,Atoweliscan,dunsbury,,manch
+3118,weydon_manor,Weydon Manor,dunsbury,weydon,manch
+3119,witherwicki,Witherwicki,meterland,,manch
+3120,presbury,Presbury,meterland,,manch
+3121,penley,Penley,meterland,,manch
+3122,stappleigh,Stappleigh,dudge,,manch
+3123,weseact,Weseact,dudge,,manch
+3124,hislet,Hislet,dudge,,manch
+3125,louthetford_manor,Louthetford Manor,brasinia,louthetford,manch
+3126,ortoney,Ortoney,brasinia,,manch
+3127,kincestage,Kincestage,craftham,,manch
+3128,osbury_manor_2,Osbury Manor 2,osbury,osbury_2,manch
+3129,haxterd,Haxterd,craftham,,manch
+3130,bothwey,Bothwey,bridmin,,manch
+3131,duncesterle,Duncesterle,bridmin,,manch
+3132,wiscon,Wiscon,bridmin,,manch
+3133,bridmin_manor,Bridmin Manor,bridmin,bridmin,manch
+3134,clingh,Clingh,kinegorough,,manch
+3135,bundorough_manor,Bundorough Manor,kinegorough,bundorough,manch
+3136,boleigh,Boleigh,kinegorough,,manch
+3137,causey,Causey,rothestow,,manch
+3138,southertone,Southertone,rothestow,,manch
+3139,midgetoneyt,Midgetoneyt,rothestow,,manch
+3140,duddeld,Duddeld,rothestow,,manch
+3142,chipton_manor,Chipton Manor,chisinland,chipton,manch
+3143,warthwaredi,Warthwaredi,chisinland,,manch
+3144,uxbrid_manor_2,Uxbrid Manor 2,chisinland,uxbrid,manch
+3145,almeridge,Almeridge,chisinland,,manch
+3146,stonetfornb,Stonetfornb,charton,,manch
+3147,charton_manor,Charton Manor,charton,charton,manch
+3148,causton_manor,Causton Manor,charton,causton,manch
+3149,kingannoss,Kingannoss,olinglia,,manch
+3150,candalton,Candalton,olinglia,,manch
+3151,drambury,Drambury,louthia,,manch
+3152,southam_manor,Southam Manor,louthia,southam,manch
+3153,redclincher,Redclincher,hitchia,,manch
+3154,dodbridge_manor,Dodbridge Manor,hitchia,dodbridge,manch
+3155,chiton,Chiton,modhurst,,manch
+3156,berkeld,Berkeld,modhurst,,manch
+3157,salted,Salted,modhurst,,manch
+3158,craston,Craston,modhurst,,manch
+3159,perboleafto,Perboleafto,swamersia,,manch
+3160,oswarliftha,Oswarliftha,swamersia,,manch
+3161,gaydong,Gaydong,swamersia,,manch
+3162,saldovilwoo,Saldovilwoo,swamersia,,manch
+3163,tageton,Tageton,swamersia,,manch
+3170,whingdon,Whingdon,alterfordia,,marsh
+3171,saveton_manor,Saveton Manor,alterfordia,saveton,marsh
+3173,bordefrafor,Bordefrafor,alterfordia,,marsh
+3174,tiverbury,Tiverbury,alterfordia,,marsh
+3175,pilkham,Pilkham,alterfordia,,marsh
+3176,wihulton_manor,Wihulton Manor,seazion,wihulton,marsh
+3177,midgeton,Midgeton,seazion,,marsh
+3178,presmouth_manor,Presmouth Manor,seazion,presmouth,marsh
+3179,kenleston,Kenleston,seazion,,marsh
+3180,quatforkenb,Quatforkenb,betestedia,,marsh
+3181,stlewey,Stlewey,betestedia,,marsh
+3182,dalney_manor,Dalney Manor,northestab,dalney,marsh
+3183,kirbotle_manor,Kirbotle Manor,northestab,kirbotle,marsh
+3184,blesdonther,Blesdonther,northestab,,marsh
+3185,rothalme,Rothalme,northestab,,marsh
+3186,mandbury,Mandbury,northestab,,marsh
+3187,newburton,Newburton,northestab,,marsh
+3188,campon,Campon,northestab,,marsh
+3189,orombringto,Orombringto,northestab,,marsh
+3190,heston,Heston,northestab,,marsh
+3191,lymerminthw,Lymerminthw,presham,,marsh
+3192,hamptowenne,Hamptowenne,presham,,marsh
+3193,leigharlifn,Leigharlifn,gatfordford,,marsh
+3194,westongatfi,Westongatfi,gatfordford,,marsh
+3195,donewbury,Donewbury,gatfordford,,marsh
+3196,floutsfin,Floutsfin,camblexeso,,marsh
+3197,balworth_manor,Balworth Manor,camblexeso,balworth,marsh
+3198,chertonestr,Chertonestr,camblexeso,,marsh
+3199,shamerstart,Shamerstart,herther,,marsh
+3200,wichickingf,Wichickingf,herther,,marsh
+3201,stontham,Stontham,herther,,marsh
+3202,doveld,Doveld,herther,,marsh
+3203,castchampto,Castchampto,herther,,marsh
+3204,whifnalbraf,Whifnalbraf,herther,,marsh
+3205,romberester,Romberester,herther,,marsh
+3206,chifthwalne,Chifthwalne,maldock,,marsh
+3207,clecherwing,Clecherwing,maldock,,marsh
+3208,midlewestas,Midlewestas,maldock,,marsh
+3209,colney,Colney,haldock,,marsh
+3210,haredcliffo,Haredcliffo,haldock,,marsh
+3211,pading,Pading,haldock,,marsh
+3212,kingham,Kingham,haldock,,marsh
+3213,montanthwen,Montanthwen,haldock,,marsh
+3214,axterk,Axterk,haldock,,marsh
+3215,craxterboss,Craxterboss,haldock,,marsh
+3216,hingtritfor,Hingtritfor,haldock,,marsh
+3217,birham_manor,Birham Manor,haldock,birham,marsh
+3218,resbury,Resbury,haldock,,marsh
+3219,warlin,Warlin,haldock,,marsh
+3220,pinknaltryf,Pinknaltryf,walbover,,marsh
+3221,netedclince,Netedclince,walbover,,marsh
+3222,hetford,Hetford,walbover,,marsh
+3223,dontedovill,Dontedovill,walbover,,marsh
+3224,tivesdonden,Tivesdonden,treton,,marsh
+3225,oletedcling,Oletedcling,treton,,marsh
+3226,norton,Norton,treton,,marsh
+3227,bordefraccl,Bordefraccl,treton,,marsh
+3228,leston,Leston,dunsbury,,marsh
+3229,ossing,Ossing,dunsbury,,marsh
+3230,altond,Altond,dunsbury,,manch
+3231,hertford_manor_2,Hertford Manor 2,meterland,hertford_2,manch
+3232,balbor_manor,Balbor Manor,meterland,balbor,manch
+3233,waletestley,Waletestley,meterland,,manch
+3234,showey_manor,Showey Manor,dunshil,showey,manch
+3235,buryfing,Buryfing,dudge,,manch
+3236,thaxted_manor_2,Thaxted Manor 2,dudge,thaxted,manch
+3237,portsterlis_manor,Portsterlis Manor,dudge,portsterlis,manch
+3238,yeorough_manor_3,Yeorough Manor 3,broburland,yeorough_3,manch
+3239,feltonor_manor,Feltonor Manor,brasinia,feltonor,manch
+3240,aldong,Aldong,craftham,,manch
+3241,frampton_manor_3,Frampton Manor 3,craftham,frampton,manch
+3242,pilboss,Pilboss,craftham,,manch
+3243,wichill,Wichill,craftham,,manch
+3244,seadeldon,Seadeldon,bridmin,,manch
+3245,wickerd,Wickerd,bridmin,,manch
+3246,marloumered,Marloumered,bridmin,,manch
+3247,boliscong,Boliscong,kinegorough,,manch
+3248,gaydove,Gaydove,kinegorough,,manch
+3249,bridlingley_manor,Bridlingley Manor,kinegorough,bridlingley,manch
+3250,rothethers_manor,Rothethers Manor,bedonbeck,rothethers,manch
+3251,skipton_manor_4,Skipton Manor 4,rothestow,skipton_6,manch
+3252,cleone_manor_2,Cleone Manor 2,rothestow,cleone_2,manch
+3253,launcesbury,Launcesbury,rothestow,,manch
+3257,waringley,Waringley,chisinland,,manch
+3258,neymouthbri,Neymouthbri,chisinland,,manch
+3259,kirmorombe,Kirmorombe,chisinland,,manch
+3260,kingford,Kingford,charton,,manch
+3261,penteresbur,Penteresbur,charton,,manch
+3262,penkwar_manor,Penkwar Manor,olinglia,penkwar,manch
+3263,wingstoney,Wingstoney,olinglia,,manch
+3264,whitham,Whitham,olinglia,,manch
+3265,horton,Horton,louthia,,manch
+3266,rendbury,Rendbury,redcke,,manch
+3267,roughay,Roughay,redcke,,manch
+3268,buryfiney,Buryfiney,oslelia,,manch
+3269,pillisbunse,Pillisbunse,oslelia,,manch
+3270,reasingsham_manor,Reasingsham Manor,modhurst,reasingsham,manch
+3271,modhurst_manor,Modhurst Manor,modhurst,modhurst,manch
+3272,hertford_manor_3,Hertford Manor 3,swamersia,hertford,manch
+3273,dunstesouto,Dunstesouto,swamersia,,manch
+3274,haraver,Haraver,swamersia,,manch
+3275,neymptotne,Neymptotne,swamersia,,manch
+3276,bossington,Bossington,swamersia,,manch
+3285,cutherley,Cutherley,alterfordia,,marsh
+3286,tandovillif,Tandovillif,alterfordia,,marsh
+3287,duryfieldfo,Duryfieldfo,weyfield,,marsh
+3288,quatfordbu_manor,Quatfordbu Manor,weyfield,quatfordbu,marsh
+3289,shbodmalne,Shbodmalne,betestedia,,marsh
+3290,ambetleby,Ambetleby,betestedia,,marsh
+3291,hafordling_manor,Hafordling Manor,betestedia,hafordling,marsh
+3292,weyter,Weyter,betestedia,,marsh
+3293,wivertotter,Wivertotter,betestedia,,marsh
+3294,brampton_manor,Brampton Manor,betestedia,brampton,marsh
+3295,leighton,Leighton,northestab,,marsh
+3296,stance,Stance,northestab,,marsh
+3297,asalme,Asalme,northestab,,marsh
+3298,northestab_manor,Northestab Manor,northestab,northestab,marsh
+3299,beridgelinc,Beridgelinc,northestab,,marsh
+3300,exetow,Exetow,northestab,,marsh
+3301,tacutheton,Tacutheton,northestab,,marsh
+3302,wesombertha,Wesombertha,presham,,marsh
+3303,wighald,Wighald,presham,,marsh
+3304,helsted_manor,Helsted Manor,presham,helsted,marsh
+3305,foromer,Foromer,presham,,marsh
+3306,merwivesey,Merwivesey,gatfordford,,marsh
+3307,horkeld,Horkeld,camblexeso,,marsh
+3308,bolton,Bolton,camblexeso,,marsh
+3309,hellifnalin,Hellifnalin,camblexeso,,marsh
+3310,hamersfielt,Hamersfielt,camblexeso,,marsh
+3311,brough,Brough,herther,,marsh
+3312,hitherd,Hitherd,herther,,marsh
+3313,brombe,Brombe,herther,,marsh
+3314,wickley,Wickley,herther,,marsh
+3315,fenmoughton,Fenmoughton,herther,,marsh
+3316,lounstchiff,Lounstchiff,herther,,marsh
+3317,graxbridefr,Graxbridefr,herther,,marsh
+3318,uxbrighwel_manor,Uxbrighwel Manor,herther,uxbrighwel,marsh
+3319,lymershfiel,Lymershfiel,maldock,,marsh
+3320,caungdovill,Caungdovill,maldock,,marsh
+3321,thestorster,Thestorster,maldock,,marsh
+3322,wookbury,Wookbury,haldock,,marsh
+3323,thordefram,Thordefram,maldock,,marsh
+3324,chawley,Chawley,haldock,,marsh
+3325,averby,Averby,haldock,,marsh
+3326,bostovilbor_manor,Bostovilbor Manor,haldock,bostovilbor,marsh
+3327,tontokeld,Tontokeld,haldock,,marsh
+3328,liscaundove,Liscaundove,haldock,,marsh
+3329,berstbury,Berstbury,haldock,,marsh
+3330,briney,Briney,haldock,,marsh
+3331,tivertotham,Tivertotham,haldock,,marsh
+3332,fordefraste,Fordefraste,haldock,,marsh
+3333,duryfinedcl,Duryfinedcl,haldock,,marsh
+3334,marithley,Marithley,walbover,,marsh
+3335,garestedmin_manor,Garestedmin Manor,walbover,garestedmin,marsh
+3336,fingley,Fingley,walbover,,marsh
+3337,skiptondodb,Skiptondodb,walbover,,marsh
+3338,walbover_manor,Walbover Manor,walbover,walbover,marsh
+3339,broughatfor,Broughatfor,walbover,,marsh
+3340,oakharlbrut,Oakharlbrut,walbover,,marsh
+3341,soutsfielew,Soutsfielew,treton,,marsh
+3342,treton_manor,Treton Manor,treton,treton,marsh
+3343,horlbridge,Horlbridge,treton,,marsh
+3344,roumermskin,Roumermskin,treton,,marsh
+3345,oakhattlest,Oakhattlest,treton,,marsh
+3346,gramereton,Gramereton,darland,,marsh
+3347,comyare,Comyare,darland,,manch
+3348,fendall,Fendall,meterland,,manch
+3349,laundolexe_manor,Laundolexe Manor,meterland,laundolexe,manch
+3350,mantes,Mantes,meterland,,manch
+3351,peringhalme,Peringhalme,dunshil,,manch
+3352,sowestothol,Sowestothol,dudge,,manch
+3353,stotfield_manor,Stotfield Manor,dudge,stotfield,manch
+3354,maldock_manor,Maldock Manor,dudge,maldock,manch
+3355,wading_manor,Wading Manor,broburland,wading,manch
+3356,shfieleigmo,Shfieleigmo,broburland,,manch
+3357,waveton,Waveton,broburland,,manch
+3358,coltetfortf,Coltetfortf,craftham,,manch
+3359,kirmoumer,Kirmoumer,craftham,,manch
+3360,thordenkleo,Thordenkleo,craftham,,manch
+3361,fenton_manor,Fenton Manor,witfordia,fenton,manch
+3362,whifnaresey,Whifnaresey,bridmin,,manch
+3363,ortongh,Ortongh,bridmin,,manch
+3364,aydongton,Aydongton,kingdonia,,manch
+3365,tagelsea,Tagelsea,kingdonia,,manch
+3366,poughton,Poughton,bedonbeck,,manch
+3367,barlbrazion,Barlbrazion,bedonbeck,,manch
+3368,marsfield,Marsfield,bedonbeck,,manch
+3369,buckirby,Buckirby,tetleley,,manch
+3370,caunston,Caunston,tetleley,,manch
+3371,wootheston,Wootheston,tetleley,,manch
+3373,clinny,Clinny,chisinland,,manch
+3374,mamerstobu_manor,Mamerstobu Manor,chisinland,mamerstobu,manch
+3375,mington,Mington,chisinland,,manch
+3376,frandovilte,Frandovilte,chisinland,,manch
+3377,clifnalbor_manor,Clifnalbor Manor,charton,clifnalbor,manch
+3378,burshet,Burshet,albrid,,manch
+3379,albrid_manor,Albrid Manor,albrid,albrid_2,manch
+3380,wingtont,Wingtont,olinglia,,manch
+3381,dongford,Dongford,framplewen,,manch
+3382,dundoviltre,Dundoviltre,framplewen,,manch
+3383,lewbord,Lewbord,framplewen,,manch
+3384,antarlbord,Antarlbord,redcke,,manch
+3385,oakhamber_manor,Oakhamber Manor,oslelia,oakhamber,manch
+3386,ashwelbo_manor,Ashwelbo Manor,oslelia,ashwelbo,manch
+3387,rootterton,Rootterton,modhurst,,manch
+3388,ablausey,Ablausey,modhurst,,manch
+3389,witon_manor,Witon Manor,witon,witon,manch
+3390,whitleton_manor,Whitleton Manor,swamersia,whitleton,manch
+3391,cheltanch,Cheltanch,seavland,,manch
+3392,knuthamerto,Knuthamerto,seavland,,manch
+3393,chawletow,Chawletow,seavland,,manch
+3401,wargdonton_manor,Wargdonton Manor,weyfield,wargdonton,marsh
+3402,tetfordbury_manor,Tetfordbury Manor,weyfield,tetfordbury,marsh
+3403,ortonghtoro,Ortonghtoro,hatfordia,,marsh
+3404,chingh,Chingh,hatfordia,,marsh
+3405,norliston_manor,Norliston Manor,betestedia,norliston,marsh
+3406,ossidge,Ossidge,betestedia,,marsh
+3407,chister_manor,Chister Manor,betestedia,chister,marsh
+3408,shinghton,Shinghton,betestedia,,marsh
+3409,carampton,Carampton,betestedia,,marsh
+3410,litforoodbu,Litforoodbu,winch,,marsh
+3411,knarlbord,Knarlbord,helsham,,marsh
+3412,rounstredcl,Rounstredcl,northestab,,marsh
+3413,tasalton,Tasalton,northestab,,marsh
+3414,clihulling,Clihulling,northestab,,marsh
+3415,witonewboro,Witonewboro,presham,,marsh
+3416,watcher,Watcher,presham,,marsh
+3417,casheshawle,Casheshawle,presham,,marsh
+3418,shicheterth,Shicheterth,presham,,marsh
+3419,manton,Manton,presham,,marsh
+3420,betongh,Betongh,presham,,marsh
+3421,broothame,Broothame,rothingia,,wildlands
+3422,ordenby,Ordenby,camblexeso,,marsh
+3423,winchingdon,Winchingdon,camblexeso,,marsh
+3424,olbone_manor,Olbone Manor,camblexeso,olbone,marsh
+3425,bidhury,Bidhury,camblexeso,,marsh
+3426,lausea,Lausea,herther,,marsh
+3427,tetham_manor,Tetham Manor,herther,tetham,marsh
+3428,shfielstefr,Shfielstefr,herther,,marsh
+3429,uxbrigh_manor,Uxbrigh Manor,herther,uxbrigh,marsh
+3430,stbury,Stbury,herther,,marsh
+3431,mathorock,Mathorock,herther,,marsh
+3432,hitham,Hitham,herther,,marsh
+3433,totbury_manor,Totbury Manor,herther,totbury,marsh
+3434,dunstesehat,Dunstesehat,herther,,marsh
+3435,axbring,Axbring,maldock,,marsh
+3436,thamber,Thamber,maldock,,marsh
+3437,dunwicher,Dunwicher,maldock,,marsh
+3438,exnillingfo,Exnillingfo,maldock,,marsh
+3439,wattleyme,Wattleyme,maldock,,marsh
+3440,penkley_manor,Penkley Manor,maldock,penkley,marsh
+3441,watongtork,Watongtork,maldock,,marsh
+3445,canchesters,Canchesters,haldock,,marsh
+3455,bineterston_manor,Bineterston Manor,bineterston,bineterston,marsh
+3456,mandfow,Mandfow,bineterston,,marsh
+3457,wickleby,Wickleby,bineterston,,marsh
+3458,madstaster,Madstaster,treton,,marsh
+3459,carmskingto,Carmskingto,treton,,marsh
+3460,modmoughbra,Modmoughbra,treton,,marsh
+3461,watfor,Watfor,treton,,marsh
+3462,comnetbungf,Comnetbungf,darland,,marsh
+3463,brazion,Brazion,darland,,manch
+3464,lymerk,Lymerk,darland,,manch
+3465,oscaundon,Oscaundon,thetland,,manch
+3466,sudbridge,Sudbridge,meterland,,manch
+3467,cheymptonte,Cheymptonte,milton,,manch
+3468,milton_manor,Milton Manor,milton,milton_2,manch
+3469,foliver_manor,Foliver Manor,dunshil,foliver,manch
+3470,suddley,Suddley,dudge,,manch
+3471,seyter,Seyter,broburland,,manch
+3472,oleyterston,Oleyterston,broburland,,manch
+3473,alboromer,Alboromer,broburland,,manch
+3474,witonewburt,Witonewburt,broburland,,manch
+3475,avelstbury,Avelstbury,craftham,,manch
+3476,pordeforend,Pordeforend,broburland,,manch
+3477,birmskipple,Birmskipple,craftham,,manch
+3478,cashbury,Cashbury,craftham,,manch
+3479,tritforne,Tritforne,craftham,,manch
+3480,trehal,Trehal,witfordia,,manch
+3481,winkham_manor_2,Winkham Manor 2,witfordia,winkham,manch
+3482,malton_manor_2,Malton Manor 2,witfordia,malton_2,manch
+3483,wiveniling_manor,Wiveniling Manor,kingdonia,wiveniling,manch
+3484,wichildford,Wichildford,kingdonia,,manch
+3485,dunsbume_manor,Dunsbume Manor,kingdonia,dunsbume,manch
+3486,grantherden_manor,Grantherden Manor,oldock,grantherden,manch
+3487,mildock_manor,Mildock Manor,bedonbeck,mildock,manch
+3488,bedonbeck_manor,Bedonbeck Manor,bedonbeck,bedonbeck,manch
+3489,tarbot_manor,Tarbot Manor,oldock,tarbot,manch
+3490,pendburthol,Pendburthol,bedonbeck,,manch
+3491,tetleley_manor,Tetleley Manor,tetleley,tetleley,manch
+3492,shbord,Shbord,tetleley,,manch
+3493,cambershenk,Cambershenk,tetleley,,manch
+3497,meregodmadi,Meregodmadi,chisinland,,manch
+3498,durgram,Durgram,chisinland,,manch
+3499,neterstch,Neterstch,chisinland,,manch
+3500,fensteregon,Fensteregon,chisinland,,manch
+3501,fieldon,Fieldon,albrid,,manch
+3502,piltonwich_manor,Piltonwich Manor,albrid,piltonwich,manch
+3503,comyaridge,Comyaridge,framplewen,,manch
+3504,preskirk_manor,Preskirk Manor,framplewen,preskirk,manch
+3505,southeling_manor,Southeling Manor,framplewen,southeling,manch
+3506,skilbrombur,Skilbrombur,framplewen,,manch
+3507,wargley_manor,Wargley Manor,framplewen,wargley,manch
+3508,redcke_manor,Redcke Manor,redcke,redcke,manch
+3509,quatleroe_manor,Quatleroe Manor,oslelia,quatleroe,manch
+3510,exningtrema,Exningtrema,oslelia,,manch
+3511,berigh,Berigh,seavland,,manch
+3512,aldover,Aldover,seavland,,manch
+3513,dalmeton_manor,Dalmeton Manor,seavland,dalmeton,manch
+3514,chenby,Chenby,seavland,,manch
+3515,presterham_manor,Presterham Manor,seavland,presterham,manch
+3525,buryfiele,Buryfiele,hatfordia,,marsh
+3526,horough,Horough,hatfordia,,marsh
+3527,causterley_manor,Causterley Manor,hatfordia,causterley,marsh
+3528,wigayley,Wigayley,hatfordia,,marsh
+3529,berwigmouse,Berwigmouse,betestedia,,marsh
+3530,wardelston,Wardelston,betestedia,,marsh
+3531,wickendovet,Wickendovet,betestedia,,marsh
+3532,helsmouth_manor,Helsmouth Manor,winch,helsmouth,marsh
+3533,stotreton_manor,Stotreton Manor,winch,stotreton,marsh
+3534,casingaton,Casingaton,helsham,,marsh
+3535,helsham_manor,Helsham Manor,helsham,helsham,marsh
+3536,witham_manor_2,Witham Manor 2,witham,witham,marsh
+3537,tershfield,Tershfield,witham,,marsh
+3538,presham_manor,Presham Manor,presham,presham,marsh
+3539,charling_manor,Charling Manor,presham,charling,marsh
+3540,candovilkha,Candovilkha,presham,,marsh
+3541,grambe_manor,Grambe Manor,presham,grambe,marsh
+3542,tretlestefo,Tretlestefo,presham,,marsh
+3543,comber,Comber,rothingia,,wildlands
+3544,warambrined,Warambrined,camblexeso,,marsh
+3545,tachilword,Tachilword,camblexeso,,marsh
+3546,waltash_manor,Waltash Manor,camblexeso,waltash,marsh
+3547,casterlow,Casterlow,camblexeso,,marsh
+3548,tontanstbur,Tontanstbur,camblexeso,,marsh
+3549,warthenle,Warthenle,camblexeso,,marsh
+3550,milwookerli,Milwookerli,herther,,marsh
+3551,coleaford,Coleaford,herther,,marsh
+3552,herther_manor,Herther Manor,herther,herther,marsh
+3553,malmer,Malmer,herther,,marsh
+3554,wiverstefra,Wiverstefra,herther,,marsh
+3555,orkerwiggin,Orkerwiggin,herther,,marsh
+3556,credclihull,Credclihull,herther,,marsh
+3557,comyaridget,Comyaridget,herther,,marsh
+3558,flowendburt,Flowendburt,maldock,,marsh
+3559,forhampton,Forhampton,maldock,,marsh
+3560,aldonth,Aldonth,maldock,,marsh
+3561,holeympsey,Holeympsey,maldock,,marsh
+3562,tivestefors,Tivestefors,maldock,,marsh
+3563,mading,Mading,maldock,,marsh
+3564,gongtontapl,Gongtontapl,maldock,,marsh
+3565,shordelstas,Shordelstas,maldock,,marsh
+3566,duntonton_manor,Duntonton Manor,maldock,duntonton,marsh
+3568,guillisle,Guillisle,altnesbury,,marsh
+3574,romershorto,Romershorto,bineterston,,marsh
+3575,brouthborth,Brouthborth,bineterston,,marsh
+3576,flokburgh_manor,Flokburgh Manor,canceswest,flokburgh,marsh
+3577,canceswest_manor,Canceswest Manor,canceswest,canceswest,marsh
+3578,brambringdo,Brambringdo,canceswest,,marsh
+3579,mersterth,Mersterth,portland,,marsh
+3580,tutryfield_manor,Tutryfield Manor,portland,tutryfield,marsh
+3581,briddelingh,Briddelingh,portland,,marsh
+3582,bechesbury,Bechesbury,darland,,marsh
+3583,exnill,Exnill,darland,,manch
+3584,granter,Granter,darland,,manch
+3585,betford_manor,Betford Manor,thetland,betford,manch
+3586,bruthwarton,Bruthwarton,thetland,,manch
+3587,watfordefow,Watfordefow,milton,,manch
+3588,clinch,Clinch,milton,,manch
+3589,exningston,Exningston,milton,,manch
+3590,thambe,Thambe,mitfield,,manch
+3591,cheringle,Cheringle,mitfield,,manch
+3592,sholeachey,Sholeachey,mitfield,,manch
+3593,mitfield_manor,Mitfield Manor,mitfield,mitfield,manch
+3594,mitnesbute_manor,Mitnesbute Manor,broburland,mitnesbute,manch
+3595,materliffor,Materliffor,broburland,,manch
+3596,chichithero,Chichithero,broburland,,manch
+3597,granthambe_manor,Granthambe Manor,broburland,granthambe,manch
+3598,pershetfors,Pershetfors,broburland,,manch
+3599,kirker,Kirker,broburland,,manch
+3600,shifnalton_manor,Shifnalton Manor,broburland,shifnalton,manch
+3603,cancharlbri,Cancharlbri,craftham,,manch
+3604,oreapple,Oreapple,craftham,,manch
+3605,soughtonewe,Soughtonewe,witfordia,,manch
+3606,modbreditha,Modbreditha,witfordia,,manch
+3607,gathen,Gathen,craftham,,manch
+3608,mathea,Mathea,witfordia,,manch
+3609,mouthenby,Mouthenby,witfordia,,manch
+3610,cambrid_manor_2,Cambrid Manor 2,witfordia,cambrid_2,manch
+3611,warlincesta,Warlincesta,witfordia,,manch
+3612,stansfield_manor,Stansfield Manor,kingdonia,stansfield,manch
+3613,netburgh,Netburgh,witfordia,,manch
+3615,casterboss,Casterboss,oldock,,manch
+3616,carlifnarpo,Carlifnarpo,oldock,,manch
+3617,dodbrid_manor_2,Dodbrid Manor 2,oldock,dodbrid_2,manch
+3618,flowes,Flowes,bedonbeck,,manch
+3624,bareham,Bareham,tetleley,,manch
+3630,cherden,Cherden,chisinland,,manch
+3631,hitcheton,Hitcheton,albrid,,manch
+3632,kirmon,Kirmon,albrid,,manch
+3633,knewen,Knewen,albrid,,manch
+3634,skingate,Skingate,albrid,,manch
+3635,duddefraves,Duddefraves,albrid,,manch
+3636,wendeford,Wendeford,framplewen,,manch
+3637,gatfow,Gatfow,framplewen,,manch
+3638,soleyme,Soleyme,framplewen,,manch
+3639,framplewen_manor,Framplewen Manor,framplewen,framplewen,manch
+3640,dunwickingt,Dunwickingt,framplewen,,manch
+3641,axbridgeter_manor,Axbridgeter Manor,redcke,axbridgeter,manch
+3642,tinknaringl,Tinknaringl,oslelia,,manch
+3643,binnord,Binnord,oslelia,,manch
+3644,hordefram,Hordefram,seavland,,manch
+3645,cretforough,Cretforough,oslelia,,manch
+3655,altfordge_manor,Altfordge Manor,hatfordia,altfordge,marsh
+3656,cambrigham_manor,Cambrigham Manor,hatfordia,cambrigham,marsh
+3657,merdenzanst,Merdenzanst,hatfordia,,marsh
+3658,ossingston,Ossingston,hatfordia,,marsh
+3659,wesfielingt,Wesfielingt,hatfordia,,marsh
+3660,berlis_manor,Berlis Manor,yeoroughia,berlis,marsh
+3661,bostabridge_manor,Bostabridge Manor,yeoroughia,bostabridge,marsh
+3662,seamers_manor,Seamers Manor,yeoroughia,seamers,marsh
+3663,clitforough,Clitforough,yeoroughia,,marsh
+3664,beckwatham,Beckwatham,winch,,marsh
+3665,fiverdengay_manor,Fiverdengay Manor,winch,fiverdengay,marsh
+3666,steditch,Steditch,winch,,marsh
+3667,tanden,Tanden,helsham,,marsh
+3668,keregodbuck,Keregodbuck,helsham,,marsh
+3669,oakhaltedcl,Oakhaltedcl,witham,,marsh
+3670,neding,Neding,presham,,marsh
+3671,watton,Watton,presham,,marsh
+3672,tintershole,Tintershole,presham,,marsh
+3673,berden,Berden,presham,,marsh
+3674,conewbidge,Conewbidge,rothingia,,wildlands
+3675,bridgeter_manor,Bridgeter Manor,draxningin,bridgeter,marsh
+3676,bromermouse,Bromermouse,draxningin,,marsh
+3677,cliford_manor,Cliford Manor,camblexeso,cliford,marsh
+3678,madston,Madston,camblexeso,,marsh
+3679,cranseapple,Cranseapple,camblexeso,,marsh
+3680,pretformoug,Pretformoug,camblexeso,,marsh
+3681,skirmouth,Skirmouth,camblexeso,,marsh
+3682,bleymponed,Bleymponed,herther,,marsh
+3683,britcher,Britcher,herther,,marsh
+3684,wickwatte,Wickwatte,herther,,marsh
+3685,birmilwootn,Birmilwootn,herther,,marsh
+3686,siddeld,Siddeld,herther,,marsh
+3687,luthampornb,Luthampornb,herther,,marsh
+3688,nordeframbe,Nordeframbe,herther,,marsh
+3689,comberingdo,Comberingdo,causford,,marsh
+3690,barlifnarle,Barlifnarle,causford,,marsh
+3691,wighawleck,Wighawleck,causford,,marsh
+3692,routhaton,Routhaton,maldock,,marsh
+3693,beridlesbor,Beridlesbor,maldock,,marsh
+3694,wingdon,Wingdon,maldock,,marsh
+3695,brafown,Brafown,maldock,,marsh
+3696,winterton,Winterton,maldock,,marsh
+3697,daltertsmoc,Daltertsmoc,maldock,,marsh
+3698,pereap,Pereap,maldock,,marsh
+3699,cherwigatfi,Cherwigatfi,maldock,,marsh
+3700,chillifton,Chillifton,altnesbury,,marsh
+3701,withenny,Withenny,altnesbury,,marsh
+3709,coleyteding,Coleyteding,canceswest,,marsh
+3710,ormsham_manor,Ormsham Manor,boston,ormsham,marsh
+3711,sallislewbo,Sallislewbo,portland,,marsh
+3712,totesbute_manor,Totesbute Manor,portland,totesbute,marsh
+3713,bridle_manor,Bridle Manor,portland,bridle,marsh
+3714,duryfiellis,Duryfiellis,portland,,marsh
+3715,newbortsfie,Newbortsfie,darland,,manch
+3716,redcheapton_manor_2,Redcheapton Manor 2,darland,redcheapton_2,manch
+3717,roumershea,Roumershea,thetland,,manch
+3718,haresbury_manor,Haresbury Manor,thetland,haresbury,manch
+3719,comerby,Comerby,thetland,,manch
+3720,harlinchamp,Harlinchamp,thetland,,manch
+3721,ageldock_manor,Ageldock Manor,bamerskirk,ageldock,manch
+3722,thwenkleiga,Thwenkleiga,mitfield,,manch
+3727,skipton_manor_5,Skipton Manor 5,broburland,skipton_5,manch
+3730,skiptonbeck_manor,Skiptonbeck Manor,craftham,skiptonbeck,manch
+3735,avestonewit,Avestonewit,witfordia,,manch
+3736,monewbiggin,Monewbiggin,witfordia,,manch
+3737,harleighin_manor,Harleighin Manor,kingdonia,harleighin,manch
+3748,albrighesto_manor,Albrighesto Manor,albrid,albrighesto,manch
+3750,crambury,Crambury,albrid,,manch
+3751,hatledonton_manor,Hatledonton Manor,albrid,hatledonton,manch
+3752,ponewbiggin,Ponewbiggin,albrid,,manch
+3753,combrooke,Combrooke,albrid,,manch
+3754,braster_manor_2,Braster Manor 2,albrid,braster,manch
+3755,warghaxbrav,Warghaxbrav,framplewen,,manch
+3756,heletforham,Heletforham,framplewen,,manch
+3757,neymouth,Neymouth,framplewen,,manch
+3758,weyfield_manor,Weyfield Manor,framplewen,weyfield,manch
+3759,wariddeldon,Wariddeldon,redcke,,manch
+3760,witford_manor,Witford Manor,oslelia,witford,manch
+3761,floutholing,Floutholing,oslelia,,manch
+3762,maltargrazi,Maltargrazi,oslelia,,manch
+3767,ordendbury,Ordendbury,hatfordia,,marsh
+3773,milneyfield_manor,Milneyfield Manor,yeoroughia,milneyfield,marsh
+3774,berbotlere_manor,Berbotlere Manor,yeoroughia,berbotlere,marsh
+3775,mingstestar,Mingstestar,yeoroughia,,marsh
+3776,steremal,Steremal,winch,,marsh
+3777,halmerton,Halmerton,winch,,marsh
+3778,knarley,Knarley,winch,,marsh
+3779,kilkleigh_manor,Kilkleigh Manor,winch,kilkleigh,marsh
+3780,malterton_manor,Malterton Manor,swalelister,malterton,marsh
+3781,cambershayl,Cambershayl,swalelister,,marsh
+3782,bershitholn,Bershitholn,swalelister,,marsh
+3783,ordeforford,Ordeforford,witham,,marsh
+3784,keriton,Keriton,witham,,marsh
+3785,newendforom,Newendforom,witham,,marsh
+3786,knalbolisco,Knalbolisco,witham,,marsh
+3787,exetonewitf,Exetonewitf,draxningin,,marsh
+3788,persfielsea,Persfielsea,draxningin,,marsh
+3789,waredclinch,Waredclinch,draxningin,,marsh
+3790,broutsfowey,Broutsfowey,draxningin,,marsh
+3791,balihury,Balihury,camblexeso,,marsh
+3792,wordefrazio,Wordefrazio,camblexeso,,marsh
+3793,camblexeso_manor,Camblexeso Manor,camblexeso,camblexeso,marsh
+3794,abington,Abington,camblexeso,,marsh
+3795,cherkseaden,Cherkseaden,harden,,marsh
+3796,weympored,Weympored,herther,,marsh
+3797,chellinkleb,Chellinkleb,harden,,marsh
+3798,hinver,Hinver,herther,,marsh
+3799,lurymeton_manor,Lurymeton Manor,herther,lurymeton,marsh
+3800,abingtowce,Abingtowce,causford,,marsh
+3801,buryfielift,Buryfielift,causford,,marsh
+3802,ordeldford,Ordeldford,causford,,marsh
+3803,whipplewenn,Whipplewenn,causford,,marsh
+3804,champste,Champste,causford,,marsh
+3805,beretheaden,Beretheaden,maldock,,marsh
+3806,cantanny,Cantanny,maldock,,marsh
+3807,pichambe,Pichambe,maldock,,marsh
+3808,ponetleymoc,Ponetleymoc,maldock,,marsh
+3809,anstestow,Anstestow,maldock,,marsh
+3810,stacutortor,Stacutortor,maldock,,marsh
+3811,clingdon,Clingdon,maldock,,marsh
+3812,rehambridge,Rehambridge,altnesbury,,marsh
+3819,tutbury_manor,Tutbury Manor,canceswest,tutbury,marsh
+3821,boston_manor,Boston Manor,boston,boston,marsh
+3822,conginces_manor,Conginces Manor,boston,conginces,marsh
+3823,holifnarigh,Holifnarigh,portland,,marsh
+3824,perstow_manor,Perstow Manor,portland,perstow,marsh
+3825,routhatforn,Routhatforn,darland,,manch
+3826,olihullitfo,Olihullitfo,darland,,manch
+3827,triddell,Triddell,thetland,,manch
+3828,ponwich_manor,Ponwich Manor,thetland,ponwich,manch
+3829,withestoney,Withestoney,thetland,,manch
+3830,solnewbinte,Solnewbinte,bamerskirk,,manch
+3831,bamerskirk_manor,Bamerskirk Manor,bamerskirk,bamerskirk,manch
+3832,cleorough_manor,Cleorough Manor,cleorough,cleorough,manch
+3833,redckingham_manor,Redckingham Manor,bamerskirk,redckingham,manch
+3834,soutbury,Soutbury,mitfield,,manch
+3835,guilbolifna,Guilbolifna,mitfield,,manch
+3861,watchester_manor,Watchester Manor,albrid,watchester,manch
+3862,knutoken,Knutoken,bitonland,,manch
+3863,sacury_manor,Sacury Manor,bitonland,sacury,manch
+3864,bertsfing,Bertsfing,bitonland,,manch
+3865,wingancheld,Wingancheld,bitonland,,manch
+3866,kilkhawle,Kilkhawle,bitonland,,manch
+3867,albrid_manor_2,Albrid Manor 2,cocker,albrid,manch
+3868,warleton,Warleton,cocker,,manch
+3869,moutheston,Moutheston,oslelia,,manch
+3870,drambechick,Drambechick,cocker,,manch
+3871,bretfordbu_manor,Bretfordbu Manor,cocker,bretfordbu,manch
+3892,sweymerston,Sweymerston,winch,,marsh
+3893,swesfieline,Swesfieline,bretland,,marsh
+3894,bingham_manor,Bingham Manor,bretland,bingham,marsh
+3895,brashomer_manor,Brashomer Manor,bretland,brashomer,marsh
+3896,swalelister_manor,Swalelister Manor,swalelister,swalelister,marsh
+3897,neringle_manor,Neringle Manor,swalelister,neringle,marsh
+3898,wickerthame,Wickerthame,swalelister,,marsh
+3899,wickwavenda,Wickwavenda,holinland,,marsh
+3900,petonthornb,Petonthornb,holinland,,marsh
+3901,wenzandalto,Wenzandalto,witham,,marsh
+3902,kingfown,Kingfown,draxningin,,marsh
+3903,porden,Porden,draxningin,,marsh
+3904,hinckley_manor,Hinckley Manor,draxningin,hinckley,marsh
+3905,haton_manor,Haton Manor,draxningin,haton,marsh
+3906,tetre_manor,Tetre Manor,camblexeso,tetre,marsh
+3907,netonton,Netonton,camblexeso,,marsh
+3908,guilboss,Guilboss,camblexeso,,marsh
+3909,broredon_manor,Broredon Manor,camblexeso,broredon,marsh
+3910,bridbury_manor,Bridbury Manor,harden,bridbury,marsh
+3911,harden_manor,Harden Manor,harden,harden,marsh
+3912,landforle,Landforle,harden,,marsh
+3913,berdenst,Berdenst,causfield,,marsh
+3914,wartham,Wartham,causfield,,marsh
+3915,canden_manor,Canden Manor,causfield,canden,marsh
+3916,norouth,Norouth,causford,,marsh
+3917,stereton,Stereton,causford,,marsh
+3918,buncesherk,Buncesherk,causford,,marsh
+3919,comerton,Comerton,causford,,marsh
+3920,tonetle,Tonetle,causford,,marsh
+3921,paditon,Paditon,maldock,,marsh
+3922,wickerton,Wickerton,maldock,,marsh
+3923,bordenburto,Bordenburto,maldock,,marsh
+3924,axbrington,Axbrington,maldock,,marsh
+3925,dalbrazion,Dalbrazion,maldock,,marsh
+3926,saldoney,Saldoney,maldock,,marsh
+3927,stonet,Stonet,altnesbury,,marsh
+3928,paighbridge,Paighbridge,altnesbury,,marsh
+3929,chermock,Chermock,altnesbury,,marsh
+3930,bridford_manor,Bridford Manor,altnesbury,bridford,marsh
+3938,guilbosweyt,Guilbosweyt,boston,,marsh
+3939,bothburgh,Bothburgh,boston,,marsh
+3940,axbrigh_manor_2,Axbrigh Manor 2,boston,axbrigh_2,marsh
+3941,peningh,Peningh,boston,,marsh
+3942,ponewenzanc,Ponewenzanc,boston,,marsh
+3943,margraverd,Margraverd,boston,,marsh
+3944,wigginninch,Wigginninch,darland,,manch
+3945,ableby,Ableby,darland,,manch
+3946,chelewburtf,Chelewburtf,darland,,manch
+3947,lutonewbord,Lutonewbord,rothbridbu,,manch
+3948,grandongton,Grandongton,thetland,,manch
+3949,rothbridbu_manor,Rothbridbu Manor,rothbridbu,rothbridbu,manch
+3953,marlounseho,Marlounseho,thetland,,manch
+3954,mondon,Mondon,bamerskirk,,manch
+3955,graxbrigh,Graxbrigh,bamerskirk,,manch
+3973,macking_manor,Macking Manor,cocker,macking_2,manch
+3974,avehamney_manor,Avehamney Manor,cocker,avehamney,manch
+3975,hatfordford_manor,Hatfordford Manor,cocker,hatfordford,manch
+3976,paigging,Paigging,cocker,,manch
+3977,watontersfo,Watontersfo,bitonland,,manch
+3978,exning_manor,Exning Manor,bitonland,exning,manch
+3979,fokeley_manor,Fokeley Manor,cocker,fokeley,manch
+3980,kingford_manor,Kingford Manor,cocker,kingford,manch
+3981,hornley_manor,Hornley Manor,cocker,hornley,manch
+3982,singantanch,Singantanch,cocker,,manch
+3985,kennewbury,Kennewbury,walmond,,manch
+3986,perscastle_manor,Perscastle Manor,walmond,perscastle,manch
+3987,bramping_manor,Bramping Manor,albridia,bramping,manch
+3988,combermouth_manor,Combermouth Manor,walmond,combermouth,manch
+3989,waresterth,Waresterth,albridia,,manch
+4001,rombury,Rombury,bretland,,marsh
+4002,fordenilwor,Fordenilwor,bretland,,marsh
+4003,theaple,Theaple,bretland,,marsh
+4004,winchel_manor,Winchel Manor,bretland,winchel,marsh
+4005,madenmounch,Madenmounch,bretland,,marsh
+4006,godbundon,Godbundon,holinland,,marsh
+4007,boroutsmout,Boroutsmout,bretland,,marsh
+4008,flounstesto,Flounstesto,holinland,,marsh
+4009,drasinchitc,Drasinchitc,holinland,,marsh
+4010,altoregodmo,Altoregodmo,holinland,,marsh
+4011,wichampton,Wichampton,holinland,,marsh
+4012,kneymoutham,Kneymoutham,draxningin,,wildlands
+4013,oakhame,Oakhame,draxningin,,marsh
+4014,warshfieldo,Warshfieldo,draxningin,,marsh
+4015,charfordge_manor,Charfordge Manor,draxningin,charfordge,marsh
+4016,toneston,Toneston,draxningin,,marsh
+4017,persbury_manor,Persbury Manor,draxningin,persbury,marsh
+4018,newbookbury,Newbookbury,camblexeso,,marsh
+4019,midgeterthe,Midgeterthe,lympstow,,marsh
+4020,macuton,Macuton,lympstow,,marsh
+4021,felbomerham_manor,Felbomerham Manor,harden,felbomerham,marsh
+4022,nordenil,Nordenil,harden,,marsh
+4023,milkhampton,Milkhampton,harden,,marsh
+4024,ancheap,Ancheap,causfield,,marsh
+4025,weldforeham,Weldforeham,causfield,,marsh
+4026,prestandon,Prestandon,causford,,marsh
+4027,uxbrid_manor_3,Uxbrid Manor 3,causford,uxbrid_3,marsh
+4028,appinchicke,Appinchicke,causford,,marsh
+4029,salces,Salces,causford,,marsh
+4030,sheafowcesf,Sheafowcesf,cambrid,,marsh
+4031,tholeton,Tholeton,cambrid,,marsh
+4032,kneympst,Kneympst,maldock,,marsh
+4033,lootharth,Lootharth,maldock,,marsh
+4034,kingdon,Kingdon,maldock,,marsh
+4035,goneston,Goneston,maldock,,marsh
+4036,blanden,Blanden,maldock,,marsh
+4037,dundal,Dundal,maldock,,marsh
+4038,flowey,Flowey,maldock,,marsh
+4039,witley_manor,Witley Manor,altnesbury,witley,marsh
+4048,macking_manor_2,Macking Manor 2,boston,macking,marsh
+4049,portsbume_manor,Portsbume Manor,boston,portsbume,marsh
+4050,avendbridma,Avendbridma,boston,,marsh
+4051,caredingdon,Caredingdon,boston,,marsh
+4052,padskirksey_manor,Padskirksey Manor,boston,padskirksey,marsh
+4053,portscom_manor,Portscom Manor,boston,portscom_2,marsh
+4058,roughbodbur,Roughbodbur,rothbridbu,,manch
+4064,macke_manor,Macke Manor,bamerskirk,macke,manch
+4071,carford_manor,Carford Manor,new_thetland,carford,manch
+4074,winkley_manor,Winkley Manor,new_thetland,winkley,manch
+4075,coclifnal_manor_2,Coclifnal Manor 2,new_thetland,coclifnal,manch
+4087,brington,Brington,wigin,,manch
+4088,stetbury,Stetbury,wigin,,manch
+4089,hatheterlow_manor,Hatheterlow Manor,wigin,hatheterlow,manch
+4090,galistoli_manor,Galistoli Manor,cocker,galistoli,manch
+4091,frampton_manor_4,Frampton Manor 4,cocker,frampton_2,manch
+4092,guildbume_manor,Guildbume Manor,rocking,guildbume,manch
+4102,wistedhurst_manor,Wistedhurst Manor,walmond,wistedhurst,manch
+4103,southare,Southare,albridia,,manch
+4104,sherwisbuck,Sherwisbuck,albridia,,manch
+4106,skiple_manor_3,Skiple Manor 3,albridia,skiple,manch
+4116,hatfordley_manor,Hatfordley Manor,holinland,hatfordley,marsh
+4117,breston,Breston,holinland,,marsh
+4118,heyterea,Heyterea,holinland,,marsh
+4119,mermingley,Mermingley,holinland,,marsh
+4120,cheringtont,Cheringtont,holinland,,marsh
+4121,knuthwaver,Knuthwaver,skipleton,,marsh
+4122,skipton_manor_6,Skipton Manor 6,skipleton,skipton_3,marsh
+4123,betfordbu_manor,Betfordbu Manor,draxningin,betfordbu,marsh
+4124,altleyme_manor,Altleyme Manor,draxningin,altleyme,marsh
+4125,warescast_manor,Warescast Manor,draxningin,warescast,marsh
+4126,draxningin_manor,Draxningin Manor,draxningin,draxningin,marsh
+4127,dymerigh,Dymerigh,lympstow,,marsh
+4128,pilton_manor,Pilton Manor,lympstow,pilton,marsh
+4129,wichithwest,Wichithwest,canrith,,marsh
+4130,tondeld,Tondeld,canrith,,marsh
+4131,axbrid_manor,Axbrid Manor,canrith,axbrid_2,marsh
+4132,cleoney_manor,Cleoney Manor,causfield,cleoney,marsh
+4133,shoroughton_manor,Shoroughton Manor,causfield,shoroughton,marsh
+4134,grafthwark,Grafthwark,causfield,,marsh
+4135,whitford_manor_3,Whitford Manor 3,causford,whitford_2,marsh
+4136,kinghtowent,Kinghtowent,causford,,marsh
+4137,apton_manor_2,Apton Manor 2,goden,apton_2,marsh
+4138,saltree,Saltree,causford,,marsh
+4139,exetfielisb,Exetfielisb,cambrid,,marsh
+4140,bossincesbu,Bossincesbu,cambrid,,marsh
+4141,botry_manor,Botry Manor,blandbury,botry,marsh
+4142,heachick,Heachick,blandbury,,marsh
+4143,hatheshickl,Hatheshickl,blandbury,,marsh
+4144,kennewbirms,Kennewbirms,blandbury,,marsh
+4145,mermord,Mermord,maldock,,marsh
+4146,redckingin_manor,Redckingin Manor,maldock,redckingin,marsh
+4147,castleton_manor,Castleton Manor,altnesbury,castleton,marsh
+4148,tredclisbun,Tredclisbun,altnesbury,,marsh
+4149,altnesbury_manor,Altnesbury Manor,altnesbury,altnesbury,marsh
+4150,shifordge_manor_3,Shifordge Manor 3,shifordge,shifordge_3,marsh
+4151,winkwarne_manor,Winkwarne Manor,winkwarne,winkwarne,marsh
+4156,salisburham,Salisburham,boston,,marsh
+4177,stedclintan,Stedclintan,new_thetland,,manch
+4183,ossinglesta,Ossinglesta,new_thetland,,wildlands
+4192,midgetforsh,Midgetforsh,wigin,,manch
+4193,macuth,Macuth,wigin,,manch
+4194,buryfielsey,Buryfielsey,wigin,,manch
+4195,bootheltred,Bootheltred,wigin,,manch
+4196,perston_manor_2,Perston Manor 2,rocking,perston,manch
+4197,chawletokbu,Chawletokbu,wigin,,manch
+4198,hambechatfo,Hambechatfo,wigin,,manch
+4205,yeobursh,Yeobursh,walmond,,manch
+4206,weninterton,Weninterton,walmond,,manch
+4207,thetonthatt,Thetonthatt,walmond,,manch
+4208,louthestow_manor,Louthestow Manor,albridia,louthestow,manch
+4209,grantho_manor,Grantho Manor,albridia,grantho,manch
+4210,wivetfiele,Wivetfiele,albridia,,manch
+4211,soleston_manor,Soleston Manor,albridia,soleston,manch
+4212,tridgeldodm,Tridgeldodm,albridia,,manch
+4213,exnint,Exnint,penkleighia,,manch
+4214,kenley,Kenley,albridia,,manch
+4215,nordendon,Nordendon,penkleighia,,manch
+4220,balifford,Balifford,holinland,,marsh
+4221,waverbodbru,Waverbodbru,holinland,,marsh
+4222,thesterine,Thesterine,holinland,,marsh
+4223,marshbury_manor,Marshbury Manor,holinland,marshbury,marsh
+4224,salnemaring_manor,Salnemaring Manor,holinland,salnemaring,marsh
+4225,brazionewbu,Brazionewbu,holinland,,marsh
+4226,gatterloodb,Gatterloodb,holinland,,marsh
+4227,macutoney,Macutoney,holinland,,marsh
+4228,routhbore,Routhbore,skipleton,,marsh
+4229,marbodburgr,Marbodburgr,skipleton,,marsh
+4230,seaches,Seaches,skipleton,,marsh
+4231,knewendovil,Knewendovil,skipleton,,marsh
+4232,wookburgram,Wookburgram,draxningin,,marsh
+4233,kirbury,Kirbury,draxningin,,marsh
+4234,portscom_manor_2,Portscom Manor 2,berland,portscom,marsh
+4235,lympstow_manor,Lympstow Manor,lympstow,lympstow,marsh
+4236,malington_manor,Malington Manor,burne,malington,marsh
+4237,sterstersho,Sterstersho,canrith,,marsh
+4238,flokhamp_manor_2,Flokhamp Manor 2,canrith,flokhamp,marsh
+4239,helifforham,Helifforham,canrith,,marsh
+4240,lookelsterl,Lookelsterl,canrith,,marsh
+4241,nostabrid_manor,Nostabrid Manor,charhamia,nostabrid,marsh
+4242,leovete,Leovete,causford,,marsh
+4243,kerton,Kerton,causford,,marsh
+4244,westonewesh,Westonewesh,goden,,marsh
+4245,rothbrid_manor,Rothbrid Manor,goden,rothbrid,marsh
+4246,duryfieley,Duryfieley,cambrid,,marsh
+4247,perwingh,Perwingh,cambrid,,marsh
+4248,alceston,Alceston,cambrid,,marsh
+4249,leweston,Leweston,cambrid,,marsh
+4250,petongaters,Petongaters,blandbury,,marsh
+4251,colewin,Colewin,blandbury,,marsh
+4252,waring_manor,Waring Manor,blandbury,waring,marsh
+4253,shersbury_manor,Shersbury Manor,blandbury,shersbury,marsh
+4254,maldock_manor_2,Maldock Manor 2,maldock,maldock_2,marsh
+4255,calton,Calton,maldock,,marsh
+4256,coclesfield_manor,Coclesfield Manor,winkwarne,coclesfield,marsh
+4275,shersle_manor,Shersle Manor,new_thetland,shersle,manch
+4280,netong,Netong,new_thetland,,wildlands
+4282,sterstedith,Sterstedith,new_thetland,,wildlands
+4283,pendalmereg,Pendalmereg,new_thetland,,wildlands
+4290,southton_manor,Southton Manor,wigin,southton,manch
+4292,wigin_manor,Wigin Manor,wigin,wigin,manch
+4293,hendenley,Hendenley,wigin,,manch
+4299,kirmskippin,Kirmskippin,walmond,,manch
+4300,wisley,Wisley,walmond,,manch
+4301,colnetereha,Colnetereha,albolewen,,manch
+4302,pingham,Pingham,albolewen,,manch
+4303,bleigmouth,Bleigmouth,albolewen,,manch
+4304,clifract_manor_2,Clifract Manor 2,albridia,clifract_2,manch
+4305,cheadenzanc,Cheadenzanc,penkleighia,,manch
+4306,fendon,Fendon,penkleighia,,manch
+4307,duddliscam,Duddliscam,penkleighia,,manch
+4314,skingle,Skingle,holinland,,marsh
+4315,sowcesterto,Sowcesterto,holinland,,marsh
+4316,felton,Felton,holinland,,marsh
+4317,netleobury,Netleobury,holinland,,marsh
+4318,kersholewbu,Kersholewbu,holinland,,marsh
+4319,waltown,Waltown,skipleton,,marsh
+4320,skipleton_manor,Skipleton Manor,skipleton,skipleton,marsh
+4321,tonetfor,Tonetfor,skipleton,,marsh
+4322,lowcesher,Lowcesher,withewesia,,marsh
+4323,uxbraxbrith,Uxbraxbrith,newborland,,marsh
+4324,mitforfor,Mitforfor,newborland,,marsh
+4325,ordeld,Ordeld,lympstow,,marsh
+4326,baritham,Baritham,lympstow,,marsh
+4327,bostowces_manor,Bostowces Manor,lympstow,bostowces,marsh
+4328,boleigmough,Boleigmough,canrith,,marsh
+4329,aldforea,Aldforea,canrith,,marsh
+4330,bodmin_manor,Bodmin Manor,canrith,bodmin,marsh
+4331,watcheling_manor,Watcheling Manor,charhamia,watcheling,marsh
+4332,bothambe,Bothambe,charhamia,,marsh
+4333,manchel_manor,Manchel Manor,charhamia,manchel,marsh
+4334,mongaydon_manor,Mongaydon Manor,goden,mongaydon,marsh
+4335,preafthaxte,Preafthaxte,goden,,marsh
+4336,cleoke_manor,Cleoke Manor,cambrid,cleoke,marsh
+4337,penste,Penste,cambrid,,marsh
+4338,horstony_manor,Horstony Manor,cambrid,horstony,marsh
+4339,ashingley_manor,Ashingley Manor,cambrid,ashingley,marsh
+4340,clifordbu_manor,Clifordbu Manor,cambrid,clifordbu,marsh
+4341,axbrid_manor_2,Axbrid Manor 2,cambrid,axbrid,marsh
+4342,hortfordels,Hortfordels,cambrid,,marsh
+4343,orsteredovi,Orsteredovi,blandbury,,marsh
+4344,fennilbossi,Fennilbossi,blandbury,,marsh
+4345,blandbury_manor,Blandbury Manor,blandbury,blandbury,marsh
+4346,colmornbers,Colmornbers,folive,,marsh
+4347,axterwithat,Axterwithat,folive,,marsh
+4348,kington_manor,Kington Manor,maldock,kington,marsh
+4349,caustoke_manor,Caustoke Manor,folive,caustoke,marsh
+4357,poneymought,Poneymought,new_thetland,,wildlands
+4358,nedone,Nedone,new_thetland,,wildlands
+4359,ordenth,Ordenth,new_thetland,,wildlands
+4360,tiverestow,Tiverestow,new_thetland,,wildlands
+4369,caungton,Caungton,new_thetland,,wildlands
+4370,wichippinve,Wichippinve,new_thetland,,wildlands
+4371,harstetletf,Harstetletf,new_thetland,,wildlands
+4372,marpouton,Marpouton,new_thetland,,wildlands
+4373,kelinewingt,Kelinewingt,new_thetland,,wildlands
+4374,bleckwar,Bleckwar,new_thetland,,wildlands
+4375,bigandon,Bigandon,new_thetland,,wildlands
+4385,finchincest,Finchincest,wigin,,manch
+4392,albolewen_manor,Albolewen Manor,albolewen,albolewen,manch
+4393,sealiscom_manor,Sealiscom Manor,albolewen,sealiscom,manch
+4394,lestowenkle,Lestowenkle,penkleighia,,manch
+4395,pontagetoth,Pontagetoth,penkleighia,,manch
+4396,felingfowes,Felingfowes,penkleighia,,manch
+4397,bolingham_manor_2,Bolingham Manor 2,penkleighia,bolingham_2,manch
+4398,aldoverby,Aldoverby,penkleighia,,manch
+4405,mertheaccli,Mertheaccli,holinland,,marsh
+4406,pickemale_manor,Pickemale Manor,holinland,pickemale,marsh
+4407,bredithambu,Bredithambu,holinland,,marsh
+4408,carsher,Carsher,holinland,,marsh
+4409,cliscocke,Cliscocke,holinland,,marsh
+4410,peverstanst,Peverstanst,skipleton,,marsh
+4411,ordenkley,Ordenkley,skipleton,,marsh
+4412,cutonewelte,Cutonewelte,skipleton,,marsh
+4413,bechestleig,Bechestleig,withewesia,,marsh
+4414,routone,Routone,withewesia,,marsh
+4415,albridhury,Albridhury,withewesia,,marsh
+4416,sasaltonce_manor,Sasaltonce Manor,newborland,sasaltonce,marsh
+4417,lymerinkley,Lymerinkley,newborland,,marsh
+4418,roughbridde,Roughbridde,lympstow,,marsh
+4419,wickingtord,Wickingtord,lympstow,,marsh
+4420,pevetown,Pevetown,lympstow,,marsh
+4421,pentam,Pentam,redclifnal,,marsh
+4422,clingleby,Clingleby,redclifnal,,marsh
+4423,marshelmond_manor,Marshelmond Manor,marshelmond,marshelmond,marsh
+4424,romnesh,Romnesh,marshelmond,,marsh
+4425,heytertonte,Heytertonte,charhamia,,marsh
+4426,bosterming_manor,Bosterming Manor,marshelmond,bosterming,marsh
+4427,haxbridenin,Haxbridenin,marshelmond,,marsh
+4428,shershing,Shershing,charhamia,,marsh
+4429,lewbigh,Lewbigh,charhamia,,marsh
+4430,mongforham,Mongforham,charhamia,,marsh
+4431,shornby,Shornby,charhamia,,marsh
+4432,wickwarambe,Wickwarambe,charhamia,,marsh
+4433,norough,Norough,goden,,marsh
+4439,wichampstbu,Wichampstbu,cambrid,,marsh
+4440,dunwickeley,Dunwickeley,cambrid,,marsh
+4441,shbury,Shbury,cambrid,,marsh
+4442,borksey,Borksey,cambrid,,marsh
+4443,fendodbury,Fendodbury,blandbury,,marsh
+4444,rockwatford,Rockwatford,blandbury,,marsh
+4445,whince,Whince,blandbury,,marsh
+4446,ordent,Ordent,blandbury,,marsh
+4447,ordenninver,Ordenninver,blandbury,,marsh
+4448,watonewen,Watonewen,blandbury,,marsh
+4449,liscandock,Liscandock,blandbury,,marsh
+4450,penneweseha,Penneweseha,folive,,marsh
+4451,sokemaford_manor,Sokemaford Manor,folive,sokemaford,marsh
+4452,folive_manor,Folive Manor,folive,folive,marsh
+4462,kingleston,Kingleston,new_thetland,,wildlands
+4463,sombertsfor,Sombertsfor,new_thetland,,wildlands
+4464,tivertfield,Tivertfield,new_thetland,,wildlands
+4465,carlough,Carlough,new_thetland,,wildlands
+4466,hestesous,Hestesous,new_thetland,,wildlands
+4467,ornesburgh,Ornesburgh,new_thetland,,wildlands
+4469,mallinghbra,Mallinghbra,new_thetland,,wildlands
+4470,bornbury,Bornbury,new_thetland,,wildlands
+4471,dundendon,Dundendon,new_thetland,,wildlands
+4472,weymoume,Weymoume,new_thetland,,wildlands
+4473,hamerlifnal,Hamerlifnal,new_thetland,,wildlands
+4474,wentorley,Wentorley,new_thetland,,wildlands
+4475,stonewbingl,Stonewbingl,new_thetland,,wildlands
+4476,toneymornbe,Toneymornbe,new_thetland,,wildlands
+4477,mockwarpout,Mockwarpout,new_thetland,,wildlands
+4478,daltancheto,Daltancheto,new_thetland,,wildlands
+4484,orthetleign,Orthetleign,wigin,,manch
+4485,orestcheldo,Orestcheldo,wigin,,manch
+4486,ormswest_manor,Ormswest Manor,wigin,ormswest,manch
+4487,solnewendfo,Solnewendfo,wigin,,manch
+4497,champon,Champon,penkleighia,,manch
+4498,bossidge,Bossidge,behobutondo,,manch
+4499,tetrinch_manor,Tetrinch Manor,penkleighia,tetrinch,manch
+4500,louthleach_manor,Louthleach Manor,penkleighia,louthleach,manch
+4506,albraforout,Albraforout,holinland,,marsh
+4507,camerstabid,Camerstabid,holinland,,marsh
+4508,godgeven_manor,Godgeven Manor,holinland,godgeven,marsh
+4509,carksea,Carksea,holinland,,marsh
+4510,graxted,Graxted,withewesia,,marsh
+4511,pendendon,Pendendon,holinland,,marsh
+4512,norookbury,Norookbury,withewesia,,marsh
+4513,fenzanterd,Fenzanterd,withewesia,,marsh
+4514,bighampton,Bighampton,withewesia,,marsh
+4515,shomerham_manor,Shomerham Manor,withewesia,shomerham,marsh
+4516,stansho_manor,Stansho Manor,withewesia,stansho,marsh
+4521,monden_manor,Monden Manor,redclifnal,monden,marsh
+4522,redclifnal_manor,Redclifnal Manor,redclifnal,redclifnal,marsh
+4523,exetleachey,Exetleachey,redclifnal,,marsh
+4524,fenknuter,Fenknuter,redclifnal,,marsh
+4525,neytertford,Neytertford,marshelmond,,marsh
+4526,bershey,Bershey,marshelmond,,marsh
+4538,berstbunsto,Berstbunsto,cambrid,,marsh
+4539,bineymouton,Bineymouton,cambrid,,marsh
+4540,thamburghto,Thamburghto,cambrid,,marsh
+4541,chifnarth,Chifnarth,blandbury,,marsh
+4542,clithampseh,Clithampseh,blandbury,,marsh
+4543,chawbigton_manor,Chawbigton Manor,blandbury,chawbigton,marsh
+4544,bringtone,Bringtone,blandbury,,marsh
+4545,wendforton,Wendforton,blandbury,,marsh
+4556,mouthampton,Mouthampton,new_thetland,,wildlands
+4557,chifforhamp,Chifforhamp,new_thetland,,wildlands
+4558,ambrampton,Ambrampton,new_thetland,,wildlands
+4559,farminceste,Farminceste,new_thetland,,wildlands
+4560,warlisbord,Warlisbord,new_thetland,,wildlands
+4561,bershorksey,Bershorksey,new_thetland,,wildlands
+4562,berincesbur,Berincesbur,new_thetland,,wildlands
+4563,cleympseham,Cleympseham,new_thetland,,wildlands
+4564,altonton,Altonton,new_thetland,,wildlands
+4565,nordelstest,Nordelstest,new_thetland,,wildlands
+4566,guillisleig,Guillisleig,new_thetland,,wildlands
+4567,thetley,Thetley,new_thetland,,wildlands
+4568,kirksey,Kirksey,new_thetland,,wildlands
+4579,anstley,Anstley,wigin,,manch
+4580,comberster,Comberster,wigin,,manch
+4581,chington,Chington,wigin,,manch
+4582,nesterd,Nesterd,wigin,,manch
+4583,chilbovil_manor,Chilbovil Manor,wigin,chilbovil,manch
+4594,dundokewen_manor,Dundokewen Manor,behobutondo,dundokewen,manch
+4595,hermill,Hermill,behobutondo,,manch
+4596,whisbottlet,Whisbottlet,behobutondo,,manch
+4597,kingtry,Kingtry,behobutondo,,manch
+4598,exnington,Exnington,penkleighia,,manch
+4599,tinethetlet,Tinethetlet,penkleighia,,manch
+4608,penilworton,Penilworton,holinland,,marsh
+4609,rehambe,Rehambe,withewesia,,marsh
+4610,wichithamps,Wichithamps,withewesia,,marsh
+4611,orlisbury,Orlisbury,withewesia,,marsh
+4612,tanchisleac,Tanchisleac,withewesia,,marsh
+4613,marshetley_manor,Marshetley Manor,withewesia,marshetley,marsh
+4614,cherston,Cherston,withewesia,,marsh
+4615,peredclisbu,Peredclisbu,withewesia,,marsh
+4616,seachargh,Seachargh,withewesia,,marsh
+4626,reholincher,Reholincher,redclifnal,,marsh
+4627,watong,Watong,redclifnal,,marsh
+4628,almondforth,Almondforth,redclifnal,,marsh
+4645,appince,Appince,blandbury,,marsh
+4654,dymerston,Dymerston,new_thetland,,wildlands
+4655,buryfielet,Buryfielet,new_thetland,,wildlands
+4656,framershamp,Framershamp,new_thetland,,wildlands
+4657,bartforforo,Bartforforo,new_thetland,,wildlands
+4658,millisleobu,Millisleobu,new_thetland,,wildlands
+4659,wesholeovil,Wesholeovil,new_thetland,,wildlands
+4660,wallislewbi,Wallislewbi,new_thetland,,wildlands
+4661,birboume,Birboume,new_thetland,,wildlands
+4662,warborfornb,Warborfornb,new_thetland,,wildlands
+4663,borneterden,Borneterden,new_thetland,,wildlands
+4671,aylestage,Aylestage,wigin,,manch
+4672,berlbornby,Berlbornby,wigin,,manch
+4673,walmer,Walmer,wigin,,manch
+4674,berther,Berther,wigin,,manch
+4675,milton_manor_2,Milton Manor 2,wigin,milton,manch
+4676,tutherkenle,Tutherkenle,wigin,,manch
+4677,tinchelsea,Tinchelsea,wigin,,manch
+4678,waverle,Waverle,wigin,,manch
+4679,heymous,Heymous,wigin,,manch
+4681,mingtry,Mingtry,behobutondo,,manch
+4682,chingfortsf,Chingfortsf,behobutondo,,manch
+4683,lintageton,Lintageton,behobutondo,,manch
+4684,gaylesbury,Gaylesbury,behobutondo,,manch
+4685,ateford,Ateford,behobutondo,,manch
+4686,behobutondo_manor,Behobutondo Manor,behobutondo,behobutondo,manch
+4687,nordenmouns,Nordenmouns,behobutondo,,manch
+4688,berkseaford,Berkseaford,behobutondo,,manch
+4689,macclinney,Macclinney,behobutondo,,manch
+4690,manchalith,Manchalith,behobutondo,,manch
+4691,newboughtor,Newboughtor,penkleighia,,manch
+4692,thershingle,Thershingle,behobutondo,,manch
+4698,solmertsmor,Solmertsmor,withewesia,,marsh
+4699,mersfornbur,Mersfornbur,withewesia,,marsh
+4700,blesough,Blesough,withewesia,,marsh
+4701,gayleovetow,Gayleovetow,withewesia,,marsh
+4702,appichea,Appichea,withewesia,,marsh
+4703,uxbridmalce,Uxbridmalce,withewesia,,marsh
+4727,penkle,Penkle,new_thetland,,wildlands
+4728,basher,Basher,new_thetland,,wildlands
+4731,crafth,Crafth,new_thetland,,wildlands
+4732,tanckelton,Tanckelton,new_thetland,,wildlands
+4733,tonester,Tonester,new_thetland,,wildlands
+4734,casinver,Casinver,new_thetland,,wildlands
+4735,fenstabidge,Fenstabidge,new_thetland,,wildlands
+4742,marandbunst,Marandbunst,wigin,,manch
+4743,shburgrampo,Shburgrampo,wigin,,manch
+4744,skipsey,Skipsey,wigin,,manch
+4745,tottleckwar,Tottleckwar,wigin,,manch
+4757,salinnetbur,Salinnetbur,behobutondo,,manch
+4758,chicham,Chicham,behobutondo,,manch
+4759,mordeforous,Mordeforous,behobutondo,,manch
+4786,olneymodbun,Olneymodbun,new_thetland,,wildlands
+4787,mattord,Mattord,new_thetland,,wildlands
+4788,bamereasali,Bamereasali,new_thetland,,wildlands
+4789,sowcesbury,Sowcesbury,new_thetland,,wildlands
+4790,wickin,Wickin,new_thetland,,wildlands

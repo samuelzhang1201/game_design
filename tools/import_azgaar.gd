@@ -49,6 +49,8 @@ extends SceneTree
 ##   assets/maps/<map-id>/world_province_index.png  same encoding, province id
 ##   assets/maps/<map-id>/world_biome_index.png     R = biome id (land cells only)
 ##   assets/maps/<map-id>/world_sea_distance.png    L8: distance to land in px, capped at 255
+##   assets/maps/<map-id>/world_cell_index.png      R | G<<8 = land cell id (manors), white = water
+##   <pack>/political/manors.csv       one named manor per land cell (ManorNames)
 ##
 ## Polygons are filled with an even-odd scanline rasterizer. Deterministic:
 ## same inputs => byte-identical outputs. Hand-edits to the generated CSVs
@@ -223,49 +225,11 @@ func _active(entries: Array) -> Array[Dictionary]:
 	return out
 
 
-## Azgaar (1.151) sometimes writes marker legends containing astral-plane
-## glyphs as *unpaired* \\uD800-\\uDFFF escapes, which Godot's JSON parser
-## rejects outright ("unpaired trail surrogate") — one bad marker would
-## otherwise cost the whole import. Drop the lone halves; keep well-formed
-## pairs, which decode normally.
+## The export's lone-surrogate escapes are dropped by AzgaarJson (shared
+## with tools/bake_manors.gd); kept here as the name the rest of this
+## script calls.
 func _drop_lone_surrogates(text: String) -> String:
-	var out := ""
-	var i := 0
-	while true:
-		var at := text.find("\\u", i)
-		if at < 0:
-			out += text.substr(i)
-			return out
-		out += text.substr(i, at - i)
-		var esc := text.substr(at, 6)
-		if esc.length() < 6 or not _is_surrogate_escape(esc):
-			out += text.substr(at, 2)
-			i = at + 2
-			continue
-		var next := text.substr(at + 6, 6)
-		if _is_high_surrogate(esc) and _is_surrogate_escape(next) \
-				and not _is_high_surrogate(next):
-			out += esc + next
-			i = at + 12
-		else:
-			i = at + 6
-	return out
-
-
-func _is_surrogate_escape(esc: String) -> bool:
-	if esc.length() != 6 or not esc.begins_with("\\u"):
-		return false
-	if not esc.substr(2).is_valid_hex_number():
-		return false
-	var cp := esc.substr(2).hex_to_int()
-	return cp >= 0xD800 and cp <= 0xDFFF
-
-
-func _is_high_surrogate(esc: String) -> bool:
-	if not _is_surrogate_escape(esc):
-		return false
-	var cp := esc.substr(2).hex_to_int()
-	return cp <= 0xDBFF
+	return AzgaarJson.drop_lone_surrogates(text)
 
 
 ## Even-odd scanline fill sampling pixel centers (x+0.5, y+0.5), writing
@@ -1032,6 +996,47 @@ func _run() -> int:
 		out += _csv_line([str(int(c["i"])), "|".join(vids), str(h),
 			str(int(c.get("biome", 0))), water, "|".join(nids)])
 	if not _write_text(out_data + "/geography/cells.csv", out):
+		return 1
+
+	# --- political/manors.csv + world_cell_index.png (2026-09-13) ----------
+	# One named manor per land cell (MANOR_SYSTEM.md §1): a burg's cell takes
+	# the burg's name, every other cell a name forged in its culture's bank
+	# (ManorNames / NameForge, seeded from the export's own seed). The cell
+	# index is how a click finds its manor. tools/bake_manors.gd writes the
+	# same two files from the same export for a pack imported earlier.
+	var banks: Dictionary = {}
+	for nb in (world.get("nameBases", []) as Array):
+		if nb is Dictionary:
+			banks[int((nb as Dictionary).get("i", 0))] = {
+				"names": String((nb as Dictionary).get("b", "")).split(",", false),
+				"min": int((nb as Dictionary).get("min", 5)), "max": int((nb as Dictionary).get("max", 12))}
+	var culture_bank: Dictionary = {}
+	for cu in (pack.get("cultures", []) as Array):
+		if cu is Dictionary:
+			culture_bank[int((cu as Dictionary).get("i", 0))] = int((cu as Dictionary).get("base", 0))
+	var burg_in: Dictionary = {}
+	for b in _active(pack.get("burgs", [])):
+		burg_in[int(b.get("cell", -1))] = b
+	var specs: Array = []
+	for c: Dictionary in cells:
+		if int(round(float(c.get("h", 0)))) < SEA_LEVEL:
+			continue
+		var cid := int(c["i"])
+		var b: Dictionary = burg_in.get(cid, {})
+		specs.append({"cell_id": cid, "bank": int(culture_bank.get(int(c.get("culture", 0)), 0)),
+			"burg_label": String(b.get("name", "")),
+			"province_code": String(prov_code.get(int(c.get("province", 0)), "")),
+			"burg_code": String(burg_code.get(int(b.get("i", -1)), "")),
+			"culture_code": String(culture_code.get(int(c.get("culture", 0)), ""))})
+	out = _csv_line(["cell_id", "manor_code", "label", "province_code", "burg_code", "culture_code"])
+	for row: Dictionary in ManorNames.forge_table(int(String(info.get("seed", "0"))), specs, banks):
+		out += _csv_line([str(int(row["cell_id"])), String(row["manor_code"]), String(row["label"]),
+			String(row["province_code"]), String(row["burg_code"]), String(row["culture_code"])])
+	if not _write_text(out_data + "/political/manors.csv", out):
+		return 1
+	var cell_img := _rasterize(cells, vertices, width, height, func(c: Dictionary) -> int:
+		return int(c["i"]) if int(round(float(c.get("h", 0)))) >= SEA_LEVEL else -1)
+	if not _save_png(cell_img, out_art + "/world_cell_index.png"):
 		return 1
 
 	# --- geography/coasts.csv ---------------------------------------------

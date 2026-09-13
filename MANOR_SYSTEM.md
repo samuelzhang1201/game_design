@@ -1,0 +1,218 @@
+# Manor System — design (2026-09-13, draft for owner review)
+
+The manor is the smallest piece of land in the game: one land cell of the
+map pack's Voronoi graph (beria: 3 500 land cells of 4 833). Today it is
+only a coloured patch in the ECONOMY view. This document makes it a **unit**:
+clickable, with attributes tied to its province, held by a **house**, and
+movable — bought, sold, or seized. It follows the owner's rulings of
+2026-09-13: owner = house; trade = an offer to the holding house at a formula
+price; seizure = data and order skeleton only this round; attributes = the
+full set including buildings and taxes; plus a **Manor Master** view listing
+every manor on the map.
+
+Everything below obeys the invariants in CLAUDE.md: the engine decides, one
+seeded RNG, engine-pure `RefCounted` classes, every change carries a reason,
+design values in CSVs, save = one JSON.
+
+---
+
+## 1. Identity and geometry
+
+| Thing | Where it comes from |
+|---|---|
+| Manor id | the cell id (`cells.csv` `cell_id`), int; stable across runs and saves |
+| Which cells are manors | land cells only (`water == ""`); lakes and sea are not manors |
+| Province of a manor | fixed geometry: the province index sampled at the cell centre (as `WorldMapView.cell_province` does today), moved into the engine as `MapManors.province_of(data, cell_id)` and cached per repo |
+| Hit-testing | a new pack bitmap **`world_cell_index.png`** (R \| G<<8 = cell id, white = none), rasterised by the importer with the same `_rasterize` the province index uses (4 833 ids fit two bytes; the importer asserts `< 65536`). `tools/bake_cell_index.gd` bakes it for the existing pack from `cells.csv` + `vertices.csv`. `data/maps.csv` gains `cell_texture`; `DataRepository.cell_texture_path`; `MapIndex.id_at` decodes it. |
+| Name | **every manor has a proper, unique name, in the pack** (owner 2026-09-13: the player has to be able to say "buy Ashcombe"). New pack table `political/manors.csv` (`cell_id,manor_code,label,province_code,burg_code,culture_code`), written by the importer and by `tools/bake_manor_names.gd` for the existing pack. A cell with a burg is named after it ("Shole Manor", `burg_code` set). Every other land cell gets a name **forged in its culture's style**: the Azgaar export carries `nameBases` (43 banks of real place names, e.g. the German bank "Achern, Aichhalden, Aitern…") and each culture's `base`; `NameForge` (engine-pure, tested) runs an order-2 letter Markov chain over the cell's culture's bank — the same method Azgaar named the burgs with, so manors and towns sound like one country — seeded from the map seed and the cell id, so a re-import forges the same names; uniqueness is enforced across the pack, and the code is the label's slug. Hand corrections go in a hand-maintained `manor_name_overrides.csv` (`cell_id,label`) that the loader applies last, so a re-export cannot undo them. Orders and the model refer to a manor by `manor_code`; the validator also accepts the label case-insensitively, so a typed "buy Ashcombe" resolves. |
+| Area | polygon area of the cell (native px²) × `distance_scale`² → km², shown as hectares/km² |
+
+## 2. Ownership — houses
+
+- **A house is a family name.** There is no House entity in the engine today
+  (houses are `Character.family_name`, `house_bindings.csv`, and
+  `MapObjects.house_of`). This round adds no entity either: a manor's owner is
+  a family-name string, and "the crown" is the player's family
+  (`GameState.player_setup.family_name`, the same string every character of
+  the player's house carries).
+- **Default owner** of an unmoved manor = the house of its province
+  (`MapObjects.house_of`: the `house_bindings.csv` family, else the seat's
+  house). So the pack needs no manor table: every manor starts with its
+  province's house, exactly as province ownership starts from the pack.
+- **State is sparse**, mirroring provinces: `GameState.manor_owner:
+  Dictionary {cell_id (String in JSON): family_name}` holds only manors that
+  moved; `GameState.manor_log: [{tick, cell, from, to, reason}]`.
+  `MapManors.set_owner(data, state, cell_id, family, reason) -> bool` refuses
+  unknown cells, water, unknown houses (a house is "known" if any character
+  carries the name or any binding names it or it is the player's) and no-op
+  moves, and never accepts an empty reason — the same shape as
+  `MapOwnership.set_owner`.
+- **Province stays the political layer.** Kingdom borders come from
+  provinces only; a manor changing house never moves a border. A conquest of
+  a province does not reassign its manors (the bindings are per province and
+  survive conquest today) — the new kingdom simply contains a province whose
+  manors are held by whoever held them. This is deliberate: houses outlive
+  crowns.
+
+## 3. Attributes (the manor card)
+
+All derived, none stored, except buildings.
+
+| Attribute | Formula / source | Data |
+|---|---|---|
+| Province, kingdom, house | `province_of`, `MapOwnership.owner_of`, `MapManors.owner_of` | live |
+| Terrain | biome label + height class (lowland / hills / mountain by `map_relief` bands) + coast / river flags (a water neighbour; a river polyline crossing the polygon) | `biomes.csv`, `cells.csv`, `rivers.csv` |
+| Land value | `MapEconomy.land_value` (habitability 0..1) | `biomes.csv` |
+| Population | the province's **rural** population (ledger `economy.provinces.<p>.rural_population`) apportioned by weight `area × land_value` over the province's land cells, plus the **urban** population of any burg in the cell (`burgs.csv` population, or the ledger's urban share for the seat). Manor populations therefore always sum to the province's — the tie to province data the owner asked for, and nothing to keep in sync. | ledger |
+| Production | working manors: `MapEconomy.manors` (goods, dominant good, units); other manors: "subsistence" — no goods row | `production.csv` |
+| Buildings | the list in `GameState.manor_buildings {cell_id: [building_code]}`; catalogue in **`data/manor_buildings.csv`** (`building_code,label,cost_gold,tax_bonus,output_bonus,defence_bonus,church_bonus,notes`): manor house, mill, granary, chapel, palisade, market — six to start | new CSV |
+| Tax (rent) | `pop / 1000 × manor_rent_per_1000 × (1 + Σ tax_bonus)` gold per tick, paid to the **owner**. Crown-held manors add their rent to `metrics.treasury` each tick as a new line "manor rents" in `TickEngine`, beside taxes and tariffs; other houses' rents are shown on the card as what the house earns (no house treasuries exist — the number is information and a price input, not a ledger). | `balance.csv` `manor_rent_per_1000` |
+| Defence | `manor_defence_base + Σ defence_bonus` — displayed now, used by the seizure resolution later | `balance.csv` |
+| Value (price) | see §5 | `balance.csv` |
+| Actions | BUY / SELL / BUILD / SEIZE buttons, shown by legality (§5) | — |
+
+The card is `MapObjects.manor_card(data, state, cell_id)` returning the same
+`{kind, code, title, subtitle, kingdom_code, fields, features, production,
+center, ask, known, actions}` shape `province_card` returns, so
+`MapDetailPanel.show_card` renders it with two additions: a buildings row
+(icons from `resource_icons.csv`, glyphs until art exists) and an action row.
+`known == "basic"` for manors outside the player's realm, as for provinces.
+
+## 4. Province tie-in
+
+- The province card gains a **Manors** field: "N manors — crown k, House A m,
+  House B j" (`MapManors.holdings_of_province`), and a **rents** line.
+- Manor populations are shares of the province's numbers (§3), so a ledger
+  delta on a province moves every manor in it; nothing is stored twice.
+- `WorldLedger.belongs_to_player` is unchanged: the model still only touches
+  provinces the crown's kingdom holds. Manor ownership is not a ledger path;
+  it moves only through actions (§5), never through a model-proposed delta.
+
+## 5. Orders
+
+New rows in `data/policy_actions_court_additions.csv`, costs in
+`data/order_costs.csv`, ideology in `data/action_signatures.csv`. All params
+are validated in `ActionSystem.validate` (a manor must exist, be land, be in
+the player's realm, and the actor must not already hold it / must hold it);
+execution in `ActionSystem.execute`; every effect carries a reason. Clicked
+from the card they go `Game.try_execute` and never touch the model; typed,
+the model may name them as actions and the same validation applies.
+
+| Order | Params | Legal when | Effect | Costs |
+|---|---|---|---|---|
+| `MANOR_BUY` | `cell` | in the player's realm, not crown-held, treasury ≥ price | owner → crown; treasury −price; the selling house's characters: opinion +`manor_trade_goodwill`, the head's `wealth` +; `manor_log` "bought from House X for N" | price (formula) + `generic_order` |
+| `MANOR_SELL` | `cell` | crown-held | owner → the province's house; treasury +price × `manor_sell_ratio` | `generic_order` |
+| `MANOR_BUILD` | `cell, building` | crown-held, not built yet, treasury ≥ cost | building appended; treasury −cost | building's `cost_gold` |
+| `MANOR_SEIZE` | `cell` | in the player's realm, not crown-held, `manor_seize_enabled` = 1 | **skeleton**: owner → crown with reason "seized by force"; legitimacy −`manor_seize_legitimacy`; unrest +`manor_seize_unrest`; the house's characters opinion −`manor_seize_outrage`; `manor_log`. Resolution is automatic success this round; the defence number and the regiment data are read and displayed but not rolled. When the raid/military system lands (PRD RD-1..3) the outcome tier plugs in here. | `always=1` row |
+
+**Price** (`MapManors.price_of`), every term in `balance.csv`:
+
+```
+base   = pop / 1000 × manor_price_per_1000
+       + units × manor_price_per_unit            (working manors)
+       + Σ building cost_gold × manor_price_building_ratio
+land   = 1 + (land_value − 0.5) × manor_price_land_swing
+ask    = base × land × markup
+markup = 1 + manor_markup_max × (1 − opinion / 100)
+```
+
+`opinion` is the selling house's head's opinion of the player when a
+character of that house exists (the highest-ranked council member of the
+family, else any character of the family), 50 for a house with no character.
+So a friendly house sells near base and a hostile one asks up to
+`manor_markup_max` more — the same opinion system the council runs on, with
+no new ledger.
+
+Signatures: BUY centralism +1, expansionism +1; SELL centralism −1; BUILD
+centralism +1; SEIZE militarism +2, centralism +2, orthodoxy −1.
+
+## 6. Map and views
+
+- **Click**: `MapObjects.object_at` gains a `manor` kind. It is picked when
+  the MANORS layer is on or the ECONOMY layer is on (both show manors);
+  elsewhere a land click keeps meaning the province/kingdom, so the political
+  map does not change behaviour. In those layers a badge still opens the
+  burg (as now), and a bare manor opens the manor card in the LEFT column
+  (columns divide by kind). Hover names the manor in the tooltip; only a
+  clicked manor is ringed.
+- **MANORS layer** (the "Manor Master" view): a fourth theme beside
+  PROVINCES / HEIGHTS / ECONOMY, on its own bottom-bar toggle, mutually
+  exclusive like the others. It draws the manor mesh coloured **by holding
+  house**: the crown in the realm's colour, each other house in a hue
+  derived deterministically from its name (`MapPalette.house_color`), pale
+  outside the player's realm; cell edges ruled as in ECONOMY; no realm tint
+  on symbols (thematic rule).
+- **Manor Master panel** in the LEFT column while the layer is on (the way
+  ECONOMY puts `EconomyPanel` there): a scrollable, sortable table of manors
+  — name, province, house, population, rent, value, buildings, production —
+  defaulting to the player's realm (hundreds of rows), with a house filter
+  and an "all realms" toggle (thousands; a `Tree` handles it), and a totals
+  line (manors held by the crown, rents per tick). Clicking a row centres the
+  map on the manor and selects it, so the card opens beside the table.
+  Everything wraps or scrolls inside `ScreenLayout.LEFT_WIDTH`.
+
+## 7. Save
+
+`GameState`: `manor_owner`, `manor_buildings`, `manor_log` added to
+`to_dict` / `from_dict` with `.get` defaults (old saves load), keys as
+strings in JSON and re-int'd on load, numeric leaves through
+`_encode_values`. `SAVE_VERSION` unchanged (additive).
+
+## 8. Data files touched
+
+| File | Change |
+|---|---|
+| `assets/maps/beria/world_cell_index.png` | new, generated |
+| `data/maps/beria/political/manors.csv` | new, generated: one named manor per land cell (§1) |
+| `data/maps/beria/manor_name_overrides.csv` | new, hand-maintained, never written by the importer |
+| `scripts/engine/name_forge.gd` | new: the Markov name forge over the export's `nameBases` |
+| `data/maps.csv` | `cell_texture` column |
+| `data/manor_buildings.csv` | new catalogue |
+| `data/balance.csv` | `manor_rent_per_1000`, `manor_price_per_1000`, `manor_price_per_unit`, `manor_price_building_ratio`, `manor_price_land_swing`, `manor_markup_max`, `manor_sell_ratio`, `manor_trade_goodwill`, `manor_defence_base`, `manor_seize_enabled`, `manor_seize_legitimacy`, `manor_seize_unrest`, `manor_seize_outrage`, `manor_master_max_rows` |
+| `data/policy_actions_court_additions.csv`, `order_costs.csv`, `action_signatures.csv` | four orders |
+| `data/political_palette.csv` | `manor_crown`, `manor_foreign`, house hue ramp keys |
+| `data/resource_icons.csv` | rows for the six buildings (glyphs) |
+
+## 9. Tests (written before the code, hand-computed values)
+
+- `test_map_manors.gd`: default owner is the province's house; `set_owner`
+  refuses water / unknown house / no-op / empty reason and logs; population
+  apportionment sums to the province's rural + urban; price formula on a
+  fixture (pop 2 000, 40 units, one building, land 0.8, opinion 20 → the
+  exact number); rent; name derivation; holdings per province.
+- `test_action_system.gd`: BUY refuses foreign / own / unaffordable, moves
+  owner, debits treasury, logs, lifts the seller's opinion; SELL; BUILD
+  refuses duplicates; SEIZE gated by the flag and charges legitimacy and
+  unrest.
+- `test_map_index.gd` / `test_map_pack.gd`: the cell index exists at canvas
+  size and returns each land cell's id at its centre.
+- `test_game_state.gd`: round-trip of the three new fields, old-save load.
+- `test_world_map_view.gd`: a click in the MANORS layer selects a manor and
+  the card shows its fields; in the political view the same click selects
+  the province; the master panel lists the realm's manors and a row click
+  selects one.
+- `test_tick_engine.gd`: crown manor rents reach the treasury with a reason.
+
+## 10. Build order
+
+1. Cell index (importer + bake tool + `maps.csv` + tests), and the names:
+   `NameForge` (tests: deterministic for a seed, unique across a bank, only
+   letters the bank uses, length inside the bank's min/max), `manors.csv`
+   baked for beria, the overrides file, and the `manor_code` / label lookup.
+2. `MapManors` engine class: province, name, owner, population, rent, price;
+   `GameState` fields + save; tests.
+3. Orders: data rows, `ActionSystem` validate/execute, tests.
+4. `TickEngine` manor rents.
+5. Card: `MapObjects.manor_card`, `object_at` manor kind, `MapDetailPanel`
+   buildings + action buttons, province card's manors field.
+6. MANORS layer: mesh colouring by house, palette, bottom-bar toggle, hover.
+7. Manor Master panel.
+8. CLAUDE.md, snapshots, full suite.
+
+Each step lands as its own commit; the suite stays green between steps.
+
+## 11. Out of scope this round (named so they are not forgotten)
+
+Seizure resolution (needs the military system), house treasuries and AI
+houses trading among themselves, manor loyalty, construction time, cross-
+border purchases and the diplomacy they imply, building art (glyphs first).
