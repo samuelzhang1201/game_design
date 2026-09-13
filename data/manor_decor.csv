@@ -1,6 +1,6 @@
-key,kind,texture,height_px,clump,spread,min_scale,per_people,max_clump,focus_code,notes
-hamlet,hamlet,res://assets/settlements/hamlet.png,3.0,1,0.6,0.8,6000,3,,"the marks every manor without a town carries in the MANORS view (owner 2026-09-13: the view read empty — 2 800 of 3 500 manors drew nothing; owner: these belong to the manors view, not the default map). kind hamlet: one farmstead per per_people people, at most max_clump, scattered spread x the cell radius from its centre by the cell id; kind focus: clump marks of the chief good the manor works (focus_code, data/manor_focus.csv). height_px is in terrain_art.csv units (x map_decor_scale); min_scale is the zoom the row appears at — hamlets from the home zoom, fields closer in. Drawn through MarkAtlas / MarkMesh like the terrain: one mesh per tier, one draw call"
-grain,focus,res://assets/terrain/fields.png,2.6,2,0.55,1.6,,,grain,strip fields
-wood,focus,res://assets/terrain/broadleaf.png,1.6,3,0.7,1.6,,,wood,a timber manor's coppice
-stone,focus,res://assets/terrain/rocks.png,1.4,2,0.6,1.6,,,stone,a quarry's spoil
-iron,focus,res://assets/terrain/rocks.png,1.4,2,0.6,1.6,,,iron,workings
+key,kind,texture,aspect,height_px,min_scale,per_people,max_count,focus_code,flip,rotate_deg,notes
+hamlet,hamlet,res://assets/settlements/hamlet.png,1.32,2.4,0.8,6000,5,,1,0,"the marks every manor without a town carries in the MANORS view (owner 2026-09-13). kind hamlet: one farmstead per per_people of the manor's people (the ledger's, so they grow), at most max_count, clustered on the manor's SITE (MapObjects.manor_site: by a river or road, back from the coast, down from the heights, or the centre of a plain); kind focus: marks of the chief good worked (focus_code, data/manor_focus.csv), by per_people too, laid around the farmsteads and never over them. aspect is the art's width over its height (for the overlap test); height_px in terrain_art.csv units (x map_decor_scale) — a farmstead stays smaller than a village drawing; flip 1 lets a mark mirror, rotate_deg how far it may turn either way; min_scale the zoom the row appears at"
+grain,focus,res://assets/terrain/fields.png,1.7,2.2,1.2,5000,6,grain,1,25,strip fields around the farmsteads
+wood,focus,res://assets/terrain/broadleaf.png,0.88,1.8,1.2,5000,6,wood,1,0,a timber manor's coppice
+stone,focus,res://assets/terrain/rocks.png,1.41,1.6,1.2,7000,4,stone,1,0,a quarry's spoil
+iron,focus,res://assets/terrain/rocks.png,1.41,1.6,1.2,7000,4,iron,1,0,workings

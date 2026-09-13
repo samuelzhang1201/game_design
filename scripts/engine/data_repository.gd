@@ -332,8 +332,8 @@ func _load(dir: String) -> bool:
 			func(r): manor_focus[String(r["focus_code"])] = r):
 		return false
 	if not _load_if_present("res://data/manor_decor.csv",
-			["key", "kind", "texture", "height_px", "clump", "spread", "min_scale",
-			"per_people", "max_clump", "focus_code"],
+			["key", "kind", "texture", "aspect", "height_px", "min_scale",
+			"per_people", "max_count", "focus_code", "flip", "rotate_deg"],
 			func(r): manor_decor.append(r)):
 		return false
 	if not _load_if_present("res://data/sea_art.csv",

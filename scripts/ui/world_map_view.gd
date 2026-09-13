@@ -436,11 +436,11 @@ func _draw_pins() -> void:
 	var min_pop := MapObjects.min_burg_pop_for_scale(Game.data, s)
 	var on_screen := Rect2(Vector2.ZERO, size).grow(PIN_CAPITAL * 2.0)
 	var sprites := settlement_sprites()
-	var sprite_tint := Game.data.bal("map_sprite_tint")
+	var sprite_strength := Game.data.bal("map_sprite_tint")
 	var drawn: Dictionary = {}
 	for sp_entry in sprites:
 		draw_texture_rect(sp_entry["texture"], sp_entry["rect"], false,
-			realm_tint(String(sp_entry.get("province", "")), sprite_tint))
+			sprite_tint(String(sp_entry["code"]), String(sp_entry.get("province", "")), sprite_strength))
 		drawn[sp_entry["code"]] = true
 	for code: String in Game.data.burgs:
 		if drawn.has(code) or show_economy:
@@ -1148,23 +1148,51 @@ var _manor_decor_sig := 0
 func manor_decor_meshes() -> Dictionary:
 	var state := Game.state
 	var sig := hash([0 if state == null else state.world.hash(),
-		0 if state == null else state.manor_focus.hash(), Game.data.bal("map_decor_alpha")])
+		0 if state == null else state.manor_focus.hash(),
+		0 if state == null else state.manor_owner.hash(), _ownership_sig(),
+		Game.data.bal("map_manor_mark_alpha")])
 	if _manor_decor_sig == sig and not _manor_decor_meshes.is_empty():
 		return _manor_decor_meshes
-	var ink := MapPalette.named(Game.data, "manor_mark")
-	ink.a = Game.data.bal("map_decor_alpha")
+	# Each mark wears its own manor's colour (owner 2026-09-13), the way the
+	# default map's symbols wear the realm's: the art multiplies the wash.
+	var tints: Dictionary = {}
 	var by_tier: Dictionary = {}
 	for d: Dictionary in MapObjects.manor_decor(Game.data, state):
+		var cell := int(d["cell"])
+		if not tints.has(cell):
+			tints[cell] = manor_mark_tint(cell)
 		var tier := float(d["min_scale"])
 		if not by_tier.has(tier):
 			by_tier[tier] = []
 		(by_tier[tier] as Array).append({"pos": d["pos"], "texture": String(d["texture"]),
-			"height": float(d["height"]), "color": ink})
+			"height": float(d["height"]), "color": tints[cell],
+			"flip": bool(d.get("flip", false)), "angle": float(d.get("angle", 0.0))})
 	_manor_decor_meshes = {}
 	for tier: float in by_tier:
 		_manor_decor_meshes[tier] = MarkMesh.build(by_tier[tier], decor_atlas())
 	_manor_decor_sig = sig
 	return _manor_decor_meshes
+
+## The tint a mark or a town drawing wears in the MANORS view: its own
+## manor's colour at map_manor_mark_alpha; the mark's art multiplies it.
+func manor_mark_tint(cell_id: int) -> Color:
+	var c := house_manor_color(cell_id)
+	if c.a <= 0.0:
+		c = MapPalette.named(Game.data, "manor_mark")
+	c.a = Game.data.bal("map_manor_mark_alpha")
+	return c
+
+## The tint a settlement drawing wears: the realm's on the default map
+## (realm_tint), its manor's in the MANORS view (owner 2026-09-13: every
+## element there follows the same colour strategy), white under the other
+## themes.
+func sprite_tint(burg_code: String, province_code: String, strength: float) -> Color:
+	if show_manors:
+		var cell := int(MapEconomy.burg_cells(Game.data).get(burg_code, -1))
+		if cell >= 0:
+			return Color.WHITE.lerp(manor_mark_tint(cell), strength)
+		return Color.WHITE
+	return realm_tint(province_code, strength)
 
 ## The tiers that draw at the current zoom in the MANORS view, ascending;
 ## none in any other view. Test seam.

@@ -41,3 +41,21 @@ func test_no_marks_is_an_empty_mesh() -> void:
 	assert_eq(mesh.get_surface_count(), 0)
 	assert_eq(MarkMesh.quad_count(mesh), 0)
 	assert_eq(MarkMesh.quad_count(null), 0)
+
+## A mark may mirror (its uv runs right to left) and turn about its point.
+func test_marks_mirror_and_turn() -> void:
+	var atlas := _atlas()
+	var mesh := MarkMesh.build([
+		{"pos": Vector2(0, 0), "texture": "wide", "height": 10.0, "flip": true},
+		{"pos": Vector2(0, 100), "texture": "wide", "height": 10.0, "angle": PI / 2.0},
+	], atlas, 0.85)
+	var arrays := mesh.surface_get_arrays(0)
+	var verts: PackedVector2Array = arrays[Mesh.ARRAY_VERTEX]
+	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var r: Rect2 = atlas.uv["wide"]
+	assert_almost_eq(uvs[0].x, r.end.x, 0.0001, "mirrored: the left corner takes the right edge")
+	assert_almost_eq(uvs[1].x, r.position.x, 0.0001)
+	assert_eq(verts[0], Vector2(-10, -8.5), "unturned")
+	# Turned a quarter: the top-left corner (-10, -8.5) about (0, 100) lands at (8.5, 90).
+	assert_almost_eq(verts[4].x, 8.5, 0.001)
+	assert_almost_eq(verts[4].y, 90.0, 0.001)

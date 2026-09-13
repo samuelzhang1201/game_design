@@ -14,8 +14,9 @@ extends RefCounted
 ## wood lower on the sheet overlaps one behind it.
 
 ## marks: [{pos: Vector2 (native), texture: String (atlas path), height:
-## float (native px), color: Color}]. Marks whose texture the atlas lacks
-## are skipped. Returns an empty ArrayMesh (no surfaces) for no marks.
+## float (native px), color: Color, flip: bool (mirrored), angle: float
+## (radians, turned about its point)}]. Marks whose texture the atlas
+## lacks are skipped. Returns an empty ArrayMesh (no surfaces) for no marks.
 static func build(marks: Array, atlas: MarkAtlas, foot: float = 0.85) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
 	var kept: Array = []
@@ -41,18 +42,24 @@ static func build(marks: Array, atlas: MarkAtlas, foot: float = 0.85) -> ArrayMe
 		var h := float(m["height"])
 		var w := h * float(atlas.aspect[path])
 		var pos: Vector2 = m["pos"]
-		var tl := pos - Vector2(w * 0.5, h * foot)
+		var tl := Vector2(-w * 0.5, -h * foot)
+		var angle := float(m.get("angle", 0.0))
+		var corners := [tl, tl + Vector2(w, 0.0), tl + Vector2(w, h), tl + Vector2(0.0, h)]
 		var r: Rect2 = atlas.uv[path]
 		var c: Color = m.get("color", Color.WHITE)
 		var v := i * 4
-		verts[v] = tl
-		verts[v + 1] = tl + Vector2(w, 0.0)
-		verts[v + 2] = tl + Vector2(w, h)
-		verts[v + 3] = tl + Vector2(0.0, h)
-		uvs[v] = r.position
-		uvs[v + 1] = r.position + Vector2(r.size.x, 0.0)
-		uvs[v + 2] = r.end
-		uvs[v + 3] = r.position + Vector2(0.0, r.size.y)
+		for k in 4:
+			var local: Vector2 = corners[k]
+			verts[v + k] = pos + (local.rotated(angle) if angle != 0.0 else local)
+		var u0 := r.position.x
+		var u1 := r.end.x
+		if bool(m.get("flip", false)):
+			u0 = r.end.x
+			u1 = r.position.x
+		uvs[v] = Vector2(u0, r.position.y)
+		uvs[v + 1] = Vector2(u1, r.position.y)
+		uvs[v + 2] = Vector2(u1, r.end.y)
+		uvs[v + 3] = Vector2(u0, r.end.y)
 		for k in 4:
 			colors[v + k] = c
 		var t := i * 6

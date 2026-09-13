@@ -1099,7 +1099,26 @@ func test_the_manor_marks_come_in_by_zoom_tier_in_the_manors_view() -> void:
 	v._zoom = float(tiers[1]) + 0.5
 	assert_eq(v.manor_decor_tiers_shown(), tiers, "close in: every tier")
 	assert_true(v.manor_decor_meshes() == meshes, "kept between frames")
+	# Every element wears its manor's colour there (owner 2026-09-13): the
+	# marks and the town drawings alike, at map_manor_mark_alpha.
+	var cell := -1
+	for c: int in Game.data.manors:
+		if MapManors.burg_of(Game.data, c) == "" and v.house_manor_color(c).a > 0.0:
+			cell = c
+			break
+	assert_gt(cell, -1)
+	var tint := v.manor_mark_tint(cell)
+	assert_almost_eq(tint.a, Game.data.bal("map_manor_mark_alpha"), 0.001)
+	var wash := v.house_manor_color(cell)
+	assert_almost_eq(tint.r, wash.r, 0.001, "the manor's own colour")
+	var burg: String = Game.data.burgs.keys()[0]
+	var burg_cell := int(MapEconomy.burg_cells(Game.data).get(burg, -1))
+	assert_gt(burg_cell, -1)
+	assert_eq(v.sprite_tint(burg, String(Game.data.burgs[burg]["province_code"]), 1.0),
+		v.manor_mark_tint(burg_cell), "a town drawing wears its manor's colour too")
 	v.show_manors = false
+	assert_ne(v.sprite_tint(burg, String(Game.data.burgs[burg]["province_code"]), 1.0),
+		v.manor_mark_tint(burg_cell), "and the realm's on the default map")
 	v.show_economy = true
 	assert_eq(v.manor_decor_tiers_shown(), [], "none in the economy view either")
 
