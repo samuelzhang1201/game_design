@@ -155,3 +155,45 @@ func test_heights_tab_toggles_the_maps_height_ramp() -> void:
 	assert_true(r.current_screen.world_map().show_heights, "the map follows the tab")
 	assert_not_null(r.current_screen.world_map().heat_mesh(),
 		"the pack's heights give the sheet a ramp to draw")
+
+## The clock (owner 2026-09-13): on the court, at a speed, days pass in real
+## time and works finish; paused, nothing moves; holding council stops it.
+func test_the_clock_passes_days_on_the_court_and_stops_for_council() -> void:
+	var r := _root()
+	await wait_frames(2)
+	r.current_screen.start_requested.emit()
+	await wait_frames(2)
+	r._switch_to(GameRoot.State.COURT)
+	r.current_screen.enter_court(null)
+	await wait_frames(1)
+	Game.data.balance["time_day_seconds"] = 0.001
+	# Tick 1 may have rolled an event; a pending event holds the clock, so
+	# clear it to watch the days.
+	Game.state.pending_event = {}
+	var tick_before: int = Game.state.tick
+	var day_before: int = Game.state.day
+	assert_eq(Game.clock_speed, 0, "the court opens paused")
+	await wait_frames(5)
+	assert_eq(Game.state.day, day_before, "paused: nothing moves")
+	Game.set_clock_speed(4)
+	await wait_frames(6)
+	assert_true(Game.state.tick > tick_before or Game.state.day > day_before, "days pass")
+	Game.set_clock_speed(0)
+	var frozen_tick: int = Game.state.tick
+	var frozen_day: int = Game.state.day
+	await wait_frames(5)
+	assert_eq([Game.state.tick, Game.state.day], [frozen_tick, frozen_day], "paused again")
+	# A tick rolled by the clock stays on the court unless an event pends.
+	if Game.state.pending_event.is_empty():
+		assert_eq(r.state, GameRoot.State.COURT)
+	else:
+		assert_eq(r.state, GameRoot.State.CONVERSATION, "an event takes the player to the council")
+	# Holding council stops the clock.
+	if r.state == GameRoot.State.COURT:
+		Game.set_clock_speed(2)
+		Game.state.pending_event = {}
+		r.current_screen.end_turn_requested.emit()
+		await wait_frames(1)
+		assert_eq(Game.clock_speed, 0, "End Turn pauses the clock")
+	Game.data.balance["time_day_seconds"] = 1.0
+	Game.set_clock_speed(0)

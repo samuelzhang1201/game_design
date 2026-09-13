@@ -54,6 +54,10 @@ var _tab := -1
 ## --manor <code|label|cell id> opens that manor's card in the left column
 ## (its fields and order buttons) and centres the map on it.
 var _manor := ""
+## --build <building> begins that building on the shot's manor (with
+## --manor), so the slot row shows a work; --speed N lights the clock.
+var _build := ""
+var _speed := -1
 
 
 func _ready() -> void:
@@ -76,6 +80,10 @@ func _ready() -> void:
 			_tab = int(args[i + 1])
 		elif args[i] == "--manor":
 			_manor = args[i + 1]
+		elif args[i] == "--build":
+			_build = args[i + 1]
+		elif args[i] == "--speed":
+			_speed = int(args[i + 1])
 		elif args[i] == "--resolution":
 			var wh := args[i + 1].split("x")
 			if wh.size() == 2:
@@ -153,8 +161,14 @@ func _process(_delta: float) -> void:
 			if cell < 0:
 				push_error("no such manor: " + _manor)
 			else:
+				if _build != "":
+					Game.state.metrics["treasury"] += 1000.0
+					Game.try_execute(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": _build}))
+					Game.state.day = mini(Game.state.day + 5, Calendar.DAYS_PER_TICK)
 				_root.current_screen.world_map().highlight_manor(cell)
 				_root.current_screen.detail_panel().show_manor(cell)
+		if _speed >= 0:
+			Game.set_clock_speed(_speed)
 	if _frames == 40:
 		var img := (get_viewport() if _viewport == null else _viewport).get_texture().get_image()
 		var abs := ProjectSettings.globalize_path(_out)

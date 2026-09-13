@@ -938,7 +938,7 @@ static func manor_actions(repo: DataRepository, state: GameState, cell: int) -> 
 				continue
 			var row_f: Dictionary = repo.manor_focus[f]
 			specs.append({"action_code": "MANOR_FOCUS", "params": {"manor": code, "focus": f},
-				"label": "WORK %s — %d gold" % [String(row_f["label"]).to_upper(), int(float(row_f["switch_cost_gold"]))]})
+				"label": "WORK %s — %dg" % [String(row_f["label"]).to_upper(), int(float(row_f["switch_cost_gold"]))]})
 		var codes: Array = repo.manor_buildings.keys()
 		codes.sort()
 		for b: String in codes:
@@ -946,7 +946,7 @@ static func manor_actions(repo: DataRepository, state: GameState, cell: int) -> 
 				continue
 			var row: Dictionary = repo.manor_buildings[b]
 			specs.append({"action_code": "MANOR_BUILD", "params": {"manor": code, "building": b},
-				"label": "BUILD %s — %d gold, %d days" % [String(row["label"]).to_upper(),
+				"label": "BUILD %s — %dg, %dd" % [String(row["label"]).to_upper(),
 					int(float(row["cost_gold"])), int(float(row.get("build_days", 0)))]})
 	else:
 		specs.append({"action_code": "MANOR_BUY", "params": {"manor": code},

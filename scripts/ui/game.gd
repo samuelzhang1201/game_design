@@ -18,6 +18,8 @@ signal relations_requested
 ## 2026-08-31). Emitted via publish_news — the CalendarOverlay feeds it as
 ## the day-run rolls; the NewsTicker (GameRoot-owned) displays it.
 signal news_published(text: String)
+## The clock's speed changed (owner 2026-09-13): 0 paused, 1, 2 or 4.
+signal clock_changed(speed: int)
 
 var data: DataRepository
 var state: GameState
@@ -40,6 +42,20 @@ func start_campaign(seed_value: int = 42) -> void:
 	if not player_setup.is_empty():
 		state.apply_player_setup(player_setup)
 	engine = TickEngine.new(data)
+
+## The clock (owner 2026-09-13): 0 is paused, 1 a day per time_day_seconds,
+## 2 and 4 that many times faster. Only GameRoot's _process reads it, on
+## the court; the simulation never sees a second.
+var clock_speed: int = 0
+
+func set_clock_speed(speed: int) -> void:
+	var allowed := [0, 1, int(data.bal("time_speed_fast")), int(data.bal("time_speed_faster"))]
+	if not speed in allowed:
+		return
+	if clock_speed == speed:
+		return
+	clock_speed = speed
+	clock_changed.emit(speed)
 
 ## One day of the clock (owner 2026-09-13). Works step; when the day is the
 ## tick's last, the tick itself runs and its report goes out. Returns
@@ -112,6 +128,7 @@ func load_campaign(path: String = "user://save.json") -> bool:
 ## Restart flow (R12): return to MENU with a clean sim + LLM seam. Called by
 ## GameRoot's global R handler.
 func restart() -> void:
+	set_clock_speed(0)
 	_reset_llm()
 	state = null
 	engine = null

@@ -159,6 +159,34 @@ manor's yield to the pack's town production for the ECONOMY column.
 The card shows "Chief good" and one `WORK <focus> — N gold` button per
 allowed focus it does not work; the Manor Master's tooltip names it.
 
+### 5b. Time, works, slots and demolition (owner 2026-09-13)
+
+**The smallest unit of time is a day.** `GameState.day` (1..15) sits under
+the tick; the top bar's clock (`||`, `>`, `2x`, `4x` — `time_day_seconds`,
+`time_speed_fast/faster`) runs on the court only, in `GameRoot._process`,
+and calls `Game.advance_day`: works step, and the fifteenth day's end runs
+the tick (`TickEngine.advance` resets the day). A tick that rolls an event
+stops the clock and takes the player to the council; End Turn stops it
+too. Real time never enters the engine.
+
+**Building takes time and room.** `data/manor_buildings.csv` `build_days`
+(palisade 20, granary 25, mill 30, chapel 40, market 45, manor house 60);
+`MANOR_BUILD` begins a work — `GameState.manor_works {cell: [{building,
+start, days}]}` — that takes a slot until `MapManors.advance_works` moves
+it into `manor_buildings`. A manor has `manor_slots_base` slots (+
+`manor_slots_burg_bonus` with a town). `MANOR_DEMOLISH` pulls a building
+down or stops a work for `manor_demolish_refund` of its cost. The card
+draws one box per slot (icon, a dimmed icon with days left, or `+`) with a
+cross under each building or work.
+
+**What buildings do** (per finished building, per tick, crown manors):
+`gold_per_tick` (market 3), `grain_per_tick` (mill 2, granary 3),
+`church_bonus` → church opinion (chapel 0.3), `contentment_per_tick`
+(manor house 0.2), `unrest_per_tick` (palisade −0.1), plus the standing
+`tax_bonus` / `output_bonus` / `defence_bonus`; `produce_good/units`
+(market: cloth 1) join the ECONOMY column. `TickEngine` applies them as
+their own ledger lines after the rents.
+
 ## 6. Map and views
 
 - **Click**: `MapObjects.object_at` gains a `manor` kind. It is picked when

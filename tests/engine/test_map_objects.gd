@@ -546,7 +546,7 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	assert_true((card["slot_actions"] as Array).is_empty(), "nothing to pull down yet")
 	for a: Dictionary in card["actions"]:
 		if String(a["action_code"]) == "MANOR_BUILD":
-			assert_string_contains(String(a["label"]), " days", "a building says how long it takes")
+			assert_true(String(a["label"]).ends_with("d"), "a building says how long it takes: " + String(a["label"]))
 	# A work begun (2026-09-13): the card carries it with its days, and a
 	# cross to stop it.
 	assert_true(MapManors.start_work(real, state, own, "mill", "test"))

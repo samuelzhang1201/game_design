@@ -39,3 +39,9 @@ wealth,Wealth,coin,What the town produces in a season.,
 town_treasury,Treasury,coin,Coin in the town's own chest.,
 towns,Towns,huts,The realm's townsfolk: everyone living inside a burg's walls or streets.,res://assets/icons/towns.png
 country,Country,grain,"The realm's country folk: everyone on the land, in villages and on farms.",res://assets/icons/country.png
+bld_manor_house,Manor house,tower,"A stone hall for the steward: rents in full, a yard that can be held, a lord in residence.",
+bld_mill,Mill,grain,"A mill: the manor grinds its own grain and sends flour to the royal granaries.",
+bld_granary,Granary,huts,"A stone granary: the harvest keeps.",
+bld_chapel,Chapel,cross,"A chapel with its own priest: the pulpit speaks well of the crown.",
+bld_palisade,Palisade,wall,"A ditch and timber wall: a raid has to work for it, and the villages sleep easier.",
+bld_market,Market,market,"A weekly market by charter: tolls, stall rents, and cloth changing hands.",

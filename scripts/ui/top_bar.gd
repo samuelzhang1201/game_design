@@ -12,6 +12,8 @@ const ORDER := ["treasury", "grain", "unrest", "legitimacy", "army_quality", "ch
 var _value_labels: Dictionary = {}
 var _delta_labels: Dictionary = {}
 var _icons: Dictionary = {}
+## speed -> its clock button (0 pause, 1 play, 2x, 4x).
+var _clock_buttons: Dictionary = {}
 
 func _ready() -> void:
 	%Bar.add_theme_stylebox_override("panel",
@@ -21,6 +23,31 @@ func _ready() -> void:
 	UiPalette.style_header(%EventChip, 14)
 	%MenuButton.add_theme_font_size_override("font_size", 16)
 	%MenuButton.pressed.connect(func() -> void: Game.menu_requested.emit())
+	# The clock (owner 2026-09-13): pause, play, 2x, 4x beside the date.
+	# The bar is one of several (each screen has its own), so the buttons
+	# only ask Game and follow its answer.
+	var clock := HBoxContainer.new()
+	clock.name = "Clock"
+	clock.add_theme_constant_override("separation", 2)
+	var speeds := [["||", 0, "Pause"], [">", 1, "Play: a day every %.1f s" % Game.data.bal("time_day_seconds")],
+		["%dx" % int(Game.data.bal("time_speed_fast")), int(Game.data.bal("time_speed_fast")), "Faster"],
+		["%dx" % int(Game.data.bal("time_speed_faster")), int(Game.data.bal("time_speed_faster")), "Fastest"]]
+	for spec: Array in speeds:
+		var b := Button.new()
+		b.name = "Clock_%d" % int(spec[1])
+		b.text = String(spec[0])
+		b.tooltip_text = String(spec[2])
+		b.toggle_mode = true
+		b.focus_mode = Control.FOCUS_NONE
+		b.add_theme_font_size_override("font_size", 13)
+		b.custom_minimum_size = Vector2(30, 0)
+		var speed: int = spec[1]
+		b.pressed.connect(func() -> void: Game.set_clock_speed(speed))
+		clock.add_child(b)
+		_clock_buttons[speed] = b
+	%DateLabel.add_sibling(clock)
+	Game.clock_changed.connect(func(_s: int) -> void: _refresh_clock())
+	_refresh_clock()
 	%FlagLabel.add_theme_font_size_override("font_size", 20)
 	for m in ORDER:
 		var cell := HBoxContainer.new()
@@ -55,7 +82,7 @@ func bar_height() -> float:
 func refresh() -> void:
 	if Game.state == null:
 		return
-	%DateLabel.text = Calendar.date_string(Game.state.tick)
+	%DateLabel.text = Calendar.date_string(Game.state.tick, Game.state.day)
 	# The chosen family flag (character creation) flies beside the date.
 	var flag_id := String(Game.state.player_setup.get("flag", ""))
 	%FlagLabel.visible = flag_id != ""
@@ -76,6 +103,15 @@ func refresh() -> void:
 		dl.add_theme_color_override("font_color",
 			UiPalette.POSITIVE if delta > 0 else UiPalette.NEGATIVE)
 	%EventChip.visible = not Game.state.pending_event.is_empty()
+
+## The lit clock button is the speed the game runs at.
+func _refresh_clock() -> void:
+	for speed: int in _clock_buttons:
+		(_clock_buttons[speed] as Button).set_pressed_no_signal(speed == Game.clock_speed)
+
+## Test seam: the clock button for a speed (0 is pause).
+func clock_button(speed: int) -> Button:
+	return _clock_buttons.get(speed)
 
 ## Test seam: the current text of one metric's value label.
 func metric_text(metric: String) -> String:

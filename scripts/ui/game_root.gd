@@ -19,6 +19,8 @@ const BGM_VOLUME_DB := -12.0
 var state: State = State.MENU
 var current_screen: Node
 var _pending_report: TickReport
+## Seconds of the clock not yet spent as days (owner 2026-09-13).
+var _clock_acc := 0.0
 var _pause_menu: Control
 var _pause_status: Label
 var _relations_screen: RelationshipGraphScreen
@@ -72,6 +74,39 @@ func _ready() -> void:
 	_build_pause_menu()
 	_start_bgm()
 	_switch_to(State.MENU)
+
+## The clock (owner 2026-09-13): on the court, at Game.clock_speed, a day
+## passes every time_day_seconds / speed. Works finish, the fifteenth day
+## runs the tick, and an event that the tick rolls stops the clock and
+## takes the player to the council, the only stage that renders a choice.
+## Real time lives here and nowhere lower: the engine only ever sees
+## advance_day.
+func _process(delta: float) -> void:
+	if state != State.COURT or Game.state == null or Game.clock_speed <= 0:
+		return
+	if (_pause_menu != null and _pause_menu.visible) or not Game.state.pending_event.is_empty():
+		return
+	var per_day := maxf(Game.data.bal("time_day_seconds") / float(Game.clock_speed), 0.001)
+	_clock_acc += delta
+	var steps := 0
+	while _clock_acc >= per_day and steps < 8:
+		_clock_acc -= per_day
+		steps += 1
+		var out := Game.advance_day()
+		for w: Dictionary in out["finished"]:
+			Game.publish_news("A %s stands at %s." % [
+				String((Game.data.manor_buildings.get(String(w["building"]), {}) as Dictionary).get("label", w["building"])).to_lower(),
+				MapManors.label_of(Game.data, int(w["cell"]))])
+		if bool(out["ticked"]):
+			_pending_report = Game.current_report
+			if not Game.state.pending_event.is_empty():
+				Game.set_clock_speed(0)
+				_clock_acc = 0.0
+				_switch_to(State.CONVERSATION)
+				current_screen.start([{"kind": "event", "portrait_id": "round_table",
+					"speaker": "The Council",
+					"event": Game.state.pending_event.duplicate(true)}], _pending_report)
+				return
 
 func _unhandled_input(event: InputEvent) -> void:
 	if state == State.MENU:
@@ -432,6 +467,10 @@ func _on_menu_load_from_title() -> void:
 		current_screen.enter_court(null)
 
 func _on_end_turn_requested() -> void:
+	# Holding council stops the clock (2026-09-13): the player starts it
+	# again when the court reconvenes.
+	Game.set_clock_speed(0)
+	_clock_acc = 0.0
 	_pending_report = Game.next_tick()
 	_switch_to(State.DAY_RUN)
 	current_screen.run(_pending_report)

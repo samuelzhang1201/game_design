@@ -54,3 +54,31 @@ func test_metrics_show_as_icons_with_tooltips() -> void:
 		assert_not_null(icon, "%s has an icon" % m)
 		assert_ne(icon.tooltip_text, "", "%s explains itself on hover" % m)
 	assert_eq(t.icon_for("treasury").glyph(), "coin")
+
+## The clock (owner 2026-09-13): pause, play, 2x and 4x beside the date; the
+## lit one is Game's speed, and the date reads to the day.
+func test_the_clock_buttons_set_the_speed_and_the_date_reads_the_day() -> void:
+	Game.start_campaign(42)
+	Game.set_clock_speed(0)
+	var t := _bar()
+	await wait_frames(1)
+	assert_eq(t.find_child("DateLabel", true, false).text,
+		Calendar.date_string(Game.state.tick, Game.state.day))
+	assert_not_null(t.clock_button(0))
+	assert_not_null(t.clock_button(1))
+	assert_not_null(t.clock_button(2))
+	assert_not_null(t.clock_button(4))
+	assert_true(t.clock_button(0).button_pressed, "paused at the start")
+	t.clock_button(2).pressed.emit()
+	assert_eq(Game.clock_speed, 2)
+	await wait_frames(1)
+	assert_true(t.clock_button(2).button_pressed)
+	assert_false(t.clock_button(0).button_pressed)
+	# Another bar (another screen's) follows the same clock.
+	var other := _bar()
+	await wait_frames(1)
+	assert_true(other.clock_button(2).button_pressed)
+	Game.set_clock_speed(0)
+	await wait_frames(1)
+	assert_true(other.clock_button(0).button_pressed)
+	assert_true(t.clock_button(0).button_pressed)

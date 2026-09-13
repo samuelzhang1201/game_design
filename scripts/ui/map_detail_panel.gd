@@ -41,7 +41,14 @@ var _lines: VBoxContainer
 ## be given. A click runs the order through Game.try_execute — never the
 ## model — and redraws the card from the new state.
 var _actions: VBoxContainer
+## The manor's building slots (owner 2026-09-13): one box per slot — a
+## building's icon, a work's icon dimmed with its days left, or an empty
+## "+" — each standing building or work with a cross beneath it that
+## pulls it down through MANOR_DEMOLISH.
+var _slots: HBoxContainer
 var _shown_manor := -1
+## A slot box's side, design px.
+const SLOT_PX := 34.0
 var _hint: Label
 var _ask: Button
 var _close: Button
@@ -105,6 +112,10 @@ func _ready() -> void:
 	_fields.add_theme_constant_override("h_separation", 12)
 	_fields.add_theme_constant_override("v_separation", 2)
 	body.add_child(_fields)
+	_slots = HBoxContainer.new()
+	_slots.name = "Slots"
+	_slots.add_theme_constant_override("separation", 6)
+	body.add_child(_slots)
 	_features = HBoxContainer.new()
 	_features.name = "Features"
 	_features.add_theme_constant_override("separation", 8)
@@ -275,16 +286,20 @@ func show_card(card: Dictionary) -> void:
 			cell.add_child(text)
 			_money.add_child(cell)
 		_set_preview(card.get("center", Vector2.ZERO))
+		_fill_slots(card)
 		for a: Dictionary in card.get("actions", []):
 			var button := Button.new()
 			button.name = String(a["action_code"]) + "_" + String((a["params"] as Dictionary).get("building",
 				(a["params"] as Dictionary).get("focus", "")))
 			button.text = String(a["label"])
 			button.focus_mode = Control.FOCUS_NONE
-			button.add_theme_font_size_override("font_size", 13)
+			button.add_theme_font_size_override("font_size", 12)
 			button.disabled = String(a.get("error", "")) != ""
 			button.tooltip_text = String(a.get("error", ""))
 			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			# The column's width is fixed (CLAUDE.md invariant 10): a long
+			# order wraps rather than pushing the column over the map.
+			button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			var request := ActionRequest.make(String(a["action_code"]), (a["params"] as Dictionary).duplicate())
 			button.pressed.connect(func() -> void: _give_order(request))
 			_actions.add_child(button)
@@ -312,8 +327,82 @@ func _give_order(request: ActionRequest) -> void:
 	if _shown_manor >= 0:
 		show_manor(_shown_manor)
 
+## One box per slot of a manor card; nothing for cards with no slots.
+func _fill_slots(card: Dictionary) -> void:
+	var total := int(card.get("slots", 0))
+	if total <= 0:
+		return
+	var demolish: Dictionary = {}
+	for a: Dictionary in card.get("slot_actions", []):
+		demolish[String(a["building"])] = a
+	var filled: Array = []
+	for b: String in card.get("buildings", []):
+		filled.append({"building": b, "work": false})
+	for w: Dictionary in card.get("works", []):
+		filled.append({"building": String(w["building"]), "work": true, "days_left": int(w["days_left"])})
+	for i in total:
+		var column := VBoxContainer.new()
+		column.add_theme_constant_override("separation", 2)
+		var box := PanelContainer.new()
+		box.custom_minimum_size = Vector2(SLOT_PX, SLOT_PX)
+		var style := UiPalette.chip_style()
+		style.content_margin_left = 4.0
+		style.content_margin_right = 4.0
+		style.content_margin_top = 4.0
+		style.content_margin_bottom = 4.0
+		box.add_theme_stylebox_override("panel", style)
+		if i < filled.size():
+			var entry: Dictionary = filled[i]
+			var code := String(entry["building"])
+			box.name = "Slot_" + code
+			var icon := ResourceIcon.create("bld_" + code)
+			var centre := CenterContainer.new()
+			centre.add_child(icon)
+			box.add_child(centre)
+			var row: Dictionary = Game.data.manor_buildings.get(code, {})
+			var name := String(row.get("label", code))
+			if bool(entry["work"]):
+				icon.modulate.a = 0.45
+				var days := Label.new()
+				days.name = "Days"
+				days.text = "%dd" % int(entry["days_left"])
+				days.add_theme_font_size_override("font_size", 11)
+				days.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+				days.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				column.add_child(box)
+				column.add_child(days)
+				box.tooltip_text = "%s — %d days to go" % [name, int(entry["days_left"])]
+			else:
+				column.add_child(box)
+				box.tooltip_text = name
+			if demolish.has(code):
+				var a: Dictionary = demolish[code]
+				var cross := Button.new()
+				cross.name = "DEMOLISH_" + code
+				cross.text = "x"
+				cross.focus_mode = Control.FOCUS_NONE
+				cross.add_theme_font_size_override("font_size", 11)
+				cross.custom_minimum_size = Vector2(SLOT_PX, 0)
+				cross.tooltip_text = String(a["label"]) if String(a.get("error", "")) == "" else String(a["error"])
+				cross.disabled = String(a.get("error", "")) != ""
+				var request := ActionRequest.make("MANOR_DEMOLISH", (a["params"] as Dictionary).duplicate())
+				cross.pressed.connect(func() -> void: _give_order(request))
+				column.add_child(cross)
+		else:
+			box.name = "Slot_empty_%d" % i
+			var plus := Label.new()
+			plus.text = "+"
+			plus.add_theme_font_size_override("font_size", 16)
+			plus.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+			plus.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			plus.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			box.add_child(plus)
+			box.tooltip_text = "An empty slot: build below"
+			column.add_child(box)
+		_slots.add_child(column)
+
 func _clear() -> void:
-	for box in [_fields, _features, _production, _money, _lines, _actions]:
+	for box in [_fields, _slots, _features, _production, _money, _lines, _actions]:
 		for child in box.get_children():
 			box.remove_child(child)
 			child.queue_free()
@@ -384,6 +473,9 @@ func close_button() -> Button:
 
 func actions_box() -> VBoxContainer:
 	return _actions
+
+func slots_row() -> HBoxContainer:
+	return _slots
 
 func shown_manor() -> int:
 	return _shown_manor
