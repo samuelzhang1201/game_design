@@ -183,13 +183,6 @@ func relations_screen() -> RelationshipGraphScreen:
 ## table.
 func _on_bottom_tab(tab: String) -> void:
 	match tab:
-		"MAP":
-			_info_screen.hide()
-			_relations_screen.visible = false
-		"PROVINCES":
-			_info_screen.hide()
-			_relations_screen.visible = false
-			set_province_view(not _province_view)
 		"HEIGHTS":
 			_info_screen.hide()
 			_relations_screen.visible = false
@@ -213,8 +206,9 @@ func _on_bottom_tab(tab: String) -> void:
 			_relations_screen.visible = false
 			_info_screen.show_tab(tab)
 
-## Turn the province view on or off everywhere: the tab lights up and the
-## current screen's map draws seams, names, and takes province clicks.
+## The province view is ALWAYS on (owner 2026-09-13: the PROVINCES tab and
+## the P key went — the seams and province clicks are part of the map).
+## Kept as the one place that would turn it off, for tools and tests.
 func set_province_view(on: bool) -> void:
 	_province_view = on
 	if _bottom_bar != null:

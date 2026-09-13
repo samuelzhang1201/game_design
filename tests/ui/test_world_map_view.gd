@@ -476,11 +476,11 @@ func test_every_gameplay_screen_uses_the_map_scene() -> void:
 		assert_eq(map.scene_file_path, WorldMapView.SCENE_PATH,
 			"%s builds it from the scene, not .new()" % path.get_file())
 
-## Province view (user request 2026-09-09): a toggle draws every kingdom's
-## internal province seams as light dashed lines, above a minimum zoom. ON
-## from the first frame since 2026-09-12 — the map opens on the realm, and
-## the seams are part of what it opens showing.
-func test_province_view_toggles_by_key_and_announces_it() -> void:
+## Province view (user request 2026-09-09): every kingdom's internal seams
+## as light dashed lines, above a minimum zoom. ON from the first frame
+## since 2026-09-12, and since 2026-09-13 (owner) not a toggle at all: no
+## key turns it off.
+func test_the_province_view_is_always_on() -> void:
 	var v := _view()
 	await wait_frames(2)
 	assert_true(v.show_provinces, "on by default")
@@ -490,10 +490,8 @@ func test_province_view_toggles_by_key_and_announces_it() -> void:
 	key.pressed = true
 	key.keycode = KEY_P
 	v._gui_input(key)
-	assert_false(v.show_provinces, "P turns it off")
-	v._gui_input(key)
-	assert_true(v.show_provinces, "P turns it on again")
-	assert_eq(seen, [false, true], "each flip is announced once")
+	assert_true(v.show_provinces, "P does nothing")
+	assert_true(seen.is_empty(), "nothing to announce")
 
 ## Kingdom outlines are drawn as the B-spline Azgaar drew the render with:
 ## one smooth ring per outline loop, steps points per vertex, following

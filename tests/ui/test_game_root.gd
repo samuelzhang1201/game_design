@@ -118,10 +118,10 @@ func test_load_with_pending_event_resumes_on_conversation() -> void:
 	assert_gt(r.current_screen.reply_buttons().size(), 0,
 		"the loaded event's choices are live")
 
-## The PROVINCES tab (user request 2026-09-09) is a toggle in the bottom bar
-## that drives the current screen's map and follows the player to the next
-## screen; the map's own P key keeps the tab in step.
-func test_provinces_tab_toggles_the_maps_province_view_across_screens() -> void:
+## The province view (user request 2026-09-09) is always on (owner
+## 2026-09-13): there is no PROVINCES tab, no MAP tab, and every screen's
+## map opens with its seams.
+func test_the_province_view_is_on_everywhere_and_has_no_tab() -> void:
 	Game.start_campaign(42)
 	Game.next_tick()
 	var r := _root()
@@ -129,24 +129,13 @@ func test_provinces_tab_toggles_the_maps_province_view_across_screens() -> void:
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
 	await wait_frames(2)
-	# ON from the first frame since 2026-09-12, so the tab's first press is
-	# the one that turns it OFF.
 	assert_true(r.province_view(), "on by default")
-	r.bottom_bar().button("PROVINCES").pressed.emit()
-	await wait_frames(1)
-	assert_false(r.province_view())
-	assert_false(r.current_screen.world_map().show_provinces, "the court's map follows the tab")
-	assert_false(r.bottom_bar().button("PROVINCES").button_pressed, "the tab goes dark")
-	r.bottom_bar().button("PROVINCES").pressed.emit()
-	await wait_frames(1)
-	assert_true(r.province_view())
-	assert_true(r.bottom_bar().button("PROVINCES").button_pressed, "the tab stays lit")
+	assert_true(r.current_screen.world_map().show_provinces, "the court's map draws its seams")
+	assert_null(r.bottom_bar().button("PROVINCES"), "no tab to turn it off")
+	assert_null(r.bottom_bar().button("MAP"), "and no MAP tab")
 	r._switch_to(GameRoot.State.CONVERSATION)
 	await wait_frames(2)
-	assert_true(r.current_screen.world_map().show_provinces, "the next screen's map inherits it")
-	r.current_screen.world_map().toggle_provinces()
-	assert_false(r.province_view(), "the map's P key reports back to the root")
-	assert_false(r.bottom_bar().button("PROVINCES").button_pressed)
+	assert_true(r.current_screen.world_map().show_provinces, "the next screen's map too")
 
 ## The HEIGHTS tab (owner request 2026-09-12): the relief is a layer you ask
 ## for, so it starts off and the tab drives it the same way PROVINCES does.

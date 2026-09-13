@@ -67,9 +67,9 @@ const SCENE_PATH := "res://scenes/world_map.tscn"
 ## (MapOwnership.seams_of), so they follow conquest where the render's
 ## printed dots cannot (no names on the map, user ruling 2026-09-09); a click
 ## names the province under it (province_selected) for the screen's left column.
-## Toggled by the bottom bar's PROVINCES tab or the P key; ON from the first
-## frame (owner request 2026-09-12).
-const PROVINCE_KEY := KEY_P
+## ON from the first frame (owner request 2026-09-12) and never toggled by
+## the player since 2026-09-13 (owner): the seams and the province clicks
+## are part of the map. The flag stays for tools and tests.
 ## The relief view (owner request 2026-09-12).
 const HEIGHT_KEY := KEY_H
 ## The economy view (owner request 2026-09-13).
@@ -1575,10 +1575,6 @@ func _gui_input(ev: InputEvent) -> void:
 		_offset -= pg.delta * Game.data.bal("map_pan_gesture_speed")
 		_clamp_offset()
 		queue_redraw()
-		return
-	if ev is InputEventKey and (ev as InputEventKey).pressed \
-			and (ev as InputEventKey).keycode == PROVINCE_KEY:
-		toggle_provinces()
 		return
 	if ev is InputEventKey and (ev as InputEventKey).pressed \
 			and (ev as InputEventKey).keycode == HEIGHT_KEY:

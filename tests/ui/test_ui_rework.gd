@@ -134,9 +134,9 @@ func test_bottom_bar_tabs_and_info_tables() -> void:
 	await wait_frames(1)
 	assert_false(r.info_screen().visible, "info yields to the graph")
 	assert_true(r.relations_screen().visible)
-	r.bottom_bar().button("MAP").pressed.emit()
+	r.bottom_bar().button("RELATIONSHIP").pressed.emit()
 	await wait_frames(1)
-	assert_false(r.relations_screen().visible, "MAP closes overlays")
+	assert_false(r.relations_screen().visible, "the tab toggles the graph off again")
 
 ## FAMILIES (user request 2026-09-09): the noble houses of the player's own
 ## realm, with the seats they hold and how they regard the king. Four columns,
