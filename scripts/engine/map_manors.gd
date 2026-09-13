@@ -232,18 +232,38 @@ static func population_of(repo: DataRepository, state: GameState, cell_id: int) 
 	var province := province_of(repo, cell_id)
 	if province == "":
 		return {"rural": 0.0, "urban": 0.0, "total": 0.0}
+	return _share(repo, cell_id, province,
+		_ledger(repo, state, "economy.provinces.%s.rural_population" % province),
+		_ledger(repo, state, "economy.provinces.%s.urban_population" % province))
+
+## The same for many manors at once — the Manor Master's table — reading
+## each province's ledger figures once instead of once per manor.
+static func population_table(repo: DataRepository, state: GameState, cells: Array) -> Dictionary:
+	var figures: Dictionary = {}
+	var out: Dictionary = {}
+	for cell: int in cells:
+		var province := province_of(repo, cell)
+		if province == "":
+			out[cell] = {"rural": 0.0, "urban": 0.0, "total": 0.0}
+			continue
+		if not figures.has(province):
+			figures[province] = [_ledger(repo, state, "economy.provinces.%s.rural_population" % province),
+				_ledger(repo, state, "economy.provinces.%s.urban_population" % province)]
+		out[cell] = _share(repo, cell, province, figures[province][0], figures[province][1])
+	return out
+
+static func _share(repo: DataRepository, cell_id: int, province: String, province_rural: float,
+		province_urban: float) -> Dictionary:
 	var total_weight := _province_weight(repo, province)
 	var rural := 0.0
 	if total_weight > 0.0:
-		rural = _ledger(repo, state, "economy.provinces.%s.rural_population" % province) \
-			* weight_of(repo, cell_id) / total_weight
+		rural = province_rural * weight_of(repo, cell_id) / total_weight
 	var urban := 0.0
 	var burg := burg_of(repo, cell_id)
 	if burg != "":
 		var burg_total := _province_burg_pop(repo, province)
 		if burg_total > 0.0:
-			urban = _ledger(repo, state, "economy.provinces.%s.urban_population" % province) \
-				* float(repo.burgs[burg].get("population", 0)) / burg_total
+			urban = province_urban * float(repo.burgs[burg].get("population", 0)) / burg_total
 	return {"rural": rural, "urban": urban, "total": rural + urban}
 
 # ---- buildings, rent, defence -------------------------------------------------
@@ -283,9 +303,10 @@ static func building_cost(repo: DataRepository, state: GameState, cell_id: int) 
 		sum += float((repo.manor_buildings.get(code, {}) as Dictionary).get("cost_gold", 0))
 	return sum
 
-## Gold per tick the manor yields its holder.
-static func rent_of(repo: DataRepository, state: GameState, cell_id: int) -> float:
-	var pop: float = population_of(repo, state, cell_id)["total"]
+## Gold per tick the manor yields its holder. `people` may be handed in by
+## a caller that already has it (population_table); below zero it is read.
+static func rent_of(repo: DataRepository, state: GameState, cell_id: int, people: float = -1.0) -> float:
+	var pop: float = people if people >= 0.0 else population_of(repo, state, cell_id)["total"]
 	return pop / 1000.0 * repo.bal("manor_rent_per_1000") \
 		* (1.0 + building_bonus(repo, state, cell_id, "tax_bonus"))
 
@@ -323,8 +344,8 @@ static func house_opinion(repo: DataRepository, state: GameState, family: String
 
 ## What a manor is worth before anyone's feelings: people, output, buildings,
 ## and the land — MANOR_SYSTEM.md §5.
-static func base_value_of(repo: DataRepository, state: GameState, cell_id: int) -> float:
-	var pop: float = population_of(repo, state, cell_id)["total"]
+static func base_value_of(repo: DataRepository, state: GameState, cell_id: int, people: float = -1.0) -> float:
+	var pop: float = people if people >= 0.0 else population_of(repo, state, cell_id)["total"]
 	var base := pop / 1000.0 * repo.bal("manor_price_per_1000") \
 		+ output_of(repo, cell_id) * repo.bal("manor_price_per_unit") \
 		+ building_cost(repo, state, cell_id) * repo.bal("manor_price_building_ratio")

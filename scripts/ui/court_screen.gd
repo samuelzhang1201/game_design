@@ -45,6 +45,7 @@ var _dashboard: RealmDashboard
 ## Whether the MILITARY tab is lit (GameRoot owns the state; this follows).
 var _military_view := false
 var _economy: EconomyPanel
+var _manor_master: ManorMasterPanel
 var _economy_view := false
 var _manor_view := false
 
@@ -80,6 +81,15 @@ func _ready() -> void:
 	# and the card of whatever was clicked on the map (owner ruling 2026-09-10).
 	_military = MilitaryPanel.attach(%LogPanel.get_node("LVBox"))
 	_economy = EconomyPanel.attach(%LogPanel.get_node("LVBox"))
+	# The Manor Master (MANOR_SYSTEM.md §6): the manors table while the
+	# MANORS layer is lit. A row centres and rings the manor; activating it
+	# opens the card, which then takes the column until it closes.
+	_manor_master = ManorMasterPanel.attach(%LogPanel.get_node("LVBox"))
+	_manor_master.manor_chosen.connect(func(cell: int) -> void:
+		_world_map.centre_on(MapTerrain.cell_center(Game.data, Game.data.cells[cell]))
+		_world_map.highlight_manor(cell))
+	_manor_master.manor_activated.connect(func(cell: int) -> void:
+		_world_map.select_object({"kind": "manor", "cell": cell}))
 	_detail = MapDetailPanel.new()
 	_detail.name = "DetailPanel"
 	%LogPanel.get_node("LVBox").add_child(_detail)
@@ -132,7 +142,8 @@ func _refresh_left() -> void:
 	# The economy column yields to the military one: two layers can be lit at
 	# once, but the column holds one set of facts.
 	_economy.visible = _economy_view and not _military_view and not card and not country
-	_dashboard.visible = not (card or country or _military_view or _economy_view)
+	_manor_master.visible = _manor_view and not _military_view and not card and not country
+	_dashboard.visible = not (card or country or _military_view or _economy_view or _manor_view)
 
 ## The MILITARY tab (GameRoot): the host takes the left column while the
 ## regiments are drawn on the map.
@@ -150,11 +161,16 @@ func set_economy_view(on: bool) -> void:
 		_economy.refresh()
 	_refresh_left()
 
-## The MANORS tab (GameRoot): the flag the left column reads (its Manor
-## Master panel lands with MANOR_SYSTEM.md step 7).
+## The MANORS tab (GameRoot): the Manor Master takes the left column while
+## the manors are coloured by house on the map (MANOR_SYSTEM.md §6).
 func set_manor_view(on: bool) -> void:
 	_manor_view = on
+	if on:
+		_manor_master.refresh()
 	_refresh_left()
+
+func manor_master() -> ManorMasterPanel:
+	return _manor_master
 
 func manor_view() -> bool:
 	return _manor_view

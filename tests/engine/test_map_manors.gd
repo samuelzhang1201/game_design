@@ -175,6 +175,13 @@ func test_people_are_the_provinces_shared_by_land_and_town() -> void:
 	assert_almost_eq(float(b["urban"]), 1000.0, 0.001, "the burg's cell holds the town")
 	assert_almost_eq(float(a["total"]) + float(b["total"]), 4000.0, 0.001, "the province entire")
 	assert_almost_eq(float(MapManors.population_of(r, s, 4)["total"]), 800.0, 0.001)
+	# The table reads each province once and agrees with the single reading.
+	var table := MapManors.population_table(r, s, [1, 2, 4])
+	assert_almost_eq(float(table[1]["rural"]), 1500.0, 0.001)
+	assert_almost_eq(float(table[2]["urban"]), 1000.0, 0.001)
+	assert_almost_eq(float(table[4]["total"]), 800.0, 0.001)
+	assert_almost_eq(MapManors.rent_of(r, s, 2, 2500.0), MapManors.rent_of(r, s, 2), 0.0001,
+		"a count handed in gives the same rent")
 	# A ledger move on the province reaches its manors with nothing stored.
 	WorldLedger.apply(r, s, "economy.provinces.p.rural_population", -1000.0, "plague", "test")
 	assert_almost_eq(float(MapManors.population_of(r, s, 1)["rural"]), 1000.0, 0.001)

@@ -2252,6 +2252,19 @@ func select_object(obj: Dictionary) -> void:
 	object_selected.emit(entry)
 	queue_redraw()
 
+## Bring a native point to the middle of the frame at the current zoom
+## (the Manor Master's row click).
+func centre_on(native: Vector2) -> void:
+	_offset = size / 2.0 - native * _zoom
+	_clamp_offset()
+	queue_redraw()
+
+## Ring a manor as if clicked, without opening a card — the table already
+## says what it is; activating the row opens the card (select_object).
+func highlight_manor(cell: int) -> void:
+	_selected_obj = {"kind": "manor", "cell": cell}
+	queue_redraw()
+
 ## Clear whatever is selected (the fact card's CLOSE).
 func clear_selection() -> void:
 	# The card lives in the screen's left column now, so clearing the
