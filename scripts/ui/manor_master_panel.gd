@@ -68,6 +68,11 @@ func _init() -> void:
 	_house.focus_mode = Control.FOCUS_NONE
 	_house.add_theme_font_size_override("font_size", 13)
 	_house.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# The column is a fixed width: the longest house name must not set the
+	# button's minimum, or it pushes the column over the map.
+	_house.fit_to_longest_item = false
+	_house.clip_text = true
+	_house.custom_minimum_size = Vector2(90, 0)
 	_house.item_selected.connect(func(index: int) -> void:
 		set_house(String(_house.get_item_metadata(index))))
 	filters.add_child(_house)
@@ -87,6 +92,7 @@ func _init() -> void:
 		_tree.set_column_expand(i, i != 2)
 		_tree.set_column_clip_content(i, true)
 	_tree.set_column_custom_minimum_width(2, 52)
+	_style_tree()
 	_tree.column_title_clicked.connect(func(column: int, _mouse: int) -> void: sort_by(column))
 	_tree.item_selected.connect(func() -> void:
 		var item := _tree.get_selected()
@@ -98,6 +104,33 @@ func _init() -> void:
 			manor_activated.emit(int(item.get_metadata(0))))
 	add_child(_tree)
 	_scope_text()
+
+## The Tree wears the UI palette, not Godot's dark default: a light track
+## for its body, muted headers, ink text, the accent for the chosen row.
+func _style_tree() -> void:
+	_tree.add_theme_stylebox_override("panel", UiPalette.bar_bg())
+	_tree.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	var head := StyleBoxFlat.new()
+	head.bg_color = UiPalette.CHIP_BG
+	head.border_color = UiPalette.EDGE
+	head.set_border_width_all(1)
+	head.set_content_margin_all(3)
+	for state in ["title_button_normal", "title_button_pressed", "title_button_hover"]:
+		_tree.add_theme_stylebox_override(state, head)
+	var chosen := StyleBoxFlat.new()
+	chosen.bg_color = Color(UiPalette.GOLD, 0.18)
+	chosen.set_corner_radius_all(3)
+	_tree.add_theme_stylebox_override("selected", chosen)
+	_tree.add_theme_stylebox_override("selected_focus", chosen)
+	var hover := StyleBoxFlat.new()
+	hover.bg_color = Color(UiPalette.GOLD, 0.08)
+	_tree.add_theme_stylebox_override("hovered", hover)
+	_tree.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+	_tree.add_theme_color_override("font_selected_color", UiPalette.TEXT_SOFT)
+	_tree.add_theme_color_override("title_button_color", UiPalette.TEXT_MUTED)
+	_tree.add_theme_color_override("guide_color", UiPalette.EDGE)
+	_tree.add_theme_constant_override("v_separation", 2)
+	_tree.add_theme_constant_override("draw_guides", 1)
 
 func _ready() -> void:
 	Game.state_changed.connect(func() -> void:
@@ -219,8 +252,10 @@ func _fill_tree() -> void:
 	var root := _tree.create_item()
 	for r: Dictionary in _rows:
 		var item := _tree.create_item(root)
-		item.set_text(0, String(r["label"]))
-		item.set_text(1, String(r["house"]))
+		# The column is narrow and Cinzel wide: the table drops a trailing
+		# "Manor" and says "Crown"; the tooltip carries every word.
+		item.set_text(0, String(r["label"]).trim_suffix(" Manor"))
+		item.set_text(1, "Crown" if String(r["house"]) == "The crown" else String(r["house"]))
 		item.set_text(2, str(roundi(float(r["value"]))))
 		item.set_text_alignment(2, HORIZONTAL_ALIGNMENT_RIGHT)
 		item.set_metadata(0, int(r["cell"]))
