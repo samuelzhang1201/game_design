@@ -22,6 +22,14 @@ static func named(data: DataRepository, key: String) -> Color:
 ## the same process cannot be served a stale colour.
 static var _color_cache: Dictionary = {}
 
+## A house's colour on the MANORS layer (MANOR_SYSTEM.md §6): a hue drawn
+## from the family name, so every house has a fixed colour with nothing
+## authored, at the saturation and value balance.csv sets. The crown does
+## not come through here — it wears its realm's colour.
+static func house_color(data: DataRepository, family: String) -> Color:
+	var hue := float(absi(family.hash()) % 360) / 360.0
+	return Color.from_hsv(hue, data.bal("map_manor_house_sat"), data.bal("map_manor_house_val"))
+
 static func forget_colors() -> void:
 	_color_cache.clear()
 

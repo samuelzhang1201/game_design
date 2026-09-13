@@ -31,6 +31,7 @@ var _bgm: AudioStreamPlayer
 var _province_view := true  # the map opens with the seams on (owner 2026-09-12)
 var _height_view := false
 var _economy_view := false
+var _manor_view := false
 ## The MILITARY tab's state (user request 2026-09-10), owned here for the
 ## same reason: the layer follows the player from screen to screen.
 var _army_view := false
@@ -197,6 +198,10 @@ func _on_bottom_tab(tab: String) -> void:
 			_info_screen.hide()
 			_relations_screen.visible = false
 			set_economy_view(not _economy_view)
+		"MANORS":
+			_info_screen.hide()
+			_relations_screen.visible = false
+			set_manor_view(not _manor_view)
 		"MILITARY":
 			_info_screen.hide()
 			_relations_screen.visible = false
@@ -227,6 +232,8 @@ func province_view() -> bool:
 ## baked into the land.
 func set_height_view(on: bool) -> void:
 	_height_view = on
+	if on and _manor_view:
+		set_manor_view(false)
 	if _bottom_bar != null:
 		_bottom_bar.set_toggled("HEIGHTS", on)
 	var map := _current_map()
@@ -242,6 +249,8 @@ func height_view() -> bool:
 ## — the same pattern the military layer follows.
 func set_economy_view(on: bool) -> void:
 	_economy_view = on
+	if on and _manor_view:
+		set_manor_view(false)
 	if _bottom_bar != null:
 		_bottom_bar.set_toggled("ECONOMY", on)
 	var map := _current_map()
@@ -252,6 +261,28 @@ func set_economy_view(on: bool) -> void:
 
 func economy_view() -> bool:
 	return _economy_view
+
+## Turn the MANORS view on or off everywhere (MANOR_SYSTEM.md §6): the tab
+## lights up, the map colours every manor by the house that holds it, and
+## the screen's LEFT column lists the manors (the Manor Master). A theme
+## like HEIGHTS and ECONOMY, so lighting it puts those out, and they it.
+func set_manor_view(on: bool) -> void:
+	_manor_view = on
+	if on:
+		if _economy_view:
+			set_economy_view(false)
+		if _height_view:
+			set_height_view(false)
+	if _bottom_bar != null:
+		_bottom_bar.set_toggled("MANORS", on)
+	var map := _current_map()
+	if map != null and map.show_manors != on:
+		map.show_manors = on
+	if current_screen != null and current_screen.has_method("set_manor_view"):
+		current_screen.set_manor_view(on)
+
+func manor_view() -> bool:
+	return _manor_view
 
 ## Turn the military layer on or off everywhere (user request 2026-09-10):
 ## the tab lights up, the current screen's map draws the realm's regiments

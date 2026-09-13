@@ -38,3 +38,14 @@ func test_line_colours_are_named() -> void:
 		assert_ne(MapPalette.named(data, key), MapPalette.FALLBACK, key)
 	assert_eq(MapPalette.named(data, "no_such_key"), MapPalette.FALLBACK)
 	assert_eq(MapPalette.color_of(data, "no_such_kingdom"), MapPalette.FALLBACK)
+
+## A house's colour (MANOR_SYSTEM.md §6) comes from its name alone: the same
+## name, the same colour; another name, almost surely another hue.
+func test_a_house_colour_is_fixed_by_its_name() -> void:
+	var r := DataRepository.new()
+	r.balance = {"map_manor_house_sat": 0.5, "map_manor_house_val": 0.9}
+	var a := MapPalette.house_color(r, "Weighhouse")
+	assert_eq(a, MapPalette.house_color(r, "Weighhouse"))
+	assert_ne(a, MapPalette.house_color(r, "Valorin"))
+	assert_almost_eq(a.v, 0.9, 0.001, "the value is data")
+	assert_almost_eq(a.s, 0.5, 0.001, "so is the saturation")

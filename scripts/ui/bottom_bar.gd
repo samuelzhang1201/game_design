@@ -9,13 +9,15 @@ extends Control
 
 signal tab_selected(tab: String)
 
-const TABS := ["MAP", "PROVINCES", "HEIGHTS", "ECONOMY", "REALM", "MILITARY",
+const TABS := ["MAP", "PROVINCES", "HEIGHTS", "ECONOMY", "MANORS", "REALM", "MILITARY",
 	"FAMILIES", "LAWS", "RELIGION", "RELATIONSHIP"]
 ## Tabs that stay lit while their view is on rather than opening an overlay:
 ## PROVINCES toggles the map's province view (user request 2026-09-09) and
 ## MILITARY its army layer (user request 2026-09-10), HEIGHTS the height
 ## ramp over the land (owner request 2026-09-12, remade 2026-09-13).
-const TOGGLES := ["PROVINCES", "HEIGHTS", "ECONOMY", "MILITARY"]
+## MANORS (MANOR_SYSTEM.md §6) is the fourth theme, exclusive with HEIGHTS
+## and ECONOMY — GameRoot keeps them so.
+const TOGGLES := ["PROVINCES", "HEIGHTS", "ECONOMY", "MANORS", "MILITARY"]
 ## The strip's height. A constant on purpose — NewsTicker, DayRunScreen and
 ## ScreenLayout all place themselves off it, so it cannot float — but it
 ## must stay at least content_height(), and a test pins that. It went stale

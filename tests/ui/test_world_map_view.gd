@@ -1124,3 +1124,41 @@ func test_in_the_economy_view_a_click_on_land_selects_its_manor() -> void:
 	v.show_economy = false
 	v._select_at(v.map_to_screen(centre))
 	assert_eq(String(v._selected_obj.get("kind", "")), "land", "the political map: land")
+
+## The MANORS view (MANOR_SYSTEM.md §6): the manor mesh is built for it,
+## coloured by house — the crown's manors in the realm's colour, another
+## house's in its own — a click selects the manor, and off again the mesh
+## goes with it.
+func test_the_manors_view_colours_manors_by_house_and_picks_them() -> void:
+	Game.start_campaign(42)
+	var v := _view()
+	await wait_frames(2)
+	assert_null(v.manor_mesh(), "no theme, no manor mesh")
+	v.show_provinces = false
+	v.show_manors = true
+	assert_not_null(v.manor_mesh())
+	var realm := Game.data.resolve_realm("player_realm")
+	var crowns := -1
+	var theirs := -1
+	for province: String in MapOwnership.provinces_of(Game.data, Game.state, realm):
+		for cell: int in MapManors.manors_of_province(Game.data, province):
+			if MapManors.is_crowns(Game.data, Game.state, cell) and crowns < 0:
+				crowns = cell
+			elif not MapManors.is_crowns(Game.data, Game.state, cell) and theirs < 0:
+				theirs = cell
+	var mine := v.house_manor_color(crowns)
+	var other := v.house_manor_color(theirs)
+	assert_gt(mine.a, 0.0)
+	assert_ne(Color(mine, 1.0), Color(other, 1.0), "two houses, two colours")
+	var realm_colour := MapPalette.color_of(Game.data, realm)
+	assert_lt(Color(mine, 1.0).h - realm_colour.h if Color(mine, 1.0).h > realm_colour.h else realm_colour.h - Color(mine, 1.0).h,
+		0.05, "the crown wears its realm's hue")
+	var centre := MapTerrain.cell_center(Game.data, Game.data.cells[theirs])
+	v._zoom_at(v.size / 2.0, 6.0)
+	v._offset += v.size / 2.0 - v.map_to_screen(centre)
+	v._clamp_offset()
+	v._select_at(v.map_to_screen(centre))
+	assert_eq(String(v._selected_obj.get("kind", "")), "manor")
+	assert_eq(int(v._selected_obj.get("cell", -1)), theirs)
+	v.show_manors = false
+	assert_null(v.manor_mesh(), "off again")

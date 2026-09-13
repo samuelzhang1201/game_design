@@ -21,6 +21,7 @@ var _zoom_mul := 1.0
 var _heights := false
 var _economy := false
 var _armies := false
+var _manors := false
 var _viewport: SubViewport
 var _view: WorldMapView
 var _frames := 0
@@ -38,6 +39,8 @@ func _ready() -> void:
 			_heights = args[i + 1] == "1"
 		elif args[i] == "--economy":
 			_economy = args[i + 1] == "1"
+		elif args[i] == "--manors":
+			_manors = args[i + 1] == "1"
 		elif args[i] == "--armies":
 			_armies = args[i + 1] == "1"
 		i += 1
@@ -60,6 +63,7 @@ func _ready() -> void:
 		_view._clamp_offset()
 	_view.show_heights = _heights
 	_view.show_economy = _economy
+	_view.show_manors = _manors
 	_view.show_armies = _armies
 	_view.queue_redraw()
 

@@ -501,3 +501,28 @@ func test_the_economy_column_uses_the_same_colours_as_the_map() -> void:
 	var tag := MapEconomy.good_tag(Game.data, String(output[0]["good"]))
 	assert_eq(panel.goods_chart().rows[0]["color"], EconomyPanel.tag_color(Game.data, tag),
 		"the column and the map read off one legend, not two")
+
+## The MANORS tab (MANOR_SYSTEM.md §6) lights the manors view on the map and
+## puts the other two themes out; lighting ECONOMY puts MANORS out again.
+func test_the_manors_tab_is_a_theme_exclusive_with_the_others() -> void:
+	Game.start_campaign(42)
+	var r := _root()
+	await wait_frames(2)
+	r._switch_to(GameRoot.State.COURT)
+	r.current_screen.enter_court(null)
+	await wait_frames(2)
+	r.bottom_bar().button("ECONOMY").pressed.emit()
+	await wait_frames(1)
+	assert_true(r.economy_view())
+	r.bottom_bar().button("MANORS").pressed.emit()
+	await wait_frames(1)
+	assert_true(r.manor_view(), "the tab drives it")
+	assert_false(r.economy_view(), "one theme at a time")
+	assert_true(r.current_screen.world_map().show_manors, "the map colours by house")
+	assert_false(r.current_screen.world_map().show_economy)
+	assert_true(r.bottom_bar().button("MANORS").button_pressed)
+	r.bottom_bar().button("HEIGHTS").pressed.emit()
+	await wait_frames(1)
+	assert_true(r.height_view())
+	assert_false(r.manor_view(), "HEIGHTS put MANORS out")
+	assert_false(r.current_screen.world_map().show_manors)

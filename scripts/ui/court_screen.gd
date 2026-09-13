@@ -46,6 +46,7 @@ var _dashboard: RealmDashboard
 var _military_view := false
 var _economy: EconomyPanel
 var _economy_view := false
+var _manor_view := false
 
 ## Static structure and layout live in scenes/court.tscn (editable in the
 ## editor); _ready fetches nodes, paints them from UiPalette, and wires
@@ -148,6 +149,15 @@ func set_economy_view(on: bool) -> void:
 	if on:
 		_economy.refresh()
 	_refresh_left()
+
+## The MANORS tab (GameRoot): the flag the left column reads (its Manor
+## Master panel lands with MANOR_SYSTEM.md step 7).
+func set_manor_view(on: bool) -> void:
+	_manor_view = on
+	_refresh_left()
+
+func manor_view() -> bool:
+	return _manor_view
 
 ## Test seam.
 func economy_panel() -> EconomyPanel:
