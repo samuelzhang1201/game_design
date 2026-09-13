@@ -15,7 +15,7 @@ var _icons: Dictionary = {}
 
 func _ready() -> void:
 	%Bar.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 8))
 	UiPalette.style_header(%DateLabel, 18)
 	%EventChip.add_theme_stylebox_override("normal", UiPalette.chip_style())
 	UiPalette.style_header(%EventChip, 14)
