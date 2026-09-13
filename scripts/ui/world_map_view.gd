@@ -135,6 +135,10 @@ var _terrain_mesh: ArrayMesh
 var _map_size := Vector2.ZERO
 ## Shore loops (coasts.csv) smoothed once, drawn over the mesh.
 var _coast_rings: Array = []
+## Every dashed line on the sheet — borders, hatching, seams, lanes — cut
+## once per zoom in native px and kept (MapDashCache); a frame transforms
+## and draws each set as ONE polyline. Test seam: dash_cache().
+var _dashes := MapDashCache.new()
 var _index_image: Image
 var _by_state_id: Dictionary = {}
 ## Azgaar state id under the mouse (-1: water/nothing); its border loops
@@ -737,29 +741,46 @@ func _draw_state_borders() -> void:
 	var dash := Game.data.bal("map_state_border_dash_px")
 	var gap := Game.data.bal("map_state_border_gap_px")
 	var frame := Rect2(Vector2.ZERO, size).grow(maxf(width, lit_width) * 2.0)
+	var version := _ownership_sig()
+	var step := Game.data.bal("map_dash_min_step_px")
 	for code: String in Game.data.kingdoms:
+		# A kingdom's rings are cut once per zoom and drawn as one polyline
+		# (MapDashCache): both phases are in it — the runs between the dark
+		# ones are the PALE half of the ribbon, not empty line.
+		var entry := _dashes.cut_lazy("border:" + code, _zoom, version,
+			func() -> Array: return _closed_rings(border_rings(code)), dash, gap, step)
 		# Hovering LIGHTS THE LINE THAT IS ALREADY THERE (owner request
 		# 2026-09-12) instead of tracing a second outline over it.
-		var on := code == hovered
-		var ink := lit if on else dark
-		var w := lit_width if on else width
-		for ring: PackedVector2Array in border_rings(code):
-			var pts := _closed_screen_ring(ring)
-			if not _ring_touches(pts, frame):
-				continue
-			# Both phases are drawn: the runs between the dark ones are the
-			# PALE half of the ribbon, not empty line.
-			for run: Dictionary in MapGeometry.dash_runs(pts, dash, gap):
-				var c := ink if (on or bool(run["on"])) else pale
-				draw_polyline(run["points"], c, w, true)
+		if code == hovered:
+			_draw_dashes(entry, frame, lit, lit, lit_width)
+		else:
+			_draw_dashes(entry, frame, dark, pale, width)
 
 func _closed_screen_ring(loop: PackedVector2Array) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	pts.resize(loop.size() + 1)
-	for i in loop.size():
-		pts[i] = map_to_screen(loop[i])
-	pts[loop.size()] = pts[0]  # close the ring
+	var pts: PackedVector2Array = _view_xform() * loop
+	if not pts.is_empty():
+		pts.append(pts[0])  # close the ring
 	return pts
+
+## Rings closed in native px, ready to be cut: the pack's loops stop one
+## point short of where they started.
+static func _closed_rings(rings: Array) -> Array:
+	var out: Array = []
+	for ring: PackedVector2Array in rings:
+		var closed := ring.duplicate()
+		if not closed.is_empty():
+			closed.append(closed[0])
+		out.append(closed)
+	return out
+
+## One cut line set drawn as ONE antialiased polyline, or nothing when it
+## is empty or lies wholly outside the frame.
+func _draw_dashes(entry: Dictionary, frame: Rect2, ink: Color, pale: Color, width: float) -> void:
+	var native: PackedVector2Array = entry["points"]
+	if native.size() < 2 or not _bbox_touches(entry["bbox"], frame):
+		return
+	var pts: PackedVector2Array = _view_xform() * native
+	draw_polyline_colors(pts, _dashes.colors(entry, ink, pale), width, true)
 
 func _ring_touches(pts: PackedVector2Array, frame: Rect2) -> bool:
 	for p in pts:
@@ -1072,9 +1093,39 @@ func wave_rings() -> Array:
 				"fade": 1.0 - float(r) / float(count)})
 	return _wave_rings
 
-func _draw_waves() -> void:
+## The hatching as PIECES of each ring — map_wave_chunk_pts points apiece,
+## sharing an end point so no gap opens — each with its fade, cut and drawn
+## on its own so only the pieces in the frame cost it anything. Whole, the
+## mainland ring touches every frame and a close zoom paid for all of it
+## (bench 2026-09-13: 100k hatching vertices a frame). The dash pattern
+## restarts at a piece boundary, which hatching can afford.
+var _wave_lines: Array = []
+
+func _wave_line_list() -> Array:
+	if not _wave_lines.is_empty():
+		return _wave_lines
+	var chunk := int(Game.data.bal("map_wave_chunk_pts"))
 	var rings := wave_rings()
-	if rings.is_empty():
+	for i in rings.size():
+		var entry: Dictionary = rings[i]
+		var ring: PackedVector2Array = (entry["ring"] as PackedVector2Array).duplicate()
+		if ring.size() < 2:
+			continue
+		ring.append(ring[0])
+		var n := ring.size()
+		var start := 0
+		var k := 0
+		while start < n - 1:
+			var stop := n - 1 if chunk <= 0 else mini(start + chunk, n - 1)
+			_wave_lines.append({"key": "waves:%d:%d" % [i, k], "fade": float(entry["fade"]),
+				"rings": [ring.slice(start, stop + 1)]})
+			start = stop
+			k += 1
+	return _wave_lines
+
+func _draw_waves() -> void:
+	var lines := _wave_line_list()
+	if lines.is_empty():
 		return
 	var base := MapTerrain.palette_color(Game.data, "wave", MapTerrain.FALLBACK)
 	var alpha := Game.data.bal("map_wave_alpha")
@@ -1082,15 +1133,13 @@ func _draw_waves() -> void:
 	var dash := Game.data.bal("map_wave_dash_px")
 	var gap := Game.data.bal("map_wave_gap_px")
 	var frame := Rect2(Vector2.ZERO, size).grow(width * 2.0)
-	for entry: Dictionary in rings:
-		var pts := _closed_screen_ring(entry["ring"])
-		if not _ring_touches(pts, frame):
-			continue
+	var version := _ownership_sig()
+	var step := Game.data.bal("map_dash_min_step_px")
+	for wl: Dictionary in lines:
+		var entry := _dashes.cut(String(wl["key"]), _zoom, version, wl["rings"], dash, gap, step)
 		var color := base
-		color.a = alpha * float(entry["fade"])
-		var pairs := MapGeometry.dash_segments(pts, dash, gap)
-		if not pairs.is_empty():
-			draw_multiline(pairs, color, width, true)
+		color.a = alpha * float(wl["fade"])
+		_draw_dashes(entry, frame, color, Color(color, 0.0), width)
 
 func _draw_coasts() -> void:
 	var width := Game.data.bal("map_coast_width")
@@ -1104,11 +1153,20 @@ func _draw_coasts() -> void:
 			draw_polyline(pts, color, width, true)
 
 func _screen_polyline(pts: PackedVector2Array) -> PackedVector2Array:
-	var out := PackedVector2Array()
-	out.resize(pts.size())
-	for i in pts.size():
-		out[i] = map_to_screen(pts[i])
-	return out
+	return _view_xform() * pts
+
+## map_to_screen as a transform, so a whole array goes through it in one
+## C++ call rather than a GDScript loop per point per frame.
+func _view_xform() -> Transform2D:
+	return Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)
+
+## Whether a native-px bounding box lands in a screen-px frame.
+func _bbox_touches(bbox: Rect2, frame: Rect2) -> bool:
+	return frame.intersects(Rect2(map_to_screen(bbox.position), bbox.size * _zoom))
+
+## Test seam: the dash cache, to see that a frame cut nothing new.
+func dash_cache() -> MapDashCache:
+	return _dashes
 
 func _line_in_frame(row: Dictionary) -> bool:
 	var b: Rect2 = row["bbox"]
@@ -1266,21 +1324,20 @@ func _draw_routes() -> void:
 	var lane_gap := Game.data.bal("map_sea_route_gap_px")
 	var soft := Game.data.bal("map_road_soft_ratio")
 	var soft_alpha := Game.data.bal("map_road_soft_alpha")
-	var lanes := PackedVector2Array()
 	for code: String in Game.data.routes:
 		var r: Dictionary = Game.data.routes[code]
 		var group := String(r["group"])
 		var is_road := group == "roads"
 		if not is_road and not show_trails:
 			continue
+		# A shipping lane is not a road (owner request 2026-09-12): it is a
+		# blue dashed line over the water, with no worn shoulder — drawn below
+		# from the dash cache, all lanes as one polyline.
+		if group == "searoutes":
+			continue
 		if not _line_in_frame(r):
 			continue
 		var pts := _screen_polyline(route_curve(code, r["polyline"]))
-		# A shipping lane is not a road (owner request 2026-09-12): it is a
-		# blue dashed line over the water, with no worn shoulder.
-		if group == "searoutes":
-			lanes.append_array(MapGeometry.dash_segments(pts, lane_dash, lane_gap))
-			continue
 		var color := road if is_road else trail
 		var width := road_w if is_road else trail_w
 		if soft > 0.0:
@@ -1288,8 +1345,22 @@ func _draw_routes() -> void:
 			shoulder.a = color.a * soft_alpha
 			draw_polyline(pts, shoulder, width * (1.0 + soft * 2.0), true)
 		draw_polyline(pts, color, width, true)
-	if not lanes.is_empty():
-		draw_multiline(lanes, lane, lane_w, true)
+	if show_trails:
+		var entry := _dashes.cut_lazy("lanes", _zoom, _ownership_sig(), _lane_curves,
+			lane_dash, lane_gap, Game.data.bal("map_dash_min_step_px"))
+		_draw_dashes(entry, Rect2(Vector2.ZERO, size).grow(lane_w * 2.0),
+			lane, Color(lane, 0.0), lane_w)
+
+## Every shipping lane's smoothed curve, in native px, gathered once.
+var _lanes: Array = []
+
+func _lane_curves() -> Array:
+	if _lanes.is_empty():
+		for code: String in Game.data.routes:
+			var r: Dictionary = Game.data.routes[code]
+			if String(r["group"]) == "searoutes":
+				_lanes.append(route_curve(code, r["polyline"]))
+	return _lanes
 
 ## Kingdom names set into the terrain like printed map lettering: the display
 ## face (Cinzel), widely letter-spaced, faint, and scaled with the zoom so
@@ -1669,8 +1740,7 @@ func _draw_selected_province() -> void:
 ## coordinates: nothing when the view is off or the zoom is below the
 ## balance floor, and only segments touching the frame.
 func _visible_seams() -> Array:
-	if not show_provinces or _terrain_mesh == null \
-			or view_scale() < Game.data.bal("map_province_min_scale"):
+	if not _seams_shown():
 		return []
 	var frame := Rect2(Vector2.ZERO, size)
 	var out: Array = []
@@ -1681,6 +1751,12 @@ func _visible_seams() -> Array:
 			if frame.intersects(Rect2(a, Vector2.ZERO).expand(b).grow(1.0)):
 				out.append(PackedVector2Array([a, b]))
 	return out
+
+## Whether the province view draws its seams at all: the view is on and the
+## zoom is above the balance floor.
+func _seams_shown() -> bool:
+	return show_provinces and _terrain_mesh != null \
+		and view_scale() >= Game.data.bal("map_province_min_scale")
 
 ## Test seam: how many seam segments are on screen right now.
 func visible_seam_count() -> int:
@@ -1952,21 +2028,25 @@ func _draw_heights() -> void:
 		draw_mesh(mesh, null, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset))
 
 ## Province seams as thin, dense dashes in the palette's seam colour — the
-## same dash helper the kingdom borders use, one draw call for the lot.
+## same dash cache the kingdom borders use, one polyline per kingdom.
 func _draw_province_seams() -> void:
-	var seams := _visible_seams()
-	if seams.is_empty():
+	if not _seams_shown():
 		return
 	var color := MapPalette.named(Game.data, "province_line")
 	color.a = Game.data.bal("map_province_line_alpha")
 	var width := Game.data.bal("map_province_line_width")
 	var dash := Game.data.bal("map_province_dash_px")
 	var gap := Game.data.bal("map_province_gap_px")
-	var pairs := PackedVector2Array()
-	for seg: PackedVector2Array in seams:
-		pairs.append_array(MapGeometry.dash_segments(seg, dash, gap))
-	if not pairs.is_empty():
-		draw_multiline(pairs, color, width, true)
+	var frame := Rect2(Vector2.ZERO, size).grow(width * 2.0)
+	var version := _ownership_sig()
+	var clear := Color(color, 0.0)
+	# A kingdom's seams, cut once per zoom, are one polyline: the gaps and
+	# the leaps between segments are in it as clear vertices.
+	for code: String in Game.data.kingdoms:
+		var entry := _dashes.cut_lazy("seams:" + code, _zoom, version,
+			func() -> Array: return MapOwnership.seams_of(Game.data, Game.state, code),
+			dash, gap)
+		_draw_dashes(entry, frame, color, clear, width)
 
 ## Public for tests: the same path a mouse-motion event takes.
 func hover_at(pos: Vector2) -> void:

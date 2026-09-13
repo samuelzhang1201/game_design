@@ -989,3 +989,31 @@ func test_thematic_views_drop_the_woods() -> void:
 	v.show_economy = true
 	assert_eq(v.terrain_sprites().size(), 0, "no woods under the manors")
 	assert_eq(v.settlement_sprites().size(), 0, "the manor badges stand in for the towns")
+
+## The dashed layers — borders, hatching, seams, lanes — are cut once per
+## zoom (MapDashCache) and only transformed on a pan (bench 2026-09-13: the
+## per-frame cut held the map at 6–8 fps). A pan cuts nothing; a zoom or a
+## conquest cuts afresh.
+func test_a_pan_cuts_no_dashes_but_a_zoom_or_conquest_does() -> void:
+	Game.start_campaign(42)
+	var v := _view()
+	v.show_provinces = true
+	await wait_frames(2)
+	var cache := v.dash_cache()
+	assert_gt(cache.builds, 0, "the first frame cut the borders")
+	var cut := cache.builds
+	v._offset += Vector2(-40.0, -25.0)
+	v._clamp_offset()
+	v.queue_redraw()
+	await wait_frames(2)
+	assert_eq(cache.builds, cut, "a pan cut nothing")
+	v._zoom_at(v.size / 2.0, 1.5)
+	await wait_frames(2)
+	assert_gt(cache.builds, cut, "a zoom cut every line again")
+	cut = cache.builds
+	var mine := Game.data.resolve_realm("player_realm")
+	var lost: String = MapOwnership.provinces_of(Game.data, Game.state, mine)[0]
+	MapOwnership.set_owner(Game.data, Game.state, lost, Game.data.resolve_realm("raider_realm"), "raid")
+	v.queue_redraw()
+	await wait_frames(2)
+	assert_gt(cache.builds, cut, "a conquest cut the borders again")
