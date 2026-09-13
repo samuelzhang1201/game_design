@@ -17,6 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+GDAIMCPRuntime="*uid://dcne7ryelpxmn"
 Game="*res://scripts/ui/game.gd"
 
 [display]
@@ -32,7 +33,7 @@ window/size/mode.debug=0
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+enabled=PackedStringArray("res://addons/gdai-mcp-plugin-godot/plugin.cfg", "res://addons/gut/plugin.cfg")
 
 [importer_defaults]
 
