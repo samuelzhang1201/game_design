@@ -92,6 +92,7 @@ static var _decor_cache: Dictionary = {}
 static func forget_decor() -> void:
 	_decor_cache.clear()
 	_sea_decor_cache.clear()
+	_estate_cache.clear()
 
 ## A stable float in [0, 1) for an integer — an integer hash, masked to 32
 ## bits at every step so it cannot drift with the word size.
@@ -159,6 +160,62 @@ static func terrain_decor(repo: DataRepository) -> Array:
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return (a["pos"] as Vector2).y < (b["pos"] as Vector2).y)
 	_decor_cache[key] = out
+	return out
+
+## The estate a manor wears in the MANORS view (owner 2026-09-13: ONE
+## drawing per manor, house and fields together, by its people — the
+## scattered houses-and-fields marks it replaced were the owner's veto).
+## The tier is the last row of data/manor_estates.csv whose min_people
+## the manor's ledger people reach: {} for no rows.
+static func estate_tier(repo: DataRepository, people: float) -> Dictionary:
+	var out: Dictionary = {}
+	for row: Dictionary in repo.manor_estates:
+		if people >= float(row["min_people"]):
+			out = row
+		else:
+			break
+	return out
+
+## [{pos, texture, height, cell, tier, flip, foot}] in native coordinates:
+## every manor without a town, its estate drawing on its cell's centre,
+## sized by tier (height_px x map_decor_scale) but never taller than
+## map_manor_estate_fit of the cell's radius, mirrored by the cell id's
+## hash for variety. A manor with a town carries none (the town drawing
+## is there). Cached on the ledger, whose people set the tiers.
+static var _estate_cache: Dictionary = {}
+
+static func manor_estates(repo: DataRepository, state: GameState) -> Array:
+	var key := hash([repo.get_instance_id(), 0 if state == null else state.world.hash()])
+	if _estate_cache.has(key):
+		return _estate_cache[key]
+	var out: Array = []
+	if repo.manor_estates.is_empty():
+		_estate_cache[key] = out
+		return out
+	var ids: Array = repo.manors.keys()
+	ids.sort()
+	var people := MapManors.population_table(repo, state, ids)
+	var scale := repo.bal("map_decor_scale")
+	var fit := repo.bal("map_manor_estate_fit")
+	var foot := repo.bal("map_manor_estate_foot")
+	for id: int in ids:
+		if MapManors.burg_of(repo, id) != "":
+			continue
+		var cell: Dictionary = repo.cells.get(id, {})
+		if cell.is_empty():
+			continue
+		var pop := float((people.get(id, {}) as Dictionary).get("total", 0.0))
+		var row := estate_tier(repo, pop)
+		if row.is_empty():
+			continue
+		var radius := MapTerrain.cell_radius(repo, cell)
+		out.append({
+			"pos": MapTerrain.cell_center(repo, cell),
+			"texture": String(row["texture"]),
+			"height": minf(float(row["height_px"]) * scale, radius * fit),
+			"cell": id, "tier": int(float(row["tier"])),
+			"flip": hash01(id * 48271) > 0.5, "foot": foot})
+	_estate_cache[key] = out
 	return out
 
 ## The sea's decoration — ships and a whale, the way an old chart fills its
@@ -855,6 +912,11 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		fields.append(["Chief good", text])
 	else:
 		fields.append(["Chief good", "none the land allows"])
+	var tier := MapManors.burg_of(repo, cell) == ""
+	if tier and not repo.manor_estates.is_empty():
+		var est := estate_tier(repo, float(people["total"]))
+		if not est.is_empty():
+			fields.append(["Estate", "tier %d of %d" % [int(float(est["tier"])), repo.manor_estates.size()]])
 	fields.append(["Defence", str(roundi(MapManors.defence_of(repo, state, cell)))])
 	var built: Array = MapManors.buildings_of(state, cell)
 	card["buildings"] = built

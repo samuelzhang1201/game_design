@@ -1086,6 +1086,12 @@ func decor_atlas() -> MarkAtlas:
 				var tex := _sprite_texture(path)
 				if tex != null:
 					textures[path] = tex
+		for row: Dictionary in Game.data.manor_estates:
+			var path := String(row["texture"])
+			if not textures.has(path):
+				var tex := _sprite_texture(path)
+				if tex != null:
+					textures[path] = tex
 		_decor_atlas = MarkAtlas.build(textures)
 	return _decor_atlas
 
@@ -1130,6 +1136,38 @@ func _realm_tint_plain(province_code: String, strength: float) -> Color:
 		return Color.WHITE
 	return Color.WHITE.lerp(MapPalette.color_of(Game.data, holder), strength)
 
+## The MANORS view's estates (MapObjects.manor_estates, owner 2026-09-13):
+## one drawing per manor by its people, ONE mesh, each quad tinted its
+## manor's colour. Rebuilt when the ledger, the manor owners or the
+## province owners change.
+var _estate_mesh: ArrayMesh = null
+var _estate_sig := 0
+
+func estate_mesh() -> ArrayMesh:
+	var state := Game.state
+	var sig := hash([0 if state == null else state.world.hash(),
+		0 if state == null else state.manor_owner.hash(), _ownership_sig(),
+		Game.data.bal("map_manor_mark_alpha")])
+	if _estate_mesh != null and _estate_sig == sig:
+		return _estate_mesh
+	var tints: Dictionary = {}
+	var marks: Array = []
+	for d: Dictionary in MapObjects.manor_estates(Game.data, state):
+		var cell := int(d["cell"])
+		if not tints.has(cell):
+			tints[cell] = manor_mark_tint(cell)
+		marks.append({"pos": d["pos"], "texture": String(d["texture"]), "height": float(d["height"]),
+			"color": tints[cell], "flip": bool(d["flip"]), "foot": float(d["foot"])})
+	_estate_mesh = MarkMesh.build(marks, decor_atlas())
+	_estate_sig = sig
+	return _estate_mesh
+
+## Whether the estates draw: the MANORS view, at or above
+## map_manor_estate_min_scale. Test seam.
+func estates_visible() -> bool:
+	return show_manors and _terrain_mesh != null \
+		and view_scale() >= Game.data.bal("map_manor_estate_min_scale")
+
 ## The tint a town drawing wears in the MANORS view (owner 2026-09-13:
 ## every element there follows one colour strategy): its own manor's
 ## colour at map_manor_mark_alpha; the art multiplies it. The per-manor
@@ -1154,11 +1192,15 @@ func sprite_tint(burg_code: String, province_code: String, strength: float) -> C
 	return realm_tint(province_code, strength)
 
 func _draw_terrain_decor() -> void:
-	if not decor_visible():
-		return
-	var mesh := decor_mesh()
-	if mesh.get_surface_count() > 0:
-		draw_mesh(mesh, decor_atlas().texture, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset))
+	var xf := Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)
+	if decor_visible():
+		var mesh := decor_mesh()
+		if mesh.get_surface_count() > 0:
+			draw_mesh(mesh, decor_atlas().texture, xf)
+	if estates_visible():
+		var estates := estate_mesh()
+		if estates.get_surface_count() > 0:
+			draw_mesh(estates, decor_atlas().texture, xf)
 
 ## The scale bar in the bottom-right corner (owner request 2026-09-12). The
 ## pack carries its own scale — map_info's distance_scale world units per

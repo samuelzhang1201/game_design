@@ -597,3 +597,53 @@ func test_the_province_card_counts_its_manors_by_house() -> void:
 		fields[String(f[0])] = String(f[1])
 	assert_true(fields.has("Manors"))
 	assert_true(String(fields["Manors"]).begins_with(str(MapManors.manors_of_province(real, province).size())))
+
+## The estates (owner 2026-09-13): one drawing per manor without a town,
+## its tier the last whose min_people its people reach, sized by tier but
+## never taller than the cell allows; a manor with a town carries none.
+func test_every_manor_without_a_town_wears_an_estate_by_its_people() -> void:
+	var state := _campaign()
+	assert_eq(real.manor_estates.size(), 10, "ten tiers")
+	for i in range(1, real.manor_estates.size()):
+		assert_gt(float(real.manor_estates[i]["min_people"]), float(real.manor_estates[i - 1]["min_people"]),
+			"tiers ascend")
+	assert_eq(int(float(MapObjects.estate_tier(real, 0.0)["tier"])), 1)
+	assert_eq(int(float(MapObjects.estate_tier(real, 1e9)["tier"])), 10)
+	var second := float(real.manor_estates[1]["min_people"])
+	assert_eq(int(float(MapObjects.estate_tier(real, second)["tier"])), 2, "reaching a threshold is enough")
+	assert_eq(int(float(MapObjects.estate_tier(real, second - 1.0)["tier"])), 1)
+	var estates := MapObjects.manor_estates(real, state)
+	var without_town := 0
+	for id: int in real.manors:
+		if MapManors.burg_of(real, id) == "":
+			without_town += 1
+	assert_eq(estates.size(), without_town, "one per manor without a town")
+	var people := MapManors.population_table(real, state, real.manors.keys())
+	var tiers_seen: Dictionary = {}
+	var fit := real.bal("map_manor_estate_fit")
+	for e: Dictionary in estates:
+		var cell := int(e["cell"])
+		assert_eq(MapManors.burg_of(real, cell), "")
+		var pop := float((people[cell] as Dictionary)["total"])
+		assert_eq(int(e["tier"]), int(float(MapObjects.estate_tier(real, pop)["tier"])))
+		assert_eq(e["pos"], MapTerrain.cell_center(real, real.cells[cell]), "on the cell's centre")
+		assert_lte(float(e["height"]), MapTerrain.cell_radius(real, real.cells[cell]) * fit + 0.001)
+		assert_gt(float(e["height"]), 0.0)
+		tiers_seen[int(e["tier"])] = true
+	assert_gte(tiers_seen.size(), 8, "the pack's people spread across most tiers")
+	assert_eq(MapObjects.manor_estates(real, state), estates, "the same every call")
+	# The card names the tier (a full card: a manor of the player's realm).
+	var realm := real.resolve_realm("player_realm")
+	var own: Dictionary = {}
+	for e: Dictionary in estates:
+		if MapOwnership.owner_of(real, state, MapManors.province_of(real, int(e["cell"]))) == realm:
+			own = e
+			break
+	assert_false(own.is_empty())
+	var card := MapObjects.manor_card(real, state, int(own["cell"]))
+	var found := false
+	for f in card["fields"]:
+		if String(f[0]) == "Estate":
+			found = true
+			assert_string_contains(String(f[1]), "tier %d of 10" % int(own["tier"]))
+	assert_true(found, "the card says the estate's tier")

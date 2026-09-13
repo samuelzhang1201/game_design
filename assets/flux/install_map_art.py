@@ -3,6 +3,7 @@
 
     python3 assets/flux/install_map_art.py goods    # G-xx -> assets/goods/
     python3 assets/flux/install_map_art.py decor    # D-xx -> assets/decor/ (sea ships, whale)
+    python3 assets/flux/install_map_art.py estates  # D-32..D-41 -> assets/manors/ (the manors view's estates)
     python3 assets/flux/install_map_art.py ui       # post.py icon tier -> assets/icons/ (resource strip, realm card)
     python3 assets/flux/install_map_art.py cast     # K-xx -> assets/portraits/
 
@@ -104,6 +105,18 @@ def install_decor(height: int = 256, lighten: float = 0.45) -> int:
     return install_marks(codes, "decor", ROOT / "assets" / "decor", height, lighten)
 
 
+## The manors view's estate drawings (owner 2026-09-13): library D-32..D-41,
+## one per population tier (data/manor_estates.csv), cut out, greyed and
+## lightened like the settlements so the view can tint them with the
+## manor's colour. estate_art.csv may name the seed to install; else the
+## newest render wins.
+def install_estates(height: int = 256, lighten: float = 0.45) -> int:
+    rows = list(csv.DictReader((HERE / "estate_art.csv").open()))
+    codes = {r["art_id"]: r["key"] for r in rows}
+    seeds = {r["art_id"]: r.get("seed", "").strip() for r in rows}
+    return install_marks(codes, "decor", ROOT / "assets" / "manors", height, lighten, seeds)
+
+
 ## The interface's dimension icons (data/resource_icons.csv texture column,
 ## owner 2026-09-13): library I-40 and I-47..I-61, cut out by post.py
 ## (--tier icon: a coloured still-life needs BiRefNet, not the blue-channel
@@ -174,11 +187,14 @@ def pad_square(w: int, h: int, px: bytearray, side: int) -> bytearray:
     return out
 
 
-def install_marks(codes: dict, chapter: str, dest, height: int, lighten: float) -> int:
+def install_marks(codes: dict, chapter: str, dest, height: int, lighten: float, seeds: dict | None = None) -> int:
     dest.mkdir(parents=True, exist_ok=True)
     done = 0
     for art_id, code in sorted(codes.items()):
         hits = sorted((HERE / "out" / chapter).glob("%s_*.png" % art_id))
+        seed = (seeds or {}).get(art_id, "")
+        if seed:
+            hits = [h for h in hits if h.stem.endswith("_s" + seed)] or hits
         if not hits:
             print("  (no render for %s / %s)" % (art_id, code))
             continue
@@ -244,7 +260,7 @@ def _install_cast_tier(codes: dict, tag: str, tier: str, size: int, dest: Path) 
 
 def main() -> int:
     chapters = {"goods": install_goods, "decor": install_decor, "cast": install_cast,
-                "ui": install_ui}
+                "ui": install_ui, "estates": install_estates}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2

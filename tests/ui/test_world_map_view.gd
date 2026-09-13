@@ -1077,6 +1077,23 @@ func test_the_woods_are_one_mesh_over_one_atlas() -> void:
 	v.show_heights = true
 	assert_false(v.decor_visible(), "hidden under a theme")
 
+## The estates are one mesh in the MANORS view (owner 2026-09-13): a quad
+## per manor without a town, kept between frames, none elsewhere.
+func test_the_estates_are_one_mesh_in_the_manors_view() -> void:
+	var v := _view()
+	await wait_frames(2)
+	assert_false(v.estates_visible(), "not on the default map")
+	v.show_manors = true
+	assert_true(v.estates_visible())
+	var mesh := v.estate_mesh()
+	assert_eq(mesh.get_surface_count(), 1, "one draw call")
+	assert_eq(MarkMesh.quad_count(mesh), MapObjects.manor_estates(Game.data, Game.state).size(),
+		"every estate has its art")
+	assert_true(v.estate_mesh() == mesh, "kept between frames")
+	v.show_manors = false
+	v.show_economy = true
+	assert_false(v.estates_visible(), "not in the economy view either")
+
 ## In the MANORS view every element follows one colour strategy (owner
 ## 2026-09-13): a town drawing wears its own manor's colour at
 ## map_manor_mark_alpha, the realm's on the default map.

@@ -1,0 +1,11 @@
+tier,min_people,texture,height_px,notes
+1,0,res://assets/manors/estate_1.png,3.0,"the estate drawing a manor without a town wears in the MANORS view (owner 2026-09-13: one drawing per manor, house and fields together, by its people — library D-32..D-41, ten tiers): the highest tier whose min_people the manor's ledger people reach; min_people are the deciles of the beria pack's manors so each tier is about a tenth of them; height_px in native map px (x map_decor_scale), capped at map_manor_estate_fit x the cell radius so a great estate stays inside its cell"
+2,2000,res://assets/manors/estate_2.png,3.4,
+3,3500,res://assets/manors/estate_3.png,3.8,
+4,4500,res://assets/manors/estate_4.png,4.2,
+5,5500,res://assets/manors/estate_5.png,4.6,
+6,6500,res://assets/manors/estate_6.png,5.0,
+7,8000,res://assets/manors/estate_7.png,5.4,
+8,11500,res://assets/manors/estate_8.png,5.8,
+9,15000,res://assets/manors/estate_9.png,6.2,
+10,19500,res://assets/manors/estate_10.png,6.6,

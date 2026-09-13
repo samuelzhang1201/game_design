@@ -1447,7 +1447,10 @@ background, no numerals, no text [C-ICON]
 | `D-39` | 庄园十档 8 | `a great manor: a hall with a corner tower, a chapel with a small spire, a mill, a tithe barn, dovecote, six tenant cottages, strip fields and an orchard, drawn as one map symbol in flat side elevation, the fields as furrowed rectangles of fine parallel lines lying flat in the foreground, everything joined into one compact group with nothing scattered` |
 | `D-40` | 庄园十档 9 | `a fortified manor: a hall behind a low crenellated wall with a gatehouse and a corner tower, chapel, mill, barns, a hamlet of cottages, extensive strip fields, drawn as one map symbol in flat side elevation, the fields as furrowed rectangles of fine parallel lines lying flat in the foreground, everything joined into one compact group with nothing scattered` |
 | `D-41` | 庄园十档 10（≥3 万人） | `a great manor estate: a moated hall with two towers, a chapel with a spire, a mill, a tithe barn, a dovecote, a hamlet of many cottages, wide strip fields bounded by hedges, drawn as one map symbol in flat side elevation, the fields as furrowed rectangles of fine parallel lines lying flat in the foreground, everything joined into one compact group with nothing scattered` |
+| `D-42` | 首都（3D 试验） | `a medieval capital city as one game piece: a great walled city on a low green hill, crenellated pale stone walls with many round towers, an arched gate between twin towers, dense steep red-tiled and slate roofs crowded inside, a cathedral with twin spires and a royal castle keep with banners on the crest, a small river with a stone bridge at the foot of the wall, the whole city isolated as a single object on a pure white background` |
 
+> **3D 试验 `D-42`**（owner 2026-09-13）：同一个首都主体配五套 3D 风格核 `STYLE_CORE_3d_lowpoly / 3d_painted / 3d_diorama / 3d_watercolour / 3d_toon`（负面词 `NEGATIVE_3d.txt`，画幅 `[C-ICON]`），owner 从中挑一种作为聚落 3D 化的方向。
+>
 > **庄园十档 `D-32`~`D-41`**（owner 2026-09-13）：MANORS 视图里每座没有城镇的庄园按人口挂一张——主宅与农田画在一起，从一间茅屋一块条田到带护城河的大宅与整片田地。拼零件（房子、田块各自散布）被 owner 否掉：凌乱且不合理。用地图符号风格核和 `[C-MAPMARK]`，条田作为前景的平铺矩形一起画进符号里。
 
 ### 6.10 经济产物图标 `G-`（2026-09-13 新增）
