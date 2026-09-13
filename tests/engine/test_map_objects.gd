@@ -599,20 +599,27 @@ func test_the_province_card_counts_its_manors_by_house() -> void:
 	assert_true(String(fields["Manors"]).begins_with(str(MapManors.manors_of_province(real, province).size())))
 
 ## The manors' marks (owner 2026-09-13): every manor without a town carries
-## farmsteads by its people and its chief good's marks; a manor with a town
-## carries nothing; no two marks of one manor overlap; the same every call.
+## farmsteads by its people and its chief good's fields in rows against
+## them; a manor with a town carries nothing; nothing overlaps or stands on
+## a river; the same every call.
 func test_manors_without_towns_carry_farmsteads_and_their_chief_good() -> void:
 	var state := _campaign()
 	var marks := MapObjects.manor_decor(real, state)
 	assert_gt(marks.size(), 2000, "thousands of manors, marked")
 	var rows: Dictionary = {}
+	var hamlet_row: Dictionary = {}
+	var grain_row: Dictionary = {}
 	for row: Dictionary in real.manor_decor:
 		rows[String(row["texture"])] = row
-	var hamlet_row: Dictionary = {}
-	for row: Dictionary in real.manor_decor:
 		if String(row["kind"]) == "hamlet":
 			hamlet_row = row
+		if String(row.get("focus_code", "")) == "grain":
+			grain_row = row
 	assert_false(hamlet_row.is_empty())
+	assert_false(grain_row.is_empty())
+	for row: Dictionary in real.manor_decor:
+		assert_false(String(row["texture"]).contains("broadleaf") or String(row["texture"]).contains("rocks"),
+			"man-made marks only in the manors view")
 	var per_cell: Dictionary = {}
 	for m: Dictionary in marks:
 		var cell := int(m["cell"])
@@ -628,74 +635,86 @@ func test_manors_without_towns_carry_farmsteads_and_their_chief_good() -> void:
 		assert_gt(float(m["height"]), 0.0)
 		assert_true(Geometry2D.is_point_in_polygon(m["pos"], MapEconomy.cell_polygon(real, real.cells[cell])),
 			"a mark stands inside its manor")
-	# Farmsteads follow the people: a big manor has the cap, a small one one;
-	# the fields never outnumber what the people call for.
 	var max_count := int(float(hamlet_row["max_count"]))
 	var per := float(hamlet_row["per_people"])
 	var people := MapManors.population_table(real, state, per_cell.keys())
 	var seen_max := false
 	var seen_one := false
 	var flipped := 0
-	var turned := 0
+	var on_river := 0
+	var houses := 0
+	var fields_total := 0
+	var far_fields := 0
 	for cell: int in per_cell:
 		var pop := float((people[cell] as Dictionary)["total"])
 		var want := clampi(roundi(pop / per), 1, max_count)
 		assert_eq(int(per_cell[cell]["hamlet"]), want, "manor %d: %d people" % [cell, int(pop)])
 		seen_max = seen_max or want == max_count
 		seen_one = seen_one or want == 1
-		# No two marks of one manor overlap (circles of half their larger side).
 		var ms: Array = per_cell[cell]["marks"]
+		var anchor: Vector2 = MapObjects.manor_site(real, cell)["anchor"]
 		for i in ms.size():
 			var a: Dictionary = ms[i]
-			var ra := 0.5 * float(a["height"]) * maxf(float(rows[String(a["texture"])]["aspect"]), 1.0)
+			var is_field := String(a["texture"]) != String(hamlet_row["texture"])
+			var ha := float(a["height"])
+			var wa := ha * float(rows[String(a["texture"])]["aspect"])
 			if bool(a["flip"]):
 				flipped += 1
-			if float(a["angle"]) != 0.0:
-				turned += 1
+			# Nothing on a river: no river point within the mark's half-height.
+			if not MapObjects.nearest_site_point(real, a["pos"], ha * 0.5, "river").is_empty():
+				on_river += 1
+			if is_field:
+				fields_total += 1
+				# A field hugs the cluster: within a few field widths of the site.
+				if (a["pos"] as Vector2).distance_to(anchor) > wa * 4.0 + ha * 3.0:
+					far_fields += 1
+			else:
+				houses += 1
 			for j in range(i + 1, ms.size()):
 				var b: Dictionary = ms[j]
-				var rb := 0.5 * float(b["height"]) * maxf(float(rows[String(b["texture"])]["aspect"]), 1.0)
-				# Fields never touch anything; a farmstead squeezed into a full
-				# cell may touch another farmstead, never a field.
-				var both_houses := String(a["texture"]) == String(hamlet_row["texture"]) \
-					and String(b["texture"]) == String(hamlet_row["texture"])
-				if not both_houses:
-					assert_gte((a["pos"] as Vector2).distance_to(b["pos"]) + 0.001, ra + rb,
-						"manor %d: marks %d and %d apart" % [cell, i, j])
+				var is_field_b := String(b["texture"]) != String(hamlet_row["texture"])
+				var hb := float(b["height"])
+				var wb := hb * float(rows[String(b["texture"])]["aspect"])
+				var d: Vector2 = (b["pos"] as Vector2) - (a["pos"] as Vector2)
+				if is_field and is_field_b:
+					# Two fields of one row frame: apart along it or across it.
+					var t := Vector2.RIGHT.rotated(float(a["angle"]))
+					var nrm := t.rotated(PI / 2.0)
+					assert_true(absf(d.dot(t)) + 0.01 >= wa or absf(d.dot(nrm)) + 0.01 >= ha,
+						"manor %d: fields %d and %d apart" % [cell, i, j])
+				elif is_field != is_field_b:
+					# A field and a house: apart by the house's half-size and
+					# the field's half-height at least.
+					var house_r := 0.5 * (maxf(wb, hb) if is_field else maxf(wa, ha))
+					var field_h := ha if is_field else hb
+					assert_gte(d.length() + 0.01, house_r + field_h * 0.5,
+						"manor %d: field and house %d/%d apart" % [cell, i, j])
 	assert_true(seen_max and seen_one, "both a full cluster and a lone farmstead exist")
 	assert_gt(flipped, 0, "some marks mirror")
-	assert_gt(turned, 0, "some fields turn")
+	assert_gt(fields_total, 0, "fields exist")
+	assert_lt(float(on_river), float(houses + fields_total) * 0.01, "%d marks on a river" % on_river)
+	assert_eq(far_fields, 0, "no field lies away from its farmsteads")
+	assert_eq(MapObjects.manor_decor(real, state), marks, "the same every call")
+	# A chosen focus moves the marks: a grain manor turned to stone (which
+	# has no man-made art yet) keeps its farmsteads and loses its fields.
 	var grain_cell := -1
 	for cell: int in per_cell:
 		if MapManors.focus_of(real, state, cell) == "grain" and int(per_cell[cell]["focus"]) > 0:
 			grain_cell = cell
 			break
 	assert_gt(grain_cell, -1, "grain manors carry fields")
-	var grain_row: Dictionary = {}
-	for row: Dictionary in real.manor_decor:
-		if String(row.get("focus_code", "")) == "grain":
-			grain_row = row
-	var grain_pop := float((people[grain_cell] as Dictionary)["total"])
-	assert_lte(int(per_cell[grain_cell]["focus"]),
-		clampi(roundi(grain_pop / float(grain_row["per_people"])), 1, int(float(grain_row["max_count"]))))
-	assert_eq(MapObjects.manor_decor(real, state), marks, "the same every call")
-	# A chosen focus moves the marks.
 	assert_true(MapManors.set_focus(real, state, grain_cell, "stone", "test"))
-	var stone_texture := ""
-	for row: Dictionary in real.manor_decor:
-		if String(row.get("focus_code", "")) == "stone":
-			stone_texture = String(row["texture"])
 	var fields := 0
-	var spoil := 0
+	var kept_houses := 0
 	for m: Dictionary in MapObjects.manor_decor(real, state):
 		if int(m["cell"]) != grain_cell:
 			continue
 		if String(m["texture"]) == String(grain_row["texture"]):
 			fields += 1
-		elif String(m["texture"]) == stone_texture:
-			spoil += 1
+		else:
+			kept_houses += 1
 	assert_eq(fields, 0, "the fields are gone")
-	assert_gt(spoil, 0, "a quarry's marks stand instead")
+	assert_eq(kept_houses, int(per_cell[grain_cell]["hamlet"]), "the farmsteads stay")
 
 ## Where the farmsteads stand (owner 2026-09-13): the centre of a plain; by
 ## the river or road when one runs through; back from the water on a coast;

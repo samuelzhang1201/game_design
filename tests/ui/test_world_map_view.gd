@@ -1087,7 +1087,7 @@ func test_the_manor_marks_come_in_by_zoom_tier_in_the_manors_view() -> void:
 	assert_eq(v.manor_decor_tiers_shown(), [], "the default map carries none")
 	v.show_manors = true
 	var meshes := v.manor_decor_meshes()
-	assert_eq(meshes.size(), 2, "two tiers in data/manor_decor.csv")
+	assert_eq(meshes.size(), 2, "two tiers in data/manor_decor.csv: farmsteads, then fields")
 	var tiers: Array = meshes.keys()
 	tiers.sort()
 	for tier: float in tiers:

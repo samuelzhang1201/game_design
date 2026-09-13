@@ -291,8 +291,9 @@ static func _site_grid(repo: DataRepository) -> Dictionary:
 	return cache["__grid"]
 
 ## The nearest river or road point within `reach` of `at`: {point, kind},
-## or {} when none is near. Rivers win a tie.
-static func nearest_site_point(repo: DataRepository, at: Vector2, reach: float) -> Dictionary:
+## or {} when none is near; `kind` narrows it to "river" or "road". Rivers
+## win a tie.
+static func nearest_site_point(repo: DataRepository, at: Vector2, reach: float, kind: String = "") -> Dictionary:
 	var grid := _site_grid(repo)
 	var px: float = grid["px"]
 	var buckets: Dictionary = grid["buckets"]
@@ -303,6 +304,8 @@ static func nearest_site_point(repo: DataRepository, at: Vector2, reach: float) 
 	for gx in range(lo.x, hi.x + 1):
 		for gy in range(lo.y, hi.y + 1):
 			for entry: Dictionary in buckets.get(Vector2i(gx, gy), []):
+				if kind != "" and String(entry["kind"]) != kind:
+					continue
 				var d := at.distance_to(entry["point"])
 				if d < best_d or (d == best_d and String(entry["kind"]) == "river" and not best.is_empty()):
 					best_d = d
@@ -313,13 +316,25 @@ static func nearest_site_point(repo: DataRepository, at: Vector2, reach: float) 
 ## min_scale, cell, flip, angle}] in native coordinates from
 ## data/manor_decor.csv. A manor with a town in it carries none (the town
 ## drawing is there). Its farmsteads — one per per_people of its people,
-## at most max_count — cluster on its site (manor_site); its chief good's
-## marks (focus rows) lie around them, never over them or each other, and a
-## mark that finds no room is left out. Every choice comes from hashes of
-## the cell id, so the land is the same every run; the counts come from the
-## ledger's people, so a growing manor gains houses and fields. Cached on
-## what can move it: the ledger and the chosen focuses.
+## at most max_count — pack on its site (manor_site) in a hexagonal
+## cluster; its chief good's marks (focus rows) lie in close ROWS against
+## the cluster, on the side away from the water, each field turned to its
+## row — so the fields read as one worked block, not scattered pieces
+## (owner). Nothing stands on a river, nothing over anything else; a
+## field with no room is left out, a farmstead always stands. Every choice
+## comes from hashes of the cell id, so the land is the same every run; the
+## counts come from the ledger's people, so a growing manor gains houses and
+## fields. Cached on what can move it: the ledger and the chosen focuses.
 static var _manor_decor_cache: Dictionary = {}
+
+## Hex offsets around a centre: the first ring's six, then the second's
+## twelve, as unit steps.
+const HEX_RING: Array = [
+	Vector2(1, 0), Vector2(0.5, 0.866), Vector2(-0.5, 0.866), Vector2(-1, 0),
+	Vector2(-0.5, -0.866), Vector2(0.5, -0.866),
+	Vector2(2, 0), Vector2(1.5, 0.866), Vector2(1, 1.732), Vector2(0, 1.732), Vector2(-1, 1.732),
+	Vector2(-1.5, 0.866), Vector2(-2, 0), Vector2(-1.5, -0.866), Vector2(-1, -1.732),
+	Vector2(0, -1.732), Vector2(1, -1.732), Vector2(1.5, -0.866)]
 
 static func manor_decor(repo: DataRepository, state: GameState) -> Array:
 	var key := hash([repo.get_instance_id(),
@@ -336,6 +351,7 @@ static func manor_decor(repo: DataRepository, state: GameState) -> Array:
 	var people := MapManors.population_table(repo, state, ids)
 	var scale := repo.bal("map_decor_scale")
 	var gap_share := repo.bal("map_manor_mark_gap")
+	var bank := repo.bal("map_manor_site_bank_px")
 	for id: int in ids:
 		if MapManors.burg_of(repo, id) != "":
 			continue
@@ -345,12 +361,30 @@ static func manor_decor(repo: DataRepository, state: GameState) -> Array:
 		var polygon := MapEconomy.cell_polygon(repo, cell)
 		var centre := MapTerrain.cell_center(repo, cell)
 		var radius := MapTerrain.cell_radius(repo, cell)
-		var anchor: Vector2 = manor_site(repo, id)["anchor"]
+		var site := manor_site(repo, id)
+		var anchor: Vector2 = site["anchor"]
 		var pop := float((people.get(id, {}) as Dictionary).get("total", 0.0))
 		var focus := MapManors.focus_of(repo, state, id)
-		# Placed marks as circles {c, r} for the overlap test.
+		# Placed marks as circles {c, r} for the house tests; fields also
+		# keep their row frame for the rectangle test between fields.
 		var placed: Array = []
 		var cluster := 0.0
+		# The side the fields go: away from the nearest water or road, else
+		# by the cell id.
+		var away := Vector2.ZERO
+		var near := nearest_site_point(repo, anchor, radius)
+		if not near.is_empty():
+			away = (anchor - (near["point"] as Vector2)).normalized()
+		if bool(site["coast"]):
+			var water := Vector2.ZERO
+			for n: int in (cell.get("neighbor_ids", PackedInt32Array()) as PackedInt32Array):
+				var other: Dictionary = repo.cells.get(n, {})
+				if not other.is_empty() and MapTerrain.is_water(other):
+					water += (MapTerrain.cell_center(repo, other) - centre).normalized()
+			if water != Vector2.ZERO:
+				away = (away - water.normalized()).normalized() if away != Vector2.ZERO else -water.normalized()
+		if away == Vector2.ZERO:
+			away = Vector2.RIGHT.rotated(hash01(id * 7331) * TAU)
 		for r in repo.manor_decor.size():
 			var row: Dictionary = repo.manor_decor[r]
 			var kind := String(row["kind"])
@@ -364,60 +398,95 @@ static func manor_decor(repo: DataRepository, state: GameState) -> Array:
 			var base := float(row["height_px"]) * scale
 			var aspect := maxf(float(row.get("aspect", 1.0)), 0.1)
 			var may_flip := int(float(row.get("flip", 0))) > 0
-			var turn := deg_to_rad(float(row.get("rotate_deg", 0)))
 			var salt := (r + 1) * 7127
-			for k in n:
-				var h := base * (0.9 + 0.2 * hash01(id * 2654435761 + k * 40503 + salt))
-				var w := h * aspect
-				var mark_r := 0.5 * maxf(w, h)
-				var gap := mark_r * 2.0 * gap_share
-				var pos := anchor
-				var found := true
-				if kind == "hamlet" and k == 0 and placed.is_empty():
-					pass
-				else:
-					found = false
-					var a0 := hash01(id * 6007 + k * 104729 + salt) * TAU
-					var start := (cluster + mark_r + gap) if kind == "focus" else (mark_r * 2.0 + gap)
-					for attempt in 8:
-						var a := a0 + float(k) * 2.399963 + float(attempt) * 0.7
-						var d := start + float(attempt) * mark_r
-						var cand := anchor + Vector2(cos(a), sin(a)) * d
+			var h := base
+			var w := h * aspect
+			var mark_r := 0.5 * maxf(w, h)
+			var gap := mark_r * 2.0 * gap_share
+			if kind == "hamlet":
+				# A packed cluster: the site, then the hex rings around it,
+				# turned by the cell id; a spot outside the cell or on a river
+				# is skipped; the first spot inside is kept if nothing is clear.
+				var turn := hash01(id * 9176) * TAU
+				var step := w + gap
+				var slot := 0
+				for k in n:
+					var pos := anchor
+					if k > 0:
+						var found := false
+						var fallback := Vector2.INF
+						while slot < HEX_RING.size():
+							var cand := anchor + (HEX_RING[slot] as Vector2).rotated(turn) * step
+							slot += 1
+							if not Geometry2D.is_point_in_polygon(cand, polygon):
+								continue
+							if fallback == Vector2.INF:
+								fallback = cand
+							if not nearest_site_point(repo, cand, mark_r + 0.5, "river").is_empty():
+								continue
+							pos = cand
+							found = true
+							break
+						if not found:
+							pos = fallback if fallback != Vector2.INF else anchor
+					placed.append({"c": pos, "r": mark_r, "field": false})
+					cluster = maxf(cluster, pos.distance_to(anchor) + mark_r)
+					out.append({"pos": pos, "texture": String(row["texture"]), "height": h,
+						"min_scale": float(row.get("min_scale", 0)), "cell": id,
+						"flip": may_flip and hash01(id * 48271 + k * 69621 + salt) > 0.5,
+						"angle": 0.0})
+			else:
+				# Rows against the cluster: the first row hugs it on the far
+				# side of the water, the next lies beyond; along a row the
+				# fields stand side by side from the middle out. A field takes
+				# the row's direction, so the block reads as one.
+				var tangent := away.rotated(PI / 2.0)
+				var angle := tangent.angle()
+				if angle > PI / 2.0:
+					angle -= PI
+				elif angle < -PI / 2.0:
+					angle += PI
+				var along := w + gap
+				var deep := h + gap
+				var order := [0, 1, -1, 2, -2, 3, -3]
+				var made := 0
+				for row_i in 3:
+					if made >= n:
+						break
+					var row_c := anchor + away * (cluster + h * 0.5 + gap + float(row_i) * deep)
+					for o: int in order:
+						if made >= n:
+							break
+						var cand := row_c + tangent * (float(o) * along)
 						if cand.distance_to(centre) > radius * 0.95:
 							continue
 						if not Geometry2D.is_point_in_polygon(cand, polygon):
 							continue
+						if not nearest_site_point(repo, cand, mark_r + 0.5, "river").is_empty():
+							continue
 						var clear := true
 						for other: Dictionary in placed:
-							if cand.distance_to(other["c"]) < mark_r + float(other["r"]) + gap:
+							var oc: Vector2 = other["c"]
+							if bool(other["field"]):
+								# The same frame: apart along the row or across it.
+								var d := cand - oc
+								var dt := absf(d.dot(tangent))
+								var dn := absf(d.dot(away))
+								if dt < w + gap * 0.5 and dn < h + gap * 0.5:
+									clear = false
+									break
+							elif cand.distance_to(oc) < 0.5 * h + float(other["r"]) + gap * 0.5 \
+									and absf((cand - oc).dot(tangent)) < 0.5 * w + float(other["r"]):
 								clear = false
 								break
-						if clear:
-							pos = cand
-							found = true
-							break
-					if not found and kind == "hamlet":
-						# A farmstead always stands (its count is the people's):
-						# the first ring spot inside the cell whatever it
-						# touches, else the site itself.
-						pos = anchor
-						found = true
-						for attempt in 8:
-							var a := a0 + float(k) * 2.399963 + float(attempt) * 0.7
-							var cand := anchor + Vector2(cos(a), sin(a)) * (mark_r * 2.0 + gap)
-							if Geometry2D.is_point_in_polygon(cand, polygon):
-								pos = cand
-								break
-				if not found:
-					continue
-				placed.append({"c": pos, "r": mark_r})
-				if kind == "hamlet":
-					cluster = maxf(cluster, pos.distance_to(anchor) + mark_r)
-				out.append({
-					"pos": pos, "texture": String(row["texture"]), "height": h,
-					"min_scale": float(row.get("min_scale", 0)), "cell": id,
-					"flip": may_flip and hash01(id * 48271 + k * 69621 + salt) > 0.5,
-					"angle": (hash01(id * 16807 + k * 39916801 + salt) - 0.5) * 2.0 * turn})
+						if not clear:
+							continue
+						placed.append({"c": cand, "r": mark_r, "field": true})
+						out.append({"pos": cand, "texture": String(row["texture"]), "height": h,
+							"min_scale": float(row.get("min_scale", 0)), "cell": id,
+							"flip": may_flip and hash01(id * 48271 + made * 69621 + salt) > 0.5,
+							"angle": angle, "foot": 0.5})
+						made += 1
 	_manor_decor_cache[key] = out
 	return out
 

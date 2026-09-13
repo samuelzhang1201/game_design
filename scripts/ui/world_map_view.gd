@@ -1166,7 +1166,8 @@ func manor_decor_meshes() -> Dictionary:
 			by_tier[tier] = []
 		(by_tier[tier] as Array).append({"pos": d["pos"], "texture": String(d["texture"]),
 			"height": float(d["height"]), "color": tints[cell],
-			"flip": bool(d.get("flip", false)), "angle": float(d.get("angle", 0.0))})
+			"flip": bool(d.get("flip", false)), "angle": float(d.get("angle", 0.0)),
+			"foot": float(d.get("foot", 0.85))})
 	_manor_decor_meshes = {}
 	for tier: float in by_tier:
 		_manor_decor_meshes[tier] = MarkMesh.build(by_tier[tier], decor_atlas())

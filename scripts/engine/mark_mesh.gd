@@ -15,7 +15,8 @@ extends RefCounted
 
 ## marks: [{pos: Vector2 (native), texture: String (atlas path), height:
 ## float (native px), color: Color, flip: bool (mirrored), angle: float
-## (radians, turned about its point)}]. Marks whose texture the atlas
+## (radians, turned about its point), foot: float (this mark's share
+## above its point; a field in a row uses 0.5)}]. Marks whose texture the atlas
 ## lacks are skipped. Returns an empty ArrayMesh (no surfaces) for no marks.
 static func build(marks: Array, atlas: MarkAtlas, foot: float = 0.85) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
@@ -42,7 +43,7 @@ static func build(marks: Array, atlas: MarkAtlas, foot: float = 0.85) -> ArrayMe
 		var h := float(m["height"])
 		var w := h * float(atlas.aspect[path])
 		var pos: Vector2 = m["pos"]
-		var tl := Vector2(-w * 0.5, -h * foot)
+		var tl := Vector2(-w * 0.5, -h * float(m.get("foot", foot)))
 		var angle := float(m.get("angle", 0.0))
 		var corners := [tl, tl + Vector2(w, 0.0), tl + Vector2(w, h), tl + Vector2(0.0, h)]
 		var r: Rect2 = atlas.uv[path]
