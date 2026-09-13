@@ -211,6 +211,15 @@ var territory_log: Array = []
 var world: Dictionary = {}
 ## One entry per ledger write: {tick, path, delta, reason, source}.
 var world_log: Array = []
+## Manors (MANOR_SYSTEM.md): cell id (as a String, for JSON) -> the family
+## holding it, ONLY for manors that changed hands — an absent manor still
+## belongs to its province's house. Read through MapManors, never directly.
+var manor_owner: Dictionary = {}
+## cell id (String) -> [building codes] raised on it (data/manor_buildings.csv).
+var manor_buildings: Dictionary = {}
+## One entry per transfer {tick, cell, from, to, reason} or building
+## {tick, cell, building, reason}: a manor that changed must say why.
+var manor_log: Array = []
 
 const SAVE_VERSION := 4
 
@@ -239,6 +248,9 @@ func to_dict() -> Dictionary:
 		"territory_log": _encode_values(territory_log.duplicate(true)),
 		"world": _encode_values(world.duplicate()),
 		"world_log": _encode_values(world_log.duplicate(true)),
+		"manor_owner": manor_owner.duplicate(),
+		"manor_buildings": manor_buildings.duplicate(true),
+		"manor_log": _encode_values(manor_log.duplicate(true)),
 	}
 
 static func from_dict(d: Dictionary) -> GameState:
@@ -282,5 +294,9 @@ static func from_dict(d: Dictionary) -> GameState:
 	# Saves from before the ledger carry neither key: nothing has moved.
 	s.world = _decode_values(d.get("world", {}))
 	s.world_log = _decode_values(d.get("world_log", []))
+	# Saves from before the manor system carry none of these: nothing moved.
+	s.manor_owner = d.get("manor_owner", {}).duplicate()
+	s.manor_buildings = d.get("manor_buildings", {}).duplicate(true)
+	s.manor_log = _decode_values(d.get("manor_log", []))
 	MapOwnership.invalidate()
 	return s

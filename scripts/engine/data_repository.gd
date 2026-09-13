@@ -41,6 +41,9 @@ var terrain_art: Array[Dictionary] = []
 ## data/sea_art.csv rows: the ships and whales printed on the open sea
 ## (MapObjects.sea_decor): texture, weight, height_px, min_shore_px from the coast.
 var sea_art: Array[Dictionary] = []
+## data/manor_buildings.csv: building_code -> {label, cost_gold, tax_bonus,
+## output_bonus, defence_bonus, church_bonus} — what a manor can raise.
+var manor_buildings: Dictionary = {}
 ## data/goods_art.csv: good_code -> the produce icon the ECONOMY view draws.
 var goods_art: Dictionary = {}
 ## data/goods_palette.csv: a good's first tag -> the colour its province wears
@@ -307,6 +310,11 @@ func _load(dir: String) -> bool:
 			["key", "biome_id", "min_height", "max_height", "texture", "density",
 			"height_px", "clump", "spread"],
 			func(r): terrain_art.append(r)):
+		return false
+	if not _load_if_present("res://data/manor_buildings.csv",
+			["building_code", "label", "cost_gold", "tax_bonus", "output_bonus",
+			"defence_bonus", "church_bonus"],
+			func(r): manor_buildings[String(r["building_code"])] = r):
 		return false
 	if not _load_if_present("res://data/sea_art.csv",
 			["key", "texture", "weight", "height_px", "min_shore_px"],

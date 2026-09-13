@@ -510,12 +510,17 @@ static func humanize(kind: String) -> String:
 ## one, else a house named after the province's capital town (so foreign
 ## land always has a holder without authoring anything).
 static func house_of(repo: DataRepository, province_code: String) -> String:
+	return "House " + house_name_of(repo, province_code)
+
+## The same house as a bare family name — what Character.family_name and
+## GameState.manor_owner carry (MapManors).
+static func house_name_of(repo: DataRepository, province_code: String) -> String:
 	var bound := String(repo.house_bindings.get(province_code, ""))
 	if bound != "":
-		return "House " + bound
+		return bound
 	var prov: Dictionary = repo.provinces.get(province_code, {})
 	var cap: Dictionary = repo.burgs.get(String(prov.get("capital_burg", "")), {})
-	return "House " + String(cap.get("label", prov.get("label", province_code)))
+	return String(cap.get("label", prov.get("label", province_code)))
 
 ## Whether the player's realm holds the province NOW.
 static func province_is_players(repo: DataRepository, state: GameState,

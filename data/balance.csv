@@ -200,3 +200,17 @@ map_sea_route_gap_px,7,world map: gap between those dashes in screen px
 map_sea_route_alpha,0.55,world map: opacity of a sea lane
 map_trail_width,0.9,terrain: trail and sea-route stroke width in screen px
 map_trail_min_scale,2.4,terrain: view scale at/above which trails and sea routes draw (roads always draw)
+manor_rent_per_1000,0.05,"manors (MANOR_SYSTEM.md §3): gold a manor yields its holder each tick per 1 000 people, before building bonuses; crown-held manors pay it into the treasury as 'manor rents'"
+manor_price_per_1000,40,"manors §5: the value of a manor per 1 000 people"
+manor_price_per_unit,2,"manors §5: the value per unit of goods a working manor makes"
+manor_price_building_ratio,0.5,"manors §5: the share of a building's cost that stays in the manor's value"
+manor_price_land_swing,0.6,"manors §5: how far the land's value (0..1) swings the price about 1 — rich land 1 + 0.5 x this, moor 1 - 0.5 x this"
+manor_markup_max,0.5,"manors §5: the most a house that hates the crown (opinion -100) adds to its asking price; a house at +100 asks the value itself"
+manor_sell_ratio,0.7,"manors §5: what the crown gets, as a share of the value, selling a manor back to its province's house"
+manor_trade_goodwill,4,"manors §5: opinion the selling house's characters gain when the crown buys from them"
+manor_defence_base,10,"manors §3: a manor's defence before buildings (displayed; the seizure roll is future work)"
+manor_seize_enabled,0,"manors §5: 1 lets the crown take a manor by force (MANOR_SEIZE); 0 hides the order — the outcome is automatic success until the military system lands"
+manor_seize_legitimacy,8,"manors §5: legitimacy lost seizing a manor"
+manor_seize_unrest,6,"manors §5: unrest gained seizing a manor"
+manor_seize_outrage,25,"manors §5: opinion lost by every character of the house a manor is seized from"
+manor_master_max_rows,400,"manors §6: the most manors the Manor Master table lists at once"

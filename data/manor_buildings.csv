@@ -1,0 +1,7 @@
+building_code,label,cost_gold,tax_bonus,output_bonus,defence_bonus,church_bonus,notes
+manor_house,Manor house,60,0.10,0,5,0,"a stone hall for the steward: rents are collected in full and the yard can be held"
+mill,Mill,40,0.05,0.15,0,0,"a water or wind mill: the manor grinds its own grain and takes a toll on its neighbours'"
+granary,Granary,35,0,0.05,0,0,"a stone granary: the harvest keeps, and a bad year is survived"
+chapel,Chapel,30,0,0,0,0.05,"a chapel with its own priest: the pulpit speaks well of the house that built it"
+palisade,Palisade,45,0,0,10,0,"a ditch and timber wall around the yard: a raid has to work for it"
+market,Market,50,0.15,0,0,0,"a weekly market by charter: tolls and stall rents"
