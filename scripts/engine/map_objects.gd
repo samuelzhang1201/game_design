@@ -155,13 +155,15 @@ static func terrain_decor(repo: DataRepository) -> Array:
 
 ## The sea's decoration — ships and a whale, the way an old chart fills its
 ## open water (owner request 2026-09-13): [{pos, texture, height}] in native
-## coordinates from data/sea_art.csv, one mark at most per sea cell, on
-## cells at least the row's min_hops from any shore (MapTerrain.shore_hops)
-## and chosen by the cell id's hash against the row's density x
-## map_sea_decor_density — the same determinism as terrain_decor, nothing
-## to seed or store. Rows are tried in table order; the first that takes
-## the cell wins. No monsters (owner ruling 2026-09-12): a whale is an
-## animal. Cached per repository.
+## coordinates from data/sea_art.csv. The pack's sea cells are few and huge
+## (beria: 1314 cells, none more than two hops from land), so marks are not
+## one per cell: candidates are spread over each sea cell by its AREA, one
+## per map_sea_decor_spacing_px square of its bounding box, hashed from the
+## cell id, kept inside the polygon, thinned by map_sea_decor_density, and
+## dropped within the row's min_shore_px of the land coast so they stay off
+## the hatching. The row is drawn by weight. The same determinism as
+## terrain_decor: nothing to seed or store. No monsters (owner ruling
+## 2026-09-12): a whale is an animal. Cached per repository.
 static var _sea_decor_cache: Dictionary = {}
 
 static func sea_decor(repo: DataRepository) -> Array:
@@ -169,35 +171,64 @@ static func sea_decor(repo: DataRepository) -> Array:
 	if _sea_decor_cache.has(key):
 		return _sea_decor_cache[key]
 	var out: Array = []
-	var hops := MapTerrain.shore_hops(repo)
-	var knob := repo.bal("map_sea_decor_density")
+	if repo.sea_art.is_empty():
+		_sea_decor_cache[key] = out
+		return out
+	var spacing := maxf(repo.bal("map_sea_decor_spacing_px"), 1.0)
+	var take := repo.bal("map_sea_decor_density")
 	var scale := repo.bal("map_sea_decor_scale")
+	var shore := shore_points(repo)
+	var total_weight := 0.0
+	for row: Dictionary in repo.sea_art:
+		total_weight += float(row["weight"])
 	for id: int in repo.cells:
 		var cell: Dictionary = repo.cells[id]
 		if not MapTerrain.is_sea(cell):
 			continue
-		var away := int(hops.get(id, 1 << 30))
-		var k := 0
-		for row: Dictionary in repo.sea_art:
-			k += 1
-			if away < int(row["min_hops"]):
+		var poly := PackedVector2Array()
+		for v: int in (cell["vertex_ids"] as PackedInt32Array):
+			poly.append(repo.vertices[v] as Vector2)
+		if poly.size() < 3:
+			continue
+		var box := MapGeometry.bounds(poly)
+		var quota := int(box.size.x * box.size.y / (spacing * spacing)) + 1
+		for q in quota:
+			var p := box.position + Vector2(hash01(id * 7919 + q * 104729),
+				hash01(id * 31337 + q * 15485863)) * box.size
+			if not Geometry2D.is_point_in_polygon(p, poly):
 				continue
-			if hash01(id * 6700417 + k * 999983) >= float(row["density"]) * knob:
+			if hash01(id * 6700417 + q * 999983) >= take:
 				continue
-			# Off the cell's centre by a hashed nudge, so the marks do not sit
-			# on the Voronoi lattice.
-			var centre := MapTerrain.cell_center(repo, cell)
-			var reach := MapTerrain.cell_radius(repo, cell) * 0.5
-			var a := hash01(id * 7919 + k * 104729) * TAU
-			var dist := sqrt(hash01(id * 31337 + k * 15485863)) * reach
-			out.append({"pos": centre + Vector2(cos(a), sin(a)) * dist,
-				"texture": String(row["texture"]),
+			var pick := hash01(id * 2654435761 + q * 40503) * total_weight
+			var row: Dictionary = repo.sea_art[0]
+			for r: Dictionary in repo.sea_art:
+				row = r
+				pick -= float(r["weight"])
+				if pick < 0.0:
+					break
+			if _to_shore(p, shore) < float(row["min_shore_px"]):
+				continue
+			out.append({"pos": p, "texture": String(row["texture"]),
 				"height": float(row["height_px"]) * scale})
-			break
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return (a["pos"] as Vector2).y < (b["pos"] as Vector2).y)
 	_sea_decor_cache[key] = out
 	return out
+
+## Every point of every LAND coast loop — the shore a sea mark keeps away
+## from. Lake shores do not bound the sea.
+static func shore_points(repo: DataRepository) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for row: Dictionary in repo.coasts:
+		if String(row.get("kind", "land")) == "land":
+			out.append_array(row["polyline"])
+	return out
+
+static func _to_shore(p: Vector2, shore: PackedVector2Array) -> float:
+	var best := INF
+	for s: Vector2 in shore:
+		best = minf(best, p.distance_squared_to(s))
+	return sqrt(best)
 
 ## Whether the pack's points of interest are on the sheet at all. Owner
 ## ruling 2026-09-12: they are off — the map is for realms and settlements —

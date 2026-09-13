@@ -384,6 +384,54 @@ func _decor_repo(clump: int, spread: float) -> DataRepository:
 		"spread": str(spread)}]
 	return r
 
+## Ships and a whale on the open sea (owner request 2026-09-13): candidates
+## spread over a sea cell by its area, kept by the hash against
+## map_sea_decor_density, and only beyond the row's min_shore_px from the
+## land coast. A 200x200 sea square east of a shore running down x = 10.
+func _sea_repo(take: float, min_shore: float) -> DataRepository:
+	var r := DataRepository.new()
+	r.balance = {"map_sea_decor_density": take, "map_sea_decor_scale": 1.0,
+		"map_sea_decor_spacing_px": 40.0}
+	r.vertices = {0: Vector2(0, 0), 1: Vector2(10, 0), 2: Vector2(10, 200), 3: Vector2(0, 200),
+		4: Vector2(210, 0), 5: Vector2(210, 200)}
+	r.cells = {
+		1: {"vertex_ids": PackedInt32Array([0, 1, 2, 3]), "height": 30.0, "biome_id": 6,
+			"water": "", "neighbor_ids": PackedInt32Array([2])},
+		2: {"vertex_ids": PackedInt32Array([1, 4, 5, 2]), "height": 5.0, "biome_id": 0,
+			"water": "ocean", "neighbor_ids": PackedInt32Array([1])}}
+	r.coasts = [{"kind": "land", "polyline": PackedVector2Array([Vector2(10, 0),
+		Vector2(10, 100), Vector2(10, 200)])}]
+	r.sea_art = [{"key": "whale", "texture": "res://w.png", "weight": "1",
+		"height_px": "22", "min_shore_px": str(min_shore)}]
+	return r
+
+func test_sea_marks_keep_off_the_shore_and_inside_the_water() -> void:
+	MapObjects.forget_decor()
+	var marks := MapObjects.sea_decor(_sea_repo(1.0, 50.0))
+	assert_gt(marks.size(), 5, "a 200x200 sea sampled every 40 px holds a good many")
+	for m: Dictionary in marks:
+		var p: Vector2 = m["pos"]
+		assert_gte(p.x, 60.0, "at least 50 px off the shore at x = 10")
+		assert_lte(p.x, 210.0, "inside the sea cell")
+		assert_true(p.y >= 0.0 and p.y <= 200.0, "inside the sea cell")
+		assert_eq(m["texture"], "res://w.png")
+		assert_eq(m["height"], 22.0)
+	MapObjects.forget_decor()
+	assert_eq(MapObjects.sea_decor(_sea_repo(0.0, 50.0)).size(), 0, "density 0: an empty sea")
+	MapObjects.forget_decor()
+	assert_eq(MapObjects.sea_decor(_sea_repo(1.0, 500.0)).size(), 0,
+		"a shore margin wider than the sea: nothing fits")
+
+func test_sea_marks_stand_in_the_same_place_every_time() -> void:
+	MapObjects.forget_decor()
+	var first := MapObjects.sea_decor(_sea_repo(0.5, 20.0)).duplicate(true)
+	MapObjects.forget_decor()
+	var second := MapObjects.sea_decor(_sea_repo(0.5, 20.0))
+	assert_gt(first.size(), 0)
+	assert_eq(first.size(), second.size())
+	for i in first.size():
+		assert_eq(first[i]["pos"], second[i]["pos"], "no RNG: the scatter is the cell id")
+
 func test_a_wood_is_several_marks_scattered_inside_its_cell() -> void:
 	MapObjects.forget_decor()
 	var repo := _decor_repo(5, 0.8)
