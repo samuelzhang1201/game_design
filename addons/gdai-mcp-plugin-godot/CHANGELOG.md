@@ -2,6 +2,14 @@
 
 > Get access to beta/dev versions exclusively on the [Discord server](/docs/update-guide).
 
+## 0.3.3
+
+- Add optional Streamable HTTP transport to the Python MCP adapter
+- Update MCP SDKs and maintain compatibility with older MCP clients
+- Fix editor shutdown crashes and headless import shutdown
+- Fix runtime debugger capture lifecycle
+- Fix runtime configuration memory leak
+
 ## 0.3.2
 
 - Auto-enable runtime plugin

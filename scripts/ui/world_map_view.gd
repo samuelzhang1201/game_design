@@ -298,9 +298,11 @@ func _draw() -> void:
 	# mapSample.jpg): painted over them it muted every river and track on
 	# claimed land, which is most of the map.
 	_layer("wash", _draw_political_wash)
+	# Filled in place, never reassigned: a lambda captures the local by value,
+	# so `manors = ...` inside it left the badges layer below reading [].
 	var manors: Array = []
 	_layer("manors", func() -> void:
-		manors = working_manors()
+		manors.append_array(working_manors())
 		_draw_manors(manors))
 	_layer("rivers", _draw_rivers)
 	_layer("routes", _draw_routes)
