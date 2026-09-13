@@ -42,6 +42,7 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 		"tax_rate": data.bal("start_tax_rate"),
 		"tariff_rate": data.bal("start_tariff_rate"),
 		"tax_income": 0.0,
+		"manor_rents": 0.0,
 		"admin_capacity": data.bal("admin_base"),
 		"legitimacy": data.bal("start_metric_default"),
 		"unrest": 0.0,

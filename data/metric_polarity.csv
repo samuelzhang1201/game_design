@@ -13,3 +13,4 @@ peasant_contentment,1,
 grain_capacity_bonus,1,
 road_income_bonus,1,
 grain_ration,0,
+manor_rents,1,gold the crown's manors pay each tick (MANOR_SYSTEM.md §3)

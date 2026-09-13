@@ -46,3 +46,33 @@ func test_outcomes_drain_into_next_report() -> void:
 	assert_eq(r.outcomes.size(), 1)
 	assert_eq(s.recent_outcomes.size(), 0)
 	assert_eq(r.outcomes[0]["action_code"], "TAX_RATE_ADJUST")
+
+## Manor rents (MANOR_SYSTEM.md §3): each tick the crown's manors pay their
+## rent into the treasury, as its own line with its own reason, and the
+## figure is what MapManors says it is. Buying a manor raises next tick's.
+func test_the_crowns_manors_pay_rent_each_tick() -> void:
+	var s := GameState.new_campaign(data, 42)
+	var expected := MapManors.crown_rents(data, s)
+	assert_gt(expected, 0.0, "the crown holds rent-paying manors")
+	var r := engine.advance(s)
+	assert_almost_eq(s.metrics["manor_rents"], expected, 0.001)
+	var found := false
+	for d in r.metric_deltas:
+		if d["metric"] == "treasury" and String(d["reason"]).contains("manor"):
+			found = true
+			assert_almost_eq(float(d["delta"]), expected, 0.001)
+	assert_true(found, "the rents are a treasury line of their own")
+	assert_lt(expected, s.metrics["tax_income"], "rents supplement the taxes, they do not replace them")
+	# A manor bought pays from the next tick.
+	var realm := data.resolve_realm("player_realm")
+	var bought := -1
+	for province: String in MapOwnership.provinces_of(data, s, realm):
+		for cell: int in MapManors.manors_of_province(data, province):
+			if not MapManors.is_crowns(data, s, cell):
+				bought = cell
+				break
+		if bought >= 0:
+			break
+	assert_true(MapManors.set_owner(data, s, bought, MapManors.crown(s), "bought"))
+	engine.advance(s)
+	assert_almost_eq(s.metrics["manor_rents"], expected + MapManors.rent_of(data, s, bought), 0.001)

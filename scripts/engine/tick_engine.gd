@@ -54,6 +54,12 @@ func _drift(state: GameState, r: TickReport) -> void:
 		+ m["tariff_rate"] * data.bal("tariff_income_factor") + m["road_income_bonus"]
 	_set_metric(r, m, "tax_income", income, "taxes and tariffs collected")
 	_apply(r, m, "treasury", income - data.bal("court_upkeep"), "income minus court upkeep")
+	# Manor rents (MANOR_SYSTEM.md §3): what the crown's own manors yield,
+	# on top of taxes and tariffs — a manor bought is a manor that pays.
+	var rents := MapManors.crown_rents(data, state)
+	_set_metric(r, m, "manor_rents", rents, "rents from the crown's manors")
+	if rents > 0.0:
+		_apply(r, m, "treasury", rents, "rents from the crown's manors")
 	if state.season() == "autumn":
 		_apply(r, m, "grain", data.bal("harvest_gain"), "the harvest comes in")
 	else:

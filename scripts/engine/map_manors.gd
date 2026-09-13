@@ -289,6 +289,14 @@ static func rent_of(repo: DataRepository, state: GameState, cell_id: int) -> flo
 	return pop / 1000.0 * repo.bal("manor_rent_per_1000") \
 		* (1.0 + building_bonus(repo, state, cell_id, "tax_bonus"))
 
+## Gold per tick from every manor the crown holds in its realm — what
+## TickEngine pays into the treasury as "manor rents" (MANOR_SYSTEM.md §3).
+static func crown_rents(repo: DataRepository, state: GameState) -> float:
+	var total := 0.0
+	for cell: int in manors_of_house(repo, state, crown(state), repo.resolve_realm("player_realm")):
+		total += rent_of(repo, state, cell)
+	return total
+
 static func defence_of(repo: DataRepository, state: GameState, cell_id: int) -> float:
 	return repo.bal("manor_defence_base") + building_bonus(repo, state, cell_id, "defence_bonus")
 
