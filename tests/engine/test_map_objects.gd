@@ -481,3 +481,96 @@ func test_marks_vary_in_size_around_the_rows_height() -> void:
 	assert_gte(lo, 4.0 * 0.8 - 0.001, "no mark smaller than 0.8 of the row")
 	assert_lte(hi, 4.0 * 1.2 + 0.001, "none larger than 1.2 of it")
 	assert_gt(hi - lo, 0.0, "and they are not all the same size")
+
+## --- Manors (MANOR_SYSTEM.md §3, §6) ----------------------------------------
+
+func _campaign() -> GameState:
+	return GameState.new_campaign(real, 42)
+
+func _manor_where(state: GameState, crowns: bool, in_realm: bool = true) -> int:
+	var realm := real.resolve_realm("player_realm")
+	for province: String in real.provinces:
+		if (MapOwnership.owner_of(real, state, province) == realm) != in_realm:
+			continue
+		for cell: int in MapManors.manors_of_province(real, province):
+			if MapManors.is_crowns(real, state, cell) == crowns:
+				return cell
+	return -1
+
+func test_a_land_pixel_answers_as_its_manor_only_when_the_cell_index_is_given() -> void:
+	var state := _campaign()
+	var cell := _manor_where(state, true)
+	assert_gt(cell, -1)
+	var centre := MapTerrain.cell_center(real, real.cells[cell])
+	var state_img: Image = (load(real.index_texture_path) as Texture2D).get_image()
+	var province_img: Image = (load(real.province_texture_path) as Texture2D).get_image()
+	var biome_img: Image = (load(real.biome_texture_path) as Texture2D).get_image()
+	var cell_img: Image = (load(real.cell_texture_path) as Texture2D).get_image()
+	var plain := MapObjects.object_at(real, state_img, province_img, biome_img, centre, 0.0, 0.0,
+		1 << 30, state)
+	assert_eq(String(plain["kind"]), "land", "the political map: land")
+	var manor := MapObjects.object_at(real, state_img, province_img, biome_img, centre, 0.0, 0.0,
+		1 << 30, state, cell_img)
+	assert_eq(String(manor["kind"]), "manor")
+	assert_eq(int(manor["cell"]), cell)
+	assert_eq(MapObjects.label_of(real, manor), MapManors.label_of(real, cell))
+	var entry := MapObjects.describe(real, manor, state)
+	assert_eq(String(entry["title"]), MapManors.label_of(real, cell))
+
+func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
+	var state := _campaign()
+	state.metrics["treasury"] = 100000.0
+	var own := _manor_where(state, true)
+	var card := MapObjects.manor_card(real, state, own)
+	assert_eq(String(card["kind"]), "manor")
+	assert_eq(int(card["cell"]), own)
+	assert_eq(String(card["known"]), "full")
+	var fields: Dictionary = {}
+	for f in card["fields"]:
+		fields[String(f[0])] = String(f[1])
+	assert_eq(fields["Held by"], "The crown")
+	for key in ["Province", "Land", "Area", "People", "Rent", "Defence", "Buildings", "Value", "Sells for"]:
+		assert_true(fields.has(key), key + " is on the card")
+	var codes: Array = []
+	for a: Dictionary in card["actions"]:
+		codes.append(String(a["action_code"]))
+		# The demesne has no house to sell back to; every other order stands.
+		if String(a["action_code"]) != "MANOR_SELL":
+			assert_eq(String(a["error"]), "", "%s can be given: %s" % [a["label"], a["error"]])
+	assert_has(codes, "MANOR_SELL")
+	assert_has(codes, "MANOR_BUILD")
+	assert_does_not_have(codes, "MANOR_BUY")
+	assert_eq(codes.count("MANOR_BUILD"), real.manor_buildings.size(), "one BUILD per building not raised")
+	# Another house's manor in the realm: buy, no seize while the flag is off.
+	var theirs := _manor_where(state, false)
+	var other := MapObjects.manor_card(real, state, theirs)
+	var other_codes: Array = []
+	for a: Dictionary in other["actions"]:
+		other_codes.append(String(a["action_code"]))
+	assert_eq(other_codes, ["MANOR_BUY"])
+	assert_true(String(other["actions"][0]["label"]).begins_with("BUY — "))
+	var of: Dictionary = {}
+	for f in other["fields"]:
+		of[String(f[0])] = String(f[1])
+	assert_true(of["Held by"].begins_with("House "))
+	assert_true(of.has("Asking price"))
+	# Poor: the button stays but carries its reason.
+	state.metrics["treasury"] = 0.0
+	var poor := MapObjects.manor_card(real, state, theirs)
+	assert_string_contains(String(poor["actions"][0]["error"]), "afford")
+	# Abroad: basic, no orders.
+	var abroad := _manor_where(state, false, false)
+	var far := MapObjects.manor_card(real, state, abroad)
+	assert_eq(String(far["known"]), "basic")
+	assert_true((far["actions"] as Array).is_empty())
+
+func test_the_province_card_counts_its_manors_by_house() -> void:
+	var state := _campaign()
+	var realm := real.resolve_realm("player_realm")
+	var province: String = MapOwnership.provinces_of(real, state, realm)[0]
+	var card := MapObjects.province_card(real, state, province)
+	var fields: Dictionary = {}
+	for f in card["fields"]:
+		fields[String(f[0])] = String(f[1])
+	assert_true(fields.has("Manors"))
+	assert_true(String(fields["Manors"]).begins_with(str(MapManors.manors_of_province(real, province).size())))

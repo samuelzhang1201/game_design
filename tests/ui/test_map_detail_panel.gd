@@ -77,3 +77,41 @@ func test_other_objects_keep_their_lines() -> void:
 	assert_false(p.preview().visible)
 	p.show_entry({})
 	assert_false(p.visible)
+
+## A manor gets a card with its orders (MANOR_SYSTEM.md §3): a BUY button
+## for another house's manor, which runs the order through Game and redraws
+## the card as the crown's, with SELL and BUILD buttons in its place.
+func test_a_manor_card_buys_the_manor_from_its_button() -> void:
+	Game.start_campaign(42)
+	Game.state.metrics["treasury"] = 100000.0
+	var p := _panel()
+	await wait_frames(1)
+	var realm := Game.data.resolve_realm("player_realm")
+	var cell := -1
+	for province: String in MapOwnership.provinces_of(Game.data, Game.state, realm):
+		for c: int in MapManors.manors_of_province(Game.data, province):
+			if not MapManors.is_crowns(Game.data, Game.state, c):
+				cell = c
+				break
+		if cell >= 0:
+			break
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "manor", "cell": cell}})
+	await wait_frames(1)
+	assert_true(p.visible)
+	assert_eq(p.shown_manor(), cell)
+	assert_eq(p.title_label().text, MapManors.label_of(Game.data, cell))
+	assert_has(_grid_texts(p), "Asking price")
+	var buttons := p.actions_box().get_children()
+	assert_eq(buttons.size(), 1, "BUY only, seizing off")
+	var buy := buttons[0] as Button
+	assert_false(buy.disabled)
+	assert_true(buy.text.begins_with("BUY"))
+	buy.pressed.emit()
+	await wait_frames(1)
+	assert_true(MapManors.is_crowns(Game.data, Game.state, cell), "the order ran")
+	assert_has(_grid_texts(p), "The crown", "the card redrew from the new state")
+	var after: Array[String] = []
+	for b in p.actions_box().get_children():
+		after.append((b as Button).text.get_slice(" ", 0))
+	assert_has(after, "SELL")
+	assert_has(after, "BUILD")

@@ -36,9 +36,12 @@ static func burg_visible(b: Dictionary, min_pop: int) -> bool:
 ## Priority: nearest pin (markers, then LOD-visible burgs) within pick_radius,
 ## else nearest line (routes, then rivers) within line_radius, else the land
 ## under the point (ids from the three bitmaps), else water.
+## `cell_img` (world_cell_index.png) makes a land pixel answer as its MANOR
+## (MANOR_SYSTEM.md §6): the view passes it while a layer that shows
+## manors is up, and null on the political map, where land means province.
 static func object_at(repo: DataRepository, state_img: Image, province_img: Image,
 		biome_img: Image, native: Vector2, pick_radius: float, line_radius: float,
-		min_burg_pop: int, state: GameState = null) -> Dictionary:
+		min_burg_pop: int, state: GameState = null, cell_img: Image = null) -> Dictionary:
 	var pin := nearest_pin(repo, native, pick_radius, min_burg_pop)
 	if not pin.is_empty():
 		return pin
@@ -53,6 +56,11 @@ static func object_at(repo: DataRepository, state_img: Image, province_img: Imag
 	if sid < 0:
 		return {"kind": "water"}
 	var pid := MapIndex.id_at(province_img, px)
+	if cell_img != null:
+		var cell := MapIndex.id_at(cell_img, px)
+		if cell >= 0 and repo.manors.has(cell):
+			return {"kind": "manor", "cell": cell, "state_id": owner_state_id(repo, state, pid, sid),
+				"province_id": pid, "x": native.x, "y": native.y}
 	return {"kind": "land", "state_id": owner_state_id(repo, state, pid, sid),
 		"province_id": pid,
 		"biome_id": MapIndex.biome_at(biome_img, px),
@@ -332,6 +340,8 @@ static func label_of(repo: DataRepository, obj: Dictionary) -> String:
 		"army":
 			return String(repo.world_table("military", "regiments")
 				.get(obj["code"], {}).get("label", ""))
+		"manor":
+			return MapManors.label_of(repo, int(obj.get("cell", -1)))
 	return ""
 
 ## Card text per kind: {title, lines, ask}. {} means "nothing to show".
@@ -353,7 +363,20 @@ static func describe(repo: DataRepository, obj: Dictionary,
 			return _describe_army(repo, String(obj["code"]))
 		"land":
 			return _describe_land(repo, obj, state)
+		"manor":
+			return _describe_manor(repo, int(obj.get("cell", -1)), state)
 	return {}
+
+## A manor's entry: its card's title and a few lines, for the floating
+## card; the detail column asks for manor_card itself.
+static func _describe_manor(repo: DataRepository, cell: int, state: GameState) -> Dictionary:
+	var card := manor_card(repo, state, cell)
+	if card.is_empty():
+		return {}
+	var lines: Array[String] = []
+	for f in card["fields"]:
+		lines.append("%s: %s" % [String(f[0]), String(f[1])])
+	return {"title": card["title"], "lines": lines, "ask": card["ask"]}
 
 static func _kingdom_by_state(repo: DataRepository, sid: int) -> Dictionary:
 	for row: Dictionary in repo.kingdoms.values():
@@ -721,6 +744,9 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 	var urban: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.urban_population" % code)
 	var rural: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.rural_population" % code)
 	var fields: Array = card["fields"]
+	# Who holds the province's manors (MANOR_SYSTEM.md §4) — the crown's
+	# own land is known in this detail; abroad it is not.
+	fields.append(["Manors", holdings_text(repo, state, code)])
 	if urban != null and rural != null:
 		fields.append(["Population", "%d (%d in towns)" % [int(urban) + int(rural), int(urban)]])
 	else:
@@ -759,6 +785,130 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 	card["wealth"] = wealth
 	card["treasury"] = treasury
 	return card
+
+## The manor card (MANOR_SYSTEM.md §3): the same shape as province_card,
+## plus `cell`, `buildings` and `actions` — the orders the crown could give
+## for this manor, each with ActionSystem's own reason when it cannot, so
+## the column's buttons say why they are dim. Full inside the crown's
+## realm, basic abroad.
+static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dictionary:
+	if not MapManors.is_manor(repo, cell):
+		return {}
+	var province := MapManors.province_of(repo, cell)
+	var prov: Dictionary = repo.provinces.get(province, {})
+	var owner := MapOwnership.owner_of(repo, state, province)
+	var kingdom: Dictionary = repo.kingdoms.get(owner, {})
+	var label := MapManors.label_of(repo, cell)
+	var house := MapManors.owner_of(repo, state, cell)
+	var crowns := MapManors.is_crowns(repo, state, cell)
+	var subtitle := String(prov.get("full_name", prov.get("label", "")))
+	if not kingdom.is_empty():
+		subtitle += " · " + String(kingdom.get("label", ""))
+	var card := {
+		"kind": "manor", "code": MapManors.code_of(repo, cell), "cell": cell, "title": label,
+		"subtitle": subtitle, "kingdom_code": owner, "initial": label.substr(0, 1),
+		"fields": [["Held by", "The crown" if crowns else ("House " + house if house != "" else "no one")],
+			["Province", String(prov.get("label", province))]],
+		"features": [], "production": [], "wealth": 0.0, "treasury": 0.0,
+		"buildings": [], "actions": [],
+		"center": MapTerrain.cell_center(repo, repo.cells.get(cell, {"vertex_ids": PackedInt32Array()})),
+		"ask": "What do we know of %s?" % label,
+		"known": "full" if (province != "" and province_is_players(repo, state, province)) else "basic",
+	}
+	var fields: Array = card["fields"]
+	var burg := MapManors.burg_of(repo, cell)
+	if burg != "":
+		fields.append(["Seat", _label(repo.burgs, burg)])
+	if card["known"] == "basic":
+		return card
+	var cell_row: Dictionary = repo.cells.get(cell, {})
+	var biome: Dictionary = repo.biomes.get(int(cell_row.get("biome_id", -1)), {})
+	var terrain := String(biome.get("label", ""))
+	for n: int in (cell_row.get("neighbor_ids", PackedInt32Array()) as PackedInt32Array):
+		if MapTerrain.is_sea(repo.cells.get(n, {})):
+			terrain += " · coast"
+			break
+	if terrain != "":
+		fields.append(["Terrain", terrain])
+	fields.append(["Land", "%d%%" % roundi(MapManors.land_value_of(repo, cell) * 100.0)])
+	var scale := float(repo.map_info.get("distance_scale", "1"))
+	fields.append(["Area", "%d %s²" % [roundi(MapManors.area_of(repo, cell) * scale * scale),
+		String(repo.map_info.get("distance_unit", "px"))]])
+	var people := MapManors.population_of(repo, state, cell)
+	if float(people["urban"]) > 0.0:
+		fields.append(["People", "%d (%d in town)" % [roundi(float(people["total"])), roundi(float(people["urban"]))]])
+	else:
+		fields.append(["People", str(roundi(float(people["total"])))])
+	fields.append(["Rent", "%.2f gold a tick" % MapManors.rent_of(repo, state, cell)])
+	fields.append(["Defence", str(roundi(MapManors.defence_of(repo, state, cell)))])
+	var built: Array = MapManors.buildings_of(state, cell)
+	card["buildings"] = built
+	var names: Array[String] = []
+	for b: String in built:
+		names.append(String((repo.manor_buildings.get(b, {}) as Dictionary).get("label", b)))
+	fields.append(["Buildings", ", ".join(names) if not names.is_empty() else "none"])
+	fields.append(["Value", "%d gold" % roundi(MapManors.base_value_of(repo, state, cell))])
+	if crowns:
+		fields.append(["Sells for", "%d gold" % roundi(MapManors.sell_price_of(repo, state, cell))])
+	else:
+		fields.append(["Asking price", "%d gold" % roundi(MapManors.price_of(repo, state, cell))])
+	if state != null:
+		for i in range(state.manor_log.size() - 1, -1, -1):
+			var t: Dictionary = state.manor_log[i]
+			if int(t.get("cell", -1)) == cell and t.has("to"):
+				fields.append(["Changed hands", "to %s, tick %d (%s)" % [
+					"the crown" if String(t["to"]) == MapManors.crown(state) else "House " + String(t["to"]),
+					int(t["tick"]), String(t["reason"])]])
+				break
+	if burg != "":
+		card["production"] = production_of(repo, [burg])
+		var e: Dictionary = repo.world_row("economy", "burgs", burg)
+		card["wealth"] = float(e.get("product", 0.0))
+		card["treasury"] = float(e.get("treasury", 0.0))
+	card["actions"] = manor_actions(repo, state, cell)
+	return card
+
+## The orders the crown could give for a manor, each validated: [{action_code,
+## label, params, error}]. Buy or seize what another house holds; sell or
+## build on the crown's own. Seizing appears only while manor_seize_enabled.
+static func manor_actions(repo: DataRepository, state: GameState, cell: int) -> Array:
+	if state == null:
+		return []
+	var code := MapManors.code_of(repo, cell)
+	var specs: Array = []
+	if MapManors.is_crowns(repo, state, cell):
+		specs.append({"action_code": "MANOR_SELL", "params": {"manor": code},
+			"label": "SELL — %d gold" % roundi(MapManors.sell_price_of(repo, state, cell))})
+		var codes: Array = repo.manor_buildings.keys()
+		codes.sort()
+		for b: String in codes:
+			if MapManors.has_building(state, cell, b):
+				continue
+			var row: Dictionary = repo.manor_buildings[b]
+			specs.append({"action_code": "MANOR_BUILD", "params": {"manor": code, "building": b},
+				"label": "BUILD %s — %d gold" % [String(row["label"]).to_upper(), int(float(row["cost_gold"]))]})
+	else:
+		specs.append({"action_code": "MANOR_BUY", "params": {"manor": code},
+			"label": "BUY — %d gold" % roundi(MapManors.price_of(repo, state, cell))})
+		if repo.bal("manor_seize_enabled") > 0.0:
+			specs.append({"action_code": "MANOR_SEIZE", "params": {"manor": code},
+				"label": "SEIZE BY FORCE"})
+	var actions := ActionSystem.new(repo)
+	for spec: Dictionary in specs:
+		spec["error"] = actions.validate(ActionRequest.make(String(spec["action_code"]), spec["params"]), state)
+	return specs
+
+## "12 — the crown 7, House Weighhouse 5": a province's manors by holder.
+static func holdings_text(repo: DataRepository, state: GameState, province_code: String) -> String:
+	var counts := MapManors.holdings_of_province(repo, state, province_code)
+	var total := 0
+	var parts: Array[String] = []
+	var houses: Array = counts.keys()
+	houses.sort_custom(func(a: String, b: String) -> bool: return int(counts[a]) > int(counts[b]))
+	for h: String in houses:
+		total += int(counts[h])
+		parts.append("%s %d" % ["the crown" if h == MapManors.crown(state) else "House " + h, int(counts[h])])
+	return "%d — %s" % [total, ", ".join(parts)] if total > 0 else "none"
 
 ## The settlement drawing for a burg (data/settlement_art.csv): its group,
 ## and for groups that distinguish it, whether it has walls. {} when the

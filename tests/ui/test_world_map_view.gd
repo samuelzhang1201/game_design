@@ -1098,3 +1098,29 @@ func test_a_pan_cuts_no_dashes_but_a_zoom_or_conquest_does() -> void:
 	v.queue_redraw()
 	await wait_frames(2)
 	assert_gt(cache.builds, cut, "a conquest cut the borders again")
+
+## In a layer that shows manors a click on bare land selects the manor
+## under it (MANOR_SYSTEM.md §6); on the political map it still means the
+## province's land.
+func test_in_the_economy_view_a_click_on_land_selects_its_manor() -> void:
+	Game.start_campaign(42)
+	var v := _view()
+	await wait_frames(2)
+	var realm := Game.data.resolve_realm("player_realm")
+	var province: String = MapOwnership.provinces_of(Game.data, Game.state, realm)[0]
+	var cell: int = MapManors.manors_of_province(Game.data, province)[0]
+	var centre := MapTerrain.cell_center(Game.data, Game.data.cells[cell])
+	v._zoom_at(v.size / 2.0, 6.0)
+	v._offset += v.size / 2.0 - v.map_to_screen(centre)
+	v._clamp_offset()
+	var seen: Array = []
+	v.object_selected.connect(func(entry: Dictionary) -> void: seen.append(entry))
+	v.show_provinces = false
+	v.show_economy = true
+	v._select_at(v.map_to_screen(centre))
+	assert_eq(String(v._selected_obj.get("kind", "")), "manor")
+	assert_eq(int(v._selected_obj.get("cell", -1)), cell)
+	assert_eq(String(seen[-1]["title"]), MapManors.label_of(Game.data, cell))
+	v.show_economy = false
+	v._select_at(v.map_to_screen(centre))
+	assert_eq(String(v._selected_obj.get("kind", "")), "land", "the political map: land")

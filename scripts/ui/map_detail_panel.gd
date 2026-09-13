@@ -36,6 +36,12 @@ var _production: VBoxContainer
 var _money: VBoxContainer
 var _preview: TerrainPreview
 var _lines: VBoxContainer
+## The manor card's orders (MANOR_SYSTEM.md §3): one button per action the
+## card offers, dim with ActionSystem's reason as its tooltip when it cannot
+## be given. A click runs the order through Game.try_execute — never the
+## model — and redraws the card from the new state.
+var _actions: VBoxContainer
+var _shown_manor := -1
 var _hint: Label
 var _ask: Button
 var _close: Button
@@ -111,6 +117,10 @@ func _ready() -> void:
 	_money.name = "Money"
 	_money.add_theme_constant_override("separation", 2)
 	body.add_child(_money)
+	_actions = VBoxContainer.new()
+	_actions.name = "Actions"
+	_actions.add_theme_constant_override("separation", 4)
+	body.add_child(_actions)
 	_lines = VBoxContainer.new()
 	_lines.name = "Rows"
 	_lines.add_theme_constant_override("separation", 2)
@@ -182,6 +192,9 @@ func show_entry(entry: Dictionary) -> void:
 	if String(obj.get("kind", "")) == "burg":
 		show_card(MapObjects.burg_card(Game.data, Game.state, String(obj["code"])))
 		return
+	if String(obj.get("kind", "")) == "manor":
+		show_manor(int(obj.get("cell", -1)))
+		return
 	_clear()
 	_shield.visible = false
 	_title.text = String(entry.get("title", ""))
@@ -204,7 +217,18 @@ func show_province(province_code: String) -> void:
 	show_card(card)
 
 
-## Render a MapObjects card (burg_card / province_card).
+## The manor card, redrawn from the live state (a bought manor shows the
+## crown at once); -1 hides.
+func show_manor(cell: int) -> void:
+	_shown_manor = cell
+	var card := MapObjects.manor_card(Game.data, Game.state, cell) if cell >= 0 else {}
+	if card.is_empty():
+		_shown_manor = -1
+		_close_panel()
+		return
+	show_card(card)
+
+## Render a MapObjects card (burg_card / province_card / manor_card).
 func show_card(card: Dictionary) -> void:
 	if card.is_empty():
 		_close_panel()
@@ -251,6 +275,18 @@ func show_card(card: Dictionary) -> void:
 			cell.add_child(text)
 			_money.add_child(cell)
 		_set_preview(card.get("center", Vector2.ZERO))
+		for a: Dictionary in card.get("actions", []):
+			var button := Button.new()
+			button.name = String(a["action_code"]) + "_" + String((a["params"] as Dictionary).get("building", ""))
+			button.text = String(a["label"])
+			button.focus_mode = Control.FOCUS_NONE
+			button.add_theme_font_size_override("font_size", 13)
+			button.disabled = String(a.get("error", "")) != ""
+			button.tooltip_text = String(a.get("error", ""))
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var request := ActionRequest.make(String(a["action_code"]), (a["params"] as Dictionary).duplicate())
+			button.pressed.connect(func() -> void: _give_order(request))
+			_actions.add_child(button)
 	else:
 		_hint.text = "Little more is known of foreign land."
 		_hint.visible = true
@@ -264,8 +300,19 @@ func _set_preview(center: Vector2) -> void:
 	_preview.show_place(center)
 
 
+## A card button's order: through Game, which validates and executes it
+## and announces the state change; then the card is drawn again.
+func _give_order(request: ActionRequest) -> void:
+	var result := Game.try_execute(request)
+	if not bool(result.get("ok", false)):
+		_hint.text = String(result.get("error", ""))
+		_hint.visible = _hint.text != ""
+		return
+	if _shown_manor >= 0:
+		show_manor(_shown_manor)
+
 func _clear() -> void:
-	for box in [_fields, _features, _production, _money, _lines]:
+	for box in [_fields, _features, _production, _money, _lines, _actions]:
 		for child in box.get_children():
 			box.remove_child(child)
 			child.queue_free()
@@ -333,6 +380,12 @@ func ask_button() -> Button:
 func close_button() -> Button:
 	return _close
 
+
+func actions_box() -> VBoxContainer:
+	return _actions
+
+func shown_manor() -> int:
+	return _shown_manor
 
 func shown_province() -> String:
 	return _shown_province

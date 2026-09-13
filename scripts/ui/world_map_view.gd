@@ -148,6 +148,9 @@ var _by_state_id: Dictionary = {}
 ## are outlined in _draw.
 var _hover_sid := -1
 var _province_image: Image
+## world_cell_index.png: the manor under a pixel, read only while a layer
+## that shows manors is up (MANOR_SYSTEM.md §6).
+var _cell_image: Image
 var _biome_image: Image
 ## The pin/line/land under the mouse (MapObjects.object_at); {} before any hover.
 var _hover_obj: Dictionary = {}
@@ -197,6 +200,7 @@ func _ready() -> void:
 		var idx: Texture2D = load(index_path)
 		_index_image = idx.get_image()
 	_province_image = _load_image(Game.data.province_texture_path)
+	_cell_image = _load_image(Game.data.cell_texture_path)
 	_biome_image = _load_image(Game.data.biome_texture_path)
 	_build_coast_rings()
 	for code: String in Game.data.kingdoms:
@@ -1722,7 +1726,13 @@ func _object_under(pos: Vector2) -> Dictionary:
 	return MapObjects.object_at(Game.data, _index_image, _province_image, _biome_image,
 		screen_to_map(pos), Game.data.bal("map_pick_radius_px") / s,
 		Game.data.bal("map_line_pick_px") / s,
-		MapObjects.min_burg_pop_for_scale(Game.data, s), Game.state)
+		MapObjects.min_burg_pop_for_scale(Game.data, s), Game.state,
+		_cell_image if manors_pickable() else null)
+
+## Whether a click on land means its manor (MANOR_SYSTEM.md §6): in the
+## layers that draw manors. On the political map land still means province.
+func manors_pickable() -> bool:
+	return show_economy
 
 func _update_hover(pos: Vector2) -> void:
 	var obj := _object_under(pos)
@@ -1736,18 +1746,18 @@ func _update_hover(pos: Vector2) -> void:
 ## reading the bitmap alone would drop the outline the moment the player
 ## touches the pin. Anything else falls back to the pixel under the cursor.
 func _state_of(obj: Dictionary, pos: Vector2) -> int:
-	var code := String(obj.get("code", ""))
-	if code != "":
-		var holder := ""
-		match String(obj.get("kind", "")):
-			"burg":
-				var b: Dictionary = Game.data.burgs.get(code, {})
-				holder = MapOwnership.owner_of(Game.data, Game.state,
-					String(b.get("province_code", "")))
-			"province":
-				holder = MapOwnership.owner_of(Game.data, Game.state, code)
-		if holder != "" and Game.data.kingdoms.has(holder):
-			return int((Game.data.kingdoms[holder] as Dictionary)["state_id"])
+	var holder := ""
+	match String(obj.get("kind", "")):
+		"burg":
+			var b: Dictionary = Game.data.burgs.get(String(obj.get("code", "")), {})
+			holder = MapOwnership.owner_of(Game.data, Game.state, String(b.get("province_code", "")))
+		"province":
+			holder = MapOwnership.owner_of(Game.data, Game.state, String(obj.get("code", "")))
+		"manor":
+			holder = MapOwnership.owner_of(Game.data, Game.state,
+				MapManors.province_of(Game.data, int(obj.get("cell", -1))))
+	if holder != "" and Game.data.kingdoms.has(holder):
+		return int((Game.data.kingdoms[holder] as Dictionary)["state_id"])
 	return _state_under(pos)
 
 ## Beside the cursor, pushed back inside the frame at the edges so a pin
