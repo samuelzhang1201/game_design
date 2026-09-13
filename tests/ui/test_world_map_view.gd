@@ -1077,6 +1077,28 @@ func test_the_woods_are_one_mesh_over_one_atlas() -> void:
 	v.show_heights = true
 	assert_false(v.decor_visible(), "hidden under a theme")
 
+## The manors' marks are meshes by zoom tier (owner 2026-09-13): nothing
+## at the world zoom, the farmsteads at the home zoom, the fields closer
+## in; none under a theme.
+func test_the_manor_marks_come_in_by_zoom_tier() -> void:
+	var v := _view()
+	await wait_frames(2)
+	var meshes := v.manor_decor_meshes()
+	assert_eq(meshes.size(), 2, "two tiers in data/manor_decor.csv")
+	var tiers: Array = meshes.keys()
+	tiers.sort()
+	for tier: float in tiers:
+		assert_gt(MarkMesh.quad_count(meshes[tier]), 0, "tier %.1f has marks" % tier)
+	v._zoom = float(tiers[0]) - 0.1
+	assert_eq(v.manor_decor_tiers_shown(), [], "below the first tier: none")
+	v._zoom = float(tiers[0])
+	assert_eq(v.manor_decor_tiers_shown(), [tiers[0]])
+	v._zoom = float(tiers[1]) + 0.5
+	assert_eq(v.manor_decor_tiers_shown(), tiers, "close in: every tier")
+	assert_true(v.manor_decor_meshes() == meshes, "kept between frames")
+	v.show_manors = true
+	assert_eq(v.manor_decor_tiers_shown(), [], "none under a theme")
+
 ## A thematic view drops the terrain decoration: a wood is not what the view
 ## is about. The HEIGHTS view keeps the town drawings — a town is still a
 ## place — while the ECONOMY view marks its places with manor badges instead

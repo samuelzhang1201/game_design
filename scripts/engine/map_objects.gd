@@ -92,6 +92,7 @@ static var _decor_cache: Dictionary = {}
 static func forget_decor() -> void:
 	_decor_cache.clear()
 	_sea_decor_cache.clear()
+	_manor_decor_cache.clear()
 
 ## A stable float in [0, 1) for an integer — an integer hash, masked to 32
 ## bits at every step so it cannot drift with the word size.
@@ -159,6 +160,70 @@ static func terrain_decor(repo: DataRepository) -> Array:
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return (a["pos"] as Vector2).y < (b["pos"] as Vector2).y)
 	_decor_cache[key] = out
+	return out
+
+## The marks the MANORS carry (owner 2026-09-13: the map read empty —
+## most manors have no town and drew nothing): [{pos, texture, height,
+## min_scale, cell}] in native coordinates from data/manor_decor.csv. A
+## manor with a town in it carries none (the town drawing is there). A
+## `hamlet` row gives one farmstead per per_people of the manor's people
+## (MapManors.population_table, so the ledger's people show on the land),
+## at most max_clump; a `focus` row gives clump marks of the chief good the
+## manor works (MapManors.focus_of). Placed inside the cell by hashes of the
+## cell id, like terrain_decor — the same every run, nothing stored. Cached
+## on what can move it: the ledger and the chosen focuses.
+static var _manor_decor_cache: Dictionary = {}
+
+static func manor_decor(repo: DataRepository, state: GameState) -> Array:
+	var key := hash([repo.get_instance_id(),
+		0 if state == null else state.world.hash(),
+		0 if state == null else state.manor_focus.hash()])
+	if _manor_decor_cache.has(key):
+		return _manor_decor_cache[key]
+	var out: Array = []
+	if repo.manor_decor.is_empty():
+		_manor_decor_cache[key] = out
+		return out
+	var ids: Array = repo.manors.keys()
+	ids.sort()
+	var people := MapManors.population_table(repo, state, ids)
+	var scale := repo.bal("map_decor_scale")
+	for id: int in ids:
+		if MapManors.burg_of(repo, id) != "":
+			continue
+		var cell: Dictionary = repo.cells.get(id, {})
+		if cell.is_empty():
+			continue
+		var centre := MapTerrain.cell_center(repo, cell)
+		var radius := MapTerrain.cell_radius(repo, cell)
+		var focus := MapManors.focus_of(repo, state, id)
+		for r in repo.manor_decor.size():
+			var row: Dictionary = repo.manor_decor[r]
+			var n := 0
+			match String(row["kind"]):
+				"hamlet":
+					var per := float(row.get("per_people", 0))
+					var pop := float((people.get(id, {}) as Dictionary).get("total", 0.0))
+					n = clampi(roundi(pop / per), 1, maxi(int(float(row.get("max_clump", 1))), 1)) if per > 0.0 else 1
+				"focus":
+					if focus == "" or focus != String(row.get("focus_code", "")):
+						continue
+					n = maxi(int(float(row.get("clump", 1))), 1)
+				_:
+					continue
+			var reach := radius * float(row.get("spread", 0.6))
+			var base := float(row["height_px"]) * scale
+			var salt := (r + 1) * 7127
+			for k in n:
+				var a := hash01(id * 6007 + k * 104729 + salt) * TAU
+				var d := sqrt(hash01(id * 30011 + k * 15485863 + salt)) * reach
+				out.append({
+					"pos": centre + Vector2(cos(a), sin(a)) * d,
+					"texture": String(row["texture"]),
+					"height": base * (0.85 + 0.3 * hash01(id * 2654435761 + k * 40503 + salt)),
+					"min_scale": float(row.get("min_scale", 0)),
+					"cell": id})
+	_manor_decor_cache[key] = out
 	return out
 
 ## The sea's decoration — ships and a whale, the way an old chart fills its

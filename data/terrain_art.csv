@@ -8,8 +8,8 @@ temperate_rainforest,8,,,res://assets/terrain/conifer_wood.png,0.36,1.6,14,0.9,
 tropical_rainforest,7,,,res://assets/terrain/broadleaf_wood.png,0.38,1.6,14,0.9,
 deciduous,6,,,res://assets/terrain/broadleaf_wood.png,0.34,1.6,14,0.9,temperate deciduous forest
 tropical_seasonal,5,,,res://assets/terrain/broadleaf.png,0.24,1.5,9,0.9,
-grassland,4,,,res://assets/terrain/thicket.png,0.11,1.2,4,0.85,open country: a hint of scrub
-savanna,3,,,res://assets/terrain/broadleaf.png,0.12,1.4,4,0.9,
-cold_desert,2,,,res://assets/terrain/rocks.png,0.10,1.2,4,0.85,
-hot_desert,1,,,res://assets/terrain/rocks.png,0.08,1.2,4,0.85,
+grassland,4,,,res://assets/terrain/thicket.png,0.18,1.2,4,0.85,open country: a hint of scrub
+savanna,3,,,res://assets/terrain/broadleaf.png,0.18,1.4,4,0.9,
+cold_desert,2,,,res://assets/terrain/rocks.png,0.14,1.2,4,0.85,
+hot_desert,1,,,res://assets/terrain/rocks.png,0.12,1.2,4,0.85,
 tundra,10,,,res://assets/terrain/conifer.png,0.12,1.3,6,0.9,

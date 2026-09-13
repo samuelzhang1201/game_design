@@ -597,3 +597,73 @@ func test_the_province_card_counts_its_manors_by_house() -> void:
 		fields[String(f[0])] = String(f[1])
 	assert_true(fields.has("Manors"))
 	assert_true(String(fields["Manors"]).begins_with(str(MapManors.manors_of_province(real, province).size())))
+
+## The manors' marks (owner 2026-09-13): every manor without a town carries
+## farmsteads by its people, and its chief good's marks; a manor with a town
+## carries nothing; the same every call.
+func test_manors_without_towns_carry_farmsteads_and_their_chief_good() -> void:
+	var state := _campaign()
+	var marks := MapObjects.manor_decor(real, state)
+	assert_gt(marks.size(), 2000, "thousands of manors, marked")
+	var hamlet_row: Dictionary = {}
+	for row: Dictionary in real.manor_decor:
+		if String(row["kind"]) == "hamlet":
+			hamlet_row = row
+	assert_false(hamlet_row.is_empty())
+	var per_cell: Dictionary = {}
+	for m: Dictionary in marks:
+		var cell := int(m["cell"])
+		assert_true(MapManors.is_manor(real, cell))
+		assert_eq(MapManors.burg_of(real, cell), "", "a town's manor carries no mark")
+		assert_true(real.cells.has(cell))
+		if not per_cell.has(cell):
+			per_cell[cell] = {"hamlet": 0, "focus": 0}
+		if String(m["texture"]) == String(hamlet_row["texture"]):
+			per_cell[cell]["hamlet"] += 1
+		else:
+			per_cell[cell]["focus"] += 1
+		assert_gt(float(m["height"]), 0.0)
+	# Farmsteads follow the people: a big manor has the cap, a small one one.
+	var max_clump := int(float(hamlet_row["max_clump"]))
+	var per := float(hamlet_row["per_people"])
+	var people := MapManors.population_table(real, state, per_cell.keys())
+	var seen_max := false
+	var seen_one := false
+	for cell: int in per_cell:
+		var pop := float((people[cell] as Dictionary)["total"])
+		var want := clampi(roundi(pop / per), 1, max_clump)
+		assert_eq(int(per_cell[cell]["hamlet"]), want, "manor %d: %d people" % [cell, int(pop)])
+		seen_max = seen_max or want == max_clump
+		seen_one = seen_one or want == 1
+	assert_true(seen_max and seen_one, "both a full clump and a lone farmstead exist")
+	# A manor working grain carries the grain row's marks; one working a good
+	# with no row carries only farmsteads.
+	var grain_cell := -1
+	for cell: int in per_cell:
+		if MapManors.focus_of(real, state, cell) == "grain":
+			grain_cell = cell
+			break
+	assert_gt(grain_cell, -1)
+	var grain_row: Dictionary = {}
+	for row: Dictionary in real.manor_decor:
+		if String(row.get("focus_code", "")) == "grain":
+			grain_row = row
+	assert_eq(int(per_cell[grain_cell]["focus"]), int(float(grain_row["clump"])))
+	assert_eq(MapObjects.manor_decor(real, state), marks, "the same every call")
+	# A chosen focus moves the marks.
+	assert_true(MapManors.set_focus(real, state, grain_cell, "stone", "test"))
+	var stone_texture := ""
+	for row: Dictionary in real.manor_decor:
+		if String(row.get("focus_code", "")) == "stone":
+			stone_texture = String(row["texture"])
+	var fields := 0
+	var spoil := 0
+	for m: Dictionary in MapObjects.manor_decor(real, state):
+		if int(m["cell"]) != grain_cell:
+			continue
+		if String(m["texture"]) == String(grain_row["texture"]):
+			fields += 1
+		elif String(m["texture"]) == stone_texture:
+			spoil += 1
+	assert_eq(fields, 0, "the fields are gone")
+	assert_gt(spoil, 0, "a quarry's marks stand instead")

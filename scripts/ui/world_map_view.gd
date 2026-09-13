@@ -1086,6 +1086,12 @@ func decor_atlas() -> MarkAtlas:
 				var tex := _sprite_texture(path)
 				if tex != null:
 					textures[path] = tex
+		for row: Dictionary in Game.data.manor_decor:
+			var path := String(row["texture"])
+			if not textures.has(path):
+				var tex := _sprite_texture(path)
+				if tex != null:
+					textures[path] = tex
 		_decor_atlas = MarkAtlas.build(textures)
 	return _decor_atlas
 
@@ -1130,14 +1136,66 @@ func _realm_tint_plain(province_code: String, strength: float) -> Color:
 		return Color.WHITE
 	return Color.WHITE.lerp(MapPalette.color_of(Game.data, holder), strength)
 
+## The manors' own marks (MapObjects.manor_decor, owner 2026-09-13): one
+## mesh per min_scale tier, so the farmsteads come in at the home zoom
+## and the fields closer in — a tier is a single draw call or nothing.
+## Rebuilt when the ledger, the focuses or the owners change.
+var _manor_decor_meshes: Dictionary = {}
+var _manor_decor_sig := 0
+
+func manor_decor_meshes() -> Dictionary:
+	var state := Game.state
+	var sig := hash([_ownership_sig(), 0 if state == null else state.world.hash(),
+		0 if state == null else state.manor_focus.hash(),
+		Game.data.bal("map_decor_alpha"), Game.data.bal("map_decor_tint")])
+	if _manor_decor_sig == sig and not _manor_decor_meshes.is_empty():
+		return _manor_decor_meshes
+	var alpha := Game.data.bal("map_decor_alpha")
+	var strength := Game.data.bal("map_decor_tint")
+	var tints: Dictionary = {}
+	var by_tier: Dictionary = {}
+	for d: Dictionary in MapObjects.manor_decor(Game.data, state):
+		var pos: Vector2 = d["pos"]
+		var province := _decor_province(pos)
+		if not tints.has(province):
+			var tint := _realm_tint_plain(province, strength)
+			tint.a = alpha
+			tints[province] = tint
+		var tier := float(d["min_scale"])
+		if not by_tier.has(tier):
+			by_tier[tier] = []
+		(by_tier[tier] as Array).append({"pos": pos, "texture": String(d["texture"]),
+			"height": float(d["height"]), "color": tints[province]})
+	_manor_decor_meshes = {}
+	for tier: float in by_tier:
+		_manor_decor_meshes[tier] = MarkMesh.build(by_tier[tier], decor_atlas())
+	_manor_decor_sig = sig
+	return _manor_decor_meshes
+
+## The tiers that draw at the current zoom, ascending. Test seam.
+func manor_decor_tiers_shown() -> Array:
+	var out: Array = []
+	if not decor_visible():
+		return out
+	for tier: float in manor_decor_meshes():
+		if view_scale() >= tier:
+			out.append(tier)
+	out.sort()
+	return out
+
 func _draw_terrain_decor() -> void:
 	if not decor_visible():
 		return
+	var xf := Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)
+	var atlas := decor_atlas()
 	var mesh := decor_mesh()
-	if mesh.get_surface_count() == 0:
-		return
-	draw_mesh(mesh, decor_atlas().texture,
-		Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset))
+	if mesh.get_surface_count() > 0:
+		draw_mesh(mesh, atlas.texture, xf)
+	var meshes := manor_decor_meshes()
+	for tier: float in manor_decor_tiers_shown():
+		var m: ArrayMesh = meshes[tier]
+		if m.get_surface_count() > 0:
+			draw_mesh(m, atlas.texture, xf)
 
 ## The scale bar in the bottom-right corner (owner request 2026-09-12). The
 ## pack carries its own scale — map_info's distance_scale world units per
@@ -2032,12 +2090,16 @@ func manor_mesh() -> ArrayMesh:
 	var idx := PackedInt32Array()
 	var ids: Array = repo.cells.keys()
 	ids.sort()
+	# A working manor's dark fill is part of the mesh (2026-09-13): it is a
+	# fact of the pack, not of the zoom, so it costs nothing per frame.
+	var working := MapEconomy.manors(repo) if show_economy and not show_manors else {}
 	for id: int in ids:
 		var cell: Dictionary = repo.cells[id]
 		var ring: PackedInt32Array = cell["vertex_ids"]
 		if MapTerrain.is_water(cell) or ring.size() < 3:
 			continue
-		var c := house_manor_color(id) if show_manors else manor_color(id)
+		var c := house_manor_color(id) if show_manors \
+			else (working_manor_color(id) if working.has(id) else manor_color(id))
 		if c.a <= 0.0:
 			continue
 		var base := verts.size()
@@ -2162,21 +2224,24 @@ func _place_badges(manors: Array) -> Array:
 	return out
 
 ## Under the rivers and roads, like the political wash it stands in for.
-func _draw_manors(manors: Array) -> void:
+func _draw_manors(_manors: Array) -> void:
 	var mesh := manor_mesh()
 	if mesh == null:
 		return
 	var repo := Game.data
 	var xf := Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)
 	draw_mesh(mesh, null, xf)
-	for m: Dictionary in manors:
-		var cell: Dictionary = repo.cells[int(m["cell"])]
-		draw_colored_polygon(xf * MapEconomy.cell_polygon(repo, cell),
-			working_manor_color(int(m["cell"])))
 	if view_scale() >= repo.bal("map_manor_line_min_scale"):
 		var line := MapPalette.named(repo, "manor_line")
 		line.a = repo.bal("map_manor_line_alpha")
-		draw_multiline(xf * manor_edges(), line, repo.bal("map_manor_line_width"), true)
+		# The edges are ONE canvas command (2026-09-13): drawn under the view
+		# transform, so the 28k points are never multiplied on the CPU, and as
+		# hairlines when the width is a pixel or less — a wide multiline is
+		# one command per pair, which was ~8 ms of renderer CPU a frame.
+		var width := repo.bal("map_manor_line_width")
+		draw_set_transform_matrix(xf)
+		draw_multiline(manor_edges(), line, -1.0 if width <= 1.0 else width)
+		draw_set_transform_matrix(Transform2D.IDENTITY)
 
 ## Over the pins: a badge is a counter, like a regiment's.
 func _draw_manor_badges(badges: Array) -> void:
