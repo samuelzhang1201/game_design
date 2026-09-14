@@ -64,6 +64,10 @@ Units are rounded per good, then valued:
 
 `strategic = Σ units × price_gold` over strategic goods, `civil` likewise. Gold values are integer because units and prices are.
 
+**The unit is one gold, whole** — the owner's "no decimals". `data_architecture_requirements.md` R-7 suggests fixed-point money ×100; this design keeps whole gold on purpose: every displayed number is the stored number. Should sub-gold precision ever be wanted, the scale changes inside `ManorEconomy` and the display stays whole.
+
+**Iteration order is fixed** (R-7): manors ascend by cell id, provinces by code, goods by code. No sum depends on a Dictionary's order.
+
 ### 4.4 Sums
 
 `ProvinceEconomy.of(repo, state, province) -> {tax, strategic, civil}` = Σ its manors. `RealmEconomy.of(repo, state) -> {realm: {…}, crown: {…}, per_province: {code: {…}}}` = Σ provinces, with the crown's controlled provinces (`MapManors.controlled_provinces`) summed separately. **The only rounding is at the manor.** Cached **per province** (§11): a province's entry holds its manors' lines and its sum, keyed on (tick, the province's owner and holders, its buildings and focus); the realm is the sum of the 203 entries. A test over the real beria pack asserts Σ manors == province and Σ provinces == realm for all three numbers.
@@ -115,6 +119,8 @@ Both go through `OrderCosts` (the spread is the cost) and can be issued from the
 
 The **play button** (`Clock_1`, and `2x`/`4x` from a stop) is the commit: `Game.set_clock_speed(n)` from 0 calls `commit_staged()` first. Pause never commits.
 
+**The command log** (R-6 / R-8 of `data_architecture_requirements.md`): a staged entry is a Command — a kind, string keys, params, the tick and day it was issued — and commit appends every applied entry to `GameState.command_log` (an array in the one JSON save: `{t: kind or action code, p: params, tick, day, seq}`; a free-text order logs the model's parsed `actions` and `world` deltas, never the prose). An order applied while the clock runs is logged the same way with its day. Nothing reads the log yet; it is the record that makes "seed + snapshot + replay" possible later without a second format.
+
 **The staged list** sits at the bottom of the right column (people and talk, invariant 10): one row per entry with its label and a ✕ that unstages it. An event whose choice is staged shows "chosen, awaiting play" on its chip and no longer blocks the clock — the clock is stopped anyway.
 
 **Month's end**: when `Game.advance_day` ticks, `GameRoot._process` sets the clock to 0 and switches to CONVERSATION with the report (today only a pending event does so; now every month). The conversation ends back on the court with everything staged.
@@ -133,6 +139,10 @@ Engine (GUT, headless, hand-computed):
 - buy and sell with the spread; `OrderCosts` sees the cost
 - staging: order kept, unstage, commit applies in order, a rejected entry leaves a line, save round-trips the list, commit from 0 only
 - caching (§11): a day step and a top bar refresh do not recompute; a manor order recomputes exactly one province; the growth table is integer and the same after a save round trip
+- the full-recompute check (§11.2, RK-1 of the architecture doc): after 24 months of scripted orders on the beria pack, a cold computation of every province equals the incrementally kept cache, province by province, all three numbers
+- the command log: a commit of three entries logs three, in order, with tick and day; the log survives a save round trip; a rejected entry is not logged
+- the budget (§11.1): each day's bucket of provinces and the month's end both stay under `bench_economy`'s targets on the beria pack; the bench prints them and the test asserts the counts, not the milliseconds (the bench, not CI, judges time)
+- engine isolation (R-12): no file under `scripts/engine/` names a `class_name` declared under `scripts/ui/` or `scripts/llm/` outside a comment (`tests/engine/test_engine_isolation.gd`, in place from this change)
 
 UI:
 - top bar: two lines, the second smaller, percentages, `bar_height` grew and the columns follow
@@ -162,7 +172,7 @@ What could hurt, and the answer to each:
 
 | where the cost would land | without care | with the design |
 |---|---|---|
-| the month's end (tick) | one full computation, 20–50 ms, once a month — fine either way; the tick already runs works, drift, events | same; the settlement adds six ledger lines |
+| the month's end (tick) | one full computation, 20–50 ms, once a month — over the architecture doc's budget of **8 ms a sim step, 16 hard** (§3.2 there, read per manor: our 3 500 manors are its 1 500–4 000 "provinces") | **bucketed across the month** (R-5): the 203 provinces are spread over the 30 days by index, ~7 a day (1–2 ms); a day step computes its bucket for the coming month; the month's end recomputes only the provinces dirtied since their bucket ran and adds 203 entries — under 8 ms either way |
 | a manor order (buy, build, focus) | invalidating the realm cache and recomputing everything: a 20–50 ms hitch at 60 fps, and the card refreshes right after the click | **per-province cache**: only the province whose manor changed is rebuilt — ~17 manors, well under 1 ms — and the realm sum re-adds 203 entries |
 | a day step (`state_changed` every day at 4x, four a second) | the top bar re-reading a sum keyed on state that changed | the key is the tick, not the day; a day step is a cache hit; a work that finishes changes one province's key, not the realm's |
 | the manor master table (up to 400 rows, sorted over all 3 500 manors) | one line computation per manor on every refresh, 20–50 ms | the province entry keeps its manors' lines, so the table reads them; a refresh is a sort |
@@ -176,10 +186,11 @@ The calendar change halves the ticks a year, so per year the engine does half th
 
 ### 11.2 The cache
 
-`RealmEconomy` keeps one dictionary `province_code → {key, manors: {manor_id: line}, sum}` and one realm sum with its own key.
+`RealmEconomy` is **columnar** (R-4 of the architecture doc, applied where the hot loop is): manors are indexed once per pack in ascending cell id (`manor_index: cell_id → i`), and the cache is three `PackedInt32Array` — `tax`, `strategic`, `civil` — of one entry per manor, plus per province a key, its manor index range and its three sums, and one realm sum with its own key. The lines of a province are a contiguous slice, so a province's sum, the manor master table and the card all read the arrays; no per-manor Dictionary exists.
 - A province's key: `(tick, controller, Σ hash of its manors' owner, buildings and focus)`, cheap to build from `GameState.manor_owner`, `manor_works` and `manor_focus`, which hold only what moved.
 - The realm key is the tuple of the province keys' hash. Reading the realm compares 203 keys, no lines.
-- `MapManors.set_owner`, `MANOR_BUILD` / `MANOR_DEMOLISH`, `MANOR_FOCUS` and a finished work call `RealmEconomy.forget_province(code)`; the tick calls `forget_all()` and recomputes the realm once for the settlement, which then serves the report, the top bar and the council.
+- **Dirty and bucketed** (R-5): a province is dirty when its key changed. `MapManors.set_owner`, `MANOR_BUILD` / `MANOR_DEMOLISH`, `MANOR_FOCUS` and a finished work mark theirs dirty. Each day step recomputes the dirty provinces of its bucket for the coming month (`province_index % 30 == day − 1`); the month's end recomputes what is still dirty and settles from the sums. The bucket count is the calendar's 30 days, so it is in the save by construction and a replay walks the same buckets.
+- **The full-recompute check** (RK-1 of the architecture doc: a missed dirty mark is a silent bug): `RealmEconomy.recompute_all()` ignores the cache and rebuilds every province; a debug switch (`economy_check_full`, balance) runs it after every settlement and asserts it equals the cache province by province, and a test runs it after a scripted campaign (§8).
 - The province ledger (`economy.provinces.<p>.rural_population` moved by the model or an event) invalidates that province through `WorldLedger.apply`.
 - `DataRepository.load_map` clears everything, like every other cache.
 
@@ -189,3 +200,23 @@ The calendar change halves the ticks a year, so per year the engine does half th
 - **A bench**: `tools/bench_economy.gd` (like `tools/bench_map.gd`) times a cold realm computation, a warm realm read, a single-province recompute and a month's settlement on the beria pack and prints them; the targets are cold < 60 ms, warm read < 0.1 ms, one province < 1 ms, settlement < 5 ms beyond the cold computation. Run it when the formulas change.
 - **A test seam**: `RealmEconomy.compute_count` (a counter, test only) so tests assert that a day step, a top bar refresh and a card click do not recompute the realm, and that a manor order recomputes exactly one province.
 - If a later pack were ten times larger, the same shape holds: the cold computation scales with lines, everything else with what changed.
+- The bench's targets, per the architecture doc's budget: any day's bucket ≤ 8 ms, the month's end ≤ 8 ms (16 hard), a warm realm read < 0.1 ms, one province < 1 ms, a cold `recompute_all` reported but unbounded (it is the check, not the path).
+
+## 12. Alignment with `data_architecture_requirements.md`
+
+Checked 2026-09-14 against v1.0 of that document (owner: "依照你的建议操作").
+
+| requirement | this design |
+|---|---|
+| R-1 Defs / State apart | the two new tables load into `DataRepository` (read-only); new state is two integers, the staged list and the command log |
+| R-2 string keys | goods by `good_code`, provinces by code, log entries and staged entries carry strings; manors keep the pack's cell id, as MANOR_SYSTEM already does |
+| R-4 columnar hot state | the derived cache is three `PackedInt32Array` over a fixed manor index (§11.2) — the hot loop is columnar; `GameState` itself stays as it is (a separate decision, §12 note below) |
+| R-5 dirty flags, buckets | province-level dirty marks, 30 day buckets, the full-recompute check (§11.2) |
+| R-6 Command as the only write | staged entries are Commands; commit validates, clamps through the existing `OrderCosts` / `WorldLedger` paths, and logs (§7) |
+| R-7 determinism | whole-gold integers, integer per-mille growth, fixed iteration order, no RNG in the economy, no wall clock |
+| R-8 seed + snapshot + log | the command log is kept from now in the one JSON save; the format question is left to the architecture doc |
+| R-9 LLM apart | a free-text order's parse is captured as data at stage time; commit and any future replay use the data, never the model |
+| R-12 sim / presentation apart | engine classes are `RefCounted`; the top bar reads a cache; `test_engine_isolation.gd` greps for it |
+| §3.2 budget | met by bucketing (§11.1), measured by `bench_economy` (§11.3) |
+
+Not this design's to settle, recorded for the architecture doc's review: whether `GameState` moves to columnar arrays (recommended: not now — accept the doc's own "soft cap for a readable object model", the pack is 203 provinces), whether the save splits into snapshot + log (recommended: keep the one JSON and the log inside it until replay exists), and the `sim/` directory (recommended: keep `scripts/engine/`, map the names).
