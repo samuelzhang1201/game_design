@@ -544,13 +544,23 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	var codes: Array = []
 	for a: Dictionary in card["actions"]:
 		codes.append(String(a["action_code"]))
-		# The demesne has no house to sell back to; every other order stands.
-		if String(a["action_code"]) != "MANOR_SELL":
+		# The demesne has no house to sell back to; every other order stands —
+		# except a building whose prerequisites are not up yet, which says so
+		# (owner 2026-09-14).
+		if String(a["action_code"]) == "MANOR_BUILD" and not MapManors.building_prereqs(real,
+				String((a["params"] as Dictionary)["building"])).is_empty():
+			assert_string_contains(String(a["error"]), "standing first", String(a["label"]))
+		elif String(a["action_code"]) != "MANOR_SELL":
 			assert_eq(String(a["error"]), "", "%s can be given: %s" % [a["label"], a["error"]])
 	assert_has(codes, "MANOR_SELL")
 	assert_has(codes, "MANOR_BUILD")
 	assert_does_not_have(codes, "MANOR_BUY")
-	assert_eq(codes.count("MANOR_BUILD"), real.manor_buildings.size(), "one BUILD per building not raised")
+	var takes := 0
+	for b: String in real.manor_buildings:
+		if MapManors.building_land_ok(real, state, own, b):
+			takes += 1
+	assert_eq(codes.count("MANOR_BUILD"), takes, "one BUILD per building the manor's ground takes")
+	assert_lt(takes, real.manor_buildings.size(), "and not every building: the land decides")
 	assert_eq(int(card["slots"]), MapManors.slots_of(real, own))
 	assert_true((card["slot_actions"] as Array).is_empty(), "nothing to pull down yet")
 	for a: Dictionary in card["actions"]:

@@ -1220,10 +1220,18 @@ static func manor_actions(repo: DataRepository, state: GameState, cell: int) -> 
 			var row_f: Dictionary = repo.manor_focus[f]
 			specs.append({"action_code": "MANOR_FOCUS", "params": {"manor": code, "focus": f},
 				"label": "WORK %s — %dg" % [String(row_f["label"]).to_upper(), int(float(row_f["switch_cost_gold"]))]})
+		# Tier by tier (owner 2026-09-14), and only what the manor's ground takes:
+		# a quay is not offered inland. What still needs another building is
+		# offered with the reason as its error.
 		var codes: Array = repo.manor_buildings.keys()
-		codes.sort()
+		codes.sort_custom(func(a: String, b2: String) -> bool:
+			var ta := int(float((repo.manor_buildings[a] as Dictionary).get("tier", 1)))
+			var tb := int(float((repo.manor_buildings[b2] as Dictionary).get("tier", 1)))
+			return a < b2 if ta == tb else ta < tb)
 		for b: String in codes:
 			if MapManors.has_building(state, cell, b) or MapManors.is_building(state, cell, b):
+				continue
+			if not MapManors.building_land_ok(repo, state, cell, b):
 				continue
 			var row: Dictionary = repo.manor_buildings[b]
 			# A building is paid for in CIVIL GOODS, not gold (spec §5), so

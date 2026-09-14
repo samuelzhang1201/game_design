@@ -152,6 +152,10 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			var building := String(req.params.get("building", ""))
 			if not data.manor_buildings.has(building):
 				return "No such building: " + building
+			# The ground and the buildings it needs come first (owner 2026-09-14).
+			var blocked := MapManors.building_blocked(data, state, cell, building)
+			if blocked != "":
+				return blocked
 			if MapManors.has_building(state, cell, building):
 				return "%s already has a %s" % [label, String(data.manor_buildings[building]["label"]).to_lower()]
 			if MapManors.is_building(state, cell, building):

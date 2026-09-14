@@ -510,6 +510,93 @@ static func build(repo: DataRepository, state: GameState, cell_id: int, building
 		"reason": reason})
 	return true
 
+# ---- where a building may stand (owner 2026-09-14) -----------------------------
+
+## Whether a manor's ground takes something: `tokens` is "any" (or empty),
+## or tokens joined by | of which ONE must hold — `coast` (a sea neighbour),
+## `high` / `peak` (height at or above manor_focus_high_height /
+## manor_focus_peak_height), `town` (a town stands in the manor),
+## `focus:<code>` (the manor works that chief good), or a biome id. The same
+## language as manor_focus.csv's default_on, so the land reads one way.
+static func land_allows(repo: DataRepository, state: GameState, cell_id: int, tokens: String) -> bool:
+	var t := tokens.strip_edges()
+	if t == "" or t == "any":
+		return true
+	var cell: Dictionary = repo.cells.get(cell_id, {})
+	var biome := str(int(cell.get("biome_id", -1)))
+	var height := float(cell.get("height", 0.0))
+	for raw: String in t.split("|"):
+		var tok := raw.strip_edges()
+		if tok == "coast" and is_coastal(repo, cell_id):
+			return true
+		if tok == "high" and height >= repo.bal("manor_focus_high_height"):
+			return true
+		if tok == "peak" and height >= repo.bal("manor_focus_peak_height"):
+			return true
+		if tok == "town" and burg_of(repo, cell_id) != "":
+			return true
+		if tok.begins_with("focus:") and focus_of(repo, state, cell_id) == tok.substr(6):
+			return true
+		if tok == biome:
+			return true
+	return false
+
+## The same tokens in words, for a refusal: "the coast or grain fields".
+static func describe_land(repo: DataRepository, tokens: String) -> String:
+	var parts: Array[String] = []
+	for raw: String in tokens.split("|"):
+		var tok := raw.strip_edges()
+		match tok:
+			"", "any":
+				continue
+			"coast":
+				parts.append("the coast")
+			"high":
+				parts.append("high ground")
+			"peak":
+				parts.append("a mountain")
+			"town":
+				parts.append("a town")
+			_:
+				if tok.begins_with("focus:"):
+					parts.append(String((repo.manor_focus.get(tok.substr(6), {}) as Dictionary).get("label", tok.substr(6))).to_lower())
+				else:
+					parts.append(String((repo.biomes.get(int(tok), {}) as Dictionary).get("label", "biome " + tok)).to_lower())
+	return " or ".join(parts) if not parts.is_empty() else "nothing in particular"
+
+## The buildings that must stand before this one is begun.
+static func building_prereqs(repo: DataRepository, building_code: String) -> Array:
+	var out: Array = []
+	for raw: String in String((repo.manor_buildings.get(building_code, {}) as Dictionary).get("prereq", "")).split("|"):
+		if raw.strip_edges() != "":
+			out.append(raw.strip_edges())
+	return out
+
+## Whether a manor's ground takes a building at all (its `land`).
+static func building_land_ok(repo: DataRepository, state: GameState, cell_id: int, building_code: String) -> bool:
+	return land_allows(repo, state, cell_id,
+		String((repo.manor_buildings.get(building_code, {}) as Dictionary).get("land", "any")))
+
+## Why a building cannot be begun on a manor for want of land or of the
+## buildings it needs — "" when nothing stands in the way (room, goods and
+## duplicates are the order's own checks).
+static func building_blocked(repo: DataRepository, state: GameState, cell_id: int, building_code: String) -> String:
+	var row: Dictionary = repo.manor_buildings.get(building_code, {})
+	if row.is_empty():
+		return "No such building: " + building_code
+	var name := String(row.get("label", building_code)).to_lower()
+	if not building_land_ok(repo, state, cell_id, building_code):
+		return "%s needs %s" % [_article(name).capitalize() + " " + name, describe_land(repo, String(row.get("land", "any")))]
+	for p: String in building_prereqs(repo, building_code):
+		if not has_building(state, cell_id, p):
+			var need := String((repo.manor_buildings.get(p, {}) as Dictionary).get("label", p)).to_lower()
+			return "%s %s needs %s %s standing first" % [_article(name).capitalize(), name, _article(need), need]
+	return ""
+
+## "a" or "an" before a word, by its first letter.
+static func _article(word: String) -> String:
+	return "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a"
+
 # ---- slots and works (owner 2026-09-13: building takes time and room) ----------
 
 ## How many buildings a manor has room for: manor_slots_base, and

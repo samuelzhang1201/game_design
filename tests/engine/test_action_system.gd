@@ -155,7 +155,7 @@ func test_selling_and_building_need_a_crown_manor() -> void:
 		if not MapManors.is_crowns(data, s, other):
 			MapManors.set_owner(data, s, other, MapManors.crown(s), "test: taken")
 	# Build a mill: its cost and the surveyor's fee leave the chest.
-	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "castle"}), s),
+	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "moon_tower"}), s),
 		"No such building")
 	var before: float = s.metrics["treasury"]
 	var grain_before: float = s.metrics["lord_civil"]
@@ -405,3 +405,43 @@ func test_metric_cost_of_reads_the_rows_pool_charge() -> void:
 	assert_eq(OrderCosts.metric_cost_of(data, "LEVY_RAISE", "strategic"), 20.0)
 	assert_eq(OrderCosts.metric_cost_of(data, "LEVY_RAISE", "grain"), 0.0)
 	assert_eq(OrderCosts.metric_cost_of(data, "COUNCIL_CONSULT", "strategic"), 0.0)
+
+## Where a building may stand (owner 2026-09-14): its `land` must hold on the
+## manor, the buildings in its `prereq` must already stand, and every
+## building yields something once it does.
+func test_buildings_need_their_land_and_their_prerequisites() -> void:
+	var cell := _crown_manor()
+	s.metrics["lord_civil"] = 100000.0
+	s.metrics["lord_gold"] = 100000.0
+	# A quay needs the coast: find the crown's inland manor, or skip the check.
+	var inland := -1
+	for c: int in MapManors.manors_of_house(data, s, MapManors.crown(s), data.resolve_realm("player_realm")):
+		if not MapManors.is_coastal(data, c):
+			inland = c
+			break
+	if inland >= 0:
+		assert_string_contains(MapManors.building_blocked(data, s, inland, "fishing_quay"), "the coast")
+		assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD",
+			{"manor": inland, "building": "fishing_quay"}), s), "the coast", "the order refuses it too")
+	# A market needs a manor house standing.
+	assert_string_contains(MapManors.building_blocked(data, s, cell, "market"), "needs a manor house standing first")
+	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD",
+		{"manor": cell, "building": "market"}), s), "standing first")
+	assert_true(MapManors.build(data, s, cell, "manor_house", "test: stood"))
+	assert_eq(MapManors.building_blocked(data, s, cell, "market"), "", "with the hall up, the market may rise")
+	assert_eq(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "market"}), s), "")
+	# The land's words read right, and every token kind is understood.
+	assert_true(MapManors.land_allows(data, s, cell, "any"))
+	assert_true(MapManors.land_allows(data, s, cell, "focus:" + MapManors.focus_of(data, s, cell)))
+	assert_false(MapManors.land_allows(data, s, cell, "focus:moon_dust"))
+	assert_eq(MapManors.describe_land(data, "coast|town"), "the coast or a town")
+	# Every building yields something: goods, or a bonus or a monthly effect.
+	for code: String in data.manor_buildings:
+		var row: Dictionary = data.manor_buildings[code]
+		var yields := float(row.get("produce_units", 0)) > 0.0
+		for col in ["tax_bonus", "output_bonus", "defence_bonus", "church_bonus", "gold_per_tick",
+				"grain_per_tick", "contentment_per_tick", "unrest_per_tick"]:
+			yields = yields or absf(float(row.get(col, 0))) > 0.0
+		assert_true(yields, "%s yields something" % code)
+		for p in MapManors.building_prereqs(data, code):
+			assert_true(data.manor_buildings.has(p), "%s needs %s, a real building" % [code, p])
