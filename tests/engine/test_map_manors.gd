@@ -485,3 +485,24 @@ func test_the_default_focus_follows_the_terrain() -> void:
 	r.cells[2]["height"] = 30.0
 	r.cells[2]["biome_id"] = 3
 	assert_eq(MapManors.default_focus(r, 2), "grain", "biome 3 is claimed by ore but ore is not allowed there")
+
+## Integer people (spec §4.1): largest remainder, ties to the lower id.
+func test_apportion_hands_the_remainder_to_the_largest_fractions() -> void:
+	var out := MapManors.apportion([1, 2, 3], PackedFloat64Array([1.0, 1.0, 1.0]), 1000)
+	assert_eq(out, {1: 334, 2: 333, 3: 333})
+	assert_eq(MapManors.apportion([7, 9], PackedFloat64Array([3.0, 1.0]), 10), {7: 8, 9: 2}, "7.5 and 2.5: the tie goes to the lower id")
+	assert_eq(MapManors.apportion([], PackedFloat64Array(), 5), {})
+	assert_eq(MapManors.apportion([4], PackedFloat64Array([0.0]), 5), {4: 0}, "no weight, no people")
+
+## Province p: 3 000 country folk over weights 80 and 80, and Shole's 1 000
+## townsfolk to cell 2 -> 1 500 and 2 500, summing to the province's 4 000.
+func test_people_sum_exactly_to_the_province() -> void:
+	var r := _repo()
+	var s := _state()
+	var t := MapManors.people_table(r, s, "p")
+	assert_eq(t, {1: 1500, 2: 2500})
+	assert_eq(MapManors.people_of(r, s, 1), 1500)
+	assert_eq(MapManors.people_of(r, s, 2), 2500)
+	assert_eq(MapManors.people_of(r, s, 4), 800, "q's 800 go to its one manor")
+	WorldLedger.apply(r, s, "economy.provinces.p.rural_population", 1, "test: one more", "test")
+	assert_eq(MapManors.people_table(r, s, "p"), {1: 1501, 2: 2500}, "an odd one goes to the lower id; the cache keys on the figure")

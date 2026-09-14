@@ -25,6 +25,7 @@ static var _cache: Dictionary = {}
 
 static func invalidate() -> void:
 	_cache.clear()
+	_people_cache.clear()
 
 static func _repo_cache(repo: DataRepository) -> Dictionary:
 	var key := repo.get_instance_id()
@@ -369,6 +370,74 @@ static func _share(repo: DataRepository, cell_id: int, province: String, provinc
 		if burg_total > 0.0:
 			urban = province_urban * float(repo.burgs[burg].get("population", 0)) / burg_total
 	return {"rural": rural, "urban": urban, "total": rural + urban}
+
+## --- Integer people (spec 2026-09-14 §4.1) -----------------------------------
+## The province's country folk apportioned to its manors by weight with the
+## largest-remainder method, so the manors sum EXACTLY to the province and
+## no manor has a fraction of a person; its townsfolk the same way over its
+## burgs. Cached per (province, rural, urban): the two ledger figures are
+## the only inputs that move.
+static var _people_cache: Dictionary = {}
+
+## Largest remainder: every id gets the floor of its share, the units left
+## go to the largest fractional remainders, ties to the id that comes first.
+static func apportion(ids: Array, weights: PackedFloat64Array, total: int) -> Dictionary:
+	var out: Dictionary = {}
+	var sum := 0.0
+	for w in weights:
+		sum += w
+	if ids.is_empty() or total <= 0 or sum <= 0.0:
+		for id in ids:
+			out[id] = 0
+		return out
+	var floors := PackedInt32Array()
+	var rem := PackedFloat64Array()
+	var given := 0
+	for i in ids.size():
+		var exact := float(total) * weights[i] / sum
+		var f := int(floor(exact))
+		floors.append(f)
+		rem.append(exact - float(f))
+		given += f
+	var order: Array = range(ids.size())
+	order.sort_custom(func(a: int, b: int) -> bool:
+		return a < b if rem[a] == rem[b] else rem[a] > rem[b])
+	for k in total - given:
+		floors[order[k]] += 1
+	for i in ids.size():
+		out[ids[i]] = floors[i]
+	return out
+
+static func people_table(repo: DataRepository, state: GameState, province_code: String) -> Dictionary:
+	var rural := int(roundf(_ledger(repo, state, "economy.provinces.%s.rural_population" % province_code)))
+	var urban := int(roundf(_ledger(repo, state, "economy.provinces.%s.urban_population" % province_code)))
+	var key := "%d|%s|%d|%d" % [repo.get_instance_id(), province_code, rural, urban]
+	if _people_cache.has(key):
+		return _people_cache[key]
+	if _people_cache.size() > 4096:
+		_people_cache.clear()
+	var cells := manors_of_province(repo, province_code)
+	var weights := PackedFloat64Array()
+	for id: int in cells:
+		weights.append(weight_of(repo, id))
+	var out := apportion(cells, weights, rural)
+	var burg_cells: Array = []
+	var burg_weights := PackedFloat64Array()
+	for id: int in cells:
+		var burg := burg_of(repo, id)
+		if burg != "":
+			burg_cells.append(id)
+			burg_weights.append(float(repo.burgs[burg].get("population", 0)))
+	var town := apportion(burg_cells, burg_weights, urban)
+	for id: int in town:
+		out[id] = int(out[id]) + int(town[id])
+	_people_cache[key] = out
+	return out
+
+## A manor's people, whole. 0 for a cell that is no manor.
+static func people_of(repo: DataRepository, state: GameState, cell_id: int) -> int:
+	var province := province_of(repo, cell_id)
+	return 0 if province == "" else int(people_table(repo, state, province).get(cell_id, 0))
 
 # ---- buildings, rent, defence -------------------------------------------------
 
