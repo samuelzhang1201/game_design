@@ -1,12 +1,13 @@
 class_name Calendar
 extends RefCounted
-## Pure date math over the tick clock: 24 ticks/year, 15 days/tick,
-## 4 seasons x 90 days (a 360-day year). Presentation helper - no state,
-## no RNG, single source of truth for season/year boundaries (tick 1..24
-## is year 1; each season spans exactly 6 ticks).
+## Pure date math over the tick clock: 12 ticks/year, 30 days/tick — a tick
+## is a MONTH (owner 2026-09-14) — 4 seasons x 90 days (a 360-day year).
+## Presentation helper - no state, no RNG, single source of truth for
+## season/year boundaries (tick 1..12 is year 1; each season spans exactly
+## 3 ticks).
 
-const DAYS_PER_TICK := 15
-const TICKS_PER_YEAR := 24
+const DAYS_PER_TICK := 30
+const TICKS_PER_YEAR := 12
 const DAYS_PER_SEASON := 90
 const DAYS_PER_YEAR := 360
 const SEASONS := ["Spring", "Summer", "Autumn", "Winter"]

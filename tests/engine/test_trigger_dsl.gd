@@ -6,7 +6,7 @@ var s: GameState
 func before_each() -> void:
 	data = DataRepository.load_all("res://data")
 	s = GameState.new_campaign(data, 42)
-	s.tick = 5
+	s.tick = 3
 
 func test_always_and_metrics() -> void:
 	assert_true(TriggerDsl.evaluate("always", s, data))

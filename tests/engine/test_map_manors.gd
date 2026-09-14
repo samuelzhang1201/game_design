@@ -375,7 +375,7 @@ func test_works_take_days_and_slots_and_can_be_pulled_down() -> void:
 	s.day = 1
 	assert_eq(MapManors.slots_of(r, 1), 2)
 	assert_eq(MapManors.slots_of(r, 2), 3, "a town adds a slot")
-	assert_eq(s.absolute_day(), 31)
+	assert_eq(s.absolute_day(), 61)
 	assert_false(MapManors.start_work(r, s, 1, "castle", "no such"), "no such building")
 	assert_false(MapManors.start_work(r, s, 1, "mill", ""), "no reason")
 	assert_true(MapManors.start_work(r, s, 1, "mill", "begun"))
@@ -418,7 +418,7 @@ func test_works_take_days_and_slots_and_can_be_pulled_down() -> void:
 	assert_eq(back.day, 5)
 	assert_eq(back.manor_works.keys(), ["1"])
 	assert_eq(String(back.manor_works["1"][0]["building"]), "chapel")
-	assert_eq(int(back.manor_works["1"][0]["start"]), 35)
+	assert_eq(int(back.manor_works["1"][0]["start"]), 65)
 	assert_eq(MapManors.work_days_left(back, 1, "chapel"), 10)
 
 ## What buildings do each tick (owner 2026-09-13): the *_per_tick columns

@@ -35,14 +35,14 @@ func test_a_pack_without_an_economy_row_falls_back_to_balance() -> void:
 func test_seasons_and_years() -> void:
 	var s := GameState.new_campaign(data, 1)
 	assert_eq(s.season(), "spring")
-	s.tick = 13
+	s.tick = 7
 	assert_eq(s.season(), "autumn")
-	s.tick = 23
+	s.tick = 11
 	assert_eq(s.season(), "winter")
-	s.tick = 24
+	s.tick = 12
 	assert_eq(s.season(), "winter")
 	assert_eq(s.year(), 1)
-	s.tick = 25
+	s.tick = 13
 	assert_eq(s.season(), "spring")
 	assert_eq(s.year(), 2)
 

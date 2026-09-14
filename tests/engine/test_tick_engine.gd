@@ -29,11 +29,11 @@ func test_tax_income_formula() -> void:
 
 func test_grain_seasonal() -> void:
 	var s := GameState.new_campaign(data, 42)
-	s.tick = 12  # advance() makes it 13 -> autumn (1-based season blocks)
+	s.tick = 6  # advance() makes it 7 -> autumn (1-based season blocks)
 	var g0: float = s.metrics["grain"]
 	engine.advance(s)
 	assert_gt(s.metrics["grain"], g0)  # harvest
-	s.tick = 19  # -> 20, winter
+	s.tick = 9  # -> 10, winter
 	var g1: float = s.metrics["grain"]
 	engine.advance(s)
 	assert_lt(s.metrics["grain"], g1)
@@ -78,9 +78,9 @@ func test_the_crowns_manors_pay_rent_each_tick() -> void:
 	assert_almost_eq(s.metrics["manor_rents"], expected + MapManors.rent_of(data, s, bought), 0.001)
 
 ## The day (owner 2026-09-13): advance_day steps the works and the day;
-## the fifteenth day's end is a tick, which resets the day and steps the
+## the thirtieth day's end is a tick, which resets the day and steps the
 ## works again, so a work takes exactly its build_days days.
-func test_days_step_works_and_the_fifteenth_is_a_tick() -> void:
+func test_days_step_works_and_the_thirtieth_is_a_tick() -> void:
 	var s := GameState.new_campaign(data, 42)
 	engine.advance(s)
 	assert_eq(s.tick, 1)
@@ -92,9 +92,13 @@ func test_days_step_works_and_the_fifteenth_is_a_tick() -> void:
 		break
 	assert_gt(cell, -1)
 	var days := int(float(data.manor_buildings["palisade"]["build_days"]))
-	assert_gt(days, Calendar.DAYS_PER_TICK, "a palisade outlasts a tick")
+	assert_lt(days, Calendar.DAYS_PER_TICK, "a palisade is done within a month")
 	assert_true(MapManors.start_work(data, s, cell, "palisade", "test"))
-	for i in Calendar.DAYS_PER_TICK - 1:
+	for i in days - 1:
+		assert_eq(engine.advance_day(s), [], "day %d" % (i + 2))
+	assert_eq(engine.advance_day(s), [{"cell": cell, "building": "palisade"}], "done on its last day")
+	var finished_at_day := s.absolute_day()
+	for i in Calendar.DAYS_PER_TICK - 1 - days:
 		assert_eq(engine.advance_day(s), [])
 	assert_eq(s.day, Calendar.DAYS_PER_TICK)
 	assert_eq(engine.advance_day(s), [], "the day does not pass the tick's end on its own")
@@ -104,17 +108,7 @@ func test_days_step_works_and_the_fifteenth_is_a_tick() -> void:
 	assert_eq(s.day, 1)
 	assert_eq(s.absolute_day(), Calendar.DAYS_PER_TICK + 1)
 	assert_eq(r.finished_works, [])
-	var stepped := Calendar.DAYS_PER_TICK
-	while stepped < days:
-		if s.day >= Calendar.DAYS_PER_TICK:
-			r = engine.advance(s)
-			if not r.finished_works.is_empty():
-				break
-		else:
-			if not engine.advance_day(s).is_empty():
-				break
-		stepped += 1
-	assert_eq(s.absolute_day(), 1 + days, "it stands on the day its days are up")
+	assert_eq(finished_at_day, 1 + days, "it stood on the day its days were up")
 	assert_eq(MapManors.buildings_of(s, cell), ["palisade"])
 
 ## A finished building works each tick (owner 2026-09-13): a market's tolls

@@ -108,7 +108,7 @@ func place_panel_bottom(left: float, bottom_margin: float, width: float) -> void
 	_panel.custom_minimum_size = Vector2(width, 0)
 
 ## tick: the tick that just BEGAN (engine already advanced) - the interlude
-## replays the fortnight belonging to that tick, days 1..15.
+## replays the month belonging to that tick, days 1..30.
 func play(tick: int) -> void:
 	_tick = tick
 	_day = 0

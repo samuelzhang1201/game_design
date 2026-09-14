@@ -1,5 +1,5 @@
 key,label,icon,tooltip,texture
-treasury,Gold,coin,Gold in the crown's chest. Taxes and tariffs fill it each fortnight; the court's upkeep and your orders empty it.,res://assets/icons/treasury.png
+treasury,Gold,coin,Gold in the crown's chest. Taxes and tariffs fill it each month; the court's upkeep and your orders empty it.,res://assets/icons/treasury.png
 grain,Grain,grain,Grain in the royal granaries. The harvest fills them each autumn; the realm eats from them the rest of the year.,res://assets/icons/grain.png
 population,People,people,Everyone in the realm's towns and countryside. Levies are drawn from them.,res://assets/icons/population.png
 army,Host,swords,"The realm's soldiers under arms, by regiment.",res://assets/icons/army.png

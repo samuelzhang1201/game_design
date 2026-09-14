@@ -22,7 +22,9 @@ func test_interlude_runs_days_and_finishes() -> void:
 	overlay.play(2)
 	assert_true(overlay.playing())
 	assert_string_contains(overlay.date_label.text, "Spring")
-	await wait_for_signal(overlay.finished, 9.0)
+	# A tick is now 30 days (owner 2026-09-14): the interlude plays every one
+	# of them at dayrun_day_seconds, so the wait must cover 30 * 0.35s.
+	await wait_for_signal(overlay.finished, 15.0)
 	assert_false(overlay.playing())
 	assert_eq(_finished_count, 1)
 	assert_gt(overlay.news_box.get_child_count(), 0)
@@ -39,4 +41,4 @@ func test_click_skips_immediately() -> void:
 	overlay._on_gui_input(click)
 	assert_false(overlay.playing())
 	assert_eq(_finished_count, 1)
-	assert_string_contains(overlay.date_label.text, "Spring 30, Year 1")
+	assert_string_contains(overlay.date_label.text, "Spring 60, Year 1")
