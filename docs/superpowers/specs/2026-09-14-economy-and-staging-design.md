@@ -60,13 +60,13 @@ Units are rounded per good, then valued:
 - **Chief good** (focus): `round(people / 1000 × yield_per_1000 × land_value × ramp × (1 + Σ output_bonus) × growth(good, tick))`
 - **Buildings**: `produce_units` per building, × growth(good, tick)
 - **Settlement**: every row of the pack's `production.csv` for the burg: `round(units × growth(good, tick) × (1 + Σ output_bonus))` — this is how a settlement earns more: a town has many lines where a manor has one
-- `growth(good, tick) = (1 + growth_permille / 1000) ^ tick`, a pure function of the tick
+- `growth(good, tick)` = `(1 + growth_permille / 1000) ^ tick`, a pure function of the tick — computed in **integer per-mille arithmetic** (`index = index × (1000 + g) / 1000`, rounded, iterated from tick 0) and tabulated once per good per tick (§11), so the same save gives the same integers on every machine
 
 `strategic = Σ units × price_gold` over strategic goods, `civil` likewise. Gold values are integer because units and prices are.
 
 ### 4.4 Sums
 
-`ProvinceEconomy.of(repo, state, province) -> {tax, strategic, civil}` = Σ its manors. `RealmEconomy.of(repo, state) -> {realm: {…}, crown: {…}, per_province: {code: {…}}}` = Σ provinces, with the crown's controlled provinces (`MapManors.controlled_provinces`) summed separately. **The only rounding is at the manor.** Cached on (tick, ownership signature, buildings and focus signature). A test over the real beria pack asserts Σ manors == province and Σ provinces == realm for all three numbers.
+`ProvinceEconomy.of(repo, state, province) -> {tax, strategic, civil}` = Σ its manors. `RealmEconomy.of(repo, state) -> {realm: {…}, crown: {…}, per_province: {code: {…}}}` = Σ provinces, with the crown's controlled provinces (`MapManors.controlled_provinces`) summed separately. **The only rounding is at the manor.** Cached **per province** (§11): a province's entry holds its manors' lines and its sum, keyed on (tick, the province's owner and holders, its buildings and focus); the realm is the sum of the 203 entries. A test over the real beria pack asserts Σ manors == province and Σ provinces == realm for all three numbers.
 
 `MapEconomy.output_of_provinces` keeps feeding the ECONOMY column, now from the same integer units.
 
@@ -132,6 +132,7 @@ Engine (GUT, headless, hand-computed):
 - month's settlement: the four treasury lines and the two stock lines by hand; the crown share rounds once
 - buy and sell with the spread; `OrderCosts` sees the cost
 - staging: order kept, unstage, commit applies in order, a rejected entry leaves a line, save round-trips the list, commit from 0 only
+- caching (§11): a day step and a top bar refresh do not recompute; a manor order recomputes exactly one province; the growth table is integer and the same after a save round trip
 
 UI:
 - top bar: two lines, the second smaller, percentages, `bar_height` grew and the columns follow
@@ -150,3 +151,41 @@ The owner allowed every initial economic number to be rewritten.
 ## 10. Out of scope
 
 The military's use of the strategic stock (capacity, reach, campaign costs) beyond the cost column; a market panel; research and arms; per-manor event modifiers (the interface is the derived formula — a `manor_modifiers` table can multiply into §4 later without storing output).
+
+## 11. Performance
+
+### 11.1 The size of the work
+
+The beria pack: 3 500 land manors in 203 provinces, 684 settlements, 5 061 town production rows, 71 goods. One full realm computation is, per manor, an integer people share (already cached), one chief-good line, a few building lines, and for a settlement manor its town's production rows — about 10 000 rounded lines and 10 000 table lookups in all. In GDScript that is **20–50 ms cold** on the development machine (a rounded line with two dictionary lookups costs 2–5 µs). Nothing in the design is per frame: the map draws nothing new, the top bar reads a cached sum, and the ECONOMY column reads the same cache.
+
+What could hurt, and the answer to each:
+
+| where the cost would land | without care | with the design |
+|---|---|---|
+| the month's end (tick) | one full computation, 20–50 ms, once a month — fine either way; the tick already runs works, drift, events | same; the settlement adds six ledger lines |
+| a manor order (buy, build, focus) | invalidating the realm cache and recomputing everything: a 20–50 ms hitch at 60 fps, and the card refreshes right after the click | **per-province cache**: only the province whose manor changed is rebuilt — ~17 manors, well under 1 ms — and the realm sum re-adds 203 entries |
+| a day step (`state_changed` every day at 4x, four a second) | the top bar re-reading a sum keyed on state that changed | the key is the tick, not the day; a day step is a cache hit; a work that finishes changes one province's key, not the realm's |
+| the manor master table (up to 400 rows, sorted over all 3 500 manors) | one line computation per manor on every refresh, 20–50 ms | the province entry keeps its manors' lines, so the table reads them; a refresh is a sort |
+| the growth index | `pow` per line, 10 000 a computation, and float `pow` differs across platforms | one table per tick: 71 goods × integer per-mille compounding, filled incrementally as ticks pass (a 60-year game is 720 ticks × 71 = 51 000 ints, ~0.4 MB) |
+| the goods lookups | `goods_economy_of` through two CSV tables per line | resolved once at load into `good_code → {pool, price_gold, growth_permille}`; the pack's production rows pre-grouped per burg as `good_code → units` (done today for the ECONOMY column) |
+| staging and commit | — | N entries through the paths they use today; a commit of ten orders is ten orders |
+| the save | — | two integers and the staged list; no per-manor state (the reason for §1's decision) |
+| the model | — | no new calls; the free-text order's one call moves from execute-time to stage-time |
+
+The calendar change halves the ticks a year, so per year the engine does half the month's-end work it does today.
+
+### 11.2 The cache
+
+`RealmEconomy` keeps one dictionary `province_code → {key, manors: {manor_id: line}, sum}` and one realm sum with its own key.
+- A province's key: `(tick, controller, Σ hash of its manors' owner, buildings and focus)`, cheap to build from `GameState.manor_owner`, `manor_works` and `manor_focus`, which hold only what moved.
+- The realm key is the tuple of the province keys' hash. Reading the realm compares 203 keys, no lines.
+- `MapManors.set_owner`, `MANOR_BUILD` / `MANOR_DEMOLISH`, `MANOR_FOCUS` and a finished work call `RealmEconomy.forget_province(code)`; the tick calls `forget_all()` and recomputes the realm once for the settlement, which then serves the report, the top bar and the council.
+- The province ledger (`economy.provinces.<p>.rural_population` moved by the model or an event) invalidates that province through `WorldLedger.apply`.
+- `DataRepository.load_map` clears everything, like every other cache.
+
+### 11.3 Discipline and measurement
+
+- **Integers only, integer growth**: no `pow`, no float in the sums, so a save loaded on another machine ticks to the same numbers (invariant 2) and the tie-out test is exact, not approximate.
+- **A bench**: `tools/bench_economy.gd` (like `tools/bench_map.gd`) times a cold realm computation, a warm realm read, a single-province recompute and a month's settlement on the beria pack and prints them; the targets are cold < 60 ms, warm read < 0.1 ms, one province < 1 ms, settlement < 5 ms beyond the cold computation. Run it when the formulas change.
+- **A test seam**: `RealmEconomy.compute_count` (a counter, test only) so tests assert that a day step, a top bar refresh and a card click do not recompute the realm, and that a manor order recomputes exactly one province.
+- If a later pack were ten times larger, the same shape holds: the cold computation scales with lines, everything else with what changed.
