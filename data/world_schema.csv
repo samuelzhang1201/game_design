@@ -1,5 +1,5 @@
 path,type,min,max,enum_values,good_direction,llm_cap,alias_to,alias_scale_key,label,notes
-metrics.treasury,int,-100000,100000,,1,60,,,Treasury,gold in the crown's chest
+metrics.treasury,int,-100000000,100000000,,1,60,,,Treasury,gold in the crown's chest (the range is the pools': the month's settlement can carry it far past 100 000)
 metrics.grain,int,0,100000000,,1,30,,,Civil goods,"the CIVIL pool in whole gold (spec §5): food, timber, cloth, wares; the harvest fills it, the court eats from it, building spends it"
 metrics.strategic,int,0,100000000,,1,30,,,Strategic goods,"the STRATEGIC pool in whole gold (spec §5): iron, horses, arms, ships — the army's capacity and reach"
 metrics.civil,int,0,100000000,,1,30,metrics.grain,,Civil goods,the schema's name for the civil pool; the metric key stays grain
@@ -21,10 +21,10 @@ attribute.*.health,int,0,100,,1,2,,,Health,
 attribute.*.wealth,int,0,100,,1,2,,,Wealth,
 attribute.*.prestige,int,0,100,,1,2,,,Prestige,
 attribute.*.influence,int,0,100,,1,2,,,Influence,
-economy.kingdoms.player_realm.treasury,float,-100000,100000,,1,60,metrics.treasury,,Treasury,the player's row IS the metric (one truth)
+economy.kingdoms.player_realm.treasury,float,-100000000,100000000,,1,60,metrics.treasury,,Treasury,the player's row IS the metric (one truth)
 economy.kingdoms.player_realm.poll_tax,float,0,1,,0,0,metrics.tax_rate,tax_rate_per_poll_tax,Poll tax,derived from the tax rate
 economy.kingdoms.player_realm.sales_tax,float,0,1,,0,0,metrics.tariff_rate,tariff_rate_per_sales_tax,Sales tax,derived from the tariff rate
-economy.kingdoms.*.treasury,float,-100000,1000000,,1,0,,,Treasury,foreign treasuries are engine-only
+economy.kingdoms.*.treasury,float,-100000000,100000000,,1,0,,,Treasury,foreign treasuries are engine-only
 economy.kingdoms.*.poll_tax,float,0,1,,0,0,,,Poll tax,
 economy.kingdoms.*.sales_tax,float,0,1,,0,0,,,Sales tax,
 economy.kingdoms.*.urban_population,int,0,100000000,,1,2000,,,Urban population,

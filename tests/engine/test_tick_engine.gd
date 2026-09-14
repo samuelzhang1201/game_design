@@ -56,6 +56,23 @@ func test_the_months_end_settles_the_three_pools() -> void:
 	for m in ["treasury", "strategic", "grain"]:
 		assert_eq(s.metrics[m], float(int(s.metrics[m])), "%s stays whole" % m)
 
+## The pool stops at empty, and the stop is a ledger line like any other
+## (CLAUDE.md invariant 4): a court that eats more than the realm makes
+## leaves the stores at exactly 0, with the write-off given its reason.
+func test_the_civil_pool_cannot_fall_below_empty() -> void:
+	var s := GameState.new_campaign(data, 42)
+	s.metrics["grain"] = 0.0
+	var was: float = data.bal("ration_gold_per_1000")
+	data.balance["ration_gold_per_1000"] = 1000000.0
+	var r := engine.advance(s)
+	data.balance["ration_gold_per_1000"] = was
+	assert_eq(s.metrics["grain"], 0.0, "the stores stand at empty, not below")
+	var written_off := 0.0
+	for d in r.metric_deltas:
+		if String(d["reason"]) == "the stores cannot fall below empty":
+			written_off = float(d["delta"])
+	assert_gt(written_off, 0.0, "what could not be eaten is a line with a reason")
+
 func test_the_harvest_is_civil_goods_in_autumn() -> void:
 	var s := GameState.new_campaign(data, 42)
 	s.tick = 6  # advance() settles month 6 and makes it 7: autumn

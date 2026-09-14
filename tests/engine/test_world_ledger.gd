@@ -55,6 +55,16 @@ func test_alias_reads_and_writes_the_metric() -> void:
 	assert_almost_eq(float(WorldLedger.value_of(data, state, "economy.kingdoms.player_realm.poll_tax")),
 		6.0 / data.bal("tax_rate_per_poll_tax"), 0.0001)
 
+## The treasury's range is the pools' (spec 2026-09-14 §5): the month's
+## settlement carries the chest far past the old 100 000 cap, and a clamp
+## there would turn a +10 world delta into a write-off of the difference.
+func test_the_treasury_has_room_for_the_new_scale() -> void:
+	state.metrics["treasury"] = 150000.0
+	var out := WorldLedger.apply(data, state, "metrics.treasury", 10.0, "test", "test")
+	assert_false(out.has("error"), str(out))
+	assert_eq(float(out["delta"]), 10.0, "nothing clamped away")
+	assert_eq(state.metrics["treasury"], 150010.0)
+
 func test_writes_clamp_to_the_schema_range() -> void:
 	state.metrics["unrest"] = 98.0
 	var out := WorldLedger.apply(data, state, "metrics.unrest", 10.0, "riots", "test")

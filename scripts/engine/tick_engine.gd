@@ -99,7 +99,10 @@ func _settle_economy(state: GameState, r: TickReport) -> void:
 	var built := MapManors.crown_building_effects(data, state)
 	_apply(r, m, "treasury", float(int(built["treasury"])), "tolls and rents of the crown's buildings")
 	_apply(r, m, "grain", float(int(built["grain"])), "the crown's mills and granaries")
-	m["grain"] = maxf(m["grain"], 0.0)
+	# The floor is a line like any other (invariant 4): what the court could
+	# not eat is written off with its reason, never cut silently.
+	if m["grain"] < 0.0:
+		_apply(r, m, "grain", -m["grain"], "the stores cannot fall below empty")
 	if data.bal("economy_check_full") > 0.0:
 		var bad := RealmEconomy.check_full(data, state)
 		if not bad.is_empty():
