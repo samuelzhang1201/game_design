@@ -24,7 +24,7 @@ var _armies := false
 var _manors := false
 var _home := false  # --home 1: keep the opening framing (the crown's provinces)
 var _hover := ""  # --hover <kingdom_code>: light that kingdom's border
-var _annex := false  # --annex 1: buy the first cross-border manor first, framed on it
+var _annex := 0  # --annex 1: buy the first cross-border manor, framed on it; 2: frame it only (the before shot)
 var _annexed_at := Vector2.ZERO
 var _clouds := false  # --clouds 1: run the clock so the clouds show
 var _biomes := true  # BIOMES LAYER (experiment 2026-09-14): --biomes 0 for a before shot
@@ -54,15 +54,15 @@ func _ready() -> void:
 		elif args[i] == "--hover":
 			_hover = args[i + 1]
 		elif args[i] == "--annex":
-			_annex = args[i + 1] == "1"
+			_annex = int(args[i + 1])
 		elif args[i] == "--clouds":
 			_clouds = args[i + 1] == "1"
 		elif args[i] == "--biomes":
 			_biomes = args[i + 1] == "1"
 		i += 1
 	Game.start_campaign(42)
-	if _annex:
-		_buy_across_the_border()
+	if _annex > 0:
+		_buy_across_the_border(_annex == 1)
 	_viewport = SubViewport.new()
 	_viewport.size = Vector2i(WIDTH, HEIGHT)
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -103,13 +103,17 @@ func _ready() -> void:
 ## The first manor, in cell order, the crown may buy across the border, bought
 ## through the order system (owner 2026-09-14: it joins the realm's richest
 ## bordering province), so the shot shows the border taking it in.
-func _buy_across_the_border() -> void:
+func _buy_across_the_border(buy: bool) -> void:
 	var ids: Array = Game.data.manors.keys()
 	ids.sort()
 	for id: int in ids:
 		var how := MapManors.purchase_kind(Game.data, Game.state, id)
 		if String(how["kind"]) != "foreign":
 			continue
+		_annexed_at = MapTerrain.cell_center(Game.data, Game.data.cells[id])
+		if not buy:
+			print("annex: framing cell %d (%s), not bought" % [id, MapManors.label_of(Game.data, id)])
+			return
 		Game.state.metrics["treasury"] = 1.0e7
 		var out := Game.try_execute(ActionRequest.make("MANOR_BUY", {"manor": id}))
 		print("annex %s: cell %d (%s) -> %s, now in %s" % ["ok" if bool(out["ok"]) else "FAILED " + String(out["error"]),

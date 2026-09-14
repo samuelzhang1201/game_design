@@ -100,9 +100,9 @@ the model may name them as actions and the same validation applies.
 
 | Order | Params | Legal when | Effect | Costs |
 |---|---|---|---|---|
-| `MANOR_BUY` | `cell` | in the player's realm, not crown-held, treasury ≥ price | owner → crown; treasury −price; the selling house's characters: opinion +`manor_trade_goodwill`, the head's `wealth` +; `manor_log` "bought from House X for N" | price (formula) + `generic_order` |
-| `MANOR_SELL` | `cell` | crown-held | owner → the province's house; treasury +price × `manor_sell_ratio` | `generic_order` |
-| `MANOR_BUILD` | `cell, building` | crown-held, not built yet, the CIVIL stores ≥ the building's `civil_cost` | the work begins (`manor_works`), finishing after `build_days`; `metrics.grain` (the civil pool) −`civil_cost` | building's `civil_cost` |
+| `MANOR_BUY` | `cell` | not crown-held, and one of (§5c): in a province the crown controls or a province of the realm bordering one — `lord_gold` ≥ price; across the border, a manor whose cell touches the realm — `treasury` ≥ price | inside the realm: owner → crown, `lord_gold` −price. Across the border: `treasury` −price, the manor is annexed into the richest bordering province of the realm (`MapManors.annex`) and held by that province's house. Either way the selling house's characters: opinion +`manor_trade_goodwill`, the head's `wealth` +; `manor_log` "bought from House X for N" | price (formula) + `generic_order` |
+| `MANOR_SELL` | `cell` | crown-held | owner → the province's house; `lord_gold` +price × `manor_sell_ratio` | `generic_order` |
+| `MANOR_BUILD` | `cell, building` | crown-held, not built yet, the lord's CIVIL stores (`lord_civil`) ≥ the building's `civil_cost` | the work begins (`manor_works`), finishing after `build_days`; `lord_civil` −`civil_cost` | building's `civil_cost` |
 | `MANOR_SEIZE` | `cell` | in the player's realm, not crown-held, `manor_seize_enabled` = 1 | **skeleton**: owner → crown with reason "seized by force"; legitimacy −`manor_seize_legitimacy`; unrest +`manor_seize_unrest`; the house's characters opinion −`manor_seize_outrage`; `manor_log`. Resolution is automatic success this round; the defence number and the regiment data are read and displayed but not rolled. When the raid/military system lands (PRD RD-1..3) the outcome tier plugs in here. | `always=1` row |
 
 **Price** (`MapManors.price_of`), every term in `balance.csv`:
@@ -134,11 +134,12 @@ province is **controlled** by the house holding the most of its manors
 crown starts controlling the capital's province alone (`house_bindings.csv`
 binds the royal house to it and nothing else) and gains or loses provinces
 manor by manor. Everything that reads as "the crown's economy" is the
-controlled provinces: the seeded treasury (their towns' treasuries), the
-dashboard's people and provinces, the ECONOMY column, the ledger paths the
-model may write (`WorldLedger.belongs_to_player`) and the order prompt's
-"Your provinces". The host stays the realm's. BUY and SEIZE work anywhere
-in the realm; BUILD and FOCUS need a province the crown controls.
+controlled provinces: the seeded LORD's purse (their towns' treasuries,
+§5c), the dashboard's people and provinces, the ECONOMY column, the ledger
+paths the model may write (`WorldLedger.belongs_to_player`) and the order
+prompt's "Your provinces". The host stays the realm's. SEIZE works anywhere
+in the realm; BUY only where §5c allows; BUILD and FOCUS need a province
+the crown controls.
 
 Every manor works one **chief good** (`data/manor_focus.csv`): a focus is
 allowed by the cell's biome (and, for fisheries, a sea neighbour); the
@@ -158,10 +159,53 @@ buildings and town together) for the ECONOMY column.
 
 | Order | Params | Legal when | Effect | Costs |
 |---|---|---|---|---|
-| `MANOR_FOCUS` | `manor, focus` | crown-held, province crown-controlled, focus allowed on the land, not the one it works, treasury ≥ `switch_cost_gold` | `manor_focus[cell] = {focus, since: tick}`; treasury −`switch_cost_gold` | `switch_cost_gold` + the reeve's fee |
+| `MANOR_FOCUS` | `manor, focus` | crown-held, province crown-controlled, focus allowed on the land, not the one it works, `lord_gold` ≥ `switch_cost_gold` | `manor_focus[cell] = {focus, since: tick}`; `lord_gold` −`switch_cost_gold` | `switch_cost_gold` + the reeve's fee |
 
 The card shows "Chief good" and one `WORK <focus> — N gold` button per
 allowed focus it does not work; the Manor Master's tooltip names it.
+
+### 5c. Two purses and where land may be bought (owner 2026-09-14)
+
+**Two purses, told apart everywhere.** The CROWN's treasury and stores —
+`metrics.treasury`, `strategic`, `grain` (the civil pool), marked with a
+crown in the top bar — are the realm's: each month's end pays them
+`crown_share_permille` of every province of the realm the player's house
+does NOT control, and they pay the ministers' salaries, the court's ration,
+the orders' fees and land bought across the border. The LORD's own purse —
+`metrics.lord_gold`, `lord_strategic`, `lord_civil`, marked with the house's
+arms — is the player's as lord of his own provinces, free to spend: the
+provinces the crown controls pay into it in full, with the autumn harvest
+and the crown's buildings' `*_per_tick`. `RealmEconomy.purses` is the one
+split the settlement (`TickEngine._settle_economy`) and the top bar read. At
+the start the lord's gold is what the controlled provinces' towns hold
+(`WorldLedger.crown_town_treasury` × `pack_treasury_scale` ×
+`start_lord_gold_scale`), the treasury the crown's share of the rest of the
+realm's towns (`realm_share_town_treasury`), and each goods pool months of
+its own purse's month. Every manor order inside the realm — buy, sell,
+build, hurry, a new chief good, a demolition's refund — moves the lord's
+purse; only the orders' fees (`order_costs.csv`) stay on the treasury.
+
+**Where a manor may be bought** (`MapManors.purchase_kind`):
+
+| Kind | Where | Paid from | What becomes of it |
+|---|---|---|---|
+| `own` | a province the crown controls | `lord_gold` | the crown's |
+| `domestic` | a province of the realm that shares a border with a controlled one (`province_neighbours`) | `lord_gold` | the crown's |
+| `foreign` | another kingdom's manor whose cell touches a cell of the realm | `treasury` | annexed into the bordering province of the realm with the most tax a month (`annex_target`, ties to the code that sorts first) and held by that province's house |
+| refused | a realm province bordering none of the crown's; a foreign manor off the border | — | the validator says which |
+
+**Annexation makes a manor's province state.** `GameState.manor_province`
+holds only manors moved out of their pack province (saved; `annex` needs a
+reason and logs `annexed_from`/`annexed_to`). `MapManors.province_of` and
+`manors_of_province` take the state, and so does everything that counts a
+province's manors — owner, holdings, control, people, `RealmEconomy`'s
+columnar index (rebuilt when the annexations change). A province's live
+outline is `MapOwnership.province_loops`: its pack loops merged with the
+outline of every cell annexed into or out of it by EDGE PARITY — cells share
+the provinces' exact vertices — so the kingdom border, the seams and the
+political wash redraw with no new art. The card of a `foreign` border manor
+(a "basic" card otherwise) offers its one BUY, and every BUY button names
+the purse that pays.
 
 ### 5b. Time, works, slots and demolition (owner 2026-09-13)
 
