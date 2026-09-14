@@ -75,14 +75,16 @@ func _ready() -> void:
 	_start_bgm()
 	_switch_to(State.MENU)
 
-## The clock (owner 2026-09-13): on the court, at Game.clock_speed, a day
-## passes every time_day_seconds / speed. Works finish, the fifteenth day
-## runs the tick, and an event that the tick rolls stops the clock and
-## takes the player to the council, the only stage that renders a choice.
-## Real time lives here and nowhere lower: the engine only ever sees
-## advance_day.
+## The clock (owner 2026-09-13): at Game.clock_speed, a day passes every
+## time_day_seconds / speed. Works finish, the thirtieth day runs the tick,
+## and an event that the tick rolls stops the clock and takes the player to
+## the council, the only stage that renders a choice. Real time lives here
+## and nowhere lower: the engine only ever sees advance_day.
+## PLAY IS THE ONLY SWITCH (owner 2026-09-14): the clock runs on the council
+## stage as well as the court, so nobody has to wave the ministers on before
+## time will move.
 func _process(delta: float) -> void:
-	if state != State.COURT or Game.state == null or Game.clock_speed <= 0:
+	if not state in [State.COURT, State.CONVERSATION] or Game.state == null or Game.clock_speed <= 0:
 		return
 	if (_pause_menu != null and _pause_menu.visible) or not Game.state.pending_event.is_empty():
 		return

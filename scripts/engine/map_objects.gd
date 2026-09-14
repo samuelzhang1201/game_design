@@ -104,6 +104,35 @@ static func hash01(n: int) -> float:
 	x = x ^ (x >> 16)
 	return float(x & 0xFFFFFF) / 16777216.0
 
+## A smooth field over the sheet in [0, 1): value noise on a lattice of
+## `wavelength` native px, hashed from the lattice corner and `seed`,
+## smoothstepped between corners, two octaves. Low where marks gather (a
+## cell is picked when its score is under the row's density). Pure and
+## deterministic — no RNG, nothing to store.
+static func decor_field(p: Vector2, wavelength: float, seed_value: int) -> float:
+	var total := 0.0
+	var norm := 0.0
+	var amp := 1.0
+	var w := maxf(wavelength, 1.0)
+	for octave in 2:
+		var q := p / w
+		var ix := int(floor(q.x))
+		var iy := int(floor(q.y))
+		var fx := q.x - float(ix)
+		var fy := q.y - float(iy)
+		fx = fx * fx * (3.0 - 2.0 * fx)
+		fy = fy * fy * (3.0 - 2.0 * fy)
+		var s := seed_value * 1000003 + octave * 7919
+		var a := hash01(ix * 73856093 + iy * 19349663 + s)
+		var b := hash01((ix + 1) * 73856093 + iy * 19349663 + s)
+		var c := hash01(ix * 73856093 + (iy + 1) * 19349663 + s)
+		var d := hash01((ix + 1) * 73856093 + (iy + 1) * 19349663 + s)
+		total += lerpf(lerpf(a, b, fx), lerpf(c, d, fx), fy) * amp
+		norm += amp
+		amp *= 0.5
+		w *= 0.5
+	return total / norm
+
 ## The terrain_art row a land cell takes, or {} for bare ground.
 ## Rows carry `clump` (how many marks) and `spread` (how far across the cell
 ## they scatter, as a fraction of its radius) alongside the size.
@@ -140,13 +169,22 @@ static func terrain_decor(repo: DataRepository) -> Array:
 		var row := decor_row(repo, cell)
 		if row.is_empty():
 			continue
-		if hash01(id) >= float(row["density"]) * repo.bal("map_decor_density"):
+		# Woods gather into FORESTS and peaks into RANGES (owner 2026-09-14):
+		# a row's `cluster` share of the pick comes from a smooth field over
+		# the sheet rather than the cell's own hash, so neighbouring cells are
+		# chosen together and whole tracts fill while others stay open.
+		var cluster := clampf(float(row.get("cluster", "0")), 0.0, 1.0)
+		var score := hash01(id)
+		var centre := MapTerrain.cell_center(repo, cell)
+		if cluster > 0.0:
+			score = lerpf(score, decor_field(centre, repo.bal("map_decor_cluster_px"),
+				int(repo.bal("map_decor_cluster_seed"))), cluster)
+		if score >= float(row["density"]) * repo.bal("map_decor_density"):
 			continue
 		# One tree is not a forest and one peak is not a range (owner request
 		# 2026-09-12): a chosen cell gets `clump` SMALL marks scattered inside
 		# it, not one big one on its centre. Offsets and per-mark size come
 		# from the cell id, so the wood stands in the same place every run.
-		var centre := MapTerrain.cell_center(repo, cell)
 		var reach := MapTerrain.cell_radius(repo, cell) * float(row["spread"])
 		var base := float(row["height_px"]) * repo.bal("map_decor_scale")
 		for k in maxi(int(row["clump"]), 1):
@@ -245,6 +283,40 @@ static func manor_estates(repo: DataRepository, state: GameState) -> Array:
 			"flip": hash01(id * 48271) > 0.5, "foot": foot})
 	_estate_cache[key] = out
 	return out
+
+## How far out each estate still shows (owner 2026-09-14: zoomed out, only a
+## scattering; zoomed in, every one). The sheet is laid in square grids of
+## `base_px` x 2^L native px for L = 0..levels-1; in each square of a level
+## the best estate — the largest tier, ties to the lower hash of its cell —
+## is that square's representative. An estate's rank is the COARSEST level
+## it represents (every estate represents level 0). The squares nest and
+## the order is total, so a representative of a coarse square also wins
+## every finer square it stands in: drawing the levels at or above some L
+## shows an even scattering that only grows as L falls. Pure; returns an
+## Array of ints parallel to `estates`.
+static func estate_lod_ranks(estates: Array, base_px: float, levels: int) -> Array:
+	var ranks: Array = []
+	ranks.resize(estates.size())
+	ranks.fill(0)
+	var better := func(i: int, j: int) -> bool:
+		var ti := int(estates[i].get("tier", 0))
+		var tj := int(estates[j].get("tier", 0))
+		if ti != tj:
+			return ti > tj
+		var hi := hash01(int(estates[i].get("cell", i)) * 69069)
+		var hj := hash01(int(estates[j].get("cell", j)) * 69069)
+		return hi < hj if hi != hj else int(estates[i].get("cell", i)) < int(estates[j].get("cell", j))
+	for level in range(1, maxi(levels, 1)):
+		var side := maxf(base_px, 1.0) * float(1 << level)
+		var best: Dictionary = {}
+		for i in estates.size():
+			var p: Vector2 = estates[i]["pos"]
+			var key := Vector2i(int(floor(p.x / side)), int(floor(p.y / side)))
+			if not best.has(key) or better.call(i, int(best[key])):
+				best[key] = i
+		for key: Vector2i in best:
+			ranks[int(best[key])] = level
+	return ranks
 
 ## The sea's decoration — ships and a whale, the way an old chart fills its
 ## open water (owner request 2026-09-13): [{pos, texture, height}] in native

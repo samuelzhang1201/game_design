@@ -86,11 +86,15 @@ map_decor_tint,1.0,"world map: how far a terrain symbol takes on the colour of t
 map_sprite_inland,0.55,"world map: how far a coastal settlement's drawing slides back onto the land, as a fraction of its own half-width (owner report 2026-09-13: seaside towns had half their picture out on the water). 0 leaves every drawing centred on its point"
 map_sprite_tint,1.0,world map: the same, for the settlement drawings
 map_decor_density,1.0,world map: one knob over HOW MANY of them — multiplies the density column of data/terrain_art.csv
+map_decor_cluster_px,90,"world map: the wavelength in native px of the field that gathers terrain marks into forests and ranges (terrain_art.csv cluster column, owner 2026-09-14) — larger = broader tracts"
+map_decor_cluster_seed,7,"world map: the fixed seed of that field — the same sheet every run"
 map_sea_decor_density,0.2,"world map: the share of the open sea's candidate spots that get a ship or a whale (owner request 2026-09-13) — the spots are one per map_sea_decor_spacing_px square of sea, so 0.1 puts a mark on every tenth"
 map_sea_decor_spacing_px,80.0,"world map: how densely the sea is sampled for those spots, in NATIVE px — one candidate per square this wide"
 map_sea_decor_min_gap_px,110.0,"world map: no two ships or whales closer than this, centre to centre, in NATIVE px (owner 2026-09-13: spread out, never overlapping) — wider than the widest mark, the whale at about twice its height_px"
 map_sea_decor_scale,1.0,"world map: one knob over their SIZE — multiplies the height_px column of data/sea_art.csv (native px, so they scale with the zoom like the woods)"
 map_sea_decor_alpha,0.36,"world map: opacity of the ships and whales — they are printed on the water, and the sea shows through them"
+map_home_margin,0.6,"world map: the space left around the crown's provinces when the map opens framed on them (owner 2026-09-14), as a share of their extent on each side"
+map_home_max_scale,3.2,"world map: the closest the opening framing may zoom, so one small province does not fill the frame with a few cells"
 map_home_scale,1.1,"world map: the zoom the map opens at, centred on the player's capital — above map_province_min_scale so the province seams are there from the first frame (owner 2026-09-12)"
 map_lod_town_scale,1.0,world map: screen px per native map px at/above which towns with map_lod_town_pop+ people get a pin (below: capitals only)
 map_lod_village_scale,2.5,world map: scale at/above which every burg gets a pin
@@ -113,8 +117,8 @@ tariff_rate_per_sales_tax,60,tariff_rate (0-10) = round(export salesTax x this);
 order_prompt_max_burgs,12,largest towns of the player's realm listed in the order prompt
 order_narrative_max_chars,600,longest narrative the validator keeps from an order reply
 map_province_min_scale,0.9,world map: screen px per native map px at/above which the province view draws seams
-map_province_line_alpha,0.38,world map: opacity of province seams — soft, they are an internal hint not a boundary (owner 2026-09-12)
-map_province_line_width,1.2,world map: width of province seams in screen px
+map_province_line_alpha,0.55,world map: opacity of province seams — soft, they are an internal hint not a boundary (owner 2026-09-12)
+map_province_line_width,2.2,"world map: width of province seams in screen px (owner 2026-09-14: bolder, 1.2 read too faint)"
 map_province_dash_px,3.0,world map: dash length of province seams in screen px (0 draws them solid)
 map_province_gap_px,5.0,world map: gap between the dashes of a province seam in screen px
 province_card_max_towns,5,province panel: how many town names to list
@@ -124,7 +128,7 @@ map_state_border_width,1.6,world map: width of every kingdom's border in screen 
 map_state_border_dash_px,9,world map: length of the DARK run of a kingdom border in screen px (0 draws it solid)
 map_state_border_gap_px,9,"world map: length of the PALE run between them — not a gap any more: it is drawn in state_border_light, so the two alternate like a chequered map band"
 map_state_border_alpha,0.9,world map: opacity of kingdom borders
-map_hover_border_width,2.8,world map: width of the hovered kingdom's outline in screen px
+map_hover_border_width,2.8,"world map: width of the hovered kingdom's border in screen px — the SAME chequered ribbon drawn wider and at full opacity (owner 2026-09-14: no amber line over it)"
 map_max_scale_bar_km,150,"world map: how far out the player may zoom, stated as the largest distance the scale bar is allowed to read (owner request 2026-09-12). The bar lands on the 1-2-5 ladder, so a cap of 150 means it stops at 100. 0 lifts the cap and the floor goes back to fitting the whole map"
 map_scale_bar_max_px,220.0,world map: the longest the scale bar may run in screen px — the bar takes the biggest round distance that fits inside it
 map_scale_bar_divisions,4,world map: alternating filled and open segments along the scale bar (library M-14)
@@ -221,7 +225,11 @@ map_manor_mark_alpha,0.9,"manors view (owner 2026-09-13): opacity of the farmste
 map_manor_estate_fit,0.75,"manors view (owner 2026-09-13): an estate drawing is never taller than this share of its cell's radius"
 map_manor_estate_min_scale,0.5,"manors view: screen px per native px at/above which the estate drawings are shown"
 map_manor_estate_foot,0.5,"manors view: the share of an estate drawing's height above the cell centre — 0.5 centres it (owner 2026-09-14)"
-map_manor_estate_px,5.0,"manors view (owner 2026-09-14): the ONE height of every estate drawing in native map px (x map_decor_scale) — the same for every manor, whatever its size; only map_manor_estate_fit can shrink it"
+map_manor_estate_px,3.8,"manors view (owner 2026-09-14): the ONE height of every estate drawing in native map px (x map_decor_scale) — the same for every manor, whatever its size; only map_manor_estate_fit can shrink it. 5.0 before the owner asked for smaller"
+map_manor_estate_alpha,0.6,"manors view (owner 2026-09-14): opacity of the estate drawings on top of map_manor_mark_alpha — more see-through than the towns"
+map_manor_estate_lod_base_px,12,"manors view (owner 2026-09-14): the finest LOD grid in native px (MapObjects.estate_lod_ranks); each coarser level doubles it"
+map_manor_estate_lod_levels,6,"manors view: how many LOD grid levels — the coarsest square is base x 2^(levels-1)"
+map_manor_estate_lod_screen_px,80,"manors view: a level is drawn once its square is at least this many screen px across, so zoomed out only a scattering of estates shows and zoomed in every one does"
 manor_focus_high_height,52,"manors (owner 2026-09-14): cell height at/above which a manor's default focus may be a high-ground one (manor_focus.csv default_on high)"
 manor_focus_peak_height,63,"manors: cell height at/above which a manor's default focus may be a mountain one (default_on peak)"
 map_biome_alpha,0.5,"BIOMES LAYER (experiment 2026-09-14): opacity of the biome ground tiles laid over the political wash, under the water and the roads; 0 switches the layer off"
@@ -240,3 +248,12 @@ granary_civil_gain,60,"ECONOMY: civil goods a new royal granary is stocked with"
 goods_trade_spread,0.25,"ECONOMY (spec §5): the factor's cut — buying a pool's goods costs gold x (1 + this), selling yields gold x (1 - this)"
 build_rush_gold_per_day,3,"ECONOMY (spec §5): gold that takes one day off a work on a crown manor (MANOR_RUSH)"
 manor_rush_days_per_click,5,"ECONOMY: days one press of a manor card's HURRY button buys (MANOR_RUSH)"
+map_cloud_alpha,0.22,"clouds (owner 2026-09-14): opacity of the faint clouds that drift over the DEFAULT map while the clock runs; 0 switches them off"
+map_cloud_size_px,190,"clouds: a cloud's width in native map px (each one 0.7..1.3 of it), so it pans and zooms with the land"
+map_cloud_speed_px,9,"clouds: drift in native px per real second at 1x, multiplied by the clock speed"
+map_cloud_wind_deg,12,"clouds: the direction they drift, degrees clockwise from east"
+map_cloud_interval_min_s,4,"clouds: the fewest real seconds between one cloud and the next"
+map_cloud_interval_max_s,11,"clouds: the most real seconds between one cloud and the next — now and then, not a sky full"
+map_cloud_max,5,"clouds: the most on the map at once"
+map_cloud_fade_s,1.2,"clouds: seconds to fade in when play starts and out when the clock stops"
+map_cloud_seed,11,"clouds: the seed of the clouds' own look-only generator (never the engine's stream)"

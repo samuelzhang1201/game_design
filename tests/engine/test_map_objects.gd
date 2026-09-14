@@ -713,3 +713,28 @@ func test_every_manor_without_a_town_wears_its_industrys_estate() -> void:
 		if int(e["cell"]) == cell:
 			assert_eq(String(e["focus"]), other, "the new industry's drawing")
 			assert_ne(String(e["texture"]), String(own["texture"]))
+
+## Estates thin out with the zoom (owner 2026-09-14): each estate's LOD rank
+## is the coarsest grid square it represents. Every estate has rank 0; each
+## coarse square holds exactly one estate at or above its level; the best
+## (largest tier) wins; ranks nest, so showing levels >= L grows as L falls.
+func test_estate_lod_ranks_scatter_the_best_first_and_nest() -> void:
+	var estates: Array = []
+	var id := 0
+	for y in 8:
+		for x in 8:
+			estates.append({"pos": Vector2(x * 10.0 + 1.0, y * 10.0 + 1.0), "cell": id,
+				"tier": 3 if (x == 5 and y == 6) else 1})
+			id += 1
+	var ranks := MapObjects.estate_lod_ranks(estates, 10.0, 4)
+	assert_eq(ranks.size(), estates.size())
+	var counts := [0, 0, 0, 0]
+	var top := -1
+	for i in ranks.size():
+		for level in int(ranks[i]) + 1:
+			counts[level] += 1
+		if int(ranks[i]) == 3:
+			top = i
+	assert_eq(counts, [64, 16, 4, 1], "one per 20, 40 and 80 px square")
+	assert_eq(int(estates[top]["tier"]), 3, "the largest estate represents the coarsest square")
+	assert_eq(ranks, MapObjects.estate_lod_ranks(estates, 10.0, 4), "no RNG: the same every call")

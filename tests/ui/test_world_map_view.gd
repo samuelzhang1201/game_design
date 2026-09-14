@@ -1130,6 +1130,25 @@ func test_the_estates_are_one_mesh_in_the_manors_view() -> void:
 	v.show_economy = true
 	assert_false(v.estates_visible(), "not in the economy view either")
 
+## Zoomed out only a scattering of estates draws; zoomed in, every one
+## (owner 2026-09-14). The LOD meshes hold every estate between them.
+func test_estates_thin_out_as_the_map_zooms_out() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v.show_manors = true
+	var all := MapObjects.manor_estates(Game.data, Game.state).size()
+	var in_meshes := 0
+	for mesh: ArrayMesh in v.estate_lod_meshes():
+		in_meshes += MarkMesh.quad_count(mesh)
+	assert_eq(in_meshes, all, "every estate is in exactly one LOD mesh")
+	v._zoom_at(v.size / 2.0, 0.0001)
+	var far := v.visible_estate_count() if v.estates_visible() else 0
+	v._zoom_at(v.size / 2.0, 1.0e6)
+	assert_true(v.estates_visible())
+	var near := v.visible_estate_count()
+	assert_eq(near, all, "close in, every estate")
+	assert_lt(far, all / 4, "far out, only a scattering")
+
 ## In the MANORS view every element follows one colour strategy (owner
 ## 2026-09-13): a town drawing wears its own manor's colour at
 ## map_manor_mark_alpha, the realm's on the default map.

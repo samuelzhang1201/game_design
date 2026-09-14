@@ -22,6 +22,8 @@ var _heights := false
 var _economy := false
 var _armies := false
 var _manors := false
+var _home := false  # --home 1: keep the opening framing (the crown's provinces)
+var _hover := ""  # --hover <kingdom_code>: light that kingdom's border
 var _biomes := true  # BIOMES LAYER (experiment 2026-09-14): --biomes 0 for a before shot
 var _viewport: SubViewport
 var _view: WorldMapView
@@ -44,6 +46,10 @@ func _ready() -> void:
 			_manors = args[i + 1] == "1"
 		elif args[i] == "--armies":
 			_armies = args[i + 1] == "1"
+		elif args[i] == "--home":
+			_home = args[i + 1] == "1"
+		elif args[i] == "--hover":
+			_hover = args[i + 1]
 		elif args[i] == "--biomes":
 			_biomes = args[i + 1] == "1"
 		i += 1
@@ -56,7 +62,10 @@ func _ready() -> void:
 	_view.size = Vector2(WIDTH, HEIGHT)
 	_viewport.add_child(_view)
 	_view._go_home()
-	_view._zoom_at(Vector2(WIDTH, HEIGHT) / 2.0, 0.0001)
+	if not _home:
+		_view._zoom_at(Vector2(WIDTH, HEIGHT) / 2.0, 0.0001)
+	if _hover != "" and Game.data.kingdoms.has(_hover):
+		_view.hover_state(int(Game.data.kingdoms[_hover]["state_id"]))
 	if _zoom_mul != 1.0:
 		var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
 		var capital: Dictionary = Game.data.burgs[String(realm["capital_burg"])]

@@ -197,3 +197,22 @@ func test_the_clock_passes_days_on_the_court_and_stops_for_council() -> void:
 		assert_eq(Game.clock_speed, 0, "End Turn pauses the clock")
 	Game.data.balance["time_day_seconds"] = 1.0
 	Game.set_clock_speed(0)
+
+## Play is the only switch (owner 2026-09-14): the opening council is still
+## talking, nobody has waved the ministers on, and pressing play moves time.
+func test_play_runs_the_clock_on_the_council_stage_too() -> void:
+	var r := _root()
+	await wait_frames(2)
+	r.current_screen.start_requested.emit()
+	await wait_frames(2)
+	assert_eq(r.state, GameRoot.State.CONVERSATION, "the reign opens on the council")
+	Game.data.balance["time_day_seconds"] = 0.001
+	Game.state.pending_event = {}
+	var before: int = Calendar.absolute_day(Game.state.tick, Game.state.day)
+	r.current_screen.top_bar().clock_button(1).pressed.emit()
+	assert_eq(Game.clock_speed, 1)
+	await wait_frames(6)
+	assert_gt(Calendar.absolute_day(Game.state.tick, Game.state.day), before,
+		"days pass without Wave them on")
+	Game.data.balance["time_day_seconds"] = 1.0
+	Game.set_clock_speed(0)

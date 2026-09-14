@@ -297,15 +297,43 @@ func _build_tooltip() -> void:
 ## Where the map opens (owner request 2026-09-12): close enough to read, on
 ## the player's own capital. With no campaign loaded — the menu draws the map
 ## too — it falls back to covering the whole world.
+## Since 2026-09-14 (owner) it frames the provinces the crown CONTROLS —
+## the player's own land — with map_home_margin round them; the capital at
+## map_home_scale stays the fallback when the crown controls none.
 func _go_home() -> void:
 	_zoom = maxf(_zoom_cover(), _zoom_min())
 	_offset = (size - _map_size * _zoom) / 2.0
+	var rect := home_rect()
 	var at := home_anchor()
-	if at != Vector2.ZERO:
+	if rect.size.x > 0.0 and rect.size.y > 0.0 and size.x > 0.0 and size.y > 0.0:
+		var fit := minf(size.x / rect.size.x, size.y / rect.size.y)
+		_zoom = clampf(fit, _zoom_min(), minf(Game.data.bal("map_home_max_scale"), ZOOM_MAX))
+		_offset = size / 2.0 - rect.get_center() * _zoom
+	elif at != Vector2.ZERO:
 		_zoom = clampf(Game.data.bal("map_home_scale"), _zoom_min(), ZOOM_MAX)
 		_offset = size / 2.0 - at * _zoom
 	_clamp_offset()
 	_homed = true
+
+## The box the map opens on, in native px: the crown's controlled provinces'
+## outlines together, grown map_home_margin of their extent on each side.
+## Rect2() when no campaign is loaded or the crown controls nothing.
+## Public for tests.
+func home_rect() -> Rect2:
+	if Game.state == null:
+		return Rect2()
+	var out := Rect2()
+	var first := true
+	for code: String in MapManors.controlled_provinces(Game.data, Game.state):
+		if not _province_bbox.has(code):
+			continue
+		var b: Rect2 = _province_bbox[code]
+		out = b if first else out.merge(b)
+		first = false
+	if first:
+		return Rect2()
+	var m := Game.data.bal("map_home_margin")
+	return out.grow_individual(out.size.x * m, out.size.y * m, out.size.x * m, out.size.y * m)
 
 ## The player's capital in native coordinates, or ZERO when no realm is
 ## bound. Public for tests.
@@ -795,7 +823,10 @@ func _draw_state_borders() -> void:
 	var pale := MapPalette.named(Game.data, "state_border_light")
 	dark.a = alpha
 	pale.a = alpha
-	var lit := MapPalette.named(Game.data, "hover_border")
+	# The hovered kingdom wears its own ribbon, wider and at full strength
+	# (owner 2026-09-14: the amber line traced over it was not wanted).
+	var lit_dark := Color(dark, 1.0)
+	var lit_pale := Color(pale, 1.0)
 	var width := Game.data.bal("map_state_border_width")
 	var lit_width := Game.data.bal("map_hover_border_width")
 	var hovered := hovered_kingdom()
@@ -813,7 +844,7 @@ func _draw_state_borders() -> void:
 		# Hovering LIGHTS THE LINE THAT IS ALREADY THERE (owner request
 		# 2026-09-12) instead of tracing a second outline over it.
 		if code == hovered:
-			_draw_dashes(entry, frame, lit, lit, lit_width)
+			_draw_dashes(entry, frame, lit_dark, lit_pale, lit_width)
 		else:
 			_draw_dashes(entry, frame, dark, pale, width)
 
@@ -1173,25 +1204,86 @@ func _realm_tint_plain(province_code: String, strength: float) -> Color:
 var _estate_mesh: ArrayMesh = null
 var _estate_sig := 0
 
-func estate_mesh() -> ArrayMesh:
+func _estate_signature() -> int:
 	var state := Game.state
-	var sig := hash([0 if state == null else state.world.hash(),
+	return hash([0 if state == null else state.world.hash(),
 		0 if state == null else state.manor_owner.hash(), _ownership_sig(),
 		0 if state == null else state.manor_focus.hash(),
-		Game.data.bal("map_manor_mark_alpha")])
-	if _estate_mesh != null and _estate_sig == sig:
-		return _estate_mesh
+		Game.data.bal("map_manor_mark_alpha"), Game.data.bal("map_manor_estate_alpha")])
+
+## The marks of every estate, tinted: its manor's colour, map_manor_estate_alpha
+## more see-through than a town (owner 2026-09-14).
+func _estate_marks() -> Array:
 	var tints: Dictionary = {}
 	var marks: Array = []
-	for d: Dictionary in MapObjects.manor_estates(Game.data, state):
+	var extra := Game.data.bal("map_manor_estate_alpha")
+	for d: Dictionary in MapObjects.manor_estates(Game.data, Game.state):
 		var cell := int(d["cell"])
 		if not tints.has(cell):
-			tints[cell] = manor_mark_tint(cell)
+			var t := manor_mark_tint(cell)
+			t.a *= extra
+			tints[cell] = t
 		marks.append({"pos": d["pos"], "texture": String(d["texture"]), "height": float(d["height"]),
 			"color": tints[cell], "flip": bool(d["flip"]), "foot": float(d["foot"])})
-	_estate_mesh = MarkMesh.build(marks, decor_atlas())
+	return marks
+
+## Every estate in one mesh — the test seam; the view draws estate_lod_meshes.
+func estate_mesh() -> ArrayMesh:
+	var sig := _estate_signature()
+	if _estate_mesh != null and _estate_sig == sig:
+		return _estate_mesh
+	_estate_mesh = MarkMesh.build(_estate_marks(), decor_atlas())
 	_estate_sig = sig
 	return _estate_mesh
+
+## The estates split by LOD rank (MapObjects.estate_lod_ranks, owner
+## 2026-09-14): one mesh per level, level 0 first. Rebuilt with the same
+## signature as the full mesh, never per zoom — a zoom only picks levels.
+var _estate_lod: Array = []
+var _estate_lod_sig := 0
+
+func estate_lod_meshes() -> Array:
+	var sig := _estate_signature()
+	if not _estate_lod.is_empty() and _estate_lod_sig == sig:
+		return _estate_lod
+	var repo := Game.data
+	var levels := maxi(int(repo.bal("map_manor_estate_lod_levels")), 1)
+	var marks := _estate_marks()
+	var ranks := MapObjects.estate_lod_ranks(MapObjects.manor_estates(repo, Game.state),
+		repo.bal("map_manor_estate_lod_base_px"), levels)
+	var by_level: Array = []
+	for level in levels:
+		by_level.append([])
+	for i in marks.size():
+		(by_level[int(ranks[i])] as Array).append(marks[i])
+	_estate_lod = []
+	for level in levels:
+		_estate_lod.append(MarkMesh.build(by_level[level], decor_atlas()))
+	_estate_lod_sig = sig
+	return _estate_lod
+
+## The finest LOD level drawn at the current zoom: a level shows once its
+## grid square spans map_manor_estate_lod_screen_px on screen. Levels at or
+## above it draw. Public for tests.
+func estate_lod_floor() -> int:
+	var repo := Game.data
+	var levels := maxi(int(repo.bal("map_manor_estate_lod_levels")), 1)
+	var need := repo.bal("map_manor_estate_lod_screen_px")
+	var base := maxf(repo.bal("map_manor_estate_lod_base_px"), 1.0)
+	for level in levels:
+		if base * float(1 << level) * view_scale() >= need:
+			return level
+	return levels - 1
+
+## How many estates draw at the current zoom (test seam).
+func visible_estate_count() -> int:
+	if not estates_visible():
+		return 0
+	var n := 0
+	var meshes := estate_lod_meshes()
+	for level in range(estate_lod_floor(), meshes.size()):
+		n += MarkMesh.quad_count(meshes[level])
+	return n
 
 ## Whether the estates draw: the MANORS view, at or above
 ## map_manor_estate_min_scale. Test seam.
@@ -1229,9 +1321,11 @@ func _draw_terrain_decor() -> void:
 		if mesh.get_surface_count() > 0:
 			draw_mesh(mesh, decor_atlas().texture, xf)
 	if estates_visible():
-		var estates := estate_mesh()
-		if estates.get_surface_count() > 0:
-			draw_mesh(estates, decor_atlas().texture, xf)
+		var meshes := estate_lod_meshes()
+		for level in range(estate_lod_floor(), meshes.size()):
+			var estates: ArrayMesh = meshes[level]
+			if estates.get_surface_count() > 0:
+				draw_mesh(estates, decor_atlas().texture, xf)
 
 ## The scale bar in the bottom-right corner (owner request 2026-09-12). The
 ## pack carries its own scale — map_info's distance_scale world units per
