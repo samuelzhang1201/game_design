@@ -237,3 +237,4 @@ manor_focus_high_height,52,"manors (owner 2026-09-14): cell height at/above whic
 manor_focus_peak_height,63,"manors: cell height at/above which a manor's default focus may be a mountain one (default_on peak)"
 map_biome_alpha,0.45,"BIOMES LAYER (experiment 2026-09-14): opacity of the biome ground tiles laid over the political wash, under the water and the roads; 0 switches the layer off"
 map_biome_tile_px,128,"BIOMES LAYER (experiment 2026-09-14): one seamless tile spans this many native map px"
+map_biome_soft,1.0,"BIOMES LAYER (experiment 2026-09-14): how far two biomes cross-fade at their seam — a vertex's tile fades by the share of the land cells around it that are NOT this biome, and a cell's centre by its land neighbours' share (owner: the hard cell edges read false); 0 = the crisp Voronoi mosaic"

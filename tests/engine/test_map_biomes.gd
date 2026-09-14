@@ -6,7 +6,7 @@ extends GutTest
 
 func _repo() -> DataRepository:
 	var r := DataRepository.new()
-	r.balance = {"map_biome_tile_px": 20.0, "map_biome_alpha": 0.5}
+	r.balance = {"map_biome_tile_px": 20.0, "map_biome_alpha": 0.5, "map_biome_soft": 0.0}
 	r.vertices = {0: Vector2(0, 0), 1: Vector2(10, 0), 2: Vector2(10, 10),
 		3: Vector2(0, 10), 4: Vector2(20, 0), 5: Vector2(20, 10),
 		6: Vector2(30, 0), 7: Vector2(30, 10), 8: Vector2(40, 0), 9: Vector2(40, 10)}
@@ -72,3 +72,49 @@ func test_a_pack_without_biome_art_has_no_layers() -> void:
 	var r := _repo()
 	r.biome_art = []
 	assert_eq(MapBiomes.layers(r).size(), 0)
+
+## Hard edges (soft 0): every vertex fully opaque.
+func test_without_softening_every_vertex_is_opaque() -> void:
+	var b := MapBiomes.build(_repo(), 1, 20.0, 0.0)
+	for c: Color in (b["colors"] as PackedColorArray):
+		assert_eq(c.a, 1.0)
+
+## Cross-fade (soft 1). The layers paint in ascending biome id, so at a
+## seam vertex the FIRST biome stays at 1 and the next carries its share:
+## vertex (10,0) touches cells 1 and 2 (biomes 1, 2) -> biome 1's mesh 1/1
+## = 1.0, biome 2's 1/2 — painted in that order the vertex is an even mix
+## with nothing of the sheet showing. Vertex (0,0) touches only cell 1 ->
+## 1.0; vertex (30,0) touches cell 3 and the SEA cell 4 -> the sea does
+## not count, 1.0 (the coast stays crisp). Every centre stays 1.0: only
+## its own mesh covers a cell's middle.
+func test_softening_fades_a_vertex_by_its_biomes_share_of_the_land_around_it() -> void:
+	var b := MapBiomes.build(_repo(), 1, 20.0, 1.0)
+	var verts: PackedVector2Array = b["vertices"]
+	var cols: PackedColorArray = b["colors"]
+	assert_eq(cols.size(), verts.size())
+	assert_almost_eq(cols[verts.find(Vector2(0, 0))].a, 1.0, 0.0001, "inside the biome")
+	assert_almost_eq(cols[verts.find(Vector2(10, 0))].a, 1.0, 0.0001, "first painted: whole at the seam")
+	assert_almost_eq(cols[verts.find(Vector2(30, 0))].a, 1.0, 0.0001, "on the coast")
+	assert_almost_eq(cols[verts.find(Vector2(5, 5))].a, 1.0, 0.0001, "cell 1's centre")
+	assert_almost_eq(cols[verts.find(Vector2(25, 5))].a, 1.0, 0.0001, "cell 3's centre")
+	var other := MapBiomes.build(_repo(), 2, 20.0, 1.0)
+	var ov: PackedVector2Array = other["vertices"]
+	var oc: PackedColorArray = other["colors"]
+	assert_almost_eq(oc[ov.find(Vector2(10, 0))].a, 0.5, 0.0001, "painted second: half over the first")
+	assert_almost_eq(oc[ov.find(Vector2(15, 5))].a, 1.0, 0.0001, "cell 2's centre")
+
+## A neighbour whose biome has no art is not in the mix: biome 2's mesh at
+## (10,0) with only biome 2 drawn -> 1/1 = 1.0, a crisp edge to the sheet.
+func test_a_biome_without_art_does_not_fade_its_neighbours() -> void:
+	var b := MapBiomes.build(_repo(), 2, 20.0, 1.0, {}, {2: "res://x/steppe.png"})
+	var verts: PackedVector2Array = b["vertices"]
+	var cols: PackedColorArray = b["colors"]
+	assert_almost_eq(cols[verts.find(Vector2(10, 0))].a, 1.0, 0.0001)
+
+## soft 0.5 pulls a seam vertex only halfway from 1 toward its share:
+## 1 + (0.5 - 1) * 0.5 = 0.75.
+func test_softening_is_a_dial() -> void:
+	var b := MapBiomes.build(_repo(), 2, 20.0, 0.5)
+	var verts: PackedVector2Array = b["vertices"]
+	var cols: PackedColorArray = b["colors"]
+	assert_almost_eq(cols[verts.find(Vector2(10, 0))].a, 0.75, 0.0001)
