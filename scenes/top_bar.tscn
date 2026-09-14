@@ -13,38 +13,36 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="Rows" type="VBoxContainer" parent="Bar"]
-theme_override_constants/separation = 0
+[node name="Row" type="HBoxContainer" parent="Bar"]
+theme_override_constants/separation = 10
 
-[node name="Row" type="HBoxContainer" parent="Bar/Rows"]
-theme_override_constants/separation = 8
-
-[node name="FlagLabel" type="Label" parent="Bar/Rows/Row"]
+[node name="FlagLabel" type="Label" parent="Bar/Row"]
 unique_name_in_owner = true
 visible = false
+size_flags_vertical = 4
 
-[node name="DateLabel" type="Label" parent="Bar/Rows/Row"]
+[node name="DateLabel" type="Label" parent="Bar/Row"]
 unique_name_in_owner = true
+size_flags_vertical = 4
 
-[node name="LeftSpacer" type="Control" parent="Bar/Rows/Row"]
+[node name="LeftSpacer" type="Control" parent="Bar/Row"]
 size_flags_horizontal = 3
 
-[node name="MetricsRow" type="HBoxContainer" parent="Bar/Rows/Row"]
+[node name="Purses" type="GridContainer" parent="Bar/Row"]
 unique_name_in_owner = true
-theme_override_constants/separation = 9
+size_flags_vertical = 4
+theme_override_constants/h_separation = 18
+theme_override_constants/v_separation = 2
+columns = 4
 
-[node name="RightSpacer" type="Control" parent="Bar/Rows/Row"]
+[node name="RightSpacer" type="Control" parent="Bar/Row"]
 size_flags_horizontal = 3
 
-[node name="MenuButton" type="Button" parent="Bar/Rows/Row"]
+[node name="MenuButton" type="Button" parent="Bar/Row"]
 unique_name_in_owner = true
+size_flags_vertical = 4
 focus_mode = 0
 text = "MENU"
-
-[node name="CrownRow" type="HBoxContainer" parent="Bar/Rows"]
-unique_name_in_owner = true
-alignment = 1
-theme_override_constants/separation = 14
 
 [node name="EventChip" type="Label" parent="."]
 unique_name_in_owner = true

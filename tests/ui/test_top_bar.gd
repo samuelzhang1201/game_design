@@ -106,5 +106,24 @@ func test_the_bar_shows_the_crowns_pools_and_the_lords_purse() -> void:
 	for gone in ["unrest", "legitimacy", "army_quality", "church_opinion"]:
 		assert_null(bar.icon_for(gone), "%s moved to the country card" % gone)
 	assert_gt(bar.bar_height(), 40.0, "two lines are taller than one")
-	assert_lt(bar.value_label("lord_gold").get_theme_font_size("font_size"), 18,
-		"the lord's row is the smaller line")
+	# Tidied 2026-09-14 (owner, UIFIX.png): small type, ONE change a pool, the
+	# two purses in one grid so their columns line up, compact buttons, and
+	# the strip's content clear of the frame's ornament.
+	assert_lte(bar.value_label("treasury").get_theme_font_size("font_size"), 15, "the figures are small")
+	for m in TopBar.ORDER + TopBar.LORD:
+		var labels := bar.cell_of(m).get_children().filter(func(c: Node) -> bool: return c is Label)
+		assert_eq(labels.size(), 2, "%s: its stock and ONE change, not two" % m)
+	assert_eq(bar.purse_grid().columns, 4, "a mark and three pools a row")
+	assert_eq(bar.cell_of("treasury").get_index() + 4, bar.cell_of("lord_gold").get_index(),
+		"the lord's gold stands under the crown's")
+	bar.size = Vector2(1280, bar.bar_height())
+	await wait_process_frames(3)
+	var frame: Control = bar.get_node("%Bar")
+	var style := frame.get_theme_stylebox("panel")
+	var inner := frame.get_global_rect()
+	var menu := (bar.get_node("%MenuButton") as Control).get_global_rect()
+	assert_lte(menu.end.x, inner.end.x - style.content_margin_right + 0.5, "MENU stands inside the frame")
+	assert_gte(menu.position.y, inner.position.y + style.content_margin_top - 0.5, "below its top rule")
+	for speed in [0, 1, 2, 4]:
+		assert_lte(bar.clock_button(speed).size.y, TopBar.BUTTON_H + 0.5,
+			"the clock's buttons do not stretch to the strip")

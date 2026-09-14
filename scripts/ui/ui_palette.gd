@@ -203,6 +203,42 @@ static func panel_style(border: Color, border_width: int = 2,
 			return framed
 	return card
 
+## How far content must stand in from a framed panel's edges to clear the
+## ornament (owner 2026-09-14: the top bar's MENU sat on the corner
+## flourish). The scrolls fill most of a corner square of PANEL_ART_INSET, so
+## the sides keep that much plus a gap; the rules along the top and bottom
+## are thin, so a strip of text only needs to sit inside the hairline.
+const ORNAMENT_CLEAR_H := PANEL_ART_INSET + 6.0
+const ORNAMENT_CLEAR_V := PANEL_ART_INSET * 0.35
+
+## Give a panel style margins that keep its content off the ornament — a
+## no-op for the plain card, which has none. For a wide, short strip (the
+## top bar), whose content would otherwise run into the corner scrolls.
+static func clear_ornament(style: StyleBox) -> StyleBox:
+	if style is VellumPanelStyle:
+		style.content_margin_left = maxf(style.content_margin_left, ORNAMENT_CLEAR_H)
+		style.content_margin_right = maxf(style.content_margin_right, ORNAMENT_CLEAR_H)
+		style.content_margin_top = maxf(style.content_margin_top, ORNAMENT_CLEAR_V)
+		style.content_margin_bottom = maxf(style.content_margin_bottom, ORNAMENT_CLEAR_V)
+	return style
+
+## A small button that sits in a strip without stretching to the strip's
+## height: tight padding, a fixed height, centred in its row.
+static func compact_button(button: Button, height: float, font_px: int, pad: float = 6.0) -> void:
+	button.add_theme_font_size_override("font_size", font_px)
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	button.custom_minimum_size = Vector2(button.custom_minimum_size.x, height)
+	var looks := {"normal": chip_style(), "hover": chip_style(Color("e3ecf8"), GOLD),
+		"pressed": chip_style(Color("dbe6f6"), GOLD),
+		"disabled": chip_style(PANEL_BG, Color(EDGE, 0.6))}
+	for state: String in looks:
+		var box: StyleBoxFlat = looks[state]
+		box.content_margin_left = pad
+		box.content_margin_right = pad
+		box.content_margin_top = 1.0
+		box.content_margin_bottom = 1.0
+		button.add_theme_stylebox_override(state, box)
+
 static func _card_style(border: Color, border_width: int, margin: int) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = PANEL_BG
