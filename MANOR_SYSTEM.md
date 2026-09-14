@@ -209,6 +209,23 @@ political wash redraw with no new art. The card of a `foreign` border manor
 (a "basic" card otherwise) offers its one BUY, and every BUY button names
 the purse that pays.
 
+### 5d. Where buildings may stand, and what they yield (owner 2026-09-14)
+
+Not every manor raises the same buildings. `data/manor_buildings.csv`'s
+`land` says where the ground takes one — a fishing quay and a shipwright
+only on the coast; a mine shaft and a stonecutter on high ground or where
+iron and stone are worked; a sawmill where there is forest; a mill and a
+granary on farming land; a winepress where vines grow; a tannery and a loom
+where the herds are — and `prereq` makes the advanced ones wait: a market
+needs a manor house, a smithy a mine shaft, a brewery a mill, an abbey a
+chapel, a castle a palisade and a manor house, a harbour a quay and a
+market, an armoury a smithy. Chains fit the three slots. Every building
+yields once it stands: goods a month (fish, salt, wood, stone, iron, honey,
+wine, leather, cloth, tools, beer, ships, books, arms, preserved food,
+candles, grain) or its bonus columns. The card lists what the ground takes
+in one dropdown; a building still waiting on another is shown disabled with
+the reason.
+
 ### 5b. Time, works, slots and demolition (owner 2026-09-13)
 
 **The smallest unit of time is a day.** `GameState.day` (1..15) sits under
