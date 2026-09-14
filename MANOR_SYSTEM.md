@@ -65,7 +65,7 @@ All derived, none stored, except buildings.
 | Land value | `MapEconomy.land_value` (habitability 0..1) | `biomes.csv` |
 | Population | the province's **rural** population (ledger `economy.provinces.<p>.rural_population`) apportioned by weight `area × land_value` over the province's land cells, plus the **urban** population of any burg in the cell (`burgs.csv` population, or the ledger's urban share for the seat). Manor populations therefore always sum to the province's — the tie to province data the owner asked for, and nothing to keep in sync. | ledger |
 | Production | working manors: `MapEconomy.manors` (goods, dominant good, units); other manors: "subsistence" — no goods row | `production.csv` |
-| Buildings | the list in `GameState.manor_buildings {cell_id: [building_code]}`; catalogue in **`data/manor_buildings.csv`** (`building_code,label,cost_gold,tax_bonus,output_bonus,defence_bonus,church_bonus,notes`): manor house, mill, granary, chapel, palisade, market — six to start | new CSV |
+| Buildings | the list in `GameState.manor_buildings {cell_id: [building_code]}`; catalogue in **`data/manor_buildings.csv`** (`building_code,label,cost_gold,civil_cost,build_days,tax_bonus,output_bonus,defence_bonus,church_bonus,gold_per_tick,grain_per_tick,contentment_per_tick,unrest_per_tick,produce_good,produce_units,notes` — `civil_cost` is the one price the game charges and `cost_gold` is unused, kept for the library): manor house, mill, granary, chapel, palisade, market — six to start | new CSV |
 | Tax (rent) | A MONTH of whole gold, §4.2 of the spec (`docs/superpowers/specs/2026-09-14-economy-and-staging-design.md`): `round(people / 1000 × manor_tax_per_1000 × tax_rate / tax_rate_base × (1 + Σ tax_bonus))`, plus its town's tariff `round(town_goods_gold × tariff_rate × tariff_per_sales_tax / 100)`. `ManorEconomy.line_of` computes it and `RealmEconomy` sums it; the crown's share is settled into `metrics.treasury` at the month's end (spec §5). Other houses' taxes are shown on the card as what the house earns (no house treasuries exist — the number is information and a price input, not a ledger). | `balance.csv` `manor_tax_per_1000`, `tax_rate_base`, `tariff_per_sales_tax` |
 | Defence | `manor_defence_base + Σ defence_bonus` — displayed now, used by the seizure resolution later | `balance.csv` |
 | Value (price) | see §5 | `balance.csv` |
@@ -102,7 +102,7 @@ the model may name them as actions and the same validation applies.
 |---|---|---|---|---|
 | `MANOR_BUY` | `cell` | in the player's realm, not crown-held, treasury ≥ price | owner → crown; treasury −price; the selling house's characters: opinion +`manor_trade_goodwill`, the head's `wealth` +; `manor_log` "bought from House X for N" | price (formula) + `generic_order` |
 | `MANOR_SELL` | `cell` | crown-held | owner → the province's house; treasury +price × `manor_sell_ratio` | `generic_order` |
-| `MANOR_BUILD` | `cell, building` | crown-held, not built yet, treasury ≥ cost | building appended; treasury −cost | building's `cost_gold` |
+| `MANOR_BUILD` | `cell, building` | crown-held, not built yet, the CIVIL stores ≥ the building's `civil_cost` | the work begins (`manor_works`), finishing after `build_days`; `metrics.grain` (the civil pool) −`civil_cost` | building's `civil_cost` |
 | `MANOR_SEIZE` | `cell` | in the player's realm, not crown-held, `manor_seize_enabled` = 1 | **skeleton**: owner → crown with reason "seized by force"; legitimacy −`manor_seize_legitimacy`; unrest +`manor_seize_unrest`; the house's characters opinion −`manor_seize_outrage`; `manor_log`. Resolution is automatic success this round; the defence number and the regiment data are read and displayed but not rolled. When the raid/military system lands (PRD RD-1..3) the outcome tier plugs in here. | `always=1` row |
 
 **Price** (`MapManors.price_of`), every term in `balance.csv`:
@@ -110,7 +110,7 @@ the model may name them as actions and the same validation applies.
 ```
 base   = pop / 1000 × manor_price_per_1000
        + units × manor_price_per_unit            (working manors)
-       + Σ building cost_gold × manor_price_building_ratio
+       + Σ building civil_cost × manor_price_building_ratio
 land   = 1 + (land_value − 0.5) × manor_price_land_swing
 ask    = base × land × markup
 markup = 1 + manor_markup_max × (1 − opinion / 100)
@@ -144,14 +144,17 @@ Every manor works one **chief good** (`data/manor_focus.csv`): a focus is
 allowed by the cell's biome (and, for fisheries, a sea neighbour); the
 default is the first the land allows, and `GameState.manor_focus` holds
 only manors whose focus was chosen (`{focus, since}`), logged in
-`manor_log` with a `focus` field. Yield a year = people / 1000 ×
+`manor_log` with a `focus` field. Yield a MONTH = people / 1000 ×
 `yield_per_1000` × land value × the settling-in ramp (0 on the tick of
 the switch, 1 after `transition_ticks`) × (1 + buildings' `output_bonus`)
-× `manor_focus_yield_scale`. The focus adds nothing to the tax (the
-`rent_bonus` column was dropped 2026-09-14: tax is the buildings'
-`tax_bonus` alone); its units count in the value like town trade, and
-`MapEconomy.output_of_provinces(repo, provinces, state)` adds every
-manor's yield to the pack's town production for the ECONOMY column.
+× the good's growth index, rounded ONCE to whole units
+(`ManorEconomy.focus_units`; the old `manor_focus_yield_scale` knob was
+retired 2026-09-14 with the float path it scaled). The focus adds nothing
+to the tax (the `rent_bonus` column was dropped 2026-09-14: tax is the
+buildings' `tax_bonus` alone); its units count in the value like town
+trade, and `MapEconomy.output_of_provinces(repo, provinces, state)` sums
+every manor's month (`ManorEconomy.line_of`'s units — chief good,
+buildings and town together) for the ECONOMY column.
 
 | Order | Params | Legal when | Effect | Costs |
 |---|---|---|---|---|
@@ -176,7 +179,9 @@ too. Real time never enters the engine.
 start, days}]}` — that takes a slot until `MapManors.advance_works` moves
 it into `manor_buildings`. A manor has `manor_slots_base` slots (+
 `manor_slots_burg_bonus` with a town). `MANOR_DEMOLISH` pulls a building
-down or stops a work for `manor_demolish_refund` of its cost. The card
+down or stops a work for `manor_demolish_refund` of its `civil_cost`,
+returned to the CIVIL STORES (a build is bought with goods, so goods come
+back — never gold). The card
 draws one box per slot (icon, a dimmed icon with days left, or `+`) with a
 cross under each building or work.
 
@@ -185,8 +190,9 @@ cross under each building or work.
 `church_bonus` → church opinion (chapel 0.3), `contentment_per_tick`
 (manor house 0.2), `unrest_per_tick` (palisade −0.1), plus the standing
 `tax_bonus` / `output_bonus` / `defence_bonus`; `produce_good/units`
-(market: cloth 1) join the ECONOMY column. `TickEngine` applies them as
-their own ledger lines after the rents.
+(market: cloth 1) join the ECONOMY column. The `*_per_tick` columns are a
+MONTH's worth — a tick is a month — and `TickEngine` applies them as their
+own ledger lines after the month's settlement.
 
 ## 6. Map and views
 
@@ -209,7 +215,7 @@ their own ledger lines after the rents.
   — name, province, house, population, rent, value, buildings, production —
   defaulting to the player's realm (hundreds of rows), with a house filter
   and an "all realms" toggle (thousands; a `Tree` handles it), and a totals
-  line (manors held by the crown, rents per tick). Clicking a row centres the
+  line (manors held by the crown, taxes per month). Clicking a row centres the
   map on the manor and selects it, so the card opens beside the table.
   Everything wraps or scrolls inside `ScreenLayout.LEFT_WIDTH`.
 
@@ -230,7 +236,7 @@ strings in JSON and re-int'd on load, numeric leaves through
 | `scripts/engine/name_forge.gd` | new: the Markov name forge over the export's `nameBases` |
 | `data/maps.csv` | `cell_texture` column |
 | `data/manor_buildings.csv` | new catalogue |
-| `data/balance.csv` | `manor_rent_per_1000`, `manor_price_per_1000`, `manor_price_per_unit`, `manor_price_building_ratio`, `manor_price_land_swing`, `manor_markup_max`, `manor_sell_ratio`, `manor_trade_goodwill`, `manor_defence_base`, `manor_seize_enabled`, `manor_seize_legitimacy`, `manor_seize_unrest`, `manor_seize_outrage`, `manor_master_max_rows` |
+| `data/balance.csv` | `manor_tax_per_1000`, `manor_price_per_1000`, `manor_price_per_unit`, `manor_price_building_ratio`, `manor_price_land_swing`, `manor_markup_max`, `manor_sell_ratio`, `manor_trade_goodwill`, `manor_defence_base`, `manor_seize_enabled`, `manor_seize_legitimacy`, `manor_seize_unrest`, `manor_seize_outrage`, `manor_master_max_rows` |
 | `data/policy_actions_court_additions.csv`, `order_costs.csv`, `action_signatures.csv` | four orders |
 | `data/political_palette.csv` | `manor_crown`, `manor_foreign`, house hue ramp keys |
 | `data/resource_icons.csv` | rows for the six buildings (glyphs) |
