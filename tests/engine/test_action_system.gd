@@ -290,3 +290,30 @@ func test_building_needs_a_free_slot_and_can_be_pulled_down() -> void:
 	assert_true(sys.execute(ActionRequest.make("MANOR_DEMOLISH", {"manor": cell, "building": codes[0]}), s)["ok"])
 	assert_false(MapManors.has_building(s, cell, codes[0]))
 	assert_string_contains(String(s.manor_log[-1]["reason"]), "pulled down")
+
+## GOODS_BUY / GOODS_SELL (spec §5): the treasury buys a pool's goods at
+## the spread and sells them under it, whole gold both ways.
+func test_buying_goods_costs_the_spread_and_selling_pays_under_it() -> void:
+	var spread := data.bal("goods_trade_spread")
+	s.metrics["treasury"] = 1000.0
+	s.metrics["strategic"] = 50.0
+	s.metrics["grain"] = 50.0
+	var out := sys.execute(ActionRequest.make("GOODS_BUY", {"pool": "strategic", "gold": 100}), s)
+	assert_true(out["ok"])
+	assert_eq(int(s.metrics["strategic"]), 150)
+	# The price at the spread, and the factor's fee (order_costs.csv), same as MANOR_BUY's notary.
+	assert_eq(int(s.metrics["treasury"]), 1000 - int(roundf(100.0 * (1.0 + spread))) - 1)
+	var t := int(s.metrics["treasury"])
+	out = sys.execute(ActionRequest.make("GOODS_SELL", {"pool": "civil", "gold": 40}), s)
+	assert_true(out["ok"])
+	assert_eq(int(s.metrics["grain"]), 10)
+	assert_eq(int(s.metrics["treasury"]), t + int(roundf(40.0 * (1.0 - spread))) - 1)
+
+func test_goods_orders_are_validated() -> void:
+	s.metrics["treasury"] = 10.0
+	s.metrics["grain"] = 5.0
+	assert_string_contains(sys.validate(ActionRequest.make("GOODS_BUY", {"pool": "wine", "gold": 10}), s), "pool")
+	assert_string_contains(sys.validate(ActionRequest.make("GOODS_BUY", {"pool": "civil", "gold": 0}), s), "gold")
+	assert_string_contains(sys.validate(ActionRequest.make("GOODS_BUY", {"pool": "civil", "gold": 100}), s), "afford")
+	assert_string_contains(sys.validate(ActionRequest.make("GOODS_SELL", {"pool": "civil", "gold": 100}), s), "only 5")
+	assert_eq(sys.validate(ActionRequest.make("GOODS_SELL", {"pool": "civil", "gold": 5}), s), "")

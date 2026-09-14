@@ -61,6 +61,21 @@ func validate(req: ActionRequest, state: GameState) -> String:
 				return "mode must be gold (slice 1)"
 		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE", "MANOR_FOCUS", "MANOR_DEMOLISH":
 			return _validate_manor(req, state, needs)
+		"GOODS_BUY", "GOODS_SELL":
+			var pool := String(req.params.get("pool", ""))
+			if not pool in ["strategic", "civil"]:
+				return "pool must be strategic|civil"
+			var gold := int(req.params.get("gold", 0))
+			if gold <= 0:
+				return "gold must be a whole number above zero"
+			if req.action_code == "GOODS_BUY":
+				var price := int(roundf(float(gold) * (1.0 + data.bal("goods_trade_spread"))))
+				if state.metrics["treasury"] < price + needs:
+					return "Cannot afford %d gold of %s goods (%d with the factor's cut)" % [gold, pool, price]
+			else:
+				var have := int(state.metrics.get(pool_metric(pool), 0.0))
+				if have < gold:
+					return "The %s stock holds only %d gold of goods" % [pool, have]
 	return ""
 
 ## The manor an order names: params.manor (a code, a label in any case, or
@@ -68,6 +83,11 @@ func validate(req: ActionRequest, state: GameState) -> String:
 func manor_of(req: ActionRequest) -> int:
 	var named := str(req.params.get("manor", req.params.get("cell", "")))
 	return MapManors.find(data, named)
+
+## The metric that holds a pool: strategic -> strategic, civil -> grain
+## (the civil pool's key, kept for its readers; spec §5).
+static func pool_metric(pool: String) -> String:
+	return "strategic" if pool == "strategic" else "grain"
 
 ## MANOR_SYSTEM.md §5: a manor must exist and lie in the crown's realm; the
 ## crown buys or seizes what it does not hold and sells or builds on what it
@@ -290,6 +310,18 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 					"the crown seized %s from their house" % label, state.tick)
 			effects.append({"metric": "manor", "delta": 1.0,
 				"reason": "%s taken from House %s by force" % [label, victim]})
+		"GOODS_BUY":
+			var pool := String(req.params["pool"])
+			var gold := int(req.params["gold"])
+			var price := int(roundf(float(gold) * (1.0 + data.bal("goods_trade_spread"))))
+			_apply(state, effects, "treasury", float(-price), "bought %d gold of %s goods" % [gold, pool])
+			_apply(state, effects, pool_metric(pool), float(gold), "%s goods bought" % pool)
+		"GOODS_SELL":
+			var pool := String(req.params["pool"])
+			var gold := int(req.params["gold"])
+			var paid := int(roundf(float(gold) * (1.0 - data.bal("goods_trade_spread"))))
+			_apply(state, effects, pool_metric(pool), float(-gold), "%s goods sold" % pool)
+			_apply(state, effects, "treasury", float(paid), "sold %d gold of %s goods" % [gold, pool])
 	var cd := int(row.get("cooldown_ticks", 0))
 	if cd > 0:
 		state.cooldowns[req.action_code] = state.tick + cd

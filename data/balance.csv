@@ -238,3 +238,4 @@ start_strategic_months,2,"ECONOMY: the strategic stock at the start = the crown'
 start_civil_months,3,"ECONOMY: the civil stock at the start = the crown's monthly civil goods x this"
 economy_check_full,0,"ECONOMY (architecture RK-1): 1 = after every settlement recompute every province from scratch and push_error on any that differs from the cache (debug only; slow)"
 granary_civil_gain,60,"ECONOMY: civil goods a new royal granary is stocked with"
+goods_trade_spread,0.25,"ECONOMY (spec §5): the factor's cut — buying a pool's goods costs gold x (1 + this), selling yields gold x (1 - this)"

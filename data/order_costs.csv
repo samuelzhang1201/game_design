@@ -27,3 +27,5 @@ MANOR_BUILD,gold:-1:the surveyor,1,
 MANOR_SEIZE,gold:-10:the men-at-arms' pay,1,soldiers are paid whether the yard falls or not
 MANOR_FOCUS,gold:-1:the reeve's ledger,1,the switch itself is charged by the order
 MANOR_DEMOLISH,gold:-1:the wreckers' ale,1,the refund itself is paid by the order
+GOODS_BUY,gold:-1:the factor's fee,1,the spread is the cost; this is the paperwork
+GOODS_SELL,gold:-1:the factor's fee,1,
