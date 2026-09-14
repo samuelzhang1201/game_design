@@ -781,11 +781,6 @@ static func focus_output_of(repo: DataRepository, state: GameState, cell_id: int
 	return {"focus": code, "good": String(row.get("good_code", "")),
 		"label": String(row.get("label", code)), "units": units}
 
-## The share the focus adds to the rent, settled in.
-static func focus_rent_bonus(repo: DataRepository, state: GameState, cell_id: int) -> float:
-	var row: Dictionary = repo.manor_focus.get(focus_of(repo, state, cell_id), {})
-	return float(row.get("rent_bonus", 0)) * focus_ramp(repo, state, cell_id)
-
 ## The manor's month of tax, for the card (spec 2026-09-14 §4.2): whole
 ## gold, the tariff of its town included, as ManorEconomy figures it. The
 ## `people` argument is kept for callers that already hold the count; the

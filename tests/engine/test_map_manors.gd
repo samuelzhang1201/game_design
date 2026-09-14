@@ -314,13 +314,13 @@ func test_a_manor_works_a_chief_good_its_land_allows() -> void:
 	r.balance["manor_focus_yield_scale"] = 1.0
 	r.manor_focus = {
 		"grain": {"focus_code": "grain", "label": "Grain fields", "good_code": "grain", "biomes": "1|2",
-			"coast": "0", "yield_per_1000": "10", "rent_bonus": "0.1", "switch_cost_gold": "20",
+			"coast": "0", "yield_per_1000": "10", "switch_cost_gold": "20",
 			"transition_ticks": "2"},
 		"fish": {"focus_code": "fish", "label": "Fisheries", "good_code": "fish", "biomes": "any",
-			"coast": "1", "yield_per_1000": "8", "rent_bonus": "0.05", "switch_cost_gold": "15",
+			"coast": "1", "yield_per_1000": "8", "switch_cost_gold": "15",
 			"transition_ticks": "2"},
 		"ore": {"focus_code": "ore", "label": "Iron workings", "good_code": "iron", "biomes": "2",
-			"coast": "0", "yield_per_1000": "2", "rent_bonus": "0.2", "switch_cost_gold": "60",
+			"coast": "0", "yield_per_1000": "2", "switch_cost_gold": "60",
 			"transition_ticks": "0"},
 	}
 	var s := _state()
@@ -477,13 +477,13 @@ func test_the_default_focus_follows_the_terrain() -> void:
 	r.balance["manor_focus_peak_height"] = 63.0
 	r.manor_focus = {
 		"grain": {"focus_code": "grain", "label": "Grain fields", "good_code": "grain", "biomes": "1|2|3",
-			"coast": "0", "yield_per_1000": "10", "rent_bonus": "0.1", "switch_cost_gold": "20",
+			"coast": "0", "yield_per_1000": "10", "switch_cost_gold": "20",
 			"transition_ticks": "2", "default_on": ""},
 		"fish": {"focus_code": "fish", "label": "Fisheries", "good_code": "fish", "biomes": "any",
-			"coast": "1", "yield_per_1000": "8", "rent_bonus": "0.05", "switch_cost_gold": "15",
+			"coast": "1", "yield_per_1000": "8", "switch_cost_gold": "15",
 			"transition_ticks": "2", "default_on": "coast"},
 		"ore": {"focus_code": "ore", "label": "Iron workings", "good_code": "iron", "biomes": "2",
-			"coast": "0", "yield_per_1000": "2", "rent_bonus": "0.2", "switch_cost_gold": "60",
+			"coast": "0", "yield_per_1000": "2", "switch_cost_gold": "60",
 			"transition_ticks": "0", "default_on": "high|3"},
 	}
 	assert_eq(MapManors.default_focus(r, 1), "fish", "a coastal manor fishes")

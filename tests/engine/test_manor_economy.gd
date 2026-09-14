@@ -39,7 +39,7 @@ func _repo() -> DataRepository:
 			"output_bonus": "0", "defence_bonus": "0", "church_bonus": "0", "produce_good": "iron", "produce_units": "30"},
 	}
 	r.manor_focus = {"grain": {"focus_code": "grain", "label": "Grain fields", "good_code": "grain",
-		"biomes": "1", "coast": "0", "yield_per_1000": "12", "rent_bonus": "0.10",
+		"biomes": "1", "coast": "0", "yield_per_1000": "12",
 		"switch_cost_gold": "20", "transition_ticks": "2", "default_on": "1"}}
 	r.goods_economy = {
 		"grain": {"good_code": "grain", "pool": "civil", "price_gold": "1", "growth_permille": "2"},

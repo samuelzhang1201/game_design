@@ -57,7 +57,7 @@ var goods_art: Dictionary = {}
 var goods_economy: Dictionary = {}
 var goods_economy_defaults: Dictionary = {}
 ## data/manor_focus.csv: focus_code -> {label, good_code, biomes, coast,
-## yield_per_1000, rent_bonus, switch_cost_gold, transition_ticks} — the
+## yield_per_1000, switch_cost_gold, transition_ticks} — the
 ## chief goods a manor may work at (owner 2026-09-13), in file order.
 var manor_focus: Dictionary = {}
 ## data/manor_estates.csv rows, in file order then ascending by min_people:
@@ -363,7 +363,7 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present("res://data/manor_focus.csv",
 			["focus_code", "label", "good_code", "biomes", "coast", "yield_per_1000",
-			"rent_bonus", "switch_cost_gold", "transition_ticks"],
+			"switch_cost_gold", "transition_ticks"],
 			func(r): manor_focus[String(r["focus_code"])] = r):
 		return false
 	if not _load_if_present("res://data/manor_estates.csv",
