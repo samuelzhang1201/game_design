@@ -24,6 +24,7 @@ var _armies := false
 var _manors := false
 var _home := false  # --home 1: keep the opening framing (the crown's provinces)
 var _hover := ""  # --hover <kingdom_code>: light that kingdom's border
+var _clouds := false  # --clouds 1: run the clock so the clouds show
 var _biomes := true  # BIOMES LAYER (experiment 2026-09-14): --biomes 0 for a before shot
 var _viewport: SubViewport
 var _view: WorldMapView
@@ -50,6 +51,8 @@ func _ready() -> void:
 			_home = args[i + 1] == "1"
 		elif args[i] == "--hover":
 			_hover = args[i + 1]
+		elif args[i] == "--clouds":
+			_clouds = args[i + 1] == "1"
 		elif args[i] == "--biomes":
 			_biomes = args[i + 1] == "1"
 		i += 1
@@ -78,6 +81,12 @@ func _ready() -> void:
 	_view.show_manors = _manors
 	_view.show_armies = _armies
 	_view.show_biomes = _biomes
+	if _clouds:
+		Game.data.balance["map_cloud_fade_s"] = 0.001
+		Game.data.balance["map_cloud_max"] = 12.0
+		Game.data.balance["map_cloud_interval_min_s"] = 0.0
+		Game.data.balance["map_cloud_interval_max_s"] = 0.0
+		Game.set_clock_speed(1)
 	_view.queue_redraw()
 
 

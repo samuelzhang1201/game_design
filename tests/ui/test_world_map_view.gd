@@ -1130,6 +1130,31 @@ func test_the_estates_are_one_mesh_in_the_manors_view() -> void:
 	v.show_economy = true
 	assert_false(v.estates_visible(), "not in the economy view either")
 
+## Clouds (owner 2026-09-14): while the clock runs, faint clouds drift over
+## the default map; under a theme — or paused — they fade away.
+func test_clouds_drift_while_time_runs_and_only_on_the_default_map() -> void:
+	Game.start_campaign(42)
+	var v := _view()
+	await wait_frames(2)
+	Game.set_clock_speed(0)
+	assert_false(v.clouds_active(), "paused: no clouds")
+	Game.set_clock_speed(1)
+	assert_true(v.clouds_active(), "time runs: clouds")
+	await wait_process_frames(3)
+	assert_gt(v.cloud_layer().cloud_count(), 0, "one shows as soon as play is pressed")
+	Game.data.balance["map_cloud_fade_s"] = 0.001
+	v.show_manors = true
+	assert_false(v.clouds_active(), "not under a theme")
+	await wait_process_frames(3)
+	assert_eq(v.cloud_layer().cloud_count(), 0, "they fade away")
+	v.show_manors = false
+	v.show_armies = true
+	assert_false(v.clouds_active(), "not with the military layer")
+	v.show_armies = false
+	Game.set_clock_speed(0)
+	assert_false(v.clouds_active())
+	Game.data.balance["map_cloud_fade_s"] = 1.2
+
 ## Zoomed out only a scattering of estates draws; zoomed in, every one
 ## (owner 2026-09-14). The LOD meshes hold every estate between them.
 func test_estates_thin_out_as_the_map_zooms_out() -> void:

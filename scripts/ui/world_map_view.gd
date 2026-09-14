@@ -167,6 +167,9 @@ var _sea: SeaLayer
 ## ground_layer(), biome_layer().
 var _ground: GroundLayer
 var _biome: BiomeLayer
+## Faint clouds drifting over the default map while time runs (CloudLayer,
+## owner 2026-09-14). Test seam: cloud_layer().
+var _clouds: CloudLayer
 ## Every dashed line on the sheet — borders, hatching, seams, lanes — cut
 ## once per zoom in native px and kept (MapDashCache); a frame transforms
 ## and draws each set as ONE polyline. Test seam: dash_cache().
@@ -254,6 +257,15 @@ func _ready() -> void:
 		var row: Dictionary = Game.data.kingdoms[code]
 		_by_state_id[int(row["state_id"])] = row
 	_build_province_meshes()
+	# Clouds (owner 2026-09-14): over the map's own drawing, under the card
+	# and the tooltip, which are added after it.
+	_clouds = CloudLayer.new()
+	_clouds.name = "Clouds"
+	_clouds.is_active = clouds_active
+	_clouds.visible_native = func() -> Rect2:
+		return Rect2(screen_to_map(Vector2.ZERO), size / maxf(_zoom, 0.0001))
+	add_child(_clouds)
+	_clouds.setup()
 	_card = MapInfoCard.new()
 	_card.ask_requested.connect(func(text: String) -> void: place_asked.emit(text))
 	_card.closed.connect(func() -> void:
@@ -383,6 +395,8 @@ func _draw() -> void:
 	_biome.position = _offset
 	_biome.scale = Vector2(_zoom, _zoom)
 	_biome.visible = biomes_visible()
+	_clouds.position = _offset
+	_clouds.scale = Vector2(_zoom, _zoom)
 	_ground.queue_redraw()
 	# Filled in place, never reassigned: a lambda captures the local by value,
 	# so `manors = ...` inside it left the badges layer below reading [].
@@ -2438,6 +2452,19 @@ func _draw_ground(target: CanvasItem) -> void:
 
 func ground_layer() -> GroundLayer:
 	return _ground
+
+func cloud_layer() -> CloudLayer:
+	return _clouds
+
+## Whether clouds drift over the map right now (owner 2026-09-14): only
+## while the clock runs, only on the default map — no theme, no military
+## layer — and not when map_cloud_alpha is 0. Pausing fades them out.
+func clouds_active() -> bool:
+	if Game.state == null or Game.clock_speed <= 0 or _terrain_mesh == null:
+		return false
+	if show_heights or show_economy or show_manors or show_armies:
+		return false
+	return is_visible_in_tree() and Game.data.bal("map_cloud_alpha") > 0.0
 
 func biome_layer() -> BiomeLayer:
 	return _biome
