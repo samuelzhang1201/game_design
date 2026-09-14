@@ -419,6 +419,8 @@ func load_map(id: String) -> bool:
 	MapTerrain.invalidate()
 	MapObjects.forget_decor()
 	MapEconomy.forget()
+	RealmEconomy.forget()
+	ManorEconomy.forget()
 	MapPalette.forget_colors()
 	routes.clear()
 	rivers.clear()
