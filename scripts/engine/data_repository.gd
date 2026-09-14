@@ -51,6 +51,11 @@ var sea_art: Array[Dictionary] = []
 var manor_buildings: Dictionary = {}
 ## data/goods_art.csv: good_code -> the produce icon the ECONOMY view draws.
 var goods_art: Dictionary = {}
+## data/goods_economy.csv: good_code -> {pool, price_gold, growth_permille}
+## (spec 2026-09-14 §3); goods_economy_defaults.csv: tag -> the same, for a
+## good the table does not name.
+var goods_economy: Dictionary = {}
+var goods_economy_defaults: Dictionary = {}
 ## data/manor_focus.csv: focus_code -> {label, good_code, biomes, coast,
 ## yield_per_1000, rent_bonus, switch_cost_gold, transition_ticks} — the
 ## chief goods a manor may work at (owner 2026-09-13), in file order.
@@ -179,6 +184,20 @@ func world_table(domain: String, area: String) -> Dictionary:
 
 func world_row(domain: String, area: String, code: String) -> Dictionary:
 	return world_table(domain, area).get(code, {})
+
+## A good's pool, whole-gold price and monthly growth per mille: its own
+## row, else its first tag's default row, else civil at 1 gold growing 0.
+func goods_economy_of(good_code: String) -> Dictionary:
+	var row: Dictionary = goods_economy.get(good_code, {})
+	if row.is_empty():
+		var tags := String(world_row("economy", "goods", good_code).get("tags", "")).split("|", false)
+		if not tags.is_empty():
+			row = goods_economy_defaults.get(String(tags[0]), {})
+	if row.is_empty():
+		return {"pool": "civil", "price_gold": 1, "growth_permille": 0}
+	return {"pool": String(row.get("pool", "civil")),
+		"price_gold": int(float(row.get("price_gold", 1))),
+		"growth_permille": int(float(row.get("growth_permille", 0)))}
 
 func _register_table(domain: String, area: String, table: Dictionary) -> void:
 	if not world_tables.has(domain):
@@ -322,6 +341,14 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present("res://data/goods_art.csv", ["good_code", "texture"],
 			func(r): goods_art[String(r["good_code"])] = String(r["texture"])):
+		return false
+	if not _load_if_present("res://data/goods_economy.csv",
+			["good_code", "pool", "price_gold", "growth_permille"],
+			func(r): goods_economy[String(r["good_code"])] = r):
+		return false
+	if not _load_if_present("res://data/goods_economy_defaults.csv",
+			["tag", "pool", "price_gold", "growth_permille"],
+			func(r): goods_economy_defaults[String(r["tag"])] = r):
 		return false
 	if not _load_if_present("res://data/terrain_art.csv",
 			["key", "biome_id", "min_height", "max_height", "texture", "density",

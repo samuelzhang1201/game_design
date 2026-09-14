@@ -1,0 +1,17 @@
+tag,pool,price_gold,growth_permille,notes
+food,civil,2,2,"a good the table does not name takes its FIRST tag's row (spec §3)"
+construction,civil,2,3,
+ore,strategic,4,3,
+luxury,civil,8,5,
+clothing,civil,3,3,
+preservative,civil,3,2,
+supply,strategic,10,2,
+naval,strategic,4,4,
+military,strategic,9,4,
+fuel,strategic,3,3,
+mineral,civil,2,2,
+storage,civil,3,3,
+ritual,civil,5,3,
+currency,civil,25,2,
+aquatic,civil,2,2,
+educational,civil,6,4,
