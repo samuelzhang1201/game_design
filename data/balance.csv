@@ -238,3 +238,6 @@ manor_focus_peak_height,63,"manors: cell height at/above which a manor's default
 map_biome_alpha,0.5,"BIOMES LAYER (experiment 2026-09-14): opacity of the biome ground tiles laid over the political wash, under the water and the roads; 0 switches the layer off"
 map_biome_tile_px,128,"BIOMES LAYER (experiment 2026-09-14): one seamless tile spans this many native map px"
 map_biome_blur_px,24,"BIOMES LAYER (experiment 2026-09-14): radius in native map px over which one biome's tile fades into the next (owner: no cell shape may show; 40 read too soft, 24 keeps the terrain legible) — BAKED into assets/maps/<id>/world_biome_weights_N.png by tools/bake_biome_weights.gd, so re-run it after changing this"
+manor_tax_per_1000,20,"ECONOMY (spec 2026-09-14 §4.2): whole gold a month a manor pays per 1 000 people at tax_rate_base, before its buildings' tax_bonus"
+tax_rate_base,5,"ECONOMY: the poll-tax level (metrics.tax_rate, 1..10) at which a manor's tax factor is 1; 10 doubles it, 1 fifths it"
+tariff_per_sales_tax,2,"ECONOMY: a settlement's tariff = its town goods' gold x tariff_rate (0..10) x this / 100 — at 5 that is a tenth"
