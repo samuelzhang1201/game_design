@@ -22,12 +22,9 @@ func test_advance_increments_and_reports() -> void:
 ## RealmEconomy's sums for the month that just ended.
 func test_the_months_end_settles_the_three_pools() -> void:
 	var s := GameState.new_campaign(data, 42)
-	var e := RealmEconomy.realm(data, s)
-	var share := data.bal("crown_share_permille") / 1000.0
-	var expect := {}
-	for k in ["tax", "strategic", "civil"]:
-		var own := int(e["crown"][k])
-		expect[k] = own + int(roundf(share * float(int(e["realm"][k]) - own)))
+	# Two purses (owner 2026-09-14): the lord's own provinces in full, the
+	# crown's treasury its share of the rest (RealmEconomy.purses).
+	var p := RealmEconomy.purses(data, s)
 	var salaries := 0
 	for seat: String in s.council:
 		salaries += int(float(data.seats[seat].get("salary_gold", 0)))
@@ -37,23 +34,28 @@ func test_the_months_end_settles_the_three_pools() -> void:
 		people += int(roundf(float(WorldLedger.value_of(data, s, "economy.provinces.%s.rural_population" % code))))
 		people += int(roundf(float(WorldLedger.value_of(data, s, "economy.provinces.%s.urban_population" % code))))
 	var ration := int(roundf(float(people) / 1000.0 * data.bal("ration_gold_per_1000")))
-	var t0 := int(s.metrics["treasury"])
-	var st0 := int(s.metrics["strategic"])
-	var cv0 := int(s.metrics["grain"])
+	var before := {}
+	for m in ["treasury", "strategic", "grain", "lord_gold", "lord_strategic", "lord_civil"]:
+		before[m] = int(s.metrics[m])
 	var built := MapManors.crown_building_effects(data, s)
 	s.tick = 0  # spring: no harvest
 	var r := engine.advance(s)
-	assert_eq(int(s.metrics["treasury"]), t0 + expect["tax"] - salaries + int(built["treasury"]))
-	assert_eq(int(s.metrics["strategic"]), st0 + expect["strategic"])
-	assert_eq(int(s.metrics["grain"]), cv0 + expect["civil"] - ration + int(built["grain"]))
-	assert_eq(int(s.metrics["tax_income"]), expect["tax"])
+	# The crown: its share of the realm, less the court's salaries and table.
+	assert_eq(int(s.metrics["treasury"]), before["treasury"] + int(p["realm_share"]["tax"]) - salaries)
+	assert_eq(int(s.metrics["strategic"]), before["strategic"] + int(p["realm_share"]["strategic"]))
+	assert_eq(int(s.metrics["grain"]), before["grain"] + int(p["realm_share"]["civil"]) - ration)
+	# The lord: his own provinces in full, and his buildings.
+	assert_eq(int(s.metrics["lord_gold"]), before["lord_gold"] + int(p["lord"]["tax"]) + int(built["treasury"]))
+	assert_eq(int(s.metrics["lord_strategic"]), before["lord_strategic"] + int(p["lord"]["strategic"]))
+	assert_eq(int(s.metrics["lord_civil"]), before["lord_civil"] + int(p["lord"]["civil"]) + int(built["grain"]))
+	assert_eq(int(s.metrics["tax_income"]), int(p["lord"]["tax"]) + int(p["realm_share"]["tax"]))
 	var reasons: Array = []
 	for d in r.metric_deltas:
 		reasons.append(String(d["reason"]))
-	for want in ["taxes of the crown's provinces", "the crown's share of the realm's taxes",
+	for want in ["taxes of your own provinces", "the crown's share of the realm's taxes",
 			"ministers' salaries", "the court's ration"]:
 		assert_true(want in reasons, want)
-	for m in ["treasury", "strategic", "grain"]:
+	for m in ["treasury", "strategic", "grain", "lord_gold", "lord_strategic", "lord_civil"]:
 		assert_eq(s.metrics[m], float(int(s.metrics[m])), "%s stays whole" % m)
 
 ## The pool stops at empty, and the stop is a ledger line like any other
@@ -76,14 +78,14 @@ func test_the_civil_pool_cannot_fall_below_empty() -> void:
 func test_the_harvest_is_civil_goods_in_autumn() -> void:
 	var s := GameState.new_campaign(data, 42)
 	s.tick = 6  # advance() settles month 6 and makes it 7: autumn
-	var before := int(s.metrics["grain"])
+	var before := int(s.metrics["lord_civil"])
 	var r := engine.advance(s)
 	var harvest := 0
 	for d in r.metric_deltas:
 		if String(d["reason"]) == "the harvest comes in":
 			harvest = int(d["delta"])
 	assert_gt(harvest, 0)
-	assert_gt(int(s.metrics["grain"]), before, "the harvest outweighs the ration")
+	assert_gt(int(s.metrics["lord_civil"]), before, "the harvest fills the lord's own stores")
 
 func test_the_day_step_warms_a_bucket() -> void:
 	var s := GameState.new_campaign(data, 42)
@@ -94,9 +96,14 @@ func test_the_day_step_warms_a_bucket() -> void:
 
 func test_the_pools_start_with_months_of_the_crowns_own_production() -> void:
 	var s := GameState.new_campaign(data, 42)
-	var e := RealmEconomy.realm(data, s)
-	assert_eq(int(s.metrics["strategic"]), int(e["crown"]["strategic"]) * int(data.bal("start_strategic_months")))
-	assert_eq(int(s.metrics["grain"]), int(e["crown"]["civil"]) * int(data.bal("start_civil_months")))
+	var p := RealmEconomy.purses(data, s)
+	var st := int(data.bal("start_strategic_months"))
+	var cv := int(data.bal("start_civil_months"))
+	assert_eq(int(s.metrics["lord_strategic"]), int(p["lord"]["strategic"]) * st)
+	assert_eq(int(s.metrics["lord_civil"]), int(p["lord"]["civil"]) * cv)
+	assert_eq(int(s.metrics["strategic"]), int(p["realm_share"]["strategic"]) * st)
+	assert_eq(int(s.metrics["grain"]), int(p["realm_share"]["civil"]) * cv)
+	assert_gt(int(s.metrics["lord_gold"]), 0, "the lord starts with what his towns hold")
 
 func test_outcomes_drain_into_next_report() -> void:
 	var s := GameState.new_campaign(data, 42)
@@ -117,10 +124,10 @@ func test_the_crowns_provinces_pay_their_taxes_each_month() -> void:
 	var r := engine.advance(s)
 	var found := false
 	for d in r.metric_deltas:
-		if d["metric"] == "treasury" and String(d["reason"]) == "taxes of the crown's provinces":
+		if d["metric"] == "lord_gold" and String(d["reason"]) == "taxes of your own provinces":
 			found = true
 			assert_eq(int(d["delta"]), expected)
-	assert_true(found, "the crown's own taxes are a treasury line of their own")
+	assert_true(found, "your own provinces' taxes are a line of the lord's purse")
 	# Buying every manor of another province of the realm makes it the
 	# crown's, and from the next month it pays in full too.
 	var realm := data.resolve_realm("player_realm")
@@ -138,7 +145,7 @@ func test_the_crowns_provinces_pay_their_taxes_each_month() -> void:
 	assert_gt(grown, expected, "the province joined the crown's own taxes")
 	var r2 := engine.advance(s)
 	for d in r2.metric_deltas:
-		if d["metric"] == "treasury" and String(d["reason"]) == "taxes of the crown's provinces":
+		if d["metric"] == "lord_gold" and String(d["reason"]) == "taxes of your own provinces":
 			assert_eq(int(d["delta"]), grown)
 
 ## The day (owner 2026-09-13): advance_day steps the works and the day;
@@ -224,7 +231,7 @@ func test_the_crowns_buildings_pay_each_tick() -> void:
 	assert_gt(tolls, 0.0)
 	var found := false
 	for d in r.metric_deltas:
-		if d["metric"] == "treasury" and String(d["reason"]).contains("buildings"):
+		if d["metric"] == "lord_gold" and String(d["reason"]).contains("buildings"):
 			found = true
 			assert_almost_eq(float(d["delta"]), tolls, 0.001)
 	assert_true(found, "the tolls are a line of their own")

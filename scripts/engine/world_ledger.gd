@@ -261,15 +261,25 @@ static func seed_metrics(data: DataRepository, state: GameState) -> void:
 	# The chest holds what the crown's OWN provinces' towns hold (owner
 	# 2026-09-13: the starting economy is the capital province's), scaled
 	# like the pack's kingdom treasury was; the rates are still the realm's.
-	state.metrics["treasury"] = roundf(crown_town_treasury(data, state) * data.bal("pack_treasury_scale"))
+	# Two purses (owner 2026-09-14): the LORD's holds what the towns of the
+	# player's own provinces hold; the CROWN's treasury its share of the rest
+	# of the realm's towns, as the month's settlement shares their taxes.
+	var scale := data.bal("pack_treasury_scale")
+	state.metrics["lord_gold"] = roundf(crown_town_treasury(data, state) * scale * data.bal("start_lord_gold_scale"))
+	state.metrics["treasury"] = roundf(realm_share_town_treasury(data, state) * scale)
 	state.metrics["tax_rate"] = clampf(
 		roundf(float(row["poll_tax"]) * data.bal("tax_rate_per_poll_tax")), 1.0, 10.0)
 	state.metrics["tariff_rate"] = clampf(
 		roundf(float(row["sales_tax"]) * data.bal("tariff_rate_per_sales_tax")), 0.0, 10.0)
-	# The pools start with months of the crown's own production (spec §5).
-	var e := RealmEconomy.realm(data, state)
-	state.metrics["strategic"] = float(int(e["crown"]["strategic"]) * int(data.bal("start_strategic_months")))
-	state.metrics["grain"] = float(int(e["crown"]["civil"]) * int(data.bal("start_civil_months")))
+	# The pools start with months of their own month (spec §5): the lord's
+	# of his provinces' goods, the crown's of its share of the realm's.
+	var p := RealmEconomy.purses(data, state)
+	var st_months := int(data.bal("start_strategic_months"))
+	var cv_months := int(data.bal("start_civil_months"))
+	state.metrics["lord_strategic"] = float(int(p["lord"]["strategic"]) * st_months)
+	state.metrics["lord_civil"] = float(int(p["lord"]["civil"]) * cv_months)
+	state.metrics["strategic"] = float(int(p["realm_share"]["strategic"]) * st_months)
+	state.metrics["grain"] = float(int(p["realm_share"]["civil"]) * cv_months)
 
 ## The pack's treasuries of every town in a province the crown controls.
 static func crown_town_treasury(data: DataRepository, state: GameState) -> float:
@@ -279,6 +289,19 @@ static func crown_town_treasury(data: DataRepository, state: GameState) -> float
 		if String(data.burgs[code].get("province_code", "")) in mine:
 			total += float(data.world_row("economy", "burgs", code).get("treasury", 0.0))
 	return total
+
+## The crown's share (crown_share_permille) of what the towns of the realm's
+## OTHER provinces hold — the treasury's starting chest.
+static func realm_share_town_treasury(data: DataRepository, state: GameState) -> float:
+	var total := 0.0
+	var mine := MapManors.controlled_provinces(data, state)
+	var realm := data.resolve_realm("player_realm")
+	for code: String in data.burgs:
+		var prov := String(data.burgs[code].get("province_code", ""))
+		if prov in mine or MapOwnership.owner_of(data, state, prov) != realm:
+			continue
+		total += float(data.world_row("economy", "burgs", code).get("treasury", 0.0))
+	return total * data.bal("crown_share_permille") / 1000.0
 
 static func _fmt(v: float) -> String:
 	return str(int(v)) if v == floorf(v) else String.num(v, 2)

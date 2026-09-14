@@ -110,17 +110,27 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 		return "No such manor: %s" % str(req.params.get("manor", req.params.get("cell", "")))
 	var label := MapManors.label_of(data, cell)
 	var realm := data.resolve_realm("player_realm")
-	if MapOwnership.owner_of(data, state, MapManors.province_of(data, cell)) != realm:
-		return "%s lies outside the realm" % label
 	var crowns := MapManors.is_crowns(data, state, cell)
-	match req.action_code:
-		"MANOR_BUY":
-			if crowns:
-				return "The crown already holds %s" % label
-			var price := MapManors.price_of(data, state, cell)
+	# Buying has its own map (owner 2026-09-14): your own province and the
+	# realm's provinces bordering it from your own purse; a manor touching
+	# the realm from across the border from the crown's treasury.
+	if req.action_code == "MANOR_BUY":
+		if crowns:
+			return "The crown already holds %s" % label
+		var how := MapManors.purchase_kind(data, state, cell)
+		if String(how["kind"]) == "":
+			return String(how["error"])
+		var price := MapManors.price_of(data, state, cell)
+		var asks := "House %s asks %d gold" % [MapManors.owner_of(data, state, cell), int(price)]
+		if String(how["kind"]) == "foreign":
 			if state.metrics["treasury"] < price + needs:
-				return "Cannot afford %s (House %s asks %d gold)" % [label,
-					MapManors.owner_of(data, state, cell), int(price)]
+				return "The crown's treasury cannot afford %s (%s)" % [label, asks]
+		elif float(state.metrics.get("lord_gold", 0.0)) < price:
+			return "Your own purse cannot afford %s (%s)" % [label, asks]
+		return ""
+	if MapOwnership.owner_of(data, state, MapManors.province_of(data, cell, state)) != realm:
+		return "%s lies outside the realm" % label
+	match req.action_code:
 		"MANOR_SEIZE":
 			if data.bal("manor_seize_enabled") <= 0.0:
 				return "Seizing manors is not permitted"
@@ -137,7 +147,7 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 				return "The crown does not hold %s" % label
 			# Building needs the province, not just the manor (owner 2026-09-13):
 			# the crown improves the land it controls.
-			if not MapManors.crown_controls(data, state, MapManors.province_of(data, cell)):
+			if not MapManors.crown_controls(data, state, MapManors.province_of(data, cell, state)):
 				return "%s lies in a province the crown does not control" % label
 			var building := String(req.params.get("building", ""))
 			if not data.manor_buildings.has(building):
@@ -150,8 +160,8 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 				return "%s has no room: %d of %d slots taken" % [label, MapManors.slots_used(state, cell),
 					MapManors.slots_of(data, cell)]
 			var civil := int(float(data.manor_buildings[String(req.params.get("building", ""))].get("civil_cost", 0)))
-			if int(state.metrics.get("grain", 0.0)) < civil:
-				return "Not enough civil goods for a %s at %s (%d needed)" % [
+			if int(state.metrics.get("lord_civil", 0.0)) < civil:
+				return "Not enough of your own civil goods for a %s at %s (%d needed)" % [
 					String(data.manor_buildings[String(req.params.get("building", ""))]["label"]).to_lower(), label, civil]
 		"MANOR_RUSH":
 			if not crowns:
@@ -165,8 +175,8 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			if days <= 0:
 				return "days must be a whole number above zero"
 			var price := days * int(data.bal("build_rush_gold_per_day"))
-			if state.metrics["treasury"] < price + needs:
-				return "Cannot afford to hurry %s by %d days (%d gold)" % [label, days, price]
+			if float(state.metrics.get("lord_gold", 0.0)) < price:
+				return "Your own purse cannot afford to hurry %s by %d days (%d gold)" % [label, days, price]
 		"MANOR_DEMOLISH":
 			if not crowns:
 				return "The crown does not hold %s" % label
@@ -178,7 +188,7 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 		"MANOR_FOCUS":
 			if not crowns:
 				return "The crown does not hold %s" % label
-			if not MapManors.crown_controls(data, state, MapManors.province_of(data, cell)):
+			if not MapManors.crown_controls(data, state, MapManors.province_of(data, cell, state)):
 				return "%s lies in a province the crown does not control" % label
 			var focus := String(req.params.get("focus", ""))
 			if not data.manor_focus.has(focus):
@@ -189,8 +199,8 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			if MapManors.focus_of(data, state, cell) == focus:
 				return "%s already works %s" % [label, name]
 			var fee := float(data.manor_focus[focus]["switch_cost_gold"])
-			if state.metrics["treasury"] < fee + needs:
-				return "Cannot afford to turn %s to %s (%d gold)" % [label, name, int(fee)]
+			if float(state.metrics.get("lord_gold", 0.0)) < fee:
+				return "Your own purse cannot afford to turn %s to %s (%d gold)" % [label, name, int(fee)]
 	return ""
 
 func execute(req: ActionRequest, state: GameState) -> Dictionary:
@@ -261,9 +271,27 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var label := MapManors.label_of(data, cell)
 			var seller := MapManors.owner_of(data, state, cell)
 			var price := MapManors.price_of(data, state, cell)
-			_apply(state, effects, "treasury", -price, "bought %s from House %s" % [label, seller])
-			MapManors.set_owner(data, state, cell, MapManors.crown(state),
-				"bought from House %s for %d gold" % [seller, int(price)])
+			var how := MapManors.purchase_kind(data, state, cell)
+			if String(how["kind"]) == "foreign":
+				# Across the border (owner 2026-09-14): the crown's treasury pays,
+				# the manor joins the richest province of the realm it touches, and
+				# that province's house holds it.
+				var into := String(how["province"])
+				var into_label := String((data.provinces.get(into, {}) as Dictionary).get("label", into))
+				_apply(state, effects, "treasury", -price, "bought %s across the border from House %s" % [label, seller])
+				MapManors.annex(data, state, cell, into, "bought across the border for %d gold" % int(price))
+				var holder := MapManors.default_owner(data, state, cell)
+				MapManors.set_owner(data, state, cell, holder,
+					"bought from House %s for %d gold and joined to %s" % [seller, int(price), into_label])
+				effects.append({"metric": "manor", "delta": 1.0,
+					"reason": "%s joins %s under %s, bought from House %s" % [label, into_label,
+						"the crown" if holder == MapManors.crown(state) else "House " + holder, seller]})
+			else:
+				_apply(state, effects, "lord_gold", -price, "bought %s from House %s" % [label, seller])
+				MapManors.set_owner(data, state, cell, MapManors.crown(state),
+					"bought from House %s for %d gold" % [seller, int(price)])
+				effects.append({"metric": "manor", "delta": 1.0,
+					"reason": "%s is the crown's, bought from House %s" % [label, seller]})
 			# A house paid well thinks better of the crown, and its councillor
 			# is the richer for it.
 			for c: Character in _house_members(state, seller):
@@ -272,14 +300,12 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				if state.council.values().has(c.id):
 					c.change_attribute("wealth", int(data.bal("manor_trade_wealth")),
 						"sold %s to the crown" % label, state.tick)
-			effects.append({"metric": "manor", "delta": 1.0,
-				"reason": "%s is the crown's, bought from House %s" % [label, seller]})
 		"MANOR_SELL":
 			var cell := manor_of(req)
 			var label := MapManors.label_of(data, cell)
 			var buyer := MapManors.default_owner(data, state, cell)
 			var price := MapManors.sell_price_of(data, state, cell)
-			_apply(state, effects, "treasury", price, "sold %s to House %s" % [label, buyer])
+			_apply(state, effects, "lord_gold", price, "sold %s to House %s" % [label, buyer])
 			MapManors.set_owner(data, state, cell, buyer, "sold to House %s for %d gold" % [buyer, int(price)])
 			effects.append({"metric": "manor", "delta": -1.0,
 				"reason": "%s passed to House %s" % [label, buyer]})
@@ -288,7 +314,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var building := String(req.params["building"])
 			var row_b: Dictionary = data.manor_buildings[building]
 			var label := MapManors.label_of(data, cell)
-			_apply(state, effects, "grain", -float(int(float(row_b.get("civil_cost", 0)))),
+			_apply(state, effects, "lord_civil", -float(int(float(row_b.get("civil_cost", 0)))),
 				"timber and stone for a %s at %s" % [String(row_b["label"]).to_lower(), label])
 			MapManors.start_work(data, state, cell, building, "begun by the crown")
 			effects.append({"metric": "manor", "delta": 0.0,
@@ -300,7 +326,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var days := int(req.params["days"])
 			var label := MapManors.label_of(data, cell)
 			var cut := MapManors.rush_work(data, state, cell, building, days, "hurried by the crown")
-			_apply(state, effects, "treasury", -float(cut * int(data.bal("build_rush_gold_per_day"))),
+			_apply(state, effects, "lord_gold", -float(cut * int(data.bal("build_rush_gold_per_day"))),
 				"hurried the %s at %s by %d days" % [building, label, cut])
 			effects.append({"metric": "manor", "delta": 0.0,
 				"reason": "the %s at %s is %d days nearer done" % [building, label, cut]})
@@ -313,7 +339,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var refund := MapManors.demolish(data, state, cell, building,
 				"pulled down by the crown" if stood else "the work stopped by the crown")
 			# A build is bought with civil goods: what comes back is goods.
-			_apply(state, effects, pool_metric("civil"), maxf(refund, 0.0),
+			_apply(state, effects, "lord_civil", maxf(refund, 0.0),
 				"the timber and stone of the %s at %s" % [String(row_d["label"]).to_lower(), label])
 			effects.append({"metric": "manor", "delta": 0.0,
 				"reason": ("the %s at %s is pulled down" if stood else "the %s at %s is left unbuilt") % [
@@ -324,7 +350,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var row_f: Dictionary = data.manor_focus[focus]
 			var label := MapManors.label_of(data, cell)
 			var was := String((data.manor_focus.get(MapManors.focus_of(data, state, cell), {}) as Dictionary).get("label", "nothing")).to_lower()
-			_apply(state, effects, "treasury", -float(row_f["switch_cost_gold"]),
+			_apply(state, effects, "lord_gold", -float(row_f["switch_cost_gold"]),
 				"turned %s to %s" % [label, String(row_f["label"]).to_lower()])
 			MapManors.set_focus(data, state, cell, focus, "turned from %s to %s by the crown" % [was, String(row_f["label"]).to_lower()])
 			effects.append({"metric": "manor", "delta": 0.0,

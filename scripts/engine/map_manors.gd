@@ -26,6 +26,7 @@ static var _cache: Dictionary = {}
 static func invalidate() -> void:
 	_cache.clear()
 	_people_cache.clear()
+	_annex_cache.clear()
 
 static func _repo_cache(repo: DataRepository) -> Dictionary:
 	var key := repo.get_instance_id()
@@ -44,7 +45,13 @@ static func label_of(repo: DataRepository, cell_id: int) -> String:
 static func code_of(repo: DataRepository, cell_id: int) -> String:
 	return String((repo.manors.get(cell_id, {}) as Dictionary).get("manor_code", ""))
 
-static func province_of(repo: DataRepository, cell_id: int) -> String:
+## The province a manor lies in NOW: the campaign's annexation when the
+## crown bought it across the border (GameState.manor_province, owner
+## 2026-09-14), else the pack's. A null state reads the pack alone, which is
+## right for geometry that never moves (neighbours, shades).
+static func province_of(repo: DataRepository, cell_id: int, state: GameState = null) -> String:
+	if state != null and state.manor_province.has(str(cell_id)):
+		return String(state.manor_province[str(cell_id)])
 	return String((repo.manors.get(cell_id, {}) as Dictionary).get("province_code", ""))
 
 static func burg_of(repo: DataRepository, cell_id: int) -> String:
@@ -74,8 +81,32 @@ static func find(repo: DataRepository, text: String) -> int:
 		return int(repo.manor_by_label[lower + " manor"])
 	return -1
 
-## The manors (cell ids, ascending) of a province.
-static func manors_of_province(repo: DataRepository, province_code: String) -> Array:
+## The manors (cell ids, ascending) of a province — with a state, as they
+## stand after any annexation (manors moved out gone, manors moved in added).
+static var _annex_cache: Dictionary = {}
+
+static func manors_of_province(repo: DataRepository, province_code: String, state: GameState = null) -> Array:
+	var base := _pack_manors_of_province(repo, province_code)
+	if state == null or state.manor_province.is_empty():
+		return base
+	var key := hash([repo.get_instance_id(), state.manor_province.hash(), province_code])
+	if _annex_cache.has(key):
+		return _annex_cache[key]
+	if _annex_cache.size() > 4096:
+		_annex_cache.clear()
+	var moved: Dictionary = state.manor_province
+	var out: Array = []
+	for id: int in base:
+		if not moved.has(str(id)):
+			out.append(id)
+	for k: String in moved:
+		if String(moved[k]) == province_code and not out.has(int(k)):
+			out.append(int(k))
+	out.sort()
+	_annex_cache[key] = out
+	return out
+
+static func _pack_manors_of_province(repo: DataRepository, province_code: String) -> Array:
 	var c := _repo_cache(repo)
 	if (c["by_province"] as Dictionary).is_empty():
 		var ids: Array = repo.manors.keys()
@@ -162,7 +193,7 @@ static func crown(state: GameState) -> String:
 ## and when that is the royal house under the name it had before character
 ## creation renamed it (player_setup.house_was), it is the crown's.
 static func default_owner(repo: DataRepository, state: GameState, cell_id: int) -> String:
-	var province := province_of(repo, cell_id)
+	var province := province_of(repo, cell_id, state)
 	if province == "":
 		return ""
 	var house := MapObjects.house_name_of(repo, province)
@@ -247,7 +278,8 @@ static func controlled_provinces(repo: DataRepository, state: GameState) -> Arra
 	if state == null:
 		return []
 	var c := _repo_cache(repo)
-	var sig := hash([state.manor_owner.hash(), crown(state), String(state.player_setup.get("house_was", ""))])
+	var sig := hash([state.manor_owner.hash(), state.manor_province.hash(), crown(state),
+		String(state.player_setup.get("house_was", ""))])
 	if c.has("control") and int(c["control"]["sig"]) == sig:
 		return c["control"]["provinces"]
 	var out: Array = []
@@ -262,7 +294,7 @@ static func controlled_provinces(repo: DataRepository, state: GameState) -> Arra
 ## {family: count} over a province's manors, live.
 static func holdings_of_province(repo: DataRepository, state: GameState, province_code: String) -> Dictionary:
 	var out: Dictionary = {}
-	for id: int in manors_of_province(repo, province_code):
+	for id: int in manors_of_province(repo, province_code, state):
 		var h := owner_of(repo, state, id)
 		out[h] = int(out.get(h, 0)) + 1
 	return out
@@ -275,11 +307,80 @@ static func manors_of_house(repo: DataRepository, state: GameState, family: Stri
 	var ids: Array = repo.manors.keys()
 	ids.sort()
 	for id: int in ids:
-		if kingdom_code != "" and MapOwnership.owner_of(repo, state, province_of(repo, id)) != kingdom_code:
+		if kingdom_code != "" and MapOwnership.owner_of(repo, state, province_of(repo, id, state)) != kingdom_code:
 			continue
 		if owner_of(repo, state, id) == family:
 			out.append(id)
 	return out
+
+# ---- buying land (owner 2026-09-14) ------------------------------------------
+
+## Move a manor into another province: a manor bought across the border
+## joins the realm's province it borders. Refuses an unknown manor or
+## province, the province it is already in, and an empty reason; logs
+## {tick, cell, annexed_from, annexed_to, reason}. Moving it back to its
+## pack province drops the entry, so the state holds only what moved.
+static func annex(repo: DataRepository, state: GameState, cell_id: int, province_code: String,
+		reason: String) -> bool:
+	if not is_manor(repo, cell_id) or not repo.provinces.has(province_code) or reason.strip_edges() == "":
+		return false
+	var from := province_of(repo, cell_id, state)
+	if from == province_code:
+		return false
+	if province_code == province_of(repo, cell_id):
+		state.manor_province.erase(str(cell_id))
+	else:
+		state.manor_province[str(cell_id)] = province_code
+	state.manor_log.append({"tick": state.tick, "cell": cell_id, "annexed_from": from,
+		"annexed_to": province_code, "reason": reason})
+	MapOwnership.invalidate()
+	return true
+
+## The province of the player's realm a border manor would join: of the
+## realm's provinces its cell touches, the one richest in gold — the most
+## tax a month (RealmEconomy), ties to the code that sorts first. "" when
+## the manor touches none.
+static func annex_target(repo: DataRepository, state: GameState, cell_id: int) -> String:
+	var realm := repo.resolve_realm("player_realm")
+	var best := ""
+	var best_tax := -1
+	var seen: Dictionary = {}
+	for n: int in ((repo.cells.get(cell_id, {}) as Dictionary).get("neighbor_ids", PackedInt32Array()) as PackedInt32Array):
+		if not is_manor(repo, n):
+			continue
+		var p := province_of(repo, n, state)
+		if p == "" or seen.has(p) or MapOwnership.owner_of(repo, state, p) != realm:
+			continue
+		seen[p] = true
+		var tax := int(RealmEconomy.province(repo, state, p)["tax"])
+		if tax > best_tax or (tax == best_tax and p < best):
+			best = p
+			best_tax = tax
+	return best
+
+## How the crown may buy a manor (owner 2026-09-14): {kind, error, province}.
+## "own" — a manor in a province the crown controls; "domestic" — in another
+## province of the realm that borders one the crown controls. Both are paid
+## from the LORD's purse. "foreign" — a manor across the border whose cell
+## touches the realm's land, paid from the CROWN's treasury and annexed into
+## `province` (annex_target). kind "" with the reason for anything else.
+static func purchase_kind(repo: DataRepository, state: GameState, cell_id: int) -> Dictionary:
+	var label := label_of(repo, cell_id)
+	var prov := province_of(repo, cell_id, state)
+	if MapOwnership.owner_of(repo, state, prov) == repo.resolve_realm("player_realm"):
+		var mine := controlled_provinces(repo, state)
+		if prov in mine:
+			return {"kind": "own", "error": "", "province": prov}
+		for other: String in province_neighbours(repo).get(prov, []):
+			if other in mine:
+				return {"kind": "domestic", "error": "", "province": prov}
+		return {"kind": "", "province": prov,
+			"error": "%s lies in a province that does not border your own" % label}
+	var target := annex_target(repo, state, cell_id)
+	if target == "":
+		return {"kind": "", "province": prov,
+			"error": "%s lies abroad and does not touch the realm's border" % label}
+	return {"kind": "foreign", "error": "", "province": target}
 
 # ---- land and people --------------------------------------------------------
 
@@ -356,12 +457,13 @@ static func apportion(ids: Array, weights: PackedFloat64Array, total: int) -> Di
 static func people_table(repo: DataRepository, state: GameState, province_code: String) -> Dictionary:
 	var rural := int(roundf(_ledger(repo, state, "economy.provinces.%s.rural_population" % province_code)))
 	var urban := int(roundf(_ledger(repo, state, "economy.provinces.%s.urban_population" % province_code)))
-	var key := "%d|%s|%d|%d" % [repo.get_instance_id(), province_code, rural, urban]
+	var key := "%d|%s|%d|%d|%d" % [repo.get_instance_id(), province_code, rural, urban,
+		0 if state == null else state.manor_province.hash()]
 	if _people_cache.has(key):
 		return _people_cache[key]
 	if _people_cache.size() > 4096:
 		_people_cache.clear()
-	var cells := manors_of_province(repo, province_code)
+	var cells := manors_of_province(repo, province_code, state)
 	var weights := PackedFloat64Array()
 	for id: int in cells:
 		weights.append(weight_of(repo, id))
@@ -381,7 +483,7 @@ static func people_table(repo: DataRepository, state: GameState, province_code: 
 
 ## A manor's people, whole. 0 for a cell that is no manor.
 static func people_of(repo: DataRepository, state: GameState, cell_id: int) -> int:
-	var province := province_of(repo, cell_id)
+	var province := province_of(repo, cell_id, state)
 	return 0 if province == "" else int(people_table(repo, state, province).get(cell_id, 0))
 
 # ---- buildings, rent, defence -------------------------------------------------

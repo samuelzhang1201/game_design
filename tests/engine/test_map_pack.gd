@@ -201,9 +201,14 @@ func test_the_crown_starts_with_the_capitals_province_only() -> void:
 	assert_eq(MapManors.controlled_provinces(repo, state), [capital_province])
 	assert_gt(MapOwnership.provinces_of(repo, state, repo.resolve_realm("player_realm")).size(), 1,
 		"the realm itself is larger")
-	assert_gt(state.metrics["treasury"], 0.0, "seeded from the capital province's towns")
+	# Two purses (owner 2026-09-14): the lord's holds what the capital
+	# province's towns hold; the crown's treasury its share of the rest.
+	assert_gt(state.metrics["lord_gold"], 0.0, "seeded from the capital province's towns")
+	assert_almost_eq(state.metrics["lord_gold"],
+		roundf(WorldLedger.crown_town_treasury(repo, state) * repo.bal("pack_treasury_scale")
+			* repo.bal("start_lord_gold_scale")), 0.001)
 	assert_almost_eq(state.metrics["treasury"],
-		roundf(WorldLedger.crown_town_treasury(repo, state) * repo.bal("pack_treasury_scale")), 0.001)
+		roundf(WorldLedger.realm_share_town_treasury(repo, state) * repo.bal("pack_treasury_scale")), 0.001)
 
 ## data/manor_focus.csv (owner 2026-09-13): every focus names a good the
 ## pack trades and biomes the pack has, and every manor of the capital's

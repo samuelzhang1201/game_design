@@ -45,9 +45,18 @@ const SEASONS := ["spring", "summer", "autumn", "winter"]
 static func default_metrics(data: DataRepository = null) -> Dictionary:
 	var b := func(key: String) -> float: return 0.0 if data == null else data.bal(key)
 	return {
+		# The CROWN's pools — the realm's treasury and stores (owner
+		# 2026-09-14: marked with the crown).
 		"treasury": b.call("start_treasury"),
 		"strategic": 0.0,
 		"grain": 0.0,  # the CIVIL pool (spec 2026-09-14 §5); the key stays for its readers
+		# The LORD's own purse — what the player's house holds as lord of its
+		# own provinces and may spend freely (owner 2026-09-14: marked with
+		# the family's arms). Its own manors pay into it; manors inside the
+		# realm are bought from it.
+		"lord_gold": 0.0,
+		"lord_strategic": 0.0,
+		"lord_civil": 0.0,
 		"tax_rate": b.call("start_tax_rate"),
 		"tariff_rate": b.call("start_tariff_rate"),
 		"tax_income": 0.0,
@@ -250,6 +259,10 @@ var manor_works: Dictionary = {}
 ## work at (data/manor_focus.csv) and the tick it was set, ONLY for manors
 ## whose focus was chosen — an absent manor works its terrain's default.
 var manor_focus: Dictionary = {}
+## cell id (String) -> province_code, ONLY for manors moved out of their pack
+## province: a manor bought across the border joins the realm's province it
+## borders (owner 2026-09-14). Read through MapManors.province_of, never directly.
+var manor_province: Dictionary = {}
 ## One entry per transfer {tick, cell, from, to, reason} or building
 ## {tick, cell, building, reason}: a manor that changed must say why.
 var manor_log: Array = []
@@ -282,6 +295,7 @@ func to_dict() -> Dictionary:
 		"world": _encode_values(world.duplicate()),
 		"world_log": _encode_values(world_log.duplicate(true)),
 		"manor_owner": manor_owner.duplicate(),
+		"manor_province": manor_province.duplicate(),
 		"manor_buildings": manor_buildings.duplicate(true),
 		"manor_focus": manor_focus.duplicate(true),
 		"manor_works": _encode_values(manor_works.duplicate(true)),
@@ -338,6 +352,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.world_log = _decode_values(d.get("world_log", []))
 	# Saves from before the manor system carry none of these: nothing moved.
 	s.manor_owner = d.get("manor_owner", {}).duplicate()
+	s.manor_province = d.get("manor_province", {}).duplicate()
 	s.manor_buildings = d.get("manor_buildings", {}).duplicate(true)
 	s.manor_focus = d.get("manor_focus", {}).duplicate(true)
 	s.manor_works = _decode_values(d.get("manor_works", {}))

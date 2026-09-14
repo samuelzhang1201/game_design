@@ -151,6 +151,10 @@ var _selected_province := ""
 ## costs one triangle-array call per loop per frame.
 var _province_tris: Dictionary = {}
 var _province_bbox: Dictionary = {}
+## Each province's loops as they stand (MapOwnership.province_loops): the
+## pack's, until a manor is annexed across the border (owner 2026-09-14).
+var _province_loops: Dictionary = {}
+var _province_loops_sig := 0
 
 ## The terrain (spec 2026-09-11): one vertex-coloured mesh of every cell,
 ## built once from the pack (MapTerrain) and drawn with the view transform.
@@ -729,11 +733,15 @@ func _draw_armies() -> void:
 func _build_province_meshes() -> void:
 	_province_tris.clear()
 	_province_bbox.clear()
+	_province_loops.clear()
+	_province_loops_sig = 0 if Game.state == null else Game.state.manor_province.hash()
 	for code: String in Game.data.province_borders:
 		var tris: Array = []
 		var bbox := Rect2()
 		var first := true
-		for loop: PackedVector2Array in Game.data.province_borders[code]:
+		var loops := MapOwnership.province_loops(Game.data, Game.state, code)
+		_province_loops[code] = loops
+		for loop: PackedVector2Array in loops:
 			tris.append(Geometry2D.triangulate_polygon(loop))
 			var b := MapGeometry.bounds(loop)
 			bbox = b if first else bbox.merge(b)
@@ -746,6 +754,9 @@ func _build_province_meshes() -> void:
 func political_fills() -> Array:
 	if _terrain_mesh == null:
 		return []
+	var annex_sig := 0 if Game.state == null else Game.state.manor_province.hash()
+	if annex_sig != _province_loops_sig:
+		_build_province_meshes()
 	var alpha := Game.data.bal("map_political_alpha")
 	var frame := Rect2(Vector2.ZERO, size)
 	var out: Array = []
@@ -778,7 +789,7 @@ func _draw_political_wash(target: CanvasItem = self) -> void:
 	var rid := target.get_canvas_item()
 	for fill in political_fills():
 		var code: String = fill["code"]
-		var loops: Array = Game.data.province_borders[code]
+		var loops: Array = _province_loops.get(code, [])
 		var tris: Array = _province_tris[code]
 		for i in loops.size():
 			var indices: PackedInt32Array = tris[i]
@@ -802,7 +813,8 @@ var _ring_cache: Dictionary = {}
 var _ring_version := -1
 
 func border_rings(kingdom_code: String) -> Array:
-	var version := 0 if Game.state == null else Game.state.province_owner.size()
+	var version := 0 if Game.state == null else hash([Game.state.province_owner.size(),
+		Game.state.manor_province.hash()])
 	if version != _ring_version:
 		_ring_cache.clear()
 		_ring_version = version
@@ -2041,7 +2053,7 @@ func _state_of(obj: Dictionary, pos: Vector2) -> int:
 			holder = MapOwnership.owner_of(Game.data, Game.state, String(obj.get("code", "")))
 		"manor":
 			holder = MapOwnership.owner_of(Game.data, Game.state,
-				MapManors.province_of(Game.data, int(obj.get("cell", -1))))
+				MapManors.province_of(Game.data, int(obj.get("cell", -1)), Game.state))
 	if holder != "" and Game.data.kingdoms.has(holder):
 		return int((Game.data.kingdoms[holder] as Dictionary)["state_id"])
 	return _state_under(pos)
@@ -2086,7 +2098,8 @@ func _draw_selected_province() -> void:
 		return
 	var tint := UiPalette.GOLD
 	tint.a = 0.22
-	for loop: PackedVector2Array in Game.data.province_borders.get(_selected_province, []):
+	for loop: PackedVector2Array in _province_loops.get(_selected_province,
+			Game.data.province_borders.get(_selected_province, [])):
 		var screen := PackedVector2Array()
 		screen.resize(loop.size())
 		for i in loop.size():
@@ -2141,11 +2154,16 @@ var _cell_province: Dictionary = {}
 
 ## A number that changes whenever any province changes hands.
 func _ownership_sig() -> int:
-	return 0 if Game.state == null else Game.state.province_owner.hash()
+	# A manor annexed across the border reshapes two provinces without either
+	# changing hands (owner 2026-09-14), so it turns the signature too.
+	return 0 if Game.state == null else hash([Game.state.province_owner.hash(),
+		Game.state.manor_province.hash()])
 
 ## The province a cell lies in — geometry, resolved once per cell from the
 ## province index at its centre.
 func cell_province(cell_id: int) -> String:
+	if Game.state != null and Game.state.manor_province.has(str(cell_id)):
+		return String(Game.state.manor_province[str(cell_id)])
 	if not _cell_province.has(cell_id):
 		_cell_province[cell_id] = province_at(
 			MapTerrain.cell_center(Game.data, Game.data.cells[cell_id]))
@@ -2182,7 +2200,7 @@ func _province_shaded(cell_id: int, color: Color) -> Color:
 	var levels := int(repo.bal("map_manor_shade_levels"))
 	if levels <= 1:
 		return color
-	var level := int(MapManors.province_shades(repo, levels).get(MapManors.province_of(repo, cell_id), 0))
+	var level := int(MapManors.province_shades(repo, levels).get(MapManors.province_of(repo, cell_id, Game.state), 0))
 	return MapManors.shade(color, level, repo.bal("map_manor_shade_step"))
 
 ## The MANORS view's wash: the holding house's colour — the crown its

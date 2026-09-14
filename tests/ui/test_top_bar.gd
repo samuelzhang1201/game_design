@@ -49,7 +49,7 @@ func test_metrics_show_as_icons_with_tooltips() -> void:
 	Game.start_campaign(42)
 	var t := _bar()
 	await wait_frames(1)
-	for m in TopBar.ORDER:
+	for m in TopBar.ORDER + TopBar.LORD:
 		var icon := t.icon_for(m)
 		assert_not_null(icon, "%s has an icon" % m)
 		assert_ne(icon.tooltip_text, "", "%s explains itself on hover" % m)
@@ -83,22 +83,28 @@ func test_the_clock_buttons_set_the_speed_and_the_date_reads_the_day() -> void:
 	assert_true(other.clock_button(0).button_pressed)
 	assert_true(t.clock_button(0).button_pressed)
 
-## Two lines (spec §6): the realm's stocks and monthly figures, then the
-## crown's provinces' monthly tax, strategic and civil goods with their
-## share of the realm in whole percent, in a smaller font.
-func test_the_bar_shows_the_realm_and_the_crowns_share() -> void:
+## Two purses (owner 2026-09-14): the crown's row — treasury, strategic and
+## civil goods under a crown — and the lord's own purse under the house's
+## arms, each with what the month brings (RealmEconomy.purses). Nothing
+## else is in the bar: the realm's temper moved to the country card.
+func test_the_bar_shows_the_crowns_pools_and_the_lords_purse() -> void:
 	Game.start_campaign(42)
 	var bar := _bar()
 	await wait_frames(2)
-	var e := RealmEconomy.realm(Game.data, Game.state)
-	assert_eq(bar.metric_text("strategic"), str(int(Game.state.metrics["strategic"])))
-	assert_eq(bar.metric_text("grain"), str(int(Game.state.metrics["grain"])))
-	assert_eq(bar.monthly_text("treasury"), "+%d" % int(e["realm"]["tax"]))
-	assert_eq(bar.monthly_text("strategic"), "+%d" % int(e["realm"]["strategic"]))
-	assert_eq(bar.monthly_text("grain"), "+%d" % int(e["realm"]["civil"]))
-	var pct := int(roundf(100.0 * float(e["crown"]["tax"]) / maxf(float(e["realm"]["tax"]), 1.0)))
-	assert_eq(bar.crown_text("tax"), "%d (%d%%)" % [int(e["crown"]["tax"]), pct])
-	assert_true(bar.crown_text("civil").ends_with("%)"))
+	var p := RealmEconomy.purses(Game.data, Game.state)
+	for m in ["treasury", "strategic", "grain", "lord_gold", "lord_strategic", "lord_civil"]:
+		assert_eq(bar.metric_text(m), str(int(Game.state.metrics[m])), m)
+	assert_eq(bar.monthly_text("treasury"), "+%d" % int(p["realm_share"]["tax"]))
+	assert_eq(bar.monthly_text("strategic"), "+%d" % int(p["realm_share"]["strategic"]))
+	assert_eq(bar.monthly_text("grain"), "+%d" % int(p["realm_share"]["civil"]))
+	assert_eq(bar.monthly_text("lord_gold"), "+%d" % int(p["lord"]["tax"]))
+	assert_eq(bar.monthly_text("lord_civil"), "+%d" % int(p["lord"]["civil"]))
+	assert_gt(int(Game.state.metrics["lord_gold"]), 0, "the lord starts with what his towns hold")
+	assert_not_null(bar.crown_mark(), "a crown marks the realm's pools")
+	assert_not_null(bar.lord_crest(), "the house's arms mark the lord's purse")
+	assert_ne(bar.crown_mark().tooltip_text, bar.lord_crest().tooltip_text, "and each says whose it is")
+	for gone in ["unrest", "legitimacy", "army_quality", "church_opinion"]:
+		assert_null(bar.icon_for(gone), "%s moved to the country card" % gone)
 	assert_gt(bar.bar_height(), 40.0, "two lines are taller than one")
-	var second: Label = bar.crown_label("tax")
-	assert_lt(second.get_theme_font_size("font_size"), 18, "the second line is smaller")
+	assert_lt(bar.value_label("lord_gold").get_theme_font_size("font_size"), 18,
+		"the lord's row is the smaller line")

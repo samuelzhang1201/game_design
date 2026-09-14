@@ -84,13 +84,18 @@ func test_other_objects_keep_their_lines() -> void:
 func test_a_manor_card_buys_the_manor_from_its_button() -> void:
 	Game.start_campaign(42)
 	Game.state.metrics["treasury"] = 100000.0
+	# A manor the lord may buy (owner 2026-09-14): another house's, in a
+	# province bordering the crown's own, paid from the lord's purse.
+	Game.state.metrics["lord_gold"] = 100000.0
+	Game.state.metrics["lord_civil"] = 100000.0
 	var p := _panel()
 	await wait_frames(1)
 	var realm := Game.data.resolve_realm("player_realm")
 	var cell := -1
 	for province: String in MapOwnership.provinces_of(Game.data, Game.state, realm):
 		for c: int in MapManors.manors_of_province(Game.data, province):
-			if not MapManors.is_crowns(Game.data, Game.state, c):
+			if not MapManors.is_crowns(Game.data, Game.state, c) \
+					and String(MapManors.purchase_kind(Game.data, Game.state, c)["kind"]) == "domestic":
 				cell = c
 				break
 		if cell >= 0:
@@ -121,6 +126,8 @@ func test_a_manor_card_buys_the_manor_from_its_button() -> void:
 func test_a_manor_card_shows_its_slots_and_a_build_fills_one() -> void:
 	Game.start_campaign(42)
 	Game.state.metrics["treasury"] = 100000.0
+	Game.state.metrics["lord_gold"] = 100000.0
+	Game.state.metrics["lord_civil"] = 100000.0
 	var p := _panel()
 	await wait_frames(1)
 	var cell := -1

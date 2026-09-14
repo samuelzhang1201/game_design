@@ -180,7 +180,7 @@ func refresh() -> void:
 		cells = repo.manors.keys()
 	else:
 		for province: String in MapOwnership.provinces_of(repo, state, realm):
-			cells.append_array(MapManors.manors_of_province(repo, province))
+			cells.append_array(MapManors.manors_of_province(repo, province, Game.state))
 	cells.sort()
 	# Every row's month at once: one cached province read each, not a line
 	# per row (the table is refreshed on every state_changed, and the map
@@ -204,7 +204,7 @@ func refresh() -> void:
 			continue
 		rows.append({"cell": cell, "label": MapManors.label_of(repo, cell),
 			"house": "The crown" if crowns else house, "family": house,
-			"province": String(repo.provinces.get(MapManors.province_of(repo, cell), {}).get("label", "")),
+			"province": String(repo.provinces.get(MapManors.province_of(repo, cell, Game.state), {}).get("label", "")),
 			"people": int(line.get("people", 0)), "rent": rent,
 			"value": MapManors.value_of_line(repo, state, cell, line),
 			"buildings": MapManors.buildings_of(state, cell).size(),

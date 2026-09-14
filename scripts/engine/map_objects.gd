@@ -954,7 +954,7 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dictionary:
 	if not MapManors.is_manor(repo, cell):
 		return {}
-	var province := MapManors.province_of(repo, cell)
+	var province := MapManors.province_of(repo, cell, state)
 	var prov: Dictionary = repo.provinces.get(province, {})
 	var owner := MapOwnership.owner_of(repo, state, province)
 	var kingdom: Dictionary = repo.kingdoms.get(owner, {})
@@ -980,6 +980,11 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	if burg != "":
 		fields.append(["Seat", _label(repo.burgs, burg)])
 	if card["known"] == "basic":
+		# Across the border a manor that touches the realm may be bought
+		# (owner 2026-09-14): its card offers that one order.
+		if state != null and not MapManors.is_crowns(repo, state, cell) \
+				and String(MapManors.purchase_kind(repo, state, cell)["kind"]) == "foreign":
+			card["actions"] = manor_actions(repo, state, cell)
 		return card
 	var cell_row: Dictionary = repo.cells.get(cell, {})
 	var biome: Dictionary = repo.biomes.get(int(cell_row.get("biome_id", -1)), {})
@@ -1103,7 +1108,7 @@ static func manor_actions(repo: DataRepository, state: GameState, cell: int) -> 
 	var specs: Array = []
 	if MapManors.is_crowns(repo, state, cell):
 		specs.append({"action_code": "MANOR_SELL", "params": {"manor": code},
-			"label": "SELL — %d gold" % roundi(MapManors.sell_price_of(repo, state, cell))})
+			"label": "SELL — %d gold to your purse" % roundi(MapManors.sell_price_of(repo, state, cell))})
 		# The chief goods the land allows, less the one it works (2026-09-13),
 		# ahead of the buildings: the choice the economy turns on.
 		var working := MapManors.focus_of(repo, state, cell)
@@ -1134,8 +1139,12 @@ static func manor_actions(repo: DataRepository, state: GameState, cell: int) -> 
 				"params": {"manor": code, "building": b_w, "days": per_click},
 				"label": "HURRY %s — %dg" % [String(row_w.get("label", b_w)).to_upper(), rush_gold]})
 	else:
+		# The button says which purse pays (owner 2026-09-14): your own for
+		# the realm, the crown's treasury across the border.
+		var how := MapManors.purchase_kind(repo, state, cell)
+		var purse := "the crown's treasury" if String(how["kind"]) == "foreign" else "your purse"
 		specs.append({"action_code": "MANOR_BUY", "params": {"manor": code},
-			"label": "BUY — %d gold" % roundi(MapManors.price_of(repo, state, cell))})
+			"label": "BUY — %d gold from %s" % [roundi(MapManors.price_of(repo, state, cell)), purse]})
 		if repo.bal("manor_seize_enabled") > 0.0:
 			specs.append({"action_code": "MANOR_SEIZE", "params": {"manor": code},
 				"label": "SEIZE BY FORCE"})

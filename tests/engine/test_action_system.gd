@@ -65,7 +65,8 @@ func _foreign_manor() -> int:
 	var realm := data.resolve_realm("player_realm")
 	for province: String in MapOwnership.provinces_of(data, s, realm):
 		for cell: int in MapManors.manors_of_province(data, province):
-			if not MapManors.is_crowns(data, s, cell):
+			if not MapManors.is_crowns(data, s, cell) \
+					and String(MapManors.purchase_kind(data, s, cell)["kind"]) == "domestic":
 				return cell
 	return -1
 
@@ -90,25 +91,34 @@ func test_buying_a_manor_needs_a_real_one_in_the_realm_and_the_gold() -> void:
 		"already holds")
 	var cell := _foreign_manor()
 	var price := MapManors.price_of(data, s, cell)
-	s.metrics["treasury"] = price - 1.0
+	s.metrics["lord_gold"] = price - 1.0
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUY", {"manor": cell}), s),
 		"afford")
-	# Outside the realm: the first manor of a province another kingdom holds.
+	# Abroad, off the border: a manor of another kingdom touching nothing of the realm.
 	var realm := data.resolve_realm("player_realm")
+	s.metrics["treasury"] = 100000.0
+	s.metrics["lord_gold"] = 100000.0
+	var found := false
 	for province: String in data.provinces:
-		if MapOwnership.owner_of(data, s, province) != realm and not MapManors.manors_of_province(data, province).is_empty():
-			var abroad: int = MapManors.manors_of_province(data, province)[0]
-			s.metrics["treasury"] = 100000.0
-			assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUY", {"manor": abroad}), s),
-				"outside the realm")
+		if MapOwnership.owner_of(data, s, province) == realm:
+			continue
+		for abroad: int in MapManors.manors_of_province(data, province):
+			if String(MapManors.purchase_kind(data, s, abroad)["kind"]) == "":
+				assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUY", {"manor": abroad}), s),
+					"does not touch the realm's border")
+				found = true
+				break
+		if found:
 			break
+	assert_true(found, "most of the world lies off the realm's border")
 
 func test_buying_moves_the_manor_pays_the_house_and_warms_it() -> void:
 	var cell := _foreign_manor()
 	var seller := MapManors.owner_of(data, s, cell)
 	var price := MapManors.price_of(data, s, cell)
-	s.metrics["treasury"] = price + 500.0
-	var before: float = s.metrics["treasury"]
+	s.metrics["lord_gold"] = price + 500.0
+	var before: float = s.metrics["lord_gold"]
+	var treasury_before: float = s.metrics["treasury"]
 	var opinions: Dictionary = {}
 	for id in s.characters:
 		if (s.characters[id] as Character).family_name == seller:
@@ -118,8 +128,9 @@ func test_buying_moves_the_manor_pays_the_house_and_warms_it() -> void:
 	assert_eq(sys.validate(req, s), "")
 	var out := sys.execute(req, s)
 	assert_true(MapManors.is_crowns(data, s, cell), "the crown holds it now")
-	assert_almost_eq(s.metrics["treasury"], before - price - 2.0, 0.001,
-		"the price and the notary's fee (order_costs.csv)")
+	assert_almost_eq(s.metrics["lord_gold"], before - price, 0.001, "the lord's purse pays the price")
+	assert_almost_eq(s.metrics["treasury"], treasury_before - 2.0, 0.001,
+		"the notary's fee (order_costs.csv) is the crown's")
 	assert_eq(s.manor_log.size(), 1)
 	assert_string_contains(String(s.manor_log[0]["reason"]), "bought from House " + seller)
 	for id in opinions:
@@ -135,7 +146,8 @@ func test_selling_and_building_need_a_crown_manor() -> void:
 		"does not hold")
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "mill"}), s),
 		"does not hold")
-	s.metrics["treasury"] = MapManors.price_of(data, s, cell) + 1000.0
+	s.metrics["lord_gold"] = MapManors.price_of(data, s, cell) + 1000.0
+	s.metrics["lord_civil"] = 100000.0
 	sys.execute(ActionRequest.make("MANOR_BUY", {"manor": cell}), s)
 	var house := MapManors.default_owner(data, s, cell)
 	# Building needs the province (2026-09-13): take the rest of it first.
@@ -146,16 +158,17 @@ func test_selling_and_building_need_a_crown_manor() -> void:
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "castle"}), s),
 		"No such building")
 	var before: float = s.metrics["treasury"]
-	var grain_before: float = s.metrics["grain"]
+	var grain_before: float = s.metrics["lord_civil"]
 	var build := ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "mill"})
 	assert_eq(sys.validate(build, s), "")
 	sys.execute(build, s)
 	# Begun, not standing (2026-09-13): the mill takes its build_days.
 	assert_eq(MapManors.buildings_of(s, cell), [])
 	assert_true(MapManors.is_building(s, cell, "mill"))
-	# Civil goods pay for the work (spec 2026-09-14 §5); only the surveyor's fee leaves the chest.
+	# The lord's own civil goods pay for the work (owner 2026-09-14); only the
+	# surveyor's fee leaves the crown's chest.
 	assert_almost_eq(s.metrics["treasury"], before - 1.0, 0.001)
-	assert_almost_eq(s.metrics["grain"], grain_before - float(data.manor_buildings["mill"]["civil_cost"]), 0.001)
+	assert_almost_eq(s.metrics["lord_civil"], grain_before - float(data.manor_buildings["mill"]["civil_cost"]), 0.001)
 	assert_string_contains(sys.validate(build, s), "already being built")
 	s.tick += int(ceili(float(data.manor_buildings["mill"]["build_days"]) / float(Calendar.DAYS_PER_TICK))) + 1
 	assert_eq(MapManors.advance_works(data, s), [{"cell": cell, "building": "mill"}])
@@ -166,10 +179,12 @@ func test_selling_and_building_need_a_crown_manor() -> void:
 	var sell := ActionRequest.make("MANOR_SELL", {"manor": cell})
 	assert_eq(sys.validate(sell, s), "")
 	before = s.metrics["treasury"]
+	var purse: float = s.metrics["lord_gold"]
 	var price := MapManors.sell_price_of(data, s, cell)
 	sys.execute(sell, s)
 	assert_eq(MapManors.owner_of(data, s, cell), house)
-	assert_almost_eq(s.metrics["treasury"], before + price - 2.0, 0.001)
+	assert_almost_eq(s.metrics["lord_gold"], purse + price, 0.001, "the sale goes to the lord's purse")
+	assert_almost_eq(s.metrics["treasury"], before - 2.0, 0.001, "the notary's fee to the crown's")
 	assert_eq(MapManors.buildings_of(s, cell), ["mill"], "the mill goes with the land")
 
 func test_seizing_is_gated_and_costs_legitimacy_unrest_and_the_houses_regard() -> void:
@@ -203,7 +218,7 @@ func test_seizing_is_gated_and_costs_legitimacy_unrest_and_the_houses_regard() -
 ## crown controls the province.
 func test_building_needs_a_province_the_crown_controls() -> void:
 	var cell := _foreign_manor()
-	s.metrics["treasury"] = 100000.0
+	s.metrics["lord_gold"] = 100000.0
 	sys.execute(ActionRequest.make("MANOR_BUY", {"manor": cell}), s)
 	assert_true(MapManors.is_crowns(data, s, cell))
 	var province := MapManors.province_of(data, cell)
@@ -236,22 +251,24 @@ func test_turning_a_manor_to_a_chief_good() -> void:
 		"No such focus")
 	var target := String(allowed[1])
 	var req := ActionRequest.make("MANOR_FOCUS", {"manor": cell, "focus": target})
-	s.metrics["treasury"] = 0.0
+	s.metrics["lord_gold"] = 0.0
 	assert_string_contains(sys.validate(req, s), "afford")
-	s.metrics["treasury"] = 1000.0
+	s.metrics["lord_gold"] = 1000.0
+	var chest: float = s.metrics["treasury"]
 	assert_eq(sys.validate(req, s), "")
 	var out := sys.execute(req, s)
 	assert_true(out["ok"])
 	assert_eq(MapManors.focus_of(data, s, cell), target)
-	assert_almost_eq(s.metrics["treasury"],
-		1000.0 - float(data.manor_focus[target]["switch_cost_gold"]) - 1.0, 0.001,
-		"the switch cost and the reeve's fee (order_costs.csv)")
+	assert_almost_eq(s.metrics["lord_gold"],
+		1000.0 - float(data.manor_focus[target]["switch_cost_gold"]), 0.001,
+		"the switch cost from the lord's purse")
+	assert_almost_eq(s.metrics["treasury"], chest - 1.0, 0.001, "the reeve's fee (order_costs.csv)")
 	assert_eq(int(s.manor_focus[str(cell)]["since"]), s.tick)
 	assert_string_contains(String(s.manor_log[0]["reason"]), "turned from")
 	assert_string_contains(sys.validate(req, s), "already works")
 	# Elsewhere in the realm the crown holds nothing it controls.
 	var foreign := _foreign_manor()
-	s.metrics["treasury"] = 100000.0
+	s.metrics["lord_gold"] = 100000.0
 	sys.execute(ActionRequest.make("MANOR_BUY", {"manor": foreign}), s)
 	if not MapManors.crown_controls(data, s, MapManors.province_of(data, foreign)):
 		var f_allowed := MapManors.focuses_for(data, foreign)
@@ -265,6 +282,7 @@ func test_turning_a_manor_to_a_chief_good() -> void:
 func test_building_needs_a_free_slot_and_can_be_pulled_down() -> void:
 	var cell := _crown_manor()
 	s.metrics["treasury"] = 100000.0
+	s.metrics["lord_civil"] = 100000.0
 	var slots := MapManors.slots_of(data, cell)
 	var codes: Array = data.manor_buildings.keys()
 	codes.sort()
@@ -280,7 +298,7 @@ func test_building_needs_a_free_slot_and_can_be_pulled_down() -> void:
 	# A build is paid for in civil goods, so its timber and stone come back
 	# to the stores — never to the chest (2026-09-14).
 	var before: float = s.metrics["treasury"]
-	var stores: float = s.metrics["grain"]
+	var stores: float = s.metrics["lord_civil"]
 	var stop := ActionRequest.make("MANOR_DEMOLISH", {"manor": cell, "building": codes[0]})
 	assert_eq(sys.validate(stop, s), "")
 	var out := sys.execute(stop, s)
@@ -288,11 +306,11 @@ func test_building_needs_a_free_slot_and_can_be_pulled_down() -> void:
 	var refund := roundf(float(data.manor_buildings[codes[0]]["civil_cost"])
 		* data.bal("manor_demolish_refund"))
 	assert_gt(refund, 0.0, "the fixture's building is worth pulling down")
-	assert_almost_eq(s.metrics["grain"], stores + refund, 0.001, "the stores take it back")
+	assert_almost_eq(s.metrics["lord_civil"], stores + refund, 0.001, "the lord's stores take it back")
 	assert_almost_eq(s.metrics["treasury"], before - 1.0, 0.001, "the chest pays the wreckers' ale")
 	var said := ""
 	for e in out["effects"]:
-		if String(e.get("metric", "")) == "grain":
+		if String(e.get("metric", "")) == "lord_civil":
 			said = String(e.get("reason", ""))
 	assert_string_contains(said, "the timber and stone of the")
 	assert_false(MapManors.is_building(s, cell, codes[0]))
@@ -337,20 +355,27 @@ func test_building_spends_civil_goods_and_rushing_spends_gold() -> void:
 	var cell := _crown_manor()
 	var civil := int(float(data.manor_buildings["palisade"]["civil_cost"]))
 	assert_gt(civil, 0)
-	s.metrics["grain"] = float(civil - 1)
+	# The lord's own stores and purse pay for his manors (owner 2026-09-14);
+	# the crown's treasury pays only the orders' fees.
+	s.metrics["lord_civil"] = float(civil - 1)
+	s.metrics["grain"] = 100000.0
 	s.metrics["treasury"] = 1000.0
+	s.metrics["lord_gold"] = 1000.0
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "palisade"}), s), "civil goods")
-	s.metrics["grain"] = float(civil + 10)
+	s.metrics["lord_civil"] = float(civil + 10)
 	var t := int(s.metrics["treasury"])
 	assert_true(sys.execute(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "palisade"}), s)["ok"])
-	assert_eq(int(s.metrics["grain"]), 10)
+	assert_eq(int(s.metrics["lord_civil"]), 10)
+	assert_eq(int(s.metrics["grain"]), 100000, "the crown's stores are not touched")
 	assert_eq(int(s.metrics["treasury"]), t - int(OrderCosts.gold_of(data, "MANOR_BUILD")), "only the surveyor")
 	var per_day := int(data.bal("build_rush_gold_per_day"))
 	t = int(s.metrics["treasury"])
+	var purse := int(s.metrics["lord_gold"])
 	var left := MapManors.work_days_left(s, cell, "palisade")
 	assert_true(sys.execute(ActionRequest.make("MANOR_RUSH", {"manor": cell, "building": "palisade", "days": 5}), s)["ok"])
 	assert_eq(MapManors.work_days_left(s, cell, "palisade"), left - 5)
-	assert_eq(int(s.metrics["treasury"]), t - 5 * per_day - int(OrderCosts.gold_of(data, "MANOR_RUSH")))
+	assert_eq(int(s.metrics["lord_gold"]), purse - 5 * per_day, "the lord pays the masons")
+	assert_eq(int(s.metrics["treasury"]), t - int(OrderCosts.gold_of(data, "MANOR_RUSH")))
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_RUSH", {"manor": cell, "building": "chapel", "days": 1}), s), "no work")
 
 ## The levy marches on strategic goods (spec §5): its cost row charges them.

@@ -287,25 +287,27 @@ func show_card(card: Dictionary) -> void:
 			_money.add_child(cell)
 		_set_preview(card.get("center", Vector2.ZERO))
 		_fill_slots(card)
-		for a: Dictionary in card.get("actions", []):
-			var button := Button.new()
-			button.name = String(a["action_code"]) + "_" + String((a["params"] as Dictionary).get("building",
-				(a["params"] as Dictionary).get("focus", "")))
-			button.text = String(a["label"])
-			button.focus_mode = Control.FOCUS_NONE
-			button.add_theme_font_size_override("font_size", 12)
-			button.disabled = String(a.get("error", "")) != ""
-			button.tooltip_text = String(a.get("error", ""))
-			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			# The column's width is fixed (CLAUDE.md invariant 10): a long
-			# order wraps rather than pushing the column over the map.
-			button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			var request := ActionRequest.make(String(a["action_code"]), (a["params"] as Dictionary).duplicate())
-			button.pressed.connect(func() -> void: _give_order(request))
-			_actions.add_child(button)
 	else:
 		_hint.text = "Little more is known of foreign land."
 		_hint.visible = true
+	# The orders the card offers stand outside the full/basic split: a foreign
+	# manor on the border offers its BUY (owner 2026-09-14).
+	for a: Dictionary in card.get("actions", []):
+		var button := Button.new()
+		button.name = String(a["action_code"]) + "_" + String((a["params"] as Dictionary).get("building",
+			(a["params"] as Dictionary).get("focus", "")))
+		button.text = String(a["label"])
+		button.focus_mode = Control.FOCUS_NONE
+		button.add_theme_font_size_override("font_size", 12)
+		button.disabled = String(a.get("error", "")) != ""
+		button.tooltip_text = String(a.get("error", ""))
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# The column's width is fixed (CLAUDE.md invariant 10): a long
+		# order wraps rather than pushing the column over the map.
+		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var request := ActionRequest.make(String(a["action_code"]), (a["params"] as Dictionary).duplicate())
+		button.pressed.connect(func() -> void: _give_order(request))
+		_actions.add_child(button)
 	_set_ask(String(card.get("ask", "")))
 	_open_panel()
 

@@ -114,7 +114,9 @@ static func seams_of(data: DataRepository, state: GameState, kingdom_code: Strin
 
 
 static func _refresh_caches(state: GameState) -> void:
-	var version := 0 if state == null else state.province_owner.size()
+	# A manor annexed across the border reshapes two provinces without moving
+	# either (owner 2026-09-14), so it turns the version too.
+	var version := 0 if state == null else hash([state.province_owner.size(), state.manor_province.hash()])
 	if _cache_owner_version != version:
 		_outline_cache.clear()
 		_seam_cache.clear()
@@ -146,9 +148,35 @@ static func _held_loops(data: DataRepository, state: GameState,
 		kingdom_code: String) -> Array:
 	var out: Array = []
 	for code in provinces_of(data, state, kingdom_code):
-		for loop: PackedVector2Array in data.province_borders.get(code, []):
+		for loop: PackedVector2Array in province_loops(data, state, code):
 			out.append(loop)
 	return out
+
+
+## A province's outline NOW (owner 2026-09-14): the pack's loops, with the
+## outline of every manor annexed into it added and of every manor annexed
+## out of it cut away. Cells share the provinces' exact vertices, so the
+## merge by edge parity makes a border cell a bump on the province that took
+## it and a notch in the one that lost it. The pack's loops when nothing
+## touching the province has moved.
+static func province_loops(data: DataRepository, state: GameState, code: String) -> Array:
+	var pack: Array = data.province_borders.get(code, [])
+	if state == null or state.manor_province.is_empty():
+		return pack
+	var extra: Array = []
+	for key: String in state.manor_province:
+		var cell := int(key)
+		var to := String(state.manor_province[key])
+		var from := String((data.manors.get(cell, {}) as Dictionary).get("province_code", ""))
+		if to != code and from != code:
+			continue
+		var row: Dictionary = data.cells.get(cell, {})
+		if row.is_empty():
+			continue
+		extra.append(MapEconomy.cell_polygon(data, row))
+	if extra.is_empty():
+		return pack
+	return _merge_loops(pack + extra)
 
 
 ## Merge closed loops into the outline of their union: an edge walked by two
@@ -167,7 +195,9 @@ static func _merge_loops(loops: Array) -> Array:
 	var adjacent: Dictionary = {}
 	var boundary: Array = []
 	for e in edge_order:
-		if int(edge_count[e]) != 1:
+		# An ODD count is the boundary: once for two provinces' seam-free
+		# union, and three times where an annexed cell's edge meets both.
+		if int(edge_count[e]) % 2 != 1:
 			continue
 		boundary.append(e)
 		for v in [e[0], e[1]]:

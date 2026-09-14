@@ -8,7 +8,9 @@ extends VBoxContainer
 ## colours in fixed order from data/chart_palette.csv.
 
 const RESOURCES := ["treasury", "grain", "population", "army"]
-const TEMPER := ["unrest", "legitimacy", "peasant_contentment", "church_opinion"]
+## The army's drill joined the temper when the top bar gave up everything
+## but the purses (owner 2026-09-14).
+const TEMPER := ["unrest", "legitimacy", "army_quality", "peasant_contentment", "church_opinion"]
 
 var _title: Label
 var _resource_values: Dictionary = {}

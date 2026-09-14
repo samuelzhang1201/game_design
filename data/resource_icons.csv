@@ -1,7 +1,10 @@
 key,label,icon,tooltip,texture
-treasury,Gold,coin,Gold in the crown's chest. Taxes fill it each month; salaries and your orders empty it.,res://assets/icons/treasury.png
+treasury,Crown gold,coin,"Gold in the CROWN's treasury — the realm's, not your house's. The crown's share of the realm's taxes fills it; salaries, the court and your orders empty it; it alone buys land across the border.",res://assets/icons/treasury.png
 grain,Civil goods,grain,"Civil goods, in gold: food, timber, cloth and wares. The harvest and your provinces fill them each month; the court eats from them and building spends them.",res://assets/icons/grain.png
 strategic,Strategic goods,swords,"Strategic goods, in gold: iron, horses, arms and ships. Your provinces fill them each month; the levy and the campaign spend them — the army goes as far as they stretch.",
+lord_gold,Your gold,coin,"Gold in your OWN house's purse, apart from the crown's treasury. Your own provinces' manors fill it each month; it buys and builds manors inside the realm.",res://assets/icons/treasury.png
+lord_strategic,Your strategic goods,swords,"Strategic goods your own provinces make, yours to spend as their lord.",
+lord_civil,Your civil goods,grain,"Civil goods your own provinces make — timber, cloth and food for building on your own manors.",res://assets/icons/grain.png
 population,People,people,Everyone in the realm's towns and countryside. Levies are drawn from them.,res://assets/icons/population.png
 army,Host,swords,"The realm's soldiers under arms, by regiment.",res://assets/icons/army.png
 army_quality,Army,swords,How well drilled the levies are. Drills lapse without fresh levies.,res://assets/icons/army_quality.png

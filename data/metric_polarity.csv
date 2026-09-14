@@ -13,3 +13,6 @@ church_opinion,1,
 peasant_contentment,1,
 road_income_bonus,1,
 grain_ration,0,
+lord_gold,1,"the lord's own purse (owner 2026-09-14): the player house's gold, apart from the crown's treasury"
+lord_strategic,1,the lord's own strategic goods
+lord_civil,1,the lord's own civil goods

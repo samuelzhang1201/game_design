@@ -64,21 +64,21 @@ func _settle_economy(state: GameState, r: TickReport) -> void:
 	# Every key is there: GameState.default_metrics is the one place a
 	# metric's presence is settled, for a fresh campaign and an old save alike.
 	var m := state.metrics
-	var e := RealmEconomy.realm(data, state)
-	var share := data.bal("crown_share_permille") / 1000.0
-	var own_tax := int(e["crown"]["tax"])
-	var share_tax := int(roundf(share * float(int(e["realm"]["tax"]) - own_tax)))
-	_apply(r, m, "treasury", float(own_tax), "taxes of the crown's provinces")
-	_apply(r, m, "treasury", float(share_tax), "the crown's share of the realm's taxes")
-	_set_metric(r, m, "tax_income", float(own_tax + share_tax), "taxes collected this month")
-	var own_st := int(e["crown"]["strategic"])
-	_apply(r, m, "strategic", float(own_st), "the crown's strategic goods")
-	_apply(r, m, "strategic", float(int(roundf(share * float(int(e["realm"]["strategic"]) - own_st)))),
+	var p := RealmEconomy.purses(data, state)
+	var lord: Dictionary = p["lord"]
+	var crown_share: Dictionary = p["realm_share"]
+	# Two purses (owner 2026-09-14). The LORD's: the provinces the player's
+	# house controls pay into it in full — gold, strategic and civil goods.
+	_apply(r, m, "lord_gold", float(int(lord["tax"])), "taxes of your own provinces")
+	_apply(r, m, "lord_strategic", float(int(lord["strategic"])), "your own provinces' strategic goods")
+	_apply(r, m, "lord_civil", float(int(lord["civil"])), "your own provinces' civil goods")
+	# The CROWN's treasury and stores: its share of every other province.
+	_apply(r, m, "treasury", float(int(crown_share["tax"])), "the crown's share of the realm's taxes")
+	_apply(r, m, "strategic", float(int(crown_share["strategic"])),
 		"the crown's share of the realm's strategic goods")
-	var own_cv := int(e["crown"]["civil"])
-	_apply(r, m, "grain", float(own_cv), "the crown's civil goods")
-	_apply(r, m, "grain", float(int(roundf(share * float(int(e["realm"]["civil"]) - own_cv)))),
-		"the crown's share of the realm's civil goods")
+	_apply(r, m, "grain", float(int(crown_share["civil"])), "the crown's share of the realm's civil goods")
+	_set_metric(r, m, "tax_income", float(int(lord["tax"]) + int(crown_share["tax"])), "taxes collected this month")
+	# The court is the crown's: its ministers and its table.
 	var salaries := 0
 	for seat: String in state.council:
 		salaries += int(float((data.seats.get(seat, {}) as Dictionary).get("salary_gold", 0)))
@@ -91,16 +91,18 @@ func _settle_economy(state: GameState, r: TickReport) -> void:
 	if m.get("grain_ration", 0.0) > 0.0:
 		ration = ration / 2
 	_apply(r, m, "grain", float(-ration), "the court's ration")
+	# The harvest and the buildings are the lord's own fields and walls.
 	if Calendar.season_name(state.tick + 1) == "Autumn":
-		_apply(r, m, "grain", float(int(roundf(float(people) / 1000.0 * data.bal("harvest_civil_per_1000")))),
+		_apply(r, m, "lord_civil", float(int(roundf(float(people) / 1000.0 * data.bal("harvest_civil_per_1000")))),
 			"the harvest comes in")
 	var built := MapManors.crown_building_effects(data, state)
-	_apply(r, m, "treasury", float(int(built["treasury"])), "tolls and rents of the crown's buildings")
-	_apply(r, m, "grain", float(int(built["grain"])), "the crown's mills and granaries")
-	# The floor is a line like any other (invariant 4): what the court could
-	# not eat is written off with its reason, never cut silently.
-	if m["grain"] < 0.0:
-		_apply(r, m, "grain", -m["grain"], "the stores cannot fall below empty")
+	_apply(r, m, "lord_gold", float(int(built["treasury"])), "tolls and rents of your buildings")
+	_apply(r, m, "lord_civil", float(int(built["grain"])), "your mills and granaries")
+	# The floor is a line like any other (invariant 4): what could not be
+	# eaten is written off with its reason, never cut silently.
+	for pool: String in ["grain", "lord_civil"]:
+		if m[pool] < 0.0:
+			_apply(r, m, pool, -m[pool], "the stores cannot fall below empty")
 	if data.bal("economy_check_full") > 0.0:
 		var bad := RealmEconomy.check_full(data, state)
 		if not bad.is_empty():

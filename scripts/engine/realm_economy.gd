@@ -24,6 +24,9 @@ extends RefCounted
 ## save is unaffected.
 
 static var _repo_id := 0
+## The annexations the layout was built under (owner 2026-09-14): a manor
+## that moved province moves its slice, so a new set rebuilds the index.
+static var _annex_sig := 0
 static var _cells := PackedInt32Array()      # i -> cell id
 static var _index: Dictionary = {}            # cell id -> i
 static var _codes := PackedStringArray()      # province index -> code
@@ -45,6 +48,7 @@ static var compute_count := 0
 
 static func forget() -> void:
 	_repo_id = 0
+	_annex_sig = 0
 	_cells = PackedInt32Array()
 	_index = {}
 	_codes = PackedStringArray()
@@ -61,20 +65,23 @@ static func forget() -> void:
 	_realm = {}
 	compute_count = 0
 
-## Index the pack's manors, province-major. Once per repository.
-static func setup(repo: DataRepository) -> void:
-	if _repo_id == repo.get_instance_id() and not _cells.is_empty():
+## Index the manors, province-major. Once per repository and set of
+## annexations.
+static func setup(repo: DataRepository, state: GameState = null) -> void:
+	var sig := 0 if state == null else state.manor_province.hash()
+	if _repo_id == repo.get_instance_id() and _annex_sig == sig and not _cells.is_empty():
 		return
 	forget()
 	_repo_id = repo.get_instance_id()
+	_annex_sig = sig
 	var codes: Array = []
 	for code: String in repo.provinces:
-		if not MapManors.manors_of_province(repo, code).is_empty():
+		if not MapManors.manors_of_province(repo, code, state).is_empty():
 			codes.append(code)
 	codes.sort()
 	for code: String in codes:
 		var start := _cells.size()
-		for id: int in MapManors.manors_of_province(repo, code):
+		for id: int in MapManors.manors_of_province(repo, code, state):
 			_index[id] = _cells.size()
 			_cells.append(id)
 		_range[code] = [start, _cells.size()]
@@ -127,7 +134,7 @@ static func province_key(repo: DataRepository, state: GameState, code: String) -
 	parts.append(str(int(state.metrics.get("tariff_rate", 0))))
 	parts.append(str(_figure(repo, state, "economy.provinces.%s.rural_population" % code)))
 	parts.append(str(_figure(repo, state, "economy.provinces.%s.urban_population" % code)))
-	for id: int in MapManors.manors_of_province(repo, code):
+	for id: int in MapManors.manors_of_province(repo, code, state):
 		var k := str(id)
 		if state.manor_owner.has(k):
 			parts.append("o%s=%s" % [k, str(state.manor_owner[k])])
@@ -138,7 +145,7 @@ static func province_key(repo: DataRepository, state: GameState, code: String) -
 	return "|".join(parts)
 
 static func recompute_province(repo: DataRepository, state: GameState, code: String) -> void:
-	setup(repo)
+	setup(repo, state)
 	compute_count += 1
 	var r: Array = _range[code]
 	var tax := 0
@@ -161,7 +168,7 @@ static func recompute_province(repo: DataRepository, state: GameState, code: Str
 
 ## A province's month, current: recomputed when its key moved.
 static func province(repo: DataRepository, state: GameState, code: String) -> Dictionary:
-	setup(repo)
+	setup(repo, state)
 	if not _range.has(code):
 		return {"tax": 0, "strategic": 0, "civil": 0}
 	if String(_keys.get(code, "")) != province_key(repo, state, code):
@@ -170,7 +177,7 @@ static func province(repo: DataRepository, state: GameState, code: String) -> Di
 
 ## A manor's cached line, current.
 static func line_of(repo: DataRepository, state: GameState, cell: int) -> Dictionary:
-	province(repo, state, MapManors.province_of(repo, cell))
+	province(repo, state, MapManors.province_of(repo, cell, state))
 	if not _index.has(cell):
 		return {"people": 0, "tax": 0, "strategic": 0, "civil": 0, "units": 0}
 	var i: int = _index[cell]
@@ -182,7 +189,7 @@ static func line_of(repo: DataRepository, state: GameState, cell: int) -> Dictio
 ## off the columnar arrays, so a table of a thousand rows (the Manor
 ## Master) costs one key build, not one per row.
 static func lines_of_province(repo: DataRepository, state: GameState, code: String) -> Dictionary:
-	setup(repo)
+	setup(repo, state)
 	if not _range.has(code):
 		return {}
 	province(repo, state, code)
@@ -200,10 +207,10 @@ static func lines_of_province(repo: DataRepository, state: GameState, code: Stri
 ## rows must never go through `line_of` per row, which is O(the province's
 ## manors) each time. Cells that are no manor are left out.
 static func lines_table(repo: DataRepository, state: GameState, cells: Array) -> Dictionary:
-	setup(repo)
+	setup(repo, state)
 	var by_province: Dictionary = {}
 	for cell: int in cells:
-		var code := MapManors.province_of(repo, cell)
+		var code := MapManors.province_of(repo, cell, state)
 		if code == "" or not _range.has(code):
 			continue
 		if not by_province.has(code):
@@ -229,15 +236,15 @@ static func tax_table(repo: DataRepository, state: GameState, cells: Array) -> D
 ## only what moved hash in C++ — ownership included, so a conquest that
 ## moves no manor and touches no ledger figure still turns the signature.
 static func realm_signature(state: GameState) -> String:
-	return "%d|%d|%d|%d|%d|%d|%d|%d" % [state.tick, state.manor_owner.hash(),
+	return "%d|%d|%d|%d|%d|%d|%d|%d|%d" % [state.tick, state.manor_owner.hash(),
 		state.manor_buildings.hash(), state.manor_focus.hash(), state.world.hash(),
-		state.province_owner.hash(),
+		state.province_owner.hash(), state.manor_province.hash(),
 		int(state.metrics.get("tax_rate", 0)), int(state.metrics.get("tariff_rate", 0))]
 
 ## {realm, crown, per_province}: the player's realm's provinces (live
 ## ownership), the crown's controlled ones summed apart.
 static func realm(repo: DataRepository, state: GameState) -> Dictionary:
-	setup(repo)
+	setup(repo, state)
 	var sig := realm_signature(state)
 	if sig == _realm_sig and not _realm.is_empty():
 		return _realm
@@ -260,10 +267,26 @@ static func realm(repo: DataRepository, state: GameState) -> Dictionary:
 	_realm_sig = sig
 	return _realm
 
+## The month split by PURSE (owner 2026-09-14): the LORD's — the provinces
+## the player's house controls, in full — and the CROWN treasury's, its
+## crown_share_permille of every other province of the realm. Whole gold;
+## the settlement and the top bar both read it here, so they never disagree.
+## {lord: {tax, strategic, civil}, realm_share: {tax, strategic, civil}}.
+static func purses(repo: DataRepository, state: GameState) -> Dictionary:
+	var e := realm(repo, state)
+	var share := repo.bal("crown_share_permille") / 1000.0
+	var lord: Dictionary = {}
+	var crown_share: Dictionary = {}
+	for k: String in ["tax", "strategic", "civil"]:
+		var own := int(e["crown"][k])
+		lord[k] = own
+		crown_share[k] = int(roundf(share * float(int(e["realm"][k]) - own)))
+	return {"lord": lord, "realm_share": crown_share}
+
 ## The day's bucket: recompute the stale provinces whose index falls on
 ## today. Returns how many were recomputed.
 static func step_day(repo: DataRepository, state: GameState) -> int:
-	setup(repo)
+	setup(repo, state)
 	var n := 0
 	var bucket := (state.day - 1) % Calendar.DAYS_PER_TICK
 	for pi: int in _codes.size():
@@ -277,7 +300,7 @@ static func step_day(repo: DataRepository, state: GameState) -> int:
 
 ## Every province from scratch, no cache: code -> {tax, strategic, civil}.
 static func recompute_all(repo: DataRepository, state: GameState) -> Dictionary:
-	setup(repo)
+	setup(repo, state)
 	var out: Dictionary = {}
 	for code: String in _codes:
 		var r: Array = _range[code]

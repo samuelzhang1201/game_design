@@ -16,17 +16,24 @@ func test_new_campaign_seeds_from_the_pack_and_balance() -> void:
 	var row: Dictionary = data.world_row("economy", "kingdoms", data.resolve_realm("player_realm"))
 	assert_false(row.is_empty(), "the pack has the player's economy row")
 	assert_gt(WorldLedger.crown_town_treasury(data, s), 0.0, "the crown's towns hold something")
+	# Two purses (owner 2026-09-14): the lord's gold is what the towns of the
+	# crown's own provinces hold; the crown's treasury its share of the rest.
+	assert_eq(s.metrics["lord_gold"],
+		roundf(WorldLedger.crown_town_treasury(data, s) * data.bal("pack_treasury_scale")
+			* data.bal("start_lord_gold_scale")))
 	assert_eq(s.metrics["treasury"],
-		roundf(WorldLedger.crown_town_treasury(data, s) * data.bal("pack_treasury_scale")))
+		roundf(WorldLedger.realm_share_town_treasury(data, s) * data.bal("pack_treasury_scale")))
 	assert_eq(s.metrics["tax_rate"],
 		clampf(roundf(float(row["poll_tax"]) * data.bal("tax_rate_per_poll_tax")), 1.0, 10.0))
 	assert_eq(s.metrics["tariff_rate"],
 		clampf(roundf(float(row["sales_tax"]) * data.bal("tariff_rate_per_sales_tax")), 0.0, 10.0))
-	var e := RealmEconomy.realm(data, s)
-	assert_eq(s.metrics["grain"],
-		float(int(e["crown"]["civil"]) * int(data.bal("start_civil_months"))))
-	assert_eq(s.metrics["strategic"],
-		float(int(e["crown"]["strategic"]) * int(data.bal("start_strategic_months"))))
+	var p := RealmEconomy.purses(data, s)
+	var cv := int(data.bal("start_civil_months"))
+	var st := int(data.bal("start_strategic_months"))
+	assert_eq(s.metrics["lord_civil"], float(int(p["lord"]["civil"]) * cv))
+	assert_eq(s.metrics["lord_strategic"], float(int(p["lord"]["strategic"]) * st))
+	assert_eq(s.metrics["grain"], float(int(p["realm_share"]["civil"]) * cv))
+	assert_eq(s.metrics["strategic"], float(int(p["realm_share"]["strategic"]) * st))
 	assert_eq(s.metrics["legitimacy"], data.bal("start_metric_default"))
 	assert_true(s.world.is_empty(), "seeding writes the metric, not an override")
 
