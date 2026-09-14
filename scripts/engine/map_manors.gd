@@ -782,10 +782,10 @@ static func focus_output_of(repo: DataRepository, state: GameState, cell_id: int
 		"label": String(row.get("label", code)), "units": units}
 
 ## The manor's month of tax, for the card (spec 2026-09-14 §4.2): whole
-## gold, the tariff of its town included, as ManorEconomy figures it. The
-## `people` argument is kept for callers that already hold the count; the
-## count itself is integer and read from the ledger either way.
-static func rent_of(repo: DataRepository, state: GameState, cell_id: int, _people: float = -1.0) -> float:
+## gold, the tariff of its town included, as ManorEconomy figures it. ONE
+## manor — a table of them goes through RealmEconomy.tax_table, which reads
+## a whole province's cached lines at a time.
+static func rent_of(repo: DataRepository, state: GameState, cell_id: int) -> float:
 	return float(ManorEconomy.line_of(repo, state, cell_id, state.tick)["tax"])
 
 static func defence_of(repo: DataRepository, state: GameState, cell_id: int) -> float:

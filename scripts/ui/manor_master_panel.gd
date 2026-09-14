@@ -183,6 +183,10 @@ func refresh() -> void:
 			cells.append_array(MapManors.manors_of_province(repo, province))
 	cells.sort()
 	var people := MapManors.population_table(repo, state, cells)
+	# The month's tax of every row at once: one cached province read each,
+	# not a ManorEconomy line per row (the table is refreshed on every
+	# state_changed, and the map scope is thousands of manors).
+	var taxes := RealmEconomy.tax_table(repo, state, cells)
 	var houses: Dictionary = {}
 	var rows: Array = []
 	var crown_count := 0
@@ -194,7 +198,7 @@ func refresh() -> void:
 		if crowns:
 			crown_count += 1
 		var pop: float = (people[cell] as Dictionary)["total"]
-		var rent := MapManors.rent_of(repo, state, cell, pop)
+		var rent := float(taxes.get(cell, 0))
 		if crowns:
 			rents += rent
 		if _house_filter != "" and house != _house_filter:

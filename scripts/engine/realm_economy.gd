@@ -164,6 +164,42 @@ static func line_of(repo: DataRepository, state: GameState, cell: int) -> Dictio
 	var i: int = _index[cell]
 	return {"tax": _tax[i], "strategic": _strategic[i], "civil": _civil[i]}
 
+## Every manor of a province at once: cell -> {tax, strategic, civil}. The
+## province's key is checked ONCE and the answers come off the columnar
+## arrays, so a table of a thousand rows (the Manor Master) costs one key
+## build, not one per row.
+static func lines_of_province(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	setup(repo)
+	if not _range.has(code):
+		return {}
+	province(repo, state, code)
+	var out: Dictionary = {}
+	var r: Array = _range[code]
+	for i in range(int(r[0]), int(r[1])):
+		out[_cells[i]] = {"tax": _tax[i], "strategic": _strategic[i], "civil": _civil[i]}
+	return out
+
+## The month's tax of many manors: cell -> whole gold. The cells are grouped
+## by province first, so each province is read in bulk once however the
+## caller ordered them. Cells that are no manor are left out.
+static func tax_table(repo: DataRepository, state: GameState, cells: Array) -> Dictionary:
+	setup(repo)
+	var by_province: Dictionary = {}
+	for cell: int in cells:
+		var code := MapManors.province_of(repo, cell)
+		if code == "" or not _range.has(code):
+			continue
+		if not by_province.has(code):
+			by_province[code] = []
+		(by_province[code] as Array).append(cell)
+	var out: Dictionary = {}
+	for code: String in by_province:
+		var lines := lines_of_province(repo, state, code)
+		for cell: int in by_province[code]:
+			if lines.has(cell):
+				out[cell] = int((lines[cell] as Dictionary)["tax"])
+	return out
+
 ## What the realm's answer depends on, cheaply: the dictionaries that hold
 ## only what moved hash in C++ — ownership included, so a conquest that
 ## moves no manor and touches no ledger figure still turns the signature.

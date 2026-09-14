@@ -125,3 +125,29 @@ func test_a_conquest_moves_a_province_into_the_realms_sum() -> void:
 		assert_eq(int(after["realm"][k]), int(before["realm"][k]) + int(added[k]),
 			"%s grew by exactly the conquered province's" % k)
 	assert_eq(RealmEconomy.compute_count, n + 1, "only the new province was computed")
+
+## The Manor Master reads a whole table at a time: one key check per
+## province, then the columnar arrays — not a line_of per row.
+func test_a_provinces_lines_come_out_together() -> void:
+	var code: String = MapManors.controlled_provinces(data, s)[0]
+	var lines := RealmEconomy.lines_of_province(data, s, code)
+	var cells: Array = MapManors.manors_of_province(data, code)
+	assert_eq(lines.size(), cells.size(), "one line per manor of %s" % code)
+	for cell: int in cells:
+		assert_eq(lines[cell], RealmEconomy.line_of(data, s, cell),
+			"the bulk read agrees with the single read on %d" % cell)
+	assert_eq(RealmEconomy.lines_of_province(data, s, "no_such_province"), {})
+
+func test_the_tax_table_groups_its_cells_by_province() -> void:
+	var cells: Array = []
+	for code: String in MapManors.controlled_provinces(data, s):
+		cells.append_array(MapManors.manors_of_province(data, code))
+	cells.append(-1)  # a cell that is no manor
+	var table := RealmEconomy.tax_table(data, s, cells)
+	assert_eq(table.size(), cells.size() - 1, "the non-manor is left out")
+	RealmEconomy.realm(data, s)
+	var n := RealmEconomy.compute_count
+	for cell: int in table:
+		assert_eq(int(table[cell]), int(RealmEconomy.line_of(data, s, cell)["tax"]))
+	assert_eq(RealmEconomy.compute_count, n, "the table left the cache warm")
+	assert_eq(RealmEconomy.tax_table(data, s, []), {})

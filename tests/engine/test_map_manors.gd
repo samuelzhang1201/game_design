@@ -71,6 +71,7 @@ func _repo() -> DataRepository:
 	r._register_table("economy", "production", {})
 	MapManors.invalidate()
 	MapEconomy.forget()
+	RealmEconomy.forget()
 	return r
 
 func _state() -> GameState:
@@ -206,8 +207,8 @@ func test_people_are_the_provinces_shared_by_land_and_town() -> void:
 	assert_almost_eq(float(table[1]["rural"]), 1500.0, 0.001)
 	assert_almost_eq(float(table[2]["urban"]), 1000.0, 0.001)
 	assert_almost_eq(float(table[4]["total"]), 800.0, 0.001)
-	assert_almost_eq(MapManors.rent_of(r, s, 2, 2500.0), MapManors.rent_of(r, s, 2), 0.0001,
-		"a count handed in gives the same rent")
+	assert_almost_eq(MapManors.rent_of(r, s, 2), float(RealmEconomy.line_of(r, s, 2)["tax"]), 0.0001,
+		"the card's rent is the cached line's tax")
 	# A ledger move on the province reaches its manors with nothing stored.
 	WorldLedger.apply(r, s, "economy.provinces.p.rural_population", -1000.0, "plague", "test")
 	assert_almost_eq(float(MapManors.population_of(r, s, 1)["rural"]), 1000.0, 0.001)
