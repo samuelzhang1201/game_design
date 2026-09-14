@@ -111,6 +111,41 @@ func test_days_step_works_and_the_thirtieth_is_a_tick() -> void:
 	assert_eq(finished_at_day, 1 + days, "it stood on the day its days were up")
 	assert_eq(MapManors.buildings_of(s, cell), ["palisade"])
 
+## A work longer than a month survives the tick (owner 2026-09-14): the day
+## count carries across a GameState.day rollover to 1 and a tick increment,
+## so a building started in one tick can finish in the next.
+func test_a_work_longer_than_a_month_survives_the_tick() -> void:
+	var s := GameState.new_campaign(data, 42)
+	engine.advance(s)
+	assert_eq(s.tick, 1)
+	assert_eq(s.day, 1)
+	var cell := -1
+	for c: int in MapManors.manors_of_house(data, s, MapManors.crown(s), data.resolve_realm("player_realm")):
+		cell = c
+		break
+	assert_gt(cell, -1)
+	var days := int(float(data.manor_buildings["chapel"]["build_days"]))
+	assert_gt(days, Calendar.DAYS_PER_TICK, "a chapel outlasts a month")
+	assert_true(MapManors.start_work(data, s, cell, "chapel", "test"))
+	assert_eq(MapManors.work_days_left(s, cell, "chapel"), days)
+	for i in Calendar.DAYS_PER_TICK - 1:
+		assert_eq(engine.advance_day(s), [], "day %d" % (i + 2))
+	assert_eq(s.day, Calendar.DAYS_PER_TICK)
+	assert_eq(MapManors.work_days_left(s, cell, "chapel"), days - (Calendar.DAYS_PER_TICK - 1))
+	var r := engine.advance(s)
+	assert_eq(s.tick, 2)
+	assert_eq(s.day, 1)
+	assert_eq(r.finished_works, [], "still under construction after the tick")
+	assert_eq(MapManors.work_days_left(s, cell, "chapel"), days - Calendar.DAYS_PER_TICK,
+		"the day count carried across the tick boundary, one day fewer than before advance()")
+	for i in days - Calendar.DAYS_PER_TICK - 1:
+		assert_eq(engine.advance_day(s), [])
+	assert_eq(engine.advance_day(s), [{"cell": cell, "building": "chapel"}],
+		"finishes on its last day, in the tick after the one it began in")
+	assert_eq(s.tick, 2, "it finished without a further tick passing")
+	assert_eq(s.absolute_day(), 1 + days, "it stands on the day its days are up")
+	assert_eq(MapManors.buildings_of(s, cell), ["chapel"])
+
 ## A finished building works each tick (owner 2026-09-13): a market's tolls
 ## are a treasury line of their own.
 func test_the_crowns_buildings_pay_each_tick() -> void:
