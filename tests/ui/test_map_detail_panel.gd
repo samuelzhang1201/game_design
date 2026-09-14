@@ -105,7 +105,7 @@ func test_a_manor_card_buys_the_manor_from_its_button() -> void:
 	assert_true(p.visible)
 	assert_eq(p.shown_manor(), cell)
 	assert_eq(p.title_label().text, MapManors.label_of(Game.data, cell))
-	assert_has(_grid_texts(p), "Asking price")
+	assert_string_contains(p.stat_tooltip("manor_price"), "Asking price", "the price is an icon with its tooltip")
 	var buttons := p.actions_box().get_children()
 	assert_eq(buttons.size(), 1, "BUY only, seizing off")
 	var buy := buttons[0] as Button
@@ -114,7 +114,7 @@ func test_a_manor_card_buys_the_manor_from_its_button() -> void:
 	buy.pressed.emit()
 	await wait_frames(1)
 	assert_true(MapManors.is_crowns(Game.data, Game.state, cell), "the order ran")
-	assert_has(_grid_texts(p), "The crown", "the card redrew from the new state")
+	assert_eq(p.stat_text("manor_owner"), "The crown", "the card redrew from the new state")
 	var after: Array[String] = []
 	for b in p.actions_box().get_children():
 		after.append((b as Button).text.get_slice(" ", 0))
@@ -171,3 +171,42 @@ func test_a_manor_card_shows_its_slots_and_a_build_fills_one() -> void:
 	assert_false(MapManors.is_building(Game.state, cell, "mill"), "stopped")
 	assert_null(p.slots_row().find_child("Slot_mill", true, false))
 	assert_not_null(p.actions_box().find_child("MANOR_BUILD_mill", true, false), "offered again")
+
+## The manor card's face (owner 2026-09-14): the estate's painting pinned over
+## the card at a third of its height (when its file is installed), the facts
+## as icons with a short value and a full tooltip, and the output a month
+## good by good — the same line the month's settlement reads.
+func test_a_manor_card_shows_its_painting_its_facts_as_icons_and_its_output_rates() -> void:
+	Game.start_campaign(42)
+	var p := _panel()
+	p.size = Vector2(240, 600)
+	await wait_frames(1)
+	var cell := -1
+	for c: int in MapManors.manors_of_house(Game.data, Game.state, MapManors.crown(Game.state),
+			Game.data.resolve_realm("player_realm")):
+		cell = c
+		break
+	assert_gt(cell, -1)
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "manor", "cell": cell}})
+	await wait_process_frames(2)
+	var card := MapObjects.manor_card(Game.data, Game.state, cell)
+	var path := String(card["painting"])
+	assert_string_contains(path, "res://assets/manors/paint/", "every manor names its painting")
+	assert_eq(p.painting_box().visible, UiPalette.load_art(path) != null, "shown when the art is installed")
+	if p.painting_box().visible:
+		assert_almost_eq(p.painting_box().custom_minimum_size.y, maxf(p.size.y / 3.0, 72.0), 1.0,
+			"a third of the card")
+	assert_eq(p.fields().get_child_count(), 0, "a manor has no text rows, only icons")
+	for key in ["manor_owner", "manor_province", "manor_people", "manor_tax", "manor_focus",
+			"manor_defence", "manor_slots", "manor_value", "manor_price"]:
+		assert_ne(p.stat_text(key), "", key)
+		assert_ne(p.stat_tooltip(key), "", "%s explains itself" % key)
+	assert_string_contains(p.stat_tooltip("manor_tax"), "gold a month")
+	var line := ManorEconomy.line_of(Game.data, Game.state, cell, Game.state.tick)
+	var units: Dictionary = line["units"]
+	assert_false(units.is_empty(), "the crown's manor makes something")
+	for good: String in units:
+		var row := p.rates_box().find_child("Rate_" + good, true, false)
+		assert_not_null(row, "%s has its rate" % good)
+		if row != null:
+			assert_eq((row.find_child("Rate", true, false) as Label).text, "+%d / mo" % int(units[good]))

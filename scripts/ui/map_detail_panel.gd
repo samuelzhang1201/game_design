@@ -41,6 +41,16 @@ var _lines: VBoxContainer
 ## be given. A click runs the order through Game.try_execute — never the
 ## model — and redraws the card from the new state.
 var _actions: VBoxContainer
+## The manor card's face (owner 2026-09-14): its estate's painting pinned
+## over the card at a third of its height, its facts as icon + short value
+## with the whole in each tooltip, and its output a month good by good.
+var _painting_box: Control
+var _painting: TextureRect
+var _stats: GridContainer
+var _rates: VBoxContainer
+var _stat_cells: Dictionary = {}
+## A stat's or a rate's icon, design px.
+const STAT_ICON_PX := 20.0
 ## The manor's building slots (owner 2026-09-13): one box per slot — a
 ## building's icon, a work's icon dimmed with its days left, or an empty
 ## "+" — each standing building or work with a cross beneath it that
@@ -71,6 +81,24 @@ func _ready() -> void:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)
 	add_child(col)
+	# The painted estate stands over the scrolling body, so it stays in view
+	# while the facts below it scroll; the picture is cover-cropped into a
+	# box a third of the card's height (_fit_painting).
+	_painting_box = Control.new()
+	_painting_box.name = "Painting"
+	_painting_box.clip_contents = true
+	_painting_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_painting_box.visible = false
+	col.add_child(_painting_box)
+	_painting = TextureRect.new()
+	_painting.name = "PaintingImage"
+	_painting.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_painting.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_painting.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_painting.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_painting.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_painting_box.add_child(_painting)
+	resized.connect(_fit_painting)
 	# The column is 120 design px wide and no taller than the screen, so a
 	# full town card does not fit: the body scrolls and ASK / CLOSE stay
 	# pinned at the bottom where the player can always reach them.
@@ -112,6 +140,16 @@ func _ready() -> void:
 	_fields.add_theme_constant_override("h_separation", 12)
 	_fields.add_theme_constant_override("v_separation", 2)
 	body.add_child(_fields)
+	_stats = GridContainer.new()
+	_stats.name = "Stats"
+	_stats.columns = 4
+	_stats.add_theme_constant_override("h_separation", 6)
+	_stats.add_theme_constant_override("v_separation", 4)
+	body.add_child(_stats)
+	_rates = VBoxContainer.new()
+	_rates.name = "Rates"
+	_rates.add_theme_constant_override("separation", 2)
+	body.add_child(_rates)
 	_slots = HBoxContainer.new()
 	_slots.name = "Slots"
 	_slots.add_theme_constant_override("separation", 6)
@@ -144,7 +182,11 @@ func _ready() -> void:
 	body.add_child(_hint)
 	_preview = TerrainPreview.new()
 	_preview.name = "Preview"
-	_preview.custom_minimum_size = PREVIEW_SIZE
+	# Only its HEIGHT is fixed (2026-09-14): a fixed 208 px width plus the
+	# scroll bar a taller card grows pushed the fixed-width column over the
+	# map (CLAUDE.md invariant 10), so the window fills whatever width it has.
+	_preview.custom_minimum_size = Vector2(0.0, PREVIEW_SIZE.y)
+	_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_preview.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	body.add_child(_preview)
 	_ask = Button.new()
@@ -251,9 +293,18 @@ func show_card(card: Dictionary) -> void:
 	_title.text = String(card.get("title", ""))
 	_subtitle.text = String(card.get("subtitle", ""))
 	_subtitle.visible = _subtitle.text != ""
-	for f in card.get("fields", []):
-		_fields.add_child(_line(String(f[0]), UiPalette.TEXT_MUTED))
-		_fields.add_child(_line(String(f[1]), UiPalette.TEXT_SOFT))
+	# A manor's card reads as icons (owner 2026-09-14): its painting over the
+	# card, its facts as icon + short value with the whole in the tooltip,
+	# and what it makes a month. Every other card keeps its fields.
+	var stats: Array = card.get("stats", [])
+	if stats.is_empty():
+		for f in card.get("fields", []):
+			_fields.add_child(_line(String(f[0]), UiPalette.TEXT_MUTED))
+			_fields.add_child(_line(String(f[1]), UiPalette.TEXT_SOFT))
+	else:
+		_fill_stats(stats)
+	_fill_rates(card.get("rates", []))
+	_show_painting(String(card.get("painting", "")))
 	var basic := String(card.get("known", "full")) == "basic"
 	if not basic:
 		var features: Array = card.get("features", [])
@@ -285,7 +336,10 @@ func show_card(card: Dictionary) -> void:
 			text.autowrap_mode = TextServer.AUTOWRAP_OFF
 			cell.add_child(text)
 			_money.add_child(cell)
-		_set_preview(card.get("center", Vector2.ZERO))
+		# A manor's painting is its picture (owner 2026-09-14); the map window
+		# is for cards without one.
+		if String(card.get("painting", "")) == "" or UiPalette.load_art(String(card["painting"])) == null:
+			_set_preview(card.get("center", Vector2.ZERO))
 		_fill_slots(card)
 	else:
 		_hint.text = "Little more is known of foreign land."
@@ -404,13 +458,115 @@ func _fill_slots(card: Dictionary) -> void:
 		_slots.add_child(column)
 
 func _clear() -> void:
-	for box in [_fields, _slots, _features, _production, _money, _lines, _actions]:
+	for box in [_fields, _stats, _rates, _slots, _features, _production, _money, _lines, _actions]:
 		for child in box.get_children():
 			box.remove_child(child)
 			child.queue_free()
+	_stat_cells.clear()
+	_painting_box.visible = false
+	_painting.texture = null
 	_hint.visible = false
 	_hint.text = ""
 	_preview.visible = false
+
+
+## The painted estate over the card, when the card names one and it is on
+## disk; the box is hidden otherwise.
+func _show_painting(path: String) -> void:
+	var tex: Texture2D = UiPalette.load_art(path) if path != "" else null
+	_painting.texture = tex
+	_painting_box.visible = tex != null
+	_fit_painting()
+
+
+## A third of the card's height (owner 2026-09-14), never so small the
+## picture is a strip.
+func _fit_painting() -> void:
+	if _painting_box == null:
+		return
+	_painting_box.custom_minimum_size = Vector2(0.0, maxf(size.y / 3.0, 72.0))
+
+
+## Two facts a row: an icon (its tooltip the whole fact) and a short value
+## that clips rather than widen the fixed column.
+func _fill_stats(stats: Array) -> void:
+	for st: Dictionary in stats:
+		var key := String(st["key"])
+		var tip := String(st["tooltip"])
+		var icon := ResourceIcon.create(key)
+		icon.name = "StatIcon_" + key
+		icon.custom_minimum_size = Vector2(STAT_ICON_PX, STAT_ICON_PX)
+		# ResourceIcon sets its own tooltip when it enters the tree; the card's
+		# is the fuller one, so it goes on after.
+		icon.ready.connect(func() -> void: icon.tooltip_text = tip, CONNECT_ONE_SHOT)
+		icon.tooltip_text = tip
+		var value := Label.new()
+		value.name = "Stat_" + key
+		value.text = String(st["text"])
+		value.add_theme_font_size_override("font_size", 13)
+		value.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+		value.clip_text = true
+		value.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		value.custom_minimum_size = Vector2(56, 0)
+		value.mouse_filter = Control.MOUSE_FILTER_PASS
+		value.tooltip_text = tip
+		_stats.add_child(icon)
+		_stats.add_child(value)
+		_stat_cells[key] = value
+
+
+## What the manor makes a month (owner 2026-09-14: the rate of every
+## product): one row a good — its art in its category's colour, its name,
+## and "+N / mo", the tooltip adding what the units are worth and to which
+## pool they go.
+func _fill_rates(rates: Array) -> void:
+	if rates.is_empty():
+		return
+	_rates.add_child(_line("Output a month", UiPalette.TEXT_MUTED))
+	for r: Dictionary in rates:
+		var good := String(r["good"])
+		var tip := "%s — %d units a month, worth %d gold to the %s goods" % [
+			String(r["label"]), int(r["units"]), int(r["gold"]), String(r["pool"])]
+		var row := HBoxContainer.new()
+		row.name = "Rate_" + good
+		row.add_theme_constant_override("separation", 6)
+		var tex: Texture2D = UiPalette.load_art(String(r.get("texture", ""))) \
+			if String(r.get("texture", "")) != "" else null
+		if tex != null:
+			var pic := TextureRect.new()
+			pic.texture = tex
+			pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+			pic.custom_minimum_size = Vector2(STAT_ICON_PX, STAT_ICON_PX)
+			pic.modulate = EconomyPanel.tag_color(Game.data, String(r.get("tag", "")))
+			pic.mouse_filter = Control.MOUSE_FILTER_PASS
+			pic.tooltip_text = tip
+			row.add_child(pic)
+		else:
+			var glyph := ResourceIcon.create("tag_" + String(r.get("tag", "")))
+			glyph.custom_minimum_size = Vector2(STAT_ICON_PX, STAT_ICON_PX)
+			row.add_child(glyph)
+		var name_l := Label.new()
+		name_l.text = String(r["label"])
+		name_l.add_theme_font_size_override("font_size", 13)
+		name_l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+		name_l.clip_text = true
+		name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_l.mouse_filter = Control.MOUSE_FILTER_PASS
+		name_l.tooltip_text = tip
+		row.add_child(name_l)
+		var rate_l := Label.new()
+		rate_l.name = "Rate"
+		rate_l.text = "+%d / mo" % int(r["units"])
+		rate_l.add_theme_font_size_override("font_size", 13)
+		rate_l.add_theme_color_override("font_color", UiPalette.POSITIVE)
+		rate_l.mouse_filter = Control.MOUSE_FILTER_PASS
+		rate_l.tooltip_text = tip
+		row.add_child(rate_l)
+		_rates.add_child(row)
 
 
 func _set_ask(ask: String) -> void:
@@ -475,6 +631,25 @@ func close_button() -> Button:
 
 func actions_box() -> VBoxContainer:
 	return _actions
+
+## Test seams for the manor card's face.
+func stat_text(key: String) -> String:
+	return String((_stat_cells[key] as Label).text) if _stat_cells.has(key) else ""
+
+func stat_tooltip(key: String) -> String:
+	return String((_stat_cells[key] as Label).tooltip_text) if _stat_cells.has(key) else ""
+
+func stats_grid() -> GridContainer:
+	return _stats
+
+func rates_box() -> VBoxContainer:
+	return _rates
+
+func painting_box() -> Control:
+	return _painting_box
+
+func painting_texture() -> Texture2D:
+	return _painting.texture
 
 func slots_row() -> HBoxContainer:
 	return _slots

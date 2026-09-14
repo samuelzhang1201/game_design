@@ -7,6 +7,7 @@
     python3 assets/flux/install_map_art.py ui       # post.py icon tier -> assets/icons/ (resource strip, realm card)
     python3 assets/flux/install_map_art.py cast     # K-xx -> assets/portraits/
     python3 assets/flux/install_map_art.py biomes   # T-xx -> assets/biomes/ (BIOMES LAYER experiment 2026-09-14)
+    python3 assets/flux/install_map_art.py paintings  # B-xx -> assets/manors/paint/ (the manor card's painted estate)
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
 blue channel (see sepia_alpha_template.json for the same steps as a ComfyUI
@@ -325,9 +326,100 @@ def install_biomes(size: int = BIOME_TILE_PX, feather: int = BIOME_FEATHER_PX) -
     return done
 
 
+## The manor card's painted estates (owner 2026-09-14): library B-01..B-36
+## (estate_paint_art.csv; key = the estate's focus_tier, the same key as its
+## map drawing), KEPT IN COLOUR — a painting is looked at, not tinted — and
+## NOT cut out: the vignette fades into its own cream paper, which the card
+## shows as it is. Sized by use (owner 2026-09-13): the card cover-crops it
+## into about 216 x 190 design px, drawn at up to ~3x on the largest window,
+## so the 1280 x 1024 render is boxed down to 720 x 576 — the same 5:4.
+PAINT_SIZE = (720, 576)
+## The vignette leaves wide cream paper round the scene, and the card is a
+## small box: the render is first cropped to the SCENE — every pixel that is
+## not the paper, the paper's colour measured in the four corners — padded by
+## PAINT_PAD of its size and widened to 5:4 inside the render, so the holding
+## fills the card instead of floating small in its margins (2026-09-14, the
+## first pilot put the scene in the middle two thirds).
+PAINT_PAD = 0.04
+PAINT_PAPER_TOL = 26
+
+
+def scene_box(w: int, h: int, px: bytearray, aspect: float) -> tuple:
+    """The crop (x0, y0, x1, y1) that holds everything not paper, padded and
+    widened to `aspect`, clamped to the image."""
+    corners = [(4, 4), (w - 5, 4), (4, h - 5), (w - 5, h - 5)]
+    ref = [sum(px[(y * w + x) * 4 + c] for x, y in corners) // 4 for c in range(3)]
+    x0, y0, x1, y1 = w, h, -1, -1
+    step = 2
+    for y in range(0, h, step):
+        base = y * w * 4
+        for x in range(0, w, step):
+            i = base + x * 4
+            d = abs(px[i] - ref[0]) + abs(px[i + 1] - ref[1]) + abs(px[i + 2] - ref[2])
+            if d > PAINT_PAPER_TOL:
+                if x < x0: x0 = x
+                if x > x1: x1 = x
+                if y < y0: y0 = y
+                if y > y1: y1 = y
+    if x1 < 0:
+        return 0, 0, w, h
+    pad_x = int((x1 - x0) * PAINT_PAD)
+    pad_y = int((y1 - y0) * PAINT_PAD)
+    x0, y0, x1, y1 = max(0, x0 - pad_x), max(0, y0 - pad_y), min(w, x1 + pad_x), min(h, y1 + pad_y)
+    bw, bh = x1 - x0, y1 - y0
+    if bw / bh < aspect:
+        grow = int(bh * aspect) - bw
+        x0, x1 = x0 - grow // 2, x1 + grow - grow // 2
+    else:
+        grow = int(bw / aspect) - bh
+        y0, y1 = y0 - grow // 2, y1 + grow - grow // 2
+    # Slide back inside the render; if the box outgrew it, take the render.
+    if x0 < 0: x1, x0 = x1 - x0, 0
+    if x1 > w: x0, x1 = max(0, x0 - (x1 - w)), w
+    if y0 < 0: y1, y0 = y1 - y0, 0
+    if y1 > h: y0, y1 = max(0, y0 - (y1 - h)), h
+    return x0, y0, x1, y1
+
+
+def crop_rgba(w: int, px: bytearray, box: tuple) -> tuple:
+    x0, y0, x1, y1 = box
+    cw, chh = x1 - x0, y1 - y0
+    out = bytearray(cw * chh * 4)
+    for y in range(chh):
+        src = ((y0 + y) * w + x0) * 4
+        out[y * cw * 4:(y + 1) * cw * 4] = px[src:src + cw * 4]
+    return cw, chh, out
+
+
+def install_paintings(size: tuple = PAINT_SIZE) -> int:
+    rows = list(csv.DictReader((HERE / "estate_paint_art.csv").open(encoding="utf-8")))
+    dest = ROOT / "assets" / "manors" / "paint"
+    dest.mkdir(parents=True, exist_ok=True)
+    done = 0
+    for r in rows:
+        art_id, key, seed = r["art_id"], r["key"], r.get("seed", "").strip()
+        hits = sorted((HERE / "out" / "estates").glob("%s_*.png" % art_id))
+        if seed:
+            hits = [h for h in hits if h.stem.endswith("_s" + seed)] or hits
+        if not hits:
+            print("  (no render for %s / %s)" % (art_id, key))
+            continue
+        w, h, ch, px = decode_png(hits[-1])
+        rgba = to_rgba(w, h, ch, bytearray(px))
+        tw, th = size
+        box = scene_box(w, h, rgba, tw / th)
+        cw, chh, scene = crop_rgba(w, rgba, box)
+        small = resize_rgba(cw, chh, scene, tw, th)
+        encode_png(dest / ("%s.png" % key), tw, th, 4, bytes(small))
+        print("  %-6s %-10s %dx%d" % (art_id, key, tw, th))
+        done += 1
+    return done
+
+
 def main() -> int:
     chapters = {"goods": install_goods, "decor": install_decor, "cast": install_cast,
-                "ui": install_ui, "estates": install_estates, "biomes": install_biomes}
+                "ui": install_ui, "estates": install_estates, "biomes": install_biomes,
+                "paintings": install_paintings}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2

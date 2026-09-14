@@ -40,13 +40,15 @@ SERVER = "http://127.0.0.1:8188"
 # Prompt library §0.3: where each ID prefix is filed.
 CHAPTER_DIR = {
     "C": "characters", "K": "cast", "E": "expressions", "P": "expressions", "M": "map",
-    "T": "terrain", "I": "icons", "D": "decor", "G": "goods", "W": "tactical",
+    "T": "terrain", "I": "icons", "D": "decor", "G": "goods", "B": "estates", "W": "tactical",
     "V": "events", "U": "ui",
 }
 # Table-driven chapters carry their canvas per chapter (§5, §6, §7, §9);
 # E/P rows are fragments layered onto a character, not assets on their own.
+# B- (§6.11, 2026-09-14) is the manor card's painted estate: the v2 colour
+# style of the characters, on its own 5:4 vignette canvas.
 TABLE_CANVAS = {"T": "C-TILE", "I": "C-ICON", "D": "C-MAPMARK", "G": "C-MAPMARK",
-                "W": "C-SYMBOL",
+                "B": "C-ESTATE", "W": "C-SYMBOL",
                 "U": "C-UIPIECE", "E": "", "P": ""}
 # Prompt library §10.7 target sizes per canvas, generated at Flux's native
 # 1024-class resolution (icons and tiles are downscaled afterwards).
@@ -55,6 +57,7 @@ CANVAS_SIZE = {
     "C-ICON": (1024, 1024), "C-TILE": (1024, 1024), "C-MAP": (1536, 1024),
     "C-SCENE": (1536, 1024), "C-SYMBOL": (1024, 1024), "C-MAPMARK": (1024, 1024),
     "C-UIPIECE": (1024, 1024), "C-UIWIDE": (1536, 512), "C-FRAME": (1792, 1008),
+    "C-ESTATE": (1280, 1024),
 }
 # One preset per model: which template graph to fill and the sampler values
 # the prompt library recommends (§1.5). schnell is a 4-step distilled Flux.1

@@ -126,6 +126,7 @@ drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 | `[C-UIWIDE]` | UI 长条部件（`U-03`/`U-08`/`U-13`/`U-17`，用 `--canvas C-UIWIDE`） | `a single wide user interface strip drawn flat and face-on with no perspective, running the full width of the frame with only a thin even margin at each end, straight true horizontal edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 3:1 horizontal` |
 | `[C-FRAME]` | 满屏装饰画框（`U-19`，2026-09-12） | `a full-bleed decorative screen border, the ornament confined to a band around the four edges and the corners, the entire middle two thirds left as plain unmarked cream vellum with absolutely nothing drawn on it, symmetrical left to right, no text, 16:9 horizontal` |
 | `[C-MAPMARK]` | 手绘地图符号（`D-`，2026-09-12） | `single map symbol drawn in flat side elevation, pure white background, no parchment, nothing at all beneath the object, no ground line, no ground plate, no cast shadow, centred with generous margin, 1:1 square` |
+| `[C-ESTATE]` | 庄园彩绘（`B-`，2026-09-14） | `a painted vignette of one rural holding seen from a gentle raised three-quarter view, the whole holding inside the frame with a little ground and sky around it, the edges fading softly into plain cream paper, no text, no border, no frame, 5:4 horizontal` |
 
 ### 1.4 调色板（写进美术规范，别让 AI 自由发挥）
 
@@ -1541,6 +1542,51 @@ background, no numerals, no text [C-ICON]
 | `G-38` | 羊 | `a standing sheep in heavy fleece in profile, with a pair of iron shears beside it` |
 
 ---
+
+### 6.11 庄园彩绘 `B-`（2026-09-14 新增）
+
+> **manor 信息卡顶部的建筑彩绘**（owner 2026-09-14）：点开一座 manor，左栏信息卡上方三分之一显示它的产业庄园画——和地图图例 `D-43`~`D-78` **一一对应**（十二种主业 × 小/中/大，同一 `key`，`assets/flux/estate_paint_art.csv`），但**风格与人物立绘一致**：§1.1 的 v2 彩铅 `STYLE_CORE.txt`（风格核本身就要求建筑与人物同样上色），画幅 `[C-ESTATE]`（5:4 横幅、边缘淡入奶油纸）。不去底、保留颜色，按用途装入 `assets/manors/paint/<key>.png`（信息卡画面约 216×190 设计像素 × 最大约 3 倍窗口缩放 → 720×576）。
+>
+> 主体沿用 `D-` 的内容（主宅 + 该产业的作业场），改成一幅上了色的乡间小景，允许几个劳作的小人物；不写"map symbol / flat side elevation"那类地图词。
+
+| ID | 对象 | Prompt 主体 |
+|---|---|---|
+| `B-01` | 庄园彩绘·粮田·小 | `a small grain holding: a thatched cottage beside one narrow strip field of ripening wheat, a wattle fence and a haystack, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-02` | 庄园彩绘·粮田·中 | `a grain manor: a stone farmhouse with a thatched barn, a windmill on a low mound, three strip fields of golden wheat in front, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-03` | 庄园彩绘·粮田·大 | `a great grain estate: a manor hall with a tithe barn, two windmills, a hamlet of thatched cottages, wide strip fields of golden wheat bounded by hedges, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-04` | 庄园彩绘·牧牛·小 | `a small cattle holding: a thatched cottage with a wattle-fenced paddock holding two brown cows, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-05` | 庄园彩绘·牧牛·中 | `a cattle manor: a stone farmhouse with a long byre, a fenced green pasture with a small herd of cattle and a wooden water trough, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-06` | 庄园彩绘·牧牛·大 | `a great cattle estate: a manor hall with two long byres, wide fenced green pastures with herds of cattle, a hamlet of cottages and a haystack yard, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-07` | 庄园彩绘·牧羊·小 | `a small sheep holding: a stone cottage with a dry-stone sheepfold holding a few white sheep on a grassy slope, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-08` | 庄园彩绘·牧羊·中 | `a sheep manor: a farmhouse with a shearing shed, a large stone-walled fold and a flock of sheep grazing on a low hillside, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-09` | 庄园彩绘·牧羊·大 | `a great sheep estate: a manor hall with a wool barn and shearing sheds, many stone-walled folds and flocks spread across rolling hills, a hamlet of cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-10` | 庄园彩绘·林场·小 | `a small timber holding: a woodcutter's cottage at the edge of an oak wood with a stack of cut logs and a few felled trunks, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-11` | 庄园彩绘·林场·中 | `a timber manor: a farmhouse with a saw-pit shed, stacks of seasoned timber and a coppice of broadleaf trees behind, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-12` | 庄园彩绘·林场·大 | `a great timber estate: a manor hall with long timber sheds and a saw-pit, great stacks of logs, carts of timber, a deep woodland behind and a hamlet of cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-13` | 庄园彩绘·蜂场·小 | `a small bee holding: a thatched cottage with three straw bee skeps on a wooden bench among wildflowers, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-14` | 庄园彩绘·蜂场·中 | `a honey manor: a farmhouse with a row of straw bee skeps under a lean-to and a small blossoming orchard, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-15` | 庄园彩绘·蜂场·大 | `a great honey estate: a manor hall with long benches of bee skeps under sheds, a large blossoming orchard and a hamlet of cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-16` | 庄园彩绘·葡萄园·小 | `a small wine holding: a stone cottage beside two rows of staked vines on a sunny slope, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-17` | 庄园彩绘·葡萄园·中 | `a wine manor: a stone farmhouse with a wine-press shed and oak barrels, terraces of staked vines climbing the slope, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-18` | 庄园彩绘·葡萄园·大 | `a great wine estate: a manor hall with a large press house and rows of oak barrels, wide terraced vineyards over the hills, a hamlet of cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-19` | 庄园彩绘·椰枣·小 | `a small date holding: a flat-roofed mud-brick cottage with three tall date palms in dry sandy country, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-20` | 庄园彩绘·椰枣·中 | `a date manor: a flat-roofed mud-brick house with a walled courtyard and a grove of date palms along an irrigation channel, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-21` | 庄园彩绘·椰枣·大 | `a great date estate: a large flat-roofed mud-brick house with towers, a wide grove of date palms along irrigation channels, a cluster of mud-brick cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-22` | 庄园彩绘·皮毛·小 | `a small trapping holding: a log cabin in a snowy clearing with a frame of stretched pelts drying beside it, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-23` | 庄园彩绘·皮毛·中 | `a fur manor: a timber lodge with drying frames of stretched pelts and a store hut, a dark conifer forest behind, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-24` | 庄园彩绘·皮毛·大 | `a great fur estate: a timber hall with long rows of drying frames of pelts, store houses and a cluster of log cabins before a conifer forest, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-25` | 庄园彩绘·渔业·小 | `a small fishing holding: a thatched cottage on the shore with one boat drawn up on the shingle and a net drying on a rack, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-26` | 庄园彩绘·渔业·中 | `a fishing manor: a stone house by a wooden jetty, three fishing boats drawn up, racks of drying nets and fish, the sea beyond, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-27` | 庄园彩绘·渔业·大 | `a great fishing estate: a manor house on the shore with a long stone quay, many fishing boats, smokehouses and drying racks, a row of fishermen's cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-28` | 庄园彩绘·盐田·小 | `a small salt holding: a cottage beside two rectangular salt pans of shallow shining water on a flat coast, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-29` | 庄园彩绘·盐田·中 | `a salt manor: a stone house with a salt store, a grid of rectangular salt pans, workers raking white heaps of salt, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-30` | 庄园彩绘·盐田·大 | `a great salt estate: a manor house with large salt stores, wide grids of rectangular salt pans, white heaps of salt and a row of workers' cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-31` | 庄园彩绘·采石·小 | `a small quarry holding: a cottage beside a small pale quarry face with a few cut stone blocks, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-32` | 庄园彩绘·采石·中 | `a stone manor: a stone house with a masons' shed, a quarry face with a wooden hoist and stacked cut blocks, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-33` | 庄园彩绘·采石·大 | `a great quarry estate: a manor house with masons' halls, a wide pale quarry face with hoists and wooden cranes, great stacks of cut blocks, a hamlet of cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-34` | 庄园彩绘·铁矿·小 | `a small mine holding: a cottage beside a timbered mine adit into a hillside with an ore cart, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-35` | 庄园彩绘·铁矿·中 | `an iron manor: a stone house with a bloomery furnace giving smoke, a timbered mine adit into the hill, ore carts and heaps of dark ore, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+| `B-36` | 庄园彩绘·铁矿·大 | `a great iron estate: a manor house with several bloomery furnaces giving smoke, mine adits into the hill, ore carts on wooden rails, heaps of ore and a hamlet of cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
 
 ## 7. 战术地图元素 `W-`
 

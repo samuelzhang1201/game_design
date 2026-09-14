@@ -78,6 +78,8 @@ center, ask, known, actions}` shape `province_card` returns, so
 (icons from `resource_icons.csv`, glyphs until art exists) and an action row.
 `known == "basic"` for manors outside the player's realm, as for provinces.
 
+**The card's face** (owner 2026-09-14): over the card, a third of its height, the painting of the manor's estate (library `B-`, the same industry × size row as its map drawing, `data/manor_estates.csv` `painting`); below the title the attributes above as icons — owner, province, seat, terrain, land, area, people, tax, strategic and civil goods a month, chief good, estate size, defence, slots, value, price — a short value beside each and the full fact in its tooltip (`manor_card.stats`); then **Output a month**, one row per good the manor makes with `+N / mo` and, in the tooltip, what the units are worth and to which pool (`manor_card.rates`, from `ManorEconomy.line_of`).
+
 ## 4. Province tie-in
 
 - The province card gains a **Manors** field: "N manors — crown k, House A m,

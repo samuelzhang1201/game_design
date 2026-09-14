@@ -979,6 +979,19 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	var burg := MapManors.burg_of(repo, cell)
 	if burg != "":
 		fields.append(["Seat", _label(repo.burgs, burg)])
+	# The card's face (owner 2026-09-14): the estate's painting over the card,
+	# and the manor's facts as icons — a short value beside each, the whole
+	# of it in its tooltip. `fields` stays for tools and tests.
+	var stats: Array = []
+	card["stats"] = stats
+	card["rates"] = []
+	card["painting"] = estate_painting(repo, state, cell)
+	stats.append(_stat("manor_owner", "The crown" if crowns else (house if house != "" else "no one"),
+		"Held by — %s" % ("the crown" if crowns else ("House " + house if house != "" else "no one"))))
+	stats.append(_stat("manor_province", String(prov.get("label", province)), "Province — %s" % subtitle))
+	if burg != "":
+		stats.append(_stat("manor_seat", _label(repo.burgs, burg),
+			"Seat — the town of %s stands in it" % _label(repo.burgs, burg)))
 	if card["known"] == "basic":
 		# Across the border a manor that touches the realm may be bought
 		# (owner 2026-09-14): its card offers that one order.
@@ -1058,6 +1071,45 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		fields.append(["Sells for", "%d gold" % roundi(MapManors.sell_price_of(repo, state, cell))])
 	else:
 		fields.append(["Asking price", "%d gold" % roundi(MapManors.price_of(repo, state, cell))])
+	var land_pct := roundi(MapManors.land_value_of(repo, cell) * 100.0)
+	var area := roundi(MapManors.area_of(repo, cell) * scale * scale)
+	var unit := String(repo.map_info.get("distance_unit", "px"))
+	if terrain != "":
+		stats.append(_stat("manor_terrain", terrain.split(" · ")[0], "Terrain — %s" % terrain))
+	stats.append(_stat("manor_land", "%d%%" % land_pct,
+		"Land — how kindly the ground is to farming: %d%%" % land_pct))
+	stats.append(_stat("manor_area", "%d %s²" % [area, unit], "Area — %d %s²" % [area, unit]))
+	stats.append(_stat("manor_people", _short_num(float(people)),
+		"People — %d live on the manor%s" % [people, ", its town included" if town != "" else ""]))
+	var tariff := int(line["tariff"])
+	stats.append(_stat("manor_tax", "%d/mo" % int(line["tax"]), "Tax — %d gold a month%s" % [int(line["tax"]),
+		(", %d of it the town's tariff" % tariff) if tariff > 0 else ""]))
+	stats.append(_stat("manor_strategic", "%d/mo" % int(line["strategic"]),
+		"Strategic goods — %d gold's worth a month" % int(line["strategic"])))
+	stats.append(_stat("manor_civil", "%d/mo" % int(line["civil"]),
+		"Civil goods — %d gold's worth a month" % int(line["civil"])))
+	var focus_now: Dictionary = repo.manor_focus.get(MapManors.focus_of(repo, state, cell), {})
+	stats.append(_stat("manor_focus", String(focus_now.get("label", "none")),
+		"Chief good — %s" % _field_text(fields, "Chief good")))
+	var estate_text := _field_text(fields, "Estate")
+	if estate_text != "":
+		stats.append(_stat("manor_estate", estate_text.get_slice(", ", estate_text.get_slice_count(", ") - 1).replace("size ", ""),
+			"Estate — %s" % estate_text))
+	stats.append(_stat("manor_defence", str(roundi(MapManors.defence_of(repo, state, cell))),
+		"Defence — how hard the manor is to take"))
+	stats.append(_stat("manor_slots", "%d/%d" % [MapManors.slots_used(state, cell), MapManors.slots_of(repo, cell)],
+		"Building slots — %s; buildings: %s" % [_field_text(fields, "Slots"), _field_text(fields, "Buildings")]))
+	stats.append(_stat("manor_value", _short_num(MapManors.base_value_of(repo, state, cell)),
+		"Value — %s" % _field_text(fields, "Value")))
+	if crowns:
+		stats.append(_stat("manor_price", _short_num(MapManors.sell_price_of(repo, state, cell)),
+			"Sells for — %s" % _field_text(fields, "Sells for")))
+	else:
+		stats.append(_stat("manor_price", _short_num(MapManors.price_of(repo, state, cell)),
+			"Asking price — %s" % _field_text(fields, "Asking price")))
+	# What it makes a month, good by good (owner 2026-09-14): the same line
+	# the month's settlement reads.
+	card["rates"] = production_rates(repo, line)
 	if state != null:
 		for i in range(state.manor_log.size() - 1, -1, -1):
 			var t: Dictionary = state.manor_log[i]
@@ -1074,6 +1126,56 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	card["actions"] = manor_actions(repo, state, cell)
 	card["slot_actions"] = slot_actions(repo, state, cell)
 	return card
+
+## One fact of a manor card: an icon key (data/resource_icons.csv), a short
+## value for beside it, and the whole of it for the tooltip.
+static func _stat(key: String, text: String, tooltip: String) -> Dictionary:
+	return {"key": key, "text": text, "tooltip": tooltip}
+
+## The value of a named row in a card's fields, or "".
+static func _field_text(fields: Array, name: String) -> String:
+	for f: Array in fields:
+		if String(f[0]) == name:
+			return String(f[1])
+	return ""
+
+## 1234 -> "1234", 45678 -> "45.7k", 1234567 -> "1.2M": a value that fits
+## beside an icon; the tooltip carries the exact figure.
+static func _short_num(v: float) -> String:
+	if absf(v) >= 1000000.0:
+		return "%.1fM" % (v / 1000000.0)
+	if absf(v) >= 10000.0:
+		return "%.1fk" % (v / 1000.0)
+	return str(roundi(v))
+
+## The painting of a manor's estate (library B-, owner 2026-09-14): the
+## `painting` of the manor_estates.csv row its industry and people choose —
+## the same row as its map drawing, so the card and the map show one estate.
+## "" when there are no rows or the row names none.
+static func estate_painting(repo: DataRepository, state: GameState, cell: int) -> String:
+	var row := estate_tier(repo, MapManors.focus_of(repo, state, cell),
+		float(MapManors.people_of(repo, state, cell)))
+	return String(row.get("painting", ""))
+
+## A manor's output a month, good by good, from its ManorEconomy line:
+## [{good, label, units, gold, pool, tag, texture}], most units first, ties
+## by code — every good its chief work, its buildings and its town make.
+static func production_rates(repo: DataRepository, line: Dictionary) -> Array:
+	var out: Array = []
+	var units: Dictionary = line.get("units", {})
+	for good: String in units:
+		var n := int(units[good])
+		if n <= 0:
+			continue
+		var ge := repo.goods_economy_of(good)
+		out.append({"good": good, "units": n,
+			"label": String(repo.world_row("economy", "goods", good).get("label", good)),
+			"gold": n * int(ge["price_gold"]), "pool": String(ge["pool"]),
+			"tag": good_tag(repo, good), "texture": String(repo.goods_art.get(good, ""))})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return String(a["good"]) < String(b["good"]) if int(a["units"]) == int(b["units"]) \
+			else int(a["units"]) > int(b["units"]))
+	return out
 
 ## One DEMOLISH order per building standing or begun on a crown manor,
 ## validated — the slot row's cross buttons. [{action_code, params,

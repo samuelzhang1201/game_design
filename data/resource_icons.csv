@@ -49,3 +49,19 @@ bld_granary,Granary,huts,"A stone granary: the harvest keeps.",
 bld_chapel,Chapel,cross,"A chapel with its own priest: the pulpit speaks well of the crown.",
 bld_palisade,Palisade,wall,"A ditch and timber wall: a raid has to work for it, and the villages sleep easier.",
 bld_market,Market,market,"A weekly market by charter: tolls, stall rents, and cloth changing hands.",
+manor_owner,Held by,crown,The house that holds the manor.,
+manor_province,Province,tower,The province the manor lies in.,
+manor_seat,Seat,huts,The town that stands in the manor.,res://assets/icons/towns.png
+manor_terrain,Terrain,sun,The land the manor stands on.,
+manor_land,Land,grain,How kindly the ground is to farming.,res://assets/icons/country.png
+manor_area,Area,cloth,How much land the manor covers.,
+manor_people,People,people,"Everyone living on the manor, its town included.",res://assets/icons/population.png
+manor_tax,Tax,coin,"The gold the manor pays a month, its town's tariff included.",res://assets/icons/treasury.png
+manor_strategic,Strategic goods,swords,What the manor's strategic goods are worth a month.,
+manor_civil,Civil goods,grain,What the manor's civil goods are worth a month.,res://assets/icons/grain.png
+manor_focus,Chief good,pick,The good the manor works at.,
+manor_estate,Estate,huts,The size of the estate for its industry.,
+manor_defence,Defence,wall,How hard the manor is to take.,
+manor_slots,Building slots,market,Room for buildings: taken of the whole.,
+manor_value,Value,gem,What the manor is worth before anyone's feelings.,
+manor_price,Price,coin,"What the manor would cost to buy, or bring to sell.",
