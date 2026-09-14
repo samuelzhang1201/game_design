@@ -43,18 +43,17 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	s.rng = Rng.new(seed_value)
 	s.metrics = {
 		"treasury": data.bal("start_treasury"),
+		"strategic": 0.0,
+		"grain": 0.0,  # the CIVIL pool (spec 2026-09-14 §5); the key stays for its readers
 		"tax_rate": data.bal("start_tax_rate"),
 		"tariff_rate": data.bal("start_tariff_rate"),
 		"tax_income": 0.0,
-		"manor_rents": 0.0,
 		"admin_capacity": data.bal("admin_base"),
 		"legitimacy": data.bal("start_metric_default"),
 		"unrest": 0.0,
-		"grain": data.bal("start_grain"),
 		"army_quality": data.bal("start_metric_default"),
 		"church_opinion": data.bal("start_metric_default"),
 		"peasant_contentment": data.bal("start_metric_default"),
-		"grain_capacity_bonus": 0.0,
 		"road_income_bonus": 0.0,
 		"grain_ration": 0.0,
 	}

@@ -18,12 +18,19 @@ func _init(d: DataRepository) -> void:
 ## today, [{cell, building}].
 func advance_day(state: GameState) -> Array:
 	state.day = mini(state.day + 1, Calendar.DAYS_PER_TICK)
-	return MapManors.advance_works(data, state)
+	var done := MapManors.advance_works(data, state)
+	# The month's economy is computed a bucket a day (spec §11.2).
+	RealmEconomy.step_day(data, state)
+	return done
 
 func advance(state: GameState) -> TickReport:
+	var r := TickReport.new()
+	# The month that just ended is settled BEFORE the tick moves: its lines
+	# are the month's own (growth of tick t), and the ledger reasons carry
+	# its tick.
+	_settle_economy(state, r)
 	state.tick += 1
 	state.day = 1
-	var r := TickReport.new()
 	r.finished_works = MapManors.advance_works(data, state)
 	r.tick = state.tick
 	r.season = state.season()
@@ -50,6 +57,54 @@ func advance(state: GameState) -> TickReport:
 	r.event = events.roll(state).duplicate(true)
 	return r
 
+## The month's settlement (spec §5): the crown's provinces in full, the
+## crown's share of the rest, less the ministers' salaries and the court's
+## ration; the harvest in autumn. Whole gold, from RealmEconomy's sums.
+func _settle_economy(state: GameState, r: TickReport) -> void:
+	var m := state.metrics
+	# A save from before the pools loads and settles (the keys are new).
+	for k: String in ["strategic", "grain"]:
+		if not m.has(k):
+			m[k] = 0.0
+	var e := RealmEconomy.realm(data, state)
+	var share := data.bal("crown_share_permille") / 1000.0
+	var own_tax := int(e["crown"]["tax"])
+	var share_tax := int(roundf(share * float(int(e["realm"]["tax"]) - own_tax)))
+	_apply(r, m, "treasury", float(own_tax), "taxes of the crown's provinces")
+	_apply(r, m, "treasury", float(share_tax), "the crown's share of the realm's taxes")
+	_set_metric(r, m, "tax_income", float(own_tax + share_tax), "taxes collected this month")
+	var own_st := int(e["crown"]["strategic"])
+	_apply(r, m, "strategic", float(own_st), "the crown's strategic goods")
+	_apply(r, m, "strategic", float(int(roundf(share * float(int(e["realm"]["strategic"]) - own_st)))),
+		"the crown's share of the realm's strategic goods")
+	var own_cv := int(e["crown"]["civil"])
+	_apply(r, m, "grain", float(own_cv), "the crown's civil goods")
+	_apply(r, m, "grain", float(int(roundf(share * float(int(e["realm"]["civil"]) - own_cv)))),
+		"the crown's share of the realm's civil goods")
+	var salaries := 0
+	for seat: String in state.council:
+		salaries += int(float((data.seats.get(seat, {}) as Dictionary).get("salary_gold", 0)))
+	_apply(r, m, "treasury", float(-salaries), "ministers' salaries")
+	var people := 0
+	for code: String in MapManors.controlled_provinces(data, state):
+		people += RealmEconomy._figure(data, state, "economy.provinces.%s.rural_population" % code)
+		people += RealmEconomy._figure(data, state, "economy.provinces.%s.urban_population" % code)
+	var ration := int(roundf(float(people) / 1000.0 * data.bal("ration_gold_per_1000")))
+	if m.get("grain_ration", 0.0) > 0.0:
+		ration = ration / 2
+	_apply(r, m, "grain", float(-ration), "the court's ration")
+	if Calendar.season_name(state.tick + 1) == "Autumn":
+		_apply(r, m, "grain", float(int(roundf(float(people) / 1000.0 * data.bal("harvest_civil_per_1000")))),
+			"the harvest comes in")
+	var built := MapManors.crown_building_effects(data, state)
+	_apply(r, m, "treasury", float(int(built["treasury"])), "tolls and rents of the crown's buildings")
+	_apply(r, m, "grain", float(int(built["grain"])), "the crown's mills and granaries")
+	m["grain"] = maxf(m["grain"], 0.0)
+	if data.bal("economy_check_full") > 0.0:
+		var bad := RealmEconomy.check_full(data, state)
+		if not bad.is_empty():
+			push_error("economy_check_full: %d province(s) differ from the cache: %s" % [bad.size(), str(bad[0])])
+
 func _drift(state: GameState, r: TickReport) -> void:
 	var m := state.metrics
 	var cap := data.bal("admin_base")
@@ -60,32 +115,13 @@ func _drift(state: GameState, r: TickReport) -> void:
 	else:
 		cap -= data.bal("chancellor_vacancy_penalty")
 	_set_metric(r, m, "admin_capacity", cap, "council administration")
-	var income: float = m["tax_rate"] * cap * data.bal("tax_income_factor") \
-		+ m["tariff_rate"] * data.bal("tariff_income_factor") + m["road_income_bonus"]
-	_set_metric(r, m, "tax_income", income, "taxes and tariffs collected")
-	_apply(r, m, "treasury", income - data.bal("court_upkeep"), "income minus court upkeep")
-	# Manor rents (MANOR_SYSTEM.md §3): what the crown's own manors yield,
-	# on top of taxes and tariffs — a manor bought is a manor that pays.
-	var rents := MapManors.crown_rents(data, state)
-	_set_metric(r, m, "manor_rents", rents, "rents from the crown's manors")
-	if rents > 0.0:
-		_apply(r, m, "treasury", rents, "rents from the crown's manors")
 	# What the crown's finished buildings do each tick (2026-09-13): a
-	# market's tolls, a mill's flour, a chapel's sermons, a hall's order.
+	# chapel's sermons, a hall's order, its walls (the gold and the goods
+	# are settled with the month, in _settle_economy).
 	var built := MapManors.crown_building_effects(data, state)
-	_apply(r, m, "treasury", float(built["treasury"]), "tolls and rents of the crown's buildings")
-	_apply(r, m, "grain", float(built["grain"]), "the crown's mills and granaries")
 	_apply(r, m, "church_opinion", float(built["church_opinion"]), "the crown's chapels")
 	_apply(r, m, "peasant_contentment", float(built["peasant_contentment"]), "lords in residence")
 	_apply(r, m, "unrest", float(built["unrest"]), "the crown's walls")
-	if state.season() == "autumn":
-		_apply(r, m, "grain", data.bal("harvest_gain"), "the harvest comes in")
-	else:
-		var drain := data.bal("grain_drain_winter") if state.season() == "winter" else data.bal("grain_drain")
-		if m["grain_ration"] > 0.0:
-			drain *= 0.5
-		_apply(r, m, "grain", -drain, "the realm eats")
-	m["grain"] = clampf(m["grain"], 0.0, data.bal("grain_cap_base") + m["grain_capacity_bonus"])
 	var unrest_delta: float = (m["tax_rate"] - data.bal("unrest_tax_pivot")) * data.bal("unrest_tax_pressure") - data.bal("unrest_decay")
 	if m["grain"] <= 0.0:
 		unrest_delta += data.bal("unrest_famine")

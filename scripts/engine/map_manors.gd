@@ -763,21 +763,12 @@ static func focus_rent_bonus(repo: DataRepository, state: GameState, cell_id: in
 	var row: Dictionary = repo.manor_focus.get(focus_of(repo, state, cell_id), {})
 	return float(row.get("rent_bonus", 0)) * focus_ramp(repo, state, cell_id)
 
-## Gold per tick the manor yields its holder. `people` may be handed in by
-## a caller that already has it (population_table); below zero it is read.
-## The buildings' tax bonus and the focus's rent bonus both raise it.
-static func rent_of(repo: DataRepository, state: GameState, cell_id: int, people: float = -1.0) -> float:
-	var pop: float = people if people >= 0.0 else population_of(repo, state, cell_id)["total"]
-	return pop / 1000.0 * repo.bal("manor_rent_per_1000") \
-		* (1.0 + building_bonus(repo, state, cell_id, "tax_bonus") + focus_rent_bonus(repo, state, cell_id))
-
-## Gold per tick from every manor the crown holds in its realm — what
-## TickEngine pays into the treasury as "manor rents" (MANOR_SYSTEM.md §3).
-static func crown_rents(repo: DataRepository, state: GameState) -> float:
-	var total := 0.0
-	for cell: int in manors_of_house(repo, state, crown(state), repo.resolve_realm("player_realm")):
-		total += rent_of(repo, state, cell)
-	return total
+## The manor's month of tax, for the card (spec 2026-09-14 §4.2): whole
+## gold, the tariff of its town included, as ManorEconomy figures it. The
+## `people` argument is kept for callers that already hold the count; the
+## count itself is integer and read from the ledger either way.
+static func rent_of(repo: DataRepository, state: GameState, cell_id: int, _people: float = -1.0) -> float:
+	return float(ManorEconomy.line_of(repo, state, cell_id, state.tick)["tax"])
 
 static func defence_of(repo: DataRepository, state: GameState, cell_id: int) -> float:
 	return repo.bal("manor_defence_base") + building_bonus(repo, state, cell_id, "defence_bonus")

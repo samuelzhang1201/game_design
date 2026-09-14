@@ -252,6 +252,10 @@ static func seed_metrics(data: DataRepository, state: GameState) -> void:
 		roundf(float(row["poll_tax"]) * data.bal("tax_rate_per_poll_tax")), 1.0, 10.0)
 	state.metrics["tariff_rate"] = clampf(
 		roundf(float(row["sales_tax"]) * data.bal("tariff_rate_per_sales_tax")), 0.0, 10.0)
+	# The pools start with months of the crown's own production (spec §5).
+	var e := RealmEconomy.realm(data, state)
+	state.metrics["strategic"] = float(int(e["crown"]["strategic"]) * int(data.bal("start_strategic_months")))
+	state.metrics["grain"] = float(int(e["crown"]["civil"]) * int(data.bal("start_civil_months")))
 
 ## The pack's treasuries of every town in a province the crown controls.
 static func crown_town_treasury(data: DataRepository, state: GameState) -> float:

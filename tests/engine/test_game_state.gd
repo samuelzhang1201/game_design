@@ -7,8 +7,9 @@ func before_each() -> void:
 
 ## One truth (owner ruling 2026-09-09): the player's rates are seeded from
 ## the pack's economy row through balance factors, and the treasury (owner
-## 2026-09-13) from the towns of the provinces the crown controls; grain and
-## the drift baselines still come from balance.csv.
+## 2026-09-13) from the towns of the provinces the crown controls; the two
+## goods pools from months of the crown's own production (spec 2026-09-14
+## §5), and the drift baselines still from balance.csv.
 func test_new_campaign_seeds_from_the_pack_and_balance() -> void:
 	var s := GameState.new_campaign(data, 42)
 	assert_eq(s.tick, 0)
@@ -21,7 +22,11 @@ func test_new_campaign_seeds_from_the_pack_and_balance() -> void:
 		clampf(roundf(float(row["poll_tax"]) * data.bal("tax_rate_per_poll_tax")), 1.0, 10.0))
 	assert_eq(s.metrics["tariff_rate"],
 		clampf(roundf(float(row["sales_tax"]) * data.bal("tariff_rate_per_sales_tax")), 0.0, 10.0))
-	assert_eq(s.metrics["grain"], data.bal("start_grain"))
+	var e := RealmEconomy.realm(data, s)
+	assert_eq(s.metrics["grain"],
+		float(int(e["crown"]["civil"]) * int(data.bal("start_civil_months"))))
+	assert_eq(s.metrics["strategic"],
+		float(int(e["crown"]["strategic"]) * int(data.bal("start_strategic_months"))))
 	assert_eq(s.metrics["legitimacy"], data.bal("start_metric_default"))
 	assert_true(s.world.is_empty(), "seeding writes the metric, not an override")
 

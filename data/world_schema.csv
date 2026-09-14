@@ -1,6 +1,10 @@
 path,type,min,max,enum_values,good_direction,llm_cap,alias_to,alias_scale_key,label,notes
-metrics.treasury,float,-100000,100000,,1,60,,,Treasury,gold in the crown's chest
-metrics.grain,float,0,100000,,1,30,,,Grain,stores in the royal granaries
+metrics.treasury,int,-100000,100000,,1,60,,,Treasury,gold in the crown's chest
+metrics.grain,int,0,100000000,,1,30,,,Civil goods,"the CIVIL pool in whole gold (spec §5): food, timber, cloth, wares; the harvest fills it, the court eats from it, building spends it"
+metrics.strategic,int,0,100000000,,1,30,,,Strategic goods,"the STRATEGIC pool in whole gold (spec §5): iron, horses, arms, ships — the army's capacity and reach"
+metrics.civil,int,0,100000000,,1,30,metrics.grain,,Civil goods,the schema's name for the civil pool; the metric key stays grain
+economy.kingdoms.player_realm.strategic,int,0,100000000,,1,30,metrics.strategic,,Strategic goods,
+economy.kingdoms.player_realm.civil,int,0,100000000,,1,30,metrics.grain,,Civil goods,
 metrics.unrest,float,0,100,,-1,5,,,Unrest,
 metrics.legitimacy,float,0,100,,1,3,,,Legitimacy,
 metrics.army_quality,float,0,100,,1,3,,,Army quality,
@@ -10,7 +14,6 @@ metrics.tax_rate,float,1,10,,0,0,,,Tax rate,engine-only: TAX_RATE_ADJUST moves i
 metrics.tariff_rate,float,0,10,,0,0,,,Tariff rate,engine-only: TARIFF_ADJUST moves it
 metrics.tax_income,float,-100000,100000,,1,0,,,Tax income,recomputed every tick
 metrics.admin_capacity,float,0,1000,,1,0,,,Admin capacity,recomputed every tick
-metrics.grain_capacity_bonus,float,0,100000,,1,0,,,Granary capacity,
 metrics.road_income_bonus,float,0,100000,,1,0,,,Road income,
 metrics.grain_ration,float,0,1,,0,0,,,Grain rationing,
 opinion.*,int,-100,100,,1,3,,,Opinion of the ruler,the same cap as tone

@@ -17,26 +17,69 @@ func test_advance_increments_and_reports() -> void:
 	for d in r.metric_deltas:
 		assert_ne(d["reason"], "")
 
-func test_tax_income_formula() -> void:
+## The month's settlement (spec §5): the crown's provinces in full, a share
+## of the rest, less salaries and the ration — all whole gold, all from
+## RealmEconomy's sums for the month that just ended.
+func test_the_months_end_settles_the_three_pools() -> void:
 	var s := GameState.new_campaign(data, 42)
-	engine.advance(s)
-	# income = tax_rate(5) * admin_capacity * 0.8 + tariff_rate(3) * 3.0 + road bonus(0)
-	var chancellor: Character = s.characters[s.council["chancellor"]]
-	var capacity_bonus_per_skill: float = float(data.seats["chancellor"]["capacity_bonus_per_skill"])
-	var cap: float = data.bal("admin_base") + chancellor.skills["sk_admin"] * capacity_bonus_per_skill
-	var expected: float = 5.0 * cap * data.bal("tax_income_factor") + 3.0 * data.bal("tariff_income_factor")
-	assert_almost_eq(s.metrics["tax_income"], expected, 0.001)
+	var e := RealmEconomy.realm(data, s)
+	var share := data.bal("crown_share_permille") / 1000.0
+	var expect := {}
+	for k in ["tax", "strategic", "civil"]:
+		var own := int(e["crown"][k])
+		expect[k] = own + int(roundf(share * float(int(e["realm"][k]) - own)))
+	var salaries := 0
+	for seat: String in s.council:
+		salaries += int(float(data.seats[seat].get("salary_gold", 0)))
+	assert_gt(salaries, 0, "ministers are paid")
+	var people := 0
+	for code: String in MapManors.controlled_provinces(data, s):
+		people += int(roundf(float(WorldLedger.value_of(data, s, "economy.provinces.%s.rural_population" % code))))
+		people += int(roundf(float(WorldLedger.value_of(data, s, "economy.provinces.%s.urban_population" % code))))
+	var ration := int(roundf(float(people) / 1000.0 * data.bal("ration_gold_per_1000")))
+	var t0 := int(s.metrics["treasury"])
+	var st0 := int(s.metrics["strategic"])
+	var cv0 := int(s.metrics["grain"])
+	var built := MapManors.crown_building_effects(data, s)
+	s.tick = 0  # spring: no harvest
+	var r := engine.advance(s)
+	assert_eq(int(s.metrics["treasury"]), t0 + expect["tax"] - salaries + int(built["treasury"]))
+	assert_eq(int(s.metrics["strategic"]), st0 + expect["strategic"])
+	assert_eq(int(s.metrics["grain"]), cv0 + expect["civil"] - ration + int(built["grain"]))
+	assert_eq(int(s.metrics["tax_income"]), expect["tax"])
+	var reasons: Array = []
+	for d in r.metric_deltas:
+		reasons.append(String(d["reason"]))
+	for want in ["taxes of the crown's provinces", "the crown's share of the realm's taxes",
+			"ministers' salaries", "the court's ration"]:
+		assert_true(want in reasons, want)
+	for m in ["treasury", "strategic", "grain"]:
+		assert_eq(s.metrics[m], float(int(s.metrics[m])), "%s stays whole" % m)
 
-func test_grain_seasonal() -> void:
+func test_the_harvest_is_civil_goods_in_autumn() -> void:
 	var s := GameState.new_campaign(data, 42)
-	s.tick = 6  # advance() makes it 7 -> autumn (1-based season blocks)
-	var g0: float = s.metrics["grain"]
-	engine.advance(s)
-	assert_gt(s.metrics["grain"], g0)  # harvest
-	s.tick = 9  # -> 10, winter
-	var g1: float = s.metrics["grain"]
-	engine.advance(s)
-	assert_lt(s.metrics["grain"], g1)
+	s.tick = 6  # advance() settles month 6 and makes it 7: autumn
+	var before := int(s.metrics["grain"])
+	var r := engine.advance(s)
+	var harvest := 0
+	for d in r.metric_deltas:
+		if String(d["reason"]) == "the harvest comes in":
+			harvest = int(d["delta"])
+	assert_gt(harvest, 0)
+	assert_gt(int(s.metrics["grain"]), before, "the harvest outweighs the ration")
+
+func test_the_day_step_warms_a_bucket() -> void:
+	var s := GameState.new_campaign(data, 42)
+	RealmEconomy.forget()
+	engine.advance_day(s)
+	assert_gt(RealmEconomy.compute_count, 0, "a day computes its bucket")
+	assert_lt(RealmEconomy.compute_count, 20, "not the realm")
+
+func test_the_pools_start_with_months_of_the_crowns_own_production() -> void:
+	var s := GameState.new_campaign(data, 42)
+	var e := RealmEconomy.realm(data, s)
+	assert_eq(int(s.metrics["strategic"]), int(e["crown"]["strategic"]) * int(data.bal("start_strategic_months")))
+	assert_eq(int(s.metrics["grain"]), int(e["crown"]["civil"]) * int(data.bal("start_civil_months")))
 
 func test_outcomes_drain_into_next_report() -> void:
 	var s := GameState.new_campaign(data, 42)
@@ -47,35 +90,39 @@ func test_outcomes_drain_into_next_report() -> void:
 	assert_eq(s.recent_outcomes.size(), 0)
 	assert_eq(r.outcomes[0]["action_code"], "TAX_RATE_ADJUST")
 
-## Manor rents (MANOR_SYSTEM.md §3): each tick the crown's manors pay their
-## rent into the treasury, as its own line with its own reason, and the
-## figure is what MapManors says it is. Buying a manor raises next tick's.
-func test_the_crowns_manors_pay_rent_each_tick() -> void:
+## The crown's own provinces pay their taxes in full (spec §5), as a
+## treasury line of their own with its own reason; the manors the crown
+## buys pay from the month they give it the province.
+func test_the_crowns_provinces_pay_their_taxes_each_month() -> void:
 	var s := GameState.new_campaign(data, 42)
-	var expected := MapManors.crown_rents(data, s)
-	assert_gt(expected, 0.0, "the crown holds rent-paying manors")
+	var expected := int(RealmEconomy.realm(data, s)["crown"]["tax"])
+	assert_gt(expected, 0, "the crown holds tax-paying manors")
 	var r := engine.advance(s)
-	assert_almost_eq(s.metrics["manor_rents"], expected, 0.001)
 	var found := false
 	for d in r.metric_deltas:
-		if d["metric"] == "treasury" and String(d["reason"]).contains("manor"):
+		if d["metric"] == "treasury" and String(d["reason"]) == "taxes of the crown's provinces":
 			found = true
-			assert_almost_eq(float(d["delta"]), expected, 0.001)
-	assert_true(found, "the rents are a treasury line of their own")
-	assert_lt(expected, s.metrics["tax_income"], "rents supplement the taxes, they do not replace them")
-	# A manor bought pays from the next tick.
+			assert_eq(int(d["delta"]), expected)
+	assert_true(found, "the crown's own taxes are a treasury line of their own")
+	# Buying every manor of another province of the realm makes it the
+	# crown's, and from the next month it pays in full too.
 	var realm := data.resolve_realm("player_realm")
-	var bought := -1
+	var taken := ""
 	for province: String in MapOwnership.provinces_of(data, s, realm):
-		for cell: int in MapManors.manors_of_province(data, province):
-			if not MapManors.is_crowns(data, s, cell):
-				bought = cell
-				break
-		if bought >= 0:
+		if not MapManors.crown_controls(data, s, province) \
+				and not MapManors.manors_of_province(data, province).is_empty():
+			taken = province
 			break
-	assert_true(MapManors.set_owner(data, s, bought, MapManors.crown(s), "bought"))
-	engine.advance(s)
-	assert_almost_eq(s.metrics["manor_rents"], expected + MapManors.rent_of(data, s, bought), 0.001)
+	assert_ne(taken, "", "the realm holds a province the crown does not")
+	for cell: int in MapManors.manors_of_province(data, taken):
+		MapManors.set_owner(data, s, cell, MapManors.crown(s), "bought")
+	assert_true(MapManors.crown_controls(data, s, taken))
+	var grown := int(RealmEconomy.realm(data, s)["crown"]["tax"])
+	assert_gt(grown, expected, "the province joined the crown's own taxes")
+	var r2 := engine.advance(s)
+	for d in r2.metric_deltas:
+		if d["metric"] == "treasury" and String(d["reason"]) == "taxes of the crown's provinces":
+			assert_eq(int(d["delta"]), grown)
 
 ## The day (owner 2026-09-13): advance_day steps the works and the day;
 ## the thirtieth day's end is a tick, which resets the day and steps the

@@ -11,7 +11,8 @@ extends GutTest
 
 func _repo() -> DataRepository:
 	var r := DataRepository.new()
-	r.balance = {"manor_rent_per_1000": 0.4, "manor_price_per_1000": 40.0,
+	r.balance = {"manor_tax_per_1000": 20.0, "tax_rate_base": 5.0,
+		"tariff_per_sales_tax": 2.0, "manor_price_per_1000": 40.0,
 		"manor_price_per_unit": 2.0, "manor_price_building_ratio": 0.5,
 		"manor_price_land_swing": 0.6, "manor_markup_max": 0.5, "manor_sell_ratio": 0.7,
 		"manor_defence_base": 10.0}
@@ -76,6 +77,7 @@ func _state() -> GameState:
 	var s := GameState.new()
 	s.rng = Rng.new(1)
 	s.tick = 3
+	s.metrics = {"tax_rate": 5.0, "tariff_rate": 3.0}
 	s.player_setup = {"first_name": "Anne", "family_name": "Rex", "flag": ""}
 	var steward := Character.new()
 	steward.id = "steward"
@@ -210,18 +212,23 @@ func test_people_are_the_provinces_shared_by_land_and_town() -> void:
 	WorldLedger.apply(r, s, "economy.provinces.p.rural_population", -1000.0, "plague", "test")
 	assert_almost_eq(float(MapManors.population_of(r, s, 1)["rural"]), 1000.0, 0.001)
 
-## Rent: 2 500 people / 1 000 x 0.4 = 1.0 a tick; a mill's 0.05 makes 1.05.
-## Defence: 10 base, 20 with a palisade.
+## The card's "rent" IS the manor's month of tax (spec 2026-09-14 §4.2):
+## 2 500 people x 20 gold per 1 000 at tax level 5 = 50 whole gold, and a
+## mill's 0.05 tax_bonus raises it. Defence: 10 base, 20 with a palisade.
 func test_buildings_rent_and_defence() -> void:
 	var r := _repo()
 	var s := _state()
-	assert_almost_eq(MapManors.rent_of(r, s, 2), 1.0, 0.0001)
+	var plain := MapManors.rent_of(r, s, 2)
+	assert_almost_eq(plain, float(ManorEconomy.line_of(r, s, 2, s.tick)["tax"]), 0.0001,
+		"the card reads ManorEconomy's line")
+	assert_almost_eq(plain, 50.0, 0.0001)
 	assert_false(MapManors.build(r, s, 2, "castle", "raised"), "no such building")
 	assert_false(MapManors.build(r, s, 2, "mill", ""), "no reason")
 	assert_true(MapManors.build(r, s, 2, "mill", "raised a mill"))
 	assert_false(MapManors.build(r, s, 2, "mill", "raised a mill"), "one mill per manor")
 	assert_eq(MapManors.buildings_of(s, 2), ["mill"])
-	assert_almost_eq(MapManors.rent_of(r, s, 2), 1.05, 0.0001)
+	assert_almost_eq(MapManors.rent_of(r, s, 2), float(ManorEconomy.line_of(r, s, 2, s.tick)["tax"]), 0.0001)
+	assert_gt(MapManors.rent_of(r, s, 2), plain, "a mill's tax bonus raises the month's tax")
 	assert_almost_eq(MapManors.building_cost(r, s, 2), 40.0, 0.0001)
 	assert_almost_eq(MapManors.defence_of(r, s, 2), 10.0, 0.0001)
 	assert_true(MapManors.build(r, s, 2, "palisade", "dug in"))
@@ -299,7 +306,9 @@ func test_the_house_with_most_manors_controls_the_province() -> void:
 ## cell 2 (biome 2, inland) grain or ore; the default is the first allowed.
 ## Grain: 1.5 x 10 x 0.8 = 12 units. Switched to fish at tick 3 with two
 ## ticks to settle: 0 at tick 3, half of 1.5 x 8 x 0.8 = 9.6 at tick 4, all
-## at tick 5. Rent on cell 2 (1.0 base) with grain's 0.1 bonus is 1.1.
+## at tick 5. The chief good no longer touches the month's TAX (spec
+## 2026-09-14 §4.2 — it pays in goods), so the card's rent stays what
+## ManorEconomy's line says.
 func test_a_manor_works_a_chief_good_its_land_allows() -> void:
 	var r := _repo()
 	r.balance["manor_focus_yield_scale"] = 1.0
@@ -325,7 +334,8 @@ func test_a_manor_works_a_chief_good_its_land_allows() -> void:
 	var grain := MapManors.focus_output_of(r, s, 1)
 	assert_eq(String(grain["good"]), "grain")
 	assert_almost_eq(float(grain["units"]), 12.0, 0.001)
-	assert_almost_eq(MapManors.rent_of(r, s, 2), 1.1, 0.0001, "grain adds a tenth to the rent")
+	assert_almost_eq(MapManors.rent_of(r, s, 2), float(ManorEconomy.line_of(r, s, 2, s.tick)["tax"]), 0.0001,
+		"the chief good pays in goods, not in tax")
 	assert_almost_eq(MapManors.base_value_of(r, s, 1), (60.0 + 12.0 * 2.0) * 1.18, 0.001,
 		"the yield counts in the value like town trade does")
 	assert_false(MapManors.set_focus(r, s, 2, "fish", "turned"), "no sea at cell 2")
@@ -343,7 +353,7 @@ func test_a_manor_works_a_chief_good_its_land_allows() -> void:
 	assert_eq(String(MapManors.focus_output_of(r, s, 1)["good"]), "fish")
 	assert_true(MapManors.set_focus(r, s, 2, "ore", "dug"))
 	assert_almost_eq(MapManors.focus_ramp(r, s, 2), 1.0, 0.001, "no transition: at once")
-	assert_almost_eq(MapManors.rent_of(r, s, 2), 1.2, 0.0001)
+	assert_almost_eq(MapManors.rent_of(r, s, 2), float(ManorEconomy.line_of(r, s, 2, s.tick)["tax"]), 0.0001)
 	# The crown's column: cell 1's fish and cell 2's ore, no town trade in
 	# this fixture.
 	var column := MapEconomy.output_of_provinces(r, ["p"], s)

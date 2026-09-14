@@ -7,9 +7,14 @@ func before_each() -> void:
 
 func test_minister_beats_group_concern_with_pitch() -> void:
 	var s := GameState.new_campaign(data, 42)
-	s.metrics["grain"] = 10.0
 	var engine := TickEngine.new(data)
 	var r := engine.advance(s)
+	# The month's settlement fills the civil pool (spec 2026-09-14 §5), so
+	# the stores are emptied after it and the concerns rescanned; what this
+	# test is about is the steward speaking to a low pool.
+	s.metrics["grain"] = 10.0
+	r.concerns = ConcernScanner.scan(s, data)
+	r.suggestions = engine.suggestions.generate(s, r.concerns)
 	if not s.pending_event.is_empty():
 		engine.events.apply_choice(String(s.pending_event["choices"][0]["choice_id"]), s)
 		r.event = {}
