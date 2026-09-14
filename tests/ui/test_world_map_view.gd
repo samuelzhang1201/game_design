@@ -1024,26 +1024,32 @@ func test_the_heights_view_drops_the_political_wash() -> void:
 	v.show_heights = false
 	assert_true(v.political_wash_visible(), "and back when the view closes")
 
-## BIOMES LAYER (experiment 2026-09-14): the default map lays a ground tile
-## over the land of every biome with art — one mesh per biome, kept between
-## frames, hidden under the themes that draw the land their own way, and off
-## when balance turns the alpha to 0.
-func test_the_biomes_layer_is_one_mesh_per_biome_on_the_default_map() -> void:
+## BIOMES LAYER (experiment 2026-09-14): the default map mixes a ground
+## tile per biome over the land through a shader on the Biomes child —
+## behind the view, over the sea and the Ground child (terrain and wash),
+## fed by the pack's baked weight maps — hidden under the themes that draw
+## the land their own way, and off when balance turns the alpha to 0.
+func test_the_biomes_layer_mixes_tiles_behind_the_view_over_the_ground() -> void:
 	var v := _view()
 	await wait_frames(2)
+	var ground := v.ground_layer()
+	assert_not_null(ground)
+	assert_true(ground.show_behind_parent, "the ground is drawn under the view's own layers")
+	assert_eq(ground.get_index(), 1, "over the sea")
+	var b := v.biome_layer()
+	assert_not_null(b)
+	assert_true(b.show_behind_parent, "the tiles too")
+	assert_eq(b.get_index(), 2, "over the ground, under the water and the roads")
+	assert_not_null(b.material, "the mixing shader")
+	assert_gt(b.tile_count(), 3, "the pack's biomes brought their tiles")
+	assert_true(b.has_weights(), "the pack's world_biome_weights baked")
+	assert_eq(b.field_size(), v.map_size(), "the field is the map's canvas")
 	assert_true(v.biomes_visible(), "on by default")
-	var layers := v.biome_layers()
-	assert_gt(layers.size(), 3, "the pack's biomes wear their tiles")
-	var seen: Dictionary = {}
-	for layer: Dictionary in layers:
-		assert_false(seen.has(layer["biome_id"]), "one layer per biome")
-		seen[layer["biome_id"]] = true
-		assert_eq((layer["mesh"] as ArrayMesh).get_surface_count(), 1, "one draw call each")
-		assert_true(String(layer["texture"]).begins_with("res://assets/biomes/"), "art from the tile folder")
-	assert_true(v.biome_layers()[0]["mesh"] == layers[0]["mesh"], "kept between frames")
+	assert_true(b.visible)
 	v.show_heights = true
 	assert_false(v.biomes_visible(), "hidden under a theme")
-	assert_eq(v.biome_layers().size(), 0)
+	await wait_frames(1)
+	assert_false(b.visible)
 	v.show_heights = false
 	v.show_biomes = false
 	assert_false(v.biomes_visible(), "the snapshot tool's switch")

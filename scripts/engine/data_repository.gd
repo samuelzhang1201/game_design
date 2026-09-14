@@ -126,6 +126,10 @@ var biome_texture_path: String = ""
 ## data/maps.csv sea_texture: world_sea_distance.png, every pixel its
 ## distance to land in native px (MapIndex.bake_sea_distance); SeaLayer.
 var sea_texture_path: String = ""
+## BIOMES LAYER (experiment 2026-09-14). data/maps.csv biome_weights: the
+## base path of world_biome_weights_N.png, each biome's blurred share of
+## the land (MapIndex.bake_biome_weights); BiomeLayer. "" when unbaked.
+var biome_weights_path: String = ""
 ## data/maps.csv cell_texture: world_cell_index.png, R | G<<8 = the land
 ## cell under a pixel (white = water) — how a click finds its manor.
 var cell_texture_path: String = ""
@@ -386,7 +390,6 @@ func load_map(id: String) -> bool:
 	provinces_by_id.clear()
 	MapOwnership.invalidate()
 	MapTerrain.invalidate()
-	MapBiomes.invalidate()  # BIOMES LAYER (experiment 2026-09-14)
 	MapObjects.forget_decor()
 	MapEconomy.forget()
 	MapPalette.forget_colors()
@@ -501,6 +504,7 @@ func load_map(id: String) -> bool:
 	province_texture_path = String(m.get("province_texture", ""))
 	biome_texture_path = String(m.get("biome_texture", ""))
 	sea_texture_path = String(m.get("sea_texture", ""))
+	biome_weights_path = String(m.get("biome_weights", ""))  # BIOMES LAYER (experiment 2026-09-14)
 	cell_texture_path = String(m.get("cell_texture", ""))
 	_resolve_realm_slots()
 	return true

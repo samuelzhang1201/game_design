@@ -162,6 +162,11 @@ var _coast_rings: Array = []
 ## The sea: four bands over the pack's distance field, drawn behind this
 ## item (SeaLayer, owner 2026-09-13). Test seam: sea_layer().
 var _sea: SeaLayer
+## BIOMES LAYER (experiment 2026-09-14): the ground (terrain and wash) and
+## the biome tiles, children behind this item after the sea. Test seams:
+## ground_layer(), biome_layer().
+var _ground: GroundLayer
+var _biome: BiomeLayer
 ## Every dashed line on the sheet — borders, hatching, seams, lanes — cut
 ## once per zoom in native px and kept (MapDashCache); a frame transforms
 ## and draws each set as ONE polyline. Test seam: dash_cache().
@@ -226,6 +231,24 @@ func _ready() -> void:
 	_province_image = _load_image(Game.data.province_texture_path)
 	_cell_image = _load_image(Game.data.cell_texture_path)
 	_biome_image = _load_image(Game.data.biome_texture_path)
+	# BIOMES LAYER (experiment 2026-09-14). The terrain and the wash draw on
+	# the Ground child and the biome tiles on the Biomes child, both behind
+	# this item in that order over the sea, so the tiles lie OVER the wash
+	# and UNDER everything this item draws itself (water, roads, woods,
+	# towns): a child cannot be drawn between a parent's own commands.
+	_ground = GroundLayer.new()
+	_ground.name = "Ground"
+	_ground.draw_with = _draw_ground
+	_ground.show_behind_parent = true
+	_ground.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_ground.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	add_child(_ground)
+	move_child(_ground, 1)
+	_biome = BiomeLayer.new()
+	_biome.name = "Biomes"
+	add_child(_biome)
+	move_child(_biome, 2)
+	_biome.setup(Game.data, _biome_image)
 	_build_coast_rings()
 	for code: String in Game.data.kingdoms:
 		var row: Dictionary = Game.data.kingdoms[code]
@@ -323,22 +346,16 @@ func _draw() -> void:
 		return
 	if not _homed and size.y > 0.0:
 		_go_home()
-	_layer("terrain", func() -> void:
-		# The sea is the SeaLayer child behind this item; it follows the
-		# view's transform. The land mesh is drawn over it.
-		_sea.position = _offset
-		_sea.scale = Vector2(_zoom, _zoom)
-		draw_mesh(_terrain_mesh, null, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)))
-	_layer("heights", _draw_heights)
-	_layer("paper", _draw_paper_grain)
-	_layer("sea_decor", _draw_sea_decor)
-	# The wash goes UNDER the water and the roads (owner 2026-09-12, after
-	# mapSample.jpg): painted over them it muted every river and track on
-	# claimed land, which is most of the map.
-	_layer("wash", _draw_political_wash)
-	# BIOMES LAYER (experiment 2026-09-14): OVER the wash, under the water
-	# and the roads — under a 0.72 wash the tiles were not there at all.
-	_layer("biomes", _draw_biomes)
+	# The sea, the ground (terrain and wash) and the biome tiles are the
+	# children behind this item, in that order; they follow the view's
+	# transform, and the ground repaints whenever this item does
+	# (BIOMES LAYER experiment 2026-09-14: see _draw_ground).
+	_sea.position = _offset
+	_sea.scale = Vector2(_zoom, _zoom)
+	_biome.position = _offset
+	_biome.scale = Vector2(_zoom, _zoom)
+	_biome.visible = biomes_visible()
+	_ground.queue_redraw()
 	# Filled in place, never reassigned: a lambda captures the local by value,
 	# so `manors = ...` inside it left the badges layer below reading [].
 	var manors: Array = []
@@ -713,10 +730,10 @@ func political_wash_visible() -> bool:
 		and Game.data.bal("map_political_alpha") > 0.0
 
 ## Paint every province in its live owner's colour over the terrain.
-func _draw_political_wash() -> void:
+func _draw_political_wash(target: CanvasItem = self) -> void:
 	if not political_wash_visible():
 		return
-	var rid := get_canvas_item()
+	var rid := target.get_canvas_item()
 	for fill in political_fills():
 		var code: String = fill["code"]
 		var loops: Array = Game.data.province_borders[code]
@@ -908,10 +925,10 @@ func paper_grain_visible() -> bool:
 func paper_vignette_visible() -> bool:
 	return Game.data.bal("map_paper_vignette") > 0.0
 
-func _draw_paper_grain() -> void:
+func _draw_paper_grain(target: CanvasItem = self) -> void:
 	if not paper_grain_visible():
 		return
-	draw_texture_rect(_paper_texture(), Rect2(Vector2.ZERO, size), true)
+	target.draw_texture_rect(_paper_texture(), Rect2(Vector2.ZERO, size), true)
 
 func _draw_paper_vignette() -> void:
 	if not paper_vignette_visible():
@@ -1062,14 +1079,14 @@ func sea_sprites() -> Array:
 			out.append({"rect": rect, "texture": d["texture"]})
 	return out
 
-func _draw_sea_decor() -> void:
+func _draw_sea_decor(target: CanvasItem = self) -> void:
 	var sprites := sea_sprites()
 	if sprites.is_empty():
 		return
 	var ink := MapTerrain.palette_color(Game.data, "sea_ink", MapTerrain.FALLBACK)
 	ink.a = Game.data.bal("map_sea_decor_alpha")
 	for d in sprites:
-		draw_texture_rect(d["texture"], d["rect"], false, ink)
+		target.draw_texture_rect(d["texture"], d["rect"], false, ink)
 
 ## The terrain decor is ONE mesh (owner 2026-09-13, the decor rework):
 ## every symbol a quad in native px over one atlas of the terrain art
@@ -2300,37 +2317,44 @@ func _draw_manor_badges(badges: Array) -> void:
 func heat_mesh() -> ArrayMesh:
 	return null if not show_heights else MapTerrain.heat_mesh(Game.data)
 
-func _draw_heights() -> void:
+func _draw_heights(target: CanvasItem = self) -> void:
 	var mesh := heat_mesh()
 	if mesh != null:
-		draw_mesh(mesh, null, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset))
+		target.draw_mesh(mesh, null, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset))
 
 
 ## --- BIOMES LAYER (experiment 2026-09-14) ------------------------------
-## The land of each biome laid with its seamless ground tile (MapBiomes),
-## over the terrain mesh and under the paper grain, one draw_mesh per biome
-## with art. Hidden under the themes that draw the land their own way
-## (HEIGHTS, ECONOMY, MANORS) and when map_biome_alpha is 0.
+## The ground: the five layers that used to open this item's own _draw —
+## terrain, heights, paper, sea decor, wash — painted on the Ground child
+## (behind this item, over the sea) so the biome tiles (BiomeLayer, the
+## next child) lie over the wash and under the water and the roads. Same
+## code, same order, same profiling names; `target` is where they draw.
+func _draw_ground(target: CanvasItem) -> void:
+	if _terrain_mesh == null:
+		return
+	_layer("terrain", func() -> void:
+		target.draw_mesh(_terrain_mesh, null, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)))
+	_layer("heights", func() -> void: _draw_heights(target))
+	_layer("paper", func() -> void: _draw_paper_grain(target))
+	_layer("sea_decor", func() -> void: _draw_sea_decor(target))
+	# The wash goes UNDER the water and the roads (owner 2026-09-12, after
+	# mapSample.jpg): painted over them it muted every river and track on
+	# claimed land, which is most of the map.
+	_layer("wash", func() -> void: _draw_political_wash(target))
+
+func ground_layer() -> GroundLayer:
+	return _ground
+
+func biome_layer() -> BiomeLayer:
+	return _biome
+
+## The biome tiles show on the default map only: hidden under the themes
+## that draw the land their own way (HEIGHTS, ECONOMY, MANORS), by the
+## snapshot tool's switch, and when map_biome_alpha is 0.
 func biomes_visible() -> bool:
-	if not show_biomes or show_heights or show_economy or show_manors:
+	if _biome == null or not show_biomes or show_heights or show_economy or show_manors:
 		return false
 	return Game.data.bal("map_biome_alpha") > 0.0
-
-## The layers drawn this frame: {biome_id, texture, mesh} per biome with
-## art and land, [] when the layer is hidden. Test seam.
-func biome_layers() -> Array:
-	return MapBiomes.layers(Game.data) if biomes_visible() else []
-
-func _draw_biomes() -> void:
-	var layers := biome_layers()
-	if layers.is_empty():
-		return
-	var tint := Color(1.0, 1.0, 1.0, Game.data.bal("map_biome_alpha"))
-	var xf := Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)
-	for layer: Dictionary in layers:
-		var tex := UiPalette.load_art(String(layer["texture"]))
-		if tex != null:
-			draw_mesh(layer["mesh"], tex, xf, tint)
 
 ## Province seams as thin, dense dashes in the palette's seam colour — the
 ## same dash cache the kingdom borders use, one polyline per kingdom.

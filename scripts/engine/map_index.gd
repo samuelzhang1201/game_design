@@ -97,6 +97,91 @@ static func bake_sea_distance(biome: Image) -> Image:
 		bytes[i] = mini(int(d[i] + 0.5), 255)
 	return Image.create_from_data(w, h, false, Image.FORMAT_L8, bytes)
 
+## --- The biomes layer's weight maps (experiment 2026-09-14) -----------------
+## Per biome 1..count, its share of the LAND within `radius` low-res px of
+## every point, at 1/`scale` of the index's resolution: the land and each
+## biome's pixels are counted per low-res cell, box-summed twice (two box
+## passes are near a Gaussian), and the biome's sum divided by the land's,
+## so the shares sum to one wherever any land is near and the coast keeps a
+## whole tile — the mesh clips it, so nothing bleeds into the sea. Four
+## biomes per RGBA8 image, biome 4N+1 in R of image N ... 4N+4 in A; a
+## biome beyond `count` is 0. Pure; a bake, never a runtime step.
+static func bake_biome_weights(biome: Image, scale: int, radius: int, count: int) -> Array[Image]:
+	var w := biome.get_width()
+	var h := biome.get_height()
+	var s := maxi(scale, 1)
+	var lw := ceili(float(w) / float(s))
+	var lh := ceili(float(h) / float(s))
+	var n := lw * lh
+	var land := PackedFloat32Array()
+	land.resize(n)
+	# Every biome's counts in one flat array, biome k at k * n.
+	var per := PackedFloat32Array()
+	per.resize(n * count)
+	for y in h:
+		for x in w:
+			var b := biome_at(biome, Vector2i(x, y))
+			if b < 1 or b > count:
+				continue
+			var i := (y / s) * lw + (x / s)
+			land[i] += 1.0
+			per[(b - 1) * n + i] += 1.0
+	land = box_sum(box_sum(land, lw, lh, radius), lw, lh, radius)
+	var blurred := PackedFloat32Array()
+	for k in count:
+		blurred.append_array(box_sum(box_sum(per.slice(k * n, (k + 1) * n), lw, lh, radius), lw, lh, radius))
+	var images: Array[Image] = []
+	for img_i in ceili(float(count) / 4.0):
+		var bytes := PackedByteArray()
+		bytes.resize(n * 4)
+		for i in n:
+			var l := land[i]
+			for c in 4:
+				var k := img_i * 4 + c
+				var v := 0.0
+				if k < count and l > 0.0:
+					v = blurred[k * n + i] / l
+				bytes[i * 4 + c] = clampi(int(v * 255.0 + 0.5), 0, 255)
+		images.append(Image.create_from_data(lw, lh, false, Image.FORMAT_RGBA8, bytes))
+	return images
+
+## The sum of `src` over the (2r+1)-square around each point, clipped at
+## the edges (no padding, no division — the bake takes ratios of two sums,
+## so the window's size cancels). Separable, running sums: O(n). Pure.
+static func box_sum(src: PackedFloat32Array, w: int, h: int, r: int) -> PackedFloat32Array:
+	if r <= 0:
+		return src.duplicate()
+	var tmp := PackedFloat32Array()
+	tmp.resize(w * h)
+	for y in h:
+		var row := y * w
+		var acc := 0.0
+		for x in mini(r, w - 1) + 1:
+			acc += src[row + x]
+		for x in w:
+			tmp[row + x] = acc
+			var add := x + r + 1
+			if add < w:
+				acc += src[row + add]
+			var drop := x - r
+			if drop >= 0:
+				acc -= src[row + drop]
+	var out := PackedFloat32Array()
+	out.resize(w * h)
+	for x in w:
+		var acc := 0.0
+		for y in mini(r, h - 1) + 1:
+			acc += tmp[y * w + x]
+		for y in h:
+			out[y * w + x] = acc
+			var add := y + r + 1
+			if add < h:
+				acc += tmp[add * w + x]
+			var drop := y - r
+			if drop >= 0:
+				acc -= tmp[drop * w + x]
+	return out
+
 ## --- Rasterising an index bitmap (2026-09-13) --------------------------------
 ## `polys[i]` filled with `ids[i]` in the two-byte encoding id_at reads (R =
 ## id & 0xFF, G = id >> 8), untouched pixels white — the same even-odd
