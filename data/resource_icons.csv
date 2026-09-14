@@ -1,6 +1,7 @@
 key,label,icon,tooltip,texture
-treasury,Gold,coin,Gold in the crown's chest. Taxes and tariffs fill it each month; the court's upkeep and your orders empty it.,res://assets/icons/treasury.png
-grain,Grain,grain,Grain in the royal granaries. The harvest fills them each autumn; the realm eats from them the rest of the year.,res://assets/icons/grain.png
+treasury,Gold,coin,Gold in the crown's chest. Taxes fill it each month; salaries and your orders empty it.,res://assets/icons/treasury.png
+grain,Civil goods,grain,"Civil goods, in gold: food, timber, cloth and wares. The harvest and your provinces fill them each month; the court eats from them and building spends them.",res://assets/icons/grain.png
+strategic,Strategic goods,swords,"Strategic goods, in gold: iron, horses, arms and ships. Your provinces fill them each month; the levy and the campaign spend them — the army goes as far as they stretch.",
 population,People,people,Everyone in the realm's towns and countryside. Levies are drawn from them.,res://assets/icons/population.png
 army,Host,swords,"The realm's soldiers under arms, by regiment.",res://assets/icons/army.png
 army_quality,Army,swords,How well drilled the levies are. Drills lapse without fresh levies.,res://assets/icons/army_quality.png

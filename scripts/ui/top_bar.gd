@@ -7,11 +7,17 @@ extends Control
 ## frame inset). Self-wiring: subscribes to Game.state_changed /
 ## report_ready, so screens just instance it.
 
-const ORDER := ["treasury", "grain", "unrest", "legitimacy", "army_quality", "church_opinion"]
+const ORDER := ["treasury", "strategic", "grain", "unrest", "legitimacy", "army_quality", "church_opinion"]
+## Pool metric -> the realm figure (RealmEconomy.realm) it shows monthly.
+const POOLS := {"treasury": "tax", "strategic": "strategic", "grain": "civil"}
+## The crown's second line: its provinces' own tax, strategic and civil.
+const CROWN := ["tax", "strategic", "civil"]
 
 var _value_labels: Dictionary = {}
 var _delta_labels: Dictionary = {}
 var _icons: Dictionary = {}
+var _monthly_labels: Dictionary = {}
+var _crown_labels: Dictionary = {}
 ## speed -> its clock button (0 pause, 1 play, 2x, 4x).
 var _clock_buttons: Dictionary = {}
 
@@ -66,7 +72,28 @@ func _ready() -> void:
 		delta_l.add_theme_font_size_override("font_size", 14)
 		cell.add_child(delta_l)
 		_delta_labels[m] = delta_l
+		if POOLS.has(m):
+			var monthly_l := Label.new()
+			monthly_l.add_theme_font_size_override("font_size", 13)
+			monthly_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+			monthly_l.tooltip_text = "the realm's %s this month" % String(POOLS[m])
+			cell.add_child(monthly_l)
+			_monthly_labels[m] = monthly_l
 		%MetricsRow.add_child(cell)
+	# The crown's own provinces (spec §6): the same three figures, smaller,
+	# each with its share of the realm.
+	for kind: String in CROWN:
+		var crown_cell := HBoxContainer.new()
+		crown_cell.add_theme_constant_override("separation", 4)
+		var crown_icon := ResourceIcon.create({"tax": "treasury", "strategic": "strategic", "civil": "grain"}[kind])
+		crown_icon.name = "CrownIcon_" + kind
+		crown_cell.add_child(crown_icon)
+		var l := Label.new()
+		l.add_theme_font_size_override("font_size", 13)
+		l.tooltip_text = "your provinces' %s this month, and its share of the realm's" % kind
+		crown_cell.add_child(l)
+		_crown_labels[kind] = l
+		%CrownRow.add_child(crown_cell)
 	Game.state_changed.connect(refresh)
 	Game.report_ready.connect(func(_r: TickReport) -> void: refresh())
 	refresh()
@@ -103,6 +130,14 @@ func refresh() -> void:
 		dl.add_theme_color_override("font_color",
 			UiPalette.POSITIVE if delta > 0 else UiPalette.NEGATIVE)
 	%EventChip.visible = not Game.state.pending_event.is_empty()
+	var e := RealmEconomy.realm(Game.data, Game.state)
+	for m: String in _monthly_labels:
+		_monthly_labels[m].text = "+%d" % int(e["realm"][String(POOLS[m])])
+	for kind: String in _crown_labels:
+		var realm_v := int(e["realm"][kind])
+		var crown_v := int(e["crown"][kind])
+		var pct := int(roundf(100.0 * float(crown_v) / maxf(float(realm_v), 1.0)))
+		_crown_labels[kind].text = "%d (%d%%)" % [crown_v, pct]
 
 ## The lit clock button is the speed the game runs at.
 func _refresh_clock() -> void:
@@ -119,6 +154,18 @@ func metric_text(metric: String) -> String:
 
 func delta_text(metric: String) -> String:
 	return String(_delta_labels[metric].text) if _delta_labels.has(metric) else ""
+
+## Test seam: the realm's monthly figure for a pool metric (treasury/strategic/grain).
+func monthly_text(metric: String) -> String:
+	return String(_monthly_labels[metric].text) if _monthly_labels.has(metric) else ""
+
+## Test seam: the crown's provinces' text for "tax"|"strategic"|"civil".
+func crown_text(kind: String) -> String:
+	return String(_crown_labels[kind].text) if _crown_labels.has(kind) else ""
+
+## Test seam: the crown row's Label for a kind.
+func crown_label(kind: String) -> Label:
+	return _crown_labels.get(kind)
 
 ## Test seam: the icon standing in for a metric's name.
 func icon_for(metric: String) -> ResourceIcon:

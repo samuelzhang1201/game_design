@@ -82,3 +82,23 @@ func test_the_clock_buttons_set_the_speed_and_the_date_reads_the_day() -> void:
 	await wait_frames(1)
 	assert_true(other.clock_button(0).button_pressed)
 	assert_true(t.clock_button(0).button_pressed)
+
+## Two lines (spec §6): the realm's stocks and monthly figures, then the
+## crown's provinces' monthly tax, strategic and civil goods with their
+## share of the realm in whole percent, in a smaller font.
+func test_the_bar_shows_the_realm_and_the_crowns_share() -> void:
+	Game.start_campaign(42)
+	var bar := _bar()
+	await wait_frames(2)
+	var e := RealmEconomy.realm(Game.data, Game.state)
+	assert_eq(bar.metric_text("strategic"), str(int(Game.state.metrics["strategic"])))
+	assert_eq(bar.metric_text("grain"), str(int(Game.state.metrics["grain"])))
+	assert_eq(bar.monthly_text("treasury"), "+%d" % int(e["realm"]["tax"]))
+	assert_eq(bar.monthly_text("strategic"), "+%d" % int(e["realm"]["strategic"]))
+	assert_eq(bar.monthly_text("grain"), "+%d" % int(e["realm"]["civil"]))
+	var pct := int(roundf(100.0 * float(e["crown"]["tax"]) / maxf(float(e["realm"]["tax"]), 1.0)))
+	assert_eq(bar.crown_text("tax"), "%d (%d%%)" % [int(e["crown"]["tax"]), pct])
+	assert_true(bar.crown_text("civil").ends_with("%)"))
+	assert_gt(bar.bar_height(), 40.0, "two lines are taller than one")
+	var second: Label = bar.crown_label("tax")
+	assert_lt(second.get_theme_font_size("font_size"), 18, "the second line is smaller")
