@@ -64,6 +64,8 @@ lie_caught_trust_penalty,25,source trust lost when a lie is exposed
 lie_relationship_penalty,12,relationship sentiment lost when a lie is exposed
 memory_exchanges_kept,8,conversational exchanges each character remembers (oldest fall off)
 news_ticker_speed,36,pixels per second the bottom chronicle strip crawls (user request 2026-08-31)
+news_build_milestone_1,0.3,"news bar (owner 2026-09-14): a work in progress is announced when it passes this share done"
+news_build_milestone_2,0.7,"news bar: and again when it passes this one; completion has its own line"
 knowledge_sure_threshold,75,"credibility at/above which a persona sheet says ""You know"" (review finding 2026-09-01)"
 knowledge_doubt_threshold,50,credibility below which a persona sheet says the character doubts what they heard
 map_decor_min_scale,0.45,"world map: screen px per native map px at/above which the terrain symbols (woods, hills, reeds) are drawn — below it the sheet would be a carpet of specks"

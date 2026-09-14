@@ -94,13 +94,18 @@ func _process(delta: float) -> void:
 	while _clock_acc >= per_day and steps < 8:
 		_clock_acc -= per_day
 		steps += 1
+		var before := works_progress()
 		var out := Game.advance_day()
+		# The news bar (owner 2026-09-14): a work's progress at each milestone,
+		# its completion, and the month's close.
+		announce_milestones(before, works_progress())
 		for w: Dictionary in out["finished"]:
-			Game.publish_news("A %s stands at %s." % [
+			Game.publish_news("The %s at %s is complete." % [
 				String((Game.data.manor_buildings.get(String(w["building"]), {}) as Dictionary).get("label", w["building"])).to_lower(),
 				MapManors.label_of(Game.data, int(w["cell"]))])
 		if bool(out["ticked"]):
 			_pending_report = Game.current_report
+			announce_month(_pending_report)
 			if not Game.state.pending_event.is_empty():
 				Game.set_clock_speed(0)
 				_clock_acc = 0.0
@@ -109,6 +114,52 @@ func _process(delta: float) -> void:
 					"speaker": "The Council",
 					"event": Game.state.pending_event.duplicate(true)}], _pending_report)
 				return
+
+## Every work in progress's share done: "cell|building" -> 0..1.
+func works_progress() -> Dictionary:
+	var out: Dictionary = {}
+	if Game.state == null:
+		return out
+	for key: String in Game.state.manor_works:
+		for w: Dictionary in Game.state.manor_works[key]:
+			out["%s|%s" % [key, String(w["building"])]] = MapManors.work_progress(Game.state, int(key), String(w["building"]))
+	return out
+
+## A headline for every work that crossed a milestone (balance.csv
+## news_build_milestone_1 and _2, owner: 30% and 70%) between two readings;
+## completion has its own line.
+func announce_milestones(before: Dictionary, now: Dictionary) -> void:
+	var marks := [Game.data.bal("news_build_milestone_1"), Game.data.bal("news_build_milestone_2")]
+	var keys: Array = now.keys()
+	keys.sort()
+	for key: String in keys:
+		var was := float(before.get(key, 0.0))
+		var is_now := float(now[key])
+		for mark: float in marks:
+			if was < mark and is_now >= mark and is_now < 1.0:
+				var cell := int(key.get_slice("|", 0))
+				var code := key.get_slice("|", 1)
+				Game.publish_news("The %s at %s is %d%% done." % [
+					String((Game.data.manor_buildings.get(code, {}) as Dictionary).get("label", code)).to_lower(),
+					MapManors.label_of(Game.data, cell), roundi(mark * 100.0)])
+
+## The month's close as news: what the crown's treasury and the lord's purse
+## took, and an event if one waits. (Other important news is a placeholder
+## for now: this is where it will go.)
+func announce_month(report: TickReport) -> void:
+	if report == null:
+		return
+	var crown := 0.0
+	var lord := 0.0
+	for d in report.metric_deltas:
+		match String(d["metric"]):
+			"treasury":
+				crown += float(d["delta"])
+			"lord_gold":
+				lord += float(d["delta"])
+	Game.publish_news("The month closes: the crown's treasury %+d gold, your purse %+d gold." % [roundi(crown), roundi(lord)])
+	if Game.state != null and not Game.state.pending_event.is_empty():
+		Game.publish_news("An event awaits the council.")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if state == State.MENU:
