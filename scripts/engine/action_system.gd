@@ -147,8 +147,10 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			if not crowns:
 				return "%s is not the crown's" % label
 			var building_r := String(req.params.get("building", ""))
-			if MapManors.work_days_left(state, cell, building_r) < 0:
-				return "There is no work on a %s at %s" % [building_r, label]
+			# 0 is a work whose days are up but which the day step has not
+			# turned into a building yet: there is nothing left to hurry.
+			if MapManors.work_days_left(state, cell, building_r) <= 0:
+				return "There is no work left on a %s at %s" % [building_r, label]
 			var days := int(req.params.get("days", 0))
 			if days <= 0:
 				return "days must be a whole number above zero"

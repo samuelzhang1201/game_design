@@ -1038,9 +1038,20 @@ static func manor_actions(repo: DataRepository, state: GameState, cell: int) -> 
 			if MapManors.has_building(state, cell, b) or MapManors.is_building(state, cell, b):
 				continue
 			var row: Dictionary = repo.manor_buildings[b]
+			# A building is paid for in CIVIL GOODS, not gold (spec §5), so
+			# the button says so; gold only hurries it (HURRY below).
 			specs.append({"action_code": "MANOR_BUILD", "params": {"manor": code, "building": b},
-				"label": "BUILD %s — %dg, %dd" % [String(row["label"]).to_upper(),
-					int(float(row["cost_gold"])), int(float(row.get("build_days", 0)))]})
+				"label": "BUILD %s — %d civil, %dd" % [String(row["label"]).to_upper(),
+					int(float(row.get("civil_cost", 0))), int(float(row.get("build_days", 0)))]})
+		# One HURRY per work in progress: gold off the days still to run.
+		var per_click := int(repo.bal("manor_rush_days_per_click"))
+		var rush_gold := per_click * int(repo.bal("build_rush_gold_per_day"))
+		for w: Dictionary in MapManors.works_of(state, cell):
+			var b_w := String(w["building"])
+			var row_w: Dictionary = repo.manor_buildings.get(b_w, {})
+			specs.append({"action_code": "MANOR_RUSH",
+				"params": {"manor": code, "building": b_w, "days": per_click},
+				"label": "HURRY %s — %dg" % [String(row_w.get("label", b_w)).to_upper(), rush_gold]})
 	else:
 		specs.append({"action_code": "MANOR_BUY", "params": {"manor": code},
 			"label": "BUY — %d gold" % roundi(MapManors.price_of(repo, state, cell))})

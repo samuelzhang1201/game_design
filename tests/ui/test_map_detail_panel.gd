@@ -144,6 +144,16 @@ func test_a_manor_card_shows_its_slots_and_a_build_fills_one() -> void:
 	var days: Label = p.slots_row().find_child("Days", true, false)
 	assert_not_null(days, "a work shows its days")
 	assert_eq(days.text, "%dd" % int(float(Game.data.manor_buildings["mill"]["build_days"])))
+	# Gold hurries the masons (spec 2026-09-14 §5): one HURRY button per work.
+	var hurry: Button = p.actions_box().find_child("MANOR_RUSH_mill", true, false)
+	assert_not_null(hurry, "a work in progress offers to be hurried")
+	var per_click := int(Game.data.bal("manor_rush_days_per_click"))
+	assert_eq(hurry.text, "HURRY MILL — %dg" % (per_click * int(Game.data.bal("build_rush_gold_per_day"))))
+	assert_false(hurry.disabled)
+	hurry.pressed.emit()
+	await wait_frames(1)
+	assert_eq(MapManors.work_days_left(Game.state, cell, "mill"),
+		int(float(Game.data.manor_buildings["mill"]["build_days"])) - per_click, "the days came off")
 	assert_eq(p.slots_row().get_child_count(), slots)
 	assert_null(p.actions_box().find_child("MANOR_BUILD_mill", true, false), "no second mill offered")
 	var cross: Button = p.slots_row().find_child("DEMOLISH_mill", true, false)

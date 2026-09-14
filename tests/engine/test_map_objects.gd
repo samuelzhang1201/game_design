@@ -587,6 +587,41 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	assert_eq(String(far["known"]), "basic")
 	assert_true((far["actions"] as Array).is_empty())
 
+## The card's BUILD button spends CIVIL GOODS (spec 2026-09-14 §5), and a
+## work in progress gets a HURRY button that buys days with gold.
+func test_the_manor_card_prices_a_build_in_civil_goods_and_offers_to_hurry_it() -> void:
+	var state := _campaign()
+	state.metrics["treasury"] = 100000.0
+	state.metrics["grain"] = 100000.0
+	var own := _manor_where(state, true)
+	var card := MapObjects.manor_card(real, state, own)
+	var build := {}
+	for a: Dictionary in card["actions"]:
+		if String(a["action_code"]) == "MANOR_BUILD" and String(a["params"]["building"]) == "mill":
+			build = a
+	assert_false(build.is_empty(), "a mill is offered")
+	assert_string_contains(String(build["label"]), "%d civil" % int(float(real.manor_buildings["mill"]["civil_cost"])),
+		"the BUILD button prices the work in civil goods")
+	assert_does_not_have(card["actions"].map(func(a: Dictionary) -> String: return String(a["action_code"])),
+		"MANOR_RUSH", "nothing to hurry before a work is begun")
+	assert_true(MapManors.start_work(real, state, own, "mill", "test"))
+	var hurry := {}
+	for a: Dictionary in MapObjects.manor_actions(real, state, own):
+		if String(a["action_code"]) == "MANOR_RUSH":
+			hurry = a
+	assert_false(hurry.is_empty(), "a work in progress can be hurried")
+	var per_click := int(real.bal("manor_rush_days_per_click"))
+	assert_eq(String(hurry["params"]["building"]), "mill")
+	assert_eq(int(hurry["params"]["days"]), per_click, "one press buys manor_rush_days_per_click days")
+	assert_eq(String(hurry["label"]), "HURRY MILL — %dg" % (per_click * int(real.bal("build_rush_gold_per_day"))))
+	assert_eq(String(hurry["error"]), "", "the order can be given: " + String(hurry["error"]))
+	# The order it carries is the one that runs.
+	var before := MapManors.work_days_left(state, own, "mill")
+	var outcome := ActionSystem.new(real).execute(
+		ActionRequest.make("MANOR_RUSH", (hurry["params"] as Dictionary).duplicate()), state)
+	assert_true(bool(outcome["ok"]), "the order the button carries runs")
+	assert_eq(MapManors.work_days_left(state, own, "mill"), before - per_click, "the days came off")
+
 func test_the_province_card_counts_its_manors_by_house() -> void:
 	var state := _campaign()
 	var realm := real.resolve_realm("player_realm")
