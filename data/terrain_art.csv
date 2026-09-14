@@ -1,12 +1,12 @@
 key,biome_id,min_height,max_height,texture,density,height_px,clump,spread,cluster,notes
-mountains,,75,100,res://assets/terrain/mountains.png,0.95,3.4,10,1.05,0.5,"small and MANY (owner 2026-09-12): a range is read from the count and the spread, never from the size of one triangle; nearly every high cell carries marks so the range runs unbroken (owner 2026-09-14)"
-peak,,63,75,res://assets/terrain/peak.png,0.85,2.9,9,1.0,0.6,
-hills,,52,63,res://assets/terrain/hills.png,0.55,2.4,8,1.0,0.75,"the foothills gather along the ranges rather than dotting the plain"
+mountains,,75,100,res://assets/terrain/mountains.png,0.95,3.4,8,1.05,0.5,"small and MANY (owner 2026-09-12): a range is read from the count and the spread, never from the size of one triangle; nearly every high cell carries marks so the range runs unbroken (owner 2026-09-14)"
+peak,,63,75,res://assets/terrain/peak.png,0.85,2.9,7,1.0,0.6,
+hills,,52,63,res://assets/terrain/hills.png,0.55,2.4,6,1.0,0.75,"the foothills gather along the ranges rather than dotting the plain"
 marsh,12,,,res://assets/terrain/marsh.png,0.40,1.8,6,0.95,0.7,wetland
-taiga,9,,,res://assets/terrain/conifer_wood.png,0.66,2.4,16,1.15,0.85,"a FOREST, not stands (owner 2026-09-14): chosen in tracts by the cluster field, marks spread past the cell so neighbours close into one canopy"
-temperate_rainforest,8,,,res://assets/terrain/conifer_wood.png,0.66,2.4,16,1.15,0.85,
-tropical_rainforest,7,,,res://assets/terrain/broadleaf_wood.png,0.68,2.4,16,1.15,0.85,
-deciduous,6,,,res://assets/terrain/broadleaf_wood.png,0.62,2.4,16,1.15,0.85,temperate deciduous forest
+taiga,9,,,res://assets/terrain/conifer_wood.png,0.66,2.4,12,1.15,0.85,"a FOREST, not stands (owner 2026-09-14): chosen in tracts by the cluster field, marks spread past the cell so neighbours close into one canopy"
+temperate_rainforest,8,,,res://assets/terrain/conifer_wood.png,0.66,2.4,12,1.15,0.85,
+tropical_rainforest,7,,,res://assets/terrain/broadleaf_wood.png,0.68,2.4,12,1.15,0.85,
+deciduous,6,,,res://assets/terrain/broadleaf_wood.png,0.62,2.4,12,1.15,0.85,temperate deciduous forest
 tropical_seasonal,5,,,res://assets/terrain/broadleaf.png,0.45,2.2,10,1.05,0.8,
 grassland,4,,,res://assets/terrain/thicket.png,0.14,1.2,5,0.9,0.6,open country: a hint of scrub
 savanna,3,,,res://assets/terrain/broadleaf.png,0.18,1.4,6,0.95,0.7,
