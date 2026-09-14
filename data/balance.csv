@@ -213,7 +213,7 @@ map_manor_shade_levels,5,"manor views (owner 2026-09-13): how many shade levels 
 map_manor_shade_step,0.12,"manor views: how far each shade level moves a manor's colour toward white or black (level 1 lighter, 2 darker, 3 lighter still...)"
 manor_slots_base,3,"manors §3 (owner 2026-09-13): building slots every manor has — a building or a work in progress takes one"
 manor_slots_burg_bonus,1,"manors §3: extra slots for a manor with a town in it"
-manor_demolish_refund,0.5,"manors §5: the share of a building's cost_gold returned when it is pulled down or a work is stopped"
+manor_demolish_refund,0.5,"manors §5: the share of a building's civil_cost returned to the CIVIL STORES when it is pulled down or a work is stopped — a build is bought with civil goods, so its timber and stone come back as goods, never as gold (2026-09-14)"
 time_day_seconds,1.0,"the clock (owner 2026-09-13): real seconds per game day at 1x; the top bar's 2x and 4x divide it"
 time_speed_fast,2,"the clock: the 2x button's multiplier"
 time_speed_faster,4,"the clock: the 4x button's multiplier"

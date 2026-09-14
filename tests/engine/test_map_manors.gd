@@ -51,10 +51,11 @@ func _repo() -> DataRepository:
 	}
 	r.house_bindings = {"p": "Valorin"}
 	r.manor_buildings = {
-		"mill": {"building_code": "mill", "label": "Mill", "cost_gold": "40", "tax_bonus": "0.05",
-			"output_bonus": "0.15", "defence_bonus": "0", "church_bonus": "0"},
+		"mill": {"building_code": "mill", "label": "Mill", "cost_gold": "40", "civil_cost": "30",
+			"tax_bonus": "0.05", "output_bonus": "0.15", "defence_bonus": "0", "church_bonus": "0"},
 		"palisade": {"building_code": "palisade", "label": "Palisade", "cost_gold": "45",
-			"tax_bonus": "0", "output_bonus": "0", "defence_bonus": "10", "church_bonus": "0"},
+			"civil_cost": "20", "tax_bonus": "0", "output_bonus": "0", "defence_bonus": "10",
+			"church_bonus": "0"},
 	}
 	r.world_schema = [
 		{"path": "economy.provinces.*.rural_population", "type": "int", "min": "0",
@@ -226,7 +227,8 @@ func test_buildings_rent_and_defence() -> void:
 	assert_eq(MapManors.buildings_of(s, 2), ["mill"])
 	assert_almost_eq(MapManors.rent_of(r, s, 2), float(ManorEconomy.line_of(r, s, 2, s.tick)["tax"]), 0.0001)
 	assert_gt(MapManors.rent_of(r, s, 2), plain, "a mill's tax bonus raises the month's tax")
-	assert_almost_eq(MapManors.building_cost(r, s, 2), 40.0, 0.0001)
+	assert_almost_eq(MapManors.building_cost(r, s, 2), 30.0, 0.0001,
+		"the mill's CIVIL cost, not its gold one")
 	assert_almost_eq(MapManors.defence_of(r, s, 2), 10.0, 0.0001)
 	assert_true(MapManors.build(r, s, 2, "palisade", "dug in"))
 	assert_almost_eq(MapManors.defence_of(r, s, 2), 20.0, 0.0001)
@@ -250,10 +252,10 @@ func test_the_price_is_the_value_marked_up_by_the_houses_coolness() -> void:
 	# A hostile house asks the full markup: opinion -100 -> coolness 1 -> x 1.5.
 	(s.characters["steward"] as Character).opinion = -100
 	assert_almost_eq(MapManors.price_of(r, s, 1), 106.0, 0.001, "70.8 x 1.5 = 106.2")
-	# Buildings raise the value by half their cost: a mill (40) adds 20 to
-	# the base before the land factor.
+	# Buildings raise the value by half what they cost to raise — the CIVIL
+	# cost: a mill (30) adds 15 to the base before the land factor.
 	assert_true(MapManors.build(r, s, 1, "mill", "raised"))
-	assert_almost_eq(MapManors.base_value_of(r, s, 1), (60.0 + 20.0) * 1.18, 0.001)
+	assert_almost_eq(MapManors.base_value_of(r, s, 1), (60.0 + 15.0) * 1.18, 0.001)
 
 func test_manor_state_survives_a_save() -> void:
 	var r := _repo()
@@ -376,7 +378,8 @@ func test_works_take_days_and_slots_and_can_be_pulled_down() -> void:
 	r.manor_buildings["mill"]["build_days"] = "4"
 	r.manor_buildings["palisade"]["build_days"] = "0"
 	r.manor_buildings["chapel"] = {"building_code": "chapel", "label": "Chapel", "cost_gold": "30",
-		"build_days": "10", "tax_bonus": "0", "output_bonus": "0", "defence_bonus": "0", "church_bonus": "0.3"}
+		"civil_cost": "10", "build_days": "10", "tax_bonus": "0", "output_bonus": "0",
+		"defence_bonus": "0", "church_bonus": "0.3"}
 	var s := _state()
 	s.day = 1
 	assert_eq(MapManors.slots_of(r, 1), 2)
@@ -409,15 +412,16 @@ func test_works_take_days_and_slots_and_can_be_pulled_down() -> void:
 	# A work with no days stands the day it is begun.
 	assert_true(MapManors.start_work(r, s, 2, "palisade", "dug"))
 	assert_eq(MapManors.advance_works(r, s), [{"cell": 2, "building": "palisade"}])
-	# Pull the mill down: half its 40 back; stop the chapel: half its 30.
+	# Pull the mill down: half its 30 civil goods back; stop the chapel: half
+	# its 10, rounded.
 	assert_almost_eq(MapManors.demolish(r, s, 1, "castle", "x"), -1.0, 0.001, "no such building")
 	assert_almost_eq(MapManors.demolish(r, s, 1, "palisade", "x"), -1.0, 0.001, "nothing there")
-	assert_almost_eq(MapManors.demolish(r, s, 1, "mill", "pulled down"), 20.0, 0.001)
+	assert_almost_eq(MapManors.demolish(r, s, 1, "mill", "pulled down"), 15.0, 0.001)
 	assert_eq(MapManors.buildings_of(s, 1), [])
-	assert_almost_eq(MapManors.demolish(r, s, 1, "chapel", "stopped"), 15.0, 0.001)
+	assert_almost_eq(MapManors.demolish(r, s, 1, "chapel", "stopped"), 5.0, 0.001)
 	assert_eq(MapManors.works_of(s, 1), [])
 	assert_eq(MapManors.free_slots(r, s, 1), 2)
-	assert_almost_eq(float(s.manor_log[-1]["demolished"]), 15.0, 0.001)
+	assert_almost_eq(float(s.manor_log[-1]["demolished"]), 5.0, 0.001)
 	# It all survives a save.
 	assert_true(MapManors.start_work(r, s, 1, "chapel", "begun again"))
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))

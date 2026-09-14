@@ -519,8 +519,10 @@ static func advance_works(repo: DataRepository, state: GameState) -> Array:
 	return done
 
 ## Pull a building down, or stop a work: the slot frees and
-## manor_demolish_refund of the cost comes back. Returns the refund, or
-## -1 when there was nothing to pull down (or no reason).
+## manor_demolish_refund of its CIVIL COST comes back — a build is paid for
+## in civil goods, so its timber and stone return to the stores, never to
+## the chest. Whole goods. Returns the refund, or -1 when there was nothing
+## to pull down (or no reason).
 static func demolish(repo: DataRepository, state: GameState, cell_id: int, building_code: String,
 		reason: String) -> float:
 	if reason.strip_edges() == "" or not repo.manor_buildings.has(building_code):
@@ -544,8 +546,8 @@ static func demolish(repo: DataRepository, state: GameState, cell_id: int, build
 		found = true
 	if not found:
 		return -1.0
-	var refund := float((repo.manor_buildings[building_code] as Dictionary).get("cost_gold", 0)) \
-		* repo.bal("manor_demolish_refund")
+	var refund := roundf(float((repo.manor_buildings[building_code] as Dictionary).get("civil_cost", 0))
+		* repo.bal("manor_demolish_refund"))
 	state.manor_log.append({"tick": state.tick, "cell": cell_id, "building": building_code,
 		"demolished": refund, "reason": reason})
 	return refund
@@ -586,10 +588,13 @@ static func building_bonus(repo: DataRepository, state: GameState, cell_id: int,
 		sum += float((repo.manor_buildings.get(code, {}) as Dictionary).get(column, 0))
 	return sum
 
+## What a manor's standing buildings cost to raise, in civil goods — the
+## price input of value_of_line (2026-09-14: a build is bought with civil
+## goods, so that is what a buyer is paying for).
 static func building_cost(repo: DataRepository, state: GameState, cell_id: int) -> float:
 	var sum := 0.0
 	for code: String in buildings_of(state, cell_id):
-		sum += float((repo.manor_buildings.get(code, {}) as Dictionary).get("cost_gold", 0))
+		sum += float((repo.manor_buildings.get(code, {}) as Dictionary).get("civil_cost", 0))
 	return sum
 
 # ---- focus: the chief good a manor works at (owner 2026-09-13) ---------------

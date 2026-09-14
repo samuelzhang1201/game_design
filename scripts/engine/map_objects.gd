@@ -1012,10 +1012,11 @@ static func slot_actions(repo: DataRepository, state: GameState, cell: int) -> A
 	var actions := ActionSystem.new(repo)
 	for b: String in all:
 		var row: Dictionary = repo.manor_buildings.get(b, {})
-		var refund := float(row.get("cost_gold", 0)) * repo.bal("manor_demolish_refund")
+		var refund := roundf(float(row.get("civil_cost", 0)) * repo.bal("manor_demolish_refund"))
 		var spec := {"action_code": "MANOR_DEMOLISH", "params": {"manor": code, "building": b},
 			"building": b, "refund": refund,
-			"label": "Pull down the %s — %d gold back" % [String(row.get("label", b)).to_lower(), roundi(refund)]}
+			"label": "Pull down the %s — %d civil goods back" % [
+				String(row.get("label", b)).to_lower(), int(refund)]}
 		spec["error"] = actions.validate(ActionRequest.make("MANOR_DEMOLISH", spec["params"]), state)
 		specs.append(spec)
 	return specs

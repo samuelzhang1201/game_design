@@ -277,13 +277,24 @@ func test_building_needs_a_free_slot_and_can_be_pulled_down() -> void:
 		"no room")
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_DEMOLISH", {"manor": cell, "building": codes[slots]}), s),
 		"There is no")
+	# A build is paid for in civil goods, so its timber and stone come back
+	# to the stores — never to the chest (2026-09-14).
 	var before: float = s.metrics["treasury"]
+	var stores: float = s.metrics["grain"]
 	var stop := ActionRequest.make("MANOR_DEMOLISH", {"manor": cell, "building": codes[0]})
 	assert_eq(sys.validate(stop, s), "")
 	var out := sys.execute(stop, s)
 	assert_true(out["ok"])
-	var refund := float(data.manor_buildings[codes[0]]["cost_gold"]) * data.bal("manor_demolish_refund")
-	assert_almost_eq(s.metrics["treasury"], before + refund - 1.0, 0.001, "the refund less the wreckers' fee")
+	var refund := roundf(float(data.manor_buildings[codes[0]]["civil_cost"])
+		* data.bal("manor_demolish_refund"))
+	assert_gt(refund, 0.0, "the fixture's building is worth pulling down")
+	assert_almost_eq(s.metrics["grain"], stores + refund, 0.001, "the stores take it back")
+	assert_almost_eq(s.metrics["treasury"], before - 1.0, 0.001, "the chest pays the wreckers' ale")
+	var said := ""
+	for e in out["effects"]:
+		if String(e.get("metric", "")) == "grain":
+			said = String(e.get("reason", ""))
+	assert_string_contains(said, "the timber and stone of the")
 	assert_false(MapManors.is_building(s, cell, codes[0]))
 	assert_eq(MapManors.free_slots(data, s, cell), 1)
 	assert_eq(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": codes[slots]}), s), "")

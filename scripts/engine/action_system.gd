@@ -312,8 +312,9 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var stood := MapManors.has_building(state, cell, building)
 			var refund := MapManors.demolish(data, state, cell, building,
 				"pulled down by the crown" if stood else "the work stopped by the crown")
-			_apply(state, effects, "treasury", maxf(refund, 0.0),
-				"the stones and timber of the %s at %s" % [String(row_d["label"]).to_lower(), label])
+			# A build is bought with civil goods: what comes back is goods.
+			_apply(state, effects, pool_metric("civil"), maxf(refund, 0.0),
+				"the timber and stone of the %s at %s" % [String(row_d["label"]).to_lower(), label])
 			effects.append({"metric": "manor", "delta": 0.0,
 				"reason": ("the %s at %s is pulled down" if stood else "the %s at %s is left unbuilt") % [
 					String(row_d["label"]).to_lower(), label]})
