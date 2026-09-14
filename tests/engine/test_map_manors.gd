@@ -516,3 +516,20 @@ func test_people_sum_exactly_to_the_province() -> void:
 	assert_eq(MapManors.people_of(r, s, 4), 800, "q's 800 go to its one manor")
 	WorldLedger.apply(r, s, "economy.provinces.p.rural_population", 1, "test: one more", "test")
 	assert_eq(MapManors.people_table(r, s, "p"), {1: 1501, 2: 2500}, "an odd one goes to the lower id; the cache keys on the figure")
+
+## Rushing (spec §5): gold takes days off a work, never below done.
+func test_rushing_cuts_days_off_a_work() -> void:
+	var r := _repo()
+	r.balance["manor_slots_base"] = 1.0
+	r.balance["manor_slots_burg_bonus"] = 0.0
+	r.manor_buildings["mill"]["build_days"] = "30"
+	var s := _state()
+	s.tick = 1
+	s.day = 1
+	assert_true(MapManors.start_work(r, s, 1, "mill", "test"))
+	assert_eq(MapManors.work_days_left(s, 1, "mill"), 30)
+	assert_eq(MapManors.rush_work(r, s, 1, "mill", 10, "test: gold"), 10)
+	assert_eq(MapManors.work_days_left(s, 1, "mill"), 20)
+	assert_eq(MapManors.rush_work(r, s, 1, "mill", 50, "test: gold"), 20, "only what is left")
+	assert_eq(MapManors.work_days_left(s, 1, "mill"), 0)
+	assert_eq(MapManors.rush_work(r, s, 1, "chapel", 5, "test"), 0, "no such work")

@@ -528,6 +528,29 @@ static func work_progress(state: GameState, cell_id: int, building_code: String)
 			return clampf(float(state.absolute_day() - int(w["start"])) / float(days), 0.0, 1.0)
 	return 0.0
 
+## Cut `days` off a work in progress (spec 2026-09-14 §5: gold hurries the
+## masons), never below done. Returns the days actually cut; 0 for no
+## such work or an empty reason. Logs into manor_log with a "rushed" field.
+static func rush_work(repo: DataRepository, state: GameState, cell_id: int, building_code: String,
+		days: int, reason: String) -> int:
+	if days <= 0 or reason.strip_edges() == "":
+		return 0
+	var key := str(cell_id)
+	if not state.manor_works.has(key):
+		return 0
+	for w: Dictionary in state.manor_works[key]:
+		if String(w["building"]) != building_code:
+			continue
+		var left := maxi(int(w["start"]) + int(w["days"]) - state.absolute_day(), 0)
+		var cut := mini(days, left)
+		if cut <= 0:
+			return 0
+		w["days"] = int(w["days"]) - cut
+		state.manor_log.append({"tick": state.tick, "cell": cell_id, "building": building_code,
+			"rushed": cut, "reason": reason})
+		return cut
+	return 0
+
 ## The day's step for every work: those whose days are up become
 ## buildings. Returns [{cell, building}] finished today, cell order.
 static func advance_works(repo: DataRepository, state: GameState) -> Array:

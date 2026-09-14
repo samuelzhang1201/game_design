@@ -146,13 +146,16 @@ func test_selling_and_building_need_a_crown_manor() -> void:
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "castle"}), s),
 		"No such building")
 	var before: float = s.metrics["treasury"]
+	var grain_before: float = s.metrics["grain"]
 	var build := ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "mill"})
 	assert_eq(sys.validate(build, s), "")
 	sys.execute(build, s)
 	# Begun, not standing (2026-09-13): the mill takes its build_days.
 	assert_eq(MapManors.buildings_of(s, cell), [])
 	assert_true(MapManors.is_building(s, cell, "mill"))
-	assert_almost_eq(s.metrics["treasury"], before - float(data.manor_buildings["mill"]["cost_gold"]) - 1.0, 0.001)
+	# Civil goods pay for the work (spec 2026-09-14 §5); only the surveyor's fee leaves the chest.
+	assert_almost_eq(s.metrics["treasury"], before - 1.0, 0.001)
+	assert_almost_eq(s.metrics["grain"], grain_before - float(data.manor_buildings["mill"]["civil_cost"]), 0.001)
 	assert_string_contains(sys.validate(build, s), "already being built")
 	s.tick += int(ceili(float(data.manor_buildings["mill"]["build_days"]) / float(Calendar.DAYS_PER_TICK))) + 1
 	assert_eq(MapManors.advance_works(data, s), [{"cell": cell, "building": "mill"}])
@@ -317,3 +320,32 @@ func test_goods_orders_are_validated() -> void:
 	assert_string_contains(sys.validate(ActionRequest.make("GOODS_BUY", {"pool": "civil", "gold": 100}), s), "afford")
 	assert_string_contains(sys.validate(ActionRequest.make("GOODS_SELL", {"pool": "civil", "gold": 100}), s), "only 5")
 	assert_eq(sys.validate(ActionRequest.make("GOODS_SELL", {"pool": "civil", "gold": 5}), s), "")
+
+## MANOR_BUILD pays civil goods, not gold (spec §5); MANOR_RUSH pays gold a day.
+func test_building_spends_civil_goods_and_rushing_spends_gold() -> void:
+	var cell := _crown_manor()
+	var civil := int(float(data.manor_buildings["palisade"]["civil_cost"]))
+	assert_gt(civil, 0)
+	s.metrics["grain"] = float(civil - 1)
+	s.metrics["treasury"] = 1000.0
+	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "palisade"}), s), "civil goods")
+	s.metrics["grain"] = float(civil + 10)
+	var t := int(s.metrics["treasury"])
+	assert_true(sys.execute(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": "palisade"}), s)["ok"])
+	assert_eq(int(s.metrics["grain"]), 10)
+	assert_eq(int(s.metrics["treasury"]), t - int(OrderCosts.gold_of(data, "MANOR_BUILD")), "only the surveyor")
+	var per_day := int(data.bal("build_rush_gold_per_day"))
+	t = int(s.metrics["treasury"])
+	var left := MapManors.work_days_left(s, cell, "palisade")
+	assert_true(sys.execute(ActionRequest.make("MANOR_RUSH", {"manor": cell, "building": "palisade", "days": 5}), s)["ok"])
+	assert_eq(MapManors.work_days_left(s, cell, "palisade"), left - 5)
+	assert_eq(int(s.metrics["treasury"]), t - 5 * per_day - int(OrderCosts.gold_of(data, "MANOR_RUSH")))
+	assert_string_contains(sys.validate(ActionRequest.make("MANOR_RUSH", {"manor": cell, "building": "chapel", "days": 1}), s), "no work")
+
+## The levy marches on strategic goods (spec §5): its cost row charges them.
+func test_raising_levies_spends_strategic_goods() -> void:
+	s.metrics["treasury"] = 1000.0
+	s.metrics["strategic"] = 100.0
+	var out := sys.execute(ActionRequest.make("LEVY_RAISE"), s)
+	assert_true(out["ok"])
+	assert_lt(int(s.metrics["strategic"]), 100, "the baggage train was paid for")

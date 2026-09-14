@@ -19,3 +19,4 @@ MANOR_FOCUS,economy,Set a manor's chief good,none,0.5,none,0,0,,manor_focus,3,no
 MANOR_DEMOLISH,economy,Pull down a building,none,0.5,none,0,0,,manor_demolish,3,no,no,"params: manor, building. Pulls down a finished building or stops one being built on a crown manor; manor_demolish_refund of its cost comes back."
 GOODS_BUY,economy,Buy goods,none,0.2,none,0,0,,goods_buy,3,no,no,"spec 2026-09-14 §5. params: pool (strategic|civil), gold. The treasury buys that much of the pool's goods at goods_trade_spread over"
 GOODS_SELL,economy,Sell goods,none,0.2,none,0,0,,goods_sell,3,no,no,"params: pool (strategic|civil), gold. The treasury sells that much of the pool's goods at goods_trade_spread under"
+MANOR_RUSH,economy,Hurry a work on a manor,none,0.2,none,0,0,,manor_rush,3,no,no,"params: manor, building, days. Pays build_rush_gold_per_day a day to cut days off a work in progress on a crown manor"

@@ -2,7 +2,7 @@ action_code,cost,always,notes
 generic_order,gold:-5:the chancery's clerks and couriers,0,an order that executes no action and whose impacts carried no cost
 TAX_RATE_ADJUST,opinion:steward:-2:re-cutting the tax rolls,0,
 TARIFF_ADJUST,opinion:char_guildmaster_tessa:-2:the guilds re-price their wares,0,
-LEVY_RAISE,world:economy.kingdoms.player_realm.rural_population:-2000:levies drawn from the villages,1,explicit population cost beside the gold
+LEVY_RAISE,world:economy.kingdoms.player_realm.rural_population:-2000:levies drawn from the villages;metric:strategic:-20:the baggage train of the levy,1,explicit population cost beside the gold
 GRAIN_POLICY_SET,opinion:steward:-1:the granary clerks grumble at new orders,0,
 CHURCH_POLICY,opinion:chaplain:-1:the church dislikes being managed,0,
 JUSTICE_SEVERITY,opinion:chancellor:-1:the courts resent being retuned,0,
@@ -29,3 +29,4 @@ MANOR_FOCUS,gold:-1:the reeve's ledger,1,the switch itself is charged by the ord
 MANOR_DEMOLISH,gold:-1:the wreckers' ale,1,the refund itself is paid by the order
 GOODS_BUY,gold:-1:the factor's fee,1,the spread is the cost; this is the paperwork
 GOODS_SELL,gold:-1:the factor's fee,1,
+MANOR_RUSH,gold:-1:the foreman's bonus,1,

@@ -59,7 +59,7 @@ func validate(req: ActionRequest, state: GameState) -> String:
 		"CHARACTER_REWARD":
 			if not req.params.get("mode", "gold") in ["gold"]:
 				return "mode must be gold (slice 1)"
-		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE", "MANOR_FOCUS", "MANOR_DEMOLISH":
+		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE", "MANOR_FOCUS", "MANOR_DEMOLISH", "MANOR_RUSH":
 			return _validate_manor(req, state, needs)
 		"GOODS_BUY", "GOODS_SELL":
 			var pool := String(req.params.get("pool", ""))
@@ -139,9 +139,22 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			if MapManors.free_slots(data, state, cell) <= 0:
 				return "%s has no room: %d of %d slots taken" % [label, MapManors.slots_used(state, cell),
 					MapManors.slots_of(data, cell)]
-			var cost := float(data.manor_buildings[building]["cost_gold"])
-			if state.metrics["treasury"] < cost + needs:
-				return "Cannot afford a %s (%d gold)" % [String(data.manor_buildings[building]["label"]).to_lower(), int(cost)]
+			var civil := int(float(data.manor_buildings[String(req.params.get("building", ""))].get("civil_cost", 0)))
+			if int(state.metrics.get("grain", 0.0)) < civil:
+				return "Not enough civil goods for a %s at %s (%d needed)" % [
+					String(data.manor_buildings[String(req.params.get("building", ""))]["label"]).to_lower(), label, civil]
+		"MANOR_RUSH":
+			if not crowns:
+				return "%s is not the crown's" % label
+			var building_r := String(req.params.get("building", ""))
+			if MapManors.work_days_left(state, cell, building_r) < 0:
+				return "There is no work on a %s at %s" % [building_r, label]
+			var days := int(req.params.get("days", 0))
+			if days <= 0:
+				return "days must be a whole number above zero"
+			var price := days * int(data.bal("build_rush_gold_per_day"))
+			if state.metrics["treasury"] < price + needs:
+				return "Cannot afford to hurry %s by %d days (%d gold)" % [label, days, price]
 		"MANOR_DEMOLISH":
 			if not crowns:
 				return "The crown does not hold %s" % label
@@ -263,12 +276,22 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var building := String(req.params["building"])
 			var row_b: Dictionary = data.manor_buildings[building]
 			var label := MapManors.label_of(data, cell)
-			_apply(state, effects, "treasury", -float(row_b["cost_gold"]),
-				"began a %s at %s" % [String(row_b["label"]).to_lower(), label])
+			_apply(state, effects, "grain", -float(int(float(row_b.get("civil_cost", 0)))),
+				"timber and stone for a %s at %s" % [String(row_b["label"]).to_lower(), label])
 			MapManors.start_work(data, state, cell, building, "begun by the crown")
 			effects.append({"metric": "manor", "delta": 0.0,
 				"reason": "a %s is begun at %s, %d days' work" % [String(row_b["label"]).to_lower(), label,
 					int(float(row_b.get("build_days", 0)))]})
+		"MANOR_RUSH":
+			var cell := manor_of(req)
+			var building := String(req.params["building"])
+			var days := int(req.params["days"])
+			var label := MapManors.label_of(data, cell)
+			var cut := MapManors.rush_work(data, state, cell, building, days, "hurried by the crown")
+			_apply(state, effects, "treasury", -float(cut * int(data.bal("build_rush_gold_per_day"))),
+				"hurried the %s at %s by %d days" % [building, label, cut])
+			effects.append({"metric": "manor", "delta": 0.0,
+				"reason": "the %s at %s is %d days nearer done" % [building, label, cut]})
 		"MANOR_DEMOLISH":
 			var cell := manor_of(req)
 			var building := String(req.params["building"])

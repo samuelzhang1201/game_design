@@ -25,3 +25,4 @@ MANOR_FOCUS,,5,0,0,0,0,the crown sets its estate to work
 MANOR_DEMOLISH,,-5,0,0,0,0,the crown lets an estate go to seed
 GOODS_BUY,,0,0,0,0,0,
 GOODS_SELL,,0,0,0,0,0,
+MANOR_RUSH,,10,0,0,0,0,the crown hurries its own works
