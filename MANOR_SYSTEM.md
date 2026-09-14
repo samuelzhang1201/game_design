@@ -66,7 +66,7 @@ All derived, none stored, except buildings.
 | Population | the province's **rural** population (ledger `economy.provinces.<p>.rural_population`) apportioned by weight `area × land_value` over the province's land cells, plus the **urban** population of any burg in the cell (`burgs.csv` population, or the ledger's urban share for the seat). Manor populations therefore always sum to the province's — the tie to province data the owner asked for, and nothing to keep in sync. | ledger |
 | Production | working manors: `MapEconomy.manors` (goods, dominant good, units); other manors: "subsistence" — no goods row | `production.csv` |
 | Buildings | the list in `GameState.manor_buildings {cell_id: [building_code]}`; catalogue in **`data/manor_buildings.csv`** (`building_code,label,cost_gold,tax_bonus,output_bonus,defence_bonus,church_bonus,notes`): manor house, mill, granary, chapel, palisade, market — six to start | new CSV |
-| Tax (rent) | `pop / 1000 × manor_rent_per_1000 × (1 + Σ tax_bonus)` gold per tick, paid to the **owner**. Crown-held manors add their rent to `metrics.treasury` each tick as a new line "manor rents" in `TickEngine`, beside taxes and tariffs; other houses' rents are shown on the card as what the house earns (no house treasuries exist — the number is information and a price input, not a ledger). | `balance.csv` `manor_rent_per_1000` |
+| Tax (rent) | A MONTH of whole gold, §4.2 of the spec (`docs/superpowers/specs/2026-09-14-economy-and-staging-design.md`): `round(people / 1000 × manor_tax_per_1000 × tax_rate / tax_rate_base × (1 + Σ tax_bonus))`, plus its town's tariff `round(town_goods_gold × tariff_rate × tariff_per_sales_tax / 100)`. `ManorEconomy.line_of` computes it and `RealmEconomy` sums it; the crown's share is settled into `metrics.treasury` at the month's end (spec §5). Other houses' taxes are shown on the card as what the house earns (no house treasuries exist — the number is information and a price input, not a ledger). | `balance.csv` `manor_tax_per_1000`, `tax_rate_base`, `tariff_per_sales_tax` |
 | Defence | `manor_defence_base + Σ defence_bonus` — displayed now, used by the seizure resolution later | `balance.csv` |
 | Value (price) | see §5 | `balance.csv` |
 | Actions | BUY / SELL / BUILD / SEIZE buttons, shown by legality (§5) | — |
@@ -147,8 +147,9 @@ only manors whose focus was chosen (`{focus, since}`), logged in
 `manor_log` with a `focus` field. Yield a year = people / 1000 ×
 `yield_per_1000` × land value × the settling-in ramp (0 on the tick of
 the switch, 1 after `transition_ticks`) × (1 + buildings' `output_bonus`)
-× `manor_focus_yield_scale`. The focus adds `rent_bonus` (× ramp) to the
-rent, its units count in the value like town trade, and
+× `manor_focus_yield_scale`. The focus adds nothing to the tax (the
+`rent_bonus` column was dropped 2026-09-14: tax is the buildings'
+`tax_bonus` alone); its units count in the value like town trade, and
 `MapEconomy.output_of_provinces(repo, provinces, state)` adds every
 manor's yield to the pack's town production for the ECONOMY column.
 
