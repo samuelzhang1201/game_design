@@ -84,3 +84,26 @@ func test_the_full_recompute_agrees_with_the_cache() -> void:
 	WorldLedger.apply(data, s, "economy.provinces.%s.rural_population" % MapManors.province_of(data, cell), 500, "test", "test")
 	RealmEconomy.realm(data, s)
 	assert_eq(RealmEconomy.check_full(data, s), [], "no province differs")
+
+func test_a_conquest_moves_a_province_into_the_realms_sum() -> void:
+	var realm_code := data.resolve_realm("player_realm")
+	var before := RealmEconomy.realm(data, s)
+	var codes: Array = data.provinces.keys()
+	codes.sort()
+	var target := ""
+	for code: String in codes:
+		if MapOwnership.owner_of(data, s, code) != realm_code \
+				and not MapManors.manors_of_province(data, code).is_empty():
+			target = code
+			break
+	assert_ne(target, "", "a foreign province with manors exists")
+	assert_false(before["per_province"].has(target), "not yet the realm's")
+	var n := RealmEconomy.compute_count
+	assert_true(MapOwnership.set_owner(data, s, target, realm_code, "test: conquest"))
+	var after := RealmEconomy.realm(data, s)
+	assert_true(after["per_province"].has(target), "the conquest is in the realm's sum")
+	var added := RealmEconomy.province(data, s, target)
+	for k in ["tax", "strategic", "civil"]:
+		assert_eq(int(after["realm"][k]), int(before["realm"][k]) + int(added[k]),
+			"%s grew by exactly the conquered province's" % k)
+	assert_eq(RealmEconomy.compute_count, n + 1, "only the new province was computed")

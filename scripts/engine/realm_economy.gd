@@ -127,10 +127,12 @@ static func line_of(repo: DataRepository, state: GameState, cell: int) -> Dictio
 	return {"tax": _tax[i], "strategic": _strategic[i], "civil": _civil[i]}
 
 ## What the realm's answer depends on, cheaply: the dictionaries that hold
-## only what moved hash in C++.
+## only what moved hash in C++ — ownership included, so a conquest that
+## moves no manor and touches no ledger figure still turns the signature.
 static func realm_signature(state: GameState) -> String:
-	return "%d|%d|%d|%d|%d|%d|%d" % [state.tick, state.manor_owner.hash(),
+	return "%d|%d|%d|%d|%d|%d|%d|%d" % [state.tick, state.manor_owner.hash(),
 		state.manor_buildings.hash(), state.manor_focus.hash(), state.world.hash(),
+		state.province_owner.hash(),
 		int(state.metrics.get("tax_rate", 0)), int(state.metrics.get("tariff_rate", 0))]
 
 ## {realm, crown, per_province}: the player's realm's provinces (live
@@ -151,7 +153,7 @@ static func realm(repo: DataRepository, state: GameState) -> Dictionary:
 			continue
 		var p := province(repo, state, code)
 		per[code] = p
-		for k in ["tax", "strategic", "civil"]:
+		for k: String in ["tax", "strategic", "civil"]:
 			total[k] += int(p[k])
 			if code in mine:
 				crown[k] += int(p[k])
@@ -165,7 +167,7 @@ static func step_day(repo: DataRepository, state: GameState) -> int:
 	setup(repo)
 	var n := 0
 	var bucket := (state.day - 1) % Calendar.DAYS_PER_TICK
-	for pi in _codes.size():
+	for pi: int in _codes.size():
 		if pi % Calendar.DAYS_PER_TICK != bucket:
 			continue
 		var code := _codes[pi]
@@ -178,7 +180,7 @@ static func step_day(repo: DataRepository, state: GameState) -> int:
 static func recompute_all(repo: DataRepository, state: GameState) -> Dictionary:
 	setup(repo)
 	var out: Dictionary = {}
-	for code in _codes:
+	for code: String in _codes:
 		var r: Array = _range[code]
 		var sum := {"tax": 0, "strategic": 0, "civil": 0}
 		for i in range(int(r[0]), int(r[1])):
@@ -194,7 +196,7 @@ static func recompute_all(repo: DataRepository, state: GameState) -> Dictionary:
 static func check_full(repo: DataRepository, state: GameState) -> Array:
 	var fresh := recompute_all(repo, state)
 	var out: Array = []
-	for code in _codes:
+	for code: String in _codes:
 		var cached := province(repo, state, code)
 		if cached != fresh[code]:
 			out.append({"province": code, "cached": cached, "fresh": fresh[code]})
