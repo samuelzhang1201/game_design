@@ -235,6 +235,6 @@ map_manor_estate_foot,0.5,"manors view: the share of an estate drawing's height 
 map_manor_estate_px,5.0,"manors view (owner 2026-09-14): the ONE height of every estate drawing in native map px (x map_decor_scale) — the same for every manor, whatever its size; only map_manor_estate_fit can shrink it"
 manor_focus_high_height,52,"manors (owner 2026-09-14): cell height at/above which a manor's default focus may be a high-ground one (manor_focus.csv default_on high)"
 manor_focus_peak_height,63,"manors: cell height at/above which a manor's default focus may be a mountain one (default_on peak)"
-map_biome_alpha,0.45,"BIOMES LAYER (experiment 2026-09-14): opacity of the biome ground tiles laid over the political wash, under the water and the roads; 0 switches the layer off"
+map_biome_alpha,0.5,"BIOMES LAYER (experiment 2026-09-14): opacity of the biome ground tiles laid over the political wash, under the water and the roads; 0 switches the layer off"
 map_biome_tile_px,128,"BIOMES LAYER (experiment 2026-09-14): one seamless tile spans this many native map px"
-map_biome_blur_px,40,"BIOMES LAYER (experiment 2026-09-14): radius in native map px over which one biome's tile fades into the next (owner: no cell shape may show) — BAKED into assets/maps/<id>/world_biome_weights_N.png by tools/bake_biome_weights.gd, so re-run it after changing this"
+map_biome_blur_px,24,"BIOMES LAYER (experiment 2026-09-14): radius in native map px over which one biome's tile fades into the next (owner: no cell shape may show; 40 read too soft, 24 keeps the terrain legible) — BAKED into assets/maps/<id>/world_biome_weights_N.png by tools/bake_biome_weights.gd, so re-run it after changing this"
