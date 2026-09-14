@@ -226,7 +226,7 @@ func test_turning_a_manor_to_a_chief_good() -> void:
 	var allowed := MapManors.focuses_for(data, cell)
 	assert_gt(allowed.size(), 1, "the capital's land allows a choice")
 	var working := MapManors.focus_of(data, s, cell)
-	assert_eq(working, String(allowed[0]), "the default is the first the land allows")
+	assert_eq(working, MapManors.default_focus(data, cell), "the default follows the terrain")
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_FOCUS", {"manor": cell, "focus": working}), s),
 		"already works")
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_FOCUS", {"manor": cell, "focus": "moon_dust"}), s),

@@ -453,3 +453,35 @@ func test_finished_buildings_add_to_the_crowns_metrics_each_tick() -> void:
 	var crown := MapManors.crown_building_effects(r, s)
 	assert_almost_eq(float(crown["treasury"]), 3.0, 0.001)
 	assert_almost_eq(float(crown["unrest"]), 0.0, 0.001, "another house's wall")
+
+## The default focus follows the terrain (owner 2026-09-14): default_on
+## rows claim cells — coast, high, peak, biomes — in file order, provided
+## the land allows the focus; an unclaimed cell works the first it allows.
+## Fixture rows: grain (biomes 1|2, no claim), fish (any, coast, claims
+## coast), ore (biome 2, claims high). Cell 1: biome 1, coastal -> fish.
+## Cell 2: biome 2, inland, height 30 -> nothing claims it -> grain; raise
+## it to 60 -> ore claims high ground.
+func test_the_default_focus_follows_the_terrain() -> void:
+	var r := _repo()
+	r.balance["manor_focus_high_height"] = 52.0
+	r.balance["manor_focus_peak_height"] = 63.0
+	r.manor_focus = {
+		"grain": {"focus_code": "grain", "label": "Grain fields", "good_code": "grain", "biomes": "1|2|3",
+			"coast": "0", "yield_per_1000": "10", "rent_bonus": "0.1", "switch_cost_gold": "20",
+			"transition_ticks": "2", "default_on": ""},
+		"fish": {"focus_code": "fish", "label": "Fisheries", "good_code": "fish", "biomes": "any",
+			"coast": "1", "yield_per_1000": "8", "rent_bonus": "0.05", "switch_cost_gold": "15",
+			"transition_ticks": "2", "default_on": "coast"},
+		"ore": {"focus_code": "ore", "label": "Iron workings", "good_code": "iron", "biomes": "2",
+			"coast": "0", "yield_per_1000": "2", "rent_bonus": "0.2", "switch_cost_gold": "60",
+			"transition_ticks": "0", "default_on": "high|3"},
+	}
+	assert_eq(MapManors.default_focus(r, 1), "fish", "a coastal manor fishes")
+	assert_eq(MapManors.default_focus(r, 2), "grain", "inland lowland: the first allowed")
+	MapManors.invalidate()
+	r.cells[2]["height"] = 60.0
+	assert_eq(MapManors.default_focus(r, 2), "ore", "high ground: the claim wins")
+	MapManors.invalidate()
+	r.cells[2]["height"] = 30.0
+	r.cells[2]["biome_id"] = 3
+	assert_eq(MapManors.default_focus(r, 2), "grain", "biome 3 is claimed by ore but ore is not allowed there")

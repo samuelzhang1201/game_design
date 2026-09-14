@@ -233,3 +233,5 @@ map_manor_estate_fit,0.75,"manors view (owner 2026-09-13): an estate drawing is 
 map_manor_estate_min_scale,0.5,"manors view: screen px per native px at/above which the estate drawings are shown"
 map_manor_estate_foot,0.5,"manors view: the share of an estate drawing's height above the cell centre — 0.5 centres it (owner 2026-09-14)"
 map_manor_estate_px,5.0,"manors view (owner 2026-09-14): the ONE height of every estate drawing in native map px (x map_decor_scale) — the same for every manor, whatever its size; only map_manor_estate_fit can shrink it"
+manor_focus_high_height,52,"manors (owner 2026-09-14): cell height at/above which a manor's default focus may be a high-ground one (manor_focus.csv default_on high)"
+manor_focus_peak_height,63,"manors: cell height at/above which a manor's default focus may be a mountain one (default_on peak)"

@@ -593,11 +593,51 @@ static func focuses_for(repo: DataRepository, cell_id: int) -> Array:
 		c["focuses"][cell_id] = out
 	return c["focuses"][cell_id]
 
-## What a manor works at when nobody has chosen: the first focus its
-## terrain allows, "" for land that allows none.
+## What a manor works at when nobody has chosen (owner 2026-09-14: it
+## follows the terrain): the first focus in file order whose default_on
+## claims the cell — a biome id, `coast` for a sea neighbour, `high` for
+## height at/above manor_focus_high_height, `peak` for
+## manor_focus_peak_height — and that the land allows; else the first
+## focus the land allows; "" for land that allows none. Cached per repo.
 static func default_focus(repo: DataRepository, cell_id: int) -> String:
+	var c := _repo_cache(repo)
+	if not c.has("default_focus"):
+		c["default_focus"] = {}
+	if c["default_focus"].has(cell_id):
+		return c["default_focus"][cell_id]
 	var allowed := focuses_for(repo, cell_id)
-	return String(allowed[0]) if not allowed.is_empty() else ""
+	var pick := String(allowed[0]) if not allowed.is_empty() else ""
+	var cell: Dictionary = repo.cells.get(cell_id, {})
+	var biome := str(int(cell.get("biome_id", -1)))
+	var height := float(cell.get("height", 0.0))
+	# A claim on the coast outranks one on a peak, a peak the high ground,
+	# and any of those a biome; ties go to file order.
+	var best_rank := -1
+	for code: String in repo.manor_focus:
+		if not code in allowed:
+			continue
+		var claims := String((repo.manor_focus[code] as Dictionary).get("default_on", "")).strip_edges()
+		if claims == "":
+			continue
+		var rank := -1
+		for token: String in claims.split("|"):
+			var t := token.strip_edges()
+			var r := -1
+			match t:
+				"coast":
+					r = 3 if is_coastal(repo, cell_id) else -1
+				"peak":
+					r = 2 if height >= repo.bal("manor_focus_peak_height") else -1
+				"high":
+					r = 1 if height >= repo.bal("manor_focus_high_height") else -1
+				_:
+					r = 0 if t == biome else -1
+			rank = maxi(rank, r)
+		if rank > best_rank:
+			best_rank = rank
+			pick = code
+	c["default_focus"][cell_id] = pick
+	return pick
 
 ## The focus a manor works at now: the one set, else the default.
 static func focus_of(repo: DataRepository, state: GameState, cell_id: int) -> String:

@@ -224,3 +224,26 @@ func test_the_manor_focus_table_fits_the_pack() -> void:
 	for province: String in MapManors.controlled_provinces(repo, state):
 		for cell: int in MapManors.manors_of_province(repo, province):
 			assert_ne(MapManors.default_focus(repo, cell), "", "%s works something" % MapManors.label_of(repo, cell))
+
+## On the real pack (owner 2026-09-14) the defaults spread the industries:
+## the coast fishes, the hot desert grows dates, the heights quarry, the
+## grassland lowlands run cattle — and no manor is left without a focus.
+func test_default_focuses_follow_the_packs_terrain() -> void:
+	var repo := _fresh()
+	var counts: Dictionary = {}
+	for id: int in repo.manors:
+		var f := MapManors.default_focus(repo, id)
+		assert_ne(f, "", "%s works something" % MapManors.label_of(repo, id))
+		counts[f] = int(counts.get(f, 0)) + 1
+		var cell: Dictionary = repo.cells[id]
+		if MapManors.is_coastal(repo, id):
+			assert_eq(f, "fish", "the coast fishes")
+		elif float(cell["height"]) >= repo.bal("manor_focus_peak_height") and MapManors.focus_allowed(repo, id, "iron"):
+			assert_eq(f, "iron")
+		elif float(cell["height"]) >= repo.bal("manor_focus_high_height"):
+			assert_eq(f, "stone")
+		elif int(cell["biome_id"]) == 1:
+			assert_eq(f, "dates")
+		elif int(cell["biome_id"]) == 4:
+			assert_eq(f, "cattle")
+	assert_gte(counts.size(), 6, "six or more industries at the start: %s" % str(counts))
