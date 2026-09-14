@@ -168,14 +168,42 @@ static func panel_art_style(margin: int) -> VellumPanelStyle:
 	style.set_content_margin_all(maxf(float(margin), PANEL_ART_INSET * 0.25))
 	return style
 
+## The plate's ornament alone (owner 2026-09-14: "restore the decorative
+## border"): panel_vellum.png with its cream made clear, leaving the double
+## rule, the hairline and the corner flourishes in the art's own ink. Drawn
+## over the bright card, so the modern theme keeps its body and gets its
+## frame back.
+const PANEL_ORNAMENT_PATH := "res://assets/ui/panel_ornament.png"
+
+static func panel_ornament_enabled() -> bool:
+	if Game == null or Game.data == null or not Game.data.balance.has("ui_panel_ornament"):
+		return false
+	return Game.data.bal("ui_panel_ornament") > 0.0
+
 ## A clean card: near-white body, a thin trim in `border`, rounded corners
-## and a soft drop shadow.
+## and a soft drop shadow — framed by the ornament when ui_panel_ornament is
+## on and the art loads.
 static func panel_style(border: Color, border_width: int = 2,
 		margin: int = 12) -> StyleBox:
 	if panel_art_enabled():
 		var art := panel_art_style(margin)
 		if art != null:
 			return art
+	var card := _card_style(border, border_width, margin)
+	if panel_ornament_enabled():
+		var tex := load_art(PANEL_ORNAMENT_PATH)
+		if tex != null:
+			var framed := VellumPanelStyle.new()
+			framed.base = card
+			framed.texture = tex
+			framed.source_inset = PANEL_ART_SOURCE_INSET
+			framed.draw_inset = PANEL_ART_INSET
+			# Text keeps clear of the rules, as the vellum plate's floor did.
+			framed.set_content_margin_all(maxf(float(margin), PANEL_ART_INSET * 0.25))
+			return framed
+	return card
+
+static func _card_style(border: Color, border_width: int, margin: int) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = PANEL_BG
 	style.border_color = border

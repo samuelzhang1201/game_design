@@ -20,9 +20,15 @@ var texture: Texture2D = null
 var source_inset := 75.0
 ## How much of the drawn box is corner, in DESIGN px.
 var draw_inset := 20.0
+## Drawn first, under the plate (owner 2026-09-14): the bright card, when the
+## plate is the ornament alone — its rules and corner flourishes on a clear
+## ground — rather than the whole vellum sheet. null draws the plate only.
+var base: StyleBox = null
 
 
 func _draw(to_canvas_item: RID, rect: Rect2) -> void:
+	if base != null:
+		base.draw(to_canvas_item, rect)
 	if texture == null:
 		return
 	var tw := float(texture.get_width())

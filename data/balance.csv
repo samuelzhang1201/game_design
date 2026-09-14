@@ -142,6 +142,7 @@ map_compass_margin_px,20.0,world map: inset of the compass rose from the top-rig
 map_compass_alpha,0.85,world map: opacity of the compass rose (0 hides it)
 map_border_smoothing_steps,8,"world map: Catmull-Rom samples per segment on a kingdom outline and a coast — the curve runs THROUGH the pack's points, so it is smooth without drifting off the real boundary (owner 2026-09-13)"
 ui_panel_art,0,"UI: 1 draws every panel as the nine-sliced vellum plate (assets/ui/panel_vellum.png, library U-01); 0 draws the flat rounded card of UiPalette.panel_style — the bright modern theme (owner 2026-09-13: the parchment look read old and dim)"
+ui_panel_ornament,1,"UI (owner 2026-09-14: restore the decorative border): 1 frames every bright card with the vellum plate's ornament alone — its double rule, hairline and corner flourishes (assets/ui/panel_ornament.png) — over the modern body; 0 is the plain card. Ignored while ui_panel_art draws the whole plate"
 dashboard_max_provinces,4,realm dashboard: how many of the realm's largest provinces the bar chart lists
 map_sprite_scale,0.18,world map: settlement art height in screen px per screen px of view scale x 100 (owner 2026-09-12: 0.32 drew the towns far too large over the parchment)
 map_sprite_min_px,12.0,world map: below this screen height a settlement draws as a pin, not art
