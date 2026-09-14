@@ -1,0 +1,13 @@
+biome_id,key,texture,notes
+1,desert,res://assets/biomes/desert.png,hot desert (T-12) — beria has no cell of it; the row waits for a pack that does
+2,moor,res://assets/biomes/moor.png,cold desert wears the moorland tile (T-06)
+3,steppe,res://assets/biomes/steppe.png,savanna (T-11)
+4,pasture,res://assets/biomes/pasture.png,grassland (T-05)
+5,woodland,res://assets/biomes/woodland.png,tropical seasonal forest: scattered woodland (T-03)
+6,broadleaf,res://assets/biomes/broadleaf.png,temperate deciduous forest (T-01)
+7,broadleaf,res://assets/biomes/broadleaf.png,tropical rainforest shares the broadleaf canopy for now
+8,conifer,res://assets/biomes/conifer.png,temperate rainforest (T-02) — the decor already gives it conifers
+9,conifer,res://assets/biomes/conifer.png,taiga (T-02)
+10,tundra,res://assets/biomes/tundra.png,tundra (T-13)
+11,ice,res://assets/biomes/ice.png,glacier (T-19)
+12,marsh,res://assets/biomes/marsh.png,wetland (T-10)

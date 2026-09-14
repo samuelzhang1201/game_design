@@ -22,6 +22,7 @@ var _heights := false
 var _economy := false
 var _armies := false
 var _manors := false
+var _biomes := true  # BIOMES LAYER (experiment 2026-09-14): --biomes 0 for a before shot
 var _viewport: SubViewport
 var _view: WorldMapView
 var _frames := 0
@@ -43,6 +44,8 @@ func _ready() -> void:
 			_manors = args[i + 1] == "1"
 		elif args[i] == "--armies":
 			_armies = args[i + 1] == "1"
+		elif args[i] == "--biomes":
+			_biomes = args[i + 1] == "1"
 		i += 1
 	Game.start_campaign(42)
 	_viewport = SubViewport.new()
@@ -65,6 +68,7 @@ func _ready() -> void:
 	_view.show_economy = _economy
 	_view.show_manors = _manors
 	_view.show_armies = _armies
+	_view.show_biomes = _biomes
 	_view.queue_redraw()
 
 

@@ -6,6 +6,7 @@
     python3 assets/flux/install_map_art.py estates  # D-32..D-41 -> assets/manors/ (the manors view's estates)
     python3 assets/flux/install_map_art.py ui       # post.py icon tier -> assets/icons/ (resource strip, realm card)
     python3 assets/flux/install_map_art.py cast     # K-xx -> assets/portraits/
+    python3 assets/flux/install_map_art.py biomes   # T-xx -> assets/biomes/ (BIOMES LAYER experiment 2026-09-14)
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
 blue channel (see sepia_alpha_template.json for the same steps as a ComfyUI
@@ -258,9 +259,75 @@ def _install_cast_tier(codes: dict, tag: str, tier: str, size: int, dest: Path) 
     return done
 
 
+## BIOMES LAYER (experiment 2026-09-14): the ground tiles the default map
+## lays over each biome's land (data/biome_art.csv, MapBiomes). Library §5
+## T- renders named in biome_art.csv, KEPT IN COLOUR (the layer is a colour
+## wash of its own, drawn at map_biome_alpha over the sheet), boxed down to
+## BIOME_TILE_PX and made seamless: the render is rolled by half a tile so
+## its four edges meet in the middle, and the original is blended back over
+## that cross with a feathered band — the classic offset-and-blend — so the
+## sheet repeats without a visible seam. The model is asked for a seamless
+## tile and never quite delivers one.
+## 512 px: a tile spans map_biome_tile_px (128) native px, and the map is
+## drawn up to ~4x native, so 512 keeps the crowns sharp at the closest zoom.
+BIOME_TILE_PX = 512
+BIOME_FEATHER_PX = 96
+
+
+def make_seamless(w: int, h: int, px: bytearray, feather: int) -> bytearray:
+    """RGBA in, RGBA out: rolled by (w/2, h/2), the original blended back
+    over the centre cross within `feather` px of it."""
+    hx, hy = w // 2, h // 2
+    out = bytearray(w * h * 4)
+    for y in range(h):
+        sy = (y + hy) % h
+        dy = abs(y - hy)
+        for x in range(w):
+            sx = (x + hx) % w
+            d = min(abs(x - hx), dy)
+            t = min(1.0, d / float(feather)) if feather > 0 else 1.0  # 0 on the cross: the original
+            o = (y * w + x) * 4
+            r = (sy * w + sx) * 4
+            for c in range(4):
+                out[o + c] = int(px[o + c] + (px[r + c] - px[o + c]) * t + 0.5)
+    return out
+
+
+def to_rgba(w: int, h: int, ch: int, px: bytearray) -> bytearray:
+    if ch == 4:
+        return bytearray(px)
+    out = bytearray(w * h * 4)
+    for i in range(w * h):
+        out[i * 4:i * 4 + 3] = px[i * 3:i * 3 + 3]
+        out[i * 4 + 3] = 255
+    return out
+
+
+def install_biomes(size: int = BIOME_TILE_PX, feather: int = BIOME_FEATHER_PX) -> int:
+    rows = list(csv.DictReader((HERE / "biome_art.csv").open()))
+    dest = ROOT / "assets" / "biomes"
+    dest.mkdir(parents=True, exist_ok=True)
+    done = 0
+    for row in sorted(rows, key=lambda r: r["art_id"]):
+        art_id, code, seed = row["art_id"], row["key"], row.get("seed", "").strip()
+        hits = sorted((HERE / "out" / "terrain").glob("%s_*.png" % art_id))
+        if seed:
+            hits = [h for h in hits if h.stem.endswith("_s" + seed)] or hits
+        if not hits:
+            print("  (no render for %s / %s)" % (art_id, code))
+            continue
+        w, h, ch, px = decode_png(hits[-1])
+        small = resize_rgba(w, h, to_rgba(w, h, ch, px), size, size)
+        tile = make_seamless(size, size, small, feather)
+        encode_png(dest / ("%s.png" % code), size, size, 4, bytes(tile))
+        print("  %-6s %-12s %dx%d seamless" % (art_id, code, size, size))
+        done += 1
+    return done
+
+
 def main() -> int:
     chapters = {"goods": install_goods, "decor": install_decor, "cast": install_cast,
-                "ui": install_ui, "estates": install_estates}
+                "ui": install_ui, "estates": install_estates, "biomes": install_biomes}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2

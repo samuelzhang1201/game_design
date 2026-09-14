@@ -38,6 +38,9 @@ var settlement_art: Array[Dictionary] = []
 ## data/terrain_art.csv rows: which symbol a land cell is decorated with, by
 ## height band or biome, and how thickly (MapObjects.terrain_decor).
 var terrain_art: Array[Dictionary] = []
+## BIOMES LAYER (experiment 2026-09-14): data/biome_art.csv rows — the
+## seamless ground tile each biome's land wears (MapBiomes.layers).
+var biome_art: Array[Dictionary] = []
 ## data/sea_art.csv rows: the ships and whales printed on the open sea
 ## (MapObjects.sea_decor): texture, weight, height_px, min_shore_px from the coast.
 var sea_art: Array[Dictionary] = []
@@ -336,6 +339,10 @@ func _load(dir: String) -> bool:
 			["focus_code", "tier", "min_people", "texture"],
 			func(r): manor_estates.append(r)):
 		return false
+	# BIOMES LAYER (experiment 2026-09-14).
+	if not _load_if_present("res://data/biome_art.csv", ["biome_id", "key", "texture"],
+			func(r): biome_art.append(r)):
+		return false
 	if not _load_if_present("res://data/sea_art.csv",
 			["key", "texture", "weight", "height_px", "min_shore_px"],
 			func(r): sea_art.append(r)):
@@ -379,6 +386,7 @@ func load_map(id: String) -> bool:
 	provinces_by_id.clear()
 	MapOwnership.invalidate()
 	MapTerrain.invalidate()
+	MapBiomes.invalidate()  # BIOMES LAYER (experiment 2026-09-14)
 	MapObjects.forget_decor()
 	MapEconomy.forget()
 	MapPalette.forget_colors()

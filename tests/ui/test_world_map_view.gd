@@ -1024,6 +1024,36 @@ func test_the_heights_view_drops_the_political_wash() -> void:
 	v.show_heights = false
 	assert_true(v.political_wash_visible(), "and back when the view closes")
 
+## BIOMES LAYER (experiment 2026-09-14): the default map lays a ground tile
+## over the land of every biome with art — one mesh per biome, kept between
+## frames, hidden under the themes that draw the land their own way, and off
+## when balance turns the alpha to 0.
+func test_the_biomes_layer_is_one_mesh_per_biome_on_the_default_map() -> void:
+	var v := _view()
+	await wait_frames(2)
+	assert_true(v.biomes_visible(), "on by default")
+	var layers := v.biome_layers()
+	assert_gt(layers.size(), 3, "the pack's biomes wear their tiles")
+	var seen: Dictionary = {}
+	for layer: Dictionary in layers:
+		assert_false(seen.has(layer["biome_id"]), "one layer per biome")
+		seen[layer["biome_id"]] = true
+		assert_eq((layer["mesh"] as ArrayMesh).get_surface_count(), 1, "one draw call each")
+		assert_true(String(layer["texture"]).begins_with("res://assets/biomes/"), "art from the tile folder")
+	assert_true(v.biome_layers()[0]["mesh"] == layers[0]["mesh"], "kept between frames")
+	v.show_heights = true
+	assert_false(v.biomes_visible(), "hidden under a theme")
+	assert_eq(v.biome_layers().size(), 0)
+	v.show_heights = false
+	v.show_biomes = false
+	assert_false(v.biomes_visible(), "the snapshot tool's switch")
+	v.show_biomes = true
+	var alpha: float = Game.data.balance["map_biome_alpha"]
+	Game.data.balance["map_biome_alpha"] = 0.0
+	assert_false(v.biomes_visible(), "alpha 0 is the data switch")
+	Game.data.balance["map_biome_alpha"] = alpha
+	assert_true(v.biomes_visible())
+
 ## Every chief good a manor can badge has a category colour for its ring and
 ## something to draw inside it: its own picture, or its category's glyph.
 func test_every_manor_badge_has_a_ring_colour_and_a_picture() -> void:

@@ -123,6 +123,16 @@ var show_manors: bool = false:
 		manor_view_changed.emit(v)
 		queue_redraw()
 
+## BIOMES LAYER (experiment 2026-09-14): the seamless ground tiles laid over
+## the land of the DEFAULT map (MapBiomes). On unless a theme replaces the
+## land; balance.csv map_biome_alpha 0 switches it off without code.
+var show_biomes: bool = true:
+	set(v):
+		if v == show_biomes:
+			return
+		show_biomes = v
+		queue_redraw()
+
 ## The military layer (user request 2026-09-10): the player's own regiments
 ## drawn where the pack quarters them, each as a counter stating its
 ## headcount (army_markers). Only the player's host shows (owner
@@ -326,6 +336,9 @@ func _draw() -> void:
 	# mapSample.jpg): painted over them it muted every river and track on
 	# claimed land, which is most of the map.
 	_layer("wash", _draw_political_wash)
+	# BIOMES LAYER (experiment 2026-09-14): OVER the wash, under the water
+	# and the roads — under a 0.72 wash the tiles were not there at all.
+	_layer("biomes", _draw_biomes)
 	# Filled in place, never reassigned: a lambda captures the local by value,
 	# so `manors = ...` inside it left the badges layer below reading [].
 	var manors: Array = []
@@ -2291,6 +2304,33 @@ func _draw_heights() -> void:
 	var mesh := heat_mesh()
 	if mesh != null:
 		draw_mesh(mesh, null, Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset))
+
+
+## --- BIOMES LAYER (experiment 2026-09-14) ------------------------------
+## The land of each biome laid with its seamless ground tile (MapBiomes),
+## over the terrain mesh and under the paper grain, one draw_mesh per biome
+## with art. Hidden under the themes that draw the land their own way
+## (HEIGHTS, ECONOMY, MANORS) and when map_biome_alpha is 0.
+func biomes_visible() -> bool:
+	if not show_biomes or show_heights or show_economy or show_manors:
+		return false
+	return Game.data.bal("map_biome_alpha") > 0.0
+
+## The layers drawn this frame: {biome_id, texture, mesh} per biome with
+## art and land, [] when the layer is hidden. Test seam.
+func biome_layers() -> Array:
+	return MapBiomes.layers(Game.data) if biomes_visible() else []
+
+func _draw_biomes() -> void:
+	var layers := biome_layers()
+	if layers.is_empty():
+		return
+	var tint := Color(1.0, 1.0, 1.0, Game.data.bal("map_biome_alpha"))
+	var xf := Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)
+	for layer: Dictionary in layers:
+		var tex := UiPalette.load_art(String(layer["texture"]))
+		if tex != null:
+			draw_mesh(layer["mesh"], tex, xf, tint)
 
 ## Province seams as thin, dense dashes in the palette's seam colour — the
 ## same dash cache the kingdom borders use, one polyline per kingdom.
