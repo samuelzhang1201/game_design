@@ -13,15 +13,22 @@ extends RefCounted
 ## step and a top-bar refresh are one string compare.
 ##
 ## The month's work is spread over its days: step_day recomputes the
-## provinces of the day's bucket (province index mod 30) whose key went
-## stale, so the month's end has almost nothing left (architecture R-5;
-## the bucket count is the calendar's, in the save by construction).
+## provinces of the day's bucket whose key went stale, so the month's end
+## has almost nothing left (architecture R-5; the bucket count is the
+## calendar's, in the save by construction). The buckets are BALANCED BY
+## MANOR COUNT, not `province index mod 30` (2026-09-14, after the bench
+## found a 196-manor bucket against a 117 mean and an 18 ms day step):
+## setup() walks the provinces heaviest first and drops each into the
+## lightest bucket so far. Deterministic — pack data, a fixed sort, ties
+## to the lower index and the lower bucket; no RNG, nothing stored, so a
+## save is unaffected.
 
 static var _repo_id := 0
 static var _cells := PackedInt32Array()      # i -> cell id
 static var _index: Dictionary = {}            # cell id -> i
 static var _codes := PackedStringArray()      # province index -> code
 static var _range: Dictionary = {}            # code -> [start, end)
+static var _bucket_of := PackedInt32Array()   # province index -> day bucket
 static var _tax := PackedInt32Array()
 static var _strategic := PackedInt32Array()
 static var _civil := PackedInt32Array()
@@ -38,6 +45,7 @@ static func forget() -> void:
 	_index = {}
 	_codes = PackedStringArray()
 	_range = {}
+	_bucket_of = PackedInt32Array()
 	_tax = PackedInt32Array()
 	_strategic = PackedInt32Array()
 	_civil = PackedInt32Array()
@@ -68,6 +76,36 @@ static func setup(repo: DataRepository) -> void:
 	_tax.resize(_cells.size())
 	_strategic.resize(_cells.size())
 	_civil.resize(_cells.size())
+	_assign_buckets()
+
+## The day bucket of every province: the heaviest province goes into the
+## lightest bucket, so no day of the month carries much more than the mean
+## (1/DAYS_PER_TICK of the pack's manors). Pure pack data, fixed order.
+static func _assign_buckets() -> void:
+	var order: Array[int] = []
+	for pi in _codes.size():
+		order.append(pi)
+	# Heaviest first; ties by province index ascending, so the order is one
+	# order on every machine.
+	order.sort_custom(func(a: int, b: int) -> bool:
+		var wa := _manor_count(a)
+		var wb := _manor_count(b)
+		return wa > wb if wa != wb else a < b)
+	var load := PackedInt32Array()
+	load.resize(Calendar.DAYS_PER_TICK)
+	_bucket_of = PackedInt32Array()
+	_bucket_of.resize(_codes.size())
+	for pi: int in order:
+		var best := 0
+		for b in load.size():
+			if load[b] < load[best]:
+				best = b
+		_bucket_of[pi] = best
+		load[best] += _manor_count(pi)
+
+static func _manor_count(province_index: int) -> int:
+	var r: Array = _range[_codes[province_index]]
+	return int(r[1]) - int(r[0])
 
 static func _figure(repo: DataRepository, state: GameState, path: String) -> int:
 	var v: Variant = WorldLedger.value_of(repo, state, path)
@@ -168,7 +206,7 @@ static func step_day(repo: DataRepository, state: GameState) -> int:
 	var n := 0
 	var bucket := (state.day - 1) % Calendar.DAYS_PER_TICK
 	for pi: int in _codes.size():
-		if pi % Calendar.DAYS_PER_TICK != bucket:
+		if _bucket_of[pi] != bucket:
 			continue
 		var code := _codes[pi]
 		if String(_keys.get(code, "")) != province_key(repo, state, code):

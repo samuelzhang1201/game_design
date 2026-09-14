@@ -17,6 +17,13 @@ var signatures: Array[Dictionary] = []
 ## data/world_schema.csv: every field the world ledger can address, its type,
 ## range, polarity, and the cap the model may move it by (WorldLedger).
 var world_schema: Array[Dictionary] = []
+## path -> the world_schema row governing it, memoised by
+## WorldLedger.schema_for (2026-09-14: matching a path walked the whole
+## table, splitting and realm-resolving every row, on EVERY ledger read —
+## 75 of the 87 us a manor's month cost). Pure of game state: the pack's
+## schema and realm bindings are loaded once and never rewritten. Code
+## that does rewrite `world_schema` after load must clear this.
+var schema_cache: Dictionary = {}
 ## data/metric_polarity.csv: metric -> which direction is good for the crown
 ## (1, -1, or 0 for neutral rates). OrderCosts reads it to tell a cost from a gain.
 var metric_polarity: Dictionary = {}

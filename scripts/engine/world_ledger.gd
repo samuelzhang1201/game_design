@@ -24,7 +24,21 @@ static func resolve(data: DataRepository, path: String) -> String:
 
 ## The schema row governing a path: same segment count, every non-wildcard
 ## segment equal after slot resolution, fewest wildcards wins. {} if none.
+## Memoised on the repository (data.schema_cache): the answer is a pure
+## function of the pack's schema table and realm bindings, and the search
+## is a walk of the whole table.
 static func schema_for(data: DataRepository, path: String) -> Dictionary:
+	if data.schema_cache.has(path):
+		return data.schema_cache[path]
+	var row := _match_schema(data, path)
+	# The pack's own paths are a few thousand; a caller inventing paths
+	# without end starts over rather than growing without bound.
+	if data.schema_cache.size() > 8192:
+		data.schema_cache.clear()
+	data.schema_cache[path] = row
+	return row
+
+static func _match_schema(data: DataRepository, path: String) -> Dictionary:
 	var parts := resolve(data, path).split(SEP)
 	var best: Dictionary = {}
 	var best_wild := 1 << 30

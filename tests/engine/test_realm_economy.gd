@@ -76,6 +76,24 @@ func test_the_day_buckets_spread_the_months_work() -> void:
 	var n := RealmEconomy.compute_count
 	RealmEconomy.realm(data, s)
 	assert_eq(RealmEconomy.compute_count, n, "the month's end had nothing left to do")
+	# The buckets are balanced by manor count (2026-09-14), so no day of the
+	# month carries much more work than the mean — `index mod 30` put 196
+	# manors on one day against a 117 mean and cost 18 ms.
+	var load: Array[int] = []
+	load.resize(Calendar.DAYS_PER_TICK)
+	load.fill(0)
+	var manors := 0
+	for pi in RealmEconomy._codes.size():
+		var r: Array = RealmEconomy._range[RealmEconomy._codes[pi]]
+		var count := int(r[1]) - int(r[0])
+		manors += count
+		load[RealmEconomy._bucket_of[pi]] += count
+	var mean := float(manors) / float(Calendar.DAYS_PER_TICK)
+	var worst := 0
+	for v: int in load:
+		worst = maxi(worst, v)
+	assert_lte(float(worst), 1.5 * mean,
+		"the heaviest day carries at most 1.5x the mean (%d manors against %.1f)" % [worst, mean])
 
 func test_the_full_recompute_agrees_with_the_cache() -> void:
 	RealmEconomy.realm(data, s)
