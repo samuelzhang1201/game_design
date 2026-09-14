@@ -112,3 +112,12 @@ func test_every_dimension_has_its_art() -> void:
 		assert_not_null(ResourceIcon.texture_of(key), key)
 	for key: String in RealmDashboard.RESOURCES + RealmDashboard.TEMPER + ["towns", "country"]:
 		assert_ne(String(Game.data.resource_icons[key].get("texture", "")), "", key + " names its art")
+
+## Every good the manor card can list has its colour icon installed
+## (goods_art.csv `icon`, owner 2026-09-14: every icon on the card is game art).
+func test_every_good_has_its_colour_icon() -> void:
+	Game.start_campaign(42)
+	assert_false(Game.data.goods_icons.is_empty())
+	for good: String in Game.data.goods_icons:
+		var path := String(Game.data.goods_icons[good])
+		assert_true(ResourceLoader.exists(path), "%s's colour icon exists: %s" % [good, path])

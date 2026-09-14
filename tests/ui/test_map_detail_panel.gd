@@ -243,3 +243,10 @@ func test_a_manor_card_shows_its_painting_its_facts_as_icons_and_its_output_rate
 		assert_not_null(row, "%s has its rate" % good)
 		if row != null:
 			assert_eq((row.find_child("Rate", true, false) as Label).text, "+%d / mo" % int(units[good]))
+			var icon_path := String(Game.data.goods_icons.get(good, ""))
+			if icon_path != "" and ResourceLoader.exists(icon_path):
+				var pic := row.get_child(0) as TextureRect
+				assert_not_null(pic, "%s draws its art" % good)
+				if pic != null:
+					assert_eq(pic.texture.resource_path, icon_path, "%s wears its colour icon" % good)
+					assert_eq(pic.modulate, Color.WHITE, "a colour icon is not tinted")
