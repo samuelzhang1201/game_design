@@ -7,7 +7,7 @@ extends Control
 ## 2026-09-09, ScreenLayout): the realm's own information in the LEFT
 ## column, the BRIGHT map in the middle, and a RIGHT slot that is empty by
 ## default — the council column (the court record, the order box, the
-## lettered suggestions, End Turn — R8/R10) opens from the ENTER THE
+## lettered suggestions — R8/R10) opens from the ENTER THE
 ## COUNCIL handle on the right edge.
 ##
 ## The columns divide by kind (owner ruling 2026-09-10): the LEFT column
@@ -17,9 +17,8 @@ extends Control
 ## map click never displaces the council, and _refresh_left decides which
 ## of the four holds the left column.
 
-## Emitted instead of self-driving the turn cycle: GameRoot owns advancing
-## the tick and playing the DAY_RUN interlude. See enter_court.
-signal end_turn_requested
+## There is no End Turn (owner 2026-09-14): the top bar's play button is the
+## only thing that moves time, and the month's end comes on its own.
 
 ## Log cap (R10-adjacent polish, ported from the old council screen's transcript):
 ## keeps the court log short since it only ever holds order results, not a
@@ -29,7 +28,6 @@ const LOG_CAP := 8
 var log_box: VBoxContainer
 var suggestions_box: VBoxContainer
 var free_text: LineEdit
-var end_turn: Button
 
 var _log_scroll: ScrollContainer
 var _suggestion_buttons: Array = []
@@ -110,8 +108,6 @@ func _ready() -> void:
 	free_text = %FreeText
 	free_text.max_length = int(Game.data.bal("prompt_max_chars"))
 	free_text.text_submitted.connect(_on_free_text_submitted)
-	end_turn = %EndTurn
-	end_turn.pressed.connect(_on_end_turn)
 	_set_right("")
 	_refresh_left()
 
@@ -228,28 +224,8 @@ func enter_court(report: TickReport) -> void:
 func top_bar() -> TopBar:
 	return %TopBar
 
-## Enter ends the turn (when the order box isn't focused - a focused LineEdit
-## consumes Enter itself, so this only fires from unhandled input).
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_accept") and not end_turn.disabled \
-			and Game.state.pending_event.is_empty():
-		_on_end_turn()
-
 func suggestion_buttons() -> Array:
 	return _suggestion_buttons
-
-func end_turn_button() -> Button:
-	return end_turn
-
-## End Turn does not advance the engine itself - GameRoot owns the tick
-## advance and the DAY_RUN interlude; this screen just signals that the
-## player is done for the month. Gated on pending_event so a player
-## cannot skip past an event still awaiting a decision.
-func _on_end_turn() -> void:
-	if not Game.state.pending_event.is_empty():
-		return
-	end_turn.disabled = true
-	end_turn_requested.emit()
 
 ## Natural-language suggestion buttons (R8): the pitch template IS the
 ## label - traits are passed as [] so labels stay generic (court has no
@@ -264,7 +240,7 @@ func _render_suggestions(report: TickReport) -> void:
 	for i in report.suggestions.size():
 		var sug: Dictionary = report.suggestions[i]
 		var b := Button.new()
-		b.focus_mode = Control.FOCUS_NONE  # Enter is reserved for End Turn
+		b.focus_mode = Control.FOCUS_NONE
 		# Mock-style lettered response ("A. Raise the levies"), left-aligned.
 		b.text = "%s.  %s" % [char(65 + i), TemplateVoicer.line_for(Game.data,
 			"pitch_" + String(sug["pitch_key"]), [],
@@ -299,16 +275,9 @@ func _on_free_text_submitted(text: String) -> void:
 	if text.strip_edges() == "":
 		return
 	free_text.editable = false
-	end_turn.disabled = true
 	_log("You", text)
 	Game.submit_free_text(text, func(res: Dictionary):
-		# free_text itself always re-enables; End Turn only when no event is
-		# pending - a free-text NORMAL action must not let the player skip
-		# past an event that's still awaiting a choice (controller ruling,
-		# ported from the old council screen). If this free text WAS the
-		# EVENT_CHOICE that resolved the event, pending_event is already
-		# clear by the time this callback runs, so End Turn re-enables
-		# correctly too.
+		# The order box always re-enables once the order is answered.
 		free_text.editable = true
 		free_text.clear()
 		if not res["ok"]:
@@ -334,9 +303,7 @@ func _on_free_text_submitted(text: String) -> void:
 			if res.has("reply"):
 				_log(String(res["reply"]["speaker"]), String(res["reply"]["text"]))
 			for line in res.get("ledger", []):
-				_log("Ledger", String(line))
-		if Game.state.pending_event.is_empty():
-			end_turn.disabled = false)
+				_log("Ledger", String(line)))
 
 ## Ask on a card pre-fills the order box and brings the council up so the
 ## player can send it.

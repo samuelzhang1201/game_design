@@ -86,8 +86,3 @@ text = "THE COUNCIL ADVISES"
 [node name="SuggestionsBox" type="VBoxContainer" parent="SidePanel/SVBox"]
 unique_name_in_owner = true
 theme_override_constants/separation = 3
-
-[node name="EndTurn" type="Button" parent="SidePanel/SVBox"]
-unique_name_in_owner = true
-focus_mode = 0
-text = "End Turn"

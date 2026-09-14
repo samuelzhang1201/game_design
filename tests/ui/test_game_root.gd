@@ -157,7 +157,7 @@ func test_heights_tab_toggles_the_maps_height_ramp() -> void:
 		"the pack's heights give the sheet a ramp to draw")
 
 ## The clock (owner 2026-09-13): on the court, at a speed, days pass in real
-## time and works finish; paused, nothing moves; holding council stops it.
+## time and works finish; paused, nothing moves.
 func test_the_clock_passes_days_on_the_court_and_stops_for_council() -> void:
 	var r := _root()
 	await wait_frames(2)
@@ -188,13 +188,6 @@ func test_the_clock_passes_days_on_the_court_and_stops_for_council() -> void:
 		assert_eq(r.state, GameRoot.State.COURT)
 	else:
 		assert_eq(r.state, GameRoot.State.CONVERSATION, "an event takes the player to the council")
-	# Holding council stops the clock.
-	if r.state == GameRoot.State.COURT:
-		Game.set_clock_speed(2)
-		Game.state.pending_event = {}
-		r.current_screen.end_turn_requested.emit()
-		await wait_frames(1)
-		assert_eq(Game.clock_speed, 0, "End Turn pauses the clock")
 	Game.data.balance["time_day_seconds"] = 1.0
 	Game.set_clock_speed(0)
 

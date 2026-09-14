@@ -391,7 +391,6 @@ func _switch_to(new_state: State) -> void:
 			current_screen.finished.connect(_on_conversation_finished)
 		State.COURT:
 			current_screen = COURT_SCENE.instantiate()
-			current_screen.end_turn_requested.connect(_on_end_turn_requested)
 		State.DAY_RUN:
 			current_screen = DAY_RUN_SCENE.instantiate()
 			current_screen.finished.connect(_on_day_run_finished)
@@ -467,15 +466,6 @@ func _on_menu_load_from_title() -> void:
 	else:
 		_switch_to(State.COURT)
 		current_screen.enter_court(null)
-
-func _on_end_turn_requested() -> void:
-	# Holding council stops the clock (2026-09-13): the player starts it
-	# again when the court reconvenes.
-	Game.set_clock_speed(0)
-	_clock_acc = 0.0
-	_pending_report = Game.next_tick()
-	_switch_to(State.DAY_RUN)
-	current_screen.run(_pending_report)
 
 func _on_day_run_finished() -> void:
 	_switch_to(State.CONVERSATION)

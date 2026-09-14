@@ -214,7 +214,7 @@ the tick; the top bar's clock (`||`, `>`, `2x`, `4x` — `time_day_seconds`,
 `time_speed_fast/faster`) runs on the court only, in `GameRoot._process`,
 and calls `Game.advance_day`: works step, and the fifteenth day's end runs
 the tick (`TickEngine.advance` resets the day). A tick that rolls an event
-stops the clock and takes the player to the council; End Turn stops it
+stops the clock and takes the player to the council; there is no End Turn (owner 2026-09-14: play is the only switch)
 too. Real time never enters the engine.
 
 **Building takes time and room.** `data/manor_buildings.csv` `build_days`
