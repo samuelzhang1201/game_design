@@ -49,6 +49,18 @@ static func gold_of(data: DataRepository, action_code: String) -> float:
 			gold += maxf(-float(p[1]), 0.0)
 	return gold
 
+## What an action's cost row takes OUT of one metric, as a positive number
+## (affordability, gold_of's sibling). A pool the row draws on — the
+## strategic stock, the civil stores — cannot be spent below empty, so
+## ActionSystem.validate refuses the order rather than settling a negative.
+static func metric_cost_of(data: DataRepository, action_code: String, metric: String) -> float:
+	var cost := 0.0
+	for raw in _ops(data, action_code).split(";", false):
+		var p := raw.strip_edges().split(":")
+		if p[0] == "metric" and p.size() > 2 and p[1] == metric:
+			cost += maxf(-float(p[2]), 0.0)
+	return cost
+
 static func _ops(data: DataRepository, action_code: String) -> String:
 	var row: Dictionary = data.order_costs.get(action_code, {})
 	var ops := String(row.get("cost", EXEMPT)).strip_edges()

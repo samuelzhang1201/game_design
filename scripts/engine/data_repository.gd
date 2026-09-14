@@ -51,10 +51,11 @@ var biome_art: Array[Dictionary] = []
 ## data/sea_art.csv rows: the ships and whales printed on the open sea
 ## (MapObjects.sea_decor): texture, weight, height_px, min_shore_px from the coast.
 var sea_art: Array[Dictionary] = []
-## data/manor_buildings.csv: building_code -> {label, cost_gold, build_days,
-## tax_bonus, output_bonus, defence_bonus, church_bonus, *_per_tick,
-## produce_good, produce_units} — what a manor can raise, how long it takes
-## and what it does once it stands.
+## data/manor_buildings.csv: building_code -> {label, cost_gold, civil_cost,
+## build_days, tax_bonus, output_bonus, defence_bonus, church_bonus,
+## *_per_tick, produce_good, produce_units} — what a manor can raise, what
+## the work takes in civil goods, how long it takes and what it does once it
+## stands.
 var manor_buildings: Dictionary = {}
 ## data/goods_art.csv: good_code -> the produce icon the ECONOMY view draws.
 var goods_art: Dictionary = {}
@@ -363,7 +364,7 @@ func _load(dir: String) -> bool:
 			func(r): terrain_art.append(r)):
 		return false
 	if not _load_if_present("res://data/manor_buildings.csv",
-			["building_code", "label", "cost_gold", "build_days", "tax_bonus", "output_bonus",
+			["building_code", "label", "cost_gold", "civil_cost", "build_days", "tax_bonus", "output_bonus",
 			"defence_bonus", "church_bonus", "gold_per_tick", "grain_per_tick",
 			"contentment_per_tick", "unrest_per_tick", "produce_good", "produce_units"],
 			func(r): manor_buildings[String(r["building_code"])] = r):

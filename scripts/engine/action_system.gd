@@ -36,6 +36,16 @@ func validate(req: ActionRequest, state: GameState) -> String:
 	var needs := gold_cost(row) + OrderCosts.gold_of(data, req.action_code)
 	if state.metrics["treasury"] < needs:
 		return "Cannot afford %s (needs %d gold)" % [req.action_code, int(needs)]
+	# A pool the cost row draws on cannot be spent below empty (the levy's
+	# baggage train, spec §5): EventEffects adds the row straight into
+	# metrics, so the refusal has to happen here.
+	for pool: String in ["strategic", "civil"]:
+		var metric := pool_metric(pool)
+		var pool_needs := OrderCosts.metric_cost_of(data, req.action_code, metric)
+		var stock := float(state.metrics.get(metric, 0.0))
+		if pool_needs > stock:
+			return "Cannot afford %s (needs %d %s goods, the stores hold %d)" % [
+				req.action_code, int(pool_needs), pool, int(stock)]
 	if row.get("target_type", "none") == "character" and not state.characters.has(req.target):
 		return "No such target character for " + req.action_code
 	match req.action_code:

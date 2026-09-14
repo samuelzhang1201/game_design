@@ -348,4 +348,24 @@ func test_raising_levies_spends_strategic_goods() -> void:
 	s.metrics["strategic"] = 100.0
 	var out := sys.execute(ActionRequest.make("LEVY_RAISE"), s)
 	assert_true(out["ok"])
-	assert_lt(int(s.metrics["strategic"]), 100, "the baggage train was paid for")
+	assert_eq(int(s.metrics["strategic"]), 80, "the baggage train took its twenty")
+	var reasons: Array[String] = []
+	for e in out["effects"]:
+		if String(e.get("metric", "")) == "strategic":
+			reasons.append(String(e.get("reason", "")))
+	assert_true("the baggage train of the levy" in reasons,
+		"the charge names itself: %s" % str(reasons))
+
+## A pool a cost row draws on cannot go below empty: the order is refused
+## before it is charged, never settled into a negative stock.
+func test_a_levy_on_an_empty_strategic_stock_is_refused() -> void:
+	s.metrics["treasury"] = 1000.0
+	s.metrics["strategic"] = 10.0
+	var why := sys.validate(ActionRequest.make("LEVY_RAISE"), s)
+	assert_string_contains(why, "strategic goods")
+	assert_eq(float(s.metrics["strategic"]), 10.0, "a refused order charges nothing")
+
+func test_metric_cost_of_reads_the_rows_pool_charge() -> void:
+	assert_eq(OrderCosts.metric_cost_of(data, "LEVY_RAISE", "strategic"), 20.0)
+	assert_eq(OrderCosts.metric_cost_of(data, "LEVY_RAISE", "grain"), 0.0)
+	assert_eq(OrderCosts.metric_cost_of(data, "COUNCIL_CONSULT", "strategic"), 0.0)
