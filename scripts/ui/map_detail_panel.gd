@@ -490,6 +490,10 @@ func _add_build_menu(builds: Array) -> void:
 	menu.get_popup().add_theme_constant_override("icon_max_width", int(STAT_ICON_PX))
 	menu.get_popup().add_theme_font_size_override("font_size", 13)
 	menu.clip_text = true
+	# An OptionButton is as wide as its longest entry unless told otherwise,
+	# and "Stonecutter — 150 civil, 40d" pushed the fixed column over the map
+	# (CLAUDE.md invariant 10): it takes the column's width and clips instead.
+	menu.fit_to_longest_item = false
 	menu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var first_ok := -1
 	for i in builds.size():

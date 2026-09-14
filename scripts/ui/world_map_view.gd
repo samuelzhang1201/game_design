@@ -174,6 +174,9 @@ var _biome: BiomeLayer
 ## Faint clouds drifting over the default map while time runs (CloudLayer,
 ## owner 2026-09-14). Test seam: cloud_layer().
 var _clouds: CloudLayer
+## The compass as turning game art (CompassLayer, owner 2026-09-14). Test
+## seam: compass_layer().
+var _compass: CompassLayer
 ## Every dashed line on the sheet — borders, hatching, seams, lanes — cut
 ## once per zoom in native px and kept (MapDashCache); a frame transforms
 ## and draws each set as ONE polyline. Test seam: dash_cache().
@@ -270,6 +273,11 @@ func _ready() -> void:
 		return Rect2(screen_to_map(Vector2.ZERO), size / maxf(_zoom, 0.0001))
 	add_child(_clouds)
 	_clouds.setup()
+	_compass = CompassLayer.new()
+	_compass.name = "Compass"
+	_compass.box = compass_rect
+	add_child(_compass)
+	_compass.setup()
 	_card = MapInfoCard.new()
 	_card.ask_requested.connect(func(text: String) -> void: place_asked.emit(text))
 	_card.closed.connect(func() -> void:
@@ -1437,6 +1445,11 @@ const COMPASS_TIERS := [[8, 0.42, 22.5], [4, 0.66, 45.0], [4, 1.0, 0.0]]
 const COMPASS_TICKS := 32
 
 func _draw_compass() -> void:
+	# The game-art compass turns on its own layer (CompassLayer); the vector
+	# rose below is only the fallback when that art is not installed.
+	if _compass != null and _compass.has_art():
+		_compass.queue_redraw()
+		return
 	var rect := compass_rect()
 	if rect.size.x <= 0.0:
 		return
@@ -2473,6 +2486,9 @@ func ground_layer() -> GroundLayer:
 
 func cloud_layer() -> CloudLayer:
 	return _clouds
+
+func compass_layer() -> CompassLayer:
+	return _compass
 
 ## Whether clouds drift over the map right now (owner 2026-09-14): only
 ## while the clock runs, only on the default map — no theme, no military

@@ -416,10 +416,41 @@ def install_paintings(size: tuple = PAINT_SIZE) -> int:
     return done
 
 
+## The map's compass (owner 2026-09-14): library I-73 cut out by post.py
+## --tier icon, trimmed to its alpha box and fitted into COMPASS_PX — drawn
+## at map_compass_size_px (88 design px) x ~3 on the largest window, so 256.
+## COMPASS_SEED picks the variant; the newest cut-out wins when it is empty.
+COMPASS_PX = 256
+COMPASS_SEED = ""
+
+
+def install_compass(size: int = COMPASS_PX) -> int:
+    hits = sorted((HERE / "out" / "game" / "icon").glob("I-73_*.png"))
+    if COMPASS_SEED:
+        hits = [h for h in hits if COMPASS_SEED in h.stem] or hits
+    if not hits:
+        print("  (no cut-out for I-73 — run post.py --tier icon first)")
+        return 0
+    w, h, ch, px = decode_png(hits[-1])
+    if ch != 4:
+        print("  (%s is not RGBA)" % hits[-1].name)
+        return 0
+    cw, chh, rgba = trim_alpha(w, h, bytearray(px))
+    scale = size / max(cw, chh)
+    tw, th = max(1, round(cw * scale)), max(1, round(chh * scale))
+    small = resize_rgba(cw, chh, rgba, tw, th)
+    canvas = pad_square(tw, th, small, size)
+    dest = ROOT / "assets" / "ui"
+    dest.mkdir(parents=True, exist_ok=True)
+    encode_png(dest / "compass.png", size, size, 4, bytes(canvas))
+    print("  I-73   compass  %dx%d in %d (from %s)" % (tw, th, size, hits[-1].name))
+    return 1
+
+
 def main() -> int:
     chapters = {"goods": install_goods, "decor": install_decor, "cast": install_cast,
                 "ui": install_ui, "estates": install_estates, "biomes": install_biomes,
-                "paintings": install_paintings}
+                "paintings": install_paintings, "compass": install_compass}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2
