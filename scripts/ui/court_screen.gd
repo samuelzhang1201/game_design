@@ -243,7 +243,7 @@ func end_turn_button() -> Button:
 
 ## End Turn does not advance the engine itself - GameRoot owns the tick
 ## advance and the DAY_RUN interlude; this screen just signals that the
-## player is done for the fortnight. Gated on pending_event so a player
+## player is done for the month. Gated on pending_event so a player
 ## cannot skip past an event still awaiting a decision.
 func _on_end_turn() -> void:
 	if not Game.state.pending_event.is_empty():

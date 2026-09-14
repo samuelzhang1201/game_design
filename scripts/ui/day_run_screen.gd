@@ -2,7 +2,7 @@ class_name DayRunScreen
 extends Control
 ## DAY_RUN state screen (game_ui.png, user ruling 2026-08-31): the same
 ## bright framed map as every gameplay screen, with the ROYAL CHRONICLE
-## transparent ticker at the map's lower left rolling the fortnight (R6, R9
+## transparent ticker at the map's lower left rolling the month (R6, R9
 ## - the TopBar keeps the numbers and deltas visible throughout).
 
 signal finished

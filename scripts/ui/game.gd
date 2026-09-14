@@ -215,7 +215,7 @@ func submit_free_text(text: String, cb: Callable, speaker_hint: String = "",
 		audience: Array = []) -> void:
 	if _prompts_this_tick >= int(data.bal("prompt_calls_per_tick")):
 		cb.call({"ok": false, "executed": [], "rejected": [],
-			"error": "the council will hear no more orders this fortnight"})
+			"error": "the council will hear no more orders this month"})
 		return
 	_prompts_this_tick += 1
 	var heard_by: Array = audience if not audience.is_empty() \

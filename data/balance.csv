@@ -17,7 +17,7 @@ promise_kept_opinion,15,
 promise_broken_opinion,-25,largest single penalty in the game by design
 promise_default_ticks,12,due when the parser omits tick_due (a year of months)
 concern_treasury_low,100,steward fires below this
-concern_grain_low,30,steward
+concern_grain_low,200,"steward: gold of civil goods below which the steward worries (spec 2026-09-14: the pools are whole gold a month, not the old grain units)"
 concern_unrest_high,40,chancellor
 concern_church_low,35,chaplain
 concern_army_low,45,marshal
@@ -42,7 +42,7 @@ spy_legitimacy_gain,1,
 build_cost,60,
 justice_unrest_per_point,-2.0,
 justice_contentment_per_point,-2.0,
-grain_release_amount,20,
+grain_release_amount,100,"gold of civil goods opened to the villages by the release order (gold-era scale, 2026-09-14)"
 grain_release_contentment,5,
 grain_ration_contentment,-3,
 unrest_tax_pivot,5,tax_rate above this drives unrest pressure
@@ -191,8 +191,8 @@ map_sea_route_gap_px,7,world map: gap between those dashes in screen px
 map_sea_route_alpha,0.55,world map: opacity of a sea lane
 map_trail_width,0.9,terrain: trail and sea-route stroke width in screen px
 map_trail_min_scale,2.4,terrain: view scale at/above which trails and sea routes draw (roads always draw)
-manor_price_per_1000,40,"manors §5: the value of a manor per 1 000 people"
-manor_price_per_unit,2,"manors §5: the value per unit of goods a working manor makes"
+manor_price_per_1000,400,"manors §5: the value of a manor per 1 000 people"
+manor_price_per_unit,10,"manors §5: the value per unit of goods a working manor makes"
 manor_price_building_ratio,0.5,"manors §5: the share of a building's cost that stays in the manor's value"
 manor_price_land_swing,0.6,"manors §5: how far the land's value (0..1) swings the price about 1 — rich land 1 + 0.5 x this, moor 1 - 0.5 x this"
 manor_markup_max,0.5,"manors §5: the most a house that hates the crown (opinion -100) adds to its asking price; a house at +100 asks the value itself"
@@ -228,7 +228,7 @@ manor_focus_peak_height,63,"manors: cell height at/above which a manor's default
 map_biome_alpha,0.5,"BIOMES LAYER (experiment 2026-09-14): opacity of the biome ground tiles laid over the political wash, under the water and the roads; 0 switches the layer off"
 map_biome_tile_px,128,"BIOMES LAYER (experiment 2026-09-14): one seamless tile spans this many native map px"
 map_biome_blur_px,24,"BIOMES LAYER (experiment 2026-09-14): radius in native map px over which one biome's tile fades into the next (owner: no cell shape may show; 40 read too soft, 24 keeps the terrain legible) — BAKED into assets/maps/<id>/world_biome_weights_N.png by tools/bake_biome_weights.gd, so re-run it after changing this"
-manor_tax_per_1000,20,"ECONOMY (spec 2026-09-14 §4.2): whole gold a month a manor pays per 1 000 people at tax_rate_base, before its buildings' tax_bonus"
+manor_tax_per_1000,2,"ECONOMY (spec 2026-09-14 §4.2): whole gold a month a manor pays per 1 000 people at tax_rate_base, before its buildings' tax_bonus"
 tax_rate_base,5,"ECONOMY: the poll-tax level (metrics.tax_rate, 1..10) at which a manor's tax factor is 1; 10 doubles it, 1 fifths it"
 tariff_per_sales_tax,2,"ECONOMY: a settlement's tariff = its town goods' gold x tariff_rate (0..10) x this / 100 — at 5 that is a tenth"
 crown_share_permille,200,"ECONOMY (spec §5): the crown's share, per mille, of the tax, strategic and civil goods of the realm's provinces it does NOT control; its own provinces pay in full"

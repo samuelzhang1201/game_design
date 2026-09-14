@@ -1,7 +1,7 @@
 class_name CalendarOverlay
 extends Control
 ## The "ROYAL CHRONICLE" live ticker (game_ui.png, user ruling 2026-08-31):
-## a TRANSPARENT window that rolls the fortnight day by day after End Turn -
+## a TRANSPARENT window that rolls the month day by day after End Turn -
 ## dated news entries appended as the days pass, surroundings visible through
 ## it, nothing dimmed. Pure presentation - the engine tick already advanced
 ## before play() is called, and news selection is hash-based (never touches
