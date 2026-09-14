@@ -37,26 +37,35 @@ var pending_event: Dictionary = {}
 
 const SEASONS := ["spring", "summer", "autumn", "winter"]
 
+## Every metric a campaign starts with, in one place: new_campaign seeds a
+## fresh state from it and from_dict fills whatever an older save is missing,
+## so nothing that reads `state.metrics` can meet an absent key. Called
+## without a repository (from_dict has none at hand) every figure is 0 — the
+## honest default for the pools, and an older save carries the rest.
+static func default_metrics(data: DataRepository = null) -> Dictionary:
+	var b := func(key: String) -> float: return 0.0 if data == null else data.bal(key)
+	return {
+		"treasury": b.call("start_treasury"),
+		"strategic": 0.0,
+		"grain": 0.0,  # the CIVIL pool (spec 2026-09-14 §5); the key stays for its readers
+		"tax_rate": b.call("start_tax_rate"),
+		"tariff_rate": b.call("start_tariff_rate"),
+		"tax_income": 0.0,
+		"admin_capacity": b.call("admin_base"),
+		"legitimacy": b.call("start_metric_default"),
+		"unrest": 0.0,
+		"army_quality": b.call("start_metric_default"),
+		"church_opinion": b.call("start_metric_default"),
+		"peasant_contentment": b.call("start_metric_default"),
+		"road_income_bonus": 0.0,
+		"grain_ration": 0.0,
+	}
+
 static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	var s := GameState.new()
 	s.map_id = data.map_id
 	s.rng = Rng.new(seed_value)
-	s.metrics = {
-		"treasury": data.bal("start_treasury"),
-		"strategic": 0.0,
-		"grain": 0.0,  # the CIVIL pool (spec 2026-09-14 §5); the key stays for its readers
-		"tax_rate": data.bal("start_tax_rate"),
-		"tariff_rate": data.bal("start_tariff_rate"),
-		"tax_income": 0.0,
-		"admin_capacity": data.bal("admin_base"),
-		"legitimacy": data.bal("start_metric_default"),
-		"unrest": 0.0,
-		"army_quality": data.bal("start_metric_default"),
-		"church_opinion": data.bal("start_metric_default"),
-		"peasant_contentment": data.bal("start_metric_default"),
-		"road_income_bonus": 0.0,
-		"grain_ration": 0.0,
-	}
+	s.metrics = default_metrics(data)
 	s.characters = CharacterFactory.build_roster(data)
 	# One truth (owner ruling 2026-09-09): the pack's economy row seeds the
 	# player's treasury and rates over the balance defaults above — after the
@@ -294,6 +303,12 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.day = clampi(int(_decode_values(d.get("day", 1))), 1, Calendar.DAYS_PER_TICK)
 	s.rng = Rng.from_dict(d["rng"])
 	s.metrics = _decode_values(d["metrics"])
+	# A save written before a metric existed carries no key for it — the
+	# pools, strategic and civil, are the newest. The template fills them in,
+	# so no reader (the top bar's strip, the tick's settlement) has to guard.
+	for key: String in default_metrics().keys():
+		if not s.metrics.has(key):
+			s.metrics[key] = 0.0
 	for id in d["characters"]:
 		s.characters[id] = Character.from_dict(d["characters"][id])
 	s.council = d["council"].duplicate()

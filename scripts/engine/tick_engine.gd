@@ -61,11 +61,9 @@ func advance(state: GameState) -> TickReport:
 ## crown's share of the rest, less the ministers' salaries and the court's
 ## ration; the harvest in autumn. Whole gold, from RealmEconomy's sums.
 func _settle_economy(state: GameState, r: TickReport) -> void:
+	# Every key is there: GameState.default_metrics is the one place a
+	# metric's presence is settled, for a fresh campaign and an old save alike.
 	var m := state.metrics
-	# A save from before the pools loads and settles (the keys are new).
-	for k: String in ["strategic", "grain"]:
-		if not m.has(k):
-			m[k] = 0.0
 	var e := RealmEconomy.realm(data, state)
 	var share := data.bal("crown_share_permille") / 1000.0
 	var own_tax := int(e["crown"]["tax"])

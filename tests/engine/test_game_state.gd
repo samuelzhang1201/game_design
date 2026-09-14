@@ -61,3 +61,17 @@ func test_round_trip() -> void:
 	assert_eq(s2.metrics["treasury"], 123.5)
 	assert_eq(s2.cooldowns["LEVY_RAISE"], 12)
 	assert_eq(s2.rng.randi_range(0, 9999), s.rng.randi_range(0, 9999))
+
+## A save written before the pools existed carries neither key. Loading one
+## must not leave the top bar indexing a metric that is not there: from_dict
+## fills every key of the campaign's template it is missing.
+func test_a_save_from_before_the_pools_loads_with_them_empty() -> void:
+	var s := GameState.new_campaign(data, 42)
+	var d := s.to_dict()
+	d["metrics"].erase("strategic")
+	d["metrics"].erase("grain")
+	var s2 := GameState.from_dict(d)
+	assert_eq(s2.metrics["strategic"], 0.0)
+	assert_eq(s2.metrics["grain"], 0.0)
+	for key: String in GameState.default_metrics().keys():
+		assert_true(s2.metrics.has(key), "the loaded metrics hold %s" % key)
