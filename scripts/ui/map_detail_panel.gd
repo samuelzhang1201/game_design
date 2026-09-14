@@ -669,8 +669,14 @@ func _fill_rates(rates: Array) -> void:
 		var row := HBoxContainer.new()
 		row.name = "Rate_" + good
 		row.add_theme_constant_override("separation", 6)
-		var tex: Texture2D = UiPalette.load_art(String(r.get("texture", ""))) \
-			if String(r.get("texture", "")) != "" else null
+		# The good's colour icon when it is installed (owner 2026-09-14: every
+		# icon on the card is game art); else the map's grey art in its
+		# category's colour.
+		var icon_path := String(r.get("icon", ""))
+		var coloured: Texture2D = UiPalette.load_art(icon_path) if icon_path != "" else null
+		var tex: Texture2D = coloured
+		if tex == null and String(r.get("texture", "")) != "":
+			tex = UiPalette.load_art(String(r["texture"]))
 		if tex != null:
 			var pic := TextureRect.new()
 			pic.texture = tex
@@ -678,7 +684,8 @@ func _fill_rates(rates: Array) -> void:
 			pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 			pic.custom_minimum_size = Vector2(STAT_ICON_PX, STAT_ICON_PX)
-			pic.modulate = EconomyPanel.tag_color(Game.data, String(r.get("tag", "")))
+			if coloured == null:
+				pic.modulate = EconomyPanel.tag_color(Game.data, String(r.get("tag", "")))
 			pic.mouse_filter = Control.MOUSE_FILTER_PASS
 			pic.tooltip_text = tip
 			row.add_child(pic)

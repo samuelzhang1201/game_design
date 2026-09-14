@@ -59,6 +59,9 @@ var sea_art: Array[Dictionary] = []
 var manor_buildings: Dictionary = {}
 ## data/goods_art.csv: good_code -> the produce icon the ECONOMY view draws.
 var goods_art: Dictionary = {}
+## data/goods_art.csv `icon`: good_code -> the COLOUR icon the manor card's
+## output rows show (owner 2026-09-14, the painting style); "" for none.
+var goods_icons: Dictionary = {}
 ## data/goods_economy.csv: good_code -> {pool, price_gold, growth_permille}
 ## (spec 2026-09-14 §3); goods_economy_defaults.csv: tag -> the same, for a
 ## good the table does not name.
@@ -348,7 +351,11 @@ func _load(dir: String) -> bool:
 			func(r): goods_palette[String(r["tag"])] = String(r["color"])):
 		return false
 	if not _load_if_present("res://data/goods_art.csv", ["good_code", "texture"],
-			func(r): goods_art[String(r["good_code"])] = String(r["texture"])):
+			func(r):
+				if String(r["texture"]) != "":
+					goods_art[String(r["good_code"])] = String(r["texture"])
+				if String(r.get("icon", "")) != "":
+					goods_icons[String(r["good_code"])] = String(r["icon"])):
 		return false
 	if not _load_if_present("res://data/goods_economy.csv",
 			["good_code", "pool", "price_gold", "growth_permille"],

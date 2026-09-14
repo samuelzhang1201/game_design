@@ -8,6 +8,9 @@
     python3 assets/flux/install_map_art.py cast     # K-xx -> assets/portraits/
     python3 assets/flux/install_map_art.py biomes   # T-xx -> assets/biomes/ (BIOMES LAYER experiment 2026-09-14)
     python3 assets/flux/install_map_art.py paintings  # B-xx -> assets/manors/paint/ (the manor card's painted estate)
+    python3 assets/flux/install_map_art.py buildings  # H-xx -> assets/icons/bld_<code>.png (slots and the build menu)
+    python3 assets/flux/install_map_art.py goods_icons  # G-xx colour -> assets/goods/colour/ (the manor card's output rows)
+    python3 assets/flux/install_map_art.py compass    # I-73 -> assets/ui/compass.png
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
 blue channel (see sepia_alpha_template.json for the same steps as a ComfyUI
@@ -447,10 +450,57 @@ def install_compass(size: int = COMPASS_PX) -> int:
     return 1
 
 
+## Cut-outs made by post.py --tier icon, trimmed to their alpha box and
+## fitted into a `size` square, one per row of a mapping: the building icons
+## and the card's colour goods icons (owner 2026-09-14, the painting style).
+def _install_icon_cutouts(codes: dict, dest: Path, name: str, size: int) -> int:
+    dest.mkdir(parents=True, exist_ok=True)
+    done = 0
+    for art_id, code in sorted(codes.items()):
+        hits = sorted((HERE / "out" / "game" / "icon").glob("%s_*.png" % art_id))
+        if not hits:
+            print("  (no cut-out for %s / %s — run post.py --tier icon first)" % (art_id, code))
+            continue
+        w, h, ch, px = decode_png(hits[-1])
+        if ch != 4:
+            print("  (%s is not RGBA)" % hits[-1].name)
+            continue
+        cw, chh, rgba = trim_alpha(w, h, bytearray(px))
+        scale = size / max(cw, chh)
+        tw, th = max(1, round(cw * scale)), max(1, round(chh * scale))
+        small = resize_rgba(cw, chh, rgba, tw, th)
+        canvas = pad_square(tw, th, small, size)
+        encode_png(dest / (name % code), size, size, 4, bytes(canvas))
+        print("  %-6s %-22s %dx%d in %d" % (art_id, code, tw, th, size))
+        done += 1
+    return done
+
+
+## Building icons (library §6.12 H-): drawn in a 34-design-px slot box and a
+## 20-px menu entry, so 34 x ~3 on the largest window -> 128 px.
+BUILDING_ICON_PX = 128
+
+
+def install_buildings(size: int = BUILDING_ICON_PX) -> int:
+    codes = {r["art_id"]: r["building_code"] for r in csv.DictReader((HERE / "building_art.csv").open(encoding="utf-8"))}
+    return _install_icon_cutouts(codes, ROOT / "assets" / "icons", "bld_%s.png", size)
+
+
+## The card's colour goods icons (library G- rendered on [C-ICON] in the v2
+## colour style): drawn at 20 design px, so 64 px like the dimension icons.
+GOODS_ICON_PX = 64
+
+
+def install_goods_icons(size: int = GOODS_ICON_PX) -> int:
+    codes = {r["art_id"]: r["good_code"] for r in csv.DictReader((HERE / "goods_art.csv").open(encoding="utf-8"))}
+    return _install_icon_cutouts(codes, ROOT / "assets" / "goods" / "colour", "%s.png", size)
+
+
 def main() -> int:
     chapters = {"goods": install_goods, "decor": install_decor, "cast": install_cast,
                 "ui": install_ui, "estates": install_estates, "biomes": install_biomes,
-                "paintings": install_paintings, "compass": install_compass}
+                "paintings": install_paintings, "compass": install_compass,
+                "buildings": install_buildings, "goods_icons": install_goods_icons}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2

@@ -1171,7 +1171,8 @@ static func production_rates(repo: DataRepository, line: Dictionary) -> Array:
 		out.append({"good": good, "units": n,
 			"label": String(repo.world_row("economy", "goods", good).get("label", good)),
 			"gold": n * int(ge["price_gold"]), "pool": String(ge["pool"]),
-			"tag": good_tag(repo, good), "texture": String(repo.goods_art.get(good, ""))})
+			"tag": good_tag(repo, good), "texture": String(repo.goods_art.get(good, "")),
+			"icon": String(repo.goods_icons.get(good, ""))})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return String(a["good"]) < String(b["good"]) if int(a["units"]) == int(b["units"]) \
 			else int(a["units"]) > int(b["units"]))
