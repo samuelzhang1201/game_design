@@ -117,9 +117,9 @@ func test_a_manor_card_buys_the_manor_from_its_button() -> void:
 	assert_eq(p.stat_text("manor_owner"), "The crown", "the card redrew from the new state")
 	var after: Array[String] = []
 	for b in p.actions_box().get_children():
-		after.append((b as Button).text.get_slice(" ", 0))
+		after.append((b as Button).text.get_slice(" ", 0) if b is Button else String(b.name))
 	assert_has(after, "SELL")
-	assert_has(after, "BUILD")
+	assert_has(after, "BuildRow", "the buildings are one dropdown (owner 2026-09-14)")
 
 ## The slot row (owner 2026-09-13): one box per slot; a BUILD fills one with
 ## the work's icon and its days, and the cross beneath it pulls it down.
@@ -141,36 +141,69 @@ func test_a_manor_card_shows_its_slots_and_a_build_fills_one() -> void:
 	assert_eq(p.slots_row().get_child_count(), slots, "one box per slot")
 	assert_not_null(p.slots_row().find_child("Slot_empty_0", true, false), "all empty")
 	assert_null(p.slots_row().find_child("DEMOLISH_mill", true, false))
-	var build: Button = p.actions_box().find_child("MANOR_BUILD_mill", true, false)
-	assert_not_null(build)
-	assert_true(build.text.ends_with("d"), "the days are on the button")
-	build.pressed.emit()
+	# The buildings are ONE dropdown (owner 2026-09-14): pick the first one the
+	# manor may raise now, and BUILD it.
+	assert_not_null(p.build_menu(), "a build dropdown")
+	var code := ""
+	for i in p.build_menu().item_count:
+		if not p.build_menu().is_item_disabled(i):
+			code = String(p.build_menu_codes()[i])
+			break
+	assert_ne(code, "", "something can be built on the crown's manor")
+	var row: Dictionary = Game.data.manor_buildings[code]
+	assert_true(p.select_build(code))
+	assert_true(p.build_menu().get_item_text(p.build_menu().selected).ends_with("d"), "the days are on the entry")
+	assert_string_contains(p.build_menu().get_item_tooltip(p.build_menu().selected), String(row["label"]),
+		"the entry says what the building yields")
+	assert_false(p.build_button().disabled)
+	p.build_button().pressed.emit()
 	await wait_frames(1)
-	assert_true(MapManors.is_building(Game.state, cell, "mill"), "the order ran")
-	assert_not_null(p.slots_row().find_child("Slot_mill", true, false), "the slot took the mill")
+	assert_true(MapManors.is_building(Game.state, cell, code), "the order ran")
+	var ghost: Control = p.slots_row().find_child("Slot_" + code, true, false)
+	assert_not_null(ghost, "the slot took the work")
+	var ghost_style := ghost.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_not_null(ghost_style)
+	assert_lt(ghost_style.bg_color.a, 0.5, "a work is a see-through box")
+	assert_eq(ghost_style.border_width_left, 0, "its edge is the drawn dashes, not a solid border")
 	var days: Label = p.slots_row().find_child("Days", true, false)
 	assert_not_null(days, "a work shows its days")
-	assert_eq(days.text, "%dd" % int(float(Game.data.manor_buildings["mill"]["build_days"])))
+	assert_eq(days.text, "%dd" % int(float(row["build_days"])))
 	# Gold hurries the masons (spec 2026-09-14 §5): one HURRY button per work.
-	var hurry: Button = p.actions_box().find_child("MANOR_RUSH_mill", true, false)
+	var hurry: Button = p.actions_box().find_child("MANOR_RUSH_" + code, true, false)
 	assert_not_null(hurry, "a work in progress offers to be hurried")
 	var per_click := int(Game.data.bal("manor_rush_days_per_click"))
-	assert_eq(hurry.text, "HURRY MILL — %dg" % (per_click * int(Game.data.bal("build_rush_gold_per_day"))))
+	assert_eq(hurry.text, "HURRY %s — %dg" % [String(row["label"]).to_upper(),
+		per_click * int(Game.data.bal("build_rush_gold_per_day"))])
 	assert_false(hurry.disabled)
 	hurry.pressed.emit()
 	await wait_frames(1)
-	assert_eq(MapManors.work_days_left(Game.state, cell, "mill"),
-		int(float(Game.data.manor_buildings["mill"]["build_days"])) - per_click, "the days came off")
+	assert_eq(MapManors.work_days_left(Game.state, cell, code),
+		int(float(row["build_days"])) - per_click, "the days came off")
 	assert_eq(p.slots_row().get_child_count(), slots)
-	assert_null(p.actions_box().find_child("MANOR_BUILD_mill", true, false), "no second mill offered")
-	var cross: Button = p.slots_row().find_child("DEMOLISH_mill", true, false)
+	assert_false(p.build_menu_codes().has(code), "no second one offered")
+	var cross: Button = p.slots_row().find_child("DEMOLISH_" + code, true, false)
 	assert_not_null(cross)
 	assert_false(cross.disabled)
 	cross.pressed.emit()
 	await wait_frames(1)
-	assert_false(MapManors.is_building(Game.state, cell, "mill"), "stopped")
-	assert_null(p.slots_row().find_child("Slot_mill", true, false))
-	assert_not_null(p.actions_box().find_child("MANOR_BUILD_mill", true, false), "offered again")
+	assert_false(MapManors.is_building(Game.state, cell, code), "stopped")
+	assert_null(p.slots_row().find_child("Slot_" + code, true, false))
+	assert_true(p.build_menu_codes().has(code), "offered again")
+	# A finished building fills its slot with its art, solid, not a ghost.
+	assert_true(MapManors.build(Game.data, Game.state, cell, code, "test: stood"))
+	p.show_manor(cell)
+	await wait_frames(1)
+	var done: Control = p.slots_row().find_child("Slot_" + code, true, false)
+	assert_not_null(done)
+	assert_null(done.find_child("Days", true, false), "no days on a standing building")
+	var icon: ResourceIcon = done.find_child("*", true, false) as ResourceIcon
+	if icon == null:
+		for n in done.find_children("*", "", true, false):
+			if n is ResourceIcon:
+				icon = n
+				break
+	assert_not_null(icon, "the building's icon stands in its slot")
+	assert_eq(icon.modulate.a, 1.0, "solid, not a ghost")
 
 ## The manor card's face (owner 2026-09-14): the estate's painting pinned over
 ## the card at a third of its height (when its file is installed), the facts

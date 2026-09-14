@@ -49,6 +49,10 @@ var _painting: TextureRect
 var _stats: GridContainer
 var _rates: VBoxContainer
 var _stat_cells: Dictionary = {}
+## The build dropdown and its button (owner 2026-09-14): one menu of the
+## buildings the manor may raise instead of a button apiece.
+var _build_menu: OptionButton
+var _build_button: Button
 ## A stat's or a rate's icon, design px.
 const STAT_ICON_PX := 20.0
 ## The manor's building slots (owner 2026-09-13): one box per slot — a
@@ -345,8 +349,13 @@ func show_card(card: Dictionary) -> void:
 		_hint.text = "Little more is known of foreign land."
 		_hint.visible = true
 	# The orders the card offers stand outside the full/basic split: a foreign
-	# manor on the border offers its BUY (owner 2026-09-14).
+	# manor on the border offers its BUY (owner 2026-09-14). The buildings
+	# are one dropdown, not a button apiece (owner 2026-09-14).
+	var builds: Array = []
 	for a: Dictionary in card.get("actions", []):
+		if String(a["action_code"]) == "MANOR_BUILD":
+			builds.append(a)
+			continue
 		var button := Button.new()
 		button.name = String(a["action_code"]) + "_" + String((a["params"] as Dictionary).get("building",
 			(a["params"] as Dictionary).get("focus", "")))
@@ -362,6 +371,8 @@ func show_card(card: Dictionary) -> void:
 		var request := ActionRequest.make(String(a["action_code"]), (a["params"] as Dictionary).duplicate())
 		button.pressed.connect(func() -> void: _give_order(request))
 		_actions.add_child(button)
+	if not builds.is_empty():
+		_add_build_menu(builds)
 	_set_ask(String(card.get("ask", "")))
 	_open_panel()
 
@@ -412,13 +423,19 @@ func _fill_slots(card: Dictionary) -> void:
 			var code := String(entry["building"])
 			box.name = "Slot_" + code
 			var icon := ResourceIcon.create("bld_" + code)
+			icon.custom_minimum_size = Vector2(SLOT_PX - 8.0, SLOT_PX - 8.0)
 			var centre := CenterContainer.new()
 			centre.add_child(icon)
 			box.add_child(centre)
 			var row: Dictionary = Game.data.manor_buildings.get(code, {})
 			var name := String(row.get("label", code))
 			if bool(entry["work"]):
-				icon.modulate.a = 0.45
+				# A work in progress is a GHOST of the building (owner
+				# 2026-09-14): a see-through box with a dashed edge and the
+				# building's art faint inside it, until the days are up.
+				box.add_theme_stylebox_override("panel", _work_style())
+				box.draw.connect(_draw_dashed_edge.bind(box))
+				icon.modulate.a = 0.35
 				var days := Label.new()
 				days.name = "Days"
 				days.text = "%dd" % int(entry["days_left"])
@@ -457,12 +474,129 @@ func _fill_slots(card: Dictionary) -> void:
 			column.add_child(box)
 		_slots.add_child(column)
 
+## The buildings the manor may raise, as ONE dropdown (owner 2026-09-14):
+## each entry its art, name, civil cost and days; one still waiting on a
+## building it needs is disabled with the reason as its tooltip, the others
+## say what they yield. BUILD gives the chosen one.
+func _add_build_menu(builds: Array) -> void:
+	var row := VBoxContainer.new()
+	row.name = "BuildRow"
+	row.add_theme_constant_override("separation", 4)
+	var menu := OptionButton.new()
+	menu.name = "BuildMenu"
+	menu.focus_mode = Control.FOCUS_NONE
+	menu.add_theme_font_size_override("font_size", 12)
+	menu.add_theme_constant_override("icon_max_width", int(STAT_ICON_PX))
+	menu.get_popup().add_theme_constant_override("icon_max_width", int(STAT_ICON_PX))
+	menu.get_popup().add_theme_font_size_override("font_size", 13)
+	menu.clip_text = true
+	menu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var first_ok := -1
+	for i in builds.size():
+		var a: Dictionary = builds[i]
+		var code := String((a["params"] as Dictionary)["building"])
+		var text := String(a["label"]).trim_prefix("BUILD ")
+		var tex := ResourceIcon.texture_of("bld_" + code)
+		if tex != null:
+			menu.add_icon_item(tex, text, i)
+		else:
+			menu.add_item(text, i)
+		menu.set_item_metadata(i, a)
+		var err := String(a.get("error", ""))
+		menu.set_item_disabled(i, err != "")
+		menu.set_item_tooltip(i, err if err != "" else building_tooltip(code))
+		if err == "" and first_ok < 0:
+			first_ok = i
+	var go := Button.new()
+	go.name = "BuildButton"
+	go.text = "BUILD"
+	go.focus_mode = Control.FOCUS_NONE
+	go.add_theme_font_size_override("font_size", 12)
+	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sync := func(index: int) -> void:
+		var chosen: Dictionary = menu.get_item_metadata(index) if index >= 0 else {}
+		var err := String(chosen.get("error", "")) if not chosen.is_empty() else "Nothing can be built here"
+		go.disabled = chosen.is_empty() or err != ""
+		go.tooltip_text = err if err != "" else building_tooltip(String((chosen["params"] as Dictionary)["building"]))
+	menu.item_selected.connect(sync)
+	menu.select(first_ok if first_ok >= 0 else 0)
+	sync.call(menu.selected)
+	go.pressed.connect(func() -> void:
+		if menu.selected < 0:
+			return
+		var chosen: Dictionary = menu.get_item_metadata(menu.selected)
+		if not chosen.is_empty() and String(chosen.get("error", "")) == "":
+			_give_order(ActionRequest.make("MANOR_BUILD", (chosen["params"] as Dictionary).duplicate())))
+	row.add_child(menu)
+	row.add_child(go)
+	_actions.add_child(row)
+	_build_menu = menu
+	_build_button = go
+
+
+## What a building yields once it stands, for its menu entry and button:
+## "Mill — +6 grain a month, tax +5%, output +15%, +2 civil goods a month".
+static func building_tooltip(code: String) -> String:
+	var row: Dictionary = Game.data.manor_buildings.get(code, {})
+	var parts: Array[String] = []
+	var units := int(float(row.get("produce_units", 0)))
+	var good := String(row.get("produce_good", ""))
+	if units > 0 and good != "":
+		parts.append("+%d %s a month" % [units,
+			String(Game.data.world_row("economy", "goods", good).get("label", good)).to_lower()])
+	var pct := func(key: String) -> int: return roundi(float(row.get(key, 0)) * 100.0)
+	if pct.call("tax_bonus") != 0:
+		parts.append("tax %+d%%" % pct.call("tax_bonus"))
+	if pct.call("output_bonus") != 0:
+		parts.append("output %+d%%" % pct.call("output_bonus"))
+	if float(row.get("defence_bonus", 0)) != 0.0:
+		parts.append("defence %+d" % int(float(row.get("defence_bonus", 0))))
+	if float(row.get("gold_per_tick", 0)) != 0.0:
+		parts.append("%+d gold a month" % int(float(row.get("gold_per_tick", 0))))
+	if float(row.get("grain_per_tick", 0)) != 0.0:
+		parts.append("%+d civil goods a month" % int(float(row.get("grain_per_tick", 0))))
+	if float(row.get("church_bonus", 0)) != 0.0:
+		parts.append("church %+.1f a month" % float(row.get("church_bonus", 0)))
+	if float(row.get("contentment_per_tick", 0)) != 0.0:
+		parts.append("contentment %+.1f a month" % float(row.get("contentment_per_tick", 0)))
+	if float(row.get("unrest_per_tick", 0)) != 0.0:
+		parts.append("unrest %+.1f a month" % float(row.get("unrest_per_tick", 0)))
+	var needs: Array[String] = []
+	for p in MapManors.building_prereqs(Game.data, code):
+		needs.append(String((Game.data.manor_buildings.get(p, {}) as Dictionary).get("label", p)).to_lower())
+	var text := "%s — %s" % [String(row.get("label", code)), ", ".join(parts) if not parts.is_empty() else "no yield"]
+	if not needs.is_empty():
+		text += " (needs %s)" % ", ".join(needs)
+	return text
+
+
+## A work in progress's box: see-through, no solid edge — the dashes are
+## drawn over it (_draw_dashed_edge).
+func _work_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(1.0, 1.0, 1.0, 0.18)
+	style.set_corner_radius_all(UiPalette.CHIP_RADIUS)
+	style.set_content_margin_all(4.0)
+	return style
+
+
+## The dashed edge of a work's ghost box, in the accent at three quarters.
+func _draw_dashed_edge(box: Control) -> void:
+	var r := Rect2(Vector2(1.0, 1.0), box.size - Vector2(2.0, 2.0))
+	var ink := Color(UiPalette.GOLD, 0.75)
+	var corners := [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]
+	for i in 4:
+		box.draw_dashed_line(corners[i], corners[(i + 1) % 4], ink, 1.5, 4.0)
+
+
 func _clear() -> void:
 	for box in [_fields, _stats, _rates, _slots, _features, _production, _money, _lines, _actions]:
 		for child in box.get_children():
 			box.remove_child(child)
 			child.queue_free()
 	_stat_cells.clear()
+	_build_menu = null
+	_build_button = null
 	_painting_box.visible = false
 	_painting.texture = null
 	_hint.visible = false
@@ -638,6 +772,31 @@ func stat_text(key: String) -> String:
 
 func stat_tooltip(key: String) -> String:
 	return String((_stat_cells[key] as Label).tooltip_text) if _stat_cells.has(key) else ""
+
+func build_menu() -> OptionButton:
+	return _build_menu
+
+func build_button() -> Button:
+	return _build_button
+
+## The building codes the dropdown offers, in its order.
+func build_menu_codes() -> Array:
+	var out: Array = []
+	if _build_menu == null:
+		return out
+	for i in _build_menu.item_count:
+		out.append(String(((_build_menu.get_item_metadata(i) as Dictionary)["params"] as Dictionary)["building"]))
+	return out
+
+## Choose a building in the dropdown as a player would; false when it is not
+## offered or cannot be built yet.
+func select_build(code: String) -> bool:
+	var i := build_menu_codes().find(code)
+	if i < 0 or _build_menu.is_item_disabled(i):
+		return false
+	_build_menu.select(i)
+	_build_menu.item_selected.emit(i)
+	return true
 
 func stats_grid() -> GridContainer:
 	return _stats
