@@ -35,6 +35,8 @@ func _repo() -> DataRepository:
 	r.manor_buildings = {
 		"mill": {"building_code": "mill", "label": "Mill", "cost_gold": "40", "tax_bonus": "0.05",
 			"output_bonus": "0.15", "defence_bonus": "0", "church_bonus": "0", "produce_good": "", "produce_units": "0"},
+		"market": {"building_code": "market", "label": "Market", "cost_gold": "50", "tax_bonus": "0",
+			"output_bonus": "0", "defence_bonus": "0", "church_bonus": "0", "produce_good": "iron", "produce_units": "30"},
 	}
 	r.manor_focus = {"grain": {"focus_code": "grain", "label": "Grain fields", "good_code": "grain",
 		"biomes": "1", "coast": "0", "yield_per_1000": "12", "rent_bonus": "0.10",
@@ -124,6 +126,29 @@ func test_growth_and_buildings_raise_the_line() -> void:
 	var line := ManorEconomy.line_of(r, s, 1, 0)
 	assert_eq(line["units"], {"grain": 17})
 	assert_eq(line["tax"], 32)
+
+## A building's produce_good grows but takes no output_bonus (unlike the
+## chief good and the town's lines): with mill + market on cell 1 at tick 0,
+## the mill's 0.15 raises grain 14.4 -> 16.56 -> 17 and its 0.05 raises tax
+## round(1.5 x 20 x 1.05) = 32, but the market's 30 iron stays 30 (growth
+## 1000, no output_bonus) -> strategic 30 x 4 = 120, civil 17. With market
+## alone at tick 12, iron's growth (3 per mille, compounding in integers)
+## reads 1036 at tick 12 -> round(30 x 1.036) = round(31.08) = 31; grain
+## (no mill now) at growth 1024 -> round(14.4 x 1.024) = round(14.7456) =
+## 15 -> units {"grain": 15, "iron": 31}, strategic 31 x 4 = 124.
+func test_a_buildings_produce_grows_but_takes_no_output_bonus() -> void:
+	var r := _repo()
+	var s := _state()
+	s.manor_buildings["1"] = ["mill", "market"]
+	var line := ManorEconomy.line_of(r, s, 1, 0)
+	assert_eq(line["units"], {"grain": 17, "iron": 30})
+	assert_eq(line["strategic"], 120)
+	assert_eq(line["civil"], 17)
+	assert_eq(line["tax"], 32)
+	s.manor_buildings["1"] = ["market"]
+	var later := ManorEconomy.line_of(r, s, 1, 12)
+	assert_eq(later["units"], {"grain": 15, "iron": 31})
+	assert_eq(later["strategic"], 124)
 
 ## The poll tax scales the tax: level 10 doubles, level 1 fifths; the
 ## sales tax scales the tariff: level 0 is none.
