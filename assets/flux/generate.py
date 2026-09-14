@@ -40,7 +40,8 @@ SERVER = "http://127.0.0.1:8188"
 # Prompt library §0.3: where each ID prefix is filed.
 CHAPTER_DIR = {
     "C": "characters", "K": "cast", "E": "expressions", "P": "expressions", "M": "map",
-    "T": "terrain", "I": "icons", "D": "decor", "G": "goods", "B": "estates", "W": "tactical",
+    "T": "terrain", "I": "icons", "D": "decor", "G": "goods", "B": "estates", "H": "buildings",
+    "W": "tactical",
     "V": "events", "U": "ui",
 }
 # Table-driven chapters carry their canvas per chapter (§5, §6, §7, §9);
@@ -48,7 +49,7 @@ CHAPTER_DIR = {
 # B- (§6.11, 2026-09-14) is the manor card's painted estate: the v2 colour
 # style of the characters, on its own 5:4 vignette canvas.
 TABLE_CANVAS = {"T": "C-TILE", "I": "C-ICON", "D": "C-MAPMARK", "G": "C-MAPMARK",
-                "B": "C-ESTATE", "W": "C-SYMBOL",
+                "B": "C-ESTATE", "H": "C-ICON", "W": "C-SYMBOL",
                 "U": "C-UIPIECE", "E": "", "P": ""}
 # Prompt library §10.7 target sizes per canvas, generated at Flux's native
 # 1024-class resolution (icons and tiles are downscaled afterwards).

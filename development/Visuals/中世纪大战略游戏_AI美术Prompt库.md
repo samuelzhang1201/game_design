@@ -1388,6 +1388,23 @@ background, no numerals, no text [C-ICON]
 | `I-60` | 城镇 · Towns | `a cluster of three timber-framed town houses with steep red tile roofs behind a low stone wall` |
 | `I-61` | 乡村 · Country | `a thatched farmhouse beside a small field of ripe wheat and an apple tree` |
 
+> **manor 信息卡图标与罗盘**（owner 2026-09-14）：信息卡上各属性的图标（`manor_*`，与界面维度图标同一画幅、同一风格核、同一静物片段），以及地图右上角的**木质罗盘**（`I-73`：做旧橡木、船舵、齿轮，一点立体感，`install_map_art.py compass` 装进 `assets/ui/compass.png`，游戏里随时间流逝顺时针转）。
+
+| ID | 维度 | Prompt 主体 |
+|---|---|---|
+| `I-62` | 领主家族 · Held by | `a tall heraldic banner on a wooden pole with a shield-shaped crest hung from it, arranged beside a small iron house key, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-63` | 省份 · Province | `a rolled parchment map tied with a ribbon and sealed with red wax, beside a small carved boundary stone, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-64` | 地形 · Terrain | `a clod of dark earth with a tuft of green grass, a small grey stone and a sprig of heather on it, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-65` | 面积 · Area | `a surveyor's wooden measuring rod marked in bands beside a coiled iron measuring chain, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-66` | 战略物资 · Strategic goods | `a bundle of three iron bars bound with cord, a horseshoe and a coil of hemp rope, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-67` | 主业 · Chief good | `a woodland pick, an iron sickle and a small woven basket of produce laid together, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-68` | 庄园规模 · Estate | `a small wooden model of a thatched farmhouse with a barn beside it on a board, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-69` | 防御 · Defence | `a short section of crenellated stone wall with a heavy wooden gate bound in iron, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-70` | 建筑槽位 · Building slots | `a mason's iron square and a wooden plank marked out into three plots with pegs and string, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-71` | 价值 · Value | `a small open wooden chest of gold coins with one red gemstone resting on top, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-72` | 价格 · Price | `a brass merchant's balance scale with a few gold coins in one pan, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-73` | 罗盘 · Compass | `a round wooden compass rose set inside a carved wooden ship's steering wheel with eight turned spokes ending in handles, interlocking brass gear wheels showing behind the rose between the spokes, the rose painted with a sixteen-point star and a north mark, weathered aged oak with worn varnish, scratches and darkened edges, brass rim and pins, seen face-on from straight above with a little raised relief and a soft shadow under the rim, the whole wheel isolated on bare paper` |
+
 > **补充资源图标**（同样格式，按需生成）：`铁 — a stack of rough iron blooms and a pair of tongs`；`盐 — a heaped cone of white salt on a coarse cloth with a wooden scoop`；`银 — a small pile of hammered silver pennies and an ingot`；`木材 — a stacked cord of split oak logs with a felling axe`；`战马 — a coiled leather bridle, a curb bit and a horseshoe`；`香料 — three small open sacks of saffron, pepper and cinnamon bark with a brass scale pan`；`毛皮 — a rolled bundle of marten and fox pelts tied with cord`；`蜂蜜与蜡 — a woven straw skep, a honeycomb section and a beeswax candle`。
 
 ### 6.9 手绘地图装饰件 `D-`（2026-09-12 新增）
@@ -1540,6 +1557,14 @@ background, no numerals, no text [C-ICON]
 | `G-36` | 首饰 | `a chased silver brooch, a ring and a short strand of beads laid on a folded cloth` |
 | `G-37` | 铜 | `a coil of drawn copper wire beside a beaten copper sheet with a hammered surface` |
 | `G-38` | 羊 | `a standing sheep in heavy fleece in profile, with a pair of iron shears beside it` |
+| `G-39` | 鱼 · fish | `three silvery whole fish laid on a bed of wet green reeds beside a small wicker creel` |
+| `G-40` | 盐 · salt | `a heaped cone of coarse white salt on a rough cloth with a wooden scoop` |
+| `G-41` | 石料 · stone | `three squared blocks of pale building stone stacked with an iron mason's chisel and a wooden mallet` |
+| `G-42` | 椰枣 · dates | `a cluster of glossy brown dates hanging from a cut palm stalk beside a small clay bowl of dates` |
+| `G-43` | 兵器 · arms | `a sword, a spearhead and an iron kettle helmet laid together` |
+| `G-44` | 麦酒 · beer | `a wooden ale cask on its side with a tap and a foaming wooden tankard beside it` |
+| `G-45` | 书籍 · books | `two closed leather-bound books with brass clasps and a goose quill beside them` |
+| `G-46` | 船只 · ships | `a small wooden model of a single-masted cog ship with a square sail on a little stand` |
 
 ---
 
@@ -1587,6 +1612,35 @@ background, no numerals, no text [C-ICON]
 | `B-34` | 庄园彩绘·铁矿·小 | `a small mine holding: a cottage beside a timbered mine adit into a hillside with an ore cart, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
 | `B-35` | 庄园彩绘·铁矿·中 | `an iron manor: a stone house with a bloomery furnace giving smoke, a timbered mine adit into the hill, ore carts and heaps of dark ore, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
 | `B-36` | 庄园彩绘·铁矿·大 | `a great iron estate: a manor house with several bloomery furnaces giving smoke, mine adits into the hill, ore carts on wooden rails, heaps of ore and a hamlet of cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+
+### 6.12 庄园建筑图标 `H-`（2026-09-14 新增）
+
+> **manor 建筑槽位与建造菜单里的建筑图标**（owner 2026-09-14）：风格与 manor 彩绘（§6.11 `B-`）和人物立绘一致——§1.1 的 v2 彩铅 `STYLE_CORE.txt`，画幅 `[C-ICON]`；每条只画**一座**建筑的完整剪影。出图经 `post.py --tier icon` 去底，`install_map_art.py buildings` 按 `assets/flux/building_art.csv` 装进 `assets/icons/bld_<code>.png`（槽位格 34 设计像素 × 最大约 3 倍窗口缩放 → 128 px），由 `data/resource_icons.csv` 的 `bld_<code>` 行引用。建筑清单和地理约束见 `data/manor_buildings.csv`。
+
+| ID | 对象 | Prompt 主体 |
+|---|---|---|
+| `H-01` | 建筑·庄园主宅 | `a two-storey stone manor house with a steep slate roof, a tall chimney and an arched wooden door, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-02` | 建筑·礼拜堂 | `a small stone chapel with a pointed arched door, a round rose window and a little bell cote with one bell, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-03` | 建筑·木栅墙 | `a short run of sharpened timber palisade stakes with a plain wooden gate between two posts behind a shallow ditch, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-04` | 建筑·粮仓 | `a stone granary raised on mushroom-shaped staddle stones with a thatched roof and a wooden ladder to its door, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-05` | 建筑·磨坊 | `a timber post windmill with four canvas-covered sails and a small wooden stair up to its door, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-06` | 建筑·渔码头 | `a short wooden fishing jetty on stout piles with a small rowing boat tied alongside and a net hung to dry, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-07` | 建筑·盐场 | `a low boiling house with a smoking chimney beside two shallow rectangular salt pans and a heap of white salt, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-08` | 建筑·锯木场 | `an open-sided timber saw-pit shed with a long two-man saw resting on a log and a stack of sawn planks, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-09` | 建筑·石匠场 | `a masons' lodge of rough stone with a wooden lifting crane and a few squared stone blocks before it, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-10` | 建筑·矿井 | `a timbered mine entrance cut into a rocky hillside with a wooden headframe, a pulley and an ore cart on rails, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-11` | 建筑·蜂场 | `a row of straw bee skeps on a wooden bench under a small thatched lean-to shelter, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-12` | 建筑·葡萄压榨坊 | `a stone press house with an open front showing a great wooden screw wine press and two oak barrels, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-13` | 建筑·制革坊 | `a timber workshop with hides stretched on wooden frames outside and a stone soaking vat, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-14` | 建筑·织布坊 | `a weaver's timber cottage with an open shutter showing a wooden hand loom and bolts of cloth stacked by the door, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-15` | 建筑·集市 | `a covered market hall of timber on open arches over a stone floor with a few stalls and baskets of goods, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-16` | 建筑·铁匠铺 | `a stone smithy with a glowing forge inside the open front, an anvil and a bellows, smoke rising from its chimney, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-17` | 建筑·酿酒坊 | `a timber brewhouse with a copper kettle chimney, stacked ale casks and a hanging sign bush over the door, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-18` | 建筑·造船坊 | `a shipwright's slipway with the ribs of a half-built wooden ship on a cradle and a timber shed beside it, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-19` | 建筑·修道院 | `a small stone abbey church with a square tower and a cloister arcade beside it, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-20` | 建筑·城堡 | `a compact stone castle keep with crenellated battlements, two round corner towers and a gatehouse with a portcullis, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-21` | 建筑·港口 | `a stone harbour quay with a small crane, a lighthouse tower at its end and a merchant cog moored alongside, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
+| `H-22` | 建筑·军械库 | `a stout stone armoury with an iron-studded door, racks of spears and shields and a stack of helmets outside, a single small painted building shown whole with a little ground at its foot, one clear readable silhouette` |
 
 ## 7. 战术地图元素 `W-`
 
