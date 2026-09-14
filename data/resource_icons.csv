@@ -43,41 +43,41 @@ wealth,Wealth,coin,What the town produces in a season.,
 town_treasury,Treasury,coin,Coin in the town's own chest.,
 towns,Towns,huts,The realm's townsfolk: everyone living inside a burg's walls or streets.,res://assets/icons/towns.png
 country,Country,grain,"The realm's country folk: everyone on the land, in villages and on farms.",res://assets/icons/country.png
-bld_manor_house,Manor house,tower,"A stone hall for the steward: rents in full, a yard that can be held, a lord in residence.",
-bld_mill,Mill,grain,A mill: the manor grinds its own grain and sends flour to the royal granaries.,
-bld_granary,Granary,huts,A stone granary: the harvest keeps.,
-bld_chapel,Chapel,cross,A chapel with its own priest: the pulpit speaks well of the crown.,
-bld_palisade,Palisade,wall,"A ditch and timber wall: a raid has to work for it, and the villages sleep easier.",
-bld_market,Market,market,"A weekly market by charter: tolls, stall rents, and cloth changing hands.",
-manor_owner,Held by,crown,The house that holds the manor.,
-manor_province,Province,tower,The province the manor lies in.,
+bld_manor_house,Manor house,tower,"A stone hall for the steward: rents in full, a yard that can be held, a lord in residence.",res://assets/icons/bld_manor_house.png
+bld_mill,Mill,grain,A mill: the manor grinds its own grain and sends flour to the royal granaries.,res://assets/icons/bld_mill.png
+bld_granary,Granary,huts,A stone granary: the harvest keeps.,res://assets/icons/bld_granary.png
+bld_chapel,Chapel,cross,A chapel with its own priest: the pulpit speaks well of the crown.,res://assets/icons/bld_chapel.png
+bld_palisade,Palisade,wall,"A ditch and timber wall: a raid has to work for it, and the villages sleep easier.",res://assets/icons/bld_palisade.png
+bld_market,Market,market,"A weekly market by charter: tolls, stall rents, and cloth changing hands.",res://assets/icons/bld_market.png
+manor_owner,Held by,crown,The house that holds the manor.,res://assets/icons/manor_owner.png
+manor_province,Province,tower,The province the manor lies in.,res://assets/icons/manor_province.png
 manor_seat,Seat,huts,The town that stands in the manor.,res://assets/icons/towns.png
-manor_terrain,Terrain,sun,The land the manor stands on.,
+manor_terrain,Terrain,sun,The land the manor stands on.,res://assets/icons/manor_terrain.png
 manor_land,Land,grain,How kindly the ground is to farming.,res://assets/icons/country.png
-manor_area,Area,cloth,How much land the manor covers.,
+manor_area,Area,cloth,How much land the manor covers.,res://assets/icons/manor_area.png
 manor_people,People,people,"Everyone living on the manor, its town included.",res://assets/icons/population.png
 manor_tax,Tax,coin,"The gold the manor pays a month, its town's tariff included.",res://assets/icons/treasury.png
-manor_strategic,Strategic goods,swords,What the manor's strategic goods are worth a month.,
+manor_strategic,Strategic goods,swords,What the manor's strategic goods are worth a month.,res://assets/icons/manor_strategic.png
 manor_civil,Civil goods,grain,What the manor's civil goods are worth a month.,res://assets/icons/grain.png
-manor_focus,Chief good,pick,The good the manor works at.,
-manor_estate,Estate,huts,The size of the estate for its industry.,
-manor_defence,Defence,wall,How hard the manor is to take.,
-manor_slots,Building slots,market,Room for buildings: taken of the whole.,
-manor_value,Value,gem,What the manor is worth before anyone's feelings.,
-manor_price,Price,coin,"What the manor would cost to buy, or bring to sell.",
-bld_fishing_quay,Fishing quay,anchor,a jetty and boats: only on the coast,
-bld_saltworks,Saltworks,market,pans and a boiling house: on the coast or the dry salt flats,
-bld_sawmill,Sawmill,huts,a saw-pit and timber sheds: only where there is forest to cut,
-bld_stonecutter,Stonecutter,pick,a masons' lodge and a crane: on high ground or at a quarry,
-bld_mine_shaft,Mine shaft,pick,a timbered adit and headframe: in the hills or where iron is already worked,
-bld_apiary,Apiary,sun,a bee yard among flowers and orchards,
-bld_winepress,Winepress,market,a press house and cellar: only where vines grow,
-bld_tannery,Tannery,cloth,hides into leather: only where herds or trappers bring the hides,
-bld_loom,Loom house,cloth,"weavers at their looms: where the sheep are, or in a town",
-bld_smithy,Smithy,flame,a forge by the mine: iron into tools,
-bld_brewery,Brewery,huts,malt from the mill into ale: the villages are merrier,
-bld_shipwright,Shipwright,sail,a slipway beside the quay: boats and small ships,
-bld_abbey,Abbey,cross,"monks and a scriptorium where the chapel stood: the church warms, and books are copied",
-bld_castle,Castle,tower,"a stone keep behind the palisade, the lord's hall within: very hard to take, and the land is quiet",
-bld_harbour,Harbour,anchor,a stone quay where the market meets the boats: harbour dues and a larger catch,
-bld_armoury,Armoury,swords,"a store of arms beside the smithy: weapons for the levy, and a harder yard",
+manor_focus,Chief good,pick,The good the manor works at.,res://assets/icons/manor_focus.png
+manor_estate,Estate,huts,The size of the estate for its industry.,res://assets/icons/manor_estate.png
+manor_defence,Defence,wall,How hard the manor is to take.,res://assets/icons/manor_defence.png
+manor_slots,Building slots,market,Room for buildings: taken of the whole.,res://assets/icons/manor_slots.png
+manor_value,Value,gem,What the manor is worth before anyone's feelings.,res://assets/icons/manor_value.png
+manor_price,Price,coin,"What the manor would cost to buy, or bring to sell.",res://assets/icons/manor_price.png
+bld_fishing_quay,Fishing quay,anchor,a jetty and boats: only on the coast,res://assets/icons/bld_fishing_quay.png
+bld_saltworks,Saltworks,market,pans and a boiling house: on the coast or the dry salt flats,res://assets/icons/bld_saltworks.png
+bld_sawmill,Sawmill,huts,a saw-pit and timber sheds: only where there is forest to cut,res://assets/icons/bld_sawmill.png
+bld_stonecutter,Stonecutter,pick,a masons' lodge and a crane: on high ground or at a quarry,res://assets/icons/bld_stonecutter.png
+bld_mine_shaft,Mine shaft,pick,a timbered adit and headframe: in the hills or where iron is already worked,res://assets/icons/bld_mine_shaft.png
+bld_apiary,Apiary,sun,a bee yard among flowers and orchards,res://assets/icons/bld_apiary.png
+bld_winepress,Winepress,market,a press house and cellar: only where vines grow,res://assets/icons/bld_winepress.png
+bld_tannery,Tannery,cloth,hides into leather: only where herds or trappers bring the hides,res://assets/icons/bld_tannery.png
+bld_loom,Loom house,cloth,"weavers at their looms: where the sheep are, or in a town",res://assets/icons/bld_loom.png
+bld_smithy,Smithy,flame,a forge by the mine: iron into tools,res://assets/icons/bld_smithy.png
+bld_brewery,Brewery,huts,malt from the mill into ale: the villages are merrier,res://assets/icons/bld_brewery.png
+bld_shipwright,Shipwright,sail,a slipway beside the quay: boats and small ships,res://assets/icons/bld_shipwright.png
+bld_abbey,Abbey,cross,"monks and a scriptorium where the chapel stood: the church warms, and books are copied",res://assets/icons/bld_abbey.png
+bld_castle,Castle,tower,"a stone keep behind the palisade, the lord's hall within: very hard to take, and the land is quiet",res://assets/icons/bld_castle.png
+bld_harbour,Harbour,anchor,a stone quay where the market meets the boats: harbour dues and a larger catch,res://assets/icons/bld_harbour.png
+bld_armoury,Armoury,swords,"a store of arms beside the smithy: weapons for the levy, and a harder yard",res://assets/icons/bld_armoury.png

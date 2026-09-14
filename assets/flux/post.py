@@ -259,6 +259,8 @@ def main() -> int:
     ap.add_argument("--no-trim", action="store_true",
                     help="mark tier: keep the render's empty margin instead of trimming to the drawing")
     ap.add_argument("--timeout", type=float, default=300.0)
+    ap.add_argument("--front", action="store_true",
+                    help="queue the cut-outs at the FRONT of ComfyUI's queue, ahead of renders still waiting (2026-09-14)")
     args = ap.parse_args()
     tone = args.tone.lstrip("#").upper()
     if tone and len(tone) != 6:
@@ -294,7 +296,10 @@ def main() -> int:
             print(f"  trimmed to {box[2]}x{box[3]} at ({box[0]},{box[1]})")
         template = templates["sepia" if tier == "mark" else "cutout"]
         graph = gen.make_graph(template, values)
-        res = gen._post("/prompt", {"prompt": graph, "client_id": uuid.uuid4().hex})
+        payload = {"prompt": graph, "client_id": uuid.uuid4().hex}
+        if args.front:
+            payload["front"] = True
+        res = gen._post("/prompt", payload)
         gain = [1.0, 1.0, 1.0]
         if tone:
             gain, why = tone_gain(path, tone)
