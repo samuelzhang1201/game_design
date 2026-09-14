@@ -11,11 +11,11 @@ extends RefCounted
 ##   manor-owner table and a re-export changes nothing.
 ## - GameState.manor_owner holds ONLY manors that moved, as province_owner
 ##   does; set_owner needs a reason and writes manor_log.
-## - Population is never stored: a manor's share of its province's rural
-##   people is its area x land value over the province's total, and a burg's
-##   cell takes the province's urban people by burg population share — so
-##   the manors of a province always sum to the province, and a ledger move
-##   on the province moves every manor in it.
+## - Population is never stored, and is WHOLE (spec 2026-09-14 §4.1): a
+##   province's country folk are apportioned to its manors by area x land
+##   value and its townsfolk to its burgs' cells, by largest remainder — so
+##   the manors of a province always sum EXACTLY to the province, and a
+##   ledger move on the province moves every manor in it.
 ## - Every number in a formula is balance.csv (manor_*) or
 ##   manor_buildings.csv.
 
@@ -30,8 +30,7 @@ static func invalidate() -> void:
 static func _repo_cache(repo: DataRepository) -> Dictionary:
 	var key := repo.get_instance_id()
 	if not _cache.has(key):
-		_cache[key] = {"by_province": {}, "weight": {}, "area": {}, "province_weight": {},
-			"burg_pop": {}}
+		_cache[key] = {"by_province": {}, "weight": {}, "area": {}}
 	return _cache[key]
 
 # ---- identity ---------------------------------------------------------------
@@ -307,71 +306,17 @@ static func weight_of(repo: DataRepository, cell_id: int) -> float:
 		c["weight"][cell_id] = area_of(repo, cell_id) * maxf(land_value_of(repo, cell_id), 0.01)
 	return c["weight"][cell_id]
 
-static func _province_weight(repo: DataRepository, province_code: String) -> float:
-	var c := _repo_cache(repo)
-	if not c["province_weight"].has(province_code):
-		var sum := 0.0
-		for id: int in manors_of_province(repo, province_code):
-			sum += weight_of(repo, id)
-		c["province_weight"][province_code] = sum
-	return c["province_weight"][province_code]
-
-## Burg population summed per province, for the urban share.
-static func _province_burg_pop(repo: DataRepository, province_code: String) -> float:
-	var c := _repo_cache(repo)
-	if not c["burg_pop"].has(province_code):
-		var sum := 0.0
-		for code: String in repo.burgs:
-			var b: Dictionary = repo.burgs[code]
-			if String(b.get("province_code", "")) == province_code:
-				sum += float(b.get("population", 0))
-		c["burg_pop"][province_code] = sum
-	return c["burg_pop"][province_code]
-
 static func _ledger(repo: DataRepository, state: GameState, path: String) -> float:
 	var v: Variant = WorldLedger.value_of(repo, state, path)
 	return float(v) if v != null else 0.0
 
-## {rural, urban, total}: the manor's share of its province, live.
-static func population_of(repo: DataRepository, state: GameState, cell_id: int) -> Dictionary:
-	var province := province_of(repo, cell_id)
-	if province == "":
-		return {"rural": 0.0, "urban": 0.0, "total": 0.0}
-	return _share(repo, cell_id, province,
-		_ledger(repo, state, "economy.provinces.%s.rural_population" % province),
-		_ledger(repo, state, "economy.provinces.%s.urban_population" % province))
-
-## The same for many manors at once — the Manor Master's table — reading
-## each province's ledger figures once instead of once per manor.
-static func population_table(repo: DataRepository, state: GameState, cells: Array) -> Dictionary:
-	var figures: Dictionary = {}
-	var out: Dictionary = {}
-	for cell: int in cells:
-		var province := province_of(repo, cell)
-		if province == "":
-			out[cell] = {"rural": 0.0, "urban": 0.0, "total": 0.0}
-			continue
-		if not figures.has(province):
-			figures[province] = [_ledger(repo, state, "economy.provinces.%s.rural_population" % province),
-				_ledger(repo, state, "economy.provinces.%s.urban_population" % province)]
-		out[cell] = _share(repo, cell, province, figures[province][0], figures[province][1])
-	return out
-
-static func _share(repo: DataRepository, cell_id: int, province: String, province_rural: float,
-		province_urban: float) -> Dictionary:
-	var total_weight := _province_weight(repo, province)
-	var rural := 0.0
-	if total_weight > 0.0:
-		rural = province_rural * weight_of(repo, cell_id) / total_weight
-	var urban := 0.0
-	var burg := burg_of(repo, cell_id)
-	if burg != "":
-		var burg_total := _province_burg_pop(repo, province)
-		if burg_total > 0.0:
-			urban = province_urban * float(repo.burgs[burg].get("population", 0)) / burg_total
-	return {"rural": rural, "urban": urban, "total": rural + urban}
-
 ## --- Integer people (spec 2026-09-14 §4.1) -----------------------------------
+## The float share of a province a manor used to be given (population_of /
+## population_table / _share) is GONE (2026-09-14): it was a second economy
+## beside the integer one below, and the manor card printed one figure from
+## each. People are whole and sum exactly to their province — people_of and
+## people_table are the only reading.
+##
 ## The province's country folk apportioned to its manors by weight with the
 ## largest-remainder method, so the manors sum EXACTLY to the province and
 ## no manor has a fraction of a person; its townsfolk the same way over its
@@ -764,23 +709,6 @@ static func set_focus(repo: DataRepository, state: GameState, cell_id: int, focu
 		"reason": reason})
 	return true
 
-## What the manor's focus yields: {focus, good, label, units} — units a
-## year = people / 1000 x yield_per_1000 x land value x the settling-in
-## ramp x (1 + the buildings' output bonus) x manor_focus_yield_scale.
-## Empty-handed ({} with units 0) for land that works nothing.
-static func focus_output_of(repo: DataRepository, state: GameState, cell_id: int,
-		people: float = -1.0) -> Dictionary:
-	var code := focus_of(repo, state, cell_id)
-	var row: Dictionary = repo.manor_focus.get(code, {})
-	if row.is_empty():
-		return {"focus": "", "good": "", "label": "", "units": 0.0}
-	var pop: float = people if people >= 0.0 else population_of(repo, state, cell_id)["total"]
-	var units := pop / 1000.0 * float(row.get("yield_per_1000", 0)) * land_value_of(repo, cell_id) \
-		* focus_ramp(repo, state, cell_id) * (1.0 + building_bonus(repo, state, cell_id, "output_bonus")) \
-		* repo.bal("manor_focus_yield_scale")
-	return {"focus": code, "good": String(row.get("good_code", "")),
-		"label": String(row.get("label", code)), "units": units}
-
 ## The manor's month of tax, for the card (spec 2026-09-14 §4.2): whole
 ## gold, the tariff of its town included, as ManorEconomy figures it. ONE
 ## manor — a table of them goes through RealmEconomy.tax_table, which reads
@@ -813,12 +741,20 @@ static func house_opinion(repo: DataRepository, state: GameState, family: String
 	return 0 if any_member == -1000 else any_member
 
 ## What a manor is worth before anyone's feelings: people, output, buildings,
-## and the land — MANOR_SYSTEM.md §5.
-static func base_value_of(repo: DataRepository, state: GameState, cell_id: int, people: float = -1.0) -> float:
-	var pop: float = people if people >= 0.0 else population_of(repo, state, cell_id)["total"]
-	var base := pop / 1000.0 * repo.bal("manor_price_per_1000") \
-		+ (output_of(repo, cell_id) + float(focus_output_of(repo, state, cell_id, pop)["units"])) \
-			* repo.bal("manor_price_per_unit") \
+## and the land — MANOR_SYSTEM.md §5. Every figure comes off the one integer
+## economy (2026-09-14): whole people, and the units of goods the manor
+## ships in a month as RealmEconomy has them cached — its chief good, its
+## buildings' and its town's alike, which is what the ECONOMY column counts.
+static func base_value_of(repo: DataRepository, state: GameState, cell_id: int) -> float:
+	return value_of_line(repo, state, cell_id, RealmEconomy.line_of(repo, state, cell_id))
+
+## The same for a caller that already holds the manor's month — the Manor
+## Master, which reads a whole province's lines at once
+## (RealmEconomy.lines_table) rather than one line per row.
+static func value_of_line(repo: DataRepository, state: GameState, cell_id: int,
+		line: Dictionary) -> float:
+	var base := float(line.get("people", 0)) / 1000.0 * repo.bal("manor_price_per_1000") \
+		+ float(line.get("units", 0)) * repo.bal("manor_price_per_unit") \
 		+ building_cost(repo, state, cell_id) * repo.bal("manor_price_building_ratio")
 	var land := 1.0 + (land_value_of(repo, cell_id) - 0.5) * repo.bal("manor_price_land_swing")
 	return base * land

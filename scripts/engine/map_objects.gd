@@ -222,7 +222,6 @@ static func manor_estates(repo: DataRepository, state: GameState) -> Array:
 		return out
 	var ids: Array = repo.manors.keys()
 	ids.sort()
-	var people := MapManors.population_table(repo, state, ids)
 	var px := repo.bal("map_manor_estate_px") * repo.bal("map_decor_scale")
 	var fit := repo.bal("map_manor_estate_fit")
 	var foot := repo.bal("map_manor_estate_foot")
@@ -232,7 +231,7 @@ static func manor_estates(repo: DataRepository, state: GameState) -> Array:
 		var cell: Dictionary = repo.cells.get(id, {})
 		if cell.is_empty():
 			continue
-		var pop := float((people.get(id, {}) as Dictionary).get("total", 0.0))
+		var pop := float(MapManors.people_of(repo, state, id))
 		var focus := MapManors.focus_of(repo, state, id)
 		var row := estate_tier(repo, focus, pop)
 		if row.is_empty():
@@ -923,18 +922,27 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	var scale := float(repo.map_info.get("distance_scale", "1"))
 	fields.append(["Area", "%d %s²" % [roundi(MapManors.area_of(repo, cell) * scale * scale),
 		String(repo.map_info.get("distance_unit", "px"))]])
-	var people := MapManors.population_of(repo, state, cell)
-	if float(people["urban"]) > 0.0:
-		fields.append(["People", "%d (%d in town)" % [roundi(float(people["total"])), roundi(float(people["urban"]))]])
+	# One economy on the card (2026-09-14): people, tax and yield are all
+	# ManorEconomy's whole-number month, the same figures the tick settles
+	# and the ECONOMY column sums.
+	var line := ManorEconomy.line_of(repo, state, cell, state.tick)
+	var people := int(line["people"])
+	var town := MapManors.burg_of(repo, cell)
+	if town != "":
+		fields.append(["People", "%d (%s stands in it)" % [people,
+			String(repo.burgs.get(town, {}).get("label", town))]])
 	else:
-		fields.append(["People", str(roundi(float(people["total"])))])
-	fields.append(["Rent", "%.2f gold a tick" % MapManors.rent_of(repo, state, cell)])
-	# The chief good (owner 2026-09-13): what the manor works at, its yield,
-	# and how far a switch has settled in.
-	var focus := MapManors.focus_output_of(repo, state, cell, float(people["total"]))
-	if String(focus["focus"]) != "":
-		var text := "%s — %d %s a year" % [String(focus["label"]), roundi(float(focus["units"])),
-			String(repo.world_row("economy", "goods", String(focus["good"])).get("label", focus["good"])).to_lower()]
+		fields.append(["People", str(people)])
+	fields.append(["Tax", "%d gold a month" % int(line["tax"])])
+	# The chief good (owner 2026-09-13): what the manor works at, what it
+	# ships of that good in a month, and how far a switch has settled in.
+	var focus_code := MapManors.focus_of(repo, state, cell)
+	var focus: Dictionary = repo.manor_focus.get(focus_code, {})
+	if not focus.is_empty():
+		var good := String(focus.get("good_code", ""))
+		var text := "%s — %d %s a month" % [String(focus.get("label", focus_code)),
+			int((line["units"] as Dictionary).get(good, 0)),
+			String(repo.world_row("economy", "goods", good).get("label", good)).to_lower()]
 		var ramp := MapManors.focus_ramp(repo, state, cell)
 		if ramp < 1.0:
 			text += " (settling in, %d%%)" % roundi(ramp * 100.0)
@@ -943,7 +951,7 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		fields.append(["Chief good", "none the land allows"])
 	var tier := MapManors.burg_of(repo, cell) == ""
 	if tier and not repo.manor_estates.is_empty():
-		var est := estate_tier(repo, MapManors.focus_of(repo, state, cell), float(people["total"]))
+		var est := estate_tier(repo, MapManors.focus_of(repo, state, cell), float(people))
 		if not est.is_empty():
 			var industry := String((repo.manor_focus.get(String(est["focus_code"]), {}) as Dictionary).get("label", est["focus_code"])).to_lower()
 			fields.append(["Estate", "%s, size %d of %d" % [industry, int(float(est["tier"])),

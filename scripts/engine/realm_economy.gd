@@ -1,10 +1,10 @@
 class_name RealmEconomy
 extends RefCounted
 ## The realm's economy from its manors (spec 2026-09-14 §4.4, §11): every
-## manor's month kept COLUMNAR — three PackedInt32Array, tax / strategic /
-## civil, one entry per manor, province-major (provinces by code, manors
-## by cell id), so a province is a contiguous slice — with a KEY per
-## province standing in for a dirty flag: the key strings together
+## manor's month kept COLUMNAR — five PackedInt32Array, people / tax /
+## strategic / civil / units, one entry per manor, province-major
+## (provinces by code, manors by cell id), so a province is a contiguous
+## slice — with a KEY per province standing in for a dirty flag: the key strings together
 ## everything a line depends on (the tick, the tax levels, the province's
 ## two ledger figures, and its manors' owner, buildings and focus), so a
 ## province is recomputed exactly when one of those moved and never
@@ -29,9 +29,13 @@ static var _index: Dictionary = {}            # cell id -> i
 static var _codes := PackedStringArray()      # province index -> code
 static var _range: Dictionary = {}            # code -> [start, end)
 static var _bucket_of := PackedInt32Array()   # province index -> day bucket
+static var _people := PackedInt32Array()      # i -> the manor's whole people
 static var _tax := PackedInt32Array()
 static var _strategic := PackedInt32Array()
 static var _civil := PackedInt32Array()
+## i -> how many units of goods the manor ships in the month, every good
+## counted alike: the price input MapManors.value_of_units reads.
+static var _units := PackedInt32Array()
 static var _keys: Dictionary = {}             # code -> key computed under
 static var _sums: Dictionary = {}             # code -> {tax, strategic, civil}
 static var _realm_sig := ""
@@ -46,9 +50,11 @@ static func forget() -> void:
 	_codes = PackedStringArray()
 	_range = {}
 	_bucket_of = PackedInt32Array()
+	_people = PackedInt32Array()
 	_tax = PackedInt32Array()
 	_strategic = PackedInt32Array()
 	_civil = PackedInt32Array()
+	_units = PackedInt32Array()
 	_keys = {}
 	_sums = {}
 	_realm_sig = ""
@@ -73,9 +79,11 @@ static func setup(repo: DataRepository) -> void:
 			_cells.append(id)
 		_range[code] = [start, _cells.size()]
 		_codes.append(code)
+	_people.resize(_cells.size())
 	_tax.resize(_cells.size())
 	_strategic.resize(_cells.size())
 	_civil.resize(_cells.size())
+	_units.resize(_cells.size())
 	_assign_buckets()
 
 ## The day bucket of every province: the heaviest province goes into the
@@ -138,9 +146,13 @@ static func recompute_province(repo: DataRepository, state: GameState, code: Str
 	var civil := 0
 	for i in range(int(r[0]), int(r[1])):
 		var line := ManorEconomy.line_of(repo, state, _cells[i], state.tick)
+		_people[i] = int(line["people"])
 		_tax[i] = int(line["tax"])
 		_strategic[i] = int(line["strategic"])
 		_civil[i] = int(line["civil"])
+		_units[i] = 0
+		for good: String in (line["units"] as Dictionary):
+			_units[i] += int((line["units"] as Dictionary)[good])
 		tax += _tax[i]
 		strategic += _strategic[i]
 		civil += _civil[i]
@@ -160,14 +172,15 @@ static func province(repo: DataRepository, state: GameState, code: String) -> Di
 static func line_of(repo: DataRepository, state: GameState, cell: int) -> Dictionary:
 	province(repo, state, MapManors.province_of(repo, cell))
 	if not _index.has(cell):
-		return {"tax": 0, "strategic": 0, "civil": 0}
+		return {"people": 0, "tax": 0, "strategic": 0, "civil": 0, "units": 0}
 	var i: int = _index[cell]
-	return {"tax": _tax[i], "strategic": _strategic[i], "civil": _civil[i]}
+	return {"people": _people[i], "tax": _tax[i], "strategic": _strategic[i],
+		"civil": _civil[i], "units": _units[i]}
 
-## Every manor of a province at once: cell -> {tax, strategic, civil}. The
-## province's key is checked ONCE and the answers come off the columnar
-## arrays, so a table of a thousand rows (the Manor Master) costs one key
-## build, not one per row.
+## Every manor of a province at once: cell -> {people, tax, strategic,
+## civil, units}. The province's key is checked ONCE and the answers come
+## off the columnar arrays, so a table of a thousand rows (the Manor
+## Master) costs one key build, not one per row.
 static func lines_of_province(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	setup(repo)
 	if not _range.has(code):
@@ -176,13 +189,17 @@ static func lines_of_province(repo: DataRepository, state: GameState, code: Stri
 	var out: Dictionary = {}
 	var r: Array = _range[code]
 	for i in range(int(r[0]), int(r[1])):
-		out[_cells[i]] = {"tax": _tax[i], "strategic": _strategic[i], "civil": _civil[i]}
+		out[_cells[i]] = {"people": _people[i], "tax": _tax[i], "strategic": _strategic[i],
+			"civil": _civil[i], "units": _units[i]}
 	return out
 
-## The month's tax of many manors: cell -> whole gold. The cells are grouped
-## by province first, so each province is read in bulk once however the
-## caller ordered them. Cells that are no manor are left out.
-static func tax_table(repo: DataRepository, state: GameState, cells: Array) -> Dictionary:
+## The month of many manors at once: cell -> {people, tax, strategic,
+## civil, units}.
+## The cells are grouped by province first, so each province's key is built
+## and compared ONCE however the caller ordered them — a table of a thousand
+## rows must never go through `line_of` per row, which is O(the province's
+## manors) each time. Cells that are no manor are left out.
+static func lines_table(repo: DataRepository, state: GameState, cells: Array) -> Dictionary:
 	setup(repo)
 	var by_province: Dictionary = {}
 	for cell: int in cells:
@@ -197,7 +214,15 @@ static func tax_table(repo: DataRepository, state: GameState, cells: Array) -> D
 		var lines := lines_of_province(repo, state, code)
 		for cell: int in by_province[code]:
 			if lines.has(cell):
-				out[cell] = int((lines[cell] as Dictionary)["tax"])
+				out[cell] = lines[cell]
+	return out
+
+## The month's tax alone: cell -> whole gold.
+static func tax_table(repo: DataRepository, state: GameState, cells: Array) -> Dictionary:
+	var out: Dictionary = {}
+	var lines := lines_table(repo, state, cells)
+	for cell: int in lines:
+		out[cell] = int((lines[cell] as Dictionary)["tax"])
 	return out
 
 ## What the realm's answer depends on, cheaply: the dictionaries that hold

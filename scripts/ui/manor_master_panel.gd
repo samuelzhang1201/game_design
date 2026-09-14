@@ -2,7 +2,7 @@ class_name ManorMasterPanel
 extends VBoxContainer
 ## The Manor Master (MANOR_SYSTEM.md §6, owner 2026-09-13): every manor on
 ## the map in one sortable table — name, house, value, and on hover its
-## province, people, rent, buildings and production — in the LEFT column
+## province, people, tax and buildings — in the LEFT column
 ## while the MANORS layer is lit, the way ECONOMY puts its panel there.
 ## Scope is the crown's realm by default (a few hundred rows) or the whole
 ## map; a house filter narrows it; the table is capped at
@@ -182,23 +182,22 @@ func refresh() -> void:
 		for province: String in MapOwnership.provinces_of(repo, state, realm):
 			cells.append_array(MapManors.manors_of_province(repo, province))
 	cells.sort()
-	var people := MapManors.population_table(repo, state, cells)
-	# The month's tax of every row at once: one cached province read each,
-	# not a ManorEconomy line per row (the table is refreshed on every
-	# state_changed, and the map scope is thousands of manors).
-	var taxes := RealmEconomy.tax_table(repo, state, cells)
+	# Every row's month at once: one cached province read each, not a line
+	# per row (the table is refreshed on every state_changed, and the map
+	# scope is thousands of manors).
+	var lines := RealmEconomy.lines_table(repo, state, cells)
 	var houses: Dictionary = {}
 	var rows: Array = []
 	var crown_count := 0
-	var rents := 0.0
+	var rents := 0
 	for cell: int in cells:
 		var house := MapManors.owner_of(repo, state, cell)
 		houses[house] = int(houses.get(house, 0)) + 1
 		var crowns := house == crown
 		if crowns:
 			crown_count += 1
-		var pop: float = (people[cell] as Dictionary)["total"]
-		var rent := float(taxes.get(cell, 0))
+		var line: Dictionary = lines.get(cell, {})
+		var rent := int(line.get("tax", 0))
 		if crowns:
 			rents += rent
 		if _house_filter != "" and house != _house_filter:
@@ -206,10 +205,10 @@ func refresh() -> void:
 		rows.append({"cell": cell, "label": MapManors.label_of(repo, cell),
 			"house": "The crown" if crowns else house, "family": house,
 			"province": String(repo.provinces.get(MapManors.province_of(repo, cell), {}).get("label", "")),
-			"people": pop, "rent": rent, "value": MapManors.base_value_of(repo, state, cell, pop),
+			"people": int(line.get("people", 0)), "rent": rent,
+			"value": MapManors.value_of_line(repo, state, cell, line),
 			"buildings": MapManors.buildings_of(state, cell).size(),
-			"output": MapManors.output_of(repo, cell),
-			"focus": MapManors.focus_output_of(repo, state, cell, pop)})
+			"focus": String((repo.manor_focus.get(MapManors.focus_of(repo, state, cell), {}) as Dictionary).get("label", ""))})
 	rows.sort_custom(_compare)
 	var cap := int(repo.bal("manor_master_max_rows"))
 	_left_out = maxi(rows.size() - cap, 0)
@@ -217,7 +216,7 @@ func refresh() -> void:
 	_fill_houses(houses, crown)
 	_fill_tree()
 	var scope := "the realm" if not _all else "the map"
-	_summary.text = "%d manors in %s — the crown holds %d, %.1f gold a tick in rents%s" % [
+	_summary.text = "%d manors in %s — the crown holds %d, %d gold a month in taxes%s" % [
 		cells.size(), scope, crown_count, rents,
 		"; %d more than the table shows" % _left_out if _left_out > 0 else ""]
 
@@ -264,13 +263,12 @@ func _fill_tree() -> void:
 		item.set_text(2, str(roundi(float(r["value"]))))
 		item.set_text_alignment(2, HORIZONTAL_ALIGNMENT_RIGHT)
 		item.set_metadata(0, int(r["cell"]))
-		var focus: Dictionary = r["focus"]
-		var works := ("works %s, %d units a year" % [String(focus["label"]).to_lower(), roundi(float(focus["units"]))]) \
-			if String(focus["focus"]) != "" else "subsistence"
-		var tip := "%s — %s\nPeople %d · rent %.2f a tick · value %d gold\n%d building%s · %s%s" % [
-			String(r["label"]), String(r["province"]), roundi(float(r["people"])), float(r["rent"]),
+		var focus := String(r["focus"])
+		var works := ("works %s" % focus.to_lower()) if focus != "" else "subsistence"
+		var tip := "%s — %s\nPeople %d · tax %d gold a month · value %d gold\n%d building%s · %s" % [
+			String(r["label"]), String(r["province"]), int(r["people"]), int(r["rent"]),
 			roundi(float(r["value"])), int(r["buildings"]), "" if int(r["buildings"]) == 1 else "s",
-			works, (" · town trade %d units" % roundi(float(r["output"]))) if float(r["output"]) > 0.0 else ""]
+			works]
 		for i in COLUMNS.size():
 			item.set_tooltip_text(i, tip)
 

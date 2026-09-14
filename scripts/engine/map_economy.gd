@@ -179,26 +179,22 @@ static func realm_output(repo: DataRepository, state: GameState, kingdom_code: S
 	return output_of_provinces(repo, MapOwnership.provinces_of(repo, state, kingdom_code))
 
 ## The same over any provinces — the crown's controlled ones for its own
-## column (MapManors.controlled_provinces). Given a state, every manor's
-## focus (owner 2026-09-13: the chief good it works at) is added on top of
-## the pack's town production.
+## column (MapManors.controlled_provinces). WITHOUT a state it is the pack's
+## town production alone; WITH one, every manor's month as ManorEconomy
+## figures it (2026-09-14) — the chief good, the buildings' produce and the
+## town's, in whole units, so the column and the manor card say one thing.
 static func output_of_provinces(repo: DataRepository, provinces: Array, state: GameState = null) -> Array:
 	var totals: Dictionary = {}
 	var per_province := province_output(repo)
 	for province: String in provinces:
-		for good: String in per_province.get(province, {}):
-			totals[good] = float(totals.get(good, 0.0)) + float(per_province[province][good])
 		if state == null:
+			for good: String in per_province.get(province, {}):
+				totals[good] = float(totals.get(good, 0.0)) + float(per_province[province][good])
 			continue
-		var cells := MapManors.manors_of_province(repo, province)
-		var people := MapManors.population_table(repo, state, cells)
-		for cell: int in cells:
-			var f := MapManors.focus_output_of(repo, state, cell, float((people[cell] as Dictionary)["total"]))
-			if float(f["units"]) > 0.0:
-				totals[f["good"]] = float(totals.get(f["good"], 0.0)) + float(f["units"])
-			var made := MapManors.building_output_of(repo, state, cell)
-			for good: String in made:
-				totals[good] = float(totals.get(good, 0.0)) + float(made[good])
+		for cell: int in MapManors.manors_of_province(repo, province):
+			var units: Dictionary = ManorEconomy.line_of(repo, state, cell, state.tick)["units"]
+			for good: String in units:
+				totals[good] = float(totals.get(good, 0.0)) + float(units[good])
 	var out: Array = []
 	for good: String in totals:
 		out.append({"good": good, "units": float(totals[good]),

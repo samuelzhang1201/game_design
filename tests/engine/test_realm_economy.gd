@@ -25,7 +25,12 @@ func test_a_province_is_the_sum_of_its_manors_lines() -> void:
 			sum["strategic"] += int(line["strategic"])
 			sum["civil"] += int(line["civil"])
 			var cached := RealmEconomy.line_of(data, s, cell)
-			assert_eq(cached, {"tax": line["tax"], "strategic": line["strategic"], "civil": line["civil"]}, "the cache keeps the line of %d" % cell)
+			var units := 0
+			for good: String in (line["units"] as Dictionary):
+				units += int((line["units"] as Dictionary)[good])
+			assert_eq(cached, {"people": line["people"], "tax": line["tax"],
+				"strategic": line["strategic"], "civil": line["civil"], "units": units},
+				"the cache keeps the line of %d" % cell)
 		assert_eq(RealmEconomy.province(data, s, code), sum, "province %s ties out" % code)
 
 func test_the_realm_is_the_sum_of_its_provinces_and_the_crown_of_its_own() -> void:

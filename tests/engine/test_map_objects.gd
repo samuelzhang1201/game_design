@@ -529,9 +529,18 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	for f in card["fields"]:
 		fields[String(f[0])] = String(f[1])
 	assert_eq(fields["Held by"], "The crown")
-	for key in ["Province", "Land", "Area", "People", "Rent", "Chief good", "Defence", "Buildings", "Slots", "Value", "Sells for"]:
+	for key in ["Province", "Land", "Area", "People", "Tax", "Chief good", "Defence", "Buildings", "Slots", "Value", "Sells for"]:
 		assert_true(fields.has(key), key + " is on the card")
-	assert_string_contains(fields["Chief good"], " a year", "the focus and its yield")
+	# One economy on the card (2026-09-14): every figure is ManorEconomy's
+	# integer month, and the month is the unit of time.
+	var line := ManorEconomy.line_of(real, state, own, state.tick)
+	assert_string_contains(fields["People"], str(int(line["people"])))
+	assert_eq(fields["Tax"], "%d gold a month" % int(line["tax"]))
+	assert_string_contains(fields["Chief good"], " a month", "the focus and its yield")
+	var good := String(ManorEconomy.focus_units(real, state, own, int(line["people"]), state.tick)["good"])
+	if good != "":
+		assert_string_contains(fields["Chief good"],
+			"%d " % int((line["units"] as Dictionary).get(good, 0)))
 	var codes: Array = []
 	for a: Dictionary in card["actions"]:
 		codes.append(String(a["action_code"]))
@@ -656,7 +665,6 @@ func test_every_manor_without_a_town_wears_its_industrys_estate() -> void:
 		if MapManors.burg_of(real, id) == "":
 			without_town += 1
 	assert_eq(estates.size(), without_town, "one per manor without a town")
-	var people := MapManors.population_table(real, state, real.manors.keys())
 	var px := real.bal("map_manor_estate_px") * real.bal("map_decor_scale")
 	var fit := real.bal("map_manor_estate_fit")
 	var industries: Dictionary = {}
@@ -664,7 +672,7 @@ func test_every_manor_without_a_town_wears_its_industrys_estate() -> void:
 	for e: Dictionary in estates:
 		var cell := int(e["cell"])
 		assert_eq(MapManors.burg_of(real, cell), "")
-		var pop := float((people[cell] as Dictionary)["total"])
+		var pop := float(MapManors.people_of(real, state, cell))
 		var focus := MapManors.focus_of(real, state, cell)
 		var row := MapObjects.estate_tier(real, focus, pop)
 		assert_eq(String(e["texture"]), String(row["texture"]))
