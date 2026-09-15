@@ -5,42 +5,58 @@ extends RefCounted
 ## and the map backdrop come from here. Stateless statics on purpose - no
 ## autoload, no tree presence needed.
 ##
-## Retuned 2026-09-13 to a BRIGHT, MODERN theme (owner request: the parchment
-## look read old and dim): dark slate ink on near-white panels with rounded
-## corners, a royal-blue accent for headers and names, gold kept for trim.
-## The parchment values of 2026-09-12 are kept beside each line, so going
-## back is a find-and-replace in this one file.
+## Retuned 2026-09-15 to a DARK theme after Crusader Kings III (owner request,
+## with the audience window): light parchment ink on dark leather cards, a
+## gold accent for headers and names, and the ornament drawn in gold. It
+## reverses the BRIGHT, MODERN theme of 2026-09-13, whose values are kept
+## beside each line, so going back is a find-and-replace in this one file.
 
-const BG_SCREEN := Color("e6ebf1")     # the desk behind the panels (was 2b2119)
-const PANEL_BG := Color("fdfcf9")      # panel body (was e6dcc4)
-const CHIP_BG := Color("eef2f7")       # buttons, trait chips, inputs (was dccfb0)
-const GOLD := Color("2456a4")          # ACCENT: headers, names, dates — royal blue now (was 8a6420)
-const BORDER_GOLD := Color("d2b36a")   # thin panel/button trim: bright gold (was a58f5c)
-const TEXT_SOFT := Color("1e2530")     # body ink (was 3a3026)
-const TEXT_MUTED := Color("4f5b6b")    # secondary text, labels (was 6d6150)
-const TEXT_DIM := Color("7a8594")      # de-emphasized hints (was 8d8370)
-const POSITIVE := Color("2f9e44")      # metric gains, opinion up (was 3f7a3f)
-const NEGATIVE := Color("d64545")      # metric losses, opinion down (was 9e3f33)
-const DIM_OVERLAY := Color(0.12, 0.16, 0.22, 0.55)  # (was 0.11, 0.08, 0.05, 0.84)
+const BG_SCREEN := Color("0f0d0b")     # the desk behind the panels (bright: e6ebf1)
+const PANEL_BG := Color("1f1a15")      # panel body — dark leather (bright: fdfcf9)
+const CHIP_BG := Color("2d251d")       # buttons, trait chips (bright: eef2f7)
+const CHIP_HOVER := Color("342a20")    # a button under the cursor (bright: e3ecf8)
+const CHIP_PRESSED := Color("3c3024")  # a button held or lit (bright: dbe6f6)
+const INPUT_BG := Color("15110d")      # text inputs, sunk into the card (bright: white)
+const TROUGH := Color("14110d")        # the empty part of a bar (bright: e6ebf1)
+const GOLD := Color("e0bb6a")          # ACCENT: headers, names, dates — gold again (bright: royal blue 2456a4)
+const BORDER_GOLD := Color("a88a4c")   # thin panel/button trim (bright: d2b36a)
+const TEXT_SOFT := Color("eee3cb")     # body ink (bright: 1e2530)
+const TEXT_MUTED := Color("bfae8f")    # secondary text, labels (bright: 4f5b6b)
+const TEXT_DIM := Color("8a7d68")      # de-emphasized hints (bright: 7a8594)
+const POSITIVE := Color("7fcf6e")      # metric gains, opinion up (bright: 2f9e44)
+const NEGATIVE := Color("ec6f5e")      # metric losses, opinion down (bright: d64545)
+const DIM_OVERLAY := Color(0.02, 0.015, 0.01, 0.62)  # (bright: 0.12, 0.16, 0.22, 0.55)
 ## Translucent ground for the chronicle ticker (game_ui.png: a transparent
 ## window whose surroundings stay visible through it).
-const GLASS_BG := Color(1.0, 1.0, 1.0, 0.88)
+const GLASS_BG := Color(0.09, 0.075, 0.06, 0.9)       # (bright: white 0.88)
 ## Softer glass for the always-on bottom news strip (user request
 ## 2026-08-31: the ticker is transparent, the screen stays visible under it).
-const GLASS_BG_SOFT := Color(1.0, 1.0, 1.0, 0.7)
+const GLASS_BG_SOFT := Color(0.09, 0.075, 0.06, 0.72)  # (bright: white 0.7)
 ## The quiet edge of a panel or chip, under the gold trim's weight.
-const EDGE := Color("cfd8e3")
+const EDGE := Color("4b3e30")          # (bright: cfd8e3)
+## The panel ornament's ink. The plate is dark lines on clear, which vanish on
+## a dark card, so VellumPanelStyle draws it in this gold.
+const ORNAMENT_TINT := Color("c9a45a")
+## A card's drop shadow: deep, since the desk under it is already dark.
+const SHADOW := Color(0.0, 0.0, 0.0, 0.45)  # (bright: 0.08, 0.12, 0.2, 0.12)
 
 ## Per-skill bar colors, matching the mock's attribute rows (diplomacy green,
-## martial red, stewardship gold, intrigue purple, admin/learning blue).
+## martial red, stewardship gold, intrigue purple, admin/learning blue) —
+## lifted a step to read on the dark card (bright: 2f9e44 d64545 d9a21b
+## 7c4ddb 2f7ed8).
 const SKILL_COLORS := {
-	"sk_diplomacy": Color("2f9e44"), "sk_martial": Color("d64545"),
-	"sk_steward": Color("d9a21b"), "sk_intrigue": Color("7c4ddb"),
-	"sk_admin": Color("2f7ed8"),
+	"sk_diplomacy": Color("7fcf6e"), "sk_martial": Color("ec6f5e"),
+	"sk_steward": Color("e6b43a"), "sk_intrigue": Color("a383ee"),
+	"sk_admin": Color("5aa2ec"),
 }
 const SKILL_NAMES := {
 	"sk_admin": "Admin", "sk_martial": "Martial", "sk_intrigue": "Intrigue",
 	"sk_diplomacy": "Diplomacy", "sk_steward": "Steward",
+}
+## Three letters for the audience window's skill badges, CK3's row of five.
+const SKILL_SHORT := {
+	"sk_admin": "ADM", "sk_martial": "MAR", "sk_intrigue": "INT",
+	"sk_diplomacy": "DIP", "sk_steward": "STW",
 }
 const SKILL_MAX := 20.0  # CharacterFactory clamps skills to 0..20
 
@@ -48,7 +64,7 @@ const SKILL_MAX := 20.0  # CharacterFactory clamps skills to 0..20
 ## seat's kingdom operations, teal for person-to-person tools, so the two
 ## kinds read apart at a glance.
 const TOOL_KINGDOM := GOLD
-const TOOL_PERSONAL := Color("13897b")
+const TOOL_PERSONAL := Color("4cc3b0")  # (bright: 13897b)
 
 ## Family flag choices for character creation (simple icons for now — art
 ## comes later): a font glyph on a heraldic field color, picked in the main
@@ -120,7 +136,7 @@ static func bar_fill(color: Color) -> StyleBoxFlat:
 
 static func bar_bg() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("e6ebf1")  # the trough (was cdbf9f)
+	style.bg_color = TROUGH
 	style.border_color = EDGE
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(3)
@@ -138,9 +154,10 @@ const PANEL_ART_PATH := "res://assets/ui/panel_vellum.png"
 const PANEL_ART_SOURCE_INSET := 75.0
 ## The same band as drawn on screen, in design px.
 const PANEL_ART_INSET := 40.0
-## Rounded corners on the flat panels and chips, in design px.
-const PANEL_RADIUS := 10
-const CHIP_RADIUS := 6
+## Rounded corners on the flat panels and chips, in design px. Tighter than the
+## bright theme's 10 / 6: CK3's frames are cut, not pillowed.
+const PANEL_RADIUS := 4
+const CHIP_RADIUS := 3
 
 ## Whether panels are drawn as the plate. Data, not a constant: the whole
 ## look turns on this one value in balance.csv and no screen has to change
@@ -170,9 +187,8 @@ static func panel_art_style(margin: int) -> VellumPanelStyle:
 
 ## The plate's ornament alone (owner 2026-09-14: "restore the decorative
 ## border"): panel_vellum.png with its cream made clear, leaving the double
-## rule, the hairline and the corner flourishes in the art's own ink. Drawn
-## over the bright card, so the modern theme keeps its body and gets its
-## frame back.
+## rule, the hairline and the corner flourishes. Drawn over the card in
+## ORNAMENT_TINT, since its own dark ink cannot be seen on the dark theme.
 const PANEL_ORNAMENT_PATH := "res://assets/ui/panel_ornament.png"
 
 static func panel_ornament_enabled() -> bool:
@@ -180,9 +196,9 @@ static func panel_ornament_enabled() -> bool:
 		return false
 	return Game.data.bal("ui_panel_ornament") > 0.0
 
-## A clean card: near-white body, a thin trim in `border`, rounded corners
-## and a soft drop shadow — framed by the ornament when ui_panel_ornament is
-## on and the art loads.
+## A card: dark leather body, a thin trim in `border`, cut corners and a deep
+## drop shadow — framed by the gold ornament when ui_panel_ornament is on and
+## the art loads.
 static func panel_style(border: Color, border_width: int = 2,
 		margin: int = 12) -> StyleBox:
 	if panel_art_enabled():
@@ -196,6 +212,7 @@ static func panel_style(border: Color, border_width: int = 2,
 			var framed := VellumPanelStyle.new()
 			framed.base = card
 			framed.texture = tex
+			framed.tint = ORNAMENT_TINT
 			framed.source_inset = PANEL_ART_SOURCE_INSET
 			framed.draw_inset = PANEL_ART_INSET
 			# Text keeps clear of the rules, as the vellum plate's floor did.
@@ -222,15 +239,21 @@ static func clear_ornament(style: StyleBox) -> StyleBox:
 		style.content_margin_bottom = maxf(style.content_margin_bottom, ORNAMENT_CLEAR_V)
 	return style
 
+## A button's four looks, one set for the theme, the compact buttons and the
+## tabs: the chip at rest, lit and gold-edged under the cursor or held, and
+## sunk into the card when disabled.
+static func button_looks() -> Dictionary:
+	return {"normal": chip_style(), "hover": chip_style(CHIP_HOVER, GOLD),
+		"pressed": chip_style(CHIP_PRESSED, GOLD),
+		"disabled": chip_style(PANEL_BG, Color(EDGE, 0.6))}
+
 ## A small button that sits in a strip without stretching to the strip's
 ## height: tight padding, a fixed height, centred in its row.
 static func compact_button(button: Button, height: float, font_px: int, pad: float = 6.0) -> void:
 	button.add_theme_font_size_override("font_size", font_px)
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	button.custom_minimum_size = Vector2(button.custom_minimum_size.x, height)
-	var looks := {"normal": chip_style(), "hover": chip_style(Color("e3ecf8"), GOLD),
-		"pressed": chip_style(Color("dbe6f6"), GOLD),
-		"disabled": chip_style(PANEL_BG, Color(EDGE, 0.6))}
+	var looks := button_looks()
 	for state: String in looks:
 		var box: StyleBoxFlat = looks[state]
 		box.content_margin_left = pad
@@ -239,15 +262,38 @@ static func compact_button(button: Button, height: float, font_px: int, pad: flo
 		box.content_margin_bottom = 1.0
 		button.add_theme_stylebox_override(state, box)
 
+## CK3's options (owner 2026-09-15): a full-width dark bar, text from the left,
+## a gold rule down its left edge that brightens and thickens under the
+## cursor. Used for the audience window's replies and event choices.
+static func option_button(button: Button) -> void:
+	var rest := chip_style(Color("241d17"), EDGE)
+	var hover := chip_style(CHIP_HOVER, GOLD)
+	var pressed := chip_style(CHIP_PRESSED, GOLD)
+	for box: StyleBoxFlat in [rest, hover, pressed]:
+		box.content_margin_left = 14.0
+		box.content_margin_right = 12.0
+		box.content_margin_top = 7.0
+		box.content_margin_bottom = 7.0
+	rest.border_width_left = 3
+	rest.border_color = Color(BORDER_GOLD, 0.7)
+	hover.border_width_left = 5
+	pressed.border_width_left = 5
+	button.add_theme_stylebox_override("normal", rest)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.add_theme_color_override("font_color", TEXT_SOFT)
+	button.add_theme_color_override("font_hover_color", GOLD)
+
 static func _card_style(border: Color, border_width: int, margin: int) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = PANEL_BG
 	style.border_color = border
 	style.set_border_width_all(mini(border_width, 1) if border_width > 0 else 0)
 	style.set_corner_radius_all(PANEL_RADIUS)
-	style.shadow_color = Color(0.08, 0.12, 0.2, 0.12)
-	style.shadow_size = 6
-	style.shadow_offset = Vector2(0, 2)
+	style.shadow_color = SHADOW
+	style.shadow_size = 8
+	style.shadow_offset = Vector2(0, 3)
 	style.set_content_margin_all(margin)
 	return style
 
@@ -416,9 +462,7 @@ static func style_tab(button: Button, size: int, pad: float = -1.0) -> void:
 		button.add_theme_font_override("font", font)
 	if pad < 0.0:
 		return
-	var looks := {"normal": chip_style(), "hover": chip_style(Color("e3ecf8"), GOLD),
-		"pressed": chip_style(Color("dbe6f6"), GOLD),
-		"disabled": chip_style(PANEL_BG, Color(EDGE, 0.6))}
+	var looks := button_looks()
 	for state: String in looks:
 		var box: StyleBoxFlat = looks[state]
 		box.content_margin_left = pad
@@ -426,36 +470,51 @@ static func style_tab(button: Button, size: int, pad: float = -1.0) -> void:
 		button.add_theme_stylebox_override(state, box)
 
 ## Game-wide Theme, applied once at GameRoot and inherited by every screen:
-## the content face in dark ink at a compact size, rounded light buttons and
-## inputs.
+## the content face in light ink at a compact size, dark cut buttons and
+## sunk inputs.
 static func build_theme() -> Theme:
 	var theme := Theme.new()
 	theme.set_color("font_color", "Label", TEXT_SOFT)
 	theme.set_color("font_color", "Button", TEXT_SOFT)
 	theme.set_color("font_hover_color", "Button", GOLD)
 	theme.set_color("font_pressed_color", "Button", GOLD)
-	theme.set_stylebox("normal", "Button", chip_style())
-	theme.set_stylebox("hover", "Button", chip_style(Color("e3ecf8"), GOLD))
-	theme.set_stylebox("pressed", "Button", chip_style(Color("dbe6f6"), GOLD))
-	theme.set_stylebox("disabled", "Button", chip_style(PANEL_BG, Color(EDGE, 0.6)))
+	var looks := button_looks()
+	for state: String in looks:
+		theme.set_stylebox(state, "Button", looks[state])
 	theme.set_color("font_disabled_color", "Button", TEXT_DIM)
-	theme.set_stylebox("normal", "LineEdit", chip_style(Color.WHITE))
-	theme.set_stylebox("focus", "LineEdit", chip_style(Color.WHITE, GOLD))
+	theme.set_stylebox("normal", "LineEdit", chip_style(INPUT_BG))
+	theme.set_stylebox("focus", "LineEdit", chip_style(INPUT_BG, GOLD))
 	theme.set_color("font_color", "LineEdit", TEXT_SOFT)
 	theme.set_color("font_placeholder_color", "LineEdit", TEXT_DIM)
+	theme.set_color("caret_color", "LineEdit", GOLD)
 	theme.set_constant("line_spacing", "Label", LINE_SPACING)
 	# The transcript is a RichTextLabel, whose ink is NOT the Label colour:
-	# left unset it was Godot's default white on a light panel (owner report
-	# 2026-09-13: the dialogue was too white to read).
+	# left unset it was Godot's default white (owner report 2026-09-13).
 	theme.set_color("default_color", "RichTextLabel", TEXT_SOFT)
 	theme.set_font_size("normal_font_size", "RichTextLabel", DIALOGUE_FONT_SIZE)
 	theme.set_font_size("bold_font_size", "RichTextLabel", DIALOGUE_FONT_SIZE)
 	theme.set_font_size("italics_font_size", "RichTextLabel", DIALOGUE_FONT_SIZE)
 	# Floating tooltips (user request 2026-09-09: icons explain themselves on
 	# hover) in the same chip chrome as everything else.
-	theme.set_stylebox("panel", "TooltipPanel", chip_style(Color.WHITE, EDGE))
+	theme.set_stylebox("panel", "TooltipPanel", chip_style(PANEL_BG, BORDER_GOLD))
 	theme.set_color("font_color", "TooltipLabel", TEXT_SOFT)
 	theme.set_font_size("font_size", "TooltipLabel", 16)
+	# Separators and scroll bars were Godot's light grey, drawn for a light card.
+	var sep := StyleBoxLine.new()
+	sep.color = EDGE
+	sep.thickness = 1
+	theme.set_stylebox("separator", "HSeparator", sep)
+	var grabber := StyleBoxFlat.new()
+	grabber.bg_color = Color(BORDER_GOLD, 0.55)
+	grabber.set_corner_radius_all(3)
+	var track := StyleBoxFlat.new()
+	track.bg_color = TROUGH
+	track.set_corner_radius_all(3)
+	for bar in ["VScrollBar", "HScrollBar"]:
+		theme.set_stylebox("scroll", bar, track)
+		theme.set_stylebox("grabber", bar, grabber)
+		theme.set_stylebox("grabber_highlight", bar, grabber)
+		theme.set_stylebox("grabber_pressed", bar, grabber)
 	var body := content_font()
 	if body != null:
 		theme.default_font = body

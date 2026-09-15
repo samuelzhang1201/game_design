@@ -14,7 +14,7 @@ const HISTORY_CAP := 60
 const HISTORY_SIZE := Vector2(420.0, 220.0)
 const SEPARATOR := "      ·      "
 ## The bar's glass and ink: dark and see-through, so the map shows through.
-const GLASS := Color(0.12, 0.16, 0.22, 0.5)
+const GLASS := Color(0.09, 0.075, 0.06, 0.6)  # warm dark glass (owner 2026-09-15; slate 0.12, 0.16, 0.22, 0.5 under the bright theme)
 const INK := Color(0.97, 0.96, 0.92)
 
 var _label: Label

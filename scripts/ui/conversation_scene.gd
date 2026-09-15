@@ -283,10 +283,10 @@ func _render_history() -> void:
 
 ## Deterministic per-speaker name color: fixed for You/Herald, hashed into a
 ## small palette for everyone else so each courtier keeps one color.
-## Picked to read on the bright panel (2026-09-13); the old light tints were
-## made for a near-black box.
-const SPEAKER_PALETTE := [Color("2f8a3e"), Color("c43c3c"), Color("6d42c8"),
-	Color("2468c0"), Color("b86e0e"), Color("11806f"), Color("b3367f")]
+## Picked to read on the dark panel (owner 2026-09-15); the bright theme's
+## were 2f8a3e c43c3c 6d42c8 2468c0 b86e0e 11806f b3367f.
+const SPEAKER_PALETTE := [Color("7fcf6e"), Color("ec6f5e"), Color("a383ee"),
+	Color("5aa2ec"), Color("e6a04a"), Color("4cc3b0"), Color("e07bb5")]
 
 static func _speaker_color(speaker: String) -> Color:
 	if speaker == "You":

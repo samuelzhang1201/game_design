@@ -578,7 +578,7 @@ static func building_tooltip(code: String) -> String:
 ## drawn over it (_draw_dashed_edge).
 func _work_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(1.0, 1.0, 1.0, 0.18)
+	style.bg_color = Color(1.0, 1.0, 1.0, 0.08)  # a breath of light on the dark card (was 0.18 on white)
 	style.set_corner_radius_all(UiPalette.CHIP_RADIUS)
 	style.set_content_margin_all(4.0)
 	return style

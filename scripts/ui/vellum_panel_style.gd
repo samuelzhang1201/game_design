@@ -24,6 +24,10 @@ var draw_inset := 20.0
 ## plate is the ornament alone — its rules and corner flourishes on a clear
 ## ground — rather than the whole vellum sheet. null draws the plate only.
 var base: StyleBox = null
+## The plate's ink (owner 2026-09-15): the ornament is dark lines on clear,
+## which disappear on the dark theme's card, so it is drawn multiplied by this.
+## White draws the art as it is.
+var tint := Color.WHITE
 
 
 func _draw(to_canvas_item: RID, rect: Rect2) -> void:
@@ -49,7 +53,7 @@ func _draw(to_canvas_item: RID, rect: Rect2) -> void:
 				continue
 			var src := Rect2(sx[c], sy[r], sx[c + 1] - sx[c], sy[r + 1] - sy[r])
 			RenderingServer.canvas_item_add_texture_rect_region(
-				to_canvas_item, dst, rid, src, Color.WHITE)
+				to_canvas_item, dst, rid, src, tint)
 
 
 func _get_draw_rect(rect: Rect2) -> Rect2:

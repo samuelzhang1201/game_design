@@ -1,8 +1,8 @@
 key,color,notes
-cat_1,#d9a21b,"categorical 1 (gold) — assigned in fixed order; brightened 2026-09-13 for the modern light theme with the same hue order as the CVD check of 2026-09-09"
-cat_2,#2f7ed8,categorical 2 (blue)
-cat_3,#2f9e44,categorical 3 (green)
-cat_4,#7c4ddb,categorical 4 (purple)
-cat_5,#d64545,categorical 5 (red)
-sequential,#2f7ed8,single-hue magnitude bars
-track,#e6ebf1,"the empty part of a bar — a shade under the white panel (was #cdbf9f for the parchment theme)"
+cat_1,#e6b43a,"categorical 1 (gold) — assigned in fixed order; lifted 2026-09-15 for the dark CK3 theme with the same hue order as the CVD check of 2026-09-09 (bright theme: #d9a21b #2f7ed8 #2f9e44 #7c4ddb #d64545)"
+cat_2,#5aa2ec,categorical 2 (blue)
+cat_3,#7fcf6e,categorical 3 (green)
+cat_4,#a383ee,categorical 4 (purple)
+cat_5,#ec6f5e,categorical 5 (red)
+sequential,#5aa2ec,single-hue magnitude bars
+track,#2d251d,"the empty part of a bar — a shade over the dark card (bright theme #e6ebf1, parchment #cdbf9f)"
