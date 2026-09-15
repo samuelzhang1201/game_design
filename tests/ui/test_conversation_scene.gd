@@ -574,10 +574,11 @@ func test_left_column_is_the_dashboard_unless_a_person_speaks() -> void:
 		c.map_panel().get_global_rect().position.x,
 		"on the right of the map, not the left")
 
-## Owner ruling 2026-09-10: the dossier is a person, so it stands at the top
-## of the RIGHT column over their words, and its pages take the talk's space
-## only while one is open — the reply box is never pushed off the column.
-func test_the_dossier_stands_over_the_talk_in_the_right_column() -> void:
+## Owner ruling 2026-09-15 (replacing 2026-09-10's dossier over the talk in
+## the right column): the person stands in the CK3 audience window with their
+## words, and a page takes the speech's space only while it is open — the
+## options and the talk box are never pushed out of the window.
+func test_the_dossier_stands_in_the_audience_window() -> void:
 	Game.start_campaign(42)
 	var report := Game.next_tick()
 	var c := _scene_with([{"kind": "minister", "portrait_id": "char_marshal",
@@ -586,26 +587,108 @@ func test_the_dossier_stands_over_the_talk_in_the_right_column() -> void:
 	await wait_frames(2)
 	var head: Control = c.find_child("DossierHead", true, false)
 	var pages: Control = c.find_child("DossierPages", true, false)
-	var panel := c.dialogue_panel()
+	var win := c.audience_window()
 	assert_true(head.visible, "a person on stage brings the head up")
-	assert_true(panel.get_global_rect().encloses(head.get_global_rect()),
-		"inside the right column, with their words")
+	assert_true(win.get_global_rect().encloses(head.get_global_rect()),
+		"inside the audience window, with their words")
+	assert_false(c.dialogue_panel().get_global_rect().intersects(head.get_global_rect()),
+		"and no longer in the council column")
 	assert_false(pages.visible, "the pages rest closed")
-	assert_true(c.dialogue_scroll().visible, "so the talk has the room")
-	# A page takes the talk's space, and hands it back.
+	assert_true(c.speech_scroll().visible, "so the speech has the room")
+	# A page takes the speech's space, and hands it back.
 	c.select_tab(1)
 	await wait_frames(2)
 	assert_true(pages.visible, "SKILLS opens")
-	assert_false(c.dialogue_scroll().visible, "the talk stands aside for it")
+	assert_false(c.speech_scroll().visible, "the speech stands aside for it")
 	assert_true(head.visible, "the head stays: you still see who you are dealing with")
 	c.select_tab(1)
 	await wait_frames(2)
 	assert_false(pages.visible, "the same tab closes it")
-	assert_true(c.dialogue_scroll().visible, "and the talk is back")
-	# Nothing was pushed out of the column at any point.
-	var col: Control = panel.get_node("Col")
-	assert_lte(col.get_combined_minimum_size().y, col.size.y + 1.0,
-		"the column still fits what it holds")
+	assert_true(c.speech_scroll().visible, "and the speech is back")
+	# The window still fits what it holds, with the council column open.
+	assert_lte(win.get_combined_minimum_size().y, c.map_panel().size.y + 1.0,
+		"the window fits the map it stands over")
+
+## Owner 2026-09-15 (CK3): the audience window stands centred over the map
+## while a person holds the stage, their portrait and their words inside it.
+func test_the_audience_window_stands_over_the_map() -> void:
+	Game.start_campaign(42)
+	var c := _scene_with([{"kind": "minister", "portrait_id": "char_marshal",
+		"speaker": "Ser Brandt", "text": "The levies grow soft.", "suggestions": []}],
+		TickReport.new())
+	await wait_frames(3)
+	var win := c.audience_window()
+	assert_true(win.is_visible_in_tree(), "a person on stage opens the audience")
+	assert_true(c.map_panel().get_global_rect().grow(1.0).encloses(win.get_global_rect()),
+		"centred over the map, inside it")
+	assert_true(win.get_global_rect().encloses(
+		c.find_child("PortraitBox", true, false).get_global_rect()), "the portrait is in it")
+	assert_string_contains(c.speech_text(), "levies", "and so are their words")
+	c.enter_council()
+	await wait_frames(3)
+	assert_true(c.map_panel().get_global_rect().grow(1.0).encloses(win.get_global_rect()),
+		"a narrower map keeps the window inside it")
+
+## The window shows this beat's exchange; the record keeps every beat.
+func test_the_speech_is_this_beat_and_the_record_is_all() -> void:
+	Game.start_campaign(42)
+	var c := _scene_with([
+		{"kind": "minister", "portrait_id": "char_marshal", "speaker": "Ser Brandt",
+			"text": "The levies grow soft.", "suggestions": []},
+		{"kind": "minister", "portrait_id": "char_chancellor", "speaker": "Aldwin Reeve",
+			"text": "The ledgers weigh heavy.", "suggestions": []},
+	], TickReport.new())
+	await wait_frames(2)
+	c.continue_button().pressed.emit()
+	await wait_frames(2)
+	assert_string_contains(c.speech_text(), "ledgers")
+	assert_false("levies" in c.speech_text(), "the last beat's words left the window")
+	assert_string_contains(c.dialogue_text(), "levies", "but stay in the record")
+
+## Invariant 4 where CK3 puts it: hover the opinion and read why.
+func test_opinion_tooltip_gives_the_reasons() -> void:
+	Game.start_campaign(42)
+	var m: Character = Game.state.characters["char_marshal"]
+	m.opinion_log.append({"delta": -8, "reason": "revoked the noble tax exemption"})
+	var c := _scene_with([{"kind": "minister", "portrait_id": "char_marshal",
+		"speaker": m.display_name, "text": "hm", "suggestions": []}], TickReport.new())
+	await wait_frames(2)
+	var value: Label = c.find_child("OpinionValue", true, false)
+	assert_string_contains(value.tooltip_text, "revoked the noble tax exemption")
+	assert_string_contains(value.tooltip_text, "-8")
+	var badges: Control = c.find_child("SkillBadges", true, false)
+	assert_eq(badges.get_child_count(), CharacterFactory.SKILLS.size(),
+		"CK3's row of skills under the portrait")
+
+## CK3's events and interactions share a frame: an event opens the same
+## window, its choices are the window's options.
+func test_an_event_uses_the_same_window() -> void:
+	Game.start_campaign(42)
+	Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	Game.engine.events._fire("ev_01", Game.state)
+	var c := _scene_with([{"kind": "event", "portrait_id": "round_table",
+		"speaker": "The Council", "event": Game.state.pending_event.duplicate(true)}],
+		TickReport.new())
+	await wait_frames(3)
+	assert_eq(c.event_popup(), c.audience_window())
+	assert_true(c.audience_window().is_visible_in_tree())
+	assert_ne((c.find_child("AudienceTitle", true, false) as Label).text, "",
+		"the event's title stands in the banner")
+	assert_gt(c.reply_buttons().size(), 0)
+	for b in c.reply_buttons():
+		assert_true(c.audience_window().is_ancestor_of(b), "choices are options in the window")
+
+## An option says what it trades before it is taken.
+func test_an_option_tells_its_tradeoff() -> void:
+	Game.start_campaign(42)
+	var sug := {"seat": "marshal", "request": ActionRequest.make("LEVY_RAISE"),
+		"pitch_key": "raise_levies", "tradeoff": "Gold and grumbling."}
+	var c := _scene_with([{"kind": "minister", "portrait_id": "char_marshal",
+		"speaker": "Ser Brandt", "text": "Fresh levies?", "suggestions": [sug]}], TickReport.new())
+	await wait_frames(2)
+	assert_string_contains(c.reply_buttons()[0].tooltip_text, "Gold and grumbling.")
 
 ## A narration or council beat has no person, so no dossier — the talk takes
 ## the whole right column.

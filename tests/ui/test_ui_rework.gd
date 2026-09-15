@@ -49,14 +49,15 @@ func test_campaign_opens_with_nameless_background_narration() -> void:
 	assert_true(scene.event_popup().visible, "narration pops centered")
 	assert_string_contains(scene.dialogue_text(), "ascended to the throne")
 	# Regression (user bug 2026-08-30): the full background text made the
-	# centered popup taller than the 360px viewport, pushing the continue
-	# button off screen with no way to scroll. The text now scrolls inside
-	# a capped box, so the popup must fit and the button must be on screen.
-	var panel: PanelContainer = scene.find_child("PopupPanel", true, false)
+	# centered popup taller than the viewport, pushing the continue button off
+	# screen with no way to scroll. The narration now stands in the audience
+	# window (owner 2026-09-15), whose speech scrolls inside a capped box, so
+	# the window must fit and the button must be on screen.
+	var panel: PanelContainer = scene.find_child("AudienceWindow", true, false)
 	var viewport_h := scene.get_viewport_rect().size.y
-	assert_lt(panel.size.y, viewport_h, "popup fits the viewport")
-	var scroll: ScrollContainer = scene.find_child("PopupScroll", true, false)
-	assert_not_null(scroll, "narration text scrolls inside the popup")
+	assert_lt(panel.size.y, viewport_h, "the window fits the viewport")
+	var scroll: ScrollContainer = scene.find_child("SpeechScroll", true, false)
+	assert_not_null(scroll, "narration text scrolls inside the window")
 	# One continue choice advances past the narration; it must sit fully
 	# inside the viewport once revealed.
 	var replies := scene.reply_buttons()
@@ -84,9 +85,11 @@ func test_event_beat_pops_centered_with_art_placeholder() -> void:
 		"speaker": "The Council", "event": ev}], TickReport.new())
 	await wait_frames(3)
 	assert_true(scene.event_popup().visible, "events pop centered")
-	var art: Label = scene.find_child("PopupArtText", true, false)
-	assert_string_contains(art.text, "event art", "art placeholder present")
-	assert_gt(scene.reply_buttons().size(), 0, "choices live in the popup")
+	# Owner 2026-09-15: the event stands in the audience window, its title in
+	# the banner where the placeholder art's caption used to be.
+	var title: Label = scene.find_child("AudienceTitle", true, false)
+	assert_ne(title.text, "", "the event's title heads the window")
+	assert_gt(scene.reply_buttons().size(), 0, "choices live in the window")
 
 func test_dossier_tabs_switch_pages() -> void:
 	Game.start_campaign(42)

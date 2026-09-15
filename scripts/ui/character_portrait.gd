@@ -124,11 +124,17 @@ func _build_badge_and_tooltip() -> void:
 		badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 		badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
 		add_child(badge)
+	tooltip_text = c.display_name + opinion_summary(c)
+
+## The last `count` opinion changes with their reasons, newest last, one per
+## line and each on a leading newline — the readable causality of invariant 4,
+## shared by the chip's tooltip and the audience window's opinion value.
+static func opinion_summary(c: Character, count: int = 5) -> String:
 	var recent := ""
 	var entries := c.opinion_log
-	for i in range(maxi(0, entries.size() - 5), entries.size()):
+	for i in range(maxi(0, entries.size() - count), entries.size()):
 		recent += "\n%+d %s" % [int(entries[i]["delta"]), entries[i]["reason"]]
-	tooltip_text = c.display_name + recent
+	return recent
 
 ## Loads a portrait PNG, cached per path. Null when no PNG exists for the id.
 static func texture_for(id: String) -> Texture2D:

@@ -23,6 +23,10 @@ const LEFT_WIDTH := 240.0
 ## The council and dialogue column. 300 left the talk a narrow strip once the
 ## transcript went back to a readable size (owner 2026-09-13).
 const RIGHT_WIDTH := 400.0
+## The conversation stage's council column (owner 2026-09-15): the talk moved
+## into the audience window over the map, leaving the column the room and the
+## record, so it gives the map back 80 px.
+const TALK_WIDTH := 320.0
 const HANDLE_LENGTH := 192.0
 const HANDLE_THICKNESS := 28.0
 
@@ -33,11 +37,12 @@ static func bottom_inset() -> float:
 ## Lay out one screen. `top` is where the columns start (below the top bar);
 ## `right_panels` are every control that can occupy the right slot (they are
 ## placed alike; the screen decides which one is visible); `right_open` says
-## whether the slot is taken, which narrows the map.
+## whether the slot is taken, which narrows the map; `right_width` is the
+## slot's width on this screen.
 static func apply(top: float, left: Control, map: Control, right_panels: Array,
-		right_open: bool) -> void:
+		right_open: bool, right_width: float = RIGHT_WIDTH) -> void:
 	var bottom := bottom_inset()
-	var right_inset := MARGIN + (RIGHT_WIDTH + GAP if right_open else 0.0)
+	var right_inset := MARGIN + (right_width + GAP if right_open else 0.0)
 	var middle_left := MARGIN + LEFT_WIDTH + GAP
 	if left != null:
 		_place(left, Vector2(0, 0), Vector2(0, 1), MARGIN, top, MARGIN + LEFT_WIDTH, -bottom)
@@ -45,7 +50,7 @@ static func apply(top: float, left: Control, map: Control, right_panels: Array,
 		_place(map, Vector2(0, 0), Vector2(1, 1), middle_left, top, -right_inset, -bottom)
 	for panel in right_panels:
 		if panel != null:
-			_place(panel, Vector2(1, 0), Vector2(1, 1), -(MARGIN + RIGHT_WIDTH), top, -MARGIN, -bottom)
+			_place(panel, Vector2(1, 0), Vector2(1, 1), -(MARGIN + right_width), top, -MARGIN, -bottom)
 
 ## The ENTER THE COUNCIL handle: a tab standing on the right edge, its text
 ## running upward, shown only while the right slot is empty.
