@@ -961,6 +961,8 @@ func test_a_settlement_sprite_is_drawn_at_its_tiers_share_of_the_tallest() -> vo
 ## colour of the realm that holds their province, so they sit in the wash
 ## instead of on it — and because the OWNER is looked up live while the
 ## province is fixed geometry, a conquest recolours them with no new art.
+## They also draw at map_sprite_alpha (owner 2026-09-17: the painted
+## towns were 太突兀), so the sheet shows through the picture.
 func test_symbols_wear_their_realms_colour_and_follow_conquest() -> void:
 	Game.start_campaign(42)
 	var v := _view()
@@ -970,6 +972,12 @@ func test_symbols_wear_their_realms_colour_and_follow_conquest() -> void:
 	var lost: String = MapOwnership.provinces_of(Game.data, Game.state, mine)[0]
 	var strength := Game.data.bal("map_sprite_tint")
 	assert_gt(strength, 0.0, "the tint is on in balance.csv")
+	var a_town: String = Game.data.burgs.keys()[0]
+	assert_almost_eq(
+		v.sprite_tint(a_town, String(Game.data.burgs[a_town]["province_code"]),
+			strength).a,
+		Game.data.bal("map_sprite_alpha"), 0.001,
+		"and draw translucent, so the sheet shows through them")
 
 	var before := v.realm_tint(lost, strength)
 	assert_ne(before, Color.WHITE, "the symbol takes the crown's colour")

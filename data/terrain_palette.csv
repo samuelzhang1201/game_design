@@ -17,9 +17,9 @@ sea_nearer,#A9D7F3,"the NEARER band, out to map_sea_band_nearer_px"
 sea_near,#CEEAF9,"the NEAR band along the shore, out to map_sea_band_near_px"
 lake,#9DD3F2,freshwater: between the two
 coast_line,#3E5566,"the shore stroke, and the ink of the map's kingdom lettering and paper grain: dark slate"
-river,#1E6FB5,"river water: a deep blue — the lighter #3F97D4 disappeared on the player realm's sky-blue wash"
-road,#4B5563,"roads: a thin solid slate line over the coloured washes"
-trail,#6B7280,land trails: the road line thinned and greyed
+river,#7FB8DD,"river water: the sea's own family (owner 2026-09-17: ""太蓝了"" — a river and the mouth it runs into must read as one water), one step deeper than sea_far so a tapered ribbon still shows over the pale land. #1E6FB5 was the deep blue"
+road,#C2A981,"roads: a worn sand track (owner 2026-09-17, after the reference painting) — pale warm earth with a soft shoulder (map_road_soft_ratio), not the slate line #4B5563 ruled across the sheet"
+trail,#D0BC99,"land trails: the same track, lighter and thinner"
 sea_route,#2F80C2,"sea lanes (owner request 2026-09-12): a blue dashed line — a shipping route is not a road and must not be drawn like one"
 contour,#8A6A46,the HEIGHTS view's iso-lines
 scale_bar,#334155,the scale bar in the bottom-right corner

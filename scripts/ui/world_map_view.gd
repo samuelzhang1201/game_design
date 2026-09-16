@@ -1339,14 +1339,19 @@ func manor_mark_tint(cell_id: int) -> Color:
 ## The tint a settlement drawing wears: the realm's on the default map
 ## (realm_tint), its manor's in the MANORS view (owner 2026-09-13: every
 ## element there follows the same colour strategy), white under the other
-## themes.
+## themes. Off the MANORS view it also carries map_sprite_alpha (owner
+## 2026-09-17: the painted towns were 太突兀) — the wash and the paper show
+## through the picture, so a town sits in the sheet instead of on it. The
+## manor tint brings its own alpha and keeps it.
 func sprite_tint(burg_code: String, province_code: String, strength: float) -> Color:
 	if show_manors:
 		var cell := int(MapEconomy.burg_cells(Game.data).get(burg_code, -1))
 		if cell >= 0:
 			return Color.WHITE.lerp(manor_mark_tint(cell), strength)
 		return Color.WHITE
-	return realm_tint(province_code, strength)
+	var tint := realm_tint(province_code, strength)
+	tint.a = Game.data.bal("map_sprite_alpha")
+	return tint
 
 func _draw_terrain_decor() -> void:
 	var xf := Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)
