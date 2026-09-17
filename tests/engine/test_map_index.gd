@@ -143,3 +143,68 @@ func test_rasterize_fills_a_polygon_with_its_id() -> void:
 	assert_eq(MapIndex.id_at(img, Vector2i(3, 6)), -1)
 	assert_eq(img.get_pixel(2, 2).g8, 1, "300 = 44 | 1 << 8")
 	assert_eq(img.get_pixel(2, 2).r8, 44)
+
+
+## --- High ground and relief (owner 2026-09-17: the satellite ground needs
+## mountains, and they are not a biome — they are HEIGHT) -------------------
+## raise_high_ground rewrites a land pixel's biome id by the height of the
+## CELL it falls in: at/above peak it is 15, mountain 14, hill 13, and below
+## that it keeps the biome the pack gave it. Three cells of height 10, 50
+## and 90 against hill 45 / mountain 62 / peak 80: the first keeps biome 4,
+## the second is a hill, the third a peak.
+func test_raise_high_ground_promotes_a_pixel_by_its_cell_height() -> void:
+	var biome := Image.create_empty(3, 1, false, Image.FORMAT_RGB8)
+	for x in 3:
+		biome.set_pixel(x, 0, Color8(4, 0, 0))
+	var cells := Image.create_empty(3, 1, false, Image.FORMAT_RGB8)
+	for x in 3:
+		cells.set_pixel(x, 0, Color8(x, 0, 0))
+	var heights := PackedInt32Array([10, 50, 90])
+	var out := MapIndex.raise_high_ground(biome, cells, heights, 45, 62, 80)
+	assert_eq(out.get_pixel(0, 0).r8, 4, "lowland keeps its biome")
+	assert_eq(out.get_pixel(1, 0).r8, 13, "50 is a hill")
+	assert_eq(out.get_pixel(2, 0).r8, 15, "90 is a peak")
+
+## Water carries no cell (white in the cell index), so it stays exactly as
+## the biome index had it — white — and never becomes a mountain.
+func test_raise_high_ground_leaves_water_alone() -> void:
+	var biome := Image.create_empty(2, 1, false, Image.FORMAT_RGB8)
+	biome.fill(Color.WHITE)
+	biome.set_pixel(0, 0, Color8(6, 0, 0))
+	var cells := Image.create_empty(2, 1, false, Image.FORMAT_RGB8)
+	cells.fill(Color.WHITE)
+	cells.set_pixel(0, 0, Color8(0, 0, 0))
+	var out := MapIndex.raise_high_ground(biome, cells, PackedInt32Array([90]), 45, 62, 80)
+	assert_eq(out.get_pixel(0, 0).r8, 15, "the land pixel rose")
+	assert_eq(out.get_pixel(1, 0).r8, 255, "the sea is untouched")
+
+## bake_relief lays each cell's height over its pixels and smooths it, so
+## the shader can read a slope without the cell edges showing. Heights are
+## 0..100 and the image is L8, so a height of 100 is 255. At scale 1 and
+## radius 0 there is no smoothing: each pixel is its own cell's height.
+func test_bake_relief_writes_cell_height_as_grey() -> void:
+	var cells := Image.create_empty(3, 1, false, Image.FORMAT_RGB8)
+	for x in 3:
+		cells.set_pixel(x, 0, Color8(x, 0, 0))
+	var img := MapIndex.bake_relief(cells, PackedInt32Array([0, 50, 100]), 1, 0)
+	assert_eq(img.get_format(), Image.FORMAT_L8)
+	assert_eq(img.get_width(), 3)
+	assert_eq(img.get_pixel(0, 0).r8, 0)
+	assert_eq(img.get_pixel(1, 0).r8, 128, "50 of 100 is half of 255, rounded")
+	assert_eq(img.get_pixel(2, 0).r8, 255)
+
+## Two box passes at radius 1 over [0, 0, 100] (one pass: [0, 100, 100]
+## summed over the window, divided by the window's own count of cells —
+## the same clipped-window average the biome weights take) leave a ramp
+## rather than a step, so a cell edge never reads as a cliff.
+func test_bake_relief_smooths_across_cells() -> void:
+	var cells := Image.create_empty(3, 1, false, Image.FORMAT_RGB8)
+	for x in 3:
+		cells.set_pixel(x, 0, Color8(x, 0, 0))
+	var img := MapIndex.bake_relief(cells, PackedInt32Array([0, 0, 100]), 1, 1)
+	var a := img.get_pixel(0, 0).r8
+	var b := img.get_pixel(1, 0).r8
+	var c := img.get_pixel(2, 0).r8
+	assert_lt(a, b, "the low end rises toward the high one")
+	assert_lt(b, c, "and keeps rising")
+	assert_gt(a, 0, "smoothing carried some height into the flat end")

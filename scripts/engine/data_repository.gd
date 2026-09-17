@@ -42,6 +42,23 @@ var resource_icons: Dictionary = {}
 ## data/settlement_art.csv rows: which settlement drawing a burg group (and
 ## whether it has walls) is shown with on the map (MapObjects.settlement_art).
 var settlement_art: Array[Dictionary] = []
+## data/army_art.csv: piece -> {piece, texture, painting} — the painted 3D
+## counter a regiment is drawn with and the painting heading its card
+## (MapObjects.army_piece / army_card, owner 2026-09-15).
+var army_art: Dictionary = {}
+## data/army_terrain_biomes.csv: biome id -> the terrain a regiment on it
+## stands on (ArmySystem.terrain_of, owner 2026-09-17).
+var army_terrain_biomes: Dictionary = {}
+## data/army_terrain.csv: "terrain|arm" -> {defend, attack} per mille.
+var army_terrain: Dictionary = {}
+## data/army_matchups.csv: arm -> [{vs, attack, defense}] per mille, in file order.
+var army_matchups: Dictionary = {}
+## data/army_training_grades.csv rows {above, label}, first match wins.
+var army_training_grades: Array[Dictionary] = []
+## data/settlement_growth.csv rows: how a settlement's drawing grows with its
+## manor — a tier promoted past min_people, or once a listed building stands
+## (MapObjects.settlement_look, owner 2026-09-15).
+var settlement_growth: Array[Dictionary] = []
 ## data/terrain_art.csv rows: which symbol a land cell is decorated with, by
 ## height band or biome, and how thickly (MapObjects.terrain_decor).
 var terrain_art: Array[Dictionary] = []
@@ -146,6 +163,11 @@ var sea_texture_path: String = ""
 ## base path of world_biome_weights_N.png, each biome's blurred share of
 ## the land (MapIndex.bake_biome_weights); BiomeLayer. "" when unbaked.
 var biome_weights_path: String = ""
+
+## BIOMES LAYER (owner 2026-09-17, choice B). data/maps.csv relief_texture:
+## the pack's baked height field (MapIndex.bake_relief, tools/bake_relief.gd);
+## biome_tiles.gdshader lights the ground by its slope. "" when unbaked.
+var relief_path: String = ""
 ## data/maps.csv cell_texture: world_cell_index.png, R | G<<8 = the land
 ## cell under a pixel (white = water) — how a click finds its manor.
 var cell_texture_path: String = ""
@@ -396,6 +418,25 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/settlement_art.csv", ["group", "walled", "tier", "texture", "size"],
 			func(r): settlement_art.append(r)):
 		return false
+	if not _load_if_present(dir + "/army_art.csv", ["piece", "texture", "painting"],
+			func(r): army_art[String(r["piece"])] = r):
+		return false
+	if not _load_if_present(dir + "/army_terrain_biomes.csv", ["biome_id", "terrain"],
+			func(r): army_terrain_biomes[int(r["biome_id"])] = String(r["terrain"])):
+		return false
+	if not _load_if_present(dir + "/army_terrain.csv", ["terrain", "arm", "defend_permille", "attack_permille"],
+			func(r): army_terrain["%s|%s" % [r["terrain"], r["arm"]]] = {
+				"defend": int(r["defend_permille"]), "attack": int(r["attack_permille"])}):
+		return false
+	if not _load_if_present(dir + "/army_matchups.csv", ["arm", "vs_arm", "attack_permille", "defense_permille"],
+			_add_matchup):
+		return false
+	if not _load_if_present(dir + "/army_training_grades.csv", ["above", "label"],
+			func(r): army_training_grades.append({"above": int(r["above"]), "label": String(r["label"])})):
+		return false
+	if not _load_if_present(dir + "/settlement_growth.csv", ["from_tier", "to_tier", "min_people", "building"],
+			func(r): settlement_growth.append(r)):
+		return false
 	if not _load_if_present(dir + "/marker_art.csv", ["type", "texture"],
 			func(r): marker_art[r["type"]] = r):
 		return false
@@ -437,6 +478,7 @@ func load_map(id: String) -> bool:
 	RealmEconomy.forget()
 	ManorEconomy.forget()
 	MapPalette.forget_colors()
+	HouseArms.forget()
 	routes.clear()
 	rivers.clear()
 	markers.clear()
@@ -549,6 +591,7 @@ func load_map(id: String) -> bool:
 	biome_texture_path = String(m.get("biome_texture", ""))
 	sea_texture_path = String(m.get("sea_texture", ""))
 	biome_weights_path = String(m.get("biome_weights", ""))  # BIOMES LAYER (experiment 2026-09-14)
+	relief_path = String(m.get("relief_texture", ""))  # BIOMES LAYER (owner 2026-09-17)
 	cell_texture_path = String(m.get("cell_texture", ""))
 	_resolve_realm_slots()
 	return true
@@ -688,6 +731,14 @@ func _fill_row_realms(r: Dictionary) -> void:
 		r["_authored"] = authored
 	for col: String in authored:
 		r[col] = fill_realms(String(authored[col]))
+
+## Sink for data/army_matchups.csv: appends one {vs, attack, defense} row
+## under its arm in army_matchups, in file order.
+func _add_matchup(r: Dictionary) -> void:
+	if not army_matchups.has(String(r["arm"])):
+		army_matchups[String(r["arm"])] = []
+	(army_matchups[String(r["arm"])] as Array).append({"vs": String(r["vs_arm"]),
+		"attack": int(r["attack_permille"]), "defense": int(r["defense_permille"])})
 
 ## Loads a live-gameplay CSV that is nonetheless allowed to be genuinely
 ## absent (future saves/mods may not ship it yet). A missing file is not an

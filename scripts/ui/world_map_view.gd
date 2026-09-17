@@ -406,6 +406,10 @@ func _draw() -> void:
 	_sea.scale = Vector2(_zoom, _zoom)
 	_biome.position = _offset
 	_biome.scale = Vector2(_zoom, _zoom)
+	# TILE LOD (owner 2026-09-17): the ground crossfades between a dense and a
+	# coarse tiling by the zoom, so it is sharp up close and free of a visible
+	# repeat at world zoom. Without this the shader would sit at one end.
+	_biome.set_view_zoom(_zoom)
 	_biome.visible = biomes_visible()
 	_clouds.position = _offset
 	_clouds.scale = Vector2(_zoom, _zoom)
@@ -468,6 +472,20 @@ func sprite_height() -> float:
 		return 0.0
 	return minf(h, Game.data.bal("map_sprite_max_px"))
 
+## burg code -> the settlement_art row it is drawn with now (MapObjects.
+## settlement_look), emptied whenever the ledger (people), the manors'
+## buildings or the ownership move — checked once per settlement_sprites.
+var _look_cache: Dictionary = {}
+var _look_sig := 0
+
+func _refresh_looks() -> void:
+	var state := Game.state
+	var sig := hash([0 if state == null else state.world.hash(),
+		0 if state == null else state.manor_buildings.hash(), _ownership_sig()])
+	if sig != _look_sig:
+		_look_cache.clear()
+		_look_sig = sig
+
 ## The settlement drawings on screen right now: {code, rect, texture}.
 ## Public for tests and for hit-testing (a drawing is picked by its rect).
 func settlement_sprites() -> Array:
@@ -480,11 +498,15 @@ func settlement_sprites() -> Array:
 	var s := view_scale()
 	var min_pop := MapObjects.min_burg_pop_for_scale(Game.data, s)
 	var frame := Rect2(Vector2.ZERO, size).grow(h)
+	_refresh_looks()
 	for code: String in Game.data.burgs:
 		var b: Dictionary = Game.data.burgs[code]
 		if not MapObjects.burg_visible(b, min_pop):
 			continue
-		var art := MapObjects.settlement_art(Game.data, b)
+		# The drawing it wears NOW — grown with its manor (owner 2026-09-15).
+		if not _look_cache.has(code):
+			_look_cache[code] = MapObjects.settlement_look(Game.data, Game.state, b)
+		var art: Dictionary = _look_cache[code]
 		if art.is_empty():
 			continue
 		var tex := _sprite_texture(String(art["texture"]))
@@ -585,8 +607,10 @@ func marker_sprites() -> Array:
 ## The regiment counters on screen right now, in stacking order:
 ## {code, pos, rect, icon, count, size, text, glyph, color, naval, royal}.
 ## `rect` is the whole counter, `icon` its glyph square and `count` the box
-## stating its headcount, all screen rects. [] while the layer is off.
-## Public for tests and hit-testing.
+## stating its headcount, all screen rects. [] while the layer is off. Every
+## regiment is drawn — counters are never thinned (owner 2026-09-17); only
+## the screen frame filters out what is off screen. Public for tests and
+## hit-testing.
 ##
 ## The look follows development/exmaples/MilitaryView.png (owner request
 ## 2026-09-13): a dark square wearing the counter's glyph — crossed swords
@@ -623,6 +647,7 @@ func army_markers() -> Array:
 		out.append({"code": code, "pos": sp, "size": strength, "text": text,
 			"font_px": font_px, "rect": Rect2(sp - Vector2(w, h) / 2.0, Vector2(w, h)),
 			"glyph": "waves" if naval else ("crown" if code == royal else "swords"),
+			"piece": MapObjects.army_piece(repo, r),
 			"color": color, "naval": naval, "royal": code == royal})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ay := (a["pos"] as Vector2).y
@@ -648,15 +673,13 @@ func army_markers() -> Array:
 		m["count"] = Rect2(rect.position + Vector2(h, 0.0), Vector2(rect.size.x - h, h))
 	return out
 
-## A counter's height in screen px: a share of the LARGEST settlement
-## drawing's height (sprite_height), held between map_army_badge_min_px and
-## map_army_badge_max_px — a counter is a note under a town, and must read
-## smaller than the town it sits under (owner request 2026-09-13). When the
-## towns are pins, the floor.
+## A counter's height in screen px: map_army_badge_native_px of the map,
+## times the zoom — it grows and shrinks with the map (owner 2026-09-17) —
+## never below map_army_badge_min_px, so the farthest zoom still shows every
+## regiment. No ceiling and no thinning: every regiment is always drawn.
 func army_badge_height() -> float:
 	var repo := Game.data
-	return clampf(sprite_height() * repo.bal("map_army_badge_frac"),
-		repo.bal("map_army_badge_min_px"), repo.bal("map_army_badge_max_px"))
+	return maxf(repo.bal("map_army_badge_native_px") * view_scale(), repo.bal("map_army_badge_min_px"))
 
 ## Screen rects of every settlement mark drawn right now — the drawings, and
 ## the pins of towns too small for one. The military counters keep clear of
@@ -726,13 +749,26 @@ func _draw_armies() -> void:
 		var rect: Rect2 = m["rect"]
 		var icon: Rect2 = m["icon"]
 		var count: Rect2 = m["count"]
-		draw_rect(rect.grow(line), outline)
-		draw_rect(icon, icon_bg)
-		draw_rect(count, m["color"])
-		draw_line(Vector2(icon.end.x, rect.position.y), Vector2(icon.end.x, rect.end.y),
-			outline, line)
-		ResourceIcon.draw_glyph(self, String(m["glyph"]), icon.get_center(),
-			icon.size.y * glyph_frac, glyph_ink)
+		# The painted 3D piece (owner 2026-09-15, data/army_art.csv) stands in the
+		# counter's square on its own base; the glyph square only without art.
+		# A layer of a few dozen counters at most, so one texture draw each.
+		var art := UiPalette.load_art(String((repo.army_art.get(String(m["piece"]), {}) as Dictionary).get("texture", "")))
+		if art != null:
+			draw_rect(count.grow(line), outline)
+			draw_rect(count, m["color"])
+			# Fitted to the square's HEIGHT: a piece is wider than tall, and fitted
+			# to its width it read as a flat disc; the overhang is a few px.
+			var ts := art.get_size()
+			var drawn := ts * (icon.size.y / ts.y)
+			draw_texture_rect(art, Rect2(icon.position + (icon.size - drawn) * Vector2(0.5, 1.0), drawn), false)
+		else:
+			draw_rect(rect.grow(line), outline)
+			draw_rect(icon, icon_bg)
+			draw_rect(count, m["color"])
+			draw_line(Vector2(icon.end.x, rect.position.y), Vector2(icon.end.x, rect.end.y),
+				outline, line)
+			ResourceIcon.draw_glyph(self, String(m["glyph"]), icon.get_center(),
+				icon.size.y * glyph_frac, glyph_ink)
 		_draw_centered_text(font, count, String(m["text"]), int(m["font_px"]), count_ink)
 
 ## Triangulate every province loop once, in native coordinates. Province
@@ -2397,9 +2433,11 @@ func _place_badges(manors: Array) -> Array:
 		# their category's glyph from data/resource_icons.csv instead.
 		var glyph := String((repo.resource_icons.get("tag_" + tag, {}) as Dictionary).get("icon", ""))
 		var entry := m.duplicate()
-		entry.merge({"text": text, "badge": badge, "label": label if with_label else null,
+		entry.merge({"text": text, "badge": badge, "label": null,
 			"texture": tex, "glyph": glyph, "rect": whole,
 			"ring": EconomyPanel.tag_color(repo, tag)})
+		if with_label:
+			entry["label"] = label
 		out.append(entry)
 	return out
 

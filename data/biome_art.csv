@@ -11,3 +11,6 @@ biome_id,key,texture,notes
 10,tundra,res://assets/biomes/tundra.png,tundra (T-13)
 11,ice,res://assets/biomes/ice.png,glacier (T-19)
 12,marsh,res://assets/biomes/marsh.png,wetland (T-10)
+13,hill,res://assets/biomes/hill.png,"high ground (owner 2026-09-17): not an Azgaar biome — MapIndex.raise_high_ground rewrites a land pixel to 13 at/above balance map_biome_hill_height (T-07)"
+14,mountain,res://assets/biomes/mountain.png,mountain (T-08)
+15,peak,res://assets/biomes/peak.png,"the snow line (T-09)"

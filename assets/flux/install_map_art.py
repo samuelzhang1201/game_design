@@ -11,6 +11,8 @@
     python3 assets/flux/install_map_art.py buildings  # H-xx -> assets/icons/bld_<code>.png (slots and the build menu)
     python3 assets/flux/install_map_art.py goods_icons  # G-xx colour -> assets/goods/colour/ (the manor card's output rows)
     python3 assets/flux/install_map_art.py compass    # I-73 -> assets/ui/compass.png
+    python3 assets/flux/install_map_art.py arms       # A-xxx -> assets/arms/beria/<key>.png (house and kingdom arms)
+    python3 assets/flux/install_map_art.py army_paintings  # B-37..42 -> assets/armies/paint/<piece>.png (army card)
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
 blue channel (see sepia_alpha_template.json for the same steps as a ComfyUI
@@ -274,8 +276,10 @@ def _install_cast_tier(codes: dict, tag: str, tier: str, size: int, dest: Path) 
 ## tile and never quite delivers one.
 ## 512 px: a tile spans map_biome_tile_px (128) native px, and the map is
 ## drawn up to ~4x native, so 512 keeps the crowns sharp at the closest zoom.
-BIOME_TILE_PX = 512
-BIOME_FEATHER_PX = 96
+BIOME_TILE_PX = 1024  # the renders are 1024; installing at 512 threw half the
+# detail away and a tile spanning map_biome_tile_px native px was magnified
+# 3.7x at the closest zoom (owner 2026-09-17: "zoom in 之后好模糊")
+BIOME_FEATHER_PX = 192  # the seamless roll scales with the tile
 
 
 def make_seamless(w: int, h: int, px: bytearray, feather: int) -> bytearray:
@@ -394,9 +398,9 @@ def crop_rgba(w: int, px: bytearray, box: tuple) -> tuple:
     return cw, chh, out
 
 
-def install_paintings(size: tuple = PAINT_SIZE) -> int:
-    rows = list(csv.DictReader((HERE / "estate_paint_art.csv").open(encoding="utf-8")))
-    dest = ROOT / "assets" / "manors" / "paint"
+def install_paintings(size: tuple = PAINT_SIZE, table: str = "estate_paint_art.csv", dest: Path | None = None) -> int:
+    rows = list(csv.DictReader((HERE / table).open(encoding="utf-8")))
+    dest = dest or ROOT / "assets" / "manors" / "paint"
     dest.mkdir(parents=True, exist_ok=True)
     done = 0
     for r in rows:
@@ -417,6 +421,13 @@ def install_paintings(size: tuple = PAINT_SIZE) -> int:
         print("  %-6s %-10s %dx%d" % (art_id, key, tw, th))
         done += 1
     return done
+
+
+## The army card's painting (owner 2026-09-15): library B-37..B-42 on the
+## same [C-ESTATE] vignette and the same card box as the manor paintings, so
+## the same crop and size, into assets/armies/paint/<piece>.png.
+def install_army_paintings(size: tuple = PAINT_SIZE) -> int:
+    return install_paintings(size, "army_paint_art.csv", ROOT / "assets" / "armies" / "paint")
 
 
 ## The map's compass (owner 2026-09-14): library I-73 cut out by post.py
@@ -496,11 +507,88 @@ def install_goods_icons(size: int = GOODS_ICON_PX) -> int:
     return _install_icon_cutouts(codes, ROOT / "assets" / "goods" / "colour", "%s.png", size)
 
 
+## House and kingdom arms (A-, owner 2026-09-15; arms_prompts.py, arms_art.csv).
+## Cut out LOCALLY: [C-ARMS] asks for a plain ground and every shield is
+## closed by its rim, so flooding the ground in from the render's edges stops
+## at the rim and a silver field inside survives — no BiRefNet queue. The
+## pixels touching the flood fade by how far they are from the ground colour,
+## so the rim keeps a soft edge. Trimmed to the shield and fitted into ARMS_PX:
+## the largest use is the main menu's preview, 88 design px x ~3 on the
+## largest window -> 256. ARMS_STYLE is the style tag of the renders to take
+## (generate.py names them ..._<style>_r640_...); ARMS_SEEDS picks a re-rolled
+## seed per art id, else the newest render wins.
+ARMS_PX = 256
+ARMS_PACK = "beria"
+ARMS_STYLE = "arms_matte"  # owner 2026-09-15, after sampling arms / arms_painted / arms_matte
+ARMS_GROUND_TOLERANCE = 40
+ARMS_SEEDS: dict = {"A-084": "954159498", "A-107": "954159498"}  # re-rolled 2026-09-15: a banner read as a field, a bordure did not show
+
+
+def flood_ground(w: int, h: int, ch: int, px: bytes, tolerance: int = ARMS_GROUND_TOLERANCE) -> bytearray:
+    """RGBA with the render's plain ground, flooded in from the edges, made clear."""
+    rgba = to_rgba(w, h, ch, bytearray(px))
+    corners = (0, w - 1, (h - 1) * w, h * w - 1)
+    ground = [sum(rgba[i * 4 + c] for i in corners) // 4 for c in range(3)]
+
+    def distance(i: int) -> int:
+        o = i * 4
+        return max(abs(rgba[o] - ground[0]), abs(rgba[o + 1] - ground[1]), abs(rgba[o + 2] - ground[2]))
+
+    seen = bytearray(w * h)
+    stack = []
+    for i in list(range(w)) + list(range((h - 1) * w, h * w)) + list(range(0, h * w, w)) + list(range(w - 1, h * w, w)):
+        if not seen[i] and distance(i) <= tolerance:
+            seen[i] = 1
+            stack.append(i)
+    while stack:
+        i = stack.pop()
+        rgba[i * 4 + 3] = 0
+        x, y = i % w, i // w
+        for n, ok in ((i - 1, x > 0), (i + 1, x < w - 1), (i - w, y > 0), (i + w, y < h - 1)):
+            if ok and not seen[n] and distance(n) <= tolerance:
+                seen[n] = 1
+                stack.append(n)
+    for i in range(w * h):
+        if seen[i]:
+            continue
+        x, y = i % w, i // w
+        if (x > 0 and seen[i - 1]) or (x < w - 1 and seen[i + 1]) or (y > 0 and seen[i - w]) or (y < h - 1 and seen[i + w]):
+            rgba[i * 4 + 3] = min(255, distance(i) * 255 // (tolerance * 3))
+    return rgba
+
+
+def install_arms(size: int = ARMS_PX) -> int:
+    rows = list(csv.DictReader((HERE / "arms_art.csv").open(encoding="utf-8")))
+    dest = ROOT / "assets" / "arms" / ARMS_PACK
+    dest.mkdir(parents=True, exist_ok=True)
+    done = 0
+    for r in rows:
+        art_id, key = r["art_id"], r["key"]
+        hits = sorted((HERE / "out" / "arms").glob("%s_*_%s_r*.png" % (art_id, ARMS_STYLE)),
+                      key=lambda p: p.stat().st_mtime)
+        seed = ARMS_SEEDS.get(art_id, "")
+        if seed:
+            hits = [h for h in hits if h.stem.endswith("_s" + seed)] or hits
+        if not hits:
+            print("  (no %s render for %s / %s)" % (ARMS_STYLE, art_id, key))
+            continue
+        w, h, ch, px = decode_png(hits[-1])
+        cw, chh, rgba = trim_alpha(w, h, flood_ground(w, h, ch, px))
+        scale = size / max(cw, chh)
+        tw, th = max(1, round(cw * scale)), max(1, round(chh * scale))
+        canvas = pad_square(tw, th, resize_rgba(cw, chh, rgba, tw, th), size)
+        encode_png(dest / ("%s.png" % key), size, size, 4, bytes(canvas))
+        print("  %-6s %-24s %dx%d in %d (from %s)" % (art_id, key, tw, th, size, hits[-1].name))
+        done += 1
+    return done
+
+
 def main() -> int:
     chapters = {"goods": install_goods, "decor": install_decor, "cast": install_cast,
                 "ui": install_ui, "estates": install_estates, "biomes": install_biomes,
                 "paintings": install_paintings, "compass": install_compass,
-                "buildings": install_buildings, "goods_icons": install_goods_icons}
+                "buildings": install_buildings, "goods_icons": install_goods_icons,
+                "arms": install_arms, "army_paintings": install_army_paintings}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2

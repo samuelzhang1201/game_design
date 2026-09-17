@@ -11,7 +11,7 @@ extends SceneTree
 ##     -s tools/bake_biome_weights.gd -- --map beria [--scale 4]
 ## A tool, not simulation: it reads the clock to report its own run time.
 
-const BIOMES := 12
+const BIOMES := 16  # 13..15 are the high ground (MapIndex.raise_high_ground)
 
 func _init() -> void:
 	var map := "beria"

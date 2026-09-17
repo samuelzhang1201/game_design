@@ -26,9 +26,12 @@ extends Node2D
 ## tools/snapshot_map.gd.
 
 const SHADER_PATH := "res://scripts/ui/biome_tiles.gdshader"
-## One layer per biome id 1..LAYERS; the shader mixes twelve.
-const LAYERS := 12
-const WEIGHT_IMAGES := 3
+## One layer per biome id 1..LAYERS; the shader mixes sixteen. 13, 14 and
+## 15 are not Azgaar biomes — MapIndex.raise_high_ground rewrites high land
+## to them (hill, mountain, peak) so the high ground blends in like any
+## other ground (owner 2026-09-17).
+const LAYERS := 16
+const WEIGHT_IMAGES := 4
 
 var _mesh: ArrayMesh = null
 var _size := Vector2.ZERO
@@ -68,7 +71,24 @@ func setup(repo: DataRepository, biome_index: Image) -> void:
 	mat.set_shader_parameter("tiles", _build_tiles(repo))
 	mat.set_shader_parameter("field_px", _size)
 	mat.set_shader_parameter("tile_px", maxf(repo.bal("map_biome_tile_px"), 1.0))
+	# TILE LOD (owner 2026-09-17): one tile size cannot be both sharp up close
+	# and free of a visible repeat at world zoom, so the shader crossfades two
+	# densities by the view's own zoom. set_view_zoom keeps it current.
+	mat.set_shader_parameter("tile_px_far", maxf(repo.bal("map_biome_tile_px_far"), 1.0))
+	mat.set_shader_parameter("lod_near_zoom", repo.bal("map_biome_lod_near_zoom"))
+	mat.set_shader_parameter("lod_far_zoom", repo.bal("map_biome_lod_far_zoom"))
 	mat.set_shader_parameter("alpha", repo.bal("map_biome_alpha"))
+	# Relief (owner 2026-09-17, choice B): the photograph is lit by the slope
+	# of the pack's baked height field, from the map's own light.
+	var relief := UiPalette.load_art(repo.relief_path) if repo.relief_path != "" else null
+	if relief != null:
+		mat.set_shader_parameter("relief", relief)
+		mat.set_shader_parameter("shade", repo.bal("map_relief_shade"))
+	else:
+		mat.set_shader_parameter("shade", 0.0)
+	mat.set_shader_parameter("shade_px", repo.bal("map_relief_shade_px"))
+	mat.set_shader_parameter("gain", repo.bal("map_relief_gain"))
+	mat.set_shader_parameter("light", Vector2(repo.bal("map_light_x"), repo.bal("map_light_y")))
 	material = mat
 	queue_redraw()
 
@@ -118,6 +138,14 @@ func _build_tiles(repo: DataRepository) -> Texture2DArray:
 	var arr := Texture2DArray.new()
 	arr.create_from_images(images)
 	return arr
+
+## The view's zoom in screen px per native px, for the tile LOD. Cheap, so
+## the view may call it every frame; the material only stores a float.
+func set_view_zoom(zoom: float) -> void:
+	var mat := material as ShaderMaterial
+	if mat != null:
+		mat.set_shader_parameter("view_zoom", maxf(zoom, 0.0001))
+
 
 func _draw() -> void:
 	if _mesh != null and _size.x > 0.0 and _size.y > 0.0:

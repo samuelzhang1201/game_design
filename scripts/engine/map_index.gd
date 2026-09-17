@@ -123,6 +123,7 @@ static func bake_biome_weights(biome: Image, scale: int, radius: int, count: int
 			var b := biome_at(biome, Vector2i(x, y))
 			if b < 1 or b > count:
 				continue
+			@warning_ignore("integer_division")  # the low-res cell a full-res pixel falls in
 			var i := (y / s) * lw + (x / s)
 			land[i] += 1.0
 			per[(b - 1) * n + i] += 1.0
@@ -181,6 +182,77 @@ static func box_sum(src: PackedFloat32Array, w: int, h: int, r: int) -> PackedFl
 			if drop >= 0:
 				acc -= tmp[drop * w + x]
 	return out
+
+## --- High ground and relief (owner 2026-09-17, choice B) --------------------
+## The pack has no mountains: Azgaar's biomes are CLIMATE, and how high the
+## ground stands lives on the cell. raise_high_ground rewrites a LAND
+## pixel's biome id to 13 (hill), 14 (mountain) or 15 (peak) by the height
+## of the cell it falls in, so the weight bake blends high ground in exactly
+## like a biome and the shader needs no second path. `cells` is the pack's
+## world_cell_index.png (id_at; white = water) and `heights` is indexed by
+## cell id. Water is left as the biome index had it. Pure.
+static func raise_high_ground(biome: Image, cells: Image, heights: PackedInt32Array,
+		hill: int, mountain: int, peak: int) -> Image:
+	var w := biome.get_width()
+	var h := biome.get_height()
+	var out := biome.duplicate() as Image
+	out.convert(Image.FORMAT_RGB8)
+	for y in h:
+		for x in w:
+			var px := Vector2i(x, y)
+			if biome_at(biome, px) < 1:
+				continue  # the sea keeps the index's own white
+			var cell := id_at(cells, px)
+			if cell < 0 or cell >= heights.size():
+				continue
+			var height := heights[cell]
+			var id := 0
+			if height >= peak:
+				id = 15
+			elif height >= mountain:
+				id = 14
+			elif height >= hill:
+				id = 13
+			if id > 0:
+				out.set_pixel(x, y, Color8(id, 0, 0))
+	return out
+
+## Every pixel's height as grey (0..100 of the pack's scale -> 0..255), at
+## 1/`scale` of the cell index's resolution and box-smoothed twice at
+## `radius` — the same two-pass near-Gaussian the biome weights take, for
+## the same reason: a cell's flat height would otherwise read as a cliff at
+## its edge. The shader takes a SLOPE from this and lights it, which is the
+## only way an aerial photograph gets relief (it has none of its own).
+## Water counts as height 0, and the land mesh clips the layer anyway. Pure.
+static func bake_relief(cells: Image, heights: PackedInt32Array, scale: int, radius: int) -> Image:
+	var w := cells.get_width()
+	var h := cells.get_height()
+	var s := maxi(scale, 1)
+	var lw := ceili(float(w) / float(s))
+	var lh := ceili(float(h) / float(s))
+	var n := lw * lh
+	var total := PackedFloat32Array()
+	total.resize(n)
+	var count := PackedFloat32Array()
+	count.resize(n)
+	for y in h:
+		for x in w:
+			@warning_ignore("integer_division")  # the low-res cell this pixel falls in
+			var i := (y / s) * lw + (x / s)
+			count[i] += 1.0
+			var cell := id_at(cells, Vector2i(x, y))
+			if cell >= 0 and cell < heights.size():
+				total[i] += float(heights[cell])
+	total = box_sum(box_sum(total, lw, lh, radius), lw, lh, radius)
+	count = box_sum(box_sum(count, lw, lh, radius), lw, lh, radius)
+	var bytes := PackedByteArray()
+	bytes.resize(n)
+	for i in n:
+		var v := 0.0
+		if count[i] > 0.0:
+			v = total[i] / count[i]
+		bytes[i] = clampi(int(v * 255.0 / 100.0 + 0.5), 0, 255)
+	return Image.create_from_data(lw, lh, false, Image.FORMAT_L8, bytes)
 
 ## --- Rasterising an index bitmap (2026-09-13) --------------------------------
 ## `polys[i]` filled with `ids[i]` in the two-byte encoding id_at reads (R =
