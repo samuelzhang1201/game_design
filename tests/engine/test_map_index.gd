@@ -209,6 +209,59 @@ func test_bake_relief_smooths_across_cells() -> void:
 	assert_lt(b, c, "and keeps rising")
 	assert_gt(a, 0, "smoothing carried some height into the flat end")
 
+## The guard that protects every existing caller: with no gain the detail
+## arguments are ignored entirely and the field is exactly what it was.
+func test_bake_relief_without_gain_is_unchanged() -> void:
+	var cells := Image.create_empty(3, 1, false, Image.FORMAT_RGB8)
+	for x in 3:
+		cells.set_pixel(x, 0, Color8(x, 0, 0))
+	var heights := PackedInt32Array([0, 50, 100])
+	var plain := MapIndex.bake_relief(cells, heights, 1, 0)
+	var with_detail := MapIndex.bake_relief(cells, heights, 1, 0,
+		PackedFloat32Array([1.0, 1.0, 1.0]), PackedFloat32Array([1.0, 1.0, 1.0]), 0.0, 0.0)
+	for x in 3:
+		assert_eq(with_detail.get_pixel(x, 0).r8, plain.get_pixel(x, 0).r8,
+			"gain 0 leaves the field alone at x=%d" % x)
+
+## Detail is added in HEIGHT units and weighted by how high the ground
+## already is, so a plain stays flat while high ground grows ridges. Cell 1
+## is at height 50 with floor 0, so h_norm is 0.5 and a gain of 20 at full
+## detail adds 10: the height becomes 60, and the byte is written once from
+## that, int(60 * 255 / 100 + 0.5) = 153. (Not 128 + 26 — the height is
+## summed first and rounded once, so rounding the two parts separately is
+## off by one.)
+func test_bake_relief_adds_detail_weighted_by_height() -> void:
+	var cells := Image.create_empty(2, 1, false, Image.FORMAT_RGB8)
+	cells.set_pixel(0, 0, Color8(0, 0, 0))
+	cells.set_pixel(1, 0, Color8(1, 0, 0))
+	var heights := PackedInt32Array([0, 50])
+	var img := MapIndex.bake_relief(cells, heights, 1, 0,
+		PackedFloat32Array([1.0, 1.0]), PackedFloat32Array([1.0, 1.0]), 20.0, 0.0)
+	assert_eq(img.get_pixel(0, 0).r8, 0, "height 0 gets no detail at all")
+	assert_eq(img.get_pixel(1, 0).r8, 153, "height 50 + 10 of detail = 60 -> 153 greys")
+
+## Suppression is how rivers and the coast keep invented ridges out of
+## their valleys: 0 holds the detail down completely, 1 lets it through.
+func test_bake_relief_suppression_holds_detail_down() -> void:
+	var cells := Image.create_empty(2, 1, false, Image.FORMAT_RGB8)
+	cells.set_pixel(0, 0, Color8(0, 0, 0))
+	cells.set_pixel(1, 0, Color8(1, 0, 0))
+	var heights := PackedInt32Array([100, 100])
+	var img := MapIndex.bake_relief(cells, heights, 1, 0,
+		PackedFloat32Array([1.0, 1.0]), PackedFloat32Array([0.0, 1.0]), 20.0, 0.0)
+	assert_eq(img.get_pixel(0, 0).r8, 255, "suppressed: the plain height, clamped")
+	assert_eq(img.get_pixel(1, 0).r8, 255, "unsuppressed would also clamp here")
+
+func test_bake_relief_suppression_is_visible_below_the_clamp() -> void:
+	var cells := Image.create_empty(2, 1, false, Image.FORMAT_RGB8)
+	cells.set_pixel(0, 0, Color8(0, 0, 0))
+	cells.set_pixel(1, 0, Color8(1, 0, 0))
+	var heights := PackedInt32Array([50, 50])
+	var img := MapIndex.bake_relief(cells, heights, 1, 0,
+		PackedFloat32Array([1.0, 1.0]), PackedFloat32Array([0.0, 1.0]), 20.0, 0.0)
+	assert_eq(img.get_pixel(0, 0).r8, 128, "fully suppressed is the plain height")
+	assert_gt(img.get_pixel(1, 0).r8, 128, "unsuppressed rose")
+
 ## stamp_polylines marks every pixel within a line's radius and nothing
 ## else, so the existing chamfer transform can measure distance from it.
 ## A zero radius still marks the pixels the segment itself crosses.

@@ -288,7 +288,10 @@ static func raise_high_ground(biome: Image, cells: Image, heights: PackedInt32Ar
 ## its edge. The shader takes a SLOPE from this and lights it, which is the
 ## only way an aerial photograph gets relief (it has none of its own).
 ## Water counts as height 0, and the land mesh clips the layer anyway. Pure.
-static func bake_relief(cells: Image, heights: PackedInt32Array, scale: int, radius: int) -> Image:
+static func bake_relief(cells: Image, heights: PackedInt32Array, scale: int, radius: int,
+		detail: PackedFloat32Array = PackedFloat32Array(),
+		suppression: PackedFloat32Array = PackedFloat32Array(),
+		gain: float = 0.0, floor_height: float = 0.0) -> Image:
 	var w := cells.get_width()
 	var h := cells.get_height()
 	var s := maxi(scale, 1)
@@ -311,10 +314,19 @@ static func bake_relief(cells: Image, heights: PackedInt32Array, scale: int, rad
 	count = box_sum(box_sum(count, lw, lh, radius), lw, lh, radius)
 	var bytes := PackedByteArray()
 	bytes.resize(n)
+	var span := maxf(100.0 - floor_height, 1.0)
 	for i in n:
 		var v := 0.0
 		if count[i] > 0.0:
 			v = total[i] / count[i]
+		# Synthesized landforms (owner 2026-09-17, approach A): added in
+		# height units, weighted by how high the ground already is so a
+		# plain stays flat, and held down near rivers and the coast so an
+		# invented ridge never cuts across real pack data.
+		if gain > 0.0 and i < detail.size():
+			var h_norm := clampf((v - floor_height) / span, 0.0, 1.0)
+			var sup := 1.0 if i >= suppression.size() else suppression[i]
+			v += gain * h_norm * sup * detail[i]
 		bytes[i] = clampi(int(v * 255.0 / 100.0 + 0.5), 0, 255)
 	return Image.create_from_data(lw, lh, false, Image.FORMAT_L8, bytes)
 
