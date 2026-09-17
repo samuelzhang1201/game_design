@@ -76,6 +76,43 @@ static func distance_to_land(land: PackedByteArray, w: int, h: int) -> PackedFlo
 			d[i] = best
 	return d
 
+## --- Stamping polylines into a mask (2026-09-17) -----------------------------
+## Every pixel within `radii[i]` px of line `i` becomes 1. `lines` holds
+## PackedVector2Array courses in the MASK's own pixel space (divide native
+## coordinates by the bake's scale before calling). Segments are walked at
+## half-pixel steps so no pixel is skipped on a diagonal. The pack's 180
+## river courses touch only a few thousand pixels, so this costs nothing
+## next to the per-pixel passes around it. Pure; a bake step, never runtime.
+static func stamp_polylines(w: int, h: int, lines: Array, radii: PackedFloat32Array) -> PackedByteArray:
+	var mask := PackedByteArray()
+	mask.resize(w * h)
+	for i in lines.size():
+		var pts: PackedVector2Array = lines[i]
+		var r := 0.0 if i >= radii.size() else maxf(radii[i], 0.0)
+		if pts.size() == 1:
+			_stamp_disc(mask, w, h, pts[0], r)
+			continue
+		for s in maxi(pts.size() - 1, 0):
+			var a := pts[s]
+			var b := pts[s + 1]
+			var steps := maxi(int(a.distance_to(b) * 2.0), 1)
+			for t in steps + 1:
+				_stamp_disc(mask, w, h, a.lerp(b, float(t) / float(steps)), r)
+	return mask
+
+static func _stamp_disc(mask: PackedByteArray, w: int, h: int, p: Vector2, r: float) -> void:
+	var cx := int(round(p.x))
+	var cy := int(round(p.y))
+	var ri := int(ceil(r))
+	for dy in range(-ri, ri + 1):
+		for dx in range(-ri, ri + 1):
+			if Vector2(dx, dy).length() > r:
+				continue
+			var x := cx + dx
+			var y := cy + dy
+			if x >= 0 and y >= 0 and x < w and y < h:
+				mask[y * w + x] = 1
+
 ## The biome index (land pixels carry an id, water is white) baked into an
 ## L8 image: each pixel its distance to land in px, capped at 255. Written
 ## by tools/import_azgaar.gd as world_sea_distance.png (and by

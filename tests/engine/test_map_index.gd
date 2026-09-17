@@ -208,3 +208,29 @@ func test_bake_relief_smooths_across_cells() -> void:
 	assert_lt(a, b, "the low end rises toward the high one")
 	assert_lt(b, c, "and keeps rising")
 	assert_gt(a, 0, "smoothing carried some height into the flat end")
+
+## stamp_polylines marks every pixel within a line's radius and nothing
+## else, so the existing chamfer transform can measure distance from it.
+## A zero radius still marks the pixels the segment itself crosses.
+func test_stamp_polylines_marks_the_segment() -> void:
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(3, 0)])
+	var mask := MapIndex.stamp_polylines(5, 3, [line], PackedFloat32Array([0.0]))
+	assert_eq(mask.size(), 15)
+	assert_eq(mask[0], 1, "the start is stamped")
+	assert_eq(mask[3], 1, "the end is stamped")
+	assert_eq(mask[4], 0, "past the end is not")
+	assert_eq(mask[5], 0, "the row below is not")
+
+func test_stamp_polylines_honours_the_radius() -> void:
+	var line := PackedVector2Array([Vector2(2, 1), Vector2(2, 1)])
+	var mask := MapIndex.stamp_polylines(5, 3, [line], PackedFloat32Array([1.0]))
+	assert_eq(mask[1 * 5 + 2], 1, "the point itself")
+	assert_eq(mask[0 * 5 + 2], 1, "one pixel up is inside radius 1")
+	assert_eq(mask[1 * 5 + 1], 1, "one pixel left is inside radius 1")
+	assert_eq(mask[0 * 5 + 0], 0, "the diagonal is 1.41 away, outside radius 1")
+
+func test_stamp_polylines_clips_to_the_field() -> void:
+	var line := PackedVector2Array([Vector2(-5, 0), Vector2(1, 0)])
+	var mask := MapIndex.stamp_polylines(3, 1, [line], PackedFloat32Array([0.0]))
+	assert_eq(mask[0], 1, "the part inside the field is stamped")
+	assert_eq(mask[2], 0, "and nothing beyond the line's end")
