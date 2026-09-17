@@ -113,6 +113,33 @@ static func _stamp_disc(mask: PackedByteArray, w: int, h: int, p: Vector2, r: fl
 			if x >= 0 and y >= 0 and x < w and y < h:
 				mask[y * w + x] = 1
 
+## --- The relief's synthesized detail (owner 2026-09-17, approach A) ----------
+## Ridged fractal noise over the whole field, 0..1, row-major. The pack has
+## ONE height per Voronoi cell (~26 native px across) and vertices.csv has
+## no heights at all, so there is no finer truth to recover: the landforms
+## below a cell are invented. Ridged, because a ridgeline is the feature a
+## satellite view reads terrain by; domain-warped so the ridges run in
+## coherent directions instead of as isotropic blobs. The seed is DATA
+## (balance.csv map_relief_detail_seed) — a look, never simulation. Pure.
+static func detail_field(w: int, h: int, seed_value: int, freq_px: float,
+		octaves: int, warp_px: float) -> PackedFloat32Array:
+	var noise := FastNoiseLite.new()
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	noise.seed = seed_value
+	noise.frequency = 1.0 / maxf(freq_px, 1.0)
+	noise.fractal_type = FastNoiseLite.FRACTAL_RIDGED
+	noise.fractal_octaves = maxi(octaves, 1)
+	if warp_px > 0.0:
+		noise.domain_warp_enabled = true
+		noise.domain_warp_amplitude = warp_px
+		noise.domain_warp_frequency = 1.0 / maxf(freq_px * 2.0, 1.0)
+	var out := PackedFloat32Array()
+	out.resize(w * h)
+	for y in h:
+		for x in w:
+			out[y * w + x] = clampf(noise.get_noise_2d(float(x), float(y)) * 0.5 + 0.5, 0.0, 1.0)
+	return out
+
 ## The biome index (land pixels carry an id, water is white) baked into an
 ## L8 image: each pixel its distance to land in px, capped at 255. Written
 ## by tools/import_azgaar.gd as world_sea_distance.png (and by

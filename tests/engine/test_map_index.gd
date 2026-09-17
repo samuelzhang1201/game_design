@@ -234,3 +234,28 @@ func test_stamp_polylines_clips_to_the_field() -> void:
 	var mask := MapIndex.stamp_polylines(3, 1, [line], PackedFloat32Array([0.0]))
 	assert_eq(mask[0], 1, "the part inside the field is stamped")
 	assert_eq(mask[2], 0, "and nothing beyond the line's end")
+
+## The detail is a LOOK, never simulation: its seed is data, so two bakes
+## with the same seed are identical and a different seed is a different
+## sheet. Values stay in 0..1 so bake_relief can scale them by a gain in
+## height units.
+func test_detail_field_is_deterministic() -> void:
+	var a := MapIndex.detail_field(8, 8, 1234, 16.0, 3, 0.0)
+	var b := MapIndex.detail_field(8, 8, 1234, 16.0, 3, 0.0)
+	assert_eq(a.size(), 64)
+	assert_eq(Array(a), Array(b), "the same seed gives the same field")
+
+func test_detail_field_changes_with_the_seed() -> void:
+	var a := MapIndex.detail_field(8, 8, 1234, 16.0, 3, 0.0)
+	var b := MapIndex.detail_field(8, 8, 9999, 16.0, 3, 0.0)
+	assert_ne(Array(a), Array(b), "a different seed is a different sheet")
+
+func test_detail_field_stays_in_unit_range() -> void:
+	var f := MapIndex.detail_field(16, 16, 7, 8.0, 4, 4.0)
+	var lo := 2.0
+	var hi := -1.0
+	for v in f:
+		lo = minf(lo, v)
+		hi = maxf(hi, v)
+	assert_gte(lo, 0.0, "never below 0")
+	assert_lte(hi, 1.0, "never above 1")
