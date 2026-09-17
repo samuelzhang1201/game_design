@@ -178,6 +178,28 @@ func test_raise_high_ground_leaves_water_alone() -> void:
 	assert_eq(out.get_pixel(0, 0).r8, 15, "the land pixel rose")
 	assert_eq(out.get_pixel(1, 0).r8, 255, "the sea is untouched")
 
+## With a detailed field the bands follow the SYNTHESIZED height, so a ridge
+## invented between two cell centres still wears rock and snow. The cell
+## says 30 (nothing), the detailed field says 90 (a peak).
+func test_raise_high_ground_prefers_the_detailed_field() -> void:
+	var biome := Image.create_empty(1, 1, false, Image.FORMAT_RGB8)
+	biome.set_pixel(0, 0, Color8(6, 0, 0))
+	var cells := Image.create_empty(1, 1, false, Image.FORMAT_RGB8)
+	cells.set_pixel(0, 0, Color8(0, 0, 0))
+	var detailed := Image.create_empty(1, 1, false, Image.FORMAT_L8)
+	detailed.set_pixel(0, 0, Color(230.0 / 255.0, 0, 0))  # 230 grey = height 90
+	var out := MapIndex.raise_high_ground(biome, cells, PackedInt32Array([30]),
+		45, 62, 80, detailed)
+	assert_eq(out.get_pixel(0, 0).r8, 15, "the detailed field made it a peak")
+
+func test_raise_high_ground_without_a_field_uses_the_cell() -> void:
+	var biome := Image.create_empty(1, 1, false, Image.FORMAT_RGB8)
+	biome.set_pixel(0, 0, Color8(6, 0, 0))
+	var cells := Image.create_empty(1, 1, false, Image.FORMAT_RGB8)
+	cells.set_pixel(0, 0, Color8(0, 0, 0))
+	var out := MapIndex.raise_high_ground(biome, cells, PackedInt32Array([30]), 45, 62, 80)
+	assert_eq(out.get_pixel(0, 0).r8, 6, "height 30 is below the hill line")
+
 ## bake_relief lays each cell's height over its pixels and smooths it, so
 ## the shader can read a slope without the cell edges showing. Heights are
 ## 0..100 and the image is L8, so a height of 100 is 255. At scale 1 and

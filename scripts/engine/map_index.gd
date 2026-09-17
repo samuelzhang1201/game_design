@@ -256,7 +256,7 @@ static func box_sum(src: PackedFloat32Array, w: int, h: int, r: int) -> PackedFl
 ## world_cell_index.png (id_at; white = water) and `heights` is indexed by
 ## cell id. Water is left as the biome index had it. Pure.
 static func raise_high_ground(biome: Image, cells: Image, heights: PackedInt32Array,
-		hill: int, mountain: int, peak: int) -> Image:
+		hill: int, mountain: int, peak: int, detailed: Image = null) -> Image:
 	var w := biome.get_width()
 	var h := biome.get_height()
 	var out := biome.duplicate() as Image
@@ -269,7 +269,14 @@ static func raise_high_ground(biome: Image, cells: Image, heights: PackedInt32Ar
 			var cell := id_at(cells, px)
 			if cell < 0 or cell >= heights.size():
 				continue
+			# The bands follow the DETAILED field when there is one (owner
+			# 2026-09-17), so rock and snow sit on a synthesized ridge
+			# rather than on the flat value of the cell it crosses.
 			var height := heights[cell]
+			if detailed != null:
+				var dx := mini(x * detailed.get_width() / w, detailed.get_width() - 1)
+				var dy := mini(y * detailed.get_height() / h, detailed.get_height() - 1)
+				height = int(round(detailed.get_pixel(dx, dy).r8 * 100.0 / 255.0))
 			var id := 0
 			if height >= peak:
 				id = 15
