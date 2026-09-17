@@ -240,17 +240,20 @@ func test_bake_relief_adds_detail_weighted_by_height() -> void:
 	assert_eq(img.get_pixel(0, 0).r8, 0, "height 0 gets no detail at all")
 	assert_eq(img.get_pixel(1, 0).r8, 153, "height 50 + 10 of detail = 60 -> 153 greys")
 
-## Suppression is how rivers and the coast keep invented ridges out of
-## their valleys: 0 holds the detail down completely, 1 lets it through.
+## Suppression must hold the detail down even where the UNsuppressed value
+## would saturate the byte — the case a clamp would otherwise hide. At height
+## 99 the plain byte is int(99 * 255 / 100 + 0.5) = 252, while 99 plus 19.8 of
+## detail exceeds 100 and clamps to 255, so the two pixels are distinguishable:
+## an implementation that ignored suppression would read 255 on both.
 func test_bake_relief_suppression_holds_detail_down() -> void:
 	var cells := Image.create_empty(2, 1, false, Image.FORMAT_RGB8)
 	cells.set_pixel(0, 0, Color8(0, 0, 0))
 	cells.set_pixel(1, 0, Color8(1, 0, 0))
-	var heights := PackedInt32Array([100, 100])
+	var heights := PackedInt32Array([99, 99])
 	var img := MapIndex.bake_relief(cells, heights, 1, 0,
 		PackedFloat32Array([1.0, 1.0]), PackedFloat32Array([0.0, 1.0]), 20.0, 0.0)
-	assert_eq(img.get_pixel(0, 0).r8, 255, "suppressed: the plain height, clamped")
-	assert_eq(img.get_pixel(1, 0).r8, 255, "unsuppressed would also clamp here")
+	assert_eq(img.get_pixel(0, 0).r8, 252, "suppressed: the plain height of 99")
+	assert_eq(img.get_pixel(1, 0).r8, 255, "unsuppressed: 99 + 19.8 of detail, clamped")
 
 func test_bake_relief_suppression_is_visible_below_the_clamp() -> void:
 	var cells := Image.create_empty(2, 1, false, Image.FORMAT_RGB8)

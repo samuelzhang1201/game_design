@@ -288,6 +288,12 @@ static func raise_high_ground(biome: Image, cells: Image, heights: PackedInt32Ar
 ## its edge. The shader takes a SLOPE from this and lights it, which is the
 ## only way an aerial photograph gets relief (it has none of its own).
 ## Water counts as height 0, and the land mesh clips the layer anyway. Pure.
+## With `gain` above 0 the field also carries synthesized landforms: `detail`
+## (0..1, row-major, at the OUTPUT resolution) scaled by `gain` in height
+## units, weighted by how far the smoothed ground already stands above
+## `floor_height`, and multiplied by `suppression` (0 holds it down, 1 lets it
+## through) so rivers and the coast keep their valleys. All four default to
+## off, so a four-argument call behaves exactly as it did before.
 static func bake_relief(cells: Image, heights: PackedInt32Array, scale: int, radius: int,
 		detail: PackedFloat32Array = PackedFloat32Array(),
 		suppression: PackedFloat32Array = PackedFloat32Array(),
