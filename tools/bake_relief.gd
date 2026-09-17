@@ -52,13 +52,39 @@ func _init() -> void:
 
 	# The SLOPE needs a sharp field: the tile weights want a wide blur, the
 	# relief wants the landforms. relief_scale / relief_blur are its own.
-	var r_scale := maxi(int(bal.get("map_relief_scale", 2.0)), 1)
+	var r_scale := maxi(int(bal.get("map_relief_scale", 1.0)), 1)
 	var r_radius := maxi(int(bal.get("map_relief_blur_px", 0.0)) / r_scale, 0)
-	var relief := MapIndex.bake_relief(cells_img, heights, r_scale, r_radius)
+	var lw := ceili(float(cells_img.get_width()) / float(r_scale))
+	var lh := ceili(float(cells_img.get_height()) / float(r_scale))
+
+	# Rivers and the coast hold the invented ridges down: stamp both into one
+	# mask, then reuse the chamfer transform to measure distance from it.
+	var river_px: float = bal.get("map_relief_detail_river_px", 0.0)
+	var coast_px: float = bal.get("map_relief_detail_coast_px", 0.0)
+	var courses := _courses(map, r_scale, river_px, coast_px)
+	var mask := MapIndex.stamp_polylines(lw, lh, courses["lines"], courses["radii"])
+	var dist := MapIndex.distance_to_land(mask, lw, lh)
+	var reach := maxf(maxf(river_px, coast_px) / float(r_scale), 1.0)
+	var suppression := PackedFloat32Array()
+	suppression.resize(lw * lh)
+	for i in lw * lh:
+		suppression[i] = smoothstep(0.0, reach, dist[i])
+
+	var detail := MapIndex.detail_field(lw, lh,
+		int(bal.get("map_relief_detail_seed", 0.0)),
+		bal.get("map_relief_detail_freq_px", 180.0) / float(r_scale),
+		int(bal.get("map_relief_detail_octaves", 4.0)),
+		bal.get("map_relief_detail_warp_px", 0.0) / float(r_scale))
+
+	var relief := MapIndex.bake_relief(cells_img, heights, r_scale, r_radius,
+		detail, suppression,
+		bal.get("map_relief_detail_gain", 0.0),
+		bal.get("map_relief_detail_floor", 0.0))
 	var relief_path := ProjectSettings.globalize_path(dir + "/world_relief.png")
 	print("bake_relief: %s -> %s (%s)" % [map, relief_path, "ok" if relief.save_png(relief_path) == OK else "FAILED"])
 
-	var raised := MapIndex.raise_high_ground(biome_img, cells_img, heights, hill, mountain, peak)
+	var raised := MapIndex.raise_high_ground(biome_img, cells_img, heights,
+		hill, mountain, peak, relief)
 	# The weights get their own scale too (owner 2026-09-17: a blocky edge at
 	# the closest zoom). At 1/4 one weight pixel covers ~29 screen px there,
 	# so the blend between two biomes shows as a straight step.
@@ -96,6 +122,46 @@ func _heights(map: String) -> PackedInt32Array:
 		if id >= out.size():
 			out.resize(id + 1)
 		out[id] = int(row.get("height", 0))
+	return out
+
+
+## The pack's river courses and land shores in native px, with the stamp
+## radius each should wear. A river's radius grows with its discharge so a
+## great river holds a wider valley clear than a brook does.
+func _courses(map: String, scale: int, river_px: float, coast_px: float) -> Dictionary:
+	var lines: Array = []
+	var radii := PackedFloat32Array()
+	var rivers := DataRepository.parse_csv("res://data/maps/%s/geography/rivers.csv" % map,
+		["river_code", "label", "type", "length", "discharge", "kingdom_codes", "points"])
+	var most := 1.0
+	for row: Dictionary in rivers:
+		most = maxf(most, float(row.get("discharge", 0)))
+	for row: Dictionary in rivers:
+		var pts := MapGeometry.parse_points(String(row.get("points", "")))
+		if pts.size() < 2:
+			continue
+		lines.append(_scaled(pts, scale))
+		var share := sqrt(float(row.get("discharge", 0)) / most)
+		radii.append(maxf(river_px * share, 1.0) / float(scale))
+	var coasts := DataRepository.parse_csv("res://data/maps/%s/geography/coasts.csv" % map,
+		["kind", "feature_id", "loop", "points"])
+	for row: Dictionary in coasts:
+		if String(row.get("kind", "")) != "land":
+			continue
+		var pts := MapGeometry.parse_points(String(row.get("points", "")))
+		if pts.size() < 2:
+			continue
+		lines.append(_scaled(pts, scale))
+		radii.append(maxf(coast_px, 1.0) / float(scale))
+	return {"lines": lines, "radii": radii}
+
+func _scaled(pts: PackedVector2Array, scale: int) -> PackedVector2Array:
+	if scale <= 1:
+		return pts
+	var out := PackedVector2Array()
+	out.resize(pts.size())
+	for i in pts.size():
+		out[i] = pts[i] / float(scale)
 	return out
 
 
