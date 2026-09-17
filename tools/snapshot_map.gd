@@ -12,8 +12,13 @@ extends Node
 
 ## The game's design viewport; the PNG is upscaled 2x (nearest) so it shows
 ## what a 1280x720 window shows, pins and labels at their real size.
+## The design viewport; --size N renders N x N*9/16 instead, for a high
+## resolution sheet (the view lays out in design units, so a larger render
+## shows the same framing with more pixels, not more map).
 const WIDTH := 1280
 const HEIGHT := 720
+var _width := WIDTH
+var _height := HEIGHT
 const UPSCALE := 1
 
 var _out := "user://map_snapshot.png"
@@ -57,6 +62,10 @@ func _ready() -> void:
 			_annex = int(args[i + 1])
 		elif args[i] == "--clouds":
 			_clouds = args[i + 1] == "1"
+		elif args[i] == "--size":
+			_width = maxi(int(args[i + 1]), 320)
+			@warning_ignore("integer_division")
+			_height = _width * 9 / 16
 		elif args[i] == "--biomes":
 			_biomes = args[i + 1] == "1"
 		i += 1
@@ -64,15 +73,15 @@ func _ready() -> void:
 	if _annex > 0:
 		_buy_across_the_border(_annex == 1)
 	_viewport = SubViewport.new()
-	_viewport.size = Vector2i(WIDTH, HEIGHT)
+	_viewport.size = Vector2i(_width, _height)
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(_viewport)
 	_view = WorldMapView.create()
-	_view.size = Vector2(WIDTH, HEIGHT)
+	_view.size = Vector2(_width, _height)
 	_viewport.add_child(_view)
 	_view._go_home()
 	if not _home:
-		_view._zoom_at(Vector2(WIDTH, HEIGHT) / 2.0, 0.0001)
+		_view._zoom_at(Vector2(_width, _height) / 2.0, 0.0001)
 	if _hover != "" and Game.data.kingdoms.has(_hover):
 		_view.hover_state(int(Game.data.kingdoms[_hover]["state_id"]))
 	if _zoom_mul != 1.0:
@@ -80,11 +89,11 @@ func _ready() -> void:
 		var capital: Dictionary = Game.data.burgs[String(realm["capital_burg"])]
 		var at := Vector2(float(capital["x"]), float(capital["y"]))
 		_view._zoom_at(_view.map_to_screen(at), _zoom_mul)
-		_view._offset += Vector2(WIDTH, HEIGHT) / 2.0 - _view.map_to_screen(at)
+		_view._offset += Vector2(_width, _height) / 2.0 - _view.map_to_screen(at)
 		_view._clamp_offset()
 	if _annexed_at != Vector2.ZERO:
 		_view._zoom = 6.0
-		_view._offset = Vector2(WIDTH, HEIGHT) / 2.0 - _annexed_at * _view._zoom
+		_view._offset = Vector2(_width, _height) / 2.0 - _annexed_at * _view._zoom
 		_view._clamp_offset()
 	_view.show_heights = _heights
 	_view.show_economy = _economy
@@ -128,10 +137,10 @@ func _process(_delta: float) -> void:
 	_frames += 1
 	if _frames == 10:
 		var img := _viewport.get_texture().get_image()
-		img.resize(WIDTH * UPSCALE, HEIGHT * UPSCALE, Image.INTERPOLATE_NEAREST)
-		var abs := ProjectSettings.globalize_path(_out)
-		DirAccess.make_dir_recursive_absolute(abs.get_base_dir())
-		var err := img.save_png(abs)
+		img.resize(_width * UPSCALE, _height * UPSCALE, Image.INTERPOLATE_NEAREST)
+		var abs_path := ProjectSettings.globalize_path(_out)
+		DirAccess.make_dir_recursive_absolute(abs_path.get_base_dir())
+		var err := img.save_png(abs_path)
 		print("snapshot %s -> %s (mesh %s, zoom %.4f)" % [
 			"ok" if err == OK else "FAILED %d" % err, _out,
 			_view.terrain_mesh() != null, _view._zoom])
