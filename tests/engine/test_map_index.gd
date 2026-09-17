@@ -250,12 +250,30 @@ func test_detail_field_changes_with_the_seed() -> void:
 	var b := MapIndex.detail_field(8, 8, 9999, 16.0, 3, 0.0)
 	assert_ne(Array(a), Array(b), "a different seed is a different sheet")
 
+## The range assertion alone CANNOT FAIL — detail_field clamps to 0..1 on the
+## way out — so it is paired with two checks that the generator is actually
+## alive: the field must vary, and the clamp must not be doing the work. A
+## broken normalisation would saturate the sheet onto its bounds, which a bare
+## range check would happily pass.
 func test_detail_field_stays_in_unit_range() -> void:
-	var f := MapIndex.detail_field(16, 16, 7, 8.0, 4, 4.0)
+	var f := MapIndex.detail_field(32, 32, 7, 8.0, 4, 4.0)
+	assert_eq(f.size(), 1024, "the field is w * h")
 	var lo := 2.0
 	var hi := -1.0
+	var interior := 0
 	for v in f:
 		lo = minf(lo, v)
 		hi = maxf(hi, v)
+		if v > 0.0 and v < 1.0:
+			interior += 1
 	assert_gte(lo, 0.0, "never below 0")
 	assert_lte(hi, 1.0, "never above 1")
+	assert_gt(hi, lo, "the field varies — a dead generator would read flat")
+	assert_gt(interior, f.size() / 10, "a good share of the sheet lies strictly inside the bounds, so the clamp is not hiding a broken normalisation")
+
+## Domain warp has to perturb the sampling, not merely be switched on: the same
+## seed with and without warp must give different fields.
+func test_detail_field_domain_warp_changes_the_field() -> void:
+	var plain := MapIndex.detail_field(16, 16, 7, 8.0, 4, 0.0)
+	var warped := MapIndex.detail_field(16, 16, 7, 8.0, 4, 8.0)
+	assert_ne(Array(plain), Array(warped), "domain warp changes the sampling")
