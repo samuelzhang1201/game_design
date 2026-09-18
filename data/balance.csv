@@ -340,6 +340,19 @@ map3d_compass_backdrop_alpha,0.25,"3D MAP compass: peak opacity of the soft dark
 map3d_ring_lift_px,3.0,"3D MAP: a ring floats this many screen px over its ground so it never clips the relief"
 map3d_ring_keyline_alpha,0.95,"3D MAP: opacity of every ring's dark keyline (fix round 1, owner 2026-09-18: the pale village ring nearly vanished on bright grass; bracketed 0.65/0.8/0.95, picked by the crop sheet)"
 map3d_border_refresh_s,1.0,"3D MAP: how often the view checks whether ownership changed and its borders need rebuilding"
+map3d_cloud_max,24,"3D MAP clouds (owner 2026-09-18: more than the 2D map's 8): the most in the sky at once — the sky fills when play starts"
+map3d_cloud_height_m,3500.0,3D MAP clouds: the deck's height over the sea
+map3d_cloud_size_min_m,3000.0,3D MAP clouds: the smallest cloud across
+map3d_cloud_size_max_m,8000.0,3D MAP clouds: the largest
+map3d_cloud_speed_m_s,40.0,"3D MAP clouds: drift in metres per real second at 1x, times the clock speed"
+map3d_cloud_wind_deg,12.0,"3D MAP clouds: the wind, degrees from east toward south (the 2D map's map_cloud_wind_deg)"
+map3d_cloud_interval_s,1.5,3D MAP clouds: about this many real seconds between one cloud coming in and the next
+map3d_cloud_fade_s,1.2,3D MAP clouds: seconds to fade in when play starts and out when the clock stops
+map3d_cloud_alpha,0.6,3D MAP clouds: their opacity at the heart
+map3d_cloud_near_fade_m,6000.0,"3D MAP clouds: a cloud closer to the camera than this fades away, so the rig at 800 m looks under the deck, not into it"
+map3d_cloud_shadow_cut,0.35,"3D MAP clouds: the alpha above which a cloud casts a shadow on the land (within the sun's 60 km shadow reach)"
+map3d_cloud_seed,23,"3D MAP clouds: the seed of their own look-only generator (never the engine's stream)"
+map3d_cloud_emission_share,0.0,"3D MAP clouds: share of ALBEDO also written to EMISSION (Task 8's fix for a lit spatial shader reading dirty/dark under Filmic) — 0 unless the visual check needs it"
 map3d_river_min_px,1.5,"3D MAP rivers (owner 2026-09-18): a river is at least this many screen px wide, so it reads as a thread at the farthest zoom and as real water up close"
 map3d_river_ripple_m,60.0,3D MAP rivers: metres per tile of the ripple normals
 map3d_river_flow_m_s,0.8,3D MAP rivers: how fast the ripples run downstream

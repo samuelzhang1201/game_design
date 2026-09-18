@@ -157,6 +157,18 @@ func test_hiding_the_view_stops_its_rendering() -> void:
 	assert_false(v.visible)
 
 
+func test_clouds_come_with_play_and_go_with_pause() -> void:
+	var v := _view()
+	v.activate()
+	assert_true("Clouds" in v.layer_names())
+	Game.set_clock_speed(1)
+	v._process(0.1)
+	assert_eq(v.cloud_count(), int(Game.data.bal("map3d_cloud_max")))
+	Game.set_clock_speed(0)
+	v._process(Game.data.bal("map3d_cloud_fade_s") + 0.1)
+	assert_eq(v.cloud_count(), 0)
+
+
 func _drag(v: Map3DView, button: MouseButton, by: Vector2) -> void:
 	var down := InputEventMouseButton.new()
 	down.button_index = button
