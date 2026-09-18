@@ -51,3 +51,32 @@ func test_the_same_seed_is_the_same_sky() -> void:
 	a.step(0.1, true, 1, VIEW, P)
 	b.step(0.1, true, 1, VIEW, P)
 	assert_eq(a.clouds[3]["pos"], b.clouds[3]["pos"])
+
+
+## Fix round 1 (owner 2026-09-18): the shipped sky read as one fused
+## landmass of shadow at 24 km — the first fill scattered 24 clouds with no
+## regard for each other. A min_gap_m best-effort keeps them apart when the
+## sky has room (VIEW here is huge next to the gap, so every pair clears it).
+func test_the_first_fill_keeps_a_minimum_gap() -> void:
+	var p := P.duplicate()
+	p["min_gap_m"] = 5000.0
+	var f := Map3DCloudField.new(11)
+	f.step(0.1, true, 1, VIEW, p)
+	for i in f.clouds.size():
+		for j in range(i + 1, f.clouds.size()):
+			var d: float = (f.clouds[i]["pos"] as Vector2).distance_to(f.clouds[j]["pos"] as Vector2)
+			assert_gt(d, 4999.0, "cloud %d and %d are only %.0f m apart" % [i, j, d])
+
+
+## With no min_gap_m in `p` the old, ungapped placement is unchanged — a
+## test seam so a caller that never sets it (none did before this fix) sees
+## byte-identical behaviour, not just "close enough".
+func test_no_min_gap_key_behaves_exactly_as_before() -> void:
+	var a := Map3DCloudField.new(11)
+	var b := Map3DCloudField.new(11)
+	a.step(0.1, true, 1, VIEW, P)
+	var p2 := P.duplicate()
+	p2["min_gap_m"] = 0.0
+	b.step(0.1, true, 1, VIEW, p2)
+	for i in a.clouds.size():
+		assert_eq(a.clouds[i]["pos"], b.clouds[i]["pos"])

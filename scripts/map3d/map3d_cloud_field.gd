@@ -40,20 +40,49 @@ func step(delta: float, running: bool, clock_speed: int, view: Rect2, p: Diction
 	var cap := int(p["max"])
 	if first:
 		while clouds.size() < cap:
-			clouds.append(_cloud(view, p, Vector2.ZERO))
+			clouds.append(_cloud(view, p, Vector2.ZERO, _positions()))
 		return
 	_spawn_in -= delta
 	if _spawn_in <= 0.0 and clouds.size() < cap:
-		clouds.append(_cloud(view, p, wind))
+		clouds.append(_cloud(view, p, wind, _positions()))
 		_spawn_in = float(p["interval_s"]) * _rng.randf_range(0.5, 1.5)
 
 
-## A cloud over the view, or — with a wind — just off its upwind side.
-func _cloud(view: Rect2, p: Dictionary, wind: Vector2) -> Dictionary:
-	var pos := Vector2(_rng.randf_range(view.position.x, view.end.x),
-		_rng.randf_range(view.position.y, view.end.y))
-	var size := _rng.randf_range(float(p["size_min"]), float(p["size_max"]))
-	if wind != Vector2.ZERO:
-		pos -= wind * (view.size.length() * 0.5 + size)
-	return {"pos": pos, "size": size, "rot": _rng.randf_range(0.0, TAU),
+func _positions() -> Array:
+	var out: Array = []
+	for c: Dictionary in clouds:
+		out.append(c["pos"])
+	return out
+
+
+## A cloud over the view, or — with a wind — just off its upwind side. With
+## `min_gap_m` in `p` and room in the sky (fix round 1, owner 2026-09-18: the
+## shipped sky, gap-blind, read as one fused landmass of shadow at 24 km), it
+## is a BEST EFFORT at a few candidates apart from every `existing` cloud,
+## keeping the furthest found even when none clears the gap outright. With
+## no `min_gap_m` (or an empty sky) this draws exactly ONE candidate, in the
+## SAME rng order as before the fix (pos.x, pos.y, size, then rot) — a
+## caller that never sets it sees byte-identical positions.
+func _cloud(view: Rect2, p: Dictionary, wind: Vector2, existing: Array) -> Dictionary:
+	var min_gap := float(p.get("min_gap_m", 0.0))
+	var attempts := 6 if min_gap > 0.0 and not existing.is_empty() else 1
+	var best_pos := Vector2.ZERO
+	var best_size := 0.0
+	var best_d := -1.0
+	for attempt in attempts:
+		var pos := Vector2(_rng.randf_range(view.position.x, view.end.x),
+			_rng.randf_range(view.position.y, view.end.y))
+		var size := _rng.randf_range(float(p["size_min"]), float(p["size_max"]))
+		if wind != Vector2.ZERO:
+			pos -= wind * (view.size.length() * 0.5 + size)
+		var d := INF
+		for e: Vector2 in existing:
+			d = minf(d, pos.distance_to(e))
+		if d > best_d:
+			best_pos = pos
+			best_size = size
+			best_d = d
+		if d >= min_gap:
+			break
+	return {"pos": best_pos, "size": best_size, "rot": _rng.randf_range(0.0, TAU),
 		"life": 1.0 if wind == Vector2.ZERO else 0.0}

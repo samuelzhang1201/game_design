@@ -353,6 +353,11 @@ map3d_cloud_near_fade_m,6000.0,"3D MAP clouds: a cloud closer to the camera than
 map3d_cloud_shadow_cut,0.35,"3D MAP clouds: the alpha above which a cloud casts a shadow on the land (within the sun's 60 km shadow reach)"
 map3d_cloud_seed,23,"3D MAP clouds: the seed of their own look-only generator (never the engine's stream)"
 map3d_cloud_emission_share,0.0,"3D MAP clouds: share of ALBEDO also written to EMISSION (Task 8's fix for a lit spatial shader reading dirty/dark under Filmic) — 0 unless the visual check needs it"
+map3d_cloud_near_fade_start_ratio,0.3,"3D MAP clouds (fix round 1, owner 2026-09-18): where the near-camera fade starts, as a fraction of map3d_cloud_near_fade_m — was hardcoded in cloud_deck.gdshader"
+map3d_cloud_depth_ratio,0.45,"3D MAP clouds (fix round 1, owner 2026-09-18): a cloud's front-to-back size as a fraction of its width — was hardcoded (0.6) in map3d_view.gd; lowered with the size bracket so individual clouds read as separate puffs rather than fusing into a sheet at 24 km"
+map3d_cloud_min_gap_m,4000.0,"3D MAP clouds (fix round 1, owner 2026-09-18): a new cloud (first fill or spawned) is placed at least this far from every other cloud when the sky has room for it — stops the 24 clouds reading as one landmass of shadow at 24 km"
+map3d_sun_shadow_opacity,0.35,"3D MAP (fix round 1, owner 2026-09-18): the Sun's DirectionalLight3D shadow_opacity, applied at load — how dark ANY cast shadow reads (0 none, 1 pitch black); a cloud shadow (and the terrain's own) must read as a cool wash of blocked light, never a hole. Bracketed 0.25/0.35/0.5 at 3000 and 24000 m, picked by look"
+map3d_sun_shadow_blur,3.0,"3D MAP (fix round 1, owner 2026-09-18): the Sun's DirectionalLight3D shadow_blur, applied at load — softens every cast shadow's edge (cloud shadows and the terrain's own); the shipped cloud shadows read as knife-edged before this"
 map3d_river_min_px,1.5,"3D MAP rivers (owner 2026-09-18): a river is at least this many screen px wide, so it reads as a thread at the farthest zoom and as real water up close"
 map3d_river_ripple_m,60.0,3D MAP rivers: metres per tile of the ripple normals
 map3d_river_flow_m_s,0.8,3D MAP rivers: how fast the ripples run downstream

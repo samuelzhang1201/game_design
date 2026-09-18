@@ -18,6 +18,7 @@ render_mode blend_mix, depth_draw_never, cull_disabled, diffuse_lambert, specula
 uniform sampler2D shape : source_color, filter_linear_mipmap, repeat_disable;
 uniform float opacity = 0.6;
 uniform float near_fade_m = 6000.0;
+uniform float near_fade_start_ratio = 0.3;
 uniform float emission_share = 0.0;
 
 // VERTEX in fragment() is not a usable view-space position for a MultiMesh
@@ -37,5 +38,5 @@ void fragment() {
 	float dist = length(world_pos - CAMERA_POSITION_WORLD);
 	ALBEDO = vec3(0.97);
 	EMISSION = ALBEDO * emission_share;
-	ALPHA = a * opacity * smoothstep(near_fade_m * 0.3, near_fade_m, dist);
+	ALPHA = a * opacity * smoothstep(near_fade_m * near_fade_start_ratio, near_fade_m, dist);
 }

@@ -87,6 +87,13 @@ var _press_on_hud := false
 var _cloud_field: Map3DCloudField
 var _cloud_mm: MultiMesh
 var _cloud_params: Dictionary
+var _cloud_depth_ratio := 0.6
+var _ground_cache := Rect2()
+var _ground_cache_target := Vector2.ZERO
+var _ground_cache_distance := -1.0
+var _ground_cache_yaw := 0.0
+var _ground_cache_size := Vector2.ZERO
+var _ground_cache_valid := false
 
 
 static func scene_path_for(map_id: String) -> String:
@@ -231,6 +238,7 @@ func _load() -> void:
 	_place_markers()
 	_build_rivers()
 	_dress_sea()
+	_apply_sun_shadow_look()
 	_build_clouds()
 	_lines = Node3D.new()
 	_lines.name = "Lines"
@@ -447,6 +455,25 @@ func _dress_sea() -> void:
 	sea.material_override = _sea_mat
 
 
+## The Sun's shadow LOOK, applied at load (owner fix round 1, 2026-09-18):
+## a code-review + independent-critic pass on Task 9 found the shipped cloud
+## shadows read as pitch-black holes with knife edges, burying the
+## settlement rings — `shadow_enabled` alone leaves Godot's default full
+## black, full crisp shadow. `shadow_opacity` blends the shadowed pixel with
+## its lit colour instead of replacing it (so a shadow reads as a COOL WASH
+## of blocked light, never a hole) and `shadow_blur` softens every cast
+## shadow's edge — both apply to the terrain's own self-shadowing too
+## (accepted: the mountains read softer with it, see the fix report). The
+## sea never receives shadows (`disable_receive_shadows` on its own
+## material, set at build time) — untouched here.
+func _apply_sun_shadow_look() -> void:
+	var sun := _world.get_node_or_null("Sun") as DirectionalLight3D
+	if sun == null:
+		return
+	sun.shadow_opacity = _repo.bal("map3d_sun_shadow_opacity")
+	sun.shadow_blur = _repo.bal("map3d_sun_shadow_blur")
+
+
 ## A deck of drifting cloud quads (owner 2026-09-18, Task 9) high over the
 ## land, plus a shadow-only twin sharing its MultiMesh so a cloud's shape and
 ## its shadow always match. `Clouds` (+ child `Shadows`) sit directly under
@@ -458,7 +485,9 @@ func _build_clouds() -> void:
 	_cloud_params = {"max": int(_repo.bal("map3d_cloud_max")),
 		"size_min": _repo.bal("map3d_cloud_size_min_m"), "size_max": _repo.bal("map3d_cloud_size_max_m"),
 		"speed_m_s": _repo.bal("map3d_cloud_speed_m_s"), "wind_deg": _repo.bal("map3d_cloud_wind_deg"),
-		"fade_s": _repo.bal("map3d_cloud_fade_s"), "interval_s": _repo.bal("map3d_cloud_interval_s")}
+		"fade_s": _repo.bal("map3d_cloud_fade_s"), "interval_s": _repo.bal("map3d_cloud_interval_s"),
+		"min_gap_m": _repo.bal("map3d_cloud_min_gap_m")}
+	_cloud_depth_ratio = _repo.bal("map3d_cloud_depth_ratio")
 	var quad := PlaneMesh.new()
 	quad.size = Vector2.ONE
 	_cloud_mm = MultiMesh.new()
@@ -500,6 +529,7 @@ func _cloud_material(shape: Texture2D) -> ShaderMaterial:
 	mat.set_shader_parameter("shape", shape)
 	mat.set_shader_parameter("opacity", _repo.bal("map3d_cloud_alpha"))
 	mat.set_shader_parameter("near_fade_m", _repo.bal("map3d_cloud_near_fade_m"))
+	mat.set_shader_parameter("near_fade_start_ratio", _repo.bal("map3d_cloud_near_fade_start_ratio"))
 	mat.set_shader_parameter("emission_share", _repo.bal("map3d_cloud_emission_share"))
 	return mat
 
@@ -516,13 +546,26 @@ func _cloud_shadow_material(shape: Texture2D) -> ShaderMaterial:
 
 
 ## The ground rect the camera sees (its four corners' ground hits), wide
-## enough for the sky when a corner looks past the horizon.
+## enough for the sky when a corner looks past the horizon — cached on the
+## camera pose (fix round 1, owner 2026-09-18: 4 raycasts every _process
+## frame regardless of whether the camera moved), invalidated only when
+## target, distance, yaw or the view's own size changes. Behaviour is
+## identical to recomputing every frame; only the cost changes.
 func _visible_ground() -> Rect2:
+	if _ground_cache_valid and _ground_cache_target == _target and _ground_cache_distance == _distance \
+			and _ground_cache_yaw == _yaw and _ground_cache_size == size:
+		return _ground_cache
 	var r := Rect2(_target, Vector2.ZERO)
 	for f: Vector2 in [Vector2.ZERO, Vector2(1, 0), Vector2(0, 1), Vector2.ONE]:
 		var hit: Variant = ground_at(size * f)
 		r = r.expand(Vector2((hit as Vector3).x, (hit as Vector3).z) if hit != null
 			else _target + Vector2(_distance, _distance) * (f * 2.0 - Vector2.ONE) * 2.0)
+	_ground_cache = r
+	_ground_cache_target = _target
+	_ground_cache_distance = _distance
+	_ground_cache_yaw = _yaw
+	_ground_cache_size = size
+	_ground_cache_valid = true
 	return r
 
 
@@ -539,7 +582,7 @@ func _step_clouds(delta: float) -> void:
 	for i in n:
 		var c: Dictionary = _cloud_field.clouds[i]
 		var s := float(c["size"])
-		var basis := Basis(Vector3.UP, float(c["rot"])).scaled(Vector3(s, 1.0, s * 0.6))
+		var basis := Basis(Vector3.UP, float(c["rot"])).scaled(Vector3(s, 1.0, s * _cloud_depth_ratio))
 		var p := c["pos"] as Vector2
 		_cloud_mm.set_instance_transform(i, Transform3D(basis, Vector3(p.x, h, p.y)))
 		_cloud_mm.set_instance_color(i, Color(1, 1, 1, float(c["life"]) * _cloud_field.fade))
