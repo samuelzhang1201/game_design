@@ -185,3 +185,77 @@ func test_hovering_a_manor_names_it_and_its_holder() -> void:
 	assert_eq(v.hovered_kingdom(), Game.data.resolve_realm("player_realm"))
 	assert_eq(Map3DView.kingdom_of_pick(Game.data, Game.state, {"kind": "manor", "cell": cell}),
 		Game.data.resolve_realm("player_realm"))
+
+
+# --- ECONOMY's output badges (owner 2026-09-19) --------------------------------
+
+func _busiest_manor() -> int:
+	var all: Dictionary = MapEconomy.manors(Game.data)
+	var best := -1
+	for id: int in all:
+		if best < 0 or float(all[id]["units"]) > float(all[best]["units"]):
+			best = id
+	return best
+
+
+func _look_at_manor(v: Map3DView, cell: int, at_m: float) -> void:
+	v.look_at_pack(MapTerrain.cell_center(Game.data, Game.data.cells[cell]), at_m)
+
+
+func test_economy_badges_stand_over_the_working_manors() -> void:
+	var v := _view()
+	var cell := _busiest_manor()
+	_look_at_manor(v, cell, 12000.0)
+	assert_eq(v.manor_badges().size(), 0, "no badges without the ECONOMY theme")
+	v.set_manor_theme("economy")
+	var badges := v.manor_badges()
+	assert_gt(badges.size(), 0)
+	var mine: Dictionary = {}
+	for b: Dictionary in badges:
+		if int(b["cell"]) == cell:
+			mine = b
+	assert_false(mine.is_empty(), "the busiest manor in view wears its badge")
+	assert_almost_eq((mine["center"] as Vector2).x, v.size.x * 0.5, 2.0, "over its cell's centre")
+	assert_eq(String(mine["good"]), String(MapEconomy.manors(Game.data)[cell]["good"]))
+
+
+func test_badges_never_overlap() -> void:
+	var v := _view()
+	v.set_manor_theme("economy")
+	_look_at_manor(v, _busiest_manor(), 60000.0)
+	var rects: Array = []
+	for b: Dictionary in v.manor_badges():
+		for r: Rect2 in rects:
+			assert_false(r.intersects(b["rect"]), "badges overlap")
+		rects.append(b["rect"])
+
+
+func test_the_manors_theme_wears_no_badges() -> void:
+	var v := _view()
+	v.set_manor_theme("manors")
+	_look_at_manor(v, _busiest_manor(), 12000.0)
+	assert_eq(v.manor_badges().size(), 0)
+
+
+func test_a_click_on_a_badge_opens_its_town() -> void:
+	var v := _view()
+	v.set_manor_theme("economy")
+	var cell := _busiest_manor()
+	_look_at_manor(v, cell, 12000.0)
+	var mine: Dictionary = {}
+	for b: Dictionary in v.manor_badges():
+		if int(b["cell"]) == cell:
+			mine = b
+	watch_signals(v)
+	_click(v, (mine["badge"] as Rect2).get_center() + Vector2(3, 0))
+	var code := String(mine["burg"])
+	assert_signal_emitted_with_parameters(v, "object_selected",
+		[{"title": String(Game.data.burgs[code]["label"]), "obj": {"kind": "burg", "code": code}}])
+
+
+func test_the_hud_draws_the_badges() -> void:
+	var v := _view()
+	v.set_manor_theme("economy")
+	_look_at_manor(v, _busiest_manor(), 12000.0)
+	await wait_process_frames(2)
+	assert_gt(v.drawn_badge_count(), 0)

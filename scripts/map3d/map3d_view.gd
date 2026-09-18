@@ -155,6 +155,8 @@ var _hover_lines: Dictionary = {}
 var _tooltip: Label
 ## The kingdoms the HUD lettered on its last draw (a test seam).
 var _drawn_labels: PackedStringArray = []
+## How many ECONOMY badges the HUD drew last (a test seam).
+var _drawn_badges := 0
 var _north_t := -1.0
 var _north_from := 0.0
 var _press_on_hud := false
@@ -1276,6 +1278,61 @@ func draw_labels(ci: CanvasItem) -> void:
 			_drawn_labels.append(String(e["code"]))
 
 
+## ECONOMY's output badges (owner 2026-09-19, the 2D map's — ManorBadges):
+## the working manors (MapEconomy.manors) before the camera whose settlement
+## passes the 2D map's town LOD rule at the scale it is SEEN at (screen px
+## per pack px at its own distance), in design px, biggest producer first;
+## a badge that would overlap a bigger one is left off. [] off the theme.
+func manor_badges() -> Array:
+	if _theme != "economy" or _camera == null:
+		return []
+	var s := _render_scale()
+	var m_per_pack := float(_meta.get("m_per_px", 50.0))
+	var fov := _repo.bal("map3d_fov_deg")
+	var h := maxf(size.y, 1.0)
+	var eye := _camera.global_position
+	var frame := Rect2(Vector2.ZERO, size).grow(_repo.bal("map_manor_badge_px") * 2.0)
+	var all := MapEconomy.manors(_repo)
+	var out: Array = []
+	for id: int in all:
+		var m: Dictionary = all[id]
+		var xz := Map3DGeometry.pack_to_world(_meta, MapTerrain.cell_center(_repo, _repo.cells[id]))
+		var ground := Vector3(xz.x, _height_at(xz), xz.y)
+		if _camera.is_position_behind(ground):
+			continue
+		var center := _camera.unproject_position(ground) / s
+		if not frame.has_point(center):
+			continue
+		var seen := m_per_pack / Map3DGeometry.metres_per_pixel(eye.distance_to(ground), fov, h)
+		var min_pop := MapObjects.min_burg_pop_for_scale(_repo, seen)
+		var burg := ""
+		for code: String in m["burgs"]:
+			if MapObjects.burg_visible(_repo.burgs[code], min_pop):
+				burg = code
+				break
+		if burg == "":
+			continue
+		out.append({"cell": id, "burg": burg, "good": String(m["good"]),
+			"units": float(m["units"]), "center": center})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if a["units"] == b["units"]:
+			return int(a["cell"]) < int(b["cell"])
+		return a["units"] > b["units"])
+	var target_scale := m_per_pack / _metres_per_pixel()
+	return ManorBadges.place(_repo, out, target_scale >= _repo.bal("map_manor_label_min_scale"))
+
+
+## Draw the badges on the HUD, over the kingdom names.
+func draw_badges(ci: CanvasItem) -> void:
+	var badges := manor_badges()
+	_drawn_badges = badges.size()
+	ManorBadges.draw(ci, _repo, badges)
+
+
+func drawn_badge_count() -> int:
+	return _drawn_badges
+
+
 ## Test seam: the kingdoms lettered on the HUD's last draw.
 func drawn_labels() -> PackedStringArray:
 	return _drawn_labels
@@ -1352,6 +1409,11 @@ func pick_at(pos: Vector2) -> Dictionary:
 	var best_d := INF
 	var fade_start := _repo.bal("map3d_ring_fade_start")
 	var eye := _camera.global_position
+	# An ECONOMY badge names the settlement whose output it shows (as on the
+	# 2D map), over whatever lies under it.
+	for b: Dictionary in manor_badges():
+		if (b["rect"] as Rect2).has_point(pos):
+			return {"kind": "burg", "code": String(b["burg"])}
 	for code: String in _sorted_burgs():
 		var burg: Dictionary = _repo.burgs[code]
 		var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
