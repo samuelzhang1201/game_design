@@ -58,6 +58,9 @@ var army_terrain: Dictionary = {}
 var army_matchups: Dictionary = {}
 ## data/army_training_grades.csv rows {above, label}, first match wins.
 var army_training_grades: Array[Dictionary] = []
+## data/army_speed.csv: arm -> km a day (int), the arm's own march
+## (owner 2026-09-19, ArmySystem.base_pace_km).
+var army_speed: Dictionary = {}
 ## data/settlement_growth.csv rows: how a settlement's drawing grows with its
 ## manor — a tier promoted past min_people, or once a listed building stands
 ## (MapObjects.settlement_look, owner 2026-09-15).
@@ -462,6 +465,9 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/army_training_grades.csv", ["above", "label"],
 			func(r): army_training_grades.append({"above": int(r["above"]), "label": String(r["label"])})):
+		return false
+	if not _load_if_present(dir + "/army_speed.csv", ["arm", "km_per_day"],
+			func(r): army_speed[String(r["arm"])] = int(r["km_per_day"])):
 		return false
 	if not _load_if_present(dir + "/settlement_growth.csv", ["from_tier", "to_tier", "min_people", "building"],
 			func(r): settlement_growth.append(r)):

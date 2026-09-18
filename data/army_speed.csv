@@ -1,0 +1,6 @@
+arm,km_per_day,notes
+infantry,20,"owner 2026-09-19: each arm's own march in km a day on a road-less day of good order — a regiment marches at its SLOWEST arm (ArmySystem.base_pace_km), then scaled by readiness (supplies, morale, training; balance.csv army_speed_*). First draft after medieval foot armies' 15-25 km"
+archers,22,"lighter kit than the spear line"
+cavalry,40,"a mounted host alone; with foot it waits for them"
+artillery,12,"the siege train: oxen and guns, the slowest thing on the road"
+fleet,100,"at sea, about 2.3 knots made good over a day and night"

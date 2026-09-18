@@ -211,6 +211,64 @@ static func strength_grade(repo: DataRepository, state: GameState, code: String)
 		return "Weak"
 	return "Average"
 
+# --- the march (owner 2026-09-19) ----------------------------------------------
+
+## The km a day a regiment's SLOWEST arm marches (data/army_speed.csv): horse
+## waits for foot, and everyone waits for the guns. 0 for an empty banner.
+static func base_pace_km(repo: DataRepository, reg: Dictionary) -> int:
+	var slowest := 0
+	for arm: String in repo.army_speed:
+		if int(float(reg.get(arm, 0))) <= 0:
+			continue
+		var km := int(repo.army_speed[arm])
+		if slowest == 0 or km < slowest:
+			slowest = km
+	return slowest
+
+
+## Supplies as a score, per mille: the months in hand over
+## army_speed_supply_full_months, capped at 1000. A banner that uses nothing
+## never runs short.
+static func supply_score(repo: DataRepository, supplies: int, use_per_month: int) -> int:
+	if use_per_month <= 0:
+		return 1000
+	var full := maxi(1, int(repo.bal("army_speed_supply_full_months")))
+	return clampi(maxi(supplies, 0) * 1000 / (use_per_month * full), 0, 1000)
+
+
+## Readiness per mille: the weighted mean (balance army_speed_w_*) of the arm
+## (always 1000), supplies (a supply_score), morale x 10 and training x 10.
+static func readiness_permille(repo: DataRepository, supply_permille: int, morale: int,
+		training: int) -> int:
+	var wa := int(repo.bal("army_speed_w_arm"))
+	var ws := int(repo.bal("army_speed_w_supply"))
+	var wm := int(repo.bal("army_speed_w_morale"))
+	var wt := int(repo.bal("army_speed_w_training"))
+	var total := wa + ws + wm + wt
+	if total <= 0:
+		return 1000
+	return (wa * 1000 + ws * clampi(supply_permille, 0, 1000)
+		+ wm * clampi(morale, 0, 100) * 10 + wt * clampi(training, 0, 100) * 10) / total
+
+
+## The march in TENTHS of a km a day: base_km x 10 x readiness / 1000.
+static func pace_tenths(repo: DataRepository, base_km: int, supply_permille: int, morale: int,
+		training: int) -> int:
+	return base_km * 10 * readiness_permille(repo, supply_permille, morale, training) / 1000
+
+
+## A regiment's march in km a day, from its arms and its state; 0 for a
+## regiment that is not the player's (no state) or has no one under arms.
+static func speed_km_per_day(repo: DataRepository, state: GameState, code: String) -> float:
+	var reg := regiment(repo, code)
+	var st := state_of(repo, state, code)
+	if reg.is_empty() or st.is_empty():
+		return 0.0
+	return pace_tenths(repo, base_pace_km(repo, reg),
+		supply_score(repo, int(st["supplies"]), supply_use(repo, reg)),
+		int(st["morale"]), int(st["training"])) / 10.0
+
+
 ## PLACEHOLDER (owner 2026-09-17: the battle formula is not decided). The
 ## attacker's power in the attack stance over both sides' powers, each on its
 ## own ground. Called by nothing but its test; replace it whole when the

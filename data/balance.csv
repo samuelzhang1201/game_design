@@ -274,6 +274,11 @@ army_morale_base_permille,500,regiments: the morale factor of power at morale 0
 army_morale_step_permille,5,regiments: the morale factor gained per point of morale (100 -> 1000)
 army_strong_ratio_permille,1250,regiments: power over the mean of the player's regiments of the same kind at/above which a regiment reads Strong
 army_weak_ratio_permille,750,regiments: power over that mean at/below which a regiment reads Weak
+army_speed_w_arm,40,"regiments' march (owner 2026-09-19): the weight of the arm itself in a regiment's readiness — the base pace is its slowest arm's (data/army_speed.csv); this share of it is always kept, however hungry or beaten the regiment. readiness = (w_arm*1000 + w_supply*S + w_morale*M + w_training*T) / sum of weights, per mille"
+army_speed_w_supply,25,"regiments' march: the weight of supplies (S = months in hand over army_speed_supply_full_months, per mille, capped at 1000)"
+army_speed_w_morale,20,"regiments' march: the weight of morale (M = morale x 10)"
+army_speed_w_training,15,"regiments' march: the weight of training (T = training x 10)"
+army_speed_supply_full_months,3,"regiments' march: months of supplies in hand at/above which supplies no longer slow a regiment"
 map_biome_hill_height,45,"BIOMES LAYER (owner 2026-09-17): cell height at/above which a land pixel wears the HILL tile (biome id 13) — about the top 30% of beria's land. MapIndex.raise_high_ground; re-bake with tools/bake_relief.gd after changing"
 map_biome_mountain_height,62,"BIOMES LAYER: cell height at/above which a pixel wears the MOUNTAIN tile (id 14) — about the top 10% of the land"
 map_biome_peak_height,72,"BIOMES LAYER (owner 2026-09-17): cell height at/above which a pixel wears the PEAK tile (id 15). 80 left snow as scattered white specks; at 72 the peaks join into a range — 14322 px of snow became 34396. The MOUNTAIN line stays 62: dropping it to 56 with the snow line spread bare rock around the snow and read dirty"
