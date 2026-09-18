@@ -33,4 +33,5 @@ army_glyph,#FFFFFF,military layer: the glyph itself
 army_count_ink,#FFFFFF,military layer: the headcount in the realm-coloured box
 manor_mark,#C4CBD2,"manors view: the ink of the farmsteads and chief-good marks every manor carries (data/manor_decor.csv) — one dark ink, since the manors wear their houses' colours"
 map3d_selection,#E8C35A,"3D MAP: the clicked province's solid outline — the gold of the UI trim, so it reads as a selection, not a border"
-map3d_seam,#F3EEDF,"3D MAP: the province seams — pale, since the 2D slate province_line vanishes on the sunlit green of the 3D ground (owner 2026-09-18)"
+map3d_border,#141414,"3D MAP: the kingdom border — a thin solid black line (owner 2026-09-18, replacing the 2D chequered ribbon)"
+map3d_seam,#141414,"3D MAP: the province seams — dark dashes in the kingdom border's ink, told from it by dash and opacity (owner 2026-09-18, was pale #F3EEDF)"

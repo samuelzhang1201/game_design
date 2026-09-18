@@ -4,7 +4,9 @@
 // off the ground at that distance, so a line keeps its weight at every zoom
 // and stays above the relief between its samples; the fragment stage cuts
 // dashes of `dash_px` / `gap_px`, alternating colour_a and colour_b (a clear
-// colour_b draws plain dashes, an opaque one a chequered ribbon).
+// colour_b draws plain dashes, an opaque one a chequered ribbon). `edge_soft`
+// fades the ribbon out toward both sides over that share of its half-width
+// (0 a hard edge; roads use it for their soft shoulder).
 shader_type spatial;
 render_mode unshaded, cull_disabled, blend_mix, depth_draw_never, shadows_disabled, fog_disabled;
 
@@ -14,6 +16,7 @@ uniform float width_px = 3.0;
 uniform float lift_px = 2.0;
 uniform float dash_px = 8.0;
 uniform float gap_px = 8.0;
+uniform float edge_soft = 0.0;
 // 2 * tan(fov / 2) / viewport height: metres per screen px per metre away.
 uniform float px_per_dist = 0.001;
 
@@ -35,4 +38,7 @@ void fragment() {
 	}
 	ALBEDO = c.rgb;
 	ALPHA = c.a;
+	if (edge_soft > 0.0) {
+		ALPHA *= smoothstep(0.0, edge_soft, 1.0 - abs(UV.y * 2.0 - 1.0));
+	}
 }

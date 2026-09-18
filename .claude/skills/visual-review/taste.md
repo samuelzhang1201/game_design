@@ -30,6 +30,12 @@ add it here as a principle with its why — not as a changelog entry.
   (value-noise field); scattered, hash-placed marks read as "unreasonable".
 - **One size where the owner said one size.** For example, estates are drawn at one height: "no big and small".
 
+- **On the 3D map, lines rank by pattern, not by colour** (2026-09-18): the
+  kingdom border is a thin SOLID black line, province seams DARK DASHES at
+  half opacity, roads a soft darker-sand track. The 2D map's chequered
+  ribbon was rejected there, and pale seams had the same hue as the sand
+  roads, so the two could not be told apart.
+
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols
   and estates carry VALUE only and are multiply-tinted; photographs, icons,

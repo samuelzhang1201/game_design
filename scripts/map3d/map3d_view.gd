@@ -71,20 +71,22 @@ const SELECTED_RING_ALWAYS_M := 1000000.0
 ## THE RENDER-PRIORITY TABLE (final review, owner 2026-09-18) — the one
 ## place the see-through layers' draw order is set. Higher draws over lower.
 ## The sea under everything; the river water under every line, so a border
-## or seam always reads over the water it crosses; seams, then kingdom
+## or seam always reads over the water it crosses; the roads (a bridge over
+## the water, under every border); seams, then kingdom
 ## borders, then the clicked province's gold outline; then the CLOUDS — over
 ## the lines, but UNDER the settlement rings, so a pin always stands above
 ## the weather; then the rings by tier (village lowest, capital highest —
 ## see _place_markers) and the gold selection ring over every tier.
 const PRIORITY_SEA := -1
 const PRIORITY_RIVERS := 0
-const PRIORITY_SEAMS := 1
-const PRIORITY_KINGDOMS := 2
-const PRIORITY_SELECTION := 3
-const PRIORITY_CLOUDS := 4
+const PRIORITY_ROADS := 1
+const PRIORITY_SEAMS := 2
+const PRIORITY_KINGDOMS := 3
+const PRIORITY_SELECTION := 4
+const PRIORITY_CLOUDS := 5
 ## The lowest ring tier; the tiers and then the selection ring count up from
 ## here, one step each (data/map3d_settlements.csv's groups).
-const PRIORITY_RING_BASE := 5
+const PRIORITY_RING_BASE := 6
 ## A press and release further apart than this is a drag, not a click
 ## (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := 10.0
@@ -281,6 +283,7 @@ func _load() -> void:
 	_lines = Node3D.new()
 	_lines.name = "Lines"
 	_viewport.add_child(_lines)
+	_build_roads()
 	_target = Map3DGeometry.clamp_target(_home(), _bounds)
 	_distance = _repo.bal("map3d_zoom_start_m")
 	_yaw = 0.0
@@ -706,9 +709,9 @@ func refresh_borders() -> void:
 	var rings: Array = []
 	for code: String in _repo.kingdoms:
 		rings.append_array(Map3DBorders.kingdom_lines(_repo, st, _meta, code, step))
-	_set_lines("Kingdoms", rings, MapPalette.named(_repo, "state_border"),
-		MapPalette.named(_repo, "state_border_light"), "map3d_border_width_px",
-		"map3d_border_dash_px", "map3d_border_gap_px", PRIORITY_KINGDOMS)
+	# A thin solid black line (owner 2026-09-18), not the 2D chequered ribbon.
+	var ink := MapPalette.named(_repo, "map3d_border")
+	_set_lines("Kingdoms", rings, ink, ink, "map3d_border_width_px", "", "", PRIORITY_KINGDOMS)
 	var seam := MapPalette.named(_repo, "map3d_seam")
 	seam.a = _repo.bal("map3d_seam_alpha")
 	_set_lines("Seams", Map3DBorders.seam_lines(_repo, st, _meta, step), seam,
@@ -716,10 +719,27 @@ func refresh_borders() -> void:
 	_draw_selection()
 
 
+## The roads and trails (owner 2026-09-18): the pack's land routes, smoothed
+## as the 2D map smooths them, draped on the relief as solid ribbons in a
+## worn-sand colour (terrain_palette map3d_road / map3d_trail) with a soft
+## shoulder. Routes never move, so
+## they are built once; sea lanes are not roads and are left out.
+func _build_roads() -> void:
+	var step := _repo.bal("map3d_line_step_m")
+	for group: String in ["roads", "trails"]:
+		var key := "road" if group == "roads" else "trail"
+		var colour := MapTerrain.palette_color(_repo, "map3d_" + key, MapTerrain.FALLBACK)
+		colour.a = _repo.bal("map3d_%s_alpha" % key)
+		_set_lines(group.capitalize(), Map3DBorders.route_lines(_repo, _meta, group, step),
+			colour, colour, "map3d_%s_width_px" % key, "", "", PRIORITY_ROADS,
+			_repo.bal("map3d_road_edge_soft"))
+
+
 ## One MeshInstance3D of ribbons under Lines/<name>, replacing any before.
-## `priority` is the line's row of the render-priority table (PRIORITY_*).
+## `priority` is the line's row of the render-priority table (PRIORITY_*);
+## `edge_soft` fades the ribbon toward its sides (border_line.gdshader).
 func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: String,
-		dash_key: String, gap_key: String, priority: int) -> void:
+		dash_key: String, gap_key: String, priority: int, edge_soft := 0.0) -> void:
 	var old := _lines.get_node_or_null(line_name)
 	if old != null:
 		_lines.remove_child(old)
@@ -734,6 +754,7 @@ func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: 
 	mat.render_priority = priority
 	mat.set_shader_parameter("colour_a", a)
 	mat.set_shader_parameter("colour_b", b)
+	mat.set_shader_parameter("edge_soft", edge_soft)
 	mat.set_meta("width_key", width_key)
 	mat.set_meta("dash_key", dash_key)
 	mat.set_meta("gap_key", gap_key)

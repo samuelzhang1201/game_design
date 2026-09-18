@@ -320,14 +320,17 @@ map3d_key_pan_screens_per_s,0.7,"3D MAP: WASD / arrow keys pan this many view-he
 map3d_near_m,20.0,"3D MAP: the camera's near clip plane"
 map3d_far_m,400000.0,"3D MAP: the camera's far clip plane — past the sea plane's edge"
 map3d_line_step_m,150.0,"3D MAP borders: borders and seams are resampled to a point every this many metres so they drape over the relief (a Terrain3D vertex is 20 m, a pack px 50 m)"
-map3d_border_width_px,3.0,"3D MAP borders: the kingdom border's width in screen px — the 2D map's chequered ribbon, ink and pale (political_palette state_border / state_border_light)"
-map3d_border_dash_px,10.0,3D MAP borders: length of each ink / pale cell of the kingdom border in screen px
-map3d_border_gap_px,10.0,3D MAP borders: length of the pale cell between them
+map3d_border_width_px,1.5,"3D MAP borders: the kingdom border's width in screen px — a thin SOLID black line (owner 2026-09-18: '删除掉现有的国境线，换成一条细黑实线'; was the 2D chequered ribbon at 3 px), political_palette map3d_border"
 map3d_line_lift_px,2.5,"3D MAP borders: every line is lifted this many screen px off the ground at its distance, so it clears the relief between its samples"
-map3d_seam_width_px,2.0,3D MAP borders: province seams width in screen px (political_palette map3d_seam)
-map3d_seam_dash_px,4.0,3D MAP borders: seam dash length in screen px
-map3d_seam_gap_px,6.0,3D MAP borders: seam gap length in screen px
-map3d_seam_alpha,0.75,3D MAP borders: seam opacity — they are an internal hint
+map3d_road_width_px,4.0,"3D MAP roads (owner 2026-09-18): a road's width in screen px — the pack's roads draped on the relief in terrain_palette road, solid with a soft shoulder"
+map3d_trail_width_px,2.5,3D MAP roads: a trail's width in screen px (terrain_palette trail)
+map3d_road_alpha,0.9,3D MAP roads: a road's opacity at its centre
+map3d_trail_alpha,0.75,3D MAP roads: a trail's opacity at its centre
+map3d_road_edge_soft,0.5,"3D MAP roads: share of the half-width over which a road fades out to its sides — a worn track, not a ruled line (taste: read by width and fade)"
+map3d_seam_width_px,1.4,3D MAP borders: province seams width in screen px (political_palette map3d_seam) — a dashed line (owner 2026-09-18)
+map3d_seam_dash_px,6.0,3D MAP borders: seam dash length in screen px
+map3d_seam_gap_px,5.0,3D MAP borders: seam gap length in screen px
+map3d_seam_alpha,0.5,"3D MAP borders: seam opacity — dark dashes under the solid black kingdom border (owner 2026-09-18; bracketed 0.4/0.5/0.6 by the critic sheet)"
 map3d_selection_width_px,4.0,"3D MAP: the clicked province's outline, solid, in political_palette map3d_selection"
 map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its ring — only while it is shown, see map3d_ring_fade_start) picks it; otherwise the province under the click"
 map3d_selected_ring_scale,1.5,"3D MAP: the clicked settlement's ring is this much larger (fix round 1, owner 2026-09-18: was 1.4x diameter AND 1.5x line — a fat smear over the tier ring rather than a second crisp ring; now diameter only, the line stays the base stroke width), in political_palette map3d_selection gold"
@@ -341,7 +344,7 @@ map3d_ring_lift_px,3.0,"3D MAP: a ring floats this many screen px over its groun
 map3d_ring_keyline_alpha,0.95,"3D MAP: opacity of every ring's dark keyline (fix round 1, owner 2026-09-18: the pale village ring nearly vanished on bright grass; bracketed 0.65/0.8/0.95, picked by the crop sheet)"
 map3d_ring_fade_start,0.8,"3D MAP (final review, owner 2026-09-18): a settlement ring starts fading at this share of its tier's max_view_m (data/map3d_settlements.csv) and is gone at max_view_m — read by settlement_ring.gdshader AND by Map3DView.pick_at, which picks no ring that has begun to fade, so a click never lands on a ring the player cannot see (was 0.8 hardcoded in the shader)"
 map3d_border_refresh_s,1.0,"3D MAP: how often the view checks whether ownership changed and its borders need rebuilding"
-map3d_cloud_max,24,"3D MAP clouds (owner 2026-09-18: more than the 2D map's 8): the most in the sky at once — the sky fills when play starts"
+map3d_cloud_max,10,"3D MAP clouds: the most in the sky at once — the sky fills when play starts (owner 2026-09-18: 24 was too many while time runs, cut to 10)"
 map3d_cloud_height_m,3500.0,3D MAP clouds: the deck's height over the sea
 map3d_cloud_size_min_m,3000.0,3D MAP clouds: the smallest cloud across
 map3d_cloud_size_max_m,8000.0,3D MAP clouds: the largest
