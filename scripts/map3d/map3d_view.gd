@@ -27,7 +27,8 @@ extends Control
 ## with sea around it — owner 2026-09-19, was 80 km); the wheel and a macOS trackpad pinch
 ## both zoom about the pointer, not the view's centre, and a two-finger
 ## trackpad drag pans the ground. Settlements draw as screen-constant hollow
-## rings (settlement_ring.gdshader, data/map3d_settlements.csv: ring_px,
+## solid black dots, the capital's with a ring round it (owner 2026-09-19;
+## settlement_ring.gdshader, data/map3d_settlements.csv: dot_px, ring_px,
 ## line_px, colour, max_view_m per tier), thinned by distance and picked in
 ## screen space (map3d_pick_px); a click gets a gold selection ring that
 ## never thins. Map3DHud draws the scale bar (ScaleBar, the 2D map's own
@@ -403,7 +404,7 @@ func _height_at(xz: Vector2) -> float:
 ## One MultiMesh of billboard rings per settlement group, each over the
 ## ground under its burg, plus a hidden gold ring for the current selection.
 ## Codes are sorted so the placement is the same every run. Render priority
-## rises with tier (village lowest, capital highest — by ring_px, the
+## rises with tier (village lowest, capital highest — by marker_px, the
 ## table's own measure of importance) so a bigger settlement's ring never
 ## gets buried under a smaller neighbour's (fix round 1, owner 2026-09-18);
 ## the selection ring sits above every tier.
@@ -421,8 +422,8 @@ func _place_markers() -> void:
 	groups.sort()
 	var by_size: Array = groups.duplicate()
 	by_size.sort_custom(func(a: String, b: String) -> bool:
-		var ra := float(_repo.map3d_settlements[a]["ring_px"])
-		var rb := float(_repo.map3d_settlements[b]["ring_px"])
+		var ra := marker_px(_repo.map3d_settlements[a])
+		var rb := marker_px(_repo.map3d_settlements[b])
 		return ra < rb if ra != rb else a < b)
 	for group: String in groups:
 		var spec: Dictionary = _repo.map3d_settlements[group]
@@ -430,7 +431,7 @@ func _place_markers() -> void:
 		mesh.size = Vector2.ONE
 		mesh.material = _ring_material(Color(String(spec["color"])),
 			float(spec["ring_px"]), float(spec["line_px"]), float(spec["max_view_m"]),
-			PRIORITY_RING_BASE + by_size.find(group))
+			PRIORITY_RING_BASE + by_size.find(group), float(spec.get("dot_px", 0.0)))
 		var pts: Array = by_group[group]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -721,8 +722,13 @@ func river_material() -> ShaderMaterial:
 ## world metres, never rescaled. The keyline is a fixed data value (fix
 ## round 1: a pale ring was nearly invisible on bright grass at the old
 ## 0.55 default).
+## A settlement's size on screen, design px: its ring, else its dot.
+static func marker_px(spec: Dictionary) -> float:
+	return maxf(float(spec.get("ring_px", 0.0)), float(spec.get("dot_px", 0.0)))
+
+
 func _ring_material(colour: Color, ring_px: float, line_px: float, max_view_m: float,
-		priority: int) -> ShaderMaterial:
+		priority: int, dot_px := 0.0) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = RING_SHADER
 	mat.render_priority = priority
@@ -733,6 +739,7 @@ func _ring_material(colour: Color, ring_px: float, line_px: float, max_view_m: f
 	mat.set_shader_parameter("keyline", keyline)
 	mat.set_meta("ring_px", ring_px)
 	mat.set_meta("line_px", line_px)
+	mat.set_meta("dot_px", dot_px)
 	_ring_mats.append(mat)
 	return mat
 
@@ -754,8 +761,9 @@ func _show_selected_ring(code: String) -> void:
 		Transform3D(Basis.IDENTITY, Vector3(xz.x, _height_at(xz), xz.y)))
 	var mat := _selected_ring.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 	var k := _repo.bal("map3d_selected_ring_scale")
-	mat.set_meta("ring_px", float(spec["ring_px"]) * k)
-	mat.set_meta("line_px", float(spec["line_px"]))
+	# A gold ring round the dot (or round the capital's own ring).
+	mat.set_meta("ring_px", maxf(float(spec["ring_px"]), float(spec.get("dot_px", 0.0)) * 2.0) * k)
+	mat.set_meta("line_px", maxf(float(spec["line_px"]), 2.0))
 	_update_line_scale()
 
 
@@ -991,6 +999,7 @@ func _update_line_scale() -> void:
 		mat.set_shader_parameter("lift_px", _repo.bal("map3d_ring_lift_px") * s)
 		mat.set_shader_parameter("ring_px", float(mat.get_meta("ring_px")) * s)
 		mat.set_shader_parameter("line_px", float(mat.get_meta("line_px")) * s)
+		mat.set_shader_parameter("dot_px", float(mat.get_meta("dot_px", 0.0)) * s)
 	if _river_mat != null:
 		_river_mat.set_shader_parameter("px_per_dist", per_dist)
 		_river_mat.set_shader_parameter("min_px", _repo.bal("map3d_river_min_px") * s)
@@ -1351,7 +1360,7 @@ func pick_at(pos: Vector2) -> Dictionary:
 		if eye.distance_to(world) >= float(spec["max_view_m"]) * fade_start:
 			continue
 		var screen_px := _camera.unproject_position(world)
-		var reach := maxf(float(spec["ring_px"]) * 0.5, _repo.bal("map3d_pick_px")) * s
+		var reach := maxf(marker_px(spec) * 0.5, _repo.bal("map3d_pick_px")) * s
 		var d := screen_px.distance_to(click_px)
 		if d <= reach and d < best_d and _camera.is_position_behind(world) == false:
 			best_d = d

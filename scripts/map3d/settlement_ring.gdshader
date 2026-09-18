@@ -21,7 +21,8 @@ render_mode unshaded, cull_disabled, blend_mix, depth_draw_never, depth_test_dis
 
 uniform vec4 colour : source_color = vec4(1.0);
 uniform vec4 keyline : source_color = vec4(0.08, 0.08, 0.08, 0.8);
-uniform float ring_px = 14.0;  // outer diameter, window px
+uniform float dot_px = 0.0;    // the solid dot's diameter, window px (owner 2026-09-19)
+uniform float ring_px = 14.0;  // outer diameter, window px; 0 = no ring
 uniform float line_px = 2.0;   // stroke, window px
 uniform float lift_px = 3.0;
 uniform float px_per_dist = 0.001;
@@ -38,7 +39,7 @@ void vertex() {
 	v_fade = 1.0 - smoothstep(fade_start * max_view_m, max_view_m, dist);
 	// Beyond max_view_m the ring is already fully faded: collapse the quad
 	// to zero size so it costs no fill, not merely zero alpha.
-	float box_px = (dist < max_view_m) ? ring_px + 4.0 : 0.0;  // +4 for the keyline/AA edge
+	float box_px = (dist < max_view_m) ? max(ring_px, dot_px) + 4.0 : 0.0;  // +4 for the keyline/AA edge
 	v_px = VERTEX.xy * box_px;
 	vec3 right = INV_VIEW_MATRIX[0].xyz;
 	vec3 up = INV_VIEW_MATRIX[1].xyz;
@@ -49,10 +50,17 @@ void vertex() {
 
 void fragment() {
 	float r = length(v_px);
-	float mid = 0.5 * ring_px - 0.5 * line_px;
-	float d = abs(r - mid) - 0.5 * line_px;  // px outside the stroke (<0 inside)
-	float stroke = clamp(0.5 - d, 0.0, 1.0);
-	float key = clamp(1.5 - d, 0.0, 1.0) * keyline.a;
-	ALBEDO = mix(keyline.rgb, colour.rgb, stroke);
-	ALPHA = max(stroke * colour.a, key) * v_fade;
+	// The solid dot (every settlement since 2026-09-19), anti-aliased.
+	float disc = clamp(0.5 * dot_px - r + 0.5, 0.0, 1.0);
+	float stroke = 0.0;
+	float key = 0.0;
+	if (ring_px > 0.0 && line_px > 0.0) {
+		float mid = 0.5 * ring_px - 0.5 * line_px;
+		float d = abs(r - mid) - 0.5 * line_px;  // px outside the stroke (<0 inside)
+		stroke = clamp(0.5 - d, 0.0, 1.0);
+		key = clamp(1.5 - d, 0.0, 1.0) * keyline.a;
+	}
+	float ink = max(stroke, disc);
+	ALBEDO = mix(keyline.rgb, colour.rgb, ink);
+	ALPHA = max(ink * colour.a, key) * v_fade;
 }

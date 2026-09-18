@@ -95,6 +95,21 @@ func test_rings_take_their_size_from_the_table() -> void:
 	assert_almost_eq(float(mat.get_shader_parameter("ring_px")), float(spec["ring_px"]), 0.001,
 		"design px at the headless render scale of 1")
 	assert_almost_eq(float(mat.get_shader_parameter("line_px")), float(spec["line_px"]), 0.001)
+	assert_almost_eq(float(mat.get_shader_parameter("dot_px")), float(spec["dot_px"]), 0.001)
+
+
+## Owner 2026-09-19: every settlement a solid black dot; only the capital
+## wears a ring round its dot.
+func test_settlements_are_black_dots_and_only_the_capital_is_ringed() -> void:
+	for group: String in Game.data.map3d_settlements:
+		var spec: Dictionary = Game.data.map3d_settlements[group]
+		assert_gt(float(spec["dot_px"]), 0.0, group + " has a dot")
+		var c := Color(String(spec["color"]))
+		assert_lt(c.get_luminance(), 0.15, group + " is black")
+		if group == "capital":
+			assert_gt(float(spec["ring_px"]), float(spec["dot_px"]), "the capital's ring round its dot")
+		else:
+			assert_eq(float(spec["ring_px"]), 0.0, group + " has no ring")
 
 
 func test_a_clicked_settlement_wears_the_gold_ring_until_cleared() -> void:
