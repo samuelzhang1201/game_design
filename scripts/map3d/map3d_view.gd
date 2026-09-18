@@ -637,6 +637,7 @@ func _ring_material(colour: Color, ring_px: float, line_px: float, max_view_m: f
 	mat.render_priority = priority
 	mat.set_shader_parameter("colour", colour)
 	mat.set_shader_parameter("max_view_m", max_view_m)
+	mat.set_shader_parameter("fade_start", _repo.bal("map3d_ring_fade_start"))
 	var keyline := Color(0.08, 0.08, 0.08, _repo.bal("map3d_ring_keyline_alpha"))
 	mat.set_shader_parameter("keyline", keyline)
 	mat.set_meta("ring_px", ring_px)
@@ -940,8 +941,13 @@ func ground_at(pos: Vector2) -> Variant:
 
 
 ## What a click at `pos` picks: {"kind": "burg", "code"} for a settlement
-## within map3d_pick_px of it (or on its disc), {"kind": "province", "code"}
+## within map3d_pick_px of it (or on its ring), {"kind": "province", "code"}
 ## for the province under it, {} for the sea or the sky.
+##
+## Only a SHOWN ring is picked (final review, owner 2026-09-18): a burg whose
+## camera distance has reached its tier's max_view_m x map3d_ring_fade_start
+## — where settlement_ring.gdshader begins to fade it — is skipped, so a
+## click on a thinned village's empty spot names the province under it.
 ##
 ## The burg distance is measured in SCREEN px (the camera's own projection of
 ## each burg's ground point), not by unprojecting the click to world XZ and
@@ -961,11 +967,15 @@ func pick_at(pos: Vector2) -> Dictionary:
 	var click_px := pos * s
 	var best := ""
 	var best_d := INF
+	var fade_start := _repo.bal("map3d_ring_fade_start")
+	var eye := _camera.global_position
 	for code: String in _sorted_burgs():
 		var burg: Dictionary = _repo.burgs[code]
 		var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
 		var bxz := _burg_xz(burg)
 		var world := Vector3(bxz.x, _height_at(bxz), bxz.y)
+		if eye.distance_to(world) >= float(spec["max_view_m"]) * fade_start:
+			continue
 		var screen_px := _camera.unproject_position(world)
 		var reach := maxf(float(spec["ring_px"]) * 0.5, _repo.bal("map3d_pick_px")) * s
 		var d := screen_px.distance_to(click_px)

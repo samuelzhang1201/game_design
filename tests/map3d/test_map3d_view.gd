@@ -108,6 +108,8 @@ func test_a_far_village_carries_its_max_view_m_from_the_table() -> void:
 	var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 	var spec: Dictionary = Game.data.map3d_settlements["village"]
 	assert_almost_eq(float(mat.get_shader_parameter("max_view_m")), float(spec["max_view_m"]), 0.001)
+	assert_almost_eq(float(mat.get_shader_parameter("fade_start")), Game.data.bal("map3d_ring_fade_start"),
+		0.001, "the shader and pick_at read one fade start")
 
 
 func test_ring_render_priority_rises_with_tier() -> void:
@@ -209,6 +211,53 @@ func test_a_click_on_open_land_names_its_province() -> void:
 	assert_signal_emitted_with_parameters(v, "province_selected", [spot["province"]])
 	assert_eq(v.selected_province(), spot["province"])
 	assert_not_null(v.line_mesh("Selection"), "the clicked province is outlined")
+
+
+## Final review (owner 2026-09-18): a ring thinned away by distance is not
+## picked — at the farthest zoom a click on a village's own spot (no bigger,
+## still-shown settlement near it) names the province under it instead.
+func test_a_thinned_village_is_not_picked_at_a_far_zoom() -> void:
+	var v := _view()
+	v.activate()
+	var far := Game.data.bal("map3d_zoom_max_m")
+	var village := _lone_village(far)
+	assert_false(village.is_empty(), "the pack has a village away from shown rings")
+	v.look_at_pack(village["px"], far)
+	var picked := v.pick_at(v.size * 0.5)
+	assert_eq(String(picked.get("kind", "")), "province", "the hidden ring is skipped")
+	assert_eq(String(picked.get("code", "")), village["province"])
+	# The same village is picked up close, where its ring shows.
+	v.look_at_pack(village["px"], Game.data.bal("map3d_zoom_min_m"))
+	assert_eq(v.pick_at(v.size * 0.5), {"kind": "burg", "code": village["code"]})
+
+
+## A village with a province under it, whose tier ring is hidden at `at_m`
+## and with no burg of a tier still shown at `at_m` within 150 pack px.
+func _lone_village(at_m: float) -> Dictionary:
+	var img := (load(Game.data.province_texture_path) as Texture2D).get_image()
+	var fade := Game.data.bal("map3d_ring_fade_start")
+	var codes: Array = Game.data.burgs.keys()
+	codes.sort()
+	for code: String in codes:
+		var b: Dictionary = Game.data.burgs[code]
+		if String(b.get("group", "")) != "village":
+			continue
+		var px := Vector2(float(b["x"]), float(b["y"]))
+		var pid := MapIndex.id_at(img, Vector2i(px.floor()))
+		var prov := String(Game.data.province_by_id(pid).get("province_code", ""))
+		if prov == "":
+			continue
+		var clear := true
+		for o: Dictionary in Game.data.burgs.values():
+			var spec: Dictionary = Game.data.map3d_settlements.get(String(o.get("group", "")), {})
+			if spec.is_empty() or float(spec["max_view_m"]) * fade <= at_m:
+				continue
+			if Vector2(float(o["x"]), float(o["y"])).distance_to(px) < 150.0:
+				clear = false
+				break
+		if clear:
+			return {"code": code, "px": px, "province": prov}
+	return {}
 
 
 func test_a_drag_is_not_a_click() -> void:
