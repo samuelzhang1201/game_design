@@ -39,7 +39,11 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 			}
 		}
 	}
-	ALBEDO = mix(base_albedo, tint.rgb, tint_mix * tint.a);"""
+	// The LUT holds the palette's sRGB bytes, read raw by texelFetch; the
+	// albedo is linear (Terrain3D samples its own textures as source_color).
+	vec3 tint_linear = mix(tint.rgb / 12.92, pow((tint.rgb + 0.055) / 1.055, vec3(2.4)),
+		step(vec3(0.04045), tint.rgb));
+	ALBEDO = mix(base_albedo, tint_linear, tint_mix * tint.a);"""
 
 
 ## `code` with the tint uniforms after its render_mode (or shader_type) line

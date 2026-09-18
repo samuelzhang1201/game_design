@@ -137,7 +137,8 @@ func test_ring_render_priority_rises_with_tier() -> void:
 ## seams < kingdoms < province outline < clouds < every ring, so a
 ## settlement pin always stands over the weather and the weather over lines.
 func test_the_render_priority_table_orders_every_layer() -> void:
-	var order := [Map3DView.PRIORITY_SEA, Map3DView.PRIORITY_RIVERS, Map3DView.PRIORITY_ROADS, Map3DView.PRIORITY_SEAMS,
+	var order := [Map3DView.PRIORITY_SEA, Map3DView.PRIORITY_RIVERS, Map3DView.PRIORITY_ROADS,
+		Map3DView.PRIORITY_MANOR_EDGES, Map3DView.PRIORITY_SEAMS,
 		Map3DView.PRIORITY_KINGDOMS, Map3DView.PRIORITY_HOVER, Map3DView.PRIORITY_SELECTION,
 		Map3DView.PRIORITY_CLOUDS,
 		Map3DView.PRIORITY_RING_BASE]

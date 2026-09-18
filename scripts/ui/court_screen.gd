@@ -47,6 +47,7 @@ var _manor_master: ManorMasterPanel
 var _economy_view := false
 var _manor_view := false
 var _map3d: Map3DView
+var _map3d_theme := ""
 
 ## Static structure and layout live in scenes/court.tscn (editable in the
 ## editor); _ready fetches nodes, paints them from UiPalette, and wires
@@ -171,6 +172,15 @@ func set_manor_view(on: bool) -> void:
 func set_map3d_view(on: bool) -> void:
 	_map3d = Map3DView.toggle_in(%MapPanel, _world_map, _map3d, on, _detail, _country_panel,
 		_refresh_left)
+	if _map3d != null:
+		_map3d.set_manor_theme(_map3d_theme)
+
+## The ECONOMY / MANORS theme on the 3D map (GameRoot, owner 2026-09-19):
+## "", "economy" or "manors"; kept for a view made later.
+func set_map3d_theme(theme_name: String) -> void:
+	_map3d_theme = theme_name
+	if _map3d != null:
+		_map3d.set_manor_theme(theme_name)
 
 ## Test seam: the 3D view, or null until the tab was first lit.
 func map3d_view() -> Map3DView:

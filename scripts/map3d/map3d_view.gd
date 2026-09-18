@@ -74,7 +74,8 @@ const SELECTED_RING_ALWAYS_M := 1000000.0
 ## place the see-through layers' draw order is set. Higher draws over lower.
 ## The sea under everything; the river water under every line, so a border
 ## or seam always reads over the water it crosses; the roads (a bridge over
-## the water, under every border); seams, then kingdom
+## the water, under every border); the manor edges of the ECONOMY / MANORS
+## themes; seams, then kingdom
 ## borders, then the hovered kingdom's wider outline, then the clicked
 ## province's gold outline; then the CLOUDS — over
 ## the lines, but UNDER the settlement rings, so a pin always stands above
@@ -83,14 +84,15 @@ const SELECTED_RING_ALWAYS_M := 1000000.0
 const PRIORITY_SEA := -1
 const PRIORITY_RIVERS := 0
 const PRIORITY_ROADS := 1
-const PRIORITY_SEAMS := 2
-const PRIORITY_KINGDOMS := 3
-const PRIORITY_HOVER := 4
-const PRIORITY_SELECTION := 5
-const PRIORITY_CLOUDS := 6
+const PRIORITY_MANOR_EDGES := 2
+const PRIORITY_SEAMS := 3
+const PRIORITY_KINGDOMS := 4
+const PRIORITY_HOVER := 5
+const PRIORITY_SELECTION := 6
+const PRIORITY_CLOUDS := 7
 ## The lowest ring tier; the tiers and then the selection ring count up from
 ## here, one step each (data/map3d_settlements.csv's groups).
-const PRIORITY_RING_BASE := 7
+const PRIORITY_RING_BASE := 8
 ## A press and release further apart than this is a drag, not a click
 ## (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := 10.0
@@ -125,6 +127,17 @@ var _province_image: Image
 var _selected_province := ""
 var _selected_burg := ""
 var _border_sig := 0
+## The ECONOMY / MANORS theme (owner 2026-09-19): "", "economy" or "manors";
+## the LUT of each cell's ManorPalette colour the patched terrain shader reads
+## (Map3DGroundTint), rebuilt when the theme or an owner turns; the terrain
+## material carrying the patch (null without a Terrain3D or when the addon's
+## code would not patch); whether the cell edges have been laid.
+var _theme := ""
+var _theme_sig := 0
+var _cell_lut: ImageTexture
+var _lut_image: Image
+var _tint_mat: Resource
+var _edges_built := false
 var _border_clock := 0.0
 var _hud: Map3DHud
 ## The hover (owner 2026-09-18): a pointer move is only recorded, and picked
@@ -342,6 +355,7 @@ func _load() -> void:
 	_lines.name = "Lines"
 	_viewport.add_child(_lines)
 	_build_roads()
+	_prepare_ground_tint()
 	_target = Map3DGeometry.clamp_target(_home(), _bounds)
 	_distance = _repo.bal("map3d_zoom_start_m")
 	_yaw = 0.0
@@ -352,6 +366,7 @@ func _load() -> void:
 	_hud.view = self
 	add_child(_hud)
 	move_child(_tooltip, -1)  # the name over the scale bar and compass
+	_refresh_theme()  # a theme lit before the first load
 
 
 func _state() -> GameState:
@@ -759,6 +774,7 @@ func _sorted_burgs() -> Array:
 func refresh_borders() -> void:
 	if not _loaded:
 		return
+	_refresh_theme()  # a manor bought or a province taken recolours the ground
 	var st := _state()
 	var sig := 0 if st == null else hash([st.province_owner.hash(), st.manor_province.hash()])
 	if sig == _border_sig and _lines.get_node_or_null("Kingdoms") != null:
@@ -780,6 +796,120 @@ func refresh_borders() -> void:
 	_set_lines("Seams", Map3DBorders.seam_lines(_repo, st, _meta, step), seam,
 		Color(seam, 0.0), "map3d_seam_width_px", "map3d_seam_dash_px", "map3d_seam_gap_px", PRIORITY_SEAMS)
 	_draw_selection()
+
+
+# --- the ECONOMY / MANORS themes ------------------------------------------------
+
+## Patch the world's Terrain3D shader for the manor tint (Map3DGroundTint).
+## Without a Terrain3D (the tests' fixture) or when the addon's code no longer
+## carries the line the patch rewrites, the ground simply stays plain.
+func _prepare_ground_tint() -> void:
+	var terrains := _world.find_children("*", "Terrain3D", true, false)
+	if terrains.is_empty():
+		return
+	var mat: Resource = terrains[0].get("material")
+	if mat == null:
+		return
+	mat.set("shader_override_enabled", true)
+	var shader: Shader = mat.get("shader_override")
+	var patched := "" if shader == null else Map3DGroundTint.patch(shader.code)
+	if patched == "":
+		mat.set("shader_override_enabled", false)
+		push_warning("Map3DView: Terrain3D's shader has no line to tint — the themes leave the ground plain")
+		return
+	shader.code = patched
+	_tint_mat = mat
+	var origin: Array = _meta.get("pack_origin", [0.0, 0.0])
+	mat.call("set_shader_param", "pack_origin", Vector2(float(origin[0]), float(origin[1])))
+	mat.call("set_shader_param", "m_per_px", float(_meta.get("m_per_px", 50.0)))
+	if _repo.cell_texture_path != "" and ResourceLoader.exists(_repo.cell_texture_path):
+		mat.call("set_shader_param", "cell_index", load(_repo.cell_texture_path))
+	mat.call("set_shader_param", "tint_mix", 0.0)
+
+
+## Show the ECONOMY or MANORS theme on the 3D ground ("" for none) — GameRoot
+## hands it down with the 2D map's show_economy / show_manors.
+func set_manor_theme(theme_name: String) -> void:
+	_theme = theme_name
+	_refresh_theme()
+
+
+func manor_theme() -> String:
+	return _theme
+
+
+## The LUT when the theme or an owner has turned, the tint's strength, and
+## the cell edges shown only under a theme.
+func _refresh_theme() -> void:
+	if not _loaded:
+		return
+	if _theme != "":
+		var st := _state()
+		var sig := hash([_theme, 0 if st == null else st.province_owner.hash(),
+			0 if st == null else st.manor_owner.hash(),
+			0 if st == null else st.manor_province.hash()])
+		if sig != _theme_sig or _cell_lut == null:
+			_theme_sig = sig
+			_build_lut()
+		if not _edges_built:
+			_build_manor_edges()
+	if _tint_mat != null:
+		_tint_mat.call("set_shader_param", "tint_mix",
+			_repo.bal("map3d_manor_tint") if _theme != "" else 0.0)
+	var edges := _lines.get_node_or_null("ManorEdges") as MeshInstance3D
+	if edges != null:
+		edges.visible = _theme != ""
+
+
+## Each land cell's ManorPalette colour for the theme at texel (id % w, id / w).
+func _build_lut() -> void:
+	var max_id := 0
+	for id: int in _repo.cells:
+		max_id = maxi(max_id, id)
+	var lut := Map3DGroundTint.lut_size(max_id)
+	var img := Image.create(lut.x, lut.y, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var st := _state()
+	for id: int in _repo.cells:
+		img.set_pixel(id % lut.x, id / lut.x, ManorPalette.theme_color(_repo, st, id, _theme))
+	_lut_image = img
+	if _cell_lut != null and _cell_lut.get_size() == Vector2(lut):
+		_cell_lut.update(img)
+	else:
+		_cell_lut = ImageTexture.create_from_image(img)
+	if _tint_mat != null:
+		_tint_mat.call("set_shader_param", "cell_lut", _cell_lut)
+		_tint_mat.call("set_shader_param", "lut_size", lut)
+
+
+## The cell edges (ManorPalette.edges, the 2D map's own) as constant-width
+## ribbons on the relief, in the 2D map's manor_line ink, alpha and width.
+## Geometry: laid on the first theme and kept.
+func _build_manor_edges() -> void:
+	_edges_built = true
+	var step := _repo.bal("map3d_line_step_m")
+	var pairs := ManorPalette.edges(_repo)
+	var lines: Array = []
+	for i in range(0, pairs.size() - 1, 2):
+		var seg := PackedVector2Array([Map3DGeometry.pack_to_world(_meta, pairs[i]),
+			Map3DGeometry.pack_to_world(_meta, pairs[i + 1])])
+		lines.append(Map3DGeometry.resample(seg, step))
+	var ink := MapPalette.named(_repo, "manor_line")
+	ink.a = _repo.bal("map_manor_line_alpha")
+	_set_lines("ManorEdges", lines, ink, ink, "map_manor_line_width", "", "", PRIORITY_MANOR_EDGES)
+
+
+## Test seam: the LUT the terrain shader reads (null before the first theme).
+func cell_lut() -> ImageTexture:
+	return _cell_lut
+
+
+## Test seam: the colour the LUT holds for cell `id` (clear before a theme).
+func lut_color(id: int) -> Color:
+	if _lut_image == null:
+		return Color(0, 0, 0, 0)
+	var w := _lut_image.get_width()
+	return _lut_image.get_pixel(id % w, id / w)
 
 
 ## The roads and trails (owner 2026-09-18): the pack's land routes, smoothed
