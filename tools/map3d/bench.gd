@@ -58,7 +58,6 @@ func _ready() -> void:
 		await get_tree().process_frame
 	root._switch_to(GameRoot.State.COURT)
 	root.current_screen.enter_court(null)
-	root.set_map3d_view(true)
 	Game.set_clock_speed(4)
 	var v: Map3DView = root.current_screen.map3d_view()
 	if v == null or not v.is_loaded():

@@ -3,9 +3,9 @@
 The 3D campaign map is built from the same Azgaar pack as the 2D map
 (`data/maps/<id>/`, `assets/maps/<id>/`) at **50 m per pack px** — `beria` is a
 128 × 46 km world, a Terrain3D vertex every 20 m, regions of 2048. The game
-shows it on the **3D MAP** bottom-bar tab (`scripts/map3d/map3d_view.gd`),
-which swaps it into the map panel in place of the 2D `WorldMapView`; a
-checkout that has not built it shows a notice pointing here.
+shows it as the default map (`scripts/map3d/map3d_view.gd`) in the map
+panel, in place of the 2D `WorldMapView` except while a 2D-only layer is on;
+a checkout that has not built it shows the 2D map.
 
 Plugin: `addons/terrain_3d/` (Terrain3D 1.0.2, committed). Renderer: GL
 Compatibility (see the traps below).
