@@ -23,8 +23,8 @@ extends Control
 ## from the live outlines (Map3DBorders) and are rebuilt when ownership
 ## changes. Settlements are placed from live data (map3d_settlements.csv).
 ##
-## Zoom runs 800 m (a village and its fields) to 80 km (the whole island,
-## edge to edge — owner 2026-09-18); the wheel and a macOS trackpad pinch
+## Zoom runs 800 m (a village and its fields) to 150 km (the whole island
+## with sea around it — owner 2026-09-19, was 80 km); the wheel and a macOS trackpad pinch
 ## both zoom about the pointer, not the view's centre, and a two-finger
 ## trackpad drag pans the ground. Settlements draw as screen-constant hollow
 ## rings (settlement_ring.gdshader, data/map3d_settlements.csv: ring_px,
