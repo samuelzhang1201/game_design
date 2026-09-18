@@ -13,6 +13,7 @@
     python3 assets/flux/install_map_art.py compass    # I-73 -> assets/ui/compass.png
     python3 assets/flux/install_map_art.py arms       # A-xxx -> assets/arms/<pack>/<key>.png (ARMS_PACK=id, default maps.csv) (house and kingdom arms)
     python3 assets/flux/install_map_art.py army_paintings  # B-37..42 -> assets/armies/paint/<piece>.png (army card)
+    python3 assets/flux/install_map_art.py app_icon   # X-01 -> icon.png (the game's application icon)
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
 blue channel (see sepia_alpha_template.json for the same steps as a ComfyUI
@@ -587,12 +588,40 @@ def install_arms(size: int = ARMS_PX) -> int:
     return done
 
 
+## The game's application icon (owner 2026-09-18): X-01, a full-bleed square,
+## installed as the project's config/icon. Its largest use is the macOS app
+## bundle's icns (512 pt @2x = 1024 px); the window, taskbar and Windows ico
+## (256 px) are made from it by the export, so it keeps the render's 1024.
+## APP_ICON_SEED picks the chosen seed among the variants.
+APP_ICON_PX = 1024
+APP_ICON_SEED = "954159499"  # owner 2026-09-18: of four seeds, the one that reads at 16 px
+
+
+def install_app_icon(size: int = APP_ICON_PX) -> int:
+    hits = sorted((HERE / "out" / "app_icon").glob("X-01_*.png"), key=lambda p: p.stat().st_mtime)
+    if APP_ICON_SEED:
+        hits = [h for h in hits if ("_s%s" % APP_ICON_SEED) in h.stem] or hits
+    if not hits:
+        print("  (no X-01 render — run generate.py --prompts-file app_icon_prompts.csv first)")
+        return 0
+    w, h, ch, px = decode_png(hits[-1])
+    rgba = to_rgba(w, h, ch, bytearray(px))
+    for i in range(3, len(rgba), 4):
+        rgba[i] = 255  # full-bleed: an app icon has no see-through corners of its own
+    if (w, h) != (size, size):
+        rgba = resize_rgba(w, h, rgba, size, size)
+    encode_png(ROOT / "icon.png", size, size, 4, bytes(rgba))
+    print("  X-01   icon.png  %dx%d (from %s)" % (size, size, hits[-1].name))
+    return 1
+
+
 def main() -> int:
     chapters = {"goods": install_goods, "decor": install_decor, "cast": install_cast,
                 "ui": install_ui, "estates": install_estates, "biomes": install_biomes,
                 "paintings": install_paintings, "compass": install_compass,
                 "buildings": install_buildings, "goods_icons": install_goods_icons,
-                "arms": install_arms, "army_paintings": install_army_paintings}
+                "arms": install_arms, "army_paintings": install_army_paintings,
+                "app_icon": install_app_icon}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2

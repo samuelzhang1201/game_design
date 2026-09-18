@@ -47,6 +47,9 @@ CHAPTER_DIR = {
     # entries: arms_prompts.py writes them from the map pack's coa into
     # arms_prompts.csv, read with --prompts-file.
     "A": "arms",
+    # X- (2026-09-18) is the game's own application icon, read with
+    # --prompts-file app_icon_prompts.csv; installed by install_map_art.py app_icon.
+    "X": "app_icon",
 }
 # Table-driven chapters carry their canvas per chapter (§5, §6, §7, §9);
 # E/P rows are fragments layered onto a character, not assets on their own.
