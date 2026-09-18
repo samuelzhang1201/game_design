@@ -68,13 +68,23 @@ const CLOUD_SHADOW_SHADER := preload("res://scripts/map3d/cloud_shadow.gdshader"
 ## The selection ring never thins by distance (fix round 1, owner 2026-09-18):
 ## whatever the player clicked stays marked regardless of zoom.
 const SELECTED_RING_ALWAYS_M := 1000000.0
-## Lines and rings are see-through, ordered by render_priority so higher
-## tiers draw over lower ones and the selection ring draws over every tier.
-## The river water sits BELOW every line (0, set in _build_rivers) so a
-## border or seam always reads over the water it crosses; Map3DBorders'
-## lines take 1-3 (seams, kingdoms, selection — see refresh_borders /
-## _draw_selection); rings start at 4, see _place_markers.
-const RING_PRIORITY_BASE := 4
+## THE RENDER-PRIORITY TABLE (final review, owner 2026-09-18) — the one
+## place the see-through layers' draw order is set. Higher draws over lower.
+## The sea under everything; the river water under every line, so a border
+## or seam always reads over the water it crosses; seams, then kingdom
+## borders, then the clicked province's gold outline; then the CLOUDS — over
+## the lines, but UNDER the settlement rings, so a pin always stands above
+## the weather; then the rings by tier (village lowest, capital highest —
+## see _place_markers) and the gold selection ring over every tier.
+const PRIORITY_SEA := -1
+const PRIORITY_RIVERS := 0
+const PRIORITY_SEAMS := 1
+const PRIORITY_KINGDOMS := 2
+const PRIORITY_SELECTION := 3
+const PRIORITY_CLOUDS := 4
+## The lowest ring tier; the tiers and then the selection ring count up from
+## here, one step each (data/map3d_settlements.csv's groups).
+const PRIORITY_RING_BASE := 5
 ## A press and release further apart than this is a drag, not a click
 ## (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := 10.0
@@ -340,7 +350,7 @@ func _place_markers() -> void:
 		mesh.size = Vector2.ONE
 		mesh.material = _ring_material(Color(String(spec["color"])),
 			float(spec["ring_px"]), float(spec["line_px"]), float(spec["max_view_m"]),
-			RING_PRIORITY_BASE + by_size.find(group))
+			PRIORITY_RING_BASE + by_size.find(group))
 		var pts: Array = by_group[group]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -359,7 +369,7 @@ func _place_markers() -> void:
 	var sel := QuadMesh.new()
 	sel.size = Vector2.ONE
 	sel.material = _ring_material(MapPalette.named(_repo, "map3d_selection"), 0.0, 0.0,
-		SELECTED_RING_ALWAYS_M, RING_PRIORITY_BASE + groups.size())
+		SELECTED_RING_ALWAYS_M, PRIORITY_RING_BASE + groups.size())
 	var smm := MultiMesh.new()
 	smm.transform_format = MultiMesh.TRANSFORM_3D
 	smm.mesh = sel
@@ -413,7 +423,7 @@ func _build_rivers() -> void:
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	_river_mat = ShaderMaterial.new()
 	_river_mat.shader = RIVER_SHADER
-	_river_mat.render_priority = 0
+	_river_mat.render_priority = PRIORITY_RIVERS
 	# The palette hex goes in RAW, as the sea's does (see _dress_sea).
 	_river_mat.set_shader_parameter("water",
 		MapTerrain.palette_color(_repo, "river", MapTerrain.FALLBACK))
@@ -451,7 +461,7 @@ func _dress_sea() -> void:
 		return
 	_sea_mat = ShaderMaterial.new()
 	_sea_mat.shader = SEA_SHADER
-	_sea_mat.render_priority = -1  # under the rivers and every line
+	_sea_mat.render_priority = PRIORITY_SEA
 	var tex_path := _repo.sea_texture_path
 	if tex_path != "" and ResourceLoader.exists(tex_path):
 		_sea_mat.set_shader_parameter("sea_distance", load(tex_path))
@@ -550,19 +560,10 @@ func _build_clouds() -> void:
 	deck.add_child(twin)
 
 
-## Comfortably above every ring's render_priority: RING_PRIORITY_BASE (4)
-## plus the settlement groups of data/map3d_settlements.csv — a fixed table,
-## the same for every pack, never the per-pack burgs — plus the selection
-## ring drawn on top of those. The brief's literal 6 collides: the shipped
-## table has 5 groups, so the selection ring already sits at 9.
-func _cloud_priority() -> int:
-	return RING_PRIORITY_BASE + _repo.map3d_settlements.size() + 2
-
-
 func _cloud_material(shape: Texture2D) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = CLOUD_SHADER
-	mat.render_priority = _cloud_priority()
+	mat.render_priority = PRIORITY_CLOUDS
 	mat.set_shader_parameter("shape", shape)
 	mat.set_shader_parameter("opacity", _repo.bal("map3d_cloud_alpha"))
 	mat.set_shader_parameter("near_fade_m", _repo.bal("map3d_cloud_near_fade_m"))
@@ -707,16 +708,16 @@ func refresh_borders() -> void:
 		rings.append_array(Map3DBorders.kingdom_lines(_repo, st, _meta, code, step))
 	_set_lines("Kingdoms", rings, MapPalette.named(_repo, "state_border"),
 		MapPalette.named(_repo, "state_border_light"), "map3d_border_width_px",
-		"map3d_border_dash_px", "map3d_border_gap_px", 2)
+		"map3d_border_dash_px", "map3d_border_gap_px", PRIORITY_KINGDOMS)
 	var seam := MapPalette.named(_repo, "map3d_seam")
 	seam.a = _repo.bal("map3d_seam_alpha")
 	_set_lines("Seams", Map3DBorders.seam_lines(_repo, st, _meta, step), seam,
-		Color(seam, 0.0), "map3d_seam_width_px", "map3d_seam_dash_px", "map3d_seam_gap_px", 1)
+		Color(seam, 0.0), "map3d_seam_width_px", "map3d_seam_dash_px", "map3d_seam_gap_px", PRIORITY_SEAMS)
 	_draw_selection()
 
 
 ## One MeshInstance3D of ribbons under Lines/<name>, replacing any before.
-## `priority` orders the see-through lines (borders over seams).
+## `priority` is the line's row of the render-priority table (PRIORITY_*).
 func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: String,
 		dash_key: String, gap_key: String, priority: int) -> void:
 	var old := _lines.get_node_or_null(line_name)
@@ -792,7 +793,7 @@ func _draw_selection() -> void:
 			pts.append(pts[0])
 			lines.append(Map3DGeometry.resample(pts, _repo.bal("map3d_line_step_m")))
 	var gold := MapPalette.named(_repo, "map3d_selection")
-	_set_lines("Selection", lines, gold, gold, "map3d_selection_width_px", "", "", 3)
+	_set_lines("Selection", lines, gold, gold, "map3d_selection_width_px", "", "", PRIORITY_SELECTION)
 
 
 # --- camera and input ----------------------------------------------------------

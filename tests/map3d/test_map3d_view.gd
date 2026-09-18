@@ -122,7 +122,30 @@ func test_ring_render_priority_rises_with_tier() -> void:
 	assert_lt(priority.call("village"), priority.call("town"), "village < town")
 	assert_lt(priority.call("town"), priority.call("city"), "town < city")
 	assert_lt(priority.call("city"), priority.call("capital"), "city < capital")
-	assert_true(priority.call("village") >= 3, "rings still draw over the lines (0-2)")
+	assert_eq(priority.call("village"), Map3DView.PRIORITY_RING_BASE, "the lowest tier sits at the table's base")
+
+
+## The render-priority table (final review, owner 2026-09-18): sea < rivers <
+## seams < kingdoms < province outline < clouds < every ring, so a
+## settlement pin always stands over the weather and the weather over lines.
+func test_the_render_priority_table_orders_every_layer() -> void:
+	var order := [Map3DView.PRIORITY_SEA, Map3DView.PRIORITY_RIVERS, Map3DView.PRIORITY_SEAMS,
+		Map3DView.PRIORITY_KINGDOMS, Map3DView.PRIORITY_SELECTION, Map3DView.PRIORITY_CLOUDS,
+		Map3DView.PRIORITY_RING_BASE]
+	for i in range(1, order.size()):
+		assert_lt(order[i - 1], order[i], "row %d under row %d" % [i - 1, i])
+	var v := _view()
+	v.activate()
+	var clouds := v.viewport().get_node("Clouds") as MultiMeshInstance3D
+	assert_eq((clouds.material_override as ShaderMaterial).render_priority, Map3DView.PRIORITY_CLOUDS)
+	for mmi: MultiMeshInstance3D in v.viewport().get_node("Markers").get_children():
+		var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
+		assert_gt(mat.render_priority, Map3DView.PRIORITY_CLOUDS, "%s over the clouds" % mmi.name)
+	v.refresh_borders()
+	var kingdoms := v.line_mesh("Kingdoms")
+	if kingdoms != null:
+		assert_eq((kingdoms.surface_get_material(0) as ShaderMaterial).render_priority,
+			Map3DView.PRIORITY_KINGDOMS)
 
 
 func test_the_wheel_zooms_within_the_clamp() -> void:
