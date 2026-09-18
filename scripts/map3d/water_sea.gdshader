@@ -76,12 +76,14 @@ void fragment() {
 	NORMAL_MAP_DEPTH = 0.4;
 	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 5.0);
 	vec3 band = mix(c, sky.rgb, fres * fresnel_sky_mix);
-	// The environment's Filmic tonemap compresses a flat EMISSION colour's
-	// shadows harder than its midtones (its toe), and unevenly per channel,
-	// so a straight multiplier over- or under-corrects one channel to fix
-	// another. A per-channel gamma lift (< 1 raises the darker channels
-	// more) undoes that toe well enough to land back near the flat 2D hex
-	// (fix round 1, picked by sampling rendered pixels against the palette).
+	// The palette colours arrive RAW (a Color uniform set from GDScript
+	// passes straight through under GL Compatibility), and the environment's
+	// Filmic tonemap LIFTS a flat EMISSION colour (0.5 -> 162/255), more in
+	// the darker channels. A per-channel gamma (> 1 darkens the darker
+	// channels more) undoes that lift well enough to land back near the flat
+	// 2D hex (final review, owner 2026-09-18: fitted by sampling rendered
+	// bands against the palette at 24 km; the gamma is fitted to THIS
+	// tonemap — change the tonemap and refit it).
 	vec3 lifted = pow(clamp(band, vec3(0.0001), vec3(1.0)), vec3(emission_gamma));
 	ALBEDO = band * (1.0 - emission_share);
 	EMISSION = lifted * emission_share;

@@ -413,14 +413,13 @@ func _build_rivers() -> void:
 	_river_mat = ShaderMaterial.new()
 	_river_mat.shader = RIVER_SHADER
 	_river_mat.render_priority = 0
-	# terrain_palette's hex is sRGB; linearize before a spatial ALBEDO (fix
-	# round 1, owner 2026-09-18 — same bug as the sea's _dress_sea).
+	# The palette hex goes in RAW, as the sea's does (see _dress_sea).
 	_river_mat.set_shader_parameter("water",
-		MapTerrain.palette_color(_repo, "river", MapTerrain.FALLBACK).srgb_to_linear())
+		MapTerrain.palette_color(_repo, "river", MapTerrain.FALLBACK))
 	_river_mat.set_shader_parameter("mouth_water",
-		MapTerrain.palette_color(_repo, "sea_near", MapTerrain.FALLBACK).srgb_to_linear())
+		MapTerrain.palette_color(_repo, "sea_near", MapTerrain.FALLBACK))
 	_river_mat.set_shader_parameter("sky",
-		MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK).srgb_to_linear())
+		MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK))
 	_river_mat.set_shader_parameter("ripples", water_normals())
 	_river_mat.set_shader_parameter("ripple_m", _repo.bal("map3d_river_ripple_m"))
 	_river_mat.set_shader_parameter("flow_m_s", _repo.bal("map3d_river_flow_m_s"))
@@ -454,17 +453,17 @@ func _dress_sea() -> void:
 	_sea_mat.set_shader_parameter("pack_origin", Vector2(float(o[0]), float(o[1])))
 	_sea_mat.set_shader_parameter("pack_px", Vector2(float(p[0]), float(p[1])))
 	_sea_mat.set_shader_parameter("m_per_px", float(_meta["m_per_px"]))
-	# terrain_palette's hex is sRGB (the 2D map paints it unlit); a spatial
-	# shader's ALBEDO is linear, so feeding the raw byte values in gets
-	# gamma-encoded a second time on output and the pale bands (sea_near
-	# especially) clip to white. Linearize once here, same as an sRGB
-	# texture import would (fix, owner 2026-09-18: shot at 800/3000m showed
-	# the whole sea blown out, confirmed with a plain grey EMISSION test).
+	# The palette hex goes in RAW (final review, owner 2026-09-18): under GL
+	# Compatibility a Color uniform set from GDScript passes straight through
+	# to the output — measured 0.5 -> 128 under a Linear tonemap, with or
+	# without source_color — so there is no double gamma to undo. What moves
+	# a flat unshaded/EMISSION colour is the environment's FILMIC tonemap,
+	# which lifts it (0.5 -> 162); map3d_sea_emission_gamma (> 1) is fitted
+	# to that tonemap by sampling the rendered bands against these hexes.
 	for key: String in ["sea_near", "sea_nearer", "sea_far", "sea_deep"]:
-		_sea_mat.set_shader_parameter(key,
-			MapTerrain.palette_color(_repo, key, MapTerrain.FALLBACK).srgb_to_linear())
+		_sea_mat.set_shader_parameter(key, MapTerrain.palette_color(_repo, key, MapTerrain.FALLBACK))
 	_sea_mat.set_shader_parameter("sky",
-		MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK).srgb_to_linear())
+		MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK))
 	_sea_mat.set_shader_parameter("band_near", _repo.bal("map_sea_band_near_px"))
 	_sea_mat.set_shader_parameter("band_nearer", _repo.bal("map_sea_band_nearer_px"))
 	_sea_mat.set_shader_parameter("band_far", _repo.bal("map_sea_band_far_px"))
@@ -621,7 +620,7 @@ func sea_material() -> ShaderMaterial:
 
 
 ## Test seam (fix round 1): the Rivers layer's material, to check the
-## palette colours went in linearized.
+## palette colours went in raw.
 func river_material() -> ShaderMaterial:
 	return _river_mat
 

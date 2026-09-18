@@ -9,11 +9,11 @@
 // end fade, 0 at a cut or the river's true source rising to 1, always 1 at
 // the true mouth — so a split never shows as a vertical wall.
 //
-// Fix round 1 (owner 2026-09-18, same pass as the sea): `water` /
-// `mouth_water` / `sky` are terrain_palette hex, sRGB, and were going
-// straight into ALBEDO unconverted — the same double-gamma bug as the sea
-// (Map3DView._build_rivers now calls Color.srgb_to_linear() before setting
-// them, matching _dress_sea). And at a far zoom the min-px floor widens a
+// `water` / `mouth_water` / `sky` are terrain_palette hex, set RAW (final
+// review, owner 2026-09-18: a Color uniform set from GDScript passes
+// straight through under GL Compatibility; the environment's Filmic
+// tonemap is what lifts a flat emissive colour, and emission_gamma > 1 is
+// fitted to it, as on the sea). Fix round 1: at a far zoom the min-px floor widens a
 // thin river on screen, but edge_soft was a FIXED FRACTION of whatever
 // width got drawn — so a heavily widened thread faded almost its whole
 // width and read as a thin, near-black line (the darkened riverbed ground
@@ -29,7 +29,7 @@
 // of its light scatters away from the camera instead of back at it. Same
 // medicine as the sea: most of the colour goes out through EMISSION
 // (unlit, immune to the ripple normal's lighting response) with a gamma
-// lift for the environment's Filmic toe, and only a small ALBEDO/SPECULAR
+// fitted to the environment's Filmic tonemap, and only a small ALBEDO/SPECULAR
 // share is left to catch a highlight.
 shader_type spatial;
 render_mode blend_mix, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
@@ -47,7 +47,7 @@ uniform float edge_soft = 0.35;
 uniform float edge_soft_floor = 0.06;
 uniform float opacity = 0.92;
 uniform float emission_share = 0.85;
-uniform float emission_gamma = 0.6;
+uniform float emission_gamma = 1.3;
 
 varying float v_across;
 varying float v_along;

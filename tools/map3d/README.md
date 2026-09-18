@@ -82,11 +82,14 @@ values are `balance.csv` `map3d_*`.
   pipeline under Compatibility and silently blanks its blended rendering, no
   error emitted: keep a shadow-only variant in its own file rather than one
   shader gated by a uniform (cloud_deck.gdshader / cloud_shadow.gdshader).
-- A `source_color` shader uniform set from GDScript is NOT linearised under
-  GL Compatibility (unlike a texture import or a material's own colour
-  field): call `Color.srgb_to_linear()` before handing a `terrain_palette`
-  hex to a spatial shader (water_sea.gdshader, water_river.gdshader), or the
-  water renders dark and over-saturated.
+- A `Color` shader uniform set from GDScript passes STRAIGHT THROUGH under
+  GL Compatibility (measured: 0.5 renders as 128/255 under a Linear
+  tonemap, with or without `source_color`) — hand a `terrain_palette` hex
+  in raw, never `srgb_to_linear()`'d. What moves an unshaded or EMISSION
+  colour is the environment's Filmic tonemap, which LIFTS it (0.5 -> 162),
+  more in the darker channels: fit the emission to the tonemap
+  (`map3d_sea_emission_gamma` / `map3d_river_emission_gamma` > 1, sampled
+  against the palette) and refit if the tonemap changes.
 - Terrain3D's `mipmap_bias` material param is a DERIVATIVE MULTIPLIER, not a
   mip-level offset like a texture import's own bias field — 1.0 is neutral,
   under 1.0 sharpens (`build_terrain.gd` uses 0.85).

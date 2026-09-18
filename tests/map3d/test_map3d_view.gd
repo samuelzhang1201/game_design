@@ -415,11 +415,11 @@ func test_the_builds_sea_wears_the_banded_water() -> void:
 	assert_true("Sea" in v.layer_names())
 
 
-## Fix round 1: terrain_palette's hex is sRGB; a spatial ALBEDO/EMISSION is
-## linear, so the colour that reaches the shader must be the linearized
-## Color, not the raw one straight off the CSV (the double-gamma bug that
-## blew the sea out to white before this fix).
-func test_the_seas_band_colours_go_in_linearized() -> void:
+## Final review (owner 2026-09-18): the palette hex goes in RAW — a Color
+## uniform set from GDScript passes straight through under GL Compatibility
+## (measured), so the old srgb_to_linear() only fought the emission gamma.
+## The Filmic tonemap's lift is undone by map3d_sea_emission_gamma instead.
+func test_the_seas_band_colours_go_in_raw() -> void:
 	var root := Node3D.new()
 	root.set_meta("map3d_world", WORLD)
 	var sea := MeshInstance3D.new()
@@ -435,15 +435,14 @@ func test_the_seas_band_colours_go_in_linearized() -> void:
 	v.activate()
 	var mat := v.sea_material()
 	var raw: Color = MapTerrain.palette_color(Game.data, "sea_near", MapTerrain.FALLBACK)
-	assert_eq(mat.get_shader_parameter("sea_near"), raw.srgb_to_linear())
-	assert_ne(mat.get_shader_parameter("sea_near"), raw, "the raw hex, unconverted, is the bug")
+	assert_eq(mat.get_shader_parameter("sea_near"), raw, "the palette hex, unconverted")
 	assert_eq(mat.get_shader_parameter("emission_share"), Game.data.bal("map3d_sea_emission_share"))
 	assert_eq(mat.get_shader_parameter("emission_gamma"), Game.data.bal("map3d_sea_emission_gamma"))
 
 
-## Same fix, the river material: water/mouth_water/sky must be linearized
-## too, and the emission share/gamma wired from balance.csv.
-func test_the_rivers_colours_go_in_linearized() -> void:
+## Same for the river material: water goes in raw, and the emission
+## share/gamma are wired from balance.csv.
+func test_the_rivers_colours_go_in_raw() -> void:
 	var f := FileAccess.open("user://rivers.json", FileAccess.WRITE)
 	f.store_string('{"rivers": [{"code": "a", "points": [[0, 0, 10, 6, 0], [500, 0, 9, 40, 1]]}]}')
 	f.close()
@@ -452,8 +451,7 @@ func test_the_rivers_colours_go_in_linearized() -> void:
 	var mat := v.river_material()
 	assert_not_null(mat)
 	var raw: Color = MapTerrain.palette_color(Game.data, "river", MapTerrain.FALLBACK)
-	assert_eq(mat.get_shader_parameter("water"), raw.srgb_to_linear())
-	assert_ne(mat.get_shader_parameter("water"), raw)
+	assert_eq(mat.get_shader_parameter("water"), raw, "the palette hex, unconverted")
 	assert_eq(mat.get_shader_parameter("emission_share"), Game.data.bal("map3d_river_emission_share"))
 	assert_eq(mat.get_shader_parameter("emission_gamma"), Game.data.bal("map3d_river_emission_gamma"))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://rivers.json"))
