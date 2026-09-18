@@ -1,9 +1,10 @@
 class_name Map3DHud
 extends Control
 ## The 3D map's furniture (owner 2026-09-18): the scale bar bottom-right —
-## ScaleBar, the 2D map's own drawing, stating the 3D WORLD's metres (50 m
-## per pack px; map_info's distance_scale is the 2D sheet's and would lie by
-## 20x) — and the compass top-left: CompassLayer's oak wheel turning while
+## ScaleBar, the 2D map's own drawing, in the 2D map's own measure (owner
+## 2026-09-18: the world is BUILT at 50 m per pack px, but it reads as the
+## pack's distance_scale says, so both maps agree — Map3DView.
+## map_units_per_metre) — and the compass top-left: CompassLayer's oak wheel turning while
 ## time runs, as on the 2D map, under a north needle that turns with the
 ## view. Mouse-transparent; Map3DView routes a click on compass_rect() to
 ## its turn-north. Redrawn by the view whenever the camera moves.
@@ -60,17 +61,18 @@ func refresh() -> void:
 		_needle.queue_redraw()
 
 
-## {distance_m, text, width_px} for the largest 1-2-5 distance whose bar fits
-## in `max_px` at `m_per_px`; {} when nothing sensible fits.
-static func scale_bar_for(m_per_px: float, max_px: float) -> Dictionary:
-	if m_per_px <= 0.0 or max_px <= 0.0:
+## {distance, text, width_px} for the largest 1-2-5 distance whose bar fits
+## in `max_px` at `units_per_px` (the pack's distance_unit per screen px, so
+## the bar reads what the 2D map's does — owner 2026-09-18); {} when nothing
+## sensible fits.
+static func scale_bar_for(units_per_px: float, max_px: float, unit: String) -> Dictionary:
+	if units_per_px <= 0.0 or max_px <= 0.0:
 		return {}
-	var d := MapGeometry.nice_step(max_px * m_per_px)
+	var d := MapGeometry.nice_step(max_px * units_per_px)
 	if d <= 0.0:
 		return {}
-	var text := ("%s km" % ScaleBar.trim_zeros(d / 1000.0)) if d >= 1000.0 \
-		else ("%s m" % ScaleBar.trim_zeros(d))
-	return {"distance_m": d, "text": text, "width_px": d / m_per_px}
+	return {"distance": d, "text": ("%s %s" % [ScaleBar.trim_zeros(d), unit]).strip_edges(),
+		"width_px": d / units_per_px}
 
 
 ## The needle's turn, clockwise from screen-up, at a view yaw (Map3DGeometry
@@ -101,8 +103,10 @@ func _draw() -> void:
 	# Own _draw() paints before every child (the wheel, the needle), so the
 	# backdrop sits behind both with no z_index needed.
 	_draw_compass_backdrop()
-	ScaleBar.draw(self, scale_bar_for(view.metres_per_pixel(),
-		Game.data.bal("map_scale_bar_max_px")), size, _hud_halo())
+	ScaleBar.draw(self, scale_bar_for(view.metres_per_pixel() * view.map_units_per_metre(),
+		Game.data.bal("map_scale_bar_max_px"), view.map_unit()), size, _hud_halo())
+	# The MEASUREMENT ruler (owner 2026-09-18), over the scale bar.
+	view.draw_ruler(self)
 
 
 ## A soft dark vignette behind the wheel (fix round 1: map symbols tangled

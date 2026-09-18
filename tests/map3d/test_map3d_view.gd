@@ -539,3 +539,72 @@ func test_the_rivers_colours_go_in_raw() -> void:
 		assert_eq(mat.get_shader_parameter(key), Game.data.bal("map3d_river_" + key), key + " is data")
 	assert_eq(mat.get_shader_parameter("lod_far_m"), Game.data.bal("map3d_sea_ripple_lod_far_m"),
 		"one LOD for both waters")
+
+
+func _button(v: Control, button: MouseButton, pressed: bool, at: Vector2) -> void:
+	var e := InputEventMouseButton.new()
+	e.button_index = button
+	e.pressed = pressed
+	e.position = at
+	v._gui_input(e)
+
+
+## MEASUREMENT (owner 2026-09-18): with the ruler on, a click measures in
+## world metres instead of picking, the pointer stretches it, and a right
+## CLICK puts it away — a right drag still only turns the view.
+func test_the_ruler_measures_ground_metres_instead_of_picking() -> void:
+	var v := _view()
+	v.activate()
+	var spot := _open_land()
+	v.look_at_pack(spot["px"], Game.data.bal("map3d_zoom_min_m"))
+	v.ruler_on = true
+	watch_signals(v)
+	_click(v, v.size * 0.5)
+	assert_signal_not_emitted(v, "province_selected", "the ruler takes the click")
+	assert_eq(v.ruler().phase, MapRuler.Phase.STRETCHING)
+	var hover := InputEventMouseMotion.new()
+	hover.position = v.size * 0.5 + Vector2(120, 0)
+	v._gui_input(hover)
+	assert_gt(v.ruler().length(), 0.0, "the pointer stretches it over the ground")
+	_click(v, hover.position)
+	assert_eq(v.ruler().phase, MapRuler.Phase.FIXED)
+	var fixed := v.ruler().length()
+	_drag(v, MOUSE_BUTTON_RIGHT, Vector2(80, 0))
+	assert_true(v.ruler().active(), "a right drag turns the view and keeps the ruler")
+	_button(v, MOUSE_BUTTON_RIGHT, true, Vector2(10, 10))
+	_button(v, MOUSE_BUTTON_RIGHT, false, Vector2(10, 10))
+	assert_false(v.ruler().active(), "a right click puts it away")
+	assert_gt(fixed, 0.0)
+
+
+func test_turning_the_ruler_off_puts_it_away_and_clicks_pick_again() -> void:
+	var v := _view()
+	v.activate()
+	var spot := _open_land()
+	v.look_at_pack(spot["px"], Game.data.bal("map3d_zoom_min_m"))
+	v.ruler_on = true
+	_click(v, v.size * 0.5)
+	v.ruler_on = false
+	assert_false(v.ruler().active())
+	watch_signals(v)
+	_click(v, v.size * 0.5)
+	assert_signal_emitted(v, "province_selected")
+
+
+## Owner 2026-09-18: the 3D map MEASURES like the 2D map. Its world is built
+## at 50 m per pack px, but a ruler and the scale bar read the pack's own
+## distance_scale / distance_unit, so the same two towns read the same on
+## both maps.
+func test_the_3d_ruler_reads_the_same_distance_as_the_2d_map() -> void:
+	var v := _view()
+	v.activate()
+	var a := Vector2(1000, 400)
+	var b := Vector2(1030, 440)
+	v.ruler_on = true
+	v.ruler().click(Map3DGeometry.pack_to_world(WORLD, a))
+	v.ruler().click(Map3DGeometry.pack_to_world(WORLD, b))
+	var scale := float(Game.data.map_info["distance_scale"])
+	var unit := String(Game.data.map_info["distance_unit"])
+	assert_eq(v.ruler_reading(), MapRuler.reading(a.distance_to(b) * scale, unit),
+		"50 px on the sheet is %s on both maps" % MapRuler.reading(50.0 * scale, unit))
+	assert_almost_eq(v.map_units_per_metre(), scale / float(WORLD["m_per_px"]), 1e-9)

@@ -38,6 +38,7 @@ var _manor_view := false
 ## The MILITARY tab's state (user request 2026-09-10), owned here for the
 ## same reason: the layer follows the player from screen to screen.
 var _army_view := false
+var _ruler_view := false
 ## Which map the panel shows (owner 2026-09-18: the 3D map is the default):
 ## the last result of _sync_map_view, never set by hand.
 var _map3d_view := false
@@ -293,6 +294,10 @@ func _on_bottom_tab(tab: String) -> void:
 			_info_screen.hide()
 			_relations_screen.visible = false
 			set_army_view(not _army_view)
+		"MEASUREMENT":
+			_info_screen.hide()
+			_relations_screen.visible = false
+			set_ruler_view(not _ruler_view)
 		"RELATIONSHIP":
 			_info_screen.hide()
 			toggle_relations()
@@ -392,6 +397,29 @@ func set_army_view(on: bool) -> void:
 func army_view() -> bool:
 	return _army_view
 
+## The MEASUREMENT tab (owner 2026-09-18): the ruler over whichever map is
+## showing, 2D or 3D, on every screen with a map. It changes no layer; the
+## maps route their clicks to the ruler while it is on (MapRuler).
+func set_ruler_view(on: bool) -> void:
+	_ruler_view = on
+	if _bottom_bar != null:
+		_bottom_bar.set_toggled("MEASUREMENT", on)
+	_apply_ruler()
+
+func ruler_view() -> bool:
+	return _ruler_view
+
+## Both of the current screen's maps take the tab's state — called on every
+## map sync too, so a screen swap or a 3D view made on first use follows it.
+func _apply_ruler() -> void:
+	var map := _current_map()
+	if map != null:
+		map.show_ruler = _ruler_view
+	if current_screen != null and current_screen.has_method("map3d_view"):
+		var v: Map3DView = current_screen.map3d_view()
+		if v != null:
+			v.ruler_on = _ruler_view
+
 ## The one rule for which map the panel shows (spec
 ## 2026-09-18-map3d-default-design): 3D whenever the pack has a built scene,
 ## balance map3d_default is on, and no 2D-only layer is — HEIGHTS, ECONOMY
@@ -402,6 +430,7 @@ func _sync_map_view() -> void:
 			and not (_height_view or _economy_view or _manor_view or _army_view)
 	if current_screen != null and current_screen.has_method("set_map3d_view"):
 		current_screen.set_map3d_view(_map3d_view)
+	_apply_ruler()
 
 func map3d_available() -> bool:
 	if _map3d_scene >= 0:

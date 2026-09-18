@@ -36,6 +36,12 @@ add it here as a principle with its why — not as a changelog entry.
   ribbon was rejected there, and pale seams had the same hue as the sand
   roads, so the two could not be told apart.
 
+- **A tool must not borrow the map's line language** (2026-09-18, ruler):
+  the MEASUREMENT ruler's dashes alone read as one more border. What makes
+  it a ruler is a crossbar at each end and ticks standing on ONE side (a
+  tick across the dashes makes "+" and "T" noise). Ticks no closer than
+  ~100 px; at 48 px they merged into a railway track.
+
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols
   and estates carry VALUE only and are multiply-tinted; photographs, icons,

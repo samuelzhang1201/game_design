@@ -11,8 +11,8 @@ extends Control
 
 signal tab_selected(tab: String)
 
-const TABS := ["HEIGHTS", "ECONOMY", "MANORS", "REALM", "MILITARY", "WAR ROOM",
-	"FAMILIES", "LAWS", "RELIGION", "RELATIONSHIP"]
+const TABS := ["HEIGHTS", "ECONOMY", "MANORS", "REALM", "MILITARY", "MEASUREMENT",
+	"WAR ROOM", "FAMILIES", "LAWS", "RELIGION", "RELATIONSHIP"]
 ## Tabs that stay lit while their view is on rather than opening an overlay:
 ## MILITARY toggles the map's army layer (user request 2026-09-10), HEIGHTS
 ## the height ramp over the land (owner request 2026-09-12, remade
@@ -20,8 +20,9 @@ const TABS := ["HEIGHTS", "ECONOMY", "MANORS", "REALM", "MILITARY", "WAR ROOM",
 ## MANORS (MANOR_SYSTEM.md §6) is the fourth theme, exclusive with HEIGHTS
 ## and ECONOMY — GameRoot keeps them so. The 3D map (owner 2026-09-18) is
 ## the default and has no tab: GameRoot shows it whenever none of these four
-## is lit.
-const TOGGLES := ["HEIGHTS", "ECONOMY", "MANORS", "MILITARY"]
+## is lit. MEASUREMENT (owner 2026-09-18) lays the ruler over whichever map
+## is showing, 2D or 3D, and changes no layer.
+const TOGGLES := ["HEIGHTS", "ECONOMY", "MANORS", "MILITARY", "MEASUREMENT"]
 ## The strip's height. A constant on purpose — NewsTicker and ScreenLayout
 ## both place themselves off it, so it cannot float — but it
 ## must stay at least content_height(), and a test pins that. It went stale

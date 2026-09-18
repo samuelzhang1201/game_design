@@ -31,8 +31,7 @@ extends Control
 ## line_px, colour, max_view_m per tier), thinned by distance and picked in
 ## screen space (map3d_pick_px); a click gets a gold selection ring that
 ## never thins. Map3DHud draws the scale bar (ScaleBar, the 2D map's own
-## drawing, restated in the 3D world's own metres — map_info's
-## distance_scale is the 2D SHEET's and would lie 20x here) and a
+## drawing, in the 2D map's own measure — see map_units_per_metre) and a
 ## north-pointing compass, top-left, that turns with the view and eases back
 ## to north on a click.
 ##
@@ -124,6 +123,22 @@ var _hud: Map3DHud
 var _north_t := -1.0
 var _north_from := 0.0
 var _press_on_hud := false
+## The MEASUREMENT tab (owner 2026-09-18): while on, a left click drops or
+## fixes the ruler (world XZ metres) instead of picking, and a right CLICK —
+## not the right-drag that turns the view — puts it away. The HUD draws it.
+var ruler_on := false:
+	set(v):
+		if v == ruler_on:
+			return
+		ruler_on = v
+		_ruler.cancel()
+		if _hud != null:
+			_hud.refresh()
+var _ruler := MapRuler.new()
+var _rpress_pos := Vector2.ZERO
+## Whether the right button has turned the view since it went down: a turn
+## that comes back to its start is still not a click.
+var _rdragged := false
 var _cloud_field: Map3DCloudField
 var _cloud_mm: MultiMesh
 var _cloud_params: Dictionary
@@ -906,12 +921,26 @@ func _gui_input(event: InputEvent) -> void:
 				_press_pos = mb.position
 				_dragging = false
 			elif not _dragging:
-				select_at(mb.position)
+				if ruler_on:
+					_ruler_click(mb.position)
+				else:
+					select_at(mb.position)
 			accept_event()
+		elif mb.button_index == MOUSE_BUTTON_RIGHT:
+			if mb.pressed:
+				_rpress_pos = mb.position
+				_rdragged = false
+			elif ruler_on and not _rdragged and _ruler.cancel() and _hud != null:
+				_hud.refresh()
 		return
 	var mm := event as InputEventMouseMotion
 	if mm == null:
 		return
+	if ruler_on and _ruler.phase == MapRuler.Phase.STRETCHING:
+		var hit: Variant = ground_at(mm.position)
+		if hit != null and _ruler.move(Vector2((hit as Vector3).x, (hit as Vector3).z)) \
+				and _hud != null:
+			_hud.refresh()
 	if mm.button_mask & MOUSE_BUTTON_MASK_LEFT:
 		if _press_on_hud:
 			accept_event()
@@ -925,6 +954,8 @@ func _gui_input(event: InputEvent) -> void:
 		_pan_by(mm.relative)
 		accept_event()
 	elif mm.button_mask & MOUSE_BUTTON_MASK_RIGHT:
+		if _rpress_pos.distance_to(mm.position) > CLICK_SLOP:
+			_rdragged = true
 		_north_t = -1.0
 		_yaw -= mm.relative.x * _repo.bal("map3d_rotate_deg_per_px")
 		_apply_camera()
@@ -965,6 +996,72 @@ func _process(delta: float) -> void:
 	# Keys move the VIEW, so the ground moves the other way from a drag.
 	var px := size.y * _repo.bal("map3d_key_pan_screens_per_s") * delta
 	_pan_by(-dir.normalized() * px)
+
+
+# --- ruler ---------------------------------------------------------------------
+
+## A ruler click at `pos` (design px): the ground under it, or nothing on the sky.
+func _ruler_click(pos: Vector2) -> void:
+	var hit: Variant = ground_at(pos)
+	if hit == null:
+		return
+	_ruler.click(Vector2((hit as Vector3).x, (hit as Vector3).z))
+	if _hud != null:
+		_hud.refresh()
+
+
+## The ruler on the HUD (design px): its ends on the ground, projected; the
+## reading is the HORIZONTAL ground distance in the pack's own measure
+## (map_units_per_metre), so it matches the 2D map's ruler; ticks on the
+## 1-2-5 step at the target's scale, placed along the 3D line so
+## perspective spaces them as the ground does.
+func draw_ruler(ci: CanvasItem) -> void:
+	if not ruler_on or not _ruler.active() or _camera == null:
+		return
+	var a3 := Vector3(_ruler.start.x, _height_at(_ruler.start), _ruler.start.y)
+	var b3 := Vector3(_ruler.end.x, _height_at(_ruler.end), _ruler.end.y)
+	if _camera.is_position_behind(a3) or _camera.is_position_behind(b3):
+		return
+	var s := _render_scale()
+	var k := map_units_per_metre()
+	var total := _ruler.length() * k
+	var step := MapRuler.tick_step(_metres_per_pixel() * k, _repo.bal("map_ruler_tick_min_px"))
+	var ticks := PackedVector2Array()
+	for d in MapRuler.ticks(total, step):
+		ticks.append(_camera.unproject_position(a3.lerp(b3, d / total)) / s)
+	MapRuler.draw(ci, _camera.unproject_position(a3) / s, _camera.unproject_position(b3) / s,
+		ticks, ruler_reading())
+
+
+## The ruler's reading, as drawn.
+func ruler_reading() -> String:
+	return MapRuler.reading(_ruler.length() * map_units_per_metre(), map_unit())
+
+
+## THE 3D MAP MEASURES LIKE THE 2D MAP (owner 2026-09-18). The world is BUILT
+## at map3d_world m_per_px (50 m per pack px: a scale the terrain, the camera
+## and the relief were tuned at), but every distance it SHOWS — the ruler,
+## the scale bar — is the pack's: world metres back to pack px, times
+## map_info.csv distance_scale, in distance_unit. So the same two towns read
+## the same on both maps. A pack with no scale reads its world in km.
+func map_units_per_metre() -> float:
+	var per_px := float(_repo.map_info.get("distance_scale", "0"))
+	var m_per_px := float(_meta.get("m_per_px", 0.0))
+	if per_px <= 0.0 or m_per_px <= 0.0:
+		return 0.001
+	return per_px / m_per_px
+
+
+func map_unit() -> String:
+	if float(_repo.map_info.get("distance_scale", "0")) <= 0.0 \
+			or float(_meta.get("m_per_px", 0.0)) <= 0.0:
+		return "km"
+	return String(_repo.map_info.get("distance_unit", ""))
+
+
+## Test seam.
+func ruler() -> MapRuler:
+	return _ruler
 
 
 # --- picking --------------------------------------------------------------------

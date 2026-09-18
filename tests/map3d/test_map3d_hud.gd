@@ -2,17 +2,17 @@ extends GutTest
 ## Map3DHud: the 3D map's scale bar and compass. Hand-computed values.
 
 func test_the_bar_takes_the_largest_round_distance_that_fits() -> void:
-	# 30 m per px, 220 px at most: 6600 m fits, the 1-2-5 step under it is 5 km.
-	var bar := Map3DHud.scale_bar_for(30.0, 220.0)
-	assert_eq(bar["distance_m"], 5000.0)
-	assert_eq(bar["text"], "5 km")
-	assert_almost_eq(float(bar["width_px"]), 5000.0 / 30.0, 0.001)
+	# 1.5 km per px, 220 px at most: 330 km fits, the 1-2-5 step under it is 200 km.
+	var bar := Map3DHud.scale_bar_for(1.5, 220.0, "km")
+	assert_eq(bar["distance"], 200.0)
+	assert_eq(bar["text"], "200 km")
+	assert_almost_eq(float(bar["width_px"]), 200.0 / 1.5, 0.001)
 
 
-func test_short_distances_read_in_metres() -> void:
-	# 1.5 m per px * 220 = 330 m -> 200 m.
-	var bar := Map3DHud.scale_bar_for(1.5, 220.0)
-	assert_eq(bar["text"], "200 m")
+func test_the_bar_reads_in_the_packs_own_unit() -> void:
+	# 0.03 units per px * 220 = 6.6 -> 5, in whatever unit the pack names.
+	assert_eq(Map3DHud.scale_bar_for(0.03, 220.0, "mi")["text"], "5 mi")
+	assert_eq(Map3DHud.scale_bar_for(0.0, 220.0, "km"), {}, "nothing sensible fits")
 
 
 func test_the_needle_turns_with_the_view() -> void:

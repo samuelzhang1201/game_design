@@ -57,12 +57,20 @@ var _manor := ""
 ## --manor), so the slot row shows a work; --speed N lights the clock.
 var _build := ""
 var _speed := -1
-## --click3d fx,fy (with --screen root --layer "3d map") clicks the 3D map
+## --click3d fx,fy (with --screen root: the court opens on the 3D map when it
+## is built) clicks the 3D map
 ## at that share of its size, so a shot shows the pick: the card in the
 ## left column and the province's gold outline.
 var _click3d := Vector2(-1, -1)
-## --zoom3d M (with --layer "3d map") frames the capital M metres away.
+## --zoom3d M (with --screen root) frames the capital M metres away.
 var _zoom3d := -1.0
+## --ruler fx1,fy1,fx2,fy2 (with --screen root) lights the MEASUREMENT tab
+## and clicks the showing map at those shares of its size, so the shot shows
+## a fixed ruler; --ruler-open leaves it stretching to the second point.
+## --map2d keeps the court on the 2D map (balance map3d_default off).
+var _ruler := PackedFloat32Array()
+var _ruler_open := false
+var _map2d := false
 
 
 func _ready() -> void:
@@ -92,6 +100,9 @@ func _ready() -> void:
 			_click3d = Vector2(float(parts[0]), float(parts[1]))
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
+		elif args[i] == "--ruler":
+			for part in args[i + 1].split(","):
+				_ruler.append(float(part))
 		elif args[i] == "--speed":
 			_speed = int(args[i + 1])
 		elif args[i] == "--resolution":
@@ -99,11 +110,15 @@ func _ready() -> void:
 			if wh.size() == 2:
 				_res = Vector2i(int(wh[0]), int(wh[1]))
 		i += 1
+	_ruler_open = args.has("--ruler-open")
+	_map2d = args.has("--map2d")
 	if not SCENES.has(_screen):
 		push_error("unknown screen %s; choose from %s" % [_screen, SCENES.keys()])
 		get_tree().quit(2)
 		return
 	Game.start_campaign(_seed)
+	if _map2d:
+		Game.data.balance["map3d_default"] = 0.0
 	if _res != Vector2i.ZERO:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(_res)
@@ -189,6 +204,25 @@ func _process(_delta: float) -> void:
 		var v: Map3DView = _root.current_screen.map3d_view()
 		v.select_at(v.size * _click3d)
 		print("click3d: province=%s burg=%s" % [v.selected_province(), v.selected_burg()])
+	if _root != null and _frames == 12 and _ruler.size() == 4:
+		_root.set_ruler_view(true)
+		var v: Control = _root.current_screen.world_map()
+		if _root.map3d_view() and _root.current_screen.map3d_view() != null:
+			v = _root.current_screen.map3d_view()
+		var a := v.size * Vector2(_ruler[0], _ruler[1])
+		var b := v.size * Vector2(_ruler[2], _ruler[3])
+		for at in [a, b]:
+			var hover := InputEventMouseMotion.new()
+			hover.position = at
+			v._gui_input(hover)
+			if at == b and _ruler_open:
+				break
+			for down in [true, false]:
+				var e := InputEventMouseButton.new()
+				e.button_index = MOUSE_BUTTON_LEFT
+				e.pressed = down
+				e.position = at
+				v._gui_input(e)
 	if _frames == 40:
 		var img := (get_viewport() if _viewport == null else _viewport).get_texture().get_image()
 		var abs_path := ProjectSettings.globalize_path(_out)
