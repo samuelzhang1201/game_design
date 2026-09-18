@@ -517,7 +517,7 @@ static func describe(repo: DataRepository, obj: Dictionary,
 		"marker":
 			return _describe_marker(repo, String(obj["code"]))
 		"army":
-			return _describe_army(repo, String(obj["code"]))
+			return _describe_army(repo, String(obj["code"]), state)
 		"land":
 			return _describe_land(repo, obj, state)
 		"manor":
@@ -1421,7 +1421,7 @@ static func royal_regiment(repo: DataRepository, kingdom_code: String) -> String
 			best = code
 	return best
 
-static func _describe_army(repo: DataRepository, code: String) -> Dictionary:
+static func _describe_army(repo: DataRepository, code: String, state: GameState = null) -> Dictionary:
 	var r: Dictionary = repo.world_table("military", "regiments").get(code, {})
 	if r.is_empty():
 		return {}
@@ -1438,6 +1438,20 @@ static func _describe_army(repo: DataRepository, code: String) -> Dictionary:
 			lines.append("%s: %d" % [String((repo.resource_icons.get(unit, {}) as Dictionary)
 				.get("label", unit.capitalize())), int(n)])
 	lines.append("Under arms: %d" % int(regiment_size(repo, r)))
+	# The player's own regiment shows its state and its march (owner
+	# 2026-09-19: a click on a counter shows the regiment).
+	var st := ArmySystem.state_of(repo, state, code)
+	if not st.is_empty():
+		var use := ArmySystem.supply_use(repo, r)
+		var supplies := int(st["supplies"])
+		lines.append("Morale: %d / 100" % int(st["morale"]))
+		lines.append("Wounded: %d" % int(st["wounded"]))
+		lines.append("Supplies: %d (%s months)" % [supplies,
+			ScaleBar.trim_zeros(snappedf(float(supplies) / float(use), 0.1)) if use > 0 else "-"])
+		lines.append("Training: %s" % ArmySystem.training_grade(repo, int(st["training"])))
+		lines.append("Strength: %s" % ArmySystem.strength_grade(repo, state, code))
+		lines.append("Ground: %s" % ArmySystem.terrain_label(repo, r))
+		lines.append("March: %.1f km a day" % ArmySystem.speed_km_per_day(repo, state, code))
 	return {"title": label, "lines": lines,
 		"ask": "What is the state of the %s?" % label}
 

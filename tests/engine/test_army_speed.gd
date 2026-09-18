@@ -85,3 +85,20 @@ func test_hunger_and_low_morale_slow_the_march() -> void:
 	Game.state.regiments[code]["supplies"] = 0
 	Game.state.regiments[code]["morale"] = 10
 	assert_lt(ArmySystem.speed_km_per_day(Game.data, Game.state, code), before)
+
+
+## Owner 2026-09-19: clicking a counter shows the regiment — its state and
+## its march, not only its heads.
+func test_the_regiments_card_shows_its_state_and_its_march() -> void:
+	Game.start_campaign(42)
+	var mine := Game.data.resolve_realm("player_realm")
+	var code := String(MapObjects.regiments_of(Game.data, mine)[0]["regiment_code"])
+	var st := ArmySystem.state_of(Game.data, Game.state, code)
+	var card := MapObjects.describe(Game.data, {"kind": "army", "code": code}, Game.state)
+	var text := "\n".join(card["lines"])
+	assert_string_contains(text, "Morale: %d / 100" % int(st["morale"]))
+	assert_string_contains(text, "Training: %s" % ArmySystem.training_grade(Game.data, int(st["training"])))
+	assert_string_contains(text, "Strength: %s" % ArmySystem.strength_grade(Game.data, Game.state, code))
+	assert_string_contains(text, "March: %.1f km a day" % ArmySystem.speed_km_per_day(Game.data, Game.state, code))
+	assert_string_contains(text, "Supplies:")
+	assert_string_contains(text, "Wounded:")
