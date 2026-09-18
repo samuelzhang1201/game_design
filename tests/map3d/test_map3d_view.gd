@@ -101,6 +101,28 @@ func test_a_clicked_settlement_wears_the_gold_ring_until_cleared() -> void:
 	assert_false(v.selected_ring_visible())
 
 
+func test_a_far_village_carries_its_max_view_m_from_the_table() -> void:
+	var v := _view()
+	v.activate()
+	var mmi := v.viewport().get_node("Markers/Village") as MultiMeshInstance3D
+	var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
+	var spec: Dictionary = Game.data.map3d_settlements["village"]
+	assert_almost_eq(float(mat.get_shader_parameter("max_view_m")), float(spec["max_view_m"]), 0.001)
+
+
+func test_ring_render_priority_rises_with_tier() -> void:
+	var v := _view()
+	v.activate()
+	var priority := func(group: String) -> int:
+		var mmi := v.viewport().get_node("Markers/%s" % group.capitalize()) as MultiMeshInstance3D
+		var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
+		return mat.render_priority
+	assert_lt(priority.call("village"), priority.call("town"), "village < town")
+	assert_lt(priority.call("town"), priority.call("city"), "town < city")
+	assert_lt(priority.call("city"), priority.call("capital"), "city < capital")
+	assert_true(priority.call("village") >= 3, "rings still draw over the lines (0-2)")
+
+
 func test_the_wheel_zooms_within_the_clamp() -> void:
 	var v := _view()
 	v.activate()

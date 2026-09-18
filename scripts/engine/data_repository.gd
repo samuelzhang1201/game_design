@@ -444,7 +444,7 @@ func _load(dir: String) -> bool:
 			func(r): settlement_art.append(r)):
 		return false
 	if not _load_if_present("res://data/map3d_settlements.csv",
-			["group", "ring_px", "line_px", "color"],
+			["group", "ring_px", "line_px", "color", "max_view_m"],
 			func(r): map3d_settlements[String(r["group"])] = r):
 		return false
 	if not _load_if_present(dir + "/army_art.csv", ["piece", "texture", "painting"],

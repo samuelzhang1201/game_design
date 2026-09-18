@@ -33,6 +33,13 @@ const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
 const NOTICE_TEXT := "The 3D map has not been built for this map.\nRun tools/map3d (see tools/map3d/README.md)."
 const BORDER_SHADER := preload("res://scripts/map3d/border_line.gdshader")
 const RING_SHADER := preload("res://scripts/map3d/settlement_ring.gdshader")
+## The selection ring never thins by distance (fix round 1, owner 2026-09-18):
+## whatever the player clicked stays marked regardless of zoom.
+const SELECTED_RING_ALWAYS_M := 1000000.0
+## Lines and rings are see-through, ordered by render_priority so higher
+## tiers draw over lower ones and the selection ring draws over every tier
+## (Map3DBorders' lines use 0-2; rings start at 3, see _place_markers).
+const RING_PRIORITY_BASE := 3
 ## A press and release further apart than this is a drag, not a click
 ## (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := 10.0
@@ -246,7 +253,11 @@ func _height_at(xz: Vector2) -> float:
 
 ## One MultiMesh of billboard rings per settlement group, each over the
 ## ground under its burg, plus a hidden gold ring for the current selection.
-## Codes are sorted so the placement is the same every run.
+## Codes are sorted so the placement is the same every run. Render priority
+## rises with tier (village lowest, capital highest — by ring_px, the
+## table's own measure of importance) so a bigger settlement's ring never
+## gets buried under a smaller neighbour's (fix round 1, owner 2026-09-18);
+## the selection ring sits above every tier.
 func _place_markers() -> void:
 	_ring_mats.clear()
 	var by_group: Dictionary = {}
@@ -259,12 +270,18 @@ func _place_markers() -> void:
 		(by_group[group] as Array).append(Vector3(xz.x, _height_at(xz), xz.y))
 	var groups: Array = by_group.keys()
 	groups.sort()
+	var by_size: Array = groups.duplicate()
+	by_size.sort_custom(func(a: String, b: String) -> bool:
+		var ra := float(_repo.map3d_settlements[a]["ring_px"])
+		var rb := float(_repo.map3d_settlements[b]["ring_px"])
+		return ra < rb if ra != rb else a < b)
 	for group: String in groups:
 		var spec: Dictionary = _repo.map3d_settlements[group]
 		var mesh := QuadMesh.new()
 		mesh.size = Vector2.ONE
 		mesh.material = _ring_material(Color(String(spec["color"])),
-			float(spec["ring_px"]), float(spec["line_px"]), 3)
+			float(spec["ring_px"]), float(spec["line_px"]), float(spec["max_view_m"]),
+			RING_PRIORITY_BASE + by_size.find(group))
 		var pts: Array = by_group[group]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -276,10 +293,14 @@ func _place_markers() -> void:
 		mmi.name = group.capitalize()
 		mmi.multimesh = mm
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# The vertex shader grows geometry far past the mesh's own 1x1 AABB
+		# (Map3DBorders' lines use the same margin, for the same reason).
+		mmi.extra_cull_margin = 16384.0
 		_markers.add_child(mmi)
 	var sel := QuadMesh.new()
 	sel.size = Vector2.ONE
-	sel.material = _ring_material(MapPalette.named(_repo, "map3d_selection"), 0.0, 0.0, 4)
+	sel.material = _ring_material(MapPalette.named(_repo, "map3d_selection"), 0.0, 0.0,
+		SELECTED_RING_ALWAYS_M, RING_PRIORITY_BASE + groups.size())
 	var smm := MultiMesh.new()
 	smm.transform_format = MultiMesh.TRANSFORM_3D
 	smm.mesh = sel
@@ -289,24 +310,35 @@ func _place_markers() -> void:
 	_selected_ring.multimesh = smm
 	_selected_ring.visible = false
 	_selected_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_selected_ring.extra_cull_margin = 16384.0
 	_markers.add_child(_selected_ring)
 	_update_line_scale()
 
 
 ## A ring material; its sizes are design px, turned into window px with the
-## lines' by _update_line_scale (base values kept as meta).
-func _ring_material(colour: Color, ring_px: float, line_px: float, priority: int) -> ShaderMaterial:
+## lines' by _update_line_scale (base values kept as meta). max_view_m is
+## world metres, never rescaled. The keyline is a fixed data value (fix
+## round 1: a pale ring was nearly invisible on bright grass at the old
+## 0.55 default).
+func _ring_material(colour: Color, ring_px: float, line_px: float, max_view_m: float,
+		priority: int) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = RING_SHADER
 	mat.render_priority = priority
 	mat.set_shader_parameter("colour", colour)
+	mat.set_shader_parameter("max_view_m", max_view_m)
+	var keyline := Color(0.08, 0.08, 0.08, _repo.bal("map3d_ring_keyline_alpha"))
+	mat.set_shader_parameter("keyline", keyline)
 	mat.set_meta("ring_px", ring_px)
 	mat.set_meta("line_px", line_px)
 	_ring_mats.append(mat)
 	return mat
 
 
-## Show the gold ring on a burg (or hide it with "").
+## Show the gold ring on a burg (or hide it with ""). It keeps the base
+## stroke width at a larger diameter (fix round 1, owner 2026-09-18: the old
+## 1.5x line width smeared it into a fat band over the tier ring instead of
+## reading as a second crisp ring).
 func _show_selected_ring(code: String) -> void:
 	if _selected_ring == null:
 		return
@@ -321,7 +353,7 @@ func _show_selected_ring(code: String) -> void:
 	var mat := _selected_ring.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 	var k := _repo.bal("map3d_selected_ring_scale")
 	mat.set_meta("ring_px", float(spec["ring_px"]) * k)
-	mat.set_meta("line_px", float(spec["line_px"]) * 1.5)
+	mat.set_meta("line_px", float(spec["line_px"]))
 	_update_line_scale()
 
 
@@ -564,22 +596,34 @@ func ground_at(pos: Vector2) -> Variant:
 ## What a click at `pos` picks: {"kind": "burg", "code"} for a settlement
 ## within map3d_pick_px of it (or on its disc), {"kind": "province", "code"}
 ## for the province under it, {} for the sea or the sky.
+##
+## The burg distance is measured in SCREEN px (the camera's own projection of
+## each burg's ground point), not by unprojecting the click to world XZ and
+## comparing world distances: at a steep near-zoom grazing angle a small
+## terrain-height error swings the raycast's XZ landing point by far more
+## than the ring's own on-screen radius, so a world-space reach either picked
+## nothing (fix round 1, owner 2026-09-18) or had to be absurdly generous.
+## Screen space matches what the player is actually aiming at, a ring of
+## constant screen size, and needs no distance conversion at all.
 func pick_at(pos: Vector2) -> Dictionary:
 	var hit: Variant = ground_at(pos)
 	if hit == null:
 		return {}
 	var p := hit as Vector3
 	var xz := Vector2(p.x, p.z)
-	var m_per_px := p.distance_to(_camera.global_position) \
-		* 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / maxf(size.y, 1.0)
+	var s := _render_scale()
+	var click_px := pos * s
 	var best := ""
 	var best_d := INF
 	for code: String in _sorted_burgs():
 		var burg: Dictionary = _repo.burgs[code]
 		var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
-		var reach := maxf(float(spec["ring_px"]) * 0.5, _repo.bal("map3d_pick_px")) * m_per_px
-		var d := _burg_xz(burg).distance_to(xz)
-		if d <= reach and d < best_d:
+		var bxz := _burg_xz(burg)
+		var world := Vector3(bxz.x, _height_at(bxz), bxz.y)
+		var screen_px := _camera.unproject_position(world)
+		var reach := maxf(float(spec["ring_px"]) * 0.5, _repo.bal("map3d_pick_px")) * s
+		var d := screen_px.distance_to(click_px)
+		if d <= reach and d < best_d and _camera.is_position_behind(world) == false:
 			best_d = d
 			best = code
 	if best != "":
