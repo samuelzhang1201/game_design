@@ -119,3 +119,69 @@ func test_the_edges_are_ruled_only_under_a_theme() -> void:
 func test_the_manor_edges_sit_between_the_roads_and_the_seams() -> void:
 	assert_lt(Map3DView.PRIORITY_ROADS, Map3DView.PRIORITY_MANOR_EDGES)
 	assert_lt(Map3DView.PRIORITY_MANOR_EDGES, Map3DView.PRIORITY_SEAMS)
+
+
+# --- picking and hovering a manor -------------------------------------------------
+
+func _click(v: Map3DView, at: Vector2) -> void:
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = at
+	v._gui_input(down)
+	var up := down.duplicate() as InputEventMouseButton
+	up.pressed = false
+	v._gui_input(up)
+
+
+## A manor's pixel (a land cell in a province) with no settlement within
+## 60 px, and the manor it lies in.
+func _open_land() -> Dictionary:
+	var img := (load(Game.data.cell_texture_path) as Texture2D).get_image()
+	for y in range(40, img.get_height() - 40, 25):
+		for x in range(40, img.get_width() - 40, 25):
+			var id := MapIndex.id_at(img, Vector2i(x, y))
+			if not Game.data.manors.has(id) or MapManors.province_of(Game.data, id) == "":
+				continue
+			var clear := true
+			for b: Dictionary in Game.data.burgs.values():
+				if Vector2(float(b["x"]), float(b["y"])).distance_to(Vector2(x, y)) < 60.0:
+					clear = false
+					break
+			if clear:
+				return {"px": Vector2(x + 0.5, y + 0.5), "cell": id}
+	return {}
+
+
+func test_under_a_theme_a_click_on_land_opens_the_manor() -> void:
+	var v := _view()
+	v.set_manor_theme("manors")
+	var spot := _open_land()
+	v.look_at_pack(spot["px"], Game.data.bal("map3d_zoom_min_m"))
+	watch_signals(v)
+	_click(v, v.size * 0.5)
+	var cell := int(spot["cell"])
+	assert_signal_emitted_with_parameters(v, "object_selected",
+		[{"title": MapManors.label_of(Game.data, cell), "obj": {"kind": "manor", "cell": cell}}])
+	assert_not_null(v.line_mesh("Selection"), "the manor is outlined in gold")
+
+
+func test_without_a_theme_the_same_click_names_the_province() -> void:
+	var v := _view()
+	var spot := _open_land()
+	v.look_at_pack(spot["px"], Game.data.bal("map3d_zoom_min_m"))
+	watch_signals(v)
+	_click(v, v.size * 0.5)
+	assert_signal_emitted_with_parameters(v, "province_selected",
+		[MapManors.province_of(Game.data, int(spot["cell"]), Game.state)])
+
+
+func test_hovering_a_manor_names_it_and_its_holder() -> void:
+	var v := _view()
+	v.set_manor_theme("economy")
+	var cell := _crown_cell()
+	v.hover_pick({"kind": "manor", "cell": cell}, Vector2(100, 100))
+	assert_eq(v.hover_tooltip(), MapManors.label_of(Game.data, cell))
+	assert_eq(v.hovered_kingdom(), Game.data.resolve_realm("player_realm"))
+	assert_eq(Map3DView.kingdom_of_pick(Game.data, Game.state, {"kind": "manor", "cell": cell}),
+		Game.data.resolve_realm("player_realm"))

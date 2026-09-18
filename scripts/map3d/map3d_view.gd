@@ -124,8 +124,11 @@ var _hovered := false
 var _press_pos := Vector2.ZERO
 var _dragging := false
 var _province_image: Image
+var _cell_image: Image
 var _selected_province := ""
 var _selected_burg := ""
+## The clicked manor under a theme (-1 for none), outlined in gold.
+var _selected_manor := -1
 var _border_sig := 0
 ## The ECONOMY / MANORS theme (owner 2026-09-19): "", "economy" or "manors";
 ## the LUT of each cell's ManorPalette colour the patched terrain shader reads
@@ -993,10 +996,18 @@ func _update_line_scale() -> void:
 		_river_mat.set_shader_parameter("min_px", _repo.bal("map3d_river_min_px") * s)
 
 
-## The clicked province's outline, solid gold over the borders.
+## The clicked province's outline — or, under a theme, the clicked manor's
+## — solid gold over the borders.
 func _draw_selection() -> void:
 	var lines: Array = []
-	if _selected_province != "":
+	if _selected_manor >= 0 and _repo.cells.has(_selected_manor):
+		var pts := PackedVector2Array()
+		for vid in (_repo.cells[_selected_manor]["vertex_ids"] as PackedInt32Array):
+			pts.append(Map3DGeometry.pack_to_world(_meta, _repo.vertices[vid] as Vector2))
+		if pts.size() >= 3:
+			pts.append(pts[0])
+			lines.append(Map3DGeometry.resample(pts, _repo.bal("map3d_line_step_m")))
+	elif _selected_province != "":
 		var steps := int(_repo.bal("map_border_smoothing_steps"))
 		for loop: PackedVector2Array in MapOwnership.province_loops(_repo, _state(), _selected_province):
 			if loop.size() < 3:
@@ -1347,6 +1358,10 @@ func pick_at(pos: Vector2) -> Dictionary:
 			best = code
 	if best != "":
 		return {"kind": "burg", "code": best}
+	# Under ECONOMY / MANORS the land means its MANOR, as on the 2D map.
+	if _theme != "":
+		var cell := _cell_at(Map3DGeometry.world_to_pack(_meta, xz))
+		return {"kind": "manor", "cell": cell} if cell >= 0 else {}
 	var province := _province_at(Map3DGeometry.world_to_pack(_meta, xz))
 	return {"kind": "province", "code": province} if province != "" else {}
 
@@ -1374,6 +1389,8 @@ static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dict
 				.get("province_code", ""))
 		"province":
 			province = String(picked["code"])
+		"manor":
+			province = MapManors.province_of(repo, int(picked["cell"]), state)
 	if province == "":
 		return ""
 	var holder := MapOwnership.owner_of(repo, state, province)
@@ -1384,7 +1401,7 @@ static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dict
 ## cursor, and — only when it changes — the kingdom's wider outline and
 ## country_hovered. Public: tests drive it without a ray.
 func hover_pick(picked: Dictionary, pos: Vector2) -> void:
-	var obj: Dictionary = picked if String(picked.get("kind", "")) == "burg" else {}
+	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor"] else {}
 	if obj != _hover_obj:
 		_hover_obj = obj
 		var label := MapObjects.label_of(_repo, obj)
@@ -1438,8 +1455,24 @@ func tooltip_rect() -> Rect2:
 	return Rect2(_tooltip.position, _tooltip.get_combined_minimum_size())
 
 
-## The click: a settlement opens its card, land names its province, the sea
-## clears — exactly the signals WorldMapView sends.
+## The manor at a pack pixel (world_cell_index.png), or -1 for water, the
+## map's edge or land no manor covers.
+func _cell_at(pack_px: Vector2) -> int:
+	if _cell_image == null:
+		var path := _repo.cell_texture_path
+		if path == "" or not ResourceLoader.exists(path):
+			return -1
+		_cell_image = (load(path) as Texture2D).get_image()
+	var p := Vector2i(pack_px.floor())
+	if p.x < 0 or p.y < 0 or p.x >= _cell_image.get_width() or p.y >= _cell_image.get_height():
+		return -1
+	var id := MapIndex.id_at(_cell_image, p)
+	return id if _repo.manors.has(id) else -1
+
+
+## The click: a settlement opens its card, land names its province (its
+## manor under a theme), the sea clears — exactly the signals WorldMapView
+## sends.
 func select_at(pos: Vector2) -> void:
 	var picked := pick_at(pos)
 	match String(picked.get("kind", "")):
@@ -1455,21 +1488,31 @@ func select_at(pos: Vector2) -> void:
 			_show_selected_ring("")
 			_set_selected_province(String(picked["code"]))
 			province_selected.emit(_selected_province)
+		"manor":
+			var cell := int(picked["cell"])
+			_selected_burg = ""
+			_show_selected_ring("")
+			_selected_province = ""
+			_selected_manor = cell
+			_draw_selection()
+			object_selected.emit({"title": MapManors.label_of(_repo, cell),
+				"obj": {"kind": "manor", "cell": cell}})
 		_:
 			clear_selection()
 
 
 func _set_selected_province(code: String) -> void:
-	if code == _selected_province:
+	if code == _selected_province and _selected_manor < 0:
 		return
 	_selected_province = code
+	_selected_manor = -1
 	if _loaded:
 		_draw_selection()
 
 
 ## Forget the selection (the card was closed, or the sea clicked).
 func clear_selection() -> void:
-	var had := _selected_burg != "" or _selected_province != ""
+	var had := _selected_burg != "" or _selected_province != "" or _selected_manor >= 0
 	_selected_burg = ""
 	_show_selected_ring("")
 	_set_selected_province("")
