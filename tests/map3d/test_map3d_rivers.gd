@@ -178,3 +178,60 @@ func test_clear_terrain_lifts_a_point_whose_edge_dips_below_ground() -> void:
 func test_clear_terrain_is_a_no_op_without_a_height_fn() -> void:
 	var courses := Map3DRivers.parse(JSON_TEXT)
 	assert_same(Map3DRivers.clear_terrain(courses, Callable(), 5.0), courses)
+
+
+## Fix round 4: a tributary ending ON a main river fades over that river's
+## LOCAL half-width, not the fixed end fade — full strength at the bank,
+## gone at the centreline. Main river "m" runs along x = 0 with width 40
+## (half-width 20); tributary "t" comes in from +x and ends at (0, 50).
+const JOIN_TEXT := '{"rivers": [' \
+	+ '{"code": "m", "points": [[0, 0, 10, 40, 0], [0, 100, 10, 40, 1]]}, ' \
+	+ '{"code": "t", "points": [[200, 50, 20, 10, 0], [100, 50, 15, 10, 0], [0, 50, 10, 10, 0]]}]}'
+
+
+func test_a_joined_end_fades_over_the_main_rivers_half_width() -> void:
+	var courses := Map3DRivers.parse(JOIN_TEXT)
+	var t: Dictionary = courses[1]
+	assert_eq(t["code"], "t")
+	assert_almost_eq(float(t["end_fade_m"]), 20.0, 0.001, "half the main river's width at the tip")
+	# A sample is inserted at the bank, 20 m before the tip.
+	var pos: PackedVector3Array = t["pos"]
+	assert_eq(pos.size(), 4)
+	assert_almost_eq(pos[2].x, 20.0, 0.001)
+	assert_almost_eq(pos[2].y, 11.0, 0.001, "height interpolated between 15 and 10")
+	var colors: PackedColorArray = Map3DRivers.ribbon_arrays([t], 80.0)[Mesh.ARRAY_COLOR]
+	assert_almost_eq(colors[4].a, 1.0, 0.001, "full strength at the main river's bank")
+	assert_almost_eq(colors[6].a, 0.0, 0.001, "gone at the main river's centreline")
+	assert_almost_eq(colors[0].a, 0.0, 0.001, "the source still fades in")
+
+
+func test_a_source_still_fades_over_end_fade() -> void:
+	var courses := Map3DRivers.parse(JOIN_TEXT)
+	var colors: PackedColorArray = Map3DRivers.ribbon_arrays([courses[1]], 80.0)[Mesh.ARRAY_COLOR]
+	# The second sample is 100 m from the source: past the 80 m fade in.
+	assert_almost_eq(colors[2].a, 1.0, 0.001)
+	var short := Map3DRivers.ribbon_arrays([courses[1]], 200.0)[Mesh.ARRAY_COLOR] as PackedColorArray
+	assert_almost_eq(short[2].a, 0.5, 0.001, "the source fade still follows end_fade_m")
+
+
+func test_a_sea_mouth_does_not_fade_and_gets_no_join_fade() -> void:
+	var courses := Map3DRivers.parse(JOIN_TEXT)
+	var m: Dictionary = courses[0]
+	assert_true(m["true_mouth"])
+	assert_false(m.has("end_fade_m"))
+	var colors: PackedColorArray = Map3DRivers.ribbon_arrays([m], 80.0)[Mesh.ARRAY_COLOR]
+	assert_almost_eq(colors[-1].a, 1.0, 0.001)
+
+
+func test_a_joined_end_far_from_any_river_keeps_the_end_fade() -> void:
+	var text := '{"rivers": [' \
+		+ '{"code": "m", "points": [[0, 0, 10, 40, 0], [0, 100, 10, 40, 1]]}, ' \
+		+ '{"code": "t", "points": [[300, 50, 20, 10, 0], [200, 50, 10, 10, 0]]}]}'
+	var t: Dictionary = Map3DRivers.parse(text)[1]
+	assert_false(t.has("end_fade_m"), "200 m off a 40 m river is more than twice its width")
+
+
+func test_clear_terrain_keeps_the_join_fade() -> void:
+	var ground := func(_xz: Vector2) -> float: return 0.0
+	var cleared := Map3DRivers.clear_terrain(Map3DRivers.parse(JOIN_TEXT), ground, 1.0)
+	assert_almost_eq(float(cleared[1]["end_fade_m"]), 20.0, 0.001)

@@ -25,7 +25,10 @@ const DEFAULT_END_FADE_M := 80.0
 
 
 ## rivers.json text -> [{code, pos: PackedVector3Array, width, mouth:
-## PackedFloat32Array, true_mouth: bool}]; [] for anything unreadable.
+## PackedFloat32Array, true_mouth: bool}, plus on a river's final strip that
+## does not reach the sea joined_end: true and — when another river's
+## course lies at its tip — end_fade_m, that river's local half-width (fix
+## round 4, _fit_joined_ends)]; [] for anything unreadable.
 ##
 ## A course is split into separate strips wherever water_y rises by more
 ## than split_rise_m between consecutive points — a river leaving or
@@ -64,8 +67,96 @@ static func parse(text: String, split_rise_m: float = DEFAULT_SPLIT_RISE_M) -> A
 				start = i
 			prev_y = y
 		var reaches_sea := float((pts[last_idx] as Array)[4]) > 0.0
-		out.append(_strip(pts, code, part, start, last_idx, reaches_sea))
+		var last := _strip(pts, code, part, start, last_idx, reaches_sea)
+		if not reaches_sea:
+			last["joined_end"] = true
+		out.append(last)
+	_fit_joined_ends(out, data["rivers"])
 	return out
+
+
+## Fix round 4: a JOINED end — the river's own last sample, not a sea mouth
+## and not a lake cut — lies ON another river's course (Task 6 fix round 3).
+## Faded over the fixed end_fade_m (80 m) it stopped short of the main
+## river's bank and left a band of wet dirt; left at full opacity (fix round
+## 2) its tip ran on to the main river's centreline and drew a bright
+## sliver inside the main water. So it fades over the main river's LOCAL
+## half-width instead: full strength at the bank, gone at the centreline.
+## Sets "end_fade_m" on each joined strip whose neighbour lies within twice
+## that neighbour's width (else the caller's end_fade_m stands), and inserts
+## a sample at that distance from the end when none is near, so the water
+## is at full strength right AT the bank rather than ramping from the
+## previous sample (the bake's samples are ~50-60 m apart).
+static func _fit_joined_ends(strips: Array, rivers: Array) -> void:
+	# Every river's course in the ground plane with its widths, and a box
+	# grown by twice its widest point to skip far rivers cheaply.
+	var courses: Array = []
+	for r: Variant in rivers:
+		var pts: Array = (r as Dictionary).get("points", [])
+		var xz := PackedVector2Array()
+		var w := PackedFloat32Array()
+		var box := Rect2()
+		var max_w := 0.0
+		for i in pts.size():
+			var p: Array = pts[i]
+			var q := Vector2(float(p[0]), float(p[1]))
+			xz.append(q)
+			w.append(float(p[3]))
+			max_w = maxf(max_w, float(p[3]))
+			box = Rect2(q, Vector2.ZERO) if i == 0 else box.expand(q)
+		courses.append({"code": String((r as Dictionary).get("code", "")), "xz": xz,
+			"w": w, "box": box.grow(max_w * 2.0)})
+	for s: Dictionary in strips:
+		if not s.get("joined_end", false):
+			continue
+		var pos: PackedVector3Array = s["pos"]
+		var tip := Vector2(pos[-1].x, pos[-1].z)
+		var own := String(s["code"]).get_slice("#", 0)
+		var best_d := INF
+		var best_w := 0.0
+		for c: Dictionary in courses:
+			if c["code"] == own or not (c["box"] as Rect2).has_point(tip):
+				continue
+			var xz: PackedVector2Array = c["xz"]
+			var w: PackedFloat32Array = c["w"]
+			for i in range(1, xz.size()):
+				var seg := xz[i] - xz[i - 1]
+				var t := 0.0
+				if seg.length_squared() > 0.0000001:
+					t = clampf((tip - xz[i - 1]).dot(seg) / seg.length_squared(), 0.0, 1.0)
+				var d := tip.distance_to(xz[i - 1] + seg * t)
+				if d < best_d:
+					best_d = d
+					best_w = lerpf(w[i - 1], w[i], t)
+		if best_w <= 0.0 or best_d > best_w * 2.0:
+			continue
+		var fade := best_w * 0.5
+		s["end_fade_m"] = fade
+		_insert_at_distance_from_end(s, fade)
+
+
+## Inserts an interpolated sample `dist` metres of arc before the strip's
+## end unless a sample already lies within a metre of that spot.
+static func _insert_at_distance_from_end(s: Dictionary, dist: float) -> void:
+	var pos: PackedVector3Array = s["pos"]
+	var width: PackedFloat32Array = s["width"]
+	var mouth: PackedFloat32Array = s["mouth"]
+	var from_end := 0.0
+	for i in range(pos.size() - 1, 0, -1):
+		var seg := Vector2(pos[i].x - pos[i - 1].x, pos[i].z - pos[i - 1].z).length()
+		if from_end + seg < dist - 1.0:
+			from_end += seg
+			continue
+		if from_end + seg <= dist + 1.0 or dist - from_end <= 1.0:
+			return
+		var t := (dist - from_end) / seg  # measured back from pos[i]
+		pos.insert(i, pos[i].lerp(pos[i - 1], t))
+		width.insert(i, lerpf(width[i], width[i - 1], t))
+		mouth.insert(i, lerpf(mouth[i], mouth[i - 1], t))
+		s["pos"] = pos
+		s["width"] = width
+		s["mouth"] = mouth
+		return
 
 
 ## pts[from_i..to_i] (inclusive, always >= 2 points) as one course dict.
@@ -129,8 +220,9 @@ static func clear_terrain(courses: Array, height_fn: Callable, margin: float) ->
 			var need := maxf(centre_h, maxf(left_h, right_h)) + margin
 			if need > pos[i].y:
 				pos[i].y = need
-		out.append({"code": c["code"], "pos": pos, "width": c["width"], "mouth": c["mouth"],
-			"true_mouth": c["true_mouth"]})
+		var lifted := c.duplicate()
+		lifted["pos"] = pos
+		out.append(lifted)
 	return out
 
 
@@ -151,6 +243,8 @@ static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M
 	var index := PackedInt32Array()
 	var fade_span := maxf(end_fade_m, 0.001)
 	for c: Dictionary in courses:
+		# A joined end fades over its main river's half-width (fix round 4).
+		var tail_span := maxf(float(c.get("end_fade_m", end_fade_m)), 0.001)
 		var pos: PackedVector3Array = c["pos"]
 		var width: PackedFloat32Array = c["width"]
 		var mouth: PackedFloat32Array = c["mouth"]
@@ -166,7 +260,7 @@ static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M
 			var side2d := _side_at(pos, i)
 			var side := Vector3(side2d.x, 0.0, side2d.y)
 			var start_fade := clampf(arcs[i] / fade_span, 0.0, 1.0)
-			var end_fade := 1.0 if true_mouth else clampf((total - arcs[i]) / fade_span, 0.0, 1.0)
+			var end_fade := 1.0 if true_mouth else clampf((total - arcs[i]) / tail_span, 0.0, 1.0)
 			var fade := minf(start_fade, end_fade)
 			var base := verts.size()
 			for s: int in [0, 1]:
