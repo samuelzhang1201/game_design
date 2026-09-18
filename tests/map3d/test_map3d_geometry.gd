@@ -150,3 +150,11 @@ func test_zoom_about_keeps_the_anchor_fixed() -> void:
 	assert_eq(Map3DGeometry.zoom_about(a, a, 1000.0, 300.0), a, "an anchor on the target stays")
 	var out := Map3DGeometry.zoom_about(Vector2(0, 0), Vector2(100, 0), 1000.0, 2000.0)
 	assert_almost_eq(out.x, -100.0, 0.001, "zooming out pushes the target away from the anchor")
+
+
+func test_ease_yaw_runs_the_short_way_home() -> void:
+	assert_eq(Map3DGeometry.ease_yaw(90.0, 0.0), 90.0)
+	assert_eq(Map3DGeometry.ease_yaw(90.0, 1.0), 0.0)
+	assert_almost_eq(Map3DGeometry.ease_yaw(90.0, 0.5), 45.0, 0.001, "smoothstep's midpoint")
+	# 350 degrees is 10 west of north: it comes home through 355, not 180.
+	assert_almost_eq(Map3DGeometry.ease_yaw(350.0, 0.5), -5.0, 0.001)

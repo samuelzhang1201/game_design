@@ -1420,51 +1420,11 @@ func scale_bar() -> Dictionary:
 	var unit := String(Game.data.map_info.get("distance_unit", ""))
 	return {"distance": distance, "unit": unit,
 		"width_px": distance / per_px * view_scale(),
-		"text": ("%s %s" % [_trim_zeros(distance), unit]).strip_edges()}
+		"text": ("%s %s" % [ScaleBar.trim_zeros(distance), unit]).strip_edges()}
 
-## 500.0 -> "500", 2.5 -> "2.5": a scale bar reads as a number, not a float.
-func _trim_zeros(v: float) -> String:
-	var s := String.num(v, 2)
-	if s.contains("."):
-		s = s.rstrip("0").rstrip(".")
-	return s
-
-## Drawn last, over the vignette, in the manner of library M-14: a narrow bar
-## of alternating filled and open segments under a bracketing line, with the
-## distance set right-aligned above it.
+## Drawn last, over the vignette: ScaleBar's own drawing (library M-14).
 func _draw_scale_bar() -> void:
-	var bar := scale_bar()
-	if bar.is_empty():
-		return
-	var color := MapTerrain.palette_color(Game.data, "scale_bar", MapTerrain.FALLBACK)
-	color.a = Game.data.bal("map_scale_bar_alpha")
-	if color.a <= 0.0:
-		return
-	var w: float = bar["width_px"]
-	var h := Game.data.bal("map_scale_bar_height_px")
-	var margin := Game.data.bal("map_scale_bar_margin_px")
-	var right := size.x - margin
-	var bottom := size.y - margin
-	var left := right - w
-	var top := bottom - h
-	var divisions := maxi(int(Game.data.bal("map_scale_bar_divisions")), 1)
-	var step := w / float(divisions)
-	for i in divisions:
-		if i % 2 == 0:
-			draw_rect(Rect2(Vector2(left + step * i, top), Vector2(step, h)), color, true)
-	draw_rect(Rect2(Vector2(left, top), Vector2(w, h)), color, false, 2.0)
-	var brow := top - 6.0
-	draw_line(Vector2(left, brow), Vector2(right, brow), color, 2.0, true)
-	draw_line(Vector2(left, brow), Vector2(left, top), color, 2.0, true)
-	draw_line(Vector2(right, brow), Vector2(right, top), color, 2.0, true)
-	var font := UiPalette.display_font()
-	if font == null:
-		return
-	var font_px := int(Game.data.bal("map_scale_bar_font_px"))
-	var text := String(bar["text"])
-	var text_w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px).x
-	draw_string(font, Vector2(right - text_w, brow - 6.0), text,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, color)
+	ScaleBar.draw(self, scale_bar(), size)
 
 ## A compass rose fixed in the top-right corner (owner request 2026-09-13),
 ## in the manner of library M-13: a sixteen-point star whose limbs are
@@ -2409,7 +2369,7 @@ func _place_badges(manors: Array) -> Array:
 		var center: Vector2 = m["center"]
 		var badge := Rect2(center - Vector2(px, px) * 0.5, Vector2(px, px))
 		var whole := badge
-		var text := _trim_zeros(float(m["units"]))
+		var text := ScaleBar.trim_zeros(float(m["units"]))
 		var label := Rect2()
 		if with_label:
 			var w := _text_width(font, text, font_px) + repo.bal("map_manor_label_pad_px") * 2.0

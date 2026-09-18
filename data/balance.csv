@@ -331,6 +331,9 @@ map3d_seam_alpha,0.75,3D MAP borders: seam opacity — they are an internal hint
 map3d_selection_width_px,4.0,"3D MAP: the clicked province's outline, solid, in political_palette map3d_selection"
 map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its disc) picks it; otherwise the province under the click"
 map3d_selected_ring_scale,1.5,"3D MAP: the clicked settlement's ring is this much larger (fix round 1, owner 2026-09-18: was 1.4x diameter AND 1.5x line — a fat smear over the tier ring rather than a second crisp ring; now diameter only, the line stays the base stroke width), in political_palette map3d_selection gold"
+map3d_compass_needle_reach,0.62,"3D MAP compass (owner 2026-09-18): the north needle's half-length as a share of the compass radius — the needle turns with the view, gold tip to north"
+map3d_compass_needle_width,0.12,3D MAP compass: the needle's half-width as a share of the compass radius
+map3d_compass_reset_s,0.4,"3D MAP compass: a click on the compass turns the view back to north over this many seconds"
 map3d_ring_lift_px,3.0,"3D MAP: a ring floats this many screen px over its ground so it never clips the relief"
 map3d_ring_keyline_alpha,0.95,"3D MAP: opacity of every ring's dark keyline (fix round 1, owner 2026-09-18: the pale village ring nearly vanished on bright grass; bracketed 0.65/0.8/0.95, picked by the crop sheet)"
 map3d_border_refresh_s,1.0,"3D MAP: how often the view checks whether ownership changed and its borders need rebuilding"

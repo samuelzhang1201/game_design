@@ -70,6 +70,10 @@ var _selected_province := ""
 var _selected_burg := ""
 var _border_sig := 0
 var _border_clock := 0.0
+var _hud: Map3DHud
+var _north_t := -1.0
+var _north_from := 0.0
+var _press_on_hud := false
 
 
 static func scene_path_for(map_id: String) -> String:
@@ -221,6 +225,9 @@ func _load() -> void:
 	_loaded = true
 	_apply_camera()
 	_update_line_scale()
+	_hud = Map3DHud.new()
+	_hud.view = self
+	add_child(_hud)
 
 
 func _state() -> GameState:
@@ -481,11 +488,17 @@ func _apply_camera() -> void:
 		_repo.bal("map3d_pitch_far_deg"))
 	var ground := Vector3(_target.x, _height_at(_target), _target.y)
 	_camera.transform = Map3DGeometry.pose(ground, _distance, _yaw, pitch)
+	if _hud != null:
+		_hud.refresh()
 
 
 func _metres_per_pixel() -> float:
 	return Map3DGeometry.metres_per_pixel(_distance, _repo.bal("map3d_fov_deg"),
 		maxf(size.y, 1.0))
+
+## Ground metres under one screen pixel at the target — the HUD's scale bar.
+func metres_per_pixel() -> float:
+	return _metres_per_pixel()
 
 
 func _pan_by(screen_delta: Vector2) -> void:
@@ -529,6 +542,16 @@ func _gui_input(event: InputEvent) -> void:
 			_zoom_at(mb.position, _distance * pow(_repo.bal("map3d_zoom_factor"), steps))
 			accept_event()
 		elif mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed and _hud != null and _hud.compass_rect().has_point(mb.position):
+				_north_from = _yaw
+				_north_t = 0.0
+				_press_on_hud = true
+				accept_event()
+				return
+			if not mb.pressed and _press_on_hud:
+				_press_on_hud = false
+				accept_event()
+				return
 			if mb.pressed:
 				_press_pos = mb.position
 				_dragging = false
@@ -549,6 +572,7 @@ func _gui_input(event: InputEvent) -> void:
 		_pan_by(mm.relative)
 		accept_event()
 	elif mm.button_mask & MOUSE_BUTTON_MASK_RIGHT:
+		_north_t = -1.0
 		_yaw -= mm.relative.x * _repo.bal("map3d_rotate_deg_per_px")
 		_apply_camera()
 		accept_event()
@@ -557,6 +581,13 @@ func _gui_input(event: InputEvent) -> void:
 ## WASD / arrows pan while the pointer is over the view and no text box has
 ## the keyboard; ownership is checked for new borders every few seconds.
 func _process(delta: float) -> void:
+	if _north_t >= 0.0:
+		_north_t += delta / maxf(_repo.bal("map3d_compass_reset_s"), 0.01)
+		_yaw = Map3DGeometry.ease_yaw(_north_from, _north_t)
+		if _north_t >= 1.0:
+			_north_t = -1.0
+			_yaw = 0.0
+		_apply_camera()
 	_border_clock += delta
 	if _border_clock >= _repo.bal("map3d_border_refresh_s"):
 		_border_clock = 0.0

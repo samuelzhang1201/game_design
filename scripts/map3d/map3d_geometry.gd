@@ -118,3 +118,12 @@ static func resample(pts: PackedVector2Array, step: float) -> PackedVector2Array
 			out.append(a.lerp(b, float(k) / float(n)))
 		out.append(b)
 	return out
+
+
+## The yaw `t` (0..1) of the way home to north from `from_deg`, the short
+## way round, smoothstepped so it starts and lands gently.
+static func ease_yaw(from_deg: float, t: float) -> float:
+	var start := wrapf(from_deg, -180.0, 180.0)
+	if t <= 0.0:
+		return from_deg
+	return start * (1.0 - smoothstep(0.0, 1.0, clampf(t, 0.0, 1.0)))

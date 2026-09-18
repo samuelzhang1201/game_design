@@ -327,3 +327,19 @@ func _open_land() -> Dictionary:
 			if clear:
 				return {"px": Vector2(x + 0.5, y + 0.5), "province": code}
 	return {}
+
+
+func test_the_hud_is_over_the_view_and_the_compass_turns_it_north() -> void:
+	var v := _view()
+	v.activate()
+	var hud := v.get_node("Hud") as Map3DHud
+	assert_not_null(hud)
+	_drag(v, MOUSE_BUTTON_RIGHT, Vector2(80, 0))
+	assert_ne(v.yaw(), 0.0)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = hud.compass_rect().get_center()
+	v._gui_input(press)
+	v._process(Game.data.bal("map3d_compass_reset_s") + 0.01)
+	assert_almost_eq(v.yaw(), 0.0, 0.001)
