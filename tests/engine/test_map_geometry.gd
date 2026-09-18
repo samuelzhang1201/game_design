@@ -167,7 +167,7 @@ func test_smooth_open_leaves_a_line_too_short_to_bend_alone() -> void:
 ## dash_runs: the same walk as dash_polyline but it hands back the gaps too,
 ## so a border can be drawn as a chequered ribbon — dark run, light run —
 ## instead of dash-and-nothing (owner request 2026-09-12, matching the
-## alternating frame band of development/exmaples).
+## alternating frame band of docs/references).
 
 func test_dash_runs_returns_both_phases_in_order() -> void:
 	var runs := MapGeometry.dash_runs(

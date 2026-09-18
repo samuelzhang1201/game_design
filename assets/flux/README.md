@@ -1,6 +1,6 @@
 # assets/flux — Flux 批量出图模板
 
-把 `development/Visuals/中世纪大战略游戏_AI美术Prompt库.md` 的 284 条资源 prompt 喂给本地 ComfyUI 的 Flux 批量生成。**不手写任何 prompt**：每条都是 `STYLE_CORE + 主体 + 画幅片段` 自动拼出来的（库 §0.1 / §10.8）。
+把 `docs/references/art_prompt_library.md` 的 284 条资源 prompt 喂给本地 ComfyUI 的 Flux 批量生成。**不手写任何 prompt**：每条都是 `STYLE_CORE + 主体 + 画幅片段` 自动拼出来的（库 §0.1 / §10.8）。
 
 ## 文件
 
@@ -47,7 +47,7 @@ python3 assets/flux/generate.py --build-csv                   # 库改了之后�
 - **不要把 `generate.py` 的输出接进管道**（2026-09-13 两次踩到）：`head` 收够行数就关管道，`generate.py` 吃到 SIGPIPE 提前退出，图在 ComfyUI 里生成了却没下载；`tail` 更阴险，它既把 `FAILED` 那几行滚掉了，又把**整条管道的退出码换成了 tail 自己的 0**——任务报成功，实际少了两张。**重定向到文件再看**：`python3 generate.py ... > run.log 2>&1`，跑完 `grep -c saved run.log` 对一下张数。
 - seed 固定为 `--seed`（默认 954159497，与地图同源）+ 变体序号，同一 ID 重跑结果可复现；表情差分（E-）务必锁 seed 只换表情词。
 - **地图上的图标**：聚落贴图（`assets/settlements/`，`settlement_art.csv`）和兴趣点图标（`assets/markers/`，`marker_art.csv` 把地图包的 29 种标记类型映射到 13 个库图标）都来自这条流水线：`generate.py --ids I-xx` → `post.py --tier icon --size N --out-dir …` → 复制进 assets。聚落按档 256→136 px，兴趣点 64 px（地图上按 `map_marker_px` 固定 16 屏幕像素画）。
-- **地图符号单色化（2026-09-12 决定，已上线）**：`assets/settlements/` 六张贴图已换成 `D-27`~`D-31` 的单色版（`settlement_art.csv` 的 notes 同步），配合改成羊皮纸的地图底。**换完 PNG 必须跑一次 `/Applications/Godot.app/Contents/MacOS/Godot --path . --headless --import`**，否则 Godot 用的还是 `.godot/imported/` 里的旧 `.ctex`，游戏里看不到变化。owner 选了手绘单色深褐的故事书地图风（参考 `development/exmaples/`），只作用在地图符号上——`D-01`~`D-31`（库 §6.9：散布装饰件 `D-01`~`D-26` 是针叶/阔叶树丛、丘陵、山脉、条田、路牌、枯树、城门楼、帆船、沉船、海怪、棕榈、波纹记号…，`D-27`~`D-31` 是平侧立面重写的聚落五档）以及用 `--canvas C-MAPMARK` 重出的单体 `I-` 条目。**聚落五档不要复用 `I-01`~`I-05`**：那五条主体是当年为 `[C-ICON]` 的俯视 3/4 角写的，本身就在描述立体沙盘，换画幅压不住（2026-09-12 首批试图验证过）。人物和事件插图不受影响，继续走下面的方案 C 彩铅风。`[C-MAPMARK]` 的**纯白底是硬要求**，`sepia_alpha_template.json` 靠它抠透明；生成时底一旦带羊皮纸色或画框，去底就会连着底一起留下。产出在 `out/decor/` 和 `out/game/mark/`，**不覆盖 `assets/settlements/`**。
+- **地图符号单色化（2026-09-12 决定，已上线）**：`assets/settlements/` 六张贴图已换成 `D-27`~`D-31` 的单色版（`settlement_art.csv` 的 notes 同步），配合改成羊皮纸的地图底。**换完 PNG 必须跑一次 `/Applications/Godot.app/Contents/MacOS/Godot --path . --headless --import`**，否则 Godot 用的还是 `.godot/imported/` 里的旧 `.ctex`，游戏里看不到变化。owner 选了手绘单色深褐的故事书地图风（参考 `docs/references/`），只作用在地图符号上——`D-01`~`D-31`（库 §6.9：散布装饰件 `D-01`~`D-26` 是针叶/阔叶树丛、丘陵、山脉、条田、路牌、枯树、城门楼、帆船、沉船、海怪、棕榈、波纹记号…，`D-27`~`D-31` 是平侧立面重写的聚落五档）以及用 `--canvas C-MAPMARK` 重出的单体 `I-` 条目。**聚落五档不要复用 `I-01`~`I-05`**：那五条主体是当年为 `[C-ICON]` 的俯视 3/4 角写的，本身就在描述立体沙盘，换画幅压不住（2026-09-12 首批试图验证过）。人物和事件插图不受影响，继续走下面的方案 C 彩铅风。`[C-MAPMARK]` 的**纯白底是硬要求**，`sepia_alpha_template.json` 靠它抠透明；生成时底一旦带羊皮纸色或画框，去底就会连着底一起留下。产出在 `out/decor/` 和 `out/game/mark/`，**不覆盖 `assets/settlements/`**。
 - **方案 C（2026-09-11 决定）**：人物和事件插图走彩铅风；人物按 `[C-FULL]`（全身，档案栏）和 `[C-BUST]`（头肩，头像格）两档生成再经 `post.py` 去底缩放；地图和 UI 维持现状，只统一调色板（待定）。库默认的 `[C-PORTRAIT]` 半身像只用来定风格。
 - 全身/头肩两档用库里人物条目下的 `**外貌**` 行（只有长相和衣着）拼 prompt，再加 `--pose P-xx` / `--expression E-xx` 片段；没有 `**外貌**` 行的人物会退回用主 prompt（会带道具，效果差）。给一个人物补 `**外貌**` 行后 `--build-csv` 重建即可。目前只有 C-01、C-04 有。
 - `E-` / `P-` 行是片段（表情/姿态），不是独立资源，脚本会跳过；做差分时把片段接到对应 `C-` 的主体后面。

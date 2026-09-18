@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Install the PAINTED settlement illustrations as the map's settlement art
 (owner 2026-09-16: the Blender models were rejected as too crude, and the
-reference — development/exmaples/ChatGPT Image Sep 16, 2026, 05_58_06 PM.png —
+reference — docs/references/ChatGPT Image Sep 16, 2026, 05_58_06 PM.png —
 is a painted aerial view, so the tiers are Flux illustrations now).
 
 VARIANTS (owner 2026-09-16): each tier has several drawings and a settlement

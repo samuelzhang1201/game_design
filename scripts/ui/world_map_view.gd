@@ -612,7 +612,7 @@ func marker_sprites() -> Array:
 ## the screen frame filters out what is off screen. Public for tests and
 ## hit-testing.
 ##
-## The look follows development/exmaples/MilitaryView.png (owner request
+## The look follows docs/references/MilitaryView.png (owner request
 ## 2026-09-13): a dark square wearing the counter's glyph — crossed swords
 ## for a regiment, a crown for the royal regiment (MapObjects.royal_regiment),
 ## waves for a fleet — joined to a box in the realm's colour with the number
@@ -881,7 +881,7 @@ func hovered_kingdom() -> String:
 	return String(row.get("kingdom_code", ""))
 
 ## Every kingdom's live border as a chequered ribbon (owner request
-## 2026-09-12, after the frame band of development/exmaples): alternating
+## 2026-09-12, after the frame band of docs/references): alternating
 ## dark and pale runs of equal length, both drawn, so the line reads as a
 ## printed map band rather than a dashed stroke. The chequer steps along the
 ## ring's own arc length (MapGeometry.dash_runs) rather than per segment: the
@@ -1794,7 +1794,7 @@ func _draw_kingdom_labels() -> void:
 	px = minf(px, Game.data.bal("map_label_max_px"))
 	var font_px := int(px)
 	var tracking := px * Game.data.bal("map_label_tracking")
-	# Ink, not gold (owner 2026-09-12, after development/exmaples/mapSample.jpg:
+	# Ink, not gold (owner 2026-09-12, after docs/references/mapSample.jpg:
 	# realm names are set in dark serif capitals over the wash).
 	var color := MapTerrain.palette_color(Game.data, "coast_line", MapTerrain.FALLBACK)
 	color.a = Game.data.bal("map_label_alpha")
@@ -2190,7 +2190,7 @@ func visible_seam_count() -> int:
 	return _visible_seams().size()
 
 ## The ECONOMY view (owner request 2026-09-13, after
-## development/exmaples/economyView.png): the land drawn as its MANORS — the
+## docs/references/economyView.png): the land drawn as its MANORS — the
 ## pack's Voronoi cells, each one an estate — every manor washed in the colour
 ## of the realm that holds it, taken from pale to deep by how good its land is
 ## (MapEconomy.land_value), with the manor edges ruled in. A WORKING manor —

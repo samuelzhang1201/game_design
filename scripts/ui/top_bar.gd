@@ -12,7 +12,7 @@ extends Control
 ## the LORD's own purse, marked with the house's arms. Nothing else sits in
 ## the bar: the realm's temper moved to the country card.
 ##
-## Tidied the same day (owner, development/exmaples/UIFIX.png): the two
+## Tidied the same day (owner, docs/references/UIFIX.png): the two
 ## purses are ONE grid — a mark and three pools a row — so gold stands over
 ## gold; the type is small; each pool shows its stock and ONE change (the
 ## month just settled, or before any has, what this month should bring, in

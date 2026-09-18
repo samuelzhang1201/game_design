@@ -71,7 +71,7 @@ knowledge_doubt_threshold,50,credibility below which a persona sheet says the ch
 map_decor_min_scale,0.45,"world map: screen px per native map px at/above which the terrain symbols (woods, hills, reeds) are drawn — below it the sheet would be a carpet of specks"
 map_decor_alpha,0.0,world map: opacity of the terrain symbols
 map_decor_scale,1.0,"world map: one knob over the SIZE of every terrain symbol — multiplies the height_px column of data/terrain_art.csv, so the whole sheet thins or thickens together"
-map_manor_alpha,0.92,"economy view: opacity of the manor wash — every land cell (a manor) in its holder's colour, over the terrain (owner request 2026-09-13, after development/exmaples/economyView.png)"
+map_manor_alpha,0.92,"economy view: opacity of the manor wash — every land cell (a manor) in its holder's colour, over the terrain (owner request 2026-09-13, after docs/references/economyView.png)"
 map_manor_pale,0.32,"economy view: how far the POOREST land's manor is taken from its realm colour toward manor_pale (political_palette.csv)"
 map_manor_deep,0.22,economy view: how far the RICHEST land's manor is taken toward manor_rich — a manor's land value is its biome's habitability
 map_manor_jitter,0.35,"economy view: a fixed per-manor nudge along that pale-to-deep ramp, so neighbouring manors of one biome still read as separate estates (0 = none)"
@@ -189,7 +189,7 @@ map_river_alpha,1.0,"terrain: opacity of a river — 1, SOLID (owner request 202
 map_river_taper_gamma,1.4,"terrain: how a river thins along its course (owner request 2026-09-13): full width at the source, half_width x (1 - t)^gamma, to a point at the end. 1 thins evenly; higher thins sooner and leaves a longer fine tail"
 map_river_smoothing_steps,3,terrain: B-spline samples per segment on a river — the pack stores rivers as raw polylines and the corners read as hard kinks without this (owner 2026-09-12)
 map_river_discharge_scale,0.11,"terrain: a river's SOURCE width in native px per sqrt(discharge) — raised from 0.05 with the solid taper (owner 2026-09-13), since a river now spends most of its course thinner than this"
-map_road_width,2.4,"terrain: road stroke width in screen px — a road is a worn track, and in the reference it reads by width and a soft edge rather than by a dark line (owner 2026-09-12; widened from 1.3 with the sand-track colour, owner 2026-09-17, after development/exmaples/ChatGPT Image Sep 16, 2026, 05_58_06 PM.png)"
+map_road_width,2.4,"terrain: road stroke width in screen px — a road is a worn track, and in the reference it reads by width and a soft edge rather than by a dark line (owner 2026-09-12; widened from 1.3 with the sand-track colour, owner 2026-09-17, after docs/references/ChatGPT Image Sep 16, 2026, 05_58_06 PM.png)"
 map_road_soft_ratio,0.6,"terrain: how far a road's soft shoulder reaches past its body, as a multiple of the body's own width on each side (0 = a hard edge). On since the painted-track roads (owner 2026-09-17): the reference's tracks fade into the grass rather than ending on a ruled edge"
 map_road_soft_alpha,0.45,terrain: opacity of that shoulder as a fraction of the body's
 map_road_alpha,0.9,terrain: opacity of a road's body

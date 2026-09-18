@@ -7,7 +7,11 @@ assets/flux/out/
 
 # macOS archive junk from unzipped asset packs
 assets/__MACOSX/
-# Blender spike RENDERS are build artifacts; the scripts beside them are not
-development/3d_spike/civ6/
-development/3d_spike/*.png
-development/3d_spike/out/
+# 3D map: sources are local downloads (Poly Haven / ambientCG, CC0), everything
+# else under assets/map3d is rebuilt by tools/map3d/ — see tools/map3d/README.md
+assets/map3d/sources/
+assets/map3d/textures/
+assets/map3d/trees/
+assets/map3d/beria/
+# purchased audio pack, not yet used by the game
+assets/Sound FX Starter Pack Vol. 1/

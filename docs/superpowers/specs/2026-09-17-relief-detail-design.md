@@ -2,7 +2,7 @@
 
 ## Decisions (owner, 2026-09-17)
 
-- The dark tactical satellite look (reference: `development/exmaples/Screenshot
+- The dark tactical satellite look (reference: `docs/references/Screenshot
   2026-09-17 at 17.36.09.png`) is the goal that exposed this. The spike proved
   the COLOUR half is cheap and reversible; the blocker is the height field.
 - **Approach A**: synthesized fractal detail over the whole land, weighted by

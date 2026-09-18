@@ -582,7 +582,7 @@ func test_every_province_on_screen_is_washed_in_its_owners_colour() -> void:
 			checked += 1
 	assert_gt(checked, 0)
 
-## Owner ruling 2026-09-12 (second pass, after development/exmaples/
+## Owner ruling 2026-09-12 (second pass, after docs/references/
 ## mapSample.jpg): every realm wears its own muted wash again — the
 ## monochrome sheet was dropped — and the wash is what carries the colour, so
 ## the land underneath stays a pale neutral that does not tint it.
@@ -629,7 +629,7 @@ func test_a_conquered_province_is_repainted_for_its_new_owner() -> void:
 	fail_test("the lost province was not painted at all")
 
 ## The ECONOMY view (owner request 2026-09-13, after
-## development/exmaples/economyView.png): the land drawn as manors — the
+## docs/references/economyView.png): the land drawn as manors — the
 ## pack's cells — in their holders' colours, and the working manors badged
 ## with the good they make most of and how many units.
 func test_the_economy_view_draws_the_land_as_manors() -> void:
@@ -723,7 +723,7 @@ func test_towns_draw_as_art_when_zoomed_in_and_pins_when_out() -> void:
 	assert_eq(String(obj.get("code", "")), _capital_code(), "picked anywhere on the picture")
 
 ## The military layer (owner request 2026-09-13, after
-## development/exmaples/MilitaryView.png): the realm's own regiments as
+## docs/references/MilitaryView.png): the realm's own regiments as
 ## counters — a glyph square joined to a box stating the headcount. Swords
 ## for a regiment, a crown for the one nearest the capital, waves for a fleet.
 func test_the_military_layer_draws_the_realms_regiments_as_counters() -> void:
