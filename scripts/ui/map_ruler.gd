@@ -1,0 +1,136 @@
+class_name MapRuler
+extends RefCounted
+## The MEASUREMENT tab's ruler (owner 2026-09-18), one per map view. A left
+## click drops the anchor, the pointer stretches the ruler, a second click
+## fixes it (a click after that starts a new one) and a right click puts it
+## away. The points are in the view's own measuring space — the 2D map's
+## native px, the 3D map's world XZ metres — and both views read a length
+## in the pack's own measure (map_info.csv distance_scale, distance_unit),
+## so the same two towns read the same on either map (owner 2026-09-18).
+##
+## draw() is the one look both views share: an ink dashed line on a pale
+## halo, a dot and a crossbar at each end, a one-sided tick at every 1-2-5
+## step, the reading at the middle (political_palette ruler_*, balance map_ruler_*).
+
+enum Phase { IDLE, STRETCHING, FIXED }
+
+var phase := Phase.IDLE
+var start := Vector2.ZERO
+var end := Vector2.ZERO
+
+
+## A left click (not a drag) at `p`.
+func click(p: Vector2) -> void:
+	if phase == Phase.STRETCHING:
+		end = p
+		phase = Phase.FIXED
+	else:
+		start = p
+		end = p
+		phase = Phase.STRETCHING
+
+
+## The pointer at `p`; true when the ruler changed and wants a redraw.
+func move(p: Vector2) -> bool:
+	if phase != Phase.STRETCHING or p == end:
+		return false
+	end = p
+	return true
+
+
+## A right click: puts the ruler away. True when there was one to put away.
+func cancel() -> bool:
+	var had := active()
+	phase = Phase.IDLE
+	return had
+
+
+func active() -> bool:
+	return phase != Phase.IDLE
+
+
+## The ruler's length in its measuring space.
+func length() -> float:
+	return start.distance_to(end)
+
+
+## A length in the pack's unit: whole from 10 up, one decimal under it.
+static func reading(dist: float, unit: String) -> String:
+	var num := ScaleBar.trim_zeros(snappedf(dist, 0.1)) if dist < 10.0 \
+		else str(int(roundf(dist)))
+	return "%s %s" % [num, unit] if unit != "" else num
+
+
+## The tick step: the 1-2-5 step nearest above `min_px` screen px, given
+## how many measuring units one screen px spans.
+static func tick_step(units_per_px: float, min_px: float) -> float:
+	return MapGeometry.nice_step(units_per_px * min_px)
+
+
+## Distances from the anchor of every tick strictly inside a ruler of
+## `length`, `step` apart.
+static func ticks(length_units: float, step: float) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	if step <= 0.0:
+		return out
+	var d := step
+	while d < length_units - step * 1e-4:
+		out.append(d)
+		d += step
+	return out
+
+
+## The ruler on `ci` in its own px: `a` the anchor, `b` the other end, `tick_pts`
+## the ticks' screen points along it, `text` the reading. `px` scales every
+## balance px value (1 for a Control drawn in design px).
+static func draw(ci: CanvasItem, a: Vector2, b: Vector2, tick_pts: PackedVector2Array,
+		text: String, px: float = 1.0) -> void:
+	var data := Game.data
+	var ink := MapPalette.named(data, "ruler_ink")
+	var halo := MapPalette.named(data, "ruler_halo")
+	halo.a = data.bal("map_ruler_halo_alpha")
+	var w := data.bal("map_ruler_width_px") * px
+	var hw := w + 2.0 * data.bal("map_ruler_halo_px") * px
+	var anchor_r := data.bal("map_ruler_anchor_px") * px
+	var tick_len := data.bal("map_ruler_tick_px") * px
+	var dir := (b - a).normalized() if a.distance_to(b) > 0.001 else Vector2.RIGHT
+	var side := Vector2(-dir.y, dir.x)
+	# Ticks stand on ONE side, off the line's edge (the side away from the
+	# reading), so a tick never crosses a dash into a "+" or a gap into a
+	# "T"; each end is a crossbar over a dot, the way a rule ends — nothing
+	# a settlement ring or a border could be mistaken for.
+	var up := side if side.y < 0.0 else -side
+	var down := -up
+	var foot := w * 0.5
+	var ticks: Array = []
+	for t in tick_pts:
+		ticks.append([t + down * foot, t + down * (foot + tick_len)])
+	var caps: Array = []
+	for e in [a, b]:
+		caps.append([e - side * tick_len * 1.6, e + side * tick_len * 1.6])
+	# Halo first — the line, every tick, both ends — so the ink above reads
+	# over snow, sea and grass alike.
+	if a.distance_to(b) > 0.001:
+		ci.draw_line(a, b, halo, hw, true)
+	for seg in ticks + caps:
+		ci.draw_line(seg[0], seg[1], halo, hw, true)
+	ci.draw_circle(a, anchor_r + hw * 0.5, halo)
+	ci.draw_circle(b, anchor_r + hw * 0.5, halo)
+	if a.distance_to(b) > 0.001:
+		ci.draw_dashed_line(a, b, ink, w, data.bal("map_ruler_dash_px") * px, true, true)
+	for seg in ticks + caps:
+		ci.draw_line(seg[0], seg[1], ink, w, true)
+	ci.draw_circle(a, anchor_r, ink)
+	ci.draw_circle(b, anchor_r, ink)
+	var font := UiPalette.display_font()
+	if font == null or text == "":
+		return
+	var font_px := int(data.bal("map_ruler_font_px") * px)
+	var size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px)
+	# The reading sits off the line's middle on the side that points up the
+	# screen, so it never lies across the dashes or the ticks.
+	var centre := (a + b) * 0.5 + up * (data.bal("map_ruler_label_offset_px") * px + size.y * 0.5)
+	var pos := centre + Vector2(-size.x * 0.5, size.y * 0.25)
+	ci.draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px,
+		int(data.bal("map_ruler_label_outline_px") * px), halo)
+	ci.draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, ink)

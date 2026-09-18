@@ -307,10 +307,13 @@ map_town_halo_max_px,12.0,"SETTLEMENT EARTH HALO: the cap, so the largest city d
 map_town_halo_fade_px,6.0,"SETTLEMENT EARTH HALO: km over which the worked ground fades back into the countryside. Measured against the pack: land is a median 15 km from the nearest town, so 6 km leaves 83% of it its own colour, 15 km would leave half and 40 km only 8%"
 map_town_earth_strength,0.75,"SETTLEMENT EARTH HALO: how far the worked ground goes toward town_earth at its centre (0 = off)"
 map3d_fov_deg,45.0,"3D MAP (owner 2026-09-18): the rig camera's vertical field of view"
-map3d_zoom_min_m,2500.0,"3D MAP: the closest the rig camera comes to its target, in metres (the world is 50 m per pack px)"
-map3d_zoom_max_m,110000.0,"3D MAP: the farthest — the whole 128 km realm in view"
+map3d_default,1,"3D MAP (owner 2026-09-18, spec 2026-09-18-map3d-default-design): 1 = the map panel shows the 3D map whenever the pack has a built scene and no 2D-only layer (HEIGHTS/ECONOMY/MANORS/MILITARY) is on; 0 = always the 2D map (the test suite's pre-run hook and snapshot_screen --map2d set 0)"
+map3d_zoom_min_m,800.0,"3D MAP: the closest the rig camera comes to its target, in metres (owner 2026-09-18: 800 m — a village and its fields; was 2500)"
+map3d_zoom_max_m,80000.0,"3D MAP (owner 2026-09-18: the whole island just fills the view — landmass edge to edge with a small margin of sea; was 110000, shot at 60/70/80/90 km and picked by look, window 1920x1080): the farthest zoom"
 map3d_zoom_start_m,24000.0,"3D MAP: the distance the view opens at, framed on the player's capital"
 map3d_zoom_factor,1.15,"3D MAP: each wheel notch multiplies or divides the distance by this"
+map3d_pinch_zoom_gain,1.6,"3D MAP (owner 2026-09-18): a trackpad pinch's ratio is bent by this around 1.0 — the 2D map's map_pinch_zoom_gain for the 3D rig"
+map3d_pan_gesture_px,6.0,"3D MAP: a two-finger trackpad drag moves the ground this many screen px per unit of the gesture's delta"
 map3d_pitch_near_deg,-32.0,"3D MAP: the tilt at the closest zoom — oblique, the land seen across"
 map3d_pitch_far_deg,-68.0,"3D MAP: the tilt at the farthest zoom — nearly straight down, a campaign map"
 map3d_rotate_deg_per_px,0.25,"3D MAP: right-drag turns the view by this many degrees per screen px"
@@ -318,14 +321,92 @@ map3d_key_pan_screens_per_s,0.7,"3D MAP: WASD / arrow keys pan this many view-he
 map3d_near_m,20.0,"3D MAP: the camera's near clip plane"
 map3d_far_m,400000.0,"3D MAP: the camera's far clip plane — past the sea plane's edge"
 map3d_line_step_m,150.0,"3D MAP borders: borders and seams are resampled to a point every this many metres so they drape over the relief (a Terrain3D vertex is 20 m, a pack px 50 m)"
-map3d_border_width_px,3.0,"3D MAP borders: the kingdom border's width in screen px — the 2D map's chequered ribbon, ink and pale (political_palette state_border / state_border_light)"
-map3d_border_dash_px,10.0,3D MAP borders: length of each ink / pale cell of the kingdom border in screen px
-map3d_border_gap_px,10.0,3D MAP borders: length of the pale cell between them
+map3d_border_width_px,1.5,"3D MAP borders: the kingdom border's width in screen px — a thin SOLID black line (owner 2026-09-18: '删除掉现有的国境线，换成一条细黑实线'; was the 2D chequered ribbon at 3 px), political_palette map3d_border"
 map3d_line_lift_px,2.5,"3D MAP borders: every line is lifted this many screen px off the ground at its distance, so it clears the relief between its samples"
-map3d_seam_width_px,2.0,3D MAP borders: province seams width in screen px (political_palette map3d_seam)
-map3d_seam_dash_px,4.0,3D MAP borders: seam dash length in screen px
-map3d_seam_gap_px,6.0,3D MAP borders: seam gap length in screen px
-map3d_seam_alpha,0.75,3D MAP borders: seam opacity — they are an internal hint
+map3d_road_width_px,4.0,"3D MAP roads (owner 2026-09-18): a road's width in screen px — the pack's roads draped on the relief in terrain_palette road, solid with a soft shoulder"
+map3d_trail_width_px,2.5,3D MAP roads: a trail's width in screen px (terrain_palette trail)
+map3d_road_alpha,0.9,3D MAP roads: a road's opacity at its centre
+map3d_trail_alpha,0.75,3D MAP roads: a trail's opacity at its centre
+map3d_road_edge_soft,0.5,"3D MAP roads: share of the half-width over which a road fades out to its sides — a worn track, not a ruled line (taste: read by width and fade)"
+map3d_seam_width_px,1.4,3D MAP borders: province seams width in screen px (political_palette map3d_seam) — a dashed line (owner 2026-09-18)
+map3d_seam_dash_px,6.0,3D MAP borders: seam dash length in screen px
+map3d_seam_gap_px,5.0,3D MAP borders: seam gap length in screen px
+map3d_seam_alpha,0.5,"3D MAP borders: seam opacity — dark dashes under the solid black kingdom border (owner 2026-09-18; bracketed 0.4/0.5/0.6 by the critic sheet)"
 map3d_selection_width_px,4.0,"3D MAP: the clicked province's outline, solid, in political_palette map3d_selection"
-map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its disc) picks it; otherwise the province under the click"
+map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its ring — only while it is shown, see map3d_ring_fade_start) picks it; otherwise the province under the click"
+map3d_selected_ring_scale,1.5,"3D MAP: the clicked settlement's ring is this much larger (fix round 1, owner 2026-09-18: was 1.4x diameter AND 1.5x line — a fat smear over the tier ring rather than a second crisp ring; now diameter only, the line stays the base stroke width), in political_palette map3d_selection gold"
+map3d_compass_needle_reach,0.62,"3D MAP compass (owner 2026-09-18): the north needle's half-length as a share of the compass radius — the needle turns with the view, gold tip to north"
+map3d_compass_needle_width,0.12,3D MAP compass: the needle's half-width as a share of the compass radius
+map3d_compass_reset_s,0.4,"3D MAP compass: a click on the compass turns the view back to north over this many seconds"
+map3d_hud_halo_alpha,0.7,"3D MAP compass (fix round 1, owner 2026-09-18): opacity of the pale halo under the scale bar's strokes and label and the needle's shadow, so they read over bright ground (snow, sea) — 0 turns the halo off"
+map3d_compass_needle_shadow_alpha,0.3,"3D MAP compass: opacity of the needle's own drop shadow, offset (1.5, 2) px, so it reads as sitting over the wheel rather than pasted flat on it"
+map3d_compass_backdrop_alpha,0.25,"3D MAP compass: peak opacity of the soft dark vignette drawn behind the wheel, so map symbols under the compass at a busy zoom (24 km) don't tangle with its spokes"
+map3d_ring_lift_px,3.0,"3D MAP: a ring floats this many screen px over its ground so it never clips the relief"
+map3d_ring_keyline_alpha,0.95,"3D MAP: opacity of every ring's dark keyline (fix round 1, owner 2026-09-18: the pale village ring nearly vanished on bright grass; bracketed 0.65/0.8/0.95, picked by the crop sheet)"
+map3d_ring_fade_start,0.8,"3D MAP (final review, owner 2026-09-18): a settlement ring starts fading at this share of its tier's max_view_m (data/map3d_settlements.csv) and is gone at max_view_m — read by settlement_ring.gdshader AND by Map3DView.pick_at, which picks no ring that has begun to fade, so a click never lands on a ring the player cannot see (was 0.8 hardcoded in the shader)"
 map3d_border_refresh_s,1.0,"3D MAP: how often the view checks whether ownership changed and its borders need rebuilding"
+map3d_cloud_max,10,"3D MAP clouds: the most in the sky at once — the sky fills when play starts (owner 2026-09-18: 24 was too many while time runs, cut to 10)"
+map3d_cloud_height_m,3500.0,3D MAP clouds: the deck's height over the sea
+map3d_cloud_size_min_m,3000.0,3D MAP clouds: the smallest cloud across
+map3d_cloud_size_max_m,8000.0,3D MAP clouds: the largest
+map3d_cloud_speed_m_s,40.0,"3D MAP clouds: drift in metres per real second at 1x, times the clock speed"
+map3d_cloud_wind_deg,12.0,"3D MAP clouds: the wind, degrees from east toward south (the 2D map's map_cloud_wind_deg)"
+map3d_cloud_interval_s,1.5,3D MAP clouds: about this many real seconds between one cloud coming in and the next
+map3d_cloud_fade_s,1.2,3D MAP clouds: seconds to fade in when play starts and out when the clock stops
+map3d_cloud_alpha,0.6,3D MAP clouds: their opacity at the heart
+map3d_cloud_near_fade_m,6000.0,"3D MAP clouds: a cloud closer to the camera than this fades away, so the rig at 800 m looks under the deck, not into it"
+map3d_cloud_shadow_cut,0.35,"3D MAP clouds: the alpha above which a cloud casts a shadow on the land (within the sun's 60 km shadow reach)"
+map3d_cloud_seed,23,"3D MAP clouds: the seed of their own look-only generator (never the engine's stream)"
+map3d_cloud_emission_share,0.0,"3D MAP clouds: share of ALBEDO also written to EMISSION (Task 8's fix for a lit spatial shader reading dirty/dark under Filmic) — 0 unless the visual check needs it"
+map3d_cloud_near_fade_start_ratio,0.3,"3D MAP clouds (fix round 1, owner 2026-09-18): where the near-camera fade starts, as a fraction of map3d_cloud_near_fade_m — was hardcoded in cloud_deck.gdshader"
+map3d_cloud_depth_ratio,0.45,"3D MAP clouds (fix round 1, owner 2026-09-18): a cloud's front-to-back size as a fraction of its width — was hardcoded (0.6) in map3d_view.gd; lowered with the size bracket so individual clouds read as separate puffs rather than fusing into a sheet at 24 km"
+map3d_cloud_min_gap_m,4000.0,"3D MAP clouds (fix round 1, owner 2026-09-18): a new cloud (first fill or spawned) is placed at least this far from every other cloud when the sky has room for it — stops the 24 clouds reading as one landmass of shadow at 24 km"
+map3d_sun_shadow_opacity,0.35,"3D MAP (fix round 1, owner 2026-09-18): the Sun's DirectionalLight3D shadow_opacity, applied at load — how dark ANY cast shadow reads (0 none, 1 pitch black); a cloud shadow (and the terrain's own) must read as a cool wash of blocked light, never a hole. Bracketed 0.25/0.35/0.5 at 3000 and 24000 m, picked by look"
+map3d_sun_shadow_blur,3.0,"3D MAP (fix round 1, owner 2026-09-18): the Sun's DirectionalLight3D shadow_blur, applied at load — softens every cast shadow's edge (cloud shadows and the terrain's own); the shipped cloud shadows read as knife-edged before this"
+map3d_river_min_px,1.5,"3D MAP rivers (owner 2026-09-18): a river is at least this many screen px wide, so it reads as a thread at the farthest zoom and as real water up close"
+map3d_river_ripple_m,60.0,3D MAP rivers: metres per tile of the ripple normals
+map3d_river_flow_m_s,0.8,3D MAP rivers: how fast the ripples run downstream
+map3d_river_opacity,0.92,3D MAP rivers: the water's opacity at its middle; the edges fade to nothing
+map3d_river_edge_soft_floor,0.06,"3D MAP rivers (fix round 1, owner 2026-09-18): the least the edge fade can shrink to (real width / drawn width) when the min-px floor has widened a far, thin river well past its true width — without a floor a razor-thin real river would lose antialiasing entirely and alias"
+map3d_river_emission_share,0.85,"3D MAP rivers (fix round 1): same lever as the sea's map3d_sea_emission_share — a far river's fully-relit ALBEDO read as a near-black thread (its NORMAL_MAP is a few ripple cycles per screen px at that distance, scattering most of the light away from the camera); most of the colour now bypasses lighting through EMISSION"
+map3d_river_emission_gamma,1.3,"3D MAP rivers (final review, owner 2026-09-18: was 0.6 over srgb_to_linear colours, whose premise was wrong — a Color uniform passes straight through under GL Compatibility): same as map3d_sea_emission_gamma, the gamma (>1) that undoes the Filmic tonemap's lift on the EMISSION share of the raw palette colour"
+map3d_river_mesh_step_m,12.0,"3D MAP rivers (final review, owner 2026-09-18: at 800 m the ribbon read as ruled straight segments between the bake's ~50 m samples): Map3DRivers.ribbon_arrays densifies each course along a centripetal Catmull-Rom curve through its samples to a point at least every this many metres"
+map3d_river_fresnel_sky_mix,0.25,"3D MAP rivers (final review): how far a grazing view mixes toward the sky — the sea's map3d_sea_fresnel_sky_mix, so both read as one water (was 0.6 in the shader, which greyed a near river to steel)"
+map3d_river_fresnel_power,4.0,"3D MAP rivers (final review): the fresnel falloff exponent (was a shader literal)"
+map3d_river_roughness,0.55,"3D MAP rivers (final review, owner 2026-09-18): the water's ROUGHNESS — the sea's 0.55 (the shader's old 0.18 with SPECULAR 0.5 mirrored the grey sky and read steel-grey up close)"
+map3d_river_specular,0.12,"3D MAP rivers (final review): the water's SPECULAR — the sea's 0.12 (was 0.5 in the shader: a near river sampled (140,182,200) against its hex (127,184,221); now bluer)"
+map3d_river_normal_depth,0.6,"3D MAP rivers (final review): NORMAL_MAP_DEPTH of the ripples (was a shader literal)"
+map3d_river_ripple_emission_gain,0.1,"3D MAP rivers (final review): the sea's map3d_sea_ripple_emission_gain for the rivers"
+map3d_river_bank_wobble_m,40.0,"3D MAP rivers (final review): about one bank wobble every this many metres (the noise tile holds ~8) — a world-space noise that pushes the bank fade in and out so a river's edge is soft and irregular up close; fades out with distance (the sea's LOD) so a far thread stays clean"
+map3d_river_bank_wobble_amp,0.3,"3D MAP rivers (final review): how far the bank wobble moves the edge, as a share of the half-width — bracketed 0.15 / 0.3 / 0.45 at 800 m: 0.15 barely showed, 0.45 broke thin tributaries into beads"
+map3d_river_split_rise_m,10.0,"3D MAP rivers (fix round 1, owner 2026-09-18): a course breaks into a separate strip wherever the bake's water line rises by more than this between two samples — a river leaving or entering a lake — instead of drawing a vertical wall of water. Raised from 2.0, which also split on a tributary's ordinary bed rise (checked against the pack: 2.0 caught a 2.6m rise at a river's own source that was never a lake; 10.0 keeps only the 4 genuine lake jumps of 14-88m, in 2 rivers)"
+map3d_river_end_fade_m,80.0,"3D MAP rivers (fix round 1, owner 2026-09-18): a strip's cut ends (and a river's true source) fade in/out over this many metres of arc length, so a split reads as a fade rather than a hard edge; the true mouth, running into the sea, never fades"
+map3d_river_terrain_clear_m,3.0,"3D MAP rivers (fix round 3, owner 2026-09-18): the least a river's water plane must sit above the real terrain at its centre and both edges (Map3DRivers.clear_terrain) — measured on knutshambe (a steep tributary joined to ashboury): its own right edge read -0.38m of clearance at one sampled point even though its centreline read +3.25m, so the carved riverbed's ground showed through as a flat, hard-edged, unrippled patch inside the water"
+map3d_water_seed,7,"3D MAP water: the seed of the ripple noise (a look, never the engine's stream)"
+map3d_sea_shore_fade_px,0.8,"3D MAP sea (owner 2026-09-18): the water turns clear over this many pack px from the shore, so the smooth coast shows through the shallows (the bands are the 2D map's map_sea_band_* in pack px)"
+map3d_sea_ripple_m,900.0,3D MAP sea: metres per tile of the drifting ripple normals
+map3d_sea_drift_m_s,6.0,3D MAP sea: how fast the ripples drift
+map3d_sea_emission_share,0.85,"3D MAP sea (fix round 1, owner 2026-09-18): the share of the band colour written straight to EMISSION (unlit, matching the flat 2D paint) rather than ALBEDO, which the sun and sky ambient relight into a brighter, more saturated colour than the 2D map's muted scheme — the independent critic's ""tropical cyan"" finding, confirmed by sampling rendered pixels against the terrain_palette hex"
+map3d_sea_emission_gamma,1.4,"3D MAP sea (final review, owner 2026-09-18: was 0.6 applied to srgb_to_linear colours — the premise was wrong, a Color uniform set from GDScript passes straight through under GL Compatibility, and the 0.6 was only undoing that linearisation): the environment's Filmic tonemap LIFTS a flat EMISSION colour (0.5 -> 162/255), more in the darker channels, so the raw band colour goes through pow(c, gamma) with gamma > 1 before EMISSION — fitted by sampling the rendered bands at 24000 m (the deep band at 80000 m) against terrain_palette: 1.3 gave worst dRGB 19, 1.4 worst 18 (near +14, nearer 10, far 14, deep 18); refit if the tonemap changes"
+map3d_sea_roughness,0.55,"3D MAP sea (fix round 1): the water's ROUGHNESS — duller than the first pass's 0.3, so what specular the ALBEDO share still catches spreads thin rather than washing the colour out"
+map3d_sea_specular,0.12,"3D MAP sea (fix round 1): the water's SPECULAR — down from 0.4, just enough shimmer on the ripples to read as water"
+map3d_sea_fresnel_sky_mix,0.25,"3D MAP sea (fix round 1): how far a grazing view mixes toward the sky colour — down from 0.5, which was greying the bands toward the horizon"
+map3d_sea_horizon_fade_start_px,1500.0,"3D MAP sea (fix round 1): past this many pack px of (possibly extrapolated) distance from shore the water starts mixing toward the sky colour — well beyond any real point inside the pack, so it only touches the plane's 12x extension"
+map3d_sea_horizon_fade_end_px,6000.0,"3D MAP sea (fix round 1): fully sky-toned by here, in pack px"
+map3d_sea_ripple_near_m,70.0,"3D MAP sea (final review, owner 2026-09-18: up close the 900 m ripple is flat across the whole screen and the sea read as milky jade): metres per tile of a second, fine ripple layer that crossfades in near the camera (40 read as sandpaper at 800 m, 70 as water)"
+map3d_sea_ripple_lod_near_m,1500.0,"3D MAP sea (final review): camera distance inside which the near water detail (the fine ripple, its emission modulation, the near emission share — and the rivers' bank wobble and ripple modulation) is fully in"
+map3d_sea_ripple_lod_far_m,8000.0,"3D MAP sea (final review): camera distance beyond which the near water detail is fully out — so the 24 km bands are exactly the fitted colours"
+map3d_sea_ripple_emission_gain,0.1,"3D MAP sea (final review): how far a ripple's slope lights or darkens the EMITTED colour up close (emission is most of the colour, so without it the ripples only showed in the small lit share); bracketed 0.05 / 0.1 / 0.2 at 800 m — 0.2 read as crumpled foil"
+map3d_sea_emission_share_near,0.75,"3D MAP sea (final review): the emission share up close, blended from map3d_sea_emission_share over the LOD distances — a larger lit share near the camera lets the sun's highlight and the ripple relief read; 0.6 lifted the near band toward mint (+10), 0.75 keeps it within ~12 of sea_near"
+map3d_sea_shore_warp_px,0.5,"3D MAP sea (final review): the shore's alpha fade reads a 50 m-per-texel distance map, so up close the waterline was a chain of straight 50 m facets; a fixed world noise warps the distance by up to this many pack px before the fade (a stopgap until a finer coast coverage map exists)"
+map3d_sea_shore_warp_m,30.0,"3D MAP sea (final review): about one shore-warp bump every this many metres (the noise tile holds ~8)"
+map_ruler_width_px,2.0,"MEASUREMENT ruler (owner 2026-09-18): the dashed line's and the ticks' width in screen px, on both maps"
+map_ruler_dash_px,10.0,"MEASUREMENT ruler: dash (and gap) length in screen px"
+map_ruler_halo_px,1.0,"MEASUREMENT ruler: how far the pale halo reaches past each stroke in screen px"
+map_ruler_halo_alpha,0.85,"MEASUREMENT ruler: the halo's opacity"
+map_ruler_anchor_px,5.0,"MEASUREMENT ruler: the radius of the dot at each end in screen px"
+map_ruler_tick_px,6.0,"MEASUREMENT ruler: a tick's length off the line in screen px (one side, away from the reading); each end's crossbar is 1.6x this each way"
+map_ruler_tick_min_px,100.0,"MEASUREMENT ruler: ticks sit on the 1-2-5 step no closer than this many screen px (critic sheet: 48 merged with the dashes into a railway track)"
+map_ruler_font_px,22.0,"MEASUREMENT ruler: the reading's font size (display_font)"
+map_ruler_label_offset_px,10.0,"MEASUREMENT ruler: the reading's distance off the line's middle, on the side up the screen"
+map_ruler_label_outline_px,7.0,"MEASUREMENT ruler: the halo outline round the reading's letters"

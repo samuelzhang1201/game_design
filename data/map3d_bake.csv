@@ -1,0 +1,34 @@
+key,value,notes
+sea_y_m,5.0,"3D bake (owner 2026-09-18): the water plane's height; the coast crosses it where the shore loops say (build_terrain.gd reads it from world.json)"
+shore_m,4.0,3D bake: land stands at least this far above the water plane and sea lies this far below it away from the shore
+coast_supersample,4,3D bake: the shore loops are rasterised at this many samples per vertex each way into a coverage value
+edge_warp_m,220.0,"3D bake: biome weights are sampled this far off (at most) along a noise field, so the edges between grounds interlock instead of blurring"
+edge_warp_wave_m,900.0,3D bake: the wavelength of that warp field
+blend_dither,0.03,3D bake: seeded dither on the second texture's share before it becomes the blend byte — no contour bands
+sharp_cliff,2.2,"3D bake: cliff weight is raised to this power after normalising — a narrow, outcrop-like edge (~60 m) where grass is wide"
+sharp_rocky_trail,1.8,3D bake: likewise for scree
+macro_depth,0.06,"3D bake: the colour map's large lighter/darker patches (was 0.16, which hid the materials)"
+macro_hue_depth,0.04,3D bake: the colour map's green-yellow drift (was 0.10)
+coast_ramp_m,40.0,"3D bake: the coverage is blurred this far before it ramps the heights through the water plane, so a coarse mesh LOD still crosses it smoothly"
+beach_fade_share,0.2,"3D bake: the beach fades out over this much of the land share round a vertex (a box of BEACH_M): 1 - share below it is full sand"
+beach_fade_height_m,15.0,3D bake: and over this many metres under BEACH_MAX_M
+far_color_sand,#6B604E,"3D bake (owner 2026-09-18): what sand reads as from far away (sRGB). The colour map can only darken and sand_03's own mean is ~#6C604F, so a lighter value changes nothing (bracketed: #9C8A66 and #B8A47C both clip to 1.0); the beach is lightened by making dirt_floor its base (beach_sand_share)"
+beach_sand_share,0.45,"3D bake: the beach is dirt_floor with sand_03 as its second texture at up to this share (kept under 0.5 so the two never trade first place: a flip draws 20 m blocks), varied by a noise field at beach_grain_wave_m so the shore carries grain"
+beach_grain_wave_m,150.0,"3D bake: the wavelength of that noise, short enough to vary across a 100 m beach (at 900 m the whole band switched at once, one flat fill)"
+river_k,6.0,"3D bake (owner 2026-09-18): a river's mouth width in metres is river_k * sqrt(discharge), clamped to river_min_w_m..river_max_w_m"
+river_min_w_m,20.0,3D bake: the narrowest mouth
+river_max_w_m,250.0,3D bake: the widest mouth
+river_source_w_m,6.0,3D bake: the width at the source — a river grows from here as t^map_river_taper_gamma
+river_depth_m,3.0,3D bake: how far the bed lies under the ground it runs through
+river_fill,0.7,3D bake: the water stands this share of the depth over the bed
+river_over_sea_m,0.3,"3D bake (final review, owner 2026-09-18: was SEA_Y + 0.3 in bake_world.py): a river's water line never stands lower than this far over the water plane it runs to, so the line keeps falling to the sea without ever dipping under it"
+river_min_drop_m,0.04,"3D bake: the bed falls at least this much per 20 m step, so every river runs downhill to the sea"
+river_bank_slope,0.35,3D bake: the banks rise this many metres per metre out from the water's edge (a valley)
+river_bank_max_m,1500.0,3D bake: a bank never reaches further out than this
+river_wet_m,120.0,3D bake: the wet-soil band beside the water reaches this far
+river_wet_weight,1.5,3D bake: how strongly that band pulls dirt_floor in
+river_wet_darken,0.55,"3D bake: how much it darkens the colour map (bracketed 0.15 / 0.35 / 0.55 on 2026-09-18: dirt_floor reads lighter than grass, so below ~0.5 the band read as a sand road, not wet earth)"
+river_mouth_m,600.0,"3D bake: the last stretch widens (x2) and shades to the sea's near band"
+river_smooth_steps,8,"3D bake: B-spline points per pack segment before a course is resampled (the 2D map's curve, map_river_smoothing_steps, but finer: at 20 m a vertex its 3 left straight 400 m runs)"
+river_ridge_fade_m,1000.0,"3D bake (2026-09-18): the synthetic ridges fade to nothing over this distance from a river's course, so the carve never cuts a gorge through a ridge the noise threw across a valley (the 2D relief detail holds itself down near rivers the same way)"
+river_join_m,400.0,"3D bake (2026-09-18): a river ending inland is carried on to the nearest point of another river's course within this distance (the pack stops its tributaries 60-290 m short of their confluence)"

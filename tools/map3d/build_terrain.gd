@@ -15,7 +15,6 @@ extends RefCounted
 const TEX := "res://assets/map3d/textures"
 ## The pack to build (build_world.gd's --map); "" is data/maps.csv's default.
 static var map_id := ""
-const SEA_Y := 5.0               # m: the water plane, just over the waterline
 
 # [key, metres per tile repeat, detiling rotation]; order is bake_world.py's
 # texture ids. No per-texture tint: bake_world.py's colour map carries every
@@ -35,19 +34,21 @@ const TEXTURES := [
 # fresh Terrain3DMaterial saved the rest as null and drew flat grey.
 const SHADER_PARAMS := {
 	"bias_distance": 512.0,
-	"blend_sharpness": 0.5,
+	"blend_sharpness": 0.85,
 	"depth_blur": 0.0,
-	"dual_scale_far": 170.0,
-	"dual_scale_near": 100.0,
+	# dual scale: grass far away at 0.3x its tile, near/far past the rig's 800 m
+	"dual_scale_far": 4000.0,
+	"dual_scale_near": 1200.0,
 	"dual_scale_reduction": 0.3,
-	"dual_scale_texture": 0,
+	"dual_scale_texture": 1,
 	"enable_macro_variation": true,
 	"enable_projection": true,
 	"flat_terrain_normals": false,
 	"macro_variation1": Color(0.9, 0.92, 0.95, 1),
 	"macro_variation2": Color(0.95, 0.92, 0.85, 1),
 	"macro_variation_slope": 0.333,
-	"mipmap_bias": 1.0,
+	# mipmap_bias multiplies the UV derivatives (1.0 neutral): a touch sharper
+	"mipmap_bias": 0.85,
 	"noise1_angle": 0.1,
 	"noise1_offset": Vector2(0.5, 0.5),
 	"noise1_scale": 0.0004,
@@ -114,6 +115,7 @@ static func import_into(terrain: Terrain3D) -> String:
 	terrain.material.auto_shader = false
 	for key: String in SHADER_PARAMS:
 		terrain.material.set_shader_param(key, SHADER_PARAMS[key])
+	terrain.material.dual_scaling = true
 
 	var images: Array[Image] = []
 	images.resize(Terrain3DRegion.TYPE_MAX)
@@ -136,6 +138,11 @@ static func import_into(terrain: Terrain3D) -> String:
 	var corner: Array = world["import_corner"]
 	terrain.data.import_images(images, Vector3(corner[0], 0.0, corner[1]), 0.0, 1.0)
 	terrain.data.save_directory(root() + "/terrain")
+	# The rivers' water lines (bake_world.py) beside the scene, for Map3DView.
+	var src := bake() + "/rivers.json"
+	if FileAccess.file_exists(src):
+		DirAccess.copy_absolute(ProjectSettings.globalize_path(src),
+			ProjectSettings.globalize_path(root() + "/rivers.json"))
 
 	return "imported %dx%d vertices at %.0f m in %d ms, %d regions" % [
 		fw, fh, terrain.vertex_spacing, Time.get_ticks_msec() - began,
@@ -175,11 +182,13 @@ static func capital_xz(world: Dictionary) -> Vector2:
 ## Step 1: the scene around the terrain (no data yet).
 static func build_scene() -> String:
 	var world := world_info()
+	# the water plane's height: bake_world.py's sea_y_m (data/map3d_bake.csv)
+	var sea_y := float(world.get("sea_y", 5.0))
 	var span := Vector2(world["pack_px"][0], world["pack_px"][1]) * float(world["m_per_px"])
 	var root := Node3D.new()
 	root.name = "Terrain_%s" % map()
 	root.set_meta("map3d_world", {"m_per_px": float(world["m_per_px"]),
-		"pack_origin": world["pack_origin"], "pack_px": world["pack_px"], "sea_y": SEA_Y})
+		"pack_origin": world["pack_origin"], "pack_px": world["pack_px"], "sea_y": sea_y})
 	var terrain := Terrain3D.new()
 	terrain.name = "Terrain3D"
 	terrain.region_size = int(world["region_size"])
@@ -208,7 +217,7 @@ static func build_scene() -> String:
 	sm.metallic_specular = 0.2
 	sm.disable_receive_shadows = true
 	sea.material_override = sm
-	sea.position = Vector3(0, SEA_Y, 0)
+	sea.position = Vector3(0, sea_y, 0)
 	_add(root, sea)
 
 	var sun := DirectionalLight3D.new()

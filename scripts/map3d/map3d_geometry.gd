@@ -40,6 +40,20 @@ static func zoomed(distance: float, steps: int, factor: float, min_d: float, max
 	return clampf(distance * pow(factor, steps), min_d, max_d)
 
 
+## The distance times a gesture's `factor`, clamped (a pinch is not a notch).
+static func zoomed_by(distance: float, factor: float, min_d: float, max_d: float) -> float:
+	return clampf(distance * factor, min_d, max_d)
+
+
+## The rig's new target when the distance goes from `old_d` to `new_d` and
+## the ground point `anchor` (the one under the pointer) must stay put: the
+## view scales about the anchor, so every offset from it scales by new/old.
+static func zoom_about(target: Vector2, anchor: Vector2, old_d: float, new_d: float) -> Vector2:
+	if old_d <= 0.0:
+		return target
+	return anchor + (target - anchor) * (new_d / old_d)
+
+
 ## The tilt at a distance: `near_deg` at min_d, `far_deg` at max_d, on a log
 ## scale so every wheel notch turns the view by the same amount.
 static func pitch_for(distance: float, min_d: float, max_d: float, near_deg: float, far_deg: float) -> float:
@@ -104,3 +118,12 @@ static func resample(pts: PackedVector2Array, step: float) -> PackedVector2Array
 			out.append(a.lerp(b, float(k) / float(n)))
 		out.append(b)
 	return out
+
+
+## The yaw `t` (0..1) of the way home to north from `from_deg`, the short
+## way round, smoothstepped so it starts and lands gently.
+static func ease_yaw(from_deg: float, t: float) -> float:
+	var start := wrapf(from_deg, -180.0, 180.0)
+	if t <= 0.0:
+		return from_deg
+	return start * (1.0 - smoothstep(0.0, 1.0, clampf(t, 0.0, 1.0)))

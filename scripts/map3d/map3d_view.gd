@@ -22,6 +22,33 @@ extends Control
 ## province is outlined in gold. Kingdom borders and province seams come
 ## from the live outlines (Map3DBorders) and are rebuilt when ownership
 ## changes. Settlements are placed from live data (map3d_settlements.csv).
+##
+## Zoom runs 800 m (a village and its fields) to 80 km (the whole island,
+## edge to edge — owner 2026-09-18); the wheel and a macOS trackpad pinch
+## both zoom about the pointer, not the view's centre, and a two-finger
+## trackpad drag pans the ground. Settlements draw as screen-constant hollow
+## rings (settlement_ring.gdshader, data/map3d_settlements.csv: ring_px,
+## line_px, colour, max_view_m per tier), thinned by distance and picked in
+## screen space (map3d_pick_px); a click gets a gold selection ring that
+## never thins. Map3DHud draws the scale bar (ScaleBar, the 2D map's own
+## drawing, in the 2D map's own measure — see map_units_per_metre) and a
+## north-pointing compass, top-left, that turns with the view and eases back
+## to north on a click.
+##
+## The ground is the bake's own coverage-and-control maps (tools/map3d/
+## bake_world.py, tuned by data/map3d_bake.csv): coasts.csv loops
+## rasterised into a supersampled coast coverage, warped biome edges, a
+## dithered blend byte, heights ramped through the shore. Rivers are carved
+## into that same heightmap and their courses (source to sea mouths) written
+## to rivers.json beside the built scene, drawn here as one ribbon mesh by
+## Map3DRivers + water_river.gdshader. The sea is water_sea.gdshader, dressed
+## onto the build's Sea plane at runtime with the 2D map's own four bands.
+## Clouds are Map3DCloudField (pure) + cloud_deck.gdshader, casting soft
+## shadows through a separate cloud_shadow.gdshader twin — kept apart
+## because a shader that so much as mentions ALPHA_SCISSOR_THRESHOLD
+## anywhere blanks the whole material's blended rendering under GL
+## Compatibility. tools/map3d/bench.gd polices all of it at an 8 ms budget
+## (60 fps) through the real view.
 
 ## The described entry of the settlement under a click ({title, obj}), or
 ## {} when the selection is cleared — WorldMapView's signal.
@@ -32,6 +59,33 @@ signal province_selected(province_code: String)
 const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
 const NOTICE_TEXT := "The 3D map has not been built for this map.\nRun tools/map3d (see tools/map3d/README.md)."
 const BORDER_SHADER := preload("res://scripts/map3d/border_line.gdshader")
+const RING_SHADER := preload("res://scripts/map3d/settlement_ring.gdshader")
+const RIVER_SHADER := preload("res://scripts/map3d/water_river.gdshader")
+const SEA_SHADER := preload("res://scripts/map3d/water_sea.gdshader")
+const CLOUD_SHADER := preload("res://scripts/map3d/cloud_deck.gdshader")
+const CLOUD_SHADOW_SHADER := preload("res://scripts/map3d/cloud_shadow.gdshader")
+## The selection ring never thins by distance (fix round 1, owner 2026-09-18):
+## whatever the player clicked stays marked regardless of zoom.
+const SELECTED_RING_ALWAYS_M := 1000000.0
+## THE RENDER-PRIORITY TABLE (final review, owner 2026-09-18) — the one
+## place the see-through layers' draw order is set. Higher draws over lower.
+## The sea under everything; the river water under every line, so a border
+## or seam always reads over the water it crosses; the roads (a bridge over
+## the water, under every border); seams, then kingdom
+## borders, then the clicked province's gold outline; then the CLOUDS — over
+## the lines, but UNDER the settlement rings, so a pin always stands above
+## the weather; then the rings by tier (village lowest, capital highest —
+## see _place_markers) and the gold selection ring over every tier.
+const PRIORITY_SEA := -1
+const PRIORITY_RIVERS := 0
+const PRIORITY_ROADS := 1
+const PRIORITY_SEAMS := 2
+const PRIORITY_KINGDOMS := 3
+const PRIORITY_SELECTION := 4
+const PRIORITY_CLOUDS := 5
+## The lowest ring tier; the tiers and then the selection ring count up from
+## here, one step each (data/map3d_settlements.csv's groups).
+const PRIORITY_RING_BASE := 6
 ## A press and release further apart than this is a drag, not a click
 ## (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := 10.0
@@ -45,6 +99,11 @@ var _camera: Camera3D
 var _markers: Node3D
 var _lines: Node3D
 var _notice: Label
+var _ring_mats: Array[ShaderMaterial] = []
+var _selected_ring: MultiMeshInstance3D
+var _water_normals: NoiseTexture2D
+var _river_mat: ShaderMaterial
+var _sea_mat: ShaderMaterial
 var _meta: Dictionary = {}
 var _bounds := Rect2()
 var _target := Vector2.ZERO
@@ -60,10 +119,46 @@ var _selected_province := ""
 var _selected_burg := ""
 var _border_sig := 0
 var _border_clock := 0.0
+var _hud: Map3DHud
+var _north_t := -1.0
+var _north_from := 0.0
+var _press_on_hud := false
+## The MEASUREMENT tab (owner 2026-09-18): while on, a left click drops or
+## fixes the ruler (world XZ metres) instead of picking, and a right CLICK —
+## not the right-drag that turns the view — puts it away. The HUD draws it.
+var ruler_on := false:
+	set(v):
+		if v == ruler_on:
+			return
+		ruler_on = v
+		_ruler.cancel()
+		if _hud != null:
+			_hud.refresh()
+var _ruler := MapRuler.new()
+var _rpress_pos := Vector2.ZERO
+## Whether the right button has turned the view since it went down: a turn
+## that comes back to its start is still not a click.
+var _rdragged := false
+var _cloud_field: Map3DCloudField
+var _cloud_mm: MultiMesh
+var _cloud_params: Dictionary
+var _cloud_depth_ratio := 0.6
+var _ground_cache := Rect2()
+var _ground_cache_target := Vector2.ZERO
+var _ground_cache_distance := -1.0
+var _ground_cache_yaw := 0.0
+var _ground_cache_size := Vector2.ZERO
+var _ground_cache_valid := false
 
 
 static func scene_path_for(map_id: String) -> String:
 	return SCENE_PATTERN % map_id
+
+
+## Whether `map_id`'s 3D scene has been built (tools/map3d; git-ignored, so a
+## fresh clone has none and GameRoot keeps the 2D map).
+static func has_scene(map_id: String) -> bool:
+	return ResourceLoader.exists(scene_path_for(map_id))
 
 
 ## A view of `repo`'s map; `scene_path` is a test seam.
@@ -202,15 +297,23 @@ func _load() -> void:
 	_markers.name = "Markers"
 	_viewport.add_child(_markers)
 	_place_markers()
+	_build_rivers()
+	_dress_sea()
+	_apply_sun_shadow_look()
+	_build_clouds()
 	_lines = Node3D.new()
 	_lines.name = "Lines"
 	_viewport.add_child(_lines)
+	_build_roads()
 	_target = Map3DGeometry.clamp_target(_home(), _bounds)
 	_distance = _repo.bal("map3d_zoom_start_m")
 	_yaw = 0.0
 	_loaded = true
 	_apply_camera()
 	_update_line_scale()
+	_hud = Map3DHud.new()
+	_hud.view = self
+	add_child(_hud)
 
 
 func _state() -> GameState:
@@ -241,9 +344,15 @@ func _height_at(xz: Vector2) -> float:
 	return sea if is_nan(y) else maxf(y, sea)
 
 
-## One MultiMesh of discs per settlement group, each on the ground under its
-## burg. Codes are sorted so the placement is the same every run.
+## One MultiMesh of billboard rings per settlement group, each over the
+## ground under its burg, plus a hidden gold ring for the current selection.
+## Codes are sorted so the placement is the same every run. Render priority
+## rises with tier (village lowest, capital highest — by ring_px, the
+## table's own measure of importance) so a bigger settlement's ring never
+## gets buried under a smaller neighbour's (fix round 1, owner 2026-09-18);
+## the selection ring sits above every tier.
 func _place_markers() -> void:
+	_ring_mats.clear()
 	var by_group: Dictionary = {}
 	for code: String in _sorted_burgs():
 		var burg: Dictionary = _repo.burgs[code]
@@ -254,17 +363,18 @@ func _place_markers() -> void:
 		(by_group[group] as Array).append(Vector3(xz.x, _height_at(xz), xz.y))
 	var groups: Array = by_group.keys()
 	groups.sort()
+	var by_size: Array = groups.duplicate()
+	by_size.sort_custom(func(a: String, b: String) -> bool:
+		var ra := float(_repo.map3d_settlements[a]["ring_px"])
+		var rb := float(_repo.map3d_settlements[b]["ring_px"])
+		return ra < rb if ra != rb else a < b)
 	for group: String in groups:
 		var spec: Dictionary = _repo.map3d_settlements[group]
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = float(spec["diameter_m"]) * 0.5
-		mesh.bottom_radius = mesh.top_radius
-		mesh.height = float(spec["height_m"])
-		mesh.radial_segments = 32
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(String(spec["color"]))
-		mat.roughness = 0.8
-		mesh.material = mat
+		var mesh := QuadMesh.new()
+		mesh.size = Vector2.ONE
+		mesh.material = _ring_material(Color(String(spec["color"])),
+			float(spec["ring_px"]), float(spec["line_px"]), float(spec["max_view_m"]),
+			PRIORITY_RING_BASE + by_size.find(group))
 		var pts: Array = by_group[group]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -275,7 +385,322 @@ func _place_markers() -> void:
 		var mmi := MultiMeshInstance3D.new()
 		mmi.name = group.capitalize()
 		mmi.multimesh = mm
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# The vertex shader grows geometry far past the mesh's own 1x1 AABB
+		# (Map3DBorders' lines use the same margin, for the same reason).
+		mmi.extra_cull_margin = 16384.0
 		_markers.add_child(mmi)
+	var sel := QuadMesh.new()
+	sel.size = Vector2.ONE
+	sel.material = _ring_material(MapPalette.named(_repo, "map3d_selection"), 0.0, 0.0,
+		SELECTED_RING_ALWAYS_M, PRIORITY_RING_BASE + groups.size())
+	var smm := MultiMesh.new()
+	smm.transform_format = MultiMesh.TRANSFORM_3D
+	smm.mesh = sel
+	smm.instance_count = 1
+	_selected_ring = MultiMeshInstance3D.new()
+	_selected_ring.name = "Selected"
+	_selected_ring.multimesh = smm
+	_selected_ring.visible = false
+	_selected_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_selected_ring.extra_cull_margin = 16384.0
+	_markers.add_child(_selected_ring)
+	_update_line_scale()
+
+
+## The ripple normal map both waters share: seamless noise made at load.
+func water_normals() -> Texture2D:
+	if _water_normals == null:
+		var noise := FastNoiseLite.new()
+		noise.seed = int(_repo.bal("map3d_water_seed"))
+		noise.frequency = 0.03
+		noise.fractal_octaves = 3
+		_water_normals = NoiseTexture2D.new()
+		_water_normals.width = 256
+		_water_normals.height = 256
+		_water_normals.seamless = true
+		_water_normals.as_normal_map = true
+		_water_normals.bump_strength = 6.0
+		_water_normals.generate_mipmaps = true
+		_water_normals.noise = noise
+	return _water_normals
+
+
+## rivers.json beside the scene (tools/map3d) as the Rivers layer; none
+## without it. Split at each lake exit (Map3DRivers.parse) so a jump in the
+## water line never draws as a vertical wall, then clear_terrain lifts any
+## point whose flat, sparsely-sampled cross-section would otherwise dip
+## below the real, denser terrain on a steep stretch (fix round 3) — the
+## carved riverbed's own ground would show through instead of the water.
+func _build_rivers() -> void:
+	var path := _scene_path.get_base_dir().path_join("rivers.json")
+	if not FileAccess.file_exists(path):
+		return
+	var courses := Map3DRivers.parse(FileAccess.get_file_as_string(path),
+		_repo.bal("map3d_river_split_rise_m"))
+	courses = Map3DRivers.clear_terrain(courses, _height_at, _repo.bal("map3d_river_terrain_clear_m"))
+	var arrays := Map3DRivers.ribbon_arrays(courses, _repo.bal("map3d_river_end_fade_m"),
+		_repo.bal("map3d_river_mesh_step_m"))
+	if arrays.is_empty():
+		return
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	_river_mat = ShaderMaterial.new()
+	_river_mat.shader = RIVER_SHADER
+	_river_mat.render_priority = PRIORITY_RIVERS
+	# The palette hex goes in RAW, as the sea's does (see _dress_sea).
+	_river_mat.set_shader_parameter("water",
+		MapTerrain.palette_color(_repo, "river", MapTerrain.FALLBACK))
+	_river_mat.set_shader_parameter("mouth_water",
+		MapTerrain.palette_color(_repo, "sea_near", MapTerrain.FALLBACK))
+	_river_mat.set_shader_parameter("sky",
+		MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK))
+	_river_mat.set_shader_parameter("ripples", water_normals())
+	_river_mat.set_shader_parameter("ripple_m", _repo.bal("map3d_river_ripple_m"))
+	_river_mat.set_shader_parameter("flow_m_s", _repo.bal("map3d_river_flow_m_s"))
+	_river_mat.set_shader_parameter("opacity", _repo.bal("map3d_river_opacity"))
+	_river_mat.set_shader_parameter("edge_soft_floor", _repo.bal("map3d_river_edge_soft_floor"))
+	_river_mat.set_shader_parameter("emission_share", _repo.bal("map3d_river_emission_share"))
+	_river_mat.set_shader_parameter("emission_gamma", _repo.bal("map3d_river_emission_gamma"))
+	for key: String in ["fresnel_sky_mix", "fresnel_power", "roughness", "specular", "normal_depth",
+			"ripple_emission_gain", "bank_wobble_m", "bank_wobble_amp"]:
+		_river_mat.set_shader_parameter(key, _repo.bal("map3d_river_" + key))
+	# One LOD for both waters: the river's near detail comes and goes with the sea's.
+	_river_mat.set_shader_parameter("lod_near_m", _repo.bal("map3d_sea_ripple_lod_near_m"))
+	_river_mat.set_shader_parameter("lod_far_m", _repo.bal("map3d_sea_ripple_lod_far_m"))
+	mesh.surface_set_material(0, _river_mat)
+	var mi := MeshInstance3D.new()
+	mi.name = "Rivers"
+	mi.mesh = mesh
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 16384.0
+	_viewport.add_child(mi)
+
+
+## The build's flat Sea plane dressed at runtime in the banded water, so the
+## palette and bands stay data (terrain_palette / balance), not a rebuild.
+func _dress_sea() -> void:
+	var sea := _world.get_node_or_null("Sea") as MeshInstance3D
+	if sea == null:
+		return
+	_sea_mat = ShaderMaterial.new()
+	_sea_mat.shader = SEA_SHADER
+	_sea_mat.render_priority = PRIORITY_SEA
+	var tex_path := _repo.sea_texture_path
+	if tex_path != "" and ResourceLoader.exists(tex_path):
+		_sea_mat.set_shader_parameter("sea_distance", load(tex_path))
+	var o: Array = _meta["pack_origin"]
+	var p: Array = _meta["pack_px"]
+	_sea_mat.set_shader_parameter("pack_origin", Vector2(float(o[0]), float(o[1])))
+	_sea_mat.set_shader_parameter("pack_px", Vector2(float(p[0]), float(p[1])))
+	_sea_mat.set_shader_parameter("m_per_px", float(_meta["m_per_px"]))
+	# The palette hex goes in RAW (final review, owner 2026-09-18): under GL
+	# Compatibility a Color uniform set from GDScript passes straight through
+	# to the output — measured 0.5 -> 128 under a Linear tonemap, with or
+	# without source_color — so there is no double gamma to undo. What moves
+	# a flat unshaded/EMISSION colour is the environment's FILMIC tonemap,
+	# which lifts it (0.5 -> 162); map3d_sea_emission_gamma (> 1) is fitted
+	# to that tonemap by sampling the rendered bands against these hexes.
+	for key: String in ["sea_near", "sea_nearer", "sea_far", "sea_deep"]:
+		_sea_mat.set_shader_parameter(key, MapTerrain.palette_color(_repo, key, MapTerrain.FALLBACK))
+	_sea_mat.set_shader_parameter("sky",
+		MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK))
+	_sea_mat.set_shader_parameter("band_near", _repo.bal("map_sea_band_near_px"))
+	_sea_mat.set_shader_parameter("band_nearer", _repo.bal("map_sea_band_nearer_px"))
+	_sea_mat.set_shader_parameter("band_far", _repo.bal("map_sea_band_far_px"))
+	_sea_mat.set_shader_parameter("soft", _repo.bal("map_sea_band_soft_px"))
+	_sea_mat.set_shader_parameter("shore_fade_px", _repo.bal("map3d_sea_shore_fade_px"))
+	_sea_mat.set_shader_parameter("ripples", water_normals())
+	_sea_mat.set_shader_parameter("ripple_m", _repo.bal("map3d_sea_ripple_m"))
+	_sea_mat.set_shader_parameter("drift_m_s", _repo.bal("map3d_sea_drift_m_s"))
+	_sea_mat.set_shader_parameter("emission_share", _repo.bal("map3d_sea_emission_share"))
+	_sea_mat.set_shader_parameter("emission_gamma", _repo.bal("map3d_sea_emission_gamma"))
+	_sea_mat.set_shader_parameter("roughness", _repo.bal("map3d_sea_roughness"))
+	_sea_mat.set_shader_parameter("specular", _repo.bal("map3d_sea_specular"))
+	_sea_mat.set_shader_parameter("fresnel_sky_mix", _repo.bal("map3d_sea_fresnel_sky_mix"))
+	_sea_mat.set_shader_parameter("horizon_fade_start_px", _repo.bal("map3d_sea_horizon_fade_start_px"))
+	_sea_mat.set_shader_parameter("horizon_fade_end_px", _repo.bal("map3d_sea_horizon_fade_end_px"))
+	for key: String in ["ripple_near_m", "ripple_lod_near_m", "ripple_lod_far_m",
+			"ripple_emission_gain", "emission_share_near", "shore_warp_px", "shore_warp_m"]:
+		_sea_mat.set_shader_parameter(key, _repo.bal("map3d_sea_" + key))
+	sea.material_override = _sea_mat
+
+
+## The Sun's shadow LOOK, applied at load (owner fix round 1, 2026-09-18):
+## a code-review + independent-critic pass on Task 9 found the shipped cloud
+## shadows read as pitch-black holes with knife edges, burying the
+## settlement rings — `shadow_enabled` alone leaves Godot's default full
+## black, full crisp shadow. `shadow_opacity` blends the shadowed pixel with
+## its lit colour instead of replacing it (so a shadow reads as a COOL WASH
+## of blocked light, never a hole) and `shadow_blur` softens every cast
+## shadow's edge — both apply to the terrain's own self-shadowing too
+## (accepted: the mountains read softer with it, see the fix report). The
+## sea never receives shadows (`disable_receive_shadows` on its own
+## material, set at build time) — untouched here.
+func _apply_sun_shadow_look() -> void:
+	var sun := _world.get_node_or_null("Sun") as DirectionalLight3D
+	if sun == null:
+		return
+	sun.shadow_opacity = _repo.bal("map3d_sun_shadow_opacity")
+	sun.shadow_blur = _repo.bal("map3d_sun_shadow_blur")
+
+
+## A deck of drifting cloud quads (owner 2026-09-18, Task 9) high over the
+## land, plus a shadow-only twin sharing its MultiMesh so a cloud's shape and
+## its shadow always match. `Clouds` (+ child `Shadows`) sit directly under
+## the SubViewport so layer_names()/set_layer_visible() find them the way
+## every other layer is found — hiding `Clouds` hides the twin with it,
+## since a Node3D's visibility is inherited by its children.
+func _build_clouds() -> void:
+	_cloud_field = Map3DCloudField.new(int(_repo.bal("map3d_cloud_seed")))
+	_cloud_params = {"max": int(_repo.bal("map3d_cloud_max")),
+		"size_min": _repo.bal("map3d_cloud_size_min_m"), "size_max": _repo.bal("map3d_cloud_size_max_m"),
+		"speed_m_s": _repo.bal("map3d_cloud_speed_m_s"), "wind_deg": _repo.bal("map3d_cloud_wind_deg"),
+		"fade_s": _repo.bal("map3d_cloud_fade_s"), "interval_s": _repo.bal("map3d_cloud_interval_s"),
+		"min_gap_m": _repo.bal("map3d_cloud_min_gap_m")}
+	_cloud_depth_ratio = _repo.bal("map3d_cloud_depth_ratio")
+	var quad := PlaneMesh.new()
+	quad.size = Vector2.ONE
+	_cloud_mm = MultiMesh.new()
+	_cloud_mm.transform_format = MultiMesh.TRANSFORM_3D
+	_cloud_mm.use_colors = true
+	_cloud_mm.mesh = quad
+	_cloud_mm.instance_count = int(_cloud_params["max"])
+	_cloud_mm.visible_instance_count = 0
+	var shape := CloudLayer.cloud_texture(int(_repo.bal("map3d_cloud_seed")))
+	var deck := MultiMeshInstance3D.new()
+	deck.name = "Clouds"
+	deck.multimesh = _cloud_mm
+	deck.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	deck.material_override = _cloud_material(shape)
+	deck.extra_cull_margin = 16384.0
+	_viewport.add_child(deck)
+	var twin := MultiMeshInstance3D.new()
+	twin.name = "Shadows"
+	twin.multimesh = _cloud_mm
+	twin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+	twin.material_override = _cloud_shadow_material(shape)
+	twin.extra_cull_margin = 16384.0
+	deck.add_child(twin)
+
+
+func _cloud_material(shape: Texture2D) -> ShaderMaterial:
+	var mat := ShaderMaterial.new()
+	mat.shader = CLOUD_SHADER
+	mat.render_priority = PRIORITY_CLOUDS
+	mat.set_shader_parameter("shape", shape)
+	mat.set_shader_parameter("opacity", _repo.bal("map3d_cloud_alpha"))
+	mat.set_shader_parameter("near_fade_m", _repo.bal("map3d_cloud_near_fade_m"))
+	mat.set_shader_parameter("near_fade_start_ratio", _repo.bal("map3d_cloud_near_fade_start_ratio"))
+	mat.set_shader_parameter("emission_share", _repo.bal("map3d_cloud_emission_share"))
+	return mat
+
+
+## The shadow-only twin's OWN shader (cloud_shadow.gdshader — see its note
+## and cloud_deck.gdshader's: the two must stay separate files under this
+## renderer, not one shader gated by a `shadow_pass` uniform).
+func _cloud_shadow_material(shape: Texture2D) -> ShaderMaterial:
+	var mat := ShaderMaterial.new()
+	mat.shader = CLOUD_SHADOW_SHADER
+	mat.set_shader_parameter("shape", shape)
+	mat.set_shader_parameter("shadow_cut", _repo.bal("map3d_cloud_shadow_cut"))
+	return mat
+
+
+## The ground rect the camera sees (its four corners' ground hits), wide
+## enough for the sky when a corner looks past the horizon — cached on the
+## camera pose (fix round 1, owner 2026-09-18: 4 raycasts every _process
+## frame regardless of whether the camera moved), invalidated only when
+## target, distance, yaw or the view's own size changes. Behaviour is
+## identical to recomputing every frame; only the cost changes.
+func _visible_ground() -> Rect2:
+	if _ground_cache_valid and _ground_cache_target == _target and _ground_cache_distance == _distance \
+			and _ground_cache_yaw == _yaw and _ground_cache_size == size:
+		return _ground_cache
+	var r := Rect2(_target, Vector2.ZERO)
+	for f: Vector2 in [Vector2.ZERO, Vector2(1, 0), Vector2(0, 1), Vector2.ONE]:
+		var hit: Variant = ground_at(size * f)
+		r = r.expand(Vector2((hit as Vector3).x, (hit as Vector3).z) if hit != null
+			else _target + Vector2(_distance, _distance) * (f * 2.0 - Vector2.ONE) * 2.0)
+	_ground_cache = r
+	_ground_cache_target = _target
+	_ground_cache_distance = _distance
+	_ground_cache_yaw = _yaw
+	_ground_cache_size = size
+	_ground_cache_valid = true
+	return r
+
+
+## Steps the cloud field and pushes it into the MultiMesh — called from
+## _process every frame the view exists, even unhovered, so the sky keeps
+## drifting and fading while the player looks elsewhere.
+func _step_clouds(delta: float) -> void:
+	if _cloud_field == null:
+		return
+	_cloud_field.step(delta, Game.clock_speed > 0, Game.clock_speed, _visible_ground(), _cloud_params)
+	var h := _repo.bal("map3d_cloud_height_m")
+	var n := _cloud_field.clouds.size()
+	_cloud_mm.visible_instance_count = n
+	for i in n:
+		var c: Dictionary = _cloud_field.clouds[i]
+		var s := float(c["size"])
+		var basis := Basis(Vector3.UP, float(c["rot"])).scaled(Vector3(s, 1.0, s * _cloud_depth_ratio))
+		var p := c["pos"] as Vector2
+		_cloud_mm.set_instance_transform(i, Transform3D(basis, Vector3(p.x, h, p.y)))
+		_cloud_mm.set_instance_color(i, Color(1, 1, 1, float(c["life"]) * _cloud_field.fade))
+
+
+func sea_material() -> ShaderMaterial:
+	return _sea_mat
+
+
+## Test seam (fix round 1): the Rivers layer's material, to check the
+## palette colours went in raw.
+func river_material() -> ShaderMaterial:
+	return _river_mat
+
+
+## A ring material; its sizes are design px, turned into window px with the
+## lines' by _update_line_scale (base values kept as meta). max_view_m is
+## world metres, never rescaled. The keyline is a fixed data value (fix
+## round 1: a pale ring was nearly invisible on bright grass at the old
+## 0.55 default).
+func _ring_material(colour: Color, ring_px: float, line_px: float, max_view_m: float,
+		priority: int) -> ShaderMaterial:
+	var mat := ShaderMaterial.new()
+	mat.shader = RING_SHADER
+	mat.render_priority = priority
+	mat.set_shader_parameter("colour", colour)
+	mat.set_shader_parameter("max_view_m", max_view_m)
+	mat.set_shader_parameter("fade_start", _repo.bal("map3d_ring_fade_start"))
+	var keyline := Color(0.08, 0.08, 0.08, _repo.bal("map3d_ring_keyline_alpha"))
+	mat.set_shader_parameter("keyline", keyline)
+	mat.set_meta("ring_px", ring_px)
+	mat.set_meta("line_px", line_px)
+	_ring_mats.append(mat)
+	return mat
+
+
+## Show the gold ring on a burg (or hide it with ""). It keeps the base
+## stroke width at a larger diameter (fix round 1, owner 2026-09-18: the old
+## 1.5x line width smeared it into a fat band over the tier ring instead of
+## reading as a second crisp ring).
+func _show_selected_ring(code: String) -> void:
+	if _selected_ring == null:
+		return
+	_selected_ring.visible = code != ""
+	if code == "":
+		return
+	var burg: Dictionary = _repo.burgs[code]
+	var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
+	var xz := _burg_xz(burg)
+	_selected_ring.multimesh.set_instance_transform(0,
+		Transform3D(Basis.IDENTITY, Vector3(xz.x, _height_at(xz), xz.y)))
+	var mat := _selected_ring.multimesh.mesh.surface_get_material(0) as ShaderMaterial
+	var k := _repo.bal("map3d_selected_ring_scale")
+	mat.set_meta("ring_px", float(spec["ring_px"]) * k)
+	mat.set_meta("line_px", float(spec["line_px"]))
+	_update_line_scale()
 
 
 ## The burgs that get a marker (their group has a map3d_settlements row),
@@ -305,20 +730,37 @@ func refresh_borders() -> void:
 	var rings: Array = []
 	for code: String in _repo.kingdoms:
 		rings.append_array(Map3DBorders.kingdom_lines(_repo, st, _meta, code, step))
-	_set_lines("Kingdoms", rings, MapPalette.named(_repo, "state_border"),
-		MapPalette.named(_repo, "state_border_light"), "map3d_border_width_px",
-		"map3d_border_dash_px", "map3d_border_gap_px", 1)
+	# A thin solid black line (owner 2026-09-18), not the 2D chequered ribbon.
+	var ink := MapPalette.named(_repo, "map3d_border")
+	_set_lines("Kingdoms", rings, ink, ink, "map3d_border_width_px", "", "", PRIORITY_KINGDOMS)
 	var seam := MapPalette.named(_repo, "map3d_seam")
 	seam.a = _repo.bal("map3d_seam_alpha")
 	_set_lines("Seams", Map3DBorders.seam_lines(_repo, st, _meta, step), seam,
-		Color(seam, 0.0), "map3d_seam_width_px", "map3d_seam_dash_px", "map3d_seam_gap_px", 0)
+		Color(seam, 0.0), "map3d_seam_width_px", "map3d_seam_dash_px", "map3d_seam_gap_px", PRIORITY_SEAMS)
 	_draw_selection()
 
 
+## The roads and trails (owner 2026-09-18): the pack's land routes, smoothed
+## as the 2D map smooths them, draped on the relief as solid ribbons in a
+## worn-sand colour (terrain_palette map3d_road / map3d_trail) with a soft
+## shoulder. Routes never move, so
+## they are built once; sea lanes are not roads and are left out.
+func _build_roads() -> void:
+	var step := _repo.bal("map3d_line_step_m")
+	for group: String in ["roads", "trails"]:
+		var key := "road" if group == "roads" else "trail"
+		var colour := MapTerrain.palette_color(_repo, "map3d_" + key, MapTerrain.FALLBACK)
+		colour.a = _repo.bal("map3d_%s_alpha" % key)
+		_set_lines(group.capitalize(), Map3DBorders.route_lines(_repo, _meta, group, step),
+			colour, colour, "map3d_%s_width_px" % key, "", "", PRIORITY_ROADS,
+			_repo.bal("map3d_road_edge_soft"))
+
+
 ## One MeshInstance3D of ribbons under Lines/<name>, replacing any before.
-## `priority` orders the see-through lines (borders over seams).
+## `priority` is the line's row of the render-priority table (PRIORITY_*);
+## `edge_soft` fades the ribbon toward its sides (border_line.gdshader).
 func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: String,
-		dash_key: String, gap_key: String, priority: int) -> void:
+		dash_key: String, gap_key: String, priority: int, edge_soft := 0.0) -> void:
 	var old := _lines.get_node_or_null(line_name)
 	if old != null:
 		_lines.remove_child(old)
@@ -333,6 +775,7 @@ func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: 
 	mat.render_priority = priority
 	mat.set_shader_parameter("colour_a", a)
 	mat.set_shader_parameter("colour_b", b)
+	mat.set_shader_parameter("edge_soft", edge_soft)
 	mat.set_meta("width_key", width_key)
 	mat.set_meta("dash_key", dash_key)
 	mat.set_meta("gap_key", gap_key)
@@ -351,22 +794,31 @@ func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: 
 ## The lines' screen-px values in WINDOW px, and the metres per px per metre
 ## of distance, for every line material — on load, resize and new lines.
 func _update_line_scale() -> void:
-	if _lines == null or _repo == null:
+	if _repo == null or _viewport == null:
 		return
 	var s := _render_scale()
 	var h := float(maxi(_viewport.size.y, 1))
 	var per_dist := 2.0 * tan(deg_to_rad(_repo.bal("map3d_fov_deg")) * 0.5) / h
-	for mi: MeshInstance3D in _lines.get_children():
-		var mat := mi.mesh.surface_get_material(0) as ShaderMaterial
-		if mat == null:
-			continue
+	if _lines != null:
+		for mi: MeshInstance3D in _lines.get_children():
+			var mat := mi.mesh.surface_get_material(0) as ShaderMaterial
+			if mat == null:
+				continue
+			mat.set_shader_parameter("px_per_dist", per_dist)
+			mat.set_shader_parameter("lift_px", _repo.bal("map3d_line_lift_px") * s)
+			mat.set_shader_parameter("width_px", _repo.bal(String(mat.get_meta("width_key"))) * s)
+			var dash_key := String(mat.get_meta("dash_key", ""))
+			mat.set_shader_parameter("dash_px", _repo.bal(dash_key) * s if dash_key != "" else 0.0)
+			var gap_key := String(mat.get_meta("gap_key", ""))
+			mat.set_shader_parameter("gap_px", _repo.bal(gap_key) * s if gap_key != "" else 0.0)
+	for mat: ShaderMaterial in _ring_mats:
 		mat.set_shader_parameter("px_per_dist", per_dist)
-		mat.set_shader_parameter("lift_px", _repo.bal("map3d_line_lift_px") * s)
-		mat.set_shader_parameter("width_px", _repo.bal(String(mat.get_meta("width_key"))) * s)
-		var dash_key := String(mat.get_meta("dash_key", ""))
-		mat.set_shader_parameter("dash_px", _repo.bal(dash_key) * s if dash_key != "" else 0.0)
-		var gap_key := String(mat.get_meta("gap_key", ""))
-		mat.set_shader_parameter("gap_px", _repo.bal(gap_key) * s if gap_key != "" else 0.0)
+		mat.set_shader_parameter("lift_px", _repo.bal("map3d_ring_lift_px") * s)
+		mat.set_shader_parameter("ring_px", float(mat.get_meta("ring_px")) * s)
+		mat.set_shader_parameter("line_px", float(mat.get_meta("line_px")) * s)
+	if _river_mat != null:
+		_river_mat.set_shader_parameter("px_per_dist", per_dist)
+		_river_mat.set_shader_parameter("min_px", _repo.bal("map3d_river_min_px") * s)
 
 
 ## The clicked province's outline, solid gold over the borders.
@@ -383,7 +835,7 @@ func _draw_selection() -> void:
 			pts.append(pts[0])
 			lines.append(Map3DGeometry.resample(pts, _repo.bal("map3d_line_step_m")))
 	var gold := MapPalette.named(_repo, "map3d_selection")
-	_set_lines("Selection", lines, gold, gold, "map3d_selection_width_px", "", "", 2)
+	_set_lines("Selection", lines, gold, gold, "map3d_selection_width_px", "", "", PRIORITY_SELECTION)
 
 
 # --- camera and input ----------------------------------------------------------
@@ -396,11 +848,17 @@ func _apply_camera() -> void:
 		_repo.bal("map3d_pitch_far_deg"))
 	var ground := Vector3(_target.x, _height_at(_target), _target.y)
 	_camera.transform = Map3DGeometry.pose(ground, _distance, _yaw, pitch)
+	if _hud != null:
+		_hud.refresh()
 
 
 func _metres_per_pixel() -> float:
 	return Map3DGeometry.metres_per_pixel(_distance, _repo.bal("map3d_fov_deg"),
 		maxf(size.y, 1.0))
+
+## Ground metres under one screen pixel at the target — the HUD's scale bar.
+func metres_per_pixel() -> float:
+	return _metres_per_pixel()
 
 
 func _pan_by(screen_delta: Vector2) -> void:
@@ -409,29 +867,84 @@ func _pan_by(screen_delta: Vector2) -> void:
 	_apply_camera()
 
 
+## Zoom to `new_distance` (clamped) keeping the ground under `pos` under it.
+func _zoom_at(pos: Vector2, new_distance: float) -> void:
+	var anchor: Variant = ground_at(pos)
+	var d := Map3DGeometry.zoomed_by(new_distance, 1.0, _repo.bal("map3d_zoom_min_m"),
+		_repo.bal("map3d_zoom_max_m"))
+	if anchor != null:
+		var a := anchor as Vector3
+		_target = Map3DGeometry.clamp_target(
+			Map3DGeometry.zoom_about(_target, Vector2(a.x, a.z), _distance, d), _bounds)
+	_distance = d
+	_apply_camera()
+
+
 func _gui_input(event: InputEvent) -> void:
 	if not _loaded:
+		return
+	# macOS trackpad (as on the 2D map): pinch zooms about the fingers,
+	# two-finger drag pans. The wheel still works exactly as before.
+	if event is InputEventMagnifyGesture:
+		var mg := event as InputEventMagnifyGesture
+		var gain := _repo.bal("map3d_pinch_zoom_gain")
+		_zoom_at(mg.position, _distance / maxf(1.0 + (mg.factor - 1.0) * gain, 0.01))
+		accept_event()
+		return
+	if event is InputEventPanGesture:
+		_pan_by(-(event as InputEventPanGesture).delta * _repo.bal("map3d_pan_gesture_px"))
+		accept_event()
 		return
 	var mb := event as InputEventMouseButton
 	if mb != null:
 		if mb.pressed and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			var steps := -1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1
-			_distance = Map3DGeometry.zoomed(_distance, steps, _repo.bal("map3d_zoom_factor"),
-				_repo.bal("map3d_zoom_min_m"), _repo.bal("map3d_zoom_max_m"))
-			_apply_camera()
+			_zoom_at(mb.position, _distance * pow(_repo.bal("map3d_zoom_factor"), steps))
 			accept_event()
 		elif mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed and _hud != null and _hud.compass_rect().has_point(mb.position):
+				_north_from = _yaw
+				_north_t = 0.0
+				_press_on_hud = true
+				# Kept in step with the ordinary press below: a stale
+				# _press_pos/_dragging from an earlier drag would let a
+				# press-and-move on the compass pan from that old point.
+				_press_pos = mb.position
+				_dragging = false
+				accept_event()
+				return
+			if not mb.pressed and _press_on_hud:
+				_press_on_hud = false
+				accept_event()
+				return
 			if mb.pressed:
 				_press_pos = mb.position
 				_dragging = false
 			elif not _dragging:
-				select_at(mb.position)
+				if ruler_on:
+					_ruler_click(mb.position)
+				else:
+					select_at(mb.position)
 			accept_event()
+		elif mb.button_index == MOUSE_BUTTON_RIGHT:
+			if mb.pressed:
+				_rpress_pos = mb.position
+				_rdragged = false
+			elif ruler_on and not _rdragged and _ruler.cancel() and _hud != null:
+				_hud.refresh()
 		return
 	var mm := event as InputEventMouseMotion
 	if mm == null:
 		return
+	if ruler_on and _ruler.phase == MapRuler.Phase.STRETCHING:
+		var hit: Variant = ground_at(mm.position)
+		if hit != null and _ruler.move(Vector2((hit as Vector3).x, (hit as Vector3).z)) \
+				and _hud != null:
+			_hud.refresh()
 	if mm.button_mask & MOUSE_BUTTON_MASK_LEFT:
+		if _press_on_hud:
+			accept_event()
+			return
 		if not _dragging and _press_pos.distance_to(mm.position) > CLICK_SLOP:
 			_dragging = true
 		if _dragging:
@@ -441,6 +954,9 @@ func _gui_input(event: InputEvent) -> void:
 		_pan_by(mm.relative)
 		accept_event()
 	elif mm.button_mask & MOUSE_BUTTON_MASK_RIGHT:
+		if _rpress_pos.distance_to(mm.position) > CLICK_SLOP:
+			_rdragged = true
+		_north_t = -1.0
 		_yaw -= mm.relative.x * _repo.bal("map3d_rotate_deg_per_px")
 		_apply_camera()
 		accept_event()
@@ -449,10 +965,18 @@ func _gui_input(event: InputEvent) -> void:
 ## WASD / arrows pan while the pointer is over the view and no text box has
 ## the keyboard; ownership is checked for new borders every few seconds.
 func _process(delta: float) -> void:
+	if _north_t >= 0.0:
+		_north_t += delta / maxf(_repo.bal("map3d_compass_reset_s"), 0.01)
+		_yaw = Map3DGeometry.ease_yaw(_north_from, _north_t)
+		if _north_t >= 1.0:
+			_north_t = -1.0
+			_yaw = 0.0
+		_apply_camera()
 	_border_clock += delta
 	if _border_clock >= _repo.bal("map3d_border_refresh_s"):
 		_border_clock = 0.0
 		refresh_borders()
+	_step_clouds(delta)
 	if not _hovered:
 		return
 	var focus := get_viewport().gui_get_focus_owner()
@@ -474,6 +998,72 @@ func _process(delta: float) -> void:
 	_pan_by(-dir.normalized() * px)
 
 
+# --- ruler ---------------------------------------------------------------------
+
+## A ruler click at `pos` (design px): the ground under it, or nothing on the sky.
+func _ruler_click(pos: Vector2) -> void:
+	var hit: Variant = ground_at(pos)
+	if hit == null:
+		return
+	_ruler.click(Vector2((hit as Vector3).x, (hit as Vector3).z))
+	if _hud != null:
+		_hud.refresh()
+
+
+## The ruler on the HUD (design px): its ends on the ground, projected; the
+## reading is the HORIZONTAL ground distance in the pack's own measure
+## (map_units_per_metre), so it matches the 2D map's ruler; ticks on the
+## 1-2-5 step at the target's scale, placed along the 3D line so
+## perspective spaces them as the ground does.
+func draw_ruler(ci: CanvasItem) -> void:
+	if not ruler_on or not _ruler.active() or _camera == null:
+		return
+	var a3 := Vector3(_ruler.start.x, _height_at(_ruler.start), _ruler.start.y)
+	var b3 := Vector3(_ruler.end.x, _height_at(_ruler.end), _ruler.end.y)
+	if _camera.is_position_behind(a3) or _camera.is_position_behind(b3):
+		return
+	var s := _render_scale()
+	var k := map_units_per_metre()
+	var total := _ruler.length() * k
+	var step := MapRuler.tick_step(_metres_per_pixel() * k, _repo.bal("map_ruler_tick_min_px"))
+	var ticks := PackedVector2Array()
+	for d in MapRuler.ticks(total, step):
+		ticks.append(_camera.unproject_position(a3.lerp(b3, d / total)) / s)
+	MapRuler.draw(ci, _camera.unproject_position(a3) / s, _camera.unproject_position(b3) / s,
+		ticks, ruler_reading())
+
+
+## The ruler's reading, as drawn.
+func ruler_reading() -> String:
+	return MapRuler.reading(_ruler.length() * map_units_per_metre(), map_unit())
+
+
+## THE 3D MAP MEASURES LIKE THE 2D MAP (owner 2026-09-18). The world is BUILT
+## at map3d_world m_per_px (50 m per pack px: a scale the terrain, the camera
+## and the relief were tuned at), but every distance it SHOWS — the ruler,
+## the scale bar — is the pack's: world metres back to pack px, times
+## map_info.csv distance_scale, in distance_unit. So the same two towns read
+## the same on both maps. A pack with no scale reads its world in km.
+func map_units_per_metre() -> float:
+	var per_px := float(_repo.map_info.get("distance_scale", "0"))
+	var m_per_px := float(_meta.get("m_per_px", 0.0))
+	if per_px <= 0.0 or m_per_px <= 0.0:
+		return 0.001
+	return per_px / m_per_px
+
+
+func map_unit() -> String:
+	if float(_repo.map_info.get("distance_scale", "0")) <= 0.0 \
+			or float(_meta.get("m_per_px", 0.0)) <= 0.0:
+		return "km"
+	return String(_repo.map_info.get("distance_unit", ""))
+
+
+## Test seam.
+func ruler() -> MapRuler:
+	return _ruler
+
+
 # --- picking --------------------------------------------------------------------
 
 ## The ground under a point of the view (design px), or null for the sky.
@@ -486,24 +1076,45 @@ func ground_at(pos: Vector2) -> Variant:
 
 
 ## What a click at `pos` picks: {"kind": "burg", "code"} for a settlement
-## within map3d_pick_px of it (or on its disc), {"kind": "province", "code"}
+## within map3d_pick_px of it (or on its ring), {"kind": "province", "code"}
 ## for the province under it, {} for the sea or the sky.
+##
+## Only a SHOWN ring is picked (final review, owner 2026-09-18): a burg whose
+## camera distance has reached its tier's max_view_m x map3d_ring_fade_start
+## — where settlement_ring.gdshader begins to fade it — is skipped, so a
+## click on a thinned village's empty spot names the province under it.
+##
+## The burg distance is measured in SCREEN px (the camera's own projection of
+## each burg's ground point), not by unprojecting the click to world XZ and
+## comparing world distances: at a steep near-zoom grazing angle a small
+## terrain-height error swings the raycast's XZ landing point by far more
+## than the ring's own on-screen radius, so a world-space reach either picked
+## nothing (fix round 1, owner 2026-09-18) or had to be absurdly generous.
+## Screen space matches what the player is actually aiming at, a ring of
+## constant screen size, and needs no distance conversion at all.
 func pick_at(pos: Vector2) -> Dictionary:
 	var hit: Variant = ground_at(pos)
 	if hit == null:
 		return {}
 	var p := hit as Vector3
 	var xz := Vector2(p.x, p.z)
-	var m_per_px := p.distance_to(_camera.global_position) \
-		* 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / maxf(size.y, 1.0)
+	var s := _render_scale()
+	var click_px := pos * s
 	var best := ""
 	var best_d := INF
+	var fade_start := _repo.bal("map3d_ring_fade_start")
+	var eye := _camera.global_position
 	for code: String in _sorted_burgs():
 		var burg: Dictionary = _repo.burgs[code]
 		var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
-		var reach := maxf(float(spec["diameter_m"]) * 0.5, _repo.bal("map3d_pick_px") * m_per_px)
-		var d := _burg_xz(burg).distance_to(xz)
-		if d <= reach and d < best_d:
+		var bxz := _burg_xz(burg)
+		var world := Vector3(bxz.x, _height_at(bxz), bxz.y)
+		if eye.distance_to(world) >= float(spec["max_view_m"]) * fade_start:
+			continue
+		var screen_px := _camera.unproject_position(world)
+		var reach := maxf(float(spec["ring_px"]) * 0.5, _repo.bal("map3d_pick_px")) * s
+		var d := screen_px.distance_to(click_px)
+		if d <= reach and d < best_d and _camera.is_position_behind(world) == false:
 			best_d = d
 			best = code
 	if best != "":
@@ -533,10 +1144,12 @@ func select_at(pos: Vector2) -> void:
 			var code := String(picked["code"])
 			_set_selected_province("")
 			_selected_burg = code
+			_show_selected_ring(code)
 			object_selected.emit({"title": String(_repo.burgs[code].get("label", code)),
 				"obj": {"kind": "burg", "code": code}})
 		"province":
 			_selected_burg = ""
+			_show_selected_ring("")
 			_set_selected_province(String(picked["code"]))
 			province_selected.emit(_selected_province)
 		_:
@@ -555,6 +1168,7 @@ func _set_selected_province(code: String) -> void:
 func clear_selection() -> void:
 	var had := _selected_burg != "" or _selected_province != ""
 	_selected_burg = ""
+	_show_selected_ring("")
 	_set_selected_province("")
 	if had:
 		object_selected.emit({})
@@ -573,6 +1187,9 @@ func viewport() -> SubViewport:
 func camera() -> Camera3D:
 	return _camera
 
+func cloud_count() -> int:
+	return _cloud_mm.visible_instance_count if _cloud_mm != null else 0
+
 func target() -> Vector2:
 	return _target
 
@@ -588,12 +1205,48 @@ func selected_province() -> String:
 func selected_burg() -> String:
 	return _selected_burg
 
+## Whether the clicked settlement's gold ring is currently shown.
+func selected_ring_visible() -> bool:
+	return _selected_ring != null and _selected_ring.visible
+
 ## Centre the rig on a pack point (tests and future "go to" orders).
 func look_at_pack(pack_px: Vector2, at_distance: float = -1.0) -> void:
 	_target = Map3DGeometry.clamp_target(Map3DGeometry.pack_to_world(_meta, pack_px), _bounds)
 	if at_distance > 0.0:
 		_distance = at_distance
 	_apply_camera()
+
+## Frame the player's capital at a distance (the bench and the snapshots).
+func look_at_home(at_distance: float) -> void:
+	_target = Map3DGeometry.clamp_target(_home(), _bounds)
+	_distance = at_distance
+	_apply_camera()
+
+## Layers the bench can switch off to price them, those that exist: the
+## view's nodes under the viewport, the build's Sea, the Sun's shadows, the HUD.
+func layer_names() -> PackedStringArray:
+	var out := PackedStringArray()
+	for n: String in ["Markers", "Lines", "Rivers", "Clouds"]:
+		if _viewport.get_node_or_null(n) != null:
+			out.append(n)
+	if _world != null and _world.get_node_or_null("Sea") != null:
+		out.append("Sea")
+	if _world != null and _world.get_node_or_null("Sun") != null:
+		out.append("Shadows")
+	if get_node_or_null("Hud") != null:
+		out.append("Hud")
+	return out
+
+func set_layer_visible(layer: String, on: bool) -> void:
+	match layer:
+		"Shadows":
+			(_world.get_node("Sun") as DirectionalLight3D).shadow_enabled = on
+		"Sea":
+			(_world.get_node("Sea") as Node3D).visible = on
+		"Hud":
+			(get_node("Hud") as CanvasItem).visible = on
+		_:
+			(_viewport.get_node(layer) as Node3D).visible = on
 
 ## A line mesh by name (Kingdoms, Seams, Selection), or null.
 func line_mesh(line_name: String) -> ArrayMesh:
@@ -606,5 +1259,7 @@ func marker_counts() -> Dictionary:
 	if _markers == null:
 		return out
 	for mmi: MultiMeshInstance3D in _markers.get_children():
+		if mmi.name == "Selected":
+			continue
 		out[mmi.name.to_lower()] = mmi.multimesh.instance_count
 	return out

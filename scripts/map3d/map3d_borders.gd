@@ -98,3 +98,24 @@ static func seam_lines(repo: DataRepository, state: GameState, world: Dictionary
 				pts.append(Map3DGeometry.pack_to_world(world, p))
 			out.append(Map3DGeometry.resample(pts, step_m))
 	return out
+
+
+## The pack's routes of one `group` ("roads", "trails") in world metres,
+## smoothed exactly as the 2D map smooths them (map_route_smoothing_steps)
+## and resampled to `step_m` so they drape over the relief.
+static func route_lines(repo: DataRepository, world: Dictionary, group: String,
+		step_m: float) -> Array:
+	var steps := int(repo.bal("map_route_smoothing_steps"))
+	var out: Array = []
+	for code: String in repo.routes:
+		var r: Dictionary = repo.routes[code]
+		if String(r["group"]) != group:
+			continue
+		var line := MapGeometry.smooth_open(r["polyline"], steps)
+		if line.size() < 2:
+			continue
+		var pts := PackedVector2Array()
+		for p in line:
+			pts.append(Map3DGeometry.pack_to_world(world, p))
+		out.append(Map3DGeometry.resample(pts, step_m))
+	return out

@@ -226,3 +226,15 @@ func test_play_runs_the_clock_on_the_council_stage_too() -> void:
 		"days pass without Wave them on")
 	Game.data.balance["time_day_seconds"] = 1.0
 	Game.set_clock_speed(0)
+
+
+## Final review (owner 2026-09-18): the bench's clock hold writes the state
+## through Game, never from GameRoot.
+func test_game_holds_the_day_short_of_the_month_end() -> void:
+	Game.start_campaign(42)
+	Game.state.day = 20
+	assert_false(Game.hold_day_before_month_end(25), "under the ceiling: untouched")
+	assert_eq(Game.state.day, 20)
+	Game.state.day = 26
+	assert_true(Game.hold_day_before_month_end(25))
+	assert_eq(Game.state.day, 1, "rolled back to the month's first day")

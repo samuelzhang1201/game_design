@@ -144,6 +144,19 @@ var show_armies: bool = false:
 			return
 		show_armies = v
 		queue_redraw()
+## The MEASUREMENT tab (owner 2026-09-18): while on, a left click drops or
+## fixes the ruler instead of selecting, and a right click puts it away.
+## Turning it off puts the ruler away too.
+var show_ruler: bool = false:
+	set(v):
+		if v == show_ruler:
+			return
+		show_ruler = v
+		_ruler.cancel()
+		queue_redraw()
+var _ruler := MapRuler.new()
+## Where the right button went down: a right CLICK (not a drag) cancels.
+var _rpress_pos := Vector2.ZERO
 ## The province selected in the province view ("" when none); drawn tinted.
 var _selected_province := ""
 ## Per province loop: its triangle indices (native coordinates, so they never
@@ -442,6 +455,7 @@ func _draw() -> void:
 	_layer("vignette", _draw_paper_vignette)
 	_layer("scale", _draw_scale_bar)
 	_layer("compass", _draw_compass)
+	_layer("ruler", _draw_ruler)
 
 ## Screen px per native map px — the LOD and pick radii are defined on it.
 func view_scale() -> float:
@@ -1420,51 +1434,11 @@ func scale_bar() -> Dictionary:
 	var unit := String(Game.data.map_info.get("distance_unit", ""))
 	return {"distance": distance, "unit": unit,
 		"width_px": distance / per_px * view_scale(),
-		"text": ("%s %s" % [_trim_zeros(distance), unit]).strip_edges()}
+		"text": ("%s %s" % [ScaleBar.trim_zeros(distance), unit]).strip_edges()}
 
-## 500.0 -> "500", 2.5 -> "2.5": a scale bar reads as a number, not a float.
-func _trim_zeros(v: float) -> String:
-	var s := String.num(v, 2)
-	if s.contains("."):
-		s = s.rstrip("0").rstrip(".")
-	return s
-
-## Drawn last, over the vignette, in the manner of library M-14: a narrow bar
-## of alternating filled and open segments under a bracketing line, with the
-## distance set right-aligned above it.
+## Drawn last, over the vignette: ScaleBar's own drawing (library M-14).
 func _draw_scale_bar() -> void:
-	var bar := scale_bar()
-	if bar.is_empty():
-		return
-	var color := MapTerrain.palette_color(Game.data, "scale_bar", MapTerrain.FALLBACK)
-	color.a = Game.data.bal("map_scale_bar_alpha")
-	if color.a <= 0.0:
-		return
-	var w: float = bar["width_px"]
-	var h := Game.data.bal("map_scale_bar_height_px")
-	var margin := Game.data.bal("map_scale_bar_margin_px")
-	var right := size.x - margin
-	var bottom := size.y - margin
-	var left := right - w
-	var top := bottom - h
-	var divisions := maxi(int(Game.data.bal("map_scale_bar_divisions")), 1)
-	var step := w / float(divisions)
-	for i in divisions:
-		if i % 2 == 0:
-			draw_rect(Rect2(Vector2(left + step * i, top), Vector2(step, h)), color, true)
-	draw_rect(Rect2(Vector2(left, top), Vector2(w, h)), color, false, 2.0)
-	var brow := top - 6.0
-	draw_line(Vector2(left, brow), Vector2(right, brow), color, 2.0, true)
-	draw_line(Vector2(left, brow), Vector2(left, top), color, 2.0, true)
-	draw_line(Vector2(right, brow), Vector2(right, top), color, 2.0, true)
-	var font := UiPalette.display_font()
-	if font == null:
-		return
-	var font_px := int(Game.data.bal("map_scale_bar_font_px"))
-	var text := String(bar["text"])
-	var text_w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px).x
-	draw_string(font, Vector2(right - text_w, brow - 6.0), text,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, color)
+	ScaleBar.draw(self, scale_bar(), size)
 
 ## A compass rose fixed in the top-right corner (owner request 2026-09-13),
 ## in the manner of library M-13: a sixteen-point star whose limbs are
@@ -1933,10 +1907,22 @@ func _gui_input(ev: InputEvent) -> void:
 				_dragging = false
 				_press_pos = mb.position
 			elif not _dragging:
-				_select_at(mb.position)
+				if show_ruler:
+					_ruler.click(screen_to_map(mb.position))
+					queue_redraw()
+				else:
+					_select_at(mb.position)
+		elif mb.button_index == MOUSE_BUTTON_RIGHT:
+			if mb.pressed:
+				_rpress_pos = mb.position
+			elif show_ruler and _rpress_pos.distance_to(mb.position) <= CLICK_SLOP \
+					and _ruler.cancel():
+				queue_redraw()
 	elif ev is InputEventMouseMotion:
 		var mm := ev as InputEventMouseMotion
 		_update_hover(mm.position)
+		if show_ruler and _ruler.move(screen_to_map(mm.position)):
+			queue_redraw()
 		if mm.button_mask & MOUSE_BUTTON_MASK_LEFT:
 			if _press_pos.distance_to(mm.position) > CLICK_SLOP:
 				_dragging = true
@@ -1992,6 +1978,31 @@ func _clamp_offset() -> void:
 		_offset.y = (size.y - scaled.y) / 2.0
 	else:
 		_offset.y = clampf(_offset.y, size.y - scaled.y, 0.0)
+
+## The MEASUREMENT ruler, over everything: its length in the pack's own
+## unit (map_info.csv distance_scale per native px, distance_unit), ticks
+## on the 1-2-5 step for the current zoom. A pack with no scale reads px.
+func _draw_ruler() -> void:
+	if not show_ruler or not _ruler.active():
+		return
+	var per_px := float(Game.data.map_info.get("distance_scale", "0"))
+	var unit := String(Game.data.map_info.get("distance_unit", ""))
+	if per_px <= 0.0:
+		per_px = 1.0
+		unit = "px"
+	var total := _ruler.length() * per_px
+	var a := map_to_screen(_ruler.start)
+	var b := map_to_screen(_ruler.end)
+	var step := MapRuler.tick_step(per_px / maxf(_zoom, 0.0001),
+		Game.data.bal("map_ruler_tick_min_px"))
+	var ticks := PackedVector2Array()
+	for d in MapRuler.ticks(total, step):
+		ticks.append(a.lerp(b, d / total))
+	MapRuler.draw(self, a, b, ticks, MapRuler.reading(total, unit))
+
+## Test seam.
+func ruler() -> MapRuler:
+	return _ruler
 
 ## Native map coordinates (pack tables, index bitmaps) -> screen.
 func map_to_screen(native: Vector2) -> Vector2:
@@ -2409,7 +2420,7 @@ func _place_badges(manors: Array) -> Array:
 		var center: Vector2 = m["center"]
 		var badge := Rect2(center - Vector2(px, px) * 0.5, Vector2(px, px))
 		var whole := badge
-		var text := _trim_zeros(float(m["units"]))
+		var text := ScaleBar.trim_zeros(float(m["units"]))
 		var label := Rect2()
 		if with_label:
 			var w := _text_width(font, text, font_px) + repo.bal("map_manor_label_pad_px") * 2.0
