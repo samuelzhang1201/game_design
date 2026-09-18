@@ -2,9 +2,10 @@
 
 The 3D campaign map is built from the same Azgaar pack as the 2D map
 (`data/maps/<id>/`, `assets/maps/<id>/`) at **50 m per pack px** — `beria` is a
-128 × 46 km world, a Terrain3D vertex every 20 m, regions of 2048. It started
-as the spike of 2026-09-17/18 and is not yet read by the game: the 2D
-`WorldMapView` stays the playable map until the 3D one replaces it.
+128 × 46 km world, a Terrain3D vertex every 20 m, regions of 2048. The game
+shows it on the **3D MAP** bottom-bar tab (`scripts/map3d/map3d_view.gd`),
+which swaps it into the map panel in place of the 2D `WorldMapView`; a
+checkout that has not built it shows a notice pointing here.
 
 Plugin: `addons/terrain_3d/` (Terrain3D 1.0.2, committed). Renderer: GL
 Compatibility (see the traps below).
@@ -19,11 +20,14 @@ Compatibility (see the traps below).
 | `assets/map3d/textures/` | packed Terrain3D texture pairs (`*_alb_ht`, `*_nrm_rgh`, 2048 px) | no — `pack_textures.py` |
 | `assets/map3d/trees/` | tree impostor cards + `trees.json` | no — `render_impostors.py` |
 | `assets/map3d/<map>/bake/` | `height.r32`, `control.r32`, `color.rgba8`, `world.json`, previews | no — `bake_world.py` |
-| `assets/map3d/<map>/world.tscn`, `terrain_assets.tres`, `terrain/` | the Terrain3D scene, its assets and region data | no — `build_terrain.gd` |
+| `assets/map3d/<map>/world.tscn`, `terrain_assets.tres`, `terrain/` | the Terrain3D scene (root metadata `map3d_world`: scale, origin, canvas, sea level), its assets and region data | no — `build_world.gd` |
 
-Runtime game code for the 3D map belongs in `scripts/map3d/`, its scenes in
-`scenes/map3d/`, its tests in `tests/map3d/` — engine-pure where it can be,
-like the rest of the project (CLAUDE.md invariants).
+Runtime game code is `scripts/map3d/` — `Map3DGeometry` (pure: pack px ↔
+metres, the camera rig's pose, zoom, tilt, pan) and `Map3DView` (the tab's
+view: lazy load, SubViewport rendering only while shown, settlements placed
+from live data by `data/map3d_settlements.csv`) — with tests in
+`tests/map3d/` that use a fixture scene, never the git-ignored build. Camera
+values are `balance.csv` `map3d_*`.
 
 ## Rebuilding from a clean checkout
 
@@ -36,9 +40,10 @@ like the rest of the project (CLAUDE.md invariants).
 3. **Bake** — `python3 tools/map3d/bake_world.py` (~2 s). Height comes from
    `cells.csv` plus its own ridges, NOT from `world_relief.png`, whose 2D-tuned
    detail is a 660 m bump every 800 m at this scale.
-4. **Scene** — in the editor (gdai `execute_editor_script`): `build_scene()`,
-   open `assets/map3d/<map>/world.tscn`, `import_into(<its Terrain3D>, <root>)`,
-   save. Load the script source into a fresh GDScript — the editor caches it.
+4. **Scene** — `GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/build_world.gd`
+   (~2 s, no editor). Nothing visual is baked into the scene beyond the
+   terrain: headless, a MultiMesh saves without its transforms, which is one
+   reason settlements are placed at runtime.
 5. **Look / measure** — `Godot --path . -s tools/map3d/shoot.gd -- --camera CameraMid --out /tmp/x.png`;
    `tools/map3d/bench.gd` for frame times.
 6. Trees (optional, owner: none yet) — `render_impostors.py` in Blender, then
@@ -63,8 +68,9 @@ like the rest of the project (CLAUDE.md invariants).
 
 ## Open items before the 3D map ships
 
-- `build_terrain.gd` hardcodes `PLAYER_REALM` and its constants; move them to
-  `realm_bindings.csv` / `balance.csv` (CLAUDE.md invariant 5, "values in CSVs").
-- Settlements are placeholder discs; trees are off.
+- `build_terrain.gd`'s look constants (textures, material, sky, sea) still
+  live in the script, not in CSVs.
+- Settlements are placeholder discs; trees are off; the view is look-only —
+  no hover, click, card, borders or labels yet.
 - Compare Compatibility vs Forward+ on the target PC (without trees
   Compatibility measured 5.0 vs 8.4 ms at 1440p).

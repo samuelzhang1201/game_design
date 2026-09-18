@@ -1,23 +1,22 @@
 @tool
 extends RefCounted
-## SPIKE (2026-09-18, throwaway): the beria pack as a Terrain3D landscape at
-## CAMPAIGN scale (owner: 50 m per pack px, a 128 x 46 km world). Nothing in
-## the game reads this.
+## The beria pack as a Terrain3D landscape at CAMPAIGN scale (owner: 50 m per
+## pack px, a 128 x 46 km world); the game shows it in Map3DView (the 3D MAP
+## tab). Build it headless, no editor:
 ##   python3 tools/map3d/bake_world.py      heights + control → bake/
-## then from the editor (gdai execute_editor_script):
-##   build_scene(), open the scene, import_into(<its Terrain3D>, <scene root>), save
-## (load the source into a fresh GDScript: the editor caches the open file).
+##   Godot --headless --path . -s tools/map3d/build_world.gd
+## (build_world.gd runs build_scene(), puts the scene in the tree, then
+## import_into() and saves).
 ## The ground wears the owner's Poly Haven sets (textures/, packed by
-## pack_textures.py) plus the Terrain3D demo's Cliff. Settlements are
-## placeholder discs sized by tier, to judge the spacing — no trees yet.
-## Constants live here, not in balance.csv, because this is a probe.
+## pack_textures.py) plus the ambientCG Cliff. No trees yet.
+## The root carries `map3d_world` metadata (scale, origin, canvas, sea level):
+## Map3DView reads it rather than the git-ignored, .gdignored bake/.
 
 const MAP := "beria"
 const ROOT := "res://assets/map3d/beria"
 const TEX := "res://assets/map3d/textures"
 const BAKE := "res://assets/map3d/beria/bake"
 const SEA_Y := 5.0               # m: the water plane, just over the waterline
-const PLAYER_REALM := "kelvarn"  # realm_bindings.csv player_realm — the near camera frames its capital
 
 # [key, metres per tile repeat, detiling rotation]; order is bake_world.py's
 # texture ids. No per-texture tint: bake_world.py's colour map carries every
@@ -32,16 +31,6 @@ const TEXTURES := [
 	["sand_03", 120.0, 0.2],
 	["leafy_grass", 200.0, 0.22],
 ]
-
-# Settlement placeholder: diameter in metres and colour per burgs.csv group.
-const TIERS := {
-	"capital": [1200.0, Color("#C8102E")],
-	"city": [700.0, Color("#E07B00")],
-	"fort": [350.0, Color("#6B4E9B")],
-	"town": [350.0, Color("#F2C300")],
-	"village": [180.0, Color("#F5F5F0")],
-}
-const DISC_HEIGHT := 60.0
 
 # Terrain3D material: demo/Demo.tscn's parameters, every one of them — a
 # fresh Terrain3DMaterial saved the rest as null and drew flat grey.
@@ -83,9 +72,10 @@ static func pack_to_world(world: Dictionary, px: Vector2) -> Vector2:
 	return Vector2(o[0], o[1]) + px * float(world["m_per_px"])
 
 
-## Step 2, on the Terrain3D node of the OPEN scene (its data only exists in
-## the tree): assets, the baked maps, the settlement discs; saves regions.
-static func import_into(terrain: Terrain3D, scene_root: Node) -> String:
+## Step 2, on the Terrain3D node of a scene IN THE TREE (its data only
+## exists there): assets and the baked maps; saves the regions. Settlements
+## are not baked — Map3DView places them from live data at runtime.
+static func import_into(terrain: Terrain3D) -> String:
 	var began := Time.get_ticks_msec()
 	var world := world_info()
 	var padded: Array = world["padded"]
@@ -135,68 +125,21 @@ static func import_into(terrain: Terrain3D, scene_root: Node) -> String:
 	terrain.data.import_images(images, Vector3(corner[0], 0.0, corner[1]), 0.0, 1.0)
 	terrain.data.save_directory(ROOT + "/terrain")
 
-	var discs := _place_settlements(terrain, scene_root, world)
-	return "imported %dx%d vertices at %.0f m in %d ms, %d regions, %s" % [
+	return "imported %dx%d vertices at %.0f m in %d ms, %d regions" % [
 		fw, fh, terrain.vertex_spacing, Time.get_ticks_msec() - began,
-		terrain.data.get_region_count(), discs]
+		terrain.data.get_region_count()]
 
 
-## One MultiMesh of flat discs per tier, each disc on the ground under its burg.
-static func _place_settlements(terrain: Terrain3D, scene_root: Node, world: Dictionary) -> String:
-	var old := scene_root.get_node_or_null("Settlements")
-	if old:
-		scene_root.remove_child(old)
-		old.free()
-	var holder := Node3D.new()
-	holder.name = "Settlements"
-	scene_root.add_child(holder)
-	holder.owner = scene_root
-	var by_tier := {}
-	var f := FileAccess.open("res://data/maps/%s/political/burgs.csv" % MAP, FileAccess.READ)
+## The kingdom the pack binds to the player_realm slot (realm_bindings.csv,
+## CLAUDE.md invariant 5: never a kingdom's name in code).
+static func player_realm() -> String:
+	var f := FileAccess.open("res://data/maps/%s/realm_bindings.csv" % MAP, FileAccess.READ)
 	var header := f.get_csv_line()
-	var col := {}
-	for i in header.size():
-		col[header[i]] = i
 	while not f.eof_reached():
 		var row := f.get_csv_line()
-		if row.size() < header.size():
-			continue
-		var tier: String = row[col["group"]]
-		if not TIERS.has(tier):
-			continue
-		var xz := pack_to_world(world, Vector2(float(row[col["x"]]), float(row[col["y"]])))
-		var y := terrain.data.get_height(Vector3(xz.x, 0.0, xz.y))
-		if is_nan(y):
-			continue
-		if not by_tier.has(tier):
-			by_tier[tier] = []
-		by_tier[tier].append(Vector3(xz.x, maxf(y, SEA_Y), xz.y))
-	var counts := []
-	for tier: String in by_tier:
-		var spec: Array = TIERS[tier]
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = float(spec[0]) * 0.5
-		mesh.bottom_radius = float(spec[0]) * 0.5
-		mesh.height = DISC_HEIGHT
-		mesh.radial_segments = 32
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = spec[1]
-		mat.roughness = 0.8
-		mesh.material = mat
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.mesh = mesh
-		var pts: Array = by_tier[tier]
-		mm.instance_count = pts.size()
-		for i in pts.size():
-			mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, pts[i]))
-		var mmi := MultiMeshInstance3D.new()
-		mmi.name = tier.capitalize()
-		mmi.multimesh = mm
-		holder.add_child(mmi)
-		mmi.owner = scene_root
-		counts.append("%s=%d" % [tier, pts.size()])
-	return "settlements " + ", ".join(counts)
+		if row.size() >= header.size() and row[header.find("slot")] == "player_realm":
+			return row[header.find("kingdom_code")]
+	return ""
 
 
 ## World XZ of the player realm's capital, for the near cameras.
@@ -206,7 +149,7 @@ static func capital_xz(world: Dictionary) -> Vector2:
 	var header := f.get_csv_line()
 	while not f.eof_reached():
 		var row := f.get_csv_line()
-		if row.size() >= header.size() and row[header.find("kingdom_code")] == PLAYER_REALM:
+		if row.size() >= header.size() and row[header.find("kingdom_code")] == player_realm():
 			capital = row[header.find("capital_burg")]
 	f = FileAccess.open("res://data/maps/%s/political/burgs.csv" % MAP, FileAccess.READ)
 	header = f.get_csv_line()
@@ -223,6 +166,8 @@ static func build_scene() -> String:
 	var span := Vector2(world["pack_px"][0], world["pack_px"][1]) * float(world["m_per_px"])
 	var root := Node3D.new()
 	root.name = "BeriaTerrain"
+	root.set_meta("map3d_world", {"m_per_px": float(world["m_per_px"]),
+		"pack_origin": world["pack_origin"], "pack_px": world["pack_px"], "sea_y": SEA_Y})
 	var terrain := Terrain3D.new()
 	terrain.name = "Terrain3D"
 	terrain.region_size = int(world["region_size"])

@@ -43,6 +43,7 @@ var _speech_label: RichTextLabel
 var _replies_box: VBoxContainer
 var _free_text: LineEdit
 var _world_map: WorldMapView
+var _map3d: Map3DView
 ## The hovered country's card, overlaying the minister column.
 var _country_panel: CountryPanel
 ## The clicked map element's fact card, in the left column (MapDetailPanel).
@@ -276,6 +277,15 @@ func set_economy_view(on: bool) -> void:
 	if on:
 		_economy.refresh()
 	_refresh_left()
+
+## The 3D MAP tab (GameRoot): the Terrain3D view takes the map panel in
+## place of the 2D map while the tab is lit (Map3DView.toggle_in).
+func set_map3d_view(on: bool) -> void:
+	_map3d = Map3DView.toggle_in(%MapPanel, _world_map, _map3d, on)
+
+## Test seam: the 3D view, or null until the tab was first lit.
+func map3d_view() -> Map3DView:
+	return _map3d
 
 ## Test seam.
 func economy_panel() -> EconomyPanel:

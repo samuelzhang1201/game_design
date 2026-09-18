@@ -1,0 +1,6 @@
+group,diameter_m,height_m,color,notes
+capital,1200,60,#C8102E,"3D MAP (owner 2026-09-18): a realm's seat as a placeholder disc on the ground, until settlement models exist — sizes from the Terrain3D spike, which judged them against the 50 m per pack px world"
+city,700,60,#E07B00,placeholder disc
+fort,350,60,#6B4E9B,placeholder disc
+town,350,60,#F2C300,placeholder disc
+village,180,60,#F5F5F0,placeholder disc

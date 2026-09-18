@@ -1,7 +1,7 @@
 class_name BottomBar
 extends Control
 ## Bottom tab strip on every gameplay screen (user ruling 2026-08-30),
-## outside the map: HEIGHTS | ECONOMY | MANORS | REALM | MILITARY |
+## outside the map: 3D MAP | HEIGHTS | ECONOMY | MANORS | REALM | MILITARY |
 ## WAR ROOM (a placeholder page, owner 2026-09-17) | FAMILIES | LAWS |
 ## RELIGION | RELATIONSHIP. MAP and PROVINCES went 2026-09-13 (owner):
 ## the province view is always on, and MAP did nothing a tab needed.
@@ -11,15 +11,17 @@ extends Control
 
 signal tab_selected(tab: String)
 
-const TABS := ["HEIGHTS", "ECONOMY", "MANORS", "REALM", "MILITARY", "WAR ROOM",
+const TABS := ["3D MAP", "HEIGHTS", "ECONOMY", "MANORS", "REALM", "MILITARY", "WAR ROOM",
 	"FAMILIES", "LAWS", "RELIGION", "RELATIONSHIP"]
 ## Tabs that stay lit while their view is on rather than opening an overlay:
 ## MILITARY toggles the map's army layer (user request 2026-09-10), HEIGHTS
 ## the height ramp over the land (owner request 2026-09-12, remade
 ## 2026-09-13), ECONOMY and MANORS their themes.
 ## MANORS (MANOR_SYSTEM.md §6) is the fourth theme, exclusive with HEIGHTS
-## and ECONOMY — GameRoot keeps them so.
-const TOGGLES := ["HEIGHTS", "ECONOMY", "MANORS", "MILITARY"]
+## and ECONOMY — GameRoot keeps them so. 3D MAP (owner 2026-09-18) swaps
+## the 2D map for the Terrain3D view (Map3DView); it puts the three 2D
+## themes out, and they it.
+const TOGGLES := ["3D MAP", "HEIGHTS", "ECONOMY", "MANORS", "MILITARY"]
 ## The strip's height. A constant on purpose — NewsTicker, DayRunScreen and
 ## ScreenLayout all place themselves off it, so it cannot float — but it
 ## must stay at least content_height(), and a test pins that. It went stale

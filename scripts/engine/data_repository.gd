@@ -42,6 +42,9 @@ var resource_icons: Dictionary = {}
 ## data/settlement_art.csv rows: which settlement drawing a burg group (and
 ## whether it has walls) is shown with on the map (MapObjects.settlement_art).
 var settlement_art: Array[Dictionary] = []
+## data/map3d_settlements.csv rows keyed by burg group: the 3D MAP's
+## placeholder marker for each settlement (Map3DView).
+var map3d_settlements: Dictionary = {}
 ## data/army_art.csv: piece -> {piece, texture, painting} — the painted 3D
 ## counter a regiment is drawn with and the painting heading its card
 ## (MapObjects.army_piece / army_card, owner 2026-09-15).
@@ -423,6 +426,10 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/settlement_art.csv", ["group", "walled", "tier", "texture", "size"],
 			func(r): settlement_art.append(r)):
+		return false
+	if not _load_if_present("res://data/map3d_settlements.csv",
+			["group", "diameter_m", "height_m", "color"],
+			func(r): map3d_settlements[String(r["group"])] = r):
 		return false
 	if not _load_if_present(dir + "/army_art.csv", ["piece", "texture", "painting"],
 			func(r): army_art[String(r["piece"])] = r):

@@ -14,6 +14,8 @@ var top_bar: TopBar
 
 ## The live map in the middle zone; GameRoot applies the province view to it.
 var _world_map: WorldMapView
+var _map_panel: PanelContainer
+var _map3d: Map3DView
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -30,6 +32,7 @@ func _ready() -> void:
 	map_panel.offset_right = -300.0
 	map_panel.offset_bottom = -(NewsTicker.STRIP_HEIGHT + BottomBar.BAR_HEIGHT + 8.0)
 	add_child(map_panel)
+	_map_panel = map_panel
 	# Live world map, same as court/conversation (user ruling 2026-09-03).
 	_world_map = WorldMapView.create()
 	map_panel.add_child(_world_map)
@@ -51,3 +54,12 @@ func run(report: TickReport) -> void:
 ## GameRoot's handle on this screen's map (the province view follows it).
 func world_map() -> WorldMapView:
 	return _world_map
+
+## The 3D MAP tab (GameRoot): the Terrain3D view takes the map panel in
+## place of the 2D map while the tab is lit (Map3DView.toggle_in).
+func set_map3d_view(on: bool) -> void:
+	_map3d = Map3DView.toggle_in(_map_panel, _world_map, _map3d, on)
+
+## Test seam: the 3D view, or null until the tab was first lit.
+func map3d_view() -> Map3DView:
+	return _map3d

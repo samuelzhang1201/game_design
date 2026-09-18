@@ -46,6 +46,7 @@ var _economy: EconomyPanel
 var _manor_master: ManorMasterPanel
 var _economy_view := false
 var _manor_view := false
+var _map3d: Map3DView
 
 ## Static structure and layout live in scenes/court.tscn (editable in the
 ## editor); _ready fetches nodes, paints them from UiPalette, and wires
@@ -164,6 +165,15 @@ func set_manor_view(on: bool) -> void:
 	if on:
 		_manor_master.refresh()
 	_refresh_left()
+
+## The 3D MAP tab (GameRoot): the Terrain3D view takes the map panel in
+## place of the 2D map while the tab is lit (Map3DView.toggle_in).
+func set_map3d_view(on: bool) -> void:
+	_map3d = Map3DView.toggle_in(%MapPanel, _world_map, _map3d, on)
+
+## Test seam: the 3D view, or null until the tab was first lit.
+func map3d_view() -> Map3DView:
+	return _map3d
 
 func manor_master() -> ManorMasterPanel:
 	return _manor_master

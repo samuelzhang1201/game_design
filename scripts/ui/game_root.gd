@@ -37,6 +37,8 @@ var _manor_view := false
 ## The MILITARY tab's state (user request 2026-09-10), owned here for the
 ## same reason: the layer follows the player from screen to screen.
 var _army_view := false
+## The 3D MAP tab's state (owner 2026-09-18), root-owned like the others.
+var _map3d_view := false
 
 ## The design viewport (project.godot window/size): all UI is authored
 ## against this and scaled to the player's screen by the canvas_items+expand
@@ -271,6 +273,10 @@ func relations_screen() -> RelationshipGraphScreen:
 ## table.
 func _on_bottom_tab(tab: String) -> void:
 	match tab:
+		"3D MAP":
+			_info_screen.hide()
+			_relations_screen.visible = false
+			set_map3d_view(not _map3d_view)
 		"HEIGHTS":
 			_info_screen.hide()
 			_relations_screen.visible = false
@@ -316,6 +322,8 @@ func set_height_view(on: bool) -> void:
 	_height_view = on
 	if on and _manor_view:
 		set_manor_view(false)
+	if on and _map3d_view:
+		set_map3d_view(false)
 	if _bottom_bar != null:
 		_bottom_bar.set_toggled("HEIGHTS", on)
 	var map := _current_map()
@@ -333,6 +341,8 @@ func set_economy_view(on: bool) -> void:
 	_economy_view = on
 	if on and _manor_view:
 		set_manor_view(false)
+	if on and _map3d_view:
+		set_map3d_view(false)
 	if _bottom_bar != null:
 		_bottom_bar.set_toggled("ECONOMY", on)
 	var map := _current_map()
@@ -351,6 +361,8 @@ func economy_view() -> bool:
 func set_manor_view(on: bool) -> void:
 	_manor_view = on
 	if on:
+		if _map3d_view:
+			set_map3d_view(false)
 		if _economy_view:
 			set_economy_view(false)
 		if _height_view:
@@ -381,6 +393,27 @@ func set_army_view(on: bool) -> void:
 
 func army_view() -> bool:
 	return _army_view
+
+## Turn the 3D map on or off everywhere (owner 2026-09-18): the tab lights
+## up and the current screen's map panel shows the Terrain3D view in place
+## of the 2D map. The 2D themes draw on the 2D map only, so lighting this
+## puts them out, and lighting any of them puts this out.
+func set_map3d_view(on: bool) -> void:
+	_map3d_view = on
+	if on:
+		if _height_view:
+			set_height_view(false)
+		if _economy_view:
+			set_economy_view(false)
+		if _manor_view:
+			set_manor_view(false)
+	if _bottom_bar != null:
+		_bottom_bar.set_toggled("3D MAP", on)
+	if current_screen != null and current_screen.has_method("set_map3d_view"):
+		current_screen.set_map3d_view(on)
+
+func map3d_view() -> bool:
+	return _map3d_view
 
 ## The map of the screen that is showing, if it has one.
 func _current_map() -> WorldMapView:
@@ -455,6 +488,8 @@ func _switch_to(new_state: State) -> void:
 		map.province_view_changed.connect(set_province_view)
 	if current_screen != null and current_screen.has_method("set_military_view"):
 		current_screen.set_military_view(_army_view)
+	if _map3d_view and current_screen != null and current_screen.has_method("set_map3d_view"):
+		current_screen.set_map3d_view(true)
 	# Overlays stay above screens across swaps: bottom bar, then info and
 	# relations, with the pause menu topmost.
 	if _bottom_bar != null:
