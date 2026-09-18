@@ -2,7 +2,9 @@ extends GutTest
 ## Map3DRivers: rivers.json -> one ribbon mesh. Each point becomes two
 ## vertices at the centreline, their NORMAL the side to widen toward (the
 ## shader widens them), UV.x across (0 / 1), UV.y metres along, UV2 (width,
-## mouth), COLOR.a the end fade (fix round 1).
+## mouth), COLOR.a the end fade (fix round 1). clear_terrain (fix round 3)
+## lifts a point whose flat cross-section would otherwise dip below the
+## real terrain at its centre or either edge.
 
 const JSON_TEXT := '{"rivers": [{"code": "a", "points": [[0, 0, 10, 6, 0], [100, 0, 9, 40, 0], [200, 0, 8, 80, 1]]}]}'
 
@@ -124,3 +126,55 @@ func test_a_zero_length_tangent_keeps_a_sane_side_vector() -> void:
 	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
 	for n: Vector3 in normals:
 		assert_false(is_nan(n.x) or is_nan(n.y) or is_nan(n.z), "no NaN from a coincident pair")
+
+
+## Fix round 3: a tributary now ends ON its main river's course instead of
+## short of it, but the bake only sets mouth > 0 on a course that truly
+## reaches the sea — a joined tributary's mouth stays 0.0 all the way to its
+## last sample. That join point must NOT read as a true mouth (which would
+## skip the end fade and leave it at full opacity, a bright sliver poking
+## into the river it joins): it has to fade out like any other cut end.
+func test_a_joined_tributary_end_is_not_a_true_mouth_and_fades() -> void:
+	var text := '{"rivers": [{"code": "h", "points": ' \
+		+ '[[0, 0, 10, 6, 0], [100, 0, 10, 6, 0], [200, 0, 10, 6, 0]]}]}'
+	var courses := Map3DRivers.parse(text)
+	assert_eq(courses.size(), 1)
+	assert_false(courses[0]["true_mouth"],
+		"mouth is 0 throughout: this course joins another river, it never reaches the sea")
+	var arrays := Map3DRivers.ribbon_arrays(courses, 50.0)
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+	assert_almost_eq(colors[-1].a, 0.0, 0.001, "the joined end fades out instead of staying at full opacity")
+
+
+## A river whose LAST sample's mouth field is > 0 is still read as a true
+## mouth (unchanged behaviour, guards against a regression where the fix
+## above over-corrects and fades every ending).
+func test_a_sea_ending_river_is_still_a_true_mouth() -> void:
+	var courses := Map3DRivers.parse(JSON_TEXT)
+	assert_true(courses[0]["true_mouth"])
+
+
+## Fix round 3: the ribbon is flat across its width and built only at the
+## bake's own sparse points, but the ground under it is not — on a steep,
+## narrow-sampled tributary the terrain can clear the centreline while
+## still rising above the water at one edge (measured on knutshambe: centre
+## +3.25m, its own right edge -0.38m at the same point). clear_terrain lifts
+## a point to clear the highest of its centre/left/right ground samples.
+func test_clear_terrain_lifts_a_point_whose_edge_dips_below_ground() -> void:
+	var text := '{"rivers": [{"code": "i", "points": ' \
+		+ '[[0, 0, 10, 20, 0], [100, 0, 10, 20, 1]]}]}'
+	var courses := Map3DRivers.parse(text)
+	# Flat ground at 0 except a ridge to 15 right under the first point's
+	# own RIGHT edge (side is -Z here; a 20m-wide river reaches 10m either
+	# way) — well above the river's own baked 10m water level.
+	var ground := func(xz: Vector2) -> float:
+		return 15.0 if absf(xz.x) < 1.0 and xz.y < 0.0 else 0.0
+	var cleared := Map3DRivers.clear_terrain(courses, ground, 2.0)
+	var pos: PackedVector3Array = cleared[0]["pos"]
+	assert_almost_eq(pos[0].y, 17.0, 0.01, "lifted to clear the ridge under its own edge, plus the margin")
+	assert_almost_eq(pos[1].y, 10.0, 0.01, "flat ground under the second point: its baked height already clears it")
+
+
+func test_clear_terrain_is_a_no_op_without_a_height_fn() -> void:
+	var courses := Map3DRivers.parse(JSON_TEXT)
+	assert_same(Map3DRivers.clear_terrain(courses, Callable(), 5.0), courses)

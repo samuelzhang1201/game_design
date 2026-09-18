@@ -349,13 +349,17 @@ func water_normals() -> Texture2D:
 
 ## rivers.json beside the scene (tools/map3d) as the Rivers layer; none
 ## without it. Split at each lake exit (Map3DRivers.parse) so a jump in the
-## water line never draws as a vertical wall.
+## water line never draws as a vertical wall, then clear_terrain lifts any
+## point whose flat, sparsely-sampled cross-section would otherwise dip
+## below the real, denser terrain on a steep stretch (fix round 3) — the
+## carved riverbed's own ground would show through instead of the water.
 func _build_rivers() -> void:
 	var path := _scene_path.get_base_dir().path_join("rivers.json")
 	if not FileAccess.file_exists(path):
 		return
 	var courses := Map3DRivers.parse(FileAccess.get_file_as_string(path),
 		_repo.bal("map3d_river_split_rise_m"))
+	courses = Map3DRivers.clear_terrain(courses, _height_at, _repo.bal("map3d_river_terrain_clear_m"))
 	var arrays := Map3DRivers.ribbon_arrays(courses, _repo.bal("map3d_river_end_fade_m"))
 	if arrays.is_empty():
 		return
