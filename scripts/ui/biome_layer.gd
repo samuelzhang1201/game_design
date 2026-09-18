@@ -1,8 +1,8 @@
 class_name BiomeLayer
 extends Node2D
-## THE BIOMES LAYER — an EXPERIMENT (owner 2026-09-14). The land of the
-## default map wears the biome ground tiles (library §5 T- tiles, colour
-## pencil; data/biome_art.csv says which tile a biome wears), and every
+## THE BIOMES LAYER (owner 2026-09-14, accepted; satellite tiles since
+## 2026-09-17, CLAUDE.md). The land of the default map wears the biome
+## ground tiles (data/biome_art.csv says which tile a biome wears), and every
 ## pixel is a MIX of the tiles around it: the pack carries
 ## world_biome_weights_N.png, each biome's share of the land within
 ## map_biome_blur_px of the point (baked by MapIndex.bake_biome_weights,
@@ -16,7 +16,7 @@ extends Node2D
 ## children so — and below the water, the roads, the woods and the towns.
 ## The view sets this node's position and scale to its offset and zoom.
 ##
-## TO REMOVE THE EXPERIMENT: delete this file, biome_tiles.gdshader,
+## To take the layer out again: delete this file, biome_tiles.gdshader,
 ## GroundLayer (and give the terrain and the wash back to the view's own
 ## _draw), tools/bake_biome_weights.gd and MapIndex.bake_biome_weights,
 ## assets/maps/<id>/world_biome_weights_*.png and maps.csv biome_weights,

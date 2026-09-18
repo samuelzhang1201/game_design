@@ -87,7 +87,7 @@ map_manor_label_pad_px,4,economy view: side padding of that chip in screen px
 map_manor_label_min_scale,1.0,economy view: screen px per native map px at/above which the units chip is drawn under the badge
 map_decor_tint,1.0,"world map: how far a terrain symbol takes on the colour of the realm that holds it, 0 = its own sepia, 1 = fully the realm's wash (owner request 2026-09-12). Follows conquest: the province is fixed geometry, the owner is looked up live"
 map_sprite_inland,0.55,"world map: how far a coastal settlement's drawing slides back onto the land, as a fraction of its own half-width (owner report 2026-09-13: seaside towns had half their picture out on the water). 0 leaves every drawing centred on its point"
-map_sprite_tint,0.12,"world map: the same, for the settlement drawings — 0.55 since the owner called the painted towns 太突兀 (2026-09-17): a drawing takes over half its realm's colour, so it sits IN the wash instead of burning through it. 0 was the painted settlements' own colour (2026-09-15)"
+map_sprite_tint,0.12,"world map: the same, for the settlement drawings — 0.12 since the towns became aerial photographs (owner 2026-09-17): a photographed town needs almost none of its realm's colour. History: 0.55 for the painted towns (太突兀, 2026-09-17), 0 their own colour (2026-09-15)"
 map_sprite_alpha,1.0,"world map: opacity of a settlement drawing (owner 2026-09-17, with map_sprite_tint): under 1 the wash and the paper show through the picture and the town stops shouting. 1 is fully opaque"
 map_decor_density,0.8,world map: one knob over HOW MANY of them — multiplies the density column of data/terrain_art.csv
 map_decor_cluster_px,90,"world map: the wavelength in native px of the field that gathers terrain marks into forests and ranges (terrain_art.csv cluster column, owner 2026-09-14) — larger = broader tracts"
@@ -127,7 +127,7 @@ map_province_dash_px,3.0,world map: dash length of province seams in screen px (
 map_province_gap_px,5.0,world map: gap between the dashes of a province seam in screen px
 province_card_max_towns,5,province panel: how many town names to list
 province_card_max_goods,4,province panel: how many produced goods to list
-map_political_alpha,0.30,"world map: opacity of the political wash over the terrain — 0 turns the coloured country areas off (owner 2026-09-12: the parchment sheet carries no fills, only lines); 0.42 was the tuned value"
+map_political_alpha,0.30,"world map: opacity of the political wash over the terrain — 0 turns the coloured country areas off. The wash came back after the parchment ruling of 2026-09-12 (no fills); 0.42 was the tuned value, 0.30 since the satellite ground lies over it"
 map_state_border_width,1.6,world map: width of every kingdom's border in screen px — it is a chequered ribbon now, so it needs the body to read as a band
 map_state_border_dash_px,9,world map: length of the DARK run of a kingdom border in screen px (0 draws it solid)
 map_state_border_gap_px,9,"world map: length of the PALE run between them — not a gap any more: it is drawn in state_border_light, so the two alternate like a chequered map band"
@@ -186,7 +186,7 @@ map_dash_min_step_px,3,"world map: no two vertices of a dashed line (borders, ha
 map_coast_width,0,"terrain: shore stroke width in screen px. 0 = NO coast line at all (owner request 2026-09-13): the land colour, the political wash and the sea tell you where the shore is, and a drawn outline over them only fought the kingdom borders. Above 0 the stroke comes back"
 map_river_min_px,1.2,"terrain: the least a river's SOURCE width may be in screen px. It floors only the widest point: the course still tapers to nothing from there (map_river_taper_gamma), so rivers no longer all draw one width at this floor the way they did when it floored the whole course (0.44 then, owner 2026-09-12)"
 map_river_alpha,1.0,"terrain: opacity of a river — 1, SOLID (owner request 2026-09-13): below 1 the ribbon's overlapping triangles on a tight bend show as darker blots"
-map_river_taper_gamma,1.4,"terrain: how a river thins along its course (owner request 2026-09-13): full width at the source, half_width x (1 - t)^gamma, to a point at the end. 1 thins evenly; higher thins sooner and leaves a longer fine tail"
+map_river_taper_gamma,1.4,"terrain: how a river thins along its course (owner request 2026-09-13): a point at the SOURCE, widest at the mouth, swelling as t^gamma (owner 2026-09-13, reversing the same morning's source-wide taper; WorldMapView.river_taper). 1 swells evenly; higher stays fine longer"
 map_river_smoothing_steps,3,terrain: B-spline samples per segment on a river — the pack stores rivers as raw polylines and the corners read as hard kinks without this (owner 2026-09-12)
 map_river_discharge_scale,0.11,"terrain: a river's SOURCE width in native px per sqrt(discharge) — raised from 0.05 with the solid taper (owner 2026-09-13), since a river now spends most of its course thinner than this"
 map_road_width,2.4,"terrain: road stroke width in screen px — a road is a worn track, and in the reference it reads by width and a soft edge rather than by a dark line (owner 2026-09-12; widened from 1.3 with the sand-track colour, owner 2026-09-17, after docs/references/ChatGPT Image Sep 16, 2026, 05_58_06 PM.png)"

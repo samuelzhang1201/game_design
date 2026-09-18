@@ -1,7 +1,7 @@
 # Roles of the Court — Crown and Council
 
 Design/persona layer for every role in the game, grounded in the story
-background at [game_story/background/game_start.md](game_story/background/game_start.md).
+background at [game_story/background/game_start.md](../../game_story/background/game_start.md).
 **Numeric truth lives in the CSVs** (`data/founding_council.csv`,
 `data/roles.csv`, `data/relationships.csv`, `data/character_traits.csv`) and is
 loaded by the engine; this document is the human-readable view and the source
@@ -16,6 +16,13 @@ the LLM persona prompts are written from. Skills vocabulary:
   ascended with grand ambitions — and a court already running with hidden
   currents. You never speak through the LLM — you type or click; every other
   role answers you in character.
+- **Name:** the main menu's setup panel lets the player rename the king and
+  the royal family (`GameState.apply_player_setup`); every role of the old
+  family name follows, and `player_setup.house_was` keeps the old name so the
+  crown's manors and arms still resolve. "Aldric Valorin" is the default.
+- **Lord of one province** (owner 2026-09-13): besides the realm, the king
+  personally controls the capital's province, with its own purse — see
+  `MANOR_SYSTEM.md`.
 - **House:** Valorin, the royal line of {player_realm}. Your first wife, of House
   O-kala, died years ago; your second marriage merged the crown with the
   Weighhouse banking clan.
@@ -103,8 +110,8 @@ same rule as opinion deltas). At campaign start they are copied into the save
 - **LLM feed** — `PromptBuilder.persona_context(id, …)` serializes a role's
   current strongest edges (via `RelationshipGraph.describe_for`) into that
   role's context window, so what the model roleplays always matches live state.
-- **In-game visual** — the TopBar's RELATIONS button opens the live node-edge
-  overlay (`RelationshipGraphScreen`): the king at center, the court ringed
+- **In-game visual** — the bottom bar's RELATIONSHIP toggle opens the live
+  node-edge overlay (`RelationshipGraphScreen`): the king at center, the court ringed
   around him, kin edges gold, friendships green, feuds red, thickness =
   strength. It redraws on every state change.
 
@@ -139,7 +146,7 @@ graph TD
     YOU -.-|kin -35/-45| TOMAS
     YOU ---|ally +70/+75| MALVERN
     VICTORIA -.-|kin -15/-25 stepmother| NORA
-    VICTORIA ---|kin +45| MIRELLA
+    VICTORIA ---|kin +45/+50| MIRELLA
     TOMAS -.-|rival -35/-40| NORA
     TOMAS -.-|rival -35/-40| MALVERN
     TOMAS ---|ally +40| CORINA
@@ -195,10 +202,13 @@ Street (Cassian, Corvin), The Mustering Field (Nora).
 
 - Each location is a scene (`scenes/locations/<code>.tscn`, CustomArt
   override pattern like character portraits).
-- The conversation screen's upper-right panel shows where you stand and who
-  is present; click a face to seek them out (dossier + typed words go to
-  them), MOVE to go elsewhere.
-- **Movement within a region costs no time** (`Game.move_to`, no tick);
+- The council column on the right shows where you stand and who is
+  present; click a face to seek them out, MOVE to go elsewhere. The talk
+  itself opens in the **audience window** over the map (owner 2026-09-15,
+  after Crusader Kings III): the person's portrait, name plate, seat,
+  opinion with its reasons, traits and skill badges on the left; the speech,
+  the BIO / SKILLS / TIES pages, the options and the talk box on the right.
+- **Movement within a region costs no time** (`Game.move_to`, no day passes);
   travel between regions is post-MVP and will cost time. The current
   location rides the save.
 
@@ -207,9 +217,10 @@ Street (Cassian, Corvin), The Mustering Field (Nora).
 `data/facts.csv` seeds what each character knows — public facts, secrets with
 knower lists, and common sense everyone holds at credibility 100. Knowledge is
 per-character: the Chancellor's graft is one fact known only to Mirella and
-Quill. `KnowledgeBase.knows` is the single authority on who knows what, so that
-once the prompt builder is wired to it (a later phase), no character can be
-shown a fact they were never told.
+Quill. `KnowledgeBase.knows` is the single authority on who knows what, and the
+prompt builder is wired to it (`KnowledgeBase.describe_for` in
+`PromptBuilder.persona_context`), so no character is shown a fact they were
+never told.
 
 Anyone may assert anything. `Belief` scores an assertion from its plausibility,
 the listener's trust in the speaker (derived from how the listener feels about
@@ -226,16 +237,22 @@ wronged character knows and the court will eventually learn.
 
 ## When the player meets these roles
 
-Roles interact with the player through the two existing loops — no new flow:
+Time runs by the top bar's clock (a tick is a month of 30 days; play/pause,
+no End Turn — owner 2026-09-14). Roles interact with the player through two
+loops, both in the audience window:
 
-1. **The decision process (COURT):** ministers brief, warn, and pitch real
-   `action_code` suggestions; free-text orders are parsed against the legal
-   action catalog, and any role can be a `target` or be `addressed` in the
-   court reaction (all 21 ids are in the parse prompt). Conversational text
-   ("who are you") gets an in-character LLM reply from whoever you addressed.
-2. **Events (CONVERSATION):** the event pool casts non-council roles via
-   `opinion:` and `rel:` effect ops and scene text — a demand from Tomas, a
-   sermon by Cassian, an embassy from Petra, ill news of Malvern's health.
+1. **The council:** at the month's end ministers brief, warn, and pitch real
+   `action_code` suggestions (template-voiced, no API call). Typed words —
+   an order or plain talk — are ONE model call returning `{narrative,
+   impacts}` in the voice of a speaker the engine picks beforehand; any role
+   can be a `target` or be `addressed` in the court reaction (every
+   character id is in the order prompt).
+2. **Events:** an event stops the clock and opens the council. Its story is
+   fixed authored prose from `RANDOM_EVENTS.md`, never model-written; the
+   pool casts non-council roles via `opinion:` and `rel:` effect ops — a
+   demand from Tomas, a sermon by Cassian, an embassy from Petra, ill news
+   of Malvern's health (designed; the current pool is the 20 starter
+   events).
 
 ## LLM context contract
 
@@ -243,19 +260,25 @@ The engine decides; the LLM only performs. For any speaking role the prompt
 contains, in order:
 
 1. `PromptBuilder.persona_context(id)` — identity (with age), house, kingdom,
-   the numeric attributes, skills, trait labels, opinion of the ruler, and
-   their live relationship lines (strongest first, capped at 6).
-2. The scene facts (tick report / event scene) — the model may voice only these.
-3. The legal-options menu — action codes, event choice ids, tone enum. The
+   the numeric attributes, skills, trait labels, opinion of the ruler, their
+   live relationship lines (strongest first, capped at 6), what they remember
+   being said (`AgentMemory`), and what they know and believe
+   (`KnowledgeBase`).
+2. The realm facts (engine truth) — the model may quote only these numbers.
+3. The legal-options menu — action codes, event choice ids, the world fields
+   it may move with their caps (`data/world_schema.csv`), tone enum. The
    model *chooses among them* and writes dialogue; `ResponseValidator` rejects
-   anything off-menu and clamps tone. That is the whole extent of "LLM directs
+   anything off-menu and clamps tone, and `WorldLedger` clamps world deltas. That is the whole extent of "LLM directs
    behaviour."
 
 ## Portraits
 
-Provided art only — pixel art is retired (generator and herald chip deleted).
-Chips (`assets/portraits/<id>.png`, 96×96 head crops) are derived from
-`assets/portraits/full/*.png` by `tools/make_portrait_chips.gd`. Roles without
-provided art render as seat-colored initial chips until art arrives — drop a
-full-body PNG in `assets/portraits/full/<id>.png` and rerun the tool to
-promote one.
+Portraits come from the art library's `K-` chapter (one entry per character
+id, looks and clothing from its `**外貌**` line), mapped by
+`assets/flux/cast_art.csv` and installed by `assets/flux/install_map_art.py
+cast` into `assets/portraits/<id>.png` (96 px chip, `[C-BUST]`) and
+`assets/portraits/full/<id>.png` (660 px figure, `[C-FULL]`). They keep their
+colour. Roles without art render as seat-coloured initial chips. (Superseded:
+deriving chips from provided full-body art with `tools/make_portrait_chips.gd`;
+the tool is still in the repo.) The audience window cuts the full figure head
+to waist before the room's backdrop.

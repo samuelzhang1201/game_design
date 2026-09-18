@@ -9,9 +9,6 @@ assets/flux/out/
 assets/__MACOSX/
 # 3D map: sources are local downloads (Poly Haven / ambientCG, CC0), everything
 # else under assets/map3d is rebuilt by tools/map3d/ — see tools/map3d/README.md
-assets/map3d/sources/
-assets/map3d/textures/
-assets/map3d/trees/
-assets/map3d/beria/
+assets/map3d/
 # purchased audio pack, not yet used by the game
 assets/Sound FX Starter Pack Vol. 1/

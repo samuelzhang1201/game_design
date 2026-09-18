@@ -3,10 +3,10 @@
 
     python3 assets/flux/install_map_art.py goods    # G-xx -> assets/goods/
     python3 assets/flux/install_map_art.py decor    # D-xx -> assets/decor/ (sea ships, whale)
-    python3 assets/flux/install_map_art.py estates  # D-32..D-41 -> assets/manors/ (the manors view's estates)
+    python3 assets/flux/install_map_art.py estates  # D-43..D-78 -> assets/manors/ (the manors view's estates)
     python3 assets/flux/install_map_art.py ui       # post.py icon tier -> assets/icons/ (resource strip, realm card)
     python3 assets/flux/install_map_art.py cast     # K-xx -> assets/portraits/
-    python3 assets/flux/install_map_art.py biomes   # T-xx -> assets/biomes/ (BIOMES LAYER experiment 2026-09-14)
+    python3 assets/flux/install_map_art.py biomes   # T-xx -> assets/biomes/ (the satellite ground tiles)
     python3 assets/flux/install_map_art.py paintings  # B-xx -> assets/manors/paint/ (the manor card's painted estate)
     python3 assets/flux/install_map_art.py buildings  # H-xx -> assets/icons/bld_<code>.png (slots and the build menu)
     python3 assets/flux/install_map_art.py goods_icons  # G-xx colour -> assets/goods/colour/ (the manor card's output rows)
@@ -116,8 +116,8 @@ def install_decor(height: int = 256, lighten: float = 0.45) -> int:
     return install_marks(codes, "decor", ROOT / "assets" / "decor", height, lighten)
 
 
-## The manors view's estate drawings (owner 2026-09-13): library D-32..D-41,
-## one per population tier (data/manor_estates.csv), cut out, greyed and
+## The manors view's estate drawings (owner 2026-09-14): library D-43..D-78,
+## one per industry and size (data/manor_estates.csv), cut out, greyed and
 ## lightened like the settlements so the view can tint them with the
 ## manor's colour. estate_art.csv may name the seed to install; else the
 ## newest render wins.

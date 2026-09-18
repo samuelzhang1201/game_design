@@ -2,8 +2,15 @@
 
 **项目**：Our Grand Ages — 中世纪大战略游戏 (Godot 4.x / Steam)
 **范围**：模拟状态的存储、调度、持久化与确定性
-**版本**：v1.0 — 2026-09-11
+**版本**：v1.0 — 2026-09-11（§11 补充 2026-09-14，更新 2026-09-18）
 **状态**：待评审 → 锁定
+
+> **Status note (2026-09-18).** §1–§10 are the requirements as written on
+> 2026-09-11 and are kept unchanged as the target. §11 maps them onto the
+> codebase as it actually stands (`scripts/engine/`, `data/`,
+> `data/maps/<id>/`) and says what is built, what is not, and what was added
+> since. This file lives in `docs/design/`; specs and plans are under
+> `../superpowers/`.
 
 ---
 
@@ -641,7 +648,7 @@ res://
 
 ## 11. 与现有代码库的映射与待决项（2026-09-14 补充）
 
-本节由经济系统 spec（`docs/superpowers/specs/2026-09-14-economy-and-staging-design.md`）的对齐评审产生。文档写于 9 月 11 日，代码库从 8 月底起已按另一套结构生长，两者未曾对过。下面记录**已按本文执行的部分**、**名称映射**和**留给锁定评审的两项决定**。
+本节由经济系统 spec（`../superpowers/specs/2026-09-14-economy-and-staging-design.md`）的对齐评审产生。文档写于 9 月 11 日，代码库从 8 月底起已按另一套结构生长，两者未曾对过。下面记录**已按本文执行的部分**、**名称映射**和**留给锁定评审的两项决定**。
 
 ### 11.1 目录映射（不改目录，改映射）
 
@@ -649,15 +656,17 @@ res://
 
 | 本文 §6 | 代码库 | 说明 |
 |---|---|---|
-| `sim/defs/` | `scripts/engine/data_repository.gd` + `data/*.csv` + `data/maps/<id>/` | 启动加载、只读；CSV 直读（R-3 的烘焙为 P1） |
+| `sim/defs/` | `scripts/engine/data_repository.gd` + `data/*.csv` + `data/maps/<id>/` | 启动加载、只读；CSV 直读（R-3 的烘焙为 P1）。Pack chosen by `data/maps.csv` (see 11.5) |
 | `sim/state/` | `scripts/engine/game_state.gd` | 唯一可变状态持有者（见 11.3 第一项） |
-| `sim/command/` | `scripts/engine/action_system.gd`、`order_pipeline.gd`、`order_costs.gd`、`world_ledger.gd` | 校验 / clamp / 执行；经济 spec 起加暂存列表与 `command_log` |
-| `sim/systems/` | `scripts/engine/tick_engine.gd` 及其调用的各引擎类 | tick 阶段固定顺序 |
-| `sim/determinism/` | `scripts/engine/rng.gd`（种子流）；定点整数在各引擎类内 | 无 `fixed.gd`，经济 spec 全程整数 |
+| `sim/state/army_state.gd` | `scripts/engine/army_system.gd` + `GameState.regiments` | Regiment state (2026-09-17): a Dictionary keyed by regiment code, not columns; see 11.5 |
+| `sim/command/` | `scripts/engine/action_system.gd`、`order_pipeline.gd`、`order_costs.gd`、`world_ledger.gd` | 校验 / clamp / 执行。The economy spec's staged list and `command_log` are **not yet built** (spec §7, the staging half) |
+| `sim/systems/` | `scripts/engine/tick_engine.gd` 及其调用的各引擎类 | tick 阶段固定顺序: settle the month's economy → `ArmySystem.settle_month` → tick +1 → finished works → drift → relationships → claims → promises → concerns → suggestions → event roll. The day step (`advance_day`) steps works and one bucket of `RealmEconomy` |
+| `sim/determinism/` | `scripts/engine/rng.gd`（种子流）；定点整数在各引擎类内 | 无 `fixed.gd`，经济 spec 全程整数; `ArmySystem` whole numbers and per-mille rates |
 | `sim/persistence/` | `scripts/engine/save_load.gd` | 单个 JSON（见 11.3 第二项） |
 | `llm/` | `scripts/llm/` | 一致 |
-| `presentation/` | `scripts/ui/`、`scenes/` | 一致 |
-| `tests/bench_tick.gd` | `tools/bench_map.gd`、经济 spec 的 `tools/bench_economy.gd` | 基准工具，不入 CI 门禁 |
+| `presentation/` | `scripts/ui/`、`scripts/map3d/`、`scenes/` | 一致; `scripts/map3d/` is the 3D MAP tab (2026-09-18), which reads ownership and polls its signature (`map3d_border_refresh_s`) |
+| `tests/bench_tick.gd` | `tools/bench_map.gd`、经济 spec 的 `tools/bench_economy.gd`、`tools/map3d/bench.gd` | 基准工具，不入 CI 门禁 |
+| `tests/test_determinism.gd` | `tests/engine/test_determinism.gd` | Same seed + scripted orders → same state, including a save/reload mid-run; single platform only (the R-7 cross-platform run is not built) |
 
 **§6 的依赖规则已做成测试**：`tests/engine/test_engine_isolation.gd` 扫描 `scripts/engine/` 下每个文件，非注释行不得出现 `scripts/ui/`、`scripts/llm/` 下任何 `class_name`，也不得引用 `Game` autoload。
 
@@ -665,11 +674,76 @@ res://
 
 §3.1 按"省份"做预算；本项目的细粒度实体是 **manor**（地图包每个陆地格一块）。beria 包：3 500 块 manor、203 省、684 镇、5 061 条镇产线、71 种货物。因此 §3.2 的经济 tick 预算（≤ 8 ms，硬上限 16 ms）按 manor 数对照，3 500 落在本文 1 500–4 000 的区间内。经济 spec 用按天分桶（30 天 = 桶数，天然入存档）把月底结算控制在预算内，并以 `bench_economy` 度量。
 
+Other counts on beria (2026-09-18), against §3.1: 7 kingdoms (target 60),
+68 pack regiments, 29 policy action definitions (8 domain + 21 court
+additions, target 76), 45 traits (target 41), 21 named characters. Every
+figure is far inside the envelope; only traits have passed their target.
+
 ### 11.3 留给锁定评审的两项决定
 
 1. **`GameState` 是否改为列式（R-4）**。现状：`metrics`、`world`、`manor_*` 等均为 Dictionary，四十余个引擎类按此读写。经济 spec 的做法：新增状态极小（两个整数、暂存列表、命令日志），**推导缓存用列式** `PackedInt32Array`（热循环所在），`GameState` 本体不动。建议：现阶段接受 §10 清单中"2 000 省软上限换可读性"的选项（实际规模为 203 省 / 3 500 manor），列式化 `GameState` 作为独立重构项目另行评估。
 2. **存档是否拆成快照 + 命令日志（R-8）**。现状：CLAUDE.md 不变量 7"存档 = 一个 JSON"，无命令日志。经济 spec 的做法：提交时把每条 Command 追加进 `state.command_log`，随现有 JSON 保存，先把"可重放"的数据留下。建议：格式不动，待命令日志与确定性回放测试跑通后，再决定是否采用 §R-8 的折中方案（JSON 外壳 + base64 内嵌列数据，保持单文件）。
+   *Status 2026-09-18:* still open. The save is one JSON (`SaveLoad`,
+   `GameState.to_dict`) at `SAVE_VERSION` 5 with a `version` field;
+   `from_dict` refuses a newer save and fills anything an older one lacks
+   with defaults. `state.command_log` does **not** exist yet — the staging
+   half of the economy spec (§7) is unplanned.
 
 ### 11.4 已按本文执行的项（经济 spec）
 
 R-1、R-2、R-6（暂存即 Command，提交记日志）、R-7（整数金币、整数千分比复利、固定遍历顺序、无随机、无墙钟）、R-5（省级脏标记、30 天分桶、全量对拍开关 `economy_check_full`）、R-9（模型解析结果在暂存时落为数据）、R-12（引擎 RefCounted、顶栏只读缓存、隔离测试）。货币单位为**整金币**而非 ×100 定点：这是产品要求"无小数点"的设计决定，需要精度时改内部倍率、显示不变。
+
+*Status 2026-09-18:* built as listed — R-7 (`ManorEconomy` / `RealmEconomy`,
+invariant 11), R-5 (a key per province standing in for the dirty flag,
+`RealmEconomy.step_day` over 30 day buckets, `economy_check_full` = 0 by
+default, `RealmEconomy.check_full`), R-12 (`tests/engine/test_engine_isolation.gd`)
+— **except** the staging parts of R-6 and R-9: there is no staged order list
+and no command log yet (see 11.3). Orders still go validate → execute in
+`ActionSystem` / `OrderPipeline`, and model output still enters only as
+validated action codes and schema-listed, clamped world deltas.
+
+### 11.5 Defs, state and tools added since 2026-09-14 (2026-09-18)
+
+**Where Defs live.** Global tables are `data/*.csv` (46 files, `balance.csv`
+the scalar knobs); a map pack is `data/maps/<id>/` — hand-maintained
+`realm_bindings.csv` and `house_bindings.csv` and the imported `map_info.csv`
+at its root, optional hand-maintained `manor_name_overrides.csv` and
+`arms_bindings.csv`, and the imported tables by domain (`geography/`,
+`political/` incl. the baked `manors.csv`, `economy/`, `military/`,
+`society/`). Generated bitmaps (`world_*_index.png`, sea distance, relief,
+biome weights, settlement distance) sit in `assets/maps/<id>/` and are named
+by `data/maps.csv`. `data/` carries a `.gdignore`; the CSVs are read with
+`FileAccess`, so an export preset must include `data/**`.
+
+**Which pack.** `data/maps.csv` lists the packs; its `is_default` row is the
+game's map. No code, tool or test names a pack: `DataRepository.default_pack_id`
+(GDScript) and `tools/packs.py` `default_pack` (Python) read that row, and
+every tool takes `--map ID` (`--map-id` for the importer). `tools/NEW_MAP.md`
+is the checklist for bringing in a new export (import, bakes in order,
+bindings, arms, 3D bake). The campaign saves its `map_id`.
+
+**New Defs** (all loaded by `DataRepository`, read-only after load):
+
+| Table | For |
+|---|---|
+| `data/army_matchups.csv`, `army_terrain.csv`, `army_terrain_biomes.csv`, `army_training_grades.csv`, `army_art.csv` | regiment power per arm, terrain and training grade (owner 2026-09-17, spec `../superpowers/specs/2026-09-17-regiment-state-design.md`); `balance.csv` `army_*` |
+| `data/goods_economy.csv`, `goods_economy_defaults.csv` | each good's pool, price and growth per mille (economy spec §3) |
+| `data/manor_buildings.csv`, `manor_focus.csv`, `manor_estates.csv` | see `MANOR_SYSTEM.md` |
+| `data/settlement_growth.csv` | a settlement's drawing promoted by its manor's people or buildings (presentation reading state) |
+| `data/map3d_settlements.csv`, `balance.csv` `map3d_*` | the 3D MAP tab: settlement discs, camera and border lines — presentation only, no simulation reads them |
+| `data/maps/<id>/arms_bindings.csv` (optional) | pins a kingdom's or house's arms; otherwise `HouseArms` borrows other packs' installed arms in the pack's own order, deterministically |
+
+**New state** in `GameState` (all saved in the one JSON, all additive with
+`.get` defaults): `manor_owner`, `manor_province`, `manor_buildings`,
+`manor_works`, `manor_focus`, `manor_log` (manors), `day` (1..30 under the
+monthly tick), the lord's purse metrics (`lord_gold`, `lord_strategic`,
+`lord_civil`), and `regiments` (code → `{morale, wounded, supplies,
+training}`, whole numbers, only the player's realm; the pack's regiments stay
+the headcount). All are sparse Dictionaries holding only what moved, which
+is the R-4 trade-off recorded in 11.3 item 1.
+
+**Derived caches** are engine-pure statics keyed on their inputs and cleared
+by `DataRepository.load_map` (`MapEconomy`, `RealmEconomy`, `ManorEconomy`,
+`HouseArms`, ...): nothing derived is saved, so R-1's "Defs never written
+after load" holds for the tables, while the caches are rebuilt from Defs +
+State.

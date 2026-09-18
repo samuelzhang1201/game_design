@@ -39,11 +39,12 @@ values are `balance.csv` `map3d_*`.
    `python3 tools/map3d/fetch_polyhaven.py fir_tree_01 ...`
 2. **Textures** — `Blender -b --factory-startup --python tools/map3d/pack_textures.py`
    (numpy in Blender; GDScript per pixel on 4K took >10 min).
-3. **Bake** — `python3 tools/map3d/bake_world.py` (~2 s). Height comes from
-   `cells.csv` plus its own ridges, NOT from `world_relief.png`, whose 2D-tuned
-   detail is a 660 m bump every 800 m at this scale.
-4. **Scene** — `GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/build_world.gd`
-   (~2 s, no editor). Nothing visual is baked into the scene beyond the
+3. **Bake** — `python3 tools/map3d/bake_world.py [--map ID]` (~2 s). Height comes from
+   `cells.csv` plus its own ridges, NOT from `world_relief.png` (read only
+   for the open sea), whose 2D-tuned detail is a 660 m bump every 800 m at
+   this scale.
+4. **Scene** — `GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/build_world.gd [-- --map ID]`
+   (~2 s, no editor; every tool defaults to `data/maps.csv`'s `is_default` pack). Nothing visual is baked into the scene beyond the
    terrain: headless, a MultiMesh saves without its transforms, which is one
    reason settlements are placed at runtime.
 5. **Look / measure** — `Godot --path . -s tools/map3d/shoot.gd -- --camera CameraMid --out /tmp/x.png`;
@@ -70,8 +71,9 @@ values are `balance.csv` `map3d_*`.
 
 ## Open items before the 3D map ships
 
-- `build_terrain.gd`'s look constants (textures, material, sky, sea) still
-  live in the script, not in CSVs.
+- `build_terrain.gd`'s look constants (textures, material, sky, sea) and
+  `bake_world.py`'s rules (scale, ridges, sea level) still live in the
+  scripts, not in CSVs.
 - Settlements are placeholder discs (half-sunk on steep ground); trees are
   off; no hover tooltip, no kingdom labels, no army counters yet.
 - Compare Compatibility vs Forward+ on the target PC (without trees

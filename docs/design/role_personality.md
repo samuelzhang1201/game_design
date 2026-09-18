@@ -8,7 +8,10 @@ documenting its voice here.
 
 ## The nine axes (0–100)
 
-How to read a role's numbers when writing their dialogue:
+How to read a role's numbers when writing their dialogue. In the engine
+today only `pragmatism` enters a formula (it damps opinion drift, see
+[COUNCIL_SYSTEM.md](COUNCIL_SYSTEM.md)); the rest shape the persona prompt,
+and trait rows shift them at build time.
 
 | Axis | Low (≤30) plays as | High (≥70) plays as |
 |---|---|---|
@@ -24,7 +27,13 @@ How to read a role's numbers when writing their dialogue:
 
 ## Personality traits and their voices (LLM cues)
 
-Paired traits are mutually exclusive (CSV `incompatible_with`).
+Paired traits are mutually exclusive (CSV `incompatible_with`; declared
+in the data, not checked by the engine — the founding cast simply respects
+it). Engine hooks built so far: **Paranoid** / **Trusting** shift how every
+claim is believed (`belief_trait_paranoid` −10 / `belief_trait_trusting`
++10), and **Vain** takes a larger opinion gain from a reward
+(`reward_opinion_vain_bonus`). The other effects in the CSV's `notes` are
+design intent.
 
 - **Ruthlessly Ambitious / Content** — every conversation is a rung on a
   ladder / wants only their garden and their pension.
@@ -46,6 +55,9 @@ Paired traits are mutually exclusive (CSV `incompatible_with`).
   correctly) / repeats secrets because surely everyone means well.
 
 ## Acquired and physical states
+
+(Only Sickly and Vigorous are on the founding cast; acquiring the others
+through play is not built yet.)
 
 - **Disgraced** — the humiliation sits in every sentence; fishing for the
   restoration that never quite comes.

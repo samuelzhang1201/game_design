@@ -1,6 +1,6 @@
 # Random Events — Crown and Council
 
-Status: Draft v1. Starter pool of 20 events + triggering rules. MVP scope (see PRD §6.5).
+Status: Built — the 20 events below are live (`data/events.csv`, `data/event_choices.csv`, `EventSystem`). MVP scope (see `docs/design/PRD.md` §6, "Random events pool"). **This file is loaded at runtime:** `StorySource` reads each `### EV-NN` heading and the prose after the Scene label on that line, and the game shows that prose verbatim. Keep the headings and the Scene labels intact; the Trigger text on the same line is design description only (the implemented trigger is the CSV's).
 
 ---
 
@@ -17,36 +17,38 @@ Status: Draft v1. Starter pool of 20 events + triggering rules. MVP scope (see P
 
 ## Triggering rules
 
-All event selection is **engine math on the seeded RNG stream — the LLM never decides what happens, only how it reads.** Same save + same seed ⇒ same events on the same ticks.
+All event selection is **engine math on the seeded RNG stream — the LLM never decides what happens, and never writes how it reads.** Every event story is the fixed, authored Scene prose below; `Voicer.voice_event` has no path to the API and no event prompt exists. Same save + same seed ⇒ same events on the same ticks. `EventSystem` is the only consumer of `state.rng` in the council slice.
 
-**The per-tick roll.**
+**The monthly roll.** A tick is a MONTH of 30 days; the clock runs day by day under play/pause and the month's end is the tick (owner 2026-09-14: no End Turn).
 
-1. At most **one event per tick**, rolled after the concern scan so events and council briefings can reference each other.
-2. Base chance **35% per tick** (≈8 events/year — "frequent" without drowning the council). If no event has fired for **6 consecutive ticks**, the next roll is forced (pity timer, also deterministic).
-3. Build the **eligible set**: every event whose `trigger` conditions are true, whose `cooldown` has elapsed, and whose `once` flag is unspent. Sample by `weight`.
-4. If the eligible set is empty, nothing fires — never pad with an ill-fitting event.
+1. At most **one event per tick (month)**, rolled at the month's end after the concern scan and the suggestions, so events and council briefings can reference each other. A rolled event **stops the clock** and opens the council, where it plays in the audience window; while it waits, no further event is rolled.
+2. **Chains first:** a scheduled follow-up whose due tick has come fires before any roll.
+3. Base chance **35% per month** (`balance.csv` `event_base_chance`; ≈4–5 events a year with the pity timer). After **3 quiet months** (`event_pity_ticks`) the next roll is forced (pity timer, also deterministic).
+4. Build the **eligible set**: every event whose `trigger` holds, whose cooldown has elapsed, and whose `once` flag is unspent. Sample by `weight`.
+5. If the eligible set is empty, nothing fires — never pad with an ill-fitting event. An event whose every choice is gated off is skipped too.
 
-**Event anatomy** (one row per event when this converts to `data/events.csv` at implementation):
+**Event anatomy** — `data/events.csv` (one row per event) and `data/event_choices.csv` (one row per choice):
 
 | Field | Meaning |
 |---|---|
-| `event_id` | `ev_snake_case` |
+| `event_id` | `ev_NN`, matching the `### EV-NN` heading here |
 | `category` | `court` · `realm` · `folk` · `church` · `windfall` · `personal` |
-| `trigger` | Condition expression over game state (metrics, season, traits present at court, recent actions). `always` = any tick. |
-| `weight` | Relative sampling weight; state modifiers allowed (e.g. ×2 if unrest > 50) |
-| `cooldown` | Min ticks before this event can repeat (default 96 ≈ 4 years) |
-| `once` | If set, fires at most once per campaign |
-| `choices` | 2–3 options, each a bundle of concrete engine effects (gold, metric deltas, opinion deltas **with reason strings**, trait/relation changes, scheduled follow-ups) |
-| `signature` | Ideology signature per choice — minister reactions come free through the existing opinion-drift math, no special code |
-| `voice` | `template` (no API call) · `mini` (routine scene) · `flagship` (rare set-piece) |
-| `chain` | Follow-up events scheduled N ticks out, conditioned on the choice made |
+| `trigger` | `TriggerDsl` clauses joined by `&`: `always`, `season=<Season>`, `year>=N`, `trait_at_court=<trait>`, `seat_filled=<seat>`, `action_since=<ACTION>:<ticks>`, `flag=<flag>`, `<metric><N>` / `<metric>>N` |
+| `weight` | Relative sampling weight (a constant; state modifiers are not built) |
+| `cooldown_ticks` | Min months before this event can repeat (96 on most rows — 8 years now that a tick is a month; see open questions) |
+| `once` | `1` = fires at most once per campaign |
+| `voice` | Every row is `template`: the Scene prose is shown as written. The `mini` / `flagship` tags in the headings below are the original draft's voicing plan, superseded 2026-08-31 (owner: every event story is fixed, authored text) |
+| `title_key` | The event's title string |
+| choice `effects` | `;`-joined ops, applied by `EventEffects`: `metric:<m>:<d>[:reason]`, `gold:<d>`, `opinion:<seat or id>:<d>:<reason>`, `attribute:<who>:<attr>:<d>:<reason>`, `rel:<from>:<to>:<d>:<reason>`, `world:...` (schema-listed deltas), `flag:<name>`, `schedule:<event_id>:<ticks>` (a chain) |
+| choice signature | The five ideology columns per choice — minister reactions come free through the opinion-drift math, no special code |
+| choice `requires` | Optional trigger expression gating the option (e.g. EV-17's "Stand and take it" needs `trait_at_court=bold`) |
 
-**Design rules** (inherited from `COUNCIL_SYSTEM.md`, non-negotiable):
+**Design rules** (inherited from `docs/design/COUNCIL_SYSTEM.md`, non-negotiable):
 
 - **No unforeseeable catastrophes.** A single event may sting; it may never cripple. Severe consequences only arrive at the *end of a chain* the player saw start and chose to ignore.
 - **Choices are buttons first** (zero LLM parse cost), free text always allowed.
 - **Ministers react through the standard opinion math.** Every choice carries a signature; a pious Chaplain resents your comet-scoffing for the same deterministic reason he resents a church tax. Reason strings on every delta.
-- **Repetition guard:** cooldowns + `once` flags + the recent-line memory in the voicing prompt. Roughly a third of the pool should be `once` set-pieces so campaigns stay surprising.
+- **Repetition guard:** cooldowns + `once` flags (there is no voicing prompt — the prose is fixed, so variety comes from the pool itself). Roughly a third of the pool should be `once` set-pieces so campaigns stay surprising.
 - Where a state check adds flavor (a `bold` ruler option, a `silver_tongued` minister interjecting), gate the *option's availability* on the trait — never roll hidden dice the player can't see.
 
 ---
@@ -137,7 +139,8 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 
 ## Coverage notes
 
-- **Voicing spread:** 3 template (free), 15 mini, 2 flagship (EV-10 debate, EV-19 orphan) — consistent with the cost posture in PRD §7.
-- **Chain-starters:** 7 events schedule follow-ups, so campaigns accumulate history instead of resetting each tick.
+- **Voicing:** as drafted, 3 template, 15 mini, 2 flagship (EV-10 debate, EV-19 orphan). As built, all 20 are `template` — authored prose, no API call (owner 2026-08-31), consistent with the cost posture in PRD §8.
+- **Chain-starters:** 7 events are drafted to schedule follow-ups. As built, one chain exists: EV-02 "Say nothing" schedules EV-18 in 24 months (`schedule:ev_18:24`). The follow-ups named above (EV-02b, EV-07b, …) have no entries or scenes yet — each needs a `### EV-NN` entry here and rows in the CSVs before it can fire.
+- **Triggers:** `events.csv` implements a simplified form of several triggers written above (e.g. EV-11 fires on `season=winter` with no coastal check; EV-14 on `seat_filled=steward&year>=2`, not on a `merchant_family` candidate). The CSV is what runs.
 - **Every seat gets events in its domain**; `venal`, `honest`, `bold`, `vain`, `wrathful`, `cynical`, `pious`, `merchant_family`, `noble_born` traits all have at least one moment to matter.
-- At implementation this converts to `data/events.csv` + `data/event_choices.csv` + per-event effect handlers, per the data-driven convention in `CLAUDE.md`.
+- Implemented as `data/events.csv` + `data/event_choices.csv` with generic effect ops (`EventEffects`) rather than per-event handlers, per the data-driven convention in `CLAUDE.md`; a test asserts all 20 ids resolve to a Scene here.
