@@ -618,6 +618,38 @@ func look_at_pack(pack_px: Vector2, at_distance: float = -1.0) -> void:
 		_distance = at_distance
 	_apply_camera()
 
+## Frame the player's capital at a distance (the bench and the snapshots).
+func look_at_home(at_distance: float) -> void:
+	_target = Map3DGeometry.clamp_target(_home(), _bounds)
+	_distance = at_distance
+	_apply_camera()
+
+## Layers the bench can switch off to price them, those that exist: the
+## view's nodes under the viewport, the build's Sea, the Sun's shadows, the HUD.
+func layer_names() -> PackedStringArray:
+	var out := PackedStringArray()
+	for n: String in ["Markers", "Lines", "Rivers", "Clouds"]:
+		if _viewport.get_node_or_null(n) != null:
+			out.append(n)
+	if _world != null and _world.get_node_or_null("Sea") != null:
+		out.append("Sea")
+	if _world != null and _world.get_node_or_null("Sun") != null:
+		out.append("Shadows")
+	if get_node_or_null("Hud") != null:
+		out.append("Hud")
+	return out
+
+func set_layer_visible(layer: String, on: bool) -> void:
+	match layer:
+		"Shadows":
+			(_world.get_node("Sun") as DirectionalLight3D).shadow_enabled = on
+		"Sea":
+			(_world.get_node("Sea") as Node3D).visible = on
+		"Hud":
+			(get_node("Hud") as CanvasItem).visible = on
+		_:
+			(_viewport.get_node(layer) as Node3D).visible = on
+
 ## A line mesh by name (Kingdoms, Seams, Selection), or null.
 func line_mesh(line_name: String) -> ArrayMesh:
 	var mi := _lines.get_node_or_null(line_name) as MeshInstance3D if _lines != null else null

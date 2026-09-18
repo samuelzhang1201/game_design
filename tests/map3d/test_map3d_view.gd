@@ -242,6 +242,18 @@ func test_the_closest_zoom_is_800_m() -> void:
 	assert_eq(Game.data.bal("map3d_zoom_min_m"), 800.0)
 
 
+func test_the_bench_can_switch_each_layer_off() -> void:
+	var v := _view()
+	v.activate()
+	var names := v.layer_names()
+	assert_true("Markers" in names and "Lines" in names)
+	v.set_layer_visible("Markers", false)
+	assert_false((v.viewport().get_node("Markers") as Node3D).visible)
+	v.set_layer_visible("Markers", true)
+	v.look_at_home(5000.0)
+	assert_almost_eq(v.distance(), 5000.0, 0.01)
+
+
 func _click(v: Map3DView, at: Vector2) -> void:
 	var down := InputEventMouseButton.new()
 	down.button_index = MOUSE_BUTTON_LEFT

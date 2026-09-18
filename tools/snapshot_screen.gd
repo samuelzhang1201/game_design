@@ -61,6 +61,8 @@ var _speed := -1
 ## at that share of its size, so a shot shows the pick: the card in the
 ## left column and the province's gold outline.
 var _click3d := Vector2(-1, -1)
+## --zoom3d M (with --layer "3d map") frames the capital M metres away.
+var _zoom3d := -1.0
 
 
 func _ready() -> void:
@@ -88,6 +90,8 @@ func _ready() -> void:
 		elif args[i] == "--click3d":
 			var parts := args[i + 1].split(",")
 			_click3d = Vector2(float(parts[0]), float(parts[1]))
+		elif args[i] == "--zoom3d":
+			_zoom3d = float(args[i + 1])
 		elif args[i] == "--speed":
 			_speed = int(args[i + 1])
 		elif args[i] == "--resolution":
@@ -175,6 +179,10 @@ func _process(_delta: float) -> void:
 				_root.current_screen.detail_panel().show_manor(cell)
 		if _speed >= 0:
 			Game.set_clock_speed(_speed)
+	if _root != null and _frames == 8 and _zoom3d > 0.0 \
+			and _root.current_screen.has_method("map3d_view") \
+			and _root.current_screen.map3d_view() != null:
+		(_root.current_screen.map3d_view() as Map3DView).look_at_home(_zoom3d)
 	if _root != null and _frames == 10 and _click3d.x >= 0.0 \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
