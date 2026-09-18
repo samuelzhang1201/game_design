@@ -65,6 +65,9 @@ var _click3d := Vector2(-1, -1)
 ## --hover3d fx,fy (with --screen root) hovers the 3D map there: the country
 ## card in the left column, the kingdom's wider outline, a town's name.
 var _hover3d := Vector2(-1, -1)
+## --bal key=value overrides one balance.csv number for the shot (repeatable)
+## — for bracketing a look value before it is written to the table.
+var _bal: Dictionary = {}
 ## --zoom3d M (with --screen root) frames the capital M metres away.
 var _zoom3d := -1.0
 ## --ruler fx1,fy1,fx2,fy2 (with --screen root) lights the MEASUREMENT tab
@@ -101,6 +104,10 @@ func _ready() -> void:
 		elif args[i] == "--click3d":
 			var parts := args[i + 1].split(",")
 			_click3d = Vector2(float(parts[0]), float(parts[1]))
+		elif args[i] == "--bal":
+			var kv := args[i + 1].split("=")
+			if kv.size() == 2:
+				_bal[kv[0]] = float(kv[1])
 		elif args[i] == "--hover3d":
 			var hparts := args[i + 1].split(",")
 			_hover3d = Vector2(float(hparts[0]), float(hparts[1]))
@@ -123,6 +130,8 @@ func _ready() -> void:
 		get_tree().quit(2)
 		return
 	Game.start_campaign(_seed)
+	for key: String in _bal:
+		Game.data.balance[key] = _bal[key]
 	if _map2d:
 		Game.data.balance["map3d_default"] = 0.0
 	if _res != Vector2i.ZERO:
