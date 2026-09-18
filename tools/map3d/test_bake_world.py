@@ -202,6 +202,56 @@ def test_water_line_never_rises_over_the_joined_stretch():
     assert np.allclose(w, [10.0, 9.0, 8.0, 8.0, 8.0]), w
 
 
+# --- the patchwork (owner 2026-09-19) ------------------------------------------------
+
+def test_hash01_is_fixed_and_in_range():
+    a = bw.hash01(np.arange(1000), 7)
+    assert np.array_equal(a, bw.hash01(np.arange(1000), 7))
+    assert a.min() >= 0.0 and a.max() < 1.0
+    assert not np.array_equal(a, bw.hash01(np.arange(1000), 8)), "the salt changes the draw"
+    assert 0.4 < a.mean() < 0.6
+
+
+def test_field_cells_are_strips_with_hedged_edges():
+    ys, xs = np.mgrid[0:200, 0:200].astype(np.float64)
+    fid, edge = bw.field_cells(xs, ys, 20.0, 2.2, np.zeros(xs.shape))
+    n = len(np.unique(fid))
+    # 200x200 over cells ~20 across: about 100 fields
+    assert 50 < n < 160, n
+    # a field is longer (along x, angle 0) than wide
+    one = fid == fid[100, 100]
+    yy, xx = np.nonzero(one)
+    assert (xx.max() - xx.min()) > (yy.max() - yy.min()), "stretched along its strip"
+    # the edge distance is 0 on a border and grows inside
+    assert edge.min() < 0.5 and edge.max() > 3.0
+    border = fid[:, 1:] != fid[:, :-1]
+    assert edge[:, 1:][border].mean() < 1.5
+
+
+def test_pick_crop_follows_the_shares():
+    crops = [(35.0, 3, None), (30.0, 1, None), (20.0, 5, None), (15.0, 1, None)]
+    idx = bw.pick_crop(np.linspace(0, 0.999, 1000), crops)
+    counts = np.bincount(idx, minlength=4)
+    assert np.allclose(counts, [350, 300, 200, 150], atol=2), counts
+
+
+def test_the_footprint_grows_with_the_square_root_of_the_people():
+    rules = {"footprint_m_per_sqrt_pop": 2.5, "footprint_min_m": 90.0, "footprint_max_m": 900.0}
+    assert bw.footprint_radius_m(10000, rules) == 250.0
+    assert bw.footprint_radius_m(10, rules) == 90.0, "the floor"
+    assert bw.footprint_radius_m(1e7, rules) == 900.0, "the ceiling"
+
+
+def test_the_fields_table_loads_with_its_textures():
+    f = bw.load_fields(os.path.join(bw.ROOT, "data", "map3d_fields.csv"), bw.TEXTURE_KEYS)
+    assert "*" in f and "grain" in f, sorted(f)
+    for focus, e in f.items():
+        assert e["reach"] > 0, focus
+        for share, tex, tint in e["crops"]:
+            assert share > 0 and 0 <= tex < bw.NT
+            assert np.all(tint <= 1.0), "a tint can only darken the colour map"
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

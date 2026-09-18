@@ -425,6 +425,220 @@ def carve(height, wet, pts, bed, widths_v, rules):
         wsub = wet[y0:y1, x0:x1]
         np.maximum(wsub, np.clip(1.0 - s / wet_v, 0.0, 1.0), out=wsub)
 
+# --- the patchwork (owner 2026-09-19: the ground between villages was one flat
+# plain; make it read like a satellite map) -----------------------------------------
+
+def hash01(a, salt=0):
+    """A fixed pseudo-random number in [0, 1) per integer in `a` (any shape):
+    the same integer always gives the same number — a look, never simulation."""
+    with np.errstate(over="ignore"):   # splitmix64: the wrap-around is the point
+        x = (np.asarray(a, dtype=np.uint64) + np.uint64(salt) * np.uint64(0x9E3779B97F4A7C15))
+        x = (x ^ (x >> np.uint64(30))) * np.uint64(0xBF58476D1CE4E5B9)
+        x = (x ^ (x >> np.uint64(27))) * np.uint64(0x94D049BB133111EB)
+        x = x ^ (x >> np.uint64(31))
+    return (x >> np.uint64(11)).astype(np.float64) / float(1 << 53)
+
+
+def field_cells(xs, ys, cell_v, stretch, angle):
+    """Strip fields (critic 2026-09-19: Voronoi outlines read as cells, not
+    fields): rows of long strips, `cell_v` across on average and `stretch`
+    times as long as wide, laid in a frame turned by `angle` (per point),
+    each row's strips staggered like brickwork and each strip's length
+    varied by hash. Returns (field id, the distance to the nearest field
+    edge in the same units as xs/ys)."""
+    ca, sa = np.cos(angle), np.sin(angle)
+    ls = cell_v * np.sqrt(stretch)       # along the strip
+    ws = cell_v / np.sqrt(stretch)       # across it
+    u = (xs * ca + ys * sa) / ls
+    v = (-xs * sa + ys * ca) / ws
+    row = np.floor(v).astype(np.int64)
+    # each row's strips start at their own offset: no crossroads grid
+    uu = u + hash01(row & 0xFFFFFF, 9)
+    col = np.floor(uu).astype(np.int64)
+    key = (col & 0xFFFFF) | ((row & 0xFFFFF) << 20)
+    # a strip's far end moves by up to a third of its length (merged with
+    # the next one when it runs short), so the strips are not all one size
+    cut = 0.35 + 0.3 * hash01(key, 10)
+    fu = uu - col
+    far = fu > cut + 0.5
+    key = np.where(far & (hash01(key, 11) < 0.5), key + 1, key)
+    du = np.minimum(fu, 1.0 - fu) * ls
+    dv = np.minimum(v - row, 1.0 - (v - row)) * ws
+    return key, np.minimum(du, dv)
+
+
+def load_fields(path, texture_keys):
+    """data/map3d_fields.csv as {focus: {"reach": m, "crops": [(share, tex, tint)]}};
+    a crop's texture by its bake key (the first layer of that name)."""
+    out = {}
+    with open(path) as f:
+        for r in csv.DictReader(f):
+            e = out.setdefault(r["focus"], {"reach": 0.0, "crops": []})
+            e["reach"] = max(e["reach"], float(r["reach_m"]))
+            e["crops"].append((float(r["share"]), texture_keys.index(r["texture"]),
+                               srgb_to_lin(hex_rgb(r["tint"]))))
+    return out
+
+
+def pick_crop(h, crops):
+    """The crop a field with hash `h` (0..1) sows: by the crops' shares."""
+    total = sum(c[0] for c in crops)
+    idx = np.zeros(np.shape(h), dtype=np.int64)
+    edge = 0.0
+    for i, c in enumerate(crops[:-1]):
+        edge += c[0] / total
+        idx = np.where(np.asarray(h) >= edge, i + 1, idx)
+    return idx
+
+
+def footprint_radius_m(population, rules):
+    """A settlement's built ground: footprint_m_per_sqrt_pop x sqrt(people),
+    within footprint_min_m..footprint_max_m."""
+    return float(np.clip(rules["footprint_m_per_sqrt_pop"] * np.sqrt(max(population, 0.0)),
+                         rules["footprint_min_m"], rules["footprint_max_m"]))
+
+
+def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn, t_rock,
+                  beach, k, vw, vh, pw, ph):
+    """Village footprints, the fields round them and each manor's own shade
+    (owner 2026-09-19). Adds the fields' and footprints' grounds to `tw` in
+    place and returns the colour map's multiplier per vertex (vh, vw, 3, in
+    linear light). Its own random stream, so the rest of the look is
+    unchanged."""
+    prng = np.random.default_rng(SEED + 1)
+    fields = load_fields(os.path.join(ROOT, "data", "map3d_fields.csv"), TEXTURE_KEYS)
+    focus_keys = sorted(fields)
+    other = focus_keys.index("*")
+    max_cell = int(cell_id.max()) + 1
+    cell_focus = np.full(max_cell, other, dtype=np.int64)
+    land_csv = os.path.join(OUT, "manor_land.csv")
+    if os.path.exists(land_csv):
+        with open(land_csv) as f:
+            for r in csv.DictReader(f):
+                c = int(r["cell_id"])
+                if c < max_cell:
+                    cell_focus[c] = focus_keys.index(r["focus"]) if r["focus"] in fields else other
+    else:
+        print("bake_world: no manor_land.csv (tools/map3d/export_manor_land.gd) — every manor sown as '*'")
+    reach_of = np.array([fields[f]["reach"] for f in focus_keys], dtype=np.float32)
+    crop_tex_of = [np.array([c[1] for c in fields[f]["crops"]]) for f in focus_keys]
+    crop_tint_of = [np.array([c[2] for c in fields[f]["crops"]], dtype=np.float32) for f in focus_keys]
+    # distance to the nearest settlement: the pack's own bake, a unit per pack px
+    sd = np.asarray(Image.open(os.path.join(PACK, "world_settlement_distance.png")).convert("L"),
+                    dtype=np.float32) * M_PER_PX
+    settle_m = resize(sd, vw, vh)
+    del sd
+    edge_n = value_noise(prng, vw, vh, rules["field_edge_noise_m"] / VERTEX_M)
+    block_n = value_noise(prng, vw, vh, rules["footprint_block_m"] / VERTEX_M)
+    fray_n = value_noise(prng, vw, vh, 3.0 * rules["footprint_block_m"] / VERTEX_M)
+    # the fields' own warp (critic 2026-09-19: straight Voronoi edges and
+    # ruled hedges read as polygons): the layout is sampled through a noise
+    # displacement, so the hedges wander like a real field's
+    warp_v = rules["field_warp_m"] / VERTEX_M
+    warp_x = (2.0 * value_noise(prng, vw, vh, rules["field_warp_wave_m"] / VERTEX_M) - 1.0) * warp_v
+    warp_y = (2.0 * value_noise(prng, vw, vh, rules["field_warp_wave_m"] / VERTEX_M) - 1.0) * warp_v
+    grain_n = value_noise(prng, vw, vh, rules["field_grain_m"] / VERTEX_M)
+    snow = np.clip((hn - rules["snow_line_lo"]) / max(rules["snow_line_hi"] - rules["snow_line_lo"], 1e-6), 0, 1)
+
+    # village footprints first: fields never cover the houses
+    foot = np.zeros((vh, vw), dtype=np.float32)
+    with open(os.path.join(ROOT, "data", "maps", MAP, "political", "burgs.csv")) as f:
+        for b in csv.DictReader(f):
+            cx, cy = float(b["x"]) * k, float(b["y"]) * k
+            r = footprint_radius_m(float(b["population"] or 0), rules) / VERTEX_M
+            reach = r * (1.0 + rules["footprint_edge_noise"]) + 2
+            x0, x1 = max(int(cx - reach), 0), min(int(cx + reach) + 1, vw)
+            y0, y1 = max(int(cy - reach), 0), min(int(cy + reach) + 1, vh)
+            if x0 >= x1 or y0 >= y1:
+                continue
+            yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+            d = np.hypot(xx - cx, yy - cy) / r
+            edge = 1.0 + rules["footprint_edge_noise"] * (2.0 * fray_n[y0:y1, x0:x1] - 1.0)
+            # the built ground thins outward over footprint_fade of its
+            # radius: no disc, no rim (taste: nothing ends on a hard cut)
+            mf = np.clip((edge - d) / rules["footprint_fade"], 0, 1) ** 1.5 * land[y0:y1, x0:x1]
+            foot[y0:y1, x0:x1] = np.maximum(foot[y0:y1, x0:x1], mf)
+    del fray_n
+
+    tint = np.ones((vh, vw, 3), dtype=np.float32)
+    farm = np.zeros((vh, vw), dtype=np.float32)
+    crop = np.zeros((vh, vw), dtype=np.int8)
+    cell_v = rules["field_cell_m"] / VERTEX_M
+    hedge_v = rules["hedge_m"] / VERTEX_M
+    for y0 in range(0, vh, 256):
+        y1 = min(y0 + 256, vh)
+        ys, xs = np.mgrid[y0:y1, 0:vw].astype(np.float64)
+        pxi = np.clip((xs / k).astype(np.int64), 0, pw - 1)
+        pyi = np.clip((ys / k).astype(np.int64), 0, ph - 1)
+        cid = np.where(has_cell[pyi, pxi], cell_id[pyi, pxi], -1)
+        cz = np.maximum(cid, 0)
+        fi = cell_focus[cz]
+        reach = reach_of[fi]
+        # farmland: within reach of a settlement, its edge frayed, on land that
+        # is neither steep, snowed, shore nor built on
+        r_eff = reach * (1.0 + rules["field_edge_noise"] * (2.0 * edge_n[y0:y1] - 1.0))
+        near = np.clip((r_eff - settle_m[y0:y1]) / (0.25 * reach), 0, 1)
+        # fields thin outward (critic round 2: an even carpet read as
+        # scattered): near the village nearly every field is sown, toward
+        # the reach fewer, the rest left to the ground under them — decided
+        # per field below, once its id is known
+        closeness = np.clip(1.0 - settle_m[y0:y1] / np.maximum(r_eff, 1.0), 0, 1)
+        m = (near * (land[y0:y1] & (cid >= 0))
+             * np.clip(1.0 - t_rock[y0:y1] / rules["field_slope_max"], 0, 1)
+             * (1.0 - snow[y0:y1]) * (1.0 - np.clip(2.0 * beach[y0:y1], 0, 1))
+             * (1.0 - foot[y0:y1]))
+        # each manor its own field layout and orientation: a field never
+        # spans two manors, and the strips turn from estate to estate
+        fid, edge_d = field_cells(xs + warp_x[y0:y1], ys + warp_y[y0:y1], cell_v,
+                                  rules["field_stretch"], hash01(cz, 3) * np.pi)
+        hf = hash01(fid ^ (cz.astype(np.int64) << 40), 4)
+        sown = hash01(fid ^ (cz.astype(np.int64) << 40), 8) < closeness ** rules["field_thin_power"] * rules["field_thin_gain"]
+        m = m * sown
+        tex = np.zeros(m.shape, dtype=np.int8)
+        tt = np.ones(m.shape + (3,), dtype=np.float32)
+        for f in range(len(focus_keys)):
+            sel = fi == f
+            if sel.any():
+                ci = pick_crop(hf[sel], fields[focus_keys[f]]["crops"])
+                tex[sel] = crop_tex_of[f][ci]
+                tt[sel] = crop_tint_of[f][ci]
+        hedge = 1.0 - rules["hedge_depth"] * np.clip(1.0 - edge_d / hedge_v, 0, 1) ** 2
+        # each field its own shade, and a fine grain inside it (critic: one
+        # flat colour per field read as a sticker up close)
+        own = 1.0 + rules["field_shade"] * (2.0 * hash01(fid ^ (cz.astype(np.int64) << 40), 7) - 1.0)
+        grain = 1.0 + rules["field_grain"] * (2.0 * grain_n[y0:y1] - 1.0)
+        tt *= (hedge * own * grain)[..., None].astype(np.float32)
+        # The crop gives way to the natural ground over the last
+        # field_edge_soft_m before its edge: Terrain3D switches a vertex's
+        # texture whole, so two crops meeting head on drew a 20 m staircase;
+        # through the ground between them the control map blends.
+        soft = np.clip(edge_d / (rules["field_edge_soft_m"] / VERTEX_M), 0, 1)
+        farm[y0:y1] = m * soft
+        crop[y0:y1] = tex
+        tint[y0:y1] = 1.0 + (tt - 1.0) * m[..., None]
+        # each manor's own shade: a patchwork even where nothing is sown
+        jv = (2.0 * hash01(cz, 5) - 1.0) * rules["manor_jitter_value"] * (cid >= 0)
+        jh = (2.0 * hash01(cz, 6) - 1.0) * rules["manor_jitter_hue"] * (cid >= 0)
+        tint[y0:y1] *= (1.0 + jv)[..., None].astype(np.float32)
+        tint[y0:y1, :, 0] *= (1.0 + jh).astype(np.float32)
+        tint[y0:y1, :, 2] *= (1.0 - jh).astype(np.float32)
+    del settle_m, edge_n, snow, warp_x, warp_y, grain_n
+
+    # the grounds: a field's crop over what grew there, the footprint's
+    # trodden earth over both
+    tw *= (1.0 - 0.85 * farm)[..., None]
+    for t in range(NT):
+        tw[..., t] += rules["field_strength"] * farm * (crop == t)
+    tw *= (1.0 - 0.9 * foot)[..., None]
+    tw[..., DIRT] += 2.0 * foot
+    built = srgb_to_lin(hex_rgb(rules["footprint_tint"])).astype(np.float32)
+    blocks = (1.0 - rules["footprint_block_depth"] * block_n)[..., None] * built
+    tint = tint * (1.0 - foot[..., None]) + blocks * foot[..., None]
+    print("bake_world: patchwork %.1f%% of the land sown, %.2f%% built" % (
+        100.0 * float(farm[land].mean()), 100.0 * float(foot[land].mean())))
+    return tint
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--map", default="")
@@ -654,6 +868,8 @@ def main(argv=None):
     tw[..., DIRT] += 2.0 * beach * (1.0 - grain)
     tw[..., SAND] += 2.0 * beach * grain
     del grain
+    tint = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn, t_rock,
+                         beach, k, vw, vh, pw, ph)
     del t_rock, t_cliff, keep, beach
     depth = np.clip(-height / 150.0, 0, 1)
     tw[~land] = 0.0
@@ -694,6 +910,9 @@ def main(argv=None):
     color_lin[..., 0] *= 1.0 - rules["macro_hue_depth"] * hue
     color_lin[..., 2] *= 1.0 - rules["macro_hue_depth"] * (1.0 - hue)
     color_lin *= (1.0 - rules["river_wet_darken"] * wet)[..., None]
+    # the patchwork's fields, hedges, villages and each manor's own shade
+    color_lin *= tint
+    del tint
     del wet
     rgba = np.empty((vh, vw, 4), dtype=np.uint8)
     for y0 in range(0, vh, 512):

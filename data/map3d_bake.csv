@@ -35,3 +35,30 @@ river_join_m,400.0,"3D bake (2026-09-18): a river ending inland is carried on to
 snow_line_lo,0.62,"3D bake (owner 2026-09-19: a snow texture on the peaks, Poly Haven snow_field_aerial): the share of the highest ground where snow starts to come in on the 3D map's own relief — the 2D map's peak band (biome 15) and glaciers wear it too, through the bake's biome mix"
 snow_line_hi,0.78,3D bake: the share of the highest ground where the snow is full
 snow_weight,2.0,"3D bake: the snow line's weight against the other grounds (the grass is 1); thinned by 60% on the steepest cliff faces"
+field_cell_m,240,"3D bake fields (owner 2026-09-19): the mean size of one field — a Voronoi cell of a jittered grid in a frame that turns slowly across the land"
+field_stretch,3.0,3D bake fields: how much longer than wide a field is (strip fields)
+field_turn_wave_m,5000,3D bake fields: the wavelength over which the fields' orientation turns
+field_edge_noise_m,700,"3D bake fields: the wavelength of the noise that frays where the farmland ends, so its edge is no circle round the village"
+field_edge_noise,0.45,3D bake fields: how far (as a share of reach_m) that noise pulls the farmland's edge in or out
+field_strength,2.2,"3D bake fields: a field's texture weight against the natural ground under it (the grass is 1) at the heart of the farmland"
+field_slope_max,0.35,"3D bake fields: the rock-slope share (0..1, the bake's own t_rock) above which no field is ploughed"
+hedge_m,40,"3D bake fields: the width of the darker hedge between two fields, metres"
+hedge_depth,0.16,3D bake fields: how much a hedge darkens the ground (the colour map multiplies by 1 - this)
+manor_jitter_value,0.07,"3D bake (owner 2026-09-19): each manor cell's own brightness shift, +- this share — neighbouring estates read apart like a satellite map's patchwork"
+manor_jitter_hue,0.05,"3D bake: each manor cell's own green-yellow shift, +- this share"
+footprint_m_per_sqrt_pop,2.5,"3D bake village footprints (owner 2026-09-19): a settlement's built ground reaches this many metres times the square root of its population — a median 4 900-soul town ~175 m, the 52 000 capital ~570 m; all 684 settlements build ~2.6% of the land (6.0 built 18%)"
+footprint_min_m,90,3D bake village footprints: the smallest footprint's radius
+footprint_max_m,900,3D bake village footprints: the largest footprint's radius
+footprint_tint,#D6CBBE,"3D bake village footprints: the built ground's multiplier on the dirt and soil under it — roofs, yards and trodden earth"
+footprint_block_m,70,"3D bake village footprints: the wavelength of the blocky light and dark within it (houses and yards)"
+footprint_block_depth,0.32,3D bake village footprints: how far the blocks darken
+footprint_edge_noise,0.5,"3D bake village footprints: how far (as a share of its radius) the edge frays"
+field_edge_soft_m,90,"3D bake fields: over this many metres before its edge a field's crop gives way to the ground under it, so neighbouring crops blend instead of switching texture in a 20 m staircase"
+field_warp_m,70,"3D bake fields (critic round 1): how far, in metres, the field layout is displaced by noise, so the hedges wander instead of ruling straight Voronoi edges"
+field_warp_wave_m,420,3D bake fields: the wavelength of that displacement
+field_shade,0.06,"3D bake fields: each field its own brightness, +- this share"
+field_grain,0.05,"3D bake fields: a fine grain of light and dark inside every field, +- this share"
+field_grain_m,70,3D bake fields: the wavelength of that grain
+footprint_fade,0.7,"3D bake village footprints (critic round 1: a dark disc with a halo): the share of its radius over which the built ground thins out"
+field_thin_power,0.5,"3D bake fields (critic round 2): the share of fields sown falls with the distance from the village as (1 - d/reach) to this power, times field_thin_gain (capped at all): a clustered farmland that thins outward into the ground, not an even carpet"
+field_thin_gain,1.8,"3D bake fields: the multiplier on that share — 1.3 with power 0.8 left 13% of the land sown and the far view barely changed; this keeps ~a quarter"

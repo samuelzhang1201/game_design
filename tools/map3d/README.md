@@ -45,7 +45,11 @@ values are `balance.csv` `map3d_*`.
    `python3 tools/map3d/fetch_polyhaven.py fir_tree_01 ...`
 2. **Textures** — `Blender -b --factory-startup --python tools/map3d/pack_textures.py`
    (numpy in Blender; GDScript per pixel on 4K took >10 min).
-3. **Bake** — `python3 tools/map3d/bake_world.py [--map ID]` (~2 s), tuned by
+3. **Manor land** — `GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/export_manor_land.gd [-- --map ID]`
+   writes `bake/manor_land.csv` (each manor's starting chief good, decided
+   by the game's own `MapManors.default_focus`) for the bake's fields.
+   Without it every manor is sown as `*` (kitchen gardens only).
+4. **Bake** — `python3 tools/map3d/bake_world.py [--map ID]` (~12 s), tuned by
    `data/map3d_bake.csv` (coast supersample and edge warp, the beach mix,
    river widths and carving — the numbers moved out of the script; the rest
    is still in `bake_world.py` itself, see Open items). Height comes from
@@ -55,16 +59,26 @@ values are `balance.csv` `map3d_*`.
    each course, source to mouth, to `rivers.json` beside the built scene,
    for `Map3DRivers` to draw at runtime. The bake's pure functions have
    their own test: `python3 tools/map3d/test_bake_world.py`.
-4. **Scene** — `GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/build_world.gd [-- --map ID]`
+   **The patchwork** (owner 2026-09-19, "make the ground read like a
+   satellite map"; `sow_patchwork`): village footprints (built ground by
+   the square root of the people, thinning outward), strip FIELDS round
+   every settlement within their chief good's reach (`data/map3d_fields.csv`:
+   crops by share, a bake texture and a darkening tint each), laid per
+   manor in its own orientation, staggered like brickwork, noise-warped,
+   sown densest near the village and thinning outward, soft hedges; and
+   every manor cell its own slight shade. Its noise has its own random
+   stream, so the rest of the look is untouched; `map3d_bake.csv`
+   `field_*`, `hedge_*`, `footprint_*`, `manor_jitter_*`.
+5. **Scene** — `GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/build_world.gd [-- --map ID]`
    (~2 s, no editor; every tool defaults to `data/maps.csv`'s `is_default` pack). Nothing visual is baked into the scene beyond the
    terrain: headless, a MultiMesh saves without its transforms, which is one
    reason settlements are placed at runtime.
-5. **Look / measure** — `Godot --path . -s tools/map3d/shoot.gd -- --camera CameraMid --out /tmp/x.png`;
+6. **Look / measure** — `Godot --path . -s tools/map3d/shoot.gd -- --camera CameraMid --out /tmp/x.png`;
    the acceptance bench drives the real view —
    `GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- --size WxH` —
    median/mean/p95 frame time per zoom against an 8 ms budget (60 fps; exits
    3 over it).
-6. Trees (optional, owner: no trees) — `render_impostors.py` in Blender, then
+7. Trees (optional, owner: no trees) — `render_impostors.py` in Blender, then
    `plant_trees.gd`.
 
 ## Known traps (macOS, GL Compatibility)
