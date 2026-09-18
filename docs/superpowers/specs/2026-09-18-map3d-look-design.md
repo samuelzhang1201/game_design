@@ -26,7 +26,8 @@ the build's CameraMid: **4.4 ms (227 fps)**, 324 draw calls; sun shadows
 Observed faults: the colour map (16 % macro darkening over a far-colour
 multiplier) hides the materials; blend weights come from 50 m biome pixels,
 so near view shows round, soft-edged rock blotches; the shoreline is the 50 m
-land mask upscaled — a visible staircase; `mipmap_bias` 1.0 blurs on purpose;
+land mask upscaled — a visible staircase; the one dual-scaled texture
+switches at 100–170 m, nearer than the camera ever comes;
 no rivers are drawn at all; the sea is a flat opaque plane; the view ignores
 trackpad gestures; the nearest zoom is 2.5 km.
 
@@ -39,8 +40,8 @@ trackpad gestures; the nearest zoom is 2.5 km.
 - **Zoom is anchored at the cursor**: the ground point under the pointer
   stays under it (as on the 2D map). Pure helpers, tested:
   `Map3DGeometry.zoomed_by(distance, factor, min_d, max_d)` and
-  `Map3DGeometry.zoom_anchor_shift(target, anchor, old_d, new_d) -> Vector2`
-  (the target moves toward the anchor by `1 − new_d / old_d`).
+  `Map3DGeometry.zoom_about(target, anchor, old_d, new_d) -> Vector2`, the
+  new target (it moves toward the anchor by `1 − new_d / old_d`).
 
 ## 2. Settlements: hollow rings
 
@@ -63,14 +64,16 @@ A Control child of `Map3DView` over the display, mouse-transparent except
 the compass rect.
 
 - **Scale bar, bottom-right**: metres per px at the target
-  (`Map3DGeometry.metres_per_pixel`) → the pack's `distance_scale` /
-  `distance_unit` (`map_info.csv`) → `MapGeometry.nice_step` 1-2-5, drawn
+  (`Map3DGeometry.metres_per_pixel`), stated in the 3D WORLD's own metres
+  (50 m per pack px, the owner's campaign scale) — NOT `map_info.csv`'s
+  `distance_scale`, which gives the 2D sheet 1 km per pack px and would make
+  the bar lie by 20× — as m or km on `MapGeometry.nice_step`'s 1-2-5, drawn
   with the 2D map's `map_scale_bar_*` keys and colour so both maps match.
   Recomputed on every zoom. The bar-length sum is a pure, tested function.
 - **Compass, top-left**: `CompassLayer` draws the oak wheel and turns it
   while time runs, exactly as on the 2D map (fallback: the vector rose);
   over it a **north needle** (vector: a gold lozenge, dark outline,
-  `map3d_compass_needle_*`) at angle −yaw. **Clicking the compass** eases
+  `map3d_compass_needle_*`) turned clockwise by the yaw. **Clicking the compass** eases
   the yaw back to 0 over `map3d_compass_reset_s` (0.4 s).
 
 ## 4. Clouds (`Map3DClouds`, new, under the SubViewport)
@@ -92,7 +95,8 @@ the compass rect.
 - The camera may pass below the cloud deck at near zoom; clouds fade by
   camera distance inside `map3d_cloud_near_fade_m` so they never fill the
   screen.
-- Tests wait PROCESS frames (as CloudLayer's do).
+- The drift, spawn, retire and fade logic is a pure `Map3DCloudField`
+  (RefCounted), tested without frames; the node only draws it.
 
 ## 5. Performance: ≥ 60 fps is an acceptance gate
 
@@ -113,8 +117,8 @@ the compass rect.
 
 ## 6. Ground: materials, transitions, sharpness (`bake_world.py`, `build_terrain.gd`)
 
-- **Coast without steps**: the land mask is rasterised from the pack's cell
-  polygons (`geography/vertices.csv`, `cells.csv`; lakes likewise) straight
+- **Coast without steps**: the land mask is rasterised from the pack's shore
+  loops (`geography/coasts.csv`: `land` loops filled, `lake` loops cut) straight
   onto the 20 m vertex grid with 4× supersampling to a coverage value, not
   upscaled from 50 m pixels; shore height goes smoothly from +`SHORE_M` to
   −`SHORE_M` across the coverage; the sea shader fades along it (§8).
@@ -131,9 +135,13 @@ the compass rect.
   (≤ 100 m inland, ≤ 40 m high).
 - **Colour map steps back**: macro depth 16 % → 6 %, hue drift 10 % → 4 %;
   near view shows the material's own colour, far view keeps the mottle.
-- **Sharpness**: `mipmap_bias` 1.0 → 0; anisotropic filtering on the terrain
-  textures (`rendering/textures/default_filters/anisotropic_filtering_level`
-  and the material's filter); `dual_scale` for far repetition. Textures stay
+- **Sharpness**: Terrain3D's `mipmap_bias` is a DERIVATIVE MULTIPLIER
+  (range 0.5–1.5, 1.0 neutral — read from the shader in the plugin binary),
+  so it goes 1.0 → 0.85, slightly sharper, not to 0; the terrain's samplers
+  are already `filter_linear_mipmap_anisotropic`, so the project's
+  `rendering/textures/default_filters/anisotropic_filtering_level` goes to
+  4 (16×); `dual_scaling` on for the grass (texture 1) with near/far at
+  1200/4000 m — the current 100/170 m is closer than the camera ever comes. Textures stay
   2048 px: at 800 m a screen px is ~0.6 m of ground, a texel ~0.08 m.
 - The bake rules this touches move from constants into
   `data/map3d_bake.csv` (key,value,notes), read by `bake_world.py`; the rest
@@ -152,7 +160,8 @@ the compass rect.
   250)` at the mouth, grown from 0 at the source as `t^γ`
   (`map_river_taper_gamma`, the 2D rule).
 - **Banks**: `dirt_floor` wet band within `RIVER_WET_M` of the water, colour
-  map darkened 15 %, a little sand at the mouth.
+  map darkened 15 %. (No separate mouth sand: the beach band and the sea's
+  near band already meet there.)
 - **Water**: `Map3DRivers` (pure, tested) builds ONE ribbon ArrayMesh for all
   rivers from `rivers.json` — UV.x across (0..1), UV.y along (metres).
   `water_river.gdshader`: two normal maps scrolled along UV.y, fresnel toward
@@ -177,10 +186,10 @@ the compass rect.
 
 ## Testing
 
-- GUT, pure: `zoomed_by`, `zoom_anchor_shift`, scale-bar length, compass
+- GUT, pure: `zoomed_by`, `zoom_about`, scale-bar length, compass
   needle angle and reset easing, `Map3DRivers` ribbon (vertex count, widths
   tapering source→mouth, minimum width, UVs), cloud spawn/retire and pause
-  fade (PROCESS frames).
+  fade (`Map3DCloudField`, no frames needed).
 - GUT, view (fixture scene, never the git-ignored build): gestures change
   distance/target; rings are placed per group with the CSV's sizes; the HUD
   exists with a scale bar and compass; clicking the compass resets yaw.
