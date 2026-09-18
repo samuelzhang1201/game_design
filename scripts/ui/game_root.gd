@@ -422,16 +422,16 @@ func _apply_ruler() -> void:
 
 ## The one rule for which map the panel shows (spec
 ## 2026-09-18-map3d-default-design): 3D whenever the pack has a built scene,
-## balance map3d_default is on, and no 2D-only layer is — HEIGHTS draws on
-## the 2D map, and so do MILITARY's counters; ECONOMY and MANORS draw on both
-## (owner 2026-09-19), so the 3D view is handed their theme. Runs on every
+## balance map3d_default is on, and no 2D-only layer is — HEIGHTS alone
+## draws on the 2D map only; ECONOMY, MANORS and MILITARY draw on both
+## (owner 2026-09-19), so the 3D view is handed their theme and the counters. Runs on every
 ## layer change and every screen swap.
 func _sync_map_view() -> void:
 	_map3d_view = Game.data.bal("map3d_default") > 0.0 and map3d_available() \
-			and not (_height_view or _army_view)
+			and not _height_view
 	if current_screen != null and current_screen.has_method("set_map3d_theme"):
 		current_screen.set_map3d_theme("manors" if _manor_view
-			else ("economy" if _economy_view else ""))
+			else ("economy" if _economy_view else ""), _army_view)
 	if current_screen != null and current_screen.has_method("set_map3d_view"):
 		current_screen.set_map3d_view(_map3d_view)
 	_apply_ruler()

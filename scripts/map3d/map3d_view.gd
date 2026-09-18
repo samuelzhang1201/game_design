@@ -157,6 +157,11 @@ var _tooltip: Label
 var _drawn_labels: PackedStringArray = []
 ## How many ECONOMY badges the HUD drew last (a test seam).
 var _drawn_badges := 0
+## MILITARY on the 3D map (owner 2026-09-19): whether the counters show, the
+## clicked regiment (outlined in gold), and how many the HUD drew last.
+var _military := false
+var _selected_army := ""
+var _drawn_armies := 0
 var _north_t := -1.0
 var _north_from := 0.0
 var _press_on_hud := false
@@ -1322,6 +1327,89 @@ func manor_badges() -> Array:
 	return ManorBadges.place(_repo, out, target_scale >= _repo.bal("map_manor_label_min_scale"))
 
 
+# --- MILITARY (owner 2026-09-19) ---------------------------------------------------
+
+## Show the player's regiments as counters — GameRoot hands this down with
+## the MILITARY tab, as the 2D map's show_armies.
+func set_military(on: bool) -> void:
+	_military = on
+	if not on and _selected_army != "":
+		clear_selection()
+	if _hud != null:
+		_hud.refresh()
+
+
+func military() -> bool:
+	return _military
+
+
+## A counter's height in design px: map_army_badge_native_px of the map at
+## the scale the target is seen at (as the 2D counter grows with the zoom),
+## held between map3d_army_badge_min_px and map3d_army_badge_max_px so it
+## reads far out and never swamps the ground close in (owner: 注意兵棋大小).
+func army_badge_height() -> float:
+	var seen := float(_meta.get("m_per_px", 50.0)) / maxf(_metres_per_pixel(), 0.0001)
+	return clampf(_repo.bal("map_army_badge_native_px") * seen,
+		_repo.bal("map3d_army_badge_min_px"), _repo.bal("map3d_army_badge_max_px"))
+
+
+## The counters (ArmyCounters, the 2D map's) of the player's regiments before
+## the camera, in design px, kept clear of the settlement dots. [] while the
+## layer is off.
+func army_markers() -> Array:
+	if not _military or _camera == null:
+		return []
+	var s := _render_scale()
+	var h := army_badge_height()
+	var frame := Rect2(Vector2.ZERO, size).grow(h * 4.0)
+	var points: Array = []
+	for r: Dictionary in MapObjects.regiments_of(_repo, _repo.resolve_realm("player_realm")):
+		var xz := Map3DGeometry.pack_to_world(_meta, Vector2(float(r["x"]), float(r["y"])))
+		var ground := Vector3(xz.x, _height_at(xz), xz.y)
+		if _camera.is_position_behind(ground):
+			continue
+		var sp := _camera.unproject_position(ground) / s
+		if frame.has_point(sp):
+			points.append({"reg": r, "pos": sp})
+	return ArmyCounters.layout(_repo, points, h, _settlement_marks())
+
+
+## The screen squares (design px) of every settlement dot shown now — what
+## the counters keep clear of.
+func _settlement_marks() -> Array:
+	var out: Array = []
+	var s := _render_scale()
+	var eye := _camera.global_position
+	var fade_start := _repo.bal("map3d_ring_fade_start")
+	for code: String in _sorted_burgs():
+		var burg: Dictionary = _repo.burgs[code]
+		var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
+		var bxz := _burg_xz(burg)
+		var world := Vector3(bxz.x, _height_at(bxz), bxz.y)
+		if eye.distance_to(world) >= float(spec["max_view_m"]) * fade_start \
+				or _camera.is_position_behind(world):
+			continue
+		var c := _camera.unproject_position(world) / s
+		var r := marker_px(spec) * 0.5 + 2.0
+		out.append(Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0))
+	return out
+
+
+## Draw the counters on the HUD, over the badges and names.
+func draw_armies(ci: CanvasItem) -> void:
+	var markers := army_markers()
+	_drawn_armies = markers.size()
+	ArmyCounters.draw(ci, _repo, markers, _selected_army)
+
+
+func drawn_army_count() -> int:
+	return _drawn_armies
+
+
+func selected_army() -> String:
+	return _selected_army
+
+
 ## Draw the badges on the HUD, over the kingdom names.
 func draw_badges(ci: CanvasItem) -> void:
 	var badges := manor_badges()
@@ -1409,6 +1497,15 @@ func pick_at(pos: Vector2) -> Dictionary:
 	var best_d := INF
 	var fade_start := _repo.bal("map3d_ring_fade_start")
 	var eye := _camera.global_position
+	# A regiment's counter is picked first, as on the 2D map: anywhere on it,
+	# or within map_army_pick_px of the point it stands on.
+	var armies := army_markers()
+	for i in range(armies.size() - 1, -1, -1):
+		if (armies[i]["rect"] as Rect2).has_point(pos):
+			return {"kind": "army", "code": String(armies[i]["code"])}
+	for i in range(armies.size() - 1, -1, -1):
+		if (armies[i]["pos"] as Vector2).distance_to(pos) <= _repo.bal("map_army_pick_px"):
+			return {"kind": "army", "code": String(armies[i]["code"])}
 	# An ECONOMY badge names the settlement whose output it shows (as on the
 	# 2D map), over whatever lies under it.
 	for b: Dictionary in manor_badges():
@@ -1462,6 +1559,9 @@ static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dict
 			province = String(picked["code"])
 		"manor":
 			province = MapManors.province_of(repo, int(picked["cell"]), state)
+		"army":
+			var k := String(ArmySystem.regiment(repo, String(picked["code"])).get("kingdom_code", ""))
+			return k if repo.kingdoms.has(k) else ""
 	if province == "":
 		return ""
 	var holder := MapOwnership.owner_of(repo, state, province)
@@ -1472,7 +1572,7 @@ static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dict
 ## cursor, and — only when it changes — the kingdom's wider outline and
 ## country_hovered. Public: tests drive it without a ray.
 func hover_pick(picked: Dictionary, pos: Vector2) -> void:
-	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor"] else {}
+	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor", "army"] else {}
 	if obj != _hover_obj:
 		_hover_obj = obj
 		var label := MapObjects.label_of(_repo, obj)
@@ -1549,6 +1649,7 @@ func select_at(pos: Vector2) -> void:
 	match String(picked.get("kind", "")):
 		"burg":
 			var code := String(picked["code"])
+			_selected_army = ""
 			_set_selected_province("")
 			_selected_burg = code
 			_show_selected_ring(code)
@@ -1556,11 +1657,23 @@ func select_at(pos: Vector2) -> void:
 				"obj": {"kind": "burg", "code": code}})
 		"province":
 			_selected_burg = ""
+			_selected_army = ""
 			_show_selected_ring("")
 			_set_selected_province(String(picked["code"]))
 			province_selected.emit(_selected_province)
+		"army":
+			var code := String(picked["code"])
+			_selected_burg = ""
+			_show_selected_ring("")
+			_set_selected_province("")
+			_selected_army = code
+			if _hud != null:
+				_hud.refresh()
+			object_selected.emit({"title": MapObjects.label_of(_repo, picked),
+				"obj": {"kind": "army", "code": code}})
 		"manor":
 			var cell := int(picked["cell"])
+			_selected_army = ""
 			_selected_burg = ""
 			_show_selected_ring("")
 			_selected_province = ""
@@ -1583,7 +1696,12 @@ func _set_selected_province(code: String) -> void:
 
 ## Forget the selection (the card was closed, or the sea clicked).
 func clear_selection() -> void:
-	var had := _selected_burg != "" or _selected_province != "" or _selected_manor >= 0
+	var had := _selected_burg != "" or _selected_province != "" or _selected_manor >= 0 \
+		or _selected_army != ""
+	if _selected_army != "":
+		_selected_army = ""
+		if _hud != null:
+			_hud.refresh()
 	_selected_burg = ""
 	_show_selected_ring("")
 	_set_selected_province("")

@@ -1447,7 +1447,7 @@ static func _describe_army(repo: DataRepository, code: String, state: GameState 
 		lines.append("Morale: %d / 100" % int(st["morale"]))
 		lines.append("Wounded: %d" % int(st["wounded"]))
 		lines.append("Supplies: %d (%s months)" % [supplies,
-			ScaleBar.trim_zeros(snappedf(float(supplies) / float(use), 0.1)) if use > 0 else "-"])
+			("%.1f" % (float(supplies) / float(use))) if use > 0 else "-"])
 		lines.append("Training: %s" % ArmySystem.training_grade(repo, int(st["training"])))
 		lines.append("Strength: %s" % ArmySystem.strength_grade(repo, state, code))
 		lines.append("Ground: %s" % ArmySystem.terrain_label(repo, r))
@@ -1513,6 +1513,9 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		stats.append(_stat("army_training", drill, "Training — %s" % drill))
 		var might := ArmySystem.strength_grade(repo, state, code)
 		stats.append(_stat("army_strength", might, "Strength — %s against the realm's others of its kind" % might))
+		var km := ArmySystem.speed_km_per_day(repo, state, code)
+		stats.append(_stat("army_march", "%.1f km/day" % km,
+			"March — %.1f km a day: its slowest arm's pace, slowed by short supplies, low morale and little training" % km))
 	return {
 		"kind": "army", "code": code, "title": label,
 		"subtitle": "%s of %s" % ["Fleet" if naval else "Regiment", _label(repo.kingdoms, kingdom)],

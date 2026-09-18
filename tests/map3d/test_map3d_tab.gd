@@ -1,8 +1,8 @@
 extends GutTest
 ## The 3D map is the default map (owner 2026-09-18, spec
 ## 2026-09-18-map3d-default-design.md): the map panel shows Map3DView
-## whenever the pack has a built scene and no 2D-only layer (HEIGHTS,
-## MILITARY; ECONOMY and MANORS draw on both since 2026-09-19) is on, and the
+## whenever the pack has a built scene and no 2D-only layer (HEIGHTS alone;
+## ECONOMY, MANORS and MILITARY draw on both since 2026-09-19) is on, and the
 ## 2D WorldMapView otherwise.
 ## The scene is git-ignored, so every test forces its presence through
 ## GameRoot.force_map3d_scene; an unbuilt view still swaps in and shows its
@@ -46,7 +46,7 @@ func test_the_court_opens_on_the_3d_map() -> void:
 
 func test_each_2d_only_layer_shows_the_2d_map_and_closing_it_returns_to_3d() -> void:
 	var r: GameRoot = await _court()
-	for setter: String in ["set_height_view", "set_army_view"]:
+	for setter: String in ["set_height_view"]:
 		r.call(setter, true)
 		assert_false(r.map3d_view(), setter + " on: 2D")
 		assert_true(r.current_screen.world_map().visible, setter + " on: the 2D map shows")

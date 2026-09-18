@@ -107,6 +107,8 @@ func _draw() -> void:
 	view.draw_labels(self)
 	# ECONOMY's output badges (owner 2026-09-19), over the names.
 	view.draw_badges(self)
+	# MILITARY's counters (owner 2026-09-19), over everything on the ground.
+	view.draw_armies(self)
 	_draw_compass_backdrop()
 	ScaleBar.draw(self, scale_bar_for(view.metres_per_pixel() * view.map_units_per_metre(),
 		Game.data.bal("map_scale_bar_max_px"), view.map_unit()), size, _hud_halo())

@@ -102,3 +102,17 @@ func test_the_regiments_card_shows_its_state_and_its_march() -> void:
 	assert_string_contains(text, "March: %.1f km a day" % ArmySystem.speed_km_per_day(Game.data, Game.state, code))
 	assert_string_contains(text, "Supplies:")
 	assert_string_contains(text, "Wounded:")
+
+
+func test_the_regiments_detail_card_carries_its_march() -> void:
+	Game.start_campaign(42)
+	var mine := Game.data.resolve_realm("player_realm")
+	var code := String(MapObjects.regiments_of(Game.data, mine)[0]["regiment_code"])
+	var card := MapObjects.army_card(Game.data, code, Game.state)
+	var march: Dictionary = {}
+	for s: Dictionary in card["stats"]:
+		if String(s["key"]) == "army_march":
+			march = s
+	assert_false(march.is_empty(), "the card's icons include the march")
+	assert_eq(String(march["text"]), "%.1f km/day" % ArmySystem.speed_km_per_day(Game.data, Game.state, code))
+	assert_true(Game.data.resource_icons.has("army_march"), "with its icon row")

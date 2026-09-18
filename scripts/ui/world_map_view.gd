@@ -638,54 +638,15 @@ func army_markers() -> Array:
 	if not show_armies or _terrain_mesh == null or Game.data == null:
 		return []
 	var repo := Game.data
-	var mine := repo.resolve_realm("player_realm")
-	var royal := MapObjects.royal_regiment(repo, mine)
 	var h := army_badge_height()
-	var pad := repo.bal("map_army_count_pad_px")
-	var gap := repo.bal("map_army_stack_gap_px")
-	var font_px := maxi(int(round(h * repo.bal("map_army_font_frac"))), 1)
-	var font := UiPalette.body_font()
-	var color := army_count_color(mine)
 	var frame := Rect2(Vector2.ZERO, size).grow(h * 4.0)
-	var out: Array = []
-	for r: Dictionary in MapObjects.regiments_of(repo, mine):
+	var points: Array = []
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
 		var sp := map_to_screen(Vector2(float(r["x"]), float(r["y"])))
-		if not frame.has_point(sp):
-			continue
-		var code := String(r["regiment_code"])
-		var strength := MapObjects.regiment_size(repo, r)
-		var naval := String(r.get("is_naval", "0")) == "1"
-		var text := str(int(strength))
-		var count_w := maxf(h, _text_width(font, text, font_px) + pad * 2.0)
-		var w := h + count_w
-		out.append({"code": code, "pos": sp, "size": strength, "text": text,
-			"font_px": font_px, "rect": Rect2(sp - Vector2(w, h) / 2.0, Vector2(w, h)),
-			"glyph": "waves" if naval else ("crown" if code == royal else "swords"),
-			"piece": MapObjects.army_piece(repo, r),
-			"color": color, "naval": naval, "royal": code == royal})
-	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var ay := (a["pos"] as Vector2).y
-		var by := (b["pos"] as Vector2).y
-		return String(a["code"]) < String(b["code"]) if ay == by else ay < by)
-	# The settlements are obstacles from the start: counters only ever move
-	# down, so a counter meeting a town drops to just under its drawing.
-	var placed: Array = settlement_marks()
-	for m: Dictionary in out:
-		var rect: Rect2 = m["rect"]
-		# Each push can land on another obstacle, so go round again until the
-		# rect is clear; every pass moves it strictly down, so this ends.
-		var moved := true
-		while moved:
-			moved = false
-			for other: Rect2 in placed:
-				if rect.intersects(other.grow(gap * 0.5)):
-					rect.position.y = other.end.y + gap
-					moved = true
-		placed.append(rect)
-		m["rect"] = rect
-		m["icon"] = Rect2(rect.position, Vector2(h, h))
-		m["count"] = Rect2(rect.position + Vector2(h, 0.0), Vector2(rect.size.x - h, h))
-	return out
+		if frame.has_point(sp):
+			points.append({"reg": r, "pos": sp})
+	# ArmyCounters (shared with the 3D map) keeps them clear of the towns.
+	return ArmyCounters.layout(repo, points, h, settlement_marks())
 
 ## A counter's height in screen px: map_army_badge_native_px of the map,
 ## times the zoom — it grows and shrinks with the map (owner 2026-09-17) —
@@ -721,69 +682,13 @@ func settlement_marks() -> Array:
 		out.append(Rect2(sp - Vector2(r, r), Vector2(r, r) * 2.0))
 	return out
 
-## The colour of a realm's headcount box: the realm's own hue, pushed to at
-## least map_army_count_sat and set at map_army_count_val, so the box reads as
-## a solid counter over that realm's pale wash rather than disappearing into it.
 func army_count_color(kingdom_code: String) -> Color:
-	var c := MapPalette.color_of(Game.data, kingdom_code)
-	return Color.from_hsv(c.h, maxf(c.s, Game.data.bal("map_army_count_sat")),
-		Game.data.bal("map_army_count_val"))
-
-func _text_width(font: Font, text: String, font_px: int) -> float:
-	if font == null:
-		return float(text.length() * font_px) * 0.6
-	return font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_px).x
-
-## Text centred in a rect, on the font's own ascent and descent so digits sit
-## in the middle of the box rather than on its floor.
-func _draw_centered_text(font: Font, rect: Rect2, text: String, font_px: int, color: Color) -> void:
-	if font == null:
-		return
-	var asc := font.get_ascent(font_px)
-	var desc := font.get_descent(font_px)
-	var base := Vector2(rect.position.x + (rect.size.x - _text_width(font, text, font_px)) * 0.5,
-		rect.position.y + (rect.size.y - asc - desc) * 0.5 + asc)
-	draw_string(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_px, color)
+	return ArmyCounters.count_color(Game.data, kingdom_code)
 
 ## Each regiment as its counter. An army is a counter on the map, not part of
 ## the terrain, so it holds its size at every zoom.
 func _draw_armies() -> void:
-	var markers := army_markers()
-	if markers.is_empty():
-		return
-	var repo := Game.data
-	var outline := MapPalette.named(repo, "army_outline")
-	var icon_bg := MapPalette.named(repo, "army_icon_bg")
-	var glyph_ink := MapPalette.named(repo, "army_glyph")
-	var count_ink := MapPalette.named(repo, "army_count_ink")
-	var line := repo.bal("map_army_outline_px")
-	var glyph_frac := repo.bal("map_army_glyph_frac")
-	var font := UiPalette.body_font()
-	for m: Dictionary in markers:
-		var rect: Rect2 = m["rect"]
-		var icon: Rect2 = m["icon"]
-		var count: Rect2 = m["count"]
-		# The painted 3D piece (owner 2026-09-15, data/army_art.csv) stands in the
-		# counter's square on its own base; the glyph square only without art.
-		# A layer of a few dozen counters at most, so one texture draw each.
-		var art := UiPalette.load_art(String((repo.army_art.get(String(m["piece"]), {}) as Dictionary).get("texture", "")))
-		if art != null:
-			draw_rect(count.grow(line), outline)
-			draw_rect(count, m["color"])
-			# Fitted to the square's HEIGHT: a piece is wider than tall, and fitted
-			# to its width it read as a flat disc; the overhang is a few px.
-			var ts := art.get_size()
-			var drawn := ts * (icon.size.y / ts.y)
-			draw_texture_rect(art, Rect2(icon.position + (icon.size - drawn) * Vector2(0.5, 1.0), drawn), false)
-		else:
-			draw_rect(rect.grow(line), outline)
-			draw_rect(icon, icon_bg)
-			draw_rect(count, m["color"])
-			draw_line(Vector2(icon.end.x, rect.position.y), Vector2(icon.end.x, rect.end.y),
-				outline, line)
-			ResourceIcon.draw_glyph(self, String(m["glyph"]), icon.get_center(),
-				icon.size.y * glyph_frac, glyph_ink)
-		_draw_centered_text(font, count, String(m["text"]), int(m["font_px"]), count_ink)
+	ArmyCounters.draw(self, Game.data, army_markers())
 
 ## Triangulate every province loop once, in native coordinates. Province
 ## outlines are concave, so a fan fill would bleed outside the shape; the

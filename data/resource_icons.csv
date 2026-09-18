@@ -93,3 +93,4 @@ army_wounded,Wound recovery,cross,The wounded who return to the ranks each month
 army_supply,Supplies,grain,The supplies the regiment holds and what it uses each month.,
 army_training,Training,shield,"How well drilled the regiment is.",
 army_strength,Strength,swords,"How the regiment measures against the realm's others of its kind.",
+army_march,March,horseshoe,"How far the regiment marches in a day: its slowest arm's pace, slowed by short supplies, low morale and little training (owner 2026-09-19).",
