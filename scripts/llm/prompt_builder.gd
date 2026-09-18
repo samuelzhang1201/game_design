@@ -45,22 +45,6 @@ static func persona_context(id: String, state: GameState, data: DataRepository) 
 		lines += "\nWhat you know and believe:\n" + knowledge
 	return lines
 
-static func briefing_prompts(report: TickReport, state: GameState) -> Dictionary:
-	var personas := ""
-	for seat in state.council:
-		var c: Character = state.characters[state.council[seat]]
-		personas += "- %s, %s. Traits: %s. Opinion of the ruler: %d.\n" % [
-			c.display_name, c.seat, ", ".join(c.traits), c.opinion]
-		var rels := RelationshipGraph.describe_for(state, c.id, 3)
-		if rels != "":
-			personas += "  Relations: %s\n" % rels.replace("\n", "; ")
-	var system := """You write in-character dialogue for a medieval royal council.
-Voice ONLY what the report contains — never invent numbers, actions, or events.
-One short paragraph per speaking minister, plain prose, no markdown.
-Council:
-%s""" % personas
-	return {"system": system, "user": JSON.stringify(report.to_dict(), "", true)}
-
 static func parse_prompts(player_text: String, report: TickReport, state: GameState,
 		data: DataRepository) -> Dictionary:
 	var catalog := ""
@@ -86,25 +70,7 @@ tone is one of respectful|neutral|curt|flattering|threatening|dismissive.%s
 Current tick: %d.""" % [catalog, ids, event_ctx + promise_rule, report.tick]
 	return {"system": system, "user": player_text}
 
-## In-character conversational reply: the player's free text parsed to no
-## action, so a role answers them directly ("who are you", "what do you make
-## of the marshal"). The persona sheet (attributes, traits, live
-## relationships) is the whole context; the model may only speak — it cannot
-## decide actions or state (those go through parse_prompts + the validator).
-static func converse_prompts(speaker_id: String, player_text: String,
-		state: GameState, data: DataRepository) -> Dictionary:
-	var system := """You roleplay one character at a medieval royal court, speaking to the ruler.
-Your character:
-%s
-The realm today (engine truth — quote these numbers, never invent others):
-%s
-Answer the ruler in character, first person, 1-3 sentences of plain prose.
-You cannot perform actions, issue orders, or change anything — you may only speak.
-Never invent events, numbers, or people beyond your character sheet and the realm facts.""" % \
-		[persona_context(speaker_id, state, data), realm_facts(state)]
-	return {"system": system, "user": player_text}
-
-## Compact engine-truth snapshot for conversational answers ("how is my
+## Compact engine-truth snapshot for a typed order's reply ("how is my
 ## army?" must be answered from these, not hallucinated).
 static func realm_facts(state: GameState) -> String:
 	var parts: Array = []

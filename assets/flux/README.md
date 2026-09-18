@@ -32,7 +32,6 @@ assets: Apache 2.0, commercial use allowed, undistilled, 20 steps, CFG 4.0
 | `post.py` + `post_cutout_template.json` | Post-processing through ComfyUI: BiRefNet cut-out → alpha → lanczos resize. Tiers `full` (660 tall), `chip` (96²), `icon` (256²), `mark` (256 tall). Writes `out/game/<tier>/<ID>.png`. Needs `models/background_removal/birefnet.safetensors`. `--tone` white-balances to the paper colour `#EDE3CE` (measured on the source, applied to the result); `--no-trim` keeps empty margins. |
 | `sepia_alpha_template.json` | The D- map-symbol cut-out as a ComfyUI graph (blue channel → ink coverage → alpha, cropped to the drawing). `install_map_art.py` does the same arithmetic locally. |
 | `install_map_art.py` | Turns renders into game assets, one chapter per call (below). Mapping tables: `goods_art`, `decor_art`, `estate_art`, `estate_paint_art`, `army_paint_art`, `building_art`, `biome_art`, `ui_icon_art`, `cast_art`, `arms_art` `.csv` (pipeline tables, not runtime data). |
-| `install_settlement_art.py` | The painted settlement tiers' installer (2026-09-16). The current aerial settlements were cut out by a one-off white-paper flood (see CLAUDE.md), which is not kept here. |
 | `export_ui_workflows.py` + `CC *.workflow.json` | Export the API templates, filled with the current style text, as ComfyUI UI workflows into the local `user/default/workflows/` so they can be opened and tried by hand. |
 
 ## Usage

@@ -14,46 +14,26 @@ func test_parse_prompt_lists_actions_and_schema() -> void:
 	assert_string_contains(p["system"], "JSON")
 	assert_string_contains(p["user"], "cut taxes by one")
 
-func test_briefing_prompt_carries_personas_and_report() -> void:
-	var s := GameState.new_campaign(data, 42)
-	s.metrics["grain"] = 10.0
-	var r := TickEngine.new(data).advance(s)
-	var p := PromptBuilder.briefing_prompts(r, s)
-	assert_string_contains(p["system"], "Aldwin Reeve")
-	assert_string_contains(p["user"], "grain")
-
-func test_converse_prompt_carries_persona_and_speech_only_rule() -> void:
-	var s := GameState.new_campaign(data, 42)
-	var p := PromptBuilder.converse_prompts("char_marshal", "who are you", s, data)
-	assert_string_contains(p["system"], "Ser Brandt of Harrow")
-	assert_string_contains(p["system"], "House Harrow")
-	assert_string_contains(p["system"], "Relationships:")
-	assert_string_contains(p["system"], "you may only speak")
-	# Realm facts ground answers like "how is my army?" in engine truth.
-	s.metrics["army_quality"] = 47.0
-	p = PromptBuilder.converse_prompts("char_marshal", "how is my army?", s, data)
-	assert_string_contains(p["system"], "army_quality 47")
-	assert_string_contains(p["system"], "treasury")
-	assert_eq(p["user"], "how is my army?")
-
 ## Review finding 2026-09-01: the persona sheet now carries the speaker's
 ## knowledge — and ONLY theirs. The isolation is structural: a secret a
 ## character does not know never enters their context window at all.
-func test_converse_prompt_carries_only_the_speakers_knowledge() -> void:
+func test_order_prompt_carries_only_the_speakers_knowledge() -> void:
 	var s := GameState.new_campaign(data, 42)
-	var steward := PromptBuilder.converse_prompts("char_steward", "hm", s, data)
+	var r := TickEngine.new(data).advance(s)
+	var steward := PromptBuilder.order_prompts("hm", "char_steward", r, s, data)
 	assert_string_contains(steward["system"], "What you know and believe:")
 	assert_string_contains(steward["system"], "skimmed the treasury",
 		"the steward knows the graft secret, so her sheet carries it")
-	var marshal := PromptBuilder.converse_prompts("char_marshal", "hm", s, data)
+	var marshal := PromptBuilder.order_prompts("hm", "char_marshal", r, s, data)
 	assert_false(marshal["system"].contains("skimmed the treasury"),
 		"a secret never enters a non-knower's context window")
 
-func test_converse_prompt_carries_the_characters_own_replies() -> void:
+func test_order_prompt_carries_the_characters_own_replies() -> void:
 	var s := GameState.new_campaign(data, 42)
+	var r := TickEngine.new(data).advance(s)
 	AgentMemory.remember(data, s, "char_marshal", "char_marshal",
 		"The border holds, my lord.", ["char_marshal"], "war_room", 2)
-	var p := PromptBuilder.converse_prompts("char_marshal", "hm", s, data)
+	var p := PromptBuilder.order_prompts("hm", "char_marshal", r, s, data)
 	assert_string_contains(p["system"],
 		'You replied, privately: "The border holds, my lord."')
 

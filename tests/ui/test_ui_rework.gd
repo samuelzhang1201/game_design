@@ -444,7 +444,7 @@ func test_transcript_names_are_colored_per_speaker() -> void:
 	assert_ne(ConversationScene._speaker_color("You"), c1)
 
 ## The bottom tab strip must be tall enough for its own buttons. BAR_HEIGHT
-## is a constant because NewsTicker, DayRunScreen and ScreenLayout all place
+## is a constant because NewsTicker and ScreenLayout both place
 ## themselves off it — so the relation gets a test instead of a computation.
 ## It broke once in exactly this way: the design viewport went 640x360 ->
 ## 1280x720, every font size doubled with it, and the tabs fell off the

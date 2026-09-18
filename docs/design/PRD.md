@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft v2.0 — MVP redefined as a complete Chapter 1 (supersedes v1.1's "first playable") |
+| **Status** | Draft v2.0 — MVP redefined as a complete Chapter 1 (supersedes v1.1's "first playable"). Owner 2026-09-18: the MVP is a **complete first chapter with every feature, all of its art and all of its gameplay** — nothing placeholder, nothing "for later" inside Chapter 1 |
 | **Date** | 2026-09-04 (statuses and facts re-aligned with the code and `CLAUDE.md` on 2026-09-18) |
 | **Author** | Yumeng Zhang |
 | **Scope** | Chapter 1, fully functional and fully illustrated: base loop + Council System through faction stage 6 (Tomas only) + chapter framework + raid defense + all chapter-1 art |
@@ -228,6 +228,18 @@ Validated with ~5 fresh playtesters on the Chapter 1 MVP:
 6. **AI opponent kingdoms**; broader map/economy/military sim; Steam packaging + key-proxy backend. *(Parts of the map/economy/military sim have already been built — the manor economy, the regiment state, territory as state — see §2 non-goals note.)*
 
 ## 11. Open questions (owed answers before/while building)
+
+**Answered by the owner, 2026-09-18** (after the documents were re-aligned with the code):
+
+- **Build order:** §6 stands unchanged and strict, even though the map, the manor economy, the regiments and the UI were built ahead of Steps 3–9.
+- **MVP:** a complete first chapter — every feature, all art, all gameplay (Status, above).
+- **Event cooldowns** are to be **redesigned**: the draft's `cooldown_ticks` were written for half-month ticks and now read as years of months (`RANDOM_EVENTS.md`).
+- **DAY_RUN** (the end-turn calendar screen, unreachable since End Turn went) is **removed** from the game.
+- **Nations:** the design counts **8** kingdoms; the size of the action set is not decided yet.
+- **Queen Isabeau's direction** ("north" in the story, "eastern border" in `relationships.csv`) waits for the owner's map update.
+- **Model configuration** stays as it is (defaults in `OpenAIClient.load_config`, overlaid by `.env` and `user://config.json`).
+
+Still open:
 
 - Full base-game action taxonomy and effect formulas — needs its own design doc (the manor orders are specified in `docs/design/MANOR_SYSTEM.md`); `FORTIFY_BORDER`/`MUSTER_DRILL` (RD-2) land with it.
 - Arc condition specifics: exact thresholds/dwell times for CH-1/CH-5 and the §7.1 resolution tests (tune in playtest; live in `chapter_arcs.csv`).

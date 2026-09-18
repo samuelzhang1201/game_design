@@ -12,9 +12,9 @@ extends Control
 ##      tooltip. Remember Sprite2D positions from its center: place it at
 ##      (24, 24) to sit inside the 48x48 portrait box.
 ##
-## CHIP ART: assets/portraits/<id>.png are 96x96 head crops derived from the
-## user-provided art by tools/make_portrait_chips.gd (the old pixel art is
-## retired). Roles without provided art fall back to a seat-colored initial.
+## CHIP ART: assets/portraits/<id>.png are 96x96 chips, installed from the
+## library's K- renders by assets/flux/install_map_art.py cast (the old pixel
+## art is retired). Roles without art fall back to a seat-colored initial.
 ##
 ## Instantiate via CharacterPortrait.instantiate_for(id) - it picks the
 ## character's own scene when one exists, else the base scene.

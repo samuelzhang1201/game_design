@@ -20,28 +20,8 @@ var data: DataRepository
 # Reassigning a member variable through the implicit `self` does propagate.
 var got: Dictionary = {}
 
-# For the overlapping-call test below; same by-value-capture reasoning as `got`.
-var got_a: Dictionary = {}
-var got_b: Dictionary = {}
-var calls_a := 0
-var calls_b := 0
-
 func before_each() -> void:
 	data = DataRepository.load_all("res://data")
-
-func test_briefing_falls_back_to_template_on_failure() -> void:
-	var fake := FakeClient.new()
-	add_child_autofree(fake)
-	var v := Voicer.new(fake)
-	add_child_autofree(v)
-	var s := GameState.new_campaign(data, 42)
-	var r := TickEngine.new(data).advance(s)
-	got = {}
-	v.voice_briefing(r, s, data, func(res): got = res)
-	await wait_frames(3)
-	assert_true(got["ok"])
-	assert_true(got["degraded"])
-	assert_gt(got["lines"].size(), 0)  # template lines
 
 func test_parse_path_validates_model_output() -> void:
 	var fake := FakeClient.new()
@@ -73,37 +53,6 @@ func test_parse_bad_model_output_reports_error_not_crash() -> void:
 	await wait_frames(3)
 	assert_false(got["ok"])
 	assert_ne(got["error"], "")
-
-func test_converse_returns_in_character_reply() -> void:
-	var fake := FakeClient.new()
-	fake.canned_ok = true
-	fake.canned_text = "I am Aldwin Reeve, my lord, your Chancellor these eleven years."
-	add_child_autofree(fake)
-	var v := Voicer.new(fake)
-	add_child_autofree(v)
-	var s := GameState.new_campaign(data, 42)
-	got = {}
-	v.converse("char_chancellor", "who are you", s, data, func(res): got = res)
-	await wait_frames(3)
-	assert_true(got["ok"])
-	assert_false(got["degraded"])
-	assert_eq(got["speaker_id"], "char_chancellor")
-	assert_eq(got["speaker"], "Aldwin Reeve")
-	assert_string_contains(got["text"], "Chancellor")
-
-func test_converse_falls_back_to_template_on_failure() -> void:
-	var fake := FakeClient.new()  # canned_ok=false: the "offline"/error path
-	add_child_autofree(fake)
-	var v := Voicer.new(fake)
-	add_child_autofree(v)
-	var s := GameState.new_campaign(data, 42)
-	got = {}
-	v.converse("char_chancellor", "who are you", s, data, func(res): got = res)
-	await wait_frames(3)
-	assert_true(got["ok"])
-	assert_true(got["degraded"])
-	# converse_fallback templates all name the speaker.
-	assert_string_contains(got["text"], "Aldwin Reeve")
 
 func test_submit_free_text_conversational_ride_along_replies() -> void:
 	# "Marshal, who are you" parses to no action; the minister the player
@@ -151,39 +100,6 @@ func test_submit_free_text_consult_gets_in_character_reply() -> void:
 	assert_eq(String(got["reply"]["speaker_id"]), "char_marshal",
 		"the consult's target seat answers")
 
-func test_overlapping_briefing_calls_both_fire_exactly_once() -> void:
-	var fake := FakeClient.new()
-	fake.canned_ok = true
-	fake.canned_text = "hear ye, the harvest is good"
-	add_child_autofree(fake)
-	var v := Voicer.new(fake)
-	add_child_autofree(v)
-	var s := GameState.new_campaign(data, 42)
-	var r := TickEngine.new(data).advance(s)
-	got_a = {}
-	got_b = {}
-	calls_a = 0
-	calls_b = 0
-	v.voice_briefing(r, s, data, func(res): got_a = res; calls_a += 1)
-	# Second call arrives while the first is still in flight (FakeClient's
-	# completed signal is call_deferred, so no frame has passed yet). The
-	# busy guard must resolve it immediately with a degraded fallback rather
-	# than let it cross-fire with the first call's one-shot listener.
-	v.voice_briefing(r, s, data, func(res): got_b = res; calls_b += 1)
-	assert_eq(calls_b, 1)
-	assert_true(got_b["ok"])
-	assert_true(got_b["degraded"])
-	assert_gt(got_b["lines"].size(), 0)
-	await wait_frames(3)
-	assert_eq(calls_a, 1)
-	assert_true(got_a["ok"])
-	assert_false(got_a["degraded"])
-	assert_eq(got_a["lines"][0]["text"], "hear ye, the harvest is good")
-
-## The two former tier tests (template short-circuits, mini degrades on
-## failure) collapse into one stronger guarantee: NO event reaches a model,
-## whatever its data says. The old `voice` values are passed deliberately —
-## a surviving tier branch would make this fail.
 func test_voice_event_never_calls_the_model_whatever_the_voice_value() -> void:
 	var s := GameState.new_campaign(data, 42)
 	for tier in ["template", "mini", "flagship"]:

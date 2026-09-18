@@ -465,8 +465,7 @@ func test_create_instantiates_from_the_scene_file() -> void:
 	assert_not_null(v.card(), "and is fully wired")
 
 func test_every_gameplay_screen_uses_the_map_scene() -> void:
-	for path in ["res://scenes/court.tscn", "res://scenes/conversation.tscn",
-			"res://scenes/day_run.tscn"]:
+	for path in ["res://scenes/court.tscn", "res://scenes/conversation.tscn"]:
 		var screen: Control = load(path).instantiate()
 		add_child_autofree(screen)
 		await wait_frames(1)

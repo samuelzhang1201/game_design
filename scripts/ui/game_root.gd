@@ -6,12 +6,13 @@ extends Control
 ## button (via Game.menu_requested) or Esc opens Resume / Save / Load /
 ## Restart / Quit to Desktop.
 
-enum State {MENU, CONVERSATION, COURT, DAY_RUN}
+## DAY_RUN (the end-turn calendar screen) was removed 2026-09-18 (owner):
+## time runs on the clock in COURT and CONVERSATION, and nothing led there.
+enum State {MENU, CONVERSATION, COURT}
 
 const MENU_SCENE := preload("res://scenes/main_menu.tscn")
 const CONVERSATION_SCENE := preload("res://scenes/conversation.tscn")
 const COURT_SCENE := preload("res://scenes/court.tscn")
-const DAY_RUN_SCENE := preload("res://scenes/day_run.tscn")
 
 const BGM_PATH := "res://assets/BGM.mp3"
 const BGM_VOLUME_DB := -12.0
@@ -475,9 +476,6 @@ func _switch_to(new_state: State) -> void:
 			current_screen.finished.connect(_on_conversation_finished)
 		State.COURT:
 			current_screen = COURT_SCENE.instantiate()
-		State.DAY_RUN:
-			current_screen = DAY_RUN_SCENE.instantiate()
-			current_screen.finished.connect(_on_day_run_finished)
 	add_child(current_screen)
 	# The province view follows the player across screens: the new screen's
 	# map takes the tab's state, and the map's own P key reports back.
@@ -552,10 +550,6 @@ func _on_menu_load_from_title() -> void:
 	else:
 		_switch_to(State.COURT)
 		current_screen.enter_court(null)
-
-func _on_day_run_finished() -> void:
-	_switch_to(State.CONVERSATION)
-	current_screen.start(ConversationBeats.build(_pending_report, Game.state, Game.data), _pending_report)
 
 ## The conversation stage already spoke the event/concerns/pitches/outcomes
 ## (spec §3, R2); COURT re-entered after it shows only the order-bar state

@@ -15,8 +15,8 @@ signal menu_requested
 @warning_ignore("unused_signal")
 signal relations_requested
 ## A chronicle headline for the persistent bottom news strip (user request
-## 2026-08-31). Emitted via publish_news — the CalendarOverlay feeds it as
-## the day-run rolls; the NewsTicker (GameRoot-owned) displays it.
+## 2026-08-31). Emitted via publish_news — GameRoot feeds it as works
+## progress and the month closes; the NewsTicker (GameRoot-owned) displays it.
 signal news_published(text: String)
 ## The clock's speed changed (owner 2026-09-13): 0 paused, 1, 2 or 4.
 signal clock_changed(speed: int)
@@ -149,7 +149,7 @@ func _ensure_llm() -> void:
 ## autoload, so its state outlives any one test) could hold a Voicer wrapping
 ## a client Node a *previous* test already freed (e.g. via
 ## add_child_autofree), and the next call that touches the LLM seam
-## (voice_briefing/submit_free_text) would connect a signal on a freed
+## (submit_free_text, an order) would connect a signal on a freed
 ## object.
 func _reset_llm() -> void:
 	if voicer != null:
@@ -158,15 +158,6 @@ func _reset_llm() -> void:
 	if client != null:
 		client.queue_free()
 		client = null
-
-## Voices the current tick's briefing through the Voicer (LLM-voiced when an
-## API key is configured, template-fallback with degraded=true otherwise —
-## see Voicer.voice_briefing). UI callers should route through here rather
-## than calling TemplateVoicer.render_briefing directly, so a configured key
-## is actually used.
-func voice_briefing(cb: Callable) -> void:
-	_ensure_llm()
-	voicer.voice_briefing(current_report, state, data, cb)
 
 ## Voices a pending event's scene through the Voicer (see Voicer.voice_event).
 ## UI callers should route through here rather than calling TemplateVoicer

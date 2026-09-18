@@ -22,8 +22,8 @@ const TABS := ["3D MAP", "HEIGHTS", "ECONOMY", "MANORS", "REALM", "MILITARY", "W
 ## the 2D map for the Terrain3D view (Map3DView); it puts the three 2D
 ## themes out, and they it.
 const TOGGLES := ["3D MAP", "HEIGHTS", "ECONOMY", "MANORS", "MILITARY"]
-## The strip's height. A constant on purpose — NewsTicker, DayRunScreen and
-## ScreenLayout all place themselves off it, so it cannot float — but it
+## The strip's height. A constant on purpose — NewsTicker and ScreenLayout
+## both place themselves off it, so it cannot float — but it
 ## must stay at least content_height(), and a test pins that. It went stale
 ## once: the design viewport doubled, every font size with it, and the tabs
 ## quietly fell off the bottom of the screen (owner report 2026-09-12).
@@ -62,7 +62,7 @@ func _ready() -> void:
 
 ## What the strip's buttons actually need, once their font size, their chip
 ## padding and the panel's own margins are counted. BAR_HEIGHT must be at
-## least this — the ticker, the day-run screen and ScreenLayout all place
+## least this — the ticker and ScreenLayout both place
 ## themselves off that constant, so it cannot float, and a test pins the
 ## relation instead. It went stale once already: the design viewport doubled,
 ## every font size with it, and the tabs quietly fell off the bottom of the

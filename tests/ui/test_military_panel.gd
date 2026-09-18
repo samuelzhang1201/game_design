@@ -72,10 +72,10 @@ func test_the_layer_survives_a_screen_change() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("MILITARY").pressed.emit()
 	await wait_frames(2)
-	r._switch_to(GameRoot.State.DAY_RUN)
+	r._switch_to(GameRoot.State.CONVERSATION)
 	await wait_frames(2)
 	assert_true(r.current_screen.world_map().show_armies,
-		"the day run's map draws the regiments too")
+		"the council stage's map draws the regiments too")
 
 ## The table it replaced refreshed live; the column does too.
 func test_the_column_follows_the_state_while_it_is_up() -> void:

@@ -63,10 +63,10 @@
 | 实体 | 目标规模 | 设计上限 | 备注 |
 |---|---|---|---|
 | 省份 (Province) | 1,500 | 4,000 | 来自 Azgaar 管线；上限即架构必须无痛支撑的值 |
-| 国家 (Nation) | 60 | 150 | 每个都跑 AI |
+| 国家 (Nation) | 8 | 150 | 每个都跑 AI (owner 2026-09-18: the design counts 8 kingdoms; 60 was the original envelope) |
 | 角色 (Character) | 800 活跃 | 3,000 | 含已故者的历史记录另计，不进热循环 |
 | 军队堆栈 (Army) | 200 | 600 | 战时峰值 |
-| 政策动作定义 | 76 | 300 | Defs，不随 tick 增长 |
+| 政策动作定义 | TBD | 300 | Defs，不随 tick 增长 (owner 2026-09-18: the action set is not decided; 76 was the draft) |
 | Trait 定义 | 41 | 200 | 同上 |
 | 单局总 tick 数 | ~1,200 | 4,000 | 300 年 × 变粒度回合 |
 
@@ -674,9 +674,9 @@ res://
 
 §3.1 按"省份"做预算；本项目的细粒度实体是 **manor**（地图包每个陆地格一块）。beria 包：3 500 块 manor、203 省、684 镇、5 061 条镇产线、71 种货物。因此 §3.2 的经济 tick 预算（≤ 8 ms，硬上限 16 ms）按 manor 数对照，3 500 落在本文 1 500–4 000 的区间内。经济 spec 用按天分桶（30 天 = 桶数，天然入存档）把月底结算控制在预算内，并以 `bench_economy` 度量。
 
-Other counts on beria (2026-09-18), against §3.1: 7 kingdoms (target 60),
+Other counts on beria (2026-09-18), against §3.1: 7 kingdoms (target 8, owner 2026-09-18),
 68 pack regiments, 29 policy action definitions (8 domain + 21 court
-additions, target 76), 45 traits (target 41), 21 named characters. Every
+additions, target not decided), 45 traits (target 41), 21 named characters. Every
 figure is far inside the envelope; only traits have passed their target.
 
 ### 11.3 留给锁定评审的两项决定

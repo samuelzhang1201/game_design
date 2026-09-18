@@ -35,7 +35,7 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 | `category` | `court` · `realm` · `folk` · `church` · `windfall` · `personal` |
 | `trigger` | `TriggerDsl` clauses joined by `&`: `always`, `season=<Season>`, `year>=N`, `trait_at_court=<trait>`, `seat_filled=<seat>`, `action_since=<ACTION>:<ticks>`, `flag=<flag>`, `<metric><N>` / `<metric>>N` |
 | `weight` | Relative sampling weight (a constant; state modifiers are not built) |
-| `cooldown_ticks` | Min months before this event can repeat (96 on most rows — 8 years now that a tick is a month; see open questions) |
+| `cooldown_ticks` | Min months before this event can repeat (96 on most rows — written for half-month ticks, 8 years now that a tick is a month; to be redesigned, owner 2026-09-18) |
 | `once` | `1` = fires at most once per campaign |
 | `voice` | Every row is `template`: the Scene prose is shown as written. The `mini` / `flagship` tags in the headings below are the original draft's voicing plan, superseded 2026-08-31 (owner: every event story is fixed, authored text) |
 | `title_key` | The event's title string |

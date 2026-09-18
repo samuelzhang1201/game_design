@@ -1,21 +1,6 @@
 class_name TemplateVoicer
 extends RefCounted
 
-static func render_briefing(report: TickReport, state: GameState, data: DataRepository) -> Array:
-	var lines: Array = []
-	var chancellor := _speaker_for_seat("chancellor", state)
-	lines.append({"speaker": chancellor["name"], "text": _line(data, "opener",
-		chancellor["traits"], report.tick, {"season": report.season, "year": report.year})})
-	for c in report.concerns:
-		var sp := _speaker_for_seat(c["seat"], state)
-		lines.append({"speaker": sp["name"], "text": _line(data, "concern_" + c["metric"],
-			sp["traits"], report.tick, {"value": int(c["value"])})})
-	for sug in report.suggestions:
-		var sp := _speaker_for_seat(sug["seat"], state)
-		lines.append({"speaker": sp["name"], "text": _line(data, "pitch_" + sug["pitch_key"],
-			sp["traits"], report.tick, {"tradeoff": sug["tradeoff"]})})
-	return lines
-
 static func render_outcomes(report: TickReport, state: GameState, data: DataRepository) -> Array:
 	var lines: Array = []
 	var chancellor := _speaker_for_seat("chancellor", state)

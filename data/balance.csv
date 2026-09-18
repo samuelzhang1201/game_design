@@ -52,7 +52,6 @@ road_income_gain,2,road_income_bonus added per road built
 opinion_drift_scale,20,scales alignment x sensitivity x (1-pragmatism) into opinion points
 prompt_max_chars,200,free-text order length cap (resource limit)
 prompt_calls_per_tick,6,LLM parse calls allowed per tick (resource limit; raised 3->6 2026-08-30 so location visits leave room to actually converse)
-dayrun_day_seconds,0.35,seconds per day in the end-turn day-run (R6; slowed 0.22->0.35 2026-08-31 so the chronicle reads as rolling news)
 relationship_drift_per_tick,0.5,edges heal toward their founding value with time
 source_trust_default,50,trust in a speaker with no relationship edge to the listener
 belief_threshold,55,claims at or above this belief are swallowed as fact

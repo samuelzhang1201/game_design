@@ -61,24 +61,6 @@ func test_published_news_joins_the_crawl_and_moves_leftward() -> void:
 	assert_gt(entries.get_child_count(), 0, "the history lists what was heard")
 	ticker.show_history(false)
 
-func test_chronicle_entries_publish_dated_headlines() -> void:
-	Game.start_campaign(42)
-	var got: Array = []
-	var handler := func(text: String) -> void: got.append(text)
-	Game.news_published.connect(handler)
-	var overlay := CalendarOverlay.new()
-	add_child_autofree(overlay)
-	await wait_frames(1)
-	overlay._tick = 2
-	overlay._day = 4
-	overlay._add_news("A pedlar swears he saw lights over the barrow hills.")
-	Game.news_published.disconnect(handler)
-	assert_eq(got.size(), 1, "each chronicle entry reaches the ticker feed")
-	assert_string_contains(String(got[0]),
-		"A pedlar swears he saw lights over the barrow hills.")
-	assert_string_contains(String(got[0]), Calendar.date_string(2, 4),
-		"the headline carries its chronicle date")
-
 ## The news bar carries a work's progress (owner 2026-09-14): 30%, 70% and
 ## complete, as the clock runs.
 func test_works_are_announced_at_their_milestones() -> void:
