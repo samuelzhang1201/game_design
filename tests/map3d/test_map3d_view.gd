@@ -369,3 +369,15 @@ func test_a_compass_press_that_moves_does_not_pan_or_select() -> void:
 	assert_eq(v.target(), t0, "a press-and-move that started on the compass never pans")
 	assert_signal_not_emitted(v, "object_selected")
 	assert_signal_not_emitted(v, "province_selected")
+
+
+func test_rivers_beside_the_scene_become_the_rivers_layer() -> void:
+	var f := FileAccess.open("user://rivers.json", FileAccess.WRITE)
+	f.store_string('{"rivers": [{"code": "a", "points": [[0, 0, 10, 6, 0], [500, 0, 9, 40, 1]]}]}')
+	f.close()
+	var v := _view()
+	v.activate()
+	var mi := v.viewport().get_node_or_null("Rivers") as MeshInstance3D
+	assert_not_null(mi)
+	assert_true("Rivers" in v.layer_names())
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://rivers.json"))

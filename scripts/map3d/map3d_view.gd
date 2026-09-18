@@ -33,13 +33,17 @@ const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
 const NOTICE_TEXT := "The 3D map has not been built for this map.\nRun tools/map3d (see tools/map3d/README.md)."
 const BORDER_SHADER := preload("res://scripts/map3d/border_line.gdshader")
 const RING_SHADER := preload("res://scripts/map3d/settlement_ring.gdshader")
+const RIVER_SHADER := preload("res://scripts/map3d/water_river.gdshader")
 ## The selection ring never thins by distance (fix round 1, owner 2026-09-18):
 ## whatever the player clicked stays marked regardless of zoom.
 const SELECTED_RING_ALWAYS_M := 1000000.0
 ## Lines and rings are see-through, ordered by render_priority so higher
-## tiers draw over lower ones and the selection ring draws over every tier
-## (Map3DBorders' lines use 0-2; rings start at 3, see _place_markers).
-const RING_PRIORITY_BASE := 3
+## tiers draw over lower ones and the selection ring draws over every tier.
+## The river water sits BELOW every line (0, set in _build_rivers) so a
+## border or seam always reads over the water it crosses; Map3DBorders'
+## lines take 1-3 (seams, kingdoms, selection — see refresh_borders /
+## _draw_selection); rings start at 4, see _place_markers.
+const RING_PRIORITY_BASE := 4
 ## A press and release further apart than this is a drag, not a click
 ## (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := 10.0
@@ -55,6 +59,8 @@ var _lines: Node3D
 var _notice: Label
 var _ring_mats: Array[ShaderMaterial] = []
 var _selected_ring: MultiMeshInstance3D
+var _water_normals: NoiseTexture2D
+var _river_mat: ShaderMaterial
 var _meta: Dictionary = {}
 var _bounds := Rect2()
 var _target := Vector2.ZERO
@@ -216,6 +222,7 @@ func _load() -> void:
 	_markers.name = "Markers"
 	_viewport.add_child(_markers)
 	_place_markers()
+	_build_rivers()
 	_lines = Node3D.new()
 	_lines.name = "Lines"
 	_viewport.add_child(_lines)
@@ -322,6 +329,57 @@ func _place_markers() -> void:
 	_update_line_scale()
 
 
+## The ripple normal map both waters share: seamless noise made at load.
+func water_normals() -> Texture2D:
+	if _water_normals == null:
+		var noise := FastNoiseLite.new()
+		noise.seed = int(_repo.bal("map3d_water_seed"))
+		noise.frequency = 0.03
+		noise.fractal_octaves = 3
+		_water_normals = NoiseTexture2D.new()
+		_water_normals.width = 256
+		_water_normals.height = 256
+		_water_normals.seamless = true
+		_water_normals.as_normal_map = true
+		_water_normals.bump_strength = 6.0
+		_water_normals.generate_mipmaps = true
+		_water_normals.noise = noise
+	return _water_normals
+
+
+## rivers.json beside the scene (tools/map3d) as the Rivers layer; none
+## without it. Split at each lake exit (Map3DRivers.parse) so a jump in the
+## water line never draws as a vertical wall.
+func _build_rivers() -> void:
+	var path := _scene_path.get_base_dir().path_join("rivers.json")
+	if not FileAccess.file_exists(path):
+		return
+	var courses := Map3DRivers.parse(FileAccess.get_file_as_string(path),
+		_repo.bal("map3d_river_split_rise_m"))
+	var arrays := Map3DRivers.ribbon_arrays(courses)
+	if arrays.is_empty():
+		return
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	_river_mat = ShaderMaterial.new()
+	_river_mat.shader = RIVER_SHADER
+	_river_mat.render_priority = 0
+	_river_mat.set_shader_parameter("water", MapTerrain.palette_color(_repo, "river", MapTerrain.FALLBACK))
+	_river_mat.set_shader_parameter("mouth_water", MapTerrain.palette_color(_repo, "sea_near", MapTerrain.FALLBACK))
+	_river_mat.set_shader_parameter("sky", MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK))
+	_river_mat.set_shader_parameter("ripples", water_normals())
+	_river_mat.set_shader_parameter("ripple_m", _repo.bal("map3d_river_ripple_m"))
+	_river_mat.set_shader_parameter("flow_m_s", _repo.bal("map3d_river_flow_m_s"))
+	_river_mat.set_shader_parameter("opacity", _repo.bal("map3d_river_opacity"))
+	mesh.surface_set_material(0, _river_mat)
+	var mi := MeshInstance3D.new()
+	mi.name = "Rivers"
+	mi.mesh = mesh
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 16384.0
+	_viewport.add_child(mi)
+
+
 ## A ring material; its sizes are design px, turned into window px with the
 ## lines' by _update_line_scale (base values kept as meta). max_view_m is
 ## world metres, never rescaled. The keyline is a fixed data value (fix
@@ -393,11 +451,11 @@ func refresh_borders() -> void:
 		rings.append_array(Map3DBorders.kingdom_lines(_repo, st, _meta, code, step))
 	_set_lines("Kingdoms", rings, MapPalette.named(_repo, "state_border"),
 		MapPalette.named(_repo, "state_border_light"), "map3d_border_width_px",
-		"map3d_border_dash_px", "map3d_border_gap_px", 1)
+		"map3d_border_dash_px", "map3d_border_gap_px", 2)
 	var seam := MapPalette.named(_repo, "map3d_seam")
 	seam.a = _repo.bal("map3d_seam_alpha")
 	_set_lines("Seams", Map3DBorders.seam_lines(_repo, st, _meta, step), seam,
-		Color(seam, 0.0), "map3d_seam_width_px", "map3d_seam_dash_px", "map3d_seam_gap_px", 0)
+		Color(seam, 0.0), "map3d_seam_width_px", "map3d_seam_dash_px", "map3d_seam_gap_px", 1)
 	_draw_selection()
 
 
@@ -459,6 +517,9 @@ func _update_line_scale() -> void:
 		mat.set_shader_parameter("lift_px", _repo.bal("map3d_ring_lift_px") * s)
 		mat.set_shader_parameter("ring_px", float(mat.get_meta("ring_px")) * s)
 		mat.set_shader_parameter("line_px", float(mat.get_meta("line_px")) * s)
+	if _river_mat != null:
+		_river_mat.set_shader_parameter("px_per_dist", per_dist)
+		_river_mat.set_shader_parameter("min_px", _repo.bal("map3d_river_min_px") * s)
 
 
 ## The clicked province's outline, solid gold over the borders.
@@ -475,7 +536,7 @@ func _draw_selection() -> void:
 			pts.append(pts[0])
 			lines.append(Map3DGeometry.resample(pts, _repo.bal("map3d_line_step_m")))
 	var gold := MapPalette.named(_repo, "map3d_selection")
-	_set_lines("Selection", lines, gold, gold, "map3d_selection_width_px", "", "", 2)
+	_set_lines("Selection", lines, gold, gold, "map3d_selection_width_px", "", "", 3)
 
 
 # --- camera and input ----------------------------------------------------------
