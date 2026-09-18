@@ -371,13 +371,21 @@ func _build_rivers() -> void:
 	_river_mat = ShaderMaterial.new()
 	_river_mat.shader = RIVER_SHADER
 	_river_mat.render_priority = 0
-	_river_mat.set_shader_parameter("water", MapTerrain.palette_color(_repo, "river", MapTerrain.FALLBACK))
-	_river_mat.set_shader_parameter("mouth_water", MapTerrain.palette_color(_repo, "sea_near", MapTerrain.FALLBACK))
-	_river_mat.set_shader_parameter("sky", MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK))
+	# terrain_palette's hex is sRGB; linearize before a spatial ALBEDO (fix
+	# round 1, owner 2026-09-18 — same bug as the sea's _dress_sea).
+	_river_mat.set_shader_parameter("water",
+		MapTerrain.palette_color(_repo, "river", MapTerrain.FALLBACK).srgb_to_linear())
+	_river_mat.set_shader_parameter("mouth_water",
+		MapTerrain.palette_color(_repo, "sea_near", MapTerrain.FALLBACK).srgb_to_linear())
+	_river_mat.set_shader_parameter("sky",
+		MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK).srgb_to_linear())
 	_river_mat.set_shader_parameter("ripples", water_normals())
 	_river_mat.set_shader_parameter("ripple_m", _repo.bal("map3d_river_ripple_m"))
 	_river_mat.set_shader_parameter("flow_m_s", _repo.bal("map3d_river_flow_m_s"))
 	_river_mat.set_shader_parameter("opacity", _repo.bal("map3d_river_opacity"))
+	_river_mat.set_shader_parameter("edge_soft_floor", _repo.bal("map3d_river_edge_soft_floor"))
+	_river_mat.set_shader_parameter("emission_share", _repo.bal("map3d_river_emission_share"))
+	_river_mat.set_shader_parameter("emission_gamma", _repo.bal("map3d_river_emission_gamma"))
 	mesh.surface_set_material(0, _river_mat)
 	var mi := MeshInstance3D.new()
 	mi.name = "Rivers"
@@ -423,11 +431,24 @@ func _dress_sea() -> void:
 	_sea_mat.set_shader_parameter("ripples", water_normals())
 	_sea_mat.set_shader_parameter("ripple_m", _repo.bal("map3d_sea_ripple_m"))
 	_sea_mat.set_shader_parameter("drift_m_s", _repo.bal("map3d_sea_drift_m_s"))
+	_sea_mat.set_shader_parameter("emission_share", _repo.bal("map3d_sea_emission_share"))
+	_sea_mat.set_shader_parameter("emission_gamma", _repo.bal("map3d_sea_emission_gamma"))
+	_sea_mat.set_shader_parameter("roughness", _repo.bal("map3d_sea_roughness"))
+	_sea_mat.set_shader_parameter("specular", _repo.bal("map3d_sea_specular"))
+	_sea_mat.set_shader_parameter("fresnel_sky_mix", _repo.bal("map3d_sea_fresnel_sky_mix"))
+	_sea_mat.set_shader_parameter("horizon_fade_start_px", _repo.bal("map3d_sea_horizon_fade_start_px"))
+	_sea_mat.set_shader_parameter("horizon_fade_end_px", _repo.bal("map3d_sea_horizon_fade_end_px"))
 	sea.material_override = _sea_mat
 
 
 func sea_material() -> ShaderMaterial:
 	return _sea_mat
+
+
+## Test seam (fix round 1): the Rivers layer's material, to check the
+## palette colours went in linearized.
+func river_material() -> ShaderMaterial:
+	return _river_mat
 
 
 ## A ring material; its sizes are design px, turned into window px with the
