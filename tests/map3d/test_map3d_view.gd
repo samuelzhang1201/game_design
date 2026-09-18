@@ -343,3 +343,29 @@ func test_the_hud_is_over_the_view_and_the_compass_turns_it_north() -> void:
 	v._gui_input(press)
 	v._process(Game.data.bal("map3d_compass_reset_s") + 0.01)
 	assert_almost_eq(v.yaw(), 0.0, 0.001)
+
+
+func test_a_compass_press_that_moves_does_not_pan_or_select() -> void:
+	var v := _view()
+	v.activate()
+	var hud := v.get_node("Hud") as Map3DHud
+	var t0 := v.target()
+	watch_signals(v)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = hud.compass_rect().get_center()
+	v._gui_input(press)
+	var motion := InputEventMouseMotion.new()
+	motion.position = press.position + Vector2(40, 0)
+	motion.relative = Vector2(40, 0)
+	motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+	v._gui_input(motion)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = motion.position
+	v._gui_input(up)
+	assert_eq(v.target(), t0, "a press-and-move that started on the compass never pans")
+	assert_signal_not_emitted(v, "object_selected")
+	assert_signal_not_emitted(v, "province_selected")

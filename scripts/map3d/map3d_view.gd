@@ -546,6 +546,11 @@ func _gui_input(event: InputEvent) -> void:
 				_north_from = _yaw
 				_north_t = 0.0
 				_press_on_hud = true
+				# Kept in step with the ordinary press below: a stale
+				# _press_pos/_dragging from an earlier drag would let a
+				# press-and-move on the compass pan from that old point.
+				_press_pos = mb.position
+				_dragging = false
 				accept_event()
 				return
 			if not mb.pressed and _press_on_hud:
@@ -563,6 +568,9 @@ func _gui_input(event: InputEvent) -> void:
 	if mm == null:
 		return
 	if mm.button_mask & MOUSE_BUTTON_MASK_LEFT:
+		if _press_on_hud:
+			accept_event()
+			return
 		if not _dragging and _press_pos.distance_to(mm.position) > CLICK_SLOP:
 			_dragging = true
 		if _dragging:

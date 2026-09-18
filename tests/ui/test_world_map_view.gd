@@ -651,7 +651,7 @@ func test_the_economy_view_draws_the_land_as_manors() -> void:
 	for b: Dictionary in badges:
 		var m: Dictionary = manors[int(b["cell"])]
 		assert_eq(String(b["good"]), String(m["good"]), "a badge shows its manor's chief good")
-		assert_eq(String(b["text"]), v._trim_zeros(float(m["units"])), "and how many units")
+		assert_eq(String(b["text"]), ScaleBar.trim_zeros(float(m["units"])), "and how many units")
 		assert_true((m["burgs"] as Array).has(String(b["burg"])), "for a settlement in that manor")
 	for i in badges.size():
 		for j in range(i + 1, badges.size()):

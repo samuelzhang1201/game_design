@@ -23,6 +23,7 @@ trail,#D0BC99,"land trails: the same track, lighter and thinner"
 sea_route,#2F80C2,"sea lanes (owner request 2026-09-12): a blue dashed line — a shipping route is not a road and must not be drawn like one"
 contour,#8A6A46,the HEIGHTS view's iso-lines
 scale_bar,#334155,the scale bar in the bottom-right corner
+map3d_hud_halo,#F3EEDF,"3D MAP (owner 2026-09-18): the pale halo under the 3D map's scale bar and compass needle, so they read on snow and sea alike"
 sea_ink,#2F5F86,"the ink the ships and whales are printed on the sea in (owner request 2026-09-13): the sea blue deepened"
 heat_1,#6DBE6A,"the HEIGHTS view's height ramp (owner 2026-09-13): lowland green at sea level — brightened with the theme"
 heat_2,#C4D35E,rising ground
