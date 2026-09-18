@@ -140,6 +140,12 @@ static func scene_path_for(map_id: String) -> String:
 	return SCENE_PATTERN % map_id
 
 
+## Whether `map_id`'s 3D scene has been built (tools/map3d; git-ignored, so a
+## fresh clone has none and GameRoot keeps the 2D map).
+static func has_scene(map_id: String) -> bool:
+	return ResourceLoader.exists(scene_path_for(map_id))
+
+
 ## A view of `repo`'s map; `scene_path` is a test seam.
 static func create(repo: DataRepository, scene_path: String = "") -> Map3DView:
 	var v := Map3DView.new()

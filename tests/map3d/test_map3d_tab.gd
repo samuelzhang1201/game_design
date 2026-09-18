@@ -1,14 +1,25 @@
 extends GutTest
-## The 3D MAP tab (owner 2026-09-18): a bottom-bar toggle that swaps the map
-## panel's 2D WorldMapView for Map3DView, exclusive with the 2D themes, and
-## following the player from screen to screen. Nothing here depends on the
-## built scene (git-ignored): an unbuilt map still swaps in the view, which
-## then shows its notice.
+## The 3D map is the default map (owner 2026-09-18, spec
+## 2026-09-18-map3d-default-design.md): the map panel shows Map3DView
+## whenever the pack has a built scene and no 2D-only layer (HEIGHTS,
+## ECONOMY, MANORS, MILITARY) is on, and the 2D WorldMapView otherwise.
+## The scene is git-ignored, so every test forces its presence through
+## GameRoot.force_map3d_scene; an unbuilt view still swaps in and shows its
+## notice. The suite holds 2D (tests/pre_run.gd); these tests lift that.
 
-func _court() -> GameRoot:
+func before_each() -> void:
+	Game.data.balance["map3d_default"] = 1.0
+
+
+func after_each() -> void:
+	Game.data.balance["map3d_default"] = 0.0
+
+
+func _court(has_scene: bool = true) -> GameRoot:
 	Game.start_campaign(42)
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
+	r.force_map3d_scene(has_scene)
 	await wait_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
@@ -16,57 +27,82 @@ func _court() -> GameRoot:
 	return r
 
 
-func test_the_tab_is_a_toggle_on_the_bar() -> void:
-	assert_true("3D MAP" in BottomBar.TABS)
-	assert_true("3D MAP" in BottomBar.TOGGLES)
+func _shows_3d(r: GameRoot) -> bool:
+	var v: Map3DView = r.current_screen.map3d_view()
+	return v != null and v.visible and not r.current_screen.world_map().visible
 
 
-func test_the_tab_swaps_the_2d_map_for_the_3d_view_and_back() -> void:
+func test_there_is_no_3d_tab() -> void:
+	assert_false("3D MAP" in BottomBar.TABS)
+	assert_false("3D MAP" in BottomBar.TOGGLES)
+
+
+func test_the_court_opens_on_the_3d_map() -> void:
 	var r: GameRoot = await _court()
-	var screen: CourtScreen = r.current_screen
-	assert_null(screen.map3d_view(), "nothing is made until the tab is lit")
-	r.bottom_bar().button("3D MAP").pressed.emit()
-	await wait_frames(1)
 	assert_true(r.map3d_view())
-	assert_true(r.bottom_bar().button("3D MAP").button_pressed, "the tab stays lit")
-	assert_not_null(screen.map3d_view())
-	assert_true(screen.map3d_view().visible)
-	assert_false(screen.world_map().visible, "the 2D map gives the panel up")
-	r.bottom_bar().button("3D MAP").pressed.emit()
-	await wait_frames(1)
-	assert_false(r.map3d_view())
-	assert_false(screen.map3d_view().visible)
-	assert_true(screen.world_map().visible)
+	assert_true(_shows_3d(r))
 
 
-func test_the_2d_themes_and_the_3d_map_put_each_other_out() -> void:
+func test_each_2d_layer_shows_the_2d_map_and_closing_it_returns_to_3d() -> void:
 	var r: GameRoot = await _court()
-	r.set_height_view(true)
-	r.set_map3d_view(true)
-	assert_false(r.height_view(), "3D puts HEIGHTS out")
+	for setter: String in ["set_height_view", "set_economy_view", "set_manor_view", "set_army_view"]:
+		r.call(setter, true)
+		assert_false(r.map3d_view(), setter + " on: 2D")
+		assert_true(r.current_screen.world_map().visible, setter + " on: the 2D map shows")
+		r.call(setter, false)
+		assert_true(_shows_3d(r), setter + " off: back to 3D")
+
+
+func test_switching_themes_stays_on_2d() -> void:
+	var r: GameRoot = await _court()
 	r.set_economy_view(true)
-	assert_false(r.map3d_view(), "ECONOMY puts 3D out")
-	assert_true(r.current_screen.world_map().visible)
-	r.set_map3d_view(true)
-	assert_false(r.economy_view())
 	r.set_manor_view(true)
-	assert_false(r.map3d_view(), "MANORS puts 3D out")
+	assert_false(r.economy_view(), "the themes still put each other out")
+	assert_false(r.map3d_view(), "and the map stays 2D between them")
+	r.set_height_view(true)
+	assert_false(r.map3d_view())
 
 
-func test_the_3d_map_follows_the_player_to_the_next_screen() -> void:
+func test_the_bottom_tab_routes_through_the_rule() -> void:
 	var r: GameRoot = await _court()
-	r.set_map3d_view(true)
+	r._on_bottom_tab("MANORS")
+	assert_false(r.map3d_view())
+	r._on_bottom_tab("MANORS")
+	assert_true(_shows_3d(r))
+
+
+func test_no_built_scene_keeps_the_2d_map() -> void:
+	var r: GameRoot = await _court(false)
+	assert_false(r.map3d_view())
+	assert_null(r.current_screen.map3d_view(), "no 3D view is even made")
+	assert_true(r.current_screen.world_map().visible)
+
+
+func test_map3d_default_zero_keeps_the_2d_map() -> void:
+	Game.data.balance["map3d_default"] = 0.0
+	var r: GameRoot = await _court()
+	assert_false(r.map3d_view())
+	assert_true(r.current_screen.world_map().visible)
+
+
+func test_the_choice_follows_the_player_to_the_next_screen() -> void:
+	var r: GameRoot = await _court()
 	r._switch_to(GameRoot.State.COURT)
 	await wait_frames(2)
-	var screen: CourtScreen = r.current_screen
-	assert_not_null(screen.map3d_view())
-	assert_true(screen.map3d_view().visible)
-	assert_false(screen.world_map().visible)
+	assert_true(_shows_3d(r), "3D on the new screen")
+	r.set_manor_view(true)
+	r._switch_to(GameRoot.State.COURT)
+	await wait_frames(2)
+	assert_false(r.map3d_view(), "a layer that is on keeps the new screen 2D")
+	assert_true(r.current_screen.world_map().visible)
+
+
+func test_the_real_scene_check_reads_the_pack() -> void:
+	assert_false(Map3DView.has_scene("no_such_pack"))
 
 
 func test_a_3d_selection_opens_the_card_in_the_left_column() -> void:
 	var r: GameRoot = await _court()
-	r.set_map3d_view(true)
 	await wait_frames(1)
 	var screen: CourtScreen = r.current_screen
 	var view := screen.map3d_view()

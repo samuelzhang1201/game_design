@@ -307,6 +307,7 @@ map_town_halo_max_px,12.0,"SETTLEMENT EARTH HALO: the cap, so the largest city d
 map_town_halo_fade_px,6.0,"SETTLEMENT EARTH HALO: km over which the worked ground fades back into the countryside. Measured against the pack: land is a median 15 km from the nearest town, so 6 km leaves 83% of it its own colour, 15 km would leave half and 40 km only 8%"
 map_town_earth_strength,0.75,"SETTLEMENT EARTH HALO: how far the worked ground goes toward town_earth at its centre (0 = off)"
 map3d_fov_deg,45.0,"3D MAP (owner 2026-09-18): the rig camera's vertical field of view"
+map3d_default,1,"3D MAP (owner 2026-09-18, spec 2026-09-18-map3d-default-design): 1 = the map panel shows the 3D map whenever the pack has a built scene and no 2D-only layer (HEIGHTS/ECONOMY/MANORS/MILITARY) is on; 0 = always the 2D map (the test suite's pre-run hook and snapshot_screen --map2d set 0)"
 map3d_zoom_min_m,800.0,"3D MAP: the closest the rig camera comes to its target, in metres (owner 2026-09-18: 800 m — a village and its fields; was 2500)"
 map3d_zoom_max_m,80000.0,"3D MAP (owner 2026-09-18: the whole island just fills the view — landmass edge to edge with a small margin of sea; was 110000, shot at 60/70/80/90 km and picked by look, window 1920x1080): the farthest zoom"
 map3d_zoom_start_m,24000.0,"3D MAP: the distance the view opens at, framed on the player's capital"

@@ -38,8 +38,11 @@ var _manor_view := false
 ## The MILITARY tab's state (user request 2026-09-10), owned here for the
 ## same reason: the layer follows the player from screen to screen.
 var _army_view := false
-## The 3D MAP tab's state (owner 2026-09-18), root-owned like the others.
+## Which map the panel shows (owner 2026-09-18: the 3D map is the default):
+## the last result of _sync_map_view, never set by hand.
 var _map3d_view := false
+## Test/tool seam for "the pack has a built 3D scene": -1 asks the disk.
+var _map3d_scene := -1
 
 ## The design viewport (project.godot window/size): all UI is authored
 ## against this and scaled to the player's screen by the canvas_items+expand
@@ -274,10 +277,6 @@ func relations_screen() -> RelationshipGraphScreen:
 ## table.
 func _on_bottom_tab(tab: String) -> void:
 	match tab:
-		"3D MAP":
-			_info_screen.hide()
-			_relations_screen.visible = false
-			set_map3d_view(not _map3d_view)
 		"HEIGHTS":
 			_info_screen.hide()
 			_relations_screen.visible = false
@@ -323,13 +322,12 @@ func set_height_view(on: bool) -> void:
 	_height_view = on
 	if on and _manor_view:
 		set_manor_view(false)
-	if on and _map3d_view:
-		set_map3d_view(false)
 	if _bottom_bar != null:
 		_bottom_bar.set_toggled("HEIGHTS", on)
 	var map := _current_map()
 	if map != null and map.show_heights != on:
 		map.show_heights = on
+	_sync_map_view()
 
 func height_view() -> bool:
 	return _height_view
@@ -342,8 +340,6 @@ func set_economy_view(on: bool) -> void:
 	_economy_view = on
 	if on and _manor_view:
 		set_manor_view(false)
-	if on and _map3d_view:
-		set_map3d_view(false)
 	if _bottom_bar != null:
 		_bottom_bar.set_toggled("ECONOMY", on)
 	var map := _current_map()
@@ -351,6 +347,7 @@ func set_economy_view(on: bool) -> void:
 		map.show_economy = on
 	if current_screen != null and current_screen.has_method("set_economy_view"):
 		current_screen.set_economy_view(on)
+	_sync_map_view()
 
 func economy_view() -> bool:
 	return _economy_view
@@ -362,8 +359,6 @@ func economy_view() -> bool:
 func set_manor_view(on: bool) -> void:
 	_manor_view = on
 	if on:
-		if _map3d_view:
-			set_map3d_view(false)
 		if _economy_view:
 			set_economy_view(false)
 		if _height_view:
@@ -375,6 +370,7 @@ func set_manor_view(on: bool) -> void:
 		map.show_manors = on
 	if current_screen != null and current_screen.has_method("set_manor_view"):
 		current_screen.set_manor_view(on)
+	_sync_map_view()
 
 func manor_view() -> bool:
 	return _manor_view
@@ -391,27 +387,31 @@ func set_army_view(on: bool) -> void:
 		map.show_armies = on
 	if current_screen != null and current_screen.has_method("set_military_view"):
 		current_screen.set_military_view(on)
+	_sync_map_view()
 
 func army_view() -> bool:
 	return _army_view
 
-## Turn the 3D map on or off everywhere (owner 2026-09-18): the tab lights
-## up and the current screen's map panel shows the Terrain3D view in place
-## of the 2D map. The 2D themes draw on the 2D map only, so lighting this
-## puts them out, and lighting any of them puts this out.
-func set_map3d_view(on: bool) -> void:
-	_map3d_view = on
-	if on:
-		if _height_view:
-			set_height_view(false)
-		if _economy_view:
-			set_economy_view(false)
-		if _manor_view:
-			set_manor_view(false)
-	if _bottom_bar != null:
-		_bottom_bar.set_toggled("3D MAP", on)
+## The one rule for which map the panel shows (spec
+## 2026-09-18-map3d-default-design): 3D whenever the pack has a built scene,
+## balance map3d_default is on, and no 2D-only layer is — HEIGHTS, ECONOMY
+## and MANORS draw on the 2D map, and so do MILITARY's counters. Runs on every
+## layer change and every screen swap.
+func _sync_map_view() -> void:
+	_map3d_view = Game.data.bal("map3d_default") > 0.0 and map3d_available() \
+			and not (_height_view or _economy_view or _manor_view or _army_view)
 	if current_screen != null and current_screen.has_method("set_map3d_view"):
-		current_screen.set_map3d_view(on)
+		current_screen.set_map3d_view(_map3d_view)
+
+func map3d_available() -> bool:
+	if _map3d_scene >= 0:
+		return _map3d_scene == 1
+	return Map3DView.has_scene(Game.data.map_id)
+
+## Test/tool seam: pretend the pack's 3D scene is (or is not) built.
+func force_map3d_scene(has: bool) -> void:
+	_map3d_scene = 1 if has else 0
+	_sync_map_view()
 
 func map3d_view() -> bool:
 	return _map3d_view
@@ -497,8 +497,7 @@ func _switch_to(new_state: State) -> void:
 		map.province_view_changed.connect(set_province_view)
 	if current_screen != null and current_screen.has_method("set_military_view"):
 		current_screen.set_military_view(_army_view)
-	if _map3d_view and current_screen != null and current_screen.has_method("set_map3d_view"):
-		current_screen.set_map3d_view(true)
+	_sync_map_view()
 	# Overlays stay above screens across swaps: bottom bar, then info and
 	# relations, with the pause menu topmost.
 	if _bottom_bar != null:
