@@ -6,6 +6,7 @@ Text-first, LLM-narrated grand strategy game: rule a kingdom for ~60 years throu
 
 - `docs/design/PRD.md` — scope of the first playable build. Build order lives here; follow it.
 - `docs/design/COUNCIL_SYSTEM.md` — the council design doc; source of truth for mechanics and formulas.
+- `.claude/skills/visual-review/` — the loop for EVERY visual change (shoot, compare variants, crop, independent critic) and `taste.md`, the owner's art rulings as principles; add each new ruling there.
 - `tools/NEW_MAP.md` — the checklist and order for bringing in a new map pack. `tools/map3d/README.md` — the Terrain3D pipeline. `assets/flux/README.md` — the Flux art pipeline.
 - `docs/design/MANOR_SYSTEM.md` — the manor system (owner 2026-09-13):
   - **Manors and houses.** Every land cell of the pack is a **manor** with a proper name (`political/manors.csv`, forged by `NameForge` / `ManorNames` from the export's name banks; `manor_name_overrides.csv` is hand-maintained) held by a **house** (a family name; the crown is the player character's live family; an unmoved manor belongs to its province's house, so `GameState.manor_owner` holds only what moved and `MapManors.set_owner` needs a reason — `manor_log`). People are never stored and are WHOLE: a province's ledger population is apportioned to its manors by area × land value (largest remainder, `MapManors.people_table`), so manors always sum EXACTLY to their province.
