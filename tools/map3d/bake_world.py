@@ -307,6 +307,46 @@ def river_span(cov_along):
     return int(on[0]), end
 
 
+def join_point(end_xy, others, max_dist):
+    """The nearest point on any of `others` (polylines) to `end_xy`, if it
+    lies within max_dist, else None. The pack's tributaries stop 60-290 m
+    short of the river they feed; appending this point carries them in."""
+    e = np.asarray(end_xy, dtype=np.float64)
+    best, best_d = None, max_dist
+    for o in others:
+        o = np.asarray(o, dtype=np.float64)
+        if len(o) == 1:
+            a, ab = o, np.zeros((1, 2))
+        else:
+            a, ab = o[:-1], np.diff(o, axis=0)
+        t = np.clip(((e - a) * ab).sum(1) / np.maximum((ab * ab).sum(1), 1e-12), 0.0, 1.0)
+        foot = a + ab * t[:, None]
+        d = np.hypot(*(foot - e).T)
+        i = int(np.argmin(d))
+        if d[i] <= best_d:
+            best, best_d = foot[i], float(d[i])
+    return best
+
+
+def river_mouth(n, n_mouth, to_sea):
+    """0 -> 1 over a course's last n_mouth samples when it ends in the sea
+    (it widens x2 and the water shades toward the sea there); an inland end,
+    a lake or a confluence, keeps 0 and its taper."""
+    if not to_sea:
+        return np.zeros(n)
+    return np.clip((np.arange(n) - (n - n_mouth)) / n_mouth, 0.0, 1.0)
+
+
+def join_water(water, start):
+    """The water line from sample `start` on (a tributary's joined stretch)
+    never rises above the one before: it may meet its river a little over
+    that river's water, which the runtime draws over."""
+    w = np.array(water, dtype=np.float64)
+    if 0 < start < len(w):
+        w[start:] = np.minimum.accumulate(w[start - 1:])[1:]
+    return w
+
+
 def river_fade(courses, vw, vh, reach):
     """0 on every course (vertex-unit polylines), easing up to 1 at `reach`
     vertices (4-neighbour steps, smoothstep): the ridges are multiplied by
@@ -442,13 +482,31 @@ def main(argv=None):
 
     # The rivers' courses, source -> mouth, smoothed like the 2D map's and in
     # vertex units: the ridges fade out along them, and they are carved below.
+    # A course ending inland (a tributary: the pack stops them short of the
+    # river they feed) is carried on to the nearest point of another course
+    # within river_join_m, found on the others' smoothed curves and appended
+    # before its own smoothing, which keeps the last point: the two meet.
+    steps = int(rules["river_smooth_steps"])
     with open(os.path.join(ROOT, "data", "maps", MAP, "geography", "rivers.csv")) as f:
-        courses = []
+        raws = []
         for r in sorted(csv.DictReader(f), key=lambda r: float(r["discharge"] or 0)):
-            raw = [tuple(map(float, p.split())) for p in r["points"].split("|") if p.strip()]
+            raw = [(x * k, y * k) for x, y in
+                   (tuple(map(float, p.split())) for p in r["points"].split("|") if p.strip())]
             if len(raw) >= 2:
-                courses.append((r, smooth_open([(x * k, y * k) for x, y in raw],
-                                               int(rules["river_smooth_steps"]))))
+                raws.append((r, raw))
+    smooth = [smooth_open(raw, steps) for _, raw in raws]
+    courses, joins, unjoined = [], {}, 0
+    for n, (r, raw) in enumerate(raws):
+        ex, ey = raw[-1]
+        if cov[min(max(int(round(ey)), 0), vh - 1), min(max(int(round(ex)), 0), vw - 1)] >= 0.5:
+            at = join_point((ex, ey), [c for m, c in enumerate(smooth) if m != n],
+                            rules["river_join_m"] / VERTEX_M)
+            if at is None:
+                unjoined += 1
+            else:
+                joins[r["river_code"]] = float(np.hypot(at[0] - ex, at[1] - ey))
+                raw = raw + [(float(at[0]), float(at[1]))]
+        courses.append((r, smooth_open(raw, steps)))
 
     # --- ridges -------------------------------------------------------------------
     ridge = np.zeros((vh, vw), dtype=np.float32)
@@ -473,14 +531,16 @@ def main(argv=None):
     # Carved after the ridges and the shore (so a bed is measured from the
     # final ground) and before the slope (so the banks read as slope). Each
     # course, source -> mouth, is resampled every vertex, trimmed to the land
-    # (river_span), and its bed falls every step to the sea; the smallest
-    # rivers carve first so a larger one's valley wins where they meet.
+    # (river_span), and its bed falls every step to the sea. The LARGEST
+    # rivers carve first: a tributary then reads the valley its river has
+    # already cut and its bed falls into the confluence (carved first, it
+    # measured the uncut ground and ended up to 110 m over its river).
     wet = np.zeros((vh, vw), dtype=np.float32)
     rivers_out = []
     gamma = taper_gamma()   # balance.csv map_river_taper_gamma, the 2D rule
     floor = SEA_Y - rules["shore_m"] - rules["river_depth_m"]
     ox_m, oz_m = (-fw_pad / 2 + ox_pad) * VERTEX_M, (-fh_pad / 2 + oy_pad) * VERTEX_M
-    for r, course in courses:
+    for r, course in reversed(courses):
         pts = resample_line(course, 1.0)   # vertex units, 20 m apart
         gi = np.clip(np.round(pts).astype(np.int64), 0, [vw - 1, vh - 1])
         span = river_span(cov[gi[:, 1], gi[:, 0]])
@@ -496,7 +556,7 @@ def main(argv=None):
                                 rules["river_min_w_m"], rules["river_max_w_m"]))
         widths = river_widths(len(pts), w_mouth, gamma, rules["river_source_w_m"])
         n_mouth = max(int(rules["river_mouth_m"] / VERTEX_M), 1)
-        mouth = np.clip((np.arange(len(pts)) - (len(pts) - n_mouth)) / n_mouth, 0.0, 1.0)
+        mouth = river_mouth(len(pts), n_mouth, bool(c[-1] < 0.5))
         widths = widths * (1.0 + mouth)
         # open sea (cov 0) is never dug: the water line still reaches it
         cut = c > 0.0
@@ -504,6 +564,8 @@ def main(argv=None):
         # the water never stands under the sea it runs to (SEA_Y + 0.3, as it
         # does over the fringe and at the mouth), so the line keeps falling
         water = np.maximum(bed + rules["river_depth_m"] * rules["river_fill"], SEA_Y + 0.3)
+        if r["river_code"] in joins:   # the joined stretch: the last few samples
+            water = join_water(water, len(pts) - int(np.ceil(joins[r["river_code"]])) - 1)
         keep = list(range(0, len(pts), 3)) + ([len(pts) - 1] if (len(pts) - 1) % 3 else [])
         rivers_out.append({"code": r["river_code"], "points": [
             [round(ox_m + pts[i, 0] * VERTEX_M, 1), round(oz_m + pts[i, 1] * VERTEX_M, 1),
@@ -664,6 +726,8 @@ def main(argv=None):
         json.dump({"rivers": rivers_out}, f)
     summary = {k: v for k, v in world.items() if k != "far_multipliers_lin"}
     summary["rivers"] = len(rivers_out)
+    summary["rivers_joined"] = len(joins)
+    summary["rivers_left_short"] = unjoined
     print(json.dumps(summary))
 
 

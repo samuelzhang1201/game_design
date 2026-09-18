@@ -30,3 +30,4 @@ river_wet_darken,0.55,"3D bake: how much it darkens the colour map (bracketed 0.
 river_mouth_m,600.0,"3D bake: the last stretch widens (x2) and shades to the sea's near band"
 river_smooth_steps,8,"3D bake: B-spline points per pack segment before a course is resampled (the 2D map's curve, map_river_smoothing_steps, but finer: at 20 m a vertex its 3 left straight 400 m runs)"
 river_ridge_fade_m,1000.0,"3D bake (2026-09-18): the synthetic ridges fade to nothing over this distance from a river's course, so the carve never cuts a gorge through a ridge the noise threw across a valley (the 2D relief detail holds itself down near rivers the same way)"
+river_join_m,400.0,"3D bake (2026-09-18): a river ending inland is carried on to the nearest point of another river's course within this distance (the pack stops its tributaries 60-290 m short of their confluence)"

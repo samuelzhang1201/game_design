@@ -180,6 +180,27 @@ def test_carve_sizes_each_valley_from_the_uncut_ground():
     assert abs(h[23, 21] - (89.96 + 7.0)) < 1e-3, h[23, 21]   # one vertex up its bank
 
 
+def test_join_point_finds_the_nearest_point_on_another_course():
+    others = [np.array([[0.0, 10.0], [10.0, 10.0]]),       # a segment 3 below the end
+              np.array([[20.0, 0.0], [20.0, 20.0]])]       # a segment 15 away
+    got = bw.join_point((4.0, 7.0), others, 5.0)
+    assert np.allclose(got, [4.0, 10.0]), got                 # the foot of the perpendicular
+    got = bw.join_point((12.0, 13.0), others, 5.0)
+    assert np.allclose(got, [10.0, 10.0]), got                # past the segment's end: its end
+    assert bw.join_point((4.0, 7.0), others, 2.9) is None      # out of reach
+
+
+def test_river_mouth_only_widens_into_the_sea():
+    m = bw.river_mouth(10, 4, True)
+    assert np.allclose(m, [0, 0, 0, 0, 0, 0, 0, 0.25, 0.5, 0.75]), m
+    assert not bw.river_mouth(10, 4, False).any()              # an inland end: 0 everywhere
+
+
+def test_water_line_never_rises_over_the_joined_stretch():
+    w = bw.join_water(np.array([10.0, 9.0, 8.0, 8.5, 9.5]), 3)
+    assert np.allclose(w, [10.0, 9.0, 8.0, 8.0, 8.0]), w
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):
