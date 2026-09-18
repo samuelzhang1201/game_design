@@ -79,8 +79,14 @@ func _init() -> void:
 static func attach(column: BoxContainer, map: WorldMapView) -> CountryPanel:
 	var panel := CountryPanel.new()
 	column.add_child(panel)
-	map.country_hovered.connect(panel.show_country)
+	panel.follow(map)
 	return panel
+
+
+## Follow one more map's hover — any map with WorldMapView's
+## `country_hovered(kingdom_code)` signal (the 3D map, owner 2026-09-18).
+func follow(map: Control) -> void:
+	map.connect("country_hovered", show_country)
 
 
 ## Show the kingdom with this code, or clear when it is "" / unknown. Safe to

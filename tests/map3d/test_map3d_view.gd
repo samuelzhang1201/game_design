@@ -138,7 +138,8 @@ func test_ring_render_priority_rises_with_tier() -> void:
 ## settlement pin always stands over the weather and the weather over lines.
 func test_the_render_priority_table_orders_every_layer() -> void:
 	var order := [Map3DView.PRIORITY_SEA, Map3DView.PRIORITY_RIVERS, Map3DView.PRIORITY_ROADS, Map3DView.PRIORITY_SEAMS,
-		Map3DView.PRIORITY_KINGDOMS, Map3DView.PRIORITY_SELECTION, Map3DView.PRIORITY_CLOUDS,
+		Map3DView.PRIORITY_KINGDOMS, Map3DView.PRIORITY_HOVER, Map3DView.PRIORITY_SELECTION,
+		Map3DView.PRIORITY_CLOUDS,
 		Map3DView.PRIORITY_RING_BASE]
 	for i in range(1, order.size()):
 		assert_lt(order[i - 1], order[i], "row %d under row %d" % [i - 1, i])

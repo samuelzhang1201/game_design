@@ -322,6 +322,7 @@ map3d_near_m,20.0,"3D MAP: the camera's near clip plane"
 map3d_far_m,400000.0,"3D MAP: the camera's far clip plane — past the sea plane's edge"
 map3d_line_step_m,150.0,"3D MAP borders: borders and seams are resampled to a point every this many metres so they drape over the relief (a Terrain3D vertex is 20 m, a pack px 50 m)"
 map3d_border_width_px,1.5,"3D MAP borders: the kingdom border's width in screen px — a thin SOLID black line (owner 2026-09-18: '删除掉现有的国境线，换成一条细黑实线'; was the 2D chequered ribbon at 3 px), political_palette map3d_border"
+map3d_hover_border_width_px,3.5,"3D MAP hover (owner 2026-09-18): the hovered kingdom's live outline, in the border's own ink (political_palette map3d_border) at this width in screen px — the 2D map's wider hover ribbon; the plain border is map3d_border_width_px"
 map3d_line_lift_px,2.5,"3D MAP borders: every line is lifted this many screen px off the ground at its distance, so it clears the relief between its samples"
 map3d_road_width_px,4.0,"3D MAP roads (owner 2026-09-18): a road's width in screen px — the pack's roads draped on the relief in terrain_palette road, solid with a soft shoulder"
 map3d_trail_width_px,2.5,3D MAP roads: a trail's width in screen px (terrain_palette trail)

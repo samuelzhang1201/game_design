@@ -169,7 +169,8 @@ func set_manor_view(on: bool) -> void:
 ## The 3D MAP tab (GameRoot): the Terrain3D view takes the map panel in
 ## place of the 2D map while the tab is lit (Map3DView.toggle_in).
 func set_map3d_view(on: bool) -> void:
-	_map3d = Map3DView.toggle_in(%MapPanel, _world_map, _map3d, on, _detail)
+	_map3d = Map3DView.toggle_in(%MapPanel, _world_map, _map3d, on, _detail, _country_panel,
+		_refresh_left)
 
 ## Test seam: the 3D view, or null until the tab was first lit.
 func map3d_view() -> Map3DView:

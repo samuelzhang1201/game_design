@@ -55,6 +55,9 @@ extends Control
 signal object_selected(entry: Dictionary)
 ## The province under a click, or "" for sea — WorldMapView's signal.
 signal province_selected(province_code: String)
+## The kingdom under the pointer, "" off the land — WorldMapView's signal:
+## the screens put that country's card in the left column (owner 2026-09-18).
+signal country_hovered(kingdom_code: String)
 
 const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
 const NOTICE_TEXT := "The 3D map has not been built for this map.\nRun tools/map3d (see tools/map3d/README.md)."
@@ -72,7 +75,8 @@ const SELECTED_RING_ALWAYS_M := 1000000.0
 ## The sea under everything; the river water under every line, so a border
 ## or seam always reads over the water it crosses; the roads (a bridge over
 ## the water, under every border); seams, then kingdom
-## borders, then the clicked province's gold outline; then the CLOUDS — over
+## borders, then the hovered kingdom's wider outline, then the clicked
+## province's gold outline; then the CLOUDS — over
 ## the lines, but UNDER the settlement rings, so a pin always stands above
 ## the weather; then the rings by tier (village lowest, capital highest —
 ## see _place_markers) and the gold selection ring over every tier.
@@ -81,14 +85,17 @@ const PRIORITY_RIVERS := 0
 const PRIORITY_ROADS := 1
 const PRIORITY_SEAMS := 2
 const PRIORITY_KINGDOMS := 3
-const PRIORITY_SELECTION := 4
-const PRIORITY_CLOUDS := 5
+const PRIORITY_HOVER := 4
+const PRIORITY_SELECTION := 5
+const PRIORITY_CLOUDS := 6
 ## The lowest ring tier; the tiers and then the selection ring count up from
 ## here, one step each (data/map3d_settlements.csv's groups).
-const PRIORITY_RING_BASE := 6
+const PRIORITY_RING_BASE := 7
 ## A press and release further apart than this is a drag, not a click
 ## (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := 10.0
+## Where the name sits off the cursor (WorldMapView.TOOLTIP_OFFSET).
+const TOOLTIP_OFFSET := Vector2(20.0, 24.0)
 
 var _repo: DataRepository
 var _scene_path := ""
@@ -120,6 +127,15 @@ var _selected_burg := ""
 var _border_sig := 0
 var _border_clock := 0.0
 var _hud: Map3DHud
+## The hover (owner 2026-09-18): a pointer move is only recorded, and picked
+## once a frame in _process; the pick's kingdom, its settlement (the
+## tooltip), and each kingdom's outline lines, kept until ownership turns.
+var _hover_pos := Vector2.ZERO
+var _hover_pending := false
+var _hover_kingdom := ""
+var _hover_obj: Dictionary = {}
+var _hover_lines: Dictionary = {}
+var _tooltip: Label
 var _north_t := -1.0
 var _north_from := 0.0
 var _press_on_hud := false
@@ -173,15 +189,23 @@ static func create(repo: DataRepository, scene_path: String = "") -> Map3DView:
 ## The one toggle every screen with a map uses: on puts a view (made on
 ## first use) into `panel` over the 2D `world_map` and hides the latter; off
 ## hands the panel back. A new view is wired to the screen's `detail` card
-## the way the 2D map is. Returns the view, or null if none was ever needed.
+## and `country` card the way the 2D map is, and calls `on_hover` when the
+## hovered country changes (the screen re-orders its left column). Returns the view, or null if none was ever needed.
 static func toggle_in(panel: Control, world_map: Control, view: Map3DView, on: bool,
-		detail: MapDetailPanel = null) -> Map3DView:
+		detail: MapDetailPanel = null, country: CountryPanel = null,
+		on_hover: Callable = Callable()) -> Map3DView:
 	if on and view == null:
 		view = Map3DView.create(Game.data)
 		panel.add_child(view)
 		if detail != null:
 			detail.follow(view)
 			detail.closed.connect(view.clear_selection)
+		# The hovered country's card, as the 2D map's hover gives it; then
+		# the screen re-orders its left column around it.
+		if country != null:
+			country.follow(view)
+		if on_hover.is_valid():
+			view.country_hovered.connect(func(_code: String) -> void: on_hover.call())
 	if world_map != null:
 		world_map.visible = not on
 	if view != null:
@@ -219,8 +243,18 @@ func _ready() -> void:
 	_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_notice.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_notice)
+	_tooltip = Label.new()
+	_tooltip.name = "Tooltip"
+	_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tooltip.add_theme_stylebox_override("normal", UiPalette.chip_style())
+	_tooltip.add_theme_font_size_override("font_size", 16)
+	_tooltip.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+	_tooltip.hide()
+	add_child(_tooltip)
 	mouse_entered.connect(func() -> void: _hovered = true)
-	mouse_exited.connect(func() -> void: _hovered = false)
+	mouse_exited.connect(func() -> void:
+		_hovered = false
+		clear_hover())
 	resized.connect(_fit_viewport)
 	_fit_viewport()
 	set_process(false)
@@ -262,6 +296,7 @@ func activate() -> void:
 func deactivate() -> void:
 	visible = false
 	_hovered = false
+	clear_hover()
 	if _viewport != null:
 		_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	set_process(false)
@@ -314,6 +349,7 @@ func _load() -> void:
 	_hud = Map3DHud.new()
 	_hud.view = self
 	add_child(_hud)
+	move_child(_tooltip, -1)  # the name over the scale bar and compass
 
 
 func _state() -> GameState:
@@ -726,6 +762,8 @@ func refresh_borders() -> void:
 	if sig == _border_sig and _lines.get_node_or_null("Kingdoms") != null:
 		return
 	_border_sig = sig
+	_hover_lines.clear()
+	_draw_hover()
 	var step := _repo.bal("map3d_line_step_m")
 	var rings: Array = []
 	for code: String in _repo.kingdoms:
@@ -941,6 +979,11 @@ func _gui_input(event: InputEvent) -> void:
 		if hit != null and _ruler.move(Vector2((hit as Vector3).x, (hit as Vector3).z)) \
 				and _hud != null:
 			_hud.refresh()
+	if mm.button_mask == 0:
+		_hover_pos = mm.position
+		_hover_pending = true
+	else:
+		clear_hover()
 	if mm.button_mask & MOUSE_BUTTON_MASK_LEFT:
 		if _press_on_hud:
 			accept_event()
@@ -977,6 +1020,9 @@ func _process(delta: float) -> void:
 		_border_clock = 0.0
 		refresh_borders()
 	_step_clouds(delta)
+	if _hover_pending:
+		_hover_pending = false
+		hover_pick(pick_at(_hover_pos), _hover_pos)
 	if not _hovered:
 		return
 	var focus := get_viewport().gui_get_focus_owner()
@@ -996,6 +1042,7 @@ func _process(delta: float) -> void:
 	# Keys move the VIEW, so the ground moves the other way from a drag.
 	var px := size.y * _repo.bal("map3d_key_pan_screens_per_s") * delta
 	_pan_by(-dir.normalized() * px)
+	_hover_pending = true  # the ground moved under a still pointer
 
 
 # --- ruler ---------------------------------------------------------------------
@@ -1133,6 +1180,81 @@ func _province_at(pack_px: Vector2) -> String:
 	if p.x < 0 or p.y < 0 or p.x >= _province_image.get_width() or p.y >= _province_image.get_height():
 		return ""
 	return String(_repo.province_by_id(MapIndex.id_at(_province_image, p)).get("province_code", ""))
+
+
+## The kingdom holding what a pick names, NOW (MapOwnership, so a conquest
+## moves it): a settlement's province's holder, a province's holder, "" for
+## the sea or the sky — WorldMapView._state_of's rule.
+static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dictionary) -> String:
+	var province := ""
+	match String(picked.get("kind", "")):
+		"burg":
+			province = String((repo.burgs.get(String(picked["code"]), {}) as Dictionary)
+				.get("province_code", ""))
+		"province":
+			province = String(picked["code"])
+	if province == "":
+		return ""
+	var holder := MapOwnership.owner_of(repo, state, province)
+	return holder if repo.kingdoms.has(holder) else ""
+
+
+## A pick at `pos` (design px) as the hover: the settlement's name beside the
+## cursor, and — only when it changes — the kingdom's wider outline and
+## country_hovered. Public: tests drive it without a ray.
+func hover_pick(picked: Dictionary, pos: Vector2) -> void:
+	var obj: Dictionary = picked if String(picked.get("kind", "")) == "burg" else {}
+	if obj != _hover_obj:
+		_hover_obj = obj
+		var label := MapObjects.label_of(_repo, obj)
+		_tooltip.text = label
+		_tooltip.visible = label != ""
+	if _tooltip.visible:
+		var tip := _tooltip.get_combined_minimum_size()
+		_tooltip.size = tip
+		_tooltip.position = (pos + TOOLTIP_OFFSET).clamp(Vector2.ZERO, (size - tip).max(Vector2.ZERO))
+	var kingdom := kingdom_of_pick(_repo, _state(), picked)
+	if kingdom == _hover_kingdom:
+		return
+	_hover_kingdom = kingdom
+	_draw_hover()
+	country_hovered.emit(kingdom)
+
+
+## No hover: the pointer left, a drag began, or the view was hidden.
+func clear_hover() -> void:
+	_hover_pending = false
+	if _tooltip != null:
+		hover_pick({}, Vector2.ZERO)
+
+
+## The hovered kingdom's live outline in the border's own ink, wider — the
+## 2D map's hover ribbon (map3d_hover_border_width_px).
+func _draw_hover() -> void:
+	if not _loaded:
+		return
+	var lines: Array = []
+	if _hover_kingdom != "":
+		if not _hover_lines.has(_hover_kingdom):
+			_hover_lines[_hover_kingdom] = Map3DBorders.kingdom_lines(_repo, _state(), _meta,
+				_hover_kingdom, _repo.bal("map3d_line_step_m"))
+		lines = _hover_lines[_hover_kingdom]
+	var ink := MapPalette.named(_repo, "map3d_border")
+	_set_lines("Hover", lines, ink, ink, "map3d_hover_border_width_px", "", "", PRIORITY_HOVER)
+
+
+func hovered_kingdom() -> String:
+	return _hover_kingdom
+
+
+## The tooltip's text while a settlement is hovered ("" otherwise).
+func hover_tooltip() -> String:
+	return _tooltip.text if _tooltip.visible else ""
+
+
+## Test seam: where the tooltip sits, in view coordinates.
+func tooltip_rect() -> Rect2:
+	return Rect2(_tooltip.position, _tooltip.get_combined_minimum_size())
 
 
 ## The click: a settlement opens its card, land names its province, the sea
