@@ -29,6 +29,12 @@ var _bottom_bar: BottomBar
 var _news_ticker: NewsTicker
 var _info_screen: InfoScreen
 var _bgm: AudioStreamPlayer
+## The player's own settings, apart from any save (owner 2026-09-19: the menu
+## switches the music off). The suite's pre-run hook points this at a test
+## file so a developer's own choice never reaches a test.
+static var settings_path := "user://settings.cfg"
+var _music_on := true
+var _music_button: Button
 ## The PROVINCES tab's state (user request 2026-09-09): root-owned so it
 ## survives moving between screens, applied to whichever screen's map shows.
 var _province_view := true  # the map opens with the seams on (owner 2026-09-12)
@@ -78,6 +84,7 @@ func _ready() -> void:
 	_news_ticker.name = "NewsTicker"
 	_news_ticker.visible = false
 	add_child(_news_ticker)
+	_load_settings()
 	_build_pause_menu()
 	_start_bgm()
 	_switch_to(State.MENU)
@@ -210,6 +217,9 @@ func _build_pause_menu() -> void:
 	col.add_child(_menu_button("Save Game", _on_menu_save))
 	col.add_child(_menu_button("Load Game", _on_menu_load))
 	col.add_child(_menu_button("Restart", _on_menu_restart))
+	_music_button = _menu_button(_music_label(), func() -> void: set_music_on(not _music_on))
+	_music_button.name = "MusicToggle"
+	col.add_child(_music_button)
 	col.add_child(_menu_button("Quit to Desktop", func() -> void: get_tree().quit()))
 	_pause_status = Label.new()
 	_pause_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -241,6 +251,30 @@ func _start_bgm() -> void:
 	_bgm.volume_db = BGM_VOLUME_DB
 	add_child(_bgm)
 	_bgm.play()
+	_bgm.stream_paused = not _music_on
+
+## Music on or off (the pause menu's switch), remembered in settings_path.
+func set_music_on(on: bool) -> void:
+	_music_on = on
+	if _bgm != null:
+		_bgm.stream_paused = not on
+	if _music_button != null:
+		_music_button.text = _music_label()
+	var cfg := ConfigFile.new()
+	cfg.load(settings_path)  # a missing file is a fresh one
+	cfg.set_value("audio", "music", on)
+	cfg.save(settings_path)
+
+func music_on() -> bool:
+	return _music_on
+
+func _music_label() -> String:
+	return "Music: On" if _music_on else "Music: Off"
+
+func _load_settings() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(settings_path) == OK:
+		_music_on = bool(cfg.get_value("audio", "music", true))
 
 ## Test seam.
 func bgm_player() -> AudioStreamPlayer:

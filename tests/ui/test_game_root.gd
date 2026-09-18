@@ -238,3 +238,24 @@ func test_game_holds_the_day_short_of_the_month_end() -> void:
 	Game.state.day = 26
 	assert_true(Game.hold_day_before_month_end(25))
 	assert_eq(Game.state.day, 1, "rolled back to the month's first day")
+
+## Owner 2026-09-19: the menu switches the music off, and the choice is
+## remembered across sessions (user settings, apart from any save). The
+## suite's pre-run hook points the settings at a test file.
+func test_the_menu_switches_the_music_off_and_remembers() -> void:
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(GameRoot.settings_path))
+	var r := _root()
+	await wait_frames(2)
+	assert_true(r.music_on(), "music is on by default")
+	var button := r.find_child("MusicToggle", true, false) as Button
+	assert_not_null(button, "the pause menu carries the switch")
+	button.pressed.emit()
+	assert_false(r.music_on())
+	assert_true(r.bgm_player().stream_paused, "the track stops")
+	var again := _root()
+	await wait_frames(2)
+	assert_false(again.music_on(), "remembered by the next session")
+	assert_true(again.bgm_player().stream_paused)
+	again.set_music_on(true)
+	assert_false(again.bgm_player().stream_paused, "and back on")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(GameRoot.settings_path))
