@@ -136,6 +136,8 @@ var _hover_kingdom := ""
 var _hover_obj: Dictionary = {}
 var _hover_lines: Dictionary = {}
 var _tooltip: Label
+## The kingdoms the HUD lettered on its last draw (a test seam).
+var _drawn_labels: PackedStringArray = []
 var _north_t := -1.0
 var _north_from := 0.0
 var _press_on_hud := false
@@ -764,6 +766,8 @@ func refresh_borders() -> void:
 	_border_sig = sig
 	_hover_lines.clear()
 	_draw_hover()
+	if _hud != null:
+		_hud.refresh()  # the names follow the land held
 	var step := _repo.bal("map3d_line_step_m")
 	var rings: Array = []
 	for code: String in _repo.kingdoms:
@@ -1078,6 +1082,53 @@ func draw_ruler(ci: CanvasItem) -> void:
 		ticks.append(_camera.unproject_position(a3.lerp(b3, d / total)) / s)
 	MapRuler.draw(ci, _camera.unproject_position(a3) / s, _camera.unproject_position(b3) / s,
 		ticks, ruler_reading())
+
+
+## The kingdom names (owner 2026-09-18, the 2D map's lettering): one entry
+## {code, text, pos (design px), px} per kingdom whose LIVE label anchor
+## (MapOwnership.label_anchor) is before the camera and whose word —
+## map_label_scale_px pack px tall on the ground, seen from its own distance —
+## reaches map_label_min_px; capped at map_label_max_px.
+func label_entries() -> Array:
+	var out: Array = []
+	if _camera == null:
+		return out
+	var s := _render_scale()
+	var height_m := _repo.bal("map_label_scale_px") * float(_meta.get("m_per_px", 0.0))
+	var eye := _camera.global_position
+	for code: String in _repo.kingdoms:
+		var xz := Map3DGeometry.pack_to_world(_meta, MapOwnership.label_anchor(_repo, _state(), code))
+		var ground := Vector3(xz.x, _height_at(xz), xz.y)
+		if _camera.is_position_behind(ground):
+			continue
+		var mpp := Map3DGeometry.metres_per_pixel(eye.distance_to(ground),
+			_repo.bal("map3d_fov_deg"), maxf(size.y, 1.0))
+		var px := Map3DGeometry.label_px(height_m, mpp, _repo.bal("map_label_min_px"),
+			_repo.bal("map_label_max_px"))
+		if px <= 0.0:
+			continue
+		out.append({"code": code, "text": String(_repo.kingdoms[code]["label"]),
+			"pos": _camera.unproject_position(ground) / s, "px": px})
+	return out
+
+
+## Letter the names on the HUD (Map3DHud._draw), upright and faint, the way
+## the 2D map letters them (MapLettering).
+func draw_labels(ci: CanvasItem) -> void:
+	_drawn_labels.clear()
+	var font := UiPalette.map_label_font()
+	if font == null:
+		return
+	var frame := Rect2(Vector2.ZERO, size)
+	for e: Dictionary in label_entries():
+		if MapLettering.draw_centred(ci, _repo, font, String(e["text"]), e["pos"],
+				float(e["px"]), frame):
+			_drawn_labels.append(String(e["code"]))
+
+
+## Test seam: the kingdoms lettered on the HUD's last draw.
+func drawn_labels() -> PackedStringArray:
+	return _drawn_labels
 
 
 ## The ruler's reading, as drawn.

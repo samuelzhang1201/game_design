@@ -1766,44 +1766,11 @@ func _draw_kingdom_labels() -> void:
 	if px < Game.data.bal("map_label_min_px"):
 		return
 	px = minf(px, Game.data.bal("map_label_max_px"))
-	var font_px := int(px)
-	var tracking := px * Game.data.bal("map_label_tracking")
-	# Ink, not gold (owner 2026-09-12, after docs/references/mapSample.jpg:
-	# realm names are set in dark serif capitals over the wash).
-	var color := MapTerrain.palette_color(Game.data, "coast_line", MapTerrain.FALLBACK)
-	color.a = Game.data.bal("map_label_alpha")
 	var frame := Rect2(Vector2.ZERO, self.size)
 	for code: String in Game.data.kingdoms:
-		var text := String(Game.data.kingdoms[code]["label"])
 		var anchor := MapOwnership.label_anchor(Game.data, Game.state, code)
-		var at := map_to_screen(anchor)
-		var width := _tracked_width(font, text, font_px, tracking)
-		var origin := at - Vector2(width * 0.5, -px * 0.35)
-		if not frame.intersects(Rect2(origin - Vector2(0, px), Vector2(width, px * 1.4))):
-			continue
-		_draw_tracked(font, text, origin, font_px, tracking, color)
-
-## draw_string has no letter-spacing, and tracking is most of what makes a
-## label read as engraved rather than typed — so the glyphs are placed one at
-## a time with the extra advance added between them.
-func _draw_tracked(font: Font, text: String, origin: Vector2, font_px: int,
-		tracking: float, color: Color) -> void:
-	var pen := origin
-	for i in text.length():
-		var ch := text.substr(i, 1)
-		font.draw_string(get_canvas_item(), pen, ch, HORIZONTAL_ALIGNMENT_LEFT,
-			-1.0, font_px, color)
-		pen.x += font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_px).x \
-			+ tracking
-
-func _tracked_width(font: Font, text: String, font_px: int, tracking: float) -> float:
-	if text.is_empty():
-		return 0.0
-	var w := 0.0
-	for i in text.length():
-		w += font.get_string_size(text.substr(i, 1), HORIZONTAL_ALIGNMENT_LEFT,
-			-1.0, font_px).x + tracking
-	return w - tracking
+		MapLettering.draw_centred(self, Game.data, font,
+			String(Game.data.kingdoms[code]["label"]), map_to_screen(anchor), px, frame)
 
 func _draw_diamond(center: Vector2, r: float, color: Color) -> void:
 	draw_colored_polygon(PackedVector2Array([center + Vector2(0, -r), center + Vector2(r, 0),

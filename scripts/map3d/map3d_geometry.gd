@@ -76,6 +76,16 @@ static func metres_per_pixel(distance: float, fov_deg: float, view_height_px: fl
 	return 2.0 * distance * tan(deg_to_rad(fov_deg) * 0.5) / maxf(view_height_px, 1.0)
 
 
+## A kingdom name's size in screen px: a word `height_m` tall on the ground
+## seen at `m_per_px`, no larger than `max_px`, and 0 (hidden) below `min_px`
+## — the 2D map's map_label_* rule.
+static func label_px(height_m: float, m_per_px: float, min_px: float, max_px: float) -> float:
+	var px := height_m / maxf(m_per_px, 0.0001)
+	if px < min_px:
+		return 0.0
+	return minf(px, max_px)
+
+
 ## How far the target moves when the mouse drags the ground by `screen_delta`:
 ## the ground follows the mouse, so the target moves the other way.
 static func pan_delta(screen_delta: Vector2, m_per_px: float, yaw_deg: float) -> Vector2:
