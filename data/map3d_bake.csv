@@ -10,3 +10,8 @@ sharp_rocky_trail,1.8,3D bake: likewise for scree
 macro_depth,0.06,"3D bake: the colour map's large lighter/darker patches (was 0.16, which hid the materials)"
 macro_hue_depth,0.04,3D bake: the colour map's green-yellow drift (was 0.10)
 coast_ramp_m,40.0,"3D bake: the coverage is blurred this far before it ramps the heights through the water plane, so a coarse mesh LOD still crosses it smoothly"
+beach_fade_share,0.2,"3D bake: the beach fades out over this much of the land share round a vertex (a box of BEACH_M): 1 - share below it is full sand"
+beach_fade_height_m,15.0,3D bake: and over this many metres under BEACH_MAX_M
+far_color_sand,#6B604E,"3D bake (owner 2026-09-18): what sand reads as from far away (sRGB). The colour map can only darken and sand_03's own mean is ~#6C604F, so a lighter value changes nothing (bracketed: #9C8A66 and #B8A47C both clip to 1.0); the beach is lightened by making dirt_floor its base (beach_sand_share)"
+beach_sand_share,0.45,"3D bake: the beach is dirt_floor with sand_03 as its second texture at up to this share (kept under 0.5 so the two never trade first place: a flip draws 20 m blocks), varied by a noise field at beach_grain_wave_m so the shore carries grain"
+beach_grain_wave_m,150.0,"3D bake: the wavelength of that noise, short enough to vary across a 100 m beach (at 900 m the whole band switched at once, one flat fill)"

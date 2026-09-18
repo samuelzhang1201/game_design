@@ -84,8 +84,8 @@ SLOPE_CLIFF = (0.93, 0.99)
 # texture's own mean colour, in linear light, and can only darken.
 FAR_COLOR = {
     CLIFF: "#7E7B77", GRASS: "#6F7A40", LEAVES: "#4E4A2C", DIRT: "#9A7A55",
-    ROCKY: "#7C7264", SOIL: "#5E4A30", SAND: "#6B604E", FOREST: "#3A5026",
-}
+    ROCKY: "#7C7264", SOIL: "#5E4A30", FOREST: "#3A5026",
+}  # SAND's is data/map3d_bake.csv far_color_sand
 MACRO_WAVE_M = 9000.0    # large patches of lighter and darker country
 # (their depth and the green-yellow drift are data/map3d_bake.csv macro_*)
 
@@ -154,9 +154,15 @@ def hex_rgb(h):
 
 
 def load_rules(path=RULES_PATH):
-    """data/map3d_bake.csv as {key: float}."""
+    """data/map3d_bake.csv as {key: float}; a value that is not a number
+    (a "#RRGGBB" colour) stays text."""
+    def value(v):
+        try:
+            return float(v)
+        except ValueError:
+            return v
     with open(path) as f:
-        return {r["key"]: float(r["value"]) for r in csv.DictReader(f)}
+        return {r["key"]: value(r["value"]) for r in csv.DictReader(f)}
 
 
 def read_loops(path):
@@ -193,12 +199,20 @@ def coverage(land_loops, lake_loops, vw, vh, k, ss=4):
 
 def shore_heights(height, cov, sea_y, shore_m):
     """Land (cov 1) at least shore_m over the water plane, sea (cov 0) at
-    least shore_m under it, and the fringe ramped through it so the coast
-    crosses the plane where the loop does."""
-    out = np.where(cov >= 1.0, np.maximum(height, sea_y + shore_m), height)
-    out = np.where(cov <= 0.0, np.minimum(out, sea_y - shore_m), out)
-    fringe = (cov > 0.0) & (cov < 1.0)
-    return np.where(fringe, sea_y + shore_m * (2.0 * cov - 1.0), out).astype(np.float32)
+    least shore_m under it. Across the fringe the ground crosses the plane
+    at cov 0.5, where the loop is: seaward it ramps down to shore_m under it
+    (a drop to the sea's real depth there made a coarse far mesh LOD cross
+    the plane in steps), landward it rises to the land's own height (a flat
+    ramp there left a shelf the width of the fringe before every high coast,
+    then a one-vertex wall).
+    """
+    land = np.maximum(height, sea_y + shore_m)
+    sea = np.minimum(height, sea_y - shore_m)
+    out = np.where(cov >= 1.0, land, np.where(cov <= 0.0, sea, height))
+    up = np.clip(2.0 * cov - 1.0, 0.0, 1.0)
+    down = np.clip(1.0 - 2.0 * cov, 0.0, 1.0)
+    fringe = np.where(cov >= 0.5, sea_y + up * (land - sea_y), sea_y - down * shore_m)
+    return np.where((cov > 0.0) & (cov < 1.0), fringe, out).astype(np.float32)
 
 
 def sample_bilinear(a, xs, ys):
@@ -212,6 +226,22 @@ def sample_bilinear(a, xs, ys):
     top = a[y0, x0] * (1 - fx) + a[y0, x0 + 1] * fx
     bot = a[y0 + 1, x0] * (1 - fx) + a[y0 + 1, x0 + 1] * fx
     return top * (1 - fy) + bot * fy
+
+
+def sharpen_weights(tw, rules):
+    """Outcrops, not blobs: the weights (h, w, NT) normalised per vertex,
+    then cliff and scree raised to a power, which narrows their soft edge
+    where the grass stays wide. What the cliff loses becomes scree (an
+    outcrop fringed by scree), and the soil slope takes the scree's power:
+    left alone it overtook both at the rim and put a one-vertex brown
+    speckle round every outcrop. Works in place and returns tw."""
+    tw /= np.maximum(tw.sum(axis=2, keepdims=True), 1e-6)
+    cliff = tw[..., CLIFF] ** rules["sharp_cliff"]
+    tw[..., ROCKY] += tw[..., CLIFF] - cliff
+    tw[..., CLIFF] = cliff
+    tw[..., ROCKY] **= rules["sharp_rocky_trail"]
+    tw[..., SOIL] **= rules["sharp_rocky_trail"]
+    return tw
 
 
 def blend_byte(w1, w2, dither):
@@ -317,7 +347,7 @@ def main(argv=None):
             y1 = min(y0 + 512, vh)
             ys, xs = np.mgrid[y0:y1, 0:vw].astype(np.float32)
             tw[y0:y1, :, t] = np.maximum(sample_bilinear(smooth, xs + dx[y0:y1], ys + dy[y0:y1]), 0)
-    del dx, dy, smooth
+    del smooth
     del wts, biome_tw
 
     gy, gx = np.gradient(height, VERTEX_M)
@@ -335,10 +365,32 @@ def main(argv=None):
     tw[..., SOIL] += 0.9 * t_rock * (1 - hn) * (1 - t_cliff)
     tw[..., CLIFF] += 2.5 * t_cliff * np.maximum(hn, 0.35)
     # The beach fades out by the share of land around a vertex (a box of
-    # BEACH_M): a 4-neighbour step count cut it on a diamond staircase.
+    # BEACH_M: a 4-neighbour step count cut it on a diamond staircase) and
+    # under BEACH_MAX_M; the whole mask is then sampled along the grounds'
+    # warp, so both its edges fray like theirs (the height fade alone drew a
+    # straight line across a steep coast).
     inland = box(land.astype(np.float32), int(BEACH_M / VERTEX_M))
-    beach = land * np.clip((1.0 - inland) / 0.2, 0, 1) * np.clip((BEACH_MAX_M - height) / 15.0, 0, 1)
-    tw[..., SAND] += 2.0 * beach
+    flat = (np.clip((1.0 - inland) / rules["beach_fade_share"], 0, 1)
+            * np.clip((BEACH_MAX_M - height) / rules["beach_fade_height_m"], 0, 1))
+    del inland
+    beach = np.empty_like(flat)
+    for y0 in range(0, vh, 512):
+        y1 = min(y0 + 512, vh)
+        ys, xs = np.mgrid[y0:y1, 0:vw].astype(np.float32)
+        beach[y0:y1] = sample_bilinear(flat, xs + dx[y0:y1], ys + dy[y0:y1])
+    # The warp may carry it up to edge_warp_m: never onto a cliff, nor above
+    # twice BEACH_MAX_M (that cap falls on the steep ground, where it hides).
+    beach *= land * (1.0 - t_cliff) * np.clip((2.0 * BEACH_MAX_M - height) / rules["beach_fade_height_m"], 0, 1)
+    del dx, dy, flat
+    # The shore is dirt_floor (lighter, warmer and grainier than sand_03,
+    # whose own tone the colour map cannot lighten) with sand as its second
+    # texture at a share that varies on a short wave but stays under a half:
+    # were the two to trade first place, the vertex's base would flip and
+    # Terrain3D would draw 20 m blocks.
+    grain = rules["beach_sand_share"] * value_noise(rng, vw, vh, rules["beach_grain_wave_m"] / VERTEX_M)
+    tw[..., DIRT] += 2.0 * beach * (1.0 - grain)
+    tw[..., SAND] += 2.0 * beach * grain
+    del grain
     del t_rock, t_cliff, keep, beach
     depth = np.clip(-height / 150.0, 0, 1)
     tw[~land] = 0.0
@@ -346,18 +398,7 @@ def main(argv=None):
     tw[..., SOIL] += np.where(land, 0.0, depth)
     del depth, hn
 
-    # Outcrops, not blobs: after normalising, cliff and scree are raised to a
-    # power, which narrows their soft edge where the grass stays wide. What
-    # the cliff loses becomes scree (an outcrop fringed by scree), and the
-    # soil slope takes the scree's power: left alone it overtook both at the
-    # rim and put a one-vertex brown speckle round every outcrop.
-    tw /= np.maximum(tw.sum(axis=2, keepdims=True), 1e-6)
-    cliff = tw[..., CLIFF] ** rules["sharp_cliff"]
-    tw[..., ROCKY] += tw[..., CLIFF] - cliff
-    tw[..., CLIFF] = cliff
-    tw[..., ROCKY] **= rules["sharp_rocky_trail"]
-    tw[..., SOIL] **= rules["sharp_rocky_trail"]
-    del cliff
+    tw = sharpen_weights(tw, rules)
 
     # --- control: top two per vertex --------------------------------------------------
     control = np.zeros((vh, vw), dtype=np.uint32)
@@ -375,7 +416,8 @@ def main(argv=None):
     for t, key in enumerate(TEXTURE_KEYS):
         a = np.asarray(Image.open(os.path.join(TEX, f"{key}_alb_ht.png")).convert("RGB").resize((64, 64)), dtype=np.float64) / 255.0
         mean_lin = srgb_to_lin(a).reshape(-1, 3).mean(0)
-        mult_lin[t] = np.clip(srgb_to_lin(hex_rgb(FAR_COLOR[t])) / np.maximum(mean_lin, 1e-4), 0, 1)
+        far = rules["far_color_sand"] if t == SAND else FAR_COLOR[t]
+        mult_lin[t] = np.clip(srgb_to_lin(hex_rgb(far)) / np.maximum(mean_lin, 1e-4), 0, 1)
     color_lin = np.zeros((vh, vw, 3), dtype=np.float32)
     wsum = np.maximum(tw.sum(axis=2), 1e-6)
     for t in range(NT):

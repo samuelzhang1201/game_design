@@ -13,6 +13,7 @@ import bake_world as bw  # noqa: E402
 def test_load_rules_reads_the_table():
     rules = bw.load_rules(os.path.join(bw.ROOT, "data", "map3d_bake.csv"))
     assert rules["sea_y_m"] == 5.0 and rules["coast_supersample"] == 4.0
+    assert rules["far_color_sand"].startswith("#")   # a colour stays text
 
 
 def test_coverage_of_a_square():
@@ -32,13 +33,20 @@ def test_a_lake_cuts_the_land():
 
 
 def test_shore_heights_cross_the_water_plane_at_half_coverage():
-    h = np.array([[100.0, 100.0, -50.0, -50.0]], dtype=np.float32)
-    cov = np.array([[1.0, 0.75, 0.25, 0.0]], dtype=np.float32)
+    # High coast: the fringe crosses the plane at cov 0.5 and rises to the
+    # land's own height (no flat shelf); seaward it ramps to shore_m under.
+    h = np.array([[100.0, 100.0, 100.0, -50.0, -50.0]], dtype=np.float32)
+    cov = np.array([[1.0, 0.75, 0.5, 0.25, 0.0]], dtype=np.float32)
     out = bw.shore_heights(h, cov, 5.0, 4.0)
-    assert out[0, 0] == 100.0            # inland keeps its ground
-    assert abs(out[0, 1] - 7.0) < 1e-5   # 5 + 4 * (2 * 0.75 - 1)
-    assert abs(out[0, 2] - 3.0) < 1e-5   # 5 + 4 * (2 * 0.25 - 1)
-    assert out[0, 3] == -50.0            # open sea keeps its depth
+    assert out[0, 0] == 100.0                 # inland keeps its ground
+    assert abs(out[0, 1] - 52.5) < 1e-4       # 5 + 0.5 * (100 - 5)
+    assert abs(out[0, 2] - 5.0) < 1e-4        # on the plane
+    assert abs(out[0, 3] - 3.0) < 1e-4        # 5 - 0.5 * 4: seaward only to shore_m under
+    assert out[0, 4] == -50.0                 # open sea keeps its depth
+    # Low coast: land held shore_m over the plane, sea shore_m under it.
+    low = bw.shore_heights(np.zeros((1, 4), np.float32),
+                           np.array([[1.0, 0.75, 0.25, 0.0]], np.float32), 5.0, 4.0)
+    assert np.allclose(low, [[9.0, 7.0, 3.0, 0.0]])  # 9, 5 + 0.5 * 4, 5 - 0.5 * 4, 0
 
 
 def test_sample_bilinear():
@@ -53,6 +61,17 @@ def test_blend_byte():
     b = bw.blend_byte(w1, w2, np.zeros(4))
     assert b[0] == 0 and b[1] == 128
     assert 0 < b[2] < b[3] < b[1]
+
+
+def test_sharpen_weights():
+    # One vertex: cliff 0.5, scree 0.3, soil 0.2 (already normalised), powers 2.
+    tw = np.zeros((1, 1, bw.NT), dtype=np.float32)
+    tw[0, 0, bw.CLIFF], tw[0, 0, bw.ROCKY], tw[0, 0, bw.SOIL] = 0.5, 0.3, 0.2
+    out = bw.sharpen_weights(tw, {"sharp_cliff": 2.0, "sharp_rocky_trail": 2.0})
+    assert abs(out[0, 0, bw.CLIFF] - 0.25) < 1e-6    # 0.5^2
+    assert abs(out[0, 0, bw.ROCKY] - 0.3025) < 1e-6  # (0.3 + 0.25)^2: the cliff's loss is scree
+    assert abs(out[0, 0, bw.SOIL] - 0.04) < 1e-6     # 0.2^2
+    assert out[0, 0, bw.ROCKY] > out[0, 0, bw.SOIL]  # soil never overtakes the rim
 
 
 if __name__ == "__main__":
