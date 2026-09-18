@@ -22,6 +22,34 @@ extends Control
 ## province is outlined in gold. Kingdom borders and province seams come
 ## from the live outlines (Map3DBorders) and are rebuilt when ownership
 ## changes. Settlements are placed from live data (map3d_settlements.csv).
+##
+## Zoom runs 800 m (a village and its fields) to 80 km (the whole island,
+## edge to edge — owner 2026-09-18); the wheel and a macOS trackpad pinch
+## both zoom about the pointer, not the view's centre, and a two-finger
+## trackpad drag pans the ground. Settlements draw as screen-constant hollow
+## rings (settlement_ring.gdshader, data/map3d_settlements.csv: ring_px,
+## line_px, colour, max_view_m per tier), thinned by distance and picked in
+## screen space (map3d_pick_px); a click gets a gold selection ring that
+## never thins. Map3DHud draws the scale bar (ScaleBar, the 2D map's own
+## drawing, restated in the 3D world's own metres — map_info's
+## distance_scale is the 2D SHEET's and would lie 20x here) and a
+## north-pointing compass, top-left, that turns with the view and eases back
+## to north on a click.
+##
+## The ground is the bake's own coverage-and-control maps (tools/map3d/
+## bake_world.py, tuned by data/map3d_bake.csv): coasts.csv loops
+## rasterised into a supersampled coast coverage, warped biome edges, a
+## dithered blend byte, heights ramped through the shore. Rivers are carved
+## into that same heightmap and their courses (source to sea mouths) written
+## to rivers.json beside the built scene, drawn here as one ribbon mesh by
+## Map3DRivers + water_river.gdshader. The sea is water_sea.gdshader, dressed
+## onto the build's Sea plane at runtime with the 2D map's own four bands.
+## Clouds are Map3DCloudField (pure) + cloud_deck.gdshader, casting soft
+## shadows through a separate cloud_shadow.gdshader twin — kept apart
+## because a shader that so much as mentions ALPHA_SCISSOR_THRESHOLD
+## anywhere blanks the whole material's blended rendering under GL
+## Compatibility. tools/map3d/bench.gd polices all of it at an 8 ms budget
+## (60 fps) through the real view.
 
 ## The described entry of the settlement under a click ({title, obj}), or
 ## {} when the selection is cleared — WorldMapView's signal.
