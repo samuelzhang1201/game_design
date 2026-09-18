@@ -2181,8 +2181,6 @@ func visible_seam_count() -> int:
 var _manor_mesh: ArrayMesh = null
 var _manor_mesh_sig := -1
 var _manor_mesh_built := false
-var _manor_edges := PackedVector2Array()
-var _cell_province: Dictionary = {}
 
 ## A number that changes whenever any province changes hands.
 func _ownership_sig() -> int:
@@ -2191,80 +2189,22 @@ func _ownership_sig() -> int:
 	return 0 if Game.state == null else hash([Game.state.province_owner.hash(),
 		Game.state.manor_province.hash()])
 
-## The province a cell lies in — geometry, resolved once per cell from the
-## province index at its centre.
+## The manor colours live in ManorPalette (owner 2026-09-19), shared with
+## the 3D map's ground tint; these wrappers keep the view's own API.
 func cell_province(cell_id: int) -> String:
-	if Game.state != null and Game.state.manor_province.has(str(cell_id)):
-		return String(Game.state.manor_province[str(cell_id)])
-	if not _cell_province.has(cell_id):
-		_cell_province[cell_id] = province_at(
-			MapTerrain.cell_center(Game.data, Game.data.cells[cell_id]))
-	return _cell_province[cell_id]
+	return ManorPalette.province(Game.data, Game.state, cell_id)
 
-## Who holds a cell now: its province's live owner, or "" for unheld land.
 func cell_owner(cell_id: int) -> String:
-	var province := cell_province(cell_id)
-	return "" if province == "" else MapOwnership.owner_of(Game.data, Game.state, province)
+	return ManorPalette.owner(Game.data, Game.state, cell_id)
 
-## The wash a land cell wears: its holder's colour, from manor_pale (poor land)
-## to manor_rich (the best), plus a fixed per-cell nudge so neighbouring
-## manors of one biome still read as separate estates. Transparent for land
-## no realm holds.
 func manor_color(cell_id: int) -> Color:
-	var holder := cell_owner(cell_id)
-	if holder == "":
-		return Color(0, 0, 0, 0)
-	var repo := Game.data
-	var realm := MapPalette.color_of(repo, holder)
-	var t := clampf(MapEconomy.land_value(repo, repo.cells[cell_id])
-		+ (MapObjects.hash01(cell_id) - 0.5) * repo.bal("map_manor_jitter"), 0.0, 1.0)
-	var pale := realm.lerp(MapPalette.named(repo, "manor_pale"), repo.bal("map_manor_pale"))
-	var deep := realm.lerp(MapPalette.named(repo, "manor_rich"), repo.bal("map_manor_deep"))
-	var c := _province_shaded(cell_id, pale.lerp(deep, t))
-	c.a = repo.bal("map_manor_alpha")
-	return c
+	return ManorPalette.manor_color(Game.data, Game.state, cell_id)
 
-## Neighbouring provinces told apart (owner 2026-09-13): the manor's colour
-## shifted by its province's shade level (MapManors.province_shades), so
-## two provinces of one house or one realm that touch never look alike.
-func _province_shaded(cell_id: int, color: Color) -> Color:
-	var repo := Game.data
-	var levels := int(repo.bal("map_manor_shade_levels"))
-	if levels <= 1:
-		return color
-	var level := int(MapManors.province_shades(repo, levels).get(MapManors.province_of(repo, cell_id, Game.state), 0))
-	return MapManors.shade(color, level, repo.bal("map_manor_shade_step"))
-
-## The MANORS view's wash: the holding house's colour — the crown its
-## realm's, deepened map_manor_crown_deep toward manor_rich; another house
-## its own hue — paled map_manor_foreign_pale outside the crown's realm.
-## Transparent for land no house holds.
 func house_manor_color(cell_id: int) -> Color:
-	var repo := Game.data
-	var family := MapManors.owner_of(repo, Game.state, cell_id)
-	if family == "":
-		return Color(0, 0, 0, 0)
-	var mine := repo.resolve_realm("player_realm")
-	var c: Color
-	if family == MapManors.crown(Game.state):
-		c = MapPalette.color_of(repo, mine).lerp(MapPalette.named(repo, "manor_rich"),
-			repo.bal("map_manor_crown_deep"))
-	else:
-		c = MapPalette.house_color(repo, family)
-	if cell_owner(cell_id) != mine:
-		c = c.lerp(MapPalette.named(repo, "manor_pale"), repo.bal("map_manor_foreign_pale"))
-	c = _province_shaded(cell_id, c)
-	c.a = repo.bal("map_manor_alpha")
-	return c
+	return ManorPalette.house_color(Game.data, Game.state, cell_id)
 
-## The fill of a working manor: its holder's colour taken map_manor_rich of
-## the way to manor_rich.
 func working_manor_color(cell_id: int) -> Color:
-	var holder := cell_owner(cell_id)
-	var repo := Game.data
-	var base := MapPalette.color_of(repo, holder) if holder != "" \
-		else MapPalette.named(repo, "manor_pale")
-	return base.lerp(MapPalette.named(repo, "manor_rich"), repo.bal("map_manor_rich"))
+	return ManorPalette.working_color(Game.data, Game.state, cell_id)
 
 ## Every land cell as one flat-coloured fan, in native coordinates, drawn with
 ## the view transform. Rebuilt only when a province changes hands; null
@@ -2286,14 +2226,13 @@ func manor_mesh() -> ArrayMesh:
 	ids.sort()
 	# A working manor's dark fill is part of the mesh (2026-09-13): it is a
 	# fact of the pack, not of the zoom, so it costs nothing per frame.
-	var working := MapEconomy.manors(repo) if show_economy and not show_manors else {}
+	var theme := "manors" if show_manors else "economy"
 	for id: int in ids:
 		var cell: Dictionary = repo.cells[id]
 		var ring: PackedInt32Array = cell["vertex_ids"]
 		if MapTerrain.is_water(cell) or ring.size() < 3:
 			continue
-		var c := house_manor_color(id) if show_manors \
-			else (working_manor_color(id) if working.has(id) else manor_color(id))
+		var c := ManorPalette.theme_color(repo, Game.state, id, theme)
 		if c.a <= 0.0:
 			continue
 		var base := verts.size()
@@ -2312,29 +2251,9 @@ func manor_mesh() -> ArrayMesh:
 	return _manor_mesh
 
 ## Every edge of every land cell, once, as segment pairs in native
-## coordinates. Geometry — built once and kept.
+## coordinates (ManorPalette.edges, shared with the 3D map).
 func manor_edges() -> PackedVector2Array:
-	if not _manor_edges.is_empty():
-		return _manor_edges
-	var repo := Game.data
-	var seen: Dictionary = {}
-	var ids: Array = repo.cells.keys()
-	ids.sort()
-	for id: int in ids:
-		var cell: Dictionary = repo.cells[id]
-		if MapTerrain.is_water(cell):
-			continue
-		var ring: PackedInt32Array = cell["vertex_ids"]
-		for i in ring.size():
-			var a := ring[i]
-			var b := ring[(i + 1) % ring.size()]
-			var key := Vector2i(mini(a, b), maxi(a, b))
-			if seen.has(key):
-				continue
-			seen[key] = true
-			_manor_edges.append(repo.vertices[a] as Vector2)
-			_manor_edges.append(repo.vertices[b] as Vector2)
-	return _manor_edges
+	return ManorPalette.edges(Game.data)
 
 ## The working manors in the frame whose settlements pass the town LOD rule
 ## (the same one the pins use), biggest producer first:
