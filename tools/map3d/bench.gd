@@ -3,6 +3,13 @@ extends Node
 ## real GameRoot, the court, the 3D tab lit, the clock at 4x — at the near,
 ## mid and far zoom with every layer on, then each layer off in turn to price
 ## it. Vsync off, so the numbers are the real cost. Exits 3 over budget.
+##
+## The clock is held short of the month's end (GameRoot.hold_clock_before_
+## month_end): a completed month can roll a random event that stops the
+## clock and swaps the screen away, freeing the very Map3DView being timed.
+## This prices the real per-day clock cost paid every frame — NOT the
+## month-end settlement itself (the tick, its report, an event firing): a
+## settle hitch is invisible to this bench and needs its own measurement.
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- --size 3024x1964
 
 const FRAMES := 120
@@ -10,9 +17,8 @@ const WARM := 30
 const BUDGET_MS := 8.0
 const STOPS := [["near", "map3d_zoom_min_m"], ["mid", "map3d_zoom_start_m"],
 	["far", "map3d_zoom_max_m"]]
-## Kept below Calendar.DAYS_PER_TICK (30) by _guard_clock: a completed month
-## can roll a random event, which stops the clock and swaps the screen to
-## the council — freeing the very Map3DView the bench is timing.
+## Kept below Calendar.DAYS_PER_TICK (30), with room to spare — see the
+## GameRoot.hold_clock_before_month_end note at the top of this file.
 const DAY_CEILING := 25
 
 var _root: GameRoot
@@ -62,22 +68,14 @@ func _ready() -> void:
 func _measure(label: String) -> float:
 	for i in WARM:
 		await get_tree().process_frame
-		_guard_clock()
+		_root.hold_clock_before_month_end(DAY_CEILING)
 	var t0 := Time.get_ticks_usec()
 	var calls := 0
 	for i in FRAMES:
 		await get_tree().process_frame
-		_guard_clock()
+		_root.hold_clock_before_month_end(DAY_CEILING)
 		calls = maxi(calls, RenderingServer.get_rendering_info(
 			RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
 	var ms := float(Time.get_ticks_usec() - t0) / 1000.0 / FRAMES
 	print("%-24s %6.2f ms  (%5.1f fps)  draw calls %d" % [label, ms, 1000.0 / ms, calls])
 	return ms
-
-
-## The clock runs at 4x for real per-frame cost, but a completed month must
-## never fire mid-bench (see DAY_CEILING): roll the day back before it can.
-func _guard_clock() -> void:
-	if Game.state != null and Game.state.day > DAY_CEILING:
-		Game.state.day = 1
-		_root._clock_acc = 0.0

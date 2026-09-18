@@ -416,6 +416,16 @@ func set_map3d_view(on: bool) -> void:
 func map3d_view() -> bool:
 	return _map3d_view
 
+## Tools only: keep the clock short of the month's end (tools/map3d/bench.gd
+## runs the clock for real per-frame cost, but a completed month can roll a
+## random event mid-bench, which stops the clock and swaps the screen to the
+## council — freeing whatever the caller is timing). Rolls the day back to 1
+## and forgets the accumulated clock seconds once it passes `day_ceiling`.
+func hold_clock_before_month_end(day_ceiling: int) -> void:
+	if Game.state != null and Game.state.day > day_ceiling:
+		Game.state.day = 1
+		_clock_acc = 0.0
+
 ## The map of the screen that is showing, if it has one.
 func _current_map() -> WorldMapView:
 	if current_screen != null and current_screen.has_method("world_map"):
