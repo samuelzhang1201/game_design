@@ -10,6 +10,15 @@ extends Node
 ## This prices the real per-day clock cost paid every frame — NOT the
 ## month-end settlement itself (the tick, its report, an event firing): a
 ## settle hitch is invisible to this bench and needs its own measurement.
+##
+## Each row is MEDIAN over the frame, not a single mean (controller ruling:
+## a single-run mean swings ±1.5 ms on this machine with the owner's Godot
+## editor, Blender and ComfyUI competing for the GPU) — a stray slow frame
+## from another app skews a mean but barely moves a median. Mean and p95
+## print alongside it so a fat tail is still visible. WORST and the exit
+## code are the MEDIAN of the "all on" rows only. The 3D view's own GPU
+## time and the window's total GPU time (also medians) separate "the
+## Map3DView is expensive" from "something else on screen is."
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- --size 3024x1964
 
 const FRAMES := 120
@@ -22,6 +31,7 @@ const STOPS := [["near", "map3d_zoom_min_m"], ["mid", "map3d_zoom_start_m"],
 const DAY_CEILING := 25
 
 var _root: GameRoot
+var _view: Map3DView
 
 
 func _ready() -> void:
@@ -51,6 +61,9 @@ func _ready() -> void:
 		push_error("the 3D map is not built — see tools/map3d/README.md")
 		get_tree().quit(1)
 		return
+	_view = v
+	RenderingServer.viewport_set_measure_render_time(v.viewport().get_viewport_rid(), true)
+	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 	print("renderer %s / %s, window %s" % [RenderingServer.get_current_rendering_method(),
 		RenderingServer.get_current_rendering_driver_name(), get_window().size])
 	var worst := 0.0
@@ -65,17 +78,52 @@ func _ready() -> void:
 	get_tree().quit(0 if worst <= BUDGET_MS else 3)
 
 
+## Times FRAMES frames after WARM warm-up ones, one sample per frame taken
+## from the gap between successive process frames (not a single before/after
+## total), so the row can report a distribution, not just its average.
+## Returns the MEDIAN frame time in ms — the bench's "how expensive is this"
+## number (see the top-of-file note on why median).
 func _measure(label: String) -> float:
 	for i in WARM:
 		await get_tree().process_frame
 		_root.hold_clock_before_month_end(DAY_CEILING)
-	var t0 := Time.get_ticks_usec()
+	var view_rid := _view.viewport().get_viewport_rid()
+	var root_rid := get_viewport().get_viewport_rid()
+	var frame_ms := PackedFloat64Array()
+	var view_gpu_ms := PackedFloat64Array()
+	var root_gpu_ms := PackedFloat64Array()
 	var calls := 0
+	var t_prev := Time.get_ticks_usec()
 	for i in FRAMES:
 		await get_tree().process_frame
 		_root.hold_clock_before_month_end(DAY_CEILING)
+		var t_now := Time.get_ticks_usec()
+		frame_ms.append(float(t_now - t_prev) / 1000.0)
+		t_prev = t_now
 		calls = maxi(calls, RenderingServer.get_rendering_info(
 			RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
-	var ms := float(Time.get_ticks_usec() - t0) / 1000.0 / FRAMES
-	print("%-24s %6.2f ms  (%5.1f fps)  draw calls %d" % [label, ms, 1000.0 / ms, calls])
-	return ms
+		view_gpu_ms.append(RenderingServer.viewport_get_measured_render_time_gpu(view_rid))
+		root_gpu_ms.append(RenderingServer.viewport_get_measured_render_time_gpu(root_rid))
+	var median := _median(frame_ms)
+	print("%-24s median %6.2f ms  mean %6.2f ms  p95 %6.2f ms  (%5.1f fps)  draw calls %4d  gpu view %5.2f ms  gpu root %5.2f ms"
+		% [label, median, _mean(frame_ms), _percentile(frame_ms, 0.95), 1000.0 / median, calls,
+			_median(view_gpu_ms), _median(root_gpu_ms)])
+	return median
+
+
+func _mean(xs: PackedFloat64Array) -> float:
+	var total := 0.0
+	for x: float in xs:
+		total += x
+	return total / float(xs.size())
+
+
+func _median(xs: PackedFloat64Array) -> float:
+	return _percentile(xs, 0.5)
+
+
+func _percentile(xs: PackedFloat64Array, p: float) -> float:
+	var sorted := xs.duplicate()
+	sorted.sort()
+	var i := clampi(int(round(p * float(sorted.size() - 1))), 0, sorted.size() - 1)
+	return sorted[i]
