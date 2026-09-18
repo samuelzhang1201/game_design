@@ -58,6 +58,10 @@ var _manor := ""
 ## --manor), so the slot row shows a work; --speed N lights the clock.
 var _build := ""
 var _speed := -1
+## --click3d fx,fy (with --screen root --layer "3d map") clicks the 3D map
+## at that share of its size, so a shot shows the pick: the card in the
+## left column and the province's gold outline.
+var _click3d := Vector2(-1, -1)
 
 
 func _ready() -> void:
@@ -82,6 +86,9 @@ func _ready() -> void:
 			_manor = args[i + 1]
 		elif args[i] == "--build":
 			_build = args[i + 1]
+		elif args[i] == "--click3d":
+			var parts := args[i + 1].split(",")
+			_click3d = Vector2(float(parts[0]), float(parts[1]))
 		elif args[i] == "--speed":
 			_speed = int(args[i + 1])
 		elif args[i] == "--resolution":
@@ -169,6 +176,12 @@ func _process(_delta: float) -> void:
 				_root.current_screen.detail_panel().show_manor(cell)
 		if _speed >= 0:
 			Game.set_clock_speed(_speed)
+	if _root != null and _frames == 10 and _click3d.x >= 0.0 \
+			and _root.current_screen.has_method("map3d_view") \
+			and _root.current_screen.map3d_view() != null:
+		var v: Map3DView = _root.current_screen.map3d_view()
+		v.select_at(v.size * _click3d)
+		print("click3d: province=%s burg=%s" % [v.selected_province(), v.selected_burg()])
 	if _frames == 40:
 		var img := (get_viewport() if _viewport == null else _viewport).get_texture().get_image()
 		var abs_path := ProjectSettings.globalize_path(_out)

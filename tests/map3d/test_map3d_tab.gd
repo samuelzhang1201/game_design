@@ -62,3 +62,20 @@ func test_the_3d_map_follows_the_player_to_the_next_screen() -> void:
 	assert_not_null(screen.map3d_view())
 	assert_true(screen.map3d_view().visible)
 	assert_false(screen.world_map().visible)
+
+
+func test_a_3d_selection_opens_the_card_in_the_left_column() -> void:
+	var r: GameRoot = await _court()
+	r.set_map3d_view(true)
+	await wait_frames(1)
+	var screen: CourtScreen = r.current_screen
+	var view := screen.map3d_view()
+	var code := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
+	view.object_selected.emit({"title": "x", "obj": {"kind": "burg", "code": code}})
+	await wait_frames(1)
+	assert_true(screen.detail_panel().visible, "the town's card, as a 2D click would open")
+	assert_false(screen.dashboard().visible, "in place of the dashboard")
+	var province := String(Game.data.burgs[code]["province_code"])
+	view.province_selected.emit(province)
+	await wait_frames(1)
+	assert_true(screen.detail_panel().visible, "a province's card too")

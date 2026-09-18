@@ -23,7 +23,9 @@ Compatibility (see the traps below).
 | `assets/map3d/<map>/world.tscn`, `terrain_assets.tres`, `terrain/` | the Terrain3D scene (root metadata `map3d_world`: scale, origin, canvas, sea level), its assets and region data | no — `build_world.gd` |
 
 Runtime game code is `scripts/map3d/` — `Map3DGeometry` (pure: pack px ↔
-metres, the camera rig's pose, zoom, tilt, pan) and `Map3DView` (the tab's
+metres, the camera rig's pose, zoom, tilt, pan, ray to ground),
+`Map3DBorders` (pure: live outlines and seams as draped ribbons,
+`border_line.gdshader` keeping them a constant screen width) and `Map3DView` (the tab's
 view: lazy load, SubViewport rendering only while shown, settlements placed
 from live data by `data/map3d_settlements.csv`) — with tests in
 `tests/map3d/` that use a fixture scene, never the git-ignored build. Camera
@@ -70,7 +72,7 @@ values are `balance.csv` `map3d_*`.
 
 - `build_terrain.gd`'s look constants (textures, material, sky, sea) still
   live in the script, not in CSVs.
-- Settlements are placeholder discs; trees are off; the view is look-only —
-  no hover, click, card, borders or labels yet.
+- Settlements are placeholder discs (half-sunk on steep ground); trees are
+  off; no hover tooltip, no kingdom labels, no army counters yet.
 - Compare Compatibility vs Forward+ on the target PC (without trees
   Compatibility measured 5.0 vs 8.4 ms at 1440p).

@@ -118,6 +118,7 @@ func _drag(v: Map3DView, button: MouseButton, by: Vector2) -> void:
 	down.pressed = true
 	v._gui_input(down)
 	var motion := InputEventMouseMotion.new()
+	motion.position = by
 	motion.relative = by
 	motion.button_mask = MOUSE_BUTTON_MASK_LEFT if button == MOUSE_BUTTON_LEFT else MOUSE_BUTTON_MASK_RIGHT
 	v._gui_input(motion)
@@ -125,3 +126,109 @@ func _drag(v: Map3DView, button: MouseButton, by: Vector2) -> void:
 	up.button_index = button
 	up.pressed = false
 	v._gui_input(up)
+
+
+func test_a_click_on_a_settlement_opens_its_card() -> void:
+	var v := _view()
+	v.activate()
+	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
+	var code := String(realm["capital_burg"])
+	var burg: Dictionary = Game.data.burgs[code]
+	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])))
+	watch_signals(v)
+	_click(v, v.size * 0.5)
+	assert_signal_emitted_with_parameters(v, "object_selected",
+		[{"title": String(burg["label"]), "obj": {"kind": "burg", "code": code}}])
+	assert_eq(v.selected_burg(), code)
+
+
+func test_a_click_on_open_land_names_its_province() -> void:
+	var v := _view()
+	v.activate()
+	var spot := _open_land()
+	v.look_at_pack(spot["px"], Game.data.bal("map3d_zoom_min_m"))
+	watch_signals(v)
+	_click(v, v.size * 0.5)
+	assert_signal_emitted_with_parameters(v, "province_selected", [spot["province"]])
+	assert_eq(v.selected_province(), spot["province"])
+	assert_not_null(v.line_mesh("Selection"), "the clicked province is outlined")
+
+
+func test_a_drag_is_not_a_click() -> void:
+	var v := _view()
+	v.activate()
+	watch_signals(v)
+	_drag(v, MOUSE_BUTTON_LEFT, Vector2(40, 0))
+	assert_signal_not_emitted(v, "province_selected")
+	assert_signal_not_emitted(v, "object_selected")
+
+
+func test_closing_the_card_clears_the_selection() -> void:
+	var v := _view()
+	v.activate()
+	var spot := _open_land()
+	v.look_at_pack(spot["px"], Game.data.bal("map3d_zoom_min_m"))
+	_click(v, v.size * 0.5)
+	watch_signals(v)
+	v.clear_selection()
+	assert_eq(v.selected_province(), "")
+	assert_signal_emitted_with_parameters(v, "object_selected", [{}])
+	assert_null(v.line_mesh("Selection"), "no outline left")
+
+
+func test_borders_and_seams_are_laid_from_the_live_outlines() -> void:
+	var v := _view()
+	v.activate()
+	var rings: Array = []
+	for code: String in Game.data.kingdoms:
+		rings.append_array(Map3DBorders.kingdom_lines(Game.data, Game.state, WORLD, code,
+			Game.data.bal("map3d_line_step_m")))
+	var expected: PackedVector3Array = Map3DBorders.ribbon_arrays(rings,
+		func(_xz: Vector2) -> float: return 5.0)[Mesh.ARRAY_VERTEX]
+	var kingdoms := v.line_mesh("Kingdoms")
+	assert_not_null(kingdoms)
+	assert_eq(kingdoms.surface_get_array_len(0), expected.size())
+	assert_not_null(v.line_mesh("Seams"))
+
+
+func test_a_conquest_redraws_the_borders() -> void:
+	var v := _view()
+	v.activate()
+	var before := v.line_mesh("Kingdoms")
+	var player := Game.data.resolve_realm("player_realm")
+	var raider := Game.data.resolve_realm("raider_realm")
+	var province := String(MapOwnership.provinces_of(Game.data, Game.state, raider)[0])
+	MapOwnership.set_owner(Game.data, Game.state, province, player, "test: conquest")
+	v.refresh_borders()
+	assert_ne(v.line_mesh("Kingdoms"), before, "a new mesh for the new outline")
+	Game.start_campaign(42)
+
+
+func _click(v: Map3DView, at: Vector2) -> void:
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = at
+	v._gui_input(down)
+	var up := down.duplicate() as InputEventMouseButton
+	up.pressed = false
+	v._gui_input(up)
+
+
+## A land pixel of some province with no settlement within 60 px of it.
+func _open_land() -> Dictionary:
+	var img := (load(Game.data.province_texture_path) as Texture2D).get_image()
+	for y in range(40, img.get_height() - 40, 25):
+		for x in range(40, img.get_width() - 40, 25):
+			var pid := MapIndex.id_at(img, Vector2i(x, y))
+			var code := String(Game.data.province_by_id(pid).get("province_code", ""))
+			if code == "":
+				continue
+			var clear := true
+			for b: Dictionary in Game.data.burgs.values():
+				if Vector2(float(b["x"]), float(b["y"])).distance_to(Vector2(x, y)) < 60.0:
+					clear = false
+					break
+			if clear:
+				return {"px": Vector2(x + 0.5, y + 0.5), "province": code}
+	return {}

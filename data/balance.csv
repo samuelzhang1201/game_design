@@ -318,3 +318,15 @@ map3d_rotate_deg_per_px,0.25,"3D MAP: right-drag turns the view by this many deg
 map3d_key_pan_screens_per_s,0.7,"3D MAP: WASD / arrow keys pan this many view-heights a second"
 map3d_near_m,20.0,"3D MAP: the camera's near clip plane"
 map3d_far_m,400000.0,"3D MAP: the camera's far clip plane — past the sea plane's edge"
+map3d_line_step_m,150.0,"3D MAP borders: borders and seams are resampled to a point every this many metres so they drape over the relief (a Terrain3D vertex is 20 m, a pack px 50 m)"
+map3d_border_width_px,3.0,"3D MAP borders: the kingdom border's width in screen px — the 2D map's chequered ribbon, ink and pale (political_palette state_border / state_border_light)"
+map3d_border_dash_px,10.0,3D MAP borders: length of each ink / pale cell of the kingdom border in screen px
+map3d_border_gap_px,10.0,3D MAP borders: length of the pale cell between them
+map3d_line_lift_px,2.5,"3D MAP borders: every line is lifted this many screen px off the ground at its distance, so it clears the relief between its samples"
+map3d_seam_width_px,2.0,3D MAP borders: province seams width in screen px (political_palette map3d_seam)
+map3d_seam_dash_px,4.0,3D MAP borders: seam dash length in screen px
+map3d_seam_gap_px,6.0,3D MAP borders: seam gap length in screen px
+map3d_seam_alpha,0.75,3D MAP borders: seam opacity — they are an internal hint
+map3d_selection_width_px,4.0,"3D MAP: the clicked province's outline, solid, in political_palette map3d_selection"
+map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its disc) picks it; otherwise the province under the click"
+map3d_border_refresh_s,1.0,"3D MAP: how often the view checks whether ownership changed and its borders need rebuilding"

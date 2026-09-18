@@ -236,10 +236,11 @@ func _close_panel() -> void:
 
 
 ## Follow a map: pins, lines, and kingdoms through object_selected; provinces
-## through province_selected. An empty selection hides the panel.
-func follow(map: WorldMapView) -> void:
-	map.object_selected.connect(show_entry)
-	map.province_selected.connect(show_province)
+## through province_selected. An empty selection hides the panel. Any map
+## with those two signals: the 2D WorldMapView and the 3D Map3DView.
+func follow(map: Control) -> void:
+	map.connect("object_selected", show_entry)
+	map.connect("province_selected", show_province)
 
 
 ## entry = {title, lines, ask, obj?} from the map; a town gets its card,

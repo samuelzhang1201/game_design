@@ -91,3 +91,44 @@ func test_pan_turns_with_the_yaw() -> void:
 	var d := Map3DGeometry.pan_delta(Vector2(10, 0), 1.0, 90.0)
 	assert_almost_eq(d.x, 0.0, 0.001)
 	assert_almost_eq(d.y, 10.0, 0.001)
+
+
+func test_a_ray_hits_flat_ground_where_the_plane_says() -> void:
+	# From (0, 100, 0) down a 45-degree ray toward -Z: flat ground at y = 20
+	# is met 80 m ahead.
+	var dir := Vector3(0, -1, -1).normalized()
+	var hit: Variant = Map3DGeometry.ground_hit(Vector3(0, 100, 0), dir,
+		func(_xz: Vector2) -> float: return 20.0)
+	assert_not_null(hit)
+	assert_almost_eq((hit as Vector3).z, -80.0, 0.01)
+	assert_almost_eq((hit as Vector3).y, 20.0, 0.01)
+
+
+func test_a_ray_settles_on_sloping_ground() -> void:
+	# Ground rising northward: h = -0.25 z. A ray down at 45 degrees from
+	# (0, 100, 0) meets it where 100 + z = -0.25 z, z = -80: y = 20.
+	var dir := Vector3(0, -1, -1).normalized()
+	var hit: Variant = Map3DGeometry.ground_hit(Vector3(0, 100, 0), dir,
+		func(xz: Vector2) -> float: return -0.25 * xz.y)
+	assert_not_null(hit)
+	assert_almost_eq((hit as Vector3).z, -80.0, 0.5)
+	assert_almost_eq((hit as Vector3).y, 20.0, 0.5)
+
+
+func test_a_ray_looking_up_misses() -> void:
+	assert_null(Map3DGeometry.ground_hit(Vector3(0, 100, 0), Vector3(0, 1, -1).normalized(),
+		func(_xz: Vector2) -> float: return 0.0))
+
+
+func test_resample_keeps_the_ends_and_caps_the_step() -> void:
+	# A 10 m segment at a 3 m step: ceil(10 / 3) = 4 pieces, 5 points.
+	var out := Map3DGeometry.resample(PackedVector2Array([Vector2(0, 0), Vector2(10, 0)]), 3.0)
+	assert_eq(out.size(), 5)
+	assert_eq(out[0], Vector2(0, 0))
+	assert_eq(out[4], Vector2(10, 0))
+	assert_almost_eq(out[1].x, 2.5, 0.0001)
+
+
+func test_resample_leaves_short_segments_alone() -> void:
+	var pts := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)])
+	assert_eq(Map3DGeometry.resample(pts, 5.0), pts)

@@ -69,3 +69,38 @@ static func pan_delta(screen_delta: Vector2, m_per_px: float, yaw_deg: float) ->
 	var right := Vector2(cos(yaw), -sin(yaw))
 	var forward := Vector2(-sin(yaw), -cos(yaw))
 	return (-right * screen_delta.x + forward * screen_delta.y) * m_per_px
+
+
+## Where a ray from `origin` along `dir` meets the ground `height_fn(xz)`,
+## or null when it looks up. The ground is found by meeting the plane at the
+## height under the last guess, again and again: it settles wherever the
+## ground is less steep than the ray, which a campaign camera always is.
+static func ground_hit(origin: Vector3, dir: Vector3, height_fn: Callable,
+		iterations: int = 12) -> Variant:
+	if dir.y >= -0.0001:
+		return null
+	var h: float = height_fn.call(Vector2(origin.x, origin.z))
+	var p := origin
+	for i in iterations:
+		var t := (h - origin.y) / dir.y
+		if t < 0.0:
+			t = 0.0
+		p = origin + dir * t
+		h = height_fn.call(Vector2(p.x, p.z))
+	return Vector3(p.x, h, p.z)
+
+
+## The polyline with points added so no segment is longer than `step`; the
+## original points are kept, each long segment cut into equal pieces.
+static func resample(pts: PackedVector2Array, step: float) -> PackedVector2Array:
+	if pts.size() < 2 or step <= 0.0:
+		return pts
+	var out := PackedVector2Array([pts[0]])
+	for i in range(1, pts.size()):
+		var a := pts[i - 1]
+		var b := pts[i]
+		var n := maxi(1, ceili(a.distance_to(b) / step))
+		for k in range(1, n):
+			out.append(a.lerp(b, float(k) / float(n)))
+		out.append(b)
+	return out
