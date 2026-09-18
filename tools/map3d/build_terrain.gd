@@ -138,6 +138,11 @@ static func import_into(terrain: Terrain3D) -> String:
 	var corner: Array = world["import_corner"]
 	terrain.data.import_images(images, Vector3(corner[0], 0.0, corner[1]), 0.0, 1.0)
 	terrain.data.save_directory(root() + "/terrain")
+	# The rivers' water lines (bake_world.py) beside the scene, for Map3DView.
+	var src := bake() + "/rivers.json"
+	if FileAccess.file_exists(src):
+		DirAccess.copy_absolute(ProjectSettings.globalize_path(src),
+			ProjectSettings.globalize_path(root() + "/rivers.json"))
 
 	return "imported %dx%d vertices at %.0f m in %d ms, %d regions" % [
 		fw, fh, terrain.vertex_spacing, Time.get_ticks_msec() - began,

@@ -6,6 +6,7 @@ Writes assets/map3d/<map>/bake/:
   control.r32   float32 carrying Terrain3D control bits (base/overlay/blend)
   color.rgba8   Terrain3D colour map: sRGB multiplier on the ground + roughness
   world.json    sizes, vertex spacing, world origin of pack px (0,0)
+  rivers.json   each river's water line, source -> mouth, in world metres
 Its look rules live in data/map3d_bake.csv and in constants here;
 build_terrain.gd only imports.
   python3 tools/map3d/bake_world.py [--map ID]   (default: data/maps.csv is_default)
@@ -253,6 +254,135 @@ def blend_byte(w1, w2, dither):
     return np.round(255.0 * 0.5 * t * t * (3.0 - 2.0 * t)).astype(np.uint32)
 
 
+def taper_gamma():
+    """balance.csv map_river_taper_gamma: the 2D river's taper, shared."""
+    with open(os.path.join(ROOT, "data", "balance.csv")) as f:
+        for r in csv.DictReader(f):
+            if r["key"] == "map_river_taper_gamma":
+                return float(r["value"])
+    return 1.4
+
+
+def smooth_open(pts, steps):
+    """The 2D map's river curve (MapGeometry.smooth_open): a clamped uniform
+    cubic B-spline, `steps` points per segment, the last point kept. The
+    pack stores a river as a raw polyline whose corners read as kinks."""
+    p = np.asarray(pts, dtype=np.float64)
+    n = len(p)
+    if n < 3 or steps < 1:
+        return p
+    t = np.arange(steps) / steps
+    t2, t3 = t * t, t * t * t
+    basis = np.stack([1 - 3 * t + 3 * t2 - t3, 4 - 6 * t2 + 3 * t3,
+                      1 + 3 * t + 3 * t2 - 3 * t3, t3], axis=1) / 6.0   # (steps, 4)
+    idx = np.clip(np.arange(-2, n - 1)[:, None] + np.arange(4)[None, :], 0, n - 1)  # (n+1, 4)
+    out = np.einsum("sk,ikd->isd", basis, p[idx]).reshape(-1, 2)
+    return np.vstack([out, p[-1:]])
+
+
+def resample_line(pts, step):
+    """Points every `step` (same units) along a polyline, ends kept."""
+    pts = np.asarray(pts, dtype=np.float64)
+    seg = np.hypot(*np.diff(pts, axis=0).T)
+    s = np.concatenate([[0.0], np.cumsum(seg)])
+    if s[-1] <= 0:
+        return pts[:1]
+    t = np.append(np.arange(0.0, s[-1], step), s[-1])
+    return np.column_stack([np.interp(t, s, pts[:, 0]), np.interp(t, s, pts[:, 1])])
+
+
+def river_span(cov_along):
+    """The slice (start, end) of a course's samples worth drawing: from its
+    first land sample (cov >= 0.5) to the first open-sea sample (cov 0)
+    past its last land one, so the mouth runs through the fringe into the
+    sea but never on across it; None when it never touches land. The pack
+    writes a river source -> mouth and the 2D map clips it to the land the
+    same way (WorldMapView._trim_to_land)."""
+    on = np.flatnonzero(cov_along >= 0.5)
+    if len(on) == 0:
+        return None
+    end = int(on[-1]) + 1
+    while end < len(cov_along) and cov_along[end - 1] > 0.0:
+        end += 1
+    return int(on[0]), end
+
+
+def river_fade(courses, vw, vh, reach):
+    """0 on every course (vertex-unit polylines), easing up to 1 at `reach`
+    vertices (4-neighbour steps, smoothstep): the ridges are multiplied by
+    it, so no ridge is thrown across a river's valley for the carve to cut a
+    gorge through (the 2D relief detail holds itself down near rivers too,
+    docs/superpowers/specs/2026-09-17-relief-detail-design.md)."""
+    img = Image.new("L", (vw, vh), 0)
+    draw = ImageDraw.Draw(img)
+    for c in courses:
+        draw.line([(float(x), float(y)) for x, y in c], fill=255, width=1)
+    t = distance_steps(np.asarray(img) > 0, int(reach)) / float(reach)
+    return (t * t * (3.0 - 2.0 * t)).astype(np.float32)
+
+
+def river_bed(ground, depth, drop, floor, restart=None):
+    """Bed heights source -> mouth: `depth` under the ground, but always at
+    least `drop` below the step before, never under `floor`. With `restart`
+    (a mask, True inland) the fall begins afresh where each inland stretch
+    begins, and the shore or lake samples before one only follow their own
+    ground: a course rising on a lake shore or crossing a lake would
+    otherwise hold its whole length down at the water's depth, a trench.
+    The last stretch, the mouth, keeps falling into the sea."""
+    bed = np.empty(len(ground), dtype=np.float64)
+    prev = np.inf
+    inland = np.flatnonzero(restart) if restart is not None else []
+    last = int(inland[-1]) if len(inland) else -1
+    for i, g in enumerate(ground):
+        if i <= last and (not restart[i] or (i > 0 and not restart[i - 1])):
+            prev = np.inf
+        prev = max(min(g - depth, prev - drop), floor)
+        bed[i] = prev
+    return bed
+
+
+def river_widths(n, w_mouth, gamma, w_source):
+    """n widths growing from w_source to w_mouth as t^gamma (the 2D taper)."""
+    t = np.linspace(0.0, 1.0, n) if n > 1 else np.ones(1)
+    return np.maximum(w_mouth * t ** gamma, w_source)
+
+
+def carve(height, wet, pts, bed, widths_v, rules):
+    """Cut each sample's valley into `height` (vertex units, in place): a flat
+    bed across the water, then banks easing out over the valley's width
+    L = (ground - bed) / river_bank_slope + 1 (at most river_bank_max_m),
+    the ground at centre fixing it. A bank vertex s out from the water sinks
+    by its OWN height over the bed times (1 - s / L), never under the slope
+    rising from the bed: on flat ground that is the slope, where the ground
+    rises to one side the bank climbs with it (a slope sized from the centre
+    alone stopped short of it and left a wall), and nothing past L is
+    touched (a slope out to where it met the ground planed whole hillsides).
+    `wet` takes the band beside the water (0..1)."""
+    H, W = height.shape
+    slope_v = rules["river_bank_slope"] * VERTEX_M      # metres per vertex
+    bank_max_v = rules["river_bank_max_m"] / VERTEX_M
+    wet_v = rules["river_wet_m"] / VERTEX_M
+    # every centre's ground read BEFORE any stamp: each sample lies inside
+    # the last one's water, and read after it, the depth is one step's drop
+    # and the valley collapses to a wall a vertex wide
+    ci = np.clip(np.round(np.asarray(pts)).astype(np.int64), 0, [W - 1, H - 1]) if len(pts) else None
+    grounds = height[ci[:, 1], ci[:, 0]].copy() if len(pts) else []
+    for (x, y), b, w, g in zip(pts, bed, widths_v, grounds):
+        xi, yi = int(round(x)), int(round(y))
+        ease = min(max(g - b, 0.0) / slope_v + 1.0, bank_max_v)
+        r = int(np.ceil(w * 0.5 + max(ease, wet_v))) + 1
+        x0, x1 = max(xi - r, 0), min(xi + r + 1, W)
+        y0, y1 = max(yi - r, 0), min(yi + r + 1, H)
+        if x0 >= x1 or y0 >= y1:
+            continue
+        yy, xx = np.mgrid[y0:y1, x0:x1]
+        s = np.maximum(np.hypot(xx - x, yy - y) - w * 0.5, 0.0)   # out from the water's edge
+        sub = height[y0:y1, x0:x1]
+        eased = sub - np.maximum(sub - b, 0.0) * np.clip(1.0 - s / ease, 0.0, 1.0)
+        np.minimum(sub, np.maximum(b + s * slope_v, eased), out=sub)
+        wsub = wet[y0:y1, x0:x1]
+        np.maximum(wsub, np.clip(1.0 - s / wet_v, 0.0, 1.0), out=wsub)
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--map", default="")
@@ -288,6 +418,14 @@ def main(argv=None):
 
     k = M_PER_PX / VERTEX_M
     vw, vh = round(pw * k), round(ph * k)
+    # The padding onto whole regions (an even count each way, the pack
+    # centred) fixes the world origin, which the rivers' water lines need.
+    cols = -(-vw // REGION)
+    cols += cols % 2
+    rows = -(-vh // REGION)
+    rows += rows % 2
+    fw_pad, fh_pad = cols * REGION, rows * REGION
+    ox_pad, oy_pad = (fw_pad - vw) // 2, (fh_pad - vh) // 2
     height = resize(metres, vw, vh)
     # The shoreline is the pack's own shore loops, not its 50 m pixels: their
     # coverage per vertex ramps the fringe through the water plane, so the
@@ -302,6 +440,16 @@ def main(argv=None):
     ramp = box(cov, int(round(rules["coast_ramp_m"] / VERTEX_M)))
     height = shore_heights(height, ramp, SEA_Y, rules["shore_m"])
 
+    # The rivers' courses, source -> mouth, smoothed like the 2D map's and in
+    # vertex units: the ridges fade out along them, and they are carved below.
+    with open(os.path.join(ROOT, "data", "maps", MAP, "geography", "rivers.csv")) as f:
+        courses = []
+        for r in sorted(csv.DictReader(f), key=lambda r: float(r["discharge"] or 0)):
+            raw = [tuple(map(float, p.split())) for p in r["points"].split("|") if p.strip()]
+            if len(raw) >= 2:
+                courses.append((r, smooth_open([(x * k, y * k) for x, y in raw],
+                                               int(rules["river_smooth_steps"]))))
+
     # --- ridges -------------------------------------------------------------------
     ridge = np.zeros((vh, vw), dtype=np.float32)
     amp, norm = 1.0, 0.0
@@ -312,6 +460,7 @@ def main(argv=None):
         amp *= RIDGE_GAIN
     ridge /= norm
     ridge -= ridge[land].mean()
+    ridge *= river_fade([c for _, c in courses], vw, vh, rules["river_ridge_fade_m"] / VERTEX_M)
     coast_steps = int(RIDGE_COAST_M / VERTEX_M)
     from_coast = distance_steps(~land, coast_steps) / coast_steps
     lift = np.clip((height - RIDGE_FROM_M) / (RIDGE_FULL_M - RIDGE_FROM_M), 0, 1)
@@ -319,6 +468,48 @@ def main(argv=None):
     height = np.where(ramp >= 1.0, np.maximum(height + RIDGE_M * lift * from_coast * ridge * 2.0,
                                              SEA_Y + rules["shore_m"]), height)
     del ridge, lift
+
+    # --- rivers -------------------------------------------------------------------
+    # Carved after the ridges and the shore (so a bed is measured from the
+    # final ground) and before the slope (so the banks read as slope). Each
+    # course, source -> mouth, is resampled every vertex, trimmed to the land
+    # (river_span), and its bed falls every step to the sea; the smallest
+    # rivers carve first so a larger one's valley wins where they meet.
+    wet = np.zeros((vh, vw), dtype=np.float32)
+    rivers_out = []
+    gamma = taper_gamma()   # balance.csv map_river_taper_gamma, the 2D rule
+    floor = SEA_Y - rules["shore_m"] - rules["river_depth_m"]
+    ox_m, oz_m = (-fw_pad / 2 + ox_pad) * VERTEX_M, (-fh_pad / 2 + oy_pad) * VERTEX_M
+    for r, course in courses:
+        pts = resample_line(course, 1.0)   # vertex units, 20 m apart
+        gi = np.clip(np.round(pts).astype(np.int64), 0, [vw - 1, vh - 1])
+        span = river_span(cov[gi[:, 1], gi[:, 0]])
+        if span is None or span[1] - span[0] < 2:
+            continue
+        pts, gi = pts[span[0]:span[1]], gi[span[0]:span[1]]
+        c = cov[gi[:, 1], gi[:, 0]]
+        ground = height[gi[:, 1], gi[:, 0]]
+        # inland = past the shore's ramp (ramp 1), where land holds its height
+        bed = river_bed(ground, rules["river_depth_m"], rules["river_min_drop_m"], floor,
+                        restart=ramp[gi[:, 1], gi[:, 0]] >= 1.0)
+        w_mouth = float(np.clip(rules["river_k"] * np.sqrt(max(float(r["discharge"] or 0), 0.0)),
+                                rules["river_min_w_m"], rules["river_max_w_m"]))
+        widths = river_widths(len(pts), w_mouth, gamma, rules["river_source_w_m"])
+        n_mouth = max(int(rules["river_mouth_m"] / VERTEX_M), 1)
+        mouth = np.clip((np.arange(len(pts)) - (len(pts) - n_mouth)) / n_mouth, 0.0, 1.0)
+        widths = widths * (1.0 + mouth)
+        # open sea (cov 0) is never dug: the water line still reaches it
+        cut = c > 0.0
+        carve(height, wet, pts[cut], bed[cut], widths[cut] / VERTEX_M, rules)
+        # the water never stands under the sea it runs to (SEA_Y + 0.3, as it
+        # does over the fringe and at the mouth), so the line keeps falling
+        water = np.maximum(bed + rules["river_depth_m"] * rules["river_fill"], SEA_Y + 0.3)
+        keep = list(range(0, len(pts), 3)) + ([len(pts) - 1] if (len(pts) - 1) % 3 else [])
+        rivers_out.append({"code": r["river_code"], "points": [
+            [round(ox_m + pts[i, 0] * VERTEX_M, 1), round(oz_m + pts[i, 1] * VERTEX_M, 1),
+             round(float(water[i]), 2), round(float(widths[i]), 1), round(float(mouth[i]), 3)]
+            for i in keep]})
+    wet *= land
 
     # --- texture weights ------------------------------------------------------------
     wts = np.zeros((ph, pw, 16), dtype=np.float32)
@@ -398,6 +589,8 @@ def main(argv=None):
     tw[..., SOIL] += np.where(land, 0.0, depth)
     del depth, hn
 
+    # the wet soil beside the water is dirt_floor (land only)
+    tw[..., DIRT] += rules["river_wet_weight"] * wet
     tw = sharpen_weights(tw, rules)
 
     # --- control: top two per vertex --------------------------------------------------
@@ -428,19 +621,16 @@ def main(argv=None):
     color_lin *= (1.0 - rules["macro_depth"] * macro)[..., None]
     color_lin[..., 0] *= 1.0 - rules["macro_hue_depth"] * hue
     color_lin[..., 2] *= 1.0 - rules["macro_hue_depth"] * (1.0 - hue)
+    color_lin *= (1.0 - rules["river_wet_darken"] * wet)[..., None]
+    del wet
     rgba = np.empty((vh, vw, 4), dtype=np.uint8)
     for y0 in range(0, vh, 512):
         rgba[y0:y0 + 512, :, :3] = np.round(lin_to_srgb(color_lin[y0:y0 + 512]) * 255).astype(np.uint8)
     rgba[..., 3] = 128  # neutral roughness
     del color_lin
 
-    # --- pad onto whole regions, the pack centred --------------------------------------------
-    cols = -(-vw // REGION)
-    cols += cols % 2
-    rows = -(-vh // REGION)
-    rows += rows % 2
-    fw, fh = cols * REGION, rows * REGION
-    ox, oy = (fw - vw) // 2, (fh - vh) // 2
+    # --- pad onto whole regions, the pack centred (sizes above) ------------------------------
+    fw, fh, ox, oy = fw_pad, fh_pad, ox_pad, oy_pad
     hp = np.full((fh, fw), -SEA_LEVEL * SEA_M_PER_UNIT, dtype=np.float32)
     hp[oy:oy + vh, ox:ox + vw] = height
     cp = np.full((fh, fw), (SOIL << 27) | (SOIL << 22), dtype=np.uint32)
@@ -467,7 +657,14 @@ def main(argv=None):
         "far_multipliers_lin": mult_lin.round(3).tolist(),
     }
     json.dump(world, open(os.path.join(OUT, "world.json"), "w"), indent=1)
-    print(json.dumps({k: v for k, v in world.items() if k != "far_multipliers_lin"}))
+    # each river's water line, source -> mouth, in world metres (the frame of
+    # pack_origin): [x, z, water_y, width_m, mouth 0..1]; build_terrain.gd
+    # copies it beside the scene for the water mesh
+    with open(os.path.join(OUT, "rivers.json"), "w") as f:
+        json.dump({"rivers": rivers_out}, f)
+    summary = {k: v for k, v in world.items() if k != "far_multipliers_lin"}
+    summary["rivers"] = len(rivers_out)
+    print(json.dumps(summary))
 
 
 if __name__ == "__main__":

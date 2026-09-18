@@ -74,6 +74,112 @@ def test_sharpen_weights():
     assert out[0, 0, bw.ROCKY] > out[0, 0, bw.SOIL]  # soil never overtakes the rim
 
 
+def test_resample_line_keeps_both_ends():
+    pts = bw.resample_line([(0.0, 0.0), (2.5, 0.0)], 1.0)
+    assert np.allclose(pts, [[0, 0], [1, 0], [2, 0], [2.5, 0]]), pts
+
+
+def test_river_bed_always_falls():
+    bed = bw.river_bed(np.array([100.0, 90.0, 95.0, 80.0]), 2.0, 0.5, -10.0)
+    assert np.allclose(bed, [98.0, 88.0, 87.5, 78.0]), bed
+
+
+def test_river_bed_stops_at_its_floor():
+    bed = bw.river_bed(np.array([1.0, -20.0, -30.0]), 2.0, 0.5, -10.0)
+    assert np.allclose(bed, [-1.0, -10.0, -10.0]), bed
+
+
+def test_river_widths_grow_from_source_to_mouth():
+    w = bw.river_widths(5, 100.0, 1.4, 6.0)
+    assert w[0] == 6.0 and abs(w[-1] - 100.0) < 1e-6
+    assert all(w[i] <= w[i + 1] for i in range(4))
+
+
+def test_carve_cuts_a_valley():
+    h = np.full((41, 41), 100.0, dtype=np.float32)
+    wet = np.zeros_like(h)
+    rules = {"river_bank_slope": 0.35, "river_bank_max_m": 1500.0, "river_wet_m": 120.0}
+    bw.carve(h, wet, np.array([[20.0, 20.0]]), np.array([90.0]), np.array([4.0]), rules)
+    assert h[20, 20] == 90.0                         # the bed
+    assert abs(h[20, 22] - 90.0) < 1e-4              # still in the water (half width 2)
+    assert abs(h[20, 23] - (90.0 + 1 * 20 * 0.35)) < 1e-3  # one vertex up the bank: 97
+    # reach = 2 + (100 - 90) / 7 + 1 = 4.43 vertices: 5 out is untouched ground
+    assert h[20, 25] == 100.0 and h[0, 0] == 100.0
+    assert wet[20, 20] == 1.0 and wet[0, 0] == 0.0
+
+
+def test_river_span_trims_to_land_and_runs_into_the_sea():
+    # coverage along a course: starts at sea, crosses land, ends through the
+    # fringe into open sea. The span begins on the first land sample and ends
+    # on the first open-sea sample after the last land one (the mouth).
+    cov = np.array([0.0, 0.2, 0.6, 1.0, 1.0, 0.7, 0.3, 0.0, 0.0, 0.0])
+    assert bw.river_span(cov) == (2, 8)
+    assert bw.river_span(np.array([1.0, 1.0, 1.0])) == (0, 3)     # an inland course
+    assert bw.river_span(np.array([0.0, 0.1])) is None            # never on land
+
+
+def test_river_bed_restarts_after_a_lake():
+    # A course rising from a lake shore (7 m), then a lake mid-way: the bed
+    # restarts at each inland stretch instead of staying at the lake's depth.
+    ground = np.array([7.0, 100.0, 90.0, 0.0, 0.0, 80.0, 70.0])
+    inland = np.array([False, True, True, False, False, True, True])
+    bed = bw.river_bed(ground, 2.0, 0.5, -10.0, restart=inland)
+    assert np.allclose(bed, [5.0, 98.0, 88.0, -2.0, -2.0, 78.0, 68.0]), bed
+    # a high far shore after the lake is not held at the lake's depth...
+    bed = bw.river_bed(np.array([100.0, 0.0, 108.0, 80.0]), 2.0, 0.5, -10.0,
+                       restart=np.array([True, False, False, True]))
+    assert np.allclose(bed, [98.0, -2.0, 106.0, 78.0]), bed
+    # ...but the last stretch, the mouth, keeps falling into the sea
+    bed = bw.river_bed(np.array([100.0, 90.0, 0.0, 50.0]), 2.0, 0.5, -10.0,
+                       restart=np.array([True, True, False, False]))
+    assert np.allclose(bed, [98.0, 88.0, -2.0, -2.5]), bed
+
+
+def test_smooth_open_is_the_2d_b_spline():
+    # MapGeometry.smooth_open: clamped uniform cubic B-spline, ends kept
+    out = bw.smooth_open([(0.0, 0.0), (3.0, 0.0), (3.0, 3.0)], 1)
+    assert np.allclose(out, [[0, 0], [0.5, 0], [2.5, 0.5], [3, 2.5], [3, 3]]), out
+    assert len(bw.smooth_open([(0.0, 0.0), (1.0, 1.0)], 4)) == 2   # too short: as is
+
+
+def test_carve_eases_into_ground_rising_to_one_side():
+    # The ground rises 3 m a vertex east of the river. The bank eases each
+    # vertex's own height down to the bed over the valley's width L =
+    # (100 - 90) / 7 + 1 = 2.43 vertices (s out from the water's edge), never
+    # under the bank's slope: no wall where the flat cone stopped short, and
+    # nothing shaved past L (a cone planed whole hillsides to 0.35).
+    xs = np.arange(41, dtype=np.float32)
+    h = np.tile(100.0 + 3.0 * np.maximum(xs - 20.0, 0.0), (41, 1)).astype(np.float32)
+    wet = np.zeros_like(h)
+    rules = {"river_bank_slope": 0.35, "river_bank_max_m": 1500.0, "river_wet_m": 120.0}
+    bw.carve(h, wet, np.array([[20.0, 20.0]]), np.array([90.0]), np.array([4.0]), rules)
+    L = 10.0 / 7.0 + 1.0
+    assert abs(h[20, 22] - 90.0) < 1e-4                        # the water's edge: the bed
+    assert abs(h[20, 23] - (90.0 + 19.0 * 1 / L)) < 1e-3, h[20, 23]   # 109 eased: 97.82
+    assert abs(h[20, 24] - (90.0 + 22.0 * 2 / L)) < 1e-3, h[20, 24]   # 112 eased: 108.1
+    assert h[20, 25] == 115.0                                  # past L: untouched
+    assert abs(h[20, 17] - 97.0) < 1e-3                        # the flat side keeps the cone
+
+
+def test_river_fade_holds_the_ridges_down_along_a_course():
+    # 0 on the course, rising to 1 at `reach` vertices away (smoothstep)
+    fade = bw.river_fade([np.array([[2.0, 5.0], [8.0, 5.0]])], 11, 11, 4)
+    assert fade[5, 5] == 0.0 and fade[0, 0] == 1.0
+    assert 0.0 < fade[3, 5] < fade[2, 5] < 1.0          # 2 then 3 vertices off
+    assert fade[1, 5] == 1.0                             # 4 off: full ridges
+
+
+def test_carve_sizes_each_valley_from_the_uncut_ground():
+    # Two samples a vertex apart on flat ground: the second must size its
+    # valley from the 100 m ground, not from the first sample's fresh bed
+    # (a 0.04 m depth and a one-vertex valley: a wall at the water's edge).
+    h = np.full((41, 41), 100.0, dtype=np.float32)
+    rules = {"river_bank_slope": 0.35, "river_bank_max_m": 1500.0, "river_wet_m": 120.0}
+    bw.carve(h, np.zeros_like(h), np.array([[20.0, 20.0], [21.0, 20.0]]),
+             np.array([90.0, 89.96]), np.array([4.0, 4.0]), rules)
+    assert abs(h[23, 21] - (89.96 + 7.0)) < 1e-3, h[23, 21]   # one vertex up its bank
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):
