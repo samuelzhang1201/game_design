@@ -53,15 +53,15 @@ func _draw() -> void:
 	draw_icon(self, key, Vector2(size.x, size.y) / 2.0, s, color)
 
 ## Draw a key's icon on any canvas item: its art when it has any, else its
-## glyph in `tint`. `name` may also be a bare glyph name (the goods chart's
-## category marks): a name with no CSV row is drawn as that glyph.
-static func draw_icon(ci: CanvasItem, name: String, c: Vector2, s: float, tint: Color) -> void:
-	var tex := texture_of(name)
+## glyph in `tint`. `icon_key` may also be a bare glyph name (the goods
+## chart's category marks): a key with no CSV row is drawn as that glyph.
+static func draw_icon(ci: CanvasItem, icon_key: String, c: Vector2, s: float, tint: Color) -> void:
+	var tex := texture_of(icon_key)
 	if tex != null:
 		draw_icon_texture(ci, tex, c, s)
 		return
-	var row: Dictionary = Game.data.resource_icons.get(name, {})
-	draw_glyph(ci, String(row.get("icon", name)), c, s, tint)
+	var row: Dictionary = Game.data.resource_icons.get(icon_key, {})
+	draw_glyph(ci, String(row.get("icon", icon_key)), c, s, tint)
 
 ## The art fitted inside an s x s box centred on c, keeping its aspect.
 static func draw_icon_texture(ci: CanvasItem, tex: Texture2D, c: Vector2, s: float) -> void:

@@ -22,8 +22,8 @@ func test_the_chain_records_what_follows_each_pair() -> void:
 func test_forged_names_use_only_the_banks_letters_and_lengths() -> void:
 	var model := NameForge.chain(PackedStringArray(BANK))
 	var letters: Dictionary = {}
-	for name in BANK:
-		for ch in name.to_lower():
+	for bank_name in BANK:
+		for ch in bank_name.to_lower():
 			letters[ch] = true
 	var rng := _rng(7)
 	for i in 40:

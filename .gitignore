@@ -4,3 +4,10 @@
 __pycache__/
 .superpowers/
 assets/flux/out/
+
+# macOS archive junk from unzipped asset packs
+assets/__MACOSX/
+# Blender spike RENDERS are build artifacts; the scripts beside them are not
+development/3d_spike/civ6/
+development/3d_spike/*.png
+development/3d_spike/out/

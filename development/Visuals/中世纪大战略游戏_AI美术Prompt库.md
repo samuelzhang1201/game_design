@@ -127,6 +127,7 @@ drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 | `[C-FRAME]` | 满屏装饰画框（`U-19`，2026-09-12） | `a full-bleed decorative screen border, the ornament confined to a band around the four edges and the corners, the entire middle two thirds left as plain unmarked cream vellum with absolutely nothing drawn on it, symmetrical left to right, no text, 16:9 horizontal` |
 | `[C-MAPMARK]` | 手绘地图符号（`D-`，2026-09-12） | `single map symbol drawn in flat side elevation, pure white background, no parchment, nothing at all beneath the object, no ground line, no ground plate, no cast shadow, centred with generous margin, 1:1 square` |
 | `[C-ESTATE]` | 庄园彩绘（`B-`，2026-09-14） | `a painted vignette of one rural holding seen from a gentle raised three-quarter view, the whole holding inside the frame with a little ground and sky around it, the edges fading softly into plain cream paper, no text, no border, no frame, 5:4 horizontal` |
+| `[C-ARMS]` | 家族与国家纹章（`A-`，2026-09-15；主体由 `assets/flux/arms_prompts.py` 从地图包的 `coa` 生成，不入本库） | `a single heraldic shield drawn flat and face-on with no perspective, the shield alone filling most of the frame, centred with an even margin, pure white background, nothing behind or around the shield, no helmet, no crest, no mantling, no supporters, no motto scroll, no text, no cast shadow, 1:1 square` |
 
 ### 1.4 调色板（写进美术规范，别让 AI 自由发挥）
 
@@ -1405,6 +1406,37 @@ background, no numerals, no text [C-ICON]
 | `I-72` | 价格 · Price | `a brass merchant's balance scale with a few gold coins in one pan, arranged as a small still-life group on bare paper, no container beyond what is described` |
 | `I-73` | 罗盘 · Compass | `a round wooden compass rose set inside a carved wooden ship's steering wheel with eight turned spokes ending in handles, interlocking brass gear wheels showing behind the rose between the spokes, the rose painted with a sixteen-point star and a north mark, weathered aged oak with worn varnish, scratches and darkened edges, brass rim and pins, seen face-on from straight above with a little raised relief and a soft shadow under the rim, the whole wheel isolated on bare paper` |
 
+> **顶栏时钟、菜单、城镇特征与货物类别图标**（owner 2026-09-15：信息卡和顶栏里所有只靠代码画的字形都换成彩绘图标，"特别是 top bar 太丑"）：同一画幅 `[C-ICON]`、同一风格核、同一静物片段；装进 `assets/icons/<key>.png`（`install_map_art.py ui`，64 px）。顶栏的王冠复用 `I-52`，城镇财富与金库复用 `I-71` / `I-47`。编号到 `I-99` 为止（两位数是库的格式）。
+
+| ID | 维度 | Prompt 主体 |
+|---|---|---|
+| `I-74` | 暂停 · Pause | `a brass-framed hourglass lying on its side with all the sand settled and still, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-75` | 播放 · Play | `a brass-framed hourglass standing upright with a thin stream of sand running from the upper bulb, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-76` | 快进 · Faster | `a small bronze figurine of a trotting horse on a round wooden base, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-77` | 极速 · Fastest | `a small bronze figurine of a galloping horse with its mane and tail flying on a round wooden base, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-78` | 菜单 · Menu | `a rolled parchment scroll tied with a red ribbon and sealed with red wax beside a white goose-quill pen, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-79` | 堡垒 · Citadel | `a small squat square stone keep with crenellated battlements and a tiny pennant on its roof, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-80` | 教堂 · Temple | `a small stone chapel with a square bell tower and a pointed slate spire, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-81` | 集市 · Market | `a wooden market stall with a striped canvas awning and baskets of apples and cabbages on its counter, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-82` | 棚户 · Shanty town | `a huddle of three crooked wooden shacks with patched thatch roofs leaning on each other, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-83` | 港口 · Port | `a short wooden quay on posts with a moored rowing boat and an iron anchor lying on the planks, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-84` | 食物 · Food | `a round loaf of brown bread, a wedge of yellow cheese and a bunch of carrots with their tops, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-85` | 矿石 · Ore | `a small heap of rough rust-red iron ore lumps with a miner's iron pick leaning on it, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-86` | 矿物 · Mineral | `a cut block of pale limestone and a split slab of grey slate with a mason's chisel, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-87` | 建材 · Building | `a stack of three sawn oak beams resting on two dressed stone blocks, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-88` | 奢侈品 · Luxury | `a small open jewel casket with a pearl necklace spilling out and a gold ring beside it, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-89` | 军需 · Arms | `a bundle of three spears tied with cord beside a steel kettle helmet, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-90` | 船具 · Naval | `a coil of tarred rope, a wooden ship's pulley block and a small furled canvas sail, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-91` | 衣料 · Cloth | `a folded bolt of blue woollen cloth with a wooden spool of thread and iron shears, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-92` | 燃料 · Fuel | `a small heap of black coal beside a tied bundle of split firewood, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-93` | 钱币 · Coin | `two neat stacks of silver and gold coins beside a small iron coin die, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-94` | 补给 · Supply | `a leather pack saddle with two tied grain sacks and a horseshoe, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-95` | 防腐 · Preserving | `a glazed clay crock heaped with white salt beside a small salted ham and a little oak barrel, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-96` | 圣物 · Ritual | `a tall beeswax candle in a brass holder beside a small bronze incense censer and a wooden rosary, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-97` | 储存 · Storage | `two stacked oak barrels with iron hoops beside a lidded wicker basket, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-98` | 渔获 · Fishing | `two silver fish on a wooden board beside a coiled fishing net with cork floats, arranged as a small still-life group on bare paper, no container beyond what is described` |
+| `I-99` | 学识 · Learning | `a thick leather-bound book lying open beside an inkwell and a goose-quill pen, arranged as a small still-life group on bare paper, no container beyond what is described` |
+
 > **补充资源图标**（同样格式，按需生成）：`铁 — a stack of rough iron blooms and a pair of tongs`；`盐 — a heaped cone of white salt on a coarse cloth with a wooden scoop`；`银 — a small pile of hammered silver pennies and an ingot`；`木材 — a stacked cord of split oak logs with a felling axe`；`战马 — a coiled leather bridle, a curb bit and a horseshoe`；`香料 — three small open sacks of saffron, pepper and cinnamon bark with a brass scale pan`；`毛皮 — a rolled bundle of marten and fox pelts tied with cord`；`蜂蜜与蜡 — a woven straw skep, a honeycomb section and a beeswax candle`。
 
 ### 6.9 手绘地图装饰件 `D-`（2026-09-12 新增）
@@ -1612,6 +1644,17 @@ background, no numerals, no text [C-ICON]
 | `B-34` | 庄园彩绘·铁矿·小 | `a small mine holding: a cottage beside a timbered mine adit into a hillside with an ore cart, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
 | `B-35` | 庄园彩绘·铁矿·中 | `an iron manor: a stone house with a bloomery furnace giving smoke, a timbered mine adit into the hill, ore carts and heaps of dark ore, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
 | `B-36` | 庄园彩绘·铁矿·大 | `a great iron estate: a manor house with several bloomery furnaces giving smoke, mine adits into the hill, ore carts on wooden rails, heaps of ore and a hamlet of cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
+
+> **军队信息卡彩绘**（owner 2026-09-15："军队的 card info 还是 2D 彩绘风格"）：点地图上的军队棋子，左栏信息卡顶部显示这支军队主兵种的彩绘——与庄园彩绘同一风格核（v2 彩铅）、同一 `[C-ESTATE]` 画幅，装进 `assets/armies/paint/<arm>.png`（`assets/flux/army_paint_art.csv`）。
+
+| ID | 主题 | Prompt 主体 |
+|---|---|---|
+| `B-37` | 军队彩绘·步兵 | `a company of medieval foot soldiers in blue tabards with spears and kite shields marching along a dirt road through green fields, a standard bearer at their head, shown as one painted scene in its own countryside` |
+| `B-38` | 军队彩绘·弓手 | `a line of medieval longbowmen in blue tabards drawing their bows on a grassy rise, quivers of arrows planted in the turf before them, shown as one painted scene in its own countryside` |
+| `B-39` | 军队彩绘·骑兵 | `a troop of mounted knights in mail with lances and blue pennants riding at a trot across a meadow, their horses in blue caparisons, shown as one painted scene in its own countryside` |
+| `B-40` | 军队彩绘·炮兵 | `a medieval bronze bombard on a wooden carriage being loaded by its crew before a stone wall, stone balls stacked beside it and a blue banner planted nearby, shown as one painted scene in its own countryside` |
+| `B-41` | 军队彩绘·舰队 | `a small fleet of medieval cogs with square sails and blue pennants sailing out of a harbour on a calm sea, shown as one painted scene on its own stretch of coast` |
+| `B-42` | 军队彩绘·王军 | `the king's own guard on parade: a mounted commander in a blue surcoat beneath a large royal banner, ranks of spearmen behind him before a castle gate, shown as one painted scene in its own countryside` |
 
 ### 6.12 庄园建筑图标 `H-`（2026-09-14 新增）
 

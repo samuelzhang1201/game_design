@@ -15,6 +15,8 @@ signal manor_activated(cell: int)
 
 const COLUMNS := ["Manor", "House", "Value"]
 const TABLE_HEIGHT := 330.0
+## The house column's arms, design px (the table's 13 px text).
+const ARMS_PX := 16
 
 var _title: Label
 var _summary: Label
@@ -187,7 +189,7 @@ func refresh() -> void:
 	# scope is thousands of manors).
 	var lines := RealmEconomy.lines_table(repo, state, cells)
 	var houses: Dictionary = {}
-	var rows: Array = []
+	var table_rows: Array = []
 	var crown_count := 0
 	var rents := 0
 	for cell: int in cells:
@@ -202,17 +204,17 @@ func refresh() -> void:
 			rents += rent
 		if _house_filter != "" and house != _house_filter:
 			continue
-		rows.append({"cell": cell, "label": MapManors.label_of(repo, cell),
+		table_rows.append({"cell": cell, "label": MapManors.label_of(repo, cell),
 			"house": "The crown" if crowns else house, "family": house,
 			"province": String(repo.provinces.get(MapManors.province_of(repo, cell, Game.state), {}).get("label", "")),
 			"people": int(line.get("people", 0)), "rent": rent,
 			"value": MapManors.value_of_line(repo, state, cell, line),
 			"buildings": MapManors.buildings_of(state, cell).size(),
 			"focus": String((repo.manor_focus.get(MapManors.focus_of(repo, state, cell), {}) as Dictionary).get("label", ""))})
-	rows.sort_custom(_compare)
+	table_rows.sort_custom(_compare)
 	var cap := int(repo.bal("manor_master_max_rows"))
-	_left_out = maxi(rows.size() - cap, 0)
-	_rows = rows.slice(0, cap)
+	_left_out = maxi(table_rows.size() - cap, 0)
+	_rows = table_rows.slice(0, cap)
 	_fill_houses(houses, crown)
 	_fill_tree()
 	var scope := "the realm" if not _all else "the map"
@@ -260,6 +262,11 @@ func _fill_tree() -> void:
 		# "Manor" and says "Crown"; the tooltip carries every word.
 		item.set_text(0, String(r["label"]).trim_suffix(" Manor"))
 		item.set_text(1, "Crown" if String(r["house"]) == "The crown" else String(r["house"]))
+		# The holding house's arms before its name (owner 2026-09-15).
+		var arms := HouseArms.texture_of_house(Game.data, Game.state, String(r["family"]))
+		if arms != null:
+			item.set_icon(1, arms)
+			item.set_icon_max_width(1, ARMS_PX)
 		item.set_text(2, str(roundi(float(r["value"]))))
 		item.set_text_alignment(2, HORIZONTAL_ALIGNMENT_RIGHT)
 		item.set_metadata(0, int(r["cell"]))

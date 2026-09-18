@@ -171,9 +171,9 @@ func _process(_delta: float) -> void:
 			Game.set_clock_speed(_speed)
 	if _frames == 40:
 		var img := (get_viewport() if _viewport == null else _viewport).get_texture().get_image()
-		var abs := ProjectSettings.globalize_path(_out)
-		DirAccess.make_dir_recursive_absolute(abs.get_base_dir())
-		var err := img.save_png(abs)
+		var abs_path := ProjectSettings.globalize_path(_out)
+		DirAccess.make_dir_recursive_absolute(abs_path.get_base_dir())
+		var err := img.save_png(abs_path)
 		var how := ("%dx%d window" % [_res.x, _res.y]) if _res != Vector2i.ZERO else ("x%.1f" % _scale)
 		print("snapshot %s -> %s (%s, %s, filter %d)" % [
 			"ok" if err == OK else "FAILED %d" % err, _out, _screen, how,

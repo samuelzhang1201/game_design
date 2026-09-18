@@ -1,0 +1,14 @@
+biome_id,terrain,notes
+0,sea,"Marine (owner 2026-09-17, spec 2026-09-17-regiment-state §4): the terrain a regiment stands on, by the biome of its cell; height first makes hills and mountains"
+1,desert,Hot desert
+2,desert,Cold desert
+3,plains,Savanna
+4,plains,Grassland
+5,jungle,Tropical seasonal forest
+6,forest,Temperate deciduous forest
+7,jungle,Tropical rainforest
+8,forest,Temperate rainforest
+9,forest,Taiga
+10,tundra,Tundra
+11,tundra,Glacier
+12,marsh,Wetland

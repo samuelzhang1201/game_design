@@ -35,7 +35,7 @@ func _init() -> void:
 		return
 	var pack: Dictionary = world["pack"]
 	var info: Dictionary = world.get("info", {})
-	var seed := int(String(info.get("seed", "0")))
+	var map_seed := int(String(info.get("seed", "0")))
 	# Name banks and each culture's bank, from the export.
 	var banks: Dictionary = {}
 	for nb in (world.get("nameBases", []) as Array):
@@ -75,7 +75,7 @@ func _init() -> void:
 			"culture_code": String(culture_code.get(culture, ""))})
 		polys.append(MapEconomy.cell_polygon(repo, cell))
 		ids.append(id)
-	var rows := ManorNames.forge_table(seed, specs, banks)
+	var rows := ManorNames.forge_table(map_seed, specs, banks)
 	var out := "cell_id,manor_code,label,province_code,burg_code,culture_code\n"
 	for row: Dictionary in rows:
 		out += "%d,%s,%s,%s,%s,%s\n" % [int(row["cell_id"]), row["manor_code"], _csv(String(row["label"])),

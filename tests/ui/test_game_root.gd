@@ -51,8 +51,8 @@ func test_r_restarts_to_menu() -> void:
 	assert_eq(r.state, GameRoot.State.MENU)
 	assert_null(Game.state)
 
-func _menu_btn(r: GameRoot, name: String) -> Button:
-	return r.pause_menu().find_child(name, true, false)
+func _menu_btn(r: GameRoot, node_name: String) -> Button:
+	return r.pause_menu().find_child(node_name, true, false)
 
 ## Pause menu (user ruling 2026-08-31): the TopBar's MENU button (via
 ## Game.menu_requested) opens Resume / Save / Load / Restart / Quit; it
@@ -155,6 +155,23 @@ func test_heights_tab_toggles_the_maps_height_ramp() -> void:
 	assert_true(r.current_screen.world_map().show_heights, "the map follows the tab")
 	assert_not_null(r.current_screen.world_map().heat_mesh(),
 		"the pack's heights give the sheet a ramp to draw")
+
+## Owner 2026-09-17: a WAR ROOM tab, a placeholder page for now.
+func test_the_war_room_tab_opens_its_placeholder() -> void:
+	assert_true("WAR ROOM" in BottomBar.TABS)
+	assert_false("WAR ROOM" in BottomBar.TOGGLES, "it opens a page, it is not a map toggle")
+	Game.start_campaign(42)
+	Game.next_tick()
+	var r := _root()
+	await wait_frames(2)
+	r._switch_to(GameRoot.State.COURT)
+	r.current_screen.enter_court(null)
+	await wait_frames(2)
+	r._on_bottom_tab("WAR ROOM")
+	var info := r.info_screen()
+	assert_true(info.visible)
+	assert_eq(info._current_tab, "WAR ROOM")
+	assert_eq(info._rows_for("WAR ROOM"), [["War Room", "The war room is being prepared."]])
 
 ## The clock (owner 2026-09-13): on the court, at a speed, days pass in real
 ## time and works finish; paused, nothing moves.

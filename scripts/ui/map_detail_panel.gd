@@ -55,6 +55,10 @@ var _build_menu: OptionButton
 var _build_button: Button
 ## A stat's or a rate's icon, design px.
 const STAT_ICON_PX := 20.0
+## The stat grid's default width: 4 columns = 2 icon+value pairs a row. A
+## card may ask for fewer (`stat_columns`, owner 2026-09-17 review) when its
+## values are too wide for a pair to fit the fixed left column.
+const DEFAULT_STAT_COLUMNS := 4
 ## The manor's building slots (owner 2026-09-13): one box per slot — a
 ## building's icon, a work's icon dimmed with its days left, or an empty
 ## "+" — each standing building or work with a cross beneath it that
@@ -146,7 +150,7 @@ func _ready() -> void:
 	body.add_child(_fields)
 	_stats = GridContainer.new()
 	_stats.name = "Stats"
-	_stats.columns = 4
+	_stats.columns = DEFAULT_STAT_COLUMNS
 	_stats.add_theme_constant_override("h_separation", 6)
 	_stats.add_theme_constant_override("v_separation", 4)
 	body.add_child(_stats)
@@ -252,6 +256,9 @@ func show_entry(entry: Dictionary) -> void:
 	if String(obj.get("kind", "")) == "manor":
 		show_manor(int(obj.get("cell", -1)))
 		return
+	if String(obj.get("kind", "")) == "army":
+		show_card(MapObjects.army_card(Game.data, String(obj["code"]), Game.state))
+		return
 	_clear()
 	_shield.visible = false
 	_title.text = String(entry.get("title", ""))
@@ -285,6 +292,20 @@ func show_manor(cell: int) -> void:
 		return
 	show_card(card)
 
+## Whose arms a card wears (owner 2026-09-15): a manor its holding house's,
+## a province its house's, a town the house of its province.
+static func house_of_card(card: Dictionary) -> String:
+	var code := String(card.get("code", ""))
+	match String(card.get("kind", "")):
+		"manor":
+			return MapManors.owner_of(Game.data, Game.state, int(card.get("cell", -1)))
+		"province":
+			return MapObjects.house_name_of(Game.data, code)
+		"burg":
+			return MapObjects.house_name_of(Game.data,
+				String(Game.data.burgs.get(code, {}).get("province_code", "")))
+	return ""
+
 ## Render a MapObjects card (burg_card / province_card / manor_card).
 func show_card(card: Dictionary) -> void:
 	if card.is_empty():
@@ -294,12 +315,18 @@ func show_card(card: Dictionary) -> void:
 	_shield.visible = true
 	_shield.set_arms(MapPalette.color_of(Game.data, String(card.get("kingdom_code", ""))),
 		String(card.get("initial", "")))
+	_shield.set_texture(HouseArms.texture_of_house(Game.data, Game.state, house_of_card(card)))
+	if String(card.get("kind", "")) == "army":  # a regiment flies its kingdom's arms
+		_shield.set_texture(HouseArms.texture_of_kingdom(Game.data, String(card.get("kingdom_code", ""))))
 	_title.text = String(card.get("title", ""))
 	_subtitle.text = String(card.get("subtitle", ""))
 	_subtitle.visible = _subtitle.text != ""
 	# A manor's card reads as icons (owner 2026-09-14): its painting over the
 	# card, its facts as icon + short value with the whole in the tooltip,
 	# and what it makes a month. Every other card keeps its fields.
+	# The grid is reused across cards, so its column count must be reset
+	# per card — a regiment's card asks for fewer, wider pairs.
+	_stats.columns = int(card.get("stat_columns", DEFAULT_STAT_COLUMNS))
 	var stats: Array = card.get("stats", [])
 	if stats.is_empty():
 		for f in card.get("fields", []):
@@ -309,8 +336,11 @@ func show_card(card: Dictionary) -> void:
 		_fill_stats(stats)
 	_fill_rates(card.get("rates", []))
 	_show_painting(String(card.get("painting", "")))
-	var basic := String(card.get("known", "full")) == "basic"
-	if not basic:
+	var known := String(card.get("known", "full"))
+	var basic := known == "basic"
+	if known == "army":
+		pass  # an army card is its painting and its icons (owner 2026-09-15)
+	elif not basic:
 		var features: Array = card.get("features", [])
 		if not features.is_empty():
 			_features.add_child(_line("Features", UiPalette.TEXT_MUTED))
@@ -428,7 +458,7 @@ func _fill_slots(card: Dictionary) -> void:
 			centre.add_child(icon)
 			box.add_child(centre)
 			var row: Dictionary = Game.data.manor_buildings.get(code, {})
-			var name := String(row.get("label", code))
+			var label := String(row.get("label", code))
 			if bool(entry["work"]):
 				# A work in progress is a GHOST of the building (owner
 				# 2026-09-14): a see-through box with a dashed edge and the
@@ -444,10 +474,10 @@ func _fill_slots(card: Dictionary) -> void:
 				days.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 				column.add_child(box)
 				column.add_child(days)
-				box.tooltip_text = "%s — %d days to go" % [name, int(entry["days_left"])]
+				box.tooltip_text = "%s — %d days to go" % [label, int(entry["days_left"])]
 			else:
 				column.add_child(box)
-				box.tooltip_text = name
+				box.tooltip_text = label
 			if demolish.has(code):
 				var a: Dictionary = demolish[code]
 				var cross := Button.new()
@@ -734,6 +764,9 @@ static func _num(v: float) -> String:
 
 
 ## Test seams.
+func shield() -> HeraldicShield:
+	return _shield
+
 func title_label() -> Label:
 	return _title
 

@@ -506,7 +506,6 @@ func test_border_rings_are_smoothed_outlines_that_follow_conquest() -> void:
 	var steps := int(Game.data.bal("map_border_smoothing_steps"))
 	for i in loops.size():
 		assert_eq((rings[i] as PackedVector2Array).size(), (loops[i] as PackedVector2Array).size() * steps)
-	var before: int = (rings[0] as PackedVector2Array).size()
 	var lost: String = MapOwnership.provinces_of(Game.data, Game.state, mine)[0]
 	MapOwnership.set_owner(Game.data, Game.state, lost, Game.data.resolve_realm("raider_realm"), "raid")
 	var after := v.border_rings(mine)
@@ -524,7 +523,7 @@ func test_clicking_land_in_the_province_view_selects_the_province() -> void:
 	var v := _view()
 	await wait_frames(2)
 	var picked: Array = []
-	v.province_selected.connect(func(code: String) -> void: picked.append(code))
+	v.province_selected.connect(func(province: String) -> void: picked.append(province))
 	var code := String(Game.data.burgs[_capital_code()]["province_code"])
 	var row: Dictionary = Game.data.provinces[code]
 	var centre := Vector2(float(row["center_x"]), float(row["center_y"]))
@@ -798,18 +797,43 @@ func test_regiment_markers_stand_on_their_point_at_a_fixed_size() -> void:
 	assert_almost_eq(icon.size.x + count.size.x, rect.size.x, 0.01)
 	assert_almost_eq(rect.get_center().x, v.map_to_screen(at).x, 0.5, "standing on its point")
 	assert_gte(rect.get_center().y, v.map_to_screen(at).y - 0.5, "never pushed ABOVE its point")
-	# Owner request 2026-09-13: smaller than the towns, and never over one.
+	# Owner request 2026-09-13: never over a settlement, at any zoom.
 	for zoom in [1.0, 4.0]:
 		v._zoom_at(v.size / 2.0, zoom)
 		assert_gt(v.sprite_height(), 0.0, "the towns are drawings at this zoom")
-		assert_lt(v.army_badge_height(), v.sprite_height(),
-			"a counter is smaller than the largest settlement drawing")
-		assert_lte(v.army_badge_height(), Game.data.bal("map_army_badge_max_px"))
 		var marks := v.settlement_marks()
 		for m: Dictionary in v.army_markers():
 			for mark: Rect2 in marks:
 				assert_false((m["rect"] as Rect2).intersects(mark),
 					"%s covers no settlement" % m["code"])
+
+## Owner 2026-09-17: a counter grows and shrinks with the map (above a small
+## floor), and every regiment in the frame is drawn at every zoom — nothing
+## thins the counters the way the estates thin.
+func test_counters_scale_with_the_map_and_are_never_thinned() -> void:
+	var v := _view()
+	await wait_frames(2)
+	v.show_armies = true
+	var mine := Game.data.resolve_realm("player_realm")
+	var floor_px := Game.data.bal("map_army_badge_min_px")
+	var native := Game.data.bal("map_army_badge_native_px")
+	var max_in_frame := 0
+	for zoom in [0.25, 1.0, 4.0, 16.0]:
+		v._zoom_at(v.size / 2.0, zoom)
+		var expect := maxf(native * v.view_scale(), floor_px)
+		assert_almost_eq(v.army_badge_height(), expect, 0.01, "height at scale %f" % v.view_scale())
+		var frame := Rect2(Vector2.ZERO, v.size).grow(v.army_badge_height() * 4.0)
+		var in_frame := 0
+		for r: Dictionary in MapObjects.regiments_of(Game.data, mine):
+			if frame.has_point(v.map_to_screen(Vector2(float(r["x"]), float(r["y"])))):
+				in_frame += 1
+		assert_eq(v.army_markers().size(), in_frame, "every regiment in the frame is drawn")
+		max_in_frame = maxi(max_in_frame, in_frame)
+	# At high zoom the frame can hold none of the player's regiments, making
+	# that pass of the assertion above vacuous (0 == 0): assert the loop
+	# actually exercised a drawn marker at least once (owner 2026-09-17
+	# review).
+	assert_gt(max_in_frame, 0, "at least one zoom level draws a regiment")
 
 ## Clicking a regiment names it in the fact card, like any other map object.
 func test_clicking_a_regiment_opens_its_card() -> void:
@@ -950,19 +974,19 @@ func test_a_settlement_sprite_is_drawn_at_its_tiers_share_of_the_tallest() -> vo
 	var seen := 0
 	for sp in v.settlement_sprites():
 		var b: Dictionary = Game.data.burgs[sp["code"]]
-		var art := MapObjects.settlement_art(Game.data, b)
+		var art := MapObjects.settlement_look(Game.data, Game.state, b)
 		var want := tallest * float(art["size"])
 		assert_almost_eq((sp["rect"] as Rect2).size.y, want, 0.01,
 			"%s draws at its tier's share" % String(sp["code"]))
 		seen += 1
 	assert_gt(seen, 0, "some settlements are on screen")
 
-## Owner request 2026-09-12: a settlement and every terrain symbol wear the
-## colour of the realm that holds their province, so they sit in the wash
-## instead of on it — and because the OWNER is looked up live while the
-## province is fixed geometry, a conquest recolours them with no new art.
-## They also draw at map_sprite_alpha (owner 2026-09-17: the painted
-## towns were 太突兀), so the sheet shows through the picture.
+## Owner request 2026-09-12: every terrain symbol wears the colour of the
+## realm that holds its province, so it sits in the wash instead of on it —
+## and because the OWNER is looked up live while the province is fixed
+## geometry, a conquest recolours it with no new art. The painted settlements
+## joined them on 2026-09-17 (owner: 太突兀): they take over half the realm's
+## colour and draw at map_sprite_alpha, so the wash shows through the picture.
 func test_symbols_wear_their_realms_colour_and_follow_conquest() -> void:
 	Game.start_campaign(42)
 	var v := _view()
@@ -970,14 +994,16 @@ func test_symbols_wear_their_realms_colour_and_follow_conquest() -> void:
 	var mine := Game.data.resolve_realm("player_realm")
 	var raider := Game.data.resolve_realm("raider_realm")
 	var lost: String = MapOwnership.provinces_of(Game.data, Game.state, mine)[0]
-	var strength := Game.data.bal("map_sprite_tint")
-	assert_gt(strength, 0.0, "the tint is on in balance.csv")
+	var sprite_strength := Game.data.bal("map_sprite_tint")
+	assert_gt(sprite_strength, 0.0, "the painted settlements wear their realm's colour too")
 	var a_town: String = Game.data.burgs.keys()[0]
 	assert_almost_eq(
 		v.sprite_tint(a_town, String(Game.data.burgs[a_town]["province_code"]),
-			strength).a,
+			sprite_strength).a,
 		Game.data.bal("map_sprite_alpha"), 0.001,
 		"and draw translucent, so the sheet shows through them")
+	var strength := Game.data.bal("map_decor_tint")
+	assert_gt(strength, 0.0, "the terrain symbols' tint is on in balance.csv")
 
 	var before := v.realm_tint(lost, strength)
 	assert_ne(before, Color.WHITE, "the symbol takes the crown's colour")
@@ -1179,7 +1205,7 @@ func test_estates_thin_out_as_the_map_zooms_out() -> void:
 	assert_true(v.estates_visible())
 	var near := v.visible_estate_count()
 	assert_eq(near, all, "close in, every estate")
-	assert_lt(far, all / 4, "far out, only a scattering")
+	assert_lt(float(far), all / 4.0, "far out, only a scattering")
 
 ## In the MANORS view every element follows one colour strategy (owner
 ## 2026-09-13): a town drawing wears its own manor's colour at

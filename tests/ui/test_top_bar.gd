@@ -8,6 +8,18 @@ func _bar() -> TopBar:
 	add_child_autofree(t)
 	return t
 
+## The crown's generated arms (owner 2026-09-15) mark the lord's purse and
+## fly beside the date, where the family-flag glyph was.
+func test_the_crowns_arms_mark_the_lords_purse_and_the_date() -> void:
+	Game.start_campaign(42)
+	var bar := _bar()
+	await wait_frames(2)
+	var arms := HouseArms.texture_of_house(Game.data, Game.state, MapManors.crown(Game.state))
+	assert_not_null(arms, "the crown has arms")
+	assert_same(bar.lord_crest().texture, arms)
+	assert_same(bar.date_arms().texture, arms)
+	assert_true(bar.date_arms().visible)
+
 func test_shows_date_and_metric_values() -> void:
 	Game.start_campaign(42)
 	var t := _bar()
@@ -28,7 +40,7 @@ func test_shows_tick_deltas_from_current_report() -> void:
 
 func test_event_chip_tracks_pending_event() -> void:
 	Game.start_campaign(42)
-	var report := Game.next_tick()
+	Game.next_tick()
 	if not Game.state.pending_event.is_empty():
 		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
 	var t := _bar()

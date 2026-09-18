@@ -338,10 +338,114 @@ func test_goods_are_shown_under_a_tag_with_a_glyph() -> void:
 	for g: String in goods:
 		if MapObjects.good_tag(Game.data, g) != "":
 			tagged += 1
-	assert_gt(tagged, goods.size() / 2, "most goods fall under a tagged glyph")
+	assert_gt(float(tagged), goods.size() / 2.0, "most goods fall under a tagged glyph")
 
 ## Settlement art (user request 2026-09-09): every burg group in the pack has
 ## a drawing, walled towns draw behind walls, and every drawing exists.
+## A regiment's card (owner 2026-09-15): the painting of its piece, its arms
+## as icons with their counts, the host under arms, where it is quartered.
+func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
+	var mine := Game.data.resolve_realm("player_realm")
+	var royal := MapObjects.royal_regiment(Game.data, mine)
+	var checked := 0
+	for r: Dictionary in MapObjects.regiments_of(Game.data, mine):
+		var code := String(r["regiment_code"])
+		var card := MapObjects.army_card(Game.data, code)
+		assert_eq(String(card["kind"]), "army")
+		assert_eq(String(card["title"]), String(r["label"]))
+		var piece := MapObjects.army_piece(Game.data, r)
+		if String(r.get("is_naval", "0")) == "1":
+			assert_eq(piece, "fleet")
+		elif code == royal:
+			assert_eq(piece, "royal")
+		else:
+			assert_eq(piece, MapObjects.regiment_arm(Game.data, r))
+		assert_true(Game.data.army_art.has(piece), "%s has art" % piece)
+		assert_eq(String(card["painting"]), String(Game.data.army_art[piece]["painting"]))
+		var keys: Dictionary = {}
+		for st: Dictionary in card["stats"]:
+			keys[String(st["key"])] = String(st["text"])
+		for unit: String in Game.data.world_table("military", "unit_types"):
+			var n := int(float(r.get(unit, 0)))
+			assert_eq(keys.has(unit), n > 0, "%s: %s shown only when mustered" % [code, unit])
+			if n > 0:
+				assert_eq(keys[unit], str(n))
+		assert_eq(keys["army"], str(int(MapObjects.regiment_size(Game.data, r))), "the host under arms")
+		checked += 1
+	assert_gt(checked, 0)
+	assert_true(MapObjects.army_card(Game.data, "no_such_regiment").is_empty())
+	for row: Dictionary in Game.data.army_art.values():
+		assert_true(ResourceLoader.exists(String(row["texture"])), "%s's piece is installed" % row["piece"])
+
+## The card of a player's regiment reads its state (owner 2026-09-17): the
+## ground, morale, the wounded beside the headcount, the month's recovery
+## and supply use, and the training and strength only as words.
+func test_a_regiment_card_shows_its_state() -> void:
+	var s := GameState.new_campaign(Game.data, 7)
+	var mine := Game.data.resolve_realm("player_realm")
+	var r: Dictionary = MapObjects.regiments_of(Game.data, mine)[0]
+	var code := String(r["regiment_code"])
+	var heads := int(MapObjects.regiment_size(Game.data, r))
+	s.regiments[code]["wounded"] = 120
+	var card := MapObjects.army_card(Game.data, code, s)
+	var order: Array = []
+	var text: Dictionary = {}
+	for st: Dictionary in card["stats"]:
+		order.append(String(st["key"]))
+		text[String(st["key"])] = String(st["text"])
+		assert_ne(String(st["tooltip"]), "", "%s explains itself" % st["key"])
+	for key in ["army_terrain", "army_morale", "army_wounded", "army_supply", "army_training", "army_strength"]:
+		assert_true(text.has(key), key)
+	assert_true(order.find("army_terrain") < order.find("army_strength"), "the state reads in order")
+	assert_eq(text["army"], "%d (120 wounded)" % heads)
+	assert_eq(text["army_morale"], "70")
+	assert_eq(text["army_wounded"], "+%d / mo" % ArmySystem.wound_recovery(Game.data, 120))
+	var use := ArmySystem.supply_use(Game.data, r)
+	assert_eq(text["army_supply"], "%d (−%d / mo)" % [int(s.regiments[code]["supplies"]), use])
+	assert_eq(text["army_training"], "Militia")
+	assert_true(text["army_strength"] in ["Strong", "Average", "Weak"])
+	assert_eq(text["army_terrain"], ArmySystem.terrain_label(Game.data, r))
+	# No number leaks for the hidden values.
+	assert_false(text["army_training"].is_valid_int())
+
+## A settlement's drawing grows with its manor (owner 2026-09-15): a town
+## that raises a palisade is drawn walled, a village past the growth row's
+## people is drawn as a town, and nothing is ever drawn smaller than the pack.
+func test_a_settlement_is_drawn_by_its_development() -> void:
+	var repo := Game.data
+	var state := GameState.new()
+	var cells: Dictionary = MapEconomy.burg_cells(repo)
+	var open_town := {}
+	var village := {}
+	for code: String in repo.burgs:
+		var b: Dictionary = repo.burgs[code]
+		if not cells.has(code):
+			continue
+		var tier := String(MapObjects.settlement_art(repo, b).get("tier", ""))
+		if tier == "town" and open_town.is_empty():
+			open_town = b
+		if tier == "village" and village.is_empty() \
+				and MapManors.people_of(repo, state, int(cells[code])) < 24000:
+			village = b
+	assert_false(open_town.is_empty(), "the pack has an open town")
+	assert_false(village.is_empty(), "the pack has a small village")
+	assert_eq(String(MapObjects.settlement_look(repo, null, open_town)["tier"]), "town", "no state: the pack row")
+	var town_cell := str(cells[String(open_town["burg_code"])])
+	assert_eq(String(MapObjects.settlement_look(repo, state, open_town)["tier"]), "town")
+	state.manor_buildings[town_cell] = ["manor_house", "palisade"]
+	assert_eq(String(MapObjects.settlement_look(repo, state, open_town)["tier"]), "walled_town",
+		"a palisade walls the town")
+	assert_eq(String(MapObjects.settlement_look(repo, state, village)["tier"]), "village", "a small village stays")
+	var saved: Array[Dictionary] = repo.settlement_growth.duplicate(true)
+	for rule: Dictionary in repo.settlement_growth:
+		if String(rule["from_tier"]) == "village":
+			rule["min_people"] = "0"
+	assert_eq(String(MapObjects.settlement_look(repo, state, village)["tier"]), "town", "a grown village is a town")
+	repo.settlement_growth = saved
+	var realm: Dictionary = repo.kingdoms[repo.resolve_realm("player_realm")]
+	var capital: Dictionary = repo.burgs[String(realm["capital_burg"])]
+	assert_eq(String(MapObjects.settlement_look(repo, state, capital)["tier"]), "capital", "a capital stays a capital")
+
 func test_settlement_art_covers_the_packs_groups() -> void:
 	Game.start_campaign(42)
 	var seen: Dictionary = {}
@@ -361,6 +465,40 @@ func test_settlement_art_covers_the_packs_groups() -> void:
 	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
 	assert_eq(String(MapObjects.settlement_art(Game.data, Game.data.burgs[String(realm["capital_burg"])])["tier"]),
 		"capital")
+
+## Variants (owner 2026-09-16, "每一种定居点给我生成10种不同的variants image,
+## 随机apply上去"): a settlement wears one of its tier's drawings, picked by
+## its OWN CODE — the same one every run and every reload, never the RNG.
+func test_each_settlement_wears_a_stable_variant_of_its_tier() -> void:
+	Game.start_campaign(42)
+	var repo: DataRepository = Game.data
+	var with_variants := 0
+	for row: Dictionary in repo.settlement_art:
+		if int(row.get("variants", 0)) > 1:
+			with_variants += 1
+	assert_gt(with_variants, 0, "settlement_art.csv names variants")
+	var seen: Dictionary = {}
+	var checked := 0
+	for code: String in repo.burgs:
+		var b: Dictionary = repo.burgs[code]
+		var look := MapObjects.settlement_look(repo, Game.state, b)
+		var count := int(look.get("variants", 0))
+		if look.is_empty() or count <= 1:
+			continue
+		var tex := String(look["texture"])
+		assert_true(ResourceLoader.exists(tex) or FileAccess.file_exists(tex), "%s exists" % tex)
+		var tail := tex.get_file().get_basename()
+		assert_between(int(tail.substr(tail.length() - 2)), 1, count,
+			"%s picks one of its tier's %d drawings" % [code, count])
+		assert_eq(String(MapObjects.settlement_look(repo, Game.state, b)["texture"]), tex,
+			"the same burg wears the same drawing every time")
+		seen[tail] = true
+		checked += 1
+	assert_gt(checked, 0, "the pack has settlements whose tier has variants")
+	assert_gt(seen.size(), 1, "different settlements wear different drawings")
+	for row: Dictionary in repo.settlement_art:
+		assert_false(String(row["texture"]).get_file().get_basename().ends_with("_01"),
+			"the shared table row is never rewritten in place")
 
 func test_burg_card_has_no_climate_or_elevation() -> void:
 	Game.start_campaign(42)
@@ -680,15 +818,15 @@ func test_every_manor_without_a_town_wears_its_industrys_estate() -> void:
 	var industries: Dictionary = {}
 	var tiers_seen: Dictionary = {}
 	for e: Dictionary in estates:
-		var cell := int(e["cell"])
-		assert_eq(MapManors.burg_of(real, cell), "")
-		var pop := float(MapManors.people_of(real, state, cell))
-		var focus := MapManors.focus_of(real, state, cell)
+		var estate_cell := int(e["cell"])
+		assert_eq(MapManors.burg_of(real, estate_cell), "")
+		var pop := float(MapManors.people_of(real, state, estate_cell))
+		var focus := MapManors.focus_of(real, state, estate_cell)
 		var row := MapObjects.estate_tier(real, focus, pop)
 		assert_eq(String(e["texture"]), String(row["texture"]))
 		assert_eq(int(e["tier"]), int(float(row["tier"])))
-		assert_eq(e["pos"], MapTerrain.cell_center(real, real.cells[cell]), "centred on the cell")
-		assert_almost_eq(float(e["height"]), minf(px, MapTerrain.cell_radius(real, real.cells[cell]) * fit), 0.001,
+		assert_eq(e["pos"], MapTerrain.cell_center(real, real.cells[estate_cell]), "centred on the cell")
+		assert_almost_eq(float(e["height"]), minf(px, MapTerrain.cell_radius(real, real.cells[estate_cell]) * fit), 0.001,
 			"one height for all, unless the cell is too small")
 		assert_almost_eq(float(e["foot"]), real.bal("map_manor_estate_foot"), 0.001)
 		industries[String(e["focus"])] = true

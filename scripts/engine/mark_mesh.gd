@@ -83,4 +83,5 @@ static func build(marks: Array, atlas: MarkAtlas, foot: float = 0.85) -> ArrayMe
 static func quad_count(mesh: ArrayMesh) -> int:
 	if mesh == null or mesh.get_surface_count() == 0:
 		return 0
+	@warning_ignore("integer_division")  # four vertices a quad, always whole
 	return mesh.surface_get_array_len(0) / 4

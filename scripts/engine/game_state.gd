@@ -81,6 +81,7 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	# roster, because the chest is the crown's own provinces' (2026-09-13)
 	# and the crown is the player character's house.
 	WorldLedger.seed_metrics(data, s)
+	ArmySystem.ensure(data, s)
 	for id in s.characters:
 		if s.characters[id].seat != "":
 			s.council[s.characters[id].seat] = id
@@ -266,6 +267,10 @@ var manor_province: Dictionary = {}
 ## One entry per transfer {tick, cell, from, to, reason} or building
 ## {tick, cell, building, reason}: a manor that changed must say why.
 var manor_log: Array = []
+## The player's regiments (owner 2026-09-17, ArmySystem): code ->
+## {morale, wounded, supplies, training}, all whole numbers. Only the player's
+## realm's regiments; the pack's arms stay the headcount.
+var regiments: Dictionary = {}
 
 const SAVE_VERSION := 5
 
@@ -300,6 +305,7 @@ func to_dict() -> Dictionary:
 		"manor_focus": manor_focus.duplicate(true),
 		"manor_works": _encode_values(manor_works.duplicate(true)),
 		"manor_log": _encode_values(manor_log.duplicate(true)),
+		"regiments": _encode_values(regiments.duplicate(true)),
 	}
 
 static func from_dict(d: Dictionary) -> GameState:
@@ -357,5 +363,6 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.manor_focus = d.get("manor_focus", {}).duplicate(true)
 	s.manor_works = _decode_values(d.get("manor_works", {}))
 	s.manor_log = _decode_values(d.get("manor_log", []))
+	s.regiments = _decode_values(d.get("regiments", {}))
 	MapOwnership.invalidate()
 	return s

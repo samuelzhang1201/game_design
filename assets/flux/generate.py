@@ -43,6 +43,10 @@ CHAPTER_DIR = {
     "T": "terrain", "I": "icons", "D": "decor", "G": "goods", "B": "estates", "H": "buildings",
     "W": "tactical",
     "V": "events", "U": "ui",
+    # A- (2026-09-15) are the houses' and kingdoms' arms. They are not library
+    # entries: arms_prompts.py writes them from the map pack's coa into
+    # arms_prompts.csv, read with --prompts-file.
+    "A": "arms",
 }
 # Table-driven chapters carry their canvas per chapter (§5, §6, §7, §9);
 # E/P rows are fragments layered onto a character, not assets on their own.
@@ -58,7 +62,9 @@ CANVAS_SIZE = {
     "C-ICON": (1024, 1024), "C-TILE": (1024, 1024), "C-MAP": (1536, 1024),
     "C-SCENE": (1536, 1024), "C-SYMBOL": (1024, 1024), "C-MAPMARK": (1024, 1024),
     "C-UIPIECE": (1024, 1024), "C-UIWIDE": (1536, 512), "C-FRAME": (1792, 1008),
-    "C-ESTATE": (1280, 1024),
+    "C-ESTATE": (1280, 1024), "C-ARMS": (1024, 1024),
+    "C-TILEWIDE": (1024, 1024),
+    "C-TOWNFLAT": (1024, 1024),
 }
 # One preset per model: which template graph to fill and the sampler values
 # the prompt library recommends (§1.5). schnell is a 4-step distilled Flux.1
@@ -130,10 +136,13 @@ def build_csv() -> None:
 
 # ---------------------------------------------------------------- prompts
 
-def load_rows() -> list[dict]:
-    if not PROMPTS_CSV.exists():
+def load_rows(prompts_file: str = "") -> list[dict]:
+    """The library's prompts.csv, or another table of the same schema that a
+    script wrote (arms_prompts.csv)."""
+    path = (HERE / prompts_file) if prompts_file else PROMPTS_CSV
+    if not prompts_file and not path.exists():
         build_csv()
-    with PROMPTS_CSV.open(encoding="utf-8") as f:
+    with path.open(encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 
@@ -249,7 +258,10 @@ def main() -> int:
     ap.add_argument("--negative-file", default="", help="override the negative list; by default the one paired with --style-file")
     ap.add_argument("--res", type=int, default=0,
                     help="sample resolution: scale the canvas so its longer side is N px (e.g. 512), keeping the aspect")
+    ap.add_argument("--prompts-file", default="",
+                    help="read entries from this CSV beside the script instead of prompts.csv, e.g. arms_prompts.csv")
     ap.add_argument("--dry-run", action="store_true", help="print prompts, queue nothing")
+    ap.add_argument("--front", action="store_true", help="queue ahead of jobs already waiting in ComfyUI")
     ap.add_argument("--timeout", type=float, default=900.0, help="seconds to wait per image")
     args = ap.parse_args()
 
@@ -258,7 +270,7 @@ def main() -> int:
         if not (args.ids or args.chapter):
             return 0
 
-    rows = load_rows()
+    rows = load_rows(args.prompts_file)
     canvas = json.loads((HERE / "canvas.json").read_text(encoding="utf-8"))
     by_id = {r["id"]: r for r in rows}
     fragments: list[str] = []
@@ -344,7 +356,10 @@ def main() -> int:
                 "guidance": preset["guidance"], "cfg": preset["cfg"], "steps": preset["steps"],
                 "width": int(r["width"]), "height": int(r["height"]), "seed": seed, "prefix": prefix})
             try:
-                res = _post("/prompt", {"prompt": graph, "client_id": uuid.uuid4().hex})
+                payload = {"prompt": graph, "client_id": uuid.uuid4().hex}
+                if args.front:
+                    payload["front"] = True
+                res = _post("/prompt", payload)
             except urllib.error.HTTPError as e:
                 print(f"queue failed for {r['id']}: {e.read().decode()[:500]}", file=sys.stderr)
                 return 1

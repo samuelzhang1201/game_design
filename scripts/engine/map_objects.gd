@@ -222,18 +222,18 @@ static var _estate_rows_cache: Dictionary = {}
 static func estate_rows(repo: DataRepository, focus_code: String) -> Array:
 	var rkey := repo.get_instance_id()
 	if not _estate_rows_cache.has(rkey):
-		var by: Dictionary = {}
+		var grouped: Dictionary = {}
 		var order: Array = []
 		for row: Dictionary in repo.manor_estates:
 			var code := String(row["focus_code"])
-			if not by.has(code):
-				by[code] = []
+			if not grouped.has(code):
+				grouped[code] = []
 				order.append(code)
-			(by[code] as Array).append(row)
-		for code: String in by:
-			(by[code] as Array).sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			(grouped[code] as Array).append(row)
+		for code: String in grouped:
+			(grouped[code] as Array).sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 				return float(a["min_people"]) < float(b["min_people"]))
-		_estate_rows_cache[rkey] = {"by": by, "first": String(order[0]) if not order.is_empty() else ""}
+		_estate_rows_cache[rkey] = {"by": grouped, "first": String(order[0]) if not order.is_empty() else ""}
 	var cache: Dictionary = _estate_rows_cache[rkey]
 	var by: Dictionary = cache["by"]
 	if by.has(focus_code):
@@ -1290,6 +1290,77 @@ static func settlement_art(repo: DataRepository, b: Dictionary) -> Dictionary:
 			return row
 	return {}
 
+## ONE OF A TIER'S PAINTED DRAWINGS (owner 2026-09-16: "每一种定居点给我生成
+## 10种不同的variants image，随机apply上去"). A tier's row names `variants`
+## drawings, installed beside its own file as <tier>_01.png ..; a settlement
+## wears the one ITS OWN CODE picks, so two towns of the same size are not
+## twins. The pick is a hash, never the RNG: the same burg must wear the same
+## drawing every run, every save and every reload (determinism, CLAUDE.md §2).
+## The row is DUPLICATED — repo.settlement_art is shared table data.
+static func settlement_variant(row: Dictionary, code: String) -> Dictionary:
+	if row.is_empty():
+		return row
+	var count := int(row.get("variants", 0))
+	if count <= 1:
+		return row
+	var n := 1
+	if code != "":
+		n = abs(code.hash()) % count + 1
+	var texture := String(row.get("texture", ""))
+	if texture == "":
+		return row
+	var picked := row.duplicate()
+	picked["texture"] = "%s/%s_%02d.%s" % [
+		texture.get_base_dir(), String(row.get("tier", "")), n, texture.get_extension()]
+	return picked
+
+## The drawing a settlement wears NOW (owner 2026-09-15: the painted drawing
+## stays where it is but changes with its development): its pack row
+## (settlement_art), then promoted by data/settlement_growth.csv while a rule
+## holds — its manor's live people past a row's min_people, or one of a row's
+## buildings standing on the manor. Promotion only: a settlement is never
+## drawn smaller than the pack made it. Without a state, the pack row. Whatever
+## row it lands on, the burg's own variant of it is what comes back.
+static func settlement_look(repo: DataRepository, state: GameState, b: Dictionary) -> Dictionary:
+	var code := String(b.get("burg_code", ""))
+	var art := settlement_art(repo, b)
+	if art.is_empty() or state == null or repo.settlement_growth.is_empty():
+		return settlement_variant(art, code)
+	var cell := int(MapEconomy.burg_cells(repo).get(code, -1))
+	if cell < 0:
+		return settlement_variant(art, code)
+	var people := MapManors.people_of(repo, state, cell)
+	var buildings := MapManors.buildings_of(state, cell)
+	var tier := String(art["tier"])
+	for _step in repo.settlement_growth.size():
+		var grown := ""
+		for rule: Dictionary in repo.settlement_growth:
+			if String(rule["from_tier"]) != tier:
+				continue
+			var min_people := String(rule.get("min_people", "")).strip_edges()
+			if min_people != "" and people < int(min_people):
+				continue
+			var needs := String(rule.get("building", "")).split("|", false)
+			if not needs.is_empty():
+				var standing := false
+				for need: String in needs:
+					if buildings.has(need):
+						standing = true
+						break
+				if not standing:
+					continue
+			grown = String(rule["to_tier"])
+			break
+		if grown == "" or grown == tier:
+			break
+		tier = grown
+	if tier == String(art["tier"]):
+		return settlement_variant(art, code)
+	for row: Dictionary in repo.settlement_art:
+		if String(row["tier"]) == tier:
+			return settlement_variant(row, code)
+	return settlement_variant(art, code)
+
 ## The point-of-interest icon for a marker row (data/marker_art.csv by the
 ## marker's type), or {} when the type has none and the view falls back to
 ## its diamond.
@@ -1369,3 +1440,75 @@ static func _describe_army(repo: DataRepository, code: String) -> Dictionary:
 	lines.append("Under arms: %d" % int(regiment_size(repo, r)))
 	return {"title": label, "lines": lines,
 		"ask": "What is the state of the %s?" % label}
+
+## The painted piece a regiment is drawn with, whose painting heads its card
+## (owner 2026-09-15, data/army_art.csv): the fleet for a naval regiment, the
+## royal piece for the crown's own (royal_regiment), else its chief arm.
+static func army_piece(repo: DataRepository, regiment: Dictionary) -> String:
+	if String(regiment.get("is_naval", "0")) == "1":
+		return "fleet"
+	if String(regiment.get("regiment_code", "")) == royal_regiment(repo, String(regiment.get("kingdom_code", ""))):
+		return "royal"
+	return regiment_arm(repo, regiment)
+
+## A regiment's fact card (owner 2026-09-15: "军队的 card info 还是 2D 彩绘风格"):
+## its piece's painting over the card, and its facts as icons — each arm it
+## musters, the whole host under arms, and where it is quartered, and, for
+## the player's own regiment with a state, its terrain, morale, wounded,
+## supplies, training and strength (ArmySystem, owner 2026-09-17).
+static func army_card(repo: DataRepository, code: String, state: GameState = null) -> Dictionary:
+	var r: Dictionary = repo.world_table("military", "regiments").get(code, {})
+	if r.is_empty():
+		return {}
+	var label := String(r["label"])
+	var kingdom := String(r["kingdom_code"])
+	var naval := String(r.get("is_naval", "0")) == "1"
+	var province := String(r.get("province_code", ""))
+	var total := int(regiment_size(repo, r))
+	var piece := army_piece(repo, r)
+	var stats: Array = []
+	for unit: String in repo.world_table("military", "unit_types"):
+		var n := int(float(r.get(unit, 0)))
+		if n <= 0:
+			continue
+		var unit_label := String((repo.resource_icons.get(unit, {}) as Dictionary).get("label", unit.capitalize()))
+		stats.append(_stat(unit, str(n), "%s — %d" % [unit_label, n]))
+	var st := ArmySystem.state_of(repo, state, code) if state != null else {}
+	if st.is_empty():
+		stats.append(_stat("army", str(total), "Under arms — %d" % total))
+	else:
+		var wounded := int(st["wounded"])
+		stats.append(_stat("army", "%d (%d wounded)" % [total, wounded],
+			"Under arms — %d, of whom %d are wounded" % [total, wounded]))
+	var fields: Array = [["Under arms", str(total)]]
+	if province != "":
+		var where := _label(repo.provinces, province)
+		stats.append(_stat("manor_province", where, "Quartered in %s" % where))
+		fields.append(["Quartered in", where])
+	if not st.is_empty():
+		var ground := ArmySystem.terrain_label(repo, r)
+		stats.append(_stat("army_terrain", ground, "Quartered on %s" % ground.to_lower()))
+		stats.append(_stat("army_morale", str(int(st["morale"])), "Morale — %d of 100" % int(st["morale"])))
+		var back := ArmySystem.wound_recovery(repo, int(st["wounded"]))
+		stats.append(_stat("army_wounded", "+%d / mo" % back,
+			"%d wounded return to the ranks each month" % back))
+		var use := ArmySystem.supply_use(repo, r)
+		stats.append(_stat("army_supply", "%d (−%d / mo)" % [int(st["supplies"]), use],
+			"Supplies — %d held, %d used each month" % [int(st["supplies"]), use]))
+		var drill := ArmySystem.training_grade(repo, int(st["training"]))
+		stats.append(_stat("army_training", drill, "Training — %s" % drill))
+		var might := ArmySystem.strength_grade(repo, state, code)
+		stats.append(_stat("army_strength", might, "Strength — %s against the realm's others of its kind" % might))
+	return {
+		"kind": "army", "code": code, "title": label,
+		"subtitle": "%s of %s" % ["Fleet" if naval else "Regiment", _label(repo.kingdoms, kingdom)],
+		"kingdom_code": kingdom, "initial": label.substr(0, 1), "piece": piece,
+		"painting": String((repo.army_art.get(piece, {}) as Dictionary).get("painting", "")),
+		"stats": stats, "rates": [], "fields": fields, "features": [], "production": [],
+		"actions": [], "known": "army", "center": Vector2(float(r["x"]), float(r["y"])),
+		"ask": "What is the state of the %s?" % label,
+		# A regiment's values ("4564 (0 wounded)", "Hills (fortified)") are too
+		# wide for the default 4-column (2-pair) grid in the 120px left column
+		# (owner 2026-09-17 review); one icon+value pair per row instead.
+		"stat_columns": 2,
+	}

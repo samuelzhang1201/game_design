@@ -53,7 +53,7 @@ func test_targeted_promise_needs_matching_target() -> void:
 func test_broken_when_due_passes() -> void:
 	_promise("LEVY_RAISE", s.tick + 1)
 	var before: int = s.characters["char_marshal"].opinion
-	var r1 := engine.advance(s)   # tick == due: still open
+	engine.advance(s)   # tick == due: still open
 	assert_eq(s.promises[0]["status"], "open")
 	var r2 := engine.advance(s)   # past due -> broken
 	assert_eq(s.promises[0]["status"], "broken")

@@ -288,8 +288,8 @@ func test_building_needs_a_free_slot_and_can_be_pulled_down() -> void:
 	codes.sort()
 	assert_gt(codes.size(), slots, "more kinds of building than room")
 	for i in slots:
-		var out := sys.execute(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": codes[i]}), s)
-		assert_true(out["ok"])
+		var built := sys.execute(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": codes[i]}), s)
+		assert_true(built["ok"])
 	assert_eq(MapManors.free_slots(data, s, cell), 0)
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": codes[slots]}), s),
 		"no room")

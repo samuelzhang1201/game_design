@@ -30,12 +30,17 @@ func test_begin_reign_applies_chosen_identity() -> void:
 	menu.menu_column().get_node("StartGame").pressed.emit()
 	await wait_frames(1)
 	var panel := menu.setup_panel()
+	# The crown's arms stand where the family-flag glyphs were (2026-09-15).
+	assert_null(panel.find_child("FlagRow", true, false))
+	assert_not_null(menu.arms_preview().texture, "the royal seat's arms")
+	var arms := menu.arms_preview().texture
 	panel.find_child("FirstName", true, false).text = "Edmund"
 	panel.find_child("FamilyName", true, false).text = "Blackwood"
 	panel.find_child("BeginReign", true, false).pressed.emit()
 	await wait_frames(2)
 	assert_eq(Game.state.characters["you"].display_name, "King Edmund Blackwood")
-	assert_eq(String(Game.state.player_setup.get("flag", "")), "sun")
+	assert_same(HouseArms.texture_of_house(Game.data, Game.state, "Blackwood"), arms,
+		"the renamed crown keeps its arms")
 
 func test_campaign_opens_with_nameless_background_narration() -> void:
 	var r := _root()
@@ -185,7 +190,7 @@ func test_families_rows_are_complete() -> void:
 	var table := r.info_screen().table()
 	assert_eq(table.get_child_count() % 4, 0,
 		"%d cells is not a whole number of 4-column rows" % table.get_child_count())
-	assert_gt(table.get_child_count() / 4, 1, "at least one house beyond the header")
+	assert_gt(table.get_child_count() / 4.0, 1.0, "at least one house beyond the header")
 
 func test_top_bar_has_no_relations_button_and_chip_off_row() -> void:
 	var bar: TopBar = load("res://scenes/top_bar.tscn").instantiate()

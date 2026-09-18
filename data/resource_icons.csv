@@ -1,9 +1,9 @@
 key,label,icon,tooltip,texture
 treasury,Crown gold,coin,"Gold in the CROWN's treasury — the realm's, not your house's. The crown's share of the realm's taxes fills it; salaries, the court and your orders empty it; it alone buys land across the border.",res://assets/icons/treasury.png
 grain,Civil goods,grain,"Civil goods, in gold: food, timber, cloth and wares. The harvest and your provinces fill them each month; the court eats from them and building spends them.",res://assets/icons/grain.png
-strategic,Strategic goods,swords,"Strategic goods, in gold: iron, horses, arms and ships. Your provinces fill them each month; the levy and the campaign spend them — the army goes as far as they stretch.",
+strategic,Strategic goods,swords,"Strategic goods, in gold: iron, horses, arms and ships. Your provinces fill them each month; the levy and the campaign spend them — the army goes as far as they stretch.",res://assets/icons/manor_strategic.png
 lord_gold,Your gold,coin,"Gold in your OWN house's purse, apart from the crown's treasury. Your own provinces' manors fill it each month; it buys and builds manors inside the realm.",res://assets/icons/treasury.png
-lord_strategic,Your strategic goods,swords,"Strategic goods your own provinces make, yours to spend as their lord.",
+lord_strategic,Your strategic goods,swords,"Strategic goods your own provinces make, yours to spend as their lord.",res://assets/icons/manor_strategic.png
 lord_civil,Your civil goods,grain,"Civil goods your own provinces make — timber, cloth and food for building on your own manors.",res://assets/icons/grain.png
 population,People,people,Everyone in the realm's towns and countryside. Levies are drawn from them.,res://assets/icons/population.png
 army,Host,swords,"The realm's soldiers under arms, by regiment.",res://assets/icons/army.png
@@ -17,30 +17,36 @@ archers,Archers,bow,Bowmen who thin a charge before it lands.,res://assets/icons
 cavalry,Cavalry,horseshoe,"Mounted troops: costly, and decisive on open ground.",res://assets/icons/cavalry.png
 artillery,Artillery,cannon,"Siege engines and guns; slow, but walls fear them.",res://assets/icons/artillery.png
 fleet,Fleet,sail,Warships crewed from the coast towns.,res://assets/icons/fleet.png
-walls,Walls,wall,"A walled town: harder to take, and its market is taxed at the gate.",
-citadel,Citadel,tower,A citadel commands the town; a garrison can hold it.,
-temple,Temple,cross,A temple: the church has a house here.,
-plaza,Market,market,A market square: goods change hands and the town grows.,
-shanty,Shanty town,huts,A shanty town outside the walls: the poor crowd in.,
-port,Port,anchor,A harbour: ships and sea trade come and go.,
-tag_food,Food,grain,Food goods.,
-tag_ore,Ore,pick,Ores and metals.,
-tag_mineral,Mineral,pick,Quarried and mined minerals.,
-tag_construction,Building,wall,Building materials.,
-tag_luxury,Luxury,gem,Luxuries the wealthy pay for.,
-tag_military,Arms,swords,Goods of war.,
-tag_naval,Naval,sail,Goods for ships.,
-tag_clothing,Cloth,cloth,Cloth and clothing.,
-tag_fuel,Fuel,flame,Fuel.,
-tag_currency,Coin,coin,Coin.,
-tag_supply,Supply,horseshoe,Beasts and supplies.,
-tag_preservative,Preserving,market,Salt and what keeps food from spoiling.,
-tag_ritual,Ritual,cross,Goods for the church and its rites.,
-tag_storage,Storage,wall,Barrels and what goods are kept in.,
-tag_aquatic,Fishing,anchor,What the waters give.,
-tag_educational,Learning,tower,Books and the tools of learning.,
-wealth,Wealth,coin,What the town produces in a season.,
-town_treasury,Treasury,coin,Coin in the town's own chest.,
+walls,Walls,wall,"A walled town: harder to take, and its market is taxed at the gate.",res://assets/icons/manor_defence.png
+citadel,Citadel,tower,A citadel commands the town; a garrison can hold it.,res://assets/icons/citadel.png
+temple,Temple,cross,A temple: the church has a house here.,res://assets/icons/temple.png
+plaza,Market,market,A market square: goods change hands and the town grows.,res://assets/icons/plaza.png
+shanty,Shanty town,huts,A shanty town outside the walls: the poor crowd in.,res://assets/icons/shanty.png
+port,Port,anchor,A harbour: ships and sea trade come and go.,res://assets/icons/port.png
+tag_food,Food,grain,Food goods.,res://assets/icons/tag_food.png
+tag_ore,Ore,pick,Ores and metals.,res://assets/icons/tag_ore.png
+tag_mineral,Mineral,pick,Quarried and mined minerals.,res://assets/icons/tag_mineral.png
+tag_construction,Building,wall,Building materials.,res://assets/icons/tag_construction.png
+tag_luxury,Luxury,gem,Luxuries the wealthy pay for.,res://assets/icons/tag_luxury.png
+tag_military,Arms,swords,Goods of war.,res://assets/icons/tag_military.png
+tag_naval,Naval,sail,Goods for ships.,res://assets/icons/tag_naval.png
+tag_clothing,Cloth,cloth,Cloth and clothing.,res://assets/icons/tag_clothing.png
+tag_fuel,Fuel,flame,Fuel.,res://assets/icons/tag_fuel.png
+tag_currency,Coin,coin,Coin.,res://assets/icons/tag_currency.png
+tag_supply,Supply,horseshoe,Beasts and supplies.,res://assets/icons/tag_supply.png
+tag_preservative,Preserving,market,Salt and what keeps food from spoiling.,res://assets/icons/tag_preservative.png
+tag_ritual,Ritual,cross,Goods for the church and its rites.,res://assets/icons/tag_ritual.png
+tag_storage,Storage,wall,Barrels and what goods are kept in.,res://assets/icons/tag_storage.png
+tag_aquatic,Fishing,anchor,What the waters give.,res://assets/icons/tag_aquatic.png
+tag_educational,Learning,tower,Books and the tools of learning.,res://assets/icons/tag_educational.png
+wealth,Wealth,coin,What the town produces in a season.,res://assets/icons/manor_value.png
+town_treasury,Treasury,coin,Coin in the town's own chest.,res://assets/icons/treasury.png
+crown,The crown,crown,The crown's own — the realm's treasury and stores.,res://assets/icons/legitimacy.png
+clock_pause,Pause,crown,Stop the days.,res://assets/icons/clock_pause.png
+clock_play,Play,sun,Let the days run.,res://assets/icons/clock_play.png
+clock_fast,Faster,horseshoe,Days pass faster.,res://assets/icons/clock_fast.png
+clock_faster,Fastest,horseshoe,Days pass fastest.,res://assets/icons/clock_faster.png
+menu,Menu,crown,"Save, load, restart or quit.",res://assets/icons/menu.png
 towns,Towns,huts,The realm's townsfolk: everyone living inside a burg's walls or streets.,res://assets/icons/towns.png
 country,Country,grain,"The realm's country folk: everyone on the land, in villages and on farms.",res://assets/icons/country.png
 bld_manor_house,Manor house,tower,"A stone hall for the steward: rents in full, a yard that can be held, a lord in residence.",res://assets/icons/bld_manor_house.png
@@ -81,3 +87,9 @@ bld_abbey,Abbey,cross,"monks and a scriptorium where the chapel stood: the churc
 bld_castle,Castle,tower,"a stone keep behind the palisade, the lord's hall within: very hard to take, and the land is quiet",res://assets/icons/bld_castle.png
 bld_harbour,Harbour,anchor,a stone quay where the market meets the boats: harbour dues and a larger catch,res://assets/icons/bld_harbour.png
 bld_armoury,Armoury,swords,"a store of arms beside the smithy: weapons for the levy, and a harder yard",res://assets/icons/bld_armoury.png
+army_terrain,Terrain,tower,"The ground the regiment is quartered on, and whether walls shelter it.",
+army_morale,Morale,flame,"The regiment's spirit, 0 to 100.",
+army_wounded,Wound recovery,cross,The wounded who return to the ranks each month.,
+army_supply,Supplies,grain,The supplies the regiment holds and what it uses each month.,
+army_training,Training,shield,"How well drilled the regiment is.",
+army_strength,Strength,swords,"How the regiment measures against the realm's others of its kind.",

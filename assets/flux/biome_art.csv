@@ -1,8 +1,8 @@
 art_id,key,seed,notes
-T-01,broadleaf,,
-T-02,conifer,,
+T-01,broadleaf,954159498,
+T-02,conifer,954159498,
 T-03,woodland,,
-T-05,pasture,,
+T-05,pasture,954159498,
 T-06,moor,,
 T-10,marsh,,
 T-11,steppe,,

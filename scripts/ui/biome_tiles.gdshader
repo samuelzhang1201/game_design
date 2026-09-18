@@ -41,6 +41,34 @@ uniform float shade = 0.0;        // 0 = flat ground, 1 = full shading
 uniform float shade_px = 40.0;    // native px between the slope samples
 uniform float gain = 40.0;        // how steeply a small height difference reads
 uniform vec2 light = vec2(-0.7, -0.7);  // toward the light: from the north-west
+// SURFACE FOLLOWS THE LAND (owner 2026-09-17). In a real satellite image the
+// cover is a RESULT of the topography: bare rock and scree on steep faces,
+// snow on the high flats, green in the sheltered low ground. The tiles alone
+// are laid by BIOME ID and know nothing of the height field, which is what
+// makes the ground read as painted rather than photographed. The high-ground
+// bands already follow HEIGHT (MapIndex.raise_high_ground), but nothing has
+// ever followed SLOPE, so a steep face at middling altitude still wears
+// grassland. Both strengths default to 0: an unset shader is what it was.
+uniform float rock_slope_lo = 0.02;
+uniform float rock_slope_hi = 0.10;
+uniform float rock_strength = 0.0;
+uniform float snow_height = 0.80;
+uniform float snow_soft = 0.06;
+uniform float snow_strength = 0.0;
+// A steep face at sea level is a BEACH, not a cliff. Land meets sea across a
+// height cliff, so slope alone rimmed every shoreline and lake edge in rock;
+// altitude is what separates a coast from a mountain face.
+uniform float rock_height_lo = 0.35;
+uniform float rock_height_hi = 0.55;
+// SETTLEMENT EARTH HALO (owner 2026-09-17). A town does not stand on
+// untouched forest: it stands in worked ground — trodden earth, yards, tracks
+// — that fades outward into the countryside. Drawing the settlement art
+// straight onto green is what made it read as a sticker. `settlement` is the
+// baked distance in km to the nearest town's worked ground.
+uniform sampler2D settlement : filter_linear, repeat_disable;
+uniform float town_fade_px = 0.0;   // km over which the earth fades out; 0 = off
+uniform float town_earth_strength = 0.0;
+uniform vec3 town_earth = vec3(0.68, 0.60, 0.49);
 
 varying vec2 native;
 
@@ -89,10 +117,39 @@ void fragment() {
 			// The bake normalises over land; 8-bit rounding and bilinear
 			// sampling drift the sum a little, so it is normalised again.
 			c /= sum;
+			// The land's own slope and height decide what grows here, BEFORE the
+			// light falls on it. Sampled outside the hillshade block because the
+			// surface depends on them even when the lighting is turned off.
+			if (rock_strength > 0.001 || snow_strength > 0.001) {
+				vec2 s_uv = vec2(shade_px) / field_px;
+				float sx = texture(relief, f + vec2(s_uv.x, 0.0)).r
+					- texture(relief, f - vec2(s_uv.x, 0.0)).r;
+				float sy = texture(relief, f + vec2(0.0, s_uv.y)).r
+					- texture(relief, f - vec2(0.0, s_uv.y)).r;
+				float steep = smoothstep(rock_slope_lo, rock_slope_hi, length(vec2(sx, sy)));
+				float hgt = texture(relief, f).r;
+				// Rock needs BOTH steepness and height: without the second term every
+				// shoreline is a height cliff and wears a rim of gravel.
+				float rocky = steep * smoothstep(rock_height_lo, rock_height_hi, hgt);
+				// layer i = biome i+1: 13 is mountain rock, 14 is peak snow.
+				vec4 rock = mix(texture(tiles, vec3(uv_far, 13.0)), texture(tiles, vec3(uv_near, 13.0)), lod);
+				vec4 snow = mix(texture(tiles, vec3(uv_far, 14.0)), texture(tiles, vec3(uv_near, 14.0)), lod);
+				c.rgb = mix(c.rgb, rock.rgb, rocky * rock_strength);
+				// Snow settles on high ground that is not a cliff face.
+				float high = smoothstep(snow_height - snow_soft, snow_height + snow_soft, hgt);
+				c.rgb = mix(c.rgb, snow.rgb, high * (1.0 - rocky) * snow_strength);
+			}
 			// Relief: the height field's slope against the light. A face
 			// turned toward the light brightens, one turned away darkens,
 			// flat ground is left alone — so the photograph gets landforms
 			// without any of the map's own symbols.
+			// The worked ground round a town, laid BEFORE the light so the earth is
+			// lit with the land instead of sitting on top of it as a flat patch.
+			if (town_fade_px > 0.001 && town_earth_strength > 0.001) {
+				float town_km = texture(settlement, f).r * 255.0;
+				float worked = 1.0 - smoothstep(0.0, town_fade_px, town_km);
+				c.rgb = mix(c.rgb, town_earth, worked * town_earth_strength);
+			}
 			if (shade > 0.001) {
 				// Classic hillshade: the height field's own normal against the
 				// light, flat ground normalised to 1.0 so `shade` alone says how

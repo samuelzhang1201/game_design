@@ -168,6 +168,12 @@ var biome_weights_path: String = ""
 ## the pack's baked height field (MapIndex.bake_relief, tools/bake_relief.gd);
 ## biome_tiles.gdshader lights the ground by its slope. "" when unbaked.
 var relief_path: String = ""
+## data/maps.csv settlement_texture: world_settlement_distance.png, every
+## pixel its distance in km to the nearest settlement's worked ground
+## (tools/bake_settlements.gd). The ground shader fades to bare earth near
+## a town so its art rises out of worked land instead of off green forest
+## (owner 2026-09-17).
+var settlement_path: String = ""
 ## data/maps.csv cell_texture: world_cell_index.png, R | G<<8 = the land
 ## cell under a pixel (white = water) — how a click finds its manor.
 var cell_texture_path: String = ""
@@ -592,6 +598,7 @@ func load_map(id: String) -> bool:
 	sea_texture_path = String(m.get("sea_texture", ""))
 	biome_weights_path = String(m.get("biome_weights", ""))  # BIOMES LAYER (experiment 2026-09-14)
 	relief_path = String(m.get("relief_texture", ""))  # BIOMES LAYER (owner 2026-09-17)
+	settlement_path = String(m.get("settlement_texture", ""))  # SETTLEMENT EARTH HALO
 	cell_texture_path = String(m.get("cell_texture", ""))
 	_resolve_realm_slots()
 	return true

@@ -16,11 +16,15 @@ static var _output_cache: Dictionary = {}
 ## never moves out of its cell.
 static var _burg_cell_cache: Dictionary = {}
 static var _manor_cache: Dictionary = {}
+## {repo instance id: {"bucket": float, "grid": Dictionary}}. Cached: the
+## pack's land cells never move.
+static var _land_grid_cache: Dictionary = {}
 
 static func forget() -> void:
 	_output_cache.clear()
 	_burg_cell_cache.clear()
 	_manor_cache.clear()
+	_land_grid_cache.clear()
 
 ## --- Manors (owner request 2026-09-13) ----------------------------------
 ## The ECONOMY view draws the land as its MANORS: the pack's Voronoi cells,
@@ -34,8 +38,24 @@ static func burg_cells(repo: DataRepository) -> Dictionary:
 	var key := repo.get_instance_id()
 	if _burg_cell_cache.has(key):
 		return _burg_cell_cache[key]
-	# Bucket the land cells by centre so each burg tests a handful of
-	# polygons, not all of them.
+	var out: Dictionary = {}
+	for code: String in repo.burgs:
+		var b: Dictionary = repo.burgs[code]
+		var p := Vector2(float(b.get("x", 0)), float(b.get("y", 0)))
+		var id := cell_at(repo, p)
+		# A burg on the shoreline can sit a hair outside every land polygon;
+		# it belongs to the nearest land cell around it.
+		if id >= 0:
+			out[code] = id
+	_burg_cell_cache[key] = out
+	return out
+
+## The land cells bucketed by centre, so a point only tests a handful of
+## polygons, not all of them. Cached: the pack's land cells never move.
+static func _land_grid(repo: DataRepository) -> Dictionary:
+	var key := repo.get_instance_id()
+	if _land_grid_cache.has(key):
+		return _land_grid_cache[key]
 	var reach := 0.0
 	var land: Array = []
 	for id: int in repo.cells:
@@ -51,35 +71,32 @@ static func burg_cells(repo: DataRepository) -> Dictionary:
 		if not grid.has(g):
 			grid[g] = []
 		(grid[g] as Array).append(id)
-	var out: Dictionary = {}
-	for code: String in repo.burgs:
-		var b: Dictionary = repo.burgs[code]
-		var p := Vector2(float(b.get("x", 0)), float(b.get("y", 0)))
-		var home := Vector2i((p / bucket).floor())
-		var nearest := -1
-		var nearest_d := INF
-		for dy in range(-1, 2):
-			for dx in range(-1, 2):
-				for id: int in grid.get(home + Vector2i(dx, dy), []):
-					var cell: Dictionary = repo.cells[id]
-					if Geometry2D.is_point_in_polygon(p, cell_polygon(repo, cell)):
-						nearest = id
-						nearest_d = -1.0
-						break
-					var d := p.distance_squared_to(MapTerrain.cell_center(repo, cell))
-					if nearest_d >= 0.0 and d < nearest_d:
-						nearest_d = d
-						nearest = id
-				if nearest_d < 0.0:
-					break
-			if nearest_d < 0.0:
-				break
-		# A burg on the shoreline can sit a hair outside every land polygon;
-		# it belongs to the nearest land cell around it.
-		if nearest >= 0:
-			out[code] = nearest
-	_burg_cell_cache[key] = out
+	var out := {"bucket": bucket, "grid": grid}
+	_land_grid_cache[key] = out
 	return out
+
+## The land cell holding a map point: the cell whose polygon contains it, else
+## the land cell with the nearest centre in the neighbouring buckets (a point
+## on the shoreline can sit a hair outside every land polygon). -1 when no
+## land cell is near.
+static func cell_at(repo: DataRepository, p: Vector2) -> int:
+	var lg := _land_grid(repo)
+	var bucket: float = lg["bucket"]
+	var grid: Dictionary = lg["grid"]
+	var home := Vector2i((p / bucket).floor())
+	var nearest := -1
+	var nearest_d := INF
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			for id: int in grid.get(home + Vector2i(dx, dy), []):
+				var cell: Dictionary = repo.cells[id]
+				if Geometry2D.is_point_in_polygon(p, cell_polygon(repo, cell)):
+					return id
+				var d := p.distance_squared_to(MapTerrain.cell_center(repo, cell))
+				if d < nearest_d:
+					nearest_d = d
+					nearest = id
+	return nearest
 
 static func cell_polygon(repo: DataRepository, cell: Dictionary) -> PackedVector2Array:
 	var pts := PackedVector2Array()

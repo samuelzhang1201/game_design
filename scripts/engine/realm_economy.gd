@@ -106,17 +106,17 @@ static func _assign_buckets() -> void:
 		var wa := _manor_count(a)
 		var wb := _manor_count(b)
 		return wa > wb if wa != wb else a < b)
-	var load := PackedInt32Array()
-	load.resize(Calendar.DAYS_PER_TICK)
+	var bucket_load := PackedInt32Array()
+	bucket_load.resize(Calendar.DAYS_PER_TICK)
 	_bucket_of = PackedInt32Array()
 	_bucket_of.resize(_codes.size())
 	for pi: int in order:
 		var best := 0
-		for b in load.size():
-			if load[b] < load[best]:
+		for b in bucket_load.size():
+			if bucket_load[b] < bucket_load[best]:
 				best = b
 		_bucket_of[pi] = best
-		load[best] += _manor_count(pi)
+		bucket_load[best] += _manor_count(pi)
 
 static func _manor_count(province_index: int) -> int:
 	var r: Array = _range[_codes[province_index]]

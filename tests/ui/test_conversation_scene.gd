@@ -258,6 +258,29 @@ func test_long_event_content_scrolls_inside_fixed_box() -> void:
 ## the dossier card shows the speaker's identity, and both reflect an order
 ## taken here (dossier via the trait/opinion fields, TopBar via
 ## Game.state_changed).
+## The name plate wears the speaker's house arms (owner 2026-09-15); a
+## person whose family holds no seat shows none.
+func test_the_name_plate_wears_the_speakers_house_arms() -> void:
+	Game.start_campaign(42)
+	var beats := [{"kind": "minister", "portrait_id": "char_marshal", "speaker": "Ser Brandt of Harrow",
+		"text": "The levies grow soft.", "suggestions": []}]
+	var c := _scene_with(beats, TickReport.new())
+	await wait_frames(2)
+	var arms: HeraldicShield = c.find_child("PlateArms", true, false)
+	var family: String = Game.state.characters["char_marshal"].family_name
+	assert_true(arms.visible)
+	assert_not_null(arms.texture)
+	assert_same(arms.texture, HouseArms.texture_of_house(Game.data, Game.state, family))
+	assert_eq(c.find_child("MinisterName", true, false).get_parent(), arms.get_parent(), "beside the name")
+	var seatless := ""
+	for id: String in Game.state.characters:
+		if HouseArms.key_of_house(Game.data, Game.state, Game.state.characters[id].family_name) == "":
+			seatless = id
+			break
+	assert_ne(seatless, "", "some character's family holds no province")
+	c._show_speaker({"portrait_id": seatless, "speaker": "x"})
+	assert_false(arms.visible, "no seat, no arms")
+
 func test_top_bar_and_dossier_reflect_speaker_and_order() -> void:
 	Game.start_campaign(42)
 	var report := Game.next_tick()

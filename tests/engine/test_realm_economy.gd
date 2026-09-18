@@ -84,18 +84,18 @@ func test_the_day_buckets_spread_the_months_work() -> void:
 	# The buckets are balanced by manor count (2026-09-14), so no day of the
 	# month carries much more work than the mean — `index mod 30` put 196
 	# manors on one day against a 117 mean and cost 18 ms.
-	var load: Array[int] = []
-	load.resize(Calendar.DAYS_PER_TICK)
-	load.fill(0)
+	var day_load: Array[int] = []
+	day_load.resize(Calendar.DAYS_PER_TICK)
+	day_load.fill(0)
 	var manors := 0
 	for pi in RealmEconomy._codes.size():
 		var r: Array = RealmEconomy._range[RealmEconomy._codes[pi]]
 		var count := int(r[1]) - int(r[0])
 		manors += count
-		load[RealmEconomy._bucket_of[pi]] += count
+		day_load[RealmEconomy._bucket_of[pi]] += count
 	var mean := float(manors) / float(Calendar.DAYS_PER_TICK)
 	var worst := 0
-	for v: int in load:
+	for v: int in day_load:
 		worst = maxi(worst, v)
 	assert_lte(float(worst), 1.5 * mean,
 		"the heaviest day carries at most 1.5x the mean (%d manors against %.1f)" % [worst, mean])

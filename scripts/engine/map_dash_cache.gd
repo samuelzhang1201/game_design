@@ -131,7 +131,7 @@ func colors(entry: Dictionary, ink: Color, pale: Color) -> PackedColorArray:
 	var phase: PackedByteArray = entry["phase"]
 	var out := PackedColorArray()
 	out.resize(phase.size())
-	var clear := Color(ink, 0.0)
+	var jump := Color(ink, 0.0)
 	for i in phase.size():
 		match phase[i]:
 			ON:
@@ -139,7 +139,7 @@ func colors(entry: Dictionary, ink: Color, pale: Color) -> PackedColorArray:
 			OFF:
 				out[i] = pale
 			_:
-				out[i] = clear
+				out[i] = jump
 	by_pair[pair_key] = out
 	return out
 

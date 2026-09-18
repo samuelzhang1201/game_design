@@ -173,6 +173,7 @@ static func province_shades(repo: DataRepository, levels: int) -> Dictionary:
 static func shade(color: Color, level: int, step: float) -> Color:
 	if level <= 0:
 		return color
+	@warning_ignore("integer_division")  # 1 and 2 share a step, 3 and 4 the next
 	var amount := step * float((level + 1) / 2)
 	var toward := Color(1, 1, 1, color.a) if level % 2 == 1 else Color(0, 0, 0, color.a)
 	return color.lerp(toward, clampf(amount, 0.0, 0.9))
@@ -665,7 +666,7 @@ static func work_progress(state: GameState, cell_id: int, building_code: String)
 ## Cut `days` off a work in progress (spec 2026-09-14 §5: gold hurries the
 ## masons), never below done. Returns the days actually cut; 0 for no
 ## such work or an empty reason. Logs into manor_log with a "rushed" field.
-static func rush_work(repo: DataRepository, state: GameState, cell_id: int, building_code: String,
+static func rush_work(_repo: DataRepository, state: GameState, cell_id: int, building_code: String,
 		days: int, reason: String) -> int:
 	if days <= 0 or reason.strip_edges() == "":
 		return 0
@@ -922,7 +923,7 @@ static func output_of(repo: DataRepository, cell_id: int) -> float:
 ## How a house feels about the crown, -100..100: its council member's
 ## opinion, else any character of the family's, else 0 (a house with no
 ## voice at court is neither warm nor cold).
-static func house_opinion(repo: DataRepository, state: GameState, family: String) -> int:
+static func house_opinion(_repo: DataRepository, state: GameState, family: String) -> int:
 	var any_member := -1000
 	for seat in state.council:
 		var c: Character = state.characters.get(String(state.council[seat]), null)

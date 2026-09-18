@@ -1,0 +1,7 @@
+piece,texture,painting,notes
+infantry,res://assets/armies/infantry.png,res://assets/armies/paint/infantry.png,"Hunyuan3D piece (owner 2026-09-16, development/3d_spike/render_hunyuan_armies.py): a spearman with kite shield on a round base; card painting library B-37"
+archers,res://assets/armies/archers.png,res://assets/armies/paint/archers.png,Hunyuan3D piece: a longbowman drawing his bow; card painting B-38
+cavalry,res://assets/armies/cavalry.png,res://assets/armies/paint/cavalry.png,Hunyuan3D piece: a mounted knight with lance and pennant; card painting B-39
+artillery,res://assets/armies/artillery.png,res://assets/armies/paint/artillery.png,Hunyuan3D piece: a bronze bombard and its gunner; card painting B-40
+fleet,res://assets/armies/fleet.png,res://assets/armies/paint/fleet.png,Hunyuan3D piece: a cog on a sea base; card painting B-41
+royal,res://assets/armies/royal.png,res://assets/armies/paint/royal.png,"Hunyuan3D piece: the crown's own regiment (MapObjects.royal_regiment), a crowned king on a white horse under the royal banner; card painting B-42"

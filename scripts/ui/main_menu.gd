@@ -2,20 +2,22 @@ class_name MainMenu
 extends Control
 ## Title screen (user rulings 2026-08-30): a visible menu — Start Game, Load
 ## Game, Quit — instead of the old press-Space-only screen. Start Game opens
-## character creation: first name, family name, and a family flag (simple
-## icons for now). The chosen family name is inherited by every role of the
-## player's house (GameState.apply_player_setup). Space still quick-starts
-## with defaults.
+## character creation: first name and family name, over the crown's arms
+## (owner 2026-09-15; they replaced the family-flag glyphs). The chosen
+## family name is inherited by every role of the player's house
+## (GameState.apply_player_setup). Space still quick-starts with defaults.
 
 signal start_requested
 signal load_requested
+
+## The arms preview's height, design px.
+const ARMS_PREVIEW_PX := 88.0
 
 var _menu_col: VBoxContainer
 var _setup_panel: PanelContainer
 var _first_name: LineEdit
 var _family_name: LineEdit
-var _flag_buttons: Array = []
-var _selected_flag := 0
+var _arms_preview: HeraldicShield
 var _status: Label
 
 func _ready() -> void:
@@ -72,7 +74,7 @@ func _menu_button(label: String, handler: Callable) -> Button:
 	btn.pressed.connect(handler)
 	return btn
 
-## Character creation: names + family flag, then Begin Reign.
+## Character creation: names over the crown's arms, then Begin Reign.
 func _build_setup_panel() -> void:
 	_setup_panel = PanelContainer.new()
 	_setup_panel.name = "SetupPanel"
@@ -105,24 +107,18 @@ func _build_setup_panel() -> void:
 	_family_name.text = "Valorin"
 	_family_name.max_length = 16
 	col.add_child(_family_name)
-	col.add_child(_field_label("Family flag"))
-	var flags := HBoxContainer.new()
-	flags.name = "FlagRow"
-	flags.add_theme_constant_override("separation", 8)
-	col.add_child(flags)
-	for i in UiPalette.FLAGS.size():
-		var f: Dictionary = UiPalette.FLAGS[i]
-		var btn := Button.new()
-		btn.name = "Flag_" + String(f["id"])
-		btn.text = String(f["symbol"])
-		btn.focus_mode = Control.FOCUS_NONE
-		btn.custom_minimum_size = Vector2(48, 48)
-		btn.add_theme_color_override("font_color", f["color"])
-		btn.add_theme_font_size_override("font_size", 28)
-		btn.pressed.connect(_select_flag.bind(i))
-		flags.add_child(btn)
-		_flag_buttons.append(btn)
-	_select_flag(0)
+	# The crown's arms (owner 2026-09-15): the royal seat's, whatever the
+	# family is named.
+	col.add_child(_field_label("House arms"))
+	_arms_preview = HeraldicShield.new()
+	_arms_preview.name = "ArmsPreview"
+	_arms_preview.custom_minimum_size = Vector2(ARMS_PREVIEW_PX * 0.85, ARMS_PREVIEW_PX)
+	_arms_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var royal := HouseArms.royal_family(Game.data)
+	_arms_preview.set_arms(MapPalette.color_of(Game.data, Game.data.resolve_realm("player_realm")),
+		royal.substr(0, 1).to_upper())
+	_arms_preview.set_texture(HouseArms.texture_of_house(Game.data, null, royal))
+	col.add_child(_arms_preview)
 	col.add_child(HSeparator.new())
 	var begin := _menu_button("Begin Reign", _on_begin_pressed)
 	begin.name = "BeginReign"
@@ -138,14 +134,6 @@ func _field_label(text: String) -> Label:
 	l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	return l
 
-func _select_flag(index: int) -> void:
-	_selected_flag = index
-	for i in _flag_buttons.size():
-		var f: Dictionary = UiPalette.FLAGS[i]
-		_flag_buttons[i].add_theme_stylebox_override("normal",
-			UiPalette.chip_style(UiPalette.CHIP_BG,
-				f["color"] if i == index else UiPalette.BORDER_GOLD))
-
 func _open_setup() -> void:
 	_menu_col.visible = false
 	_setup_panel.visible = true
@@ -158,7 +146,6 @@ func _on_begin_pressed() -> void:
 	Game.player_setup = {
 		"first_name": _first_name.text.strip_edges(),
 		"family_name": _family_name.text.strip_edges(),
-		"flag": String(UiPalette.FLAGS[_selected_flag]["id"]),
 	}
 	start_requested.emit()
 
@@ -174,6 +161,9 @@ func setup_panel() -> PanelContainer:
 
 func menu_column() -> VBoxContainer:
 	return _menu_col
+
+func arms_preview() -> HeraldicShield:
+	return _arms_preview
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("start_game") and not _setup_panel.visible:

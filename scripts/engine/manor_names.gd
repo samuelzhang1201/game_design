@@ -9,7 +9,7 @@ extends RefCounted
 ## `specs`: [{cell_id, bank, burg_label, province_code, burg_code, culture_code}]
 ## in any order; `banks`: {bank key: {names: PackedStringArray, min, max}}.
 ## Returns rows sorted by cell id: [{cell_id, manor_code, label, ...}].
-static func forge_table(seed: int, specs: Array, banks: Dictionary) -> Array:
+static func forge_table(map_seed: int, specs: Array, banks: Dictionary) -> Array:
 	var ordered := specs.duplicate()
 	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["cell_id"]) < int(b["cell_id"]))
@@ -38,7 +38,7 @@ static func forge_table(seed: int, specs: Array, banks: Dictionary) -> Array:
 		var bank_row: Dictionary = banks.get(key, {})
 		var rng := RandomNumberGenerator.new()
 		# Plain arithmetic, so the seed is the same on every platform.
-		rng.seed = seed * 1000003 + int(spec["cell_id"])
+		rng.seed = map_seed * 1000003 + int(spec["cell_id"])
 		var label := NameForge.forge_unique(models[key], rng,
 			int(bank_row.get("min", 5)), int(bank_row.get("max", 12)), taken)
 		if label == "":

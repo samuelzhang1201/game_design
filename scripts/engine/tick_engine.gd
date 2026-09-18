@@ -29,6 +29,8 @@ func advance(state: GameState) -> TickReport:
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.
 	_settle_economy(state, r)
+	# The regiments' month (owner 2026-09-17): wounded return, supplies spent.
+	ArmySystem.settle_month(data, state)
 	state.tick += 1
 	state.day = 1
 	r.finished_works = MapManors.advance_works(data, state)
@@ -89,6 +91,7 @@ func _settle_economy(state: GameState, r: TickReport) -> void:
 		people += RealmEconomy._figure(data, state, "economy.provinces.%s.urban_population" % code)
 	var ration := int(roundf(float(people) / 1000.0 * data.bal("ration_gold_per_1000")))
 	if m.get("grain_ration", 0.0) > 0.0:
+		@warning_ignore("integer_division")  # whole gold (invariant 11)
 		ration = ration / 2
 	_apply(r, m, "grain", float(-ration), "the court's ration")
 	# The harvest and the buildings are the lord's own fields and walls.

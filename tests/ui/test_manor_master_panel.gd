@@ -53,6 +53,22 @@ func test_the_manors_tab_lists_the_realms_manors_biggest_first() -> void:
 	panel.sort_by(0)
 	assert_true(String(panel.rows()[0]["label"]) >= first)
 
+## Each row's house carries its arms before its name (owner 2026-09-15).
+func test_each_row_wears_its_houses_arms() -> void:
+	var r: GameRoot = await _court()
+	var panel: ManorMasterPanel = (r.current_screen as CourtScreen).manor_master()
+	r.bottom_bar().button("MANORS").pressed.emit()
+	await wait_frames(1)
+	var item := panel.table().get_root().get_first_child()
+	var i := 0
+	while item != null:
+		var arms := HouseArms.texture_of_house(Game.data, Game.state, String(panel.rows()[i]["family"]))
+		assert_not_null(arms, String(panel.rows()[i]["family"]))
+		assert_same(item.get_icon(1), arms)
+		item = item.get_next()
+		i += 1
+	assert_gt(i, 0)
+
 func test_scope_and_house_narrow_or_widen_the_table() -> void:
 	var r: GameRoot = await _court()
 	var panel: ManorMasterPanel = r.current_screen.manor_master()

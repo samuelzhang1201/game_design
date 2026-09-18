@@ -25,6 +25,7 @@ static func growth_index(repo: DataRepository, good: String, tick: int) -> int:
 	var table: PackedInt32Array = _growth.get(key, PackedInt32Array([1000]))
 	while table.size() <= tick:
 		var prev := table[table.size() - 1]
+		@warning_ignore("integer_division")  # whole per-mille, rounded half up (invariant 11)
 		table.append((prev * (1000 + g) + 500) / 1000)
 	_growth[key] = table
 	return table[maxi(tick, 0)]

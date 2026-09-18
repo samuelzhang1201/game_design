@@ -63,6 +63,50 @@ func test_own_province_gets_a_card_and_foreign_land_the_basics() -> void:
 	assert_true(p.hint_label().visible)
 	assert_string_contains(p.hint_label().text, "Little more is known")
 
+## The card's shield wears generated arms (owner 2026-09-15): a province its
+## house's, a manor its holding house's, a town its province's house's.
+func test_a_card_wears_the_arms_of_its_house() -> void:
+	Game.start_campaign(42)
+	var p := _panel()
+	await wait_frames(1)
+	var mine := MapOwnership.provinces_of(Game.data, Game.state, Game.data.resolve_realm("player_realm"))[0]
+	p.show_province(mine)
+	await wait_frames(1)
+	var house := MapObjects.house_name_of(Game.data, mine)
+	assert_not_null(p.shield().texture)
+	assert_same(p.shield().texture, HouseArms.texture_of_house(Game.data, Game.state, house))
+	var cell: int = MapManors.manors_of_province(Game.data, mine, Game.state)[0]
+	p.show_manor(cell)
+	await wait_frames(1)
+	assert_same(p.shield().texture,
+		HouseArms.texture_of_house(Game.data, Game.state, MapManors.owner_of(Game.data, Game.state, cell)))
+	var town := String(Game.data.provinces[mine]["capital_burg"])
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "burg", "code": town}})
+	await wait_frames(1)
+	assert_same(p.shield().texture, HouseArms.texture_of_house(Game.data, Game.state, house))
+
+## Clicking a regiment opens its painted card (owner 2026-09-15): its arms as
+## icons, the kingdom's arms on the shield, no town sums or map window.
+func test_a_regiment_opens_its_painted_card() -> void:
+	Game.start_campaign(42)
+	var p := _panel()
+	await wait_frames(1)
+	var mine := Game.data.resolve_realm("player_realm")
+	var r: Dictionary = MapObjects.regiments_of(Game.data, mine)[0]
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "army", "code": String(r["regiment_code"])}})
+	await wait_frames(1)
+	assert_true(p.visible)
+	assert_eq(p.title_label().text, String(r["label"]))
+	assert_gt(p.stats_grid().get_child_count(), 0, "its facts read as icons")
+	assert_eq(p.rows().get_child_count(), 0, "no plain lines")
+	assert_false(p.preview().visible, "no window onto the map")
+	assert_same(p.shield().texture, HouseArms.texture_of_kingdom(Game.data, mine))
+	# Regiment review (owner 2026-09-17): its values ("4564 (0 wounded)",
+	# "Hills (fortified)") are too wide for the default 4-column (2-pair)
+	# grid in the fixed left column, so its card asks for 2 — one
+	# icon+value pair a row.
+	assert_eq(p.stats_grid().columns, 2, "one icon+value pair a row so its wide values fit")
+
 func test_other_objects_keep_their_lines() -> void:
 	Game.start_campaign(42)
 	var p := _panel()
@@ -230,6 +274,8 @@ func test_a_manor_card_shows_its_painting_its_facts_as_icons_and_its_output_rate
 		assert_almost_eq(p.painting_box().custom_minimum_size.y, maxf(p.size.y / 3.0, 72.0), 1.0,
 			"a third of the card")
 	assert_eq(p.fields().get_child_count(), 0, "a manor has no text rows, only icons")
+	assert_eq(p.stats_grid().columns, MapDetailPanel.DEFAULT_STAT_COLUMNS,
+		"a card with no stat_columns of its own keeps the default 2-pair grid")
 	for key in ["manor_owner", "manor_province", "manor_people", "manor_tax", "manor_focus",
 			"manor_defence", "manor_slots", "manor_value", "manor_price"]:
 		assert_ne(p.stat_text(key), "", key)

@@ -137,9 +137,10 @@ func test_buying_across_the_border_pays_from_the_treasury_and_annexes_the_manor(
 			annexed = String(entry["annexed_to"]) == target
 	assert_true(annexed, "the move is logged with its province")
 	assert_eq(RealmEconomy.check_full(data, s), [], "the economy's cache agrees with a fresh count")
-	assert_string_contains(sys.validate(req, s), "already holds",
-		"bought once" if MapManors.is_crowns(data, s, cell) else "")\
-		if MapManors.is_crowns(data, s, cell) else pass_test("held by another house of the realm")
+	if MapManors.is_crowns(data, s, cell):
+		assert_string_contains(sys.validate(req, s), "already holds", "bought once")
+	else:
+		pass_test("held by another house of the realm")
 
 func test_an_annexation_survives_a_save() -> void:
 	var cell := _manor_of_kind("foreign")

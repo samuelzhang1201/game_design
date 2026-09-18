@@ -34,6 +34,9 @@ const HISTORY_CAP := 60
 var _said := 0
 var _beat_start := 0
 var _report: TickReport
+## The name plate's house arms, design px tall.
+const PLATE_ARMS_PX := 36.0
+var _plate_arms: HeraldicShield
 var _name_label: Label
 var _text_label: RichTextLabel
 var _speech_label: RichTextLabel
@@ -210,6 +213,24 @@ func _style_audience() -> void:
 	%OpinionBar.add_theme_stylebox_override("background", UiPalette.bar_bg())
 	%OpinionValue.add_theme_font_size_override("font_size", 16)
 	UiPalette.style_header(%NameLabel, 20)
+	# The person's house arms beside the name on the plate (owner 2026-09-15).
+	var name_label: Label = %MinisterName
+	var head := name_label.get_parent()
+	var plate := HBoxContainer.new()
+	plate.name = "PlateRow"
+	plate.add_theme_constant_override("separation", 8)
+	head.add_child(plate)
+	head.move_child(plate, name_label.get_index())
+	plate.owner = self
+	_plate_arms = HeraldicShield.new()
+	_plate_arms.name = "PlateArms"
+	_plate_arms.custom_minimum_size = Vector2(PLATE_ARMS_PX * 0.85, PLATE_ARMS_PX)
+	_plate_arms.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_plate_arms.visible = false
+	plate.add_child(_plate_arms)
+	name_label.reparent(plate)
+	name_label.owner = self
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 ## What holds the right slot: "" (nothing, the map runs to the edge) or
 ## "council". The fact card lives in the left column, so it never competes
@@ -919,6 +940,9 @@ func _show_speaker(b: Dictionary) -> void:
 		c = Game.state.characters[portrait_id]
 	_show_dossier(c != null)
 	%MinisterName.text = c.display_name if c != null else String(b.get("speaker", ""))
+	var arms := HouseArms.texture_of_house(Game.data, Game.state, c.family_name) if c != null else null
+	_plate_arms.set_texture(arms)
+	_plate_arms.visible = arms != null
 	%MinisterTitle.visible = c != null
 	%OpinionRow.visible = c != null
 	%SkillRows.visible = c != null

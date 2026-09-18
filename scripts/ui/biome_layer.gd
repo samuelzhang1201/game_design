@@ -89,6 +89,26 @@ func setup(repo: DataRepository, biome_index: Image) -> void:
 	mat.set_shader_parameter("shade_px", repo.bal("map_relief_shade_px"))
 	mat.set_shader_parameter("gain", repo.bal("map_relief_gain"))
 	mat.set_shader_parameter("light", Vector2(repo.bal("map_light_x"), repo.bal("map_light_y")))
+	# SETTLEMENT EARTH HALO (owner 2026-09-17): the ground fades to bare earth
+	# near a town, so its art rises out of worked land. Absent field or rows
+	# leave the shader's own 0 strength, i.e. unchanged.
+	var settle := UiPalette.load_art(repo.settlement_path) if repo.settlement_path != "" else null
+	if settle != null:
+		mat.set_shader_parameter("settlement", settle)
+		mat.set_shader_parameter("town_fade_px", float(repo.balance.get("map_town_halo_fade_px", 0.0)))
+		mat.set_shader_parameter("town_earth_strength", float(repo.balance.get("map_town_earth_strength", 0.0)))
+		var earth := MapTerrain.palette_color(repo, "town_earth", Color(0.68, 0.60, 0.49))
+		mat.set_shader_parameter("town_earth", Vector3(earth.r, earth.g, earth.b))
+	# SURFACE FOLLOWS THE LAND (owner 2026-09-17): slope and height bias which
+	# tile shows, so the cover is a result of the topography and not of the biome
+	# id alone. bal() asserts on a missing key, so read the dict directly: a pack
+	# without these rows leaves the shader's own 0 strengths, i.e. unchanged.
+	for key: String in ["map_biome_rock_slope_lo", "map_biome_rock_slope_hi",
+			"map_biome_rock_strength", "map_biome_snow_height",
+			"map_biome_snow_soft", "map_biome_snow_strength",
+			"map_biome_rock_height_lo", "map_biome_rock_height_hi"]:
+		if repo.balance.has(key):
+			mat.set_shader_parameter(key.trim_prefix("map_biome_"), float(repo.balance[key]))
 	material = mat
 	queue_redraw()
 

@@ -138,7 +138,7 @@ func test_every_route_has_a_label() -> void:
 ## burg within SNAP_RADIUS, and whichever roads a given export happens to
 ## contain, the ones that snapped must name burgs this pack actually has.
 func test_roads_snap_their_endpoints_to_real_towns() -> void:
-	var snapped := 0
+	var snapped_ends := 0
 	for code: String in repo.routes:
 		var r: Dictionary = repo.routes[code]
 		if String(r["group"]) != "roads":
@@ -147,10 +147,10 @@ func test_roads_snap_their_endpoints_to_real_towns() -> void:
 			var burg := String(r[end_col])
 			if burg == "":
 				continue
-			snapped += 1
+			snapped_ends += 1
 			assert_true(repo.burgs.has(burg),
 				"road %s %s is the burg %s" % [code, end_col, burg])
-	assert_gt(snapped, 0, "some road snapped to a town")
+	assert_gt(snapped_ends, 0, "some road snapped to a town")
 
 func test_markers_lie_inside_the_map_and_carry_legends() -> void:
 	var w := float(repo.map_info["width"])

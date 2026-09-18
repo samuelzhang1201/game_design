@@ -1,0 +1,5 @@
+from_tier,to_tier,min_people,building,notes
+village,town,24000,,"a village whose manor's people pass this grows into a town (owner 2026-09-15: the painted 3D settlement changes with its development). 24000 is above nine villages in ten on the beria pack and near the towns' median, so only a village that truly grew is promoted"
+town,city,36000,,a town past this is drawn as a city: above the towns' tenth-highest and near the cities' median
+walled_town,city,36000,,a walled town past the same count is drawn as a city
+town,walled_town,,palisade|castle,"a town whose manor raises a palisade or a castle is drawn walled (manor_buildings.csv codes, any one)"

@@ -1,0 +1,18 @@
+arm,vs_arm,attack_permille,defense_permille,notes
+infantry,infantry,1000,1000,"first draft (owner 2026-09-17): each arm's base against each arm; a regiment's value floats around it monthly"
+infantry,archers,900,1000,
+infantry,cavalry,1200,1300,"spears hold a charge"
+infantry,artillery,1100,900,
+archers,infantry,1200,800,"arrows thin a slow line"
+archers,archers,1000,1000,
+archers,cavalry,800,700,
+archers,artillery,1000,900,
+cavalry,infantry,900,800,
+cavalry,archers,1300,1200,"horse rides down bowmen"
+cavalry,cavalry,1000,1000,
+cavalry,artillery,1300,1100,
+artillery,infantry,1100,700,
+artillery,archers,900,800,
+artillery,cavalry,800,600,
+artillery,artillery,1000,1000,
+fleet,fleet,1000,1000,

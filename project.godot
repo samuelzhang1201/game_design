@@ -33,7 +33,7 @@ window/size/mode.debug=0
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gdai-mcp-plugin-godot/plugin.cfg", "res://addons/gut/plugin.cfg")
+enabled=PackedStringArray("res://addons/gdai-mcp-plugin-godot/plugin.cfg", "res://addons/gut/plugin.cfg", "res://addons/terrain_3d/plugin.cfg")
 
 [importer_defaults]
 

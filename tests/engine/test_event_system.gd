@@ -71,7 +71,7 @@ func test_once_fires_at_most_once() -> void:
 
 func test_apply_choice_runs_effects_and_signature_drift() -> void:
 	s.pending_event = {}
-	var ev := es._fire("ev_a", s)
+	es._fire("ev_a", s)
 	var pc0: float = s.metrics["peasant_contentment"]
 	var out := es.apply_choice("accept", s)
 	assert_eq(s.metrics["peasant_contentment"], pc0 + 2.0)
@@ -125,8 +125,8 @@ func test_reload_with_pending_event_is_bit_identical() -> void:
 	# (iii) Resolve independently on both; hashes diverge by the same effects
 	var s_es := EventSystem.new(data)
 	var loaded_es := EventSystem.new(data)
-	var outcome_s := s_es.apply_choice("accept", s)
-	var outcome_loaded := loaded_es.apply_choice("accept", loaded)
+	s_es.apply_choice("accept", s)
+	loaded_es.apply_choice("accept", loaded)
 	assert_eq(SaveLoad.state_hash(s), SaveLoad.state_hash(loaded))
 
 	# (iv) One subsequent roll on each (same tick) yields same result

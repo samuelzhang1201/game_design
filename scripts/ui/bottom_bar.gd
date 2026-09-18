@@ -1,8 +1,9 @@
 class_name BottomBar
 extends Control
 ## Bottom tab strip on every gameplay screen (user ruling 2026-08-30),
-## outside the map: HEIGHTS | ECONOMY | MANORS | REALM | MILITARY | FAMILIES |
-## LAWS | RELIGION | RELATIONSHIP. MAP and PROVINCES went 2026-09-13 (owner):
+## outside the map: HEIGHTS | ECONOMY | MANORS | REALM | MILITARY |
+## WAR ROOM (a placeholder page, owner 2026-09-17) | FAMILIES | LAWS |
+## RELIGION | RELATIONSHIP. MAP and PROVINCES went 2026-09-13 (owner):
 ## the province view is always on, and MAP did nothing a tab needed.
 ## Pure chrome — GameRoot owns it and decides what each tab opens (MAP
 ## closes overlays, RELATIONSHIP toggles the graph, the rest open the
@@ -10,7 +11,7 @@ extends Control
 
 signal tab_selected(tab: String)
 
-const TABS := ["HEIGHTS", "ECONOMY", "MANORS", "REALM", "MILITARY",
+const TABS := ["HEIGHTS", "ECONOMY", "MANORS", "REALM", "MILITARY", "WAR ROOM",
 	"FAMILIES", "LAWS", "RELIGION", "RELATIONSHIP"]
 ## Tabs that stay lit while their view is on rather than opening an overlay:
 ## MILITARY toggles the map's army layer (user request 2026-09-10), HEIGHTS

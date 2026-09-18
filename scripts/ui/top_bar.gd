@@ -47,6 +47,7 @@ var _monthly: Dictionary = {}
 var _clock_buttons: Dictionary = {}
 var _crown_mark: Control
 var _lord_crest: HeraldicShield
+var _date_arms: HeraldicShield
 
 func _ready() -> void:
 	%Bar.add_theme_stylebox_override("panel",
@@ -55,6 +56,7 @@ func _ready() -> void:
 	%EventChip.add_theme_stylebox_override("normal", UiPalette.chip_style())
 	UiPalette.style_header(%EventChip, 14)
 	UiPalette.compact_button(%MenuButton, BUTTON_H, 14, 10.0)
+	_art_button(%MenuButton, "menu", true)
 	%MenuButton.pressed.connect(func() -> void: Game.menu_requested.emit())
 	# The clock (owner 2026-09-13): pause, play, 2x, 4x beside the date.
 	# The bar is one of several (each screen has its own), so the buttons
@@ -63,9 +65,10 @@ func _ready() -> void:
 	clock.name = "Clock"
 	clock.add_theme_constant_override("separation", 3)
 	clock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var speeds := [["||", 0, "Pause"], [">", 1, "Play: a day every %.1f s" % Game.data.bal("time_day_seconds")],
-		["%dx" % int(Game.data.bal("time_speed_fast")), int(Game.data.bal("time_speed_fast")), "Faster"],
-		["%dx" % int(Game.data.bal("time_speed_faster")), int(Game.data.bal("time_speed_faster")), "Fastest"]]
+	var speeds := [["||", 0, "Pause", "clock_pause"],
+		[">", 1, "Play: a day every %.1f s" % Game.data.bal("time_day_seconds"), "clock_play"],
+		["%dx" % int(Game.data.bal("time_speed_fast")), int(Game.data.bal("time_speed_fast")), "Faster", "clock_fast"],
+		["%dx" % int(Game.data.bal("time_speed_faster")), int(Game.data.bal("time_speed_faster")), "Fastest", "clock_faster"]]
 	for spec: Array in speeds:
 		var b := Button.new()
 		b.name = "Clock_%d" % int(spec[1])
@@ -75,6 +78,9 @@ func _ready() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = Vector2(32, 0)
 		UiPalette.compact_button(b, BUTTON_H, 13)
+		# Painted art when installed (owner 2026-09-15: no code-drawn marks
+		# in the bar), the glyph text otherwise.
+		_art_button(b, String(spec[3]))
 		var speed: int = spec[1]
 		b.pressed.connect(func() -> void: Game.set_clock_speed(speed))
 		clock.add_child(b)
@@ -82,18 +88,20 @@ func _ready() -> void:
 	%DateLabel.add_sibling(clock)
 	Game.clock_changed.connect(func(_s: int) -> void: _refresh_clock())
 	_refresh_clock()
-	%FlagLabel.add_theme_font_size_override("font_size", 18)
+	_date_arms = HeraldicShield.new()
+	_date_arms.name = "DateArms"
+	_date_arms.custom_minimum_size = Vector2(ICON_PX * 0.85, ICON_PX)
+	_date_arms.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	%DateLabel.add_sibling(_date_arms)
+	%DateLabel.get_parent().move_child(_date_arms, %DateLabel.get_index())
 	# The purses: one grid, the crown's row over the lord's.
-	_crown_mark = Control.new()
+	# The crown's mark is the painted crown (resource_icons.csv `crown`), the
+	# gold glyph only while the art is missing.
+	_crown_mark = ResourceIcon.create("crown")
 	_crown_mark.name = "CrownMark"
 	_crown_mark.custom_minimum_size = Vector2(ICON_PX, ICON_PX)
-	_crown_mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_crown_mark.mouse_filter = Control.MOUSE_FILTER_PASS
-	_crown_mark.tooltip_text = "The crown's — the realm's treasury and stores, which pay the court and buy land across the border"
-	_crown_mark.draw.connect(func() -> void:
-		ResourceIcon.draw_glyph(_crown_mark, "crown", _crown_mark.size / 2.0,
-			minf(_crown_mark.size.x, _crown_mark.size.y), UiPalette.GOLD))
 	%Purses.add_child(_crown_mark)
+	_crown_mark.tooltip_text = "The crown's — the realm's treasury and stores, which pay the court and buy land across the border"
 	for m: String in ORDER:
 		%Purses.add_child(_cell(m))
 	_lord_crest = HeraldicShield.new()
@@ -112,6 +120,23 @@ func _ready() -> void:
 	# start under it instead of guessing (user report 2026-09-09: the left
 	# column overlapped the header).
 	offset_bottom = bar_height()
+
+## A button that shows its key's painted art in place of its text, when the
+## art is installed; the text stays as the fallback and the tooltip.
+func _art_button(b: Button, key: String, keep_text := false) -> void:
+	var tex := ResourceIcon.texture_of(key)
+	if tex == null:
+		return
+	b.icon = tex
+	b.add_theme_constant_override("icon_max_width", int(BUTTON_H - 4.0))
+	if keep_text:
+		# A scroll alone at this size read as a tick mark: icon and word together.
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		return
+	b.expand_icon = true
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.text = ""
+	b.custom_minimum_size = Vector2(BUTTON_H + 6.0, BUTTON_H)
 
 ## One pool: its icon, the stock, and its one change.
 func _cell(m: String) -> HBoxContainer:
@@ -146,19 +171,16 @@ func refresh() -> void:
 	if Game.state == null:
 		return
 	%DateLabel.text = Calendar.date_string(Game.state.tick, Game.state.day)
-	# The chosen family flag (character creation) flies beside the date.
-	var flag_id := String(Game.state.player_setup.get("flag", ""))
-	%FlagLabel.visible = flag_id != ""
-	if flag_id != "":
-		var f := UiPalette.flag_by_id(flag_id)
-		%FlagLabel.text = String(f["symbol"])
-		%FlagLabel.add_theme_color_override("font_color", f["color"])
-	# The house's arms, until real coats of arms exist: its flag's colour (the
-	# realm's when none was chosen) with its initial.
+	# The crown's arms (owner 2026-09-15) fly beside the date and mark the
+	# lord's purse; without art the purse keeps the realm's colour and the
+	# house's initial.
 	var family := MapManors.crown(Game.state)
-	var arms: Color = UiPalette.flag_by_id(flag_id)["color"] if flag_id != "" \
-		else MapPalette.color_of(Game.data, Game.data.resolve_realm("player_realm"))
-	_lord_crest.set_arms(arms, family.substr(0, 1).to_upper())
+	var arms := HouseArms.texture_of_house(Game.data, Game.state, family)
+	_date_arms.visible = arms != null
+	_date_arms.set_texture(arms)
+	_lord_crest.set_arms(MapPalette.color_of(Game.data, Game.data.resolve_realm("player_realm")),
+		family.substr(0, 1).to_upper())
+	_lord_crest.set_texture(arms)
 	var deltas := {}
 	var settled := Game.current_report != null
 	if settled:
@@ -221,6 +243,9 @@ func crown_mark() -> Control:
 
 func lord_crest() -> HeraldicShield:
 	return _lord_crest
+
+func date_arms() -> HeraldicShield:
+	return _date_arms
 
 ## Test seams: a pool's value label, its whole cell, and the purse grid.
 func value_label(metric: String) -> Label:

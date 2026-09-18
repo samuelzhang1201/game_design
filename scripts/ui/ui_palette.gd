@@ -66,24 +66,6 @@ const SKILL_MAX := 20.0  # CharacterFactory clamps skills to 0..20
 const TOOL_KINGDOM := GOLD
 const TOOL_PERSONAL := Color("4cc3b0")  # (bright: 13897b)
 
-## Family flag choices for character creation (simple icons for now — art
-## comes later): a font glyph on a heraldic field color, picked in the main
-## menu and shown beside the date in the TopBar.
-const FLAGS := [
-	{"id": "sun", "symbol": "☀", "color": Color("d9a21b")},
-	{"id": "moon", "symbol": "☾", "color": Color("2f7ed8")},
-	{"id": "blade", "symbol": "†", "color": Color("d64545")},
-	{"id": "leaf", "symbol": "❦", "color": Color("2f9e44")},
-	{"id": "star", "symbol": "✶", "color": Color("7c4ddb")},
-	{"id": "tower", "symbol": "♜", "color": Color("5a6778")},
-]
-
-static func flag_by_id(id: String) -> Dictionary:
-	for f in FLAGS:
-		if String(f["id"]) == id:
-			return f
-	return FLAGS[0]
-
 ## OFL-licensed faces (assets/fonts/, licenses alongside), divided by job
 ## (owner requests 2026-09-13):
 ## - TITLE: UnifrakturMaguntia (blackletter) for the game title, headers and

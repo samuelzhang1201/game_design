@@ -17,9 +17,11 @@ static func absolute_day(tick: int, day_in_tick: int = DAYS_PER_TICK) -> int:
 	return (t - 1) * DAYS_PER_TICK + clampi(day_in_tick, 1, DAYS_PER_TICK)
 
 static func year_of(tick: int) -> int:
+	@warning_ignore("integer_division")  # whole years
 	return (absolute_day(tick, 1) - 1) / DAYS_PER_YEAR + 1
 
 static func season_name(tick: int) -> String:
+	@warning_ignore("integer_division")  # whole seasons
 	return SEASONS[((absolute_day(tick, 1) - 1) % DAYS_PER_YEAR) / DAYS_PER_SEASON]
 
 static func day_of_season(tick: int, day_in_tick: int = DAYS_PER_TICK) -> int:
