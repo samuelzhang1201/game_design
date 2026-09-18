@@ -329,6 +329,11 @@ map3d_line_step_m,150.0,"3D MAP borders: borders and seams are resampled to a po
 map3d_border_width_px,1.5,"3D MAP borders: the kingdom border's width in screen px — a thin SOLID black line (owner 2026-09-18: '删除掉现有的国境线，换成一条细黑实线'; was the 2D chequered ribbon at 3 px), political_palette map3d_border"
 map3d_hover_border_width_px,3.5,"3D MAP hover (owner 2026-09-18): the hovered kingdom's live outline, in the border's own ink (political_palette map3d_border) at this width in screen px — the 2D map's wider hover ribbon; the plain border is map3d_border_width_px"
 map3d_manor_tint,0.8,"3D MAP ECONOMY / MANORS (owner 2026-09-19): how far the ground's albedo mixes toward its manor's ManorPalette colour under a theme (Map3DGroundTint, the patched Terrain3D shader) — the colour is lit by the relief and the sun like the ground; 0 without a theme"
+map3d_furrow_m,9.0,"3D MAP fields (owner 2026-09-19): the furrows' spacing in metres, drawn by the patched terrain shader along each estate's strips from the bake's field map (bake/fields.png) — only on sown ground, and faded out before their spacing falls under ~3 screen px"
+map3d_furrow_depth,0.14,3D MAP fields: how far a furrow darkens the field (0 = none)
+map3d_field_fade,0.6,"3D MAP fields: how much of the fields' own colour the shader takes back far out — the farmland reads as a tone, not a speckle (0 = none, 1 = all)"
+map3d_field_fade_near_m,8000,3D MAP fields: the camera distance where that fade begins
+map3d_field_fade_far_m,40000,"3D MAP fields: the camera distance where it is full (15-60 km took back only ~16% at 30 km)"
 map3d_army_badge_min_px,18,"3D MAP MILITARY (owner 2026-09-19: '注意兵棋大小'): the smallest a regiment's counter gets, design px — map_army_badge_native_px of the map at the scale the camera's target is seen at, held between this and map3d_army_badge_max_px"
 map3d_army_badge_max_px,30,"3D MAP MILITARY: the largest a counter gets close in, design px, so the counters never swamp the ground"
 map3d_line_lift_px,2.5,"3D MAP borders: every line is lifted this many screen px off the ground at its distance, so it clears the relief between its samples"

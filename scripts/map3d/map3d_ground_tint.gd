@@ -24,9 +24,36 @@ uniform float tint_mix = 0.0;
 uniform vec2 pack_origin = vec2(0.0);
 uniform float m_per_px = 50.0;
 uniform ivec2 lut_size = ivec2(128, 1);
+// The bake's field map (owner 2026-09-19): RGB each field's own colour
+// multiplier, A its strip direction; furrows up close, eased back far out.
+uniform highp sampler2D field_map : filter_linear, repeat_disable;
+uniform float field_m_per_texel = 40.0;
+uniform float furrow_m = 9.0;
+uniform float furrow_depth = 0.0;
+uniform float field_fade = 0.0;
+uniform float field_fade_near_m = 15000.0;
+uniform float field_fade_far_m = 60000.0;
 """
 
 const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.rgb * macrov;
+	if (furrow_depth > 0.0 || field_fade > 0.0) {
+		vec2 fuv = (v_vertex.xz - pack_origin) / field_m_per_texel / vec2(textureSize(field_map, 0));
+		vec4 fm = texture(field_map, fuv);
+		vec3 ftint = max(fm.rgb, vec3(0.2));
+		// far out the fields' own colour gives way, so the farmland reads as
+		// a tone rather than a speckle (the colour map carries it; undo part)
+		float far_k = smoothstep(field_fade_near_m, field_fade_far_m,
+			length(v_vertex - _camera_pos)) * field_fade;
+		base_albedo /= mix(vec3(1.0), ftint, far_k);
+		// up close, furrows along the estate's strips — only on sown ground,
+		// and gone before their period shrinks to a pixel or two
+		float sown = clamp((1.0 - min(min(ftint.r, ftint.g), ftint.b)) / 0.25, 0.0, 1.0);
+		float ang = fm.a * 3.14159265;
+		float ph = dot(v_vertex.xz, vec2(-sin(ang), cos(ang))) / furrow_m;
+		float aa = 1.0 - smoothstep(0.2, 0.45, fwidth(ph));
+		float stripe = 0.5 + 0.5 * sin(ph * 6.2831853);
+		base_albedo *= 1.0 - furrow_depth * sown * aa * stripe;
+	}
 	vec4 tint = vec4(0.0);
 	if (tint_mix > 0.0) {
 		ivec2 tint_px = ivec2(floor((v_vertex.xz - pack_origin) / m_per_px));

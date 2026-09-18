@@ -99,6 +99,9 @@ const PRIORITY_RING_BASE := 8
 const CLICK_SLOP := 10.0
 ## Where the name sits off the cursor (WorldMapView.TOOLTIP_OFFSET).
 const TOOLTIP_OFFSET := Vector2(20.0, 24.0)
+## Metres per texel of the bake's field map: tools/map3d/bake_world.py
+## FIELD_MAP_STEP (2) vertices of VERTEX_M (20 m).
+const FIELD_MAP_M_PER_TEXEL := 40.0
 
 var _repo: DataRepository
 var _scene_path := ""
@@ -843,6 +846,27 @@ func _prepare_ground_tint() -> void:
 	if _repo.cell_texture_path != "" and ResourceLoader.exists(_repo.cell_texture_path):
 		mat.call("set_shader_param", "cell_index", load(_repo.cell_texture_path))
 	mat.call("set_shader_param", "tint_mix", 0.0)
+	# the bake's field map (owner 2026-09-19): furrows up close, the crops'
+	# colour eased back far out; without it both stay off
+	var fields := load_field_map(_scene_path)
+	if fields != null:
+		mat.call("set_shader_param", "field_map", fields)
+		mat.call("set_shader_param", "field_m_per_texel", FIELD_MAP_M_PER_TEXEL)
+		mat.call("set_shader_param", "furrow_m", _repo.bal("map3d_furrow_m"))
+		mat.call("set_shader_param", "furrow_depth", _repo.bal("map3d_furrow_depth"))
+		mat.call("set_shader_param", "field_fade", _repo.bal("map3d_field_fade"))
+		mat.call("set_shader_param", "field_fade_near_m", _repo.bal("map3d_field_fade_near_m"))
+		mat.call("set_shader_param", "field_fade_far_m", _repo.bal("map3d_field_fade_far_m"))
+
+
+## The bake's field map beside a built scene (bake/fields.png — the bake dir
+## is .gdignored, so it is read as a file, not imported), or null.
+static func load_field_map(scene_path: String) -> Texture2D:
+	var path := ProjectSettings.globalize_path(scene_path.get_base_dir().path_join("bake/fields.png"))
+	if not FileAccess.file_exists(path):
+		return null
+	var img := Image.load_from_file(path)
+	return null if img == null else ImageTexture.create_from_image(img)
 
 
 ## Show the ECONOMY or MANORS theme on the 3D ground ("" for none) — GameRoot

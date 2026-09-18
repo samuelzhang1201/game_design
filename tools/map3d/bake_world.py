@@ -491,6 +491,24 @@ def pick_crop(h, crops):
     return idx
 
 
+FIELD_MAP_STEP = 2   # vertices per field-map texel (40 m)
+
+
+def field_map(ftint, fangle, step=FIELD_MAP_STEP):
+    """The terrain shader's field map, RGBA8 at one texel per `step`
+    vertices: RGB the fields' own colour multiplier (1 = no field, raw
+    bytes, not sRGB), A a field's strip direction as a share of a half turn.
+    The colour is averaged over the texel; the direction is sampled, not
+    averaged — an average across two estates' directions is neither."""
+    h, w = fangle.shape
+    hh, ww = h // step, w // step
+    rgb = ftint[:hh * step, :ww * step].astype(np.float32).reshape(hh, step, ww, step, 3).mean(axis=(1, 3))
+    out = np.empty((hh, ww, 4), dtype=np.uint8)
+    out[..., :3] = np.round(np.clip(rgb, 0, 1) * 255).astype(np.uint8)
+    out[..., 3] = np.round(np.clip(fangle[:hh * step:step, :ww * step:step].astype(np.float32), 0, 1) * 255).astype(np.uint8)
+    return out
+
+
 def footprint_radius_m(population, rules):
     """A settlement's built ground: footprint_m_per_sqrt_pop x sqrt(people),
     within footprint_min_m..footprint_max_m."""
@@ -561,6 +579,11 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     del fray_n
 
     tint = np.ones((vh, vw, 3), dtype=np.float32)
+    # the field-only part of the tint, and each estate's strip direction
+    # (0..1 of a half turn): the terrain shader's field map (furrows up
+    # close, the crops' colour eased back far out)
+    ftint = np.ones((vh, vw, 3), dtype=np.float16)
+    fangle = np.zeros((vh, vw), dtype=np.float16)
     farm = np.zeros((vh, vw), dtype=np.float32)
     crop = np.zeros((vh, vw), dtype=np.int8)
     cell_v = rules["field_cell_m"] / VERTEX_M
@@ -616,6 +639,8 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         farm[y0:y1] = m * soft
         crop[y0:y1] = tex
         tint[y0:y1] = 1.0 + (tt - 1.0) * m[..., None]
+        ftint[y0:y1] = tint[y0:y1]
+        fangle[y0:y1] = hash01(cz, 3)
         # each manor's own shade: a patchwork even where nothing is sown
         jv = (2.0 * hash01(cz, 5) - 1.0) * rules["manor_jitter_value"] * (cid >= 0)
         jh = (2.0 * hash01(cz, 6) - 1.0) * rules["manor_jitter_hue"] * (cid >= 0)
@@ -636,7 +661,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     tint = tint * (1.0 - foot[..., None]) + blocks * foot[..., None]
     print("bake_world: patchwork %.1f%% of the land sown, %.2f%% built" % (
         100.0 * float(farm[land].mean()), 100.0 * float(foot[land].mean())))
-    return tint
+    return tint, field_map(ftint, fangle)
 
 
 def main(argv=None):
@@ -827,6 +852,19 @@ def main(argv=None):
     t_rock = np.clip((slope - pct(SLOPE_ROCKY[0])) / max(pct(SLOPE_ROCKY[1]) - pct(SLOPE_ROCKY[0]), 1e-6), 0, 1)
     t_cliff = np.clip((slope - pct(SLOPE_CLIFF[0])) / max(pct(SLOPE_CLIFF[1]) - pct(SLOPE_CLIFF[0]), 1e-6), 0, 1)
     del gx, gy, slope
+    # A carved river's banks are steep by construction, not rock: without
+    # this the cliff texture drew a pixelated blue-grey scar where a river
+    # meets the sea (owner review 2026-09-19, at the capital).
+    # (widened to river_bank_rock_reach_m: the carve's walls stand beyond
+    # the wet band itself)
+    bank = np.clip(rules["river_bank_rock_hold"]
+                   * box(wet, int(rules["river_bank_rock_reach_m"] / VERTEX_M)), 0, 1)
+    # ...nor is a low coast where a carved mouth meets the shore ramp (the
+    # band there is already 0: `wet` only counts on land)
+    bank = np.maximum(bank, np.clip((rules["low_rock_free_m"] - (height - SEA_Y)) / 30.0, 0, 1))
+    t_cliff *= 1.0 - bank
+    t_rock *= 1.0 - bank
+    del bank
     hn = np.clip(height / max(float(height.max()), 1.0), 0, 1)
     keep = 1.0 - 0.85 * t_rock
     for t in (GRASS, LEAVES, DIRT, SAND, FOREST):
@@ -868,8 +906,12 @@ def main(argv=None):
     tw[..., DIRT] += 2.0 * beach * (1.0 - grain)
     tw[..., SAND] += 2.0 * beach * grain
     del grain
-    tint = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn, t_rock,
-                         beach, k, vw, vh, pw, ph)
+    tint, fmap = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn,
+                               t_rock, beach, k, vw, vh, pw, ph)
+    # read by Map3DView for the patched terrain shader (Map3DGroundTint):
+    # FIELD_MAP_STEP vertices to a texel, from the pack's own corner
+    Image.fromarray(fmap, "RGBA").save(os.path.join(OUT, "fields.png"))
+    del fmap
     del t_rock, t_cliff, keep, beach
     depth = np.clip(-height / 150.0, 0, 1)
     tw[~land] = 0.0

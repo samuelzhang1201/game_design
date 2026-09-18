@@ -68,7 +68,7 @@ values are `balance.csv` `map3d_*`.
    sown densest near the village and thinning outward, soft hedges; and
    every manor cell its own slight shade. Its noise has its own random
    stream, so the rest of the look is untouched; `map3d_bake.csv`
-   `field_*`, `hedge_*`, `footprint_*`, `manor_jitter_*`.
+   `field_*`, `hedge_*`, `footprint_*`, `manor_jitter_*`. It also writes `bake/fields.png` (RGB each field's own colour multiplier, A its strip direction, `FIELD_MAP_STEP` vertices a texel), read at runtime — not imported — for the terrain shader's furrows and far fade (`Map3DGroundTint`, balance `map3d_furrow_*` / `map3d_field_fade*`).
 5. **Scene** — `GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/build_world.gd [-- --map ID]`
    (~2 s, no editor; every tool defaults to `data/maps.csv`'s `is_default` pack). Nothing visual is baked into the scene beyond the
    terrain: headless, a MultiMesh saves without its transforms, which is one

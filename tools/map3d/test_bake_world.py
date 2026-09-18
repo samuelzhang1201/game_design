@@ -252,6 +252,18 @@ def test_the_fields_table_loads_with_its_textures():
             assert np.all(tint <= 1.0), "a tint can only darken the colour map"
 
 
+def test_the_field_map_packs_colour_and_direction():
+    ftint = np.ones((4, 6, 3), dtype=np.float16)
+    ftint[0:2, 0:2] = 0.5          # one field texel, a half-dark crop
+    fangle = np.zeros((4, 6), dtype=np.float16)
+    fangle[:, 3:] = 0.75           # the second estate's direction
+    m = bw.field_map(ftint, fangle, 2)
+    assert m.shape == (2, 3, 4) and m.dtype == np.uint8
+    assert tuple(m[0, 0, :3]) == (128, 128, 128)
+    assert tuple(m[1, 2, :3]) == (255, 255, 255), "no field: the colour untouched"
+    assert m[0, 0, 3] == 0 and m[0, 2, 3] == 191, "the direction sampled, not averaged"
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):
