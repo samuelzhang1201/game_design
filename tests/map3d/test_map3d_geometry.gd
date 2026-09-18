@@ -132,3 +132,21 @@ func test_resample_keeps_the_ends_and_caps_the_step() -> void:
 func test_resample_leaves_short_segments_alone() -> void:
 	var pts := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)])
 	assert_eq(Map3DGeometry.resample(pts, 5.0), pts)
+
+
+func test_zoomed_by_multiplies_and_clamps() -> void:
+	assert_almost_eq(Map3DGeometry.zoomed_by(10000.0, 0.5, 1000.0, 50000.0), 5000.0, 0.01)
+	assert_eq(Map3DGeometry.zoomed_by(1500.0, 0.5, 1000.0, 50000.0), 1000.0)
+	assert_eq(Map3DGeometry.zoomed_by(40000.0, 2.0, 1000.0, 50000.0), 50000.0)
+
+
+func test_zoom_about_keeps_the_anchor_fixed() -> void:
+	# Halving the distance halves every offset from the anchor: the target at
+	# 100 m west of the anchor ends 50 m west of it.
+	var t := Map3DGeometry.zoom_about(Vector2(0, 0), Vector2(100, 0), 1000.0, 500.0)
+	assert_almost_eq(t.x, 50.0, 0.001)
+	assert_almost_eq(t.y, 0.0, 0.001)
+	var a := Vector2(-30, 70)
+	assert_eq(Map3DGeometry.zoom_about(a, a, 1000.0, 300.0), a, "an anchor on the target stays")
+	var out := Map3DGeometry.zoom_about(Vector2(0, 0), Vector2(100, 0), 1000.0, 2000.0)
+	assert_almost_eq(out.x, -100.0, 0.001, "zooming out pushes the target away from the anchor")

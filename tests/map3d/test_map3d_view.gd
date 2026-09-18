@@ -204,6 +204,44 @@ func test_a_conquest_redraws_the_borders() -> void:
 	Game.start_campaign(42)
 
 
+func test_a_pinch_zooms_and_a_two_finger_drag_pans() -> void:
+	var v := _view()
+	v.activate()
+	var d0 := v.distance()
+	var pinch := InputEventMagnifyGesture.new()
+	pinch.position = v.size * 0.5
+	pinch.factor = 1.5
+	v._gui_input(pinch)
+	assert_lt(v.distance(), d0, "fingers apart zoom in")
+	var t0 := v.target()
+	var pan := InputEventPanGesture.new()
+	pan.position = v.size * 0.5
+	pan.delta = Vector2(3, 0)
+	v._gui_input(pan)
+	assert_ne(v.target(), t0, "two fingers pan")
+
+
+func test_the_zoom_keeps_the_ground_under_the_pointer() -> void:
+	var v := _view()
+	v.activate()
+	var at := v.size * Vector2(0.8, 0.7)
+	var before: Vector3 = v.ground_at(at)
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	wheel.pressed = true
+	wheel.position = at
+	v._gui_input(wheel)
+	var after: Vector3 = v.ground_at(at)
+	# The pitch also changes with the distance, so allow a few per cent of
+	# the distance rather than demanding an exact fixed point.
+	assert_lt(Vector2(after.x, after.z).distance_to(Vector2(before.x, before.z)),
+		v.distance() * 0.08)
+
+
+func test_the_closest_zoom_is_800_m() -> void:
+	assert_eq(Game.data.bal("map3d_zoom_min_m"), 800.0)
+
+
 func _click(v: Map3DView, at: Vector2) -> void:
 	var down := InputEventMouseButton.new()
 	down.button_index = MOUSE_BUTTON_LEFT

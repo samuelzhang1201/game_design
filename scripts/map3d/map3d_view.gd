@@ -409,16 +409,39 @@ func _pan_by(screen_delta: Vector2) -> void:
 	_apply_camera()
 
 
+## Zoom to `new_distance` (clamped) keeping the ground under `pos` under it.
+func _zoom_at(pos: Vector2, new_distance: float) -> void:
+	var anchor: Variant = ground_at(pos)
+	var d := Map3DGeometry.zoomed_by(new_distance, 1.0, _repo.bal("map3d_zoom_min_m"),
+		_repo.bal("map3d_zoom_max_m"))
+	if anchor != null:
+		var a := anchor as Vector3
+		_target = Map3DGeometry.clamp_target(
+			Map3DGeometry.zoom_about(_target, Vector2(a.x, a.z), _distance, d), _bounds)
+	_distance = d
+	_apply_camera()
+
+
 func _gui_input(event: InputEvent) -> void:
 	if not _loaded:
+		return
+	# macOS trackpad (as on the 2D map): pinch zooms about the fingers,
+	# two-finger drag pans. The wheel still works exactly as before.
+	if event is InputEventMagnifyGesture:
+		var mg := event as InputEventMagnifyGesture
+		var gain := _repo.bal("map3d_pinch_zoom_gain")
+		_zoom_at(mg.position, _distance / maxf(1.0 + (mg.factor - 1.0) * gain, 0.01))
+		accept_event()
+		return
+	if event is InputEventPanGesture:
+		_pan_by(-(event as InputEventPanGesture).delta * _repo.bal("map3d_pan_gesture_px"))
+		accept_event()
 		return
 	var mb := event as InputEventMouseButton
 	if mb != null:
 		if mb.pressed and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			var steps := -1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1
-			_distance = Map3DGeometry.zoomed(_distance, steps, _repo.bal("map3d_zoom_factor"),
-				_repo.bal("map3d_zoom_min_m"), _repo.bal("map3d_zoom_max_m"))
-			_apply_camera()
+			_zoom_at(mb.position, _distance * pow(_repo.bal("map3d_zoom_factor"), steps))
 			accept_event()
 		elif mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
