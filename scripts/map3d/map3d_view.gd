@@ -34,6 +34,7 @@ const NOTICE_TEXT := "The 3D map has not been built for this map.\nRun tools/map
 const BORDER_SHADER := preload("res://scripts/map3d/border_line.gdshader")
 const RING_SHADER := preload("res://scripts/map3d/settlement_ring.gdshader")
 const RIVER_SHADER := preload("res://scripts/map3d/water_river.gdshader")
+const SEA_SHADER := preload("res://scripts/map3d/water_sea.gdshader")
 ## The selection ring never thins by distance (fix round 1, owner 2026-09-18):
 ## whatever the player clicked stays marked regardless of zoom.
 const SELECTED_RING_ALWAYS_M := 1000000.0
@@ -61,6 +62,7 @@ var _ring_mats: Array[ShaderMaterial] = []
 var _selected_ring: MultiMeshInstance3D
 var _water_normals: NoiseTexture2D
 var _river_mat: ShaderMaterial
+var _sea_mat: ShaderMaterial
 var _meta: Dictionary = {}
 var _bounds := Rect2()
 var _target := Vector2.ZERO
@@ -223,6 +225,7 @@ func _load() -> void:
 	_viewport.add_child(_markers)
 	_place_markers()
 	_build_rivers()
+	_dress_sea()
 	_lines = Node3D.new()
 	_lines.name = "Lines"
 	_viewport.add_child(_lines)
@@ -382,6 +385,49 @@ func _build_rivers() -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.extra_cull_margin = 16384.0
 	_viewport.add_child(mi)
+
+
+## The build's flat Sea plane dressed at runtime in the banded water, so the
+## palette and bands stay data (terrain_palette / balance), not a rebuild.
+func _dress_sea() -> void:
+	var sea := _world.get_node_or_null("Sea") as MeshInstance3D
+	if sea == null:
+		return
+	_sea_mat = ShaderMaterial.new()
+	_sea_mat.shader = SEA_SHADER
+	_sea_mat.render_priority = -1  # under the rivers and every line
+	var tex_path := _repo.sea_texture_path
+	if tex_path != "" and ResourceLoader.exists(tex_path):
+		_sea_mat.set_shader_parameter("sea_distance", load(tex_path))
+	var o: Array = _meta["pack_origin"]
+	var p: Array = _meta["pack_px"]
+	_sea_mat.set_shader_parameter("pack_origin", Vector2(float(o[0]), float(o[1])))
+	_sea_mat.set_shader_parameter("pack_px", Vector2(float(p[0]), float(p[1])))
+	_sea_mat.set_shader_parameter("m_per_px", float(_meta["m_per_px"]))
+	# terrain_palette's hex is sRGB (the 2D map paints it unlit); a spatial
+	# shader's ALBEDO is linear, so feeding the raw byte values in gets
+	# gamma-encoded a second time on output and the pale bands (sea_near
+	# especially) clip to white. Linearize once here, same as an sRGB
+	# texture import would (fix, owner 2026-09-18: shot at 800/3000m showed
+	# the whole sea blown out, confirmed with a plain grey EMISSION test).
+	for key: String in ["sea_near", "sea_nearer", "sea_far", "sea_deep"]:
+		_sea_mat.set_shader_parameter(key,
+			MapTerrain.palette_color(_repo, key, MapTerrain.FALLBACK).srgb_to_linear())
+	_sea_mat.set_shader_parameter("sky",
+		MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK).srgb_to_linear())
+	_sea_mat.set_shader_parameter("band_near", _repo.bal("map_sea_band_near_px"))
+	_sea_mat.set_shader_parameter("band_nearer", _repo.bal("map_sea_band_nearer_px"))
+	_sea_mat.set_shader_parameter("band_far", _repo.bal("map_sea_band_far_px"))
+	_sea_mat.set_shader_parameter("soft", _repo.bal("map_sea_band_soft_px"))
+	_sea_mat.set_shader_parameter("shore_fade_px", _repo.bal("map3d_sea_shore_fade_px"))
+	_sea_mat.set_shader_parameter("ripples", water_normals())
+	_sea_mat.set_shader_parameter("ripple_m", _repo.bal("map3d_sea_ripple_m"))
+	_sea_mat.set_shader_parameter("drift_m_s", _repo.bal("map3d_sea_drift_m_s"))
+	sea.material_override = _sea_mat
+
+
+func sea_material() -> ShaderMaterial:
+	return _sea_mat
 
 
 ## A ring material; its sizes are design px, turned into window px with the

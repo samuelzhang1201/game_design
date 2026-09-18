@@ -381,3 +381,23 @@ func test_rivers_beside_the_scene_become_the_rivers_layer() -> void:
 	assert_not_null(mi)
 	assert_true("Rivers" in v.layer_names())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://rivers.json"))
+
+
+func test_the_builds_sea_wears_the_banded_water() -> void:
+	var root := Node3D.new()
+	root.set_meta("map3d_world", WORLD)
+	var sea := MeshInstance3D.new()
+	sea.name = "Sea"
+	sea.mesh = PlaneMesh.new()
+	root.add_child(sea)
+	sea.owner = root
+	var packed := PackedScene.new()
+	packed.pack(root)
+	ResourceSaver.save(packed, "user://test_map3d_sea.tscn")
+	root.free()
+	var v := _view("user://test_map3d_sea.tscn")
+	v.activate()
+	var mat := v.sea_material()
+	assert_not_null(mat)
+	assert_eq(mat.get_shader_parameter("band_near"), Game.data.bal("map_sea_band_near_px"))
+	assert_true("Sea" in v.layer_names())
