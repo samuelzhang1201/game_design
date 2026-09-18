@@ -1,0 +1,12 @@
+key,value,notes
+sea_y_m,5.0,"3D bake (owner 2026-09-18): the water plane's height; the coast crosses it where the shore loops say (build_terrain.gd reads it from world.json)"
+shore_m,4.0,3D bake: land stands at least this far above the water plane and sea lies this far below it away from the shore
+coast_supersample,4,3D bake: the shore loops are rasterised at this many samples per vertex each way into a coverage value
+edge_warp_m,220.0,"3D bake: biome weights are sampled this far off (at most) along a noise field, so the edges between grounds interlock instead of blurring"
+edge_warp_wave_m,900.0,3D bake: the wavelength of that warp field
+blend_dither,0.03,3D bake: seeded dither on the second texture's share before it becomes the blend byte — no contour bands
+sharp_cliff,2.2,"3D bake: cliff weight is raised to this power after normalising — a narrow, outcrop-like edge (~60 m) where grass is wide"
+sharp_rocky_trail,1.8,3D bake: likewise for scree
+macro_depth,0.06,"3D bake: the colour map's large lighter/darker patches (was 0.16, which hid the materials)"
+macro_hue_depth,0.04,3D bake: the colour map's green-yellow drift (was 0.10)
+coast_ramp_m,40.0,"3D bake: the coverage is blurred this far before it ramps the heights through the water plane, so a coarse mesh LOD still crosses it smoothly"

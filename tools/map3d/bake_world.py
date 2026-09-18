@@ -6,7 +6,8 @@ Writes assets/map3d/<map>/bake/:
   control.r32   float32 carrying Terrain3D control bits (base/overlay/blend)
   color.rgba8   Terrain3D colour map: sRGB multiplier on the ground + roughness
   world.json    sizes, vertex spacing, world origin of pack px (0,0)
-Every rule lives here as a constant; build_terrain.gd only imports.
+Its look rules live in data/map3d_bake.csv and in constants here;
+build_terrain.gd only imports.
   python3 tools/map3d/bake_world.py [--map ID]   (default: data/maps.csv is_default)
 
 HEIGHT does NOT read world_relief.png: its synthesized detail was tuned for
@@ -21,19 +22,14 @@ import os
 import sys
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 from packs import default_pack  # noqa: E402
 
-_ap = argparse.ArgumentParser()
-_ap.add_argument("--map", default="")
-MAP = _ap.parse_args().map or default_pack()
-PACK = os.path.join(ROOT, "assets", "maps", MAP)
-CELLS = os.path.join(ROOT, "data", "maps", MAP, "geography", "cells.csv")
 TEX = os.path.join(ROOT, "assets", "map3d", "textures")
-OUT = os.path.join(ROOT, "assets", "map3d", MAP, "bake")
+RULES_PATH = os.path.join(ROOT, "data", "map3d_bake.csv")
 SEED = 954159497         # a look, never simulation: the same for every pack
 
 M_PER_PX = 50.0          # world metres per pack px
@@ -43,7 +39,6 @@ SEA_LEVEL = 20.0         # Azgaar height of the waterline
 LAND_M_PER_UNIT = 30.0   # ~2400 m for the highest cells
 SEA_M_PER_UNIT = 15.0    # ~300 m for the deepest sea
 BASE_BLUR_PX = 7         # box radius (pack px, twice) turning cells (~26 px) into landforms
-SHORE_M = 4.0            # land stays at least this high, sea at least this deep
 
 # Ridges at campaign scale: ridged value noise, octave wavelengths in metres,
 # faded in with the ground's height so plains stay plains, held down near the
@@ -56,7 +51,6 @@ RIDGE_FULL_M = 1600.0    # ...and reach full strength here
 RIDGE_COAST_M = 1200.0   # fade-in distance from the shore
 
 WEIGHT_BLUR_PX = 5       # box radius (pack px) softening biome weights (3 left 50 m stair-steps on forest edges)
-SHORE_BLUR_PX = 1        # box radius (pack px) on the land mask before its threshold: rounds the 50 m pixel steps
 BEACH_M = 100.0          # sand reaches this far inland
 BEACH_MAX_M = 40.0       # and no higher
 
@@ -92,9 +86,8 @@ FAR_COLOR = {
     CLIFF: "#7E7B77", GRASS: "#6F7A40", LEAVES: "#4E4A2C", DIRT: "#9A7A55",
     ROCKY: "#7C7264", SOIL: "#5E4A30", SAND: "#6B604E", FOREST: "#3A5026",
 }
-MACRO_WAVE_M = 9000.0    # large patches of lighter and darker country...
-MACRO_DEPTH = 0.16       # ...by up to this much
-MACRO_HUE_DEPTH = 0.10   # and a drift between greener and yellower ground
+MACRO_WAVE_M = 9000.0    # large patches of lighter and darker country
+# (their depth and the green-yellow drift are data/map3d_bake.csv macro_*)
 
 
 def box(a, r):
@@ -160,7 +153,85 @@ def hex_rgb(h):
     return np.array([int(h[i:i + 2], 16) for i in (1, 3, 5)]) / 255.0
 
 
-def main():
+def load_rules(path=RULES_PATH):
+    """data/map3d_bake.csv as {key: float}."""
+    with open(path) as f:
+        return {r["key"]: float(r["value"]) for r in csv.DictReader(f)}
+
+
+def read_loops(path):
+    """geography/coasts.csv -> (land loops, lake loops), each a list of (x, y) pack px."""
+    land, lakes = [], []
+    with open(path) as f:
+        for r in csv.DictReader(f):
+            pts = [tuple(map(float, p.split())) for p in r["points"].split("|")]
+            (land if r["kind"] == "land" else lakes).append(pts)
+    return land, lakes
+
+
+def coverage(land_loops, lake_loops, vw, vh, k, ss=4):
+    """Share (0..1) of each vertex's square that is land: the loops filled at
+    `ss` samples per vertex each way, lakes cut out, then averaged. Vertex v
+    sits at pack px v / k, the centre of its supersampled block."""
+    img = Image.new("L", (vw * ss, vh * ss), 0)
+    draw = ImageDraw.Draw(img)
+    # PIL fills pixel i when the point i (not its centre i + 0.5) is inside,
+    # so shift by half a sample less: an edge through a vertex reads 0.5.
+    half = ss * 0.5 - 0.5
+    for loops, fill in ((land_loops, 255), (lake_loops, 0)):
+        for pts in loops:
+            if len(pts) >= 3:
+                draw.polygon([(x * k * ss + half, y * k * ss + half) for x, y in pts], fill=fill)
+    full = np.asarray(img)
+    out = np.empty((vh, vw), dtype=np.float32)
+    for y0 in range(0, vh, 256):
+        y1 = min(y0 + 256, vh)
+        blk = full[y0 * ss:y1 * ss].reshape(y1 - y0, ss, vw, ss).astype(np.uint16)
+        out[y0:y1] = blk.sum(axis=(1, 3)) / (255.0 * ss * ss)
+    return out
+
+
+def shore_heights(height, cov, sea_y, shore_m):
+    """Land (cov 1) at least shore_m over the water plane, sea (cov 0) at
+    least shore_m under it, and the fringe ramped through it so the coast
+    crosses the plane where the loop does."""
+    out = np.where(cov >= 1.0, np.maximum(height, sea_y + shore_m), height)
+    out = np.where(cov <= 0.0, np.minimum(out, sea_y - shore_m), out)
+    fringe = (cov > 0.0) & (cov < 1.0)
+    return np.where(fringe, sea_y + shore_m * (2.0 * cov - 1.0), out).astype(np.float32)
+
+
+def sample_bilinear(a, xs, ys):
+    """a sampled at fractional (xs, ys), clamped to its edges."""
+    h, w = a.shape
+    xs = np.clip(xs, 0, w - 1)
+    ys = np.clip(ys, 0, h - 1)
+    x0 = np.minimum(np.floor(xs).astype(np.int64), w - 2)
+    y0 = np.minimum(np.floor(ys).astype(np.int64), h - 2)
+    fx, fy = xs - x0, ys - y0
+    top = a[y0, x0] * (1 - fx) + a[y0, x0 + 1] * fx
+    bot = a[y0 + 1, x0] * (1 - fx) + a[y0 + 1, x0 + 1] * fx
+    return top * (1 - fy) + bot * fy
+
+
+def blend_byte(w1, w2, dither):
+    """Terrain3D's blend (0 base only .. 255 overlay only) from the top two
+    weights: the overlay's share (0..0.5) through a smoothstep, so thin
+    traces vanish and the crossing is steep, plus dither against banding."""
+    r = np.where(w1 + w2 > 0, w2 / np.maximum(w1 + w2, 1e-6), 0.0)
+    t = np.clip(r * 2.0 + dither, 0.0, 1.0)
+    return np.round(255.0 * 0.5 * t * t * (3.0 - 2.0 * t)).astype(np.uint32)
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--map", default="")
+    MAP = ap.parse_args(argv).map or default_pack()
+    PACK = os.path.join(ROOT, "assets", "maps", MAP)
+    CELLS = os.path.join(ROOT, "data", "maps", MAP, "geography", "cells.csv")
+    OUT = os.path.join(ROOT, "assets", "map3d", MAP, "bake")
+    rules = load_rules()
+    SEA_Y = rules["sea_y_m"]
     os.makedirs(OUT, exist_ok=True)
     # raw bake files and previews are read by build_terrain.gd, never imported
     open(os.path.join(OUT, ".gdignore"), "w").close()
@@ -182,16 +253,24 @@ def main():
     # Cells for land and lakes; the relief (detail and all) only for open sea,
     # which lies under an opaque water plane.
     units = np.where(has_cell, heights[cell_id], relief * 100.0 / 255.0) - SEA_LEVEL
-    land_px = has_cell & ~water[cell_id] & (units >= 0)
     metres = np.where(units >= 0, units * LAND_M_PER_UNIT, units * SEA_M_PER_UNIT)
     metres = box(box(metres, BASE_BLUR_PX), BASE_BLUR_PX)
 
     k = M_PER_PX / VERTEX_M
     vw, vh = round(pw * k), round(ph * k)
     height = resize(metres, vw, vh)
-    land = resize(box(land_px.astype(np.float32), SHORE_BLUR_PX), vw, vh) >= 0.5
-    # Keep the pack's shoreline: the blur must not sink a coast or raise a shoal.
-    height = np.where(land, np.maximum(height, SHORE_M), np.minimum(height, -SHORE_M))
+    # The shoreline is the pack's own shore loops, not its 50 m pixels: their
+    # coverage per vertex ramps the fringe through the water plane, so the
+    # coast crosses it where the loop does (no staircase), and the blur can
+    # neither sink a coast nor raise a shoal.
+    land_loops, lake_loops = read_loops(os.path.join(ROOT, "data", "maps", MAP, "geography", "coasts.csv"))
+    cov = coverage(land_loops, lake_loops, vw, vh, k, int(rules["coast_supersample"]))
+    land = cov >= 0.5
+    # The heights ramp through the plane over coast_ramp_m, not one vertex:
+    # a one-vertex ramp stair-stepped again wherever the mesh LOD skipped it.
+    # A symmetric blur keeps the half-coverage line where it was.
+    ramp = box(cov, int(round(rules["coast_ramp_m"] / VERTEX_M)))
+    height = shore_heights(height, ramp, SEA_Y, rules["shore_m"])
 
     # --- ridges -------------------------------------------------------------------
     ridge = np.zeros((vh, vw), dtype=np.float32)
@@ -206,7 +285,9 @@ def main():
     coast_steps = int(RIDGE_COAST_M / VERTEX_M)
     from_coast = distance_steps(~land, coast_steps) / coast_steps
     lift = np.clip((height - RIDGE_FROM_M) / (RIDGE_FULL_M - RIDGE_FROM_M), 0, 1)
-    height = np.where(land, np.maximum(height + RIDGE_M * lift * from_coast * ridge * 2.0, SHORE_M), height)
+    # the fringe (0 < ramp < 1) keeps its ramp through the water plane
+    height = np.where(ramp >= 1.0, np.maximum(height + RIDGE_M * lift * from_coast * ridge * 2.0,
+                                             SEA_Y + rules["shore_m"]), height)
     del ridge, lift
 
     # --- texture weights ------------------------------------------------------------
@@ -223,8 +304,20 @@ def main():
         for t, f in mix.items():
             biome_tw[..., t] += share * f
     biome_tw[total <= 0, GRASS] = 1.0
+    # Interlocking edges: each vertex samples the (blurred) weights at a
+    # point pushed off by a smooth noise field, so a boundary between two
+    # grounds meanders and tongues into its neighbour instead of blurring.
+    wave_v = rules["edge_warp_wave_m"] / VERTEX_M
+    amp_v = rules["edge_warp_m"] / VERTEX_M
+    dx = (value_noise(rng, vw, vh, wave_v) - 0.5) * 2.0 * amp_v
+    dy = (value_noise(rng, vw, vh, wave_v) - 0.5) * 2.0 * amp_v
     for t in range(NT):
-        tw[..., t] = np.maximum(resize(box(biome_tw[..., t], WEIGHT_BLUR_PX), vw, vh), 0)
+        smooth = resize(box(biome_tw[..., t], WEIGHT_BLUR_PX), vw, vh)
+        for y0 in range(0, vh, 512):
+            y1 = min(y0 + 512, vh)
+            ys, xs = np.mgrid[y0:y1, 0:vw].astype(np.float32)
+            tw[y0:y1, :, t] = np.maximum(sample_bilinear(smooth, xs + dx[y0:y1], ys + dy[y0:y1]), 0)
+    del dx, dy, smooth
     del wts, biome_tw
 
     gy, gx = np.gradient(height, VERTEX_M)
@@ -241,15 +334,30 @@ def main():
     tw[..., ROCKY] += 1.2 * t_rock * (1 - t_cliff)
     tw[..., SOIL] += 0.9 * t_rock * (1 - hn) * (1 - t_cliff)
     tw[..., CLIFF] += 2.5 * t_cliff * np.maximum(hn, 0.35)
-    beach_steps = int(BEACH_M / VERTEX_M)
-    beach = land & (distance_steps(~land, beach_steps + 1) <= beach_steps) & (height < BEACH_MAX_M)
-    tw[..., SAND] += np.where(beach, 2.0, 0.0)
+    # The beach fades out by the share of land around a vertex (a box of
+    # BEACH_M): a 4-neighbour step count cut it on a diamond staircase.
+    inland = box(land.astype(np.float32), int(BEACH_M / VERTEX_M))
+    beach = land * np.clip((1.0 - inland) / 0.2, 0, 1) * np.clip((BEACH_MAX_M - height) / 15.0, 0, 1)
+    tw[..., SAND] += 2.0 * beach
     del t_rock, t_cliff, keep, beach
     depth = np.clip(-height / 150.0, 0, 1)
     tw[~land] = 0.0
     tw[..., SAND] += np.where(land, 0.0, 1.0 - depth)
     tw[..., SOIL] += np.where(land, 0.0, depth)
     del depth, hn
+
+    # Outcrops, not blobs: after normalising, cliff and scree are raised to a
+    # power, which narrows their soft edge where the grass stays wide. What
+    # the cliff loses becomes scree (an outcrop fringed by scree), and the
+    # soil slope takes the scree's power: left alone it overtook both at the
+    # rim and put a one-vertex brown speckle round every outcrop.
+    tw /= np.maximum(tw.sum(axis=2, keepdims=True), 1e-6)
+    cliff = tw[..., CLIFF] ** rules["sharp_cliff"]
+    tw[..., ROCKY] += tw[..., CLIFF] - cliff
+    tw[..., CLIFF] = cliff
+    tw[..., ROCKY] **= rules["sharp_rocky_trail"]
+    tw[..., SOIL] **= rules["sharp_rocky_trail"]
+    del cliff
 
     # --- control: top two per vertex --------------------------------------------------
     control = np.zeros((vh, vw), dtype=np.uint32)
@@ -259,7 +367,7 @@ def main():
         b1, b2 = order[..., 0], order[..., 1]
         w1 = np.take_along_axis(s, b1[..., None], 2)[..., 0]
         w2 = np.take_along_axis(s, b2[..., None], 2)[..., 0]
-        blend = np.where(w1 + w2 > 0, 255.0 * w2 / np.maximum(w1 + w2, 1e-6), 0).astype(np.uint32)
+        blend = blend_byte(w1, w2, rng.uniform(-rules["blend_dither"], rules["blend_dither"], w1.shape))
         control[y0:y0 + 256] = (b1.astype(np.uint32) << 27) | (b2.astype(np.uint32) << 22) | (blend << 14)
 
     # --- colour map ----------------------------------------------------------------------
@@ -275,9 +383,9 @@ def main():
     del tw, wsum
     macro = value_noise(rng, vw, vh, MACRO_WAVE_M / VERTEX_M)
     hue = value_noise(rng, vw, vh, MACRO_WAVE_M * 0.7 / VERTEX_M)
-    color_lin *= (1.0 - MACRO_DEPTH * macro)[..., None]
-    color_lin[..., 0] *= 1.0 - MACRO_HUE_DEPTH * hue
-    color_lin[..., 2] *= 1.0 - MACRO_HUE_DEPTH * (1.0 - hue)
+    color_lin *= (1.0 - rules["macro_depth"] * macro)[..., None]
+    color_lin[..., 0] *= 1.0 - rules["macro_hue_depth"] * hue
+    color_lin[..., 2] *= 1.0 - rules["macro_hue_depth"] * (1.0 - hue)
     rgba = np.empty((vh, vw, 4), dtype=np.uint8)
     for y0 in range(0, vh, 512):
         rgba[y0:y0 + 512, :, :3] = np.round(lin_to_srgb(color_lin[y0:y0 + 512]) * 255).astype(np.uint8)
@@ -311,6 +419,7 @@ def main():
         # world position of the padded image's corner, and of pack px (0,0)
         "import_corner": [-fw * VERTEX_M / 2, -fh * VERTEX_M / 2],
         "pack_origin": [(-fw / 2 + ox) * VERTEX_M, (-fh / 2 + oy) * VERTEX_M],
+        "sea_y": SEA_Y,
         "height_range": [float(height.min()), float(height.max())],
         "slope_percentiles": [pct(SLOPE_ROCKY[0]), pct(SLOPE_ROCKY[1]), pct(SLOPE_CLIFF[1])],
         "far_multipliers_lin": mult_lin.round(3).tolist(),
@@ -319,4 +428,5 @@ def main():
     print(json.dumps({k: v for k, v in world.items() if k != "far_multipliers_lin"}))
 
 
-main()
+if __name__ == "__main__":
+    main()
