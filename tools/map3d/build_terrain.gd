@@ -28,6 +28,7 @@ const TEXTURES := [
 	["excavated_soil_wall", 240.0, 0.1],
 	["sand_03", 120.0, 0.2],
 	["leafy_grass", 200.0, 0.22],
+	["snow_field_aerial", 260.0, 0.14],  # the snow line (owner 2026-09-19)
 ]
 
 # Terrain3D material: demo/Demo.tscn's parameters, every one of them — a

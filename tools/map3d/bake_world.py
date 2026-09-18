@@ -56,10 +56,12 @@ BEACH_M = 100.0          # sand reaches this far inland
 BEACH_MAX_M = 40.0       # and no higher
 
 # Texture ids = build_terrain.gd TEXTURES order.
-CLIFF, GRASS, LEAVES, DIRT, ROCKY, SOIL, SAND, FOREST = range(8)
-NT = 8
+CLIFF, GRASS, LEAVES, DIRT, ROCKY, SOIL, SAND, FOREST, SNOW = range(9)
+NT = 9
 TEXTURE_KEYS = ["cliff", "leafy_grass", "dry_decay_leaves", "dirt_floor", "rocky_trail",
-                "excavated_soil_wall", "sand_03", "leafy_grass"]
+                "excavated_soil_wall", "sand_03", "leafy_grass",
+                # the snow line (owner 2026-09-19): Poly Haven snow_field_aerial
+                "snow_field_aerial"]
 BIOME_MIX = {
     1: {SAND: 1.0},
     2: {DIRT: 0.8, ROCKY: 0.2},
@@ -71,11 +73,11 @@ BIOME_MIX = {
     8: {FOREST: 0.8, LEAVES: 0.2},
     9: {FOREST: 0.6, LEAVES: 0.2, DIRT: 0.2},
     10: {DIRT: 0.5, ROCKY: 0.5},
-    11: {CLIFF: 1.0},
+    11: {SNOW: 1.0},
     12: {GRASS: 0.5, DIRT: 0.5},
     13: {GRASS: 0.75, ROCKY: 0.25},
     14: {GRASS: 0.3, ROCKY: 0.4, CLIFF: 0.3},
-    15: {CLIFF: 1.0},
+    15: {SNOW: 0.8, CLIFF: 0.2},
 }
 SLOPE_ROCKY = (0.82, 0.93)   # land slope percentiles
 SLOPE_CLIFF = (0.93, 0.99)
@@ -85,7 +87,7 @@ SLOPE_CLIFF = (0.93, 0.99)
 # texture's own mean colour, in linear light, and can only darken.
 FAR_COLOR = {
     CLIFF: "#7E7B77", GRASS: "#6F7A40", LEAVES: "#4E4A2C", DIRT: "#9A7A55",
-    ROCKY: "#7C7264", SOIL: "#5E4A30", FOREST: "#3A5026",
+    ROCKY: "#7C7264", SOIL: "#5E4A30", FOREST: "#3A5026", SNOW: "#E4E8EC",
 }  # SAND's is data/map3d_bake.csv far_color_sand
 MACRO_WAVE_M = 9000.0    # large patches of lighter and darker country
 # (their depth and the green-yellow drift are data/map3d_bake.csv macro_*)
@@ -618,6 +620,13 @@ def main(argv=None):
     tw[..., ROCKY] += 1.2 * t_rock * (1 - t_cliff)
     tw[..., SOIL] += 0.9 * t_rock * (1 - hn) * (1 - t_cliff)
     tw[..., CLIFF] += 2.5 * t_cliff * np.maximum(hn, 0.35)
+    # The snow line (owner 2026-09-19): above snow_line_lo of the highest
+    # ground snow comes in, full by snow_line_hi — on the 3D map's own ridges
+    # as well as the 2D map's peak band — thinner on the steepest faces,
+    # where rock shows through.
+    snow = np.clip((hn - rules["snow_line_lo"]) / max(rules["snow_line_hi"] - rules["snow_line_lo"], 1e-6), 0, 1)
+    tw[..., SNOW] += rules["snow_weight"] * snow * (1.0 - 0.6 * t_cliff)
+    del snow
     # The beach fades out by the share of land around a vertex (a box of
     # BEACH_M: a 4-neighbour step count cut it on a diamond staircase) and
     # under BEACH_MAX_M; the whole mask is then sampled along the grounds'

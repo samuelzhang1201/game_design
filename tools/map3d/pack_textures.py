@@ -7,6 +7,7 @@ every layer the same size. Runs inside Blender (it reads the EXRs):
   Blender -b --factory-startup --python tools/map3d/pack_textures.py
 """
 import os
+import sys
 import bpy
 import numpy as np
 
@@ -16,7 +17,11 @@ OUT = os.path.join(ROOT, "assets", "map3d", "textures")
 SIZE = 2048
 DEFAULT_ROUGH = 0.85  # rocky_trail ships no roughness map
 SETS = ["leafy_grass", "dry_decay_leaves", "dirt_floor", "rocky_trail",
-        "excavated_soil_wall", "sand_03"]
+        "excavated_soil_wall", "sand_03",
+        # The snow line (owner 2026-09-19): Poly Haven's aerial snow field,
+        # fetched through the Blender MCP's Poly Haven download, which hands
+        # every map over as a JPEG — hence first(), below.
+        "snow_field_aerial"]
 
 
 def load(path, colorspace):
@@ -42,14 +47,27 @@ def save(arr, path):
     bpy.data.images.remove(img)
 
 
+def first(*paths):
+    """The first of `paths` on disk (a set's maps come as EXR/PNG from the
+    site's .blend, as JPEG from the MCP download), else the first."""
+    for p in paths:
+        if os.path.exists(p):
+            return p
+    return paths[0]
+
+
 os.makedirs(OUT, exist_ok=True)
+# Blender's own argv ends at "--"; after it, set keys to pack (default: all).
+ONLY = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 for key in SETS:
+    if ONLY and key not in ONLY:
+        continue
     base = os.path.join(SRC, f"{key}_4k.blend", "textures", key)
     # Non-Color everywhere: the JPEG's sRGB bytes pass through unchanged.
     diff = load(base + "_diff_4k.jpg", "Non-Color")
-    disp = load(base + "_disp_4k.png", "Non-Color")
-    nor = load(base + "_nor_gl_4k.exr", "Non-Color")
-    rough_path = base + "_rough_4k.exr"
+    disp = load(first(base + "_disp_4k.png", base + "_disp_4k.jpg"), "Non-Color")
+    nor = load(first(base + "_nor_gl_4k.exr", base + "_nor_gl_4k.jpg"), "Non-Color")
+    rough_path = first(base + "_rough_4k.exr", base + "_rough_4k.jpg")
     alb = np.dstack([diff[..., :3], disp[..., 0]])
     if os.path.exists(rough_path):
         rough = load(rough_path, "Non-Color")[..., 0]

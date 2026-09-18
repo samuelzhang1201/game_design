@@ -70,6 +70,8 @@ var _hover3d := Vector2(-1, -1)
 var _bal: Dictionary = {}
 ## --zoom3d M (with --screen root) frames the capital M metres away.
 var _zoom3d := -1.0
+## --at3d x,y (with --zoom3d) frames that pack pixel instead of the capital.
+var _at3d := Vector2(-1, -1)
 ## --ruler fx1,fy1,fx2,fy2 (with --screen root) lights the MEASUREMENT tab
 ## and clicks the showing map at those shares of its size, so the shot shows
 ## a fixed ruler; --ruler-open leaves it stretching to the second point.
@@ -111,6 +113,9 @@ func _ready() -> void:
 		elif args[i] == "--hover3d":
 			var hparts := args[i + 1].split(",")
 			_hover3d = Vector2(float(hparts[0]), float(hparts[1]))
+		elif args[i] == "--at3d":
+			var aparts := args[i + 1].split(",")
+			_at3d = Vector2(float(aparts[0]), float(aparts[1]))
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
 		elif args[i] == "--ruler":
@@ -212,7 +217,11 @@ func _process(_delta: float) -> void:
 	if _root != null and _frames == 8 and _zoom3d > 0.0 \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
-		(_root.current_screen.map3d_view() as Map3DView).look_at_home(_zoom3d)
+		var v3: Map3DView = _root.current_screen.map3d_view()
+		if _at3d.x >= 0.0:
+			v3.look_at_pack(_at3d, _zoom3d)
+		else:
+			v3.look_at_home(_zoom3d)
 	if _root != null and _frames == 10 and _click3d.x >= 0.0 \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:

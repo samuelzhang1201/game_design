@@ -35,7 +35,13 @@ values are `balance.csv` `map3d_*`.
 
 1. **Sources** — download the Poly Haven sets named in `pack_textures.py`
    into `assets/map3d/sources/polyhaven/` and Rock023 into
-   `assets/map3d/sources/ambientcg/`. Tree models (only if planting trees):
+   `assets/map3d/sources/ambientcg/`. The snow line's `snow_field_aerial`
+   (owner 2026-09-19) came through the Blender MCP's Poly Haven download
+   (the add-on's `blendermcp_use_polyhaven` on), its packed JPEGs written to
+   `snow_field_aerial_4k.blend/textures/*_4k.jpg`; `pack_textures.py` takes a
+   set's maps as EXR/PNG or JPEG, and `-- <key>` packs one set. A new layer's
+   `.import` must copy the others' `[params]` (VRAM `compress/mode=2`): the
+   texture array wants one format. Tree models (only if planting trees):
    `python3 tools/map3d/fetch_polyhaven.py fir_tree_01 ...`
 2. **Textures** — `Blender -b --factory-startup --python tools/map3d/pack_textures.py`
    (numpy in Blender; GDScript per pixel on 4K took >10 min).
