@@ -405,7 +405,8 @@ func _build_rivers() -> void:
 	var courses := Map3DRivers.parse(FileAccess.get_file_as_string(path),
 		_repo.bal("map3d_river_split_rise_m"))
 	courses = Map3DRivers.clear_terrain(courses, _height_at, _repo.bal("map3d_river_terrain_clear_m"))
-	var arrays := Map3DRivers.ribbon_arrays(courses, _repo.bal("map3d_river_end_fade_m"))
+	var arrays := Map3DRivers.ribbon_arrays(courses, _repo.bal("map3d_river_end_fade_m"),
+		_repo.bal("map3d_river_mesh_step_m"))
 	if arrays.is_empty():
 		return
 	var mesh := ArrayMesh.new()
@@ -427,6 +428,12 @@ func _build_rivers() -> void:
 	_river_mat.set_shader_parameter("edge_soft_floor", _repo.bal("map3d_river_edge_soft_floor"))
 	_river_mat.set_shader_parameter("emission_share", _repo.bal("map3d_river_emission_share"))
 	_river_mat.set_shader_parameter("emission_gamma", _repo.bal("map3d_river_emission_gamma"))
+	for key: String in ["fresnel_sky_mix", "fresnel_power", "roughness", "specular", "normal_depth",
+			"ripple_emission_gain", "bank_wobble_m", "bank_wobble_amp"]:
+		_river_mat.set_shader_parameter(key, _repo.bal("map3d_river_" + key))
+	# One LOD for both waters: the river's near detail comes and goes with the sea's.
+	_river_mat.set_shader_parameter("lod_near_m", _repo.bal("map3d_sea_ripple_lod_near_m"))
+	_river_mat.set_shader_parameter("lod_far_m", _repo.bal("map3d_sea_ripple_lod_far_m"))
 	mesh.surface_set_material(0, _river_mat)
 	var mi := MeshInstance3D.new()
 	mi.name = "Rivers"
@@ -479,6 +486,9 @@ func _dress_sea() -> void:
 	_sea_mat.set_shader_parameter("fresnel_sky_mix", _repo.bal("map3d_sea_fresnel_sky_mix"))
 	_sea_mat.set_shader_parameter("horizon_fade_start_px", _repo.bal("map3d_sea_horizon_fade_start_px"))
 	_sea_mat.set_shader_parameter("horizon_fade_end_px", _repo.bal("map3d_sea_horizon_fade_end_px"))
+	for key: String in ["ripple_near_m", "ripple_lod_near_m", "ripple_lod_far_m",
+			"ripple_emission_gain", "emission_share_near", "shore_warp_px", "shore_warp_m"]:
+		_sea_mat.set_shader_parameter(key, _repo.bal("map3d_sea_" + key))
 	sea.material_override = _sea_mat
 
 

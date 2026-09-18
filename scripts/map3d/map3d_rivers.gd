@@ -234,7 +234,18 @@ static func clear_terrain(courses: Array, height_fn: Callable, margin: float) ->
 ## end is neither — fix round 3 — so it fades the same as any other cut,
 ## sliding under the river it joins instead of ending at full opacity).
 ## water_river.gdshader multiplies its ALPHA by this.
-static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M) -> Array:
+##
+## `mesh_step_m` > 0 first densifies each course along a centripetal
+## Catmull-Rom curve through its samples (densify), so up close the ribbon
+## bends smoothly instead of running in ruled ~50 m segments; 0 keeps the
+## samples as they are.
+static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M,
+		mesh_step_m: float = 0.0) -> Array:
+	if mesh_step_m > 0.0:
+		var dense: Array = []
+		for c: Dictionary in courses:
+			dense.append(densify(c, mesh_step_m))
+		courses = dense
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var uv := PackedVector2Array()
@@ -282,3 +293,62 @@ static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M
 	arrays[Mesh.ARRAY_COLOR] = colors
 	arrays[Mesh.ARRAY_INDEX] = index
 	return arrays
+
+
+## A course with points added between its samples so no two consecutive
+## points are more than `step_m` apart in the ground plane (final review,
+## owner 2026-09-18). The ground-plane path is a CENTRIPETAL Catmull-Rom
+## curve through every original sample — the samples stay exactly on it, and
+## the centripetal knots never loop or overshoot on the bake's unevenly
+## spaced points (a joined end's inserted sample can sit a metre from its
+## neighbour). The water height, width and mouth are interpolated LINEARLY
+## between samples: a curve on the water height could dip below the level
+## clear_terrain lifted each sample to. The ends are extended by mirroring,
+## so a strip's first and last segments curve too. Every other key of the
+## course is kept as it is.
+static func densify(course: Dictionary, step_m: float) -> Dictionary:
+	var pos: PackedVector3Array = course["pos"]
+	var width: PackedFloat32Array = course["width"]
+	var mouth: PackedFloat32Array = course["mouth"]
+	var n := pos.size()
+	if n < 2 or step_m <= 0.0:
+		return course
+	var out_pos := PackedVector3Array()
+	var out_w := PackedFloat32Array()
+	var out_m := PackedFloat32Array()
+	for i in n - 1:
+		var p1 := Vector2(pos[i].x, pos[i].z)
+		var p2 := Vector2(pos[i + 1].x, pos[i + 1].z)
+		var p0 := Vector2(pos[i - 1].x, pos[i - 1].z) if i > 0 else p1 * 2.0 - p2
+		var p3 := Vector2(pos[i + 2].x, pos[i + 2].z) if i + 2 < n else p2 * 2.0 - p1
+		var pieces := maxi(1, ceili(p1.distance_to(p2) / step_m))
+		for k in pieces:
+			var t := float(k) / float(pieces)
+			var xz := p1 if k == 0 else _centripetal(p0, p1, p2, p3, t)
+			out_pos.append(Vector3(xz.x, lerpf(pos[i].y, pos[i + 1].y, t), xz.y))
+			out_w.append(lerpf(width[i], width[i + 1], t))
+			out_m.append(lerpf(mouth[i], mouth[i + 1], t))
+	out_pos.append(pos[n - 1])
+	out_w.append(width[n - 1])
+	out_m.append(mouth[n - 1])
+	var out := course.duplicate()
+	out["pos"] = out_pos
+	out["width"] = out_w
+	out["mouth"] = out_m
+	return out
+
+
+## The point at t (0..1) between p1 and p2 of the centripetal (alpha 0.5)
+## Catmull-Rom spline through p0..p3 (Barry and Goldman's pyramid).
+static func _centripetal(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, t: float) -> Vector2:
+	var t0 := 0.0
+	var t1 := t0 + maxf(sqrt(p0.distance_to(p1)), 0.0001)
+	var t2 := t1 + maxf(sqrt(p1.distance_to(p2)), 0.0001)
+	var t3 := t2 + maxf(sqrt(p2.distance_to(p3)), 0.0001)
+	var u := lerpf(t1, t2, t)
+	var a1 := p0 * ((t1 - u) / (t1 - t0)) + p1 * ((u - t0) / (t1 - t0))
+	var a2 := p1 * ((t2 - u) / (t2 - t1)) + p2 * ((u - t1) / (t2 - t1))
+	var a3 := p2 * ((t3 - u) / (t3 - t2)) + p3 * ((u - t2) / (t3 - t2))
+	var b1 := a1 * ((t2 - u) / (t2 - t0)) + a2 * ((u - t0) / (t2 - t0))
+	var b2 := a2 * ((t3 - u) / (t3 - t1)) + a3 * ((u - t1) / (t3 - t1))
+	return b1 * ((t2 - u) / (t2 - t1)) + b2 * ((u - t1) / (t2 - t1))

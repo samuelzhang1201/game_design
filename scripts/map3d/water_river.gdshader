@@ -48,6 +48,23 @@ uniform float edge_soft_floor = 0.06;
 uniform float opacity = 0.92;
 uniform float emission_share = 0.85;
 uniform float emission_gamma = 1.3;
+// Near-zoom water (final review, owner 2026-09-18): the look numbers are
+// data (balance.csv map3d_river_*), the sky mix matches the sea's so both
+// read as one water, the ripples modulate the EMISSION as on the sea, and a
+// world-space noise wobbles the bank fade so a river's edge is soft and
+// irregular up close rather than ruled. The wobble and the ripple
+// modulation fade out with camera distance over the SEA's LOD distances
+// (lod_near_m -> lod_far_m) so a far thread stays a clean line.
+uniform float fresnel_sky_mix = 0.25;
+uniform float fresnel_power = 4.0;
+uniform float roughness = 0.18;
+uniform float specular = 0.5;
+uniform float normal_depth = 0.6;
+uniform float ripple_emission_gain = 0.1;
+uniform float bank_wobble_m = 40.0;
+uniform float bank_wobble_amp = 0.15;
+uniform float lod_near_m = 1500.0;
+uniform float lod_far_m = 8000.0;
 
 varying float v_across;
 varying float v_along;
@@ -55,12 +72,14 @@ varying float v_width;
 varying float v_mouth;
 varying float v_fade;
 varying float v_soft_scale;
+varying vec2 v_xz;
 
 void vertex() {
 	vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	float m_per_px = length(world - CAMERA_POSITION_WORLD) * px_per_dist;
 	float drawn_half_w = max(0.5 * UV2.x, 0.5 * min_px * m_per_px);
 	VERTEX += NORMAL * drawn_half_w;
+	v_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
 	VERTEX.y += lift_px * m_per_px;
 	NORMAL = vec3(0.0, 1.0, 0.0);
 	v_across = UV.x;
@@ -72,19 +91,29 @@ void vertex() {
 }
 
 void fragment() {
+	float near_w = 1.0 - smoothstep(lod_near_m, lod_far_m, length(VERTEX));
 	vec2 p = vec2((v_across - 0.5) * v_width, v_along) / ripple_m;
 	vec3 n1 = texture(ripples, p + vec2(0.0, -TIME * flow_m_s / ripple_m)).xyz;
 	vec3 n2 = texture(ripples, p * 1.7 + vec2(0.31, -TIME * flow_m_s * 1.3 / ripple_m)).xyz;
-	NORMAL_MAP = normalize(n1 + n2 - 1.0) * 0.5 + 0.5;
-	NORMAL_MAP_DEPTH = 0.6;
-	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 4.0);
+	vec3 n = normalize(n1 + n2 - 1.0);
+	NORMAL_MAP = n * 0.5 + 0.5;
+	NORMAL_MAP_DEPTH = normal_depth;
+	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), fresnel_power);
 	vec3 base = mix(water.rgb, mouth_water.rgb, v_mouth);
-	vec3 tinted = mix(base, sky.rgb, fres * 0.6);
+	vec3 tinted = mix(base, sky.rgb, fres * fresnel_sky_mix);
 	vec3 lifted = pow(clamp(tinted, vec3(0.0001), vec3(1.0)), vec3(emission_gamma));
+	float slope = clamp((n.x - n.y) * 2.0, -1.0, 1.0);
+	lifted *= 1.0 + ripple_emission_gain * near_w * slope;
 	ALBEDO = tinted * (1.0 - emission_share);
 	EMISSION = lifted * emission_share;
-	ROUGHNESS = 0.18;
-	SPECULAR = 0.5;
-	float edge = smoothstep(0.0, edge_soft * v_soft_scale, 1.0 - abs(v_across * 2.0 - 1.0));
+	ROUGHNESS = roughness;
+	SPECULAR = specular;
+	// 0 at either bank, 1 on the centreline; the wobble pushes the bank in
+	// and out along the river by up to bank_wobble_amp of the half-width.
+	float across = 1.0 - abs(v_across * 2.0 - 1.0);
+	// The noise tile holds about eight bumps: one every bank_wobble_m.
+	float wobble = texture(ripples, v_xz / (bank_wobble_m * 8.0)).x * 2.0 - 1.0;
+	across += wobble * bank_wobble_amp * near_w;
+	float edge = smoothstep(0.0, edge_soft * v_soft_scale + bank_wobble_amp * near_w, across);
 	ALPHA = opacity * edge * v_fade;
 }

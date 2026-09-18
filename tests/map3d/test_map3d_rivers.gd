@@ -235,3 +235,66 @@ func test_clear_terrain_keeps_the_join_fade() -> void:
 	var ground := func(_xz: Vector2) -> float: return 0.0
 	var cleared := Map3DRivers.clear_terrain(Map3DRivers.parse(JOIN_TEXT), ground, 1.0)
 	assert_almost_eq(float(cleared[1]["end_fade_m"]), 20.0, 0.001)
+
+
+# --- densify (final review, owner 2026-09-18) ----------------------------------
+
+const BEND_TEXT := '{"rivers": [{"code": "b", "points": [[0, 0, 10, 6, 0], [50, 0, 9, 10, 0], ' \
+	+ '[90, 30, 8, 14, 0], [100, 80, 7, 20, 1]]}]}'
+
+
+func test_densify_steps_every_segment_and_keeps_the_samples_on_the_curve() -> void:
+	var c: Dictionary = Map3DRivers.parse(BEND_TEXT)[0]
+	var orig: PackedVector3Array = c["pos"]
+	var d := Map3DRivers.densify(c, 12.0)
+	var pos: PackedVector3Array = d["pos"]
+	# Segments 50, 50, 50.99 m -> ceil(/12) = 5, 5, 5 pieces, plus the end.
+	assert_eq(pos.size(), 16)
+	assert_eq((d["width"] as PackedFloat32Array).size(), 16)
+	assert_eq((d["mouth"] as PackedFloat32Array).size(), 16)
+	for k in orig.size():
+		assert_eq(pos[k * 5], orig[k], "sample %d stays exactly on the curve" % k)
+	for i in range(1, pos.size()):
+		var step := Vector2(pos[i].x - pos[i - 1].x, pos[i].z - pos[i - 1].z).length()
+		assert_true(step <= 12.5, "no gap over the step (got %.2f at %d)" % [step, i])
+	# Width and height are linear between samples; the curve bends the path.
+	assert_almost_eq((d["width"] as PackedFloat32Array)[7], lerpf(10.0, 14.0, 0.4), 0.001)
+	assert_almost_eq(pos[7].y, lerpf(9.0, 8.0, 0.4), 0.001)
+	var chord := Vector2(50, 0).lerp(Vector2(90, 30), 0.4)
+	assert_gt(Vector2(pos[7].x, pos[7].z).distance_to(chord), 0.5, "the ribbon bends, not a ruled chord")
+	assert_true(d["true_mouth"], "the course's own keys are kept")
+
+
+func test_a_densified_ribbon_keeps_its_end_fades() -> void:
+	var courses := Map3DRivers.parse(BEND_TEXT)
+	var arrays := Map3DRivers.ribbon_arrays(courses, 20.0, 12.0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+	assert_eq(verts.size(), 32, "two vertices per densified point")
+	assert_eq((arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size(), 15 * 6)
+	assert_almost_eq(colors[0].a, 0.0, 0.001, "the source still fades in")
+	assert_almost_eq(colors[2].a, 0.5, 0.02, "about 10 m of arc (the curve bends) of a 20 m fade")
+	assert_almost_eq(colors[-1].a, 1.0, 0.001, "the true mouth never fades")
+
+
+func test_a_densified_joined_end_still_fades_over_the_main_rivers_half_width() -> void:
+	var t: Dictionary = Map3DRivers.parse(JOIN_TEXT)[1]
+	var colors: PackedColorArray = Map3DRivers.ribbon_arrays([t], 80.0, 5.0)[Mesh.ARRAY_COLOR]
+	assert_almost_eq(colors[-1].a, 0.0, 0.001, "gone at the main river's centreline")
+	var pos: PackedVector3Array = Map3DRivers.densify(t, 5.0)["pos"]
+	var bank := -1
+	for i in pos.size():
+		if is_equal_approx(pos[i].x, 20.0) and is_equal_approx(pos[i].z, (t["pos"] as PackedVector3Array)[2].z):
+			bank = i
+	assert_gt(bank, -1, "the inserted bank sample is kept")
+	assert_almost_eq(colors[bank * 2].a, 1.0, 0.001, "full strength at the bank")
+
+
+func test_split_strips_still_share_their_cut_vertex_when_densified() -> void:
+	var text := '{"rivers": [{"code": "f", "points": ' \
+		+ '[[0, 0, 10, 6, 0], [50, 0, 10, 6, 0], [100, 0, 10, 6, 0], [150, 0, 50, 6, 0], ' \
+		+ '[200, 0, 50, 6, 0], [250, 0, 50, 6, 1]]}]}'
+	var courses := Map3DRivers.parse(text, 5.0)
+	var a: PackedVector3Array = Map3DRivers.densify(courses[0], 12.0)["pos"]
+	var b: PackedVector3Array = Map3DRivers.densify(courses[1], 12.0)["pos"]
+	assert_eq(a[-1], b[0], "the cut vertex is shared")

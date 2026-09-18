@@ -487,6 +487,8 @@ func test_the_seas_band_colours_go_in_raw() -> void:
 	assert_eq(mat.get_shader_parameter("sea_near"), raw, "the palette hex, unconverted")
 	assert_eq(mat.get_shader_parameter("emission_share"), Game.data.bal("map3d_sea_emission_share"))
 	assert_eq(mat.get_shader_parameter("emission_gamma"), Game.data.bal("map3d_sea_emission_gamma"))
+	for key: String in ["ripple_near_m", "ripple_emission_gain", "emission_share_near", "shore_warp_px"]:
+		assert_eq(mat.get_shader_parameter(key), Game.data.bal("map3d_sea_" + key), key + " is data")
 
 
 ## Same for the river material: water goes in raw, and the emission
@@ -503,4 +505,8 @@ func test_the_rivers_colours_go_in_raw() -> void:
 	assert_eq(mat.get_shader_parameter("water"), raw, "the palette hex, unconverted")
 	assert_eq(mat.get_shader_parameter("emission_share"), Game.data.bal("map3d_river_emission_share"))
 	assert_eq(mat.get_shader_parameter("emission_gamma"), Game.data.bal("map3d_river_emission_gamma"))
+	for key: String in ["fresnel_sky_mix", "roughness", "specular", "normal_depth", "bank_wobble_amp"]:
+		assert_eq(mat.get_shader_parameter(key), Game.data.bal("map3d_river_" + key), key + " is data")
+	assert_eq(mat.get_shader_parameter("lod_far_m"), Game.data.bal("map3d_sea_ripple_lod_far_m"),
+		"one LOD for both waters")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://rivers.json"))

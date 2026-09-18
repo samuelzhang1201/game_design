@@ -48,6 +48,26 @@ uniform float specular = 0.12;
 uniform float fresnel_sky_mix = 0.25;
 uniform float horizon_fade_start_px = 1500.0;
 uniform float horizon_fade_end_px = 6000.0;
+// Near-zoom water (final review, owner 2026-09-18): up close the 900 m
+// ripple is flat for a whole screen and the sea read as milky jade. A
+// second, fine ripple layer (ripple_near_m) crossfades in as the camera
+// comes closer than ripple_lod_far_m, fully in by ripple_lod_near_m; the
+// ripples also modulate the EMISSION (ripple_emission_gain) — emission is
+// most of the colour, so without this they only showed in the small lit
+// share — and the lit share grows up close (emission_share_near) so the
+// sun's highlight reads. All of it is weighted by the same near factor, so
+// the far bands (24 km) are exactly what they were.
+uniform float ripple_near_m = 40.0;
+uniform float ripple_lod_near_m = 1500.0;
+uniform float ripple_lod_far_m = 8000.0;
+uniform float ripple_emission_gain = 0.1;
+uniform float emission_share_near = 0.6;
+// The shore's alpha fade reads `d` off a 50 m-per-texel distance map, so up
+// close the waterline is a chain of straight 50 m facets. A fixed world
+// noise warps `d` by up to shore_warp_px (pack px) before the fade — a
+// stopgap until a finer coast coverage map exists.
+uniform float shore_warp_px = 0.5;
+uniform float shore_warp_m = 160.0;
 
 varying vec2 v_xz;
 
@@ -69,10 +89,17 @@ void fragment() {
 	c = mix(c, sea_far.rgb, smoothstep(band_nearer - soft, band_nearer + soft, d));
 	c = mix(c, sea_deep.rgb, smoothstep(band_far - soft, band_far + soft, d));
 	c = mix(c, sky.rgb, smoothstep(horizon_fade_start_px, horizon_fade_end_px, d));
+	float near_w = 1.0 - smoothstep(ripple_lod_near_m, ripple_lod_far_m, length(VERTEX));
 	vec2 p = v_xz / ripple_m;
 	vec3 n1 = texture(ripples, p + vec2(TIME * drift_m_s / ripple_m, 0.0)).xyz;
 	vec3 n2 = texture(ripples, p * 0.61 + vec2(0.0, TIME * drift_m_s * 0.7 / ripple_m)).xyz;
-	NORMAL_MAP = normalize(n1 + n2 - 1.0) * 0.5 + 0.5;
+	vec3 far_n = normalize(n1 + n2 - 1.0);
+	vec2 q = v_xz / ripple_near_m;
+	vec3 m1 = texture(ripples, q + vec2(TIME * drift_m_s / ripple_near_m, 0.0)).xyz;
+	vec3 m2 = texture(ripples, q * 0.57 + vec2(0.0, -TIME * drift_m_s * 0.8 / ripple_near_m)).xyz;
+	vec3 near_n = normalize(m1 + m2 - 1.0);
+	vec3 n = normalize(mix(far_n, near_n, near_w));
+	NORMAL_MAP = n * 0.5 + 0.5;
 	NORMAL_MAP_DEPTH = 0.4;
 	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 5.0);
 	vec3 band = mix(c, sky.rgb, fres * fresnel_sky_mix);
@@ -85,9 +112,16 @@ void fragment() {
 	// bands against the palette at 24 km; the gamma is fitted to THIS
 	// tonemap — change the tonemap and refit it).
 	vec3 lifted = pow(clamp(band, vec3(0.0001), vec3(1.0)), vec3(emission_gamma));
-	ALBEDO = band * (1.0 - emission_share);
-	EMISSION = lifted * emission_share;
+	// A ripple's slope toward or away from the light, -1..1: lights and
+	// darkens the emitted colour a little, up close only.
+	float slope = clamp((n.x - n.y) * 2.0, -1.0, 1.0);
+	lifted *= 1.0 + ripple_emission_gain * near_w * slope;
+	float share = mix(emission_share, emission_share_near, near_w);
+	ALBEDO = band * (1.0 - share);
+	EMISSION = lifted * share;
 	ROUGHNESS = roughness;
 	SPECULAR = specular;
-	ALPHA = smoothstep(0.0, shore_fade_px, d);
+	// The noise tile holds about eight bumps: one every shore_warp_m.
+	float warp = texture(ripples, v_xz / (shore_warp_m * 8.0)).x * 2.0 - 1.0;
+	ALPHA = smoothstep(0.0, shore_fade_px, d + warp * shore_warp_px);
 }
