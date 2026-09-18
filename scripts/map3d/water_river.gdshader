@@ -4,7 +4,10 @@
 // them a little so a far river is never swallowed by the relief. The
 // fragment stage scrolls two ripple normals DOWNSTREAM (UV.y is metres from
 // the source), mixes in the sky by fresnel, shades the mouth (UV2.y) toward
-// the sea's near band, and fades both edges so a river has no hard rim.
+// the sea's near band, fades both edges of the ribbon so it has no hard
+// rim, and (fix round 1) multiplies in COLOR.a — Map3DRivers' per-vertex
+// end fade, 0 at a cut or the river's true source rising to 1, always 1 at
+// the true mouth — so a split never shows as a vertical wall.
 shader_type spatial;
 render_mode blend_mix, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
 
@@ -24,6 +27,7 @@ varying float v_across;
 varying float v_along;
 varying float v_width;
 varying float v_mouth;
+varying float v_fade;
 
 void vertex() {
 	vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -36,6 +40,7 @@ void vertex() {
 	v_along = UV.y;
 	v_width = 2.0 * half_w;
 	v_mouth = UV2.y;
+	v_fade = COLOR.a;
 }
 
 void fragment() {
@@ -50,5 +55,5 @@ void fragment() {
 	ROUGHNESS = 0.18;
 	SPECULAR = 0.5;
 	float edge = smoothstep(0.0, edge_soft, 1.0 - abs(v_across * 2.0 - 1.0));
-	ALPHA = opacity * edge;
+	ALPHA = opacity * edge * v_fade;
 }

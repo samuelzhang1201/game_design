@@ -344,5 +344,6 @@ map3d_river_min_px,1.5,"3D MAP rivers (owner 2026-09-18): a river is at least th
 map3d_river_ripple_m,60.0,3D MAP rivers: metres per tile of the ripple normals
 map3d_river_flow_m_s,0.8,3D MAP rivers: how fast the ripples run downstream
 map3d_river_opacity,0.92,3D MAP rivers: the water's opacity at its middle; the edges fade to nothing
-map3d_river_split_rise_m,2.0,"3D MAP rivers (owner 2026-09-18): a course breaks into a separate strip wherever the bake's water line rises by more than this between two samples — a river leaving or entering a lake — instead of drawing a vertical wall of water"
+map3d_river_split_rise_m,10.0,"3D MAP rivers (fix round 1, owner 2026-09-18): a course breaks into a separate strip wherever the bake's water line rises by more than this between two samples — a river leaving or entering a lake — instead of drawing a vertical wall of water. Raised from 2.0, which also split on a tributary's ordinary bed rise (checked against the pack: 2.0 caught a 2.6m rise at a river's own source that was never a lake; 10.0 keeps only the 4 genuine lake jumps of 14-88m, in 2 rivers)"
+map3d_river_end_fade_m,80.0,"3D MAP rivers (fix round 1, owner 2026-09-18): a strip's cut ends (and a river's true source) fade in/out over this many metres of arc length, so a split reads as a fade rather than a hard edge; the true mouth, running into the sea, never fades"
 map3d_water_seed,7,"3D MAP water: the seed of the ripple noise (a look, never the engine's stream)"

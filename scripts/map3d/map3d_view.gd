@@ -356,7 +356,7 @@ func _build_rivers() -> void:
 		return
 	var courses := Map3DRivers.parse(FileAccess.get_file_as_string(path),
 		_repo.bal("map3d_river_split_rise_m"))
-	var arrays := Map3DRivers.ribbon_arrays(courses)
+	var arrays := Map3DRivers.ribbon_arrays(courses, _repo.bal("map3d_river_end_fade_m"))
 	if arrays.is_empty():
 		return
 	var mesh := ArrayMesh.new()
