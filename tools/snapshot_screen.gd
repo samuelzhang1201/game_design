@@ -62,6 +62,9 @@ var _speed := -1
 ## at that share of its size, so a shot shows the pick: the card in the
 ## left column and the province's gold outline.
 var _click3d := Vector2(-1, -1)
+## --hover3d fx,fy (with --screen root) hovers the 3D map there: the country
+## card in the left column, the kingdom's wider outline, a town's name.
+var _hover3d := Vector2(-1, -1)
 ## --zoom3d M (with --screen root) frames the capital M metres away.
 var _zoom3d := -1.0
 ## --ruler fx1,fy1,fx2,fy2 (with --screen root) lights the MEASUREMENT tab
@@ -98,6 +101,9 @@ func _ready() -> void:
 		elif args[i] == "--click3d":
 			var parts := args[i + 1].split(",")
 			_click3d = Vector2(float(parts[0]), float(parts[1]))
+		elif args[i] == "--hover3d":
+			var hparts := args[i + 1].split(",")
+			_hover3d = Vector2(float(hparts[0]), float(hparts[1]))
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
 		elif args[i] == "--ruler":
@@ -204,6 +210,13 @@ func _process(_delta: float) -> void:
 		var v: Map3DView = _root.current_screen.map3d_view()
 		v.select_at(v.size * _click3d)
 		print("click3d: province=%s burg=%s" % [v.selected_province(), v.selected_burg()])
+	if _root != null and _frames == 12 and _hover3d.x >= 0.0 \
+			and _root.current_screen.has_method("map3d_view") \
+			and _root.current_screen.map3d_view() != null:
+		var hv: Map3DView = _root.current_screen.map3d_view()
+		var at := hv.size * _hover3d
+		hv.hover_pick(hv.pick_at(at), at)
+		print("hover3d: kingdom=%s name=%s" % [hv.hovered_kingdom(), hv.hover_tooltip()])
 	if _root != null and _frames == 12 and _ruler.size() == 4:
 		_root.set_ruler_view(true)
 		var v: Control = _root.current_screen.world_map()
