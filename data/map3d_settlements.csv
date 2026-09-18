@@ -1,6 +1,6 @@
-group,diameter_m,height_m,color,notes
-capital,1200,60,#C8102E,"3D MAP (owner 2026-09-18): a realm's seat as a placeholder disc on the ground, until settlement models exist — sizes from the Terrain3D spike, which judged them against the 50 m per pack px world"
-city,700,60,#E07B00,placeholder disc
-fort,350,60,#6B4E9B,placeholder disc
-town,350,60,#F2C300,placeholder disc
-village,180,60,#F5F5F0,placeholder disc
+group,ring_px,line_px,color,notes
+capital,28,3,#C8102E,"3D MAP (owner 2026-09-18): a settlement is a hollow ring of constant SCREEN size (design px, × the window scale) until settlement models exist — a pin, seen over ridges, never a disc sunk in a slope"
+city,20,2.5,#E07B00,placeholder ring
+fort,14,2,#6B4E9B,placeholder ring
+town,14,2,#F2C300,placeholder ring
+village,9,1.5,#F5F5F0,placeholder ring

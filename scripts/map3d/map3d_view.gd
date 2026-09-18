@@ -32,6 +32,7 @@ signal province_selected(province_code: String)
 const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
 const NOTICE_TEXT := "The 3D map has not been built for this map.\nRun tools/map3d (see tools/map3d/README.md)."
 const BORDER_SHADER := preload("res://scripts/map3d/border_line.gdshader")
+const RING_SHADER := preload("res://scripts/map3d/settlement_ring.gdshader")
 ## A press and release further apart than this is a drag, not a click
 ## (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := 10.0
@@ -45,6 +46,8 @@ var _camera: Camera3D
 var _markers: Node3D
 var _lines: Node3D
 var _notice: Label
+var _ring_mats: Array[ShaderMaterial] = []
+var _selected_ring: MultiMeshInstance3D
 var _meta: Dictionary = {}
 var _bounds := Rect2()
 var _target := Vector2.ZERO
@@ -241,9 +244,11 @@ func _height_at(xz: Vector2) -> float:
 	return sea if is_nan(y) else maxf(y, sea)
 
 
-## One MultiMesh of discs per settlement group, each on the ground under its
-## burg. Codes are sorted so the placement is the same every run.
+## One MultiMesh of billboard rings per settlement group, each over the
+## ground under its burg, plus a hidden gold ring for the current selection.
+## Codes are sorted so the placement is the same every run.
 func _place_markers() -> void:
+	_ring_mats.clear()
 	var by_group: Dictionary = {}
 	for code: String in _sorted_burgs():
 		var burg: Dictionary = _repo.burgs[code]
@@ -256,15 +261,10 @@ func _place_markers() -> void:
 	groups.sort()
 	for group: String in groups:
 		var spec: Dictionary = _repo.map3d_settlements[group]
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = float(spec["diameter_m"]) * 0.5
-		mesh.bottom_radius = mesh.top_radius
-		mesh.height = float(spec["height_m"])
-		mesh.radial_segments = 32
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(String(spec["color"]))
-		mat.roughness = 0.8
-		mesh.material = mat
+		var mesh := QuadMesh.new()
+		mesh.size = Vector2.ONE
+		mesh.material = _ring_material(Color(String(spec["color"])),
+			float(spec["ring_px"]), float(spec["line_px"]), 3)
 		var pts: Array = by_group[group]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -275,7 +275,54 @@ func _place_markers() -> void:
 		var mmi := MultiMeshInstance3D.new()
 		mmi.name = group.capitalize()
 		mmi.multimesh = mm
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_markers.add_child(mmi)
+	var sel := QuadMesh.new()
+	sel.size = Vector2.ONE
+	sel.material = _ring_material(MapPalette.named(_repo, "map3d_selection"), 0.0, 0.0, 4)
+	var smm := MultiMesh.new()
+	smm.transform_format = MultiMesh.TRANSFORM_3D
+	smm.mesh = sel
+	smm.instance_count = 1
+	_selected_ring = MultiMeshInstance3D.new()
+	_selected_ring.name = "Selected"
+	_selected_ring.multimesh = smm
+	_selected_ring.visible = false
+	_selected_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_markers.add_child(_selected_ring)
+	_update_line_scale()
+
+
+## A ring material; its sizes are design px, turned into window px with the
+## lines' by _update_line_scale (base values kept as meta).
+func _ring_material(colour: Color, ring_px: float, line_px: float, priority: int) -> ShaderMaterial:
+	var mat := ShaderMaterial.new()
+	mat.shader = RING_SHADER
+	mat.render_priority = priority
+	mat.set_shader_parameter("colour", colour)
+	mat.set_meta("ring_px", ring_px)
+	mat.set_meta("line_px", line_px)
+	_ring_mats.append(mat)
+	return mat
+
+
+## Show the gold ring on a burg (or hide it with "").
+func _show_selected_ring(code: String) -> void:
+	if _selected_ring == null:
+		return
+	_selected_ring.visible = code != ""
+	if code == "":
+		return
+	var burg: Dictionary = _repo.burgs[code]
+	var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
+	var xz := _burg_xz(burg)
+	_selected_ring.multimesh.set_instance_transform(0,
+		Transform3D(Basis.IDENTITY, Vector3(xz.x, _height_at(xz), xz.y)))
+	var mat := _selected_ring.multimesh.mesh.surface_get_material(0) as ShaderMaterial
+	var k := _repo.bal("map3d_selected_ring_scale")
+	mat.set_meta("ring_px", float(spec["ring_px"]) * k)
+	mat.set_meta("line_px", float(spec["line_px"]) * 1.5)
+	_update_line_scale()
 
 
 ## The burgs that get a marker (their group has a map3d_settlements row),
@@ -351,22 +398,28 @@ func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: 
 ## The lines' screen-px values in WINDOW px, and the metres per px per metre
 ## of distance, for every line material — on load, resize and new lines.
 func _update_line_scale() -> void:
-	if _lines == null or _repo == null:
+	if _repo == null or _viewport == null:
 		return
 	var s := _render_scale()
 	var h := float(maxi(_viewport.size.y, 1))
 	var per_dist := 2.0 * tan(deg_to_rad(_repo.bal("map3d_fov_deg")) * 0.5) / h
-	for mi: MeshInstance3D in _lines.get_children():
-		var mat := mi.mesh.surface_get_material(0) as ShaderMaterial
-		if mat == null:
-			continue
+	if _lines != null:
+		for mi: MeshInstance3D in _lines.get_children():
+			var mat := mi.mesh.surface_get_material(0) as ShaderMaterial
+			if mat == null:
+				continue
+			mat.set_shader_parameter("px_per_dist", per_dist)
+			mat.set_shader_parameter("lift_px", _repo.bal("map3d_line_lift_px") * s)
+			mat.set_shader_parameter("width_px", _repo.bal(String(mat.get_meta("width_key"))) * s)
+			var dash_key := String(mat.get_meta("dash_key", ""))
+			mat.set_shader_parameter("dash_px", _repo.bal(dash_key) * s if dash_key != "" else 0.0)
+			var gap_key := String(mat.get_meta("gap_key", ""))
+			mat.set_shader_parameter("gap_px", _repo.bal(gap_key) * s if gap_key != "" else 0.0)
+	for mat: ShaderMaterial in _ring_mats:
 		mat.set_shader_parameter("px_per_dist", per_dist)
-		mat.set_shader_parameter("lift_px", _repo.bal("map3d_line_lift_px") * s)
-		mat.set_shader_parameter("width_px", _repo.bal(String(mat.get_meta("width_key"))) * s)
-		var dash_key := String(mat.get_meta("dash_key", ""))
-		mat.set_shader_parameter("dash_px", _repo.bal(dash_key) * s if dash_key != "" else 0.0)
-		var gap_key := String(mat.get_meta("gap_key", ""))
-		mat.set_shader_parameter("gap_px", _repo.bal(gap_key) * s if gap_key != "" else 0.0)
+		mat.set_shader_parameter("lift_px", _repo.bal("map3d_ring_lift_px") * s)
+		mat.set_shader_parameter("ring_px", float(mat.get_meta("ring_px")) * s)
+		mat.set_shader_parameter("line_px", float(mat.get_meta("line_px")) * s)
 
 
 ## The clicked province's outline, solid gold over the borders.
@@ -524,7 +577,7 @@ func pick_at(pos: Vector2) -> Dictionary:
 	for code: String in _sorted_burgs():
 		var burg: Dictionary = _repo.burgs[code]
 		var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
-		var reach := maxf(float(spec["diameter_m"]) * 0.5, _repo.bal("map3d_pick_px") * m_per_px)
+		var reach := maxf(float(spec["ring_px"]) * 0.5, _repo.bal("map3d_pick_px")) * m_per_px
 		var d := _burg_xz(burg).distance_to(xz)
 		if d <= reach and d < best_d:
 			best_d = d
@@ -556,10 +609,12 @@ func select_at(pos: Vector2) -> void:
 			var code := String(picked["code"])
 			_set_selected_province("")
 			_selected_burg = code
+			_show_selected_ring(code)
 			object_selected.emit({"title": String(_repo.burgs[code].get("label", code)),
 				"obj": {"kind": "burg", "code": code}})
 		"province":
 			_selected_burg = ""
+			_show_selected_ring("")
 			_set_selected_province(String(picked["code"]))
 			province_selected.emit(_selected_province)
 		_:
@@ -578,6 +633,7 @@ func _set_selected_province(code: String) -> void:
 func clear_selection() -> void:
 	var had := _selected_burg != "" or _selected_province != ""
 	_selected_burg = ""
+	_show_selected_ring("")
 	_set_selected_province("")
 	if had:
 		object_selected.emit({})
@@ -610,6 +666,10 @@ func selected_province() -> String:
 
 func selected_burg() -> String:
 	return _selected_burg
+
+## Whether the clicked settlement's gold ring is currently shown.
+func selected_ring_visible() -> bool:
+	return _selected_ring != null and _selected_ring.visible
 
 ## Centre the rig on a pack point (tests and future "go to" orders).
 func look_at_pack(pack_px: Vector2, at_distance: float = -1.0) -> void:
@@ -661,5 +721,7 @@ func marker_counts() -> Dictionary:
 	if _markers == null:
 		return out
 	for mmi: MultiMeshInstance3D in _markers.get_children():
+		if mmi.name == "Selected":
+			continue
 		out[mmi.name.to_lower()] = mmi.multimesh.instance_count
 	return out

@@ -78,6 +78,29 @@ func test_every_settlement_gets_a_marker_by_group() -> void:
 	assert_gt(got.size(), 0, "the pack has settlements")
 
 
+func test_rings_take_their_size_from_the_table() -> void:
+	var v := _view()
+	v.activate()
+	var mmi := v.viewport().get_node("Markers/Capital") as MultiMeshInstance3D
+	var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
+	var spec: Dictionary = Game.data.map3d_settlements["capital"]
+	assert_almost_eq(float(mat.get_shader_parameter("ring_px")), float(spec["ring_px"]), 0.001,
+		"design px at the headless render scale of 1")
+	assert_almost_eq(float(mat.get_shader_parameter("line_px")), float(spec["line_px"]), 0.001)
+
+
+func test_a_clicked_settlement_wears_the_gold_ring_until_cleared() -> void:
+	var v := _view()
+	v.activate()
+	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
+	var burg: Dictionary = Game.data.burgs[String(realm["capital_burg"])]
+	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])))
+	_click(v, v.size * 0.5)
+	assert_true(v.selected_ring_visible())
+	v.clear_selection()
+	assert_false(v.selected_ring_visible())
+
+
 func test_the_wheel_zooms_within_the_clamp() -> void:
 	var v := _view()
 	v.activate()

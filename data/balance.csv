@@ -330,4 +330,6 @@ map3d_seam_gap_px,6.0,3D MAP borders: seam gap length in screen px
 map3d_seam_alpha,0.75,3D MAP borders: seam opacity — they are an internal hint
 map3d_selection_width_px,4.0,"3D MAP: the clicked province's outline, solid, in political_palette map3d_selection"
 map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its disc) picks it; otherwise the province under the click"
+map3d_selected_ring_scale,1.4,"3D MAP: the clicked settlement's ring is this much larger, in political_palette map3d_selection gold, its line 1.5x"
+map3d_ring_lift_px,3.0,"3D MAP: a ring floats this many screen px over its ground so it never clips the relief"
 map3d_border_refresh_s,1.0,"3D MAP: how often the view checks whether ownership changed and its borders need rebuilding"
