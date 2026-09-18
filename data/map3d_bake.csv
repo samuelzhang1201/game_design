@@ -21,6 +21,7 @@ river_max_w_m,250.0,3D bake: the widest mouth
 river_source_w_m,6.0,3D bake: the width at the source — a river grows from here as t^map_river_taper_gamma
 river_depth_m,3.0,3D bake: how far the bed lies under the ground it runs through
 river_fill,0.7,3D bake: the water stands this share of the depth over the bed
+river_over_sea_m,0.3,"3D bake (final review, owner 2026-09-18: was SEA_Y + 0.3 in bake_world.py): a river's water line never stands lower than this far over the water plane it runs to, so the line keeps falling to the sea without ever dipping under it"
 river_min_drop_m,0.04,"3D bake: the bed falls at least this much per 20 m step, so every river runs downhill to the sea"
 river_bank_slope,0.35,3D bake: the banks rise this many metres per metre out from the water's edge (a valley)
 river_bank_max_m,1500.0,3D bake: a bank never reaches further out than this

@@ -57,6 +57,19 @@ func set_clock_speed(speed: int) -> void:
 	clock_speed = speed
 	clock_changed.emit(speed)
 
+## Tools only (tools/map3d/bench.gd, through GameRoot): roll the day back
+## to 1 once it passes `day_ceiling`, so a timed run never reaches the
+## month's end — a completed month can roll a random event, which stops the
+## clock and swaps the screen mid-measurement. Returns whether it rolled
+## back. Lives here, not on GameRoot, because only Game writes the state
+## (final review, owner 2026-09-18).
+func hold_day_before_month_end(day_ceiling: int) -> bool:
+	if state == null or state.day <= day_ceiling:
+		return false
+	state.day = 1
+	return true
+
+
 ## One day of the clock (owner 2026-09-13). Works step; when the day is the
 ## tick's last, the tick itself runs and its report goes out. Returns
 ## {ticked, finished: [{cell, building}]}.

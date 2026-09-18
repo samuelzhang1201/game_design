@@ -561,9 +561,10 @@ def main(argv=None):
         # open sea (cov 0) is never dug: the water line still reaches it
         cut = c > 0.0
         carve(height, wet, pts[cut], bed[cut], widths[cut] / VERTEX_M, rules)
-        # the water never stands under the sea it runs to (SEA_Y + 0.3, as it
-        # does over the fringe and at the mouth), so the line keeps falling
-        water = np.maximum(bed + rules["river_depth_m"] * rules["river_fill"], SEA_Y + 0.3)
+        # the water never stands under the sea it runs to (river_over_sea_m
+        # over it, as over the fringe and at the mouth), so the line keeps falling
+        water = np.maximum(bed + rules["river_depth_m"] * rules["river_fill"],
+                           SEA_Y + rules["river_over_sea_m"])
         if r["river_code"] in joins:   # the joined stretch: the last few samples
             water = join_water(water, len(pts) - int(np.ceil(joins[r["river_code"]])) - 1)
         keep = list(range(0, len(pts), 3)) + ([len(pts) - 1] if (len(pts) - 1) % 3 else [])

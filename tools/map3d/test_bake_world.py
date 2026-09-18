@@ -13,6 +13,7 @@ import bake_world as bw  # noqa: E402
 def test_load_rules_reads_the_table():
     rules = bw.load_rules(os.path.join(bw.ROOT, "data", "map3d_bake.csv"))
     assert rules["sea_y_m"] == 5.0 and rules["coast_supersample"] == 4.0
+    assert rules["river_over_sea_m"] == 0.3
     assert rules["far_color_sand"].startswith("#")   # a colour stays text
 
 

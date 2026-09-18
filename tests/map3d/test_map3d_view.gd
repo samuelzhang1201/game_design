@@ -21,6 +21,14 @@ func before_all() -> void:
 	root.free()
 
 
+## Tests that write rivers.json beside the fixture scene leave nothing
+## behind even when an assert fails before their own cleanup line (final
+## review, owner 2026-09-18).
+func after_each() -> void:
+	if FileAccess.file_exists("user://rivers.json"):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path("user://rivers.json"))
+
+
 func _view(path: String = FIXTURE) -> Map3DView:
 	var v := Map3DView.create(Game.data, path)
 	v.size = Vector2(800, 450)
@@ -464,7 +472,6 @@ func test_rivers_beside_the_scene_become_the_rivers_layer() -> void:
 	var mi := v.viewport().get_node_or_null("Rivers") as MeshInstance3D
 	assert_not_null(mi)
 	assert_true("Rivers" in v.layer_names())
-	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://rivers.json"))
 
 
 func test_the_builds_sea_wears_the_banded_water() -> void:
@@ -532,4 +539,3 @@ func test_the_rivers_colours_go_in_raw() -> void:
 		assert_eq(mat.get_shader_parameter(key), Game.data.bal("map3d_river_" + key), key + " is data")
 	assert_eq(mat.get_shader_parameter("lod_far_m"), Game.data.bal("map3d_sea_ripple_lod_far_m"),
 		"one LOD for both waters")
-	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://rivers.json"))
