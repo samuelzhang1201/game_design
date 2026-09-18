@@ -308,7 +308,7 @@ map_town_halo_fade_px,6.0,"SETTLEMENT EARTH HALO: km over which the worked groun
 map_town_earth_strength,0.75,"SETTLEMENT EARTH HALO: how far the worked ground goes toward town_earth at its centre (0 = off)"
 map3d_fov_deg,45.0,"3D MAP (owner 2026-09-18): the rig camera's vertical field of view"
 map3d_zoom_min_m,800.0,"3D MAP: the closest the rig camera comes to its target, in metres (owner 2026-09-18: 800 m — a village and its fields; was 2500)"
-map3d_zoom_max_m,110000.0,"3D MAP: the farthest — the whole 128 km realm in view"
+map3d_zoom_max_m,80000.0,"3D MAP (owner 2026-09-18: the whole island just fills the view — landmass edge to edge with a small margin of sea; was 110000, shot at 60/70/80/90 km and picked by look, window 1920x1080): the farthest zoom"
 map3d_zoom_start_m,24000.0,"3D MAP: the distance the view opens at, framed on the player's capital"
 map3d_zoom_factor,1.15,"3D MAP: each wheel notch multiplies or divides the distance by this"
 map3d_pinch_zoom_gain,1.6,"3D MAP (owner 2026-09-18): a trackpad pinch's ratio is bent by this around 1.0 — the 2D map's map_pinch_zoom_gain for the 3D rig"
