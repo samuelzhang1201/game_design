@@ -1,32 +1,40 @@
-"""SPIKE: bake the beria pack into Terrain3D import maps at campaign scale
+"""Bake a map pack into Terrain3D import maps at campaign scale
 (owner 2026-09-18: 50 m per pack px, a 128 x 46 km world, vertex every 20 m).
 
-Writes tools/map3d/bake/:
+Writes assets/map3d/<map>/bake/:
   height.r32    float32 metres, row-major, padded onto whole regions
   control.r32   float32 carrying Terrain3D control bits (base/overlay/blend)
   color.rgba8   Terrain3D colour map: sRGB multiplier on the ground + roughness
   world.json    sizes, vertex spacing, world origin of pack px (0,0)
 Every rule lives here as a constant; build_terrain.gd only imports.
-  python3 tools/map3d/bake_world.py
+  python3 tools/map3d/bake_world.py [--map ID]   (default: data/maps.csv is_default)
 
 HEIGHT does NOT read world_relief.png: its synthesized detail was tuned for
 the 2D canvas (16 px wavelength, 22 height units), which at 50 m/px is a
 660 m bump every 800 m — the "blanket of bubbles". The land is the pack's
 own cell heights, smoothed, plus ridges made for this scale.
 """
+import argparse
 import csv
 import json
 import os
+import sys
 
 import numpy as np
 from PIL import Image
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-PACK = os.path.join(ROOT, "assets", "maps", "beria")
-CELLS = os.path.join(ROOT, "data", "maps", "beria", "geography", "cells.csv")
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+from packs import default_pack  # noqa: E402
+
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--map", default="")
+MAP = _ap.parse_args().map or default_pack()
+PACK = os.path.join(ROOT, "assets", "maps", MAP)
+CELLS = os.path.join(ROOT, "data", "maps", MAP, "geography", "cells.csv")
 TEX = os.path.join(ROOT, "assets", "map3d", "textures")
-OUT = os.path.join(ROOT, "assets", "map3d", "beria", "bake")
-SEED = 954159497         # the pack's own seed: a look, never simulation
+OUT = os.path.join(ROOT, "assets", "map3d", MAP, "bake")
+SEED = 954159497         # a look, never simulation: the same for every pack
 
 M_PER_PX = 50.0          # world metres per pack px
 VERTEX_M = 20.0          # Terrain3D vertex_spacing

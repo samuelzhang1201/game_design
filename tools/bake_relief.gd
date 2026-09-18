@@ -16,7 +16,7 @@ extends SceneTree
 ## re-run this after changing any of them or re-importing the pack.
 ## No autoloads needed:
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-##     -s tools/bake_relief.gd -- --map beria
+##     -s tools/bake_relief.gd -- [--map ID]  (default: data/maps.csv is_default)
 ## The resolutions are data: map_relief_scale for the height field and
 ## map_biome_weights_scale for the weight maps, each with its own blur.
 ## A tool, not simulation: it reads the clock to report its own run time.
@@ -25,7 +25,7 @@ const BIOMES := 16
 
 
 func _init() -> void:
-	var map := "beria"
+	var map := DataRepository.default_pack_id()
 	var args := OS.get_cmdline_user_args()
 	for i in range(args.size() - 1):
 		if args[i] == "--map":

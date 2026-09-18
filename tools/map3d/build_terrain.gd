@@ -1,7 +1,7 @@
 @tool
 extends RefCounted
-## The beria pack as a Terrain3D landscape at CAMPAIGN scale (owner: 50 m per
-## pack px, a 128 x 46 km world); the game shows it in Map3DView (the 3D MAP
+## A map pack as a Terrain3D landscape at CAMPAIGN scale (owner: 50 m per
+## pack px: beria is a 128 x 46 km world); the game shows it in Map3DView (the 3D MAP
 ## tab). Build it headless, no editor:
 ##   python3 tools/map3d/bake_world.py      heights + control → bake/
 ##   Godot --headless --path . -s tools/map3d/build_world.gd
@@ -12,10 +12,9 @@ extends RefCounted
 ## The root carries `map3d_world` metadata (scale, origin, canvas, sea level):
 ## Map3DView reads it rather than the git-ignored, .gdignored bake/.
 
-const MAP := "beria"
-const ROOT := "res://assets/map3d/beria"
 const TEX := "res://assets/map3d/textures"
-const BAKE := "res://assets/map3d/beria/bake"
+## The pack to build (build_world.gd's --map); "" is data/maps.csv's default.
+static var map_id := ""
 const SEA_Y := 5.0               # m: the water plane, just over the waterline
 
 # [key, metres per tile repeat, detiling rotation]; order is bake_world.py's
@@ -62,8 +61,21 @@ const SHADER_PARAMS := {
 }
 
 
+static func map() -> String:
+	return map_id if map_id != "" else DataRepository.default_pack_id()
+
+
+## Where the built scene, its assets and region data go.
+static func root() -> String:
+	return "res://assets/map3d/%s" % map()
+
+
+static func bake() -> String:
+	return root() + "/bake"
+
+
 static func world_info() -> Dictionary:
-	return JSON.parse_string(FileAccess.get_file_as_string(BAKE + "/world.json"))
+	return JSON.parse_string(FileAccess.get_file_as_string(bake() + "/world.json"))
 
 
 ## World XZ of a pack pixel.
@@ -97,8 +109,8 @@ static func import_into(terrain: Terrain3D) -> String:
 		tex_list.append(ta)
 	var assets := Terrain3DAssets.new()
 	assets.texture_list = tex_list
-	ResourceSaver.save(assets, ROOT + "/terrain_assets.tres")
-	terrain.assets = load(ROOT + "/terrain_assets.tres")
+	ResourceSaver.save(assets, root() + "/terrain_assets.tres")
+	terrain.assets = load(root() + "/terrain_assets.tres")
 	terrain.material.auto_shader = false
 	for key: String in SHADER_PARAMS:
 		terrain.material.set_shader_param(key, SHADER_PARAMS[key])
@@ -106,24 +118,24 @@ static func import_into(terrain: Terrain3D) -> String:
 	var images: Array[Image] = []
 	images.resize(Terrain3DRegion.TYPE_MAX)
 	images[Terrain3DRegion.TYPE_HEIGHT] = Image.create_from_data(fw, fh, false, Image.FORMAT_RF,
-		FileAccess.get_file_as_bytes(BAKE + "/height.r32"))
+		FileAccess.get_file_as_bytes(bake() + "/height.r32"))
 	images[Terrain3DRegion.TYPE_CONTROL] = Image.create_from_data(fw, fh, false, Image.FORMAT_RF,
-		FileAccess.get_file_as_bytes(BAKE + "/control.r32"))
+		FileAccess.get_file_as_bytes(bake() + "/control.r32"))
 	images[Terrain3DRegion.TYPE_COLOR] = Image.create_from_data(fw, fh, false, Image.FORMAT_RGBA8,
-		FileAccess.get_file_as_bytes(BAKE + "/color.rgba8"))
+		FileAccess.get_file_as_bytes(bake() + "/color.rgba8"))
 
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ROOT + "/terrain"))
-	for f in DirAccess.get_files_at(ROOT + "/terrain"):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(ROOT + "/terrain/" + f))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(root() + "/terrain"))
+	for f in DirAccess.get_files_at(root() + "/terrain"):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(root() + "/terrain/" + f))
 	terrain.vertex_spacing = float(world["vertex_m"])
 	if terrain.region_size != int(world["region_size"]):
 		terrain.change_region_size(int(world["region_size"]))
-	terrain.data_directory = ROOT + "/terrain"
+	terrain.data_directory = root() + "/terrain"
 	for region in terrain.data.get_regions_active():
 		terrain.data.remove_region(region, false)
 	var corner: Array = world["import_corner"]
 	terrain.data.import_images(images, Vector3(corner[0], 0.0, corner[1]), 0.0, 1.0)
-	terrain.data.save_directory(ROOT + "/terrain")
+	terrain.data.save_directory(root() + "/terrain")
 
 	return "imported %dx%d vertices at %.0f m in %d ms, %d regions" % [
 		fw, fh, terrain.vertex_spacing, Time.get_ticks_msec() - began,
@@ -133,7 +145,7 @@ static func import_into(terrain: Terrain3D) -> String:
 ## The kingdom the pack binds to the player_realm slot (realm_bindings.csv,
 ## CLAUDE.md invariant 5: never a kingdom's name in code).
 static func player_realm() -> String:
-	var f := FileAccess.open("res://data/maps/%s/realm_bindings.csv" % MAP, FileAccess.READ)
+	var f := FileAccess.open("res://data/maps/%s/realm_bindings.csv" % map(), FileAccess.READ)
 	var header := f.get_csv_line()
 	while not f.eof_reached():
 		var row := f.get_csv_line()
@@ -145,13 +157,13 @@ static func player_realm() -> String:
 ## World XZ of the player realm's capital, for the near cameras.
 static func capital_xz(world: Dictionary) -> Vector2:
 	var capital := ""
-	var f := FileAccess.open("res://data/maps/%s/political/kingdoms.csv" % MAP, FileAccess.READ)
+	var f := FileAccess.open("res://data/maps/%s/political/kingdoms.csv" % map(), FileAccess.READ)
 	var header := f.get_csv_line()
 	while not f.eof_reached():
 		var row := f.get_csv_line()
 		if row.size() >= header.size() and row[header.find("kingdom_code")] == player_realm():
 			capital = row[header.find("capital_burg")]
-	f = FileAccess.open("res://data/maps/%s/political/burgs.csv" % MAP, FileAccess.READ)
+	f = FileAccess.open("res://data/maps/%s/political/burgs.csv" % map(), FileAccess.READ)
 	header = f.get_csv_line()
 	while not f.eof_reached():
 		var row := f.get_csv_line()
@@ -165,7 +177,7 @@ static func build_scene() -> String:
 	var world := world_info()
 	var span := Vector2(world["pack_px"][0], world["pack_px"][1]) * float(world["m_per_px"])
 	var root := Node3D.new()
-	root.name = "BeriaTerrain"
+	root.name = "Terrain_%s" % map()
 	root.set_meta("map3d_world", {"m_per_px": float(world["m_per_px"]),
 		"pack_origin": world["pack_origin"], "pack_px": world["pack_px"], "sea_y": SEA_Y})
 	var terrain := Terrain3D.new()
@@ -238,7 +250,7 @@ static func build_scene() -> String:
 
 	var packed := PackedScene.new()
 	packed.pack(root)
-	var err := ResourceSaver.save(packed, ROOT + "/world.tscn")
+	var err := ResourceSaver.save(packed, root() + "/world.tscn")
 	root.free()
 	return "scene err=%d, capital at %s" % [err, capital]
 

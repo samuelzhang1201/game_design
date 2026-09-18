@@ -11,7 +11,7 @@
     python3 assets/flux/install_map_art.py buildings  # H-xx -> assets/icons/bld_<code>.png (slots and the build menu)
     python3 assets/flux/install_map_art.py goods_icons  # G-xx colour -> assets/goods/colour/ (the manor card's output rows)
     python3 assets/flux/install_map_art.py compass    # I-73 -> assets/ui/compass.png
-    python3 assets/flux/install_map_art.py arms       # A-xxx -> assets/arms/beria/<key>.png (house and kingdom arms)
+    python3 assets/flux/install_map_art.py arms       # A-xxx -> assets/arms/<pack>/<key>.png (ARMS_PACK=id, default maps.csv) (house and kingdom arms)
     python3 assets/flux/install_map_art.py army_paintings  # B-37..42 -> assets/armies/paint/<piece>.png (army card)
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
@@ -31,12 +31,15 @@ Stdlib only.
 from __future__ import annotations
 
 import csv
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
+from packs import default_pack  # noqa: E402
 sys.path.insert(0, str(HERE))
 from post import decode_png, encode_png, INK_BLUE_MAX, TRIM_ALPHA  # noqa: E402
 
@@ -518,7 +521,6 @@ def install_goods_icons(size: int = GOODS_ICON_PX) -> int:
 ## (generate.py names them ..._<style>_r640_...); ARMS_SEEDS picks a re-rolled
 ## seed per art id, else the newest render wins.
 ARMS_PX = 256
-ARMS_PACK = "beria"
 ARMS_STYLE = "arms_matte"  # owner 2026-09-15, after sampling arms / arms_painted / arms_matte
 ARMS_GROUND_TOLERANCE = 40
 ARMS_SEEDS: dict = {"A-084": "954159498", "A-107": "954159498"}  # re-rolled 2026-09-15: a banner read as a field, a bordure did not show
@@ -558,8 +560,10 @@ def flood_ground(w: int, h: int, ch: int, px: bytes, tolerance: int = ARMS_GROUN
 
 
 def install_arms(size: int = ARMS_PX) -> int:
+    """Into assets/arms/<pack>/: the pack is ARMS_PACK in the environment,
+    else data/maps.csv's default."""
     rows = list(csv.DictReader((HERE / "arms_art.csv").open(encoding="utf-8")))
-    dest = ROOT / "assets" / "arms" / ARMS_PACK
+    dest = ROOT / "assets" / "arms" / (os.environ.get("ARMS_PACK", "") or default_pack())
     dest.mkdir(parents=True, exist_ok=True)
     done = 0
     for r in rows:

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Coats of arms prompts from the map pack (owner 2026-09-15).
 
-    python3 assets/flux/arms_prompts.py            # the beria pack
-    python3 assets/flux/arms_prompts.py --pack beria
+    python3 assets/flux/arms_prompts.py            # data/maps.csv's default pack
+    python3 assets/flux/arms_prompts.py --pack ID
 
 Every house and every kingdom of the pack wears the Azgaar coat of arms of
 its seat, but the arms are GENERATED through the local Flux (klein 4B,
@@ -35,6 +35,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
+from packs import default_pack  # noqa: E402
 
 TINCTURES = {
     "argent": "silver white", "or": "gold yellow", "gules": "red", "azure": "blue",
@@ -390,9 +392,9 @@ def build(pack: str) -> tuple[list[dict], list[dict]]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--pack", default="beria")
+    ap.add_argument("--pack", default="")
     args = ap.parse_args()
-    prompts, art = build(args.pack)
+    prompts, art = build(args.pack or default_pack())
     with (HERE / "arms_prompts.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["id", "chapter", "dir", "title", "canvas", "width", "height",
                                           "subject", "appearance"])

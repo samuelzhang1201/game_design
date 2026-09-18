@@ -21,7 +21,7 @@ extends SceneTree
 ## keep invented ridges out of real river valleys.
 ##
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-##     -s tools/bake_settlements.gd -- --map beria
+##     -s tools/bake_settlements.gd -- [--map ID]  (default: data/maps.csv is_default)
 ##
 ## The radii come from balance.csv (map_town_halo_*), so re-run after changing
 ## them or re-importing the pack. A tool, not simulation: it reads the clock to
@@ -29,7 +29,7 @@ extends SceneTree
 
 
 func _init() -> void:
-	var map := "beria"
+	var map := DataRepository.default_pack_id()
 	var args := OS.get_cmdline_user_args()
 	for i in range(args.size() - 1):
 		if args[i] == "--map":

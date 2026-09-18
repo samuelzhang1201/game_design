@@ -186,6 +186,10 @@ var realm_bindings: Dictionary = {}
 ## hand-maintained like realm_bindings). Unbound provinces are held by a house
 ## named after their capital town — see MapObjects.house_of.
 var house_bindings: Dictionary = {}
+## arms key -> res:// path of the art it wears (maps/<id>/arms_bindings.csv,
+## optional, hand-maintained): pins a kingdom or a house to a chosen coat of
+## arms, from this pack or any other — HouseArms reads it before its own.
+var arms_bindings: Dictionary = {}
 ## maps/<id>/political/manors.csv: cell_id (int) -> {manor_code, label,
 ## province_code, burg_code, culture_code} — one named manor per land cell,
 ## forged by the importer (ManorNames); maps/<id>/manor_name_overrides.csv
@@ -249,6 +253,18 @@ func _register_table(domain: String, area: String, table: Dictionary) -> void:
 ## Parses a CSV with a header row into an Array of row Dictionaries.
 ## Returns [] and sets last_error if any row is shorter than required_cols
 ## or a file error occurs. Extra columns are kept; empty trailing lines skipped.
+## The default map pack's id straight from data/maps.csv (is_default = 1,
+## else the first row) — for tools that run before any repository loads,
+## so none of them names a pack.
+static func default_pack_id(maps_csv: String = "res://data/maps.csv") -> String:
+	var first := ""
+	for row: Dictionary in parse_csv(maps_csv, ["map_id"]):
+		if first == "":
+			first = String(row["map_id"])
+		if String(row.get("is_default", "")) == "1":
+			return String(row["map_id"])
+	return first
+
 static func parse_csv(path: String, required_cols: Array) -> Array[Dictionary]:
 	last_error = ""
 	var out: Array[Dictionary] = []
@@ -502,6 +518,7 @@ func load_map(id: String) -> bool:
 	coasts.clear()
 	realm_bindings.clear()
 	house_bindings.clear()
+	arms_bindings.clear()
 	manors.clear()
 	manor_by_code.clear()
 	manor_by_label.clear()
@@ -581,6 +598,10 @@ func load_map(id: String) -> bool:
 			func(r: Dictionary) -> void:
 				for pc in String(r["province_codes"]).split("|", false):
 					house_bindings[pc] = String(r["family_name"])):
+		return false
+	if not _load_if_present(dir + "/arms_bindings.csv", ["key", "arms"],
+			func(r: Dictionary) -> void:
+				arms_bindings[String(r["key"])] = HouseArms.arms_path(String(r["arms"]))):
 		return false
 	if not _load_if_present(dir + "/political/manors.csv",
 			["cell_id", "manor_code", "label", "province_code", "burg_code", "culture_code"],

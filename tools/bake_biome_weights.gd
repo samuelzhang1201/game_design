@@ -8,13 +8,13 @@ extends SceneTree
 ## Re-run after changing map_biome_blur_px or re-importing the pack.
 ## No autoloads needed:
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-##     -s tools/bake_biome_weights.gd -- --map beria [--scale 4]
+##     -s tools/bake_biome_weights.gd -- [--map ID]  (default: data/maps.csv is_default) [--scale 4]
 ## A tool, not simulation: it reads the clock to report its own run time.
 
 const BIOMES := 16  # 13..15 are the high ground (MapIndex.raise_high_ground)
 
 func _init() -> void:
-	var map := "beria"
+	var map := DataRepository.default_pack_id()
 	var scale := 4
 	var args := OS.get_cmdline_user_args()
 	for i in range(args.size() - 1):

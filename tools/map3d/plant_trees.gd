@@ -9,8 +9,7 @@ extends RefCounted
 ## a tree with the probability of its pixel's forest share; the species comes
 ## from which forest biome it is. Seeded, so a re-run plants the same wood.
 
-const MAP := "beria"
-const ROOT := "res://assets/map3d/beria"
+const BuildTerrain := preload("res://tools/map3d/build_terrain.gd")
 const TREES := "res://assets/map3d/trees"
 const SEED := 20260917
 const SPACING := 3.5            # m between candidates
@@ -49,7 +48,7 @@ static func plant(terrain: Terrain3D) -> String:
 	var began := Time.get_ticks_msec()
 	var manifest: Dictionary = JSON.parse_string(
 		FileAccess.get_file_as_string(TREES + "/trees.json"))
-	var dir := "res://assets/maps/%s" % MAP
+	var dir := "res://assets/maps/%s" % BuildTerrain.map()
 	var weights: Array[Image] = []
 	for k in 4:
 		var wi := Image.load_from_file(ProjectSettings.globalize_path(dir + "/world_biome_weights_%d.png" % k))
@@ -91,7 +90,7 @@ static func plant(terrain: Terrain3D) -> String:
 		meshes.append(ma)
 		species_cards[spec[1]].append(c)
 	terrain.assets.mesh_list = meshes
-	ResourceSaver.save(terrain.assets, ROOT + "/terrain_assets.tres")
+	ResourceSaver.save(terrain.assets, BuildTerrain.root() + "/terrain_assets.tres")
 
 	# --- candidates ----------------------------------------------------------------
 	var rng := RandomNumberGenerator.new()
@@ -165,7 +164,7 @@ static func plant(terrain: Terrain3D) -> String:
 		if xf.is_empty():
 			continue
 		terrain.instancer.add_transforms(c, xf, per_mesh[c]["colors"], true)
-	terrain.data.save_directory(ROOT + "/terrain")
+	terrain.data.save_directory(BuildTerrain.root() + "/terrain")
 	var counts := []
 	for c in CARDS.size():
 		counts.append("%s=%d" % [CARDS[c][0], per_mesh[c]["xforms"].size()])

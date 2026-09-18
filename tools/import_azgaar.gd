@@ -59,15 +59,10 @@ extends SceneTree
 ## Usage:
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
 ##     --script res://tools/import_azgaar.gd \\
-##       [-- --map-id ID --json PATH]
+##       [-- --map-id ID --json PATH]   (default id: data/maps.csv is_default)
 
 const MAPS := "res://assets/maps"
 const DATA := "res://data"
-## Which pack this import writes. Authored content no longer names Azgaar
-## kingdoms directly — it names realm slots, and the pack's
-## realm_bindings.csv binds each slot to one of that map's kingdoms — so the
-## check below is against those bindings, per map, not a global list.
-const DEFAULT_MAP_ID := "beria"
 ## A route endpoint this close (native px) to a burg is "at" that burg.
 const SNAP_RADIUS := 3.0
 ## Title words for routes Azgaar left nameless (most trails and sea routes).
@@ -417,7 +412,11 @@ func _bound_kingdoms(path: String) -> Array[String]:
 func _run() -> int:
 	# --- input selection --------------------------------------------------
 	var json_path := ""
-	var map_id := DEFAULT_MAP_ID
+	# Which pack this import writes: --map-id, else data/maps.csv's default
+	# (a re-import). Authored content names realm slots, never Azgaar
+	# kingdoms, and the pack's realm_bindings.csv binds each slot to one of
+	# that map's kingdoms — so the check below is per map, not a global list.
+	var map_id := DataRepository.default_pack_id()
 	var user_args := OS.get_cmdline_user_args()
 	var i := 0
 	while i < user_args.size() - 1:
