@@ -18,7 +18,11 @@ extends Node
 ## print alongside it so a fat tail is still visible. WORST and the exit
 ## code are the MEDIAN of the "all on" rows only. The 3D view's own GPU
 ## time and the window's total GPU time (also medians) separate "the
-## Map3DView is expensive" from "something else on screen is."
+## Map3DView is expensive" from "something else on screen is" — but only
+## on a RenderingDevice-backed method (Forward+/Mobile): this project runs
+## GL Compatibility (see CLAUDE.md's Stack), which has no GPU timestamp
+## queries, so "gpu view" / "gpu root" read a flat 0.00 ms here. That's
+## expected on this renderer, not a broken measurement.
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- --size 3024x1964
 
 const FRAMES := 120
@@ -123,6 +127,8 @@ func _median(xs: PackedFloat64Array) -> float:
 
 
 func _percentile(xs: PackedFloat64Array, p: float) -> float:
+	if xs.is_empty():
+		return 0.0
 	var sorted := xs.duplicate()
 	sorted.sort()
 	var i := clampi(int(round(p * float(sorted.size() - 1))), 0, sorted.size() - 1)
