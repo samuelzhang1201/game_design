@@ -175,3 +175,74 @@ func test_the_hud_draws_marks_and_legend_without_error() -> void:
 	_frame_on(v, Elevation.landmarks(Game.data)[0], 20000.0)
 	await wait_process_frames(3)
 	assert_gt(v.landmark_marks().size(), 0)
+
+## A burg on screen now: its code, its centre and its dot's radius, design px.
+func _burgs_on_screen(v: Map3DView) -> Array:
+	var out: Array = []
+	var s := v._render_scale()
+	var cam := v.camera()
+	for code: String in Game.data.burgs:
+		var burg: Dictionary = Game.data.burgs[code]
+		var spec: Dictionary = Game.data.map3d_settlements[String(burg.get("group", ""))]
+		var bxz := v._burg_xz(burg)
+		var world := Vector3(bxz.x, v._height_at(bxz), bxz.y)
+		if cam.is_position_behind(world) or cam.global_position.distance_to(world) \
+				>= float(spec["max_view_m"]) * Game.data.bal("map3d_ring_fade_start"):
+			continue
+		out.append({"code": code, "c": cam.unproject_position(world) / s,
+			"r": Map3DView.marker_px(spec) * 0.5})
+	return out
+
+## The point of `rect` nearest `c`.
+func _nearest_in(rect: Rect2, c: Vector2) -> Vector2:
+	return Vector2(clampf(c.x, rect.position.x, rect.end.x), clampf(c.y, rect.position.y, rect.end.y))
+
+## A click on a settlement's dot opens the settlement even where a landmark's
+## grown pick rect reaches over it (Task 6 review: the grown rect stole it).
+func test_a_click_on_a_settlement_dot_beside_a_mark_opens_the_settlement() -> void:
+	var v := _view()
+	v.set_manor_theme("heights")
+	var grow := Game.data.bal("map3d_pick_px") * 0.5
+	var found := {}
+	for m: Dictionary in Elevation.landmarks(Game.data):
+		for dist: float in [Game.data.bal("map3d_zoom_min_m") * 2.0, 6000.0, 15000.0]:
+			_frame_on(v, m, dist)
+			var burgs := _burgs_on_screen(v)
+			for mk: Dictionary in v.landmark_marks():
+				var grown := (mk["rect"] as Rect2).grow(grow)
+				for b: Dictionary in burgs:
+					var q := _nearest_in(grown, b["c"])
+					var at: Vector2 = (b["c"] as Vector2).move_toward(q, float(b["r"]) * 0.8)
+					if grown.has_point(at) and (b["c"] as Vector2).distance_to(at) < float(b["r"]):
+						found = {"at": at, "code": b["code"]}
+						break
+				if not found.is_empty():
+					break
+			if not found.is_empty():
+				break
+		if not found.is_empty():
+			break
+	assert_false(found.is_empty(), "somewhere a mark's grown rect reaches a settlement's dot")
+	if found.is_empty():
+		return
+	var picked := v.pick_at(found["at"])
+	assert_eq(String(picked.get("kind", "")), "burg")
+
+## Landmarks keep off the legend's box, bottom-left.
+func test_marks_keep_off_the_legend() -> void:
+	var v := _view()
+	v.set_manor_theme("heights")
+	var box := v.heat_legend_rect()
+	var top: Dictionary = Elevation.landmarks(Game.data)[0]
+	_frame_on(v, top, 20000.0)
+	# Pan until the top landmark's ground point sits in the legend's box.
+	var cell := int(top["cell"])
+	var xz := Map3DGeometry.pack_to_world(v._meta, top["pos"])
+	var ground := Vector3(xz.x, v._height_at(xz), xz.y)
+	for i in 16:
+		var p := v.camera().unproject_position(ground) / v._render_scale()
+		v._pan_by((box.get_center() - p) * 0.8)
+	var p := v.camera().unproject_position(ground) / v._render_scale()
+	assert_true(box.grow(4.0).has_point(p), "the mark's point lies in the legend (got %s, box %s)" % [p, box])
+	for mk: Dictionary in v.landmark_marks():
+		assert_false((mk["rect"] as Rect2).intersects(box), "mark %d over the legend" % int(mk["cell"]))

@@ -1608,7 +1608,8 @@ func draw_armies(ci: CanvasItem) -> void:
 
 ## The high and low points shown now, in design px, biggest first: those
 ## whose lod the camera's distance allows, before the camera and on screen,
-## none overlapping a settlement dot, a regiment counter or a bigger mark.
+## none overlapping a settlement dot, a regiment counter, the legend or a
+## bigger mark.
 ## [] off HEIGHTS.
 func landmark_marks() -> Array:
 	if not _heat or _camera == null or not _loaded:
@@ -1626,6 +1627,7 @@ func landmark_marks() -> Array:
 	var taken: Array = _settlement_marks()
 	for a: Dictionary in army_markers():
 		taken.append(a["rect"])
+	taken.append(heat_legend_rect())
 	var out: Array = []
 	for m: Dictionary in Elevation.landmarks(_repo):
 		if int(m["lod"]) > max_lod:
@@ -1850,12 +1852,7 @@ func pick_at(pos: Vector2) -> Dictionary:
 	for b: Dictionary in manor_badges():
 		if (b["rect"] as Rect2).has_point(pos):
 			return {"kind": "burg", "code": String(b["burg"])}
-	# Under HEIGHTS a high or low point, on its mark (spec 2026-09-19-map3d-heights).
-	if _heat:
-		var grow := _repo.bal("map3d_pick_px") * 0.5
-		for mk: Dictionary in landmark_marks():
-			if (mk["rect"] as Rect2).grow(grow).has_point(pos):
-				return {"kind": "landmark", "cell": int(mk["cell"])}
+	var best_dot := 0.0
 	for code: String in _sorted_burgs():
 		var burg: Dictionary = _repo.burgs[code]
 		var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
@@ -1869,8 +1866,23 @@ func pick_at(pos: Vector2) -> Dictionary:
 		if d <= reach and d < best_d and _camera.is_position_behind(world) == false:
 			best_d = d
 			best = code
+			best_dot = (marker_px(spec) * 0.5 + 2.0) * s
+	# Under HEIGHTS a high or low point (spec 2026-09-19-map3d-heights), ranked
+	# against the settlements (Task 7): a click ON a settlement's dot is the
+	# settlement's, a click on a mark is the mark's, then a settlement's reach,
+	# and last the mark's rect grown by half the pick reach.
+	if best != "" and best_d <= best_dot:
+		return {"kind": "burg", "code": best}
+	var marks := landmark_marks() if _heat else []
+	for mk: Dictionary in marks:
+		if (mk["rect"] as Rect2).has_point(pos):
+			return {"kind": "landmark", "cell": int(mk["cell"])}
 	if best != "":
 		return {"kind": "burg", "code": best}
+	var grow := _repo.bal("map3d_pick_px") * 0.5
+	for mk: Dictionary in marks:
+		if (mk["rect"] as Rect2).grow(grow).has_point(pos):
+			return {"kind": "landmark", "cell": int(mk["cell"])}
 	# Under MANORS the land means its MANOR, as on the 2D map.
 	if _theme == "manors":
 		var cell := _cell_at(Map3DGeometry.world_to_pack(_meta, xz))
