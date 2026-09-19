@@ -29,11 +29,15 @@ Compatibility (see the traps below).
 Runtime game code is `scripts/map3d/` — `Map3DGeometry` (pure: pack px ↔
 metres, the camera rig's pose, zoom, tilt, pan, ray to ground),
 `Map3DBorders` (pure: live outlines and seams as draped ribbons,
-`border_line.gdshader` keeping them a constant screen width) and `Map3DView` (the tab's
-view: lazy load, SubViewport rendering only while shown, settlements placed
-from live data by `data/map3d_settlements.csv`) — with tests in
-`tests/map3d/` that use a fixture scene, never the git-ignored build. Camera
-values are `balance.csv` `map3d_*`.
+`border_line.gdshader` keeping them a constant screen width) and `Map3DView`,
+the map panel's view (there is no 3D tab: the 3D map is the default map). It
+is a COORDINATOR over `Map3DContext` — what every piece shares — with one
+script per layer under `scenes/map3d/world_map_3d.tscn` and a rig, input,
+picker, selection and HUD piece beside them: lazy load, the SubViewport
+rendering only while shown, settlements placed from live data by
+`data/map3d_settlements.csv`. Tests are in `tests/map3d/` and use a fixture
+scene, never the git-ignored build. Camera values are `balance.csv`
+`map3d_*`; the look assets are `scenes/map3d/materials/*.tres`.
 
 ## Rebuilding from a clean checkout
 
@@ -216,13 +220,27 @@ military` lights that bottom-bar tab first, so a theme's ground and HUD are
 priced too. The budget is the tier row's `bench_budget_ms`; a WARNING prints
 if `--size` does not match the row's own `bench_size` (the gate is only
 meaningful at the size it names). Exit 0 at or under budget, 3 over it.
+
+**Still or panning** (`--pan`, final review 2026-09-20). Without `--pan` the
+camera stands STILL for the whole row, so everything the view cuts once per
+camera pose — the output badges, the army counters, the kingdom names, the
+landmark marks, the hover pick and the HUD's own redraw — is computed on the
+row's first frame and never again: a still number prices the GPU and the
+clock, not the per-move CPU. `--pan` pans the ground a little EVERY measured
+frame (through the rig's own `pan_by`, the drag's path) and asks for a hover
+pick at a wandering pointer, so all of it is paid per frame as it is while the
+player drags the map; the pan oscillates, so the framing stays where the row
+put it. A run is one or the other, and its rows are labelled `[pan]` (and
+`[manors]` / `[heights]` / `[military]` for a `--layer` run) so one `--out`
+CSV can hold them all.
 **`--out` must land under `tools/map3d/baselines/` (which carries its own
 `.gdignore`) or a scratch path — a bare CSV anywhere else under `res://`
 gets auto-imported as a Translation resource and litters the folder with
 `.import` / `.translation` sidecars, same trap as `data/`'s (see CLAUDE.md).**
 
 Gates, run 2026-09-20 on the dev machine (Apple Silicon, GL Compatibility;
-`tools/map3d/baselines/bench_runs.csv` has the full per-layer breakdown):
+`tools/map3d/baselines/bench_runs.csv` has the full per-layer breakdown).
+**STILL camera** — the GPU and the clock, none of the per-move CPU:
 
 | tier | size | budget | WORST (all on) | WORST (`--layer manors`) | WORST (`--layer heights`) |
 |---|---|---|---|---|---|
@@ -230,9 +248,32 @@ Gates, run 2026-09-20 on the dev machine (Apple Silicon, GL Compatibility;
 | medium | 1920×1080 | 6.00 ms | 2.46 ms | 2.57 ms | 2.49 ms |
 | low | 1920×1080 | 4.00 ms | 1.47 ms | 1.49 ms | 1.47 ms |
 
-All nine gates passed with wide headroom on this machine (an Apple Silicon
-GPU, well above every tier's target hardware), so no tier's CSV row needed
-tuning. As the spec notes (§4): this is the M5 Pro to Iris Xe / low-end APU
+**PANNING** (`--pan`, added in the final review of 2026-09-20 — the same
+machine, later the same day, with the Godot editor open; `high` re-measured
+still at 7.34 ms in that session, so read the pan column against 7.34, not
+against 6.87):
+
+| tier | size | budget | WORST (all on, `--pan`) | WORST (`--layer manors --pan`) |
+|---|---|---|---|---|
+| high | 3024×1964 | 8.00 ms | **9.05 ms — OVER** | **12.30 ms — OVER** |
+| medium | 1920×1080 | 6.00 ms | 3.42 ms | not measured |
+| low | 1920×1080 | 4.00 ms | 2.50 ms | not measured |
+
+**The `high` tier does not clear its 8 ms budget while the map is being
+dragged.** It is reported, not tuned away (the owner decides whether the
+budget, the tier's contents or the per-move work moves): a drag costs ~1.7 ms
+a frame on top of the still figure with no theme up, and ~5 ms with MANORS up
+— the manor edges and the ground tint push the draw calls from 433 to 699,
+and the HUD's own per-move share is ~1.6 ms of it. 110 fps and 81 fps are
+still comfortably playable; what the numbers say is that the 60 fps gate has
+no headroom left at `high` on a machine well above the tier's floor, which the
+still figures had hidden. Memoising the badges and the counters per camera
+pose (the same final review) already took 0.5–1.0 ms a frame off the MANORS
+pan figure (12.81 → 12.30 ms mid, 8.78 → 7.80 ms far).
+
+Every still gate passed with wide headroom on this machine (an Apple Silicon
+GPU, well above every tier's target hardware), so no tier's CSV row was
+tuned. As the spec notes (§4): this is the M5 Pro to Iris Xe / low-end APU
 gap — **one real run on an integrated-GPU machine is recommended before
 shipping**, since a GPU actually AT a tier's floor may not clear its budget
 by the same margin.
@@ -244,7 +285,15 @@ by the same margin.
   shore, coast-edge, beach and river numbers out of `bake_world.py`, but the
   remaining bake constants (ridges, biome mix, far colours) are still in
   `bake_world.py`.
-- Settlements are placeholder rings; no hover tooltip, no kingdom labels, no
-  army counters yet.
+- The `low` tier's `world` column still reads `full`: the optional LITE
+  terrain build (a coarser heightmap and a smaller control map for an
+  integrated GPU, Task 23 of the 2026-09-20 refactor plan) was SKIPPED and
+  never built. Until it exists, `low` differs from `high` only in the render
+  scale, the shadows, the clouds, the mesh and the line steps.
+- **The bench's headline numbers were STILL-camera numbers** until
+  2026-09-20's `--pan` (above), and `high` does not clear its budget while
+  the map is dragged (9.05 ms plain, 12.30 ms under MANORS, against 8.00 ms).
+  Nothing was retuned: the owner decides whether the budget, the tier's
+  contents or the per-move work gives.
 - Compare Compatibility vs Forward+ on the target PC (without trees
   Compatibility measured 5.0 vs 8.4 ms at 1440p).

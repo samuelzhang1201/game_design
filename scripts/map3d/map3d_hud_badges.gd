@@ -4,6 +4,9 @@ extends Map3DHudPiece
 ## — ManorBadges), over the kingdom names.
 
 var _drawn := 0
+## badges()' cut and the pose it was cut for (see there).
+var _cache: Array = []
+var _key: Array = []
 
 
 ## The working manors (MapEconomy.manors) before the camera whose settlement
@@ -13,6 +16,22 @@ var _drawn := 0
 func badges() -> Array:
 	if not bound() or view.manor_theme() != "manors":
 		return []
+	# Asked twice a frame while the pointer moves under MANORS — the HUD's draw
+	# and Map3DPicker.pick_at — so it is cut once per camera pose, exactly as
+	# Map3DHudLandmarks.marks() is (final review 2026-09-20). Same key shape:
+	# the pose, the view's size, the render scale, the layer's own switch and
+	# the date (the ledger's output moves with the month).
+	var st := ctx.state()
+	var key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(),
+		view.manor_theme(), st.tick if st != null else 0, st.day if st != null else 0]
+	if key == _key:
+		return _cache
+	_cache = _cut()
+	_key = key
+	return _cache
+
+
+func _cut() -> Array:
 	var repo := ctx.repo
 	var camera := ctx.camera
 	var s := ctx.viewport_px_scale()

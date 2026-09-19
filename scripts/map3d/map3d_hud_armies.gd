@@ -4,6 +4,9 @@ extends Map3DHudPiece
 ## ArmyCounters), over the badges and the names.
 
 var _drawn := 0
+## markers()' cut and the pose it was cut for (see there).
+var _cache: Array = []
+var _key: Array = []
 
 
 ## A counter's height in design px: map_army_badge_native_px of the map at
@@ -23,6 +26,22 @@ func badge_height() -> float:
 func markers() -> Array:
 	if not bound() or not view.military():
 		return []
+	# Asked up to three times a frame — the HUD's draw, Map3DPicker.pick_at and
+	# Map3DHudLandmarks' clearance — so it is cut once per camera pose, exactly
+	# as Map3DHudLandmarks.marks() is (final review 2026-09-20). Same key shape:
+	# the pose, the view's size, the render scale, the layer's own switch and
+	# the date (regiments march and are settled by the month).
+	var st := ctx.state()
+	var key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(),
+		view.military(), st.tick if st != null else 0, st.day if st != null else 0]
+	if key == _key:
+		return _cache
+	_cache = _cut()
+	_key = key
+	return _cache
+
+
+func _cut() -> Array:
 	var repo := ctx.repo
 	var camera := ctx.camera
 	var s := ctx.viewport_px_scale()

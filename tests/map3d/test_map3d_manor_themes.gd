@@ -246,6 +246,22 @@ func test_the_hud_draws_the_badges() -> void:
 	assert_gt(v.drawn_badge_count(), 0)
 
 
+## The badges are cut once per camera pose (final review 2026-09-20): the HUD's
+## draw and Map3DPicker.pick_at both ask for them every frame the pointer moves,
+## so a second call at the same pose is the SAME array, and a moved camera a new
+## one — Map3DHudLandmarks.marks()' rule.
+func test_badges_are_cut_once_per_pose() -> void:
+	var v := _view()
+	v.set_manor_theme("manors")
+	var cell := _busiest_manor()
+	_look_at_manor(v, cell, 12000.0)
+	var a := v.manor_badges()
+	assert_gt(a.size(), 0)
+	assert_true(is_same(a, v.manor_badges()), "the same pose, the same cut")
+	_look_at_manor(v, cell, 24000.0)
+	assert_false(is_same(a, v.manor_badges()), "a new pose, a new cut")
+
+
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()

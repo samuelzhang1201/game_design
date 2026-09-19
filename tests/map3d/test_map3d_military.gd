@@ -153,6 +153,22 @@ func test_military_stays_on_the_3d_map() -> void:
 	Game.data.balance["map3d_default"] = 0.0
 
 
+## The counters are cut once per camera pose (final review 2026-09-20): the
+## HUD's draw, Map3DPicker.pick_at and the landmarks' clearance all ask for them
+## every frame the pointer moves, so a second call at the same pose is the SAME
+## array, and a moved camera a new one — Map3DHudLandmarks.marks()' rule.
+func test_counters_are_cut_once_per_pose() -> void:
+	var v := _view()
+	v.set_military(true)
+	var r := _first_regiment()
+	_look_at_regiment(v, r, 20000.0)
+	var a := v.army_markers()
+	assert_gt(a.size(), 0)
+	assert_true(is_same(a, v.army_markers()), "the same pose, the same cut")
+	_look_at_regiment(v, r, 40000.0)
+	assert_false(is_same(a, v.army_markers()), "a new pose, a new cut")
+
+
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()

@@ -24,14 +24,45 @@ extends Node
 ## queries, so "gpu view" / "gpu root" read a flat 0.00 ms here. That's
 ## expected on this renderer, not a broken measurement.
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- --size 3024x1964
-## --layer heights|manors|military lights that bottom-bar tab first (as
-## tools/snapshot_screen.gd takes it), so a theme's HUD and ground are priced.
+##
+## Flags:
+##   --size WxH          the window to measure at; pass the tier's own
+##                       `bench_size` or the gate means nothing (a WARNING prints).
+##   --quality TIER      force a graphics tier (Map3DQuality.forced) BEFORE the
+##                       view's first load, so the whole tier is worn. Default high.
+##   --render-scale X    override just that tier's render_scale on top of it.
+##   --out FILE          append every row (size, tier, label, median/mean/p95 ms,
+##                       draw calls, primitives) to a CSV. It must land under
+##                       tools/map3d/baselines/ or a scratch path — a bare CSV
+##                       elsewhere under res:// is auto-imported as a Translation.
+##   --layer heights|manors|military   lights that bottom-bar tab first (as
+##                       tools/snapshot_screen.gd takes it), so a theme's HUD and
+##                       ground are priced.
+##   --pan               measure a MOVING view instead of a still one (below).
+##
+## STILL vs PAN (final review 2026-09-20). Without --pan the camera stands
+## still for the whole row, so everything the view cuts once per camera pose —
+## the output badges, the army counters, the kingdom names, the landmark marks,
+## the hover pick and the HUD's own redraw — is computed on the row's first
+## frame and never again: a still number prices the GPU and the clock, not the
+## per-move CPU. `--pan` pans the ground a little EVERY measured frame (through
+## the rig's own pan_by, the drag's path) and asks for a hover pick at a
+## wandering pointer, so every one of those is paid per frame, as it is while
+## the player drags the map. The pan OSCILLATES (PAN_PERIOD frames each way),
+## so the framing — and therefore what is drawn — stays where the row put it.
+## Pan rows carry " [pan]" in their label; a run is one or the other. A
+## --layer run tags its rows with the layer too ("[manors]"), so one --out CSV
+## can hold every run without two of them reading alike.
 
 const FRAMES := 120
 const WARM := 30
 const BUDGET_MS := 8.0
 const STOPS := [["near", "map3d_zoom_min_m"], ["mid", "map3d_zoom_start_m"],
 	["far", "map3d_zoom_max_m"]]
+## --pan: screen px of ground moved per frame, and how many frames each way
+## before it turns back (so 120 frames end roughly where they began).
+const PAN_PX := 8.0
+const PAN_PERIOD := 15
 ## Kept below Calendar.DAYS_PER_TICK (30), with room to spare — see the
 ## GameRoot.hold_clock_before_month_end note at the top of this file.
 const DAY_CEILING := 25
@@ -44,6 +75,11 @@ var _rows: Array = []
 ## was not given. Recorded per row so --out rows from different tiers never
 ## get confused under one "current" label.
 var _tier := "high"
+## --pan: every measured frame pans the view and asks for a hover pick.
+var _pan := false
+## --layer's bottom-bar tab ("" for none), tagged onto every row's label.
+var _layer := ""
+var _rig: Map3DCameraRig
 
 
 func _ready() -> void:
@@ -54,6 +90,7 @@ func _ready() -> void:
 	if at >= 0 and at + 1 < args.size():
 		var wh := args[at + 1].split("x")
 		size = Vector2i(int(wh[0]), int(wh[1]))
+	_pan = args.has("--pan")
 	var oi := args.find("--out")
 	if oi >= 0 and oi + 1 < args.size():
 		_out = args[oi + 1]
@@ -76,6 +113,7 @@ func _ready() -> void:
 	var li := args.find("--layer")
 	if li >= 0 and li + 1 < args.size():
 		root._on_bottom_tab(args[li + 1].to_upper())
+		_layer = args[li + 1].to_lower()
 		for i in 4:
 			await get_tree().process_frame
 	Game.set_clock_speed(4)
@@ -86,6 +124,7 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 	_view = v
+	_rig = v.component("rig") as Map3DCameraRig
 	var overrides := {}
 	var ri := args.find("--render-scale")
 	if ri >= 0 and ri + 1 < args.size():
@@ -97,9 +136,10 @@ func _ready() -> void:
 		print("WARNING: tier %s is gated at %s, not %dx%d" % [tier, String(row.get("bench_size", "")), size.x, size.y])
 	RenderingServer.viewport_set_measure_render_time(v.viewport().get_viewport_rid(), true)
 	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
-	print("renderer %s / %s, window %s, tier %s render_scale %.2f" % [RenderingServer.get_current_rendering_method(),
+	print("renderer %s / %s, window %s, tier %s render_scale %.2f, camera %s" % [RenderingServer.get_current_rendering_method(),
 		RenderingServer.get_current_rendering_driver_name(), get_window().size, tier,
-		Map3DQuality.num(Map3DQuality.merged(Game.data, tier, overrides), "render_scale", 1.0)])
+		Map3DQuality.num(Map3DQuality.merged(Game.data, tier, overrides), "render_scale", 1.0),
+		"PANNING (per-move CPU priced)" if _pan else "still (per-move CPU NOT priced)"])
 	var worst := 0.0
 	for stop: Array in STOPS:
 		v.look_at_home(Game.data.bal(String(stop[1])))
@@ -115,7 +155,8 @@ func _ready() -> void:
 			if layer == "Shadows":
 				restore = Map3DQuality.num(row, "sun_shadows", 1.0) != 0.0
 			v.set_layer_visible(layer, restore)
-	print("WORST %.2f ms (%.0f fps), budget %.2f ms (%s)" % [worst, 1000.0 / worst, budget, tier])
+	print("WORST %.2f ms (%.0f fps), budget %.2f ms (%s, %s)" % [worst, 1000.0 / worst, budget,
+		tier, "pan" if _pan else "still"])
 	_write_rows()
 	Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
 	get_tree().quit(0 if worst <= budget else 3)
@@ -126,10 +167,12 @@ func _ready() -> void:
 ## total), so the row can report a distribution, not just its average.
 ## Returns the MEDIAN frame time in ms — the bench's "how expensive is this"
 ## number (see the top-of-file note on why median).
-func _measure(label: String) -> float:
+func _measure(plain_label: String) -> float:
+	var label := plain_label + ("  [pan]" if _pan else "") + ("  [%s]" % _layer if _layer != "" else "")
 	for i in WARM:
 		await get_tree().process_frame
 		_root.hold_clock_before_month_end(DAY_CEILING)
+		_stir(i)
 	var view_rid := _view.viewport().get_viewport_rid()
 	var root_rid := get_viewport().get_viewport_rid()
 	var frame_ms := PackedFloat64Array()
@@ -141,6 +184,7 @@ func _measure(label: String) -> float:
 	for i in FRAMES:
 		await get_tree().process_frame
 		_root.hold_clock_before_month_end(DAY_CEILING)
+		_stir(i)
 		var t_now := Time.get_ticks_usec()
 		frame_ms.append(float(t_now - t_prev) / 1000.0)
 		t_prev = t_now
@@ -157,6 +201,22 @@ func _measure(label: String) -> float:
 	_rows.append([str(get_window().size.x) + "x" + str(get_window().size.y), _tier, label,
 		median, _mean(frame_ms), _percentile(frame_ms, 0.95), calls, prims])
 	return median
+
+
+## --pan's per-frame work, through the view's own public seams: the rig's
+## pan_by (what a left-drag calls) and request_hover (what a pointer move
+## calls, picked once a frame in Map3DView._process). Nothing when --pan is
+## off, so a still run is byte-for-byte the run it always was.
+func _stir(i: int) -> void:
+	if not _pan or _view == null:
+		return
+	if _rig != null:
+		var dir := 1.0 if int(i / PAN_PERIOD) % 2 == 0 else -1.0
+		_rig.pan_by(Vector2(PAN_PX, PAN_PX * 0.4) * dir)
+	# a pointer wandering over the view, so the hover picks something new
+	var t := float(i) * 0.11
+	_view.request_hover(Vector2(_view.size.x * (0.5 + 0.25 * cos(t)),
+		_view.size.y * (0.5 + 0.25 * sin(t))))
 
 
 func _mean(xs: PackedFloat64Array) -> float:
