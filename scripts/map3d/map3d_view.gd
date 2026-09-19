@@ -69,8 +69,6 @@ const ROAD_SHADER := preload("res://scripts/map3d/road_line.gdshader")
 const ROAD_TEXTURE := "res://assets/map3d/textures/rocky_trail_02"
 const BRIDGE_TEXTURE := "res://assets/map3d/textures/medieval_blocks_03"
 const RING_SHADER := preload("res://scripts/map3d/settlement_ring.gdshader")
-const CLOUD_SHADER := preload("res://scripts/map3d/cloud_deck.gdshader")
-const CLOUD_SHADOW_SHADER := preload("res://scripts/map3d/cloud_shadow.gdshader")
 ## The selection ring never thins by distance (fix round 1, owner 2026-09-18):
 ## whatever the player clicked stays marked regardless of zoom.
 const SELECTED_RING_ALWAYS_M := 1000000.0
@@ -186,16 +184,7 @@ var _rpress_pos := Vector2.ZERO
 ## Whether the right button has turned the view since it went down: a turn
 ## that comes back to its start is still not a click.
 var _rdragged := false
-var _cloud_field: Map3DCloudField
-var _cloud_mm: MultiMesh
-var _cloud_params: Dictionary
-var _cloud_depth_ratio := 0.6
-var _ground_cache := Rect2()
-var _ground_cache_target := Vector2.ZERO
-var _ground_cache_distance := -1.0
-var _ground_cache_yaw := 0.0
-var _ground_cache_size := Vector2.ZERO
-var _ground_cache_valid := false
+var _clouds: Map3DLayerClouds
 
 
 static func scene_path_for(map_id: String) -> String:
@@ -398,7 +387,10 @@ func _load() -> void:
 	var sun := _world.get_node_or_null("Sun") as DirectionalLight3D
 	if sun != null:
 		Map3DEnvironment.apply_sun_look(_repo, sun)
-	_build_clouds()
+	_clouds = Map3DLayerClouds.new()
+	_clouds.name = "Clouds"
+	_viewport.add_child(_clouds)
+	_clouds.build(_ctx)
 	_lines = Map3DLayerLines.new()
 	_lines.name = "Lines"
 	_viewport.add_child(_lines)
@@ -512,111 +504,6 @@ func _place_markers() -> void:
 ## The ripple normal map both waters share (Map3DContext.water_normals).
 func water_normals() -> Texture2D:
 	return _ctx.water_normals() if _ctx != null else null
-
-
-## A deck of drifting cloud quads (owner 2026-09-18, Task 9) high over the
-## land, plus a shadow-only twin sharing its MultiMesh so a cloud's shape and
-## its shadow always match. `Clouds` (+ child `Shadows`) sit directly under
-## the SubViewport so layer_names()/set_layer_visible() find them the way
-## every other layer is found — hiding `Clouds` hides the twin with it,
-## since a Node3D's visibility is inherited by its children.
-func _build_clouds() -> void:
-	_cloud_field = Map3DCloudField.new(int(_repo.bal("map3d_cloud_seed")))
-	_cloud_params = {"max": int(_repo.bal("map3d_cloud_max")),
-		"size_min": _repo.bal("map3d_cloud_size_min_m"), "size_max": _repo.bal("map3d_cloud_size_max_m"),
-		"speed_m_s": _repo.bal("map3d_cloud_speed_m_s"), "wind_deg": _repo.bal("map3d_cloud_wind_deg"),
-		"fade_s": _repo.bal("map3d_cloud_fade_s"), "interval_s": _repo.bal("map3d_cloud_interval_s"),
-		"min_gap_m": _repo.bal("map3d_cloud_min_gap_m")}
-	_cloud_depth_ratio = _repo.bal("map3d_cloud_depth_ratio")
-	var quad := PlaneMesh.new()
-	quad.size = Vector2.ONE
-	_cloud_mm = MultiMesh.new()
-	_cloud_mm.transform_format = MultiMesh.TRANSFORM_3D
-	_cloud_mm.use_colors = true
-	_cloud_mm.mesh = quad
-	_cloud_mm.instance_count = int(_cloud_params["max"])
-	_cloud_mm.visible_instance_count = 0
-	var shape := CloudLayer.cloud_texture(int(_repo.bal("map3d_cloud_seed")))
-	var deck := MultiMeshInstance3D.new()
-	deck.name = "Clouds"
-	deck.multimesh = _cloud_mm
-	deck.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	deck.material_override = _cloud_material(shape)
-	deck.extra_cull_margin = 16384.0
-	_viewport.add_child(deck)
-	var twin := MultiMeshInstance3D.new()
-	twin.name = "Shadows"
-	twin.multimesh = _cloud_mm
-	twin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
-	twin.material_override = _cloud_shadow_material(shape)
-	twin.extra_cull_margin = 16384.0
-	deck.add_child(twin)
-
-
-func _cloud_material(shape: Texture2D) -> ShaderMaterial:
-	var mat := ShaderMaterial.new()
-	mat.shader = CLOUD_SHADER
-	mat.render_priority = PRIORITY_CLOUDS
-	mat.set_shader_parameter("shape", shape)
-	mat.set_shader_parameter("opacity", _repo.bal("map3d_cloud_alpha"))
-	mat.set_shader_parameter("near_fade_m", _repo.bal("map3d_cloud_near_fade_m"))
-	mat.set_shader_parameter("near_fade_start_ratio", _repo.bal("map3d_cloud_near_fade_start_ratio"))
-	mat.set_shader_parameter("emission_share", _repo.bal("map3d_cloud_emission_share"))
-	return mat
-
-
-## The shadow-only twin's OWN shader (cloud_shadow.gdshader — see its note
-## and cloud_deck.gdshader's: the two must stay separate files under this
-## renderer, not one shader gated by a `shadow_pass` uniform).
-func _cloud_shadow_material(shape: Texture2D) -> ShaderMaterial:
-	var mat := ShaderMaterial.new()
-	mat.shader = CLOUD_SHADOW_SHADER
-	mat.set_shader_parameter("shape", shape)
-	mat.set_shader_parameter("shadow_cut", _repo.bal("map3d_cloud_shadow_cut"))
-	return mat
-
-
-## The ground rect the camera sees (its four corners' ground hits), wide
-## enough for the sky when a corner looks past the horizon — cached on the
-## camera pose (fix round 1, owner 2026-09-18: 4 raycasts every _process
-## frame regardless of whether the camera moved), invalidated only when
-## target, distance, yaw or the view's own size changes. Behaviour is
-## identical to recomputing every frame; only the cost changes.
-func _visible_ground() -> Rect2:
-	if _ground_cache_valid and _ground_cache_target == _target and _ground_cache_distance == _distance \
-			and _ground_cache_yaw == _yaw and _ground_cache_size == size:
-		return _ground_cache
-	var r := Rect2(_target, Vector2.ZERO)
-	for f: Vector2 in [Vector2.ZERO, Vector2(1, 0), Vector2(0, 1), Vector2.ONE]:
-		var hit: Variant = ground_at(size * f)
-		r = r.expand(Vector2((hit as Vector3).x, (hit as Vector3).z) if hit != null
-			else _target + Vector2(_distance, _distance) * (f * 2.0 - Vector2.ONE) * 2.0)
-	_ground_cache = r
-	_ground_cache_target = _target
-	_ground_cache_distance = _distance
-	_ground_cache_yaw = _yaw
-	_ground_cache_size = size
-	_ground_cache_valid = true
-	return r
-
-
-## Steps the cloud field and pushes it into the MultiMesh — called from
-## _process every frame the view exists, even unhovered, so the sky keeps
-## drifting and fading while the player looks elsewhere.
-func _step_clouds(delta: float) -> void:
-	if _cloud_field == null:
-		return
-	_cloud_field.step(delta, Game.clock_speed > 0, Game.clock_speed, _visible_ground(), _cloud_params)
-	var h := _repo.bal("map3d_cloud_height_m")
-	var n := _cloud_field.clouds.size()
-	_cloud_mm.visible_instance_count = n
-	for i in n:
-		var c: Dictionary = _cloud_field.clouds[i]
-		var s := float(c["size"])
-		var basis := Basis(Vector3.UP, float(c["rot"])).scaled(Vector3(s, 1.0, s * _cloud_depth_ratio))
-		var p := c["pos"] as Vector2
-		_cloud_mm.set_instance_transform(i, Transform3D(basis, Vector3(p.x, h, p.y)))
-		_cloud_mm.set_instance_color(i, Color(1, 1, 1, float(c["life"]) * _cloud_field.fade))
 
 
 func sea_material() -> ShaderMaterial:
@@ -1238,7 +1125,8 @@ func _process(delta: float) -> void:
 	if _border_clock >= _repo.bal("map3d_border_refresh_s"):
 		_border_clock = 0.0
 		refresh_borders()
-	_step_clouds(delta)
+	if _clouds != null:
+		_clouds.step(delta)
 	if _hover_pending:
 		_hover_pending = false
 		hover_pick(pick_at(_hover_pos), _hover_pos)
@@ -1984,7 +1872,7 @@ func camera() -> Camera3D:
 	return _camera
 
 func cloud_count() -> int:
-	return _cloud_mm.visible_instance_count if _cloud_mm != null else 0
+	return _clouds.count() if _clouds != null else 0
 
 func target() -> Vector2:
 	return _target

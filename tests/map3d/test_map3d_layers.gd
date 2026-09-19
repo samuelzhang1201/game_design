@@ -85,3 +85,19 @@ func test_the_suns_shadow_look_is_data() -> void:
 	var sun := suns[0] as DirectionalLight3D
 	assert_almost_eq(sun.shadow_opacity, Game.data.bal("map3d_sun_shadow_opacity"), 0.0001)
 	assert_almost_eq(sun.shadow_blur, Game.data.bal("map3d_sun_shadow_blur"), 0.0001)
+
+
+func test_the_clouds_are_their_own_layer_with_a_shadow_twin() -> void:
+	var v := _view()
+	var clouds := v.viewport().get_node("Clouds")
+	assert_true(clouds is Map3DLayerClouds)
+	var twin := clouds.get_node("Shadows") as MultiMeshInstance3D
+	assert_eq(twin.multimesh, (clouds as MultiMeshInstance3D).multimesh, "one shape, one shadow")
+	assert_eq(twin.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY)
+	var deck := (clouds as MultiMeshInstance3D).material_override as ShaderMaterial
+	var shade := twin.material_override as ShaderMaterial
+	assert_ne(deck.shader, shade.shader, "two shader files (the Compatibility trap)")
+	Game.set_clock_speed(1)
+	(clouds as Map3DLayerClouds).step(0.1)
+	assert_eq((clouds as Map3DLayerClouds).count(), v.cloud_count())
+	Game.set_clock_speed(0)
