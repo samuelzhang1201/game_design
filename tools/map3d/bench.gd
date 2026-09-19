@@ -24,6 +24,8 @@ extends Node
 ## queries, so "gpu view" / "gpu root" read a flat 0.00 ms here. That's
 ## expected on this renderer, not a broken measurement.
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- --size 3024x1964
+## --layer heights|manors|military lights that bottom-bar tab first (as
+## tools/snapshot_screen.gd takes it), so a theme's HUD and ground are priced.
 
 const FRAMES := 120
 const WARM := 30
@@ -58,6 +60,11 @@ func _ready() -> void:
 		await get_tree().process_frame
 	root._switch_to(GameRoot.State.COURT)
 	root.current_screen.enter_court(null)
+	var li := args.find("--layer")
+	if li >= 0 and li + 1 < args.size():
+		root._on_bottom_tab(args[li + 1].to_upper())
+		for i in 4:
+			await get_tree().process_frame
 	Game.set_clock_speed(4)
 	var v: Map3DView = root.current_screen.map3d_view()
 	if v == null or not v.is_loaded():

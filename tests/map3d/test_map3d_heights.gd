@@ -281,3 +281,18 @@ func test_the_legend_yields_to_a_ruler_across_it() -> void:
 	assert_true(v.heat_legend_yields())
 	v.ruler_on = false
 	assert_false(v.heat_legend_yields(), "the tab off, the legend back")
+
+## The marks are cut once per camera pose (Task 7 bench): asked again at the
+## same pose they are the same cut; a moved camera cuts them anew.
+func test_marks_are_cut_once_per_pose() -> void:
+	var v := _view()
+	v.set_manor_theme("heights")
+	_frame_on(v, Elevation.landmarks(Game.data)[0], 20000.0)
+	var a := v.landmark_marks()
+	assert_true(is_same(a, v.landmark_marks()), "the same pose, the same cut")
+	_frame_on(v, Elevation.landmarks(Game.data)[0], 40000.0)
+	assert_false(is_same(a, v.landmark_marks()), "a new pose, a new cut")
+	v.set_military(true)
+	var b := v.landmark_marks()
+	v.set_military(false)
+	assert_false(is_same(b, v.landmark_marks()), "the counters toggled, a new cut")

@@ -180,6 +180,9 @@ var _drawn_badges := 0
 var _military := false
 var _selected_army := ""
 var _drawn_armies := 0
+## landmark_marks' cut and the pose it was cut for (see there).
+var _landmark_cache: Array = []
+var _landmark_key: Array = []
 var _north_t := -1.0
 var _north_from := 0.0
 var _press_on_hud := false
@@ -1614,6 +1617,21 @@ func draw_armies(ci: CanvasItem) -> void:
 func landmark_marks() -> Array:
 	if not _heat or _camera == null or not _loaded:
 		return []
+	# ~1.5 ms a call (the settlement dots dominate) and asked up to three
+	# times a frame — HUD draw, hover, click — so it is cut once per camera
+	# pose (Task 7 bench): the pose, the view's size, whether the counters
+	# are shown and the date (regiments) key it.
+	var st := _state()
+	var key := [_camera.global_transform, size, _render_scale(), _military,
+		st.tick if st != null else 0, st.day if st != null else 0]
+	if key == _landmark_key:
+		return _landmark_cache
+	_landmark_cache = _cut_landmark_marks()
+	_landmark_key = key
+	return _landmark_cache
+
+
+func _cut_landmark_marks() -> Array:
 	var max_lod := 2
 	if _distance >= _repo.bal("map3d_landmark_lod_far_view_m"):
 		max_lod = 0
