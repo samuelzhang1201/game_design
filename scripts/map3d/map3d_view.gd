@@ -192,18 +192,14 @@ func deactivate() -> void:
 		_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	set_process(false)
 
-## Put the built world under WorldSlot and bind the authored layers to it.
-## A build it cannot open leaves the notice saying why and what to run.
+## Put the built world (Map3DWorldCache's kept one when free) under WorldSlot and
+## bind the layers to it; a build it cannot open leaves the notice saying why.
 func _load() -> void:
-	var st := Map3DWorldLoader.status(_scene_path)
-	var state := String(st["state"])
-	if state != "ok" and state != "legacy":
-		_notice.text = Map3DWorldLoader.notice_text(state, _repo.map_id)
+	var got: Variant = Map3DWorldCache.lend(_scene_path)
+	if got is String:
+		_notice.text = Map3DWorldLoader.notice_text(got, _repo.map_id)
 		return
-	_world = Map3DWorldLoader.instance(_scene_path)
-	if _world == null:
-		_notice.text = Map3DWorldLoader.notice_text("bad", _repo.map_id)
-		return
+	_world = got
 	_meta = _world.get_meta("map3d_world")
 	_ctx = Map3DContext.new(_repo, _meta, _world)
 	_ctx.viewport = _viewport
@@ -243,6 +239,18 @@ func _load() -> void:
 	_refresh_theme()  # a theme lit before the first load
 	_apply_quality()
 
+## Hand the world to Map3DWorldCache ahead of a queue_free (GameRoot's swap).
+func release_world() -> void:
+	if _world != null:
+		deactivate()
+		_loaded = false
+		Map3DWorldCache.give_back(_scene_path, _world)
+		_world = null
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE and _world != null:
+		Map3DWorldCache.give_back(_scene_path, _world)
+
 ## Wear a graphics tier (Map3DQuality; `overrides` over single values — the
 ## bench's --render-scale). All of it applies now but the line, road and river
 ## steps, which wait for the layers' next build (Ruling 6).
@@ -252,7 +260,6 @@ func set_quality(tier: String, overrides: Dictionary = {}) -> void:
 	_apply_quality()
 
 func quality_tier() -> String: return _tier
-
 func _apply_quality() -> void:
 	if not _loaded:
 		return
@@ -263,16 +270,11 @@ func _apply_quality() -> void:
 	_hud.apply_quality(_ctx.quality)
 
 func context() -> Map3DContext: return _ctx
-
 func _home() -> Vector2: return _ctx.home()
-
 func _burg_xz(burg: Dictionary) -> Vector2: return _ctx.to_world(Vector2(float(burg["x"]), float(burg["y"])))
-
 func _height_at(xz: Vector2) -> float: return _ctx.height_at(xz) if _ctx != null else float(_meta.get("sea_y", 0.0))
-
 func water_normals() -> Texture2D: return _ctx.water_normals() if _ctx != null else null
 func sea_material() -> ShaderMaterial: return _sea.material() if _loaded else null
-
 ## Test seam: the Rivers layer's material (the palette colours go in raw).
 func river_material() -> ShaderMaterial: return _rivers.material() if _loaded else null
 static func marker_px(spec: Dictionary) -> float: return Map3DLayerSettlements.marker_px(spec)
@@ -380,7 +382,6 @@ func ruler_reading() -> String: return MapRuler.reading(_ruler.length() * map_un
 ## The 3D map MEASURES LIKE THE 2D MAP (owner 2026-09-18; Map3DGeometry).
 func map_units_per_metre() -> float: return Map3DGeometry.map_units_per_metre(_repo.map_info, _meta)
 func map_unit() -> String: return Map3DGeometry.map_unit(_repo.map_info, _meta)
-
 func ruler() -> MapRuler: return _ruler
 
 # --- the HUD's pieces (Map3DHud: one per job) -------------------------------------

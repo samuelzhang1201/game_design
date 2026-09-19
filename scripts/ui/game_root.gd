@@ -57,6 +57,15 @@ var _map3d_scene := -1
 ## stretch. The OS window may never shrink below it, or panels would clip.
 const MIN_WINDOW_SIZE := Vector2i(1280, 720)
 
+## The kept 3D world (Map3DWorldCache) outlives the screens, not the game:
+## the showing screen's world is handed back first so the clear frees it
+## (a world still lent would be kept by its view's own teardown, and leak).
+func _exit_tree() -> void:
+	if current_screen != null and current_screen.has_method("map3d_view") \
+			and current_screen.map3d_view() != null:
+		(current_screen.map3d_view() as Map3DView).release_world()
+	Map3DWorldCache.clear()
+
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# Fit-any-screen guarantee: fullscreen scales the whole UI to the monitor
@@ -539,6 +548,10 @@ func _on_menu_restart() -> void:
 
 func _switch_to(new_state: State) -> void:
 	if current_screen != null:
+		# the old screen dies at the frame's end, the new one loads now: its
+		# 3D world goes back to Map3DWorldCache first, to be re-parented
+		if current_screen.has_method("map3d_view") and current_screen.map3d_view() != null:
+			(current_screen.map3d_view() as Map3DView).release_world()
 		current_screen.queue_free()
 		current_screen = null
 	state = new_state

@@ -21,7 +21,7 @@ fi
 # which is tee's exit code, not Godot's — a red suite would exit 0.
 code=0
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-  -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gpre_run_script=res://tests/pre_run.gd -gexit > "$TEST_OUTPUT" 2>&1 || code=$?
+  -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gpre_run_script=res://tests/pre_run.gd -gpost_run_script=res://tests/post_run.gd -gexit > "$TEST_OUTPUT" 2>&1 || code=$?
 cat "$TEST_OUTPUT"
 
 # GUT silently SKIPS a test script that fails to parse ("Ignoring script ...

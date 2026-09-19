@@ -51,7 +51,10 @@ func prepare(scene_path: String) -> void:
 		mat.set("shader_override_enabled", false)
 		push_warning("Map3DView: Terrain3D's shader has no line to tint — the themes leave the ground plain")
 		return
-	shader.code = patched
+	# A kept world (Map3DWorldCache) arrives already patched: its material is
+	# this view's own, so the shader is left as it is — no second rewrite.
+	if not Map3DGroundTint.is_patched(shader.code):
+		shader.code = patched
 	_tint_mat = mat
 	var repo := ctx.repo
 	var origin: Array = ctx.meta.get("pack_origin", [0.0, 0.0])
