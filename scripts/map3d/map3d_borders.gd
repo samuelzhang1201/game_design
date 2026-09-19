@@ -13,13 +13,17 @@ extends RefCounted
 
 
 ## Mesh arrays for `lines` (PackedVector2Array, world XZ), each a separate
-## strip, lying on `height_fn(xz)`. [] when there is nothing to draw.
-static func ribbon_arrays(lines: Array, height_fn: Callable) -> Array:
+## strip, lying on `height_fn(xz)` — or, where `heights` gives line i a
+## PackedFloat32Array, on its value at each point that is not NAN (a road's
+## bridge deck, Map3DBridges). [] when there is nothing to draw.
+static func ribbon_arrays(lines: Array, height_fn: Callable, heights: Array = []) -> Array:
 	var verts := PackedVector3Array()
 	var sides := PackedVector3Array()
 	var uvs := PackedVector2Array()
 	var idx := PackedInt32Array()
-	for line: PackedVector2Array in lines:
+	for li in lines.size():
+		var line: PackedVector2Array = lines[li]
+		var own: PackedFloat32Array = heights[li] if li < heights.size() else PackedFloat32Array()
 		var n := line.size()
 		if n < 2:
 			continue
@@ -29,7 +33,8 @@ static func ribbon_arrays(lines: Array, height_fn: Callable) -> Array:
 			if i > 0:
 				arc += line[i - 1].distance_to(line[i])
 			var side := _side(line, i)
-			var p := Vector3(line[i].x, float(height_fn.call(line[i])), line[i].y)
+			var y := own[i] if i < own.size() and not is_nan(own[i]) else float(height_fn.call(line[i]))
+			var p := Vector3(line[i].x, y, line[i].y)
 			verts.append(p)
 			verts.append(p)
 			sides.append(Vector3(side.x, 0.0, side.y))

@@ -63,6 +63,12 @@ signal country_hovered(kingdom_code: String)
 const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
 const NOTICE_TEXT := "The 3D map has not been built for this map.\nRun tools/map3d (see tools/map3d/README.md)."
 const BORDER_SHADER := preload("res://scripts/map3d/border_line.gdshader")
+const ROAD_SHADER := preload("res://scripts/map3d/road_line.gdshader")
+## The road surface and the bridges' stone (Poly Haven, packed by
+## tools/map3d/pack_textures.py into the git-ignored textures folder): a
+## checkout without them draws flat roads and untextured stone.
+const ROAD_TEXTURE := "res://assets/map3d/textures/rocky_trail_02"
+const BRIDGE_TEXTURE := "res://assets/map3d/textures/medieval_blocks_03"
 const RING_SHADER := preload("res://scripts/map3d/settlement_ring.gdshader")
 const RIVER_SHADER := preload("res://scripts/map3d/water_river.gdshader")
 const SEA_SHADER := preload("res://scripts/map3d/water_sea.gdshader")
@@ -116,6 +122,11 @@ var _ring_mats: Array[ShaderMaterial] = []
 var _selected_ring: MultiMeshInstance3D
 var _water_normals: NoiseTexture2D
 var _river_mat: ShaderMaterial
+## The river courses as drawn (Map3DRivers.parse, cleared of the terrain):
+## the bridges look for them.
+var _river_courses: Array = []
+## Every bridge built (Map3DBridges.plan's, each with its deck_w).
+var _bridge_list: Array = []
 var _sea_mat: ShaderMaterial
 var _meta: Dictionary = {}
 var _bounds := Rect2()
@@ -514,6 +525,7 @@ func _build_rivers() -> void:
 	var courses := Map3DRivers.parse(FileAccess.get_file_as_string(path),
 		_repo.bal("map3d_river_split_rise_m"))
 	courses = Map3DRivers.clear_terrain(courses, _height_at, _repo.bal("map3d_river_terrain_clear_m"))
+	_river_courses = courses
 	var arrays := Map3DRivers.ribbon_arrays(courses, _repo.bal("map3d_river_end_fade_m"),
 		_repo.bal("map3d_river_mesh_step_m"))
 	if arrays.is_empty():
@@ -963,19 +975,146 @@ func lut_color(id: int) -> Color:
 
 
 ## The roads and trails (owner 2026-09-18): the pack's land routes, smoothed
-## as the 2D map smooths them, draped on the relief as solid ribbons in a
-## worn-sand colour (terrain_palette map3d_road / map3d_trail) with a soft
-## shoulder. Routes never move, so
-## they are built once; sea lanes are not roads and are left out.
+## as the 2D map smooths them, draped on the relief. Since 2026-09-19 (owner:
+## a packed earth-and-stone road) each is drawn at its REAL width in the
+## rocky_trail_02 texture up close, fading to the worn-sand palette colour
+## (terrain_palette map3d_road / map3d_trail) far away, where a screen-px
+## floor keeps it a track (road_line.gdshader); and wherever one crosses a
+## river it runs over a stone BRIDGE (Map3DBridges). Routes never move, so
+## they are built once, after the rivers; sea lanes are not roads.
 func _build_roads() -> void:
-	var step := _repo.bal("map3d_line_step_m")
+	var step := _repo.bal("map3d_road_step_m")
+	var all_bridges: Array = []
 	for group: String in ["roads", "trails"]:
 		var key := "road" if group == "roads" else "trail"
 		var colour := MapTerrain.palette_color(_repo, "map3d_" + key, MapTerrain.FALLBACK)
 		colour.a = _repo.bal("map3d_%s_alpha" % key)
-		_set_lines(group.capitalize(), Map3DBorders.route_lines(_repo, _meta, group, step),
-			colour, colour, "map3d_%s_width_px" % key, "", "", PRIORITY_ROADS,
-			_repo.bal("map3d_road_edge_soft"))
+		var width_m := _repo.bal("map3d_%s_width_m" % key)
+		var plan := Map3DBridges.plan(Map3DBorders.route_lines(_repo, _meta, group, step),
+			_river_courses, _height_at, bridge_rules())
+		_set_road(group.capitalize(), plan["lines"], plan["heights"], colour,
+			"map3d_%s_width_px" % key, width_m)
+		var deck_w := width_m + _repo.bal("map3d_bridge_extra_w_m")
+		for b: Dictionary in plan["bridges"]:
+			b["deck_w"] = deck_w
+		all_bridges.append_array(plan["bridges"])
+	_build_bridges(all_bridges)
+
+
+## balance.csv map3d_bridge_* as Map3DBridges' rules.
+func bridge_rules() -> Dictionary:
+	var rules: Dictionary = {}
+	for key: String in ["abut_m", "clear_m", "clear_per_width", "hump_m", "min_sin", "merge_m",
+			"deck_step_m", "deck_m", "parapet_h_m", "parapet_w_m", "arch_max_m", "pier_m",
+			"end_over_water_m"]:
+		rules[key] = _repo.bal("map3d_bridge_" + key)
+	return rules
+
+
+## Test seam: every bridge built, [{a, b, ya, yb, crown, water_y, width, deck_w}].
+func bridges() -> Array:
+	return _bridge_list
+
+
+## A packed Poly Haven pair (<base>_alb_ht / <base>_nrm_rgh), or [] when the
+## textures folder has not been built.
+static func _texture_pair(base: String) -> Array:
+	if not ResourceLoader.exists(base + "_alb_ht.png") or not ResourceLoader.exists(base + "_nrm_rgh.png"):
+		return []
+	return [load(base + "_alb_ht.png"), load(base + "_nrm_rgh.png")]
+
+
+## One road layer under Lines/<name>, replacing any before: the ribbons of
+## `lines` on the ground (or on a bridge deck where `heights` says so).
+func _set_road(line_name: String, lines: Array, heights: Array, colour: Color,
+		width_key: String, width_m: float) -> void:
+	var old := _lines.get_node_or_null(line_name)
+	if old != null:
+		_lines.remove_child(old)
+		old.queue_free()
+	var arrays := Map3DBorders.ribbon_arrays(lines, _height_at, heights)
+	if arrays.is_empty():
+		return
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var mat := ShaderMaterial.new()
+	mat.shader = ROAD_SHADER
+	mat.render_priority = PRIORITY_ROADS
+	mat.set_shader_parameter("colour", colour)
+	mat.set_shader_parameter("width_m", width_m)
+	mat.set_shader_parameter("edge_soft", _repo.bal("map3d_road_edge_soft"))
+	mat.set_shader_parameter("fray", _repo.bal("map3d_road_fray"))
+	mat.set_shader_parameter("tile_m", _repo.bal("map3d_road_tile_m"))
+	mat.set_shader_parameter("near_mpp", _repo.bal("map3d_road_near_mpp"))
+	mat.set_shader_parameter("far_mpp", _repo.bal("map3d_road_far_mpp"))
+	var gain := _repo.bal("map3d_road_texture_gain")
+	var tint := MapTerrain.palette_color(_repo, "map3d_road_surface", Color.WHITE)
+	mat.set_shader_parameter("surface_tint", Vector3(tint.r, tint.g, tint.b) * gain)
+	var pair := _texture_pair(ROAD_TEXTURE)
+	mat.set_shader_parameter("has_surface", not pair.is_empty())
+	if not pair.is_empty():
+		mat.set_shader_parameter("surface", pair[0])
+		mat.set_shader_parameter("surface_nrm", pair[1])
+	mat.set_meta("width_key", width_key)
+	mesh.surface_set_material(0, mat)
+	var mi := MeshInstance3D.new()
+	mi.name = line_name
+	mi.mesh = mesh
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 16384.0
+	_lines.add_child(mi)
+	_update_line_scale()
+
+
+## Every bridge as ONE mesh in the medieval_blocks_03 stone, lit and casting
+## shadows like the ground; replaces any before.
+func _build_bridges(list: Array) -> void:
+	_bridge_list = list
+	var old := _viewport.get_node_or_null("Bridges") if _viewport != null else null
+	if old != null:
+		_viewport.remove_child(old)
+		old.queue_free()
+	if list.is_empty() or _viewport == null:
+		return
+	var rules := bridge_rules()
+	var tile := _repo.bal("map3d_bridge_tile_m")
+	var mesh := ArrayMesh.new()
+	# one deck width per group, so one mesh per width
+	var by_w: Dictionary = {}
+	for b: Dictionary in list:
+		var w := float(b["deck_w"])
+		if not by_w.has(w):
+			by_w[w] = []
+		(by_w[w] as Array).append(b)
+	for w: float in by_w:
+		var arrays := Map3DBridges.mesh_arrays(by_w[w], w, rules, tile)
+		if not arrays.is_empty():
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	if mesh.get_surface_count() == 0:
+		return
+	var mat := StandardMaterial3D.new()
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.albedo_color = MapTerrain.palette_color(_repo, "map3d_bridge", Color("#8A7F70"))
+	mat.roughness = 0.9
+	# Fade out far away, per pixel (the mesh spans the world, so a
+	# visibility range, measured to its centre, would hide every bridge):
+	# a min distance past the max inverts Godot's distance fade.
+	var far := _repo.bal("map3d_bridge_max_view_m")
+	mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
+	mat.distance_fade_min_distance = far
+	mat.distance_fade_max_distance = far * 0.8
+	var pair := _texture_pair(BRIDGE_TEXTURE)
+	if not pair.is_empty():
+		mat.albedo_texture = pair[0]
+		mat.normal_enabled = true
+		mat.normal_texture = pair[1]
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	for i in mesh.get_surface_count():
+		mesh.surface_set_material(i, mat)
+	var mi := MeshInstance3D.new()
+	mi.name = "Bridges"
+	mi.mesh = mesh
+	_viewport.add_child(mi)
 
 
 ## One MeshInstance3D of ribbons under Lines/<name>, replacing any before.

@@ -60,8 +60,9 @@ CLIFF, GRASS, LEAVES, DIRT, ROCKY, SOIL, SAND, FOREST, SNOW = range(9)
 NT = 9
 TEXTURE_KEYS = ["cliff", "leafy_grass", "dry_decay_leaves", "dirt_floor", "rocky_trail",
                 "excavated_soil_wall", "sand_03", "leafy_grass",
-                # the snow line (owner 2026-09-19): Poly Haven snow_field_aerial
-                "snow_field_aerial"]
+                # the snow line (owner 2026-09-19): Poly Haven snow_02 since the
+                # same day (snow_field_aerial read blue-grey and blotchy)
+                "snow_02"]
 BIOME_MIX = {
     1: {SAND: 1.0},
     2: {DIRT: 0.8, ROCKY: 0.2},
@@ -87,8 +88,8 @@ SLOPE_CLIFF = (0.93, 0.99)
 # texture's own mean colour, in linear light, and can only darken.
 FAR_COLOR = {
     CLIFF: "#7E7B77", GRASS: "#6F7A40", LEAVES: "#4E4A2C", DIRT: "#9A7A55",
-    ROCKY: "#7C7264", SOIL: "#5E4A30", FOREST: "#3A5026", SNOW: "#E4E8EC",
-}  # SAND's is data/map3d_bake.csv far_color_sand
+    ROCKY: "#7C7264", SOIL: "#5E4A30", FOREST: "#3A5026",
+}  # SAND's and SNOW's are data/map3d_bake.csv far_color_sand / far_color_snow
 MACRO_WAVE_M = 9000.0    # large patches of lighter and darker country
 # (their depth and the green-yellow drift are data/map3d_bake.csv macro_*)
 
@@ -939,12 +940,15 @@ def main(argv=None):
     for t, key in enumerate(TEXTURE_KEYS):
         a = np.asarray(Image.open(os.path.join(TEX, f"{key}_alb_ht.png")).convert("RGB").resize((64, 64)), dtype=np.float64) / 255.0
         mean_lin = srgb_to_lin(a).reshape(-1, 3).mean(0)
-        far = rules["far_color_sand"] if t == SAND else FAR_COLOR[t]
+        far = rules["far_color_sand"] if t == SAND else rules["far_color_snow"] if t == SNOW else FAR_COLOR[t]
         mult_lin[t] = np.clip(srgb_to_lin(hex_rgb(far)) / np.maximum(mean_lin, 1e-4), 0, 1)
     color_lin = np.zeros((vh, vw, 3), dtype=np.float32)
     wsum = np.maximum(tw.sum(axis=2), 1e-6)
     for t in range(NT):
         color_lin += (tw[..., t] / wsum)[..., None] * mult_lin[t].astype(np.float32)
+    # Snow wears none of the country's drift (2026-09-19): the macro hue, the
+    # manors' own shades and the fields turned the snow line mint-green.
+    snow_share = (tw[..., SNOW] / wsum).astype(np.float32)
     del tw, wsum
     macro = value_noise(rng, vw, vh, MACRO_WAVE_M / VERTEX_M)
     hue = value_noise(rng, vw, vh, MACRO_WAVE_M * 0.7 / VERTEX_M)
@@ -955,6 +959,8 @@ def main(argv=None):
     # the patchwork's fields, hedges, villages and each manor's own shade
     color_lin *= tint
     del tint
+    color_lin += (mult_lin[SNOW].astype(np.float32) - color_lin) * snow_share[..., None]
+    del snow_share
     del wet
     rgba = np.empty((vh, vw, 4), dtype=np.uint8)
     for y0 in range(0, vh, 512):

@@ -35,11 +35,16 @@ values are `balance.csv` `map3d_*`.
 
 1. **Sources** — download the Poly Haven sets named in `pack_textures.py`
    into `assets/map3d/sources/polyhaven/` and Rock023 into
-   `assets/map3d/sources/ambientcg/`. The snow line's `snow_field_aerial`
-   (owner 2026-09-19) came through the Blender MCP's Poly Haven download
-   (the add-on's `blendermcp_use_polyhaven` on), its packed JPEGs written to
-   `snow_field_aerial_4k.blend/textures/*_4k.jpg`; `pack_textures.py` takes a
-   set's maps as EXR/PNG or JPEG, and `-- <key>` packs one set. A new layer's
+   `assets/map3d/sources/ambientcg/`. The snow line's `snow_02`, the roads'
+   `rocky_trail_02` and the bridges' `medieval_blocks_03` (2026-09-19; the
+   first snow, `snow_field_aerial`, read blue-grey and blotchy) are 4K JPEGs
+   from the Poly Haven API (`https://api.polyhaven.com/files/<id>`: Diffuse,
+   Displacement, nor_gl, Rough), written to
+   `<id>_4k.blend/textures/<id>_{diff,disp,nor_gl,rough}_4k.jpg` — the same
+   layout the Blender MCP's Poly Haven download leaves; `pack_textures.py`
+   takes a set's maps as EXR/PNG or JPEG, and `-- <key>` packs one set. The
+   road and bridge sets are not terrain layers: `Map3DView` loads their
+   packed pairs itself and draws flat colours without them. A new layer's
    `.import` must copy the others' `[params]` (VRAM `compress/mode=2`): the
    texture array wants one format. Tree models (only if planting trees):
    `python3 tools/map3d/fetch_polyhaven.py fir_tree_01 ...`

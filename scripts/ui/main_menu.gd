@@ -60,7 +60,7 @@ func _build_menu() -> void:
 	_status.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	_menu_col.add_child(_status)
 	var hint := Label.new()
-	hint.text = "Space: take the throne with the founding name"
+	hint.text = "Space: take the throne with the founding name"	
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
 	hint.add_theme_font_size_override("font_size", 16)
@@ -169,3 +169,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("start_game") and not _setup_panel.visible:
 		Game.player_setup = {}
 		start_requested.emit()
+
+
+func _on_load_requested() -> void:
+	pass # Replace with function body.

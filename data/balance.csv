@@ -335,9 +335,9 @@ map3d_army_badge_max_px,30,"3D MAP MILITARY: the largest a counter gets close in
 map3d_line_lift_px,2.5,"3D MAP borders: every line is lifted this many screen px off the ground at its distance, so it clears the relief between its samples"
 map3d_road_width_px,4.0,"3D MAP roads (owner 2026-09-18): a road's width in screen px — the pack's roads draped on the relief in terrain_palette road, solid with a soft shoulder"
 map3d_trail_width_px,2.5,3D MAP roads: a trail's width in screen px (terrain_palette trail)
-map3d_road_alpha,0.9,3D MAP roads: a road's opacity at its centre
-map3d_trail_alpha,0.75,3D MAP roads: a trail's opacity at its centre
-map3d_road_edge_soft,0.5,"3D MAP roads: share of the half-width over which a road fades out to its sides — a worn track, not a ruled line (taste: read by width and fade)"
+map3d_road_alpha,1.0,3D MAP roads: a road's opacity at its centre
+map3d_trail_alpha,0.9,3D MAP roads: a trail's opacity at its centre
+map3d_road_edge_soft,0.8,"3D MAP roads: share of the half-width over which a road fades out to its sides — a worn track, not a ruled line (taste: read by width and fade)"
 map3d_seam_width_px,1.4,3D MAP borders: province seams width in screen px (political_palette map3d_seam) — a dashed line (owner 2026-09-18)
 map3d_seam_dash_px,6.0,3D MAP borders: seam dash length in screen px
 map3d_seam_gap_px,5.0,3D MAP borders: seam gap length in screen px
@@ -420,3 +420,27 @@ map_ruler_tick_min_px,100.0,"MEASUREMENT ruler: ticks sit on the 1-2-5 step no c
 map_ruler_font_px,22.0,"MEASUREMENT ruler: the reading's font size (display_font)"
 map_ruler_label_offset_px,10.0,"MEASUREMENT ruler: the reading's distance off the line's middle, on the side up the screen"
 map_ruler_label_outline_px,7.0,"MEASUREMENT ruler: the halo outline round the reading's letters"
+map3d_road_step_m,25.0,"3D MAP roads (owner 2026-09-19: a textured road): roads and trails are resampled to a point every this many metres — a road is now drawn at its real width up close, and at the borders' 150 m it cut into the relief between its samples"
+map3d_road_width_m,14.0,"3D MAP roads: a road's width in metres, drawn wider than life as the rivers are (a 7 m road was 2-3 px at the closest zoom, ~3 m a px; bracketed 16 / 24 / 32; the critic: 24 read wider than the rivers, a highway); the ribbon is this wide, or map3d_road_width_px on screen when that is wider (far away)"
+map3d_trail_width_m,9.0,3D MAP roads: a trail's width in metres (wider than life like the roads')
+map3d_road_tile_m,60.0,"3D MAP roads: metres per repeat of the road texture (Poly Haven rocky_trail_02, packed earth and stones) — deliberately huge: at the closest zoom a screen px is ~3 m, and at 20 m a repeat was 7 px and the stones averaged away to a flat colour (bracketed 40 / 70 / 110 at 24 m wide, scaled with the width)"
+map3d_road_near_mpp,2.5,"3D MAP roads: at this many metres per screen px and closer the road shows its texture in full"
+map3d_road_far_mpp,7.0,"3D MAP roads: at this many metres per screen px and further the road is the flat palette colour (map3d_road / map3d_trail): the stones are smaller than a pixel"
+map3d_road_fray,0.35,"3D MAP roads: how far the texture's own height frays the road's sides up close (taste: read by width and fade, never a ruled line)"
+map3d_bridge_abut_m,12.0,"3D MAP bridges (owner 2026-09-19: a road crossing a river is a bridge): the span runs this far onto each bank past the water"
+map3d_bridge_clear_m,5.0,3D MAP bridges: the crown stands at least this high over the water...
+map3d_bridge_clear_per_width,0.05,"3D MAP bridges: ...plus this share of the river's width, so a wide river gets a higher bridge"
+map3d_bridge_hump_m,1.2,3D MAP bridges: the deck rises this much more to its middle (a humped stone bridge)
+map3d_bridge_min_sin,0.45,"3D MAP bridges: a road crossing at a slant is never taken as crossing more sharply than this sine (a span is at most width / this)"
+map3d_bridge_merge_m,40.0,"3D MAP bridges: two crossings of one road closer than this (a meander) share one bridge"
+map3d_bridge_deck_step_m,3.0,3D MAP bridges: the road is sampled every this many metres over a deck
+map3d_bridge_deck_m,1.4,3D MAP bridges: the deck's thickness over the arch crowns
+map3d_bridge_extra_w_m,2.0,"3D MAP bridges: the bridge is this much wider than the road it carries (a parapet each side)"
+map3d_bridge_parapet_h_m,1.0,3D MAP bridges: the parapet's height over the deck
+map3d_bridge_parapet_w_m,0.6,3D MAP bridges: the parapet's thickness
+map3d_bridge_arch_max_m,18.0,"3D MAP bridges: no arch is wider than this; a long bridge stands on piers between several"
+map3d_bridge_pier_m,3.0,3D MAP bridges: a pier's length along the bridge
+map3d_bridge_tile_m,10.0,"3D MAP bridges: metres per repeat of the stone texture (Poly Haven medieval_blocks_03)"
+map3d_road_texture_gain,1.1,"3D MAP roads: the road texture's brightness multiplier up close, so the lit stones sit at the palette road's tone"
+map3d_bridge_end_over_water_m,0.5,"3D MAP bridges: a deck end stands at least this far over the drawn water line, even where the carved bank lies lower"
+map3d_bridge_max_view_m,3500.0,"3D MAP bridges: a bridge fades out beyond this camera distance (over its last fifth) — further away it was a grey tick, and the road already runs on across the water"

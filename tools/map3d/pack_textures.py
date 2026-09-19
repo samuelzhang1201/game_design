@@ -18,10 +18,14 @@ SIZE = 2048
 DEFAULT_ROUGH = 0.85  # rocky_trail ships no roughness map
 SETS = ["leafy_grass", "dry_decay_leaves", "dirt_floor", "rocky_trail",
         "excavated_soil_wall", "sand_03",
-        # The snow line (owner 2026-09-19): Poly Haven's aerial snow field,
-        # fetched through the Blender MCP's Poly Haven download, which hands
-        # every map over as a JPEG — hence first(), below.
-        "snow_field_aerial"]
+        # The snow line: Poly Haven snow_02 (2026-09-19, replacing the owner's
+        # first snow_field_aerial, which read blue-grey and blotchy). Sets
+        # fetched as JPEGs (the Blender MCP's Poly Haven download, or the
+        # Poly Haven API) — hence first(), below.
+        "snow_02",
+        # Not terrain layers: the roads' surface (road_line.gdshader) and the
+        # bridges' stone (Map3DView._build_bridges), loaded by Map3DView.
+        "rocky_trail_02", "medieval_blocks_03"]
 
 
 def load(path, colorspace):

@@ -559,7 +559,7 @@ func _switch_to(new_state: State) -> void:
 const BACKGROUND_STORY_PATH := "res://game_story/background/game_start.md"
 
 func _on_start_requested() -> void:
-	Game.start_campaign(42)
+	Game.start_campaign(44)
 	_pending_report = Game.next_tick()
 	_switch_to(State.CONVERSATION)
 	# The reign opens with the game background as a nameless narration beat
