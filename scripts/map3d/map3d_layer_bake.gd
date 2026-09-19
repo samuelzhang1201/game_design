@@ -7,7 +7,21 @@ extends RefCounted
 ## key each was baked under. The runtime uses a set only when it is complete
 ## and its key matches every input today; otherwise it builds as before.
 
+## Versions the OUTPUT of GEOMETRY_SOURCES: the runtime key cannot hash the
+## scripts (an exported build need not ship the .gd sources), so a change to
+## any of them bumps this, and tests/map3d/test_map3d_layer_bake.gd holds
+## GEOMETRY_MD5 to their text so the bump cannot be forgotten.
 const FORMAT := 1
+## Every script the baked meshes' vertices come from: the layers' arrays_for /
+## plan_for / bridge_mesh, the river, bridge and ribbon builders, the pack ->
+## world maths and the route smoothing, and the context's heights and steps.
+const GEOMETRY_SOURCES := ["res://scripts/map3d/map3d_layer_rivers.gd",
+	"res://scripts/map3d/map3d_layer_roads.gd", "res://scripts/map3d/map3d_rivers.gd",
+	"res://scripts/map3d/map3d_bridges.gd", "res://scripts/map3d/map3d_borders.gd",
+	"res://scripts/map3d/map3d_geometry.gd", "res://scripts/map3d/map3d_context.gd",
+	"res://scripts/engine/map_geometry.gd"]
+## The md5 of GEOMETRY_SOURCES' text, concatenated in list order.
+const GEOMETRY_MD5 := "a203e252f732933604279a238401dcc2"
 const LAYERS := ["rivers", "roads", "trails", "bridges"]
 const KEYS := ["map3d_road_step_m", "map3d_river_mesh_step_m", "map3d_river_split_rise_m",
 	"map3d_river_terrain_clear_m", "map3d_river_end_fade_m", "map3d_road_width_m",
@@ -105,6 +119,10 @@ static func build_layers(ctx: Map3DContext, scene_path: String, rivers: Map3DLay
 		rivers.build_baked(ctx, m["rivers"])
 		roads.build_baked(m)
 		return true
+	if FileAccess.file_exists(dir.path_join("layers/manifest.json")):
+		Map3DWorldLoader.warn_once("layers:" + dir,
+			"Map3DLayerBake: %s/layers is stale for step set %s — built at load instead; run tools/map3d/bake_layers.gd"
+			% [dir, step_set(row)])
 	rivers.build(ctx, scene_path)
 	roads.build(rivers.courses())
 	return false

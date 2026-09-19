@@ -85,3 +85,13 @@ func test_a_stale_bake_is_ignored() -> void:
 	var rivers := v.viewport().get_node("Rivers") as MeshInstance3D
 	assert_eq(rivers.mesh.resource_path, "", "built at runtime")
 	Game.data.balance["map3d_bridge_abut_m"] = was
+
+
+## The runtime key cannot see the geometry code: a change to it must bump FORMAT.
+func test_the_geometry_code_is_the_one_the_format_names() -> void:
+	var text := ""
+	for path: String in Map3DLayerBake.GEOMETRY_SOURCES:
+		assert_true(FileAccess.file_exists(path), path)
+		text += FileAccess.get_file_as_string(path)
+	assert_eq(text.md5_text(), Map3DLayerBake.GEOMETRY_MD5,
+		"geometry code changed: bump Map3DLayerBake.FORMAT and update GEOMETRY_MD5, then re-run tools/map3d/bake_layers.gd")

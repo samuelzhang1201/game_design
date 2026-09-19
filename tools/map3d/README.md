@@ -140,7 +140,12 @@ COMPLETE (all four files) and its key matches today's inputs; otherwise it
 builds the layers at load as before, so a stale bake is never drawn — only
 slower to open. Materials are never baked: colours, widths in px and the
 shaders' numbers are read at load. After changing any of those inputs, run
-`bake_layers.gd` again (or the whole `build_pack.sh`).
+`bake_layers.gd` again (or the whole `build_pack.sh`). The key cannot see
+the geometry CODE (an exported build need not ship the scripts), so a change
+to any script in `Map3DLayerBake.GEOMETRY_SOURCES` fails
+`test_map3d_layer_bake.gd` until you bump `Map3DLayerBake.FORMAT`, update
+`GEOMETRY_MD5` and re-run `bake_layers.gd`. A view that finds a stale
+`layers/` warns once and builds at load.
 
 ## `map3d_dir`
 

@@ -35,6 +35,7 @@ func _run() -> void:
 	await process_frame  # Terrain3D's data only exists in the tree
 	var ctx := Map3DContext.new(repo, world.get_meta("map3d_world"), world)
 	var done: Dictionary = {}
+	var failed := false
 	for tier: String in Map3DQuality.TIERS:
 		var row := Map3DQuality.row(repo, tier)
 		var set_name := Map3DLayerBake.step_set(row)
@@ -49,7 +50,8 @@ func _run() -> void:
 			"bridges": Map3DLayerRoads.bridge_mesh(ctx, rd["bridges"])}
 		var err := Map3DLayerBake.save(dir, row, Map3DLayerBake.key(repo, dir, row), meshes)
 		print("bake_layers: %s %s" % [set_name, "ok" if err == OK else "err %d" % err])
+		failed = failed or err != OK
 	world.queue_free()
 	cam.queue_free()
 	await process_frame
-	quit(0)
+	quit(1 if failed else 0)  # build_pack.sh's set -e stops on a failed save
