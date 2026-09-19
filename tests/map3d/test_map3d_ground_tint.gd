@@ -40,6 +40,28 @@ func test_the_patch_reads_the_field_map() -> void:
 	assert_string_contains(out, "fwidth(", "the furrows fade before they alias")
 
 
+## The built world's terrain material is shared by every view that loads it
+## (the council screen's, then the court's): the second must find the code
+## already patched and keep it, not take the patch for a failure and switch
+## the tint off (the owner saw no tint in the game, 2026-09-19).
+func test_patched_code_is_patched_already() -> void:
+	var once := Map3DGroundTint.patch(SAMPLE)
+	assert_true(Map3DGroundTint.is_patched(once))
+	assert_false(Map3DGroundTint.is_patched(SAMPLE))
+	assert_eq(Map3DGroundTint.patch(once), once, "patching twice changes nothing")
+
+
+func test_terrain3ds_shader_survives_a_second_view() -> void:
+	var t := Terrain3D.new()
+	add_child_autofree(t)
+	t.material.shader_override_enabled = true
+	await wait_process_frames(1)
+	var shader: Shader = t.material.shader_override
+	shader.code = Map3DGroundTint.patch(shader.code)
+	# a second view reads the same material
+	assert_ne(Map3DGroundTint.patch(shader.code), "", "the second view keeps the tint")
+
+
 func test_code_without_the_albedo_line_is_not_patched() -> void:
 	assert_eq(Map3DGroundTint.patch("shader_type spatial;\nvoid fragment() {}\n"), "")
 

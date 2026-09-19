@@ -77,6 +77,10 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 ## and its ALBEDO line mixing toward the manor's colour; "" when the line is
 ## not there.
 static func patch(code: String) -> String:
+	# The built world's material is shared by every view that loads it: a
+	# second view finds the first one's patch, which is its patch too.
+	if is_patched(code):
+		return code
 	if not code.contains(ALBEDO_LINE):
 		return ""
 	var lines := code.split("\n")
@@ -92,6 +96,11 @@ static func patch(code: String) -> String:
 		return ""
 	lines.insert(at + 1, UNIFORMS)
 	return "\n".join(lines).replace(ALBEDO_LINE, TINTED_ALBEDO)
+
+
+## Whether `code` already carries the tint (a view loaded the world before).
+static func is_patched(code: String) -> bool:
+	return code.contains("// Map3DGroundTint:")
 
 
 ## The LUT's size for ids 0..max_id: LUT_WIDTH wide, as many rows as needed.

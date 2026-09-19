@@ -345,6 +345,14 @@ func _load() -> void:
 		return
 	_meta = _world.get_meta("map3d_world")
 	_bounds = Map3DGeometry.world_bounds(_meta)
+	# Each view its OWN terrain material: the loaded scene's material is a
+	# shared resource, so the council screen's view and the court's patched
+	# and set the same one, and the first view's teardown left the second's
+	# ground untinted (owner 2026-09-19: no MANORS tint in the game).
+	for t in _world.find_children("*", "Terrain3D", true, false):
+		var m: Resource = t.get("material")
+		if m != null:
+			t.set("material", m.duplicate(true))
 	_viewport.add_child(_world)
 	# The build's own framing cameras are for tools/map3d/shoot.gd.
 	for child in _world.get_children():
