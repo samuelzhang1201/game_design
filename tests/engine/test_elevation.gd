@@ -36,3 +36,69 @@ func test_tier_edges() -> void:
 func test_the_table_is_read_highest_first() -> void:
 	var mins: Array = repo.army_height_supply.map(func(r: Dictionary) -> int: return int(r["min_height"]))
 	assert_eq(mins, [72, 62, 45, 0])
+
+## A hand-built strip of land cells 0..4 (heights 30, 50, 40, 25, 35) and
+## one sea cell 5 next to cell 4. High: 1, and 4 (above its one land
+## neighbour). Low: 0 and 3; 4 touches the sea, so it is never a basin.
+func _strip() -> Dictionary:
+	var hs := [30.0, 50.0, 40.0, 25.0, 35.0]
+	var cells := {}
+	for i in hs.size():
+		var nb := PackedInt32Array()
+		if i > 0:
+			nb.append(i - 1)
+		if i < hs.size() - 1:
+			nb.append(i + 1)
+		cells[i] = {"height": hs[i], "water": "", "neighbor_ids": nb,
+			"vertex_ids": PackedInt32Array([0, 1, 2])}
+	(cells[4]["neighbor_ids"] as PackedInt32Array).append(5)
+	cells[5] = {"height": 10.0, "water": "ocean", "neighbor_ids": PackedInt32Array([4]),
+		"vertex_ids": PackedInt32Array([0, 1, 2])}
+	return cells
+
+func test_extremes_on_a_strip() -> void:
+	var e := Elevation.extremes(_strip())
+	assert_eq(Array(e["high"]), [1, 4], "4 is above its one land neighbour")
+	assert_eq(Array(e["low"]), [0, 3], "4 touches the sea, so it is no basin")
+
+func test_a_plateau_keeps_one_high_point() -> void:
+	var cells := _strip()
+	cells[2]["height"] = 50.0  # 1 and 2 tie
+	var e := Elevation.extremes(cells)
+	assert_true(1 in Array(e["high"]), "the lower id wins a tie")
+	assert_false(2 in Array(e["high"]))
+
+func test_landmarks_on_the_pack() -> void:
+	var marks := Elevation.landmarks(repo)
+	assert_gt(marks.size(), 0)
+	var prev := 1 << 30
+	for m: Dictionary in marks:
+		assert_true(int(m["prominence"]) <= prev, "biggest first")
+		prev = int(m["prominence"])
+		assert_gte(int(m["prominence"]), int(repo.bal("landmark_min_prominence_m")))
+		assert_ne(String(m["name"]), "")
+		assert_true(int(m["lod"]) in [0, 1, 2])
+	var names := {}
+	for m: Dictionary in marks:
+		assert_false(names.has(m["name"]), "names are unique: " + String(m["name"]))
+		names[m["name"]] = true
+
+func test_the_lod_follows_prominence() -> void:
+	for m: Dictionary in Elevation.landmarks(repo):
+		var p := int(m["prominence"])
+		var want := 0 if p >= int(repo.bal("landmark_lod_far_m")) \
+			else (1 if p >= int(repo.bal("landmark_lod_mid_m")) else 2)
+		assert_eq(int(m["lod"]), want)
+
+func test_a_name_override_wins() -> void:
+	var m: Dictionary = Elevation.landmarks(repo)[0]
+	repo.landmark_name_overrides[int(m["cell"])] = "The Old Man"
+	Elevation.forget()
+	assert_eq(Elevation.landmark_at(repo, int(m["cell"]))["name"], "The Old Man")
+	repo.landmark_name_overrides.erase(int(m["cell"]))
+	Elevation.forget()
+
+func test_local_edge() -> void:
+	var m: Dictionary = Elevation.landmarks(repo)[0]
+	var edge := Elevation.local_edge_m(repo, int(m["cell"]))
+	assert_eq(absi(edge), int(m["prominence"]), "the prominence is the edge's size")

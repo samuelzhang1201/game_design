@@ -448,3 +448,7 @@ elevation_sea_level,20,"height (owner 2026-09-19, spec 2026-09-19-map3d-heights-
 elevation_m_per_unit,30,"height: metres per Azgaar height unit above the waterline (100 -> 2400 m). Read by Elevation and bake_world.py"
 army_height_bonus_permille_per_100m,40,"height in war (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §2): per mille a side gains for every 100 m it stands above the other in a fight, and the lower side loses; ArmySystem.height_factor"
 army_height_bonus_cap_permille,300,"height in war: the most a height difference moves a side's power either way, per mille (+-30%, reached at 750 m)"
+landmark_ring,2,"landmarks (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §3): rings of neighbours a high or low point is measured against"
+landmark_min_prominence_m,100,"landmarks: metres a point must stand above (or below) the mean of its rings to be marked"
+landmark_lod_mid_m,300,"landmarks: prominence at/above which a point still shows at the middle zooms (lod 1)"
+landmark_lod_far_m,560,"landmarks: prominence at/above which a point shows at every zoom (lod 0)"

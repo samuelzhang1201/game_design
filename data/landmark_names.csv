@@ -1,0 +1,8 @@
+kind,pattern,notes
+high,Mount {town},"owner 2026-09-19 (spec 2026-09-19-map3d-heights-design §3): a landmark is named after its nearest town; the pattern is picked by a hash of the cell, the next one on a clash"
+high,{town} Fell,
+high,{town} Crag,
+high,{town} Heights,
+low,{town} Vale,
+low,{town} Hollow,
+low,{town} Basin,

@@ -64,6 +64,8 @@ var army_speed: Dictionary = {}
 ## data/army_height_supply.csv: [{tier, min_height, supply_permille}],
 ## highest min_height first (Elevation.tier_of reads the first it reaches).
 var army_height_supply: Array = []
+## data/landmark_names.csv: kind ("high"|"low") -> patterns in file order.
+var landmark_names: Dictionary = {}
 ## data/settlement_growth.csv rows: how a settlement's drawing grows with its
 ## manor — a tier promoted past min_people, or once a listed building stands
 ## (MapObjects.settlement_look, owner 2026-09-15).
@@ -205,6 +207,8 @@ var manors: Dictionary = {}
 ## name a manor ("buy Ashcombe").
 var manor_by_code: Dictionary = {}
 var manor_by_label: Dictionary = {}
+## maps/<id>/landmark_name_overrides.csv (optional): cell id -> name.
+var landmark_name_overrides: Dictionary = {}
 ## Every pack table by domain and area: world_tables[domain][area][code] -> row
 ## (spec 2026-09-09 §1). The named fields above (kingdoms, provinces, burgs,
 ## routes, rivers, markers, biomes) are the SAME Dictionary objects, so the
@@ -478,6 +482,13 @@ func _load(dir: String) -> bool:
 		return false
 	army_height_supply.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["min_height"]) > int(b["min_height"]))
+	if not _load_if_present(dir + "/landmark_names.csv", ["kind", "pattern"],
+			func(r):
+				var k := String(r["kind"])
+				if not landmark_names.has(k):
+					landmark_names[k] = []
+				(landmark_names[k] as Array).append(String(r["pattern"]))):
+		return false
 	if not _load_if_present(dir + "/settlement_growth.csv", ["from_tier", "to_tier", "min_people", "building"],
 			func(r): settlement_growth.append(r)):
 		return false
@@ -538,6 +549,7 @@ func load_map(id: String) -> bool:
 	manors.clear()
 	manor_by_code.clear()
 	manor_by_label.clear()
+	landmark_name_overrides.clear()
 	world_tables.clear()
 	if not _load_if_present(dir + "/political/kingdoms.csv",
 			["kingdom_code", "state_id", "label", "capital_burg"],
@@ -630,6 +642,9 @@ func load_map(id: String) -> bool:
 				var cell := int(r["cell_id"])
 				if manors.has(cell):
 					manors[cell]["label"] = String(r["label"])):
+		return false
+	if not _load_if_present(dir + "/landmark_name_overrides.csv", ["cell_id", "name"],
+			func(r): landmark_name_overrides[int(r["cell_id"])] = String(r["name"])):
 		return false
 	for cell: int in manors:
 		var row: Dictionary = manors[cell]
