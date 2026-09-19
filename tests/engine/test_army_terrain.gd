@@ -31,8 +31,8 @@ func test_cell_at_finds_the_cell_it_stands_in() -> void:
 	assert_eq(MapEconomy.cell_at(repo, MapTerrain.cell_center(repo, repo.cells[id])), id)
 
 func test_height_makes_mountains_and_hills() -> void:
-	var peak := repo.bal("manor_focus_peak_height")
-	var high := repo.bal("manor_focus_high_height")
+	var peak := float(repo.army_height_supply.filter(func(r: Dictionary) -> bool: return r["tier"] == "mountains")[0]["min_height"])
+	var high := float(repo.army_height_supply.filter(func(r: Dictionary) -> bool: return r["tier"] == "hills")[0]["min_height"])
 	var m := _land_cell(func(c: Dictionary) -> bool: return float(c["height"]) >= peak)
 	if m >= 0:
 		assert_eq(ArmySystem.terrain_of(repo, _at_cell(m)), "mountains")
@@ -41,7 +41,7 @@ func test_height_makes_mountains_and_hills() -> void:
 	assert_eq(ArmySystem.terrain_of(repo, _at_cell(h)), "hills")
 
 func test_low_ground_takes_its_biomes_terrain() -> void:
-	var high := repo.bal("manor_focus_high_height")
+	var high := float(repo.army_height_supply.filter(func(r: Dictionary) -> bool: return r["tier"] == "hills")[0]["min_height"])
 	var f := _land_cell(func(c: Dictionary) -> bool: return float(c["height"]) < high and int(c["biome_id"]) == 6)
 	assert_gte(f, 0, "the pack has low deciduous forest")
 	assert_eq(ArmySystem.terrain_of(repo, _at_cell(f)), "forest")

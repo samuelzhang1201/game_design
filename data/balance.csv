@@ -446,3 +446,5 @@ map3d_bridge_end_over_water_m,0.5,"3D MAP bridges: a deck end stands at least th
 map3d_bridge_max_view_m,3500.0,"3D MAP bridges: a bridge fades out beyond this camera distance (over its last fifth) — further away it was a grey tick, and the road already runs on across the water"
 elevation_sea_level,20,"height (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §1): the Azgaar cell height of the waterline. Elevation.metres_of_cell and tools/map3d/bake_world.py both read it — one measure for the ground and the engine"
 elevation_m_per_unit,30,"height: metres per Azgaar height unit above the waterline (100 -> 2400 m). Read by Elevation and bake_world.py"
+army_height_bonus_permille_per_100m,40,"height in war (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §2): per mille a side gains for every 100 m it stands above the other in a fight, and the lower side loses; ArmySystem.height_factor"
+army_height_bonus_cap_permille,300,"height in war: the most a height difference moves a side's power either way, per mille (+-30%, reached at 750 m)"

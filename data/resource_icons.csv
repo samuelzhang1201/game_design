@@ -88,6 +88,7 @@ bld_castle,Castle,tower,"a stone keep behind the palisade, the lord's hall withi
 bld_harbour,Harbour,anchor,a stone quay where the market meets the boats: harbour dues and a larger catch,res://assets/icons/bld_harbour.png
 bld_armoury,Armoury,swords,"a store of arms beside the smithy: weapons for the levy, and a harder yard",res://assets/icons/bld_armoury.png
 army_terrain,Terrain,tower,"The ground the regiment is quartered on, and whether walls shelter it.",
+army_height,Height,tower,"The height the regiment stands at and how much faster it uses supplies there; in a fight the higher side gains (owner 2026-09-19).",
 army_morale,Morale,flame,"The regiment's spirit, 0 to 100.",
 army_wounded,Wound recovery,cross,The wounded who return to the ranks each month.,
 army_supply,Supplies,grain,The supplies the regiment holds and what it uses each month.,

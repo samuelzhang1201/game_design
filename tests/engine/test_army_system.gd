@@ -27,8 +27,8 @@ func test_a_new_campaign_seeds_only_the_players_regiments() -> void:
 	assert_eq(int(entry["morale"]), 70)
 	assert_eq(int(entry["training"]), 10)
 	assert_eq(int(entry["wounded"]), 0)
-	# heads x 100 / 1000 a month, times 6 months
-	assert_eq(int(entry["supplies"]), heads * 100 / 1000 * 6)
+	# heads x 100 / 1000 a month (scaled by the cell's height tier), times 6 months
+	assert_eq(int(entry["supplies"]), ArmySystem.supply_use(repo, r) * 6)
 	assert_false(s.regiments.has(_other_code()))
 
 func test_wound_recovery_is_a_share_with_a_floor_of_one() -> void:
@@ -40,8 +40,7 @@ func test_the_month_returns_wounded_and_spends_supplies() -> void:
 	var s := GameState.new_campaign(repo, 7)
 	var r: Dictionary = _mine()[0]
 	var code := String(r["regiment_code"])
-	var heads := int(MapObjects.regiment_size(repo, r))
-	var use := heads * 100 / 1000
+	var use := ArmySystem.supply_use(repo, r)
 	s.regiments[code]["wounded"] = 250
 	s.regiments[code]["supplies"] = use + 5
 	ArmySystem.settle_month(repo, s)
@@ -50,6 +49,12 @@ func test_the_month_returns_wounded_and_spends_supplies() -> void:
 	ArmySystem.settle_month(repo, s)
 	assert_eq(int(s.regiments[code]["supplies"]), 0, "supplies stop at zero")
 	assert_eq(int(s.regiments[code]["morale"]), 70, "morale does not move yet")
+
+func test_supply_use_is_the_base_scaled_by_the_cells_height_tier() -> void:
+	var r: Dictionary = _mine()[0]
+	var heads := int(MapObjects.regiment_size(repo, r))
+	assert_eq(ArmySystem.supply_use(repo, r),
+		heads * 100 / 1000 * int(ArmySystem.height_tier(repo, r)["supply_permille"]) / 1000)
 
 func test_wounded_never_exceed_the_headcount() -> void:
 	var s := GameState.new_campaign(repo, 7)

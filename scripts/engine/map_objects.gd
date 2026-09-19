@@ -1502,6 +1502,14 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	if not st.is_empty():
 		var ground := ArmySystem.terrain_label(repo, r)
 		stats.append(_stat("army_terrain", ground, "Quartered on %s" % ground.to_lower()))
+		var metres := ArmySystem.elevation_of(repo, r)
+		var tier := ArmySystem.height_tier(repo, r)
+		var mult := float(int(tier["supply_permille"])) / 1000.0
+		stats.append(_stat("army_height", "%d m · ×%.1f" % [metres, mult],
+			"Height — %d m, %s: supplies are used ×%.1f here. In a fight each 100 m above the foe is +%d%% (at most +%d%%), and below it as much less" % [
+				metres, String(tier["tier"]), mult,
+				int(repo.bal("army_height_bonus_permille_per_100m")) / 10,
+				int(repo.bal("army_height_bonus_cap_permille")) / 10]))
 		stats.append(_stat("army_morale", str(int(st["morale"])), "Morale — %d of 100" % int(st["morale"])))
 		var back := ArmySystem.wound_recovery(repo, int(st["wounded"]))
 		stats.append(_stat("army_wounded", "+%d / mo" % back,

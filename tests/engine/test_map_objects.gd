@@ -394,8 +394,9 @@ func test_a_regiment_card_shows_its_state() -> void:
 		order.append(String(st["key"]))
 		text[String(st["key"])] = String(st["text"])
 		assert_ne(String(st["tooltip"]), "", "%s explains itself" % st["key"])
-	for key in ["army_terrain", "army_morale", "army_wounded", "army_supply", "army_training", "army_strength"]:
+	for key in ["army_terrain", "army_height", "army_morale", "army_wounded", "army_supply", "army_training", "army_strength"]:
 		assert_true(text.has(key), key)
+	assert_true(text.has("army_height"))
 	assert_true(order.find("army_terrain") < order.find("army_strength"), "the state reads in order")
 	assert_eq(text["army"], "%d (120 wounded)" % heads)
 	assert_eq(text["army_morale"], "70")

@@ -41,9 +41,12 @@ static func state_of(repo: DataRepository, state: GameState, code: String) -> Di
 		return state.regiments[code]
 	return starting_state(repo, reg)
 
-## Supplies a regiment uses in a month.
+## Supplies a regiment uses in a month: the headcount's use times its cell's
+## height tier (data/army_height_supply.csv, spec 2026-09-19-map3d-heights
+## §2) — a fleet is not scaled.
 static func supply_use(repo: DataRepository, reg: Dictionary) -> int:
-	return headcount(repo, reg) * int(repo.bal("army_supply_per_head_permille")) / 1000
+	var base := headcount(repo, reg) * int(repo.bal("army_supply_per_head_permille")) / 1000
+	return base * int(height_tier(repo, reg)["supply_permille"]) / 1000
 
 ## Wounded who return to the ranks in a month: a share, at least one while
 ## any are wounded.
@@ -74,7 +77,8 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 ## --- Terrain (spec §4) ---------------------------------------------------
 
 ## The ground a regiment stands on: sea for a fleet; mountains and hills by
-## the cell's height (the manors' own thresholds); else its biome's terrain.
+## the cell's height (the supply tiers' lines, Elevation.tier_of); else its
+## biome's terrain.
 static func terrain_of(repo: DataRepository, reg: Dictionary) -> String:
 	if String(reg.get("is_naval", "0")) == "1":
 		return "sea"
@@ -82,11 +86,12 @@ static func terrain_of(repo: DataRepository, reg: Dictionary) -> String:
 	if id < 0:
 		return "plains"
 	var cell: Dictionary = repo.cells[id]
-	var h := float(cell["height"])
-	if h >= repo.bal("manor_focus_peak_height"):
-		return "mountains"
-	if h >= repo.bal("manor_focus_high_height"):
-		return "hills"
+	# The supply tiers' lines (Elevation.tier_of): a peak fights as a mountain.
+	match String(Elevation.tier_of(repo, float(cell["height"]))["tier"]):
+		"peak", "mountains":
+			return "mountains"
+		"hills":
+			return "hills"
 	return String(repo.army_terrain_biomes.get(int(cell["biome_id"]), "plains"))
 
 ## Whether walls or a citadel stand in the regiment's cell.
@@ -117,6 +122,31 @@ static func terrain_factor(repo: DataRepository, terrain: String, arm: String, s
 static func terrain_label(repo: DataRepository, reg: Dictionary) -> String:
 	var text := terrain_of(repo, reg).capitalize()
 	return text + " (fortified)" if is_fortified(repo, reg) else text
+
+## --- Height (spec 2026-09-19-map3d-heights §2) ---------------------------
+
+## The cell under a regiment, -1 for a fleet or off the land.
+static func _cell_of(repo: DataRepository, reg: Dictionary) -> int:
+	if String(reg.get("is_naval", "0")) == "1":
+		return -1
+	return MapEconomy.cell_at(repo, Vector2(float(reg["x"]), float(reg["y"])))
+
+## Whole metres the regiment stands at; 0 for a fleet or off the land.
+static func elevation_of(repo: DataRepository, reg: Dictionary) -> int:
+	return Elevation.metres_of_cell(repo, _cell_of(repo, reg))
+
+## {tier, supply_permille} of the regiment's cell; plains / 1000 for a fleet.
+static func height_tier(repo: DataRepository, reg: Dictionary) -> Dictionary:
+	var id := _cell_of(repo, reg)
+	if id < 0:
+		return {"tier": "plains", "supply_permille": 1000}
+	return Elevation.tier_of(repo, float(repo.cells[id]["height"]))
+
+## Per mille on a side's power for standing delta_m above (or, negative,
+## below) the other: army_height_bonus_permille_per_100m, capped either way.
+static func height_factor(repo: DataRepository, delta_m: int) -> int:
+	var cap := int(repo.bal("army_height_bonus_cap_permille"))
+	return 1000 + clampi(delta_m * int(repo.bal("army_height_bonus_permille_per_100m")) / 100, -cap, cap)
 
 ## --- Hidden strength (spec §5) ------------------------------------------
 
@@ -272,10 +302,14 @@ static func speed_km_per_day(repo: DataRepository, state: GameState, code: Strin
 ## PLACEHOLDER (owner 2026-09-17: the battle formula is not decided). The
 ## attacker's power in the attack stance over both sides' powers, each on its
 ## own ground. Called by nothing but its test; replace it whole when the
-## owner settles the formula.
+## owner settles the formula. Height is its first settled factor (spec
+## 2026-09-19-map3d-heights §2): the higher side's power is scaled up and the
+## lower side's down by the same height_factor.
 static func battle_odds(repo: DataRepository, state: GameState, attacker_code: String, defender_code: String) -> float:
-	var a := power(repo, state, attacker_code, "attack")
-	var d := power(repo, state, defender_code, "defend")
+	var delta := elevation_of(repo, regiment(repo, attacker_code)) \
+		- elevation_of(repo, regiment(repo, defender_code))
+	var a := power(repo, state, attacker_code, "attack") * height_factor(repo, delta) / 1000
+	var d := power(repo, state, defender_code, "defend") * height_factor(repo, -delta) / 1000
 	if a + d <= 0:
 		return 0.5
 	return float(a) / float(a + d)
