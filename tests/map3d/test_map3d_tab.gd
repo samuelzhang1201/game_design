@@ -1,9 +1,9 @@
 extends GutTest
 ## The 3D map is the default map (owner 2026-09-18, spec
 ## 2026-09-18-map3d-default-design.md): the map panel shows Map3DView
-## whenever the pack has a built scene and no 2D-only layer (HEIGHTS alone;
-## MANORS and MILITARY draw on both since 2026-09-19) is on, and the
-## 2D WorldMapView otherwise.
+## whenever the pack has a built scene, and the 2D WorldMapView otherwise —
+## no 2D-only layer is left (HEIGHTS draws on the 3D map too since
+## 2026-09-19, spec 2026-09-19-map3d-heights).
 ## The scene is git-ignored, so every test forces its presence through
 ## GameRoot.force_map3d_scene; an unbuilt view still swaps in and shows its
 ## notice. The suite holds 2D (tests/pre_run.gd); these tests lift that.
@@ -44,14 +44,17 @@ func test_the_court_opens_on_the_3d_map() -> void:
 	assert_true(_shows_3d(r))
 
 
-func test_each_2d_only_layer_shows_the_2d_map_and_closing_it_returns_to_3d() -> void:
+## HEIGHTS draws on the 3D map (owner 2026-09-19, spec 2026-09-19-map3d-heights).
+func test_heights_stays_on_the_3d_map_and_reaches_it() -> void:
 	var r: GameRoot = await _court()
-	for setter: String in ["set_height_view"]:
-		r.call(setter, true)
-		assert_false(r.map3d_view(), setter + " on: 2D")
-		assert_true(r.current_screen.world_map().visible, setter + " on: the 2D map shows")
-		r.call(setter, false)
-		assert_true(_shows_3d(r), setter + " off: back to 3D")
+	r.set_height_view(true)
+	assert_true(_shows_3d(r))
+	assert_eq(r.current_screen.map3d_view().manor_theme(), "heights")
+	r.set_manor_view(true)
+	assert_eq(r.current_screen.map3d_view().manor_theme(), "manors", "MANORS put HEIGHTS out")
+	assert_false(r.height_view())
+	r.set_manor_view(false)
+	assert_eq(r.current_screen.map3d_view().manor_theme(), "")
 
 
 ## MANORS draws on the 3D map too, and ECONOMY is gone — folded into it
@@ -67,13 +70,14 @@ func test_the_manors_theme_stays_on_the_3d_map_and_reaches_it() -> void:
 	assert_eq(r.current_screen.map3d_view().manor_theme(), "")
 	r.set_manor_view(true)
 	r.set_height_view(true)
-	assert_false(r.map3d_view(), "HEIGHTS still takes the 2D map")
+	assert_true(_shows_3d(r), "HEIGHTS stays on 3D")
+	assert_eq(r.current_screen.map3d_view().manor_theme(), "heights")
 
 
 func test_the_bottom_tab_routes_through_the_rule() -> void:
 	var r: GameRoot = await _court()
 	r._on_bottom_tab("HEIGHTS")
-	assert_false(r.map3d_view())
+	assert_true(_shows_3d(r))
 	r._on_bottom_tab("HEIGHTS")
 	assert_true(_shows_3d(r))
 	r._on_bottom_tab("MANORS")
@@ -102,8 +106,8 @@ func test_the_choice_follows_the_player_to_the_next_screen() -> void:
 	r.set_height_view(true)
 	r._switch_to(GameRoot.State.COURT)
 	await wait_frames(2)
-	assert_false(r.map3d_view(), "a layer that is on keeps the new screen 2D")
-	assert_true(r.current_screen.world_map().visible)
+	assert_true(_shows_3d(r), "HEIGHTS keeps the new screen 3D")
+	assert_eq(r.current_screen.map3d_view().manor_theme(), "heights")
 
 
 func test_the_real_scene_check_reads_the_pack() -> void:

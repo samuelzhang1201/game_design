@@ -163,9 +163,10 @@ func set_map3d_view(on: bool) -> void:
 		_map3d.set_manor_theme(_map3d_theme)
 		_map3d.set_military(_map3d_military)
 
-## The MANORS theme ("" or "manors"; ECONOMY was folded into it, owner
-## 2026-09-19) and the MILITARY counters on the 3D map (GameRoot, owner 2026-09-19); kept for a view made
-## later.
+## The theme on the 3D ground ("", "manors" or "heights"; ECONOMY was folded
+## into MANORS, owner 2026-09-19; HEIGHTS joined it the same day, spec
+## 2026-09-19-map3d-heights) and the MILITARY counters (GameRoot); kept for a
+## view made later.
 func set_map3d_theme(theme_name: String, military := false) -> void:
 	_map3d_theme = theme_name
 	_map3d_military = military

@@ -1,16 +1,17 @@
 class_name Map3DGroundTint
 extends RefCounted
-## The MANORS ground on the 3D map (owner 2026-09-19, spec
-## 2026-09-19-map3d-manor-themes-design): Compatibility has no decals, so
-## the manor colours go into Terrain3D's OWN shader. Map3DView reads the code
-## Terrain3D generates for the build's settings and patch() rewrites its one
-## ALBEDO line to mix the ground toward the colour of the manor under it —
-## the cell id from the pack's world_cell_index.png (R + G * 256, white is
-## water), its colour from a small LUT texture (ManorPalette) — by tint_mix.
-## The colour enters the albedo, so the relief, the sun and the cloud shadows
-## still light it. Nothing is committed from the addon: an update that
-## changes the line makes patch() return "" (tested), and the ground stays
-## plain.
+## The MANORS and HEIGHTS ground on the 3D map (owner 2026-09-19, specs
+## 2026-09-19-map3d-manor-themes-design and 2026-09-19-map3d-heights):
+## Compatibility has no decals, so both themes' colours go into Terrain3D's
+## OWN shader. Map3DView reads the code Terrain3D generates for the build's
+## settings and patch() rewrites its one ALBEDO line to mix the ground toward
+## the colour of the manor under it — the cell id from the pack's
+## world_cell_index.png (R + G * 256, white is water), its colour from a
+## small LUT texture (ManorPalette) — by tint_mix, or toward the terrain
+## heat ramp by the ground's world height — by heat_mix. The colour enters
+## the albedo, so the relief, the sun and the cloud shadows still light it.
+## Nothing is committed from the addon: an update that changes the line makes
+## patch() return "" (tested), and the ground stays plain.
 
 const ALBEDO_LINE := "ALBEDO = mat.albedo_height.rgb * color_map.rgb * macrov;"
 ## The LUT's width in texels: cell id → (id % 128, id / 128).
@@ -33,6 +34,17 @@ uniform float furrow_depth = 0.0;
 uniform float field_fade = 0.0;
 uniform float field_fade_near_m = 15000.0;
 uniform float field_fade_far_m = 60000.0;
+// The HEIGHTS heat (owner 2026-09-19): the ground's world height ramped
+// through terrain_palette heat_1..6 (sRGB, turned linear below).
+uniform float heat_mix = 0.0;
+uniform float heat_sea_y = 0.0;
+uniform float heat_top_m = 2400.0;
+uniform vec4 heat_c0 : source_color = vec4(1.0);
+uniform vec4 heat_c1 : source_color = vec4(1.0);
+uniform vec4 heat_c2 : source_color = vec4(1.0);
+uniform vec4 heat_c3 : source_color = vec4(1.0);
+uniform vec4 heat_c4 : source_color = vec4(1.0);
+uniform vec4 heat_c5 : source_color = vec4(1.0);
 """
 
 const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.rgb * macrov;
@@ -70,7 +82,17 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 	// albedo is linear (Terrain3D samples its own textures as source_color).
 	vec3 tint_linear = mix(tint.rgb / 12.92, pow((tint.rgb + 0.055) / 1.055, vec3(2.4)),
 		step(vec3(0.04045), tint.rgb));
-	ALBEDO = mix(base_albedo, tint_linear, tint_mix * tint.a);"""
+	vec3 tinted = mix(base_albedo, tint_linear, tint_mix * tint.a);
+	if (heat_mix > 0.0) {
+		float t = clamp((v_vertex.y - heat_sea_y) / heat_top_m, 0.0, 1.0) * 5.0;
+		vec3 heat = mix(heat_c0.rgb, heat_c1.rgb, clamp(t, 0.0, 1.0));
+		heat = mix(heat, heat_c2.rgb, clamp(t - 1.0, 0.0, 1.0));
+		heat = mix(heat, heat_c3.rgb, clamp(t - 2.0, 0.0, 1.0));
+		heat = mix(heat, heat_c4.rgb, clamp(t - 3.0, 0.0, 1.0));
+		heat = mix(heat, heat_c5.rgb, clamp(t - 4.0, 0.0, 1.0));
+		tinted = mix(tinted, heat, heat_mix);
+	}
+	ALBEDO = tinted;"""
 
 
 ## `code` with the tint uniforms after its render_mode (or shader_type) line

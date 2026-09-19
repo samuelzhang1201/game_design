@@ -24,7 +24,7 @@ func test_the_patch_mixes_the_albedo_toward_the_cells_colour() -> void:
 	assert_false(out.contains(Map3DGroundTint.ALBEDO_LINE), "the plain albedo line is gone")
 	assert_string_contains(out, "texelFetch(cell_index")
 	assert_string_contains(out, "texelFetch(cell_lut")
-	assert_string_contains(out, "ALBEDO = mix(")
+	assert_string_contains(out, "mix(base_albedo, tint_linear, tint_mix * tint.a)")
 
 
 ## The field map (owner 2026-09-19): furrows along each estate's strips up
@@ -64,6 +64,17 @@ func test_terrain3ds_shader_survives_a_second_view() -> void:
 
 func test_code_without_the_albedo_line_is_not_patched() -> void:
 	assert_eq(Map3DGroundTint.patch("shader_type spatial;\nvoid fragment() {}\n"), "")
+
+
+## The HEIGHTS heat ramp (owner 2026-09-19, spec 2026-09-19-map3d-heights):
+## the ground's world height mixed toward terrain_palette heat_1..6.
+func test_the_patch_carries_the_heat_ramp() -> void:
+	var code := "shader_type spatial;\nrender_mode blend_mix;\nvoid fragment() {\n\t" \
+		+ Map3DGroundTint.ALBEDO_LINE + "\n}\n"
+	var out := Map3DGroundTint.patch(code)
+	assert_string_contains(out, "uniform float heat_mix")
+	assert_string_contains(out, "uniform vec4 heat_c5")
+	assert_string_contains(out, "heat_mix > 0.0")
 
 
 func test_the_lut_is_128_wide() -> void:
