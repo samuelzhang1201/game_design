@@ -65,3 +65,57 @@ func test_the_tooltip_chip_is_the_themes_own() -> void:
 	assert_eq(saved.corner_radius_top_left, live.corner_radius_top_left)
 	assert_eq(saved.content_margin_left, live.content_margin_left)
 	assert_eq(saved.content_margin_top, live.content_margin_top)
+
+
+const OLD_BUILD := "user://test_map3d_old_build.tscn"
+
+
+func _old_build() -> void:
+	var root := Node3D.new()
+	root.name = "OldBuild"
+	root.set_meta("map3d_world", WORLD)
+	for n: Node in [DirectionalLight3D.new(), WorldEnvironment.new(), MeshInstance3D.new(),
+			Camera3D.new()]:
+		n.name = {"DirectionalLight3D": "Sun", "WorldEnvironment": "Environment",
+			"MeshInstance3D": "Sea", "Camera3D": "Camera3D"}[n.get_class()]
+		root.add_child(n)
+		n.owner = root
+	(root.get_node("Sea") as MeshInstance3D).mesh = PlaneMesh.new()
+	var packed := PackedScene.new()
+	packed.pack(root)
+	ResourceSaver.save(packed, OLD_BUILD)
+	root.free()
+
+
+func test_an_old_builds_sun_sky_sea_and_cameras_step_aside() -> void:
+	_old_build()
+	var v := Map3DView.create(Game.data, OLD_BUILD)
+	v.size = Vector2(800, 450)
+	add_child_autofree(v)
+	v.activate()
+	var vp := v.viewport()
+	assert_eq(vp.find_children("*", "DirectionalLight3D", true, false).size(), 1, "one sun")
+	assert_eq(vp.find_children("*", "WorldEnvironment", true, false).size(), 1, "one sky")
+	assert_eq(vp.find_children("*", "Camera3D", true, false).size(), 1, "the rig's camera only")
+	var world := vp.get_node("WorldSlot").get_child(0)
+	for n: String in Map3DWorldLoader.OLD_BUILD_NODES:
+		assert_null(world.get_node_or_null(n), n + " of the old build is gone")
+	assert_true("Sea" in v.layer_names())
+	assert_true("Shadows" in v.layer_names())
+
+
+func test_the_sky_and_sun_are_data() -> void:
+	var v := Map3DView.create(Game.data, FIXTURE)
+	v.size = Vector2(800, 450)
+	add_child_autofree(v)
+	v.activate()
+	var env := (v.get_node("Viewport/Environment") as WorldEnvironment).environment
+	assert_almost_eq(env.ambient_light_energy, Game.data.bal("map3d_ambient_energy"), 0.0001)
+	assert_almost_eq(env.fog_density, Game.data.bal("map3d_fog_density"), 1e-9)
+	assert_eq(env.tonemap_mode, Environment.TONE_MAPPER_FILMIC)
+	var sun := v.get_node("Viewport/Sun") as DirectionalLight3D
+	assert_almost_eq(sun.light_energy, Game.data.bal("map3d_sun_energy"), 0.0001)
+	assert_almost_eq(sun.rotation_degrees.x, Game.data.bal("map3d_sun_pitch_deg"), 0.01)
+	var sea := v.get_node("Viewport/Sea") as MeshInstance3D
+	assert_not_null(sea.mesh, "the sea plane is the scene's own")
+	assert_almost_eq(sea.global_position.y, 5.0, 0.001)

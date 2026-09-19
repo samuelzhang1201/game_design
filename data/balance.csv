@@ -466,3 +466,12 @@ map3d_landmark_font_px,14,"3D MAP HEIGHTS: the height beside a landmark, design 
 map3d_heat_legend_w_px,14,"3D MAP HEIGHTS: the legend ramp's width, design px (bottom-left)"
 map3d_heat_legend_h_px,160,"3D MAP HEIGHTS: the legend ramp's height, design px"
 map3d_heat_legend_yield_alpha,0.25,"3D MAP HEIGHTS (Task 7 look pass, 2026-09-20): the legend's opacity while a MEASUREMENT ruler runs through it, so the ruler's reading is never printed over a tier's name"
+map3d_sun_pitch_deg,-35,"3D MAP sky (2026-09-20): the Sun's pitch in degrees (rotation_degrees.x), applied at load to the view scene's Viewport/Sun — the value tools/map3d/build_terrain.gd build_scene wrote into every build (2026-09-18)"
+map3d_sun_yaw_deg,45,3D MAP sky (2026-09-20): the Sun's yaw in degrees (rotation_degrees.y) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
+map3d_sun_energy,1.1,3D MAP sky (2026-09-20): the Sun's light_energy — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
+map3d_sun_shadow_max_m,60000,3D MAP sky (2026-09-20): the Sun's directional_shadow_max_distance in world metres — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
+map3d_ambient_energy,0.35,3D MAP sky (2026-09-20): the Environment's ambient_light_energy (ambient from the sky) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
+map3d_ambient_sky_share,0.6,3D MAP sky (2026-09-20): the Environment's ambient_light_sky_contribution — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
+map3d_fog_density,0.0000008,3D MAP sky (2026-09-20): the Environment's fog_density (fog lit in terrain_palette map3d_sky) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
+map3d_sky_sun_angle_max,1.0,3D MAP sky (2026-09-20): the ProceduralSkyMaterial's sun_angle_max in degrees — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
+map3d_sea_plane_span,12,"3D MAP sea (2026-09-20): the sea plane is the pack's size in metres times this, centred on the world origin at the build's sea_y — its edge must sit past the far camera's horizon; from tools/map3d/build_terrain.gd build_scene's span * 12.0 (2026-09-18)"

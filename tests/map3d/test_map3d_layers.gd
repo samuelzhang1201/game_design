@@ -67,12 +67,12 @@ func test_no_rivers_file_no_rivers_layer_listed() -> void:
 	assert_false("Rivers" in v.layer_names())
 
 
-func test_the_sea_layer_dresses_the_builds_plane() -> void:
+func test_the_sea_layer_is_the_scenes_own_plane() -> void:
 	var v := _view(SEA_FIXTURE)
 	var sea := v.viewport().get_node("Sea")
 	assert_true(sea is Map3DLayerSea)
 	assert_eq((sea as Map3DLayerSea).material_override, v.sea_material())
-	assert_not_null((sea as Map3DLayerSea).mesh, "the build's plane, taken over")
+	assert_not_null((sea as Map3DLayerSea).mesh, "the scene's own plane")
 	assert_eq(v.sea_material().render_priority, Map3DPriority.SEA)
 	v.set_layer_visible("Sea", false)
 	assert_false((sea as Node3D).visible)

@@ -52,28 +52,9 @@ func _init(p_repo: DataRepository, p_meta: Dictionary, p_world: Node3D = null) -
 		terrain = world.get_node_or_null("Terrain3D")
 
 
-## The built world at `scene_path` (tools/map3d), instanced and made ready to
-## add under the view — or null when it is missing or carries no map3d_world
-## meta. Each instance gets its OWN terrain material: the loaded one is shared,
-## and the first view's teardown left the second's ground untinted (owner
-## 2026-09-19). The build's framing cameras (tools/map3d/shoot.gd's) are off.
+## The built world at `scene_path` — Map3DWorldLoader.instance (Task 14).
 static func instance_world(scene_path: String) -> Node3D:
-	if not ResourceLoader.exists(scene_path):
-		return null
-	var packed := load(scene_path) as PackedScene
-	var w: Node3D = packed.instantiate() as Node3D if packed != null else null
-	if w == null or not w.has_meta("map3d_world"):
-		if w != null:
-			w.free()
-		return null
-	for t in w.find_children("*", "Terrain3D", true, false):
-		var m: Resource = t.get("material")
-		if m != null:
-			t.set("material", m.duplicate(true))
-	for child in w.get_children():
-		if child is Camera3D:
-			(child as Camera3D).current = false
-	return w
+	return Map3DWorldLoader.instance(scene_path)
 
 
 func state() -> GameState:

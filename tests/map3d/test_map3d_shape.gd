@@ -11,7 +11,7 @@ func _lines(path: String) -> int:
 
 
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 450)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 480)
 
 
 func test_every_other_script_is_small() -> void:

@@ -9,6 +9,7 @@
 [ext_resource type="Script" uid="uid://be5qi7kf6i0fy" path="res://scripts/map3d/map3d_hud.gd" id="7_3vvdf"]
 [ext_resource type="Script" uid="uid://bdbdtbw8fi2va" path="res://scripts/map3d/map3d_layer_settlements.gd" id="7_wti7n"]
 [ext_resource type="Script" uid="uid://b405afs5pa6ut" path="res://scripts/map3d/map3d_hud_labels.gd" id="8_7g25l"]
+[ext_resource type="Environment" uid="uid://c3ufh1051rmw3" path="res://scenes/map3d/world_environment.tres" id="8_mtfpr"]
 [ext_resource type="Script" uid="uid://bgwpo33vkfjjo" path="res://scripts/map3d/map3d_hud_landmarks.gd" id="9_h26ti"]
 [ext_resource type="Script" uid="uid://di4wc0jkj6o4u" path="res://scripts/map3d/map3d_hud_heat_legend.gd" id="10_kdwdj"]
 [ext_resource type="Script" uid="uid://d17t5xkpku5bw" path="res://scripts/map3d/map3d_hud_badges.gd" id="11_jhdww"]
@@ -74,6 +75,15 @@ extra_cull_margin = 16384.0
 
 [node name="Markers" type="Node3D" parent="Viewport" unique_id=1753765991]
 script = ExtResource("7_wti7n")
+
+[node name="Environment" type="WorldEnvironment" parent="Viewport" unique_id=1880847201]
+environment = ExtResource("8_mtfpr")
+
+[node name="Sun" type="DirectionalLight3D" parent="Viewport" unique_id=2026147674]
+transform = Transform3D(0.70710677, -0.4055798, 0.579228, 0, 0.81915206, 0.57357645, -0.70710677, -0.4055798, 0.579228, 0, 0, 0)
+light_energy = 1.1
+shadow_enabled = true
+directional_shadow_max_distance = 60000.0
 
 [node name="Display" type="TextureRect" parent="." unique_id=499707313]
 layout_mode = 1

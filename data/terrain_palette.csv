@@ -37,3 +37,5 @@ heat_6,#FFFFFF,the summit, snow
 town_earth,#AD9A7C,"SETTLEMENT EARTH HALO (owner 2026-09-17): the worked ground a town stands in — trodden earth and yards, a shade greyer and darker than the sand track of road"
 map3d_road_surface,#EDE0CE,"3D MAP roads (2026-09-19): the multiplier on the road texture (Poly Haven rocky_trail_02) up close, so the lit earth reads warm like the fields around it, not grey"
 map3d_bridge,#E0CBA8,"3D MAP bridges (2026-09-19): the multiplier on the bridges' stone (Poly Haven medieval_blocks_03) — the lit stone read near-white against the fields; also the flat colour when the texture is missing"
+map3d_sky_top,#2F5878,3D MAP sky (2026-09-20): the ProceduralSkyMaterial's sky_top_color (the horizon and the fog are map3d_sky) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
+map3d_sky_ground,#2E4A5C,3D MAP sky (2026-09-20): the ProceduralSkyMaterial's ground_bottom_color — from tools/map3d/build_terrain.gd build_scene (2026-09-18)

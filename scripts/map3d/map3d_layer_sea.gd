@@ -1,11 +1,12 @@
 class_name Map3DLayerSea
 extends MeshInstance3D
 ## The 3D map's sea as its own layer (spec 2026-09-20 §1, node Viewport/Sea):
-## the build's flat Sea plane dressed at runtime in the banded water, so the
-## palette and bands stay data (terrain_palette / balance), not a rebuild.
-## Takes over the build's plane's mesh and transform and hides the original;
-## has_water() is false when the build carries no Sea (a test fixture
-## without one).
+## the scene's OWN flat plane (Task 14: the build no longer makes one) dressed
+## at runtime in the banded water, so the palette and bands stay data
+## (terrain_palette / balance), not a rebuild. The plane is the pack's size
+## times map3d_sea_plane_span, centred on the world origin at the build's
+## sea_y — its edge must sit past the far camera's horizon (the old build's
+## span * 12). has_water() is false until a world is built.
 
 const SEA_SHADER := preload("res://scripts/map3d/water_sea.gdshader")
 
@@ -15,12 +16,12 @@ var _mat: ShaderMaterial
 
 func build(p_ctx: Map3DContext) -> void:
 	ctx = p_ctx
-	var src := ctx.world.get_node_or_null("Sea") as MeshInstance3D if ctx.world != null else null
-	if src == null:
-		return
-	mesh = src.mesh
-	global_transform = src.global_transform
-	src.visible = false
+	var p: Array = ctx.meta["pack_px"]
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(float(p[0]), float(p[1])) * float(ctx.meta["m_per_px"]) \
+		* ctx.repo.bal("map3d_sea_plane_span")
+	mesh = plane
+	position = Vector3(0.0, float(ctx.meta.get("sea_y", 0.0)), 0.0)
 	_mat = ShaderMaterial.new()
 	_mat.shader = SEA_SHADER
 	_mat.render_priority = Map3DPriority.SEA
@@ -28,7 +29,6 @@ func build(p_ctx: Map3DContext) -> void:
 	if tex_path != "" and ResourceLoader.exists(tex_path):
 		_mat.set_shader_parameter("sea_distance", load(tex_path))
 	var o: Array = ctx.meta["pack_origin"]
-	var p: Array = ctx.meta["pack_px"]
 	_mat.set_shader_parameter("pack_origin", Vector2(float(o[0]), float(o[1])))
 	_mat.set_shader_parameter("pack_px", Vector2(float(p[0]), float(p[1])))
 	_mat.set_shader_parameter("m_per_px", float(ctx.meta["m_per_px"]))

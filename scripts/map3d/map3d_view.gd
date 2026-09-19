@@ -7,6 +7,12 @@ extends Control
 ## authored layers to it. Nothing generated is saved into the scene. A
 ## COORDINATOR: rig, input, picker, selection, layers and HUD do the work; the
 ## rest forwards to them under the API test_map3d_api.gd pins.
+## It renders into a SubViewport at WINDOW resolution shown by a TextureRect
+## (Display) — never a SubViewportContainer, which under the canvas_items
+## stretch renders at design size and blurs. Controls: the wheel and a
+## trackpad pinch zoom about the pointer (map3d_zoom_min_m 800 to
+## map3d_zoom_max_m 150000 m), a left, middle or two-finger drag pans, a right
+## drag turns, WASD / arrows pan, a click picks.
 
 ## The described entry of the settlement under a click ({title, obj}), or
 ## {} when the selection is cleared — WorldMapView's signal.
@@ -49,6 +55,8 @@ var _scene_path := ""
 @onready var _lines: Map3DLayerLines = $Viewport/Lines
 @onready var _clouds: Map3DLayerClouds = $Viewport/Clouds
 @onready var _markers: Map3DLayerSettlements = $Viewport/Markers
+@onready var _env: WorldEnvironment = $Viewport/Environment
+@onready var _sun: DirectionalLight3D = $Viewport/Sun
 @onready var _display: TextureRect = $Display
 @onready var _notice: Label = $Notice
 ## The HUD waits hidden until a world loads; _load binds and shows it.
@@ -121,6 +129,7 @@ static func toggle_in(panel: Control, world_map: Control, view: Map3DView, on: b
 
 func _ready() -> void:
 	_display.texture = _viewport.get_texture()
+	_notice.text = NOTICE_TEXT  # the scene's text is a preview; this is the one source
 	_tooltip.add_theme_stylebox_override("normal", UiPalette.chip_style())
 	_tooltip.add_theme_font_size_override("font_size", 16)
 	_tooltip.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
@@ -178,7 +187,7 @@ func deactivate() -> void:
 
 ## Put the built world under WorldSlot and bind the authored layers to it.
 func _load() -> void:
-	_world = Map3DContext.instance_world(_scene_path)
+	_world = Map3DWorldLoader.instance(_scene_path)
 	if _world == null:
 		return
 	_meta = _world.get_meta("map3d_world")
@@ -196,9 +205,11 @@ func _load() -> void:
 	_markers.build()
 	_sea.build(_ctx)
 	_rivers.build(_ctx, _scene_path)
-	var sun := _world.get_node_or_null("Sun") as DirectionalLight3D
-	if sun != null:
-		Map3DEnvironment.apply_sun_look(_repo, sun)
+	# The sky and sun are the scene's, their numbers data (Task 14); the
+	# environment is this view's own copy of the shared .tres.
+	_env.environment = _env.environment.duplicate(true)
+	Map3DEnvironment.apply_environment(_repo, _env.environment)
+	Map3DEnvironment.apply_sun(_repo, _sun)
 	_clouds.build(_ctx)
 	_lines.bind(_ctx)
 	_roads.bind(_ctx, _lines, _viewport)
@@ -428,15 +439,13 @@ func layer_names() -> PackedStringArray:
 		out.append_array(["Markers", "Lines", "Clouds"])
 		out.append_array(["Rivers"] if _rivers.mesh != null else [])
 		out.append_array(["Sea"] if _sea.has_water() else [])
-	if _world != null and _world.get_node_or_null("Sun") != null:
-		out.append("Shadows")
-	out.append_array(["Hud"] if _loaded else [])
+	out.append_array(["Shadows", "Hud"] if _loaded else [])
 	return out
 
 func set_layer_visible(layer: String, on: bool) -> void:
 	match layer:
 		"Shadows":
-			(_world.get_node("Sun") as DirectionalLight3D).shadow_enabled = on
+			_sun.shadow_enabled = on
 		"Sea":
 			_sea.visible = on
 		"Hud":

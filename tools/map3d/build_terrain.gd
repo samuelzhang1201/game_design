@@ -9,8 +9,9 @@ extends RefCounted
 ## import_into() and saves).
 ## The ground wears the owner's Poly Haven sets (textures/, packed by
 ## pack_textures.py) plus the ambientCG Cliff. No trees yet.
-## The root carries `map3d_world` metadata (scale, origin, canvas, sea level):
-## Map3DView reads it rather than the git-ignored, .gdignored bake/.
+## The root carries `map3d_world` metadata (scale, origin, canvas, sea level,
+## format_version): Map3DView reads it rather than the git-ignored, .gdignored
+## bake/. The build is DATA only — no sun, sky, sea or cameras (2026-09-20).
 
 const TEX := "res://assets/map3d/textures"
 ## The pack to build (build_world.gd's --map); "" is data/maps.csv's default.
@@ -162,7 +163,7 @@ static func player_realm() -> String:
 	return ""
 
 
-## World XZ of the player realm's capital, for the near cameras.
+## World XZ of the player realm's capital, for shoot.gd's near framings.
 static func capital_xz(world: Dictionary) -> Vector2:
 	var capital := ""
 	var f := FileAccess.open("res://data/maps/%s/political/kingdoms.csv" % map(), FileAccess.READ)
@@ -180,16 +181,19 @@ static func capital_xz(world: Dictionary) -> Vector2:
 	return Vector2.ZERO
 
 
-## Step 1: the scene around the terrain (no data yet).
+## Step 1: the scene around the terrain (no data yet). The build is DATA —
+## terrain, meta, rivers, fields (2026-09-20): the sun, the sky, the sea and
+## the framing shots are the view scene's (scenes/map3d/world_map_3d.tscn,
+## numbers in balance / terrain_palette) and shoot.gd's, never baked here.
 static func build_scene() -> String:
 	var world := world_info()
 	# the water plane's height: bake_world.py's sea_y_m (data/map3d_bake.csv)
 	var sea_y := float(world.get("sea_y", 5.0))
-	var span := Vector2(world["pack_px"][0], world["pack_px"][1]) * float(world["m_per_px"])
 	var root := Node3D.new()
 	root.name = "Terrain_%s" % map()
 	root.set_meta("map3d_world", {"m_per_px": float(world["m_per_px"]),
-		"pack_origin": world["pack_origin"], "pack_px": world["pack_px"], "sea_y": sea_y})
+		"pack_origin": world["pack_origin"], "pack_px": world["pack_px"], "sea_y": sea_y,
+		"format_version": Map3DWorldLoader.FORMAT_VERSION})
 	var terrain := Terrain3D.new()
 	terrain.name = "Terrain3D"
 	terrain.region_size = int(world["region_size"])
@@ -205,77 +209,8 @@ static func build_scene() -> String:
 	terrain.owner = root
 	terrain.material = mat
 
-	var sea := MeshInstance3D.new()
-	sea.name = "Sea"
-	var plane := PlaneMesh.new()
-	plane.size = span * 12.0  # its edge must sit past the far camera's horizon
-	sea.mesh = plane
-	var sm := StandardMaterial3D.new()
-	sm.albedo_color = Color("#1F5570")
-	sm.albedo_color.a = 0.96  # at 0.8 the padded regions' sea floor showed as a dark rectangle
-	sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	sm.roughness = 0.55
-	sm.metallic_specular = 0.2
-	sm.disable_receive_shadows = true
-	sea.material_override = sm
-	sea.position = Vector3(0, sea_y, 0)
-	_add(root, sea)
-
-	var sun := DirectionalLight3D.new()
-	sun.name = "Sun"
-	sun.rotation_degrees = Vector3(-35, 45, 0)
-	sun.light_energy = 1.1
-	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 60000.0
-	_add(root, sun)
-
-	var env := WorldEnvironment.new()
-	env.name = "Environment"
-	var e := Environment.new()
-	var sky := Sky.new()
-	var psm := ProceduralSkyMaterial.new()
-	psm.sky_top_color = Color("#2F5878")
-	psm.sky_horizon_color = Color("#A9BFCC")
-	psm.ground_horizon_color = Color("#A9BFCC")
-	psm.ground_bottom_color = Color("#2E4A5C")
-	psm.sun_angle_max = 1.0
-	sky.sky_material = psm
-	e.background_mode = Environment.BG_SKY
-	e.sky = sky
-	e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	e.ambient_light_energy = 0.35
-	e.ambient_light_sky_contribution = 0.6
-	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	e.fog_enabled = true
-	e.fog_light_color = Color("#A9BFCC")
-	e.fog_density = 0.0000008
-	env.environment = e
-	_add(root, env)
-
-	# The whole realm, the country round the player's capital, and the capital.
-	var capital := capital_xz(world)
-	_camera(root, "Camera3D", Vector3(0, 70000, 75000), -45.0, 50.0, 400000.0)
-	_camera(root, "CameraMid", Vector3(capital.x, 14000, capital.y + 16000), -40.0, 20.0, 200000.0)
-	_camera(root, "CameraNear", Vector3(capital.x, 3000, capital.y + 4200), -35.0, 5.0, 100000.0)
-
 	var packed := PackedScene.new()
 	packed.pack(root)
 	var err := ResourceSaver.save(packed, root() + "/world.tscn")
 	root.free()
-	return "scene err=%d, capital at %s" % [err, capital]
-
-
-static func _camera(root: Node, cam_name: String, pos: Vector3, pitch: float, near: float, far: float) -> void:
-	var cam := Camera3D.new()
-	cam.name = cam_name
-	cam.fov = 45.0
-	cam.near = near
-	cam.far = far
-	cam.position = pos
-	cam.rotation_degrees = Vector3(pitch, 0, 0)
-	_add(root, cam)
-
-
-static func _add(root: Node, n: Node) -> void:
-	root.add_child(n)
-	n.owner = root
+	return "scene err=%d" % err
