@@ -103,6 +103,17 @@ func test_the_clouds_are_their_own_layer_with_a_shadow_twin() -> void:
 	Game.set_clock_speed(0)
 
 
+func test_the_markers_are_their_own_layer() -> void:
+	var v := _view()
+	var markers := v.viewport().get_node("Markers")
+	assert_true(markers is Map3DLayerSettlements)
+	assert_eq((markers as Map3DLayerSettlements).counts(), v.marker_counts())
+	var spec: Dictionary = Game.data.map3d_settlements["capital"]
+	assert_eq(Map3DView.marker_px(spec), Map3DLayerSettlements.marker_px(spec))
+	assert_eq(Map3DView.SELECTED_RING_ALWAYS_M, Map3DLayerSettlements.SELECTED_RING_ALWAYS_M)
+	assert_false((markers as Map3DLayerSettlements).selected_visible())
+
+
 func test_the_roads_are_one_builder_writing_lines_and_bridges() -> void:
 	var v := _view()
 	assert_true(v.component("roads") is Map3DLayerRoads)

@@ -235,6 +235,6 @@ func settlement_rects() -> Array:
 	for e: Dictionary in projected_settlements():
 		if not bool(e["shown"]):
 			continue
-		var r := Map3DView.marker_px(e["spec"]) * 0.5 + 2.0
+		var r := Map3DLayerSettlements.marker_px(e["spec"]) * 0.5 + 2.0
 		out.append(Rect2((e["screen"] as Vector2) - Vector2(r, r), Vector2(r, r) * 2.0))
 	return out

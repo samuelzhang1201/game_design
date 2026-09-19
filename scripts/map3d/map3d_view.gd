@@ -62,10 +62,10 @@ signal country_hovered(kingdom_code: String)
 
 const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
 const NOTICE_TEXT := "The 3D map has not been built for this map.\nRun tools/map3d (see tools/map3d/README.md)."
-const RING_SHADER := preload("res://scripts/map3d/settlement_ring.gdshader")
 ## The selection ring never thins by distance (fix round 1, owner 2026-09-18):
-## whatever the player clicked stays marked regardless of zoom.
-const SELECTED_RING_ALWAYS_M := 1000000.0
+## whatever the player clicked stays marked regardless of zoom. Alias of
+## Map3DLayerSettlements.SELECTED_RING_ALWAYS_M, pinned by test_map3d_api.gd.
+const SELECTED_RING_ALWAYS_M := Map3DLayerSettlements.SELECTED_RING_ALWAYS_M
 ## The render-priority table lives in Map3DPriority; these are its aliases.
 const PRIORITY_SEA := Map3DPriority.SEA
 const PRIORITY_RIVERS := Map3DPriority.RIVERS
@@ -94,11 +94,9 @@ var _display: TextureRect
 var _viewport: SubViewport
 var _world: Node3D
 var _camera: Camera3D
-var _markers: Node3D
+var _markers: Map3DLayerSettlements
 var _lines: Map3DLayerLines
 var _notice: Label
-var _ring_mats: Array[ShaderMaterial] = []
-var _selected_ring: MultiMeshInstance3D
 var _ctx: Map3DContext
 var _rivers: Map3DLayerRivers
 var _sea: Map3DLayerSea
@@ -364,11 +362,12 @@ func _load() -> void:
 	_viewport.add_child(_camera)
 	_camera.make_current()
 	_ctx.camera = _camera
-	_markers = Node3D.new()
+	_markers = Map3DLayerSettlements.new()
 	_markers.name = "Markers"
 	_viewport.add_child(_markers)
+	_markers.bind(_ctx)
 	_ctx.settle_ground()
-	_place_markers()
+	_markers.build()
 	_sea = Map3DLayerSea.new()
 	_sea.name = "Sea"
 	_viewport.add_child(_sea)
@@ -432,69 +431,6 @@ func _height_at(xz: Vector2) -> float:
 	return _ctx.height_at(xz) if _ctx != null else float(_meta.get("sea_y", 0.0))
 
 
-## One MultiMesh of billboard rings per settlement group, each over the
-## ground under its burg, plus a hidden gold ring for the current selection.
-## Codes are sorted so the placement is the same every run. Render priority
-## rises with tier (village lowest, capital highest — by marker_px, the
-## table's own measure of importance) so a bigger settlement's ring never
-## gets buried under a smaller neighbour's (fix round 1, owner 2026-09-18);
-## the selection ring sits above every tier.
-func _place_markers() -> void:
-	_ring_mats.clear()
-	var by_group: Dictionary = {}
-	for code: String in _sorted_burgs():
-		var burg: Dictionary = _repo.burgs[code]
-		var group := String(burg.get("group", ""))
-		if not by_group.has(group):
-			by_group[group] = []
-		(by_group[group] as Array).append(_ctx.burg_ground(code))
-	var groups: Array = by_group.keys()
-	groups.sort()
-	var by_size: Array = groups.duplicate()
-	by_size.sort_custom(func(a: String, b: String) -> bool:
-		var ra := marker_px(_repo.map3d_settlements[a])
-		var rb := marker_px(_repo.map3d_settlements[b])
-		return ra < rb if ra != rb else a < b)
-	for group: String in groups:
-		var spec: Dictionary = _repo.map3d_settlements[group]
-		var mesh := QuadMesh.new()
-		mesh.size = Vector2.ONE
-		mesh.material = _ring_material(Color(String(spec["color"])),
-			float(spec["ring_px"]), float(spec["line_px"]), float(spec["max_view_m"]),
-			PRIORITY_RING_BASE + by_size.find(group), float(spec.get("dot_px", 0.0)))
-		var pts: Array = by_group[group]
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.mesh = mesh
-		mm.instance_count = pts.size()
-		for i in pts.size():
-			mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, pts[i]))
-		var mmi := MultiMeshInstance3D.new()
-		mmi.name = group.capitalize()
-		mmi.multimesh = mm
-		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		# The vertex shader grows geometry far past the mesh's own 1x1 AABB
-		# (Map3DBorders' lines use the same margin, for the same reason).
-		mmi.extra_cull_margin = 16384.0
-		_markers.add_child(mmi)
-	var sel := QuadMesh.new()
-	sel.size = Vector2.ONE
-	sel.material = _ring_material(MapPalette.named(_repo, "map3d_selection"), 0.0, 0.0,
-		SELECTED_RING_ALWAYS_M, PRIORITY_RING_BASE + groups.size())
-	var smm := MultiMesh.new()
-	smm.transform_format = MultiMesh.TRANSFORM_3D
-	smm.mesh = sel
-	smm.instance_count = 1
-	_selected_ring = MultiMeshInstance3D.new()
-	_selected_ring.name = "Selected"
-	_selected_ring.multimesh = smm
-	_selected_ring.visible = false
-	_selected_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_selected_ring.extra_cull_margin = 16384.0
-	_markers.add_child(_selected_ring)
-	_update_line_scale()
-
-
 ## The ripple normal map both waters share (Map3DContext.water_normals).
 func water_normals() -> Texture2D:
 	return _ctx.water_normals() if _ctx != null else null
@@ -510,59 +446,15 @@ func river_material() -> ShaderMaterial:
 	return _rivers.material() if _rivers != null else null
 
 
-## A ring material; its sizes are design px, turned into window px with the
-## lines' by _update_line_scale (base values kept as meta). max_view_m is
-## world metres, never rescaled. The keyline is a fixed data value (fix
-## round 1: a pale ring was nearly invisible on bright grass at the old
-## 0.55 default).
 ## A settlement's size on screen, design px: its ring, else its dot.
 static func marker_px(spec: Dictionary) -> float:
-	return maxf(float(spec.get("ring_px", 0.0)), float(spec.get("dot_px", 0.0)))
+	return Map3DLayerSettlements.marker_px(spec)
 
 
-func _ring_material(colour: Color, ring_px: float, line_px: float, max_view_m: float,
-		priority: int, dot_px := 0.0) -> ShaderMaterial:
-	var mat := ShaderMaterial.new()
-	mat.shader = RING_SHADER
-	mat.render_priority = priority
-	mat.set_shader_parameter("colour", colour)
-	mat.set_shader_parameter("max_view_m", max_view_m)
-	mat.set_shader_parameter("fade_start", _repo.bal("map3d_ring_fade_start"))
-	var keyline := Color(0.08, 0.08, 0.08, _repo.bal("map3d_ring_keyline_alpha"))
-	mat.set_shader_parameter("keyline", keyline)
-	mat.set_meta("ring_px", ring_px)
-	mat.set_meta("line_px", line_px)
-	mat.set_meta("dot_px", dot_px)
-	_ring_mats.append(mat)
-	return mat
-
-
-## Show the gold ring on a burg (or hide it with ""). It keeps the base
-## stroke width at a larger diameter (fix round 1, owner 2026-09-18: the old
-## 1.5x line width smeared it into a fat band over the tier ring instead of
-## reading as a second crisp ring).
+## Show the gold ring on a burg (or hide it with "").
 func _show_selected_ring(code: String) -> void:
-	if _selected_ring == null:
-		return
-	_selected_ring.visible = code != ""
-	if code == "":
-		return
-	var burg: Dictionary = _repo.burgs[code]
-	var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
-	_selected_ring.multimesh.set_instance_transform(0,
-		Transform3D(Basis.IDENTITY, _ctx.burg_ground(code)))
-	var mat := _selected_ring.multimesh.mesh.surface_get_material(0) as ShaderMaterial
-	var k := _repo.bal("map3d_selected_ring_scale")
-	# A gold ring round the dot (or round the capital's own ring).
-	mat.set_meta("ring_px", maxf(float(spec["ring_px"]), float(spec.get("dot_px", 0.0)) * 2.0) * k)
-	mat.set_meta("line_px", maxf(float(spec["line_px"]), 2.0))
-	_update_line_scale()
-
-
-## The burgs that get a marker (their group has a map3d_settlements row),
-## sorted by code.
-func _sorted_burgs() -> Array:
-	return _ctx.marked_burgs()
+	if _markers != null:
+		_markers.show_selected(code)
 
 
 # --- borders -----------------------------------------------------------------
@@ -808,22 +700,15 @@ func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: 
 	_lines.set_lines(line_name, lines, st)
 
 
-## The lines' screen-px values in WINDOW px, and the metres per px per metre
-## of distance, for every line material — on load, resize and new lines.
+## The lines' and rings' screen-px values in WINDOW px, and the metres per px
+## per metre of distance — on load, resize and new lines.
 func _update_line_scale() -> void:
 	if _repo == null or _viewport == null:
 		return
-	var s := _render_scale()
-	var h := float(maxi(_viewport.size.y, 1))
-	var per_dist := _ctx.px_per_dist() if _ctx != null else 2.0 * tan(deg_to_rad(_repo.bal("map3d_fov_deg")) * 0.5) / h
 	if _lines != null:
 		_lines.apply_scale()
-	for mat: ShaderMaterial in _ring_mats:
-		mat.set_shader_parameter("px_per_dist", per_dist)
-		mat.set_shader_parameter("lift_px", _repo.bal("map3d_ring_lift_px") * s)
-		mat.set_shader_parameter("ring_px", float(mat.get_meta("ring_px")) * s)
-		mat.set_shader_parameter("line_px", float(mat.get_meta("line_px")) * s)
-		mat.set_shader_parameter("dot_px", float(mat.get_meta("dot_px", 0.0)) * s)
+	if _markers != null:
+		_markers.apply_scale()
 	if _rivers != null:
 		_rivers.apply_scale()
 
@@ -1781,7 +1666,7 @@ func selected_manor() -> int:
 
 ## Whether the clicked settlement's gold ring is currently shown.
 func selected_ring_visible() -> bool:
-	return _selected_ring != null and _selected_ring.visible
+	return _markers != null and _markers.selected_visible()
 
 ## Centre the rig on a pack point (tests and future "go to" orders).
 func look_at_pack(pack_px: Vector2, at_distance: float = -1.0) -> void:
@@ -1830,11 +1715,4 @@ func line_mesh(line_name: String) -> ArrayMesh:
 
 ## Settlement markers per group: {group: count}.
 func marker_counts() -> Dictionary:
-	var out: Dictionary = {}
-	if _markers == null:
-		return out
-	for mmi: MultiMeshInstance3D in _markers.get_children():
-		if mmi.name == "Selected":
-			continue
-		out[mmi.name.to_lower()] = mmi.multimesh.instance_count
-	return out
+	return _markers.counts() if _markers != null else {}
