@@ -45,6 +45,9 @@ var settlement_art: Array[Dictionary] = []
 ## data/map3d_settlements.csv rows keyed by burg group: the 3D MAP's
 ## placeholder marker for each settlement (Map3DView).
 var map3d_settlements: Dictionary = {}
+## data/graphics_quality.csv rows keyed by tier (low/medium/high/ultra): the
+## 3D map's graphics tiers (Map3DQuality, spec 2026-09-20 §4).
+var graphics_quality: Dictionary = {}
 ## data/army_art.csv: piece -> {piece, texture, painting} — the painted 3D
 ## counter a regiment is drawn with and the painting heading its card
 ## (MapObjects.army_piece / army_card, owner 2026-09-15).
@@ -285,11 +288,11 @@ func map3d_dir(id: String = "") -> String:
 
 ## map3d_dir straight from data/maps.csv, for tools that run before any
 ## repository loads.
-static func map3d_dir_of(map_id: String, maps_csv: String = "res://data/maps.csv") -> String:
+static func map3d_dir_of(pack_id: String, maps_csv: String = "res://data/maps.csv") -> String:
 	for row: Dictionary in parse_csv(maps_csv, ["map_id"]):
-		if String(row["map_id"]) == map_id and String(row.get("map3d_dir", "")) != "":
+		if String(row["map_id"]) == pack_id and String(row.get("map3d_dir", "")) != "":
 			return String(row["map3d_dir"])
-	return "res://assets/map3d/%s" % map_id
+	return "res://assets/map3d/%s" % pack_id
 
 static func parse_csv(path: String, required_cols: Array) -> Array[Dictionary]:
 	last_error = ""
@@ -472,6 +475,9 @@ func _load(dir: String) -> bool:
 	if not _load_if_present("res://data/map3d_settlements.csv",
 			["group", "dot_px", "ring_px", "line_px", "color", "max_view_m"],
 			func(r): map3d_settlements[String(r["group"])] = r):
+		return false
+	if not _load_if_present("res://data/graphics_quality.csv", ["tier", "render_scale"],
+			func(r): graphics_quality[String(r["tier"])] = r):
 		return false
 	if not _load_if_present(dir + "/army_art.csv", ["piece", "texture", "painting"],
 			func(r): army_art[String(r["piece"])] = r):

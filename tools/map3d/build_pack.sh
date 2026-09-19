@@ -10,7 +10,12 @@ cd "$(dirname "$0")/../.."
 MAP=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --map) MAP="$2"; shift 2 ;;
+    --map)
+      if [ $# -lt 2 ]; then
+        echo "usage: $0 [--map ID]" >&2
+        exit 2
+      fi
+      MAP="$2"; shift 2 ;;
     *) echo "usage: $0 [--map ID]" >&2; exit 2 ;;
   esac
 done

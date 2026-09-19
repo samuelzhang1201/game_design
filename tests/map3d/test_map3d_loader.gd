@@ -77,9 +77,9 @@ func test_json_numbers_still_match_the_meta() -> void:
 
 func test_each_notice_says_what_to_run() -> void:
 	for state: String in ["missing", "stale", "bad"]:
-		var text := Map3DWorldLoader.notice_text(state, "beria")
+		var text := Map3DWorldLoader.notice_text(state, "some_pack")
 		assert_string_contains(text, "tools/map3d")
-		assert_string_contains(text, "build_pack.sh --map beria")
+		assert_string_contains(text, "build_pack.sh --map some_pack")
 
 
 func test_a_stale_build_shows_its_notice_and_does_not_load() -> void:

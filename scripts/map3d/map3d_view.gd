@@ -195,8 +195,8 @@ func deactivate() -> void:
 func _load() -> void:
 	var st := Map3DWorldLoader.status(_scene_path)
 	var state := String(st["state"])
-	_notice.text = Map3DWorldLoader.notice_text(state, _repo.map_id)
 	if state != "ok" and state != "legacy":
+		_notice.text = Map3DWorldLoader.notice_text(state, _repo.map_id)
 		return
 	_world = Map3DWorldLoader.instance(_scene_path)
 	if _world == null:

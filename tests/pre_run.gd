@@ -7,6 +7,8 @@ extends GutHookScript
 
 func run() -> void:
 	Game.data.balance["map3d_default"] = 0.0
+	# the suite runs at high, today's look (Ruling 7)
+	Map3DQuality.forced = "high"
 	# The player's settings (music on/off) live in user://; the suite reads
 	# its own file so a developer's choice never reaches a test.
 	GameRoot.settings_path = "user://test_settings.cfg"
