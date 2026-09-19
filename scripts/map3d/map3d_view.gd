@@ -82,8 +82,9 @@ const SELECTED_RING_ALWAYS_M := 1000000.0
 ## The sea under everything; the river water under every line, so a border
 ## or seam always reads over the water it crosses; the roads (a bridge over
 ## the water, under every border); the manor edges of the MANORS
-## themes; seams, then kingdom
-## borders, then the hovered kingdom's wider outline, then the clicked
+## themes; the realm band inside each kingdom (2026-09-19), seams, the
+## kingdom border's pale halo, then its ink, then the hovered kingdom's
+## wider outline, then the clicked
 ## province's gold outline; then the CLOUDS — over
 ## the lines, but UNDER the settlement rings, so a pin always stands above
 ## the weather; then the rings by tier (village lowest, capital highest —
@@ -92,14 +93,16 @@ const PRIORITY_SEA := -1
 const PRIORITY_RIVERS := 0
 const PRIORITY_ROADS := 1
 const PRIORITY_MANOR_EDGES := 2
-const PRIORITY_SEAMS := 3
-const PRIORITY_KINGDOMS := 4
-const PRIORITY_HOVER := 5
-const PRIORITY_SELECTION := 6
-const PRIORITY_CLOUDS := 7
+const PRIORITY_KINGDOM_BAND := 3
+const PRIORITY_SEAMS := 4
+const PRIORITY_KINGDOM_HALO := 5
+const PRIORITY_KINGDOMS := 6
+const PRIORITY_HOVER := 7
+const PRIORITY_SELECTION := 8
+const PRIORITY_CLOUDS := 9
 ## The lowest ring tier; the tiers and then the selection ring count up from
 ## here, one step each (data/map3d_settlements.csv's groups).
-const PRIORITY_RING_BASE := 8
+const PRIORITY_RING_BASE := 10
 ## A press and release further apart than this is a drag, not a click
 ## (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := 10.0
@@ -833,10 +836,28 @@ func refresh_borders() -> void:
 	if _hud != null:
 		_hud.refresh()  # the names follow the land held
 	var step := _repo.bal("map3d_line_step_m")
+	# The kingdom border (owner 2026-09-19, spec 2026-09-19-map3d-border-look,
+	# replacing the thin solid black line of 2026-09-18): a band in the realm's
+	# own colour inside each outline, fading inward — ONE mesh, the colour per
+	# vertex; where two kingdoms meet each draws its band on its own side — a
+	# pale halo, and the warm ink line over both.
 	var rings: Array = []
+	var bands: Array = []
+	var band_colours: Array = []
 	for code: String in _repo.kingdoms:
-		rings.append_array(Map3DBorders.kingdom_lines(_repo, st, _meta, code, step))
-	# A thin solid black line (owner 2026-09-18), not the 2D chequered ribbon.
+		var own := Map3DBorders.kingdom_lines(_repo, st, _meta, code, step)
+		rings.append_array(own)
+		var c := MapPalette.color_of(_repo, code)
+		for r: PackedVector2Array in own:
+			bands.append(Map3DBorders.inward(r))
+			band_colours.append(c)
+	var band := Color(1, 1, 1, _repo.bal("map3d_border_band_alpha"))
+	_set_lines("KingdomBand", bands, band, band, "map3d_border_band_px", "", "",
+		PRIORITY_KINGDOM_BAND, 0.0, true, band_colours, 1.0)
+	var halo := MapPalette.named(_repo, "map3d_border_halo")
+	halo.a = _repo.bal("map3d_border_halo_alpha")
+	_set_lines("KingdomHalo", rings, halo, halo, "map3d_border_halo_px", "", "",
+		PRIORITY_KINGDOM_HALO, _repo.bal("map3d_border_halo_soft"))
 	var ink := MapPalette.named(_repo, "map3d_border")
 	_set_lines("Kingdoms", rings, ink, ink, "map3d_border_width_px", "", "", PRIORITY_KINGDOMS)
 	var seam := MapPalette.named(_repo, "map3d_seam")
@@ -1153,14 +1174,18 @@ func _build_bridges(list: Array) -> void:
 
 ## One MeshInstance3D of ribbons under Lines/<name>, replacing any before.
 ## `priority` is the line's row of the render-priority table (PRIORITY_*);
-## `edge_soft` fades the ribbon toward its sides (border_line.gdshader).
+## `edge_soft` fades the ribbon toward its sides (border_line.gdshader);
+## `one_sided` lays it from the line to one side (Map3DBorders.ribbon_arrays),
+## `colours` a Color per line drawn in place of `a`'s rgb, and `fade_across`
+## fades it away from the line (the realm band).
 func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: String,
-		dash_key: String, gap_key: String, priority: int, edge_soft := 0.0) -> void:
+		dash_key: String, gap_key: String, priority: int, edge_soft := 0.0,
+		one_sided := false, colours: Array = [], fade_across := 0.0) -> void:
 	var old := _lines.get_node_or_null(line_name)
 	if old != null:
 		_lines.remove_child(old)
 		old.queue_free()
-	var arrays := Map3DBorders.ribbon_arrays(lines, _height_at)
+	var arrays := Map3DBorders.ribbon_arrays(lines, _height_at, [], one_sided, colours)
 	if arrays.is_empty():
 		return
 	var mesh := ArrayMesh.new()
@@ -1171,6 +1196,10 @@ func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: 
 	mat.set_shader_parameter("colour_a", a)
 	mat.set_shader_parameter("colour_b", b)
 	mat.set_shader_parameter("edge_soft", edge_soft)
+	mat.set_shader_parameter("one_sided", 1.0 if one_sided else 0.0)
+	mat.set_shader_parameter("use_vertex_colour", 1.0 if not colours.is_empty() else 0.0)
+	mat.set_shader_parameter("fade_across", fade_across)
+	mat.set_shader_parameter("fade_power", _repo.bal("map3d_border_band_fade_power") if fade_across > 0.0 else 1.0)
 	mat.set_meta("width_key", width_key)
 	mat.set_meta("dash_key", dash_key)
 	mat.set_meta("gap_key", gap_key)

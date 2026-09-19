@@ -153,8 +153,8 @@ func test_ring_render_priority_rises_with_tier() -> void:
 ## settlement pin always stands over the weather and the weather over lines.
 func test_the_render_priority_table_orders_every_layer() -> void:
 	var order := [Map3DView.PRIORITY_SEA, Map3DView.PRIORITY_RIVERS, Map3DView.PRIORITY_ROADS,
-		Map3DView.PRIORITY_MANOR_EDGES, Map3DView.PRIORITY_SEAMS,
-		Map3DView.PRIORITY_KINGDOMS, Map3DView.PRIORITY_HOVER, Map3DView.PRIORITY_SELECTION,
+		Map3DView.PRIORITY_MANOR_EDGES, Map3DView.PRIORITY_KINGDOM_BAND, Map3DView.PRIORITY_SEAMS,
+		Map3DView.PRIORITY_KINGDOM_HALO, Map3DView.PRIORITY_KINGDOMS, Map3DView.PRIORITY_HOVER, Map3DView.PRIORITY_SELECTION,
 		Map3DView.PRIORITY_CLOUDS,
 		Map3DView.PRIORITY_RING_BASE]
 	for i in range(1, order.size()):
@@ -343,6 +343,31 @@ func test_borders_and_seams_are_laid_from_the_live_outlines() -> void:
 	assert_not_null(kingdoms)
 	assert_eq(kingdoms.surface_get_array_len(0), expected.size())
 	assert_not_null(v.line_mesh("Seams"))
+
+
+## The kingdom border (spec 2026-09-19-map3d-border-look): a realm band in
+## each kingdom's colour inside its outline (ONE one-sided mesh, a colour per
+## vertex, fading inward), a pale halo, and the warm ink over both.
+func test_the_kingdom_border_is_band_halo_and_ink() -> void:
+	var v := _view()
+	v.activate()
+	for n: String in ["KingdomBand", "KingdomHalo", "Kingdoms"]:
+		assert_not_null(v.line_mesh(n), n)
+	var band := v.line_mesh("KingdomBand")
+	var mat := band.surface_get_material(0) as ShaderMaterial
+	assert_eq(float(mat.get_shader_parameter("fade_across")), 1.0)
+	assert_eq(float(mat.get_shader_parameter("one_sided")), 1.0)
+	assert_eq(float(mat.get_shader_parameter("use_vertex_colour")), 1.0)
+	assert_eq(band.surface_get_array_len(0), v.line_mesh("Kingdoms").surface_get_array_len(0),
+		"the band follows every ring the ink does")
+	var cols: PackedColorArray = band.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+	var player := Game.data.resolve_realm("player_realm")
+	assert_true(cols.has(MapPalette.color_of(Game.data, player)), "the player's realm wears its colour")
+	var halo := v.line_mesh("KingdomHalo").surface_get_material(0) as ShaderMaterial
+	var ink := v.line_mesh("Kingdoms").surface_get_material(0) as ShaderMaterial
+	assert_lt(mat.render_priority, Map3DView.PRIORITY_SEAMS, "the band under the seams")
+	assert_lt(halo.render_priority, ink.render_priority, "the halo under the ink")
+	assert_lt(ink.render_priority, Map3DView.PRIORITY_HOVER)
 
 
 func test_a_conquest_redraws_the_borders() -> void:

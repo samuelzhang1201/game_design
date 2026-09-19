@@ -31,10 +31,15 @@ add it here as a principle with its why — not as a changelog entry.
 - **One size where the owner said one size.** For example, estates are drawn at one height: "no big and small".
 
 - **On the 3D map, lines rank by pattern, not by colour** (2026-09-18): the
-  kingdom border is a thin SOLID black line, province seams DARK DASHES at
-  half opacity, roads a soft darker-sand track. The 2D map's chequered
-  ribbon was rejected there, and pale seams had the same hue as the sand
-  roads, so the two could not be told apart.
+  kingdom border is a SOLID line, province seams DARK DASHES at half
+  opacity, roads a soft darker-sand track. The 2D map's chequered ribbon
+  was rejected there, and pale seams had the same hue as the sand roads,
+  so the two could not be told apart.
+- **A bare line is not a border** (2026-09-19: "the one solid black line is
+  ugly"): a lone thin black line on the photograph said nothing about who
+  holds which side. The border now carries the realm's colour as a band
+  fading INWARD from the line (each side its own, so a shared border is
+  two-toned) under a warm dark-brown ink — an atlas border, not a rule.
 
 - **A tool must not borrow the map's line language** (2026-09-18, ruler):
   the MEASUREMENT ruler's dashes alone read as one more border. What makes

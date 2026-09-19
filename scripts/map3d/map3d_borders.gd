@@ -16,14 +16,27 @@ extends RefCounted
 ## strip, lying on `height_fn(xz)` — or, where `heights` gives line i a
 ## PackedFloat32Array, on its value at each point that is not NAN (a road's
 ## bridge deck, Map3DBridges). [] when there is nothing to draw.
-static func ribbon_arrays(lines: Array, height_fn: Callable, heights: Array = []) -> Array:
+##
+## `one_sided` (the realm band, spec 2026-09-19-map3d-border-look): both
+## vertices of a point carry the SAME side, the line's own at UV.y 0 and the
+## far one at UV.y 1, and border_line.gdshader's one_sided pushes only the far
+## one, a full width — so the ribbon starts on the line and reaches one way
+## (to the left of the line's heading; `inward` turns a ring so that is its
+## inside). The side is never coded in NORMAL's length: Godot stores normals
+## octahedrally, so a zero or doubled normal comes back unit-length.
+## `colours`, when given, is a Color per line written on its vertices
+## (ARRAY_COLOR), so one mesh carries every kingdom's band.
+static func ribbon_arrays(lines: Array, height_fn: Callable, heights: Array = [],
+		one_sided := false, colours: Array = []) -> Array:
 	var verts := PackedVector3Array()
 	var sides := PackedVector3Array()
 	var uvs := PackedVector2Array()
+	var cols := PackedColorArray()
 	var idx := PackedInt32Array()
 	for li in lines.size():
 		var line: PackedVector2Array = lines[li]
 		var own: PackedFloat32Array = heights[li] if li < heights.size() else PackedFloat32Array()
+		var col: Color = colours[li] if li < colours.size() else Color.WHITE
 		var n := line.size()
 		if n < 2:
 			continue
@@ -40,9 +53,12 @@ static func ribbon_arrays(lines: Array, height_fn: Callable, heights: Array = []
 			verts.append(p)
 			verts.append(p)
 			sides.append(Vector3(side.x, 0.0, side.y))
-			sides.append(Vector3(-side.x, 0.0, -side.y))
+			sides.append(Vector3(side.x, 0.0, side.y) if one_sided else Vector3(-side.x, 0.0, -side.y))
 			uvs.append(Vector2(arc, 0.0))
 			uvs.append(Vector2(arc, 1.0))
+			if not colours.is_empty():
+				cols.append(col)
+				cols.append(col)
 		for i in n - 1:
 			var a := base + i * 2
 			idx.append_array(PackedInt32Array([a, a + 1, a + 2, a + 1, a + 3, a + 2]))
@@ -54,7 +70,26 @@ static func ribbon_arrays(lines: Array, height_fn: Callable, heights: Array = []
 	arrays[Mesh.ARRAY_NORMAL] = sides
 	arrays[Mesh.ARRAY_TEX_UV] = uvs
 	arrays[Mesh.ARRAY_INDEX] = idx
+	if not colours.is_empty():
+		arrays[Mesh.ARRAY_COLOR] = cols
 	return arrays
+
+
+## A closed ring turned so a one-sided ribbon along it reaches INSIDE: _side's
+## (-d.y, d.x) is the left of the heading, which is the inside of a ring whose
+## shoelace area over (x, z) is positive, so a negative one is reversed.
+static func inward(line: PackedVector2Array) -> PackedVector2Array:
+	var area := 0.0
+	var n := line.size()
+	for i in n:
+		var a := line[i]
+		var b := line[(i + 1) % n]
+		area += a.x * b.y - b.x * a.y
+	if area >= 0.0:
+		return line
+	var out := line.duplicate()
+	out.reverse()
+	return out
 
 
 ## The unit side at point i: perpendicular to the line there, the mitre of

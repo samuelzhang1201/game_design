@@ -194,3 +194,56 @@ func test_shared_borders_draw_one_curve() -> void:
 				worst = maxf(worst, sa[j].distance_to(sb[j]))
 	assert_gt(checked, 0, "found shared kingdom-kingdom edges to check")
 	assert_lt(worst, 0.02)
+
+
+## A one-sided ribbon (the realm band, spec 2026-09-19-map3d-border-look):
+## both vertices carry the SAME unit side and UV.y says which is which — the
+## line's own at 0 stays on the line, the other at 1 is pushed a full width
+## one way by border_line.gdshader's one_sided. Not NORMAL's length: Godot
+## stores normals octahedrally, so a zero or a doubled normal comes back unit
+## (the round trip below pins it).
+func test_a_one_sided_ribbon_keeps_the_line_and_reaches_one_way() -> void:
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(10, 0)])
+	var arrays := Map3DBorders.ribbon_arrays([line], func(_xz: Vector2) -> float: return 0.0, [], true)
+	var sides: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	assert_eq(sides[0], sides[1], "both vertices reach the same way")
+	assert_almost_eq(sides[1].length(), 1.0, 0.0001)
+	assert_eq(uvs[0].y, 0.0, "the line's own vertex")
+	assert_eq(uvs[1].y, 1.0, "the far one")
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var back: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
+	assert_almost_eq(back[1].dot(sides[1]), 1.0, 0.001, "the side survives the mesh's encoding")
+
+
+func test_inward_bands_reach_inside_the_ring() -> void:
+	# A square ring, either winding: the band's side points to the centre.
+	for ring: PackedVector2Array in [
+			PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10), Vector2(0, 0)]),
+			PackedVector2Array([Vector2(0, 0), Vector2(0, 10), Vector2(10, 10), Vector2(10, 0), Vector2(0, 0)])]:
+		var r := Map3DBorders.inward(ring)
+		assert_eq(r.size(), ring.size())
+		var sides: PackedVector3Array = Map3DBorders.ribbon_arrays([r],
+			func(_xz: Vector2) -> float: return 0.0, [], true)[Mesh.ARRAY_NORMAL]
+		for i in [1, 2, 3]:
+			var p := r[i]
+			var s := Vector2(sides[i * 2 + 1].x, sides[i * 2 + 1].z)
+			assert_lt((p + s).distance_to(Vector2(5, 5)), p.distance_to(Vector2(5, 5)),
+				"corner %d reaches inside" % i)
+
+
+## One band mesh for every kingdom: a Color per line goes on both its
+## vertices (ARRAY_COLOR), read by the shader under use_vertex_colour.
+func test_line_colours_go_on_their_vertices() -> void:
+	var a := PackedVector2Array([Vector2(0, 0), Vector2(5, 0)])
+	var b := PackedVector2Array([Vector2(0, 9), Vector2(5, 9)])
+	var arrays := Map3DBorders.ribbon_arrays([a, b], func(_xz: Vector2) -> float: return 0.0,
+		[], true, [Color.RED, Color.BLUE])
+	var cols: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+	assert_eq(cols.size(), 8)
+	assert_eq(cols[0], Color.RED)
+	assert_eq(cols[3], Color.RED)
+	assert_eq(cols[4], Color.BLUE)
+	assert_null(Map3DBorders.ribbon_arrays([a], func(_xz: Vector2) -> float: return 0.0)[Mesh.ARRAY_COLOR],
+		"no colours asked, none written")
