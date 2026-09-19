@@ -1,0 +1,72 @@
+class_name Map3DLayerSea
+extends MeshInstance3D
+## The 3D map's sea as its own layer (spec 2026-09-20 §1, node Viewport/Sea):
+## the build's flat Sea plane dressed at runtime in the banded water, so the
+## palette and bands stay data (terrain_palette / balance), not a rebuild.
+## Takes over the build's plane's mesh and transform and hides the original;
+## has_water() is false when the build carries no Sea (a test fixture
+## without one).
+
+const SEA_SHADER := preload("res://scripts/map3d/water_sea.gdshader")
+
+var ctx: Map3DContext
+var _mat: ShaderMaterial
+
+
+func build(p_ctx: Map3DContext) -> void:
+	ctx = p_ctx
+	var src := ctx.world.get_node_or_null("Sea") as MeshInstance3D if ctx.world != null else null
+	if src == null:
+		return
+	mesh = src.mesh
+	global_transform = src.global_transform
+	src.visible = false
+	_mat = ShaderMaterial.new()
+	_mat.shader = SEA_SHADER
+	_mat.render_priority = Map3DPriority.SEA
+	var tex_path := ctx.repo.sea_texture_path
+	if tex_path != "" and ResourceLoader.exists(tex_path):
+		_mat.set_shader_parameter("sea_distance", load(tex_path))
+	var o: Array = ctx.meta["pack_origin"]
+	var p: Array = ctx.meta["pack_px"]
+	_mat.set_shader_parameter("pack_origin", Vector2(float(o[0]), float(o[1])))
+	_mat.set_shader_parameter("pack_px", Vector2(float(p[0]), float(p[1])))
+	_mat.set_shader_parameter("m_per_px", float(ctx.meta["m_per_px"]))
+	# The palette hex goes in RAW (final review, owner 2026-09-18): under GL
+	# Compatibility a Color uniform set from GDScript passes straight through
+	# to the output — measured 0.5 -> 128 under a Linear tonemap, with or
+	# without source_color — so there is no double gamma to undo. What moves
+	# a flat unshaded/EMISSION colour is the environment's FILMIC tonemap,
+	# which lifts it (0.5 -> 162); map3d_sea_emission_gamma (> 1) is fitted
+	# to that tonemap by sampling the rendered bands against these hexes.
+	for key: String in ["sea_near", "sea_nearer", "sea_far", "sea_deep"]:
+		_mat.set_shader_parameter(key, MapTerrain.palette_color(ctx.repo, key, MapTerrain.FALLBACK))
+	_mat.set_shader_parameter("sky",
+		MapTerrain.palette_color(ctx.repo, "map3d_sky", MapTerrain.FALLBACK))
+	_mat.set_shader_parameter("band_near", ctx.repo.bal("map_sea_band_near_px"))
+	_mat.set_shader_parameter("band_nearer", ctx.repo.bal("map_sea_band_nearer_px"))
+	_mat.set_shader_parameter("band_far", ctx.repo.bal("map_sea_band_far_px"))
+	_mat.set_shader_parameter("soft", ctx.repo.bal("map_sea_band_soft_px"))
+	_mat.set_shader_parameter("shore_fade_px", ctx.repo.bal("map3d_sea_shore_fade_px"))
+	_mat.set_shader_parameter("ripples", ctx.water_normals())
+	_mat.set_shader_parameter("ripple_m", ctx.repo.bal("map3d_sea_ripple_m"))
+	_mat.set_shader_parameter("drift_m_s", ctx.repo.bal("map3d_sea_drift_m_s"))
+	_mat.set_shader_parameter("emission_share", ctx.repo.bal("map3d_sea_emission_share"))
+	_mat.set_shader_parameter("emission_gamma", ctx.repo.bal("map3d_sea_emission_gamma"))
+	_mat.set_shader_parameter("roughness", ctx.repo.bal("map3d_sea_roughness"))
+	_mat.set_shader_parameter("specular", ctx.repo.bal("map3d_sea_specular"))
+	_mat.set_shader_parameter("fresnel_sky_mix", ctx.repo.bal("map3d_sea_fresnel_sky_mix"))
+	_mat.set_shader_parameter("horizon_fade_start_px", ctx.repo.bal("map3d_sea_horizon_fade_start_px"))
+	_mat.set_shader_parameter("horizon_fade_end_px", ctx.repo.bal("map3d_sea_horizon_fade_end_px"))
+	for key: String in ["ripple_near_m", "ripple_lod_near_m", "ripple_lod_far_m",
+			"ripple_emission_gain", "emission_share_near", "shore_warp_px", "shore_warp_m"]:
+		_mat.set_shader_parameter(key, ctx.repo.bal("map3d_sea_" + key))
+	material_override = _mat
+
+
+func material() -> ShaderMaterial:
+	return _mat
+
+
+func has_water() -> bool:
+	return mesh != null

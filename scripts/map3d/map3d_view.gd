@@ -62,7 +62,6 @@ signal country_hovered(kingdom_code: String)
 
 const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
 const NOTICE_TEXT := "The 3D map has not been built for this map.\nRun tools/map3d (see tools/map3d/README.md)."
-const BORDER_SHADER := preload("res://scripts/map3d/border_line.gdshader")
 const ROAD_SHADER := preload("res://scripts/map3d/road_line.gdshader")
 ## The road surface and the bridges' stone (Poly Haven, packed by
 ## tools/map3d/pack_textures.py into the git-ignored textures folder): a
@@ -70,8 +69,6 @@ const ROAD_SHADER := preload("res://scripts/map3d/road_line.gdshader")
 const ROAD_TEXTURE := "res://assets/map3d/textures/rocky_trail_02"
 const BRIDGE_TEXTURE := "res://assets/map3d/textures/medieval_blocks_03"
 const RING_SHADER := preload("res://scripts/map3d/settlement_ring.gdshader")
-const RIVER_SHADER := preload("res://scripts/map3d/water_river.gdshader")
-const SEA_SHADER := preload("res://scripts/map3d/water_sea.gdshader")
 const CLOUD_SHADER := preload("res://scripts/map3d/cloud_deck.gdshader")
 const CLOUD_SHADOW_SHADER := preload("res://scripts/map3d/cloud_shadow.gdshader")
 ## The selection ring never thins by distance (fix round 1, owner 2026-09-18):
@@ -111,13 +108,10 @@ var _notice: Label
 var _ring_mats: Array[ShaderMaterial] = []
 var _selected_ring: MultiMeshInstance3D
 var _ctx: Map3DContext
-var _river_mat: ShaderMaterial
-## The river courses as drawn (Map3DRivers.parse, cleared of the terrain):
-## the bridges look for them.
-var _river_courses: Array = []
+var _rivers: Map3DLayerRivers
+var _sea: Map3DLayerSea
 ## Every bridge built (Map3DBridges.plan's, each with its deck_w).
 var _bridge_list: Array = []
-var _sea_mat: ShaderMaterial
 var _meta: Dictionary = {}
 var _bounds := Rect2()
 var _target := Vector2.ZERO
@@ -393,9 +387,17 @@ func _load() -> void:
 	_viewport.add_child(_markers)
 	_ctx.settle_ground()
 	_place_markers()
-	_build_rivers()
-	_dress_sea()
-	_apply_sun_shadow_look()
+	_sea = Map3DLayerSea.new()
+	_sea.name = "Sea"
+	_viewport.add_child(_sea)
+	_sea.build(_ctx)
+	_rivers = Map3DLayerRivers.new()
+	_rivers.name = "Rivers"
+	_viewport.add_child(_rivers)
+	_rivers.build(_ctx, _scene_path)
+	var sun := _world.get_node_or_null("Sun") as DirectionalLight3D
+	if sun != null:
+		Map3DEnvironment.apply_sun_look(_repo, sun)
 	_build_clouds()
 	_lines = Map3DLayerLines.new()
 	_lines.name = "Lines"
@@ -512,126 +514,6 @@ func water_normals() -> Texture2D:
 	return _ctx.water_normals() if _ctx != null else null
 
 
-## rivers.json beside the scene (tools/map3d) as the Rivers layer; none
-## without it. Split at each lake exit (Map3DRivers.parse) so a jump in the
-## water line never draws as a vertical wall, then clear_terrain lifts any
-## point whose flat, sparsely-sampled cross-section would otherwise dip
-## below the real, denser terrain on a steep stretch (fix round 3) — the
-## carved riverbed's own ground would show through instead of the water.
-func _build_rivers() -> void:
-	var path := _scene_path.get_base_dir().path_join("rivers.json")
-	if not FileAccess.file_exists(path):
-		return
-	var courses := Map3DRivers.parse(FileAccess.get_file_as_string(path),
-		_repo.bal("map3d_river_split_rise_m"))
-	courses = Map3DRivers.clear_terrain(courses, _height_at, _repo.bal("map3d_river_terrain_clear_m"))
-	_river_courses = courses
-	var arrays := Map3DRivers.ribbon_arrays(courses, _repo.bal("map3d_river_end_fade_m"),
-		_repo.bal("map3d_river_mesh_step_m"))
-	if arrays.is_empty():
-		return
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	_river_mat = ShaderMaterial.new()
-	_river_mat.shader = RIVER_SHADER
-	_river_mat.render_priority = PRIORITY_RIVERS
-	# The palette hex goes in RAW, as the sea's does (see _dress_sea).
-	_river_mat.set_shader_parameter("water",
-		MapTerrain.palette_color(_repo, "river", MapTerrain.FALLBACK))
-	_river_mat.set_shader_parameter("mouth_water",
-		MapTerrain.palette_color(_repo, "sea_near", MapTerrain.FALLBACK))
-	_river_mat.set_shader_parameter("sky",
-		MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK))
-	_river_mat.set_shader_parameter("ripples", water_normals())
-	_river_mat.set_shader_parameter("ripple_m", _repo.bal("map3d_river_ripple_m"))
-	_river_mat.set_shader_parameter("flow_m_s", _repo.bal("map3d_river_flow_m_s"))
-	_river_mat.set_shader_parameter("opacity", _repo.bal("map3d_river_opacity"))
-	_river_mat.set_shader_parameter("edge_soft_floor", _repo.bal("map3d_river_edge_soft_floor"))
-	_river_mat.set_shader_parameter("emission_share", _repo.bal("map3d_river_emission_share"))
-	_river_mat.set_shader_parameter("emission_gamma", _repo.bal("map3d_river_emission_gamma"))
-	for key: String in ["fresnel_sky_mix", "fresnel_power", "roughness", "specular", "normal_depth",
-			"ripple_emission_gain", "bank_wobble_m", "bank_wobble_amp"]:
-		_river_mat.set_shader_parameter(key, _repo.bal("map3d_river_" + key))
-	# One LOD for both waters: the river's near detail comes and goes with the sea's.
-	_river_mat.set_shader_parameter("lod_near_m", _repo.bal("map3d_sea_ripple_lod_near_m"))
-	_river_mat.set_shader_parameter("lod_far_m", _repo.bal("map3d_sea_ripple_lod_far_m"))
-	mesh.surface_set_material(0, _river_mat)
-	var mi := MeshInstance3D.new()
-	mi.name = "Rivers"
-	mi.mesh = mesh
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.extra_cull_margin = 16384.0
-	_viewport.add_child(mi)
-
-
-## The build's flat Sea plane dressed at runtime in the banded water, so the
-## palette and bands stay data (terrain_palette / balance), not a rebuild.
-func _dress_sea() -> void:
-	var sea := _world.get_node_or_null("Sea") as MeshInstance3D
-	if sea == null:
-		return
-	_sea_mat = ShaderMaterial.new()
-	_sea_mat.shader = SEA_SHADER
-	_sea_mat.render_priority = PRIORITY_SEA
-	var tex_path := _repo.sea_texture_path
-	if tex_path != "" and ResourceLoader.exists(tex_path):
-		_sea_mat.set_shader_parameter("sea_distance", load(tex_path))
-	var o: Array = _meta["pack_origin"]
-	var p: Array = _meta["pack_px"]
-	_sea_mat.set_shader_parameter("pack_origin", Vector2(float(o[0]), float(o[1])))
-	_sea_mat.set_shader_parameter("pack_px", Vector2(float(p[0]), float(p[1])))
-	_sea_mat.set_shader_parameter("m_per_px", float(_meta["m_per_px"]))
-	# The palette hex goes in RAW (final review, owner 2026-09-18): under GL
-	# Compatibility a Color uniform set from GDScript passes straight through
-	# to the output — measured 0.5 -> 128 under a Linear tonemap, with or
-	# without source_color — so there is no double gamma to undo. What moves
-	# a flat unshaded/EMISSION colour is the environment's FILMIC tonemap,
-	# which lifts it (0.5 -> 162); map3d_sea_emission_gamma (> 1) is fitted
-	# to that tonemap by sampling the rendered bands against these hexes.
-	for key: String in ["sea_near", "sea_nearer", "sea_far", "sea_deep"]:
-		_sea_mat.set_shader_parameter(key, MapTerrain.palette_color(_repo, key, MapTerrain.FALLBACK))
-	_sea_mat.set_shader_parameter("sky",
-		MapTerrain.palette_color(_repo, "map3d_sky", MapTerrain.FALLBACK))
-	_sea_mat.set_shader_parameter("band_near", _repo.bal("map_sea_band_near_px"))
-	_sea_mat.set_shader_parameter("band_nearer", _repo.bal("map_sea_band_nearer_px"))
-	_sea_mat.set_shader_parameter("band_far", _repo.bal("map_sea_band_far_px"))
-	_sea_mat.set_shader_parameter("soft", _repo.bal("map_sea_band_soft_px"))
-	_sea_mat.set_shader_parameter("shore_fade_px", _repo.bal("map3d_sea_shore_fade_px"))
-	_sea_mat.set_shader_parameter("ripples", water_normals())
-	_sea_mat.set_shader_parameter("ripple_m", _repo.bal("map3d_sea_ripple_m"))
-	_sea_mat.set_shader_parameter("drift_m_s", _repo.bal("map3d_sea_drift_m_s"))
-	_sea_mat.set_shader_parameter("emission_share", _repo.bal("map3d_sea_emission_share"))
-	_sea_mat.set_shader_parameter("emission_gamma", _repo.bal("map3d_sea_emission_gamma"))
-	_sea_mat.set_shader_parameter("roughness", _repo.bal("map3d_sea_roughness"))
-	_sea_mat.set_shader_parameter("specular", _repo.bal("map3d_sea_specular"))
-	_sea_mat.set_shader_parameter("fresnel_sky_mix", _repo.bal("map3d_sea_fresnel_sky_mix"))
-	_sea_mat.set_shader_parameter("horizon_fade_start_px", _repo.bal("map3d_sea_horizon_fade_start_px"))
-	_sea_mat.set_shader_parameter("horizon_fade_end_px", _repo.bal("map3d_sea_horizon_fade_end_px"))
-	for key: String in ["ripple_near_m", "ripple_lod_near_m", "ripple_lod_far_m",
-			"ripple_emission_gain", "emission_share_near", "shore_warp_px", "shore_warp_m"]:
-		_sea_mat.set_shader_parameter(key, _repo.bal("map3d_sea_" + key))
-	sea.material_override = _sea_mat
-
-
-## The Sun's shadow LOOK, applied at load (owner fix round 1, 2026-09-18):
-## a code-review + independent-critic pass on Task 9 found the shipped cloud
-## shadows read as pitch-black holes with knife edges, burying the
-## settlement rings — `shadow_enabled` alone leaves Godot's default full
-## black, full crisp shadow. `shadow_opacity` blends the shadowed pixel with
-## its lit colour instead of replacing it (so a shadow reads as a COOL WASH
-## of blocked light, never a hole) and `shadow_blur` softens every cast
-## shadow's edge — both apply to the terrain's own self-shadowing too
-## (accepted: the mountains read softer with it, see the fix report). The
-## sea never receives shadows (`disable_receive_shadows` on its own
-## material, set at build time) — untouched here.
-func _apply_sun_shadow_look() -> void:
-	var sun := _world.get_node_or_null("Sun") as DirectionalLight3D
-	if sun == null:
-		return
-	sun.shadow_opacity = _repo.bal("map3d_sun_shadow_opacity")
-	sun.shadow_blur = _repo.bal("map3d_sun_shadow_blur")
-
-
 ## A deck of drifting cloud quads (owner 2026-09-18, Task 9) high over the
 ## land, plus a shadow-only twin sharing its MultiMesh so a cloud's shape and
 ## its shadow always match. `Clouds` (+ child `Shadows`) sit directly under
@@ -738,13 +620,13 @@ func _step_clouds(delta: float) -> void:
 
 
 func sea_material() -> ShaderMaterial:
-	return _sea_mat
+	return _sea.material() if _sea != null else null
 
 
 ## Test seam (fix round 1): the Rivers layer's material, to check the
 ## palette colours went in raw.
 func river_material() -> ShaderMaterial:
-	return _river_mat
+	return _rivers.material() if _rivers != null else null
 
 
 ## A ring material; its sizes are design px, turned into window px with the
@@ -1030,7 +912,7 @@ func _build_roads() -> void:
 		colour.a = _repo.bal("map3d_%s_alpha" % key)
 		var width_m := _repo.bal("map3d_%s_width_m" % key)
 		var plan := Map3DBridges.plan(Map3DBorders.route_lines(_repo, _meta, group, step),
-			_river_courses, _height_at, bridge_rules())
+			_rivers.courses() if _rivers != null else [], _height_at, bridge_rules())
 		_set_road(group.capitalize(), plan["lines"], plan["heights"], colour,
 			"map3d_%s_width_px" % key, width_m)
 		var deck_w := width_m + _repo.bal("map3d_bridge_extra_w_m")
@@ -1177,9 +1059,8 @@ func _update_line_scale() -> void:
 		mat.set_shader_parameter("ring_px", float(mat.get_meta("ring_px")) * s)
 		mat.set_shader_parameter("line_px", float(mat.get_meta("line_px")) * s)
 		mat.set_shader_parameter("dot_px", float(mat.get_meta("dot_px", 0.0)) * s)
-	if _river_mat != null:
-		_river_mat.set_shader_parameter("px_per_dist", per_dist)
-		_river_mat.set_shader_parameter("min_px", _repo.bal("map3d_river_min_px") * s)
+	if _rivers != null:
+		_rivers.apply_scale()
 
 
 ## The clicked province's outline — or, under a theme, the clicked manor's
@@ -2144,10 +2025,12 @@ func look_at_home(at_distance: float) -> void:
 ## view's nodes under the viewport, the build's Sea, the Sun's shadows, the HUD.
 func layer_names() -> PackedStringArray:
 	var out := PackedStringArray()
-	for n: String in ["Markers", "Lines", "Rivers", "Clouds"]:
+	for n: String in ["Markers", "Lines", "Clouds"]:
 		if _viewport.get_node_or_null(n) != null:
 			out.append(n)
-	if _world != null and _world.get_node_or_null("Sea") != null:
+	if _rivers != null and _rivers.mesh != null:
+		out.append("Rivers")
+	if _sea != null and _sea.has_water():
 		out.append("Sea")
 	if _world != null and _world.get_node_or_null("Sun") != null:
 		out.append("Shadows")
@@ -2160,7 +2043,7 @@ func set_layer_visible(layer: String, on: bool) -> void:
 		"Shadows":
 			(_world.get_node("Sun") as DirectionalLight3D).shadow_enabled = on
 		"Sea":
-			(_world.get_node("Sea") as Node3D).visible = on
+			_sea.visible = on
 		"Hud":
 			(get_node("Hud") as CanvasItem).visible = on
 		_:

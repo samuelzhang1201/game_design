@@ -40,13 +40,18 @@ func test_an_empty_line_leaves_no_mesh() -> void:
 func test_a_dashed_line_is_one_mesh_at_its_priority() -> void:
 	var lines := _lines()
 	var seam := Color(0.2, 0.2, 0.2, 0.5)
-	lines.set_lines("Seams", [_line()], Map3DLineStyle.dashed(seam, Color(seam, 0.0),
-		"map3d_seam_width_px", "map3d_seam_dash_px", "map3d_seam_gap_px", Map3DPriority.SEAMS))
+	var gap := Color(seam, 0.0)
+	var style := Map3DLineStyle.dashed(seam, gap,
+		"map3d_seam_width_px", "map3d_seam_dash_px", "map3d_seam_gap_px", Map3DPriority.SEAMS)
+	style.edge_soft = 0.35
+	lines.set_lines("Seams", [_line()], style)
 	var mesh := lines.line_mesh("Seams")
 	assert_not_null(mesh)
 	var mat := mesh.surface_get_material(0) as ShaderMaterial
 	assert_eq(mat.render_priority, Map3DPriority.SEAMS)
 	assert_eq(mat.get_shader_parameter("colour_a"), seam)
+	assert_eq(mat.get_shader_parameter("colour_b"), gap)
+	assert_almost_eq(float(mat.get_shader_parameter("edge_soft")), 0.35, 0.0001)
 	assert_almost_eq(float(mat.get_shader_parameter("width_px")), Game.data.bal("map3d_seam_width_px"), 0.0001)
 	assert_almost_eq(float(mat.get_shader_parameter("dash_px")), Game.data.bal("map3d_seam_dash_px"), 0.0001)
 	assert_almost_eq(float(mat.get_shader_parameter("gap_px")), Game.data.bal("map3d_seam_gap_px"), 0.0001)
