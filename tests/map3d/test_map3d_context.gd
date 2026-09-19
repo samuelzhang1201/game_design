@@ -93,3 +93,46 @@ func test_the_target_projects_to_the_middle_of_the_view() -> void:
 	var hit: Variant = c.ground_at(p as Vector2)
 	assert_almost_eq((hit as Vector3).x, c.target.x, 5.0)
 	assert_almost_eq((hit as Vector3).z, c.target.y, 5.0)
+
+
+func test_settlement_ground_is_read_at_load_not_per_pose() -> void:
+	var v := _view()
+	var c := v.context()
+	var calls := [0]
+	c.height_fn = func(_xz: Vector2) -> float:
+		calls[0] += 1
+		return 5.0
+	v.look_at_home(8000.0)
+	calls[0] = 0
+	var list := c.projected_settlements()
+	assert_gt(list.size(), 0)
+	assert_eq(calls[0], 0, "no terrain lookup per settlement")
+	assert_true(is_same(c.projected_settlements(), list), "the same pose hands back the same list")
+	v.look_at_home(9000.0)
+	assert_false(is_same(c.projected_settlements(), list), "a new pose cuts a new one")
+
+
+func test_the_projected_list_matches_the_marked_burgs() -> void:
+	var v := _view()
+	var c := v.context()
+	var codes: Array = []
+	for e: Dictionary in c.projected_settlements():
+		codes.append(String(e["code"]))
+	assert_eq(codes, c.marked_burgs())
+	var capital := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
+	var e: Dictionary = c.projected_settlements()[codes.find(capital)]
+	assert_true(bool(e["shown"]), "the capital is shown at the opening zoom")
+	assert_almost_eq((e["screen"] as Vector2).x, v.size.x * 0.5, 1.0)
+
+
+func test_cells_are_memoised() -> void:
+	var v := _view()
+	var c := v.context()
+	var id: int = Game.data.manors.keys()[0]
+	var calls := [0]
+	c.height_fn = func(_xz: Vector2) -> float:
+		calls[0] += 1
+		return 5.0
+	c.cell_ground(id)
+	c.cell_ground(id)
+	assert_lte(calls[0], 1, "one lookup per cell, ever")

@@ -404,6 +404,7 @@ func _load() -> void:
 	_markers = Node3D.new()
 	_markers.name = "Markers"
 	_viewport.add_child(_markers)
+	_ctx.settle_ground()
 	_place_markers()
 	_build_rivers()
 	_dress_sea()
@@ -468,10 +469,9 @@ func _place_markers() -> void:
 	for code: String in _sorted_burgs():
 		var burg: Dictionary = _repo.burgs[code]
 		var group := String(burg.get("group", ""))
-		var xz := _burg_xz(burg)
 		if not by_group.has(group):
 			by_group[group] = []
-		(by_group[group] as Array).append(Vector3(xz.x, _height_at(xz), xz.y))
+		(by_group[group] as Array).append(_ctx.burg_ground(code))
 	var groups: Array = by_group.keys()
 	groups.sort()
 	var by_size: Array = groups.duplicate()
@@ -798,9 +798,8 @@ func _show_selected_ring(code: String) -> void:
 		return
 	var burg: Dictionary = _repo.burgs[code]
 	var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
-	var xz := _burg_xz(burg)
 	_selected_ring.multimesh.set_instance_transform(0,
-		Transform3D(Basis.IDENTITY, Vector3(xz.x, _height_at(xz), xz.y)))
+		Transform3D(Basis.IDENTITY, _ctx.burg_ground(code)))
 	var mat := _selected_ring.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 	var k := _repo.bal("map3d_selected_ring_scale")
 	# A gold ring round the dot (or round the capital's own ring).
@@ -812,12 +811,7 @@ func _show_selected_ring(code: String) -> void:
 ## The burgs that get a marker (their group has a map3d_settlements row),
 ## sorted by code.
 func _sorted_burgs() -> Array:
-	var out: Array = []
-	for code: String in _repo.burgs:
-		if _repo.map3d_settlements.has(String(_repo.burgs[code].get("group", ""))):
-			out.append(code)
-	out.sort()
-	return out
+	return _ctx.marked_burgs()
 
 
 # --- borders -----------------------------------------------------------------
@@ -1278,7 +1272,10 @@ func _draw_selection() -> void:
 # --- camera and input ----------------------------------------------------------
 
 func _apply_camera() -> void:
-	if _camera == null:
+	# _camera is only ever made after _ctx (see _load), so this one guard
+	# covers both — kept explicit so a reordering there cannot dereference a
+	# null _ctx below.
+	if _camera == null or _ctx == null:
 		return
 	var pitch := Map3DGeometry.pitch_for(_distance, _repo.bal("map3d_zoom_min_m"),
 		_repo.bal("map3d_zoom_max_m"), _repo.bal("map3d_pitch_near_deg"),
@@ -1543,8 +1540,7 @@ func manor_badges() -> Array:
 	var out: Array = []
 	for id: int in all:
 		var m: Dictionary = all[id]
-		var xz := Map3DGeometry.pack_to_world(_meta, MapTerrain.cell_center(_repo, _repo.cells[id]))
-		var ground := Vector3(xz.x, _height_at(xz), xz.y)
+		var ground := _ctx.cell_ground(id)
 		if _camera.is_position_behind(ground):
 			continue
 		var center := _camera.unproject_position(ground) / s
@@ -1619,22 +1615,7 @@ func army_markers() -> Array:
 ## The screen squares (design px) of every settlement dot shown now — what
 ## the counters keep clear of.
 func _settlement_marks() -> Array:
-	var out: Array = []
-	var s := _render_scale()
-	var eye := _camera.global_position
-	var fade_start := _repo.bal("map3d_ring_fade_start")
-	for code: String in _sorted_burgs():
-		var burg: Dictionary = _repo.burgs[code]
-		var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
-		var bxz := _burg_xz(burg)
-		var world := Vector3(bxz.x, _height_at(bxz), bxz.y)
-		if eye.distance_to(world) >= float(spec["max_view_m"]) * fade_start \
-				or _camera.is_position_behind(world):
-			continue
-		var c := _camera.unproject_position(world) / s
-		var r := marker_px(spec) * 0.5 + 2.0
-		out.append(Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0))
-	return out
+	return _ctx.settlement_rects()
 
 
 ## Draw the counters on the HUD, over the badges and names.
@@ -1687,8 +1668,7 @@ func _cut_landmark_marks() -> Array:
 	for m: Dictionary in Elevation.landmarks(_repo):
 		if int(m["lod"]) > max_lod:
 			continue
-		var xz := Map3DGeometry.pack_to_world(_meta, m["pos"])
-		var ground := Vector3(xz.x, _height_at(xz), xz.y)
+		var ground := _ctx.pack_ground(m["pos"])
 		if _camera.is_position_behind(ground):
 			continue
 		var p := _camera.unproject_position(ground) / s
@@ -1932,12 +1912,8 @@ func pick_at(pos: Vector2) -> Dictionary:
 		return {}
 	var p := hit as Vector3
 	var xz := Vector2(p.x, p.z)
-	var s := _render_scale()
-	var click_px := pos * s
 	var best := ""
 	var best_d := INF
-	var fade_start := _repo.bal("map3d_ring_fade_start")
-	var eye := _camera.global_position
 	# A regiment's counter is picked first, as on the 2D map: anywhere on it,
 	# or within map_army_pick_px of the point it stands on.
 	var armies := army_markers()
@@ -1953,20 +1929,16 @@ func pick_at(pos: Vector2) -> Dictionary:
 		if (b["rect"] as Rect2).has_point(pos):
 			return {"kind": "burg", "code": String(b["burg"])}
 	var best_dot := 0.0
-	for code: String in _sorted_burgs():
-		var burg: Dictionary = _repo.burgs[code]
-		var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
-		var bxz := _burg_xz(burg)
-		var world := Vector3(bxz.x, _height_at(bxz), bxz.y)
-		if eye.distance_to(world) >= float(spec["max_view_m"]) * fade_start:
+	for e: Dictionary in _ctx.projected_settlements():
+		if not bool(e["shown"]):
 			continue
-		var screen_px := _camera.unproject_position(world)
-		var reach := maxf(marker_px(spec) * 0.5, _repo.bal("map3d_pick_px")) * s
-		var d := screen_px.distance_to(click_px)
-		if d <= reach and d < best_d and _camera.is_position_behind(world) == false:
+		var spec: Dictionary = e["spec"]
+		var reach := maxf(marker_px(spec) * 0.5, _repo.bal("map3d_pick_px"))
+		var d := (e["screen"] as Vector2).distance_to(pos)
+		if d <= reach and d < best_d:
 			best_d = d
-			best = code
-			best_dot = (marker_px(spec) * 0.5 + 2.0) * s
+			best = String(e["code"])
+			best_dot = marker_px(spec) * 0.5 + 2.0
 	# Under HEIGHTS a high or low point (spec 2026-09-19-map3d-heights), ranked
 	# against the settlements (Task 7): a click ON a settlement's dot is the
 	# settlement's, a click on a mark is the mark's, then a settlement's reach,

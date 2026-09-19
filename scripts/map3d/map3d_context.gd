@@ -36,6 +36,11 @@ var window_scale_fn: Callable = Callable()
 ## Test seam: when valid, replaces the terrain lookup in height_at.
 var height_fn: Callable = Callable()
 var _water_normals: NoiseTexture2D
+var _marked: Array = []
+var _burg_ground: Dictionary = {}
+var _pack_ground: Dictionary = {}
+var _proj_key: Array = []
+var _proj: Array = []
 
 
 func _init(p_repo: DataRepository, p_meta: Dictionary, p_world: Node3D = null) -> void:
@@ -150,3 +155,80 @@ func water_normals() -> Texture2D:
 		_water_normals.generate_mipmaps = true
 		_water_normals.noise = noise
 	return _water_normals
+
+
+## The burgs that get a marker (their group has a map3d_settlements row),
+## sorted by code (was Map3DView._sorted_burgs).
+func marked_burgs() -> Array:
+	if _marked.is_empty():
+		for code: String in repo.burgs:
+			if repo.map3d_settlements.has(String(repo.burgs[code].get("group", ""))):
+				_marked.append(code)
+		_marked.sort()
+	return _marked
+
+
+## Every marked burg's ground point, read ONCE at load (spec §1: the data
+## never moves, so nothing asks the terrain per frame).
+func settle_ground() -> void:
+	_burg_ground.clear()
+	for code: String in marked_burgs():
+		var b: Dictionary = repo.burgs[code]
+		_burg_ground[code] = ground_of_pack(Vector2(float(b["x"]), float(b["y"])))
+	_proj_key = []
+
+
+func burg_ground(code: String) -> Vector3:
+	if not _burg_ground.has(code):
+		var b: Dictionary = repo.burgs[code]
+		_burg_ground[code] = ground_of_pack(Vector2(float(b["x"]), float(b["y"])))
+	return _burg_ground[code]
+
+
+## A fixed pack point's ground, looked up once (cells, landmarks — Ruling 4).
+func pack_ground(pack_px: Vector2) -> Vector3:
+	if not _pack_ground.has(pack_px):
+		_pack_ground[pack_px] = ground_of_pack(pack_px)
+	return _pack_ground[pack_px]
+
+
+func cell_ground(id: int) -> Vector3:
+	return pack_ground(MapTerrain.cell_center(repo, repo.cells[id]))
+
+
+## Every marked settlement as the camera sees it now, cut once per pose:
+## {code, spec, world, screen (design px), behind, shown}. `shown` is what
+## settlement_ring.gdshader still draws: before the camera and short of its
+## tier's max_view_m x map3d_ring_fade_start (where the ring begins to fade).
+func projected_settlements() -> Array:
+	if camera == null:
+		return []
+	var key := [camera.global_transform, view_size, viewport_px_scale()]
+	if key == _proj_key:
+		return _proj
+	var out: Array = []
+	var s := viewport_px_scale()
+	var eye := camera.global_position
+	var fade_start := repo.bal("map3d_ring_fade_start")
+	for code: String in marked_burgs():
+		var spec: Dictionary = repo.map3d_settlements[String(repo.burgs[code].get("group", ""))]
+		var w := burg_ground(code)
+		var behind := camera.is_position_behind(w)
+		out.append({"code": code, "spec": spec, "world": w,
+			"screen": camera.unproject_position(w) / s, "behind": behind,
+			"shown": not behind and eye.distance_to(w) < float(spec["max_view_m"]) * fade_start})
+	_proj = out
+	_proj_key = key
+	return out
+
+
+## The screen squares (design px) of every settlement dot shown now — what
+## the counters and the landmarks keep clear of (was Map3DView._settlement_marks).
+func settlement_rects() -> Array:
+	var out: Array = []
+	for e: Dictionary in projected_settlements():
+		if not bool(e["shown"]):
+			continue
+		var r := Map3DView.marker_px(e["spec"]) * 0.5 + 2.0
+		out.append(Rect2((e["screen"] as Vector2) - Vector2(r, r), Vector2(r, r) * 2.0))
+	return out
