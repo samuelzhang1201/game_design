@@ -38,6 +38,8 @@ const DAY_CEILING := 25
 
 var _root: GameRoot
 var _view: Map3DView
+var _out := ""
+var _rows: Array = []
 
 
 func _ready() -> void:
@@ -48,6 +50,9 @@ func _ready() -> void:
 	if at >= 0 and at + 1 < args.size():
 		var wh := args[at + 1].split("x")
 		size = Vector2i(int(wh[0]), int(wh[1]))
+	var oi := args.find("--out")
+	if oi >= 0 and oi + 1 < args.size():
+		_out = args[oi + 1]
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(size)
 	get_window().size = size
@@ -85,6 +90,7 @@ func _ready() -> void:
 			await _measure("%s  - %s" % [stop[0], layer])
 			v.set_layer_visible(layer, true)
 	print("WORST %.2f ms (%.0f fps), budget %.2f ms" % [worst, 1000.0 / worst, BUDGET_MS])
+	_write_rows()
 	get_tree().quit(0 if worst <= BUDGET_MS else 3)
 
 
@@ -103,6 +109,7 @@ func _measure(label: String) -> float:
 	var view_gpu_ms := PackedFloat64Array()
 	var root_gpu_ms := PackedFloat64Array()
 	var calls := 0
+	var prims := 0
 	var t_prev := Time.get_ticks_usec()
 	for i in FRAMES:
 		await get_tree().process_frame
@@ -112,12 +119,16 @@ func _measure(label: String) -> float:
 		t_prev = t_now
 		calls = maxi(calls, RenderingServer.get_rendering_info(
 			RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
+		prims = maxi(prims, RenderingServer.get_rendering_info(
+			RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME))
 		view_gpu_ms.append(RenderingServer.viewport_get_measured_render_time_gpu(view_rid))
 		root_gpu_ms.append(RenderingServer.viewport_get_measured_render_time_gpu(root_rid))
 	var median := _median(frame_ms)
-	print("%-24s median %6.2f ms  mean %6.2f ms  p95 %6.2f ms  (%5.1f fps)  draw calls %4d  gpu view %5.2f ms  gpu root %5.2f ms"
-		% [label, median, _mean(frame_ms), _percentile(frame_ms, 0.95), 1000.0 / median, calls,
+	print("%-24s median %6.2f ms  mean %6.2f ms  p95 %6.2f ms  (%5.1f fps)  draw calls %4d  primitives %8d  gpu view %5.2f ms  gpu root %5.2f ms"
+		% [label, median, _mean(frame_ms), _percentile(frame_ms, 0.95), 1000.0 / median, calls, prims,
 			_median(view_gpu_ms), _median(root_gpu_ms)])
+	_rows.append([str(get_window().size.x) + "x" + str(get_window().size.y), "current", label,
+		median, _mean(frame_ms), _percentile(frame_ms, 0.95), calls, prims])
 	return median
 
 
@@ -139,3 +150,21 @@ func _percentile(xs: PackedFloat64Array, p: float) -> float:
 	sorted.sort()
 	var i := clampi(int(round(p * float(sorted.size() - 1))), 0, sorted.size() - 1)
 	return sorted[i]
+
+
+## Appends this run's rows to --out (CSV; a header when the file is new).
+func _write_rows() -> void:
+	if _out == "":
+		return
+	var path := _out if _out.is_absolute_path() else ProjectSettings.globalize_path("res://" + _out)
+	var fresh := not FileAccess.file_exists(path)
+	var f := FileAccess.open(path, FileAccess.READ_WRITE if not fresh else FileAccess.WRITE)
+	if f == null:
+		push_error("bench: cannot write " + path)
+		return
+	f.seek_end()
+	if fresh:
+		f.store_line("size,quality,label,median_ms,mean_ms,p95_ms,draw_calls,primitives")
+	for r: Array in _rows:
+		f.store_line("%s,%s,\"%s\",%.3f,%.3f,%.3f,%d,%d" % r)
+	f.close()
