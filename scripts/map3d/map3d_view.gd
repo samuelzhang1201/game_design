@@ -83,7 +83,7 @@ const PRIORITY_RING_BASE := Map3DPriority.RING_BASE
 ## (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := Map3DInput.CLICK_SLOP
 ## Where the name sits off the cursor (WorldMapView.TOOLTIP_OFFSET).
-const TOOLTIP_OFFSET := Vector2(20.0, 24.0)
+const TOOLTIP_OFFSET := Map3DPicker.TOOLTIP_OFFSET
 ## Metres per texel of the bake's field map (Map3DLayerThemes).
 const FIELD_MAP_M_PER_TEXEL := Map3DLayerThemes.FIELD_MAP_M_PER_TEXEL
 
@@ -110,30 +110,21 @@ var _input := Map3DInput.new()
 var _loaded := false
 var _tried := false
 var _hovered := false
-var _province_image: Image
-var _cell_image: Image
-var _selected_province := ""
-var _selected_burg := ""
-## The clicked manor under a theme (-1 for none), outlined in gold.
-var _selected_manor := -1
+## The pick and the hover (Map3DPicker) and what was clicked (Map3DSelection):
+## made here, before load, since clear_hover and clear_selection run before it.
+var _picker := Map3DPicker.new()
+var _selection := Map3DSelection.new()
 var _border_clock := 0.0
 var _hud: Map3DHud
-## The hover (owner 2026-09-18): a pointer move is only recorded, and picked
-## once a frame in _process; the pick's kingdom, its settlement (the
-## tooltip); the outline itself is Map3DLayerBorders'.
-var _hover_pos := Vector2.ZERO
-var _hover_pending := false
-var _hover_kingdom := ""
-var _hover_obj: Dictionary = {}
+## The hover's name beside the cursor (owner 2026-09-18); Map3DPicker fills it.
 var _tooltip: Label
 ## The kingdoms the HUD lettered on its last draw (a test seam).
 var _drawn_labels: PackedStringArray = []
 ## How many MANORS output badges the HUD drew last (a test seam).
 var _drawn_badges := 0
-## MILITARY on the 3D map (owner 2026-09-19): whether the counters show, the
-## clicked regiment (outlined in gold), and how many the HUD drew last.
+## MILITARY on the 3D map (owner 2026-09-19): whether the counters show and
+## how many the HUD drew last (the clicked regiment is Map3DSelection's).
 var _military := false
-var _selected_army := ""
 var _drawn_armies := 0
 ## landmark_marks' cut and the pose it was cut for (see there).
 var _landmark_cache: Array = []
@@ -237,6 +228,10 @@ func _ready() -> void:
 	_tooltip.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
 	_tooltip.hide()
 	add_child(_tooltip)
+	_picker.tooltip = _tooltip
+	_picker.kingdom_changed.connect(func(code: String) -> void: country_hovered.emit(code))
+	_selection.object_selected.connect(func(e: Dictionary) -> void: object_selected.emit(e))
+	_selection.province_selected.connect(func(c: String) -> void: province_selected.emit(c))
 	mouse_entered.connect(func() -> void: _hovered = true)
 	mouse_exited.connect(func() -> void:
 		_hovered = false
@@ -365,6 +360,8 @@ func _load() -> void:
 	_borders.bind(_ctx, _lines)
 	_themes.bind(_ctx, _lines)
 	_themes.prepare(_scene_path)
+	_picker.bind(_ctx, self, _tooltip, _borders)
+	_selection.bind(_ctx, _lines, _markers, self)
 	_loaded = true
 	_rig.place(_home(), _repo.bal("map3d_zoom_start_m"), 0.0)
 	_update_line_scale()
@@ -423,12 +420,6 @@ static func marker_px(spec: Dictionary) -> float:
 	return Map3DLayerSettlements.marker_px(spec)
 
 
-## Show the gold ring on a burg (or hide it with "").
-func _show_selected_ring(code: String) -> void:
-	if _markers != null:
-		_markers.show_selected(code)
-
-
 # --- borders -----------------------------------------------------------------
 
 ## Rebuild the kingdom borders and province seams if ownership moved since
@@ -456,10 +447,8 @@ func set_manor_theme(theme_name: String) -> void:
 	_themes.set_theme(theme_name)
 	# A manor is picked only under MANORS: leaving it forgets the clicked
 	# manor and its gold outline.
-	if theme_name != "manors" and _selected_manor >= 0:
-		_selected_manor = -1
-		if _loaded:
-			_draw_selection()
+	if theme_name != "manors":
+		_selection.forget_manor()
 	_refresh_theme()
 
 
@@ -535,29 +524,9 @@ func _update_line_scale() -> void:
 		_rivers.apply_scale()
 
 
-## The clicked province's outline — or, under a theme, the clicked manor's
-## — solid gold over the borders.
+## The clicked province's (or manor's) gold outline (Map3DSelection.redraw).
 func _draw_selection() -> void:
-	var lines: Array = []
-	if _selected_manor >= 0 and _repo.cells.has(_selected_manor):
-		var pts := PackedVector2Array()
-		for vid in (_repo.cells[_selected_manor]["vertex_ids"] as PackedInt32Array):
-			pts.append(Map3DGeometry.pack_to_world(_meta, _repo.vertices[vid] as Vector2))
-		if pts.size() >= 3:
-			pts.append(pts[0])
-			lines.append(Map3DGeometry.resample(pts, _repo.bal("map3d_line_step_m")))
-	elif _selected_province != "":
-		var steps := int(_repo.bal("map_border_smoothing_steps"))
-		for loop: PackedVector2Array in MapOwnership.province_loops(_repo, _state(), _selected_province):
-			if loop.size() < 3:
-				continue
-			var pts := PackedVector2Array()
-			for p in MapGeometry.smooth_closed_through(loop, steps):
-				pts.append(Map3DGeometry.pack_to_world(_meta, p))
-			pts.append(pts[0])
-			lines.append(Map3DGeometry.resample(pts, _repo.bal("map3d_line_step_m")))
-	var gold := MapPalette.named(_repo, "map3d_selection")
-	_set_lines("Selection", lines, gold, gold, "map3d_selection_width_px", "", "", PRIORITY_SELECTION)
+	_selection.redraw()
 
 
 # --- camera and input ----------------------------------------------------------
@@ -605,22 +574,19 @@ func _process(delta: float) -> void:
 		refresh_borders()
 	if _clouds != null:
 		_clouds.step(delta)
-	if _hover_pending:
-		_hover_pending = false
-		hover_pick(pick_at(_hover_pos), _hover_pos)
+	_picker.step()
 	if not _hovered:
 		return
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit:
 		return
 	if _input.key_pan(delta):
-		_hover_pending = true  # the ground moved under a still pointer
+		_picker.repick()  # the ground moved under a still pointer
 
 
 ## Map3DInput: pick the hover at `pos` on the next frame.
 func request_hover(pos: Vector2) -> void:
-	_hover_pos = pos
-	_hover_pending = true
+	_picker.request(pos)
 
 
 ## Redraw the HUD (compass, scale bar, labels, ruler); on every camera move.
@@ -637,13 +603,18 @@ func compass_rect() -> Rect2:
 # --- ruler ---------------------------------------------------------------------
 
 ## A ruler click at `pos` (design px): the ground under it, or nothing on the sky.
-func _ruler_click(pos: Vector2) -> void:
+func ruler_click(pos: Vector2) -> void:
 	var hit: Variant = ground_at(pos)
 	if hit == null:
 		return
 	_ruler.click(Vector2((hit as Vector3).x, (hit as Vector3).z))
 	if _hud != null:
 		_hud.refresh()
+
+
+## Kept for the tests that call it (test_map3d_api pins it): ruler_click.
+func _ruler_click(pos: Vector2) -> void:
+	ruler_click(pos)
 
 
 ## The ruler on the HUD (design px): its ends on the ground, projected; the
@@ -760,8 +731,8 @@ func manor_badges() -> Array:
 ## the MILITARY tab, as the 2D map's show_armies.
 func set_military(on: bool) -> void:
 	_military = on
-	if not on and _selected_army != "":
-		clear_selection()
+	if not on and _selection.army != "":
+		_selection.clear()
 	if _hud != null:
 		_hud.refresh()
 
@@ -811,7 +782,7 @@ func _settlement_marks() -> Array:
 func draw_armies(ci: CanvasItem) -> void:
 	var markers := army_markers()
 	_drawn_armies = markers.size()
-	ArmyCounters.draw(ci, _repo, markers, _selected_army)
+	ArmyCounters.draw(ci, _repo, markers, _selection.army)
 
 
 # --- HEIGHTS landmarks (owner 2026-09-19, spec 2026-09-19-map3d-heights §4) ---
@@ -1021,7 +992,7 @@ func drawn_army_count() -> int:
 
 
 func selected_army() -> String:
-	return _selected_army
+	return _selection.army
 
 
 ## Draw the badges on the HUD, over the kingdom names.
@@ -1078,257 +1049,49 @@ func ground_at(pos: Vector2) -> Variant:
 	return _ctx.ground_at(pos) if _ctx != null else null
 
 
-## What a click at `pos` picks: {"kind": "burg", "code"} for a settlement
-## within map3d_pick_px of it (or on its ring), {"kind": "province", "code"}
-## for the province under it, {} for the sea or the sky.
-##
-## Only a SHOWN ring is picked (final review, owner 2026-09-18): a burg whose
-## camera distance has reached its tier's max_view_m x map3d_ring_fade_start
-## — where settlement_ring.gdshader begins to fade it — is skipped, so a
-## click on a thinned village's empty spot names the province under it.
-##
-## The burg distance is measured in SCREEN px (the camera's own projection of
-## each burg's ground point), not by unprojecting the click to world XZ and
-## comparing world distances: at a steep near-zoom grazing angle a small
-## terrain-height error swings the raycast's XZ landing point by far more
-## than the ring's own on-screen radius, so a world-space reach either picked
-## nothing (fix round 1, owner 2026-09-18) or had to be absurdly generous.
-## Screen space matches what the player is actually aiming at, a ring of
-## constant screen size, and needs no distance conversion at all.
+## What a click at `pos` picks (Map3DPicker.pick_at): {} before the world loads.
 func pick_at(pos: Vector2) -> Dictionary:
-	var hit: Variant = ground_at(pos)
-	if hit == null:
-		return {}
-	var p := hit as Vector3
-	var xz := Vector2(p.x, p.z)
-	var best := ""
-	var best_d := INF
-	# A regiment's counter is picked first, as on the 2D map: anywhere on it,
-	# or within map_army_pick_px of the point it stands on.
-	var armies := army_markers()
-	for i in range(armies.size() - 1, -1, -1):
-		if (armies[i]["rect"] as Rect2).has_point(pos):
-			return {"kind": "army", "code": String(armies[i]["code"])}
-	for i in range(armies.size() - 1, -1, -1):
-		if (armies[i]["pos"] as Vector2).distance_to(pos) <= _repo.bal("map_army_pick_px"):
-			return {"kind": "army", "code": String(armies[i]["code"])}
-	# An output badge names the settlement whose output it shows (as on the
-	# 2D map), over whatever lies under it.
-	for b: Dictionary in manor_badges():
-		if (b["rect"] as Rect2).has_point(pos):
-			return {"kind": "burg", "code": String(b["burg"])}
-	var best_dot := 0.0
-	for e: Dictionary in _ctx.projected_settlements():
-		if not bool(e["shown"]):
-			continue
-		var spec: Dictionary = e["spec"]
-		var reach := maxf(marker_px(spec) * 0.5, _repo.bal("map3d_pick_px"))
-		var d := (e["screen"] as Vector2).distance_to(pos)
-		if d <= reach and d < best_d:
-			best_d = d
-			best = String(e["code"])
-			best_dot = marker_px(spec) * 0.5 + 2.0
-	# Under HEIGHTS a high or low point (spec 2026-09-19-map3d-heights), ranked
-	# against the settlements (Task 7): a click ON a settlement's dot is the
-	# settlement's, a click on a mark is the mark's, then a settlement's reach,
-	# and last the mark's rect grown by half the pick reach.
-	if best != "" and best_d <= best_dot:
-		return {"kind": "burg", "code": best}
-	var marks := landmark_marks() if _themes.heat_on() else []
-	for mk: Dictionary in marks:
-		if (mk["rect"] as Rect2).has_point(pos):
-			return {"kind": "landmark", "cell": int(mk["cell"])}
-	if best != "":
-		return {"kind": "burg", "code": best}
-	var grow := _repo.bal("map3d_pick_px") * 0.5
-	for mk: Dictionary in marks:
-		if (mk["rect"] as Rect2).grow(grow).has_point(pos):
-			return {"kind": "landmark", "cell": int(mk["cell"])}
-	# Under MANORS the land means its MANOR, as on the 2D map.
-	if _themes.theme() == "manors":
-		var cell := _cell_at(Map3DGeometry.world_to_pack(_meta, xz))
-		return {"kind": "manor", "cell": cell} if cell >= 0 else {}
-	var province := _province_at(Map3DGeometry.world_to_pack(_meta, xz))
-	return {"kind": "province", "code": province} if province != "" else {}
+	return _picker.pick_at(pos) if _loaded else {}
 
 
-func _province_at(pack_px: Vector2) -> String:
-	if _province_image == null:
-		var path := _repo.province_texture_path
-		if path == "" or not ResourceLoader.exists(path):
-			return ""
-		_province_image = (load(path) as Texture2D).get_image()
-	var p := Vector2i(pack_px.floor())
-	if p.x < 0 or p.y < 0 or p.x >= _province_image.get_width() or p.y >= _province_image.get_height():
-		return ""
-	return String(_repo.province_by_id(MapIndex.id_at(_province_image, p)).get("province_code", ""))
-
-
-## The kingdom holding what a pick names, NOW (MapOwnership, so a conquest
-## moves it): a settlement's province's holder, a province's holder, "" for
-## the sea or the sky — WorldMapView._state_of's rule.
+## The kingdom holding what a pick names, NOW (Map3DPicker.kingdom_of_pick).
 static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dictionary) -> String:
-	var province := ""
-	match String(picked.get("kind", "")):
-		"burg":
-			province = String((repo.burgs.get(String(picked["code"]), {}) as Dictionary)
-				.get("province_code", ""))
-		"province":
-			province = String(picked["code"])
-		"manor", "landmark":
-			province = MapManors.province_of(repo, int(picked["cell"]), state)
-		"army":
-			var k := String(ArmySystem.regiment(repo, String(picked["code"])).get("kingdom_code", ""))
-			return k if repo.kingdoms.has(k) else ""
-	if province == "":
-		return ""
-	var holder := MapOwnership.owner_of(repo, state, province)
-	return holder if repo.kingdoms.has(holder) else ""
+	return Map3DPicker.kingdom_of_pick(repo, state, picked)
 
 
-## A pick at `pos` (design px) as the hover: the settlement's name beside the
-## cursor, and — only when it changes — the kingdom's wider outline and
-## country_hovered. Public: tests drive it without a ray.
+## A pick at `pos` as the hover (Map3DPicker.hover_pick): the name beside the
+## cursor and, when the kingdom changes, its outline and country_hovered.
 func hover_pick(picked: Dictionary, pos: Vector2) -> void:
-	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor", "army", "landmark"] else {}
-	if obj != _hover_obj:
-		_hover_obj = obj
-		var label := MapObjects.label_of(_repo, obj, _state())
-		_tooltip.text = label
-		_tooltip.visible = label != ""
-	if _tooltip.visible:
-		var tip := _tooltip.get_combined_minimum_size()
-		_tooltip.size = tip
-		_tooltip.position = (pos + TOOLTIP_OFFSET).clamp(Vector2.ZERO, (size - tip).max(Vector2.ZERO))
-	var kingdom := kingdom_of_pick(_repo, _state(), picked)
-	if kingdom == _hover_kingdom:
-		return
-	_hover_kingdom = kingdom
-	_draw_hover()
-	country_hovered.emit(kingdom)
+	_picker.hover_pick(picked, pos)
 
 
 ## No hover: the pointer left, a drag began, or the view was hidden.
 func clear_hover() -> void:
-	_hover_pending = false
-	if _tooltip != null:
-		hover_pick({}, Vector2.ZERO)
-
-
-## The hovered kingdom's live outline (Map3DLayerBorders.draw_hover).
-func _draw_hover() -> void:
-	if _loaded:
-		_borders.draw_hover(_hover_kingdom)
+	_picker.clear_hover()
 
 
 func hovered_kingdom() -> String:
-	return _hover_kingdom
+	return _picker.hovered_kingdom()
 
 
 ## The tooltip's text while a settlement is hovered ("" otherwise).
 func hover_tooltip() -> String:
-	return _tooltip.text if _tooltip.visible else ""
+	return _picker.hover_tooltip()
 
 
 ## Test seam: where the tooltip sits, in view coordinates.
 func tooltip_rect() -> Rect2:
-	return Rect2(_tooltip.position, _tooltip.get_combined_minimum_size())
+	return _picker.tooltip_rect()
 
 
-## The manor at a pack pixel (world_cell_index.png), or -1 for water, the
-## map's edge or land no manor covers.
-func _cell_at(pack_px: Vector2) -> int:
-	if _cell_image == null:
-		var path := _repo.cell_texture_path
-		if path == "" or not ResourceLoader.exists(path):
-			return -1
-		_cell_image = (load(path) as Texture2D).get_image()
-	var p := Vector2i(pack_px.floor())
-	if p.x < 0 or p.y < 0 or p.x >= _cell_image.get_width() or p.y >= _cell_image.get_height():
-		return -1
-	var id := MapIndex.id_at(_cell_image, p)
-	return id if _repo.manors.has(id) else -1
-
-
-## The click: a settlement opens its card, land names its province (its
-## manor under a theme), the sea clears — exactly the signals WorldMapView
-## sends.
+## The click (Map3DSelection.select): the signals WorldMapView sends.
 func select_at(pos: Vector2) -> void:
-	var picked := pick_at(pos)
-	match String(picked.get("kind", "")):
-		"burg":
-			var code := String(picked["code"])
-			_selected_army = ""
-			_set_selected_province("")
-			_selected_burg = code
-			_show_selected_ring(code)
-			object_selected.emit({"title": String(_repo.burgs[code].get("label", code)),
-				"obj": {"kind": "burg", "code": code}})
-		"province":
-			_selected_burg = ""
-			_selected_army = ""
-			_show_selected_ring("")
-			_set_selected_province(String(picked["code"]))
-			province_selected.emit(_selected_province)
-		"army":
-			var code := String(picked["code"])
-			_selected_burg = ""
-			_show_selected_ring("")
-			_set_selected_province("")
-			_selected_army = code
-			if _hud != null:
-				_hud.refresh()
-			object_selected.emit({"title": MapObjects.label_of(_repo, picked),
-				"obj": {"kind": "army", "code": code}})
-		"manor":
-			var cell := int(picked["cell"])
-			_selected_army = ""
-			_selected_burg = ""
-			_show_selected_ring("")
-			_selected_province = ""
-			_selected_manor = cell
-			_draw_selection()
-			object_selected.emit({"title": MapManors.label_of(_repo, cell),
-				"obj": {"kind": "manor", "cell": cell}})
-		"landmark":
-			var cell := int(picked["cell"])
-			if _selected_army != "":
-				_selected_army = ""
-				if _hud != null:
-					_hud.refresh()
-			_selected_burg = ""
-			_show_selected_ring("")
-			_set_selected_province("")
-			var m := Elevation.landmark_at(_repo, cell)
-			object_selected.emit({"title": String(m.get("name", "")),
-				"lines": MapObjects.landmark_lines(_repo, _state(), cell),
-				"ask": "", "obj": {"kind": "landmark", "cell": cell}})
-		_:
-			clear_selection()
-
-
-func _set_selected_province(code: String) -> void:
-	if code == _selected_province and _selected_manor < 0:
-		return
-	_selected_province = code
-	_selected_manor = -1
-	if _loaded:
-		_draw_selection()
+	_selection.select(pick_at(pos))
 
 
 ## Forget the selection (the card was closed, or the sea clicked).
 func clear_selection() -> void:
-	var had := _selected_burg != "" or _selected_province != "" or _selected_manor >= 0 \
-		or _selected_army != ""
-	if _selected_army != "":
-		_selected_army = ""
-		if _hud != null:
-			_hud.refresh()
-	_selected_burg = ""
-	_show_selected_ring("")
-	_set_selected_province("")
-	if had:
-		object_selected.emit({})
+	_selection.clear()
 
 
 ## Test seam (Ruling 18): the inner part named `key`, or null. Later tasks
@@ -1345,6 +1108,10 @@ func component(key: String) -> Object:
 			return _input
 		"rig":
 			return _rig
+		"picker":
+			return _picker
+		"selection":
+			return _selection
 	return null
 
 
@@ -1374,13 +1141,13 @@ func yaw() -> float:
 	return _ctx.yaw if _ctx != null else 0.0
 
 func selected_province() -> String:
-	return _selected_province
+	return _selection.province
 
 func selected_burg() -> String:
-	return _selected_burg
+	return _selection.burg
 
 func selected_manor() -> int:
-	return _selected_manor
+	return _selection.manor
 
 ## Whether the clicked settlement's gold ring is currently shown.
 func selected_ring_visible() -> bool:

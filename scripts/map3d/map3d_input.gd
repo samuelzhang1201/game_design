@@ -65,7 +65,7 @@ func _button(mb: InputEventMouseButton) -> bool:
 			_dragging = false
 		elif not _dragging:
 			if view.ruler_on:
-				view._ruler_click(mb.position)
+				view.ruler_click(mb.position)
 			else:
 				view.select_at(mb.position)
 		return true
@@ -109,6 +109,8 @@ func _motion(mm: InputEventMouseMotion) -> bool:
 ## WASD / arrows move the VIEW, so the ground moves the other way from a
 ## drag; true when it moved (the hover re-picks under a still pointer).
 func key_pan(delta: float) -> bool:
+	if rig == null:
+		return false
 	var dir := Vector2.ZERO
 	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
 		dir.x -= 1.0
