@@ -29,10 +29,12 @@ static func ribbon_arrays(lines: Array, height_fn: Callable, heights: Array = []
 			continue
 		var base := verts.size()
 		var arc := 0.0
+		var prev_side := Vector2.ZERO
 		for i in n:
 			if i > 0:
 				arc += line[i - 1].distance_to(line[i])
-			var side := _side(line, i)
+			var side := _side(line, i, prev_side)
+			prev_side = side
 			var y := own[i] if i < own.size() and not is_nan(own[i]) else float(height_fn.call(line[i]))
 			var p := Vector3(line[i].x, y, line[i].y)
 			verts.append(p)
@@ -58,17 +60,62 @@ static func ribbon_arrays(lines: Array, height_fn: Callable, heights: Array = []
 ## The unit side at point i: perpendicular to the line there, the mitre of
 ## the two segments at a corner (the plain average — the shader's width is a
 ## few px, where a true mitre's spikes would only show as blots).
-static func _side(line: PackedVector2Array, i: int) -> Vector2:
+static func _side(line: PackedVector2Array, i: int, prev := Vector2.ZERO) -> Vector2:
 	var n := line.size()
-	var d := Vector2.ZERO
-	if i > 0:
-		d += (line[i] - line[i - 1]).normalized()
-	if i < n - 1:
-		d += (line[i + 1] - line[i]).normalized()
+	var a := (line[i] - line[i - 1]).normalized() if i > 0 else Vector2.ZERO
+	var b := (line[i + 1] - line[i]).normalized() if i < n - 1 else Vector2.ZERO
+	# At a cusp the two directions cancel: keep the previous point's side
+	# rather than swap the ribbon's sides (a twist, owner 2026-09-19).
+	if a != Vector2.ZERO and b != Vector2.ZERO and a.dot(b) < -0.9 and prev != Vector2.ZERO:
+		return prev
+	var d := a + b
 	if d.length_squared() < 1e-12:
 		d = (line[mini(i + 1, n - 1)] - line[maxi(i - 1, 0)]).normalized()
 	d = d.normalized()
 	return Vector2(-d.y, d.x)
+
+
+## Two-point segments joined into polylines through every point exactly two
+## of them share; a point shared by one or by three or more ends a chain. A
+## seam drawn as one strip has no overlapping caps at its joints and one
+## unbroken dash (owner 2026-09-19).
+static func chain_segments(segments: Array) -> Array:
+	var at := {}  # point -> [segment indices]
+	for i in segments.size():
+		for p: Vector2 in segments[i]:
+			if not at.has(p):
+				at[p] = []
+			(at[p] as Array).append(i)
+	var used := PackedByteArray()
+	used.resize(segments.size())
+	var out: Array = []
+	for s in segments.size():
+		if used[s] == 1:
+			continue
+		used[s] = 1
+		var seg: PackedVector2Array = segments[s]
+		var chain := PackedVector2Array([seg[0], seg[1]])
+		for dir in 2:  # forward from the end, then backward from the start
+			while true:
+				var tip: Vector2 = chain[chain.size() - 1] if dir == 0 else chain[0]
+				var here: Array = at.get(tip, [])
+				if here.size() != 2:
+					break
+				var next := -1
+				for j: int in here:
+					if used[j] == 0:
+						next = j
+				if next < 0:
+					break
+				used[next] = 1
+				var ns: PackedVector2Array = segments[next]
+				var far: Vector2 = ns[1] if ns[0] == tip else ns[0]
+				if dir == 0:
+					chain.append(far)
+				else:
+					chain.insert(0, far)
+		out.append(chain)
+	return out
 
 
 ## A kingdom's live outline rings in world metres, smoothed through the
@@ -94,15 +141,18 @@ static func kingdom_lines(repo: DataRepository, state: GameState, world: Diction
 	return out
 
 
-## Every kingdom's province seams in world metres, one resampled line each —
+## Every kingdom's province seams in world metres, chained through their
+## shared joints into as few polylines as possible (chain_segments) — one
+## strip per seam, no overlapping caps at a junction and one unbroken dash —
 ## the province view is always on (owner 2026-09-13), so all of them.
 static func seam_lines(repo: DataRepository, state: GameState, world: Dictionary,
 		step_m: float) -> Array:
 	var out: Array = []
 	for code: String in repo.kingdoms:
-		for seg: PackedVector2Array in MapOwnership.seams_of(repo, state, code):
+		var segments: Array = MapOwnership.seams_of(repo, state, code)
+		for chain: PackedVector2Array in chain_segments(segments):
 			var pts := PackedVector2Array()
-			for p in seg:
+			for p in chain:
 				pts.append(Map3DGeometry.pack_to_world(world, p))
 			out.append(Map3DGeometry.resample(pts, step_m))
 	return out

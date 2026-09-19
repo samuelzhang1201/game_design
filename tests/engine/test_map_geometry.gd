@@ -307,3 +307,18 @@ func test_a_pinned_point_leaves_along_its_own_edge() -> void:
 	assert_almost_eq(d.x, 0.0, 0.06, "leaves close to due south along 1->2")
 	var back := (out[8] - out[7]).normalized()
 	assert_almost_eq(back.y, 0.0, 0.06, "arrives close to due east along 0->1")
+
+func test_a_duplicated_last_point_carries_its_pin_into_index_0() -> void:
+	# A raw loop often repeats its first point at the end. Pinned only on
+	# that trailing copy, the merge must fold the pin onto index 0 before
+	# the duplicate is dropped, or the pin is silently lost. Same square as
+	# the test above, rotated so the pinned corner (10, 0) sits at index 0
+	# via a duplicate at the end instead of index 1.
+	var ring := PackedVector2Array([Vector2(10, 0), Vector2(10, 10), Vector2(0, 10), Vector2(0, 0), Vector2(10, 0)])
+	var pins := PackedByteArray([0, 0, 0, 0, 1])
+	var out := MapGeometry.smooth_closed_through(ring, 8, pins)
+	assert_eq(out.size(), 4 * 8, "the duplicated point is dropped")
+	var d := (out[1] - out[0]).normalized()
+	assert_almost_eq(d.x, 0.0, 0.06, "leaves close to due south along 0->1")
+	var back := (out[0] - out[out.size() - 1]).normalized()
+	assert_almost_eq(back.y, 0.0, 0.06, "arrives close to due east along 3->0")

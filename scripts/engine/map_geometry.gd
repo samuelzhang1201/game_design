@@ -261,6 +261,8 @@ static func smooth_closed_through(pts: PackedVector2Array, steps: int,
 		p.append(pts[i])
 		pin.append(1 if i < pinned.size() and pinned[i] == 1 else 0)
 	if p.size() > 1 and p[0].distance_to(p[p.size() - 1]) < 1e-3:
+		if pin[pin.size() - 1] == 1:
+			pin[0] = 1
 		p.remove_at(p.size() - 1)
 		pin.remove_at(pin.size() - 1)
 	var n := p.size()

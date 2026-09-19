@@ -63,13 +63,54 @@ func test_kingdom_lines_follow_the_live_outline_in_world_metres() -> void:
 	assert_lt(near, 1.0, "passes through the outline's own corner")
 
 
+func test_segments_chain_through_their_joints() -> void:
+	var segs := [PackedVector2Array([Vector2(0, 0), Vector2(1, 0)]),
+		PackedVector2Array([Vector2(2, 0), Vector2(1, 0)]),
+		PackedVector2Array([Vector2(2, 0), Vector2(3, 1)]),
+		PackedVector2Array([Vector2(9, 9), Vector2(8, 8)])]
+	var chains := Map3DBorders.chain_segments(segs)
+	assert_eq(chains.size(), 2)
+	assert_eq(Array(chains[0]), [Vector2(0, 0), Vector2(1, 0), Vector2(2, 0), Vector2(3, 1)])
+
+
+func test_a_three_way_joint_ends_the_chains() -> void:
+	var segs := [PackedVector2Array([Vector2(0, 0), Vector2(1, 0)]),
+		PackedVector2Array([Vector2(1, 0), Vector2(2, 0)]),
+		PackedVector2Array([Vector2(1, 0), Vector2(1, 1)])]
+	assert_eq(Map3DBorders.chain_segments(segs).size(), 3)
+
+
+func test_seam_lines_are_fewer_chains_than_segments() -> void:
+	var repo := DataRepository.load_all("res://data")
+	var st := GameState.new_campaign(repo, 7)
+	var segments := 0
+	for code: String in repo.kingdoms:
+		segments += MapOwnership.seams_of(repo, st, code).size()
+	var lines := Map3DBorders.seam_lines(repo, st, WORLD, 150.0)
+	assert_lt(lines.size(), segments)
+
+
+func test_a_cusp_keeps_the_ribbons_side() -> void:
+	# Out and straight back: the two directions cancel at the tip.
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(0, 0.01)])
+	var sides: PackedVector3Array = Map3DBorders.ribbon_arrays([line],
+		func(_xz: Vector2) -> float: return 0.0)[Mesh.ARRAY_NORMAL]
+	assert_gt(sides[0].dot(sides[2]), 0.0, "the tip keeps the first point's side")
+
+
 func test_seam_lines_cover_every_kingdoms_seams() -> void:
 	Game.start_campaign(42)
-	var expected := 0
+	var lines := Map3DBorders.seam_lines(Game.data, Game.state, WORLD, 100.0)
+	var m_per_px: float = WORLD["m_per_px"]
 	for code: String in Game.data.kingdoms:
-		expected += MapOwnership.seams_of(Game.data, Game.state, code).size()
-	assert_eq(Map3DBorders.seam_lines(Game.data, Game.state, WORLD, 100.0).size(), expected)
-	assert_gt(expected, 0)
+		for seg: PackedVector2Array in MapOwnership.seams_of(Game.data, Game.state, code):
+			for end: Vector2 in seg:
+				var target := end * m_per_px
+				var near := INF
+				for line: PackedVector2Array in lines:
+					for p: Vector2 in line:
+						near = minf(near, p.distance_to(target))
+				assert_lt(near, 1.0, "%s's seam end %s lies on some chain" % [code, end])
 
 
 ## No kingdom ring curls (owner 2026-09-19).
