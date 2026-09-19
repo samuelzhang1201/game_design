@@ -1,3 +1,4 @@
+@tool
 class_name Map3DLayerLines
 extends Node3D
 ## The ribbon host (spec 2026-09-20 §1): Roads, Trails, ManorEdges, Seams,
@@ -9,11 +10,47 @@ extends Node3D
 ## The ribbons' look (shader, render priority 0 until a style binds its own).
 const BORDER_MAT := preload("res://scenes/map3d/materials/border_line.tres")
 
+## Editor preview (Task 22): the borders, the seams and the pack's roads,
+## drawn from the data alone. Nothing it makes is ever saved (no owner).
+@export var preview := false: set = set_preview
+
 var ctx: Map3DContext
 
 
 func bind(p_ctx: Map3DContext) -> void:
 	ctx = p_ctx
+
+
+func set_preview(on: bool) -> void:
+	preview = on
+	if not Engine.is_editor_hint() or not is_inside_tree():
+		return
+	if on:
+		preview_build(Map3DPreview.context_for(self))
+	else:
+		Map3DPreview.clear_generated(self)
+	Map3DPreview.sync_viewport(self)
+
+
+## Build the layer as the game does, from `p_ctx` alone — no autoload, no
+## view: the kingdom band, its halo and ink, the province seams and the
+## pack's roads and trails. A pack with no 3D build gets the placeholder.
+func preview_build(p_ctx: Map3DContext) -> void:
+	bind(p_ctx)
+	Map3DPreview.prepare(self, p_ctx)
+	if p_ctx.meta.is_empty():
+		Map3DPreview.show_placeholder(self, BORDER_MAT)
+		return
+	Map3DPreview.clear_generated(self)
+	var borders := Map3DLayerBorders.new()
+	borders.bind(p_ctx, self)
+	borders.refresh()
+	# The bridges hang off this layer's SIBLING (Viewport/Bridges), so a lines
+	# preview draws the roads themselves and no bridges.
+	var roads := Map3DLayerRoads.new()
+	roads.bind(p_ctx, self, null)
+	roads.build([])
+	apply_scale()
 
 
 ## One ribbon layer in border_line.gdshader, replacing any before.

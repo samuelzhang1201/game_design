@@ -17,6 +17,10 @@ const MATERIALS := {
 }
 const PREVIEWS := ["rocky_trail_02_alb_ht", "rocky_trail_02_nrm_rgh", "medieval_blocks_03_alb_ht",
 	"medieval_blocks_03_nrm_rgh", "cloud_shape"]
+## The only shader parameters a .tres may carry: its LOOK ASSETS (the textures
+## and the switch that says one is there). Every other parameter is a tuned
+## number, which lives in data/*.csv and is bound at load.
+const ASSET_PARAMS := ["surface", "surface_nrm", "has_surface", "ripples", "shape"]
 
 
 func test_each_material_is_its_shader() -> void:
@@ -37,11 +41,16 @@ func test_the_previews_are_committed_and_small() -> void:
 		assert_lte(maxi(tex.get_width(), tex.get_height()), 512, name)
 
 
-func test_the_road_material_carries_textures_but_no_tuned_number() -> void:
-	var text := FileAccess.get_file_as_string("res://scenes/map3d/materials/road_line.tres")
-	assert_true(text.contains("map3d_preview/rocky_trail_02_alb_ht.png"))
-	for tuned: String in ["tile_m", "width_m", "near_mpp", "far_mpp", "fray", "colour"]:
-		assert_false(text.contains("shader_parameter/" + tuned), tuned + " is CSV's")
+func test_no_material_carries_a_tuned_number() -> void:
+	for name: String in MATERIALS:
+		var text := FileAccess.get_file_as_string("res://scenes/map3d/materials/%s.tres" % name)
+		for line: String in text.split("\n"):
+			if not line.begins_with("shader_parameter/"):
+				continue
+			var param := line.get_slice("=", 0).trim_prefix("shader_parameter/").strip_edges()
+			assert_true(param in ASSET_PARAMS, "%s: %s is CSV's, not the .tres's" % [name, param])
+	var road := FileAccess.get_file_as_string("res://scenes/map3d/materials/road_line.tres")
+	assert_true(road.contains("map3d_preview/rocky_trail_02_alb_ht.png"))
 
 
 func test_a_views_materials_are_its_own_copies() -> void:

@@ -1,3 +1,4 @@
+@tool
 class_name Map3DView
 extends Control
 ## The 3D map (owner 2026-09-18, the default map): an AUTHORED scene,
@@ -43,6 +44,11 @@ const PRIORITY_RING_BASE := Map3DPriority.RING_BASE
 const CLICK_SLOP := Map3DInput.CLICK_SLOP
 const TOOLTIP_OFFSET := Map3DPicker.TOOLTIP_OFFSET
 const FIELD_MAP_M_PER_TEXEL := Map3DLayerThemes.FIELD_MAP_M_PER_TEXEL
+
+## EDITOR previews (Task 22): the pack a layer's `preview` draws ("" = the
+## default) and whether it loads the terrain; nothing in a running game.
+@export var preview_pack := ""
+@export var preview_terrain := false
 
 var _repo: DataRepository
 var _scene_path := ""
@@ -135,7 +141,8 @@ static func toggle_in(panel: Control, world_map: Control, view: Map3DView, on: b
 	return view
 
 func _ready() -> void:
-	_display.texture = _viewport.get_texture()
+	_display.texture = _viewport.get_texture()  # in the editor too: it shows the previews
+	if Engine.is_editor_hint(): return  # there the layers' `preview` switches do all the rest
 	_notice.text = NOTICE_TEXT  # the scene's text is a preview; this is the one source
 	_tooltip.add_theme_stylebox_override("normal", UiPalette.chip_style())
 	_tooltip.add_theme_font_size_override("font_size", 16)
@@ -247,7 +254,7 @@ func release_world() -> void:
 		_world = null
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE and _world != null:
+	if what == NOTIFICATION_PREDELETE and _world != null and not Engine.is_editor_hint():
 		Map3DWorldCache.give_back(_scene_path, _world)
 
 ## Wear a graphics tier (Map3DQuality; `overrides` over single values — the
@@ -335,11 +342,12 @@ func _zoom_at(pos: Vector2, new_distance: float) -> void:
 		_rig.zoom_at(pos, new_distance)
 
 func _gui_input(event: InputEvent) -> void:
-	if _loaded and _input.handle(event):
+	if not Engine.is_editor_hint() and _loaded and _input.handle(event):
 		accept_event()
 
 ## The rig's ease, the border poll, the clouds, the hover, and WASD / arrows.
 func _process(delta: float) -> void:
+	if Engine.is_editor_hint(): return
 	if _loaded:
 		_rig.step(delta)
 	_border_clock += delta

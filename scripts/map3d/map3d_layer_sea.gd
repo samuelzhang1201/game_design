@@ -1,3 +1,4 @@
+@tool
 class_name Map3DLayerSea
 extends MeshInstance3D
 ## The 3D map's sea as its own layer (spec 2026-09-20 §1, node Viewport/Sea):
@@ -11,8 +12,35 @@ extends MeshInstance3D
 ## The sea's look (shader, ripples, render priority); every number is bound below.
 const SEA_MAT := preload("res://scenes/map3d/materials/water_sea.tres")
 
+## Editor preview (Task 22): the banded water over the pack's own plane.
+@export var preview := false: set = set_preview
+
 var ctx: Map3DContext
 var _mat: ShaderMaterial
+
+
+func set_preview(on: bool) -> void:
+	preview = on
+	if not Engine.is_editor_hint() or not is_inside_tree():
+		return
+	if on:
+		preview_build(Map3DPreview.context_for(self))
+	else:
+		Map3DPreview.clear_generated(self)
+	Map3DPreview.sync_viewport(self)
+
+
+## The sea as the game dresses it, from `p_ctx` alone — built into an UNOWNED
+## twin of this node, never onto the authored one (a mesh or a material set
+## here would be saved into the scene). A pack with no 3D build gets the
+## placeholder in the same water.
+func preview_build(p_ctx: Map3DContext) -> void:
+	Map3DPreview.prepare(self, p_ctx)
+	if p_ctx.meta.is_empty():
+		ctx = p_ctx
+		Map3DPreview.show_placeholder(self, SEA_MAT)
+		return
+	(Map3DPreview.proxy(self, get_script(), "SeaPreview") as Map3DLayerSea).build(p_ctx)
 
 
 func build(p_ctx: Map3DContext) -> void:

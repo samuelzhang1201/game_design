@@ -1,3 +1,4 @@
+@tool
 class_name Map3DLayerSettlements
 extends Node3D
 ## Settlement markers as their own layer (spec 2026-09-20 §1, node
@@ -14,6 +15,9 @@ const SELECTION_RING_MAT := preload("res://scenes/map3d/materials/selection_ring
 ## whatever the player clicked stays marked regardless of zoom.
 const SELECTED_RING_ALWAYS_M := 1000000.0
 
+## Editor preview (Task 22): every marked burg's ring, from the pack alone.
+@export var preview := false: set = set_preview
+
 var ctx: Map3DContext
 var _ring_mats: Array[ShaderMaterial] = []
 var _selected_ring: MultiMeshInstance3D
@@ -21,6 +25,30 @@ var _selected_ring: MultiMeshInstance3D
 
 func bind(p_ctx: Map3DContext) -> void:
 	ctx = p_ctx
+
+
+func set_preview(on: bool) -> void:
+	preview = on
+	if not Engine.is_editor_hint() or not is_inside_tree():
+		return
+	if on:
+		preview_build(Map3DPreview.context_for(self))
+	else:
+		_ring_mats.clear()
+		_selected_ring = null
+		Map3DPreview.clear_generated(self)
+	Map3DPreview.sync_viewport(self)
+
+
+## The markers as the game builds them, from `p_ctx` alone; a pack with no
+## 3D build gets the placeholder.
+func preview_build(p_ctx: Map3DContext) -> void:
+	bind(p_ctx)
+	Map3DPreview.prepare(self, p_ctx)
+	if p_ctx.meta.is_empty():
+		Map3DPreview.show_placeholder(self, RING_MAT)
+		return
+	build()
 
 
 ## One MultiMesh of billboard rings per settlement group, each over the

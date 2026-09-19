@@ -1,3 +1,4 @@
+@tool
 class_name Map3DCameraRig
 extends Node3D
 ## The 3D map's camera (spec 2026-09-20 §1): a target on the ground, a
@@ -6,6 +7,11 @@ extends Node3D
 ## ends in ctx.camera_moved. A press on the compass eases the view back to
 ## north over map3d_compass_reset_s.
 
+## Editor preview (Task 22): an UNOWNED camera of its own over the map's
+## centre at the opening zoom, so the other layers' previews are seen from
+## where the game opens and nothing is written to the scene's own RigCamera.
+@export var preview := false: set = set_preview
+
 var ctx: Map3DContext
 var _camera: Camera3D
 var _north_t := -1.0
@@ -13,7 +19,43 @@ var _north_from := 0.0
 
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	_ensure_camera()
+
+
+func set_preview(on: bool) -> void:
+	preview = on
+	if not Engine.is_editor_hint() or not is_inside_tree():
+		return
+	if on:
+		preview_build(Map3DPreview.context_for(self))
+	else:
+		Map3DPreview.clear_generated(self)
+		_camera = get_node_or_null("RigCamera") as Camera3D
+	Map3DPreview.sync_viewport(self)
+
+
+## The rig over the map's centre at the opening zoom (the pose the game opens
+## on), so the other layers' previews are seen from where the game opens. The
+## scene's own RigCamera is AUTHORED — its transform and lens are saved
+## properties — so a preview drives an UNOWNED camera of its own instead.
+func preview_build(p_ctx: Map3DContext) -> void:
+	Map3DPreview.prepare(self, p_ctx)
+	if p_ctx.meta.is_empty():
+		return
+	ctx = p_ctx
+	var cam := Camera3D.new()
+	cam.name = "PreviewCamera"
+	cam.fov = p_ctx.repo.bal("map3d_fov_deg")
+	cam.near = p_ctx.repo.bal("map3d_near_m")
+	cam.far = p_ctx.repo.bal("map3d_far_m")
+	Map3DPreview.clear_generated(self)
+	add_child(cam)  # no owner: never saved
+	cam.make_current()
+	_camera = cam
+	p_ctx.camera = cam
+	place(p_ctx.bounds.get_center(), p_ctx.repo.bal("map3d_zoom_start_m"), 0.0)
 
 
 ## The rig's own camera, made once (on _ready, or on bind if the rig is not

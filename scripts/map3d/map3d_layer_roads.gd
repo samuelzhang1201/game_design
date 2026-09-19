@@ -178,6 +178,10 @@ func _place_bridges(mesh: ArrayMesh) -> void:
 	var mi := viewport.get_node_or_null("Bridges") as MeshInstance3D if viewport != null else null
 	if mi != null:
 		mi.mesh = null
+		# The scene's own shared .tres must not stay on this view's node: it is
+		# one resource for every view, so nothing may edit it (the stone below
+		# is always a duplicate).
+		mi.material_override = null
 	if mesh == null or mesh.get_surface_count() == 0 or viewport == null:
 		return
 	if mi == null:

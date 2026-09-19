@@ -1,3 +1,4 @@
+@tool
 class_name Map3DLayerRivers
 extends MeshInstance3D
 ## The 3D map's rivers as their own layer (spec 2026-09-20 §1, node
@@ -12,6 +13,9 @@ extends MeshInstance3D
 ## The rivers' look (shader, ripples, render priority); every number is bound below.
 const RIVER_MAT := preload("res://scenes/map3d/materials/water_river.tres")
 
+## Editor preview (Task 22): the build's rivers.json, drawn as the game draws it.
+@export var preview := false: set = set_preview
+
 var ctx: Map3DContext
 var _mat: ShaderMaterial
 ## The river courses as drawn (Map3DRivers.parse, cleared of the terrain):
@@ -20,9 +24,37 @@ var _courses: Array = []
 
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# Lines are thin and long: never culled by a box the relief lift pushes them out of.
 	extra_cull_margin = 16384.0
+
+
+func set_preview(on: bool) -> void:
+	preview = on
+	if not Engine.is_editor_hint() or not is_inside_tree():
+		return
+	if on:
+		preview_build(Map3DPreview.context_for(self))
+	else:
+		Map3DPreview.clear_generated(self)
+	Map3DPreview.sync_viewport(self)
+
+
+## The rivers as the game draws them, from `p_ctx` and the pack's own build —
+## into an UNOWNED twin of this node, never onto the authored one (a mesh set
+## here would be saved into the scene). A pack with no 3D build gets the
+## placeholder in the same water.
+func preview_build(p_ctx: Map3DContext) -> void:
+	Map3DPreview.prepare(self, p_ctx)
+	if p_ctx.meta.is_empty():
+		ctx = p_ctx
+		Map3DPreview.show_placeholder(self, RIVER_MAT)
+		return
+	var twin := Map3DPreview.proxy(self, get_script(), "RiversPreview") as Map3DLayerRivers
+	twin.build(p_ctx, p_ctx.repo.map3d_dir().path_join("world.tscn"))
+	twin.apply_scale()
 
 
 ## The rivers' ribbon arrays and their drawn courses for `scene_path`'s
@@ -48,6 +80,11 @@ func build(p_ctx: Map3DContext, scene_path: String) -> void:
 	_courses = got["courses"]
 	var arrays: Array = got["arrays"]
 	if arrays.is_empty():
+		# No rivers: the scene's own shared .tres must not stay on this view
+		# (it is one resource for every view — nothing may edit it).
+		mesh = null
+		_mat = null
+		material_override = null
 		return
 	_make_material()
 	mesh = Map3DLayerBake.mesh_of(arrays)

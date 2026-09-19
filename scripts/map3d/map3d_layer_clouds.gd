@@ -1,3 +1,4 @@
+@tool
 class_name Map3DLayerClouds
 extends MultiMeshInstance3D
 ## The 3D map's clouds as their own layer (spec 2026-09-20 §1, node
@@ -18,6 +19,9 @@ extends MultiMeshInstance3D
 const CLOUD_MAT := preload("res://scenes/map3d/materials/cloud_deck.tres")
 const CLOUD_SHADOW_MAT := preload("res://scenes/map3d/materials/cloud_shadow.tres")
 
+## Editor preview (Task 22): one still frame of the drifting deck.
+@export var preview := false: set = set_preview
+
 var ctx: Map3DContext
 var _field: Map3DCloudField
 var _params: Dictionary
@@ -28,6 +32,33 @@ var _ground_cache_distance := -1.0
 var _ground_cache_yaw := 0.0
 var _ground_cache_size := Vector2.ZERO
 var _ground_cache_valid := false
+
+
+func set_preview(on: bool) -> void:
+	preview = on
+	if not Engine.is_editor_hint() or not is_inside_tree():
+		return
+	if on:
+		preview_build(Map3DPreview.context_for(self))
+	else:
+		Map3DPreview.clear_generated(self)
+	Map3DPreview.sync_viewport(self)
+
+
+## The deck as the game builds it, then ONE step with the clock running, so
+## the editor shows clouds rather than an empty sky — into an UNOWNED twin of
+## this node (its own Shadows and MultiMesh come with it), never onto the
+## authored one. A pack with no 3D build gets the placeholder.
+func preview_build(p_ctx: Map3DContext) -> void:
+	Map3DPreview.prepare(self, p_ctx)
+	if p_ctx.meta.is_empty():
+		ctx = p_ctx
+		Map3DPreview.show_placeholder(self, CLOUD_MAT)
+		return
+	p_ctx.clock_fn = func() -> int: return 1
+	var deck := Map3DPreview.proxy(self, get_script(), "CloudsPreview") as Map3DLayerClouds
+	deck.build(p_ctx)
+	deck.step(0.1)
 
 
 func build(p_ctx: Map3DContext) -> void:
