@@ -106,10 +106,11 @@ func _set_road(line_name: String, route_lines: Array, heights: Array, colour: Co
 ## shadows like the ground; replaces any before.
 func _build_bridges(list: Array) -> void:
 	_bridges = list
-	var old := viewport.get_node_or_null("Bridges") if viewport != null else null
-	if old != null:
-		viewport.remove_child(old)
-		old.queue_free()
+	# The authored scene's Viewport/Bridges is filled in place (its mesh null
+	# when there are none); a bare viewport gets a node made for it.
+	var mi := viewport.get_node_or_null("Bridges") as MeshInstance3D if viewport != null else null
+	if mi != null:
+		mi.mesh = null
 	if list.is_empty() or viewport == null:
 		return
 	var rules := bridge_rules()
@@ -147,7 +148,8 @@ func _build_bridges(list: Array) -> void:
 		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	for i in mesh.get_surface_count():
 		mesh.surface_set_material(i, mat)
-	var mi := MeshInstance3D.new()
-	mi.name = "Bridges"
+	if mi == null:
+		mi = MeshInstance3D.new()
+		mi.name = "Bridges"
+		viewport.add_child(mi)
 	mi.mesh = mesh
-	viewport.add_child(mi)

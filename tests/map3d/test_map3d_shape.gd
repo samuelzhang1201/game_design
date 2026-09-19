@@ -11,8 +11,6 @@ func _lines(path: String) -> int:
 
 
 func test_the_view_is_a_coordinator() -> void:
-	pending("until Task 13")
-	return
 	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 450)
 
 

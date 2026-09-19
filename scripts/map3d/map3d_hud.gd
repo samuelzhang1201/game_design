@@ -39,6 +39,8 @@ func _ready() -> void:
 	for piece_name: String in PIECES:
 		if get_node_or_null(piece_name) == null:
 			var p := _make_piece(piece_name)
+			if p == null:
+				continue
 			p.name = piece_name
 			add_child(p)
 	_compass = get_node_or_null("Compass") as CompassLayer
@@ -54,6 +56,13 @@ func _ready() -> void:
 		_needle.name = "Needle"
 		add_child(_needle)
 	_needle.hud = self
+	# The paint order holds however the children came (authored or made
+	# here): an authored Compass or Needle never ends up under a piece.
+	var order: Array = PIECES + ["Compass", "Needle"]
+	for i in order.size():
+		var n := get_node_or_null(String(order[i]))
+		if n != null:
+			move_child(n, i)
 
 
 static func _make_piece(piece_name: String) -> Map3DHudPiece:
@@ -72,7 +81,10 @@ static func _make_piece(piece_name: String) -> Map3DHudPiece:
 			return Map3DHudBackdrop.new()
 		"ScaleBar":
 			return Map3DHudScaleBar.new()
-	return Map3DHudRuler.new()
+		"Ruler":
+			return Map3DHudRuler.new()
+	push_error("Map3DHud: no piece named " + piece_name)
+	return null
 
 
 ## Hand every piece the context and the view; the HUD redraws on every

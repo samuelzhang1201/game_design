@@ -50,13 +50,17 @@ func build(p_ctx: Map3DContext) -> void:
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	material_override = _cloud_material(shape)
 	extra_cull_margin = 16384.0
-	var twin := MultiMeshInstance3D.new()
-	twin.name = "Shadows"
+	# The authored scene carries the twin (Viewport/Clouds/Shadows); a bare
+	# layer makes its own.
+	var twin := get_node_or_null("Shadows") as MultiMeshInstance3D
+	if twin == null:
+		twin = MultiMeshInstance3D.new()
+		twin.name = "Shadows"
+		add_child(twin)
 	twin.multimesh = mm
 	twin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
 	twin.material_override = _cloud_shadow_material(shape)
 	twin.extra_cull_margin = 16384.0
-	add_child(twin)
 
 
 func _cloud_material(shape: Texture2D) -> ShaderMaterial:

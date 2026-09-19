@@ -1,0 +1,205 @@
+[gd_scene format=3 uid="uid://b8ikn50ruc80b"]
+
+[ext_resource type="Script" uid="uid://bbxuiv7nornlk" path="res://scripts/map3d/map3d_view.gd" id="1_ck3bs"]
+[ext_resource type="Script" uid="uid://c0fdq5yaeymx8" path="res://scripts/map3d/map3d_camera_rig.gd" id="2_cyo7d"]
+[ext_resource type="Script" uid="uid://blsrnfbpmcqs2" path="res://scripts/map3d/map3d_layer_sea.gd" id="3_tnw3f"]
+[ext_resource type="Script" uid="uid://dotqljdc2fmkp" path="res://scripts/map3d/map3d_layer_rivers.gd" id="4_nchpr"]
+[ext_resource type="Script" uid="uid://doh3alf7ojk4r" path="res://scripts/map3d/map3d_layer_lines.gd" id="5_15j32"]
+[ext_resource type="Script" uid="uid://prihlsk25ejt" path="res://scripts/map3d/map3d_layer_clouds.gd" id="6_ceki2"]
+[ext_resource type="Script" uid="uid://be5qi7kf6i0fy" path="res://scripts/map3d/map3d_hud.gd" id="7_3vvdf"]
+[ext_resource type="Script" uid="uid://bdbdtbw8fi2va" path="res://scripts/map3d/map3d_layer_settlements.gd" id="7_wti7n"]
+[ext_resource type="Script" uid="uid://b405afs5pa6ut" path="res://scripts/map3d/map3d_hud_labels.gd" id="8_7g25l"]
+[ext_resource type="Script" uid="uid://bgwpo33vkfjjo" path="res://scripts/map3d/map3d_hud_landmarks.gd" id="9_h26ti"]
+[ext_resource type="Script" uid="uid://di4wc0jkj6o4u" path="res://scripts/map3d/map3d_hud_heat_legend.gd" id="10_kdwdj"]
+[ext_resource type="Script" uid="uid://d17t5xkpku5bw" path="res://scripts/map3d/map3d_hud_badges.gd" id="11_jhdww"]
+[ext_resource type="Script" uid="uid://bk62itfbf2i7t" path="res://scripts/map3d/map3d_hud_armies.gd" id="12_2v84w"]
+[ext_resource type="Script" uid="uid://deuj4qveun3qh" path="res://scripts/map3d/map3d_hud_backdrop.gd" id="13_hgoyr"]
+[ext_resource type="Script" uid="uid://c3tjsn1gfvlqh" path="res://scripts/map3d/map3d_hud_scale_bar.gd" id="14_0umpl"]
+[ext_resource type="Script" uid="uid://cmmbyhsi3kxcj" path="res://scripts/map3d/map3d_hud_ruler.gd" id="15_ebs35"]
+[ext_resource type="Script" uid="uid://kumuxikla7vf" path="res://scripts/ui/compass_layer.gd" id="16_nceau"]
+[ext_resource type="Script" uid="uid://bula280a44q8l" path="res://scripts/map3d/map3d_hud_needle.gd" id="17_geqxk"]
+[ext_resource type="StyleBox" uid="uid://btdf8fw324b5o" path="res://scenes/map3d/tooltip_chip.tres" id="19_rbqyb"]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_mtfpr"]
+viewport_path = NodePath("Viewport")
+
+[node name="Map3DView" type="Control" unique_id=915010041]
+clip_contents = true
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 1
+script = ExtResource("1_ck3bs")
+
+[node name="Viewport" type="SubViewport" parent="." unique_id=786217641]
+own_world_3d = true
+size = Vector2i(800, 450)
+render_target_update_mode = 0
+
+[node name="WorldSlot" type="Node3D" parent="Viewport" unique_id=1435114459]
+
+[node name="CameraRig" type="Node3D" parent="Viewport" unique_id=391170711]
+script = ExtResource("2_cyo7d")
+
+[node name="RigCamera" type="Camera3D" parent="Viewport/CameraRig" unique_id=383985795]
+fov = 45.0
+near = 50.0
+far = 400000.0
+
+[node name="Sea" type="MeshInstance3D" parent="Viewport" unique_id=888949554]
+cast_shadow = 0
+script = ExtResource("3_tnw3f")
+
+[node name="Rivers" type="MeshInstance3D" parent="Viewport" unique_id=1189924628]
+cast_shadow = 0
+extra_cull_margin = 16384.0
+script = ExtResource("4_nchpr")
+
+[node name="Bridges" type="MeshInstance3D" parent="Viewport" unique_id=531083100]
+
+[node name="Lines" type="Node3D" parent="Viewport" unique_id=505890697]
+script = ExtResource("5_15j32")
+
+[node name="Clouds" type="MultiMeshInstance3D" parent="Viewport" unique_id=709351108]
+cast_shadow = 0
+extra_cull_margin = 16384.0
+script = ExtResource("6_ceki2")
+
+[node name="Shadows" type="MultiMeshInstance3D" parent="Viewport/Clouds" unique_id=325918479]
+cast_shadow = 3
+extra_cull_margin = 16384.0
+
+[node name="Markers" type="Node3D" parent="Viewport" unique_id=1753765991]
+script = ExtResource("7_wti7n")
+
+[node name="Display" type="TextureRect" parent="." unique_id=499707313]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("ViewportTexture_mtfpr")
+expand_mode = 1
+
+[node name="Notice" type="Label" parent="." unique_id=374640910]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "The 3D map has not been built for this map.
+Run tools/map3d (see tools/map3d/README.md)."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="Hud" type="Control" parent="." unique_id=1148602537]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_3vvdf")
+
+[node name="Labels" type="Control" parent="Hud" unique_id=870793903]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("8_7g25l")
+
+[node name="Landmarks" type="Control" parent="Hud" unique_id=737321585]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("9_h26ti")
+
+[node name="HeatLegend" type="Control" parent="Hud" unique_id=1080052685]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("10_kdwdj")
+
+[node name="Badges" type="Control" parent="Hud" unique_id=947103583]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("11_jhdww")
+
+[node name="Armies" type="Control" parent="Hud" unique_id=1248130993]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("12_2v84w")
+
+[node name="Backdrop" type="Control" parent="Hud" unique_id=675688395]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("13_hgoyr")
+
+[node name="ScaleBar" type="Control" parent="Hud" unique_id=617893956]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("14_0umpl")
+
+[node name="Ruler" type="Control" parent="Hud" unique_id=1837869984]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("15_ebs35")
+
+[node name="Compass" type="Node2D" parent="Hud" unique_id=545051867]
+script = ExtResource("16_nceau")
+
+[node name="Needle" type="Node2D" parent="Hud" unique_id=1778557338]
+script = ExtResource("17_geqxk")
+
+[node name="Tooltip" type="Label" parent="." unique_id=1013388888]
+visible = false
+layout_mode = 0
+theme_override_colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = ExtResource("19_rbqyb")
