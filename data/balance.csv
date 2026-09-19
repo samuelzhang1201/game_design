@@ -71,10 +71,6 @@ map_decor_min_scale,0.45,"world map: screen px per native map px at/above which 
 map_decor_alpha,0.0,world map: opacity of the terrain symbols
 map_decor_scale,1.0,"world map: one knob over the SIZE of every terrain symbol — multiplies the height_px column of data/terrain_art.csv, so the whole sheet thins or thickens together"
 map_manor_alpha,0.92,"economy view: opacity of the manor wash — every land cell (a manor) in its holder's colour, over the terrain (owner request 2026-09-13, after docs/references/economyView.png)"
-map_manor_pale,0.32,"economy view: how far the POOREST land's manor is taken from its realm colour toward manor_pale (political_palette.csv)"
-map_manor_deep,0.22,economy view: how far the RICHEST land's manor is taken toward manor_rich — a manor's land value is its biome's habitability
-map_manor_jitter,0.35,"economy view: a fixed per-manor nudge along that pale-to-deep ramp, so neighbouring manors of one biome still read as separate estates (0 = none)"
-map_manor_rich,0.72,economy view: how far a WORKING manor (a settlement producing in it) is taken from its realm colour toward manor_rich
 map_manor_line_min_scale,0.9,economy view: screen px per native map px at/above which the manor edges are ruled in
 map_manor_line_alpha,0.4,economy view: opacity of the manor edges
 map_manor_line_width,1.0,economy view: width of the manor edges in screen px
@@ -328,7 +324,7 @@ map3d_far_m,400000.0,"3D MAP: the camera's far clip plane — past the sea plane
 map3d_line_step_m,150.0,"3D MAP borders: borders and seams are resampled to a point every this many metres so they drape over the relief (a Terrain3D vertex is 20 m, a pack px 50 m)"
 map3d_border_width_px,1.5,"3D MAP borders: the kingdom border's width in screen px — a thin SOLID black line (owner 2026-09-18: '删除掉现有的国境线，换成一条细黑实线'; was the 2D chequered ribbon at 3 px), political_palette map3d_border"
 map3d_hover_border_width_px,3.5,"3D MAP hover (owner 2026-09-18): the hovered kingdom's live outline, in the border's own ink (political_palette map3d_border) at this width in screen px — the 2D map's wider hover ribbon; the plain border is map3d_border_width_px"
-map3d_manor_tint,0.8,"3D MAP ECONOMY / MANORS (owner 2026-09-19): how far the ground's albedo mixes toward its manor's ManorPalette colour under a theme (Map3DGroundTint, the patched Terrain3D shader) — the colour is lit by the relief and the sun like the ground; 0 without a theme"
+map3d_manor_tint,0.8,"3D MAP MANORS (owner 2026-09-19; ECONOMY folded into it): how far the ground's albedo mixes toward its manor's ManorPalette colour under a theme (Map3DGroundTint, the patched Terrain3D shader) — the colour is lit by the relief and the sun like the ground; 0 without a theme"
 map3d_furrow_m,9.0,"3D MAP fields (owner 2026-09-19): the furrows' spacing in metres, drawn by the patched terrain shader along each estate's strips from the bake's field map (bake/fields.png) — only on sown ground, and faded out before their spacing falls under ~3 screen px"
 map3d_furrow_depth,0.14,3D MAP fields: how far a furrow darkens the field (0 = none)
 map3d_field_fade,0.6,"3D MAP fields: how much of the fields' own colour the shader takes back far out — the farmland reads as a tone, not a speckle (0 = none, 1 = all)"

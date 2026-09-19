@@ -1,7 +1,7 @@
 extends Node
 ## Frame-time benchmark for the world map (owner request 2026-09-13).
 ##
-## PAN: every view (political, provinces, heights, economy, military) panned
+## PAN: every view (political, provinces, heights, manors, military) panned
 ## across the map at three zooms — the zoom-out floor, the opening zoom, and
 ## three times closer — with a hover probe every frame the way a mouse drag
 ## triggers one. SWITCH: the frames right after a view is turned on, the
@@ -17,7 +17,7 @@ extends Node
 ##     -- [--resolution 1280x720] [--frames 180] [--out user://bench_map.txt]
 ## A tool, not simulation: it reads wall-clock time, which engine code never may.
 
-const VIEWS := ["political", "provinces", "heights", "economy", "military"]
+const VIEWS := ["political", "provinces", "heights", "manors", "military"]
 const ZOOMS := ["world", "home", "close"]
 const CLOSE_MUL := 3.0
 const WARM_FRAMES := 20
@@ -82,7 +82,7 @@ func _ready() -> void:
 
 func _set_view(v: String) -> void:
 	_view.show_heights = v == "heights"
-	_view.show_economy = v == "economy"
+	_view.show_manors = v == "manors"
 	_view.show_armies = v == "military"
 	_view.show_provinces = v == "provinces"
 
@@ -96,7 +96,7 @@ func _set_zoom(z: String) -> void:
 
 func _build_steps() -> void:
 	# The switches come first, while every view's caches are still cold.
-	for v: String in ["heights", "economy", "military", "provinces"]:
+	for v: String in ["heights", "manors", "military", "provinces"]:
 		_steps.append({"kind": "switch", "name": "%s on (first)" % v, "view": v})
 		_steps.append({"kind": "switch", "name": "back to political", "view": "political"})
 		_steps.append({"kind": "switch", "name": "%s on (cached)" % v, "view": v})

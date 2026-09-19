@@ -1,6 +1,6 @@
 class_name Map3DGroundTint
 extends RefCounted
-## The ECONOMY / MANORS ground on the 3D map (owner 2026-09-19, spec
+## The MANORS ground on the 3D map (owner 2026-09-19, spec
 ## 2026-09-19-map3d-manor-themes-design): Compatibility has no decals, so
 ## the manor colours go into Terrain3D's OWN shader. Map3DView reads the code
 ## Terrain3D generates for the build's settings and patch() rewrites its one
@@ -17,7 +17,7 @@ const ALBEDO_LINE := "ALBEDO = mat.albedo_height.rgb * color_map.rgb * macrov;"
 const LUT_WIDTH := 128
 
 const UNIFORMS := """
-// Map3DGroundTint: the ECONOMY / MANORS manor colours (Map3DView sets these).
+// Map3DGroundTint: the MANORS manor colours (Map3DView sets these).
 uniform highp sampler2D cell_index : filter_nearest, repeat_disable;
 uniform highp sampler2D cell_lut : filter_nearest, repeat_disable;
 uniform float tint_mix = 0.0;

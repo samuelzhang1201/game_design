@@ -1,7 +1,7 @@
 class_name ManorPalette
 extends RefCounted
-## The colours the ECONOMY and MANORS themes paint each manor (owner
-## 2026-09-19): moved out of WorldMapView so the 2D map and the 3D map's
+## The colours the MANORS theme paints each manor (owner 2026-09-19; ECONOMY
+## was folded into it the same day): moved out of WorldMapView so the 2D map and the 3D map's
 ## ground tint (Map3DGroundTint) read ONE palette and can never colour a
 ## manor differently. Pure: every colour comes from the repository and the
 ## state it is given. Every value is balance.csv map_manor_* /
@@ -22,33 +22,6 @@ static func province(repo: DataRepository, state: GameState, cell_id: int) -> St
 static func owner(repo: DataRepository, state: GameState, cell_id: int) -> String:
 	var p := province(repo, state, cell_id)
 	return "" if p == "" else MapOwnership.owner_of(repo, state, p)
-
-
-## The ECONOMY wash a land cell wears: its holder's colour, from manor_pale
-## (poor land) to manor_rich (the best), plus a fixed per-cell nudge so
-## neighbouring manors of one biome still read as separate estates.
-## Transparent for land no realm holds.
-static func manor_color(repo: DataRepository, state: GameState, cell_id: int) -> Color:
-	var holder := owner(repo, state, cell_id)
-	if holder == "":
-		return Color(0, 0, 0, 0)
-	var realm := MapPalette.color_of(repo, holder)
-	var t := clampf(MapEconomy.land_value(repo, repo.cells[cell_id])
-		+ (MapObjects.hash01(cell_id) - 0.5) * repo.bal("map_manor_jitter"), 0.0, 1.0)
-	var pale := realm.lerp(MapPalette.named(repo, "manor_pale"), repo.bal("map_manor_pale"))
-	var deep := realm.lerp(MapPalette.named(repo, "manor_rich"), repo.bal("map_manor_deep"))
-	var c := _shaded(repo, state, cell_id, pale.lerp(deep, t))
-	c.a = repo.bal("map_manor_alpha")
-	return c
-
-
-## The fill of a working manor: its holder's colour taken map_manor_rich of
-## the way to manor_rich.
-static func working_color(repo: DataRepository, state: GameState, cell_id: int) -> Color:
-	var holder := owner(repo, state, cell_id)
-	var base := MapPalette.color_of(repo, holder) if holder != "" \
-		else MapPalette.named(repo, "manor_pale")
-	return base.lerp(MapPalette.named(repo, "manor_rich"), repo.bal("map_manor_rich"))
 
 
 ## The MANORS view's wash: the holding house's colour — the crown its
@@ -73,22 +46,15 @@ static func house_color(repo: DataRepository, state: GameState, cell_id: int) ->
 	return c
 
 
-## What a land cell wears under `theme`: "manors" its house's colour;
-## "economy" a working manor's dark fill (MapEconomy.manors) or the land's
-## wash. Clear for water, unheld land and any other theme.
+## What a land cell wears under `theme`: "manors" its house's colour (ECONOMY
+## was folded into MANORS, owner 2026-09-19). Clear for water, unheld land
+## and any other theme.
 static func theme_color(repo: DataRepository, state: GameState, cell_id: int,
 		theme: String) -> Color:
 	var cell: Dictionary = repo.cells.get(cell_id, {})
-	if cell.is_empty() or MapTerrain.is_water(cell):
+	if cell.is_empty() or MapTerrain.is_water(cell) or theme != "manors":
 		return Color(0, 0, 0, 0)
-	match theme:
-		"manors":
-			return house_color(repo, state, cell_id)
-		"economy":
-			if MapEconomy.manors(repo).has(cell_id):
-				return working_color(repo, state, cell_id)
-			return manor_color(repo, state, cell_id)
-	return Color(0, 0, 0, 0)
+	return house_color(repo, state, cell_id)
 
 
 ## Neighbouring provinces told apart (owner 2026-09-13): the manor's colour

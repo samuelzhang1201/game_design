@@ -39,7 +39,6 @@ var _music_button: Button
 ## survives moving between screens, applied to whichever screen's map shows.
 var _province_view := true  # the map opens with the seams on (owner 2026-09-12)
 var _height_view := false
-var _economy_view := false
 var _manor_view := false
 ## The MILITARY tab's state (user request 2026-09-10), owned here for the
 ## same reason: the layer follows the player from screen to screen.
@@ -316,10 +315,6 @@ func _on_bottom_tab(tab: String) -> void:
 			_info_screen.hide()
 			_relations_screen.visible = false
 			set_height_view(not _height_view)
-		"ECONOMY":
-			_info_screen.hide()
-			_relations_screen.visible = false
-			set_economy_view(not _economy_view)
 		"MANORS":
 			_info_screen.hide()
 			_relations_screen.visible = false
@@ -371,35 +366,15 @@ func set_height_view(on: bool) -> void:
 func height_view() -> bool:
 	return _height_view
 
-## Turn the economy view on or off everywhere (owner request 2026-09-13): the
-## tab lights up, the map washes every province in the category of what it
-## makes most of, and the screen's LEFT column lists what the realm produces
-## — the same pattern the military layer follows.
-func set_economy_view(on: bool) -> void:
-	_economy_view = on
-	if on and _manor_view:
-		set_manor_view(false)
-	if _bottom_bar != null:
-		_bottom_bar.set_toggled("ECONOMY", on)
-	var map := _current_map()
-	if map != null and map.show_economy != on:
-		map.show_economy = on
-	if current_screen != null and current_screen.has_method("set_economy_view"):
-		current_screen.set_economy_view(on)
-	_sync_map_view()
-
-func economy_view() -> bool:
-	return _economy_view
-
 ## Turn the MANORS view on or off everywhere (MANOR_SYSTEM.md §6): the tab
 ## lights up, the map colours every manor by the house that holds it, and
-## the screen's LEFT column lists the manors (the Manor Master). A theme
-## like HEIGHTS and ECONOMY, so lighting it puts those out, and they it.
+## the screen's LEFT column lists the manors (the Manor Master), with each
+## working manor's output badge on the map (ECONOMY was folded in, owner
+## 2026-09-19). A theme like HEIGHTS, so lighting it puts that out, and it
+## this.
 func set_manor_view(on: bool) -> void:
 	_manor_view = on
 	if on:
-		if _economy_view:
-			set_economy_view(false)
 		if _height_view:
 			set_height_view(false)
 	if _bottom_bar != null:
@@ -457,15 +432,14 @@ func _apply_ruler() -> void:
 ## The one rule for which map the panel shows (spec
 ## 2026-09-18-map3d-default-design): 3D whenever the pack has a built scene,
 ## balance map3d_default is on, and no 2D-only layer is — HEIGHTS alone
-## draws on the 2D map only; ECONOMY, MANORS and MILITARY draw on both
-## (owner 2026-09-19), so the 3D view is handed their theme and the counters. Runs on every
-## layer change and every screen swap.
+## draws on the 2D map only; MANORS and MILITARY draw on both (owner
+## 2026-09-19), so the 3D view is handed the theme and the counters. Runs on
+## every layer change and every screen swap.
 func _sync_map_view() -> void:
 	_map3d_view = Game.data.bal("map3d_default") > 0.0 and map3d_available() \
 			and not _height_view
 	if current_screen != null and current_screen.has_method("set_map3d_theme"):
-		current_screen.set_map3d_theme("manors" if _manor_view
-			else ("economy" if _economy_view else ""), _army_view)
+		current_screen.set_map3d_theme("manors" if _manor_view else "", _army_view)
 	if current_screen != null and current_screen.has_method("set_map3d_view"):
 		current_screen.set_map3d_view(_map3d_view)
 	_apply_ruler()

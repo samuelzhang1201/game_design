@@ -627,16 +627,16 @@ func test_a_conquered_province_is_repainted_for_its_new_owner() -> void:
 			return
 	fail_test("the lost province was not painted at all")
 
-## The ECONOMY view (owner request 2026-09-13, after
-## docs/references/economyView.png): the land drawn as manors — the
-## pack's cells — in their holders' colours, and the working manors badged
-## with the good they make most of and how many units.
-func test_the_economy_view_draws_the_land_as_manors() -> void:
+## The MANORS view (ECONOMY folded into it, owner 2026-09-19; after
+## docs/references/economyView.png): the land drawn as manors — the pack's
+## cells — in their houses' colours, and the working manors badged with the
+## good they make most of and how many units.
+func test_the_manors_view_draws_the_land_as_manors_with_badges() -> void:
 	var v := _view()
 	await wait_frames(2)
-	assert_null(v.manor_mesh(), "no manors outside the economy view")
+	assert_null(v.manor_mesh(), "no manors outside the manors view")
 	assert_eq(v.manor_badges().size(), 0)
-	v.show_economy = true
+	v.show_manors = true
 	assert_not_null(v.manor_mesh(), "the manors are one mesh")
 	assert_false(v.political_wash_visible(), "standing in for the political wash")
 	assert_gt(v.manor_edges().size(), 0, "with their edges ruled in")
@@ -662,14 +662,14 @@ func test_the_economy_view_draws_the_land_as_manors() -> void:
 	var obj := v._object_under((first["badge"] as Rect2).get_center())
 	assert_eq(String(obj.get("kind", "")), "burg", "clicking a badge picks its settlement")
 	assert_eq(String(obj.get("code", "")), String(first["burg"]))
-	v.show_economy = false
+	v.show_manors = false
 	assert_gt(v.settlement_sprites().size(), 0, "and the towns come back with the layer off")
 
 func test_a_conquered_manor_takes_its_new_holders_colour() -> void:
 	Game.start_campaign(42)
 	var v := _view()
 	await wait_frames(2)
-	v.show_economy = true
+	v.show_manors = true
 	var mine := Game.data.resolve_realm("player_realm")
 	var raider := Game.data.resolve_realm("raider_realm")
 	var ids: Array = Game.data.cells.keys()
@@ -680,11 +680,11 @@ func test_a_conquered_manor_takes_its_new_holders_colour() -> void:
 			cell = id
 			break
 	assert_gte(cell, 0, "the realm holds land cells")
-	var before := v.manor_color(cell)
+	var before := v.house_manor_color(cell)
 	var mesh_before := v.manor_mesh()
 	MapOwnership.set_owner(Game.data, Game.state, v.cell_province(cell), raider, "a raid")
 	assert_eq(v.cell_owner(cell), raider, "the manor is the raiders' now")
-	assert_ne(v.manor_color(cell), before, "and wears their colour")
+	assert_ne(v.house_manor_color(cell), before, "and reads foreign now")
 	assert_ne(v.manor_mesh(), mesh_before, "the manor mesh is rebuilt for the new holder")
 
 ## Settlement art (user request 2026-09-09): zoomed in, towns draw as their
@@ -1103,7 +1103,7 @@ func test_every_manor_badge_has_a_ring_colour_and_a_picture() -> void:
 			"'%s' has art or its category '%s' has a glyph" % [good, tag])
 
 ## A thematic view drops the realm tint from the symbols too: a blue-teal
-## wood standing on an economy wash is a third colour that means nothing.
+## wood standing on a manors wash is a third colour that means nothing.
 func test_thematic_views_leave_the_symbols_untinted() -> void:
 	Game.start_campaign(42)
 	var v := _view()
@@ -1111,12 +1111,12 @@ func test_thematic_views_leave_the_symbols_untinted() -> void:
 	var mine := Game.data.resolve_realm("player_realm")
 	var held: String = MapOwnership.provinces_of(Game.data, Game.state, mine)[0]
 	assert_ne(v.realm_tint(held, 1.0), Color.WHITE, "tinted on the political map")
-	for layer in ["heights", "economy"]:
+	for layer in ["heights", "manors"]:
 		v.show_heights = layer == "heights"
-		v.show_economy = layer == "economy"
+		v.show_manors = layer == "manors"
 		assert_eq(v.realm_tint(held, 1.0), Color.WHITE, "untinted under %s" % layer)
 	v.show_heights = false
-	v.show_economy = false
+	v.show_manors = false
 	assert_ne(v.realm_tint(held, 1.0), Color.WHITE, "and tinted again after")
 
 ## The decor is one mesh (owner 2026-09-13): every mark a quad over one
@@ -1158,9 +1158,6 @@ func test_the_estates_are_one_mesh_in_the_manors_view() -> void:
 	assert_eq(MarkMesh.quad_count(mesh), MapObjects.manor_estates(Game.data, Game.state).size(),
 		"every estate has its art")
 	assert_true(v.estate_mesh() == mesh, "kept between frames")
-	v.show_manors = false
-	v.show_economy = true
-	assert_false(v.estates_visible(), "not in the economy view either")
 
 ## Clouds (owner 2026-09-14): while the clock runs, faint clouds drift over
 ## the default map; under a theme — or paused — they fade away.
@@ -1206,26 +1203,9 @@ func test_estates_thin_out_as_the_map_zooms_out() -> void:
 	assert_eq(near, all, "close in, every estate")
 	assert_lt(float(far), all / 4.0, "far out, only a scattering")
 
-## In the MANORS view every element follows one colour strategy (owner
-## 2026-09-13): a town drawing wears its own manor's colour at
-## map_manor_mark_alpha, the realm's on the default map.
-func test_town_drawings_wear_their_manors_colour_in_the_manors_view() -> void:
-	var v := _view()
-	await wait_frames(2)
-	var burg: String = Game.data.burgs.keys()[0]
-	var burg_cell := int(MapEconomy.burg_cells(Game.data).get(burg, -1))
-	assert_gt(burg_cell, -1)
-	var province := String(Game.data.burgs[burg]["province_code"])
-	v.show_manors = true
-	var tint := v.manor_mark_tint(burg_cell)
-	assert_almost_eq(tint.a, Game.data.bal("map_manor_mark_alpha"), 0.001)
-	assert_eq(v.sprite_tint(burg, province, 1.0), tint, "the manor's own colour")
-	v.show_manors = false
-	assert_ne(v.sprite_tint(burg, province, 1.0), tint, "the realm's on the default map")
-
 ## A thematic view drops the terrain decoration: a wood is not what the view
 ## is about. The HEIGHTS view keeps the town drawings — a town is still a
-## place — while the ECONOMY view marks its places with manor badges instead
+## place — while the MANORS view marks its places with output badges instead
 ## (economyView.png), which a town drawing would cover.
 func test_thematic_views_drop_the_woods() -> void:
 	var v := _view()
@@ -1237,7 +1217,7 @@ func test_thematic_views_drop_the_woods() -> void:
 	assert_eq(v.terrain_sprites().size(), 0, "no woods under the height ramp")
 	assert_eq(v.settlement_sprites().size(), towns, "the towns are still there")
 	v.show_heights = false
-	v.show_economy = true
+	v.show_manors = true
 	assert_eq(v.terrain_sprites().size(), 0, "no woods under the manors")
 	assert_eq(v.settlement_sprites().size(), 0, "the manor badges stand in for the towns")
 
@@ -1272,7 +1252,7 @@ func test_a_pan_cuts_no_dashes_but_a_zoom_or_conquest_does() -> void:
 ## In a layer that shows manors a click on bare land selects the manor
 ## under it (MANOR_SYSTEM.md §6); on the political map it still means the
 ## province's land.
-func test_in_the_economy_view_a_click_on_land_selects_its_manor() -> void:
+func test_in_the_manors_view_a_click_on_land_selects_its_manor() -> void:
 	Game.start_campaign(42)
 	var v := _view()
 	await wait_frames(2)
@@ -1286,12 +1266,12 @@ func test_in_the_economy_view_a_click_on_land_selects_its_manor() -> void:
 	var seen: Array = []
 	v.object_selected.connect(func(entry: Dictionary) -> void: seen.append(entry))
 	v.show_provinces = false
-	v.show_economy = true
+	v.show_manors = true
 	v._select_at(v.map_to_screen(centre))
 	assert_eq(String(v._selected_obj.get("kind", "")), "manor")
 	assert_eq(int(v._selected_obj.get("cell", -1)), cell)
 	assert_eq(String(seen[-1]["title"]), MapManors.label_of(Game.data, cell))
-	v.show_economy = false
+	v.show_manors = false
 	v._select_at(v.map_to_screen(centre))
 	assert_eq(String(v._selected_obj.get("kind", "")), "land", "the political map: land")
 

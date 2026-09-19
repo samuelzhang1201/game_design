@@ -1,8 +1,9 @@
 class_name ManorBadges
 extends RefCounted
-## ECONOMY's output badges (owner 2026-09-13 on the 2D map, 2026-09-19 on the
-## 3D map): a working manor's chief good as its icon in a disc ringed in the
-## good's CATEGORY colour, over a chip with its units. Shared by both maps so
+## The MANORS view's output badges (owner 2026-09-13 on the 2D map as
+## ECONOMY's; 2026-09-19 on the 3D map, and ECONOMY folded into MANORS): a
+## working manor's chief good as its icon in a disc ringed in the good's
+## CATEGORY colour, over a chip with its units. Shared by both maps so
 ## they place and draw a badge the same way: each map gathers its working
 ## manors in screen space ({cell, burg, good, units, center}, biggest producer
 ## first) and hands them here. Every colour and size is political_palette.csv
@@ -54,7 +55,7 @@ static func place(repo: DataRepository, manors: Array, with_label: bool) -> Arra
 		var entry := m.duplicate()
 		entry.merge({"text": text, "badge": badge, "label": null,
 			"texture": tex, "glyph": glyph, "rect": whole,
-			"ring": EconomyPanel.tag_color(repo, tag)})
+			"ring": tag_color(repo, tag)})
 		if with_label:
 			entry["label"] = label
 		out.append(entry)
@@ -91,6 +92,13 @@ static func draw(ci: CanvasItem, repo: DataRepository, badges: Array) -> void:
 			ci.draw_rect(label.grow(1.0), ink)
 			ci.draw_rect(label, chip)
 			draw_centered_text(ci, font, label, String(b["text"]), font_px, ink)
+
+
+## The colour a good's category wears (data/goods_palette.csv) — the badge's
+## ring, and the manor card's output icons.
+static func tag_color(data: DataRepository, tag: String) -> Color:
+	var hex := String(data.goods_palette.get(tag, ""))
+	return Color(hex) if hex != "" else UiPalette.TEXT_MUTED
 
 
 static func text_width(font: Font, text: String, font_px: int) -> float:

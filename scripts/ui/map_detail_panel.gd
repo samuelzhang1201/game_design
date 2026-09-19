@@ -716,7 +716,7 @@ func _fill_rates(rates: Array) -> void:
 			pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 			pic.custom_minimum_size = Vector2(STAT_ICON_PX, STAT_ICON_PX)
 			if coloured == null:
-				pic.modulate = EconomyPanel.tag_color(Game.data, String(r.get("tag", "")))
+				pic.modulate = ManorBadges.tag_color(Game.data, String(r.get("tag", "")))
 			pic.mouse_filter = Control.MOUSE_FILTER_PASS
 			pic.tooltip_text = tip
 			row.add_child(pic)

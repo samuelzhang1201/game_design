@@ -28,8 +28,6 @@ signal country_hovered(kingdom_code: String)
 signal province_view_changed(on: bool)
 ## The relief view was switched on or off (the H key, or a screen).
 signal height_view_changed(on: bool)
-## The economy view was switched on or off (the E key, or a screen).
-signal economy_view_changed(on: bool)
 signal manor_view_changed(on: bool)
 ## In the province view, the province under a click — its province_code, or
 ## "" for water / nothing — so a screen's left column can show its account.
@@ -72,8 +70,6 @@ const SCENE_PATH := "res://scenes/world_map.tscn"
 ## are part of the map. The flag stays for tools and tests.
 ## The relief view (owner request 2026-09-12).
 const HEIGHT_KEY := KEY_H
-## The economy view (owner request 2026-09-13).
-const ECONOMY_KEY := KEY_E
 var show_provinces: bool = true:
 	set(v):
 		if v == show_provinces:
@@ -97,24 +93,13 @@ var show_heights: bool = false:
 		height_view_changed.emit(v)
 		queue_redraw()
 
-## The ECONOMY view (owner request 2026-09-13): the land as its manors, each
-## washed by its holder and the worth of its land, the working ones marked
-## with what they make and how much (see manor_mesh / manor_badges).
-## Thematic like HEIGHTS, so it replaces the political wash rather than
-## sitting on top of it — one map, one theme.
-var show_economy: bool = false:
-	set(v):
-		if v == show_economy:
-			return
-		show_economy = v
-		economy_view_changed.emit(v)
-		queue_redraw()
-
 ## The MANORS view (MANOR_SYSTEM.md §6, owner 2026-09-13): the land as its
 ## manors coloured by the HOUSE that holds each — the crown in its realm's
 ## colour, every other house in a hue of its own (MapPalette.house_color),
-## foreign land paled — and a click on a manor opens its card. Thematic
-## like ECONOMY: GameRoot keeps the three themes exclusive.
+## foreign land paled — the working ones marked with what they make and how
+## much (manor_badges; ECONOMY was folded in, owner 2026-09-19), and a click
+## on a manor opens its card. Thematic like HEIGHTS: GameRoot keeps the two
+## exclusive, and it replaces the political wash — one map, one theme.
 var show_manors: bool = false:
 	set(v):
 		if v == show_manors:
@@ -505,9 +490,9 @@ func _refresh_looks() -> void:
 func settlement_sprites() -> Array:
 	var out: Array = []
 	var h := sprite_height()
-	# The economy view marks its places with manor badges (economyView.png);
+	# The manors view marks its places with output badges (economyView.png);
 	# a town drawing over the badge would hide the very thing it shows.
-	if h <= 0.0 or _terrain_mesh == null or show_economy:
+	if h <= 0.0 or _terrain_mesh == null or show_manors:
 		return out
 	var s := view_scale()
 	var min_pop := MapObjects.min_burg_pop_for_scale(Game.data, s)
@@ -563,7 +548,7 @@ func _draw_pins() -> void:
 			sprite_tint(String(sp_entry["code"]), String(sp_entry.get("province", "")), sprite_strength))
 		drawn[sp_entry["code"]] = true
 	for code: String in Game.data.burgs:
-		if drawn.has(code) or show_economy:
+		if drawn.has(code) or show_manors:
 			continue
 		var b: Dictionary = Game.data.burgs[code]
 		if not MapObjects.burg_visible(b, min_pop):
@@ -665,7 +650,7 @@ func settlement_marks() -> Array:
 	for sp_entry: Dictionary in settlement_sprites():
 		out.append(sp_entry["rect"])
 		drawn[sp_entry["code"]] = true
-	if show_economy:
+	if show_manors:
 		return out
 	var min_pop := MapObjects.min_burg_pop_for_scale(Game.data, view_scale())
 	var frame := Rect2(Vector2.ZERO, size).grow(PIN_CAPITAL * 4.0)
@@ -742,7 +727,7 @@ func political_fills() -> Array:
 func political_wash_visible() -> bool:
 	# Not in the HEIGHTS view: you cannot read a height ramp through a
 	# political colour, and a thematic map shows ONE theme (owner 2026-09-13).
-	return not show_heights and not show_economy \
+	return not show_heights and not show_manors \
 		and Game.data.bal("map_political_alpha") > 0.0
 
 ## Paint every province in its live owner's colour over the terrain.
@@ -998,9 +983,9 @@ func inland_bias(code: String, native: Vector2, radius: float) -> Vector2:
 
 func realm_tint(province_code: String, strength: float) -> Color:
 	# In a thematic view the realm colours are not on the map, so the symbols
-	# must not wear them either — a blue-teal wood over an economy wash reads
+	# must not wear them either — a blue-teal wood over a manors wash reads
 	# as a third, meaningless colour (owner ruling 2026-09-13).
-	if show_heights or show_economy or show_manors:
+	if show_heights or show_manors:
 		return Color.WHITE
 	if province_code == "" or strength <= 0.0:
 		return Color.WHITE
@@ -1020,7 +1005,7 @@ func terrain_sprites() -> Array:
 	# A thematic view shows its theme: woods and hills are decoration, and
 	# with the realm tint gone they read as pale specks over the wash.
 	# Settlements stay — a town is a place, not decoration.
-	if show_heights or show_economy or show_manors:
+	if show_heights or show_manors:
 		return []
 	if _terrain_mesh == null or view_scale() < Game.data.bal("map_decor_min_scale"):
 		return []
@@ -1076,7 +1061,7 @@ func _prepared_decor() -> Array:
 var _prepared_sea_decor: Array = []
 
 func sea_sprites() -> Array:
-	if show_heights or show_economy or show_manors:
+	if show_heights or show_manors:
 		return []
 	if _terrain_mesh == null or view_scale() < Game.data.bal("map_decor_min_scale"):
 		return []
@@ -1123,7 +1108,7 @@ var _decor_mesh_sig := 0
 ## Whether the decor layer draws at all: not under a theme, not below
 ## map_decor_min_scale.
 func decor_visible() -> bool:
-	if show_heights or show_economy or show_manors:
+	if show_heights or show_manors:
 		return false
 	return _terrain_mesh != null and view_scale() >= Game.data.bal("map_decor_min_scale")
 
@@ -1292,18 +1277,12 @@ func manor_mark_tint(cell_id: int) -> Color:
 	return c
 
 ## The tint a settlement drawing wears: the realm's on the default map
-## (realm_tint), its manor's in the MANORS view (owner 2026-09-13: every
-## element there follows the same colour strategy), white under the other
-## themes. Off the MANORS view it also carries map_sprite_alpha (owner
-## 2026-09-17: the painted towns were 太突兀) — the wash and the paper show
-## through the picture, so a town sits in the sheet instead of on it. The
-## manor tint brings its own alpha and keeps it.
-func sprite_tint(burg_code: String, province_code: String, strength: float) -> Color:
-	if show_manors:
-		var cell := int(MapEconomy.burg_cells(Game.data).get(burg_code, -1))
-		if cell >= 0:
-			return Color.WHITE.lerp(manor_mark_tint(cell), strength)
-		return Color.WHITE
+## (realm_tint), white under a theme (the MANORS view draws no towns — its
+## output badges stand in, owner 2026-09-19). It also carries
+## map_sprite_alpha (owner 2026-09-17: the painted towns were 太突兀) — the
+## wash and the paper show through the picture, so a town sits in the sheet
+## instead of on it.
+func sprite_tint(_burg_code: String, province_code: String, strength: float) -> Color:
 	var tint := realm_tint(province_code, strength)
 	tint.a = Game.data.bal("map_sprite_alpha")
 	return tint
@@ -1760,10 +1739,6 @@ func _gui_input(ev: InputEvent) -> void:
 		show_heights = not show_heights
 		return
 	if ev is InputEventKey and (ev as InputEventKey).pressed \
-			and (ev as InputEventKey).keycode == ECONOMY_KEY:
-		show_economy = not show_economy
-		return
-	if ev is InputEventKey and (ev as InputEventKey).pressed \
 			and (ev as InputEventKey).keycode == DEV_FLIP_KEY \
 			and OS.is_debug_build():
 		dev_flip_hovered_province()
@@ -1967,7 +1942,7 @@ func _object_under(pos: Vector2) -> Dictionary:
 ## Whether a click on land means its manor (MANOR_SYSTEM.md §6): in the
 ## layers that draw manors. On the political map land still means province.
 func manors_pickable() -> bool:
-	return show_economy or show_manors
+	return show_manors
 
 func _update_hover(pos: Vector2) -> void:
 	var obj := _object_under(pos)
@@ -2072,16 +2047,13 @@ func _seams_shown() -> bool:
 func visible_seam_count() -> int:
 	return _visible_seams().size()
 
-## The ECONOMY view (owner request 2026-09-13, after
-## docs/references/economyView.png): the land drawn as its MANORS — the
-## pack's Voronoi cells, each one an estate — every manor washed in the colour
-## of the realm that holds it, taken from pale to deep by how good its land is
-## (MapEconomy.land_value), with the manor edges ruled in. A WORKING manor —
-## one with a settlement producing in it (MapEconomy.manors) — is filled dark
-## and carries a badge: the icon of the good it makes most of, ringed in that
-## good's category colour (the same data/goods_palette.csv the left column's
-## bars use, so the column stays the map's legend), over a chip with how many
-## units it makes. Ownership is read live, so a conquest recolours the manors
+## The MANORS view's land (owner 2026-09-13; ECONOMY folded in 2026-09-19):
+## the pack's Voronoi cells, each one an estate, washed in the colour of the
+## house that holds it (ManorPalette), with the manor edges ruled in. A
+## WORKING manor — one with a settlement producing in it (MapEconomy.manors)
+## — carries a badge: the icon of the good it makes most of, ringed in that
+## good's category colour, over a chip with how many units it makes
+## (ManorBadges). Ownership is read live, so a conquest recolours the manors
 ## with no new art.
 var _manor_mesh: ArrayMesh = null
 var _manor_mesh_sig := -1
@@ -2102,23 +2074,16 @@ func cell_province(cell_id: int) -> String:
 func cell_owner(cell_id: int) -> String:
 	return ManorPalette.owner(Game.data, Game.state, cell_id)
 
-func manor_color(cell_id: int) -> Color:
-	return ManorPalette.manor_color(Game.data, Game.state, cell_id)
-
 func house_manor_color(cell_id: int) -> Color:
 	return ManorPalette.house_color(Game.data, Game.state, cell_id)
 
-func working_manor_color(cell_id: int) -> Color:
-	return ManorPalette.working_color(Game.data, Game.state, cell_id)
-
 ## Every land cell as one flat-coloured fan, in native coordinates, drawn with
 ## the view transform. Rebuilt only when a province changes hands; null
-## outside the economy view.
+## outside the manors view.
 func manor_mesh() -> ArrayMesh:
-	if not (show_economy or show_manors) or _terrain_mesh == null:
+	if not show_manors or _terrain_mesh == null:
 		return null
-	# Rebuilt when a province or a manor changes hands, or the theme flips:
-	# ECONOMY colours by realm and land, MANORS by house.
+	# Rebuilt when a province or a manor changes hands, or the theme flips.
 	var sig := hash([_ownership_sig(),
 		0 if Game.state == null else Game.state.manor_owner.hash(), show_manors])
 	if _manor_mesh_built and sig == _manor_mesh_sig:
@@ -2131,7 +2096,7 @@ func manor_mesh() -> ArrayMesh:
 	ids.sort()
 	# A working manor's dark fill is part of the mesh (2026-09-13): it is a
 	# fact of the pack, not of the zoom, so it costs nothing per frame.
-	var theme := "manors" if show_manors else "economy"
+	var theme := "manors"
 	for id: int in ids:
 		var cell: Dictionary = repo.cells[id]
 		var ring: PackedInt32Array = cell["vertex_ids"]
@@ -2162,9 +2127,9 @@ func manor_edges() -> PackedVector2Array:
 
 ## The working manors in the frame whose settlements pass the town LOD rule
 ## (the same one the pins use), biggest producer first:
-## {cell, burg, good, units, center}. [] outside the economy view.
+## {cell, burg, good, units, center}. [] outside the manors view.
 func working_manors() -> Array:
-	if not show_economy or _terrain_mesh == null:
+	if not show_manors or _terrain_mesh == null:
 		return []
 	var repo := Game.data
 	var min_pop := MapObjects.min_burg_pop_for_scale(repo, view_scale())
@@ -2273,7 +2238,7 @@ func compass_layer() -> CompassLayer:
 func clouds_active() -> bool:
 	if Game.state == null or Game.clock_speed <= 0 or _terrain_mesh == null:
 		return false
-	if show_heights or show_economy or show_manors or show_armies:
+	if show_heights or show_manors or show_armies:
 		return false
 	return is_visible_in_tree() and Game.data.bal("map_cloud_alpha") > 0.0
 
@@ -2281,10 +2246,10 @@ func biome_layer() -> BiomeLayer:
 	return _biome
 
 ## The biome tiles show on the default map only: hidden under the themes
-## that draw the land their own way (HEIGHTS, ECONOMY, MANORS), by the
+## that draw the land their own way (HEIGHTS, MANORS), by the
 ## snapshot tool's switch, and when map_biome_alpha is 0.
 func biomes_visible() -> bool:
-	if _biome == null or not show_biomes or show_heights or show_economy or show_manors:
+	if _biome == null or not show_biomes or show_heights or show_manors:
 		return false
 	return Game.data.bal("map_biome_alpha") > 0.0
 

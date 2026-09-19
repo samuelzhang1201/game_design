@@ -468,55 +468,9 @@ func test_the_bottom_tabs_fit_across_the_design_viewport() -> void:
 	assert_lte(row.get_combined_minimum_size().x, 1280.0,
 		"%d tabs still fit the 1280 px design viewport" % BottomBar.TABS.size())
 
-## The ECONOMY column (owner request 2026-09-13): what the realm makes, in
-## the LEFT column while the economy layer is lit — the same place and the
-## same rules the military layer's column follows.
-func test_the_economy_column_lists_what_the_realm_makes() -> void:
-	Game.start_campaign(42)
-	var r := _root()
-	await wait_frames(2)
-	r._switch_to(GameRoot.State.COURT)
-	r.current_screen.enter_court(null)
-	await wait_frames(2)
-	var panel: EconomyPanel = r.current_screen.economy_panel()
-	assert_false(panel.visible, "off by default")
-	r.bottom_bar().button("ECONOMY").pressed.emit()
-	await wait_frames(1)
-	assert_true(r.economy_view(), "the tab drives it")
-	assert_true(panel.visible, "and the column shows the produce")
-	assert_true(r.current_screen.world_map().show_economy, "with the map washed to match")
-	# The column is the crown's OWN produce (2026-09-13): the provinces it
-	# controls, not the whole realm's.
-	var own := MapManors.controlled_provinces(Game.data, Game.state)
-	var output := MapEconomy.output_of_provinces(Game.data, own, Game.state)
-	assert_gt(output.size(), 0, "the crown's land produces something")
-	assert_string_contains(panel.summary_text(), "%d kinds" % output.size())
-	assert_string_contains(panel.summary_text(), "%d province" % own.size())
-	assert_lt(output.size(), MapEconomy.realm_output(Game.data, Game.state,
-		Game.data.resolve_realm("player_realm")).size(), "fewer kinds than the whole realm")
-	assert_gt(panel.goods_chart().rows.size(), 0, "the biggest goods are charted")
-	assert_lte(panel.goods_chart().rows.size(), EconomyPanel.MAX_GOODS)
-	assert_eq(String(panel.goods_chart().rows[0]["label"]), String(output[0]["label"]),
-		"biggest first, matching the engine")
-
-func test_the_economy_column_uses_the_same_colours_as_the_map() -> void:
-	Game.start_campaign(42)
-	var r := _root()
-	await wait_frames(2)
-	r._switch_to(GameRoot.State.COURT)
-	r.current_screen.enter_court(null)
-	await wait_frames(2)
-	r.bottom_bar().button("ECONOMY").pressed.emit()
-	await wait_frames(1)
-	var panel: EconomyPanel = r.current_screen.economy_panel()
-	var mine := Game.data.resolve_realm("player_realm")
-	var output := MapEconomy.realm_output(Game.data, Game.state, mine)
-	var tag := MapEconomy.good_tag(Game.data, String(output[0]["good"]))
-	assert_eq(panel.goods_chart().rows[0]["color"], EconomyPanel.tag_color(Game.data, tag),
-		"the column and the map read off one legend, not two")
-
-## The MANORS tab (MANOR_SYSTEM.md §6) lights the manors view on the map and
-## puts the other two themes out; lighting ECONOMY puts MANORS out again.
+## The MANORS tab (MANOR_SYSTEM.md §6) lights the manors view on the map —
+## house colours and, since ECONOMY was folded into it (owner 2026-09-19),
+## the output badges — and is exclusive with HEIGHTS.
 func test_the_manors_tab_is_a_theme_exclusive_with_the_others() -> void:
 	Game.start_campaign(42)
 	var r := _root()
@@ -524,15 +478,10 @@ func test_the_manors_tab_is_a_theme_exclusive_with_the_others() -> void:
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
 	await wait_frames(2)
-	r.bottom_bar().button("ECONOMY").pressed.emit()
-	await wait_frames(1)
-	assert_true(r.economy_view())
 	r.bottom_bar().button("MANORS").pressed.emit()
 	await wait_frames(1)
 	assert_true(r.manor_view(), "the tab drives it")
-	assert_false(r.economy_view(), "one theme at a time")
 	assert_true(r.current_screen.world_map().show_manors, "the map colours by house")
-	assert_false(r.current_screen.world_map().show_economy)
 	assert_true(r.bottom_bar().button("MANORS").button_pressed)
 	r.bottom_bar().button("HEIGHTS").pressed.emit()
 	await wait_frames(1)

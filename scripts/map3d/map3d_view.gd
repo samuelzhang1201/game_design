@@ -75,7 +75,7 @@ const SELECTED_RING_ALWAYS_M := 1000000.0
 ## place the see-through layers' draw order is set. Higher draws over lower.
 ## The sea under everything; the river water under every line, so a border
 ## or seam always reads over the water it crosses; the roads (a bridge over
-## the water, under every border); the manor edges of the ECONOMY / MANORS
+## the water, under every border); the manor edges of the MANORS
 ## themes; seams, then kingdom
 ## borders, then the hovered kingdom's wider outline, then the clicked
 ## province's gold outline; then the CLOUDS — over
@@ -134,7 +134,7 @@ var _selected_burg := ""
 ## The clicked manor under a theme (-1 for none), outlined in gold.
 var _selected_manor := -1
 var _border_sig := 0
-## The ECONOMY / MANORS theme (owner 2026-09-19): "", "economy" or "manors";
+## The MANORS theme (owner 2026-09-19; ECONOMY was folded into it): "" or "manors";
 ## the LUT of each cell's ManorPalette colour the patched terrain shader reads
 ## (Map3DGroundTint), rebuilt when the theme or an owner turns; the terrain
 ## material carrying the patch (null without a Terrain3D or when the addon's
@@ -158,7 +158,7 @@ var _hover_lines: Dictionary = {}
 var _tooltip: Label
 ## The kingdoms the HUD lettered on its last draw (a test seam).
 var _drawn_labels: PackedStringArray = []
-## How many ECONOMY badges the HUD drew last (a test seam).
+## How many MANORS output badges the HUD drew last (a test seam).
 var _drawn_badges := 0
 ## MILITARY on the 3D map (owner 2026-09-19): whether the counters show, the
 ## clicked regiment (outlined in gold), and how many the HUD drew last.
@@ -827,7 +827,7 @@ func refresh_borders() -> void:
 	_draw_selection()
 
 
-# --- the ECONOMY / MANORS themes ------------------------------------------------
+# --- the MANORS theme -------------------------------------------------------------
 
 ## Patch the world's Terrain3D shader for the manor tint (Map3DGroundTint).
 ## Without a Terrain3D (the tests' fixture) or when the addon's code no longer
@@ -877,8 +877,8 @@ static func load_field_map(scene_path: String) -> Texture2D:
 	return null if img == null else ImageTexture.create_from_image(img)
 
 
-## Show the ECONOMY or MANORS theme on the 3D ground ("" for none) — GameRoot
-## hands it down with the 2D map's show_economy / show_manors.
+## Show the MANORS theme on the 3D ground ("manors", or "" for none) —
+## GameRoot hands it down with the 2D map's show_manors.
 func set_manor_theme(theme_name: String) -> void:
 	_theme = theme_name
 	_refresh_theme()
@@ -1315,13 +1315,13 @@ func draw_labels(ci: CanvasItem) -> void:
 			_drawn_labels.append(String(e["code"]))
 
 
-## ECONOMY's output badges (owner 2026-09-19, the 2D map's — ManorBadges):
+## The MANORS view's output badges (owner 2026-09-19, the 2D map's — ManorBadges):
 ## the working manors (MapEconomy.manors) before the camera whose settlement
 ## passes the 2D map's town LOD rule at the scale it is SEEN at (screen px
 ## per pack px at its own distance), in design px, biggest producer first;
 ## a badge that would overlap a bigger one is left off. [] off the theme.
 func manor_badges() -> Array:
-	if _theme != "economy" or _camera == null:
+	if _theme != "manors" or _camera == null:
 		return []
 	var s := _render_scale()
 	var m_per_pack := float(_meta.get("m_per_px", 50.0))
@@ -1538,7 +1538,7 @@ func pick_at(pos: Vector2) -> Dictionary:
 	for i in range(armies.size() - 1, -1, -1):
 		if (armies[i]["pos"] as Vector2).distance_to(pos) <= _repo.bal("map_army_pick_px"):
 			return {"kind": "army", "code": String(armies[i]["code"])}
-	# An ECONOMY badge names the settlement whose output it shows (as on the
+	# An output badge names the settlement whose output it shows (as on the
 	# 2D map), over whatever lies under it.
 	for b: Dictionary in manor_badges():
 		if (b["rect"] as Rect2).has_point(pos):
@@ -1558,7 +1558,7 @@ func pick_at(pos: Vector2) -> Dictionary:
 			best = code
 	if best != "":
 		return {"kind": "burg", "code": best}
-	# Under ECONOMY / MANORS the land means its MANOR, as on the 2D map.
+	# Under MANORS the land means its MANOR, as on the 2D map.
 	if _theme != "":
 		var cell := _cell_at(Map3DGeometry.world_to_pack(_meta, xz))
 		return {"kind": "manor", "cell": cell} if cell >= 0 else {}

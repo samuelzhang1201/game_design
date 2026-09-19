@@ -1,6 +1,6 @@
 extends GutTest
-## ManorPalette (owner 2026-09-19): the manor colours the ECONOMY and MANORS
-## themes wear, shared by the 2D map (WorldMapView's wrappers) and the 3D
+## ManorPalette (owner 2026-09-19): the manor colours the MANORS
+## theme wears, shared by the 2D map (WorldMapView's wrappers) and the 3D
 ## map's ground tint, so the two maps can never colour a manor differently.
 
 var _map: WorldMapView
@@ -36,8 +36,6 @@ func test_every_land_cell_wears_the_2d_maps_colours() -> void:
 	for id: int in _land_cells():
 		if ManorPalette.province(repo, st, id) != _map.cell_province(id) \
 				or ManorPalette.owner(repo, st, id) != _map.cell_owner(id) \
-				or ManorPalette.manor_color(repo, st, id) != _map.manor_color(id) \
-				or ManorPalette.working_color(repo, st, id) != _map.working_manor_color(id) \
 				or ManorPalette.house_color(repo, st, id) != _map.house_manor_color(id):
 			bad += 1
 	assert_eq(bad, 0, "cells whose colour differs between the palette and the 2D map")
@@ -45,7 +43,6 @@ func test_every_land_cell_wears_the_2d_maps_colours() -> void:
 
 func test_water_wears_nothing() -> void:
 	var id := _water_cell()
-	assert_eq(ManorPalette.theme_color(Game.data, Game.state, id, "economy"), Color(0, 0, 0, 0))
 	assert_eq(ManorPalette.theme_color(Game.data, Game.state, id, "manors"), Color(0, 0, 0, 0))
 
 
@@ -57,28 +54,22 @@ func test_a_conquest_recolours_the_manor() -> void:
 		if ManorPalette.owner(Game.data, Game.state, id) == mine:
 			cell = id
 			break
-	var before := ManorPalette.manor_color(Game.data, Game.state, cell)
+	var before := ManorPalette.house_color(Game.data, Game.state, cell)
 	MapOwnership.set_owner(Game.data, Game.state,
 		ManorPalette.province(Game.data, Game.state, cell), raider, "test: a raid")
 	assert_eq(ManorPalette.owner(Game.data, Game.state, cell), raider)
-	assert_ne(ManorPalette.manor_color(Game.data, Game.state, cell), before)
+	assert_ne(ManorPalette.house_color(Game.data, Game.state, cell), before,
+		"the crown's manor under the raiders reads foreign")
 
 
-func test_the_theme_picks_the_colour() -> void:
+## ECONOMY was folded into MANORS (owner 2026-09-19): one theme, the houses.
+func test_the_theme_is_the_house_colour() -> void:
 	var repo := Game.data
-	var working: Dictionary = MapEconomy.manors(repo)
-	var plain := -1
-	for id: int in _land_cells():
-		if not working.has(id):
-			plain = id
-			break
-	var worked := int(working.keys()[0])
-	assert_eq(ManorPalette.theme_color(repo, Game.state, plain, "economy"),
-		ManorPalette.manor_color(repo, Game.state, plain))
-	assert_eq(ManorPalette.theme_color(repo, Game.state, worked, "economy"),
-		ManorPalette.working_color(repo, Game.state, worked), "a working manor's dark fill")
-	assert_eq(ManorPalette.theme_color(repo, Game.state, plain, "manors"),
-		ManorPalette.house_color(repo, Game.state, plain))
+	var id := int(_land_cells()[0])
+	assert_eq(ManorPalette.theme_color(repo, Game.state, id, "manors"),
+		ManorPalette.house_color(repo, Game.state, id))
+	assert_eq(ManorPalette.theme_color(repo, Game.state, id, "economy"), Color(0, 0, 0, 0),
+		"no economy theme any more")
 
 
 func test_the_edges_are_the_2d_maps_edges() -> void:

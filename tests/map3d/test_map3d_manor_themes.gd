@@ -1,7 +1,7 @@
 extends GutTest
-## ECONOMY and MANORS on the 3D map (owner 2026-09-19, spec
-## 2026-09-19-map3d-manor-themes-design): under a theme the ground wears each
-## manor's ManorPalette colour (a LUT the patched Terrain3D shader reads), the
+## MANORS on the 3D map (owner 2026-09-19, spec
+## 2026-09-19-map3d-manor-themes-design; ECONOMY folded into it the same day):
+## the ground wears each manor's house colour (ManorPalette) (a LUT the patched Terrain3D shader reads), the
 ## cell edges are ruled in, and a click on land picks the manor. The fixture
 ## world has no Terrain3D — the shader patch is skipped there — so these
 ## tests hold the LUT, the edges and the picking.
@@ -62,26 +62,18 @@ func _close(a: Color, b: Color) -> bool:
 
 # --- the LUT --------------------------------------------------------------------
 
-func test_the_economy_lut_holds_each_manors_colour() -> void:
-	var v := _view()
-	v.set_manor_theme("economy")
-	var id := _crown_cell()
-	assert_true(_close(_texel(v, id), ManorPalette.theme_color(Game.data, Game.state, id, "economy")),
-		"%s vs %s" % [_texel(v, id), ManorPalette.theme_color(Game.data, Game.state, id, "economy")])
-	assert_eq(_texel(v, _water_cell()).a, 0.0, "water wears nothing")
-	assert_not_null(v.cell_lut(), "the texture the terrain shader reads")
-
-
 func test_the_manors_lut_holds_each_houses_colour() -> void:
 	var v := _view()
 	v.set_manor_theme("manors")
 	var id := _crown_cell()
 	assert_true(_close(_texel(v, id), ManorPalette.house_color(Game.data, Game.state, id)))
+	assert_eq(_texel(v, _water_cell()).a, 0.0, "water wears nothing")
+	assert_not_null(v.cell_lut(), "the texture the terrain shader reads")
 
 
 func test_a_conquest_recolours_the_lut() -> void:
 	var v := _view()
-	v.set_manor_theme("economy")
+	v.set_manor_theme("manors")
 	var id := _crown_cell()
 	var before := _texel(v, id)
 	MapOwnership.set_owner(Game.data, Game.state, ManorPalette.province(Game.data, Game.state, id),
@@ -105,7 +97,7 @@ func _edges_node(v: Map3DView) -> MeshInstance3D:
 
 func test_the_edges_are_ruled_only_under_a_theme() -> void:
 	var v := _view()
-	v.set_manor_theme("economy")
+	v.set_manor_theme("manors")
 	var edges := _edges_node(v)
 	assert_not_null(edges)
 	assert_true(edges.visible)
@@ -178,7 +170,7 @@ func test_without_a_theme_the_same_click_names_the_province() -> void:
 
 func test_hovering_a_manor_names_it_and_its_holder() -> void:
 	var v := _view()
-	v.set_manor_theme("economy")
+	v.set_manor_theme("manors")
 	var cell := _crown_cell()
 	v.hover_pick({"kind": "manor", "cell": cell}, Vector2(100, 100))
 	assert_eq(v.hover_tooltip(), MapManors.label_of(Game.data, cell))
@@ -187,7 +179,7 @@ func test_hovering_a_manor_names_it_and_its_holder() -> void:
 		Game.data.resolve_realm("player_realm"))
 
 
-# --- ECONOMY's output badges (owner 2026-09-19) --------------------------------
+# --- the output badges (owner 2026-09-19: ECONOMY's, folded into MANORS) -------
 
 func _busiest_manor() -> int:
 	var all: Dictionary = MapEconomy.manors(Game.data)
@@ -202,12 +194,12 @@ func _look_at_manor(v: Map3DView, cell: int, at_m: float) -> void:
 	v.look_at_pack(MapTerrain.cell_center(Game.data, Game.data.cells[cell]), at_m)
 
 
-func test_economy_badges_stand_over_the_working_manors() -> void:
+func test_output_badges_stand_over_the_working_manors() -> void:
 	var v := _view()
 	var cell := _busiest_manor()
 	_look_at_manor(v, cell, 12000.0)
-	assert_eq(v.manor_badges().size(), 0, "no badges without the ECONOMY theme")
-	v.set_manor_theme("economy")
+	assert_eq(v.manor_badges().size(), 0, "no badges without the MANORS theme")
+	v.set_manor_theme("manors")
 	var badges := v.manor_badges()
 	assert_gt(badges.size(), 0)
 	var mine: Dictionary = {}
@@ -221,7 +213,7 @@ func test_economy_badges_stand_over_the_working_manors() -> void:
 
 func test_badges_never_overlap() -> void:
 	var v := _view()
-	v.set_manor_theme("economy")
+	v.set_manor_theme("manors")
 	_look_at_manor(v, _busiest_manor(), 60000.0)
 	var rects: Array = []
 	for b: Dictionary in v.manor_badges():
@@ -230,16 +222,9 @@ func test_badges_never_overlap() -> void:
 		rects.append(b["rect"])
 
 
-func test_the_manors_theme_wears_no_badges() -> void:
-	var v := _view()
-	v.set_manor_theme("manors")
-	_look_at_manor(v, _busiest_manor(), 12000.0)
-	assert_eq(v.manor_badges().size(), 0)
-
-
 func test_a_click_on_a_badge_opens_its_town() -> void:
 	var v := _view()
-	v.set_manor_theme("economy")
+	v.set_manor_theme("manors")
 	var cell := _busiest_manor()
 	_look_at_manor(v, cell, 12000.0)
 	var mine: Dictionary = {}
@@ -255,7 +240,7 @@ func test_a_click_on_a_badge_opens_its_town() -> void:
 
 func test_the_hud_draws_the_badges() -> void:
 	var v := _view()
-	v.set_manor_theme("economy")
+	v.set_manor_theme("manors")
 	_look_at_manor(v, _busiest_manor(), 12000.0)
 	await wait_process_frames(2)
 	assert_gt(v.drawn_badge_count(), 0)

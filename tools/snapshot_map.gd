@@ -24,7 +24,6 @@ const UPSCALE := 1
 var _out := "user://map_snapshot.png"
 var _zoom_mul := 1.0
 var _heights := false
-var _economy := false
 var _armies := false
 var _manors := false
 var _home := false  # --home 1: keep the opening framing (the crown's provinces)
@@ -48,8 +47,6 @@ func _ready() -> void:
 			_zoom_mul = float(args[i + 1])
 		elif args[i] == "--heights":
 			_heights = args[i + 1] == "1"
-		elif args[i] == "--economy":
-			_economy = args[i + 1] == "1"
 		elif args[i] == "--manors":
 			_manors = args[i + 1] == "1"
 		elif args[i] == "--armies":
@@ -96,7 +93,6 @@ func _ready() -> void:
 		_view._offset = Vector2(_width, _height) / 2.0 - _annexed_at * _view._zoom
 		_view._clamp_offset()
 	_view.show_heights = _heights
-	_view.show_economy = _economy
 	_view.show_manors = _manors
 	_view.show_armies = _armies
 	_view.show_biomes = _biomes

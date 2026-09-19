@@ -40,7 +40,7 @@ var _res := Vector2i.ZERO
 var _viewport: SubViewport
 var _frames := 0
 var _root: GameRoot = null
-## --layer economy|heights|military|provinces lights that bottom-bar tab once
+## --layer manors|heights|military|measurement lights that bottom-bar tab once
 ## the root is up, so a shot can show a thematic view and its left column.
 var _layer := ""
 ## --speaker <portrait_id> opens the council on the conversation screen and

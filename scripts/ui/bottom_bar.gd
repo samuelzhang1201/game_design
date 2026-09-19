@@ -1,7 +1,7 @@
 class_name BottomBar
 extends Control
 ## Bottom tab strip on every gameplay screen (user ruling 2026-08-30),
-## outside the map: HEIGHTS | ECONOMY | MANORS | REALM | MILITARY |
+## outside the map: HEIGHTS | MANORS | REALM | MILITARY | MEASUREMENT |
 ## WAR ROOM (a placeholder page, owner 2026-09-17) | FAMILIES | LAWS |
 ## RELIGION | RELATIONSHIP. MAP and PROVINCES went 2026-09-13 (owner):
 ## the province view is always on, and MAP did nothing a tab needed.
@@ -11,18 +11,18 @@ extends Control
 
 signal tab_selected(tab: String)
 
-const TABS := ["HEIGHTS", "ECONOMY", "MANORS", "REALM", "MILITARY", "MEASUREMENT",
+const TABS := ["HEIGHTS", "MANORS", "REALM", "MILITARY", "MEASUREMENT",
 	"WAR ROOM", "FAMILIES", "LAWS", "RELIGION", "RELATIONSHIP"]
 ## Tabs that stay lit while their view is on rather than opening an overlay:
 ## MILITARY toggles the map's army layer (user request 2026-09-10), HEIGHTS
 ## the height ramp over the land (owner request 2026-09-12, remade
-## 2026-09-13), ECONOMY and MANORS their themes.
-## MANORS (MANOR_SYSTEM.md §6) is the fourth theme, exclusive with HEIGHTS
-## and ECONOMY — GameRoot keeps them so. The 3D map (owner 2026-09-18) is
-## the default and has no tab: GameRoot shows it whenever none of these four
-## is lit. MEASUREMENT (owner 2026-09-18) lays the ruler over whichever map
+## 2026-09-13), MANORS its theme (MANOR_SYSTEM.md §6: house colours and,
+## since ECONOMY was folded into it on 2026-09-19, the output badges),
+## exclusive with HEIGHTS — GameRoot keeps them so. The 3D map (owner
+## 2026-09-18) is the default and has no tab: GameRoot shows it unless
+## HEIGHTS is lit. MEASUREMENT (owner 2026-09-18) lays the ruler over whichever map
 ## is showing, 2D or 3D, and changes no layer.
-const TOGGLES := ["HEIGHTS", "ECONOMY", "MANORS", "MILITARY", "MEASUREMENT"]
+const TOGGLES := ["HEIGHTS", "MANORS", "MILITARY", "MEASUREMENT"]
 ## The strip's height. A constant on purpose — NewsTicker and ScreenLayout
 ## both place themselves off it, so it cannot float — but it
 ## must stay at least content_height(), and a test pins that. It went stale

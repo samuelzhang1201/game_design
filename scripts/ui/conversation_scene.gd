@@ -57,8 +57,6 @@ var _dossier_up := false
 var _military: MilitaryPanel
 ## Whether the MILITARY tab is lit (GameRoot owns the state; this follows).
 var _military_view := false
-var _economy: EconomyPanel
-var _economy_view := false
 var _continue_btn: Button
 var _panel: PanelContainer
 var _scroll: ScrollContainer
@@ -120,7 +118,6 @@ func _ready() -> void:
 	# The rest of the facts column (owner ruling 2026-09-10): the host while
 	# the military layer is on, and the card of whatever was clicked.
 	_military = MilitaryPanel.attach(%MinisterPanel.get_node("MVBox"))
-	_economy = EconomyPanel.attach(%MinisterPanel.get_node("MVBox"))
 	_detail = MapDetailPanel.new()
 	_detail.name = "DetailPanel"
 	%MinisterPanel.get_node("MVBox").add_child(_detail)
@@ -259,10 +256,7 @@ func _refresh_left() -> void:
 	_detail.visible = card
 	_country_panel.visible = country
 	_military.visible = _military_view and not card and not country
-	# The economy column yields to the military one: two layers can be lit at
-	# once, but the column holds one set of facts.
-	_economy.visible = _economy_view and not _military_view and not card and not country
-	_dashboard.visible = not (card or country or _military_view or _economy_view)
+	_dashboard.visible = not (card or country or _military_view)
 
 ## The MILITARY tab (GameRoot): the host takes the left column while the
 ## regiments are drawn on the map.
@@ -270,14 +264,6 @@ func set_military_view(on: bool) -> void:
 	_military_view = on
 	if on:
 		_military.refresh()
-	_refresh_left()
-
-## The ECONOMY tab (GameRoot): what the realm makes takes the left column
-## while the same categories are washed across the map.
-func set_economy_view(on: bool) -> void:
-	_economy_view = on
-	if on:
-		_economy.refresh()
 	_refresh_left()
 
 ## The 3D MAP tab (GameRoot): the Terrain3D view takes the map panel in
@@ -289,8 +275,8 @@ func set_map3d_view(on: bool) -> void:
 		_map3d.set_manor_theme(_map3d_theme)
 		_map3d.set_military(_map3d_military)
 
-## The ECONOMY / MANORS theme ("", "economy" or "manors") and the MILITARY
-## counters on the 3D map (GameRoot, owner 2026-09-19); kept for a view made
+## The MANORS theme ("" or "manors"; ECONOMY was folded into it, owner
+## 2026-09-19) and the MILITARY counters on the 3D map (GameRoot, owner 2026-09-19); kept for a view made
 ## later.
 func set_map3d_theme(theme_name: String, military := false) -> void:
 	_map3d_theme = theme_name
@@ -302,10 +288,6 @@ func set_map3d_theme(theme_name: String, military := false) -> void:
 ## Test seam: the 3D view, or null until the tab was first lit.
 func map3d_view() -> Map3DView:
 	return _map3d
-
-## Test seam.
-func economy_panel() -> EconomyPanel:
-	return _economy
 
 ## Columns, map, and whichever panel holds the right slot (ScreenLayout). The
 ## council column is narrower here than on the court (TALK_WIDTH): the talk

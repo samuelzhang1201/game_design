@@ -2,7 +2,7 @@ extends GutTest
 ## The 3D map is the default map (owner 2026-09-18, spec
 ## 2026-09-18-map3d-default-design.md): the map panel shows Map3DView
 ## whenever the pack has a built scene and no 2D-only layer (HEIGHTS alone;
-## ECONOMY, MANORS and MILITARY draw on both since 2026-09-19) is on, and the
+## MANORS and MILITARY draw on both since 2026-09-19) is on, and the
 ## 2D WorldMapView otherwise.
 ## The scene is git-ignored, so every test forces its presence through
 ## GameRoot.force_map3d_scene; an unbuilt view still swaps in and shows its
@@ -54,14 +54,13 @@ func test_each_2d_only_layer_shows_the_2d_map_and_closing_it_returns_to_3d() -> 
 		assert_true(_shows_3d(r), setter + " off: back to 3D")
 
 
-## ECONOMY and MANORS draw on the 3D map too (owner 2026-09-19).
-func test_the_manor_themes_stay_on_the_3d_map_and_reach_it() -> void:
+## MANORS draws on the 3D map too, and ECONOMY is gone — folded into it
+## (owner 2026-09-19).
+func test_the_manors_theme_stays_on_the_3d_map_and_reaches_it() -> void:
 	var r: GameRoot = await _court()
-	r.set_economy_view(true)
-	assert_true(_shows_3d(r), "ECONOMY on the 3D map")
-	assert_eq(r.current_screen.map3d_view().manor_theme(), "economy")
+	assert_false("ECONOMY" in BottomBar.TABS, "no ECONOMY tab")
+	assert_false(r.has_method("set_economy_view"))
 	r.set_manor_view(true)
-	assert_false(r.economy_view(), "the themes still put each other out")
 	assert_true(_shows_3d(r))
 	assert_eq(r.current_screen.map3d_view().manor_theme(), "manors")
 	r.set_manor_view(false)
