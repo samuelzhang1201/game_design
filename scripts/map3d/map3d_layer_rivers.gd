@@ -34,7 +34,7 @@ func build(p_ctx: Map3DContext, scene_path: String) -> void:
 	courses = Map3DRivers.clear_terrain(courses, ctx.height_at, ctx.repo.bal("map3d_river_terrain_clear_m"))
 	_courses = courses
 	var arrays := Map3DRivers.ribbon_arrays(courses, ctx.repo.bal("map3d_river_end_fade_m"),
-		ctx.repo.bal("map3d_river_mesh_step_m"))
+		ctx.river_step())
 	if arrays.is_empty():
 		return
 	var built := ArrayMesh.new()

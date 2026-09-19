@@ -101,3 +101,15 @@ func test_the_clouds_are_their_own_layer_with_a_shadow_twin() -> void:
 	(clouds as Map3DLayerClouds).step(0.1)
 	assert_eq((clouds as Map3DLayerClouds).count(), v.cloud_count())
 	Game.set_clock_speed(0)
+
+
+func test_the_roads_are_one_builder_writing_lines_and_bridges() -> void:
+	var v := _view()
+	assert_true(v.component("roads") is Map3DLayerRoads)
+	var roads := v.line_mesh("Roads")
+	assert_not_null(roads, "the pack's roads draped on the ground")
+	var mat := roads.surface_get_material(0) as ShaderMaterial
+	assert_eq(mat.render_priority, Map3DPriority.ROADS)
+	assert_eq(mat.get_shader_parameter("width_m"), Game.data.bal("map3d_road_width_m"))
+	assert_eq(v.bridges(), (v.component("roads") as Map3DLayerRoads).bridges())
+	assert_eq(v.bridge_rules()["abut_m"], Game.data.bal("map3d_bridge_abut_m"))
