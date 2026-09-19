@@ -75,17 +75,38 @@ static func ribbon_arrays(lines: Array, height_fn: Callable, heights: Array = []
 	return arrays
 
 
-## A closed ring turned so a one-sided ribbon along it reaches INSIDE: _side's
-## (-d.y, d.x) is the left of the heading, which is the inside of a ring whose
-## shoelace area over (x, z) is positive, so a negative one is reversed.
-static func inward(line: PackedVector2Array) -> PackedVector2Array:
+## A kingdom's rings (kingdom_lines) turned so a one-sided ribbon along each
+## reaches into the KINGDOM: _side's (-d.y, d.x) is the left of the heading,
+## the inside of a ring whose shoelace area over (x, z) is positive. An outer
+## ring is turned to reach into itself; a HOLE — a ring inside an odd number of
+## the kingdom's other rings (a lake, unheld land, an enclave: MapOwnership's
+## merged loops return them as plain rings) — to reach out of itself, onto
+## the land around it. Even-odd on one probe point of each ring.
+static func inward_rings(rings: Array) -> Array:
+	var out: Array = []
+	for i in rings.size():
+		var ring: PackedVector2Array = rings[i]
+		var depth := 0
+		if ring.size() >= 3:
+			var probe := (ring[0] + ring[1]) * 0.5
+			for j in rings.size():
+				if j != i and (rings[j] as PackedVector2Array).size() >= 3 \
+						and Geometry2D.is_point_in_polygon(probe, rings[j]):
+					depth += 1
+		out.append(oriented(ring, depth % 2 == 0))
+	return out
+
+
+## `line` turned so a one-sided ribbon along it reaches inside it (`inside`)
+## or outside it, by the sign of its shoelace area over (x, z).
+static func oriented(line: PackedVector2Array, inside: bool) -> PackedVector2Array:
 	var area := 0.0
 	var n := line.size()
 	for i in n:
 		var a := line[i]
 		var b := line[(i + 1) % n]
 		area += a.x * b.y - b.x * a.y
-	if area >= 0.0:
+	if (area >= 0.0) == inside:
 		return line
 	var out := line.duplicate()
 	out.reverse()

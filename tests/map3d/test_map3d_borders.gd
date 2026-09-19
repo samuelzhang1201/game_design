@@ -219,18 +219,76 @@ func test_a_one_sided_ribbon_keeps_the_line_and_reaches_one_way() -> void:
 
 func test_inward_bands_reach_inside_the_ring() -> void:
 	# A square ring, either winding: the band's side points to the centre.
-	for ring: PackedVector2Array in [
-			PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10), Vector2(0, 0)]),
-			PackedVector2Array([Vector2(0, 0), Vector2(0, 10), Vector2(10, 10), Vector2(10, 0), Vector2(0, 0)])]:
-		var r := Map3DBorders.inward(ring)
+	for ring: PackedVector2Array in [_square(0, 10, false), _square(0, 10, true)]:
+		var r: PackedVector2Array = Map3DBorders.inward_rings([ring])[0]
 		assert_eq(r.size(), ring.size())
-		var sides: PackedVector3Array = Map3DBorders.ribbon_arrays([r],
-			func(_xz: Vector2) -> float: return 0.0, [], true)[Mesh.ARRAY_NORMAL]
-		for i in [1, 2, 3]:
-			var p := r[i]
-			var s := Vector2(sides[i * 2 + 1].x, sides[i * 2 + 1].z)
-			assert_lt((p + s).distance_to(Vector2(5, 5)), p.distance_to(Vector2(5, 5)),
-				"corner %d reaches inside" % i)
+		assert_eq(_reach(r, Vector2(5, 5)), 3, "every corner reaches inside")
+
+
+## A ring inside a ring is a HOLE (a lake, unheld land): the outer's band
+## reaches into the kingdom, the hole's band out of the hole onto that same
+## land — whatever either winding (review, 2026-09-19).
+func test_a_hole_rings_band_reaches_out_onto_the_land() -> void:
+	for outer_cw in [false, true]:
+		for inner_cw in [false, true]:
+			var rings := Map3DBorders.inward_rings([_square(0, 30, outer_cw), _square(10, 20, inner_cw)])
+			assert_eq(_reach(rings[0], Vector2(15, 15)), 3, "the outer ring's band reaches in")
+			var inner: PackedVector2Array = rings[1]
+			var sides: PackedVector3Array = Map3DBorders.ribbon_arrays([inner],
+				func(_xz: Vector2) -> float: return 0.0, [], true)[Mesh.ARRAY_NORMAL]
+			for i in [1, 2, 3]:
+				var p := inner[i] + Vector2(sides[i * 2 + 1].x, sides[i * 2 + 1].z)
+				assert_false(Geometry2D.is_point_in_polygon(p, inner), "the hole's band leaves the hole")
+
+
+## On the pack: every hole ring of every kingdom (Farhold and Brackmoor have
+## them on beria's starting borders) lays its band outside the hole.
+func test_no_kingdoms_band_falls_into_its_holes() -> void:
+	Game.start_campaign(42)
+	var holes := 0
+	for code: String in Game.data.kingdoms:
+		var own := Map3DBorders.kingdom_lines(Game.data, Game.state, WORLD, code, 500.0)
+		var turned := Map3DBorders.inward_rings(own)
+		for i in own.size():
+			var probe := ((own[i] as PackedVector2Array)[0] + (own[i] as PackedVector2Array)[1]) * 0.5
+			var depth := 0
+			for j in own.size():
+				if j != i and Geometry2D.is_point_in_polygon(probe, own[j]):
+					depth += 1
+			if depth % 2 == 0:
+				continue
+			holes += 1
+			var ring: PackedVector2Array = turned[i]
+			var sides: PackedVector3Array = Map3DBorders.ribbon_arrays([ring],
+				func(_xz: Vector2) -> float: return 0.0, [], true)[Mesh.ARRAY_NORMAL]
+			var inside := 0
+			for k in ring.size():
+				var p := ring[k] + Vector2(sides[k * 2 + 1].x, sides[k * 2 + 1].z) * 20.0
+				if Geometry2D.is_point_in_polygon(p, ring):
+					inside += 1
+			# A cusp's mitre can point anywhere; the band as a whole leaves the hole.
+			assert_lt(float(inside), ring.size() * 0.1, "%s hole %d: band outside the hole" % [code, i])
+	assert_gt(holes, 0, "the pack has hole rings to check")
+
+
+func _square(lo: float, hi: float, clockwise: bool) -> PackedVector2Array:
+	var r := PackedVector2Array([Vector2(lo, lo), Vector2(hi, lo), Vector2(hi, hi), Vector2(lo, hi), Vector2(lo, lo)])
+	if clockwise:
+		r.reverse()
+	return r
+
+
+## How many of corners 1..3 of `ring`'s one-sided band step toward `centre`.
+func _reach(ring: PackedVector2Array, centre: Vector2) -> int:
+	var sides: PackedVector3Array = Map3DBorders.ribbon_arrays([ring],
+		func(_xz: Vector2) -> float: return 0.0, [], true)[Mesh.ARRAY_NORMAL]
+	var n := 0
+	for i in [1, 2, 3]:
+		var p := ring[i]
+		var s := Vector2(sides[i * 2 + 1].x, sides[i * 2 + 1].z)
+		if (p + s).distance_to(centre) < p.distance_to(centre):
+			n += 1
+	return n
 
 
 ## One band mesh for every kingdom: a Color per line goes on both its

@@ -148,9 +148,11 @@ func test_ring_render_priority_rises_with_tier() -> void:
 	assert_eq(priority.call("village"), Map3DView.PRIORITY_RING_BASE, "the lowest tier sits at the table's base")
 
 
-## The render-priority table (final review, owner 2026-09-18): sea < rivers <
-## seams < kingdoms < province outline < clouds < every ring, so a
-## settlement pin always stands over the weather and the weather over lines.
+## The render-priority table (final review, owner 2026-09-18; the border's
+## band and halo 2026-09-19): sea < rivers < roads < manor edges < realm band
+## < seams < kingdom halo < kingdom ink < hover outline < province outline <
+## clouds < every ring, so a settlement pin always stands over the weather
+## and the weather over lines.
 func test_the_render_priority_table_orders_every_layer() -> void:
 	var order := [Map3DView.PRIORITY_SEA, Map3DView.PRIORITY_RIVERS, Map3DView.PRIORITY_ROADS,
 		Map3DView.PRIORITY_MANOR_EDGES, Map3DView.PRIORITY_KINGDOM_BAND, Map3DView.PRIORITY_SEAMS,

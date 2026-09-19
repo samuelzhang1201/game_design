@@ -848,12 +848,12 @@ func refresh_borders() -> void:
 		var own := Map3DBorders.kingdom_lines(_repo, st, _meta, code, step)
 		rings.append_array(own)
 		var c := MapPalette.color_of(_repo, code)
-		for r: PackedVector2Array in own:
-			bands.append(Map3DBorders.inward(r))
+		for r: PackedVector2Array in Map3DBorders.inward_rings(own):
+			bands.append(r)
 			band_colours.append(c)
 	var band := Color(1, 1, 1, _repo.bal("map3d_border_band_alpha"))
 	_set_lines("KingdomBand", bands, band, band, "map3d_border_band_px", "", "",
-		PRIORITY_KINGDOM_BAND, 0.0, true, band_colours, 1.0)
+		PRIORITY_KINGDOM_BAND, 0.0, true, band_colours, 1.0, "map3d_border_band_fade_power")
 	var halo := MapPalette.named(_repo, "map3d_border_halo")
 	halo.a = _repo.bal("map3d_border_halo_alpha")
 	_set_lines("KingdomHalo", rings, halo, halo, "map3d_border_halo_px", "", "",
@@ -1177,10 +1177,12 @@ func _build_bridges(list: Array) -> void:
 ## `edge_soft` fades the ribbon toward its sides (border_line.gdshader);
 ## `one_sided` lays it from the line to one side (Map3DBorders.ribbon_arrays),
 ## `colours` a Color per line drawn in place of `a`'s rgb, and `fade_across`
-## fades it away from the line (the realm band).
+## fades it away from the line (the realm band) by the curve `fade_power_key`
+## names in balance.csv ("" linear).
 func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: String,
 		dash_key: String, gap_key: String, priority: int, edge_soft := 0.0,
-		one_sided := false, colours: Array = [], fade_across := 0.0) -> void:
+		one_sided := false, colours: Array = [], fade_across := 0.0,
+		fade_power_key := "") -> void:
 	var old := _lines.get_node_or_null(line_name)
 	if old != null:
 		_lines.remove_child(old)
@@ -1199,7 +1201,7 @@ func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: 
 	mat.set_shader_parameter("one_sided", 1.0 if one_sided else 0.0)
 	mat.set_shader_parameter("use_vertex_colour", 1.0 if not colours.is_empty() else 0.0)
 	mat.set_shader_parameter("fade_across", fade_across)
-	mat.set_shader_parameter("fade_power", _repo.bal("map3d_border_band_fade_power") if fade_across > 0.0 else 1.0)
+	mat.set_shader_parameter("fade_power", _repo.bal(fade_power_key) if fade_power_key != "" else 1.0)
 	mat.set_meta("width_key", width_key)
 	mat.set_meta("dash_key", dash_key)
 	mat.set_meta("gap_key", gap_key)
