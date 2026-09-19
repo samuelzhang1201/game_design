@@ -229,25 +229,71 @@ static func ribbon(pts: PackedVector2Array, half: PackedFloat32Array) -> PackedV
 ## loops, and drifting inside them means the line no longer sits on the
 ## boundary it claims to draw (owner 2026-09-13). Catmull-Rom keeps the fit
 ## and still smooths everything between the points.
-static func smooth_closed_through(pts: PackedVector2Array, steps: int) -> PackedVector2Array:
-	var n := pts.size()
+##
+## Uniform knots overshoot: a short Voronoi edge sitting between two long
+## ones gets a tangent scaled by its long neighbours, and the curve loops or
+## cusps past the short span (owner 2026-09-19: 108 self-crossings, 58
+## back-tracking vertices on the default pack's kingdom borders). CENTRIPETAL
+## knots (alpha 0.5, Barry-Goldman) size each span's parameter interval by
+## the square root of its chord length, so a short edge gets a short
+## interval and the curve can neither cusp nor loop through it — 0 and 0 on
+## the same pack. Near-duplicate points (a near-zero Voronoi edge) are
+## dropped first, since a knot of zero length is the degenerate case
+## centripetal spacing cannot help.
+##
+## `pinned[i] == 1` reflects point i's own segment for its neighbour's
+## tangent instead of reading past it, so the curve leaves (or arrives at)
+## a pinned point along the edge itself. Two kingdoms sharing a border edge
+## pin its endpoints (MapOwnership.outline_pins) so both smooth that edge
+## into the exact same curve instead of two copies that part company near
+## the junction.
+static func smooth_closed_through(pts: PackedVector2Array, steps: int,
+		pinned := PackedByteArray()) -> PackedVector2Array:
+	# Drop near-duplicates first (a 0.0005 px Voronoi edge would make a knot
+	# of zero length), carrying each kept point's pin.
+	var p := PackedVector2Array()
+	var pin := PackedByteArray()
+	for i in pts.size():
+		if p.size() > 0 and pts[i].distance_to(p[p.size() - 1]) < 1e-3:
+			if i < pinned.size() and pinned[i] == 1:
+				pin[pin.size() - 1] = 1
+			continue
+		p.append(pts[i])
+		pin.append(1 if i < pinned.size() and pinned[i] == 1 else 0)
+	if p.size() > 1 and p[0].distance_to(p[p.size() - 1]) < 1e-3:
+		p.remove_at(p.size() - 1)
+		pin.remove_at(pin.size() - 1)
+	var n := p.size()
 	if n < 3 or steps < 1:
-		return pts
+		return p
 	var out := PackedVector2Array()
 	out.resize(n * steps)
 	var k := 0
 	for i in n:
-		var p0: Vector2 = pts[(i - 1 + n) % n]
-		var p1: Vector2 = pts[i]
-		var p2: Vector2 = pts[(i + 1) % n]
-		var p3: Vector2 = pts[(i + 2) % n]
+		var p1: Vector2 = p[i]
+		var p2: Vector2 = p[(i + 1) % n]
+		# A pinned end reflects its own segment, so the curve leaves (or
+		# reaches) a junction along the edge itself and both kingdoms that
+		# share the edge draw the same curve.
+		var p0: Vector2 = 2.0 * p1 - p2 if pin[i] == 1 else p[(i - 1 + n) % n]
+		var p3: Vector2 = 2.0 * p2 - p1 if pin[(i + 1) % n] == 1 else p[(i + 2) % n]
+		# Centripetal knots (alpha 0.5, Barry-Goldman): a short edge between
+		# long ones can neither cusp nor loop (the uniform form made 108 curls
+		# on the default pack, owner 2026-09-19).
+		var t1 := maxf(sqrt(p0.distance_to(p1)), 1e-4)
+		var t2 := t1 + maxf(sqrt(p1.distance_to(p2)), 1e-4)
+		var t3 := t2 + maxf(sqrt(p2.distance_to(p3)), 1e-4)
 		for j in steps:
-			var t := float(j) / float(steps)
-			var t2 := t * t
-			var t3 := t2 * t
-			out[k] = 0.5 * ((2.0 * p1)
-				+ (-p0 + p2) * t
-				+ (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
-				+ (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3)
+			if j == 0:
+				out[k] = p1
+				k += 1
+				continue
+			var t := lerpf(t1, t2, float(j) / float(steps))
+			var a1 := p0.lerp(p1, t / t1)
+			var a2 := p1.lerp(p2, (t - t1) / (t2 - t1))
+			var a3 := p2.lerp(p3, (t - t2) / (t3 - t2))
+			var b1 := a1.lerp(a2, t / t2)
+			var b2 := a2.lerp(a3, (t - t1) / (t3 - t1))
+			out[k] = b1.lerp(b2, (t - t1) / (t2 - t1))
 			k += 1
 	return out

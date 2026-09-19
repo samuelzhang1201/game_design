@@ -250,3 +250,60 @@ func test_smooth_closed_through_of_a_degenerate_ring_is_itself() -> void:
 	assert_eq(MapGeometry.smooth_closed_through(two, 4), two)
 	var sq := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)])
 	assert_eq(MapGeometry.smooth_closed_through(sq, 0), sq, "no samples asked for")
+
+## The curls (owner 2026-09-19): a uniform Catmull-Rom overshoots a short
+## edge between long ones into a cusp or loop; centripetal cannot.
+func _turns_back(pts: PackedVector2Array) -> int:
+	var n := pts.size()
+	var count := 0
+	for i in n:
+		var a := (pts[i] - pts[(i - 1 + n) % n])
+		var b := (pts[(i + 1) % n] - pts[i])
+		if a.length() < 1e-6 or b.length() < 1e-6:
+			continue
+		if a.normalized().dot(b.normalized()) < cos(deg_to_rad(150.0)):
+			count += 1
+	return count
+
+func _crossings(pts: PackedVector2Array, window: int) -> int:
+	var n := pts.size()
+	var count := 0
+	for i in n:
+		for k in range(2, window):
+			var j := (i + k) % n
+			if (j + 1) % n == i:
+				continue
+			if Geometry2D.segment_intersects_segment(pts[i], pts[(i + 1) % n], pts[j], pts[(j + 1) % n]) != null:
+				count += 1
+	return count
+
+func test_a_short_edge_between_long_ones_makes_no_curl() -> void:
+	var ring := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10.05, 0.02),
+		Vector2(10.05, 10), Vector2(0, 10)])
+	var out := MapGeometry.smooth_closed_through(ring, 8)
+	assert_eq(_turns_back(out), 0)
+	assert_eq(_crossings(out, 24), 0)
+	for p in ring:
+		assert_true(out.has(p), "still through %s" % p)
+
+func test_near_duplicate_points_are_dropped_first() -> void:
+	var ring := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10.0005, 0), Vector2(10, 10), Vector2(0, 10)])
+	var out := MapGeometry.smooth_closed_through(ring, 4)
+	assert_eq(out.size(), 4 * 4, "the near-duplicate went")
+
+func test_a_pinned_point_leaves_along_its_own_edge() -> void:
+	var ring := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10)])
+	var pins := PackedByteArray([0, 1, 0, 0])
+	var out := MapGeometry.smooth_closed_through(ring, 8, pins)
+	# Point 1 is at index 8, exactly (the j == 0 sample is forced to p1); the
+	# tangent AT a pinned point is exact only in the limit (the reflected
+	# neighbour makes p0, p1, p2 collinear, but the OTHER side of the curve
+	# still leans on the real p3/p0 one segment away), so a finite step off
+	# it is close to the edge, not exactly on it: unpinned this same corner
+	# leaves at d.x ~= 0.55, pinned at steps=8 it is ~= 0.05 (10x closer, and
+	# it keeps closing as steps grows) — a fixed, generous bound that still
+	# catches a broken pin (which regresses toward the unpinned 0.55).
+	var d := (out[9] - out[8]).normalized()
+	assert_almost_eq(d.x, 0.0, 0.06, "leaves close to due south along 1->2")
+	var back := (out[8] - out[7]).normalized()
+	assert_almost_eq(back.y, 0.0, 0.06, "arrives close to due east along 0->1")

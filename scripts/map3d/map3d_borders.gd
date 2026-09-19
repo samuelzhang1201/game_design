@@ -78,10 +78,13 @@ static func kingdom_lines(repo: DataRepository, state: GameState, world: Diction
 		kingdom_code: String, step_m: float) -> Array:
 	var steps := int(repo.bal("map_border_smoothing_steps"))
 	var out: Array = []
-	for loop: PackedVector2Array in MapOwnership.outline_of(repo, state, kingdom_code):
+	var loops := MapOwnership.outline_of(repo, state, kingdom_code)
+	var pins := MapOwnership.outline_pins(repo, state, kingdom_code)
+	for li in loops.size():
+		var loop: PackedVector2Array = loops[li]
 		if loop.size() < 3:
 			continue
-		var ring := MapGeometry.smooth_closed_through(loop, steps)
+		var ring := MapGeometry.smooth_closed_through(loop, steps, pins[li])
 		var pts := PackedVector2Array()
 		for p in ring:
 			pts.append(Map3DGeometry.pack_to_world(world, p))

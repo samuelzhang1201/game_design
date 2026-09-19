@@ -70,3 +70,86 @@ func test_seam_lines_cover_every_kingdoms_seams() -> void:
 		expected += MapOwnership.seams_of(Game.data, Game.state, code).size()
 	assert_eq(Map3DBorders.seam_lines(Game.data, Game.state, WORLD, 100.0).size(), expected)
 	assert_gt(expected, 0)
+
+
+## No kingdom ring curls (owner 2026-09-19).
+func test_kingdom_lines_do_not_curl() -> void:
+	var repo := DataRepository.load_all("res://data")
+	var st := GameState.new_campaign(repo, 7)
+	for code: String in repo.kingdoms:
+		for line: PackedVector2Array in Map3DBorders.kingdom_lines(repo, st, WORLD, code, 150.0):
+			var n := line.size()
+			for i in range(1, n - 1):
+				var a := line[i] - line[i - 1]
+				var b := line[i + 1] - line[i]
+				if a.length() < 1e-3 or b.length() < 1e-3:
+					continue
+				assert_gt(a.normalized().dot(b.normalized()), cos(deg_to_rad(150.0)),
+					"%s turns back at %s" % [code, line[i]])
+
+## A shared border is ONE curve: each kingdom's copy of a shared
+## kingdom-kingdom edge lies on the other's, once both sides are pinned and
+## smoothed (MapOwnership.outline_pins).
+##
+## A blind "nearest point anywhere on the other ring" scan (the brief's first
+## draft) ALSO flags ~150 points on the default pack that sit close to a
+## properly-pinned junction but belong to a short, genuinely DIFFERENT edge
+## leaving it in another direction — proximity to the junction, not a shared
+## edge. The true matches are a clean, separate population: 5,200 pairs under
+## 0.02 px, then a gap with NOTHING between 0.02 and 0.1 px before the ~150
+## junction-adjacent false positives start (0.1 px up to the 3 px scan
+## radius). So this matches the ACTUAL shared raw edge between two kingdoms'
+## outlines (the same edge-key walk `MapOwnership._merge_loops` and the
+## probe's own divergence check use) and compares that edge's two smoothed
+## copies directly — 323 shared kingdom-kingdom edges on the default pack.
+func test_shared_borders_draw_one_curve() -> void:
+	var repo := DataRepository.load_all("res://data")
+	var st := GameState.new_campaign(repo, 7)
+	var steps := int(repo.bal("map_border_smoothing_steps"))
+	# edge key (quantised endpoints, smaller first) -> Array of
+	# {code, seg}: that edge's `steps + 1` smoothed points, oriented so the
+	# edge's own smaller-endpoint-first direction always reads the same way
+	# regardless of which kingdom's ring walked it forward or backward.
+	var copies: Dictionary = {}
+	for code: String in repo.kingdoms:
+		var loops := MapOwnership.outline_of(repo, st, code)
+		var pins := MapOwnership.outline_pins(repo, st, code)
+		for li in loops.size():
+			var loop: PackedVector2Array = loops[li]
+			if loop.size() < 3:
+				continue
+			var curve := MapGeometry.smooth_closed_through(loop, steps, pins[li])
+			var n := loop.size()
+			for i in n:
+				var a := loop[i]
+				var b := loop[(i + 1) % n]
+				var ak := Vector2i(roundi(a.x * 100.0), roundi(a.y * 100.0))
+				var bk := Vector2i(roundi(b.x * 100.0), roundi(b.y * 100.0))
+				if ak == bk:
+					continue
+				var fwd := ak.x < bk.x or (ak.x == bk.x and ak.y <= bk.y)
+				var key: Array = [ak, bk] if fwd else [bk, ak]
+				var seg := PackedVector2Array()
+				for j in steps + 1:
+					seg.append(curve[(i * steps + j) % curve.size()])
+				if not fwd:
+					seg.reverse()
+				if not copies.has(key):
+					copies[key] = []
+				(copies[key] as Array).append({"code": code, "seg": seg})
+	var worst := 0.0
+	var checked := 0
+	for key in copies:
+		var c: Array = copies[key]
+		if c.size() < 2:
+			continue
+		for oi in range(1, c.size()):
+			if c[0]["code"] == c[oi]["code"]:
+				continue
+			var sa: PackedVector2Array = c[0]["seg"]
+			var sb: PackedVector2Array = c[oi]["seg"]
+			checked += 1
+			for j in steps + 1:
+				worst = maxf(worst, sa[j].distance_to(sb[j]))
+	assert_gt(checked, 0, "found shared kingdom-kingdom edges to check")
+	assert_lt(worst, 0.02)

@@ -25,6 +25,8 @@ static var _outline_cache: Dictionary = {}
 static var _cache_owner_version := -1
 ## Cached province seams per kingdom (seams_of), dropped with the outlines.
 static var _seam_cache: Dictionary = {}
+## Cached junction pins per kingdom (outline_pins), dropped with the outlines.
+static var _pin_cache: Dictionary = {}
 
 
 ## The kingdom holding `province_code` right now: the campaign's override if
@@ -73,6 +75,7 @@ static func set_owner(data: DataRepository, state: GameState,
 static func invalidate() -> void:
 	_outline_cache.clear()
 	_seam_cache.clear()
+	_pin_cache.clear()
 	_cache_owner_version = -1
 
 
@@ -113,6 +116,49 @@ static func seams_of(data: DataRepository, state: GameState, kingdom_code: Strin
 	return out
 
 
+## Per loop of outline_of, 1 where the ring meets a junction: three or more
+## kingdoms meet there, or the kingdoms along the ring change there (a border
+## reaching the coast, or a third realm). Pinning these makes both kingdoms
+## that share an edge smooth it the same way (MapGeometry.smooth_closed_through).
+static func outline_pins(data: DataRepository, state: GameState, kingdom_code: String) -> Array:
+	_refresh_caches(state)
+	if _pin_cache.has(kingdom_code):
+		return _pin_cache[kingdom_code]
+	var owners := {}  # _key(point) -> {kingdom: true}
+	for code: String in data.kingdoms:
+		for loop: PackedVector2Array in outline_of(data, state, code):
+			for pt in loop:
+				var key := _key(pt)
+				if not owners.has(key):
+					owners[key] = {}
+				owners[key][code] = true
+	var out: Array = []
+	for loop: PackedVector2Array in outline_of(data, state, kingdom_code):
+		var n := loop.size()
+		var pins := PackedByteArray()
+		pins.resize(n)
+		for i in n:
+			var here: Dictionary = owners.get(_key(loop[i]), {})
+			var before: Dictionary = owners.get(_key(loop[(i - 1 + n) % n]), {})
+			var after: Dictionary = owners.get(_key(loop[(i + 1) % n]), {})
+			var edge_in := _shared(here, before)
+			var edge_out := _shared(here, after)
+			pins[i] = 1 if here.size() >= 3 or edge_in != edge_out else 0
+		out.append(pins)
+	_pin_cache[kingdom_code] = out
+	return out
+
+
+## The kingdoms two neighbouring points of a ring have in common, sorted.
+static func _shared(a: Dictionary, b: Dictionary) -> Array:
+	var out: Array = []
+	for k in a:
+		if b.has(k):
+			out.append(k)
+	out.sort()
+	return out
+
+
 static func _refresh_caches(state: GameState) -> void:
 	# A manor annexed across the border reshapes two provinces without moving
 	# either (owner 2026-09-14), so it turns the version too.
@@ -120,6 +166,7 @@ static func _refresh_caches(state: GameState) -> void:
 	if _cache_owner_version != version:
 		_outline_cache.clear()
 		_seam_cache.clear()
+		_pin_cache.clear()
 		_cache_owner_version = version
 
 
