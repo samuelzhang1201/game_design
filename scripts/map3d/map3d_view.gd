@@ -118,17 +118,9 @@ var _border_clock := 0.0
 var _hud: Map3DHud
 ## The hover's name beside the cursor (owner 2026-09-18); Map3DPicker fills it.
 var _tooltip: Label
-## The kingdoms the HUD lettered on its last draw (a test seam).
-var _drawn_labels: PackedStringArray = []
-## How many MANORS output badges the HUD drew last (a test seam).
-var _drawn_badges := 0
-## MILITARY on the 3D map (owner 2026-09-19): whether the counters show and
-## how many the HUD drew last (the clicked regiment is Map3DSelection's).
+## MILITARY on the 3D map (owner 2026-09-19): whether the counters show (the
+## clicked regiment is Map3DSelection's).
 var _military := false
-var _drawn_armies := 0
-## landmark_marks' cut and the pose it was cut for (see there).
-var _landmark_cache: Array = []
-var _landmark_key: Array = []
 ## The MEASUREMENT tab (owner 2026-09-18): while on, a left click drops or
 ## fixes the ruler (world XZ metres) instead of picking, and a right CLICK —
 ## not the right-drag that turns the view — puts it away. The HUD draws it.
@@ -305,7 +297,6 @@ func _load() -> void:
 		return
 	_meta = _world.get_meta("map3d_world")
 	_ctx = Map3DContext.new(_repo, _meta, _world)
-	_ctx.camera_moved.connect(refresh_hud)
 	_ctx.viewport = _viewport
 	_ctx.view_size = size
 	_ctx.state_fn = func() -> GameState: return Game.state
@@ -366,8 +357,9 @@ func _load() -> void:
 	_rig.place(_home(), _repo.bal("map3d_zoom_start_m"), 0.0)
 	_update_line_scale()
 	_hud = Map3DHud.new()
-	_hud.view = self
+	_hud.name = "Hud"
 	add_child(_hud)
+	_hud.bind(_ctx, self)  # the HUD redraws itself on every camera move
 	move_child(_tooltip, -1)  # the name over the scale bar and compass
 	_refresh_theme()  # a theme lit before the first load
 
@@ -617,112 +609,58 @@ func _ruler_click(pos: Vector2) -> void:
 	ruler_click(pos)
 
 
-## The ruler on the HUD (design px): its ends on the ground, projected; the
-## reading is the HORIZONTAL ground distance in the pack's own measure
-## (map_units_per_metre), so it matches the 2D map's ruler; ticks on the
-## 1-2-5 step at the target's scale, placed along the 3D line so
-## perspective spaces them as the ground does.
-func draw_ruler(ci: CanvasItem) -> void:
-	if not ruler_on or not _ruler.active() or _camera == null:
-		return
-	var a3 := Vector3(_ruler.start.x, _height_at(_ruler.start), _ruler.start.y)
-	var b3 := Vector3(_ruler.end.x, _height_at(_ruler.end), _ruler.end.y)
-	if _camera.is_position_behind(a3) or _camera.is_position_behind(b3):
-		return
-	var s := _render_scale()
-	var k := map_units_per_metre()
-	var total := _ruler.length() * k
-	var step := MapRuler.tick_step(_metres_per_pixel() * k, _repo.bal("map_ruler_tick_min_px"))
-	var ticks := PackedVector2Array()
-	for d in MapRuler.ticks(total, step):
-		ticks.append(_camera.unproject_position(a3.lerp(b3, d / total)) / s)
-	MapRuler.draw(ci, _camera.unproject_position(a3) / s, _camera.unproject_position(b3) / s,
-		ticks, ruler_reading())
+# --- the HUD's pieces (Map3DHud: one per job, drawn from the context) -----------
 
-
-## The kingdom names (owner 2026-09-18, the 2D map's lettering): one entry
-## {code, text, pos (design px), px} per kingdom whose LIVE label anchor
-## (MapOwnership.label_anchor) is before the camera and whose word —
-## map_label_scale_px pack px tall on the ground, seen from its own distance —
-## reaches map_label_min_px; capped at map_label_max_px.
+## The kingdom names the HUD would letter now (Map3DHudLabels.entries).
 func label_entries() -> Array:
-	var out: Array = []
-	if _camera == null:
-		return out
-	var s := _render_scale()
-	var height_m := _repo.bal("map_label_scale_px") * float(_meta.get("m_per_px", 0.0))
-	var eye := _camera.global_position
-	for code: String in _repo.kingdoms:
-		var xz := Map3DGeometry.pack_to_world(_meta, MapOwnership.label_anchor(_repo, _state(), code))
-		var ground := Vector3(xz.x, _height_at(xz), xz.y)
-		if _camera.is_position_behind(ground):
-			continue
-		var mpp := Map3DGeometry.metres_per_pixel(eye.distance_to(ground),
-			_repo.bal("map3d_fov_deg"), maxf(size.y, 1.0))
-		var px := Map3DGeometry.label_px(height_m, mpp, _repo.bal("map_label_min_px"),
-			_repo.bal("map_label_max_px"))
-		if px <= 0.0:
-			continue
-		out.append({"code": code, "text": String(_repo.kingdoms[code]["label"]),
-			"pos": _camera.unproject_position(ground) / s, "px": px})
-	return out
+	return (_hud.piece("Labels") as Map3DHudLabels).entries() if _hud != null else []
 
 
-## Letter the names on the HUD (Map3DHud._draw), upright and faint, the way
-## the 2D map letters them (MapLettering).
-func draw_labels(ci: CanvasItem) -> void:
-	_drawn_labels.clear()
-	var font := UiPalette.map_label_font()
-	if font == null:
-		return
-	var frame := Rect2(Vector2.ZERO, size)
-	for e: Dictionary in label_entries():
-		if MapLettering.draw_centred(ci, _repo, font, String(e["text"]), e["pos"],
-				float(e["px"]), frame):
-			_drawn_labels.append(String(e["code"]))
+## Test seam: the kingdoms lettered on the HUD's last draw.
+func drawn_labels() -> PackedStringArray:
+	return (_hud.piece("Labels") as Map3DHudLabels).drawn() if _hud != null else PackedStringArray()
 
 
-## The MANORS view's output badges (owner 2026-09-19, the 2D map's — ManorBadges):
-## the working manors (MapEconomy.manors) before the camera whose settlement
-## passes the 2D map's town LOD rule at the scale it is SEEN at (screen px
-## per pack px at its own distance), in design px, biggest producer first;
-## a badge that would overlap a bigger one is left off. [] off the theme.
+## MANORS' output badges shown now, design px (Map3DHudBadges.badges).
 func manor_badges() -> Array:
-	if _themes.theme() != "manors" or _camera == null:
-		return []
-	var s := _render_scale()
-	var m_per_pack := float(_meta.get("m_per_px", 50.0))
-	var fov := _repo.bal("map3d_fov_deg")
-	var h := maxf(size.y, 1.0)
-	var eye := _camera.global_position
-	var frame := Rect2(Vector2.ZERO, size).grow(_repo.bal("map_manor_badge_px") * 2.0)
-	var all := MapEconomy.manors(_repo)
-	var out: Array = []
-	for id: int in all:
-		var m: Dictionary = all[id]
-		var ground := _ctx.cell_ground(id)
-		if _camera.is_position_behind(ground):
-			continue
-		var center := _camera.unproject_position(ground) / s
-		if not frame.has_point(center):
-			continue
-		var seen := m_per_pack / Map3DGeometry.metres_per_pixel(eye.distance_to(ground), fov, h)
-		var min_pop := MapObjects.min_burg_pop_for_scale(_repo, seen)
-		var burg := ""
-		for code: String in m["burgs"]:
-			if MapObjects.burg_visible(_repo.burgs[code], min_pop):
-				burg = code
-				break
-		if burg == "":
-			continue
-		out.append({"cell": id, "burg": burg, "good": String(m["good"]),
-			"units": float(m["units"]), "center": center})
-	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		if a["units"] == b["units"]:
-			return int(a["cell"]) < int(b["cell"])
-		return a["units"] > b["units"])
-	var target_scale := m_per_pack / _metres_per_pixel()
-	return ManorBadges.place(_repo, out, target_scale >= _repo.bal("map_manor_label_min_scale"))
+	return (_hud.piece("Badges") as Map3DHudBadges).badges() if _hud != null else []
+
+
+func drawn_badge_count() -> int:
+	return (_hud.piece("Badges") as Map3DHudBadges).drawn_count() if _hud != null else 0
+
+
+## A counter's height, design px (Map3DHudArmies.badge_height).
+func army_badge_height() -> float:
+	return (_hud.piece("Armies") as Map3DHudArmies).badge_height() if _hud != null else 0.0
+
+
+## The regiments' counters shown now, design px (Map3DHudArmies.markers).
+func army_markers() -> Array:
+	return (_hud.piece("Armies") as Map3DHudArmies).markers() if _hud != null else []
+
+
+func drawn_army_count() -> int:
+	return (_hud.piece("Armies") as Map3DHudArmies).drawn_count() if _hud != null else 0
+
+
+## HEIGHTS' high and low points shown now (Map3DHudLandmarks.marks).
+func landmark_marks() -> Array:
+	return (_hud.piece("Landmarks") as Map3DHudLandmarks).marks() if _hud != null else []
+
+
+## The HEIGHTS legend's box, its tier lines, and whether it steps back for a
+## ruler (Map3DHudHeatLegend).
+func heat_legend_rect() -> Rect2:
+	return (_hud.piece("HeatLegend") as Map3DHudHeatLegend).rect() if _hud != null else Rect2()
+
+
+func heat_legend_ticks() -> Array:
+	return (_hud.piece("HeatLegend") as Map3DHudHeatLegend).ticks() if _hud != null else []
+
+
+func heat_legend_yields() -> bool:
+	return (_hud.piece("HeatLegend") as Map3DHudHeatLegend).yields() if _hud != null else false
 
 
 # --- MILITARY (owner 2026-09-19) ---------------------------------------------------
@@ -741,274 +679,8 @@ func military() -> bool:
 	return _military
 
 
-## A counter's height in design px: map_army_badge_native_px of the map at
-## the scale the target is seen at (as the 2D counter grows with the zoom),
-## held between map3d_army_badge_min_px and map3d_army_badge_max_px so it
-## reads far out and never swamps the ground close in (owner: 注意兵棋大小).
-func army_badge_height() -> float:
-	var seen := float(_meta.get("m_per_px", 50.0)) / maxf(_metres_per_pixel(), 0.0001)
-	return clampf(_repo.bal("map_army_badge_native_px") * seen,
-		_repo.bal("map3d_army_badge_min_px"), _repo.bal("map3d_army_badge_max_px"))
-
-
-## The counters (ArmyCounters, the 2D map's) of the player's regiments before
-## the camera, in design px, kept clear of the settlement dots. [] while the
-## layer is off.
-func army_markers() -> Array:
-	if not _military or _camera == null:
-		return []
-	var s := _render_scale()
-	var h := army_badge_height()
-	var frame := Rect2(Vector2.ZERO, size).grow(h * 4.0)
-	var points: Array = []
-	for r: Dictionary in MapObjects.regiments_of(_repo, _repo.resolve_realm("player_realm")):
-		var xz := Map3DGeometry.pack_to_world(_meta, Vector2(float(r["x"]), float(r["y"])))
-		var ground := Vector3(xz.x, _height_at(xz), xz.y)
-		if _camera.is_position_behind(ground):
-			continue
-		var sp := _camera.unproject_position(ground) / s
-		if frame.has_point(sp):
-			points.append({"reg": r, "pos": sp})
-	return ArmyCounters.layout(_repo, points, h, _settlement_marks())
-
-
-## The screen squares (design px) of every settlement dot shown now — what
-## the counters keep clear of.
-func _settlement_marks() -> Array:
-	return _ctx.settlement_rects()
-
-
-## Draw the counters on the HUD, over the badges and names.
-func draw_armies(ci: CanvasItem) -> void:
-	var markers := army_markers()
-	_drawn_armies = markers.size()
-	ArmyCounters.draw(ci, _repo, markers, _selection.army)
-
-
-# --- HEIGHTS landmarks (owner 2026-09-19, spec 2026-09-19-map3d-heights §4) ---
-
-## The high and low points shown now, in design px, biggest first: those
-## whose lod the camera's distance allows, before the camera and on screen,
-## none overlapping a settlement dot, a regiment counter, the legend or a
-## bigger mark.
-## [] off HEIGHTS.
-func landmark_marks() -> Array:
-	if not _themes.heat_on() or _camera == null or not _loaded:
-		return []
-	# ~1.5 ms a call (the settlement dots dominate) and asked up to three
-	# times a frame — HUD draw, hover, click — so it is cut once per camera
-	# pose (Task 7 bench): the pose, the view's size, whether the counters
-	# are shown and the date (regiments) key it.
-	var st := _state()
-	var key := [_camera.global_transform, size, _render_scale(), _military,
-		st.tick if st != null else 0, st.day if st != null else 0]
-	if key == _landmark_key:
-		return _landmark_cache
-	_landmark_cache = _cut_landmark_marks()
-	_landmark_key = key
-	return _landmark_cache
-
-
-func _cut_landmark_marks() -> Array:
-	var max_lod := 2
-	if _ctx.distance >= _repo.bal("map3d_landmark_lod_far_view_m"):
-		max_lod = 0
-	elif _ctx.distance >= _repo.bal("map3d_landmark_lod_mid_view_m"):
-		max_lod = 1
-	var s := _render_scale()
-	var px := _repo.bal("map3d_landmark_px")
-	var font := UiPalette.display_font()
-	var font_px := int(_repo.bal("map3d_landmark_font_px"))
-	var frame := Rect2(Vector2.ZERO, size)
-	var taken: Array = _settlement_marks()
-	for a: Dictionary in army_markers():
-		taken.append(a["rect"])
-	taken.append(heat_legend_rect())
-	var out: Array = []
-	for m: Dictionary in Elevation.landmarks(_repo):
-		if int(m["lod"]) > max_lod:
-			continue
-		var ground := _ctx.pack_ground(m["pos"])
-		if _camera.is_position_behind(ground):
-			continue
-		var p := _camera.unproject_position(ground) / s
-		if not frame.has_point(p):
-			continue
-		var text := "%d m" % int(m["metres"])
-		var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px).x \
-			if font != null else 0.0
-		var tall := maxf(px, float(font_px))
-		var rect := Rect2(p - Vector2(px * 0.5, tall * 0.5), Vector2(px + 4.0 + tw, tall))
-		# the whole mark and its height inside the view: a "15" cut by the edge
-		# (or under the council tab) reads as a wrong number (Task 7 look pass)
-		if not frame.encloses(rect):
-			continue
-		var clear := true
-		for r: Rect2 in taken:
-			if r.intersects(rect):
-				clear = false
-				break
-		if not clear:
-			continue
-		taken.append(rect)
-		out.append({"cell": int(m["cell"]), "kind": String(m["kind"]), "pos": p,
-			"rect": rect, "text": text})
-	return out
-
-
-## Draw the landmarks on the HUD: a triangle up (high) or down (low) on a
-## pale halo, the height beside it.
-func draw_landmarks(ci: CanvasItem) -> void:
-	var marks := landmark_marks()
-	if marks.is_empty():
-		return
-	var px := _repo.bal("map3d_landmark_px")
-	var font := UiPalette.display_font()
-	var font_px := int(_repo.bal("map3d_landmark_font_px"))
-	var halo := MapTerrain.palette_color(_repo, "map3d_hud_halo", MapTerrain.FALLBACK)
-	var text_ink := MapPalette.named(_repo, "landmark_text")
-	var high_ink := MapPalette.named(_repo, "landmark_high")
-	var low_ink := MapPalette.named(_repo, "landmark_low")
-	for mk: Dictionary in marks:
-		var p: Vector2 = mk["pos"]
-		var h := px * 0.5
-		var high := String(mk["kind"]) == "high"
-		var tri := PackedVector2Array([p + Vector2(0, -h), p + Vector2(h, h), p + Vector2(-h, h)]) \
-			if high else PackedVector2Array([p + Vector2(0, h), p + Vector2(-h, -h), p + Vector2(h, -h)])
-		ci.draw_colored_polygon(tri, high_ink if high else low_ink)
-		ci.draw_polyline(tri + PackedVector2Array([tri[0]]), halo, 1.5, true)
-		if font != null:
-			var at := p + Vector2(h + 3.0, font_px * 0.35)
-			ci.draw_string_outline(font, at, String(mk["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
-				font_px, 3, halo)
-			ci.draw_string(font, at, String(mk["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
-				font_px, text_ink)
-
-
-## The HEIGHTS legend's box, bottom-left, in design px (Rect2() off HEIGHTS).
-func heat_legend_rect() -> Rect2:
-	if not _themes.heat_on():
-		return Rect2()
-	var w := _repo.bal("map3d_heat_legend_w_px")
-	var h := _repo.bal("map3d_heat_legend_h_px")
-	var margin := _repo.bal("map_compass_margin_px")
-	return Rect2(Vector2(margin, size.y - margin - h), Vector2(w, h))
-
-
-## The legend's tier lines, bottom up: {label "Hills 750 m", y} in design px,
-## each at its metres' share of the ramp's height. [] off HEIGHTS.
-func heat_legend_ticks() -> Array:
-	var box := heat_legend_rect()
-	if box.size.y <= 0.0:
-		return []
-	var top_m := _repo.bal("elevation_m_per_unit") * (100.0 - _repo.bal("elevation_sea_level"))
-	var out: Array = []
-	for i in range(_repo.army_height_supply.size() - 1, -1, -1):
-		var r: Dictionary = _repo.army_height_supply[i]
-		var metres := Elevation.metres_of_height(_repo, float(r["min_height"]))
-		if metres <= 0 or top_m <= 0.0:
-			continue
-		out.append({"label": "%s %d m" % [String(r["tier"]).capitalize(), metres],
-			"y": box.end.y - box.size.y * clampf(float(metres) / top_m, 0.0, 1.0)})
-	return out
-
-
-## The legend's whole footprint, design px: the ramp and its tier names
-## (Rect2() off HEIGHTS).
-func _heat_legend_area() -> Rect2:
-	var box := heat_legend_rect()
-	if box.size.y <= 0.0:
-		return Rect2()
-	var font := UiPalette.display_font()
-	var font_px := int(_repo.bal("map3d_landmark_font_px"))
-	var w := 0.0
-	for t: Dictionary in heat_legend_ticks():
-		w = maxf(w, font.get_string_size(String(t["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
-			font_px).x if font != null else float(font_px) * String(t["label"]).length())
-	return Rect2(box.position, Vector2(box.size.x + 7.0 + w, box.size.y))
-
-
-## Whether the legend steps back for a MEASUREMENT ruler (Task 7 look pass):
-## true while a ruler runs through the legend's footprint grown by the
-## reading's size, so the reading is never printed over a tier's name.
-func heat_legend_yields() -> bool:
-	if not ruler_on or not _ruler.active() or _camera == null:
-		return false
-	var area := _heat_legend_area()
-	if area.size.y <= 0.0:
-		return false
-	area = area.grow(_repo.bal("map_ruler_font_px") + _repo.bal("map_ruler_label_offset_px"))
-	var a3 := Vector3(_ruler.start.x, _height_at(_ruler.start), _ruler.start.y)
-	var b3 := Vector3(_ruler.end.x, _height_at(_ruler.end), _ruler.end.y)
-	if _camera.is_position_behind(a3) or _camera.is_position_behind(b3):
-		return false
-	var s := _render_scale()
-	var a := _camera.unproject_position(a3) / s
-	var b := _camera.unproject_position(b3) / s
-	if area.has_point(a) or area.has_point(b):
-		return true
-	var c := [area.position, Vector2(area.end.x, area.position.y), area.end,
-		Vector2(area.position.x, area.end.y)]
-	for i in 4:
-		if Geometry2D.segment_intersects_segment(a, b, c[i], c[(i + 1) % 4]) != null:
-			return true
-	return false
-
-
-## The HEIGHTS legend, bottom-left: the heat ramp (terrain_palette heat_1..6)
-## bottom to top, the tier lines ticked and named with their metres; faint
-## (map3d_heat_legend_yield_alpha) while a ruler crosses it.
-func draw_heat_legend(ci: CanvasItem) -> void:
-	var box := heat_legend_rect()
-	if box.size.y <= 0.0:
-		return
-	var fade := Color(1, 1, 1, _repo.bal("map3d_heat_legend_yield_alpha")) \
-		if heat_legend_yields() else Color.WHITE
-	var x0 := box.position.x
-	var x1 := box.end.x
-	for i in 5:
-		var y0 := box.end.y - box.size.y * float(i) / 5.0
-		var y1 := box.end.y - box.size.y * float(i + 1) / 5.0
-		var c0 := MapTerrain.palette_color(_repo, "heat_%d" % (i + 1), MapTerrain.FALLBACK) * fade
-		var c1 := MapTerrain.palette_color(_repo, "heat_%d" % (i + 2), MapTerrain.FALLBACK) * fade
-		ci.draw_polygon(PackedVector2Array([Vector2(x0, y0), Vector2(x1, y0),
-			Vector2(x1, y1), Vector2(x0, y1)]), PackedColorArray([c0, c0, c1, c1]))
-	var font := UiPalette.display_font()
-	var font_px := int(_repo.bal("map3d_landmark_font_px"))
-	var ink := MapPalette.named(_repo, "landmark_text") * fade
-	var halo := MapTerrain.palette_color(_repo, "map3d_hud_halo", MapTerrain.FALLBACK) * fade
-	for t: Dictionary in heat_legend_ticks():
-		var y := float(t["y"])
-		ci.draw_line(Vector2(x0, y), Vector2(x1 + 4.0, y), ink, 1.5)
-		if font != null:
-			var at := Vector2(x1 + 7.0, y + font_px * 0.35)
-			ci.draw_string_outline(font, at, String(t["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
-				font_px, 3, halo)
-			ci.draw_string(font, at, String(t["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, ink)
-
-
-func drawn_army_count() -> int:
-	return _drawn_armies
-
-
 func selected_army() -> String:
 	return _selection.army
-
-
-## Draw the badges on the HUD, over the kingdom names.
-func draw_badges(ci: CanvasItem) -> void:
-	var badges := manor_badges()
-	_drawn_badges = badges.size()
-	ManorBadges.draw(ci, _repo, badges)
-
-
-func drawn_badge_count() -> int:
-	return _drawn_badges
-
-
-## Test seam: the kingdoms lettered on the HUD's last draw.
-func drawn_labels() -> PackedStringArray:
-	return _drawn_labels
 
 
 ## The ruler's reading, as drawn.

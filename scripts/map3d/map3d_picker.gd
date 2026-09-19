@@ -176,6 +176,10 @@ func step() -> void:
 ## cursor, and — only when it changes — the kingdom's wider outline and
 ## kingdom_changed. Public: tests drive it without a ray.
 func hover_pick(picked: Dictionary, pos: Vector2) -> void:
+	# Before bind there is no repo to name a pick with (the view clears the
+	# hover before its world loads): only the empty pick, which needs none.
+	if ctx == null and not picked.is_empty():
+		return
 	var repo: DataRepository = ctx.repo if ctx != null else null
 	var state: GameState = ctx.state() if ctx != null else null
 	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor", "army", "landmark"] else {}

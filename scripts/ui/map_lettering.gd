@@ -1,7 +1,7 @@
 class_name MapLettering
 extends RefCounted
 ## Kingdom names set like printed map lettering — shared by the 2D map
-## (WorldMapView) and the 3D map's HUD (Map3DView.draw_labels), so the two
+## (WorldMapView) and the 3D map's HUD (Map3DHudLabels), so the two
 ## letter a realm the same way: blackletter in the name's own case
 ## (UiPalette.map_label_font), map_label_tracking between the glyphs, in the
 ## coast ink at map_label_alpha.

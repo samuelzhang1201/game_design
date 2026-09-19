@@ -7,7 +7,7 @@ extends Control
 ## map_units_per_metre) — and the compass top-left: CompassLayer's oak wheel turning while
 ## time runs, as on the 2D map, under a north needle that turns with the
 ## view. Mouse-transparent; Map3DView routes a click on compass_rect() to
-## its turn-north. Redrawn by the view whenever the camera moves.
+## its turn-north. Redrawn on every camera move (Map3DContext.camera_moved).
 ##
 ## Fix round 1 (owner 2026-09-18): a pale halo (terrain_palette
 ## map3d_hud_halo) under the scale bar's strokes/label and the needle's
@@ -17,48 +17,96 @@ extends Control
 ## shadow and a small rotating "N" so the needle reads as sitting over the
 ## wheel rather than pasted flat on it.
 
-## A needle drawn as its own CanvasItem, added after CompassLayer so it
-## paints on top of the wheel art: a CanvasItem child always draws over its
-## earlier siblings at the same z_index, and a negative z_index on the
-## wheel instead would sink it below the view's own TextureRect (a sibling
-## of Hud, not a child of it) and hide it entirely.
-class NeedleLayer:
-	extends Node2D
-	var hud: Map3DHud
+## One child per job (spec 2026-09-20 §1), in PAINT ORDER — a CanvasItem
+## child draws over its earlier siblings (Ruling 17): the kingdom names, then
+## HEIGHTS' landmarks and legend, MANORS' badges, MILITARY's counters, the
+## wheel's backdrop, the scale bar, the MEASUREMENT ruler, the wheel
+## (CompassLayer) and last its needle. Every piece reads the context the view
+## binds — never the Game autoload — and draws nothing until bound.
+const PIECES := ["Labels", "Landmarks", "HeatLegend", "Badges", "Armies", "Backdrop",
+	"ScaleBar", "Ruler"]
 
-	func _draw() -> void:
-		if hud != null:
-			hud._draw_needle(self)
-
-
+var ctx: Map3DContext
 var view: Map3DView
 var _compass: CompassLayer
-var _needle: NeedleLayer
+var _needle: Map3DHudNeedle
 
 
 func _ready() -> void:
 	name = "Hud"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_compass = CompassLayer.new()
-	_compass.name = "Compass"
+	for piece_name: String in PIECES:
+		if get_node_or_null(piece_name) == null:
+			var p := _make_piece(piece_name)
+			p.name = piece_name
+			add_child(p)
+	_compass = get_node_or_null("Compass") as CompassLayer
+	if _compass == null:
+		_compass = CompassLayer.new()
+		_compass.name = "Compass"
+		add_child(_compass)
 	_compass.box = compass_rect
-	add_child(_compass)
 	_compass.setup()
-	_needle = NeedleLayer.new()
-	_needle.name = "Needle"
+	_needle = get_node_or_null("Needle") as Map3DHudNeedle
+	if _needle == null:
+		_needle = Map3DHudNeedle.new()
+		_needle.name = "Needle"
+		add_child(_needle)
 	_needle.hud = self
-	add_child(_needle)
 
 
-## Redraws the scale bar and, on top of the wheel, the needle (queue_redraw
-## itself cannot be overridden — the engine refuses to call a script's
-## override of a native CanvasItem method). Called by the view on every
-## camera move.
-func refresh() -> void:
-	queue_redraw()
+static func _make_piece(piece_name: String) -> Map3DHudPiece:
+	match piece_name:
+		"Labels":
+			return Map3DHudLabels.new()
+		"Landmarks":
+			return Map3DHudLandmarks.new()
+		"HeatLegend":
+			return Map3DHudHeatLegend.new()
+		"Badges":
+			return Map3DHudBadges.new()
+		"Armies":
+			return Map3DHudArmies.new()
+		"Backdrop":
+			return Map3DHudBackdrop.new()
+		"ScaleBar":
+			return Map3DHudScaleBar.new()
+	return Map3DHudRuler.new()
+
+
+## Hand every piece the context and the view; the HUD redraws on every
+## camera move from here on.
+func bind(p_ctx: Map3DContext, p_view: Map3DView) -> void:
+	ctx = p_ctx
+	view = p_view
+	for c: Node in get_children():
+		if c is Map3DHudPiece:
+			(c as Map3DHudPiece).bind(ctx, view)
 	if _needle != null:
-		_needle.queue_redraw()
+		_needle.hud = self
+	if not ctx.camera_moved.is_connected(refresh):
+		ctx.camera_moved.connect(refresh)
+	refresh()
+
+
+## Redraw every piece, the wheel and the needle (queue_redraw itself cannot
+## be overridden — the engine refuses to call a script's override of a
+## native CanvasItem method). On every camera move and state change.
+func refresh() -> void:
+	for c: Node in get_children():
+		if c is CanvasItem:
+			(c as CanvasItem).queue_redraw()
+
+
+## The piece named `piece_name` (PIECES), or null.
+func piece(piece_name: String) -> Map3DHudPiece:
+	return get_node_or_null(piece_name) as Map3DHudPiece
+
+
+## Whether the wheel's art is in (the needle draws a ring without it).
+func has_compass_art() -> bool:
+	return _compass != null and _compass.has_art()
 
 
 ## {distance, text, width_px} for the largest 1-2-5 distance whose bar fits
@@ -83,109 +131,17 @@ static func needle_angle(yaw_deg: float) -> float:
 
 ## Top-left, the 2D compass's size and margin (the 2D map's is top-right).
 func compass_rect() -> Rect2:
-	var d := Game.data.bal("map_compass_size_px")
-	var m := Game.data.bal("map_compass_margin_px")
+	if ctx == null:
+		return Rect2()
+	var d := ctx.repo.bal("map_compass_size_px")
+	var m := ctx.repo.bal("map_compass_margin_px")
 	return Rect2(Vector2(m, m), Vector2(d, d)) if d > 0.0 else Rect2()
 
 
 ## terrain_palette's pale halo, at map3d_hud_halo_alpha — {} (alpha 0) turns
 ## every halo off, including the 2D map's ScaleBar.draw call, which never
 ## passes one and so is untouched by this fix.
-func _hud_halo() -> Color:
-	var halo := MapTerrain.palette_color(Game.data, "map3d_hud_halo", MapTerrain.FALLBACK)
-	halo.a = Game.data.bal("map3d_hud_halo_alpha")
-	return halo
-
-
-func _draw() -> void:
-	if view == null:
-		return
-	# Own _draw() paints before every child (the wheel, the needle), so the
-	# backdrop sits behind both with no z_index needed.
-	# Kingdom names first (owner 2026-09-18): under the compass, the scale
-	# bar and the ruler.
-	view.draw_labels(self)
-	# HEIGHTS' landmarks and legend (owner 2026-09-19), over the names.
-	view.draw_landmarks(self)
-	view.draw_heat_legend(self)
-	# MANORS' output badges (owner 2026-09-19), over the names.
-	view.draw_badges(self)
-	# MILITARY's counters (owner 2026-09-19), over everything on the ground.
-	view.draw_armies(self)
-	_draw_compass_backdrop()
-	ScaleBar.draw(self, scale_bar_for(view.metres_per_pixel() * view.map_units_per_metre(),
-		Game.data.bal("map_scale_bar_max_px"), view.map_unit()), size, _hud_halo())
-	# The MEASUREMENT ruler (owner 2026-09-18), over the scale bar.
-	view.draw_ruler(self)
-
-
-## A soft dark vignette behind the wheel (fix round 1: map symbols tangled
-## with the spokes at 24 km), a few concentric filled circles layered from
-## a pale wide one to a small one at map3d_compass_backdrop_alpha — normal
-## alpha blending stacks them into a radial fade with no gradient texture.
-func _draw_compass_backdrop() -> void:
-	var r := compass_rect()
-	if r.size.x <= 0.0:
-		return
-	var peak := Game.data.bal("map3d_compass_backdrop_alpha")
-	if peak <= 0.0:
-		return
-	var c := r.get_center()
-	var radius := r.size.x * 0.58
-	var rings := 6
-	for i in rings:
-		var t := float(i + 1) / float(rings)
-		draw_circle(c, radius * (1.0 - t), Color(0.0, 0.0, 0.0, peak * t))
-
-
-func _draw_needle(ci: CanvasItem) -> void:
-	if view == null:
-		return
-	var r := compass_rect()
-	if r.size.x <= 0.0:
-		return
-	var c := r.get_center()
-	var reach := r.size.x * 0.5 * Game.data.bal("map3d_compass_needle_reach")
-	var w := r.size.x * 0.5 * Game.data.bal("map3d_compass_needle_width")
-	var gold := MapPalette.named(Game.data, "map3d_selection")
-	var ink := MapTerrain.palette_color(Game.data, "coast_line", MapTerrain.FALLBACK)
-	var halo := _hud_halo()
-	if not _compass.has_art():
-		ci.draw_arc(c, r.size.x * 0.5 - 2.0, 0.0, TAU, 48, ink, 2.0, true)
-	ci.draw_set_transform(c, needle_angle(view.yaw()), Vector2.ONE)
-	var north := PackedVector2Array([Vector2(0, -reach), Vector2(w, 0), Vector2(-w, 0)])
-	var south := PackedVector2Array([Vector2(0, reach), Vector2(w, 0), Vector2(-w, 0)])
-	var shadow_alpha := Game.data.bal("map3d_compass_needle_shadow_alpha")
-	if shadow_alpha > 0.0:
-		var shadow := Color(0.0, 0.0, 0.0, shadow_alpha)
-		var by := Vector2(1.5, 2.0)
-		ci.draw_colored_polygon(_offset_poly(south, by), shadow)
-		ci.draw_colored_polygon(_offset_poly(north, by), shadow)
-	ci.draw_colored_polygon(south, Color(ink, 0.85))
-	ci.draw_colored_polygon(north, gold)
-	ci.draw_polyline(PackedVector2Array([Vector2(0, -reach), Vector2(w, 0), Vector2(0, reach),
-		Vector2(-w, 0), Vector2(0, -reach)]), ink, 1.5, true)
-	_draw_north_label(ci, gold, halo, reach)
-	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
-## A small "N" just beyond the north tip, in the same rotated frame as the
-## needle so it turns with it.
-func _draw_north_label(ci: CanvasItem, gold: Color, halo: Color, reach: float) -> void:
-	var font := UiPalette.display_font()
-	if font == null:
-		return
-	var font_px := 10
-	var text := "N"
-	var text_w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px).x
-	var pos := Vector2(-text_w * 0.5, -reach - 4.0)
-	if halo.a > 0.0:
-		ci.draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, 3, halo)
-	ci.draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, gold)
-
-
-static func _offset_poly(pts: PackedVector2Array, by: Vector2) -> PackedVector2Array:
-	var out := PackedVector2Array()
-	for p: Vector2 in pts:
-		out.append(p + by)
-	return out
+static func halo(repo: DataRepository) -> Color:
+	var c := MapTerrain.palette_color(repo, "map3d_hud_halo", MapTerrain.FALLBACK)
+	c.a = repo.bal("map3d_hud_halo_alpha")
+	return c
