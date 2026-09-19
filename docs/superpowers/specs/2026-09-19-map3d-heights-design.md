@@ -79,8 +79,9 @@ own change (owner 2026-09-19: the 2D map is no longer wanted, no fallback).
 ## 3. Landmarks
 
 `Elevation.landmarks(repo) -> Array` of
-`{cell, kind ("high"|"low"), metres, prominence, lod, name, pos}`, in cell
-order:
+`{cell, kind ("high"|"low"), metres, prominence, lod, name, pos}`, biggest
+prominence first (ties by cell id), so the biggest point is named first and
+drawn first:
 
 - A **high** point is a land cell higher than every neighbour; a **low** point
   a land cell (not lake, not sea) lower than every neighbour.
