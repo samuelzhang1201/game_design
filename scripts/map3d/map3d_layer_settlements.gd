@@ -60,9 +60,9 @@ func preview_build(p_ctx: Map3DContext) -> void:
 ## the selection ring sits above every tier. Replaces any markers before.
 func build() -> void:
 	_ring_mats.clear()
-	for child in get_children():
-		remove_child(child)
-		child.queue_free()
+	# Only what a build (or a preview) made: an AUTHORED child is never
+	# touched, so its deletion could never be saved (Task 22 review).
+	Map3DPreview.clear_generated(self)
 	_selected_ring = null
 	var by_group: Dictionary = {}
 	for code: String in ctx.marked_burgs():

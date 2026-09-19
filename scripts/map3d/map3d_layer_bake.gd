@@ -11,6 +11,9 @@ extends RefCounted
 ## scripts (an exported build need not ship the .gd sources), so a change to
 ## any of them bumps this, and tests/map3d/test_map3d_layer_bake.gd holds
 ## GEOMETRY_MD5 to their text so the bump cannot be forgotten.
+## THE ONE EXCEPTION (Task 22): an edit to those files that cannot reach the
+## baked vertices — a `@tool` line, editor-only preview code, a comment —
+## updates GEOMETRY_MD5 ALONE and leaves FORMAT and the bakes as they are.
 const FORMAT := 1
 ## Every script the baked meshes' vertices come from: the layers' arrays_for /
 ## plan_for / bridge_mesh, the river, bridge and ribbon builders, the pack ->

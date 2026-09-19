@@ -60,6 +60,59 @@ func test_a_pack_with_no_build_gets_the_placeholder() -> void:
 	assert_null(sea.mesh, "nothing generated is ever written onto the AUTHORED node")
 
 
+## Task 22 review: Viewport.get_texture() carries an EMPTY viewport_path, so a
+## scene saved with it on the Display opens UNBOUND. The editor keeps the
+## authored texture, a preview swaps the live one in, and whatever a save
+## finds there must carry the path again.
+func test_a_saved_display_keeps_its_viewport_path() -> void:
+	assert_true(FileAccess.get_file_as_string(Map3DView.VIEW_SCENE).contains(
+		'viewport_path = NodePath("Viewport")'), "the authored scene binds the Display")
+	var v := (load(Map3DView.VIEW_SCENE) as PackedScene).instantiate() as Map3DView
+	add_child_autofree(v)
+	var vp := v.get_node("Viewport") as SubViewport
+	var display := v.get_node("Display") as TextureRect
+	assert_true((vp.get_texture() as ViewportTexture).get_viewport_path_in_scene().is_empty(),
+		"the live texture has no path: it is why this test exists")
+	Map3DPreview.show_live(display, vp, true)
+	assert_eq(display.texture, vp.get_texture(), "a preview shows the live render")
+	Map3DPreview.show_live(display, vp, false)
+	assert_eq((display.texture as ViewportTexture).get_viewport_path_in_scene(),
+		NodePath("Viewport"), "and gives the authored one back")
+	var packed := PackedScene.new()
+	assert_eq(packed.pack(v), OK)
+	var st := packed.get_state()
+	for i in st.get_node_count():
+		if st.get_node_name(i) != &"Display":
+			continue
+		for j in st.get_node_property_count(i):
+			if st.get_node_property_name(i, j) != &"texture":
+				continue
+			var tex: ViewportTexture = st.get_node_property_value(i, j)
+			assert_false(tex.get_viewport_path_in_scene().is_empty(),
+				"a save never writes an unbound Display texture")
+
+
+## Task 22 review: a save can never write preview state, whatever the editor
+## was left in — the view puts everything back on NOTIFICATION_EDITOR_PRE_SAVE.
+func test_an_editor_save_puts_every_preview_back() -> void:
+	var v := (load(Map3DView.VIEW_SCENE) as PackedScene).instantiate() as Map3DView
+	add_child_autofree(v)
+	var vp := v.get_node("Viewport") as SubViewport
+	var display := v.get_node("Display") as TextureRect
+	var lines := vp.get_node("Lines") as Map3DLayerLines
+	var rig := vp.get_node("CameraRig") as Map3DCameraRig
+	lines.preview = true
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	Map3DPreview.show_live(display, vp, true)
+	(rig.get_node("RigCamera") as Camera3D).current = true
+	v.notification(Node.NOTIFICATION_EDITOR_PRE_SAVE)
+	assert_false(lines.preview, "every layer's switch is off")
+	assert_eq(vp.render_target_update_mode, SubViewport.UPDATE_DISABLED)
+	assert_false((display.texture as ViewportTexture).get_viewport_path_in_scene().is_empty())
+	assert_false((rig.get_node("RigCamera") as Camera3D).current,
+		"the authored camera's `current` is the scene's own: false")
+
+
 func test_no_layer_script_reads_game() -> void:
 	for f: String in DirAccess.get_files_at("res://scripts/map3d"):
 		if f.begins_with("map3d_layer") or f == "map3d_camera_rig.gd" or f == "map3d_preview.gd":

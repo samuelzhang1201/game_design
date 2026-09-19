@@ -53,6 +53,36 @@ func test_no_material_carries_a_tuned_number() -> void:
 	assert_true(road.contains("map3d_preview/rocky_trail_02_alb_ht.png"))
 
 
+## A pack ships no picture (CLAUDE.md): every world_*.png is DATA — ids,
+## distances, a height field, blend weights — read as an Image or sampled for
+## its exact values. The 3D map hands two of them to 3D shaders (the sea's
+## distance field, the cell index under the manor tint), and the editor's
+## "detect 3D" then re-imports them as VRAM COMPRESSED, which scrambles manor
+## ids and bands the sea (found in Task 22's editor pass). Every one of them
+## stays lossless with that detection off.
+const DATA_BITMAPS := ["index_texture", "province_texture", "biome_texture", "sea_texture",
+	"cell_texture", "relief_texture", "settlement_texture"]
+
+
+func test_a_packs_bitmaps_are_data_and_are_never_recompressed() -> void:
+	for id: String in Game.data.maps:
+		var row: Dictionary = Game.data.maps[id]
+		var paths: Array = []
+		for col: String in DATA_BITMAPS:
+			if String(row.get(col, "")) != "":
+				paths.append(String(row[col]))
+		var weights := String(row.get("biome_weights", ""))
+		for i in (4 if weights != "" else 0):
+			paths.append("%s_%d.png" % [weights, i])
+		for path: String in paths:
+			if not FileAccess.file_exists(path + ".import"):
+				continue
+			var text := FileAccess.get_file_as_string(path + ".import")
+			assert_true(text.contains("compress/mode=0"), path + " must stay lossless")
+			assert_true(text.contains("detect_3d/compress_to=0"),
+				path + ": the editor must never re-import a DATA bitmap as VRAM compressed")
+
+
 func test_a_views_materials_are_its_own_copies() -> void:
 	Game.start_campaign(42)
 	var root := Node3D.new()

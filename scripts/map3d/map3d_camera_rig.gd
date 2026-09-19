@@ -33,6 +33,12 @@ func set_preview(on: bool) -> void:
 	else:
 		Map3DPreview.clear_generated(self)
 		_camera = get_node_or_null("RigCamera") as Camera3D
+		if _camera != null:
+			# The preview camera is gone: the scene's own must take the view
+			# back, or the SubViewport draws nothing (Task 22 review). The
+			# `current` this writes is cleared again before any save
+			# (Map3DPreview.reset).
+			_camera.make_current()
 	Map3DPreview.sync_viewport(self)
 
 

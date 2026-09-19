@@ -141,7 +141,7 @@ static func toggle_in(panel: Control, world_map: Control, view: Map3DView, on: b
 	return view
 
 func _ready() -> void:
-	_display.texture = _viewport.get_texture()  # in the editor too: it shows the previews
+	Map3DPreview.bind_display(_display, _viewport)  # the editor keeps the scene's own
 	if Engine.is_editor_hint(): return  # there the layers' `preview` switches do all the rest
 	_notice.text = NOTICE_TEXT  # the scene's text is a preview; this is the one source
 	_tooltip.add_theme_stylebox_override("normal", UiPalette.chip_style())
@@ -253,9 +253,14 @@ func release_world() -> void:
 		Map3DWorldCache.give_back(_scene_path, _world)
 		_world = null
 
+## The editor NEVER saves a preview (Task 22 review): whatever a preview
+## switched on goes back before the scene is written — every layer's switch,
+## the SubViewport's update mode, the built world and the Display's texture.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE and _world != null and not Engine.is_editor_hint():
 		Map3DWorldCache.give_back(_scene_path, _world)
+	elif what == NOTIFICATION_EDITOR_PRE_SAVE:
+		Map3DPreview.reset(self)
 
 ## Wear a graphics tier (Map3DQuality; `overrides` over single values — the
 ## bench's --render-scale). All of it applies now but the line, road and river

@@ -94,4 +94,6 @@ func test_the_geometry_code_is_the_one_the_format_names() -> void:
 		assert_true(FileAccess.file_exists(path), path)
 		text += FileAccess.get_file_as_string(path)
 	assert_eq(text.md5_text(), Map3DLayerBake.GEOMETRY_MD5,
-		"geometry code changed: bump Map3DLayerBake.FORMAT and update GEOMETRY_MD5, then re-run tools/map3d/bake_layers.gd")
+		"geometry code changed: update GEOMETRY_MD5, and if the BAKED VERTICES can differ "
+		+ "bump Map3DLayerBake.FORMAT too and re-run tools/map3d/bake_layers.gd "
+		+ "(an editor-only edit — a @tool line, preview code, a comment — updates the md5 alone)")

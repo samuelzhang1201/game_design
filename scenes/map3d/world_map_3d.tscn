@@ -26,7 +26,7 @@
 [ext_resource type="Script" uid="uid://bula280a44q8l" path="res://scripts/map3d/map3d_hud_needle.gd" id="17_geqxk"]
 [ext_resource type="StyleBox" uid="uid://btdf8fw324b5o" path="res://scenes/map3d/tooltip_chip.tres" id="19_rbqyb"]
 
-[sub_resource type="ViewportTexture" id="ViewportTexture_mtfpr"]
+[sub_resource type="ViewportTexture" id="ViewportTexture_au2na"]
 viewport_path = NodePath("Viewport")
 
 [node name="Map3DView" type="Control" unique_id=915010041]
@@ -103,7 +103,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = SubResource("ViewportTexture_mtfpr")
+texture = SubResource("ViewportTexture_au2na")
 expand_mode = 1
 
 [node name="Notice" type="Label" parent="." unique_id=374640910]

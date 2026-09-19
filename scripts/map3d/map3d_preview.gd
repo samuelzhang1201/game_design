@@ -23,6 +23,9 @@ const PLACEHOLDER_M := 4000.0
 ## preview is switched on and off over and over, and both are expensive.
 static var _repos: Dictionary = {}
 static var _worlds: Dictionary = {}
+## Each Display's AUTHORED texture while a preview shows the live render
+## instead (keyed by the TextureRect's instance id) — see show_live.
+static var _authored_tex: Dictionary = {}
 
 
 ## The data for `pack_id` ("" = maps.csv's default), loaded once and kept.
@@ -182,12 +185,83 @@ static func sync_viewport(node: Node) -> void:
 	var on := _any_preview(vp)
 	vp.render_target_update_mode = (SubViewport.UPDATE_ALWAYS if on
 		else SubViewport.UPDATE_DISABLED)
+	show_live(display_of(vp), vp, on)
 	var slot := vp.get_node_or_null("WorldSlot")
-	if on or slot == null:
+	# Only the editor's preview hands the world back; at runtime the view owns
+	# what stands under WorldSlot.
+	if on or slot == null or not Engine.is_editor_hint():
 		return
 	for c: Node in slot.get_children():
 		if c.owner == null:
 			slot.remove_child(c)  # kept for the next preview, never freed here
+
+
+## The view's Display beside `vp`, or null.
+static func display_of(vp: SubViewport) -> TextureRect:
+	var root := vp.get_parent()
+	return root.get_node_or_null("Display") as TextureRect if root != null else null
+
+
+## The Display's texture at load (the view's _ready): at RUNTIME the
+## SubViewport's own live texture; in the EDITOR the scene's own one is KEPT —
+## Viewport.get_texture()'s viewport_path is EMPTY, so binding it there would
+## save an unbound texture over the authored `viewport_path` (Task 22 review).
+static func bind_display(display: TextureRect, vp: SubViewport) -> void:
+	if not Engine.is_editor_hint() or not (display.texture is ViewportTexture):
+		display.texture = vp.get_texture()
+
+
+## While a preview runs, the Display shows the SubViewport's LIVE texture; its
+## authored one is kept aside and put back when the last preview goes off (and
+## before any save). Viewport.get_texture()'s own viewport_path is EMPTY, so a
+## scene saved with it on the Display would open with an unbound picture
+## (Task 22 review).
+static func show_live(display: TextureRect, vp: SubViewport, on: bool) -> void:
+	if display == null:
+		return
+	if not on:
+		display.texture = authored_texture(display, vp)
+		return
+	if not _authored_tex.has(display.get_instance_id()):
+		_authored_tex[display.get_instance_id()] = display.texture
+	display.texture = vp.get_texture()
+
+
+## The texture a SAVE must find on `display`: the one it was authored with,
+## else a fresh ViewportTexture carrying the path to `vp`. A kept texture with
+## no path is no better than the live one, so it is rebuilt too. The path is
+## the SCENE ROOT's to the viewport ("Viewport"), which is what
+## ViewportTexture resolves against, not the Display's own.
+static func authored_texture(display: TextureRect, vp: SubViewport) -> Texture2D:
+	var key := display.get_instance_id()
+	var kept := _authored_tex.get(key) as ViewportTexture
+	_authored_tex.erase(key)
+	if kept != null and not kept.get_viewport_path_in_scene().is_empty():
+		return kept
+	var showing := display.texture as ViewportTexture
+	if showing != null and not showing.get_viewport_path_in_scene().is_empty():
+		return showing  # nothing was ever swapped in: the authored one is still there
+	var made := ViewportTexture.new()
+	var root := vp.get_parent()
+	made.set_viewport_path_in_scene(root.get_path_to(vp) if root != null else NodePath("Viewport"))
+	return made
+
+
+## Everything a preview touched, put back — the layers' switches, the
+## SubViewport, the built world and the Display's texture. The view calls it
+## on NOTIFICATION_EDITOR_PRE_SAVE, so a save can never write preview state.
+static func reset(root: Node) -> void:
+	var vp := root.get_node_or_null("Viewport") as SubViewport
+	if vp == null:
+		return
+	for c: Node in vp.find_children("*", "", true, false):
+		if "preview" in c and bool(c.get("preview")):
+			c.set("preview", false)  # each layer clears what it drew
+	sync_viewport(vp)
+	# `current` is the authored camera's own saved property: the scene has none.
+	for cam: Node in vp.find_children("*", "Camera3D", true, false):
+		if cam.owner != null:
+			(cam as Camera3D).current = false
 
 
 static func _any_preview(vp: Node) -> bool:

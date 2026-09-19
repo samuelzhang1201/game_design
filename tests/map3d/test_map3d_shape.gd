@@ -10,11 +10,12 @@ func _lines(path: String) -> int:
 	return FileAccess.get_file_as_string(path).split("\n").size()
 
 
-## 490, not the 480 of Task 13: Task 22 put the editor previews' two @export
-## switches and the four `Engine.is_editor_hint()` guards on the root. The view
-## still only forwards — every new line here must be a forwarder or a guard.
+## 495, not the 480 of Task 13: Task 22 put the editor previews' two @export
+## switches, the four `Engine.is_editor_hint()` guards and the PRE_SAVE reset
+## on the root (the rules themselves live in Map3DPreview). The view still
+## only forwards — every new line here must be a forwarder or a guard.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 490)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 495)
 
 
 func test_every_other_script_is_small() -> void:
