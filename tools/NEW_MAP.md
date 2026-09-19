@@ -27,6 +27,19 @@ committed files byte for byte (checked 2026-09-18).
    scene and `manifest.json` in one command, into the pack's `maps.csv`
    `map3d_dir` (empty: `assets/map3d/<id>`; tools/map3d/README.md).
 
+**A pack's `world_*.png` are DATA, never pictures** — ids, distances, a
+height field, blend weights, read as an `Image` or sampled for their exact
+values — so they must import LOSSLESS and must never be re-imported as VRAM
+compressed (VRAM compression scrambles manor ids and bands the sea). Two of
+them are handed to 3D shaders, which is what makes the editor's "detect 3D"
+want to recompress them. Nothing to do by hand: `project.godot`'s
+`[importer_defaults] texture` sets `detect_3d/compress_to: 0` for the whole
+project, so a bitmap imported for the first time already has it, and
+`tests/map3d/test_map3d_look_assets.gd`'s
+`test_a_packs_bitmaps_are_data_and_are_never_recompressed` fails if any of a
+pack's bitmaps ever loses `compress/mode=0` or that flag. If it does fail,
+fix the `.import` — do not "fix" the test.
+
 ## 2. Bindings — the owner's decisions (`data/maps/<id>/`)
 
 - `realm_bindings.csv` — which kingdom is `player_realm`, `raider_realm`,

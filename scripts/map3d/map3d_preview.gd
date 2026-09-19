@@ -247,10 +247,18 @@ static func authored_texture(display: TextureRect, vp: SubViewport) -> Texture2D
 	return made
 
 
-## Everything a preview touched, put back — the layers' switches, the
-## SubViewport, the built world and the Display's texture. The view calls it
-## on NOTIFICATION_EDITOR_PRE_SAVE, so a save can never write preview state.
+## Everything a preview touched, put back — the ROOT's own preview switches,
+## the layers' switches, the SubViewport, the built world and the Display's
+## texture. The view calls it on NOTIFICATION_EDITOR_PRE_SAVE, so a save can
+## never write preview state.
 static func reset(root: Node) -> void:
+	# The root's two are exported and would otherwise be SAVED (final review
+	# 2026-09-20): a scene written while previewing another pack would open
+	# every checkout on that pack, and with its terrain, for good.
+	if "preview_pack" in root:
+		root.set("preview_pack", "")
+	if "preview_terrain" in root:
+		root.set("preview_terrain", false)
 	var vp := root.get_node_or_null("Viewport") as SubViewport
 	if vp == null:
 		return

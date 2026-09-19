@@ -24,7 +24,8 @@ SETS = ["leafy_grass", "dry_decay_leaves", "dirt_floor", "rocky_trail",
         # Poly Haven API) — hence first(), below.
         "snow_02",
         # Not terrain layers: the roads' surface (road_line.gdshader) and the
-        # bridges' stone (Map3DView._build_bridges), loaded by Map3DView.
+        # bridges' stone, both loaded by Map3DLayerRoads (ROAD_TEXTURE /
+        # BRIDGE_TEXTURE); without them it draws flat palette colours.
         "rocky_trail_02", "medieval_blocks_03"]
 
 

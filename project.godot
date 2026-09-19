@@ -38,6 +38,7 @@ enabled=PackedStringArray("res://addons/gdai-mcp-plugin-godot/plugin.cfg", "res:
 [importer_defaults]
 
 texture={
+"detect_3d/compress_to": 0,
 "mipmaps/generate": true
 }
 

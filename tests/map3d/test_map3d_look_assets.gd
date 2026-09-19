@@ -103,3 +103,10 @@ func test_a_views_materials_are_its_own_copies() -> void:
 	var road := a.line_mesh("Roads").surface_get_material(0) as ShaderMaterial
 	assert_eq(road.get_shader_parameter("tile_m"), Game.data.bal("map3d_road_tile_m"))
 	assert_not_null(road.get_shader_parameter("surface"), "a texture always: full or preview")
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file: this file
+## builds two views over the same fixture, so one of them hands its world back
+## to the cache on free (final review 2026-09-20).
+func after_all() -> void:
+	Map3DWorldCache.clear()

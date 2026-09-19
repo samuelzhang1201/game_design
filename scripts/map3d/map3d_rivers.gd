@@ -202,7 +202,8 @@ static func _side_at(pos: PackedVector3Array, i: int) -> Vector2:
 ## clears cleanly and reads as normal water. height_fn(xz) -> ground height;
 ## `margin` on top of the highest of the centre/left/right samples. Courses
 ## are returned unchanged when height_fn is invalid (pure tests carry no
-## Terrain3D); real callers pass Map3DView._height_at, at build time only.
+## Terrain3D); the real caller is Map3DLayerRivers, which passes the context's
+## own height_at, at build time only.
 static func clear_terrain(courses: Array, height_fn: Callable, margin: float) -> Array:
 	if not height_fn.is_valid():
 		return courses

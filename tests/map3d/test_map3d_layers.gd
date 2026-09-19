@@ -145,6 +145,11 @@ func test_the_borders_rebuild_only_when_ownership_moves() -> void:
 	assert_not_null(v.line_mesh("Hover"))
 	borders.draw_hover("")
 	assert_null(v.line_mesh("Hover"))
+	# Given back: before_all starts ONE campaign for the whole file, so a
+	# conquest left standing would run every later test on a map whose borders
+	# have moved (final review 2026-09-20).
+	MapOwnership.set_owner(Game.data, Game.state, province, raider, "test: conquest undone")
+	assert_eq(MapOwnership.owner_of(Game.data, Game.state, province), raider)
 
 
 func test_the_themes_are_one_layer_that_works_before_load() -> void:

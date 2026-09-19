@@ -101,6 +101,8 @@ func test_an_editor_save_puts_every_preview_back() -> void:
 	var display := v.get_node("Display") as TextureRect
 	var lines := vp.get_node("Lines") as Map3DLayerLines
 	var rig := vp.get_node("CameraRig") as Map3DCameraRig
+	v.preview_pack = "some_other_pack"
+	v.preview_terrain = true
 	lines.preview = true
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	Map3DPreview.show_live(display, vp, true)
@@ -111,9 +113,23 @@ func test_an_editor_save_puts_every_preview_back() -> void:
 	assert_false((display.texture as ViewportTexture).get_viewport_path_in_scene().is_empty())
 	assert_false((rig.get_node("RigCamera") as Camera3D).current,
 		"the authored camera's `current` is the scene's own: false")
+	# final review 2026-09-20: the root's own two are EXPORTED, so a save while
+	# previewing another pack would pin every checkout to it.
+	assert_eq(v.preview_pack, "", "the root's preview pack is never saved")
+	assert_false(v.preview_terrain, "nor its preview terrain")
 
 
-func test_no_layer_script_reads_game() -> void:
+## Ruling (spec 2026-09-20 §1): Map3DContext is what every piece shares, and no
+## script under the view reaches for the Game autoload — that is what lets the
+## same layer draw in the editor, where Game does not exist. Map3DView itself is
+## the ONE exception: it is the screen's node and hands the context down.
+## Widened from the layer scripts alone in the final review of 2026-09-20.
+func test_no_script_under_the_view_reads_game() -> void:
+	var checked := 0
 	for f: String in DirAccess.get_files_at("res://scripts/map3d"):
-		if f.begins_with("map3d_layer") or f == "map3d_camera_rig.gd" or f == "map3d_preview.gd":
-			assert_false(FileAccess.get_file_as_string("res://scripts/map3d/" + f).contains("Game."), f)
+		if not f.ends_with(".gd") or f == "map3d_view.gd":
+			continue
+		checked += 1
+		assert_false(FileAccess.get_file_as_string("res://scripts/map3d/" + f).contains("Game."),
+			f + " must take what it needs from Map3DContext, never from the Game autoload")
+	assert_gt(checked, 30, "every script under the view was scanned")

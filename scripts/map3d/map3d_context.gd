@@ -26,7 +26,9 @@ var distance := 1.0
 var yaw := 0.0
 ## The graphics tier's row (Map3DQuality.row); {} reads as full quality.
 var quality: Dictionary = {}
-## -> GameState. The view passes Game.state's getter; a preview a blank state.
+## -> GameState. The view passes the autoload's state getter; a preview a blank
+## state. (Spelling the autoload out here would trip the no-autoload scan in
+## tests/map3d/test_map3d_preview.gd, which is the point of it.)
 ## Unset (the default), the state is null.
 var state_fn: Callable = Callable()
 ## -> int, the clock's speed. Unset: 0 (paused).
