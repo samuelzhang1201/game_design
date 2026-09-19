@@ -77,6 +77,18 @@ func test_the_patch_carries_the_heat_ramp() -> void:
 	assert_string_contains(out, "heat_mix > 0.0")
 
 
+## The heat stops arrive as the palette's raw sRGB (a Color uniform passes
+## straight through under GL Compatibility; a source_color hint left them
+## unconverted and the lowland read a washed mint, Task 7): the ramp is blended
+## in sRGB like the 2D map and turned linear in the shader, as the LUT is.
+func test_the_heat_ramp_is_turned_linear_in_the_shader() -> void:
+	var code := "shader_type spatial;\nrender_mode blend_mix;\nvoid fragment() {\n\t" \
+		+ Map3DGroundTint.ALBEDO_LINE + "\n}\n"
+	var out := Map3DGroundTint.patch(code)
+	assert_false(out.contains("heat_c0 : source_color"), "no source_color on the stops")
+	assert_string_contains(out, "pow((heat + 0.055) / 1.055, vec3(2.4))")
+
+
 func test_the_lut_is_128_wide() -> void:
 	assert_eq(Map3DGroundTint.lut_size(4832), Vector2i(128, 38))
 	assert_eq(Map3DGroundTint.lut_size(127), Vector2i(128, 1))

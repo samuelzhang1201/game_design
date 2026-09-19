@@ -459,3 +459,4 @@ map3d_landmark_px,11,"3D MAP HEIGHTS: a landmark triangle's height in design px 
 map3d_landmark_font_px,14,"3D MAP HEIGHTS: the height beside a landmark, design px"
 map3d_heat_legend_w_px,14,"3D MAP HEIGHTS: the legend ramp's width, design px (bottom-left)"
 map3d_heat_legend_h_px,160,"3D MAP HEIGHTS: the legend ramp's height, design px"
+map3d_heat_legend_yield_alpha,0.25,"3D MAP HEIGHTS (Task 7 look pass, 2026-09-20): the legend's opacity while a MEASUREMENT ruler runs through it, so the ruler's reading is never printed over a tier's name"

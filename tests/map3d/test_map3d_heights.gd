@@ -132,6 +132,21 @@ func test_marks_never_overlap() -> void:
 		for j in range(i + 1, marks.size()):
 			assert_false((marks[i]["rect"] as Rect2).intersects(marks[j]["rect"]))
 
+## A mark and its height lie wholly inside the view: a number cut by the
+## edge reads as a wrong number (Task 7 look pass).
+func test_marks_lie_wholly_in_the_view() -> void:
+	var v := _view()
+	v.set_manor_theme("heights")
+	var frame := Rect2(Vector2.ZERO, v.size)
+	var seen := 0
+	for m: Dictionary in Elevation.landmarks(Game.data).slice(0, 12):
+		for dist: float in [6000.0, 20000.0, 40000.0]:
+			_frame_on(v, m, dist)
+			for mk: Dictionary in v.landmark_marks():
+				seen += 1
+				assert_true(frame.encloses(mk["rect"]), "mark %d at %s cut by the edge" % [int(mk["cell"]), mk["rect"]])
+	assert_gt(seen, 0)
+
 func test_hovering_a_mark_shows_its_tooltip_and_a_click_opens_its_card() -> void:
 	var v := _view()
 	v.set_manor_theme("heights")
@@ -246,3 +261,23 @@ func test_marks_keep_off_the_legend() -> void:
 	assert_true(box.grow(4.0).has_point(p), "the mark's point lies in the legend (got %s, box %s)" % [p, box])
 	for mk: Dictionary in v.landmark_marks():
 		assert_false((mk["rect"] as Rect2).intersects(box), "mark %d over the legend" % int(mk["cell"]))
+
+## The legend steps back (drawn faint) while a MEASUREMENT ruler crosses it,
+## so the ruler's reading is never printed over a tier's name (Task 7 look pass).
+func test_the_legend_yields_to_a_ruler_across_it() -> void:
+	var v := _view()
+	v.set_manor_theme("heights")
+	v.look_at_home(40000.0)
+	assert_false(v.heat_legend_yields(), "no ruler, no yielding")
+	v.ruler_on = true
+	var box := v.heat_legend_rect()
+	# a ruler far from the legend, top-right
+	v._ruler_click(v.size * Vector2(0.6, 0.2))
+	v._ruler_click(v.size * Vector2(0.8, 0.3))
+	assert_false(v.heat_legend_yields(), "a ruler elsewhere leaves the legend alone")
+	# one from the legend's foot out across its labels
+	v._ruler_click(box.position + Vector2(4.0, box.size.y - 4.0))
+	v._ruler_click(box.position + Vector2(260.0, -120.0))
+	assert_true(v.heat_legend_yields())
+	v.ruler_on = false
+	assert_false(v.heat_legend_yields(), "the tab off, the legend back")

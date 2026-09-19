@@ -39,12 +39,12 @@ uniform float field_fade_far_m = 60000.0;
 uniform float heat_mix = 0.0;
 uniform float heat_sea_y = 0.0;
 uniform float heat_top_m = 2400.0;
-uniform vec4 heat_c0 : source_color = vec4(1.0);
-uniform vec4 heat_c1 : source_color = vec4(1.0);
-uniform vec4 heat_c2 : source_color = vec4(1.0);
-uniform vec4 heat_c3 : source_color = vec4(1.0);
-uniform vec4 heat_c4 : source_color = vec4(1.0);
-uniform vec4 heat_c5 : source_color = vec4(1.0);
+uniform vec4 heat_c0 = vec4(1.0);
+uniform vec4 heat_c1 = vec4(1.0);
+uniform vec4 heat_c2 = vec4(1.0);
+uniform vec4 heat_c3 = vec4(1.0);
+uniform vec4 heat_c4 = vec4(1.0);
+uniform vec4 heat_c5 = vec4(1.0);
 """
 
 const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.rgb * macrov;
@@ -90,6 +90,10 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 		heat = mix(heat, heat_c3.rgb, clamp(t - 2.0, 0.0, 1.0));
 		heat = mix(heat, heat_c4.rgb, clamp(t - 3.0, 0.0, 1.0));
 		heat = mix(heat, heat_c5.rgb, clamp(t - 4.0, 0.0, 1.0));
+		// The stops are the palette's sRGB bytes, passed raw (a Color uniform
+		// goes straight through under GL Compatibility): turned linear here,
+		// as the LUT is above, after the ramp is blended in sRGB like the 2D map.
+		heat = mix(heat / 12.92, pow((heat + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), heat));
 		tinted = mix(tinted, heat, heat_mix);
 	}
 	ALBEDO = tinted;"""

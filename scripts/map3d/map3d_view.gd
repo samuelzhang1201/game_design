@@ -1644,6 +1644,10 @@ func landmark_marks() -> Array:
 			if font != null else 0.0
 		var tall := maxf(px, float(font_px))
 		var rect := Rect2(p - Vector2(px * 0.5, tall * 0.5), Vector2(px + 4.0 + tw, tall))
+		# the whole mark and its height inside the view: a "15" cut by the edge
+		# (or under the council tab) reads as a wrong number (Task 7 look pass)
+		if not frame.encloses(rect):
+			continue
 		var clear := true
 		for r: Rect2 in taken:
 			if r.intersects(rect):
@@ -1714,25 +1718,70 @@ func heat_legend_ticks() -> Array:
 	return out
 
 
+## The legend's whole footprint, design px: the ramp and its tier names
+## (Rect2() off HEIGHTS).
+func _heat_legend_area() -> Rect2:
+	var box := heat_legend_rect()
+	if box.size.y <= 0.0:
+		return Rect2()
+	var font := UiPalette.display_font()
+	var font_px := int(_repo.bal("map3d_landmark_font_px"))
+	var w := 0.0
+	for t: Dictionary in heat_legend_ticks():
+		w = maxf(w, font.get_string_size(String(t["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
+			font_px).x if font != null else float(font_px) * String(t["label"]).length())
+	return Rect2(box.position, Vector2(box.size.x + 7.0 + w, box.size.y))
+
+
+## Whether the legend steps back for a MEASUREMENT ruler (Task 7 look pass):
+## true while a ruler runs through the legend's footprint grown by the
+## reading's size, so the reading is never printed over a tier's name.
+func heat_legend_yields() -> bool:
+	if not ruler_on or not _ruler.active() or _camera == null:
+		return false
+	var area := _heat_legend_area()
+	if area.size.y <= 0.0:
+		return false
+	area = area.grow(_repo.bal("map_ruler_font_px") + _repo.bal("map_ruler_label_offset_px"))
+	var a3 := Vector3(_ruler.start.x, _height_at(_ruler.start), _ruler.start.y)
+	var b3 := Vector3(_ruler.end.x, _height_at(_ruler.end), _ruler.end.y)
+	if _camera.is_position_behind(a3) or _camera.is_position_behind(b3):
+		return false
+	var s := _render_scale()
+	var a := _camera.unproject_position(a3) / s
+	var b := _camera.unproject_position(b3) / s
+	if area.has_point(a) or area.has_point(b):
+		return true
+	var c := [area.position, Vector2(area.end.x, area.position.y), area.end,
+		Vector2(area.position.x, area.end.y)]
+	for i in 4:
+		if Geometry2D.segment_intersects_segment(a, b, c[i], c[(i + 1) % 4]) != null:
+			return true
+	return false
+
+
 ## The HEIGHTS legend, bottom-left: the heat ramp (terrain_palette heat_1..6)
-## bottom to top, the tier lines ticked and named with their metres.
+## bottom to top, the tier lines ticked and named with their metres; faint
+## (map3d_heat_legend_yield_alpha) while a ruler crosses it.
 func draw_heat_legend(ci: CanvasItem) -> void:
 	var box := heat_legend_rect()
 	if box.size.y <= 0.0:
 		return
+	var fade := Color(1, 1, 1, _repo.bal("map3d_heat_legend_yield_alpha")) \
+		if heat_legend_yields() else Color.WHITE
 	var x0 := box.position.x
 	var x1 := box.end.x
 	for i in 5:
 		var y0 := box.end.y - box.size.y * float(i) / 5.0
 		var y1 := box.end.y - box.size.y * float(i + 1) / 5.0
-		var c0 := MapTerrain.palette_color(_repo, "heat_%d" % (i + 1), MapTerrain.FALLBACK)
-		var c1 := MapTerrain.palette_color(_repo, "heat_%d" % (i + 2), MapTerrain.FALLBACK)
+		var c0 := MapTerrain.palette_color(_repo, "heat_%d" % (i + 1), MapTerrain.FALLBACK) * fade
+		var c1 := MapTerrain.palette_color(_repo, "heat_%d" % (i + 2), MapTerrain.FALLBACK) * fade
 		ci.draw_polygon(PackedVector2Array([Vector2(x0, y0), Vector2(x1, y0),
 			Vector2(x1, y1), Vector2(x0, y1)]), PackedColorArray([c0, c0, c1, c1]))
 	var font := UiPalette.display_font()
 	var font_px := int(_repo.bal("map3d_landmark_font_px"))
-	var ink := MapPalette.named(_repo, "landmark_text")
-	var halo := MapTerrain.palette_color(_repo, "map3d_hud_halo", MapTerrain.FALLBACK)
+	var ink := MapPalette.named(_repo, "landmark_text") * fade
+	var halo := MapTerrain.palette_color(_repo, "map3d_hud_halo", MapTerrain.FALLBACK) * fade
 	for t: Dictionary in heat_legend_ticks():
 		var y := float(t["y"])
 		ci.draw_line(Vector2(x0, y), Vector2(x1 + 4.0, y), ink, 1.5)
