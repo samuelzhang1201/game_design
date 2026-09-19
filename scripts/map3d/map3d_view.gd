@@ -123,7 +123,7 @@ var _lines: Node3D
 var _notice: Label
 var _ring_mats: Array[ShaderMaterial] = []
 var _selected_ring: MultiMeshInstance3D
-var _water_normals: NoiseTexture2D
+var _ctx: Map3DContext
 var _river_mat: ShaderMaterial
 ## The river courses as drawn (Map3DRivers.parse, cleared of the terrain):
 ## the bridges look for them.
@@ -311,10 +311,16 @@ func _ready() -> void:
 
 
 ## Window pixels per design px: the canvas_items stretch's scale, 1 headless.
-func _render_scale() -> float:
+func _window_scale() -> float:
 	if not is_inside_tree():
 		return 1.0
 	return maxf(get_viewport().get_final_transform().get_scale().x, 1.0)
+
+
+## SubViewport px per design px: the window's scale times the graphics tier's
+## render scale once the world is loaded, the window's alone before.
+func _render_scale() -> float:
+	return _ctx.viewport_px_scale() if _ctx != null else _window_scale()
 
 
 ## The SubViewport at the view's size in WINDOW pixels; the TextureRect
@@ -324,6 +330,8 @@ func _fit_viewport() -> void:
 		return
 	var s := _render_scale()
 	_viewport.size = Vector2i(maxi(1, int(size.x * s)), maxi(1, int(size.y * s)))
+	if _ctx != null:
+		_ctx.view_size = size
 	_update_line_scale()
 
 
@@ -366,6 +374,12 @@ func _load() -> void:
 		return
 	_meta = _world.get_meta("map3d_world")
 	_bounds = Map3DGeometry.world_bounds(_meta)
+	_ctx = Map3DContext.new(_repo, _meta, _world)
+	_ctx.viewport = _viewport
+	_ctx.view_size = size
+	_ctx.state_fn = func() -> GameState: return Game.state
+	_ctx.clock_fn = func() -> int: return Game.clock_speed
+	_ctx.window_scale_fn = _window_scale
 	# Each view its OWN terrain material: the loaded scene's material is a
 	# shared resource, so the council screen's view and the court's patched
 	# and set the same one, and the first view's teardown left the second's
@@ -386,6 +400,7 @@ func _load() -> void:
 	_camera.far = _repo.bal("map3d_far_m")
 	_viewport.add_child(_camera)
 	_camera.make_current()
+	_ctx.camera = _camera
 	_markers = Node3D.new()
 	_markers.name = "Markers"
 	_viewport.add_child(_markers)
@@ -416,6 +431,11 @@ func _state() -> GameState:
 	return Game.state
 
 
+## What the layers share (Map3DContext): null until the world has loaded.
+func context() -> Map3DContext:
+	return _ctx
+
+
 ## The player's capital, or the map's centre when no realm is bound.
 func _home() -> Vector2:
 	var realm: Dictionary = _repo.kingdoms.get(_repo.resolve_realm("player_realm"), {})
@@ -426,18 +446,13 @@ func _home() -> Vector2:
 
 
 func _burg_xz(burg: Dictionary) -> Vector2:
-	return Map3DGeometry.pack_to_world(_meta, Vector2(float(burg["x"]), float(burg["y"])))
+	return _ctx.to_world(Vector2(float(burg["x"]), float(burg["y"])))
 
 
 ## Ground height at a world XZ: the terrain's when it has data, never below
-## the sea plane.
+## the sea plane (Map3DContext.height_at).
 func _height_at(xz: Vector2) -> float:
-	var sea := float(_meta.get("sea_y", 0.0))
-	var terrain := _world.get_node_or_null("Terrain3D") if _world != null else null
-	if terrain == null or terrain.get("data") == null:
-		return sea
-	var y: float = terrain.data.get_height(Vector3(xz.x, 0.0, xz.y))
-	return sea if is_nan(y) else maxf(y, sea)
+	return _ctx.height_at(xz) if _ctx != null else float(_meta.get("sea_y", 0.0))
 
 
 ## One MultiMesh of billboard rings per settlement group, each over the
@@ -504,22 +519,9 @@ func _place_markers() -> void:
 	_update_line_scale()
 
 
-## The ripple normal map both waters share: seamless noise made at load.
+## The ripple normal map both waters share (Map3DContext.water_normals).
 func water_normals() -> Texture2D:
-	if _water_normals == null:
-		var noise := FastNoiseLite.new()
-		noise.seed = int(_repo.bal("map3d_water_seed"))
-		noise.frequency = 0.03
-		noise.fractal_octaves = 3
-		_water_normals = NoiseTexture2D.new()
-		_water_normals.width = 256
-		_water_normals.height = 256
-		_water_normals.seamless = true
-		_water_normals.as_normal_map = true
-		_water_normals.bump_strength = 6.0
-		_water_normals.generate_mipmaps = true
-		_water_normals.noise = noise
-	return _water_normals
+	return _ctx.water_normals() if _ctx != null else null
 
 
 ## rivers.json beside the scene (tools/map3d) as the Rivers layer; none
@@ -1224,7 +1226,7 @@ func _update_line_scale() -> void:
 		return
 	var s := _render_scale()
 	var h := float(maxi(_viewport.size.y, 1))
-	var per_dist := 2.0 * tan(deg_to_rad(_repo.bal("map3d_fov_deg")) * 0.5) / h
+	var per_dist := _ctx.px_per_dist() if _ctx != null else 2.0 * tan(deg_to_rad(_repo.bal("map3d_fov_deg")) * 0.5) / h
 	if _lines != null:
 		for mi: MeshInstance3D in _lines.get_children():
 			var mat := mi.mesh.surface_get_material(0) as ShaderMaterial
@@ -1283,13 +1285,17 @@ func _apply_camera() -> void:
 		_repo.bal("map3d_pitch_far_deg"))
 	var ground := Vector3(_target.x, _height_at(_target), _target.y)
 	_camera.transform = Map3DGeometry.pose(ground, _distance, _yaw, pitch)
+	_ctx.target = _target
+	_ctx.distance = _distance
+	_ctx.yaw = _yaw
+	_ctx.camera_moved.emit()
 	if _hud != null:
 		_hud.refresh()
 
 
 func _metres_per_pixel() -> float:
-	return Map3DGeometry.metres_per_pixel(_distance, _repo.bal("map3d_fov_deg"),
-		maxf(size.y, 1.0))
+	return _ctx.metres_per_pixel() if _ctx != null else Map3DGeometry.metres_per_pixel(
+		_distance, _repo.bal("map3d_fov_deg"), maxf(size.y, 1.0))
 
 ## Ground metres under one screen pixel at the target — the HUD's scale bar.
 func metres_per_pixel() -> float:
@@ -1900,11 +1906,7 @@ func ruler() -> MapRuler:
 
 ## The ground under a point of the view (design px), or null for the sky.
 func ground_at(pos: Vector2) -> Variant:
-	if _camera == null:
-		return null
-	var px := pos * _render_scale()
-	return Map3DGeometry.ground_hit(_camera.project_ray_origin(px),
-		_camera.project_ray_normal(px), _height_at)
+	return _ctx.ground_at(pos) if _ctx != null else null
 
 
 ## What a click at `pos` picks: {"kind": "burg", "code"} for a settlement
