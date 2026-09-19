@@ -2,16 +2,21 @@
 
 [ext_resource type="Script" uid="uid://bbxuiv7nornlk" path="res://scripts/map3d/map3d_view.gd" id="1_ck3bs"]
 [ext_resource type="Script" uid="uid://c0fdq5yaeymx8" path="res://scripts/map3d/map3d_camera_rig.gd" id="2_cyo7d"]
+[ext_resource type="Material" uid="uid://bjk4qolalxb8i" path="res://scenes/map3d/materials/water_sea.tres" id="3_au2na"]
 [ext_resource type="Script" uid="uid://blsrnfbpmcqs2" path="res://scripts/map3d/map3d_layer_sea.gd" id="3_tnw3f"]
 [ext_resource type="Script" uid="uid://dotqljdc2fmkp" path="res://scripts/map3d/map3d_layer_rivers.gd" id="4_nchpr"]
+[ext_resource type="Material" uid="uid://blcgi53vfweuv" path="res://scenes/map3d/materials/water_river.tres" id="5_1de1q"]
 [ext_resource type="Script" uid="uid://doh3alf7ojk4r" path="res://scripts/map3d/map3d_layer_lines.gd" id="5_15j32"]
 [ext_resource type="Script" uid="uid://prihlsk25ejt" path="res://scripts/map3d/map3d_layer_clouds.gd" id="6_ceki2"]
 [ext_resource type="Script" uid="uid://be5qi7kf6i0fy" path="res://scripts/map3d/map3d_hud.gd" id="7_3vvdf"]
+[ext_resource type="Material" uid="uid://ckxs4cm6uye8q" path="res://scenes/map3d/materials/bridge_stone.tres" id="7_exbav"]
 [ext_resource type="Script" uid="uid://bdbdtbw8fi2va" path="res://scripts/map3d/map3d_layer_settlements.gd" id="7_wti7n"]
 [ext_resource type="Script" uid="uid://b405afs5pa6ut" path="res://scripts/map3d/map3d_hud_labels.gd" id="8_7g25l"]
 [ext_resource type="Environment" uid="uid://c3ufh1051rmw3" path="res://scenes/map3d/world_environment.tres" id="8_mtfpr"]
+[ext_resource type="Material" uid="uid://bn160h81mvxwr" path="res://scenes/map3d/materials/cloud_deck.tres" id="9_6fmkp"]
 [ext_resource type="Script" uid="uid://bgwpo33vkfjjo" path="res://scripts/map3d/map3d_hud_landmarks.gd" id="9_h26ti"]
 [ext_resource type="Script" uid="uid://di4wc0jkj6o4u" path="res://scripts/map3d/map3d_hud_heat_legend.gd" id="10_kdwdj"]
+[ext_resource type="Material" uid="uid://dfvtylmtrbc4v" path="res://scenes/map3d/materials/cloud_shadow.tres" id="11_esj72"]
 [ext_resource type="Script" uid="uid://d17t5xkpku5bw" path="res://scripts/map3d/map3d_hud_badges.gd" id="11_jhdww"]
 [ext_resource type="Script" uid="uid://bk62itfbf2i7t" path="res://scripts/map3d/map3d_hud_armies.gd" id="12_2v84w"]
 [ext_resource type="Script" uid="uid://deuj4qveun3qh" path="res://scripts/map3d/map3d_hud_backdrop.gd" id="13_hgoyr"]
@@ -51,25 +56,30 @@ near = 50.0
 far = 400000.0
 
 [node name="Sea" type="MeshInstance3D" parent="Viewport" unique_id=888949554]
+material_override = ExtResource("3_au2na")
 cast_shadow = 0
 script = ExtResource("3_tnw3f")
 
 [node name="Rivers" type="MeshInstance3D" parent="Viewport" unique_id=1189924628]
+material_override = ExtResource("5_1de1q")
 cast_shadow = 0
 extra_cull_margin = 16384.0
 script = ExtResource("4_nchpr")
 
 [node name="Bridges" type="MeshInstance3D" parent="Viewport" unique_id=531083100]
+material_override = ExtResource("7_exbav")
 
 [node name="Lines" type="Node3D" parent="Viewport" unique_id=505890697]
 script = ExtResource("5_15j32")
 
 [node name="Clouds" type="MultiMeshInstance3D" parent="Viewport" unique_id=709351108]
+material_override = ExtResource("9_6fmkp")
 cast_shadow = 0
 extra_cull_margin = 16384.0
 script = ExtResource("6_ceki2")
 
 [node name="Shadows" type="MultiMeshInstance3D" parent="Viewport/Clouds" unique_id=325918479]
+material_override = ExtResource("11_esj72")
 cast_shadow = 3
 extra_cull_margin = 16384.0
 

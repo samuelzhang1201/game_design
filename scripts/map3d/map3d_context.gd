@@ -159,21 +159,13 @@ func river_step() -> float:
 	return repo.bal("map3d_river_mesh_step_m") * Map3DQuality.num(q(), "river_step_mul")
 
 
-## The ripple normal map both waters share (was Map3DView.water_normals).
+## The ripple normal map both waters share (was Map3DView.water_normals): the
+## generator is scenes/map3d/materials/water_ripples.tres, its seed data.
 func water_normals() -> Texture2D:
 	if _water_normals == null:
-		var noise := FastNoiseLite.new()
-		noise.seed = int(repo.bal("map3d_water_seed"))
-		noise.frequency = 0.03
-		noise.fractal_octaves = 3
-		_water_normals = NoiseTexture2D.new()
-		_water_normals.width = 256
-		_water_normals.height = 256
-		_water_normals.seamless = true
-		_water_normals.as_normal_map = true
-		_water_normals.bump_strength = 6.0
-		_water_normals.generate_mipmaps = true
-		_water_normals.noise = noise
+		_water_normals = (load("res://scenes/map3d/materials/water_ripples.tres") as NoiseTexture2D) \
+			.duplicate(true) as NoiseTexture2D
+		_water_normals.noise.seed = int(repo.bal("map3d_water_seed"))
 	return _water_normals
 
 

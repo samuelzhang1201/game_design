@@ -1,0 +1,9 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://blcgi53vfweuv"]
+
+[ext_resource type="Shader" uid="uid://ccc54yjn446bt" path="res://scripts/map3d/water_river.gdshader" id="1_ty26j"]
+[ext_resource type="Texture2D" uid="uid://cdpmrc4jauetx" path="res://scenes/map3d/materials/water_ripples.tres" id="2_m8pol"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_ty26j")
+shader_parameter/ripples = ExtResource("2_m8pol")

@@ -1,0 +1,7 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://jm2t67nbvhio"]
+
+[ext_resource type="Shader" uid="uid://d2kn3d1hcq2ba" path="res://scripts/map3d/border_line.gdshader" id="1_1tw38"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_1tw38")

@@ -10,10 +10,14 @@ extends RefCounted
 ## never move, so they are built once, after the rivers — the risk this task
 ## guards (bridges read the river courses).
 
-const ROAD_SHADER := preload("res://scripts/map3d/road_line.gdshader")
-## The road surface and the bridges' stone (Poly Haven, packed by
-## tools/map3d/pack_textures.py into the git-ignored textures folder): a
-## checkout without them draws flat roads and untextured stone.
+## The roads' and the bridges' looks (spec 2026-09-20 §2): shader, render
+## priority and the committed 512 px previews of their textures
+## (tools/map3d/make_previews.gd); every tuned number is bound below.
+const ROAD_MAT := preload("res://scenes/map3d/materials/road_line.tres")
+const BRIDGE_MAT := preload("res://scenes/map3d/materials/bridge_stone.tres")
+## The road surface and the bridges' stone at full resolution (Poly Haven,
+## packed by tools/map3d/pack_textures.py into the git-ignored textures
+## folder): they replace the previews when present (Ruling 15).
 const ROAD_TEXTURE := "res://assets/map3d/textures/rocky_trail_02"
 const BRIDGE_TEXTURE := "res://assets/map3d/textures/medieval_blocks_03"
 
@@ -89,11 +93,11 @@ func bridges() -> Array:
 
 
 ## A packed Poly Haven pair (<base>_alb_ht / <base>_nrm_rgh), or [] when the
-## textures folder has not been built.
+## textures folder has not been built (the material's preview pair stays).
 static func texture_pair(base: String) -> Array:
 	if not ResourceLoader.exists(base + "_alb_ht.png") or not ResourceLoader.exists(base + "_nrm_rgh.png"):
 		Map3DWorldLoader.warn_once("textures:" + base,
-			"Map3DView: %s_alb_ht/_nrm_rgh.png are not packed — drawn flat (tools/map3d/pack_textures.py)" % base)
+			"Map3DView: %s_alb_ht/_nrm_rgh.png are not packed — drawn with the 512 px previews (tools/map3d/pack_textures.py)" % base)
 		return []
 	return [load(base + "_alb_ht.png"), load(base + "_nrm_rgh.png")]
 
@@ -103,8 +107,7 @@ static func road_material(ctx: Map3DContext, line_name: String) -> ShaderMateria
 	var key := "road" if line_name == "Roads" else "trail"
 	var colour := MapTerrain.palette_color(ctx.repo, "map3d_" + key, MapTerrain.FALLBACK)
 	colour.a = ctx.repo.bal("map3d_%s_alpha" % key)
-	var mat := ShaderMaterial.new()
-	mat.shader = ROAD_SHADER
+	var mat := (ROAD_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	mat.render_priority = Map3DPriority.ROADS
 	mat.set_shader_parameter("colour", colour)
 	mat.set_shader_parameter("width_m", ctx.repo.bal("map3d_%s_width_m" % key))
@@ -117,7 +120,6 @@ static func road_material(ctx: Map3DContext, line_name: String) -> ShaderMateria
 	var tint := MapTerrain.palette_color(ctx.repo, "map3d_road_surface", Color.WHITE)
 	mat.set_shader_parameter("surface_tint", Vector3(tint.r, tint.g, tint.b) * gain)
 	var pair := texture_pair(ROAD_TEXTURE)
-	mat.set_shader_parameter("has_surface", not pair.is_empty())
 	if not pair.is_empty():
 		mat.set_shader_parameter("surface", pair[0])
 		mat.set_shader_parameter("surface_nrm", pair[1])
@@ -148,10 +150,11 @@ static func bridge_mesh(ctx: Map3DContext, list: Array) -> ArrayMesh:
 
 ## The bridges' stone: medieval_blocks_03, lit and casting shadows like the ground.
 func bridge_material() -> StandardMaterial3D:
-	var mat := StandardMaterial3D.new()
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# The .tres: double-sided, roughness, the preview textures, anisotropic
+	# filtering. Its fade is set here with its distances: the fade mode alone,
+	# at Godot's default distances, would blank the editor's preview sphere.
+	var mat := (BRIDGE_MAT as StandardMaterial3D).duplicate() as StandardMaterial3D
 	mat.albedo_color = MapTerrain.palette_color(ctx.repo, "map3d_bridge", Color("#8A7F70"))
-	mat.roughness = 0.9
 	# Fade out far away, per pixel (the mesh spans the world, so a
 	# visibility range, measured to its centre, would hide every bridge):
 	# a min distance past the max inverts Godot's distance fade.
@@ -162,9 +165,7 @@ func bridge_material() -> StandardMaterial3D:
 	var pair := texture_pair(BRIDGE_TEXTURE)
 	if not pair.is_empty():
 		mat.albedo_texture = pair[0]
-		mat.normal_enabled = true
 		mat.normal_texture = pair[1]
-		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	return mat
 
 

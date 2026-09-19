@@ -1,0 +1,9 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://bjk4qolalxb8i"]
+
+[ext_resource type="Shader" uid="uid://ennexv4jvng" path="res://scripts/map3d/water_sea.gdshader" id="1_m7va6"]
+[ext_resource type="Texture2D" uid="uid://cdpmrc4jauetx" path="res://scenes/map3d/materials/water_ripples.tres" id="2_q4nlq"]
+
+[resource]
+render_priority = -1
+shader = ExtResource("1_m7va6")
+shader_parameter/ripples = ExtResource("2_q4nlq")

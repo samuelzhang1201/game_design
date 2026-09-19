@@ -8,7 +8,8 @@ extends MeshInstance3D
 ## sea_y — its edge must sit past the far camera's horizon (the old build's
 ## span * 12). has_water() is false until a world is built.
 
-const SEA_SHADER := preload("res://scripts/map3d/water_sea.gdshader")
+## The sea's look (shader, ripples, render priority); every number is bound below.
+const SEA_MAT := preload("res://scenes/map3d/materials/water_sea.tres")
 
 var ctx: Map3DContext
 var _mat: ShaderMaterial
@@ -22,8 +23,7 @@ func build(p_ctx: Map3DContext) -> void:
 		* ctx.repo.bal("map3d_sea_plane_span")
 	mesh = plane
 	position = Vector3(0.0, float(ctx.meta.get("sea_y", 0.0)), 0.0)
-	_mat = ShaderMaterial.new()
-	_mat.shader = SEA_SHADER
+	_mat = (SEA_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	_mat.render_priority = Map3DPriority.SEA
 	var tex_path := ctx.repo.sea_texture_path
 	if tex_path != "" and ResourceLoader.exists(tex_path):

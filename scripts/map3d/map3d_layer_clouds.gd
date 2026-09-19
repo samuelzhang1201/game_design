@@ -13,8 +13,10 @@ extends MultiMeshInstance3D
 ## anywhere pushes the whole material into an alpha-scissor pipeline under GL
 ## Compatibility and silently blanks its blended rendering.
 
-const CLOUD_SHADER := preload("res://scripts/map3d/cloud_deck.gdshader")
-const CLOUD_SHADOW_SHADER := preload("res://scripts/map3d/cloud_shadow.gdshader")
+## The deck's and the twin's looks — two materials over two shader files. Their
+## `shape` is the editor's preview; build() sets the seeded one.
+const CLOUD_MAT := preload("res://scenes/map3d/materials/cloud_deck.tres")
+const CLOUD_SHADOW_MAT := preload("res://scenes/map3d/materials/cloud_shadow.tres")
 
 var ctx: Map3DContext
 var _field: Map3DCloudField
@@ -64,8 +66,7 @@ func build(p_ctx: Map3DContext) -> void:
 
 
 func _cloud_material(shape: Texture2D) -> ShaderMaterial:
-	var mat := ShaderMaterial.new()
-	mat.shader = CLOUD_SHADER
+	var mat := (CLOUD_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	mat.render_priority = Map3DPriority.CLOUDS
 	mat.set_shader_parameter("shape", shape)
 	mat.set_shader_parameter("opacity", ctx.repo.bal("map3d_cloud_alpha"))
@@ -79,8 +80,7 @@ func _cloud_material(shape: Texture2D) -> ShaderMaterial:
 ## and cloud_deck.gdshader's: the two must stay separate files under this
 ## renderer, not one shader gated by a `shadow_pass` uniform).
 func _cloud_shadow_material(shape: Texture2D) -> ShaderMaterial:
-	var mat := ShaderMaterial.new()
-	mat.shader = CLOUD_SHADOW_SHADER
+	var mat := (CLOUD_SHADOW_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	mat.set_shader_parameter("shape", shape)
 	mat.set_shader_parameter("shadow_cut", ctx.repo.bal("map3d_cloud_shadow_cut"))
 	return mat

@@ -6,7 +6,10 @@ extends Node3D
 ## current selection (was Map3DView._place_markers / _ring_material /
 ## _show_selected_ring / _sorted_burgs).
 
-const RING_SHADER := preload("res://scripts/map3d/settlement_ring.gdshader")
+## The tier rings' and the selection ring's looks (one shader); each ring's
+## colour, sizes, fade and render priority are bound per group below.
+const RING_MAT := preload("res://scenes/map3d/materials/settlement_ring.tres")
+const SELECTION_RING_MAT := preload("res://scenes/map3d/materials/selection_ring.tres")
 ## The selection ring never thins by distance (fix round 1, owner 2026-09-18):
 ## whatever the player clicked stays marked regardless of zoom.
 const SELECTED_RING_ALWAYS_M := 1000000.0
@@ -72,7 +75,7 @@ func build() -> void:
 	var sel := QuadMesh.new()
 	sel.size = Vector2.ONE
 	sel.material = _ring_material(MapPalette.named(ctx.repo, "map3d_selection"), 0.0, 0.0,
-		SELECTED_RING_ALWAYS_M, Map3DPriority.RING_BASE + groups.size())
+		SELECTED_RING_ALWAYS_M, Map3DPriority.RING_BASE + groups.size(), 0.0, SELECTION_RING_MAT)
 	var smm := MultiMesh.new()
 	smm.transform_format = MultiMesh.TRANSFORM_3D
 	smm.mesh = sel
@@ -130,9 +133,8 @@ func counts() -> Dictionary:
 ## round 1: a pale ring was nearly invisible on bright grass at the old
 ## 0.55 default).
 func _ring_material(colour: Color, ring_px: float, line_px: float, max_view_m: float,
-		priority: int, dot_px := 0.0) -> ShaderMaterial:
-	var mat := ShaderMaterial.new()
-	mat.shader = RING_SHADER
+		priority: int, dot_px := 0.0, look: ShaderMaterial = RING_MAT) -> ShaderMaterial:
+	var mat := look.duplicate() as ShaderMaterial
 	mat.render_priority = priority
 	mat.set_shader_parameter("colour", colour)
 	mat.set_shader_parameter("max_view_m", max_view_m)

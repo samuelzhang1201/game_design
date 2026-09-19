@@ -6,7 +6,8 @@ extends Node3D
 ## (Map3DBorders.ribbon_arrays) and kept a constant SCREEN width by its shader.
 ## An empty line leaves no node, so line_mesh() is null for it.
 
-const BORDER_SHADER := preload("res://scripts/map3d/border_line.gdshader")
+## The ribbons' look (shader, render priority 0 until a style binds its own).
+const BORDER_MAT := preload("res://scenes/map3d/materials/border_line.tres")
 
 var ctx: Map3DContext
 
@@ -19,8 +20,7 @@ func bind(p_ctx: Map3DContext) -> void:
 func set_lines(line_name: String, lines: Array, style: Map3DLineStyle) -> void:
 	var arrays := Map3DBorders.ribbon_arrays(lines, ctx.height_at, [], style.one_sided,
 		style.colours)
-	var mat := ShaderMaterial.new()
-	mat.shader = BORDER_SHADER
+	var mat := (BORDER_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	mat.render_priority = style.priority
 	mat.set_shader_parameter("colour_a", style.a)
 	mat.set_shader_parameter("colour_b", style.b)

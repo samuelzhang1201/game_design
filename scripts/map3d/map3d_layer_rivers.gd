@@ -9,7 +9,8 @@ extends MeshInstance3D
 ## terrain on a steep stretch (fix round 3) — the carved riverbed's own
 ## ground would show through instead of the water.
 
-const RIVER_SHADER := preload("res://scripts/map3d/water_river.gdshader")
+## The rivers' look (shader, ripples, render priority); every number is bound below.
+const RIVER_MAT := preload("res://scenes/map3d/materials/water_river.tres")
 
 var ctx: Map3DContext
 var _mat: ShaderMaterial
@@ -65,8 +66,7 @@ func build_baked(p_ctx: Map3DContext, baked: ArrayMesh) -> void:
 
 
 func _make_material() -> void:
-	_mat = ShaderMaterial.new()
-	_mat.shader = RIVER_SHADER
+	_mat = (RIVER_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	_mat.render_priority = Map3DPriority.RIVERS
 	# The palette hex goes in RAW, as the sea's does (see Map3DLayerSea.build).
 	_mat.set_shader_parameter("water",

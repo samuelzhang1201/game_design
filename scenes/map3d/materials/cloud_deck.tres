@@ -1,0 +1,9 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://bn160h81mvxwr"]
+
+[ext_resource type="Shader" uid="uid://23kv1gf4qm7b" path="res://scripts/map3d/cloud_deck.gdshader" id="1_5xh7i"]
+[ext_resource type="Texture2D" uid="uid://c5ibnfkpalkw5" path="res://assets/map3d_preview/cloud_shape.png" id="2_ih54x"]
+
+[resource]
+render_priority = 9
+shader = ExtResource("1_5xh7i")
+shader_parameter/shape = ExtResource("2_ih54x")

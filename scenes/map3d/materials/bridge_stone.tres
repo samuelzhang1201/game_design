@@ -1,0 +1,12 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://ckxs4cm6uye8q"]
+
+[ext_resource type="Texture2D" uid="uid://clnjnom60x3wq" path="res://assets/map3d_preview/medieval_blocks_03_alb_ht.png" id="1_j0w5l"]
+[ext_resource type="Texture2D" uid="uid://dw6xj6sn874pv" path="res://assets/map3d_preview/medieval_blocks_03_nrm_rgh.png" id="2_esh67"]
+
+[resource]
+cull_mode = 2
+albedo_texture = ExtResource("1_j0w5l")
+roughness = 0.9
+normal_enabled = true
+normal_texture = ExtResource("2_esh67")
+texture_filter = 5
