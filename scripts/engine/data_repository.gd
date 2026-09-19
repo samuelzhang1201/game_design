@@ -61,6 +61,9 @@ var army_training_grades: Array[Dictionary] = []
 ## data/army_speed.csv: arm -> km a day (int), the arm's own march
 ## (owner 2026-09-19, ArmySystem.base_pace_km).
 var army_speed: Dictionary = {}
+## data/army_height_supply.csv: [{tier, min_height, supply_permille}],
+## highest min_height first (Elevation.tier_of reads the first it reaches).
+var army_height_supply: Array = []
 ## data/settlement_growth.csv rows: how a settlement's drawing grows with its
 ## manor — a tier promoted past min_people, or once a listed building stands
 ## (MapObjects.settlement_look, owner 2026-09-15).
@@ -469,6 +472,12 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/army_speed.csv", ["arm", "km_per_day"],
 			func(r): army_speed[String(r["arm"])] = int(r["km_per_day"])):
 		return false
+	if not _load_if_present(dir + "/army_height_supply.csv", ["tier", "min_height", "supply_permille"],
+			func(r): army_height_supply.append({"tier": String(r["tier"]),
+				"min_height": int(r["min_height"]), "supply_permille": int(r["supply_permille"])})):
+		return false
+	army_height_supply.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a["min_height"]) > int(b["min_height"]))
 	if not _load_if_present(dir + "/settlement_growth.csv", ["from_tier", "to_tier", "min_people", "building"],
 			func(r): settlement_growth.append(r)):
 		return false
@@ -514,6 +523,7 @@ func load_map(id: String) -> bool:
 	ManorEconomy.forget()
 	MapPalette.forget_colors()
 	HouseArms.forget()
+	Elevation.forget()
 	routes.clear()
 	rivers.clear()
 	markers.clear()

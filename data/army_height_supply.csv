@@ -1,0 +1,5 @@
+tier,min_height,supply_permille,notes
+plains,0,1000,"owner 2026-09-19 (spec 2026-09-19-map3d-heights-design §1): a regiment's monthly supply use by the HEIGHT TIER of its cell, per mille. Read highest first; the lines are the ground's own bands (map_biome_hill/mountain/peak_height) so rock and snow sit where the tiers change"
+hills,45,1300,"hills: 30% more to haul up"
+mountains,62,1700,"mountains: pack animals, not carts"
+peak,72,2200,"above the snow line everything is carried"

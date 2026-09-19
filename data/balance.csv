@@ -444,3 +444,5 @@ map3d_bridge_tile_m,10.0,"3D MAP bridges: metres per repeat of the stone texture
 map3d_road_texture_gain,1.1,"3D MAP roads: the road texture's brightness multiplier up close, so the lit stones sit at the palette road's tone"
 map3d_bridge_end_over_water_m,0.5,"3D MAP bridges: a deck end stands at least this far over the drawn water line, even where the carved bank lies lower"
 map3d_bridge_max_view_m,3500.0,"3D MAP bridges: a bridge fades out beyond this camera distance (over its last fifth) — further away it was a grey tick, and the road already runs on across the water"
+elevation_sea_level,20,"height (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §1): the Azgaar cell height of the waterline. Elevation.metres_of_cell and tools/map3d/bake_world.py both read it — one measure for the ground and the engine"
+elevation_m_per_unit,30,"height: metres per Azgaar height unit above the waterline (100 -> 2400 m). Read by Elevation and bake_world.py"

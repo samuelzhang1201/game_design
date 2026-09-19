@@ -36,8 +36,17 @@ SEED = 954159497         # a look, never simulation: the same for every pack
 M_PER_PX = 50.0          # world metres per pack px
 VERTEX_M = 20.0          # Terrain3D vertex_spacing
 REGION = 2048            # Terrain3D region_size (vertices)
-SEA_LEVEL = 20.0         # Azgaar height of the waterline
-LAND_M_PER_UNIT = 30.0   # ~2400 m for the highest cells
+def _balance(key):
+    """A balance.csv value — the engine's Elevation reads the same row."""
+    with open(os.path.join(ROOT, "data", "balance.csv"), newline="") as f:
+        for row in csv.DictReader(f):
+            if row["key"] == key:
+                return float(row["value"])
+    raise KeyError(key)
+
+
+SEA_LEVEL = _balance("elevation_sea_level")        # Azgaar height of the waterline
+LAND_M_PER_UNIT = _balance("elevation_m_per_unit")  # ~2400 m for the highest cells
 SEA_M_PER_UNIT = 15.0    # ~300 m for the deepest sea
 BASE_BLUR_PX = 7         # box radius (pack px, twice) turning cells (~26 px) into landforms
 
