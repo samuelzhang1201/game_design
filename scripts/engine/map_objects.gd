@@ -484,7 +484,7 @@ static func nearest_burg(repo: DataRepository, native: Vector2) -> String:
 	return best
 
 ## Tooltip text: the object's name ("" for land/water, which have no pin).
-static func label_of(repo: DataRepository, obj: Dictionary) -> String:
+static func label_of(repo: DataRepository, obj: Dictionary, state: GameState = null) -> String:
 	match String(obj.get("kind", "")):
 		"burg":
 			return String(repo.burgs.get(obj["code"], {}).get("label", ""))
@@ -499,6 +499,12 @@ static func label_of(repo: DataRepository, obj: Dictionary) -> String:
 				.get(obj["code"], {}).get("label", ""))
 		"manor":
 			return MapManors.label_of(repo, int(obj.get("cell", -1)))
+		"landmark":
+			var id := int(obj.get("cell", -1))
+			var m := Elevation.landmark_at(repo, id)
+			if m.is_empty():
+				return ""
+			return String(m["name"]) + "\n" + "\n".join(landmark_lines(repo, state, id))
 	return ""
 
 ## Card text per kind: {title, lines, ask}. {} means "nothing to show".
@@ -546,6 +552,29 @@ static func _province_by_id(repo: DataRepository, pid: int) -> Dictionary:
 
 static func _label(table: Dictionary, code: String) -> String:
 	return String(table.get(code, {}).get("label", code))
+
+## A landmark's facts, one per line (spec 2026-09-19-map3d-heights §4):
+## height · tier · biome; province — holder; the garrison's supply; the
+## edge over the land round it and what it is worth in a fight.
+static func landmark_lines(repo: DataRepository, state: GameState, cell: int) -> PackedStringArray:
+	var c: Dictionary = repo.cells[cell]
+	var tier := Elevation.tier_of(repo, float(c["height"]))
+	var biome := String((repo.biomes.get(int(c["biome_id"]), {}) as Dictionary).get("label", ""))
+	var province := MapManors.province_of(repo, cell, state)
+	var where := _label(repo.provinces, province) if province != "" else ""
+	var holder := MapManors.owner_of(repo, state, cell)
+	var mult := float(int(tier["supply_permille"])) / 1000.0
+	var edge := Elevation.local_edge_m(repo, cell)
+	var pct := (ArmySystem.height_factor(repo, absi(edge)) - 1000) / 10
+	var out := PackedStringArray()
+	out.append("%d m · %s · %s" % [Elevation.metres_of_cell(repo, cell), String(tier["tier"]).capitalize(), biome])
+	out.append("%s — %s" % [where, holder] if holder != "" else where)
+	out.append("Garrison: supplies ×%.1f (%s)" % [mult, String(tier["tier"])])
+	if edge >= 0:
+		out.append("%d m above the land around — +%d%% in a fight against it" % [edge, pct])
+	else:
+		out.append("%d m below the land around — −%d%% fighting up out of it" % [-edge, pct])
+	return out
 
 ## Native px -> "N unit" via map_info.csv (falls back to px when absent).
 static func format_distance(repo: DataRepository, native_px: float) -> String:
