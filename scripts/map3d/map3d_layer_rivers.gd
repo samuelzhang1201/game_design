@@ -28,6 +28,8 @@ func build(p_ctx: Map3DContext, scene_path: String) -> void:
 	ctx = p_ctx
 	var path := scene_path.get_base_dir().path_join("rivers.json")
 	if not FileAccess.file_exists(path):
+		Map3DWorldLoader.warn_once("rivers:" + path,
+			"Map3DView: %s is missing — the 3D map draws no rivers (rebuild: tools/map3d/build_pack.sh)" % path)
 		return
 	var courses := Map3DRivers.parse(FileAccess.get_file_as_string(path),
 		ctx.repo.bal("map3d_river_split_rise_m"))

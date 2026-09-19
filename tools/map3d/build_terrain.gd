@@ -68,9 +68,10 @@ static func map() -> String:
 	return map_id if map_id != "" else DataRepository.default_pack_id()
 
 
-## Where the built scene, its assets and region data go.
+## Where the built scene, its assets and region data go: the pack's
+## maps.csv map3d_dir, default res://assets/map3d/<map>.
 static func root() -> String:
-	return "res://assets/map3d/%s" % map()
+	return DataRepository.map3d_dir_of(map())
 
 
 static func bake() -> String:

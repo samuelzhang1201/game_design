@@ -10,7 +10,8 @@ extends SceneTree
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . \
 ##     -s tools/map3d/export_manor_land.gd [-- --map ID]
 ##
-## writes assets/map3d/<map>/bake/manor_land.csv: cell_id,focus
+## writes <map3d_dir>/bake/manor_land.csv (maps.csv map3d_dir, default
+## assets/map3d/<map>): cell_id,focus
 
 
 func _init() -> void:
@@ -28,7 +29,7 @@ func _init() -> void:
 		push_error("export_manor_land: no pack " + map)
 		quit(1)
 		return
-	var dir := ProjectSettings.globalize_path("res://assets/map3d/%s/bake" % map)
+	var dir := ProjectSettings.globalize_path(DataRepository.map3d_dir_of(map).path_join("bake"))
 	DirAccess.make_dir_recursive_absolute(dir)
 	var f := FileAccess.open(dir + "/manor_land.csv", FileAccess.WRITE)
 	f.store_line("cell_id,focus")

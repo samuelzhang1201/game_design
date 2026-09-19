@@ -71,6 +71,8 @@ func bridges() -> Array:
 ## textures folder has not been built.
 static func texture_pair(base: String) -> Array:
 	if not ResourceLoader.exists(base + "_alb_ht.png") or not ResourceLoader.exists(base + "_nrm_rgh.png"):
+		Map3DWorldLoader.warn_once("textures:" + base,
+			"Map3DView: %s_alb_ht/_nrm_rgh.png are not packed — drawn flat (tools/map3d/pack_textures.py)" % base)
 		return []
 	return [load(base + "_alb_ht.png"), load(base + "_nrm_rgh.png")]
 

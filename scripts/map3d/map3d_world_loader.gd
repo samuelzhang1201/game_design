@@ -6,12 +6,113 @@ extends RefCounted
 ## (and to tools/map3d/shoot.gd). A build made before 2026-09-20 still carries
 ## its own Sun, Environment, Sea and cameras: they are removed on load, so a
 ## world never holds two suns or two skies.
+##
+## Since Task 15 a build also writes `manifest.json` beside world.tscn (its
+## format version, meta, build time and the bake tables' fingerprint), and
+## `status` says honestly why there is no 3D map — missing, stale (built by an
+## older pipeline, or the manifest describes another world), bad (damaged) —
+## with `notice_text` naming the command that fixes it. A build with no
+## manifest (before 2026-09-20, and every test fixture) is `legacy` and loads.
 
 ## The build's format: 2 is data only (build_terrain.gd writes it into the
 ## `map3d_world` meta); an older build has none and is stripped on load.
 const FORMAT_VERSION := 2
 ## What a build before format 2 put beside the terrain.
 const OLD_BUILD_NODES := ["Sun", "Environment", "Sea", "Camera3D", "CameraMid", "CameraNear"]
+## What the view says for each state it cannot load, `%s` the map id.
+const NOTICES := {
+	"missing": "The 3D map has not been built for this map.\nRun tools/map3d/build_pack.sh --map %s (see tools/map3d/README.md).",
+	"stale": "This 3D map was built by an older pipeline.\nRebuild it: tools/map3d/build_pack.sh --map %s",
+	"bad": "This 3D map's build is damaged.\nRebuild it: tools/map3d/build_pack.sh --map %s",
+}
+## The warnings already given, so a missing optional input is said once.
+static var _warned: Dictionary = {}
+
+
+## Whether the build at `scene_path` can be opened: `{state, why, manifest}`,
+## state "ok" | "legacy" (no manifest; loads) | "missing" | "stale" | "bad".
+static func status(scene_path: String) -> Dictionary:
+	if not ResourceLoader.exists(scene_path):
+		return {"state": "missing", "why": scene_path + " is not built", "manifest": {}}
+	var mpath := scene_path.get_base_dir().path_join("manifest.json")
+	if not FileAccess.file_exists(mpath):
+		warn_once("legacy:" + scene_path,
+			"Map3DWorldLoader: %s has no manifest.json (a build from before 2026-09-20)" % scene_path)
+		return {"state": "legacy", "why": "", "manifest": {}}
+	var json := JSON.new()  # parse() reports through its return, parse_string() prints an error
+	if json.parse(FileAccess.get_file_as_string(mpath)) != OK or not (json.data is Dictionary):
+		return {"state": "bad", "why": "manifest.json is not a JSON object", "manifest": {}}
+	var m: Dictionary = json.data
+	var v := int(m.get("format_version", 0))
+	if v != FORMAT_VERSION:
+		return {"state": "stale", "why": "built by pipeline v%d; the game reads v%d" % [v, FORMAT_VERSION],
+			"manifest": m}
+	var sm := scene_meta(scene_path)
+	if sm.is_empty():
+		return {"state": "bad", "why": "the scene's root carries no map3d_world", "manifest": m}
+	var mm: Variant = m.get("meta", {})
+	if not (mm is Dictionary) or not same_meta(mm, sm):
+		return {"state": "stale", "why": "manifest.json describes another world than the scene",
+			"manifest": m}
+	if String(m.get("steps_hash", "")) != steps_hash():
+		warn_once("steps:" + scene_path,
+			"Map3DWorldLoader: the bake tables changed since %s was built — rebuild to see them" % scene_path)
+	return {"state": "ok", "why": "", "manifest": m}
+
+
+## The root's map3d_world meta, read from the packed scene without instancing
+## it (the load is cached; instance() reuses it).
+static func scene_meta(scene_path: String) -> Dictionary:
+	var ps := load(scene_path) as PackedScene
+	if ps == null:
+		return {}
+	var st := ps.get_state()
+	if st.get_node_count() == 0:
+		return {}
+	for i in st.get_node_property_count(0):
+		if st.get_node_property_name(0, i) == &"metadata/map3d_world":
+			var value: Variant = st.get_node_property_value(0, i)
+			return value if value is Dictionary else {}
+	return {}
+
+
+## The notice for a state the view cannot load (an unknown state reads "bad").
+static func notice_text(state: String, map_id: String) -> String:
+	return String(NOTICES.get(state, NOTICES["bad"])) % map_id
+
+
+## The bake inputs' fingerprint: data/map3d_bake.csv and data/map3d_fields.csv.
+static func steps_hash() -> String:
+	return (FileAccess.get_md5("res://data/map3d_bake.csv")
+		+ FileAccess.get_md5("res://data/map3d_fields.csv")).md5_text()
+
+
+## Two map3d_world metas describe the same world (JSON turns 2560 into 2560.0).
+static func same_meta(a: Dictionary, b: Dictionary) -> bool:
+	for key: String in ["m_per_px", "sea_y"]:
+		if not is_equal_approx(float(a.get(key, 0.0)), float(b.get(key, 0.0))):
+			return false
+	for key: String in ["pack_origin", "pack_px"]:
+		var x: Variant = a.get(key, [])
+		var y: Variant = b.get(key, [])
+		if not (x is Array and y is Array) or (x as Array).size() != (y as Array).size():
+			return false
+		for i in (x as Array).size():
+			if not is_equal_approx(float(x[i]), float(y[i])):
+				return false
+	return true
+
+
+## push_warning once per `key` (until clear_warnings).
+static func warn_once(key: String, message: String) -> void:
+	if _warned.has(key):
+		return
+	_warned[key] = true
+	push_warning(message)
+
+
+static func clear_warnings() -> void:
+	_warned.clear()
 
 
 ## The world at `scene_path`, stripped and with its own terrain material, or

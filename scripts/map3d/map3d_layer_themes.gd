@@ -73,7 +73,10 @@ func prepare(scene_path: String) -> void:
 	# the bake's field map (owner 2026-09-19): furrows up close, the crops'
 	# colour eased back far out; without it both stay off
 	var fields := load_field_map(scene_path)
-	if fields != null:
+	if fields == null:
+		Map3DWorldLoader.warn_once("fields:" + scene_path,
+			"Map3DView: no bake/fields.png beside %s — no furrows (rebuild: tools/map3d/build_pack.sh)" % scene_path)
+	else:
 		mat.call("set_shader_param", "field_map", fields)
 		mat.call("set_shader_param", "field_m_per_texel", FIELD_MAP_M_PER_TEXEL)
 		mat.call("set_shader_param", "furrow_m", repo.bal("map3d_furrow_m"))

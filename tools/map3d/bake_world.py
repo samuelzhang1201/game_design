@@ -1,7 +1,7 @@
 """Bake a map pack into Terrain3D import maps at campaign scale
 (owner 2026-09-18: 50 m per pack px, a 128 x 46 km world, vertex every 20 m).
 
-Writes assets/map3d/<map>/bake/:
+Writes <map3d_dir>/bake/ (data/maps.csv map3d_dir, default assets/map3d/<map>):
   height.r32    float32 metres, row-major, padded onto whole regions
   control.r32   float32 carrying Terrain3D control bits (base/overlay/blend)
   color.rgba8   Terrain3D colour map: sRGB multiplier on the ground + roughness
@@ -27,7 +27,7 @@ from PIL import Image, ImageDraw
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
-from packs import default_pack  # noqa: E402
+from packs import default_pack, map3d_dir  # noqa: E402
 
 TEX = os.path.join(ROOT, "assets", "map3d", "textures")
 RULES_PATH = os.path.join(ROOT, "data", "map3d_bake.csv")
@@ -680,7 +680,7 @@ def main(argv=None):
     MAP = ap.parse_args(argv).map or default_pack()
     PACK = os.path.join(ROOT, "assets", "maps", MAP)
     CELLS = os.path.join(ROOT, "data", "maps", MAP, "geography", "cells.csv")
-    OUT = os.path.join(ROOT, "assets", "map3d", MAP, "bake")
+    OUT = os.path.join(map3d_dir(MAP), "bake")
     rules = load_rules()
     SEA_Y = rules["sea_y_m"]
     os.makedirs(OUT, exist_ok=True)

@@ -23,8 +23,9 @@ committed files byte for byte (checked 2026-09-18).
 6. `G -s tools/bake_relief.gd -- --map <id>` — the relief AND the biome
    weights at their own resolutions. `bake_biome_weights.gd` alone writes the
    weights at a different scale; run `bake_relief.gd` last.
-7. 3D: `python3 tools/map3d/bake_world.py --map <id>`, then
-   `G -s tools/map3d/build_world.gd -- --map <id>` (tools/map3d/README.md).
+7. 3D map: `tools/map3d/build_pack.sh --map <id>` — manor land, bake,
+   scene and `manifest.json` in one command, into the pack's `maps.csv`
+   `map3d_dir` (empty: `assets/map3d/<id>`; tools/map3d/README.md).
 
 ## 2. Bindings — the owner's decisions (`data/maps/<id>/`)
 

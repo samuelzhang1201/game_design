@@ -275,6 +275,22 @@ static func default_pack_id(maps_csv: String = "res://data/maps.csv") -> String:
 			return String(row["map_id"])
 	return first
 
+## Where pack `id`'s 3D build lives ("" = the loaded map): its maps.csv
+## `map3d_dir`, else res://assets/map3d/<id> (spec 2026-09-20 §3).
+func map3d_dir(id: String = "") -> String:
+	var key := id if id != "" else map_id
+	var row: Dictionary = maps.get(key, {})
+	var d := String(row.get("map3d_dir", ""))
+	return d if d != "" else "res://assets/map3d/%s" % key
+
+## map3d_dir straight from data/maps.csv, for tools that run before any
+## repository loads.
+static func map3d_dir_of(map_id: String, maps_csv: String = "res://data/maps.csv") -> String:
+	for row: Dictionary in parse_csv(maps_csv, ["map_id"]):
+		if String(row["map_id"]) == map_id and String(row.get("map3d_dir", "")) != "":
+			return String(row["map3d_dir"])
+	return "res://assets/map3d/%s" % map_id
+
 static func parse_csv(path: String, required_cols: Array) -> Array[Dictionary]:
 	last_error = ""
 	var out: Array[Dictionary] = []

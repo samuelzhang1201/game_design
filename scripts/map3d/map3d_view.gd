@@ -90,7 +90,12 @@ var ruler_on := false:
 			_hud.refresh()
 var _ruler := MapRuler.new()
 
-static func scene_path_for(map_id: String) -> String: return SCENE_PATTERN % map_id
+## Where `map_id`'s built world lives: its maps.csv `map3d_dir` (default
+## res://assets/map3d/<id>), or SCENE_PATTERN when no repository is loaded.
+static func scene_path_for(map_id: String) -> String:
+	if Game.data != null and Game.data.maps.has(map_id):
+		return Game.data.map3d_dir(map_id).path_join("world.tscn")
+	return SCENE_PATTERN % map_id
 
 ## Whether `map_id`'s 3D world has been built (tools/map3d; git-ignored).
 static func has_scene(map_id: String) -> bool: return ResourceLoader.exists(scene_path_for(map_id))
@@ -186,9 +191,16 @@ func deactivate() -> void:
 	set_process(false)
 
 ## Put the built world under WorldSlot and bind the authored layers to it.
+## A build it cannot open leaves the notice saying why and what to run.
 func _load() -> void:
+	var st := Map3DWorldLoader.status(_scene_path)
+	var state := String(st["state"])
+	_notice.text = Map3DWorldLoader.notice_text(state, _repo.map_id)
+	if state != "ok" and state != "legacy":
+		return
 	_world = Map3DWorldLoader.instance(_scene_path)
 	if _world == null:
+		_notice.text = Map3DWorldLoader.notice_text("bad", _repo.map_id)
 		return
 	_meta = _world.get_meta("map3d_world")
 	_ctx = Map3DContext.new(_repo, _meta, _world)

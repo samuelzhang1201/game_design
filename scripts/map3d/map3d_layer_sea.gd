@@ -28,6 +28,9 @@ func build(p_ctx: Map3DContext) -> void:
 	var tex_path := ctx.repo.sea_texture_path
 	if tex_path != "" and ResourceLoader.exists(tex_path):
 		_mat.set_shader_parameter("sea_distance", load(tex_path))
+	else:
+		Map3DWorldLoader.warn_once("sea:" + tex_path,
+			"Map3DView: the pack's sea_texture (%s) is missing — the sea has no bands" % tex_path)
 	var o: Array = ctx.meta["pack_origin"]
 	_mat.set_shader_parameter("pack_origin", Vector2(float(o[0]), float(o[1])))
 	_mat.set_shader_parameter("pack_px", Vector2(float(p[0]), float(p[1])))

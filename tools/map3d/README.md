@@ -19,8 +19,12 @@ Compatibility (see the traps below).
 | `assets/map3d/sources/ambientcg/` | ambientCG Rock023 cliff (CC0), `asset_licenses.txt` | no — local download |
 | `assets/map3d/textures/` | packed Terrain3D texture pairs (`*_alb_ht`, `*_nrm_rgh`, 2048 px) | no — `pack_textures.py` |
 | `assets/map3d/trees/` | tree impostor cards + `trees.json` | no — `render_impostors.py` |
-| `assets/map3d/<map>/bake/` | `height.r32`, `control.r32`, `color.rgba8`, `world.json`, previews | no — `bake_world.py` |
-| `assets/map3d/<map>/world.tscn`, `terrain_assets.tres`, `terrain/` | the Terrain3D scene (root metadata `map3d_world`: scale, origin, canvas, sea level), its assets and region data | no — `build_world.gd` |
+| `assets/map3d/<map>/bake/` | `height.r32`, `control.r32`, `color.rgba8`, `world.json`, `manor_land.csv`, `fields.png`, previews | no — `export_manor_land.gd`, `bake_world.py` |
+| `assets/map3d/<map>/world.tscn`, `terrain_assets.tres`, `terrain/`, `rivers.json` | the Terrain3D scene (root metadata `map3d_world`: scale, origin, canvas, sea level, format version), its assets, region data and river courses — DATA only: sun, sky and sea are `scenes/map3d/world_map_3d.tscn`'s | no — `bake_world.py`, `build_world.gd` |
+| `assets/map3d/<map>/manifest.json` | what built it (below) | no — `build_world.gd` |
+
+`assets/map3d/<map>/` is the default; a pack can keep its build elsewhere
+(`map3d_dir`, below).
 
 Runtime game code is `scripts/map3d/` — `Map3DGeometry` (pure: pack px ↔
 metres, the camera rig's pose, zoom, tilt, pan, ray to ground),
@@ -32,6 +36,13 @@ from live data by `data/map3d_settlements.csv`) — with tests in
 values are `balance.csv` `map3d_*`.
 
 ## Rebuilding from a clean checkout
+
+**One pack, one command:** `tools/map3d/build_pack.sh [--map ID]` (default:
+`data/maps.csv`'s `is_default` pack) runs steps 3–5 below in order —
+`export_manor_land.gd`, `bake_world.py`, `build_world.gd` — with
+`GDAI_MCP_SERVER_PORT=3999` set, stops at the first failure, and ends with
+`manifest.json` written. Steps 1–2 (sources and the packed textures) are
+shared by every pack and built once. The steps one by one:
 
 1. **Sources** — download the Poly Haven sets named in `pack_textures.py`
    into `assets/map3d/sources/polyhaven/` and Rock023 into
@@ -85,6 +96,39 @@ values are `balance.csv` `map3d_*`.
    3 over it).
 7. Trees (optional, owner: no trees) — `render_impostors.py` in Blender, then
    `plant_trees.gd`.
+
+## The manifest
+
+`build_world.gd` writes `manifest.json` beside `world.tscn` once the scene
+has saved: `format_version` (`Map3DWorldLoader.FORMAT_VERSION`, 2 = data
+only), `meta` (the root's `map3d_world`), `built_at` (UTC) and `steps_hash`
+(`Map3DWorldLoader.steps_hash()`, the md5 of `data/map3d_bake.csv` +
+`data/map3d_fields.csv`). `Map3DWorldLoader.status(scene_path)` reads it
+before the view loads anything, and the view's notice says honestly why
+there is no 3D map and what to run:
+
+| state | when | the view |
+|---|---|---|
+| `ok` | the manifest's version is the game's and its meta matches the scene's root | loads (a changed `steps_hash` only warns once: rebuild to see the new tables) |
+| `legacy` | no `manifest.json` (a build before 2026-09-20; every test fixture) | loads, warns once |
+| `missing` | no `world.tscn` | "has not been built" + `build_pack.sh --map ID` |
+| `stale` | another `format_version`, or a manifest meta that is not the scene's | "built by an older pipeline" + rebuild |
+| `bad` | a manifest that is not a JSON object, a scene root without `map3d_world`, or a scene that will not instance | "damaged" + rebuild |
+
+The optional inputs — `rivers.json`, `bake/fields.png`, the packed road and
+bridge textures, the pack's `sea_texture` — each warn ONCE when missing
+(`Map3DWorldLoader.warn_once`) and the map draws without them.
+
+## `map3d_dir`
+
+`data/maps.csv`'s `map3d_dir` column says where a pack's 3D build lives (a
+`res://` path; empty means `res://assets/map3d/<id>`). The game reads it
+through `DataRepository.map3d_dir(id)` (`Map3DView.scene_path_for`), the
+GDScript tools through the static `DataRepository.map3d_dir_of(id)`
+(`build_terrain.gd` `root()`, `export_manor_land.gd`, `shoot.gd`) and the
+Python tools through `tools/packs.py` `map3d_dir(id)` (`bake_world.py`'s
+`bake/`). The shared `assets/map3d/textures/`, `sources/` and `trees/` do not
+move with it.
 
 ## Known traps (macOS, GL Compatibility)
 
