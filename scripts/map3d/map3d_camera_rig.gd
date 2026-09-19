@@ -1,0 +1,103 @@
+class_name Map3DCameraRig
+extends Node3D
+## The 3D map's camera (spec 2026-09-20 §1): a target on the ground, a
+## distance, a yaw, and a tilt that follows the distance (Map3DGeometry). The
+## pose lives in the context — every layer reads it there — and each move
+## ends in ctx.camera_moved. A press on the compass eases the view back to
+## north over map3d_compass_reset_s.
+
+var ctx: Map3DContext
+var _camera: Camera3D
+var _north_t := -1.0
+var _north_from := 0.0
+
+
+func _ready() -> void:
+	_ensure_camera()
+
+
+## The rig's own camera, made once (on _ready, or on bind if the rig is not
+## yet in a tree).
+func _ensure_camera() -> void:
+	if _camera != null:
+		return
+	_camera = get_node_or_null("RigCamera") as Camera3D
+	if _camera == null:
+		_camera = Camera3D.new()
+		_camera.name = "RigCamera"
+		add_child(_camera)
+
+
+func bind(p_ctx: Map3DContext) -> void:
+	_ensure_camera()
+	ctx = p_ctx
+	_camera.fov = ctx.repo.bal("map3d_fov_deg")
+	_camera.near = ctx.repo.bal("map3d_near_m")
+	_camera.far = ctx.repo.bal("map3d_far_m")
+	_camera.make_current()
+	ctx.camera = _camera
+
+
+func camera() -> Camera3D:
+	return _camera
+
+
+## Put the rig at a world XZ (clamped to the world), a distance and a yaw.
+func place(target_xz: Vector2, distance_m: float, yaw_deg: float) -> void:
+	ctx.target = Map3DGeometry.clamp_target(target_xz, ctx.bounds)
+	ctx.distance = distance_m
+	ctx.yaw = yaw_deg
+	apply()
+
+
+## The camera at the context's pose (was Map3DView._apply_camera).
+func apply() -> void:
+	var r := ctx.repo
+	var pitch := Map3DGeometry.pitch_for(ctx.distance, r.bal("map3d_zoom_min_m"),
+		r.bal("map3d_zoom_max_m"), r.bal("map3d_pitch_near_deg"), r.bal("map3d_pitch_far_deg"))
+	var ground := Vector3(ctx.target.x, ctx.height_at(ctx.target), ctx.target.y)
+	_camera.transform = Map3DGeometry.pose(ground, ctx.distance, ctx.yaw, pitch)
+	ctx.camera_moved.emit()
+
+
+func pan_by(screen_delta: Vector2) -> void:
+	ctx.target = Map3DGeometry.clamp_target(
+		ctx.target + Map3DGeometry.pan_delta(screen_delta, ctx.metres_per_pixel(), ctx.yaw), ctx.bounds)
+	apply()
+
+
+## Zoom to `new_distance` (clamped) keeping the ground under `pos` under it.
+func zoom_at(pos: Vector2, new_distance: float) -> void:
+	var anchor: Variant = ctx.ground_at(pos)
+	var d := Map3DGeometry.zoomed_by(new_distance, 1.0, ctx.repo.bal("map3d_zoom_min_m"),
+		ctx.repo.bal("map3d_zoom_max_m"))
+	if anchor != null:
+		var a := anchor as Vector3
+		ctx.target = Map3DGeometry.clamp_target(
+			Map3DGeometry.zoom_about(ctx.target, Vector2(a.x, a.z), ctx.distance, d), ctx.bounds)
+	ctx.distance = d
+	apply()
+
+
+## A right-drag turn of `dx_px` screen px; it cancels a north ease.
+func turn_by(dx_px: float) -> void:
+	_north_t = -1.0
+	ctx.yaw -= dx_px * ctx.repo.bal("map3d_rotate_deg_per_px")
+	apply()
+
+
+func start_north() -> void:
+	_north_from = ctx.yaw
+	_north_t = 0.0
+
+
+## The compass's ease back to north, a frame at a time.
+func step(delta: float) -> void:
+	if _north_t < 0.0:
+		return
+	_north_t += delta / maxf(ctx.repo.bal("map3d_compass_reset_s"), 0.01)
+	ctx.yaw = Map3DGeometry.ease_yaw(_north_from, _north_t)
+	if _north_t >= 1.0:
+		_north_t = -1.0
+		ctx.yaw = 0.0
+	apply()

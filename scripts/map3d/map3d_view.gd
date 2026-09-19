@@ -81,7 +81,7 @@ const PRIORITY_CLOUDS := Map3DPriority.CLOUDS
 const PRIORITY_RING_BASE := Map3DPriority.RING_BASE
 ## A press and release further apart than this is a drag, not a click
 ## (WorldMapView.CLICK_SLOP).
-const CLICK_SLOP := 10.0
+const CLICK_SLOP := Map3DInput.CLICK_SLOP
 ## Where the name sits off the cursor (WorldMapView.TOOLTIP_OFFSET).
 const TOOLTIP_OFFSET := Vector2(20.0, 24.0)
 ## Metres per texel of the bake's field map (Map3DLayerThemes).
@@ -105,15 +105,11 @@ var _borders := Map3DLayerBorders.new()
 ## _ready, so a theme handed down before the first load is held.
 var _themes := Map3DLayerThemes.new()
 var _meta: Dictionary = {}
-var _bounds := Rect2()
-var _target := Vector2.ZERO
-var _distance := 1.0
-var _yaw := 0.0
+var _rig: Map3DCameraRig
+var _input := Map3DInput.new()
 var _loaded := false
 var _tried := false
 var _hovered := false
-var _press_pos := Vector2.ZERO
-var _dragging := false
 var _province_image: Image
 var _cell_image: Image
 var _selected_province := ""
@@ -142,9 +138,6 @@ var _drawn_armies := 0
 ## landmark_marks' cut and the pose it was cut for (see there).
 var _landmark_cache: Array = []
 var _landmark_key: Array = []
-var _north_t := -1.0
-var _north_from := 0.0
-var _press_on_hud := false
 ## The MEASUREMENT tab (owner 2026-09-18): while on, a left click drops or
 ## fixes the ruler (world XZ metres) instead of picking, and a right CLICK —
 ## not the right-drag that turns the view — puts it away. The HUD draws it.
@@ -157,10 +150,6 @@ var ruler_on := false:
 		if _hud != null:
 			_hud.refresh()
 var _ruler := MapRuler.new()
-var _rpress_pos := Vector2.ZERO
-## Whether the right button has turned the view since it went down: a turn
-## that comes back to its start is still not a click.
-var _rdragged := false
 var _clouds: Map3DLayerClouds
 
 
@@ -320,8 +309,8 @@ func _load() -> void:
 			_world = null
 		return
 	_meta = _world.get_meta("map3d_world")
-	_bounds = Map3DGeometry.world_bounds(_meta)
 	_ctx = Map3DContext.new(_repo, _meta, _world)
+	_ctx.camera_moved.connect(refresh_hud)
 	_ctx.viewport = _viewport
 	_ctx.view_size = size
 	_ctx.state_fn = func() -> GameState: return Game.state
@@ -340,14 +329,12 @@ func _load() -> void:
 	for child in _world.get_children():
 		if child is Camera3D:
 			(child as Camera3D).current = false
-	_camera = Camera3D.new()
-	_camera.name = "RigCamera"
-	_camera.fov = _repo.bal("map3d_fov_deg")
-	_camera.near = _repo.bal("map3d_near_m")
-	_camera.far = _repo.bal("map3d_far_m")
-	_viewport.add_child(_camera)
-	_camera.make_current()
-	_ctx.camera = _camera
+	_rig = Map3DCameraRig.new()
+	_rig.name = "CameraRig"
+	_viewport.add_child(_rig)
+	_rig.bind(_ctx)
+	_camera = _rig.camera()
+	_input.bind(self, _rig, _repo)
 	_markers = Map3DLayerSettlements.new()
 	_markers.name = "Markers"
 	_viewport.add_child(_markers)
@@ -378,11 +365,8 @@ func _load() -> void:
 	_borders.bind(_ctx, _lines)
 	_themes.bind(_ctx, _lines)
 	_themes.prepare(_scene_path)
-	_target = Map3DGeometry.clamp_target(_home(), _bounds)
-	_distance = _repo.bal("map3d_zoom_start_m")
-	_yaw = 0.0
 	_loaded = true
-	_apply_camera()
+	_rig.place(_home(), _repo.bal("map3d_zoom_start_m"), 0.0)
 	_update_line_scale()
 	_hud = Map3DHud.new()
 	_hud.view = self
@@ -405,7 +389,7 @@ func _home() -> Vector2:
 	var realm: Dictionary = _repo.kingdoms.get(_repo.resolve_realm("player_realm"), {})
 	var burg: Dictionary = _repo.burgs.get(String(realm.get("capital_burg", "")), {})
 	if burg.is_empty():
-		return _bounds.get_center()
+		return _ctx.bounds.get_center()
 	return _burg_xz(burg)
 
 
@@ -578,150 +562,43 @@ func _draw_selection() -> void:
 
 # --- camera and input ----------------------------------------------------------
 
-func _apply_camera() -> void:
-	# _camera is only ever made after _ctx (see _load), so this one guard
-	# covers both — kept explicit so a reordering there cannot dereference a
-	# null _ctx below.
-	if _camera == null or _ctx == null:
-		return
-	var pitch := Map3DGeometry.pitch_for(_distance, _repo.bal("map3d_zoom_min_m"),
-		_repo.bal("map3d_zoom_max_m"), _repo.bal("map3d_pitch_near_deg"),
-		_repo.bal("map3d_pitch_far_deg"))
-	var ground := Vector3(_target.x, _height_at(_target), _target.y)
-	_camera.transform = Map3DGeometry.pose(ground, _distance, _yaw, pitch)
-	_ctx.target = _target
-	_ctx.distance = _distance
-	_ctx.yaw = _yaw
-	_ctx.camera_moved.emit()
-	if _hud != null:
-		_hud.refresh()
-
-
+## Ground metres under one screen pixel at the target (Map3DContext).
 func _metres_per_pixel() -> float:
 	return _ctx.metres_per_pixel() if _ctx != null else Map3DGeometry.metres_per_pixel(
-		_distance, _repo.bal("map3d_fov_deg"), maxf(size.y, 1.0))
+		1.0, _repo.bal("map3d_fov_deg"), maxf(size.y, 1.0))
 
 ## Ground metres under one screen pixel at the target — the HUD's scale bar.
 func metres_per_pixel() -> float:
 	return _metres_per_pixel()
 
 
+## Map3DCameraRig.pan_by.
 func _pan_by(screen_delta: Vector2) -> void:
-	_target = Map3DGeometry.clamp_target(
-		_target + Map3DGeometry.pan_delta(screen_delta, _metres_per_pixel(), _yaw), _bounds)
-	_apply_camera()
+	if _rig != null:
+		_rig.pan_by(screen_delta)
 
 
-## Zoom to `new_distance` (clamped) keeping the ground under `pos` under it.
+## Zoom to `new_distance` (clamped) keeping the ground under `pos` under it
+## (Map3DCameraRig.zoom_at).
 func _zoom_at(pos: Vector2, new_distance: float) -> void:
-	var anchor: Variant = ground_at(pos)
-	var d := Map3DGeometry.zoomed_by(new_distance, 1.0, _repo.bal("map3d_zoom_min_m"),
-		_repo.bal("map3d_zoom_max_m"))
-	if anchor != null:
-		var a := anchor as Vector3
-		_target = Map3DGeometry.clamp_target(
-			Map3DGeometry.zoom_about(_target, Vector2(a.x, a.z), _distance, d), _bounds)
-	_distance = d
-	_apply_camera()
+	if _rig != null:
+		_rig.zoom_at(pos, new_distance)
 
 
+## Map3DInput.handle says which events the view takes.
 func _gui_input(event: InputEvent) -> void:
 	if not _loaded:
 		return
-	# macOS trackpad (as on the 2D map): pinch zooms about the fingers,
-	# two-finger drag pans. The wheel still works exactly as before.
-	if event is InputEventMagnifyGesture:
-		var mg := event as InputEventMagnifyGesture
-		var gain := _repo.bal("map3d_pinch_zoom_gain")
-		_zoom_at(mg.position, _distance / maxf(1.0 + (mg.factor - 1.0) * gain, 0.01))
-		accept_event()
-		return
-	if event is InputEventPanGesture:
-		_pan_by(-(event as InputEventPanGesture).delta * _repo.bal("map3d_pan_gesture_px"))
-		accept_event()
-		return
-	var mb := event as InputEventMouseButton
-	if mb != null:
-		if mb.pressed and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
-			var steps := -1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1
-			_zoom_at(mb.position, _distance * pow(_repo.bal("map3d_zoom_factor"), steps))
-			accept_event()
-		elif mb.button_index == MOUSE_BUTTON_LEFT:
-			if mb.pressed and _hud != null and _hud.compass_rect().has_point(mb.position):
-				_north_from = _yaw
-				_north_t = 0.0
-				_press_on_hud = true
-				# Kept in step with the ordinary press below: a stale
-				# _press_pos/_dragging from an earlier drag would let a
-				# press-and-move on the compass pan from that old point.
-				_press_pos = mb.position
-				_dragging = false
-				accept_event()
-				return
-			if not mb.pressed and _press_on_hud:
-				_press_on_hud = false
-				accept_event()
-				return
-			if mb.pressed:
-				_press_pos = mb.position
-				_dragging = false
-			elif not _dragging:
-				if ruler_on:
-					_ruler_click(mb.position)
-				else:
-					select_at(mb.position)
-			accept_event()
-		elif mb.button_index == MOUSE_BUTTON_RIGHT:
-			if mb.pressed:
-				_rpress_pos = mb.position
-				_rdragged = false
-			elif ruler_on and not _rdragged and _ruler.cancel() and _hud != null:
-				_hud.refresh()
-		return
-	var mm := event as InputEventMouseMotion
-	if mm == null:
-		return
-	if ruler_on and _ruler.phase == MapRuler.Phase.STRETCHING:
-		var hit: Variant = ground_at(mm.position)
-		if hit != null and _ruler.move(Vector2((hit as Vector3).x, (hit as Vector3).z)) \
-				and _hud != null:
-			_hud.refresh()
-	if mm.button_mask == 0:
-		_hover_pos = mm.position
-		_hover_pending = true
-	else:
-		clear_hover()
-	if mm.button_mask & MOUSE_BUTTON_MASK_LEFT:
-		if _press_on_hud:
-			accept_event()
-			return
-		if not _dragging and _press_pos.distance_to(mm.position) > CLICK_SLOP:
-			_dragging = true
-		if _dragging:
-			_pan_by(mm.relative)
-		accept_event()
-	elif mm.button_mask & MOUSE_BUTTON_MASK_MIDDLE:
-		_pan_by(mm.relative)
-		accept_event()
-	elif mm.button_mask & MOUSE_BUTTON_MASK_RIGHT:
-		if _rpress_pos.distance_to(mm.position) > CLICK_SLOP:
-			_rdragged = true
-		_north_t = -1.0
-		_yaw -= mm.relative.x * _repo.bal("map3d_rotate_deg_per_px")
-		_apply_camera()
+	if _input.handle(event):
 		accept_event()
 
 
-## WASD / arrows pan while the pointer is over the view and no text box has
-## the keyboard; ownership is checked for new borders every few seconds.
+## The compass's ease, the border poll, the clouds, the hover picked once a
+## frame, and WASD / arrows while the pointer is over the view and no text
+## box has the keyboard.
 func _process(delta: float) -> void:
-	if _north_t >= 0.0:
-		_north_t += delta / maxf(_repo.bal("map3d_compass_reset_s"), 0.01)
-		_yaw = Map3DGeometry.ease_yaw(_north_from, _north_t)
-		if _north_t >= 1.0:
-			_north_t = -1.0
-			_yaw = 0.0
-		_apply_camera()
+	if _rig != null:
+		_rig.step(delta)
 	_border_clock += delta
 	if _border_clock >= _repo.bal("map3d_border_refresh_s"):
 		_border_clock = 0.0
@@ -736,21 +613,25 @@ func _process(delta: float) -> void:
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit:
 		return
-	var dir := Vector2.ZERO
-	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
-		dir.x -= 1.0
-	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
-		dir.x += 1.0
-	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
-		dir.y -= 1.0
-	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
-		dir.y += 1.0
-	if dir == Vector2.ZERO:
-		return
-	# Keys move the VIEW, so the ground moves the other way from a drag.
-	var px := size.y * _repo.bal("map3d_key_pan_screens_per_s") * delta
-	_pan_by(-dir.normalized() * px)
-	_hover_pending = true  # the ground moved under a still pointer
+	if _input.key_pan(delta):
+		_hover_pending = true  # the ground moved under a still pointer
+
+
+## Map3DInput: pick the hover at `pos` on the next frame.
+func request_hover(pos: Vector2) -> void:
+	_hover_pos = pos
+	_hover_pending = true
+
+
+## Redraw the HUD (compass, scale bar, labels, ruler); on every camera move.
+func refresh_hud() -> void:
+	if _hud != null:
+		_hud.refresh()
+
+
+## The compass's screen rect (design px), empty before the HUD exists.
+func compass_rect() -> Rect2:
+	return _hud.compass_rect() if _hud != null else Rect2()
 
 
 # --- ruler ---------------------------------------------------------------------
@@ -959,9 +840,9 @@ func landmark_marks() -> Array:
 
 func _cut_landmark_marks() -> Array:
 	var max_lod := 2
-	if _distance >= _repo.bal("map3d_landmark_lod_far_view_m"):
+	if _ctx.distance >= _repo.bal("map3d_landmark_lod_far_view_m"):
 		max_lod = 0
-	elif _distance >= _repo.bal("map3d_landmark_lod_mid_view_m"):
+	elif _ctx.distance >= _repo.bal("map3d_landmark_lod_mid_view_m"):
 		max_lod = 1
 	var s := _render_scale()
 	var px := _repo.bal("map3d_landmark_px")
@@ -1460,6 +1341,10 @@ func component(key: String) -> Object:
 			return _borders
 		"themes":
 			return _themes
+		"input":
+			return _input
+		"rig":
+			return _rig
 	return null
 
 
@@ -1474,19 +1359,19 @@ func viewport() -> SubViewport:
 	return _viewport
 
 func camera() -> Camera3D:
-	return _camera
+	return _rig.camera() if _rig != null else null
 
 func cloud_count() -> int:
 	return _clouds.count() if _clouds != null else 0
 
 func target() -> Vector2:
-	return _target
+	return _ctx.target if _ctx != null else Vector2.ZERO
 
 func distance() -> float:
-	return _distance
+	return _ctx.distance if _ctx != null else 1.0
 
 func yaw() -> float:
-	return _yaw
+	return _ctx.yaw if _ctx != null else 0.0
 
 func selected_province() -> String:
 	return _selected_province
@@ -1503,16 +1388,15 @@ func selected_ring_visible() -> bool:
 
 ## Centre the rig on a pack point (tests and future "go to" orders).
 func look_at_pack(pack_px: Vector2, at_distance: float = -1.0) -> void:
-	_target = Map3DGeometry.clamp_target(Map3DGeometry.pack_to_world(_meta, pack_px), _bounds)
-	if at_distance > 0.0:
-		_distance = at_distance
-	_apply_camera()
+	if _rig == null:
+		return
+	_rig.place(_ctx.to_world(pack_px), at_distance if at_distance > 0.0 else _ctx.distance, _ctx.yaw)
 
 ## Frame the player's capital at a distance (the bench and the snapshots).
 func look_at_home(at_distance: float) -> void:
-	_target = Map3DGeometry.clamp_target(_home(), _bounds)
-	_distance = at_distance
-	_apply_camera()
+	if _rig == null:
+		return
+	_rig.place(_home(), at_distance, _ctx.yaw)
 
 ## Layers the bench can switch off to price them, those that exist: the
 ## view's nodes under the viewport, the build's Sea, the Sun's shadows, the HUD.
