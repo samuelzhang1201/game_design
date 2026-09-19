@@ -82,3 +82,8 @@ func test_the_input_says_which_events_the_view_takes() -> void:
 	pinch.position = v.size * 0.5
 	pinch.factor = 1.2
 	assert_true(input.handle(pinch))
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

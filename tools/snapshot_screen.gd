@@ -132,6 +132,7 @@ func _ready() -> void:
 	_map2d = args.has("--map2d")
 	if not SCENES.has(_screen):
 		push_error("unknown screen %s; choose from %s" % [_screen, SCENES.keys()])
+		Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
 		get_tree().quit(2)
 		return
 	Game.start_campaign(_seed)
@@ -263,4 +264,5 @@ func _process(_delta: float) -> void:
 		print("snapshot %s -> %s (%s, %s, filter %d)" % [
 			"ok" if err == OK else "FAILED %d" % err, _out, _screen, how,
 			int(ProjectSettings.get_setting("rendering/textures/canvas_textures/default_texture_filter", 0))])
+		Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
 		get_tree().quit()

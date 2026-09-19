@@ -68,3 +68,8 @@ func test_no_hud_script_reads_the_game_autoload() -> void:
 		if f.begins_with("map3d_hud") and f.ends_with(".gd"):
 			var text := FileAccess.get_file_as_string("res://scripts/map3d/" + f)
 			assert_false(text.contains("Game."), f + " takes the context, not Game")
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

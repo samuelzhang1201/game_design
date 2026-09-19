@@ -105,3 +105,8 @@ func test_the_hud_letters_the_names() -> void:
 	v.look_at_pack(MapOwnership.label_anchor(Game.data, Game.state, mine), 30000.0)
 	await wait_process_frames(2)
 	assert_has(v.drawn_labels(), mine, "the HUD's draw letters the realm")
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

@@ -151,3 +151,8 @@ func test_military_stays_on_the_3d_map() -> void:
 	r.set_army_view(false)
 	assert_false(r.current_screen.map3d_view().military())
 	Game.data.balance["map3d_default"] = 0.0
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

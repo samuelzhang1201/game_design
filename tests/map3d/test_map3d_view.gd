@@ -652,3 +652,8 @@ func test_the_3d_ruler_reads_the_same_distance_as_the_2d_map() -> void:
 	assert_eq(v.ruler_reading(), MapRuler.reading(a.distance_to(b) * scale, unit),
 		"50 px on the sheet is %s on both maps" % MapRuler.reading(50.0 * scale, unit))
 	assert_almost_eq(v.map_units_per_metre(), scale / float(WORLD["m_per_px"]), 1e-9)
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

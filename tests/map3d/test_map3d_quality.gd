@@ -184,3 +184,8 @@ func test_the_pause_menu_remembers_the_tier() -> void:
 	assert_eq(r.quality_setting(), Map3DQuality.next_setting(before))
 	assert_eq(Map3DQuality.setting(GameRoot.settings_path), r.quality_setting())
 	assert_string_contains(button.text, "Graphics")
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

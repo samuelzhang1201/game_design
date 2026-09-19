@@ -82,6 +82,7 @@ func _ready() -> void:
 	var v: Map3DView = root.current_screen.map3d_view()
 	if v == null or not v.is_loaded():
 		push_error("the 3D map is not built — see tools/map3d/README.md")
+		Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
 		get_tree().quit(1)
 		return
 	_view = v
@@ -116,6 +117,7 @@ func _ready() -> void:
 			v.set_layer_visible(layer, restore)
 	print("WORST %.2f ms (%.0f fps), budget %.2f ms (%s)" % [worst, 1000.0 / worst, budget, tier])
 	_write_rows()
+	Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
 	get_tree().quit(0 if worst <= budget else 3)
 
 

@@ -137,3 +137,8 @@ func test_cells_are_memoised() -> void:
 	assert_eq(calls[0], 1, "the first ask looks the cell up")
 	c.cell_ground(id)
 	assert_eq(calls[0], 1, "one lookup per cell, ever")
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

@@ -162,3 +162,8 @@ func test_the_themes_are_one_layer_that_works_before_load() -> void:
 	assert_not_null(v.cell_lut())
 	assert_not_null(v.viewport().get_node_or_null("Lines/ManorEdges"))
 	assert_eq(Map3DView.load_field_map("user://nowhere/world.tscn"), null)
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

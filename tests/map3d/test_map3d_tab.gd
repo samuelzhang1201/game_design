@@ -128,3 +128,8 @@ func test_a_3d_selection_opens_the_card_in_the_left_column() -> void:
 	view.province_selected.emit(province)
 	await wait_frames(1)
 	assert_true(screen.detail_panel().visible, "a province's card too")
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

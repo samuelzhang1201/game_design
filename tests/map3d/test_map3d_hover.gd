@@ -197,3 +197,8 @@ func test_a_clicked_card_outranks_the_3d_hover() -> void:
 	view.country_hovered.emit(Game.data.resolve_realm("raider_realm"))
 	assert_true(screen.detail_panel().visible)
 	assert_false(screen.country_panel().visible)
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

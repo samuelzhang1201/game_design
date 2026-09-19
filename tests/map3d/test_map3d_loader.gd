@@ -100,3 +100,8 @@ func test_a_pack_can_keep_its_3d_build_elsewhere() -> void:
 	assert_eq(Map3DView.scene_path_for(id), "res://elsewhere/%s/world.tscn" % id)
 	row["map3d_dir"] = before
 	assert_eq(Map3DView.scene_path_for(id), "res://assets/map3d/%s/world.tscn" % id)
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

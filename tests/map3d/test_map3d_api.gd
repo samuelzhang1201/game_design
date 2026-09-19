@@ -138,3 +138,8 @@ func test_create_takes_a_fixture_path() -> void:
 func test_the_hud_statics_are_kept() -> void:
 	assert_eq(Map3DHud.scale_bar_for(1.5, 220.0, "km")["text"], "200 km")
 	assert_eq(Map3DHud.needle_angle(0.0), 0.0)
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

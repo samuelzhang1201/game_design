@@ -244,3 +244,8 @@ func test_the_hud_draws_the_badges() -> void:
 	_look_at_manor(v, _busiest_manor(), 12000.0)
 	await wait_process_frames(2)
 	assert_gt(v.drawn_badge_count(), 0)
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

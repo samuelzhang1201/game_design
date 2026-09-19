@@ -296,3 +296,8 @@ func test_marks_are_cut_once_per_pose() -> void:
 	var b := v.landmark_marks()
 	v.set_military(false)
 	assert_false(is_same(b, v.landmark_marks()), "the counters toggled, a new cut")
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

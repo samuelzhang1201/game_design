@@ -128,6 +128,7 @@ static func instance(scene_path: String) -> Node3D:
 		return null
 	strip_old_build(w)
 	own_terrain_material(w)
+	no_collision(w)
 	return w
 
 
@@ -147,3 +148,20 @@ static func own_terrain_material(world: Node3D) -> void:
 		var m: Resource = t.get("material")
 		if m != null:
 			t.set("material", m.duplicate(true))
+
+
+## Terrain3D collision OFF: nothing raycasts the terrain (a pick meets the
+## ground through Map3DGeometry.ground_hit), and Terrain3D 1.0.2 keeps its
+## collision body across a tree exit, so a kept world re-parented into a new
+## view freed that body after the old view's physics space had died and
+## crashed the engine (found 2026-09-20). Terrain3D 1.0.2 ignores the mode
+## off the tree (it reads 1 again), so it is set as each terrain first enters
+## one; once off it stays off across every later exit and entry.
+static func no_collision(world: Node3D) -> void:
+	for t in world.find_children("*", "Terrain3D", true, false):
+		if "collision_mode" in t:
+			t.tree_entered.connect(_collision_off.bind(t), CONNECT_ONE_SHOT)
+
+
+static func _collision_off(terrain: Node) -> void:
+	terrain.set("collision_mode", 0)

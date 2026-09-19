@@ -119,3 +119,8 @@ func test_the_sky_and_sun_are_data() -> void:
 	var sea := v.get_node("Viewport/Sea") as MeshInstance3D
 	assert_not_null(sea.mesh, "the sea plane is the scene's own")
 	assert_almost_eq(sea.global_position.y, 5.0, 0.001)
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()

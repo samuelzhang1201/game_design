@@ -65,3 +65,8 @@ func test_the_hover_signals_through_the_view() -> void:
 	assert_signal_emitted(v, "country_hovered")
 	assert_ne(v.hover_tooltip(), "")
 	assert_eq(v.hovered_kingdom(), (v.component("picker") as Map3DPicker).hovered_kingdom())
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file.
+func after_all() -> void:
+	Map3DWorldCache.clear()
