@@ -113,6 +113,12 @@ var _markers: Node3D
 var _lines: Node3D
 var _notice: Label
 var _ring_mats: Array[ShaderMaterial] = []
+## Each settlement's place among the markers: code -> [MultiMesh, index].
+var _marker_slot: Dictionary = {}
+## The signature the markers' colours were last set for (MANORS tints them),
+## and those colours (the renderer keeps no copy a headless test can read).
+var _marker_sig := 0
+var _marker_colours: Dictionary = {}
 var _selected_ring: MultiMeshInstance3D
 var _water_normals: NoiseTexture2D
 var _river_mat: ShaderMaterial
@@ -421,13 +427,19 @@ func _height_at(xz: Vector2) -> float:
 func _place_markers() -> void:
 	_ring_mats.clear()
 	var by_group: Dictionary = {}
+	var by_code: Dictionary = {}
+	_marker_slot.clear()
+	_marker_colours.clear()
+	_marker_sig = 0
 	for code: String in _sorted_burgs():
 		var burg: Dictionary = _repo.burgs[code]
 		var group := String(burg.get("group", ""))
 		var xz := _burg_xz(burg)
 		if not by_group.has(group):
 			by_group[group] = []
+			by_code[group] = []
 		(by_group[group] as Array).append(Vector3(xz.x, _height_at(xz), xz.y))
+		(by_code[group] as Array).append(code)
 	var groups: Array = by_group.keys()
 	groups.sort()
 	var by_size: Array = groups.duplicate()
@@ -445,10 +457,16 @@ func _place_markers() -> void:
 		var pts: Array = by_group[group]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
+		# per-instance colour: a manor's house under MANORS, else none (clear)
+		mm.use_colors = true
 		mm.mesh = mesh
 		mm.instance_count = pts.size()
 		for i in pts.size():
 			mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, pts[i]))
+			mm.set_instance_color(i, Color(0, 0, 0, 0))
+		var codes: Array = by_code[group]
+		for i in codes.size():
+			_marker_slot[codes[i]] = [mm, i]
 		var mmi := MultiMeshInstance3D.new()
 		mmi.name = group.capitalize()
 		mmi.multimesh = mm
@@ -901,6 +919,50 @@ func _refresh_theme() -> void:
 	var edges := _lines.get_node_or_null("ManorEdges") as MeshInstance3D
 	if edges != null:
 		edges.visible = _theme != ""
+	_recolour_markers()
+
+
+## MANORS (owner 2026-09-19, the 2D map's town tint): each settlement's dot
+## wears the house colour of the manor it stands in (ManorPalette, opaque);
+## any other view, none — the dots stay black. Only when the theme or an
+## owner has turned.
+func _recolour_markers() -> void:
+	var manors := _theme == "manors"
+	var st := _state()
+	var sig := 0 if not manors else hash([st.province_owner.hash() if st != null else 0,
+		st.manor_owner.hash() if st != null else 0, st.manor_province.hash() if st != null else 0])
+	sig = hash([manors, sig])
+	if sig == _marker_sig:
+		return
+	_marker_sig = sig
+	var cells := MapEconomy.burg_cells(_repo)
+	for code: String in _marker_slot:
+		var slot: Array = _marker_slot[code]
+		var c := Color(0, 0, 0, 0)
+		if manors and cells.has(code):
+			c = ManorPalette.house_color(_repo, st, int(cells[code]))
+			c.a = 1.0 if c.a > 0.0 else 0.0
+			# a deeper shade of the house than its ground: the ground is lit,
+			# the dot is not, and at the house's own value it read as a hole
+			c = manor_dot_colour(_repo, c)
+		(slot[0] as MultiMesh).set_instance_color(int(slot[1]), c)
+		_marker_colours[code] = c
+
+
+## A MANORS dot's fill from its house's colour: a step darker, or — for a
+## house already dark (luminance under map3d_manor_dot_dark_luma) — a step
+## lighter, so a dot always stands a clear step off its own ground (critic
+## 2026-09-19: darkened dots vanished on the slate house).
+static func manor_dot_colour(repo: DataRepository, house: Color) -> Color:
+	var k := repo.bal("map3d_manor_dot_darken")
+	if house.get_luminance() < repo.bal("map3d_manor_dot_dark_luma"):
+		return house.lightened(k)
+	return house.darkened(k)
+
+
+## Test seam: the colour a settlement's dot wears of its own (clear = none).
+func marker_colour(code: String) -> Color:
+	return _marker_colours.get(code, Color(0, 0, 0, 0))
 
 
 ## Each land cell's ManorPalette colour for the theme at texel (id % w, id / w).

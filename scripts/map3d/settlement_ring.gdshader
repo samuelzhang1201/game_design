@@ -30,6 +30,7 @@ uniform float max_view_m = 1000000.0;  // beyond this, gone
 uniform float fade_start = 0.8;  // share of max_view_m where the fade begins
 
 varying vec2 v_px;    // this fragment's offset from the centre, window px
+varying vec4 v_tint;  // the instance's own colour (MANORS: its manor's house), alpha 0 = none
 varying float v_fade;  // distance fade, 1 near, 0 at/beyond max_view_m
 
 void vertex() {
@@ -37,6 +38,7 @@ void vertex() {
 	float dist = length(centre - CAMERA_POSITION_WORLD);
 	float m_per_px = dist * px_per_dist;
 	v_fade = 1.0 - smoothstep(fade_start * max_view_m, max_view_m, dist);
+	v_tint = COLOR;
 	// Beyond max_view_m the ring is already fully faded: collapse the quad
 	// to zero size so it costs no fill, not merely zero alpha.
 	float box_px = (dist < max_view_m) ? max(ring_px, dot_px) + 4.0 : 0.0;  // +4 for the keyline/AA edge
@@ -60,7 +62,14 @@ void fragment() {
 		stroke = clamp(0.5 - d, 0.0, 1.0);
 		key = clamp(1.5 - d, 0.0, 1.0) * keyline.a;
 	}
+	// Under MANORS a dot wears its manor's house colour (owner 2026-09-19),
+	// ringed in the dark keyline so it holds on ground tinted the same hue.
+	bool tinted = v_tint.a > 0.5;
+	vec3 fill = tinted ? v_tint.rgb : colour.rgb;
+	if (tinted) {
+		key = max(key, clamp(1.5 - (r - 0.5 * dot_px), 0.0, 1.0) * keyline.a);
+	}
 	float ink = max(stroke, disc);
-	ALBEDO = mix(keyline.rgb, colour.rgb, ink);
+	ALBEDO = mix(keyline.rgb, tinted && disc > stroke ? fill : colour.rgb, ink);
 	ALPHA = max(ink * colour.a, key) * v_fade;
 }
