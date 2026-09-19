@@ -161,10 +161,14 @@ func water_normals() -> Texture2D:
 ## sorted by code (was Map3DView._sorted_burgs).
 func marked_burgs() -> Array:
 	if _marked.is_empty():
+		var out: Array = []
 		for code: String in repo.burgs:
 			if repo.map3d_settlements.has(String(repo.burgs[code].get("group", ""))):
-				_marked.append(code)
-		_marked.sort()
+				out.append(code)
+		out.sort()
+		# shared, cached: callers read it, never mutate it
+		out.make_read_only()
+		_marked = out
 	return _marked
 
 
@@ -217,6 +221,8 @@ func projected_settlements() -> Array:
 		out.append({"code": code, "spec": spec, "world": w,
 			"screen": camera.unproject_position(w) / s, "behind": behind,
 			"shown": not behind and eye.distance_to(w) < float(spec["max_view_m"]) * fade_start})
+	# shared, cached per pose: callers read it, never mutate it
+	out.make_read_only()
 	_proj = out
 	_proj_key = key
 	return out

@@ -77,32 +77,19 @@ const CLOUD_SHADOW_SHADER := preload("res://scripts/map3d/cloud_shadow.gdshader"
 ## The selection ring never thins by distance (fix round 1, owner 2026-09-18):
 ## whatever the player clicked stays marked regardless of zoom.
 const SELECTED_RING_ALWAYS_M := 1000000.0
-## THE RENDER-PRIORITY TABLE (final review, owner 2026-09-18) — the one
-## place the see-through layers' draw order is set. Higher draws over lower.
-## The sea under everything; the river water under every line, so a border
-## or seam always reads over the water it crosses; the roads (a bridge over
-## the water, under every border); the manor edges of the MANORS
-## themes; the realm band inside each kingdom (2026-09-19), seams, the
-## kingdom border's pale halo, then its ink, then the hovered kingdom's
-## wider outline, then the clicked
-## province's gold outline; then the CLOUDS — over
-## the lines, but UNDER the settlement rings, so a pin always stands above
-## the weather; then the rings by tier (village lowest, capital highest —
-## see _place_markers) and the gold selection ring over every tier.
-const PRIORITY_SEA := -1
-const PRIORITY_RIVERS := 0
-const PRIORITY_ROADS := 1
-const PRIORITY_MANOR_EDGES := 2
-const PRIORITY_KINGDOM_BAND := 3
-const PRIORITY_SEAMS := 4
-const PRIORITY_KINGDOM_HALO := 5
-const PRIORITY_KINGDOMS := 6
-const PRIORITY_HOVER := 7
-const PRIORITY_SELECTION := 8
-const PRIORITY_CLOUDS := 9
-## The lowest ring tier; the tiers and then the selection ring count up from
-## here, one step each (data/map3d_settlements.csv's groups).
-const PRIORITY_RING_BASE := 10
+## The render-priority table lives in Map3DPriority; these are its aliases.
+const PRIORITY_SEA := Map3DPriority.SEA
+const PRIORITY_RIVERS := Map3DPriority.RIVERS
+const PRIORITY_ROADS := Map3DPriority.ROADS
+const PRIORITY_MANOR_EDGES := Map3DPriority.MANOR_EDGES
+const PRIORITY_KINGDOM_BAND := Map3DPriority.KINGDOM_BAND
+const PRIORITY_SEAMS := Map3DPriority.SEAMS
+const PRIORITY_KINGDOM_HALO := Map3DPriority.KINGDOM_HALO
+const PRIORITY_KINGDOMS := Map3DPriority.KINGDOMS
+const PRIORITY_HOVER := Map3DPriority.HOVER
+const PRIORITY_SELECTION := Map3DPriority.SELECTION
+const PRIORITY_CLOUDS := Map3DPriority.CLOUDS
+const PRIORITY_RING_BASE := Map3DPriority.RING_BASE
 ## A press and release further apart than this is a drag, not a click
 ## (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := 10.0
@@ -119,7 +106,7 @@ var _viewport: SubViewport
 var _world: Node3D
 var _camera: Camera3D
 var _markers: Node3D
-var _lines: Node3D
+var _lines: Map3DLayerLines
 var _notice: Label
 var _ring_mats: Array[ShaderMaterial] = []
 var _selected_ring: MultiMeshInstance3D
@@ -410,9 +397,10 @@ func _load() -> void:
 	_dress_sea()
 	_apply_sun_shadow_look()
 	_build_clouds()
-	_lines = Node3D.new()
+	_lines = Map3DLayerLines.new()
 	_lines.name = "Lines"
 	_viewport.add_child(_lines)
+	_lines.bind(_ctx)
 	_build_roads()
 	_prepare_ground_tint()
 	_target = Map3DGeometry.clamp_target(_home(), _bounds)
@@ -1079,15 +1067,7 @@ static func _texture_pair(base: String) -> Array:
 ## `lines` on the ground (or on a bridge deck where `heights` says so).
 func _set_road(line_name: String, lines: Array, heights: Array, colour: Color,
 		width_key: String, width_m: float) -> void:
-	var old := _lines.get_node_or_null(line_name)
-	if old != null:
-		_lines.remove_child(old)
-		old.queue_free()
 	var arrays := Map3DBorders.ribbon_arrays(lines, _height_at, heights)
-	if arrays.is_empty():
-		return
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var mat := ShaderMaterial.new()
 	mat.shader = ROAD_SHADER
 	mat.render_priority = PRIORITY_ROADS
@@ -1107,14 +1087,7 @@ func _set_road(line_name: String, lines: Array, heights: Array, colour: Color,
 		mat.set_shader_parameter("surface", pair[0])
 		mat.set_shader_parameter("surface_nrm", pair[1])
 	mat.set_meta("width_key", width_key)
-	mesh.surface_set_material(0, mat)
-	var mi := MeshInstance3D.new()
-	mi.name = line_name
-	mi.mesh = mesh
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.extra_cull_margin = 16384.0
-	_lines.add_child(mi)
-	_update_line_scale()
+	_lines.put_mesh(line_name, arrays, mat)
 
 
 ## Every bridge as ONE mesh in the medieval_blocks_03 stone, lit and casting
@@ -1179,38 +1152,13 @@ func _set_lines(line_name: String, lines: Array, a: Color, b: Color, width_key: 
 		dash_key: String, gap_key: String, priority: int, edge_soft := 0.0,
 		one_sided := false, colours: Array = [], fade_across := 0.0,
 		fade_power_key := "") -> void:
-	var old := _lines.get_node_or_null(line_name)
-	if old != null:
-		_lines.remove_child(old)
-		old.queue_free()
-	var arrays := Map3DBorders.ribbon_arrays(lines, _height_at, [], one_sided, colours)
-	if arrays.is_empty():
-		return
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var mat := ShaderMaterial.new()
-	mat.shader = BORDER_SHADER
-	mat.render_priority = priority
-	mat.set_shader_parameter("colour_a", a)
-	mat.set_shader_parameter("colour_b", b)
-	mat.set_shader_parameter("edge_soft", edge_soft)
-	mat.set_shader_parameter("one_sided", 1.0 if one_sided else 0.0)
-	mat.set_shader_parameter("use_vertex_colour", 1.0 if not colours.is_empty() else 0.0)
-	mat.set_shader_parameter("fade_across", fade_across)
-	mat.set_shader_parameter("fade_power", _repo.bal(fade_power_key) if fade_power_key != "" else 1.0)
-	mat.set_meta("width_key", width_key)
-	mat.set_meta("dash_key", dash_key)
-	mat.set_meta("gap_key", gap_key)
-	mesh.surface_set_material(0, mat)
-	var mi := MeshInstance3D.new()
-	mi.name = line_name
-	mi.mesh = mesh
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# Lines are thin and long: never culled by a bounding box the relief lift
-	# pushes them out of.
-	mi.extra_cull_margin = 16384.0
-	_lines.add_child(mi)
-	_update_line_scale()
+	var st := Map3DLineStyle.dashed(a, b, width_key, dash_key, gap_key, priority)
+	st.edge_soft = edge_soft
+	st.one_sided = one_sided
+	st.colours = colours
+	st.fade_across = fade_across
+	st.fade_power_key = fade_power_key
+	_lines.set_lines(line_name, lines, st)
 
 
 ## The lines' screen-px values in WINDOW px, and the metres per px per metre
@@ -1222,17 +1170,7 @@ func _update_line_scale() -> void:
 	var h := float(maxi(_viewport.size.y, 1))
 	var per_dist := _ctx.px_per_dist() if _ctx != null else 2.0 * tan(deg_to_rad(_repo.bal("map3d_fov_deg")) * 0.5) / h
 	if _lines != null:
-		for mi: MeshInstance3D in _lines.get_children():
-			var mat := mi.mesh.surface_get_material(0) as ShaderMaterial
-			if mat == null:
-				continue
-			mat.set_shader_parameter("px_per_dist", per_dist)
-			mat.set_shader_parameter("lift_px", _repo.bal("map3d_line_lift_px") * s)
-			mat.set_shader_parameter("width_px", _repo.bal(String(mat.get_meta("width_key"))) * s)
-			var dash_key := String(mat.get_meta("dash_key", ""))
-			mat.set_shader_parameter("dash_px", _repo.bal(dash_key) * s if dash_key != "" else 0.0)
-			var gap_key := String(mat.get_meta("gap_key", ""))
-			mat.set_shader_parameter("gap_px", _repo.bal(gap_key) * s if gap_key != "" else 0.0)
+		_lines.apply_scale()
 	for mat: ShaderMaterial in _ring_mats:
 		mat.set_shader_parameter("px_per_dist", per_dist)
 		mat.set_shader_parameter("lift_px", _repo.bal("map3d_ring_lift_px") * s)
@@ -2230,8 +2168,7 @@ func set_layer_visible(layer: String, on: bool) -> void:
 
 ## A line mesh by name (Kingdoms, Seams, Selection), or null.
 func line_mesh(line_name: String) -> ArrayMesh:
-	var mi := _lines.get_node_or_null(line_name) as MeshInstance3D if _lines != null else null
-	return mi.mesh as ArrayMesh if mi != null else null
+	return _lines.line_mesh(line_name) if _lines != null else null
 
 ## Settlement markers per group: {group: count}.
 func marker_counts() -> Dictionary:

@@ -134,5 +134,6 @@ func test_cells_are_memoised() -> void:
 		calls[0] += 1
 		return 5.0
 	c.cell_ground(id)
+	assert_eq(calls[0], 1, "the first ask looks the cell up")
 	c.cell_ground(id)
-	assert_lte(calls[0], 1, "one lookup per cell, ever")
+	assert_eq(calls[0], 1, "one lookup per cell, ever")
