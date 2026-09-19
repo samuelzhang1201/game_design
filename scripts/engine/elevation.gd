@@ -9,11 +9,23 @@ extends RefCounted
 
 static var _landmarks: Array = []
 static var _landmarks_map := ""
+static var _landmarks_computed := false
 
 
 static func forget() -> void:
 	_landmarks = []
 	_landmarks_map = ""
+	_landmarks_computed = false
+
+
+## Test seam: the pack id the landmark cache holds, "" when it has never
+## been computed (or was just forgotten) — so a test can tell a real
+## recompute from a cache hit without a counter. Recomputing landmarks()
+## and finding the same map id here proves nothing new ran only together
+## with a side effect (an override, a balance change) that a fresh compute
+## would have picked up and a cache hit would not.
+static func computed_for() -> String:
+	return _landmarks_map if _landmarks_computed else ""
 
 
 ## Whole metres above the waterline of an Azgaar height (negative under it).
@@ -121,7 +133,7 @@ static func local_edge_m(repo: DataRepository, id: int) -> int:
 ## Every landmark of the pack, biggest prominence first (ties by cell id),
 ## named; cached per pack.
 static func landmarks(repo: DataRepository) -> Array:
-	if _landmarks_map == repo.map_id and not _landmarks.is_empty():
+	if _landmarks_computed and _landmarks_map == repo.map_id:
 		return _landmarks
 	var e := extremes(repo.cells)
 	var out: Array = []
@@ -142,6 +154,7 @@ static func landmarks(repo: DataRepository) -> Array:
 	_name_all(repo, out)
 	_landmarks = out
 	_landmarks_map = repo.map_id
+	_landmarks_computed = true
 	return out
 
 
@@ -160,6 +173,49 @@ static func _lod(repo: DataRepository, prominence: int) -> int:
 	return 2
 
 
+## Whether `town`'s patterns (tried from `start`) can name `m`: sets
+## m["name"] to the first untaken one and returns true, else leaves it
+## untouched and returns false.
+static func _try_town(repo: DataRepository, m: Dictionary, town: String, patterns: Array,
+		start: int, taken: Dictionary) -> bool:
+	var label := String(repo.burgs[town].get("label", town))
+	for k in patterns.size():
+		var name := String(patterns[(start + k) % patterns.size()]).replace("{town}", label)
+		if not taken.has(name):
+			m["name"] = name
+			return true
+	return false
+
+
+## The nearest town to `at`, ties going to the lower code (towns sorted):
+## ONE linear pass, no sort — the common case, and the whole point of the
+## perf fix below.
+static func _nearest_town(repo: DataRepository, towns: Array, at: Vector2) -> String:
+	var best := ""
+	var best_d := INF
+	for town: String in towns:
+		var d: float = at.distance_squared_to(Vector2(float(repo.burgs[town]["x"]), float(repo.burgs[town]["y"])))
+		if d < best_d:
+			best_d = d
+			best = town
+	return best
+
+
+## Every town, nearest first, ties by code: [dist², code] pairs built once
+## for this landmark and sorted with Array's own comparator (no per-pair
+## Callable) — the clash-only fallback below.
+static func _towns_by_distance(repo: DataRepository, towns: Array, at: Vector2) -> Array:
+	var pairs: Array = []
+	for town: String in towns:
+		var d: float = at.distance_squared_to(Vector2(float(repo.burgs[town]["x"]), float(repo.burgs[town]["y"])))
+		pairs.append([d, town])
+	pairs.sort()
+	var out: Array = []
+	for p: Array in pairs:
+		out.append(String(p[1]))
+	return out
+
+
 ## Names in prominence order, so the biggest gets its first choice: every
 ## override is reserved FIRST, in its own pass, so a hand-authored name
 ## always wins its cell and can never be handed to a more prominent
@@ -167,6 +223,14 @@ static func _lod(repo: DataRepository, prominence: int) -> int:
 ## the patterns, by a hash of the cell over the nearest town, then the
 ## next-nearest, never a name already taken (by an override or a generated
 ## name).
+##
+## Perf (owner review 2026-09-19): duplicating and sort_custom-ing every
+## town for every landmark cost ~650ms on beria's 166 landmarks × 684
+## burgs. A landmark almost always names off its ONE nearest town (a
+## single linear pass); the full distance-sorted list is only ever built
+## — and only once per landmark — on a name clash, when that nearest
+## town's patterns are all already spoken for. Output is unchanged: same
+## nearest-first, same tie-break by code, same fallback order.
 static func _name_all(repo: DataRepository, marks: Array) -> void:
 	var taken := {}
 	for m: Dictionary in marks:
@@ -184,19 +248,12 @@ static func _name_all(repo: DataRepository, marks: Array) -> void:
 		if patterns.is_empty():
 			continue
 		var at: Vector2 = m["pos"]
-		var by_dist := towns.duplicate()
-		by_dist.sort_custom(func(a: String, b: String) -> bool:
-			var da := at.distance_squared_to(Vector2(float(repo.burgs[a]["x"]), float(repo.burgs[a]["y"])))
-			var db := at.distance_squared_to(Vector2(float(repo.burgs[b]["x"]), float(repo.burgs[b]["y"])))
-			return da < db if da != db else a < b)
 		var start := posmod(str(id).hash(), patterns.size())
-		for town: String in by_dist:
-			var label := String(repo.burgs[town].get("label", town))
-			for k in patterns.size():
-				var name := String(patterns[(start + k) % patterns.size()]).replace("{town}", label)
-				if not taken.has(name):
-					m["name"] = name
+		var nearest := _nearest_town(repo, towns, at)
+		if nearest == "" or not _try_town(repo, m, nearest, patterns, start, taken):
+			for town: String in _towns_by_distance(repo, towns, at):
+				if town == nearest:
+					continue
+				if _try_town(repo, m, town, patterns, start, taken):
 					break
-			if String(m["name"]) != "":
-				break
 		taken[m["name"]] = true

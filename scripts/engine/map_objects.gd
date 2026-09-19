@@ -553,6 +553,17 @@ static func _province_by_id(repo: DataRepository, pid: int) -> Dictionary:
 static func _label(table: Dictionary, code: String) -> String:
 	return String(table.get(code, {}).get("label", code))
 
+## "where — holder", collapsed: no "Wickhampia — Wickhampia" when the
+## holder's house wears the province's own name, no leading " — " when
+## there is no province to name (an off-pack cell) but a holder still
+## reads, and just the province when there is no holder at all.
+static func _landmark_where_line(where: String, holder: String) -> String:
+	if holder == "":
+		return where
+	if where == "" or where == holder:
+		return holder
+	return "%s — %s" % [where, holder]
+
 ## A landmark's facts, one per line (spec 2026-09-19-map3d-heights §4):
 ## height · tier · biome; province — holder; the garrison's supply; the
 ## edge over the land round it and what it is worth in a fight.
@@ -568,7 +579,7 @@ static func landmark_lines(repo: DataRepository, state: GameState, cell: int) ->
 	var pct := (ArmySystem.height_factor(repo, absi(edge)) - 1000) / 10
 	var out := PackedStringArray()
 	out.append("%d m · %s · %s" % [Elevation.metres_of_cell(repo, cell), String(tier["tier"]).capitalize(), biome])
-	out.append("%s — %s" % [where, holder] if holder != "" else where)
+	out.append(_landmark_where_line(where, holder))
 	out.append("Garrison: supplies ×%.1f (%s)" % [mult, String(tier["tier"])])
 	if edge >= 0:
 		out.append("%d m above the land around — +%d%% in a fight against it" % [edge, pct])

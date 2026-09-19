@@ -56,20 +56,46 @@ func test_terrain_follows_the_tier_lines() -> void:
 		assert_eq(ArmySystem.terrain_of(repo, _at_cell(p)), "mountains", "a peak fights as a mountain")
 
 func test_battle_odds_swap_symmetrically_with_the_ground() -> void:
-	# Two copies of one regiment on different ground: the odds of A on B
-	# and of B on A sum to 1 when their powers are equal, and the higher
-	# one's odds are above one half.
+	# Two of the player's land regiments standing at DIFFERENT elevations:
+	# the higher side's odds beat what they would be on equal ground (height
+	# factor 1000 both ways, power alone), and the formula matches a
+	# hand-checked value.
 	var s := GameState.new_campaign(repo, 7)
 	var mine := MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
 	var land: Array = mine.filter(func(r: Dictionary) -> bool: return String(r.get("is_naval", "0")) != "1")
 	assert_gte(land.size(), 2)
-	var a := String(land[0]["regiment_code"])
-	var b := String(land[1]["regiment_code"])
+	var a := ""
+	var b := ""
+	for i in land.size():
+		for j in land.size():
+			if i == j:
+				continue
+			var ca := String(land[i]["regiment_code"])
+			var cb := String(land[j]["regiment_code"])
+			if ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, ca)) \
+					!= ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, cb)):
+				a = ca
+				b = cb
+				break
+		if a != "":
+			break
+	if a == "":
+		pending("the pack has no two land regiments at different elevations")
+		return
 	var ea := ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, a))
 	var eb := ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, b))
+	assert_ne(ea, eb, "the two stand at different heights")
 	var pa := ArmySystem.power(repo, s, a, "attack")
 	var pd := ArmySystem.power(repo, s, b, "defend")
 	var fa := ArmySystem.height_factor(repo, ea - eb)
 	var fd := ArmySystem.height_factor(repo, eb - ea)
 	var expected := float(pa * fa / 1000) / float(pa * fa / 1000 + pd * fd / 1000)
-	assert_almost_eq(ArmySystem.battle_odds(repo, s, a, b), expected, 0.0001)
+	var odds := ArmySystem.battle_odds(repo, s, a, b)
+	assert_almost_eq(odds, expected, 0.0001, "hand-checked against the formula")
+	# The spec's property: the higher side's odds beat the equal-ground
+	# expectation (height_factor 1000 both ways, power only).
+	var equal_ground := float(pa) / float(pa + pd) if pa + pd > 0 else 0.5
+	if ea > eb:
+		assert_gt(odds, equal_ground, "the higher attacker does better than on level ground")
+	else:
+		assert_lt(odds, equal_ground, "the lower attacker does worse than on level ground")

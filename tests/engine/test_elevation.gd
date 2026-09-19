@@ -37,6 +37,16 @@ func test_the_table_is_read_highest_first() -> void:
 	var mins: Array = repo.army_height_supply.map(func(r: Dictionary) -> int: return int(r["min_height"]))
 	assert_eq(mins, [72, 62, 45, 0])
 
+## The supply tiers ARE the ground bands (spec §1: "the lines are the biome
+## bands'"), so army_height_supply.csv must never drift from balance.csv.
+func test_the_tiers_match_the_biome_bands() -> void:
+	var by_tier := {}
+	for r: Dictionary in repo.army_height_supply:
+		by_tier[String(r["tier"])] = int(r["min_height"])
+	assert_eq(by_tier["hills"], int(repo.bal("map_biome_hill_height")))
+	assert_eq(by_tier["mountains"], int(repo.bal("map_biome_mountain_height")))
+	assert_eq(by_tier["peak"], int(repo.bal("map_biome_peak_height")))
+
 ## A hand-built strip of land cells 0..4 (heights 30, 50, 40, 25, 35) and
 ## one sea cell 5 next to cell 4. High: 1, and 4 (above its one land
 ## neighbour). Low: 0 and 3; 4 touches the sea, so it is never a basin.
@@ -89,6 +99,29 @@ func test_the_lod_follows_prominence() -> void:
 		var want := 0 if p >= int(repo.bal("landmark_lod_far_m")) \
 			else (1 if p >= int(repo.bal("landmark_lod_mid_m")) else 2)
 		assert_eq(int(m["lod"]), want)
+
+## An EMPTY result must cache too (owner review 2026-09-19): the old guard
+## (`not _landmarks.is_empty()`) recomputed every call once nothing
+## qualified. Prove the second call is a cache hit, not a recompute, by
+## mutating something only a recompute would pick up (an override) and
+## showing it has no effect until forget().
+func test_an_empty_result_is_cached_too() -> void:
+	var saved: float = repo.balance["landmark_min_prominence_m"]
+	repo.balance["landmark_min_prominence_m"] = 1000000.0
+	Elevation.forget()
+	assert_eq(Elevation.computed_for(), "", "nothing computed yet")
+	var first := Elevation.landmarks(repo)
+	assert_eq(first.size(), 0, "the floor is unreachable")
+	assert_eq(Elevation.computed_for(), repo.map_id, "the empty result is now cached")
+	# Restore the floor WITHOUT forget(): a recompute would now find
+	# landmarks, so a still-empty result proves the second call was a cache
+	# hit, not a real walk of the pack.
+	repo.balance["landmark_min_prominence_m"] = saved
+	var second := Elevation.landmarks(repo)
+	assert_eq(second.size(), 0, "still the cached empty result, not a recompute at the restored floor")
+	Elevation.forget()
+	var third := Elevation.landmarks(repo)
+	assert_gt(third.size(), 0, "forgetting the cache lets the restored floor recompute")
 
 func test_a_name_override_wins() -> void:
 	var m: Dictionary = Elevation.landmarks(repo)[0]

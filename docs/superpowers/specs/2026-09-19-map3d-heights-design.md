@@ -86,9 +86,11 @@ drawn first:
 - A **high** point is a land cell higher than every neighbour; a **low** point
   a land cell (not lake, not sea) lower than every neighbour.
 - Prominence = |metres − mean metres of the cells out to `landmark_ring`
-  (draft 2) rings|. Below `landmark_min_prominence_m` it is dropped.
-- `lod` 0..2 by `landmark_lod_1_m` / `landmark_lod_2_m`: the prominence at or
-  above which a landmark still shows at the far zooms.
+  (draft 2) rings|. Below `landmark_min_prominence_m` (tuned 100) it is
+  dropped.
+- `lod` 0..2 by `landmark_lod_mid_m` / `landmark_lod_far_m` (tuned 300 /
+  560): the prominence at or above which a landmark still shows at the far
+  zooms.
 - **Names**: `data/landmark_names.csv` (`kind,pattern`), e.g.
   `high,Mount {town}` / `{town} Fell` / `{town} Crag` / `{town} Heights`,
   `low,{town} Vale` / `{town} Hollow` / `{town} Basin`. `{town}` is the
@@ -130,8 +132,8 @@ drawn first:
 
   (the last line's percentage is `height_factor(local_edge_m) − 1000`). A
   click opens the same facts as a card in the left column
-  (`MapObjects.landmark_card`, `object_selected` with kind `landmark`).
-  Hovering elsewhere still sends the country card.
+  (`MapObjects.landmark_lines`, the lines payload; `object_selected` with
+  kind `landmark`). Hovering elsewhere still sends the country card.
 - The 2D `show_heights` / `heat_mesh` are not touched and are left for the
   2D-deletion spec.
 

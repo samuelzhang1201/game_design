@@ -54,7 +54,7 @@ func test_supply_use_is_the_base_scaled_by_the_cells_height_tier() -> void:
 	var r: Dictionary = _mine()[0]
 	var heads := int(MapObjects.regiment_size(repo, r))
 	assert_eq(ArmySystem.supply_use(repo, r),
-		heads * 100 / 1000 * int(ArmySystem.height_tier(repo, r)["supply_permille"]) / 1000)
+		heads * 100 * int(ArmySystem.height_tier(repo, r)["supply_permille"]) / 1_000_000)
 
 func test_wounded_never_exceed_the_headcount() -> void:
 	var s := GameState.new_campaign(repo, 7)

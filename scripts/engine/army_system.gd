@@ -43,10 +43,12 @@ static func state_of(repo: DataRepository, state: GameState, code: String) -> Di
 
 ## Supplies a regiment uses in a month: the headcount's use times its cell's
 ## height tier (data/army_height_supply.csv, spec 2026-09-19-map3d-heights
-## §2) — a fleet is not scaled.
+## §2) — a fleet is not scaled. ONE rounding, at the end (owner review
+## 2026-09-19): two per-mille divisions in a row lost heads a first
+## regiment's worth of supply to truncation twice.
 static func supply_use(repo: DataRepository, reg: Dictionary) -> int:
-	var base := headcount(repo, reg) * int(repo.bal("army_supply_per_head_permille")) / 1000
-	return base * int(height_tier(repo, reg)["supply_permille"]) / 1000
+	return headcount(repo, reg) * int(repo.bal("army_supply_per_head_permille")) \
+		* int(height_tier(repo, reg)["supply_permille"]) / 1_000_000
 
 ## Wounded who return to the ranks in a month: a share, at least one while
 ## any are wounded.
