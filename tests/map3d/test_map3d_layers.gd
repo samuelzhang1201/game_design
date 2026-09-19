@@ -124,3 +124,24 @@ func test_the_roads_are_one_builder_writing_lines_and_bridges() -> void:
 	assert_eq(mat.get_shader_parameter("width_m"), Game.data.bal("map3d_road_width_m"))
 	assert_eq(v.bridges(), (v.component("roads") as Map3DLayerRoads).bridges())
 	assert_eq(v.bridge_rules()["abut_m"], Game.data.bal("map3d_bridge_abut_m"))
+
+
+func test_the_borders_rebuild_only_when_ownership_moves() -> void:
+	var v := _view()
+	var borders := v.component("borders") as Map3DLayerBorders
+	assert_not_null(borders)
+	v.refresh_borders()
+	assert_false(borders.refresh(), "same owners: nothing rebuilt")
+	var mine := Game.data.resolve_realm("player_realm")
+	var raider := Game.data.resolve_realm("raider_realm")
+	var province: String = MapOwnership.provinces_of(Game.data, Game.state, raider)[0]
+	MapOwnership.set_owner(Game.data, Game.state, province, mine, "test: conquest")
+	assert_true(borders.refresh(), "a conquest rebuilds")
+	var band := v.line_mesh("KingdomBand").surface_get_material(0) as ShaderMaterial
+	assert_eq(band.render_priority, Map3DPriority.KINGDOM_BAND)
+	assert_eq(band.get_shader_parameter("fade_power"), Game.data.bal("map3d_border_band_fade_power"))
+	borders.draw_hover(mine)
+	assert_eq(borders.hovered(), mine)
+	assert_not_null(v.line_mesh("Hover"))
+	borders.draw_hover("")
+	assert_null(v.line_mesh("Hover"))

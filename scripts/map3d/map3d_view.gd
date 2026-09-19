@@ -101,6 +101,7 @@ var _ctx: Map3DContext
 var _rivers: Map3DLayerRivers
 var _sea: Map3DLayerSea
 var _roads := Map3DLayerRoads.new()
+var _borders := Map3DLayerBorders.new()
 var _meta: Dictionary = {}
 var _bounds := Rect2()
 var _target := Vector2.ZERO
@@ -117,7 +118,6 @@ var _selected_province := ""
 var _selected_burg := ""
 ## The clicked manor under a theme (-1 for none), outlined in gold.
 var _selected_manor := -1
-var _border_sig := 0
 ## The MANORS theme (owner 2026-09-19; ECONOMY was folded into it): "" or "manors";
 ## the LUT of each cell's ManorPalette colour the patched terrain shader reads
 ## (Map3DGroundTint), rebuilt when the theme or an owner turns; the terrain
@@ -137,12 +137,11 @@ var _border_clock := 0.0
 var _hud: Map3DHud
 ## The hover (owner 2026-09-18): a pointer move is only recorded, and picked
 ## once a frame in _process; the pick's kingdom, its settlement (the
-## tooltip), and each kingdom's outline lines, kept until ownership turns.
+## tooltip); the outline itself is Map3DLayerBorders'.
 var _hover_pos := Vector2.ZERO
 var _hover_pending := false
 var _hover_kingdom := ""
 var _hover_obj: Dictionary = {}
-var _hover_lines: Dictionary = {}
 var _tooltip: Label
 ## The kingdoms the HUD lettered on its last draw (a test seam).
 var _drawn_labels: PackedStringArray = []
@@ -389,6 +388,7 @@ func _load() -> void:
 	_lines.bind(_ctx)
 	_roads.bind(_ctx, _lines, _viewport)
 	_roads.build(_rivers.courses())
+	_borders.bind(_ctx, _lines)
 	_prepare_ground_tint()
 	_target = Map3DGeometry.clamp_target(_home(), _bounds)
 	_distance = _repo.bal("map3d_zoom_start_m")
@@ -460,50 +460,15 @@ func _show_selected_ring(code: String) -> void:
 # --- borders -----------------------------------------------------------------
 
 ## Rebuild the kingdom borders and province seams if ownership moved since
-## they were built — the same signature WorldMapView keys its rings on.
+## they were built (Map3DLayerBorders), and what follows the land held.
 func refresh_borders() -> void:
 	if not _loaded:
 		return
 	_refresh_theme()  # a manor bought or a province taken recolours the ground
-	var st := _state()
-	var sig := 0 if st == null else hash([st.province_owner.hash(), st.manor_province.hash()])
-	if sig == _border_sig and _lines.get_node_or_null("Kingdoms") != null:
-		return
-	_border_sig = sig
-	_hover_lines.clear()
-	_draw_hover()
-	if _hud != null:
-		_hud.refresh()  # the names follow the land held
-	var step := _repo.bal("map3d_line_step_m")
-	# The kingdom border (owner 2026-09-19, spec 2026-09-19-map3d-border-look,
-	# replacing the thin solid black line of 2026-09-18): a band in the realm's
-	# own colour inside each outline, fading inward — ONE mesh, the colour per
-	# vertex; where two kingdoms meet each draws its band on its own side — a
-	# pale halo, and the warm ink line over both.
-	var rings: Array = []
-	var bands: Array = []
-	var band_colours: Array = []
-	for code: String in _repo.kingdoms:
-		var own := Map3DBorders.kingdom_lines(_repo, st, _meta, code, step)
-		rings.append_array(own)
-		var c := MapPalette.color_of(_repo, code)
-		for r: PackedVector2Array in Map3DBorders.inward_rings(own):
-			bands.append(r)
-			band_colours.append(c)
-	var band := Color(1, 1, 1, _repo.bal("map3d_border_band_alpha"))
-	_set_lines("KingdomBand", bands, band, band, "map3d_border_band_px", "", "",
-		PRIORITY_KINGDOM_BAND, 0.0, true, band_colours, 1.0, "map3d_border_band_fade_power")
-	var halo := MapPalette.named(_repo, "map3d_border_halo")
-	halo.a = _repo.bal("map3d_border_halo_alpha")
-	_set_lines("KingdomHalo", rings, halo, halo, "map3d_border_halo_px", "", "",
-		PRIORITY_KINGDOM_HALO, _repo.bal("map3d_border_halo_soft"))
-	var ink := MapPalette.named(_repo, "map3d_border")
-	_set_lines("Kingdoms", rings, ink, ink, "map3d_border_width_px", "", "", PRIORITY_KINGDOMS)
-	var seam := MapPalette.named(_repo, "map3d_seam")
-	seam.a = _repo.bal("map3d_seam_alpha")
-	_set_lines("Seams", Map3DBorders.seam_lines(_repo, st, _meta, step), seam,
-		Color(seam, 0.0), "map3d_seam_width_px", "map3d_seam_dash_px", "map3d_seam_gap_px", PRIORITY_SEAMS)
-	_draw_selection()
+	if _borders.refresh():
+		if _hud != null:
+			_hud.refresh()  # the names follow the land held
+		_draw_selection()
 
 
 # --- the MANORS theme -------------------------------------------------------------
@@ -1496,19 +1461,10 @@ func clear_hover() -> void:
 		hover_pick({}, Vector2.ZERO)
 
 
-## The hovered kingdom's live outline in the border's own ink, wider — the
-## 2D map's hover ribbon (map3d_hover_border_width_px).
+## The hovered kingdom's live outline (Map3DLayerBorders.draw_hover).
 func _draw_hover() -> void:
-	if not _loaded:
-		return
-	var lines: Array = []
-	if _hover_kingdom != "":
-		if not _hover_lines.has(_hover_kingdom):
-			_hover_lines[_hover_kingdom] = Map3DBorders.kingdom_lines(_repo, _state(), _meta,
-				_hover_kingdom, _repo.bal("map3d_line_step_m"))
-		lines = _hover_lines[_hover_kingdom]
-	var ink := MapPalette.named(_repo, "map3d_border")
-	_set_lines("Hover", lines, ink, ink, "map3d_hover_border_width_px", "", "", PRIORITY_HOVER)
+	if _loaded:
+		_borders.draw_hover(_hover_kingdom)
 
 
 func hovered_kingdom() -> String:
@@ -1627,6 +1583,8 @@ func component(key: String) -> Object:
 	match key:
 		"roads":
 			return _roads
+		"borders":
+			return _borders
 	return null
 
 

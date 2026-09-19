@@ -20,6 +20,6 @@ const HOVER := 7
 const SELECTION := 8
 const CLOUDS := 9
 ## The lowest ring tier; the tiers (village lowest, capital highest — see
-## Map3DView._place_markers) and then the selection ring count up from here,
+## Map3DLayerSettlements.build) and then the selection ring count up from here,
 ## one step each (data/map3d_settlements.csv's groups).
 const RING_BASE := 10
