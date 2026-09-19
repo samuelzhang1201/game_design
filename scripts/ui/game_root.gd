@@ -35,6 +35,8 @@ var _bgm: AudioStreamPlayer
 static var settings_path := "user://settings.cfg"
 var _music_on := true
 var _music_button: Button
+## The pause menu's 3D-map graphics tier (Map3DQuality), cycled in place.
+var _quality_button: Button
 ## The PROVINCES tab's state (user request 2026-09-09): root-owned so it
 ## survives moving between screens, applied to whichever screen's map shows.
 var _province_view := true  # the map opens with the seams on (owner 2026-09-12)
@@ -219,6 +221,9 @@ func _build_pause_menu() -> void:
 	_music_button = _menu_button(_music_label(), func() -> void: set_music_on(not _music_on))
 	_music_button.name = "MusicToggle"
 	col.add_child(_music_button)
+	_quality_button = _menu_button(_quality_label(), _cycle_quality)
+	_quality_button.name = "GraphicsQuality"
+	col.add_child(_quality_button)
 	col.add_child(_menu_button("Quit to Desktop", func() -> void: get_tree().quit()))
 	_pause_status = Label.new()
 	_pause_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -269,6 +274,24 @@ func music_on() -> bool:
 
 func _music_label() -> String:
 	return "Music: On" if _music_on else "Music: Off"
+
+## The 3D map's graphics tier (spec 2026-09-20 §4), remembered in settings_path:
+## "auto" (the GPU's detection) or a graphics_quality.csv tier.
+func quality_setting() -> String:
+	return Map3DQuality.setting(settings_path)
+
+func _quality_label() -> String:
+	var s := quality_setting()
+	return "Graphics: %s" % (s.capitalize() if s != Map3DQuality.AUTO else "Auto")
+
+## The next choice (auto, low .. ultra), saved and worn by the showing 3D map.
+func _cycle_quality() -> void:
+	Map3DQuality.save_setting(settings_path, Map3DQuality.next_setting(quality_setting()))
+	_quality_button.text = _quality_label()
+	if current_screen != null and current_screen.has_method("map3d_view"):
+		var v: Map3DView = current_screen.map3d_view()
+		if v != null:
+			v.set_quality(Map3DQuality.resolve_here(settings_path))
 
 func _load_settings() -> void:
 	var cfg := ConfigFile.new()

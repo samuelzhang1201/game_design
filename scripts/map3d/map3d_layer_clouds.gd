@@ -135,7 +135,19 @@ func count() -> int:
 ## Task 17's quality tiers: caps the instance count and turns the shadow
 ## twin off at a lower tier.
 func set_quality(max_clouds: int, shadows: bool) -> void:
+	if multimesh == null:
+		return
 	_params["max"] = max_clouds
-	multimesh.instance_count = max_clouds
+	if _field != null and _field.clouds.size() > max_clouds:
+		_field.clouds.resize(max_clouds)  # a lower tier drops the extra clouds now
+	if multimesh.instance_count != max_clouds:
+		multimesh.instance_count = max_clouds
 	multimesh.visible_instance_count = mini(multimesh.visible_instance_count, max_clouds)
 	get_node("Shadows").visible = shadows
+
+
+## A tier's sky (graphics_quality clouds, cloud_shadows), never more clouds
+## than balance map3d_cloud_max.
+func apply_quality(row: Dictionary) -> void:
+	set_quality(mini(int(ctx.repo.bal("map3d_cloud_max")), int(Map3DQuality.num(row, "clouds"))),
+		Map3DQuality.num(row, "cloud_shadows") > 0.0)

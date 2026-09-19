@@ -72,7 +72,21 @@ static func resolve(settings_path: String, adapter: String, vendor: String) -> S
 	return t if t != AUTO else detect(adapter, vendor)
 
 
+## resolve() for the GPU this runs on (the view at load, the pause menu).
+static func resolve_here(settings_path: String) -> String:
+	return resolve(settings_path, RenderingServer.get_video_adapter_name(),
+		RenderingServer.get_video_adapter_vendor())
+
+
 ## The pause menu's next choice: auto, then each tier, then auto again.
 static func next_setting(current: String) -> String:
 	var order: Array = [AUTO] + TIERS
 	return String(order[(order.find(current) + 1) % order.size()])
+
+
+## `tier`'s row with `overrides` set over single values (the bench's
+## --render-scale), a copy: the CSV's row is shared.
+static func merged(repo: DataRepository, tier: String, overrides: Dictionary = {}) -> Dictionary:
+	var r: Dictionary = row(repo, tier).duplicate()
+	r.merge(overrides, true)
+	return r

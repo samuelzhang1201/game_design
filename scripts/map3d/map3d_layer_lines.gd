@@ -66,7 +66,9 @@ func line_mesh(line_name: String) -> ArrayMesh:
 ## Every line's screen-px values in SubViewport px (on load, resize, a tier change).
 func apply_scale() -> void:
 	for mi: MeshInstance3D in get_children():
-		var mat := mi.mesh.surface_get_material(0) as ShaderMaterial
+		# a baked mesh (Task 20) carries its material as an override
+		var mat := (mi.material_override if mi.material_override != null
+			else mi.mesh.surface_get_material(0)) as ShaderMaterial
 		if mat != null:
 			_scale_material(mat)
 

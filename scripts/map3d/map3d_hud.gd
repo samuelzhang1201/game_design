@@ -28,6 +28,13 @@ const PIECES := ["Labels", "Landmarks", "HeatLegend", "Badges", "Armies", "Backd
 
 var ctx: Map3DContext
 var view: Map3DView
+## Redraws per second at most (graphics_quality hud_hz; 0 = on every move).
+var hz := 0.0
+## Test seam: how many times the HUD has redrawn.
+var redraws := 0
+var _dirty := false
+## Seconds since the last throttled redraw (INF: none yet, or unthrottled).
+var _since := INF
 var _compass: CompassLayer
 var _needle: Map3DHudNeedle
 
@@ -104,11 +111,41 @@ func bind(p_ctx: Map3DContext, p_view: Map3DView) -> void:
 
 ## Redraw every piece, the wheel and the needle (queue_redraw itself cannot
 ## be overridden — the engine refuses to call a script's override of a
-## native CanvasItem method). On every camera move and state change.
+## native CanvasItem method). On every camera move and state change — at
+## most `hz` times a second: a move inside the interval waits for _process.
 func refresh() -> void:
+	if hz <= 0.0 or _since >= 1.0 / hz:
+		_redraw()
+	else:
+		_dirty = true
+		set_process(true)
+
+
+## Runs only while a throttled redraw waits or its interval is still open.
+func _process(delta: float) -> void:
+	_since += delta
+	if _dirty and hz > 0.0 and _since >= 1.0 / hz:
+		_redraw()
+	if not _dirty and (hz <= 0.0 or _since >= 1.0 / hz):
+		set_process(false)
+
+
+func _redraw() -> void:
+	_dirty = false
+	redraws += 1
+	if hz > 0.0:
+		# the interval is counted in _process, which runs until it closes
+		_since = 0.0
+		set_process(true)
 	for c: Node in get_children():
 		if c is CanvasItem:
 			(c as CanvasItem).queue_redraw()
+
+
+## A tier's redraw rate (graphics_quality hud_hz), and a redraw at it.
+func apply_quality(row: Dictionary) -> void:
+	hz = Map3DQuality.num(row, "hud_hz", 0.0)
+	refresh()
 
 
 ## The piece named `piece_name` (PIECES), or null.

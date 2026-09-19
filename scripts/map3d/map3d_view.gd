@@ -7,12 +7,11 @@ extends Control
 ## authored layers to it. Nothing generated is saved into the scene. A
 ## COORDINATOR: rig, input, picker, selection, layers and HUD do the work; the
 ## rest forwards to them under the API test_map3d_api.gd pins.
-## It renders into a SubViewport at WINDOW resolution shown by a TextureRect
-## (Display) — never a SubViewportContainer, which under the canvas_items
-## stretch renders at design size and blurs. Controls: the wheel and a
-## trackpad pinch zoom about the pointer (map3d_zoom_min_m 800 to
-## map3d_zoom_max_m 150000 m), a left, middle or two-finger drag pans, a right
-## drag turns, WASD / arrows pan, a click picks.
+## It renders into a SubViewport at WINDOW resolution × the graphics tier's
+## render_scale (Map3DQuality), shown by a TextureRect (Display) — never a
+## SubViewportContainer, which under the canvas_items stretch renders at design
+## size and blurs. Controls: the wheel and a pinch zoom about the pointer, a
+## left, middle or two-finger drag pans, a right drag turns, WASD / arrows pan.
 
 ## The described entry of the settlement under a click ({title, obj}), or
 ## {} when the selection is cleared — WorldMapView's signal.
@@ -89,6 +88,9 @@ var ruler_on := false:
 		if _loaded:
 			_hud.refresh()
 var _ruler := MapRuler.new()
+## The graphics tier worn ("" until the first load resolves one), overrides over it.
+var _tier := ""
+var _overrides: Dictionary = {}
 
 ## Where `map_id`'s built world lives: its maps.csv `map3d_dir` (default
 ## res://assets/map3d/<id>), or SCENE_PATTERN when no repository is loaded.
@@ -209,6 +211,8 @@ func _load() -> void:
 	_ctx.state_fn = func() -> GameState: return Game.state
 	_ctx.clock_fn = func() -> int: return Game.clock_speed
 	_ctx.window_scale_fn = _window_scale
+	_tier = Map3DQuality.resolve_here(GameRoot.settings_path) if _tier == "" else _tier
+	_ctx.quality = Map3DQuality.merged(_repo, _tier, _overrides)  # the layers read the steps
 	_world_slot.add_child(_world)
 	_rig.bind(_ctx)
 	_input.bind(self, _rig, _repo)
@@ -237,20 +241,34 @@ func _load() -> void:
 	_hud.bind(_ctx, self)  # the HUD redraws itself on every camera move
 	_hud.visible = true
 	_refresh_theme()  # a theme lit before the first load
+	_apply_quality()
 
-func _state() -> GameState: return Game.state
+## Wear a graphics tier (Map3DQuality; `overrides` over single values — the
+## bench's --render-scale). All of it applies now but the line, road and river
+## steps, which wait for the layers' next build (Ruling 6).
+func set_quality(tier: String, overrides: Dictionary = {}) -> void:
+	_tier = tier
+	_overrides = overrides
+	_apply_quality()
+
+func quality_tier() -> String: return _tier
+
+func _apply_quality() -> void:
+	if not _loaded:
+		return
+	_ctx.quality = Map3DQuality.merged(_repo, _tier, _overrides)
+	_fit_viewport()  # the SubViewport's pixels, then every px uniform
+	Map3DEnvironment.apply_view_quality(_viewport, _sun, _ctx.terrain, _ctx.quality)
+	_clouds.apply_quality(_ctx.quality)
+	_hud.apply_quality(_ctx.quality)
+
 func context() -> Map3DContext: return _ctx
 
-## The player's capital, or the map's centre when no realm is bound.
-func _home() -> Vector2:
-	var realm: Dictionary = _repo.kingdoms.get(_repo.resolve_realm("player_realm"), {})
-	var burg: Dictionary = _repo.burgs.get(String(realm.get("capital_burg", "")), {})
-	return _ctx.bounds.get_center() if burg.is_empty() else _burg_xz(burg)
+func _home() -> Vector2: return _ctx.home()
 
 func _burg_xz(burg: Dictionary) -> Vector2: return _ctx.to_world(Vector2(float(burg["x"]), float(burg["y"])))
 
-func _height_at(xz: Vector2) -> float:
-	return _ctx.height_at(xz) if _ctx != null else float(_meta.get("sea_y", 0.0))
+func _height_at(xz: Vector2) -> float: return _ctx.height_at(xz) if _ctx != null else float(_meta.get("sea_y", 0.0))
 
 func water_normals() -> Texture2D: return _ctx.water_normals() if _ctx != null else null
 func sea_material() -> ShaderMaterial: return _sea.material() if _loaded else null
@@ -359,18 +377,9 @@ func ruler_click(pos: Vector2) -> void:
 func _ruler_click(pos: Vector2) -> void: ruler_click(pos)
 func ruler_reading() -> String: return MapRuler.reading(_ruler.length() * map_units_per_metre(), map_unit())
 
-## The 3D map MEASURES LIKE THE 2D MAP (owner 2026-09-18): world metres back to
-## pack px times map_info.csv distance_scale, in distance_unit (no scale: km).
-func map_units_per_metre() -> float:
-	var per_px := float(_repo.map_info.get("distance_scale", "0"))
-	var m_per_px := float(_meta.get("m_per_px", 0.0))
-	return per_px / m_per_px if per_px > 0.0 and m_per_px > 0.0 else 0.001
-
-func map_unit() -> String:
-	if float(_repo.map_info.get("distance_scale", "0")) <= 0.0 \
-			or float(_meta.get("m_per_px", 0.0)) <= 0.0:
-		return "km"
-	return String(_repo.map_info.get("distance_unit", ""))
+## The 3D map MEASURES LIKE THE 2D MAP (owner 2026-09-18; Map3DGeometry).
+func map_units_per_metre() -> float: return Map3DGeometry.map_units_per_metre(_repo.map_info, _meta)
+func map_unit() -> String: return Map3DGeometry.map_unit(_repo.map_info, _meta)
 
 func ruler() -> MapRuler: return _ruler
 

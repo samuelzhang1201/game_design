@@ -137,3 +137,19 @@ static func ease_yaw(from_deg: float, t: float) -> float:
 	if t <= 0.0:
 		return from_deg
 	return start * (1.0 - smoothstep(0.0, 1.0, clampf(t, 0.0, 1.0)))
+
+
+## The pack's measure per world metre (owner 2026-09-18: the 3D map MEASURES
+## LIKE THE 2D MAP): world metres back to pack px (meta m_per_px) times
+## map_info.csv distance_scale; 0.001 (km) when either is missing.
+static func map_units_per_metre(map_info: Dictionary, meta: Dictionary) -> float:
+	var per_px := float(map_info.get("distance_scale", "0"))
+	var m_per_px := float(meta.get("m_per_px", 0.0))
+	return per_px / m_per_px if per_px > 0.0 and m_per_px > 0.0 else 0.001
+
+
+## map_info.csv distance_unit, or "km" when the measure falls back.
+static func map_unit(map_info: Dictionary, meta: Dictionary) -> String:
+	if float(map_info.get("distance_scale", "0")) <= 0.0 or float(meta.get("m_per_px", 0.0)) <= 0.0:
+		return "km"
+	return String(map_info.get("distance_unit", ""))

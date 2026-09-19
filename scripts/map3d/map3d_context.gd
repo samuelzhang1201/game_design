@@ -69,9 +69,14 @@ func window_scale() -> float:
 	return float(window_scale_fn.call()) if window_scale_fn.is_valid() else 1.0
 
 
+## The tier's row: the view's, or high's (today's look) when none is set.
+func q() -> Dictionary:
+	return quality if not quality.is_empty() else Map3DQuality.row(repo, "high")
+
+
 ## The graphics tier's share of the window's pixels the 3D view renders at.
 func render_scale() -> float:
-	return float(quality.get("render_scale", 1.0))
+	return Map3DQuality.num(q(), "render_scale")
 
 
 ## SubViewport px per design px: every projection, ray and px uniform uses it.
@@ -97,6 +102,14 @@ func to_world(pack_px: Vector2) -> Vector2:
 
 func to_pack(xz: Vector2) -> Vector2:
 	return Map3DGeometry.world_to_pack(meta, xz)
+
+
+## The player's capital (world XZ), or the map's centre when no realm is bound
+## (was Map3DView._home).
+func home() -> Vector2:
+	var realm: Dictionary = repo.kingdoms.get(repo.resolve_realm("player_realm"), {})
+	var burg: Dictionary = repo.burgs.get(String(realm.get("capital_burg", "")), {})
+	return bounds.get_center() if burg.is_empty() else to_world(Vector2(float(burg["x"]), float(burg["y"])))
 
 
 func ground_of_pack(pack_px: Vector2) -> Vector3:
@@ -132,16 +145,18 @@ func px_per_dist() -> float:
 	return 2.0 * tan(deg_to_rad(repo.bal("map3d_fov_deg")) * 0.5) / h
 
 
+## The borders', roads' and rivers' resampling steps in metres: balance.csv's
+## times the tier's multiplier (graphics_quality *_step_mul).
 func line_step() -> float:
-	return repo.bal("map3d_line_step_m")
+	return repo.bal("map3d_line_step_m") * Map3DQuality.num(q(), "line_step_mul")
 
 
 func road_step() -> float:
-	return repo.bal("map3d_road_step_m")
+	return repo.bal("map3d_road_step_m") * Map3DQuality.num(q(), "road_step_mul")
 
 
 func river_step() -> float:
-	return repo.bal("map3d_river_mesh_step_m")
+	return repo.bal("map3d_river_mesh_step_m") * Map3DQuality.num(q(), "river_step_mul")
 
 
 ## The ripple normal map both waters share (was Map3DView.water_normals).

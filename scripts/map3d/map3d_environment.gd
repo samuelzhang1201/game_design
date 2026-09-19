@@ -66,3 +66,51 @@ static func make_environment(repo: DataRepository) -> WorldEnvironment:
 	we.environment = (load(ENVIRONMENT) as Environment).duplicate(true)
 	apply_environment(repo, we.environment)
 	return we
+
+
+## A graphics tier's sun (graphics_quality.csv): shadows on or off, 4 / 2
+## splits or one orthogonal map, their reach and the directional atlas —
+## a 0 in shadow_max_m or shadow_atlas_px keeps what is set.
+static func apply_quality(sun: DirectionalLight3D, row: Dictionary) -> void:
+	sun.shadow_enabled = Map3DQuality.num(row, "sun_shadows", 1.0) > 0.0
+	var splits := int(Map3DQuality.num(row, "shadow_splits", 4.0))
+	sun.directional_shadow_mode = (DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if splits == 4
+		else (DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if splits == 2
+		else DirectionalLight3D.SHADOW_ORTHOGONAL))
+	if Map3DQuality.num(row, "shadow_max_m", 0.0) > 0.0:
+		sun.directional_shadow_max_distance = Map3DQuality.num(row, "shadow_max_m", 0.0)
+	if Map3DQuality.num(row, "shadow_atlas_px", 0.0) > 0.0:
+		RenderingServer.directional_shadow_atlas_set_size(
+			int(Map3DQuality.num(row, "shadow_atlas_px", 0.0)), true)
+
+
+## A tier's Terrain3D mesh (Terrain3D 1.0.2's mesh_size / mesh_lods); nothing
+## without a terrain (fixtures) or on a build that lacks the property.
+static func apply_terrain_quality(terrain: Node, row: Dictionary) -> void:
+	if terrain == null:
+		return
+	for pair: Array in [["mesh_size", "terrain_mesh_size"], ["mesh_lods", "terrain_mesh_lods"]]:
+		var v := int(Map3DQuality.num(row, String(pair[1]), 0.0))
+		# an unchanged value is left alone: setting it rebuilds the clipmap
+		if v > 0 and String(pair[0]) in terrain and int(terrain.get(String(pair[0]))) != v:
+			terrain.set(String(pair[0]), v)
+
+
+## A tier's SubViewport: MSAA (0 / 2 / 4 / 8) and anisotropic filtering
+## (1 / 2 / 4 / 8 / 16x, Viewport.anisotropic_filtering_level 0..4).
+static func apply_viewport_quality(vp: SubViewport, row: Dictionary) -> void:
+	var msaa := int(Map3DQuality.num(row, "msaa", 0.0))
+	vp.msaa_3d = {2: Viewport.MSAA_2X, 4: Viewport.MSAA_4X, 8: Viewport.MSAA_8X}.get(
+		msaa, Viewport.MSAA_DISABLED)
+	if "anisotropic_filtering_level" in vp:
+		vp.set("anisotropic_filtering_level",
+			{1: 0, 2: 1, 4: 2, 8: 3, 16: 4}.get(int(Map3DQuality.num(row, "aniso", 16.0)), 4))
+
+
+## Everything a tier sets on the view's own nodes: the SubViewport, the sun
+## and the terrain (Map3DView._apply_quality; the layers take theirs).
+static func apply_view_quality(vp: SubViewport, sun: DirectionalLight3D, terrain: Node,
+		row: Dictionary) -> void:
+	apply_viewport_quality(vp, row)
+	apply_quality(sun, row)
+	apply_terrain_quality(terrain, row)
