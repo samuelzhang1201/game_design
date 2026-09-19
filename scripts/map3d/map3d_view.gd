@@ -216,7 +216,6 @@ func _load() -> void:
 	_ctx.settle_ground()
 	_markers.build()
 	_sea.build(_ctx)
-	_rivers.build(_ctx, _scene_path)
 	# The sky and sun are the scene's, their numbers data (Task 14); the
 	# environment is this view's own copy of the shared .tres.
 	_env.environment = _env.environment.duplicate(true)
@@ -225,7 +224,7 @@ func _load() -> void:
 	_clouds.build(_ctx)
 	_lines.bind(_ctx)
 	_roads.bind(_ctx, _lines, _viewport)
-	_roads.build(_rivers.courses())
+	Map3DLayerBake.build_layers(_ctx, _scene_path, _rivers, _roads)  # baked, or built now
 	_borders.bind(_ctx, _lines)
 	_themes.bind(_ctx, _lines)
 	_themes.prepare(_scene_path)

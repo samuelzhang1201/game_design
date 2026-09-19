@@ -48,14 +48,34 @@ func put_mesh(line_name: String, arrays: Array, mat: ShaderMaterial) -> void:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	mesh.surface_set_material(0, mat)
+	_add_line(line_name, mesh, null)
+	_scale_material(mat)
+
+
+## One line's node: `mesh`, and `override` over its own material when given.
+func _add_line(line_name: String, mesh: ArrayMesh, override: ShaderMaterial) -> void:
 	var mi := MeshInstance3D.new()
 	mi.name = line_name
 	mi.mesh = mesh
+	mi.material_override = override
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# Lines are thin and long: never culled by a box the relief lift pushes them out of.
 	mi.extra_cull_margin = 16384.0
 	add_child(mi)
-	_scale_material(mat)
+	if override != null:
+		_scale_material(override)
+
+
+## A baked ribbon mesh (Map3DLayerBake) with `mat` as its override: the
+## loaded resource is shared, so it is never edited. Nothing without a surface.
+func put_baked(line_name: String, mesh: ArrayMesh, mat: ShaderMaterial) -> void:
+	var old := get_node_or_null(line_name)
+	if old != null:
+		remove_child(old)
+		old.queue_free()
+	if mesh == null or mesh.get_surface_count() == 0:
+		return
+	_add_line(line_name, mesh, mat)
 
 
 func line_mesh(line_name: String) -> ArrayMesh:

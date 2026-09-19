@@ -39,9 +39,10 @@ values are `balance.csv` `map3d_*`.
 
 **One pack, one command:** `tools/map3d/build_pack.sh [--map ID]` (default:
 `data/maps.csv`'s `is_default` pack) runs steps 3–5 below in order —
-`export_manor_land.gd`, `bake_world.py`, `build_world.gd` — with
-`GDAI_MCP_SERVER_PORT=3999` set, stops at the first failure, and ends with
-`manifest.json` written. Steps 1–2 (sources and the packed textures) are
+`export_manor_land.gd`, `bake_world.py`, `build_world.gd` — then
+`bake_layers.gd` (see Baked layers), with `GDAI_MCP_SERVER_PORT=3999` set,
+stops at the first failure, and ends with `manifest.json` and `layers/`
+written. Steps 1–2 (sources and the packed textures) are
 shared by every pack and built once. The steps one by one:
 
 1. **Sources** — download the Poly Haven sets named in `pack_textures.py`
@@ -118,6 +119,28 @@ there is no 3D map and what to run:
 The optional inputs — `rivers.json`, `bake/fields.png`, the packed road and
 bridge textures, the pack's `sea_texture` — each warn ONCE when missing
 (`Map3DWorldLoader.warn_once`) and the map draws without them.
+
+## Baked layers
+
+Rivers, roads, trails and bridges never move, so the build bakes their
+meshes (spec 2026-09-20 §2): `GDAI_MCP_SERVER_PORT=3999 Godot --headless
+--path . -s tools/map3d/bake_layers.gd [-- --map ID]`, run by `build_pack.sh`
+after `build_world.gd`, opens the built world and saves one `ArrayMesh` per
+layer into `<map3d_dir>/layers/<layer>_<step set>.res` — one set per
+distinct step set of `data/graphics_quality.csv` (`road_step_mul` and
+`river_step_mul`, e.g. `r100_v100` for high/ultra, `r140_v150` medium,
+`r200_v250` low) — and `layers/manifest.json`, the key each set was baked
+under (`Map3DLayerBake`). The key covers `Map3DLayerBake.KEYS` (the balance
+numbers the geometry depends on: the road and river steps, the river split,
+clearance and end fade, the road and trail widths, the route smoothing and
+every `map3d_bridge_*` but `max_view_m`, which is only the material's fade),
+the md5 of `rivers.json` and of the pack's `geography/routes.csv`, the world
+manifest's `built_at` and the step set. The view uses a set only when it is
+COMPLETE (all four files) and its key matches today's inputs; otherwise it
+builds the layers at load as before, so a stale bake is never drawn — only
+slower to open. Materials are never baked: colours, widths in px and the
+shaders' numbers are read at load. After changing any of those inputs, run
+`bake_layers.gd` again (or the whole `build_pack.sh`).
 
 ## `map3d_dir`
 

@@ -34,31 +34,52 @@ func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_viewport: SubViewport
 ## and every bridge where one crosses `courses` (the rivers' own drawn
 ## courses — the rivers must already be built).
 func build(courses: Array) -> void:
+	var plan := plan_for(ctx, courses)
+	for line_name: String in ["Roads", "Trails"]:
+		lines.put_mesh(line_name, plan[line_name], road_material(ctx, line_name))
+	_place_bridges(bridge_mesh(ctx, plan["bridges"]))
+
+
+## The build's baked roads, trails and bridges (Map3DLayerBake), drawn as
+## they are: the loaded meshes are shared, so they are never edited.
+func build_baked(meshes: Dictionary) -> void:
+	lines.put_baked("Roads", meshes["roads"], road_material(ctx, "Roads"))
+	lines.put_baked("Trails", meshes["trails"], road_material(ctx, "Trails"))
+	_place_bridges(meshes["bridges"])  # its meta "bridges" is the list
+
+
+## What build() draws and tools/map3d/bake_layers.gd saves (Task 20): the
+## ribbon arrays of "Roads" and "Trails" (on the ground, or on a bridge deck)
+## and "bridges", every bridge where one crosses `courses`, each with its deck_w.
+static func plan_for(ctx: Map3DContext, courses: Array) -> Dictionary:
 	var step := ctx.road_step()
-	var all_bridges: Array = []
+	var out: Dictionary = {"bridges": []}
+	var rules := bridge_rules_of(ctx.repo)
 	for group: String in ["roads", "trails"]:
 		var key := "road" if group == "roads" else "trail"
-		var colour := MapTerrain.palette_color(ctx.repo, "map3d_" + key, MapTerrain.FALLBACK)
-		colour.a = ctx.repo.bal("map3d_%s_alpha" % key)
 		var width_m := ctx.repo.bal("map3d_%s_width_m" % key)
 		var plan := Map3DBridges.plan(Map3DBorders.route_lines(ctx.repo, ctx.meta, group, step),
-			courses, ctx.height_at, bridge_rules())
-		_set_road(group.capitalize(), plan["lines"], plan["heights"], colour,
-			"map3d_%s_width_px" % key, width_m)
+			courses, ctx.height_at, rules)
+		out[group.capitalize()] = Map3DBorders.ribbon_arrays(plan["lines"], ctx.height_at,
+			plan["heights"])
 		var deck_w := width_m + ctx.repo.bal("map3d_bridge_extra_w_m")
 		for b: Dictionary in plan["bridges"]:
 			b["deck_w"] = deck_w
-		all_bridges.append_array(plan["bridges"])
-	_build_bridges(all_bridges)
+		(out["bridges"] as Array).append_array(plan["bridges"])
+	return out
 
 
 ## balance.csv map3d_bridge_* as Map3DBridges' rules.
 func bridge_rules() -> Dictionary:
+	return bridge_rules_of(ctx.repo)
+
+
+static func bridge_rules_of(repo: DataRepository) -> Dictionary:
 	var rules: Dictionary = {}
 	for key: String in ["abut_m", "clear_m", "clear_per_width", "hump_m", "min_sin", "merge_m",
 			"deck_step_m", "deck_m", "parapet_h_m", "parapet_w_m", "arch_max_m", "pier_m",
 			"end_over_water_m"]:
-		rules[key] = ctx.repo.bal("map3d_bridge_" + key)
+		rules[key] = repo.bal("map3d_bridge_" + key)
 	return rules
 
 
@@ -77,16 +98,16 @@ static func texture_pair(base: String) -> Array:
 	return [load(base + "_alb_ht.png"), load(base + "_nrm_rgh.png")]
 
 
-## One road layer under Lines/<name>, replacing any before: the ribbons of
-## `route_lines` on the ground (or on a bridge deck where `heights` says so).
-func _set_road(line_name: String, route_lines: Array, heights: Array, colour: Color,
-		width_key: String, width_m: float) -> void:
-	var arrays := Map3DBorders.ribbon_arrays(route_lines, ctx.height_at, heights)
+## The road_line.gdshader material of Lines/Roads or Lines/Trails.
+static func road_material(ctx: Map3DContext, line_name: String) -> ShaderMaterial:
+	var key := "road" if line_name == "Roads" else "trail"
+	var colour := MapTerrain.palette_color(ctx.repo, "map3d_" + key, MapTerrain.FALLBACK)
+	colour.a = ctx.repo.bal("map3d_%s_alpha" % key)
 	var mat := ShaderMaterial.new()
 	mat.shader = ROAD_SHADER
 	mat.render_priority = Map3DPriority.ROADS
 	mat.set_shader_parameter("colour", colour)
-	mat.set_shader_parameter("width_m", width_m)
+	mat.set_shader_parameter("width_m", ctx.repo.bal("map3d_%s_width_m" % key))
 	mat.set_shader_parameter("edge_soft", ctx.repo.bal("map3d_road_edge_soft"))
 	mat.set_shader_parameter("fray", ctx.repo.bal("map3d_road_fray"))
 	mat.set_shader_parameter("tile_m", ctx.repo.bal("map3d_road_tile_m"))
@@ -100,24 +121,17 @@ func _set_road(line_name: String, route_lines: Array, heights: Array, colour: Co
 	if not pair.is_empty():
 		mat.set_shader_parameter("surface", pair[0])
 		mat.set_shader_parameter("surface_nrm", pair[1])
-	mat.set_meta("width_key", width_key)
-	lines.put_mesh(line_name, arrays, mat)
+	mat.set_meta("width_key", "map3d_%s_width_px" % key)
+	return mat
 
 
-## Every bridge as ONE mesh in the medieval_blocks_03 stone, lit and casting
-## shadows like the ground; replaces any before.
-func _build_bridges(list: Array) -> void:
-	_bridges = list
-	# The authored scene's Viewport/Bridges is filled in place (its mesh null
-	# when there are none); a bare viewport gets a node made for it.
-	var mi := viewport.get_node_or_null("Bridges") as MeshInstance3D if viewport != null else null
-	if mi != null:
-		mi.mesh = null
-	if list.is_empty() or viewport == null:
-		return
-	var rules := bridge_rules()
-	var tile := ctx.repo.bal("map3d_bridge_tile_m")
+## Every bridge in `list` as ONE mesh (a surface per deck width), its meta
+## "bridges" the list; no surface when there are none.
+static func bridge_mesh(ctx: Map3DContext, list: Array) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
+	mesh.set_meta("bridges", list)
+	var rules := bridge_rules_of(ctx.repo)
+	var tile := ctx.repo.bal("map3d_bridge_tile_m")
 	# one deck width per group, so one mesh per width
 	var by_w: Dictionary = {}
 	for b: Dictionary in list:
@@ -129,8 +143,11 @@ func _build_bridges(list: Array) -> void:
 		var arrays := Map3DBridges.mesh_arrays(by_w[w], w, rules, tile)
 		if not arrays.is_empty():
 			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	if mesh.get_surface_count() == 0:
-		return
+	return mesh
+
+
+## The bridges' stone: medieval_blocks_03, lit and casting shadows like the ground.
+func bridge_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat.albedo_color = MapTerrain.palette_color(ctx.repo, "map3d_bridge", Color("#8A7F70"))
@@ -148,10 +165,23 @@ func _build_bridges(list: Array) -> void:
 		mat.normal_enabled = true
 		mat.normal_texture = pair[1]
 		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	for i in mesh.get_surface_count():
-		mesh.surface_set_material(i, mat)
+	return mat
+
+
+## `mesh` under Viewport/Bridges in the stone (as its override: a baked mesh
+## is shared), replacing any before; cleared when it has no surface.
+func _place_bridges(mesh: ArrayMesh) -> void:
+	_bridges = mesh.get_meta("bridges", []) if mesh != null else []
+	# The authored scene's Viewport/Bridges is filled in place (its mesh null
+	# when there are none); a bare viewport gets a node made for it.
+	var mi := viewport.get_node_or_null("Bridges") as MeshInstance3D if viewport != null else null
+	if mi != null:
+		mi.mesh = null
+	if mesh == null or mesh.get_surface_count() == 0 or viewport == null:
+		return
 	if mi == null:
 		mi = MeshInstance3D.new()
 		mi.name = "Bridges"
 		viewport.add_child(mi)
 	mi.mesh = mesh
+	mi.material_override = bridge_material()
