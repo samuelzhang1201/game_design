@@ -160,19 +160,26 @@ static func _lod(repo: DataRepository, prominence: int) -> int:
 	return 2
 
 
-## Names in prominence order, so the biggest gets its first choice: an
-## override, else the patterns from a hash of the cell over the nearest town,
-## then the next-nearest; never a name already given.
+## Names in prominence order, so the biggest gets its first choice: every
+## override is reserved FIRST, in its own pass, so a hand-authored name
+## always wins its cell and can never be handed to a more prominent
+## landmark that is only generated afterward; the rest are then named from
+## the patterns, by a hash of the cell over the nearest town, then the
+## next-nearest, never a name already taken (by an override or a generated
+## name).
 static func _name_all(repo: DataRepository, marks: Array) -> void:
 	var taken := {}
-	var towns := repo.burgs.keys()
-	towns.sort()
 	for m: Dictionary in marks:
 		var id := int(m["cell"])
 		if repo.landmark_name_overrides.has(id):
 			m["name"] = String(repo.landmark_name_overrides[id])
 			taken[m["name"]] = true
+	var towns := repo.burgs.keys()
+	towns.sort()
+	for m: Dictionary in marks:
+		if String(m["name"]) != "":
 			continue
+		var id := int(m["cell"])
 		var patterns: Array = repo.landmark_names.get(String(m["kind"]), [])
 		if patterns.is_empty():
 			continue

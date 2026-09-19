@@ -102,3 +102,17 @@ func test_local_edge() -> void:
 	var m: Dictionary = Elevation.landmarks(repo)[0]
 	var edge := Elevation.local_edge_m(repo, int(m["cell"]))
 	assert_eq(absi(edge), int(m["prominence"]), "the prominence is the edge's size")
+
+func test_an_override_never_collides_with_a_more_prominent_name() -> void:
+	var marks := Elevation.landmarks(repo)
+	var top: Dictionary = marks[0]
+	var lesser: Dictionary = marks[marks.size() - 1]
+	var top_name := String(top["name"])
+	repo.landmark_name_overrides[int(lesser["cell"])] = top_name
+	Elevation.forget()
+	var top_after := String(Elevation.landmark_at(repo, int(top["cell"]))["name"])
+	var lesser_after := String(Elevation.landmark_at(repo, int(lesser["cell"]))["name"])
+	assert_eq(lesser_after, top_name, "the override wins its own cell")
+	assert_ne(top_after, lesser_after, "names stay unique after the override")
+	repo.landmark_name_overrides.erase(int(lesser["cell"]))
+	Elevation.forget()
