@@ -13,6 +13,10 @@ func before_all() -> void:
 func after_each() -> void:
 	if FileAccess.file_exists(CFG):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(CFG))
+	# test_the_pause_menu_remembers_the_tier writes the REAL settings file
+	# (GameRoot.settings_path, not CFG); restore it here so a failing assert
+	# mid-test can't leave it pinned at a tier.
+	Map3DQuality.save_setting(GameRoot.settings_path, Map3DQuality.AUTO)
 
 
 func test_every_tier_has_a_row() -> void:
@@ -180,4 +184,3 @@ func test_the_pause_menu_remembers_the_tier() -> void:
 	assert_eq(r.quality_setting(), Map3DQuality.next_setting(before))
 	assert_eq(Map3DQuality.setting(GameRoot.settings_path), r.quality_setting())
 	assert_string_contains(button.text, "Graphics")
-	Map3DQuality.save_setting(GameRoot.settings_path, Map3DQuality.AUTO)

@@ -163,6 +163,52 @@ move with it.
   mip-level offset like a texture import's own bias field — 1.0 is neutral,
   under 1.0 sharpens (`build_terrain.gd` uses 0.85).
 
+## Performance tiers
+
+`data/graphics_quality.csv` holds four rows — `low`, `medium`, `high`,
+`ultra` — each a render scale, shadow/cloud/mesh settings and the step
+multipliers for lines, roads and rivers (`Map3DQuality`). A first run
+detects a tier from the GPU's name (integrated Intel/AMD, llvmpipe → low;
+base Apple M-series, GTX ≤ 10xx, MX → medium; else high); the pause menu's
+Graphics button cycles auto → low → medium → high → ultra → auto and saves
+the choice to `user://settings.cfg`.
+
+The bench (`tools/map3d/bench.gd`) gates each tier against its own row:
+
+```
+GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- \
+    --size 3024x1964 --quality high --out tools/map3d/baselines/bench_runs.csv
+```
+
+`--quality low|medium|high|ultra` forces the tier before the view loads
+(`Map3DQuality.forced`); `--render-scale X` overrides just the render scale
+on top of it; `--out FILE` appends every row (size, tier, label, median/
+mean/p95 ms, draw calls, primitives) to a CSV; `--layer manors|heights|
+military` lights that bottom-bar tab first, so a theme's ground and HUD are
+priced too. The budget is the tier row's `bench_budget_ms`; a WARNING prints
+if `--size` does not match the row's own `bench_size` (the gate is only
+meaningful at the size it names). Exit 0 at or under budget, 3 over it.
+**`--out` must land under `tools/map3d/baselines/` (which carries its own
+`.gdignore`) or a scratch path — a bare CSV anywhere else under `res://`
+gets auto-imported as a Translation resource and litters the folder with
+`.import` / `.translation` sidecars, same trap as `data/`'s (see CLAUDE.md).**
+
+Gates, run 2026-09-20 on the dev machine (Apple Silicon, GL Compatibility;
+`tools/map3d/baselines/bench_runs.csv` has the full per-layer breakdown):
+
+| tier | size | budget | WORST (all on) | WORST (`--layer manors`) | WORST (`--layer heights`) |
+|---|---|---|---|---|---|
+| high | 3024×1964 | 8.00 ms | 6.87 ms | 7.01 ms | 6.95 ms |
+| medium | 1920×1080 | 6.00 ms | 2.46 ms | 2.57 ms | 2.49 ms |
+| low | 1920×1080 | 4.00 ms | 1.47 ms | 1.49 ms | 1.47 ms |
+
+All nine gates passed with wide headroom on this machine (an Apple Silicon
+GPU, well above every tier's target hardware), so no tier's CSV row needed
+tuning. As the spec notes (§4): this is the M5 Pro to Iris Xe / low-end APU
+gap — **one real run on an integrated-GPU machine is recommended before
+shipping**, since a GPU actually AT a tier's floor may not clear its budget
+by the same margin.
+
 ## Open items before the 3D map ships
 
 - `build_terrain.gd`'s look constants (textures, material, sky, sea) still

@@ -40,6 +40,10 @@ var _root: GameRoot
 var _view: Map3DView
 var _out := ""
 var _rows: Array = []
+## The tier this run was gated at (Map3DQuality.TIERS); "high" if --quality
+## was not given. Recorded per row so --out rows from different tiers never
+## get confused under one "current" label.
+var _tier := "high"
 
 
 func _ready() -> void:
@@ -53,6 +57,10 @@ func _ready() -> void:
 	var oi := args.find("--out")
 	if oi >= 0 and oi + 1 < args.size():
 		_out = args[oi + 1]
+	var qi := args.find("--quality")
+	var tier := args[qi + 1] if qi >= 0 and qi + 1 < args.size() else "high"
+	_tier = tier
+	Map3DQuality.forced = tier  # before GameRoot exists, so the view's first load wears it
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(size)
 	get_window().size = size
@@ -77,10 +85,20 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 	_view = v
+	var overrides := {}
+	var ri := args.find("--render-scale")
+	if ri >= 0 and ri + 1 < args.size():
+		overrides["render_scale"] = args[ri + 1]
+		v.set_quality(tier, overrides)
+	var row := Map3DQuality.row(Game.data, tier)
+	var budget := Map3DQuality.num(row, "bench_budget_ms", BUDGET_MS)
+	if "%dx%d" % [size.x, size.y] != String(row.get("bench_size", "")):
+		print("WARNING: tier %s is gated at %s, not %dx%d" % [tier, String(row.get("bench_size", "")), size.x, size.y])
 	RenderingServer.viewport_set_measure_render_time(v.viewport().get_viewport_rid(), true)
 	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
-	print("renderer %s / %s, window %s" % [RenderingServer.get_current_rendering_method(),
-		RenderingServer.get_current_rendering_driver_name(), get_window().size])
+	print("renderer %s / %s, window %s, tier %s render_scale %.2f" % [RenderingServer.get_current_rendering_method(),
+		RenderingServer.get_current_rendering_driver_name(), get_window().size, tier,
+		Map3DQuality.num(Map3DQuality.merged(Game.data, tier, overrides), "render_scale", 1.0)])
 	var worst := 0.0
 	for stop: Array in STOPS:
 		v.look_at_home(Game.data.bal(String(stop[1])))
@@ -88,10 +106,17 @@ func _ready() -> void:
 		for layer: String in v.layer_names():
 			v.set_layer_visible(layer, false)
 			await _measure("%s  - %s" % [stop[0], layer])
-			v.set_layer_visible(layer, true)
-	print("WORST %.2f ms (%.0f fps), budget %.2f ms" % [worst, 1000.0 / worst, BUDGET_MS])
+			# Restore the LAYER's own tier value, not a hardcoded true: at low
+			# (sun_shadows 0) this used to turn shadows back ON after pricing
+			# them, so every row after "- Shadows" was priced with shadows the
+			# tier does not actually pay for (Task 17 review).
+			var restore := true
+			if layer == "Shadows":
+				restore = Map3DQuality.num(row, "sun_shadows", 1.0) != 0.0
+			v.set_layer_visible(layer, restore)
+	print("WORST %.2f ms (%.0f fps), budget %.2f ms (%s)" % [worst, 1000.0 / worst, budget, tier])
 	_write_rows()
-	get_tree().quit(0 if worst <= BUDGET_MS else 3)
+	get_tree().quit(0 if worst <= budget else 3)
 
 
 ## Times FRAMES frames after WARM warm-up ones, one sample per frame taken
@@ -127,7 +152,7 @@ func _measure(label: String) -> float:
 	print("%-24s median %6.2f ms  mean %6.2f ms  p95 %6.2f ms  (%5.1f fps)  draw calls %4d  primitives %8d  gpu view %5.2f ms  gpu root %5.2f ms"
 		% [label, median, _mean(frame_ms), _percentile(frame_ms, 0.95), 1000.0 / median, calls, prims,
 			_median(view_gpu_ms), _median(root_gpu_ms)])
-	_rows.append([str(get_window().size.x) + "x" + str(get_window().size.y), "current", label,
+	_rows.append([str(get_window().size.x) + "x" + str(get_window().size.y), _tier, label,
 		median, _mean(frame_ms), _percentile(frame_ms, 0.95), calls, prims])
 	return median
 
@@ -164,7 +189,7 @@ func _write_rows() -> void:
 		return
 	f.seek_end()
 	if fresh:
-		f.store_line("size,quality,label,median_ms,mean_ms,p95_ms,draw_calls,primitives")
+		f.store_line("size,tier,label,median_ms,mean_ms,p95_ms,draw_calls,primitives")
 	for r: Array in _rows:
 		f.store_line("%s,%s,\"%s\",%.3f,%.3f,%.3f,%d,%d" % r)
 	f.close()
