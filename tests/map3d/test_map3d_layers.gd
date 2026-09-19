@@ -145,3 +145,20 @@ func test_the_borders_rebuild_only_when_ownership_moves() -> void:
 	assert_not_null(v.line_mesh("Hover"))
 	borders.draw_hover("")
 	assert_null(v.line_mesh("Hover"))
+
+
+func test_the_themes_are_one_layer_that_works_before_load() -> void:
+	var v := Map3DView.create(Game.data, FIXTURE)
+	v.size = Vector2(800, 450)
+	add_child_autofree(v)
+	v.set_manor_theme("heights")
+	assert_true(v.heat_on(), "the theme holds before the world loads")
+	var themes := v.component("themes") as Map3DLayerThemes
+	assert_not_null(themes)
+	assert_eq(themes.theme(), "heights")
+	v.activate()
+	v.set_manor_theme("manors")
+	assert_false(v.heat_on())
+	assert_not_null(v.cell_lut())
+	assert_not_null(v.viewport().get_node_or_null("Lines/ManorEdges"))
+	assert_eq(Map3DView.load_field_map("user://nowhere/world.tscn"), null)

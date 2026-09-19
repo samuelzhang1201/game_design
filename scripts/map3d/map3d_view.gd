@@ -84,9 +84,8 @@ const PRIORITY_RING_BASE := Map3DPriority.RING_BASE
 const CLICK_SLOP := 10.0
 ## Where the name sits off the cursor (WorldMapView.TOOLTIP_OFFSET).
 const TOOLTIP_OFFSET := Vector2(20.0, 24.0)
-## Metres per texel of the bake's field map: tools/map3d/bake_world.py
-## FIELD_MAP_STEP (2) vertices of VERTEX_M (20 m).
-const FIELD_MAP_M_PER_TEXEL := 40.0
+## Metres per texel of the bake's field map (Map3DLayerThemes).
+const FIELD_MAP_M_PER_TEXEL := Map3DLayerThemes.FIELD_MAP_M_PER_TEXEL
 
 var _repo: DataRepository
 var _scene_path := ""
@@ -102,6 +101,9 @@ var _rivers: Map3DLayerRivers
 var _sea: Map3DLayerSea
 var _roads := Map3DLayerRoads.new()
 var _borders := Map3DLayerBorders.new()
+## MANORS and HEIGHTS on the ground (Map3DLayerThemes): made here, before
+## _ready, so a theme handed down before the first load is held.
+var _themes := Map3DLayerThemes.new()
 var _meta: Dictionary = {}
 var _bounds := Rect2()
 var _target := Vector2.ZERO
@@ -118,21 +120,6 @@ var _selected_province := ""
 var _selected_burg := ""
 ## The clicked manor under a theme (-1 for none), outlined in gold.
 var _selected_manor := -1
-## The MANORS theme (owner 2026-09-19; ECONOMY was folded into it): "" or "manors";
-## the LUT of each cell's ManorPalette colour the patched terrain shader reads
-## (Map3DGroundTint), rebuilt when the theme or an owner turns; the terrain
-## material carrying the patch (null without a Terrain3D or when the addon's
-## code would not patch); whether the cell edges have been laid.
-var _theme := ""
-## HEIGHTS' heat mix (owner 2026-09-19, spec 2026-09-19-map3d-heights): a
-## plain bool _refresh_theme sets before the _loaded guard, so heat_on()
-## works even in the test fixture, which has no Terrain3D.
-var _heat := false
-var _theme_sig := 0
-var _cell_lut: ImageTexture
-var _lut_image: Image
-var _tint_mat: Resource
-var _edges_built := false
 var _border_clock := 0.0
 var _hud: Map3DHud
 ## The hover (owner 2026-09-18): a pointer move is only recorded, and picked
@@ -389,7 +376,8 @@ func _load() -> void:
 	_roads.bind(_ctx, _lines, _viewport)
 	_roads.build(_rivers.courses())
 	_borders.bind(_ctx, _lines)
-	_prepare_ground_tint()
+	_themes.bind(_ctx, _lines)
+	_themes.prepare(_scene_path)
 	_target = Map3DGeometry.clamp_target(_home(), _bounds)
 	_distance = _repo.bal("map3d_zoom_start_m")
 	_yaw = 0.0
@@ -473,71 +461,18 @@ func refresh_borders() -> void:
 
 # --- the MANORS theme -------------------------------------------------------------
 
-## Patch the world's Terrain3D shader for the manor tint (Map3DGroundTint).
-## Without a Terrain3D (the tests' fixture) or when the addon's code no longer
-## carries the line the patch rewrites, the ground simply stays plain.
-func _prepare_ground_tint() -> void:
-	var terrains := _world.find_children("*", "Terrain3D", true, false)
-	if terrains.is_empty():
-		return
-	var mat: Resource = terrains[0].get("material")
-	if mat == null:
-		return
-	mat.set("shader_override_enabled", true)
-	var shader: Shader = mat.get("shader_override")
-	var patched := "" if shader == null else Map3DGroundTint.patch(shader.code)
-	if patched == "":
-		mat.set("shader_override_enabled", false)
-		push_warning("Map3DView: Terrain3D's shader has no line to tint — the themes leave the ground plain")
-		return
-	shader.code = patched
-	_tint_mat = mat
-	var origin: Array = _meta.get("pack_origin", [0.0, 0.0])
-	mat.call("set_shader_param", "pack_origin", Vector2(float(origin[0]), float(origin[1])))
-	mat.call("set_shader_param", "m_per_px", float(_meta.get("m_per_px", 50.0)))
-	if _repo.cell_texture_path != "" and ResourceLoader.exists(_repo.cell_texture_path):
-		mat.call("set_shader_param", "cell_index", load(_repo.cell_texture_path))
-	mat.call("set_shader_param", "tint_mix", 0.0)
-	# HEIGHTS (owner 2026-09-19): the ground's world height ramped through
-	# terrain_palette heat_1..6, over 0..elevation_m_per_unit x
-	# (100 - elevation_sea_level) metres.
-	mat.call("set_shader_param", "heat_mix", 0.0)
-	mat.call("set_shader_param", "heat_sea_y", float(_meta.get("sea_y", 0.0)))
-	mat.call("set_shader_param", "heat_top_m",
-		_repo.bal("elevation_m_per_unit") * (100.0 - _repo.bal("elevation_sea_level")))
-	for i in 6:
-		mat.call("set_shader_param", "heat_c%d" % i,
-			MapTerrain.palette_color(_repo, "heat_%d" % (i + 1), MapTerrain.FALLBACK))
-	# the bake's field map (owner 2026-09-19): furrows up close, the crops'
-	# colour eased back far out; without it both stay off
-	var fields := load_field_map(_scene_path)
-	if fields != null:
-		mat.call("set_shader_param", "field_map", fields)
-		mat.call("set_shader_param", "field_m_per_texel", FIELD_MAP_M_PER_TEXEL)
-		mat.call("set_shader_param", "furrow_m", _repo.bal("map3d_furrow_m"))
-		mat.call("set_shader_param", "furrow_depth", _repo.bal("map3d_furrow_depth"))
-		mat.call("set_shader_param", "field_fade", _repo.bal("map3d_field_fade"))
-		mat.call("set_shader_param", "field_fade_near_m", _repo.bal("map3d_field_fade_near_m"))
-		mat.call("set_shader_param", "field_fade_far_m", _repo.bal("map3d_field_fade_far_m"))
-
-
-## The bake's field map beside a built scene (bake/fields.png — the bake dir
-## is .gdignored, so it is read as a file, not imported), or null.
+## The bake's field map beside a built scene, or null (Map3DLayerThemes).
 static func load_field_map(scene_path: String) -> Texture2D:
-	var path := ProjectSettings.globalize_path(scene_path.get_base_dir().path_join("bake/fields.png"))
-	if not FileAccess.file_exists(path):
-		return null
-	var img := Image.load_from_file(path)
-	return null if img == null else ImageTexture.create_from_image(img)
+	return Map3DLayerThemes.load_field_map(scene_path)
 
 
 ## Show a theme on the 3D ground: "manors", "heights", or "" for none —
 ## GameRoot hands it down with the 2D map's show_manors / show_heights.
 func set_manor_theme(theme_name: String) -> void:
-	_theme = theme_name
+	_themes.set_theme(theme_name)
 	# A manor is picked only under MANORS: leaving it forgets the clicked
 	# manor and its gold outline.
-	if _theme != "manors" and _selected_manor >= 0:
+	if theme_name != "manors" and _selected_manor >= 0:
 		_selected_manor = -1
 		if _loaded:
 			_draw_selection()
@@ -545,92 +480,30 @@ func set_manor_theme(theme_name: String) -> void:
 
 
 func manor_theme() -> String:
-	return _theme
+	return _themes.theme()
 
 
-## The theme on the ground: MANORS' LUT (rebuilt when an owner turns), its
-## tint and cell edges; HEIGHTS' heat mix. One theme at a time.
+## The theme on the ground (Map3DLayerThemes), and the HUD that follows it.
 func _refresh_theme() -> void:
-	_heat = _theme == "heights"
-	if not _loaded:
-		return
-	var manors := _theme == "manors"
-	if manors:
-		var st := _state()
-		var sig := hash([_theme, 0 if st == null else st.province_owner.hash(),
-			0 if st == null else st.manor_owner.hash(),
-			0 if st == null else st.manor_province.hash()])
-		if sig != _theme_sig or _cell_lut == null:
-			_theme_sig = sig
-			_build_lut()
-		if not _edges_built:
-			_build_manor_edges()
-	if _tint_mat != null:
-		_tint_mat.call("set_shader_param", "tint_mix",
-			_repo.bal("map3d_manor_tint") if manors else 0.0)
-		_tint_mat.call("set_shader_param", "heat_mix",
-			_repo.bal("map3d_heat_tint") if _heat else 0.0)
-	var edges := _lines.get_node_or_null("ManorEdges") as MeshInstance3D
-	if edges != null:
-		edges.visible = manors
+	if _loaded:
+		_themes.refresh()
 	if _hud != null:
 		_hud.refresh()
 
 
 ## Test seam: whether the HEIGHTS heat is on the ground.
 func heat_on() -> bool:
-	return _heat
-
-
-## Each land cell's ManorPalette colour for the theme at texel (id % w, id / w).
-func _build_lut() -> void:
-	var max_id := 0
-	for id: int in _repo.cells:
-		max_id = maxi(max_id, id)
-	var lut := Map3DGroundTint.lut_size(max_id)
-	var img := Image.create(lut.x, lut.y, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0, 0, 0, 0))
-	var st := _state()
-	for id: int in _repo.cells:
-		img.set_pixel(id % lut.x, id / lut.x, ManorPalette.theme_color(_repo, st, id, _theme))
-	_lut_image = img
-	if _cell_lut != null and _cell_lut.get_size() == Vector2(lut):
-		_cell_lut.update(img)
-	else:
-		_cell_lut = ImageTexture.create_from_image(img)
-	if _tint_mat != null:
-		_tint_mat.call("set_shader_param", "cell_lut", _cell_lut)
-		_tint_mat.call("set_shader_param", "lut_size", lut)
-
-
-## The cell edges (ManorPalette.edges, the 2D map's own) as constant-width
-## ribbons on the relief, in the 2D map's manor_line ink, alpha and width.
-## Geometry: laid on the first theme and kept.
-func _build_manor_edges() -> void:
-	_edges_built = true
-	var step := _repo.bal("map3d_line_step_m")
-	var pairs := ManorPalette.edges(_repo)
-	var lines: Array = []
-	for i in range(0, pairs.size() - 1, 2):
-		var seg := PackedVector2Array([Map3DGeometry.pack_to_world(_meta, pairs[i]),
-			Map3DGeometry.pack_to_world(_meta, pairs[i + 1])])
-		lines.append(Map3DGeometry.resample(seg, step))
-	var ink := MapPalette.named(_repo, "manor_line")
-	ink.a = _repo.bal("map_manor_line_alpha")
-	_set_lines("ManorEdges", lines, ink, ink, "map_manor_line_width", "", "", PRIORITY_MANOR_EDGES)
+	return _themes.heat_on()
 
 
 ## Test seam: the LUT the terrain shader reads (null before the first theme).
 func cell_lut() -> ImageTexture:
-	return _cell_lut
+	return _themes.cell_lut()
 
 
 ## Test seam: the colour the LUT holds for cell `id` (clear before a theme).
 func lut_color(id: int) -> Color:
-	if _lut_image == null:
-		return Color(0, 0, 0, 0)
-	var w := _lut_image.get_width()
-	return _lut_image.get_pixel(id % w, id / w)
+	return _themes.lut_color(id)
 
 
 ## balance.csv map3d_bridge_* as Map3DBridges' rules (Map3DLayerRoads owns
@@ -963,7 +836,7 @@ func draw_labels(ci: CanvasItem) -> void:
 ## per pack px at its own distance), in design px, biggest producer first;
 ## a badge that would overlap a bigger one is left off. [] off the theme.
 func manor_badges() -> Array:
-	if _theme != "manors" or _camera == null:
+	if _themes.theme() != "manors" or _camera == null:
 		return []
 	var s := _render_scale()
 	var m_per_pack := float(_meta.get("m_per_px", 50.0))
@@ -1068,7 +941,7 @@ func draw_armies(ci: CanvasItem) -> void:
 ## bigger mark.
 ## [] off HEIGHTS.
 func landmark_marks() -> Array:
-	if not _heat or _camera == null or not _loaded:
+	if not _themes.heat_on() or _camera == null or not _loaded:
 		return []
 	# ~1.5 ms a call (the settlement dots dominate) and asked up to three
 	# times a frame — HUD draw, hover, click — so it is cut once per camera
@@ -1162,7 +1035,7 @@ func draw_landmarks(ci: CanvasItem) -> void:
 
 ## The HEIGHTS legend's box, bottom-left, in design px (Rect2() off HEIGHTS).
 func heat_legend_rect() -> Rect2:
-	if not _heat:
+	if not _themes.heat_on():
 		return Rect2()
 	var w := _repo.bal("map3d_heat_legend_w_px")
 	var h := _repo.bal("map3d_heat_legend_h_px")
@@ -1380,7 +1253,7 @@ func pick_at(pos: Vector2) -> Dictionary:
 	# and last the mark's rect grown by half the pick reach.
 	if best != "" and best_d <= best_dot:
 		return {"kind": "burg", "code": best}
-	var marks := landmark_marks() if _heat else []
+	var marks := landmark_marks() if _themes.heat_on() else []
 	for mk: Dictionary in marks:
 		if (mk["rect"] as Rect2).has_point(pos):
 			return {"kind": "landmark", "cell": int(mk["cell"])}
@@ -1391,7 +1264,7 @@ func pick_at(pos: Vector2) -> Dictionary:
 		if (mk["rect"] as Rect2).grow(grow).has_point(pos):
 			return {"kind": "landmark", "cell": int(mk["cell"])}
 	# Under MANORS the land means its MANOR, as on the 2D map.
-	if _theme == "manors":
+	if _themes.theme() == "manors":
 		var cell := _cell_at(Map3DGeometry.world_to_pack(_meta, xz))
 		return {"kind": "manor", "cell": cell} if cell >= 0 else {}
 	var province := _province_at(Map3DGeometry.world_to_pack(_meta, xz))
@@ -1585,6 +1458,8 @@ func component(key: String) -> Object:
 			return _roads
 		"borders":
 			return _borders
+		"themes":
+			return _themes
 	return null
 
 
