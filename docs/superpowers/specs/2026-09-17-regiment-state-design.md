@@ -83,6 +83,11 @@ point)`):
   `forest`, tropical forests → `jungle`, wetland → `marsh`, deserts →
   `desert`, tundra/glacier → `tundra`.
 
+Height (2026-09-19): the hill and mountain lines are now the supply tiers'
+(`Elevation.tier_of`, `data/army_height_supply.csv`), and height also scales
+battle odds and supply use — see `2026-09-19-map3d-heights-design.md` for the
+height factor and the tiers.
+
 **Fortified**: a burg with `walls` or `citadel` in its `features` stands in
 the same cell. Shown as "(fortified)" beside the terrain.
 
