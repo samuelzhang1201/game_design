@@ -105,6 +105,9 @@ func _draw() -> void:
 	# Kingdom names first (owner 2026-09-18): under the compass, the scale
 	# bar and the ruler.
 	view.draw_labels(self)
+	# HEIGHTS' landmarks and legend (owner 2026-09-19), over the names.
+	view.draw_landmarks(self)
+	view.draw_heat_legend(self)
 	# MANORS' output badges (owner 2026-09-19), over the names.
 	view.draw_badges(self)
 	# MILITARY's counters (owner 2026-09-19), over everything on the ground.

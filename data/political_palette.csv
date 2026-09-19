@@ -37,3 +37,6 @@ map3d_border,#141414,"3D MAP: the kingdom border — a thin solid black line (ow
 map3d_seam,#141414,"3D MAP: the province seams — dark dashes in the kingdom border's ink, told from it by dash and opacity (owner 2026-09-18, was pale #F3EEDF)"
 ruler_ink,#141414,"MEASUREMENT ruler (owner 2026-09-18): the dashed line, ticks, anchors and reading, on both maps"
 ruler_halo,#F3EEDF,"MEASUREMENT ruler: the pale halo under every stroke and the reading, so the ruler reads over snow, sea and grass"
+landmark_high,#2B1D14,"3D MAP HEIGHTS (owner 2026-09-19, spec 2026-09-19-map3d-heights §4): a high point's triangle — dark brown-black"
+landmark_low,#1E4257,"3D MAP HEIGHTS: a low point's triangle — the coast line's deep blue"
+landmark_text,#1A1410,"3D MAP HEIGHTS: the height beside a landmark and the legend's tier names"

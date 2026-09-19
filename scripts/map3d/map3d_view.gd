@@ -907,6 +907,12 @@ static func load_field_map(scene_path: String) -> Texture2D:
 ## GameRoot hands it down with the 2D map's show_manors / show_heights.
 func set_manor_theme(theme_name: String) -> void:
 	_theme = theme_name
+	# A manor is picked only under MANORS: leaving it forgets the clicked
+	# manor and its gold outline.
+	if _theme != "manors" and _selected_manor >= 0:
+		_selected_manor = -1
+		if _loaded:
+			_draw_selection()
 	_refresh_theme()
 
 
@@ -1598,6 +1604,143 @@ func draw_armies(ci: CanvasItem) -> void:
 	ArmyCounters.draw(ci, _repo, markers, _selected_army)
 
 
+# --- HEIGHTS landmarks (owner 2026-09-19, spec 2026-09-19-map3d-heights §4) ---
+
+## The high and low points shown now, in design px, biggest first: those
+## whose lod the camera's distance allows, before the camera and on screen,
+## none overlapping a settlement dot, a regiment counter or a bigger mark.
+## [] off HEIGHTS.
+func landmark_marks() -> Array:
+	if not _heat or _camera == null or not _loaded:
+		return []
+	var max_lod := 2
+	if _distance >= _repo.bal("map3d_landmark_lod_far_view_m"):
+		max_lod = 0
+	elif _distance >= _repo.bal("map3d_landmark_lod_mid_view_m"):
+		max_lod = 1
+	var s := _render_scale()
+	var px := _repo.bal("map3d_landmark_px")
+	var font := UiPalette.display_font()
+	var font_px := int(_repo.bal("map3d_landmark_font_px"))
+	var frame := Rect2(Vector2.ZERO, size)
+	var taken: Array = _settlement_marks()
+	for a: Dictionary in army_markers():
+		taken.append(a["rect"])
+	var out: Array = []
+	for m: Dictionary in Elevation.landmarks(_repo):
+		if int(m["lod"]) > max_lod:
+			continue
+		var xz := Map3DGeometry.pack_to_world(_meta, m["pos"])
+		var ground := Vector3(xz.x, _height_at(xz), xz.y)
+		if _camera.is_position_behind(ground):
+			continue
+		var p := _camera.unproject_position(ground) / s
+		if not frame.has_point(p):
+			continue
+		var text := "%d m" % int(m["metres"])
+		var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px).x \
+			if font != null else 0.0
+		var tall := maxf(px, float(font_px))
+		var rect := Rect2(p - Vector2(px * 0.5, tall * 0.5), Vector2(px + 4.0 + tw, tall))
+		var clear := true
+		for r: Rect2 in taken:
+			if r.intersects(rect):
+				clear = false
+				break
+		if not clear:
+			continue
+		taken.append(rect)
+		out.append({"cell": int(m["cell"]), "kind": String(m["kind"]), "pos": p,
+			"rect": rect, "text": text})
+	return out
+
+
+## Draw the landmarks on the HUD: a triangle up (high) or down (low) on a
+## pale halo, the height beside it.
+func draw_landmarks(ci: CanvasItem) -> void:
+	var marks := landmark_marks()
+	if marks.is_empty():
+		return
+	var px := _repo.bal("map3d_landmark_px")
+	var font := UiPalette.display_font()
+	var font_px := int(_repo.bal("map3d_landmark_font_px"))
+	var halo := MapTerrain.palette_color(_repo, "map3d_hud_halo", MapTerrain.FALLBACK)
+	var text_ink := MapPalette.named(_repo, "landmark_text")
+	var high_ink := MapPalette.named(_repo, "landmark_high")
+	var low_ink := MapPalette.named(_repo, "landmark_low")
+	for mk: Dictionary in marks:
+		var p: Vector2 = mk["pos"]
+		var h := px * 0.5
+		var high := String(mk["kind"]) == "high"
+		var tri := PackedVector2Array([p + Vector2(0, -h), p + Vector2(h, h), p + Vector2(-h, h)]) \
+			if high else PackedVector2Array([p + Vector2(0, h), p + Vector2(-h, -h), p + Vector2(h, -h)])
+		ci.draw_colored_polygon(tri, high_ink if high else low_ink)
+		ci.draw_polyline(tri + PackedVector2Array([tri[0]]), halo, 1.5, true)
+		if font != null:
+			var at := p + Vector2(h + 3.0, font_px * 0.35)
+			ci.draw_string_outline(font, at, String(mk["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
+				font_px, 3, halo)
+			ci.draw_string(font, at, String(mk["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
+				font_px, text_ink)
+
+
+## The HEIGHTS legend's box, bottom-left, in design px (Rect2() off HEIGHTS).
+func heat_legend_rect() -> Rect2:
+	if not _heat:
+		return Rect2()
+	var w := _repo.bal("map3d_heat_legend_w_px")
+	var h := _repo.bal("map3d_heat_legend_h_px")
+	var margin := _repo.bal("map_compass_margin_px")
+	return Rect2(Vector2(margin, size.y - margin - h), Vector2(w, h))
+
+
+## The legend's tier lines, bottom up: {label "Hills 750 m", y} in design px,
+## each at its metres' share of the ramp's height. [] off HEIGHTS.
+func heat_legend_ticks() -> Array:
+	var box := heat_legend_rect()
+	if box.size.y <= 0.0:
+		return []
+	var top_m := _repo.bal("elevation_m_per_unit") * (100.0 - _repo.bal("elevation_sea_level"))
+	var out: Array = []
+	for i in range(_repo.army_height_supply.size() - 1, -1, -1):
+		var r: Dictionary = _repo.army_height_supply[i]
+		var metres := Elevation.metres_of_height(_repo, float(r["min_height"]))
+		if metres <= 0 or top_m <= 0.0:
+			continue
+		out.append({"label": "%s %d m" % [String(r["tier"]).capitalize(), metres],
+			"y": box.end.y - box.size.y * clampf(float(metres) / top_m, 0.0, 1.0)})
+	return out
+
+
+## The HEIGHTS legend, bottom-left: the heat ramp (terrain_palette heat_1..6)
+## bottom to top, the tier lines ticked and named with their metres.
+func draw_heat_legend(ci: CanvasItem) -> void:
+	var box := heat_legend_rect()
+	if box.size.y <= 0.0:
+		return
+	var x0 := box.position.x
+	var x1 := box.end.x
+	for i in 5:
+		var y0 := box.end.y - box.size.y * float(i) / 5.0
+		var y1 := box.end.y - box.size.y * float(i + 1) / 5.0
+		var c0 := MapTerrain.palette_color(_repo, "heat_%d" % (i + 1), MapTerrain.FALLBACK)
+		var c1 := MapTerrain.palette_color(_repo, "heat_%d" % (i + 2), MapTerrain.FALLBACK)
+		ci.draw_polygon(PackedVector2Array([Vector2(x0, y0), Vector2(x1, y0),
+			Vector2(x1, y1), Vector2(x0, y1)]), PackedColorArray([c0, c0, c1, c1]))
+	var font := UiPalette.display_font()
+	var font_px := int(_repo.bal("map3d_landmark_font_px"))
+	var ink := MapPalette.named(_repo, "landmark_text")
+	var halo := MapTerrain.palette_color(_repo, "map3d_hud_halo", MapTerrain.FALLBACK)
+	for t: Dictionary in heat_legend_ticks():
+		var y := float(t["y"])
+		ci.draw_line(Vector2(x0, y), Vector2(x1 + 4.0, y), ink, 1.5)
+		if font != null:
+			var at := Vector2(x1 + 7.0, y + font_px * 0.35)
+			ci.draw_string_outline(font, at, String(t["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
+				font_px, 3, halo)
+			ci.draw_string(font, at, String(t["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, ink)
+
+
 func drawn_army_count() -> int:
 	return _drawn_armies
 
@@ -1707,6 +1850,12 @@ func pick_at(pos: Vector2) -> Dictionary:
 	for b: Dictionary in manor_badges():
 		if (b["rect"] as Rect2).has_point(pos):
 			return {"kind": "burg", "code": String(b["burg"])}
+	# Under HEIGHTS a high or low point, on its mark (spec 2026-09-19-map3d-heights).
+	if _heat:
+		var grow := _repo.bal("map3d_pick_px") * 0.5
+		for mk: Dictionary in landmark_marks():
+			if (mk["rect"] as Rect2).grow(grow).has_point(pos):
+				return {"kind": "landmark", "cell": int(mk["cell"])}
 	for code: String in _sorted_burgs():
 		var burg: Dictionary = _repo.burgs[code]
 		var spec: Dictionary = _repo.map3d_settlements[String(burg.get("group", ""))]
@@ -1753,7 +1902,7 @@ static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dict
 				.get("province_code", ""))
 		"province":
 			province = String(picked["code"])
-		"manor":
+		"manor", "landmark":
 			province = MapManors.province_of(repo, int(picked["cell"]), state)
 		"army":
 			var k := String(ArmySystem.regiment(repo, String(picked["code"])).get("kingdom_code", ""))
@@ -1768,10 +1917,10 @@ static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dict
 ## cursor, and — only when it changes — the kingdom's wider outline and
 ## country_hovered. Public: tests drive it without a ray.
 func hover_pick(picked: Dictionary, pos: Vector2) -> void:
-	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor", "army"] else {}
+	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor", "army", "landmark"] else {}
 	if obj != _hover_obj:
 		_hover_obj = obj
-		var label := MapObjects.label_of(_repo, obj)
+		var label := MapObjects.label_of(_repo, obj, _state())
 		_tooltip.text = label
 		_tooltip.visible = label != ""
 	if _tooltip.visible:
@@ -1877,6 +2026,19 @@ func select_at(pos: Vector2) -> void:
 			_draw_selection()
 			object_selected.emit({"title": MapManors.label_of(_repo, cell),
 				"obj": {"kind": "manor", "cell": cell}})
+		"landmark":
+			var cell := int(picked["cell"])
+			if _selected_army != "":
+				_selected_army = ""
+				if _hud != null:
+					_hud.refresh()
+			_selected_burg = ""
+			_show_selected_ring("")
+			_set_selected_province("")
+			var m := Elevation.landmark_at(_repo, cell)
+			object_selected.emit({"title": String(m.get("name", "")),
+				"lines": MapObjects.landmark_lines(_repo, _state(), cell),
+				"ask": "", "obj": {"kind": "landmark", "cell": cell}})
 		_:
 			clear_selection()
 
@@ -1935,6 +2097,9 @@ func selected_province() -> String:
 
 func selected_burg() -> String:
 	return _selected_burg
+
+func selected_manor() -> int:
+	return _selected_manor
 
 ## Whether the clicked settlement's gold ring is currently shown.
 func selected_ring_visible() -> bool:

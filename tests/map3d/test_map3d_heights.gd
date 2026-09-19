@@ -35,8 +35,143 @@ func test_heights_is_a_theme_of_its_own() -> void:
 	v.set_manor_theme("")
 	assert_false(v.heat_on())
 
+## A manor's pixel (a land cell in a province) with no settlement and no
+## landmark within 60 pack px, and the manor it lies in.
+func _open_land() -> Dictionary:
+	var img := (load(Game.data.cell_texture_path) as Texture2D).get_image()
+	var near: Array = []
+	for b: Dictionary in Game.data.burgs.values():
+		near.append(Vector2(float(b["x"]), float(b["y"])))
+	for m: Dictionary in Elevation.landmarks(Game.data):
+		near.append(m["pos"])
+	for y in range(40, img.get_height() - 40, 25):
+		for x in range(40, img.get_width() - 40, 25):
+			var id := MapIndex.id_at(img, Vector2i(x, y))
+			if not Game.data.manors.has(id) or MapManors.province_of(Game.data, id) == "":
+				continue
+			var clear := true
+			for q: Vector2 in near:
+				if q.distance_to(Vector2(x, y)) < 60.0:
+					clear = false
+					break
+			if clear:
+				return {"px": Vector2(x + 0.5, y + 0.5), "cell": id}
+	return {}
+
+func _click(v: Map3DView, at: Vector2) -> void:
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = at
+	v._gui_input(down)
+	var up := down.duplicate() as InputEventMouseButton
+	up.pressed = false
+	v._gui_input(up)
+
 func test_under_heights_land_still_means_its_province() -> void:
 	var v := _view()
+	var spot := _open_land()
+	assert_false(spot.is_empty(), "the pack has open land")
+	v.look_at_pack(spot["px"], Game.data.bal("map3d_zoom_min_m"))
+	v.set_manor_theme("manors")
+	assert_eq(v.pick_at(v.size * 0.5), {"kind": "manor", "cell": int(spot["cell"])})
 	v.set_manor_theme("heights")
 	var picked := v.pick_at(v.size * 0.5)
-	assert_ne(String(picked.get("kind", "")), "manor", "manors are picked only under MANORS")
+	assert_eq(String(picked.get("kind", "")), "province", "manors are picked only under MANORS")
+	assert_eq(String(picked.get("code", "")),
+		MapManors.province_of(Game.data, int(spot["cell"]), Game.state))
+
+func test_leaving_manors_forgets_the_selected_manor() -> void:
+	var v := _view()
+	var spot := _open_land()
+	v.look_at_pack(spot["px"], Game.data.bal("map3d_zoom_min_m"))
+	v.set_manor_theme("manors")
+	_click(v, v.size * 0.5)
+	assert_not_null(v.line_mesh("Selection"), "the manor is outlined in gold")
+	v.set_manor_theme("heights")
+	assert_null(v.line_mesh("Selection"), "no manor outline off MANORS")
+	assert_eq(v.selected_manor(), -1)
+
+func _frame_on(v: Map3DView, m: Dictionary, distance: float) -> void:
+	v.look_at_pack(m["pos"], distance)
+
+func test_no_marks_off_heights() -> void:
+	var v := _view()
+	assert_eq(v.landmark_marks(), [])
+
+func test_far_out_only_the_big_ones_show() -> void:
+	var v := _view()
+	v.set_manor_theme("heights")
+	var top: Dictionary = Elevation.landmarks(Game.data)[0]
+	_frame_on(v, top, Game.data.bal("map3d_landmark_lod_far_view_m") * 1.5)
+	var marks := v.landmark_marks()
+	assert_gt(marks.size(), 0)
+	for mk: Dictionary in marks:
+		assert_eq(int(Elevation.landmark_at(Game.data, int(mk["cell"]))["lod"]), 0)
+
+func test_close_in_smaller_ones_join() -> void:
+	var v := _view()
+	v.set_manor_theme("heights")
+	var small: Dictionary = {}
+	for m: Dictionary in Elevation.landmarks(Game.data):
+		if int(m["lod"]) == 2:
+			small = m
+			break
+	assert_false(small.is_empty(), "the pack has near-only landmarks")
+	_frame_on(v, small, Game.data.bal("map3d_zoom_min_m") * 2.0)
+	var cells: Array = v.landmark_marks().map(func(mk: Dictionary) -> int: return int(mk["cell"]))
+	assert_true(int(small["cell"]) in cells)
+
+func test_marks_never_overlap() -> void:
+	var v := _view()
+	v.set_manor_theme("heights")
+	_frame_on(v, Elevation.landmarks(Game.data)[0], 40000.0)
+	var marks := v.landmark_marks()
+	assert_gt(marks.size(), 1)
+	for i in marks.size():
+		for j in range(i + 1, marks.size()):
+			assert_false((marks[i]["rect"] as Rect2).intersects(marks[j]["rect"]))
+
+func test_hovering_a_mark_shows_its_tooltip_and_a_click_opens_its_card() -> void:
+	var v := _view()
+	v.set_manor_theme("heights")
+	var top: Dictionary = Elevation.landmarks(Game.data)[0]
+	_frame_on(v, top, 20000.0)
+	var mk: Dictionary = {}
+	for m: Dictionary in v.landmark_marks():
+		if int(m["cell"]) == int(top["cell"]):
+			mk = m
+	assert_false(mk.is_empty())
+	var picked := v.pick_at(mk["pos"])
+	assert_eq(picked, {"kind": "landmark", "cell": int(top["cell"])})
+	v.hover_pick(picked, mk["pos"])
+	assert_true(v.hover_tooltip().begins_with(String(top["name"])))
+	assert_ne(v.hovered_kingdom(), "", "a landmark on land names its kingdom")
+	watch_signals(v)
+	v.select_at(mk["pos"])
+	assert_signal_emitted(v, "object_selected")
+	var entry: Dictionary = get_signal_parameters(v, "object_selected")[0]
+	assert_eq(String(entry["title"]), String(top["name"]))
+	assert_eq(Array(entry["lines"]), Array(MapObjects.landmark_lines(Game.data, Game.state, int(top["cell"]))))
+
+func test_the_legend_names_the_tier_lines_under_heights() -> void:
+	var v := _view()
+	assert_eq(v.heat_legend_ticks(), [], "no legend off HEIGHTS")
+	assert_eq(v.heat_legend_rect(), Rect2())
+	v.set_manor_theme("heights")
+	var box := v.heat_legend_rect()
+	var m := Game.data.bal("map_compass_margin_px")
+	assert_eq(box, Rect2(Vector2(m, v.size.y - m - 160.0), Vector2(14.0, 160.0)))
+	var ticks := v.heat_legend_ticks()
+	# (45-20)*30, (62-20)*30, (72-20)*30 over a 2400 m ramp; plains (0) is below the sea line.
+	assert_eq(ticks.map(func(t: Dictionary) -> String: return String(t["label"])),
+		["Hills 750 m", "Mountains 1260 m", "Peak 1560 m"])
+	assert_almost_eq(float(ticks[0]["y"]), box.end.y - 160.0 * 750.0 / 2400.0, 0.01)
+	assert_almost_eq(float(ticks[2]["y"]), box.end.y - 160.0 * 1560.0 / 2400.0, 0.01)
+
+func test_the_hud_draws_marks_and_legend_without_error() -> void:
+	var v := _view()
+	v.set_manor_theme("heights")
+	_frame_on(v, Elevation.landmarks(Game.data)[0], 20000.0)
+	await wait_process_frames(3)
+	assert_gt(v.landmark_marks().size(), 0)
