@@ -10,23 +10,19 @@ standing on the Terrain3D ground, a cluster whose size comes from the burg's
 population, irregular around a centre, thinning outward into the built ground
 the bake already lays down.
 
-> **Status (2026-09-20, after the owner reviewed the first shoot): the
-> placement algorithm below shipped differently from how §1–§5 describe it.**
-> The first cut was an evenly-spaced jittered grid with a radial density
-> falloff, sized off each burg's population (`house_people_per_house`,
-> `house_density_gamma`, `house_core_ratio`, `house_spacing_m`,
-> `house_min` / `house_max_<group>`). The owner rejected it as scattered
-> ("你不需要实时严格的计算房屋数量…房屋的摆放要凸显中世纪那种风格，紧凑杂乱，形成
-> 巷子，高低层次不齐") and it was replaced with a lane-grown layout whose house
-> count is a fixed TARGET per settlement GROUP, not derived from population at
-> all. Every key named above is gone from `data/map3d_bake.csv`; §1's `rank`
-> bullet carries the detailed correction, and §8 below records what the owner
-> ruled on the values that remain (`house_radius_ratio`) and what replaced the
-> ones that don't. Where this document and `data/map3d_bake.csv` /
-> `tools/map3d/bake_houses.py` disagree, the CODE is correct — treat §1–§5 as
-> the design's FIRST draft and the ledger
-> (`.superpowers/sdd/2026-09-20-map3d-settlement-houses/progress.md`) as the
-> record of how it changed.
+> **Status (2026-09-20): §1–§5 below now describe `tools/map3d/bake_houses.py`
+> as it actually ships**, current as of the branch's last commit (`3af24da`).
+> They did not always: the first cut was an evenly-spaced jittered grid with
+> a radial density falloff, sized off each burg's population. The owner
+> rejected it as scattered ("你不需要实时严格的计算房屋数量…房屋的摆放要凸显中世
+> 纪那种风格，紧凑杂乱，形成巷子，高低层次不齐") and it was replaced with the
+> lane-grown, ring-quota layout this document now describes, whose house
+> count is a fixed TARGET per settlement GROUP, never derived from
+> population. For the history of that change — what was tried, measured and
+> rejected along the way — see the work ledger,
+> `.superpowers/sdd/2026-09-20-map3d-settlement-houses/progress.md`. Where
+> this document and the code still disagree on anything, the CODE is
+> correct.
 
 ## Owner rulings that govern this work
 
@@ -68,8 +64,12 @@ afterwards. Nothing downstream can place a house the footprint did not claim.
 ### Output: `<map3d_dir>/bake/houses.csv`
 
 ```
-burg_code,rank,x_m,z_m,yaw_deg,type,scale
+burg_code,rank,x_m,z_m,yaw_deg,type,scale,height_scale
 ```
+
+(**corrected** — `height_scale` was missing from this document's original
+header; `Map3DHouses.COLUMNS` in `scripts/map3d/map3d_houses.gd` and the
+rows `bake_houses.place()` actually writes both carry all eight fields.)
 
 - `x_m`, `z_m` — world metres (the same frame `Map3DGeometry.pack_to_world`
   produces), so the runtime does no coordinate maths.
@@ -81,8 +81,12 @@ burg_code,rank,x_m,z_m,yaw_deg,type,scale
   (frontage before block infill) within each ring quota. **This bullet, as
   originally written, described a design that shipped differently — see the
   correction below.**
-- `scale` — per-instance size jitter, plus the edge taper of §4.
-- `yaw_deg` — §4.
+- `scale` — the HORIZONTAL edge taper of §1 point 9 plus its own jitter.
+- `height_scale` — a SEPARATE, independent VERTICAL taper (§1 point 9):
+  tallest at the centre, shortest at the rim, jittered per house — 高低层次
+  不齐, so neighbours differ in height as well as footprint.
+- `yaw_deg` — the bearing to the house's own lane (or the nearest one, for a
+  block-infill house) plus jitter (§1 points 6–7).
 
 **Correction (owner amendment 2026-09-20, after the first review; ledger
 entries under Task 2 and the "OWNER AMENDMENT" section):** this bullet
@@ -113,28 +117,117 @@ more houses live, with no re-bake. Neither half of that survived:
 
 ### Placement per burg
 
-1. `r_foot = footprint_radius_m(population)` — the existing function, unchanged.
+The steps below are `tools/map3d/bake_houses.py`'s `place()` as it actually
+ships, current as of the branch's last commit (`3af24da`). It replaced the
+jittered grid an earlier draft of this document described; §1's `rank`
+correction above has the reason why.
+
+1. `r_foot = footprint_radius_m(population)` — unchanged, the same formula
+   `bake_world.py` uses for the built-ground footprint.
 2. `r_house = house_radius_ratio * r_foot` (§4). Houses live only inside
-   `r_house`; the ring out to `r_foot` is deliberately empty.
-3. Candidates on a jittered grid at `house_spacing_m`, seeded from the burg
-   code so a re-bake places the same village.
-4. A candidate is kept when ALL hold:
-   - the footprint mask at that point is above `house_foot_min`;
-   - it is land (the bake's own `land` mask);
-   - the final heightmap's slope there is under `house_max_slope` — this is
-     what keeps houses off carved river banks and cliffs;
-   - it is at least `house_shore_min_m` from water. A burg with `is_port` 1
-     uses `house_port_shore_min_m` instead, so a harbour may sit on the water's
-     edge;
-   - a Bernoulli draw against the density falloff (§4) passes;
-   - it does not overlap an already-placed house's `footprint_m`.
-5. The centre landmark is placed first, at the burg's own position, its type
-   chosen by `group` (§2).
-6. Ranking: the landmark is rank 0; the rest are ranked by distance from the
-   centre, so a growing settlement grows OUTWARD.
-7. A burg whose kept count falls below `house_min` (a village on a crag) keeps
-   its best candidates by relaxing the density draw only — never the land,
-   water or slope tests.
+   `r_house`; the ring out to `r_foot` is deliberately empty — the owner's
+   buffer.
+3. **Lanes are grown first**, before anything else draws from the burg's own
+   RNG stream (seeded from `blake2b(burg_code)`, not Python's salted
+   `hash()`, so a re-bake is byte-identical): `lane_seeds` lanes (4 on
+   `beria`) leave the centre on roughly even, jittered bearings, and each
+   grows as a branching random walk (`_walk_lane`) — `lane_step_m` (20 m)
+   per step, heading perturbed by up to `lane_wander_deg` (25°) each step, a
+   `lane_branch_chance` (0.15) chance to fork a shorter-budgeted child lane
+   at each step while `lane_max_depth` (3) still allows it — until the walk
+   passes `r_house` or its own step budget runs out. This is the "巷子"
+   (lanes) the owner asked for: negative space as literal geometry, not a
+   density formula.
+4. **The centre landmark is placed next**, its type picked by `role ==
+   "landmark"` and the burg's `group`, weighted by `weight` among the types
+   its `min_group` allows (capital → palace, city → church with tower, town
+   / fort → church, village → chapel — §2). It stands at the burg's own
+   centre when that point is land and clear of the shore buffer; otherwise a
+   ring search (`_find_landmark_spot`, 11 m radial steps, 16 points per
+   ring) looks outward for the nearest land that is, bounded by
+   `min(house_landmark_search_m, r_house)` — the search is capped at the
+   cluster's OWN radius, so a relocated landmark can never land in the
+   buffer ring. **The landmark is never slope-tested** (a hillside church is
+   intended) but is always land- and shore-tested; if nothing within the
+   bound qualifies, the settlement gets NEITHER a landmark NOR any houses —
+   an empty list (0 of 684 real burgs hit this on `beria`; two highland
+   sites do find landmark ground but then fail every house candidate and
+   are left landmark-only).
+5. **The target house count comes from the settlement's GROUP, never its
+   population**: `house_count_<group>` (`data/map3d_bake.csv` — village 25,
+   fort 55, town 70, city 200, capital 400 on `beria`), split into
+   `house_edge_rings` (8) concentric ring quotas by distance from the
+   centre, weighted `(1 - ring's own mid-radius fraction) ^
+   house_edge_falloff_gamma` so the outer rings still get a nonzero share
+   instead of the fill exhausting itself in one dense core well short of
+   `r_house`.
+6. **Frontage pass.** Every lane is resampled every `plot_step_m` (10 m) of
+   its own arc length, offering a candidate on BOTH sides, oriented to face
+   the lane (`yaw = bearing - side*90`, plus `house_yaw_jitter_deg` jitter —
+   never uniform random). Candidates are tried nearest-centre first, capped
+   by `house_frontage_share` (0.45) of EACH ring's own quota, so lane
+   frontage cannot consume a ring's whole target before block infill gets a
+   turn (an earlier round measured 60–72% real frontage share against this
+   0.45 target, from a pass-ordering bug fixed in `3af24da` — see §8).
+7. **Block-infill pass.** A jittered grid at `plot_step_m` spacing across
+   the whole `r_house` disc fills whatever each ring's quota still lacks —
+   skipping any point that falls on a lane's own clear strip
+   (`lane_half_width_m`, 1.75 m half-width: a real medieval lane's own
+   width, deliberately NOT widened the way this project widens roads and
+   rivers for visibility, plus the candidate's own half-footprint) — and
+   orienting each accepted house to the NEAREST lane's bearing (or a random
+   yaw where no lane reaches), never spun on its own hash.
+8. **Acceptance, for every candidate in either pass (`_try_place`).** A
+   candidate is kept only when ALL hold:
+   - it is inside `r_house`;
+   - the footprint mask there is at least `house_foot_min`;
+   - it is land, dry to `house_shore_min_m` of any water
+     (`house_port_shore_min_m` instead for a burg with `is_port` 1, so a
+     harbour may sit at the water's edge);
+   - the heightmap's slope there is at most `house_max_slope`;
+   - **its own oriented rectangle comes no closer than `house_gap_m` to any
+     rectangle already placed** — an oriented separating-axis (SAT) test
+     over each box's own two edge normals, not a circle-distance check: two
+     rotated squares can meet corner-to-corner closer than the sum of their
+     half-widths along an axis, which is why an earlier circle-based
+     version of this test read as gapped.
+9. **Two independent tapers toward the rim, both jittered so neighbours
+   differ.** At fractional radius `t = d / r_house`: `height_scale` (its OWN
+   column, vertical only) runs from `house_height_max` (1.5) at the centre
+   down to `house_height_min` (0.75) at the rim — 高低层次不齐, uneven
+   roofs — jittered by ±30% of its own span; the horizontal `scale`
+   separately runs from 1.0 down to `house_edge_scale_min` (0.75), then a
+   further `uniform(0.92, 1.08)` per house. The cluster ends by getting
+   shorter AND smaller, never by stopping.
+10. **If a ring's quota is still short after both quota-respecting passes**
+    (real terrain — a shore, a slope, a thin footprint mask — can leave a
+    ring without enough valid ground), an uncapped top-up spends whatever
+    room is left: infill's own uncapped pass runs FIRST, then frontage's —
+    reversing that order is exactly what caused the frontage leak in point
+    6. If a settlement is still short after that, a finer grid
+    (`plot_step_m * house_small_site_grid_ratio`) is tried; if it is STILL
+    short and the shortfall is not water or slope, `house_foot_min` is
+    relaxed by `house_small_site_foot_min_ratio` as the absolute last
+    resort — this never touches the slope or shore tests, so a genuinely
+    steep or wet site is still correctly left short.
+11. **Ranking.** The landmark, when present, is always rank 0; every other
+    house is numbered 1.. dense by distance from the centre (0.. dense with
+    no landmark). This is bake-time row order, not a live growth signal —
+    see §1's `rank` correction above.
+
+**What the design still promises, unchanged, and still tested:**
+
+- **Never in the sea** —
+  `tests/map3d/test_map3d_houses_bake.gd::test_no_house_stands_in_the_sea`,
+  `tools/map3d/test_bake_houses.py::test_no_house_lands_on_water`.
+- **Every house inside its own cluster** (never in the buffer ring) —
+  `test_every_house_is_inside_its_own_cluster`,
+  `test_the_buffer_ring_is_empty`.
+- **Deterministic** — the same burg code places the same village every
+  re-bake — `test_the_same_burg_places_the_same_village_twice`.
+- **Ranks dense from 0, a landmark at rank 0** —
+  `test_rank_is_dense_and_starts_at_a_landmark`,
+  `test_rank_is_dense_and_grows_outward`.
 
 ### The blocky-noise conflict
 
@@ -155,7 +248,12 @@ blender -b --factory-startup --python tools/map3d/make_houses.py
 ```
 
 It writes `assets/map3d_houses/<type>.glb` and `assets/map3d_houses/houses.json`
-(each mesh's size in metres and its forward axis).
+(**corrected** — the JSON holds each type's `footprint_m`, `height_m` and
+triangle count, echoed from the CSV and measured respectively; there is no
+per-mesh forward-axis field, because every mesh is generated to the SAME
+fixed convention instead — standing on its own origin, min Z = 0, facing
++Z — which is what lets the runtime place it with a single yaw and no
+per-type correction).
 
 **These files are committed.** They are a few hundred triangles and ~20 KB
 each. `assets/map3d/` is git-ignored in full — putting them there would make
@@ -182,9 +280,19 @@ type,mesh,role,weight,footprint_m,height_m,roof,min_group,notes
   the roof colour is most of what reads, so it is data, not baked into the mesh.
 
 First set: thatched cottage ×3 variants, tiled house ×3, longhouse, barn,
-workshop, church with tower, chapel, lord's tower house, palace. Walls and
-stone reuse the already-packed `medieval_blocks_03` (the bridges' texture);
-thatch and tile get flat materials.
+workshop, church with tower, chapel, lord's tower house, palace.
+
+**Correction:** every material is a flat Principled BSDF colour read from
+`data/terrain_palette.csv` at generation time (`house_wall`,
+`house_roof_thatch`, `house_roof_tile`) — NOT a texture. The plan this
+document originally described wanted walls and stone to reuse the
+already-packed `medieval_blocks_03` (the bridges' texture); the ledger
+records a reviewer finding it illegible at a 9–17 px draw size, so it was
+dropped in favour of the flat colours, which removes a look asset
+(`scenes/map3d/materials/house.tres`) rather than adding one. §3's runtime
+layer therefore sets NO material override and NO per-instance colour of its
+own — each `.glb` already carries its own two coloured surfaces (wall and
+roof) from generation time.
 
 Landmark by burg `group`: capital → palace, city → church with tower, town /
 fort → church, village → chapel.
@@ -196,9 +304,15 @@ frame.
 
 - **One `MultiMesh` per house TYPE**, not per settlement. When the camera has
   moved more than `map3d_house_rebuild_move_m`, the layer collects the burgs
-  within `map3d_house_view_m`, takes each one's first N houses by `rank`
-  (N from its live people), buckets them by type, and rebuilds every
-  `MultiMesh` in one pass. Of 684 burgs only a handful are ever in range.
+  within `map3d_house_view_m` and takes EVERY house the bake gave each one
+  in range — **corrected**: not "the first N by rank, N from its live
+  people" as this bullet originally said. There is no live thinning by
+  population at all: the bake's own `house_count_<group>` (§1 point 5)
+  already fixed each settlement's count, so `Map3DHouses.visible_set` drops
+  whole SETTLEMENTS (farthest first, against the instance budget below),
+  never individual houses within one. Houses are bucketed by type and every
+  `MultiMesh` rebuilt in one pass. Of 684 burgs only a handful are ever in
+  range.
 - A burg beyond `map3d_house_view_m` is not instanced at all — not culled after
   the fact.
 - Instance total is capped by a new `house_budget` column in
@@ -208,7 +322,14 @@ frame.
   `house_sink_m` so the wall foot bites into the ground (§4).
 - The layer takes everything from `Map3DContext`; it **must not reference the
   `Game` autoload** — `tests/map3d/` already scans `scripts/map3d/*.gd` for
-  `Game.` and fails on a hit. Live people come through the context.
+  `Game.` and fails on a hit. (`Map3DContext.people_of_burg` exists but this
+  layer does not call it: population drives nothing here any more.)
+- **No material override, no per-instance colour.** Each type's `.glb`
+  already carries two baked surfaces (wall, roof) with their own albedo
+  from `data/terrain_palette.csv` (§2's correction); a shared
+  `material_override` would flatten both to one colour and lose the wall
+  entirely, so every `MultiMeshInstance3D` renders with the mesh's own
+  materials untouched.
 - Houses are opaque geometry and sort by depth, so they need no
   `Map3DPriority` slot; the ribbons (borders, seams, roads, rivers) keep their
   own ordering unchanged and draw over the ground as they do today.
@@ -223,44 +344,70 @@ stays — it is interaction feedback, not art. Picking (`Map3DContext`'s
 `projected_settlements` / `settlement_rects`, `map3d_pick_px`) keeps working off
 the burg's own projected position, which never depended on the dot's existence.
 
-## 4. The buffer transition — four bands, no hard edge anywhere
+## 4. The buffer transition — the ring stands empty by construction
 
-The owner's requirement ("定居点周边和地图上的地形要有一定距离的缓冲过渡") is met by
-making the house radius clearly smaller than the footprint radius, leaving a
-whole ring of built ground with no houses on it.
+The owner's requirement ("定居点周边和地图上的地形要有一定距离的缓冲过渡") holds
+exactly as first designed, though the mechanism that produces the falloff
+inside it does not (§1 was rewritten wholesale from an evenly-spaced
+jittered grid to grown lanes and ring quotas; this section originally
+described the grid version). Making `r_house` clearly smaller than `r_foot`
+still leaves a whole ring of built ground with no houses on it, and nothing
+in the lane redesign touches that boundary — `bake_houses.place()` cannot
+place a candidate past `r_house` under any of its passes, including every
+top-up (§1 point 10).
 
 | band | extent | content |
 |---|---|---|
-| core | `0 .. house_core_ratio * r_house` | the centre landmark and the densest houses |
-| thinning | `.. r_house` | density falls as `(1 - t) ^ house_density_gamma`; past `house_barn_ratio` only `barn`-role types appear, and `scale` tapers by `house_edge_scale` |
+| cluster | `0 .. r_house` (`r_house = house_radius_ratio * r_foot`) | the centre landmark, the grown lane network, and every frontage/infill house; density feathers through `house_edge_rings` ring quotas weighted by `house_edge_falloff_gamma` (§1 point 5), not the flat radial falloff this document originally described — sparser and shorter toward the rim either way, never a hard cut |
 | **buffer** | `r_house .. r_foot` | the footprint's trodden earth, **no houses** — yards, threshing floors, kitchen plots. This ring IS the transition |
 | fade | beyond `r_foot` | the existing `footprint_fade` 0.7 fray, with the fields of `data/map3d_fields.csv` taking over |
 
-`house_radius_ratio` starts at 0.60 and is settled by a bracket shoot (§8).
+`house_radius_ratio` was bracketed (A 0.60 / B 0.55 / C 0.40 / D 0.28) and
+the owner picked **C, 0.40** ("我喜欢C，就C吧！") — RESOLVED; see §8.
 
-Three rules against the "sticker" reading:
+Three rules against the "sticker" reading, as they actually ship:
 
-- **Yaw has a weak bias, never uniform random.** Each house's `yaw_deg` is the
-  bearing to the cluster centre (or to the nearest route point when one passes
-  within `house_road_align_m`) plus a jitter of `house_yaw_jitter_deg`.
-  Uniformly random orientation reads as scattered — the owner rejected exactly
-  that on the 2D estates ("scattered and unreasonable"; CLAUDE.md: never place
-  separate houses and fields by hash again).
-- **`house_sink_m` sinks every instance** so no model shows a floating bottom
-  edge on sloped ground. **No base plate, no ground disc, ever** — taste.md's
-  first rejection.
-- **The outer houses taper in scale**, so the cluster ends by getting smaller
-  rather than by stopping.
+- **A house's yaw comes from its own lane, never uniform random.** A
+  frontage house faces the lane it stands against (`bearing - side*90`); a
+  block-infill house takes the bearing of the NEAREST lane, or a random yaw
+  only where no lane reaches at all; either way `house_yaw_jitter_deg`
+  jitters it a little. Uniformly random orientation reads as scattered — the
+  owner rejected exactly that on the 2D estates ("scattered and
+  unreasonable"; CLAUDE.md: never place separate houses and fields by hash
+  again), and, this round, rejected an even jittered-grid scatter of the
+  houses themselves twice before the lane redesign landed.
+- **`house_sink_m` sinks every instance** (at the runtime layer, §3) so no
+  model shows a floating bottom edge on sloped ground. **No base plate, no
+  ground disc, ever** — taste.md's first rejection.
+- **The outer houses taper in BOTH `scale` and `height_scale`** (§1 point
+  9, independent columns — `height_scale` is vertical only, `scale` is
+  horizontal), so the cluster ends by getting shorter AND smaller, never by
+  stopping.
 
 ## 5. Data (every tuned value in a CSV, per CLAUDE.md)
 
 - **new** `data/map3d_houses.csv` — the type table of §2.
-- `data/map3d_bake.csv` — `house_radius_ratio`, `house_core_ratio`,
-  `house_barn_ratio`, `house_spacing_m`, `house_density_gamma`,
-  `house_foot_min`, `house_max_slope`, `house_shore_min_m`,
-  `house_port_shore_min_m`, `house_min`, `house_max_<group>`,
-  `house_edge_scale`, `house_yaw_jitter_deg`, `house_road_align_m`,
-  `house_people_per_house`.
+- `data/map3d_bake.csv` — the keys as they actually ship. **The set this
+  bullet originally listed was replaced wholesale** when §1's placement was
+  rewritten from a jittered grid to grown lanes and ring quotas:
+  `house_core_ratio`, `house_spacing_m`, `house_density_gamma`, `house_min`,
+  `house_max_<group>`, `house_edge_scale`, `house_road_align_m` and
+  `house_people_per_house` do not exist in `data/map3d_bake.csv` at all any
+  more. The keys that do:
+  - placement: `house_radius_ratio`, `house_foot_min`, `house_max_slope`,
+    `house_shore_min_m`, `house_port_shore_min_m`, `house_gap_m`.
+  - the landmark: `house_landmark_search_m`.
+  - house count and its ring-quota falloff: `house_count_capital` /
+    `_city` / `_town` / `_fort` / `_village`, `house_edge_rings`,
+    `house_edge_falloff_gamma`, `house_frontage_share`.
+  - the two rim tapers: `house_height_min`, `house_height_max`,
+    `house_edge_scale_min`.
+  - orientation and the small-site last resorts: `house_yaw_jitter_deg`,
+    `house_barn_ratio`, `house_small_site_grid_ratio`,
+    `house_small_site_foot_min_ratio`.
+  - the lane network itself: `lane_seeds`, `lane_step_m`,
+    `lane_wander_deg`, `lane_branch_chance`, `lane_max_depth`,
+    `lane_half_width_m`, `plot_step_m`.
 - `data/balance.csv` — `map3d_house_view_m`, `map3d_house_fade_m`,
   `map3d_house_rebuild_move_m`, `map3d_house_sink_m`.
 - `data/graphics_quality.csv` — new column `house_budget` (low tier low).
