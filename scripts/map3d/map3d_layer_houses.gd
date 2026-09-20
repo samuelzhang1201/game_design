@@ -24,19 +24,20 @@ extends Node3D
 var houses_override: Dictionary = {}
 
 var ctx: Map3DContext
-var _meshes: Dictionary = {}          # type -> Mesh
+var _built := false
 var _built_at := Vector2.INF
 var _instances: Dictionary = {}       # type -> MultiMeshInstance3D
-## Test seam: the rows actually handed to each type's MultiMesh in the last
-## refresh(), in instance order. Debugging finding (task 6): under the
-## headless dummy renderer GUT runs the suite with, MultiMeshInstance3D's
+## Test seam (fix round 1): the Transform3D actually handed to
+## set_instance_transform for each type's MultiMesh in the last refresh(),
+## in instance order. Debugging finding (task 6): under the headless dummy
+## renderer GUT runs the suite with, MultiMeshInstance3D's
 ## get_instance_transform() never reflects anything written by
 ## set_instance_transform() — proven even for a hand-built raw `buffer`
 ## assignment, so it is the renderer's storage that is missing, not a bug
 ## here. A test that needs to check what an instance was given must read
-## _placed and re-derive the transform through transform_of() below, rather
-## than asking the MultiMesh what it was set to.
-var _placed: Dictionary = {}          # type -> Array of rows, instance order
+## _transforms — what refresh() itself computed and handed to the
+## MultiMesh — rather than asking the MultiMesh what it was set to.
+var _transforms: Dictionary = {}      # type -> Array[Transform3D], instance order
 
 
 func bind(p_ctx: Map3DContext) -> void:
@@ -51,6 +52,8 @@ func set_preview(on: bool) -> void:
 		preview_build(Map3DPreview.context_for(self))
 	else:
 		_instances.clear()
+		_transforms.clear()
+		_built = false
 		_built_at = Vector2.INF
 		Map3DPreview.clear_generated(self)
 	Map3DPreview.sync_viewport(self)
@@ -77,14 +80,14 @@ func preview_build(p_ctx: Map3DContext) -> void:
 func build() -> void:
 	Map3DPreview.clear_generated(self)
 	_instances.clear()
-	_meshes.clear()
+	_transforms.clear()
 	_built_at = Vector2.INF
+	_built = true
 	ctx.houses()
 	for type: String in ctx.repo.map3d_houses:
 		var mesh := _mesh_of(type)
 		if mesh == null:
 			continue
-		_meshes[type] = mesh
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = mesh
@@ -105,8 +108,8 @@ func build() -> void:
 func refresh(camera_xz: Vector2) -> bool:
 	if ctx == null:
 		return false
-	if _instances.is_empty():
-		build()  # a caller that never called build() itself still gets one
+	if not _built:
+		build()  # a caller that never called build() itself still gets one, ONCE
 	var step := ctx.repo.bal("map3d_house_rebuild_move_m")
 	if _built_at.is_finite() and _built_at.distance_to(camera_xz) < step:
 		return false
@@ -121,15 +124,18 @@ func refresh(camera_xz: Vector2) -> bool:
 		func(c: String) -> float: return ctx.people_of_burg(c),
 		camera_xz, ctx.repo.bal("map3d_house_view_m"), _budget())
 	var sink := ctx.repo.bal("map3d_house_sink_m")
-	_placed.clear()
+	_transforms.clear()
 	for type: String in _instances:
 		var mmi: MultiMeshInstance3D = _instances[type]
 		var rows: Array = buckets.get(type, [])
 		mmi.multimesh.instance_count = rows.size()
-		_placed[type] = rows
+		var xforms: Array[Transform3D] = []
 		for i in rows.size():
 			var h: Dictionary = rows[i]
-			mmi.multimesh.set_instance_transform(i, transform_of(h, ctx.height_at(h["at"]), sink))
+			var t := transform_of(h, ctx.height_at(h["at"]), sink)
+			mmi.multimesh.set_instance_transform(i, t)
+			xforms.append(t)
+		_transforms[type] = xforms
 	return true
 
 
@@ -141,11 +147,13 @@ func counts() -> Dictionary:
 	return out
 
 
-## Test seam: the rows given a type's MultiMesh in the last refresh(), in
-## instance order (see _placed's note on why a test reads this instead of
-## the MultiMesh's own get_instance_transform).
-func rows_of(type: String) -> Array:
-	return _placed.get(type, [])
+## Test seam: the Transform3D given to instance `i` of `type`'s MultiMesh in
+## the last refresh(), in instance order (see _transforms' note on why a test
+## reads this instead of the MultiMesh's own get_instance_transform). Exercises
+## refresh()'s own height lookup and yaw/scale maths, not a value the test
+## supplied itself.
+func transforms_of(type: String) -> Array:
+	return _transforms.get(type, [])
 
 
 ## The world transform for one baked house row: yaw about the vertical,

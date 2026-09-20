@@ -5,6 +5,10 @@ extends GutTest
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
 const CSV := "user://test_map3d_layer_houses.csv"
+## Fix round 1, finding 1: a distinctive, non-zero height so a refresh() that
+## hardcoded or skipped the ctx.height_at() lookup could not pass by accident
+## (0.0 or the fixture's own sea_y of 5.0 would both be too easy to fake).
+const HEIGHT := 777.5
 
 var _layer: Map3DLayerHouses
 var _ctx: Map3DContext
@@ -23,7 +27,7 @@ func before_each() -> void:
 	f.store_line("%s,1,%f,%f,90,cottage_a,1.0" % [a, at.x + 20.0, at.y])
 	f.close()
 	_ctx = Map3DContext.new(Game.data, WORLD)
-	_ctx.height_fn = func(_xz: Vector2) -> float: return 100.0
+	_ctx.height_fn = func(_xz: Vector2) -> float: return HEIGHT
 	_layer = Map3DLayerHouses.new()
 	_layer.houses_override = Map3DHouses.load_csv(CSV)
 	add_child_autofree(_layer)
@@ -44,14 +48,17 @@ func test_every_instance_sits_on_the_ground_minus_the_sink() -> void:
 	# under, MultiMeshInstance3D.get_instance_transform() never reflects what
 	# set_instance_transform() wrote — verified directly, even for a
 	# hand-built raw `buffer` assignment, so this is the renderer's storage
-	# missing, not our code. Reading rows_of() + transform_of() checks the
-	# same maths against what the layer actually handed the GPU, without
-	# depending on that readback.
+	# missing, not our code. transforms_of() records the Transform3D refresh()
+	# ITSELF computed and handed to set_instance_transform, so this asserts on
+	# what refresh() actually did — including its ctx.height_at() lookup — not
+	# on a value the test supplies (fix round 1, finding 1).
+	var checked := 0
 	for type: String in _layer.counts():
-		for h: Dictionary in _layer.rows_of(type):
-			var y := Map3DLayerHouses.transform_of(h, 100.0, sink).origin.y
-			assert_almost_eq(y, 100.0 - sink, 0.001,
+		for t: Transform3D in _layer.transforms_of(type):
+			assert_almost_eq(t.origin.y, HEIGHT - sink, 0.001,
 				"a house stands on the ground, sunk so its foot bites in")
+			checked += 1
+	assert_eq(checked, 2, "both chapel and cottage_a were checked")
 
 
 func test_a_small_camera_move_does_not_rebuild() -> void:
@@ -77,16 +84,18 @@ func test_instances_carry_their_yaw_and_scale() -> void:
 	# nodes after the raw CSV type instead, so the lookup here follows suit.
 	var mmi := _layer.get_node_or_null("cottage_a") as MultiMeshInstance3D
 	assert_not_null(mmi)
-	# Second deviation, same test: read the row placed via rows_of() and
-	# recompute its transform with transform_of() rather than
-	# get_instance_transform(), which the headless dummy renderer never backs
-	# with real data (see test_every_instance_sits_on_the_ground_minus_the_sink).
-	var rows := _layer.rows_of("cottage_a")
-	assert_eq(rows.size(), 1)
-	if rows.size() > 0:
-		var t := Map3DLayerHouses.transform_of(rows[0], 100.0,
-			Game.data.bal("map3d_house_sink_m"))
-		assert_almost_eq(t.basis.get_euler().y, deg_to_rad(90.0), 0.01)
+	# Second deviation, same test: read the Transform3D refresh() itself
+	# computed and handed to set_instance_transform (transforms_of()) rather
+	# than reading it back from the MultiMesh, which the headless dummy
+	# renderer never backs with real data (see
+	# test_every_instance_sits_on_the_ground_minus_the_sink). A refresh() that
+	# dropped the yaw or the scale fails this directly, since transforms_of()
+	# is filled from inside refresh()'s own loop.
+	var xforms := _layer.transforms_of("cottage_a")
+	assert_eq(xforms.size(), 1)
+	if xforms.size() > 0:
+		var basis: Basis = (xforms[0] as Transform3D).basis
+		assert_almost_eq(basis.get_euler().y, deg_to_rad(90.0), 0.01)
 
 
 func _home() -> Vector2:

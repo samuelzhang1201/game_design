@@ -41,9 +41,9 @@ const CONSTANTS := ["PRIORITY_SEA", "PRIORITY_RIVERS", "PRIORITY_ROADS",
 ## Paths under the view after activate() on the fixture (+ refresh_borders).
 const PATHS := ["Viewport", "Display", "Notice", "Tooltip", "Hud", "Hud/Compass",
 	"Hud/Needle", "Viewport/Markers", "Viewport/Markers/Selected", "Viewport/Markers/Capital",
-	"Viewport/Markers/Village", "Viewport/Clouds", "Viewport/Clouds/Shadows", "Viewport/Lines",
-	"Viewport/Lines/Kingdoms", "Viewport/Lines/KingdomHalo", "Viewport/Lines/KingdomBand",
-	"Viewport/Lines/Seams", "Viewport/Lines/Roads"]
+	"Viewport/Markers/Village", "Viewport/Houses", "Viewport/Clouds", "Viewport/Clouds/Shadows",
+	"Viewport/Lines", "Viewport/Lines/Kingdoms", "Viewport/Lines/KingdomHalo",
+	"Viewport/Lines/KingdomBand", "Viewport/Lines/Seams", "Viewport/Lines/Roads"]
 
 
 func before_all() -> void:

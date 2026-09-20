@@ -10,6 +10,7 @@ const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 const TREE := ["Viewport", "Viewport/WorldSlot", "Viewport/CameraRig",
 	"Viewport/CameraRig/RigCamera", "Viewport/Sea", "Viewport/Rivers", "Viewport/Bridges",
 	"Viewport/Lines", "Viewport/Clouds", "Viewport/Clouds/Shadows", "Viewport/Markers",
+	"Viewport/Houses",
 	"Display", "Notice", "Hud", "Hud/Labels", "Hud/Landmarks", "Hud/HeatLegend", "Hud/Badges",
 	"Hud/Armies", "Hud/Backdrop", "Hud/ScaleBar", "Hud/Ruler", "Hud/Compass", "Hud/Needle",
 	"Tooltip"]
