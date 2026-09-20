@@ -31,14 +31,30 @@ def hex_rgb(s):
     return tuple(int(s[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
 
 
+def srgb_to_linear(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def hex_rgb_linear(s):
+    """The palette's hexes are sRGB (project convention); Blender's
+    Principled BSDF Base Color input is linear, so every colour handed to
+    it must be converted or it renders lifted (measured: #C8BCA6 sRGB
+    (0.784, 0.737, 0.651) came back through Godot's import as
+    (0.898, 0.874, 0.827) — an almost-white wall)."""
+    return tuple(srgb_to_linear(c) for c in hex_rgb(s))
+
+
 def load_palette():
+    """Values come back LINEAR — the only place a palette hex reaches the
+    Principled BSDF (via material() below), so the conversion happens once,
+    here, rather than at each call site."""
     out = {}
     with open(PALETTE) as f:
         for r in csv.DictReader(f):
             key = r.get("key") or r.get("name")
             col = r.get("color") or r.get("colour") or r.get("hex")
             if key and col and col.startswith("#"):
-                out[key] = hex_rgb(col)
+                out[key] = hex_rgb_linear(col)
     return out
 
 
@@ -201,7 +217,7 @@ def export(ob, path):
 def main():
     os.makedirs(OUT, exist_ok=True)
     palette = load_palette()
-    wall_rgb = palette.get("house_wall", (0.78, 0.74, 0.65))
+    wall_rgb = palette.get("house_wall", tuple(srgb_to_linear(c) for c in (0.78, 0.74, 0.65)))
     manifest = {}
     with open(TABLE) as f:
         rows = list(csv.DictReader(f))
@@ -211,7 +227,7 @@ def main():
         clear()
         walls, roofs = build(t, fp, ht)
         wall_mat = material("wall", wall_rgb)
-        roof_mat = material("roof", palette.get(r["roof"], (0.55, 0.35, 0.27)))
+        roof_mat = material("roof", palette.get(r["roof"], tuple(srgb_to_linear(c) for c in (0.55, 0.35, 0.27))))
         for o in walls:
             o.data.materials.append(wall_mat)
         for o in roofs:
