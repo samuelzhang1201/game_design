@@ -264,6 +264,17 @@ def test_the_field_map_packs_colour_and_direction():
     assert m[0, 0, 3] == 0 and m[0, 2, 3] == 191, "the direction sampled, not averaged"
 
 
+def test_footprint_radius_agrees_between_the_two_modules():
+    """bake_houses keeps its own copy so it can stand alone; the two must
+    never drift."""
+    import bake_houses
+    import bake_world
+    rules = {"footprint_m_per_sqrt_pop": 2.5, "footprint_min_m": 90, "footprint_max_m": 900}
+    for pop in (0, 1, 600, 4900, 52000, 10**7):
+        assert bake_houses.footprint_radius_m(pop, rules) == \
+               bake_world.footprint_radius_m(pop, rules)
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

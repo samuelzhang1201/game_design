@@ -19,6 +19,7 @@ own cell heights, smoothed, plus ridges made for this scale.
 import argparse
 import csv
 import json
+import math
 import os
 import sys
 
@@ -28,6 +29,7 @@ from PIL import Image, ImageDraw
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 from packs import default_pack, map3d_dir  # noqa: E402
+import bake_houses  # noqa: E402
 
 TEX = os.path.join(ROOT, "assets", "map3d", "textures")
 RULES_PATH = os.path.join(ROOT, "data", "map3d_bake.csv")
@@ -527,12 +529,16 @@ def footprint_radius_m(population, rules):
 
 
 def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn, t_rock,
-                  beach, k, vw, vh, pw, ph):
-    """Village footprints, the fields round them and each manor's own shade
-    (owner 2026-09-19). Adds the fields' and footprints' grounds to `tw` in
+                  beach, k, vw, vh, pw, ph, origin):
+    """Village footprints, the fields round them, each manor's own shade
+    (owner 2026-09-19) and the houses that stand on that built ground (spec
+    2026-09-20 §1). Adds the fields' and footprints' grounds to `tw` in
     place and returns the colour map's multiplier per vertex (vh, vw, 3, in
-    linear light). Its own random stream, so the rest of the look is
-    unchanged."""
+    linear light), the terrain shader's field map, and the houses of every
+    settlement in world metres (`origin` is the world position of pack px
+    (0,0), the same pair `main()` writes into world.json as `pack_origin`).
+    Its own random stream, so the rest of the look is unchanged."""
+    ORIGIN_X, ORIGIN_Y = origin
     prng = np.random.default_rng(SEED + 1)
     fields = load_fields(os.path.join(ROOT, "data", "map3d_fields.csv"), TEXTURE_KEYS)
     focus_keys = sorted(fields)
@@ -587,6 +593,83 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
             mf = np.clip((edge - d) / rules["footprint_fade"], 0, 1) ** 1.5 * land[y0:y1, x0:x1]
             foot[y0:y1, x0:x1] = np.maximum(foot[y0:y1, x0:x1], mf)
     del fray_n
+
+    # the houses that stand on that built ground (spec 2026-09-20 §1). The
+    # footprint mask is finished, so "inside the built ground" and "never in
+    # the sea" are the same test the footprint already passed.
+    house_rows = []
+    r_house_mask = np.zeros((vh, vw), dtype=np.float32)
+    types = {}
+    with open(os.path.join(ROOT, "data", "map3d_houses.csv")) as f:
+        for r in csv.DictReader(f):
+            types[r["type"]] = {"role": r["role"], "weight": float(r["weight"]),
+                                "footprint_m": float(r["footprint_m"]),
+                                "min_group": r["min_group"]}
+    # world_cell_index.png is the GAME's own land test (MapManors.cell_at,
+    # what test_no_house_stands_in_the_sea checks against): a pack-px raster,
+    # coarser than this bake's own fine coastline coverage (`land`). A house
+    # must stand on land in BOTH, or a port's quay -- where the burg's own
+    # (x, y) can sit on a "no cell" pack pixel a metre or two off true land
+    # -- reads as land here and sea there. `land` itself (the fine mask that
+    # `foot`/the fields already used above) is left untouched, so the
+    # patchwork's own percentages do not move; this stricter mask is only
+    # for placing houses.
+    pxi_g = np.clip((np.arange(vw) / k).astype(np.int64), 0, pw - 1)
+    pyi_g = np.clip((np.arange(vh) / k).astype(np.int64), 0, ph - 1)
+    land_gate = land & has_cell[pyi_g][:, pxi_g]
+    del pxi_g, pyi_g
+    with open(os.path.join(ROOT, "data", "maps", MAP, "political", "burgs.csv")) as f:
+        for b in csv.DictReader(f):
+            b = dict(b)
+            b["population"] = float(b["population"] or 0)
+            rows = bake_houses.place(b, rules, types, foot, land_gate, height, k, vw, vh)
+            cx, cy = float(b["x"]) * k, float(b["y"]) * k
+            # the landmark (rank 0) is placed unconditionally at the burg's
+            # own centre -- bake_houses.place has no land test for it at all
+            # -- so nudge it onto the nearest point passing land_gate when
+            # the burg's raw coordinate itself sits off it (spec 2026-09-20
+            # §7, the owner's hard requirement: no house stands in the sea)
+            if rows and int(rows[0]["rank"]) == 0:
+                shore_m = (rules["house_port_shore_min_m"] if int(b.get("is_port", 0) or 0)
+                           else rules["house_shore_min_m"])
+                on_land = (0 <= cx < vw and 0 <= cy < vh and float(land_gate[int(cy), int(cx)]) > 0.5
+                           and bake_houses._dry(land_gate, cx, cy, vw, vh, shore_m))
+                if not on_land:
+                    step = float(rules["house_spacing_m"]) * 0.5
+                    for ring in range(1, 21):
+                        rad = ring * step
+                        moved = False
+                        for a in range(16):
+                            ang = a * (2.0 * math.pi / 16.0)
+                            ox_, oz_ = rad * math.cos(ang), rad * math.sin(ang)
+                            vx, vy = cx + ox_ / VERTEX_M, cy + oz_ / VERTEX_M
+                            if not (0 <= vx < vw and 0 <= vy < vh):
+                                continue
+                            if float(land_gate[int(vy), int(vx)]) < 0.5:
+                                continue
+                            if not bake_houses._dry(land_gate, vx, vy, vw, vh, shore_m):
+                                continue
+                            rows[0]["x_m"] = float(round(ox_, 2))
+                            rows[0]["z_m"] = float(round(oz_, 2))
+                            moved = True
+                            break
+                        if moved:
+                            break
+            r_house = rules["house_radius_ratio"] * bake_houses.footprint_radius_m(
+                b["population"], rules) / VERTEX_M
+            # the block noise stops where the real roofs begin (§1): roofs
+            # painted on the ground beside real roofs read as a mistake
+            x0, x1 = max(int(cx - r_house) - 1, 0), min(int(cx + r_house) + 2, vw)
+            y0, y1 = max(int(cy - r_house) - 1, 0), min(int(cy + r_house) + 2, vh)
+            if x0 < x1 and y0 < y1:
+                yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+                d = np.hypot(xx - cx, yy - cy) / max(r_house, 1e-6)
+                r_house_mask[y0:y1, x0:x1] = np.maximum(
+                    r_house_mask[y0:y1, x0:x1], np.clip(1.5 - 1.5 * d, 0, 1))
+            for r in rows:
+                r["x_m"] = ORIGIN_X + float(b["x"]) * M_PER_PX + r["x_m"]
+                r["z_m"] = ORIGIN_Y + float(b["y"]) * M_PER_PX + r["z_m"]
+            house_rows.extend(rows)
 
     tint = np.ones((vh, vw, 3), dtype=np.float32)
     # the field-only part of the tint, and each estate's strip direction
@@ -667,11 +750,12 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     tw *= (1.0 - 0.9 * foot)[..., None]
     tw[..., DIRT] += 2.0 * foot
     built = srgb_to_lin(hex_rgb(rules["footprint_tint"])).astype(np.float32)
-    blocks = (1.0 - rules["footprint_block_depth"] * block_n)[..., None] * built
+    block_amt = rules["footprint_block_depth"] * (1.0 - r_house_mask)
+    blocks = (1.0 - block_amt * block_n)[..., None] * built
     tint = tint * (1.0 - foot[..., None]) + blocks * foot[..., None]
     print("bake_world: patchwork %.1f%% of the land sown, %.2f%% built" % (
         100.0 * float(farm[land].mean()), 100.0 * float(foot[land].mean())))
-    return tint, field_map(ftint, fangle)
+    return tint, field_map(ftint, fangle), house_rows
 
 
 def main(argv=None):
@@ -717,6 +801,9 @@ def main(argv=None):
     rows += rows % 2
     fw_pad, fh_pad = cols * REGION, rows * REGION
     ox_pad, oy_pad = (fw_pad - vw) // 2, (fh_pad - vh) // 2
+    # world position of pack px (0,0) — the same pair written into world.json
+    # as pack_origin; sow_patchwork's houses need it to place on the world frame
+    origin = ((-fw_pad / 2 + ox_pad) * VERTEX_M, (-fh_pad / 2 + oy_pad) * VERTEX_M)
     height = resize(metres, vw, vh)
     # The shoreline is the pack's own shore loops, not its 50 m pixels: their
     # coverage per vertex ramps the fringe through the water plane, so the
@@ -916,8 +1003,8 @@ def main(argv=None):
     tw[..., DIRT] += 2.0 * beach * (1.0 - grain)
     tw[..., SAND] += 2.0 * beach * grain
     del grain
-    tint, fmap = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn,
-                               t_rock, beach, k, vw, vh, pw, ph)
+    tint, fmap, house_rows = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn,
+                               t_rock, beach, k, vw, vh, pw, ph, origin)
     # read by Map3DView for the patched terrain shader (Map3DGroundTint):
     # FIELD_MAP_STEP vertices to a texel, from the pack's own corner
     Image.fromarray(fmap, "RGBA").save(os.path.join(OUT, "fields.png"))
@@ -1010,6 +1097,13 @@ def main(argv=None):
     # copies it beside the scene for the water mesh
     with open(os.path.join(OUT, "rivers.json"), "w") as f:
         json.dump({"rivers": rivers_out}, f)
+    with open(os.path.join(OUT, "houses.csv"), "w", newline="") as f:
+        w = csv.DictWriter(f, ["burg_code", "rank", "x_m", "z_m", "yaw_deg", "type", "scale"])
+        w.writeheader()
+        for r in sorted(house_rows, key=lambda r: (r["burg_code"], r["rank"])):
+            w.writerow(r)
+    print("bake_world: %d houses over %d settlements" % (
+        len(house_rows), len({r["burg_code"] for r in house_rows})))
     summary = {k: v for k, v in world.items() if k != "far_multipliers_lin"}
     summary["rivers"] = len(rivers_out)
     summary["rivers_joined"] = len(joins)
