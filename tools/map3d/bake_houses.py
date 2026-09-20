@@ -279,7 +279,7 @@ def _nearest_lane(lanes, x, z):
     return best_d, best_b
 
 
-def place(burg, rules, types, foot, land, height, k, vw, vh):
+def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None):
     """The houses of one settlement, ranked from the centre outward.
 
     `foot`, `land`, `height` are the bake's vertex-resolution arrays; `k` is
@@ -297,6 +297,12 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
     lane), then fill whatever block is left between lanes with a jittered
     close-spaced grid — oriented to the nearest lane, not spun independently
     — until the group's target count is reached or candidates run out.
+
+    `debug_counts`, if a dict is passed, is updated in place with
+    {"frontage": n, "infill": n} — how many non-landmark houses each pass
+    actually placed (test-only introspection; the returned rows are
+    unchanged either way, so a caller that never passes it sees no
+    difference).
     """
     code = str(burg["burg_code"])
     group = str(burg.get("group", "village"))
@@ -309,6 +315,7 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
 
     rows = []
     taken = []   # (x_m, z_m, half_footprint_m, yaw_deg) of every accepted rectangle
+    pass_counts = {"frontage": 0, "infill": 0}   # for debug_counts only
 
     # lanes are grown FIRST, before anything else draws from `rng` — a test
     # (or a future caller) can reproduce them exactly from a freshly seeded
@@ -452,7 +459,8 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
             # fix round 1 finding 1, a house was turning its back on its
             # own street
             yaw = bearing - side * 90.0 + rng.uniform(-jitter, jitter)
-            _try_place(ox, oz, yaw, pick, ring)
+            if _try_place(ox, oz, yaw, pick, ring):
+                pass_counts["frontage"] += 1
 
     _frontage_pass(enforce_quota=True)
 
@@ -492,7 +500,8 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
                 continue   # sits over a lane's own clear strip: leave it be
             base_yaw = lane_bearing if lane_d is not None else float(rng.uniform(0.0, 360.0))
             yaw = base_yaw + rng.uniform(-jitter, jitter)
-            _try_place(ox, oz, yaw, pick, ring, foot_min=foot_min)
+            if _try_place(ox, oz, yaw, pick, ring, foot_min=foot_min):
+                pass_counts["infill"] += 1
 
     if sum(ring_counts) < n_target:
         _infill_pass(enforce_quota=True)
@@ -508,10 +517,17 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
     # own allowance or its own ground -- a settlement with room to spare
     # never reaches here (both loops break out via sum(ring_counts) >=
     # n_target on their very first check, no different from before)
-    if sum(ring_counts) < n_target:
-        _frontage_pass(enforce_quota=False)
+    # infill runs first here: frontage already had first pick of every ring
+    # in pass 2 above, so handing the quota-respecting shortfall to infill
+    # FIRST means frontage's uncapped top-up (next) only ever receives what
+    # infill genuinely could not place (a block too small, ground infill
+    # refuses) -- reversed, frontage's untried candidates soaked up nearly
+    # every leftover slot before infill got a turn, measured at 60-72% real
+    # frontage share against a 0.45 target
     if sum(ring_counts) < n_target:
         _infill_pass(enforce_quota=False)
+    if sum(ring_counts) < n_target:
+        _frontage_pass(enforce_quota=False)
 
     # 3c. FINE-GRID TOP UP: fix round 2, finding 2 -- a small or awkwardly
     # shaped site (a harbour village whose buildable land is a narrow wedge,
@@ -563,4 +579,7 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
         rows.sort(key=lambda r: math.hypot(r["x_m"], r["z_m"]))
         for i, r in enumerate(rows):
             r["rank"] = i
+
+    if debug_counts is not None:
+        debug_counts.update(pass_counts)
     return rows

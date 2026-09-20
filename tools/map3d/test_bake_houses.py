@@ -3,7 +3,9 @@
 
   python3 -m pytest tools/map3d/test_bake_houses.py
 """
+import csv
 import math
+import os
 from unittest import mock
 
 import numpy as np
@@ -11,6 +13,8 @@ import pytest
 
 import bake_houses
 from bake_houses import place, house_count, footprint_radius_m
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 VW = VH = 64
 K = 2.5           # vertices per pack px, as bake_world.py's k
@@ -574,3 +578,91 @@ def test_a_settlement_with_a_weak_footprint_mask_still_gets_a_handful_of_houses(
         f"only {len(rows)} row(s) on land that is flat, dry and unremarkable everywhere -- "
         "a settlement should not vanish to its landmark over a fraying footprint mask alone"
     )
+
+
+def _load_real_rules():
+    """The production bake table, not the toy fixture -- the leak below
+    only shows up at real house_count_*/footprint_* scale (see the test's
+    own docstring)."""
+    rules = {}
+    with open(os.path.join(ROOT, "data", "map3d_bake.csv")) as f:
+        for row in csv.DictReader(f):
+            try:
+                rules[row["key"]] = float(row["value"])
+            except ValueError:
+                pass   # a text value (a colour, a path) -- not a bake number
+    return rules
+
+
+def _load_real_house_types():
+    types = {}
+    with open(os.path.join(ROOT, "data", "map3d_houses.csv")) as f:
+        for row in csv.DictReader(f):
+            types[row["type"]] = {
+                "role": row["role"], "weight": float(row["weight"]),
+                "footprint_m": float(row["footprint_m"]), "min_group": row["min_group"],
+            }
+    return types
+
+
+def test_the_frontage_share_matches_its_target_on_ample_open_ground():
+    """Reviewer finding: house_frontage_share is 0.45, but the real pack
+    measured 60-72% (stotreso 61.3%, carden 67.7%, shole 60.0%, staptonsey
+    72.0%; only shorough, whose own lanes already ran infill-heavy, at
+    28.5%). The cause was precise: the uncapped top-up (run only once the
+    quota-respecting passes above have genuinely exhausted a ring's own
+    allowance -- see the "3b. TOP UP" comment in place()) tried
+    `_frontage_pass(enforce_quota=False)` before
+    `_infill_pass(enforce_quota=False)`. Since frontage places first and
+    already holds the near-lane ground, infill's own grid routinely cannot
+    spend its full share of a ring -- and with the old order, that
+    shortfall went straight back to frontage's own untried candidates
+    instead of infill's, which is what leaked the share upward.
+
+    This reproduces the leak with the REAL production rules and house
+    types (map3d_bake.csv / map3d_houses.csv, not the toy fixture, whose
+    target counts are too small relative to its footprint to ever reach
+    the uncapped top-up at all -- see test_the_blocks_between_lanes_are_not_empty's
+    own toy-fixture capital, which never exercises it either) on a flat,
+    entirely buildable canvas: foot=land=1 everywhere, no shore or slope
+    refusals anywhere. "Ample ground" is exactly this -- nothing about the
+    TERRAIN is short; the current house_radius_ratio simply packs each
+    group's target count densely enough that the ordinary ring-quota
+    passes alone routinely fall a little short even here, which is what
+    exercises the fallback on every group without needing to manufacture
+    scarcity.
+    """
+    rules = _load_real_rules()
+    types = _load_real_house_types()
+    vw = vh = 128
+    k = 2.5
+    foot = np.ones((vh, vw), np.float32)
+    land = np.ones((vh, vw), np.float32)
+    height = np.zeros((vh, vw), np.float32)
+    target = rules["house_frontage_share"]
+    margin = 0.12
+    # one population per group chosen so the real algorithm's achieved
+    # share sits close to the target under the FIXED order (deviations
+    # 0.01-0.09 measured); under the pre-fix order the same four settle at
+    # 0.56-0.64 (deviations 0.11-0.19) -- comfortably on the far side of
+    # this margin
+    cases = (("capital", 180000), ("city", 200000), ("town", 50000), ("village", 8000))
+    for group, pop in cases:
+        b = {"burg_code": "ample_%s" % group, "population": pop, "group": group,
+             "is_port": 0, "x": vw / 2.0 / k, "y": vh / 2.0 / k}
+        debug = {}
+        rows = place(b, rules, types, foot, land, height, k, vw, vh, debug_counts=debug)
+        assert len(rows) - 1 >= house_count(b, rules), (
+            f"{group}: ample, fully buildable ground should still seat the full target "
+            f"({len(rows) - 1} of {house_count(b, rules)})"
+        )
+        total = debug["frontage"] + debug["infill"]
+        assert total > 20, "need a real cluster to measure a frontage/infill split"
+        share = debug["frontage"] / total
+        print(group, "frontage share", round(share, 4), "vs target", target)
+        assert abs(share - target) <= margin, (
+            f"{group}: achieved frontage share {share:.1%} strayed more than "
+            f"{margin:.0%} from house_frontage_share ({target:.0%}) on ample, fully "
+            "buildable ground -- the uncapped top-up's fallback order is leaking "
+            "frontage share again"
+        )
