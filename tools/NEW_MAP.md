@@ -15,6 +15,21 @@ committed files byte for byte (checked 2026-09-18).
    (copy beria's, swap the id; set `is_default` to 1 to make it the game's map).
 2. `G --script res://tools/import_azgaar.gd -- --map-id <id>` — every pack
    table and the index bitmaps.
+
+   **Hazard (found 2026-09-20, not yet fixed): re-importing an unchanged
+   export can still change the pack.** Re-running this step on `beria`'s own
+   JSON with nothing edited in Azgaar rewrites
+   `data/maps/beria/political/manors.csv` and
+   `assets/maps/beria/world_cell_index.png` with real content changes (not
+   encoding noise) — both were last generated before the importer's
+   neutral-burg-skip logic changed, so auto-numbered manor names shift
+   downstream of the two burgs it now drops. `world_cell_index.png` is the
+   bitmap that ENCODES MANOR IDS PER PIXEL (CLAUDE.md), so a workflow of
+   "edit in Azgaar, re-import" silently renumbers manors and desyncs that
+   bitmap from every save that referenced the old ids. Before doing a real
+   re-import: diff `manors.csv` and re-bake `world_cell_index.png`
+   (`tools/bake_manors.gd`, step 3 below) deliberately, and expect a
+   one-time manor renumber rather than assuming re-import is a no-op.
 3. `G -s tools/bake_manors.gd -- --map <id>` — manor names and the cell
    index. **Always after the import**: the importer's own cell index and
    manors differ in a few cells; this bake is the one the game reads.

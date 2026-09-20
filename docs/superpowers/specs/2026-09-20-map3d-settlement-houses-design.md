@@ -10,6 +10,24 @@ standing on the Terrain3D ground, a cluster whose size comes from the burg's
 population, irregular around a centre, thinning outward into the built ground
 the bake already lays down.
 
+> **Status (2026-09-20, after the owner reviewed the first shoot): the
+> placement algorithm below shipped differently from how §1–§5 describe it.**
+> The first cut was an evenly-spaced jittered grid with a radial density
+> falloff, sized off each burg's population (`house_people_per_house`,
+> `house_density_gamma`, `house_core_ratio`, `house_spacing_m`,
+> `house_min` / `house_max_<group>`). The owner rejected it as scattered
+> ("你不需要实时严格的计算房屋数量…房屋的摆放要凸显中世纪那种风格，紧凑杂乱，形成
+> 巷子，高低层次不齐") and it was replaced with a lane-grown layout whose house
+> count is a fixed TARGET per settlement GROUP, not derived from population at
+> all. Every key named above is gone from `data/map3d_bake.csv`; §1's `rank`
+> bullet carries the detailed correction, and §8 below records what the owner
+> ruled on the values that remain (`house_radius_ratio`) and what replaced the
+> ones that don't. Where this document and `data/map3d_bake.csv` /
+> `tools/map3d/bake_houses.py` disagree, the CODE is correct — treat §1–§5 as
+> the design's FIRST draft and the ledger
+> (`.superpowers/sdd/2026-09-20-map3d-settlement-houses/progress.md`) as the
+> record of how it changed.
+
 ## Owner rulings that govern this work
 
 - **The 2026-09-16 ruling "procedural Blender towns were abandoned after five
@@ -59,12 +77,39 @@ burg_code,rank,x_m,z_m,yaw_deg,type,scale
   height is the built terrain's; the runtime samples it with
   `Map3DContext.height_at()` at load.
 - `type` — a row of `data/map3d_houses.csv`.
-- `rank` — the order houses appear as the settlement grows, 0 first. The
-  runtime shows the first N by the burg's CURRENT people. A village promoted to
-  a town by `data/settlement_growth.csv` therefore sprouts more houses **with no
-  re-bake**; the bake always emits the cluster at its maximum size.
+- `rank` — 0 is the centre landmark; the rest follow placement order
+  (frontage before block infill) within each ring quota. **This bullet, as
+  originally written, described a design that shipped differently — see the
+  correction below.**
 - `scale` — per-instance size jitter, plus the edge taper of §4.
 - `yaw_deg` — §4.
+
+**Correction (owner amendment 2026-09-20, after the first review; ledger
+entries under Task 2 and the "OWNER AMENDMENT" section):** this bullet
+originally claimed the runtime "shows the first N [houses] by the burg's
+CURRENT people" and that "the bake always emits the cluster at its maximum
+size", so a settlement promoted by `data/settlement_growth.csv` would sprout
+more houses live, with no re-bake. Neither half of that survived:
+
+1. **It was already false when written.** A reviewer proved with real
+   `beria` populations that ground and terrain rejections (shore, slope, a
+   footprint mask that frays low on an otherwise dry, flat site) leave
+   `place()` 3–5% short of what the population formula asked for at
+   ordinary sizes, and up to 14% short on an unlucky seed — `rows.size()`
+   binds before any population-derived maximum does. Growth stayed
+   monotonic; it just plateaued a few percent early.
+2. **The whole population-driven mechanism it describes is gone.** The
+   owner's later ruling in this same session ("你不需要实时严格的计算房屋数量，
+   你只需要根据定居点种类不同生成这几种种类的定居点房屋密度即可…不需要每次都重新
+   计算") replaced it: a settlement's house count is now a fixed TARGET by
+   its GROUP — `house_count_village` / `_fort` / `_town` / `_city` /
+   `_capital` in `data/map3d_bake.csv` (25 / 55 / 70 / 200 / 400) — decided
+   once at bake time, never derived from population and never thinned live
+   by it. `Map3DHouses.visible_set` instances every house the bake gave a
+   settlement that is in range; it does not pick "the first N" by anything.
+   A village promoted to a town by `settlement_growth.csv` therefore shows
+   its PRE-growth house count until the pack is re-baked — the opposite of
+   what this bullet claimed. `house_people_per_house` (§5) no longer exists.
 
 ### Placement per burg
 
@@ -255,25 +300,84 @@ bake, not geometry built by a `scripts/map3d/` builder, so there is no
   honest measure) against the tier's `bench_budget_ms`.
 - The whole suite must still report the expected error count (`./run_tests.sh`).
 
-## 8. Open — the owner's to rule, with the shoot already planned
+## 8. Open — updated 2026-09-20 against what actually shipped
 
-1. **What stands at campaign zoom.** At `map3d_zoom_max_m` 150 000 a screen px
-   is ~172 m: a capital's 1.1 km footprint is 6.6 px and a village is 1 px, so
-   clusters are invisible there. The owner asked to see samples of all three
-   candidates ("以上每一种你给我个sample看看"); option (a) cannot be shot before
-   the clusters exist, because it *is* the cluster seen from far away. So once
-   §1–§4 are in, shoot a three-way comparison at the same camera pose (~40 km)
-   with crops, per `.claude/skills/visual-review/`:
-   a. the cluster rendered to an impostor card (the precedent is
-      `tools/map3d/render_impostors.py`, which already does this for trees),
-      crossfading to the real meshes as the camera closes, with a minimum
-      screen size so a city stays findable;
-   b. names only, standing on the HUD like the kingdom names, sized and gated
-      by tier;
-   c. a proper art symbol per tier, fading out as the meshes fade in.
-2. **`house_radius_ratio`, `house_density_gamma`, and the per-group house
-   caps** — bracketed with `snapshot_screen --bal key=value` and picked by the
-   owner from a crop sheet.
-3. **Walls.** `burgs.csv` carries `walls|citadel`; the owner chose no walls this
-   round. If revisited, the 2026-09-17 settlement-art ruling applies: a BROKEN
-   stretch of old wall along one side only, never a closed circuit.
+This list was written before the first shoot. Most of it did not survive
+contact with the owner's review unchanged; each item below says what
+happened, not just what was asked.
+
+1. **What stands at campaign zoom — still open, and now overlapping a
+   concurrent change.** The reasoning stands (a capital's footprint is 6.6 px
+   at `map3d_zoom_max_m`, a village 1 px, so clusters are invisible at that
+   distance) and none of options (a)/(b)/(c) were built this round. Separately,
+   the owner ruled that the black dot itself is not gone after all: it is kept
+   as a far-zoom-only affordance once a settlement's houses are too small to
+   read, white and solid, the capital's alone with a dark centre
+   (`.claude/skills/visual-review/taste.md`). That is a narrower thing than
+   any of (a)/(b)/(c) — it is the OLD symbol kept at long range, not a new
+   impostor, name or art symbol — and it is being implemented as a separate,
+   concurrent change to `scripts/map3d/map3d_layer_settlements.gd`,
+   `settlement_ring.gdshader`, `data/map3d_settlements.csv`,
+   `map3d_picker.gd`, `map3d_context.gd` and `map3d_view.gd` that this
+   document does not describe further and that had not landed at the time
+   this correction was written. Options (a) (impostor-to-mesh crossfade) and
+   (b) (HUD names) remain genuinely open if the dot-at-distance answer turns
+   out not to be enough.
+2. **`house_radius_ratio` — RESOLVED.** Bracketed as four variants (A 0.60,
+   B 0.55, C 0.40, D 0.28) with `snapshot_screen --bal key=value`; the owner
+   picked C from the crop sheet ("我喜欢C，就C吧！"): `house_radius_ratio = 0.40`
+   in `data/map3d_bake.csv`, giving a capital ~381 m² of ground per house and
+   a median town ~268 m², about 3× denser than the original 0.60, with every
+   settlement still reaching 100% of its target house count. D (0.28) was
+   tried and rejected because it could NOT be filled (a capital placed 87% of
+   its target, a town 61%, three villages lost their houses entirely).
+   **`house_density_gamma` — REMOVED, not merely re-tuned.** It belonged to
+   the rejected jittered-grid design (even specks, no negative space) and has
+   no successor of the same name; the lane-and-ring-quota system's own taper
+   is `house_edge_falloff_gamma` (`data/map3d_bake.csv`), a different
+   mechanism (how a FIXED ring-quota total spends itself from centre to rim
+   over a network that already has lanes for negative space, not how densely
+   to scatter points).
+   **"The per-group house caps" — REMOVED and replaced.** `house_max_<group>`
+   (a ceiling on a population-derived count) no longer exists; house count is
+   now `house_count_village` / `_fort` / `_town` / `_city` / `_capital` — a
+   fixed TARGET per group, independent of population (25 / 55 / 70 / 200 /
+   400 on `beria`), spent across `house_edge_rings` concentric ring quotas
+   (§1's correction and CLAUDE.md carry the detail).
+3. **Walls — unchanged.** `burgs.csv` carries `walls|citadel`; the owner
+   chose no walls this round. If revisited, the 2026-09-17 settlement-art
+   ruling applies: a BROKEN stretch of old wall along one side only, never a
+   closed circuit.
+4. **NEW — the generated mesh is narrower than the CSV it was generated
+   from.** `tools/map3d/make_houses.py`'s `join_and_normalise()` scales a
+   built mesh uniformly by `min(footprint_m / span, height_m / tall)`, so a
+   tall, narrow type (bounded by its height ratio) comes out narrower than
+   its claimed footprint: measured `townhouse_c` at 8.50 m against a claimed
+   11.00 m, `church_tower` at 16.39 m against a claimed 22.00 m — 12–25%
+   narrower. `bake_houses.py`'s own overlap test places candidates using the
+   CSV's `footprint_m`, not the mesh's real size, so buildings are spaced as
+   if they were up to a quarter wider than they actually render. Not fixed
+   this round (see `tools/map3d/README.md`'s Open items for the same note
+   aimed at whoever resumes this).
+5. **NEW — `house_frontage_share` leaked past its target, and this was
+   fixed in the branch's final commit.** Measured 60–72% against a 0.45
+   target (`stotreso` 61.3%, `carden` 67.7%, `staptonsey` 72.0%): the
+   uncapped top-up ran `_frontage_pass(enforce_quota=False)` before
+   `_infill_pass(enforce_quota=False)`, so whenever infill could not spend
+   its own ring share — routine, since frontage places first and already
+   holds the near-lane ground — the shortfall went back to frontage instead
+   of infill. **This is fixed as of commit `3af24da`** (the fallback order
+   was swapped; a regression test lives in `tools/map3d/test_bake_houses.py`).
+   Recorded here because the work ledger's own entry for this defect still
+   read "OPEN, not yet dispatched" — the ledger and the code disagree, and
+   the code, which carries the fix and its test, is correct.
+6. **NEW — `house_road_align_m` and the spec's own "nearest route point" idea
+   did not survive.** §4 as originally written said a house's yaw biases
+   toward "the nearest route point when one passes within
+   `house_road_align_m`"; the shipped code has no such key and no reference
+   to the pack's `routes` table at all — yaw comes only from the house's own
+   grown lane. A drawn road can therefore run into a settlement whose
+   invented lane network does not meet it at the edge. Deferred, not fixed:
+   the owner explicitly chose "no streets" (through-roads connecting to the
+   wider map) for this round, so it may be exactly what is wanted; revisit
+   if that changes.

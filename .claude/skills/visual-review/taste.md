@@ -24,10 +24,43 @@ add it here as a principle with its why — not as a changelog entry.
 - **Relief comes from height, not from texture.** Tiles carry material only;
   landform words in a texture prompt made a wallpaper of feathers.
 - **Geometry density beats texture relief** at small draw sizes: at ~80 px per
-  house, what reads is silhouette, not material. That is why procedural
-  Blender towns were abandoned after five rounds; do not retry.
+  house, what reads is silhouette, not material. Procedural Blender towns
+  were abandoned after five rounds on 2026-09-16 for this reason.
+  *Amended 2026-09-20: that ruling was about a 3D town rendered down to a 2D
+  sprite pasted on the 2D map's own photographic ground ("3d城市的建模没有用，
+  删掉"); the owner OVERRULED it for the 3D map itself ("推翻它，这次是真3D地图")
+  — houses now stand as real meshes on Terrain3D under the scene's own light,
+  which is a different thing from a sprite. **No base plates** survives from
+  that 2026-09-16 ruling unchanged: the grass disc under those towns was the
+  first thing rejected, and a house mesh may not carry one either.*
+- **At a 10 px draw size, what reads is silhouette, roof colour, and whether
+  a landmark stands above the rest — not detail** (owner's 800 m closest
+  zoom on the 3D map, 2026-09-20: a house is 9–17 px there). The house
+  meshes are low-poly by design and the roof colour, not the geometry, is
+  what tells a thatched cottage from a tiled townhouse.
 - **Clustered, not scattered.** Woods and ranges gather together
   (value-noise field); scattered, hash-placed marks read as "unreasonable".
+- **A settlement ends in a buffer, not at its last house** (owner 2026-09-20):
+  between the houses and the fields lies a ring of built ground with nothing
+  standing on it — yards, threshing floors — because a cluster that stops
+  where its buildings stop reads as a sticker laid on the ground beneath it.
+- **A medieval town reads by its lanes, not by its buildings**: compact and
+  messy, with negative space threading through it, never evenly-spaced
+  houses. The owner rejected an even scatter TWICE (a jittered grid with a
+  radial density falloff, then a denser version of the same thing) as
+  scattered and unreasonable; the fix was to grow a lane network out from
+  the settlement's centre first and pack houses along its frontage, filling
+  whatever block is left behind the lanes.
+- **Lanes keep their real width** (3–4 m), unlike the roads and rivers this
+  project deliberately draws wider than life for legibility. The owner
+  accepted that a true-width lane stops reading past ~2500 m and the
+  cluster becomes one solid mass at distance, rather than widen it to
+  compensate.
+- **The marker dot is a far-zoom affordance only, not a settlement's whole
+  representation** (owner 2026-09-20): now that a settlement is a real
+  cluster of houses up close, the dot that used to stand for every
+  settlement at every zoom is kept only where the houses themselves are too
+  small to read — white and solid, the capital's alone with a dark centre.
 - **One size where the owner said one size.** For example, estates are drawn at one height: "no big and small".
 
 - **On the 3D map, lines rank by pattern, not by colour** (2026-09-18): the
