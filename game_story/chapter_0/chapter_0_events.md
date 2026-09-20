@@ -203,6 +203,10 @@ Repression is checked before the ledger on purpose: burning the mills cannot be 
 
 **No fork is a hidden die.** The design rule the random pool follows — gate the *option*, never roll where the player cannot see (`RANDOM_EVENTS.md`) — holds here. The knife in the side chamber is not bad luck: a veteran captain offers, in the open, to empty the room first, and C0-04A is what happens to a king who did not take him up on it (or has no veteran at his door). And the Spymaster's fork is the first hour of the reign coming back: Quill is `paranoid` and `lowborn`, and a king who let every office speak before he did has earned a straight report, where a king who called for the books and the oaths has taught him to keep his own counsel.
 
+## Paths
+
+Walked exhaustively by `tests/engine/test_chapter_zero.gd`, twice over — once with the year's four figures kept and once with them lost: **140,670 distinct paths**, every one of the 21 beats reached, every one of the four endings reached, no beat that leads nowhere and no beat that can have every choice gated off.
+
 ## What the chapter leaves behind
 
 Every flag the chapter sets, and who may read it. The four the chain reads itself are marked; the rest are the record of what the player did, for chapter 1, for the random pool (`trigger: flag=...`) and for the endings' own prose.

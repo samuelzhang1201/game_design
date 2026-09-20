@@ -430,3 +430,83 @@ func test_the_ending_follows_the_four_figures() -> void:
 		EventEffects.apply("branch:c0_br_ending", s, data, "test")
 		assert_eq(String((s.event_state["scheduled"][0])["event_id"]), String(case[2]),
 			"metrics %s flags %s" % [case[0], case[1]])
+
+## Every path, walked. The chain is small enough to enumerate outright, but
+## only if the walk is cheap: a path's whole history is the set of flags it
+## has set, so it is simulated as a flag set rather than by replaying a
+## GameState. The one state-dependent clause a branch uses beyond flags is
+## trait_of, which is constant for a roster, so it is resolved once up front.
+func test_every_path_terminates_in_one_of_the_four_endings() -> void:
+	var s := GameState.new_campaign(data, 44)
+	var endings := {"c0_13": 0, "c0_14": 0, "c0_15": 0, "c0_16": 0}
+	var visited := {}
+	var paths := 0
+	for bond_kept: bool in [true, false]:
+		paths += _walk("c0_01", {}, bond_kept, s, endings, visited, 0)
+	assert_gt(paths, 100, "the chain really does branch")
+	for id: String in endings:
+		assert_gt(int(endings[id]), 0, id + " is reached by no path")
+	for id: String in _ids():
+		assert_true(visited.has(id), id + " is reached by no path at all")
+
+func _walk(event_id: String, flags: Dictionary, bond_kept: bool, s: GameState,
+		endings: Dictionary, visited: Dictionary, depth: int) -> int:
+	if depth >= 24:
+		fail_test("the chain runs longer than the chapter can, at " + event_id)
+		return 0
+	visited[event_id] = true
+	if endings.has(event_id):
+		endings[event_id] = int(endings[event_id]) + 1
+		return 1
+	var closed := 0
+	var offered := 0
+	for c in data.chapter_event_choices:
+		if String(c["event_id"]) != event_id:
+			continue
+		if not _holds(String(c.get("requires", "")), flags, bond_kept, s):
+			continue
+		offered += 1
+		var next_flags := flags.duplicate()
+		var next := ""
+		for raw in String(c["effects"]).split(";", false):
+			var op := raw.strip_edges()
+			if op.begins_with("flag:"):
+				next_flags[op.split(":")[1]] = true
+			elif op.begins_with("schedule:"):
+				next = String(op.split(":")[1])
+			elif op.begins_with("branch:"):
+				for rule: Dictionary in data.chapter_branches.get(op.split(":")[1], []):
+					if _holds(String(rule["requires"]), next_flags, bond_kept, s):
+						next = String(rule["event_id"])
+						break
+		assert_ne(next, "", "%s/%s leads nowhere" % [event_id, c["choice_id"]])
+		if next != "":
+			closed += _walk(next, next_flags, bond_kept, s, endings, visited, depth + 1)
+	assert_gt(offered, 0, event_id + " offers nothing in this state")
+	return closed
+
+## The branch/requires clauses this chapter actually uses, over a flag set:
+## always, flag=, !flag=, trait_of= and the four metric comparisons of the
+## bond (which this walk fixes per pass rather than simulating).
+func _holds(expr: String, flags: Dictionary, bond_kept: bool, s: GameState) -> bool:
+	var e := expr.strip_edges()
+	if e == "" or e == "always":
+		return true
+	for raw in e.split("&"):
+		var c := raw.strip_edges()
+		var want := true
+		if c.begins_with("!"):
+			want = false
+			c = c.substr(1).strip_edges()
+		var got := false
+		if c.begins_with("flag="):
+			got = flags.has(c.substr(5))
+		elif c.begins_with("trait_of="):
+			got = TriggerDsl.evaluate(c, s, data)
+		elif "<" in c or ">" in c:
+			got = bond_kept  # the four figures, kept or lost, per pass
+		else:
+			fail_test("the walk cannot read the clause: " + c)
+		if got != want:
+			return false
+	return true
