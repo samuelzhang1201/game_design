@@ -67,6 +67,24 @@ func test_the_hover_signals_through_the_view() -> void:
 	assert_eq(v.hovered_kingdom(), (v.component("picker") as Map3DPicker).hovered_kingdom())
 
 
+## A town is still clickable at 20 km (change 3, owner 2026-09-20): between
+## map3d_house_view_m (9 km, houses stop) and map3d_dot_min_view_m (40 km,
+## the dot appears), a settlement is marked by nothing but its ground patch —
+## picking must not depend on a dot that is not drawn there.
+func test_a_town_is_still_clickable_at_20km_with_no_dot_shown() -> void:
+	var v := _view()
+	var code := ""
+	for c: String in Game.data.burgs:
+		if String(Game.data.burgs[c].get("group", "")) == "town":
+			code = c
+			break
+	assert_ne(code, "", "the pack has a town")
+	var burg: Dictionary = Game.data.burgs[code]
+	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])), 20000.0)
+	assert_true(20000.0 < Game.data.bal("map3d_dot_min_view_m"), "the fixture is inside the no-dot gap")
+	assert_eq(v.pick_at(v.size * 0.5), {"kind": "burg", "code": code})
+
+
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()

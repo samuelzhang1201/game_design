@@ -54,10 +54,12 @@ func preview_build(p_ctx: Map3DContext) -> void:
 ## One MultiMesh of billboard rings per settlement group, each over the
 ## ground under its burg, plus a hidden gold ring for the current selection.
 ## Codes are sorted so the placement is the same every run. Render priority
-## rises with tier (village lowest, capital highest — by marker_px, the
-## table's own measure of importance) so a bigger settlement's ring never
-## gets buried under a smaller neighbour's (fix round 1, owner 2026-09-18);
-## the selection ring sits above every tier. Replaces any markers before.
+## rises with tier (village lowest, capital highest — by dot_px, the table's
+## own measure of importance, ring_px having gone to 0 for every group since
+## the capital's ring became its inner dot, owner 2026-09-20) so a bigger
+## settlement's mark never gets buried under a smaller neighbour's (fix
+## round 1, owner 2026-09-18); the selection ring sits above every tier.
+## Replaces any markers before.
 func build() -> void:
 	_ring_mats.clear()
 	# Only what a build (or a preview) made: an AUTHORED child is never
@@ -75,16 +77,18 @@ func build() -> void:
 	groups.sort()
 	var by_size: Array = groups.duplicate()
 	by_size.sort_custom(func(a: String, b: String) -> bool:
-		var ra := marker_px(ctx.repo.map3d_settlements[a])
-		var rb := marker_px(ctx.repo.map3d_settlements[b])
+		var ra := float(ctx.repo.map3d_settlements[a]["dot_px"])
+		var rb := float(ctx.repo.map3d_settlements[b]["dot_px"])
 		return ra < rb if ra != rb else a < b)
+	var min_view_m := ctx.repo.bal("map3d_dot_min_view_m")
 	for group: String in groups:
 		var spec: Dictionary = ctx.repo.map3d_settlements[group]
 		var mesh := QuadMesh.new()
 		mesh.size = Vector2.ONE
 		mesh.material = _ring_material(Color(String(spec["color"])),
 			float(spec["ring_px"]), float(spec["line_px"]), float(spec["max_view_m"]),
-			Map3DPriority.RING_BASE + by_size.find(group), float(spec.get("dot_px", 0.0)))
+			Map3DPriority.RING_BASE + by_size.find(group), float(spec.get("dot_px", 0.0)),
+			RING_MAT, float(spec.get("inner_px", 0.0)), min_view_m)
 		var pts: Array = by_group[group]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -156,22 +160,26 @@ func counts() -> Dictionary:
 
 
 ## A ring material; its sizes are design px, turned into window px with the
-## other layers' by apply_scale (base values kept as meta). max_view_m is
-## world metres, never rescaled. The keyline is a fixed data value (fix
-## round 1: a pale ring was nearly invisible on bright grass at the old
-## 0.55 default).
+## other layers' by apply_scale (base values kept as meta). max_view_m and
+## min_view_m are world metres, never rescaled. The keyline is a fixed data
+## value (fix round 1: a pale ring was nearly invisible on bright grass at
+## the old 0.55 default). min_view_m is 0 (never hidden) for the selection
+## ring, which must keep showing at any zoom once something is clicked.
 func _ring_material(colour: Color, ring_px: float, line_px: float, max_view_m: float,
-		priority: int, dot_px := 0.0, look: ShaderMaterial = RING_MAT) -> ShaderMaterial:
+		priority: int, dot_px := 0.0, look: ShaderMaterial = RING_MAT, inner_px := 0.0,
+		min_view_m := 0.0) -> ShaderMaterial:
 	var mat := look.duplicate() as ShaderMaterial
 	mat.render_priority = priority
 	mat.set_shader_parameter("colour", colour)
 	mat.set_shader_parameter("max_view_m", max_view_m)
+	mat.set_shader_parameter("min_view_m", min_view_m)
 	mat.set_shader_parameter("fade_start", ctx.repo.bal("map3d_ring_fade_start"))
 	var keyline := Color(0.08, 0.08, 0.08, ctx.repo.bal("map3d_ring_keyline_alpha"))
 	mat.set_shader_parameter("keyline", keyline)
 	mat.set_meta("ring_px", ring_px)
 	mat.set_meta("line_px", line_px)
 	mat.set_meta("dot_px", dot_px)
+	mat.set_meta("inner_px", inner_px)
 	_ring_mats.append(mat)
 	return mat
 
@@ -189,8 +197,4 @@ func apply_scale() -> void:
 		mat.set_shader_parameter("ring_px", float(mat.get_meta("ring_px")) * s)
 		mat.set_shader_parameter("line_px", float(mat.get_meta("line_px")) * s)
 		mat.set_shader_parameter("dot_px", float(mat.get_meta("dot_px", 0.0)) * s)
-
-
-## A settlement's size on screen, design px: its ring, else its dot.
-static func marker_px(spec: Dictionary) -> float:
-	return maxf(float(spec.get("ring_px", 0.0)), float(spec.get("dot_px", 0.0)))
+		mat.set_shader_parameter("inner_px", float(mat.get_meta("inner_px", 0.0)) * s)

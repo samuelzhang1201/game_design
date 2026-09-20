@@ -96,20 +96,40 @@ func test_rings_take_their_size_from_the_table() -> void:
 		"design px at the headless render scale of 1")
 	assert_almost_eq(float(mat.get_shader_parameter("line_px")), float(spec["line_px"]), 0.001)
 	assert_almost_eq(float(mat.get_shader_parameter("dot_px")), float(spec["dot_px"]), 0.001)
+	assert_almost_eq(float(mat.get_shader_parameter("inner_px")), float(spec["inner_px"]), 0.001)
+	assert_almost_eq(float(mat.get_shader_parameter("min_view_m")),
+		Game.data.bal("map3d_dot_min_view_m"), 0.001, "the dot hides below this distance")
 
 
-## Owner 2026-09-19: every settlement a solid black dot; only the capital
-## wears a ring round its dot.
-func test_settlements_are_black_dots_and_only_the_capital_is_ringed() -> void:
+## Owner 2026-09-20: every settlement a white solid dot, smaller than the
+## 2026-09-19 sizes; only the capital wears a second, darker dot in its
+## centre (its old ring round the dot is retired).
+func test_settlements_are_white_dots_and_only_the_capital_has_an_inner_dot() -> void:
 	for group: String in Game.data.map3d_settlements:
 		var spec: Dictionary = Game.data.map3d_settlements[group]
 		assert_gt(float(spec["dot_px"]), 0.0, group + " has a dot")
 		var c := Color(String(spec["color"]))
-		assert_lt(c.get_luminance(), 0.15, group + " is black")
+		assert_gt(c.get_luminance(), 0.85, group + " is white")
+		assert_eq(float(spec["ring_px"]), 0.0, group + " has no ring (replaced by the inner dot)")
 		if group == "capital":
-			assert_gt(float(spec["ring_px"]), float(spec["dot_px"]), "the capital's ring round its dot")
+			assert_gt(float(spec["inner_px"]), 0.0, "the capital's inner dot")
+			assert_lt(float(spec["inner_px"]), float(spec["dot_px"]), "the inner dot sits inside the outer one")
 		else:
-			assert_eq(float(spec["ring_px"]), 0.0, group + " has no ring")
+			assert_eq(float(spec["inner_px"]), 0.0, group + " has no inner dot")
+
+
+## The selection ring's own material must keep showing at any zoom once
+## something is clicked (owner 2026-09-20: the near cutoff must not silence
+## the gold ring the way it silences the plain dots).
+func test_the_selection_ring_never_hides_by_distance() -> void:
+	var v := _view()
+	v.activate()
+	var markers := v.viewport().get_node("Markers") as Map3DLayerSettlements
+	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
+	markers.show_selected(String(realm["capital_burg"]))
+	var mmi := v.viewport().get_node("Markers/Selected") as MultiMeshInstance3D
+	var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
+	assert_eq(float(mat.get_shader_parameter("min_view_m")), 0.0)
 
 
 func test_a_clicked_settlement_wears_the_gold_ring_until_cleared() -> void:
@@ -133,6 +153,26 @@ func test_a_far_village_carries_its_max_view_m_from_the_table() -> void:
 	assert_almost_eq(float(mat.get_shader_parameter("max_view_m")), float(spec["max_view_m"]), 0.001)
 	assert_almost_eq(float(mat.get_shader_parameter("fade_start")), Game.data.bal("map3d_ring_fade_start"),
 		0.001, "the shader and pick_at read one fade start")
+
+
+## Mirrors settlement_ring.gdshader's vertex() near_fade formula exactly
+## (owner 2026-09-20): a shader edit that changes the idiom must update this
+## too. Proves the dot is hidden below map3d_dot_min_view_m and shown above
+## it, without a GPU readback.
+func _near_fade(dist_m: float, min_view_m: float, fade_start: float) -> float:
+	if min_view_m <= 0.0:
+		return 1.0
+	return smoothstep(min_view_m, min_view_m / fade_start, dist_m)
+
+
+func test_the_dot_hides_below_the_near_cutoff_and_shows_above_it() -> void:
+	var min_m: float = Game.data.bal("map3d_dot_min_view_m")
+	var fade_start: float = Game.data.bal("map3d_ring_fade_start")
+	assert_eq(_near_fade(0.0, min_m, fade_start), 0.0, "hidden at the camera")
+	assert_eq(_near_fade(min_m * 0.5, min_m, fade_start), 0.0, "hidden well below the cutoff")
+	assert_eq(_near_fade(min_m, min_m, fade_start), 0.0, "hidden exactly at the cutoff")
+	assert_gt(_near_fade(min_m / fade_start, min_m, fade_start), 0.99, "fully shown once the near band clears")
+	assert_almost_eq(_near_fade(1000000.0, min_m, fade_start), 1.0, 0.001, "fully shown far out")
 
 
 func test_ring_render_priority_rises_with_tier() -> void:

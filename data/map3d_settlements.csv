@@ -1,6 +1,6 @@
-group,dot_px,ring_px,line_px,color,max_view_m,notes
-capital,7,20,2,#141414,1000000,"3D MAP (owner 2026-09-19: '定居点全部换成实心小黑点，只有首都是黑点外套一层圆圈'): every settlement is a solid black dot of constant SCREEN size (design px, x the window scale); the capital alone also wears a ring round its dot. Replaces the coloured hollow rings of 2026-09-18"
-city,6,0,0,#141414,150000,a solid black dot; dot_px falls with the tier
-fort,5,0,0,#141414,60000,a solid black dot
-town,5,0,0,#141414,60000,a solid black dot
-village,3.5,0,0,#141414,25000,"a solid black dot, thinned by distance (max_view_m: the camera-to-settlement distance beyond which it is gone, faded over its last 20%)"
+group,dot_px,inner_px,ring_px,line_px,color,max_view_m,notes
+capital,3.5,1.75,0,0,#FFFFFF,1000000,"3D MAP (owner 2026-09-20: '那个黑点太大了，弄的小一点, 并且变成白色的实心点，首都则为白色实心点中间有一个黑点' — smaller, white solid dots, the capital a white dot with a black dot in its centre): dot_px halved from the 2026-09-19 sizes; the old ring_px/line_px round the capital's dot is retired in favour of inner_px (the columns stay, at 0, so the gold selection ring's sizing — which falls back to dot_px x 2 for every group already — needs no special case)"
+city,3,0,0,0,#FFFFFF,150000,"a white solid dot; dot_px falls with the tier (halved from 2026-09-19)"
+fort,2.5,0,0,0,#FFFFFF,60000,"a white solid dot (halved from 2026-09-19)"
+town,2.5,0,0,0,#FFFFFF,60000,"a white solid dot (halved from 2026-09-19)"
+village,1.75,0,0,0,#FFFFFF,25000,"a white solid dot, thinned by distance (max_view_m: the camera-to-settlement distance beyond which it is gone, faded over its last 20%; halved from 2026-09-19)"

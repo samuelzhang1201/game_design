@@ -109,7 +109,8 @@ func test_the_markers_are_their_own_layer() -> void:
 	assert_true(markers is Map3DLayerSettlements)
 	assert_eq((markers as Map3DLayerSettlements).counts(), v.marker_counts())
 	var spec: Dictionary = Game.data.map3d_settlements["capital"]
-	assert_eq(Map3DView.marker_px(spec), Map3DLayerSettlements.marker_px(spec))
+	var capital := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
+	assert_eq(v.pick_reach_px(capital, spec, 5000.0), v.context().pick_reach_px(capital, spec, 5000.0))
 	assert_eq(Map3DView.SELECTED_RING_ALWAYS_M, Map3DLayerSettlements.SELECTED_RING_ALWAYS_M)
 	assert_false((markers as Map3DLayerSettlements).selected_visible())
 
@@ -204,6 +205,17 @@ func test_the_themes_are_one_layer_that_works_before_load() -> void:
 	assert_not_null(v.cell_lut())
 	assert_not_null(v.viewport().get_node_or_null("Lines/ManorEdges"))
 	assert_eq(Map3DView.load_field_map("user://nowhere/world.tscn"), null)
+
+
+## The capital's inner dot must come from data/map3d_settlements.csv's
+## inner_px column, never a hardcoded group name (owner 2026-09-20).
+func test_the_inner_dot_is_data_driven_not_a_hardcoded_group_name() -> void:
+	var layer_src := FileAccess.get_file_as_string("res://scripts/map3d/map3d_layer_settlements.gd")
+	assert_false(layer_src.contains("\"capital\""),
+		"the layer must read inner_px from the spec, not branch on the group's name")
+	var shader_src := FileAccess.get_file_as_string("res://scripts/map3d/settlement_ring.gdshader")
+	assert_false(shader_src.to_lower().contains("capital"),
+		"the shader must not name a settlement group")
 
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.

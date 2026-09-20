@@ -15,6 +15,16 @@
 // a ring that has begun to fade is no longer picked) and the vertex stage
 // collapses the quad to zero size at/beyond it, so a culled ring costs no
 // fill at all, not just zero alpha.
+//
+// Owner 2026-09-20: the dot now shows only at the farthest zoom — min_view_m
+// (balance.csv map3d_dot_min_view_m) hides it below that distance, fading in
+// over the SAME fade_start share mirrored inward (min_view_m ..
+// min_view_m / fade_start), so the near band widens with the far one instead
+// of needing a second tuning knob. Dots turned white and shrank, so the
+// keyline — until now only drawn round a RING's stroke — also rings the
+// dot's own rim; whichever group's row asks for one (inner_px, data only:
+// this shader never names a settlement group) wears a second, darker disc
+// in place of its old ring.
 shader_type spatial;
 render_mode unshaded, cull_disabled, blend_mix, depth_draw_never, depth_test_disabled,
 	shadows_disabled, fog_disabled;
@@ -22,24 +32,31 @@ render_mode unshaded, cull_disabled, blend_mix, depth_draw_never, depth_test_dis
 uniform vec4 colour : source_color = vec4(1.0);
 uniform vec4 keyline : source_color = vec4(0.08, 0.08, 0.08, 0.8);
 uniform float dot_px = 0.0;    // the solid dot's diameter, window px (owner 2026-09-19)
+uniform float inner_px = 0.0;  // a second, darker disc centred in the dot, window px (owner 2026-09-20)
 uniform float ring_px = 14.0;  // outer diameter, window px; 0 = no ring
 uniform float line_px = 2.0;   // stroke, window px
 uniform float lift_px = 3.0;
 uniform float px_per_dist = 0.001;
 uniform float max_view_m = 1000000.0;  // beyond this, gone
-uniform float fade_start = 0.8;  // share of max_view_m where the fade begins
+uniform float min_view_m = 0.0;  // nearer than this, gone (0 = never; owner 2026-09-20)
+uniform float fade_start = 0.8;  // share of max_view_m / min_view_m where each fade begins
 
 varying vec2 v_px;    // this fragment's offset from the centre, window px
-varying float v_fade;  // distance fade, 1 near, 0 at/beyond max_view_m
+varying float v_fade;  // distance fade, 1 near, 0 at/beyond max_view_m or at/below min_view_m
 
 void vertex() {
 	vec3 centre = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	float dist = length(centre - CAMERA_POSITION_WORLD);
 	float m_per_px = dist * px_per_dist;
-	v_fade = 1.0 - smoothstep(fade_start * max_view_m, max_view_m, dist);
-	// Beyond max_view_m the ring is already fully faded: collapse the quad
-	// to zero size so it costs no fill, not merely zero alpha.
-	float box_px = (dist < max_view_m) ? max(ring_px, dot_px) + 4.0 : 0.0;  // +4 for the keyline/AA edge
+	float far_fade = 1.0 - smoothstep(fade_start * max_view_m, max_view_m, dist);
+	float near_fade = min_view_m <= 0.0 ? 1.0 : smoothstep(min_view_m, min_view_m / fade_start, dist);
+	v_fade = far_fade * near_fade;
+	bool near_hidden = min_view_m > 0.0 && dist <= min_view_m;
+	// Beyond max_view_m (or within min_view_m) the mark is already fully
+	// faded: collapse the quad to zero size so it costs no fill, not merely
+	// zero alpha.
+	float box_px = (dist < max_view_m && !near_hidden) ?
+		max(max(ring_px, dot_px), inner_px) + 4.0 : 0.0;  // +4 for the keyline/AA edge
 	v_px = VERTEX.xy * box_px;
 	vec3 right = INV_VIEW_MATRIX[0].xyz;
 	vec3 up = INV_VIEW_MATRIX[1].xyz;
@@ -50,8 +67,18 @@ void vertex() {
 
 void fragment() {
 	float r = length(v_px);
-	// The solid dot (every settlement since 2026-09-19), anti-aliased.
+	// The solid dot (every settlement since 2026-09-19), anti-aliased, with
+	// a dark keyline round its own rim (owner 2026-09-20: white needs it far
+	// more than the old black dot did, to hold on bright ground).
 	float disc = clamp(0.5 * dot_px - r + 0.5, 0.0, 1.0);
+	float dot_key = 0.0;
+	if (dot_px > 0.0) {
+		float dot_d = abs(r - 0.5 * dot_px) - 0.6;
+		dot_key = clamp(1.6 - dot_d, 0.0, 1.0) * keyline.a;
+	}
+	// The inner dot (whichever group's data asks for one): a second, darker
+	// disc centred in the first.
+	float inner = clamp(0.5 * inner_px - r + 0.5, 0.0, 1.0);
 	float stroke = 0.0;
 	float key = 0.0;
 	if (ring_px > 0.0 && line_px > 0.0) {
@@ -60,7 +87,9 @@ void fragment() {
 		stroke = clamp(0.5 - d, 0.0, 1.0);
 		key = clamp(1.5 - d, 0.0, 1.0) * keyline.a;
 	}
+	key = max(key, dot_key);
 	float ink = max(stroke, disc);
-	ALBEDO = mix(keyline.rgb, colour.rgb, ink);
+	vec3 base = mix(keyline.rgb, colour.rgb, ink);
+	ALBEDO = mix(base, keyline.rgb, inner);
 	ALPHA = max(ink * colour.a, key) * v_fade;
 }

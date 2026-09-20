@@ -293,7 +293,7 @@ func water_normals() -> Texture2D: return _ctx.water_normals() if _ctx != null e
 func sea_material() -> ShaderMaterial: return _sea.material() if _loaded else null
 ## Test seam: the Rivers layer's material (the palette colours go in raw).
 func river_material() -> ShaderMaterial: return _rivers.material() if _loaded else null
-static func marker_px(spec: Dictionary) -> float: return Map3DLayerSettlements.marker_px(spec)
+func pick_reach_px(code: String, spec: Dictionary, dist_m: float) -> float: return _ctx.pick_reach_px(code, spec, dist_m)
 
 ## Rebuild the borders if ownership moved, and the theme, names and selection.
 func refresh_borders() -> void:

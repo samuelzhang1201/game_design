@@ -109,18 +109,28 @@ func test_far_out_only_the_big_ones_show() -> void:
 	for mk: Dictionary in marks:
 		assert_eq(int(Elevation.landmark_at(Game.data, int(mk["cell"]))["lod"]), 0)
 
+## Some near-only landmark still joins the marks close in — but not
+## necessarily the FIRST one (owner 2026-09-20, change 3): a settlement's
+## keep-clear rect is now its real footprint (pick_reach_px), so a landmark
+## sitting right on top of a big, close city can legitimately be crowded out
+## the way a small dot's rect never crowded anything.
 func test_close_in_smaller_ones_join() -> void:
 	var v := _view()
 	v.set_manor_theme("heights")
-	var small: Dictionary = {}
+	var candidates: Array = []
 	for m: Dictionary in Elevation.landmarks(Game.data):
 		if int(m["lod"]) == 2:
+			candidates.append(m)
+	assert_false(candidates.is_empty(), "the pack has near-only landmarks")
+	var small: Dictionary = {}
+	var cells: Array = []
+	for m: Dictionary in candidates:
+		_frame_on(v, m, Game.data.bal("map3d_zoom_min_m") * 2.0)
+		cells = v.landmark_marks().map(func(mk: Dictionary) -> int: return int(mk["cell"]))
+		if int(m["cell"]) in cells:
 			small = m
 			break
-	assert_false(small.is_empty(), "the pack has near-only landmarks")
-	_frame_on(v, small, Game.data.bal("map3d_zoom_min_m") * 2.0)
-	var cells: Array = v.landmark_marks().map(func(mk: Dictionary) -> int: return int(mk["cell"]))
-	assert_true(int(small["cell"]) in cells)
+	assert_false(small.is_empty(), "at least one near-only landmark is clear of every settlement's reach")
 
 func test_marks_never_overlap() -> void:
 	var v := _view()
@@ -191,7 +201,8 @@ func test_the_hud_draws_marks_and_legend_without_error() -> void:
 	await wait_process_frames(3)
 	assert_gt(v.landmark_marks().size(), 0)
 
-## A burg on screen now: its code, its centre and its dot's radius, design px.
+## A burg on screen now: its code, its centre and its click reach, design px
+## (pick_reach_px — its own geometry, not whether a dot is drawn there).
 func _burgs_on_screen(v: Map3DView) -> Array:
 	var out: Array = []
 	var s := v._render_scale()
@@ -201,11 +212,11 @@ func _burgs_on_screen(v: Map3DView) -> Array:
 		var spec: Dictionary = Game.data.map3d_settlements[String(burg.get("group", ""))]
 		var bxz := v._burg_xz(burg)
 		var world := Vector3(bxz.x, v._height_at(bxz), bxz.y)
-		if cam.is_position_behind(world) or cam.global_position.distance_to(world) \
-				>= float(spec["max_view_m"]) * Game.data.bal("map3d_ring_fade_start"):
+		var dist_m := cam.global_position.distance_to(world)
+		if cam.is_position_behind(world) or dist_m >= float(spec["max_view_m"]) * Game.data.bal("map3d_ring_fade_start"):
 			continue
 		out.append({"code": code, "c": cam.unproject_position(world) / s,
-			"r": Map3DView.marker_px(spec) * 0.5})
+			"r": v.pick_reach_px(code, spec, dist_m)})
 	return out
 
 ## The point of `rect` nearest `c`.

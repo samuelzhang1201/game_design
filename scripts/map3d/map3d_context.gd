@@ -245,14 +245,17 @@ func projected_settlements() -> Array:
 	return out
 
 
-## The screen squares (design px) of every settlement dot shown now — what
+## The screen squares (design px) of every settlement shown now — what
 ## the counters and the landmarks keep clear of (was Map3DView._settlement_marks).
+## Sized by pick_reach_px, so the reserved area matches what a click actually
+## reaches rather than a dot that may not even be drawn.
 func settlement_rects() -> Array:
 	var out: Array = []
 	for e: Dictionary in projected_settlements():
 		if not bool(e["shown"]):
 			continue
-		var r := Map3DLayerSettlements.marker_px(e["spec"]) * 0.5 + 2.0
+		var dist_m := camera.global_position.distance_to(e["world"] as Vector3)
+		var r := pick_reach_px(String(e["code"]), e["spec"], dist_m) + 2.0
 		out.append(Rect2((e["screen"] as Vector2) - Vector2(r, r), Vector2(r, r) * 2.0))
 	return out
 
@@ -271,3 +274,20 @@ func houses() -> Dictionary:
 func people_of_burg(code: String) -> float:
 	var burg: Dictionary = repo.burgs.get(code, {})
 	return float(burg.get("population", 0))
+
+
+## A settlement's click reach in DESIGN px: its cluster's projected radius,
+## never below map3d_pick_px. Independent of whether its dot is drawn (owner
+## 2026-09-20: the dot itself now hides below map3d_dot_min_view_m, but a
+## settlement between the house cutoff and the dot's near cutoff must still
+## be clickable). `spec` is unused today — kept so a caller already holding
+## a settlement's row from projected_settlements() need not look it up again.
+## Uses Map3DGeometry.metres_per_pixel (view_size, DESIGN px — the same
+## measure label_px uses), not px_per_dist, which is metres per SUBVIEWPORT
+## px: e["screen"]/pos are design px, and the two only agree when
+## viewport_px_scale() is 1.
+func pick_reach_px(code: String, _spec: Dictionary, dist_m: float) -> float:
+	var world_r := Map3DHouses.footprint_radius_m(people_of_burg(code), repo)
+	var m_per_px := Map3DGeometry.metres_per_pixel(dist_m, repo.bal("map3d_fov_deg"),
+		maxf(view_size.y, 1.0))
+	return maxf(world_r / maxf(m_per_px, 0.0001), repo.bal("map3d_pick_px"))

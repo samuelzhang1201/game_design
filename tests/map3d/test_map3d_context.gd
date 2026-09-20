@@ -139,6 +139,40 @@ func test_cells_are_memoised() -> void:
 	assert_eq(calls[0], 1, "one lookup per cell, ever")
 
 
+func _some_burg(group: String) -> String:
+	for code: String in Game.data.burgs:
+		if String(Game.data.burgs[code].get("group", "")) == group:
+			return code
+	return ""
+
+
+## A settlement's click reach is its footprint's projected radius (change 3,
+## owner 2026-09-20): the capital's far bigger population reaches farther on
+## screen than a village's, at the same distance.
+func test_a_bigger_settlement_has_a_wider_pick_reach_at_the_same_distance() -> void:
+	var v := _view()
+	var c := v.context()
+	var capital := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
+	var village := _some_burg("village")
+	assert_ne(village, "", "the pack has a village")
+	var cap_r := c.pick_reach_px(capital, Game.data.map3d_settlements["capital"], 5000.0)
+	var vil_r := c.pick_reach_px(village, Game.data.map3d_settlements["village"], 5000.0)
+	assert_gt(cap_r, vil_r, "the capital's cluster reaches farther on screen")
+
+
+## The reach never falls below map3d_pick_px, however small the footprint's
+## screen size becomes — the floor that keeps a settlement clickable even
+## where its dot is not drawn (change 3's whole point).
+func test_pick_reach_never_falls_below_the_pick_floor() -> void:
+	var v := _view()
+	var c := v.context()
+	var village := _some_burg("village")
+	assert_ne(village, "", "the pack has a village")
+	var r := c.pick_reach_px(village, Game.data.map3d_settlements["village"], 5000000.0)
+	assert_almost_eq(r, Game.data.bal("map3d_pick_px"), 0.01,
+		"far enough that the footprint's screen size shrinks under the floor")
+
+
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()

@@ -68,29 +68,27 @@ func pick_at(pos: Vector2) -> Dictionary:
 	for b: Dictionary in view.manor_badges():
 		if (b["rect"] as Rect2).has_point(pos):
 			return {"kind": "burg", "code": String(b["burg"])}
-	var best_dot := 0.0
 	for e: Dictionary in ctx.projected_settlements():
 		if not bool(e["shown"]):
 			continue
-		var spec: Dictionary = e["spec"]
-		var reach := maxf(Map3DLayerSettlements.marker_px(spec) * 0.5, ctx.repo.bal("map3d_pick_px"))
+		var code := String(e["code"])
+		var dist_m := ctx.camera.global_position.distance_to(e["world"] as Vector3)
+		var reach := ctx.pick_reach_px(code, e["spec"], dist_m)
 		var d := (e["screen"] as Vector2).distance_to(pos)
 		if d <= reach and d < best_d:
 			best_d = d
-			best = String(e["code"])
-			best_dot = Map3DLayerSettlements.marker_px(spec) * 0.5 + 2.0
+			best = code
 	# Under HEIGHTS a high or low point (spec 2026-09-19-map3d-heights), ranked
-	# against the settlements (Task 7): a click ON a settlement's dot is the
-	# settlement's, a click on a mark is the mark's, then a settlement's reach,
-	# and last the mark's rect grown by half the pick reach.
-	if best != "" and best_d <= best_dot:
+	# against the settlements (Task 7; simplified owner 2026-09-20, change 3:
+	# pick_reach_px is now the settlement's ONE click geometry, no longer a
+	# tighter "exact dot" inside a looser "click floor" — a settlement within
+	# reach always beats a mark, a mark's own box beats its grown rect).
+	if best != "":
 		return {"kind": "burg", "code": best}
 	var marks := view.landmark_marks() if view.heat_on() else []
 	for mk: Dictionary in marks:
 		if (mk["rect"] as Rect2).has_point(pos):
 			return {"kind": "landmark", "cell": int(mk["cell"])}
-	if best != "":
-		return {"kind": "burg", "code": best}
 	var grow := ctx.repo.bal("map3d_pick_px") * 0.5
 	for mk: Dictionary in marks:
 		if (mk["rect"] as Rect2).grow(grow).has_point(pos):
