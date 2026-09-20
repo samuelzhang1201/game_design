@@ -109,28 +109,18 @@ func test_far_out_only_the_big_ones_show() -> void:
 	for mk: Dictionary in marks:
 		assert_eq(int(Elevation.landmark_at(Game.data, int(mk["cell"]))["lod"]), 0)
 
-## Some near-only landmark still joins the marks close in — but not
-## necessarily the FIRST one (owner 2026-09-20, change 3): a settlement's
-## keep-clear rect is now its real footprint (pick_reach_px), so a landmark
-## sitting right on top of a big, close city can legitimately be crowded out
-## the way a small dot's rect never crowded anything.
 func test_close_in_smaller_ones_join() -> void:
 	var v := _view()
 	v.set_manor_theme("heights")
-	var candidates: Array = []
+	var small: Dictionary = {}
 	for m: Dictionary in Elevation.landmarks(Game.data):
 		if int(m["lod"]) == 2:
-			candidates.append(m)
-	assert_false(candidates.is_empty(), "the pack has near-only landmarks")
-	var small: Dictionary = {}
-	var cells: Array = []
-	for m: Dictionary in candidates:
-		_frame_on(v, m, Game.data.bal("map3d_zoom_min_m") * 2.0)
-		cells = v.landmark_marks().map(func(mk: Dictionary) -> int: return int(mk["cell"]))
-		if int(m["cell"]) in cells:
 			small = m
 			break
-	assert_false(small.is_empty(), "at least one near-only landmark is clear of every settlement's reach")
+	assert_false(small.is_empty(), "the pack has near-only landmarks")
+	_frame_on(v, small, Game.data.bal("map3d_zoom_min_m") * 2.0)
+	var cells: Array = v.landmark_marks().map(func(mk: Dictionary) -> int: return int(mk["cell"]))
+	assert_true(int(small["cell"]) in cells)
 
 func test_marks_never_overlap() -> void:
 	var v := _view()

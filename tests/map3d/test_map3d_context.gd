@@ -173,6 +173,37 @@ func test_pick_reach_never_falls_below_the_pick_floor() -> void:
 		"far enough that the footprint's screen size shrinks under the floor")
 
 
+## settlement_rects() sizes on the DRAWN dot (Map3DLayerSettlements.drawn_px),
+## pick_reach_px on the ground footprint — fix round 1, owner 2026-09-20:
+## both used to be fed by one function, `marker_px`, and conflating them
+## crowded landmark marks out of a huge area where nothing was even drawn.
+## Below map3d_dot_min_view_m the dot is hidden, so the capital contributes
+## NO keep-clear rect there, even though pick_reach_px — independent of the
+## dot — is still a real, large number at that same distance. Above the
+## cutoff, once the dot is drawn again, it keeps its own screen space clear.
+func test_settlement_rects_sizes_on_the_drawn_dot_not_the_footprint() -> void:
+	var v := _view()
+	var c := v.context()
+	var capital := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
+	var min_m: float = Game.data.bal("map3d_dot_min_view_m")
+	var burg: Dictionary = Game.data.burgs[capital]
+	var pack_pos := Vector2(float(burg["x"]), float(burg["y"]))
+	v.look_at_pack(pack_pos, min_m * 0.5)
+	var reach := c.pick_reach_px(capital, Game.data.map3d_settlements["capital"], min_m * 0.5)
+	assert_gt(reach, Game.data.bal("map3d_pick_px") * 2.0,
+		"the ground footprint reach is real and large this close, well past the floor")
+	var p := v.size * 0.5  # look_at_pack centres the target on screen
+	for r: Rect2 in c.settlement_rects():
+		assert_false(r.has_point(p),
+			"the dot is hidden below map3d_dot_min_view_m: nothing here to keep clear of")
+	v.look_at_pack(pack_pos, min_m * 1.5)
+	var found := false
+	for r: Rect2 in c.settlement_rects():
+		if r.has_point(v.size * 0.5):
+			found = true
+	assert_true(found, "once the dot shows again, it keeps its own screen space clear")
+
+
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()

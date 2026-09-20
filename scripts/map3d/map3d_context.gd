@@ -245,17 +245,22 @@ func projected_settlements() -> Array:
 	return out
 
 
-## The screen squares (design px) of every settlement shown now — what
-## the counters and the landmarks keep clear of (was Map3DView._settlement_marks).
-## Sized by pick_reach_px, so the reserved area matches what a click actually
-## reaches rather than a dot that may not even be drawn.
+## The screen squares (design px) of every DRAWN settlement dot — what the
+## counters and landmarks keep clear of (was Map3DView._settlement_marks).
+## Sizes on Map3DLayerSettlements.drawn_px, NEVER pick_reach_px's ground
+## footprint (fix round 1, owner 2026-09-20: conflating the two — once one
+## `marker_px` — crowded landmarks out of ground where the dot is hidden).
+## A hidden dot — nearer than map3d_dot_min_view_m, or `shown` false — gets no rect.
 func settlement_rects() -> Array:
 	var out: Array = []
+	var min_view_m := repo.bal("map3d_dot_min_view_m")
 	for e: Dictionary in projected_settlements():
 		if not bool(e["shown"]):
 			continue
 		var dist_m := camera.global_position.distance_to(e["world"] as Vector3)
-		var r := pick_reach_px(String(e["code"]), e["spec"], dist_m) + 2.0
+		if min_view_m > 0.0 and dist_m <= min_view_m:
+			continue
+		var r := Map3DLayerSettlements.drawn_px(e["spec"]) * 0.5 + 2.0
 		out.append(Rect2((e["screen"] as Vector2) - Vector2(r, r), Vector2(r, r) * 2.0))
 	return out
 
@@ -276,16 +281,17 @@ func people_of_burg(code: String) -> float:
 	return float(burg.get("population", 0))
 
 
-## A settlement's click reach in DESIGN px: its cluster's projected radius,
-## never below map3d_pick_px. Independent of whether its dot is drawn (owner
-## 2026-09-20: the dot itself now hides below map3d_dot_min_view_m, but a
-## settlement between the house cutoff and the dot's near cutoff must still
-## be clickable). `spec` is unused today — kept so a caller already holding
-## a settlement's row from projected_settlements() need not look it up again.
-## Uses Map3DGeometry.metres_per_pixel (view_size, DESIGN px — the same
-## measure label_px uses), not px_per_dist, which is metres per SUBVIEWPORT
-## px: e["screen"]/pos are design px, and the two only agree when
-## viewport_px_scale() is 1.
+## A settlement's click reach in DESIGN px: its cluster's projected GROUND
+## radius, never below map3d_pick_px, independent of whether its dot is
+## drawn (a settlement between the house cutoff and map3d_dot_min_view_m
+## must still be clickable). NOT what settlement_rects() sizes on — that
+## uses Map3DLayerSettlements.drawn_px, the marker's ON-SCREEN size (fix
+## round 1, owner 2026-09-20: the two were one `marker_px`; conflating "how
+## far can a click land" with "what must a landmark avoid" crowded
+## landmarks out of ground where nothing is drawn). `spec` unused today,
+## kept for a caller already holding the row. Uses metres_per_pixel
+## (view_size, DESIGN px — label_px's measure), not px_per_dist (metres per
+## SUBVIEWPORT px): the two agree only when viewport_px_scale() is 1.
 func pick_reach_px(code: String, _spec: Dictionary, dist_m: float) -> float:
 	var world_r := Map3DHouses.footprint_radius_m(people_of_burg(code), repo)
 	var m_per_px := Map3DGeometry.metres_per_pixel(dist_m, repo.bal("map3d_fov_deg"),

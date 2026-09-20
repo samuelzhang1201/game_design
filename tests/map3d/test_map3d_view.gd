@@ -144,6 +144,38 @@ func test_a_clicked_settlement_wears_the_gold_ring_until_cleared() -> void:
 	assert_false(v.selected_ring_visible())
 
 
+## The gold selection ring falls back to dot_px * 2 for every group now that
+## ring_px is 0 across the board (owner 2026-09-20). Pins the formula and
+## confirms both a capital and a village still show a selection ring at all
+## — fix round 1 asked to verify, not change, this: the village's own outer
+## diameter comes out at 5.25 design px (dot_px 1.75 x 2 x
+## map3d_selected_ring_scale 1.5), against a 2 px stroke, which is small
+## enough that it may read as a filled dot rather than a ring — a look call
+## for the owner, not fixed here.
+func test_the_selection_ring_falls_back_to_dot_px_for_every_group() -> void:
+	var v := _view()
+	v.activate()
+	var markers := v.viewport().get_node("Markers") as Map3DLayerSettlements
+	var k := Game.data.bal("map3d_selected_ring_scale")
+	for group: String in ["capital", "village"]:
+		var code := ""
+		for c: String in Game.data.burgs:
+			if String(Game.data.burgs[c].get("group", "")) == group:
+				code = c
+				break
+		assert_ne(code, "", "the pack has a " + group)
+		markers.show_selected(code)
+		assert_true(markers.selected_visible(), group + "'s ring shows")
+		var mmi := v.viewport().get_node("Markers/Selected") as MultiMeshInstance3D
+		var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
+		var spec: Dictionary = Game.data.map3d_settlements[group]
+		var want_ring := float(spec["dot_px"]) * 2.0 * k
+		assert_almost_eq(float(mat.get_shader_parameter("ring_px")), want_ring, 0.01,
+			group + "'s selection ring outer diameter, design px at render scale 1")
+	markers.show_selected("")
+	assert_false(markers.selected_visible())
+
+
 func test_a_far_village_carries_its_max_view_m_from_the_table() -> void:
 	var v := _view()
 	v.activate()

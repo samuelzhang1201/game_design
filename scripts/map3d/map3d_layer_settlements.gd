@@ -54,9 +54,8 @@ func preview_build(p_ctx: Map3DContext) -> void:
 ## One MultiMesh of billboard rings per settlement group, each over the
 ## ground under its burg, plus a hidden gold ring for the current selection.
 ## Codes are sorted so the placement is the same every run. Render priority
-## rises with tier (village lowest, capital highest — by dot_px, the table's
-## own measure of importance, ring_px having gone to 0 for every group since
-## the capital's ring became its inner dot, owner 2026-09-20) so a bigger
+## rises with tier (village lowest, capital highest — by drawn_px, the
+## table's own measure of the marker's ON-SCREEN size) so a bigger
 ## settlement's mark never gets buried under a smaller neighbour's (fix
 ## round 1, owner 2026-09-18); the selection ring sits above every tier.
 ## Replaces any markers before.
@@ -77,8 +76,8 @@ func build() -> void:
 	groups.sort()
 	var by_size: Array = groups.duplicate()
 	by_size.sort_custom(func(a: String, b: String) -> bool:
-		var ra := float(ctx.repo.map3d_settlements[a]["dot_px"])
-		var rb := float(ctx.repo.map3d_settlements[b]["dot_px"])
+		var ra := drawn_px(ctx.repo.map3d_settlements[a])
+		var rb := drawn_px(ctx.repo.map3d_settlements[b])
 		return ra < rb if ra != rb else a < b)
 	var min_view_m := ctx.repo.bal("map3d_dot_min_view_m")
 	for group: String in groups:
@@ -198,3 +197,19 @@ func apply_scale() -> void:
 		mat.set_shader_parameter("line_px", float(mat.get_meta("line_px")) * s)
 		mat.set_shader_parameter("dot_px", float(mat.get_meta("dot_px", 0.0)) * s)
 		mat.set_shader_parameter("inner_px", float(mat.get_meta("inner_px", 0.0)) * s)
+
+
+## The settlement's DRAWN marker's diameter, design px: max(ring_px, dot_px,
+## inner_px). Fix round 1 (owner 2026-09-20): this is deliberately NOT the
+## same thing as Map3DContext.pick_reach_px. The old `marker_px` this
+## replaces fed BOTH the click reach and Map3DContext.settlement_rects' HUD
+## keep-clear rect, and re-homing the click reach onto the settlement's
+## ground footprint (pick_reach_px) while leaving settlement_rects calling
+## the same function crowded landmark marks out of a huge area below
+## map3d_dot_min_view_m — ground where the dot is hidden and nothing is
+## drawn at all. drawn_px stays tied to what is actually ON SCREEN (the
+## marker), so settlement_rects only reserves space around something a
+## player can actually see; pick_reach_px alone reasons about the ground.
+static func drawn_px(spec: Dictionary) -> float:
+	return maxf(maxf(float(spec.get("ring_px", 0.0)), float(spec.get("dot_px", 0.0))),
+		float(spec.get("inner_px", 0.0)))
