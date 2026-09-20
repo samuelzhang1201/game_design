@@ -39,6 +39,9 @@ map3d_road_surface,#EDE0CE,"3D MAP roads (2026-09-19): the multiplier on the roa
 map3d_bridge,#E0CBA8,"3D MAP bridges (2026-09-19): the multiplier on the bridges' stone (Poly Haven medieval_blocks_03) — the lit stone read near-white against the fields; also the flat colour when the texture is missing"
 map3d_sky_top,#2F5878,3D MAP sky (2026-09-20): the ProceduralSkyMaterial's sky_top_color (the horizon and the fog are map3d_sky) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_sky_ground,#2E4A5C,3D MAP sky (2026-09-20): the ProceduralSkyMaterial's ground_bottom_color — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
-house_roof_thatch,#9A8459,"3D MAP houses (spec 2026-09-20 §2): weathered thatch. At 9-17 px the roof colour is most of what a house says, so it is data"
+house_roof_thatch,#9A8459,"3D MAP houses (spec 2026-09-20 §2, widened 2026-09-21 for the mesh remake): weathered thatch. At 17-35 px (400 m closest zoom) the roof colour is most of what a house says, so it is data"
+house_roof_thatch_fresh,#B99A5E,"3D MAP houses (2026-09-21): fresh thatch, lighter and warmer than the weathered kind — a second thatch tone so a village's cottages don't read as one repeated roof"
 house_roof_tile,#8C5A45,3D MAP houses: fired clay tile
+house_roof_tile_dark,#5E3A2E,"3D MAP houses (2026-09-21): dark fired tile, deeper than house_roof_tile — the tall townhouses and the palace"
+house_roof_slate,#5C6259,"3D MAP houses (2026-09-21): slate, grey with an earthy green cast to stay in the palette's family rather than reading blue — the grander roofs (a landmark, a merchant's house)"
 house_wall,#C8BCA6,3D MAP houses: limewashed daub and plaster between the timbers
