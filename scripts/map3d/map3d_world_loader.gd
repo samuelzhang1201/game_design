@@ -81,10 +81,13 @@ static func notice_text(state: String, map_id: String) -> String:
 	return String(NOTICES.get(state, NOTICES["bad"])) % map_id
 
 
-## The bake inputs' fingerprint: data/map3d_bake.csv and data/map3d_fields.csv.
+## The bake inputs' fingerprint: data/map3d_bake.csv, data/map3d_fields.csv
+## and data/map3d_houses.csv (Task 7: a changed house table must read stale,
+## not draw the old one).
 static func steps_hash() -> String:
 	return (FileAccess.get_md5("res://data/map3d_bake.csv")
-		+ FileAccess.get_md5("res://data/map3d_fields.csv")).md5_text()
+		+ FileAccess.get_md5("res://data/map3d_fields.csv")
+		+ FileAccess.get_md5("res://data/map3d_houses.csv")).md5_text()
 
 
 ## Two map3d_world metas describe the same world (JSON turns 2560 into 2560.0).

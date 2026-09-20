@@ -102,6 +102,21 @@ func test_a_pack_can_keep_its_3d_build_elsewhere() -> void:
 	assert_eq(Map3DView.scene_path_for(id), "res://assets/map3d/%s/world.tscn" % id)
 
 
+func test_the_house_table_is_in_the_steps_hash() -> void:
+	# a changed house table must report the build stale, not draw the old one
+	var before := Map3DWorldLoader.steps_hash()
+	var path := "res://data/map3d_houses.csv"
+	var original := FileAccess.get_file_as_string(path)
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(original + "\n# probe\n")
+	f.close()
+	var after := Map3DWorldLoader.steps_hash()
+	var g := FileAccess.open(path, FileAccess.WRITE)
+	g.store_string(original)
+	g.close()
+	assert_ne(before, after, "map3d_houses.csv is part of the build's steps hash")
+
+
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()

@@ -60,6 +60,7 @@ var _scene_path := ""
 @onready var _lines: Map3DLayerLines = $Viewport/Lines
 @onready var _clouds: Map3DLayerClouds = $Viewport/Clouds
 @onready var _markers: Map3DLayerSettlements = $Viewport/Markers
+@onready var _houses: Map3DLayerHouses = $Viewport/Houses
 @onready var _env: WorldEnvironment = $Viewport/Environment
 @onready var _sun: DirectionalLight3D = $Viewport/Sun
 @onready var _display: TextureRect = $Display
@@ -222,8 +223,11 @@ func _load() -> void:
 	_rig.bind(_ctx)
 	_input.bind(self, _rig, _repo)
 	_markers.bind(_ctx)
+	_houses.bind(_ctx)
 	_ctx.settle_ground()
 	_markers.build()
+	_houses.build()  # warm here (~91 ms), not on the first refresh() mid-play
+	_ctx.camera_moved.connect(_refresh_houses)  # _load() runs once: nothing to double-connect
 	_sea.build(_ctx)
 	# The sky and sun are the scene's, their numbers data (Task 14); the
 	# environment is this view's own copy of the shared .tres.
@@ -472,7 +476,7 @@ func look_at_home(at_distance: float) -> void:
 func layer_names() -> PackedStringArray:
 	var out := PackedStringArray()
 	if _loaded:
-		out.append_array(["Markers", "Lines", "Clouds"])
+		out.append_array(["Markers", "Houses", "Lines", "Clouds"])
 		out.append_array(["Rivers"] if _rivers.mesh != null else [])
 		out.append_array(["Sea"] if _sea.has_water() else [])
 	out.append_array(["Shadows", "Hud"] if _loaded else [])
@@ -491,3 +495,9 @@ func set_layer_visible(layer: String, on: bool) -> void:
 
 func line_mesh(line_name: String) -> ArrayMesh: return _lines.line_mesh(line_name) if _loaded else null
 func marker_counts() -> Dictionary: return _markers.counts() if _loaded else {}
+
+## Houses refresh from the rig's target, not the eye (which swings with pitch).
+func _refresh_houses() -> void:
+	if _houses != null: _houses.refresh(_ctx.target)
+
+func house_counts() -> Dictionary: return _houses.counts() if _loaded else {}

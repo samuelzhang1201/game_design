@@ -37,7 +37,9 @@ extends Node
 ##                       elsewhere under res:// is auto-imported as a Translation.
 ##   --layer heights|manors|military   lights that bottom-bar tab first (as
 ##                       tools/snapshot_screen.gd takes it), so a theme's HUD and
-##                       ground are priced.
+##                       ground are priced. --layer houses is not a tab — the
+##                       house clusters are always on — it only tags the rows and
+##                       relies on the STOPS loop's own "near" framing (below).
 ##   --pan               measure a MOVING view instead of a still one (below).
 ##
 ## STILL vs PAN (final review 2026-09-20). Without --pan the camera stands
@@ -112,8 +114,13 @@ func _ready() -> void:
 	root.current_screen.enter_court(null)
 	var li := args.find("--layer")
 	if li >= 0 and li + 1 < args.size():
-		root._on_bottom_tab(args[li + 1].to_upper())
 		_layer = args[li + 1].to_lower()
+		# "houses" is not a bottom-bar theme (MANORS/HEIGHTS/MILITARY are) — the
+		# house clusters are always on, so there is no tab to light; the STOPS
+		# loop below already frames "near" at map3d_zoom_min_m over the home
+		# province, which is the closest bench zoom and where a cluster shows.
+		if _layer != "houses":
+			root._on_bottom_tab(args[li + 1].to_upper())
 		for i in 4:
 			await get_tree().process_frame
 	Game.set_clock_speed(4)
