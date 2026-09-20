@@ -226,10 +226,19 @@ def build_cottage_a(fp, ht):
     roofs = [prism_roof("roof", w, d, roof_h, wall_h, overhang=0.45, axis="x")]
     roofs.append(ridge_trim("ridge", w, d, 1.0, roof_h, wall_h, axis="x"))
     walls.append(chimney("chimney", w * 0.24, d * 0.30, wall_h * 0.55, ht * 0.30))
+    # The porch's high (wall) end sits FLUSH with the eave (top = wall_h,
+    # not wall_h + 0.3) and embeds only 0.1 m into the wall (2026-09-21
+    # audit: the old +0.3 rise poked the porch's tall end above the wall
+    # top into open air the roof's own gable slope didn't reach either —
+    # nothing there to explain it — while the old y offset (pd * 0.3, less
+    # than the porch's own half-depth-plus-overhang) buried 0.42 m of the
+    # wedge inside the wall's opaque solid, a real self-intersection that
+    # rendered as a dark gash on the wall face).
     pw, pd = w * 0.30, d * 0.32
     porch_h = wall_h * 0.62
-    porch = shed_roof("porch", pw, pd, wall_h - porch_h + 0.3, porch_h, overhang=0.15, axis="y", sign=-1)
-    move(porch, y=-d * 0.5 - pd * 0.3)
+    porch_overhang = 0.15
+    porch = shed_roof("porch", pw, pd, wall_h - porch_h, porch_h, overhang=porch_overhang, axis="y", sign=-1)
+    move(porch, y=-(d * 0.5 + pd * 0.5 + porch_overhang - 0.1))
     roofs.append(porch)
     return walls, roofs
 
@@ -311,13 +320,23 @@ def build_townhouse_b(fp, ht):
     roofs = [prism_roof("roof", jw, jd, roof_h, wall_h, overhang=0.4, ridge_frac=0.55)]
     roofs.append(ridge_trim("ridge", jw, jd, 0.55, roof_h, wall_h, axis="y"))
     walls.append(chimney("chimney", -jw * 0.26, jd * 0.28, ht * 0.76, ht * 0.24))
-    sw, sd = w * 0.30, d * 0.42
-    stair = shed_roof("stair", sw, sd, ground_h, 0.0, overhang=0.0, axis="x", sign=-1)
-    move(stair, x=w * 0.5 + sw * 0.5 - 0.1, y=-d * 0.15)
-    walls.append(stair)
-    rail = box("rail", sw * 0.85, 0.12, 0.5, ground_h)
-    move(rail, x=stair.location.x, y=stair.location.y - sd * 0.42)
-    walls.append(rail)
+    # Three flat treads climbing to the door, not a single sloped wedge
+    # plus a floating rail (2026-09-21 audit): the wedge's own diagonal
+    # face read as an unparseable dark mass at 17-35 px, and a rail this
+    # thin tucked partly under the jetty's cantilever added clutter no
+    # camera angle could resolve into "a stair." Flat boxes stacked in a
+    # tread stay entirely below the jetty's own z range (they only ever
+    # touch its flat underside at ground_h, never cross it) even where
+    # they sit under its horizontal overhang, so nothing here interpenetrates.
+    steps_n = 3
+    tread = w * 0.09
+    step_w = d * 0.30
+    x0 = w * 0.5 - 0.08
+    for i in range(steps_n):
+        sh = ground_h * (steps_n - i) / steps_n
+        step = box("step%d" % i, tread, step_w, sh)
+        move(step, x=x0 + tread * (i + 0.5), y=-d * 0.15)
+        walls.append(step)
     return walls, roofs
 
 
@@ -348,9 +367,14 @@ def build_townhouse_c(fp, ht):
     walls.append(oriel)
     # a rectangular hip, not a square pyramid_roof: a square cap sized off
     # ow (the oriel's WIDTH) swung far past od (its shallow depth) and
-    # over-filled the mesh's own footprint on that axis.
+    # over-filled the mesh's own footprint on that axis. ridge_frac is a
+    # hair above 0, not exactly 0 (2026-09-21 audit): at exactly 0 the
+    # ridge's two endpoints collapse onto the SAME point, which degenerates
+    # two of prism_roof's quad faces into zero-area slivers and left one
+    # edge's winding ambiguous between its neighbours — caught by the new
+    # watertight/winding test, invisible at this size but worth doing right.
     oriel_roof = prism_roof("oriel_roof", ow, od, wall_h * 0.12, wall_h * 0.30 + oh,
-                             overhang=0.05, ridge_frac=0.0, axis="x")
+                             overhang=0.05, ridge_frac=0.08, axis="x")
     move(oriel_roof, y=oriel.location.y)
     roofs.append(oriel_roof)
     return walls, roofs
@@ -369,8 +393,26 @@ def build_longhouse(fp, ht):
     byre = box("byre_wing", bw, bd, bh)
     move(byre, x=w * 0.5 - bw * 0.4, y=d * 0.5 + bd * 0.32)
     walls.append(byre)
-    broof = prism_roof("byre_roof", bw, bd, (ht - wall_h) * 0.75, bh, overhang=0.35)
-    move(broof, x=byre.location.x, y=byre.location.y)
+    # byre_roof is narrower and pushed further out than the wing it sits on
+    # (2026-09-21 audit): hall_roof is a solid prism, not a shell, so its
+    # hip taper at this end still stands taller than byre_roof everywhere
+    # the wing's own footprint reaches back toward the hall — centering a
+    # same-size roof on the wing let it cross straight through hall_roof's
+    # sloped hip face, which rendered as a black gash where the two
+    # sloped surfaces met edge-on. The roof instead starts exactly where
+    # hall_roof's own footprint ends (plus a hair's clearance), covering
+    # only the wing's visible, un-embedded portion; the wing's near end
+    # stays roofless because it already sits under the hall's own eaves.
+    hall_roof_edge = d * 0.5 + 0.4
+    wing_far = byre.location.y + bd * 0.5
+    broof_overhang = 0.3
+    broof_near = hall_roof_edge + 0.05
+    broof_far = wing_far + broof_overhang
+    broof_y = (broof_near + broof_far) * 0.5
+    broof_half = (broof_far - broof_near) * 0.5
+    broof_d = 2.0 * (broof_half - broof_overhang)
+    broof = prism_roof("byre_roof", bw, broof_d, (ht - wall_h) * 0.75, bh, overhang=broof_overhang)
+    move(broof, x=byre.location.x, y=broof_y)
     roofs.append(broof)
     walls.append(chimney("chimney", -w * 0.32, 0.0, wall_h * 0.6, ht * 0.2))
     return walls, roofs

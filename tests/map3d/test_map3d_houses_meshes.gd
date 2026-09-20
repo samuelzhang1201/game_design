@@ -84,6 +84,76 @@ func test_the_manifests_tris_is_the_meshs_real_triangle_count() -> void:
 		node.free()
 
 
+func test_every_mesh_is_watertight_and_consistently_wound() -> void:
+	## Catches the class of defect a bounding-box check cannot: a face left
+	## unclosed (an edge used by only one triangle) or a face wound the
+	## wrong way relative to its neighbour (an edge two triangles both walk
+	## in the SAME direction, instead of the one-forward-one-back a closed,
+	## consistently outward-facing solid always has). 2026-09-21: three
+	## rendered tiles (cottage_a, longhouse, townhouse_b) showed a dark
+	## gash/hole the owner suspected was exactly this; this test came back
+	## clean on all three (see the report for what the real cause was and
+	## why this check is still worth keeping as a permanent regression net).
+	for type: String in Game.data.map3d_houses:
+		var row: Dictionary = Game.data.map3d_houses[type]
+		var scene := load(String(row["mesh"])) as PackedScene
+		if scene == null:
+			continue
+		var node := scene.instantiate()
+		var mesh := _first_mesh(node)
+		if mesh != null:
+			var result := _manifold_check(mesh)
+			assert_eq(int(result["open_boundary_edges"]), 0,
+				type + " has an open/uncapped face — an edge used by only one triangle")
+			assert_eq(int(result["winding_conflicts"]), 0,
+				type + " has two triangles sharing an edge with the SAME winding — one of them is flipped")
+		node.free()
+
+
+func _manifold_check(mesh: Mesh) -> Dictionary:
+	# A directed-edge census over quantized vertex POSITIONS, not indices:
+	# glTF re-export duplicates vertices per face, so position is the only
+	# stable identity left. A properly closed, consistently outward-wound
+	# solid has every edge walked exactly once forward and once backward
+	# by its two triangles; an edge walked only once is a hole, and an
+	# edge walked twice in the SAME direction is a local winding conflict.
+	var edge_dir := {}
+	var edge_any := {}
+	for s in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(s)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var n := indices.size() / 3 if indices.size() > 0 else verts.size() / 3
+		for tri in range(n):
+			var tri_verts: Array[Vector3] = []
+			for k in range(3):
+				var idx := tri * 3 + k
+				var vi := indices[idx] if indices.size() > 0 else idx
+				tri_verts.append(verts[vi])
+			for k in range(3):
+				var a: Vector3 = tri_verts[k]
+				var b: Vector3 = tri_verts[(k + 1) % 3]
+				var ka := "%.3f,%.3f,%.3f" % [a.x, a.y, a.z]
+				var kb := "%.3f,%.3f,%.3f" % [b.x, b.y, b.z]
+				var dkey: String = ka + ">" + kb
+				edge_dir[dkey] = int(edge_dir.get(dkey, 0)) + 1
+				var ukey: String = (ka + "<>" + kb) if ka < kb else (kb + "<>" + ka)
+				edge_any[ukey] = int(edge_any.get(ukey, 0)) + 1
+	var open_boundary := 0
+	var winding_conflicts := 0
+	for ukey: String in edge_any:
+		var count: int = edge_any[ukey]
+		if count == 1:
+			open_boundary += 1
+		elif count == 2:
+			var parts := ukey.split("<>")
+			var fwd: String = parts[0] + ">" + parts[1]
+			var bwd: String = parts[1] + ">" + parts[0]
+			if int(edge_dir.get(fwd, 0)) != 1 or int(edge_dir.get(bwd, 0)) != 1:
+				winding_conflicts += 1
+	return {"open_boundary_edges": open_boundary, "winding_conflicts": winding_conflicts}
+
+
 func _first_mesh(node: Node) -> Mesh:
 	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
 		return (node as MeshInstance3D).mesh
