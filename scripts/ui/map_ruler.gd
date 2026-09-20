@@ -102,9 +102,9 @@ static func draw(ci: CanvasItem, a: Vector2, b: Vector2, tick_pts: PackedVector2
 	var up := side if side.y < 0.0 else -side
 	var down := -up
 	var foot := w * 0.5
-	var ticks: Array = []
+	var tick_segs: Array = []
 	for t in tick_pts:
-		ticks.append([t + down * foot, t + down * (foot + tick_len)])
+		tick_segs.append([t + down * foot, t + down * (foot + tick_len)])
 	var caps: Array = []
 	for e in [a, b]:
 		caps.append([e - side * tick_len * 1.6, e + side * tick_len * 1.6])
@@ -112,13 +112,13 @@ static func draw(ci: CanvasItem, a: Vector2, b: Vector2, tick_pts: PackedVector2
 	# over snow, sea and grass alike.
 	if a.distance_to(b) > 0.001:
 		ci.draw_line(a, b, halo, hw, true)
-	for seg in ticks + caps:
+	for seg in tick_segs + caps:
 		ci.draw_line(seg[0], seg[1], halo, hw, true)
 	ci.draw_circle(a, anchor_r + hw * 0.5, halo)
 	ci.draw_circle(b, anchor_r + hw * 0.5, halo)
 	if a.distance_to(b) > 0.001:
 		ci.draw_dashed_line(a, b, ink, w, data.bal("map_ruler_dash_px") * px, true, true)
-	for seg in ticks + caps:
+	for seg in tick_segs + caps:
 		ci.draw_line(seg[0], seg[1], ink, w, true)
 	ci.draw_circle(a, anchor_r, ink)
 	ci.draw_circle(b, anchor_r, ink)

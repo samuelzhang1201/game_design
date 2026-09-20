@@ -576,6 +576,7 @@ static func landmark_lines(repo: DataRepository, state: GameState, cell: int) ->
 	var holder := MapManors.owner_of(repo, state, cell)
 	var mult := float(int(tier["supply_permille"])) / 1000.0
 	var edge := Elevation.local_edge_m(repo, cell)
+	@warning_ignore("integer_division")  # whole percent from per-mille
 	var pct := (ArmySystem.height_factor(repo, absi(edge)) - 1000) / 10
 	var out := PackedStringArray()
 	out.append("%d m · %s · %s" % [Elevation.metres_of_cell(repo, cell), String(tier["tier"]).capitalize(), biome])
@@ -1545,6 +1546,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		var metres := ArmySystem.elevation_of(repo, r)
 		var tier := ArmySystem.height_tier(repo, r)
 		var mult := float(int(tier["supply_permille"])) / 1000.0
+		@warning_ignore("integer_division")  # whole percent from per-mille
 		stats.append(_stat("army_height", "%d m · ×%.1f" % [metres, mult],
 			"Height — %d m, %s: supplies are used ×%.1f here. In a fight each 100 m above the foe is +%d%% (at most +%d%%), and below it as much less" % [
 				metres, String(tier["tier"]), mult,

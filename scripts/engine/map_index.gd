@@ -274,7 +274,9 @@ static func raise_high_ground(biome: Image, cells: Image, heights: PackedInt32Ar
 			# rather than on the flat value of the cell it crosses.
 			var height := heights[cell]
 			if detailed != null:
+				@warning_ignore("integer_division")  # the detail pixel this canvas pixel falls in
 				var dx := mini(x * detailed.get_width() / w, detailed.get_width() - 1)
+				@warning_ignore("integer_division")  # the detail pixel this canvas pixel falls in
 				var dy := mini(y * detailed.get_height() / h, detailed.get_height() - 1)
 				height = int(round(detailed.get_pixel(dx, dy).r8 * 100.0 / 255.0))
 			var id := 0

@@ -47,6 +47,7 @@ static func state_of(repo: DataRepository, state: GameState, code: String) -> Di
 ## 2026-09-19): two per-mille divisions in a row lost heads a first
 ## regiment's worth of supply to truncation twice.
 static func supply_use(repo: DataRepository, reg: Dictionary) -> int:
+	@warning_ignore("integer_division")  # whole supplies, one rounding at the end
 	return headcount(repo, reg) * int(repo.bal("army_supply_per_head_permille")) \
 		* int(height_tier(repo, reg)["supply_permille"]) / 1_000_000
 
@@ -55,6 +56,7 @@ static func supply_use(repo: DataRepository, reg: Dictionary) -> int:
 static func wound_recovery(repo: DataRepository, wounded: int) -> int:
 	if wounded <= 0:
 		return 0
+	@warning_ignore("integer_division")  # whole heads back in the ranks
 	return maxi(1, wounded * int(repo.bal("army_wound_recovery_permille")) / 1000)
 
 ## The month's end for every regiment of the player's realm, in code order:
@@ -117,6 +119,7 @@ static func is_fortified(repo: DataRepository, reg: Dictionary) -> bool:
 static func terrain_factor(repo: DataRepository, terrain: String, arm: String, stance: String, fortified: bool) -> int:
 	var f := int((repo.army_terrain.get("%s|%s" % [terrain, arm], {}) as Dictionary).get(stance, 1000))
 	if fortified and stance == "defend":
+		@warning_ignore("integer_division")  # whole per-mille factor
 		f = f * int((repo.army_terrain.get("fortified|%s" % arm, {}) as Dictionary).get("defend", 1000)) / 1000
 	return f
 
@@ -148,6 +151,7 @@ static func height_tier(repo: DataRepository, reg: Dictionary) -> Dictionary:
 ## below) the other: army_height_bonus_permille_per_100m, capped either way.
 static func height_factor(repo: DataRepository, delta_m: int) -> int:
 	var cap := int(repo.bal("army_height_bonus_cap_permille"))
+	@warning_ignore("integer_division")  # whole per-mille per 100 m
 	return 1000 + clampi(delta_m * int(repo.bal("army_height_bonus_permille_per_100m")) / 100, -cap, cap)
 
 ## --- Hidden strength (spec §5) ------------------------------------------
@@ -167,7 +171,9 @@ static func _arm_base(repo: DataRepository, code: String, arm: String, tick: int
 		return 1000
 	var sum := 0
 	for m: Dictionary in rows:
+		@warning_ignore("integer_division")  # whole per-mille: the arms' mean, then the float factor
 		sum += (int(m["attack"]) + int(m["defense"])) / 2 * float_factor(repo, code, String(m["vs"]), tick) / 1000
+	@warning_ignore("integer_division")  # the arms' whole mean
 	return sum / rows.size()
 
 ## A regiment's power where it stands, in the given stance ("defend" or
@@ -204,11 +210,17 @@ static func power(repo: DataRepository, state: GameState, code: String, stance: 
 		# truly contributes something — even a lone ship at low training —
 		# never rounds all the way down to 0 (every intermediate stays far
 		# inside int64: heads <= ~4564, factors <= ~1500 each).
+		@warning_ignore("integer_division")  # milli-heads, whole (see the note above)
 		var p := n * fit * 1000 / heads
+		@warning_ignore("integer_division")  # whole per-mille
 		p = p * _arm_base(repo, code, arm, tick) / 1000
+		@warning_ignore("integer_division")  # whole per-mille
 		p = p * training_f / 1000
+		@warning_ignore("integer_division")  # whole per-mille
 		p = p * morale_f / 1000
+		@warning_ignore("integer_division")  # whole per-mille
 		p = p * terrain_factor(repo, terrain, arm, stance, walls) / 1000
+		@warning_ignore("integer_division")  # the ceiling of the milli-head digit
 		total += (p + 999) / 1000
 	return total
 
@@ -236,6 +248,7 @@ static func strength_grade(repo: DataRepository, state: GameState, code: String)
 		n += 1
 	if n <= 1 or sum <= 0:
 		return "Average"
+	@warning_ignore("integer_division")  # whole per-mille ratio against the mean
 	var ratio := power(repo, state, code, "defend") * 1000 * n / sum
 	if ratio >= int(repo.bal("army_strong_ratio_permille")):
 		return "Strong"
@@ -265,6 +278,7 @@ static func supply_score(repo: DataRepository, supplies: int, use_per_month: int
 	if use_per_month <= 0:
 		return 1000
 	var full := maxi(1, int(repo.bal("army_speed_supply_full_months")))
+	@warning_ignore("integer_division")  # whole per-mille of a full supply train
 	return clampi(maxi(supplies, 0) * 1000 / (use_per_month * full), 0, 1000)
 
 
@@ -279,6 +293,7 @@ static func readiness_permille(repo: DataRepository, supply_permille: int, moral
 	var total := wa + ws + wm + wt
 	if total <= 0:
 		return 1000
+	@warning_ignore("integer_division")  # the weighted mean, whole per-mille
 	return (wa * 1000 + ws * clampi(supply_permille, 0, 1000)
 		+ wm * clampi(morale, 0, 100) * 10 + wt * clampi(training, 0, 100) * 10) / total
 
@@ -286,6 +301,7 @@ static func readiness_permille(repo: DataRepository, supply_permille: int, moral
 ## The march in TENTHS of a km a day: base_km x 10 x readiness / 1000.
 static func pace_tenths(repo: DataRepository, base_km: int, supply_permille: int, morale: int,
 		training: int) -> int:
+	@warning_ignore("integer_division")  # whole tenths of a km
 	return base_km * 10 * readiness_permille(repo, supply_permille, morale, training) / 1000
 
 
@@ -310,7 +326,9 @@ static func speed_km_per_day(repo: DataRepository, state: GameState, code: Strin
 static func battle_odds(repo: DataRepository, state: GameState, attacker_code: String, defender_code: String) -> float:
 	var delta := elevation_of(repo, regiment(repo, attacker_code)) \
 		- elevation_of(repo, regiment(repo, defender_code))
+	@warning_ignore("integer_division")  # whole power, per-mille height factor
 	var a := power(repo, state, attacker_code, "attack") * height_factor(repo, delta) / 1000
+	@warning_ignore("integer_division")  # whole power, per-mille height factor
 	var d := power(repo, state, defender_code, "defend") * height_factor(repo, -delta) / 1000
 	if a + d <= 0:
 		return 0.5

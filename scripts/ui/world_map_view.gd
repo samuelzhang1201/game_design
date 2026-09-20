@@ -2096,13 +2096,13 @@ func manor_mesh() -> ArrayMesh:
 	ids.sort()
 	# A working manor's dark fill is part of the mesh (2026-09-13): it is a
 	# fact of the pack, not of the zoom, so it costs nothing per frame.
-	var theme := "manors"
+	var manor_theme := "manors"
 	for id: int in ids:
 		var cell: Dictionary = repo.cells[id]
 		var ring: PackedInt32Array = cell["vertex_ids"]
 		if MapTerrain.is_water(cell) or ring.size() < 3:
 			continue
-		var c := ManorPalette.theme_color(repo, Game.state, id, theme)
+		var c := ManorPalette.theme_color(repo, Game.state, id, manor_theme)
 		if c.a <= 0.0:
 			continue
 		var base := verts.size()
