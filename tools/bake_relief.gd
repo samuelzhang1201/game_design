@@ -53,6 +53,7 @@ func _init() -> void:
 	# The SLOPE needs a sharp field: the tile weights want a wide blur, the
 	# relief wants the landforms. relief_scale / relief_blur are its own.
 	var r_scale := maxi(int(bal.get("map_relief_scale", 1.0)), 1)
+	@warning_ignore("integer_division")  # whole blur radius at the field's own scale
 	var r_radius := maxi(int(bal.get("map_relief_blur_px", 0.0)) / r_scale, 0)
 	var lw := ceili(float(cells_img.get_width()) / float(r_scale))
 	var lh := ceili(float(cells_img.get_height()) / float(r_scale))

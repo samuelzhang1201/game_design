@@ -65,6 +65,7 @@ func _init() -> void:
 		pops.append(maxf(float(row.get("population", 0)), 1.0))
 	var sorted_pops := Array(pops)
 	sorted_pops.sort()
+	@warning_ignore("integer_division")  # the middle row, whole index
 	var median: float = maxf(float(sorted_pops[sorted_pops.size() / 2]), 1.0)
 
 	var lines: Array = []

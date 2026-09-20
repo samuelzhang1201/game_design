@@ -211,6 +211,7 @@ func _stir(i: int) -> void:
 	if not _pan or _view == null:
 		return
 	if _rig != null:
+		@warning_ignore("integer_division")  # whole pan periods, so the sweep turns round
 		var dir := 1.0 if int(i / PAN_PERIOD) % 2 == 0 else -1.0
 		_rig.pan_by(Vector2(PAN_PX, PAN_PX * 0.4) * dir)
 	# a pointer wandering over the view, so the hover picks something new

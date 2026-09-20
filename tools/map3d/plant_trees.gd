@@ -78,7 +78,7 @@ static func plant(terrain: Terrain3D) -> String:
 		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 		var ma := Terrain3DMeshAsset.new()
 		ma.name = spec[0]
-		ma.generated_type = 1  # texture card
+		ma.generated_type = Terrain3DMeshAsset.TYPE_TEXTURE_CARD
 		ma.generated_faces = 2
 		ma.generated_size = size
 		ma.height_offset = size.y * 0.5

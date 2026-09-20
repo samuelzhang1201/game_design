@@ -190,28 +190,28 @@ static func build_scene() -> String:
 	var world := world_info()
 	# the water plane's height: bake_world.py's sea_y_m (data/map3d_bake.csv)
 	var sea_y := float(world.get("sea_y", 5.0))
-	var root := Node3D.new()
-	root.name = "Terrain_%s" % map()
-	root.set_meta("map3d_world", {"m_per_px": float(world["m_per_px"]),
+	var scene_root := Node3D.new()
+	scene_root.name = "Terrain_%s" % map()
+	scene_root.set_meta("map3d_world", {"m_per_px": float(world["m_per_px"]),
 		"pack_origin": world["pack_origin"], "pack_px": world["pack_px"], "sea_y": sea_y,
 		"format_version": Map3DWorldLoader.FORMAT_VERSION})
 	var terrain := Terrain3D.new()
 	terrain.name = "Terrain3D"
-	terrain.region_size = int(world["region_size"])
+	terrain.region_size = int(world["region_size"]) as Terrain3D.RegionSize
 	terrain.vertex_spacing = float(world["vertex_m"])
 	var mat := Terrain3DMaterial.new()
 	mat.show_checkered = false
 	# NONE: under Compatibility on macOS, FLAT/NOISE fetch height-map layer -1
 	# outside the regions, which Apple GL clamps to layer 0 — the whole map
 	# repeated to the horizon (2026-09-17).
-	mat.world_background = 0
+	mat.world_background = Terrain3DMaterial.NONE
 	mat.auto_shader = false
-	root.add_child(terrain)
-	terrain.owner = root
+	scene_root.add_child(terrain)
+	terrain.owner = scene_root
 	terrain.material = mat
 
 	var packed := PackedScene.new()
-	packed.pack(root)
+	packed.pack(scene_root)
 	var err := ResourceSaver.save(packed, root() + "/world.tscn")
-	root.free()
+	scene_root.free()
 	return "scene err=%d" % err
