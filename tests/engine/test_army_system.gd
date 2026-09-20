@@ -23,7 +23,6 @@ func test_a_new_campaign_seeds_only_the_players_regiments() -> void:
 	assert_eq(s.regiments.size(), _mine().size())
 	var r: Dictionary = _mine()[0]
 	var entry: Dictionary = s.regiments[String(r["regiment_code"])]
-	var heads := int(MapObjects.regiment_size(repo, r))
 	assert_eq(int(entry["morale"]), 70)
 	assert_eq(int(entry["training"]), 10)
 	assert_eq(int(entry["wounded"]), 0)
@@ -53,6 +52,7 @@ func test_the_month_returns_wounded_and_spends_supplies() -> void:
 func test_supply_use_is_the_base_scaled_by_the_cells_height_tier() -> void:
 	var r: Dictionary = _mine()[0]
 	var heads := int(MapObjects.regiment_size(repo, r))
+	@warning_ignore("integer_division")  # the formula's own whole per-mille
 	assert_eq(ArmySystem.supply_use(repo, r),
 		heads * 100 * int(ArmySystem.height_tier(repo, r)["supply_permille"]) / 1_000_000)
 

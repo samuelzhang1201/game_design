@@ -71,5 +71,6 @@ func test_the_modifier_table() -> void:
 	assert_eq(ArmySystem.terrain_factor(repo, "mountains", "cavalry", "attack", false), 650)
 	assert_eq(ArmySystem.terrain_factor(repo, "plains", "cavalry", "attack", false), 1000, "a missing row is 1000")
 	assert_eq(ArmySystem.terrain_factor(repo, "plains", "infantry", "defend", true), 1300, "walls on open ground")
+	@warning_ignore("integer_division")  # the formula's own whole per-mille
 	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "defend", true), 800 * 1300 / 1000)
 	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "attack", true), 800, "walls only help the defender")

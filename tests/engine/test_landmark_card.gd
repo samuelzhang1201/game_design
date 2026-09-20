@@ -17,6 +17,7 @@ func test_the_lines_of_the_highest_landmark() -> void:
 	assert_string_contains(lines[1], String(Game.data.provinces[province].get("label", province)))
 	assert_string_contains(lines[2], "×%.1f" % (float(int(tier["supply_permille"])) / 1000.0))
 	var edge := Elevation.local_edge_m(Game.data, id)
+	@warning_ignore("integer_division")  # whole percent from per-mille, as the card does it
 	var pct := (ArmySystem.height_factor(Game.data, absi(edge)) - 1000) / 10
 	assert_string_contains(lines[3], "%d m" % absi(edge))
 	assert_string_contains(lines[3], "%d%%" % pct)

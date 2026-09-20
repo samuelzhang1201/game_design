@@ -24,11 +24,11 @@ func before_each() -> void:
 
 func after_each() -> void:
 	Map3DWorldCache.clear()
-	var abs := ProjectSettings.globalize_path(DIR)
-	for f: String in DirAccess.get_files_at(abs + "/layers"):
-		DirAccess.remove_absolute(abs + "/layers/" + f)
-	for f: String in DirAccess.get_files_at(abs):
-		DirAccess.remove_absolute(abs + "/" + f)
+	var dir_abs := ProjectSettings.globalize_path(DIR)
+	for f: String in DirAccess.get_files_at(dir_abs + "/layers"):
+		DirAccess.remove_absolute(dir_abs + "/layers/" + f)
+	for f: String in DirAccess.get_files_at(dir_abs):
+		DirAccess.remove_absolute(dir_abs + "/" + f)
 
 
 func _bake() -> void:

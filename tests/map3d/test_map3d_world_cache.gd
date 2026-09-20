@@ -25,6 +25,11 @@ func before_all() -> void:
 	var t: Node3D = ClassDB.instantiate("Terrain3D")
 	t.name = "Terrain3D"
 	t.set("collision_mode", 1)
+	# A build's terrain carries its assets (tools/map3d/build_terrain.gd saves
+	# terrain_assets.tres beside the scene). Without them Terrain3D loads its
+	# asset list from an empty path as the world re-enters a tree, and the
+	# re-parent this file tests printed "Error loading resource: ''".
+	t.set("assets", ClassDB.instantiate("Terrain3DAssets"))
 	world.add_child(t)
 	t.owner = world
 	var ps := PackedScene.new()

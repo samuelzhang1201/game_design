@@ -24,10 +24,10 @@ const ASSET_PARAMS := ["surface", "surface_nrm", "has_surface", "ripples", "shap
 
 
 func test_each_material_is_its_shader() -> void:
-	for name: String in MATERIALS:
-		var mat := load("res://scenes/map3d/materials/%s.tres" % name) as ShaderMaterial
-		assert_not_null(mat, name)
-		assert_eq(mat.shader.resource_path, MATERIALS[name], name)
+	for key: String in MATERIALS:
+		var mat := load("res://scenes/map3d/materials/%s.tres" % key) as ShaderMaterial
+		assert_not_null(mat, key)
+		assert_eq(mat.shader.resource_path, MATERIALS[key], key)
 	assert_ne((load("res://scenes/map3d/materials/cloud_deck.tres") as ShaderMaterial).shader,
 		(load("res://scenes/map3d/materials/cloud_shadow.tres") as ShaderMaterial).shader,
 		"two cloud shaders, never one (the Compatibility alpha-scissor trap)")
@@ -35,20 +35,20 @@ func test_each_material_is_its_shader() -> void:
 
 
 func test_the_previews_are_committed_and_small() -> void:
-	for name: String in PREVIEWS:
-		var tex := load("res://assets/map3d_preview/%s.png" % name) as Texture2D
-		assert_not_null(tex, name)
-		assert_lte(maxi(tex.get_width(), tex.get_height()), 512, name)
+	for key: String in PREVIEWS:
+		var tex := load("res://assets/map3d_preview/%s.png" % key) as Texture2D
+		assert_not_null(tex, key)
+		assert_lte(maxi(tex.get_width(), tex.get_height()), 512, key)
 
 
 func test_no_material_carries_a_tuned_number() -> void:
-	for name: String in MATERIALS:
-		var text := FileAccess.get_file_as_string("res://scenes/map3d/materials/%s.tres" % name)
+	for key: String in MATERIALS:
+		var text := FileAccess.get_file_as_string("res://scenes/map3d/materials/%s.tres" % key)
 		for line: String in text.split("\n"):
 			if not line.begins_with("shader_parameter/"):
 				continue
 			var param := line.get_slice("=", 0).trim_prefix("shader_parameter/").strip_edges()
-			assert_true(param in ASSET_PARAMS, "%s: %s is CSV's, not the .tres's" % [name, param])
+			assert_true(param in ASSET_PARAMS, "%s: %s is CSV's, not the .tres's" % [key, param])
 	var road := FileAccess.get_file_as_string("res://scenes/map3d/materials/road_line.tres")
 	assert_true(road.contains("map3d_preview/rocky_trail_02_alb_ht.png"))
 

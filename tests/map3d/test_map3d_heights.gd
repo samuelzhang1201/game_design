@@ -251,12 +251,11 @@ func test_marks_keep_off_the_legend() -> void:
 	var top: Dictionary = Elevation.landmarks(Game.data)[0]
 	_frame_on(v, top, 20000.0)
 	# Pan until the top landmark's ground point sits in the legend's box.
-	var cell := int(top["cell"])
 	var xz := Map3DGeometry.pack_to_world(v._meta, top["pos"])
 	var ground := Vector3(xz.x, v._height_at(xz), xz.y)
 	for i in 16:
-		var p := v.camera().unproject_position(ground) / v._render_scale()
-		v._pan_by((box.get_center() - p) * 0.8)
+		var at := v.camera().unproject_position(ground) / v._render_scale()
+		v._pan_by((box.get_center() - at) * 0.8)
 	var p := v.camera().unproject_position(ground) / v._render_scale()
 	assert_true(box.grow(4.0).has_point(p), "the mark's point lies in the legend (got %s, box %s)" % [p, box])
 	for mk: Dictionary in v.landmark_marks():

@@ -347,6 +347,7 @@ func test_detail_field_stays_in_unit_range() -> void:
 	assert_gte(lo, 0.0, "never below 0")
 	assert_lte(hi, 1.0, "never above 1")
 	assert_gt(hi, lo, "the field varies — a dead generator would read flat")
+	@warning_ignore("integer_division")  # a whole tenth of the sheet
 	assert_gt(interior, f.size() / 10, "a good share of the sheet lies strictly inside the bounds, so the clamp is not hiding a broken normalisation")
 
 ## Domain warp has to perturb the sampling, not merely be switched on: the same

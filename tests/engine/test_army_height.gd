@@ -42,8 +42,10 @@ func test_supply_use_goes_up_by_tier() -> void:
 	var high := _land_cell(func(c: Dictionary) -> bool: return float(c["height"]) >= 62.0 and float(c["height"]) < 72.0)
 	assert_gte(low, 0)
 	assert_gte(high, 0, "the pack has mountains")
+	@warning_ignore("integer_division")  # the formula's own whole per-mille
 	var base := ArmySystem.headcount(repo, _at_cell(low)) * 100 / 1000
 	assert_eq(ArmySystem.supply_use(repo, _at_cell(low)), base)
+	@warning_ignore("integer_division")  # the formula's own whole per-mille
 	assert_eq(ArmySystem.supply_use(repo, _at_cell(high)), base * 1700 / 1000)
 	assert_eq(ArmySystem.supply_use(repo, _at_cell(high, true)), base, "a fleet is not scaled")
 
@@ -89,6 +91,7 @@ func test_battle_odds_swap_symmetrically_with_the_ground() -> void:
 	var pd := ArmySystem.power(repo, s, b, "defend")
 	var fa := ArmySystem.height_factor(repo, ea - eb)
 	var fd := ArmySystem.height_factor(repo, eb - ea)
+	@warning_ignore("integer_division")  # the formula's own whole per-mille
 	var expected := float(pa * fa / 1000) / float(pa * fa / 1000 + pd * fd / 1000)
 	var odds := ArmySystem.battle_odds(repo, s, a, b)
 	assert_almost_eq(odds, expected, 0.0001, "hand-checked against the formula")

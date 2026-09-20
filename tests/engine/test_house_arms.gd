@@ -141,6 +141,7 @@ func test_more_houses_than_the_pool_repeat_and_say_so() -> void:
 	var pool_size: int = (HouseArms.pool(data)["house"] as Array).size()
 	# Pin art to every kingdom so the house pool is the only source, then
 	# take a third of it away by binding it too: the rest must repeat.
+	@warning_ignore("integer_division")  # a whole third of the pool
 	var art: Array = (HouseArms.pool(data)["house"] as Array).slice(0, pool_size / 3)
 	for i in art.size():
 		data.arms_bindings["unused_key_%d" % i] = art[i]

@@ -76,33 +76,33 @@ func _view() -> Map3DView:
 
 func test_every_method_keeps_its_name_and_shape() -> void:
 	var have := _script_methods()
-	for name: String in METHODS:
-		assert_true(have.has(name), "Map3DView.%s is kept" % name)
-		if have.has(name):
-			assert_eq((have[name]["args"] as Array).size(), int(METHODS[name]),
-				"Map3DView.%s keeps %d argument(s)" % [name, METHODS[name]])
+	for key: String in METHODS:
+		assert_true(have.has(key), "Map3DView.%s is kept" % key)
+		if have.has(key):
+			assert_eq((have[key]["args"] as Array).size(), int(METHODS[key]),
+				"Map3DView.%s keeps %d argument(s)" % [key, METHODS[key]])
 
 
 func test_the_statics_stay_static() -> void:
 	var have := _script_methods()
-	for name: String in STATICS:
-		assert_true((int(have[name]["flags"]) & METHOD_FLAG_STATIC) != 0, name + " is static")
+	for key: String in STATICS:
+		assert_true((int(have[key]["flags"]) & METHOD_FLAG_STATIC) != 0, key + " is static")
 
 
 func test_the_signals_are_kept() -> void:
 	var v := Map3DView.create(Game.data, FIXTURE)
 	add_child_autofree(v)
-	for name: String in SIGNALS:
-		assert_true(v.has_signal(name), name)
+	for key: String in SIGNALS:
+		assert_true(v.has_signal(key), key)
 		for s: Dictionary in v.get_signal_list():
-			if String(s["name"]) == name:
-				assert_eq((s["args"] as Array).size(), int(SIGNALS[name]), name + " arguments")
+			if String(s["name"]) == key:
+				assert_eq((s["args"] as Array).size(), int(SIGNALS[key]), key + " arguments")
 
 
 func test_the_constants_and_properties_are_kept() -> void:
 	var consts: Dictionary = (load("res://scripts/map3d/map3d_view.gd") as Script).get_script_constant_map()
-	for name: String in CONSTANTS:
-		assert_true(consts.has(name), name)
+	for key: String in CONSTANTS:
+		assert_true(consts.has(key), key)
 	var v := Map3DView.create(Game.data, FIXTURE)
 	add_child_autofree(v)
 	assert_true("ruler_on" in v, "ruler_on (GameRoot sets it)")
