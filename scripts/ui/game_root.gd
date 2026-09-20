@@ -593,7 +593,7 @@ func _switch_to(new_state: State) -> void:
 	if _pause_menu != null:
 		move_child(_pause_menu, get_child_count() - 1)
 
-const BACKGROUND_STORY_PATH := "res://game_story/background/game_start.md"
+const BACKGROUND_STORY_PATH := "res://game_story/chapter_0/game_start.md"
 
 func _on_start_requested() -> void:
 	Game.start_campaign(44)
@@ -608,7 +608,7 @@ func _on_start_requested() -> void:
 			"speaker": "", "text": story})
 	current_screen.start(beats, _pending_report)
 
-## The story background (game_story/background/game_start.md) with markdown
+## The story background (game_story/chapter_0/game_start.md) with markdown
 ## chrome stripped for in-game narration and {player_realm}-style tokens
 ## filled from the loaded pack. Empty when the file is absent.
 func _load_background_story() -> String:

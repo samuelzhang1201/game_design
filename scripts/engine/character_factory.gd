@@ -31,7 +31,7 @@ static func build(row: Dictionary, data: DataRepository) -> Character:
 	c.kingdom = String(row.get("kingdom", ""))
 	for rm in ROLE_METRICS:
 		c.attributes[rm] = int(row.get(rm, "50") if String(row.get(rm, "")) != "" else "50")
-	# Personal data (game_story/background/game_start.md gives canonical ages).
+	# Personal data (game_story/chapter_0/game_start.md gives canonical ages).
 	c.attributes["age"] = int(row.get("age", "40") if String(row.get("age", "")) != "" else "40")
 	for a in ATTRS:
 		c.attributes[a] = int(row[a])
