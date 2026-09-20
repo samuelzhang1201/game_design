@@ -2105,9 +2105,9 @@ above, cold slate blue with the comet in pale ochre [C-SCENE]
 
 #### `V-35` 石厅的第一次御前会议 · The First Council
 ```
-[S] a long oak council table in a stone hall by daylight, a European king of forty
-with short dark hair greying at the temples under a plain gold circlet and a deep blue
-mantle seated at the head, a gaunt stooped lord of seventy-one in a heavy dark brown
+[S] a long oak council table in a stone hall by daylight, a bearded European king of forty
+with short dark hair greying at the temples and a close-trimmed dark beard, under a plain
+gold circlet, in a deep blue mantle, seated at the head, a gaunt stooped lord of seventy-one in a heavy dark brown
 furred gown rising with one hand flat on the table to carry his weight and speaking,
 five ministers seated along the sides watching the king rather than the speaker, a
 narrow-faced chancellor in a fur-collared green gown, a square-faced stewardess in a
@@ -2141,8 +2141,8 @@ grey morning light [C-EVENT]
 [S] a private royal study in winter light from one tall window, a wiry sharp-featured
 spymaster of thirty-seven with lank black hair in a plain brown hooded cloak standing
 with his head bowed low, offering a thick hand-copied ledger bound in cracked leather
-with both hands, a European king of forty with a plain gold circlet and a deep blue
-mantle standing before him with one hand already reaching for it, the room otherwise
+with both hands, a bearded European king of forty with greying temples, a close-trimmed dark
+beard, a plain gold circlet and a deep blue mantle standing before him with one hand already reaching for it, the room otherwise
 empty, honest and penitent [C-EVENT]
 ```
 
@@ -2151,8 +2151,8 @@ empty, honest and penitent [C-EVENT]
 [S] a narrow stone corridor by low candlelight, a wiry sharp-featured spymaster of
 thirty-seven with lank black hair in a plain brown hooded cloak speaking with a composed
 half-smile, half his face in shadow, one open hand gesturing toward a brazier of glowing
-coals as if suggesting something be burned, a European king of forty with a plain gold
-circlet standing in the dark at the edge of the frame listening, ambiguous and
+coals as if suggesting something be burned, a bearded European king of forty with a close-trimmed dark beard and a
+plain gold circlet standing in the dark at the edge of the frame listening, ambiguous and
 untrustworthy [C-EVENT]
 ```
 
@@ -2162,8 +2162,8 @@ untrustworthy [C-EVENT]
 thirty-three with wild dark hair to the shoulders, an untrimmed beard and a coarse
 undyed woollen robe belted with rope standing barefoot at a plain table and setting down
 a worn hand-copied ledger, a thickset grey-haired soldier of fifty-two in a leather
-brigandine watching from the doorway with one hand on his belt, a European king of forty
-with a plain gold circlet seated in the foreground, quiet recognition [C-EVENT]
+brigandine watching from the doorway with one hand on his belt, a bearded European king of
+forty with a close-trimmed dark beard and a plain gold circlet seated in the foreground, quiet recognition [C-EVENT]
 ```
 
 #### `V-41` 偏厅里的刀 · The Knife in the Side Chamber
@@ -2171,20 +2171,20 @@ with a plain gold circlet seated in the foreground, quiet recognition [C-EVENT]
 [S] sudden movement frozen in a small stone chamber, a man in road-dirt peasant clothes
 lunging forward with a short knife, a lean sun-blackened barefoot preacher of thirty-three
 in a coarse undyed robe throwing himself across the path of the blade with both hands
-closed around the attacker's wrist, a European king of forty with a plain gold circlet
-pulled back off balance, a candle and a chair going over, guards bursting in at the far
+closed around the attacker's wrist, a bearded European king of forty with a close-trimmed dark beard and a plain gold
+circlet pulled back off balance, a candle and a chair going over, guards bursting in at the far
 door, a thick ledger falling out of the preacher's robe onto the flagstones, dynamic
 diagonal composition, no blood, no wounds [C-EVENT]
 ```
 
 #### `V-42` 账簿 · The Ledger
 ```
-[S] extreme close-up still life on a dark oak desk by candlelight, an open hand-copied
-ledger showing two columns of tally marks and figures in faded brown ink with rows struck
-through, delicate annotations in a different finer hand in blue-black ink down the margin,
-a woman's jewelled girdle and a fine gold hair net lying beside it, a small wax seal of a
-silver sickle on red at the edge of the frame, shallow depth of field, the writing
-unreadable, no legible text [C-EVENT]
+[S] a dim study seen from across a dark oak table, a thick leather-bound ledger lying
+open under one candle with a bearded European king of forty leaning over it on both
+fists, his face lit from below, the pages seen at a steep raking angle so the ruled
+columns read only as soft unreadable marks with no letters and no numerals anywhere, a
+small blood-red wax seal bearing a silver sickle lying beside the book, a woman's fine
+gold hair net beside the seal, the rest of the room lost in deep umber shadow [C-EVENT]
 ```
 
 #### `V-43` 公爵的提议 · The Duke's Offer
@@ -2194,7 +2194,8 @@ forty-four with dark hair swept back and a black and gold parti-coloured cotehar
 standing at the centre of the table with one open palm extended in a reasonable gesture,
 addressing the room, a narrow-faced chancellor in a fur-collared green gown seated beside
 him nodding, a gaunt stooped lord of seventy-one writing with great effort at the table's
-end, a European king of forty with a plain gold circlet seated and still, the duke holding
+end, a bearded European king of forty with a close-trimmed dark beard and a plain gold
+circlet seated and still, the duke holding
 the centre of the composition [C-EVENT]
 ```
 
@@ -2212,9 +2213,9 @@ small in the far distance, heat haze, a mood of patience worn very thin [C-EVENT
 [S] a royal audience chamber in late summer light, a lean sun-blackened man of
 thirty-three in a coarse undyed woollen robe kneeling on one knee and holding up a long
 parchment petition covered in rows of marks and thumbprints, sealed with a bound sheaf of
-wheat, millers and weavers standing behind him with caps in their hands, a European king
-of forty with a plain gold circlet and a deep blue mantle seated on a modest wooden
-throne in the foreground, no legible writing on the parchment [C-EVENT]
+wheat, millers and weavers standing behind him with caps in their hands, a bearded European
+king of forty with a close-trimmed dark beard, a plain gold circlet and a deep blue mantle
+seated on a modest wooden throne in the foreground, no legible writing on the parchment [C-EVENT]
 ```
 
 #### `V-46` 囚室里的名单 · The Prisoner
@@ -2231,8 +2232,8 @@ just inside the door with his hands folded, quiet and dignified, no legible writ
 ```
 [S] night in a king's private chamber, an olive-skinned woman of thirty-eight in a
 high-collared dark teal travelling gown and a short fur-lined mantle standing composed
-beside an open coffer of coin, a European king of forty with a plain gold circlet reading
-an unrolled treaty on the table, its heavy wax seal showing a silver sickle on a red
+beside an open coffer of coin, a bearded European king of forty with a close-trimmed dark beard and a
+plain gold circlet reading an unrolled treaty on the table, its heavy wax seal showing a silver sickle on a red
 field, a fair-haired woman of twenty-seven in a pale rose gown standing silently in the
 open doorway behind them with candlelight on her face, restrained emotion [C-EVENT]
 ```
@@ -2265,8 +2266,8 @@ beyond with few chimneys smoking, cold air, a landscape with too few people in i
 #### `V-51` 最后的清算 · The Last Reckoning
 ```
 [S] a tight composition across a small table in a dim study at night, one candle between
-them, a European king of forty with a plain gold circlet resting one hand flat on a
-closed leather ledger, opposite him the hand and forearm of a nobleman in a black and
+them, a bearded European king of forty with greying temples and a close-trimmed dark beard,
+a plain gold circlet, resting one hand flat on a closed leather ledger, opposite him the hand and forearm of a nobleman in a black and
 gold sleeve with a jewelled ring lying still beside it, fingers slightly tense, both men
 cut off at the shoulders by the frame so only hands, candle and table are seen, deep
 shadow all around [C-EVENT]
@@ -2286,8 +2287,8 @@ a young man in black and gold watching the king with a still cold face, hard cle
 ```
 [S] an almost empty audience hall in late winter afternoon light, a lean sun-blackened
 man of thirty-three in a coarse undyed robe standing upright without bowing and looking
-directly at a European king of forty with a plain gold circlet seated on a modest throne,
-a woman from the valley beside him holding a guild book, dead leaves blown across the
+directly at a bearded European king of forty with a close-trimmed dark beard and a plain gold
+circlet seated on a modest throne, a woman from the valley beside him holding a guild book, dead leaves blown across the
 flagstones through the open door, the two figures small in a very large room [C-EVENT]
 ```
 

@@ -397,7 +397,15 @@ func _render_history() -> void:
 	_text_label.text = "\n".join(shown)
 	_speech_label.text = "\n\n".join(speech)
 	_scroll.set_deferred("scroll_vertical", 1000000)
-	%SpeechScroll.set_deferred("scroll_vertical", 1000000)
+	# The record keeps growing and reads from its newest line. The audience
+	# window does too — EXCEPT while an event or the opening narration is on
+	# stage: that is ONE block of authored prose, and it is read from its
+	# first word, not from its last. The scene arrives deferred through the
+	# voicer, so this has to be decided here rather than at the end of
+	# _render_beat, which has already run by the time the words land.
+	var kind := String(current_beat().get("kind", ""))
+	%SpeechScroll.set_deferred("scroll_vertical",
+		0 if kind in ["event", "narration"] else 1000000)
 
 ## Deterministic per-speaker name color: fixed for You/Herald, hashed into a
 ## small palette for everyone else so each courtier keeps one color.

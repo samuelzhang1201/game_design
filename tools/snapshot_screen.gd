@@ -47,6 +47,10 @@ var _layer := ""
 ## stands that courtier up in it, which is the only way a shot can show the
 ## dossier and the full-body art — the screen otherwise boots to the map.
 var _speaker := ""
+## --event <event_id> fires that event by id and opens the conversation
+## screen on it, which is the only way to look at a chapter beat — its
+## banner, its illustration band and its choices — as the game draws it.
+var _event := ""
 ## --tab 0|1|2 opens the dossier's BIO / SKILLS / TIES page over the talk,
 ## which is where the full-body art is shown at size.
 var _tab := -1
@@ -97,6 +101,8 @@ func _ready() -> void:
 			_layer = args[i + 1]
 		elif args[i] == "--speaker":
 			_speaker = args[i + 1]
+		elif args[i] == "--event":
+			_event = args[i + 1]
 		elif args[i] == "--tab":
 			_tab = int(args[i + 1])
 		elif args[i] == "--manor":
@@ -174,7 +180,17 @@ func _ready() -> void:
 		_root = screen as GameRoot
 	elif screen.has_method("enter_court"):
 		screen.call("enter_court", null)
-	if _speaker != "" and screen.has_method("enter_council"):
+	if _event != "" and screen.has_method("enter_council"):
+		screen.call("enter_council")
+		var sys := EventSystem.new(Game.data)
+		Game.state.pending_event = {}
+		var ev := sys._fire(_event, Game.state)
+		if ev.is_empty():
+			push_error("snapshot_screen: no such event, or every choice gated off: " + _event)
+		elif screen.has_method("start"):
+			screen.call("start", [{"kind": "event", "portrait_id": "round_table",
+				"speaker": "The Council", "event": ev.duplicate(true)}], TickReport.new())
+	elif _speaker != "" and screen.has_method("enter_council"):
 		screen.call("enter_council")
 		if screen.has_method("start"):
 			screen.call("start", [_minister_beat(_speaker)], null)
