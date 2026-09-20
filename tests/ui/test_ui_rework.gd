@@ -75,6 +75,15 @@ func test_campaign_opens_with_nameless_background_narration() -> void:
 	btn.pressed.emit()
 	await wait_frames(2)
 	assert_ne(String(scene.current_beat()["kind"]), "narration")
+	# The reign opens on the prologue's first council, not on whatever the
+	# random roll happened to pick (chapter 0, 2026-09-21): the narration is
+	# pushed in front of the tick's own event beat, and that beat is the
+	# chapter opener GameState.new_campaign scheduled for tick 1.
+	var beat := scene.current_beat()
+	assert_eq(String(beat["kind"]), "event")
+	assert_eq(String(beat["event"]["event_id"]), "c0_01")
+	assert_string_contains(scene.speech_text(), "older than the kingdom",
+		"the authored scene is shown verbatim")
 
 func test_event_beat_pops_centered_with_art_placeholder() -> void:
 	Game.start_campaign(42)

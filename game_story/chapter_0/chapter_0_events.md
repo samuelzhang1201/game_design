@@ -205,12 +205,30 @@ Repression is checked before the ledger on purpose: burning the mills cannot be 
 
 ## What the chapter leaves behind
 
-| flag | meaning |
-|---|---|
-| `c0_end_just` / `c0_end_compromise` / `c0_end_iron` / `c0_end_winter` | which ending was reached |
-| `aymer_resentful` | the Warden's son saw his father broken in open council |
-| `tomas_retired` | he went quietly, with his lands and his health |
-| `brotherhood_underground` | the Sheaf went under the floorboards |
-| `coup_pending` | three riders, three colours, one lit window |
-| `c0_charter` | the Louthton weavers hold a crown charter |
-| `c0_smuggling_cut` | the northern grain road is closed |
+Every flag the chapter sets, and who may read it. The four the chain reads itself are marked; the rest are the record of what the player did, for chapter 1, for the random pool (`trigger: flag=...`) and for the endings' own prose.
+
+| flag | set by | meaning |
+|---|---|---|
+| `c0_council_heard` | C0-01 ① | **read by `c0_br_spy`** — the king let every office speak before he did |
+| `c0_path_suppress` | C0-02 ① | **read by `c0_br_ending`** — the mills were burned |
+| `c0_path_investigate` / `c0_path_summon` | C0-02 ②③④ | which road was taken |
+| `c0_hall_searched` | C0-02 ④ | **read by `c0_br_guard`** — the captain emptied the room first |
+| `c0_ledger_held` | C0-03S ②, C0-03L, C0-03A ②, C0-04S, C0-04A | **read by three choices' `requires`** — the king has the book |
+| `c0_ledger_burned` / `c0_ledger_quill` | C0-03S ①, C0-03A ① | the two roads that never open it |
+| `c0_ledger_public` / `c0_ledger_secret` / `c0_ysolde_told` | C0-05 | what was done with the truth in summer |
+| `c0_cassian_held` | C0-04S ② | **read by `c0_br_charter`** — the preacher is in the cells |
+| `c0_attempt` | C0-04A | someone paid for a knife |
+| `c0_warden_tomas` | C0-06 ① | **read by `c0_br_tax`** — the granary keys stayed in his hand |
+| `c0_warden_crown` / `c0_warden_split` | C0-06 ②③ | who holds them instead |
+| `c0_seed_lent` | C0-07 ① | **read by `c0_br_harvest` and `c0_br_tax`** — the valley was fed through the gap |
+| `c0_charter` / `c0_charter_tithe` | C0-08, C0-08S | the Louthton weavers hold a crown charter |
+| `c0_martyr` | C0-08S ③ | a preacher was tried for preaching |
+| `c0_betrothal` / `c0_betrothal_refused` | C0-09 ①② | what was done with the king's cousin |
+| `c0_smuggling_cut` | C0-09 ③ | the northern grain road is closed |
+| `c0_ledger_shown` | C0-10 ③, C0-12 ① | **read by `c0_br_ending`** — the book was read out |
+| `c0_ledger_sold` | C0-12 ② | it was sold back for silence |
+| `c0_end_just` / `c0_end_compromise` / `c0_end_iron` / `c0_end_winter` | the endings | which one was reached |
+| `aymer_resentful` | C0-13 | the Warden's son saw his father broken in open council |
+| `tomas_retired` | C0-14 | he went quietly, with his lands and his health |
+| `brotherhood_underground` | C0-15 | the Sheaf went under the floorboards |
+| `coup_pending` | C0-16 | three riders, three colours, one lit window |
