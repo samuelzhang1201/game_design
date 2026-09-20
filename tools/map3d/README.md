@@ -333,8 +333,21 @@ by the same margin.
   real house geometry is 20–52 triangles each). **Every one of those pan
   numbers, houses included, was measured with a Godot editor resident on the
   same GPU** (open on `world_map_3d.tscn` for part of the session), so they
-  are likely pessimistic; re-run `tools/map3d/bench.gd --pan` with the
-  editor closed before treating any of them as final.
+  were flagged as likely pessimistic.
+  **Re-measured 2026-09-20 with no editor resident** (`GDAI_MCP_SERVER_PORT=3999
+  /Applications/Godot.app/Contents/MacOS/Godot --path . res://tools/map3d/bench.tscn
+  -- --size 3024x1964 --quality high --layer houses [--pan]`, after a full
+  `build_pack.sh` rebuild so the world matched the house-table changes): the
+  editor-closed number is **not** better — `--pan` gave a worst frame of
+  **14.63 ms** and, run again immediately after, **15.07 ms** (both far-zoom,
+  against the near-zoom worst the editor-resident run reported), clearing
+  10.93 ms further, not clearing it; the still-camera worst was **6.87 ms**,
+  close to the editor-resident 6.49 ms. So the editor was not hiding cost
+  here — with it gone the `high` tier is worse over budget while dragging
+  (14.6–15.1 ms vs. 10.93 ms, both against 8.00 ms), and about the same
+  standing still (6.87 ms vs. 6.49 ms). Old (editor-resident) and new
+  (editor-closed) numbers are both kept above for comparison; nothing was
+  retuned to close the gap either way.
 - **The generated house meshes are narrower than the CSV claims they are.**
   `make_houses.py`'s `join_and_normalise()` scales a mesh uniformly by
   `min(footprint_m / span, height_m / tall)`, so a tall, narrow type is
