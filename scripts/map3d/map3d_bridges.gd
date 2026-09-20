@@ -193,7 +193,12 @@ static func mesh_arrays(bridges: Array, deck_w: float, rules: Dictionary, tile_m
 	for b: Dictionary in bridges:
 		_bridge(st, b, deck_w, rules, tile_m)
 	var arrays := st.commit_to_arrays()
-	if (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).is_empty():
+	# With nothing committed SurfaceTool leaves ARRAY_VERTEX null, and `as`
+	# on a null prints "Invalid cast": ask the variant, never cast it.
+	if arrays.size() <= Mesh.ARRAY_VERTEX:
+		return []
+	var verts: Variant = arrays[Mesh.ARRAY_VERTEX]
+	if typeof(verts) != TYPE_PACKED_VECTOR3_ARRAY or (verts as PackedVector3Array).is_empty():
 		return []
 	return arrays
 

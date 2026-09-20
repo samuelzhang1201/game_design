@@ -7,6 +7,7 @@ extends RefCounted
 ## makes one from the pack alone.
 
 ## The rig moved the camera; the HUD redraws on it.
+@warning_ignore("unused_signal")  # emitted by Map3DCameraRig, which owns the pose
 signal camera_moved
 
 var repo: DataRepository

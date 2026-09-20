@@ -153,9 +153,9 @@ func step(delta: float) -> void:
 	for i in n:
 		var c: Dictionary = _field.clouds[i]
 		var s := float(c["size"])
-		var basis := Basis(Vector3.UP, float(c["rot"])).scaled(Vector3(s, 1.0, s * _depth_ratio))
+		var puff := Basis(Vector3.UP, float(c["rot"])).scaled(Vector3(s, 1.0, s * _depth_ratio))
 		var p := c["pos"] as Vector2
-		multimesh.set_instance_transform(i, Transform3D(basis, Vector3(p.x, h, p.y)))
+		multimesh.set_instance_transform(i, Transform3D(puff, Vector3(p.x, h, p.y)))
 		multimesh.set_instance_color(i, Color(1, 1, 1, float(c["life"]) * _field.fade))
 
 

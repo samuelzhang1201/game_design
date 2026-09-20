@@ -152,6 +152,7 @@ func _build_lut() -> void:
 	img.fill(Color(0, 0, 0, 0))
 	var st := ctx.state()
 	for id: int in repo.cells:
+		@warning_ignore("integer_division")  # the LUT row this cell id falls in
 		img.set_pixel(id % lut.x, id / lut.x, ManorPalette.theme_color(repo, st, id, _theme))
 	_lut_image = img
 	if _cell_lut != null and _cell_lut.get_size() == Vector2(lut):
@@ -192,4 +193,5 @@ func lut_color(id: int) -> Color:
 	if _lut_image == null:
 		return Color(0, 0, 0, 0)
 	var w := _lut_image.get_width()
+	@warning_ignore("integer_division")  # the LUT row this cell id falls in
 	return _lut_image.get_pixel(id % w, id / w)

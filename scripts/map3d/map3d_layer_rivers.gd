@@ -60,18 +60,18 @@ func preview_build(p_ctx: Map3DContext) -> void:
 ## The rivers' ribbon arrays and their drawn courses for `scene_path`'s
 ## rivers.json ({arrays: [] , courses: []} without the file): what build()
 ## draws and what tools/map3d/bake_layers.gd saves (Task 20).
-static func arrays_for(ctx: Map3DContext, scene_dir: String) -> Dictionary:
+static func arrays_for(p_ctx: Map3DContext, scene_dir: String) -> Dictionary:
 	var path := scene_dir.path_join("rivers.json")
 	if not FileAccess.file_exists(path):
 		Map3DWorldLoader.warn_once("rivers:" + path,
 			"Map3DView: %s is missing — the 3D map draws no rivers (rebuild: tools/map3d/build_pack.sh)" % path)
 		return {"arrays": [], "courses": []}
-	var courses := Map3DRivers.parse(FileAccess.get_file_as_string(path),
-		ctx.repo.bal("map3d_river_split_rise_m"))
-	courses = Map3DRivers.clear_terrain(courses, ctx.height_at, ctx.repo.bal("map3d_river_terrain_clear_m"))
-	var arrays := Map3DRivers.ribbon_arrays(courses, ctx.repo.bal("map3d_river_end_fade_m"),
-		ctx.river_step())
-	return {"arrays": arrays, "courses": courses}
+	var drawn := Map3DRivers.parse(FileAccess.get_file_as_string(path),
+		p_ctx.repo.bal("map3d_river_split_rise_m"))
+	drawn = Map3DRivers.clear_terrain(drawn, p_ctx.height_at, p_ctx.repo.bal("map3d_river_terrain_clear_m"))
+	var arrays := Map3DRivers.ribbon_arrays(drawn, p_ctx.repo.bal("map3d_river_end_fade_m"),
+		p_ctx.river_step())
+	return {"arrays": arrays, "courses": drawn}
 
 
 func build(p_ctx: Map3DContext, scene_path: String) -> void:

@@ -55,18 +55,18 @@ func build_baked(meshes: Dictionary) -> void:
 ## What build() draws and tools/map3d/bake_layers.gd saves (Task 20): the
 ## ribbon arrays of "Roads" and "Trails" (on the ground, or on a bridge deck)
 ## and "bridges", every bridge where one crosses `courses`, each with its deck_w.
-static func plan_for(ctx: Map3DContext, courses: Array) -> Dictionary:
-	var step := ctx.road_step()
+static func plan_for(p_ctx: Map3DContext, courses: Array) -> Dictionary:
+	var step := p_ctx.road_step()
 	var out: Dictionary = {"bridges": []}
-	var rules := bridge_rules_of(ctx.repo)
+	var rules := bridge_rules_of(p_ctx.repo)
 	for group: String in ["roads", "trails"]:
 		var key := "road" if group == "roads" else "trail"
-		var width_m := ctx.repo.bal("map3d_%s_width_m" % key)
-		var plan := Map3DBridges.plan(Map3DBorders.route_lines(ctx.repo, ctx.meta, group, step),
-			courses, ctx.height_at, rules)
-		out[group.capitalize()] = Map3DBorders.ribbon_arrays(plan["lines"], ctx.height_at,
+		var width_m := p_ctx.repo.bal("map3d_%s_width_m" % key)
+		var plan := Map3DBridges.plan(Map3DBorders.route_lines(p_ctx.repo, p_ctx.meta, group, step),
+			courses, p_ctx.height_at, rules)
+		out[group.capitalize()] = Map3DBorders.ribbon_arrays(plan["lines"], p_ctx.height_at,
 			plan["heights"])
-		var deck_w := width_m + ctx.repo.bal("map3d_bridge_extra_w_m")
+		var deck_w := width_m + p_ctx.repo.bal("map3d_bridge_extra_w_m")
 		for b: Dictionary in plan["bridges"]:
 			b["deck_w"] = deck_w
 		(out["bridges"] as Array).append_array(plan["bridges"])
@@ -103,21 +103,21 @@ static func texture_pair(base: String) -> Array:
 
 
 ## The road_line.gdshader material of Lines/Roads or Lines/Trails.
-static func road_material(ctx: Map3DContext, line_name: String) -> ShaderMaterial:
+static func road_material(p_ctx: Map3DContext, line_name: String) -> ShaderMaterial:
 	var key := "road" if line_name == "Roads" else "trail"
-	var colour := MapTerrain.palette_color(ctx.repo, "map3d_" + key, MapTerrain.FALLBACK)
-	colour.a = ctx.repo.bal("map3d_%s_alpha" % key)
+	var colour := MapTerrain.palette_color(p_ctx.repo, "map3d_" + key, MapTerrain.FALLBACK)
+	colour.a = p_ctx.repo.bal("map3d_%s_alpha" % key)
 	var mat := (ROAD_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	mat.render_priority = Map3DPriority.ROADS
 	mat.set_shader_parameter("colour", colour)
-	mat.set_shader_parameter("width_m", ctx.repo.bal("map3d_%s_width_m" % key))
-	mat.set_shader_parameter("edge_soft", ctx.repo.bal("map3d_road_edge_soft"))
-	mat.set_shader_parameter("fray", ctx.repo.bal("map3d_road_fray"))
-	mat.set_shader_parameter("tile_m", ctx.repo.bal("map3d_road_tile_m"))
-	mat.set_shader_parameter("near_mpp", ctx.repo.bal("map3d_road_near_mpp"))
-	mat.set_shader_parameter("far_mpp", ctx.repo.bal("map3d_road_far_mpp"))
-	var gain := ctx.repo.bal("map3d_road_texture_gain")
-	var tint := MapTerrain.palette_color(ctx.repo, "map3d_road_surface", Color.WHITE)
+	mat.set_shader_parameter("width_m", p_ctx.repo.bal("map3d_%s_width_m" % key))
+	mat.set_shader_parameter("edge_soft", p_ctx.repo.bal("map3d_road_edge_soft"))
+	mat.set_shader_parameter("fray", p_ctx.repo.bal("map3d_road_fray"))
+	mat.set_shader_parameter("tile_m", p_ctx.repo.bal("map3d_road_tile_m"))
+	mat.set_shader_parameter("near_mpp", p_ctx.repo.bal("map3d_road_near_mpp"))
+	mat.set_shader_parameter("far_mpp", p_ctx.repo.bal("map3d_road_far_mpp"))
+	var gain := p_ctx.repo.bal("map3d_road_texture_gain")
+	var tint := MapTerrain.palette_color(p_ctx.repo, "map3d_road_surface", Color.WHITE)
 	mat.set_shader_parameter("surface_tint", Vector3(tint.r, tint.g, tint.b) * gain)
 	var pair := texture_pair(ROAD_TEXTURE)
 	if not pair.is_empty():
@@ -129,11 +129,11 @@ static func road_material(ctx: Map3DContext, line_name: String) -> ShaderMateria
 
 ## Every bridge in `list` as ONE mesh (a surface per deck width), its meta
 ## "bridges" the list; no surface when there are none.
-static func bridge_mesh(ctx: Map3DContext, list: Array) -> ArrayMesh:
+static func bridge_mesh(p_ctx: Map3DContext, list: Array) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
 	mesh.set_meta("bridges", list)
-	var rules := bridge_rules_of(ctx.repo)
-	var tile := ctx.repo.bal("map3d_bridge_tile_m")
+	var rules := bridge_rules_of(p_ctx.repo)
+	var tile := p_ctx.repo.bal("map3d_bridge_tile_m")
 	# one deck width per group, so one mesh per width
 	var by_w: Dictionary = {}
 	for b: Dictionary in list:
