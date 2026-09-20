@@ -2144,8 +2144,9 @@ grey morning light [C-EVENT]
 spymaster of thirty-seven with lank black hair in a plain brown hooded cloak standing
 with his head bowed low, offering a thick ledger bound in cracked leather, held closed in both
 hands so no page shows, a bearded European king of forty with greying temples, a close-trimmed dark
-beard, a plain gold circlet and a deep blue mantle standing before him with one hand already reaching for it, the room otherwise
-empty, honest and penitent [C-EVENT]
+beard, a plain gold circlet and a deep blue mantle standing before him with one hand already reaching for it, behind them a writing desk
+with an inkhorn, an iron-bound chest, a hanging on the stone wall and a cold hearth,
+honest and penitent [C-EVENT]
 ```
 
 #### `V-39` 奎尔的提议 · Quill's Offer
