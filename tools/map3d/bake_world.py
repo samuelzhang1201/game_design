@@ -626,14 +626,18 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
             r_house = rules["house_radius_ratio"] * bake_houses.footprint_radius_m(
                 b["population"], rules) / VERTEX_M
             # the block noise stops where the real roofs begin (§1): roofs
-            # painted on the ground beside real roofs read as a mistake
-            x0, x1 = max(int(cx - r_house) - 1, 0), min(int(cx + r_house) + 2, vw)
-            y0, y1 = max(int(cy - r_house) - 1, 0), min(int(cy + r_house) + 2, vh)
-            if x0 < x1 and y0 < y1:
-                yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
-                d = np.hypot(xx - cx, yy - cy) / max(r_house, 1e-6)
-                r_house_mask[y0:y1, x0:x1] = np.maximum(
-                    r_house_mask[y0:y1, x0:x1], np.clip(1.5 - 1.5 * d, 0, 1))
+            # painted on the ground beside real roofs read as a mistake --
+            # but only where there ARE roofs; a settlement place() gave
+            # nothing to (no dry land within its search) keeps its painted
+            # blocks, which is what the fade is for
+            if rows:
+                x0, x1 = max(int(cx - r_house) - 1, 0), min(int(cx + r_house) + 2, vw)
+                y0, y1 = max(int(cy - r_house) - 1, 0), min(int(cy + r_house) + 2, vh)
+                if x0 < x1 and y0 < y1:
+                    yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+                    d = np.hypot(xx - cx, yy - cy) / max(r_house, 1e-6)
+                    r_house_mask[y0:y1, x0:x1] = np.maximum(
+                        r_house_mask[y0:y1, x0:x1], np.clip(1.5 - 1.5 * d, 0, 1))
             for r in rows:
                 r["x_m"] = ORIGIN_X + float(b["x"]) * M_PER_PX + r["x_m"]
                 r["z_m"] = ORIGIN_Y + float(b["y"]) * M_PER_PX + r["z_m"]
@@ -769,8 +773,10 @@ def main(argv=None):
     rows += rows % 2
     fw_pad, fh_pad = cols * REGION, rows * REGION
     ox_pad, oy_pad = (fw_pad - vw) // 2, (fh_pad - vh) // 2
-    # world position of pack px (0,0) — the same pair written into world.json
-    # as pack_origin; sow_patchwork's houses need it to place on the world frame
+    # world position of pack px (0,0), computed here ONCE and reused for the
+    # houses below, the rivers' water lines, and world.json's own pack_origin
+    # — a drift between those three would silently misplace every house with
+    # no test catching it
     origin = ((-fw_pad / 2 + ox_pad) * VERTEX_M, (-fh_pad / 2 + oy_pad) * VERTEX_M)
     height = resize(metres, vw, vh)
     # The shoreline is the pack's own shore loops, not its 50 m pixels: their
@@ -845,7 +851,7 @@ def main(argv=None):
     rivers_out = []
     gamma = taper_gamma()   # balance.csv map_river_taper_gamma, the 2D rule
     floor = SEA_Y - rules["shore_m"] - rules["river_depth_m"]
-    ox_m, oz_m = (-fw_pad / 2 + ox_pad) * VERTEX_M, (-fh_pad / 2 + oy_pad) * VERTEX_M
+    ox_m, oz_m = origin
     for r, course in reversed(courses):
         pts = resample_line(course, 1.0)   # vertex units, 20 m apart
         gi = np.clip(np.round(pts).astype(np.int64), 0, [vw - 1, vh - 1])
@@ -1053,7 +1059,7 @@ def main(argv=None):
         "pack_px": [pw, ph], "vertices": [vw, vh], "padded": [fw, fh],
         # world position of the padded image's corner, and of pack px (0,0)
         "import_corner": [-fw * VERTEX_M / 2, -fh * VERTEX_M / 2],
-        "pack_origin": [(-fw / 2 + ox) * VERTEX_M, (-fh / 2 + oy) * VERTEX_M],
+        "pack_origin": list(origin),
         "sea_y": SEA_Y,
         "height_range": [float(height.min()), float(height.max())],
         "slope_percentiles": [pct(SLOPE_ROCKY[0]), pct(SLOPE_ROCKY[1]), pct(SLOPE_CLIFF[1])],

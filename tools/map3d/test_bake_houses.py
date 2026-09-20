@@ -161,13 +161,15 @@ def test_no_house_stands_where_the_shore_window_runs_off_the_array_edge():
 
 def test_a_water_centre_relocates_the_landmark_onto_land():
     # A burg's own registered point can sit on the water (a port's quay):
-    # a small drowned patch right at the burg's centre, land beyond it.
+    # a small drowned patch right at the burg's centre, land beyond it but
+    # still well inside the burg's own r_house (94.87 m for the default
+    # town-sized burg here), so the fix round 2 clamp does not swallow it.
     # The landmark must move onto the nearest dry land it finds, not stay
     # pinned to the water at (0, 0) -- spec 2026-09-20 fix round 1, finding 2.
     foot, land, height = flat_world()
     yy, xx = np.mgrid[0:VH, 0:VW].astype(np.float32)
     d = np.hypot(xx - CENTRE, yy - CENTRE)
-    land[d < 6.0] = 0.0
+    land[d < 2.0] = 0.0
     rows = place(burg(), RULES, TYPES, foot, land, height, K, VW, VH)
     assert rows, "land is close by; the settlement should still build"
     assert rows[0]["rank"] == 0
@@ -188,3 +190,23 @@ def test_a_burg_with_no_land_within_the_search_bound_gets_nothing():
     height = np.zeros((VH, VW), np.float32)
     rows = place(burg(), RULES, TYPES, foot, land, height, K, VW, VH)
     assert rows == [], "no land anywhere near the burg: no landmark, no houses"
+
+
+def test_a_small_burg_never_gets_a_landmark_outside_its_own_cluster():
+    # house_landmark_search_m (300 m) is an outer bound only: a minimum-size
+    # burg's own r_house is far smaller (54 m for the smallest footprint).
+    # Water at the burg's own centre with the only dry ground well past its
+    # tiny cluster radius -- the search must be capped at r_house too, so
+    # this settlement gets no landmark and no houses, never a landmark
+    # standing in the buffer ring beyond its own cluster (spec 2026-09-20
+    # fix round 2, finding 1).
+    foot, land, height = flat_world()
+    yy, xx = np.mgrid[0:VH, 0:VW].astype(np.float32)
+    d = np.hypot(xx - CENTRE, yy - CENTRE)
+    land[d < 4.0] = 0.0             # an 80 m drowned disc at the centre
+    b = burg(pop=1, group="village")
+    r_foot = max(2.5 * math.sqrt(1.0), RULES["footprint_min_m"])
+    r_house = RULES["house_radius_ratio"] * r_foot
+    assert r_house < 4.0 * 20.0, "the sea must reach past this tiny cluster's own radius"
+    rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
+    assert rows == [], "the only dry ground lies outside the cluster: no landmark, no houses"

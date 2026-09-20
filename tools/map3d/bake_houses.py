@@ -123,8 +123,10 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, routes=None):
     +x east and +z south, matching the world frame's axes.
 
     A settlement whose own centre, and everything within
-    house_landmark_search_m of it, is water gets no landmark and no houses:
-    an empty list.
+    min(house_landmark_search_m, r_house) of it, is water gets no landmark
+    and no houses: an empty list. The landmark's own search never reaches
+    past r_house, so it can never land in the buffer ring beyond the
+    cluster's own houses.
     """
     code = str(burg["burg_code"])
     group = str(burg.get("group", "village"))
@@ -140,8 +142,12 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, routes=None):
 
     landmark = _pick(rng, types, "landmark", group)
     if landmark is not None:
-        spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m,
-                                   float(rules["house_landmark_search_m"]))
+        # the landmark's own search never reaches past the cluster it is
+        # meant to stand in -- the buffer ring beyond r_house must stay
+        # empty (the owner's own requirement), so house_landmark_search_m is
+        # an outer bound only; r_house also caps it
+        search_m = min(float(rules["house_landmark_search_m"]), r_house)
+        spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m, search_m)
         if spot is None:
             return []
         lx, lz = spot
