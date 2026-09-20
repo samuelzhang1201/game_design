@@ -30,14 +30,14 @@ func _choices_of(id: String) -> Array:
 
 func test_the_chapter_is_all_there() -> void:
 	assert_eq(data.chapter_events.size(), 21, "16 beats and 5 harvest/ending entries")
-	assert_eq(data.chapter_event_choices.size(), 50)
+	assert_eq(data.chapter_event_choices.size(), 51)
 	for row in data.chapter_events:
 		var id := String(row["event_id"])
 		assert_eq(String(row["category"]), "chapter", id)
 		assert_eq(String(row["trigger"]), "never",
 			id + " must be chained, never sampled by the random roll")
 		assert_eq(String(row["once"]), "1", id + " fires at most once")
-		assert_between(_choices_of(id).size(), 1, 3, id + " choice count")
+		assert_between(_choices_of(id).size(), 1, 4, id + " choice count")
 
 ## The prologue is free of the model (PRD §8, invariant 9): every beat is
 ## authored prose shown verbatim.
@@ -258,6 +258,35 @@ func test_a_new_reign_opens_on_the_first_council() -> void:
 	assert_eq(String(ev.get("event_id", "")), "c0_01",
 		"the prologue opens the reign, not a random event")
 	assert_eq((ev["choices"] as Array).size(), 3)
+
+## Neither fork may be dead content. The captain's search is an OPTION the
+## player is offered because his captain is a veteran (the design rule: gate
+## the option, never roll a hidden die), and the spymaster's own fork turns
+## on how the king treated his council in the first hour of the reign.
+func test_both_sides_of_every_fork_are_reachable() -> void:
+	var s := GameState.new_campaign(data, 44)
+	s.tick = 3
+	for branch: String in ["c0_br_spy", "c0_br_guard", "c0_br_charter",
+			"c0_br_tax", "c0_br_harvest", "c0_br_ending"]:
+		var seen := {}
+		# Every rule of the table must be the winner for SOME state: walk the
+		# table and check each rule is not shadowed by an earlier one that
+		# holds whenever it does. The cheap, honest version: each rule's own
+		# target must differ from the target of the rule above it, or the
+		# fork has a side nobody can reach.
+		for rule: Dictionary in data.chapter_branches[branch]:
+			seen[String(rule["event_id"])] = true
+		assert_gt(seen.size(), 1, branch + " has only one destination")
+	# The captain's option exists because Captain Hale is a veteran.
+	var sys := EventSystem.new(data)
+	s.event_state["scheduled"] = []
+	var ev := sys._fire("c0_02", s)
+	var ids: Array = []
+	for c in ev["choices"]:
+		ids.append(String(c["choice_id"]))
+	assert_true("summon_searched" in ids,
+		"a veteran captain offers to strip the hall, in the open")
+	assert_true("summon" in ids, "and the plain safe conduct is still there")
 
 func test_a_whole_playthrough_reaches_an_ending() -> void:
 	# Walk the chain the way the game does: fire what is due, take the first

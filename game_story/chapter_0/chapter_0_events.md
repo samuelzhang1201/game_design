@@ -77,7 +77,7 @@ Places are the pack's own: **Bineterston Department**, the small grain-and-river
 ### C0-02 · The Brotherhood of the Sheaf — `chapter · template`
 **Trigger:** chained from C0-01. **Scene:** Quill does not wait to be asked. In Bineterston, he says, in the mill manors along the Louthton, there is a society — the Brotherhood of the Sheaf. Millers and weavers, a bound sheaf scratched on doorposts, and an intercepted letter that reads: when the corn is cut, the granary belongs to those who sowed it. He puts the letter on the table. At the far end, the Warden of the Louthton — your half-brother, who has held the valley's granary keys since your father's war — turns his ring once and says, with great warmth, that he will deal with it himself and the crown need never hear the word again. He is far too calm.
 
-**Choices:** ① Send the Marshal's riders to Wickleby — obedience bought with mills. ② Quill, find out who feeds them — four hundred gold to the informers. ③ Bring their voice to me under safe conduct — the hall does not like it.
+**Choices:** ① Send the Marshal's riders to Wickleby — obedience bought with mills. ② Quill, find out who feeds them — four hundred gold to the informers. ③ Bring their voice to me under safe conduct — the hall does not like it. ④ *(a veteran captain at the door)* Bring him, and let Captain Hale strip the hall first — the only thing standing between C0-04S and C0-04A, and the player is the one who decides it.
 
 ### C0-03S · Ashes on the Louthton — `chapter · template`
 **Trigger:** chained from C0-02, suppression. **Scene:** It took two nights. The riders came back with the sheaf-marked doorposts hacked out and carried behind the saddles like trophies, and behind them, over the valley, a smear of smoke where the Wickleby mills had been. Nobody was killed, which the Marshal reports as though it were a victory. In the ash of the counting-house a serjeant found something that would not burn through: a ledger, hand-copied, bound in cracked leather, three years of the valley's harvest set down in a clerk's careful hand. He has laid it on your table and is waiting to be dismissed.
@@ -182,9 +182,10 @@ Places are the pack's own: **Bineterston Department**, the small grain-and-river
 
 | branch | rule | goes to |
 |---|---|---|
-| `c0_br_spy` | `trait_of=spymaster:amb_ruthless` | C0-03A |
+| `c0_br_spy` | `flag=c0_council_heard` | C0-03L |
+| | `trait_of=spymaster:schemer` | C0-03A |
 | | `always` | C0-03L |
-| `c0_br_guard` | `trait_of=char_captain_hale:veteran` | C0-04S |
+| `c0_br_guard` | `flag=c0_hall_searched` | C0-04S |
 | | `always` | C0-04A |
 | `c0_br_charter` | `flag=c0_cassian_held` | C0-08S |
 | | `always` | C0-08 |
@@ -199,6 +200,8 @@ Places are the pack's own: **Bineterston Department**, the small grain-and-river
 | | `always` | C0-16 The Empty Winter |
 
 Repression is checked before the ledger on purpose: burning the mills cannot be redeemed by producing the truth afterwards.
+
+**No fork is a hidden die.** The design rule the random pool follows — gate the *option*, never roll where the player cannot see (`RANDOM_EVENTS.md`) — holds here. The knife in the side chamber is not bad luck: a veteran captain offers, in the open, to empty the room first, and C0-04A is what happens to a king who did not take him up on it (or has no veteran at his door). And the Spymaster's fork is the first hour of the reign coming back: Quill is `paranoid` and `lowborn`, and a king who let every office speak before he did has earned a straight report, where a king who called for the books and the oaths has taught him to keep his own counsel.
 
 ## What the chapter leaves behind
 

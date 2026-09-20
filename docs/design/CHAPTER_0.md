@@ -23,15 +23,15 @@ Crown and Council — Chapter 0 Design Doc
 |---|---|
 | 21 段正文（场景散文 + 标题） | `game_story/chapter_0/chapter_0_events.md`，**运行时加载** |
 | 21 行事件表 | `data/chapter_events.csv` |
-| 50 行选项表 | `data/chapter_event_choices.csv` |
-| 15 行分支表 | `data/chapter_branches.csv` |
-| 50 行结果台词 | `data/templates.csv`（`event_c0_*`） |
+| 51 行选项表 | `data/chapter_event_choices.csv` |
+| 16 行分支表 | `data/chapter_branches.csv` |
+| 51 行结果台词 | `data/templates.csv`（`event_c0_*`） |
 | 21 张插图的 prompt | `docs/references/art_prompt_library.md` §8.6（`V-35`~`V-55`）→ `assets/flux/event_art.csv` |
-| 测试 | `tests/engine/test_chapter_zero.gd`（20 个用例） |
+| 测试 | `tests/engine/test_chapter_zero.gd`（21 个用例） |
 
 **没有新的 ChapterRunner，也没有第二套事件格式。** 本作已经有一整套事件系统——`EventSystem` 取事件、`TriggerDsl` 判条件、`EventEffects` 执行效果、`StorySource` 读散文、会见窗显示、存档带着走。序章是**这套系统里的一条链**，不是它旁边的第二套东西。为此对引擎只加了三样小东西：
 
-1. `TriggerDsl`：`never`（只走链、永不被随机抽到）、`!` 取反、`trait_of=<席位或角色>:<特质>`（原来只有"朝堂上任何人有某特质"，分支需要问"你的情报总管本人是否野心勃勃"）。
+1. `TriggerDsl`：`never`（只走链、永不被随机抽到）、`!` 取反、`trait_of=<席位或角色>:<特质>`（原来只有"朝堂上任何人有某特质"，而这里要问的是"**门口这个人**是不是老兵"）。
 2. `EventEffects` 新增 `branch:<branch_id>` 算子：按 `data/chapter_branches.csv` 的顺序取**第一条成立的规则**，按该规则自己的 `ticks` 排期。整章的分叉都走它。
 3. `GameState.new_campaign`：把 `chapter_events.csv` 里填了 `start_tick` 的那一拍排进日程。序章因此是每一局新游戏的开场，而不是随机抽到的。
 
@@ -68,7 +68,7 @@ Crown and Council — Chapter 0 Design Doc
 | 瓦伦（情报总管） | **奎尔** | `char_spymaster` | 就是情报总管席位本人 |
 | 奥斯瓦尔德（财务大臣，公爵的白手套） | **大法官奥德温·里夫** | `char_chancellor` | `venal`、`schemer`、`cynical`——`game_start.md` 里"内务大臣贪婪狡诈、身上有把柄"的正是他 |
 | （原稿没有） | **内府总管米蕾拉** | `char_steward` | `game_start.md` 说把柄"财务大臣知道"；`blunt`、`shrewd_trader`，和里夫关系恶劣——原有的宿怨直接变成剧情资产 |
-| 罗兰（侍卫统领） | **海尔上尉** | `char_captain_hale` | 他的 `veteran` 特质就是"是否警觉"的判定 |
+| 罗兰（侍卫统领） | **海尔上尉** | `char_captain_hale` | 他的 `veteran` 特质决定玩家**有没有**"先清场"这个选项（见 §9）|
 | （原稿没有） | **马尔文领主**，71 岁 | `char_lord_malvern` | `sickly`、忠诚、好感 70：教学关需要一个教官，而他活不到第二章 |
 | 东马克的求婚方 | **北方女王**（`{neighbor_realm}`），使节**佩特拉·科列夫** | `char_envoy_petra` | 地图包已经绑好的邻国和使节；`schemer`、`silver_tongued` |
 | 堂兄（叔父之子） | 托马斯之子**埃默**（王的侄子） | — | 只在"明君之始"的散文和插图里出现，留一个 `aymer_resentful` 标志给第二章；不加 CSV 行 |
@@ -165,8 +165,8 @@ lord_gold 861    unrest 0           legitimacy 50   contentment 50
 | 节拍 | 教的东西 |
 |---|---|
 | C0-01 | 两个钱包（王室国库 vs 领主purse）、议会席位、好感 |
-| C0-02 | 一个选择有多个后果维度；特质会改变结果（`trait_of`） |
-| C0-03/04 | 情报、好感、安全通行；特质分支是**看得见的**，不是暗骰 |
+| C0-02 | 一个选择有多个后果维度；随从的特质会**多给你一个选项**（`trait_of` 开在 `requires` 上） |
+| C0-03/04 | 情报、好感、安全通行；分叉都是**看得见的**，不是暗骰——海尔上尉的 `veteran` 让他当着玩家的面提出"先清场"，不选才会挨刀；奎尔报不报实情，取决于玩家在第一次御前会议上有没有先听人说话 |
 | C0-05 | 读账、证据、人际关系图 |
 | C0-06 | 目标与截止；月结算怎么读 |
 | C0-07 | 民用池 = 粮食；赈济的价格和它买到的东西 |
@@ -195,6 +195,12 @@ lord_gold 861    unrest 0           legitimacy 50   contentment 50
 | "行省粮仓储备""城镇贸易收入"作为变量 | 王室民用池、国库、动乱、民心 | 引擎没有"行省粮仓"这种状态——省是求和出来的，`metrics.grain` 是全realm的民用池 |
 | 2,568 条路径、四结局全可达（靠外部脚本遍历） | `test_chapter_zero.gd` 遍历可达性、分支兜底、选项不可能全被关掉、整章可通关 | 校验跟着代码走，随 `./run_tests.sh` 一起跑 |
 | 20 张油画风插图，另有 6 张角色参考 | 21 张插图（一拍一张），本作的彩铅风；角色参考不做 | 21 个角色的立绘（chip + full）**已经全部存在**于 `assets/portraits/`。风格必须是 `STYLE_CORE.txt` 的彩铅，"写实历史油画"和游戏里其他任何一张图都不搭 |
+
+### 两处死内容，改成了玩家的选择
+
+原稿把两个分支挂在特质上：情报总管是否 `ambitious`、侍卫统领是否 `vigilant`。映射到本作的花名册之后，这两条判定的答案是**固定的**——奎尔没有 `amb_ruthless`，海尔有 `veteran`——于是"奎尔的提议"和"偏厅里的刀"两拍永远不会出现。而且 `RANDOM_EVENTS.md` 的设计规则本来就写着：**门要开在选项上，不要在玩家看不见的地方掷骰**。
+
+所以：C0-02 多了第四个选项"让海尔上尉先把偏厅清一遍"，它的出现条件是 `trait_of=char_captain_hale:veteran`——特质决定这个选项**存不存在**，而要不要用是玩家的事；不用（或者门口没有老兵）就会挨那一刀。奎尔那条改成挂在玩家自己的第一个决定上：C0-01 选"先听每个人说"会留下 `c0_council_heard`，奎尔就把账簿直接交上来；否则这个 `paranoid|schemer|lowborn` 的人会先把它收进自己的保险柜。
 
 ### 顺手修掉的 bug
 

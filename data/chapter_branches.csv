@@ -1,7 +1,8 @@
 branch_id,order,requires,event_id,ticks
-c0_br_spy,1,trait_of=spymaster:amb_ruthless,c0_03a,1
-c0_br_spy,2,always,c0_03l,1
-c0_br_guard,1,trait_of=char_captain_hale:veteran,c0_04s,1
+c0_br_spy,1,flag=c0_council_heard,c0_03l,1
+c0_br_spy,2,trait_of=spymaster:schemer,c0_03a,1
+c0_br_spy,3,always,c0_03l,1
+c0_br_guard,1,flag=c0_hall_searched,c0_04s,1
 c0_br_guard,2,always,c0_04a,1
 c0_br_charter,1,flag=c0_cassian_held,c0_08s,1
 c0_br_charter,2,always,c0_08,1
