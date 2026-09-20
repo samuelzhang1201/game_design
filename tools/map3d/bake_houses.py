@@ -85,12 +85,46 @@ def _dry(land, vx, vy, vw, vh, shore_m):
     return bool(np.all(land[y0:y1, x0:x1] > 0.5))
 
 
+def _find_landmark_spot(cx, cy, land, vw, vh, shore_m, bound_m):
+    """The nearest point to the burg's own centre that stands on land with
+    its shore buffer clear, searched in rings out to bound_m; None if
+    nothing within it passes ("never in the sea" is structural even for the
+    landmark, which carries no slope test — a church on a hillside is
+    intended, but not a church offshore)."""
+    if 0 <= cx < vw and 0 <= cy < vh and float(land[int(cy), int(cx)]) > 0.5 \
+            and _dry(land, cx, cy, vw, vh, shore_m):
+        return 0.0, 0.0
+    step = 11.0   # metres: half a house's jittered-grid cell, fine enough to hug the shore
+    ring = 1
+    while (ring - 1) * step < bound_m:
+        rad = min(ring * step, bound_m)
+        for a in range(16):
+            ang = a * (2.0 * math.pi / 16.0)
+            ox, oz = rad * math.cos(ang), rad * math.sin(ang)
+            vx, vy = cx + ox / VERTEX_M, cy + oz / VERTEX_M
+            if not (0 <= vx < vw and 0 <= vy < vh):
+                continue
+            if float(land[int(vy), int(vx)]) < 0.5:
+                continue
+            if not _dry(land, vx, vy, vw, vh, shore_m):
+                continue
+            return ox, oz
+        if rad >= bound_m:
+            break
+        ring += 1
+    return None
+
+
 def place(burg, rules, types, foot, land, height, k, vw, vh, routes=None):
     """The houses of one settlement, ranked from the centre outward.
 
     `foot`, `land`, `height` are the bake's vertex-resolution arrays; `k` is
     vertices per pack px. Offsets come back in metres from the burg's centre,
     +x east and +z south, matching the world frame's axes.
+
+    A settlement whose own centre, and everything within
+    house_landmark_search_m of it, is water gets no landmark and no houses:
+    an empty list.
     """
     code = str(burg["burg_code"])
     group = str(burg.get("group", "village"))
@@ -106,10 +140,16 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, routes=None):
 
     landmark = _pick(rng, types, "landmark", group)
     if landmark is not None:
-        rows.append({"burg_code": code, "rank": 0, "x_m": 0.0, "z_m": 0.0,
+        spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m,
+                                   float(rules["house_landmark_search_m"]))
+        if spot is None:
+            return []
+        lx, lz = spot
+        rows.append({"burg_code": code, "rank": 0, "x_m": float(round(lx, 2)),
+                     "z_m": float(round(lz, 2)),
                      "yaw_deg": float(round(rng.uniform(0.0, 360.0), 2)),
                      "type": landmark, "scale": 1.0})
-        taken.append((0.0, 0.0, float(types[landmark]["footprint_m"])))
+        taken.append((lx, lz, float(types[landmark]["footprint_m"])))
 
     # candidates on a jittered grid, gathered then sorted by radius so the
     # ranking is "grows outward" and the order never depends on the scan

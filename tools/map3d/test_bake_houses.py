@@ -19,8 +19,8 @@ RULES = {
     "house_radius_ratio": 0.60, "house_core_ratio": 0.35, "house_barn_ratio": 0.75,
     "house_spacing_m": 22, "house_density_gamma": 1.4, "house_foot_min": 0.55,
     "house_max_slope": 0.38, "house_shore_min_m": 25, "house_port_shore_min_m": 6,
-    "house_min": 4, "house_edge_scale": 0.82, "house_yaw_jitter_deg": 35,
-    "house_road_align_m": 40, "house_people_per_house": 160,
+    "house_landmark_search_m": 300, "house_min": 4, "house_edge_scale": 0.82,
+    "house_yaw_jitter_deg": 35, "house_road_align_m": 40, "house_people_per_house": 160,
     "house_max_capital": 220, "house_max_city": 150, "house_max_town": 80,
     "house_max_fort": 60, "house_max_village": 24,
 }
@@ -157,3 +157,34 @@ def test_no_house_stands_where_the_shore_window_runs_off_the_array_edge():
     for r in rows:
         vx = edge_vx + r["x_m"] / 20.0
         assert vx - shore_rad >= 0, f"{r} sits where its shore window runs off the array edge"
+
+
+def test_a_water_centre_relocates_the_landmark_onto_land():
+    # A burg's own registered point can sit on the water (a port's quay):
+    # a small drowned patch right at the burg's centre, land beyond it.
+    # The landmark must move onto the nearest dry land it finds, not stay
+    # pinned to the water at (0, 0) -- spec 2026-09-20 fix round 1, finding 2.
+    foot, land, height = flat_world()
+    yy, xx = np.mgrid[0:VH, 0:VW].astype(np.float32)
+    d = np.hypot(xx - CENTRE, yy - CENTRE)
+    land[d < 6.0] = 0.0
+    rows = place(burg(), RULES, TYPES, foot, land, height, K, VW, VH)
+    assert rows, "land is close by; the settlement should still build"
+    assert rows[0]["rank"] == 0
+    assert TYPES[rows[0]["type"]]["role"] == "landmark"
+    assert math.hypot(rows[0]["x_m"], rows[0]["z_m"]) > 1e-6, \
+        "the burg's own point is water; the landmark must move off it"
+    vx = CENTRE + rows[0]["x_m"] / 20.0   # VERTEX_M
+    vy = CENTRE + rows[0]["z_m"] / 20.0
+    assert land[int(vy), int(vx)] > 0.5, "relocated onto land"
+
+
+def test_a_burg_with_no_land_within_the_search_bound_gets_nothing():
+    # Nothing but sea within house_landmark_search_m of the burg: no
+    # landmark can be planted anywhere near it, so it gets no houses either
+    # -- an empty list, never a landmark left standing in the water.
+    foot = np.zeros((VH, VW), np.float32)
+    land = np.zeros((VH, VW), np.float32)
+    height = np.zeros((VH, VW), np.float32)
+    rows = place(burg(), RULES, TYPES, foot, land, height, K, VW, VH)
+    assert rows == [], "no land anywhere near the burg: no landmark, no houses"

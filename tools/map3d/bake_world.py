@@ -19,7 +19,6 @@ own cell heights, smoothed, plus ridges made for this scale.
 import argparse
 import csv
 import json
-import math
 import os
 import sys
 
@@ -624,37 +623,6 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
             b["population"] = float(b["population"] or 0)
             rows = bake_houses.place(b, rules, types, foot, land_gate, height, k, vw, vh)
             cx, cy = float(b["x"]) * k, float(b["y"]) * k
-            # the landmark (rank 0) is placed unconditionally at the burg's
-            # own centre -- bake_houses.place has no land test for it at all
-            # -- so nudge it onto the nearest point passing land_gate when
-            # the burg's raw coordinate itself sits off it (spec 2026-09-20
-            # §7, the owner's hard requirement: no house stands in the sea)
-            if rows and int(rows[0]["rank"]) == 0:
-                shore_m = (rules["house_port_shore_min_m"] if int(b.get("is_port", 0) or 0)
-                           else rules["house_shore_min_m"])
-                on_land = (0 <= cx < vw and 0 <= cy < vh and float(land_gate[int(cy), int(cx)]) > 0.5
-                           and bake_houses._dry(land_gate, cx, cy, vw, vh, shore_m))
-                if not on_land:
-                    step = float(rules["house_spacing_m"]) * 0.5
-                    for ring in range(1, 21):
-                        rad = ring * step
-                        moved = False
-                        for a in range(16):
-                            ang = a * (2.0 * math.pi / 16.0)
-                            ox_, oz_ = rad * math.cos(ang), rad * math.sin(ang)
-                            vx, vy = cx + ox_ / VERTEX_M, cy + oz_ / VERTEX_M
-                            if not (0 <= vx < vw and 0 <= vy < vh):
-                                continue
-                            if float(land_gate[int(vy), int(vx)]) < 0.5:
-                                continue
-                            if not bake_houses._dry(land_gate, vx, vy, vw, vh, shore_m):
-                                continue
-                            rows[0]["x_m"] = float(round(ox_, 2))
-                            rows[0]["z_m"] = float(round(oz_, 2))
-                            moved = True
-                            break
-                        if moved:
-                            break
             r_house = rules["house_radius_ratio"] * bake_houses.footprint_radius_m(
                 b["population"], rules) / VERTEX_M
             # the block noise stops where the real roofs begin (§1): roofs
