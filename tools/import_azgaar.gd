@@ -25,7 +25,9 @@ extends SceneTree
 ##   <pack>/economy/kingdoms.csv       treasury, sales/poll tax, urban/rural population
 ##   <pack>/economy/provinces.csv      urban/rural population
 ##   <pack>/economy/burgs.csv          treasury, product, market; production.csv what
-##       each burg makes; goods.csv, markets.csv, market_goods.csv the trade tables
+##       each burg makes; goods.csv, markets.csv, market_goods.csv the trade tables;
+##       deals.csv every recorded trade flow (seller/buyer, market or burg, good,
+##       units, price, tax) -- the only record of which settlement trades with which
 ##   <pack>/military/kingdoms.csv      unit totals, regiment count, strength, alert
 ##   <pack>/military/regiments.csv     one row per regiment: its province and unit counts
 ##   <pack>/military/unit_types.csv    the unit definitions (rates, crew, power)
@@ -354,6 +356,21 @@ func _csv_line(fields: Array[String]) -> String:
 	for f in fields:
 		quoted.append(_csv_field(f))
 	return ",".join(quoted) + "\n"
+
+
+## Resolves one side of a deals.csv row to the id column it should carry:
+## a burg's burg_code, or a market's own numeric id. Returns "" when the
+## party's type is unknown or its id does not resolve.
+func _deal_party_code(party_type: String, id: int, burg_code: Dictionary, market_ids: Dictionary) -> String:
+	if party_type == "burg":
+		if not burg_code.has(id):
+			return ""
+		return String(burg_code[id])
+	if party_type == "market":
+		if not market_ids.has(id):
+			return ""
+		return str(id)
+	return ""
 
 
 ## Coordinates: up to 2 decimals, trailing zeros stripped, whole numbers
@@ -727,7 +744,9 @@ func _run() -> int:
 		return 1
 	out = _csv_line(["market_id", "center_burg"])
 	var market_goods := _csv_line(["market_id", "good_code", "stock", "price"])
+	var market_ids: Dictionary = {}
 	for mk in _active(pack.get("markets", [])):
+		market_ids[int(mk["i"])] = true
 		out += _csv_line([str(int(mk["i"])),
 			String(burg_code.get(int(mk.get("centerBurgId", 0)), ""))])
 		var goods: Dictionary = mk.get("goods", {})
@@ -745,6 +764,28 @@ func _run() -> int:
 		return 1
 	if not _write_text(out_data + "/economy/market_goods.csv", market_goods):
 		return 1
+	var deals := _csv_line(["seller_type", "seller", "buyer_type", "buyer",
+		"good_code", "units", "price", "tax"])
+	var deals_skipped := 0
+	for dl in (pack.get("deals", []) as Array):
+		var seller_type := String(dl.get("sellerType", ""))
+		var buyer_type := String(dl.get("buyerType", ""))
+		var gid := int(dl.get("good", -1))
+		if not good_code.has(gid):
+			deals_skipped += 1
+			continue
+		var seller_id := _deal_party_code(seller_type, int(dl.get("seller", -1)), burg_code, market_ids)
+		var buyer_id := _deal_party_code(buyer_type, int(dl.get("buyer", -1)), burg_code, market_ids)
+		if seller_id.is_empty() or buyer_id.is_empty():
+			deals_skipped += 1
+			continue
+		deals += _csv_line([seller_type, seller_id, buyer_type, buyer_id,
+			String(good_code[gid]), _num2(float(dl.get("units", 0))),
+			_num2(float(dl.get("price", 0))), _num2(float(dl.get("tax", 0)))])
+	if not _write_text(out_data + "/economy/deals.csv", deals):
+		return 1
+	print("import_azgaar: deals.csv skipped %d of %d rows" % [
+		deals_skipped, (pack.get("deals", []) as Array).size()])
 
 	# --- military/* -------------------------------------------------------
 	out = _csv_line(["unit_code", "label", "type", "rural_rate", "urban_rate", "crew",
