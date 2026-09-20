@@ -121,7 +121,7 @@ drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 | `[C-TILE]` | 可平铺贴图 | `seamless tileable texture, flat top-down orthographic view, even illumination, no directional shadow, no focal point, uniform density across the whole square, 1:1` |
 | `[C-MAP]` | 地图底图 | `top-down orthographic cartographic view, north up, no perspective, even lighting, antique map plate` |
 | `[C-SCENE]` | 事件插图 | `narrative illustration, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 3:2 horizontal` |
-| `[C-EVENT]` | 事件横幅插图（`V-35`+，2026-09-21） | `narrative illustration in a wide cinematic band, the scene filling the frame edge to edge with its own setting fully drawn behind the figures and no blank paper anywhere, the subject centred and held clear of the top and bottom edges, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 12:5 horizontal` |
+| `[C-EVENT]` | 事件横幅插图（`V-35`+，2026-09-21） | `narrative illustration in a wide cinematic band, the scene filling the frame edge to edge with its own setting fully drawn behind the figures and no blank paper anywhere, the subject centred and held clear of the top and bottom edges, every garment and weapon strictly thirteenth century — long belted tunics and hose, hooded cloaks and surcoats, mail hauberks and open-faced helmets, kite shields and spears — and absolutely no military uniforms, no frock coats, no epaulettes, no peaked caps, no crinolines, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 12:5 horizontal` |
 | `[C-SYMBOL]` | 战术符号 | `flat cartographic symbol, drawn as if inked onto a military campaign map, isolated on transparent background, no scene, no perspective, 1:1 square` |
 | `[C-UIPIECE]` | UI 部件（`U-`，2026-09-12） | `a single user interface piece drawn flat and face-on with no perspective, filling the frame edge to edge with only a thin even margin all round, straight true horizontal and vertical edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 1:1 square` |
 | `[C-UIWIDE]` | UI 长条部件（`U-03`/`U-08`/`U-13`/`U-17`，用 `--canvas C-UIWIDE`） | `a single wide user interface strip drawn flat and face-on with no perspective, running the full width of the frame with only a thin even margin at each end, straight true horizontal edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 3:1 horizontal` |
@@ -2161,7 +2161,8 @@ untrustworthy [C-EVENT]
 
 #### `V-40` 门口的赤足者 · The Preacher at the Door
 ```
-[S] a modest whitewashed side chamber lit by one candle, a lean sun-blackened man of
+[S] a small stone side chamber lit by one candle, rough masonry walls, a plank floor, a
+shuttered window and a woven hanging, a lean sun-blackened man of
 thirty-three with wild dark hair to the shoulders, an untrimmed beard and a coarse
 undyed woollen robe belted with rope standing barefoot at a plain table and setting down
 a worn ledger, closed, its cover up and no page showing, a thickset grey-haired soldier of fifty-two in a leather
@@ -2174,9 +2175,9 @@ forty with a close-trimmed dark beard and a plain gold circlet seated in the for
 [S] sudden movement frozen in a small stone chamber, a man in road-dirt peasant clothes
 lunging forward with a short knife, a lean sun-blackened barefoot preacher of thirty-three
 in a coarse undyed robe throwing himself across the path of the blade with both hands
-closed around the attacker's wrist, a bearded European king of forty with a close-trimmed dark beard and a plain gold
-circlet pulled back off balance, a candle and a chair going over, guards bursting in at the far
-door, a thick ledger fallen shut on the flagstones out of the preacher's robe, dynamic
+closed around the attacker's wrist, the king — bearded, forty, a plain gold circlet, a deep blue mantle — stumbling backwards
+out of reach behind the preacher with both palms up and no weapon, a candle and a chair
+going over, men-at-arms in mail bursting in at the far door, a thick ledger fallen shut on the flagstones out of the preacher's robe, dynamic
 diagonal composition, no blood, no wounds [C-EVENT]
 ```
 
@@ -2234,19 +2235,22 @@ just inside the door with his hands folded, quiet and dignified, no legible writ
 
 #### `V-47` 北方的婚约 · The Northern Betrothal
 ```
-[S] night in a king's private chamber, an olive-skinned woman of thirty-eight in a
-high-collared dark teal travelling gown and a short fur-lined mantle standing composed
-beside an open coffer of coin, a bearded European king of forty with a close-trimmed dark beard and a
+[S] night in a king's private chamber, an olive-skinned woman of thirty-eight in a floor-length medieval gown of dark teal wool
+with tight buttoned sleeves, a short fur-lined mantle clasped at the shoulder and her hair
+pinned under a small embroidered cap, standing composed beside an open coffer of coin, a bearded European king of forty with a close-trimmed dark beard and a
 plain gold circlet standing over a treaty rolled shut on the table with only its heavy wax
-seal showing, a silver sickle on a red field, no writing visible anywhere, a fair-haired woman of twenty-seven in a pale rose gown standing silently in the
-open doorway behind them with candlelight on her face, restrained emotion [C-EVENT]
+seal showing, a silver sickle on a red field, no writing visible anywhere, a fair-haired woman of twenty-seven in a floor-length medieval gown of pale rose wool
+with long trailing sleeves and a jewelled girdle high at the waist, her hair in two coiled
+braids under a fine gold net, standing silently in the open doorway behind them with
+candlelight on her face, restrained emotion [C-EVENT]
 ```
 
 #### `V-48` 扣下的税粮 · The Withheld Grain
 ```
 [S] late summer at the gate of a provincial castle, a line of loaded grain carts standing
 motionless in the road with the oxen unharnessed and the drivers sitting idle in the
-shade, spearmen in black and gold livery barring the road out with levelled spears, dust
+shade, spearmen in mail hauberks and open-faced helmets over black and gold surcoats, with kite
+shields, barring the road out with levelled spears, dust
 hanging in the heat, long shadows, ominous stillness, no violence [C-EVENT]
 ```
 
@@ -2280,8 +2284,9 @@ shadow all around [C-EVENT]
 
 #### `V-52` 明君之始 · A Just Beginning
 ```
-[S] a council hall in bright morning light, a leather ledger being passed hand to hand down
-a long oak table while the ministers stare at it, its pages seen at a raking angle so the
+[S] a vaulted stone council hall in bright morning light, a leather ledger being passed hand
+to hand down a long oak table while the ministers — in long fur-collared gowns and soft caps —
+stare at it, its pages seen at a raking angle so the
 ruled columns read as unreadable marks with no letters and no numerals, a handsome sharp-boned nobleman of
 forty-four in black and gold sitting rigid and pale with his chain of office lying on the
 oak in front of him, guards standing at the door, in the background half behind a pillar
@@ -2301,7 +2306,7 @@ flagstones through the open door, the two figures small in a very large room [C-
 
 #### `V-54` 铁腕之冠 · The Iron Crown
 ```
-[S] a quiet street in a river town under an overcast sky, a column of mounted soldiers
+[S] a quiet street in a river town under an overcast sky, a column of mounted men-at-arms in mail hauberks and open-faced helmets over surcoats,
 riding past newly rebuilt stone mills under banners of a red field with a gold armillary
 sphere, every door and shutter along the street closed, a small child watching from
 behind a half-open shutter and being pulled back by a hand on the shoulder, on the wall a
