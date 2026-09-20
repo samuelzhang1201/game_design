@@ -61,12 +61,9 @@ func test_every_house_is_inside_its_own_cluster() -> void:
 		var centre := Map3DGeometry.pack_to_world(_meta,
 			Vector2(float(b["x"]), float(b["y"])))
 		var at := Vector2(float(r["x_m"]), float(r["z_m"]))
-		# Map3DHouses arrives in Task 5; until then this assertion cannot
-		# parse (2026-09-20, task 4 note — restore in Task 5):
-		# var r_foot := Map3DHouses.footprint_radius_m(float(b.get("population", 0)), Game.data)
-		# assert_lte(at.distance_to(centre), ratio * r_foot + 0.5,
-		# 	code + " rank " + String(r["rank"]) + " is inside the house radius")
-		pass
+		var r_foot := Map3DHouses.footprint_radius_m(float(b.get("population", 0)), Game.data)
+		assert_lte(at.distance_to(centre), ratio * r_foot + 0.5,
+			code + " rank " + String(r["rank"]) + " is inside the house radius")
 
 
 func test_rank_is_dense_and_starts_at_a_landmark() -> void:

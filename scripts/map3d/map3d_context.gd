@@ -44,6 +44,8 @@ var _burg_ground: Dictionary = {}
 var _pack_ground: Dictionary = {}
 var _proj_key: Array = []
 var _proj: Array = []
+var _houses: Dictionary = {}
+var _houses_loaded := false
 
 
 func _init(p_repo: DataRepository, p_meta: Dictionary, p_world: Node3D = null) -> void:
@@ -253,3 +255,19 @@ func settlement_rects() -> Array:
 		var r := Map3DLayerSettlements.marker_px(e["spec"]) * 0.5 + 2.0
 		out.append(Rect2((e["screen"] as Vector2) - Vector2(r, r), Vector2(r, r) * 2.0))
 	return out
+
+
+## The build's baked houses, grouped by burg (spec 2026-09-20 §3). Loaded
+## once; a build without them is {} and no houses are drawn.
+func houses() -> Dictionary:
+	if not _houses_loaded:
+		_houses_loaded = true
+		_houses = Map3DHouses.load_csv(repo.map3d_dir() + "/bake/houses.csv")
+	return _houses
+
+
+## A burg's people now: the manor ledger where there is a live state, the
+## pack's own population otherwise (a preview, a test).
+func people_of_burg(code: String) -> float:
+	var burg: Dictionary = repo.burgs.get(code, {})
+	return float(burg.get("population", 0))
