@@ -191,58 +191,18 @@ func test_the_hud_draws_marks_and_legend_without_error() -> void:
 	await wait_process_frames(3)
 	assert_gt(v.landmark_marks().size(), 0)
 
-## A burg on screen now: its code, its centre and its click reach, design px
-## (pick_reach_px — its own geometry, not whether a dot is drawn there).
-func _burgs_on_screen(v: Map3DView) -> Array:
-	var out: Array = []
-	var s := v._render_scale()
-	var cam := v.camera()
-	for code: String in Game.data.burgs:
-		var burg: Dictionary = Game.data.burgs[code]
-		var spec: Dictionary = Game.data.map3d_settlements[String(burg.get("group", ""))]
-		var bxz := v._burg_xz(burg)
-		var world := Vector3(bxz.x, v._height_at(bxz), bxz.y)
-		var dist_m := cam.global_position.distance_to(world)
-		if cam.is_position_behind(world) or dist_m >= float(spec["max_view_m"]) * Game.data.bal("map3d_ring_fade_start"):
-			continue
-		out.append({"code": code, "c": cam.unproject_position(world) / s,
-			"r": v.pick_reach_px(code, spec, dist_m)})
-	return out
-
-## The point of `rect` nearest `c`.
-func _nearest_in(rect: Rect2, c: Vector2) -> Vector2:
-	return Vector2(clampf(c.x, rect.position.x, rect.end.x), clampf(c.y, rect.position.y, rect.end.y))
-
-## A click on a settlement's dot opens the settlement even where a landmark's
-## grown pick rect reaches over it (Task 6 review: the grown rect stole it).
-func test_a_click_on_a_settlement_dot_beside_a_mark_opens_the_settlement() -> void:
-	var v := _view()
-	v.set_manor_theme("heights")
-	var grow := Game.data.bal("map3d_pick_px") * 0.5
-	var found := {}
-	for m: Dictionary in Elevation.landmarks(Game.data):
-		for dist: float in [Game.data.bal("map3d_zoom_min_m") * 2.0, 6000.0, 15000.0]:
-			_frame_on(v, m, dist)
-			var burgs := _burgs_on_screen(v)
-			for mk: Dictionary in v.landmark_marks():
-				var grown := (mk["rect"] as Rect2).grow(grow)
-				for b: Dictionary in burgs:
-					var q := _nearest_in(grown, b["c"])
-					var at: Vector2 = (b["c"] as Vector2).move_toward(q, float(b["r"]) * 0.8)
-					if grown.has_point(at) and (b["c"] as Vector2).distance_to(at) < float(b["r"]):
-						found = {"at": at, "code": b["code"]}
-						break
-				if not found.is_empty():
-					break
-			if not found.is_empty():
-				break
-		if not found.is_empty():
-			break
-	assert_false(found.is_empty(), "somewhere a mark's grown rect reaches a settlement's dot")
-	if found.is_empty():
-		return
-	var picked := v.pick_at(found["at"])
-	assert_eq(String(picked.get("kind", "")), "burg")
+## test_a_click_on_a_settlement_dot_beside_a_mark_opens_the_settlement was
+## removed here (final review, 2026-09-20): it probed a two-tier pick_reach_px
+## (a tight "exact dot" that always beat a mark, inside a looser "click
+## floor" that could lose to a mark's grown rect) which owner 2026-09-20
+## change 3 replaced with pick_reach_px as the settlement's ONE click
+## geometry — see map3d_picker.gd's pick_at doc comment: "a settlement
+## within reach always beats a mark". The test's probe point was constructed
+## to sit inside a settlement's reach BY CONSTRUCTION (c.distance_to(at) <
+## r), which under the current, single-geometry pick_at guarantees a burg
+## regardless of whether marks are consulted before or after it, so the
+## assertion could never fail and the precedence it named no longer exists
+## as a concept to test.
 
 ## Landmarks keep off the legend's box, bottom-left.
 func test_marks_keep_off_the_legend() -> void:

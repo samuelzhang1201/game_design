@@ -274,8 +274,8 @@ func houses() -> Dictionary:
 	return _houses
 
 
-## A burg's people now: the manor ledger where there is a live state, the
-## pack's own population otherwise (a preview, a test).
+## A burg's people: just the pack's own population (`repo.burgs[code]`'s
+## `population`), never the manor ledger — used by `pick_reach_px`.
 func people_of_burg(code: String) -> float:
 	var burg: Dictionary = repo.burgs.get(code, {})
 	return float(burg.get("population", 0))

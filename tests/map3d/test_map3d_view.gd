@@ -207,6 +207,26 @@ func test_the_dot_hides_below_the_near_cutoff_and_shows_above_it() -> void:
 	assert_almost_eq(_near_fade(1000000.0, min_m, fade_start), 1.0, 0.001, "fully shown far out")
 
 
+## Regression (final review, owner 2026-09-20): the near cutoff
+## (map3d_dot_min_view_m) was added to data/map3d_settlements.csv without
+## reconciling it against the per-tier max_view_m FAR cutoffs already there.
+## settlement_ring.gdshader's vertex() multiplies far_fade by near_fade, so a
+## tier is drawn at ALL only where its far window (0..max_view_m) and the
+## near window (min_view_m..) overlap; a village's old max_view_m (25000)
+## sat entirely inside the near-hidden band and was never drawn at any
+## camera distance. The far side starts fading at fade_start * max_view_m
+## (settlement_ring.gdshader), so that must clear the near cutoff.
+func test_every_tier_has_a_nonempty_draw_window() -> void:
+	var min_m: float = Game.data.bal("map3d_dot_min_view_m")
+	var fade_start: float = Game.data.bal("map3d_ring_fade_start")
+	for group: String in Game.data.map3d_settlements:
+		var spec: Dictionary = Game.data.map3d_settlements[group]
+		var max_m := float(spec["max_view_m"])
+		assert_gt(max_m * fade_start, min_m,
+			group + "'s max_view_m x map3d_ring_fade_start must clear map3d_dot_min_view_m "
+			+ "or the tier is never drawn at any camera distance")
+
+
 func test_ring_render_priority_rises_with_tier() -> void:
 	var v := _view()
 	v.activate()

@@ -1,5 +1,5 @@
 extends GutTest
-## economy/deals.csv (importer-only, spec: 10,844 Azgaar trade flows): every
+## economy/deals.csv (importer-only, spec: 10,815 Azgaar trade flows): every
 ## recorded flow between a market and a burg, or between two markets. Nothing
 ## reads this table yet (DataRepository is deliberately not wired to it), so
 ## these assertions read the pack file directly, the way test_map_pack.gd's

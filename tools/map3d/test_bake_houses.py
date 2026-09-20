@@ -425,13 +425,6 @@ def test_height_scale_varies_and_is_higher_near_the_centre():
         assert RULES["house_height_min"] <= r["height_scale"] <= RULES["house_height_max"]
 
 
-if __name__ == "__main__":
-    for name, fn in sorted(globals().items()):
-        if name.startswith("test_") and callable(fn):
-            fn()
-            print("ok", name)
-
-
 def test_edge_density_feathers_not_a_cliff():
     """Fix round 1, finding 2: a greedy nearest-first fill against a flat
     per-group count target cuts a hard CIRCLE where the count runs out --
@@ -640,12 +633,11 @@ def test_the_frontage_share_matches_its_target_on_ample_open_ground():
     land = np.ones((vh, vw), np.float32)
     height = np.zeros((vh, vw), np.float32)
     target = rules["house_frontage_share"]
-    margin = 0.12
+    margin = 0.10
     # one population per group chosen so the real algorithm's achieved
     # share sits close to the target under the FIXED order (deviations
     # 0.01-0.09 measured); under the pre-fix order the same four settle at
-    # 0.56-0.64 (deviations 0.11-0.19) -- comfortably on the far side of
-    # this margin
+    # 0.56-0.64 (deviations 0.11-0.19) -- on the far side of this margin
     cases = (("capital", 180000), ("city", 200000), ("town", 50000), ("village", 8000))
     for group, pop in cases:
         b = {"burg_code": "ample_%s" % group, "population": pop, "group": group,
@@ -666,3 +658,10 @@ def test_the_frontage_share_matches_its_target_on_ample_open_ground():
             "buildable ground -- the uncapped top-up's fallback order is leaking "
             "frontage share again"
         )
+
+
+if __name__ == "__main__":
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            fn()
+            print("ok", name)

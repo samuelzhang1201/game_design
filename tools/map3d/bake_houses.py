@@ -356,9 +356,12 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None):
     # than the disc it's spent in was never going to reach the rim at max
     # density anyway, so instead of one flat budget the target is split into
     # house_edge_rings concentric quotas, richest at the centre and thinning
-    # by house_edge_falloff_gamma toward the rim -- the LAST ring's quota is
-    # still nonzero, so the cluster is designed to reach close to r_house
-    # rather than stopping wherever a single dense core exhausts the count.
+    # by house_edge_falloff_gamma toward the rim -- even where the outer
+    # rings' own quotas round down to a handful or to zero (a village's 8
+    # rings at gamma 1.5 round to [8,6,4,3,2,1,1,0]), the uncapped top-up
+    # (see the "3b. TOP UP" comment below) still spends there, so the
+    # cluster is designed to reach close to r_house rather than stopping
+    # wherever a single dense core exhausts the count.
     n_rings = max(int(rules["house_edge_rings"]), 1)
     gamma = float(rules["house_edge_falloff_gamma"])
     weights = [(1.0 - (i + 0.5) / n_rings) ** gamma for i in range(n_rings)]

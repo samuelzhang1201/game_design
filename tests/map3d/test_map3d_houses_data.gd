@@ -16,7 +16,7 @@ const BAKE_KEYS := ["house_radius_ratio", "house_barn_ratio", "house_foot_min",
 	"house_count_town", "house_count_fort", "house_count_village",
 	"lane_seeds", "lane_step_m", "lane_wander_deg", "lane_branch_chance",
 	"lane_max_depth", "lane_half_width_m", "plot_step_m"]
-const BAL_KEYS := ["map3d_house_view_m", "map3d_house_fade_m",
+const BAL_KEYS := ["map3d_house_view_m",
 	"map3d_house_rebuild_move_m", "map3d_house_sink_m"]
 
 
