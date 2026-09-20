@@ -40,8 +40,21 @@ var _instances: Dictionary = {}       # type -> MultiMeshInstance3D
 var _transforms: Dictionary = {}      # type -> Array[Transform3D], instance order
 
 
+## Fix round 1 (owner review): the layer self-connects to the rig's
+## camera_moved, the same idiom Map3DHud.bind() uses — Map3DView stays a
+## coordinator and never dispatches this itself. Guarded exactly like
+## Map3DHud's: bind() can run again (a preview toggle, preview_build()
+## calling bind() too) and must not double-connect.
 func bind(p_ctx: Map3DContext) -> void:
 	ctx = p_ctx
+	if not ctx.camera_moved.is_connected(_on_camera_moved):
+		ctx.camera_moved.connect(_on_camera_moved)
+
+
+## Cut once per camera pose, never per frame — the rig's own ground target,
+## not the camera's eye, which swings with the pitch (spec §3).
+func _on_camera_moved() -> void:
+	refresh(ctx.target)
 
 
 func set_preview(on: bool) -> void:

@@ -10,14 +10,15 @@ func _lines(path: String) -> int:
 	return FileAccess.get_file_as_string(path).split("\n").size()
 
 
-## 504, not the 495 of Task 22: Task 7 put the houses layer's @onready field,
+## 498, not the 495 of Task 22: Task 7 put the houses layer's @onready field,
 ## its bind()/build() at load (Map3DHouses.load_csv costs ~91 ms — warmed
-## here, not on the first refresh() mid-play) and its camera_moved refresh
-## seam on the root (the layer itself, Map3DLayerHouses, does the real work).
-## The view still only forwards — every new line here must be a forwarder or
-## a guard.
+## here, not on the first refresh() mid-play) and a house_counts() getter on
+## the root. The camera_moved refresh itself is NOT here (fix round 1): the
+## layer self-connects inside its own bind(), the same idiom Map3DHud.bind()
+## uses, so the coordinator never dispatches it. The view still only
+## forwards — every new line here must be a forwarder or a guard.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 504)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 498)
 
 
 func test_every_other_script_is_small() -> void:
