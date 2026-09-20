@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://duho6m8511icf"
+
+[deps]
+
+files=["res://game_story/chapter_0/chapter_0/illustrations_manifest.kind.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.used.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.title.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.characters.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.width.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.height.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.seed.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.prompt.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.notes.translation"]
+
+source_file="res://game_story/chapter_0/chapter_0/illustrations_manifest.csv"
+dest_files=["res://game_story/chapter_0/chapter_0/illustrations_manifest.kind.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.used.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.title.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.characters.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.width.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.height.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.seed.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.prompt.translation", "res://game_story/chapter_0/chapter_0/illustrations_manifest.notes.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

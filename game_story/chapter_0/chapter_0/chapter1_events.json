@@ -1,0 +1,1194 @@
+{
+  "chapter_id": "C1",
+  "title_text": "C1.title",
+  "schema_version": 1,
+  "notes": "第一章：纯预设内容，无 LLM。所有叙述为预写文本（chapter1_texts.csv），所有选项为固定按钮。数值效果由确定性引擎执行。trait / seat / province ID 为占位，需与 traits 与 council seat 表对齐。",
+  "characters": {
+    "uncle": {
+      "name_text": "CHAR.uncle",
+      "seat": null,
+      "placeholder_traits": [
+        "greedy",
+        "smooth_talker"
+      ]
+    },
+    "liana": {
+      "name_text": "CHAR.liana",
+      "seat": null,
+      "placeholder_traits": [
+        "compassionate"
+      ]
+    },
+    "martha": {
+      "name_text": "CHAR.martha",
+      "seat": null,
+      "placeholder_traits": [
+        "stubborn"
+      ]
+    },
+    "varen": {
+      "name_text": "CHAR.varen",
+      "seat": "spymaster",
+      "placeholder_traits": [
+        "loyal|ambitious"
+      ]
+    },
+    "oswald": {
+      "name_text": "CHAR.oswald",
+      "seat": "treasurer",
+      "placeholder_traits": [
+        "greedy"
+      ]
+    },
+    "captain": {
+      "name_text": "CHAR.captain",
+      "seat": "captain_of_guard",
+      "placeholder_traits": [
+        "vigilant|none"
+      ]
+    }
+  },
+  "initial_state": {
+    "vars": {
+      "royal.treasury": 3200,
+      "province.hegu.grain_reserve": 4000,
+      "settlement.greywheat.unrest": 35,
+      "settlement.greywheat.trade_income": 300,
+      "faction.uncle.stage": 2,
+      "faction.uncle.approval": 50,
+      "character.liana.relation": 60,
+      "character.martha.relation": 0,
+      "foreign.eastmark.relation": 0
+    },
+    "flags": [
+      "martha_alive"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "C1_OBJ_grey_wheat_pact",
+      "title_text": "C1_OBJ.title",
+      "desc_text": "C1_OBJ.desc",
+      "deadline": {
+        "turn": 3,
+        "phase": "end"
+      },
+      "conditions": [
+        {
+          "var": "province.hegu.grain_reserve",
+          "cmp": ">=",
+          "value": 12000,
+          "label_text": "C1_OBJ.c_grain"
+        },
+        {
+          "var": "royal.treasury",
+          "cmp": ">=",
+          "value": 5000,
+          "label_text": "C1_OBJ.c_treasury"
+        },
+        {
+          "var": "settlement.greywheat.unrest",
+          "cmp": "<",
+          "value": 40,
+          "label_text": "C1_OBJ.c_unrest"
+        },
+        {
+          "var": "settlement.greywheat.trade_income",
+          "cmp": ">=",
+          "value": 600,
+          "label_text": "C1_OBJ.c_trade"
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "C1_E00",
+      "trigger": {
+        "turn": 0,
+        "phase": "start"
+      },
+      "title_text": "C1_E00.title",
+      "illustration": "C1_IL01",
+      "body_text": "C1_E00.body",
+      "options": [
+        {
+          "id": "continue",
+          "label_text": "C1_E00.opt.continue",
+          "effects": [],
+          "next": "C1_E01"
+        }
+      ]
+    },
+    {
+      "id": "C1_E01",
+      "trigger": null,
+      "title_text": "C1_E01.title",
+      "illustration": "C1_IL02",
+      "body_text": "C1_E01.body",
+      "options": [
+        {
+          "id": "suppress",
+          "label_text": "C1_E01.opt.suppress",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "path_suppress"
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": 15
+            },
+            {
+              "op": "add",
+              "var": "settlement.greywheat.unrest",
+              "value": 30
+            },
+            {
+              "op": "add",
+              "var": "settlement.greywheat.trade_income",
+              "value": -150
+            },
+            {
+              "op": "add_modifier",
+              "id": "C1_MOD_mills_burned",
+              "target": "province.hegu.harvest_pct",
+              "value": -20,
+              "turns": 4
+            }
+          ],
+          "next": "C1_E02S"
+        },
+        {
+          "id": "investigate",
+          "label_text": "C1_E01.opt.investigate",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "path_investigate"
+            },
+            {
+              "op": "add",
+              "var": "royal.treasury",
+              "value": -150
+            }
+          ],
+          "next_rules": [
+            {
+              "if": {
+                "trait": {
+                  "character": "varen",
+                  "trait": "ambitious"
+                }
+              },
+              "goto": "C1_E02I_AMB"
+            },
+            {
+              "goto": "C1_E02I_LOY"
+            }
+          ]
+        },
+        {
+          "id": "summon",
+          "label_text": "C1_E01.opt.summon",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "path_summon"
+            },
+            {
+              "op": "add",
+              "var": "character.martha.relation",
+              "value": 20
+            },
+            {
+              "op": "add",
+              "var": "settlement.greywheat.unrest",
+              "value": -10
+            }
+          ],
+          "next_rules": [
+            {
+              "if": {
+                "trait": {
+                  "character": "captain",
+                  "trait": "vigilant"
+                }
+              },
+              "goto": "C1_E02C_SAFE"
+            },
+            {
+              "goto": "C1_E02C_ATK"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C1_E02S",
+      "trigger": null,
+      "title_text": "C1_E02S.title",
+      "illustration": "C1_IL03",
+      "body_text": "C1_E02S.body",
+      "on_fire": [
+        {
+          "op": "set_flag",
+          "flag": "martha_imprisoned"
+        }
+      ],
+      "options": [
+        {
+          "id": "burn",
+          "label_text": "C1_E02S.opt.burn",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "burned_ledger"
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": 10
+            }
+          ],
+          "next": "C1_E03"
+        },
+        {
+          "id": "read",
+          "label_text": "C1_E02S.opt.read",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "ledger_revealed"
+            }
+          ],
+          "next": "C1_E02R"
+        }
+      ]
+    },
+    {
+      "id": "C1_E02I_LOY",
+      "trigger": null,
+      "title_text": "C1_E02I_LOY.title",
+      "illustration": "C1_IL04",
+      "body_text": "C1_E02I_LOY.body",
+      "on_fire": [
+        {
+          "op": "set_flag",
+          "flag": "varen_loyal"
+        },
+        {
+          "op": "set_flag",
+          "flag": "ledger_revealed"
+        }
+      ],
+      "options": [
+        {
+          "id": "continue",
+          "label_text": "C1_E02I_LOY.opt.continue",
+          "effects": [],
+          "next": "C1_E02R"
+        }
+      ]
+    },
+    {
+      "id": "C1_E02I_AMB",
+      "trigger": null,
+      "title_text": "C1_E02I_AMB.title",
+      "illustration": "C1_IL05",
+      "body_text": "C1_E02I_AMB.body",
+      "on_fire": [
+        {
+          "op": "set_flag",
+          "flag": "varen_ambitious"
+        }
+      ],
+      "options": [
+        {
+          "id": "trust_varen",
+          "label_text": "C1_E02I_AMB.opt.trust",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "varen_trusted"
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": 5
+            }
+          ],
+          "next": "C1_E03"
+        },
+        {
+          "id": "bypass_varen",
+          "label_text": "C1_E02I_AMB.opt.bypass",
+          "effects": [
+            {
+              "op": "add",
+              "var": "royal.treasury",
+              "value": -100
+            },
+            {
+              "op": "set_flag",
+              "flag": "ledger_revealed"
+            },
+            {
+              "op": "set_flag",
+              "flag": "varen_suspected"
+            }
+          ],
+          "next": "C1_E02R"
+        }
+      ]
+    },
+    {
+      "id": "C1_E02C_SAFE",
+      "trigger": null,
+      "title_text": "C1_E02C_SAFE.title",
+      "illustration": "C1_IL06",
+      "body_text": "C1_E02C_SAFE.body",
+      "on_fire": [
+        {
+          "op": "set_flag",
+          "flag": "ledger_revealed"
+        },
+        {
+          "op": "add",
+          "var": "character.martha.relation",
+          "value": 10
+        }
+      ],
+      "options": [
+        {
+          "id": "continue",
+          "label_text": "C1_E02C_SAFE.opt.continue",
+          "effects": [],
+          "next": "C1_E02R"
+        }
+      ]
+    },
+    {
+      "id": "C1_E02C_ATK",
+      "trigger": null,
+      "title_text": "C1_E02C_ATK.title",
+      "illustration": "C1_IL07",
+      "body_text": "C1_E02C_ATK.body",
+      "on_fire": [
+        {
+          "op": "set_flag",
+          "flag": "king_wounded"
+        },
+        {
+          "op": "set_flag",
+          "flag": "ledger_revealed"
+        },
+        {
+          "op": "add",
+          "var": "royal.treasury",
+          "value": -200
+        },
+        {
+          "op": "add",
+          "var": "character.martha.relation",
+          "value": 20
+        }
+      ],
+      "options": [
+        {
+          "id": "continue",
+          "label_text": "C1_E02C_ATK.opt.continue",
+          "effects": [],
+          "next": "C1_E02R"
+        }
+      ]
+    },
+    {
+      "id": "C1_E02R",
+      "trigger": null,
+      "title_text": "C1_E02R.title",
+      "illustration": "C1_IL08",
+      "body_text": "C1_E02R.body",
+      "options": [
+        {
+          "id": "confront_now",
+          "label_text": "C1_E02R.opt.confront_now",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "evidence_public_early"
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.stage",
+              "value": 2
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": -30
+            }
+          ],
+          "next": "C1_E03"
+        },
+        {
+          "id": "hold",
+          "label_text": "C1_E02R.opt.hold",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "evidence_held"
+            }
+          ],
+          "next": "C1_E03"
+        },
+        {
+          "id": "ask_liana",
+          "label_text": "C1_E02R.opt.ask_liana",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "evidence_held"
+            },
+            {
+              "op": "set_flag",
+              "flag": "liana_involvement_known"
+            },
+            {
+              "op": "add",
+              "var": "character.liana.relation",
+              "value": 20
+            }
+          ],
+          "next": "C1_E03"
+        }
+      ]
+    },
+    {
+      "id": "C1_E03",
+      "trigger": null,
+      "title_text": "C1_E03.title",
+      "illustration": "C1_IL09",
+      "body_text": "C1_E03.body",
+      "on_fire": [
+        {
+          "op": "activate_objective",
+          "id": "C1_OBJ_grey_wheat_pact"
+        }
+      ],
+      "options": [
+        {
+          "id": "accept",
+          "label_text": "C1_E03.opt.accept",
+          "effects": [
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": 10
+            },
+            {
+              "op": "add_modifier",
+              "id": "C1_MOD_grain_diversion",
+              "target": "province.hegu.grain_income_pct",
+              "value": -25,
+              "turns": 4
+            }
+          ],
+          "next": null
+        },
+        {
+          "id": "royal_steward",
+          "label_text": "C1_E03.opt.royal_steward",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "royal_granary"
+            },
+            {
+              "op": "add",
+              "var": "royal.treasury",
+              "value": -400
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": -15
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.stage",
+              "value": 1
+            }
+          ],
+          "next": null
+        }
+      ]
+    },
+    {
+      "id": "C1_E04",
+      "trigger": {
+        "turn": 1,
+        "phase": "start"
+      },
+      "title_text": "C1_E04.title",
+      "illustration": "C1_IL10",
+      "body_text_rules": [
+        {
+          "if": {
+            "flag": "martha_imprisoned"
+          },
+          "text": "C1_E04.body_elder"
+        },
+        {
+          "text": "C1_E04.body_martha"
+        }
+      ],
+      "options": [
+        {
+          "id": "lend",
+          "label_text": "C1_E04.opt.lend",
+          "requires": {
+            "var": "province.hegu.grain_reserve",
+            "cmp": ">=",
+            "value": 1500
+          },
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "seed_lent"
+            },
+            {
+              "op": "add",
+              "var": "province.hegu.grain_reserve",
+              "value": -1500
+            },
+            {
+              "op": "add",
+              "var": "settlement.greywheat.unrest",
+              "value": -10
+            },
+            {
+              "op": "add_modifier",
+              "id": "C1_MOD_seed_loan",
+              "target": "province.hegu.harvest_pct",
+              "value": 25,
+              "turns": 3
+            }
+          ],
+          "next": null
+        },
+        {
+          "id": "refuse",
+          "label_text": "C1_E04.opt.refuse",
+          "effects": [
+            {
+              "op": "add",
+              "var": "settlement.greywheat.unrest",
+              "value": 10
+            },
+            {
+              "op": "add_modifier",
+              "id": "C1_MOD_seed_shortage",
+              "target": "province.hegu.harvest_pct",
+              "value": -30,
+              "turns": 3
+            }
+          ],
+          "next": null
+        }
+      ]
+    },
+    {
+      "id": "C1_E05",
+      "trigger": {
+        "turn": 1,
+        "phase": "end",
+        "condition": {
+          "not": {
+            "flag": "martha_imprisoned"
+          }
+        }
+      },
+      "title_text": "C1_E05.title",
+      "illustration": "C1_IL11",
+      "body_text": "C1_E05.body",
+      "options": [
+        {
+          "id": "grant",
+          "label_text": "C1_E05.opt.grant",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "charter_granted"
+            },
+            {
+              "op": "add",
+              "var": "settlement.greywheat.trade_income",
+              "value": 250
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": -20
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.stage",
+              "value": 1
+            }
+          ],
+          "next": null
+        },
+        {
+          "id": "grant_taxed",
+          "label_text": "C1_E05.opt.grant_taxed",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "charter_granted"
+            },
+            {
+              "op": "set_flag",
+              "flag": "charter_taxed"
+            },
+            {
+              "op": "add",
+              "var": "settlement.greywheat.trade_income",
+              "value": 150
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": -10
+            },
+            {
+              "op": "add_modifier",
+              "id": "C1_MOD_charter_tax",
+              "target": "royal.income_flat",
+              "value": 150,
+              "turns": 3
+            }
+          ],
+          "next": null
+        },
+        {
+          "id": "defer",
+          "label_text": "C1_E05.opt.defer",
+          "effects": [
+            {
+              "op": "add",
+              "var": "character.martha.relation",
+              "value": -15
+            }
+          ],
+          "next": null
+        }
+      ]
+    },
+    {
+      "id": "C1_E05S",
+      "trigger": {
+        "turn": 1,
+        "phase": "end",
+        "condition": {
+          "flag": "martha_imprisoned"
+        }
+      },
+      "title_text": "C1_E05S.title",
+      "illustration": "C1_IL12",
+      "body_text": "C1_E05S.body",
+      "options": [
+        {
+          "id": "pardon",
+          "label_text": "C1_E05S.opt.pardon",
+          "effects": [
+            {
+              "op": "clear_flag",
+              "flag": "martha_imprisoned"
+            },
+            {
+              "op": "set_flag",
+              "flag": "martha_pardoned"
+            },
+            {
+              "op": "add",
+              "var": "settlement.greywheat.unrest",
+              "value": -20
+            },
+            {
+              "op": "add",
+              "var": "settlement.greywheat.trade_income",
+              "value": 100
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": -10
+            },
+            {
+              "op": "remove_modifier",
+              "id": "C1_MOD_mills_burned"
+            }
+          ],
+          "next": null
+        },
+        {
+          "id": "keep",
+          "label_text": "C1_E05S.opt.keep",
+          "effects": [
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": 5
+            },
+            {
+              "op": "add",
+              "var": "settlement.greywheat.unrest",
+              "value": 5
+            }
+          ],
+          "next": null
+        }
+      ]
+    },
+    {
+      "id": "C1_E06",
+      "trigger": {
+        "turn": 2,
+        "phase": "start"
+      },
+      "title_text": "C1_E06.title",
+      "illustration": "C1_IL13",
+      "body_text_rules": [
+        {
+          "if": {
+            "flag": "liana_involvement_known"
+          },
+          "text": "C1_E06.body_known"
+        },
+        {
+          "text": "C1_E06.body_unknown"
+        }
+      ],
+      "options": [
+        {
+          "id": "refuse",
+          "label_text": "C1_E06.opt.refuse",
+          "effects": [
+            {
+              "op": "add",
+              "var": "foreign.eastmark.relation",
+              "value": -20
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": -10
+            },
+            {
+              "op": "add",
+              "var": "character.liana.relation",
+              "value": 10
+            }
+          ],
+          "next": null
+        },
+        {
+          "id": "agree",
+          "label_text": "C1_E06.opt.agree",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "liana_married_away"
+            },
+            {
+              "op": "set_flag",
+              "flag": "witness_lost"
+            },
+            {
+              "op": "add",
+              "var": "character.liana.relation",
+              "value": -40
+            },
+            {
+              "op": "add",
+              "var": "royal.treasury",
+              "value": 600
+            },
+            {
+              "op": "add",
+              "var": "foreign.eastmark.relation",
+              "value": 20
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": 15
+            }
+          ],
+          "next": null
+        },
+        {
+          "id": "stall",
+          "label_text": "C1_E06.opt.stall",
+          "requires": {
+            "flag": "ledger_revealed"
+          },
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "smuggling_cut"
+            },
+            {
+              "op": "add",
+              "var": "royal.treasury",
+              "value": -200
+            },
+            {
+              "op": "add",
+              "var": "province.hegu.grain_reserve",
+              "value": 2000
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.approval",
+              "value": -20
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.stage",
+              "value": 1
+            }
+          ],
+          "next": null
+        }
+      ]
+    },
+    {
+      "id": "C1_E07",
+      "trigger": {
+        "turn": 2,
+        "phase": "end",
+        "condition": {
+          "var": "faction.uncle.stage",
+          "cmp": ">=",
+          "value": 4
+        }
+      },
+      "title_text": "C1_E07.title",
+      "illustration": "C1_IL14",
+      "body_text": "C1_E07.body",
+      "on_fire": [
+        {
+          "op": "set_flag",
+          "flag": "hegu_tax_withheld"
+        },
+        {
+          "op": "add_modifier",
+          "id": "C1_MOD_tax_withheld",
+          "target": "province.hegu.tax_to_crown_pct",
+          "value": -100,
+          "turns": 1
+        },
+        {
+          "op": "set_turn_granularity",
+          "value": "monthly"
+        }
+      ],
+      "options": [
+        {
+          "id": "army",
+          "label_text": "C1_E07.opt.army",
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "uncle_crushed"
+            },
+            {
+              "op": "add",
+              "var": "royal.treasury",
+              "value": -1000
+            },
+            {
+              "op": "add",
+              "var": "settlement.greywheat.unrest",
+              "value": 15
+            },
+            {
+              "op": "add",
+              "var": "province.hegu.grain_reserve",
+              "value": 3000
+            },
+            {
+              "op": "set",
+              "var": "faction.uncle.stage",
+              "value": 1
+            },
+            {
+              "op": "remove_modifier",
+              "id": "C1_MOD_tax_withheld"
+            }
+          ],
+          "next": null
+        },
+        {
+          "id": "negotiate",
+          "label_text": "C1_E07.opt.negotiate",
+          "effects": [
+            {
+              "op": "add",
+              "var": "royal.treasury",
+              "value": -800
+            },
+            {
+              "op": "add",
+              "var": "faction.uncle.stage",
+              "value": -1
+            },
+            {
+              "op": "remove_modifier",
+              "id": "C1_MOD_tax_withheld"
+            }
+          ],
+          "next": null
+        },
+        {
+          "id": "expose",
+          "label_text": "C1_E07.opt.expose",
+          "requires": {
+            "all": [
+              {
+                "flag": "ledger_revealed"
+              },
+              {
+                "flag": "evidence_held"
+              },
+              {
+                "not": {
+                  "flag": "witness_lost"
+                }
+              }
+            ]
+          },
+          "effects": [
+            {
+              "op": "set_flag",
+              "flag": "uncle_isolated"
+            },
+            {
+              "op": "set",
+              "var": "faction.uncle.stage",
+              "value": 2
+            },
+            {
+              "op": "set",
+              "var": "faction.uncle.approval",
+              "value": 0
+            },
+            {
+              "op": "add",
+              "var": "province.hegu.grain_reserve",
+              "value": 2000
+            },
+            {
+              "op": "remove_modifier",
+              "id": "C1_MOD_tax_withheld"
+            },
+            {
+              "op": "remove_modifier",
+              "id": "C1_MOD_grain_diversion"
+            }
+          ],
+          "next": null
+        }
+      ]
+    },
+    {
+      "id": "C1_E08",
+      "trigger": {
+        "turn": 3,
+        "phase": "end"
+      },
+      "title_text": "C1_E08.title",
+      "illustration": "C1_IL15",
+      "body_text": "C1_E08.body",
+      "options": [
+        {
+          "id": "continue",
+          "label_text": "C1_E08.opt.continue",
+          "effects": [],
+          "next_rules": [
+            {
+              "if": {
+                "not": {
+                  "objective": "C1_OBJ_grey_wheat_pact"
+                }
+              },
+              "goto": "END_EMPTY_WINTER"
+            },
+            {
+              "if": {
+                "flag": "path_suppress"
+              },
+              "goto": "END_IRON_CROWN"
+            },
+            {
+              "if": {
+                "all": [
+                  {
+                    "flag": "ledger_revealed"
+                  },
+                  {
+                    "not": {
+                      "flag": "burned_ledger"
+                    }
+                  }
+                ]
+              },
+              "goto": "C1_E09"
+            },
+            {
+              "goto": "END_COMPROMISE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C1_E09",
+      "trigger": null,
+      "title_text": "C1_E09.title",
+      "illustration": "C1_IL16",
+      "body_text": "C1_E09.body",
+      "options": [
+        {
+          "id": "public",
+          "label_text": "C1_E09.opt.public",
+          "effects": [],
+          "next": "END_JUST"
+        },
+        {
+          "id": "private_deal",
+          "label_text": "C1_E09.opt.private_deal",
+          "effects": [
+            {
+              "op": "add",
+              "var": "royal.treasury",
+              "value": 1500
+            }
+          ],
+          "next": "END_COMPROMISE"
+        }
+      ]
+    }
+  ],
+  "endings": [
+    {
+      "id": "END_JUST",
+      "title_text": "END_JUST.title",
+      "illustration": "C1_IL17",
+      "body_text": "END_JUST.body",
+      "effects": [
+        {
+          "op": "set_flag",
+          "flag": "c1_end_just"
+        },
+        {
+          "op": "set_flag",
+          "flag": "uncle_deposed"
+        },
+        {
+          "op": "set_flag",
+          "flag": "oswald_imprisoned"
+        },
+        {
+          "op": "set_flag",
+          "flag": "cousin_resentful"
+        },
+        {
+          "op": "set",
+          "var": "faction.uncle.stage",
+          "value": 1
+        },
+        {
+          "op": "add_modifier",
+          "id": "C1_MOD_just_ruler",
+          "target": "province.hegu.loyalty",
+          "value": 20,
+          "turns": 8
+        }
+      ]
+    },
+    {
+      "id": "END_COMPROMISE",
+      "title_text": "END_COMPROMISE.title",
+      "illustration": "C1_IL18",
+      "body_text_rules": [
+        {
+          "if": {
+            "flag": "ledger_revealed"
+          },
+          "text": "END_COMPROMISE.body_deal"
+        },
+        {
+          "text": "END_COMPROMISE.body_blind"
+        }
+      ],
+      "effects": [
+        {
+          "op": "set_flag",
+          "flag": "c1_end_compromise"
+        },
+        {
+          "op": "set_flag",
+          "flag": "uncle_retired"
+        }
+      ]
+    },
+    {
+      "id": "END_IRON_CROWN",
+      "title_text": "END_IRON_CROWN.title",
+      "illustration": "C1_IL19",
+      "body_text": "END_IRON_CROWN.body",
+      "effects": [
+        {
+          "op": "set_flag",
+          "flag": "c1_end_iron"
+        },
+        {
+          "op": "set_flag",
+          "flag": "brotherhood_underground"
+        },
+        {
+          "op": "add_modifier",
+          "id": "C1_MOD_fear",
+          "target": "settlement.greywheat.unrest_floor",
+          "value": 25,
+          "turns": 8
+        }
+      ]
+    },
+    {
+      "id": "END_EMPTY_WINTER",
+      "title_text": "END_EMPTY_WINTER.title",
+      "illustration": "C1_IL20",
+      "body_text": "END_EMPTY_WINTER.body",
+      "effects": [
+        {
+          "op": "set_flag",
+          "flag": "c1_end_failed"
+        },
+        {
+          "op": "set_flag",
+          "flag": "coup_pending"
+        },
+        {
+          "op": "add",
+          "var": "faction.uncle.stage",
+          "value": 2
+        }
+      ]
+    }
+  ]
+}
