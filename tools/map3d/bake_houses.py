@@ -370,18 +370,32 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
         guard += 1
     ring_counts = [0] * n_rings
 
+    # fix round 2, finding 1: lane frontage alone was supplying essentially
+    # the WHOLE target (measured: 399 of a capital's 400) before block fill
+    # ever got a slot, so the blocks between lanes stayed empty and the town
+    # read as a starburst of strings rather than a compact, messy mass.
+    # house_frontage_share caps what frontage may take of EACH ring's own
+    # quota (not a single flat share of the total), so the cap works WITH
+    # the edge-feathering rings rather than against them -- a ring's leftover
+    # share is always available to block fill (frontage is gated on this
+    # smaller share; infill is still gated on the ring's FULL quota, so it
+    # picks up whatever frontage did not spend, including all of it if
+    # frontage's own lanes never reached that ring at all).
+    frontage_share = float(rules["house_frontage_share"])
+    frontage_cap = [int(round(q * frontage_share)) for q in quotas]
+
     def _ring_of(d):
         idx = int(d / max(r_house, 1e-6) * n_rings)
         return min(max(idx, 0), n_rings - 1)
 
-    def _try_place(ox, oz, yaw, pick, ring):
+    def _try_place(ox, oz, yaw, pick, ring, foot_min=None):
         d = math.hypot(ox, oz)
         if d > r_house or d < 1e-6:
             return False
         vx, vy = cx + ox / VERTEX_M, cy + oz / VERTEX_M
         if not (0 <= vx < vw and 0 <= vy < vh):
             return False
-        if float(foot[int(vy), int(vx)]) < rules["house_foot_min"]:
+        if float(foot[int(vy), int(vx)]) < (rules["house_foot_min"] if foot_min is None else foot_min):
             return False
         if not _dry(land, vx, vy, vw, vh, shore_m):
             return False
@@ -418,8 +432,12 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
             if sum(ring_counts) >= n_target:
                 break
             ring = _ring_of(d0)
-            if enforce_quota and ring_counts[ring] >= quotas[ring]:
-                continue   # this band of the town is already at its target density
+            # capped by its OWN share of the ring's quota, not the ring's
+            # full quota -- the rest is reserved for block fill (fix round
+            # 2, finding 1); the leftover pass below (enforce_quota=False)
+            # is what lets frontage claim more if infill can't spend it
+            if enforce_quota and ring_counts[ring] >= frontage_cap[ring]:
+                continue   # frontage's own share of this band is spent
             role = "barn" if d0 > barn_r else "house"
             pick = _pick(rng, types, role, group)
             if pick is None:
@@ -441,20 +459,24 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
     # 3. fill the leftover block between lanes with a jittered close-spaced
     # grid, oriented to the nearest lane rather than spun on its own, same
     # per-ring quota gate topping up whatever frontage left short
-    reach = int(math.ceil(r_house / plot_step))
-    grid = []
-    for gy in range(-reach, reach + 1):
-        for gx in range(-reach, reach + 1):
-            ox = gx * plot_step + rng.uniform(-0.4, 0.4) * plot_step
-            oz = gy * plot_step + rng.uniform(-0.4, 0.4) * plot_step
-            d = math.hypot(ox, oz)
-            if d > r_house or d < 1e-6:
-                continue
-            grid.append((d, ox, oz))
-    grid.sort(key=lambda c: c[0])
+    def _build_grid(step):
+        out = []
+        reach_g = int(math.ceil(r_house / step))
+        for gy in range(-reach_g, reach_g + 1):
+            for gx in range(-reach_g, reach_g + 1):
+                ox = gx * step + rng.uniform(-0.4, 0.4) * step
+                oz = gy * step + rng.uniform(-0.4, 0.4) * step
+                d = math.hypot(ox, oz)
+                if d > r_house or d < 1e-6:
+                    continue
+                out.append((d, ox, oz))
+        out.sort(key=lambda c: c[0])
+        return out
 
-    def _infill_pass(enforce_quota):
-        for d, ox, oz in grid:
+    grid = _build_grid(plot_step)
+
+    def _infill_pass(enforce_quota, candidates=None, foot_min=None):
+        for d, ox, oz in (grid if candidates is None else candidates):
             if sum(ring_counts) >= n_target:
                 break
             ring = _ring_of(d)
@@ -470,7 +492,7 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
                 continue   # sits over a lane's own clear strip: leave it be
             base_yaw = lane_bearing if lane_d is not None else float(rng.uniform(0.0, 360.0))
             yaw = base_yaw + rng.uniform(-jitter, jitter)
-            _try_place(ox, oz, yaw, pick, ring)
+            _try_place(ox, oz, yaw, pick, ring, foot_min=foot_min)
 
     if sum(ring_counts) < n_target:
         _infill_pass(enforce_quota=True)
@@ -490,6 +512,45 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
         _frontage_pass(enforce_quota=False)
     if sum(ring_counts) < n_target:
         _infill_pass(enforce_quota=False)
+
+    # 3c. FINE-GRID TOP UP: fix round 2, finding 2 -- a small or awkwardly
+    # shaped site (a harbour village whose buildable land is a narrow wedge,
+    # most of its nominal r_house being open water) can leave the whole
+    # settlement stuck at the landmark plus one house, not because it has no
+    # room, but because the 10 m infill grid never happens to land a
+    # candidate in the sliver of land that IS buildable (measured on one
+    # such village: the coarse grid found 4 valid spots out of 96 candidates;
+    # a grid a third as coarse found 49 out of ~1500). Only runs when the
+    # settlement is still short after every pass above -- a normal
+    # settlement never reaches here, so this changes nothing for the vast
+    # majority that already meet their target
+    if sum(ring_counts) < n_target:
+        fine_step = plot_step * float(rules["house_small_site_grid_ratio"])
+        if fine_step > 1e-6:
+            _infill_pass(enforce_quota=False, candidates=_build_grid(fine_step))
+
+    # 3d. LAST-RESORT RELAXED FOOTPRINT: fix round 2, finding 2 -- diagnosed
+    # a second, DIFFERENT cause on a real settlement (chawbigdon, a city):
+    # not water, not slope (both fine everywhere in its disc), but the
+    # footprint/built-ground mask itself sat at ~0.48 at the settlement's OWN
+    # centre and only fell further outward -- the built-ground fray
+    # (bake_world.py's own footprint_edge_noise, out of this module's scope)
+    # landed low across this settlement's whole disc, on land that is
+    # otherwise flat, dry and unremarkable. No amount of denser sampling
+    # helps here (100% of even the fine grid failed on foot_min alone), so
+    # this is the one hard-coded relaxation: only in this absolute last
+    # resort, only after every other pass and the fine grid have all failed,
+    # house_foot_min is scaled down by house_small_site_foot_min_ratio. A
+    # settlement whose disc is genuinely too steep (verified separately:
+    # apton, aringham -- 100% slope failures well past the threshold, not a
+    # foot_min problem) is correctly left at its landmark: this never
+    # touches the slope or shore tests, so a real cliff or a real sea still
+    # refuses a house exactly as before.
+    if sum(ring_counts) < n_target:
+        relaxed_foot_min = rules["house_foot_min"] * float(rules["house_small_site_foot_min_ratio"])
+        fine_step = plot_step * float(rules["house_small_site_grid_ratio"])
+        if fine_step > 1e-6:
+            _infill_pass(enforce_quota=False, candidates=_build_grid(fine_step), foot_min=relaxed_foot_min)
 
     # 4. rank dense from the centre out, the landmark pinned at 0
     if landmark is not None:

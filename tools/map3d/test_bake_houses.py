@@ -30,6 +30,8 @@ RULES = {
     "lane_branch_chance": 0.15, "lane_max_depth": 3, "lane_half_width_m": 1.75,
     "plot_step_m": 10,
     "house_edge_rings": 8, "house_edge_falloff_gamma": 1.5, "house_edge_scale_min": 0.75,
+    "house_frontage_share": 0.45, "house_small_site_grid_ratio": 0.35,
+    "house_small_site_foot_min_ratio": 0.7,
 }
 
 TYPES = {
@@ -64,6 +66,17 @@ def flat_world(land_value=1.0):
 def _axes(yaw_deg):
     r = math.radians(yaw_deg)
     return (math.sin(r), math.cos(r)), (math.cos(r), -math.sin(r))
+
+
+# bake_houses.place() rounds x_m/z_m/yaw_deg to 2 decimals before returning
+# a row (the CSV's own precision) -- that rounding can, at most, shift a
+# stored position by ~0.01 m per axis, which for a pair sitting EXACTLY at
+# the SAT boundary can turn a real (pre-rounding) clearance into an
+# apparent overlap of a similar, sub-centimetre size once reconstructed
+# from the rounded output. Deflating each half-width by this much when
+# testing the OUTPUT rows absorbs that storage rounding without hiding a
+# real overlap (house_gap_m is 1.0 m, two orders of magnitude bigger).
+ROUNDING_SLACK_M = 0.02
 
 
 def _rects_overlap_independent(ax, az, ahalf, ayaw, bx, bz, bhalf, byaw):
@@ -187,9 +200,9 @@ def test_houses_do_not_overlap():
     rows = place(burg(), RULES, TYPES, foot, land, height, K, VW, VH)
     gap = RULES["house_gap_m"]
     for i, a in enumerate(rows):
-        ah = 0.5 * TYPES[a["type"]]["footprint_m"] + gap * 0.5
+        ah = 0.5 * TYPES[a["type"]]["footprint_m"] + gap * 0.5 - ROUNDING_SLACK_M
         for b in rows[i + 1:]:
-            bh = 0.5 * TYPES[b["type"]]["footprint_m"] + gap * 0.5
+            bh = 0.5 * TYPES[b["type"]]["footprint_m"] + gap * 0.5 - ROUNDING_SLACK_M
             assert not _rects_overlap_independent(
                 a["x_m"], a["z_m"], ah, a["yaw_deg"], b["x_m"], b["z_m"], bh, b["yaw_deg"]
             ), f"{a} and {b} come closer than house_gap_m allows"
@@ -383,9 +396,9 @@ def test_rectangles_never_overlap_even_at_high_target_counts():
     assert len(rows) > 10, "a lot of candidates should still get placed"
     gap = rules["house_gap_m"]
     for i, a in enumerate(rows):
-        ah = 0.5 * TYPES[a["type"]]["footprint_m"] + gap * 0.5
+        ah = 0.5 * TYPES[a["type"]]["footprint_m"] + gap * 0.5 - ROUNDING_SLACK_M
         for b in rows[i + 1:]:
-            bh = 0.5 * TYPES[b["type"]]["footprint_m"] + gap * 0.5
+            bh = 0.5 * TYPES[b["type"]]["footprint_m"] + gap * 0.5 - ROUNDING_SLACK_M
             assert not _rects_overlap_independent(
                 a["x_m"], a["z_m"], ah, a["yaw_deg"], b["x_m"], b["z_m"], bh, b["yaw_deg"]
             )
@@ -454,4 +467,110 @@ def test_edge_density_feathers_not_a_cliff():
         f"the rim (shells {last_occupied - 2}..{last_occupied}, density {rim:.6f}) "
         f"should be visibly thinner than the core (density {core:.6f}), not full "
         "density right up to the edge"
+    )
+
+
+def test_the_blocks_between_lanes_are_not_empty():
+    """Fix round 2, finding 1: lane frontage alone was supplying essentially
+    the whole per-group target (measured on the real pack: 399 of a
+    capital's 400) before block fill ever got a slot -- the town rendered as
+    a starburst of strings radiating from the centre, with the wedges
+    between them bare. house_frontage_share caps what frontage may spend of
+    EACH ring's own quota, reserving the rest for block fill.
+
+    This measures the fraction of non-landmark houses that stand well away
+    from every lane (more than 5x lane_half_width_m from the nearest one) --
+    a starburst puts almost nothing out there, since only frontage-adjacent
+    positions get built; a compact, messy town puts a real share of its
+    houses deep in the blocks. Verified against the pre-fix behaviour
+    (house_frontage_share=1.0, no cap): 8.75% of houses fall in the blocks
+    -- this test's own threshold (25%) fails against it. With the fix
+    (0.45): 48.75%."""
+    foot = np.ones((VH, VW), np.float32)
+    land = np.ones((VH, VW), np.float32)
+    height = np.zeros((VH, VW), np.float32)
+    code = "toy"
+    b = burg(code=code, pop=90000, group="capital")
+    rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
+    r_foot = footprint_radius_m(90000, RULES)
+    r_house = RULES["house_radius_ratio"] * r_foot
+    rng = np.random.default_rng(bake_houses._seed(code))
+    lanes = bake_houses._grow_lanes(rng, r_house, RULES)
+    half_w = RULES["lane_half_width_m"]
+    non_landmark = rows[1:]
+    assert len(non_landmark) > 20, "need a real cluster to measure a block fraction"
+    far = 0
+    for r in non_landmark:
+        d, _ = bake_houses._nearest_lane(lanes, r["x_m"], r["z_m"])
+        if d is not None and d > 5.0 * half_w:
+            far += 1
+    frac = far / len(non_landmark)
+    print("fraction of houses away from every lane:", round(frac, 4))
+    assert frac > 0.25, (
+        f"only {frac:.1%} of houses stand away from the lanes -- the blocks "
+        "between them are reading empty (a starburst), not compact and messy"
+    )
+
+
+def test_a_village_on_a_narrow_wedge_site_still_gets_more_houses():
+    """Fix round 2, finding 2, cause 1 of 2 (diagnosed on the real pack,
+    burg "savehorough", a port village): a harbour village whose buildable
+    land is a narrow wedge -- most of its nominal r_house being open water
+    -- can be left with almost nothing built, not from lack of room, but
+    because the ordinary plot_step_m infill grid never happens to land a
+    candidate in the sliver that IS buildable (measured there: 4 of 96
+    candidates passed at the normal 10 m step, 49 of ~1500 at a third of
+    it). Reproduces that shape with a toy world (land only in a narrow
+    wedge) and confirms the fine-grid last resort (house_small_site_grid_ratio)
+    recovers more than the ordinary passes alone do."""
+    vw = vh = 64
+    centre = 32.0
+    yy, xx = np.mgrid[0:vh, 0:vw].astype(np.float32)
+    ang = np.degrees(np.arctan2(xx - centre, yy - centre)) % 360.0   # bearing from centre
+    wedge = (ang < 12.0) | (ang > 348.0)   # a narrow 24-degree wedge is "good land"
+    land = np.where(wedge, 1.0, 0.0).astype(np.float32)
+    foot = np.ones((vh, vw), np.float32)
+    height = np.zeros((vh, vw), np.float32)
+    b = burg(code="narrowsite", pop=12000, group="village", port=1,
+             x=centre / K, y=centre / K)
+    rows = place(b, RULES, TYPES, foot, land, height, K, vw, vh)
+    assert rows, "the wedge has dry land; the village should still build"
+    assert TYPES[rows[0]["type"]]["role"] == "landmark"
+    rows_without_fine_grid = place(b, dict(RULES, house_small_site_grid_ratio=0.0),
+                                    TYPES, foot, land, height, K, vw, vh)
+    print("wedge site: with fine-grid fallback", len(rows), "without", len(rows_without_fine_grid))
+    assert len(rows) > len(rows_without_fine_grid), \
+        "the fine-grid fallback should recover more houses on a narrow site than the ordinary grid alone"
+    assert len(rows) >= 4, (
+        f"only {len(rows)} row(s) (landmark plus {len(rows) - 1}) on a site with a real, "
+        "if narrow, buildable wedge -- a village should read as a handful of "
+        "buildings around its chapel, not as one"
+    )
+
+
+def test_a_settlement_with_a_weak_footprint_mask_still_gets_a_handful_of_houses():
+    """Fix round 2, finding 2, cause 2 of 2 (diagnosed on the real pack,
+    burg "chawbigdon", a city): NOT water (land everywhere), NOT slope (flat
+    everywhere), but the footprint/built-ground mask itself sat at ~0.48 at
+    the settlement's own centre and only fell further outward --
+    bake_world.py's own footprint_edge_noise frayed low across that whole
+    disc, on land that is otherwise unremarkable. No amount of denser
+    sampling helps this (the diagnosis found 100% of even a fine grid
+    failing on house_foot_min alone), so this checks the one hard-coded
+    last resort (house_small_site_foot_min_ratio) recovers a legible
+    cluster where the ordinary threshold leaves only the landmark."""
+    vw = vh = 64
+    land = np.ones((vh, vw), np.float32)
+    height = np.zeros((vh, vw), np.float32)
+    foot = np.full((vh, vw), 0.50, np.float32)   # below house_foot_min (0.55) everywhere
+    b = burg(code="weakfoot", pop=8000, group="village", port=0)
+    rows = place(b, RULES, TYPES, foot, land, height, K, vw, vh)
+    rows_without_relax = place(b, dict(RULES, house_small_site_foot_min_ratio=1.0),
+                                TYPES, foot, land, height, K, vw, vh)
+    print("weak-footprint site: with relaxed foot_min", len(rows), "without", len(rows_without_relax))
+    assert len(rows_without_relax) == 1, \
+        "sanity check: house_foot_min (0.55) against a flat 0.50 mask should leave only the landmark"
+    assert len(rows) >= 4, (
+        f"only {len(rows)} row(s) on land that is flat, dry and unremarkable everywhere -- "
+        "a settlement should not vanish to its landmark over a fraying footprint mask alone"
     )
