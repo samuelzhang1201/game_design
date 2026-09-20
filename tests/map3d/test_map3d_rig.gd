@@ -87,3 +87,40 @@ func test_the_input_says_which_events_the_view_takes() -> void:
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()
+
+
+## Zooming out stops where the SCALE BAR would read past its cap (owner
+## 2026-09-20: "设置zoom out标尺最多150km"; the 1-2-5 ladder makes that 100 km).
+func _bar_reading(v: Map3DView) -> float:
+	var bar := Map3DHud.scale_bar_for(v.metres_per_pixel() * v.map_units_per_metre(),
+		Game.data.bal("map_scale_bar_max_px"), v.map_unit())
+	return float(bar.get("distance", 0.0))
+
+func test_zooming_out_stops_before_the_scale_bar_passes_its_cap() -> void:
+	var cap := Game.data.bal("map3d_zoom_max_scale")
+	for view_h: float in [450.0, 600.0]:
+		var v := _view()
+		v.size = Vector2(800, view_h)
+		v._fit_viewport()
+		# Ask for far more than the ceiling: the rig takes what it may.
+		v.look_at_home(Game.data.bal("map3d_zoom_max_m") * 10.0)
+		var rig := v.viewport().get_node("CameraRig") as Map3DCameraRig
+		assert_almost_eq(v.distance(), rig.max_distance(), 1.0,
+			"the far stop is the rig's own ceiling at %d px" % int(view_h))
+		assert_lte(v.distance(), Game.data.bal("map3d_zoom_max_m"),
+			"never past the balance ceiling")
+		assert_lte(_bar_reading(v), cap, "the bar reads at or under its cap at %d px" % int(view_h))
+		assert_gt(_bar_reading(v), 0.0, "the bar still reads something")
+
+func test_a_taller_view_may_zoom_out_farther() -> void:
+	# More pixels under the same bar means a smaller reading, so the ceiling
+	# rises with the view's height.
+	var short_v := _view()
+	short_v.size = Vector2(800, 400)
+	short_v._fit_viewport()
+	var tall_v := _view()
+	tall_v.size = Vector2(800, 800)
+	tall_v._fit_viewport()
+	var short_rig := short_v.viewport().get_node("CameraRig") as Map3DCameraRig
+	var tall_rig := tall_v.viewport().get_node("CameraRig") as Map3DCameraRig
+	assert_gt(tall_rig.max_distance(), short_rig.max_distance())

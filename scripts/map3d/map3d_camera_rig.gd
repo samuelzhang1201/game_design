@@ -90,10 +90,26 @@ func camera() -> Camera3D:
 	return _camera
 
 
-## Put the rig at a world XZ (clamped to the world), a distance and a yaw.
+## The farthest the rig may sit: balance.csv's ceiling, and never so far that
+## the SCALE BAR would read above map3d_zoom_max_scale of the pack's own
+## measure (owner 2026-09-20: "设置zoom out标尺最多150km" — 150 km lands on the
+## ladder's 100 km rung). Before the view has a size there is no bar to read,
+## so only the ceiling applies.
+func max_distance() -> float:
+	var r := ctx.repo
+	var ceiling := r.bal("map3d_zoom_max_m")
+	if ctx.view_size.y <= 1.0:
+		return ceiling
+	return minf(ceiling, Map3DGeometry.distance_for_scale(r.bal("map3d_zoom_max_scale"),
+		Map3DGeometry.map_units_per_metre(r.map_info, ctx.meta),
+		r.bal("map_scale_bar_max_px"), r.bal("map3d_fov_deg"), ctx.view_size.y))
+
+
+## Put the rig at a world XZ (clamped to the world), a distance (clamped to
+## the zoom range, max_distance included) and a yaw.
 func place(target_xz: Vector2, distance_m: float, yaw_deg: float) -> void:
 	ctx.target = Map3DGeometry.clamp_target(target_xz, ctx.bounds)
-	ctx.distance = distance_m
+	ctx.distance = clampf(distance_m, ctx.repo.bal("map3d_zoom_min_m"), max_distance())
 	ctx.yaw = yaw_deg
 	apply()
 
@@ -118,7 +134,7 @@ func pan_by(screen_delta: Vector2) -> void:
 func zoom_at(pos: Vector2, new_distance: float) -> void:
 	var anchor: Variant = ctx.ground_at(pos)
 	var d := Map3DGeometry.zoomed_by(new_distance, 1.0, ctx.repo.bal("map3d_zoom_min_m"),
-		ctx.repo.bal("map3d_zoom_max_m"))
+		max_distance())
 	if anchor != null:
 		var a := anchor as Vector3
 		ctx.target = Map3DGeometry.clamp_target(

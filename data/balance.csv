@@ -310,6 +310,7 @@ map_town_earth_strength,0.75,"SETTLEMENT EARTH HALO: how far the worked ground g
 map3d_fov_deg,45.0,"3D MAP (owner 2026-09-18): the rig camera's vertical field of view"
 map3d_default,1,"3D MAP (owner 2026-09-18, spec 2026-09-18-map3d-default-design): 1 = the map panel shows the 3D map whenever the pack has a built scene and no 2D-only layer (HEIGHTS/ECONOMY/MANORS/MILITARY) is on; 0 = always the 2D map (the test suite's pre-run hook and snapshot_screen --map2d set 0)"
 map3d_zoom_min_m,800.0,"3D MAP: the closest the rig camera comes to its target, in metres (owner 2026-09-18: 800 m — a village and its fields; was 2500)"
+map3d_zoom_max_scale,150,"3D MAP (owner 2026-09-20: '设置zoom out标尺最多150km'): the most the SCALE BAR may read at the farthest zoom, in the pack's own distance_unit. The bar lands on the 1-2-5 ladder (MapGeometry.nice_step), so 150 prints as 100 and the zoom stops just under the 200 rung; Map3DCameraRig.max_distance takes this OR map3d_zoom_max_m, whichever is nearer"
 map3d_zoom_max_m,150000.0,"3D MAP (owner 2026-09-19: '设置游戏最大zoom out尺寸为150km'; was 80000 — the whole island just filling the view, and 110000 before that): the farthest zoom, in metres from the camera to its target"
 map3d_zoom_start_m,24000.0,"3D MAP: the distance the view opens at, framed on the player's capital"
 map3d_zoom_factor,1.15,"3D MAP: each wheel notch multiplies or divides the distance by this"

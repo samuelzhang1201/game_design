@@ -76,6 +76,32 @@ static func metres_per_pixel(distance: float, fov_deg: float, view_height_px: fl
 	return 2.0 * distance * tan(deg_to_rad(fov_deg) * 0.5) / maxf(view_height_px, 1.0)
 
 
+## The farthest the camera may sit while its SCALE BAR still reads at or
+## under `max_units` of the pack's own measure (owner 2026-09-20: "设置zoom
+## out标尺最多150km"). The bar lands on MapGeometry.nice_step's 1-2-5 ladder,
+## so a cap of 150 km prints as 100 km: the distance returned is the one just
+## under the next rung (200). INF when there is nothing to measure, so a
+## caller can min() it with its own ceiling.
+static func distance_for_scale(max_units: float, units_per_metre: float, bar_max_px: float,
+		fov_deg: float, view_height_px: float) -> float:
+	if max_units <= 0.0 or units_per_metre <= 0.0 or bar_max_px <= 0.0:
+		return INF
+	var units_per_px := rung_above(max_units) * 0.999 / bar_max_px
+	return units_per_px / units_per_metre * maxf(view_height_px, 1.0) \
+		/ (2.0 * tan(deg_to_rad(fov_deg) * 0.5))
+
+
+## The smallest 1-2-5 rung strictly above `v` (150 -> 200, 200 -> 500).
+static func rung_above(v: float) -> float:
+	if v <= 0.0:
+		return 0.0
+	var base: float = pow(10.0, floor(log(v) / log(10.0)))
+	for step: float in [1.0, 2.0, 5.0, 10.0]:
+		if base * step > v:
+			return base * step
+	return base * 10.0
+
+
 ## A kingdom name's size in screen px: a word `height_m` tall on the ground
 ## seen at `m_per_px`, no larger than `max_px`, and 0 (hidden) below `min_px`
 ## — the 2D map's map_label_* rule.

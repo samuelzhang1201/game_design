@@ -158,3 +158,24 @@ func test_ease_yaw_runs_the_short_way_home() -> void:
 	assert_almost_eq(Map3DGeometry.ease_yaw(90.0, 0.5), 45.0, 0.001, "smoothstep's midpoint")
 	# 350 degrees is 10 west of north: it comes home through 355, not 180.
 	assert_almost_eq(Map3DGeometry.ease_yaw(350.0, 0.5), -5.0, 0.001)
+
+
+## The zoom-out limit reads off the SCALE BAR (owner 2026-09-20: "设置zoom out
+## 标尺最多150km"): the bar lands on the 1-2-5 ladder, so a cap of 150 prints
+## as 100 and the distance is the one just under the next rung.
+func test_distance_for_scale_keeps_the_bar_under_its_cap() -> void:
+	# beria's measure: 1 km per pack px at 50 m per px, a 220 px bar, a 600 px view.
+	var units_per_m := 1.0 / 50.0
+	var d := Map3DGeometry.distance_for_scale(150.0, units_per_m, 220.0, 45.0, 600.0)
+	var reading := func(dist: float) -> float:
+		return MapGeometry.nice_step(220.0 * Map3DGeometry.metres_per_pixel(dist, 45.0, 600.0) * units_per_m)
+	assert_eq(reading.call(d), 100.0, "the bar reads the rung under the cap")
+	assert_gt(reading.call(d * 1.02), 150.0, "a little farther and it jumps over the cap")
+	# A cap ON a rung keeps that rung: 200 prints 200, 201 does not become 500.
+	assert_eq(reading.call(Map3DGeometry.distance_for_scale(200.0, units_per_m, 220.0, 45.0, 600.0)), 200.0)
+	assert_eq(reading.call(Map3DGeometry.distance_for_scale(201.0, units_per_m, 220.0, 45.0, 600.0)), 200.0)
+
+func test_distance_for_scale_is_unbounded_when_there_is_nothing_to_measure() -> void:
+	assert_eq(Map3DGeometry.distance_for_scale(0.0, 0.02, 220.0, 45.0, 600.0), INF)
+	assert_eq(Map3DGeometry.distance_for_scale(150.0, 0.0, 220.0, 45.0, 600.0), INF, "no measure")
+	assert_eq(Map3DGeometry.distance_for_scale(150.0, 0.02, 0.0, 45.0, 600.0), INF, "no bar")

@@ -176,6 +176,8 @@ func _fit_viewport() -> void:
 	_viewport.size = Vector2i(maxi(1, int(size.x * s)), maxi(1, int(size.y * s)))
 	if _ctx != null:
 		_ctx.view_size = size
+	if _loaded:  # a shorter view reads a longer scale bar: take the new ceiling
+		_rig.place(_ctx.target, _ctx.distance, _ctx.yaw)
 	_update_line_scale()
 
 func activate() -> void:
