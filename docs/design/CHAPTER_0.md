@@ -204,7 +204,11 @@ lord_gold 861    unrest 0           legitimacy 50   contentment 50
 
 ### 顺手修掉的 bug
 
-会见窗的事件标题一直显示 `[missing template: event_ev_01]`：`events.csv` 的 `title_key` 指向 `event_<id>`，而 `test_event_content.gd` **明令禁止** templates.csv 里出现这个 key（防止散文和标题漂移）。现在标题从散文文档的标题行来（`StorySource.parse_titles` → `DataRepository.event_titles`），池里的 20 个事件因此也有了正确的标题。
+**标题一直是 `[missing template: event_ev_01]`。** `events.csv` 的 `title_key` 指向 `event_<id>`，而 `test_event_content.gd` **明令禁止** templates.csv 里出现这个 key（防止散文和标题漂移）——于是每个事件的横幅都显示占位符。现在标题从散文文档自己的标题行来（`StorySource.parse_titles` → `DataRepository.event_titles`），随机池里那 20 个事件因此也一起有了正确的标题。
+
+**事件正文从中间开始读。** 会见窗每一拍都滚到最新一行，这对对话是对的，对事件是错的：一段事件散文是一个整块，玩家被直接丢到中间。散文是经 voicer **延迟**送达的，所以这个判断必须放在 `_say` 里（文字落地之后），而不是 `_render_beat` 的末尾（那时还没落地）。
+
+**插图就是事件的脸。** 装了图之后，会见窗顶端是横幅插图，左边那张圆桌立绘就退场了——在剧情拍里它是同一个房间的第二张图，而它下面的档案属于一个叫"议会"的说话人。散文因此拿到整幅宽度，讲话框有了下限（一开场看得见六行而不是两行）。没装图的事件维持原样（立绘、没有横幅），所以没有美术的检出仍是一个完整的界面。`tests/ui/test_ui_rework.gd` 钉住最宽的情况：C0-02 的四个选项加一条 1280×533 的横幅，窗口和最后一个选项都必须在视口里。
 
 ---
 
