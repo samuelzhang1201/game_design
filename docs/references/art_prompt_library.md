@@ -121,7 +121,7 @@ drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 | `[C-TILE]` | 可平铺贴图 | `seamless tileable texture, flat top-down orthographic view, even illumination, no directional shadow, no focal point, uniform density across the whole square, 1:1` |
 | `[C-MAP]` | 地图底图 | `top-down orthographic cartographic view, north up, no perspective, even lighting, antique map plate` |
 | `[C-SCENE]` | 事件插图 | `narrative illustration, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 3:2 horizontal` |
-| `[C-EVENT]` | 事件横幅插图（`V-35`+，2026-09-21） | `narrative illustration in a wide cinematic band, the subject centred and held clear of the top and bottom edges, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 12:5 horizontal` |
+| `[C-EVENT]` | 事件横幅插图（`V-35`+，2026-09-21） | `narrative illustration in a wide cinematic band, the scene filling the frame edge to edge with its own setting fully drawn behind the figures and no blank paper anywhere, the subject centred and held clear of the top and bottom edges, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 12:5 horizontal` |
 | `[C-SYMBOL]` | 战术符号 | `flat cartographic symbol, drawn as if inked onto a military campaign map, isolated on transparent background, no scene, no perspective, 1:1 square` |
 | `[C-UIPIECE]` | UI 部件（`U-`，2026-09-12） | `a single user interface piece drawn flat and face-on with no perspective, filling the frame edge to edge with only a thin even margin all round, straight true horizontal and vertical edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 1:1 square` |
 | `[C-UIWIDE]` | UI 长条部件（`U-03`/`U-08`/`U-13`/`U-17`，用 `--canvas C-UIWIDE`） | `a single wide user interface strip drawn flat and face-on with no perspective, running the full width of the frame with only a thin even margin at each end, straight true horizontal edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 3:1 horizontal` |
@@ -2142,8 +2142,8 @@ grey morning light [C-EVENT]
 ```
 [S] a private royal study in winter light from one tall window, a wiry sharp-featured
 spymaster of thirty-seven with lank black hair in a plain brown hooded cloak standing
-with his head bowed low, offering a thick hand-copied ledger bound in cracked leather
-with both hands, a bearded European king of forty with greying temples, a close-trimmed dark
+with his head bowed low, offering a thick ledger bound in cracked leather, held closed in both
+hands so no page shows, a bearded European king of forty with greying temples, a close-trimmed dark
 beard, a plain gold circlet and a deep blue mantle standing before him with one hand already reaching for it, the room otherwise
 empty, honest and penitent [C-EVENT]
 ```
@@ -2163,7 +2163,7 @@ untrustworthy [C-EVENT]
 [S] a modest whitewashed side chamber lit by one candle, a lean sun-blackened man of
 thirty-three with wild dark hair to the shoulders, an untrimmed beard and a coarse
 undyed woollen robe belted with rope standing barefoot at a plain table and setting down
-a worn hand-copied ledger, a thickset grey-haired soldier of fifty-two in a leather
+a worn ledger, closed, its cover up and no page showing, a thickset grey-haired soldier of fifty-two in a leather
 brigandine watching from the doorway with one hand on his belt, a bearded European king of
 forty with a close-trimmed dark beard and a plain gold circlet seated in the foreground, quiet recognition [C-EVENT]
 ```
@@ -2175,7 +2175,7 @@ lunging forward with a short knife, a lean sun-blackened barefoot preacher of th
 in a coarse undyed robe throwing himself across the path of the blade with both hands
 closed around the attacker's wrist, a bearded European king of forty with a close-trimmed dark beard and a plain gold
 circlet pulled back off balance, a candle and a chair going over, guards bursting in at the far
-door, a thick ledger falling out of the preacher's robe onto the flagstones, dynamic
+door, a thick ledger fallen shut on the flagstones out of the preacher's robe, dynamic
 diagonal composition, no blood, no wounds [C-EVENT]
 ```
 
@@ -2205,7 +2205,7 @@ the centre of the composition [C-EVENT]
 ```
 [S] a river valley in the last weeks before harvest, standing green corn stretching away
 under a hot pale sky, a group of thin villagers in worn wool waiting at the edge of the
-field with empty sacks and a handcart, a woman holding a folded letter, a lean
+field with empty sacks and a handcart, a woman holding a letter folded shut with nothing written showing, a lean
 sun-blackened man in a coarse undyed robe standing barefoot among them, burned mill ruins
 small in the far distance, heat haze, a mood of patience worn very thin [C-EVENT]
 ```
@@ -2269,7 +2269,8 @@ beyond with few chimneys smoking, cold air, a landscape with too few people in i
 ```
 [S] a tight composition across a small table in a dim study at night, one candle between
 them, a bearded European king of forty with greying temples and a close-trimmed dark beard,
-a plain gold circlet, resting one hand flat on a closed leather ledger, opposite him the hand and forearm of a nobleman in a black and
+a plain gold circlet, resting one hand flat on a closed leather ledger with no writing anywhere in the
+picture, opposite him the hand and forearm of a nobleman in a black and
 gold sleeve with a jewelled ring lying still beside it, fingers slightly tense, both men
 cut off at the shoulders by the frame so only hands, candle and table are seen, deep
 shadow all around [C-EVENT]
@@ -2291,7 +2292,8 @@ a young man in black and gold watching the king with a still cold face, hard cle
 [S] an almost empty audience hall in late winter afternoon light, a lean sun-blackened
 man of thirty-three in a coarse undyed robe standing upright without bowing and looking
 directly at a bearded European king of forty with a close-trimmed dark beard and a plain gold
-circlet seated on a modest throne, a woman from the valley beside him holding a guild book, dead leaves blown across the
+circlet seated on a modest throne, a woman from the valley beside him holding a guild book closed under her arm, nothing
+written visible, dead leaves blown across the
 flagstones through the open door, the two figures small in a very large room [C-EVENT]
 ```
 
