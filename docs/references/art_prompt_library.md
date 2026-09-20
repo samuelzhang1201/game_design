@@ -121,7 +121,7 @@ drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 | `[C-TILE]` | 可平铺贴图 | `seamless tileable texture, flat top-down orthographic view, even illumination, no directional shadow, no focal point, uniform density across the whole square, 1:1` |
 | `[C-MAP]` | 地图底图 | `top-down orthographic cartographic view, north up, no perspective, even lighting, antique map plate` |
 | `[C-SCENE]` | 事件插图 | `narrative illustration, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 3:2 horizontal` |
-| `[C-EVENT]` | 事件横幅插图（`V-35`+，2026-09-21） | `narrative illustration in a wide cinematic band, the scene filling the frame edge to edge with its own setting fully drawn behind the figures and no blank paper anywhere, the subject centred and held clear of the top and bottom edges, every garment and weapon strictly thirteenth century — long belted tunics and hose, hooded cloaks and surcoats, mail hauberks and open-faced helmets, kite shields and spears — and absolutely no military uniforms, no frock coats, no epaulettes, no peaked caps, no crinolines, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 12:5 horizontal` |
+| `[C-EVENT]` | 事件横幅插图（`V-35`+，2026-09-21） | `narrative illustration in a wide cinematic band, the scene filling the frame edge to edge with its own setting fully drawn behind the figures and no blank paper anywhere, at most three figures drawn in clear focus and anyone else small and soft behind them, no two faces alike, everyone dressed for their own station, strictly thirteenth century and absolutely no military uniforms, no frock coats, no epaulettes, no peaked caps, no crinolines, no armour on anyone the scene has not called a soldier, hands kept few and simple — resting flat with the fingers together, folded, closed on one named object, or out of frame entirely, never spread open toward the viewer and never gesturing in the foreground, the subject centred and held clear of the top and bottom edges, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 12:5 horizontal` |
 | `[C-SYMBOL]` | 战术符号 | `flat cartographic symbol, drawn as if inked onto a military campaign map, isolated on transparent background, no scene, no perspective, 1:1 square` |
 | `[C-UIPIECE]` | UI 部件（`U-`，2026-09-12） | `a single user interface piece drawn flat and face-on with no perspective, filling the frame edge to edge with only a thin even margin all round, straight true horizontal and vertical edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 1:1 square` |
 | `[C-UIWIDE]` | UI 长条部件（`U-03`/`U-08`/`U-13`/`U-17`，用 `--canvas C-UIWIDE`） | `a single wide user interface strip drawn flat and face-on with no perspective, running the full width of the frame with only a thin even margin at each end, straight true horizontal edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 3:1 horizontal` |
@@ -2105,27 +2105,29 @@ above, cold slate blue with the comet in pale ochre [C-SCENE]
 
 #### `V-35` 石厅的第一次御前会议 · The First Council
 ```
-[S] a long oak council table in a stone hall by daylight, a bearded European king of forty
-with short dark hair greying at the temples and a close-trimmed dark beard, under a plain
-gold circlet, in a deep blue mantle, seated at the head, a gaunt stooped lord of seventy-one in a heavy dark brown
-furred gown rising with one hand flat on the table to carry his weight and speaking,
-five ministers seated along the sides watching the king rather than the speaker, a
-narrow-faced chancellor in a fur-collared green gown, a square-faced stewardess in a
-slate-grey gown with a girdle of keys, banners of a red field with a gold armillary
-sphere hanging still in the background, quiet formal tension [C-EVENT]
+[S] the head of a long oak table in a stone hall by daylight, seen at a slight angle: a
+gaunt stooped lord of seventy-one in a heavy dark brown furred gown standing at the
+table's near end with his back three-quarters to the viewer, one hand flat on the oak to
+carry his weight, speaking; a bearded European king of forty with short dark hair greying
+at the temples, a close-trimmed dark beard, a plain gold circlet and a deep blue mantle
+seated at the far head listening with both hands out of sight below the table edge; one
+narrow-faced chancellor of fifty-eight in a fur-collared green gown seated between them in
+profile; the rest of the council small and soft along the table behind, banners of a red
+field with a gold armillary sphere hanging still in the background, quiet formal tension
+[C-EVENT]
 ```
 
 #### `V-36` 麦捆兄弟会 · The Brotherhood of the Sheaf
 ```
-[S] a stone council hall lit from one tall window, a wiry sharp-featured spymaster of
-thirty-seven with lank black hair in a plain brown hooded cloak leaning over the oak
-table and laying down a letter folded face down with a broken red wax seal on it, the
-seal stamped with a bound sheaf of wheat, nothing written anywhere in the picture, at the
-far end of the table one handsome sharp-boned nobleman of forty-four in a black and gold
-parti-coloured cotehardie turning a ring on his finger with a faint unconcerned smile,
-four other councillors in plain dark robes half risen from their seats between them,
-banners and stonework behind, the two men framed at opposite ends of the long table
-[C-EVENT]
+[S] a stone council hall lit from one tall window: a wiry sharp-featured spymaster of
+thirty-seven with lank black hair in a plain brown hooded cloak leaning over the near end
+of the oak table, one hand flat on a letter folded face down with a broken red wax seal on
+it, the seal stamped with a bound sheaf of wheat, nothing written anywhere in the picture;
+at the far end one handsome sharp-boned nobleman of forty-four in a long black gown with a broad
+gold-embroidered band down the front and at the cuffs, a jewelled belt slung low and no
+shoulder ornament of any kind seated back in his chair turning a ring on his finger with a
+faint unconcerned smile; two other councillors small and soft between them; the long empty
+table running away between the two men [C-EVENT]
 ```
 
 #### `V-37` 卢顿河上的灰烬 · Ashes on the Louthton
@@ -2140,13 +2142,14 @@ grey morning light [C-EVENT]
 
 #### `V-38` 密探带回来的东西 · What the Spy Brought Back
 ```
-[S] a private royal study in winter light from one tall window, a wiry sharp-featured
+[S] a stone study in winter light from one tall window, seen from behind the king's
+shoulder so that the back of his head, his plain gold circlet and his deep blue mantle
+fill the near left of the frame and his hands are out of shot: a wiry sharp-featured
 spymaster of thirty-seven with lank black hair in a plain brown hooded cloak standing
-with his head bowed low, offering a thick ledger bound in cracked leather, held closed in both
-hands so no page shows, a bearded European king of forty with greying temples, a close-trimmed dark
-beard, a plain gold circlet and a deep blue mantle standing before him with one hand already reaching for it, behind them a writing desk
-with an inkhorn, an iron-bound chest, a hanging on the stone wall and a cold hearth,
-honest and penitent [C-EVENT]
+before him with his head bowed low, holding out a thick ledger bound in cracked leather,
+closed, in both hands so no page shows; behind them a writing desk with an inkhorn, an
+iron-bound chest, a hanging on the stone wall and a cold hearth, honest and penitent
+[C-EVENT]
 ```
 
 #### `V-39` 奎尔的提议 · Quill's Offer
@@ -2162,12 +2165,13 @@ untrustworthy [C-EVENT]
 #### `V-40` 门口的赤足者 · The Preacher at the Door
 ```
 [S] a small stone side chamber lit by one candle, rough masonry walls, a plank floor, a
-shuttered window and a woven hanging, a lean sun-blackened man of
-thirty-three with wild dark hair to the shoulders, an untrimmed beard and a coarse
-undyed woollen robe belted with rope standing barefoot at a plain table and setting down
-a worn ledger, closed, its cover up and no page showing, a thickset grey-haired soldier of fifty-two in a leather
-brigandine watching from the doorway with one hand on his belt, a bearded European king of
-forty with a close-trimmed dark beard and a plain gold circlet seated in the foreground, quiet recognition [C-EVENT]
+shuttered window and a woven hanging: a lean sun-blackened man of thirty-three with wild
+dark hair to the shoulders, an untrimmed beard and a coarse undyed woollen robe belted
+with rope, standing barefoot at a plain table and setting down a worn ledger with one
+hand, the book closed and its cover up so no page shows; a thickset grey-haired soldier of
+fifty-two in a leather brigandine watching from the doorway; in the near foreground, seen
+from behind, the shoulder and deep blue mantle of the seated king, his face and hands out
+of shot, quiet recognition [C-EVENT]
 ```
 
 #### `V-41` 偏厅里的刀 · The Knife in the Side Chamber
@@ -2176,8 +2180,8 @@ forty with a close-trimmed dark beard and a plain gold circlet seated in the for
 of thirty-three with wild dark hair in a coarse undyed robe caught mid-lunge with both hands
 closed around the wrist of a man in road-dirt peasant clothes, the short knife still held
 high above them, a chair gone over and a candle guttering on the flagstones, a thick ledger
-fallen shut beside it, men-at-arms in mail and open-faced helmets bursting in through the
-far door, seen from the king's own place at the very edge of the frame so that only his
+fallen shut beside it, men-at-arms in mail hauberks and open-faced helmets, with kite shields, bursting in
+through the far door, seen from the king's own place at the very edge of the frame so that only his
 outstretched hand and the blue sleeve of his mantle are in shot, dynamic diagonal
 composition, no blood, no wounds [C-EVENT]
 ```
@@ -2194,14 +2198,15 @@ gold hair net beside the seal, the rest of the room lost in deep umber shadow [C
 
 #### `V-43` 公爵的提议 · The Duke's Offer
 ```
-[S] a stone council hall in cold grey daylight, a handsome sharp-boned nobleman of
-forty-four with dark hair swept back and a black and gold parti-coloured cotehardie
-standing at the centre of the table with one open palm extended in a reasonable gesture,
-addressing the room, a narrow-faced chancellor in a fur-collared green gown seated beside
-him nodding, a gaunt stooped lord of seventy-one writing with great effort at the table's
-end, a bearded European king of forty with a close-trimmed dark beard and a plain gold
-circlet seated and still, the duke holding
-the centre of the composition [C-EVENT]
+[S] a vaulted stone council hall in cold grey daylight: a handsome sharp-boned nobleman of
+forty-four with dark hair swept back, in a long black gown with a broad gold-embroidered band down the front and at the cuffs,
+a jewelled belt slung low and no shoulder ornament of any kind,
+standing at the middle of the table addressing the room with one hand closed on the high back of a chair and the other hidden
+in his sleeve; in the near foreground, seen from behind over
+his shoulder, the back of a bearded king's head with a plain gold circlet and a deep blue
+mantle; a gaunt stooped lord of seventy-one writing with great effort at the table's far
+end; the rest of the council small and soft behind, the duke holding the centre of the
+composition [C-EVENT]
 ```
 
 #### `V-44` 青黄不接 · The Hungry Gap
@@ -2274,25 +2279,25 @@ beyond with few chimneys smoking, cold air, no maize anywhere, a landscape with 
 
 #### `V-51` 最后的清算 · The Last Reckoning
 ```
-[S] a tight composition across a small table in a dim study at night, one candle between
-them, a bearded European king of forty with greying temples and a close-trimmed dark beard,
-a plain gold circlet, resting one hand flat on a closed leather ledger with no writing anywhere in the
-picture, opposite him the hand and forearm of a nobleman in a black and
-gold sleeve with a jewelled ring lying still beside it, fingers slightly tense, both men
-cut off at the shoulders by the frame so only hands, candle and table are seen, deep
-shadow all around [C-EVENT]
+[S] a hands-and-candle shot across a small table in a dim study at night, the top edge of
+the frame at chest height so that no face is anywhere in the picture: one bare hand
+resting flat with the fingers together on a closed leather ledger, and opposite it across
+the boards the hand and black-and-gold sleeve of another man with a jewelled ring, lying
+still with the fingers slightly tense; a single candle in a brass stick between them; deep
+umber shadow all around, no writing anywhere [C-EVENT]
 ```
 
 #### `V-52` 明君之始 · A Just Beginning
 ```
-[S] a vaulted stone council hall in bright morning light, a leather ledger being passed hand
-to hand down a long oak table while the ministers — in long fur-collared gowns and soft caps —
-stare at it, its pages seen at a raking angle so the
-ruled columns read as unreadable marks with no letters and no numerals, a handsome sharp-boned nobleman of
-forty-four in black and gold sitting rigid and pale with his chain of office lying on the
-oak in front of him, guards standing at the door, in the background half behind a pillar
-a young man in black and gold watching the king with a still cold face, hard clear light
-[C-EVENT]
+[S] a vaulted stone council hall in bright morning light: a leather ledger lying open in
+the middle of the long oak table with nobody's hands on it, its pages seen at a raking
+angle so the ruled columns read as unreadable marks with no letters and no numerals; a
+handsome sharp-boned nobleman of forty-four sitting rigid and pale behind it with his
+chain of office lying on the oak in front of him and both hands below the table edge; the
+ministers drawn back from the book in their long fur-collared gowns and soft caps, small
+and soft along the table; guards in mail hauberks standing at the door; in the background
+half behind a pillar a young man in the same black gown watching with a still cold face, hard
+clear light [C-EVENT]
 ```
 
 #### `V-53` 妥协之王 · The Compromising King
