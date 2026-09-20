@@ -250,10 +250,10 @@ func projected_settlements() -> Array:
 ## Sizes on Map3DLayerSettlements.drawn_px, NEVER pick_reach_px's ground
 ## footprint (fix round 1, owner 2026-09-20: conflating the two — once one
 ## `marker_px` — crowded landmarks out of ground where the dot is hidden).
-## A hidden dot — nearer than map3d_dot_min_view_m, or `shown` false — gets no rect.
+## A hidden dot — nearer than the dot's own threshold, or `shown` false — no rect.
 func settlement_rects() -> Array:
 	var out: Array = []
-	var min_view_m := repo.bal("map3d_dot_min_view_m")
+	var min_view_m := Map3DLayerSettlements.dot_min_view_m(repo, meta, view_size.y)
 	for e: Dictionary in projected_settlements():
 		if not bool(e["shown"]):
 			continue
@@ -283,8 +283,8 @@ func people_of_burg(code: String) -> float:
 
 ## A settlement's click reach in DESIGN px: its cluster's projected GROUND
 ## radius, never below map3d_pick_px, independent of whether its dot is
-## drawn (a settlement between the house cutoff and map3d_dot_min_view_m
-## must still be clickable). NOT what settlement_rects() sizes on — that
+## drawn (a settlement between the house cutoff and the dot's own near
+## threshold must still be clickable). NOT what settlement_rects() sizes on — that
 ## uses Map3DLayerSettlements.drawn_px, the marker's ON-SCREEN size (fix
 ## round 1, owner 2026-09-20: the two were one `marker_px`; conflating "how
 ## far can a click land" with "what must a landmark avoid" crowded

@@ -177,15 +177,17 @@ func test_pick_reach_never_falls_below_the_pick_floor() -> void:
 ## pick_reach_px on the ground footprint — fix round 1, owner 2026-09-20:
 ## both used to be fed by one function, `marker_px`, and conflating them
 ## crowded landmark marks out of a huge area where nothing was even drawn.
-## Below map3d_dot_min_view_m the dot is hidden, so the capital contributes
-## NO keep-clear rect there, even though pick_reach_px — independent of the
-## dot — is still a real, large number at that same distance. Above the
-## cutoff, once the dot is drawn again, it keeps its own screen space clear.
+## Below the dot's near threshold (Map3DLayerSettlements.dot_min_view_m, a
+## SHARE of the reachable range since 2026-09-21) the dot is hidden, so the
+## capital contributes NO keep-clear rect there, even though pick_reach_px —
+## independent of the dot — is still a real, large number at that same
+## distance. Above the cutoff, once the dot is drawn again, it keeps its own
+## screen space clear.
 func test_settlement_rects_sizes_on_the_drawn_dot_not_the_footprint() -> void:
 	var v := _view()
 	var c := v.context()
 	var capital := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
-	var min_m: float = Game.data.bal("map3d_dot_min_view_m")
+	var min_m := Map3DLayerSettlements.dot_min_view_m(Game.data, c.meta, c.view_size.y)
 	var burg: Dictionary = Game.data.burgs[capital]
 	var pack_pos := Vector2(float(burg["x"]), float(burg["y"]))
 	v.look_at_pack(pack_pos, min_m * 0.5)
@@ -195,7 +197,7 @@ func test_settlement_rects_sizes_on_the_drawn_dot_not_the_footprint() -> void:
 	var p := v.size * 0.5  # look_at_pack centres the target on screen
 	for r: Rect2 in c.settlement_rects():
 		assert_false(r.has_point(p),
-			"the dot is hidden below map3d_dot_min_view_m: nothing here to keep clear of")
+			"the dot is hidden below its near threshold: nothing here to keep clear of")
 	v.look_at_pack(pack_pos, min_m * 1.5)
 	var found := false
 	for r: Rect2 in c.settlement_rects():

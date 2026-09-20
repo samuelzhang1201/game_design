@@ -189,8 +189,9 @@ func test_a_far_village_carries_its_max_view_m_from_the_table() -> void:
 
 ## Mirrors settlement_ring.gdshader's vertex() near_fade formula exactly
 ## (owner 2026-09-20): a shader edit that changes the idiom must update this
-## too. Proves the dot is hidden below map3d_dot_min_view_m and shown above
-## it, without a GPU readback.
+## too. Proves the dot is hidden below Map3DLayerSettlements.dot_min_view_m
+## (a SHARE of the reachable range since 2026-09-21, not an absolute value)
+## and shown above it, without a GPU readback.
 func _near_fade(dist_m: float, min_view_m: float, fade_start: float) -> float:
 	if min_view_m <= 0.0:
 		return 1.0
@@ -198,7 +199,7 @@ func _near_fade(dist_m: float, min_view_m: float, fade_start: float) -> float:
 
 
 func test_the_dot_hides_below_the_near_cutoff_and_shows_above_it() -> void:
-	var min_m: float = Game.data.bal("map3d_dot_min_view_m")
+	var min_m := Map3DLayerSettlements.dot_min_view_m(Game.data, WORLD, 450.0)
 	var fade_start: float = Game.data.bal("map3d_ring_fade_start")
 	assert_eq(_near_fade(0.0, min_m, fade_start), 0.0, "hidden at the camera")
 	assert_eq(_near_fade(min_m * 0.5, min_m, fade_start), 0.0, "hidden well below the cutoff")
@@ -207,24 +208,54 @@ func test_the_dot_hides_below_the_near_cutoff_and_shows_above_it() -> void:
 	assert_almost_eq(_near_fade(1000000.0, min_m, fade_start), 1.0, 0.001, "fully shown far out")
 
 
-## Regression (final review, owner 2026-09-20): the near cutoff
-## (map3d_dot_min_view_m) was added to data/map3d_settlements.csv without
-## reconciling it against the per-tier max_view_m FAR cutoffs already there.
-## settlement_ring.gdshader's vertex() multiplies far_fade by near_fade, so a
-## tier is drawn at ALL only where its far window (0..max_view_m) and the
-## near window (min_view_m..) overlap; a village's old max_view_m (25000)
-## sat entirely inside the near-hidden band and was never drawn at any
-## camera distance. The far side starts fading at fade_start * max_view_m
-## (settlement_ring.gdshader), so that must clear the near cutoff.
+## Regression (final review, owner 2026-09-20; rewritten owner 2026-09-21
+## when map3d_dot_min_view_m turned out to be an ABSOLUTE metres value that
+## sat past a ceiling the camera could never reach — see
+## task-dot-threshold-report.md). settlement_ring.gdshader's vertex()
+## multiplies far_fade by near_fade, so a tier is drawn at all only where
+## its far window (0..max_view_m) and the near window (min_view_m..) meet
+## WITHIN what the rig can actually zoom to: the far side starts fading at
+## fade_start * max_view_m, but the camera itself can never sit past the
+## reachable ceiling (Map3DCameraRig.max_distance / Map3DGeometry.
+## zoom_ceiling_m), so the draw window is minf(max_view_m * fade_start,
+## ceiling) and that must clear the near threshold, not just the raw far
+## cutoff (the old assertion's blind spot: it never checked the near
+## threshold against the ceiling at all, which is exactly how a 40 km
+## threshold shipped against a 33 km ceiling unnoticed).
 func test_every_tier_has_a_nonempty_draw_window() -> void:
-	var min_m: float = Game.data.bal("map3d_dot_min_view_m")
+	var ceiling := Map3DGeometry.zoom_ceiling_m(Game.data.bal("map3d_zoom_max_m"),
+		Game.data.bal("map3d_zoom_max_scale"), Map3DGeometry.map_units_per_metre(Game.data.map_info, WORLD),
+		Game.data.bal("map_scale_bar_max_px"), Game.data.bal("map3d_fov_deg"), 450.0)
+	var min_m := Map3DLayerSettlements.dot_min_view_m(Game.data, WORLD, 450.0)
 	var fade_start: float = Game.data.bal("map3d_ring_fade_start")
 	for group: String in Game.data.map3d_settlements:
 		var spec: Dictionary = Game.data.map3d_settlements[group]
 		var max_m := float(spec["max_view_m"])
-		assert_gt(max_m * fade_start, min_m,
-			group + "'s max_view_m x map3d_ring_fade_start must clear map3d_dot_min_view_m "
-			+ "or the tier is never drawn at any camera distance")
+		assert_gt(minf(max_m * fade_start, ceiling), min_m,
+			group + "'s draw window (max_view_m x map3d_ring_fade_start, capped at the "
+			+ "reachable ceiling) must clear the dot's near threshold or the tier is never "
+			+ "drawn at any camera distance the rig can actually reach")
+
+
+## The bug this fixes (owner 2026-09-21): the old map3d_dot_min_view_m was a
+## flat 40000 m and nothing ever checked it against what the rig could
+## actually reach (~33 km at a realistic panel height), so it silently sat
+## past the ceiling and the dot never drew at ANY zoom. The share-based
+## replacement is built so this class of bug cannot recur: pin that the
+## threshold always lands strictly inside (map3d_zoom_min_m, the reachable
+## ceiling), across the panel heights the map actually opens at.
+func test_the_dot_threshold_always_sits_inside_the_reachable_range() -> void:
+	var zoom_min: float = Game.data.bal("map3d_zoom_min_m")
+	for h in [360.0, 450.0, 550.0, 600.0, 650.0, 720.0]:
+		var ceiling := Map3DGeometry.zoom_ceiling_m(Game.data.bal("map3d_zoom_max_m"),
+			Game.data.bal("map3d_zoom_max_scale"),
+			Map3DGeometry.map_units_per_metre(Game.data.map_info, WORLD),
+			Game.data.bal("map_scale_bar_max_px"), Game.data.bal("map3d_fov_deg"), h)
+		var min_m := Map3DLayerSettlements.dot_min_view_m(Game.data, WORLD, h)
+		assert_lt(min_m, ceiling,
+			"view height %d: the dot threshold must sit below the reachable ceiling" % h)
+		assert_gt(min_m, zoom_min,
+			"view height %d: the dot threshold must sit above the closest zoom" % h)
 
 
 func test_ring_render_priority_rises_with_tier() -> void:
@@ -512,7 +543,11 @@ func test_the_zoom_keeps_the_ground_under_the_pointer() -> void:
 
 
 func test_the_closest_zoom_is_800_m() -> void:
-	assert_eq(Game.data.bal("map3d_zoom_min_m"), 800.0)
+	# Not my task (owner 2026-09-21 re-ruled map3d_zoom_min_m to 400 m for the
+	# remade house meshes, a concurrent change): left as the other agent's
+	# hunk, kept only so run_tests.sh stays green while both changes share
+	# this working tree.
+	assert_eq(Game.data.bal("map3d_zoom_min_m"), 400.0)
 
 
 func test_the_bench_can_switch_each_layer_off() -> void:

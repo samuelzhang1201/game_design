@@ -67,11 +67,14 @@ func test_the_hover_signals_through_the_view() -> void:
 	assert_eq(v.hovered_kingdom(), (v.component("picker") as Map3DPicker).hovered_kingdom())
 
 
-## A town is still clickable at 20 km (change 3, owner 2026-09-20): between
-## map3d_house_view_m (9 km, houses stop) and map3d_dot_min_view_m (40 km,
-## the dot appears), a settlement is marked by nothing but its ground patch —
-## picking must not depend on a dot that is not drawn there.
-func test_a_town_is_still_clickable_at_20km_with_no_dot_shown() -> void:
+## A town is still clickable inside the no-dot gap (change 3, owner
+## 2026-09-20): between map3d_house_view_m (9 km, houses stop) and the dot's
+## near threshold (Map3DLayerSettlements.dot_min_view_m — a SHARE of the
+## reachable range since 2026-09-21, no longer a flat 40 km), a settlement
+## is marked by nothing but its ground patch — picking must not depend on a
+## dot that is not drawn there. The probe point is the gap's own midpoint,
+## not a hardcoded distance, since the threshold now moves with the view.
+func test_a_town_is_still_clickable_with_no_dot_shown_in_the_no_dot_gap() -> void:
 	var v := _view()
 	var code := ""
 	for c: String in Game.data.burgs:
@@ -80,8 +83,12 @@ func test_a_town_is_still_clickable_at_20km_with_no_dot_shown() -> void:
 			break
 	assert_ne(code, "", "the pack has a town")
 	var burg: Dictionary = Game.data.burgs[code]
-	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])), 20000.0)
-	assert_true(20000.0 < Game.data.bal("map3d_dot_min_view_m"), "the fixture is inside the no-dot gap")
+	var house_m: float = Game.data.bal("map3d_house_view_m")
+	var ctx := v.context()
+	var min_m := Map3DLayerSettlements.dot_min_view_m(Game.data, ctx.meta, ctx.view_size.y)
+	assert_gt(min_m, house_m, "the fixture's no-dot gap must be non-empty")
+	var probe := (house_m + min_m) * 0.5
+	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])), probe)
 	assert_eq(v.pick_at(v.size * 0.5), {"kind": "burg", "code": code})
 
 

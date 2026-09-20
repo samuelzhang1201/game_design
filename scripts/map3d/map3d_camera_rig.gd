@@ -97,12 +97,9 @@ func camera() -> Camera3D:
 ## so only the ceiling applies.
 func max_distance() -> float:
 	var r := ctx.repo
-	var ceiling := r.bal("map3d_zoom_max_m")
-	if ctx.view_size.y <= 1.0:
-		return ceiling
-	return minf(ceiling, Map3DGeometry.distance_for_scale(r.bal("map3d_zoom_max_scale"),
-		Map3DGeometry.map_units_per_metre(r.map_info, ctx.meta),
-		r.bal("map_scale_bar_max_px"), r.bal("map3d_fov_deg"), ctx.view_size.y))
+	return Map3DGeometry.zoom_ceiling_m(r.bal("map3d_zoom_max_m"), r.bal("map3d_zoom_max_scale"),
+		Map3DGeometry.map_units_per_metre(r.map_info, ctx.meta), r.bal("map_scale_bar_max_px"),
+		r.bal("map3d_fov_deg"), ctx.view_size.y)
 
 
 ## Put the rig at a world XZ (clamped to the world), a distance (clamped to

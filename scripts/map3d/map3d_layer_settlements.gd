@@ -158,15 +158,34 @@ func counts() -> Dictionary:
 	return out
 
 
+## The dot's near threshold, world metres (owner 2026-09-21 ruling): NOT the
+## absolute balance.csv value it replaces (map3d_dot_min_view_m, which once
+## sat past a ceiling the camera could never reach — see
+## task-dot-threshold-report.md), but the farthest map3d_dot_min_view_share
+## of the RIGHT-NOW reachable range, counted down from the same ceiling
+## Map3DCameraRig.max_distance computes toward map3d_zoom_min_m. It depends
+## on the view's own height (the ceiling does, through the scale bar's own
+## cap), so it must be recomputed whenever the view resizes, not just once
+## at build — see apply_scale.
+static func dot_min_view_m(repo: DataRepository, meta: Dictionary, view_height_px: float) -> float:
+	var ceiling := Map3DGeometry.zoom_ceiling_m(repo.bal("map3d_zoom_max_m"),
+		repo.bal("map3d_zoom_max_scale"), Map3DGeometry.map_units_per_metre(repo.map_info, meta),
+		repo.bal("map_scale_bar_max_px"), repo.bal("map3d_fov_deg"), view_height_px)
+	return Map3DGeometry.dot_min_view_m(ceiling, repo.bal("map3d_zoom_min_m"),
+		repo.bal("map3d_dot_min_view_share"))
+
+
 ## A ring material; its sizes are design px, turned into window px with the
 ## other layers' by apply_scale (base values kept as meta). max_view_m and
 ## min_view_m are world metres, never rescaled. The keyline is a fixed data
 ## value (fix round 1: a pale ring was nearly invisible on bright grass at
 ## the old 0.55 default). min_view_m is 0 (never hidden) for the selection
-## ring, which must keep showing at any zoom once something is clicked.
+## ring, which must keep showing at any zoom once something is clicked;
+## `dynamic_min` (false for it) marks a tier ring's material so apply_scale
+## knows which ones to keep re-pointed at the live threshold.
 func _ring_material(colour: Color, ring_px: float, line_px: float, max_view_m: float,
 		priority: int, dot_px := 0.0, look: ShaderMaterial = RING_MAT, inner_px := 0.0,
-		min_view_m := 0.0) -> ShaderMaterial:
+		min_view_m := 0.0, dynamic_min := false) -> ShaderMaterial:
 	var mat := look.duplicate() as ShaderMaterial
 	mat.render_priority = priority
 	mat.set_shader_parameter("colour", colour)
@@ -179,17 +198,25 @@ func _ring_material(colour: Color, ring_px: float, line_px: float, max_view_m: f
 	mat.set_meta("line_px", line_px)
 	mat.set_meta("dot_px", dot_px)
 	mat.set_meta("inner_px", inner_px)
+	mat.set_meta("dynamic_min", dynamic_min)
 	_ring_mats.append(mat)
 	return mat
 
 
 ## The ring materials' screen-px values in WINDOW px, and the metres per px
 ## per metre of distance — on load, marker build, selection and resize.
+## min_view_m is WORLD metres, never rescaled by `s`, but it is recomputed
+## here too (not only in build()): it depends on ctx.view_size, which a
+## resize changes (Map3DView._fit_viewport -> _update_line_scale ->
+## apply_scale), so a shorter or taller panel keeps the same share of ITS
+## OWN reachable range rather than a threshold sized for the view it loaded
+## under. The selection ring (dynamic_min false) is left at its fixed 0.
 func apply_scale() -> void:
 	if ctx == null:
 		return
 	var s := ctx.viewport_px_scale()
 	var per_dist := ctx.px_per_dist()
+	var min_view_m := dot_min_view_m(ctx.repo, ctx.meta, ctx.view_size.y)
 	for mat: ShaderMaterial in _ring_mats:
 		mat.set_shader_parameter("px_per_dist", per_dist)
 		mat.set_shader_parameter("lift_px", ctx.repo.bal("map3d_ring_lift_px") * s)
@@ -197,6 +224,8 @@ func apply_scale() -> void:
 		mat.set_shader_parameter("line_px", float(mat.get_meta("line_px")) * s)
 		mat.set_shader_parameter("dot_px", float(mat.get_meta("dot_px", 0.0)) * s)
 		mat.set_shader_parameter("inner_px", float(mat.get_meta("inner_px", 0.0)) * s)
+		if bool(mat.get_meta("dynamic_min", false)):
+			mat.set_shader_parameter("min_view_m", min_view_m)
 
 
 ## The settlement's DRAWN marker's diameter, design px: max(ring_px, dot_px,

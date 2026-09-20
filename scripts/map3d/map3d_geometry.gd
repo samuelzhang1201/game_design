@@ -102,6 +102,30 @@ static func rung_above(v: float) -> float:
 	return base * 10.0
 
 
+## The farthest the rig may actually sit: `zoom_max_m`, or nearer still if
+## the scale bar cap binds (Map3DCameraRig.max_distance's own maths, pulled
+## out pure so anything that needs the reachable ceiling — the settlement
+## dot's near threshold included — can compute it without a rig). Before a
+## view has a size (view_height_px <= 1) there is no bar to read, so only
+## the flat ceiling applies.
+static func zoom_ceiling_m(zoom_max_m: float, max_units: float, units_per_metre: float,
+		bar_max_px: float, fov_deg: float, view_height_px: float) -> float:
+	if view_height_px <= 1.0:
+		return zoom_max_m
+	return minf(zoom_max_m, distance_for_scale(max_units, units_per_metre, bar_max_px,
+		fov_deg, view_height_px))
+
+
+## The settlement dot's near threshold (owner 2026-09-21, replacing an
+## absolute metres value that once sat past an unreachable ceiling): the
+## farthest `share` of the reachable range, counted DOWN from `ceiling_m`
+## toward `zoom_min_m` — so the threshold can never again land outside the
+## camera's own reach. share 0 puts it AT the ceiling (nothing ever clears
+## it); 1 puts it at zoom_min_m (always clear).
+static func dot_min_view_m(ceiling_m: float, zoom_min_m: float, share: float) -> float:
+	return ceiling_m - share * (ceiling_m - zoom_min_m)
+
+
 ## A kingdom name's size in screen px: a word `height_m` tall on the ground
 ## seen at `m_per_px`, no larger than `max_px`, and 0 (hidden) below `min_px`
 ## — the 2D map's map_label_* rule.
