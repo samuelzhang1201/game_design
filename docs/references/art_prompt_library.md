@@ -2204,7 +2204,7 @@ the centre of the composition [C-EVENT]
 
 #### `V-44` 青黄不接 · The Hungry Gap
 ```
-[S] a river valley in the last weeks before harvest, standing green corn stretching away
+[S] a river valley in the last weeks before harvest, a standing green wheat field of tall thin stalks with bearded ears stretching away
 under a hot pale sky, a group of thin villagers in worn wool waiting at the edge of the
 field with empty sacks and a handcart, a woman holding a letter folded shut with nothing written showing, a lean
 sun-blackened man in a coarse undyed robe standing barefoot among them, burned mill ruins
@@ -2251,18 +2251,18 @@ hanging in the heat, long shadows, ominous stillness, no violence [C-EVENT]
 
 #### `V-49` 秋收之日 · Harvest Day
 ```
-[S] a river valley at golden hour in full harvest, ripe corn being cut by a long line of
+[S] a river valley at golden hour in full harvest, ripe golden wheat being cut by a long line of
 reapers with sickles, bound sheaves standing in stooks, loaded carts on the track,
 watermills turning on the river in the middle distance, a small town with smoke from its
-chimneys beyond, warm earned light, a crowded busy landscape [C-EVENT]
+chimneys beyond, warm earned light, no maize anywhere, a crowded busy landscape [C-EVENT]
 ```
 
 #### `V-50` 薄收之日 · A Thin Harvest
 ```
-[S] a river valley in flat grey autumn light, a wide field of overripe corn left standing
+[S] a river valley in flat grey autumn light, a wide field of overripe wheat left standing
 and going down in patches, three reapers working alone in a very large field, one empty
 cart on the track, an idle watermill on the river, gulls on the stubble, a small town
-beyond with few chimneys smoking, cold air, a landscape with too few people in it
+beyond with few chimneys smoking, cold air, no maize anywhere, a landscape with too few people in it
 [C-EVENT]
 ```
 
