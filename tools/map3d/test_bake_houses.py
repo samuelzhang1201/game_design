@@ -4,6 +4,7 @@
   python3 -m pytest tools/map3d/test_bake_houses.py
 """
 import math
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -28,10 +29,17 @@ RULES = {
     "lane_seeds": 4, "lane_step_m": 20, "lane_wander_deg": 25,
     "lane_branch_chance": 0.15, "lane_max_depth": 3, "lane_half_width_m": 1.75,
     "plot_step_m": 10,
+    "house_edge_rings": 8, "house_edge_falloff_gamma": 1.5, "house_edge_scale_min": 0.75,
 }
 
 TYPES = {
     "cottage_a": {"role": "house", "weight": 1.0, "footprint_m": 7.0, "min_group": "village"},
+    # a big house-role type, mirroring the real map3d_houses.csv's longhouse
+    # (16 m) -- without one, this fixture is too small to ever expose fix
+    # round 1 finding 4 (the frontage offset can push a house-role candidate
+    # well past the barn ring before its role, decided from a SMALLER
+    # assumed size, is even chosen)
+    "longhouse": {"role": "house", "weight": 0.4, "footprint_m": 16.0, "min_group": "village"},
     "barn":      {"role": "barn",  "weight": 1.0, "footprint_m": 13.0, "min_group": "village"},
     "chapel":    {"role": "landmark", "weight": 1.0, "footprint_m": 10.0, "min_group": "village"},
     "palace":    {"role": "landmark", "weight": 1.0, "footprint_m": 34.0, "min_group": "capital"},
@@ -133,15 +141,22 @@ def test_rank_is_dense_and_grows_outward():
 def test_far_houses_lean_towards_barns():
     # role is decided from the lane sample (or grid cell) a candidate grows
     # out of, before its actual footprint -- and so before its exact final
-    # offset -- is known, so the boundary allows one house's worth of slack
-    # rather than the old algorithm's pixel-exact ring (the old test's
-    # premise, that EVERY house past the ring is a barn with no tolerance,
-    # no longer holds now that role and final position are decided a step
-    # apart). A uniform footprint mask (not flat_world()'s own, which decays
-    # to nothing by 400 m) and a count target pushed well past what the
-    # cluster can actually hold, so placement is forced to reach all the way
-    # out to the barn ring rather than filling up on the near core alone --
-    # with a modest target count and a lot of room, it never gets there.
+    # offset -- is known, so the boundary allows slack rather than the old
+    # algorithm's pixel-exact ring (the old test's premise, that EVERY house
+    # past the ring is a barn with no tolerance, no longer holds now that
+    # role and final position are decided a step apart). A uniform footprint
+    # mask (not flat_world()'s own, which decays to nothing by 400 m) and a
+    # count target pushed well past what the cluster can actually hold, so
+    # placement is forced to reach all the way out to the barn ring rather
+    # than filling up on the near core alone -- with a modest target count
+    # and a lot of room, it never gets there.
+    #
+    # Fix round 1, finding 4: the slack is DERIVED from the geometry, not a
+    # picked number -- the frontage offset can push a house-role candidate
+    # outward by lane_half_width_m plus the largest half-depth any
+    # house-role type in this run's own `types` table can have (here,
+    # "longhouse"'s 8 m half), which is exactly the worst case a real
+    # candidate can overshoot the ring its role was decided against.
     foot = np.ones((VH, VW), np.float32)
     land = np.ones((VH, VW), np.float32)
     height = np.zeros((VH, VW), np.float32)
@@ -149,7 +164,8 @@ def test_far_houses_lean_towards_barns():
     rows = place(burg(pop=4000, group="town"), rules, TYPES, foot, land, height, K, VW, VH)
     r_foot = footprint_radius_m(4000, RULES)
     r_house = RULES["house_radius_ratio"] * r_foot
-    slack = 5.0
+    max_house_half = max(0.5 * t["footprint_m"] for t in TYPES.values() if t["role"] == "house")
+    slack = RULES["lane_half_width_m"] + max_house_half
     far = [r for r in rows[1:]
            if math.hypot(r["x_m"], r["z_m"]) > RULES["house_barn_ratio"] * r_house + slack]
     assert far, "expect some houses safely past the barn ring at this size"
@@ -262,41 +278,72 @@ def test_house_count_tracks_group_not_population():
 
 
 def test_lanes_exist_as_negative_space():
-    # A big, generous cluster (a lot of candidates, both frontage and
-    # block-fill) should still leave most of its OWN lane centrelines free
-    # of any building rectangle -- the lanes are the negative space the
-    # owner asked for, not just leftover gaps from running out of houses.
+    # Fix round 1, finding 3: the previous version sampled points along the
+    # lane centreline and checked how many were free of a building -- true
+    # by construction, since EVERY placement rule already keeps rectangles
+    # off the centrelines (proven: deleting the block-fill lane guard
+    # entirely and re-running still passed, free fraction ~0.93-0.95 against
+    # a > 0.5 bar -- with such a sparse cluster relative to its own area,
+    # almost any point reads "free" whether the guard does anything or not).
+    #
+    # This asserts the actual MECHANISM instead: every accepted block-fill
+    # house must clear its nearest lane by at least lane_half_width_m plus
+    # its own half-footprint -- precisely what the guard (bake_houses.py,
+    # "sits over a lane's own clear strip") exists to enforce.
+    #
+    # Lane-frontage houses are deliberately excluded by DISABLING that phase
+    # entirely (mocking _frontage_candidates to return nothing), rather than
+    # trying to tell frontage and block-fill houses apart in a normal run:
+    # a first attempt at this test left frontage active and found it kept
+    # accidentally supplying the clearance around every lane before
+    # block-fill ever got a candidate close enough to matter, so the guard's
+    # own effect was invisible either way. With frontage disabled, EVERY
+    # non-landmark house here is block-fill, and the guard is the only thing
+    # keeping any of them off the lanes.
+    #
+    # Verified both directions by hand: with bake_houses.py's guard deleted,
+    # this exact test setup produces a minimum margin of -5.99 m (a house
+    # sitting on top of a lane); with the guard restored, +0.15 m (never
+    # negative).
     foot, land, height = flat_world()
     code = "toy"
-    b = burg(code=code, pop=200000, group="capital")
-    rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
-    r_foot = footprint_radius_m(200000, RULES)
+    b = burg(code=code, pop=20000, group="city")
+    with mock.patch.object(bake_houses, "_frontage_candidates", return_value=[]):
+        rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
+    r_foot = footprint_radius_m(20000, RULES)
     r_house = RULES["house_radius_ratio"] * r_foot
     rng = np.random.default_rng(bake_houses._seed(code))
     lanes = bake_houses._grow_lanes(rng, r_house, RULES)
-    samples = []
-    for lane in lanes:
-        samples.extend((x, z) for x, z, _ in bake_houses._resample_lane(lane, RULES["plot_step_m"]))
-    assert samples, "the lane network should produce sample points to test"
-
-    def covered(x, z):
-        for r in rows:
-            half = 0.5 * TYPES[r["type"]]["footprint_m"]
-            if math.hypot(x - r["x_m"], z - r["z_m"]) < half:
-                return True
-        return False
-
-    free = sum(1 for x, z in samples if not covered(x, z))
-    assert free / len(samples) > 0.5, "most of a lane's own centreline should stay clear of buildings"
+    half_w = RULES["lane_half_width_m"]
+    checked = 0
+    for r in rows[1:]:
+        half = 0.5 * TYPES[r["type"]]["footprint_m"]
+        d, _ = bake_houses._nearest_lane(lanes, r["x_m"], r["z_m"])
+        if d is None:
+            continue
+        checked += 1
+        assert d >= half_w + half - 1e-6, \
+            f"{r} sits over a lane's own clear strip (distance {d:.2f}, needs {half_w + half:.2f})"
+    assert checked > 0, "expected at least one block-fill house near a lane to test the guard against"
 
 
 def test_frontage_houses_face_their_lane():
-    # Regenerate the exact candidate list place() packed against (same rng,
-    # same _frontage_candidates geometry helper) and match each one to an
-    # accepted row by its exact predicted position -- not a nearest-lane
-    # distance heuristic, which is unreliable here: a house can legitimately
-    # sit close to a DIFFERENT branch of the lane network than the one it
-    # was actually plotted against, once branching is dense.
+    # Fix round 1, finding 1: the old version asserted
+    # `want = bearing + side*90`, which is the SAME expression place() itself
+    # used to compute the (broken) yaw -- a test that restates the formula it
+    # is checking can only ever agree with it, broken or not. This asserts
+    # the actual GEOMETRIC property instead: a frontage house's forward
+    # vector must point back toward the lane point it was plotted from, i.e.
+    # dot(forward, lane_point - house_point) > 0. Under this module's own
+    # convention (_axes: forward = (sin(yaw), cos(yaw))), turning the house
+    # around flips that dot negative, so this catches the bug the old test
+    # could not.
+    #
+    # Candidates are matched to accepted rows by exact predicted position
+    # (not a nearest-lane distance heuristic, which is unreliable here: a
+    # house can legitimately sit closer to a DIFFERENT branch of the lane
+    # network than the one it was actually plotted against, once branching
+    # is dense).
     foot, land, height = flat_world()
     code = "toy"
     b = burg(code=code, pop=4000, group="town")
@@ -307,7 +354,6 @@ def test_frontage_houses_face_their_lane():
     lanes = bake_houses._grow_lanes(rng, r_house, RULES)
     frontage = bake_houses._frontage_candidates(lanes, RULES["plot_step_m"], r_house)
     half_w = RULES["lane_half_width_m"]
-    jitter = RULES["house_yaw_jitter_deg"] + 0.5   # rounding slack
     checked = 0
     for r in rows[1:]:
         half = 0.5 * TYPES[r["type"]]["footprint_m"]
@@ -317,9 +363,12 @@ def test_frontage_houses_face_their_lane():
             px, pz = x + offset * math.sin(perp), z + offset * math.cos(perp)
             if abs(px - r["x_m"]) < 0.02 and abs(pz - r["z_m"]) < 0.02:
                 checked += 1
-                want = (bearing + side * 90.0) % 360.0
-                diff = abs((r["yaw_deg"] - want + 180) % 360 - 180)
-                assert diff <= jitter, f"{r} does not face its lane (bearing {bearing}, side {side})"
+                yaw_r = math.radians(r["yaw_deg"])
+                forward = (math.sin(yaw_r), math.cos(yaw_r))
+                toward_lane = (x - r["x_m"], z - r["z_m"])
+                dot = forward[0] * toward_lane[0] + forward[1] * toward_lane[1]
+                assert dot > 0, \
+                    f"{r} turns its back to its lane (bearing {bearing}, side {side}, dot {dot})"
                 break
     assert checked > 0, "expected at least one house placed at a lane-frontage plot to test facing"
 
@@ -364,3 +413,45 @@ if __name__ == "__main__":
         if name.startswith("test_") and callable(fn):
             fn()
             print("ok", name)
+
+
+def test_edge_density_feathers_not_a_cliff():
+    """Fix round 1, finding 2: a greedy nearest-first fill against a flat
+    per-group count target cuts a hard CIRCLE where the count runs out --
+    full density right up to some radius, then nothing, however far short
+    of r_house that radius falls. Divide the settlement's own r_house into
+    shells and look at the density (count per unit area) in each: the
+    occupied shells must taper down toward the edge, and the cluster's own
+    reach must not stop far short of r_house either."""
+    foot = np.ones((VH, VW), np.float32)
+    land = np.ones((VH, VW), np.float32)
+    height = np.zeros((VH, VW), np.float32)
+    rules = dict(RULES, house_count_capital=400)
+    b = burg(pop=90000, group="capital")
+    rows = place(b, rules, TYPES, foot, land, height, K, VW, VH)
+    r_foot = footprint_radius_m(90000, RULES)
+    r_house = RULES["house_radius_ratio"] * r_foot
+    n_shells = 16
+    shell_w = r_house / n_shells
+    counts = [0] * n_shells
+    for r in rows[1:]:
+        d = math.hypot(r["x_m"], r["z_m"])
+        i = min(int(d // shell_w), n_shells - 1)
+        counts[i] += 1
+    areas = [math.pi * ((i + 1) * shell_w) ** 2 - math.pi * (i * shell_w) ** 2 for i in range(n_shells)]
+    density = [counts[i] / areas[i] for i in range(n_shells)]
+    print("shell counts:", counts)
+    print("shell density (per sqm):", [round(v, 6) for v in density])
+    last_occupied = max(i for i, c in enumerate(counts) if c > 0)
+    core = sum(density[: n_shells // 3]) / (n_shells // 3)
+    assert last_occupied >= n_shells - 3, (
+        f"the cluster stops at shell {last_occupied}/{n_shells - 1} "
+        f"({(last_occupied + 1) * shell_w:.1f} m of {r_house:.1f} m r_house) -- "
+        "it should reach near r_house, not cliff off well short of it"
+    )
+    rim = sum(density[last_occupied - 2: last_occupied + 1]) / 3
+    assert rim < 0.6 * core, (
+        f"the rim (shells {last_occupied - 2}..{last_occupied}, density {rim:.6f}) "
+        f"should be visibly thinner than the core (density {core:.6f}), not full "
+        "density right up to the edge"
+    )

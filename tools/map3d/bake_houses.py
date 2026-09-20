@@ -265,7 +265,13 @@ def _nearest_lane(lanes, x, z):
             if seg_len2 < 1e-9:
                 px, pz = x0, z0
             else:
-                t = float(np.clip(((x - x0) * dx + (z - z0) * dz) / seg_len2, 0.0, 1.0))
+                # a plain min/max, not np.clip: this runs in _nearest_lane's
+                # innermost loop, potentially thousands of times per call
+                # once the fix round 1 ring quotas make the fill try far
+                # more candidates than the old flat cap ever did, and a
+                # scalar np.clip's array-wrapping overhead dominated a
+                # profile of that (13M calls, ~14s) for no numeric benefit
+                t = min(1.0, max(0.0, ((x - x0) * dx + (z - z0) * dz) / seg_len2))
                 px, pz = x0 + t * dx, z0 + t * dz
             d = math.hypot(x - px, z - pz)
             if best_d is None or d < best_d:
@@ -333,10 +339,42 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
     barn_r = rules["house_barn_ratio"] * r_house
     hmin, hmax = float(rules["house_height_min"]), float(rules["house_height_max"])
     span = hmax - hmin
+    scale_min = float(rules["house_edge_scale_min"])
 
-    def _try_place(ox, oz, yaw, pick):
-        if len(rows) >= n_target:
-            return False
+    # fix round 1, finding 2: filling greedily nearest-first up to a flat
+    # n_target and then stopping cuts a hard circle -- full density right up
+    # to whatever radius the count happens to run out at, then NOTHING,
+    # however far short of r_house that falls (measured: a capital's fill
+    # stopped at 220 m of its own 342 m r_house). A budget this much smaller
+    # than the disc it's spent in was never going to reach the rim at max
+    # density anyway, so instead of one flat budget the target is split into
+    # house_edge_rings concentric quotas, richest at the centre and thinning
+    # by house_edge_falloff_gamma toward the rim -- the LAST ring's quota is
+    # still nonzero, so the cluster is designed to reach close to r_house
+    # rather than stopping wherever a single dense core exhausts the count.
+    n_rings = max(int(rules["house_edge_rings"]), 1)
+    gamma = float(rules["house_edge_falloff_gamma"])
+    weights = [(1.0 - (i + 0.5) / n_rings) ** gamma for i in range(n_rings)]
+    wsum = sum(weights) or 1.0
+    quotas = [int(round(n_target * w / wsum)) for w in weights]
+    diff = n_target - sum(quotas)
+    guard = 0
+    while diff != 0 and guard < 10 * n_rings:
+        idx = guard % n_rings
+        if diff > 0:
+            quotas[idx] += 1
+            diff -= 1
+        elif quotas[idx] > 0:
+            quotas[idx] -= 1
+            diff += 1
+        guard += 1
+    ring_counts = [0] * n_rings
+
+    def _ring_of(d):
+        idx = int(d / max(r_house, 1e-6) * n_rings)
+        return min(max(idx, 0), n_rings - 1)
+
+    def _try_place(ox, oz, yaw, pick, ring):
         d = math.hypot(ox, oz)
         if d > r_house or d < 1e-6:
             return False
@@ -353,52 +391,75 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
         for tx, tz, thalf, tyaw in taken:
             if _rects_too_close(ox, oz, half, yaw, tx, tz, thalf, tyaw, gap):
                 return False
+        # taper size AND height into the rim (fix round 1, finding 2's second
+        # half: "visibly smaller and lower", not merely sparser) -- against
+        # the nominal r_house, which the ring quotas now genuinely reach
         t = float(np.clip(d / max(r_house, 1e-6), 0.0, 1.0))
         base_h = hmax - span * t
         h_jitter = rng.uniform(-0.3 * span, 0.3 * span) if span > 0 else 0.0
         height_scale = float(np.clip(base_h + h_jitter, hmin, hmax))
+        base_scale = 1.0 - (1.0 - scale_min) * t
         taken.append((ox, oz, half, yaw))
         rows.append({"burg_code": code, "rank": 0, "x_m": float(round(ox, 2)),
                      "z_m": float(round(oz, 2)), "yaw_deg": float(round(yaw % 360.0, 2)),
-                     "type": pick, "scale": float(round(rng.uniform(0.92, 1.08), 3)),
+                     "type": pick, "scale": float(round(base_scale * rng.uniform(0.92, 1.08), 3)),
                      "height_scale": float(round(height_scale, 3))})
+        ring_counts[ring] += 1
         return True
 
-    # 2. pack houses along their frontage, both sides, nearest to the centre first
+    # 2. pack houses along their frontage, both sides, nearest to the centre
+    # first, gated by each candidate's own ring quota rather than a flat cap
     plot_step = float(rules["plot_step_m"])
     half_w = float(rules["lane_half_width_m"])
     frontage = _frontage_candidates(lanes, plot_step, r_house)
-    for d0, x, z, bearing, side in frontage:
-        if len(rows) >= n_target:
-            break
-        role = "barn" if d0 > barn_r else "house"
-        pick = _pick(rng, types, role, group)
-        if pick is None:
-            continue
-        half = 0.5 * float(types[pick]["footprint_m"])
-        offset = half_w + half
-        perp = math.radians(bearing + side * 90.0)
-        ox, oz = x + offset * math.sin(perp), z + offset * math.cos(perp)
-        yaw = bearing + side * 90.0 + rng.uniform(-jitter, jitter)
-        _try_place(ox, oz, yaw, pick)
+
+    def _frontage_pass(enforce_quota):
+        for d0, x, z, bearing, side in frontage:
+            if sum(ring_counts) >= n_target:
+                break
+            ring = _ring_of(d0)
+            if enforce_quota and ring_counts[ring] >= quotas[ring]:
+                continue   # this band of the town is already at its target density
+            role = "barn" if d0 > barn_r else "house"
+            pick = _pick(rng, types, role, group)
+            if pick is None:
+                continue
+            half = 0.5 * float(types[pick]["footprint_m"])
+            offset = half_w + half
+            perp = math.radians(bearing + side * 90.0)
+            ox, oz = x + offset * math.sin(perp), z + offset * math.cos(perp)
+            # face the lane, not away from it: forward is (sin(yaw), cos(yaw))
+            # (_axes' own convention), and the lane sits back along -side*90
+            # from the outward perpendicular the plot was offset along --
+            # fix round 1 finding 1, a house was turning its back on its
+            # own street
+            yaw = bearing - side * 90.0 + rng.uniform(-jitter, jitter)
+            _try_place(ox, oz, yaw, pick, ring)
+
+    _frontage_pass(enforce_quota=True)
 
     # 3. fill the leftover block between lanes with a jittered close-spaced
-    # grid, oriented to the nearest lane rather than spun on its own
-    if len(rows) < n_target:
-        reach = int(math.ceil(r_house / plot_step))
-        grid = []
-        for gy in range(-reach, reach + 1):
-            for gx in range(-reach, reach + 1):
-                ox = gx * plot_step + rng.uniform(-0.4, 0.4) * plot_step
-                oz = gy * plot_step + rng.uniform(-0.4, 0.4) * plot_step
-                d = math.hypot(ox, oz)
-                if d > r_house or d < 1e-6:
-                    continue
-                grid.append((d, ox, oz))
-        grid.sort(key=lambda c: c[0])
+    # grid, oriented to the nearest lane rather than spun on its own, same
+    # per-ring quota gate topping up whatever frontage left short
+    reach = int(math.ceil(r_house / plot_step))
+    grid = []
+    for gy in range(-reach, reach + 1):
+        for gx in range(-reach, reach + 1):
+            ox = gx * plot_step + rng.uniform(-0.4, 0.4) * plot_step
+            oz = gy * plot_step + rng.uniform(-0.4, 0.4) * plot_step
+            d = math.hypot(ox, oz)
+            if d > r_house or d < 1e-6:
+                continue
+            grid.append((d, ox, oz))
+    grid.sort(key=lambda c: c[0])
+
+    def _infill_pass(enforce_quota):
         for d, ox, oz in grid:
-            if len(rows) >= n_target:
+            if sum(ring_counts) >= n_target:
                 break
+            ring = _ring_of(d)
+            if enforce_quota and ring_counts[ring] >= quotas[ring]:
+                continue
             role = "barn" if d > barn_r else "house"
             pick = _pick(rng, types, role, group)
             if pick is None:
@@ -409,7 +470,26 @@ def place(burg, rules, types, foot, land, height, k, vw, vh):
                 continue   # sits over a lane's own clear strip: leave it be
             base_yaw = lane_bearing if lane_d is not None else float(rng.uniform(0.0, 360.0))
             yaw = base_yaw + rng.uniform(-jitter, jitter)
-            _try_place(ox, oz, yaw, pick)
+            _try_place(ox, oz, yaw, pick, ring)
+
+    if sum(ring_counts) < n_target:
+        _infill_pass(enforce_quota=True)
+
+    # 3b. TOP UP: real terrain (shore, slope, a small island) can leave a
+    # ring's own band without enough valid ground to meet its quota, and
+    # unlike a single flat budget that shortfall is not automatically spent
+    # elsewhere -- so if there is still room after both quota-gated passes,
+    # spend it on whatever ring still has candidates, favouring the nearest
+    # (frontage) then whatever is left (infill), same as the very first
+    # design before ring quotas existed. This only ever runs once the
+    # quota-respecting passes above have genuinely exhausted every ring's
+    # own allowance or its own ground -- a settlement with room to spare
+    # never reaches here (both loops break out via sum(ring_counts) >=
+    # n_target on their very first check, no different from before)
+    if sum(ring_counts) < n_target:
+        _frontage_pass(enforce_quota=False)
+    if sum(ring_counts) < n_target:
+        _infill_pass(enforce_quota=False)
 
     # 4. rank dense from the centre out, the landmark pinned at 0
     if landmark is not None:
