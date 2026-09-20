@@ -1,7 +1,7 @@
 # Roles of the Court — Crown and Council
 
 Design/persona layer for every role in the game, grounded in the story
-background at [game_story/background/game_start.md](../../game_story/background/game_start.md).
+background at [game_story/chapter_0/game_start.md](../../game_story/chapter_0/game_start.md).
 **Numeric truth lives in the CSVs** (`data/founding_council.csv`,
 `data/roles.csv`, `data/relationships.csv`, `data/character_traits.csv`) and is
 loaded by the engine; this document is the human-readable view and the source

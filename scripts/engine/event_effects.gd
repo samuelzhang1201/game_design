@@ -73,6 +73,28 @@ static func apply(ops: String, state: GameState, data: DataRepository,
 				state.event_state["scheduled"].append(
 					{"event_id": p[1], "due_tick": state.tick + int(p[2])})
 				results.append({"kind": "schedule", "event_id": p[1]})
+			"branch":
+				# branch:<branch_id> — a scripted chapter's fork
+				# (data/chapter_branches.csv): schedule the FIRST rule whose
+				# `requires` holds, in the table's own order. The rule
+				# carries its own delay, so the chapter's calendar lives in
+				# the table and not in every choice that reaches it. Every
+				# table ends in an `always` rule, so a branch cannot
+				# dead-end; a missing table is a loud error, not silence.
+				var rules: Array = data.chapter_branches.get(p[1], [])
+				if rules.is_empty():
+					push_error("EventEffects: no branch table: " + p[1])
+				var taken := ""
+				for rule: Dictionary in rules:
+					if TriggerDsl.evaluate(String(rule["requires"]), state, data):
+						taken = String(rule["event_id"])
+						state.event_state["scheduled"].append({"event_id": taken,
+							"due_tick": state.tick + int(rule["ticks"])})
+						break
+				if taken == "":
+					push_error("EventEffects: branch %s matched no rule" % p[1])
+				else:
+					results.append({"kind": "branch", "branch_id": p[1], "event_id": taken})
 			"flag":
 				if not p[1] in state.event_state["flags"]:
 					state.event_state["flags"].append(p[1])

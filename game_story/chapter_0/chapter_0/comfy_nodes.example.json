@@ -1,7 +1,0 @@
-{
-  "_comment": "Node ids are the keys in your API-format workflow JSON. Values below match the stock ComfyUI Flux-dev example workflow; change them to your own.",
-  "prompt": {"node": "6",  "field": "text"},
-  "seed":   {"node": "25", "field": "noise_seed"},
-  "size":   {"node": "27", "width_field": "width", "height_field": "height"},
-  "save":   {"node": "9",  "field": "filename_prefix"}
-}

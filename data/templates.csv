@@ -107,3 +107,53 @@ council_summary_now,,"This session it is resolved: {label}."
 council_summary_idle,,"Nothing was ordered, and nothing resolved. The realm drifts as it will."
 converse_no_one,,"The words find no ear. Whoever you seek is not here — seek them where they keep."
 converse_no_one,,"The herald coughs. ""None you address are present, my lord."""
+event_c0_01_hear,,"One by one the offices speak, and the last of them speaks longer than he meant to. Lord Malvern does not say well done, but he sits back."
+event_c0_01_purse,,The ledgers come up before the speeches do. The Steward reads with evident pleasure; the Chancellor's hand is very still on the arm of his chair.
+event_c0_01_oath,,"Five men swear on the same cold iron, and the Spymaster watches the order in which they kneel."
+event_c0_02_suppress,,The Marshal is already calling for horses. Nobody at the table meets the Chaplain's eye.
+event_c0_02_investigate,,"Four hundred gold goes out to men with no names, and Quill is gone before the candles are trimmed."
+event_c0_02_summon,,A safe conduct is written out and sealed. At the far end of the table your brother's ring stops turning for exactly one heartbeat.
+event_c0_03s_burn_it,,It burns badly and takes most of the morning. The Chancellor sends up a very good wine at supper and does not say why.
+event_c0_03s_read_it,,You have it opened on the table before the serjeant has left the room.
+event_c0_03l_thank,,"Quill has no answer ready for being thanked, which is the first honest thing you have seen him do."
+event_c0_03l_rebuke,,"He takes it standing, agrees with every word, and will remember each of them longer than you will."
+event_c0_03a_take_offer,,"The offer is accepted in a corridor, without paper. Quill's strongbox has a new occupant and he has a new hold on you."
+event_c0_03a_go_around,,"A crown clerk rides for the valley at first light. Quill learns of it from a groom, which is precisely the point, and precisely the cost."
+event_c0_04s_hear_him,,"He talks for an hour and never once asks for anything. When he has finished, the ledger is still lying between you."
+event_c0_04s_hold_him,,"The safe conduct is torn up in front of him. He goes down to the cells without a word, and the Chaplain follows as far as the stair."
+event_c0_04a_spare_the_hall,,No door in Wickleby is broken that week. Quill takes the hunt instead of the hanging and finds it the better bargain.
+event_c0_04a_seal_the_town,,Spears go up at both ends of the Wickleby road. Whoever paid for the knife sleeps soundly; the millers do not.
+event_c0_05_confront,,The book goes round the table in a silence you can hear. The Chancellor says the word 'context' twice and is not helped by it.
+event_c0_05_lock_it,,Two turns of the key. The Chancellor visibly ages backwards.
+event_c0_05_ysolde,,"She comes at once, sees the open book, and does not pretend. What she says about the millers takes four sentences and costs her the dowry she has left."
+event_c0_06_accept,,"The keys stay where they are, and so does the leak. Four figures are written down and the court writes them down with him."
+event_c0_06_revoke,,"Twelve hundred gold buys locks, clerks and a very cold thank-you. The valley's granaries answer to the crown by the end of the week."
+event_c0_06_split,,"Two sets of keys are cut, and the Steward is at the valley gate with hers before the Warden reaches his own."
+event_c0_07_lend,,"Six thousand out of the stores, carted down the Louthton in the worst week of the year. They will not forget who sent it, one way or the other."
+event_c0_07_sell,,They buy what they can. The crown is nine hundred gold richer and the valley has learned what kind of crown it is.
+event_c0_07_refuse,,"The stores stay shut. The letter is not answered, and the Chaplain preaches on it, at length, on Sunday."
+event_c0_08_grant,,"The seal goes on in open court. In the valley they read the charter aloud in the mill yard twice over, for the ones who missed it."
+event_c0_08_grant_tithe,,"A charter with a tenth on it. They take the bargain, and the Steward notes with approval that they haggled first."
+event_c0_08_deny,,The petition is refused with courtesy. Two hundred and eleven marks go back down the road unanswered.
+event_c0_08s_release,,"He walks out of the cells and into the audience chamber in the same hour, and signs the charter with a hand that is not entirely steady."
+event_c0_08s_keep,,Nothing is granted and nothing is taken. He goes on writing his list by the window and the valley goes on reading its own silence.
+event_c0_08s_try_him,,"The trial is short and lawful, which is the worst that can be said for it. The Chaplain is not in the hall."
+event_c0_09_accept,,The coffer is carried in and the betrothal is sealed. Your cousin says all the right words in the right order and does not look at you once.
+event_c0_09_refuse,,"The envoy takes the refusal beautifully, as she takes everything, and the coffer goes back north unopened."
+event_c0_09_turn_it,,"You sign the treaty, and then you ask about the sickle. Envoy Kolev's face does not move, and the grain road north closes that month."
+event_c0_10_march,,The Marshal takes two thousand gold and four days. The carts move on the fifth; the spearmen at the gate were not paid enough to be there.
+event_c0_10_treat,,Fifteen hundred gold opens the road and buys a courteous letter about mutual understanding.
+event_c0_10_copies,,"A fair copy goes to every hall in the valley. By the fourth day the Warden's own lords are opening the road for him, and not gently."
+event_c0_11h_read,,"The columns are read out to the end. The last of them is heavy, and the hall hears it land."
+event_c0_11h_walk,,"You are out in the stubble with the reapers when the tallies come in, and they are heavy, and the shouting reaches you across the field."
+event_c0_11h_steward,,The Steward reads a heavy year to the council in a flat voice while the king is elsewhere. She does not embellish. She never does.
+event_c0_11t_read,,The columns are read out to the end. Nobody says the word thin; everybody hears it.
+event_c0_11t_walk,,"You walk the stubble before you read the figures. The fields tell you what the figures will say, an hour early."
+event_c0_11t_steward,,"The Steward reads a thin year to the council in a flat voice while the king is elsewhere, and is asked twice whether she is certain."
+event_c0_12_show,,"You tell him it goes on the table in the morning, and he nods as though you had agreed about the weather, and leaves the candle burning."
+event_c0_12_settle,,"Fifteen hundred gold and a resignation, and the ledger changes hands in the dark like any other stolen thing."
+event_c0_12_nothing,,"There is no book to put on any table. He says goodnight as though he has won, and he may be right."
+event_c0_13_on,,"They toll the mill bells in the valley for an hour, and nobody can say who started it."
+event_c0_14_on,,"The winter passes without a hard word said anywhere, which is what you bought."
+event_c0_15_on,,"The tax grain comes in on the day it is due, every year, for as long as the spears are there."
+event_c0_16_on,,The council stops bringing you things. Malvern sends word that you should sleep in the keep this winter.

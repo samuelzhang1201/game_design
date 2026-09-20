@@ -85,6 +85,15 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	for id in s.characters:
 		if s.characters[id].seat != "":
 			s.council[s.characters[id].seat] = id
+	# The prologue is a chain, not a pool: a chapter beat whose row names a
+	# start_tick is scheduled here, so a new reign opens on the first council
+	# rather than on whatever the random roll happens to pick
+	# (data/chapter_events.csv, game_story/chapter_0/chapter_0_events.md).
+	for row: Dictionary in data.chapter_events:
+		var start := String(row.get("start_tick", "")).strip_edges()
+		if start != "":
+			s.event_state["scheduled"].append(
+				{"event_id": String(row["event_id"]), "due_tick": int(start)})
 	s.relationships = RelationshipGraph.init_from_data(data)
 	s.knowledge = KnowledgeBase.init_from_data(data, s)
 	s.source_trust = SourceTrust.init_from_relationships(data, s)

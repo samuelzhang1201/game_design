@@ -6,7 +6,7 @@
 | **Date** | 2026-09-04 (statuses and facts re-aligned with the code and `CLAUDE.md` on 2026-09-18) |
 | **Author** | Yumeng Zhang |
 | **Scope** | Chapter 1, fully functional and fully illustrated: base loop + Council System through faction stage 6 (Tomas only) + chapter framework + raid defense + all chapter-1 art |
-| **Source design** | `docs/design/COUNCIL_SYSTEM.md`, `docs/design/MANOR_SYSTEM.md`, `RANDOM_EVENTS.md` (repository root), `game_story/background/game_start.md` + the data CSVs in `data/` (all paths from the repository root) |
+| **Source design** | `docs/design/COUNCIL_SYSTEM.md`, `docs/design/MANOR_SYSTEM.md`, `RANDOM_EVENTS.md` (repository root), `game_story/chapter_0/game_start.md` + the data CSVs in `data/` (all paths from the repository root) |
 
 ## 1. Vision
 
@@ -134,7 +134,7 @@ Full design in `RANDOM_EVENTS.md`.
 - **CH-4** Chapter title card on campaign start ("Chapter One — <name>") after the opening narration.
 - **CH-5** Pacing guardrails: arcs cannot all resolve before year 2 (dwell minimums), and the chapter forces escalation beats if an arc has idled for a year (tunable in data).
 
-*Status: not yet built (no `data/chapter_arcs.csv`). The opening narration from `game_story/background/game_start.md` is built; the title card is not.*
+*Status: not yet built (no `data/chapter_arcs.csv`). The opening narration from `game_story/chapter_0/game_start.md` is built; the title card is not.*
 
 ### Step 7 — Faction stages 4–6, Tomas only (new; was post-MVP)
 
@@ -170,7 +170,7 @@ Full design in `RANDOM_EVENTS.md`.
 
 ## 7. Chapter 1 — "The Crown Unsettled" (working title)
 
-Chapter 1 is the authored opening situation of `game_story/background/game_start.md`, played to resolution. It opens at coronation and closes when all three arcs resolve (or the crown falls).
+Chapter 1 is the authored opening situation of `game_story/chapter_0/game_start.md`, played to resolution. It opens at coronation and closes when all three arcs resolve (or the crown falls).
 
 ### 7.1 The three arcs
 

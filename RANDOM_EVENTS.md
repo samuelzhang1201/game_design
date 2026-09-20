@@ -1,6 +1,6 @@
 # Random Events — Crown and Council
 
-Status: Built — the 20 events below are live (`data/events.csv`, `data/event_choices.csv`, `EventSystem`). MVP scope (see `docs/design/PRD.md` §6, "Random events pool"). **This file is loaded at runtime:** `StorySource` reads each `### EV-NN` heading and the prose after the Scene label on that line, and the game shows that prose verbatim. Keep the headings and the Scene labels intact; the Trigger text on the same line is design description only (the implemented trigger is the CSV's).
+Status: Built — the 20 events below are live (`data/events.csv`, `data/event_choices.csv`, `EventSystem`). MVP scope (see `docs/design/PRD.md` §6, "Random events pool"). **This file is loaded at runtime:** `StorySource` reads each `### EV-NN` heading and the prose after the Scene label on that line, and the game shows that prose verbatim. Keep the headings and the Scene labels intact; the Trigger text on the same line is design description only (the implemented trigger is the CSV's). The heading's TITLE — between the `·` and the trailing `— \`tags\`` — is what the audience window's banner shows, so it is authored here too, not in `templates.csv`.
 
 ---
 
@@ -31,15 +31,15 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 
 | Field | Meaning |
 |---|---|
-| `event_id` | `ev_NN`, matching the `### EV-NN` heading here |
+| `event_id` | `ev_NN`, matching the `### EV-NN` heading here. A scripted chapter's beats live in `data/chapter_events.csv` instead, with their own document — see `docs/design/CHAPTER_0.md`; they share this anatomy exactly, and only differ in being fired by id off a chain rather than sampled by weight |
 | `category` | `court` · `realm` · `folk` · `church` · `windfall` · `personal` |
-| `trigger` | `TriggerDsl` clauses joined by `&`: `always`, `season=<Season>`, `year>=N`, `trait_at_court=<trait>`, `seat_filled=<seat>`, `action_since=<ACTION>:<ticks>`, `flag=<flag>`, `<metric><N>` / `<metric>>N` |
+| `trigger` | `TriggerDsl` clauses joined by `&`, any of them negatable with a leading `!`: `always`, `never` (chained only — a scripted chapter beat), `season=<Season>`, `year>=N`, `trait_at_court=<trait>`, `trait_of=<seat or character id>:<trait>` (ONE person's), `seat_filled=<seat>`, `action_since=<ACTION>:<ticks>`, `flag=<flag>`, `<metric><N>` / `<metric>>N` |
 | `weight` | Relative sampling weight (a constant; state modifiers are not built) |
 | `cooldown_ticks` | Min months before this event can repeat (96 on most rows — written for half-month ticks, 8 years now that a tick is a month; to be redesigned, owner 2026-09-18) |
 | `once` | `1` = fires at most once per campaign |
 | `voice` | Every row is `template`: the Scene prose is shown as written. The `mini` / `flagship` tags in the headings below are the original draft's voicing plan, superseded 2026-08-31 (owner: every event story is fixed, authored text) |
 | `title_key` | The event's title string |
-| choice `effects` | `;`-joined ops, applied by `EventEffects`: `metric:<m>:<d>[:reason]`, `gold:<d>`, `opinion:<seat or id>:<d>:<reason>`, `attribute:<who>:<attr>:<d>:<reason>`, `rel:<from>:<to>:<d>:<reason>`, `world:...` (schema-listed deltas), `flag:<name>`, `schedule:<event_id>:<ticks>` (a chain) |
+| choice `effects` | `;`-joined ops, applied by `EventEffects`: `metric:<m>:<d>[:reason]`, `gold:<d>[:reason]`, `opinion:<seat or id>:<d>:<reason>`, `attribute:<who>:<attr>:<d>:<reason>`, `rel:<from>:<to>:<d>:<reason>`, `world:<path>:<d>:<reason>` (schema-listed deltas, clamped and logged), `flag:<name>`, `schedule:<event_id>:<ticks>` (a chain), `branch:<branch_id>` (a fork: the first rule of `data/chapter_branches.csv` whose `requires` holds, at that rule's own delay) |
 | choice signature | The five ideology columns per choice — minister reactions come free through the opinion-drift math, no special code |
 | choice `requires` | Optional trigger expression gating the option (e.g. EV-17's "Stand and take it" needs `trait_at_court=bold`) |
 

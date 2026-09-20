@@ -6,7 +6,7 @@
 | **Date** | 2026-08-30 |
 | **Author** | Yumeng Zhang (with Claude) |
 | **Supersedes** | Nothing. Extends the existing `scripts/llm/` converse path. |
-| **Related** | `CLAUDE.md` (architecture invariants), `PRD.md`, `COUNCIL_SYSTEM.md`, `role_player.md`, `game_story/background/game_start.md` |
+| **Related** | `CLAUDE.md` (architecture invariants), `PRD.md`, `COUNCIL_SYSTEM.md`, `role_player.md`, `game_story/chapter_0/game_start.md` |
 
 ## 1. Purpose
 

@@ -1,0 +1,16 @@
+branch_id,order,requires,event_id,ticks
+c0_br_spy,1,trait_of=spymaster:amb_ruthless,c0_03a,1
+c0_br_spy,2,always,c0_03l,1
+c0_br_guard,1,trait_of=char_captain_hale:veteran,c0_04s,1
+c0_br_guard,2,always,c0_04a,1
+c0_br_charter,1,flag=c0_cassian_held,c0_08s,1
+c0_br_charter,2,always,c0_08,1
+c0_br_tax,1,flag=c0_warden_tomas,c0_10,1
+c0_br_tax,2,flag=c0_seed_lent,c0_11h,1
+c0_br_tax,3,always,c0_11t,1
+c0_br_harvest,1,flag=c0_seed_lent,c0_11h,1
+c0_br_harvest,2,always,c0_11t,1
+c0_br_ending,1,treasury>12000&grain>45000&unrest<25&peasant_contentment>45&flag=c0_path_suppress,c0_15,1
+c0_br_ending,2,treasury>12000&grain>45000&unrest<25&peasant_contentment>45&flag=c0_ledger_shown,c0_13,1
+c0_br_ending,3,treasury>12000&grain>45000&unrest<25&peasant_contentment>45,c0_14,1
+c0_br_ending,4,always,c0_16,1

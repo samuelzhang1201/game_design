@@ -126,11 +126,23 @@ var terrain_palette: Dictionary = {}
 var events: Array[Dictionary] = []
 var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
+## The scripted chapters (data/chapter_events.csv). They are NOT in `events`
+## — the random roll samples that pool by weight and a chapter beat must
+## never be sampled; it is fired by id, off the chain. `events_by_id` holds
+## both, because EventSystem._fire looks a beat up by id either way.
+var chapter_events: Array[Dictionary] = []
+var chapter_event_choices: Array[Dictionary] = []
+## branch_id -> the ordered rules of data/chapter_branches.csv. The `branch:`
+## effect op schedules the first rule whose `requires` holds.
+var chapter_branches: Dictionary = {}
 var world_rules: Dictionary = {}
 var claim_types: Dictionary = {}
 ## event_id -> scene prose from RANDOM_EVENTS.md (see StorySource), with
 ## {player_realm}-style tokens filled from the loaded pack. Read this one.
 var event_scenes: Dictionary = {}
+## event_id -> the title from its heading in the story document, shown on the
+## audience window's banner. Authored like the scene, never a template key.
+var event_titles: Dictionary = {}
 ## The same scenes exactly as authored, tokens unfilled — the source every
 ## re-fill starts from, so loading a second pack cannot compound substitutions.
 var event_scenes_authored: Dictionary = {}
@@ -399,19 +411,39 @@ func _load(dir: String) -> bool:
 		return false
 	for row in events:
 		events_by_id[row["event_id"]] = row
+	if not _load_if_present(dir + "/chapter_events.csv",
+			["event_id", "category", "trigger", "weight", "cooldown_ticks", "once",
+			"voice", "title_key"],
+			func(r): chapter_events.append(r)):
+		return false
+	for row in chapter_events:
+		events_by_id[row["event_id"]] = row
 	if not _load_if_present(dir + "/maps.csv",
 			["map_id", "label", "index_texture", "data_dir"],
 			func(r): maps[r["map_id"]] = r):
 		return false
 	# Event prose is authored, not generated: it comes from the story
-	# document, and templates.csv no longer carries a copy to drift from it.
-	event_scenes_authored = StorySource.load_scenes()
+	# documents, and templates.csv no longer carries a copy to drift from them.
+	event_scenes_authored = StorySource.load_all_scenes()
 	event_scenes = event_scenes_authored.duplicate()
+	event_titles = StorySource.load_all_titles()
 	if not _load_if_present(dir + "/event_choices.csv",
 			["event_id", "choice_id", "label", "centralism", "militarism", "orthodoxy",
 			"tax_incidence", "expansionism", "effects", "requires"],
 			func(r): event_choices.append(r)):
 		return false
+	if not _load_if_present(dir + "/chapter_event_choices.csv",
+			["event_id", "choice_id", "label", "centralism", "militarism", "orthodoxy",
+			"tax_incidence", "expansionism", "effects", "requires"],
+			func(r): chapter_event_choices.append(r)):
+		return false
+	if not _load_if_present(dir + "/chapter_branches.csv",
+			["branch_id", "order", "requires", "event_id", "ticks"],
+			func(r): (chapter_branches.get_or_add(r["branch_id"], []) as Array).append(r)):
+		return false
+	for id: String in chapter_branches:
+		(chapter_branches[id] as Array).sort_custom(
+			func(a: Dictionary, b: Dictionary) -> bool: return int(a["order"]) < int(b["order"]))
 	if not _load_if_present(dir + "/world_schema.csv",
 			["path", "type", "good_direction", "llm_cap"],
 			func(r): world_schema.append(r)):
@@ -809,7 +841,7 @@ func _resolve_realm_slots() -> void:
 	# should not have to be remembered here. Cells with no "{" are untouched,
 	# so ids and numbers cannot be caught by this.
 	for rows in [roles, founding, facts, relationships, templates, events,
-			event_choices]:
+			event_choices, chapter_events, chapter_event_choices]:
 		for r: Dictionary in rows:
 			_fill_row_realms(r)
 	# RANDOM_EVENTS.md scenes are loaded before any map is, so they are filled
@@ -817,6 +849,13 @@ func _resolve_realm_slots() -> void:
 	# packs mid-session re-fills rather than compounding.
 	for id: String in event_scenes_authored:
 		event_scenes[id] = fill_realms(String(event_scenes_authored[id]))
+
+## Every choice the engine may resolve — the random pool's and the scripted
+## chapters'. Concatenated on the spot rather than cached, so a test fixture
+## that replaces `event_choices` wholesale is still the truth the engine reads.
+func event_choices_all() -> Array[Dictionary]:
+	return event_choices + chapter_event_choices
+
 
 ## Fills realm tokens in every string cell of one row, keeping the authored
 ## text under "_authored" so a second load_map re-fills from the original

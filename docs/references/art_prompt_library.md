@@ -121,6 +121,7 @@ drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 | `[C-TILE]` | 可平铺贴图 | `seamless tileable texture, flat top-down orthographic view, even illumination, no directional shadow, no focal point, uniform density across the whole square, 1:1` |
 | `[C-MAP]` | 地图底图 | `top-down orthographic cartographic view, north up, no perspective, even lighting, antique map plate` |
 | `[C-SCENE]` | 事件插图 | `narrative illustration, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 3:2 horizontal` |
+| `[C-EVENT]` | 事件横幅插图（`V-35`+，2026-09-21） | `narrative illustration in a wide cinematic band, the subject centred and held clear of the top and bottom edges, cinematic staging, shallow depth of field suggested by softer pencil pressure in background, 12:5 horizontal` |
 | `[C-SYMBOL]` | 战术符号 | `flat cartographic symbol, drawn as if inked onto a military campaign map, isolated on transparent background, no scene, no perspective, 1:1 square` |
 | `[C-UIPIECE]` | UI 部件（`U-`，2026-09-12） | `a single user interface piece drawn flat and face-on with no perspective, filling the frame edge to edge with only a thin even margin all round, straight true horizontal and vertical edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 1:1 square` |
 | `[C-UIWIDE]` | UI 长条部件（`U-03`/`U-08`/`U-13`/`U-17`，用 `--canvas C-UIWIDE`） | `a single wide user interface strip drawn flat and face-on with no perspective, running the full width of the frame with only a thin even margin at each end, straight true horizontal edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 3:1 horizontal` |
@@ -2088,6 +2089,226 @@ above, cold slate blue with the comet in pale ochre [C-SCENE]
 ```
 
 ---
+
+
+### 8.6 第零章 · 卢顿之约（`V-35`~`V-55`，2026-09-21）
+
+> 序章（`game_story/chapter_0/chapter_0_events.md`）21 个节拍一图一条，一一对应，`assets/flux/event_art.csv` 把编号接回 `event_id`。
+>
+> **画布是 `[C-EVENT]` 而不是 `[C-SCENE]`**：事件图在会见窗（`%AudienceWindow`，760×500 设计像素）顶端横幅里显示，所以构图是宽带，主体居中，上下留空。装进 `assets/events/<event_id>.png`，1280×533。
+>
+> **人物外貌必须照抄 §2.6 的 `**外貌**` 行**（这里为长度做了压缩，但发色、年龄、衣着颜色一个都不能改），否则同一个人在立绘和事件图里会是两个人。
+>
+> **纹章是地图包自己的**（架构约束 5，`assets/flux/arms_prompts.csv`）：本国是**红底金浑天仪**，北方女王是**红底银镰刀**，兄弟会的记号是**一捆麦子**。不要再画"蓝底银塔"或"红底白鹿"——那是外来设定，本作没有。
+>
+> 画面中绝对不能出现文字；账簿、petition、旗帜最容易诱发，出图后专门检查。
+
+#### `V-35` 石厅的第一次御前会议 · The First Council
+```
+[S] a long oak council table in a stone hall by daylight, a European king of forty
+with short dark hair greying at the temples under a plain gold circlet and a deep blue
+mantle seated at the head, a gaunt stooped lord of seventy-one in a heavy dark brown
+furred gown rising with one hand flat on the table to carry his weight and speaking,
+five ministers seated along the sides watching the king rather than the speaker, a
+narrow-faced chancellor in a fur-collared green gown, a square-faced stewardess in a
+slate-grey gown with a girdle of keys, banners of a red field with a gold armillary
+sphere hanging still in the background, quiet formal tension [C-EVENT]
+```
+
+#### `V-36` 麦捆兄弟会 · The Brotherhood of the Sheaf
+```
+[S] a council table lit from one side, a wiry sharp-featured spymaster of thirty-seven
+with lank black hair in a plain brown hooded cloak leaning in and laying a folded letter
+with a broken wax seal on the oak, the seal stamped with a bound sheaf of wheat, at the
+far end of the table a handsome sharp-boned nobleman of forty-four in a black and gold
+parti-coloured cotehardie turning a ring on his finger with a faint unconcerned smile,
+other councillors half risen from their seats, the two men framed at opposite ends of a
+long empty table [C-EVENT]
+```
+
+#### `V-37` 卢顿河上的灰烬 · Ashes on the Louthton
+```
+[S] a small river town at dawn after a raid, two timber watermills burned down to black
+skeletons with smoke rising into a pale sky, a collapsed waterwheel lying half in the
+icy river, mounted soldiers riding away along the bank with hacked-out doorposts tied
+behind their saddles, villagers standing silent in the mud at a distance, a bound sheaf
+of wheat carved into a charred doorpost in the foreground, no bodies, no blood, cold
+grey morning light [C-EVENT]
+```
+
+#### `V-38` 密探带回来的东西 · What the Spy Brought Back
+```
+[S] a private royal study in winter light from one tall window, a wiry sharp-featured
+spymaster of thirty-seven with lank black hair in a plain brown hooded cloak standing
+with his head bowed low, offering a thick hand-copied ledger bound in cracked leather
+with both hands, a European king of forty with a plain gold circlet and a deep blue
+mantle standing before him with one hand already reaching for it, the room otherwise
+empty, honest and penitent [C-EVENT]
+```
+
+#### `V-39` 奎尔的提议 · Quill's Offer
+```
+[S] a narrow stone corridor by low candlelight, a wiry sharp-featured spymaster of
+thirty-seven with lank black hair in a plain brown hooded cloak speaking with a composed
+half-smile, half his face in shadow, one open hand gesturing toward a brazier of glowing
+coals as if suggesting something be burned, a European king of forty with a plain gold
+circlet standing in the dark at the edge of the frame listening, ambiguous and
+untrustworthy [C-EVENT]
+```
+
+#### `V-40` 门口的赤足者 · The Preacher at the Door
+```
+[S] a modest whitewashed side chamber lit by one candle, a lean sun-blackened man of
+thirty-three with wild dark hair to the shoulders, an untrimmed beard and a coarse
+undyed woollen robe belted with rope standing barefoot at a plain table and setting down
+a worn hand-copied ledger, a thickset grey-haired soldier of fifty-two in a leather
+brigandine watching from the doorway with one hand on his belt, a European king of forty
+with a plain gold circlet seated in the foreground, quiet recognition [C-EVENT]
+```
+
+#### `V-41` 偏厅里的刀 · The Knife in the Side Chamber
+```
+[S] sudden movement frozen in a small stone chamber, a man in road-dirt peasant clothes
+lunging forward with a short knife, a lean sun-blackened barefoot preacher of thirty-three
+in a coarse undyed robe throwing himself across the path of the blade with both hands
+closed around the attacker's wrist, a European king of forty with a plain gold circlet
+pulled back off balance, a candle and a chair going over, guards bursting in at the far
+door, a thick ledger falling out of the preacher's robe onto the flagstones, dynamic
+diagonal composition, no blood, no wounds [C-EVENT]
+```
+
+#### `V-42` 账簿 · The Ledger
+```
+[S] extreme close-up still life on a dark oak desk by candlelight, an open hand-copied
+ledger showing two columns of tally marks and figures in faded brown ink with rows struck
+through, delicate annotations in a different finer hand in blue-black ink down the margin,
+a woman's jewelled girdle and a fine gold hair net lying beside it, a small wax seal of a
+silver sickle on red at the edge of the frame, shallow depth of field, the writing
+unreadable, no legible text [C-EVENT]
+```
+
+#### `V-43` 公爵的提议 · The Duke's Offer
+```
+[S] a stone council hall in cold grey daylight, a handsome sharp-boned nobleman of
+forty-four with dark hair swept back and a black and gold parti-coloured cotehardie
+standing at the centre of the table with one open palm extended in a reasonable gesture,
+addressing the room, a narrow-faced chancellor in a fur-collared green gown seated beside
+him nodding, a gaunt stooped lord of seventy-one writing with great effort at the table's
+end, a European king of forty with a plain gold circlet seated and still, the duke holding
+the centre of the composition [C-EVENT]
+```
+
+#### `V-44` 青黄不接 · The Hungry Gap
+```
+[S] a river valley in the last weeks before harvest, standing green corn stretching away
+under a hot pale sky, a group of thin villagers in worn wool waiting at the edge of the
+field with empty sacks and a handcart, a woman holding a folded letter, a lean
+sun-blackened man in a coarse undyed robe standing barefoot among them, burned mill ruins
+small in the far distance, heat haze, a mood of patience worn very thin [C-EVENT]
+```
+
+#### `V-45` 织工的特许状 · The Weavers' Charter
+```
+[S] a royal audience chamber in late summer light, a lean sun-blackened man of
+thirty-three in a coarse undyed woollen robe kneeling on one knee and holding up a long
+parchment petition covered in rows of marks and thumbprints, sealed with a bound sheaf of
+wheat, millers and weavers standing behind him with caps in their hands, a European king
+of forty with a plain gold circlet and a deep blue mantle seated on a modest wooden
+throne in the foreground, no legible writing on the parchment [C-EVENT]
+```
+
+#### `V-46` 囚室里的名单 · The Prisoner
+```
+[S] a damp stone cell lit by one hard shaft of light from a small barred window, a lean
+sun-blackened man of thirty-three with wild dark hair and a coarse undyed robe sitting
+barefoot on straw, writing a long list on cheap paper braced on his knee, many filled
+sheets stacked beside him, a round-faced priest of sixty-three in an undyed habit standing
+just inside the door with his hands folded, quiet and dignified, no legible writing
+[C-EVENT]
+```
+
+#### `V-47` 北方的婚约 · The Northern Betrothal
+```
+[S] night in a king's private chamber, an olive-skinned woman of thirty-eight in a
+high-collared dark teal travelling gown and a short fur-lined mantle standing composed
+beside an open coffer of coin, a European king of forty with a plain gold circlet reading
+an unrolled treaty on the table, its heavy wax seal showing a silver sickle on a red
+field, a fair-haired woman of twenty-seven in a pale rose gown standing silently in the
+open doorway behind them with candlelight on her face, restrained emotion [C-EVENT]
+```
+
+#### `V-48` 扣下的税粮 · The Withheld Grain
+```
+[S] late summer at the gate of a provincial castle, a line of loaded grain carts standing
+motionless in the road with the oxen unharnessed and the drivers sitting idle in the
+shade, spearmen in black and gold livery barring the road out with levelled spears, dust
+hanging in the heat, long shadows, ominous stillness, no violence [C-EVENT]
+```
+
+#### `V-49` 秋收之日 · Harvest Day
+```
+[S] a river valley at golden hour in full harvest, ripe corn being cut by a long line of
+reapers with sickles, bound sheaves standing in stooks, loaded carts on the track,
+watermills turning on the river in the middle distance, a small town with smoke from its
+chimneys beyond, warm earned light, a crowded busy landscape [C-EVENT]
+```
+
+#### `V-50` 薄收之日 · A Thin Harvest
+```
+[S] a river valley in flat grey autumn light, a wide field of overripe corn left standing
+and going down in patches, three reapers working alone in a very large field, one empty
+cart on the track, an idle watermill on the river, gulls on the stubble, a small town
+beyond with few chimneys smoking, cold air, a landscape with too few people in it
+[C-EVENT]
+```
+
+#### `V-51` 最后的清算 · The Last Reckoning
+```
+[S] a tight composition across a small table in a dim study at night, one candle between
+them, a European king of forty with a plain gold circlet resting one hand flat on a
+closed leather ledger, opposite him the hand and forearm of a nobleman in a black and
+gold sleeve with a jewelled ring lying still beside it, fingers slightly tense, both men
+cut off at the shoulders by the frame so only hands, candle and table are seen, deep
+shadow all around [C-EVENT]
+```
+
+#### `V-52` 明君之始 · A Just Beginning
+```
+[S] a council hall in bright morning light, an open ledger being passed hand to hand down
+a long oak table while the ministers stare at it, a handsome sharp-boned nobleman of
+forty-four in black and gold sitting rigid and pale with his chain of office lying on the
+oak in front of him, guards standing at the door, in the background half behind a pillar
+a young man in black and gold watching the king with a still cold face, hard clear light
+[C-EVENT]
+```
+
+#### `V-53` 妥协之王 · The Compromising King
+```
+[S] an almost empty audience hall in late winter afternoon light, a lean sun-blackened
+man of thirty-three in a coarse undyed robe standing upright without bowing and looking
+directly at a European king of forty with a plain gold circlet seated on a modest throne,
+a woman from the valley beside him holding a guild book, dead leaves blown across the
+flagstones through the open door, the two figures small in a very large room [C-EVENT]
+```
+
+#### `V-54` 铁腕之冠 · The Iron Crown
+```
+[S] a quiet street in a river town under an overcast sky, a column of mounted soldiers
+riding past newly rebuilt stone mills under banners of a red field with a gold armillary
+sphere, every door and shutter along the street closed, a small child watching from
+behind a half-open shutter and being pulled back by a hand on the shoulder, on the wall a
+bound sheaf of wheat scratched out and a fresh one cut low down near the ground, cold
+grey light [C-EVENT]
+```
+
+#### `V-55` 空库之冬 · The Empty Winter
+```
+[S] night and heavy falling snow before the gate of a great nobleman's town house, three
+cloaked riders waiting under hanging lanterns with a different noble colour on each
+saddle cloth, their breath and the horses' breath showing, one upper window glowing warm
+with a figure standing black against it, deep blue and umber snow light, cold and
+foreboding [C-EVENT]
+```
 
 ## 9. UI 框架件 `U-`
 

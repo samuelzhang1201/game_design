@@ -50,7 +50,7 @@ func _fire(event_id: String, state: GameState) -> Dictionary:
 	var row: Dictionary = data.events_by_id[event_id]
 	# Build choices FIRST to detect if any are eligible
 	var choices: Array = []
-	for c in data.event_choices:
+	for c in data.event_choices_all():
 		if String(c["event_id"]) != event_id:
 			continue
 		if not _requires_met(String(c.get("requires", "")), state):
@@ -84,7 +84,7 @@ func apply_choice(choice_id: String, state: GameState) -> Dictionary:
 			active = true
 	if not active:
 		return {}
-	for c in data.event_choices:
+	for c in data.event_choices_all():
 		if String(c["event_id"]) == event_id and String(c["choice_id"]) == choice_id:
 			# FIX 2(a): pass the choice's own label as the effects' narration
 			# reason (ConversationScene._on_event_choice narrates metric effects

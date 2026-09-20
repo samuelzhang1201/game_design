@@ -14,6 +14,7 @@
     python3 assets/flux/install_map_art.py arms       # A-xxx -> assets/arms/<pack>/<key>.png (ARMS_PACK=id, default maps.csv) (house and kingdom arms)
     python3 assets/flux/install_map_art.py army_paintings  # B-37..42 -> assets/armies/paint/<piece>.png (army card)
     python3 assets/flux/install_map_art.py app_icon   # X-01 -> icon.png (the game's application icon)
+    python3 assets/flux/install_map_art.py events     # V-35..V-55 -> assets/events/<event_id>.png (the audience window's event band)
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
 blue channel (see sepia_alpha_template.json for the same steps as a ComfyUI
@@ -402,14 +403,16 @@ def crop_rgba(w: int, px: bytearray, box: tuple) -> tuple:
     return cw, chh, out
 
 
-def install_paintings(size: tuple = PAINT_SIZE, table: str = "estate_paint_art.csv", dest: Path | None = None) -> int:
+def install_paintings(size: tuple = PAINT_SIZE, table: str = "estate_paint_art.csv",
+                      dest: Path | None = None, key_column: str = "key",
+                      src: str = "estates") -> int:
     rows = list(csv.DictReader((HERE / table).open(encoding="utf-8")))
     dest = dest or ROOT / "assets" / "manors" / "paint"
     dest.mkdir(parents=True, exist_ok=True)
     done = 0
     for r in rows:
-        art_id, key, seed = r["art_id"], r["key"], r.get("seed", "").strip()
-        hits = sorted((HERE / "out" / "estates").glob("%s_*.png" % art_id))
+        art_id, key, seed = r["art_id"], r[key_column], r.get("seed", "").strip()
+        hits = sorted((HERE / "out" / src).glob("%s_*.png" % art_id))
         if seed:
             hits = [h for h in hits if h.stem.endswith("_s" + seed)] or hits
         if not hits:
@@ -425,6 +428,20 @@ def install_paintings(size: tuple = PAINT_SIZE, table: str = "estate_paint_art.c
         print("  %-6s %-10s %dx%d" % (art_id, key, tw, th))
         done += 1
     return done
+
+
+## The audience window's event band (chapter 0, 2026-09-21): library
+## V-35..V-55 on the wide [C-EVENT] canvas, mapped to an event_id by
+## event_art.csv. Drawn across the top of the 760-design-px audience window,
+## so EVENT_SIZE is that band at roughly 1.8x — the art is a painting, not a
+## crisp icon, and the render is only 1536 wide to begin with. They keep
+## their colour, like the portraits: an illustration is looked at, not tinted.
+EVENT_SIZE = (1280, 533)
+
+
+def install_events(size: tuple = EVENT_SIZE) -> int:
+    return install_paintings(size, "event_art.csv", ROOT / "assets" / "events",
+                             key_column="event_id", src="events")
 
 
 ## The army card's painting (owner 2026-09-15): library B-37..B-42 on the
@@ -621,7 +638,7 @@ def main() -> int:
                 "paintings": install_paintings, "compass": install_compass,
                 "buildings": install_buildings, "goods_icons": install_goods_icons,
                 "arms": install_arms, "army_paintings": install_army_paintings,
-                "app_icon": install_app_icon}
+                "app_icon": install_app_icon, "events": install_events}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2

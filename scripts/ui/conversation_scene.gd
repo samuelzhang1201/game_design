@@ -544,8 +544,14 @@ func _refresh_banner() -> void:
 	var text := ""
 	match kind:
 		"event":
-			text = TemplateVoicer.line_for(Game.data,
-				String(b["event"]["title_key"]), [], Game.state.tick)
+			# The title is the story document's own heading (StorySource),
+			# not a template key: templates.csv deliberately carries no
+			# event_<id> row — a scene and its title must not be able to
+			# drift from the document the game reads them out of.
+			text = String(Game.data.event_titles.get(String(b["event"]["event_id"]), ""))
+			if text == "":
+				text = TemplateVoicer.line_for(Game.data,
+					String(b["event"]["title_key"]), [], Game.state.tick)
 		"narration":
 			text = ""
 		_:
@@ -554,6 +560,22 @@ func _refresh_banner() -> void:
 					Game.state.current_location).get("label", ""))
 	%AudienceTitle.text = text
 	%AudienceBanner.visible = text != ""
+
+## The event's own illustration, across the top of the audience window
+## (chapter 0, 2026-09-21): assets/events/<event_id>.png, installed from the
+## art library's V- chapter by install_map_art.py events. An event with no
+## art installed simply has no band — the window is complete without it, so
+## a fresh checkout is never broken by a missing render.
+const EVENT_ART_DIR := "res://assets/events/"
+
+func _show_event_art(b: Dictionary) -> void:
+	var art: Texture2D = null
+	if String(b.get("kind", "")) == "event":
+		var path := EVENT_ART_DIR + String(b["event"].get("event_id", "")) + ".png"
+		if ResourceLoader.exists(path):
+			art = load(path) as Texture2D
+	%EventArt.texture = art
+	%EventArt.visible = art != null
 
 ## Adds or removes someone from the address list. Selecting nobody means the
 ## whole room, so deselecting the last target quietly returns to addressing
@@ -780,6 +802,7 @@ func _advance() -> void:
 	# The move popup is no place to be while an event or narration is on stage
 	# (resolve or continue first).
 	%MoveButton.disabled = kind in ["event", "narration"]
+	_show_event_art(b)
 	match kind:
 		"event":
 			_continue_btn.visible = false

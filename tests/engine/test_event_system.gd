@@ -15,6 +15,10 @@ func before_each() -> void:
 		{"event_id": "ev_gated", "category": "realm", "trigger": "grain<5", "weight": "99",
 			"cooldown_ticks": "0", "once": "0", "voice": "template", "title_key": "event_ev_gated"},
 	]
+	# A synthetic pool has no chapter: clear the prologue too, or
+	# new_campaign schedules its opener into a pool that cannot fire it.
+	data.chapter_events = []
+	data.chapter_event_choices = []
 	data.events_by_id = {}
 	for row in data.events:
 		data.events_by_id[row["event_id"]] = row

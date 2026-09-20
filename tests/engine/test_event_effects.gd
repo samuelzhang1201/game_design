@@ -20,6 +20,9 @@ func test_metric_gold_and_opinion_ops() -> void:
 	assert_eq(res.size(), 3)
 
 func test_schedule_flag_promise_ops() -> void:
+	# A new campaign already carries the prologue's opener on its schedule
+	# (GameState.new_campaign); this test is about what the ops append.
+	s.event_state["scheduled"] = []
 	EventEffects.apply("schedule:ev_test_followup:12; flag:omen_seen; promise:marshal:LEVY_RAISE:8", s, data)
 	assert_eq(s.event_state["scheduled"].size(), 1)
 	assert_eq(String(s.event_state["scheduled"][0]["event_id"]), "ev_test_followup")

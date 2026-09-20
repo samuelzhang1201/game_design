@@ -78,6 +78,15 @@ unique_name_in_owner = true
 horizontal_alignment = 1
 text_overrun_behavior = 3
 
+[node name="EventArt" type="TextureRect" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol"]
+unique_name_in_owner = true
+visible = false
+clip_contents = true
+custom_minimum_size = Vector2(0, 190)
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+
 [node name="AudienceBody" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol"]
 size_flags_vertical = 3
 theme_override_constants/separation = 16
