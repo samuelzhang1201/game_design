@@ -2172,13 +2172,14 @@ forty with a close-trimmed dark beard and a plain gold circlet seated in the for
 
 #### `V-41` 偏厅里的刀 · The Knife in the Side Chamber
 ```
-[S] sudden movement frozen in a small stone chamber, a man in road-dirt peasant clothes
-lunging forward with a short knife, a lean sun-blackened barefoot preacher of thirty-three
-in a coarse undyed robe throwing himself across the path of the blade with both hands
-closed around the attacker's wrist, the king — bearded, forty, a plain gold circlet, a deep blue mantle — stumbling backwards
-out of reach behind the preacher with both palms up and no weapon, a candle and a chair
-going over, men-at-arms in mail bursting in at the far door, a thick ledger fallen shut on the flagstones out of the preacher's robe, dynamic
-diagonal composition, no blood, no wounds [C-EVENT]
+[S] sudden movement frozen in a small stone chamber, a lean sun-blackened barefoot preacher
+of thirty-three with wild dark hair in a coarse undyed robe caught mid-lunge with both hands
+closed around the wrist of a man in road-dirt peasant clothes, the short knife still held
+high above them, a chair gone over and a candle guttering on the flagstones, a thick ledger
+fallen shut beside it, men-at-arms in mail and open-faced helmets bursting in through the
+far door, seen from the king's own place at the very edge of the frame so that only his
+outstretched hand and the blue sleeve of his mantle are in shot, dynamic diagonal
+composition, no blood, no wounds [C-EVENT]
 ```
 
 #### `V-42` 账簿 · The Ledger

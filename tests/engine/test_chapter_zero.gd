@@ -270,6 +270,11 @@ func test_every_beat_has_an_illustration_planned() -> void:
 	for id: String in art:
 		assert_true(data.events_by_id.has(id),
 			"event_art.csv names %s, which is not an event" % id)
+	# The renders are committed (assets/events/), so a missing one is an
+	# incomplete install, not an empty checkout: install_map_art.py events.
+	for id: String in _ids():
+		assert_true(ResourceLoader.exists("res://assets/events/%s.png" % id),
+			"no installed illustration for " + id)
 
 # --- playing it -----------------------------------------------------------
 
