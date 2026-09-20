@@ -219,8 +219,12 @@ def main():
         ob = join_and_normalise(t, walls + roofs, fp, ht)
         path = os.path.join(OUT, t + ".glb")
         export(ob, path)
-        manifest[t] = {"footprint_m": fp, "height_m": ht, "tris": len(ob.data.polygons)}
-        print("make_houses: %s -> %s (%d faces)" % (t, path, len(ob.data.polygons)))
+        # len(polygons) is Blender's FACE count (a quad counts as 1), but the
+        # glTF exporter triangulates on export — an n-vertex polygon becomes
+        # n - 2 triangles, so sum that rather than the raw face count.
+        tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
+        manifest[t] = {"footprint_m": fp, "height_m": ht, "tris": tris}
+        print("make_houses: %s -> %s (%d faces, %d tris)" % (t, path, len(ob.data.polygons), tris))
     with open(os.path.join(OUT, "houses.json"), "w") as f:
         json.dump(manifest, f, indent=1, sort_keys=True)
     print("make_houses: %d types" % len(manifest))
