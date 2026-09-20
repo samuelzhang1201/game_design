@@ -15,7 +15,7 @@ func before_all() -> void:
 	if not FileAccess.file_exists(path):
 		return
 	_rows = DataRepository.parse_csv(path,
-		["burg_code", "rank", "x_m", "z_m", "yaw_deg", "type", "scale"])
+		["burg_code", "rank", "x_m", "z_m", "yaw_deg", "type", "scale", "height_scale"])
 	var manifest := dir + "/manifest.json"
 	if FileAccess.file_exists(manifest):
 		var m: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(manifest))

@@ -20,11 +20,14 @@ func before_each() -> void:
 	codes.sort()
 	var a := String(codes[0])
 	var f := FileAccess.open(CSV, FileAccess.WRITE)
-	f.store_line("burg_code,rank,x_m,z_m,yaw_deg,type,scale")
+	f.store_line("burg_code,rank,x_m,z_m,yaw_deg,type,scale,height_scale")
 	var b: Dictionary = Game.data.burgs[a]
 	var at := Map3DGeometry.pack_to_world(WORLD, Vector2(float(b["x"]), float(b["y"])))
-	f.store_line("%s,0,%f,%f,0,chapel,1.0" % [a, at.x, at.y])
-	f.store_line("%s,1,%f,%f,90,cottage_a,1.0" % [a, at.x + 20.0, at.y])
+	f.store_line("%s,0,%f,%f,0,chapel,1.0,1.0" % [a, at.x, at.y])
+	# cottage_a's scale and height_scale are deliberately DIFFERENT (0.8 vs
+	# 2.0) so a layer that scaled uniformly (ignoring the column, or reusing
+	# `scale` for both axes) would fail test_height_scale_reaches_the_transform.
+	f.store_line("%s,1,%f,%f,90,cottage_a,0.8,2.0" % [a, at.x + 20.0, at.y])
 	f.close()
 	_ctx = Map3DContext.new(Game.data, WORLD)
 	_ctx.height_fn = func(_xz: Vector2) -> float: return HEIGHT
@@ -96,6 +99,22 @@ func test_instances_carry_their_yaw_and_scale() -> void:
 	if xforms.size() > 0:
 		var basis: Basis = (xforms[0] as Transform3D).basis
 		assert_almost_eq(basis.get_euler().y, deg_to_rad(90.0), 0.01)
+
+
+## Redesign owner 2026-09-20 (高低层次不齐): height_scale is a SEPARATE
+## vertical multiplier, not folded into `scale`. cottage_a's fixture row
+## carries scale 0.8 and height_scale 2.0, so a correct transform stands
+## 0.8 wide/deep and 1.6 tall — three distinct values that could not agree
+## by accident if the layer ignored the column or scaled uniformly.
+func test_height_scale_reaches_the_transform() -> void:
+	_layer.refresh(_home())
+	var xforms := _layer.transforms_of("cottage_a")
+	assert_eq(xforms.size(), 1)
+	if xforms.size() > 0:
+		var s := (xforms[0] as Transform3D).basis.get_scale()
+		assert_almost_eq(s.x, 0.8, 0.01, "horizontal scale is the row's own scale")
+		assert_almost_eq(s.z, 0.8, 0.01, "horizontal scale is the row's own scale")
+		assert_almost_eq(s.y, 0.8 * 2.0, 0.01, "vertical scale is scale * height_scale")
 
 
 func _home() -> Vector2:

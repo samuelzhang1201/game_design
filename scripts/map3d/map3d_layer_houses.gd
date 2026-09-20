@@ -134,7 +134,6 @@ func refresh(camera_xz: Vector2) -> bool:
 			var b: Dictionary = ctx.repo.burgs[code]
 			pos[code] = ctx.to_world(Vector2(float(b["x"]), float(b["y"])))
 	var buckets := Map3DHouses.visible_set(houses, ctx.repo, pos,
-		func(c: String) -> float: return ctx.people_of_burg(c),
 		camera_xz, ctx.repo.bal("map3d_house_view_m"), _budget())
 	var sink := ctx.repo.bal("map3d_house_sink_m")
 	_transforms.clear()
@@ -170,13 +169,17 @@ func transforms_of(type: String) -> Array:
 
 
 ## The world transform for one baked house row: yaw about the vertical,
-## scaled uniformly, standing at `height` (the ground under it) sunk by
-## `sink` so its foot bites into sloped ground. Pure, so a test can check the
-## maths directly rather than reading it back off a MultiMesh.
+## scaled HORIZONTALLY by `scale` and VERTICALLY by `scale * height_scale`
+## (the bake's own per-house bias, tallest at a settlement's core, jittered
+## per house — 高低层次不齐), standing at `height` (the ground under it) sunk
+## by `sink` so its foot bites into sloped ground. Pure, so a test can check
+## the maths directly rather than reading it back off a MultiMesh.
 static func transform_of(h: Dictionary, height: float, sink: float) -> Transform3D:
 	var at: Vector2 = h["at"]
+	var s: float = float(h["scale"])
+	var height_scale: float = float(h["height_scale"])
 	var basis := Basis(Vector3.UP, deg_to_rad(float(h["yaw_deg"])))
-	basis = basis.scaled(Vector3.ONE * float(h["scale"]))
+	basis = basis.scaled(Vector3(s, s * height_scale, s))
 	return Transform3D(basis, Vector3(at.x, height - sink, at.y))
 
 

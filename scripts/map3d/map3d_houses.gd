@@ -1,14 +1,18 @@
 class_name Map3DHouses
 extends RefCounted
 ## Which of a settlement's baked houses are shown, and where (spec
-## 2026-09-20 §3). Pure and static: the bake decided WHERE every house
-## stands; this decides HOW MANY of them a settlement shows right now (its
-## people) and WHICH settlements are near enough to build at all.
+## 2026-09-20 §3, redesign owner 2026-09-20). Pure and static: the bake
+## decided WHERE every house stands AND HOW MANY — a settlement's house
+## count is now a target picked at bake time by its KIND (village / fort /
+## town / city / capital, `house_count_<group>` in map3d_bake.csv), never by
+## its live population — so this only decides WHICH settlements are near
+## enough to build at all, and drops whole settlements, farthest first, to
+## stay inside the instance budget.
 ##
 ## Never reaches for the Game autoload — tests/map3d/test_map3d_preview.gd
 ## scans this directory for it.
 
-const COLUMNS := ["burg_code", "rank", "x_m", "z_m", "yaw_deg", "type", "scale"]
+const COLUMNS := ["burg_code", "rank", "x_m", "z_m", "yaw_deg", "type", "scale", "height_scale"]
 
 
 ## The bake's houses.csv, grouped by burg and sorted by rank. A missing file
@@ -32,6 +36,7 @@ static func load_csv(path: String) -> Dictionary:
 			"yaw_deg": float(r["yaw_deg"]),
 			"type": String(r["type"]),
 			"scale": float(r["scale"]),
+			"height_scale": float(r["height_scale"]),
 		})
 	for code: String in out:
 		(out[code] as Array).sort_custom(func(a, b): return int(a["rank"]) < int(b["rank"]))
@@ -46,29 +51,14 @@ static func footprint_radius_m(population: float, repo: DataRepository) -> float
 		float(t["footprint_min_m"]), float(t["footprint_max_m"]))
 
 
-## The most houses this settlement's group ever shows.
-static func max_houses(group: String, repo: DataRepository) -> int:
-	var t: Dictionary = repo.map3d_bake
-	var key := "house_max_" + group
-	return int(t[key]) if t.has(key) else int(t["house_max_village"])
-
-
-## How many of the baked houses a settlement shows: one per
-## house_people_per_house souls, at least house_min, capped by its group. A
-## settlement that grows sprouts more houses with no re-bake.
-static func shown_count(burg: Dictionary, people: float, repo: DataRepository) -> int:
-	var t: Dictionary = repo.map3d_bake
-	var n := int(round(people / maxf(float(t["house_people_per_house"]), 1.0)))
-	return mini(maxi(n, int(t["house_min"])),
-		max_houses(String(burg.get("group", "village")), repo))
-
-
-## The houses to instance now, bucketed by type.
-## `burg_pos` is {code: world XZ}, `people_of` a Callable(String) -> float.
-## A settlement past `view_m` is not built at all; over `budget`, whole
-## settlements are dropped farthest first — never half a village.
+## The houses to instance now, bucketed by type. `burg_pos` is {code: world
+## XZ}. A settlement past `view_m` is not built at all; over `budget`, whole
+## settlements are dropped farthest first — never half a village. Every
+## settlement that IS built shows every house the bake gave it: the bake's
+## own house_count_<group> already decided how many that is, so there is no
+## further thinning by population here (redesign owner 2026-09-20).
 static func visible_set(houses: Dictionary, repo: DataRepository, burg_pos: Dictionary,
-		people_of: Callable, camera_xz: Vector2, view_m: float, budget: int) -> Dictionary:
+		camera_xz: Vector2, view_m: float, budget: int) -> Dictionary:
 	var near: Array = []
 	for code: String in houses:
 		if not burg_pos.has(code):
@@ -82,9 +72,8 @@ static func visible_set(houses: Dictionary, repo: DataRepository, burg_pos: Dict
 	var used := 0
 	for e: Dictionary in near:
 		var code: String = e["code"]
-		var burg: Dictionary = repo.burgs.get(code, {})
 		var rows: Array = houses[code]
-		var want := mini(shown_count(burg, float(people_of.call(code)), repo), rows.size())
+		var want := rows.size()
 		if used + want > budget:
 			break
 		for i in want:

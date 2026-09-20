@@ -5,12 +5,17 @@ extends GutTest
 
 const ROLES := ["landmark", "house", "barn"]
 const GROUPS := ["capital", "city", "fort", "town", "village"]
-const BAKE_KEYS := ["house_radius_ratio", "house_core_ratio", "house_barn_ratio",
-	"house_spacing_m", "house_density_gamma", "house_foot_min", "house_max_slope",
-	"house_shore_min_m", "house_port_shore_min_m", "house_min", "house_edge_scale",
-	"house_yaw_jitter_deg", "house_road_align_m", "house_people_per_house",
-	"house_max_capital", "house_max_city", "house_max_town", "house_max_fort",
-	"house_max_village"]
+## Redesign owner 2026-09-20 (lanes, not a jittered grid): the density/edge/
+## spacing/road-align/per-population keys are gone, replaced by the
+## house_count_<group> targets and the lane_*/plot_step_m keys that grow the
+## lanes themselves.
+const BAKE_KEYS := ["house_radius_ratio", "house_barn_ratio", "house_foot_min",
+	"house_max_slope", "house_shore_min_m", "house_port_shore_min_m",
+	"house_landmark_search_m", "house_yaw_jitter_deg", "house_gap_m",
+	"house_height_min", "house_height_max", "house_count_capital", "house_count_city",
+	"house_count_town", "house_count_fort", "house_count_village",
+	"lane_seeds", "lane_step_m", "lane_wander_deg", "lane_branch_chance",
+	"lane_max_depth", "lane_half_width_m", "plot_step_m"]
 const BAL_KEYS := ["map3d_house_view_m", "map3d_house_fade_m",
 	"map3d_house_rebuild_move_m", "map3d_house_sink_m"]
 
