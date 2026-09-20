@@ -180,10 +180,14 @@ def move(ob, x=0.0, y=0.0):
 def ridge_trim(name, w, d, ridge_frac, h, z, axis="y"):
     """A thin cresting strip along a roof's own ridge — cheap (one box) but
     it draws the ridge as a hard line rather than a soft meeting of two
-    planes, and it takes the roof's own colour, not the wall's."""
+    planes, and it takes the roof's own colour, not the wall's. Its TOP
+    sits exactly at the ridge (z + h), never above it: the old z + h - 0.06
+    origin with a 0.26 box height poked 0.20 m past every roof it dressed,
+    which is what inflated `tall` past the declared height_m on nearly
+    every type carrying one (2026-09-21 audit)."""
     if axis == "y":
-        return box(name, 0.32, d * ridge_frac + 0.3, 0.26, z + h - 0.06)
-    return box(name, w * ridge_frac + 0.3, 0.32, 0.26, z + h - 0.06)
+        return box(name, 0.32, d * ridge_frac + 0.3, 0.26, z + h - 0.26)
+    return box(name, w * ridge_frac + 0.3, 0.32, 0.26, z + h - 0.26)
 
 
 def buttress(name, x, y, w, d, h, z=0.0):
@@ -236,11 +240,11 @@ def build_cottage_b(fp, ht):
     the lean-to that used to be a bare, unroofed box."""
     wall_h = ht * 0.58
     roof_h = ht - wall_h
-    w, d = fp * 0.76, fp * 0.56
+    w, d = fp * 0.62, fp * 0.56
     walls = [box("wall", w, d, wall_h)]
     roofs = [prism_roof("roof", w, d, roof_h, wall_h, overhang=0.4, axis="x")]
     roofs.append(ridge_trim("ridge", w, d, 1.0, roof_h, wall_h, axis="x"))
-    lw, ld, lh = fp * 0.46, d * 0.82, wall_h * 0.60
+    lw, ld, lh = fp * 0.34, d * 0.82, wall_h * 0.60
     lean = box("lean", lw, ld, lh)
     move(lean, x=w * 0.5 + lw * 0.5 - 0.2)
     walls.append(lean)
@@ -267,32 +271,53 @@ def build_cottage_c(fp, ht):
 
 
 def build_townhouse_a(fp, ht):
-    """A two-storey tiled house, narrow gable-end to the street, a tall
-    chimney at the ridge's near end."""
-    wall_h = ht * 0.62
+    """A narrow gable-fronted townhouse: the street gable is a crow-stepped
+    parapet climbing to a point at the ridge, not an open eave — the shape
+    that tells it apart from a cottage's plain gable at a glance, and from
+    townhouse_b's jetty and townhouse_c's dormer."""
+    wall_h = ht * 0.60
     roof_h = ht - wall_h
-    w, d = fp * 0.62, fp * 0.78
+    w, d = fp * 0.55, fp - 0.5
     walls = [box("wall", w, d, wall_h)]
-    roofs = [prism_roof("roof", w, d, roof_h, wall_h, overhang=0.35)]
+    roofs = [prism_roof("roof", w, d, roof_h, wall_h, overhang=0.25)]
     roofs.append(ridge_trim("ridge", w, d, 1.0, roof_h, wall_h, axis="y"))
-    walls.append(chimney("chimney", w * 0.30, -d * 0.34, ht * 0.84, ht * 0.24))
+    steps = 5
+    step_w = w / steps
+    for i in range(steps):
+        t = abs((i + 0.5) / steps - 0.5) * 2.0
+        step_h = wall_h + roof_h * (1.0 - t)
+        block = box("parapet%d" % i, step_w * 0.92, 0.34, step_h)
+        move(block, x=-w / 2 + step_w * (i + 0.5), y=-d * 0.5 - 0.05)
+        walls.append(block)
+    walls.append(chimney("chimney", w * 0.28, d * 0.30, ht * 0.78, ht * 0.22))
     return walls, roofs
 
 
 def build_townhouse_b(fp, ht):
-    """A tiled house with a jettied upper floor overhanging the ground
-    floor on every side, and a half-hipped roof over the jetty."""
+    """A jettied corner house reached by its own outside stair: the upper
+    floor still overhangs on every side, but a canted ramp now climbs the
+    ground floor's east end to the jetty's door — an entrance no other
+    type wears, so it is not just townhouse_a with a wider eave."""
     wall_h = ht * 0.55
     ground_h = wall_h * 0.60
-    w, d = fp * 0.58, fp * 0.74
+    w = fp * 0.58
+    jd = fp - 0.8
+    d = jd / 1.05
     walls = [box("ground", w, d, ground_h)]
-    jw, jd, jetty_h = w * 1.16, d * 1.05, wall_h * 0.4
+    jw, jetty_h = w * 1.16, wall_h * 0.4
     jetty = box("jetty", jw, jd, jetty_h, ground_h)
     walls.append(jetty)
     roof_h = ht - wall_h
     roofs = [prism_roof("roof", jw, jd, roof_h, wall_h, overhang=0.4, ridge_frac=0.55)]
     roofs.append(ridge_trim("ridge", jw, jd, 0.55, roof_h, wall_h, axis="y"))
-    walls.append(chimney("chimney", -jw * 0.26, jd * 0.28, ht * 0.8, ht * 0.24))
+    walls.append(chimney("chimney", -jw * 0.26, jd * 0.28, ht * 0.76, ht * 0.24))
+    sw, sd = w * 0.30, d * 0.42
+    stair = shed_roof("stair", sw, sd, ground_h, 0.0, overhang=0.0, axis="x", sign=-1)
+    move(stair, x=w * 0.5 + sw * 0.5 - 0.1, y=-d * 0.15)
+    walls.append(stair)
+    rail = box("rail", sw * 0.85, 0.12, 0.5, ground_h)
+    move(rail, x=stair.location.x, y=stair.location.y - sd * 0.42)
+    walls.append(rail)
     return walls, roofs
 
 
@@ -302,7 +327,7 @@ def build_townhouse_c(fp, ht):
     tallest of the three, so the roofline needs the most incident."""
     wall_h = ht * 0.66
     roof_h = ht - wall_h
-    w, d = fp * 0.52, fp * 0.80
+    w, d = fp * 0.52, fp - 0.6
     walls = [box("wall", w, d, wall_h)]
     roofs = [prism_roof("roof", w, d, roof_h, wall_h, overhang=0.3)]
     roofs.append(ridge_trim("ridge", w, d, 1.0, roof_h, wall_h, axis="y"))
@@ -314,7 +339,20 @@ def build_townhouse_c(fp, ht):
     droof = prism_roof("dormer_roof", dw, dd, dh * 0.6, dz + dh, overhang=0.12)
     move(droof, y=-d * 0.16)
     roofs.append(droof)
-    walls.append(chimney("chimney", -w * 0.30, d * 0.32, ht * 0.86, ht * 0.20))
+    walls.append(chimney("chimney", -w * 0.30, d * 0.32, ht * 0.78, ht * 0.22))
+    # a small ground-floor oriel on the front wall, opposite the roof's
+    # dormer — a partial bay, unlike townhouse_b's full-width jetty.
+    ow, od, oh = w * 0.30, 0.35, wall_h * 0.42
+    oriel = box("oriel", ow, od, oh, wall_h * 0.30)
+    move(oriel, y=-d * 0.5 - od * 0.5 + 0.05)
+    walls.append(oriel)
+    # a rectangular hip, not a square pyramid_roof: a square cap sized off
+    # ow (the oriel's WIDTH) swung far past od (its shallow depth) and
+    # over-filled the mesh's own footprint on that axis.
+    oriel_roof = prism_roof("oriel_roof", ow, od, wall_h * 0.12, wall_h * 0.30 + oh,
+                             overhang=0.05, ridge_frac=0.0, axis="x")
+    move(oriel_roof, y=oriel.location.y)
+    roofs.append(oriel_roof)
     return walls, roofs
 
 
@@ -344,7 +382,11 @@ def build_workshop(fp, ht):
     front for the open working face."""
     wall_h = ht * 0.60
     roof_h = ht - wall_h
-    w, d = fp * 0.66, fp * 0.60
+    # d is solved so the canopy's own overhang, not the main roof's, sets
+    # the y-extent at exactly footprint_m (2026-09-21 audit: the canopy
+    # used to swing past the block's own roof and over-fill the footprint
+    # by 7-9%, which join_and_normalise then had to shrink back down).
+    w, d = fp * 0.66, (fp - 0.65) / 1.451
     walls = [box("wall", w, d, wall_h)]
     roofs = [prism_roof("roof", w, d, roof_h, wall_h, overhang=0.3, axis="x")]
     roofs.append(ridge_trim("ridge", w, d, 1.0, roof_h, wall_h, axis="x"))
@@ -368,29 +410,32 @@ def build_barn(fp, ht):
     roofs = [prism_roof("roof", w, d, roof_h, wall_h, overhang=0.55, axis="x")]
     roofs.append(ridge_trim("ridge", w, d, 1.0, roof_h, wall_h, axis="x"))
     cw = w * 0.10
-    cupola_z = ht * 0.84
-    cupola = box("cupola", cw, cw, ht * 0.12, cupola_z)
+    cupola_z = ht * 0.80
+    cupola = box("cupola", cw, cw, ht * 0.10, cupola_z)
     walls.append(cupola)
-    roofs.append(pyramid_roof("cupola_roof", cw, ht * 0.10, cupola_z + ht * 0.12, overhang=0.08))
+    roofs.append(pyramid_roof("cupola_roof", cw, ht * 0.10, cupola_z + ht * 0.10, overhang=0.08))
     return walls, roofs
 
 
 def build_byre(fp, ht):
-    """A low byre with an attached pen along one side (an L plan), the
-    pen's own catslide roof lower than the byre's own gable."""
+    """An open-fronted cattle byre: a solid back wall and two deep side
+    piers under one broad, shallow roof, the whole front left open between
+    them — a genuine void in the silhouette, not cottage_b's lean-to idiom
+    turned onto the other axis."""
     wall_h = ht * 0.62
     roof_h = ht - wall_h
-    w, d = fp * 0.82, fp * 0.52
-    walls = [box("wall", w, d, wall_h)]
-    roofs = [prism_roof("roof", w, d, roof_h, wall_h, overhang=0.5, axis="x")]
+    w, d = fp - 1.1, fp * 0.50
+    back_d = d * 0.18
+    back = box("back", w, back_d, wall_h)
+    move(back, y=d * 0.5 - back_d * 0.5)
+    walls = [back]
+    pier_w, pier_d = w * 0.14, d * 0.9
+    for i, sx in enumerate((-1, 1)):
+        pier = box("pier%d" % i, pier_w, pier_d, wall_h)
+        move(pier, x=sx * (w * 0.5 - pier_w * 0.5))
+        walls.append(pier)
+    roofs = [prism_roof("roof", w, d, roof_h, wall_h, overhang=0.55, axis="x")]
     roofs.append(ridge_trim("ridge", w, d, 1.0, roof_h, wall_h, axis="x"))
-    pw, pd, ph = w * 0.5, d * 0.9, wall_h * 0.55
-    pen = box("pen", pw, pd, ph)
-    move(pen, y=d * 0.5 + pd * 0.34)
-    walls.append(pen)
-    proof = shed_roof("pen_roof", pw, pd, (wall_h - ph) + 0.3, ph, overhang=0.35, axis="y", sign=-1)
-    move(proof, y=pen.location.y)
-    roofs.append(proof)
     return walls, roofs
 
 
@@ -399,16 +444,22 @@ def build_chapel(fp, ht):
     screen wall rising clear of the ridge at one gable end, capped with its
     own small spire — the cheapest way to be unmistakably not a house."""
     nave_h = ht * 0.46
-    w, d = fp * 0.48, fp * 0.86
+    w, d = fp * 0.48, fp - 0.7
     walls = [box("nave", w, d, nave_h)]
     roof_h = ht * 0.30
     roofs = [prism_roof("nave_roof", w, d, roof_h, nave_h, overhang=0.35)]
     roofs.append(ridge_trim("ridge", w, d, 1.0, roof_h, nave_h, axis="y"))
-    bw, bd, bh = w * 0.55, 0.5, ht - (nave_h + roof_h * 0.55)
-    bellcote = box("bellcote", bw, bd, bh, nave_h + roof_h * 0.55)
+    bell_z = nave_h + roof_h * 0.55
+    cap_h = ht * 0.09
+    bw, bd, bh = w * 0.55, 0.5, ht - bell_z - cap_h
+    bellcote = box("bellcote", bw, bd, bh, bell_z)
     move(bellcote, y=-d * 0.5 + 0.35)
     walls.append(bellcote)
-    cap = pyramid_roof("bell_cap", bw * 0.85, ht * 0.09, nave_h + roof_h * 0.55 + bh, overhang=0.05)
+    # the cap's own SIZE stays independent of bw (the bellcote's visual
+    # width): sized off bw it used to swing wide enough to poke past the
+    # nave roof's own overhang on the gable side, which is what inflated
+    # the whole mesh's measured span past its declared footprint_m.
+    cap = pyramid_roof("bell_cap", w * 0.26, cap_h, bell_z + bh, overhang=0.05)
     move(cap, y=bellcote.location.y)
     roofs.append(cap)
     return walls, roofs
@@ -420,7 +471,7 @@ def build_church(fp, ht):
     their meeting point — grander than the chapel, shorter than
     church_tower."""
     nave_h = ht * 0.40
-    w, d = fp * 0.40, fp * 0.86
+    w, d = fp * 0.40, fp - 0.7
     walls = [box("nave", w, d, nave_h)]
     roofs = [prism_roof("nave_roof", w, d, ht * 0.22, nave_h, overhang=0.35)]
     roofs.append(ridge_trim("ridge", w, d, 1.0, ht * 0.22, nave_h, axis="y"))
@@ -429,19 +480,25 @@ def build_church(fp, ht):
     walls.append(box("transept", tw, td, transept_h))
     roofs.append(prism_roof("transept_roof", tw, td, ht * 0.16, transept_h, overhang=0.3, axis="x"))
     tower_w = fp * 0.24
-    tower_h = ht * 0.62
+    tower_h = ht * 0.72
     walls.append(box("tower", tower_w, tower_w, tower_h))
     tower_buttresses(walls, 0.0, 0.0, tower_w, tower_h)
-    roofs.append(pyramid_roof("tower_roof", tower_w, ht * 0.20, tower_h, overhang=0.12))
+    roofs.append(pyramid_roof("tower_roof", tower_w, ht * 0.28, tower_h, overhang=0.12))
     return walls, roofs
 
 
 def build_church_tower(fp, ht):
-    """A city's landmark: a small nave beside a genuinely tall tower with a
+    """A city's landmark: a long nave beside a genuinely tall tower with a
     two-stage tapered spire — the silhouette that has to read over
-    everything else at 17-35 px."""
+    everything else at 17-35 px. The nave is real mass, not padding: at
+    footprint_m 22 the tower's own authored plan (5.7 m square under a
+    15.4 m shaft) already accounts for barely half that box, so a nave
+    short enough to leave the rest empty forced join_and_normalise to
+    stretch the WHOLE mesh sideways to reach 22 m, squashing the tower's
+    own aspect out of shape (2026-09-21 audit) — the nave now supplies the
+    length the footprint already promises instead."""
     nave_h = ht * 0.20
-    w, d = fp * 0.5, fp * 0.30
+    w, d = fp * 0.83, fp * 0.30
     walls = [box("nave", w, d, nave_h)]
     roofs = [prism_roof("nave_roof", w, d, nave_h * 0.6, nave_h, overhang=0.3, axis="x")]
     roofs.append(ridge_trim("ridge", w, d, 1.0, nave_h * 0.6, nave_h, axis="x"))
@@ -480,14 +537,14 @@ def build_palace(fp, ht):
     move(proof, y=portico.location.y)
     roofs.append(proof)
     tower_w = d * 0.55
-    tower_h = ht * 0.78
+    tower_h = ht * 0.82
     for sx in (-1, 1):
         tw_ob = box("wing%d" % sx, tower_w, tower_w, tower_h)
         move(tw_ob, x=sx * w * 0.5)
         walls.append(tw_ob)
         tower_buttresses(walls, tw_ob.location.x, tw_ob.location.y, tower_w, tower_h,
                           name_prefix="but%d" % sx)
-        cap = pyramid_roof("cap%d" % sx, tower_w, ht * 0.16, tower_h, overhang=0.15)
+        cap = pyramid_roof("cap%d" % sx, tower_w, ht * 0.18, tower_h, overhang=0.15)
         move(cap, x=sx * w * 0.5)
         roofs.append(cap)
     return walls, roofs
@@ -563,6 +620,13 @@ def join_and_normalise(name, objs, fp, ht):
         v.co.x *= s_xy
         v.co.y *= s_xy
         v.co.z *= s_z
+    # Diagnostic only (2026-09-21 audit): s_xy/s_z close to 1.0 means the
+    # authored plan already filled its declared footprint_m/height_m box, so
+    # normalise barely has to touch it; far from 1.0 means one axis is being
+    # stretched to reach the box the OTHER axis already fills, which is the
+    # distortion this audit exists to catch.
+    print("make_houses: %-12s span=%.2f tall=%.2f s_xy=%.3f s_z=%.3f ratio=%.3f" %
+          (name, span, tall, s_xy, s_z, s_xy / s_z if s_z else float("inf")))
     return ob
 
 
@@ -579,7 +643,8 @@ def export(ob, path):
 def main():
     os.makedirs(OUT, exist_ok=True)
     palette = load_palette()
-    wall_rgb = palette.get("house_wall", tuple(srgb_to_linear(c) for c in (0.78, 0.74, 0.65)))
+    default_wall = tuple(srgb_to_linear(c) for c in (0.78, 0.74, 0.65))
+    default_roof = tuple(srgb_to_linear(c) for c in (0.55, 0.35, 0.27))
     manifest = {}
     with open(TABLE) as f:
         rows = list(csv.DictReader(f))
@@ -588,8 +653,13 @@ def main():
         fp, ht = float(r["footprint_m"]), float(r["height_m"])
         clear()
         walls, roofs = build(t, fp, ht)
-        wall_mat = material("wall", wall_rgb)
-        roof_mat = material("roof", palette.get(r["roof"], tuple(srgb_to_linear(c) for c in (0.55, 0.35, 0.27))))
+        # Each row picks its own wall colour (2026-09-21: every wall used to
+        # be the same "house_wall" cream regardless of type, which at
+        # 17-35 px throws away half the visible pixels' worth of variety —
+        # roughly as much as the 5 roof colours buy).
+        wall_key = r.get("wall") or "house_wall"
+        wall_mat = material("wall", palette.get(wall_key, default_wall))
+        roof_mat = material("roof", palette.get(r["roof"], default_roof))
         for o in walls:
             o.data.materials.append(wall_mat)
         for o in roofs:

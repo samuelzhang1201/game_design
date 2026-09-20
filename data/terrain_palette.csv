@@ -45,3 +45,5 @@ house_roof_tile,#8C5A45,3D MAP houses: fired clay tile
 house_roof_tile_dark,#5E3A2E,"3D MAP houses (2026-09-21): dark fired tile, deeper than house_roof_tile — the tall townhouses and the palace"
 house_roof_slate,#5C6259,"3D MAP houses (2026-09-21): slate, grey with an earthy green cast to stay in the palette's family rather than reading blue — the grander roofs (a landmark, a merchant's house)"
 house_wall,#C8BCA6,3D MAP houses: limewashed daub and plaster between the timbers
+house_wall_daub,#8C7856,"3D MAP houses (2026-09-21): plain unlimewashed daub, darker and browner than house_wall — the rougher end of the village"
+house_wall_stone,#A29C89,"3D MAP houses (2026-09-21): bare dressed stone, greyer than house_wall — the grander material (a landmark, a merchant's house) alongside house_roof_slate"

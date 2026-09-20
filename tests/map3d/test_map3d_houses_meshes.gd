@@ -47,6 +47,12 @@ func test_every_mesh_stands_on_its_origin_at_the_claimed_size() -> void:
 				type + " is as tall as its row claims")
 			assert_lt(maxf(aabb.size.x, aabb.size.z), float(row["footprint_m"]) + 0.6,
 				type + " fits the footprint its row claims")
+			assert_gt(maxf(aabb.size.x, aabb.size.z), float(row["footprint_m"]) - 0.6,
+				type + " actually FILLS the footprint its row claims, not just narrower than it " +
+				"(2026-09-21: join_and_normalise used to scale x/y and z independently by " +
+				"min(fp/span, ht/tall) tied together, so the taller ratio always won and left " +
+				"every mesh 12-25% narrower than its declared footprint — an upper-only bound " +
+				"never caught that)")
 		node.free()
 
 

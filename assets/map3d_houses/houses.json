@@ -7,7 +7,7 @@
  "byre": {
   "footprint_m": 9.0,
   "height_m": 4.5,
-  "tris": 52
+  "tris": 56
  },
  "chapel": {
   "footprint_m": 10.0,
@@ -52,17 +52,17 @@
  "townhouse_a": {
   "footprint_m": 9.0,
   "height_m": 8.5,
-  "tris": 44
+  "tris": 104
  },
  "townhouse_b": {
   "footprint_m": 10.0,
   "height_m": 9.0,
-  "tris": 56
+  "tris": 76
  },
  "townhouse_c": {
   "footprint_m": 11.0,
   "height_m": 10.0,
-  "tris": 64
+  "tris": 84
  },
  "workshop": {
   "footprint_m": 10.0,
