@@ -476,3 +476,7 @@ map3d_ambient_sky_share,0.6,3D MAP sky (2026-09-20): the Environment's ambient_l
 map3d_fog_density,0.0000008,3D MAP sky (2026-09-20): the Environment's fog_density (fog lit in terrain_palette map3d_sky) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_sky_sun_angle_max,1.0,3D MAP sky (2026-09-20): the ProceduralSkyMaterial's sun_angle_max in degrees — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_sea_plane_span,12,"3D MAP sea (2026-09-20): the sea plane is the pack's size in metres times this, centred on the world origin at the build's sea_y — its edge must sit past the far camera's horizon; from tools/map3d/build_terrain.gd build_scene's span * 12.0 (2026-09-18)"
+map3d_house_view_m,9000,"3D MAP houses (spec 2026-09-20 §3): a settlement farther than this from the camera is not instanced at all — not culled after the fact"
+map3d_house_fade_m,1500,3D MAP houses: the distance over which a cluster fades in before map3d_house_view_m
+map3d_house_rebuild_move_m,300,"3D MAP houses: the camera must move this far before the house MultiMeshes are rebuilt — cut once per camera pose, never per frame"
+map3d_house_sink_m,0.35,"3D MAP houses: every instance is sunk this far so the wall foot bites into sloped ground. NO base plate, ever (taste.md: the grass disc under the 2026-09-16 3D towns was the first thing rejected)"

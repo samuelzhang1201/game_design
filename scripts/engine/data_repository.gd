@@ -45,6 +45,14 @@ var settlement_art: Array[Dictionary] = []
 ## data/map3d_settlements.csv rows keyed by burg group: the 3D MAP's
 ## placeholder marker for each settlement (Map3DView).
 var map3d_settlements: Dictionary = {}
+## data/map3d_houses.csv rows keyed by type: the 3D MAP's house meshes,
+## their role, weight, size and roof colour (spec 2026-09-20 §2).
+var map3d_houses: Dictionary = {}
+## data/map3d_bake.csv as key -> number: the 3D build's own tuning. The bake
+## (tools/map3d/bake_world.py) has always read this file; the runtime reads
+## it too for the settlements' house clusters, so the two can never disagree
+## about where a cluster ends.
+var map3d_bake: Dictionary = {}
 ## data/graphics_quality.csv rows keyed by tier (low/medium/high/ultra): the
 ## 3D map's graphics tiers (Map3DQuality, spec 2026-09-20 §4).
 var graphics_quality: Dictionary = {}
@@ -475,6 +483,13 @@ func _load(dir: String) -> bool:
 	if not _load_if_present("res://data/map3d_settlements.csv",
 			["group", "dot_px", "ring_px", "line_px", "color", "max_view_m"],
 			func(r): map3d_settlements[String(r["group"])] = r):
+		return false
+	if not _load_if_present("res://data/map3d_houses.csv",
+			["type", "mesh", "role", "weight", "footprint_m", "height_m", "roof", "min_group"],
+			func(r): map3d_houses[String(r["type"])] = r):
+		return false
+	if not _load_if_present("res://data/map3d_bake.csv", ["key", "value"],
+			func(r): map3d_bake[String(r["key"])] = float(r["value"])):
 		return false
 	if not _load_if_present("res://data/graphics_quality.csv", ["tier", "render_scale"],
 			func(r): graphics_quality[String(r["tier"])] = r):
