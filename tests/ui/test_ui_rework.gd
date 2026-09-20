@@ -105,6 +105,40 @@ func test_event_beat_pops_centered_with_art_placeholder() -> void:
 	assert_ne(title.text, "", "the event's title heads the window")
 	assert_gt(scene.reply_buttons().size(), 0, "choices live in the window")
 
+## The widest the audience window can get: a chapter beat with four choices
+## AND an illustration band over it. The whole thing — the window and the
+## last option in it — has to stay inside the viewport, or the player is
+## given a choice they cannot click (the bug the opening narration had in
+## 2026-08-30, one layer up).
+func test_the_window_fits_with_an_illustration_and_four_choices() -> void:
+	Game.start_campaign(42)
+	Game.next_tick()
+	var r := _root()
+	await wait_frames(2)
+	r._switch_to(GameRoot.State.CONVERSATION)
+	var scene: ConversationScene = r.current_screen
+	var ev := EventSystem.new(Game.data)._fire("c0_02", Game.state)
+	assert_eq((ev["choices"] as Array).size(), 4,
+		"C0-02 is the chapter's widest beat: three roads and the captain's offer")
+	scene.start([{"kind": "event", "portrait_id": "round_table",
+		"speaker": "The Council", "event": ev}], TickReport.new())
+	await wait_frames(3)
+	# Stand in for the installed render at the size install_map_art.py writes.
+	var band: TextureRect = scene.find_child("EventArt", true, false)
+	var stand_in := PlaceholderTexture2D.new()
+	stand_in.size = Vector2(1280, 533)
+	band.texture = stand_in
+	band.visible = true
+	for btn in scene.reply_buttons():
+		btn.visible = true
+	await wait_frames(3)
+	var panel: PanelContainer = scene.find_child("AudienceWindow", true, false)
+	var viewport_h := scene.get_viewport_rect().size.y
+	assert_lt(panel.size.y, viewport_h, "the window fits the viewport")
+	var last: Button = scene.reply_buttons()[scene.reply_buttons().size() - 1]
+	var bottom: float = last.get_global_rect().position.y + last.get_global_rect().size.y
+	assert_lt(bottom, viewport_h, "the last option is on screen")
+
 func test_dossier_tabs_switch_pages() -> void:
 	Game.start_campaign(42)
 	var report := Game.next_tick()

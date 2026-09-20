@@ -584,6 +584,12 @@ func _show_event_art(b: Dictionary) -> void:
 			art = load(path) as Texture2D
 	%EventArt.texture = art
 	%EventArt.visible = art != null
+	# The illustration IS the event's face. With one in the window the
+	# round-table portrait beside it is a second picture of the same room and
+	# a dossier for a speaker who is "The Council", so it stands down and the
+	# prose takes the full width; an event with no render installed keeps it.
+	if art != null:
+		%PortraitSide.visible = false
 
 ## Adds or removes someone from the address list. Selecting nobody means the
 ## whole room, so deselecting the last target quietly returns to addressing

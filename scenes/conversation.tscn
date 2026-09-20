@@ -82,7 +82,7 @@ text_overrun_behavior = 3
 unique_name_in_owner = true
 visible = false
 clip_contents = true
-custom_minimum_size = Vector2(0, 190)
+custom_minimum_size = Vector2(0, 170)
 mouse_filter = 2
 expand_mode = 1
 stretch_mode = 6
@@ -183,7 +183,7 @@ theme_override_constants/separation = 2
 
 [node name="SpeechScroll" type="ScrollContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 60)
+custom_minimum_size = Vector2(0, 120)
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
