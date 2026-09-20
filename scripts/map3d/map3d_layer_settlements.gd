@@ -79,7 +79,7 @@ func build() -> void:
 		var ra := drawn_px(ctx.repo.map3d_settlements[a])
 		var rb := drawn_px(ctx.repo.map3d_settlements[b])
 		return ra < rb if ra != rb else a < b)
-	var min_view_m := ctx.repo.bal("map3d_dot_min_view_m")
+	var min_view_m := Map3DGeometry.settlement_dot_min_view_m(ctx.repo, ctx.meta, ctx.view_size.y)
 	for group: String in groups:
 		var spec: Dictionary = ctx.repo.map3d_settlements[group]
 		var mesh := QuadMesh.new()
@@ -87,7 +87,7 @@ func build() -> void:
 		mesh.material = _ring_material(Color(String(spec["color"])),
 			float(spec["ring_px"]), float(spec["line_px"]), float(spec["max_view_m"]),
 			Map3DPriority.RING_BASE + by_size.find(group), float(spec.get("dot_px", 0.0)),
-			RING_MAT, float(spec.get("inner_px", 0.0)), min_view_m)
+			RING_MAT, float(spec.get("inner_px", 0.0)), min_view_m, true)
 		var pts: Array = by_group[group]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -158,23 +158,6 @@ func counts() -> Dictionary:
 	return out
 
 
-## The dot's near threshold, world metres (owner 2026-09-21 ruling): NOT the
-## absolute balance.csv value it replaces (map3d_dot_min_view_m, which once
-## sat past a ceiling the camera could never reach — see
-## task-dot-threshold-report.md), but the farthest map3d_dot_min_view_share
-## of the RIGHT-NOW reachable range, counted down from the same ceiling
-## Map3DCameraRig.max_distance computes toward map3d_zoom_min_m. It depends
-## on the view's own height (the ceiling does, through the scale bar's own
-## cap), so it must be recomputed whenever the view resizes, not just once
-## at build — see apply_scale.
-static func dot_min_view_m(repo: DataRepository, meta: Dictionary, view_height_px: float) -> float:
-	var ceiling := Map3DGeometry.zoom_ceiling_m(repo.bal("map3d_zoom_max_m"),
-		repo.bal("map3d_zoom_max_scale"), Map3DGeometry.map_units_per_metre(repo.map_info, meta),
-		repo.bal("map_scale_bar_max_px"), repo.bal("map3d_fov_deg"), view_height_px)
-	return Map3DGeometry.dot_min_view_m(ceiling, repo.bal("map3d_zoom_min_m"),
-		repo.bal("map3d_dot_min_view_share"))
-
-
 ## A ring material; its sizes are design px, turned into window px with the
 ## other layers' by apply_scale (base values kept as meta). max_view_m and
 ## min_view_m are world metres, never rescaled. The keyline is a fixed data
@@ -216,7 +199,7 @@ func apply_scale() -> void:
 		return
 	var s := ctx.viewport_px_scale()
 	var per_dist := ctx.px_per_dist()
-	var min_view_m := dot_min_view_m(ctx.repo, ctx.meta, ctx.view_size.y)
+	var min_view_m := Map3DGeometry.settlement_dot_min_view_m(ctx.repo, ctx.meta, ctx.view_size.y)
 	for mat: ShaderMaterial in _ring_mats:
 		mat.set_shader_parameter("px_per_dist", per_dist)
 		mat.set_shader_parameter("lift_px", ctx.repo.bal("map3d_ring_lift_px") * s)

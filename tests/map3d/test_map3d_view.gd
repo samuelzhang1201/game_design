@@ -97,8 +97,10 @@ func test_rings_take_their_size_from_the_table() -> void:
 	assert_almost_eq(float(mat.get_shader_parameter("line_px")), float(spec["line_px"]), 0.001)
 	assert_almost_eq(float(mat.get_shader_parameter("dot_px")), float(spec["dot_px"]), 0.001)
 	assert_almost_eq(float(mat.get_shader_parameter("inner_px")), float(spec["inner_px"]), 0.001)
+	var ctx := v.context()
 	assert_almost_eq(float(mat.get_shader_parameter("min_view_m")),
-		Game.data.bal("map3d_dot_min_view_m"), 0.001, "the dot hides below this distance")
+		Map3DGeometry.settlement_dot_min_view_m(Game.data, ctx.meta, ctx.view_size.y), 0.001,
+		"the dot hides below this distance")
 
 
 ## Owner 2026-09-20: every settlement a white solid dot, smaller than the
@@ -189,7 +191,7 @@ func test_a_far_village_carries_its_max_view_m_from_the_table() -> void:
 
 ## Mirrors settlement_ring.gdshader's vertex() near_fade formula exactly
 ## (owner 2026-09-20): a shader edit that changes the idiom must update this
-## too. Proves the dot is hidden below Map3DLayerSettlements.dot_min_view_m
+## too. Proves the dot is hidden below Map3DGeometry.settlement_dot_min_view_m
 ## (a SHARE of the reachable range since 2026-09-21, not an absolute value)
 ## and shown above it, without a GPU readback.
 func _near_fade(dist_m: float, min_view_m: float, fade_start: float) -> float:
@@ -199,7 +201,7 @@ func _near_fade(dist_m: float, min_view_m: float, fade_start: float) -> float:
 
 
 func test_the_dot_hides_below_the_near_cutoff_and_shows_above_it() -> void:
-	var min_m := Map3DLayerSettlements.dot_min_view_m(Game.data, WORLD, 450.0)
+	var min_m := Map3DGeometry.settlement_dot_min_view_m(Game.data, WORLD, 450.0)
 	var fade_start: float = Game.data.bal("map3d_ring_fade_start")
 	assert_eq(_near_fade(0.0, min_m, fade_start), 0.0, "hidden at the camera")
 	assert_eq(_near_fade(min_m * 0.5, min_m, fade_start), 0.0, "hidden well below the cutoff")
@@ -226,7 +228,7 @@ func test_every_tier_has_a_nonempty_draw_window() -> void:
 	var ceiling := Map3DGeometry.zoom_ceiling_m(Game.data.bal("map3d_zoom_max_m"),
 		Game.data.bal("map3d_zoom_max_scale"), Map3DGeometry.map_units_per_metre(Game.data.map_info, WORLD),
 		Game.data.bal("map_scale_bar_max_px"), Game.data.bal("map3d_fov_deg"), 450.0)
-	var min_m := Map3DLayerSettlements.dot_min_view_m(Game.data, WORLD, 450.0)
+	var min_m := Map3DGeometry.settlement_dot_min_view_m(Game.data, WORLD, 450.0)
 	var fade_start: float = Game.data.bal("map3d_ring_fade_start")
 	for group: String in Game.data.map3d_settlements:
 		var spec: Dictionary = Game.data.map3d_settlements[group]
@@ -240,22 +242,34 @@ func test_every_tier_has_a_nonempty_draw_window() -> void:
 ## The bug this fixes (owner 2026-09-21): the old map3d_dot_min_view_m was a
 ## flat 40000 m and nothing ever checked it against what the rig could
 ## actually reach (~33 km at a realistic panel height), so it silently sat
-## past the ceiling and the dot never drew at ANY zoom. The share-based
-## replacement is built so this class of bug cannot recur: pin that the
-## threshold always lands strictly inside (map3d_zoom_min_m, the reachable
-## ceiling), across the panel heights the map actually opens at.
-func test_the_dot_threshold_always_sits_inside_the_reachable_range() -> void:
-	var zoom_min: float = Game.data.bal("map3d_zoom_min_m")
+## past the ceiling and the dot never drew at ANY zoom. Fix round 1 review:
+## the first version of this test only checked the ALGEBRA — ceiling -
+## share * (ceiling - zoom_min) is inside (zoom_min, ceiling) for any
+## 0 < share < 1 no matter what build() actually does with it — so it never
+## caught build() shipping the deleted balance key (which bal() turns into
+## 0.0) to the shader instead. This reads what the DRAW PATH actually
+## carries: each tier ring's own `min_view_m` shader parameter, compared to
+## the one true computation, Map3DGeometry.settlement_dot_min_view_m — and
+## only then checks that value sits inside the reachable range, across the
+## panel heights the map actually opens at.
+func test_the_tier_materials_carry_the_computed_threshold_inside_the_reachable_range() -> void:
 	for h in [360.0, 450.0, 550.0, 600.0, 650.0, 720.0]:
-		var ceiling := Map3DGeometry.zoom_ceiling_m(Game.data.bal("map3d_zoom_max_m"),
-			Game.data.bal("map3d_zoom_max_scale"),
-			Map3DGeometry.map_units_per_metre(Game.data.map_info, WORLD),
-			Game.data.bal("map_scale_bar_max_px"), Game.data.bal("map3d_fov_deg"), h)
-		var min_m := Map3DLayerSettlements.dot_min_view_m(Game.data, WORLD, h)
-		assert_lt(min_m, ceiling,
-			"view height %d: the dot threshold must sit below the reachable ceiling" % h)
-		assert_gt(min_m, zoom_min,
-			"view height %d: the dot threshold must sit above the closest zoom" % h)
+		var v := _view()
+		v.size = Vector2(800, h)
+		v.activate()
+		var ctx := v.context()
+		var expected := Map3DGeometry.settlement_dot_min_view_m(Game.data, ctx.meta, ctx.view_size.y)
+		var rig := v.component("rig") as Map3DCameraRig
+		assert_lt(expected, rig.max_distance(),
+			"view height %d: the computed threshold must sit below the reachable ceiling" % h)
+		assert_gt(expected, Game.data.bal("map3d_zoom_min_m"),
+			"view height %d: the computed threshold must sit above the closest zoom" % h)
+		for group: String in Game.data.map3d_settlements:
+			var mmi := v.viewport().get_node("Markers/%s" % group.capitalize()) as MultiMeshInstance3D
+			var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
+			assert_almost_eq(float(mat.get_shader_parameter("min_view_m")), expected, 0.001,
+				"view height %d: %s's ring material must carry the computed threshold, not the "
+				% [h, group] + "deleted absolute key (which bal() turns into 0.0)")
 
 
 func test_ring_render_priority_rises_with_tier() -> void:

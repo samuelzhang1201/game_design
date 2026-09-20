@@ -177,17 +177,25 @@ func test_pick_reach_never_falls_below_the_pick_floor() -> void:
 ## pick_reach_px on the ground footprint — fix round 1, owner 2026-09-20:
 ## both used to be fed by one function, `marker_px`, and conflating them
 ## crowded landmark marks out of a huge area where nothing was even drawn.
-## Below the dot's near threshold (Map3DLayerSettlements.dot_min_view_m, a
+## Below the dot's near threshold (Map3DGeometry.settlement_dot_min_view_m, a
 ## SHARE of the reachable range since 2026-09-21) the dot is hidden, so the
 ## capital contributes NO keep-clear rect there, even though pick_reach_px —
 ## independent of the dot — is still a real, large number at that same
 ## distance. Above the cutoff, once the dot is drawn again, it keeps its own
-## screen space clear.
+## screen space clear. Fix round 1 review point 4: also pins that the
+## capital's own ring MATERIAL carries this exact number — settlement_rects()
+## and the shader now both call Map3DGeometry.settlement_dot_min_view_m
+## directly rather than one depending on the other, so a rect and the dot it
+## is reserving space for can never disagree about where the cutoff sits.
 func test_settlement_rects_sizes_on_the_drawn_dot_not_the_footprint() -> void:
 	var v := _view()
 	var c := v.context()
 	var capital := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
-	var min_m := Map3DLayerSettlements.dot_min_view_m(Game.data, c.meta, c.view_size.y)
+	var min_m := Map3DGeometry.settlement_dot_min_view_m(Game.data, c.meta, c.view_size.y)
+	var mmi := v.viewport().get_node("Markers/Capital") as MultiMeshInstance3D
+	var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
+	assert_almost_eq(float(mat.get_shader_parameter("min_view_m")), min_m, 0.001,
+		"the capital's ring material must carry the same threshold settlement_rects() uses")
 	var burg: Dictionary = Game.data.burgs[capital]
 	var pack_pos := Vector2(float(burg["x"]), float(burg["y"]))
 	v.look_at_pack(pack_pos, min_m * 0.5)

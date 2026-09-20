@@ -116,14 +116,34 @@ static func zoom_ceiling_m(zoom_max_m: float, max_units: float, units_per_metre:
 		fov_deg, view_height_px))
 
 
-## The settlement dot's near threshold (owner 2026-09-21, replacing an
-## absolute metres value that once sat past an unreachable ceiling): the
-## farthest `share` of the reachable range, counted DOWN from `ceiling_m`
-## toward `zoom_min_m` — so the threshold can never again land outside the
-## camera's own reach. share 0 puts it AT the ceiling (nothing ever clears
-## it); 1 puts it at zoom_min_m (always clear).
-static func dot_min_view_m(ceiling_m: float, zoom_min_m: float, share: float) -> float:
-	return ceiling_m - share * (ceiling_m - zoom_min_m)
+## A value counted DOWN `share` of the way from `ceiling` toward `floor` —
+## the settlement dot's near threshold uses this (owner 2026-09-21, replacing
+## an absolute metres value that once sat past an unreachable ceiling), but
+## the maths itself names neither: share 0 returns `ceiling`, 1 returns
+## `floor`. Pure and generic on purpose, so its name cannot be mistaken for
+## settlement_dot_min_view_m below, which is the one settlement-specific
+## reader (fix round 1 review: the two used to share a name).
+static func threshold_from_share(ceiling: float, floor: float, share: float) -> float:
+	return ceiling - share * (ceiling - floor)
+
+
+## The settlement dot's near threshold in world metres (owner 2026-09-21
+## ruling): the farthest map3d_dot_min_view_share of the RIGHT-NOW reachable
+## range (zoom_ceiling_m, which depends on `meta` and the view's own height
+## through the scale bar cap) counted down toward map3d_zoom_min_m. The one
+## place this is computed — Map3DContext.settlement_rects() and
+## Map3DLayerSettlements (build and apply_scale, the latter because a resize
+## changes the ceiling) all call this, rather than each other, so neither a
+## layer nor the context depends on the other (fix round 1 review: Context
+## calling a Layer class inverted the sharing direction every other piece of
+## the 3D map follows).
+static func settlement_dot_min_view_m(repo: DataRepository, meta: Dictionary,
+		view_height_px: float) -> float:
+	var ceiling := zoom_ceiling_m(repo.bal("map3d_zoom_max_m"), repo.bal("map3d_zoom_max_scale"),
+		map_units_per_metre(repo.map_info, meta), repo.bal("map_scale_bar_max_px"),
+		repo.bal("map3d_fov_deg"), view_height_px)
+	return threshold_from_share(ceiling, repo.bal("map3d_zoom_min_m"),
+		repo.bal("map3d_dot_min_view_share"))
 
 
 ## A kingdom name's size in screen px: a word `height_m` tall on the ground

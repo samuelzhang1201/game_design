@@ -253,7 +253,7 @@ func projected_settlements() -> Array:
 ## A hidden dot — nearer than the dot's own threshold, or `shown` false — no rect.
 func settlement_rects() -> Array:
 	var out: Array = []
-	var min_view_m := Map3DLayerSettlements.dot_min_view_m(repo, meta, view_size.y)
+	var min_view_m := Map3DGeometry.settlement_dot_min_view_m(repo, meta, view_size.y)
 	for e: Dictionary in projected_settlements():
 		if not bool(e["shown"]):
 			continue
