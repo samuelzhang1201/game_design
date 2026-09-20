@@ -248,6 +248,29 @@ func test_hush_money_cannot_buy_the_bond() -> void:
 			return
 	fail_test("c0_12/settle is gone")
 
+## Every beat has an illustration planned, and every plan points at a real
+## entry of the art prompt library. The installed PNG is not required — a
+## fresh checkout has no renders and the audience window simply shows no
+## band — but the mapping must never rot.
+func test_every_beat_has_an_illustration_planned() -> void:
+	var art := {}
+	for r in DataRepository.parse_csv("res://assets/flux/event_art.csv",
+			["event_id", "art_id"]):
+		art[String(r["event_id"])] = String(r["art_id"])
+	var prompts := {}
+	for r in DataRepository.parse_csv("res://assets/flux/prompts.csv", ["id", "canvas"]):
+		prompts[String(r["id"])] = String(r["canvas"])
+	for id: String in _ids():
+		assert_true(art.has(id), id + " has no row in assets/flux/event_art.csv")
+		var art_id: String = art.get(id, "")
+		assert_true(prompts.has(art_id),
+			"%s names %s, which is not in the prompt library" % [id, art_id])
+		assert_eq(String(prompts.get(art_id, "")), "C-EVENT",
+			"%s must be drawn on the wide event band canvas" % art_id)
+	for id: String in art:
+		assert_true(data.events_by_id.has(id),
+			"event_art.csv names %s, which is not an event" % id)
+
 # --- playing it -----------------------------------------------------------
 
 func test_a_new_reign_opens_on_the_first_council() -> void:

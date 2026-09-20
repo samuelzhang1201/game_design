@@ -2117,13 +2117,15 @@ sphere hanging still in the background, quiet formal tension [C-EVENT]
 
 #### `V-36` 麦捆兄弟会 · The Brotherhood of the Sheaf
 ```
-[S] a council table lit from one side, a wiry sharp-featured spymaster of thirty-seven
-with lank black hair in a plain brown hooded cloak leaning in and laying a folded letter
-with a broken wax seal on the oak, the seal stamped with a bound sheaf of wheat, at the
-far end of the table a handsome sharp-boned nobleman of forty-four in a black and gold
+[S] a stone council hall lit from one tall window, a wiry sharp-featured spymaster of
+thirty-seven with lank black hair in a plain brown hooded cloak leaning over the oak
+table and laying down a letter folded face down with a broken red wax seal on it, the
+seal stamped with a bound sheaf of wheat, nothing written anywhere in the picture, at the
+far end of the table one handsome sharp-boned nobleman of forty-four in a black and gold
 parti-coloured cotehardie turning a ring on his finger with a faint unconcerned smile,
-other councillors half risen from their seats, the two men framed at opposite ends of a
-long empty table [C-EVENT]
+four other councillors in plain dark robes half risen from their seats between them,
+banners and stonework behind, the two men framed at opposite ends of the long table
+[C-EVENT]
 ```
 
 #### `V-37` 卢顿河上的灰烬 · Ashes on the Louthton
@@ -2212,8 +2214,8 @@ small in the far distance, heat haze, a mood of patience worn very thin [C-EVENT
 ```
 [S] a royal audience chamber in late summer light, a lean sun-blackened man of
 thirty-three in a coarse undyed woollen robe kneeling on one knee and holding up a long
-parchment petition covered in rows of marks and thumbprints, sealed with a bound sheaf of
-wheat, millers and weavers standing behind him with caps in their hands, a bearded European
+parchment petition that hangs half rolled so only rows of inked crosses and dark
+thumbprints show and no words at all, sealed with a bound sheaf of wheat, millers and weavers standing behind him with caps in their hands, a bearded European
 king of forty with a close-trimmed dark beard, a plain gold circlet and a deep blue mantle
 seated on a modest wooden throne in the foreground, no legible writing on the parchment [C-EVENT]
 ```
@@ -2222,8 +2224,8 @@ seated on a modest wooden throne in the foreground, no legible writing on the pa
 ```
 [S] a damp stone cell lit by one hard shaft of light from a small barred window, a lean
 sun-blackened man of thirty-three with wild dark hair and a coarse undyed robe sitting
-barefoot on straw, writing a long list on cheap paper braced on his knee, many filled
-sheets stacked beside him, a round-faced priest of sixty-three in an undyed habit standing
+barefoot on straw, writing on a sheet of cheap paper braced on his knee and turned away from the viewer so
+nothing written can be seen, many finished sheets stacked face down beside him, a round-faced priest of sixty-three in an undyed habit standing
 just inside the door with his hands folded, quiet and dignified, no legible writing
 [C-EVENT]
 ```
@@ -2233,8 +2235,8 @@ just inside the door with his hands folded, quiet and dignified, no legible writ
 [S] night in a king's private chamber, an olive-skinned woman of thirty-eight in a
 high-collared dark teal travelling gown and a short fur-lined mantle standing composed
 beside an open coffer of coin, a bearded European king of forty with a close-trimmed dark beard and a
-plain gold circlet reading an unrolled treaty on the table, its heavy wax seal showing a silver sickle on a red
-field, a fair-haired woman of twenty-seven in a pale rose gown standing silently in the
+plain gold circlet standing over a treaty rolled shut on the table with only its heavy wax
+seal showing, a silver sickle on a red field, no writing visible anywhere, a fair-haired woman of twenty-seven in a pale rose gown standing silently in the
 open doorway behind them with candlelight on her face, restrained emotion [C-EVENT]
 ```
 
@@ -2275,8 +2277,9 @@ shadow all around [C-EVENT]
 
 #### `V-52` 明君之始 · A Just Beginning
 ```
-[S] a council hall in bright morning light, an open ledger being passed hand to hand down
-a long oak table while the ministers stare at it, a handsome sharp-boned nobleman of
+[S] a council hall in bright morning light, a leather ledger being passed hand to hand down
+a long oak table while the ministers stare at it, its pages seen at a raking angle so the
+ruled columns read as unreadable marks with no letters and no numerals, a handsome sharp-boned nobleman of
 forty-four in black and gold sitting rigid and pale with his chain of office lying on the
 oak in front of him, guards standing at the door, in the background half behind a pillar
 a young man in black and gold watching the king with a still cold face, hard clear light
