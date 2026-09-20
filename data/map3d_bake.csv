@@ -67,22 +67,25 @@ low_rock_free_m,60,"3D bake (2026-09-19): below this many metres over the sea no
 river_bank_rock_reach_m,240,"3D bake: how far from the water the carve's walls are held off rock — the gorge wall by the capital stood 250 m out, beyond the wet band, and kept its pixelated cliff"
 far_color_snow,#9E9289,"3D bake (2026-09-19, snow_02): what the snow reads as (sRGB). snow_02's own mean is ~#A5A5A7 and the sky lights it cyan: this takes blue and green out and a little value (bracketed #A5A39E, #A5988F, #A5928A: the lightest read blown white and flattened the ridges) — the colour map can only darken, and the snow wears none of the country's tints (bake_world.py)"
 house_radius_ratio,0.60,"3D bake houses (spec 2026-09-20 §4): houses fill this share of the settlement's footprint radius. The ring from here out to the footprint edge is built ground with NO houses — the buffer the owner asked for (定居点周边和地图上的地形要有一定距离的缓冲过渡). Bracketed for the owner in Task 11"
-house_core_ratio,0.35,3D bake houses: the share of the house radius that is the dense core
 house_barn_ratio,0.75,3D bake houses: past this share of the house radius only barn-role types are placed
-house_spacing_m,22,3D bake houses: metres between candidate slots on the jittered grid
-house_density_gamma,1.4,"3D bake houses: density falls as (1 - t) ^ this from the core to the house radius; higher thins the edge faster"
 house_foot_min,0.55,3D bake houses: the footprint mask must be at least this for a candidate to be kept
 house_max_slope,0.62,"3D bake houses: the largest ground gradient (rise over run) a house may stand on — the pack's own 93rd-percentile land slope (assets/map3d/<map>/bake/world.json's slope_percentiles[1]), where bake_world.py's t_rock (ramping from the 82nd percentile) reaches FULL strength, so the rule is a house stands anywhere the ground is not fully drawn as rock; a new pack should read its own world.json rather than assume 0.62"
 house_shore_min_m,25,3D bake houses: a house stays this many metres from water
 house_port_shore_min_m,6,3D bake houses: a burg with is_port 1 may build this close to the water instead
 house_landmark_search_m,300,"3D bake houses: how far bake_houses.place() searches outward, in rings, for land clear of the shore buffer when the burg's own centre fails it — a port's registered point can sit right on the water; the landmark is placed there instead, offset from (0,0). This is an outer bound only: the search is also capped by house_radius_ratio x the settlement's own footprint radius, so a relocated landmark never lands past its own cluster in the buffer ring meant to stay empty. Nothing found leaves the settlement with no landmark and no houses at all"
-house_min,4,3D bake houses: the fewest houses a settlement keeps; below it the density draw is relaxed (never the land, water or slope tests)
-house_edge_scale,0.82,3D bake houses: the scale the outermost houses taper to, so the cluster ends by getting smaller rather than by stopping
-house_yaw_jitter_deg,35,"3D bake houses: a house faces the cluster centre (or the nearest route) plus this much jitter. NEVER uniform random — the owner rejected hash-scattered marks on the 2D estates as unreasonable"
-house_road_align_m,40,3D bake houses: a house within this distance of a route point faces the route instead of the centre
-house_people_per_house,160,"3D bake houses: how many people one shown house stands for; the runtime shows people / this many houses by rank, so a settlement that grows sprouts more houses with no re-bake"
-house_max_capital,220,3D bake houses: the most houses a capital's cluster holds
-house_max_city,150,3D bake houses: the most houses a city's cluster holds
-house_max_town,80,3D bake houses: the most houses a town's cluster holds
-house_max_fort,60,3D bake houses: the most houses a fort's cluster holds
-house_max_village,24,3D bake houses: the most houses a village's cluster holds
+house_yaw_jitter_deg,35,"3D bake houses: a house faces its lane (or the nearest lane, for a block-fill house) plus this much jitter. NEVER uniform random — the owner rejected hash-scattered marks on the 2D estates as unreasonable"
+house_gap_m,1.0,"3D bake houses redesign (owner 2026-09-20, 紧凑杂乱): the deliberate clearance kept between two accepted house rectangles, so a medieval town reads as nearly touching walls rather than the old circle-test's visible gaps — about a person's width, not a road's"
+house_height_min,0.75,"3D bake houses redesign: the height_scale (independent of the horizontal scale jitter) a house at the rim of the cluster settles to — roughly a squat single-storey cottage against the tallest building's height_m"
+house_height_max,1.5,"3D bake houses redesign: the height_scale a house at the cluster's own core reaches — a medieval town is tallest at its centre, so the bias runs house_height_max at d=0 down to house_height_min at r_house, jittered per house so neighbours differ (定居点... 高低层次不齐)"
+house_count_capital,400,"3D bake houses redesign: the target house count for a capital's cluster — bracketed well under the ~450 mark where one capital alone starts starving the runtime's shared 5000-instance budget (data/map3d_settlements.csv max_view_m already thins the far ones; this is the bake-time count)"
+house_count_city,200,3D bake houses redesign: the target house count for a city's cluster
+house_count_town,70,3D bake houses redesign: the target house count for a town's cluster
+house_count_fort,55,3D bake houses redesign: the target house count for a fort's cluster — a small garrison town, between a village and a town
+house_count_village,25,"3D bake houses redesign: the target house count for a village's cluster, and the fallback for any group not listed here"
+lane_seeds,4,"3D bake houses redesign: how many lanes leave the settlement's own centre on roughly even, jittered bearings before any of them branch"
+lane_step_m,20,3D bake houses redesign: how far a lane's random walk steps before its heading is perturbed again
+lane_wander_deg,25,3D bake houses redesign: how far a lane's heading may drift, plus or minus, at each step — enough to wander like a real medieval street, not enough to double back on itself
+lane_branch_chance,0.15,3D bake houses redesign: the chance a lane forks a child at each step, while lane_max_depth still allows it
+lane_max_depth,3,3D bake houses redesign: how many levels of lane branching are allowed (the seed lanes are depth 0) before a fork stops spawning further forks
+lane_half_width_m,1.75,"3D bake houses redesign (owner's explicit ruling): a real medieval lane's own half-width — about 3-4 m kerb to kerb total. Do NOT widen this the way this project widens roads and rivers for visibility; it is a gap between house fronts, not a drawn line"
+plot_step_m,10,"3D bake houses redesign: how often, walking a lane's own length, a frontage plot is offered on each side — and the spacing of the block-fill grid that packs whatever is left between lanes, close enough that neighbouring footprints (6-34 m, data/map3d_houses.csv) crowd each other rather than leaving evenly-spaced gaps"

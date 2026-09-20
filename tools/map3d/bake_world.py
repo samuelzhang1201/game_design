@@ -1072,7 +1072,7 @@ def main(argv=None):
     with open(os.path.join(OUT, "rivers.json"), "w") as f:
         json.dump({"rivers": rivers_out}, f)
     with open(os.path.join(OUT, "houses.csv"), "w", newline="") as f:
-        w = csv.DictWriter(f, ["burg_code", "rank", "x_m", "z_m", "yaw_deg", "type", "scale"])
+        w = csv.DictWriter(f, ["burg_code", "rank", "x_m", "z_m", "yaw_deg", "type", "scale", "height_scale"])
         w.writeheader()
         for r in sorted(house_rows, key=lambda r: (r["burg_code"], r["rank"])):
             w.writerow(r)

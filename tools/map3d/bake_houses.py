@@ -1,4 +1,5 @@
-"""House placement for the 3D map's settlements (spec 2026-09-20 §1).
+"""House placement for the 3D map's settlements (spec 2026-09-20 §1, redesign
+2026-09-20: lanes, not a jittered grid — owner's ruling below).
 
 Pure: given a burg, the tuning rules, the type table and the bake's own
 vertex-resolution masks, it returns the houses of one cluster with their
@@ -9,6 +10,16 @@ writes the CSV.
 "never in the sea" is structural here: a candidate is tested against the very
 land mask the footprint was multiplied by, so nothing downstream can place a
 house the footprint did not claim.
+
+The owner, verbatim, on the first cut (an evenly-spaced jittered grid with a
+radial density falloff — even specks, no negative space): "你不需要实时严格的计
+算房屋数量，你只需要根据定居点种类不同生成这几种种类的定居点房屋密度即可！房屋的
+位置也可以生成在不同的位置，但不需要每次都重新计算。房屋的摆放要凸显中世纪那种风
+格，紧凑杂乱，形成巷子，高低层次不齐" — the count is a target per settlement
+GROUP now, not derived from population, and the layout GROWS A LANE NETWORK
+out from the centre first, then packs house rectangles along its frontage,
+then fills whatever block remains between lanes: compact, messy, with real
+negative space (the lanes themselves) and uneven roofs (`height_scale`).
 """
 import hashlib
 import math
@@ -33,17 +44,13 @@ def footprint_radius_m(population, rules):
                          rules["footprint_min_m"], rules["footprint_max_m"]))
 
 
-def max_houses(group, rules):
-    """The most houses a settlement of this group ever shows."""
-    return int(rules.get("house_max_%s" % group, rules["house_max_village"]))
-
-
 def house_count(burg, rules):
-    """How many of the baked houses a settlement shows: one per
-    house_people_per_house souls, at least house_min, capped by its group."""
-    people = float(burg.get("population", 0) or 0)
-    n = int(round(people / max(rules["house_people_per_house"], 1.0)))
-    return int(min(max(n, int(rules["house_min"])), max_houses(burg.get("group", "village"), rules)))
+    """The TARGET number of houses a settlement's cluster shows — fixed by
+    its group (village/fort/town/city/capital), never by its population: two
+    burgs of the same group get the same target however far apart their
+    populations sit. An unknown group falls back to the village count."""
+    group = str(burg.get("group", "village"))
+    return int(rules.get("house_count_%s" % group, rules["house_count_village"]))
 
 
 def _group_allows(group, min_group):
@@ -115,7 +122,158 @@ def _find_landmark_spot(cx, cy, land, vw, vh, shore_m, bound_m):
     return None
 
 
-def place(burg, rules, types, foot, land, height, k, vw, vh, routes=None):
+def _axes(yaw_deg):
+    """The two unit axes of a footprint's own local frame (its "width" and
+    "length" directions), for the separating-axis test below."""
+    r = math.radians(yaw_deg)
+    return (math.sin(r), math.cos(r)), (math.cos(r), -math.sin(r))
+
+
+def _rects_too_close(ax, az, ahalf, ayaw, bx, bz, bhalf, byaw, gap):
+    """Oriented rectangle overlap: true when two square footprints (centre,
+    half-width, yaw in degrees) come closer than `gap` metres apart, tested
+    by the separating axis theorem over each box's own two edge normals —
+    a circle-distance bound is not tight enough for rotated rectangles
+    (two squares can sit closer, corner to corner, than the sum of their
+    half-widths would suggest along an axis), which is why the "current
+    algorithm" this replaces read as gapped: it was really testing circles."""
+    aux, auz = _axes(ayaw)
+    bux, buz = _axes(byaw)
+    ahw = ahalf + gap * 0.5
+    bhw = bhalf + gap * 0.5
+    tx, tz = bx - ax, bz - az
+    for lx, lz in (aux, auz, bux, buz):
+        t = abs(tx * lx + tz * lz)
+        ra = ahw * abs(aux[0] * lx + aux[1] * lz) + ahw * abs(auz[0] * lx + auz[1] * lz)
+        rb = bhw * abs(bux[0] * lx + bux[1] * lz) + bhw * abs(buz[0] * lx + buz[1] * lz)
+        if t > ra + rb:
+            return False   # a separating axis: the two rectangles clear each other
+    return True
+
+
+def _walk_lane(rng, lanes, x0, z0, bearing, r_house, step, wander,
+               branch_chance, max_depth, depth, max_steps):
+    """One lane, grown as a random walk from (x0, z0) outward on `bearing`
+    (degrees, 0 = +z, 90 = +x — the same convention a house's own facing
+    yaw uses), heading perturbed by up to ±wander a step; a child lane may
+    fork off at each step while depth allows, with a shorter step budget
+    than its parent so the network thins as it branches rather than filling
+    the whole cluster with backbone. Appends every lane of at least one
+    step (its own and every child's) to `lanes` in place."""
+    pts = [(x0, z0, bearing)]
+    x, z = x0, z0
+    steps = 0
+    while math.hypot(x, z) <= r_house and steps < max_steps:
+        bearing = bearing + rng.uniform(-wander, wander)
+        rad = math.radians(bearing)
+        x = x + step * math.sin(rad)
+        z = z + step * math.cos(rad)
+        pts.append((x, z, bearing))
+        steps += 1
+        if depth < max_depth and rng.random() < branch_chance:
+            side = 1.0 if rng.random() < 0.5 else -1.0
+            child_bearing = bearing + side * rng.uniform(40.0, 70.0)
+            child_budget = max(int((max_steps - steps) * 0.6), 2)
+            _walk_lane(rng, lanes, x, z, child_bearing, r_house, step, wander,
+                       branch_chance, max_depth, depth + 1, child_budget)
+    if len(pts) > 1:
+        lanes.append(pts)
+
+
+def _grow_lanes(rng, r_house, rules):
+    """The settlement's lane network: lane_seeds lanes leave the centre on
+    roughly even bearings (each jittered so they are not a spoked wheel),
+    each a branching random walk out to r_house. Baked once per burg from
+    its own seeded stream, never recomputed at runtime."""
+    lanes = []
+    n_seeds = max(int(rules["lane_seeds"]), 1)
+    step = float(rules["lane_step_m"])
+    wander = float(rules["lane_wander_deg"])
+    branch_chance = float(rules["lane_branch_chance"])
+    max_depth = int(rules["lane_max_depth"])
+    # generous: the walk wanders rather than making straight for the rim, so
+    # its step BUDGET must outlast the distance test that actually stops it
+    max_steps = max(int(math.ceil(r_house / max(step, 1e-6))) * 4 + 4, 4)
+    base = rng.uniform(0.0, 360.0)
+    for i in range(n_seeds):
+        bearing = base + i * (360.0 / n_seeds) + rng.uniform(-15.0, 15.0)
+        _walk_lane(rng, lanes, 0.0, 0.0, bearing, r_house, step, wander,
+                   branch_chance, max_depth, 0, max_steps)
+    return lanes
+
+
+def _resample_lane(lane, plot_step_m):
+    """(x, z, bearing_deg) every plot_step_m of arc length along a lane's
+    own polyline — the frontage a house can stand against."""
+    if len(lane) < 2:
+        return []
+    cum = [0.0]
+    for i in range(len(lane) - 1):
+        x0, z0, _ = lane[i]
+        x1, z1, _ = lane[i + 1]
+        cum.append(cum[-1] + math.hypot(x1 - x0, z1 - z0))
+    total = cum[-1]
+    if total < 1e-6:
+        return []
+    out = []
+    d = 0.0
+    seg = 0
+    n_seg = len(lane) - 1
+    while d <= total:
+        while seg < n_seg - 1 and cum[seg + 1] < d:
+            seg += 1
+        x0, z0, _ = lane[seg]
+        x1, z1, b1 = lane[seg + 1]
+        seg_len = max(cum[seg + 1] - cum[seg], 1e-6)
+        t = (d - cum[seg]) / seg_len
+        out.append((x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, b1))
+        d += plot_step_m
+    return out
+
+
+def _frontage_candidates(lanes, plot_step_m, r_house):
+    """(d0, x, z, bearing_deg, side) for every plot offered along every
+    lane's own frontage, both sides, sorted nearest-centre first — geometry
+    only, before any type is picked or any mask applied (`side` is +1/-1,
+    the perpendicular a house at that plot would face: bearing + side*90).
+    Pulled out of place() so a test can regenerate the exact same candidates
+    it placed against, without re-deriving the RNG's own type/jitter draws."""
+    out = []
+    for lane in lanes:
+        for x, z, bearing in _resample_lane(lane, plot_step_m):
+            d0 = math.hypot(x, z)
+            if d0 > r_house:
+                continue
+            for side in (1.0, -1.0):
+                out.append((d0, x, z, bearing, side))
+    out.sort(key=lambda c: (c[0], c[3], c[4]))
+    return out
+
+
+def _nearest_lane(lanes, x, z):
+    """(distance_m, bearing_deg) of the lane point nearest (x, z), or
+    (None, 0.0) with no lanes at all — the local street's own direction, for
+    a block-fill house that reads as belonging to that street rather than
+    spun by its own hash."""
+    best_d, best_b = None, 0.0
+    for lane in lanes:
+        for i in range(len(lane) - 1):
+            x0, z0, _ = lane[i]
+            x1, z1, b1 = lane[i + 1]
+            dx, dz = x1 - x0, z1 - z0
+            seg_len2 = dx * dx + dz * dz
+            if seg_len2 < 1e-9:
+                px, pz = x0, z0
+            else:
+                t = float(np.clip(((x - x0) * dx + (z - z0) * dz) / seg_len2, 0.0, 1.0))
+                px, pz = x0 + t * dx, z0 + t * dz
+            d = math.hypot(x - px, z - pz)
+            if best_d is None or d < best_d:
+                best_d, best_b = d, b1
+    return best_d, best_b
+
+
+def place(burg, rules, types, foot, land, height, k, vw, vh):
     """The houses of one settlement, ranked from the centre outward.
 
     `foot`, `land`, `height` are the bake's vertex-resolution arrays; `k` is
@@ -127,6 +285,12 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, routes=None):
     and no houses: an empty list. The landmark's own search never reaches
     past r_house, so it can never land in the buffer ring beyond the
     cluster's own houses.
+
+    The layout: grow a branching lane network out from the centre, pack
+    house rectangles along its frontage (both sides, oriented to face the
+    lane), then fill whatever block is left between lanes with a jittered
+    close-spaced grid — oriented to the nearest lane, not spun independently
+    — until the group's target count is reached or candidates run out.
     """
     code = str(burg["burg_code"])
     group = str(burg.get("group", "village"))
@@ -138,7 +302,12 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, routes=None):
                else rules["house_shore_min_m"])
 
     rows = []
-    taken = []   # (x_m, z_m, footprint_m)
+    taken = []   # (x_m, z_m, half_footprint_m, yaw_deg) of every accepted rectangle
+
+    # lanes are grown FIRST, before anything else draws from `rng` — a test
+    # (or a future caller) can reproduce them exactly from a freshly seeded
+    # rng and this same call, with no need to replay the landmark's own draws
+    lanes = _grow_lanes(rng, r_house, rules)
 
     landmark = _pick(rng, types, "landmark", group)
     if landmark is not None:
@@ -151,92 +320,106 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, routes=None):
         if spot is None:
             return []
         lx, lz = spot
+        yaw0 = float(round(rng.uniform(0.0, 360.0), 2))
         rows.append({"burg_code": code, "rank": 0, "x_m": float(round(lx, 2)),
-                     "z_m": float(round(lz, 2)),
-                     "yaw_deg": float(round(rng.uniform(0.0, 360.0), 2)),
-                     "type": landmark, "scale": 1.0})
-        taken.append((lx, lz, float(types[landmark]["footprint_m"])))
+                     "z_m": float(round(lz, 2)), "yaw_deg": yaw0,
+                     "type": landmark, "scale": 1.0,
+                     "height_scale": float(rules["house_height_max"])})
+        taken.append((lx, lz, 0.5 * float(types[landmark]["footprint_m"]), yaw0))
 
-    # candidates on a jittered grid, gathered then sorted by radius so the
-    # ranking is "grows outward" and the order never depends on the scan
-    step = float(rules["house_spacing_m"])
-    reach = int(math.ceil(r_house / step))
-    cand = []
-    for gy in range(-reach, reach + 1):
-        for gx in range(-reach, reach + 1):
-            ox = gx * step + rng.uniform(-0.4, 0.4) * step
-            oz = gy * step + rng.uniform(-0.4, 0.4) * step
-            d = math.hypot(ox, oz)
-            if d > r_house or d < 1e-6:
-                continue
-            cand.append((d, ox, oz, rng.random()))
-    cand.sort(key=lambda c: (c[0], c[1], c[2]))
+    n_target = house_count(burg, rules)
+    gap = float(rules["house_gap_m"])
+    jitter = float(rules["house_yaw_jitter_deg"])
+    barn_r = rules["house_barn_ratio"] * r_house
+    hmin, hmax = float(rules["house_height_min"]), float(rules["house_height_max"])
+    span = hmax - hmin
 
-    core = rules["house_core_ratio"] * r_house
-    gamma = rules["house_density_gamma"]
-    cap = max_houses(group, rules)
-    kept = []
-    for d, ox, oz, draw in cand:
-        if len(rows) + len(kept) >= cap:
-            break
+    def _try_place(ox, oz, yaw, pick):
+        if len(rows) >= n_target:
+            return False
+        d = math.hypot(ox, oz)
+        if d > r_house or d < 1e-6:
+            return False
         vx, vy = cx + ox / VERTEX_M, cy + oz / VERTEX_M
         if not (0 <= vx < vw and 0 <= vy < vh):
-            continue
+            return False
         if float(foot[int(vy), int(vx)]) < rules["house_foot_min"]:
-            continue
+            return False
         if not _dry(land, vx, vy, vw, vh, shore_m):
-            continue
+            return False
         if _slope(height, vx, vy, vw, vh) > rules["house_max_slope"]:
-            continue
-        t = 0.0 if d <= core else (d - core) / max(r_house - core, 1e-6)
-        density = (1.0 - t) ** gamma
-        role = "barn" if d > rules["house_barn_ratio"] * r_house else "house"
-        # house_min is met by relaxing the DENSITY draw only, never a mask
-        relaxed = len(kept) < int(rules["house_min"])
-        if not relaxed and draw > density:
-            continue
+            return False
+        half = 0.5 * float(types[pick]["footprint_m"])
+        for tx, tz, thalf, tyaw in taken:
+            if _rects_too_close(ox, oz, half, yaw, tx, tz, thalf, tyaw, gap):
+                return False
+        t = float(np.clip(d / max(r_house, 1e-6), 0.0, 1.0))
+        base_h = hmax - span * t
+        h_jitter = rng.uniform(-0.3 * span, 0.3 * span) if span > 0 else 0.0
+        height_scale = float(np.clip(base_h + h_jitter, hmin, hmax))
+        taken.append((ox, oz, half, yaw))
+        rows.append({"burg_code": code, "rank": 0, "x_m": float(round(ox, 2)),
+                     "z_m": float(round(oz, 2)), "yaw_deg": float(round(yaw % 360.0, 2)),
+                     "type": pick, "scale": float(round(rng.uniform(0.92, 1.08), 3)),
+                     "height_scale": float(round(height_scale, 3))})
+        return True
+
+    # 2. pack houses along their frontage, both sides, nearest to the centre first
+    plot_step = float(rules["plot_step_m"])
+    half_w = float(rules["lane_half_width_m"])
+    frontage = _frontage_candidates(lanes, plot_step, r_house)
+    for d0, x, z, bearing, side in frontage:
+        if len(rows) >= n_target:
+            break
+        role = "barn" if d0 > barn_r else "house"
         pick = _pick(rng, types, role, group)
         if pick is None:
             continue
-        fp = float(types[pick]["footprint_m"])
-        clash = False
-        for tx, tz, tf in taken:
-            if math.hypot(ox - tx, oz - tz) < 0.5 * (fp + tf):
-                clash = True
+        half = 0.5 * float(types[pick]["footprint_m"])
+        offset = half_w + half
+        perp = math.radians(bearing + side * 90.0)
+        ox, oz = x + offset * math.sin(perp), z + offset * math.cos(perp)
+        yaw = bearing + side * 90.0 + rng.uniform(-jitter, jitter)
+        _try_place(ox, oz, yaw, pick)
+
+    # 3. fill the leftover block between lanes with a jittered close-spaced
+    # grid, oriented to the nearest lane rather than spun on its own
+    if len(rows) < n_target:
+        reach = int(math.ceil(r_house / plot_step))
+        grid = []
+        for gy in range(-reach, reach + 1):
+            for gx in range(-reach, reach + 1):
+                ox = gx * plot_step + rng.uniform(-0.4, 0.4) * plot_step
+                oz = gy * plot_step + rng.uniform(-0.4, 0.4) * plot_step
+                d = math.hypot(ox, oz)
+                if d > r_house or d < 1e-6:
+                    continue
+                grid.append((d, ox, oz))
+        grid.sort(key=lambda c: c[0])
+        for d, ox, oz in grid:
+            if len(rows) >= n_target:
                 break
-        if clash:
-            continue
-        taper = 1.0 + (rules["house_edge_scale"] - 1.0) * (d / max(r_house, 1e-6))
-        jitter = rules["house_yaw_jitter_deg"]
-        yaw = math.degrees(math.atan2(-ox, -oz))          # facing the centre
-        if routes:
-            near = _nearest_route_bearing(routes, cx + ox / VERTEX_M, cy + oz / VERTEX_M,
-                                          k, rules["house_road_align_m"])
-            if near is not None:
-                yaw = near
-        yaw += rng.uniform(-jitter, jitter)
-        taken.append((ox, oz, fp))
-        kept.append({"burg_code": code, "rank": 0,
-                     "x_m": float(round(ox, 2)), "z_m": float(round(oz, 2)),
-                     "yaw_deg": float(round(yaw % 360.0, 2)), "type": pick,
-                     "scale": float(round(taper * rng.uniform(0.92, 1.08), 3))})
+            role = "barn" if d > barn_r else "house"
+            pick = _pick(rng, types, role, group)
+            if pick is None:
+                continue
+            half = 0.5 * float(types[pick]["footprint_m"])
+            lane_d, lane_bearing = _nearest_lane(lanes, ox, oz)
+            if lane_d is not None and lane_d < half_w + half:
+                continue   # sits over a lane's own clear strip: leave it be
+            base_yaw = lane_bearing if lane_d is not None else float(rng.uniform(0.0, 360.0))
+            yaw = base_yaw + rng.uniform(-jitter, jitter)
+            _try_place(ox, oz, yaw, pick)
 
-    for i, r in enumerate(kept):
-        r["rank"] = len(rows) + i
-    rows.extend(kept)
+    # 4. rank dense from the centre out, the landmark pinned at 0
+    if landmark is not None:
+        rest = rows[1:]
+        rest.sort(key=lambda r: math.hypot(r["x_m"], r["z_m"]))
+        for i, r in enumerate(rest):
+            r["rank"] = i + 1
+        rows = [rows[0]] + rest
+    else:
+        rows.sort(key=lambda r: math.hypot(r["x_m"], r["z_m"]))
+        for i, r in enumerate(rows):
+            r["rank"] = i
     return rows
-
-
-def _nearest_route_bearing(routes, vx, vy, k, reach_m):
-    """The bearing of the nearest route segment within reach_m, in degrees, or
-    None. `routes` is a list of point lists in PACK px."""
-    best, best_d = None, reach_m / VERTEX_M
-    for pts in routes:
-        for i in range(len(pts) - 1):
-            ax, ay = pts[i][0] * k, pts[i][1] * k
-            bx, by = pts[i + 1][0] * k, pts[i + 1][1] * k
-            mx, my = 0.5 * (ax + bx), 0.5 * (ay + by)
-            d = math.hypot(mx - vx, my - vy)
-            if d < best_d:
-                best_d, best = d, math.degrees(math.atan2(bx - ax, by - ay))
-    return best

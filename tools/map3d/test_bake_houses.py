@@ -1,4 +1,5 @@
-"""Unit tests for the house placement (spec 2026-09-20 §1).
+"""Unit tests for the house placement (spec 2026-09-20 §1, redesign
+2026-09-20: lanes, not a jittered grid).
 
   python3 -m pytest tools/map3d/test_bake_houses.py
 """
@@ -7,7 +8,8 @@ import math
 import numpy as np
 import pytest
 
-from bake_houses import place, house_count, max_houses
+import bake_houses
+from bake_houses import place, house_count, footprint_radius_m
 
 VW = VH = 64
 K = 2.5           # vertices per pack px, as bake_world.py's k
@@ -16,13 +18,16 @@ CENTRE_COL = 32   # the column the toy sea stops at
 
 RULES = {
     "footprint_m_per_sqrt_pop": 2.5, "footprint_min_m": 90, "footprint_max_m": 900,
-    "house_radius_ratio": 0.60, "house_core_ratio": 0.35, "house_barn_ratio": 0.75,
-    "house_spacing_m": 22, "house_density_gamma": 1.4, "house_foot_min": 0.55,
-    "house_max_slope": 0.38, "house_shore_min_m": 25, "house_port_shore_min_m": 6,
-    "house_landmark_search_m": 300, "house_min": 4, "house_edge_scale": 0.82,
-    "house_yaw_jitter_deg": 35, "house_road_align_m": 40, "house_people_per_house": 160,
-    "house_max_capital": 220, "house_max_city": 150, "house_max_town": 80,
-    "house_max_fort": 60, "house_max_village": 24,
+    "house_radius_ratio": 0.60, "house_barn_ratio": 0.75,
+    "house_foot_min": 0.55, "house_max_slope": 0.38,
+    "house_shore_min_m": 25, "house_port_shore_min_m": 6,
+    "house_landmark_search_m": 300, "house_yaw_jitter_deg": 35,
+    "house_gap_m": 1.0, "house_height_min": 0.75, "house_height_max": 1.5,
+    "house_count_capital": 80, "house_count_city": 60, "house_count_town": 40,
+    "house_count_fort": 30, "house_count_village": 20,
+    "lane_seeds": 4, "lane_step_m": 20, "lane_wander_deg": 25,
+    "lane_branch_chance": 0.15, "lane_max_depth": 3, "lane_half_width_m": 1.75,
+    "plot_step_m": 10,
 }
 
 TYPES = {
@@ -46,6 +51,27 @@ def flat_world(land_value=1.0):
     land = np.full((VH, VW), land_value, np.float32)
     height = np.zeros((VH, VW), np.float32)
     return foot, land, height
+
+
+def _axes(yaw_deg):
+    r = math.radians(yaw_deg)
+    return (math.sin(r), math.cos(r)), (math.cos(r), -math.sin(r))
+
+
+def _rects_overlap_independent(ax, az, ahalf, ayaw, bx, bz, bhalf, byaw):
+    """A from-scratch separating-axis test (not bake_houses._rects_too_close)
+    so the "no overlap" test below does not just re-check the algorithm's
+    own bookkeeping against itself."""
+    aux, auz = _axes(ayaw)
+    bux, buz = _axes(byaw)
+    tx, tz = bx - ax, bz - az
+    for lx, lz in (aux, auz, bux, buz):
+        t = abs(tx * lx + tz * lz)
+        ra = ahalf * abs(aux[0] * lx + aux[1] * lz) + ahalf * abs(auz[0] * lx + auz[1] * lz)
+        rb = bhalf * abs(bux[0] * lx + bux[1] * lz) + bhalf * abs(buz[0] * lx + buz[1] * lz)
+        if t > ra + rb:
+            return False
+    return True
 
 
 def test_places_a_landmark_first_at_the_centre():
@@ -104,13 +130,30 @@ def test_rank_is_dense_and_grows_outward():
     assert radii == sorted(radii), "a growing settlement grows outward"
 
 
-def test_only_barns_stand_in_the_outer_ring():
-    foot, land, height = flat_world()
-    rows = place(burg(), RULES, TYPES, foot, land, height, K, VW, VH)
-    r_house = RULES["house_radius_ratio"] * 2.5 * np.sqrt(4000)
-    for r in rows[1:]:
-        if np.hypot(r["x_m"], r["z_m"]) > RULES["house_barn_ratio"] * r_house:
-            assert TYPES[r["type"]]["role"] == "barn"
+def test_far_houses_lean_towards_barns():
+    # role is decided from the lane sample (or grid cell) a candidate grows
+    # out of, before its actual footprint -- and so before its exact final
+    # offset -- is known, so the boundary allows one house's worth of slack
+    # rather than the old algorithm's pixel-exact ring (the old test's
+    # premise, that EVERY house past the ring is a barn with no tolerance,
+    # no longer holds now that role and final position are decided a step
+    # apart). A uniform footprint mask (not flat_world()'s own, which decays
+    # to nothing by 400 m) and a count target pushed well past what the
+    # cluster can actually hold, so placement is forced to reach all the way
+    # out to the barn ring rather than filling up on the near core alone --
+    # with a modest target count and a lot of room, it never gets there.
+    foot = np.ones((VH, VW), np.float32)
+    land = np.ones((VH, VW), np.float32)
+    height = np.zeros((VH, VW), np.float32)
+    rules = dict(RULES, house_count_town=300)
+    rows = place(burg(pop=4000, group="town"), rules, TYPES, foot, land, height, K, VW, VH)
+    r_foot = footprint_radius_m(4000, RULES)
+    r_house = RULES["house_radius_ratio"] * r_foot
+    slack = 5.0
+    far = [r for r in rows[1:]
+           if math.hypot(r["x_m"], r["z_m"]) > RULES["house_barn_ratio"] * r_house + slack]
+    assert far, "expect some houses safely past the barn ring at this size"
+    assert all(TYPES[r["type"]]["role"] == "barn" for r in far)
 
 
 def test_a_village_never_gets_a_palace():
@@ -120,33 +163,29 @@ def test_a_village_never_gets_a_palace():
 
 
 def test_houses_do_not_overlap():
+    """Rectangle-vs-rectangle, not the old circle test: two squares can sit
+    corner to corner closer than the sum of their half-widths, so this checks
+    the true oriented overlap, inflated by house_gap_m, with a from-scratch
+    SAT test independent of the module's own _rects_too_close."""
     foot, land, height = flat_world()
     rows = place(burg(), RULES, TYPES, foot, land, height, K, VW, VH)
+    gap = RULES["house_gap_m"]
     for i, a in enumerate(rows):
+        ah = 0.5 * TYPES[a["type"]]["footprint_m"] + gap * 0.5
         for b in rows[i + 1:]:
-            gap = np.hypot(a["x_m"] - b["x_m"], a["z_m"] - b["z_m"])
-            want = 0.5 * (TYPES[a["type"]]["footprint_m"] + TYPES[b["type"]]["footprint_m"])
-            assert gap >= want - 1e-6
-
-
-def test_the_cluster_is_capped_by_group():
-    assert max_houses("village", RULES) == 24
-    assert max_houses("capital", RULES) == 220
-
-
-def test_house_count_follows_people():
-    assert house_count({"population": 1600, "group": "town"}, RULES) == 10
-    assert house_count({"population": 999999, "group": "village"}, RULES) == 24
-    assert house_count({"population": 1, "group": "village"}, RULES) == RULES["house_min"]
+            bh = 0.5 * TYPES[b["type"]]["footprint_m"] + gap * 0.5
+            assert not _rects_overlap_independent(
+                a["x_m"], a["z_m"], ah, a["yaw_deg"], b["x_m"], b["z_m"], bh, b["yaw_deg"]
+            ), f"{a} and {b} come closer than house_gap_m allows"
 
 
 def test_no_house_stands_where_the_shore_window_runs_off_the_array_edge():
     # An all-land world with no water anywhere: the only way a candidate can
     # be near unmodelled ground is the _dry() shore-buffer window running past
     # the array's own edge. The centre sits only 3 vertices from the west
-    # edge, well inside the burg's ~4.7-vertex house radius, so candidates
-    # west of it must probe a window straddling x < 0. That must fail closed
-    # (never on) rather than pass on a window silently clipped to the array.
+    # edge, well inside the burg's house radius, so candidates west of it
+    # must probe a window straddling x < 0. That must fail closed (never on)
+    # rather than pass on a window silently clipped to the array.
     foot = np.ones((VH, VW), np.float32)
     land = np.ones((VH, VW), np.float32)
     height = np.zeros((VH, VW), np.float32)
@@ -210,3 +249,118 @@ def test_a_small_burg_never_gets_a_landmark_outside_its_own_cluster():
     assert r_house < 4.0 * 20.0, "the sea must reach past this tiny cluster's own radius"
     rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
     assert rows == [], "the only dry ground lies outside the cluster: no landmark, no houses"
+
+
+# ---- the redesign's own behaviour (spec 2026-09-20, "lanes not a grid") ----
+
+def test_house_count_tracks_group_not_population():
+    small = house_count({"population": 50, "group": "city"}, RULES)
+    large = house_count({"population": 5_000_000, "group": "city"}, RULES)
+    assert small == large == RULES["house_count_city"]
+    assert house_count({"population": 1, "group": "some_unlisted_group"}, RULES) \
+        == RULES["house_count_village"]
+
+
+def test_lanes_exist_as_negative_space():
+    # A big, generous cluster (a lot of candidates, both frontage and
+    # block-fill) should still leave most of its OWN lane centrelines free
+    # of any building rectangle -- the lanes are the negative space the
+    # owner asked for, not just leftover gaps from running out of houses.
+    foot, land, height = flat_world()
+    code = "toy"
+    b = burg(code=code, pop=200000, group="capital")
+    rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
+    r_foot = footprint_radius_m(200000, RULES)
+    r_house = RULES["house_radius_ratio"] * r_foot
+    rng = np.random.default_rng(bake_houses._seed(code))
+    lanes = bake_houses._grow_lanes(rng, r_house, RULES)
+    samples = []
+    for lane in lanes:
+        samples.extend((x, z) for x, z, _ in bake_houses._resample_lane(lane, RULES["plot_step_m"]))
+    assert samples, "the lane network should produce sample points to test"
+
+    def covered(x, z):
+        for r in rows:
+            half = 0.5 * TYPES[r["type"]]["footprint_m"]
+            if math.hypot(x - r["x_m"], z - r["z_m"]) < half:
+                return True
+        return False
+
+    free = sum(1 for x, z in samples if not covered(x, z))
+    assert free / len(samples) > 0.5, "most of a lane's own centreline should stay clear of buildings"
+
+
+def test_frontage_houses_face_their_lane():
+    # Regenerate the exact candidate list place() packed against (same rng,
+    # same _frontage_candidates geometry helper) and match each one to an
+    # accepted row by its exact predicted position -- not a nearest-lane
+    # distance heuristic, which is unreliable here: a house can legitimately
+    # sit close to a DIFFERENT branch of the lane network than the one it
+    # was actually plotted against, once branching is dense.
+    foot, land, height = flat_world()
+    code = "toy"
+    b = burg(code=code, pop=4000, group="town")
+    rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
+    r_foot = footprint_radius_m(4000, RULES)
+    r_house = RULES["house_radius_ratio"] * r_foot
+    rng = np.random.default_rng(bake_houses._seed(code))
+    lanes = bake_houses._grow_lanes(rng, r_house, RULES)
+    frontage = bake_houses._frontage_candidates(lanes, RULES["plot_step_m"], r_house)
+    half_w = RULES["lane_half_width_m"]
+    jitter = RULES["house_yaw_jitter_deg"] + 0.5   # rounding slack
+    checked = 0
+    for r in rows[1:]:
+        half = 0.5 * TYPES[r["type"]]["footprint_m"]
+        for d0, x, z, bearing, side in frontage:
+            offset = half_w + half
+            perp = math.radians(bearing + side * 90.0)
+            px, pz = x + offset * math.sin(perp), z + offset * math.cos(perp)
+            if abs(px - r["x_m"]) < 0.02 and abs(pz - r["z_m"]) < 0.02:
+                checked += 1
+                want = (bearing + side * 90.0) % 360.0
+                diff = abs((r["yaw_deg"] - want + 180) % 360 - 180)
+                assert diff <= jitter, f"{r} does not face its lane (bearing {bearing}, side {side})"
+                break
+    assert checked > 0, "expected at least one house placed at a lane-frontage plot to test facing"
+
+
+def test_rectangles_never_overlap_even_at_high_target_counts():
+    # Push the count target far above what the toy world can actually fit,
+    # so both the frontage pass and the block-fill pass run to exhaustion --
+    # the overlap test must still hold under maximum packing pressure.
+    foot, land, height = flat_world()
+    rules = dict(RULES, house_count_town=400)
+    rows = place(burg(pop=4000, group="town"), rules, TYPES, foot, land, height, K, VW, VH)
+    assert len(rows) > 10, "a lot of candidates should still get placed"
+    gap = rules["house_gap_m"]
+    for i, a in enumerate(rows):
+        ah = 0.5 * TYPES[a["type"]]["footprint_m"] + gap * 0.5
+        for b in rows[i + 1:]:
+            bh = 0.5 * TYPES[b["type"]]["footprint_m"] + gap * 0.5
+            assert not _rects_overlap_independent(
+                a["x_m"], a["z_m"], ah, a["yaw_deg"], b["x_m"], b["z_m"], bh, b["yaw_deg"]
+            )
+
+
+def test_height_scale_varies_and_is_higher_near_the_centre():
+    foot, land, height = flat_world()
+    rows = place(burg(pop=20000, group="city"), RULES, TYPES, foot, land, height, K, VW, VH)
+    non_landmark = [r for r in rows if TYPES[r["type"]]["role"] != "landmark"]
+    assert len(non_landmark) >= 6, "need enough houses to compare near vs far"
+    by_d = sorted(non_landmark, key=lambda r: math.hypot(r["x_m"], r["z_m"]))
+    third = max(len(by_d) // 3, 1)
+    near, far = by_d[:third], by_d[-third:]
+    near_avg = sum(r["height_scale"] for r in near) / len(near)
+    far_avg = sum(r["height_scale"] for r in far) / len(far)
+    assert near_avg > far_avg, "the core should read taller than the rim"
+    assert len({r["height_scale"] for r in non_landmark}) > 1, \
+        "neighbours should not all share exactly the same height"
+    for r in rows:
+        assert RULES["house_height_min"] <= r["height_scale"] <= RULES["house_height_max"]
+
+
+if __name__ == "__main__":
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            fn()
+            print("ok", name)
