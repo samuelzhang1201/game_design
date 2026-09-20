@@ -76,9 +76,11 @@ def _slope(height, vx, vy, vw, vh):
 def _dry(land, vx, vy, vw, vh, shore_m):
     """True when every vertex within shore_m of this point is land."""
     rad = max(int(math.ceil(shore_m / VERTEX_M)), 0)
-    x0, x1 = max(int(vx) - rad, 0), min(int(vx) + rad + 1, vw)
-    y0, y1 = max(int(vy) - rad, 0), min(int(vy) + rad + 1, vh)
-    if x0 >= x1 or y0 >= y1:
+    x0, x1 = int(vx) - rad, int(vx) + rad + 1
+    y0, y1 = int(vy) - rad, int(vy) + rad + 1
+    # an unmodelled edge is not known to be dry: refuse rather than judge a
+    # candidate on a window silently shrunk by clamping to the array bounds
+    if x0 < 0 or x1 > vw or y0 < 0 or y1 > vh:
         return False
     return bool(np.all(land[y0:y1, x0:x1] > 0.5))
 

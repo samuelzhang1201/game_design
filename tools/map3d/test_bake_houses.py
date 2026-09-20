@@ -2,6 +2,8 @@
 
   python3 -m pytest tools/map3d/test_bake_houses.py
 """
+import math
+
 import numpy as np
 import pytest
 
@@ -136,3 +138,22 @@ def test_house_count_follows_people():
     assert house_count({"population": 1600, "group": "town"}, RULES) == 10
     assert house_count({"population": 999999, "group": "village"}, RULES) == 24
     assert house_count({"population": 1, "group": "village"}, RULES) == RULES["house_min"]
+
+
+def test_no_house_stands_where_the_shore_window_runs_off_the_array_edge():
+    # An all-land world with no water anywhere: the only way a candidate can
+    # be near unmodelled ground is the _dry() shore-buffer window running past
+    # the array's own edge. The centre sits only 3 vertices from the west
+    # edge, well inside the burg's ~4.7-vertex house radius, so candidates
+    # west of it must probe a window straddling x < 0. That must fail closed
+    # (never on) rather than pass on a window silently clipped to the array.
+    foot = np.ones((VH, VW), np.float32)
+    land = np.ones((VH, VW), np.float32)
+    height = np.zeros((VH, VW), np.float32)
+    edge_vx = 3.0
+    rows = place(burg(x=edge_vx / K, y=CENTRE / K), RULES, TYPES, foot, land, height, K, VW, VH)
+    assert rows, "an all-land world should still build houses"
+    shore_rad = math.ceil(RULES["house_shore_min_m"] / 20.0)   # VERTEX_M
+    for r in rows:
+        vx = edge_vx + r["x_m"] / 20.0
+        assert vx - shore_rad >= 0, f"{r} sits where its shore window runs off the array edge"
