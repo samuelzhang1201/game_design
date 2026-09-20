@@ -76,7 +76,7 @@ and it is asserted in four test files. So:
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `DataRepository.map3d_houses: Dictionary` keyed by `type` → the row `Dictionary` (string values, as every other `_load_if_present` sink stores). Balance keys `map3d_house_view_m`, `map3d_house_fade_m`, `map3d_house_rebuild_move_m`, `map3d_house_sink_m`. `data/map3d_bake.csv` keys `house_radius_ratio`, `house_core_ratio`, `house_barn_ratio`, `house_spacing_m`, `house_density_gamma`, `house_foot_min`, `house_max_slope`, `house_shore_min_m`, `house_port_shore_min_m`, `house_min`, `house_edge_scale`, `house_yaw_jitter_deg`, `house_road_align_m`, `house_people_per_house`, `house_max_capital`, `house_max_city`, `house_max_town`, `house_max_fort`, `house_max_village`. `graphics_quality.csv` column `house_budget`.
+- Produces: `DataRepository.map3d_houses: Dictionary` keyed by `type` → the row `Dictionary` (string values, as every other `_load_if_present` sink stores); `DataRepository.map3d_bake: Dictionary` as `{key: float}` (pre-flight ruling P1 — the file was Python-only until now). Balance keys `map3d_house_view_m`, `map3d_house_fade_m`, `map3d_house_rebuild_move_m`, `map3d_house_sink_m`. `data/map3d_bake.csv` keys `house_radius_ratio`, `house_core_ratio`, `house_barn_ratio`, `house_spacing_m`, `house_density_gamma`, `house_foot_min`, `house_max_slope`, `house_shore_min_m`, `house_port_shore_min_m`, `house_min`, `house_edge_scale`, `house_yaw_jitter_deg`, `house_road_align_m`, `house_people_per_house`, `house_max_capital`, `house_max_city`, `house_max_town`, `house_max_fort`, `house_max_village`. `graphics_quality.csv` column `house_budget`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -230,7 +230,9 @@ map3d_house_sink_m,0.35,"3D MAP houses: every instance is sunk this far so the w
 
 Insert the column before `notes` in the header and give every row a value: `low` 1200, `medium` 2500, `high` 5000, `ultra` 8000. Append to each row's `notes` the sentence `Houses: at most <N> instances at once.`
 
-- [ ] **Step 8: Load the table in `DataRepository`**
+- [ ] **Step 8: Load both tables in `DataRepository`**
+
+**Pre-flight ruling P1:** `data/map3d_bake.csv` has been Python-only until now (`bake_world.py`'s `load_rules`), but the runtime needs `house_radius_ratio`, `house_people_per_house`, `house_min`, `house_max_*` and the footprint keys — and the bake and the runtime must read the SAME table, which is what the `footprint_radius_m` parity test in Task 4 exists to protect. So load it too. It is `key,value,notes`, the same shape as `balance.csv`.
 
 Beside `map3d_settlements` (`scripts/engine/data_repository.gd:45-47`) declare:
 
@@ -238,6 +240,11 @@ Beside `map3d_settlements` (`scripts/engine/data_repository.gd:45-47`) declare:
 ## data/map3d_houses.csv rows keyed by type: the 3D MAP's house meshes,
 ## their role, weight, size and roof colour (spec 2026-09-20 §2).
 var map3d_houses: Dictionary = {}
+## data/map3d_bake.csv as key -> number: the 3D build's own tuning. The bake
+## (tools/map3d/bake_world.py) has always read this file; the runtime reads
+## it too for the settlements' house clusters, so the two can never disagree
+## about where a cluster ends.
+var map3d_bake: Dictionary = {}
 ```
 
 And beside its loader (near `:475`):
@@ -247,7 +254,12 @@ And beside its loader (near `:475`):
 			["type", "mesh", "role", "weight", "footprint_m", "height_m", "roof", "min_group"],
 			func(r): map3d_houses[String(r["type"])] = r):
 		return false
+	if not _load_if_present("res://data/map3d_bake.csv", ["key", "value"],
+			func(r): map3d_bake[String(r["key"])] = float(r["value"])):
+		return false
 ```
+
+Note: `map3d_bake.csv` holds non-numeric values too (`footprint_tint` is `#D6CBBE`, `far_color_snow` names a texture). `float("#D6CBBE")` is 0.0 in GDScript, not an error, so those keys load as 0 and nothing reads them from GDScript — acceptable. Do **not** add a guard that skips them; a silent skip would hide a real typo in a numeric key.
 
 - [ ] **Step 9: Run the tests**
 
@@ -264,6 +276,9 @@ git add data/map3d_houses.csv data/map3d_bake.csv data/balance.csv \
         data/graphics_quality.csv data/terrain_palette.csv \
         scripts/engine/data_repository.gd tests/map3d/test_map3d_houses_data.gd
 git commit -m "feat(map3d): the house type table and its tuning keys
+
+map3d_bake.csv is now read by the runtime as well as the bake, so the two
+can never disagree about where a cluster ends.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ```
@@ -301,6 +316,7 @@ from bake_houses import place, house_count, max_houses
 VW = VH = 64
 K = 2.5           # vertices per pack px, as bake_world.py's k
 CENTRE = 32.0     # vertex coords of the toy burg
+CENTRE_COL = 32   # the column the toy sea stops at
 
 RULES = {
     "footprint_m_per_sqrt_pop": 2.5, "footprint_min_m": 90, "footprint_max_m": 900,
@@ -352,9 +368,6 @@ def test_no_house_lands_on_water():
     for r in rows:
         vx = CENTRE + r["x_m"] / 20.0   # VERTEX_M
         assert vx >= CENTRE_COL - 1e-6, f"{r} stands in the sea"
-
-
-CENTRE_COL = 32
 
 
 def test_the_buffer_ring_is_empty():
@@ -1065,7 +1078,9 @@ func before_all() -> void:
 		var m: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(manifest))
 		_meta = m.get("meta", {})
 	var ctx := Map3DContext.new(Game.data, _meta)
-	_picker = Map3DPicker.new(ctx)
+	# Map3DPicker has no _init; map3d_view.gd:77 is the pattern (ruling P3)
+	_picker = Map3DPicker.new()
+	_picker.ctx = ctx
 
 
 func _skip() -> bool:
@@ -1795,8 +1810,13 @@ func _budget() -> int:
 	return int(Map3DQuality.num(ctx.q(), "house_budget"))
 
 
+## Pre-flight ruling P2: the roof colours live in terrain_palette.csv, which
+## make_houses.py also parses — NOT in political_palette.csv, which is what
+## MapPalette.named reads. Read the same table the mesh was built from.
 func _roof_colour(type: String) -> Color:
-	return MapPalette.named(ctx.repo, String(ctx.repo.map3d_houses[type]["roof"]))
+	var key := String(ctx.repo.map3d_houses[type]["roof"])
+	var hex := String(ctx.repo.terrain_palette.get(key, ""))
+	return Color(hex) if hex != "" else Color.WHITE
 
 
 func _mesh_of(type: String) -> Mesh:
