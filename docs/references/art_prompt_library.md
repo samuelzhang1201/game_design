@@ -2208,7 +2208,8 @@ the centre of the composition [C-EVENT]
 under a hot pale sky, a group of thin villagers in worn wool waiting at the edge of the
 field with empty sacks and a handcart, a woman holding a letter folded shut with nothing written showing, a lean
 sun-blackened man in a coarse undyed robe standing barefoot among them, burned mill ruins
-small in the far distance, heat haze, a mood of patience worn very thin [C-EVENT]
+small in the far distance, heat haze, no maize anywhere, a mood of patience worn very
+thin [C-EVENT]
 ```
 
 #### `V-45` 织工的特许状 · The Weavers' Charter
