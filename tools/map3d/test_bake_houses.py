@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 import bake_houses
-from bake_houses import place, house_count, footprint_radius_m
+from bake_houses import place, house_count, house_radius_m, footprint_radius_m
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -22,8 +22,14 @@ CENTRE = 32.0     # vertex coords of the toy burg
 CENTRE_COL = 32   # the column the toy sea stops at
 
 RULES = {
-    "footprint_m_per_sqrt_pop": 2.5, "footprint_min_m": 90, "footprint_max_m": 900,
-    "house_radius_ratio": 0.60, "house_barn_ratio": 0.75,
+    # density v3 (owner 2026-09-21): the cluster radius comes from the
+    # group's own fixed house count and this per-house density, never from
+    # population -- see house_radius_m's own note in bake_houses.py. Set to
+    # the same values as the real data/map3d_bake.csv so this fixture's
+    # magnitudes stand for something (a capital's 400-count override below
+    # lands on the real pack's own r_house, 171 m).
+    "house_m2_each": 230, "house_built_share": 0.78,
+    "house_barn_ratio": 0.75,
     "house_foot_min": 0.55, "house_max_slope": 0.38,
     "house_shore_min_m": 25, "house_port_shore_min_m": 6,
     "house_landmark_search_m": 300, "house_yaw_jitter_deg": 35,
@@ -55,6 +61,20 @@ TYPES = {
 def burg(code="toy", pop=4000, group="town", port=0, x=CENTRE / K, y=CENTRE / K):
     return {"burg_code": code, "population": pop, "group": group,
             "is_port": port, "x": x, "y": y}
+
+
+def test_footprint_radius_is_house_radius_over_built_share():
+    """density v3: the footprint (built ground, the terrain stamp) is
+    downstream of the house cluster now, not the other way around --
+    house_built_share is the cluster's own share of it, and depends only on
+    the burg's GROUP (via house_count and house_m2_each), never population."""
+    for group, pop in (("village", 1), ("town", 4000), ("capital", 90000)):
+        b = burg(group=group, pop=pop)
+        assert footprint_radius_m(b, RULES) == pytest.approx(
+            house_radius_m(b, RULES) / RULES["house_built_share"])
+        # population-independent: a group's radius never moves with its pop
+        assert house_radius_m(dict(b, population=1), RULES) == \
+            house_radius_m(dict(b, population=10**7), RULES)
 
 
 def flat_world(land_value=1.0):
@@ -119,9 +139,9 @@ def test_no_house_lands_on_water():
 
 def test_the_buffer_ring_is_empty():
     foot, land, height = flat_world()
-    rows = place(burg(), RULES, TYPES, foot, land, height, K, VW, VH)
-    r_foot = 2.5 * np.sqrt(4000)
-    r_house = RULES["house_radius_ratio"] * r_foot
+    b = burg()
+    rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
+    r_house = house_radius_m(b, RULES)
     for r in rows:
         assert np.hypot(r["x_m"], r["z_m"]) <= r_house + 1e-6
 
@@ -178,9 +198,9 @@ def test_far_houses_lean_towards_barns():
     land = np.ones((VH, VW), np.float32)
     height = np.zeros((VH, VW), np.float32)
     rules = dict(RULES, house_count_town=300)
-    rows = place(burg(pop=4000, group="town"), rules, TYPES, foot, land, height, K, VW, VH)
-    r_foot = footprint_radius_m(4000, RULES)
-    r_house = RULES["house_radius_ratio"] * r_foot
+    b = burg(pop=4000, group="town")
+    rows = place(b, rules, TYPES, foot, land, height, K, VW, VH)
+    r_house = house_radius_m(b, rules)
     max_house_half = max(0.5 * t["footprint_m"] for t in TYPES.values() if t["role"] == "house")
     slack = RULES["lane_half_width_m"] + max_house_half
     far = [r for r in rows[1:]
@@ -234,14 +254,17 @@ def test_no_house_stands_where_the_shore_window_runs_off_the_array_edge():
 def test_a_water_centre_relocates_the_landmark_onto_land():
     # A burg's own registered point can sit on the water (a port's quay):
     # a small drowned patch right at the burg's centre, land beyond it but
-    # still well inside the burg's own r_house (94.87 m for the default
-    # town-sized burg here), so the fix round 2 clamp does not swallow it.
+    # still well inside the burg's own r_house (54.1 m for the default
+    # town-sized burg here -- density v3: sqrt(house_count_town *
+    # house_m2_each / pi), fixed by group, not population), so the fix
+    # round 2 clamp does not swallow it.
     # The landmark must move onto the nearest dry land it finds, not stay
     # pinned to the water at (0, 0) -- spec 2026-09-20 fix round 1, finding 2.
     foot, land, height = flat_world()
     yy, xx = np.mgrid[0:VH, 0:VW].astype(np.float32)
     d = np.hypot(xx - CENTRE, yy - CENTRE)
-    land[d < 2.0] = 0.0
+    land[d < 1.0] = 0.0   # a 20 m drowned disc: well clear of the 25 m shore
+                          # buffer inside the town's own 54.1 m r_house
     rows = place(burg(), RULES, TYPES, foot, land, height, K, VW, VH)
     assert rows, "land is close by; the settlement should still build"
     assert rows[0]["rank"] == 0
@@ -265,20 +288,20 @@ def test_a_burg_with_no_land_within_the_search_bound_gets_nothing():
 
 
 def test_a_small_burg_never_gets_a_landmark_outside_its_own_cluster():
-    # house_landmark_search_m (300 m) is an outer bound only: a minimum-size
-    # burg's own r_house is far smaller (54 m for the smallest footprint).
-    # Water at the burg's own centre with the only dry ground well past its
-    # tiny cluster radius -- the search must be capped at r_house too, so
-    # this settlement gets no landmark and no houses, never a landmark
-    # standing in the buffer ring beyond its own cluster (spec 2026-09-20
-    # fix round 2, finding 1).
+    # house_landmark_search_m (300 m) is an outer bound only: a village's
+    # own r_house is far smaller (38.3 m -- density v3: sqrt(house_count_village
+    # * house_m2_each / pi), fixed by group, unaffected by this burg's
+    # population of 1). Water at the burg's own centre with the only dry
+    # ground well past its tiny cluster radius -- the search must be capped
+    # at r_house too, so this settlement gets no landmark and no houses,
+    # never a landmark standing in the buffer ring beyond its own cluster
+    # (spec 2026-09-20 fix round 2, finding 1).
     foot, land, height = flat_world()
     yy, xx = np.mgrid[0:VH, 0:VW].astype(np.float32)
     d = np.hypot(xx - CENTRE, yy - CENTRE)
     land[d < 4.0] = 0.0             # an 80 m drowned disc at the centre
     b = burg(pop=1, group="village")
-    r_foot = max(2.5 * math.sqrt(1.0), RULES["footprint_min_m"])
-    r_house = RULES["house_radius_ratio"] * r_foot
+    r_house = house_radius_m(b, RULES)
     assert r_house < 4.0 * 20.0, "the sea must reach past this tiny cluster's own radius"
     rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
     assert rows == [], "the only dry ground lies outside the cluster: no landmark, no houses"
@@ -327,8 +350,7 @@ def test_lanes_exist_as_negative_space():
     b = burg(code=code, pop=20000, group="city")
     with mock.patch.object(bake_houses, "_frontage_candidates", return_value=[]):
         rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
-    r_foot = footprint_radius_m(20000, RULES)
-    r_house = RULES["house_radius_ratio"] * r_foot
+    r_house = house_radius_m(b, RULES)
     rng = np.random.default_rng(bake_houses._seed(code))
     lanes = bake_houses._grow_lanes(rng, r_house, RULES)
     half_w = RULES["lane_half_width_m"]
@@ -365,8 +387,7 @@ def test_frontage_houses_face_their_lane():
     code = "toy"
     b = burg(code=code, pop=4000, group="town")
     rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
-    r_foot = footprint_radius_m(4000, RULES)
-    r_house = RULES["house_radius_ratio"] * r_foot
+    r_house = house_radius_m(b, RULES)
     rng = np.random.default_rng(bake_houses._seed(code))
     lanes = bake_houses._grow_lanes(rng, r_house, RULES)
     frontage = bake_houses._frontage_candidates(lanes, RULES["plot_step_m"], r_house)
@@ -439,8 +460,7 @@ def test_edge_density_feathers_not_a_cliff():
     rules = dict(RULES, house_count_capital=400)
     b = burg(pop=90000, group="capital")
     rows = place(b, rules, TYPES, foot, land, height, K, VW, VH)
-    r_foot = footprint_radius_m(90000, RULES)
-    r_house = RULES["house_radius_ratio"] * r_foot
+    r_house = house_radius_m(b, rules)
     n_shells = 16
     shell_w = r_house / n_shells
     counts = [0] * n_shells
@@ -489,8 +509,7 @@ def test_the_blocks_between_lanes_are_not_empty():
     code = "toy"
     b = burg(code=code, pop=90000, group="capital")
     rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
-    r_foot = footprint_radius_m(90000, RULES)
-    r_house = RULES["house_radius_ratio"] * r_foot
+    r_house = house_radius_m(b, RULES)
     rng = np.random.default_rng(bake_houses._seed(code))
     lanes = bake_houses._grow_lanes(rng, r_house, RULES)
     half_w = RULES["lane_half_width_m"]
@@ -519,7 +538,16 @@ def test_a_village_on_a_narrow_wedge_site_still_gets_more_houses():
     candidates passed at the normal 10 m step, 49 of ~1500 at a third of
     it). Reproduces that shape with a toy world (land only in a narrow
     wedge) and confirms the fine-grid last resort (house_small_site_grid_ratio)
-    recovers more than the ordinary passes alone do."""
+    recovers more than the ordinary passes alone do.
+
+    house_count_village is overridden well above its real value here: at a
+    24-degree wedge and the real house_shore_min_m (25 m), a candidate's
+    own shore-buffer window only clears the water past roughly 118 m out
+    (25 / tan(12 deg)) -- under density v3 a village's r_house no longer
+    grows with population (RULES's real 38.3 m never reaches that ring at
+    all, landmark included), so this override stands in for a populous
+    coastal town, the scale this mechanism was written to cover, rather
+    than density v3's own much smaller village."""
     vw = vh = 64
     centre = 32.0
     yy, xx = np.mgrid[0:vh, 0:vw].astype(np.float32)
@@ -528,12 +556,13 @@ def test_a_village_on_a_narrow_wedge_site_still_gets_more_houses():
     land = np.where(wedge, 1.0, 0.0).astype(np.float32)
     foot = np.ones((vh, vw), np.float32)
     height = np.zeros((vh, vw), np.float32)
+    rules = dict(RULES, house_count_village=600)
     b = burg(code="narrowsite", pop=12000, group="village", port=1,
              x=centre / K, y=centre / K)
-    rows = place(b, RULES, TYPES, foot, land, height, K, vw, vh)
+    rows = place(b, rules, TYPES, foot, land, height, K, vw, vh)
     assert rows, "the wedge has dry land; the village should still build"
     assert TYPES[rows[0]["type"]]["role"] == "landmark"
-    rows_without_fine_grid = place(b, dict(RULES, house_small_site_grid_ratio=0.0),
+    rows_without_fine_grid = place(b, dict(rules, house_small_site_grid_ratio=0.0),
                                     TYPES, foot, land, height, K, vw, vh)
     print("wedge site: with fine-grid fallback", len(rows), "without", len(rows_without_fine_grid))
     assert len(rows) > len(rows_without_fine_grid), \
@@ -619,11 +648,28 @@ def test_the_frontage_share_matches_its_target_on_ample_open_ground():
     own toy-fixture capital, which never exercises it either) on a flat,
     entirely buildable canvas: foot=land=1 everywhere, no shore or slope
     refusals anywhere. "Ample ground" is exactly this -- nothing about the
-    TERRAIN is short; the current house_radius_ratio simply packs each
+    TERRAIN is short; the current house_m2_each simply packs each
     group's target count densely enough that the ordinary ring-quota
     passes alone routinely fall a little short even here, which is what
     exercises the fallback on every group without needing to manufacture
     scarcity.
+
+    Density v3 (owner 2026-09-21, "invert the dependency") moved this
+    margin: house_frontage_share is a CAP on frontage's own share of each
+    ring's quota, not a promise of what share is actually achieved -- the
+    achieved share also depends on how much linear lane frontage a cluster
+    grows relative to its target count, and v3 shrank r_house for a fixed
+    target count in most groups (the density fix itself), which shrinks
+    total lane length faster than the target it has to seat. Measured
+    against the real pack's own values (house_m2_each 230, house_built_share
+    0.78): 21.75%-28.57% across all four groups here, down from the pre-v3
+    ~40-49% this test's old +-10% margin around the 45% cap was written for
+    -- consistently BELOW the cap in every group, the opposite direction
+    from the leak this test exists to catch (frontage spending past its own
+    share of a ring). So this asserts the two things that actually matter:
+    never leaking past the cap (the real historical bug, `leak_slack`) and
+    never collapsing to a sliver that would read as an all-infill town with
+    no street frontage at all (`floor`).
     """
     rules = _load_real_rules()
     types = _load_real_house_types()
@@ -632,12 +678,9 @@ def test_the_frontage_share_matches_its_target_on_ample_open_ground():
     foot = np.ones((vh, vw), np.float32)
     land = np.ones((vh, vw), np.float32)
     height = np.zeros((vh, vw), np.float32)
-    target = rules["house_frontage_share"]
-    margin = 0.10
-    # one population per group chosen so the real algorithm's achieved
-    # share sits close to the target under the FIXED order (deviations
-    # 0.01-0.09 measured); under the pre-fix order the same four settle at
-    # 0.56-0.64 (deviations 0.11-0.19) -- on the far side of this margin
+    cap = rules["house_frontage_share"]
+    leak_slack = 0.05
+    floor = 0.15
     cases = (("capital", 180000), ("city", 200000), ("town", 50000), ("village", 8000))
     for group, pop in cases:
         b = {"burg_code": "ample_%s" % group, "population": pop, "group": group,
@@ -651,12 +694,17 @@ def test_the_frontage_share_matches_its_target_on_ample_open_ground():
         total = debug["frontage"] + debug["infill"]
         assert total > 20, "need a real cluster to measure a frontage/infill split"
         share = debug["frontage"] / total
-        print(group, "frontage share", round(share, 4), "vs target", target)
-        assert abs(share - target) <= margin, (
-            f"{group}: achieved frontage share {share:.1%} strayed more than "
-            f"{margin:.0%} from house_frontage_share ({target:.0%}) on ample, fully "
+        print(group, "frontage share", round(share, 4), "cap", cap)
+        assert share <= cap + leak_slack, (
+            f"{group}: achieved frontage share {share:.1%} strayed past the "
+            f"house_frontage_share cap ({cap:.0%}) plus slack on ample, fully "
             "buildable ground -- the uncapped top-up's fallback order is leaking "
             "frontage share again"
+        )
+        assert share >= floor, (
+            f"{group}: achieved frontage share {share:.1%} fell under {floor:.0%} on "
+            "ample, fully buildable ground -- frontage has collapsed to almost "
+            "nothing, reading as an all-infill town with no street frontage"
         )
 
 
