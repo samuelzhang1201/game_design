@@ -1,7 +1,6 @@
 """Plain-assert tests of bake_world.py's pure functions (no pytest here):
     python3 tools/map3d/test_bake_world.py
 """
-import math
 import os
 import sys
 
@@ -236,25 +235,11 @@ def test_pick_crop_follows_the_shares():
     assert np.allclose(counts, [350, 300, 200, 150], atol=2), counts
 
 
-def test_the_footprint_is_the_house_radius_over_the_built_share():
-    """density v3 (owner 2026-09-21): the footprint no longer grows with
-    the square root of the people at all — it is downstream of the house
-    cluster, which is sized from the burg's GROUP (a fixed house count)
-    and an authored density, never from population. See house_m2_each's
-    own note in data/map3d_bake.csv."""
-    rules = {"house_count_town": 40, "house_count_village": 20,
-             "house_m2_each": 230.0, "house_built_share": 0.78}
-    b = {"group": "town", "population": 10000}
-    r_house = math.sqrt(40 * 230.0 / math.pi)
-    assert math.isclose(bw.house_radius_m(b, rules), r_house)
-    assert math.isclose(bw.footprint_radius_m(b, rules), r_house / 0.78)
-    # population plays no part in either radius: only the GROUP does
-    assert bw.house_radius_m(dict(b, population=1), rules) == \
-        bw.house_radius_m(dict(b, population=10**7), rules)
-    # an unknown group falls back to the village count, as house_count does
-    rules_v = dict(rules, house_count_village=20)
-    assert math.isclose(bw.house_radius_m({"group": "nonesuch"}, rules_v),
-                        math.sqrt(20 * 230.0 / math.pi))
+def test_the_footprint_grows_with_the_square_root_of_the_people():
+    rules = {"footprint_m_per_sqrt_pop": 2.5, "footprint_min_m": 90.0, "footprint_max_m": 900.0}
+    assert bw.footprint_radius_m(10000, rules) == 250.0
+    assert bw.footprint_radius_m(10, rules) == 90.0, "the floor"
+    assert bw.footprint_radius_m(1e7, rules) == 900.0, "the ceiling"
 
 
 def test_the_fields_table_loads_with_its_textures():
@@ -281,20 +266,13 @@ def test_the_field_map_packs_colour_and_direction():
 
 def test_footprint_radius_agrees_between_the_two_modules():
     """bake_houses keeps its own copy so it can stand alone; the two must
-    never drift (density v3: now house_radius_m too, the primitive
-    footprint_radius_m is derived from)."""
+    never drift."""
     import bake_houses
     import bake_world
-    rules = {"house_count_capital": 400, "house_count_city": 200, "house_count_town": 70,
-             "house_count_fort": 55, "house_count_village": 25,
-             "house_m2_each": 230, "house_built_share": 0.78}
-    for group in ("capital", "city", "town", "fort", "village", "nonesuch"):
-        for pop in (0, 1, 600, 4900, 52000, 10**7):
-            b = {"group": group, "population": pop}
-            assert bake_houses.house_radius_m(b, rules) == \
-                   bake_world.house_radius_m(b, rules)
-            assert bake_houses.footprint_radius_m(b, rules) == \
-                   bake_world.footprint_radius_m(b, rules)
+    rules = {"footprint_m_per_sqrt_pop": 2.5, "footprint_min_m": 90, "footprint_max_m": 900}
+    for pop in (0, 1, 600, 4900, 52000, 10**7):
+        assert bake_houses.footprint_radius_m(pop, rules) == \
+               bake_world.footprint_radius_m(pop, rules)
 
 
 if __name__ == "__main__":
