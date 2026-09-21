@@ -2,71 +2,71 @@
  "barn": {
   "footprint_m": 13.0,
   "height_m": 7.0,
-  "tris": 50
+  "tris": 268
  },
  "byre": {
   "footprint_m": 9.0,
   "height_m": 4.5,
-  "tris": 56
+  "tris": 252
  },
  "chapel": {
   "footprint_m": 10.0,
   "height_m": 9.0,
-  "tris": 50
+  "tris": 324
  },
  "church": {
   "footprint_m": 18.0,
   "height_m": 13.0,
-  "tris": 118
+  "tris": 596
  },
  "church_tower": {
   "footprint_m": 22.0,
   "height_m": 24.0,
-  "tris": 104
+  "tris": 502
  },
  "cottage_a": {
   "footprint_m": 7.0,
   "height_m": 5.5,
-  "tris": 52
+  "tris": 360
  },
  "cottage_b": {
   "footprint_m": 8.0,
   "height_m": 5.5,
-  "tris": 64
+  "tris": 404
  },
  "cottage_c": {
   "footprint_m": 6.0,
   "height_m": 5.0,
-  "tris": 44
+  "tris": 304
  },
  "longhouse": {
   "footprint_m": 16.0,
   "height_m": 6.0,
-  "tris": 64
+  "tris": 328
  },
  "palace": {
   "footprint_m": 34.0,
   "height_m": 22.0,
-  "tris": 184
+  "tris": 900
  },
  "townhouse_a": {
   "footprint_m": 9.0,
   "height_m": 8.5,
-  "tris": 104
+  "tris": 376
  },
  "townhouse_b": {
   "footprint_m": 10.0,
   "height_m": 9.0,
-  "tris": 92
+  "tris": 396
  },
  "townhouse_c": {
   "footprint_m": 11.0,
   "height_m": 10.0,
-  "tris": 84
+  "tris": 432
  },
  "workshop": {
   "footprint_m": 10.0,
   "height_m": 6.5,
-  "tris": 52
+  "tris": 296
  }
 }

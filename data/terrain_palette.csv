@@ -47,3 +47,5 @@ house_roof_slate,#5C6259,"3D MAP houses (2026-09-21): slate, grey with an earthy
 house_wall,#C8BCA6,3D MAP houses: limewashed daub and plaster between the timbers
 house_wall_daub,#8C7856,"3D MAP houses (2026-09-21): plain unlimewashed daub, darker and browner than house_wall — the rougher end of the village"
 house_wall_stone,#A29C89,"3D MAP houses (2026-09-21): bare dressed stone, greyer than house_wall — the grander material (a landmark, a merchant's house) alongside house_roof_slate"
+house_beam,#3E2A1D,"3D MAP houses (v4, 2026-09-21): dark weathered oak — corner posts, a mid rail and a couple of studs standing proud of a daub/plaster wall (TIMBER_TYPES in make_houses.py), the third of up to four material slots (wall, roof, beam, void)"
+house_void,#211C19,"3D MAP houses (v4, 2026-09-21): a door or window's recess — no frame, no mullions, just a dark box let a few centimetres into the wall (make_houses.py's opening()), the fourth material slot"
