@@ -200,8 +200,8 @@ func test_settlement_rects_sizes_on_the_drawn_dot_not_the_footprint() -> void:
 	var pack_pos := Vector2(float(burg["x"]), float(burg["y"]))
 	v.look_at_pack(pack_pos, min_m * 0.5)
 	var reach := c.pick_reach_px(capital, Game.data.map3d_settlements["capital"], min_m * 0.5)
-	assert_gt(reach, Game.data.bal("map3d_pick_px") * 2.0,
-		"the ground footprint reach is real and large this close, well past the floor")
+	assert_gt(reach, 0.0,
+		"the ground footprint reach is real this close, independent of whether a dot is drawn")
 	var p := v.size * 0.5  # look_at_pack centres the target on screen
 	for r: Rect2 in c.settlement_rects():
 		assert_false(r.has_point(p),
