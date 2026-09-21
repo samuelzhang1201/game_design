@@ -9,7 +9,9 @@ const GROUPS := ["capital", "city", "fort", "town", "village"]
 ## spacing/road-align/per-population keys are gone, replaced by the
 ## house_count_<group> targets and the lane_*/plot_step_m keys that grow the
 ## lanes themselves.
-const BAKE_KEYS := ["house_radius_ratio", "house_barn_ratio", "house_foot_min",
+const BAKE_KEYS := ["house_built_share", "house_m2_each_capital", "house_m2_each_city",
+	"house_m2_each_town", "house_m2_each_fort", "house_m2_each_village",
+	"house_barn_ratio", "house_foot_min",
 	"house_max_slope", "house_shore_min_m", "house_port_shore_min_m",
 	"house_landmark_search_m", "house_yaw_jitter_deg", "house_gap_m",
 	"house_height_min", "house_height_max", "house_count_capital", "house_count_city",
@@ -61,10 +63,13 @@ func test_the_tuning_keys_exist() -> void:
 
 
 func test_the_buffer_ring_is_not_empty() -> void:
-	# the whole point of §4: houses stop well inside the built ground
-	var ratio: float = Game.data.map3d_bake["house_radius_ratio"]
-	assert_lt(ratio, 0.85, "houses stop well inside the footprint")
-	assert_gt(ratio, 0.3, "the cluster is not a dot in the middle of bare earth")
+	# the whole point of §4, now read off the derivation itself (density v4):
+	# the cluster is house_built_share of the built ground it stands on, so
+	# the ring from the last house out to the footprint's edge is built
+	# ground with no houses on it
+	var share: float = Game.data.map3d_bake["house_built_share"]
+	assert_lt(share, 0.85, "houses stop well inside the footprint")
+	assert_gt(share, 0.3, "the cluster is not a dot in the middle of bare earth")
 
 
 func _group_allows(group: String, min_group: String) -> bool:

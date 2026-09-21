@@ -75,12 +75,24 @@ func test_the_result_is_bucketed_by_type() -> void:
 			assert_eq(String(h["type"]), type, "every row is in its own bucket")
 
 
-func test_footprint_radius_matches_the_bake_table() -> void:
-	var r := Map3DHouses.footprint_radius_m(4900.0, Game.data)
-	var want: float = clampf(
-		Game.data.map3d_bake["footprint_m_per_sqrt_pop"] * sqrt(4900.0),
-		Game.data.map3d_bake["footprint_min_m"], Game.data.map3d_bake["footprint_max_m"])
-	assert_almost_eq(r, want, 0.001)
+## density v4 (owner 2026-09-21): a cluster's radius is the group's fixed
+## house COUNT at that group's own ground-per-house, and the footprint is
+## that radius over the built share — population plays no part in either.
+func test_the_cluster_and_footprint_radius_match_the_bake_table() -> void:
+	var t: Dictionary = Game.data.map3d_bake
+	for group: String in ["capital", "city", "town", "fort", "village"]:
+		var b := {"group": group, "population": 4900.0}
+		var want: float = sqrt(float(t["house_count_%s" % group])
+			* float(t["house_m2_each_%s" % group]) / PI)
+		assert_almost_eq(Map3DHouses.house_radius_m(b, Game.data), want, 0.001)
+		assert_almost_eq(Map3DHouses.footprint_radius_m(b, Game.data),
+			want / float(t["house_built_share"]), 0.001)
+		assert_eq(Map3DHouses.house_radius_m({"group": group, "population": 1.0}, Game.data),
+			Map3DHouses.house_radius_m({"group": group, "population": 1e7}, Game.data),
+			"the radius never moves with population")
+	assert_almost_eq(Map3DHouses.house_radius_m({"group": "nonesuch"}, Game.data),
+		Map3DHouses.house_radius_m({"group": "village"}, Game.data), 0.001,
+		"an unknown group falls back to the village row, as the bake does")
 
 
 func _codes(buckets: Dictionary) -> Dictionary:

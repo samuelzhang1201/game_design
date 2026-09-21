@@ -274,13 +274,6 @@ func houses() -> Dictionary:
 	return _houses
 
 
-## A burg's people: just the pack's own population (`repo.burgs[code]`'s
-## `population`), never the manor ledger — used by `pick_reach_px`.
-func people_of_burg(code: String) -> float:
-	var burg: Dictionary = repo.burgs.get(code, {})
-	return float(burg.get("population", 0))
-
-
 ## A settlement's click reach in DESIGN px: its cluster's projected GROUND
 ## radius, never below map3d_pick_px, independent of whether its dot is
 ## drawn (a settlement between the house cutoff and the dot's own near
@@ -293,7 +286,7 @@ func people_of_burg(code: String) -> float:
 ## (view_size, DESIGN px — label_px's measure), not px_per_dist (metres per
 ## SUBVIEWPORT px): the two agree only when viewport_px_scale() is 1.
 func pick_reach_px(code: String, _spec: Dictionary, dist_m: float) -> float:
-	var world_r := Map3DHouses.footprint_radius_m(people_of_burg(code), repo)
+	var world_r := Map3DHouses.footprint_radius_m(repo.burgs.get(code, {}), repo)
 	var m_per_px := Map3DGeometry.metres_per_pixel(dist_m, repo.bal("map3d_fov_deg"),
 		maxf(view_size.y, 1.0))
 	return maxf(world_r / maxf(m_per_px, 0.0001), repo.bal("map3d_pick_px"))

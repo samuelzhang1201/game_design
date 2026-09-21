@@ -51,7 +51,6 @@ func test_no_house_stands_in_the_sea() -> void:
 func test_every_house_is_inside_its_own_cluster() -> void:
 	if _skip():
 		return
-	var ratio: float = Game.data.map3d_bake["house_radius_ratio"]
 	for r: Dictionary in _rows:
 		var code := String(r["burg_code"])
 		assert_true(Game.data.burgs.has(code), code + " is a burg of this pack")
@@ -61,8 +60,12 @@ func test_every_house_is_inside_its_own_cluster() -> void:
 		var centre := Map3DGeometry.pack_to_world(_meta,
 			Vector2(float(b["x"]), float(b["y"])))
 		var at := Vector2(float(r["x_m"]), float(r["z_m"]))
-		var r_foot := Map3DHouses.footprint_radius_m(float(b.get("population", 0)), Game.data)
-		assert_lte(at.distance_to(centre), ratio * r_foot + 0.5,
+		# the bake's own cluster radius (density v4): the group's fixed house
+		# count at that group's density, never the population — the runtime
+		# and the bake read the ONE formula, which is what this re-derivation
+		# is here to hold
+		var r_house := Map3DHouses.house_radius_m(b, Game.data)
+		assert_lte(at.distance_to(centre), r_house + 0.5,
 			code + " rank " + String(r["rank"]) + " is inside the house radius")
 
 

@@ -37,13 +37,6 @@ def _seed(code):
     return int.from_bytes(hashlib.blake2b(code.encode("utf-8"), digest_size=8).digest(), "big")
 
 
-def footprint_radius_m(population, rules):
-    """The built ground's radius — the same formula bake_world.py uses; kept
-    here so this module stands alone, and asserted equal by the bake's test."""
-    return float(np.clip(rules["footprint_m_per_sqrt_pop"] * math.sqrt(max(population, 0.0)),
-                         rules["footprint_min_m"], rules["footprint_max_m"]))
-
-
 def house_count(burg, rules):
     """The TARGET number of houses a settlement's cluster shows — fixed by
     its group (village/fort/town/city/capital), never by its population: two
@@ -51,6 +44,43 @@ def house_count(burg, rules):
     populations sit. An unknown group falls back to the village count."""
     group = str(burg.get("group", "village"))
     return int(rules.get("house_count_%s" % group, rules["house_count_village"]))
+
+
+def house_m2_each(burg, rules):
+    """The ground a house is given, in square metres — PER GROUP
+    (`house_m2_each_<group>`), the village value the fallback (owner
+    2026-09-21, density v4). One shared density could not serve both ends:
+    a settlement at full fill has exactly this much ground per house BY
+    CONSTRUCTION, so the value a small awkward village site needs to fill
+    at all (loose) is the very value that would leave a capital — which
+    reaches full fill at any value — sitting sparse. Per group, a capital
+    is packed tight and a village stays loose enough to fill its site."""
+    group = str(burg.get("group", "village"))
+    return float(rules.get("house_m2_each_%s" % group, rules["house_m2_each_village"]))
+
+
+def house_radius_m(burg, rules):
+    """The cluster's own radius: derived straight from the group's fixed
+    house COUNT and that group's per-house density — never from population,
+    and never through the footprint. r = sqrt(count * m2_each / pi), the
+    radius of a circle whose area holds `count` houses at that density.
+
+    v1/v2 had this backwards: the house count was already fixed per GROUP
+    (the owner's ruling) while the cluster's radius came from a
+    population-driven footprint formula via house_radius_ratio. The two are
+    unrelated, so the density — count / (ratio * r_foot)^2 — was whatever
+    they happened to produce, and shrinking the footprint simply forced the
+    ratio up to keep the houses fitting, cancelling the shrink."""
+    return math.sqrt(max(house_count(burg, rules), 0) * house_m2_each(burg, rules) / math.pi)
+
+
+def footprint_radius_m(burg, rules):
+    """The built ground's radius — the same formula bake_world.py uses; kept
+    here so this module stands alone, and asserted equal by the bake's test.
+    The house cluster grown out by a buffer ring, `house_built_share` the
+    cluster's own share of it: the footprint is DOWNSTREAM of the houses
+    now, not the other way around."""
+    return house_radius_m(burg, rules) / rules["house_built_share"]
 
 
 def _group_allows(group, min_group):
@@ -308,8 +338,7 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None):
     group = str(burg.get("group", "village"))
     rng = np.random.default_rng(_seed(code))
     cx, cy = float(burg["x"]) * k, float(burg["y"]) * k
-    r_foot = footprint_radius_m(float(burg.get("population", 0) or 0), rules)
-    r_house = rules["house_radius_ratio"] * r_foot
+    r_house = house_radius_m(burg, rules)
     shore_m = (rules["house_port_shore_min_m"] if int(burg.get("is_port", 0) or 0)
                else rules["house_shore_min_m"])
 

@@ -520,11 +520,26 @@ def field_map(ftint, fangle, step=FIELD_MAP_STEP):
     return out
 
 
-def footprint_radius_m(population, rules):
-    """A settlement's built ground: footprint_m_per_sqrt_pop x sqrt(people),
-    within footprint_min_m..footprint_max_m."""
-    return float(np.clip(rules["footprint_m_per_sqrt_pop"] * np.sqrt(max(population, 0.0)),
-                         rules["footprint_min_m"], rules["footprint_max_m"]))
+def house_radius_m(burg, rules):
+    """A settlement's house-cluster radius: sqrt(count * m2_each / pi), both
+    the count (house_count_<group>) and the density (house_m2_each_<group>)
+    fixed by the burg's own GROUP, never by its population. Duplicated from
+    bake_houses.house_radius_m — kept independent, not a call-through, so a
+    slip between the two shows up as a test failure
+    (test_footprint_radius_agrees_between_the_two_modules) rather than
+    silently agreeing with itself. See that function's own note, and
+    house_m2_each_capital's in data/map3d_bake.csv, for why this replaced
+    the population-driven footprint formula (owner 2026-09-21, density v4)."""
+    group = str(burg.get("group", "village"))
+    n = float(rules.get("house_count_%s" % group, rules["house_count_village"]))
+    m2 = float(rules.get("house_m2_each_%s" % group, rules["house_m2_each_village"]))
+    return float(np.sqrt(max(n, 0.0) * m2 / np.pi))
+
+
+def footprint_radius_m(burg, rules):
+    """A settlement's built ground: the house cluster grown out by a buffer
+    ring, house_built_share the cluster's own share of it."""
+    return house_radius_m(burg, rules) / rules["house_built_share"]
 
 
 def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn, t_rock,
@@ -578,7 +593,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     with open(os.path.join(ROOT, "data", "maps", MAP, "political", "burgs.csv")) as f:
         for b in csv.DictReader(f):
             cx, cy = float(b["x"]) * k, float(b["y"]) * k
-            r = footprint_radius_m(float(b["population"] or 0), rules) / VERTEX_M
+            r = footprint_radius_m(b, rules) / VERTEX_M
             reach = r * (1.0 + rules["footprint_edge_noise"]) + 2
             x0, x1 = max(int(cx - reach), 0), min(int(cx + reach) + 1, vw)
             y0, y1 = max(int(cy - reach), 0), min(int(cy + reach) + 1, vh)
@@ -623,8 +638,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
             b["population"] = float(b["population"] or 0)
             rows = bake_houses.place(b, rules, types, foot, land_gate, height, k, vw, vh)
             cx, cy = float(b["x"]) * k, float(b["y"]) * k
-            r_house = rules["house_radius_ratio"] * bake_houses.footprint_radius_m(
-                b["population"], rules) / VERTEX_M
+            r_house = bake_houses.house_radius_m(b, rules) / VERTEX_M
             # the block noise stops where the real roofs begin (§1): roofs
             # painted on the ground beside real roofs read as a mistake --
             # but only where there ARE roofs; a settlement place() gave

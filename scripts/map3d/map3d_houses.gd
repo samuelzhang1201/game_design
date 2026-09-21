@@ -43,12 +43,25 @@ static func load_csv(path: String) -> Dictionary:
 	return out
 
 
-## The built ground's radius in metres — the bake's own formula, so the
-## runtime and the bake agree on where a cluster ends.
-static func footprint_radius_m(population: float, repo: DataRepository) -> float:
+## A settlement's house-cluster radius in metres — the bake's own formula
+## (tools/map3d/bake_houses.py's house_radius_m), so the runtime and the
+## bake agree on where a cluster ends: sqrt(count * m2_each / pi), both the
+## count (house_count_<group>) and the ground per house
+## (house_m2_each_<group>) fixed by the burg's own GROUP, never by its
+## population (owner 2026-09-21, density v4).
+static func house_radius_m(burg: Dictionary, repo: DataRepository) -> float:
 	var t: Dictionary = repo.map3d_bake
-	return clampf(float(t["footprint_m_per_sqrt_pop"]) * sqrt(maxf(population, 0.0)),
-		float(t["footprint_min_m"]), float(t["footprint_max_m"]))
+	var group := String(burg.get("group", "village"))
+	var n := float(t.get("house_count_%s" % group, t["house_count_village"]))
+	var m2 := float(t.get("house_m2_each_%s" % group, t["house_m2_each_village"]))
+	return sqrt(maxf(n, 0.0) * m2 / PI)
+
+
+## The built ground's radius in metres — the house cluster grown out by its
+## buffer ring, `house_built_share` the cluster's own share of it, as the
+## bake paints it.
+static func footprint_radius_m(burg: Dictionary, repo: DataRepository) -> float:
+	return house_radius_m(burg, repo) / float(repo.map3d_bake["house_built_share"])
 
 
 ## The houses to instance now, bucketed by type. `burg_pos` is {code: world
