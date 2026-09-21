@@ -2180,10 +2180,10 @@ of shot, quiet recognition [C-EVENT]
 of thirty-three with wild dark hair in a coarse undyed robe caught mid-lunge with both hands
 closed around the wrist of a man in road-dirt peasant clothes, the short knife still held
 high above them, a chair gone over and a candle guttering on the flagstones, a thick ledger
-fallen shut beside it, men-at-arms in mail hauberks and open-faced helmets, with kite shields, bursting in
-through the far door, seen from the king's own place at the very edge of the frame so that only his
-outstretched hand and the blue sleeve of his mantle are in shot, dynamic diagonal
-composition, no blood, no wounds [C-EVENT]
+fallen shut beside it, men-at-arms in mail hauberks and open-faced helmets, with kite
+shields, bursting in through the far door, and at the very edge of the frame the blue
+sleeve and gold-banded cuff of the king's arm with the hand itself out of shot, dynamic
+diagonal composition, no blood, no wounds [C-EVENT]
 ```
 
 #### `V-42` 账簿 · The Ledger
@@ -2221,12 +2221,14 @@ thin [C-EVENT]
 
 #### `V-45` 织工的特许状 · The Weavers' Charter
 ```
-[S] a royal audience chamber in late summer light, a lean sun-blackened man of
-thirty-three in a coarse undyed woollen robe kneeling on one knee and holding up a long
-parchment petition that hangs half rolled so only rows of inked crosses and dark
-thumbprints show and no words at all, sealed with a bound sheaf of wheat, millers and weavers standing behind him with caps in their hands, a bearded European
-king of forty with a close-trimmed dark beard, a plain gold circlet and a deep blue mantle
-seated on a modest wooden throne in the foreground, no legible writing on the parchment [C-EVENT]
+[S] a stone audience chamber in late summer light: a lean sun-blackened man of thirty-three
+in a coarse undyed woollen robe kneeling on one knee in the middle of the floor, holding up
+with both hands a long parchment petition that hangs half rolled so only rows of inked
+crosses and dark thumbprints show and no words at all, a bound sheaf of wheat laid on the
+flagstones beside his knee; a bearded European king of forty with a close-trimmed dark
+beard, a plain gold circlet and a deep blue mantle seated on a modest wooden throne facing
+him with both hands on the arms of the chair; behind the kneeling man a line of millers and
+weavers in plain tunics and aprons, small and soft, caps in their hands [C-EVENT]
 ```
 
 #### `V-46` 囚室里的名单 · The Prisoner
@@ -2241,14 +2243,16 @@ just inside the door with his hands folded, quiet and dignified, no legible writ
 
 #### `V-47` 北方的婚约 · The Northern Betrothal
 ```
-[S] night in a king's private chamber, an olive-skinned woman of thirty-eight in a floor-length medieval gown of dark teal wool
+[S] night in a king's private chamber, exactly three people in the picture and nobody else:
+an olive-skinned woman of thirty-eight in a floor-length medieval gown of dark teal wool
 with tight buttoned sleeves, a short fur-lined mantle clasped at the shoulder and her hair
-pinned under a small embroidered cap, standing composed beside an open coffer of coin, a bearded European king of forty with a close-trimmed dark beard and a
-plain gold circlet standing over a treaty rolled shut on the table with only its heavy wax
-seal showing, a silver sickle on a red field, no writing visible anywhere, a fair-haired woman of twenty-seven in a floor-length medieval gown of pale rose wool
-with long trailing sleeves and a jewelled girdle high at the waist, her hair in two coiled
-braids under a fine gold net, standing silently in the open doorway behind them with
-candlelight on her face, restrained emotion [C-EVENT]
+pinned under a small embroidered cap, standing composed beside an open coffer of coin; a
+bearded European king of forty with a close-trimmed dark beard and a plain gold circlet
+standing over a treaty rolled shut on the table with only its heavy wax seal showing, a
+silver sickle on a red field, no writing visible anywhere; and one fair-haired woman of
+twenty-seven in a floor-length medieval gown of pale rose wool with long trailing sleeves,
+her hair in two coiled braids under a fine gold net, alone in the open doorway behind them
+with candlelight on her face, restrained emotion [C-EVENT]
 ```
 
 #### `V-48` 扣下的税粮 · The Withheld Grain
@@ -2289,15 +2293,15 @@ umber shadow all around, no writing anywhere [C-EVENT]
 
 #### `V-52` 明君之始 · A Just Beginning
 ```
-[S] a vaulted stone council hall in bright morning light: a leather ledger lying open in
-the middle of the long oak table with nobody's hands on it, its pages seen at a raking
-angle so the ruled columns read as unreadable marks with no letters and no numerals; a
-handsome sharp-boned nobleman of forty-four sitting rigid and pale behind it with his
-chain of office lying on the oak in front of him and both hands below the table edge; the
-ministers drawn back from the book in their long fur-collared gowns and soft caps, small
-and soft along the table; guards in mail hauberks standing at the door; in the background
-half behind a pillar a young man in the same black gown watching with a still cold face, hard
-clear light [C-EVENT]
+[S] a vaulted stone council hall in bright morning light, seen down the length of the long
+oak table from behind the ministers so that only their backs and fur-collared shoulders
+frame the near edge: at the far end one handsome sharp-boned nobleman of forty-four in a
+long black gown with a gold-embroidered band and no shoulder ornament of any kind sits
+alone and rigid behind a leather ledger lying open on the oak, its pages seen at a raking
+angle so the ruled columns read as unreadable marks with no letters and no numerals, his
+chain of office unclasped on the table in front of him and both hands below the table edge;
+two guards in mail hauberks at the door behind him; half behind a stone pillar a young man
+in the same black gown watching with a still cold face, hard clear light [C-EVENT]
 ```
 
 #### `V-53` 妥协之王 · The Compromising King
