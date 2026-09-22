@@ -1,72 +1,100 @@
 {
  "barn": {
-  "footprint_m": 13.0,
-  "height_m": 7.0,
-  "tris": 268
+  "footprint_m": 20.0,
+  "height_m": 11.868,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 500000,
+  "tris": 13735
  },
  "byre": {
-  "footprint_m": 9.0,
-  "height_m": 4.5,
-  "tris": 252
+  "footprint_m": 17.0,
+  "height_m": 7.159,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 500000,
+  "tris": 6569
  },
  "chapel": {
-  "footprint_m": 10.0,
-  "height_m": 9.0,
-  "tris": 324
+  "footprint_m": 24.0,
+  "height_m": 18.217,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 498792,
+  "tris": 8095
  },
  "church": {
-  "footprint_m": 18.0,
-  "height_m": 13.0,
-  "tris": 596
+  "footprint_m": 36.0,
+  "height_m": 23.839,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 500000,
+  "tris": 26507
  },
  "church_tower": {
-  "footprint_m": 22.0,
-  "height_m": 24.0,
-  "tris": 502
+  "footprint_m": 44.0,
+  "height_m": 42.357,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 500000,
+  "tris": 39444
  },
  "cottage_a": {
-  "footprint_m": 7.0,
-  "height_m": 5.5,
-  "tris": 360
+  "footprint_m": 17.0,
+  "height_m": 16.345,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 500860,
+  "tris": 3990
  },
  "cottage_b": {
-  "footprint_m": 8.0,
-  "height_m": 5.5,
-  "tris": 404
+  "footprint_m": 18.0,
+  "height_m": 11.7,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 496140,
+  "tris": 5207
  },
  "cottage_c": {
-  "footprint_m": 6.0,
-  "height_m": 5.0,
-  "tris": 304
+  "footprint_m": 16.0,
+  "height_m": 13.784,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 499882,
+  "tris": 2947
  },
  "longhouse": {
-  "footprint_m": 16.0,
-  "height_m": 6.0,
-  "tris": 328
+  "footprint_m": 20.0,
+  "height_m": 9.238,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 500000,
+  "tris": 20774
  },
  "palace": {
-  "footprint_m": 34.0,
-  "height_m": 22.0,
-  "tris": 900
+  "footprint_m": 68.0,
+  "height_m": 47.564,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 500000,
+  "tris": 94322
  },
  "townhouse_a": {
-  "footprint_m": 9.0,
-  "height_m": 8.5,
-  "tris": 376
+  "footprint_m": 18.0,
+  "height_m": 17.773,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 499852,
+  "tris": 6579
  },
  "townhouse_b": {
-  "footprint_m": 10.0,
-  "height_m": 9.0,
-  "tris": 396
+  "footprint_m": 19.0,
+  "height_m": 20.087,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 499472,
+  "tris": 8092
  },
  "townhouse_c": {
-  "footprint_m": 11.0,
-  "height_m": 10.0,
-  "tris": 432
+  "footprint_m": 15.0,
+  "height_m": 26.239,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 499722,
+  "tris": 9919
  },
  "workshop": {
-  "footprint_m": 10.0,
-  "height_m": 6.5,
-  "tris": 296
+  "footprint_m": 19.0,
+  "height_m": 13.028,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 498920,
+  "tris": 8074
  }
 }
