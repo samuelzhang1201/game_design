@@ -129,6 +129,53 @@ settlements with no Blender install. It is NOT part of `build_pack.sh`
 and needs re-running only when `data/map3d_houses.csv` or the roof/wall
 colours in `data/terrain_palette.csv` change (~1 minute for all 14 types).
 
+### Since 2026-09-21 the shipped meshes are Hunyuan3D retopos
+
+`make_houses.py` still builds a type that has no AI source. The 14 that ship
+now come from `assets/map3d_houses/ai_src/<type>.glb` through:
+
+```
+blender -b --factory-startup --python tools/map3d/retopo_houses.py -- [--only palace] [--min-fill X]
+python3 tools/map3d/dilate_house_atlas.py        # after any retopo
+python3 tools/map3d/scale_houses.py              # after any retopo, and to resize
+```
+
+- **`retopo_houses.py`** voxel-remeshes the ~500k-tri source, decimates to
+  the type's budget and bakes the source's surface onto the result.
+  `--only a,b` rebuilds just those types; `--min-fill X` lowers the hollow
+  guard for a source being TESTED (see below).
+- **`dilate_house_atlas.py`** floods each UV island's colour outward into the
+  black between islands. `smart_project` on a remeshed mesh gives thousands
+  of per-triangle islands about a dozen pixels across, and a house is drawn
+  at 24–50 px: every sample comes from a low mip, and a low mip of an
+  undilated atlas is the island averaged with the void. Without it the
+  buildings render dark and the big landmarks render as black-and-white
+  crust. Run it after every retopo.
+- **`scale_houses.py`** scales the BUILT mesh's vertices to the table's
+  `footprint_m` and writes `width_m` / `depth_m` / `height_m` / `tris` back
+  into the table and `houses.json` — all four MEASURED off the glTF, never
+  authored. It is how house size is changed (density v5 put every building
+  at ×2 life size): re-running the retopo at a bigger `footprint_m` would
+  double every triangle count, since `tri_budget()` goes with the footprint
+  SQUARED, for what is a pure uniform scale. Idempotent.
+
+**A hollow source and an airy building are not the same thing** (2026-09-22).
+A game mesh is a SHELL and that is fine; what this pipeline cannot take is a
+shell with HOLES, because the bake fires rays from the low poly at the high
+poly and a ray through a hole writes black. `self_check`'s absolute enclosed
+volume floor conflated the two — the realistic palace (a hall and a chapel
+inside a low walled yard) is 5.6% enclosed and bakes clean, while a toy
+castle is a solid block by its shape alone — so that floor now only WARNS
+when there is a relative number to judge by; the refusal is
+`MIN_FILL_OF_SOURCE`, which catches a remesh that tore the surface apart.
+When a source is warned about, RENDER the result and look at it.
+
+**After replacing any `.glb`, run `Godot --headless --path . --import`**, or
+the game keeps loading the previous `.scn` and you will shoot the old mesh.
+Godot's glTF importer also EXTRACTS each embedded texture to a loose file
+beside the `.glb` (`gltf/embedded_image_handling=1`) and the imported scene
+depends on it — deleting those "stray" files silently breaks every house.
+
 ## The manifest
 
 `build_world.gd` writes `manifest.json` beside `world.tscn` once the scene
@@ -361,6 +408,16 @@ by the same margin.
   already carries `footprint_m` and `height_m`, but they are the CSV's
   claimed values, not measured ones) or stop scaling non-uniformly-bounded
   types down in the first place.
+  **RESOLVED 2026-09-21 (density v5), by the first of those two routes.**
+  The meshes are Hunyuan3D retopos now, scaled uniformly to `footprint_m` on
+  their long horizontal axis, and `data/map3d_houses.csv` carries `width_m`
+  and `depth_m` — the mesh's own measured spans, written back by
+  `tools/map3d/scale_houses.py` exactly as `height_m` is.
+  `bake_houses.half_extents()` packs against those, so a house reserves its
+  real rectangle rather than a square of its long side. That square was the
+  larger half of this finding: it gave a 14 × 10 m cottage a 14 × 14 m plot,
+  i.e. ~37% of every settlement's ground spent on air, which read as a loose
+  scatter no `house_m2_each_*` could tighten.
 - **`house_frontage_share` leaked well past its target during this branch's
   work** (measured 60–72% against a 0.45 target: the uncapped top-up ran
   `_frontage_pass(enforce_quota=False)` before `_infill_pass(enforce_quota=False)`,

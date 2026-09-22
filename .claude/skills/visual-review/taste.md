@@ -51,11 +51,54 @@ add it here as a principle with its why — not as a changelog entry.
   scattered and unreasonable; the fix was to grow a lane network out from
   the settlement's centre first and pack houses along its frontage, filling
   whatever block is left behind the lanes.
+- **Houses are drawn at TWICE life size, and a settlement's tier reads from
+  WHAT stands in it, not from how many roofs it has** (owner 2026-09-21:
+  "每一个等级的定居点房屋数量要差不多，并且忽略房屋和地图的真实比例的大小，尽量
+  贴近AI原图模型的生成游戏模型"). The world is built at 50 m per pack px, so a
+  true-to-life 7 m cottage is 7–12 px at the closest zoom and a settlement
+  reads as gravel scattered on bare ground; every mesh is scaled ×2 instead
+  (`tools/map3d/scale_houses.py`, which rescales the built mesh rather than
+  re-running the retopo bake, so the triangle count does not move). The five
+  groups' counts are 100 / 80 / 50 / 30 / 20 — under 5:1, where they had been
+  100 / 60 / 24 / 20 / 9 — and the tier is told by the palace, the church
+  tower, the church or the chapel at the centre, and by townhouses against
+  thatch. **Ignoring real-world scale is allowed here; what is not allowed is
+  one tier that reads as a different KIND of place than another.**
+- **Buildings are SIMPLE REALISM, never toy** (owner 2026-09-22, on a
+  generated palace: "这个王宫太假了太卡通了，我要简约写实风格"). Real weathered
+  stone with visible masonry courses, plain slate or tile roofs, sober true
+  proportions, muted natural colour — no flags, no banners, no bright
+  pennants, no shrubs, no little figures, and no ground slab under the
+  building. **Generating one: never ask Hunyuan3D for a "game asset" in
+  words.** Three text-to-3D attempts saying "game asset for a grand strategy
+  game" each came back a toy castle with orange flags and a grass base,
+  and the negatives ("NOT cartoon, NO flags") did nothing — that phrase is
+  itself what pulls the model toward toy. What works is IMAGE-to-3D from a
+  photoreal reference rendered by the project's own Flux pipeline
+  (`STYLE_CORE_photoreal_building.txt` + `NEGATIVE_photoreal_building.txt`,
+  canvas `C-ICON`): the reference carries the realism and the 3D step only
+  has to follow it.
+- **A packer reserves the building, not its bounding square.** Each house is
+  packed as its own measured rectangle (`width_m` × `depth_m`, in
+  `bake_houses.half_extents`). A square of the long side gave a 14 × 10 m
+  cottage a 14 × 14 m plot and held a third of every settlement's ground as
+  air that no density could win back — the clusters read loose no matter how
+  hard the density was tightened, which is the trap that cost two rounds.
+  With the rectangle, each group's `house_m2_each_*` sits on its MEASURED
+  packing floor (the tightest value at which it still seats its full count on
+  flat, fully buildable ground), so the weave is as tight as this layout
+  packs rather than as tight as someone guessed.
 - **Lanes keep their real width** (3–4 m), unlike the roads and rivers this
   project deliberately draws wider than life for legibility. The owner
   accepted that a true-width lane stops reading past ~2500 m and the
   cluster becomes one solid mass at distance, rather than widen it to
   compensate.
+  *Amended 2026-09-21: once every house was scaled ×2, a real 3.5 m lane was
+  half a doorway wide between them and the alleys stopped reading at any
+  zoom, so `lane_half_width_m` moved with the houses (1.75 → 2.5 m). The
+  ruling's substance holds — a lane is narrow AGAINST ITS OWN HOUSES and is
+  not widened the way roads and rivers are — but it is now proportional to
+  the buildings, not to the real world the buildings left behind.*
 - **The marker dot is a far-zoom affordance only, not a settlement's whole
   representation** (owner 2026-09-20): now that a settlement is a real
   cluster of houses up close, the dot that used to stand for every

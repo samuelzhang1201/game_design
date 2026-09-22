@@ -24,6 +24,33 @@ the bake already lays down.
 > this document and the code still disagree on anything, the CODE is
 > correct.
 
+> **Amendment, 2026-09-21 (density v5).** Three of this document's numbers
+> are superseded by the owner's ruling "每一个等级的定居点房屋数量要差不多，并且
+> 忽略房屋和地图的真实比例的大小，尽量贴近AI原图模型的生成游戏模型", with the
+> counts he then fixed himself ("从大到小：100/80/50/30/20") and the size
+> ("再放大一档 ×2"):
+> 1. **Per-group counts compress to 100 / 80 / 50 / 30 / 20.** A settlement's
+>    TIER is told by what stands at its centre (palace / church tower /
+>    church / chapel) and by townhouses against thatch, not by a tenfold
+>    range in roof count.
+> 2. **Houses are ×2 life size.** §"Houses are read at the cluster scale"
+>    below reasons from an 8 m house at 9–17 px; that is exactly the size
+>    that read as gravel. `tools/map3d/scale_houses.py` scales the BUILT
+>    meshes (footprint_m 7→14 for the commonest cottage, palace 34→68) so the
+>    triangle count and the baked textures are untouched — re-running
+>    `retopo_houses.py` at the new footprint would have doubled every mesh's
+>    triangles for what is a pure uniform scale, since `tri_budget()` goes
+>    with the footprint SQUARED.
+> 3. **The packer reserves a rectangle, not a square.** `_rects_too_close`
+>    took one half-width per house, i.e. a square of the building's LONG
+>    side, so a 14 × 10 m cottage held a 14 × 14 m plot. It now takes
+>    `half_extents()` — `width_m` × `depth_m`, measured off the built mesh
+>    like `height_m` — and `house_m2_each_*` sits on each group's measured
+>    packing floor (660 / 660 / 700 / 640 / 640).
+>
+> `lane_half_width_m` (1.75 → 2.5) and `map3d_house_sink_m` (0.35 → 0.5)
+> follow the houses for the same reason. Everything else below stands.
+
 ## Owner rulings that govern this work
 
 - **The 2026-09-16 ruling "procedural Blender towns were abandoned after five
