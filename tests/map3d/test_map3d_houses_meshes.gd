@@ -84,16 +84,32 @@ func test_the_manifests_tris_is_the_meshs_real_triangle_count() -> void:
 		node.free()
 
 
-func test_every_mesh_is_watertight_and_consistently_wound() -> void:
-	## Catches the class of defect a bounding-box check cannot: a face left
-	## unclosed (an edge used by only one triangle) or a face wound the
-	## wrong way relative to its neighbour (an edge two triangles both walk
-	## in the SAME direction, instead of the one-forward-one-back a closed,
-	## consistently outward-facing solid always has). 2026-09-21: three
-	## rendered tiles (cottage_a, longhouse, townhouse_b) showed a dark
-	## gash/hole the owner suspected was exactly this; this test came back
-	## clean on all three (see the report for what the real cause was and
-	## why this check is still worth keeping as a permanent regression net).
+## The largest hole a house mesh may carry, in metres across (owner
+## 2026-09-22: 水密性前提要重定, after asking "一般游戏的3d模型不能是空壳吗").
+## It cannot: a game mesh is a SHELL, only its visible surface exists, and
+## demanding a closed solid was the wrong premise — it failed 13 of the 14
+## shipped meshes for cracks nobody can see. What IS a defect is a hole big
+## enough to look THROUGH at the size a house is drawn. At the closest zoom
+## an 18 m building covers 24-50 px, so roughly 0.4 m to a pixel; 1.0 m is
+## about two pixels. Measured over the shipped set
+## (tools/map3d/census_house_meshes.py), every mesh's largest hole is
+## 0.04-0.45 m — decimation cracks, comfortably under this — so the bar is a
+## real guard with room, not a rubber stamp of what exists.
+const HOLE_MAX_M := 1.0
+
+
+func test_no_mesh_has_a_hole_you_could_see_through() -> void:
+	## Two defects, one census. A FLIPPED FACE — a triangle that disagrees
+	## with two or more of its own neighbours about which way is out —
+	## renders as a hole you can see through whatever the mesh is made of,
+	## and is refused absolutely. An open boundary is only a defect once the
+	## hole it bounds is big enough to read: boundary edges are grouped into
+	## the holes they actually form and each hole is measured across, rather
+	## than counted.
+	## 2026-09-21: three rendered tiles (cottage_a, longhouse, townhouse_b)
+	## showed a dark gash the owner suspected was exactly this; the census
+	## came back clean on all three (the real cause was the UV atlas's
+	## undilated black, now flooded by tools/map3d/dilate_house_atlas.py).
 	for type: String in Game.data.map3d_houses:
 		var row: Dictionary = Game.data.map3d_houses[type]
 		var scene := load(String(row["mesh"])) as PackedScene
@@ -103,10 +119,12 @@ func test_every_mesh_is_watertight_and_consistently_wound() -> void:
 		var mesh := _first_mesh(node)
 		if mesh != null:
 			var result := _manifold_check(mesh)
-			assert_eq(int(result["open_boundary_edges"]), 0,
-				type + " has an open/uncapped face — an edge used by only one triangle")
-			assert_eq(int(result["winding_conflicts"]), 0,
-				type + " has two triangles sharing an edge with the SAME winding — one of them is flipped")
+			assert_lt(float(result["biggest_hole_m"]), HOLE_MAX_M,
+				"%s's biggest hole is %.2f m across — a shell is fine, a hole you can see through is not"
+					% [type, float(result["biggest_hole_m"])])
+			assert_eq(int(result["flipped_faces"]), 0,
+				"%s has a flipped face — %d of its triangles disagree with two or more of their own neighbours"
+					% [type, int(result["flipped_faces"])])
 		node.free()
 
 
@@ -119,6 +137,7 @@ func _manifold_check(mesh: Mesh) -> Dictionary:
 	# edge walked twice in the SAME direction is a local winding conflict.
 	var edge_dir := {}
 	var edge_any := {}
+	var edge_tris := {}           # undirected key -> the triangles that walk it
 	for s in mesh.get_surface_count():
 		var arrays := mesh.surface_get_arrays(s)
 		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
@@ -139,19 +158,80 @@ func _manifold_check(mesh: Mesh) -> Dictionary:
 				edge_dir[dkey] = int(edge_dir.get(dkey, 0)) + 1
 				var ukey: String = (ka + "<>" + kb) if ka < kb else (kb + "<>" + ka)
 				edge_any[ukey] = int(edge_any.get(ukey, 0)) + 1
+				var owners: Array = edge_tris.get(ukey, [])
+				owners.append(tri)
+				edge_tris[ukey] = owners
 	var open_boundary := 0
 	var winding_conflicts := 0
+	var tri_bad := {}             # triangle -> how many of its edges conflict
+	var border_adj := {}          # vertex key -> its boundary neighbours
 	for ukey: String in edge_any:
 		var count: int = edge_any[ukey]
+		var parts := ukey.split("<>")
 		if count == 1:
 			open_boundary += 1
+			# remember the hole's own edges: a count of them says nothing
+			# about whether anything can be seen through them, and the
+			# boundary of a shell's open underside is as long as the
+			# building is round
+			for pair: Array in [[parts[0], parts[1]], [parts[1], parts[0]]]:
+				var at: Array = border_adj.get(pair[0], [])
+				at.append(pair[1])
+				border_adj[pair[0]] = at
 		elif count == 2:
-			var parts := ukey.split("<>")
 			var fwd: String = parts[0] + ">" + parts[1]
 			var bwd: String = parts[1] + ">" + parts[0]
 			if int(edge_dir.get(fwd, 0)) != 1 or int(edge_dir.get(bwd, 0)) != 1:
 				winding_conflicts += 1
-	return {"open_boundary_edges": open_boundary, "winding_conflicts": winding_conflicts}
+				for tri: int in edge_tris.get(ukey, []):
+					tri_bad[tri] = int(tri_bad.get(tri, 0)) + 1
+	# A FLIPPED face disagrees with every neighbour it has, so it shows up on
+	# two or three of its own edges. A lone conflicting edge is the census's
+	# own false positive: it keys an edge by its ROUNDED POSITION (a glTF
+	# re-export duplicates vertices per face, so position is the only stable
+	# identity left), and where the remesh leaves two coincident vertices,
+	# two unrelated edges collide on one key and can look like a conflict.
+	# Measured 2026-09-22 against Blender's own census over the welded
+	# topology (tools/map3d/census_house_meshes.py — and it must WELD first,
+	# or glTF's per-seam vertex split leaves nothing sharing an edge and the
+	# census reports every mesh clean): every shipped mesh is 0 there, while
+	# this one reported a single conflict in church's 26,507 triangles.
+	# Counting per FACE rather than per edge tells the two apart without
+	# loosening anything — a genuinely flipped face still fails.
+	var flipped := 0
+	for tri: int in tri_bad:
+		if int(tri_bad[tri]) >= 2:
+			flipped += 1
+	return {"open_boundary_edges": open_boundary, "winding_conflicts": winding_conflicts,
+		"flipped_faces": flipped, "biggest_hole_m": _biggest_hole_m(border_adj)}
+
+
+## The widest hole in a shell, in metres: boundary edges walked into the
+## connected loops they form, each loop measured by its own bounding box's
+## diagonal. One hole a metre across is a defect; a thousand cracks a
+## centimetre wide are what a decimated mesh is made of.
+func _biggest_hole_m(border_adj: Dictionary) -> float:
+	var seen := {}
+	var biggest := 0.0
+	for start: String in border_adj:
+		if seen.has(start):
+			continue
+		var stack: Array[String] = [start]
+		seen[start] = true
+		var lo := Vector3(INF, INF, INF)
+		var hi := Vector3(-INF, -INF, -INF)
+		while not stack.is_empty():
+			var at: String = stack.pop_back()
+			var xyz := at.split(",")
+			var p := Vector3(float(xyz[0]), float(xyz[1]), float(xyz[2]))
+			lo = lo.min(p)
+			hi = hi.max(p)
+			for next: String in border_adj[at]:
+				if not seen.has(next):
+					seen[next] = true
+					stack.append(next)
+		biggest = maxf(biggest, (hi - lo).length())
+	return biggest
 
 
 func _first_mesh(node: Node) -> Mesh:
