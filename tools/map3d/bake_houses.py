@@ -100,6 +100,27 @@ def _pick(rng, types, role, group):
     return keys[int(rng.choice(len(keys), p=w / w.sum()))]
 
 
+def _pick_landmark(types, group):
+    """The building at a settlement's centre: the HIGHEST-ranked landmark its
+    group allows, never a weighted draw (owner 2026-09-22, 要改成按等级固定).
+
+    Since density v5 compressed the per-group house counts to 100/80/50/30/20,
+    the centrepiece is the only thing left that tells a capital from a town —
+    and a weighted draw among every allowed landmark undid exactly that:
+    measured over the pack, 4 of the 7 capitals drew a plain church, which is
+    what a TOWN shows, and one drew a chapel, which is what a VILLAGE shows.
+    Ranking by `min_group` gives capital → palace, city → church tower,
+    town and fort → church, village → chapel, with weight then name breaking
+    a tie between two landmarks of the same rank."""
+    keys = [t for t, r in types.items()
+            if r["role"] == "landmark" and _group_allows(group, r["min_group"])]
+    if not keys:
+        return None
+    return sorted(keys, key=lambda t: (GROUP_ORDER.index(types[t]["min_group"])
+                                       if types[t]["min_group"] in GROUP_ORDER else -1,
+                                       float(types[t]["weight"]), t))[-1]
+
+
 def _slope(height, vx, vy, vw, vh):
     """The ground's gradient (rise over run) at a vertex, from the bake's own
     heightmap — the field the rivers are already carved into."""
@@ -122,14 +143,27 @@ def _dry(land, vx, vy, vw, vh, shore_m):
     return bool(np.all(land[y0:y1, x0:x1] > 0.5))
 
 
-def _find_landmark_spot(cx, cy, land, vw, vh, shore_m, bound_m):
+def _find_landmark_spot(cx, cy, land, vw, vh, shore_m, bound_m, on_water=None):
     """The nearest point to the burg's own centre that stands on land with
     its shore buffer clear, searched in rings out to bound_m; None if
     nothing within it passes ("never in the sea" is structural even for the
     landmark, which carries no slope test — a church on a hillside is
-    intended, but not a church offshore)."""
-    if 0 <= cx < vw and 0 <= cy < vh and float(land[int(cy), int(cx)]) > 0.5 \
-            and _dry(land, cx, cy, vw, vh, shore_m):
+    intended, but not a church offshore).
+
+    `on_water(vx, vy)` refuses a river as well (2026-09-21): Azgaar puts a
+    riverside burg's own centre ON its river, so the one building that is
+    NOT placed by the house passes — the palace, the church, the chapel a
+    settlement is read by — was the one standing in the water."""
+    def _ok(vx, vy):
+        if not (0 <= vx < vw and 0 <= vy < vh):
+            return False
+        if float(land[int(vy), int(vx)]) < 0.5:
+            return False
+        if not _dry(land, vx, vy, vw, vh, shore_m):
+            return False
+        return not (on_water is not None and on_water(vx, vy))
+
+    if _ok(cx, cy):
         return 0.0, 0.0
     step = 11.0   # metres: half a house's jittered-grid cell, fine enough to hug the shore
     ring = 1
@@ -139,11 +173,7 @@ def _find_landmark_spot(cx, cy, land, vw, vh, shore_m, bound_m):
             ang = a * (2.0 * math.pi / 16.0)
             ox, oz = rad * math.cos(ang), rad * math.sin(ang)
             vx, vy = cx + ox / VERTEX_M, cy + oz / VERTEX_M
-            if not (0 <= vx < vw and 0 <= vy < vh):
-                continue
-            if float(land[int(vy), int(vx)]) < 0.5:
-                continue
-            if not _dry(land, vx, vy, vw, vh, shore_m):
+            if not _ok(vx, vy):
                 continue
             return ox, oz
         if rad >= bound_m:
@@ -160,25 +190,49 @@ def _axes(yaw_deg):
 
 
 def _rects_too_close(ax, az, ahalf, ayaw, bx, bz, bhalf, byaw, gap):
-    """Oriented rectangle overlap: true when two square footprints (centre,
-    half-width, yaw in degrees) come closer than `gap` metres apart, tested
-    by the separating axis theorem over each box's own two edge normals —
-    a circle-distance bound is not tight enough for rotated rectangles
-    (two squares can sit closer, corner to corner, than the sum of their
+    """Oriented rectangle overlap: true when two footprints (centre, half
+    extents, yaw in degrees) come closer than `gap` metres apart, tested by
+    the separating axis theorem over each box's own two edge normals — a
+    circle-distance bound is not tight enough for rotated rectangles (two
+    boxes can sit closer, corner to corner, than the sum of their
     half-widths would suggest along an axis), which is why the "current
-    algorithm" this replaces read as gapped: it was really testing circles."""
+    algorithm" this replaces read as gapped: it was really testing circles.
+
+    `ahalf` / `bhalf` are (half_depth, half_width): half extents along the
+    building's own FACING axis and across it, the pair `half_extents()`
+    returns. A scalar is accepted as a square, which is what this took
+    before the types carried a depth (density v5, owner 2026-09-21 —
+    a square of the LONG side reserved a 14 x 14 m plot for a 14 x 10 m
+    cottage, so a third of every settlement's ground was air the packer
+    had already spent and no density could win it back)."""
     aux, auz = _axes(ayaw)
     bux, buz = _axes(byaw)
-    ahw = ahalf + gap * 0.5
-    bhw = bhalf + gap * 0.5
+    ad, aw = (ahalf, ahalf) if np.isscalar(ahalf) else ahalf
+    bd, bw = (bhalf, bhalf) if np.isscalar(bhalf) else bhalf
+    ad, aw = ad + gap * 0.5, aw + gap * 0.5
+    bd, bw = bd + gap * 0.5, bw + gap * 0.5
     tx, tz = bx - ax, bz - az
     for lx, lz in (aux, auz, bux, buz):
         t = abs(tx * lx + tz * lz)
-        ra = ahw * abs(aux[0] * lx + aux[1] * lz) + ahw * abs(auz[0] * lx + auz[1] * lz)
-        rb = bhw * abs(bux[0] * lx + bux[1] * lz) + bhw * abs(buz[0] * lx + buz[1] * lz)
+        ra = ad * abs(aux[0] * lx + aux[1] * lz) + aw * abs(auz[0] * lx + auz[1] * lz)
+        rb = bd * abs(bux[0] * lx + bux[1] * lz) + bw * abs(buz[0] * lx + buz[1] * lz)
         if t > ra + rb:
             return False   # a separating axis: the two rectangles clear each other
     return True
+
+
+def half_extents(row):
+    """(half along the building's facing axis, half across it) for one type
+    of data/map3d_houses.csv. The mesh faces +Z and Map3DLayerHouses turns
+    it about the vertical by the row's yaw, so the mesh's own Z span lies
+    along `_axes(yaw)`'s first axis and its X span along the second.
+
+    `width_m` / `depth_m` are MEASURED off the built mesh (they are written
+    by tools/map3d/scale_houses.py, like height_m); a table that carries
+    neither falls back to the square of footprint_m this used to assume."""
+    w = float(row.get("width_m") or 0.0) or float(row["footprint_m"])
+    d = float(row.get("depth_m") or 0.0) or float(row["footprint_m"])
+    return 0.5 * d, 0.5 * w
 
 
 def _walk_lane(rng, lanes, x0, z0, bearing, r_house, step, wander,
@@ -309,7 +363,7 @@ def _nearest_lane(lanes, x, z):
     return best_d, best_b
 
 
-def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None):
+def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, wet=None):
     """The houses of one settlement, ranked from the centre outward.
 
     `foot`, `land`, `height` are the bake's vertex-resolution arrays; `k` is
@@ -351,14 +405,36 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None):
     # rng and this same call, with no need to replay the landmark's own draws
     lanes = _grow_lanes(rng, r_house, rules)
 
-    landmark = _pick(rng, types, "landmark", group)
+    landmark = _pick_landmark(types, group)
     if landmark is not None:
         # the landmark's own search never reaches past the cluster it is
         # meant to stand in -- the buffer ring beyond r_house must stay
         # empty (the owner's own requirement), so house_landmark_search_m is
         # an outer bound only; r_house also caps it
         search_m = min(float(rules["house_landmark_search_m"]), r_house)
-        spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m, search_m)
+        # a landmark keeps clear of a river by its own half-size, like every
+        # other building (see _try_place): Azgaar puts a riverside burg's
+        # centre ON the water, and the landmark is the one building the
+        # house passes never vet.
+        lm_clear = float(rules.get("house_river_clear_m", 0.0)) \
+            + max(half_extents(types[landmark]))
+
+        def _lm_on_water(vx, vy):
+            if wet is None:
+                return False
+            return (1.0 - float(wet[int(vy), int(vx)])) * rules["river_wet_m"] < lm_clear
+
+        spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m, search_m,
+                                   on_water=_lm_on_water)
+        if spot is None:
+            # A settlement always shows its landmark. The river clearance is
+            # a LOOK rule and the sea gate is the structural one, so when a
+            # burg's whole cluster is within a river's reach the clearance
+            # gives way rather than the settlement disappearing — measured,
+            # the strict rule alone left 3 of the pack's 684 with no
+            # building at all, which reads as a named dot standing on empty
+            # ground.
+            spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m, search_m)
         if spot is None:
             return []
         lx, lz = spot
@@ -367,7 +443,7 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None):
                      "z_m": float(round(lz, 2)), "yaw_deg": yaw0,
                      "type": landmark, "scale": 1.0,
                      "height_scale": float(rules["house_height_max"])})
-        taken.append((lx, lz, 0.5 * float(types[landmark]["footprint_m"]), yaw0))
+        taken.append((lx, lz, half_extents(types[landmark]), yaw0))
 
     n_target = house_count(burg, rules)
     gap = float(rules["house_gap_m"])
@@ -440,7 +516,21 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None):
             return False
         if _slope(height, vx, vy, vw, vh) > rules["house_max_slope"]:
             return False
-        half = 0.5 * float(types[pick]["footprint_m"])
+        half = half_extents(types[pick])
+        # a river is water too (2026-09-21): `wet` is 1 inside the drawn
+        # channel and fades to 0 over river_wet_m beyond it, so
+        # (1 - wet) * river_wet_m is this point's distance from the water's
+        # EDGE. A house needs its own reach plus house_river_clear_m of it —
+        # the clearance covers the runtime's bank wobble
+        # (map3d_river_bank_wobble_amp of the local width), and adding the
+        # house's own half-size is what stops a building standing clear at
+        # its centre and hanging over the water at its corner. NOT the sea's
+        # house_shore_min_m: a town stands ON its river, which is what its
+        # bridge is for.
+        if wet is not None:
+            edge_m = (1.0 - float(wet[int(vy), int(vx)])) * rules["river_wet_m"]
+            if edge_m < rules["house_river_clear_m"] + max(half):
+                return False
         for tx, tz, thalf, tyaw in taken:
             if _rects_too_close(ox, oz, half, yaw, tx, tz, thalf, tyaw, gap):
                 return False

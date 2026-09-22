@@ -19,6 +19,7 @@ own cell heights, smoothed, plus ridges made for this scale.
 import argparse
 import csv
 import json
+import math
 import os
 import sys
 
@@ -543,7 +544,7 @@ def footprint_radius_m(burg, rules):
 
 
 def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn, t_rock,
-                  beach, k, vw, vh, pw, ph, origin):
+                  beach, wet, k, vw, vh, pw, ph, origin):
     """Village footprints, the fields round them, each manor's own shade
     (owner 2026-09-19) and the houses that stand on that built ground (spec
     2026-09-20 §1). Adds the fields' and footprints' grounds to `tw` in
@@ -589,35 +590,42 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     snow = np.clip((hn - rules["snow_line_lo"]) / max(rules["snow_line_hi"] - rules["snow_line_lo"], 1e-6), 0, 1)
 
     # village footprints first: fields never cover the houses
+    def stamp_foot(foot, cx, cy, r):
+        reach = r * (1.0 + rules["footprint_edge_noise"]) + 2
+        x0, x1 = max(int(cx - reach), 0), min(int(cx + reach) + 1, vw)
+        y0, y1 = max(int(cy - reach), 0), min(int(cy + reach) + 1, vh)
+        if x0 >= x1 or y0 >= y1:
+            return
+        yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+        d = np.hypot(xx - cx, yy - cy) / max(r, 1e-6)
+        edge = 1.0 + rules["footprint_edge_noise"] * (2.0 * fray_n[y0:y1, x0:x1] - 1.0)
+        # the built ground thins outward over footprint_fade of its
+        # radius: no disc, no rim (taste: nothing ends on a hard cut)
+        mf = np.clip((edge - d) / rules["footprint_fade"], 0, 1) ** 1.5 * land[y0:y1, x0:x1]
+        foot[y0:y1, x0:x1] = np.maximum(foot[y0:y1, x0:x1], mf)
+
     foot = np.zeros((vh, vw), dtype=np.float32)
     with open(os.path.join(ROOT, "data", "maps", MAP, "political", "burgs.csv")) as f:
         for b in csv.DictReader(f):
-            cx, cy = float(b["x"]) * k, float(b["y"]) * k
-            r = footprint_radius_m(b, rules) / VERTEX_M
-            reach = r * (1.0 + rules["footprint_edge_noise"]) + 2
-            x0, x1 = max(int(cx - reach), 0), min(int(cx + reach) + 1, vw)
-            y0, y1 = max(int(cy - reach), 0), min(int(cy + reach) + 1, vh)
-            if x0 >= x1 or y0 >= y1:
-                continue
-            yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
-            d = np.hypot(xx - cx, yy - cy) / r
-            edge = 1.0 + rules["footprint_edge_noise"] * (2.0 * fray_n[y0:y1, x0:x1] - 1.0)
-            # the built ground thins outward over footprint_fade of its
-            # radius: no disc, no rim (taste: nothing ends on a hard cut)
-            mf = np.clip((edge - d) / rules["footprint_fade"], 0, 1) ** 1.5 * land[y0:y1, x0:x1]
-            foot[y0:y1, x0:x1] = np.maximum(foot[y0:y1, x0:x1], mf)
-    del fray_n
+            stamp_foot(foot, float(b["x"]) * k, float(b["y"]) * k,
+                       footprint_radius_m(b, rules) / VERTEX_M)
 
     # the houses that stand on that built ground (spec 2026-09-20 §1). The
     # footprint mask is finished, so "inside the built ground" and "never in
     # the sea" are the same test the footprint already passed.
     house_rows = []
+    built = []          # (cx, cy, r) per settlement that actually built something
     r_house_mask = np.zeros((vh, vw), dtype=np.float32)
     types = {}
     with open(os.path.join(ROOT, "data", "map3d_houses.csv")) as f:
         for r in csv.DictReader(f):
             types[r["type"]] = {"role": r["role"], "weight": float(r["weight"]),
                                 "footprint_m": float(r["footprint_m"]),
+                                # measured off the built mesh: the packer
+                                # reserves the building's real rectangle, not
+                                # a square of its long side (density v5)
+                                "width_m": float(r.get("width_m") or 0.0),
+                                "depth_m": float(r.get("depth_m") or 0.0),
                                 "min_group": r["min_group"]}
     # world_cell_index.png is the GAME's own land test (MapManors.cell_at,
     # what test_no_house_stands_in_the_sea checks against): a pack-px raster,
@@ -632,11 +640,25 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     pyi_g = np.clip((np.arange(vh) / k).astype(np.int64), 0, ph - 1)
     land_gate = land & has_cell[pyi_g][:, pxi_g]
     del pxi_g, pyi_g
+    # A RIVER IS WATER TOO (2026-09-21). `land` is the COASTLINE's mask, so a
+    # carved river ran straight through the gate and a riverside town put a
+    # third of its houses in the water — Carden, a capital, was half afloat
+    # with barns drifting on the blue. `wet` is 1 inside the drawn channel
+    # and fades to 0 over river_wet_m beyond it, so it reads as a DISTANCE
+    # from the water's edge and bake_houses tests each candidate against it
+    # by that house's own half-width.
+    #
+    # It is deliberately NOT folded into `land_gate`: _dry() applies
+    # house_shore_min_m (25 m) around everything in that mask, and a town
+    # does not stand 25 m back from its own river — it stands ON it, which
+    # is what the bridge is for. Tried: Shole, a town of 50, came out with
+    # four buildings and its bridge crossing an empty bank.
     with open(os.path.join(ROOT, "data", "maps", MAP, "political", "burgs.csv")) as f:
         for b in csv.DictReader(f):
             b = dict(b)
             b["population"] = float(b["population"] or 0)
-            rows = bake_houses.place(b, rules, types, foot, land_gate, height, k, vw, vh)
+            rows = bake_houses.place(b, rules, types, foot, land_gate, height, k, vw, vh,
+                                     wet=wet)
             cx, cy = float(b["x"]) * k, float(b["y"]) * k
             r_house = bake_houses.house_radius_m(b, rules) / VERTEX_M
             # the block noise stops where the real roofs begin (§1): roofs
@@ -652,10 +674,31 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
                     d = np.hypot(xx - cx, yy - cy) / max(r_house, 1e-6)
                     r_house_mask[y0:y1, x0:x1] = np.maximum(
                         r_house_mask[y0:y1, x0:x1], np.clip(1.5 - 1.5 * d, 0, 1))
+            # the built ground this settlement ACTUALLY earned: the cluster
+            # that got placed, grown back out by house_built_share into the
+            # buffer ring the owner asked for (2026-09-20: 定居点周边和地图
+            # 上的地形要有一定距离的缓冲过渡). The nominal radius is what the
+            # group would fill on open, level ground; a site that is half
+            # water or too steep to build on fills less of it, and stamping
+            # the nominal disc there left a bare brown pancake with nothing
+            # standing on it — worst on the 24 settlements whose ground
+            # refuses every house, which drew a disc and not one roof.
+            spread = max((math.hypot(r["x_m"], r["z_m"]) for r in rows), default=0.0)
+            if spread > 0.0:
+                built.append((cx, cy, min(spread / VERTEX_M / rules["house_built_share"],
+                                          footprint_radius_m(b, rules) / VERTEX_M)))
             for r in rows:
                 r["x_m"] = ORIGIN_X + float(b["x"]) * M_PER_PX + r["x_m"]
                 r["z_m"] = ORIGIN_Y + float(b["y"]) * M_PER_PX + r["z_m"]
             house_rows.extend(rows)
+
+    # second pass: the disc each settlement earned replaces the one it was
+    # offered. It can only ever shrink (the placement was gated on the first
+    # pass's own mask), so no house can fall outside its own built ground.
+    foot = np.zeros((vh, vw), dtype=np.float32)
+    for cx, cy, r in built:
+        stamp_foot(foot, cx, cy, r)
+    del fray_n
 
     tint = np.ones((vh, vw, 3), dtype=np.float32)
     # the field-only part of the tint, and each estate's strip direction
@@ -992,7 +1035,7 @@ def main(argv=None):
     tw[..., SAND] += 2.0 * beach * grain
     del grain
     tint, fmap, house_rows = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn,
-                               t_rock, beach, k, vw, vh, pw, ph, origin)
+                               t_rock, beach, wet, k, vw, vh, pw, ph, origin)
     # read by Map3DView for the patched terrain shader (Map3DGroundTint):
     # FIELD_MAP_STEP vertices to a texel, from the pack's own corner
     Image.fromarray(fmap, "RGBA").save(os.path.join(OUT, "fields.png"))

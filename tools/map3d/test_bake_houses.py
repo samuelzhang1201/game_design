@@ -721,7 +721,13 @@ def test_the_frontage_share_matches_its_target_on_ample_open_ground():
             f"({len(rows) - 1} of {house_count(b, rules)})"
         )
         total = debug["frontage"] + debug["infill"]
-        assert total > 20, "need a real cluster to measure a frontage/infill split"
+        # a flat "> 20" was really "the village's own target, which was 25";
+        # density v5 set it to 20 and the guard started failing on a cluster
+        # that had seated every house it was asked for. What it is actually
+        # guarding is that the split is measured over essentially the whole
+        # cluster, so say that instead of a number.
+        assert total >= 0.8 * house_count(b, rules), \
+            "need a real cluster to measure a frontage/infill split"
         share = debug["frontage"] / total
         print(group, "frontage share", round(share, 4), "cap", cap)
         assert share <= cap + leak_slack, (
