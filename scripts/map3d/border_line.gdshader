@@ -45,7 +45,10 @@ void vertex() {
 void fragment() {
 	vec4 c = colour_a;
 	if (use_vertex_colour > 0.5) {
-		c = vec4(COLOR.rgb, colour_a.a);
+		// the palette's sRGB bytes, turned linear (Forward+ blends in linear;
+		// the uniforms' source_color hint does this for colour_a / colour_b)
+		vec3 v = COLOR.rgb;
+		c = vec4(mix(v / 12.92, pow((v + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), v)), colour_a.a);
 	}
 	float period = dash_px + gap_px;
 	if (dash_px > 0.0 && mod(v_arc_px, period) >= dash_px) {

@@ -225,19 +225,19 @@ map3d_zoom_start_m,24000.0,"3D MAP: the distance the view opens at, framed on th
 map3d_zoom_factor,1.15,3D MAP: each wheel notch multiplies or divides the distance by this
 map3d_pinch_zoom_gain,1.6,3D MAP (owner 2026-09-18): a trackpad pinch's ratio is bent by this around 1.0 — the 2D map's map_pinch_zoom_gain for the 3D rig
 map3d_pan_gesture_px,6.0,3D MAP: a two-finger trackpad drag moves the ground this many screen px per unit of the gesture's delta
-map3d_pitch_near_deg,-32.0,"3D MAP: the tilt at the closest zoom — oblique, the land seen across"
-map3d_pitch_far_deg,-68.0,"3D MAP: the tilt at the farthest zoom — nearly straight down, a campaign map"
+map3d_pitch_near_deg,-22,"3D MAP: the tilt at the closest zoom — oblique, the land seen across — Phase 0 2026-09-24: was -32"
+map3d_pitch_far_deg,-55,"3D MAP: the tilt at the farthest zoom — nearly straight down, a campaign map — Phase 0 2026-09-24: was -68 — tilted so the land is seen across, ~-37 at 6 km"
 map3d_rotate_deg_per_px,0.25,3D MAP: right-drag turns the view by this many degrees per screen px
 map3d_key_pan_screens_per_s,0.7,3D MAP: WASD / arrow keys pan this many view-heights a second
 map3d_near_m,20.0,3D MAP: the camera's near clip plane
 map3d_far_m,400000.0,3D MAP: the camera's far clip plane — past the sea plane's edge
 map3d_line_step_m,150.0,"3D MAP borders: borders and seams are resampled to a point every this many metres so they drape over the relief (a Terrain3D vertex is 20 m, a pack px 50 m)"
 map3d_border_width_px,1.8,"3D MAP borders: the kingdom border's ink line in screen px (political_palette map3d_border, warm dark brown) — over a pale halo and the realm band (owner 2026-09-19: 'the one solid black line is ugly', spec 2026-09-19-map3d-border-look; was a 1.5 px solid black line of 2026-09-18, itself replacing the 2D chequered ribbon)"
-map3d_border_band_px,9,"3D MAP borders (implementer's recommendation 2026-09-19 after the owner ruled the thin black line ugly, pending the owner's confirmation; spec 2026-09-19-map3d-border-look): the realm band inside each kingdom's outline, screen px — the kingdom's own colour (MapPalette.color_of), fading inward; where two kingdoms meet each lays its band on its own side"
-map3d_border_band_alpha,0.5,"3D MAP borders: the realm band's opacity at the line (bracketed 0.40 / 0.55 / 0.75 at far, mid and near, 2026-09-19: 0.40 left the far view's kingdoms faint, 0.55 let the sky-blue crown band read as water beside a river up close, 0.75 painted a stripe)"
+map3d_border_band_px,6,"3D MAP borders (implementer's recommendation 2026-09-19 after the owner ruled the thin black line ugly, pending the owner's confirmation; spec 2026-09-19-map3d-border-look): the realm band inside each kingdom's outline, screen px — the kingdom's own colour (MapPalette.color_of), fading inward; where two kingdoms meet each lays its band on its own side — Phase 0 2026-09-24: was 9 — under Forward+ the band glowed and out-shouted the land"
+map3d_border_band_alpha,0.3,"3D MAP borders: the realm band's opacity at the line (bracketed 0.40 / 0.55 / 0.75 at far, mid and near, 2026-09-19: 0.40 left the far view's kingdoms faint, 0.55 let the sky-blue crown band read as water beside a river up close, 0.75 painted a stripe) — Phase 0 2026-09-24: was 0.5"
 map3d_border_band_fade_power,1.0,3D MAP borders: the realm band's fade from the line inward — alpha × (1 − t^power) across the band (1 linear; above 1 holds the colour longer before it fades)
 map3d_border_halo_px,3.6,"3D MAP borders: the pale halo under the ink line, screen px (political_palette map3d_border_halo) — so the ink reads on dark forest and bright snow alike"
-map3d_border_halo_alpha,0.7,3D MAP borders: the halo's opacity
+map3d_border_halo_alpha,0,3D MAP borders: the halo's opacity — Phase 0 2026-09-24: was 0.7 — linear blending made the pale halo a glowing tray
 map3d_border_halo_soft,0.6,"3D MAP borders: the halo's soft edge (border_line.gdshader edge_soft, a share of its half-width)"
 map3d_hover_border_width_px,3.5,"3D MAP hover (owner 2026-09-18): the hovered kingdom's live outline, in the border's own ink (political_palette map3d_border) at this width in screen px — the 2D map's wider hover ribbon; the plain border is map3d_border_width_px"
 map3d_manor_tint,0.8,"3D MAP MANORS (owner 2026-09-19; ECONOMY folded into it): how far the ground's albedo mixes toward its manor's ManorPalette colour under a theme (Map3DGroundTint, the patched Terrain3D shader) — the colour is lit by the relief and the sun like the ground; 0 without a theme"
@@ -258,7 +258,7 @@ map3d_road_edge_soft,0.8,"3D MAP roads: share of the half-width over which a roa
 map3d_seam_width_px,1.4,3D MAP borders: province seams width in screen px (political_palette map3d_seam) — a dashed line (owner 2026-09-18)
 map3d_seam_dash_px,6.0,3D MAP borders: seam dash length in screen px
 map3d_seam_gap_px,5.0,3D MAP borders: seam gap length in screen px
-map3d_seam_alpha,0.5,3D MAP borders: seam opacity — dark dashes under the solid black kingdom border (owner 2026-09-18; bracketed 0.4/0.5/0.6 by the critic sheet)
+map3d_seam_alpha,0.65,3D MAP borders: seam opacity — dark dashes under the solid black kingdom border (owner 2026-09-18; bracketed 0.4/0.5/0.6 by the critic sheet) — Phase 0 2026-09-24: was 0.5 — linear blending thins a dark dash
 map3d_selection_width_px,4.0,"3D MAP: the clicked province's outline, solid, in political_palette map3d_selection"
 map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its ring — only while it is shown, see map3d_ring_fade_start) picks it; otherwise the province under the click"
 map3d_selected_ring_scale,1.5,"3D MAP: the clicked settlement's ring is this much larger (fix round 1, owner 2026-09-18: was 1.4x diameter AND 1.5x line — a fat smear over the tier ring rather than a second crisp ring; now diameter only, the line stays the base stroke width), in political_palette map3d_selection gold"
@@ -387,6 +387,30 @@ map3d_ambient_energy,0.35,3D MAP sky (2026-09-20): the Environment's ambient_lig
 map3d_ambient_sky_share,0.6,3D MAP sky (2026-09-20): the Environment's ambient_light_sky_contribution — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_fog_density,0.0000008,3D MAP sky (2026-09-20): the Environment's fog_density (fog lit in terrain_palette map3d_sky) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_sky_sun_angle_max,1.0,3D MAP sky (2026-09-20): the ProceduralSkyMaterial's sun_angle_max in degrees — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
+map3d_env_tonemap,4,"3D MAP Forward+ (owner 2026-09-24, look route Phase 0): Environment.tonemap_mode — 0 linear, 1 Reinhard, 2 Filmic (the Compatibility-era look), 3 ACES, 4 AgX"
+map3d_env_exposure,1.0,3D MAP Forward+ (Phase 0): tonemap_exposure
+map3d_env_white,1.0,3D MAP Forward+ (Phase 0): tonemap_white
+map3d_env_ssao,1,"3D MAP Forward+ (Phase 0): screen-space ambient occlusion on (1) or off — the dark in every valley and at every cliff foot of the reference"
+map3d_env_ssao_radius,2.0,3D MAP Forward+ (Phase 0): ssao_radius in world metres
+map3d_env_ssao_intensity,2.0,3D MAP Forward+ (Phase 0): ssao_intensity
+map3d_env_ssao_power,1.5,3D MAP Forward+ (Phase 0): ssao_power
+map3d_env_ssao_detail,0.5,3D MAP Forward+ (Phase 0): ssao_detail
+map3d_env_ssil,0,3D MAP Forward+ (Phase 0): screen-space indirect light on (1) or off
+map3d_env_ssil_radius,5.0,3D MAP Forward+ (Phase 0): ssil_radius in world metres
+map3d_env_ssil_intensity,1.0,3D MAP Forward+ (Phase 0): ssil_intensity
+map3d_env_glow,0,3D MAP Forward+ (Phase 0): glow on (1) or off
+map3d_env_glow_intensity,0.8,3D MAP Forward+ (Phase 0): glow_intensity
+map3d_env_glow_bloom,0.0,3D MAP Forward+ (Phase 0): glow_bloom
+map3d_env_brightness,1.0,3D MAP Forward+ (Phase 0): adjustment_brightness
+map3d_env_contrast,1.1,3D MAP Forward+ (Phase 0): adjustment_contrast
+map3d_env_saturation,1.3,3D MAP Forward+ (Phase 0): adjustment_saturation — Phase 0: the independent critic ranked AgX + 1.3 / 1.1 over Filmic and ACES
+map3d_fog_aerial,1,3D MAP Forward+ (Phase 0): fog_aerial_perspective — 1 takes the haze's colour from the sky behind it
+map3d_fog_sky_affect,0.0,3D MAP Forward+ (Phase 0): fog_sky_affect — how much the haze covers the sky itself
+map3d_fog_depth_begin,1.1,"3D MAP Forward+ (Phase 0): >0 turns the haze into DEPTH fog, clear to this many camera distances from the camera (0 keeps the exponential map3d_fog_density)"
+map3d_fog_depth_end,4,3D MAP Forward+ (Phase 0): the depth fog is thickest at this many camera distances
+map3d_fog_depth_curve,1.0,3D MAP Forward+ (Phase 0): fog_depth_curve (above 1 holds the haze back toward the far end)
+map3d_fog_depth_density,0.5,"3D MAP Forward+ (Phase 0): fog_density under depth fog — the haze's opacity at its end, 0..1"
+map3d_env_ssao_radius_per_view,0.03,3D MAP Forward+ (Phase 0): SSAO's radius as a share of the camera's distance (0 keeps map3d_env_ssao_radius)
 map3d_sea_plane_span,12,"3D MAP sea (2026-09-20): the sea plane is the pack's size in metres times this, centred on the world origin at the build's sea_y — its edge must sit past the far camera's horizon; from tools/map3d/build_terrain.gd build_scene's span * 12.0 (2026-09-18)"
 map3d_house_view_m,9000,3D MAP houses (spec 2026-09-20 §3): a settlement farther than this from the camera is not instanced at all — not culled after the fact
 map3d_house_rebuild_move_m,300,"3D MAP houses: the camera must move this far before the house MultiMeshes are rebuilt — cut once per camera pose, never per frame"

@@ -159,8 +159,17 @@ func refresh(camera_xz: Vector2) -> bool:
 		var box: AABB = _aabbs[type]
 		for i in rows.size():
 			var h: Dictionary = rows[i]
-			var ground := Map3DHouses.seat(
-				Map3DHouses.ground_under(h, box, ground_inset, samples, ctx.height_at), clear)
+			# The seat is sampled ONCE per house and kept on its row: the ground
+			# never moves, and re-sampling a 5x5 grid under every visible house on
+			# each rebuild cost ~40 ms a pan step at the high tier's 5000 houses
+			# (measured 2026-09-24). A new world loads new rows.
+			var ground: Vector2
+			if h.has("_seat"):
+				ground = h["_seat"]
+			else:
+				ground = Map3DHouses.seat(
+					Map3DHouses.ground_under(h, box, ground_inset, samples, ctx.height_at), clear)
+				h["_seat"] = ground
 			var t := transform_of(h, ground.y)
 			mmi.multimesh.set_instance_transform(i, t)
 			xforms.append(t)

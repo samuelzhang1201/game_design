@@ -112,8 +112,11 @@ func test_the_sky_and_sun_are_data() -> void:
 	v.activate()
 	var env := (v.get_node("Viewport/Environment") as WorldEnvironment).environment
 	assert_almost_eq(env.ambient_light_energy, Game.data.bal("map3d_ambient_energy"), 0.0001)
-	assert_almost_eq(env.fog_density, Game.data.bal("map3d_fog_density"), 1e-9)
-	assert_eq(env.tonemap_mode, Environment.TONE_MAPPER_FILMIC)
+	# depth haze (Phase 0, 2026-09-24): the fog follows the camera's distance
+	assert_eq(env.fog_mode, Environment.FOG_MODE_DEPTH)
+	assert_almost_eq(env.fog_density, Game.data.bal("map3d_fog_depth_density"), 1e-9)
+	assert_eq(int(env.tonemap_mode), int(Game.data.bal("map3d_env_tonemap")))
+	assert_eq(env.ssao_enabled, Game.data.bal("map3d_env_ssao") > 0.0)
 	var sun := v.get_node("Viewport/Sun") as DirectionalLight3D
 	assert_almost_eq(sun.light_energy, Game.data.bal("map3d_sun_energy"), 0.0001)
 	assert_almost_eq(sun.rotation_degrees.x, Game.data.bal("map3d_sun_pitch_deg"), 0.01)

@@ -104,6 +104,12 @@ func _ready() -> void:
 	DisplayServer.window_set_size(size)
 	get_window().size = size
 	Game.start_campaign(42)
+	# --bal key=value (repeatable) overrides one balance.csv number for the run
+	for i in args.size() - 1:
+		if args[i] == "--bal":
+			var kv := args[i + 1].split("=")
+			if kv.size() == 2:
+				Game.data.balance[kv[0]] = float(kv[1])
 	var root := (load("res://scenes/game_root.tscn") as PackedScene).instantiate() as GameRoot
 	_root = root
 	add_child(root)

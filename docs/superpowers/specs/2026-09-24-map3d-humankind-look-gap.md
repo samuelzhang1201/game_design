@@ -249,6 +249,21 @@ owner judges whether the direction is worth the route. This phase
 answers the whole question cheaply; nothing after it is worth starting
 without that answer.
 
+*Phase 0 result (2026-09-24,
+`docs/references/map_look/phase0_before_after.png`):* Forward+ on, AgX with
+saturation 1.3 / contrast 1.1 (the independent critic ranked it over Filmic
+and ACES), the camera tilted (−22° near to −55° far, ~−37° at 6 km), depth
+haze from 1.1 to 4 camera distances, SSAO at 3% of the distance, the realm
+band thinner and fainter and the halo gone (Forward+ blends in linear, so the
+band glowed and the halo became a tray). Found on the way: panning cost
+~48 ms a frame at mid/far zoom under EITHER renderer — the houses layer
+re-sampled a 5×5 ground grid under every visible house on each rebuild — now
+cached per house (high tier pan 8.1 ms mid/far, 8.7 ms near; MANORS 10.8 ms).
+Still wrong, by the critic and by eye: the land reads darker and more olive
+than the reference's warm gold-green, the mid-zoom sea is milky and lighter
+than the land, the kingdom names sink into the dark ground, and the far
+zoom's road web and white dots are clutter.
+
 **Phase 1 — foundation, ~1 week.**
 Make Forward+ real: re-fit every shader colour to its palette hex, add
 the environment's values to data, extend `graphics_quality.csv` (ssao,

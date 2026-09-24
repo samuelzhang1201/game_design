@@ -40,6 +40,56 @@ static func apply_environment(repo: DataRepository, env: Environment) -> void:
 	env.ambient_light_sky_contribution = repo.bal("map3d_ambient_sky_share")
 	env.fog_light_color = horizon
 	env.fog_density = repo.bal("map3d_fog_density")
+	apply_post(repo, env)
+
+
+## Forward+'s light and grade (owner 2026-09-24, the look route's Phase 0,
+## spec 2026-09-24-map3d-humankind-look-gap §2.1): the tonemap, occlusion,
+## indirect light, glow, colour adjustment and aerial haze, every number
+## balance map3d_env_*. Under a renderer that lacks one, Godot ignores it.
+static func apply_post(repo: DataRepository, env: Environment) -> void:
+	env.tonemap_mode = int(repo.bal("map3d_env_tonemap")) as Environment.ToneMapper
+	env.tonemap_exposure = repo.bal("map3d_env_exposure")
+	env.tonemap_white = repo.bal("map3d_env_white")
+	env.ssao_enabled = repo.bal("map3d_env_ssao") > 0.0
+	env.ssao_radius = repo.bal("map3d_env_ssao_radius")
+	env.ssao_intensity = repo.bal("map3d_env_ssao_intensity")
+	env.ssao_power = repo.bal("map3d_env_ssao_power")
+	env.ssao_detail = repo.bal("map3d_env_ssao_detail")
+	env.ssil_enabled = repo.bal("map3d_env_ssil") > 0.0
+	env.ssil_radius = repo.bal("map3d_env_ssil_radius")
+	env.ssil_intensity = repo.bal("map3d_env_ssil_intensity")
+	env.glow_enabled = repo.bal("map3d_env_glow") > 0.0
+	env.glow_intensity = repo.bal("map3d_env_glow_intensity")
+	env.glow_bloom = repo.bal("map3d_env_glow_bloom")
+	env.adjustment_enabled = true
+	env.adjustment_brightness = repo.bal("map3d_env_brightness")
+	env.adjustment_contrast = repo.bal("map3d_env_contrast")
+	env.adjustment_saturation = repo.bal("map3d_env_saturation")
+	env.fog_aerial_perspective = repo.bal("map3d_fog_aerial")
+	env.fog_sky_affect = repo.bal("map3d_fog_sky_affect")
+
+
+## The haze and the occlusion follow the zoom (Phase 0). With
+## map3d_fog_depth_begin > 0 the fog is DEPTH fog, clear to that many camera
+## distances and thickest at map3d_fog_depth_end of them (curve
+## map3d_fog_depth_curve), so the target stands clear and only the land
+## toward the horizon fades, the same share at every zoom; SSAO's radius is
+## map3d_env_ssao_radius_per_view of the distance (0 keeps the fixed radius),
+## since a valley at 25 km is kilometres wide.
+static func fog_for_distance(repo: DataRepository, env: Environment, distance_m: float) -> void:
+	if distance_m <= 0.0:
+		return
+	var begin := repo.bal("map3d_fog_depth_begin")
+	if begin > 0.0:
+		env.fog_mode = Environment.FOG_MODE_DEPTH
+		env.fog_depth_begin = begin * distance_m
+		env.fog_depth_end = repo.bal("map3d_fog_depth_end") * distance_m
+		env.fog_depth_curve = repo.bal("map3d_fog_depth_curve")
+		env.fog_density = repo.bal("map3d_fog_depth_density")
+	var r := repo.bal("map3d_env_ssao_radius_per_view")
+	if r > 0.0:
+		env.ssao_radius = r * distance_m
 
 
 ## `sun`'s angle, energy and shadow reach (balance map3d_sun_*), then its look.
