@@ -256,6 +256,10 @@ map3d_road_width_px,4.0,"3D MAP roads (owner 2026-09-18): a road's width in scre
 map3d_trail_width_px,2.5,3D MAP roads: a trail's width in screen px (terrain_palette trail)
 map3d_road_alpha,1.0,3D MAP roads: a road's opacity at its centre
 map3d_trail_alpha,0.9,3D MAP roads: a trail's opacity at its centre
+map3d_trail_hide_from_m,12000,"3D MAP far-zoom denoise (owner 2026-09-25: 进行远景降噪): trails start fading out this far from the camera — the road web at the opening zoom was the critics' commonest complaint"
+map3d_trail_hide_to_m,22000,3D MAP far-zoom denoise: trails are gone this far from the camera
+map3d_road_hide_from_m,1000000000,3D MAP far-zoom denoise: the roads never fade (the realm's main roads stay the far view's network)
+map3d_road_hide_to_m,2000000000,3D MAP far-zoom denoise: see map3d_road_hide_from_m
 map3d_road_edge_soft,0.8,"3D MAP roads: share of the half-width over which a road fades out to its sides — a worn track, not a ruled line (taste: read by width and fade)"
 map3d_seam_width_px,1.4,3D MAP borders: province seams width in screen px (political_palette map3d_seam) — a dashed line (owner 2026-09-18)
 map3d_seam_dash_px,6.0,3D MAP borders: seam dash length in screen px
@@ -292,8 +296,10 @@ map3d_cloud_emission_share,0.0,3D MAP clouds: share of ALBEDO also written to EM
 map3d_cloud_near_fade_start_ratio,0.3,"3D MAP clouds (fix round 1, owner 2026-09-18): where the near-camera fade starts, as a fraction of map3d_cloud_near_fade_m — was hardcoded in cloud_deck.gdshader"
 map3d_cloud_depth_ratio,0.45,"3D MAP clouds (fix round 1, owner 2026-09-18): a cloud's front-to-back size as a fraction of its width — was hardcoded (0.6) in map3d_view.gd; lowered with the size bracket so individual clouds read as separate puffs rather than fusing into a sheet at 24 km"
 map3d_cloud_min_gap_m,4000.0,"3D MAP clouds (fix round 1, owner 2026-09-18): a new cloud (first fill or spawned) is placed at least this far from every other cloud when the sky has room for it — stops the 24 clouds reading as one landmass of shadow at 24 km"
-map3d_sun_shadow_opacity,0.35,"3D MAP (fix round 1, owner 2026-09-18): the Sun's DirectionalLight3D shadow_opacity, applied at load — how dark ANY cast shadow reads (0 none, 1 pitch black); a cloud shadow (and the terrain's own) must read as a cool wash of blocked light, never a hole. Bracketed 0.25/0.35/0.5 at 3000 and 24000 m, picked by look"
-map3d_sun_shadow_blur,3.0,"3D MAP (fix round 1, owner 2026-09-18): the Sun's DirectionalLight3D shadow_blur, applied at load — softens every cast shadow's edge (cloud shadows and the terrain's own); the shipped cloud shadows read as knife-edged before this"
+map3d_sun_shadow_opacity,0.95,"[2026-09-25: 0.35 -> 0.95 with blur 3 -> 1.0, normal bias 2.5 and ambient 0.35 -> 0.25 (at exposure 1.4 the lifted fill washed a 0.65 shadow out — measured), so the houses cast readable shadows up close — owner: 近景加上房屋阴影] 3D MAP (fix round 1, owner 2026-09-18): the Sun's DirectionalLight3D shadow_opacity, applied at load — how dark ANY cast shadow reads (0 none, 1 pitch black); a cloud shadow (and the terrain's own) must read as a cool wash of blocked light, never a hole. Bracketed 0.25/0.35/0.5 at 3000 and 24000 m, picked by look"
+map3d_sun_shadow_blur,1.0,"[2026-09-25: was 3.0] 3D MAP (fix round 1, owner 2026-09-18): the Sun's DirectionalLight3D shadow_blur, applied at load — softens every cast shadow's edge (cloud shadows and the terrain's own); the shipped cloud shadows read as knife-edged before this"
+map3d_sun_shadow_bias,0.1,"3D MAP (2026-09-25): the Sun's shadow_bias (Godot's default) — raised if the ground shows striped shadow acne"
+map3d_sun_shadow_normal_bias,2.5,[2026-09-25: 1.0 left striped acne on the ground at the full opacity] 3D MAP (2026-09-25): the Sun's shadow_normal_bias (Godot's default)
 map3d_river_min_px,1.5,"3D MAP rivers (owner 2026-09-18): a river is at least this many screen px wide, so it reads as a thread at the farthest zoom and as real water up close"
 map3d_river_ripple_m,60.0,3D MAP rivers: metres per tile of the ripple normals
 map3d_river_flow_m_s,0.8,3D MAP rivers: how fast the ripples run downstream
@@ -398,12 +404,14 @@ map3d_sun_pitch_deg,-35,"3D MAP sky (2026-09-20): the Sun's pitch in degrees (ro
 map3d_sun_yaw_deg,-45,3D MAP sky (2026-09-20): the Sun's yaw in degrees (rotation_degrees.y) — from tools/map3d/build_terrain.gd build_scene (2026-09-18) — -45 since 2026-09-24 (look route Phase 2): the light from the upper left, the cartographer\'s northwest light, so the faces of the new escarpments that turn toward the camera are lit rock, not blue-black shade
 map3d_sun_energy,1.4,3D MAP sky (2026-09-20): the Sun's light_energy — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_sun_shadow_max_m,60000,3D MAP sky (2026-09-20): the Sun's directional_shadow_max_distance in world metres — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
-map3d_ambient_energy,0.35,3D MAP sky (2026-09-20): the Environment's ambient_light_energy (ambient from the sky) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
+map3d_sun_shadow_per_view,3.0,"3D MAP (owner 2026-09-25: house shadows up close, fps unharmed): the sun's shadow reach is this many camera distances, capped by the tier's shadow_max_m — one atlas spread over 60 km drew a 14 m house on a few texels; 0 keeps the fixed reach"
+map3d_sun_shadow_min_m,2000,3D MAP: the sun's shadow reach never falls under this many metres
+map3d_ambient_energy,0.25,[2026-09-25: was 0.35 — the sky fill filled the house shadows in at the brighter exposure] 3D MAP sky (2026-09-20): the Environment's ambient_light_energy (ambient from the sky) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_ambient_sky_share,0.6,3D MAP sky (2026-09-20): the Environment's ambient_light_sky_contribution — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_fog_density,0.0000008,3D MAP sky (2026-09-20): the Environment's fog_density (fog lit in terrain_palette map3d_sky) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_sky_sun_angle_max,1.0,3D MAP sky (2026-09-20): the ProceduralSkyMaterial's sun_angle_max in degrees — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_env_tonemap,4,"3D MAP Forward+ (owner 2026-09-24, look route Phase 0): Environment.tonemap_mode — 0 linear, 1 Reinhard, 2 Filmic (the Compatibility-era look), 3 ACES, 4 AgX"
-map3d_env_exposure,1.25,"3D MAP Forward+ (Phase 0): tonemap_exposure — 1.25 since Phase 2 (2026-09-24): the land read murky olive against the reference's sunlit ground (critic-measured land mean 84,88,44 -> ~110,97,29 at 6 km)"
+map3d_env_exposure,1.4,"[2026-09-25: 1.25 -> 1.4, owner: 调的再亮一些] 3D MAP Forward+ (Phase 0): tonemap_exposure — 1.25 since Phase 2 (2026-09-24): the land read murky olive against the reference's sunlit ground (critic-measured land mean 84,88,44 -> ~110,97,29 at 6 km)"
 map3d_env_white,1.0,3D MAP Forward+ (Phase 0): tonemap_white
 map3d_env_ssao,1,"3D MAP Forward+ (Phase 0): screen-space ambient occlusion on (1) or off — the dark in every valley and at every cliff foot of the reference"
 map3d_env_ssao_radius,2.0,3D MAP Forward+ (Phase 0): ssao_radius in world metres

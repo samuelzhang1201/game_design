@@ -237,8 +237,7 @@ func _load() -> void:
 	_env.environment = _env.environment.duplicate(true)
 	Map3DEnvironment.apply_environment(_repo, _env.environment)
 	Map3DEnvironment.apply_sun(_repo, _sun)
-	_ctx.camera_moved.connect(func() -> void:
-		Map3DEnvironment.fog_for_distance(_repo, _env.environment, _ctx.distance))
+	_ctx.camera_moved.connect(func() -> void: Map3DEnvironment.follow_camera(_repo, _env.environment, _sun, _ctx))
 	_clouds.build(_ctx)
 	_lines.bind(_ctx)
 	_roads.bind(_ctx, _lines, _viewport)
@@ -289,6 +288,7 @@ func _apply_quality() -> void:
 	_fit_viewport()  # the SubViewport's pixels, then every px uniform
 	Map3DEnvironment.apply_view_quality(_viewport, _sun, _ctx.terrain, _ctx.quality,
 		_repo, _env.environment)
+	Map3DEnvironment.follow_camera(_repo, _env.environment, _sun, _ctx)
 	_clouds.apply_quality(_ctx.quality)
 	_hud.apply_quality(_ctx.quality)
 

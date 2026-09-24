@@ -17,6 +17,8 @@ extends RefCounted
 static func apply_sun_look(repo: DataRepository, sun: DirectionalLight3D) -> void:
 	sun.shadow_opacity = repo.bal("map3d_sun_shadow_opacity")
 	sun.shadow_blur = repo.bal("map3d_sun_shadow_blur")
+	sun.shadow_bias = repo.bal("map3d_sun_shadow_bias")
+	sun.shadow_normal_bias = repo.bal("map3d_sun_shadow_normal_bias")
 
 
 ## The sky, ambient and fog the build wrote until 2026-09-20 (Task 14): the
@@ -89,6 +91,30 @@ static func warm_curve(r_gamma: float, g_gamma: float, b_gamma: float) -> Textur
 	t.gradient = g
 	t.width = 256
 	return t
+
+
+## Everything that follows the camera's distance: the haze, the SSAO radius
+## and the sun's shadow reach (the tier's shadow_max_m its ceiling).
+static func follow_camera(repo: DataRepository, env: Environment, sun: DirectionalLight3D,
+		ctx: Map3DContext) -> void:
+	fog_for_distance(repo, env, ctx.distance)
+	shadow_for_distance(repo, sun, ctx.distance, Map3DQuality.num(ctx.quality, "shadow_max_m", 0.0))
+
+
+## The sun's shadow reach follows the zoom too (owner 2026-09-25: house
+## shadows up close without costing fps): map3d_sun_shadow_per_view camera
+## distances, never under map3d_sun_shadow_min_m and never past the tier's
+## own reach (`tier_max_m`). One shadow atlas spread over 60 km put a 14 m
+## house on a few texels; spread over a few km it draws the house's shadow,
+## and fewer casters fall inside it, so it costs no more.
+static func shadow_for_distance(repo: DataRepository, sun: DirectionalLight3D, distance_m: float,
+		tier_max_m: float) -> void:
+	var k := repo.bal("map3d_sun_shadow_per_view")
+	if sun == null or k <= 0.0 or distance_m <= 0.0:
+		return
+	var top := tier_max_m if tier_max_m > 0.0 else repo.bal("map3d_sun_shadow_max_m")
+	sun.directional_shadow_max_distance = clampf(k * distance_m,
+		minf(repo.bal("map3d_sun_shadow_min_m"), top), top)
 
 
 ## The haze and the occlusion follow the zoom (Phase 0). With

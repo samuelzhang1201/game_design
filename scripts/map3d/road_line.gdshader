@@ -26,6 +26,12 @@ uniform float fray = 0.35;
 uniform float tile_m = 6.0;
 uniform float near_mpp = 0.4;
 uniform float far_mpp = 1.6;
+// Far-zoom denoise (owner 2026-09-25: "进行远景降噪"): a line fades out
+// between hide_from_m and hide_to_m from the camera (trails; the roads keep
+// the defaults, which never hide).
+uniform float hide_from_m = 1.0e9;
+uniform float hide_to_m = 2.0e9;
+varying float v_hide;
 uniform float px_per_dist = 0.001;
 
 varying float v_arc;
@@ -46,6 +52,7 @@ void vertex() {
 	v_arc = UV.x;
 	v_across = (UV.y - 0.5) * 2.0 * half_w;
 	v_far = has_surface ? smoothstep(near_mpp, far_mpp, m_per_px) : 1.0;
+	v_hide = 1.0 - smoothstep(hide_from_m, hide_to_m, length(world - CAMERA_POSITION_WORLD));
 }
 
 void fragment() {
@@ -63,5 +70,5 @@ void fragment() {
 	SPECULAR = 0.0;
 	float edge = 1.0 - abs(UV.y * 2.0 - 1.0);
 	edge += (alb.a - 0.5) * fray * (1.0 - v_far);
-	ALPHA = colour.a * smoothstep(0.0, edge_soft, edge);
+	ALPHA = colour.a * smoothstep(0.0, edge_soft, edge) * v_hide;
 }

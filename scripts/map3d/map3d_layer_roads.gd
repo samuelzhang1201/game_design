@@ -116,6 +116,9 @@ static func road_material(p_ctx: Map3DContext, line_name: String) -> ShaderMater
 	mat.set_shader_parameter("tile_m", p_ctx.repo.bal("map3d_road_tile_m"))
 	mat.set_shader_parameter("near_mpp", p_ctx.repo.bal("map3d_road_near_mpp"))
 	mat.set_shader_parameter("far_mpp", p_ctx.repo.bal("map3d_road_far_mpp"))
+	# far-zoom denoise (owner 2026-09-25): trails fade out far from the camera
+	mat.set_shader_parameter("hide_from_m", p_ctx.repo.bal("map3d_%s_hide_from_m" % key))
+	mat.set_shader_parameter("hide_to_m", p_ctx.repo.bal("map3d_%s_hide_to_m" % key))
 	var gain := p_ctx.repo.bal("map3d_road_texture_gain")
 	var tint := MapTerrain.palette_color(p_ctx.repo, "map3d_road_surface", Color.WHITE)
 	mat.set_shader_parameter("surface_tint", Vector3(tint.r, tint.g, tint.b) * gain)
