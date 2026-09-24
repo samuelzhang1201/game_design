@@ -299,6 +299,7 @@ map3d_river_opacity,0.92,3D MAP rivers: the water's opacity at its middle; the e
 map3d_river_edge_soft_floor,0.06,"3D MAP rivers (fix round 1, owner 2026-09-18): the least the edge fade can shrink to (real width / drawn width) when the min-px floor has widened a far, thin river well past its true width — without a floor a razor-thin real river would lose antialiasing entirely and alias"
 map3d_river_emission_share,0.85,"3D MAP rivers (fix round 1): same lever as the sea's map3d_sea_emission_share — a far river's fully-relit ALBEDO read as a near-black thread (its NORMAL_MAP is a few ripple cycles per screen px at that distance, scattering most of the light away from the camera); most of the colour now bypasses lighting through EMISSION"
 map3d_river_emission_gamma,1.3,"3D MAP rivers (final review, owner 2026-09-18: was 0.6 over srgb_to_linear colours, whose premise was wrong — a Color uniform passes straight through under GL Compatibility): same as map3d_sea_emission_gamma, the gamma (>1) that undoes the Filmic tonemap's lift on the EMISSION share of the raw palette colour"
+map3d_river_nat_emission_share,0.15,"3D MAP rivers (owner 2026-09-24, Phase 3): a river's unlit share where the sea is natural — the sea's map3d_sea_nat_emission_share, so both waters are lit alike"
 map3d_river_mesh_step_m,12.0,"3D MAP rivers (final review, owner 2026-09-18: at 800 m the ribbon read as ruled straight segments between the bake's ~50 m samples): Map3DRivers.ribbon_arrays densifies each course along a centripetal Catmull-Rom curve through its samples to a point at least every this many metres"
 map3d_river_fresnel_sky_mix,0.25,"3D MAP rivers (final review): how far a grazing view mixes toward the sky — the sea's map3d_sea_fresnel_sky_mix, so both read as one water (was 0.6 in the shader, which greyed a near river to steel)"
 map3d_river_fresnel_power,4.0,3D MAP rivers (final review): the fresnel falloff exponent (was a shader literal)
@@ -327,6 +328,18 @@ map3d_sea_ripple_lod_near_m,1500.0,"3D MAP sea (final review): camera distance i
 map3d_sea_ripple_lod_far_m,8000.0,3D MAP sea (final review): camera distance beyond which the near water detail is fully out — so the 24 km bands are exactly the fitted colours
 map3d_sea_ripple_emission_gain,0.1,"3D MAP sea (final review): how far a ripple's slope lights or darkens the EMITTED colour up close (emission is most of the colour, so without it the ripples only showed in the small lit share); bracketed 0.05 / 0.1 / 0.2 at 800 m — 0.2 read as crumpled foil"
 map3d_sea_emission_share_near,0.75,"3D MAP sea (final review): the emission share up close, blended from map3d_sea_emission_share over the LOD distances — a larger lit share near the camera lets the sun's highlight and the ripple relief read; 0.6 lifted the near band toward mint (+10), 0.75 keeps it within ~12 of sea_near"
+map3d_sea_natural_full_m,40000,"3D MAP sea (owner 2026-09-24: natural water near, the flat bands far — look route Phase 3): at or under this camera distance the sea is natural water"
+map3d_sea_bands_full_m,100000,3D MAP sea (Phase 3): at or past this camera distance the sea is the flat bands again; between the two it crossfades (was 60000 on the first pass: at the opening 24 km the few percent of the pale bands still mixed in drew a cyan ring outside every coast)
+map3d_sea_nat_shallow_px,2.0,"3D MAP sea (Phase 3): natural water stays its shallow colour this many pack px (km) out from the shore"
+map3d_sea_nat_mid_px,35.0,3D MAP sea (Phase 3): natural water reaches its mid colour this many pack px out
+map3d_sea_nat_deep_px,90.0,3D MAP sea (Phase 3): natural water reaches its deep colour this many pack px out
+map3d_sea_nat_warp_px,3.0,"3D MAP sea (Phase 3): a slow world noise warps the natural gradient's distance by up to this many pack px — the distance map steps a whole pack px (1 km) at a time, and an unwarped gradient drew those steps as contour rings at the opening zoom"
+map3d_sea_nat_emission_share,0.15,"3D MAP sea (Phase 3): natural water's share of colour sent out unlit — low, so the sun and sky light it"
+map3d_sea_nat_roughness,0.18,3D MAP sea (Phase 3): natural water's roughness (glossy: the sun's highlight reads)
+map3d_sea_nat_specular,0.5,3D MAP sea (Phase 3): natural water's specular
+map3d_sea_nat_fresnel_sky_mix,0.3,3D MAP sea (Phase 3): how much of the sky natural water reflects at grazing angles
+map3d_sea_foam_px,1.0,"3D MAP sea (Phase 3): the shore foam's reach out from the waterline, pack px"
+map3d_sea_foam_strength,0.45,3D MAP sea (Phase 3): the shore foam's opacity at its thickest
 map3d_sea_shore_warp_px,0.5,"3D MAP sea (final review): the shore's alpha fade reads a 50 m-per-texel distance map, so up close the waterline was a chain of straight 50 m facets; a fixed world noise warps the distance by up to this many pack px before the fade (a stopgap until a finer coast coverage map exists)"
 map3d_sea_shore_warp_m,30.0,3D MAP sea (final review): about one shore-warp bump every this many metres (the noise tile holds ~8)
 map_ruler_width_px,2.0,"MEASUREMENT ruler (owner 2026-09-18): the dashed line's and the ticks' width in screen px, on both maps"

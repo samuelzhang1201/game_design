@@ -65,6 +65,12 @@ uniform float bank_wobble_m = 40.0;
 uniform float bank_wobble_amp = 0.15;
 uniform float lod_near_m = 1500.0;
 uniform float lod_far_m = 8000.0;
+// Natural water near (owner 2026-09-24, look route Phase 3): the sea's
+// `natural` share, a natural river colour and mouth, lit like the sea.
+uniform float natural = 0.0;
+uniform vec4 nat_water : source_color = vec4(0.2, 0.37, 0.42, 1.0);
+uniform vec4 nat_mouth : source_color = vec4(0.27, 0.44, 0.43, 1.0);
+uniform float nat_emission_share = 0.15;
 
 varying float v_across;
 varying float v_along;
@@ -102,10 +108,14 @@ void fragment() {
 	vec3 base = mix(water.rgb, mouth_water.rgb, v_mouth);
 	vec3 tinted = mix(base, sky.rgb, fres * fresnel_sky_mix);
 	vec3 lifted = pow(clamp(tinted, vec3(0.0001), vec3(1.0)), vec3(emission_gamma));
+	vec3 nat = mix(mix(nat_water.rgb, nat_mouth.rgb, v_mouth), sky.rgb, fres * fresnel_sky_mix);
+	tinted = mix(tinted, nat, natural);
+	lifted = mix(lifted, nat, natural);
 	float slope = clamp((n.x - n.y) * 2.0, -1.0, 1.0);
 	lifted *= 1.0 + ripple_emission_gain * near_w * slope;
-	ALBEDO = tinted * (1.0 - emission_share);
-	EMISSION = lifted * emission_share;
+	float share = mix(emission_share, nat_emission_share, natural);
+	ALBEDO = tinted * (1.0 - share);
+	EMISSION = lifted * share;
 	ROUGHNESS = roughness;
 	SPECULAR = specular;
 	// 0 at either bank, 1 on the centreline; the wobble pushes the bank in

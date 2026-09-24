@@ -125,6 +125,24 @@ func _make_material() -> void:
 	# One LOD for both waters: the river's near detail comes and goes with the sea's.
 	_mat.set_shader_parameter("lod_near_m", ctx.repo.bal("map3d_sea_ripple_lod_near_m"))
 	_mat.set_shader_parameter("lod_far_m", ctx.repo.bal("map3d_sea_ripple_lod_far_m"))
+	# Natural water near, as the sea (owner 2026-09-24): the river turns to
+	# its natural colour, its mouth to the natural sea's shallows, by the
+	# sea's own share — water is one water at every zoom.
+	_mat.set_shader_parameter("nat_water",
+		MapTerrain.palette_color(ctx.repo, "map3d_river_nat", MapTerrain.FALLBACK))
+	_mat.set_shader_parameter("nat_mouth",
+		MapTerrain.palette_color(ctx.repo, "map3d_sea_nat_shallow", MapTerrain.FALLBACK))
+	_mat.set_shader_parameter("nat_emission_share", ctx.repo.bal("map3d_river_nat_emission_share"))
+	if not ctx.camera_moved.is_connected(_on_camera_moved):
+		ctx.camera_moved.connect(_on_camera_moved)
+	_on_camera_moved()
+
+
+func _on_camera_moved() -> void:
+	if _mat == null or ctx == null:
+		return
+	_mat.set_shader_parameter("natural", Map3DLayerSea.natural_share(ctx.distance,
+		ctx.repo.bal("map3d_sea_natural_full_m"), ctx.repo.bal("map3d_sea_bands_full_m")))
 
 
 ## The lines' screen-px values in SubViewport px, and the metres per px per

@@ -706,6 +706,16 @@ func test_the_seas_band_colours_go_in_raw() -> void:
 		assert_eq(mat.get_shader_parameter(key), Game.data.bal("map3d_sea_" + key), key + " is data")
 
 
+## Natural water near, the bands far (owner 2026-09-24, look route Phase 3):
+## the share is 1 up close, 0 far out, and eases between.
+func test_the_sea_turns_natural_near_and_banded_far() -> void:
+	assert_eq(Map3DLayerSea.natural_share(5000.0, 20000.0, 60000.0), 1.0)
+	assert_eq(Map3DLayerSea.natural_share(90000.0, 20000.0, 60000.0), 0.0)
+	var mid := Map3DLayerSea.natural_share(40000.0, 20000.0, 60000.0)
+	assert_almost_eq(mid, 0.5, 0.0001, "halfway, a smoothstep is at half")
+	assert_eq(Map3DLayerSea.natural_share(30000.0, 20000.0, 20000.0), 0.0, "no blend range: a cut")
+
+
 ## Same for the river material: water goes in raw, and the emission
 ## share/gamma are wired from balance.csv.
 func test_the_rivers_colours_go_in_raw() -> void:

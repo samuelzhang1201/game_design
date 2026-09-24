@@ -92,7 +92,32 @@ func build(p_ctx: Map3DContext) -> void:
 	for key: String in ["ripple_near_m", "ripple_lod_near_m", "ripple_lod_far_m",
 			"ripple_emission_gain", "emission_share_near", "shore_warp_px", "shore_warp_m"]:
 		_mat.set_shader_parameter(key, ctx.repo.bal("map3d_sea_" + key))
+	for key: String in ["nat_shallow", "nat_mid", "nat_deep", "foam"]:
+		_mat.set_shader_parameter(key,
+			MapTerrain.palette_color(ctx.repo, "map3d_sea_" + key, MapTerrain.FALLBACK))
+	for key: String in ["nat_shallow_px", "nat_mid_px", "nat_deep_px", "nat_warp_px", "nat_emission_share",
+			"nat_roughness", "nat_specular", "nat_fresnel_sky_mix", "foam_px", "foam_strength"]:
+		_mat.set_shader_parameter(key, ctx.repo.bal("map3d_sea_" + key))
 	material_override = _mat
+	if not ctx.camera_moved.is_connected(_on_camera_moved):
+		ctx.camera_moved.connect(_on_camera_moved)
+	_on_camera_moved()
+
+
+## Natural water near, the bands far (owner 2026-09-24): the share of natural
+## water at the camera's distance, 1 at or under map3d_sea_natural_full_m, 0
+## at or past map3d_sea_bands_full_m.
+static func natural_share(distance_m: float, full_m: float, bands_m: float) -> float:
+	if bands_m <= full_m:
+		return 1.0 if distance_m <= full_m else 0.0
+	return 1.0 - smoothstep(full_m, bands_m, distance_m)
+
+
+func _on_camera_moved() -> void:
+	if _mat == null or ctx == null:
+		return
+	_mat.set_shader_parameter("natural", natural_share(ctx.distance,
+		ctx.repo.bal("map3d_sea_natural_full_m"), ctx.repo.bal("map3d_sea_bands_full_m")))
 
 
 func material() -> ShaderMaterial:

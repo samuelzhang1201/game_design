@@ -68,6 +68,29 @@ uniform float emission_share_near = 0.6;
 // stopgap until a finer coast coverage map exists.
 uniform float shore_warp_px = 0.5;
 uniform float shore_warp_m = 160.0;
+// NATURAL WATER NEAR, BANDS FAR (owner 2026-09-24, the look route's Phase 3,
+// spec 2026-09-24-map3d-humankind-look-gap §2.6): `natural` (0..1, set by
+// the layer from the camera's distance) crossfades the flat bands into
+// natural water — a continuous shallow -> mid -> deep gradient by distance
+// from the shore, mostly LIT (a small emission share, a glossy surface) so
+// it takes the sun's highlight and the sky's reflection, with a line of
+// drifting foam along the shore. At natural 0 the bands are exactly what
+// they were.
+uniform float natural = 0.0;
+uniform vec4 nat_shallow : source_color = vec4(0.24, 0.5, 0.52, 1.0);
+uniform vec4 nat_mid : source_color = vec4(0.12, 0.33, 0.45, 1.0);
+uniform vec4 nat_deep : source_color = vec4(0.06, 0.18, 0.29, 1.0);
+uniform float nat_shallow_px = 2.0;
+uniform float nat_mid_px = 20.0;
+uniform float nat_deep_px = 90.0;
+uniform float nat_warp_px = 3.0;
+uniform float nat_emission_share = 0.35;
+uniform float nat_roughness = 0.18;
+uniform float nat_specular = 0.5;
+uniform float nat_fresnel_sky_mix = 0.45;
+uniform vec4 foam : source_color = vec4(0.93, 0.95, 0.93, 1.0);
+uniform float foam_px = 0.7;
+uniform float foam_strength = 0.6;
 
 varying vec2 v_xz;
 
@@ -103,6 +126,17 @@ void fragment() {
 	NORMAL_MAP_DEPTH = 0.4;
 	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 5.0);
 	vec3 band = mix(c, sky.rgb, fres * fresnel_sky_mix);
+	// natural water: a continuous gradient by distance from the shore
+	float dw = d + (texture(ripples, v_xz / 30000.0).x * 2.0 - 1.0) * nat_warp_px * step(nat_shallow_px, d);
+	vec3 cn = mix(nat_shallow.rgb, nat_mid.rgb, smoothstep(0.0, nat_mid_px, dw - nat_shallow_px));
+	cn = mix(cn, nat_deep.rgb, smoothstep(nat_mid_px, nat_deep_px, dw));
+	cn = mix(cn, sky.rgb, fres * nat_fresnel_sky_mix);
+	// foam: a broken line along the shore, drifting with the ripples
+	float foam_noise = texture(ripples, v_xz / 220.0 + vec2(TIME * 0.004, 0.0)).x;
+	float foam_break = texture(ripples, v_xz / 1800.0).y;
+	float foam_line = (1.0 - smoothstep(0.0, foam_px, d)) * smoothstep(0.45, 0.8, foam_noise)
+		* smoothstep(0.35, 0.65, foam_break);
+	cn = mix(cn, foam.rgb, clamp(foam_line * foam_strength, 0.0, 1.0));
 	// The palette colours arrive RAW (a Color uniform set from GDScript
 	// passes straight through under GL Compatibility), and the environment's
 	// Filmic tonemap LIFTS a flat EMISSION colour (0.5 -> 162/255), more in
@@ -112,15 +146,18 @@ void fragment() {
 	// bands against the palette at 24 km; the gamma is fitted to THIS
 	// tonemap — change the tonemap and refit it).
 	vec3 lifted = pow(clamp(band, vec3(0.0001), vec3(1.0)), vec3(emission_gamma));
+	// the natural water goes out as itself (no gamma: it is lit, not flat)
+	lifted = mix(lifted, cn, natural);
+	band = mix(band, cn, natural);
 	// A ripple's slope toward or away from the light, -1..1: lights and
 	// darkens the emitted colour a little, up close only.
 	float slope = clamp((n.x - n.y) * 2.0, -1.0, 1.0);
 	lifted *= 1.0 + ripple_emission_gain * near_w * slope;
-	float share = mix(emission_share, emission_share_near, near_w);
+	float share = mix(mix(emission_share, emission_share_near, near_w), nat_emission_share, natural);
 	ALBEDO = band * (1.0 - share);
 	EMISSION = lifted * share;
-	ROUGHNESS = roughness;
-	SPECULAR = specular;
+	ROUGHNESS = mix(roughness, nat_roughness, natural);
+	SPECULAR = mix(specular, nat_specular, natural);
 	// The noise tile holds about eight bumps: one every shore_warp_m.
 	float warp = texture(ripples, v_xz / (shore_warp_m * 8.0)).x * 2.0 - 1.0;
 	ALPHA = smoothstep(0.0, shore_fade_px, d + warp * shore_warp_px);

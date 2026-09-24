@@ -72,6 +72,8 @@ var _hover3d := Vector2(-1, -1)
 ## --bal key=value overrides one balance.csv number for the shot (repeatable)
 ## — for bracketing a look value before it is written to the table.
 var _bal: Dictionary = {}
+## --pal key=#hex overrides one terrain_palette.csv colour for the shot (repeatable)
+var _pal: Dictionary = {}
 ## --zoom3d M (with --screen root) frames the capital M metres away.
 var _zoom3d := -1.0
 ## --at3d x,y (with --zoom3d) frames that pack pixel instead of the capital.
@@ -120,6 +122,10 @@ func _ready() -> void:
 		elif args[i] == "--click3d":
 			var parts := args[i + 1].split(",")
 			_click3d = Vector2(float(parts[0]), float(parts[1]))
+		elif args[i] == "--pal":
+			var pv := args[i + 1].split("=")
+			if pv.size() == 2:
+				_pal[pv[0]] = pv[1]
 		elif args[i] == "--bal":
 			var kv := args[i + 1].split("=")
 			if kv.size() == 2:
@@ -157,6 +163,8 @@ func _ready() -> void:
 	Game.start_campaign(_seed)
 	for key: String in _bal:
 		Game.data.balance[key] = _bal[key]
+	for key: String in _pal:
+		Game.data.terrain_palette[key] = _pal[key]
 	if _res != Vector2i.ZERO:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(_res)
