@@ -78,6 +78,16 @@ add it here as a principle with its why — not as a changelog entry.
   (`STYLE_CORE_photoreal_building.txt` + `NEGATIVE_photoreal_building.txt`,
   canvas `C-ICON`): the reference carries the realism and the 3D step only
   has to follow it.
+- **Roofs are TILE or SLATE, never thatch** (owner 2026-09-24, on the first
+  Hunyuan3D 2.1 house set: "那我们就不用茅草屋顶了，用瓦片效果还不错…可以换成
+  不同颜色的瓦片"). The paint turns thatch into a flat, lumpy orange or beige
+  slab with none of the reference's straw (and tore cottage_b's roof), while
+  a tile roof keeps its courses and reads crisply at map size. Variety comes
+  from the tile's COLOUR — red, rose-red, weathered orange terracotta,
+  orange-brown, brown-grey, grey slate — not from the roofing material. NOT
+  dark brown: the paint turns a dark brown tile flat black and its courses
+  vanish (cottage_b, workshop, townhouse_b, 2026-09-24), a black blob at map
+  size.
 - **A packer reserves the building, not its bounding square.** Each house is
   packed as its own measured rectangle (`width_m` × `depth_m`, in
   `bake_houses.half_extents`). A square of the long side gave a 14 × 10 m

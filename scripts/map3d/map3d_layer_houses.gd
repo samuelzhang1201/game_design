@@ -27,6 +27,10 @@ var ctx: Map3DContext
 var _built := false
 var _built_at := Vector2.INF
 var _instances: Dictionary = {}       # type -> MultiMeshInstance3D
+var _aabbs: Dictionary = {}           # type -> its mesh's AABB, for the footprint
+## One MultiMesh of stone foundations, one per house on a slope (see Map3DHouses.seat()).
+var _plinths: MultiMeshInstance3D
+var _plinth_xforms: Array[Transform3D] = []
 ## Test seam (fix round 1): the Transform3D actually handed to
 ## set_instance_transform for each type's MultiMesh in the last refresh(),
 ## in instance order. Debugging finding (task 6): under the headless dummy
@@ -93,7 +97,9 @@ func preview_build(p_ctx: Map3DContext) -> void:
 func build() -> void:
 	Map3DPreview.clear_generated(self)
 	_instances.clear()
+	_aabbs.clear()
 	_transforms.clear()
+	_plinth_xforms.clear()
 	_built_at = Vector2.INF
 	_built = true
 	ctx.houses()
@@ -114,6 +120,8 @@ func build() -> void:
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		add_child(mmi)  # no owner: never saved
 		_instances[type] = mmi
+		_aabbs[type] = mesh.get_aabb()
+	_plinths = _make_plinths()
 
 
 ## Rebuild the instances for this camera position; true when it did. A move
@@ -136,18 +144,34 @@ func refresh(camera_xz: Vector2) -> bool:
 	var buckets := Map3DHouses.visible_set(houses, ctx.repo, pos,
 		camera_xz, ctx.repo.bal("map3d_house_view_m"), _budget())
 	var sink := ctx.repo.bal("map3d_house_sink_m")
+	var inset := ctx.repo.bal("map3d_house_plinth_inset")
+	var min_drop := ctx.repo.bal("map3d_house_plinth_min_drop_m")
+	var below := ctx.repo.bal("map3d_house_plinth_below_m")
+	var max_rise := ctx.repo.bal("map3d_house_plinth_max_rise_m")
 	_transforms.clear()
+	_plinth_xforms.clear()
 	for type: String in _instances:
 		var mmi: MultiMeshInstance3D = _instances[type]
 		var rows: Array = buckets.get(type, [])
 		mmi.multimesh.instance_count = rows.size()
 		var xforms: Array[Transform3D] = []
+		var box: AABB = _aabbs[type]
 		for i in rows.size():
 			var h: Dictionary = rows[i]
-			var t := transform_of(h, ctx.height_at(h["at"]), sink)
+			var ground := Map3DHouses.seat(Map3DHouses.ground_under(h, box, inset, ctx.height_at), max_rise)
+			var t := transform_of(h, ground.y, sink)
 			mmi.multimesh.set_instance_transform(i, t)
 			xforms.append(t)
+			# A foundation only under a gentle slope: on a cliff the building
+			# overhangs from its centre as it always did, since a foundation
+			# down to the cliff's foot was a pier standing in the sea.
+			if ground.y - ground.x > min_drop and ground.y - ground.x <= max_rise:
+				_plinth_xforms.append(Map3DHouses.plinth_of(h, box, inset, ground, sink, below))
 		_transforms[type] = xforms
+	if _plinths != null:
+		_plinths.multimesh.instance_count = _plinth_xforms.size()
+		for i in _plinth_xforms.size():
+			_plinths.multimesh.set_instance_transform(i, _plinth_xforms[i])
 	return true
 
 
@@ -171,7 +195,8 @@ func transforms_of(type: String) -> Array:
 ## The world transform for one baked house row: yaw about the vertical,
 ## scaled HORIZONTALLY by `scale` and VERTICALLY by `scale * height_scale`
 ## (the bake's own per-house bias, tallest at a settlement's core, jittered
-## per house — 高低层次不齐), standing at `height` (the ground under it) sunk
+## per house — 高低层次不齐), standing at `height` (the ground under it, the
+## highest under its footprint — ground_under) sunk
 ## by `sink` so its foot bites into sloped ground. Pure, so a test can check
 ## the maths directly rather than reading it back off a MultiMesh.
 static func transform_of(h: Dictionary, height: float, sink: float) -> Transform3D:
@@ -181,6 +206,33 @@ static func transform_of(h: Dictionary, height: float, sink: float) -> Transform
 	var basis := Basis(Vector3.UP, deg_to_rad(float(h["yaw_deg"])))
 	basis = basis.scaled(Vector3(s, s * height_scale, s))
 	return Transform3D(basis, Vector3(at.x, height - sink, at.y))
+
+
+## Test seam: the foundations the last refresh() laid, in instance order.
+func plinths() -> Array[Transform3D]:
+	return _plinth_xforms
+
+
+## The bridges' stone (Map3DLayerRoads.bridge_material's .tres) laid
+## world-triplanar, so a foundation of any size shows blocks of one size.
+func _make_plinths() -> MultiMeshInstance3D:
+	var mat := (Map3DLayerRoads.BRIDGE_MAT as StandardMaterial3D).duplicate() as StandardMaterial3D
+	mat.albedo_color = MapTerrain.palette_color(ctx.repo, "map3d_house_plinth", Color("#9A8F80"))
+	mat.uv1_triplanar = true
+	mat.uv1_world_triplanar = true
+	mat.uv1_scale = Vector3.ONE / maxf(ctx.repo.bal("map3d_house_plinth_tile_m"), 0.1)
+	var box := BoxMesh.new()
+	box.material = mat
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = box
+	mm.instance_count = 0
+	var mmi := MultiMeshInstance3D.new()
+	mmi.name = "Plinths"
+	mmi.multimesh = mm
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mmi)  # no owner: never saved
+	return mmi
 
 
 func _budget() -> int:

@@ -129,10 +129,69 @@ settlements with no Blender install. It is NOT part of `build_pack.sh`
 and needs re-running only when `data/map3d_houses.csv` or the roof/wall
 colours in `data/terrain_palette.csv` change (~1 minute for all 14 types).
 
-### Since 2026-09-21 the shipped meshes are Hunyuan3D retopos
+### (Superseded) Since 2026-09-24 the shipped meshes were LOCAL Hunyuan3D 2.1, decimated
+
+(owner 2026-09-23: photoreal 2D references in ComfyUI, image-to-3D from
+them, "平衡清晰度和游戏performance".) The sources come from the local
+ComfyUI (Comfy Desktop's install; `tools/map3d/gen_house_sources.py`), the
+game meshes from Blender:
+
+```
+python3 tools/map3d/gen_house_sources.py image [--only a,b] [--force]    # Flux.2 klein refs -> assets/flux/out/house_ref/
+python3 tools/map3d/gen_house_sources.py shape --restart tools/map3d/restart_comfy.sh   # Hunyuan3D 2.1 white models
+python3 tools/map3d/gen_house_sources.py paint --restart tools/map3d/restart_comfy.sh   # its paint -> ai_src/<type>.glb (aligned)
+blender -b --factory-startup --python tools/map3d/decimate_houses.py -- [--only a,b]
+Godot --headless --path . --import
+```
+
+- **References** are `assets/flux/house_ref_prompts.csv` (subject + features)
+  in the prompt shape of the owner's "Hunyuan3D 2.1 Building Pipeline"
+  workflow; `cottage_a`'s reference is the owner's own
+  (`Dev/examples/building_src_rgb_00001_.png`) and `image` never overwrites
+  a reference already on disk without `--force`. Look at all 14 before any
+  3D: a tower where a house was asked for, a toy-yellow thatch or a floor
+  slab under a building is fixed in the prompt, not after.
+- **Shape and paint are separate prompts, each in a FRESH ComfyUI**
+  (`--restart` takes a command that restarts the server). This Mac's MPS
+  pool could not hold them together: FlashVDM's decode at octree 384 ran
+  dry, then the paint with the shape's leftovers resident, and a prompt that
+  fails keeps its allocations, so every prompt after it fails too (it even
+  killed ComfyUI's worker thread once). Octree 256 with the plain decoder,
+  four paint views (three sides 120° apart and the top: the map looks DOWN,
+  the roof is what is seen) and `PYTORCH_MPS_HIGH_WATERMARK_RATIO=2.0` on
+  the server. The multiview model will not go below 512 px a view. Even so
+  the paint swaps: ~7 min a shape, ~24 min a paint.
+- **The paint comes back UPSIDE DOWN** (saved through an .obj): 
+  `align_house_source.py` finds the turn by fitting the painted mesh onto
+  its own white model over the 48 signed axis permutations (cottage_a:
+  diag(1, −1, −1), mean error 0) and refuses a paint that fits none.
+- **`decimate_houses.py`, not `retopo_houses.py`, builds these**: weld, then
+  ONE collapse decimate to `TRI_BASE` 1600 × (footprint / 14 m)^1.5 (a
+  cottage ~2,100, the palace ~16,000 — the retopo made 3,000–94,000),
+  smooth-by-angle at 40° so walls meet crisply, the paint's own xatlas UVs
+  and albedo kept (no re-bake, no dilation — the atlas has no black), the
+  metallic-roughness map dropped for roughness 0.85, and the albedo darkened
+  by ONE gain to the reference's mean luminance (the paint comes back
+  lighter; per-channel matching shifted hue and was reverted). Welding first
+  is essential: unwelded, collapse turns the paint's per-corner seam
+  vertices into confetti. `scale_houses.py` is then a no-op.
+
+**Projecting the reference instead of painting** (`project_house_texture.py`,
+tried 2026-09-24 as the owner's "方案 A"; ships NOTHING). It finds the
+reference's camera by fitting the white model's silhouette to the cut-out
+(IoU 0.89–0.96), paints what that camera sees from the reference and the rest
+from the same picture a half turn round, in ~25 s a house and no GPU. It is
+sharper close up and equal at map size on a SIMPLE house (cottage_a), but the
+shape Hunyuan builds is not the photograph's to within a few percent, and on
+anything with overlapping parts it failed visibly: cottage_b's gable timbers
+landed on its roof, workshop's open bay and townhouse_b's stilts took the
+paper. Use it only to try a quick look at a boxy building; the paint stays
+the pipeline.
+
+### 2026-09-21 .. 09-23: the shipped meshes were Hunyuan3D retopos
 
 `make_houses.py` still builds a type that has no AI source. The 14 that ship
-now come from `assets/map3d_houses/ai_src/<type>.glb` through:
+now come from `assets/hunyuan_ref/houses/sources/<type>.glb` through:
 
 ```
 blender -b --factory-startup --python tools/map3d/retopo_houses.py -- [--only palace] [--min-fill X]
