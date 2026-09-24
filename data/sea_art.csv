@@ -1,4 +1,0 @@
-key,texture,weight,height_px,min_shore_px,notes
-whale,res://assets/decor/whale.png,3,27,45,"library D-22: a real whale breaching among water dashes, the way an old chart draws one — no monster (owner ruling 2026-09-12)"
-carrack,res://assets/decor/carrack.png,2,32,55,"library D-19: a three-masted carrack under sail"
-cog,res://assets/decor/cog.png,3,25,40,"library D-20: a single-masted cog"

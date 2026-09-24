@@ -1,5 +1,5 @@
 // The 3D map's clouds (owner 2026-09-18): flat quads high over the land,
-// a soft noise alpha (CloudLayer.cloud_texture, the 2D clouds' own), lit by
+// a soft noise alpha (Map3DCloudField.cloud_texture), lit by
 // the sun so their undersides read, faded by the field (COLOR.a) and by
 // nearness so a camera under the deck is never blinded. The shadow-only
 // twin is a SEPARATE shader (cloud_shadow.gdshader, fix below) — never

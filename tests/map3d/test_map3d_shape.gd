@@ -22,7 +22,7 @@ func _lines(path: String) -> int:
 ## one-line getters the HUD and the picker read it through; then two signals
 ## (army_menu_requested, ground_clicked), the `aiming` flag that makes a left
 ## click say WHERE it landed instead of picking, right_click(), and one more
-## parameter on toggle_in that hands the view to ArmyOrderMenu. Every one of
+## parameter on attach() that hands the view to ArmyOrderMenu. Every one of
 ## those is a forwarder or a signal — the orders themselves are ArmyOrderMenu's,
 ## because nothing under scripts/map3d may reach the Game autoload.
 ##

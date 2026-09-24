@@ -74,17 +74,14 @@ func _init() -> void:
 	add_child(_rows)
 
 
-## Put the panel in `column` and have it follow `map`'s hover. The screen
-## connects to the same signal to re-order the column around it.
-static func attach(column: BoxContainer, map: WorldMapView) -> CountryPanel:
+## Put the panel in `column`; Map3DView.attach has it follow the map's hover.
+static func attach(column: BoxContainer) -> CountryPanel:
 	var panel := CountryPanel.new()
 	column.add_child(panel)
-	panel.follow(map)
 	return panel
 
 
-## Follow one more map's hover — any map with WorldMapView's
-## `country_hovered(kingdom_code)` signal (the 3D map, owner 2026-09-18).
+## Follow a map's hover: its `country_hovered(kingdom_code)` signal.
 func follow(map: Control) -> void:
 	map.connect("country_hovered", show_country)
 

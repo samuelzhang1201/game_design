@@ -242,14 +242,15 @@ func test_the_country_card_follows_conquest() -> void:
 func test_map_ask_fills_the_order_box_without_sending() -> void:
 	var screen := _screen()
 	await wait_frames(1)
-	var map := screen.world_map()
-	# The pack is generated: ask about the bound realm's own capital.
+	var map := screen.map3d_view()
+	# The pack is generated: ask about the bound realm's own capital. What the
+	# map sends for a click on it (a headless run does not load the 3D world).
 	var capital: Dictionary = Game.data.burgs[String(
 		Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
-	map.select_object({"kind": "burg", "code": String(capital["burg_code"])})
+	map.object_selected.emit({"title": String(capital["label"]),
+		"obj": {"kind": "burg", "code": String(capital["burg_code"])}})
 	await wait_frames(1)
 	assert_true(screen.detail_panel().visible, "the click opens the detail column")
-	assert_false(map.card().visible, "and not the floating card")
 	assert_true(screen.detail_panel().ask_button().visible, "court owns an order box, so Ask shows")
 	screen.detail_panel().ask_button().pressed.emit()
 	assert_eq(screen.free_text.text, "What do we know of %s?" % String(capital["label"]))
@@ -309,10 +310,10 @@ func test_selecting_a_province_shows_its_card_in_the_detail_column() -> void:
 	Game.start_campaign(42)
 	var screen := _screen()
 	await wait_frames(2)
-	var map := screen.world_map()
-	map.show_provinces = true
+	# What the map sends for a click on a province (see above).
+	var map := screen.map3d_view()
 	var mine := MapOwnership.provinces_of(Game.data, Game.state, Game.data.resolve_realm("player_realm"))[0]
-	map.select_province(mine)
+	map.province_selected.emit(mine)
 	await wait_frames(1)
 	var panel := screen.detail_panel()
 	assert_true(panel.visible, "the detail column opens")
@@ -328,7 +329,7 @@ func test_selecting_a_province_shows_its_card_in_the_detail_column() -> void:
 		if String(Game.data.provinces[code]["kingdom_code"]) != Game.data.resolve_realm("player_realm"):
 			foreign = code
 			break
-	map.select_province(foreign)
+	map.province_selected.emit(foreign)
 	await wait_frames(1)
 	texts.clear()
 	for l in panel.fields().get_children():
@@ -336,7 +337,7 @@ func test_selecting_a_province_shows_its_card_in_the_detail_column() -> void:
 	assert_false(texts.has("Population"), "no details abroad")
 	assert_has(texts, "Held by")
 	assert_string_contains(panel.hint_label().text, "Little more is known")
-	map.select_province("")
+	map.province_selected.emit("")
 	await wait_frames(1)
 	assert_false(panel.visible, "clearing the selection closes the column")
 

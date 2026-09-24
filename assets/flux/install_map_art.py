@@ -2,11 +2,8 @@
 """Turn a chapter's renders into game assets.
 
     python3 assets/flux/install_map_art.py goods    # G-xx -> assets/goods/
-    python3 assets/flux/install_map_art.py decor    # D-xx -> assets/decor/ (sea ships, whale)
-    python3 assets/flux/install_map_art.py estates  # D-43..D-78 -> assets/manors/ (the manors view's estates)
     python3 assets/flux/install_map_art.py ui       # post.py icon tier -> assets/icons/ (resource strip, realm card)
     python3 assets/flux/install_map_art.py cast     # K-xx -> assets/portraits/
-    python3 assets/flux/install_map_art.py biomes   # T-xx -> assets/biomes/ (the satellite ground tiles)
     python3 assets/flux/install_map_art.py paintings  # B-xx -> assets/manors/paint/ (the manor card's painted estate)
     python3 assets/flux/install_map_art.py buildings  # H-xx -> assets/icons/bld_<code>.png (slots and the build menu)
     python3 assets/flux/install_map_art.py goods_icons  # G-xx colour -> assets/goods/colour/ (the manor card's output rows)
@@ -108,38 +105,6 @@ def install_goods(height: int = 128, lighten: float = 0.45) -> int:
     return install_marks(codes, "goods", ROOT / "assets" / "goods", height, lighten)
 
 
-## The sea's decoration (data/sea_art.csv, owner request 2026-09-13): the
-## D- renders named in decor_art.csv, cut out, greyed and lightened like the
-## goods — the game prints them on the water in sea_ink at map_sea_decor_alpha
-## — at 256 px, the mark tier of post.py.
-def install_decor(height: int = 256, lighten: float = 0.45) -> int:
-    codes = {r["art_id"]: r["key"] for r in csv.DictReader((HERE / "decor_art.csv").open())}
-    return install_marks(codes, "decor", ROOT / "assets" / "decor", height, lighten)
-
-
-## The manors view's estate drawings (owner 2026-09-14): library D-43..D-78,
-## one per industry and size (data/manor_estates.csv), cut out, greyed and
-## lightened like the settlements so the view can tint them with the
-## manor's colour. estate_art.csv may name the seed to install; else the
-## newest render wins.
-def install_estates(height: int = 256, lighten: float = 0.45) -> int:
-    rows = list(csv.DictReader((HERE / "estate_art.csv").open()))
-    codes = {r["art_id"]: r["key"] for r in rows}
-    seeds = {r["art_id"]: r.get("seed", "").strip() for r in rows}
-    return install_marks(codes, "decor", ROOT / "assets" / "manors", height, lighten, seeds)
-
-
-## The interface's dimension icons (data/resource_icons.csv texture column,
-## owner 2026-09-13): library I-40 and I-47..I-61, cut out by post.py
-## (--tier icon: a coloured still-life needs BiRefNet, not the blue-channel
-## key), trimmed and fitted under their dimension's key. They KEEP
-## their colour — an icon is looked at, not tinted.
-## The strip and the card draw these at 20-24 design px, so the installed file
-## is 64 px (24 x the ~3x largest window scale, rounded to a power of two;
-## owner 2026-09-13: an installed file is sized by its use). [C-ICON] leaves a
-## generous margin and BiRefNet keeps it, so the cut-out is first TRIMMED to
-## its alpha box and only then fitted into the square: the subject fills the
-## icon instead of floating small in the middle of it.
 UI_ICON_PX = 64
 UI_ALPHA_MIN = 8
 
@@ -270,42 +235,6 @@ def _install_cast_tier(codes: dict, tag: str, tier: str, size: int, dest: Path) 
     return done
 
 
-## BIOMES LAYER (experiment 2026-09-14): the ground tiles the default map
-## lays over each biome's land (data/biome_art.csv, MapBiomes). Library §5
-## T- renders named in biome_art.csv, KEPT IN COLOUR (the layer is a colour
-## wash of its own, drawn at map_biome_alpha over the sheet), boxed down to
-## BIOME_TILE_PX and made seamless: the render is rolled by half a tile so
-## its four edges meet in the middle, and the original is blended back over
-## that cross with a feathered band — the classic offset-and-blend — so the
-## sheet repeats without a visible seam. The model is asked for a seamless
-## tile and never quite delivers one.
-## 512 px: a tile spans map_biome_tile_px (128) native px, and the map is
-## drawn up to ~4x native, so 512 keeps the crowns sharp at the closest zoom.
-BIOME_TILE_PX = 1024  # the renders are 1024; installing at 512 threw half the
-# detail away and a tile spanning map_biome_tile_px native px was magnified
-# 3.7x at the closest zoom (owner 2026-09-17: "zoom in 之后好模糊")
-BIOME_FEATHER_PX = 192  # the seamless roll scales with the tile
-
-
-def make_seamless(w: int, h: int, px: bytearray, feather: int) -> bytearray:
-    """RGBA in, RGBA out: rolled by (w/2, h/2), the original blended back
-    over the centre cross within `feather` px of it."""
-    hx, hy = w // 2, h // 2
-    out = bytearray(w * h * 4)
-    for y in range(h):
-        sy = (y + hy) % h
-        dy = abs(y - hy)
-        for x in range(w):
-            sx = (x + hx) % w
-            d = min(abs(x - hx), dy)
-            t = min(1.0, d / float(feather)) if feather > 0 else 1.0  # 0 on the cross: the original
-            o = (y * w + x) * 4
-            r = (sy * w + sx) * 4
-            for c in range(4):
-                out[o + c] = int(px[o + c] + (px[r + c] - px[o + c]) * t + 0.5)
-    return out
-
-
 def to_rgba(w: int, h: int, ch: int, px: bytearray) -> bytearray:
     if ch == 4:
         return bytearray(px)
@@ -316,35 +245,6 @@ def to_rgba(w: int, h: int, ch: int, px: bytearray) -> bytearray:
     return out
 
 
-def install_biomes(size: int = BIOME_TILE_PX, feather: int = BIOME_FEATHER_PX) -> int:
-    rows = list(csv.DictReader((HERE / "biome_art.csv").open()))
-    dest = ROOT / "assets" / "biomes"
-    dest.mkdir(parents=True, exist_ok=True)
-    done = 0
-    for row in sorted(rows, key=lambda r: r["art_id"]):
-        art_id, code, seed = row["art_id"], row["key"], row.get("seed", "").strip()
-        hits = sorted((HERE / "out" / "terrain").glob("%s_*.png" % art_id))
-        if seed:
-            hits = [h for h in hits if h.stem.endswith("_s" + seed)] or hits
-        if not hits:
-            print("  (no render for %s / %s)" % (art_id, code))
-            continue
-        w, h, ch, px = decode_png(hits[-1])
-        small = resize_rgba(w, h, to_rgba(w, h, ch, px), size, size)
-        tile = make_seamless(size, size, small, feather)
-        encode_png(dest / ("%s.png" % code), size, size, 4, bytes(tile))
-        print("  %-6s %-12s %dx%d seamless" % (art_id, code, size, size))
-        done += 1
-    return done
-
-
-## The manor card's painted estates (owner 2026-09-14): library B-01..B-36
-## (estate_paint_art.csv; key = the estate's focus_tier, the same key as its
-## map drawing), KEPT IN COLOUR — a painting is looked at, not tinted — and
-## NOT cut out: the vignette fades into its own cream paper, which the card
-## shows as it is. Sized by use (owner 2026-09-13): the card cover-crops it
-## into about 216 x 190 design px, drawn at up to ~3x on the largest window,
-## so the 1280 x 1024 render is boxed down to 720 x 576 — the same 5:4.
 PAINT_SIZE = (720, 576)
 ## The vignette leaves wide cream paper round the scene, and the card is a
 ## small box: the render is first cropped to the SCENE — every pixel that is
@@ -633,8 +533,8 @@ def install_app_icon(size: int = APP_ICON_PX) -> int:
 
 
 def main() -> int:
-    chapters = {"goods": install_goods, "decor": install_decor, "cast": install_cast,
-                "ui": install_ui, "estates": install_estates, "biomes": install_biomes,
+    chapters = {"goods": install_goods, "cast": install_cast,
+                "ui": install_ui,
                 "paintings": install_paintings, "compass": install_compass,
                 "buildings": install_buildings, "goods_icons": install_goods_icons,
                 "arms": install_arms, "army_paintings": install_army_paintings,

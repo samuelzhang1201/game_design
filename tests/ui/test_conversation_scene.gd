@@ -205,7 +205,10 @@ func test_right_slot_is_empty_until_the_council_or_a_map_click_takes_it() -> voi
 	# map click never displaces the council on the right.
 	var capital: Dictionary = Game.data.burgs[String(
 		Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
-	c.world_map().select_object({"kind": "burg", "code": String(capital["burg_code"])})
+	# What the map sends for a click on the town (a headless run does not load
+	# the 3D world, so the view's signal stands in for the click).
+	c.map3d_view().object_selected.emit({"title": String(capital["label"]),
+		"obj": {"kind": "burg", "code": String(capital["burg_code"])}})
 	await wait_frames(2)
 	assert_true(c.detail_panel().visible, "a map click opens the card")
 	assert_true(c.dialogue_panel().visible, "and the council stays where it is")
@@ -538,7 +541,10 @@ func test_map_ask_fills_the_talk_box() -> void:
 	await wait_frames(2)
 	var capital: Dictionary = Game.data.burgs[String(
 		Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
-	c.world_map().select_object({"kind": "burg", "code": String(capital["burg_code"])})
+	# What the map sends for a click on the town (a headless run does not load
+	# the 3D world, so the view's signal stands in for the click).
+	c.map3d_view().object_selected.emit({"title": String(capital["label"]),
+		"obj": {"kind": "burg", "code": String(capital["burg_code"])}})
 	await wait_frames(1)
 	assert_true(c.detail_panel().ask_button().visible, "the stage owns a talk box, so Ask shows")
 	c.detail_panel().ask_button().pressed.emit()

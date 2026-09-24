@@ -42,7 +42,6 @@ var _text_label: RichTextLabel
 var _speech_label: RichTextLabel
 var _replies_box: VBoxContainer
 var _free_text: LineEdit
-var _world_map: WorldMapView
 var _map3d: Map3DView
 var _map3d_theme := ""
 var _map3d_military := false
@@ -91,15 +90,6 @@ func _ready() -> void:
 	%Bg.color = UiPalette.BG_SCREEN
 	%MapPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4))
-	# The live world map fills the middle zone on every gameplay screen
-	# (user ruling 2026-09-03); the audience window draws above it.
-	_world_map = WorldMapView.create()
-	%MapPanel.add_child(_world_map)
-	# A click on the map opens the fact card in the left column, not the
-	# floating card (user ruling 2026-09-09); its Ask pre-fills the talk box
-	# and never sends (spec 2026-09-08).
-	_world_map.use_card = false
-	_world_map.place_asked.connect(_fill_talk_box)
 	# The council column is hidden until the player enters it (user ruling
 	# 2026-09-09): a handle on the right edge opens it, LEAVE closes it.
 	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
@@ -110,8 +100,7 @@ func _ready() -> void:
 	# %MinisterPanel is the LEFT column — the facts column (owner ruling
 	# 2026-09-10). Hovering a country swaps the column to its card and back
 	# again (user request 2026-09-09).
-	_country_panel = CountryPanel.attach(%MinisterPanel.get_node("MVBox"), _world_map)
-	_world_map.country_hovered.connect(func(_code: String) -> void: _refresh_left())
+	_country_panel = CountryPanel.attach(%MinisterPanel.get_node("MVBox"))
 	# The left column shows the realm at a glance by default (user ruling
 	# 2026-09-09).
 	_dashboard = RealmDashboard.attach(%MinisterPanel.get_node("MVBox"))
@@ -121,10 +110,14 @@ func _ready() -> void:
 	_detail = MapDetailPanel.new()
 	_detail.name = "DetailPanel"
 	%MinisterPanel.get_node("MVBox").add_child(_detail)
-	_detail.follow(_world_map)
 	_detail.ask_enabled = true
 	_detail.ask_requested.connect(_fill_talk_box)
-	_detail.closed.connect(_world_map.clear_selection)
+	# The world map fills the middle zone on every gameplay screen (user
+	# ruling 2026-09-03) — the 3D map, the only one since 2026-09-24 — and the
+	# audience window draws above it; a click opens the fact card in the left
+	# column (user ruling 2026-09-09), whose Ask pre-fills the talk box and
+	# never sends (spec 2026-09-08).
+	_map3d = Map3DView.attach(%MapPanel, _detail, _country_panel, _refresh_left, %ArmyOrders)
 	_detail.visibility_changed.connect(_refresh_left)
 	%MinisterPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16))
@@ -266,14 +259,15 @@ func set_military_view(on: bool) -> void:
 		_military.refresh()
 	_refresh_left()
 
-## The 3D MAP tab (GameRoot): the Terrain3D view takes the map panel in
-## place of the 2D map while the tab is lit (Map3DView.toggle_in).
+## The map shown or put away (GameRoot): it loads the built world the first
+## time it is shown, and shows the notice naming build_pack.sh without one.
 func set_map3d_view(on: bool) -> void:
-	_map3d = Map3DView.toggle_in(%MapPanel, _world_map, _map3d, on, _detail, _country_panel,
-		_refresh_left, %ArmyOrders)
-	if _map3d != null:
+	if on:
+		_map3d.activate()
 		_map3d.set_manor_theme(_map3d_theme)
 		_map3d.set_military(_map3d_military)
+	else:
+		_map3d.deactivate()
 
 ## The theme on the 3D ground ("", "manors" or "heights"; ECONOMY was folded
 ## into MANORS, owner 2026-09-19; HEIGHTS joined it the same day, spec
@@ -336,7 +330,7 @@ func council_handle() -> Button:
 ## Ask on a card pre-fills the talk box and brings the council up so the
 ## player can send it.
 func _fill_talk_box(text: String) -> void:
-	_world_map.clear_selection()
+	_map3d.clear_selection()
 	_set_right("council")
 	_free_text.text = text
 	_free_text.caret_column = text.length()
@@ -1209,5 +1203,3 @@ func _refresh_dossier() -> void:
 		_tab_pages[i].visible = _dossier_up and i == _tab_index
 
 ## Test seam and GameRoot's handle on this screen's map.
-func world_map() -> WorldMapView:
-	return _world_map

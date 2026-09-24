@@ -12,7 +12,7 @@ const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 ## name -> argument count (defaults included). Underscored names are the
 ## private handlers and helpers the tests call directly.
 const METHODS := {
-	"scene_path_for": 1, "has_scene": 1, "create": 2, "toggle_in": 8,
+	"scene_path_for": 1, "has_scene": 1, "create": 2, "attach": 5,
 	"load_field_map": 1, "kingdom_of_pick": 3, "pick_reach_px": 3,
 	"activate": 0, "deactivate": 0, "water_normals": 0, "sea_material": 0,
 	"river_material": 0, "refresh_borders": 0, "set_manor_theme": 1, "manor_theme": 0,
@@ -31,7 +31,7 @@ const METHODS := {
 	"_gui_input": 1, "_process": 1, "_render_scale": 0, "_burg_xz": 1, "_height_at": 1,
 	"_pan_by": 1, "_zoom_at": 2, "_ruler_click": 1,
 }
-const STATICS := ["scene_path_for", "has_scene", "create", "toggle_in",
+const STATICS := ["scene_path_for", "has_scene", "create", "attach",
 	"load_field_map", "kingdom_of_pick"]
 const SIGNALS := {"object_selected": 1, "province_selected": 1, "country_hovered": 1}
 const CONSTANTS := ["PRIORITY_SEA", "PRIORITY_RIVERS", "PRIORITY_ROADS",

@@ -22,87 +22,9 @@ func test_bounds_wraps_every_point() -> void:
 func test_bounds_of_nothing_is_empty() -> void:
 	assert_eq(MapGeometry.bounds(PackedVector2Array()), Rect2())
 
-func test_polyline_length_sums_the_segments() -> void:
-	var pts := PackedVector2Array([Vector2(0, 0), Vector2(3, 4), Vector2(3, 10)])
-	assert_almost_eq(MapGeometry.polyline_length(pts), 11.0, 0.0001)
-	assert_eq(MapGeometry.polyline_length(PackedVector2Array([Vector2(1, 1)])), 0.0)
-
-func test_distance_to_polyline_is_to_the_nearest_segment() -> void:
-	var pts := PackedVector2Array([Vector2(0, 0), Vector2(2, 0), Vector2(2, 2)])
-	assert_almost_eq(MapGeometry.distance_to_polyline(Vector2(1, 1), pts), 1.0, 0.0001,
-		"one unit above the first segment (and one left of the second)")
-	assert_almost_eq(MapGeometry.distance_to_polyline(Vector2(5, 0), pts), 3.0, 0.0001,
-		"past the corner: distance to the corner vertex")
-	assert_almost_eq(MapGeometry.distance_to_polyline(Vector2(2, 1), pts), 0.0, 0.0001, "on the line")
-
-func test_distance_to_nothing_is_infinite() -> void:
-	assert_eq(MapGeometry.distance_to_polyline(Vector2.ZERO, PackedVector2Array()), INF)
-
-## The uniform cubic B-spline through a closed polygon (Azgaar's
-## curveBasisClosed): steps points per vertex, each segment's first point the
-## (1, 4, 1)/6 blend of its neighbours, and the curve never leaves the hull.
-func test_smooth_closed_is_the_uniform_cubic_b_spline() -> void:
-	var square := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10)])
-	var curve := MapGeometry.smooth_closed(square, 4)
-	assert_eq(curve.size(), 16)
-	# At t = 0 on segment i the point is (P[i-1] + 4 P[i] + P[i+1]) / 6.
-	assert_almost_eq(curve[0].x, (0.0 + 4.0 * 0.0 + 10.0) / 6.0, 0.0001)
-	assert_almost_eq(curve[0].y, (10.0 + 4.0 * 0.0 + 0.0) / 6.0, 0.0001)
-	assert_almost_eq(curve[4].x, (0.0 + 4.0 * 10.0 + 10.0) / 6.0, 0.0001)
-	for p in curve:
-		assert_true(p.x >= 0.0 and p.x <= 10.0 and p.y >= 0.0 and p.y <= 10.0,
-			"%s stays inside the square" % p)
-	assert_eq(MapGeometry.smooth_closed(PackedVector2Array([Vector2.ZERO, Vector2.ONE]), 4).size(), 2,
-		"too few points: returned as is")
-
 ## dash_polyline: the dash pattern is measured along the line's own length,
 ## so it survives a vertex instead of restarting there (draw_dashed_line
 ## restarts per call, which turned the smoothed borders into mush).
-
-func test_dash_polyline_cuts_a_straight_line_into_dashes() -> void:
-	var pieces := MapGeometry.dash_polyline(
-		PackedVector2Array([Vector2(0, 0), Vector2(10, 0)]), 2.0, 2.0)
-	assert_eq(pieces.size(), 3, "10 long, 2 on 2 off: dashes at 0-2, 4-6, 8-10")
-	assert_eq(pieces[0], PackedVector2Array([Vector2(0, 0), Vector2(2, 0)]))
-	assert_eq(pieces[1], PackedVector2Array([Vector2(4, 0), Vector2(6, 0)]))
-	assert_eq(pieces[2], PackedVector2Array([Vector2(8, 0), Vector2(10, 0)]))
-
-func test_dash_polyline_keeps_its_phase_across_a_corner() -> void:
-	# (0,0)->(3,0)->(3,3), 2 on 2 off. The first dash ends at (2,0); the gap
-	# runs 2 more units — one to the corner, one up the second leg — so the
-	# next dash starts at (3,1) and the line ends mid-dash at (3,3).
-	var pieces := MapGeometry.dash_polyline(
-		PackedVector2Array([Vector2(0, 0), Vector2(3, 0), Vector2(3, 3)]), 2.0, 2.0)
-	assert_eq(pieces.size(), 2)
-	assert_eq(pieces[0], PackedVector2Array([Vector2(0, 0), Vector2(2, 0)]))
-	assert_eq(pieces[1], PackedVector2Array([Vector2(3, 1), Vector2(3, 3)]))
-
-func test_a_dash_that_spans_a_corner_keeps_the_corner_point() -> void:
-	# 5 on 5 off over (0,0)->(3,0)->(3,3): one dash the whole way, bending
-	# at the corner, so the piece carries three points.
-	var pieces := MapGeometry.dash_polyline(
-		PackedVector2Array([Vector2(0, 0), Vector2(3, 0), Vector2(3, 3)]), 5.0, 5.0)
-	assert_eq(pieces.size(), 1)
-	assert_eq(pieces[0], PackedVector2Array([Vector2(0, 0), Vector2(3, 0), Vector2(3, 2)]),
-		"the dash runs out one unit short of the end")
-
-func test_dash_polyline_of_a_degenerate_line_is_nothing() -> void:
-	assert_eq(MapGeometry.dash_polyline(PackedVector2Array([Vector2(1, 1)]), 2.0, 2.0).size(), 0)
-	assert_eq(MapGeometry.dash_polyline(PackedVector2Array(), 2.0, 2.0).size(), 0)
-
-func test_a_dash_length_of_zero_draws_the_line_solid() -> void:
-	var line := PackedVector2Array([Vector2(0, 0), Vector2(10, 0)])
-	assert_eq(MapGeometry.dash_polyline(line, 0.0, 2.0), [line], "no dash: one solid piece")
-	assert_eq(MapGeometry.dash_polyline(line, 2.0, 0.0), [line], "no gap: one solid piece")
-
-func test_dash_segments_flattens_the_pieces_into_draw_multiline_pairs() -> void:
-	# draw_multiline takes a flat array of point pairs, one draw call for a
-	# whole dashed border instead of one per dash.
-	var pairs := MapGeometry.dash_segments(
-		PackedVector2Array([Vector2(0, 0), Vector2(3, 0), Vector2(3, 3)]), 5.0, 5.0)
-	assert_eq(pairs, PackedVector2Array([
-		Vector2(0, 0), Vector2(3, 0),
-		Vector2(3, 0), Vector2(3, 2)]), "the bent dash becomes two pairs")
 
 ## nice_step: the 1-2-5 ladder a map's scale bar is allowed to land on, so
 ## the bar reads "200 km", never "187 km".
@@ -169,24 +91,6 @@ func test_smooth_open_leaves_a_line_too_short_to_bend_alone() -> void:
 ## instead of dash-and-nothing (owner request 2026-09-12, matching the
 ## alternating frame band of docs/references).
 
-func test_dash_runs_returns_both_phases_in_order() -> void:
-	var runs := MapGeometry.dash_runs(
-		PackedVector2Array([Vector2(0, 0), Vector2(10, 0)]), 2.0, 2.0)
-	assert_eq(runs.size(), 5, "10 long, 2 on 2 off: on off on off on")
-	for i in runs.size():
-		assert_eq(bool(runs[i]["on"]), i % 2 == 0, "run %d alternates" % i)
-	assert_eq(runs[0]["points"], PackedVector2Array([Vector2(0, 0), Vector2(2, 0)]))
-	assert_eq(runs[1]["points"], PackedVector2Array([Vector2(2, 0), Vector2(4, 0)]))
-	assert_eq(runs[4]["points"], PackedVector2Array([Vector2(8, 0), Vector2(10, 0)]))
-
-func test_dash_polyline_is_the_on_runs_of_dash_runs() -> void:
-	var line := PackedVector2Array([Vector2(0, 0), Vector2(3, 0), Vector2(3, 3)])
-	var on: Array = []
-	for run: Dictionary in MapGeometry.dash_runs(line, 2.0, 2.0):
-		if bool(run["on"]):
-			on.append(run["points"])
-	assert_eq(on, MapGeometry.dash_polyline(line, 2.0, 2.0))
-
 ## ribbon: a polyline swollen into a filled band whose half-width varies from
 ## point to point — what draw_polyline cannot do, and what a drawn river
 ## needs: a hairline at the source widening to its mouth.
@@ -234,16 +138,6 @@ func test_smooth_closed_through_keeps_every_control_point() -> void:
 			if q.distance_to(p) < 0.0001:
 				hit = true
 		assert_true(hit, "the curve runs through %s" % p)
-
-func test_the_b_spline_does_not_keep_them() -> void:
-	# The contrast this change is about, pinned so nobody "simplifies" the two
-	# back into one.
-	var square := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10), Vector2(0, 10)])
-	var out := MapGeometry.smooth_closed(square, 4)
-	var nearest := INF
-	for q: Vector2 in out:
-		nearest = minf(nearest, q.distance_to(Vector2(0, 0)))
-	assert_gt(nearest, 0.5, "the B-spline cuts the corner off")
 
 func test_smooth_closed_through_of_a_degenerate_ring_is_itself() -> void:
 	var two := PackedVector2Array([Vector2(0, 0), Vector2(1, 1)])

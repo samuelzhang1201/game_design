@@ -67,11 +67,7 @@ news_build_milestone_1,0.3,news bar (owner 2026-09-14): a work in progress is an
 news_build_milestone_2,0.7,news bar: and again when it passes this one; completion has its own line
 knowledge_sure_threshold,75,"credibility at/above which a persona sheet says ""You know"" (review finding 2026-09-01)"
 knowledge_doubt_threshold,50,credibility below which a persona sheet says the character doubts what they heard
-map_decor_min_scale,0.45,"world map: screen px per native map px at/above which the terrain symbols (woods, hills, reeds) are drawn — below it the sheet would be a carpet of specks"
-map_decor_alpha,0.0,world map: opacity of the terrain symbols
-map_decor_scale,1.0,"world map: one knob over the SIZE of every terrain symbol — multiplies the height_px column of data/terrain_art.csv, so the whole sheet thins or thickens together"
 map_manor_alpha,0.92,"economy view: opacity of the manor wash — every land cell (a manor) in its holder's colour, over the terrain (owner request 2026-09-13, after docs/references/economyView.png)"
-map_manor_line_min_scale,0.9,economy view: screen px per native map px at/above which the manor edges are ruled in
 map_manor_line_alpha,0.4,economy view: opacity of the manor edges
 map_manor_line_width,1.0,economy view: width of the manor edges in screen px
 map_manor_badge_px,26,"economy view: diameter of a working manor's produce badge in screen px (fixed at any zoom, a counter like the pins; which manors get one follows the town LOD rule)"
@@ -80,31 +76,13 @@ map_manor_icon_frac,0.82,economy view: the produce icon's height as a fraction o
 map_manor_label_font_px,14,economy view: size of the units chip under a badge in screen px
 map_manor_label_pad_px,4,economy view: side padding of that chip in screen px
 map_manor_label_min_scale,1.0,economy view: screen px per native map px at/above which the units chip is drawn under the badge
-map_decor_tint,1.0,"world map: how far a terrain symbol takes on the colour of the realm that holds it, 0 = its own sepia, 1 = fully the realm's wash (owner request 2026-09-12). Follows conquest: the province is fixed geometry, the owner is looked up live"
-map_sprite_inland,0.55,"world map: how far a coastal settlement's drawing slides back onto the land, as a fraction of its own half-width (owner report 2026-09-13: seaside towns had half their picture out on the water). 0 leaves every drawing centred on its point"
-map_sprite_tint,0.12,"world map: the same, for the settlement drawings — 0.12 since the towns became aerial photographs (owner 2026-09-17): a photographed town needs almost none of its realm's colour. History: 0.55 for the painted towns (太突兀, 2026-09-17), 0 their own colour (2026-09-15)"
-map_sprite_alpha,1.0,"world map: opacity of a settlement drawing (owner 2026-09-17, with map_sprite_tint): under 1 the wash and the paper show through the picture and the town stops shouting. 1 is fully opaque"
-map_decor_density,0.8,world map: one knob over HOW MANY of them — multiplies the density column of data/terrain_art.csv
-map_decor_cluster_px,90,"world map: the wavelength in native px of the field that gathers terrain marks into forests and ranges (terrain_art.csv cluster column, owner 2026-09-14) — larger = broader tracts"
-map_decor_cluster_seed,7,world map: the fixed seed of that field — the same sheet every run
-map_sea_decor_density,0.2,"world map: the share of the open sea's candidate spots that get a ship or a whale (owner request 2026-09-13) — the spots are one per map_sea_decor_spacing_px square of sea, so 0.1 puts a mark on every tenth"
-map_sea_decor_spacing_px,80.0,"world map: how densely the sea is sampled for those spots, in NATIVE px — one candidate per square this wide"
-map_sea_decor_min_gap_px,110.0,"world map: no two ships or whales closer than this, centre to centre, in NATIVE px (owner 2026-09-13: spread out, never overlapping) — wider than the widest mark, the whale at about twice its height_px"
-map_sea_decor_scale,1.0,"world map: one knob over their SIZE — multiplies the height_px column of data/sea_art.csv (native px, so they scale with the zoom like the woods)"
-map_sea_decor_alpha,0.36,"world map: opacity of the ships and whales — they are printed on the water, and the sea shows through them"
-map_home_margin,0.6,"world map: the space left around the crown's provinces when the map opens framed on them (owner 2026-09-14), as a share of their extent on each side"
-map_home_max_scale,3.2,"world map: the closest the opening framing may zoom, so one small province does not fill the frame with a few cells"
-map_home_scale,1.1,"world map: the zoom the map opens at, centred on the player's capital — above map_province_min_scale so the province seams are there from the first frame (owner 2026-09-12)"
 map_lod_town_scale,1.0,world map: screen px per native map px at/above which towns with map_lod_town_pop+ people get a pin (below: capitals only)
 map_lod_village_scale,2.5,world map: scale at/above which every burg gets a pin
 map_show_markers,0,"world map: 1 draws the pack's points of interest, 0 leaves them off (owner 2026-09-12: the sheet is for realms and settlements)"
 map_lod_marker_scale,1.0,world map: scale at/above which points of interest get a pin
-map_marker_px,32.0,world map: point-of-interest icon size in screen px (fixed at any zoom, like the pins; the icons are data/marker_art.csv)
 map_lod_town_pop,12000,world map: population a non-capital needs for a pin between the town and village scales
 map_pick_radius_px,12,world map: screen px within which a click/hover picks a pin
 map_line_pick_px,8,world map: screen px within which a click/hover picks a road or river
-map_pinch_zoom_gain,1.0,"world map: how strongly a trackpad pinch zooms — 1.0 follows the gesture exactly, higher is faster"
-map_pan_gesture_speed,4.0,world map: screen px panned per unit of two-finger trackpad scroll
 map_label_scale_px,45.0,world map: kingdom label height in native map px — it scales with zoom like printed lettering
 map_label_min_px,16.0,world map: smallest kingdom label in screen px (below this the label is hidden)
 map_label_max_px,60.0,world map: largest kingdom label in screen px
@@ -115,20 +93,9 @@ tax_rate_per_poll_tax,36,tax_rate (1-10) = round(export pollTax x this); also th
 tariff_rate_per_sales_tax,60,tariff_rate (0-10) = round(export salesTax x this); also the alias scale for the player's sales_tax row
 order_prompt_max_burgs,12,largest towns of the player's realm listed in the order prompt
 order_narrative_max_chars,600,longest narrative the validator keeps from an order reply
-map_province_min_scale,0.9,world map: screen px per native map px at/above which the province view draws seams
-map_province_line_alpha,0.55,world map: opacity of province seams — soft, they are an internal hint not a boundary (owner 2026-09-12)
-map_province_line_width,2.2,"world map: width of province seams in screen px (owner 2026-09-14: bolder, 1.2 read too faint)"
-map_province_dash_px,3.0,world map: dash length of province seams in screen px (0 draws them solid)
-map_province_gap_px,5.0,world map: gap between the dashes of a province seam in screen px
 province_card_max_towns,5,province panel: how many town names to list
 province_card_max_goods,4,province panel: how many produced goods to list
-map_political_alpha,0.30,"world map: opacity of the political wash over the terrain — 0 turns the coloured country areas off. The wash came back after the parchment ruling of 2026-09-12 (no fills); 0.42 was the tuned value, 0.30 since the satellite ground lies over it"
-map_state_border_width,1.6,world map: width of every kingdom's border in screen px — it is a chequered ribbon now, so it needs the body to read as a band
 map_state_border_dash_px,9,world map: length of the DARK run of a kingdom border in screen px (0 draws it solid)
-map_state_border_gap_px,9,"world map: length of the PALE run between them — not a gap any more: it is drawn in state_border_light, so the two alternate like a chequered map band"
-map_state_border_alpha,0.9,world map: opacity of kingdom borders
-map_hover_border_width,2.8,world map: width of the hovered kingdom's border in screen px — the SAME chequered ribbon drawn wider and at full opacity (owner 2026-09-14: no amber line over it)
-map_max_scale_bar_km,150,"world map: how far out the player may zoom, stated as the largest distance the scale bar is allowed to read (owner request 2026-09-12). The bar lands on the 1-2-5 ladder, so a cap of 150 means it stops at 100. 0 lifts the cap and the floor goes back to fitting the whole map"
 map_scale_bar_max_px,220.0,world map: the longest the scale bar may run in screen px — the bar takes the biggest round distance that fits inside it
 map_scale_bar_divisions,4,world map: alternating filled and open segments along the scale bar (library M-14)
 map_scale_bar_height_px,8.0,world map: height of the scale bar in screen px
@@ -143,11 +110,7 @@ map_border_smoothing_steps,8,"world map: Catmull-Rom samples per segment on a ki
 ui_panel_art,0,"UI: 1 draws every panel as the nine-sliced vellum plate (assets/ui/panel_vellum.png, library U-01); 0 draws the flat rounded card of UiPalette.panel_style — the bright modern theme (owner 2026-09-13: the parchment look read old and dim)"
 ui_panel_ornament,1,"UI (owner 2026-09-14: restore the decorative border): 1 frames every bright card with the vellum plate's ornament alone — its double rule, hairline and corner flourishes (assets/ui/panel_ornament.png) — over the modern body; 0 is the plain card. Ignored while ui_panel_art draws the whole plate"
 dashboard_max_provinces,4,realm dashboard: how many of the realm's largest provinces the bar chart lists
-map_sprite_scale,0.12,world map: settlement art height in screen px per screen px of view scale x 100. 0.17 was tuned while max_px still clipped; with the clip gone it read too large and the coast crowded (owner 2026-09-17)
-map_sprite_min_px,12.0,world map: below this screen height a settlement draws as a pin, not art
-map_sprite_max_px,400.0,"world map: a settlement drawing never grows taller than this on screen. 110 CLIPPED the closest zoom (the scale asks for 125 there), so towns stopped growing with the camera and read as shrinking against the map (owner 2026-09-17). 400 is out of reach at every zoom the view allows, so the size is purely proportional"
 map_army_badge_native_px,4.55,"military layer: height of a regiment's counter in NATIVE map px, times the zoom (owner 2026-09-17: counters scale with the map and are never thinned; 4.55 = the old 0.35 of a 0.13 settlement drawing (map_sprite_scale), so the unclamped size is unchanged), never below map_army_badge_min_px"
-map_army_badge_min_px,11.0,military layer: the smallest a counter gets in screen px however far the map zooms out
 map_army_font_frac,0.5,military layer: the headcount's font size as a share of the counter's height
 map_army_count_pad_px,3.0,military layer: side padding inside the headcount box in screen px
 map_army_outline_px,1.0,military layer: width of the dark outline round a counter in screen px
@@ -162,37 +125,19 @@ map_relief_max,1.35,terrain: brightest relief factor
 map_light_x,-0.7,terrain: light direction x (toward the light; negative = from the west)
 map_light_y,-0.7,terrain: light direction y (negative = from the north)
 map_altitude_gain,0,terrain: extra brightening from sea level to the summit — 0 = flat (owner 2026-09-11); 0.25 was the tuned value
-map_paper_strength,0.03,"terrain: how dark the paper grain gets over the sheet (0 = off) — fixed in screen px, does not zoom. 0.1 was the parchment value; the bright theme (owner 2026-09-13) keeps only a trace"
-map_paper_grain_px,380.0,terrain: size of one parchment mottle in screen px (the noise tile is drawn at this scale)
-map_paper_octaves,4,terrain: octaves of the parchment grain — more gives finer fibre inside the mottling
-map_paper_seed,954159497,terrain: seed of the parchment grain (the map's own seed; the grain is a look, never simulation)
-map_paper_vignette,0,"terrain: how dark the sheet's edges go (0 = off), drawn over everything like the shadow on a rolled scroll. Off in the bright theme (owner 2026-09-13); 0.22 was the parchment value"
 map_terrain_blend,1,terrain: 1 = ring vertices blend the cells around them (soft painterly land); 0 = flat colour per cell with crisp edges
 map_sea_band_near_px,12,"terrain: the NEAR band — sea within this many native px of the shore, in sea_near (owner 2026-09-13, after the reference chart: four flat bands by distance from land over a fixed wave grain, drawn by SeaLayer from the pack's world_sea_distance.png)"
 map_sea_band_nearer_px,55,"terrain: out to here is the NEARER band, sea_nearer"
 map_sea_band_far_px,200,"terrain: out to here is the FAR band, sea_far; beyond is the deep, sea_deep (the field caps at 255)"
 map_sea_band_soft_px,8,"terrain: half-width of the fade between two bands, in native px — 0 is a hard edge"
-map_sea_wave_alpha,0.08,terrain: how much darker a wave streak is than the sea around it (0 = no streaks). Faint on purpose (owner 2026-09-13): the sea must not draw the eye
-map_sea_wave_tile_px,120,terrain: height of one tile of the wave grain in native px — it belongs to the drawing and scales with the zoom
-map_sea_wave_stretch,10,"terrain: how much wider than tall the grain is drawn, so a streak reads as a horizontal ripple"
-map_sea_wave_cut,0.6,terrain: only grain above this (0..1) becomes a streak; the rest of the sea keeps its flat band tint — higher is sparser
-map_sea_wave_seed,954159497,"terrain: seed of the wave grain (the map's own seed); a look, never simulation"
-map_dash_min_step_px,3,"world map: no two vertices of a dashed line (borders, hatching, lanes) closer than this in SCREEN px once cut for the zoom — the rings are sampled about a native px apart, so zoomed out they carried several vertices per screen px and the strip builder paid for every one (bench 2026-09-13). 0 keeps every vertex"
 map_coast_width,0,"terrain: shore stroke width in screen px. 0 = NO coast line at all (owner request 2026-09-13): the land colour, the political wash and the sea tell you where the shore is, and a drawn outline over them only fought the kingdom borders. Above 0 the stroke comes back"
 map_river_min_px,1.2,"terrain: the least a river's SOURCE width may be in screen px. It floors only the widest point: the course still tapers to nothing from there (map_river_taper_gamma), so rivers no longer all draw one width at this floor the way they did when it floored the whole course (0.44 then, owner 2026-09-12)"
-map_river_alpha,1.0,"terrain: opacity of a river — 1, SOLID (owner request 2026-09-13): below 1 the ribbon's overlapping triangles on a tight bend show as darker blots"
 map_river_taper_gamma,1.4,"terrain: how a river thins along its course (owner request 2026-09-13): a point at the SOURCE, widest at the mouth, swelling as t^gamma (owner 2026-09-13, reversing the same morning's source-wide taper; WorldMapView.river_taper). 1 swells evenly; higher stays fine longer"
 map_river_smoothing_steps,3,terrain: B-spline samples per segment on a river — the pack stores rivers as raw polylines and the corners read as hard kinks without this (owner 2026-09-12)
 map_river_discharge_scale,0.11,"terrain: a river's SOURCE width in native px per sqrt(discharge) — raised from 0.05 with the solid taper (owner 2026-09-13), since a river now spends most of its course thinner than this"
 map_road_width,2.4,"terrain: road stroke width in screen px — a road is a worn track, and in the reference it reads by width and a soft edge rather than by a dark line (owner 2026-09-12; widened from 1.3 with the sand-track colour, owner 2026-09-17, after docs/references/ChatGPT Image Sep 16, 2026, 05_58_06 PM.png)"
 map_road_soft_ratio,0.6,"terrain: how far a road's soft shoulder reaches past its body, as a multiple of the body's own width on each side (0 = a hard edge). On since the painted-track roads (owner 2026-09-17): the reference's tracks fade into the grass rather than ending on a ruled edge"
-map_road_soft_alpha,0.45,terrain: opacity of that shoulder as a fraction of the body's
-map_road_alpha,0.9,terrain: opacity of a road's body
 map_route_smoothing_steps,3,terrain: B-spline samples per segment on a road or trail — the pack stores routes as raw polylines and a wide stroke makes every kink obvious
-map_sea_route_width,1.8,world map: width of a sea lane in screen px
-map_sea_route_dash_px,7,world map: dash length of a sea lane in screen px
-map_sea_route_gap_px,7,world map: gap between those dashes in screen px
-map_sea_route_alpha,0.55,world map: opacity of a sea lane
 map_trail_width,0.9,terrain: trail and sea-route stroke width in screen px
 map_trail_min_scale,2.4,terrain: view scale at/above which trails and sea routes draw (roads always draw)
 manor_price_per_1000,400,manors §5: the value of a manor per 1 000 people
@@ -221,19 +166,8 @@ manor_demolish_refund,0.5,"manors §5: the share of a building's civil_cost retu
 time_day_seconds,1.0,the clock (owner 2026-09-13): real seconds per game day at 1x; the top bar's 2x and 4x divide it
 time_speed_fast,2,the clock: the 2x button's multiplier
 time_speed_faster,4,the clock: the 4x button's multiplier
-map_manor_mark_alpha,0.9,"manors view (owner 2026-09-13): opacity of the farmsteads, fields and town drawings, which wear their manor's own colour the way the default map's symbols wear the realm's"
-map_manor_estate_fit,0.75,manors view (owner 2026-09-13): an estate drawing is never taller than this share of its cell's radius
-map_manor_estate_min_scale,0.5,manors view: screen px per native px at/above which the estate drawings are shown
-map_manor_estate_foot,0.5,manors view: the share of an estate drawing's height above the cell centre — 0.5 centres it (owner 2026-09-14)
-map_manor_estate_px,3.8,"manors view (owner 2026-09-14): the ONE height of every estate drawing in native map px (x map_decor_scale) — the same for every manor, whatever its size; only map_manor_estate_fit can shrink it. 5.0 before the owner asked for smaller"
-map_manor_estate_alpha,0.6,manors view (owner 2026-09-14): opacity of the estate drawings on top of map_manor_mark_alpha — more see-through than the towns
-map_manor_estate_lod_base_px,12,manors view (owner 2026-09-14): the finest LOD grid in native px (MapObjects.estate_lod_ranks); each coarser level doubles it
-map_manor_estate_lod_levels,6,manors view: how many LOD grid levels — the coarsest square is base x 2^(levels-1)
-map_manor_estate_lod_screen_px,80,"manors view: a level is drawn once its square is at least this many screen px across, so zoomed out only a scattering of estates shows and zoomed in every one does"
 manor_focus_high_height,52,manors (owner 2026-09-14): cell height at/above which a manor's default focus may be a high-ground one (manor_focus.csv default_on high)
 manor_focus_peak_height,63,manors: cell height at/above which a manor's default focus may be a mountain one (default_on peak)
-map_biome_alpha,0.85,"BIOMES LAYER (experiment 2026-09-14): opacity of the biome ground tiles laid over the political wash, under the water and the roads; 0 switches the layer off"
-map_biome_tile_px,128,"BIOMES LAYER: one seamless tile spans this many native map px. 256 with a 1024 render meant a 1.8x MAGNIFICATION at the closest zoom and the ground read soft (owner 2026-09-17: zoom in 之后好模糊); 128 makes it a 0.92x minification instead — sharp — and the doubled repeat does not show, because the satellite materials have no direction or landmark and the weight blend breaks the period"
 map_biome_blur_px,4,"BIOMES LAYER (experiment 2026-09-14): radius in native map px over which one biome's tile fades into the next (owner: no cell shape may show; 40 read too soft, 24 keeps the terrain legible) — BAKED into assets/maps/<id>/world_biome_weights_N.png by tools/bake_biome_weights.gd, so re-run it after changing this"
 manor_tax_per_1000,2,"ECONOMY (spec 2026-09-14 §4.2): whole gold a month a manor pays per 1 000 people at tax_rate_base, before its buildings' tax_bonus"
 tax_rate_base,5,"ECONOMY: the poll-tax level (metrics.tax_rate, 1..10) at which a manor's tax factor is 1; 10 doubles it, 1 fifths it"
@@ -248,15 +182,6 @@ granary_civil_gain,60,ECONOMY: civil goods a new royal granary is stocked with
 goods_trade_spread,0.25,"ECONOMY (spec §5): the factor's cut — buying a pool's goods costs gold x (1 + this), selling yields gold x (1 - this)"
 build_rush_gold_per_day,3,ECONOMY (spec §5): gold that takes one day off a work on a crown manor (MANOR_RUSH)
 manor_rush_days_per_click,5,ECONOMY: days one press of a manor card's HURRY button buys (MANOR_RUSH)
-map_cloud_alpha,0.55,clouds (owner 2026-09-14): opacity of the faint clouds that drift over the DEFAULT map while the clock runs; 0 switches them off
-map_cloud_size_px,220,"clouds: a cloud's width in native map px (each one 0.7..1.3 of it), so it pans and zooms with the land"
-map_cloud_speed_px,9,"clouds: drift in native px per real second at 1x, multiplied by the clock speed"
-map_cloud_wind_deg,12,"clouds: the direction they drift, degrees clockwise from east"
-map_cloud_interval_min_s,2.5,clouds: the fewest real seconds between one cloud and the next
-map_cloud_interval_max_s,7,"clouds: the most real seconds between one cloud and the next — now and then, not a sky full"
-map_cloud_max,8,clouds: the most on the map at once
-map_cloud_fade_s,1.2,clouds: seconds to fade in when play starts and out when the clock stops
-map_cloud_seed,11,clouds: the seed of the clouds' own look-only generator (never the engine's stream)
 army_start_morale,70,"regiments (owner 2026-09-17, spec 2026-09-17-regiment-state): morale a regiment starts with, 0..100; it does not change yet"
 army_start_training,10,regiments: the hidden training value a regiment starts with — militia
 army_start_supply_months,6,regiments: supplies a regiment starts with in months of its own use
@@ -278,15 +203,9 @@ army_speed_supply_full_months,3,regiments' march: months of supplies in hand at/
 map_biome_hill_height,45,BIOMES LAYER (owner 2026-09-17): cell height at/above which a land pixel wears the HILL tile (biome id 13) — about the top 30% of beria's land. MapIndex.raise_high_ground; re-bake with tools/bake_relief.gd after changing
 map_biome_mountain_height,62,BIOMES LAYER: cell height at/above which a pixel wears the MOUNTAIN tile (id 14) — about the top 10% of the land
 map_biome_peak_height,72,BIOMES LAYER (owner 2026-09-17): cell height at/above which a pixel wears the PEAK tile (id 15). 80 left snow as scattered white specks; at 72 the peaks join into a range — 14322 px of snow became 34396. The MOUNTAIN line stays 62: dropping it to 56 with the snow line spread bare rock around the snow and read dirty
-map_relief_shade,0.20,"BIOMES LAYER (owner 2026-09-17, choice D): how far a lit or shaded face departs from flat ground (flat is normalised to 1.0). 0.35+ read as dirty patches; 0 is flat"
-map_relief_shade_px,3.0,BIOMES LAYER: how far apart in native px the shader samples the height field for the slope. 3.0 was under one texel of the 1/4-scale field (nothing); 40 spanned 10 texels and made broad dirty patches instead of landforms
-map_relief_gain,16,"BIOMES LAYER (owner 2026-09-17, choice D): VERTICAL EXAGGERATION of the height field before its normal is lit. Classic hillshade, no saturation. Measured against a shade=0 baseline: gain 16 / shade .20 moves the average land pixel 9.3% and 40% of them by more than 10%"
 map_relief_scale,1,"BIOMES LAYER (owner 2026-09-17, choice B): the height field is baked at 1/this of the pack canvas. The tile weights are baked at 1/4 with a wide blur, which is right for cross-fading tiles and WRONG for a slope — at 1/4 and radius 3 the field's wavelength was hundreds of native px and the hillshade read as half the sheet bright, half dark"
 map_relief_blur_px,4,"BIOMES LAYER: native px of smoothing on the height field before the slope is taken — just enough to kill the cell edges, not the landforms (the first bake used the tiles' own radius 3 at 1/4 scale, i.e. 48 native px)"
 map_biome_weights_scale,2,BIOMES LAYER (owner 2026-09-17): the biome weight maps are baked at 1/this of the pack canvas. At 1/4 (640x233) one weight pixel covered ~29 screen px at the closest zoom and the blend between two biomes read as a straight blocky step; 1/2 halves that. Re-bake with tools/bake_relief.gd after changing
-map_biome_tile_px_far,384,"BIOMES LAYER tile LOD (owner 2026-09-17): the COARSE tiling, used at and below map_biome_lod_far_zoom. At world zoom 128 px repeats 13.6x across the screen and the ground reads as a chequerboard; 384 repeats 4.5x and reads as natural patches"
-map_biome_lod_near_zoom,4.0,"BIOMES LAYER tile LOD: at or above this view zoom (screen px per native px) the ground is purely map_biome_tile_px — the dense, sharp tiling"
-map_biome_lod_far_zoom,1.8,"BIOMES LAYER tile LOD: at or below this view zoom the ground is purely map_biome_tile_px_far; between the two the shader crossfades, so no zoom shows a jump"
 map_relief_detail_seed,954159497,"terrain: seed of the relief's synthesized detail (owner 2026-09-17, approach A). The map's own seed — a look, never simulation, so two bakes match"
 map_relief_detail_freq_px,16,"terrain: wavelength of the coarsest octave of relief detail, in native px"
 map_relief_detail_octaves,5,terrain: octaves of ridged fractal in the relief detail
@@ -295,18 +214,8 @@ map_relief_detail_floor,0,"terrain: height below which the detail fades to nothi
 map_relief_detail_warp_px,8,"terrain: domain-warp amplitude of the detail noise in native px, so ridges run in coherent directions instead of isotropic blobs. 0 = no warp"
 map_relief_detail_river_px,14,"terrain: how far from a river course the detail is held down, in native px — an invented ridge may not cut across a real river valley"
 map_relief_detail_coast_px,10,terrain: the same for the shoreline
-map_biome_rock_slope_lo,0.02,BIOMES LAYER (owner 2026-09-17): relief slope below which no rock shows through; slope is the height fields own 0..1 grey across map_relief_shade_px
-map_biome_rock_slope_hi,0.10,"BIOMES LAYER: slope at or above which a face is fully bare rock. Nothing followed SLOPE before this, so a steep face at middling altitude wore grassland"
-map_biome_rock_strength,0.85,"BIOMES LAYER: how far a steep face is replaced by the mountain tile (0 = off, the pre-2026-09-17 ground)"
-map_biome_snow_height,0.80,BIOMES LAYER: relief grey (0..1 of the packs 0..100 height) above which snow creeps onto the flats
-map_biome_snow_soft,0.06,BIOMES LAYER: half-width of that snow fade
-map_biome_snow_strength,0.35,"BIOMES LAYER: how far the high flats are replaced by the peak tile. Low, because raise_high_ground already bands peak by height; this only softens its edge (0 = off)"
-map_biome_rock_height_lo,0.35,"BIOMES LAYER (owner 2026-09-17): relief grey below which a steep face shows NO rock. Land meets sea across a height cliff, so slope alone rimmed every shoreline in gravel; a steep face at sea level is a beach"
-map_biome_rock_height_hi,0.55,BIOMES LAYER: relief grey at or above which altitude no longer holds the rock back
 map_town_halo_base_px,3.0,"SETTLEMENT EARTH HALO (owner 2026-09-17): the radius of worked ground a town of MEDIAN population clears, in native px (= km). A town does not sit on untouched forest; drawing its art straight onto green ground is what made it read as a sticker. Scales with the square root of population, as a river radius scales with discharge"
 map_town_halo_max_px,12.0,"SETTLEMENT EARTH HALO: the cap, so the largest city does not clear half a province"
-map_town_halo_fade_px,6.0,"SETTLEMENT EARTH HALO: km over which the worked ground fades back into the countryside. Measured against the pack: land is a median 15 km from the nearest town, so 6 km leaves 83% of it its own colour, 15 km would leave half and 40 km only 8%"
-map_town_earth_strength,0.75,SETTLEMENT EARTH HALO: how far the worked ground goes toward town_earth at its centre (0 = off)
 map3d_fov_deg,45.0,3D MAP (owner 2026-09-18): the rig camera's vertical field of view
 map3d_default,1,"3D MAP (owner 2026-09-18, spec 2026-09-18-map3d-default-design): 1 = the map panel shows the 3D map whenever the pack has a built scene and no 2D-only layer (HEIGHTS/ECONOMY/MANORS/MILITARY) is on; 0 = always the 2D map (the test suite's pre-run hook and snapshot_screen --map2d set 0)"
 map3d_zoom_min_m,400.0,"3D MAP: the closest the rig camera comes to its target, in metres (owner 2026-09-21: '游戏视角可以拉的更近一点', chose 400 m over the 2026-09-18 800 m ruling; was 2500 before that). At 400 m a house (footprint_m 6-34) reads at roughly 17-35 screen px, double its size at 800 m — the size the remade tools/map3d/make_houses.py meshes are built to read at"

@@ -79,7 +79,7 @@ func build(p_ctx: Map3DContext) -> void:
 	mm.instance_count = int(_params["max"])
 	mm.visible_instance_count = 0
 	self.multimesh = mm
-	var shape := CloudLayer.cloud_texture(int(ctx.repo.bal("map3d_cloud_seed")))
+	var shape := Map3DCloudField.cloud_texture(int(ctx.repo.bal("map3d_cloud_seed")))
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	material_override = _cloud_material(shape)
 	extra_cull_margin = 16384.0

@@ -124,30 +124,23 @@ static func create(repo: DataRepository, scene_path: String = "") -> Map3DView:
 	v._scene_path = scene_path if scene_path != "" else scene_path_for(repo.map_id)
 	return v
 
-## Every map screen's toggle: on puts a view (made on first use, wired to the
-## `detail` and `country` cards and `on_hover`) over the 2D `world_map`.
-static func toggle_in(panel: Control, world_map: Control, view: Map3DView, on: bool,
-		detail: MapDetailPanel = null, country: CountryPanel = null,
+## THE map of a screen (the 2D map was deleted 2026-09-24): made once in the
+## screen's _ready, put in `panel` and wired to its `detail`, `country` and
+## `orders` and to `on_hover`; it loads the built world on its first activate().
+static func attach(panel: Control, detail: MapDetailPanel = null, country: CountryPanel = null,
 		on_hover: Callable = Callable(), orders: ArmyOrderMenu = null) -> Map3DView:
-	if on and view == null:
-		view = Map3DView.create(Game.data)
-		panel.add_child(view)
-		if detail != null:
-			detail.follow(view)
-			detail.closed.connect(view.clear_selection)
-		if country != null:
-			country.follow(view)
-		if orders != null:
-			orders.follow(view)
-		if on_hover.is_valid():
-			view.country_hovered.connect(func(_code: String) -> void: on_hover.call())
-	if world_map != null:
-		world_map.visible = not on
-	if view != null:
-		if on:
-			view.activate()
-		else:
-			view.deactivate()
+	var view := Map3DView.create(Game.data)
+	panel.add_child(view)
+	view.visible = false
+	if detail != null:
+		detail.follow(view)
+		detail.closed.connect(view.clear_selection)
+	if country != null:
+		country.follow(view)
+	if orders != null:
+		orders.follow(view)
+	if on_hover.is_valid():
+		view.country_hovered.connect(func(_code: String) -> void: on_hover.call())
 	return view
 
 func _ready() -> void:
@@ -481,6 +474,7 @@ func select_at(pos: Vector2) -> void:
 	if at != null: ground_clicked.emit(at)
 	if not was_aiming: _selection.click(pick_at(pos), pos)
 func clear_selection() -> void: _selection.clear()
+func select_object(picked: Dictionary) -> void: if _loaded: _selection.select(picked)  # the Manor Master
 
 ## Test seam (Ruling 18): the inner part named `key`, or null.
 func component(key: String) -> Object:

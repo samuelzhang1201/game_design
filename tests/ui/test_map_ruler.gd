@@ -71,61 +71,6 @@ func test_ticks_fall_on_a_nice_step_inside_the_ruler() -> void:
 	assert_eq(MapRuler.ticks(30.0, 0.0).size(), 0, "no step, no ticks")
 
 
-func _map() -> WorldMapView:
-	var v := WorldMapView.create()
-	v.size = Vector2(640, 360)
-	add_child_autofree(v)
-	return v
-
-
-func _press(v: Control, button: MouseButton, pressed: bool, at: Vector2) -> void:
-	var e := InputEventMouseButton.new()
-	e.button_index = button
-	e.pressed = pressed
-	e.position = at
-	v._gui_input(e)
-
-
-func _click(v: Control, at: Vector2) -> void:
-	_press(v, MOUSE_BUTTON_LEFT, true, at)
-	_press(v, MOUSE_BUTTON_LEFT, false, at)
-
-
-## The 2D map: clicks drop and fix the ruler in NATIVE px (so the reading
-## survives a zoom), a drag still pans, a right click puts it away.
-func test_the_2d_map_routes_clicks_to_the_ruler_while_it_is_on() -> void:
-	Game.start_campaign(42)
-	var v := _map()
-	await wait_frames(2)
-	v.show_ruler = true
-	_click(v, Vector2(100, 100))
-	assert_eq(v.ruler().phase, MapRuler.Phase.STRETCHING)
-	assert_eq(v.ruler().start, v.screen_to_map(Vector2(100, 100)))
-	var hover := InputEventMouseMotion.new()
-	hover.position = Vector2(300, 100)
-	v._gui_input(hover)
-	assert_eq(v.ruler().end, v.screen_to_map(Vector2(300, 100)))
-	_click(v, Vector2(300, 200))
-	assert_eq(v.ruler().phase, MapRuler.Phase.FIXED)
-	assert_almost_eq(v.ruler().length(),
-		v.screen_to_map(Vector2(100, 100)).distance_to(v.screen_to_map(Vector2(300, 200))), 1e-3)
-	_press(v, MOUSE_BUTTON_RIGHT, true, Vector2(5, 5))
-	_press(v, MOUSE_BUTTON_RIGHT, false, Vector2(5, 5))
-	assert_false(v.ruler().active(), "a right click puts it away")
-
-
-func test_turning_the_2d_ruler_off_puts_it_away() -> void:
-	Game.start_campaign(42)
-	var v := _map()
-	await wait_frames(2)
-	v.show_ruler = true
-	_click(v, Vector2(100, 100))
-	v.show_ruler = false
-	assert_false(v.ruler().active())
-	_click(v, Vector2(100, 100))
-	assert_false(v.ruler().active(), "with the tab off a click selects, not measures")
-
-
 ## GameRoot: the MEASUREMENT tab is a toggle that lays the ruler over the
 ## map of every screen, and follows the player across a screen swap.
 func test_the_measurement_tab_turns_the_ruler_on_across_screens() -> void:
@@ -143,10 +88,10 @@ func test_the_measurement_tab_turns_the_ruler_on_across_screens() -> void:
 	await wait_frames(1)
 	assert_true(r.ruler_view())
 	assert_true(r.bottom_bar().button("MEASUREMENT").button_pressed, "the tab stays lit")
-	assert_true(r.current_screen.world_map().show_ruler)
+	assert_true(r.current_screen.map3d_view().ruler_on)
 	r._switch_to(GameRoot.State.CONVERSATION)
 	await wait_frames(2)
-	assert_true(r.current_screen.world_map().show_ruler, "the next screen's map too")
+	assert_true(r.current_screen.map3d_view().ruler_on, "the next screen's map too")
 	r.bottom_bar().button("MEASUREMENT").pressed.emit()
 	await wait_frames(1)
-	assert_false(r.current_screen.world_map().show_ruler)
+	assert_false(r.current_screen.map3d_view().ruler_on)

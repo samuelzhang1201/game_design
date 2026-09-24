@@ -18,7 +18,6 @@ other_12,#8F92E6,periwinkle
 other_13,#6DD1A8,mint
 other_14,#EE8FB0,rose
 state_border,#2E3A46,"the dark half of the kingdom border: a THIN chequered ribbon (owner request 2026-09-12), alternating with state_border_light along the wash's edge. map_state_border_dash_px 0 would make it a plain solid line"
-state_border_light,#FFFFFF,the pale half of that ribbon; unused while the border is solid
 province_line,#5F6F80,thin dashed province seams: slate so it reads over any wash
 hover_border,#F2A93B,"UNUSED since 2026-09-14 (owner: no amber line on hover — the hovered border is its own chequer, wider); kept for the palette test"
 manor_pale,#FFFFFF,"economy view: the white a poor manor's colour fades toward (map_manor_pale)"

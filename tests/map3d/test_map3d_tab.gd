@@ -1,12 +1,11 @@
 extends GutTest
-## The 3D map is the default map (owner 2026-09-18, spec
-## 2026-09-18-map3d-default-design.md): the map panel shows Map3DView
-## whenever the pack has a built scene, and the 2D WorldMapView otherwise —
-## no 2D-only layer is left (HEIGHTS draws on the 3D map too since
-## 2026-09-19, spec 2026-09-19-map3d-heights).
-## The scene is git-ignored, so every test forces its presence through
-## GameRoot.force_map3d_scene; an unbuilt view still swaps in and shows its
-## notice. The suite holds 2D (tests/pre_run.gd); these tests lift that.
+## The 3D map is THE map (owner 2026-09-18, spec
+## 2026-09-18-map3d-default-design.md; the 2D map was deleted 2026-09-24):
+## the map panel shows Map3DView on every screen, with every theme on it, and
+## without a built scene the view shows its notice naming build_pack.sh.
+## The scene is git-ignored, so the tests force its presence through
+## GameRoot.force_map3d_scene. The suite holds the view unloaded
+## (tests/pre_run.gd, map3d_default 0); these tests lift that.
 
 func before_each() -> void:
 	Game.data.balance["map3d_default"] = 1.0
@@ -30,7 +29,7 @@ func _court(has_scene: bool = true) -> GameRoot:
 
 func _shows_3d(r: GameRoot) -> bool:
 	var v: Map3DView = r.current_screen.map3d_view()
-	return v != null and v.visible and not r.current_screen.world_map().visible
+	return v != null and v.visible
 
 
 func test_there_is_no_3d_tab() -> void:
@@ -84,18 +83,19 @@ func test_the_bottom_tab_routes_through_the_rule() -> void:
 	assert_true(_shows_3d(r))
 
 
-func test_no_built_scene_keeps_the_2d_map() -> void:
+func test_no_built_scene_still_shows_the_view() -> void:
 	var r: GameRoot = await _court(false)
-	assert_false(r.map3d_view())
-	assert_null(r.current_screen.map3d_view(), "no 3D view is even made")
-	assert_true(r.current_screen.world_map().visible)
+	assert_false(r.map3d_view(), "no world to show")
+	assert_true(r.current_screen.map3d_view().visible,
+		"the panel still holds the view, which says how to build one")
 
 
-func test_map3d_default_zero_keeps_the_2d_map() -> void:
+func test_map3d_default_zero_holds_the_view_unloaded() -> void:
 	Game.data.balance["map3d_default"] = 0.0
 	var r: GameRoot = await _court()
 	assert_false(r.map3d_view())
-	assert_true(r.current_screen.world_map().visible)
+	assert_false(r.current_screen.map3d_view().visible, "the suite's hold: nothing loads")
+	assert_false(r.current_screen.map3d_view().is_loaded())
 
 
 func test_the_choice_follows_the_player_to_the_next_screen() -> void:

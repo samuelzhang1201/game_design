@@ -86,3 +86,29 @@ func _cloud(view: Rect2, p: Dictionary, wind: Vector2, existing: Array) -> Dicti
 			break
 	return {"pos": best_pos, "size": best_size, "rot": _rng.randf_range(0.0, TAU),
 		"life": 1.0 if wind == Vector2.ZERO else 0.0}
+
+
+## One cloud's shape: a soft simplex-noise puff fading to clear at its edge,
+## white with the shape in its alpha — the deck and its shadow twin both
+## sample it. Was the 2D map's CloudLayer.cloud_texture; it moved here when
+## the 2D map was deleted (2026-09-24).
+const TEX_W := 192
+const TEX_H := 112
+
+static func cloud_texture(seed_value: int) -> ImageTexture:
+	var noise := FastNoiseLite.new()
+	noise.seed = seed_value
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+	noise.fractal_octaves = 4
+	noise.frequency = 0.03
+	var img := Image.create(TEX_W, TEX_H, false, Image.FORMAT_RGBA8)
+	for y in TEX_H:
+		for x in TEX_W:
+			var u := (float(x) / float(TEX_W - 1)) * 2.0 - 1.0
+			var v := (float(y) / float(TEX_H - 1)) * 2.0 - 1.0
+			var fall := clampf(1.0 - (u * u + v * v), 0.0, 1.0)
+			var n := noise.get_noise_2d(float(x), float(y)) * 0.5 + 0.5
+			var a := clampf((n * 1.5 - 0.3) * sqrt(fall) * 1.6, 0.0, 1.0)
+			img.set_pixel(x, y, Color(1.0, 1.0, 1.0, a * a * (3.0 - 2.0 * a)))
+	return ImageTexture.create_from_image(img)

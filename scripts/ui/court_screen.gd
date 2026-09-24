@@ -31,7 +31,6 @@ var free_text: LineEdit
 
 var _log_scroll: ScrollContainer
 var _suggestion_buttons: Array = []
-var _world_map: WorldMapView
 ## The hovered country's card, overlaying the left column.
 var _country_panel: CountryPanel
 ## The clicked map element's fact card, in the left column.
@@ -56,15 +55,6 @@ func _ready() -> void:
 	%Bg.color = UiPalette.BG_SCREEN
 	%MapPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4))
-	# The live world map fills the middle zone (user ruling 2026-09-03).
-	_world_map = WorldMapView.create()
-	%MapPanel.add_child(_world_map)
-	# A click on the map opens the fact card in the left column, not the
-	# floating card (user ruling 2026-09-09); its Ask drops the question into the
-	# order box and the player still presses Enter, so no order or API call
-	# happens without them (spec 2026-09-08).
-	_world_map.use_card = false
-	_world_map.place_asked.connect(_on_place_asked)
 	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
 	_handle.pressed.connect(enter_council)
 	add_child(_handle)
@@ -72,8 +62,7 @@ func _ready() -> void:
 	%LeaveButton.pressed.connect(leave_council)
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the column's own content returns when it leaves.
-	_country_panel = CountryPanel.attach(%LogPanel.get_node("LVBox"), _world_map)
-	_world_map.country_hovered.connect(func(_code: String) -> void: _refresh_left())
+	_country_panel = CountryPanel.attach(%LogPanel.get_node("LVBox"))
 	# The left column's own content: the realm at a glance (user ruling 2026-09-09).
 	_dashboard = RealmDashboard.attach(%LogPanel.get_node("LVBox"))
 	# The rest of the facts column: the host while the military layer is on,
@@ -84,17 +73,20 @@ func _ready() -> void:
 	# opens the card, which then takes the column until it closes.
 	_manor_master = ManorMasterPanel.attach(%LogPanel.get_node("LVBox"))
 	_manor_master.manor_chosen.connect(func(cell: int) -> void:
-		_world_map.centre_on(MapTerrain.cell_center(Game.data, Game.data.cells[cell]))
-		_world_map.highlight_manor(cell))
+		_map3d.look_at_pack(MapTerrain.cell_center(Game.data, Game.data.cells[cell])))
 	_manor_master.manor_activated.connect(func(cell: int) -> void:
-		_world_map.select_object({"kind": "manor", "cell": cell}))
+		_detail.show_manor(cell)
+		_map3d.select_object({"kind": "manor", "cell": cell}))
 	_detail = MapDetailPanel.new()
 	_detail.name = "DetailPanel"
 	%LogPanel.get_node("LVBox").add_child(_detail)
-	_detail.follow(_world_map)
 	_detail.ask_enabled = true
 	_detail.ask_requested.connect(_on_place_asked)
-	_detail.closed.connect(_world_map.clear_selection)
+	# The world map fills the middle zone (user ruling 2026-09-03) — the 3D
+	# map, the only one since 2026-09-24; a click opens its fact card in the
+	# left column (user ruling 2026-09-09), whose Ask drops the question into
+	# the order box and the player still presses Enter (spec 2026-09-08).
+	_map3d = Map3DView.attach(%MapPanel, _detail, _country_panel, _refresh_left, %ArmyOrders)
 	_detail.visibility_changed.connect(_refresh_left)
 	%LogPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24))
@@ -154,14 +146,15 @@ func set_manor_view(on: bool) -> void:
 		_manor_master.refresh()
 	_refresh_left()
 
-## The 3D MAP tab (GameRoot): the Terrain3D view takes the map panel in
-## place of the 2D map while the tab is lit (Map3DView.toggle_in).
+## The map shown or put away (GameRoot): it loads the built world the first
+## time it is shown, and shows the notice naming build_pack.sh without one.
 func set_map3d_view(on: bool) -> void:
-	_map3d = Map3DView.toggle_in(%MapPanel, _world_map, _map3d, on, _detail, _country_panel,
-		_refresh_left, %ArmyOrders)
-	if _map3d != null:
+	if on:
+		_map3d.activate()
 		_map3d.set_manor_theme(_map3d_theme)
 		_map3d.set_military(_map3d_military)
+	else:
+		_map3d.deactivate()
 
 ## The theme on the 3D ground ("", "manors" or "heights"; ECONOMY was folded
 ## into MANORS, owner 2026-09-19; HEIGHTS joined it the same day, spec
@@ -204,8 +197,6 @@ func council_handle() -> Button:
 	return _handle
 
 ## Test seam.
-func world_map() -> WorldMapView:
-	return _world_map
 
 func detail_panel() -> MapDetailPanel:
 	return _detail
@@ -317,7 +308,7 @@ func _on_free_text_submitted(text: String) -> void:
 ## Ask on a card pre-fills the order box and brings the council up so the
 ## player can send it.
 func _on_place_asked(text: String) -> void:
-	_world_map.clear_selection()
+	_map3d.clear_selection()
 	_set_right("council")
 	free_text.text = text
 	free_text.caret_column = text.length()

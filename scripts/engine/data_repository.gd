@@ -39,9 +39,6 @@ var chart_palette: Dictionary = {}
 ## data/resource_icons.csv: key -> {label, icon, tooltip} for every resource
 ## and unit the UI shows as a glyph with a floating tooltip.
 var resource_icons: Dictionary = {}
-## data/settlement_art.csv rows: which settlement drawing a burg group (and
-## whether it has walls) is shown with on the map (MapObjects.settlement_art).
-var settlement_art: Array[Dictionary] = []
 ## data/map3d_settlements.csv rows keyed by burg group: the 3D MAP's
 ## placeholder marker for each settlement (Map3DView).
 var map3d_settlements: Dictionary = {}
@@ -81,19 +78,6 @@ var army_speed: Dictionary = {}
 var army_height_supply: Array = []
 ## data/landmark_names.csv: kind ("high"|"low") -> patterns in file order.
 var landmark_names: Dictionary = {}
-## data/settlement_growth.csv rows: how a settlement's drawing grows with its
-## manor — a tier promoted past min_people, or once a listed building stands
-## (MapObjects.settlement_look, owner 2026-09-15).
-var settlement_growth: Array[Dictionary] = []
-## data/terrain_art.csv rows: which symbol a land cell is decorated with, by
-## height band or biome, and how thickly (MapObjects.terrain_decor).
-var terrain_art: Array[Dictionary] = []
-## BIOMES LAYER (experiment 2026-09-14): data/biome_art.csv rows — the
-## seamless ground tile each biome's land wears (MapBiomes.layers).
-var biome_art: Array[Dictionary] = []
-## data/sea_art.csv rows: the ships and whales printed on the open sea
-## (MapObjects.sea_decor): texture, weight, height_px, min_shore_px from the coast.
-var sea_art: Array[Dictionary] = []
 ## data/manor_buildings.csv: building_code -> {label, cost_gold, civil_cost,
 ## build_days, tax_bonus, output_bonus, defence_bonus, church_bonus,
 ## *_per_tick, produce_good, produce_units} — what a manor can raise, what
@@ -115,15 +99,12 @@ var goods_economy_defaults: Dictionary = {}
 ## chief goods a manor may work at (owner 2026-09-13), in file order.
 var manor_focus: Dictionary = {}
 ## data/manor_estates.csv rows, in file order then ascending by min_people:
-## the estate drawing a manor wears in the MANORS view by its industry
-## (focus_code) and its people (owner 2026-09-14).
+## the estate a manor is by its industry (focus_code) and its people (owner
+## 2026-09-14) — the manor card's size and painting.
 var manor_estates: Array[Dictionary] = []
 ## data/goods_palette.csv: a good's first tag -> the colour its province wears
 ## in the ECONOMY view.
 var goods_palette: Dictionary = {}
-## data/marker_art.csv: marker type -> {texture, notes}, the point-of-interest
-## icon drawn for that type on the map (MapObjects.marker_art).
-var marker_art: Dictionary = {}
 ## data/terrain_palette.csv: key -> "#rrggbb" for the terrain the game draws
 ## itself (MapTerrain): land tints per biome, sea, lake, and line colours.
 var terrain_palette: Dictionary = {}
@@ -485,11 +466,6 @@ func _load(dir: String) -> bool:
 			["tag", "pool", "price_gold", "growth_permille"],
 			func(r): goods_economy_defaults[String(r["tag"])] = r):
 		return false
-	if not _load_if_present("res://data/terrain_art.csv",
-			["key", "biome_id", "min_height", "max_height", "texture", "density",
-			"height_px", "clump", "spread"],
-			func(r): terrain_art.append(r)):
-		return false
 	if not _load_if_present("res://data/manor_buildings.csv",
 			["building_code", "label", "cost_gold", "civil_cost", "build_days", "tax_bonus", "output_bonus",
 			"defence_bonus", "church_bonus", "gold_per_tick", "grain_per_tick",
@@ -502,19 +478,8 @@ func _load(dir: String) -> bool:
 			func(r): manor_focus[String(r["focus_code"])] = r):
 		return false
 	if not _load_if_present("res://data/manor_estates.csv",
-			["focus_code", "tier", "min_people", "texture"],
+			["focus_code", "tier", "min_people", "painting"],
 			func(r): manor_estates.append(r)):
-		return false
-	# BIOMES LAYER (experiment 2026-09-14).
-	if not _load_if_present("res://data/biome_art.csv", ["biome_id", "key", "texture"],
-			func(r): biome_art.append(r)):
-		return false
-	if not _load_if_present("res://data/sea_art.csv",
-			["key", "texture", "weight", "height_px", "min_shore_px"],
-			func(r): sea_art.append(r)):
-		return false
-	if not _load_if_present(dir + "/settlement_art.csv", ["group", "walled", "tier", "texture", "size"],
-			func(r): settlement_art.append(r)):
 		return false
 	if not _load_if_present("res://data/map3d_settlements.csv",
 			["group", "dot_px", "ring_px", "line_px", "color", "max_view_m"],
@@ -566,12 +531,6 @@ func _load(dir: String) -> bool:
 					landmark_names[k] = []
 				(landmark_names[k] as Array).append(String(r["pattern"]))):
 		return false
-	if not _load_if_present(dir + "/settlement_growth.csv", ["from_tier", "to_tier", "min_people", "building"],
-			func(r): settlement_growth.append(r)):
-		return false
-	if not _load_if_present(dir + "/marker_art.csv", ["type", "texture"],
-			func(r): marker_art[r["type"]] = r):
-		return false
 	if not _load_if_present(dir + "/terrain_palette.csv", ["key", "color"],
 			func(r): terrain_palette[r["key"]] = r["color"]):
 		return false
@@ -605,7 +564,6 @@ func load_map(id: String) -> bool:
 	provinces_by_id.clear()
 	MapOwnership.invalidate()
 	MapTerrain.invalidate()
-	MapObjects.forget_decor()
 	MapEconomy.forget()
 	RealmEconomy.forget()
 	ManorEconomy.forget()

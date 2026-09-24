@@ -118,28 +118,19 @@ func test_load_with_pending_event_resumes_on_conversation() -> void:
 	assert_gt(r.current_screen.reply_buttons().size(), 0,
 		"the loaded event's choices are live")
 
-## The province view (user request 2026-09-09) is always on (owner
-## 2026-09-13): there is no PROVINCES tab, no MAP tab, and every screen's
-## map opens with its seams.
-func test_the_province_view_is_on_everywhere_and_has_no_tab() -> void:
+## There is no PROVINCES tab and no MAP tab (owner 2026-09-13): the seams
+## are part of the map.
+func test_there_is_no_provinces_or_map_tab() -> void:
 	Game.start_campaign(42)
 	Game.next_tick()
 	var r := _root()
 	await wait_frames(2)
-	r._switch_to(GameRoot.State.COURT)
-	r.current_screen.enter_court(null)
-	await wait_frames(2)
-	assert_true(r.province_view(), "on by default")
-	assert_true(r.current_screen.world_map().show_provinces, "the court's map draws its seams")
-	assert_null(r.bottom_bar().button("PROVINCES"), "no tab to turn it off")
+	assert_null(r.bottom_bar().button("PROVINCES"), "no tab to turn them off")
 	assert_null(r.bottom_bar().button("MAP"), "and no MAP tab")
-	r._switch_to(GameRoot.State.CONVERSATION)
-	await wait_frames(2)
-	assert_true(r.current_screen.world_map().show_provinces, "the next screen's map too")
 
-## The HEIGHTS tab (owner request 2026-09-12): the relief is a layer you ask
-## for, so it starts off and the tab drives it the same way PROVINCES does.
-func test_heights_tab_toggles_the_maps_height_ramp() -> void:
+## The HEIGHTS tab (owner request 2026-09-12): the relief is a theme you ask
+## for, so it starts off and the tab hands it to the screen's map.
+func test_heights_tab_toggles_the_maps_height_theme() -> void:
 	Game.start_campaign(42)
 	Game.next_tick()
 	var r := _root()
@@ -148,13 +139,11 @@ func test_heights_tab_toggles_the_maps_height_ramp() -> void:
 	r.current_screen.enter_court(null)
 	await wait_frames(2)
 	assert_false(r.height_view(), "off by default")
-	assert_null(r.current_screen.world_map().heat_mesh(), "and nothing built")
+	assert_eq(r.current_screen.map3d_view().manor_theme(), "")
 	r.bottom_bar().button("HEIGHTS").pressed.emit()
 	await wait_frames(1)
 	assert_true(r.height_view())
-	assert_true(r.current_screen.world_map().show_heights, "the map follows the tab")
-	assert_not_null(r.current_screen.world_map().heat_mesh(),
-		"the pack's heights give the sheet a ramp to draw")
+	assert_eq(r.current_screen.map3d_view().manor_theme(), "heights", "the map follows the tab")
 
 ## Owner 2026-09-17: a WAR ROOM tab, a placeholder page for now.
 func test_the_war_room_tab_opens_its_placeholder() -> void:

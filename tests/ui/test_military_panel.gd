@@ -50,7 +50,7 @@ func test_military_tab_shows_the_host_in_the_left_column() -> void:
 	assert_false(r.army_view())
 	assert_false(panel.visible)
 	assert_true(screen.dashboard().visible, "the dashboard has the column back")
-	assert_false(screen.world_map().show_armies, "and the map drops the layer")
+	assert_false(screen.map3d_view().military(), "and the map drops the layer")
 
 func test_bars_follow_the_ledger() -> void:
 	var r: GameRoot = await _court()
@@ -74,7 +74,7 @@ func test_the_layer_survives_a_screen_change() -> void:
 	await wait_frames(2)
 	r._switch_to(GameRoot.State.CONVERSATION)
 	await wait_frames(2)
-	assert_true(r.current_screen.world_map().show_armies,
+	assert_true(r.current_screen.map3d_view().military(),
 		"the council stage's map draws the regiments too")
 
 ## The table it replaced refreshed live; the column does too.

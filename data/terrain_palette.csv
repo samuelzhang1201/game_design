@@ -23,18 +23,15 @@ road,#C2A981,"roads: a worn sand track (owner 2026-09-17, after the reference pa
 map3d_road,#9C8058,"3D MAP roads (owner 2026-09-18): a darker, warmer sand than the 2D road — the 2D colour vanished on the 3D map's sunlit green"
 map3d_trail,#AE9670,3D MAP trails: the same track a shade lighter
 trail,#D0BC99,"land trails: the same track, lighter and thinner"
-sea_route,#2F80C2,"sea lanes (owner request 2026-09-12): a blue dashed line — a shipping route is not a road and must not be drawn like one"
 contour,#8A6A46,the HEIGHTS view's iso-lines
 scale_bar,#334155,the scale bar in the bottom-right corner
 map3d_hud_halo,#F3EEDF,"3D MAP (owner 2026-09-18): the pale halo under the 3D map's scale bar and compass needle, so they read on snow and sea alike"
-sea_ink,#2F5F86,"the ink the ships and whales are printed on the sea in (owner request 2026-09-13): the sea blue deepened"
 heat_1,#6DBE6A,"the HEIGHTS view's height ramp (owner 2026-09-13): lowland green at sea level — brightened with the theme"
 heat_2,#C4D35E,rising ground
 heat_3,#F0C04E,upland yellow
 heat_4,#E08A45,hill orange
 heat_5,#B55A3C,mountain
 heat_6,#FFFFFF,the summit, snow
-town_earth,#AD9A7C,"SETTLEMENT EARTH HALO (owner 2026-09-17): the worked ground a town stands in — trodden earth and yards, a shade greyer and darker than the sand track of road"
 map3d_road_surface,#EDE0CE,"3D MAP roads (2026-09-19): the multiplier on the road texture (Poly Haven rocky_trail_02) up close, so the lit earth reads warm like the fields around it, not grey"
 map3d_bridge,#E0CBA8,"3D MAP bridges (2026-09-19): the multiplier on the bridges' stone (Poly Haven medieval_blocks_03) — the lit stone read near-white against the fields; also the flat colour when the texture is missing"
 map3d_house_plinth,#C4BAAA,"3D MAP houses (owner 2026-09-24): the multiplier on the stone foundation laid under a house on a slope (the bridges' medieval_blocks_03) — near the houses' own wall stone, so a foundation reads as the wall carried down, not as a dark box (#9A8F80 did)"

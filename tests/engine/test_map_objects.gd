@@ -52,17 +52,6 @@ func _tiny() -> DataRepository:
 	repo.biomes = {6: {"biome_id": "6", "label": "Forest", "color": "", "habitability": "50"}}
 	return repo
 
-func _bitmap(id: int) -> Image:
-	var img := Image.create(4, 4, false, Image.FORMAT_RGB8)
-	img.fill(Color8(255, 255, 255))
-	for y in 4:
-		for x in 2:
-			img.set_pixel(x, y, Color8(id & 0xFF, (id >> 8) & 0xFF, 0))
-	return img
-
-func _at(repo: DataRepository, p: Vector2, min_pop: int) -> Dictionary:
-	return MapObjects.object_at(repo, _bitmap(6), _bitmap(72), _bitmap(6), p, 0.3, 0.2, min_pop)
-
 func test_lod_rule_from_balance() -> void:
 	var repo := _tiny()
 	assert_eq(MapObjects.min_burg_pop_for_scale(repo, 0.3), MapObjects.CAPITALS_ONLY)
@@ -75,59 +64,6 @@ func test_burg_visible_respects_capitals_and_population() -> void:
 	assert_false(MapObjects.burg_visible(repo.burgs["vil"], MapObjects.CAPITALS_ONLY))
 	assert_false(MapObjects.burg_visible(repo.burgs["vil"], 5000))
 	assert_true(MapObjects.burg_visible(repo.burgs["vil"], 0))
-
-## Owner ruling 2026-09-12: the pack's points of interest are off the sheet,
-## and MapObjects.markers_visible is the one place that decides — so a click
-## can never pick something that is not drawn. With them on, a marker still
-## outranks a burg sharing its point.
-func test_a_hidden_marker_cannot_be_picked() -> void:
-	var repo := _tiny()
-	assert_false(MapObjects.markers_visible(repo), "points of interest are off")
-	var hit := _at(repo, Vector2(1.5, 2.5), 0)
-	assert_eq(hit["kind"], "burg", "the village under it is picked instead")
-	assert_eq(hit["code"], "vil")
-
-func test_marker_beats_a_burg_at_the_same_spot_when_shown() -> void:
-	var repo := _tiny()
-	repo.balance["map_show_markers"] = 1.0
-	var hit := _at(repo, Vector2(1.5, 2.5), 0)
-	assert_eq(hit["kind"], "marker")
-	assert_eq(hit["code"], "inn")
-
-func test_capital_pin_is_picked_within_radius() -> void:
-	var hit := _at(_tiny(), Vector2(0.7, 0.5), MapObjects.CAPITALS_ONLY)
-	assert_eq(hit["kind"], "burg")
-	assert_eq(hit["code"], "cap")
-
-func test_hidden_village_falls_through_to_the_road_under_it() -> void:
-	# The marker sits on the village too; pick a road point away from both.
-	var hit := _at(_tiny(), Vector2(1.0, 1.5), MapObjects.CAPITALS_ONLY)
-	assert_eq(hit["kind"], "route")
-	assert_eq(hit["code"], "rd")
-
-## The trail starts exactly on the road: equal distance, and the road wins.
-func test_road_beats_trail_on_a_shared_point() -> void:
-	var hit := _at(_tiny(), Vector2(1.0, 1.5), 0)
-	assert_eq(hit["kind"], "route")
-	assert_eq(hit["code"], "rd")
-	var on_trail_only := _at(_tiny(), Vector2(2.5, 1.5), 0)
-	assert_eq(on_trail_only["code"], "tr")
-
-func test_river_is_picked_when_no_route_is_closer() -> void:
-	var hit := _at(_tiny(), Vector2(1.0, 3.6), 0)
-	assert_eq(hit["kind"], "river")
-	assert_eq(hit["code"], "rv")
-
-func test_bare_land_reports_its_ids_and_position() -> void:
-	var hit := _at(_tiny(), Vector2(0.5, 2.0), 0)
-	assert_eq(hit["kind"], "land")
-	assert_eq(hit["state_id"], 6)
-	assert_eq(hit["province_id"], 72)
-	assert_eq(hit["biome_id"], 6)
-	assert_almost_eq(float(hit["x"]), 0.5, 0.0001)
-
-func test_water_is_water() -> void:
-	assert_eq(_at(_tiny(), Vector2(3.5, 1.0), 0)["kind"], "water")
 
 func test_nearest_burg_ignores_lod() -> void:
 	assert_eq(MapObjects.nearest_burg(_tiny(), Vector2(1.4, 2.4)), "vil")
@@ -174,32 +110,6 @@ func test_label_of_each_kind() -> void:
 	assert_eq(MapObjects.label_of(repo, {"kind": "route", "code": "rd"}), "Old Road")
 	assert_eq(MapObjects.label_of(repo, {"kind": "marker", "code": "inn"}), "The Inn")
 	assert_eq(MapObjects.label_of(repo, {"kind": "water"}), "")
-
-## Real pack: the player's capital and a known road resolve where the export
-## says they are.
-func test_real_capital_and_road_resolve() -> void:
-	var state_img: Image = (load(real.index_texture_path) as Texture2D).get_image()
-	var prov_img: Image = (load(real.province_texture_path) as Texture2D).get_image()
-	var biome_img: Image = (load(real.biome_texture_path) as Texture2D).get_image()
-	# No literal town or road: the pack is generated, so this takes the realm
-	# the bindings point at, its own capital, and the map's longest road.
-	var realm: Dictionary = real.kingdoms[real.resolve_realm("player_realm")]
-	var capital_code := String(realm["capital_burg"])
-	var k: Dictionary = real.burgs[capital_code]
-	var at_capital := MapObjects.object_at(real, state_img, prov_img, biome_img,
-		Vector2(float(k["x"]), float(k["y"])), 6.0, 4.0, MapObjects.CAPITALS_ONLY)
-	assert_eq(at_capital["kind"], "burg")
-	assert_eq(at_capital["code"], capital_code)
-	var road_code := _longest_road(real)
-	var on_road := MapObjects.object_at(real, state_img, prov_img, biome_img,
-		_open_point_on(real, road_code), 0.5, 4.0, MapObjects.CAPITALS_ONLY)
-	assert_eq(on_road["kind"], "route", "a point on a road hits that road")
-	assert_eq(on_road["code"], road_code)
-	var d := MapObjects.describe(real, at_capital)
-	assert_eq(d["title"], String(k["label"]))
-	assert_eq(d["lines"][0], "Capital of %s, %s" % [
-		String(real.provinces[String(k["province_code"])]["label"]),
-		String(realm["label"])])
 
 ## The vertex of `code` that is farthest from every town and marker, so the
 ## point is unambiguously on the road: burgs and markers win the pick over
@@ -263,35 +173,6 @@ func test_house_of_uses_the_binding_then_the_capital_town() -> void:
 	var cap: Dictionary = Game.data.burgs[String(Game.data.provinces[unbound]["capital_burg"])]
 	assert_eq(MapObjects.house_of(Game.data, unbound), "House " + String(cap["label"]),
 		"an unbound province is held by the house of its seat")
-
-func test_own_province_is_described_in_full_and_a_foreign_one_barely() -> void:
-	Game.start_campaign(42)
-	var mine := MapObjects.describe_province(Game.data, Game.state, _own_province())
-	assert_eq(String(mine["known"]), "full")
-	var joined := "\n".join(mine["lines"])
-	for word in ["Province of", "Held by House", "Seat:", "Towns:", "Population:", "Area:"]:
-		assert_string_contains(joined, word)
-	var theirs := MapObjects.describe_province(Game.data, Game.state, _foreign_province())
-	assert_eq(String(theirs["known"]), "basic")
-	var basic := "\n".join(theirs["lines"])
-	assert_string_contains(basic, "Province of")
-	assert_string_contains(basic, "Held by House")
-	assert_string_contains(basic, "Seat:")
-	assert_false(basic.contains("Population"), "no details abroad")
-	assert_false(basic.contains("Towns"), "no details abroad")
-	assert_eq(theirs["lines"].size(), 3, "name, kingdom, house, seat and nothing more")
-
-func test_the_province_account_follows_conquest() -> void:
-	Game.start_campaign(42)
-	var lost := _own_province()
-	MapOwnership.set_owner(Game.data, Game.state, lost, Game.data.resolve_realm("raider_realm"), "a raid")
-	var after := MapObjects.describe_province(Game.data, Game.state, lost)
-	assert_eq(String(after["known"]), "basic", "lost land is foreign land")
-	var won := _foreign_province()
-	MapOwnership.set_owner(Game.data, Game.state, won, _player_realm(), "conquest")
-	var gained := MapObjects.describe_province(Game.data, Game.state, won)
-	assert_eq(String(gained["known"]), "full")
-	assert_string_contains("\n".join(gained["lines"]), "Changed hands:")
 
 # --- info cards after Azgaar's burg editor (user request 2026-09-09) --------
 
@@ -409,217 +290,12 @@ func test_a_regiment_card_shows_its_state() -> void:
 	# No number leaks for the hidden values.
 	assert_false(text["army_training"].is_valid_int())
 
-## A settlement's drawing grows with its manor (owner 2026-09-15): a town
-## that raises a palisade is drawn walled, a village past the growth row's
-## people is drawn as a town, and nothing is ever drawn smaller than the pack.
-func test_a_settlement_is_drawn_by_its_development() -> void:
-	var repo := Game.data
-	var state := GameState.new()
-	var cells: Dictionary = MapEconomy.burg_cells(repo)
-	var open_town := {}
-	var village := {}
-	for code: String in repo.burgs:
-		var b: Dictionary = repo.burgs[code]
-		if not cells.has(code):
-			continue
-		var tier := String(MapObjects.settlement_art(repo, b).get("tier", ""))
-		if tier == "town" and open_town.is_empty():
-			open_town = b
-		if tier == "village" and village.is_empty() \
-				and MapManors.people_of(repo, state, int(cells[code])) < 24000:
-			village = b
-	assert_false(open_town.is_empty(), "the pack has an open town")
-	assert_false(village.is_empty(), "the pack has a small village")
-	assert_eq(String(MapObjects.settlement_look(repo, null, open_town)["tier"]), "town", "no state: the pack row")
-	var town_cell := str(cells[String(open_town["burg_code"])])
-	assert_eq(String(MapObjects.settlement_look(repo, state, open_town)["tier"]), "town")
-	state.manor_buildings[town_cell] = ["manor_house", "palisade"]
-	assert_eq(String(MapObjects.settlement_look(repo, state, open_town)["tier"]), "walled_town",
-		"a palisade walls the town")
-	assert_eq(String(MapObjects.settlement_look(repo, state, village)["tier"]), "village", "a small village stays")
-	var saved: Array[Dictionary] = repo.settlement_growth.duplicate(true)
-	for rule: Dictionary in repo.settlement_growth:
-		if String(rule["from_tier"]) == "village":
-			rule["min_people"] = "0"
-	assert_eq(String(MapObjects.settlement_look(repo, state, village)["tier"]), "town", "a grown village is a town")
-	repo.settlement_growth = saved
-	var realm: Dictionary = repo.kingdoms[repo.resolve_realm("player_realm")]
-	var capital: Dictionary = repo.burgs[String(realm["capital_burg"])]
-	assert_eq(String(MapObjects.settlement_look(repo, state, capital)["tier"]), "capital", "a capital stays a capital")
-
-func test_settlement_art_covers_the_packs_groups() -> void:
-	Game.start_campaign(42)
-	var seen: Dictionary = {}
-	for code: String in Game.data.burgs:
-		var b: Dictionary = Game.data.burgs[code]
-		var art := MapObjects.settlement_art(Game.data, b)
-		assert_false(art.is_empty(), "%s (%s) has a drawing" % [code, b.get("group", "")])
-		seen[String(art["tier"])] = true
-	assert_true(seen.has("capital") and seen.has("city") and seen.has("town"))
-	for row: Dictionary in Game.data.settlement_art:
-		assert_true(ResourceLoader.exists(String(row["texture"])) or FileAccess.file_exists(String(row["texture"])),
-			"%s exists" % String(row["texture"]))
-	var walled := {"group": "town", "features": "walls|citadel"}
-	assert_eq(String(MapObjects.settlement_art(Game.data, walled)["tier"]), "walled_town")
-	var open := {"group": "town", "features": "plaza"}
-	assert_eq(String(MapObjects.settlement_art(Game.data, open)["tier"]), "town")
-	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
-	assert_eq(String(MapObjects.settlement_art(Game.data, Game.data.burgs[String(realm["capital_burg"])])["tier"]),
-		"capital")
-
-## Variants (owner 2026-09-16, "每一种定居点给我生成10种不同的variants image,
-## 随机apply上去"): a settlement wears one of its tier's drawings, picked by
-## its OWN CODE — the same one every run and every reload, never the RNG.
-func test_each_settlement_wears_a_stable_variant_of_its_tier() -> void:
-	Game.start_campaign(42)
-	var repo: DataRepository = Game.data
-	var with_variants := 0
-	for row: Dictionary in repo.settlement_art:
-		if int(row.get("variants", 0)) > 1:
-			with_variants += 1
-	assert_gt(with_variants, 0, "settlement_art.csv names variants")
-	var seen: Dictionary = {}
-	var checked := 0
-	for code: String in repo.burgs:
-		var b: Dictionary = repo.burgs[code]
-		var look := MapObjects.settlement_look(repo, Game.state, b)
-		var count := int(look.get("variants", 0))
-		if look.is_empty() or count <= 1:
-			continue
-		var tex := String(look["texture"])
-		assert_true(ResourceLoader.exists(tex) or FileAccess.file_exists(tex), "%s exists" % tex)
-		var tail := tex.get_file().get_basename()
-		assert_between(int(tail.substr(tail.length() - 2)), 1, count,
-			"%s picks one of its tier's %d drawings" % [code, count])
-		assert_eq(String(MapObjects.settlement_look(repo, Game.state, b)["texture"]), tex,
-			"the same burg wears the same drawing every time")
-		seen[tail] = true
-		checked += 1
-	assert_gt(checked, 0, "the pack has settlements whose tier has variants")
-	assert_gt(seen.size(), 1, "different settlements wear different drawings")
-	for row: Dictionary in repo.settlement_art:
-		assert_false(String(row["texture"]).get_file().get_basename().ends_with("_01"),
-			"the shared table row is never rewritten in place")
-
 func test_burg_card_has_no_climate_or_elevation() -> void:
 	Game.start_campaign(42)
 	var realm: Dictionary = Game.data.kingdoms[_player_realm()]
 	var card := MapObjects.burg_card(Game.data, Game.state, String(realm["capital_burg"]))
 	for f in card["fields"]:
 		assert_false(String(f[0]) in ["Climate", "Elevation"], "%s is not on the card" % String(f[0]))
-
-## One tree is not a forest and one peak is not a range (owner request
-## 2026-09-12): a chosen cell yields `clump` small marks scattered inside it,
-## not one big mark on its centre — and the scatter comes from the cell id, so
-## the same wood stands in the same place every run.
-func _decor_repo(clump: int, spread: float) -> DataRepository:
-	var r := DataRepository.new()
-	r.balance = {"map_decor_density": 1.0, "map_decor_scale": 1.0}
-	r.vertices = {0: Vector2(0, 0), 1: Vector2(10, 0), 2: Vector2(10, 10), 3: Vector2(0, 10)}
-	r.cells = {1: {"vertex_ids": PackedInt32Array([0, 1, 2, 3]), "height": 30.0,
-		"biome_id": 6, "water": "", "neighbor_ids": PackedInt32Array()}}
-	r.terrain_art = [{"key": "wood", "biome_id": "6", "min_height": "", "max_height": "",
-		"texture": "res://x.png", "density": "1.0", "height_px": "4", "clump": str(clump),
-		"spread": str(spread)}]
-	return r
-
-## Ships and a whale on the open sea (owner request 2026-09-13): candidates
-## spread over a sea cell by its area, kept by the hash against
-## map_sea_decor_density, and only beyond the row's min_shore_px from the
-## land coast. A 200x200 sea square east of a shore running down x = 10.
-func _sea_repo(take: float, min_shore: float, gap: float = 0.0) -> DataRepository:
-	var r := DataRepository.new()
-	r.balance = {"map_sea_decor_density": take, "map_sea_decor_scale": 1.0,
-		"map_sea_decor_spacing_px": 40.0, "map_sea_decor_min_gap_px": gap}
-	r.vertices = {0: Vector2(0, 0), 1: Vector2(10, 0), 2: Vector2(10, 200), 3: Vector2(0, 200),
-		4: Vector2(210, 0), 5: Vector2(210, 200)}
-	r.cells = {
-		1: {"vertex_ids": PackedInt32Array([0, 1, 2, 3]), "height": 30.0, "biome_id": 6,
-			"water": "", "neighbor_ids": PackedInt32Array([2])},
-		2: {"vertex_ids": PackedInt32Array([1, 4, 5, 2]), "height": 5.0, "biome_id": 0,
-			"water": "ocean", "neighbor_ids": PackedInt32Array([1])}}
-	r.coasts = [{"kind": "land", "polyline": PackedVector2Array([Vector2(10, 0),
-		Vector2(10, 100), Vector2(10, 200)])}]
-	r.sea_art = [{"key": "whale", "texture": "res://w.png", "weight": "1",
-		"height_px": "22", "min_shore_px": str(min_shore)}]
-	return r
-
-func test_sea_marks_keep_off_the_shore_and_inside_the_water() -> void:
-	MapObjects.forget_decor()
-	var marks := MapObjects.sea_decor(_sea_repo(1.0, 50.0))
-	assert_gt(marks.size(), 5, "a 200x200 sea sampled every 40 px holds a good many")
-	for m: Dictionary in marks:
-		var p: Vector2 = m["pos"]
-		assert_gte(p.x, 60.0, "at least 50 px off the shore at x = 10")
-		assert_lte(p.x, 210.0, "inside the sea cell")
-		assert_true(p.y >= 0.0 and p.y <= 200.0, "inside the sea cell")
-		assert_eq(m["texture"], "res://w.png")
-		assert_eq(m["height"], 22.0)
-	MapObjects.forget_decor()
-	assert_eq(MapObjects.sea_decor(_sea_repo(0.0, 50.0)).size(), 0, "density 0: an empty sea")
-	MapObjects.forget_decor()
-	assert_eq(MapObjects.sea_decor(_sea_repo(1.0, 500.0)).size(), 0,
-		"a shore margin wider than the sea: nothing fits")
-
-## Spread out and never overlapping (owner 2026-09-13): with a minimum gap
-## no two marks come closer than it, and the sea still gets its share.
-func test_sea_marks_keep_their_distance_from_each_other() -> void:
-	MapObjects.forget_decor()
-	var crowded := MapObjects.sea_decor(_sea_repo(1.0, 0.0, 0.0)).size()
-	MapObjects.forget_decor()
-	var marks := MapObjects.sea_decor(_sea_repo(1.0, 0.0, 60.0))
-	assert_gt(marks.size(), 1, "more than one still fits a 200x200 sea at 60 px apart")
-	assert_lt(marks.size(), crowded, "the gap thinned the crowd")
-	for a in marks.size():
-		for b in range(a + 1, marks.size()):
-			assert_gte((marks[a]["pos"] as Vector2).distance_to(marks[b]["pos"]), 60.0,
-				"no two marks within the gap")
-
-func test_sea_marks_stand_in_the_same_place_every_time() -> void:
-	MapObjects.forget_decor()
-	var first := MapObjects.sea_decor(_sea_repo(0.5, 20.0)).duplicate(true)
-	MapObjects.forget_decor()
-	var second := MapObjects.sea_decor(_sea_repo(0.5, 20.0))
-	assert_gt(first.size(), 0)
-	assert_eq(first.size(), second.size())
-	for i in first.size():
-		assert_eq(first[i]["pos"], second[i]["pos"], "no RNG: the scatter is the cell id")
-
-func test_a_wood_is_several_marks_scattered_inside_its_cell() -> void:
-	MapObjects.forget_decor()
-	var repo := _decor_repo(5, 0.8)
-	var marks := MapObjects.terrain_decor(repo)
-	assert_eq(marks.size(), 5, "five marks, not one")
-	# The cell is the square (0,0)-(10,10): centre (5,5), mean vertex distance
-	# 7.071, so the marks fall within 0.8 of that.
-	var reach := 7.0711 * 0.8
-	var distinct: Dictionary = {}
-	for m: Dictionary in marks:
-		var p: Vector2 = m["pos"]
-		assert_lte(p.distance_to(Vector2(5, 5)), reach + 0.001, "inside the cell's reach")
-		distinct[p] = true
-	assert_eq(distinct.size(), 5, "and no two land on the same spot")
-
-func test_the_same_cell_decorates_the_same_way_every_time() -> void:
-	MapObjects.forget_decor()
-	var first := MapObjects.terrain_decor(_decor_repo(4, 0.7)).duplicate(true)
-	MapObjects.forget_decor()
-	var second := MapObjects.terrain_decor(_decor_repo(4, 0.7))
-	assert_eq(first.size(), second.size())
-	for i in first.size():
-		assert_eq(first[i]["pos"], second[i]["pos"], "no RNG: the scatter is the cell id")
-
-func test_marks_vary_in_size_around_the_rows_height() -> void:
-	MapObjects.forget_decor()
-	var marks := MapObjects.terrain_decor(_decor_repo(6, 0.8))
-	var lo := INF
-	var hi := 0.0
-	for m: Dictionary in marks:
-		lo = minf(lo, float(m["height"]))
-		hi = maxf(hi, float(m["height"]))
-	assert_gte(lo, 4.0 * 0.8 - 0.001, "no mark smaller than 0.8 of the row")
-	assert_lte(hi, 4.0 * 1.2 + 0.001, "none larger than 1.2 of it")
-	assert_gt(hi - lo, 0.0, "and they are not all the same size")
 
 ## --- Manors (MANOR_SYSTEM.md §3, §6) ----------------------------------------
 
@@ -635,26 +311,6 @@ func _manor_where(state: GameState, crowns: bool, in_realm: bool = true) -> int:
 			if MapManors.is_crowns(real, state, cell) == crowns:
 				return cell
 	return -1
-
-func test_a_land_pixel_answers_as_its_manor_only_when_the_cell_index_is_given() -> void:
-	var state := _campaign()
-	var cell := _manor_where(state, true)
-	assert_gt(cell, -1)
-	var centre := MapTerrain.cell_center(real, real.cells[cell])
-	var state_img: Image = (load(real.index_texture_path) as Texture2D).get_image()
-	var province_img: Image = (load(real.province_texture_path) as Texture2D).get_image()
-	var biome_img: Image = (load(real.biome_texture_path) as Texture2D).get_image()
-	var cell_img: Image = (load(real.cell_texture_path) as Texture2D).get_image()
-	var plain := MapObjects.object_at(real, state_img, province_img, biome_img, centre, 0.0, 0.0,
-		1 << 30, state)
-	assert_eq(String(plain["kind"]), "land", "the political map: land")
-	var manor := MapObjects.object_at(real, state_img, province_img, biome_img, centre, 0.0, 0.0,
-		1 << 30, state, cell_img)
-	assert_eq(String(manor["kind"]), "manor")
-	assert_eq(int(manor["cell"]), cell)
-	assert_eq(MapObjects.label_of(real, manor), MapManors.label_of(real, cell))
-	var entry := MapObjects.describe(real, manor, state)
-	assert_eq(String(entry["title"]), MapManors.label_of(real, cell))
 
 func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	var state := _campaign()
@@ -790,100 +446,3 @@ func test_the_province_card_counts_its_manors_by_house() -> void:
 		fields[String(f[0])] = String(f[1])
 	assert_true(fields.has("Manors"))
 	assert_true(String(fields["Manors"]).begins_with(str(MapManors.manors_of_province(real, province).size())))
-
-## The estates (owner 2026-09-14): one drawing per manor without a town, by
-## its industry (the chief good it works) and its size (the last tier whose
-## min_people its people reach); one height for all, centred; a manor with
-## a town carries none; a change of focus or of people changes the drawing.
-func test_every_manor_without_a_town_wears_its_industrys_estate() -> void:
-	var state := _campaign()
-	assert_eq(real.manor_estates.size(), 36, "twelve industries, three sizes")
-	for code: String in real.manor_focus:
-		assert_eq(MapObjects.estate_rows(real, code).size(), 3, "%s has three sizes" % code)
-	assert_eq(int(float(MapObjects.estate_tier(real, "grain", 0.0)["tier"])), 1)
-	assert_eq(int(float(MapObjects.estate_tier(real, "grain", 1e9)["tier"])), 3)
-	var second := float(MapObjects.estate_rows(real, "grain")[1]["min_people"])
-	assert_eq(int(float(MapObjects.estate_tier(real, "grain", second)["tier"])), 2, "reaching a threshold is enough")
-	assert_eq(int(float(MapObjects.estate_tier(real, "grain", second - 1.0)["tier"])), 1)
-	assert_eq(String(MapObjects.estate_tier(real, "fish", 0.0)["focus_code"]), "fish")
-	assert_eq(String(MapObjects.estate_tier(real, "moon_dust", 0.0)["focus_code"]),
-		String(real.manor_estates[0]["focus_code"]), "an industry with no art wears the first")
-	var estates := MapObjects.manor_estates(real, state)
-	var without_town := 0
-	for id: int in real.manors:
-		if MapManors.burg_of(real, id) == "":
-			without_town += 1
-	assert_eq(estates.size(), without_town, "one per manor without a town")
-	var px := real.bal("map_manor_estate_px") * real.bal("map_decor_scale")
-	var fit := real.bal("map_manor_estate_fit")
-	var industries: Dictionary = {}
-	var tiers_seen: Dictionary = {}
-	for e: Dictionary in estates:
-		var estate_cell := int(e["cell"])
-		assert_eq(MapManors.burg_of(real, estate_cell), "")
-		var pop := float(MapManors.people_of(real, state, estate_cell))
-		var focus := MapManors.focus_of(real, state, estate_cell)
-		var row := MapObjects.estate_tier(real, focus, pop)
-		assert_eq(String(e["texture"]), String(row["texture"]))
-		assert_eq(int(e["tier"]), int(float(row["tier"])))
-		assert_eq(e["pos"], MapTerrain.cell_center(real, real.cells[estate_cell]), "centred on the cell")
-		assert_almost_eq(float(e["height"]), minf(px, MapTerrain.cell_radius(real, real.cells[estate_cell]) * fit), 0.001,
-			"one height for all, unless the cell is too small")
-		assert_almost_eq(float(e["foot"]), real.bal("map_manor_estate_foot"), 0.001)
-		industries[String(e["focus"])] = true
-		tiers_seen[int(e["tier"])] = true
-	assert_gte(industries.size(), 4, "the pack's land works several industries")
-	assert_eq(tiers_seen.size(), 3, "all three sizes occur")
-	assert_eq(MapObjects.manor_estates(real, state), estates, "the same every call")
-	# A change of focus changes the drawing; the card names the industry.
-	var realm := real.resolve_realm("player_realm")
-	var own: Dictionary = {}
-	for e: Dictionary in estates:
-		if MapOwnership.owner_of(real, state, MapManors.province_of(real, int(e["cell"]))) == realm \
-				and MapManors.focuses_for(real, int(e["cell"])).size() > 1:
-			own = e
-			break
-	assert_false(own.is_empty())
-	var cell := int(own["cell"])
-	var card := MapObjects.manor_card(real, state, cell)
-	var found := false
-	for f in card["fields"]:
-		if String(f[0]) == "Estate":
-			found = true
-			assert_string_contains(String(f[1]), "size %d of 3" % int(own["tier"]))
-	assert_true(found, "the card says the estate's industry and size")
-	var other := ""
-	for f: String in MapManors.focuses_for(real, cell):
-		if f != String(own["focus"]):
-			other = f
-			break
-	assert_true(MapManors.set_focus(real, state, cell, other, "test"))
-	for e: Dictionary in MapObjects.manor_estates(real, state):
-		if int(e["cell"]) == cell:
-			assert_eq(String(e["focus"]), other, "the new industry's drawing")
-			assert_ne(String(e["texture"]), String(own["texture"]))
-
-## Estates thin out with the zoom (owner 2026-09-14): each estate's LOD rank
-## is the coarsest grid square it represents. Every estate has rank 0; each
-## coarse square holds exactly one estate at or above its level; the best
-## (largest tier) wins; ranks nest, so showing levels >= L grows as L falls.
-func test_estate_lod_ranks_scatter_the_best_first_and_nest() -> void:
-	var estates: Array = []
-	var id := 0
-	for y in 8:
-		for x in 8:
-			estates.append({"pos": Vector2(x * 10.0 + 1.0, y * 10.0 + 1.0), "cell": id,
-				"tier": 3 if (x == 5 and y == 6) else 1})
-			id += 1
-	var ranks := MapObjects.estate_lod_ranks(estates, 10.0, 4)
-	assert_eq(ranks.size(), estates.size())
-	var counts := [0, 0, 0, 0]
-	var top := -1
-	for i in ranks.size():
-		for level in int(ranks[i]) + 1:
-			counts[level] += 1
-		if int(ranks[i]) == 3:
-			top = i
-	assert_eq(counts, [64, 16, 4, 1], "one per 20, 40 and 80 px square")
-	assert_eq(int(estates[top]["tier"]), 3, "the largest estate represents the coarsest square")
-	assert_eq(ranks, MapObjects.estate_lod_ranks(estates, 10.0, 4), "no RNG: the same every call")

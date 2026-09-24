@@ -79,10 +79,8 @@ var _at3d := Vector2(-1, -1)
 ## --ruler fx1,fy1,fx2,fy2 (with --screen root) lights the MEASUREMENT tab
 ## and clicks the showing map at those shares of its size, so the shot shows
 ## a fixed ruler; --ruler-open leaves it stretching to the second point.
-## --map2d keeps the court on the 2D map (balance map3d_default off).
 var _ruler := PackedFloat32Array()
 var _ruler_open := false
-var _map2d := false
 ## --march3d fx,fy (with --screen root --layer military) plays the player's
 ## march as the owner specified it (2026-09-24): a left click on the first
 ## regiment's piece opens its orders, MARCH is chosen, the pointer is put at
@@ -150,7 +148,6 @@ func _ready() -> void:
 				_res = Vector2i(int(wh[0]), int(wh[1]))
 		i += 1
 	_ruler_open = args.has("--ruler-open")
-	_map2d = args.has("--map2d")
 	_march_confirm = args.has("--march-confirm")
 	if not SCENES.has(_screen):
 		push_error("unknown screen %s; choose from %s" % [_screen, SCENES.keys()])
@@ -160,8 +157,6 @@ func _ready() -> void:
 	Game.start_campaign(_seed)
 	for key: String in _bal:
 		Game.data.balance[key] = _bal[key]
-	if _map2d:
-		Game.data.balance["map3d_default"] = 0.0
 	if _res != Vector2i.ZERO:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(_res)
@@ -263,7 +258,9 @@ func _process(_delta: float) -> void:
 					Game.state.metrics["treasury"] += 1000.0
 					Game.try_execute(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": _build}))
 					Game.state.day = mini(Game.state.day + 5, Calendar.DAYS_PER_TICK)
-				_root.current_screen.world_map().highlight_manor(cell)
+				_root.current_screen.map3d_view().look_at_pack(
+					MapTerrain.cell_center(Game.data, Game.data.cells[cell]))
+				_root.current_screen.map3d_view().select_object({"kind": "manor", "cell": cell})
 				_root.current_screen.detail_panel().show_manor(cell)
 		if _speed >= 0:
 			Game.set_clock_speed(_speed)
@@ -290,9 +287,7 @@ func _process(_delta: float) -> void:
 		print("hover3d: kingdom=%s name=%s" % [hv.hovered_kingdom(), hv.hover_tooltip()])
 	if _root != null and _frames == 12 and _ruler.size() == 4:
 		_root.set_ruler_view(true)
-		var v: Control = _root.current_screen.world_map()
-		if _root.map3d_view() and _root.current_screen.map3d_view() != null:
-			v = _root.current_screen.map3d_view()
+		var v: Control = _root.current_screen.map3d_view()
 		var a := v.size * Vector2(_ruler[0], _ruler[1])
 		var b := v.size * Vector2(_ruler[2], _ruler[3])
 		for at in [a, b]:

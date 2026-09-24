@@ -39,7 +39,6 @@ var _music_button: Button
 var _quality_button: Button
 ## The PROVINCES tab's state (user request 2026-09-09): root-owned so it
 ## survives moving between screens, applied to whichever screen's map shows.
-var _province_view := true  # the map opens with the seams on (owner 2026-09-12)
 var _height_view := false
 var _manor_view := false
 ## The MILITARY tab's state (user request 2026-09-10), owned here for the
@@ -366,20 +365,6 @@ func _on_bottom_tab(tab: String) -> void:
 			_relations_screen.visible = false
 			_info_screen.show_tab(tab)
 
-## The province view is ALWAYS on (owner 2026-09-13: the PROVINCES tab and
-## the P key went — the seams and province clicks are part of the map).
-## Kept as the one place that would turn it off, for tools and tests.
-func set_province_view(on: bool) -> void:
-	_province_view = on
-	if _bottom_bar != null:
-		_bottom_bar.set_toggled("PROVINCES", on)
-	var map := _current_map()
-	if map != null and map.show_provinces != on:
-		map.show_provinces = on
-
-func province_view() -> bool:
-	return _province_view
-
 ## Turn the relief view on or off everywhere (owner request 2026-09-12): the
 ## tab lights up and the current screen's map ramps the land by height. The
 ## default sheet stays flat — height is a layer you ask for, not a tint
@@ -390,9 +375,6 @@ func set_height_view(on: bool) -> void:
 		set_manor_view(false)
 	if _bottom_bar != null:
 		_bottom_bar.set_toggled("HEIGHTS", on)
-	var map := _current_map()
-	if map != null and map.show_heights != on:
-		map.show_heights = on
 	_sync_map_view()
 
 func height_view() -> bool:
@@ -411,9 +393,6 @@ func set_manor_view(on: bool) -> void:
 			set_height_view(false)
 	if _bottom_bar != null:
 		_bottom_bar.set_toggled("MANORS", on)
-	var map := _current_map()
-	if map != null and map.show_manors != on:
-		map.show_manors = on
 	if current_screen != null and current_screen.has_method("set_manor_view"):
 		current_screen.set_manor_view(on)
 	_sync_map_view()
@@ -428,9 +407,6 @@ func set_army_view(on: bool) -> void:
 	_army_view = on
 	if _bottom_bar != null:
 		_bottom_bar.set_toggled("MILITARY", on)
-	var map := _current_map()
-	if map != null:
-		map.show_armies = on
 	if current_screen != null and current_screen.has_method("set_military_view"):
 		current_screen.set_military_view(on)
 	_sync_map_view()
@@ -450,31 +426,28 @@ func set_ruler_view(on: bool) -> void:
 func ruler_view() -> bool:
 	return _ruler_view
 
-## Both of the current screen's maps take the tab's state — called on every
+## The current screen's map takes the tab's state — called on every
 ## map sync too, so a screen swap or a 3D view made on first use follows it.
 func _apply_ruler() -> void:
-	var map := _current_map()
-	if map != null:
-		map.show_ruler = _ruler_view
 	if current_screen != null and current_screen.has_method("map3d_view"):
 		var v: Map3DView = current_screen.map3d_view()
 		if v != null:
 			v.ruler_on = _ruler_view
 
-## The one rule for which map the panel shows (spec
-## 2026-09-18-map3d-default-design): 3D whenever the pack has a built scene
-## and balance map3d_default is on — every layer now draws on the 3D map
-## (HEIGHTS since 2026-09-19, spec 2026-09-19-map3d-heights; MANORS and
-## MILITARY since 2026-09-19 too), so the 3D view is handed the theme and the
-## counters. 2D only without a built scene or with map3d_default 0. Runs on
-## every layer change and every screen swap.
+## The one rule for the map panel (the 2D map was deleted 2026-09-24): the
+## 3D map is shown on every screen with a map, handed the theme and the
+## counters; without a built scene it shows its notice naming build_pack.sh.
+## balance map3d_default 0 holds it unloaded — the test suite does, since a
+## headless run cannot render Terrain3D (tests/pre_run.gd). Runs on every
+## layer change and every screen swap.
 func _sync_map_view() -> void:
-	_map3d_view = Game.data.bal("map3d_default") > 0.0 and map3d_available()
+	var on := Game.data.bal("map3d_default") > 0.0
+	_map3d_view = on and map3d_available()
 	if current_screen != null and current_screen.has_method("set_map3d_theme"):
 		var theme_name := "manors" if _manor_view else ("heights" if _height_view else "")
 		current_screen.set_map3d_theme(theme_name, _army_view)
 	if current_screen != null and current_screen.has_method("set_map3d_view"):
-		current_screen.set_map3d_view(_map3d_view)
+		current_screen.set_map3d_view(on)
 	_apply_ruler()
 
 func map3d_available() -> bool:
@@ -500,12 +473,6 @@ func map3d_view() -> bool:
 func hold_clock_before_month_end(day_ceiling: int) -> void:
 	if Game.hold_day_before_month_end(day_ceiling):
 		_clock_acc = 0.0
-
-## The map of the screen that is showing, if it has one.
-func _current_map() -> WorldMapView:
-	if current_screen != null and current_screen.has_method("world_map"):
-		return current_screen.world_map()
-	return null
 
 func bottom_bar() -> BottomBar:
 	return _bottom_bar
@@ -566,13 +533,6 @@ func _switch_to(new_state: State) -> void:
 		State.COURT:
 			current_screen = COURT_SCENE.instantiate()
 	add_child(current_screen)
-	# The province view follows the player across screens: the new screen's
-	# map takes the tab's state, and the map's own P key reports back.
-	var map := _current_map()
-	if map != null:
-		map.show_provinces = _province_view
-		map.show_armies = _army_view
-		map.province_view_changed.connect(set_province_view)
 	if current_screen != null and current_screen.has_method("set_military_view"):
 		current_screen.set_military_view(_army_view)
 	_sync_map_view()
