@@ -1,15 +1,15 @@
 type,mesh,role,weight,footprint_m,width_m,depth_m,height_m,roof,wall,min_group,yaw_offset_deg,notes
-cottage_a,res://assets/map3d_houses/cottage_a.glb,house,1.0,17.0,17.00,12.30,16.34,house_roof_thatch,house_wall,village,0,a one-room thatched cottage; the commonest building anywhere
-cottage_b,res://assets/map3d_houses/cottage_b.glb,house,0.9,18.0,18.00,11.48,11.70,house_roof_thatch_fresh,house_wall_daub,village,0,a thatched cottage with a lean-to
-cottage_c,res://assets/map3d_houses/cottage_c.glb,house,0.7,16.0,16.00,13.00,13.78,house_roof_tile,house_wall,village,0,the smallest cottage
-townhouse_a,res://assets/map3d_houses/townhouse_a.glb,house,0.8,18.0,18.00,10.92,17.77,house_roof_tile,house_wall,town,0,a two-storey tiled house with a crow-stepped street gable; only from a town upward
-townhouse_b,res://assets/map3d_houses/townhouse_b.glb,house,0.7,19.0,19.00,11.90,20.09,house_roof_tile_dark,house_wall_daub,town,0,a tiled house with a jettied upper floor and an outside stair
-townhouse_c,res://assets/map3d_houses/townhouse_c.glb,house,0.5,15.0,15.00,13.99,26.24,house_roof_slate,house_wall_stone,city,0,a tall merchant's house
-longhouse,res://assets/map3d_houses/longhouse.glb,house,0.4,20.0,10.16,20.00,9.24,house_roof_thatch,house_wall_daub,village,0,a long hall with byre
-workshop,res://assets/map3d_houses/workshop.glb,house,0.35,19.0,19.00,14.60,13.03,house_roof_tile_dark,house_wall_stone,town,0,a workshop with an open front
-barn,res://assets/map3d_houses/barn.glb,barn,1.0,20.0,20.00,11.50,11.87,house_roof_thatch_fresh,house_wall_daub,village,0,the outlying kind: barns and byres sit in the thinning ring
-byre,res://assets/map3d_houses/byre.glb,barn,0.8,17.0,8.01,17.00,7.16,house_roof_thatch,house_wall_stone,village,0,an open-fronted byre
-chapel,res://assets/map3d_houses/chapel.glb,landmark,1.0,24.0,16.68,24.00,18.22,house_roof_slate,house_wall_stone,village,0,a village's centre
-church,res://assets/map3d_houses/church.glb,landmark,1.0,36.0,36.00,20.02,23.84,house_roof_tile,house_wall_stone,fort,0,a town's and a fort's centre; min_group is fort, not town, because a fort ranks BELOW a town and the landmark is now the highest its group allows (2026-09-22)
-church_tower,res://assets/map3d_houses/church_tower.glb,landmark,1.0,44.0,44.00,23.50,42.36,house_roof_slate,house_wall_stone,city,0,a city's centre: the tower is the silhouette that reads at 9 px
-palace,res://assets/map3d_houses/palace.glb,landmark,1.0,68.0,65.34,68.00,47.56,house_roof_tile_dark,house_wall_stone,capital,0,a capital's centre
+cottage_a,res://assets/map3d_houses/cottage_a.glb,house,1.0,17.0,17.00,12.12,15.18,house_roof_tile,house_wall,village,0,a one-room tiled stone cottage; the commonest building anywhere
+cottage_b,res://assets/map3d_houses/cottage_b.glb,house,0.9,18.0,17.58,18.00,18.00,house_roof_tile,house_wall_daub,village,0,a tiled cottage with a lean-to
+cottage_c,res://assets/map3d_houses/cottage_c.glb,house,0.7,16.0,12.04,16.00,16.90,house_roof_tile,house_wall,village,0,the smallest cottage
+townhouse_a,res://assets/map3d_houses/townhouse_a.glb,house,0.8,18.0,18.00,15.17,23.06,house_roof_tile,house_wall,town,0,a two-storey tiled house with a crow-stepped street gable; only from a town upward
+townhouse_b,res://assets/map3d_houses/townhouse_b.glb,house,0.7,19.0,15.35,19.00,21.30,house_roof_tile,house_wall_daub,town,0,a tiled house with a jettied upper floor and an outside stair
+townhouse_c,res://assets/map3d_houses/townhouse_c.glb,house,0.5,15.0,15.00,11.57,21.37,house_roof_slate,house_wall_stone,city,0,a tall merchant's house
+longhouse,res://assets/map3d_houses/longhouse.glb,house,0.4,20.0,20.00,8.00,9.33,house_roof_tile,house_wall_daub,village,0,a long hall with byre
+workshop,res://assets/map3d_houses/workshop.glb,house,0.35,19.0,15.73,19.00,15.73,house_roof_tile,house_wall_stone,town,0,a workshop with an open front
+barn,res://assets/map3d_houses/barn.glb,barn,1.0,20.0,15.28,20.00,17.98,house_roof_tile_dark,house_wall_daub,village,0,the outlying kind: barns and byres sit in the thinning ring
+byre,res://assets/map3d_houses/byre.glb,barn,0.8,17.0,12.80,17.00,10.41,house_roof_slate,house_wall_stone,village,0,an open-fronted byre
+chapel,res://assets/map3d_houses/chapel.glb,landmark,1.0,24.0,15.24,24.00,27.93,house_roof_slate,house_wall_stone,village,0,a village's centre
+church,res://assets/map3d_houses/church.glb,landmark,1.0,36.0,18.98,36.00,27.29,house_roof_tile,house_wall_stone,fort,0,a town's and a fort's centre; min_group is fort, not town, because a fort ranks BELOW a town and the landmark is now the highest its group allows (2026-09-22)
+church_tower,res://assets/map3d_houses/church_tower.glb,landmark,1.0,44.0,44.00,17.10,53.97,house_roof_slate,house_wall_stone,city,0,a city's centre: the tower is the silhouette that reads at 9 px
+palace,res://assets/map3d_houses/palace.glb,landmark,1.0,68.0,68.00,41.58,51.10,house_roof_tile_dark,house_wall_stone,capital,0,a capital's centre

@@ -69,7 +69,10 @@ add it here as a principle with its why — not as a changelog entry.
   stone with visible masonry courses, plain slate or tile roofs, sober true
   proportions, muted natural colour — no flags, no banners, no bright
   pennants, no shrubs, no little figures, and no ground slab under the
-  building. **Generating one: never ask Hunyuan3D for a "game asset" in
+  building. **No AI 3D (owner 2026-09-24: Hunyuan3D removed over its
+  licence) — houses are hand-modelled in Blender against a photoreal Flux
+  reference; ComfyUI stops at the image.** The lesson from the Hunyuan
+  rounds still holds for any prompt: **never ask for a "game asset" in
   words.** Three text-to-3D attempts saying "game asset for a grand strategy
   game" each came back a toy castle with orange flags and a grass base,
   and the negatives ("NOT cartoon, NO flags") did nothing — that phrase is
@@ -88,6 +91,28 @@ add it here as a principle with its why — not as a changelog entry.
   dark brown: the paint turns a dark brown tile flat black and its courses
   vanish (cottage_b, workshop, townhouse_b, 2026-09-24), a black blob at map
   size.
+  *Narrowed later that day, on the hand-modelled set: "房顶颜色还是用那种带
+  橘红色元素的暖色系比较好看". The houses' tile is WARM orange-red terracotta
+  in several shades. Grey slate and a neutral brown-grey on houses read cold
+  or lilac, and slate now marks only the church landmarks. The value must
+  match the old roofs' measured albedo (roughly (120,30,20) to (80,32,19)).
+  Anything lighter reads PINK under the map's sun.*
+- **Walls are weathered at the foot** (owner 2026-09-24: "墙根加上有污渍、做旧").
+  A clean wall down to the ground reads as CG. The hand-modelled houses
+  darken each wall toward a damp earthy colour below ~2.6 m, as vertex colour.
+  Limewash is kept a muted lime-ochre, never near-white (the owner found it
+  too bright twice).
+- **A building stands plumb and nothing of it is ever under the ground**
+  (owner 2026-09-24: "要垂直于地面，不可以被地面遮住部分"). On a slope it
+  stands on the HIGHEST ground under its whole footprint, and a stone
+  foundation carries the downhill side. It is never tilted with the slope,
+  and its uphill wall never bites into the hill. Ground too steep for a
+  modest foundation gets no house at all (the bake refuses the plot).
+- **A landmark's sign must be BIG enough to read at map size** (owner
+  2026-09-24, on the church's bell-cote and its two crosses: "太小了，根本看不
+  出来，把那个钟楼直接换成一个大木质十字架"). One large hewn wooden cross on the
+  gable replaces the small detail. A detail that is illegible at 30-50 px is
+  noise; enlarge the one sign that carries the meaning instead.
 - **A packer reserves the building, not its bounding square.** Each house is
   packed as its own measured rectangle (`width_m` × `depth_m`, in
   `bake_houses.half_extents`). A square of the long side gave a 14 × 10 m
