@@ -270,7 +270,7 @@ func set_military_view(on: bool) -> void:
 ## place of the 2D map while the tab is lit (Map3DView.toggle_in).
 func set_map3d_view(on: bool) -> void:
 	_map3d = Map3DView.toggle_in(%MapPanel, _world_map, _map3d, on, _detail, _country_panel,
-		_refresh_left)
+		_refresh_left, %ArmyOrders)
 	if _map3d != null:
 		_map3d.set_manor_theme(_map3d_theme)
 		_map3d.set_military(_map3d_military)

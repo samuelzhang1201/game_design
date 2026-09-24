@@ -33,7 +33,8 @@ func markers() -> Array:
 	# the date (regiments march and are settled by the month).
 	var st := ctx.state()
 	var key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(),
-		view.military(), st.tick if st != null else 0, st.day if st != null else 0]
+		view.military(), st.tick if st != null else 0, st.day if st != null else 0,
+		view.unit_tops().size(), view.unit_moves()]
 	if key == _key:
 		return _cache
 	_cache = _cut()
@@ -43,20 +44,31 @@ func markers() -> Array:
 
 func _cut() -> Array:
 	var repo := ctx.repo
+	var st := ctx.state()
 	var camera := ctx.camera
 	var s := ctx.viewport_px_scale()
 	var h := badge_height()
 	var frame := Rect2(Vector2.ZERO, ctx.view_size).grow(h * 4.0)
 	var points: Array = []
+	# Where the 3D pieces have their heads: a regiment with a piece hangs its
+	# headcount just over it instead of standing a second counter on its boots.
+	var tops := view.unit_tops()
+	var lift := h * 0.6 + repo.bal("map_army_stack_gap_px")
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		var xz := Map3DGeometry.pack_to_world(ctx.meta, Vector2(float(r["x"]), float(r["y"])))
-		var ground := Vector3(xz.x, ctx.height_at(xz), xz.y)
-		if camera.is_position_behind(ground):
-			continue
-		var sp := camera.unproject_position(ground) / s
+		var code := String(r["regiment_code"])
+		var sp := Vector2.ZERO
+		if tops.has(code):
+			sp = (tops[code] as Vector2) - Vector2(0.0, lift)
+		else:
+			var xz := Map3DGeometry.pack_to_world(ctx.meta,
+				ArmySystem.position_of(repo, st, r))
+			var ground := Vector3(xz.x, ctx.height_at(xz), xz.y)
+			if camera.is_position_behind(ground):
+				continue
+			sp = camera.unproject_position(ground) / s
 		if frame.has_point(sp):
 			points.append({"reg": r, "pos": sp})
-	return ArmyCounters.layout(repo, points, h, ctx.settlement_rects())
+	return ArmyCounters.layout(repo, points, h, ctx.settlement_rects(), tops)
 
 
 func drawn_count() -> int:
@@ -68,4 +80,39 @@ func _draw() -> void:
 		return
 	var list := markers()
 	_drawn = list.size()
+	_draw_routes()
 	ArmyCounters.draw(self, ctx.repo, list, view.selected_army())
+
+
+## Each marching regiment's road still ahead: a dashed line on the ground
+## from where the engine has it to where it was sent, and a ring there, in
+## the realm's own colour as its aim was — the
+## order made visible, so a click that sent a column is seen to have.
+func _draw_routes() -> void:
+	if not view.military():
+		return
+	var repo := ctx.repo
+	var st := ctx.state()
+	if st == null:
+		return
+	var s := ctx.viewport_px_scale()
+	var w := repo.bal("map3d_unit_route_px")
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		var code := String(r["regiment_code"])
+		if ArmySystem.order_of(repo, st, code) != ArmySystem.ORDER_MARCH:
+			continue
+		var from: Variant = _screen_of(ArmySystem.position_of(repo, st, r))
+		var to: Variant = _screen_of(ArmySystem.destination_of(repo, st, code))
+		if from == null or to == null:
+			continue
+		var ink := MapPalette.color_of(repo, String(r.get("kingdom_code", "")))
+		draw_dashed_line((from as Vector2) / s, (to as Vector2) / s, ink, w, w * 4.0)
+		draw_arc((to as Vector2) / s, w * 4.0, 0.0, TAU, 24, ink, w, true)
+
+
+func _screen_of(pack: Vector2) -> Variant:
+	var xz := Map3DGeometry.pack_to_world(ctx.meta, pack)
+	var p := Vector3(xz.x, ctx.height_at(xz), xz.y)
+	if ctx.camera.is_position_behind(p):
+		return null
+	return ctx.camera.unproject_position(p)

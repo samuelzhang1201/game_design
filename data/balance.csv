@@ -138,7 +138,7 @@ map_scale_bar_alpha,0.8,world map: opacity of the scale bar (0 hides it)
 map_compass_size_px,88.0,"world map: the box the compass rose in the top-right corner fills, in screen px (owner request 2026-09-13); 0 hides it"
 map_compass_margin_px,20.0,world map: inset of the compass rose from the top-right corner in screen px
 map_compass_alpha,0.85,world map: opacity of the compass rose (0 hides it)
-map_compass_turn_deg_per_s,12,"world map (owner 2026-09-14): how fast the game-art compass turns clockwise while time runs, degrees a real second at 1x; 2x and 4x turn it that much faster, a paused clock holds it still"
+map_compass_turn_deg_per_s,24,"world map (owner 2026-09-14; doubled from 12 on 2026-09-24: 转速需要翻倍): how fast the game-art compass turns clockwise while time runs, degrees a real second at 1x; 2x and 4x turn it that much faster, a paused clock holds it still"
 map_border_smoothing_steps,8,"world map: Catmull-Rom samples per segment on a kingdom outline and a coast — the curve runs THROUGH the pack's points, so it is smooth without drifting off the real boundary (owner 2026-09-13)"
 ui_panel_art,0,"UI: 1 draws every panel as the nine-sliced vellum plate (assets/ui/panel_vellum.png, library U-01); 0 draws the flat rounded card of UiPalette.panel_style — the bright modern theme (owner 2026-09-13: the parchment look read old and dim)"
 ui_panel_ornament,1,"UI (owner 2026-09-14: restore the decorative border): 1 frames every bright card with the vellum plate's ornament alone — its double rule, hairline and corner flourishes (assets/ui/panel_ornament.png) — over the modern body; 0 is the plain card. Ignored while ui_panel_art draws the whole plate"
@@ -374,7 +374,8 @@ map3d_cloud_interval_s,1.5,3D MAP clouds: about this many real seconds between o
 map3d_cloud_fade_s,1.2,3D MAP clouds: seconds to fade in when play starts and out when the clock stops
 map3d_cloud_alpha,0.6,3D MAP clouds: their opacity at the heart
 map3d_cloud_near_fade_m,6000.0,"3D MAP clouds: a cloud closer to the camera than this fades away, so the rig at 800 m looks under the deck, not into it"
-map3d_cloud_shadow_cut,0.35,3D MAP clouds: the alpha above which a cloud casts a shadow on the land (within the sun's 60 km shadow reach)
+map3d_cloud_shadow_cut,0.6,"3D MAP clouds: the alpha above which a cloud casts a shadow on the land (within the sun's 60 km shadow reach) — 0.35 until 2026-09-24, when the owner asked for fewer, fainter shadows (云彩阴影减少减淡): only a cloud's dense heart casts now"
+map3d_cloud_shadow_density,0.45,"3D MAP clouds (owner 2026-09-24): the share of a cloud's shadow texels actually cast, in an ordered 4x4 stipple the sun's shadow blur smooths into a half-tone — the one way to lighten the CLOUDS' shadow alone, since map3d_sun_shadow_opacity darkens every shadow the sun casts (houses too)"
 map3d_cloud_seed,23,3D MAP clouds: the seed of their own look-only generator (never the engine's stream)
 map3d_cloud_emission_share,0.0,3D MAP clouds: share of ALBEDO also written to EMISSION (Task 8's fix for a lit spatial shader reading dirty/dark under Filmic) — 0 unless the visual check needs it
 map3d_cloud_near_fade_start_ratio,0.3,"3D MAP clouds (fix round 1, owner 2026-09-18): where the near-camera fade starts, as a fraction of map3d_cloud_near_fade_m — was hardcoded in cloud_deck.gdshader"
@@ -420,6 +421,7 @@ map3d_sea_emission_share_near,0.75,"3D MAP sea (final review): the emission shar
 map3d_sea_shore_warp_px,0.5,"3D MAP sea (final review): the shore's alpha fade reads a 50 m-per-texel distance map, so up close the waterline was a chain of straight 50 m facets; a fixed world noise warps the distance by up to this many pack px before the fade (a stopgap until a finer coast coverage map exists)"
 map3d_sea_shore_warp_m,30.0,3D MAP sea (final review): about one shore-warp bump every this many metres (the noise tile holds ~8)
 map_ruler_width_px,2.0,"MEASUREMENT ruler (owner 2026-09-18): the dashed line's and the ticks' width in screen px, on both maps"
+map_ruler_arrow_px,16,"the MARCH aim's ruler (owner 2026-09-24): the arrowhead's length in design px at the pointer end, where the measuring ruler has its crossbar"
 map_ruler_dash_px,10.0,MEASUREMENT ruler: dash (and gap) length in screen px
 map_ruler_halo_px,1.0,MEASUREMENT ruler: how far the pale halo reaches past each stroke in screen px
 map_ruler_halo_alpha,0.85,MEASUREMENT ruler: the halo's opacity
@@ -480,3 +482,15 @@ map3d_sea_plane_span,12,"3D MAP sea (2026-09-20): the sea plane is the pack's si
 map3d_house_view_m,9000,3D MAP houses (spec 2026-09-20 §3): a settlement farther than this from the camera is not instanced at all — not culled after the fact
 map3d_house_rebuild_move_m,300,"3D MAP houses: the camera must move this far before the house MultiMeshes are rebuilt — cut once per camera pose, never per frame"
 map3d_house_sink_m,0.5,"3D MAP houses: every instance is sunk this far (0.35 -> 0.5 with the houses themselves, density v5 2026-09-21: a building twice as wide spans twice as much ground height, so its uphill corner lifts twice as far off the slope) so the wall foot bites into sloped ground. NO base plate, ever (taste.md: the grass disc under the 2026-09-16 3D towns was the first thing rejected)"
+map3d_unit_px,40,"MILITARY's 3D piece: the height it is DRAWN at, in design px, held constant as the camera pulls back (owner 2026-09-22: size要大一些, 远景战略模式下要看清楚; 2026-09-24: 96 was far too big — 模型太大了, 比例改的合理一点). A real 1.8 m man is 2 px even at the closest zoom the rig allows, so a piece on this map is a wargame miniature standing on a table, never a person at life size — it is scaled to a constant SCREEN height exactly as the flat counter it replaces was"
+map3d_unit_min_h_m,12,"floor on that piece's world height in metres, so it never vanishes among the houses close in — 12 m stands a little under a 2x-life cottage (15 m), a miniature beside the houses, not a giant over them (owner 2026-09-24; it was 26)"
+map3d_unit_max_h_m,9000,"ceiling on it, so the farthest zoom does not stand a man taller than the mountains; past this the piece stops growing and simply reads smaller"
+map3d_unit_snap_days,3,"MILITARY's 3D piece: a drawn piece more than this many days' march behind its regiment jumps to it instead of walking (a load, a fast clock); within it, it WALKS each day's step over the day's real seconds (Map3DUnits.walk_speed)"
+map3d_unit_route_px,2.0,"MILITARY's 3D piece: the width in design px of the dashed road a marching regiment still has ahead (in the realm's own colour), and a fifth of the ring at its end"
+map3d_unit_seat_ring,8,"MILITARY's 3D piece (owner 2026-09-24: 斜面上兵人的一部分会被地图盖住): points on each of the two rings (half and full base) where the ground under a piece's base is sampled, besides its centre — Map3DUnits.footprint"
+map3d_unit_tilt_max_deg,14,"how far a piece tilts with the slope it stands on, at most — a miniature on a sloping table leans with it, but a man lying on a cliff reads as fallen; past this it stays at this tilt and is lifted clear instead (Map3DUnits.seat)"
+map3d_unit_seat_clear,0.015,"how far a seated piece is lifted over the highest ground under its base, as a share of its drawn height — far out Terrain3D DRAWS the ground from a coarser mesh than the heightmap the base is sampled on, and this covers the difference"
+map3d_unit_sink_m,0.0,metres the piece's base is sunk into the ground so it bites into a slope
+map3d_unit_turn_deg_per_s,220.0,"how fast a piece turns to face its heading (or the camera at rest) — instant turning reads as a glitch when the camera orbits"
+map3d_unit_base_sat,0.55,"MILITARY's 3D piece: the least saturation its base wears. The base is painted the REALM's own hue (review 2026-09-22) — a neutral grey disc says nothing and belongs to no other part of this map, while a coloured one tells you whose regiment it is, which is the one thing a counter must do"
+map3d_unit_base_val,0.22,"and how dark: deep, so the figure standing on it stays the brighter thing"

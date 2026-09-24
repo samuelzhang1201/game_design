@@ -69,6 +69,10 @@ var army_terrain: Dictionary = {}
 var army_matchups: Dictionary = {}
 ## data/army_training_grades.csv rows {above, label}, first match wins.
 var army_training_grades: Array[Dictionary] = []
+## data/army_orders.csv, IN ORDER: the rows of a regiment's right-click menu
+## on the map, [{action_code, label, hint}] (ArmyOrderMenu). A list, not a
+## dictionary, because the order of the entries is the order they are shown in.
+var army_orders: Array = []
 ## data/army_speed.csv: arm -> km a day (int), the arm's own march
 ## (owner 2026-09-19, ArmySystem.base_pace_km).
 var army_speed: Dictionary = {}
@@ -544,6 +548,10 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/army_speed.csv", ["arm", "km_per_day"],
 			func(r): army_speed[String(r["arm"])] = int(r["km_per_day"])):
+		return false
+	if not _load_if_present(dir + "/army_orders.csv", ["action_code", "label", "hint"],
+			func(r): army_orders.append({"action_code": String(r["action_code"]),
+				"label": String(r["label"]), "hint": String(r["hint"])})):
 		return false
 	if not _load_if_present(dir + "/army_height_supply.csv", ["tier", "min_height", "supply_permille"],
 			func(r): army_height_supply.append({"tier": String(r["tier"]),

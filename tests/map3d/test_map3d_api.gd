@@ -12,7 +12,7 @@ const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 ## name -> argument count (defaults included). Underscored names are the
 ## private handlers and helpers the tests call directly.
 const METHODS := {
-	"scene_path_for": 1, "has_scene": 1, "create": 2, "toggle_in": 7,
+	"scene_path_for": 1, "has_scene": 1, "create": 2, "toggle_in": 8,
 	"load_field_map": 1, "kingdom_of_pick": 3, "pick_reach_px": 3,
 	"activate": 0, "deactivate": 0, "water_normals": 0, "sea_material": 0,
 	"river_material": 0, "refresh_borders": 0, "set_manor_theme": 1, "manor_theme": 0,

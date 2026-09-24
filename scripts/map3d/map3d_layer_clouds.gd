@@ -114,6 +114,7 @@ func _cloud_shadow_material(shape: Texture2D) -> ShaderMaterial:
 	var mat := (CLOUD_SHADOW_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	mat.set_shader_parameter("shape", shape)
 	mat.set_shader_parameter("shadow_cut", ctx.repo.bal("map3d_cloud_shadow_cut"))
+	mat.set_shader_parameter("shadow_density", ctx.repo.bal("map3d_cloud_shadow_density"))
 	return mat
 
 

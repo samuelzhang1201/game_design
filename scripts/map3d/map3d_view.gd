@@ -22,6 +22,12 @@ signal province_selected(province_code: String)
 ## The kingdom under the pointer, "" off the land — WorldMapView's signal:
 ## the screens put that country's card in the left column (owner 2026-09-18).
 signal country_hovered(kingdom_code: String)
+## A right CLICK (not a turn) on one of the player's regiments: ArmyOrderMenu
+## opens over it. `at` is design px in this view.
+signal army_menu_requested(code: String, at: Vector2)
+## Where on the pack a left click landed — an order being AIMED needs the
+## ground, not the thing picked.
+signal ground_clicked(pack_px: Vector2)
 
 const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
 ## The view's own authored scene (the tree, flags and anchors live there).
@@ -61,6 +67,7 @@ var _scene_path := ""
 @onready var _clouds: Map3DLayerClouds = $Viewport/Clouds
 @onready var _markers: Map3DLayerSettlements = $Viewport/Markers
 @onready var _houses: Map3DLayerHouses = $Viewport/Houses
+@onready var _units: Map3DLayerUnits = $Viewport/Units
 @onready var _env: WorldEnvironment = $Viewport/Environment
 @onready var _sun: DirectionalLight3D = $Viewport/Sun
 @onready var _display: TextureRect = $Display
@@ -121,7 +128,7 @@ static func create(repo: DataRepository, scene_path: String = "") -> Map3DView:
 ## `detail` and `country` cards and `on_hover`) over the 2D `world_map`.
 static func toggle_in(panel: Control, world_map: Control, view: Map3DView, on: bool,
 		detail: MapDetailPanel = null, country: CountryPanel = null,
-		on_hover: Callable = Callable()) -> Map3DView:
+		on_hover: Callable = Callable(), orders: ArmyOrderMenu = null) -> Map3DView:
 	if on and view == null:
 		view = Map3DView.create(Game.data)
 		panel.add_child(view)
@@ -130,6 +137,8 @@ static func toggle_in(panel: Control, world_map: Control, view: Map3DView, on: b
 			detail.closed.connect(view.clear_selection)
 		if country != null:
 			country.follow(view)
+		if orders != null:
+			orders.follow(view)
 		if on_hover.is_valid():
 			view.country_hovered.connect(func(_code: String) -> void: on_hover.call())
 	if world_map != null:
@@ -224,6 +233,8 @@ func _load() -> void:
 	_input.bind(self, _rig, _repo)
 	_markers.bind(_ctx)
 	_houses.bind(_ctx)
+	_units.bind(_ctx)
+	_units.set_shown(_military)
 	_ctx.settle_ground()
 	_markers.build()
 	_houses.build()  # warm here (~91 ms), not on the first refresh() mid-play
@@ -366,6 +377,7 @@ func _process(delta: float) -> void:
 		refresh_borders()
 	if _loaded:
 		_clouds.step(delta)
+		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
 	_picker.step()
 	if not _hovered:
 		return
@@ -426,7 +438,14 @@ func set_military(on: bool) -> void:
 	if not on and _selection.army != "":
 		_selection.clear()
 	if _loaded:
+		_units.set_shown(on)
 		_hud.refresh()
+
+# MILITARY's 3D pieces: heads (the chip hangs there), boxes (clicks), count, motion.
+func unit_tops() -> Dictionary: return _units.screen_tops() if _loaded else {}
+func unit_rects() -> Dictionary: return _units.screen_rects() if _loaded else {}
+func unit_count() -> int: return _units.drawn_count() if _loaded else 0
+func unit_moves() -> int: return _units.moves() if _loaded else 0
 
 func military() -> bool: return _military
 func selected_army() -> String: return _selection.army
@@ -441,7 +460,26 @@ func clear_hover() -> void: _picker.clear_hover()
 func hovered_kingdom() -> String: return _picker.hovered_kingdom()
 func hover_tooltip() -> String: return _picker.hover_tooltip()
 func tooltip_rect() -> Rect2: return _picker.tooltip_rect()
-func select_at(pos: Vector2) -> void: _selection.select(pick_at(pos))
+## While an order is aimed (ArmyOrderMenu sets both): a left click only says
+## where it landed, and the HUD's ruler runs from `aim_code`'s piece to the pointer.
+var aiming := false
+var aim_code := ""
+
+## True when a regiment was under it and its order menu was asked for — a
+## right click on open country is NOT consumed, exactly as before.
+func right_click(pos: Vector2) -> bool:
+	var picked := pick_at(pos)
+	if String(picked.get("kind", "")) != "army":
+		return false
+	army_menu_requested.emit(String(picked["code"]), pos)
+	return true
+
+func select_at(pos: Vector2) -> void:
+	var hit: Variant = ground_at(pos)
+	var at: Variant = null if hit == null else _ctx.to_pack(Vector2((hit as Vector3).x, (hit as Vector3).z))
+	var was_aiming := aiming  # the click that ends an aim selects nothing
+	if at != null: ground_clicked.emit(at)
+	if not was_aiming: _selection.click(pick_at(pos), pos)
 func clear_selection() -> void: _selection.clear()
 
 ## Test seam (Ruling 18): the inner part named `key`, or null.

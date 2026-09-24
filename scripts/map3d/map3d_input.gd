@@ -73,8 +73,16 @@ func _button(mb: InputEventMouseButton) -> bool:
 		if mb.pressed:
 			_rpress_pos = mb.position
 			_rdragged = false
-		elif view.ruler_on and not _rdragged and view.ruler().cancel():
-			view.refresh_hud()
+		elif not _rdragged:
+			# A right CLICK, never a turn. With the ruler up it puts the ruler
+			# away; otherwise it asks for the order menu of the regiment under
+			# it — and is taken ONLY if there was one, so a right click on open
+			# country still falls through untouched as it always did.
+			if view.ruler_on:
+				if view.ruler().cancel():
+					view.refresh_hud()
+			elif view.right_click(mb.position):
+				return true
 	return false
 
 

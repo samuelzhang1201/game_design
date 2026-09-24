@@ -1,23 +1,26 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://x10wk6i843n2"]
 
-[ext_resource type="Script" path="res://scripts/ui/conversation_scene.gd" id="1"]
+[ext_resource type="Script" uid="uid://bjfj0a5io4f7y" path="res://scripts/ui/conversation_scene.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/top_bar.tscn" id="2"]
-[ext_resource type="Script" path="res://scripts/ui/audience_backdrop.gd" id="3"]
+[ext_resource type="Script" uid="uid://dgo56mr5okaon" path="res://scripts/ui/audience_backdrop.gd" id="3"]
+[ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="4_jcdsd"]
 
-[node name="ConversationScene" type="Control"]
+[node name="ConversationScene" type="Control" unique_id=1715265354]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1")
 
-[node name="Bg" type="ColorRect" parent="."]
+[node name="Bg" type="ColorRect" parent="." unique_id=87825667]
 unique_name_in_owner = true
-anchors_preset = 15
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="MapPanel" type="PanelContainer" parent="."]
+[node name="MapPanel" type="PanelContainer" parent="." unique_id=1804200223]
 unique_name_in_owner = true
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 128.0
@@ -25,23 +28,26 @@ offset_top = 30.0
 offset_right = -4.0
 offset_bottom = -40.0
 
-[node name="TopBar" parent="." instance=ExtResource("2")]
+[node name="TopBar" parent="." unique_id=1742348619 instance=ExtResource("2")]
 unique_name_in_owner = true
-anchor_right = 1.0
+anchors_preset = 0
 
-[node name="MinisterPanel" type="PanelContainer" parent="."]
+[node name="MinisterPanel" type="PanelContainer" parent="." unique_id=1501378524]
 unique_name_in_owner = true
+layout_mode = 0
 anchor_bottom = 1.0
 offset_left = 4.0
 offset_top = 30.0
 offset_right = 124.0
 offset_bottom = -40.0
 
-[node name="MVBox" type="VBoxContainer" parent="MinisterPanel"]
+[node name="MVBox" type="VBoxContainer" parent="MinisterPanel" unique_id=1601692104]
+layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="AudienceLayer" type="Control" parent="."]
+[node name="AudienceLayer" type="Control" parent="." unique_id=732824053]
 unique_name_in_owner = true
+anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 128.0
@@ -50,221 +56,262 @@ offset_right = -4.0
 offset_bottom = -40.0
 mouse_filter = 2
 
-[node name="AudienceDim" type="ColorRect" parent="AudienceLayer"]
+[node name="AudienceDim" type="ColorRect" parent="AudienceLayer" unique_id=1829424282]
 unique_name_in_owner = true
-anchors_preset = 15
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 
-[node name="AudienceCenter" type="CenterContainer" parent="AudienceLayer"]
-anchors_preset = 15
+[node name="AudienceCenter" type="CenterContainer" parent="AudienceLayer" unique_id=728702222]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 
-[node name="AudienceWindow" type="PanelContainer" parent="AudienceLayer/AudienceCenter"]
+[node name="AudienceWindow" type="PanelContainer" parent="AudienceLayer/AudienceCenter" unique_id=201120120]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(760, 500)
+layout_mode = 2
 
-[node name="AudienceCol" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow"]
+[node name="AudienceCol" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow" unique_id=5494348]
+layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="AudienceBanner" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol"]
+[node name="AudienceBanner" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol" unique_id=1193525787]
 unique_name_in_owner = true
+layout_mode = 2
 
-[node name="AudienceTitle" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBanner"]
+[node name="AudienceTitle" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBanner" unique_id=1782393403]
 unique_name_in_owner = true
+layout_mode = 2
 horizontal_alignment = 1
 text_overrun_behavior = 3
 
-[node name="EventArt" type="TextureRect" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol"]
+[node name="EventArt" type="TextureRect" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol" unique_id=2422067]
 unique_name_in_owner = true
 visible = false
-clip_contents = true
 custom_minimum_size = Vector2(0, 170)
+clip_contents = true
+layout_mode = 2
 mouse_filter = 2
 expand_mode = 1
 stretch_mode = 6
 
-[node name="AudienceBody" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol"]
+[node name="AudienceBody" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol" unique_id=2079333202]
+layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 16
 
-[node name="PortraitSide" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody"]
+[node name="PortraitSide" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody" unique_id=21984348]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(230, 0)
+layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="PortraitFrame" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide"]
+[node name="PortraitFrame" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide" unique_id=309489969]
 unique_name_in_owner = true
+layout_mode = 2
 
-[node name="FrameStack" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/PortraitFrame"]
-clip_contents = true
+[node name="FrameStack" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/PortraitFrame" unique_id=2044004590]
 custom_minimum_size = Vector2(222, 250)
+clip_contents = true
+layout_mode = 2
 mouse_filter = 2
 
-[node name="Backdrop" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/PortraitFrame/FrameStack"]
+[node name="Backdrop" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/PortraitFrame/FrameStack" unique_id=12856135]
 unique_name_in_owner = true
-anchors_preset = 15
+anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 script = ExtResource("3")
 
-[node name="PortraitBox" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/PortraitFrame/FrameStack"]
+[node name="PortraitBox" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/PortraitFrame/FrameStack" unique_id=1046049573]
 unique_name_in_owner = true
-clip_contents = true
 custom_minimum_size = Vector2(222, 250)
+clip_contents = true
+anchors_preset = 0
 mouse_filter = 2
 
-[node name="DossierHead" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide"]
+[node name="DossierHead" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide" unique_id=648232450]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="MinisterName" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead"]
+[node name="MinisterName" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead" unique_id=1198441752]
 unique_name_in_owner = true
+layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="MinisterTitle" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead"]
+[node name="MinisterTitle" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead" unique_id=89395367]
 unique_name_in_owner = true
+layout_mode = 2
 horizontal_alignment = 1
 
-[node name="OpinionRow" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead"]
+[node name="OpinionRow" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead" unique_id=1856260727]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="OpinionCaption" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/OpinionRow"]
+[node name="OpinionCaption" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/OpinionRow" unique_id=339850126]
 unique_name_in_owner = true
+layout_mode = 2
 text = "Opinion"
 
-[node name="OpinionBar" type="ProgressBar" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/OpinionRow"]
+[node name="OpinionBar" type="ProgressBar" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/OpinionRow" unique_id=133462869]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 8)
+layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 min_value = -100.0
-max_value = 100.0
 show_percentage = false
 
-[node name="OpinionValue" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/OpinionRow"]
+[node name="OpinionValue" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/OpinionRow" unique_id=406909870]
 unique_name_in_owner = true
+layout_mode = 2
 mouse_filter = 0
 
-[node name="TraitChips" type="HFlowContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead"]
+[node name="TraitChips" type="HFlowContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead" unique_id=2109190645]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/h_separation = 4
 theme_override_constants/v_separation = 4
 
-[node name="SkillBadges" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead"]
+[node name="SkillBadges" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead" unique_id=963584170]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 3
 alignment = 1
 
-[node name="WordsSide" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody"]
+[node name="WordsSide" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody" unique_id=504679425]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="NameRow" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide"]
+[node name="NameRow" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide" unique_id=982060976]
+layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="NameLabel" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/NameRow"]
+[node name="NameLabel" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/NameRow" unique_id=2132591442]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 autowrap_mode = 3
 
-[node name="TabsRow" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/NameRow"]
+[node name="TabsRow" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/NameRow" unique_id=450382933]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="SpeechRule" type="HSeparator" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide"]
+[node name="SpeechRule" type="HSeparator" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide" unique_id=2108097447]
+layout_mode = 2
 
-[node name="SpeechScroll" type="ScrollContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide"]
+[node name="SpeechScroll" type="ScrollContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide" unique_id=1348874801]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="SpeechLabel" type="RichTextLabel" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/SpeechScroll"]
+[node name="SpeechLabel" type="RichTextLabel" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/SpeechScroll" unique_id=395748444]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 
-[node name="DossierPages" type="ScrollContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide"]
+[node name="DossierPages" type="ScrollContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide" unique_id=1253006735]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="PagesBox" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages"]
+[node name="PagesBox" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages" unique_id=2040661009]
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
 
-[node name="BioTab" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox"]
+[node name="BioTab" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox" unique_id=312797890]
 unique_name_in_owner = true
 visible = false
+layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="BioArt" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/BioTab"]
+[node name="BioArt" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/BioTab" unique_id=1538176702]
 unique_name_in_owner = true
-clip_contents = true
 custom_minimum_size = Vector2(150, 225)
+clip_contents = true
+layout_mode = 2
 size_flags_horizontal = 4
 
-[node name="SkillsTab" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox"]
+[node name="SkillsTab" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox" unique_id=840108354]
 unique_name_in_owner = true
 visible = false
+layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="SkillRows" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/SkillsTab"]
+[node name="SkillRows" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/SkillsTab" unique_id=1706581823]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 3
 
-[node name="ToolsSep" type="HSeparator" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/SkillsTab"]
+[node name="ToolsSep" type="HSeparator" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/SkillsTab" unique_id=407536255]
+layout_mode = 2
 
-[node name="ToolsTitle" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/SkillsTab"]
+[node name="ToolsTitle" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/SkillsTab" unique_id=1627078635]
 unique_name_in_owner = true
+layout_mode = 2
 text = "TOOLS"
 
-[node name="ToolsList" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/SkillsTab"]
+[node name="ToolsList" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/SkillsTab" unique_id=1129259270]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="TiesTab" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox"]
+[node name="TiesTab" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox" unique_id=1927949843]
 unique_name_in_owner = true
 visible = false
+layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="TiesText" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/TiesTab"]
+[node name="TiesText" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/TiesTab" unique_id=1594497305]
 unique_name_in_owner = true
+layout_mode = 2
 autowrap_mode = 3
 
-[node name="RepliesBox" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide"]
+[node name="RepliesBox" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide" unique_id=1386643097]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="TalkRow" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide"]
+[node name="TalkRow" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide" unique_id=1776119914]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="FreeText" type="LineEdit" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/TalkRow"]
+[node name="FreeText" type="LineEdit" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/TalkRow" unique_id=514208069]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Speak your mind..."
 
-[node name="ContinueButton" type="Button" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/TalkRow"]
+[node name="ContinueButton" type="Button" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/TalkRow" unique_id=1730821104]
 unique_name_in_owner = true
+layout_mode = 2
 focus_mode = 0
 text = "Wave them on"
 
-[node name="DialoguePanel" type="PanelContainer" parent="."]
+[node name="DialoguePanel" type="PanelContainer" parent="." unique_id=1370593479]
 unique_name_in_owner = true
 visible = false
+layout_mode = 0
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -273,73 +320,84 @@ offset_top = 30.0
 offset_right = -4.0
 offset_bottom = -40.0
 
-[node name="Col" type="VBoxContainer" parent="DialoguePanel"]
+[node name="Col" type="VBoxContainer" parent="DialoguePanel" unique_id=746815519]
+layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="LeaveButton" type="Button" parent="DialoguePanel/Col"]
+[node name="LeaveButton" type="Button" parent="DialoguePanel/Col" unique_id=915854260]
 unique_name_in_owner = true
+layout_mode = 2
 focus_mode = 0
 text = "LEAVE THE COUNCIL"
 
-[node name="LocationBox" type="VBoxContainer" parent="DialoguePanel/Col"]
+[node name="LocationBox" type="VBoxContainer" parent="DialoguePanel/Col" unique_id=254172670]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="LocationSlot" type="Control" parent="DialoguePanel/Col/LocationBox"]
+[node name="LocationSlot" type="Control" parent="DialoguePanel/Col/LocationBox" unique_id=269822722]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(128, 30)
 clip_contents = true
+layout_mode = 2
 
-[node name="OccupantsRow" type="HFlowContainer" parent="DialoguePanel/Col/LocationBox"]
+[node name="OccupantsRow" type="HFlowContainer" parent="DialoguePanel/Col/LocationBox" unique_id=302039100]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/h_separation = 4
 theme_override_constants/v_separation = 4
 
-[node name="MoveButton" type="Button" parent="DialoguePanel/Col/LocationBox"]
+[node name="MoveButton" type="Button" parent="DialoguePanel/Col/LocationBox" unique_id=1735547651]
 unique_name_in_owner = true
+layout_mode = 2
 focus_mode = 0
 text = "MOVE"
 
-[node name="LocSep" type="HSeparator" parent="DialoguePanel/Col"]
+[node name="LocSep" type="HSeparator" parent="DialoguePanel/Col" unique_id=1461910330]
+layout_mode = 2
 
-[node name="RecordTitle" type="Label" parent="DialoguePanel/Col"]
+[node name="RecordTitle" type="Label" parent="DialoguePanel/Col" unique_id=512739130]
 unique_name_in_owner = true
+layout_mode = 2
 text = "The Record"
 
-[node name="DialogueScroll" type="ScrollContainer" parent="DialoguePanel/Col"]
+[node name="DialogueScroll" type="ScrollContainer" parent="DialoguePanel/Col" unique_id=1831272121]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="Content" type="VBoxContainer" parent="DialoguePanel/Col/DialogueScroll"]
+[node name="Content" type="VBoxContainer" parent="DialoguePanel/Col/DialogueScroll" unique_id=551770351]
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
 
-[node name="TextLabel" type="RichTextLabel" parent="DialoguePanel/Col/DialogueScroll/Content"]
+[node name="TextLabel" type="RichTextLabel" parent="DialoguePanel/Col/DialogueScroll/Content" unique_id=1929844176]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 
-[node name="EventPopup" type="Control" parent="."]
+[node name="EventPopup" type="Control" parent="." unique_id=2023712029]
 unique_name_in_owner = true
 visible = false
-anchors_preset = 15
+anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 
-[node name="PopupDim" type="ColorRect" parent="EventPopup"]
-anchors_preset = 15
+[node name="PopupDim" type="ColorRect" parent="EventPopup" unique_id=1362565802]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 
-[node name="PopupPanel" type="PanelContainer" parent="EventPopup"]
+[node name="PopupPanel" type="PanelContainer" parent="EventPopup" unique_id=1576759606]
 unique_name_in_owner = true
-anchors_preset = 8
+layout_mode = 0
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
@@ -347,23 +405,32 @@ anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="PopupCol" type="VBoxContainer" parent="EventPopup/PopupPanel"]
+[node name="PopupCol" type="VBoxContainer" parent="EventPopup/PopupPanel" unique_id=414715254]
+layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="PopupTitle" type="Label" parent="EventPopup/PopupPanel/PopupCol"]
+[node name="PopupTitle" type="Label" parent="EventPopup/PopupPanel/PopupCol" unique_id=182209970]
 unique_name_in_owner = true
+layout_mode = 2
 horizontal_alignment = 1
 
-[node name="PopupScroll" type="ScrollContainer" parent="EventPopup/PopupPanel/PopupCol"]
+[node name="PopupScroll" type="ScrollContainer" parent="EventPopup/PopupPanel/PopupCol" unique_id=212775023]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(240, 60)
+layout_mode = 2
 horizontal_scroll_mode = 0
 
-[node name="PopupText" type="Label" parent="EventPopup/PopupPanel/PopupCol/PopupScroll"]
+[node name="PopupText" type="Label" parent="EventPopup/PopupPanel/PopupCol/PopupScroll" unique_id=520647863]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 autowrap_mode = 3
 
-[node name="PopupChoices" type="VBoxContainer" parent="EventPopup/PopupPanel/PopupCol"]
+[node name="PopupChoices" type="VBoxContainer" parent="EventPopup/PopupPanel/PopupCol" unique_id=340966567]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 4
+
+[node name="ArmyOrders" type="PopupMenu" parent="." unique_id=1559366654]
+unique_name_in_owner = true
+script = ExtResource("4_jcdsd")

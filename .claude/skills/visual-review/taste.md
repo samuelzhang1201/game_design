@@ -125,6 +125,13 @@ add it here as a principle with its why — not as a changelog entry.
   tick across the dashes makes "+" and "T" noise). Ticks no closer than
   ~100 px; at 48 px they merged into a railway track.
 
+- **A wargame piece is a miniature, not a monument** (2026-09-24, 3D
+  regiments: "模型太大了！比例请改的合理一点"): at 96 px of screen and a
+  26 m floor the soldiers towered over towns and read as giants on the
+  strategic view. A piece stands a little UNDER a cottage close in (12 m
+  floor against 15 m houses) and ~40 px far out — still findable, never
+  the biggest thing on the map.
+
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols
   and estates carry VALUE only and are multiply-tinted; photographs, icons,

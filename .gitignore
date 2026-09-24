@@ -32,3 +32,12 @@ assets/map3d_houses/*_albedo.jpg.import
 assets/map3d_houses/*_albedo.png.import
 assets/map3d_houses/*_normal.jpg.import
 assets/map3d_houses/*_normal.png.import
+
+# The 3D regiments' Hunyuan3D sources (~180 MB) and the bake's texture
+# intermediates: never loaded by the game — tools/units3d reads them, and its
+# OUTPUT (assets/units3d/*.glb, textures embedded) is what is committed.
+assets/units3d/ai_src/
+assets/units3d/*_albedo.jpg
+assets/units3d/*_normal.jpg
+assets/units3d/*_albedo.jpg.import
+assets/units3d/*_normal.jpg.import

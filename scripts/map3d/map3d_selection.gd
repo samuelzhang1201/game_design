@@ -27,6 +27,16 @@ func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_markers: Map3DLayerSe
 	view = p_view
 
 
+## A left click. On one of the player's regiments it selects him AND opens
+## his orders (owner 2026-09-24: 左键点击兵人，会出现行动清单 — GARRISON, or
+## MARCH, which is then aimed with a ruler and confirmed by the next left
+## click); anywhere else it selects what it hit. `pos` is design px.
+func click(picked: Dictionary, pos: Vector2) -> void:
+	select(picked)
+	if String(picked.get("kind", "")) == "army":
+		view.army_menu_requested.emit(String(picked["code"]), pos)
+
+
 ## The click: a settlement opens its card, land names its province (its
 ## manor under a theme), the sea clears — exactly the signals WorldMapView
 ## sends.

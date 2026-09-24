@@ -1,22 +1,25 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3 uid="uid://c383jbakpc7d8"]
 
-[ext_resource type="Script" path="res://scripts/ui/court_screen.gd" id="1"]
+[ext_resource type="Script" uid="uid://bkm0g1bago8lo" path="res://scripts/ui/court_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/top_bar.tscn" id="2"]
+[ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="3_i1kge"]
 
-[node name="CourtScreen" type="Control"]
+[node name="CourtScreen" type="Control" unique_id=626180433]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1")
 
-[node name="Bg" type="ColorRect" parent="."]
+[node name="Bg" type="ColorRect" parent="." unique_id=1308777378]
 unique_name_in_owner = true
-anchors_preset = 15
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="MapPanel" type="PanelContainer" parent="."]
+[node name="MapPanel" type="PanelContainer" parent="." unique_id=1468847440]
 unique_name_in_owner = true
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 128.0
@@ -24,24 +27,27 @@ offset_top = 30.0
 offset_right = -4.0
 offset_bottom = -40.0
 
-[node name="TopBar" parent="." instance=ExtResource("2")]
+[node name="TopBar" parent="." unique_id=1122720887 instance=ExtResource("2")]
 unique_name_in_owner = true
-anchor_right = 1.0
+anchors_preset = 0
 
-[node name="LogPanel" type="PanelContainer" parent="."]
+[node name="LogPanel" type="PanelContainer" parent="." unique_id=290478157]
 unique_name_in_owner = true
+layout_mode = 0
 anchor_bottom = 1.0
 offset_left = 4.0
 offset_top = 30.0
 offset_right = 124.0
 offset_bottom = -40.0
 
-[node name="LVBox" type="VBoxContainer" parent="LogPanel"]
+[node name="LVBox" type="VBoxContainer" parent="LogPanel" unique_id=2007783036]
+layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="SidePanel" type="PanelContainer" parent="."]
+[node name="SidePanel" type="PanelContainer" parent="." unique_id=1631763932]
 unique_name_in_owner = true
 visible = false
+layout_mode = 0
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -50,39 +56,52 @@ offset_top = 30.0
 offset_right = -4.0
 offset_bottom = -40.0
 
-[node name="SVBox" type="VBoxContainer" parent="SidePanel"]
+[node name="SVBox" type="VBoxContainer" parent="SidePanel" unique_id=1136924669]
+layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="LeaveButton" type="Button" parent="SidePanel/SVBox"]
+[node name="LeaveButton" type="Button" parent="SidePanel/SVBox" unique_id=176605033]
 unique_name_in_owner = true
+layout_mode = 2
 focus_mode = 0
 text = "LEAVE THE COUNCIL"
 
-[node name="LogHeader" type="Label" parent="SidePanel/SVBox"]
+[node name="LogHeader" type="Label" parent="SidePanel/SVBox" unique_id=1746705682]
 unique_name_in_owner = true
+layout_mode = 2
 text = "THE COURT RECORD"
 
-[node name="LogScroll" type="ScrollContainer" parent="SidePanel/SVBox"]
+[node name="LogScroll" type="ScrollContainer" parent="SidePanel/SVBox" unique_id=2097251120]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="LogBox" type="VBoxContainer" parent="SidePanel/SVBox/LogScroll"]
+[node name="LogBox" type="VBoxContainer" parent="SidePanel/SVBox/LogScroll" unique_id=830378947]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 3
 
-[node name="FreeText" type="LineEdit" parent="SidePanel/SVBox"]
+[node name="FreeText" type="LineEdit" parent="SidePanel/SVBox" unique_id=1048309932]
 unique_name_in_owner = true
+layout_mode = 2
 placeholder_text = "Give an order..."
 
-[node name="SideSep" type="HSeparator" parent="SidePanel/SVBox"]
+[node name="SideSep" type="HSeparator" parent="SidePanel/SVBox" unique_id=513427901]
+layout_mode = 2
 
-[node name="SideHeader" type="Label" parent="SidePanel/SVBox"]
+[node name="SideHeader" type="Label" parent="SidePanel/SVBox" unique_id=1246033178]
 unique_name_in_owner = true
-autowrap_mode = 3
+layout_mode = 2
 text = "THE COUNCIL ADVISES"
+autowrap_mode = 3
 
-[node name="SuggestionsBox" type="VBoxContainer" parent="SidePanel/SVBox"]
+[node name="SuggestionsBox" type="VBoxContainer" parent="SidePanel/SVBox" unique_id=2110440753]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 3
+
+[node name="ArmyOrders" type="PopupMenu" parent="." unique_id=1155623443]
+unique_name_in_owner = true
+script = ExtResource("3_i1kge")

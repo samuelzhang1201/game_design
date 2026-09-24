@@ -627,7 +627,7 @@ func army_markers() -> Array:
 	var frame := Rect2(Vector2.ZERO, size).grow(h * 4.0)
 	var points: Array = []
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		var sp := map_to_screen(Vector2(float(r["x"]), float(r["y"])))
+		var sp := map_to_screen(ArmySystem.position_of(repo, Game.state, r))
 		if frame.has_point(sp):
 			points.append({"reg": r, "pos": sp})
 	# ArmyCounters (shared with the 3D map) keeps them clear of the towns.

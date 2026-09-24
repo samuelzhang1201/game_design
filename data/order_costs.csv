@@ -30,3 +30,5 @@ MANOR_DEMOLISH,gold:-1:the wreckers' ale,1,the refund itself is paid by the orde
 GOODS_BUY,gold:-1:the factor's fee,1,the spread is the cost; this is the paperwork
 GOODS_SELL,gold:-1:the factor's fee,1,
 MANOR_RUSH,gold:-1:the foreman's bonus,1,
+ARMY_MARCH,gold:-2:the column's provisions on the road,1,a regiment on the march eats off the chest
+ARMY_GARRISON,gold:-1:the quartermaster's billets,1,

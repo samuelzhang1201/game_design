@@ -71,6 +71,8 @@ func validate(req: ActionRequest, state: GameState) -> String:
 				return "mode must be gold (slice 1)"
 		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE", "MANOR_FOCUS", "MANOR_DEMOLISH", "MANOR_RUSH":
 			return _validate_manor(req, state, needs)
+		"ARMY_MARCH", "ARMY_GARRISON":
+			return _validate_army(req, state)
 		"GOODS_BUY", "GOODS_SELL":
 			var pool := String(req.params.get("pool", ""))
 			if not pool in ["strategic", "civil"]:
@@ -86,6 +88,39 @@ func validate(req: ActionRequest, state: GameState) -> String:
 				var have := int(state.metrics.get(pool_metric(pool), 0.0))
 				if have < gold:
 					return "The %s stock holds only %d gold of goods" % [pool, have]
+	return ""
+
+## ARMY_MARCH / ARMY_GARRISON (owner 2026-09-22). Both name a regiment of
+## the player's own realm; a march also names where, and that place has to be
+## ground the regiment can stand on — land for a column, the sea for a fleet.
+## A banner with nobody under arms is refused outright rather than left
+## crawling toward a place it can never reach, because day_step_m is 0 for it
+## and march_day would carry the order forever.
+func _validate_army(req: ActionRequest, state: GameState) -> String:
+	var code := String(req.params.get("regiment", ""))
+	var reg := ArmySystem.regiment(data, code)
+	if reg.is_empty():
+		return "No such regiment: " + code
+	if String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
+		return "%s is not yours to command" % String(reg["label"])
+	if req.action_code == "ARMY_GARRISON":
+		return ""
+	if ArmySystem.base_pace_km(data, reg) <= 0:
+		return "%s has no one under arms to march" % String(reg["label"])
+	var dest := Vector2(float(req.params.get("x", -1.0)), float(req.params.get("y", -1.0)))
+	var w := float(data.map_info.get("width", "0"))
+	var h := float(data.map_info.get("height", "0"))
+	if dest.x < 0.0 or dest.y < 0.0 or (w > 0.0 and dest.x > w) or (h > 0.0 and dest.y > h):
+		return "That is off the map"
+	var naval := String(reg.get("is_naval", "0")) == "1"
+	# cell_at reads the LAND grid, so a land cell is exactly what it finds.
+	var on_land := MapEconomy.cell_at(data, dest) >= 0
+	if naval and on_land:
+		return "%s is a fleet and cannot be sent inland" % String(reg["label"])
+	if not naval and not on_land:
+		return "%s cannot march into the sea" % String(reg["label"])
+	if ArmySystem.position_of(data, state, reg).distance_to(dest) < 1.0:
+		return "%s is already there" % String(reg["label"])
 	return ""
 
 ## The manor an order names: params.manor (a code, a label in any case, or
@@ -376,6 +411,23 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 					"the crown seized %s from their house" % label, state.tick)
 			effects.append({"metric": "manor", "delta": 1.0,
 				"reason": "%s taken from House %s by force" % [label, victim]})
+		"ARMY_MARCH":
+			var code := String(req.params["regiment"])
+			var reg := ArmySystem.regiment(data, code)
+			var dest := Vector2(float(req.params["x"]), float(req.params["y"]))
+			ArmySystem.set_march(data, state, code, dest)
+			var days := ArmySystem.days_out(data, state, code)
+			effects.append({"metric": "army", "delta": 0.0,
+				"reason": "%s takes the road; %d day%s' march" % [
+					String(reg["label"]), days, "" if days == 1 else "s"]})
+		"ARMY_GARRISON":
+			var code := String(req.params["regiment"])
+			var reg := ArmySystem.regiment(data, code)
+			var was := ArmySystem.order_of(data, state, code)
+			ArmySystem.set_garrison(data, state, code)
+			effects.append({"metric": "army", "delta": 0.0,
+				"reason": ("%s halts and takes up quarters" if was == ArmySystem.ORDER_MARCH
+					else "%s stands to its post") % String(reg["label"])})
 		"GOODS_BUY":
 			var pool := String(req.params["pool"])
 			var gold := int(req.params["gold"])

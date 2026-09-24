@@ -83,6 +83,16 @@ var _at3d := Vector2(-1, -1)
 var _ruler := PackedFloat32Array()
 var _ruler_open := false
 var _map2d := false
+## --march3d fx,fy (with --screen root --layer military) plays the player's
+## march as the owner specified it (2026-09-24): a left click on the first
+## regiment's piece opens its orders, MARCH is chosen, the pointer is put at
+## that share of the 3D map (the aim's ruler follows it) and — with
+## --march-confirm — a left click there gives the order. --shot-frame N waits
+## N frames before the shot (default 40), so a run with --speed can show the
+## piece walking; without --speed the clock stays stopped and nothing moves.
+var _march3d := Vector2(-1, -1)
+var _march_confirm := false
+var _shot_frame := 40
 
 
 func _ready() -> void:
@@ -122,6 +132,11 @@ func _ready() -> void:
 		elif args[i] == "--at3d":
 			var aparts := args[i + 1].split(",")
 			_at3d = Vector2(float(aparts[0]), float(aparts[1]))
+		elif args[i] == "--march3d":
+			var mparts := args[i + 1].split(",")
+			_march3d = Vector2(float(mparts[0]), float(mparts[1]))
+		elif args[i] == "--shot-frame":
+			_shot_frame = int(args[i + 1])
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
 		elif args[i] == "--ruler":
@@ -136,6 +151,7 @@ func _ready() -> void:
 		i += 1
 	_ruler_open = args.has("--ruler-open")
 	_map2d = args.has("--map2d")
+	_march_confirm = args.has("--march-confirm")
 	if not SCENES.has(_screen):
 		push_error("unknown screen %s; choose from %s" % [_screen, SCENES.keys()])
 		Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
@@ -196,6 +212,26 @@ func _ready() -> void:
 			screen.call("start", [_minister_beat(_speaker)], null)
 		if _tab >= 0 and screen.has_method("select_tab"):
 			screen.call("select_tab", _tab)
+
+
+## A left click at `local` (design px of `c`), pushed into c's viewport as
+## a player's press and release would arrive.
+func _real_click(c: Control, local: Vector2) -> void:
+	_real_move(c, local)
+	for down in [true, false]:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.pressed = down
+		e.position = c.get_global_transform_with_canvas() * local
+		e.global_position = e.position
+		c.get_viewport().push_input(e, true)
+
+
+func _real_move(c: Control, local: Vector2) -> void:
+	var m := InputEventMouseMotion.new()
+	m.position = c.get_global_transform_with_canvas() * local
+	m.global_position = m.position
+	c.get_viewport().push_input(m, true)
 
 
 ## One standing minister beat, enough for _advance to raise the dossier.
@@ -271,7 +307,41 @@ func _process(_delta: float) -> void:
 				e.pressed = down
 				e.position = at
 				v._gui_input(e)
-	if _frames == 40:
+	if _root != null and _march3d.x >= 0.0 and _frames in [14, 16, 18, 20] \
+			and _root.current_screen.has_method("map3d_view") \
+			and _root.current_screen.map3d_view() != null:
+		# REAL input all the way (2026-09-24: a shot that called the view's and
+		# the menu's functions directly hid that a chosen order was thrown
+		# away): mouse events pushed into the viewport the view lives in, so
+		# they route through the GUI exactly as a player's clicks do, and the
+		# menu row chosen through PopupMenu.activate_item, its real path.
+		var mv: Map3DView = _root.current_screen.map3d_view()
+		var menu := _root.current_screen.get_node("%ArmyOrders") as ArmyOrderMenu
+		var at := mv.size * _march3d
+		if _frames == 14:
+			var rects := mv.unit_rects()
+			if rects.is_empty():
+				push_error("march3d: no piece on screen")
+			else:
+				_real_click(mv, (rects[rects.keys()[0]] as Rect2).get_center())
+				print("march3d: menu open=%s selected=%s" % [menu.visible, mv.selected_army()])
+		elif _frames == 16:
+			# The first row, MARCH…, chosen in the order PopupMenu.activate_item
+			# (not exposed to scripts) does it: the menu HIDES first, and only
+			# then emits id_pressed. That order is what threw every chosen
+			# order away until 2026-09-24, so the shot must keep it.
+			menu.hide()
+			menu.id_pressed.emit(0)
+			print("march3d: aiming=%s" % menu.aiming())
+		elif _frames == 18:
+			_real_move(mv, at)
+		elif _frames == 20 and _march_confirm:
+			var code := menu.aiming()
+			_real_click(mv, at)
+			print("march3d: order=%s days=%d clock=%d aiming_after=%s" % [
+				ArmySystem.order_of(Game.data, Game.state, code),
+				ArmySystem.days_out(Game.data, Game.state, code), Game.clock_speed, menu.aiming()])
+	if _frames == _shot_frame:
 		var img := (get_viewport() if _viewport == null else _viewport).get_texture().get_image()
 		var abs_path := ProjectSettings.globalize_path(_out)
 		DirAccess.make_dir_recursive_absolute(abs_path.get_base_dir())

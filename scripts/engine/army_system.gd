@@ -16,11 +16,17 @@ static func headcount(repo: DataRepository, reg: Dictionary) -> int:
 
 ## What a regiment starts a campaign with.
 static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
+	var home := pack_to_metres(repo, Vector2(float(reg.get("x", 0)), float(reg.get("y", 0))))
 	return {
 		"morale": int(repo.bal("army_start_morale")),
 		"wounded": 0,
 		"supplies": supply_use(repo, reg) * int(repo.bal("army_start_supply_months")),
 		"training": int(repo.bal("army_start_training")),
+		"x_m": home.x,
+		"y_m": home.y,
+		"dest_x_m": home.x,
+		"dest_y_m": home.y,
+		"order": ORDER_GARRISON,
 	}
 
 ## Seeds every regiment of the player's realm that has no state yet — a new
@@ -30,6 +36,17 @@ static func ensure(repo: DataRepository, state: GameState) -> void:
 		var code := String(reg["regiment_code"])
 		if not state.regiments.has(code):
 			state.regiments[code] = starting_state(repo, reg)
+			continue
+		# A save written before the march existed has morale but no position:
+		# seat it where the pack put it, standing.
+		var entry: Dictionary = state.regiments[code]
+		if not entry.has("x_m"):
+			var home := pack_to_metres(repo, Vector2(float(reg.get("x", 0)), float(reg.get("y", 0))))
+			entry["x_m"] = home.x
+			entry["y_m"] = home.y
+			entry["dest_x_m"] = home.x
+			entry["dest_y_m"] = home.y
+			entry["order"] = ORDER_GARRISON
 
 ## A regiment's state for reading: the stored one, else what it would start
 ## with. Never writes. {} for a regiment that is not the player's.
@@ -83,10 +100,10 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 ## The ground a regiment stands on: sea for a fleet; mountains and hills by
 ## the cell's height (the supply tiers' lines, Elevation.tier_of); else its
 ## biome's terrain.
-static func terrain_of(repo: DataRepository, reg: Dictionary) -> String:
+static func terrain_of(repo: DataRepository, reg: Dictionary, state: GameState = null) -> String:
 	if String(reg.get("is_naval", "0")) == "1":
 		return "sea"
-	var id := MapEconomy.cell_at(repo, Vector2(float(reg["x"]), float(reg["y"])))
+	var id := MapEconomy.cell_at(repo, position_of(repo, state, reg))
 	if id < 0:
 		return "plains"
 	var cell: Dictionary = repo.cells[id]
@@ -99,10 +116,10 @@ static func terrain_of(repo: DataRepository, reg: Dictionary) -> String:
 	return String(repo.army_terrain_biomes.get(int(cell["biome_id"]), "plains"))
 
 ## Whether walls or a citadel stand in the regiment's cell.
-static func is_fortified(repo: DataRepository, reg: Dictionary) -> bool:
+static func is_fortified(repo: DataRepository, reg: Dictionary, state: GameState = null) -> bool:
 	if String(reg.get("is_naval", "0")) == "1":
 		return false
-	var id := MapEconomy.cell_at(repo, Vector2(float(reg["x"]), float(reg["y"])))
+	var id := MapEconomy.cell_at(repo, position_of(repo, state, reg))
 	if id < 0:
 		return false
 	var cells := MapEconomy.burg_cells(repo)
@@ -124,21 +141,21 @@ static func terrain_factor(repo: DataRepository, terrain: String, arm: String, s
 	return f
 
 ## "Hills", or "Hills (fortified)".
-static func terrain_label(repo: DataRepository, reg: Dictionary) -> String:
-	var text := terrain_of(repo, reg).capitalize()
-	return text + " (fortified)" if is_fortified(repo, reg) else text
+static func terrain_label(repo: DataRepository, reg: Dictionary, state: GameState = null) -> String:
+	var text := terrain_of(repo, reg, state).capitalize()
+	return text + " (fortified)" if is_fortified(repo, reg, state) else text
 
 ## --- Height (spec 2026-09-19-map3d-heights §2) ---------------------------
 
 ## The cell under a regiment, -1 for a fleet or off the land.
-static func _cell_of(repo: DataRepository, reg: Dictionary) -> int:
+static func _cell_of(repo: DataRepository, reg: Dictionary, state: GameState = null) -> int:
 	if String(reg.get("is_naval", "0")) == "1":
 		return -1
-	return MapEconomy.cell_at(repo, Vector2(float(reg["x"]), float(reg["y"])))
+	return MapEconomy.cell_at(repo, position_of(repo, state, reg))
 
 ## Whole metres the regiment stands at; 0 for a fleet or off the land.
-static func elevation_of(repo: DataRepository, reg: Dictionary) -> int:
-	return Elevation.metres_of_cell(repo, _cell_of(repo, reg))
+static func elevation_of(repo: DataRepository, reg: Dictionary, state: GameState = null) -> int:
+	return Elevation.metres_of_cell(repo, _cell_of(repo, reg, state))
 
 ## {tier, supply_permille} of the regiment's cell; plains / 1000 for a fleet.
 static func height_tier(repo: DataRepository, reg: Dictionary) -> Dictionary:
@@ -317,6 +334,165 @@ static func speed_km_per_day(repo: DataRepository, state: GameState, code: Strin
 		int(st["morale"]), int(st["training"])) / 10.0
 
 
+## --- The march (owner 2026-09-22) ----------------------------------------
+##
+## A regiment's LIVE position is whole METRES on the pack's own measure —
+## map_info's distance_scale in its distance_unit, the same measure the scale
+## bar and the ruler show, so a day's march covers the distance the ruler
+## says it does. It lives in GameState.regiments beside the morale; the
+## pack's own x,y stay what the regiment STARTED from and are never written.
+##
+## Whole metres, and not pack pixels and not a float. Not pixels because a
+## pack pixel is a kilometre here and a day's march would round to nothing;
+## not a float because the save is JSON and "identical save + identical
+## inputs => identical state" (architecture invariant 2) then rests on a
+## float surviving a round trip through text. A day's march is
+## pace_tenths x 100 metres, which is already a whole number, so nothing is
+## lost by keeping the whole thing in metres.
+
+const ORDER_GARRISON := "garrison"
+const ORDER_MARCH := "march"
+
+
+## Metres to one pack pixel, from the pack's own map_info.
+static func metres_per_pack_px(repo: DataRepository) -> int:
+	var per_unit := 1609 if String(repo.map_info.get("distance_unit", "km")) == "mi" else 1000
+	return maxi(1, int(round(float(repo.map_info.get("distance_scale", "1")) * per_unit)))
+
+
+static func pack_to_metres(repo: DataRepository, p: Vector2) -> Vector2i:
+	var k := float(metres_per_pack_px(repo))
+	return Vector2i(int(round(p.x * k)), int(round(p.y * k)))
+
+
+static func metres_to_pack(repo: DataRepository, m: Vector2i) -> Vector2:
+	var k := float(metres_per_pack_px(repo))
+	return Vector2(float(m.x) / k, float(m.y) / k)
+
+
+## Where a regiment IS, in pack pixels: its marched position when it has one,
+## else the pack's own row. Everything that draws or measures a regiment goes
+## through this — the counters, the 3D pieces, the terrain it fights on — so
+## a regiment on the road is somewhere else on every one of them at once.
+static func position_of(repo: DataRepository, state: GameState, reg: Dictionary) -> Vector2:
+	var home := Vector2(float(reg.get("x", 0)), float(reg.get("y", 0)))
+	if state == null:
+		return home
+	var entry: Dictionary = state.regiments.get(String(reg.get("regiment_code", "")), {})
+	if not entry.has("x_m"):
+		return home
+	return metres_to_pack(repo, Vector2i(int(entry["x_m"]), int(entry["y_m"])))
+
+
+## The order a regiment is under: "march" or "garrison".
+static func order_of(repo: DataRepository, state: GameState, code: String) -> String:
+	var entry: Dictionary = state_of(repo, state, code)
+	return String(entry.get("order", ORDER_GARRISON)) if not entry.is_empty() else ORDER_GARRISON
+
+
+## Where a marching regiment is headed, in pack pixels; its own position when
+## it is not marching.
+static func destination_of(repo: DataRepository, state: GameState, code: String) -> Vector2:
+	var entry: Dictionary = state_of(repo, state, code)
+	if entry.is_empty() or not entry.has("dest_x_m"):
+		return position_of(repo, state, regiment(repo, code))
+	return metres_to_pack(repo, Vector2i(int(entry["dest_x_m"]), int(entry["dest_y_m"])))
+
+
+## The way a marching regiment faces, as a unit vector in PACK space (y down,
+## as the pack's own coordinates are); Vector2.ZERO when it stands. The 3D
+## pieces turn by this, so a column faces the road it is on.
+static func heading_of(repo: DataRepository, state: GameState, code: String) -> Vector2:
+	if order_of(repo, state, code) != ORDER_MARCH:
+		return Vector2.ZERO
+	var away := destination_of(repo, state, code) - position_of(repo, state, regiment(repo, code))
+	return away.normalized() if away.length() > 0.0001 else Vector2.ZERO
+
+
+## Metres a regiment covers in one day: pace_tenths (tenths of a km) x 100.
+## 0 for a banner with no one under arms, which is why an order to march is
+## refused for one rather than leaving it crawling toward a place forever.
+static func day_step_m(repo: DataRepository, state: GameState, code: String) -> int:
+	var reg := regiment(repo, code)
+	var st := state_of(repo, state, code)
+	if reg.is_empty() or st.is_empty():
+		return 0
+	return pace_tenths(repo, base_pace_km(repo, reg),
+		supply_score(repo, int(st["supplies"]), supply_use(repo, reg)),
+		int(st["morale"]), int(st["training"])) * 100
+
+
+## Send a regiment to `dest` (pack pixels). The engine's only writer of a
+## march order; ActionSystem calls it after ARMY_MARCH validates.
+static func set_march(repo: DataRepository, state: GameState, code: String, dest: Vector2) -> void:
+	ensure(repo, state)
+	if not state.regiments.has(code):
+		return
+	var entry: Dictionary = state.regiments[code]
+	var m := pack_to_metres(repo, dest)
+	entry["dest_x_m"] = m.x
+	entry["dest_y_m"] = m.y
+	entry["order"] = ORDER_MARCH
+
+
+## Halt a regiment where it stands.
+static func set_garrison(repo: DataRepository, state: GameState, code: String) -> void:
+	ensure(repo, state)
+	if not state.regiments.has(code):
+		return
+	var entry: Dictionary = state.regiments[code]
+	entry["order"] = ORDER_GARRISON
+	entry["dest_x_m"] = int(entry["x_m"])
+	entry["dest_y_m"] = int(entry["y_m"])
+
+
+## One DAY of marching for every regiment under a march order, in code order.
+## Returns the codes that arrived today, for the news bar. Straight-line: the
+## column walks at its own pace toward where it was sent, and there is no
+## pathfinding yet — a march ordered across a bay walks across it.
+static func march_day(repo: DataRepository, state: GameState) -> Array:
+	ensure(repo, state)
+	var arrived: Array = []
+	var codes := state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var code := String(c)
+		var entry: Dictionary = state.regiments[code]
+		if String(entry.get("order", ORDER_GARRISON)) != ORDER_MARCH:
+			continue
+		if regiment(repo, code).is_empty():
+			continue
+		var step := day_step_m(repo, state, code)
+		if step <= 0:
+			continue
+		var here := Vector2(float(entry["x_m"]), float(entry["y_m"]))
+		var dest := Vector2(float(entry["dest_x_m"]), float(entry["dest_y_m"]))
+		var left := here.distance_to(dest)
+		if left <= float(step):
+			entry["x_m"] = int(entry["dest_x_m"])
+			entry["y_m"] = int(entry["dest_y_m"])
+			entry["order"] = ORDER_GARRISON
+			arrived.append(code)
+			continue
+		var way := (dest - here) / left
+		entry["x_m"] = int(round(here.x + way.x * float(step)))
+		entry["y_m"] = int(round(here.y + way.y * float(step)))
+	return arrived
+
+
+## Days still on the road, rounded up; 0 for a regiment that is not marching.
+static func days_out(repo: DataRepository, state: GameState, code: String) -> int:
+	if order_of(repo, state, code) != ORDER_MARCH:
+		return 0
+	var step := day_step_m(repo, state, code)
+	if step <= 0:
+		return 0
+	var k := float(metres_per_pack_px(repo))
+	var left := position_of(repo, state, regiment(repo, code)) \
+		.distance_to(destination_of(repo, state, code)) * k
+	return int(ceil(left / float(step)))
+
+
 ## PLACEHOLDER (owner 2026-09-17: the battle formula is not decided). The
 ## attacker's power in the attack stance over both sides' powers, each on its
 ## own ground. Called by nothing but its test; replace it whole when the
@@ -324,8 +500,8 @@ static func speed_km_per_day(repo: DataRepository, state: GameState, code: Strin
 ## 2026-09-19-map3d-heights §2): the higher side's power is scaled up and the
 ## lower side's down by the same height_factor.
 static func battle_odds(repo: DataRepository, state: GameState, attacker_code: String, defender_code: String) -> float:
-	var delta := elevation_of(repo, regiment(repo, attacker_code)) \
-		- elevation_of(repo, regiment(repo, defender_code))
+	var delta := elevation_of(repo, regiment(repo, attacker_code), state) \
+		- elevation_of(repo, regiment(repo, defender_code), state)
 	@warning_ignore("integer_division")  # whole power, per-mille height factor
 	var a := power(repo, state, attacker_code, "attack") * height_factor(repo, delta) / 1000
 	@warning_ignore("integer_division")  # whole power, per-mille height factor

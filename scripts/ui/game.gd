@@ -76,10 +76,10 @@ func hold_day_before_month_end(day_ceiling: int) -> bool:
 func advance_day() -> Dictionary:
 	if state.day >= Calendar.DAYS_PER_TICK:
 		var r := next_tick()
-		return {"ticked": true, "finished": r.finished_works}
+		return {"ticked": true, "finished": r.finished_works, "arrived": engine.day_arrivals}
 	var finished := engine.advance_day(state)
 	state_changed.emit()
-	return {"ticked": false, "finished": finished}
+	return {"ticked": false, "finished": finished, "arrived": engine.day_arrivals}
 
 func next_tick() -> TickReport:
 	_prompts_this_tick = 0

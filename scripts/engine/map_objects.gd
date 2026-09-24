@@ -1541,9 +1541,12 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		stats.append(_stat("manor_province", where, "Quartered in %s" % where))
 		fields.append(["Quartered in", where])
 	if not st.is_empty():
-		var ground := ArmySystem.terrain_label(repo, r)
+		# The ground, the height and the supply tier are the ground the
+		# regiment is on NOW, not the one the pack quartered it on: a column
+		# three days down the road fights on what it has reached.
+		var ground := ArmySystem.terrain_label(repo, r, state)
 		stats.append(_stat("army_terrain", ground, "Quartered on %s" % ground.to_lower()))
-		var metres := ArmySystem.elevation_of(repo, r)
+		var metres := ArmySystem.elevation_of(repo, r, state)
 		var tier := ArmySystem.height_tier(repo, r)
 		var mult := float(int(tier["supply_permille"])) / 1000.0
 		@warning_ignore("integer_division")  # whole percent from per-mille
@@ -1564,15 +1567,22 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		var might := ArmySystem.strength_grade(repo, state, code)
 		stats.append(_stat("army_strength", might, "Strength — %s against the realm's others of its kind" % might))
 		var km := ArmySystem.speed_km_per_day(repo, state, code)
-		stats.append(_stat("army_march", "%.1f km/day" % km,
-			"March — %.1f km a day: its slowest arm's pace, slowed by short supplies, low morale and little training" % km))
+		var marching := ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH
+		if marching:
+			var days := ArmySystem.days_out(repo, state, code)
+			stats.append(_stat("army_march", "%d day%s out" % [days, "" if days == 1 else "s"],
+				"On the march — %.1f km a day, %d day%s from where it was sent" % [
+					km, days, "" if days == 1 else "s"]))
+		else:
+			stats.append(_stat("army_march", "%.1f km/day" % km,
+				"March — %.1f km a day: its slowest arm's pace, slowed by short supplies, low morale and little training" % km))
 	return {
 		"kind": "army", "code": code, "title": label,
 		"subtitle": "%s of %s" % ["Fleet" if naval else "Regiment", _label(repo.kingdoms, kingdom)],
 		"kingdom_code": kingdom, "initial": label.substr(0, 1), "piece": piece,
 		"painting": String((repo.army_art.get(piece, {}) as Dictionary).get("painting", "")),
 		"stats": stats, "rates": [], "fields": fields, "features": [], "production": [],
-		"actions": [], "known": "army", "center": Vector2(float(r["x"]), float(r["y"])),
+		"actions": [], "known": "army", "center": ArmySystem.position_of(repo, state, r),
 		"ask": "What is the state of the %s?" % label,
 		# A regiment's values ("4564 (0 wounded)", "Hills (fortified)") are too
 		# wide for the default 4-column (2-pair) grid in the 120px left column

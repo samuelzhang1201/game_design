@@ -82,11 +82,14 @@ static func ticks(length_units: float, step: float) -> PackedFloat32Array:
 
 ## The ruler on `ci` in its own px: `a` the anchor, `b` the other end, `tick_pts`
 ## the ticks' screen points along it, `text` the reading. `px` scales every
-## balance px value (1 for a Control drawn in design px).
+## balance px value (1 for a Control drawn in design px). `ink_over` (alpha
+## > 0) replaces the ink, and `arrow` ends the rule at `b` in an arrowhead
+## instead of a crossbar — the MARCH aim's ruler (owner 2026-09-24: 像那个
+## measurement的标尺类似，但是颜色是玩家国家颜色).
 static func draw(ci: CanvasItem, a: Vector2, b: Vector2, tick_pts: PackedVector2Array,
-		text: String, px: float = 1.0) -> void:
+		text: String, px: float = 1.0, ink_over := Color(0, 0, 0, 0), arrow := false) -> void:
 	var data := Game.data
-	var ink := MapPalette.named(data, "ruler_ink")
+	var ink := ink_over if ink_over.a > 0.0 else MapPalette.named(data, "ruler_ink")
 	var halo := MapPalette.named(data, "ruler_halo")
 	halo.a = data.bal("map_ruler_halo_alpha")
 	var w := data.bal("map_ruler_width_px") * px
@@ -106,8 +109,12 @@ static func draw(ci: CanvasItem, a: Vector2, b: Vector2, tick_pts: PackedVector2
 	for t in tick_pts:
 		tick_segs.append([t + down * foot, t + down * (foot + tick_len)])
 	var caps: Array = []
-	for e in [a, b]:
+	for e in ([a] if arrow else [a, b]):
 		caps.append([e - side * tick_len * 1.6, e + side * tick_len * 1.6])
+	var head := PackedVector2Array()
+	if arrow:
+		var hl := data.bal("map_ruler_arrow_px") * px
+		head = PackedVector2Array([b, b - dir * hl + side * hl * 0.55, b - dir * hl - side * hl * 0.55])
 	# Halo first — the line, every tick, both ends — so the ink above reads
 	# over snow, sea and grass alike.
 	if a.distance_to(b) > 0.001:
@@ -115,13 +122,19 @@ static func draw(ci: CanvasItem, a: Vector2, b: Vector2, tick_pts: PackedVector2
 	for seg in tick_segs + caps:
 		ci.draw_line(seg[0], seg[1], halo, hw, true)
 	ci.draw_circle(a, anchor_r + hw * 0.5, halo)
-	ci.draw_circle(b, anchor_r + hw * 0.5, halo)
+	if arrow:
+		ci.draw_polyline(head + PackedVector2Array([b]), halo, hw, true)
+	else:
+		ci.draw_circle(b, anchor_r + hw * 0.5, halo)
 	if a.distance_to(b) > 0.001:
 		ci.draw_dashed_line(a, b, ink, w, data.bal("map_ruler_dash_px") * px, true, true)
 	for seg in tick_segs + caps:
 		ci.draw_line(seg[0], seg[1], ink, w, true)
 	ci.draw_circle(a, anchor_r, ink)
-	ci.draw_circle(b, anchor_r, ink)
+	if arrow:
+		ci.draw_colored_polygon(head, ink)
+	else:
+		ci.draw_circle(b, anchor_r, ink)
 	var font := UiPalette.display_font()
 	if font == null or text == "":
 		return

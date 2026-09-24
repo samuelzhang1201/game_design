@@ -1,0 +1,3 @@
+action_code,label,hint,notes
+ARMY_MARCH,March…,Then click where on the map to send it,"the ellipsis says a second click follows: the order is AIMED, not issued by the menu"
+ARMY_GARRISON,Garrison,Halt and hold this ground,cancels a march where the column has got to

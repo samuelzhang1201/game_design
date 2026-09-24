@@ -22,6 +22,7 @@
 [ext_resource type="Script" uid="uid://deuj4qveun3qh" path="res://scripts/map3d/map3d_hud_backdrop.gd" id="13_hgoyr"]
 [ext_resource type="Script" uid="uid://c3tjsn1gfvlqh" path="res://scripts/map3d/map3d_hud_scale_bar.gd" id="14_0umpl"]
 [ext_resource type="Script" uid="uid://cmmbyhsi3kxcj" path="res://scripts/map3d/map3d_hud_ruler.gd" id="15_ebs35"]
+[ext_resource type="Script" path="res://scripts/map3d/map3d_layer_units.gd" id="15_exbav"]
 [ext_resource type="Script" uid="uid://kumuxikla7vf" path="res://scripts/ui/compass_layer.gd" id="16_nceau"]
 [ext_resource type="Script" uid="uid://bula280a44q8l" path="res://scripts/map3d/map3d_hud_needle.gd" id="17_geqxk"]
 [ext_resource type="StyleBox" uid="uid://btdf8fw324b5o" path="res://scenes/map3d/tooltip_chip.tres" id="19_rbqyb"]
@@ -98,6 +99,9 @@ transform = Transform3D(0.70710677, -0.4055798, 0.579228, 0, 0.81915206, 0.57357
 light_energy = 1.1
 shadow_enabled = true
 directional_shadow_max_distance = 60000.0
+
+[node name="Units" type="Node3D" parent="Viewport" unique_id=157155689]
+script = ExtResource("15_exbav")
 
 [node name="Display" type="TextureRect" parent="." unique_id=499707313]
 layout_mode = 1

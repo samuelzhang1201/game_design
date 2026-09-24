@@ -13,10 +13,21 @@ render_mode depth_draw_opaque, cull_disabled;
 
 uniform sampler2D shape : source_color, filter_linear_mipmap, repeat_disable;
 uniform float shadow_cut = 0.35;
+// The share of texels that cast (map3d_cloud_shadow_density): an ordered 4x4
+// stipple the shadow blur smooths into a lighter shadow, since the sun's
+// shadow_opacity would lighten every other shadow with it.
+uniform float shadow_density = 1.0;
+
+float bayer4(vec2 p) {
+	ivec2 q = ivec2(mod(p, 4.0));
+	int i = q.x + q.y * 4;
+	int m[16] = int[](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
+	return (float(m[i]) + 0.5) / 16.0;
+}
 
 void fragment() {
 	float a = texture(shape, UV).a * COLOR.a;
 	ALBEDO = vec3(0.0);
-	ALPHA = a;
+	ALPHA = bayer4(FRAGCOORD.xy) < shadow_density ? a : 0.0;
 	ALPHA_SCISSOR_THRESHOLD = shadow_cut;
 }

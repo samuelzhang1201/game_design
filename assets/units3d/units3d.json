@@ -1,0 +1,66 @@
+{
+ "cavalry": {
+  "actions": {
+   "ATTACK": [
+    1,
+    76
+   ],
+   "GARRISON": [
+    1,
+    121
+   ],
+   "MARCH": [
+    1,
+    49
+   ]
+  },
+  "base_m": [
+   0.88,
+   2.16,
+   0.07
+  ],
+  "bones": 34,
+  "fps": 30,
+  "height_m": 2.7,
+  "kind": "mounted",
+  "label": "Knight",
+  "prop_verts": 0,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 499932,
+  "tris": 17988,
+  "weapon_verts": 299,
+  "weights": "distance"
+ },
+ "infantry": {
+  "actions": {
+   "ATTACK": [
+    1,
+    61
+   ],
+   "GARRISON": [
+    1,
+    121
+   ],
+   "MARCH": [
+    1,
+    41
+   ]
+  },
+  "base_m": [
+   0.92,
+   0.92,
+   0.055
+  ],
+  "bones": 20,
+  "fps": 30,
+  "height_m": 1.8,
+  "kind": "humanoid",
+  "label": "Man-at-arms",
+  "prop_verts": 1553,
+  "source": "hunyuan3d+retopo",
+  "source_tris": 499940,
+  "tris": 11999,
+  "weapon_verts": 629,
+  "weights": "heat"
+ }
+}

@@ -54,8 +54,13 @@ func pick_at(pos: Vector2) -> Dictionary:
 	var xz := Vector2(p.x, p.z)
 	var best := ""
 	var best_d := INF
-	# A regiment's counter is picked first, as on the 2D map: anywhere on it,
-	# or within map_army_pick_px of the point it stands on.
+	# A regiment is picked first, as on the 2D map. Its 3D PIECE comes before
+	# its counter: the piece is the big thing the player is aiming at, and
+	# under MILITARY the counter has shrunk to a headcount chip over its head.
+	for code: String in view.unit_rects():
+		if (view.unit_rects()[code] as Rect2).has_point(pos):
+			return {"kind": "army", "code": code}
+	# ...anywhere on the counter, or within map_army_pick_px of its point.
 	var armies := view.army_markers()
 	for i in range(armies.size() - 1, -1, -1):
 		if (armies[i]["rect"] as Rect2).has_point(pos):

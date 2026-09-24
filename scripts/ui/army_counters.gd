@@ -15,7 +15,12 @@ extends RefCounted
 ## piece, color, naval, royal}. Sorted top to bottom; a counter meeting a
 ## settlement mark or an earlier counter drops to just under it, so no
 ## counter ever covers a town or another counter.
-static func layout(repo: DataRepository, points: Array, h: float, obstacles: Array) -> Array:
+## `with_piece` names the regiments that already have a 3D PIECE standing on
+## the map (Map3DLayerUnits). Those keep only their headcount box: the model
+## IS the counter's square now, and drawing the flat piece beside it put the
+## same regiment on the map twice.
+static func layout(repo: DataRepository, points: Array, h: float, obstacles: Array,
+		with_piece: Dictionary = {}) -> Array:
 	var mine := repo.resolve_realm("player_realm")
 	var royal := MapObjects.royal_regiment(repo, mine)
 	var pad := repo.bal("map_army_count_pad_px")
@@ -32,8 +37,9 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var naval := String(r.get("is_naval", "0")) == "1"
 		var text := str(int(strength))
 		var count_w := maxf(h, ManorBadges.text_width(font, text, font_px) + pad * 2.0)
-		var w := h + count_w
-		out.append({"code": code, "pos": sp, "size": strength, "text": text,
+		var solo := with_piece.has(code)
+		var w := count_w if solo else h + count_w
+		out.append({"code": code, "pos": sp, "size": strength, "text": text, "solo": solo,
 			"font_px": font_px, "rect": Rect2(sp - Vector2(w, h) / 2.0, Vector2(w, h)),
 			"glyph": "waves" if naval else ("crown" if code == royal else "swords"),
 			"piece": MapObjects.army_piece(repo, r),
@@ -58,8 +64,9 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 					moved = true
 		placed.append(rect)
 		m["rect"] = rect
-		m["icon"] = Rect2(rect.position, Vector2(h, h))
-		m["count"] = Rect2(rect.position + Vector2(h, 0.0), Vector2(rect.size.x - h, h))
+		var square := 0.0 if bool(m.get("solo", false)) else h
+		m["icon"] = Rect2(rect.position, Vector2(square, h))
+		m["count"] = Rect2(rect.position + Vector2(square, 0.0), Vector2(rect.size.x - square, h))
 	return out
 
 
@@ -90,6 +97,15 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 		var count: Rect2 = m["count"]
 		# The painted 3D piece (owner 2026-09-15, data/army_art.csv) stands in the
 		# counter's square on its own base; the glyph square only without art.
+		if bool(m.get("solo", false)):
+			# The 3D piece is the counter; this is only its headcount.
+			ci.draw_rect(count.grow(line), outline)
+			ci.draw_rect(count, m["color"])
+			ManorBadges.draw_centered_text(ci, font, count, String(m["text"]),
+				int(m["font_px"]), count_ink)
+			if String(m["code"]) == selected and selected != "":
+				ci.draw_rect(rect.grow(line + 1.5), UiPalette.GOLD, false, 2.0)
+			continue
 		var art := UiPalette.load_art(String((repo.army_art.get(String(m["piece"]), {}) as Dictionary).get("texture", "")))
 		if art != null:
 			ci.draw_rect(count.grow(line), outline)
