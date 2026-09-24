@@ -100,7 +100,7 @@ SLOPE_CLIFF = (0.93, 0.99)
 FAR_COLOR = {
     CLIFF: "#7E7B77", GRASS: "#6F7A40", LEAVES: "#4E4A2C", DIRT: "#9A7A55",
     ROCKY: "#7C7264", SOIL: "#5E4A30", FOREST: "#3A5026",
-}  # SAND's and SNOW's are data/map3d_bake.csv far_color_sand / far_color_snow
+}  # SAND's, SNOW's and CLIFF's are data/map3d_bake.csv far_color_sand / _snow / _cliff
 MACRO_WAVE_M = 9000.0    # large patches of lighter and darker country
 # (their depth and the green-yellow drift are data/map3d_bake.csv macro_*)
 
@@ -136,6 +136,80 @@ def value_noise(rng, w, h, wave):
     big = resize(grid, int(gw * wave), int(gh * wave))
     ox, oy = rng.integers(0, int(wave)), rng.integers(0, int(wave))
     return np.clip(big[oy:oy + h, ox:ox + w], 0, 1)
+
+
+def terrace(height, ramp, land, from_coast, rules, vw, vh, courses=()):
+    """Fold the high ground into plateaus and escarpments (owner 2026-09-24,
+    the look route's Phase 2, spec 2026-09-24-map3d-humankind-look-gap §2.3):
+    above terrace_from_m the height is stepped every terrace_step_m, each step
+    a flat top and a face that takes terrace_face of the step, the steps'
+    edges warped by a slow noise (terrace_warp_*) so a face does not follow a
+    contour, and all of it mixed in only where a coarse noise mask allows
+    (terrace_mask_*) — not every hill is a mesa. Held off the coast like the
+    ridges, and done before the rivers carve, so a river cuts a gorge through
+    a step. LOOK only: the engine's heights are the cells' (Elevation), and
+    the slope percentiles that pick cliff and scree follow the new faces.
+    Its own random stream, so nothing sown after it moves.
+
+    Critic round 1 (2026-09-24): the step height drifts with a slow noise
+    (terrace_step_jitter) so the steps are not stair-regular; only ground
+    whose local top clears terrace_min_steps steps is terraced (a lone
+    hilltop crossing one level became a flat "pill"); and the terraces are
+    held off the rivers over terrace_river_fade_m like the ridges, since a
+    river carved through a face left a black slot.
+
+    Blind A/B round (2026-09-24): terraced ground won, but read as contour
+    lines where every region stepped at the same levels — so the levels
+    themselves drift by region (terrace_level_jitter steps, a slow noise),
+    and no slope takes more than terrace_max_steps steps above its region's
+    first level (above them the ground is its own again, eased over a
+    step)."""
+    strength = rules.get("terrace_strength", 0.0)
+    if strength <= 0.0:
+        return height
+    trng = np.random.default_rng(int(rules["terrace_seed"]))
+    base = rules["terrace_from_m"]
+    step = rules["terrace_step_m"] * (1.0 + rules["terrace_step_jitter"]
+        * (value_noise(trng, vw, vh, rules["terrace_step_wave_m"] / VERTEX_M) * 2.0 - 1.0))
+    warp = (value_noise(trng, vw, vh, rules["terrace_warp_wave_m"] / VERTEX_M) * 2.0 - 1.0) \
+        * rules["terrace_warp_m"]
+    mask = value_noise(trng, vw, vh, rules["terrace_mask_wave_m"] / VERTEX_M)
+    lo, hi = rules["terrace_mask_lo"], rules["terrace_mask_hi"]
+    t = np.clip((mask - lo) / max(hi - lo, 1e-6), 0, 1)
+    mask = t * t * (3 - 2 * t)
+    mask *= np.clip((height - base) / rules["terrace_fade_m"], 0, 1) * from_coast
+    mask *= np.clip((local_top(height, rules["terrace_top_reach_m"] / VERTEX_M) - base)
+                    / (rules["terrace_min_steps"] * rules["terrace_step_m"]) - 1.0, 0, 1)
+    if len(courses):
+        mask *= river_fade(courses, vw, vh, rules["terrace_river_fade_m"] / VERTEX_M)
+    level = (value_noise(trng, vw, vh, rules["terrace_level_wave_m"] / VERTEX_M) * 2.0 - 1.0) \
+        * rules["terrace_level_jitter"] * step
+    hw = (height - base - level + warp) / step
+    mask *= np.clip(rules["terrace_max_steps"] + 1.0 - hw, 0, 1)
+    k = np.floor(hw)
+    f = hw - k
+    w = rules["terrace_face"]
+    u = np.clip((f - (1.0 - w)) / w, 0, 1)
+    stepped = base + level + (k + u * u * (3 - 2 * u)) * step
+    out = height + strength * mask * (stepped - height)
+    return np.where(ramp >= 1.0, out, height).astype(np.float32)
+
+
+def local_top(a, reach):
+    """The highest value within about `reach` samples of each sample: a block
+    maximum over reach-sized blocks, dilated one block, upsampled — coarse,
+    which is all a mask needs."""
+    b = max(int(reach), 1)
+    h, w = a.shape
+    ph, pw = -(-h // b) * b, -(-w // b) * b
+    pad = np.full((ph, pw), -1e9, dtype=np.float32)
+    pad[:h, :w] = a
+    blk = pad.reshape(ph // b, b, pw // b, b).max(axis=(1, 3))
+    d = blk.copy()
+    d[1:] = np.maximum(d[1:], blk[:-1]); d[:-1] = np.maximum(d[:-1], blk[1:])
+    e = d.copy()
+    e[:, 1:] = np.maximum(e[:, 1:], d[:, :-1]); e[:, :-1] = np.maximum(e[:, :-1], d[:, 1:])
+    return resize(e, pw, ph)[:h, :w]
 
 
 def distance_steps(mask, steps):
@@ -895,6 +969,7 @@ def main(argv=None):
     height = np.where(ramp >= 1.0, np.maximum(height + RIDGE_M * lift * from_coast * ridge * 2.0,
                                              SEA_Y + rules["shore_m"]), height)
     del ridge, lift
+    height = terrace(height, ramp, land, from_coast, rules, vw, vh, [c for _, c in courses])
 
     # --- rivers -------------------------------------------------------------------
     # Carved after the ridges and the shore (so a bed is measured from the
@@ -1067,7 +1142,8 @@ def main(argv=None):
     for t, key in enumerate(TEXTURE_KEYS):
         a = np.asarray(Image.open(os.path.join(TEX, f"{key}_alb_ht.png")).convert("RGB").resize((64, 64)), dtype=np.float64) / 255.0
         mean_lin = srgb_to_lin(a).reshape(-1, 3).mean(0)
-        far = rules["far_color_sand"] if t == SAND else rules["far_color_snow"] if t == SNOW else FAR_COLOR[t]
+        far = rules["far_color_sand"] if t == SAND else rules["far_color_snow"] if t == SNOW \
+            else rules["far_color_cliff"] if t == CLIFF else FAR_COLOR[t]
         mult_lin[t] = np.clip(srgb_to_lin(hex_rgb(far)) / np.maximum(mean_lin, 1e-4), 0, 1)
     color_lin = np.zeros((vh, vw, 3), dtype=np.float32)
     wsum = np.maximum(tw.sum(axis=2), 1e-6)

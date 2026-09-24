@@ -15,14 +15,28 @@ static func ink(repo: DataRepository) -> Color:
 	return color
 
 
+## A faint parchment halo under the ink (2026-09-24, look route Phase 4):
+## under Forward+ and the new grade the ground went darker and the dark ink
+## sank into it; the ink stays ink (the owner's 2026-09-12 ruling) and the
+## halo lifts it — terrain_palette map_label_halo at map_label_halo_alpha.
+static func halo(repo: DataRepository) -> Color:
+	var color := MapTerrain.palette_color(repo, "map_label_halo", Color(0.94, 0.9, 0.82))
+	color.a = repo.bal("map_label_halo_alpha")
+	return color
+
+
 ## draw_string has no letter-spacing, and tracking is most of what makes a
 ## label read as engraved rather than typed — so the glyphs are placed one at
 ## a time with the extra advance added between them.
 static func draw_tracked(ci: CanvasItem, font: Font, text: String, origin: Vector2,
-		font_px: int, tracking: float, color: Color) -> void:
+		font_px: int, tracking: float, color: Color, halo := Color(0, 0, 0, 0),
+		halo_px := 0) -> void:
 	var pen := origin
 	for i in text.length():
 		var ch := text.substr(i, 1)
+		if halo.a > 0.0 and halo_px > 0:
+			font.draw_string_outline(ci.get_canvas_item(), pen, ch, HORIZONTAL_ALIGNMENT_LEFT,
+				-1.0, font_px, halo_px, halo)
 		font.draw_string(ci.get_canvas_item(), pen, ch, HORIZONTAL_ALIGNMENT_LEFT,
 			-1.0, font_px, color)
 		pen.x += font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_px).x \
@@ -49,5 +63,6 @@ static func draw_centred(ci: CanvasItem, repo: DataRepository, font: Font, text:
 	var origin := at - Vector2(width * 0.5, -px * 0.35)
 	if not frame.intersects(Rect2(origin - Vector2(0, px), Vector2(width, px * 1.4))):
 		return false
-	draw_tracked(ci, font, text, origin, font_px, tracking, ink(repo))
+	draw_tracked(ci, font, text, origin, font_px, tracking, ink(repo), halo(repo),
+		int(round(px * repo.bal("map_label_halo_frac"))))
 	return true

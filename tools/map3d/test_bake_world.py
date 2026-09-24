@@ -304,3 +304,47 @@ if __name__ == "__main__":
         if name.startswith("test_") and callable(fn):
             fn()
             print("ok", name)
+
+
+def _terrace_rules(**over):
+    r = {"terrace_strength": 1.0, "terrace_seed": 1, "terrace_from_m": 100.0,
+         "terrace_fade_m": 1.0, "terrace_step_m": 200.0, "terrace_step_jitter": 0.0,
+         "terrace_step_wave_m": 20000.0, "terrace_face": 0.2, "terrace_warp_m": 0.0,
+         "terrace_warp_wave_m": 2000.0, "terrace_mask_wave_m": 20000.0,
+         "terrace_mask_lo": -1.0, "terrace_mask_hi": -0.5, "terrace_min_steps": 0,
+         "terrace_top_reach_m": 200.0, "terrace_river_fade_m": 200.0,
+         "terrace_level_jitter": 0.0, "terrace_level_wave_m": 20000.0,
+         "terrace_max_steps": 10}
+    r.update(over)
+    return r
+
+
+def _slope(vw=200, vh=4):
+    """A ramp from 0 to 800 m across, land everywhere."""
+    h = np.tile(np.linspace(0.0, 800.0, vw, dtype=np.float32), (vh, 1))
+    return h, np.ones((vh, vw), np.float32), np.ones((vh, vw), bool), np.ones((vh, vw), np.float32)
+
+
+def test_terrace_off_changes_nothing():
+    h, ramp, land, coast = _slope()
+    out = bw.terrace(h.copy(), ramp, land, coast, _terrace_rules(terrace_strength=0.0), 200, 4)
+    assert np.array_equal(out, h)
+
+
+def test_terrace_makes_flat_plateaus_and_steep_faces():
+    h, ramp, land, coast = _slope()
+    out = bw.terrace(h.copy(), ramp, land, coast, _terrace_rules(), 200, 4)
+    row = out[0]
+    d = np.diff(row[row > 150.0])
+    # most of the stepped ramp is flat (plateaus), a few samples carry the rise
+    assert (np.abs(d) < 1e-3).mean() > 0.6
+    assert d.max() > 4.0 * (800.0 / 199.0)
+    # below terrace_from_m nothing moves
+    assert np.allclose(out[0][h[0] < 100.0], h[0][h[0] < 100.0])
+
+
+def test_terrace_leaves_the_fringe_alone():
+    h, ramp, land, coast = _slope()
+    ramp[:] = 0.5  # the shore fringe keeps its ramp through the water plane
+    out = bw.terrace(h.copy(), ramp, land, coast, _terrace_rules(), 200, 4)
+    assert np.array_equal(out, h)
