@@ -204,6 +204,18 @@ func test_a_tier_only_takes_effects_away() -> void:
 	Game.data.balance["map3d_env_ssao"] = saved
 
 
+## The grade's warm curve (2026-09-24): no curve at 1 / 1 / 1, and each
+## channel through x^gamma otherwise.
+func test_the_warm_curve_is_per_channel() -> void:
+	assert_null(Map3DEnvironment.warm_curve(1.0, 1.0, 1.0), "no curve at all")
+	var t := Map3DEnvironment.warm_curve(0.5, 1.0, 2.0) as GradientTexture1D
+	assert_not_null(t)
+	var mid := t.gradient.sample(0.25)
+	assert_almost_eq(mid.r, 0.5, 0.01, "0.25^0.5 lifts red")
+	assert_almost_eq(mid.g, 0.25, 0.01)
+	assert_almost_eq(mid.b, 0.0625, 0.01, "0.25^2 takes blue out")
+
+
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()

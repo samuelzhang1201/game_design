@@ -66,8 +66,29 @@ static func apply_post(repo: DataRepository, env: Environment) -> void:
 	env.adjustment_brightness = repo.bal("map3d_env_brightness")
 	env.adjustment_contrast = repo.bal("map3d_env_contrast")
 	env.adjustment_saturation = repo.bal("map3d_env_saturation")
+	env.adjustment_color_correction = warm_curve(repo.bal("map3d_env_curve_r_gamma"),
+		repo.bal("map3d_env_curve_g_gamma"), repo.bal("map3d_env_curve_b_gamma"))
 	env.fog_aerial_perspective = repo.bal("map3d_fog_aerial")
 	env.fog_sky_affect = repo.bal("map3d_fog_sky_affect")
+
+
+## A per-channel curve for the grade (2026-09-24, look route Phase 2): each
+## channel x -> x^gamma (below 1 lifts it), as the Environment's colour
+## correction — a warm white balance the ground's own colour map cannot
+## give (it only darkens its textures). All gammas 1 is no curve at all.
+static func warm_curve(r_gamma: float, g_gamma: float, b_gamma: float) -> Texture2D:
+	if is_equal_approx(r_gamma, 1.0) and is_equal_approx(g_gamma, 1.0) and is_equal_approx(b_gamma, 1.0):
+		return null
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array()
+	g.colors = PackedColorArray()
+	for i in 17:
+		var x := float(i) / 16.0
+		g.add_point(x, Color(pow(x, r_gamma), pow(x, g_gamma), pow(x, b_gamma)))
+	var t := GradientTexture1D.new()
+	t.gradient = g
+	t.width = 256
+	return t
 
 
 ## The haze and the occlusion follow the zoom (Phase 0). With
