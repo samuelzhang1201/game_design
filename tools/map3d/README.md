@@ -317,7 +317,32 @@ against 6.87):
 | medium | 1920×1080 | 6.00 ms | 3.42 ms | not measured |
 | low | 1920×1080 | 4.00 ms | 2.50 ms | not measured |
 
-**The `high` tier does not clear its 8 ms budget while the map is being
+**Forward+ (2026-09-24, the look route's Phase 0/1 — supersedes the two
+tables above for today's renderer).** The map left GL Compatibility for
+Forward+ (owner), tilted its camera (more ground in view), and gained SSAO
+(now faded over the whole view: Godot's default 50–300 m fade had switched
+it off on every map view), depth haze and AgX. Two things change how to read
+the bench: Godot's Metal backend gives no GPU timestamps, and **macOS holds a
+windowed Metal app at the display's refresh whatever the vsync mode**, so on
+this Mac no row reads under ~8.33 ms (120 Hz) — a row at that floor means
+"holds the refresh", not a cost. Budgets moved with it (graphics_quality.csv
+notes): low / medium 8.5 ms (hold the floor), high 12, ultra 12.5 ms.
+
+| tier | size | budget | still near / mid / far | pan near / mid / far |
+|---|---|---|---|---|
+| ultra | 3024×1964 | 12.5 ms | 11.51 / 11.05 / 10.32 | 11.46 / 11.01 / 10.54 |
+| high | 3024×1964 | 12 ms | 11.12 / 9.87 / 9.46 | 11.14 / 10.32 / 9.82 |
+| medium | 1920×1080 | 8.5 ms | at the floor | at the floor |
+| low | 1920×1080 | 8.5 ms | at the floor | at the floor |
+
+Priced at `high`, near (`--tier` overrides one tier column): SSAO ~1.9 ms,
+MSAA 4x ~1.2 ms, houses ~2.5 ms, sun shadows ~2 ms; `ssao_quality` barely
+matters and `render_scale` 0.85 takes 11.1 → 9.5 ms (the frame is fill-bound
+at Retina size). Found on the way: a drag cost ~48 ms a frame at mid/far under
+EITHER renderer since the houses' 5×5 ground sampling of 2026-09-24 — every
+visible house re-sampled on each rebuild; the seat is now kept per house.
+
+**(Compatibility, 2026-09-20:) The `high` tier does not clear its 8 ms budget while the map is being
 dragged.** It is reported, not tuned away (the owner decides whether the
 budget, the tier's contents or the per-move work moves): a drag costs ~1.7 ms
 a frame on top of the still figure with no theme up, and ~5 ms with MANORS up

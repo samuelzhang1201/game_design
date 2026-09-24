@@ -395,6 +395,8 @@ map3d_env_ssao_radius,2.0,3D MAP Forward+ (Phase 0): ssao_radius in world metres
 map3d_env_ssao_intensity,2.0,3D MAP Forward+ (Phase 0): ssao_intensity
 map3d_env_ssao_power,1.5,3D MAP Forward+ (Phase 0): ssao_power
 map3d_env_ssao_detail,0.5,3D MAP Forward+ (Phase 0): ssao_detail
+map3d_env_ssao_fade_from_m,400000,"3D MAP Forward+ (2026-09-24): SSAO starts fading out this far from the camera. Godot's default 50 m (to 300 m) switched it off on every view of this map, which is seen from kilometres; a project-wide RenderingServer setting, applied with the tier's ssao_quality"
+map3d_env_ssao_fade_to_m,600000,3D MAP Forward+ (2026-09-24): SSAO is gone this far from the camera
 map3d_env_ssil,0,3D MAP Forward+ (Phase 0): screen-space indirect light on (1) or off
 map3d_env_ssil_radius,5.0,3D MAP Forward+ (Phase 0): ssil_radius in world metres
 map3d_env_ssil_intensity,1.0,3D MAP Forward+ (Phase 0): ssil_intensity

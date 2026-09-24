@@ -157,10 +157,32 @@ static func apply_viewport_quality(vp: SubViewport, row: Dictionary) -> void:
 			{1: 0, 2: 1, 4: 2, 8: 3, 16: 4}.get(int(Map3DQuality.num(row, "aniso", 16.0)), 4))
 
 
-## Everything a tier sets on the view's own nodes: the SubViewport, the sun
-## and the terrain (Map3DView._apply_quality; the layers take theirs).
+## A tier's screen effects (graphics_quality ssao / ssil / glow / haze, each
+## 0 or 1): an effect runs only where the tier allows it AND its balance
+## switch is on, so a tier can only take effects away.
+static func apply_effects_quality(repo: DataRepository, env: Environment, row: Dictionary) -> void:
+	if env == null:
+		return
+	env.ssao_enabled = repo.bal("map3d_env_ssao") > 0.0 and Map3DQuality.num(row, "ssao", 1.0) > 0.0
+	env.ssil_enabled = repo.bal("map3d_env_ssil") > 0.0 and Map3DQuality.num(row, "ssil", 1.0) > 0.0
+	env.glow_enabled = repo.bal("map3d_env_glow") > 0.0 and Map3DQuality.num(row, "glow", 1.0) > 0.0
+	env.fog_enabled = Map3DQuality.num(row, "haze", 1.0) > 0.0
+	# SSAO's quality (graphics_quality ssao_quality, RenderingServer's 0 very
+	# low .. 4 ultra) and its fade: Godot's default fades SSAO out from 50 to
+	# 300 m, which on a map seen from kilometres away kept its cost and threw
+	# its look away (found 2026-09-24) — map3d_env_ssao_fade_from_m / _to_m.
+	RenderingServer.environment_set_ssao_quality(
+		int(Map3DQuality.num(row, "ssao_quality", 2.0)) as RenderingServer.EnvironmentSSAOQuality,
+		true, 0.5, 2, repo.bal("map3d_env_ssao_fade_from_m"), repo.bal("map3d_env_ssao_fade_to_m"))
+
+
+## Everything a tier sets on the view's own nodes: the SubViewport, the sun,
+## the terrain and the environment's effects (Map3DView._apply_quality; the
+## layers take theirs).
 static func apply_view_quality(vp: SubViewport, sun: DirectionalLight3D, terrain: Node,
-		row: Dictionary) -> void:
+		row: Dictionary, repo: DataRepository = null, env: Environment = null) -> void:
+	if repo != null:
+		apply_effects_quality(repo, env, row)
 	apply_viewport_quality(vp, row)
 	apply_quality(sun, row)
 	apply_terrain_quality(terrain, row)

@@ -287,7 +287,8 @@ func _apply_quality() -> void:
 		return
 	_ctx.quality = Map3DQuality.merged(_repo, _tier, _overrides)
 	_fit_viewport()  # the SubViewport's pixels, then every px uniform
-	Map3DEnvironment.apply_view_quality(_viewport, _sun, _ctx.terrain, _ctx.quality)
+	Map3DEnvironment.apply_view_quality(_viewport, _sun, _ctx.terrain, _ctx.quality,
+		_repo, _env.environment)
 	_clouds.apply_quality(_ctx.quality)
 	_hud.apply_quality(_ctx.quality)
 

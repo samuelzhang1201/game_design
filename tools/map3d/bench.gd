@@ -23,6 +23,12 @@ extends Node
 ## GL Compatibility (see CLAUDE.md's Stack), which has no GPU timestamp
 ## queries, so "gpu view" / "gpu root" read a flat 0.00 ms here. That's
 ## expected on this renderer, not a broken measurement.
+## Forward+ on Metal (2026-09-24) has no timestamps either, AND macOS caps a
+## windowed Metal app at the display's refresh whatever the vsync mode, so
+## on this Mac a frame never reads under ~8.33 ms (120 Hz): a row at that
+## floor means "holds the refresh", not a cost. "cpu" is the CPU's share
+## (scripts + the render thread's setup and viewports), which is what a
+## pan regression shows up in.
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- --size 3024x1964
 ##
 ## Flags:
@@ -142,6 +148,12 @@ func _ready() -> void:
 	var ri := args.find("--render-scale")
 	if ri >= 0 and ri + 1 < args.size():
 		overrides["render_scale"] = args[ri + 1]
+	# --tier column=value (repeatable) overrides one graphics_quality.csv value
+	for i in args.size() - 1:
+		if args[i] == "--tier":
+			var kv := args[i + 1].split("=")
+			if kv.size() == 2:
+				overrides[kv[0]] = kv[1]
 		v.set_quality(tier, overrides)
 	var row := Map3DQuality.row(Game.data, tier)
 	var budget := Map3DQuality.num(row, "bench_budget_ms", BUDGET_MS)
@@ -191,6 +203,7 @@ func _measure(plain_label: String) -> float:
 	var frame_ms := PackedFloat64Array()
 	var view_gpu_ms := PackedFloat64Array()
 	var root_gpu_ms := PackedFloat64Array()
+	var cpu_ms := PackedFloat64Array()
 	var calls := 0
 	var prims := 0
 	var t_prev := Time.get_ticks_usec()
@@ -207,10 +220,16 @@ func _measure(plain_label: String) -> float:
 			RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME))
 		view_gpu_ms.append(RenderingServer.viewport_get_measured_render_time_gpu(view_rid))
 		root_gpu_ms.append(RenderingServer.viewport_get_measured_render_time_gpu(root_rid))
+		# the CPU's share of the frame: scripts (process) plus the render
+		# thread's setup and both viewports' CPU work
+		cpu_ms.append(Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+			+ RenderingServer.get_frame_setup_time_cpu()
+			+ RenderingServer.viewport_get_measured_render_time_cpu(view_rid)
+			+ RenderingServer.viewport_get_measured_render_time_cpu(root_rid))
 	var median := _median(frame_ms)
-	print("%-24s median %6.2f ms  mean %6.2f ms  p95 %6.2f ms  (%5.1f fps)  draw calls %4d  primitives %8d  gpu view %5.2f ms  gpu root %5.2f ms"
+	print("%-24s median %6.2f ms  mean %6.2f ms  p95 %6.2f ms  (%5.1f fps)  draw calls %4d  primitives %8d  gpu view %5.2f ms  gpu root %5.2f ms  cpu %5.2f ms"
 		% [label, median, _mean(frame_ms), _percentile(frame_ms, 0.95), 1000.0 / median, calls, prims,
-			_median(view_gpu_ms), _median(root_gpu_ms)])
+			_median(view_gpu_ms), _median(root_gpu_ms), _median(cpu_ms)])
 	_rows.append([str(get_window().size.x) + "x" + str(get_window().size.y), _tier, label,
 		median, _mean(frame_ms), _percentile(frame_ms, 0.95), calls, prims])
 	return median

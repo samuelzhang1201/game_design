@@ -186,6 +186,24 @@ func test_the_pause_menu_remembers_the_tier() -> void:
 	assert_string_contains(button.text, "Graphics")
 
 
+## Forward+'s screen effects are per tier (2026-09-24): low has no SSAO,
+## only ultra has SSIL, and a tier can only take an effect away — with the
+## balance switch off, no tier turns it on.
+func test_a_tier_only_takes_effects_away() -> void:
+	var env := Environment.new()
+	Map3DEnvironment.apply_effects_quality(Game.data, env, Map3DQuality.row(Game.data, "low"))
+	assert_false(env.ssao_enabled, "low: no SSAO")
+	assert_false(env.ssil_enabled)
+	assert_true(env.fog_enabled, "the haze stays on every tier")
+	Map3DEnvironment.apply_effects_quality(Game.data, env, Map3DQuality.row(Game.data, "high"))
+	assert_eq(env.ssao_enabled, Game.data.bal("map3d_env_ssao") > 0.0)
+	var saved: float = Game.data.balance["map3d_env_ssao"]
+	Game.data.balance["map3d_env_ssao"] = 0.0
+	Map3DEnvironment.apply_effects_quality(Game.data, env, Map3DQuality.row(Game.data, "ultra"))
+	assert_false(env.ssao_enabled, "the balance switch off wins over every tier")
+	Game.data.balance["map3d_env_ssao"] = saved
+
+
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()
