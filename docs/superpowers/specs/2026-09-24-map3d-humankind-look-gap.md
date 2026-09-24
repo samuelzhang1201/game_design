@@ -296,6 +296,41 @@ the gameplay steps before it are done, or be taken up by the owner's
 explicit decision to reorder. Phase 0 alone is small enough to run as a
 direction check without disturbing the order.
 
+## 4b. Progress (overnight 2026-09-24/25, the owner asleep: "不需要问我")
+
+Branch `feat/map3d-look`. Every step below went through the visual-review
+loop (variants, crops, an independent critic); pictures in
+`docs/references/map_look/`.
+
+| Phase | Done | Commit |
+|---|---|---|
+| 0 | Forward+, tilted camera, depth haze, SSAO, AgX; the houses' per-pan ground sampling bug (48 ms a pan frame) fixed | `e1a14b9` |
+| 1 | effects per graphics tier; SSAO's 50–300 m fade removed (it was off on every map view); budgets re-set for Forward+ on Metal | `2fcac5b` |
+| 3 | natural water near, SCHEME C bands far (40 → 100 km); rivers follow; foam | `b864fc5` |
+| 2 | escarpments in the high ground (terraces), northwest sun, warmer cliff rock; kingdom names get a parchment halo | `d60cdec` |
+| 2 | brighter, warmer grade (exposure 1.25, sun 1.4, per-channel curve) | `82db021` |
+| 2 | small irregular fields instead of long strips | `31d341d` |
+
+**Not done, and why:**
+- **Trees** — deferred by the owner (§6).
+- **Rock outcrops / boulder scatter** (§2.3 item 3) — needs new meshes
+  (CC0 or hand-made in Blender): new art waits for the owner's go-ahead.
+- **Stylised ground texture set** (§2.5) — new art, same reason. The warm
+  grade and field shapes were the no-new-art half of it.
+- **Settlement scale, walls, streets** (§2.7) — another session is working
+  on the houses in the same tree (uncommitted changes to the house bake and
+  meshes); touching them would collide.
+- **Border restyle to a thin glowing realm line, city banners** (§2.8) —
+  the border look is still the owner's open decision (2026-09-19), and a
+  banner on every settlement is new UI that changes what is always on the
+  map; both are proposals for the owner, not overnight changes.
+- **Far-zoom clutter** (the road web and white settlement dots at 25 km,
+  flagged by every critic) — thinning them removes information, which the
+  visual-review scope says to ask about first.
+
+**Performance after all of it** (high, 3024×1964, panning): 11.80 ms near /
+11.18 mid / 10.27 far; MANORS 11.88 ms — inside the 12 ms budget.
+
 ## 5. Risks
 
 - **Performance.** Already over budget on high while panning. Forward+,

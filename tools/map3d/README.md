@@ -75,7 +75,10 @@ shared by every pack and built once. The steps one by one:
    `data/map3d_bake.csv` (coast supersample and edge warp, the beach mix,
    river widths and carving — the numbers moved out of the script; the rest
    is still in `bake_world.py` itself, see Open items). Height comes from
-   `cells.csv` plus its own ridges, NOT from `world_relief.png` (read only
+   `cells.csv` plus its own ridges and, since 2026-09-24, TERRACES
+   (`bake_world.terrace`, `map3d_bake.csv` `terrace_*`: the high ground over
+   260 m folded into plateaus and escarpments, look only — the engine's
+   heights stay the cells'), NOT from `world_relief.png` (read only
    for the open sea), whose 2D-tuned detail is a 660 m bump every 800 m at
    this scale. The same pass carves rivers into that heightmap and writes
    each course, source to mouth, to `rivers.json` beside the built scene,
