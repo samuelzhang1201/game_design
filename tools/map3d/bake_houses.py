@@ -131,6 +131,33 @@ def _slope(height, vx, vy, vw, vh):
     return math.hypot(dx, dy)
 
 
+def _height_at(height, vx, vy, vw, vh):
+    """The heightmap bilinear at a fractional vertex position, clamped to the grid."""
+    vx = min(max(vx, 0.0), vw - 1.001)
+    vy = min(max(vy, 0.0), vh - 1.001)
+    x0, y0 = int(vx), int(vy)
+    ax, ay = vx - x0, vy - y0
+    return (float(height[y0, x0]) * (1 - ax) * (1 - ay) + float(height[y0, x0 + 1]) * ax * (1 - ay)
+            + float(height[y0 + 1, x0]) * (1 - ax) * ay + float(height[y0 + 1, x0 + 1]) * ax * ay)
+
+
+def _footprint_drop(height, vx, vy, half, yaw_deg, vw, vh):
+    """How far the ground falls across a building's own rotated rectangle
+    (`half` = (half_depth, half_width), metres) centred on vertex (vx, vy):
+    highest minus lowest of a 3 x 3 grid over it. The runtime stands a house
+    on its HIGHEST ground and builds a foundation down to its lowest (owner
+    2026-09-24: 不可以被地面遮住部分), so this drop is that foundation's height."""
+    (fx, fz), (rx, rz) = _axes(yaw_deg)
+    hd, hw = half
+    ys = []
+    for a in (-1.0, 0.0, 1.0):
+        for b in (-1.0, 0.0, 1.0):
+            ox = fx * hd * a + rx * hw * b
+            oz = fz * hd * a + rz * hw * b
+            ys.append(_height_at(height, vx + ox / VERTEX_M, vy + oz / VERTEX_M, vw, vh))
+    return max(ys) - min(ys)
+
+
 def _dry(land, vx, vy, vw, vh, shore_m):
     """True when every vertex within shore_m of this point is land."""
     rad = max(int(math.ceil(shore_m / VERTEX_M)), 0)
@@ -143,17 +170,23 @@ def _dry(land, vx, vy, vw, vh, shore_m):
     return bool(np.all(land[y0:y1, x0:x1] > 0.5))
 
 
-def _find_landmark_spot(cx, cy, land, vw, vh, shore_m, bound_m, on_water=None):
+def _find_landmark_spot(cx, cy, land, vw, vh, shore_m, bound_m, on_water=None, drop=None,
+                        max_drop=None):
     """The nearest point to the burg's own centre that stands on land with
     its shore buffer clear, searched in rings out to bound_m; None if
     nothing within it passes ("never in the sea" is structural even for the
-    landmark, which carries no slope test — a church on a hillside is
-    intended, but not a church offshore).
+    landmark).
 
     `on_water(vx, vy)` refuses a river as well (2026-09-21): Azgaar puts a
     riverside burg's own centre ON its river, so the one building that is
     NOT placed by the house passes — the palace, the church, the chapel a
-    settlement is read by — was the one standing in the water."""
+    settlement is read by — was the one standing in the water.
+
+    `drop(vx, vy)` is how far the ground falls across the landmark's own
+    footprint there (owner 2026-09-24: 不可以被地面遮住部分 — the runtime
+    stands it on its highest ground over a foundation down to its lowest,
+    and a church across a 155 m fall stood on a tower of stone). The nearest
+    spot within `max_drop` wins; when none is, the flattest spot searched."""
     def _ok(vx, vy):
         if not (0 <= vx < vw and 0 <= vy < vh):
             return False
@@ -163,23 +196,30 @@ def _find_landmark_spot(cx, cy, land, vw, vh, shore_m, bound_m, on_water=None):
             return False
         return not (on_water is not None and on_water(vx, vy))
 
-    if _ok(cx, cy):
-        return 0.0, 0.0
+    best = None   # (drop, ox, oz) of the flattest spot that passed _ok
+    candidates = [(0.0, 0.0)]
     step = 11.0   # metres: half a house's jittered-grid cell, fine enough to hug the shore
     ring = 1
     while (ring - 1) * step < bound_m:
         rad = min(ring * step, bound_m)
         for a in range(16):
             ang = a * (2.0 * math.pi / 16.0)
-            ox, oz = rad * math.cos(ang), rad * math.sin(ang)
-            vx, vy = cx + ox / VERTEX_M, cy + oz / VERTEX_M
-            if not _ok(vx, vy):
-                continue
-            return ox, oz
+            candidates.append((rad * math.cos(ang), rad * math.sin(ang)))
         if rad >= bound_m:
             break
         ring += 1
-    return None
+    for ox, oz in candidates:
+        vx, vy = cx + ox / VERTEX_M, cy + oz / VERTEX_M
+        if not _ok(vx, vy):
+            continue
+        if drop is None:
+            return ox, oz
+        d = drop(vx, vy)
+        if max_drop is None or d <= max_drop:
+            return ox, oz
+        if best is None or d < best[0]:
+            best = (d, ox, oz)
+    return None if best is None else (best[1], best[2])
 
 
 def _axes(yaw_deg):
@@ -424,8 +464,17 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
                 return False
             return (1.0 - float(wet[int(vy), int(vx)])) * rules["river_wet_m"] < lm_clear
 
+        # the yaw is drawn BEFORE the spot (the same single draw, so the
+        # stream is unchanged) because the footprint's fall depends on it
+        yaw0 = float(round(rng.uniform(0.0, 360.0), 2))
+        lm_half = half_extents(types[landmark])
+        lm_max = float(rules["house_landmark_max_drop_m"])
+
+        def _lm_drop(vx, vy):
+            return _footprint_drop(height, vx, vy, lm_half, yaw0, vw, vh)
+
         spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m, search_m,
-                                   on_water=_lm_on_water)
+                                   on_water=_lm_on_water, drop=_lm_drop, max_drop=lm_max)
         if spot is None:
             # A settlement always shows its landmark. The river clearance is
             # a LOOK rule and the sea gate is the structural one, so when a
@@ -434,11 +483,11 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
             # the strict rule alone left 3 of the pack's 684 with no
             # building at all, which reads as a named dot standing on empty
             # ground.
-            spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m, search_m)
+            spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m, search_m,
+                                       drop=_lm_drop, max_drop=lm_max)
         if spot is None:
             return []
         lx, lz = spot
-        yaw0 = float(round(rng.uniform(0.0, 360.0), 2))
         rows.append({"burg_code": code, "rank": 0, "x_m": float(round(lx, 2)),
                      "z_m": float(round(lz, 2)), "yaw_deg": yaw0,
                      "type": landmark, "scale": 1.0,
@@ -517,6 +566,12 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
         if _slope(height, vx, vy, vw, vh) > rules["house_max_slope"]:
             return False
         half = half_extents(types[pick])
+        # owner 2026-09-24 (不可以被地面遮住部分): the runtime stands a house on
+        # its highest ground over a foundation down to its lowest, so a plot
+        # the ground falls across by more than this would stand on a tower
+        # of stone -- the house is placed elsewhere instead
+        if _footprint_drop(height, vx, vy, half, yaw, vw, vh) > rules["house_max_drop_m"]:
+            return False
         # a river is water too (2026-09-21): `wet` is 1 inside the drawn
         # channel and fades to 0 over river_wet_m beyond it, so
         # (1 - wet) * river_wet_m is this point's distance from the water's

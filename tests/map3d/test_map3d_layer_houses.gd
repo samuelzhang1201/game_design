@@ -44,9 +44,9 @@ func test_one_multimesh_per_type_present() -> void:
 	assert_eq(counts.get("cottage_a", 0), 1)
 
 
-func test_every_instance_sits_on_the_ground_minus_the_sink() -> void:
+func test_every_instance_sits_on_the_ground() -> void:
 	_layer.refresh(_home())
-	var sink: float = Game.data.bal("map3d_house_sink_m")
+	var clear: float = Game.data.bal("map3d_house_seat_clear_m")
 	# Deviation from the brief: under the headless dummy renderer GUT runs
 	# under, MultiMeshInstance3D.get_instance_transform() never reflects what
 	# set_instance_transform() wrote — verified directly, even for a
@@ -58,8 +58,8 @@ func test_every_instance_sits_on_the_ground_minus_the_sink() -> void:
 	var checked := 0
 	for type: String in _layer.counts():
 		for t: Transform3D in _layer.transforms_of(type):
-			assert_almost_eq(t.origin.y, HEIGHT - sink, 0.001,
-				"a house stands on the ground, sunk so its foot bites in")
+			assert_almost_eq(t.origin.y, HEIGHT + clear, 0.001,
+				"a house stands on the ground, never sunk into it")
 			checked += 1
 	assert_eq(checked, 2, "both chapel and cottage_a were checked")
 
@@ -91,7 +91,7 @@ func test_instances_carry_their_yaw_and_scale() -> void:
 	# computed and handed to set_instance_transform (transforms_of()) rather
 	# than reading it back from the MultiMesh, which the headless dummy
 	# renderer never backs with real data (see
-	# test_every_instance_sits_on_the_ground_minus_the_sink). A refresh() that
+	# test_every_instance_sits_on_the_ground). A refresh() that
 	# dropped the yaw or the scale fails this directly, since transforms_of()
 	# is filled from inside refresh()'s own loop.
 	var xforms := _layer.transforms_of("cottage_a")
@@ -117,30 +117,31 @@ func test_height_scale_reaches_the_transform() -> void:
 		assert_almost_eq(s.y, 0.8 * 2.0, 0.01, "vertical scale is scale * height_scale")
 
 
-## Owner 2026-09-24: on a slope part of a house was buried in the hill. A
-## house stands on the HIGHEST ground under its footprint (so the uphill wall
-## is never buried beyond the sink) and a stone foundation fills the gap
-## under the downhill side down past the LOWEST corner.
-func test_a_house_on_a_slope_stands_on_its_highest_corner_over_a_foundation() -> void:
+## Owner 2026-09-24, twice: on a slope part of a house was buried in the
+## hill, and then "要垂直于地面，不可以被地面遮住部分". A house stands upright on
+## the HIGHEST ground anywhere under its footprint (a grid of samples, not
+## just the corners), plus map3d_house_seat_clear_m, so no part of it is ever
+## under the ground; a stone foundation fills the downhill side down past the
+## LOWEST sample.
+func test_a_house_on_a_slope_stands_on_its_highest_ground_over_a_foundation() -> void:
 	var at := _home()
-	# A gentle slope: under map3d_house_plinth_max_rise_m across the chapel.
 	_ctx.height_fn = func(xz: Vector2) -> float: return HEIGHT + 0.1 * (xz.x - at.x)
 	_layer.refresh(at)
-	var sink: float = Game.data.bal("map3d_house_sink_m")
-	var inset: float = Game.data.bal("map3d_house_plinth_inset")
 	var xforms := _layer.transforms_of("chapel")
 	assert_eq(xforms.size(), 1)
 	var mesh_box: AABB = _layer._aabbs["chapel"]
 	var h := {"at": at, "scale": 1.0, "yaw_deg": 0.0}
 	var ys: Array = []
-	for c in Map3DHouses.footprint_of(h, mesh_box, inset):
+	for c in Map3DHouses.footprint_grid(h, mesh_box, Game.data.bal("map3d_house_ground_inset"),
+			int(Game.data.bal("map3d_house_ground_samples"))):
 		ys.append(HEIGHT + 0.1 * (c.x - at.x))
 	var highest: float = ys.max()
 	var lowest: float = ys.min()
 	assert_gt(highest - lowest, 1.0, "the fixture slope is real")
 	if xforms.size() > 0:
-		assert_almost_eq((xforms[0] as Transform3D).origin.y, highest - sink, 0.001,
-			"a house stands on its footprint's highest corner, never buried downhill of it")
+		assert_almost_eq((xforms[0] as Transform3D).origin.y,
+			highest + Game.data.bal("map3d_house_seat_clear_m"), 0.001,
+			"a house stands on the highest ground under it, never buried")
 	var plinths := _layer.plinths()
 	assert_eq(plinths.size(), 2, "both houses on the slope stand on a foundation")
 	var reaches := false
@@ -148,27 +149,46 @@ func test_a_house_on_a_slope_stands_on_its_highest_corner_over_a_foundation() ->
 		var bottom := p.origin.y - p.basis.get_scale().y * 0.5
 		if absf(bottom - (lowest - Game.data.bal("map3d_house_plinth_below_m"))) < 0.01:
 			reaches = true
-	assert_true(reaches, "the chapel's foundation reaches below its lowest corner")
+	assert_true(reaches, "the chapel's foundation reaches below its lowest ground")
 
 
-## ...but on a steep site never more than map3d_house_plinth_max_rise_m above
-## its lowest corner (the palace on its sea cliff rode a tower of stone), and
-## never below its own centre's ground (capping alone sank it seaward).
-func test_a_house_rises_no_more_than_the_max_rise_above_its_lowest_corner() -> void:
-	var rise: float = Game.data.bal("map3d_house_plinth_max_rise_m")
-	# A slope under max_rise: the highest corner.
-	assert_eq(Map3DHouses.seat(Vector3(10.0, 11.0, 10.5), rise), Vector2(10.0, 11.0))
-	# A cliff whose centre is low: lowest + max_rise.
-	assert_eq(Map3DHouses.seat(Vector3(10.0, 40.0, 11.0), rise), Vector2(10.0, 10.0 + rise))
-	# A cliff whose centre is high (the palace): never below its centre.
-	assert_eq(Map3DHouses.seat(Vector3(0.0, 40.0, 25.0), rise), Vector2(0.0, 25.0))
-
-
-func test_a_cliff_gets_no_foundation() -> void:
+## A ridge BETWEEN the corners: a house that sampled only its corners stood
+## below the crest and the crest came up through its floor.
+func test_a_crest_between_the_corners_lifts_the_house() -> void:
 	var at := _home()
-	_ctx.height_fn = func(xz: Vector2) -> float: return HEIGHT + 3.0 * (xz.x - at.x)
+	_ctx.height_fn = func(xz: Vector2) -> float: return HEIGHT + maxf(0.0, 4.0 - absf(xz.x - at.x))
 	_layer.refresh(at)
-	assert_eq(_layer.plinths().size(), 0, "no pier down a cliff face")
+	var xforms := _layer.transforms_of("chapel")
+	assert_eq(xforms.size(), 1)
+	if xforms.size() > 0:
+		assert_gte((xforms[0] as Transform3D).origin.y, HEIGHT + 4.0 - 0.001,
+			"the crest under the middle of the house is not inside it")
+
+
+## Upright, never tilted with the slope: a building is plumb.
+func test_a_house_on_a_slope_stays_upright() -> void:
+	var at := _home()
+	_ctx.height_fn = func(xz: Vector2) -> float: return HEIGHT + 0.3 * (xz.x - at.x) + 0.2 * (xz.y - at.y)
+	_layer.refresh(at)
+	for t: Transform3D in _layer.transforms_of("chapel"):
+		assert_almost_eq(t.basis.y.normalized().dot(Vector3.UP), 1.0, 0.0001, "the house stands plumb")
+
+
+## Steep ground no longer caps the seat and buries the uphill wall: even a
+## steep site is stood on its highest ground, its foundation reaching down.
+## (The bake keeps houses off such sites in the first place: map3d_bake.csv
+## house_max_drop_m.)
+func test_a_steep_site_still_buries_nothing() -> void:
+	var at := _home()
+	_ctx.height_fn = func(xz: Vector2) -> float: return HEIGHT + 1.5 * (xz.x - at.x)
+	_layer.refresh(at)
+	var mesh_box: AABB = _layer._aabbs["chapel"]
+	var h := {"at": at, "scale": 1.0, "yaw_deg": 0.0}
+	var ground := Map3DHouses.ground_under(h, mesh_box, Game.data.bal("map3d_house_ground_inset"),
+		int(Game.data.bal("map3d_house_ground_samples")), _ctx.height_at)
+	for t: Transform3D in _layer.transforms_of("chapel"):
+		assert_gte(t.origin.y, ground.y, "the uphill wall is not under the hill")
+	assert_eq(_layer.plinths().size(), 2, "and the downhill side stands on stone")
 
 
 func test_flat_ground_gets_no_foundation() -> void:

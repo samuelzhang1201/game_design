@@ -143,11 +143,12 @@ func refresh(camera_xz: Vector2) -> bool:
 			pos[code] = ctx.to_world(Vector2(float(b["x"]), float(b["y"])))
 	var buckets := Map3DHouses.visible_set(houses, ctx.repo, pos,
 		camera_xz, ctx.repo.bal("map3d_house_view_m"), _budget())
-	var sink := ctx.repo.bal("map3d_house_sink_m")
+	var clear := ctx.repo.bal("map3d_house_seat_clear_m")
+	var ground_inset := ctx.repo.bal("map3d_house_ground_inset")
+	var samples := int(ctx.repo.bal("map3d_house_ground_samples"))
 	var inset := ctx.repo.bal("map3d_house_plinth_inset")
 	var min_drop := ctx.repo.bal("map3d_house_plinth_min_drop_m")
 	var below := ctx.repo.bal("map3d_house_plinth_below_m")
-	var max_rise := ctx.repo.bal("map3d_house_plinth_max_rise_m")
 	_transforms.clear()
 	_plinth_xforms.clear()
 	for type: String in _instances:
@@ -158,15 +159,16 @@ func refresh(camera_xz: Vector2) -> bool:
 		var box: AABB = _aabbs[type]
 		for i in rows.size():
 			var h: Dictionary = rows[i]
-			var ground := Map3DHouses.seat(Map3DHouses.ground_under(h, box, inset, ctx.height_at), max_rise)
-			var t := transform_of(h, ground.y, sink)
+			var ground := Map3DHouses.seat(
+				Map3DHouses.ground_under(h, box, ground_inset, samples, ctx.height_at), clear)
+			var t := transform_of(h, ground.y)
 			mmi.multimesh.set_instance_transform(i, t)
 			xforms.append(t)
-			# A foundation only under a gentle slope: on a cliff the building
-			# overhangs from its centre as it always did, since a foundation
-			# down to the cliff's foot was a pier standing in the sea.
-			if ground.y - ground.x > min_drop and ground.y - ground.x <= max_rise:
-				_plinth_xforms.append(Map3DHouses.plinth_of(h, box, inset, ground, sink, below))
+			# Every house off level ground stands on a foundation down past its
+			# lowest ground, however far: nothing is buried and nothing hangs
+			# in the air (the bake keeps houses off cliffs: house_max_drop_m).
+			if ground.y - clear - ground.x > min_drop:   # the ground's own fall, not the clearance
+				_plinth_xforms.append(Map3DHouses.plinth_of(h, box, inset, ground, below))
 		_transforms[type] = xforms
 	if _plinths != null:
 		_plinths.multimesh.instance_count = _plinth_xforms.size()
@@ -195,17 +197,17 @@ func transforms_of(type: String) -> Array:
 ## The world transform for one baked house row: yaw about the vertical,
 ## scaled HORIZONTALLY by `scale` and VERTICALLY by `scale * height_scale`
 ## (the bake's own per-house bias, tallest at a settlement's core, jittered
-## per house — 高低层次不齐), standing at `height` (the ground under it, the
-## highest under its footprint — ground_under) sunk
-## by `sink` so its foot bites into sloped ground. Pure, so a test can check
-## the maths directly rather than reading it back off a MultiMesh.
-static func transform_of(h: Dictionary, height: float, sink: float) -> Transform3D:
+## per house — 高低层次不齐), standing upright at `height` (Map3DHouses.seat:
+## the highest ground under its footprint, so nothing of it is buried). Pure,
+## so a test can check the maths directly rather than reading it back off a
+## MultiMesh.
+static func transform_of(h: Dictionary, height: float) -> Transform3D:
 	var at: Vector2 = h["at"]
 	var s: float = float(h["scale"])
 	var height_scale: float = float(h["height_scale"])
 	var basis := Basis(Vector3.UP, deg_to_rad(float(h["yaw_deg"])))
 	basis = basis.scaled(Vector3(s, s * height_scale, s))
-	return Transform3D(basis, Vector3(at.x, height - sink, at.y))
+	return Transform3D(basis, Vector3(at.x, height, at.y))
 
 
 ## Test seam: the foundations the last refresh() laid, in instance order.

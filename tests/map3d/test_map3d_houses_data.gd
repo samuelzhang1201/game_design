@@ -19,7 +19,8 @@ const BAKE_KEYS := ["house_built_share", "house_m2_each_capital", "house_m2_each
 	"lane_seeds", "lane_step_m", "lane_wander_deg", "lane_branch_chance",
 	"lane_max_depth", "lane_half_width_m", "plot_step_m"]
 const BAL_KEYS := ["map3d_house_view_m",
-	"map3d_house_rebuild_move_m", "map3d_house_sink_m"]
+	"map3d_house_rebuild_move_m", "map3d_house_seat_clear_m",
+	"map3d_house_ground_samples", "map3d_house_ground_inset"]
 
 
 func before_all() -> void:

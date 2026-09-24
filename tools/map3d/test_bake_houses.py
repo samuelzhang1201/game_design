@@ -31,6 +31,7 @@ RULES = {
     "house_m2_each_fort": 480, "house_m2_each_village": 520,
     "house_built_share": 0.53, "house_barn_ratio": 0.75,
     "house_foot_min": 0.55, "house_max_slope": 0.38,
+    "house_max_drop_m": 8.0, "house_landmark_max_drop_m": 10.0,
     "house_shore_min_m": 25, "house_port_shore_min_m": 6,
     "house_landmark_search_m": 300, "house_yaw_jitter_deg": 35,
     "house_gap_m": 1.0, "house_height_min": 0.75, "house_height_max": 1.5,
@@ -137,6 +138,43 @@ def test_steep_ground_is_refused():
     height[:] = np.arange(VW, dtype=np.float32) * 40.0   # a 2.0 gradient over 20 m
     rows = place(burg(), RULES, TYPES, foot, land, height, K, VW, VH)
     assert len(rows) == 1, "only the landmark, which is pinned to the burg's own point"
+
+
+def test_no_house_needs_a_foundation_taller_than_the_limit():
+    """Owner 2026-09-24 (不可以被地面遮住部分): the runtime stands a house on
+    its highest ground over a foundation down to its lowest, so the bake
+    refuses a plot the ground falls across by more than house_max_drop_m.
+    A slope gentle enough for house_max_slope still falls ~4 m across a
+    house here; with the limit at 2 m some plots fit and none exceed it."""
+    foot, land, height = flat_world()
+    yy, xx = np.mgrid[0:VH, 0:VW].astype(np.float32)
+    height[:] = np.sin(xx * 0.35) * 6.0 + xx * 0.5    # rolling ground: steep and flat bands
+    rules = dict(RULES, house_max_drop_m=2.0, house_max_slope=5.0)
+    rows = place(burg(), rules, TYPES, foot, land, height, K, VW, VH)
+    houses = [r for r in rows if r["rank"] > 0]
+    assert houses, "the flat bands still take houses"
+    for r in houses:
+        vx = CENTRE + r["x_m"] / bake_houses.VERTEX_M
+        vy = CENTRE + r["z_m"] / bake_houses.VERTEX_M
+        d = bake_houses._footprint_drop(height, vx, vy, bake_houses.half_extents(TYPES[r["type"]]),
+                                        r["yaw_deg"], VW, VH)
+        assert d <= 2.0 + 1e-6, "%s at (%.0f, %.0f) needs a %.1f m foundation" % (r["type"], r["x_m"], r["z_m"], d)
+
+
+def test_the_landmark_moves_off_a_cliff_to_the_nearest_level_spot():
+    """A settlement's own centre on a cliff edge: its landmark goes to the
+    nearest spot whose footprint falls no more than house_landmark_max_drop_m."""
+    foot, land, height = flat_world()
+    yy, xx = np.mgrid[0:VH, 0:VW].astype(np.float32)
+    height[:] = np.where(xx < CENTRE + 1, 0.0, 60.0)    # a 60 m cliff just east of the centre
+    rows = place(burg(), RULES, TYPES, foot, land, height, K, VW, VH)
+    lm = rows[0]
+    assert lm["rank"] == 0
+    vx = CENTRE + lm["x_m"] / bake_houses.VERTEX_M
+    vy = CENTRE + lm["z_m"] / bake_houses.VERTEX_M
+    d = bake_houses._footprint_drop(height, vx, vy, bake_houses.half_extents(TYPES[lm["type"]]),
+                                    lm["yaw_deg"], VW, VH)
+    assert d <= RULES["house_landmark_max_drop_m"] + 1e-6
 
 
 def test_the_same_burg_places_the_same_village_twice():
