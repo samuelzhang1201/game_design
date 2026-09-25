@@ -48,25 +48,31 @@ func test_no_house_stands_in_the_sea() -> void:
 	assert_eq(wet, 0, "every one of %d houses is on land; first wet: %s" % [_rows.size(), worst])
 
 
+## Owner 2026-09-25 (标志性建筑要在中间附近): a settlement is laid out round
+## its LANDMARK's own spot (rank 0), which moves off water or a slope, and
+## its cluster is the group's house radius grown by the landmark's square.
 func test_every_house_is_inside_its_own_cluster() -> void:
 	if _skip():
 		return
+	var landmark_of: Dictionary = {}
+	for r: Dictionary in _rows:
+		if int(r["rank"]) == 0:
+			landmark_of[String(r["burg_code"])] = r
 	for r: Dictionary in _rows:
 		var code := String(r["burg_code"])
 		assert_true(Game.data.burgs.has(code), code + " is a burg of this pack")
-		if not Game.data.burgs.has(code):
+		if not Game.data.burgs.has(code) or not landmark_of.has(code):
 			continue
 		var b: Dictionary = Game.data.burgs[code]
-		var centre := Map3DGeometry.pack_to_world(_meta,
-			Vector2(float(b["x"]), float(b["y"])))
+		var lm: Dictionary = landmark_of[code]
+		var centre := Vector2(float(lm["x_m"]), float(lm["z_m"]))
 		var at := Vector2(float(r["x_m"]), float(r["z_m"]))
-		# the bake's own cluster radius (density v4): the group's fixed house
-		# count at that group's density, never the population — the runtime
-		# and the bake read the ONE formula, which is what this re-derivation
-		# is here to hold
-		var r_house := Map3DHouses.house_radius_m(b, Game.data)
-		assert_lte(at.distance_to(centre), r_house + 0.5,
-			code + " rank " + String(r["rank"]) + " is inside the house radius")
+		# the bake's own cluster radius: the group's fixed house count at that
+		# group's density plus the landmark's square — the runtime and the
+		# bake read the ONE formula, which is what this re-derivation holds
+		var r_cluster := Map3DHouses.cluster_radius_m(b, Game.data, String(lm["type"]))
+		assert_lte(at.distance_to(centre), r_cluster + 0.5,
+			code + " rank " + String(r["rank"]) + " is inside its cluster round the landmark")
 
 
 func test_rank_is_dense_and_starts_at_a_landmark() -> void:

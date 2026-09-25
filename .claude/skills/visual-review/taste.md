@@ -102,12 +102,52 @@ add it here as a principle with its why — not as a changelog entry.
   darken each wall toward a damp earthy colour below ~2.6 m, as vertex colour.
   Limewash is kept a muted lime-ochre, never near-white (the owner found it
   too bright twice).
+- **Hand-built, not machined: no edge dead straight, no corner knife-sharp**
+  (owner 2026-09-24, on the hand-modelled set: "边边角角太直了，太sharp了，
+  应该有点石头或者木质材质的不规则的感觉，而不是完全整齐的线条"). Stone and
+  timber are irregular materials; a house of perfect boxes reads as CG. The
+  kit rounds wall and roof corners, sags every ridge toward its middle as a
+  smooth bow (sampled finely along the ridge; a coarse sag reads as a broken
+  roof, not an old one), lets the roof's eave waver, and lays each beam a
+  little off true. It never leans the house (it stands plumb) and never
+  bows the walls (invisible at map size, and costly).
+- **Colour a little richer than true** (owner 2026-09-24: "颜色可以再鲜艳一
+  点"). Saturation rises by a SHARE toward full at the same lightness, so the
+  grey walls gain as much as the red roofs and nothing gets lighter; stone
+  takes half the share (at the full share it turned golden sandstone) and
+  slate none (it turns olive).
 - **A building stands plumb and nothing of it is ever under the ground**
   (owner 2026-09-24: "要垂直于地面，不可以被地面遮住部分"). On a slope it
   stands on the HIGHEST ground under its whole footprint, and a stone
   foundation carries the downhill side. It is never tilted with the slope,
   and its uphill wall never bites into the hill. Ground too steep for a
   modest foundation gets no house at all (the bake refuses the plot).
+- **A settlement is laid out ROUND its landmark** (owner 2026-09-25: "所有房子
+  几乎都一个方向，而不是围绕着标志性建筑展开…标志性建筑要在中间附近"). The
+  landmark is the centre the town grows from, wherever it had to move to
+  (off water, off a slope). An open square surrounds it, with a lane round
+  the square whose houses face in across it. The capital's houses had been
+  packed round the burg's registered point, all to one side of a palace that
+  had moved 59 m onto level ground.
+- **A landmark stands on a levelled terrace, and a house's footing follows
+  its walls** (owner 2026-09-25: "在斜坡上的房子都加了个很方的底座，看起来非常丑
+  和怪异"). The runtime's box foundation filled the mesh's whole bounding box,
+  eaves and chimney included, and was dark. It read as a square pedestal.
+  Now every house mesh carries its own stone footing traced from its walls
+  (a real hillside house's basement). The bake cuts and fills a terrace under
+  each landmark and eases it back into the hill, so a palace never stands on
+  a 30 m tower of its own stone.
+- **Detail that costs nothing goes in the texture** (owner 2026-09-25:
+  "窗子…加个窗框，在不影响成本的前提下"). The window's frame, cross and glass
+  are a texture on the recess material every window already had, so they add
+  no triangles and no draw call. At map size the texture must still average
+  to a DARK opening. A lighter first cut averaged to a mauve patch.
+- **Variety within the palette, never outside it** (owner 2026-09-25:
+  "颜色可以多样化一点，主色调不变，但可以有不同variant"). Each house wears one
+  of a few wall and roof tints (`data/map3d_house_variants.csv`), multiplied
+  into its own texture. A tint may be warmer, cooler, greyer or a shade
+  deeper, never lighter (pink roofs, white limewash) and never so dark that
+  a tile reads maroon or brown.
 - **A landmark's sign must be BIG enough to read at map size** (owner
   2026-09-24, on the church's bell-cote and its two crosses: "太小了，根本看不
   出来，把那个钟楼直接换成一个大木质十字架"). One large hewn wooden cross on the

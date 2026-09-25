@@ -31,6 +31,7 @@ Conventions:
 import json
 import math
 import os
+import random
 
 import bmesh
 import bpy
@@ -68,8 +69,43 @@ GRIME_BASE = (0.50, 0.45, 0.36)
 GRIME_VARY = 0.10
 GRIME_TOP = 0.90
 GRIME_TOP_M = 9.0
+# Weathering (owner 2026-09-24: "边边角角太直了，太sharp了，应该有点石头或者
+# 木质材质的不规则的感觉，而不是完全整齐的线条"). finish() rounds the walls'
+# and roofs' corners (a bevel), splits every long wall and roof edge so it
+# can bend, sags every ridge toward its middle — one smooth field over the
+# whole house, so a roof keeps sitting on its hall — and lets the roof slab's
+# eave and ridge waver; beam() lays each timber a little crooked. The walls
+# are NOT bowed: at map size a 15 cm bow is half a pixel, and a bow would
+# have to split every beam too for the beams to keep lying on it (2.3x the
+# triangles). The house never leans: it stands plumb (taste.md).
+WEATHER = {
+    "bevel_wall_m": 0.38,     # rounded wall corners
+    "bevel_roof_m": 0.15,     # softened roof edges
+    "bevel_segments": 1,
+    "bevel_min_face_m2": 2.0,
+    "split_m": 5.0,           # longest straight wall or roof edge left after splitting
+    "ridge_split_m": 2.5,     # and a roof's edges along the sag, so it bows, not kinks
+    "sag_m": 0.5,             # the ridge's sag at its middle (House.sag overrides)
+    "roof_wave_m": 0.12,      # the roof slab's own waver, eave and ridge
+    "roof_wave_len_m": 9.0,
+    "beam_jitter_m": 0.11,    # a beam's ends off true
+    "beam_width_vary": 0.18,  # and its width, as a share
+    "smooth_deg": 50.0,       # shade smooth below this angle (a 45-degree chamfer), sharp above
+}
+# Footings (owner 2026-09-25: "在斜坡上的房子都加了个很方的底座，看起来非常丑
+# 和怪异"): every wall that stands on the ground carries its own stone footing
+# down FOOT_M below the floor, traced from the wall's own footprint (never
+# the mesh's box, eaves and chimney included, which the old runtime plinth
+# filled), standing FOOT_PROUD out from the wall with a FOOT_TOP course above
+# the floor, in the house's rubble. On level ground only the course shows; on a slope the house stands
+# on its highest ground (Map3DHouses.seat) and the downhill side shows a
+# stone basement down to the hill, as a real hillside house does.
+FOOT_M = 18.0        # deep enough for house_max_drop_m 8 at the smallest drawn scale
+FOOT_TOP = 0.45
+FOOT_PROUD = 0.15
 SLOT_M = 90.0        # a new model's place in the Blender scene: its own cell of this grid
-VOID = (0x33 / 255, 0x27 / 255, 0x1E / 255)   # warmer than house_void: a pure near-black read as holes stuck on the wall
+WINDOW_U = 0.75      # textures.py's window: the share of the texture's width that is the window
+VOID_UV = (0.875, 0.5)   # the plain recess strip (textures.py WINDOW["void"], warmer than a pure near-black)
 # Off (2026-09-24): an A/B in game showed no difference at map size, and
 # each normal map is another texture and sample per surface.
 USE_NORMALS = False
@@ -89,8 +125,13 @@ def material(key):
     nt = m.node_tree
     b = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
     if key == "void":
-        b.inputs["Base Color"].default_value = (*[_lin(c) for c in VOID], 1)
-        b.inputs["Roughness"].default_value = 1.0
+        # the recess wears textures.py's window: a window's own face is
+        # stretched over its left WINDOW_U, every other void samples the
+        # plain strip right of it (VOID_UV) — no geometry, no new surface
+        it = nt.nodes.new("ShaderNodeTexImage")
+        it.image = bpy.data.images.load(TEX + "tinted/window.png", check_existing=True)
+        nt.links.new(it.outputs["Color"], b.inputs["Base Color"])
+        b.inputs["Roughness"].default_value = 0.9   # no sheen: a sunlit sheen read mauve
         return m
     diff, nrm, _tile, rough = MATS[key]
     it = nt.nodes.new("ShaderNodeTexImage")
@@ -133,6 +174,11 @@ class House:
         # the void is the one surface whose colour the grime never touches
         self.keys = ["void"]
         self.M = Matrix.Identity(4)
+        self.rng = random.Random(name)
+        self.sag = WEATHER["sag_m"]
+        self.feet = []   # ground footprints of the walls, (x, y) in the house's frame
+        self.win = self.bm.faces.layers.int.new("win")   # 1 + the index into self.windows
+        self.windows = []   # (wall, u0, width, z0, z1, frame matrix) of every glazed opening
 
     # -- plumbing -----------------------------------------------------------
     def mi(self, key):
@@ -178,12 +224,17 @@ class House:
         zs = [z0, z1]
         if key in WALL_KEYS and z0 < GRIME_H < z1:
             zs = [z0, GRIME_H, z1]
+        if key in WALL_KEYS and z0 <= 0.01:
+            self.footing(pts)
         return self._solid([[(x, y, z) for x, y in pts] for z in zs], key)
 
     def along_y(self, prof, y0, y1, key):
         """A profile in (x, z) (counter-clockwise seen from -Y) extruded
         from y0 to y1; a wall's vertical edges get a point at GRIME_H."""
         if key in WALL_KEYS:
+            xs = [x for x, z in prof if z <= 0.01]
+            if len(xs) >= 2:
+                self.footing([(min(xs), y0), (max(xs), y0), (max(xs), y1), (min(xs), y1)])
             out = []
             for i, (x, z) in enumerate(prof):
                 out.append((x, z))
@@ -274,7 +325,13 @@ class House:
     # -- things laid on a wall ---------------------------------------------
     def panel(self, wall, outline, key, d0=-0.05, d1=0.08):
         """An outline in the wall's (u, z), counter-clockwise seen from
-        outside, extruded from d0 to d1 off the wall plane."""
+        outside, extruded from d0 to d1 off the wall plane. A deep wall panel
+        standing on the ground (a buttress) gets a footing like a wall."""
+        if key in WALL_KEYS and d1 - d0 >= 0.5:
+            us = [u for u, z in outline if z <= 0.01]
+            if len(us) >= 2:
+                self.footing([tuple(wall.at(u, 0.0, d).xy) for u, d in
+                              ((min(us), d0), (max(us), d0), (max(us), d1), (min(us), d1))])
         rings = [[tuple(wall.at(u, z, d)) for u, z in outline] for d in (d0, d1)]
         return self._solid(rings, key)
 
@@ -286,10 +343,19 @@ class House:
         if frame:
             self.panel(wall, _outline(u, w + 2 * frame_w, z0 - (frame_w if z0 > 0.01 else 0), z1 + frame_w, arch),
                        frame, 0.0, 0.14)
-        self.panel(wall, out, key, -0.05, 0.18 if frame else 0.08)
+        faces = self.panel(wall, out, key, -0.05, 0.18 if frame else 0.08)
+        if key == "void" and z0 > 0.01:   # a window, not a door's dark
+            self.windows.append((wall, u - w / 2, w, z0, z1, self.M.copy()))
+            for f in faces:
+                f[self.win] = len(self.windows)
 
     def beam(self, wall, u0, z0, u1, z1, w=0.35, d=0.12, key="timber"):
-        """A timber standing proud of a wall from (u0, z0) to (u1, z1)."""
+        """A timber standing proud of a wall from (u0, z0) to (u1, z1),
+        its ends and width a little off true (hewn, not sawn)."""
+        if key != "void":
+            j, r = WEATHER["beam_jitter_m"], self.rng
+            u0, z0, u1, z1 = (c + r.uniform(-j, j) for c in (u0, z0, u1, z1))
+            w *= 1.0 + r.uniform(-1.0, 1.0) * WEATHER["beam_width_vary"]
         a, b = Vector((u0, z0)), Vector((u1, z1))
         t = (b - a).normalized()
         s = Vector((-t.y, t.x)) * (w / 2)
@@ -336,9 +402,16 @@ class House:
         bm = self.bm
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         bm.normal_update()
+        self._weather()
+        self._footings()
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        bm.normal_update()
         uv = bm.loops.layers.uv.verify()
         for f in bm.faces:
             key = self.keys[f.material_index]
+            if key == "void":
+                self._void_uv(f, uv)
+                continue
             s = MATS[key][2] if key in MATS else 3.0
             n = f.normal
             nh = math.hypot(n.x, n.y)
@@ -365,14 +438,141 @@ class House:
         for key in self.keys:
             me.materials.append(material(key))
         for p in me.polygons:
-            p.use_smooth = False
+            p.use_smooth = True
+        me.set_sharp_from_angle(angle=math.radians(WEATHER["smooth_deg"]))
         ob = bpy.data.objects.new(self.name, me)
         ob.location = where
+        # Area-weighted normals: a big wall stays flat and only the chamfer
+        # beside it shades round. Plain smooth shading bent the normals across
+        # whole faces, and the palace's square towers read as cylinders.
+        # export() applies it (export_apply).
+        wn = ob.modifiers.new("weighted_normals", "WEIGHTED_NORMAL")
+        wn.mode = "FACE_AREA"
+        wn.keep_sharp = True
         col = bpy.data.collections.get("HOUSES") or bpy.data.collections.new("HOUSES")
         if col.name not in bpy.context.scene.collection.children:
             bpy.context.scene.collection.children.link(col)
         col.objects.link(ob)
         return ob
+
+
+    def _void_uv(self, f, uv):
+        """A window's face spans the texture's window, the rest the plain strip."""
+        i = f[self.win]
+        if i == 0:
+            for lp in f.loops:
+                lp[uv].uv = VOID_UV
+            return
+        wall, u0, w, z0, z1, M = self.windows[i - 1]
+        o = M @ wall.o
+        ax = (M.to_3x3() @ wall.u).normalized()
+        for lp in f.loops:
+            p = lp.vert.co
+            su = min(1.0, max(0.0, (p - o).dot(ax) - u0) / w)
+            sv = min(1.0, max(0.0, (p.z - z0) / max(z1 - z0, 1e-6)))
+            lp[uv].uv = (su * WINDOW_U, sv)
+
+    # -- footings ---------------------------------------------------------------------
+    def footing(self, pts):
+        """Register a ground footprint (counter-clockwise from above, in the
+        current frame) for a footing: walls do it themselves, and a builder
+        adds what stands on posts (an open bay)."""
+        pts = [tuple((self.M @ Vector((x, y, 0.0))).xy) for x, y in pts]
+        area = sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]))
+        self.feet.append(pts if area > 0 else pts[::-1])
+
+    def _footings(self):
+        """One stone footing under each registered footprint (after the
+        weathering, so its faces stay few and flat)."""
+        # the house's own stone, so a footing costs no new surface where it
+        # can: rubble, else dressed stone, else rubble added if there is room
+        if "wall_rubble" in self.keys:
+            key = "wall_rubble"
+        elif "wall_ashlar" in self.keys:
+            key = "wall_ashlar"
+        elif len(self.keys) < 5:
+            key = "wall_rubble"
+        else:
+            key = next(k for k in self.keys if k in WALL_KEYS)
+        M, self.M = self.M, Matrix.Identity(4)
+        for pts in self.feet:
+            ring = _offset(pts, FOOT_PROUD)
+            self._solid([[(x, y, -FOOT_M) for x, y in ring], [(x, y, FOOT_TOP) for x, y in ring]], key)
+        self.M = M
+
+    # -- weathering ---------------------------------------------------------------
+    def _indices(self, keys):
+        return {self.keys.index(k) for k in keys if k in self.keys}
+
+    def _bevel(self, keys, offset, segments):
+        """Round the sharp edges of solids wearing `keys` between two faces
+        of at least bevel_min_face_m2 (walls, roofs, buttresses, stacks; not a
+        window's frame, whose bevel would cost more triangles than the whole
+        house and never be seen) and not at their feet on the ground."""
+        for i in self._indices(keys):
+            edges = [e for e in self.bm.edges if len(e.link_faces) == 2
+                     and all(f.material_index == i and f.calc_area() >= WEATHER["bevel_min_face_m2"]
+                             for f in e.link_faces)
+                     and e.calc_face_angle(0.0) > math.radians(40)
+                     and max(v.co.z for v in e.verts) > 0.05]
+            if edges:
+                # material: a bevel face otherwise takes index 0, the void
+                bmesh.ops.bevel(self.bm, geom=edges, offset=offset, offset_type="OFFSET", segments=segments,
+                                profile=0.5, affect="EDGES", clamp_overlap=True, material=i)
+
+    def _split_long(self, keys, longest, axis=None):
+        """Halve every edge of `keys` longer than `longest` until none is,
+        so the field below has vertices to bend a wall or a ridge with; with
+        `axis`, only the edges running mostly along it."""
+        idx = self._indices(keys)
+
+        def along(e):
+            d = e.verts[1].co - e.verts[0].co
+            return axis is None or abs(d[axis]) > 0.7 * d.length
+
+        for _ in range(8):
+            edges = [e for e in self.bm.edges if e.calc_length() > longest and along(e)
+                     and any(f.material_index in idx for f in e.link_faces)]
+            if not edges:
+                return
+            bmesh.ops.subdivide_edges(self.bm, edges=edges, cuts=1, use_grid_fill=True)
+
+    def _weather(self):
+        W = WEATHER
+        walls = [k for k in self.keys if k in WALL_KEYS]
+        roofs = [k for k in self.keys if k.startswith("roof_")]
+        bm = self.bm
+        vs = [v.co for v in bm.verts]
+        lo = Vector((min(v.x for v in vs), min(v.y for v in vs), 0.0))
+        hi = Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))
+        axis = 0 if hi.x - lo.x >= hi.y - lo.y else 1
+        self._bevel(walls, W["bevel_wall_m"], W["bevel_segments"])
+        self._bevel(roofs, W["bevel_roof_m"], 1)
+        self._split_long(walls + roofs, W["split_m"])
+        self._split_long(roofs, W["ridge_split_m"], axis)
+        r = random.Random(self.name + "/weather")
+
+        def waves(length):
+            out = []
+            for _ in range(3):
+                d = Vector((r.uniform(-1, 1), r.uniform(-1, 1), r.uniform(-0.4, 0.4))).normalized()
+                out.append((d * (2 * math.pi / (length * r.uniform(0.7, 1.4))), r.uniform(0, 2 * math.pi)))
+            return out
+
+        def field(ws, p):
+            return sum(math.sin(k.dot(p) + ph) for k, ph in ws) / math.sqrt(len(ws))
+
+        wave_z = waves(W["roof_wave_len_m"])
+        mid, half = (lo[axis] + hi[axis]) / 2, max(1.0, (hi[axis] - lo[axis]) / 2)
+        roof_idx = self._indices(roofs)
+        for v in bm.verts:
+            p = v.co.copy()
+            t = min(1.0, abs(p[axis] - mid) / half)
+            high = min(1.0, max(0.0, (p.z - 0.4 * hi.z) / (0.6 * hi.z)))
+            dz = -self.sag * (1.0 - t * t) * high
+            if v.link_faces and all(f.material_index in roof_idx for f in v.link_faces):
+                dz += W["roof_wave_m"] * field(wave_z, p)
+            v.co = p + Vector((0.0, 0.0, dz))
 
 
 def _grime(p):
@@ -389,6 +589,20 @@ def _grime(p):
         v = 1.0 - (1.0 - GRIME_TOP) * t
         rgb = [v, v, v]
     return (rgb[0], rgb[1], rgb[2], 1.0)
+
+
+def _offset(pts, d):
+    """A counter-clockwise polygon moved `d` outward, its corners mitred."""
+    out = []
+    n = len(pts)
+    for i in range(n):
+        p0, p1, p2 = Vector(pts[i - 1]), Vector(pts[i]), Vector(pts[(i + 1) % n])
+        e1, e2 = (p1 - p0).normalized(), (p2 - p1).normalized()
+        n1, n2 = Vector((e1.y, -e1.x)), Vector((e2.y, -e2.x))
+        m = n1 + n2
+        k = 1.0 + n1.dot(n2)
+        out.append(tuple(p1 + m * (d / k)) if k > 1e-3 else tuple(p1 + n1 * d))
+    return out
 
 
 def _free_slot(name):
@@ -460,10 +674,13 @@ def export(ob, type_):
     bpy.context.scene.collection.objects.link(exp)
     exp.location = (0, 0, 0)
     vs = [v.co for v in exp.data.vertices]
-    lo = Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs)))
-    hi = Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))
+    up = [v for v in vs if v.z >= -0.01]   # the fit is what stands above the floor, not the footings
+    lo = Vector((min(v.x for v in up), min(v.y for v in up), min(v.z for v in vs)))
+    hi = Vector((max(v.x for v in up), max(v.y for v in up), max(v.z for v in vs)))
     s = foot / max(hi.x - lo.x, hi.y - lo.y)
-    exp.data.transform(Matrix.Diagonal((s, s, s, 1)) @ Matrix.Translation((-(lo.x + hi.x) / 2, -(lo.y + hi.y) / 2, -lo.z)))
+    # the FLOOR stays at z = 0 (the footings reach below it): the runtime
+    # stands a house's origin on its highest ground
+    exp.data.transform(Matrix.Diagonal((s, s, s, 1)) @ Matrix.Translation((-(lo.x + hi.x) / 2, -(lo.y + hi.y) / 2, 0.0)))
     exp.data.update()
     bpy.ops.object.select_all(action="DESELECT")
     exp.select_set(True)
@@ -472,12 +689,13 @@ def export(ob, type_):
                               export_image_format="JPEG", export_jpeg_quality=88, export_yup=True,
                               export_apply=True, export_cameras=False, export_lights=False,
                               export_vertex_color="ACTIVE")
-    width, depth, height = (hi.x - lo.x) * s, (hi.y - lo.y) * s, (hi.z - lo.z) * s
+    width, depth, height = (hi.x - lo.x) * s, (hi.y - lo.y) * s, hi.z * s
     tris = sum(len(p.vertices) - 2 for p in exp.data.polygons)
     bpy.data.objects.remove(exp)
     man_path = HOUSES + "houses.json"
     man = json.load(open(man_path))
-    man[type_] = {"footprint_m": foot, "height_m": round(height, 3), "source": "blender-mcp", "tris": tris}
+    man[type_] = {"footing_m": round(-lo.z * s, 3), "footprint_m": foot, "height_m": round(height, 3),
+                  "source": "blender-mcp", "tris": tris}
     with open(man_path, "w") as f:
         json.dump(man, f, indent=1, sort_keys=True)
         f.write("\n")
@@ -500,7 +718,8 @@ def render_views(ob, out_prefix, res=(900, 700)):
     cam = sc.camera
     sc.render.resolution_x, sc.render.resolution_y = res
     for o in bpy.data.collections["HOUSES"].objects:
-        o.hide_render = o is not ob
+        o.hide_render = o.name != ob.name   # by name: two wrappers of one object are not `is`
+    bpy.context.view_layer.update()   # a just-built object's matrix_world is identity until then
     vs = [ob.matrix_world @ v.co for v in ob.data.vertices]
     lo = Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs)))
     hi = Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))

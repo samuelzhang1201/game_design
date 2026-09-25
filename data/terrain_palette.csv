@@ -40,7 +40,6 @@ heat_5,#B55A3C,mountain
 heat_6,#FFFFFF,the summit, snow
 map3d_road_surface,#EDE0CE,"3D MAP roads (2026-09-19): the multiplier on the road texture (Poly Haven rocky_trail_02) up close, so the lit earth reads warm like the fields around it, not grey"
 map3d_bridge,#E0CBA8,"3D MAP bridges (2026-09-19): the multiplier on the bridges' stone (Poly Haven medieval_blocks_03) — the lit stone read near-white against the fields; also the flat colour when the texture is missing"
-map3d_house_plinth,#C4BAAA,"3D MAP houses (owner 2026-09-24): the multiplier on the stone foundation laid under a house on a slope (the bridges' medieval_blocks_03) — near the houses' own wall stone, so a foundation reads as the wall carried down, not as a dark box (#9A8F80 did)"
 map3d_sky_top,#2F5878,3D MAP sky (2026-09-20): the ProceduralSkyMaterial's sky_top_color (the horizon and the fog are map3d_sky) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_sky_ground,#2E4A5C,3D MAP sky (2026-09-20): the ProceduralSkyMaterial's ground_bottom_color — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 house_roof_thatch,#9A8459,"3D MAP houses (spec 2026-09-20 §2, widened 2026-09-21 for the mesh remake): weathered thatch. At 17-35 px (400 m closest zoom) the roof colour is most of what a house says, so it is data"

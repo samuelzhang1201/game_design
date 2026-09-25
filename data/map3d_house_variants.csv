@@ -1,0 +1,12 @@
+part,variant,tint,notes
+wall,0,#FFFFFF,"3D MAP houses (owner 2026-09-25: 房屋墙壁和房顶的颜色可以多样化一点，主色调不变，但可以有不同variant): a WALL tint, multiplied into the wall's own texture per house (Map3DHouses.variant_of hashes the house's spot, so a house keeps its variant). Every tint is at most 1 in every channel: a variant may be warmer, cooler or darker than the mesh, never lighter (the owner found limewash too bright twice). As built"
+wall,1,#F7E9D2,"a warmer ochre wash"
+wall,2,#E6E3DC,"cooler, greyer"
+wall,3,#DCD0BE,"older and darker"
+wall,4,#F4E0C0,"a yellower ochre"
+wall,5,#EDE6E0,"a faintly rosy lime"
+roof,0,#FFFFFF,"a ROOF tint (tile only: slate takes none), multiplied into the roof's own texture per house. Never lighter than the mesh — a lighter tile reads PINK under the map's sun (taste.md). As fired"
+roof,1,#FFE6D8,"redder"
+roof,2,#ECE6DE,"weathered, greyer"
+roof,3,#FFEFD2,"a warmer orange"
+roof,4,#F4E2D4,"a burnt red, a shade deeper"

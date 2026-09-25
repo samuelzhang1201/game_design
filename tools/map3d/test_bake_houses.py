@@ -33,7 +33,7 @@ RULES = {
     "house_foot_min": 0.55, "house_max_slope": 0.38,
     "house_max_drop_m": 8.0, "house_landmark_max_drop_m": 10.0,
     "house_shore_min_m": 25, "house_port_shore_min_m": 6,
-    "house_landmark_search_m": 300, "house_yaw_jitter_deg": 35,
+    "house_landmark_search_m": 300, "house_yaw_jitter_deg": 35, "house_plaza_m": 8, "house_pad_blend_m": 60,
     "house_gap_m": 1.0, "house_height_min": 0.75, "house_height_max": 1.5,
     "house_count_capital": 80, "house_count_city": 60, "house_count_town": 40,
     "house_count_fort": 30, "house_count_village": 20,
@@ -128,7 +128,7 @@ def test_the_buffer_ring_is_empty():
     foot, land, height = flat_world()
     b = burg()
     rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
-    r_house = house_radius_m(b, RULES)
+    r_house = bake_houses.cluster_radius_m(b, RULES, TYPES)
     for r in rows:
         assert np.hypot(r["x_m"], r["z_m"]) <= r_house + 1e-6
 
@@ -224,7 +224,7 @@ def test_far_houses_lean_towards_barns():
     rules = dict(RULES, house_count_town=300)
     b = burg(pop=4000, group="town")
     rows = place(b, rules, TYPES, foot, land, height, K, VW, VH)
-    r_house = house_radius_m(b, rules)
+    r_house = bake_houses.cluster_radius_m(b, rules, TYPES)
     max_house_half = max(0.5 * t["footprint_m"] for t in TYPES.values() if t["role"] == "house")
     slack = RULES["lane_half_width_m"] + max_house_half
     far = [r for r in rows[1:]
@@ -418,7 +418,7 @@ def test_lanes_exist_as_negative_space():
     b = burg(code=code, pop=20000, group="city")
     with mock.patch.object(bake_houses, "_frontage_candidates", return_value=[]):
         rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
-    r_house = house_radius_m(b, RULES)
+    r_house = bake_houses.cluster_radius_m(b, RULES, TYPES)
     rng = np.random.default_rng(bake_houses._seed(code))
     lanes = bake_houses._grow_lanes(rng, r_house, RULES)
     half_w = RULES["lane_half_width_m"]
@@ -455,7 +455,7 @@ def test_frontage_houses_face_their_lane():
     code = "toy"
     b = burg(code=code, pop=4000, group="town")
     rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
-    r_house = house_radius_m(b, RULES)
+    r_house = bake_houses.cluster_radius_m(b, RULES, TYPES)
     rng = np.random.default_rng(bake_houses._seed(code))
     lanes = bake_houses._grow_lanes(rng, r_house, RULES)
     frontage = bake_houses._frontage_candidates(lanes, RULES["plot_step_m"], r_house)
@@ -528,7 +528,7 @@ def test_edge_density_feathers_not_a_cliff():
     rules = dict(RULES, house_count_capital=400)
     b = burg(pop=90000, group="capital")
     rows = place(b, rules, TYPES, foot, land, height, K, VW, VH)
-    r_house = house_radius_m(b, rules)
+    r_house = bake_houses.cluster_radius_m(b, rules, TYPES)
     n_shells = 16
     shell_w = r_house / n_shells
     counts = [0] * n_shells
@@ -541,7 +541,10 @@ def test_edge_density_feathers_not_a_cliff():
     print("shell counts:", counts)
     print("shell density (per sqm):", [round(v, 6) for v in density])
     last_occupied = max(i for i, c in enumerate(counts) if c > 0)
-    core = sum(density[: n_shells // 3]) / (n_shells // 3)
+    # the core starts outside the landmark's open square (house_plaza_m,
+    # owner 2026-09-25), which is empty by design
+    first = int(bake_houses.square_inner_m(b, rules, TYPES) // shell_w) + 1
+    core = sum(density[first: first + n_shells // 3]) / (n_shells // 3)
     assert last_occupied >= n_shells - 3, (
         f"the cluster stops at shell {last_occupied}/{n_shells - 1} "
         f"({(last_occupied + 1) * shell_w:.1f} m of {r_house:.1f} m r_house) -- "
@@ -577,7 +580,7 @@ def test_the_blocks_between_lanes_are_not_empty():
     code = "toy"
     b = burg(code=code, pop=90000, group="capital")
     rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
-    r_house = house_radius_m(b, RULES)
+    r_house = bake_houses.cluster_radius_m(b, RULES, TYPES)
     rng = np.random.default_rng(bake_houses._seed(code))
     lanes = bake_houses._grow_lanes(rng, r_house, RULES)
     half_w = RULES["lane_half_width_m"]
@@ -786,3 +789,64 @@ if __name__ == "__main__":
         if name.startswith("test_") and callable(fn):
             fn()
             print("ok", name)
+
+
+def test_the_houses_stand_round_a_moved_landmark():
+    """Owner 2026-09-25 (标志性建筑要在中间附近): when the landmark has to move
+    off its burg's own point (water, a slope), the houses are laid round
+    where it stands, not round the point it left."""
+    foot = np.ones((VH, VW), np.float32)
+    land = np.ones((VH, VW), np.float32)
+    height = np.zeros((VH, VW), np.float32)
+    b = burg(pop=20000, group="city")
+    with mock.patch.object(bake_houses, "_find_landmark_spot", return_value=(120.0, -40.0)):
+        rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
+    assert (rows[0]["x_m"], rows[0]["z_m"]) == (120.0, -40.0)
+    houses = rows[1:]
+    assert len(houses) > 10
+    mx = sum(r["x_m"] for r in houses) / len(houses)
+    mz = sum(r["z_m"] for r in houses) / len(houses)
+    assert math.hypot(mx - 120.0, mz + 40.0) < 20.0, \
+        "the houses' centre (%.0f, %.0f) is not round the landmark" % (mx, mz)
+
+
+def test_no_house_stands_in_the_landmark_square():
+    """The landmark keeps an open square of house_plaza_m on every side,
+    the houses round it facing in across it."""
+    foot = np.ones((VH, VW), np.float32)
+    land = np.ones((VH, VW), np.float32)
+    height = np.zeros((VH, VW), np.float32)
+    b = burg(pop=90000, group="capital")
+    rows = place(b, RULES, TYPES, foot, land, height, K, VW, VH)
+    lm = rows[0]
+    hx, hz = bake_houses.half_extents(TYPES[lm["type"]])
+    reach_a, reach_c = hx + RULES["house_plaza_m"], hz + RULES["house_plaza_m"]
+    (fx, fz), (rx, rz) = _axes(lm["yaw_deg"])
+    facing_in = 0
+    for r in rows[1:]:
+        dx, dz = r["x_m"] - lm["x_m"], r["z_m"] - lm["z_m"]
+        u, v = dx * fx + dz * fz, dx * rx + dz * rz
+        assert abs(u) > reach_a or abs(v) > reach_c, "%s stands in the square" % r
+        yaw = math.radians(r["yaw_deg"])
+        if math.hypot(dx, dz) < max(reach_a, reach_c) + 25.0 \
+                and math.sin(yaw) * -dx + math.cos(yaw) * -dz > 0.5 * math.hypot(dx, dz):
+            facing_in += 1
+    assert facing_in >= 4, "the first row round the square should face the landmark"
+
+
+def test_a_landmark_stands_on_a_levelled_terrace():
+    """Owner 2026-09-25: a palace on a hillside stood on a tower of its own
+    footing. level_pad cuts and fills the ground under the landmark and its
+    square to one height and eases back to the hill; the sea is untouched."""
+    height = np.tile(np.arange(VW, dtype=np.float32) * 6.0, (VH, 1))   # a 0.3 slope
+    land = np.ones((VH, VW), np.float32)
+    land[:, :4] = 0.0
+    before = height.copy()
+    half = bake_houses.half_extents(TYPES["palace"])
+    bake_houses.level_pad(height, CENTRE, CENTRE, half, 0.0, RULES, land=land)
+    pad = height[int(CENTRE) - 1:int(CENTRE) + 2, int(CENTRE) - 1:int(CENTRE) + 2]
+    assert pad.max() - pad.min() < 1e-3, "the ground under the landmark is level"
+    assert abs(float(pad.mean()) - float(before[int(CENTRE), int(CENTRE)])) < 6.0, "cut and fill, not a mound"
+    assert np.array_equal(height[:, :4], before[:, :4]), "the sea is never touched"
+    far = int(CENTRE + (max(half) + RULES["house_plaza_m"] + 20 + RULES["house_pad_blend_m"]) / 20) + 2
+    assert np.array_equal(height[:, far:], before[:, far:]), "past the blend the hill is as it was"

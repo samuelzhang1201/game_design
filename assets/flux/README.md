@@ -17,6 +17,26 @@ assets: Apache 2.0, commercial use allowed, undistilled, 20 steps, CFG 4.0
 `--model schnell` (Flux.1 schnell, no negative path) is kept for comparison only.
 **Never Flux.1 dev, Flux.2 dev or klein 9B** — non-commercial licences.
 
+**Under evaluation (2026-09-24), not yet approved for game assets** — both
+Apache 2.0; the full comparison is `claude/t2i-model-evaluation-2026-09.md` in
+the Claude project. Download with `bash assets/flux/download_models.sh` (on the
+Mac, ~47 GB, resumable), then restart ComfyUI.
+
+| `--model` | Model | Steps / CFG | Negative | Memory on MPS | For |
+|---|---|---|---|---|---|
+| `zimage` | Z-Image Turbo 6B, `z_image_turbo_bf16.safetensors` (+ klein's `qwen_3_4b` as type `lumina2`, `vae/ae.safetensors`) | 8 / 1 | none (distilled) | ~20 GB | portraits |
+| `qwen2512` | Qwen-Image-2512 20B, `qwen-image-2512-Q6_K.gguf` + `qwen_2.5_vl_7b.safetensors` + `qwen_image_vae.safetensors` | 50 / 4 | applied | ~33 GB | multi-figure event art |
+| `qwen2512fast` | the same + `loras/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors` at strength 1 | 8 / 1 | no effect | ~34 GB | drafts of the above |
+
+Qwen runs as **GGUF, never fp8**: on Apple MPS ComfyUI upcasts fp8 weights to
+16-bit (`comfy/model_management.py` `supports_cast`), so the 20 GB fp8 file
+would take ~41 GB. The GGUF loader is the ComfyUI-GGUF custom node
+(`custom_nodes/ComfyUI-GGUF`, installed 2026-09-24; its Python deps `gguf` and
+`protobuf` are installed by `download_models.sh`). **Not listed on purpose:**
+Ideogram 4 open weights (non-commercial), HunyuanImage (licence excludes
+EU/UK/KR), Qwen-Image-2.1 (research licence), Krea 2 open weights and SD 3.5
+(licences end at US$1M company revenue).
+
 ## Files
 
 | File | Role |
@@ -29,6 +49,8 @@ assets: Apache 2.0, commercial use allowed, undistilled, 20 steps, CFG 4.0
 | `*_prompts.csv` | Entry sheets outside the library, used with `--prompts-file`: `arms_prompts.csv` (generated, below), `app_icon_prompts.csv`, `terrain_prompts_v2.csv` (satellite biome tiles), `town_prompts_sat.csv` (aerial S-02..S-06), `town_prompts_v3.csv` (S-07, the unwalled capital), `town_prompts.csv` (the earlier painted tiers). |
 | `arms_prompts.py` | Writes `arms_prompts.csv` + `arms_art.csv` from the pack's Azgaar `coa` (see Arms). |
 | `flux2_klein_template.json` / `flux_template.json` | API-format graphs for klein / schnell. Each declares the slots the script fills in `_slots`. |
+| `zimage_turbo_template.json` / `qwen2512_template.json` | API-format graphs for the models under evaluation (above). Node settings follow ComfyUI's own `image_z_image_turbo` / `image_qwen_image_2512` templates; the Qwen graph adds a `lora_strength` slot. |
+| `download_models.sh` | Fetches the evaluation models into `~/ComfyUI-Shared/models` (resumable, size-checked) and installs the GGUF node's Python deps. Run on the Mac: the Hugging Face host is not reachable from the agent's sandbox. |
 | `post.py` + `post_cutout_template.json` | Post-processing through ComfyUI: BiRefNet cut-out → alpha → lanczos resize. Tiers `full` (660 tall), `chip` (96²), `icon` (256²), `mark` (256 tall). Writes `out/game/<tier>/<ID>.png`. Needs `models/background_removal/birefnet.safetensors`. `--tone` white-balances to the paper colour `#EDE3CE` (measured on the source, applied to the result); `--no-trim` keeps empty margins. |
 | `sepia_alpha_template.json` | The D- map-symbol cut-out as a ComfyUI graph (blue channel → ink coverage → alpha, cropped to the drawing). `install_map_art.py` does the same arithmetic locally. |
 | `install_map_art.py` | Turns renders into game assets, one chapter per call (below). Mapping tables: `goods_art`, `decor_art`, `estate_art`, `estate_paint_art`, `army_paint_art`, `building_art`, `biome_art`, `ui_icon_art`, `cast_art`, `arms_art` `.csv` (pipeline tables, not runtime data). |

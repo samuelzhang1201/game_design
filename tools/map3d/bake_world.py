@@ -678,18 +678,6 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         mf = np.clip((edge - d) / rules["footprint_fade"], 0, 1) ** 1.5 * land[y0:y1, x0:x1]
         foot[y0:y1, x0:x1] = np.maximum(foot[y0:y1, x0:x1], mf)
 
-    foot = np.zeros((vh, vw), dtype=np.float32)
-    with open(os.path.join(ROOT, "data", "maps", MAP, "political", "burgs.csv")) as f:
-        for b in csv.DictReader(f):
-            stamp_foot(foot, float(b["x"]) * k, float(b["y"]) * k,
-                       footprint_radius_m(b, rules) / VERTEX_M)
-
-    # the houses that stand on that built ground (spec 2026-09-20 §1). The
-    # footprint mask is finished, so "inside the built ground" and "never in
-    # the sea" are the same test the footprint already passed.
-    house_rows = []
-    built = []          # (cx, cy, r) per settlement that actually built something
-    r_house_mask = np.zeros((vh, vw), dtype=np.float32)
     types = {}
     with open(os.path.join(ROOT, "data", "map3d_houses.csv")) as f:
         for r in csv.DictReader(f):
@@ -714,6 +702,34 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     pyi_g = np.clip((np.arange(vh) / k).astype(np.int64), 0, ph - 1)
     land_gate = land & has_cell[pyi_g][:, pxi_g]
     del pxi_g, pyi_g
+    # every settlement is laid out round its LANDMARK's own spot (owner
+    # 2026-09-25: 标志性建筑要在中间附近), which moves off water or a slope,
+    # so its built ground is stamped round that spot and not the burg's point
+    burgs = []
+    with open(os.path.join(ROOT, "data", "maps", MAP, "political", "burgs.csv")) as f:
+        for b in csv.DictReader(f):
+            b = dict(b)
+            b["population"] = float(b["population"] or 0)
+            site = bake_houses.landmark_of(b, rules, types, land_gate, height, k, vw, vh, wet=wet)
+            lx, lz = site[2] if site[2] is not None else (0.0, 0.0)
+            cx, cy = float(b["x"]) * k + lx / VERTEX_M, float(b["y"]) * k + lz / VERTEX_M
+            if site[0] is not None and site[2] is not None:
+                # the landmark stands on a levelled terrace, not on a tower
+                # of its own footing (owner 2026-09-25)
+                bake_houses.level_pad(height, cx, cy, bake_houses.half_extents(types[site[0]]), site[1],
+                                      rules, land=land, wet=wet)
+            burgs.append((b, cx, cy, site))
+    foot = np.zeros((vh, vw), dtype=np.float32)
+    for b, cx, cy, _site in burgs:
+        stamp_foot(foot, cx, cy, bake_houses.cluster_radius_m(b, rules, types)
+                   / rules["house_built_share"] / VERTEX_M)
+
+    # the houses that stand on that built ground (spec 2026-09-20 §1). The
+    # footprint mask is finished, so "inside the built ground" and "never in
+    # the sea" are the same test the footprint already passed.
+    house_rows = []
+    built = []          # (cx, cy, r) per settlement that actually built something
+    r_house_mask = np.zeros((vh, vw), dtype=np.float32)
     # A RIVER IS WATER TOO (2026-09-21). `land` is the COASTLINE's mask, so a
     # carved river ran straight through the gate and a riverside town put a
     # third of its houses in the water — Carden, a capital, was half afloat
@@ -727,44 +743,41 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     # does not stand 25 m back from its own river — it stands ON it, which
     # is what the bridge is for. Tried: Shole, a town of 50, came out with
     # four buildings and its bridge crossing an empty bank.
-    with open(os.path.join(ROOT, "data", "maps", MAP, "political", "burgs.csv")) as f:
-        for b in csv.DictReader(f):
-            b = dict(b)
-            b["population"] = float(b["population"] or 0)
-            rows = bake_houses.place(b, rules, types, foot, land_gate, height, k, vw, vh,
-                                     wet=wet)
-            cx, cy = float(b["x"]) * k, float(b["y"]) * k
-            r_house = bake_houses.house_radius_m(b, rules) / VERTEX_M
-            # the block noise stops where the real roofs begin (§1): roofs
-            # painted on the ground beside real roofs read as a mistake --
-            # but only where there ARE roofs; a settlement place() gave
-            # nothing to (no dry land within its search) keeps its painted
-            # blocks, which is what the fade is for
-            if rows:
-                x0, x1 = max(int(cx - r_house) - 1, 0), min(int(cx + r_house) + 2, vw)
-                y0, y1 = max(int(cy - r_house) - 1, 0), min(int(cy + r_house) + 2, vh)
-                if x0 < x1 and y0 < y1:
-                    yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
-                    d = np.hypot(xx - cx, yy - cy) / max(r_house, 1e-6)
-                    r_house_mask[y0:y1, x0:x1] = np.maximum(
-                        r_house_mask[y0:y1, x0:x1], np.clip(1.5 - 1.5 * d, 0, 1))
-            # the built ground this settlement ACTUALLY earned: the cluster
-            # that got placed, grown back out by house_built_share into the
-            # buffer ring the owner asked for (2026-09-20: 定居点周边和地图
-            # 上的地形要有一定距离的缓冲过渡). The nominal radius is what the
-            # group would fill on open, level ground; a site that is half
-            # water or too steep to build on fills less of it, and stamping
-            # the nominal disc there left a bare brown pancake with nothing
-            # standing on it — worst on the 24 settlements whose ground
-            # refuses every house, which drew a disc and not one roof.
-            spread = max((math.hypot(r["x_m"], r["z_m"]) for r in rows), default=0.0)
-            if spread > 0.0:
-                built.append((cx, cy, min(spread / VERTEX_M / rules["house_built_share"],
-                                          footprint_radius_m(b, rules) / VERTEX_M)))
-            for r in rows:
-                r["x_m"] = ORIGIN_X + float(b["x"]) * M_PER_PX + r["x_m"]
-                r["z_m"] = ORIGIN_Y + float(b["y"]) * M_PER_PX + r["z_m"]
-            house_rows.extend(rows)
+    for b, cx, cy, site in burgs:
+        rows = bake_houses.place(b, rules, types, foot, land_gate, height, k, vw, vh,
+                                 wet=wet, site=site)
+        lx, lz = (cx - float(b["x"]) * k) * VERTEX_M, (cy - float(b["y"]) * k) * VERTEX_M
+        r_house = bake_houses.cluster_radius_m(b, rules, types) / VERTEX_M
+        # the block noise stops where the real roofs begin (§1): roofs
+        # painted on the ground beside real roofs read as a mistake --
+        # but only where there ARE roofs; a settlement place() gave
+        # nothing to (no dry land within its search) keeps its painted
+        # blocks, which is what the fade is for
+        if rows:
+            x0, x1 = max(int(cx - r_house) - 1, 0), min(int(cx + r_house) + 2, vw)
+            y0, y1 = max(int(cy - r_house) - 1, 0), min(int(cy + r_house) + 2, vh)
+            if x0 < x1 and y0 < y1:
+                yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+                d = np.hypot(xx - cx, yy - cy) / max(r_house, 1e-6)
+                r_house_mask[y0:y1, x0:x1] = np.maximum(
+                    r_house_mask[y0:y1, x0:x1], np.clip(1.5 - 1.5 * d, 0, 1))
+        # the built ground this settlement ACTUALLY earned: the cluster
+        # that got placed, grown back out by house_built_share into the
+        # buffer ring the owner asked for (2026-09-20: 定居点周边和地图
+        # 上的地形要有一定距离的缓冲过渡). The nominal radius is what the
+        # group would fill on open, level ground; a site that is half
+        # water or too steep to build on fills less of it, and stamping
+        # the nominal disc there left a bare brown pancake with nothing
+        # standing on it — worst on the 24 settlements whose ground
+        # refuses every house, which drew a disc and not one roof.
+        spread = max((math.hypot(r["x_m"] - lx, r["z_m"] - lz) for r in rows), default=0.0)
+        if spread > 0.0:
+            built.append((cx, cy, min(spread / VERTEX_M / rules["house_built_share"],
+                                      r_house / rules["house_built_share"])))
+        for r in rows:
+            r["x_m"] = ORIGIN_X + float(b["x"]) * M_PER_PX + r["x_m"]
+            r["z_m"] = ORIGIN_Y + float(b["y"]) * M_PER_PX + r["z_m"]
+        house_rows.extend(rows)
 
     # second pass: the disc each settlement earned replaces the one it was
     # offered. It can only ever shrink (the placement was gated on the first

@@ -1,0 +1,71 @@
+{
+  "_comment": "ComfyUI API-format graph for Qwen-Image-2512 (Alibaba, 20B, Apache 2.0, commercial OK) as a Q6_K GGUF, because on Apple MPS ComfyUI upcasts fp8 weights to 16-bit (model_management.supports_cast returns False for mps), so the fp8 file would take ~41 GB; the GGUF stays ~17 GB. Needs the ComfyUI-GGUF custom node (UnetLoaderGGUF). The Lightning LoRA (lightx2v Qwen-Image-2512-Lightning 8-step, Apache 2.0) is always wired; its strength is a slot: preset qwen2512 runs it at 0 (full model, 50 steps, CFG 4, NEGATIVE.txt applied), qwen2512fast at 1 (8 steps, CFG 1, negative has no effect at CFG 1). Node settings follow ComfyUI's image_qwen_image_2512 template (CLIPLoader type qwen_image, ModelSamplingAuraFlow shift 3, euler/simple).",
+  "_slots": {
+    "unet": [["1", "unet_name"]],
+    "lora_strength": [["4", "strength_model"]],
+    "prompt": [["6", "text"]],
+    "negative": [["7", "text"]],
+    "cfg": [["9", "cfg"]],
+    "steps": [["9", "steps"]],
+    "width": [["8", "width"]],
+    "height": [["8", "height"]],
+    "seed": [["9", "seed"]],
+    "prefix": [["11", "filename_prefix"]]
+  },
+  "1": {
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {"title": "Qwen-Image-2512 Q6_K GGUF (ComfyUI-GGUF)"},
+    "inputs": {"unet_name": "qwen-image-2512-Q6_K.gguf"}
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "_meta": {"title": "Qwen2.5-VL 7B text encoder"},
+    "inputs": {"clip_name": "qwen_2.5_vl_7b.safetensors", "type": "qwen_image", "device": "default"}
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "_meta": {"title": "Qwen-Image VAE"},
+    "inputs": {"vae_name": "qwen_image_vae.safetensors"}
+  },
+  "4": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {"title": "Lightning 8-step LoRA (strength 0 = off)"},
+    "inputs": {"lora_name": "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors", "strength_model": 0.0, "model": ["1", 0]}
+  },
+  "5": {
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {"title": "Shift 3 (ComfyUI template)"},
+    "inputs": {"shift": 3, "model": ["4", 0]}
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {"title": "Prompt = STYLE_CORE + subject + canvas"},
+    "inputs": {"text": "{{PROMPT}}", "clip": ["2", 0]}
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {"title": "Negative = NEGATIVE.txt"},
+    "inputs": {"text": "{{NEGATIVE}}", "clip": ["2", 0]}
+  },
+  "8": {
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {"title": "Canvas"},
+    "inputs": {"width": 1024, "height": 1024, "batch_size": 1}
+  },
+  "9": {
+    "class_type": "KSampler",
+    "_meta": {"title": "Sample"},
+    "inputs": {"seed": 0, "steps": 50, "cfg": 4.0, "sampler_name": "euler", "scheduler": "simple",
+               "denoise": 1.0, "model": ["5", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["8", 0]}
+  },
+  "10": {
+    "class_type": "VAEDecode",
+    "_meta": {"title": "Decode"},
+    "inputs": {"samples": ["9", 0], "vae": ["3", 0]}
+  },
+  "11": {
+    "class_type": "SaveImage",
+    "_meta": {"title": "Save (prefix = chapter/ID)"},
+    "inputs": {"filename_prefix": "{{PREFIX}}", "images": ["10", 0]}
+  }
+}

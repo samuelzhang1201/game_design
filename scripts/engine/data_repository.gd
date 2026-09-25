@@ -45,6 +45,9 @@ var map3d_settlements: Dictionary = {}
 ## data/map3d_houses.csv rows keyed by type: the 3D MAP's house meshes,
 ## their role, weight, size and roof colour (spec 2026-09-20 §2).
 var map3d_houses: Dictionary = {}
+## data/map3d_house_variants.csv rows (part, variant, tint): the per-house
+## wall and roof tints the 3D map's houses wear (owner 2026-09-25).
+var map3d_house_variants: Array = []
 ## data/map3d_bake.csv as key -> number: the 3D build's own tuning. The bake
 ## (tools/map3d/bake_world.py) has always read this file; the runtime reads
 ## it too for the settlements' house clusters, so the two can never disagree
@@ -488,6 +491,9 @@ func _load(dir: String) -> bool:
 	if not _load_if_present("res://data/map3d_houses.csv",
 			["type", "mesh", "role", "weight", "footprint_m", "height_m", "roof", "min_group"],
 			func(r): map3d_houses[String(r["type"])] = r):
+		return false
+	if not _load_if_present("res://data/map3d_house_variants.csv", ["part", "variant", "tint"],
+			func(r): map3d_house_variants.append(r)):
 		return false
 	if not _load_if_present("res://data/map3d_bake.csv", ["key", "value"],
 			func(r): map3d_bake[String(r["key"])] = float(r["value"])):

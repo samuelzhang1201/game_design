@@ -21,6 +21,8 @@ reads pink under the map's light; a sunlit wall renders ~1.6x its
 albedo and a little cold, so limewash and dressed stone sit warmer and
 darker still).
 """
+import argparse
+import colorsys
 import json
 import os
 import subprocess
@@ -58,6 +60,25 @@ KEYS = {
 }
 
 
+# Owner 2026-09-24: "颜色可以再鲜艳一点". Every target moves BOOST of the way
+# from its saturation (HLS) toward full, at the same lightness — a share, not
+# a factor, so the near-grey walls gain as much as the already-red roofs —
+# and the texture's own variation is kept that much more colourful too. The
+# lightness stays: lighter roofs read PINK under the map's sun. KEY_BOOST
+# scales the share per key: stone takes half (at the full share rubble and
+# ashlar turned golden sandstone) and slate none (pushed, its faint hue
+# turns it olive).
+BOOST = 0.2
+KEY_BOOST = {"wall_rubble": 0.5, "wall_ashlar": 0.5, "roof_slate": 0.0}
+
+
+def boosted(hexcol, k):
+    r, g, b = (int(hexcol[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    r, g, b = colorsys.hls_to_rgb(h, l, s + (1.0 - s) * k)
+    return "#%02X%02X%02X" % tuple(round(c * 255) for c in (r, g, b))
+
+
 def _get(url):
     # curl, like tools/map3d/fetch_polyhaven.py: python.org's Python ships no
     # root certificates on macOS, so urllib fails the TLS handshake
@@ -84,12 +105,60 @@ def tint(src, hexcol, sat, con):
                                for i in range(3)])
 
 
+# The window (owner 2026-09-25: "窗子就是个黑色的贴图，稍微处理下，加个窗框，
+# 在不影响成本的前提下"): the recess material's texture, so a window gains
+# a frame, a mullion and transom and glass that catches the sky with no
+# geometry and no new surface. Its left WINDOW_U of the width is one window,
+# stretched over each opening's own rectangle by kit.py; the strip right of
+# it is the plain recess colour every other void (a door's dark, a chimney's
+# flue, an open bay) samples.
+WINDOW_U = 0.75
+# Kept DARK on average: at map size a window is 2-4 px and its mip is the
+# mean of frame and glass, which must still read as an opening — a lighter
+# first cut averaged to a mauve-brown patch (critic, 2026-09-25).
+WINDOW = {"frame": "#4A3A2C", "frame_w": 0.10, "bar_w": 0.06, "transom": 0.58,
+          "glass_top": "#34424A", "glass_bottom": "#11161A", "lead": "#0D1012",
+          "void": "#33271E"}
+
+
+def window_texture(w=256, h=128):
+    def rgb(hx):
+        return tuple(int(hx[i:i + 2], 16) for i in (1, 3, 5))
+    im = Image.new("RGB", (w, h), rgb(WINDOW["void"]))
+    px = im.load()
+    ww = int(w * WINDOW_U)
+    top, bottom = rgb(WINDOW["glass_top"]), rgb(WINDOW["glass_bottom"])
+    fw, bw = WINDOW["frame_w"], WINDOW["bar_w"]
+    for y in range(h):
+        v = y / (h - 1)            # 0 at the image's top: the window's head
+        for x in range(ww):
+            u = x / (ww - 1)
+            frame = u < fw or u > 1 - fw or v < fw or v > 1 - fw
+            bar = abs(u - 0.5) < bw / 2 or abs(v - (1 - WINDOW["transom"])) < bw / 2
+            if frame or bar:
+                px[x, y] = rgb(WINDOW["frame"])
+                continue
+            # glass: the sky's light at the head, dark at the sill, and a
+            # diamond of lead cames every eighth of the pane
+            t = min(1.0, v * 1.3)
+            c = [int(top[i] + (bottom[i] - top[i]) * t) for i in range(3)]
+            if min((u * 8 + v * 6) % 1.0, (u * 8 - v * 6) % 1.0) < 0.07:
+                c = list(rgb(WINDOW["lead"]))
+            px[x, y] = tuple(c)
+    return im
+
+
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--boost", type=float, default=BOOST)
+    boost = ap.parse_args().boost
     os.makedirs(OUT, exist_ok=True)
     for asset in SOURCES:
         fetch(asset)
     for key, (src, hexcol, sat, con) in KEYS.items():
-        tint(src, hexcol, sat, con).save(os.path.join(OUT, key + ".jpg"), quality=90)
+        k = boost * KEY_BOOST.get(key, 1.0)
+        tint(src, boosted(hexcol, k), sat * (1.0 + k), con).save(os.path.join(OUT, key + ".jpg"), quality=90)
+    window_texture().save(os.path.join(OUT, "window.png"))
     print("tinted", len(KEYS), "keys into", OUT)
 
 

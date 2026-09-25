@@ -31,6 +31,14 @@ func test_every_mesh_loads_and_carries_geometry() -> void:
 		node.free()
 
 
+## The smallest a house is ever drawn: the bake's rim scale less its
+## jitter, times the lowest height_scale (map3d_bake.csv).
+var MIN_DRAWN_SCALE: float:
+	get:
+		var b: Dictionary = Game.data.map3d_bake
+		return b["house_edge_scale_min"] * 0.92 * b["house_height_min"]
+
+
 func test_every_mesh_stands_on_its_origin_at_the_claimed_size() -> void:
 	for type: String in Game.data.map3d_houses:
 		var row: Dictionary = Game.data.map3d_houses[type]
@@ -41,9 +49,13 @@ func test_every_mesh_stands_on_its_origin_at_the_claimed_size() -> void:
 		var mesh := _first_mesh(node)
 		if mesh != null:
 			var aabb := mesh.get_aabb()
-			assert_almost_eq(aabb.position.y, 0.0, 0.05,
-				type + " stands ON its origin — no base plate, nothing sunk into the mesh")
-			assert_almost_eq(aabb.size.y, float(row["height_m"]), 0.6,
+			# the floor is the origin; below it only the stone footing under the
+			# walls (owner 2026-09-25), deep enough for the bake's tallest fall
+			# (map3d_bake.csv house_max_drop_m) at the smallest a house is drawn
+			var footing := -aabb.position.y
+			assert_gt(footing * MIN_DRAWN_SCALE, Game.data.map3d_bake["house_max_drop_m"],
+				type + "'s footing reaches the bottom of the steepest plot")
+			assert_almost_eq(aabb.end.y, float(row["height_m"]), 0.6,
 				type + " is as tall as its row claims")
 			assert_lt(maxf(aabb.size.x, aabb.size.z), float(row["footprint_m"]) + 0.6,
 				type + " fits the footprint its row claims")

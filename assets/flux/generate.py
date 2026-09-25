@@ -74,11 +74,25 @@ CANVAS_SIZE = {
 # that ignores guidance (Apache 2.0). klein is Flux.2 [klein] 4B base
 # (Apache 2.0): undistilled, so CFG and NEGATIVE.txt apply. Flux.1 dev is
 # non-commercial and is deliberately NOT listed.
+# Added 2026-09-24 (docs: claude/t2i-model-evaluation-2026-09.md in the Claude
+# project): zimage = Z-Image Turbo (Apache 2.0, 6B, 8 steps, CFG 1, no
+# negative path); qwen2512 = Qwen-Image-2512 Q6_K GGUF (Apache 2.0, 20B; needs
+# the ComfyUI-GGUF node) at full quality, qwen2512fast = the same with the
+# Lightning 8-step LoRA (Apache 2.0). Models: assets/flux/download_models.sh.
+# NOT listed on purpose: FLUX.2 [dev] / klein 9B (FLUX non-commercial),
+# Ideogram 4 open weights (non-commercial), HunyuanImage (licence excludes
+# EU/UK/KR), Qwen-Image-2.1 (research licence), Krea 2 open / SD3.5 (revenue cap).
 MODEL_PRESETS = {
     "schnell": {"template": "flux_template.json", "unet": "flux1-schnell.safetensors",
                 "steps": 4, "guidance": 3.0, "cfg": 1.0},
     "klein": {"template": "flux2_klein_template.json", "unet": "flux-2-klein-base-4b.safetensors",
               "steps": 20, "guidance": 3.0, "cfg": 4.0},
+    "zimage": {"template": "zimage_turbo_template.json", "unet": "z_image_turbo_bf16.safetensors",
+               "steps": 8, "guidance": 0.0, "cfg": 1.0},
+    "qwen2512": {"template": "qwen2512_template.json", "unet": "qwen-image-2512-Q6_K.gguf",
+                 "steps": 50, "guidance": 0.0, "cfg": 4.0, "lora_strength": 0.0},
+    "qwen2512fast": {"template": "qwen2512_template.json", "unet": "qwen-image-2512-Q6_K.gguf",
+                     "steps": 8, "guidance": 0.0, "cfg": 1.0, "lora_strength": 1.0},
 }
 
 
@@ -331,10 +345,11 @@ def main() -> int:
     uses_negative = "negative" in template.get("_slots", {})
     print(f"style {style_path.name}  negative {negative_path.name}")
     print(f"model {preset['unet']}  template {preset['template']}  steps {preset['steps']}  "
-          f"{'cfg ' + str(preset['cfg']) if uses_negative else 'guidance ' + str(preset['guidance'])}  "
+          f"{'cfg ' + str(preset['cfg']) if 'cfg' in template.get('_slots', {}) else 'guidance ' + str(preset['guidance'])}  "
           f"{len(rows)} entries x {args.variants} variant(s)")
     if not uses_negative:
-        print("note: Flux.1 has no negative-prompt path; NEGATIVE.txt is not applied by this template")
+        print(f"note: {preset['template']} has no negative-prompt path (distilled / guidance model); "
+              "NEGATIVE.txt is not applied")
 
     jobs = []
     for r in rows:
@@ -357,6 +372,7 @@ def main() -> int:
             graph = make_graph(template, {
                 "unet": preset["unet"], "prompt": prompt, "negative": negative,
                 "guidance": preset["guidance"], "cfg": preset["cfg"], "steps": preset["steps"],
+                "lora_strength": preset.get("lora_strength", 0.0),
                 "width": int(r["width"]), "height": int(r["height"]), "seed": seed, "prefix": prefix})
             try:
                 payload = {"prompt": graph, "client_id": uuid.uuid4().hex}

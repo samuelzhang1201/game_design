@@ -271,6 +271,7 @@ def workshop():
     h = House("workshop")
     hw, y0, yb, y1, eave, ridge = 6.4, -9.2, -3.6, 9.2, 5.8, 12.6
     h.hall(hw, yb, y1, eave, ridge, "wall_rubble")
+    h.footing([(-hw, y0 + 0.1), (hw, y0 + 0.1), (hw, yb), (-hw, yb)])   # the open bay's floor
     h.roof(hw, y0, y1, eave, ridge, "roof_orange_brown", over=0.6, end0=0.4, end1=0.4)
     for x in (-hw + 0.3, hw - 0.3):
         h.box(x - 0.3, x + 0.3, y0 + 0.1, y0 + 0.7, 0, eave, "timber")

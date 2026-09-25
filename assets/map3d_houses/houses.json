@@ -1,86 +1,100 @@
 {
  "barn": {
+  "footing_m": 16.981,
   "footprint_m": 20.0,
-  "height_m": 17.98,
+  "height_m": 17.888,
   "source": "blender-mcp",
-  "tris": 812
+  "tris": 1796
  },
  "byre": {
+  "footing_m": 17.191,
   "footprint_m": 17.0,
-  "height_m": 10.405,
+  "height_m": 10.313,
   "source": "blender-mcp",
-  "tris": 152
+  "tris": 608
  },
  "chapel": {
+  "footing_m": 19.658,
   "footprint_m": 24.0,
-  "height_m": 27.929,
+  "height_m": 27.814,
   "source": "blender-mcp",
-  "tris": 1238
+  "tris": 2644
  },
  "church": {
+  "footing_m": 16.406,
   "footprint_m": 36.0,
-  "height_m": 27.285,
+  "height_m": 27.195,
   "source": "blender-mcp",
-  "tris": 2194
+  "tris": 5256
  },
  "church_tower": {
+  "footing_m": 17.838,
   "footprint_m": 44.0,
-  "height_m": 53.973,
+  "height_m": 53.564,
   "source": "blender-mcp",
-  "tris": 3038
+  "tris": 7106
  },
  "cottage_a": {
+  "footing_m": 17.739,
   "footprint_m": 17.0,
-  "height_m": 15.177,
+  "height_m": 15.116,
   "source": "blender-mcp",
-  "tris": 208
+  "tris": 700
  },
  "cottage_b": {
+  "footing_m": 19.059,
   "footprint_m": 18.0,
-  "height_m": 18.002,
+  "height_m": 17.999,
   "source": "blender-mcp",
-  "tris": 904
+  "tris": 1680
  },
  "cottage_c": {
+  "footing_m": 19.01,
   "footprint_m": 16.0,
-  "height_m": 16.898,
+  "height_m": 16.821,
   "source": "blender-mcp",
-  "tris": 208
+  "tris": 692
  },
  "longhouse": {
+  "footing_m": 17.143,
   "footprint_m": 20.0,
-  "height_m": 9.333,
+  "height_m": 8.904,
   "source": "blender-mcp",
-  "tris": 680
+  "tris": 1312
  },
  "palace": {
+  "footing_m": 21.165,
   "footprint_m": 68.0,
-  "height_m": 51.1,
+  "height_m": 49.931,
   "source": "blender-mcp",
-  "tris": 4778
+  "tris": 10928
  },
  "townhouse_a": {
+  "footing_m": 18.451,
   "footprint_m": 18.0,
-  "height_m": 23.064,
+  "height_m": 22.628,
   "source": "blender-mcp",
-  "tris": 968
+  "tris": 2540
  },
  "townhouse_b": {
+  "footing_m": 18.713,
   "footprint_m": 19.0,
-  "height_m": 21.297,
+  "height_m": 20.888,
   "source": "blender-mcp",
-  "tris": 1052
+  "tris": 1836
  },
  "townhouse_c": {
+  "footing_m": 17.647,
   "footprint_m": 15.0,
-  "height_m": 21.373,
+  "height_m": 21.275,
   "source": "blender-mcp",
-  "tris": 536
+  "tris": 1468
  },
  "workshop": {
+  "footing_m": 17.812,
   "footprint_m": 19.0,
-  "height_m": 15.734,
+  "height_m": 15.325,
   "source": "blender-mcp",
-  "tris": 204
+  "tris": 764
  }
 }

@@ -57,6 +57,22 @@ static func house_radius_m(burg: Dictionary, repo: DataRepository) -> float:
 	return sqrt(maxf(n, 0.0) * m2 / PI)
 
 
+## house_radius_m grown by the landmark's open square (house_plaza_m and the
+## lane round it, owner 2026-09-25), exactly as bake_houses.cluster_radius_m:
+## the houses keep their group's ground and the square is added to it. The
+## cluster is centred on its LANDMARK's own spot, not the burg's point.
+static func cluster_radius_m(burg: Dictionary, repo: DataRepository, landmark: String) -> float:
+	var r := house_radius_m(burg, repo)
+	if not repo.map3d_houses.has(landmark):
+		return r
+	var row: Dictionary = repo.map3d_houses[landmark]
+	var t: Dictionary = repo.map3d_bake
+	var e := float(t["house_plaza_m"]) + 2.0 * float(t["lane_half_width_m"])
+	var along := 0.5 * (float(row.get("depth_m", 0.0)) if float(row.get("depth_m", 0.0)) > 0.0 else float(row["footprint_m"]))
+	var across := 0.5 * (float(row.get("width_m", 0.0)) if float(row.get("width_m", 0.0)) > 0.0 else float(row["footprint_m"]))
+	return sqrt(r * r + 4.0 * (along + e) * (across + e) / PI)
+
+
 ## The built ground's radius in metres — the house cluster grown out by its
 ## buffer ring, `house_built_share` the cluster's own share of it, as the
 ## bake paints it.
@@ -104,8 +120,9 @@ static func visible_set(houses: Dictionary, repo: DataRepository, burg_pos: Dict
 ## building cannot tilt with the ground as a wargame piece does — walls stand
 ## plumb — so it stands on the HIGHEST ground anywhere under its footprint and
 ## no part of it is ever under the ground; the downhill side, which that
-## leaves in the air, stands on a stone foundation (plinth_of) reaching below
-## the LOWEST, as a house on a real hillside does. The ground is sampled over
+## leaves in the air, shows the stone footing every house mesh carries under
+## its walls (tools/map3d/blender_houses/kit.py FOOT_M), as a house on a real
+## hillside does. The ground is sampled over
 ## an n x n grid (footprint_grid), not just the corners: a crest running
 ## between the corners came up through the floor. Returns
 ## Vector3(lowest, highest, the centre's). Pure: `height_at` is world XZ ->
@@ -158,17 +175,31 @@ static func footprint_grid(h: Dictionary, box: AABB, inset: float, n: int) -> Pa
 	return out
 
 
-## The foundation under a house on a slope: a unit box turned with the house,
-## `inset` of its footprint (so its faces stay under the walls — a
-## foundation, never a base plate out past them), from just inside the
-## house's floor down to `below` metres under the lowest corner.
-static func plinth_of(h: Dictionary, box: AABB, inset: float, ground: Vector2,
-		below: float) -> Transform3D:
+## Which of `count` variants a house wears (data/map3d_house_variants.csv,
+## owner 2026-09-25: 颜色可以多样化一点): a hash of where it stands and of
+## `salt` (0 the wall, 1 the roof, so the two vary apart), so a house keeps
+## its colours across every rebuild and every run. Pure.
+static func variant_of(h: Dictionary, count: int, salt: int) -> int:
+	if count <= 1:
+		return 0
 	var at: Vector2 = h["at"]
-	var s: float = float(h["scale"])
-	var turn := Basis(Vector3.UP, deg_to_rad(float(h["yaw_deg"])))
-	var top := ground.y + 0.25
-	var bottom := ground.x - below
-	var centre: Vector3 = turn * (Vector3(box.get_center().x, 0, box.get_center().z) * s)
-	var basis := turn.scaled(Vector3(box.size.x * s * inset, top - bottom, box.size.z * s * inset))
-	return Transform3D(basis, Vector3(at.x + centre.x, (top + bottom) * 0.5, at.y + centre.z))
+	var x := int(roundf(at.x * 10.0))
+	var z := int(roundf(at.y * 10.0))
+	var k := (x * 73856093) ^ (z * 19349663) ^ (salt * 83492791)
+	k = (k ^ (k >> 13)) * 1274126177
+	return absi(k ^ (k >> 16)) % count
+
+
+## The tints of one `part` ("wall" or "roof") in variant order, as LINEAR
+## multipliers: the table's hexes are sRGB, and a multiplier on an sRGB
+## albedo is its linear power on the linear one.
+static func tints_of(variants: Array, part: String) -> PackedVector3Array:
+	var rows: Array = variants.filter(func(r): return String(r["part"]) == part)
+	rows.sort_custom(func(a, b): return int(a["variant"]) < int(b["variant"]))
+	var out := PackedVector3Array()
+	for r: Dictionary in rows:
+		var c := Color(String(r["tint"]))
+		out.append(Vector3(pow(c.r, 2.2), pow(c.g, 2.2), pow(c.b, 2.2)))
+	if out.is_empty():
+		out.append(Vector3.ONE)
+	return out

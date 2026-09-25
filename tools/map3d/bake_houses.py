@@ -83,6 +83,36 @@ def footprint_radius_m(burg, rules):
     return house_radius_m(burg, rules) / rules["house_built_share"]
 
 
+def _square_reach(types, group, rules):
+    """(half along, half across) of a landmark's open square out to the far
+    kerb of the lane round it — the ground no house of this group's
+    settlement may take — or None when the group has no landmark."""
+    lm = _pick_landmark(types, group)
+    if lm is None:
+        return None
+    hx, hz = half_extents(types[lm])
+    e = float(rules["house_plaza_m"]) + 2.0 * float(rules["lane_half_width_m"])
+    return hx + e, hz + e
+
+
+def cluster_radius_m(burg, rules, types):
+    """house_radius_m grown by the landmark's open square (house_plaza_m,
+    owner 2026-09-25): the houses keep the ground their group's density gives
+    them, and the square is added to it rather than taken out of it."""
+    r = house_radius_m(burg, rules)
+    reach = _square_reach(types, str(burg.get("group", "village")), rules)
+    if reach is None:
+        return r
+    return math.sqrt(r * r + 4.0 * reach[0] * reach[1] / math.pi)
+
+
+def square_inner_m(burg, rules, types):
+    """How near its landmark's centre the first house can stand: the square's
+    shorter reach (0 with no landmark). The ring quotas start here."""
+    reach = _square_reach(types, str(burg.get("group", "village")), rules)
+    return 0.0 if reach is None else min(reach)
+
+
 def _group_allows(group, min_group):
     try:
         return GROUP_ORDER.index(group) >= GROUP_ORDER.index(min_group)
@@ -403,7 +433,136 @@ def _nearest_lane(lanes, x, z):
     return best_d, best_b
 
 
-def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, wet=None):
+def _landmark_site(burg, rules, types, land, height, k, vw, vh, wet, rng, r_house):
+    """(landmark type, yaw, (x_m, z_m) from the burg's point) for a
+    settlement, drawing its yaw from `rng` right after the lanes; the spot is
+    None when no ground within reach takes it, and the type None when the
+    group allows no landmark at all."""
+    group = str(burg.get("group", "village"))
+    landmark = _pick_landmark(types, group)
+    if landmark is None:
+        return None, 0.0, None
+    cx, cy = float(burg["x"]) * k, float(burg["y"]) * k
+    shore_m = (rules["house_port_shore_min_m"] if int(burg.get("is_port", 0) or 0)
+               else rules["house_shore_min_m"])
+    # the landmark's own search never reaches past the cluster it is
+    # meant to stand in -- the buffer ring beyond r_house must stay
+    # empty (the owner's own requirement), so house_landmark_search_m is
+    # an outer bound only; r_house also caps it
+    search_m = min(float(rules["house_landmark_search_m"]), r_house)
+    # a landmark keeps clear of a river by its own half-size, like every
+    # other building (see _try_place): Azgaar puts a riverside burg's
+    # centre ON the water, and the landmark is the one building the
+    # house passes never vet.
+    lm_clear = float(rules.get("house_river_clear_m", 0.0)) + max(half_extents(types[landmark]))
+
+    def _lm_on_water(vx, vy):
+        if wet is None:
+            return False
+        return (1.0 - float(wet[int(vy), int(vx)])) * rules["river_wet_m"] < lm_clear
+
+    # the yaw is drawn BEFORE the spot (the same single draw, so the
+    # stream is unchanged) because the footprint's fall depends on it
+    yaw0 = float(round(rng.uniform(0.0, 360.0), 2))
+    lm_half = half_extents(types[landmark])
+    lm_max = float(rules["house_landmark_max_drop_m"])
+
+    def _lm_drop(vx, vy):
+        return _footprint_drop(height, vx, vy, lm_half, yaw0, vw, vh)
+
+    spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m, search_m,
+                               on_water=_lm_on_water, drop=_lm_drop, max_drop=lm_max)
+    if spot is None:
+        # A settlement always shows its landmark. The river clearance is
+        # a LOOK rule and the sea gate is the structural one, so when a
+        # burg's whole cluster is within a river's reach the clearance
+        # gives way rather than the settlement disappearing — measured,
+        # the strict rule alone left 3 of the pack's 684 with no
+        # building at all, which reads as a named dot standing on empty
+        # ground.
+        spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m, search_m,
+                                   drop=_lm_drop, max_drop=lm_max)
+    if spot is not None:
+        spot = (float(round(spot[0], 2)), float(round(spot[1], 2)))
+    return landmark, yaw0, spot
+
+
+def landmark_of(burg, rules, types, land, height, k, vw, vh, wet=None):
+    """(type, yaw, spot) of this settlement's landmark exactly as place()
+    would choose it — the spot in metres from the burg's own point, None
+    when nothing takes it — so the bake can stamp the built ground round it
+    and level its terrace BEFORE the houses are placed, then hand it to
+    place() as `site`. Replays place()'s own draws."""
+    rng = np.random.default_rng(_seed(str(burg["burg_code"])))
+    r_house = cluster_radius_m(burg, rules, types)
+    _grow_lanes(rng, r_house, rules)
+    return _landmark_site(burg, rules, types, land, height, k, vw, vh, wet, rng, r_house)
+
+
+def landmark_centre(burg, rules, types, land, height, k, vw, vh, wet=None):
+    """Where place() will stand this settlement's landmark, in metres from
+    the burg's own point ((0, 0) when it has none)."""
+    spot = landmark_of(burg, rules, types, land, height, k, vw, vh, wet)[2]
+    return spot if spot is not None else (0.0, 0.0)
+
+
+def level_pad(height, vx, vy, half, yaw_deg, rules, land=None, wet=None):
+    """Level the ground under a landmark and its square IN PLACE (owner
+    2026-09-25: a palace on a hillside stood on a tower of its own stone
+    footing and read as a skyscraper): every vertex inside the landmark's
+    rectangle grown by house_plaza_m and one vertex takes the mean height
+    there — cut on the uphill side, fill on the downhill — and the ground
+    eases back to the hill over house_pad_blend_m. The sea and a river's
+    channel and banks (`land`, `wet`) are never touched. `vx`, `vy` are the
+    landmark's vertex coordinates, `half` its (along, across) half-extents."""
+    vh, vw = height.shape
+    a = half[0] + float(rules["house_plaza_m"]) + VERTEX_M
+    c = half[1] + float(rules["house_plaza_m"]) + VERTEX_M
+    blend = float(rules["house_pad_blend_m"])
+    reach = (math.hypot(a, c) + blend) / VERTEX_M + 1
+    x0, x1 = max(int(vx - reach), 0), min(int(vx + reach) + 2, vw)
+    y0, y1 = max(int(vy - reach), 0), min(int(vy + reach) + 2, vh)
+    if x0 >= x1 or y0 >= y1:
+        return
+    yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+    dx, dz = (xx - vx) * VERTEX_M, (yy - vy) * VERTEX_M
+    (fx, fz), (rx, rz) = _axes(yaw_deg)
+    u, v = np.abs(dx * fx + dz * fz), np.abs(dx * rx + dz * rz)
+    out = np.hypot(np.maximum(u - a, 0.0), np.maximum(v - c, 0.0))   # metres outside the pad
+    sub = height[y0:y1, x0:x1]
+    inside = out <= 0.0
+    if not inside.any():
+        return
+    target = float(sub[inside].mean())
+    t = np.clip(out / max(blend, 1e-6), 0.0, 1.0)
+    w = 1.0 - t * t * (3.0 - 2.0 * t)
+    if land is not None:
+        w = w * (land[y0:y1, x0:x1] >= 0.5)
+    if wet is not None:
+        w = w * (1.0 - np.clip(wet[y0:y1, x0:x1], 0.0, 1.0))
+    height[y0:y1, x0:x1] = sub + (target - sub) * w
+
+
+def _square_lane(a, c, yaw_deg, step):
+    """A closed lane round a landmark's square: a rectangle `a` out along
+    the landmark's facing axis and `c` across it, turned with it, as
+    (x, z, bearing_deg) points no more than `step` apart."""
+    (fx, fz), (rx, rz) = _axes(yaw_deg)
+    corners = [(a, c), (-a, c), (-a, -c), (a, -c), (a, c)]
+    pts = []
+    for (u0, v0), (u1, v1) in zip(corners, corners[1:]):
+        x0, z0 = fx * u0 + rx * v0, fz * u0 + rz * v0
+        x1, z1 = fx * u1 + rx * v1, fz * u1 + rz * v1
+        bearing = math.degrees(math.atan2(x1 - x0, z1 - z0))
+        n = max(int(math.ceil(math.hypot(x1 - x0, z1 - z0) / max(step, 1e-6))), 1)
+        for i in range(n):
+            t = i / n
+            pts.append((x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, bearing))
+    pts.append((pts[0][0], pts[0][1], pts[-1][2]))
+    return pts
+
+
+def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, wet=None, site=None):
     """The houses of one settlement, ranked from the centre outward.
 
     `foot`, `land`, `height` are the bake's vertex-resolution arrays; `k` is
@@ -416,7 +575,10 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
     past r_house, so it can never land in the buffer ring beyond the
     cluster's own houses.
 
-    The layout: grow a branching lane network out from the centre, pack
+    The layout, centred on the landmark's own spot (which moves off water
+    or a slope; the houses move with it): an open square round the
+    landmark (house_plaza_m) ringed by a lane, a branching lane network
+    grown out from the centre, and houses packed
     house rectangles along its frontage (both sides, oriented to face the
     lane), then fill whatever block is left between lanes with a jittered
     close-spaced grid — oriented to the nearest lane, not spun independently
@@ -432,7 +594,8 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
     group = str(burg.get("group", "village"))
     rng = np.random.default_rng(_seed(code))
     cx, cy = float(burg["x"]) * k, float(burg["y"]) * k
-    r_house = house_radius_m(burg, rules)
+    r_house = cluster_radius_m(burg, rules, types)
+    r_inner = square_inner_m(burg, rules, types)
     shore_m = (rules["house_port_shore_min_m"] if int(burg.get("is_port", 0) or 0)
                else rules["house_shore_min_m"])
 
@@ -445,54 +608,33 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
     # rng and this same call, with no need to replay the landmark's own draws
     lanes = _grow_lanes(rng, r_house, rules)
 
-    landmark = _pick_landmark(types, group)
+    landmark, yaw0, spot = _landmark_site(burg, rules, types, land, height, k, vw, vh, wet, rng, r_house)
+    if site is not None:
+        # the bake chose the site (landmark_of) before it levelled the
+        # ground there; the search above only keeps the stream in step
+        landmark, yaw0, spot = site
+    if landmark is not None and spot is None:
+        return []
+    # THE SETTLEMENT STANDS ROUND ITS LANDMARK (owner 2026-09-25: "标志性建筑要
+    # 在中间附近" — the capital's palace had been moved 59 m off its burg's
+    # point onto level ground and every house was still packed round the
+    # point, all to one side of it). Everything below is laid out in a frame
+    # centred on the landmark's own spot, and shifted back at the end.
+    lx, lz = spot if spot is not None else (0.0, 0.0)
+    cx, cy = cx + lx / VERTEX_M, cy + lz / VERTEX_M
+    half_w = float(rules["lane_half_width_m"])
     if landmark is not None:
-        # the landmark's own search never reaches past the cluster it is
-        # meant to stand in -- the buffer ring beyond r_house must stay
-        # empty (the owner's own requirement), so house_landmark_search_m is
-        # an outer bound only; r_house also caps it
-        search_m = min(float(rules["house_landmark_search_m"]), r_house)
-        # a landmark keeps clear of a river by its own half-size, like every
-        # other building (see _try_place): Azgaar puts a riverside burg's
-        # centre ON the water, and the landmark is the one building the
-        # house passes never vet.
-        lm_clear = float(rules.get("house_river_clear_m", 0.0)) \
-            + max(half_extents(types[landmark]))
-
-        def _lm_on_water(vx, vy):
-            if wet is None:
-                return False
-            return (1.0 - float(wet[int(vy), int(vx)])) * rules["river_wet_m"] < lm_clear
-
-        # the yaw is drawn BEFORE the spot (the same single draw, so the
-        # stream is unchanged) because the footprint's fall depends on it
-        yaw0 = float(round(rng.uniform(0.0, 360.0), 2))
-        lm_half = half_extents(types[landmark])
-        lm_max = float(rules["house_landmark_max_drop_m"])
-
-        def _lm_drop(vx, vy):
-            return _footprint_drop(height, vx, vy, lm_half, yaw0, vw, vh)
-
-        spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m, search_m,
-                                   on_water=_lm_on_water, drop=_lm_drop, max_drop=lm_max)
-        if spot is None:
-            # A settlement always shows its landmark. The river clearance is
-            # a LOOK rule and the sea gate is the structural one, so when a
-            # burg's whole cluster is within a river's reach the clearance
-            # gives way rather than the settlement disappearing — measured,
-            # the strict rule alone left 3 of the pack's 684 with no
-            # building at all, which reads as a named dot standing on empty
-            # ground.
-            spot = _find_landmark_spot(cx, cy, land, vw, vh, shore_m, search_m,
-                                       drop=_lm_drop, max_drop=lm_max)
-        if spot is None:
-            return []
-        lx, lz = spot
-        rows.append({"burg_code": code, "rank": 0, "x_m": float(round(lx, 2)),
-                     "z_m": float(round(lz, 2)), "yaw_deg": yaw0,
+        rows.append({"burg_code": code, "rank": 0, "x_m": 0.0, "z_m": 0.0, "yaw_deg": yaw0,
                      "type": landmark, "scale": 1.0,
                      "height_scale": float(rules["house_height_max"])})
-        taken.append((lx, lz, half_extents(types[landmark]), yaw0))
+        # an open square round it, and a lane round the square: the first
+        # houses face the landmark from every side rather than all turning
+        # to whichever radial lane happens to pass
+        hx, hz = half_extents(types[landmark])
+        plaza = float(rules["house_plaza_m"])
+        taken.append((0.0, 0.0, (hx + plaza, hz + plaza), yaw0))
+        lanes = lanes + [_square_lane(hx + plaza + half_w, hz + plaza + half_w, yaw0,
+                                      float(rules["lane_step_m"]))]
 
     n_target = house_count(burg, rules)
     gap = float(rules["house_gap_m"])
@@ -549,7 +691,9 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
     frontage_cap = [int(round(q * frontage_share)) for q in quotas]
 
     def _ring_of(d):
-        idx = int(d / max(r_house, 1e-6) * n_rings)
+        # the rings span the ground OUTSIDE the landmark's square, so the
+        # richest quota is the first row of houses round it, not the square
+        idx = int((d - r_inner) / max(r_house - r_inner, 1e-6) * n_rings)
         return min(max(idx, 0), n_rings - 1)
 
     def _try_place(ox, oz, yaw, pick, ring, foot_min=None):
@@ -608,7 +752,6 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
     # 2. pack houses along their frontage, both sides, nearest to the centre
     # first, gated by each candidate's own ring quota rather than a flat cap
     plot_step = float(rules["plot_step_m"])
-    half_w = float(rules["lane_half_width_m"])
     frontage = _frontage_candidates(lanes, plot_step, r_house)
 
     def _frontage_pass(enforce_quota):
@@ -757,6 +900,9 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
         for i, r in enumerate(rows):
             r["rank"] = i
 
+    for r in rows:   # back from the landmark's frame to the burg's own point
+        r["x_m"] = float(round(r["x_m"] + lx, 2))
+        r["z_m"] = float(round(r["z_m"] + lz, 2))
     if debug_counts is not None:
         debug_counts.update(pass_counts)
     return rows

@@ -121,9 +121,9 @@ func test_height_scale_reaches_the_transform() -> void:
 ## hill, and then "要垂直于地面，不可以被地面遮住部分". A house stands upright on
 ## the HIGHEST ground anywhere under its footprint (a grid of samples, not
 ## just the corners), plus map3d_house_seat_clear_m, so no part of it is ever
-## under the ground; a stone foundation fills the downhill side down past the
-## LOWEST sample.
-func test_a_house_on_a_slope_stands_on_its_highest_ground_over_a_foundation() -> void:
+## under the ground; its mesh's own stone footing (owner 2026-09-25) fills
+## the downhill side down past the LOWEST sample.
+func test_a_house_on_a_slope_stands_on_its_highest_ground_over_its_footing() -> void:
 	var at := _home()
 	_ctx.height_fn = func(xz: Vector2) -> float: return HEIGHT + 0.1 * (xz.x - at.x)
 	_layer.refresh(at)
@@ -142,14 +142,10 @@ func test_a_house_on_a_slope_stands_on_its_highest_ground_over_a_foundation() ->
 		assert_almost_eq((xforms[0] as Transform3D).origin.y,
 			highest + Game.data.bal("map3d_house_seat_clear_m"), 0.001,
 			"a house stands on the highest ground under it, never buried")
-	var plinths := _layer.plinths()
-	assert_eq(plinths.size(), 2, "both houses on the slope stand on a foundation")
-	var reaches := false
-	for p: Transform3D in plinths:
-		var bottom := p.origin.y - p.basis.get_scale().y * 0.5
-		if absf(bottom - (lowest - Game.data.bal("map3d_house_plinth_below_m"))) < 0.01:
-			reaches = true
-	assert_true(reaches, "the chapel's foundation reaches below its lowest ground")
+	if xforms.size() > 0:
+		var t := xforms[0] as Transform3D
+		var footing_bottom := t.origin.y + t.basis.get_scale().y * mesh_box.position.y
+		assert_lt(footing_bottom, lowest, "the chapel's own footing reaches below its lowest ground")
 
 
 ## A ridge BETWEEN the corners: a house that sampled only its corners stood
@@ -188,12 +184,42 @@ func test_a_steep_site_still_buries_nothing() -> void:
 		int(Game.data.bal("map3d_house_ground_samples")), _ctx.height_at)
 	for t: Transform3D in _layer.transforms_of("chapel"):
 		assert_gte(t.origin.y, ground.y, "the uphill wall is not under the hill")
-	assert_eq(_layer.plinths().size(), 2, "and the downhill side stands on stone")
 
 
-func test_flat_ground_gets_no_foundation() -> void:
+## No box is laid under a house any more (owner 2026-09-25: ugly and strange):
+## the layer's only children are the per-type MultiMeshes.
+func test_no_foundation_box_is_laid() -> void:
 	_layer.refresh(_home())
-	assert_eq(_layer.plinths().size(), 0)
+	for c in _layer.get_children():
+		assert_true(_layer._instances.values().has(c), "%s is not a house type's MultiMesh" % c.name)
+
+
+## Owner 2026-09-25 (颜色可以多样化一点，主色调不变): every house wears one of
+## the table's wall and roof variants, kept across rebuilds, and a settlement's
+## houses do not all wear the same one.
+func test_houses_wear_their_own_colour_variants() -> void:
+	var walls := Map3DHouses.tints_of(Game.data.map3d_house_variants, "wall").size()
+	var roofs := Map3DHouses.tints_of(Game.data.map3d_house_variants, "roof").size()
+	assert_gt(walls, 1, "the table offers wall variants")
+	assert_gt(roofs, 1, "and roof variants")
+	var seen := {}
+	for i in 40:
+		var h := {"at": Vector2(1000.0 + 37.0 * i, 2000.0 - 23.0 * i)}
+		var w := Map3DHouses.variant_of(h, walls, 0)
+		var r := Map3DHouses.variant_of(h, roofs, 1)
+		assert_true(w >= 0 and w < walls and r >= 0 and r < roofs)
+		assert_eq(w, Map3DHouses.variant_of(h, walls, 0), "a house keeps its variant")
+		seen[Vector2i(w, r)] = true
+	assert_gt(seen.size(), 6, "neighbours vary")
+
+
+## A variant never makes a wall or a roof LIGHTER than its mesh (taste.md:
+## limewash too bright twice; a lighter tile reads pink).
+func test_no_variant_lightens() -> void:
+	for r: Dictionary in Game.data.map3d_house_variants:
+		var c := Color(String(r["tint"]))
+		assert_true(c.r <= 1.0 and c.g <= 1.0 and c.b <= 1.0, "%s" % r)
+		assert_lte(c.get_luminance(), 1.0, "%s" % r)
 
 
 func _home() -> Vector2:

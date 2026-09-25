@@ -10,12 +10,17 @@ extends Node3D
 ## this only instances them. Takes everything from Map3DContext — never the
 ## Game autoload.
 ##
-## Task 6 override 1: NO material override and NO instance colour. Each
-## type's .glb already carries two baked surfaces — wall and roof — with
-## their own albedo read from terrain_palette.csv at generation time. A
-## shared material_override would flatten both surfaces to one colour and
-## lose the wall entirely, so every MultiMeshInstance3D renders with the
-## mesh's own materials and this layer never touches colour.
+## Each type's .glb carries its own surfaces (a recess, walls, a roof,
+## timber), each with its own texture. A shared material_override would
+## flatten them to one colour, so every surface keeps its OWN texture, drawn
+## by house_surface.gdshader, which also multiplies a wall or a roof by one
+## of data/map3d_house_variants.csv's tints, picked per house
+## (Map3DHouses.variant_of) and handed over as instance custom data (owner
+## 2026-09-25: 颜色可以多样化一点，主色调不变，但可以有不同variant).
+##
+## There is no foundation here: every house mesh carries its own stone
+## footing under its walls (owner 2026-09-25: the square box this layer laid
+## under a house on a slope was ugly and strange).
 
 ## Editor preview: the clusters from the pack and its build alone.
 @export var preview := false: set = set_preview
@@ -23,14 +28,13 @@ extends Node3D
 ## Test seam: the baked houses, in place of the build's own houses.csv.
 var houses_override: Dictionary = {}
 
+const HOUSE_SHADER := preload("res://scripts/map3d/house_surface.gdshader")
+
 var ctx: Map3DContext
 var _built := false
 var _built_at := Vector2.INF
 var _instances: Dictionary = {}       # type -> MultiMeshInstance3D
 var _aabbs: Dictionary = {}           # type -> its mesh's AABB, for the footprint
-## One MultiMesh of stone foundations, one per house on a slope (see Map3DHouses.seat()).
-var _plinths: MultiMeshInstance3D
-var _plinth_xforms: Array[Transform3D] = []
 ## Test seam (fix round 1): the Transform3D actually handed to
 ## set_instance_transform for each type's MultiMesh in the last refresh(),
 ## in instance order. Debugging finding (task 6): under the headless dummy
@@ -42,6 +46,11 @@ var _plinth_xforms: Array[Transform3D] = []
 ## _transforms — what refresh() itself computed and handed to the
 ## MultiMesh — rather than asking the MultiMesh what it was set to.
 var _transforms: Dictionary = {}      # type -> Array[Transform3D], instance order
+## Test seam: the (wall, roof) variant given to each instance in the last
+## refresh(), in instance order, like _transforms.
+var _variants: Dictionary = {}        # type -> Array[Vector2i]
+var _wall_tints := PackedVector3Array()
+var _roof_tints := PackedVector3Array()
 
 
 ## Fix round 1 (owner review): the layer self-connects to the rig's
@@ -99,17 +108,20 @@ func build() -> void:
 	_instances.clear()
 	_aabbs.clear()
 	_transforms.clear()
-	_plinth_xforms.clear()
+	_variants.clear()
 	_built_at = Vector2.INF
 	_built = true
 	ctx.houses()
+	_wall_tints = Map3DHouses.tints_of(ctx.repo.map3d_house_variants, "wall")
+	_roof_tints = Map3DHouses.tints_of(ctx.repo.map3d_house_variants, "roof")
 	for type: String in ctx.repo.map3d_houses:
 		var mesh := _mesh_of(type)
 		if mesh == null:
 			continue
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.mesh = mesh
+		mm.use_custom_data = true
+		mm.mesh = _tinted(mesh)
 		mm.instance_count = 0
 		var mmi := MultiMeshInstance3D.new()
 		# Task 6 override 4: the type itself, not type.capitalize() — capitalize()
@@ -121,7 +133,6 @@ func build() -> void:
 		add_child(mmi)  # no owner: never saved
 		_instances[type] = mmi
 		_aabbs[type] = mesh.get_aabb()
-	_plinths = _make_plinths()
 
 
 ## Rebuild the instances for this camera position; true when it did. A move
@@ -146,16 +157,14 @@ func refresh(camera_xz: Vector2) -> bool:
 	var clear := ctx.repo.bal("map3d_house_seat_clear_m")
 	var ground_inset := ctx.repo.bal("map3d_house_ground_inset")
 	var samples := int(ctx.repo.bal("map3d_house_ground_samples"))
-	var inset := ctx.repo.bal("map3d_house_plinth_inset")
-	var min_drop := ctx.repo.bal("map3d_house_plinth_min_drop_m")
-	var below := ctx.repo.bal("map3d_house_plinth_below_m")
 	_transforms.clear()
-	_plinth_xforms.clear()
+	_variants.clear()
 	for type: String in _instances:
 		var mmi: MultiMeshInstance3D = _instances[type]
 		var rows: Array = buckets.get(type, [])
 		mmi.multimesh.instance_count = rows.size()
 		var xforms: Array[Transform3D] = []
+		var picks: Array[Vector2i] = []
 		var box: AABB = _aabbs[type]
 		for i in rows.size():
 			var h: Dictionary = rows[i]
@@ -173,16 +182,12 @@ func refresh(camera_xz: Vector2) -> bool:
 			var t := transform_of(h, ground.y)
 			mmi.multimesh.set_instance_transform(i, t)
 			xforms.append(t)
-			# Every house off level ground stands on a foundation down past its
-			# lowest ground, however far: nothing is buried and nothing hangs
-			# in the air (the bake keeps houses off cliffs: house_max_drop_m).
-			if ground.y - clear - ground.x > min_drop:   # the ground's own fall, not the clearance
-				_plinth_xforms.append(Map3DHouses.plinth_of(h, box, inset, ground, below))
+			var pick := Vector2i(Map3DHouses.variant_of(h, _wall_tints.size(), 0),
+				Map3DHouses.variant_of(h, _roof_tints.size(), 1))
+			mmi.multimesh.set_instance_custom_data(i, Color(pick.x, pick.y, 0.0, 0.0))
+			picks.append(pick)
 		_transforms[type] = xforms
-	if _plinths != null:
-		_plinths.multimesh.instance_count = _plinth_xforms.size()
-		for i in _plinth_xforms.size():
-			_plinths.multimesh.set_instance_transform(i, _plinth_xforms[i])
+		_variants[type] = picks
 	return true
 
 
@@ -219,31 +224,43 @@ static func transform_of(h: Dictionary, height: float) -> Transform3D:
 	return Transform3D(basis, Vector3(at.x, height, at.y))
 
 
-## Test seam: the foundations the last refresh() laid, in instance order.
-func plinths() -> Array[Transform3D]:
-	return _plinth_xforms
+## Test seam: the (wall, roof) variant each instance of `type` wore in the
+## last refresh(), in instance order.
+func variants_of(type: String) -> Array:
+	return _variants.get(type, [])
 
 
-## The bridges' stone (Map3DLayerRoads.bridge_material's .tres) laid
-## world-triplanar, so a foundation of any size shows blocks of one size.
-func _make_plinths() -> MultiMeshInstance3D:
-	var mat := (Map3DLayerRoads.BRIDGE_MAT as StandardMaterial3D).duplicate() as StandardMaterial3D
-	mat.albedo_color = MapTerrain.palette_color(ctx.repo, "map3d_house_plinth", Color("#9A8F80"))
-	mat.uv1_triplanar = true
-	mat.uv1_world_triplanar = true
-	mat.uv1_scale = Vector3.ONE / maxf(ctx.repo.bal("map3d_house_plinth_tile_m"), 0.1)
-	var box := BoxMesh.new()
-	box.material = mat
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = box
-	mm.instance_count = 0
-	var mmi := MultiMeshInstance3D.new()
-	mmi.name = "Plinths"
-	mmi.multimesh = mm
-	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mmi)  # no owner: never saved
-	return mmi
+## A copy of `mesh` whose every surface is drawn by house_surface.gdshader
+## with that surface's own imported texture, roughness and vertex-colour use:
+## a wall surface (material hh_wall_*) takes the wall tints, a tile roof
+## (hh_roof_*, not slate) the roof tints, anything else none.
+func _tinted(mesh: Mesh) -> Mesh:
+	var out := mesh.duplicate() as Mesh
+	if not (out is ArrayMesh):
+		return mesh
+	for i in out.get_surface_count():
+		var src := out.surface_get_material(i) as StandardMaterial3D
+		if src == null:
+			continue
+		var mat := ShaderMaterial.new()
+		mat.shader = HOUSE_SHADER
+		mat.set_shader_parameter("albedo_tex", src.albedo_texture)
+		mat.set_shader_parameter("albedo_color", src.albedo_color)
+		mat.set_shader_parameter("roughness", src.roughness)
+		mat.set_shader_parameter("use_vertex_color", src.vertex_color_use_as_albedo)
+		var name := src.resource_name
+		var role := 0
+		if name.begins_with("hh_wall_"):
+			role = 1
+		elif name.begins_with("hh_roof_") and name != "hh_roof_slate":
+			role = 2
+		mat.set_shader_parameter("role", role)
+		mat.set_shader_parameter("wall_tints", _wall_tints)
+		mat.set_shader_parameter("roof_tints", _roof_tints)
+		mat.set_shader_parameter("wall_count", _wall_tints.size())
+		mat.set_shader_parameter("roof_count", _roof_tints.size())
+		(out as ArrayMesh).surface_set_material(i, mat)
+	return out
 
 
 func _budget() -> int:

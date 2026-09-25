@@ -39,6 +39,15 @@ EXPORTS = [
      "Flux.2 [klein] 4B base (Apache 2.0, commercial OK). Undistilled: CFG works and the\n"
      "negative box carries NEGATIVE.txt. 20 steps, cfg 4.0. Never klein 9B (non-commercial).\n"
      "Bulk: python3 assets/flux/generate.py --model klein --ids C-01 --canvas C-FULL --pose P-05"),
+    ("CC Z-Image Turbo T2I", "zimage_turbo_template.json", {"model": "zimage", "id": "K-01"},
+     "Z-Image Turbo (Tongyi-MAI, 6B, Apache 2.0) - UNDER EVALUATION 2026-09-24, not yet a game-asset model.\n"
+     "8 steps, CFG 1, res_multistep; distilled, so no negative path (NEGATIVE.txt not applied).\n"
+     "Bulk: python3 assets/flux/generate.py --model zimage --ids K-01"),
+    ("CC Qwen-Image-2512 T2I", "qwen2512_template.json", {"model": "qwen2512fast", "id": "K-01"},
+     "Qwen-Image-2512 Q6_K GGUF (Alibaba, 20B, Apache 2.0) - UNDER EVALUATION 2026-09-24.\n"
+     "Needs the ComfyUI-GGUF node. Lightning LoRA strength 1 = 8 steps CFG 1 (qwen2512fast);\n"
+     "strength 0 + 50 steps + CFG 4 = full quality with NEGATIVE.txt (qwen2512). GGUF, not fp8: MPS upcasts fp8 to 16-bit.\n"
+     "Bulk: python3 assets/flux/generate.py --model qwen2512fast --ids K-01"),
     ("CC Post Cutout", "post_cutout_template.json", {"width": 0, "height": 660},
      "A generated portrait becomes a game asset: BiRefNet mask -> InvertMask -> RGBA ->\n"
      "lanczos resize (full: height 660; chip: 96x96). Driven by assets/flux/post.py."),
@@ -73,7 +82,8 @@ def sample_values(overrides: dict) -> dict:
     row = rows[overrides.get("id", SAMPLE_ID)]
     values = {"unet": preset["unet"], "prompt": gen.assemble(row, canvas, style),
               "negative": negative, "guidance": preset["guidance"], "cfg": preset["cfg"],
-              "steps": preset["steps"], "width": 1024, "height": 1024, "seed": 954159497,
+              "steps": preset["steps"], "lora_strength": preset.get("lora_strength", 0.0),
+              "width": 1024, "height": 1024, "seed": 954159497,
               "prefix": "flux/manual/test", "image": "example.png"}
     values.update({k: v for k, v in overrides.items() if k not in ("model", "style", "id")})
     return values
