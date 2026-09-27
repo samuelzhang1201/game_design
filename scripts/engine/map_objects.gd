@@ -997,7 +997,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		if marching:
 			var days := ArmySystem.days_out(repo, state, code)
 			stats.append(_stat("army_march", "%d day%s out" % [days, "" if days == 1 else "s"],
-				"On the march — %.1f km a day in clear weather, %d day%s from where it was sent at today's" % [
+				"On the march — %.1f km a day in clear weather; %d day%s to go in today's weather" % [
 					km, days, "" if days == 1 else "s"]))
 		else:
 			stats.append(_stat("army_march", "%.1f km/day" % km,

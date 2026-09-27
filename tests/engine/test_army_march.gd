@@ -273,9 +273,17 @@ func test_in_rain_the_card_the_days_out_and_the_ruler_agree() -> void:
 		"the card's days out is the ruler's figure")
 	var card := MapObjects.army_card(repo, code, s)
 	var weather: Dictionary = {}
+	var march: Dictionary = {}
 	for st: Dictionary in card["stats"]:
 		if String(st["key"]) == "army_weather":
 			weather = st
+		if String(st["key"]) == "army_march":
+			march = st
+	var days := ArmySystem.days_out(repo, s, code)
+	assert_eq(String(march.get("text", "")), "%d day%s out" % [days, "" if days == 1 else "s"])
+	var tip := String(march.get("tooltip", ""))
+	assert_string_contains(tip, "clear weather")
+	assert_true(tip.ends_with("in today's weather"), "a whole sentence: " + tip)
 	assert_eq(String(weather.get("text", "")), "Rain ×0.85", "the weather is its own line")
 	assert_true(repo.resource_icons.has("army_weather"), "with its icon row")
 	var ruler := FileAccess.get_file_as_string("res://scripts/map3d/map3d_hud_ruler.gd")
