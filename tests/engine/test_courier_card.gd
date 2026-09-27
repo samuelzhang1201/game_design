@@ -37,11 +37,28 @@ func test_the_card_says_what_he_carries_and_when() -> void:
 	var label := String(ArmySystem.regiment(repo, code)["label"])
 	assert_eq(String(card["title"]), "Courier to " + label)
 	assert_eq(String(card["known"]), "courier")
-	assert_eq(_field(card, "Carrying"), "Orders to stand for " + label)
+	assert_eq(_field(card, "Carrying"), "Orders to stand", "short: the title names the regiment")
+	assert_string_contains(String(card["title"]), label)
 	assert_string_contains(_field(card, "Arrives"), "day")
 	assert_ne(_field(card, "Weather"), "")
 	assert_ne(_field(card, "Ground"), "")
 	assert_eq(_field(card, "Rode out"), Calendar.date_string(s.tick, s.day))
+
+
+## The card's values stay short in the fixed left column (fix round 1,
+## 2026-09-28: "Rain (march and couriers ×0.85)" wrapped to five lines).
+func test_the_weather_reads_short_on_his_card() -> void:
+	for key in repo.weather_odds:
+		repo.weather_odds[key] = {"clear": 0, "rain": 1, "mud": 0, "snow": 0, "blizzard": 0}
+	Weather.forget()
+	var s := GameState.new_campaign(repo, 7)
+	var c := CourierSystem.dispatch(repo, s, "ordinary", _code(), {"action_code": "ARMY_MARCH",
+		"dest_x_m": 0, "dest_y_m": 0})
+	var card := CourierCard.card(repo, s, int(c["id"]))
+	assert_eq(_field(card, "Weather"), "Rain ×0.85")
+	assert_eq(_field(card, "Carrying"), "Orders to march")
+	assert_eq(CourierCard.weather_short(repo, "clear"), "Clear")
+	assert_eq(CourierCard.weather_short(repo, "blizzard"), "Blizzard ×0.40")
 
 
 func test_a_gone_courier_has_no_card() -> void:

@@ -31,13 +31,21 @@ static func date_of(abs_day: int) -> String:
 	return Calendar.date_string(d / Calendar.DAYS_PER_TICK + 1, d % Calendar.DAYS_PER_TICK + 1)
 
 
+## "Rain ×0.85", or just "Clear": the province and manor cards say what the
+## factor is for; a courier's card is about his ride.
+static func weather_short(repo: DataRepository, kind: String) -> String:
+	var permille := Weather.speed_permille(repo, kind)
+	if permille >= 1000:
+		return Weather.label_of(repo, kind)
+	return "%s ×%.2f" % [Weather.label_of(repo, kind), float(permille) / 1000.0]
+
+
 static func card(repo: DataRepository, state: GameState, id: int) -> Dictionary:
 	var c := courier(state, id)
 	if c.is_empty():
 		return {}
 	var realm := repo.resolve_realm("player_realm")
 	var kind := String(c["kind"])
-	var reg_label := String(ArmySystem.regiment(repo, String(c["target"])).get("label", c["target"]))
 	var order := String((c["order"] as Dictionary).get("action_code", ""))
 	var here := Vector2i(int(c["x_m"]), int(c["y_m"]))
 	var wx := Weather.at(repo, state, ArmySystem.metres_to_pack(repo, here), state.absolute_day())
@@ -52,11 +60,13 @@ static func card(repo: DataRepository, state: GameState, id: int) -> Dictionary:
 		"painting": String((repo.courier_art.get(kind, {}) as Dictionary).get("painting", "")),
 		"stats": [], "rates": [], "features": [], "production": [], "actions": [],
 		"fields": [
-			["Carrying", ("Orders to march" if order == "ARMY_MARCH" else "Orders to stand") + " for " + reg_label],
+			# short: the fixed left column wraps a long value line by line, and
+			# the title already names the regiment (fix round 1, 2026-09-28)
+			["Carrying", "Orders to march" if order == "ARMY_MARCH" else "Orders to stand"],
 			["Rode out", date_of(int(c["issued"]))],
 			["Arrives", "in about %d day%s" % [days, "" if days == 1 else "s"]],
 			["Ground", String(GROUND.get(ground, ground))],
-			["Weather", Weather.describe_kind(repo, wx)],
+			["Weather", weather_short(repo, wx)],
 		],
 		"known": "courier",
 		"center": ArmySystem.metres_to_pack(repo, here),
