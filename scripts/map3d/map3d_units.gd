@@ -101,7 +101,7 @@ static func day_world_m(repo: DataRepository, state: GameState, code: String,
 		meta: Dictionary) -> float:
 	if state == null:
 		return 0.0
-	return float(ArmySystem.day_step_m(repo, state, code)) \
+	return float(ArmySystem.day_march_m(repo, state, code)) \
 		* float(meta.get("m_per_px", 50.0)) / float(ArmySystem.metres_per_pack_px(repo))
 
 

@@ -8,6 +8,10 @@ var repo: DataRepository
 
 func before_all() -> void:
 	repo = DataRepository.load_all("res://data")
+	# Force clear skies so every hand-sum match still holds (task 7, owner 2026-09-27)
+	for key in repo.weather_odds:
+		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
+	Weather.forget()
 
 
 ## The size rule (owner 2026-09-27), by hand at fov 45 and a 1080 px view:
@@ -153,7 +157,7 @@ func test_the_menu_rows_are_data_and_every_one_is_a_real_order() -> void:
 
 func _walker(s: GameState) -> String:
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		if ArmySystem.day_step_m(repo, s, String(r["regiment_code"])) > 0:
+		if ArmySystem.day_march_m(repo, s, String(r["regiment_code"])) > 0:
 			return String(r["regiment_code"])
 	return ""
 
@@ -162,9 +166,9 @@ func test_a_piece_walks_a_days_march_in_a_days_real_seconds() -> void:
 	var s := GameState.new_campaign(repo, 7)
 	var code := _walker(s)
 	var meta := {"m_per_px": 50.0}
-	# By hand: day_step_m pack metres x (50 world m / metres_per_pack_px) over
+	# By hand: day_march_m pack metres x (50 world m / metres_per_pack_px) over
 	# time_day_seconds / 2 at the 2x clock.
-	var day_world := float(ArmySystem.day_step_m(repo, s, code)) * 50.0 \
+	var day_world := float(ArmySystem.day_march_m(repo, s, code)) * 50.0 \
 		/ float(ArmySystem.metres_per_pack_px(repo))
 	assert_almost_eq(Map3DUnits.day_world_m(repo, s, code, meta), day_world, 0.001)
 	assert_almost_eq(Map3DUnits.walk_speed(repo, s, code, meta, 2),

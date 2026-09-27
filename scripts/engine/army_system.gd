@@ -437,6 +437,17 @@ static func day_step_m(repo: DataRepository, state: GameState, code: String) -> 
 		int(st["morale"]), int(st["training"])) * 100
 
 
+## Metres a regiment covers TODAY (spec 2026-09-27-courier-core §1): its
+## day_step_m under the weather of the province it stands in.
+static func day_march_m(repo: DataRepository, state: GameState, code: String) -> int:
+	var step := day_step_m(repo, state, code)
+	if step <= 0 or state == null:
+		return step
+	var kind := Weather.at(repo, state, position_of(repo, state, regiment(repo, code)), state.absolute_day())
+	@warning_ignore("integer_division")  # whole metres
+	return step * Weather.speed_permille(repo, kind) / 1000
+
+
 ## Send a regiment to `dest` (pack pixels). The engine's only writer of a
 ## march order; ActionSystem calls it after ARMY_MARCH validates.
 static func set_march(repo: DataRepository, state: GameState, code: String, dest: Vector2) -> void:
@@ -477,7 +488,7 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 			continue
 		if regiment(repo, code).is_empty():
 			continue
-		var step := day_step_m(repo, state, code)
+		var step := day_march_m(repo, state, code)
 		if step <= 0:
 			continue
 		var here := Vector2(float(entry["x_m"]), float(entry["y_m"]))
@@ -499,7 +510,7 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 static func days_out(repo: DataRepository, state: GameState, code: String) -> int:
 	if order_of(repo, state, code) != ORDER_MARCH:
 		return 0
-	var step := day_step_m(repo, state, code)
+	var step := day_march_m(repo, state, code)
 	if step <= 0:
 		return 0
 	var k := float(metres_per_pack_px(repo))

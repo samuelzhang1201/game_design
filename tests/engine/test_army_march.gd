@@ -8,6 +8,10 @@ var repo: DataRepository
 
 func before_all() -> void:
 	repo = DataRepository.load_all("res://data")
+	# Force clear skies so every hand-sum march still holds (task 7, owner 2026-09-27)
+	for key in repo.weather_odds:
+		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
+	Weather.forget()
 
 
 func _mine() -> Array:
@@ -234,3 +238,16 @@ func test_the_order_runs_and_charges_its_cost() -> void:
 	actions.execute(req, s)
 	assert_eq(s.couriers.size(), 1, "the order rides by courier (2026-09-27)")
 	assert_lt(s.metrics["treasury"], before, "every order carries a cost (invariant 8)")
+
+
+func test_the_weather_where_it_stands_scales_its_day() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var code := String(_marcher()["regiment_code"])
+	var step := ArmySystem.day_step_m(repo, s, code)
+	var saved := repo.weather_odds.duplicate(true)
+	for key in repo.weather_odds:
+		repo.weather_odds[key] = {"clear": 0, "rain": 0, "mud": 0, "snow": 0, "blizzard": 1}
+	Weather.forget()
+	@warning_ignore("integer_division")
+	assert_eq(ArmySystem.day_march_m(repo, s, code), step * 400 / 1000, "a blizzard: 400‰")
+	repo.weather_odds = saved
