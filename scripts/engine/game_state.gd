@@ -280,6 +280,11 @@ var manor_log: Array = []
 ## {morale, wounded, supplies, training}, all whole numbers. Only the player's
 ## realm's regiments; the pack's arms stay the headcount.
 var regiments: Dictionary = {}
+## The couriers on the road (owner 2026-09-27, CourierSystem): an Array of
+## Dictionaries in whole metres and ints, walked in ascending id order.
+var couriers: Array = []
+## The last courier id handed out; a higher id is a NEWER order.
+var next_courier_id := 0
 
 const SAVE_VERSION := 5
 

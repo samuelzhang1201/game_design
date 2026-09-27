@@ -1,0 +1,176 @@
+class_name CourierSystem
+extends RefCounted
+## Couriers (owner 2026-09-27, spec docs/superpowers/specs/2026-09-27-courier-core-design.md):
+## an order to a regiment rides from the capital and takes effect only when
+## the courier reaches the column. One courier per order, gone on delivery.
+## The route is the road network's fastest (RoadGraph); the pace each day is
+## the stretch's kind, the height tier it starts on and the province's
+## weather (Weather). Whole metres and whole per-mille throughout; couriers
+## ride in id order.
+
+const ORDINARY := "ordinary"
+const SECRET := "secret"
+
+
+## Whether a regiment's orders ride by courier: every land regiment; a fleet
+## is exempt in this sub-project (spec §1).
+static func carries_orders(reg: Dictionary) -> bool:
+	return String(reg.get("is_naval", "0")) != "1"
+
+
+static func fee_gold(repo: DataRepository, kind: String) -> int:
+	return int((repo.courier_kinds.get(kind, {}) as Dictionary).get("fee_gold", 0))
+
+
+## Clear-road metres a courier of this kind rides in a day.
+static func day_budget(repo: DataRepository, kind: String) -> int:
+	return int(repo.bal("courier_base_km_per_day")) \
+		* int((repo.courier_kinds.get(kind, {}) as Dictionary).get("speed_permille", 1000))
+
+
+## Where couriers ride from, in pack px: the realm's capital while the realm
+## holds its province; else the most populous town of the realm, the
+## crown's home and controlled provinces first, then any province it holds.
+static func origin(repo: DataRepository, state: GameState) -> Vector2:
+	var realm := repo.resolve_realm("player_realm")
+	var cap := String((repo.kingdoms.get(realm, {}) as Dictionary).get("capital_burg", ""))
+	if repo.burgs.has(cap) and _holds(repo, state, String(repo.burgs[cap]["province_code"]), realm):
+		return _burg_px(repo.burgs[cap])
+	var order: Array = []
+	var home := MapManors.home_province(repo, state)
+	if home != "":
+		order.append(home)
+	for p: String in MapManors.controlled_provinces(repo, state):
+		if not p in order:
+			order.append(p)
+	var rest := repo.provinces.keys()
+	rest.sort()
+	for p: String in rest:
+		if not p in order:
+			order.append(p)
+	var codes := repo.burgs.keys()
+	codes.sort()
+	for p: String in order:
+		if not _holds(repo, state, p, realm):
+			continue
+		var best := ""
+		var best_pop := -1
+		for b: String in codes:
+			var row: Dictionary = repo.burgs[b]
+			if String(row["province_code"]) != p:
+				continue
+			var pop := int(float(row["population"]))
+			if pop > best_pop:
+				best = b
+				best_pop = pop
+		if best != "":
+			return _burg_px(repo.burgs[best])
+	return _burg_px(repo.burgs[cap]) if repo.burgs.has(cap) else Vector2.ZERO
+
+
+static func _holds(repo: DataRepository, state: GameState, province: String, realm: String) -> bool:
+	return MapOwnership.owner_of(repo, state, province) == realm
+
+
+static func _burg_px(b: Dictionary) -> Vector2:
+	return Vector2(float(b["x"]), float(b["y"]))
+
+
+## The waypoints from one point to another, [x_m, y_m, kind] each (the kind
+## of the stretch INTO it): across country to the nearest road node, the
+## network's fastest route to the reached node nearest the target, across
+## country (or by sea) to the target. Farther than courier_offroad_max_km
+## from any node: one straight leg.
+static func path_between(repo: DataRepository, from_px: Vector2, to_px: Vector2) -> Array:
+	var a := ArmySystem.pack_to_metres(repo, from_px)
+	var b := ArmySystem.pack_to_metres(repo, to_px)
+	var g := RoadGraph.of_pack(repo)
+	var reach := float(repo.bal("courier_offroad_max_km")) * 1000.0
+	var start := g.nearest(a)
+	if start < 0 or Vector2(a).distance_to(Vector2(g.nodes[start])) > reach:
+		return [[b.x, b.y, _leg_kind(repo, a, b)]]
+	var tree := g.shortest(start)
+	var goal := g.nearest(b, tree["dist"])
+	var way: Array = [[g.nodes[start].x, g.nodes[start].y, _leg_kind(repo, a, g.nodes[start])]]
+	way.append_array(g.route(tree, goal))
+	way.append([b.x, b.y, _leg_kind(repo, g.nodes[goal], b)])
+	return way
+
+
+## "offroad", or "sea" when any sample every courier_sea_sample_km along the
+## leg is off the land grid (MapEconomy.cell_at < 0, the land/sea test
+## ActionSystem uses).
+static func _leg_kind(repo: DataRepository, a: Vector2i, b: Vector2i) -> String:
+	var step := maxf(repo.bal("courier_sea_sample_km") * 1000.0, 1.0)
+	var length := Vector2(a).distance_to(Vector2(b))
+	for i in range(1, int(length / step) + 1):
+		var p := Vector2(a).lerp(Vector2(b), float(i) * step / length)
+		if MapEconomy.cell_at(repo, ArmySystem.metres_to_pack(repo, Vector2i(p))) < 0:
+			return "sea"
+	return "offroad"
+
+
+## A stretch's pace as a product of per-milles out of 10^9: its kind x the
+## height tier where it starts (none at sea) x the weather there.
+static func stretch_factor(repo: DataRepository, kind: String, at_m: Vector2i, weather: String) -> int:
+	var tier := 1000 if kind == "sea" else RoadGraph.tier_permille(repo, Vector2(at_m))
+	return RoadGraph.factor_permille(repo, kind) * tier * Weather.speed_permille(repo, weather)
+
+
+## Clear-road metres from a point along a path, each stretch at its start's
+## weather on `abs_day`.
+static func need_along(repo: DataRepository, state: GameState, from_m: Vector2i, path: Array,
+		abs_day: int) -> int:
+	var need := 0
+	var here := from_m
+	for p: Array in path:
+		var to := Vector2i(int(p[0]), int(p[1]))
+		var wx := Weather.at(repo, state, ArmySystem.metres_to_pack(repo, here), abs_day)
+		need += RoadGraph.stretch_need(int(round(Vector2(here).distance_to(Vector2(to)))),
+			stretch_factor(repo, String(p[2]), here, wx))
+		here = to
+	return need
+
+
+## Whole days to ride `need` clear-road metres, rounded up, at least one.
+static func days_for(repo: DataRepository, kind: String, need: int) -> int:
+	var b := maxi(1, day_budget(repo, kind))
+	@warning_ignore("integer_division")  # whole days, rounded up
+	return maxi(1, (need + b - 1) / b)
+
+
+## Send a courier of `kind` with `order` for regiment `code`. Charges
+## nothing: the fee is ActionSystem's ledger line.
+static func dispatch(repo: DataRepository, state: GameState, kind: String, code: String,
+		order: Dictionary) -> Dictionary:
+	var from := origin(repo, state)
+	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
+	var home := ArmySystem.pack_to_metres(repo, from)
+	var aim := ArmySystem.pack_to_metres(repo, at)
+	state.next_courier_id += 1
+	var c := {
+		"id": state.next_courier_id, "kind": kind, "x_m": home.x, "y_m": home.y,
+		"path": path_between(repo, from, at), "target": code, "order": order.duplicate(true),
+		"issued": state.absolute_day(), "aim_x_m": aim.x, "aim_y_m": aim.y,
+		"days": 0, "day_m": 0, "slow_spell": -1,
+	}
+	state.couriers.append(c)
+	return c
+
+
+## Days a courier still has to ride, today's weather held.
+static func days_left(repo: DataRepository, state: GameState, c: Dictionary) -> int:
+	return days_for(repo, String(c["kind"]), need_along(repo, state,
+		Vector2i(int(c["x_m"]), int(c["y_m"])), c["path"], state.absolute_day()))
+
+
+## The aim ruler's estimate (spec §1): days for a courier sent now to reach
+## the regiment, the route and today's weather held. 0 for no regiment.
+static func eta_days(repo: DataRepository, state: GameState, kind: String, code: String) -> int:
+	var reg := ArmySystem.regiment(repo, code)
+	if reg.is_empty():
+		return 0
+	var from := origin(repo, state)
+	var path := path_between(repo, from, ArmySystem.position_of(repo, state, reg))
+	return days_for(repo, kind, need_along(repo, state, ArmySystem.pack_to_metres(repo, from),
+		path, state.absolute_day()))
