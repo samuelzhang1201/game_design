@@ -92,6 +92,35 @@ func test_a_town_is_still_clickable_with_no_dot_shown_in_the_no_dot_gap() -> voi
 	assert_eq(v.pick_at(v.size * 0.5), {"kind": "burg", "code": code})
 
 
+## Final review M4: a courier not yet ridden waits in the capital, and a click
+## there opens the capital, not him; once he is on the road he ranks before
+## the settlements again. His real rect, laid over the capital's own point.
+func test_a_waiting_courier_yields_the_click_to_the_town_under_him() -> void:
+	var v := _view()
+	var code := ""
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+		if CourierSystem.carries_orders(r):
+			code = String(r["regiment_code"])
+			break
+	var c := CourierSystem.dispatch(Game.data, Game.state, CourierSystem.ORDINARY, code,
+		{"action_code": "ARMY_GARRISON"})
+	var layer := v.get_node("Viewport/Couriers") as Map3DLayerCouriers
+	var at := Vector2.ZERO
+	for e: Dictionary in v.context().projected_settlements():
+		if String(e["code"]) == _capital():
+			at = e["screen"]
+	for days in [0, 1]:
+		c["days"] = days
+		layer.refresh()
+		var entry: Dictionary = v.courier_rects()[int(c["id"])]
+		assert_eq(bool(entry["waiting"]), days == 0)
+		var box := entry["rect"] as Rect2
+		entry["rect"] = Rect2(at - box.size * 0.5, box.size)
+		assert_eq(v.pick_at(at), {"kind": "burg", "code": _capital()} if days == 0 \
+			else {"kind": "courier", "id": int(c["id"])})
+	Game.state.couriers.clear()
+
+
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()

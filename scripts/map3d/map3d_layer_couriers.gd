@@ -32,7 +32,8 @@ func bind(p_ctx: Map3DContext) -> void:
 
 ## id -> {rect: Rect2 in design px, counter: bool, lead: the world XZ points
 ## from where he is drawn to where the engine has him (Map3DHudCouriers draws
-## his road ahead from them)}.
+## his road ahead from them), waiting: not yet ridden (days 0), so the town
+## he waits in wins a click on him (Map3DPicker)}.
 func screen_rects() -> Dictionary:
 	return _rects
 
@@ -170,7 +171,7 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 		var at: Vector2 = ctx.camera.unproject_position(centre) / s_px
 		var half := repo.bal("map3d_courier_counter_px") * 0.5
 		_rects[id] = {"rect": Rect2(at - Vector2(half, half), Vector2(half, half) * 2.0), "counter": true,
-			"lead": _lead(id, xz)}
+			"lead": _lead(id, xz), "waiting": int(c["days"]) == 0}
 		return
 	var node: Node3D = piece["node"]
 	node.visible = true
@@ -189,7 +190,7 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 	node.transform = Transform3D((Basis(Quaternion(Vector3.UP, up)) * Basis(Vector3.UP, yaw))
 		.scaled(Vector3(k, k, k)), ground)
 	_rects[id] = {"rect": Map3DUnits.screen_box(ctx.camera, ground, high, float(piece["half_w_m"]) * k, s_px),
-		"counter": false, "lead": _lead(id, xz)}
+		"counter": false, "lead": _lead(id, xz), "waiting": int(c["days"]) == 0}
 
 
 func _lead(id: int, xz: Vector2) -> Array:

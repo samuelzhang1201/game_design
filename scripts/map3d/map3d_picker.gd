@@ -75,9 +75,15 @@ func pick_at(pos: Vector2) -> Dictionary:
 	var couriers: Dictionary = view.courier_rects()
 	var ids := couriers.keys()
 	ids.sort()
+	var waiting := -1
 	for id in ids:
 		if (couriers[id]["rect"] as Rect2).has_point(pos):
-			return {"kind": "courier", "id": int(id)}
+			# one on the road ranks before the settlements; one not yet ridden
+			# stands in the capital, and the town under him wins (final review)
+			if not bool(couriers[id].get("waiting", false)):
+				return {"kind": "courier", "id": int(id)}
+			if waiting < 0:
+				waiting = int(id)
 	# An output badge names the settlement whose output it shows (as on the
 	# 2D map), over whatever lies under it.
 	for b: Dictionary in view.manor_badges():
@@ -100,6 +106,8 @@ func pick_at(pos: Vector2) -> Dictionary:
 	# reach always beats a mark, a mark's own box beats its grown rect).
 	if best != "":
 		return {"kind": "burg", "code": best}
+	if waiting >= 0:
+		return {"kind": "courier", "id": waiting}
 	var marks := view.landmark_marks() if view.heat_on() else []
 	for mk: Dictionary in marks:
 		if (mk["rect"] as Rect2).has_point(pos):
