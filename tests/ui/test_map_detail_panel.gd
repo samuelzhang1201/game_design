@@ -107,6 +107,27 @@ func test_a_regiment_opens_its_painted_card() -> void:
 	# icon+value pair a row.
 	assert_eq(p.stats_grid().columns, 2, "one icon+value pair a row so its wide values fit")
 
+## A courier's card flies his kingdom's arms, as his regiment's does (b0848aa;
+## spec 2026-09-27-courier-core §2).
+func test_a_courier_flies_his_kingdoms_arms() -> void:
+	Game.start_campaign(42)
+	var p := _panel()
+	await wait_frames(1)
+	var mine := Game.data.resolve_realm("player_realm")
+	var code := ""
+	for r: Dictionary in MapObjects.regiments_of(Game.data, mine):
+		if String(r.get("is_naval", "0")) != "1":
+			code = String(r["regiment_code"])
+			break
+	var c := CourierSystem.dispatch(Game.data, Game.state, CourierSystem.ORDINARY, code,
+		{"action_code": "ARMY_GARRISON"})
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "courier", "id": int(c["id"])}})
+	await wait_frames(1)
+	assert_true(p.visible)
+	assert_eq(p.title_label().text, CourierCard.title(Game.data, Game.state, int(c["id"])))
+	assert_not_null(HouseArms.texture_of_kingdom(Game.data, mine), "the realm has arms to fly")
+	assert_same(p.shield().texture, HouseArms.texture_of_kingdom(Game.data, mine))
+
 func test_other_objects_keep_their_lines() -> void:
 	Game.start_campaign(42)
 	var p := _panel()
