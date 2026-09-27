@@ -61,7 +61,7 @@ func test_most_of_the_way_is_on_the_roads() -> void:
 		assert_true(k in ["road", "trail", "offroad", "sea"], k)
 
 
-func test_the_capital_lost_he_rides_from_the_realms_largest_town() -> void:
+func test_the_capital_lost_he_rides_from_the_most_populous_town_of_the_first_held_province() -> void:
 	var s := GameState.new_campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
 	var cap_code := String(repo.kingdoms[realm]["capital_burg"])
