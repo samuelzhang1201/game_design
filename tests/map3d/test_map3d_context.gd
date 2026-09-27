@@ -225,6 +225,17 @@ func test_settlement_rects_sizes_on_the_drawn_dot_not_the_footprint() -> void:
 	assert_true(found, "once the dot shows again, it keeps its own screen space clear")
 
 
+func test_the_context_hands_out_the_live_couriers() -> void:
+	var repo := DataRepository.load_all("res://data")
+	var s := GameState.new_campaign(repo, 7)
+	s.couriers = [{"id": 1}]
+	var ctx := Map3DContext.new(repo, {}, null)
+	ctx.state_fn = func() -> GameState: return s
+	assert_eq(ctx.couriers(), [{"id": 1}])
+	ctx.state_fn = Callable()
+	assert_eq(ctx.couriers(), [])
+
+
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()

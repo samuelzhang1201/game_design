@@ -78,6 +78,15 @@ func select(picked: Dictionary) -> void:
 			redraw()
 			object_selected.emit({"title": MapManors.label_of(ctx.repo, cell),
 				"obj": {"kind": "manor", "cell": cell}})
+		"courier":
+			var id := int(picked["id"])
+			burg = ""
+			army = ""
+			_show_ring("")
+			_set_province("")
+			_refresh_hud()
+			object_selected.emit({"title": CourierCard.title(ctx.repo, ctx.state(), id),
+				"obj": {"kind": "courier", "id": id}})
 		"landmark":
 			var cell := int(picked["cell"])
 			if army != "":

@@ -128,6 +128,8 @@ func regiments() -> Array:
 	return repo.world_table("military", "regiments").values() if dev \
 		else MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
 
+## The couriers on the road (spec 2026-09-27-courier-core §2), from the live state.
+func couriers() -> Array: return state().couriers if state() != null else []
 
 func ground_of_pack(pack_px: Vector2) -> Vector3:
 	var xz := to_world(pack_px)

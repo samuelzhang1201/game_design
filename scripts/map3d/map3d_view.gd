@@ -70,6 +70,7 @@ var _scene_path := ""
 @onready var _markers: Map3DLayerSettlements = $Viewport/Markers
 @onready var _houses: Map3DLayerHouses = $Viewport/Houses
 @onready var _units: Map3DLayerUnits = $Viewport/Units
+@onready var _couriers: Map3DLayerCouriers = $Viewport/Couriers
 @onready var _env: WorldEnvironment = $Viewport/Environment
 @onready var _sun: DirectionalLight3D = $Viewport/Sun
 @onready var _display: TextureRect = $Display
@@ -233,6 +234,7 @@ func _load() -> void:
 	_houses.bind(_ctx)
 	_ctx.dev = _dev
 	_units.bind(_ctx)
+	_couriers.bind(_ctx)
 	_units.set_shown(_military)
 	_ctx.settle_ground()
 	_markers.build()
@@ -380,6 +382,7 @@ func _process(delta: float) -> void:
 	if _loaded:
 		_clouds.step(delta)
 		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
+		if _couriers.step(delta): _hud.refresh()  # the couriers' roads and counters follow them
 		Map3DEnvironment.sweep_sun(_repo, _sun, Game.day_progress)  # a round a game day
 	_picker.step()
 	if not _hovered:
@@ -450,6 +453,7 @@ func unit_tops() -> Dictionary: return _units.screen_tops() if _loaded else {}
 func unit_rects() -> Dictionary: return _units.screen_rects() if _loaded else {}
 func unit_count() -> int: return _units.drawn_count() if _loaded else 0
 func unit_moves() -> int: return _units.moves() if _loaded else 0
+func courier_rects() -> Dictionary: return _couriers.screen_rects() if _loaded else {}
 
 func military() -> bool: return _military
 

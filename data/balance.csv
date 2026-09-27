@@ -476,3 +476,5 @@ courier_max_days,60,"the fuse: a courier out this many days is lost and his orde
 courier_slow_news_permille,500,"a day's weather slower than this raises one news line per courier per spell"
 courier_sea_sample_km,5,"a leg is sampled every this many km; any point off the land grid makes it a sea crossing"
 weather_spell_days,3,"days a province's weather holds (Weather.spell_of) so it does not flicker daily"
+map3d_courier_counter_px,16,"a courier's square counter in design px, drawn past map3d_unit_counter_scale (Map3DHudCouriers) and his click box then"
+map3d_courier_anim_rate,2.5,"the courier's MARCH clip playback rate — a gallop, not a walk — until sub-project D's own gallop clip"

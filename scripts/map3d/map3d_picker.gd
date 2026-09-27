@@ -72,6 +72,12 @@ func pick_at(pos: Vector2) -> Dictionary:
 	for e: Dictionary in view.route_ends():
 		if (e["pos"] as Vector2).distance_to(pos) <= ctx.repo.bal("map_army_pick_px"):
 			return {"kind": "route", "code": String(e["code"])}
+	var couriers: Dictionary = view.courier_rects()
+	var ids := couriers.keys()
+	ids.sort()
+	for id in ids:
+		if (couriers[id]["rect"] as Rect2).has_point(pos):
+			return {"kind": "courier", "id": int(id)}
 	# An output badge names the settlement whose output it shows (as on the
 	# 2D map), over whatever lies under it.
 	for b: Dictionary in view.manor_badges():

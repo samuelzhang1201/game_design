@@ -40,8 +40,13 @@ func _lines(path: String) -> int:
 ## round, one line in _process reading Game.day_progress (the view is the one
 ## script under scripts/map3d allowed the autoload). The rule is the layer's
 ## (Map3DEnvironment.sun_angles), the menus are ArmyOrderMenu's.
+##
+## 560 since the couriers (2026-09-27): the Couriers layer's @onready, its
+## bind, its step in _process and a courier_rects() forwarder — the layer
+## does the work. (_lines() counts split("\n").size(), one more than the
+## file's own newlines, so four added lines raise it by four, not three.)
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 556)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 560)
 
 
 func test_every_other_script_is_small() -> void:
