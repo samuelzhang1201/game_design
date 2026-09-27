@@ -59,10 +59,17 @@ static func draw_centred(ci: CanvasItem, repo: DataRepository, font: Font, text:
 		at: Vector2, px: float, frame: Rect2) -> bool:
 	var font_px := int(px)
 	var tracking := px * repo.bal("map_label_tracking")
-	var width := tracked_width(font, text, font_px, tracking)
-	var origin := at - Vector2(width * 0.5, -px * 0.35)
-	if not frame.intersects(Rect2(origin - Vector2(0, px), Vector2(width, px * 1.4))):
+	var box := box_centred(repo, font, text, at, px)
+	if not frame.intersects(box):
 		return false
-	draw_tracked(ci, font, text, origin, font_px, tracking, ink(repo), halo(repo),
+	draw_tracked(ci, font, text, box.position + Vector2(0, px), font_px, tracking, ink(repo), halo(repo),
 		int(round(px * repo.bal("map_label_halo_frac"))))
 	return true
+
+
+## The box draw_centred letters `text` in: its width, from a cap height above
+## the baseline to below the descenders.
+static func box_centred(repo: DataRepository, font: Font, text: String, at: Vector2, px: float) -> Rect2:
+	var width := tracked_width(font, text, int(px), px * repo.bal("map_label_tracking"))
+	var origin := at - Vector2(width * 0.5, -px * 0.35)
+	return Rect2(origin - Vector2(0, px), Vector2(width, px * 1.4))

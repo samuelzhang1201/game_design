@@ -18,3 +18,59 @@ func test_marks_keep_off_what_is_already_drawn() -> void:
 	var kept := Map3DHudWeather.thin(marks, 20.0, Rect2(0, 0, 100, 100), taken, 10.0)
 	assert_eq(kept.size(), 1)
 	assert_eq(String(kept[0]["kind"]), "snow", "the mark over a dot is left off")
+
+
+const HUD_FIXTURE := "user://test_map3d_hud_weather_world.tscn"
+const HUD_WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
+	"pack_px": [2560, 929], "sea_y": 5.0}
+
+
+func _hud_view() -> Map3DView:
+	Game.start_campaign(42)
+	var root := Node3D.new()
+	root.set_meta("map3d_world", HUD_WORLD)
+	var packed := PackedScene.new()
+	packed.pack(root)
+	ResourceSaver.save(packed, HUD_FIXTURE)
+	root.free()
+	var v := Map3DView.create(Game.data, HUD_FIXTURE)
+	v.size = Vector2(800, 450)
+	add_child_autofree(v)
+	v.activate()
+	return v
+
+
+## The gathering itself, through the real HUD (review 2026-09-28): what the
+## marks keep off is every piece's own output — the kingdom names' boxes, the
+## counters with their bars, the couriers' pending envelopes — not a
+## hand-built list.
+func test_the_marks_keep_off_every_pieces_output() -> void:
+	var v := _hud_view()
+	var hud := v.get_node("Hud") as Map3DHud
+	var repo := Game.data
+	var reg: Dictionary = {}
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		if String(r.get("is_naval", "0")) != "1":
+			reg = r
+			break
+	var at := ArmySystem.position_of(repo, Game.state, reg)
+	var dest := ArmySystem.pack_to_metres(repo, at + Vector2(3.0, 3.0))
+	CourierSystem.dispatch(repo, Game.state, CourierSystem.ORDINARY, String(reg["regiment_code"]),
+		{"action_code": "ARMY_MARCH", "dest_x_m": dest.x, "dest_y_m": dest.y})
+	v.look_at_pack(at, 30000.0)
+	var weather := hud.piece("Weather") as Map3DHudWeather
+	var taken := weather.taken()
+	var envelopes := (hud.piece("Couriers") as Map3DHudCouriers).pending_rects()
+	var names := (hud.piece("Labels") as Map3DHudLabels).rects()
+	var counters := (hud.piece("Armies") as Map3DHudArmies).markers()
+	assert_eq(envelopes.size(), 1, "the pending order's envelope is on screen")
+	assert_gt(names.size(), 0, "some kingdom is lettered")
+	assert_gt(counters.size(), 0, "some counter stands")
+	for r: Rect2 in envelopes + names:
+		assert_true(taken.has(r), "kept off %s" % r)
+	for m: Dictionary in counters:
+		assert_true(taken.has(m["rect"]), "kept off the counter and its bars of " + String(m["code"]))
+
+
+func after_all() -> void:
+	Map3DWorldCache.clear()

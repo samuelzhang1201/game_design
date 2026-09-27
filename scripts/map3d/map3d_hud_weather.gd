@@ -30,24 +30,38 @@ func _draw() -> void:
 		if ctx.camera.is_position_behind(p):
 			continue
 		marks.append({"at": ctx.camera.unproject_position(p) / ctx.viewport_px_scale(), "kind": kind})
-	for m: Dictionary in thin(marks, px * 1.5, Rect2(Vector2.ZERO, size), _taken(), px):
+	for m: Dictionary in thin(marks, px * 1.5, Rect2(Vector2.ZERO, size), taken(), px):
 		_draw_icon(String(m["kind"]), m["at"], px)
 
 
-func _taken() -> Array:
-	var key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale()]
+## Everything a weather mark keeps off, as design-px rects: the settlement
+## dots and the kingdom names (cut once per camera pose), the regiments'
+## counters with their bars, their pieces and march end rings, the couriers
+## and their pending orders' envelope rings (read live: they walk).
+func taken() -> Array:
+	var key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(),
+		ctx.state().absolute_day() if ctx.state() != null else 0]
 	if key != _dots_key:
 		_dots = ctx.settlement_rects()
+		var labels := sibling("Labels") as Map3DHudLabels
+		if labels != null:
+			_dots.append_array(labels.rects())
 		_dots_key = key
 	var out := _dots.duplicate()
 	var armies := sibling("Armies") as Map3DHudArmies
 	if armies != null:
 		for a: Dictionary in armies.markers():
 			out.append(a["rect"])
+		var ring := Map3DHudCouriers.ring_px(ctx.repo) + ctx.repo.bal("map3d_unit_route_px")
+		for e: Dictionary in armies.route_ends():
+			out.append(Rect2((e["pos"] as Vector2) - Vector2(ring, ring), Vector2(ring, ring) * 2.0))
 	for r: Rect2 in (view.unit_rects() as Dictionary).values():
 		out.append(r)
 	for r: Dictionary in (view.courier_rects() as Dictionary).values():
 		out.append(r["rect"])
+	var couriers := sibling("Couriers") as Map3DHudCouriers
+	if couriers != null:
+		out.append_array(couriers.pending_rects())
 	return out
 
 

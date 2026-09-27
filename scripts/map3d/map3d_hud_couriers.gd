@@ -46,21 +46,49 @@ func _draw_road(c: Dictionary, lead: Array, ink: Color, w: float) -> void:
 
 
 func _draw_pending(c: Dictionary, ink: Color, w: float) -> void:
+	var ends := _pending_ends(c)
+	if ends.is_empty():
+		return
+	var to: Vector2 = ends["to"]
+	var faint := Color(ink, ink.a * ctx.repo.bal("map3d_courier_pending_alpha"))
+	draw_dashed_line(ends["from"], to, faint, w, w)  # dotted: a dash as long as the line is wide
+	var r := ring_px(ctx.repo)
+	draw_arc(to, r, 0.0, TAU, 24, faint, w, true)
+	ResourceIcon.draw_glyph(self, "letter", to, r * 1.4, faint)
+
+
+## A march order still on the road: {from, to} in design px — the column and
+## where it will go — or {} for any other order or one off the camera.
+func _pending_ends(c: Dictionary) -> Dictionary:
 	var order: Dictionary = c["order"]
 	if String(order.get("action_code", "")) != "ARMY_MARCH":
-		return
+		return {}
 	var reg := ArmySystem.regiment(ctx.repo, String(c["target"]))
 	if reg.is_empty():
-		return
+		return {}
 	var from: Variant = _screen_of(ArmySystem.position_of(ctx.repo, ctx.state(), reg))
 	var to: Variant = _screen_of_m(Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])))
 	if from == null or to == null:
-		return
-	var faint := Color(ink, ink.a * ctx.repo.bal("map3d_courier_pending_alpha"))
-	draw_dashed_line(from, to, faint, w, w)  # dotted: a dash as long as the line is wide
-	var r := ctx.repo.bal("map3d_unit_route_px") * 4.0
-	draw_arc(to, r, 0.0, TAU, 24, faint, w, true)
-	ResourceIcon.draw_glyph(self, "letter", to, r * 1.4, faint)
+		return {}
+	return {"from": from, "to": to}
+
+
+static func ring_px(repo: DataRepository) -> float:
+	return repo.bal("map3d_unit_route_px") * 4.0
+
+
+## Each pending order's envelope ring, as a box in design px (the weather
+## marks keep off them).
+func pending_rects() -> Array:
+	var out: Array = []
+	if not bound() or ctx.state() == null:
+		return out
+	var r := ring_px(ctx.repo) + ctx.repo.bal("map3d_courier_route_px")
+	for c: Dictionary in ctx.couriers():
+		var ends := _pending_ends(c)
+		if not ends.is_empty():
+			out.append(Rect2((ends["to"] as Vector2) - Vector2(r, r), Vector2(r, r) * 2.0))
+	return out
 
 
 func _draw_counter(rect: Rect2, ink: Color) -> void:

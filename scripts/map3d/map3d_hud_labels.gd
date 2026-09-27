@@ -36,6 +36,18 @@ func entries() -> Array:
 	return out
 
 
+## The boxes the names are lettered in, in design px (the weather marks keep
+## off them).
+func rects() -> Array:
+	var out: Array = []
+	var font := UiPalette.map_label_font()
+	if font == null:
+		return out
+	for e: Dictionary in entries():
+		out.append(MapLettering.box_centred(ctx.repo, font, String(e["text"]), e["pos"], float(e["px"])))
+	return out
+
+
 func drawn() -> PackedStringArray:
 	return _drawn
 
