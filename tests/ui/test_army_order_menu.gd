@@ -43,6 +43,15 @@ func _land_near(from: Vector2) -> Vector2:
 	return Vector2.ZERO
 
 
+## Days run until every courier has delivered (or the fuse has taken him).
+func _deliver_all() -> void:
+	Game.set_clock_speed(0)
+	for i in int(Game.data.bal("courier_max_days")) + 1:
+		if Game.state.couriers.is_empty():
+			return
+		Game.advance_day()
+
+
 func test_the_menu_offers_exactly_the_rows_in_the_table() -> void:
 	_map.army_menu_requested.emit(_marcher(), Vector2(10.0, 10.0))
 	assert_eq(_menu.item_count, Game.data.army_orders.size())
@@ -76,8 +85,10 @@ func test_a_row_chosen_the_way_PopupMenu_chooses_it_still_takes() -> void:
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
 	_menu.hide()
 	_menu.id_pressed.emit(1)   # ARMY_GARRISON
+	assert_eq(Game.state.couriers.size(), 1, "a courier rides with the halt")
+	_deliver_all()
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON,
-		"GARRISON chosen from a closing menu still halts it")
+		"GARRISON chosen from a closing menu still halts it, once the courier delivers")
 
 
 func test_an_order_on_a_stopped_clock_does_not_start_it() -> void:
@@ -91,9 +102,13 @@ func test_an_order_on_a_stopped_clock_does_not_start_it() -> void:
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(there)
+	watch_signals(Game)
 	_commit()
-	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_MARCH, "the order is given")
+	assert_eq(Game.state.couriers.size(), 1, "the order is given: a courier waits to ride")
+	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON, "the column waits for him")
 	assert_eq(Game.clock_speed, 0, "but time stays stopped")
+	assert_signal_emitted_with_parameters(Game, "news_published",
+		["A courier will ride for %s when time runs." % String(ArmySystem.regiment(Game.data, code)["label"])])
 
 
 ## COMMIT chosen the way PopupMenu chooses: hidden first, then id_pressed.
@@ -114,7 +129,9 @@ func test_the_next_click_on_the_ground_sends_it_on_commit() -> void:
 	_commit()
 	assert_eq(_menu.aiming(), "", "the aim is spent")
 	assert_false(_map.aiming)
-	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_MARCH)
+	assert_eq(Game.state.couriers.size(), 1)
+	_deliver_all()
+	assert_eq(Game.state.couriers, [], "delivered")
 	var dest := ArmySystem.destination_of(Game.data, Game.state, code)
 	assert_almost_eq(dest.x, there.x, 0.002)
 	assert_almost_eq(dest.y, there.y, 0.002)
@@ -126,12 +143,14 @@ func test_a_click_on_the_ground_with_nothing_aimed_orders_nothing() -> void:
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON)
 
 
-func test_garrison_runs_at_once_and_halts_a_march() -> void:
+func test_garrison_rides_and_halts_a_march_on_delivery() -> void:
 	var code := _marcher()
 	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
 	ArmySystem.set_march(Game.data, Game.state, code, here + Vector2(30.0, 0.0))
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
 	_menu.id_pressed.emit(1)   # ARMY_GARRISON
+	assert_eq(Game.state.couriers.size(), 1, "a courier rides with the halt")
+	_deliver_all()
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON)
 
 
@@ -257,8 +276,16 @@ func test_the_end_ring_edits_or_halts_the_march() -> void:
 	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
 	_menu.hide()
 	_menu.id_pressed.emit(ArmyOrderMenu.HALT)
+	assert_eq(Game.state.couriers.size(), 1, "a courier rides with the halt")
+	_deliver_all()
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON,
-		"Cancel march halts the column")
+		"Cancel march halts the column, once the courier delivers")
+
+
+func test_the_commit_row_names_the_courier_and_his_fee() -> void:
+	var row: Dictionary = Game.data.army_route_orders["commit"]
+	assert_eq(String(row["label"]), "Send courier")
+	assert_string_contains(String(row["hint"]), "{fee}")
 
 
 func test_the_route_menu_is_paused_only() -> void:

@@ -232,5 +232,5 @@ func test_the_order_runs_and_charges_its_cost() -> void:
 	assert_eq(actions.validate(req, s), "")
 	var before: float = s.metrics["treasury"]
 	actions.execute(req, s)
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_MARCH)
+	assert_eq(s.couriers.size(), 1, "the order rides by courier (2026-09-27)")
 	assert_lt(s.metrics["treasury"], before, "every order carries a cost (invariant 8)")

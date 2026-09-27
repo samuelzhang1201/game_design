@@ -129,6 +129,8 @@ func _process(delta: float) -> void:
 			Game.publish_news("The %s at %s is complete." % [
 				String((Game.data.manor_buildings.get(String(w["building"]), {}) as Dictionary).get("label", w["building"])).to_lower(),
 				MapManors.label_of(Game.data, int(w["cell"]))])
+		for e: Dictionary in out.get("couriers", []):
+			Game.publish_news(CourierSystem.headline(Game.data, e))
 		if bool(out["ticked"]):
 			_pending_report = Game.current_report
 			announce_month(_pending_report)

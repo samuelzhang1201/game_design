@@ -103,7 +103,8 @@ func _add_row(key: String, id: int, why: String) -> void:
 	add_item(String(row["label"]), id)
 	var i := get_item_index(id)
 	set_item_disabled(i, why != "")
-	set_item_tooltip(i, why if why != "" else String(row["hint"]))
+	set_item_tooltip(i, why if why != "" else String(row["hint"]).replace("{fee}",
+		str(CourierSystem.fee_gold(Game.data, CourierSystem.ORDINARY))))
 
 
 ## `at` in the map's own px.
@@ -223,11 +224,16 @@ func _run(req: ActionRequest) -> void:
 	if not bool(out.get("ok", false)):
 		Game.publish_news(String(out.get("error", "That order cannot be given.")))
 		return
-	# An order on a stopped clock waits for play (owner 2026-09-24: 兵棋不进行
-	# 移动，直到玩家点击继续游戏按钮) — the clock is never started for the player.
-	if req.action_code == "ARMY_MARCH" and Game.clock_speed <= 0:
-		Game.publish_news("%s will set out when time runs." % _name_of(String(req.params["regiment"])))
-		return
+	# An order on a stopped clock waits for play (owner 2026-09-24) — and since
+	# 2026-09-27 it rides by courier, who waits in the capital with it.
+	if Game.clock_speed <= 0 and req.action_code in ["ARMY_MARCH", "ARMY_GARRISON"]:
+		var code := String(req.params["regiment"])
+		if CourierSystem.carries_orders(ArmySystem.regiment(Game.data, code)):
+			Game.publish_news("A courier will ride for %s when time runs." % _name_of(code))
+			return
+		if req.action_code == "ARMY_MARCH":
+			Game.publish_news("%s will set out when time runs." % _name_of(code))
+			return
 	var outcome: Dictionary = out.get("outcome", {})
 	for e: Dictionary in outcome.get("effects", []):
 		if String(e.get("metric", "")) == "army":

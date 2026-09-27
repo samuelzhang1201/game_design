@@ -103,6 +103,12 @@ func _validate_army(req: ActionRequest, state: GameState) -> String:
 		return "No such regiment: " + code
 	if String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
 		return "%s is not yours to command" % String(reg["label"])
+	# The order rides by courier (owner 2026-09-27): his fee is paid from the
+	# crown's chest, so an order the chest cannot send is refused, not sent
+	# into the red.
+	if CourierSystem.carries_orders(reg) and float(state.metrics["treasury"]) \
+			< float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)):
+		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
 	if req.action_code == "ARMY_GARRISON":
 		return ""
 	if ArmySystem.base_pace_km(data, reg) <= 0:
@@ -415,19 +421,27 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var code := String(req.params["regiment"])
 			var reg := ArmySystem.regiment(data, code)
 			var dest := Vector2(float(req.params["x"]), float(req.params["y"]))
-			ArmySystem.set_march(data, state, code, dest)
-			var days := ArmySystem.days_out(data, state, code)
-			effects.append({"metric": "army", "delta": 0.0,
-				"reason": "%s takes the road; %d day%s' march" % [
-					String(reg["label"]), days, "" if days == 1 else "s"]})
+			if CourierSystem.carries_orders(reg):
+				var m := ArmySystem.pack_to_metres(data, dest)
+				_send_courier(state, effects, code, {"action_code": "ARMY_MARCH",
+					"dest_x_m": m.x, "dest_y_m": m.y}, "with orders to march")
+			else:
+				ArmySystem.set_march(data, state, code, dest)
+				var days := ArmySystem.days_out(data, state, code)
+				effects.append({"metric": "army", "delta": 0.0,
+					"reason": "%s takes the road; %d day%s' march" % [
+						String(reg["label"]), days, "" if days == 1 else "s"]})
 		"ARMY_GARRISON":
 			var code := String(req.params["regiment"])
 			var reg := ArmySystem.regiment(data, code)
-			var was := ArmySystem.order_of(data, state, code)
-			ArmySystem.set_garrison(data, state, code)
-			effects.append({"metric": "army", "delta": 0.0,
-				"reason": ("%s halts and takes up quarters" if was == ArmySystem.ORDER_MARCH
-					else "%s stands to its post") % String(reg["label"])})
+			if CourierSystem.carries_orders(reg):
+				_send_courier(state, effects, code, {"action_code": "ARMY_GARRISON"}, "with orders to stand")
+			else:
+				var was := ArmySystem.order_of(data, state, code)
+				ArmySystem.set_garrison(data, state, code)
+				effects.append({"metric": "army", "delta": 0.0,
+					"reason": ("%s halts and takes up quarters" if was == ArmySystem.ORDER_MARCH
+						else "%s stands to its post") % String(reg["label"])})
 		"GOODS_BUY":
 			var pool := String(req.params["pool"])
 			var gold := int(req.params["gold"])
@@ -496,6 +510,18 @@ func _house_members(state: GameState, family: String) -> Array:
 func _apply(state: GameState, effects: Array, metric: String, delta: float, reason: String) -> void:
 	state.metrics[metric] = state.metrics[metric] + delta
 	effects.append({"metric": metric, "delta": delta, "reason": reason})
+
+## An order that rides (owner 2026-09-27, spec 2026-09-27-courier-core): one
+## courier from the capital, his fee a ledger line, and the army line saying
+## when he should get there. The regiment is untouched until he does.
+func _send_courier(state: GameState, effects: Array, code: String, order: Dictionary, what: String) -> void:
+	var label := String(ArmySystem.regiment(data, code)["label"])
+	var c := CourierSystem.dispatch(data, state, CourierSystem.ORDINARY, code, order)
+	_apply(state, effects, "treasury", -float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)),
+		"a courier rides for " + label)
+	var days := CourierSystem.days_left(data, state, c)
+	effects.append({"metric": "army", "delta": 0.0, "reason": "A courier rides for %s %s; about %d day%s" % [
+		label, what, days, "" if days == 1 else "s"]})
 
 func _set_metric(state: GameState, effects: Array, metric: String, value: float, reason: String) -> void:
 	var delta: float = value - state.metrics[metric]
