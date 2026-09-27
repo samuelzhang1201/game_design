@@ -92,7 +92,9 @@ static func path_between(repo: DataRepository, from_px: Vector2, to_px: Vector2)
 		return [[b.x, b.y, _leg_kind(repo, a, b)]]
 	var tree := g.shortest(start)
 	var goal := g.nearest(b, tree["dist"])
-	var way: Array = [[g.nodes[start].x, g.nodes[start].y, _leg_kind(repo, a, g.nodes[start])]]
+	# a start ON the network (the capital is a road node) takes no leg to itself
+	var way: Array = [] if g.nodes[start] == a else \
+		[[g.nodes[start].x, g.nodes[start].y, _leg_kind(repo, a, g.nodes[start])]]
 	way.append_array(g.route(tree, goal))
 	way.append([b.x, b.y, _leg_kind(repo, g.nodes[goal], b)])
 	return way

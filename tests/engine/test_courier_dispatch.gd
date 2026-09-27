@@ -109,3 +109,18 @@ func test_the_estimate_is_the_dispatched_couriers() -> void:
 func test_a_fleet_takes_no_courier() -> void:
 	assert_false(CourierSystem.carries_orders({"is_naval": "1"}))
 	assert_true(CourierSystem.carries_orders({"is_naval": "0"}))
+
+
+## Found through the real game (2026-09-28): the capital is itself a road
+## node, so the road began with a zero-length leg back to where he stood,
+## "offroad" — and his card read "Across country" while he sat in the capital.
+func test_his_road_does_not_begin_where_he_stands() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var c := CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, _marcher(), {"action_code": "ARMY_GARRISON"})
+	var first: Array = (c["path"] as Array)[0]
+	assert_ne(Vector2i(int(first[0]), int(first[1])), Vector2i(int(c["x_m"]), int(c["y_m"])),
+		"no zero-length first leg")
+	var card := CourierCard.card(repo, s, int(c["id"]))
+	for f: Array in card["fields"]:
+		if String(f[0]) == "Ground":
+			assert_ne(String(f[1]), "Across country", "a courier in the capital is on the road")
