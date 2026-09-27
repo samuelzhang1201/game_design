@@ -13,20 +13,29 @@ func _draw() -> void:
 	var repo := ctx.repo
 	var ink := MapPalette.color_of(repo, repo.resolve_realm("player_realm"))
 	var w := repo.bal("map3d_courier_route_px")
-	for c: Dictionary in ctx.couriers():
-		_draw_road(c, ink, w)
-		_draw_pending(c, ink, w)
 	var rects: Dictionary = view.courier_rects()
+	for c: Dictionary in ctx.couriers():
+		_draw_road(c, (rects.get(int(c["id"]), {}) as Dictionary).get("lead", []), ink, w)
+		_draw_pending(c, ink, w)
 	for id in rects:
 		if bool(rects[id]["counter"]):
 			_draw_counter(rects[id]["rect"], ink)
 
 
-func _draw_road(c: Dictionary, ink: Color, w: float) -> void:
-	var here: Variant = _screen_of_m(Vector2i(int(c["x_m"]), int(c["y_m"])))
-	if here == null:
-		return
-	var pts := PackedVector2Array([here])
+## From where he is DRAWN (`lead`: the drawn rider and the road he is still
+## riding to where the engine has him), then the road the engine has left.
+func _draw_road(c: Dictionary, lead: Array, ink: Color, w: float) -> void:
+	var pts := PackedVector2Array()
+	for xz: Vector2 in lead:
+		var p3 := Vector3(xz.x, ctx.height_at(xz), xz.y)
+		if ctx.camera.is_position_behind(p3):
+			return
+		pts.append(ctx.camera.unproject_position(p3) / ctx.viewport_px_scale())
+	if lead.is_empty():
+		var here: Variant = _screen_of_m(Vector2i(int(c["x_m"]), int(c["y_m"])))
+		if here == null:
+			return
+		pts.append(here)
 	for p: Array in c["path"]:
 		var s: Variant = _screen_of_m(Vector2i(int(p[0]), int(p[1])))
 		if s == null:

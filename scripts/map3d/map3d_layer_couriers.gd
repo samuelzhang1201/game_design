@@ -15,6 +15,12 @@ var _pieces: Dictionary = {}
 var _shown_xz: Dictionary = {}
 var _rects: Dictionary = {}
 var _scenes: Dictionary = {}
+## id -> the world XZ points still to ride to, in order: the road he rode
+## today, which the engine has already put behind him.
+var _queue: Dictionary = {}
+## id -> {x_m, y_m, path} as the engine last had him; id -> today's leg length.
+var _last: Dictionary = {}
+var _leg: Dictionary = {}
 
 
 func bind(p_ctx: Map3DContext) -> void:
@@ -24,7 +30,9 @@ func bind(p_ctx: Map3DContext) -> void:
 	refresh()
 
 
-## id -> {rect: Rect2 in design px, counter: bool}.
+## id -> {rect: Rect2 in design px, counter: bool, lead: the world XZ points
+## from where he is drawn to where the engine has him (Map3DHudCouriers draws
+## his road ahead from them)}.
 func screen_rects() -> Dictionary:
 	return _rects
 
@@ -47,10 +55,14 @@ func refresh() -> void:
 	for id in _shown_xz.keys():
 		if not live.has(id):
 			_shown_xz.erase(id)
+			_queue.erase(id)
+			_last.erase(id)
+			_leg.erase(id)
 
 
-## Walk each drawn rider toward where the engine has him, a day's ride per
-## day's real seconds; true when anything changed (the HUD redraws).
+## Walk each drawn rider ALONG the road he rode toward where the engine has
+## him, a day's ride per day's real seconds; true when anything changed (the
+## HUD redraws).
 func step(delta: float) -> bool:
 	if ctx == null or ctx.camera == null:
 		return false
@@ -58,24 +70,74 @@ func step(delta: float) -> bool:
 	var dirty := list.size() != _rects.size()
 	var clock := ctx.clock_speed()
 	var day_s := maxf(ctx.repo.bal("time_day_seconds") / float(maxi(clock, 1)), 0.001)
-	var per_m := float(ctx.meta.get("m_per_px", 50.0)) / float(ArmySystem.metres_per_pack_px(ctx.repo))
 	for c: Dictionary in list:
 		var id := int(c["id"])
-		var want := _target_xz(c)
 		if not _shown_xz.has(id):
-			_shown_xz[id] = want
+			_shown_xz[id] = _target_xz(c)
+			_queue[id] = []
+			_remember(c)
 			dirty = true
 			continue
-		var now: Vector2 = _shown_xz[id]
-		if now == want:
+		var last: Dictionary = _last[id]
+		if int(last["x_m"]) != int(c["x_m"]) or int(last["y_m"]) != int(c["y_m"]):
+			var q: Array = _queue[id]
+			var fresh: Array = []
+			for m: Vector2i in passed_points(last["path"], (c["path"] as Array).size(),
+					Vector2i(int(c["x_m"]), int(c["y_m"]))):
+				fresh.append(ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, m)))
+			# today's ride sets his pace: its length over a day's real seconds
+			_leg[id] = maxf(length_along(q.back() if not q.is_empty() else _shown_xz[id], fresh), 0.001)
+			q.append_array(fresh)
+			if length_along(_shown_xz[id], q) > float(_leg[id]) * ctx.repo.bal("map3d_unit_snap_days"):
+				_shown_xz[id] = (_queue[id] as Array).back()
+				(_queue[id] as Array).clear()
+			_remember(c)
+		var queue: Array = _queue[id]
+		if queue.is_empty() or clock <= 0:
 			continue
-		var day_m := float(maxi(int(c.get("day_m", 0)), 1)) * per_m
-		var speed := day_m / day_s if clock > 0 else 0.0
-		_shown_xz[id] = Map3DUnits.walk(now, want, speed * delta, day_m * ctx.repo.bal("map3d_unit_snap_days"))
+		_shown_xz[id] = walk_along(_shown_xz[id], queue, float(_leg[id]) / day_s * delta)
 		dirty = true
 	if dirty:
 		refresh()
 	return dirty
+
+
+func _remember(c: Dictionary) -> void:
+	_last[int(c["id"])] = {"x_m": int(c["x_m"]), "y_m": int(c["y_m"]), "path": (c["path"] as Array).duplicate(true)}
+
+
+## The points (whole metres) a courier passed since the engine last moved him:
+## the waypoints his road has dropped from its front, then where he is now.
+static func passed_points(old_path: Array, new_size: int, now: Vector2i) -> Array:
+	var out: Array = []
+	for i in range(maxi(old_path.size() - new_size, 0)):
+		out.append(Vector2i(int(old_path[i][0]), int(old_path[i][1])))
+	out.append(now)
+	return out
+
+
+## `step` along the points of `queue` from `now`, dropping each point reached.
+static func walk_along(now: Vector2, queue: Array, step: float) -> Vector2:
+	var at := now
+	var left := step
+	while not queue.is_empty():
+		var to: Vector2 = queue[0]
+		var d := at.distance_to(to)
+		if d > left:
+			return at + (to - at) / d * left
+		left -= d
+		at = to
+		queue.pop_front()
+	return at
+
+
+static func length_along(now: Vector2, points: Array) -> float:
+	var total := 0.0
+	var at := now
+	for p: Vector2 in points:
+		total += at.distance_to(p)
+		at = p
+	return total
 
 
 func _target_xz(c: Dictionary) -> Vector2:
@@ -107,7 +169,8 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 			(_pieces[id]["node"] as Node3D).visible = false
 		var at: Vector2 = ctx.camera.unproject_position(centre) / s_px
 		var half := repo.bal("map3d_courier_counter_px") * 0.5
-		_rects[id] = {"rect": Rect2(at - Vector2(half, half), Vector2(half, half) * 2.0), "counter": true}
+		_rects[id] = {"rect": Rect2(at - Vector2(half, half), Vector2(half, half) * 2.0), "counter": true,
+			"lead": _lead(id, xz)}
 		return
 	var node: Node3D = piece["node"]
 	node.visible = true
@@ -115,7 +178,9 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 	var k := Map3DUnits.scale_for(repo, ctx.camera.global_position.distance_to(centre),
 		repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m, float(piece["height_m"]), float(piece["size"]))
 	var cam := Vector2(ctx.camera.global_position.x, ctx.camera.global_position.z)
-	var yaw := Map3DUnits.yaw_for(_heading(c), cam, xz)
+	var queue: Array = _queue.get(id, [])
+	var heading := ((queue[0] as Vector2) - xz).normalized() if not queue.is_empty() else _heading(c)
+	var yaw := Map3DUnits.yaw_for(heading, cam, xz)
 	var sit := Map3DUnits.seat_at(repo, ctx.height_at, xz, piece["extent"], yaw, k)
 	var high := float(piece["height_m"]) * k
 	var ground := Vector3(xz.x, float(sit["y"]) + high * repo.bal("map3d_unit_seat_clear")
@@ -124,7 +189,13 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 	node.transform = Transform3D((Basis(Quaternion(Vector3.UP, up)) * Basis(Vector3.UP, yaw))
 		.scaled(Vector3(k, k, k)), ground)
 	_rects[id] = {"rect": Map3DUnits.screen_box(ctx.camera, ground, high, float(piece["half_w_m"]) * k, s_px),
-		"counter": false}
+		"counter": false, "lead": _lead(id, xz)}
+
+
+func _lead(id: int, xz: Vector2) -> Array:
+	var out: Array = [xz]
+	out.append_array(_queue.get(id, []))
+	return out
 
 
 func _piece_of(c: Dictionary) -> Dictionary:
