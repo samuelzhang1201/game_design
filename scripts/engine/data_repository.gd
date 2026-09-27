@@ -625,6 +625,7 @@ func load_map(id: String) -> bool:
 	MapPalette.forget_colors()
 	HouseArms.forget()
 	Elevation.forget()
+	Weather.forget()
 	routes.clear()
 	rivers.clear()
 	markers.clear()
