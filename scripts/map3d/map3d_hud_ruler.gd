@@ -58,8 +58,8 @@ func _draw() -> void:
 ## A MARCH being aimed (owner 2026-09-24): the measuring ruler from the
 ## regiment's piece to the ground under the pointer, in the player's own
 ## realm colour and ending in an arrowhead, reading the distance and the days
-## it will take at the regiment's own pace (ArmySystem.day_step_m) — the same
-## numbers the march will then keep.
+## it will take at the regiment's own pace under today's weather where it
+## stands (ArmySystem.march_days) — the card's "days out" figure.
 func _draw_aim() -> void:
 	var code: String = view.aim_code
 	if code == "":
@@ -90,10 +90,9 @@ func _draw_aim() -> void:
 			ticks.append(camera.unproject_position(a3.lerp(b3, d / total)) / s)
 	var metres := from.distance_to(ctx.to_pack(Vector2(b3.x, b3.z))) \
 		* float(ArmySystem.metres_per_pack_px(repo))
-	var per_day := ArmySystem.day_step_m(repo, ctx.state(), code)
+	var days := ArmySystem.march_days(repo, ctx.state(), code, metres)
 	var text := MapRuler.reading(total, view.map_unit())
-	if per_day > 0:
-		var days := int(ceil(metres / float(per_day)))
+	if days > 0:
 		text += " · %d day%s" % [days, "" if days == 1 else "s"]
 	var eta := _courier_eta(code)
 	if eta > 0:

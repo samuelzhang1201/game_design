@@ -510,13 +510,20 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 static func days_out(repo: DataRepository, state: GameState, code: String) -> int:
 	if order_of(repo, state, code) != ORDER_MARCH:
 		return 0
-	var step := day_march_m(repo, state, code)
-	if step <= 0:
-		return 0
 	var k := float(metres_per_pack_px(repo))
 	var left := position_of(repo, state, regiment(repo, code)) \
 		.distance_to(destination_of(repo, state, code)) * k
-	return int(ceil(left / float(step)))
+	return march_days(repo, state, code, left)
+
+
+## Whole days, rounded up, for a regiment to march `metres` at today's pace
+## where it stands (day_march_m, the weather in): the card's "days out" and
+## the aim ruler's figure, so the two agree. 0 for a regiment that cannot move.
+static func march_days(repo: DataRepository, state: GameState, code: String, metres: float) -> int:
+	var step := day_march_m(repo, state, code)
+	if step <= 0:
+		return 0
+	return int(ceil(metres / float(step)))
 
 
 ## PLACEHOLDER (owner 2026-09-17: the battle formula is not decided). The

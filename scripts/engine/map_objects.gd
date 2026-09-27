@@ -997,11 +997,16 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		if marching:
 			var days := ArmySystem.days_out(repo, state, code)
 			stats.append(_stat("army_march", "%d day%s out" % [days, "" if days == 1 else "s"],
-				"On the march — %.1f km a day, %d day%s from where it was sent" % [
+				"On the march — %.1f km a day in clear weather, %d day%s from where it was sent at today's" % [
 					km, days, "" if days == 1 else "s"]))
 		else:
 			stats.append(_stat("army_march", "%.1f km/day" % km,
 				"March — %.1f km a day: its slowest arm's pace, slowed by short supplies, low morale and little training" % km))
+		# the base pace above is weather-free; the weather is its own line
+		# (spec 2026-09-27-courier-core §1)
+		var wx := Weather.at(repo, state, ArmySystem.position_of(repo, state, r), state.absolute_day())
+		stats.append(_stat("army_weather", CourierCard.weather_short(repo, wx),
+			"Weather here — %s" % Weather.describe_kind(repo, wx)))
 	return {
 		"kind": "army", "code": code, "title": label,
 		"subtitle": "%s of %s" % ["Fleet" if naval else "Regiment", _label(repo.kingdoms, kingdom)],

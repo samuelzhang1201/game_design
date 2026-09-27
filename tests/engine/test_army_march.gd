@@ -251,3 +251,35 @@ func test_the_weather_where_it_stands_scales_its_day() -> void:
 	@warning_ignore("integer_division")
 	assert_eq(ArmySystem.day_march_m(repo, s, code), step * 400 / 1000, "a blizzard: 400‰")
 	repo.weather_odds = saved
+
+
+## Final review I2 (spec §1): the card shows the base pace and a separate
+## weather line, and its "days out" and the aim ruler's figure are one
+## function, ArmySystem.march_days, today's weather where it stands in.
+func test_in_rain_the_card_the_days_out_and_the_ruler_agree() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var code := String(_marcher()["regiment_code"])
+	var step := ArmySystem.day_step_m(repo, s, code)
+	var saved := repo.weather_odds.duplicate(true)
+	for key in repo.weather_odds:
+		repo.weather_odds[key] = {"clear": 0, "rain": 1, "mud": 0, "snow": 0, "blizzard": 0}
+	Weather.forget()
+	# five clear days of road in rain at 850‰: 5 / 0.85 = 5.9 -> 6 days
+	assert_eq(ArmySystem.march_days(repo, s, code, float(step * 5)), 6)
+	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code))
+	ArmySystem.set_march(repo, s, code, here + Vector2(37.0, 0.0))
+	var left := 37.0 * float(ArmySystem.metres_per_pack_px(repo))
+	assert_eq(ArmySystem.days_out(repo, s, code), ArmySystem.march_days(repo, s, code, left),
+		"the card's days out is the ruler's figure")
+	var card := MapObjects.army_card(repo, code, s)
+	var weather: Dictionary = {}
+	for st: Dictionary in card["stats"]:
+		if String(st["key"]) == "army_weather":
+			weather = st
+	assert_eq(String(weather.get("text", "")), "Rain ×0.85", "the weather is its own line")
+	assert_true(repo.resource_icons.has("army_weather"), "with its icon row")
+	var ruler := FileAccess.get_file_as_string("res://scripts/map3d/map3d_hud_ruler.gd")
+	assert_string_contains(ruler, "ArmySystem.march_days(", "the aim ruler counts the same days")
+	assert_false(ruler.contains("day_step_m"), "not the weather-free pace")
+	repo.weather_odds = saved
+	Weather.forget()
