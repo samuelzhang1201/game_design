@@ -49,8 +49,8 @@ func test_the_hud_is_one_child_per_job_in_paint_order() -> void:
 	var names: Array = []
 	for c: Node in v.get_node("Hud").get_children():
 		names.append(String(c.name))
-	assert_eq(names, ["Labels", "Landmarks", "HeatLegend", "Badges", "Armies", "Backdrop",
-		"ScaleBar", "Ruler", "Compass", "Needle"])
+	assert_eq(names, ["Labels", "Landmarks", "Weather", "HeatLegend", "Badges", "Armies",
+		"Couriers", "Backdrop", "ScaleBar", "Ruler", "Compass", "Needle"])
 	assert_true(v.get_node("Hud/Labels") is Map3DHudLabels)
 	assert_true(v.get_node("Hud/Needle") is Map3DHudNeedle)
 

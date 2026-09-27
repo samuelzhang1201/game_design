@@ -11,9 +11,9 @@ const TREE := ["Viewport", "Viewport/WorldSlot", "Viewport/CameraRig",
 	"Viewport/CameraRig/RigCamera", "Viewport/Sea", "Viewport/Rivers", "Viewport/Bridges",
 	"Viewport/Lines", "Viewport/Clouds", "Viewport/Clouds/Shadows", "Viewport/Markers",
 	"Viewport/Houses", "Viewport/Couriers",
-	"Display", "Notice", "Hud", "Hud/Labels", "Hud/Landmarks", "Hud/HeatLegend", "Hud/Badges",
-	"Hud/Armies", "Hud/Backdrop", "Hud/ScaleBar", "Hud/Ruler", "Hud/Compass", "Hud/Needle",
-	"Tooltip"]
+	"Display", "Notice", "Hud", "Hud/Labels", "Hud/Landmarks", "Hud/Weather", "Hud/HeatLegend",
+	"Hud/Badges", "Hud/Armies", "Hud/Couriers", "Hud/Backdrop", "Hud/ScaleBar", "Hud/Ruler",
+	"Hud/Compass", "Hud/Needle", "Tooltip"]
 
 
 func before_all() -> void:

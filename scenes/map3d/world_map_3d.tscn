@@ -24,6 +24,8 @@
 [ext_resource type="Script" uid="uid://cmmbyhsi3kxcj" path="res://scripts/map3d/map3d_hud_ruler.gd" id="15_ebs35"]
 [ext_resource type="Script" path="res://scripts/map3d/map3d_layer_units.gd" id="15_exbav"]
 [ext_resource type="Script" path="res://scripts/map3d/map3d_layer_couriers.gd" id="40_cour"]
+[ext_resource type="Script" path="res://scripts/map3d/map3d_hud_weather.gd" id="41_hwea"]
+[ext_resource type="Script" path="res://scripts/map3d/map3d_hud_couriers.gd" id="42_hcou"]
 [ext_resource type="Script" uid="uid://kumuxikla7vf" path="res://scripts/ui/compass_layer.gd" id="16_nceau"]
 [ext_resource type="Script" uid="uid://bula280a44q8l" path="res://scripts/map3d/map3d_hud_needle.gd" id="17_geqxk"]
 [ext_resource type="StyleBox" uid="uid://btdf8fw324b5o" path="res://scenes/map3d/tooltip_chip.tres" id="19_rbqyb"]
@@ -163,6 +165,16 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("9_h26ti")
 
+[node name="Weather" type="Control" parent="Hud" unique_id=314159265]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("41_hwea")
+
 [node name="HeatLegend" type="Control" parent="Hud" unique_id=1080052685]
 layout_mode = 1
 anchors_preset = 15
@@ -192,6 +204,16 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("12_2v84w")
+
+[node name="Couriers" type="Control" parent="Hud" unique_id=271828182]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("42_hcou")
 
 [node name="Backdrop" type="Control" parent="Hud" unique_id=675688395]
 layout_mode = 1

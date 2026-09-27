@@ -7,10 +7,29 @@ extends Map3DHudPiece
 ## scale, placed along the 3D line so perspective spaces them as the ground does.
 
 
+var _eta_key := ""
+var _eta := 0
+
+
 ## The aim follows the pointer, so it redraws every frame while one is up.
 func _process(_delta: float) -> void:
 	if bound() and view.aim_code != "":
 		queue_redraw()
+
+
+## Days for a courier sent now to reach the column (spec 2026-09-27-courier-core
+## §2): one Dijkstra per aim, not per frame — the route depends only on where
+## the column stands, and the weather only on the day.
+func _courier_eta(code: String) -> int:
+	var st := ctx.state()
+	var reg := ArmySystem.regiment(ctx.repo, code)
+	if st == null or reg.is_empty() or not CourierSystem.carries_orders(reg):
+		return 0
+	var key := "%s|%s|%d" % [code, ArmySystem.position_of(ctx.repo, st, reg), st.absolute_day()]
+	if key != _eta_key:
+		_eta_key = key
+		_eta = CourierSystem.eta_days(ctx.repo, st, CourierSystem.ORDINARY, code)
+	return _eta
 
 
 func _draw() -> void:
@@ -76,5 +95,8 @@ func _draw_aim() -> void:
 	if per_day > 0:
 		var days := int(ceil(metres / float(per_day)))
 		text += " · %d day%s" % [days, "" if days == 1 else "s"]
+	var eta := _courier_eta(code)
+	if eta > 0:
+		text += " · courier ≈%d day%s" % [eta, "" if eta == 1 else "s"]
 	MapRuler.draw(self, camera.unproject_position(a3) / s, camera.unproject_position(b3) / s,
 		ticks, text, 1.0, MapPalette.color_of(repo, String(reg.get("kingdom_code", ""))), true)

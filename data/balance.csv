@@ -478,3 +478,7 @@ courier_sea_sample_km,5,"a leg is sampled every this many km; any point off the 
 weather_spell_days,3,"days a province's weather holds (Weather.spell_of) so it does not flicker daily"
 map3d_courier_counter_px,16,"a courier's square counter in design px, drawn past map3d_unit_counter_scale (Map3DHudCouriers) and his click box then"
 map3d_courier_anim_rate,2.5,"the courier's MARCH clip playback rate — a gallop, not a walk — until sub-project D's own gallop clip"
+map3d_courier_route_px,1.2,"a courier's road still ahead: dashed, in the realm's colour, finer than a march's map3d_unit_route_px (Map3DHudCouriers)"
+map3d_courier_pending_alpha,0.55,"an order still on the road: its route drawn dotted at this share of the realm colour's opacity, an envelope in its ring"
+map3d_weather_view_m,60000,"the weather marks show only while the camera is nearer than this (world metres)"
+map3d_weather_icon_px,18,"a weather mark's size in design px"
