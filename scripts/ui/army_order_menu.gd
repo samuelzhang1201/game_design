@@ -85,7 +85,7 @@ func _open_route(code: String, at: Vector2) -> void:
 	_code = code
 	clear()
 	_add_row("edit", EDIT, _paused_reason())
-	_add_row("halt", HALT, _paused_reason() if _paused_reason() != "" \
+	_add_row(_row_key("halt", code), HALT, _paused_reason() if _paused_reason() != "" \
 		else _refusal("ARMY_GARRISON", code))
 	_pop(at)
 
@@ -93,9 +93,19 @@ func _open_route(code: String, at: Vector2) -> void:
 ## The destination was clicked: ask COMMIT or CANCEL there.
 func _open_confirm(at: Vector2) -> void:
 	clear()
-	_add_row("commit", COMMIT, "")
+	_add_row(_row_key("commit", _aiming), COMMIT, "")
 	_add_row("cancel", CANCEL, "")
 	_pop(at)
+
+
+## A fleet's orders take no courier yet (CourierSystem.carries_orders), so
+## its COMMIT and Cancel march read the rows that promise none.
+func _row_key(key: String, code: String) -> String:
+	var reg := ArmySystem.regiment(Game.data, code)
+	if not reg.is_empty() and not CourierSystem.carries_orders(reg) \
+			and Game.data.army_route_orders.has(key + "_fleet"):
+		return key + "_fleet"
+	return key
 
 
 func _add_row(key: String, id: int, why: String) -> void:

@@ -297,3 +297,37 @@ func test_the_route_menu_is_paused_only() -> void:
 	assert_true(_menu.is_item_disabled(0))
 	assert_true(_menu.is_item_disabled(1))
 	Game.set_clock_speed(0)
+
+
+func _fleet() -> String:
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+		if not CourierSystem.carries_orders(r):
+			return String(r["regiment_code"])
+	return ""
+
+
+## Final review M1: a fleet takes no courier yet, so its COMMIT and its
+## Cancel march promise none and name no fee; a land regiment's still do.
+func test_a_fleets_route_menus_promise_no_courier() -> void:
+	var fleet := _fleet()
+	assert_ne(fleet, "", "the realm has a fleet")
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, fleet))
+	_map.army_menu_requested.emit(fleet, Vector2(10.0, 10.0))
+	_menu.hide()
+	_menu.id_pressed.emit(0)
+	_map.ground_clicked.emit(here + Vector2(20.0, 0.0))
+	var commit := _menu.get_item_index(ArmyOrderMenu.COMMIT)
+	assert_eq(_menu.get_item_text(commit), String(Game.data.army_route_orders["commit_fleet"]["label"]))
+	assert_false(_menu.get_item_tooltip(commit).to_lower().contains("courier"), "no courier for a fleet")
+	assert_false(_menu.get_item_tooltip(commit).contains("Fee"), "and no fee")
+	_menu.id_pressed.emit(ArmyOrderMenu.CANCEL)
+	ArmySystem.set_march(Game.data, Game.state, fleet, here + Vector2(30.0, 0.0))
+	_map.route_clicked.emit(fleet, Vector2(10.0, 10.0))
+	var halt := _menu.get_item_index(ArmyOrderMenu.HALT)
+	assert_eq(_menu.get_item_tooltip(halt), String(Game.data.army_route_orders["halt_fleet"]["hint"]))
+	# a land regiment's rows still send a courier
+	var code := _marcher()
+	var there := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	ArmySystem.set_march(Game.data, Game.state, code, there + Vector2(30.0, 0.0))
+	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
+	assert_string_contains(_menu.get_item_tooltip(_menu.get_item_index(ArmyOrderMenu.HALT)), "courier")

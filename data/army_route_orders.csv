@@ -4,3 +4,5 @@ cancel,Cancel,Give this route up,the confirm menu's other row; clicking away fro
 edit,Edit route…,Aim the march anew from where the column stands,"owner 2026-09-27: 行进路线commit后，再次点击终点可以edit路线或者cancel操作 — the route menu, opened by a click on a march's end ring"
 halt,Cancel march,Send a courier to halt the column where it has got to,"the route menu's other row: an ARMY_GARRISON, owner 2026-09-27: the order rides by courier (spec 2026-09-27-courier-core)"
 paused_only,,Pause the clock to plan a march,"owner 2026-09-27: 兵人行进路线只能在暂停模式下选择 — the reason MARCH, Edit and Cancel march are greyed out while time runs"
+commit_fleet,Commit march,Send the fleet along this route,"final review 2026-09-28: a fleet takes no courier yet (CourierSystem.carries_orders), so its COMMIT keeps the pre-courier words"
+halt_fleet,Cancel march,Halt the fleet where it has got to,"final review 2026-09-28: a fleet's Cancel march, no courier"
