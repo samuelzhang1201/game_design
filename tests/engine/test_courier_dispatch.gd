@@ -124,3 +124,54 @@ func test_his_road_does_not_begin_where_he_stands() -> void:
 	for f: Array in card["fields"]:
 		if String(f[0]) == "Ground":
 			assert_ne(String(f[1]), "Across country", "a courier in the capital is on the road")
+
+
+## A pack point off the land grid farther than courier_offroad_max_km from
+## every road node — the open sea, found by a coarse scan of the pack.
+func _open_sea_px() -> Vector2:
+	var g := RoadGraph.of_pack(repo)
+	var reach := float(repo.bal("courier_offroad_max_km")) * 1000.0
+	var w := int(float(repo.map_info.get("width", "0")))
+	var h := int(float(repo.map_info.get("height", "0")))
+	for y in range(10, h, 50):
+		for x in range(10, w, 50):
+			var p := Vector2(x, y)
+			if MapEconomy.cell_at(repo, p) >= 0:
+				continue
+			var m := ArmySystem.pack_to_metres(repo, p)
+			if Vector2(m).distance_to(Vector2(g.nodes[g.nearest(m)])) > reach:
+				return p
+	return Vector2(-1, -1)
+
+
+## Spec §1: a leg that leaves the land grid is a sea crossing — the sea's
+## per mille, no height tier (1000), clear weather at sea.
+func test_a_leg_off_the_land_is_a_sea_crossing_by_hand() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	_skies("clear")
+	repo.road_speed = {"road": 1000, "trail": 800, "offroad": 500, "sea": 625,
+		"tier_plains": 300, "tier_hills": 300, "tier_mountains": 300, "tier_peak": 300}
+	var sea := _open_sea_px()
+	assert_ne(sea, Vector2(-1, -1), "the pack has open sea far from the roads")
+	var cap := ArmySystem.pack_to_metres(repo, _capital_px())
+	var out := ArmySystem.pack_to_metres(repo, sea)
+	assert_eq(CourierSystem._leg_kind(repo, cap, out), "sea", "a leg ending off the land grid")
+	assert_eq(CourierSystem._leg_kind(repo, out, cap), "sea", "and one starting there")
+	# the tier is 1000 at sea, even from a point on the land (every tier forced to 300‰)
+	assert_eq(CourierSystem.stretch_factor(repo, "sea", cap, "clear"), 625 * 1000 * 1000)
+	assert_eq(CourierSystem.stretch_factor(repo, "offroad", cap, "clear"), 500 * 300 * 1000,
+		"across country the tier counts")
+	# need: length x 10^9 / (625 x 1000 x 1000) = length x 1000 / 625, rounded up.
+	var length := int(round(Vector2(out).distance_to(Vector2(cap))))
+	@warning_ignore("integer_division")
+	var by_hand := (length * 1000 + 624) / 625
+	assert_eq(CourierSystem.need_along(repo, s, out, [[cap.x, cap.y, "sea"]], 10), by_hand)
+
+
+## Farther than courier_offroad_max_km from every road node: ONE straight leg,
+## and from the open sea that leg is a crossing.
+func test_far_from_the_network_he_rides_one_straight_leg() -> void:
+	var sea := _open_sea_px()
+	var path := CourierSystem.path_between(repo, sea, _capital_px())
+	var cap := ArmySystem.pack_to_metres(repo, _capital_px())
+	assert_eq(path, [[cap.x, cap.y, "sea"]])
