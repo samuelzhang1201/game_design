@@ -68,7 +68,7 @@ static func yaw_for(heading: Vector2, camera_xz: Vector2, at_xz: Vector2,
 
 
 ## World metres a piece WALKS in one real second: the regiment's day's march
-## (ArmySystem.day_step_m, in the pack's own metres) turned into the built
+## (ArmySystem.day_march_m, the weather in, in the pack's own metres) turned into the built
 ## world's metres, over the real seconds a day lasts at this clock speed. The
 ## engine still moves it a whole day at a time; this is only how the drawing
 ## gets from one day's spot to the next, so it arrives just as the next day
