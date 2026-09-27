@@ -265,6 +265,9 @@ add it here as a principle with its why — not as a changelog entry.
   view) growing as the camera comes in, capped close in so it never towers
   over the houses, and a flat square counter once the scale bar reads 50 km.
   Bigger is not better: the cavalry at 1.5× was ruled wrong ("应该更小一点").
+  Then, the same day, "骑兵和步兵的size稍微再调大一点点": +15% (ref 26→30 px,
+  cap 36→41) — "a little" means a step you can see side by side, not one
+  that makes a piece loom over the houses (+25% did).
 - **The owner names a zoom by the SCALE BAR**, not the camera's height
   ("是比例尺，不是高度"). Put zoom thresholds in scale-bar units.
 - **A selection emphasises the line that is already there.** The clicked

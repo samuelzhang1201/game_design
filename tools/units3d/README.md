@@ -1,7 +1,10 @@
 # 3D military units
 
-Animated wargame pieces built from Hunyuan3D sources: one glTF per unit
-holding the figure, its skeleton and its actions. No base (owner 2026-09-27).
+Animated wargame pieces: one glTF per unit holding the figure, its skeleton
+and its actions. No base (owner 2026-09-27). Both are now built from CC0
+scans, each by its own script (`cavalry_scan.py`, `infantry_scan.py`, below);
+`make_units.py` is the Hunyuan-era build they reuse the rig, weighting and
+actions of, and it skips both rows.
 
 ```
 tools/units3d/build.sh            # everything, both units
@@ -142,3 +145,63 @@ cut the disc out of the already-built infantry (its Hunyuan source is gone),
 lowering the figure onto z = 0 and writing its actions back unchanged. The
 runtime seats a piece on its own half extents (`Map3DUnits.stand_extent`).
 `shoot_glb.py GLB OUT feet` photographs the hooves and boots.
+
+## The infantry is built from CC0 scans too (2026-09-27)
+
+The owner asked for the infantry "the cavalry's way". `infantry_scan.py`
+builds it; `make_units.py` skips its row (source `infantry_scan.py`).
+
+```
+blender -b --factory-startup --python tools/units3d/infantry_scan.py
+INF_PREVIEW=/tmp/p blender -b --factory-startup --python tools/units3d/infantry_scan.py
+INF_BLEND=assets/units3d/ai_src/cc0/infantry_manatarms.blend blender -b --factory-startup --python tools/units3d/infantry_scan.py
+```
+
+`INF_PREVIEW` shoots the prepared scans painted flat by region (five sides)
+and stops before the bake — the loop for tuning the cuts and the regions;
+`INF_OUT=dir` writes a trial glb elsewhere; `INF_BLEND` saves an openable
+`.blend`. Sources in `assets/units3d/ai_src/cc0/`:
+
+* `graf_salm/` — noe-3d.at "Graf Salm" (Sketchfab `db96e431…`, CC0-1.0): the
+  1867 Vienna statue of Niklas Count Salm, plate, mail skirt, sword and a
+  long cloak. Its SHAPE is used, like the Hunt horse's: the plinth, the helmet
+  at his feet, the baton in his right fist and his bare head are cut away
+  (`cut`), the holes filled.
+* `cleveland_armor/` — the cavalry knight's own close helmet
+  (`HELMET_PARTS` of the knight's shells), tipped forward, set on the collar,
+  over a lofted steel collar (`gorget`).
+
+The statue is painted by REGION — plate, mail fringe, cloak, scabbard —
+from capsules along the measured joints (`J`, `regions`), a mottle and pits
+over it, AO multiplied in (`shade_body`), baked into a 2048 atlas with the
+scan's normals; the spear, the cavalry's heater (turned 60° to face half
+forward) and the collar are `model_cavalry` lofts; the skeleton is
+`make_units`' humanoid one fitted to `J`, weighted by bone heat, and the
+actions are `make_units.humanoid_actions`, so `reanimate.py` still works.
+
+Traps it paid for:
+
+* **The near knee in a side shot is the FAR leg.** He stands in contrapposto,
+  his right leg back and fused into the cloak; the joints came right only off
+  point-cloud slices (`z` cuts of the scan plotted from above), not off the
+  gridded side render.
+* **The cloak kicked out behind him like a skirt**: bone heat gives the
+  cloak between and behind his legs to the legs. `soften_legs` hands a
+  vertex's leg weight to the hips with its distance from the leg bones
+  (`LEG_FULL_M` / `LEG_FAR_M` / `LEG_KEEP`).
+* **A fully metallic plate read BLACK on the map** beside the knight. The
+  Cleveland scan's plate is roughness ~0.65, metallic ~0.3–0.9, ~0.2 linear
+  albedo; `LOOK` is set so the BAKED plate (after patina and AO) matches the
+  helmet, measured off the atlas.
+* **The cloak ends at the knee** (owner: 把披风截到膝盖), and the scan is
+  ONE closed solid: deleting the cloak under the hem opened a ring of holes no
+  fill could close, the voxel remesh fell into 1,500 pieces and bone heat
+  failed on every bone. `shorten_cloak` PRESSES everything under the hem
+  flat onto it instead (the surface stays closed), tears the faces that then
+  hang from the hem down to his left leg (`CURTAIN_M`), and swaps in his left
+  lower leg, mirrored (`left_to_right`), for the right one the cloak hid; the
+  scan's scabbard went flat with the cloak and a lofted one hangs instead.
+* **The helmet's back is the top of the Cleveland BACKPLATE's shell**, and
+  taking it brought the collar's thin flanges, which the collapse left as
+  bare shards the bake missed (grey fill). The helmet is worn open-backed over
+  the lofted collar instead.

@@ -40,16 +40,13 @@
     41
    ]
   },
-  "bones": 20,
+  "bones": 22,
   "fps": 30,
-  "height_m": 1.8,
+  "height_m": 1.796,
   "kind": "humanoid",
   "label": "Man-at-arms",
-  "prop_verts": 1553,
-  "source": "hunyuan3d+retopo",
-  "source_tris": 499940,
-  "tris": 11999,
-  "weapon_verts": 629,
+  "source": "CC0 scans (noe-3d.at Graf Salm statue, Cleveland Museum of Art 1964.88 helmet), tools/units3d/infantry_scan.py",
+  "tris": 11212,
   "weights": "heat"
  }
 }

@@ -4,7 +4,8 @@ what shoot_units.py reads.
 
   blender -b --python tools/units3d/shoot_glb.py -- GLB OUT_PREFIX MODE
 
-MODE: rest (six angles), close (the rider and the head), feet (low, at the hooves),
+MODE: rest (six angles), close (the rider and the head), side (a man on foot from
+four sides), feet (low, at the hooves),
 or an action name (garrison | march | attack: eight frames from the side).
 Writes OUT_PREFIX_<n>.png per shot and OUT_PREFIX_sheet.png.
 """
@@ -83,19 +84,20 @@ def shot(tag):
 
 
 cols = 3
-if MODE in ("rest", "close", "feet"):
+if MODE in ("rest", "close", "feet", "side"):
     bind(acts["GARRISON"])
     sc.frame_set(1)
     plan = {
         "rest": [(35, 8, 8.0, 1.45, 0), (90, 2, 8.0, 1.45, 0), (0, 4, 8.0, 1.45, 0),
                  (180, 4, 8.0, 1.45, 0), (215, 20, 8.0, 1.45, 0), (35, 50, 9.5, 1.45, 0)],
         "close": [(40, 6, 2.8, 2.0, 0.2), (300, 10, 2.8, 1.9, 0.2), (60, 5, 2.4, 1.6, 1.0)],
+        "side": [(90, 4, 3.4, 1.05, 0), (270, 4, 3.4, 1.05, 0), (0, 4, 3.4, 1.05, 0), (180, 4, 3.4, 1.05, 0)],
         "feet": [(30, 12, 3.2, 0.5, 0.0), (140, 18, 3.2, 0.5, 0.0), (35, 50, 6.5, 1.0, 0.0), (80, 8, 1.6, 0.2, -0.6)],
     }[MODE]
     for i, (yaw, el, d, tz, ty) in enumerate(plan):
         aim(yaw, el, d, tz, ty)
         shot(i)
-    cols = 2 if MODE == "feet" else 3
+    cols = 2 if MODE == "feet" else 4 if MODE == "side" else 3
 else:
     act = acts[MODE.upper()]
     bind(act)

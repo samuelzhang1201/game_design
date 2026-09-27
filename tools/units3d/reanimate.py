@@ -1,7 +1,8 @@
 """Re-author a built unit .glb's actions from make_units.py's action code,
-for a unit whose SOURCES are gone (the infantry's Hunyuan3D source was
-deleted with the rest of Hunyuan — docs: no-hunyuan-3d), so a change to its
-GARRISON / MARCH / ATTACK can still reach the game (owner 2026-09-27: 行进动作
+without rebuilding it (written when the infantry's Hunyuan3D source was
+gone; since 2026-09-27 infantry_scan.py rebuilds the infantry whole from its
+CC0 scans with the same actions, so this is only the quick path), so a change
+to its GARRISON / MARCH / ATTACK can reach the game (owner 2026-09-27: 行进动作
 设计幅度再大一点).
 
   blender -b --factory-startup --python tools/units3d/reanimate.py -- CODE [CODE ...]
