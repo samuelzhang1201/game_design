@@ -24,7 +24,7 @@ const MARCH := "MARCH"
 var ctx: Map3DContext
 ## Whether MILITARY is up; Map3DView sets it from set_military.
 var shown := false
-## code -> {node, anim, height_m, half_w_m, base} — the model's own metres.
+## code -> {node, anim, height_m, half_w_m, extent} — the model's own metres.
 var _pieces: Dictionary = {}
 ## code -> the piece's box on screen, design px. What a click hits.
 var _rects: Dictionary = {}
@@ -115,9 +115,9 @@ func _target_xz(reg: Dictionary) -> Vector2:
 
 ## Stand one piece where it is SHOWN: at the camera's scale, facing the way
 ## it walks (or the camera at rest), SEATED on the ground under its whole
-## base — tilted with the slope and lifted clear of it (Map3DUnits.seat) —
-## never on the one point under its centre, which on a hillside buried half a
-## base as wide as a village (owner 2026-09-24: 斜面上兵人的一部分会被地图盖住).
+## footprint — tilted with the slope and lifted clear of it (Map3DUnits.seat)
+## — never on the one point under its centre, which on a hillside buried half
+## a piece as wide as a village (owner 2026-09-24: 斜面上兵人的一部分会被地图盖住).
 func _place(code: String, piece: Dictionary) -> void:
 	var repo := ctx.repo
 	var xz: Vector2 = _shown_xz[code]
@@ -130,17 +130,17 @@ func _place(code: String, piece: Dictionary) -> void:
 		return
 	node.visible = true
 	var k := Map3DUnits.scale_for(repo, ctx.camera.global_position.distance_to(centre),
-		repo.bal("map3d_fov_deg"), ctx.view_size.y, float(piece["height_m"]))
+		repo.bal("map3d_fov_deg"), ctx.view_size.y, float(piece["height_m"]), piece["size"])
 	var reg := ArmySystem.regiment(repo, code)
 	var ahead := _target_xz(reg) - xz
 	var heading := ahead.normalized() if ahead.length() > 0.5 \
 		else ArmySystem.heading_of(repo, ctx.state(), code)
-	_want_yaw[code] = Map3DUnits.yaw_for(heading,
-		Vector2(ctx.camera.global_position.x, ctx.camera.global_position.z), xz)
+	var cam := ctx.camera.global_position
+	_want_yaw[code] = Map3DUnits.yaw_for(heading, Vector2(cam.x, cam.z), xz, piece.get("stand_deg", 0.0))
 	if not _yaw.has(code):
 		_yaw[code] = _want_yaw[code]
 	var yaw := float(_yaw[code])
-	var sit := Map3DUnits.seat_at(repo, ctx.height_at, xz, piece["base"], yaw, k)
+	var sit := Map3DUnits.seat_at(repo, ctx.height_at, xz, piece["extent"], yaw, k)
 	var high := float(piece["height_m"]) * k
 	# The clearance grows with the piece: far out the ground is DRAWN by a
 	# coarser Terrain3D mesh than the heightmap it is sampled from.
@@ -188,7 +188,7 @@ func step(delta: float) -> bool:
 			var rate := deg_to_rad(repo.bal("map3d_unit_turn_deg_per_s")) * delta
 			_yaw[code] = rotate_toward(float(_yaw.get(code, 0.0)),
 				float(_want_yaw.get(code, 0.0)), rate)
-			# Re-seated as it turns: a long (cavalry) base turned across a
+			# Re-seated as it turns: a long (cavalry) piece turned across a
 			# slope reaches different ground.
 			_place(code, _pieces[code])
 	if moved:
@@ -263,10 +263,9 @@ func _piece_of(code: String) -> Dictionary:
 	# would be a mile of darkness across the country it stands in.
 	for m: MeshInstance3D in Map3DUnits.meshes(node):
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	Map3DUnits.paint_base(node, Map3DUnits.base_color(ctx.repo, String(reg["kingdom_code"])))
 	var span := Map3DUnits.model_size(node)
 	_pieces[code] = {"node": node, "anim": anim, "height_m": span.y, "half_w_m": span.x,
-		"base": Map3DUnits.base_extent(node)}
+		"extent": Map3DUnits.stand_extent(node), "stand_deg": float(art.get("stand_deg", "0")), "size": float(art.get("size", "1"))}
 	_sync_action(code)
 	return _pieces[code]
 

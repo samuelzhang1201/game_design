@@ -57,7 +57,7 @@ def stage(height):
     fo.location = (-4.0, -4.0, height * 1.2)
     fo.rotation_euler = (math.radians(65), 0.0, math.radians(-45))
 
-    # A floor so the base has something to sit on and cast onto.
+    # A floor for the figure to stand on and cast onto.
     bpy.ops.mesh.primitive_plane_add(size=40.0)
     floor = bpy.context.active_object
     m = bpy.data.materials.new("floor")
@@ -159,8 +159,8 @@ def main():
         acts = find_actions(arm)
         log("%s actions in the file: %s" % (code, sorted(acts)))
 
-        height = info["height_m"] + info["base_m"][2]
-        span = max(info["base_m"][0], info["base_m"][1])
+        height = info["height_m"]
+        span = height * (0.9 if info["kind"] == "mounted" else 0.4)
         cam = stage(height)
 
         shots = []

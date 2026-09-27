@@ -34,6 +34,10 @@ assets/units3d/*_albedo.jpg
 assets/units3d/*_normal.jpg
 assets/units3d/*_albedo.jpg.import
 assets/units3d/*_normal.jpg.import
+assets/units3d/*_atlas*.jpg
+assets/units3d/*_atlas*.jpg.import
+assets/units3d/*_base_ground*.jpg
+assets/units3d/*_base_ground*.jpg.import
 
 # Godot's extracted copies of the textures embedded in the hand-modelled house .glb files (regenerated on import)
 assets/map3d_houses/*.jpg

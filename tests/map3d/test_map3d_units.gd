@@ -40,6 +40,15 @@ func test_the_scale_is_that_height_over_the_models_own() -> void:
 		"a model with no height is left alone rather than scaled by infinity")
 
 
+func test_an_arm_can_stand_bigger_than_the_rest() -> void:
+	# army_art's size multiplies the drawn height (owner 2026-09-27: the
+	# cavalry alone, 单独调大, 更显眼一点); 1 leaves a piece as it was.
+	var fov := repo.bal("map3d_fov_deg")
+	var one := Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 2.0)
+	assert_almost_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 2.0, 1.5), one * 1.5, 0.0001)
+	assert_almost_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 2.0, 1.0), one, 0.0001)
+
+
 func test_a_marching_piece_faces_its_heading() -> void:
 	# The models are authored facing +Y in Blender, which is -Z here, so a
 	# piece marching toward -Z stands at yaw 0.
@@ -58,6 +67,17 @@ func test_a_standing_piece_turns_square_to_the_camera() -> void:
 	assert_almost_eq(Map3DUnits.yaw_for(Vector2.ZERO, cam, at), 0.0, 0.0001)
 	assert_almost_eq(absf(Map3DUnits.yaw_for(Vector2.ZERO, Vector2(100.0, 160.0), at)),
 		PI, 0.0001)
+
+
+func test_a_standing_horse_turns_its_flank_to_the_camera() -> void:
+	# A horse square to the camera is nose-on — the narrowest thing it can
+	# show; army_art's stand_deg turns it that far off square, but only while
+	# it stands: a marching piece still faces its road.
+	var at := Vector2(100.0, 100.0)
+	var cam := Vector2(100.0, 40.0)
+	assert_almost_eq(Map3DUnits.yaw_for(Vector2.ZERO, cam, at, 55.0), deg_to_rad(55.0), 0.0001)
+	assert_almost_eq(Map3DUnits.yaw_for(Vector2(0.0, -1.0), cam, at, 55.0), 0.0, 0.0001,
+		"marching, it faces the way it goes")
 
 
 func test_a_model_is_measured_not_declared() -> void:

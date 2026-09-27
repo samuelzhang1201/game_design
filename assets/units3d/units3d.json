@@ -14,22 +14,16 @@
     49
    ]
   },
-  "base_m": [
-   0.88,
-   2.16,
-   0.07
-  ],
-  "bones": 34,
+  "bones": 43,
   "fps": 30,
-  "height_m": 2.7,
+  "height_m": 3.319,
   "kind": "mounted",
   "label": "Knight",
-  "prop_verts": 0,
-  "source": "hunyuan3d+retopo",
-  "source_tris": 499932,
-  "tris": 17988,
-  "weapon_verts": 299,
-  "weights": "distance"
+  "source": "CC0 scans (Cleveland Museum of Art 1964.88 knight, Hunt Museum horse) + design C tack, tools/units3d/cavalry_scan.py",
+  "tris": 18444,
+  "weights": {
+   "horse": "heat"
+  }
  },
  "infantry": {
   "actions": {
@@ -46,11 +40,6 @@
     41
    ]
   },
-  "base_m": [
-   0.92,
-   0.92,
-   0.055
-  ],
   "bones": 20,
   "fps": 30,
   "height_m": 1.8,

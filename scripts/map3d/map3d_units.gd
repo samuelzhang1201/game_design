@@ -26,27 +26,36 @@ static func height_m(repo: DataRepository, distance_m: float, fov_deg: float,
 		repo.bal("map3d_unit_min_h_m"), repo.bal("map3d_unit_max_h_m"))
 
 
-## That height as a scale on the model's own metres.
+## That height as a scale on the model's own metres, times `size`
+## (data/army_art.csv): one arm may stand bigger than the rest (owner
+## 2026-09-27: the cavalry alone, 单独调大, 更显眼一点).
 static func scale_for(repo: DataRepository, distance_m: float, fov_deg: float,
-		view_h_px: float, model_h_m: float) -> float:
+		view_h_px: float, model_h_m: float, size: float = 1.0) -> float:
 	if model_h_m <= 0.0:
 		return 1.0
-	return height_m(repo, distance_m, fov_deg, view_h_px) / model_h_m
+	return height_m(repo, distance_m, fov_deg, view_h_px) / model_h_m * size
 
 
 ## The yaw a piece stands at: the way it MARCHES (a heading in PACK space,
 ## which is world XZ), or — standing still — square to the camera, because a
 ## counter on a map is there to be read and a miniature seen edge-on is not.
 ##
+## `stand_deg` (data/army_art.csv) turns a STANDING piece that far off square:
+## a horse square to the camera is nose-on, the narrowest thing it can show
+## (owner 2026-09-27, the scanned knight read as a sliver in game).
+##
 ## The models are authored facing +Y in Blender, which the glTF exporter
 ## turns into -Z here, and -Z turned by a yaw is (-sin, -cos).
-static func yaw_for(heading: Vector2, camera_xz: Vector2, at_xz: Vector2) -> float:
+static func yaw_for(heading: Vector2, camera_xz: Vector2, at_xz: Vector2,
+		stand_deg: float = 0.0) -> float:
 	var dir := heading
+	var off := 0.0
 	if dir == Vector2.ZERO:
 		dir = camera_xz - at_xz
+		off = deg_to_rad(stand_deg)
 	if dir.length() < 0.0001:
-		return 0.0
-	return atan2(-dir.x, -dir.y)
+		return off
+	return atan2(-dir.x, -dir.y) + off
 
 
 ## World metres a piece WALKS in one real second: the regiment's day's march
@@ -89,9 +98,9 @@ static func walk(now: Vector2, want: Vector2, step: float, snap: float) -> Vecto
 	return now + (want - now) / left * step
 
 
-## Where a piece's BASE samples the ground (owner 2026-09-24: 斜面上兵人的一
-## 部分会被地图盖住): its centre, an inner ring and the base's own outline —
-## an ellipse of the base's half extents, so a cavalry base's long axis is
+## Where a piece samples the ground (owner 2026-09-24: 斜面上兵人的一
+## 部分会被地图盖住): its centre, an inner ring and its own outline — an
+## ellipse of its half extents (stand_extent), so a horse's long axis is
 ## sampled where it actually reaches — turned by the piece's yaw and scaled to
 ## the size it is drawn at. Offsets in world XZ from the piece's centre.
 static func footprint(half_extents: Vector2, yaw: float, k: float, ring: int) -> PackedVector2Array:
@@ -110,7 +119,7 @@ static func footprint(half_extents: Vector2, yaw: float, k: float, ring: int) ->
 ## sloping table tilts with the table rather than half sinking into it:
 ## the plane h = a*x + b*z + c fitted through the samples (least squares),
 ## its slope held to `max_tilt_deg` so a man on a cliff does not lie down,
-## then raised until no sample stands above it. Returns {"y": the base's
+## then raised until no sample stands above it. Returns {"y": the piece's
 ## centre height, "normal": the plane's up}. `offsets` are XZ from the
 ## centre, `heights` the ground at each.
 static func seat(offsets: PackedVector2Array, heights: PackedFloat32Array,
@@ -152,25 +161,28 @@ static func seat(offsets: PackedVector2Array, heights: PackedFloat32Array,
 ## seat() on the ground `height_at` (world XZ -> metres) gives under a
 ## piece's footprint at `xz`, sampled per balance map3d_unit_seat_ring.
 static func seat_at(repo: DataRepository, height_at: Callable, xz: Vector2,
-		base: Vector2, yaw: float, k: float) -> Dictionary:
-	var offsets := footprint(base, yaw, k, int(repo.bal("map3d_unit_seat_ring")))
+		extent: Vector2, yaw: float, k: float) -> Dictionary:
+	var offsets := footprint(extent, yaw, k, int(repo.bal("map3d_unit_seat_ring")))
 	var heights := PackedFloat32Array()
 	for o in offsets:
 		heights.append(float(height_at.call(xz + o)))
 	return seat(offsets, heights, repo.bal("map3d_unit_tilt_max_deg"))
 
 
-## The half extents (x, z) of a piece's BASE mesh in its own metres — what
-## its footprint is sampled on. The widest extent of the whole model when no
-## "_base" mesh is found.
-static func base_extent(node: Node3D) -> Vector2:
+## The half extents (x, z) a piece stands on, in its own metres — what its
+## footprint is sampled on. Measured off the whole model: the pieces have no
+## base (owner 2026-09-27: 撤除所有底座), so a horse's is long and narrow.
+static func stand_extent(node: Node3D) -> Vector2:
+	var half := Vector2.ZERO
 	for m: MeshInstance3D in meshes(node):
-		if m.mesh != null and String(m.mesh.resource_name).ends_with("_base"):
-			var box := m.mesh.get_aabb()
-			return Vector2(maxf(absf(box.position.x), absf(box.end.x)),
-				maxf(absf(box.position.z), absf(box.end.z)))
-	var w := model_size(node).x
-	return Vector2(w, w)
+		if m.mesh == null:
+			continue
+		var box := m.mesh.get_aabb()
+		var at := node.transform.affine_inverse() * m.transform
+		for i in 8:
+			var p: Vector3 = at * box.get_endpoint(i)
+			half = Vector2(maxf(half.x, absf(p.x)), maxf(half.y, absf(p.z)))
+	return half if half != Vector2.ZERO else Vector2(0.5, 0.5)
 
 
 ## A model's own (half width, height) in metres, measured off its meshes
@@ -224,36 +236,6 @@ static func clip_named(anim: AnimationPlayer, action: String) -> String:
 		if n.to_upper().ends_with(action):
 			return n
 	return ""
-
-
-## The base's colour: the REALM's own hue, deepened.
-##
-## A grey disc was the first review's worst finding — a hard-edged tray that
-## says nothing, in a neutral that exists nowhere else on this map. Painting
-## it the realm's colour is what a real wargame base is FOR: it tells you
-## whose piece it is at a glance, which is the one thing a counter must do,
-## and it puts the disc in the map's own palette instead of outside it. Deep,
-## not bright: the figure standing on it has to stay the brighter thing.
-static func base_color(repo: DataRepository, kingdom_code: String) -> Color:
-	var c := MapPalette.color_of(repo, kingdom_code)
-	return Color.from_hsv(c.h, maxf(c.s, repo.bal("map3d_unit_base_sat")),
-		repo.bal("map3d_unit_base_val"))
-
-
-## Paint every surface of the piece's BASE (and nothing else) in `color`.
-## The base is its own mesh in the .glb — make_units.py keeps it separate so
-## it cannot deform with the animation — and it is named after the unit with
-## "_base" on the end.
-static func paint_base(node: Node3D, color: Color) -> void:
-	for m: MeshInstance3D in meshes(node):
-		if not String(m.mesh.resource_name if m.mesh != null else "").ends_with("_base"):
-			continue
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = color
-		mat.roughness = 0.85
-		mat.metallic = 0.0
-		# Surface 0 only: surface 1 is the gold trim, which keeps its own.
-		m.set_surface_override_material(0, mat)
 
 
 static func meshes(node: Node) -> Array:

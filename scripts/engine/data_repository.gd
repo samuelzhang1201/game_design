@@ -56,7 +56,7 @@ var map3d_bake: Dictionary = {}
 ## data/graphics_quality.csv rows keyed by tier (low/medium/high/ultra): the
 ## 3D map's graphics tiers (Map3DQuality, spec 2026-09-20 §4).
 var graphics_quality: Dictionary = {}
-## data/army_art.csv: piece -> {piece, texture, painting} — the painted 3D
+## data/army_art.csv: piece -> {piece, texture, painting, model, stand_deg, size} — the painted 3D
 ## counter a regiment is drawn with and the painting heading its card
 ## (MapObjects.army_piece / army_card, owner 2026-09-15).
 var army_art: Dictionary = {}

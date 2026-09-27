@@ -1,7 +1,7 @@
 # 3D military units
 
 Animated wargame pieces built from Hunyuan3D sources: one glTF per unit
-holding the figure, its skeleton, two actions and the base it stands on.
+holding the figure, its skeleton and its actions. No base (owner 2026-09-27).
 
 ```
 tools/units3d/build.sh            # everything, both units
@@ -18,9 +18,9 @@ blender -b --factory-startup --python tools/units3d/measure_units.py -- OUTDIR
 
 | file | what it does |
 | --- | --- |
-| `data/unit_models.csv` | every tuning number: height, yaw, voxel, tri budget, base size, the weapon and prop boxes |
+| `data/unit_models.csv` | every tuning number: height, yaw, voxel, tri budget, the weapon and prop boxes |
 | `measure_units.py` | prints each source's slice profile and shoots four orthographic views — **run this first for a new source**; every number in the CSV is read off it |
-| `make_units.py` | the build: retopo → bake → skeleton → skin → lock the props → base → actions → `assets/units3d/<code>.glb` |
+| `make_units.py` | the build: retopo → bake → skeleton → skin → lock the props → actions → `assets/units3d/<code>.glb` |
 | `shoot_units.py` | photographs the BUILT glb (contact sheet + a strip per action), so a shot also proves the export round-trips |
 | `data/army_art.csv` | which .glb each arm wears in the game (`model`) |
 | `data/army_orders.csv` | the rows of the right-click order menu |
@@ -35,11 +35,8 @@ Blender MCP's Hunyuan3D at 35 credits each.
 * The figure faces **+Y** with **+Z** up and stands on **z = 0**, which the
   exporter turns into glTF's own forward. A camera parked on -Y photographs
   its back.
-* The **base is a separate, unskinned object**. Welded into the figure it
-  would deform with the animation, and the whole point of a wargame counter
-  is that the disc sits dead still under a moving man. Round for a man,
-  drawn out along the line of march for a horse, which does not fit on a
-  man's disc — the source measures 2.5 m nose to tail.
+* **No base** (owner 2026-09-27: 撤除所有底座; the separate unskinned disc
+  and then a modelled plinth were both rejected). The feet stand on z = 0.
 * Two actions, `GARRISON` (a loop) and `ATTACK` (one shot), exported as
   separate glTF animations off muted NLA tracks.
 * Joint positions are **fractions of the measured height**, never metres, so
@@ -106,3 +103,42 @@ pipeline:
   charge — and nothing plays `ATTACK`, because there is no battle yet.
 * A march walks in a straight line: `ArmySystem.march_day` has no
   pathfinding, so a column ordered across a bay walks across it.
+
+## The cavalry is built from CC0 scans (2026-09-27)
+
+`make_units.py` no longer builds the cavalry (its `unit_models.csv` row names
+`cavalry_scan.py` and is skipped). The owner rejected the lofted
+`model_cavalry.py` knight as crude and chose CC0 base meshes, at a game
+budget:
+
+```
+blender -b --factory-startup --python tools/units3d/cavalry_scan.py
+CAV_BLEND=assets/units3d/ai_src/cc0/cavalry_knight.blend blender -b --factory-startup --python tools/units3d/cavalry_scan.py
+```
+
+writes `assets/units3d/cavalry.glb` and `units3d.json`'s entry; `CAV_BLEND`
+also saves an openable `.blend` (the piece alone, GARRISON playing);
+`CAV_OUT=dir` writes a trial glb elsewhere. It needs the two scans in
+`assets/units3d/ai_src/cc0/` (Sketchfab `faca2ad5…` Cleveland armour, whose
+knight is kept, and `1cd8a30c…` Hunt Museum horse, whose shape is kept),
+downloaded with the owner's Sketchfab key; both CC0-1.0. `model_cavalry.py`
+stays as the library of lofts, tiles, rig helpers and actions it reuses.
+
+Traps it paid for: the Hunt export is three chunks (weld before keeping the
+biggest piece); the Cleveland scan is 123 loose shells (the knight is
+`RIDER_PARTS`, by index); re-pointing ONE image node between Cycles bakes
+wrote the third bake into the second's image (one node per target);
+`model_cavalry.paint_atlas` paints its own hair/hoof tiles, parked on cells
+this atlas never copies; a Chinese Blender UI names new UV layers in
+Chinese, so `unwrap` names `UVMap` itself; the glTF ACTIONS mode exports
+every action in the file whose bones match, so a live file's infantry
+ATTACK rode along (export by NLA track).
+
+## No base (2026-09-27)
+
+The owner rejected the disc and then a modelled plinth: no piece has a base.
+`cavalry_scan.py` and `make_units.py` build none, and `strip_base.py CODE`
+cut the disc out of the already-built infantry (its Hunyuan source is gone),
+lowering the figure onto z = 0 and writing its actions back unchanged. The
+runtime seats a piece on its own half extents (`Map3DUnits.stand_extent`).
+`shoot_glb.py GLB OUT feet` photographs the hooves and boots.

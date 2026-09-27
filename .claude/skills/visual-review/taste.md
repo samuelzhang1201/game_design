@@ -206,6 +206,20 @@ add it here as a principle with its why — not as a changelog entry.
   strategic view. A piece stands a little UNDER a cottage close in (12 m
   floor against 15 m houses) and ~40 px far out — still findable, never
   the biggest thing on the map.
+- **A piece is sized by what it IS, not by its tallest prop** (2026-09-27,
+  the scanned cavalry: "单独调大unit，更显眼一点"): the upright lance made
+  the knight's height 3.3 m, so the constant-screen rule drew horse and man
+  smaller than the infantryman. `army_art.csv` `size` 1.5 for cavalry and
+  royal (1.3 still read smaller than the foot; 1.8 began to read as a
+  monument), and `stand_deg` 55 so a standing horse shows its flank — nose-on
+  it was a sliver.
+- **A wargame piece has NO base** (2026-09-27: "不满意，请撤除所有底座").
+  Two tries were rejected the same day: the flat disc in the realm's colour
+  ("太丑，就是一个灰色阴影") and then a modelled plinth — tall realm band,
+  bronze lip, earth groundwork with stones and tufts. The figures stand on
+  the map's own ground, like the houses ("no base plates"); whose piece it
+  is, is the headcount chip's job. Do not bring a base back without the
+  owner asking.
 
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols

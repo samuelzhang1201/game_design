@@ -455,5 +455,3 @@ map3d_unit_tilt_max_deg,14,"how far a piece tilts with the slope it stands on, a
 map3d_unit_seat_clear,0.015,"how far a seated piece is lifted over the highest ground under its base, as a share of its drawn height — far out Terrain3D DRAWS the ground from a coarser mesh than the heightmap the base is sampled on, and this covers the difference"
 map3d_unit_sink_m,0.0,metres the piece's base is sunk into the ground so it bites into a slope
 map3d_unit_turn_deg_per_s,220.0,"how fast a piece turns to face its heading (or the camera at rest) — instant turning reads as a glitch when the camera orbits"
-map3d_unit_base_sat,0.55,"MILITARY's 3D piece: the least saturation its base wears. The base is painted the REALM's own hue (review 2026-09-22) — a neutral grey disc says nothing and belongs to no other part of this map, while a coloured one tells you whose regiment it is, which is the one thing a counter must do"
-map3d_unit_base_val,0.22,"and how dark: deep, so the figure standing on it stays the brighter thing"

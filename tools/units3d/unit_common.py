@@ -3,12 +3,8 @@
 The units are Hunyuan3D sources retopologised, rigged and animated into one
 glTF each, the same way tools/map3d/retopo_houses.py treats the houses —
 voxel remesh, one collapse pass, bake the AI surface onto the result — with
-three things the houses never needed: a skeleton, two actions (GARRISON and
-ATTACK) and a wargame base the figure stands on.
-
-The base is a SEPARATE, unskinned object on purpose: welded into the figure
-it would deform with the animation, and a wargame counter's base must sit
-dead still under a moving man.
+two things the houses never needed: a skeleton and its actions (GARRISON,
+MARCH, ATTACK). The pieces stand on no base (owner 2026-09-27).
 """
 
 import bpy
@@ -101,8 +97,8 @@ def place(ob, height_m, yaw_offset_deg):
 
     The footprint, not the box: a spear leaning out past the shoulder drags
     the box's centre off the man, and the figure would then stand off-centre
-    on its base. The footprint is the lowest tenth of the mesh — feet and
-    hooves — which is what actually has to sit in the middle of the disc.
+    on its spot. The footprint is the lowest tenth of the mesh — feet and
+    hooves — which is what actually has to stand on the spot.
     """
     from mathutils import Matrix, Vector
     if yaw_offset_deg:

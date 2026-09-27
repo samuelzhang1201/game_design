@@ -3,15 +3,13 @@
   blender -b --factory-startup --python tools/units3d/make_units.py [-- CODE ...]
 
 Reads data/unit_models.csv and writes assets/units3d/<code>.glb — one glTF
-per unit holding THREE things:
+per unit holding TWO things:
 
   * the retopologised, texture-baked figure, skinned to a skeleton,
-  * that skeleton, carrying two actions, GARRISON and ATTACK,
-  * a wargame base, a separate unskinned mesh, which does NOT move.
+  * that skeleton, carrying its actions, GARRISON, MARCH and ATTACK.
 
-The base is separate on purpose. Welded into the figure it would deform with
-the animation, and the whole point of a wargame counter is that the disc
-under the man sits dead still while he moves.
+There is no base (owner 2026-09-27: 撤除所有底座; until then a separate,
+unskinned disc stood under each figure): the feet stand on z = 0.
 
 The retopo half is tools/map3d/retopo_houses.py's, proven on the houses:
 voxel remesh the AI's marching-cubes surface, ONE collapse pass down to the
@@ -22,7 +20,7 @@ explicit cage. Two of that script's steps are deliberately NOT here:
     thickness. A Hunyuan character is already a closed solid; solidifying it
     inward eats the spear shaft and the fingers.
   * strip_base_plate() — these sources came out with no ground disc at all
-    (the prompt refused one), and we add our own base afterwards anyway.
+    (the prompt refused one), and the pieces stand on no base anyway.
 
 Every joint position is a FRACTION of the figure's measured height, not a
 number in metres, so re-generating a source at another scale changes nothing
@@ -540,69 +538,6 @@ def lock_props(ob, spec_text, h, z0):
     return total
 
 
-# ------------------------------------------------------------- the base ----
-
-def build_base(name, rx, ry, height):
-    """The wargame base: an elliptical iron disc with a gold trim ring.
-
-    Round for a man, drawn out along the line of march for a horse, because
-    a horse simply does not fit on a man's disc — the source measures 2.5 m
-    nose to tail. It is its OWN object and carries no armature modifier, so
-    it cannot inherit a single frame of the figure's motion.
-    """
-    bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=1.0, depth=1.0)
-    disc = bpy.context.active_object
-    disc.name = name + "_base"
-    disc.scale = (rx, ry, height)
-    disc.location = (0.0, 0.0, height * 0.5)
-    apply_transform(disc)
-    m = disc.modifiers.new("bevel", "BEVEL")
-    m.width = height * 0.22
-    m.segments = 3
-    m.limit_method = "ANGLE"
-    m.angle_limit = math.radians(30)
-    bpy.ops.object.modifier_apply(modifier=m.name)
-
-    bpy.ops.mesh.primitive_torus_add(major_radius=1.0, minor_radius=height * 0.11,
-                                     major_segments=64, minor_segments=8)
-    rim = bpy.context.active_object
-    rim.scale = (rx, ry, 1.0)
-    rim.location = (0.0, 0.0, height * 0.80)
-    apply_transform(rim)
-
-    # MATTE, and not metallic at all (review 2026-09-22). The first base was
-    # Metallic 0.35 at Roughness 0.62, which under the map's bright sky is a
-    # mirror for it: the disc came out a dead neutral #5B6163 — a grey that
-    # exists nowhere else on this map, reading as a hard-cut tray under every
-    # figure rather than as the base of a wargame piece. A dark warm matte
-    # takes its colour from the ground's own light instead.
-    iron = bpy.data.materials.new("base_iron")
-    iron.use_nodes = True
-    b = next(n for n in iron.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
-    b.inputs["Base Color"].default_value = (0.043, 0.032, 0.024, 1.0)   # 2A1E16 ink, warm
-    b.inputs["Roughness"].default_value = 0.88
-    b.inputs["Metallic"].default_value = 0.0
-    gold = bpy.data.materials.new("base_gold")
-    gold.use_nodes = True
-    b = next(n for n in gold.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
-    b.inputs["Base Color"].default_value = (0.74, 0.55, 0.16, 1.0)
-    b.inputs["Roughness"].default_value = 0.38
-    b.inputs["Metallic"].default_value = 1.0
-    disc.data.materials.append(iron)
-    rim.data.materials.append(gold)
-
-    bpy.ops.object.select_all(action="DESELECT")
-    rim.select_set(True)
-    disc.select_set(True)
-    bpy.context.view_layer.objects.active = disc
-    bpy.ops.object.join()
-    bpy.ops.object.shade_smooth()
-    disc.data.polygons.foreach_set("use_smooth", [False] * len(disc.data.polygons))
-    disc.data.update()
-    disc.data.name = name + "_base"
-    return disc
-
-
 # ----------------------------------------------------------- animation ----
 #
 # A pose names, per bone, a list of WORLD-axis turns and a WORLD translation.
@@ -946,6 +881,7 @@ def export(objs, path):
     # every regeneration.
     bpy.ops.export_scene.gltf(
         filepath=path, export_format="GLB", use_selection=True,
+        use_active_scene=True,   # else a selection in ANY scene of a live file rides along
         export_yup=True, export_apply=False,
         export_image_format="JPEG", export_jpeg_quality=92,
         export_animations=True, export_animation_mode="ACTIONS",
@@ -967,12 +903,16 @@ def main():
         code = row["code"]
         if wanted and code not in wanted:
             continue
+        if row["source"].endswith(".py"):
+            # hand-modelled: built by its own script, never from an AI source
+            log("%s is built by tools/units3d/%s — skipped" % (code, row["source"]))
+            continue
         src = os.path.join(SRC, row["source"])
         if not os.path.exists(src):
             log("no source for " + code)
             continue
         h = float(row["height_m"])
-        z0 = float(row["base_height_m"])
+        z0 = 0.0          # no base any more (owner 2026-09-27): the feet stand on z = 0
         clear()
         bpy.context.scene.render.fps = FPS
 
@@ -990,10 +930,6 @@ def main():
         bake_surface(low, high, code, CAGE_FRACTION * h)
         bpy.data.objects.remove(high, do_unlink=True)
 
-        # Stand the figure ON the base, not inside it.
-        low.location.z += z0
-        apply_transform(low)
-
         spec = [(n, p, (hx, hy, hz + z0), (tx, ty, tz + z0))
                 for n, p, (hx, hy, hz), (tx, ty, tz) in SPECS[row["kind"]](h)]
         arm = build_armature(code, spec)
@@ -1006,19 +942,16 @@ def main():
 
         props = lock_props(low, row["rigid_props"], h, z0)
 
-        base = build_base(code, float(row["base_rx_m"]), float(row["base_ry_m"]), z0)
         acts = ACTIONS[row["kind"]](arm, h)
         stash(arm, acts)
         bpy.context.scene.frame_end = int(max(a.frame_range[1] for a in acts))
 
         path = os.path.join(OUT, code + ".glb")
-        export([arm, low, base], path)
+        export([arm, low], path)
         manifest[code] = {
             "label": row["label"],
             "kind": row["kind"],
             "height_m": round(h, 3),
-            "base_m": [float(row["base_rx_m"]) * 2.0, float(row["base_ry_m"]) * 2.0,
-                       z0],
             "source": "hunyuan3d+retopo",
             "source_tris": src_tris,
             "tris": got,
@@ -1041,4 +974,5 @@ def main():
     log("wrote " + manifest_path)
 
 
-main()
+if __name__ == "__main__":  # model_cavalry.py imports the helpers below
+    main()
