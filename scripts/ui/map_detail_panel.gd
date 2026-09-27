@@ -324,7 +324,8 @@ func show_card(card: Dictionary) -> void:
 	_shield.set_arms(MapPalette.color_of(Game.data, String(card.get("kingdom_code", ""))),
 		String(card.get("initial", "")))
 	_shield.set_texture(HouseArms.texture_of_house(Game.data, Game.state, house_of_card(card)))
-	if String(card.get("kind", "")) == "army":  # a regiment flies its kingdom's arms
+	# a regiment, and the courier riding with its orders, fly the kingdom's arms
+	if String(card.get("kind", "")) in ["army", "courier"]:
 		_shield.set_texture(HouseArms.texture_of_kingdom(Game.data, String(card.get("kingdom_code", ""))))
 	_title.text = String(card.get("title", ""))
 	_subtitle.text = String(card.get("subtitle", ""))
