@@ -95,3 +95,8 @@ army_supply,Supplies,grain,The supplies the regiment holds and what it uses each
 army_training,Training,shield,"How well drilled the regiment is.",
 army_strength,Strength,swords,"How the regiment measures against the realm's others of its kind.",
 army_march,March,horseshoe,"How far the regiment marches in a day: its slowest arm's pace, slowed by short supplies, low morale and little training (owner 2026-09-19).",
+weather_clear,Clear,sun,"Clear weather: roads at their pace",
+weather_rain,Rain,drop,"Rain: marches and couriers slowed (data/weather.csv)",
+weather_mud,Mud,cloud,"Mud: the roads of spring and autumn, slow going",
+weather_snow,Snow,flake,"Snow: slow going on every road",
+weather_blizzard,Blizzard,flake,"Blizzard: little moves",

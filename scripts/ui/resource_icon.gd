@@ -167,5 +167,20 @@ static func draw_glyph(ci: CanvasItem, glyph_name: String, c: Vector2, s: float,
 		"cloth":
 			ci.draw_rect(Rect2(c + Vector2(-3.6, -3.0) * u, Vector2(7.2, 6.0) * u), tint)
 			ci.draw_line(c + Vector2(-3.6, -1.0) * u, c + Vector2(3.6, 1.0) * u, UiPalette.PANEL_BG, 0.8 * u, true)
+		"drop":
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -4.0) * u, c + Vector2(2.6, 0.8) * u,
+				c + Vector2(0, 3.8) * u, c + Vector2(-2.6, 0.8) * u]), tint)
+		"cloud":
+			ci.draw_circle(c + Vector2(-1.8, 0.6) * u, 2.0 * u, tint)
+			ci.draw_circle(c + Vector2(1.0, -0.6) * u, 2.6 * u, tint)
+			ci.draw_rect(Rect2(c + Vector2(-3.8, 0.6) * u, Vector2(7.4, 2.0) * u), tint)
+		"flake":
+			for i in 3:
+				var d := Vector2(cos(PI * float(i) / 3.0), sin(PI * float(i) / 3.0)) * 3.8 * u
+				ci.draw_line(c - d, c + d, tint, 1.0 * u, true)
+		"letter":
+			ci.draw_rect(Rect2(c + Vector2(-3.8, -2.6) * u, Vector2(7.6, 5.2) * u), tint, false, 1.0 * u)
+			ci.draw_polyline(PackedVector2Array([c + Vector2(-3.8, -2.6) * u, c + Vector2(0, 0.6) * u,
+				c + Vector2(3.8, -2.6) * u]), tint, 1.0 * u, true)
 		_:
 			ci.draw_rect(Rect2(c - Vector2(3, 3) * u, Vector2(6, 6) * u), tint, false, 1.0 * u)

@@ -208,7 +208,7 @@ func test_province_card_is_full_at_home_and_basic_abroad() -> void:
 	assert_true(mine["production"].size() > 0, "the province's towns make goods")
 	var theirs := MapObjects.province_card(Game.data, Game.state, _foreign_province())
 	assert_eq(String(theirs["known"]), "basic")
-	assert_eq(theirs["fields"].size(), 2, "house and seat, nothing more")
+	assert_eq(theirs["fields"].size(), 3, "house, seat and weather, nothing more")
 	assert_true(theirs["production"].is_empty())
 
 func test_goods_are_shown_under_a_tag_with_a_glyph() -> void:

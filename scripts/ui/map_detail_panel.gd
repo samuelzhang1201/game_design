@@ -264,6 +264,9 @@ func show_entry(entry: Dictionary) -> void:
 	if String(obj.get("kind", "")) == "army":
 		show_card(MapObjects.army_card(Game.data, String(obj["code"]), Game.state))
 		return
+	if String(obj.get("kind", "")) == "courier":
+		show_card(CourierCard.card(Game.data, Game.state, int(obj.get("id", -1))))
+		return
 	_clear()
 	_shield.visible = false
 	_title.text = String(entry.get("title", ""))
@@ -355,6 +358,8 @@ func show_card(card: Dictionary) -> void:
 		host.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		host.pressed.connect(func() -> void: host_requested.emit())
 		_actions.add_child(host)
+	elif known == "courier":
+		pass  # a courier's card is his painting and his fields; no land sections
 	elif not basic:
 		var features: Array = card.get("features", [])
 		if not features.is_empty():

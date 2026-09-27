@@ -433,7 +433,8 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 		"subtitle": String(kingdom.get("full_name", kingdom.get("label", ""))),
 		"kingdom_code": owner, "initial": label.substr(0, 1),
 		"fields": [["Held by", house_of(repo, code)],
-			["Seat", _label(repo.burgs, String(prov.get("capital_burg", "")))]],
+			["Seat", _label(repo.burgs, String(prov.get("capital_burg", "")))],
+			["Weather", Weather.describe(repo, state, code)]],
 		"features": [], "production": [], "wealth": 0.0, "treasury": 0.0,
 		"center": Vector2(float(prov.get("center_x", 0.0)), float(prov.get("center_y", 0.0))),
 		"ask": "What do we know of %s?" % label,
@@ -541,6 +542,8 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	card["stats"] = stats
 	card["rates"] = []
 	card["painting"] = estate_painting(repo, state, cell)
+	var wx := Weather.of(repo, state, province, state.absolute_day()) if state != null else Weather.CLEAR
+	stats.append(_stat("weather_" + wx, Weather.label_of(repo, wx), "Weather — " + Weather.describe_kind(repo, wx)))
 	stats.append(_stat("manor_owner", "The crown" if crowns else (house if house != "" else "no one"),
 		"Held by — %s" % ("the crown" if crowns else ("House " + house if house != "" else "no one"))))
 	stats.append(_stat("manor_province", String(prov.get("label", province)), "Province — %s" % subtitle))
