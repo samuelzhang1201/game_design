@@ -10,15 +10,33 @@ extends Map3DHudPiece
 ## The settlement dots' rects, cut once per camera pose (~1.5 ms a call).
 var _dots: Array = []
 var _dots_key: Array = []
+## Today's marks on the ground, cut once per day (final review: Weather.of and
+## a ground sample for every province were paid on every redraw) ...
+var _day_marks: Array = []
+var _day_key: Array = []
+## ... and on the screen, cut once per camera pose.
+var _screen_marks: Array = []
+var _screen_key: Array = []
 
 
 func _draw() -> void:
 	if not bound() or ctx.state() == null or ctx.distance > ctx.repo.bal("map3d_weather_view_m"):
 		return
+	var px := ctx.repo.bal("map3d_weather_icon_px")
+	for m: Dictionary in thin(screen_marks(), px * 1.5, Rect2(Vector2.ZERO, size), taken(), px):
+		_draw_icon(String(m["kind"]), m["at"], px)
+
+
+## {kind, ground: Vector3} for each province whose weather is not clear
+## today, in province order; the same Array until the day, the campaign's
+## seed or the pack changes.
+func day_marks() -> Array:
 	var repo := ctx.repo
 	var st := ctx.state()
-	var px := repo.bal("map3d_weather_icon_px")
-	var marks: Array = []
+	var key := [repo.map_id, st.rng.seed_value() if st.rng != null else 0, st.absolute_day()]
+	if key == _day_key:
+		return _day_marks
+	_day_marks = []
 	var codes := repo.provinces.keys()
 	codes.sort()
 	for code: String in codes:
@@ -26,12 +44,27 @@ func _draw() -> void:
 		if kind == Weather.CLEAR:
 			continue
 		var prov: Dictionary = repo.provinces[code]
-		var p := ctx.ground_of_pack(Vector2(float(prov["center_x"]), float(prov["center_y"])))
-		if ctx.camera.is_position_behind(p):
-			continue
-		marks.append({"at": ctx.camera.unproject_position(p) / ctx.viewport_px_scale(), "kind": kind})
-	for m: Dictionary in thin(marks, px * 1.5, Rect2(Vector2.ZERO, size), taken(), px):
-		_draw_icon(String(m["kind"]), m["at"], px)
+		_day_marks.append({"kind": kind,
+			"ground": ctx.ground_of_pack(Vector2(float(prov["center_x"]), float(prov["center_y"])))})
+	_day_key = key
+	return _day_marks
+
+
+## day_marks() projected, {kind, at} in design px, those behind the camera
+## left out; cut once per camera pose.
+func screen_marks() -> Array:
+	var ground := day_marks()
+	var key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(), _day_key]
+	if key == _screen_key:
+		return _screen_marks
+	_screen_marks = []
+	for m: Dictionary in ground:
+		var p: Vector3 = m["ground"]
+		if not ctx.camera.is_position_behind(p):
+			_screen_marks.append({"at": ctx.camera.unproject_position(p) / ctx.viewport_px_scale(),
+				"kind": m["kind"]})
+	_screen_key = key
+	return _screen_marks
 
 
 ## Everything a weather mark keeps off, as design-px rects: the settlement

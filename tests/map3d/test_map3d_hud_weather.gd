@@ -72,5 +72,29 @@ func test_the_marks_keep_off_every_pieces_output() -> void:
 		assert_true(taken.has(m["rect"]), "kept off the counter and its bars of " + String(m["code"]))
 
 
+## Final review M5: the marks are cut once per day on the ground and once per
+## camera pose on the screen, not recomputed for every province each redraw.
+func test_the_marks_are_cut_once_per_day_and_per_pose() -> void:
+	var v := _hud_view()
+	var repo := Game.data
+	var saved := repo.weather_odds.duplicate(true)
+	for key in repo.weather_odds:
+		repo.weather_odds[key] = {"clear": 0, "rain": 1, "mud": 0, "snow": 0, "blizzard": 0}
+	Weather.forget()
+	var weather := (v.get_node("Hud") as Map3DHud).piece("Weather") as Map3DHudWeather
+	var day := weather.day_marks()
+	assert_eq(day.size(), repo.provinces.size(), "rain everywhere: a mark per province")
+	assert_true(is_same(weather.day_marks(), day), "the same day: not cut again")
+	var shown := weather.screen_marks()
+	assert_true(is_same(weather.screen_marks(), shown), "the same pose: not projected again")
+	var capital: Dictionary = repo.burgs[String(repo.kingdoms[repo.resolve_realm("player_realm")]["capital_burg"])]
+	v.look_at_pack(Vector2(float(capital["x"]), float(capital["y"])), 20000.0)
+	assert_false(is_same(weather.screen_marks(), shown), "a new pose: projected anew")
+	Game.state.day += 1
+	assert_false(is_same(weather.day_marks(), day), "a new day: cut anew")
+	repo.weather_odds = saved
+	Weather.forget()
+
+
 func after_all() -> void:
 	Map3DWorldCache.clear()
