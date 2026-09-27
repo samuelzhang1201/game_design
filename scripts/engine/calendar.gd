@@ -24,6 +24,12 @@ static func season_name(tick: int) -> String:
 	@warning_ignore("integer_division")  # whole seasons
 	return SEASONS[((absolute_day(tick, 1) - 1) % DAYS_PER_YEAR) / DAYS_PER_SEASON]
 
+## The season of an absolute day, lower case ("spring".."winter") — the
+## weather's odds are keyed by it.
+static func season_of_day(abs_day: int) -> String:
+	@warning_ignore("integer_division")  # whole seasons
+	return String(SEASONS[((maxi(abs_day, 1) - 1) % DAYS_PER_YEAR) / DAYS_PER_SEASON]).to_lower()
+
 static func day_of_season(tick: int, day_in_tick: int = DAYS_PER_TICK) -> int:
 	return ((absolute_day(tick, day_in_tick) - 1) % DAYS_PER_SEASON) + 1
 

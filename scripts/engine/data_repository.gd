@@ -86,6 +86,17 @@ var army_speed: Dictionary = {}
 ## data/army_height_supply.csv: [{tier, min_height, supply_permille}],
 ## highest min_height first (Elevation.tier_of reads the first it reaches).
 var army_height_supply: Array = []
+## data/courier_kinds.csv: kind -> {speed_permille, fee_gold, offered}
+## (spec 2026-09-27-courier-core §3).
+var courier_kinds: Dictionary = {}
+## data/courier_art.csv: kind -> its row (model, painting, size).
+var courier_art: Dictionary = {}
+## data/road_speed.csv: key -> per mille (road, trail, offroad, sea, tier_<tier>).
+var road_speed: Dictionary = {}
+## data/weather.csv: kind -> {speed_permille, icon, label}, in the file's order.
+var weather_kinds: Dictionary = {}
+## data/weather_odds.csv: "season|tier" -> {kind: weight}, kinds in weather_kinds' order.
+var weather_odds: Dictionary = {}
 ## data/landmark_names.csv: kind ("high"|"low") -> patterns in file order.
 var landmark_names: Dictionary = {}
 ## data/manor_buildings.csv: building_code -> {label, cost_gold, civil_cost,
@@ -527,6 +538,22 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/army_speed.csv", ["arm", "km_per_day"],
 			func(r): army_speed[String(r["arm"])] = int(r["km_per_day"])):
 		return false
+	if not _load_if_present(dir + "/courier_kinds.csv", ["kind", "speed_permille", "fee_gold", "offered"],
+			func(r): courier_kinds[String(r["kind"])] = {"speed_permille": int(r["speed_permille"]),
+				"fee_gold": int(r["fee_gold"]), "offered": int(r["offered"]) == 1}):
+		return false
+	if not _load_if_present(dir + "/courier_art.csv", ["kind", "model", "painting", "size"],
+			func(r): courier_art[String(r["kind"])] = r):
+		return false
+	if not _load_if_present(dir + "/road_speed.csv", ["key", "permille"],
+			func(r): road_speed[String(r["key"])] = int(r["permille"])):
+		return false
+	if not _load_if_present(dir + "/weather.csv", ["kind", "speed_permille", "icon", "label"],
+			func(r): weather_kinds[String(r["kind"])] = {"speed_permille": int(r["speed_permille"]),
+				"icon": String(r["icon"]), "label": String(r["label"])}):
+		return false
+	if not _load_if_present(dir + "/weather_odds.csv", ["season", "tier"], _add_weather_odds):
+		return false
 	if not _load_if_present(dir + "/army_orders.csv", ["action_code", "label", "hint"],
 			func(r): army_orders.append({"action_code": String(r["action_code"]),
 				"label": String(r["label"]), "hint": String(r["hint"])})):
@@ -875,6 +902,12 @@ func _add_matchup(r: Dictionary) -> void:
 		army_matchups[String(r["arm"])] = []
 	(army_matchups[String(r["arm"])] as Array).append({"vs": String(r["vs_arm"]),
 		"attack": int(r["attack_permille"]), "defense": int(r["defense_permille"])})
+
+func _add_weather_odds(r: Dictionary) -> void:
+	var w: Dictionary = {}
+	for kind: String in weather_kinds:
+		w[kind] = int(r.get(kind, "0"))
+	weather_odds["%s|%s" % [String(r["season"]), String(r["tier"])]] = w
 
 ## Loads a live-gameplay CSV that is nonetheless allowed to be genuinely
 ## absent (future saves/mods may not ship it yet). A missing file is not an

@@ -1,0 +1,3 @@
+kind,speed_permille,fee_gold,offered,notes
+ordinary,1000,2,1,"owner 2026-09-27 (spec 2026-09-27-courier-core): the fastest rider, courier_base_km_per_day on a clear road on the plain; one per order, gone on delivery; the fee is charged by ActionSystem as a ledger line"
+secret,750,5,0,"slower, but never intercepted — which means nothing until sub-project C, so the UI does not offer it yet (offered 0)"

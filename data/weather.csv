@@ -1,0 +1,6 @@
+kind,speed_permille,icon,label,notes
+clear,1000,weather_clear,Clear,"owner 2026-09-27: regional weather changes SPEED only — a courier's ride and a regiment's march (Weather)"
+rain,850,weather_rain,Rain,wet roads
+mud,700,weather_mud,Mud,the spring and autumn roads
+snow,650,weather_snow,Snow,
+blizzard,400,weather_blizzard,Blizzard,"under courier_slow_news_permille, so the news bar says a courier is held up"

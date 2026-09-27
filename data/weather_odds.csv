@@ -1,0 +1,17 @@
+season,tier,clear,rain,mud,snow,blizzard
+spring,plains,55,25,20,0,0
+spring,hills,50,25,20,5,0
+spring,mountains,40,20,15,20,5
+spring,peak,25,10,5,40,20
+summer,plains,75,20,5,0,0
+summer,hills,70,22,8,0,0
+summer,mountains,60,25,5,8,2
+summer,peak,45,15,0,30,10
+autumn,plains,50,30,20,0,0
+autumn,hills,45,30,20,5,0
+autumn,mountains,35,25,15,20,5
+autumn,peak,20,10,5,45,20
+winter,plains,40,15,15,25,5
+winter,hills,30,10,10,40,10
+winter,mountains,15,5,0,55,25
+winter,peak,5,0,0,55,40

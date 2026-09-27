@@ -15,6 +15,11 @@ func randf() -> float:
 func chance(p: float) -> bool:
 	return _rng.randf() < p
 
+## The seed this stream started from — Weather hashes it, so the skies are
+## the campaign's own without drawing from the stream.
+func seed_value() -> int:
+	return int(_rng.seed)
+
 func pick_weighted(weights: Array) -> int:
 	var total := 0.0
 	for w in weights:
