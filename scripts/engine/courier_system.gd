@@ -202,6 +202,10 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 		events.append(_event("lost", c))
 		return false
 	c["days"] = int(c.get("days", 0)) + 1
+	if int(c["days"]) == 1:  # his first day on the road: the news bar says he left
+		var e := _event("set_out", c)
+		e["capital"] = 1 if _at_capital(repo, c) else 0
+		events.append(e)
 	if int(c["days"]) > int(repo.bal("courier_max_days")):
 		events.append(_event("fuse", c))
 		return false
@@ -282,6 +286,15 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 	return _event("delivered", c)
 
 
+## Whether he stands on the capital's own spot — where dispatch puts him when
+## the realm holds its capital (origin), and nowhere else it would.
+static func _at_capital(repo: DataRepository, c: Dictionary) -> bool:
+	var cap := String((repo.kingdoms.get(repo.resolve_realm("player_realm"), {}) as Dictionary).get("capital_burg", ""))
+	if not repo.burgs.has(cap):
+		return false
+	return ArmySystem.pack_to_metres(repo, _burg_px(repo.burgs[cap])) == Vector2i(int(c["x_m"]), int(c["y_m"]))
+
+
 static func _event(type: String, c: Dictionary, weather: String = "") -> Dictionary:
 	return {"type": type, "courier": int(c["id"]), "regiment": String(c["target"]), "weather": weather}
 
@@ -301,6 +314,10 @@ static func pending_for(state: GameState, code: String) -> Dictionary:
 static func headline(repo: DataRepository, e: Dictionary) -> String:
 	var label := String(ArmySystem.regiment(repo, String(e.get("regiment", ""))).get("label", e.get("regiment", "")))
 	match String(e.get("type", "")):
+		"set_out":
+			if int(e.get("capital", 0)) == 1:
+				return "A courier leaves the capital for %s." % label
+			return "A courier rides for %s." % label
 		"delivered":
 			return "Orders delivered to %s." % label
 		"stale":

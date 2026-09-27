@@ -49,7 +49,8 @@ func test_a_days_ride_by_hand() -> void:
 		{"action_code": "ARMY_GARRISON"})
 	# Day 1: 160,000 of budget. 100 km of road costs 100,000; 60,000 left at
 	# 500‰ across country carries him 30 km more.
-	assert_eq(CourierSystem.ride_day(repo, s), [])
+	assert_eq(CourierSystem.ride_day(repo, s), [{"type": "set_out", "courier": 1,
+		"regiment": String(c["target"]), "weather": "", "capital": 0}], "he sets out, and says so")
 	assert_eq(Vector2i(int(c["x_m"]), int(c["y_m"])), Vector2i(130000, 0))
 	assert_eq(int(c["day_m"]), 130000)
 	# Days 2-4: 80 km each across country.
@@ -83,8 +84,8 @@ func test_an_older_order_arriving_late_is_set_aside() -> void:
 	_courier(s, 1, code, [[400000, 0, "road"]], {"action_code": "ARMY_MARCH", "dest_x_m": 5000, "dest_y_m": 5000})
 	_courier(s, 2, code, [[10000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
 	var first := CourierSystem.ride_day(repo, s)
-	assert_eq(String(first[0]["type"]), "delivered")
-	assert_eq(int(first[0]["courier"]), 2)
+	assert_eq(_types(first), ["set_out", "set_out", "delivered"], "both set out; the newer arrives")
+	assert_eq(int(first[2]["courier"]), 2)
 	var later: Array = []
 	for i in 3:
 		later.append_array(CourierSystem.ride_day(repo, s))
@@ -104,7 +105,7 @@ func test_the_fuse() -> void:
 	var s := GameState.new_campaign(repo, 7)
 	repo.balance["courier_max_days"] = 2.0
 	_courier(s, 1, _marcher(), [[9000000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
-	assert_eq(CourierSystem.ride_day(repo, s), [])
+	assert_eq(_types(CourierSystem.ride_day(repo, s)), ["set_out"])
 	assert_eq(CourierSystem.ride_day(repo, s), [])
 	assert_eq(String(CourierSystem.ride_day(repo, s)[0]["type"]), "fuse")
 	assert_eq(s.couriers, [])
@@ -120,8 +121,8 @@ func test_bad_weather_slows_him_and_is_announced_once_a_spell() -> void:
 	c["x_m"] = at.x
 	c["y_m"] = at.y
 	var ev := CourierSystem.ride_day(repo, s)
-	assert_eq(String(ev[0]["type"]), "slow")
-	assert_eq(String(ev[0]["weather"]), "blizzard")
+	assert_eq(_types(ev), ["set_out", "slow"])
+	assert_eq(String(ev[1]["weather"]), "blizzard")
 	# 160,000 x 400‰ = 64 km in a blizzard, the tiers forced to 1000.
 	assert_eq(int(c["x_m"]) - at.x, 64000)
 	assert_eq(CourierSystem.ride_day(repo, s), [], "said once for the spell")
@@ -156,6 +157,46 @@ func test_a_ride_survives_a_save_mid_road() -> void:
 		CourierSystem.ride_day(repo, s)
 		CourierSystem.ride_day(repo, copy)
 	assert_eq(JSON.stringify(copy.to_dict()), JSON.stringify(s.to_dict()))
+
+
+func _types(events: Array) -> Array:
+	var out: Array = []
+	for e: Dictionary in events:
+		out.append(String(e["type"]))
+	return out
+
+
+## Spec §2's news line (fix round 1, 2026-09-28): once, on his first day on
+## the road, before anything else that day; "the capital" only when he rode
+## from it.
+func test_he_is_seen_to_leave_the_capital_once() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var code := _marcher()
+	var c := CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
+	var ev := CourierSystem.ride_day(repo, s)
+	assert_eq(String(ev[0]["type"]), "set_out", "first that day")
+	assert_eq(int(ev[0]["courier"]), int(c["id"]))
+	assert_eq(int(ev[0]["capital"]), 1, "dispatch put him on the capital's spot")
+	var label := String(ArmySystem.regiment(repo, code)["label"])
+	assert_eq(CourierSystem.headline(repo, ev[0]), "A courier leaves the capital for %s." % label)
+	assert_false(s.couriers.is_empty(), "still riding after a day")
+	assert_false(_types(CourierSystem.ride_day(repo, s)).has("set_out"), "said once")
+
+
+func test_a_courier_not_from_the_capital_just_rides() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var code := _marcher()
+	_courier(s, 1, code, [[100000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
+	var ev := CourierSystem.ride_day(repo, s)
+	assert_eq(int(ev[0]["capital"]), 0)
+	var label := String(ArmySystem.regiment(repo, code)["label"])
+	assert_eq(CourierSystem.headline(repo, ev[0]), "A courier rides for %s." % label)
+
+
+func test_a_courier_for_a_vanished_regiment_never_sets_out() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	_courier(s, 1, "no_such_regiment", [[10000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
+	assert_eq(_types(CourierSystem.ride_day(repo, s)), ["lost"])
 
 
 func test_headlines() -> void:
