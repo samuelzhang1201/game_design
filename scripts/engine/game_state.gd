@@ -320,6 +320,8 @@ func to_dict() -> Dictionary:
 		"manor_works": _encode_values(manor_works.duplicate(true)),
 		"manor_log": _encode_values(manor_log.duplicate(true)),
 		"regiments": _encode_values(regiments.duplicate(true)),
+		"couriers": _encode_values(couriers.duplicate(true)),
+		"next_courier_id": _encode_values(next_courier_id),
 	}
 
 static func from_dict(d: Dictionary) -> GameState:
@@ -378,5 +380,8 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.manor_works = _decode_values(d.get("manor_works", {}))
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	s.regiments = _decode_values(d.get("regiments", {}))
+	# Saves from before the couriers carry neither key: no one is on the road.
+	s.couriers = _decode_values(d.get("couriers", []))
+	s.next_courier_id = int(_decode_values(d.get("next_courier_id", 0)))
 	MapOwnership.invalidate()
 	return s

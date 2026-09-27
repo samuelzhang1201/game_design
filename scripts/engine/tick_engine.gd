@@ -19,6 +19,9 @@ func _init(d: DataRepository) -> void:
 func advance_day(state: GameState) -> Array:
 	state.day = mini(state.day + 1, Calendar.DAYS_PER_TICK)
 	var done := MapManors.advance_works(data, state)
+	# The couriers ride before the columns march (owner 2026-09-27): an order
+	# delivered today is marched on today.
+	day_couriers = CourierSystem.ride_day(data, state)
 	# A day on the road for every regiment under a march order (owner
 	# 2026-09-22). The arrivals go on day_arrivals rather than into the
 	# return value, which is the finished WORKS and is asserted as such by
@@ -32,6 +35,9 @@ func advance_day(state: GameState) -> Array:
 ## code order — read by Game for the news bar and by nothing else.
 var day_arrivals: Array = []
 
+## The couriers' events of the last day (CourierSystem.ride_day), for the news bar.
+var day_couriers: Array = []
+
 
 func advance(state: GameState) -> TickReport:
 	var r := TickReport.new()
@@ -44,6 +50,9 @@ func advance(state: GameState) -> TickReport:
 	state.tick += 1
 	state.day = 1
 	r.finished_works = MapManors.advance_works(data, state)
+	# The couriers ride before the columns march (owner 2026-09-27): an order
+	# delivered today is marched on today.
+	day_couriers = CourierSystem.ride_day(data, state)
 	# The tick IS a day on the road too (owner 2026-09-24: 行进速度必须和给定
 	# 的速度相符): without this a regiment marched 29 days in every 30 and
 	# its piece stood still for one day each month.

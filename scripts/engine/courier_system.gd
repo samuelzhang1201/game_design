@@ -29,8 +29,9 @@ static func day_budget(repo: DataRepository, kind: String) -> int:
 
 
 ## Where couriers ride from, in pack px: the realm's capital while the realm
-## holds its province; else the most populous town of the realm, the
-## crown's home and controlled provinces first, then any province it holds.
+## holds its province; else the most populous town of the first province the
+## realm holds, in order: the crown's home province, its controlled provinces,
+## then any province by code.
 static func origin(repo: DataRepository, state: GameState) -> Vector2:
 	var realm := repo.resolve_realm("player_realm")
 	var cap := String((repo.kingdoms.get(realm, {}) as Dictionary).get("capital_burg", ""))
@@ -174,3 +175,138 @@ static func eta_days(repo: DataRepository, state: GameState, kind: String, code:
 	var path := path_between(repo, from, ArmySystem.position_of(repo, state, reg))
 	return days_for(repo, kind, need_along(repo, state, ArmySystem.pack_to_metres(repo, from),
 		path, state.absolute_day()))
+
+
+## One DAY on the road for every courier, in id order (TickEngine, before the
+## regiments march). Returns the day's events for the news bar.
+static func ride_day(repo: DataRepository, state: GameState) -> Array:
+	var events: Array = []
+	var today := state.absolute_day()
+	var list: Array = state.couriers.duplicate()
+	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["id"]) < int(b["id"]))
+	var keep: Array = []
+	for c: Dictionary in list:
+		if _ride(repo, state, c, today, events):
+			keep.append(c)
+	state.couriers = keep
+	return events
+
+
+## One courier's day; false when he is done (delivered, lost, or out of time).
+static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: int, events: Array) -> bool:
+	var code := String(c["target"])
+	var reg := ArmySystem.regiment(repo, code)
+	if reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty():
+		events.append(_event("lost", c))
+		return false
+	c["days"] = int(c.get("days", 0)) + 1
+	if int(c["days"]) > int(repo.bal("courier_max_days")):
+		events.append(_event("fuse", c))
+		return false
+	_reaim(repo, state, c, reg)
+	var budget := day_budget(repo, String(c["kind"]))
+	var here := Vector2i(int(c["x_m"]), int(c["y_m"]))
+	var start := here
+	var path: Array = c["path"]
+	while not path.is_empty() and budget > 0:
+		var to := Vector2i(int(path[0][0]), int(path[0][1]))
+		var wx := Weather.at(repo, state, ArmySystem.metres_to_pack(repo, here), today)
+		_note_slow(repo, c, wx, today, events)
+		var f := stretch_factor(repo, String(path[0][2]), here, wx)
+		var length := int(round(Vector2(here).distance_to(Vector2(to))))
+		var need := RoadGraph.stretch_need(length, f)
+		if need <= budget:
+			budget -= need
+			here = to
+			path.pop_front()
+			continue
+		@warning_ignore("integer_division")  # whole metres into the stretch
+		var adv := budget * f / 1_000_000_000
+		if length > 0:
+			var way := (Vector2(to) - Vector2(here)) / float(length)
+			here = Vector2i(roundi(float(here.x) + way.x * float(adv)), roundi(float(here.y) + way.y * float(adv)))
+		budget = 0
+	c["day_m"] = int(round(Vector2(start).distance_to(Vector2(here))))
+	c["x_m"] = here.x
+	c["y_m"] = here.y
+	if path.is_empty():
+		events.append(_deliver(repo, state, c))
+		return false
+	return true
+
+
+## The column has moved more than courier_reaim_m since his road was set:
+## his last leg now ends where it stands (a column is far slower than a
+## courier, so the road itself is not re-planned).
+static func _reaim(repo: DataRepository, state: GameState, c: Dictionary, reg: Dictionary) -> void:
+	var at := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, reg))
+	if Vector2(at).distance_to(Vector2(int(c["aim_x_m"]), int(c["aim_y_m"]))) <= repo.bal("courier_reaim_m"):
+		return
+	c["aim_x_m"] = at.x
+	c["aim_y_m"] = at.y
+	var path: Array = c["path"]
+	if path.is_empty():
+		path.append([at.x, at.y, "offroad"])
+	else:
+		path[path.size() - 1] = [at.x, at.y, String(path[path.size() - 1][2])]
+
+
+static func _note_slow(repo: DataRepository, c: Dictionary, weather: String, today: int, events: Array) -> void:
+	if Weather.speed_permille(repo, weather) >= int(repo.bal("courier_slow_news_permille")):
+		return
+	var spell := Weather.spell_of(repo, today)
+	if int(c.get("slow_spell", -1)) == spell:
+		return
+	c["slow_spell"] = spell
+	events.append(_event("slow", c, weather))
+
+
+## The order takes effect — unless the column already obeys a NEWER one (a
+## higher courier id), in which case this one is set aside.
+static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
+	var code := String(c["target"])
+	var entry: Dictionary = state.regiments.get(code, {})
+	if int(entry.get("order_id", 0)) > int(c["id"]):
+		return _event("stale", c)
+	var order: Dictionary = c["order"]
+	match String(order.get("action_code", "")):
+		"ARMY_MARCH":
+			ArmySystem.set_march(repo, state, code, ArmySystem.metres_to_pack(repo,
+				Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"]))))
+		"ARMY_GARRISON":
+			ArmySystem.set_garrison(repo, state, code)
+	if state.regiments.has(code):
+		state.regiments[code]["order_id"] = int(c["id"])
+	return _event("delivered", c)
+
+
+static func _event(type: String, c: Dictionary, weather: String = "") -> Dictionary:
+	return {"type": type, "courier": int(c["id"]), "regiment": String(c["target"]), "weather": weather}
+
+
+## The newest courier riding for a regiment, {} when none.
+static func pending_for(state: GameState, code: String) -> Dictionary:
+	var best: Dictionary = {}
+	if state == null:
+		return best
+	for c: Dictionary in state.couriers:
+		if String(c["target"]) == code and (best.is_empty() or int(c["id"]) > int(best["id"])):
+			best = c
+	return best
+
+
+## The news bar's line for a ride_day event.
+static func headline(repo: DataRepository, e: Dictionary) -> String:
+	var label := String(ArmySystem.regiment(repo, String(e.get("regiment", ""))).get("label", e.get("regiment", "")))
+	match String(e.get("type", "")):
+		"delivered":
+			return "Orders delivered to %s." % label
+		"stale":
+			return "Older orders to %s came after newer ones and were set aside." % label
+		"lost":
+			return "Orders to %s undelivered: the regiment is gone." % label
+		"fuse":
+			return "Orders to %s undelivered: the courier never found them." % label
+		"slow":
+			return "The courier to %s is held up by %s." % [label, Weather.label_of(repo, String(e.get("weather", ""))).to_lower()]
+	return ""
