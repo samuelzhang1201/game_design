@@ -97,6 +97,13 @@ var _march_commit := false
 ## --dev: the 3D map in DEV MODE (every realm's regiments) for this shot only —
 ## the view's switch, never GameRoot's, which would write the player's settings.
 var _dev := false
+## --look3d x,y,M,F (with --screen root) frames pack px (x,y) M metres away at
+## frame F — after an order, to follow its courier from the capital.
+var _look3d := PackedFloat32Array()
+## --click-courier F (with --screen root) left-clicks, as a player would, the
+## first courier drawn inside the 3D map at frame F and prints the card the
+## left column then shows.
+var _click_courier := -1
 var _shot_frame := 40
 
 
@@ -146,6 +153,11 @@ func _ready() -> void:
 			_march3d = Vector2(float(mparts[0]), float(mparts[1]))
 		elif args[i] == "--shot-frame":
 			_shot_frame = int(args[i + 1])
+		elif args[i] == "--look3d":
+			for part in args[i + 1].split(","):
+				_look3d.append(float(part))
+		elif args[i] == "--click-courier":
+			_click_courier = int(args[i + 1])
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
 		elif args[i] == "--ruler":
@@ -168,6 +180,8 @@ func _ready() -> void:
 		get_tree().quit(2)
 		return
 	Game.start_campaign(_seed)
+	# the news bar's lines, so a run shows what the player was told
+	Game.news_published.connect(func(t: String) -> void: print("news: " + t))
 	for key: String in _bal:
 		Game.data.balance[key] = _bal[key]
 	for key: String in _pal:
@@ -277,8 +291,33 @@ func _process(_delta: float) -> void:
 					MapTerrain.cell_center(Game.data, Game.data.cells[cell]))
 				_root.current_screen.map3d_view().select_object({"kind": "manor", "cell": cell})
 				_root.current_screen.detail_panel().show_manor(cell)
-		if _speed >= 0:
+		# A march is given on a PAUSED clock (owner 2026-09-27): with --march3d
+		# the clock starts only once the order is in, as the player's play would.
+		if _speed >= 0 and _march3d.x < 0.0:
 			Game.set_clock_speed(_speed)
+	if _root != null and _frames == 24 and _speed >= 0 and _march3d.x >= 0.0:
+		Game.set_clock_speed(_speed)
+	if _root != null and _look3d.size() == 4 and _frames == int(_look3d[3]) \
+			and _root.current_screen.has_method("map3d_view") \
+			and _root.current_screen.map3d_view() != null:
+		_root.current_screen.map3d_view().look_at_pack(Vector2(_look3d[0], _look3d[1]), _look3d[2])
+	if _root != null and _frames == _click_courier \
+			and _root.current_screen.has_method("map3d_view") \
+			and _root.current_screen.map3d_view() != null:
+		var cv: Map3DView = _root.current_screen.map3d_view()
+		var hit := Vector2(-1, -1)
+		for id in cv.courier_rects():
+			var cc := (cv.courier_rects()[id]["rect"] as Rect2).get_center()
+			if Rect2(Vector2.ZERO, cv.size).has_point(cc):
+				hit = cc
+				break
+		if hit.x < 0.0:
+			push_error("click-courier: no courier on screen (%d couriers)" % Game.state.couriers.size())
+		else:
+			_real_click(cv, hit)
+			var title := _root.current_screen.detail_panel().find_child("Title", true, false) as Label
+			print("click-courier: at=%s picked=%s card=%s" % [hit, cv.pick_at(hit),
+				title.text if title != null else "?"])
 	if _root != null and _frames == 8 and _zoom3d > 0.0 \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
@@ -362,10 +401,14 @@ func _process(_delta: float) -> void:
 			var code := menu.aiming()
 			menu.hide()
 			menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
-			print("march3d: order=%s days=%d clock=%d aiming_after=%s" % [
+			print("march3d: order=%s days=%d clock=%d aiming_after=%s couriers=%s" % [
 				ArmySystem.order_of(Game.data, Game.state, code),
-				ArmySystem.days_out(Game.data, Game.state, code), Game.clock_speed, menu.aiming()])
+				ArmySystem.days_out(Game.data, Game.state, code), Game.clock_speed, menu.aiming(),
+				Game.state.couriers])
 	if _frames == _shot_frame:
+		if Game.state != null:
+			print("state at shot: day=%d clock=%d pending_event=%s couriers=%d" % [Game.state.absolute_day(),
+				Game.clock_speed, not Game.state.pending_event.is_empty(), Game.state.couriers.size()])
 		var img := (get_viewport() if _viewport == null else _viewport).get_texture().get_image()
 		var abs_path := ProjectSettings.globalize_path(_out)
 		DirAccess.make_dir_recursive_absolute(abs_path.get_base_dir())
