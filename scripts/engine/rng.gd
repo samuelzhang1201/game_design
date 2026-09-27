@@ -33,10 +33,13 @@ func pick_weighted(weights: Array) -> int:
 	return weights.size() - 1
 
 func to_dict() -> Dictionary:
-	# Serialize state as string to preserve precision through JSON round-trip
-	return {"seed": int(_rng.seed), "state": str(_rng.state)}
+	# Seed and state as exact strings: a JSON number is a double, and a seed
+	# above 2^53 would come back changed — and with it every campaign's weather.
+	return {"seed": str(int(_rng.seed)), "state": str(_rng.state)}
 
 static func from_dict(d: Dictionary) -> Rng:
-	var r := Rng.new(int(d["seed"]))
+	# a save written before 2026-09-28 carries the seed as a JSON number
+	var seed_in: Variant = d["seed"]
+	var r := Rng.new(String(seed_in).to_int() if seed_in is String else int(seed_in))
 	r._rng.state = int(d["state"])  # String is auto-converted to int
 	return r
