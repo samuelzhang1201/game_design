@@ -80,6 +80,59 @@ func test_a_chest_too_thin_for_the_courier_is_refused() -> void:
 	assert_string_contains(actions.validate(ActionRequest.make("ARMY_GARRISON", {"regiment": code}), s), "courier")
 
 
+## Fix round 1 (review finding): the courier's fee and the order's own
+## always-charged cost were checked independently against the same starting
+## treasury, so a chest could pass both checks and still go negative
+## (e.g. treasury == fee alone let ARMY_GARRISON's own -1 gold through too).
+## Pin the exact window: refused half a gold under fee + the order's own
+## cost, and clear exactly at it — the same pattern MANOR_BUY already uses
+## (price + needs).
+func test_a_garrison_chest_half_a_gold_under_the_full_window_is_refused() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var actions := ActionSystem.new(repo)
+	var code := String(_marcher()["regiment_code"])
+	var needs := OrderCosts.gold_of(repo, "ARMY_GARRISON") + float(CourierSystem.fee_gold(repo, CourierSystem.ORDINARY))
+	s.metrics["treasury"] = needs - 0.5
+	assert_string_contains(actions.validate(ActionRequest.make("ARMY_GARRISON", {"regiment": code}), s), "courier")
+
+
+func test_a_garrison_chest_exactly_at_the_full_window_validates() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var actions := ActionSystem.new(repo)
+	var code := String(_marcher()["regiment_code"])
+	var needs := OrderCosts.gold_of(repo, "ARMY_GARRISON") + float(CourierSystem.fee_gold(repo, CourierSystem.ORDINARY))
+	s.metrics["treasury"] = needs
+	assert_eq(actions.validate(ActionRequest.make("ARMY_GARRISON", {"regiment": code}), s), "")
+
+
+func test_a_march_chest_half_a_gold_under_the_full_window_is_refused() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var actions := ActionSystem.new(repo)
+	var r := _marcher()
+	var code := String(r["regiment_code"])
+	var dest := _land_near(s, r)
+	if dest == Vector2.ZERO:
+		return
+	var needs := OrderCosts.gold_of(repo, "ARMY_MARCH") + float(CourierSystem.fee_gold(repo, CourierSystem.ORDINARY))
+	s.metrics["treasury"] = needs - 0.5
+	assert_string_contains(actions.validate(ActionRequest.make("ARMY_MARCH",
+		{"regiment": code, "x": dest.x, "y": dest.y}), s), "courier")
+
+
+func test_a_march_chest_exactly_at_the_full_window_validates() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var actions := ActionSystem.new(repo)
+	var r := _marcher()
+	var code := String(r["regiment_code"])
+	var dest := _land_near(s, r)
+	if dest == Vector2.ZERO:
+		return
+	var needs := OrderCosts.gold_of(repo, "ARMY_MARCH") + float(CourierSystem.fee_gold(repo, CourierSystem.ORDINARY))
+	s.metrics["treasury"] = needs
+	assert_eq(actions.validate(ActionRequest.make("ARMY_MARCH",
+		{"regiment": code, "x": dest.x, "y": dest.y}), s), "")
+
+
 func test_a_fleets_orders_apply_at_once() -> void:
 	var s := GameState.new_campaign(repo, 7)
 	var actions := ActionSystem.new(repo)

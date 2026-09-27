@@ -104,10 +104,13 @@ func _validate_army(req: ActionRequest, state: GameState) -> String:
 	if String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
 		return "%s is not yours to command" % String(reg["label"])
 	# The order rides by courier (owner 2026-09-27): his fee is paid from the
-	# crown's chest, so an order the chest cannot send is refused, not sent
-	# into the red.
+	# crown's chest ON TOP of the order's own always-charged cost (fix round 1:
+	# the two were checked independently against the same treasury, so an
+	# order could still drive it negative — MANOR_BUY's own pattern, gold_of
+	# summed with the extra spend, is the fix), so an order the chest cannot
+	# cover in full is refused, not sent into the red.
 	if CourierSystem.carries_orders(reg) and float(state.metrics["treasury"]) \
-			< float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)):
+			< OrderCosts.gold_of(data, req.action_code) + float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)):
 		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
 	if req.action_code == "ARMY_GARRISON":
 		return ""
