@@ -42,7 +42,7 @@ func test_the_card_says_what_he_carries_and_when() -> void:
 	assert_string_contains(_field(card, "Arrives"), "day")
 	assert_ne(_field(card, "Weather"), "")
 	assert_ne(_field(card, "Ground"), "")
-	assert_eq(_field(card, "Rode out"), Calendar.date_string(s.tick, s.day))
+	assert_eq(_field(card, "Ordered"), Calendar.date_string(s.tick, s.day))
 
 
 ## The card's values stay short in the fixed left column (fix round 1,

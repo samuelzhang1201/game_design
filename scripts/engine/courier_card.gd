@@ -63,7 +63,7 @@ static func card(repo: DataRepository, state: GameState, id: int) -> Dictionary:
 			# short: the fixed left column wraps a long value line by line, and
 			# the title already names the regiment (fix round 1, 2026-09-28)
 			["Carrying", "Orders to march" if order == "ARMY_MARCH" else "Orders to stand"],
-			["Rode out", date_of(int(c["issued"]))],
+			["Ordered", date_of(int(c["issued"]))],
 			["Arrives", "in about %d day%s" % [days, "" if days == 1 else "s"]],
 			["Ground", String(GROUND.get(ground, ground))],
 			["Weather", weather_short(repo, wx)],
