@@ -292,6 +292,17 @@ static func controlled_provinces(repo: DataRepository, state: GameState) -> Arra
 	c["control"] = {"sig": sig, "provinces": out}
 	return out
 
+## The province the player's view opens on (owner 2026-09-27: "focus在玩家控制的
+## 省份"): the controlled province holding the realm's capital, else the first
+## controlled one, else "".
+static func home_province(repo: DataRepository, state: GameState) -> String:
+	var held := controlled_provinces(repo, state)
+	var capital := String(repo.kingdoms.get(repo.resolve_realm("player_realm"), {}).get("capital_burg", ""))
+	for code: String in held:
+		if String(repo.provinces.get(code, {}).get("capital_burg", "")) == capital:
+			return code
+	return String(held[0]) if not held.is_empty() else ""
+
 ## {family: count} over a province's manors, live.
 static func holdings_of_province(repo: DataRepository, state: GameState, province_code: String) -> Dictionary:
 	var out: Dictionary = {}

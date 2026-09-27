@@ -871,35 +871,71 @@ def into_tile(ob):
 
 # ------------------------------------------------------------ actions ----
 
+def _merge(*poses):
+    """Poses joined bone by bone: a bone in several has its turns chained."""
+    out = {}
+    for pose in poses:
+        for bone, entry in pose.items():
+            have = out.setdefault(bone, {})
+            if "rot" in entry:
+                have["rot"] = list(have.get("rot", [])) + list(entry["rot"])
+            if "loc" in entry:
+                have["loc"] = entry["loc"]
+    return out
+
+
 def actions(arm):
     neutral = {}
+    # GARRISON stands ON GUARD (owner 2026-09-27: 骑士把盾牌竖起挡在身前，长矛改为
+    # 指向向前，马匹也轻微晃动一下脖颈): the shield raised square in front of him,
+    # the lance couched forward as in ATTACK's surge but a touch higher, held
+    # through every key; the horse's neck sways gently side to side.
+    guard = {"lance": {"rot": [("x", -72.0)]},
+             "upperarm_r": {"rot": [("x", -18.0)]}, "forearm_r": {"rot": [("x", 8.0)]},
+             "upperarm_l": {"rot": [("x", 30.0), ("z", -40.0)]},
+             "forearm_l": {"rot": [("z", -75.0)]}, "shield": {"rot": [("z", 20.0)]}}
+
+    def sway(k):
+        return {"neck_1": {"rot": [("z", 5.0 * k)]}, "neck_2": {"rot": [("z", 4.0 * k)]},
+                "head_h": {"rot": [("z", 6.0 * k)]}}
+
     garrison = [
-        (1, neutral),
-        (31, {"horse_body": {"rot": [("x", 0.8)]}, "neck_1": {"rot": [("x", -3.0)]},
+        (1, _merge(guard)),
+        (31, _merge(guard, sway(1.0), {"horse_body": {"rot": [("x", 0.8)]}, "neck_1": {"rot": [("x", -3.0)]},
               "neck_2": {"rot": [("x", -2.0)]}, "head_h": {"rot": [("x", 5.0)]},
               "tail_1": {"rot": [("y", 6.0)]}, "tail_2": {"rot": [("y", 8.0)]},
-              "chest": {"rot": [("x", -1.5)]}, "head": {"rot": [("z", 8.0)]}}),
-        (61, {"neck_1": {"rot": [("x", 2.0), ("z", 4.0)]}, "head_h": {"rot": [("x", -4.0), ("z", 5.0)]},
+              "chest": {"rot": [("x", -1.5)]}, "head": {"rot": [("z", 8.0)]}})),
+        (61, _merge(guard, {"neck_1": {"rot": [("x", 2.0)]}, "head_h": {"rot": [("x", -4.0)]},
               "tail_1": {"rot": [("y", -5.0)]}, "tail_2": {"rot": [("y", -7.0)]},
               "hind_upper_l": {"rot": [("x", 3.0)]}, "hind_lower_l": {"rot": [("x", -8.0)]},
               "hind_hoof_l": {"rot": [("x", -10.0)]},
-              "hips": {"rot": [("x", 1.0)]}, "head": {"rot": [("z", -4.0), ("x", -3.0)]}}),
-        (91, {"horse_body": {"rot": [("x", -0.6)]}, "neck_2": {"rot": [("x", 2.5)]},
+              "hips": {"rot": [("x", 1.0)]}, "head": {"rot": [("z", -4.0), ("x", -3.0)]}})),
+        (91, _merge(guard, sway(-1.0), {"horse_body": {"rot": [("x", -0.6)]}, "neck_2": {"rot": [("x", 2.5)]},
               "head_h": {"rot": [("x", 3.0)]}, "tail_1": {"rot": [("y", 5.0)]},
-              "chest": {"rot": [("x", 1.2)]}, "head": {"rot": [("z", -9.0)]}}),
-        (121, neutral),
+              "chest": {"rot": [("x", 1.2)]}, "head": {"rot": [("z", -9.0)]}})),
+        (121, _merge(guard)),
     ]
 
+    # MARCH is BIG (owner 2026-09-27: 行进动作设计幅度再大一点，人和马都要有动作):
+    # a long stride, a head that nods into every step, and a rider who rocks
+    # with the horse — seat, back, shoulders and helmet — rather than riding
+    # it like a statue. Read at map size, a small walk is no walk at all.
     def horse_step(u):
         nod = math.sin(2 * math.pi * u)
-        return {"root": {"loc": (0, 0, abs(math.sin(4 * math.pi * u)) * 0.022)},
-                "horse_body": {"rot": [("x", nod * 1.0), ("y", nod * 0.8)]},
-                "neck_1": {"rot": [("x", nod * 3.0)]}, "neck_2": {"rot": [("x", nod * 2.0)]},
-                "head_h": {"rot": [("x", -nod * 4.0)]},
-                "tail_1": {"rot": [("y", nod * 6.0)]}, "tail_2": {"rot": [("y", nod * 5.0)]},
-                "hips": {"rot": [("x", -nod * 1.8), ("y", -nod * 1.2)]},
-                "chest": {"rot": [("x", nod * 1.2)]},
-                "forearm_r": {"rot": [("x", nod * 1.5)]}}
+        beat = math.sin(4 * math.pi * u)
+        return {"root": {"loc": (0, 0, abs(beat) * 0.045)},
+                "horse_body": {"rot": [("x", nod * 2.2), ("y", nod * 1.8)]},
+                "neck_1": {"rot": [("x", nod * 6.0), ("z", nod * 2.0)]},
+                "neck_2": {"rot": [("x", nod * 4.5)]},
+                "head_h": {"rot": [("x", -nod * 7.0)]},
+                "tail_1": {"rot": [("y", nod * 10.0)]}, "tail_2": {"rot": [("y", nod * 9.0)]},
+                "hips": {"rot": [("x", -beat * 4.5), ("y", -nod * 3.5)]},
+                "spine": {"rot": [("x", beat * 3.0)]},
+                "chest": {"rot": [("x", beat * 2.5), ("y", nod * 2.5)]},
+                "head": {"rot": [("x", -beat * 3.0), ("z", nod * 4.0)]},
+                "upperarm_l": {"rot": [("x", beat * 4.0)]},
+                "upperarm_r": {"rot": [("x", -beat * 3.0)]},
+                "forearm_r": {"rot": [("x", nod * 4.0)]}}
 
     legs = [("hind", "l", 0.00), ("fore", "l", 0.25), ("hind", "r", 0.50), ("fore", "r", 0.75)]
     march = []
@@ -910,14 +946,14 @@ def actions(arm):
         for kind, n, ph in legs:
             a, b = gait(u + ph)
             if kind == "fore":
-                pose["fore_upper_" + n] = {"rot": [("x", a * 16.0)]}
-                pose["fore_lower_" + n] = {"rot": [("x", b * 22.0)]}
-                pose["fore_hoof_" + n] = {"rot": [("x", b * 12.0)]}
+                pose["fore_upper_" + n] = {"rot": [("x", a * 24.0)]}
+                pose["fore_lower_" + n] = {"rot": [("x", b * 34.0)]}
+                pose["fore_hoof_" + n] = {"rot": [("x", b * 18.0)]}
             else:
-                pose["hind_upper_" + n] = {"rot": [("x", a * 13.0)]}
-                pose["hind_gaskin_" + n] = {"rot": [("x", -b * 8.0)]}
-                pose["hind_lower_" + n] = {"rot": [("x", b * 16.0)]}
-                pose["hind_hoof_" + n] = {"rot": [("x", b * 12.0)]}
+                pose["hind_upper_" + n] = {"rot": [("x", a * 20.0)]}
+                pose["hind_gaskin_" + n] = {"rot": [("x", -b * 12.0)]}
+                pose["hind_lower_" + n] = {"rot": [("x", b * 24.0)]}
+                pose["hind_hoof_" + n] = {"rot": [("x", b * 18.0)]}
         march.append((1 + round(u * (frames - 1)), pose))
 
     def charge(body, fore_u, fore_l, lance_x, arm_r, lean, surge, neck):

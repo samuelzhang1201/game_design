@@ -31,8 +31,17 @@ func _lines(path: String) -> int:
 ## coordinator never dispatches it. The view still only forwards — every new
 ## line here must be a forwarder or a guard, and a change that is neither
 ## belongs in the layer.
+##
+## 556 since the regiment pieces' second round (owner 2026-09-27), again only
+## forwarders, guards and signals: DEV MODE's set_dev_mode / dev_mode (the
+## pause menu's switch, handed to the context and the units layer); the march's
+## COMMIT / CANCEL and route menu — a route_clicked signal, aim_dest, the
+## aim_code setter's HUD refresh and a route_ends() forwarder; and the sun's
+## round, one line in _process reading Game.day_progress (the view is the one
+## script under scripts/map3d allowed the autoload). The rule is the layer's
+## (Map3DEnvironment.sun_angles), the menus are ArmyOrderMenu's.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 536)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 556)
 
 
 func test_every_other_script_is_small() -> void:

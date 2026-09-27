@@ -148,6 +148,30 @@ static func apply_sun(repo: DataRepository, sun: DirectionalLight3D) -> void:
 	apply_sun_look(repo, sun)
 
 
+## The sun over a game day (owner 2026-09-27: 随着时间的流逝，光照光源从西向东缓慢
+## 变化; one day a round): Vector2(pitch, yaw) in degrees at `day_share` 0..1 of
+## the day. The light comes from map3d_sun_day_yaw0_deg (-90: the WEST) and
+## turns once round a day — west, south at its highest (map3d_sun_day_high_deg),
+## east, then low through the north (map3d_sun_day_low_deg) back to the west —
+## so it never jumps at the day's turn. A yaw of 0 lights from the south
+## (+Z); the light's own -Z is turned by the yaw. map3d_sun_day_sweep 0 holds
+## the fixed map3d_sun_pitch_deg / _yaw_deg.
+static func sun_angles(repo: DataRepository, day_share: float) -> Vector2:
+	if repo.bal("map3d_sun_day_sweep") <= 0.0:
+		return Vector2(repo.bal("map3d_sun_pitch_deg"), repo.bal("map3d_sun_yaw_deg"))
+	var f := fposmod(day_share, 1.0)
+	var low := repo.bal("map3d_sun_day_low_deg")
+	var high := repo.bal("map3d_sun_day_high_deg")
+	return Vector2(low + (high - low) * (0.5 + 0.5 * sin(TAU * f)),
+		repo.bal("map3d_sun_day_yaw0_deg") + 360.0 * f)
+
+
+## Turn `sun` to where it stands at `day_share` of the day (Map3DView, each frame).
+static func sweep_sun(repo: DataRepository, sun: DirectionalLight3D, day_share: float) -> void:
+	var a := sun_angles(repo, day_share)
+	sun.rotation_degrees = Vector3(a.x, a.y, 0.0)
+
+
 ## A fresh Sun (tools/map3d/shoot.gd, which renders a world without the view).
 static func make_sun(repo: DataRepository) -> DirectionalLight3D:
 	var sun := DirectionalLight3D.new()

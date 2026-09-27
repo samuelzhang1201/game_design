@@ -73,6 +73,13 @@ var army_training_grades: Array[Dictionary] = []
 ## on the map, [{action_code, label, hint}] (ArmyOrderMenu). A list, not a
 ## dictionary, because the order of the entries is the order they are shown in.
 var army_orders: Array = []
+## data/army_route_orders.csv: key -> {label, hint} — the rows of the march's
+## confirm menu (commit / cancel) and route menu (edit / halt), and the
+## paused-only reason (owner 2026-09-27, ArmyOrderMenu).
+var army_route_orders: Dictionary = {}
+## data/army_formations.csv, by min_heads: [{figures, min_heads, slots:
+## [Vector2]}] — how many figures a regiment's piece shows (Map3DFormation).
+var army_formations: Array = []
 ## data/army_speed.csv: arm -> km a day (int), the arm's own march
 ## (owner 2026-09-19, ArmySystem.base_pace_km).
 var army_speed: Dictionary = {}
@@ -524,6 +531,21 @@ func _load(dir: String) -> bool:
 			func(r): army_orders.append({"action_code": String(r["action_code"]),
 				"label": String(r["label"]), "hint": String(r["hint"])})):
 		return false
+	if not _load_if_present(dir + "/army_route_orders.csv", ["key", "label", "hint"],
+			func(r): army_route_orders[String(r["key"])] = {"label": String(r["label"]),
+				"hint": String(r["hint"])}):
+		return false
+	if not _load_if_present(dir + "/army_formations.csv", ["figures", "min_heads", "slots"],
+			func(r):
+				var slots: Array = []
+				for part: String in String(r["slots"]).split("|"):
+					var xy := part.split(":")
+					slots.append(Vector2(float(xy[0]), float(xy[1])))
+				army_formations.append({"figures": int(r["figures"]),
+					"min_heads": int(r["min_heads"]), "slots": slots})):
+		return false
+	army_formations.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a["min_heads"]) < int(b["min_heads"]))
 	if not _load_if_present(dir + "/army_height_supply.csv", ["tier", "min_height", "supply_permille"],
 			func(r): army_height_supply.append({"tier": String(r["tier"]),
 				"min_height": int(r["min_height"]), "supply_permille": int(r["supply_permille"])})):

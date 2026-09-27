@@ -88,6 +88,12 @@ func _ready() -> void:
 	# the order box and the player still presses Enter (spec 2026-09-08).
 	_map3d = Map3DView.attach(%MapPanel, _detail, _country_panel, _refresh_left, %ArmyOrders)
 	_detail.visibility_changed.connect(_refresh_left)
+	# The host opens from a regiment's card and closes back (owner 2026-09-27:
+	# the MILITARY tab is gone; the regiments are always on the map).
+	_detail.host_requested.connect(func() -> void:
+		_detail.show_card({})
+		set_military_view(true))
+	_military.closed.connect(func() -> void: set_military_view(false))
 	%LogPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24))
 	%SidePanel.add_theme_stylebox_override("panel",
@@ -130,8 +136,8 @@ func _refresh_left() -> void:
 	_manor_master.visible = _manor_view and not _military_view and not card and not country
 	_dashboard.visible = not (card or country or _military_view or _manor_view)
 
-## The MILITARY tab (GameRoot): the host takes the left column while the
-## regiments are drawn on the map.
+## The host in the left column (owner 2026-09-27: opened from a regiment's
+## card, closed by its own ×; the regiments are always on the map).
 func set_military_view(on: bool) -> void:
 	_military_view = on
 	if on:

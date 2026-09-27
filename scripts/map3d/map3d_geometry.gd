@@ -86,9 +86,26 @@ static func distance_for_scale(max_units: float, units_per_metre: float, bar_max
 		fov_deg: float, view_height_px: float) -> float:
 	if max_units <= 0.0 or units_per_metre <= 0.0 or bar_max_px <= 0.0:
 		return INF
-	var units_per_px := rung_above(max_units) * 0.999 / bar_max_px
-	return units_per_px / units_per_metre * maxf(view_height_px, 1.0) \
+	return distance_for_span(rung_above(max_units) * 0.999, units_per_metre, bar_max_px,
+		fov_deg, view_height_px)
+
+
+## The camera distance at which `bar_max_px` of screen spans `units` of the
+## pack's own measure — the scale bar's full run.
+static func distance_for_span(units: float, units_per_metre: float, bar_max_px: float,
+		fov_deg: float, view_height_px: float) -> float:
+	return units / bar_max_px / units_per_metre * maxf(view_height_px, 1.0) \
 		/ (2.0 * tan(deg_to_rad(fov_deg) * 0.5))
+
+
+## How the owner names a zoom: by the SCALE BAR (owner 2026-09-27, "是比例尺，
+## 不是高度") — the camera distance at which the bar's full run
+## (map_scale_bar_max_px) spans `units` of the pack's measure, so the bar
+## reads the 1-2-5 rung at or under it (25 -> "20 km"; 50 -> "50 km").
+static func distance_for_bar(repo: DataRepository, meta: Dictionary, units: float,
+		view_height_px: float) -> float:
+	return distance_for_span(units, map_units_per_metre(repo.map_info, meta),
+		repo.bal("map_scale_bar_max_px"), repo.bal("map3d_fov_deg"), view_height_px)
 
 
 ## The smallest 1-2-5 rung strictly above `v` (150 -> 200, 200 -> 500).

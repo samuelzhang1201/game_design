@@ -83,15 +83,20 @@ var _at3d := Vector2(-1, -1)
 ## a fixed ruler; --ruler-open leaves it stretching to the second point.
 var _ruler := PackedFloat32Array()
 var _ruler_open := false
-## --march3d fx,fy (with --screen root --layer military) plays the player's
-## march as the owner specified it (2026-09-24): a left click on the first
-## regiment's piece opens its orders, MARCH is chosen, the pointer is put at
-## that share of the 3D map (the aim's ruler follows it) and — with
-## --march-confirm — a left click there gives the order. --shot-frame N waits
+## --march3d fx,fy (with --screen root) plays the player's march as the owner
+## specified it (2026-09-24, 2026-09-27): a left click on the first regiment's
+## piece opens its orders, MARCH is chosen, the pointer is put at that share of
+## the 3D map (the aim's ruler follows it); with --march-confirm a left click
+## there opens COMMIT / CANCEL, and --march-commit then commits it. --shot-frame N waits
 ## N frames before the shot (default 40), so a run with --speed can show the
 ## piece walking; without --speed the clock stays stopped and nothing moves.
 var _march3d := Vector2(-1, -1)
 var _march_confirm := false
+## --march-commit (with --march-confirm): choose COMMIT on the confirm menu.
+var _march_commit := false
+## --dev: the 3D map in DEV MODE (every realm's regiments) for this shot only —
+## the view's switch, never GameRoot's, which would write the player's settings.
+var _dev := false
 var _shot_frame := 40
 
 
@@ -155,6 +160,8 @@ func _ready() -> void:
 		i += 1
 	_ruler_open = args.has("--ruler-open")
 	_march_confirm = args.has("--march-confirm")
+	_march_commit = args.has("--march-commit")
+	_dev = args.has("--dev")
 	if not SCENES.has(_screen):
 		push_error("unknown screen %s; choose from %s" % [_screen, SCENES.keys()])
 		Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
@@ -276,6 +283,8 @@ func _process(_delta: float) -> void:
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
 		var v3: Map3DView = _root.current_screen.map3d_view()
+		if _dev:
+			v3.set_dev_mode(true)
 		if _at3d.x >= 0.0:
 			v3.look_at_pack(_at3d, _zoom3d)
 		else:
@@ -310,7 +319,7 @@ func _process(_delta: float) -> void:
 				e.pressed = down
 				e.position = at
 				v._gui_input(e)
-	if _root != null and _march3d.x >= 0.0 and _frames in [14, 16, 18, 20] \
+	if _root != null and _march3d.x >= 0.0 and _frames in [14, 16, 18, 20, 22] \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
 		# REAL input all the way (2026-09-24: a shot that called the view's and
@@ -322,11 +331,18 @@ func _process(_delta: float) -> void:
 		var menu := _root.current_screen.get_node("%ArmyOrders") as ArmyOrderMenu
 		var at := mv.size * _march3d
 		if _frames == 14:
-			var rects := mv.unit_rects()
-			if rects.is_empty():
+			# the first piece whose box is actually inside the view (a piece in
+			# front of the camera but off the panel has a box too)
+			var target := Vector2(-1, -1)
+			for code: String in mv.unit_rects():
+				var c := (mv.unit_rects()[code] as Rect2).get_center()
+				if Rect2(Vector2.ZERO, mv.size).has_point(c):
+					target = c
+					break
+			if target.x < 0.0:
 				push_error("march3d: no piece on screen")
 			else:
-				_real_click(mv, (rects[rects.keys()[0]] as Rect2).get_center())
+				_real_click(mv, target)
 				print("march3d: menu open=%s selected=%s" % [menu.visible, mv.selected_army()])
 		elif _frames == 16:
 			# The first row, MARCH…, chosen in the order PopupMenu.activate_item
@@ -339,8 +355,13 @@ func _process(_delta: float) -> void:
 		elif _frames == 18:
 			_real_move(mv, at)
 		elif _frames == 20 and _march_confirm:
-			var code := menu.aiming()
+			# the destination click only ASKS: COMMIT / CANCEL (owner 2026-09-27)
 			_real_click(mv, at)
+			print("march3d: confirm open=%s pending=%s" % [menu.visible, menu.pending()])
+		elif _frames == 22 and _march_confirm and _march_commit:
+			var code := menu.aiming()
+			menu.hide()
+			menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
 			print("march3d: order=%s days=%d clock=%d aiming_after=%s" % [
 				ArmySystem.order_of(Game.data, Game.state, code),
 				ArmySystem.days_out(Game.data, Game.state, code), Game.clock_speed, menu.aiming()])

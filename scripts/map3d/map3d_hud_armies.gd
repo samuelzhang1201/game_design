@@ -53,11 +53,14 @@ func _cut() -> Array:
 	# Where the 3D pieces have their heads: a regiment with a piece hangs its
 	# headcount just over it instead of standing a second counter on its boots.
 	var tops := view.unit_tops()
-	var lift := h * 0.6 + repo.bal("map_army_stack_gap_px")
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	var chip := minf(h, repo.bal("map3d_army_chip_px"))
+	var lift := chip * 0.5 + repo.bal("map_army_stack_gap_px")
+	for r: Dictionary in ctx.regiments():
 		var code := String(r["regiment_code"])
 		var sp := Vector2.ZERO
+		var ph := h
 		if tops.has(code):
+			ph = chip
 			sp = (tops[code] as Vector2) - Vector2(0.0, lift)
 		else:
 			var xz := Map3DGeometry.pack_to_world(ctx.meta,
@@ -67,7 +70,7 @@ func _cut() -> Array:
 				continue
 			sp = camera.unproject_position(ground) / s
 		if frame.has_point(sp):
-			points.append({"reg": r, "pos": sp})
+			points.append({"reg": r, "pos": sp, "h": ph, "bars": ArmySystem.bars_of(repo, st, code)})
 	return ArmyCounters.layout(repo, points, h, ctx.settlement_rects(), tops)
 
 
@@ -97,7 +100,7 @@ func _draw_routes() -> void:
 		return
 	var s := ctx.viewport_px_scale()
 	var w := repo.bal("map3d_unit_route_px")
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in ctx.regiments():
 		var code := String(r["regiment_code"])
 		if ArmySystem.order_of(repo, st, code) != ArmySystem.ORDER_MARCH:
 			continue
@@ -108,6 +111,24 @@ func _draw_routes() -> void:
 		var ink := MapPalette.color_of(repo, String(r.get("kingdom_code", "")))
 		draw_dashed_line((from as Vector2) / s, (to as Vector2) / s, ink, w, w * 4.0)
 		draw_arc((to as Vector2) / s, w * 4.0, 0.0, TAU, 24, ink, w, true)
+
+
+## Every committed march's end ring, [{code, pos}] in design px — what a click
+## on it hits (Map3DPicker: the route menu, owner 2026-09-27).
+func route_ends() -> Array:
+	var out: Array = []
+	var st := ctx.state() if bound() else null
+	if st == null or not view.military():
+		return out
+	var s := ctx.viewport_px_scale()
+	for r: Dictionary in ctx.regiments():
+		var code := String(r["regiment_code"])
+		if ArmySystem.order_of(ctx.repo, st, code) != ArmySystem.ORDER_MARCH:
+			continue
+		var to: Variant = _screen_of(ArmySystem.destination_of(ctx.repo, st, code))
+		if to != null:
+			out.append({"code": code, "pos": (to as Vector2) / s})
+	return out
 
 
 func _screen_of(pack: Vector2) -> Variant:

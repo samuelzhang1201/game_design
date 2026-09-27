@@ -122,6 +122,9 @@ func test_the_projected_list_matches_the_marked_burgs() -> void:
 	var capital := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
 	var e: Dictionary = c.projected_settlements()[codes.find(capital)]
 	assert_true(bool(e["shown"]), "the capital is shown at the opening zoom")
+	var burg: Dictionary = Game.data.burgs[capital]
+	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])))
+	e = c.projected_settlements()[codes.find(capital)]
 	assert_almost_eq((e["screen"] as Vector2).x, v.size.x * 0.5, 1.0)
 
 

@@ -125,6 +125,7 @@ func test_a_real_pointer_move_hovers_on_the_next_frame() -> void:
 	var v := _view()
 	var code := _capital()
 	var burg: Dictionary = Game.data.burgs[code]
+	v.set_military(false)  # the fleet lies at the capital; this is the town's hover
 	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])))
 	watch_signals(v)
 	var mm := InputEventMouseMotion.new()

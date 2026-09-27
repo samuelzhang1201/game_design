@@ -116,3 +116,28 @@ func test_the_regiments_detail_card_carries_its_march() -> void:
 	assert_false(march.is_empty(), "the card's icons include the march")
 	assert_eq(String(march["text"]), "%.1f km/day" % ArmySystem.speed_km_per_day(Game.data, Game.state, code))
 	assert_true(Game.data.resource_icons.has("army_march"), "with its icon row")
+
+
+## The map's two bars (owner 2026-09-27): red the readiness, yellow the supply.
+func test_the_bars_are_readiness_and_supply() -> void:
+	var st := GameState.new()
+	var reg: Dictionary = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))[0]
+	var code := String(reg["regiment_code"])
+	var use := ArmySystem.supply_use(repo, reg)
+	st.regiments[code] = {"morale": 50, "training": 20, "supplies": use, "wounded": 0}
+	# one month of three: 333; (40*1000 + 25*333 + 20*500 + 15*200) / 100 = 61325 / 100 = 613
+	assert_eq(ArmySystem.bars_of(repo, st, code), Vector2i(613, 333))
+
+
+func test_a_foreign_regiment_reads_as_it_would_start() -> void:
+	repo.balance["army_start_morale"] = 70.0
+	repo.balance["army_start_training"] = 10.0
+	repo.balance["army_start_supply_months"] = 6.0
+	var mine := repo.resolve_realm("player_realm")
+	for reg: Dictionary in repo.world_table("military", "regiments").values():
+		if String(reg["kingdom_code"]) != mine:
+			# six months of three: 1000; readiness 805 (above)
+			assert_eq(ArmySystem.bars_of(repo, GameState.new(), String(reg["regiment_code"])),
+				Vector2i(805, 1000))
+			return
+	fail_test("the pack has no foreign regiment")

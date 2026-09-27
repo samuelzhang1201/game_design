@@ -65,7 +65,7 @@ extends Node
 const FRAMES := 120
 const WARM := 30
 const BUDGET_MS := 8.0
-const STOPS := [["near", "map3d_zoom_min_m"], ["mid", "map3d_zoom_start_m"],
+const STOPS := [["near", "map3d_zoom_min_m"], ["mid", "map3d_bench_mid_m"],
 	["far", "map3d_zoom_max_m"]]
 ## --pan: screen px of ground moved per frame, and how many frames each way
 ## before it turns back (so 120 frames end roughly where they began).

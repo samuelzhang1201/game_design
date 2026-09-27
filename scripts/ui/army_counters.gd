@@ -10,9 +10,11 @@ extends RefCounted
 ## map_army_*.
 
 
-## The counters for `points` ([{reg, pos}], pos in the map's screen px) at
-## height `h`: {code, pos, size, text, font_px, rect, icon, count, glyph,
-## piece, color, naval, royal}. Sorted top to bottom; a counter meeting a
+## The counters for `points` ([{reg, pos, bars?}], pos in the map's screen px)
+## at height `h`: {code, pos, size, text, font_px, rect, icon, count, bars,
+## glyph, piece, color, naval, royal}. `bars` is ArmySystem.bars_of's
+## Vector2i (readiness, supply per mille): two thin bars, red over yellow,
+## stand on the counter inside its `rect` (owner 2026-09-27). Sorted top to bottom; a counter meeting a
 ## settlement mark or an earlier counter drops to just under it, so no
 ## counter ever covers a town or another counter.
 ## `with_piece` names the regiments that already have a 3D PIECE standing on
@@ -25,9 +27,8 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 	var royal := MapObjects.royal_regiment(repo, mine)
 	var pad := repo.bal("map_army_count_pad_px")
 	var gap := repo.bal("map_army_stack_gap_px")
-	var font_px := maxi(int(round(h * repo.bal("map_army_font_frac"))), 1)
 	var font := UiPalette.body_font()
-	var color := count_color(repo, mine)
+	var bars_h := bars_height(repo)
 	var out: Array = []
 	for p: Dictionary in points:
 		var r: Dictionary = p["reg"]
@@ -36,14 +37,21 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var strength := MapObjects.regiment_size(repo, r)
 		var naval := String(r.get("is_naval", "0")) == "1"
 		var text := str(int(strength))
-		var count_w := maxf(h, ManorBadges.text_width(font, text, font_px) + pad * 2.0)
 		var solo := with_piece.has(code)
-		var w := count_w if solo else h + count_w
+		# a chip over a 3D piece is its tag, never bigger than the soldier
+		var ph: float = minf(h, float(p.get("h", h)))
+		var font_px := maxi(int(round(ph * repo.bal("map_army_font_frac"))), 1)
+		var count_w := maxf(ph, ManorBadges.text_width(font, text, font_px) + pad * 2.0)
+		var w := count_w if solo else ph + count_w
 		out.append({"code": code, "pos": sp, "size": strength, "text": text, "solo": solo,
-			"font_px": font_px, "rect": Rect2(sp - Vector2(w, h) / 2.0, Vector2(w, h)),
+			"font_px": font_px,
+			"h": ph,
+			"rect": Rect2(sp - Vector2(w, ph) / 2.0 - Vector2(0.0, bars_h), Vector2(w, ph + bars_h)),
+			"bars": p.get("bars", Vector2i(-1, -1)),
 			"glyph": "waves" if naval else ("crown" if code == royal else "swords"),
 			"piece": MapObjects.army_piece(repo, r),
-			"color": color, "naval": naval, "royal": code == royal})
+			"color": count_color(repo, String(r.get("kingdom_code", mine))),
+			"naval": naval, "royal": code == royal})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ay := (a["pos"] as Vector2).y
 		var by := (b["pos"] as Vector2).y
@@ -64,10 +72,38 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 					moved = true
 		placed.append(rect)
 		m["rect"] = rect
-		var square := 0.0 if bool(m.get("solo", false)) else h
-		m["icon"] = Rect2(rect.position, Vector2(square, h))
-		m["count"] = Rect2(rect.position + Vector2(square, 0.0), Vector2(rect.size.x - square, h))
+		var mh := float(m["h"])
+		var square := 0.0 if bool(m.get("solo", false)) else mh
+		var top := rect.position + Vector2(0.0, bars_h)
+		m["icon"] = Rect2(top, Vector2(square, mh))
+		m["count"] = Rect2(top + Vector2(square, 0.0), Vector2(rect.size.x - square, mh))
 	return out
+
+
+## The two bars and their gaps, screen px (0 while map_army_bar_px is 0).
+static func bars_height(repo: DataRepository) -> float:
+	var bar := repo.bal("map_army_bar_px")
+	return 0.0 if bar <= 0.0 else (bar + repo.bal("map_army_bar_gap_px")) * 2.0
+
+
+## Red (readiness) over yellow (supply), each as wide as the counter and
+## filled by its per mille, on a dark track — the top of `rect`.
+static func _draw_bars(ci: CanvasItem, repo: DataRepository, m: Dictionary) -> void:
+	var v: Vector2i = m.get("bars", Vector2i(-1, -1))
+	var bar := repo.bal("map_army_bar_px")
+	if v.x < 0 or bar <= 0.0:
+		return
+	var gap := repo.bal("map_army_bar_gap_px")
+	var rect: Rect2 = m["rect"]
+	var track := MapPalette.named(repo, "army_bar_track")
+	var y := rect.position.y
+	for row: Array in [[v.x, "army_bar_ready"], [v.y, "army_bar_supply"]]:
+		var full := Rect2(rect.position.x, y, rect.size.x, bar + gap)
+		ci.draw_rect(full, track)
+		var inner := Rect2(full.position + Vector2(gap, gap), Vector2(full.size.x - gap * 2.0, bar))
+		inner.size.x *= clampf(float(row[0]) / 1000.0, 0.0, 1.0)
+		ci.draw_rect(inner, MapPalette.named(repo, String(row[1])))
+		y += bar + gap
 
 
 ## The colour of a realm's headcount box: the realm's own hue, pushed to at
@@ -95,6 +131,7 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 		var rect: Rect2 = m["rect"]
 		var icon: Rect2 = m["icon"]
 		var count: Rect2 = m["count"]
+		_draw_bars(ci, repo, m)
 		# The painted 3D piece (owner 2026-09-15, data/army_art.csv) stands in the
 		# counter's square on its own base; the glyph square only without art.
 		if bool(m.get("solo", false)):
@@ -116,10 +153,10 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 			var drawn := ts * (icon.size.y / ts.y)
 			ci.draw_texture_rect(art, Rect2(icon.position + (icon.size - drawn) * Vector2(0.5, 1.0), drawn), false)
 		else:
-			ci.draw_rect(rect.grow(line), outline)
+			ci.draw_rect(icon.merge(count).grow(line), outline)
 			ci.draw_rect(icon, icon_bg)
 			ci.draw_rect(count, m["color"])
-			ci.draw_line(Vector2(icon.end.x, rect.position.y), Vector2(icon.end.x, rect.end.y),
+			ci.draw_line(Vector2(icon.end.x, icon.position.y), Vector2(icon.end.x, icon.end.y),
 				outline, line)
 			ResourceIcon.draw_glyph(ci, String(m["glyph"]), icon.get_center(),
 				icon.size.y * glyph_frac, glyph_ink)

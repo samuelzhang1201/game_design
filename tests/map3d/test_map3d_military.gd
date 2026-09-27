@@ -51,8 +51,11 @@ func _click(v: Map3DView, at: Vector2) -> void:
 	v._gui_input(up)
 
 
+## The regiments are always on (owner 2026-09-27); set_military(false) stays
+## as the seam that hides them.
 func test_no_counters_while_the_layer_is_off() -> void:
 	var v := _view()
+	v.set_military(false)
 	_look_at_regiment(v, _first_regiment(), 20000.0)
 	assert_eq(v.army_markers().size(), 0)
 
@@ -144,12 +147,13 @@ func test_military_stays_on_the_3d_map() -> void:
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
 	await wait_process_frames(2)
+	assert_true(r.map3d_view())
+	assert_true(r.current_screen.map3d_view().military(), "the regiments are always on (owner 2026-09-27)")
 	r.set_army_view(true)
-	assert_true(r.map3d_view(), "MILITARY draws on the 3D map now")
-	assert_true(r.current_screen.map3d_view().military())
 	assert_true(r.current_screen.military_panel().visible, "the host in the left column")
 	r.set_army_view(false)
-	assert_false(r.current_screen.map3d_view().military())
+	assert_false(r.current_screen.military_panel().visible)
+	assert_true(r.current_screen.map3d_view().military(), "the host closing leaves them on the map")
 	Game.data.balance["map3d_default"] = 0.0
 
 

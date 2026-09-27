@@ -45,7 +45,11 @@ func _draw_aim() -> void:
 	var code: String = view.aim_code
 	if code == "":
 		return
+	# To the pointer while aiming; to the clicked destination while COMMIT /
+	# CANCEL is asked (owner 2026-09-27).
 	var hit: Variant = view.ground_at(get_local_mouse_position())
+	if view.aim_dest.x >= 0.0:
+		hit = ctx.ground_of_pack(view.aim_dest)
 	if hit == null:
 		return
 	var repo := ctx.repo

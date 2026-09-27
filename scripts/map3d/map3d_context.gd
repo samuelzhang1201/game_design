@@ -27,6 +27,9 @@ var distance := 1.0
 var yaw := 0.0
 ## The graphics tier's row (Map3DQuality.row); {} reads as full quality.
 var quality: Dictionary = {}
+## DEV MODE (owner 2026-09-27, the pause menu's switch): every realm's
+## regiments on the map, not only the player's.
+var dev := false
 ## -> GameState. The view passes the autoload's state getter; a preview a blank
 ## state. (Spelling the autoload out here would trip the no-autoload scan in
 ## tests/map3d/test_map3d_preview.gd, which is the point of it.)
@@ -109,12 +112,21 @@ func to_pack(xz: Vector2) -> Vector2:
 	return Map3DGeometry.world_to_pack(meta, xz)
 
 
-## The player's capital (world XZ), or the map's centre when no realm is bound
-## (was Map3DView._home).
+## Where the view opens (world XZ): the middle of the player's home province
+## (MapManors.home_province), else the capital, else the map's centre.
 func home() -> Vector2:
+	var p: Dictionary = repo.provinces.get(MapManors.home_province(repo, state()), {})
+	if p.has("center_x"):
+		return to_world(Vector2(float(p["center_x"]), float(p["center_y"])))
 	var realm: Dictionary = repo.kingdoms.get(repo.resolve_realm("player_realm"), {})
 	var burg: Dictionary = repo.burgs.get(String(realm.get("capital_burg", "")), {})
 	return bounds.get_center() if burg.is_empty() else to_world(Vector2(float(burg["x"]), float(burg["y"])))
+
+
+## The regiments the map draws: the player's, or every realm's in DEV MODE.
+func regiments() -> Array:
+	return repo.world_table("military", "regiments").values() if dev \
+		else MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
 
 
 func ground_of_pack(pack_px: Vector2) -> Vector3:
@@ -274,17 +286,10 @@ func houses() -> Dictionary:
 	return _houses
 
 
-## A settlement's click reach in DESIGN px: its cluster's projected GROUND
-## radius, never below map3d_pick_px, independent of whether its dot is
-## drawn (a settlement between the house cutoff and the dot's own near
-## threshold must still be clickable). NOT what settlement_rects() sizes on — that
-## uses Map3DLayerSettlements.drawn_px, the marker's ON-SCREEN size (fix
-## round 1, owner 2026-09-20: the two were one `marker_px`; conflating "how
-## far can a click land" with "what must a landmark avoid" crowded
-## landmarks out of ground where nothing is drawn). `spec` unused today,
-## kept for a caller already holding the row. Uses metres_per_pixel
-## (view_size, DESIGN px — label_px's measure), not px_per_dist (metres per
-## SUBVIEWPORT px): the two agree only when viewport_px_scale() is 1.
+## A settlement's click reach in DESIGN px: its cluster's projected ground
+## radius, never below map3d_pick_px, whether or not its dot is drawn. NOT
+## settlement_rects()' measure (the dot's on-screen size — fix round 1, owner
+## 2026-09-20). `spec` unused, kept for callers holding the row.
 func pick_reach_px(code: String, _spec: Dictionary, dist_m: float) -> float:
 	var world_r := Map3DHouses.footprint_radius_m(repo.burgs.get(code, {}), repo)
 	var m_per_px := Map3DGeometry.metres_per_pixel(dist_m, repo.bal("map3d_fov_deg"),

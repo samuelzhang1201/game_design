@@ -9,7 +9,9 @@ extends GutTest
 class FakeMap extends Node:
 	signal army_menu_requested(code: String, at: Vector2)
 	signal ground_clicked(pack_px: Vector2)
+	signal route_clicked(code: String, at: Vector2)
 	var aiming := false
+	var aim_dest := Vector2(-1, -1)
 
 
 var _menu: ArmyOrderMenu
@@ -18,6 +20,7 @@ var _map: FakeMap
 
 func before_each() -> void:
 	Game.start_campaign(42)
+	Game.set_clock_speed(0)
 	_menu = ArmyOrderMenu.new()
 	add_child_autofree(_menu)
 	_map = FakeMap.new()
@@ -88,11 +91,18 @@ func test_an_order_on_a_stopped_clock_does_not_start_it() -> void:
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(there)
+	_commit()
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_MARCH, "the order is given")
 	assert_eq(Game.clock_speed, 0, "but time stays stopped")
 
 
-func test_the_next_click_on_the_ground_sends_it() -> void:
+## COMMIT chosen the way PopupMenu chooses: hidden first, then id_pressed.
+func _commit() -> void:
+	_menu.hide()
+	_menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
+
+
+func test_the_next_click_on_the_ground_sends_it_on_commit() -> void:
 	var code := _marcher()
 	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
 	var there := _land_near(here)
@@ -101,6 +111,7 @@ func test_the_next_click_on_the_ground_sends_it() -> void:
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(there)
+	_commit()
 	assert_eq(_menu.aiming(), "", "the aim is spent")
 	assert_false(_map.aiming)
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_MARCH)
@@ -153,5 +164,109 @@ func test_the_order_is_charged_like_every_other() -> void:
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(there)
+	_commit()
 	assert_lt(Game.state.metrics["treasury"], before,
 		"every order carries a cost (architecture invariant 8)")
+
+
+
+## owner 2026-09-27: 当点击完兵人行进路线后，会出现commit/cancel的选项.
+func test_the_destination_click_only_ASKS() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var there := _land_near(here)
+	if there == Vector2.ZERO:
+		return
+	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+	_menu.id_pressed.emit(0)
+	_map.ground_clicked.emit(there)
+	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON,
+		"nothing is sent before COMMIT")
+	assert_eq(_menu.pending(), there)
+	assert_eq(_map.aim_dest, there, "the route is drawn to where it was clicked")
+	assert_eq(_menu.get_item_index(ArmyOrderMenu.COMMIT), 0)
+	assert_eq(_menu.get_item_text(0), String(Game.data.army_route_orders["commit"]["label"]))
+	assert_eq(_menu.get_item_text(1), String(Game.data.army_route_orders["cancel"]["label"]))
+
+
+func test_cancel_gives_the_march_up() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var there := _land_near(here)
+	if there == Vector2.ZERO:
+		return
+	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+	_menu.id_pressed.emit(0)
+	_map.ground_clicked.emit(there)
+	_menu.hide()
+	_menu.id_pressed.emit(ArmyOrderMenu.CANCEL)
+	assert_eq(_menu.aiming(), "")
+	assert_eq(_map.aim_dest, Vector2(-1, -1))
+	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON)
+
+
+func test_clicking_away_from_the_confirm_gives_it_up() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var there := _land_near(here)
+	if there == Vector2.ZERO:
+		return
+	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+	_menu.id_pressed.emit(0)
+	_map.ground_clicked.emit(there)
+	_menu.hide()   # closed with no row chosen
+	await wait_process_frames(2)
+	assert_eq(_menu.aiming(), "")
+	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON)
+
+
+## owner 2026-09-27: 兵人行进路线只能在暂停模式下选择，时间流逝的时候不可以操作.
+func test_march_is_greyed_out_while_time_runs() -> void:
+	Game.set_clock_speed(1)
+	_map.army_menu_requested.emit(_marcher(), Vector2(10.0, 10.0))
+	assert_true(_menu.is_item_disabled(0), "MARCH")
+	assert_eq(_menu.get_item_tooltip(0), String(Game.data.army_route_orders["paused_only"]["hint"]))
+	assert_false(_menu.is_item_disabled(1), "GARRISON still halts a column while time runs")
+	Game.set_clock_speed(0)
+
+
+func test_starting_the_clock_withdraws_an_aim() -> void:
+	var code := _marcher()
+	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+	_menu.id_pressed.emit(0)
+	assert_eq(_menu.aiming(), code)
+	Game.set_clock_speed(1)
+	await wait_process_frames(2)
+	assert_eq(_menu.aiming(), "")
+	assert_false(_map.aiming)
+	Game.set_clock_speed(0)
+
+
+## owner 2026-09-27: 行进路线commit后，再次点击终点可以edit路线或者cancel操作.
+func test_the_end_ring_edits_or_halts_the_march() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	ArmySystem.set_march(Game.data, Game.state, code, here + Vector2(30.0, 0.0))
+	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
+	assert_eq(_menu.item_count, 2)
+	assert_eq(_menu.get_item_text(0), String(Game.data.army_route_orders["edit"]["label"]))
+	_menu.hide()
+	_menu.id_pressed.emit(ArmyOrderMenu.EDIT)
+	assert_eq(_menu.aiming(), code, "Edit aims the march anew")
+	_menu.id_pressed.emit(ArmyOrderMenu.CANCEL)
+	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
+	_menu.hide()
+	_menu.id_pressed.emit(ArmyOrderMenu.HALT)
+	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON,
+		"Cancel march halts the column")
+
+
+func test_the_route_menu_is_paused_only() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	ArmySystem.set_march(Game.data, Game.state, code, here + Vector2(30.0, 0.0))
+	Game.set_clock_speed(1)
+	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
+	assert_true(_menu.is_item_disabled(0))
+	assert_true(_menu.is_item_disabled(1))
+	Game.set_clock_speed(0)

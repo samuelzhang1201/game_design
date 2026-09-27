@@ -120,6 +120,8 @@ map_army_glyph_frac,0.8,military layer: the glyph's size as a fraction of its sq
 map_army_stack_gap_px,2.0,military layer: gap left between counters stacked because they would overlap
 map_army_count_sat,0.6,military layer: the least saturation the headcount box's realm colour is pushed to
 map_army_count_val,0.78,military layer: the brightness the headcount box's realm colour is set to
+map_army_bar_px,3.0,"military layer (owner 2026-09-27): the height in screen px of each of the two bars (red readiness, yellow supply) stacked over a regiment's headcount, as wide as the counter"
+map_army_bar_gap_px,1.0,military layer: the dark gap in screen px between the two bars and between them and the counter
 map_army_pick_px,24.0,military layer: screen px within which a click or hover picks a regiment
 map_relief_strength,0,terrain: shade change per unit of mean height difference to land neighbours (not distance-normalised) facing the light — 0 = no relief on the map (owner 2026-09-11); 0.02 was the tuned value
 map_relief_min,0.6,terrain: darkest relief factor
@@ -165,7 +167,7 @@ map_manor_shade_step,0.12,"manor views: how far each shade level moves a manor's
 manor_slots_base,3,manors §3 (owner 2026-09-13): building slots every manor has — a building or a work in progress takes one
 manor_slots_burg_bonus,1,manors §3: extra slots for a manor with a town in it
 manor_demolish_refund,0.5,"manors §5: the share of a building's civil_cost returned to the CIVIL STORES when it is pulled down or a work is stopped — a build is bought with civil goods, so its timber and stone come back as goods, never as gold (2026-09-14)"
-time_day_seconds,1.0,the clock (owner 2026-09-13): real seconds per game day at 1x; the top bar's 2x and 4x divide it
+time_day_seconds,8.0,"the clock (owner 2026-09-13): real seconds per game day at 1x; the top bar's 2x and 4x divide it — 8 since 2026-09-27 (was 1; owner: 一个游戏日的时间流逝速度需要放缓很多了, with the sun circling once a day and the pieces' legs keeping pace, Map3DUnits.march_rate) — a month is 4 min at 1x, 1 min at 4x"
 time_speed_fast,2,the clock: the 2x button's multiplier
 time_speed_faster,4,the clock: the 4x button's multiplier
 manor_focus_high_height,52,manors (owner 2026-09-14): cell height at/above which a manor's default focus may be a high-ground one (manor_focus.csv default_on high)
@@ -223,7 +225,8 @@ map3d_default,1,"3D MAP (owner 2026-09-18, spec 2026-09-18-map3d-default-design)
 map3d_zoom_min_m,400.0,"3D MAP: the closest the rig camera comes to its target, in metres (owner 2026-09-21: '游戏视角可以拉的更近一点', chose 400 m over the 2026-09-18 800 m ruling; was 2500 before that). At 400 m a house (footprint_m 6-34) reads at roughly 17-35 screen px, double its size at 800 m — the size the remade tools/map3d/make_houses.py meshes are built to read at"
 map3d_zoom_max_scale,150,"3D MAP (owner 2026-09-20: '设置zoom out标尺最多150km'): the most the SCALE BAR may read at the farthest zoom, in the pack's own distance_unit. The bar lands on the 1-2-5 ladder (MapGeometry.nice_step), so 150 prints as 100 and the zoom stops just under the 200 rung; Map3DCameraRig.max_distance takes this OR map3d_zoom_max_m, whichever is nearer"
 map3d_zoom_max_m,150000.0,"3D MAP (owner 2026-09-19: '设置游戏最大zoom out尺寸为150km'; was 80000 — the whole island just filling the view, and 110000 before that): the farthest zoom, in metres from the camera to its target"
-map3d_zoom_start_m,24000.0,"3D MAP: the distance the view opens at, framed on the player's capital"
+map3d_zoom_start_scale,25,"3D MAP (owner 2026-09-27: 游戏初始默认…25km — '是比例尺，不是高度'): the view opens with the SCALE BAR's full run (map_scale_bar_max_px) spanning this much of the pack's own measure (distance_unit), so the bar reads the 1-2-5 rung under it (20 km); Map3DGeometry.distance_for_bar turns it into a camera distance for the view's height. Framed on the middle of the province the player controls (MapManors.home_province). Replaced map3d_zoom_start_m 24000 (a camera distance)"
+map3d_bench_mid_m,24000,"tools/map3d/bench.gd's middle framing and the editor preview's camera distance, metres (the opening view until 2026-09-27, kept so the bench's mid rows stay comparable)"
 map3d_zoom_factor,1.15,3D MAP: each wheel notch multiplies or divides the distance by this
 map3d_pinch_zoom_gain,1.6,3D MAP (owner 2026-09-18): a trackpad pinch's ratio is bent by this around 1.0 — the 2D map's map_pinch_zoom_gain for the 3D rig
 map3d_pan_gesture_px,6.0,3D MAP: a two-finger trackpad drag moves the ground this many screen px per unit of the gesture's delta
@@ -250,6 +253,7 @@ map3d_field_fade,0.6,"3D MAP fields: how much of the fields' own colour the shad
 map3d_field_fade_near_m,8000,3D MAP fields: the camera distance where that fade begins
 map3d_field_fade_far_m,40000,3D MAP fields: the camera distance where it is full (15-60 km took back only ~16% at 30 km)
 map3d_army_badge_min_px,18,"3D MAP MILITARY (owner 2026-09-19: '注意兵棋大小'): the smallest a regiment's counter gets, design px — map_army_badge_native_px of the map at the scale the camera's target is seen at, held between this and map3d_army_badge_max_px"
+map3d_army_chip_px,15,"3D MAP MILITARY (2026-09-27 critic: the chip outranked the soldier): the headcount chip that hangs over a 3D PIECE is at most this tall, design px — the piece is the counter, the chip only its tag; a flat counter (far out, a fleet) keeps map3d_army_badge_min_px..max_px"
 map3d_army_badge_max_px,30,"3D MAP MILITARY: the largest a counter gets close in, design px, so the counters never swamp the ground"
 map3d_line_lift_px,2.5,"3D MAP borders: every line is lifted this many screen px off the ground at its distance, so it clears the relief between its samples"
 map3d_road_width_px,4.0,"3D MAP roads (owner 2026-09-18): a road's width in screen px — the pack's roads draped on the relief in terrain_palette road, solid with a soft shoulder"
@@ -265,7 +269,8 @@ map3d_seam_width_px,1.4,3D MAP borders: province seams width in screen px (polit
 map3d_seam_dash_px,6.0,3D MAP borders: seam dash length in screen px
 map3d_seam_gap_px,5.0,3D MAP borders: seam gap length in screen px
 map3d_seam_alpha,0.65,3D MAP borders: seam opacity — dark dashes under the solid black kingdom border (owner 2026-09-18; bracketed 0.4/0.5/0.6 by the critic sheet) — Phase 0 2026-09-24: was 0.5 — linear blending thins a dark dash
-map3d_selection_width_px,4.0,"3D MAP: the clicked province's outline, solid, in political_palette map3d_selection"
+map3d_selection_width_px,4.0,"3D MAP: the clicked MANOR's outline (under a theme), solid, in political_palette map3d_selection"
+map3d_selection_seam_width_px,3.2,"3D MAP (owner 2026-09-27: highlight the black dashed seam itself, not a gold solid line): the clicked province's outline — the seam's own dashes (map3d_seam_dash_px / _gap_px) in its ink at full opacity, this wide in screen px (the plain seam is map3d_seam_width_px 1.4 at map3d_seam_alpha)"
 map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its ring — only while it is shown, see map3d_ring_fade_start) picks it; otherwise the province under the click"
 map3d_selected_ring_scale,1.5,"3D MAP: the clicked settlement's ring is this much larger (fix round 1, owner 2026-09-18: was 1.4x diameter AND 1.5x line — a fat smear over the tier ring rather than a second crisp ring; now diameter only, the line stays the base stroke width), in political_palette map3d_selection gold"
 map3d_compass_needle_reach,0.62,"3D MAP compass (owner 2026-09-18): the north needle's half-length as a share of the compass radius — the needle turns with the view, gold tip to north"
@@ -289,8 +294,8 @@ map3d_cloud_interval_s,1.5,3D MAP clouds: about this many real seconds between o
 map3d_cloud_fade_s,1.2,3D MAP clouds: seconds to fade in when play starts and out when the clock stops
 map3d_cloud_alpha,0.6,3D MAP clouds: their opacity at the heart
 map3d_cloud_near_fade_m,6000.0,"3D MAP clouds: a cloud closer to the camera than this fades away, so the rig at 800 m looks under the deck, not into it"
-map3d_cloud_shadow_cut,0.6,"3D MAP clouds: the alpha above which a cloud casts a shadow on the land (within the sun's 60 km shadow reach) — 0.35 until 2026-09-24, when the owner asked for fewer, fainter shadows (云彩阴影减少减淡): only a cloud's dense heart casts now"
-map3d_cloud_shadow_density,0.45,"3D MAP clouds (owner 2026-09-24): the share of a cloud's shadow texels actually cast, in an ordered 4x4 stipple the sun's shadow blur smooths into a half-tone — the one way to lighten the CLOUDS' shadow alone, since map3d_sun_shadow_opacity darkens every shadow the sun casts (houses too)"
+map3d_cloud_shadow_cut,0.7,"[2026-09-27: 0.6 -> 0.7, owner: 云彩阴影太夸张，要更加淡化，让人感觉有即可] 3D MAP clouds: the alpha above which a cloud casts a shadow on the land (within the sun's 60 km shadow reach) — 0.35 until 2026-09-24, when the owner asked for fewer, fainter shadows (云彩阴影减少减淡): only a cloud's dense heart casts now"
+map3d_cloud_shadow_density,0.2,"[2026-09-27: 0.45 -> 0.2 — bracketed 0.45 / 0.2 / 0.12, the middle felt but never dominant] 3D MAP clouds (owner 2026-09-24): the share of a cloud's shadow texels actually cast, in an ordered 4x4 stipple the sun's shadow blur smooths into a half-tone — the one way to lighten the CLOUDS' shadow alone, since map3d_sun_shadow_opacity darkens every shadow the sun casts (houses too)"
 map3d_cloud_seed,23,3D MAP clouds: the seed of their own look-only generator (never the engine's stream)
 map3d_cloud_emission_share,0.0,3D MAP clouds: share of ALBEDO also written to EMISSION (Task 8's fix for a lit spatial shader reading dirty/dark under Filmic) — 0 unless the visual check needs it
 map3d_cloud_near_fade_start_ratio,0.3,"3D MAP clouds (fix round 1, owner 2026-09-18): where the near-camera fade starts, as a fraction of map3d_cloud_near_fade_m — was hardcoded in cloud_deck.gdshader"
@@ -402,6 +407,10 @@ map3d_heat_legend_h_px,160,"3D MAP HEIGHTS: the legend ramp's height, design px"
 map3d_heat_legend_yield_alpha,0.25,"3D MAP HEIGHTS (Task 7 look pass, 2026-09-20): the legend's opacity while a MEASUREMENT ruler runs through it, so the ruler's reading is never printed over a tier's name"
 map3d_sun_pitch_deg,-35,"3D MAP sky (2026-09-20): the Sun's pitch in degrees (rotation_degrees.x), applied at load to the view scene's Viewport/Sun — the value tools/map3d/build_terrain.gd build_scene wrote into every build (2026-09-18)"
 map3d_sun_yaw_deg,-45,3D MAP sky (2026-09-20): the Sun's yaw in degrees (rotation_degrees.y) — from tools/map3d/build_terrain.gd build_scene (2026-09-18) — -45 since 2026-09-24 (look route Phase 2): the light from the upper left, the cartographer\'s northwest light, so the faces of the new escarpments that turn toward the camera are lit rock, not blue-black shade
+map3d_sun_day_sweep,1,"3D MAP sky (owner 2026-09-27: 随着时间的流逝，光照光源从西向东缓慢变化): 1 turns the Sun once round each game day (Map3DEnvironment.sun_angles) — from the west, south at its highest, east, low through the north and back, so it never jumps at the day's turn; 0 holds map3d_sun_pitch_deg / _yaw_deg"
+map3d_sun_day_yaw0_deg,-90,"3D MAP sky: the Sun's yaw as a day begins, degrees — -90 lights from the WEST (0 from the south, 90 the east)"
+map3d_sun_day_high_deg,-40,"3D MAP sky: the Sun's pitch when it stands in the south, a quarter through the day — its highest"
+map3d_sun_day_low_deg,-18,"3D MAP sky: the Sun's pitch when it swings through the north, three quarters through the day — its lowest; never a night, only a long-shadowed hour"
 map3d_sun_energy,1.4,3D MAP sky (2026-09-20): the Sun's light_energy — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_sun_shadow_max_m,60000,3D MAP sky (2026-09-20): the Sun's directional_shadow_max_distance in world metres — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
 map3d_sun_shadow_per_view,3.0,"3D MAP (owner 2026-09-25: house shadows up close, fps unharmed): the sun's shadow reach is this many camera distances, capped by the tier's shadow_max_m — one atlas spread over 60 km drew a 14 m house on a few texels; 0 keeps the fixed reach"
@@ -445,13 +454,17 @@ map3d_house_rebuild_move_m,300,"3D MAP houses: the camera must move this far bef
 map3d_house_seat_clear_m,0.1,"3D MAP houses (owner 2026-09-24: 要垂直于地面，不可以被地面遮住部分): a house stands this far above the HIGHEST ground sampled under its footprint (Map3DHouses.seat) — the drawn Terrain3D surface is triangles between 20 m vertices, the sampled one bilinear, and they part by centimetres on a slope. Replaced map3d_house_sink_m (0.5), which sank every house into the ground"
 map3d_house_ground_samples,5,"3D MAP houses (owner 2026-09-24): the ground under a house is sampled on an N x N grid over its footprint (Map3DHouses.footprint_grid), corners included — sampling the four corners alone let a crest between them come up through the floor"
 map3d_house_ground_inset,1.0,"3D MAP houses (owner 2026-09-24): the share of a mesh's own AABB the ground is sampled over — the WHOLE box, eaves included, so no wall or chimney foot can be below the ground it stands on"
-map3d_unit_px,40,"MILITARY's 3D piece: the height it is DRAWN at, in design px, held constant as the camera pulls back (owner 2026-09-22: size要大一些, 远景战略模式下要看清楚; 2026-09-24: 96 was far too big — 模型太大了, 比例改的合理一点). A real 1.8 m man is 2 px even at the closest zoom the rig allows, so a piece on this map is a wargame miniature standing on a table, never a person at life size — it is scaled to a constant SCREEN height exactly as the flat counter it replaces was"
-map3d_unit_min_h_m,12,"floor on that piece's world height in metres, so it never vanishes among the houses close in — 12 m stands a little under a 2x-life cottage (15 m), a miniature beside the houses, not a giant over them (owner 2026-09-24; it was 26)"
-map3d_unit_max_h_m,9000,"ceiling on it, so the farthest zoom does not stand a man taller than the mountains; past this the piece stops growing and simply reads smaller"
+map3d_unit_ref_px,26,"MILITARY's 3D piece (owner 2026-09-27): the height of its model box (lance tip included, so the figure reads ~3/4 of it, and less seen from above) DRAWN in design px at the opening view's distance (map3d_zoom_start_scale) — 26 reads as a ~20 px figure as the game opens (owner: ~20 px), small but readable. A real man is two px even at the closest zoom, so a piece is a wargame MINIATURE on a table map: below map3d_unit_max_px it keeps one world height and grows on screen as the camera comes in (Map3DUnits.height_m). Replaced map3d_unit_px 40 held constant at every zoom (the owner: 随着镜头的缩放，兵人大小没有变化这是不对的)"
+map3d_unit_max_px,36,"the most a piece grows to on screen as the camera comes in, design px; it holds there, so close in it shrinks in the world and never towers over the houses (owner 2026-09-27: 兵人比例太大了)"
+map3d_unit_counter_scale,50,"once the SCALE BAR's full run would span this much of the pack's measure — the bar reads 50 km — the pieces are not drawn and every regiment is its flat square counter, still clickable (owner 2026-09-27: 拉远后在50km的[比例尺]后，兵人缩减成为一个方形色块; Map3DUnits.as_counters)"
 map3d_unit_snap_days,3,"MILITARY's 3D piece: a drawn piece more than this many days' march behind its regiment jumps to it instead of walking (a load, a fast clock); within it, it WALKS each day's step over the day's real seconds (Map3DUnits.walk_speed)"
 map3d_unit_route_px,2.0,"MILITARY's 3D piece: the width in design px of the dashed road a marching regiment still has ahead (in the realm's own colour), and a fifth of the ring at its end"
 map3d_unit_seat_ring,8,"MILITARY's 3D piece (owner 2026-09-24: 斜面上兵人的一部分会被地图盖住): points on each of the two rings (half and full base) where the ground under a piece's base is sampled, besides its centre — Map3DUnits.footprint"
 map3d_unit_tilt_max_deg,14,"how far a piece tilts with the slope it stands on, at most — a miniature on a sloping table leans with it, but a man lying on a cliff reads as fallen; past this it stays at this tilt and is lifted clear instead (Map3DUnits.seat)"
 map3d_unit_seat_clear,0.015,"how far a seated piece is lifted over the highest ground under its base, as a share of its drawn height — far out Terrain3D DRAWS the ground from a coarser mesh than the heightmap the base is sampled on, and this covers the difference"
 map3d_unit_sink_m,0.0,metres the piece's base is sunk into the ground so it bites into a slope
+map3d_unit_formation_gap,1.1,"MILITARY's 3D piece (owner 2026-09-27: 6 figure tiers, data/army_formations.csv): the distance between figures in a formation, as a multiple of one figure's own footprint (its width across, its length front to back)"
+map3d_unit_anim_min,0.5,"MILITARY's 3D piece (owner 2026-09-27: 步幅和实际移动的距离不符): the slowest the MARCH clip plays, x its own speed, however slowly the column goes (Map3DUnits.march_rate)"
+map3d_unit_anim_max,3.0,"the fastest the MARCH clip plays, x its own speed: a miniature crosses kilometres a second, which no leg can match, so past this the piece slides rather than turning its legs into a blur"
+map3d_unit_blend_s,0.3,"seconds a piece takes to blend from GARRISON into MARCH and back, so the start and the halt are not a snap (owner 2026-09-27: 行进的动作非常突兀)"
 map3d_unit_turn_deg_per_s,220.0,"how fast a piece turns to face its heading (or the camera at rest) — instant turning reads as a glitch when the camera orbits"

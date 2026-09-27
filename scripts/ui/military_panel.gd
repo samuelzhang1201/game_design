@@ -9,6 +9,9 @@ extends VBoxContainer
 ## the facts column) while the MILITARY layer is on, in place of the realm
 ## dashboard, with the regiments themselves drawn on the map beside it.
 
+## CLOSE (owner 2026-09-27: opened from a regiment's card now the tab is gone).
+signal closed
+
 var _title: Label
 var _summary: Label
 var _arms: BarChart
@@ -32,7 +35,17 @@ func _init() -> void:
 	_title.text = "THE HOST"
 	UiPalette.style_header(_title, 16)
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(_title)
+	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var head := HBoxContainer.new()
+	head.add_child(_title)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "×"
+	close.focus_mode = Control.FOCUS_NONE
+	close.tooltip_text = "Close"
+	close.pressed.connect(func() -> void: closed.emit())
+	head.add_child(close)
+	add_child(head)
 	add_child(HSeparator.new())
 	_summary = Label.new()
 	_summary.name = "Summary"

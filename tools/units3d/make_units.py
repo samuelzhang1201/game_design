@@ -758,19 +758,22 @@ def humanoid_actions(arm, h):
         # The SPEAR ARM barely moves: the shaft is one rigid stick pinned to
         # the glove, and a marching spearman shoulders it rather than
         # swinging it.
+        # BIG since 2026-09-27 (owner: 行进动作设计幅度再大一点): a longer
+        # stride, a bob, the shoulders and the shield arm swinging against
+        # the hips — read at map size, a small walk is no walk at all.
         swing = math.sin(2.0 * math.pi * u)
         return {
-            "root": {"loc": (0.0, 0.0, abs(math.sin(2.0 * math.pi * u)) * 0.020 * h)},
-            "hips": {"rot": [("z", swing * 4.0)]},
-            "chest": {"rot": [("z", -swing * 5.0), ("x", -3.0)]},
-            "head": {"rot": [("z", -swing * 1.5)]},
-            "upperarm_r": {"rot": [("x", swing * 3.0)]},
-            "clavicle_l": {"rot": [("x", -swing * 4.0)]},
+            "root": {"loc": (0.0, 0.0, abs(math.sin(2.0 * math.pi * u)) * 0.032 * h)},
+            "hips": {"rot": [("z", swing * 7.0), ("y", swing * 3.0)]},
+            "chest": {"rot": [("z", -swing * 9.0), ("x", -5.0)]},
+            "head": {"rot": [("z", -swing * 3.0)]},
+            "upperarm_r": {"rot": [("x", swing * 5.0)]},
+            "clavicle_l": {"rot": [("x", -swing * 9.0)]},
         }
 
     march = walk_keys(41, 8,
                       [("thigh_l", "shin_l", 0.0), ("thigh_r", "shin_r", 0.5)],
-                      foot_body, 24.0, 24.0)
+                      foot_body, 34.0, 34.0)
     return [make_action(arm, "GARRISON", garrison),
             make_action(arm, "ATTACK", attack),
             make_action(arm, "MARCH", march)]

@@ -1,0 +1,6 @@
+key,label,hint,notes
+commit,Commit march,Send the column along this route,"owner 2026-09-27: after the destination click, the order waits for COMMIT or CANCEL (ArmyOrderMenu, the confirm menu)"
+cancel,Cancel,Give this route up,the confirm menu's other row; clicking away from the menu does the same
+edit,Edit route…,Aim the march anew from where the column stands,"owner 2026-09-27: 行进路线commit后，再次点击终点可以edit路线或者cancel操作 — the route menu, opened by a click on a march's end ring"
+halt,Cancel march,Halt the column where it has got to,the route menu's other row: an ARMY_GARRISON
+paused_only,,Pause the clock to plan a march,"owner 2026-09-27: 兵人行进路线只能在暂停模式下选择 — the reason MARCH, Edit and Cancel march are greyed out while time runs"

@@ -61,7 +61,7 @@ func preview_build(p_ctx: Map3DContext) -> void:
 	cam.make_current()
 	_camera = cam
 	p_ctx.camera = cam
-	place(p_ctx.bounds.get_center(), p_ctx.repo.bal("map3d_zoom_start_m"), 0.0)
+	place(p_ctx.bounds.get_center(), start_distance(), 0.0)
 
 
 ## The rig's own camera, made once (on _ready, or on bind if the rig is not
@@ -88,6 +88,13 @@ func bind(p_ctx: Map3DContext) -> void:
 
 func camera() -> Camera3D:
 	return _camera
+
+
+## Where the view opens: the scale bar spanning map3d_zoom_start_scale of the
+## pack's measure (owner 2026-09-27: 初始默认…25km, by the scale bar).
+func start_distance() -> float:
+	return Map3DGeometry.distance_for_bar(ctx.repo, ctx.meta,
+		ctx.repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 
 
 ## The farthest the rig may sit: balance.csv's ceiling, and never so far that

@@ -44,6 +44,9 @@ var _manor_view := false
 ## The MILITARY tab's state (user request 2026-09-10), owned here for the
 ## same reason: the layer follows the player from screen to screen.
 var _army_view := false
+## DEV MODE (the pause menu's switch, owner 2026-09-27).
+var _dev_mode := false
+var _dev_button: Button
 var _ruler_view := false
 ## Which map the panel shows (owner 2026-09-18: the 3D map is the default):
 ## the last result of _sync_map_view, never set by hand.
@@ -132,11 +135,14 @@ func _process(delta: float) -> void:
 			if not Game.state.pending_event.is_empty():
 				Game.set_clock_speed(0)
 				_clock_acc = 0.0
+				Game.day_progress = 0.0
 				_switch_to(State.CONVERSATION)
 				current_screen.start([{"kind": "event", "portrait_id": "round_table",
 					"speaker": "The Council",
 					"event": Game.state.pending_event.duplicate(true)}], _pending_report)
 				return
+
+	Game.day_progress = clampf(_clock_acc / per_day, 0.0, 1.0)
 
 ## Every work in progress's share done: "cell|building" -> 0..1.
 func works_progress() -> Dictionary:
@@ -232,6 +238,9 @@ func _build_pause_menu() -> void:
 	_quality_button = _menu_button(_quality_label(), _cycle_quality)
 	_quality_button.name = "GraphicsQuality"
 	col.add_child(_quality_button)
+	_dev_button = _menu_button(_dev_label(), func() -> void: set_dev_mode(not _dev_mode))
+	_dev_button.name = "DevMode"
+	col.add_child(_dev_button)
 	col.add_child(_menu_button("Quit to Desktop", func() -> void: get_tree().quit()))
 	_pause_status = Label.new()
 	_pause_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -305,6 +314,32 @@ func _load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(settings_path) == OK:
 		_music_on = bool(cfg.get_value("audio", "music", true))
+		_dev_mode = bool(cfg.get_value("game", "dev_mode", false))
+
+## DEV MODE (owner 2026-09-27: "menu中新增一个dev模式，on/off"): the map shows
+## every realm's regiments. Remembered in settings_path; the showing map
+## follows at once, a map made later on its first sync.
+func set_dev_mode(on: bool) -> void:
+	_dev_mode = on
+	if _dev_button != null:
+		_dev_button.text = _dev_label()
+	var cfg := ConfigFile.new()
+	cfg.load(settings_path)
+	cfg.set_value("game", "dev_mode", on)
+	cfg.save(settings_path)
+	_apply_dev_mode()
+
+func dev_mode() -> bool:
+	return _dev_mode
+
+func _dev_label() -> String:
+	return "Dev mode: On" if _dev_mode else "Dev mode: Off"
+
+func _apply_dev_mode() -> void:
+	if current_screen != null and current_screen.has_method("map3d_view"):
+		var v: Map3DView = current_screen.map3d_view()
+		if v != null:
+			v.set_dev_mode(_dev_mode)
 
 ## Test seam.
 func bgm_player() -> AudioStreamPlayer:
@@ -350,10 +385,6 @@ func _on_bottom_tab(tab: String) -> void:
 			_info_screen.hide()
 			_relations_screen.visible = false
 			set_manor_view(not _manor_view)
-		"MILITARY":
-			_info_screen.hide()
-			_relations_screen.visible = false
-			set_army_view(not _army_view)
 		"MEASUREMENT":
 			_info_screen.hide()
 			_relations_screen.visible = false
@@ -400,16 +431,13 @@ func set_manor_view(on: bool) -> void:
 func manor_view() -> bool:
 	return _manor_view
 
-## Turn the military layer on or off everywhere (user request 2026-09-10):
-## the tab lights up, the current screen's map draws the realm's regiments
-## with their strength bars, and the screen's LEFT column shows the host.
+## The host in the current screen's LEFT column (the MILITARY tab that lit
+## it is gone, owner 2026-09-27: the regiments are always on the map and the
+## host opens from a regiment's card). Kept as the root's switch for it.
 func set_army_view(on: bool) -> void:
 	_army_view = on
-	if _bottom_bar != null:
-		_bottom_bar.set_toggled("MILITARY", on)
 	if current_screen != null and current_screen.has_method("set_military_view"):
 		current_screen.set_military_view(on)
-	_sync_map_view()
 
 func army_view() -> bool:
 	return _army_view
@@ -445,10 +473,11 @@ func _sync_map_view() -> void:
 	_map3d_view = on and map3d_available()
 	if current_screen != null and current_screen.has_method("set_map3d_theme"):
 		var theme_name := "manors" if _manor_view else ("heights" if _height_view else "")
-		current_screen.set_map3d_theme(theme_name, _army_view)
+		current_screen.set_map3d_theme(theme_name, true)   # the regiments always show
 	if current_screen != null and current_screen.has_method("set_map3d_view"):
 		current_screen.set_map3d_view(on)
 	_apply_ruler()
+	_apply_dev_mode()
 
 func map3d_available() -> bool:
 	if _map3d_scene >= 0:

@@ -9,31 +9,40 @@ extends RefCounted
 ## checked without a 3D view. Never reaches for the Game autoload.
 
 
-## The world height one piece is drawn at: a constant `map3d_unit_px` of
-## SCREEN, clamped in metres at both ends.
-##
-## A real 1.8 m man is two pixels at the closest zoom the rig allows and a
-## rounding error at the farthest, so a piece on this map is a MINIATURE
-## standing on a table, never a person at life size — it keeps a constant
-## screen height exactly as the flat counter it replaces did. The clamps are
-## what stop that rule running away: without the floor it would vanish among
-## the houses close in, and without the ceiling the farthest zoom would stand
-## a man taller than the mountains he is crossing.
+## The world height one piece is drawn at (owner 2026-09-27: "随着镜头的缩放，
+## 兵人大小没有变化这是不对的"): `map3d_unit_ref_px` of SCREEN with the camera
+## `ref_m` from it — the opening view's distance, so about 20 px as the game
+## opens — and, as the camera comes in, growing with it like anything on the
+## ground until it reaches `map3d_unit_max_px`, where it holds. Below the cap
+## that is ONE world height (px x metres-per-px cancel the distance), so a
+## piece is a miniature of a fixed size on the table; the cap keeps it from
+## towering over the houses close in. Far out it is not drawn at all: the
+## regiment is a flat counter (as_counters).
 static func height_m(repo: DataRepository, distance_m: float, fov_deg: float,
-		view_h_px: float) -> float:
-	var mpp := Map3DGeometry.metres_per_pixel(distance_m, fov_deg, view_h_px)
-	return clampf(repo.bal("map3d_unit_px") * mpp,
-		repo.bal("map3d_unit_min_h_m"), repo.bal("map3d_unit_max_h_m"))
+		view_h_px: float, ref_m: float) -> float:
+	var d := maxf(distance_m, 1.0)
+	var px := minf(repo.bal("map3d_unit_max_px"), repo.bal("map3d_unit_ref_px") * ref_m / d)
+	return px * Map3DGeometry.metres_per_pixel(d, fov_deg, view_h_px)
+
+
+## Whether the camera is far enough out that every regiment is a square
+## counter instead of a piece (owner 2026-09-27: "拉远后在50km的[比例尺]后，兵人
+## 缩减成为一个方形色块，并且可以点击查看状态"): once the scale bar would span
+## map3d_unit_counter_scale of the pack's measure — it then reads that rung.
+static func as_counters(repo: DataRepository, meta: Dictionary, camera_distance_m: float,
+		view_h_px: float) -> bool:
+	return camera_distance_m >= Map3DGeometry.distance_for_bar(repo, meta,
+		repo.bal("map3d_unit_counter_scale"), view_h_px)
 
 
 ## That height as a scale on the model's own metres, times `size`
-## (data/army_art.csv): one arm may stand bigger than the rest (owner
-## 2026-09-27: the cavalry alone, 单独调大, 更显眼一点).
+## (data/army_art.csv): one arm may stand bigger than the rest (all 1 since
+## the owner's 2026-09-27 "1.5倍不合适").
 static func scale_for(repo: DataRepository, distance_m: float, fov_deg: float,
-		view_h_px: float, model_h_m: float, size: float = 1.0) -> float:
+		view_h_px: float, ref_m: float, model_h_m: float, size: float = 1.0) -> float:
 	if model_h_m <= 0.0:
 		return 1.0
-	return height_m(repo, distance_m, fov_deg, view_h_px) / model_h_m * size
+	return height_m(repo, distance_m, fov_deg, view_h_px, ref_m) / model_h_m * size
 
 
 ## The yaw a piece stands at: the way it MARCHES (a heading in PACK space,
@@ -70,6 +79,21 @@ static func walk_speed(repo: DataRepository, state: GameState, code: String, met
 		return 0.0
 	var day_s := maxf(repo.bal("time_day_seconds") / float(clock_speed), 0.001)
 	return day_world_m(repo, state, code, meta) / day_s
+
+
+## The MARCH clip's playback rate (owner 2026-09-27: 马的腿移动的步幅和它实际移
+## 动的距离不符): the ground the piece covers per second in its MODEL'S metres
+## (world speed / its scale k) over what one loop of the clip walks
+## (`stride_m`, data/army_art.csv, the model metres a loop carries it) in the
+## clip's `clip_s` — so the feet keep pace with the ground — held within
+## map3d_unit_anim_min..max: a miniature crossing kilometres a second outruns
+## any leg, and past the ceiling it slides rather than blurs.
+static func march_rate(repo: DataRepository, world_speed: float, k: float, clip_s: float,
+		stride_m: float) -> float:
+	if world_speed <= 0.0 or k <= 0.0 or stride_m <= 0.0:
+		return 1.0
+	return clampf(world_speed / k * clip_s / stride_m,
+		repo.bal("map3d_unit_anim_min"), repo.bal("map3d_unit_anim_max"))
 
 
 ## A day's march in the built world's metres.

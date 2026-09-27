@@ -5,9 +5,17 @@ extends PopupMenu
 ## in the order they are shown — so renaming or reordering them touches no code.
 ##
 ## MARCH is AIMED, not issued by the menu: choosing it arms the map, the next
-## left click on the ground is the destination, and only then does the order
-## go in. That is why its label ends in an ellipsis. GARRISON runs at once.
-## A right click, Escape or a click off the land gives the aim up.
+## left click on the ground is the destination, and the same menu then asks
+## COMMIT or CANCEL there, the route drawn to it (owner 2026-09-27) — only a
+## commit sends the order. That is why its label ends in an ellipsis.
+## GARRISON runs at once. Escape or a click away from the confirm gives it up.
+## A committed march's end ring opens the ROUTE menu: Edit route… aims it
+## anew, Cancel march halts it (an ARMY_GARRISON).
+##
+## Routes are planned only on a PAUSED clock (owner 2026-09-27: 兵人行进路线只能
+## 在暂停模式下选择，时间流逝的时候不可以操作): while time runs MARCH, Edit and
+## Cancel march are greyed out with data/army_route_orders.csv's reason, and
+## an aim or a waiting confirm is withdrawn the moment the clock starts.
 ##
 ## Every order goes through Game.try_execute, exactly as the manor card's
 ## buttons do — so ActionSystem validates it, OrderCosts charges it and the
@@ -18,9 +26,18 @@ extends PopupMenu
 ## landed on.
 signal aiming_changed(regiment_code: String)
 
+## The confirm and route menus' ids, after the order rows'.
+const COMMIT := 100
+const CANCEL := 101
+const EDIT := 200
+const HALT := 201
+
 var _map: Node = null
 var _code := ""
 var _aiming := ""
+## The aimed march's destination (pack px) while COMMIT / CANCEL is asked;
+## Vector2(-1, -1) when none waits.
+var _pending := Vector2(-1, -1)
 
 
 func _ready() -> void:
@@ -35,6 +52,9 @@ func follow(map: Node) -> void:
 	_map = map
 	map.connect("army_menu_requested", _open_for)
 	map.connect("ground_clicked", _on_ground)
+	if map.has_signal("route_clicked"):
+		map.connect("route_clicked", _open_route)
+	popup_hide.connect(func() -> void: _after_hide.call_deferred())
 
 
 ## Open over the regiment `code`. Each row is offered only when the engine
@@ -54,10 +74,51 @@ func _open_for(code: String, at: Vector2) -> void:
 		set_item_tooltip(i, why if why != "" else String(row["hint"]))
 	if item_count == 0:
 		return
+	_pop(at)
+
+
+## A committed march's end ring was clicked: Edit route… or Cancel march.
+func _open_route(code: String, at: Vector2) -> void:
+	if Game.state == null or ArmySystem.order_of(Game.data, Game.state, code) != ArmySystem.ORDER_MARCH:
+		return
+	_set_aim("")
+	_code = code
+	clear()
+	_add_row("edit", EDIT, _paused_reason())
+	_add_row("halt", HALT, _paused_reason() if _paused_reason() != "" \
+		else _refusal("ARMY_GARRISON", code))
+	_pop(at)
+
+
+## The destination was clicked: ask COMMIT or CANCEL there.
+func _open_confirm(at: Vector2) -> void:
+	clear()
+	_add_row("commit", COMMIT, "")
+	_add_row("cancel", CANCEL, "")
+	_pop(at)
+
+
+func _add_row(key: String, id: int, why: String) -> void:
+	var row: Dictionary = Game.data.army_route_orders.get(key, {"label": key, "hint": ""})
+	add_item(String(row["label"]), id)
+	var i := get_item_index(id)
+	set_item_disabled(i, why != "")
+	set_item_tooltip(i, why if why != "" else String(row["hint"]))
+
+
+## `at` in the map's own px.
+func _pop(at: Vector2) -> void:
 	var origin := Vector2.ZERO
 	if _map is Control:
 		origin = (_map as Control).get_global_rect().position
 	popup_on_parent(Rect2i(Vector2i((origin + at).round()), Vector2i(1, 1)))
+
+
+## Why a route cannot be planned now, "" on a paused clock.
+func _paused_reason() -> String:
+	if Game.clock_speed <= 0:
+		return ""
+	return String(Game.data.army_route_orders.get("paused_only", {}).get("hint", "Pause the clock first."))
 
 
 ## Why the engine would refuse this order, "" when it would take it. MARCH is
@@ -66,6 +127,8 @@ func _open_for(code: String, at: Vector2) -> void:
 ## has it anyone under arms, can the chest pay) are the ones worth asking
 ## before the player aims.
 func _refusal(action_code: String, code: String) -> String:
+	if action_code == "ARMY_MARCH" and _paused_reason() != "":
+		return _paused_reason()
 	var req := ActionRequest.make(action_code, {"regiment": code})
 	if action_code == "ARMY_MARCH":
 		var here := ArmySystem.position_of(Game.data, Game.state,
@@ -81,6 +144,22 @@ func _refusal(action_code: String, code: String) -> String:
 
 
 func _on_chosen(id: int) -> void:
+	match id:
+		COMMIT:
+			_commit()
+			return
+		CANCEL:
+			_withdraw("The march is given up.")
+			return
+		EDIT:
+			if _code != "" and _paused_reason() == "":
+				_set_aim(_code)
+				Game.publish_news("%s awaits a new route — click where to send it." % _name_of(_code))
+			return
+		HALT:
+			if _code != "":
+				_run(ActionRequest.make("ARMY_GARRISON", {"regiment": _code}))
+			return
 	if _code == "" or id < 0 or id >= Game.data.army_orders.size():
 		return
 	var row: Dictionary = Game.data.army_orders[id]
@@ -91,14 +170,50 @@ func _on_chosen(id: int) -> void:
 	_run(ActionRequest.make(String(row["action_code"]), {"regiment": _code}))
 
 
-## The aimed march's destination.
+## The aimed march's destination: held, drawn to, and asked about — the
+## order goes in only on COMMIT.
 func _on_ground(pack_px: Vector2) -> void:
-	if _aiming == "":
+	if _aiming == "" or _pending.x >= 0.0:
+		return
+	_pending = pack_px
+	if _map != null and "aim_dest" in _map:
+		_map.set("aim_dest", pack_px)
+	var at := Vector2.ZERO
+	if _map is Control:
+		at = (_map as Control).get_local_mouse_position()
+	_open_confirm(at)
+
+
+func _commit() -> void:
+	if _aiming == "" or _pending.x < 0.0:
 		return
 	var code := _aiming
+	var to := _pending
 	_set_aim("")
-	_run(ActionRequest.make("ARMY_MARCH",
-		{"regiment": code, "x": pack_px.x, "y": pack_px.y}))
+	_run(ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": to.x, "y": to.y}))
+
+
+## An aim or a waiting confirm given up.
+func _withdraw(news: String) -> void:
+	if _aiming == "":
+		return
+	_set_aim("")
+	Game.publish_news(news)
+
+
+## The confirm closed without COMMIT (a click away from it): give it up.
+## Deferred, because PopupMenu hides BEFORE it emits id_pressed.
+func _after_hide() -> void:
+	if _pending.x >= 0.0 and not visible:
+		_withdraw("The march is given up.")
+
+
+## The clock started: no route is planned while time runs.
+func _process(_delta: float) -> void:
+	if _aiming != "" and Game.clock_speed > 0:
+		if visible:
+			hide()
+		_withdraw("Time runs — the march order is withdrawn.")
 
 
 ## Run an order and say what came of it in the news bar — a refusal has to be
@@ -121,6 +236,9 @@ func _run(req: ActionRequest) -> void:
 
 
 func _set_aim(code: String) -> void:
+	_pending = Vector2(-1, -1)
+	if _map != null and "aim_dest" in _map:
+		_map.set("aim_dest", Vector2(-1, -1))
 	if _aiming == code:
 		return
 	_aiming = code
@@ -146,11 +264,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _aiming != "" and event is InputEventKey and (event as InputEventKey).pressed \
 			and (event as InputEventKey).keycode == KEY_ESCAPE:
-		_set_aim("")
-		Game.publish_news("The order is withdrawn.")
+		_withdraw("The order is withdrawn.")
 		get_viewport().set_input_as_handled()
 
 
 ## Test seam: the regiment an order is being aimed for, "" when none is.
 func aiming() -> String:
 	return _aiming
+
+
+## Test seam: the destination waiting for COMMIT, Vector2(-1, -1) when none.
+func pending() -> Vector2:
+	return _pending

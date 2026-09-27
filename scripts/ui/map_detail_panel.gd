@@ -14,6 +14,10 @@ extends PanelContainer
 
 signal ask_requested(text: String)
 signal closed
+## A regiment's card's THE HOST button (owner 2026-09-27: the MILITARY tab is
+## gone and the host overview opens from a regiment): the screen puts the
+## MilitaryPanel in the left column.
+signal host_requested
 
 ## Sized for the left column's content width (ScreenLayout.LEFT_WIDTH less
 ## the column panel's margins).
@@ -340,7 +344,17 @@ func show_card(card: Dictionary) -> void:
 	var known := String(card.get("known", "full"))
 	var basic := known == "basic"
 	if known == "army":
-		pass  # an army card is its painting and its icons (owner 2026-09-15)
+		# an army card is its painting and its icons (owner 2026-09-15), and
+		# the way to the whole host (owner 2026-09-27)
+		var host := Button.new()
+		host.name = "TheHost"
+		host.text = "The Host — all regiments"
+		host.focus_mode = Control.FOCUS_NONE
+		host.add_theme_font_size_override("font_size", 12)
+		host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		host.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		host.pressed.connect(func() -> void: host_requested.emit())
+		_actions.add_child(host)
 	elif not basic:
 		var features: Array = card.get("features", [])
 		if not features.is_empty():

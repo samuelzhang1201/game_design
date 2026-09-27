@@ -10,43 +10,65 @@ func before_all() -> void:
 	repo = DataRepository.load_all("res://data")
 
 
-func test_a_piece_keeps_a_CONSTANT_height_in_screen_px() -> void:
-	# The whole rule: a piece is a miniature on a table map, not a person. Two
-	# camera distances an order of magnitude apart must give the same number
-	# of SCREEN px, which means ten times the world height.
-	var fov := repo.bal("map3d_fov_deg")
-	var near := Map3DUnits.height_m(repo, 1000.0, fov, 1080.0)
-	var far := Map3DUnits.height_m(repo, 10000.0, fov, 1080.0)
-	assert_almost_eq(far / near, 10.0, 0.001,
-		"ten times as far away is ten times as tall in the world")
-	# ...and that number of px is the one the table asks for.
-	var mpp := Map3DGeometry.metres_per_pixel(1000.0, fov, 1080.0)
-	assert_almost_eq(near / mpp, repo.bal("map3d_unit_px"), 0.001)
+## The size rule (owner 2026-09-27), by hand at fov 45 and a 1080 px view:
+## metres per px = 2 d tan(22.5) / 1080 = d x 7.67063e-4; the reference
+## (the opening view) 25 km away, 20 px there, 32 px at most.
+func _rule() -> void:
+	repo.balance["map3d_unit_ref_px"] = 20.0
+	repo.balance["map3d_unit_max_px"] = 32.0
 
 
-func test_the_clamps_stop_the_rule_running_away() -> void:
-	var fov := repo.bal("map3d_fov_deg")
-	assert_eq(Map3DUnits.height_m(repo, 1.0, fov, 1080.0), repo.bal("map3d_unit_min_h_m"),
-		"nose to the ground, it still stands as tall as the floor allows")
-	assert_eq(Map3DUnits.height_m(repo, 1.0e9, fov, 1080.0), repo.bal("map3d_unit_max_h_m"),
-		"and never grows past the ceiling")
+func test_a_piece_is_its_ref_px_at_the_opening_distance() -> void:
+	_rule()
+	# 20 px x 25000 x 7.67063e-4 = 383.53 m
+	assert_almost_eq(Map3DUnits.height_m(repo, 25000.0, 45.0, 1080.0, 25000.0), 383.53, 0.05)
+
+
+func test_below_the_cap_a_piece_is_one_world_height() -> void:
+	_rule()
+	# 50 km: 10 px x 38.353 m = 383.53 m — the same miniature, half the px
+	assert_almost_eq(Map3DUnits.height_m(repo, 50000.0, 45.0, 1080.0, 25000.0), 383.53, 0.05)
+	# 18 km: 27.78 px x 13.807 m = 383.53 m
+	assert_almost_eq(Map3DUnits.height_m(repo, 18000.0, 45.0, 1080.0, 25000.0), 383.53, 0.05)
+
+
+func test_close_in_it_holds_at_the_cap() -> void:
+	_rule()
+	# 5 km: 20 x 25000 / 5000 = 100 px, held at 32 px x 3.83532 m = 122.73 m
+	assert_almost_eq(Map3DUnits.height_m(repo, 5000.0, 45.0, 1080.0, 25000.0), 122.73, 0.05)
+	# 800 m: 32 px x 0.613650 m = 19.64 m
+	assert_almost_eq(Map3DUnits.height_m(repo, 800.0, 45.0, 1080.0, 25000.0), 19.64, 0.01)
+
+
+## By the scale bar: 1 km per pack px, 50 m per pack px (0.02 km a metre), a
+## 220 px bar, fov 45, a 600 px view — the bar spans 50 km at
+## 50 / 220 / 0.02 x 600 / 0.828427 = 8230.2 m.
+func test_far_out_the_pieces_become_counters() -> void:
+	repo.balance["map3d_unit_counter_scale"] = 50.0
+	repo.balance["map_scale_bar_max_px"] = 220.0
+	repo.balance["map3d_fov_deg"] = 45.0
+	var meta := {"m_per_px": 50.0}
+	var info := repo.map_info.duplicate()
+	repo.map_info["distance_scale"] = "1"
+	assert_false(Map3DUnits.as_counters(repo, meta, 8229.0, 600.0))
+	assert_true(Map3DUnits.as_counters(repo, meta, 8231.0, 600.0))
+	repo.map_info = info
 
 
 func test_the_scale_is_that_height_over_the_models_own() -> void:
 	var fov := repo.bal("map3d_fov_deg")
-	var want := Map3DUnits.height_m(repo, 5000.0, fov, 1080.0)
-	assert_almost_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 2.0), want / 2.0, 0.0001)
-	assert_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 0.0), 1.0,
+	var want := Map3DUnits.height_m(repo, 5000.0, fov, 1080.0, 25000.0)
+	assert_almost_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 25000.0, 2.0), want / 2.0, 0.0001)
+	assert_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 25000.0, 0.0), 1.0,
 		"a model with no height is left alone rather than scaled by infinity")
 
 
 func test_an_arm_can_stand_bigger_than_the_rest() -> void:
-	# army_art's size multiplies the drawn height (owner 2026-09-27: the
-	# cavalry alone, 单独调大, 更显眼一点); 1 leaves a piece as it was.
+	# army_art's size multiplies the drawn height; 1 leaves a piece as it was.
 	var fov := repo.bal("map3d_fov_deg")
-	var one := Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 2.0)
-	assert_almost_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 2.0, 1.5), one * 1.5, 0.0001)
-	assert_almost_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 2.0, 1.0), one, 0.0001)
+	var one := Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 25000.0, 2.0)
+	assert_almost_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 25000.0, 2.0, 1.5), one * 1.5, 0.0001)
+	assert_almost_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 25000.0, 2.0, 1.0), one, 0.0001)
 
 
 func test_a_marching_piece_faces_its_heading() -> void:
@@ -214,3 +236,18 @@ func test_a_footprint_turns_and_scales_with_the_piece() -> void:
 	for p in o:
 		widest = maxf(widest, absf(p.x))
 	assert_almost_eq(widest, 6.0, 0.001, "3 m half length x 2 scale, along x")
+
+
+## The MARCH clip keeps pace with the ground (owner 2026-09-27), by hand: a
+## piece at scale 40 crossing 20 world m/s covers 0.5 model m/s; a 2 s clip
+## that walks 1.0 model m a loop plays at 0.5 x 2 / 1.0 = 1.0.
+func test_the_march_plays_at_the_grounds_pace() -> void:
+	repo.balance["map3d_unit_anim_min"] = 0.5
+	repo.balance["map3d_unit_anim_max"] = 3.0
+	assert_almost_eq(Map3DUnits.march_rate(repo, 20.0, 40.0, 2.0, 1.0), 1.0, 0.0001)
+	# twice as fast on the ground: 2.0
+	assert_almost_eq(Map3DUnits.march_rate(repo, 40.0, 40.0, 2.0, 1.0), 2.0, 0.0001)
+	# 200 m/s would be 10x: held at the ceiling; a crawl held at the floor
+	assert_eq(Map3DUnits.march_rate(repo, 200.0, 40.0, 2.0, 1.0), 3.0)
+	assert_eq(Map3DUnits.march_rate(repo, 1.0, 40.0, 2.0, 1.0), 0.5)
+	assert_eq(Map3DUnits.march_rate(repo, 20.0, 40.0, 2.0, 0.0), 1.0, "no stride: as authored")

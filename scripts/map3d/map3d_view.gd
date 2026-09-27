@@ -28,6 +28,8 @@ signal army_menu_requested(code: String, at: Vector2)
 ## Where on the pack a left click landed — an order being AIMED needs the
 ## ground, not the thing picked.
 signal ground_clicked(pack_px: Vector2)
+## A click on a committed march's end ring (owner 2026-09-27): ArmyOrderMenu's route menu.
+signal route_clicked(code: String, at: Vector2)
 
 const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
 ## The view's own authored scene (the tree, flags and anchors live there).
@@ -90,8 +92,11 @@ var _loaded := false
 var _tried := false
 var _hovered := false
 var _border_clock := 0.0
-## MILITARY (owner 2026-09-19): whether the counters show.
-var _military := false
+## The regiments (owner 2026-09-19; always on since 2026-09-27, when the
+## MILITARY tab went): whether the pieces and counters show.
+var _military := true
+## DEV MODE (owner 2026-09-27): every realm's regiments, set from the pause menu.
+var _dev := false
 ## MEASUREMENT (owner 2026-09-18): left clicks lay the ruler, a right CLICK clears it.
 var ruler_on := false:
 	set(v):
@@ -226,6 +231,7 @@ func _load() -> void:
 	_input.bind(self, _rig, _repo)
 	_markers.bind(_ctx)
 	_houses.bind(_ctx)
+	_ctx.dev = _dev
 	_units.bind(_ctx)
 	_units.set_shown(_military)
 	_ctx.settle_ground()
@@ -248,7 +254,7 @@ func _load() -> void:
 	_picker.bind(_ctx, self, _tooltip, _borders)
 	_selection.bind(_ctx, _lines, _markers, self)
 	_loaded = true
-	_rig.place(_home(), _repo.bal("map3d_zoom_start_m"), 0.0)
+	_rig.place(_home(), _rig.start_distance(), 0.0)
 	_update_line_scale()
 	_hud.bind(_ctx, self)  # the HUD redraws itself on every camera move
 	_hud.visible = true
@@ -374,6 +380,7 @@ func _process(delta: float) -> void:
 	if _loaded:
 		_clouds.step(delta)
 		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
+		Map3DEnvironment.sweep_sun(_repo, _sun, Game.day_progress)  # a round a game day
 	_picker.step()
 	if not _hovered:
 		return
@@ -418,6 +425,7 @@ func drawn_badge_count() -> int: return (_hud.piece("Badges") as Map3DHudBadges)
 func army_badge_height() -> float:
 	return (_hud.piece("Armies") as Map3DHudArmies).badge_height() if _loaded else 0.0
 func army_markers() -> Array: return (_hud.piece("Armies") as Map3DHudArmies).markers() if _loaded else []
+func route_ends() -> Array: return (_hud.piece("Armies") as Map3DHudArmies).route_ends() if _loaded else []
 func drawn_army_count() -> int: return (_hud.piece("Armies") as Map3DHudArmies).drawn_count() if _loaded else 0
 func landmark_marks() -> Array: return (_hud.piece("Landmarks") as Map3DHudLandmarks).marks() if _loaded else []
 func heat_legend_rect() -> Rect2:
@@ -444,6 +452,16 @@ func unit_count() -> int: return _units.drawn_count() if _loaded else 0
 func unit_moves() -> int: return _units.moves() if _loaded else 0
 
 func military() -> bool: return _military
+
+## DEV MODE (the pause menu's switch, owner 2026-09-27): every realm's regiments.
+func set_dev_mode(on: bool) -> void:
+	_dev = on
+	if _loaded:
+		_ctx.dev = on
+		_units.refresh()
+		_hud.refresh()
+
+func dev_mode() -> bool: return _dev
 func selected_army() -> String: return _selection.army
 
 # --- picking (Map3DPicker, Map3DSelection) --------------------------------------------
@@ -459,7 +477,12 @@ func tooltip_rect() -> Rect2: return _picker.tooltip_rect()
 ## While an order is aimed (ArmyOrderMenu sets both): a left click only says
 ## where it landed, and the HUD's ruler runs from `aim_code`'s piece to the pointer.
 var aiming := false
-var aim_code := ""
+var aim_code := "":
+	set(v):
+		aim_code = v
+		if _loaded: _hud.refresh()  # the aim's ruler goes, the committed route shows
+## The aimed march's destination (pack px) while COMMIT / CANCEL is asked, else (-1, -1).
+var aim_dest := Vector2(-1, -1)
 
 ## True when a regiment was under it and its order menu was asked for — a
 ## right click on open country is NOT consumed, exactly as before.

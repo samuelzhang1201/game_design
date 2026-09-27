@@ -142,6 +142,9 @@ func test_picks_round_trip_at_any_render_scale() -> void:
 				break
 		assert_gt(checked, 0)
 		var capital := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
+		var burg: Dictionary = Game.data.burgs[capital]
+		v.set_military(false)  # the fleet lies at the capital; this is the town's pick
+		v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])))
 		assert_eq(v.pick_at(v.size * 0.5), {"kind": "burg", "code": capital}, tier)
 
 

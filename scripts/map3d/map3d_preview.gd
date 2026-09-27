@@ -66,7 +66,7 @@ static func context(pack_id: String, with_terrain: bool = false) -> Map3DContext
 	ctx.state_fn = func() -> GameState: return blank
 	ctx.quality = Map3DQuality.row(r, "high")
 	ctx.target = ctx.bounds.get_center()
-	ctx.distance = r.bal("map3d_zoom_start_m")
+	ctx.distance = r.bal("map3d_bench_mid_m")
 	return ctx
 
 

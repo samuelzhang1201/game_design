@@ -63,12 +63,22 @@ func test_an_unbuilt_map_says_how_to_build_it() -> void:
 	assert_string_contains(v.notice().text, "tools/map3d")
 
 
-func test_it_opens_on_the_players_capital() -> void:
+## Owner 2026-09-27: the view opens on the middle of the province the player
+## controls (the capital's, at the start of a reign).
+func test_it_opens_on_the_players_home_province() -> void:
 	var v := _view()
 	v.activate()
-	assert_almost_eq(v.target().x, _capital_xz().x, 0.01)
-	assert_almost_eq(v.target().y, _capital_xz().y, 0.01)
-	assert_almost_eq(v.distance(), Game.data.bal("map3d_zoom_start_m"), 0.01)
+	var capital := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
+	var home := {}
+	for code: String in Game.data.provinces:
+		if String(Game.data.provinces[code].get("capital_burg", "")) == capital:
+			home = Game.data.provinces[code]
+	var xz := Map3DGeometry.pack_to_world(WORLD, Vector2(float(home["center_x"]), float(home["center_y"])))
+	assert_almost_eq(v.target().x, xz.x, 0.01)
+	assert_almost_eq(v.target().y, xz.y, 0.01)
+	# by the scale bar (owner 2026-09-27): its full run spans map3d_zoom_start_scale
+	assert_almost_eq(v.distance(), Map3DGeometry.distance_for_bar(Game.data, v.context().meta,
+		Game.data.bal("map3d_zoom_start_scale"), v.context().view_size.y), 0.01)
 	assert_true(v.camera().current, "the rig's camera is the viewport's")
 	assert_false(v.notice().visible)
 
@@ -139,6 +149,7 @@ func test_a_clicked_settlement_wears_the_gold_ring_until_cleared() -> void:
 	v.activate()
 	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
 	var burg: Dictionary = Game.data.burgs[String(realm["capital_burg"])]
+	v.set_military(false)  # the fleet lies at the capital; this is the town's click
 	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])))
 	_click(v, v.size * 0.5)
 	assert_true(v.selected_ring_visible())
@@ -380,6 +391,7 @@ func test_a_click_on_a_settlement_opens_its_card() -> void:
 	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
 	var code := String(realm["capital_burg"])
 	var burg: Dictionary = Game.data.burgs[code]
+	v.set_military(false)  # the fleet lies at the capital; this is the town's click
 	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])))
 	watch_signals(v)
 	_click(v, v.size * 0.5)

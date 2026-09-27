@@ -256,3 +256,20 @@ add it here as a principle with its why — not as a changelog entry.
 4. **手和脸糟，多半是构图问题，不是参数问题。** 同 seed 下 32 步对 20 步几乎没差别。一条 12:5 的宽带里七张脸、十四只手，4B 模型一定崩。画布里规定"最多三个清晰人物，其余小而虚"，并且**每只手都要有交代**——平放且手指并拢、交叠、握住一个点名的东西，或者出画。越肩构图（前景人物只有后脑和肩膀）是最省事的解法。
 5. **画布只禁止，不规定。** 为了压时代漂移往画布里写"锁子甲、头盔、鸢形盾"，结果每张图都生效：大臣成了士兵，织工成了卫兵。改成"没被点名为士兵的人不许穿甲"，需要盔甲的场景自己写。
 6. **人会被画两遍。** "站在他们身后的门口"经常变成"旁边一个、门口一个"。要么明写"画面里只有 N 个人"，要么把那个人挪进主群。
+
+## The regiment pieces (owner 2026-09-27, round 2)
+
+- **A miniature grows with the zoom, then holds; far out it is a counter.**
+  A piece held at one screen size at every zoom read wrong ("随着镜头的缩放，
+  兵人大小没有变化这是不对的"): it is one world size (~20 px at the opening
+  view) growing as the camera comes in, capped close in so it never towers
+  over the houses, and a flat square counter once the scale bar reads 50 km.
+  Bigger is not better: the cavalry at 1.5× was ruled wrong ("应该更小一点").
+- **The owner names a zoom by the SCALE BAR**, not the camera's height
+  ("是比例尺，不是高度"). Put zoom thresholds in scale-bar units.
+- **A selection emphasises the line that is already there.** The clicked
+  province is its own black dashed seam, heavier and full ink — never a new
+  gold solid line laid over it ("一个黄色实心线…很丑").
+- **Status reads as two thin bars on the counter**, red (readiness) over
+  yellow (supplies), in the counter's own width.
+- **A miniature casts its shadow** — the table-top look wants it.

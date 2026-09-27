@@ -315,6 +315,21 @@ static func readiness_permille(repo: DataRepository, supply_permille: int, moral
 		+ wm * clampi(morale, 0, 100) * 10 + wt * clampi(training, 0, 100) * 10) / total
 
 
+## The two bars over a regiment on the map (owner 2026-09-27: 红色是健康度 — 综合
+## 战备, the readiness — 黄色是战略补给数), per mille: Vector2i(readiness,
+## supply score). A regiment that is not the player's has no state, and reads
+## as it would start (dev mode shows every realm's).
+static func bars_of(repo: DataRepository, state: GameState, code: String) -> Vector2i:
+	var reg := regiment(repo, code)
+	if reg.is_empty():
+		return Vector2i.ZERO
+	var st := state_of(repo, state, code)
+	if st.is_empty():
+		st = starting_state(repo, reg)
+	var supply := supply_score(repo, int(st["supplies"]), supply_use(repo, reg))
+	return Vector2i(readiness_permille(repo, supply, int(st["morale"]), int(st["training"])), supply)
+
+
 ## The march in TENTHS of a km a day: base_km x 10 x readiness / 1000.
 static func pace_tenths(repo: DataRepository, base_km: int, supply_permille: int, morale: int,
 		training: int) -> int:

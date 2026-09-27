@@ -1,7 +1,7 @@
 class_name BottomBar
 extends Control
 ## Bottom tab strip on every gameplay screen (user ruling 2026-08-30),
-## outside the map: HEIGHTS | MANORS | REALM | MILITARY | MEASUREMENT |
+## outside the map: HEIGHTS | MANORS | REALM | MEASUREMENT |
 ## WAR ROOM (a placeholder page, owner 2026-09-17) | FAMILIES | LAWS |
 ## RELIGION | RELATIONSHIP. MAP and PROVINCES went 2026-09-13 (owner):
 ## the province view is always on, and MAP did nothing a tab needed.
@@ -11,10 +11,10 @@ extends Control
 
 signal tab_selected(tab: String)
 
-const TABS := ["HEIGHTS", "MANORS", "REALM", "MILITARY", "MEASUREMENT",
+const TABS := ["HEIGHTS", "MANORS", "REALM", "MEASUREMENT",
 	"WAR ROOM", "FAMILIES", "LAWS", "RELIGION", "RELATIONSHIP"]
-## Tabs that stay lit while their view is on rather than opening an overlay:
-## MILITARY toggles the map's army layer (user request 2026-09-10), HEIGHTS
+## Tabs that stay lit while their view is on rather than opening an overlay
+## (MILITARY went 2026-09-27: the regiments are always on the map): HEIGHTS
 ## the height ramp over the land (owner request 2026-09-12, remade
 ## 2026-09-13), MANORS its theme (MANOR_SYSTEM.md §6: house colours and,
 ## since ECONOMY was folded into it on 2026-09-19, the output badges),
@@ -22,7 +22,7 @@ const TABS := ["HEIGHTS", "MANORS", "REALM", "MILITARY", "MEASUREMENT",
 ## 2026-09-18) is the default and has no tab: GameRoot shows it unless
 ## HEIGHTS is lit. MEASUREMENT (owner 2026-09-18) lays the ruler over whichever map
 ## is showing, 2D or 3D, and changes no layer.
-const TOGGLES := ["HEIGHTS", "MANORS", "MILITARY", "MEASUREMENT"]
+const TOGGLES := ["HEIGHTS", "MANORS", "MEASUREMENT"]
 ## The strip's height. A constant on purpose — NewsTicker and ScreenLayout
 ## both place themselves off it, so it cannot float — but it
 ## must stay at least content_height(), and a test pins that. It went stale

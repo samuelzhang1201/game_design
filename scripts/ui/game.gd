@@ -47,6 +47,10 @@ func start_campaign(seed_value: int = 42) -> void:
 ## 2 and 4 that many times faster. Only GameRoot's _process reads it, on
 ## the court; the simulation never sees a second.
 var clock_speed: int = 0
+## The share of the current day already gone, 0..1 — GameRoot's clock writes
+## it, the 3D map's sun reads it (owner 2026-09-27: the light turns with the day).
+## Presentation only: the simulation never sees it.
+var day_progress := 0.0
 
 func set_clock_speed(speed: int) -> void:
 	var allowed := [0, 1, int(data.bal("time_speed_fast")), int(data.bal("time_speed_faster"))]

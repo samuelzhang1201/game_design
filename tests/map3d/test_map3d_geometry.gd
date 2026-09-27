@@ -175,6 +175,12 @@ func test_distance_for_scale_keeps_the_bar_under_its_cap() -> void:
 	assert_eq(reading.call(Map3DGeometry.distance_for_scale(200.0, units_per_m, 220.0, 45.0, 600.0)), 200.0)
 	assert_eq(reading.call(Map3DGeometry.distance_for_scale(201.0, units_per_m, 220.0, 45.0, 600.0)), 200.0)
 
+## By hand: 25 km over a 220 px bar at 0.02 km a metre is 5.6818 m a screen px;
+## x 600 / (2 tan 22.5 = 0.828427) = 4115.1 m.
+func test_distance_for_span_puts_the_run_on_the_bar() -> void:
+	assert_almost_eq(Map3DGeometry.distance_for_span(25.0, 0.02, 220.0, 45.0, 600.0), 4115.1, 0.1)
+
+
 func test_distance_for_scale_is_unbounded_when_there_is_nothing_to_measure() -> void:
 	assert_eq(Map3DGeometry.distance_for_scale(0.0, 0.02, 220.0, 45.0, 600.0), INF)
 	assert_eq(Map3DGeometry.distance_for_scale(150.0, 0.0, 220.0, 45.0, 600.0), INF, "no measure")

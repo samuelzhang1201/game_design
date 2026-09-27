@@ -1,0 +1,7 @@
+figures,min_heads,slots,notes
+1,0,0:0,"owner 2026-09-27: a regiment's piece shows its strength in figures, six tiers — one figure under 1200 heads. The thresholds are the SEXTILES of the 46 land regiments on the default pack (1273 / 1732 / 2308 / 2896 / 3566), rounded. Slots are x:z in spacing units (x to the figure's right, z toward its REAR), Map3DFormation"
+2,1200,-0.5:0|0.5:0,two side by side
+3,1700,0:-0.5|-0.5:0.5|0.5:0.5,"a triangle, its point forward"
+4,2300,-0.5:-0.5|0.5:-0.5|-0.5:0.5|0.5:0.5,two ranks of two side by side
+5,2900,-0.6:-0.55|0.6:-0.55|0:0|-0.6:0.55|0.6:0.55,"the five of a die: four corners and the middle"
+6,3500,0:-1|-0.5:0|0.5:0|-1:1|0:1|1:1,"a wedge: one, two, three from the point back"

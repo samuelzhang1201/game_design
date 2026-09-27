@@ -32,6 +32,9 @@ func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_markers: Map3DLayerSe
 ## MARCH, which is then aimed with a ruler and confirmed by the next left
 ## click); anywhere else it selects what it hit. `pos` is design px.
 func click(picked: Dictionary, pos: Vector2) -> void:
+	if String(picked.get("kind", "")) == "route":
+		view.route_clicked.emit(String(picked["code"]), pos)
+		return
 	select(picked)
 	if String(picked.get("kind", "")) == "army":
 		view.army_menu_requested.emit(String(picked["code"]), pos)
@@ -112,8 +115,10 @@ func forget_manor() -> void:
 			redraw()
 
 
-## The clicked province's outline — or, under a theme, the clicked manor's
-## — solid gold over the borders.
+## The clicked province's outline — its own seam EMPHASISED: the same dark
+## dashes at full ink and heavier (owner 2026-09-27: "黄色实心线…不需要这个，
+## 它本身就是一个黑色的虚线，你highlight那个黑色虚线即可"); under a theme the
+## clicked manor's stays solid gold over the borders.
 func redraw() -> void:
 	var repo := ctx.repo
 	var ls: Array = []
@@ -134,9 +139,13 @@ func redraw() -> void:
 				pts.append(Map3DGeometry.pack_to_world(ctx.meta, p))
 			pts.append(pts[0])
 			ls.append(Map3DGeometry.resample(pts, ctx.line_step()))
-	var gold := MapPalette.named(repo, "map3d_selection")
-	lines.set_lines("Selection", ls,
-		Map3DLineStyle.solid(gold, "map3d_selection_width_px", Map3DPriority.SELECTION))
+	var style := Map3DLineStyle.solid(MapPalette.named(repo, "map3d_selection"),
+		"map3d_selection_width_px", Map3DPriority.SELECTION)
+	if manor < 0:
+		var seam := MapPalette.named(repo, "map3d_seam")
+		style = Map3DLineStyle.dashed(seam, Color(seam, 0.0), "map3d_selection_seam_width_px",
+			"map3d_seam_dash_px", "map3d_seam_gap_px", Map3DPriority.SELECTION)
+	lines.set_lines("Selection", ls, style)
 
 
 func _set_province(code: String) -> void:
