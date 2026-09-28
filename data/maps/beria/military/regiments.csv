@@ -51,19 +51,33 @@ farhold_3rd_fleet,farhold,rothestow,3rd Fleet,1710.19,559.99,0,0,0,0,1,1
 farhold_4th_fleet,farhold,wigin,4th Fleet,1838.69,723.31,0,0,0,0,1,1
 farhold_5th_fleet,farhold,leigham,5th Fleet,1527.63,236.28,0,0,0,0,1,1
 farhold_6th_fleet,farhold,witfordia,6th Fleet,1570.5,641.4,0,0,0,0,1,1
-kelvarn_1st_axbrigh_regiment,kelvarn,axbrigh,1st (Axbrigh) Regiment,1240.57,516.09,2651,1993,2762,49,0,0
-kelvarn_2nd_somerlis_regiment,kelvarn,haldock,2nd (Somerlis) Regiment,1121.94,491.69,428,408,1993,0,0,0
-kelvarn_3rd_framp_regiment,kelvarn,altnesbury,3rd (Framp) Regiment,1170.15,695.18,802,724,737,24,0,0
-kelvarn_4th_crafthamia_regiment,kelvarn,maldock,4th (Crafthamia) Regiment,1032.2,594.62,265,291,1321,2,0,0
-kelvarn_5th_penkburgh_regiment,kelvarn,witfordia_2,5th (Penkburgh) Regiment,1208.26,488.19,227,134,186,3,0,0
+kelvarn_1st_axbrigh_regiment,kelvarn,axbrigh,1st (Axbrigh) Regiment,1240.57,516.09,711,535,741,13,0,0
+kelvarn_2nd_somerlis_regiment,kelvarn,haldock,2nd (Somerlis) Regiment,1121.94,491.69,272,260,1268,0,0,0
+kelvarn_3rd_framp_regiment,kelvarn,altnesbury,3rd (Framp) Regiment,1170.15,695.18,561,506,516,17,0,0
+kelvarn_4th_crafthamia_regiment,kelvarn,maldock,4th (Crafthamia) Regiment,1032.2,594.62,212,232,1055,1,0,0
+kelvarn_5th_penkburgh_regiment,kelvarn,witfordia_2,5th (Penkburgh) Regiment,1208.26,488.19,495,292,406,7,0,0
 kelvarn_1st_fleet,kelvarn,walbover,1st Fleet,1215.57,607.76,0,0,0,0,6,1
 kelvarn_2nd_fleet,kelvarn,rothin,2nd Fleet,1381.9,484.94,0,0,0,0,1,1
-brackmoor_1st_neton_regiment,brackmoor,bolingham,1st (Neton) Regiment,1219.91,272.57,3601,2025,2392,57,0,0
-brackmoor_2nd_hertle_regiment,brackmoor,hertle,2nd (Hertle) Regiment,1412.32,249.28,746,356,810,13,0,0
-yorwald_1st_felney_regiment,yorwald,magelia,1st (Felney) Regiment,1916.45,376.32,2288,2586,453,57,0,0
-yorwald_2nd_swalisland_regiment,yorwald,bolne,2nd (Swalisland) Regiment,1976.78,313.87,1835,1548,594,27,0,0
-yorwald_3rd_berbotland_regiment,yorwald,dunshilbo,3rd (Berbotland) Regiment,2094.49,218.07,248,319,33,12,0,0
+kelvarn_6th_walbover_regiment,kelvarn,walbover,6th (Walbover) Regiment,1216.69,587.84,466,379,747,8,0,0
+kelvarn_7th_rothin_regiment,kelvarn,rothin,7th (Rothin) Regiment,1377.5,476.2,437,355,700,8,0,0
+kelvarn_8th_canceswest_regiment,kelvarn,canceswest,8th (Canceswest) Regiment,1255.54,642.86,408,331,653,8,0,0
+kelvarn_9th_yeorough_regiment,kelvarn,midenia,9th (Yeorough) Regiment,1336.14,419.74,379,308,606,7,0,0
+kelvarn_10th_rothbridbu_regiment,kelvarn,rothbridbu,10th (Rothbridbu) Regiment,1361.4,680.44,321,260,513,6,0,0
+brackmoor_1st_neton_regiment,brackmoor,bolingham,1st (Neton) Regiment,1219.91,272.57,892,502,592,14,0,0
+brackmoor_2nd_hertle_regiment,brackmoor,hertle,2nd (Hertle) Regiment,1412.32,249.28,542,259,589,10,0,0
+brackmoor_3rd_coclifnal_regiment,brackmoor,coclifnal,3rd (Coclifnal) Regiment,1301.57,311.51,739,405,544,12,0,0
+brackmoor_4th_ponbecksey_regiment,brackmoor,albrid_2,4th (Ponbecksey) Regiment,1339.53,238.62,652,357,480,11,0,0
+brackmoor_5th_shole_regiment,brackmoor,shole,5th (Shole) Regiment,1283.27,259.65,565,310,416,9,0,0
+brackmoor_6th_bunsey_regiment,brackmoor,osheadminia,6th (Bunsey) Regiment,1253.88,279.67,478,262,352,8,0,0
+brackmoor_7th_midford_regiment,brackmoor,caustonver,7th (Midford) Regiment,1266.13,211.01,435,238,320,7,0,0
+yorwald_1st_felney_regiment,yorwald,magelia,1st (Felney) Regiment,1916.45,376.32,765,865,151,19,0,0
+yorwald_2nd_swalisland_regiment,yorwald,bolne,2nd (Swalisland) Regiment,1976.78,313.87,733,619,237,11,0,0
+yorwald_3rd_berbotland_regiment,yorwald,dunshilbo,3rd (Berbotland) Regiment,2094.49,218.07,405,522,54,19,0,0
 yorwald_1st_fleet,yorwald,dunshilbo,1st Fleet,2106.31,206.75,0,0,0,0,2,1
 yorwald_2nd_fleet,yorwald,uxbridgia,2nd Fleet,2057.97,264.84,0,0,0,0,1,1
+yorwald_4th_thethorough_regiment,yorwald,uxbridgia,4th (Thethorough) Regiment,2039.27,251.03,699,713,173,15,0,0
+yorwald_5th_oakham_regiment,yorwald,oakham,5th (Oakham) Regiment,1924.17,456.11,656,668,162,14,0,0
+yorwald_6th_altley_regiment,yorwald,mitfordbia,6th (Altley) Regiment,1995.23,376.27,612,624,151,13,0,0
+yorwald_7th_osfield_regiment,yorwald,osfield,7th (Osfield) Regiment,2047.2,346.6,481,490,119,10,0,0
 valmoor_1st_bolingham_regiment,valmoor,penkleighia,1st (Bolingham) Regiment,2007.21,737.69,237,302,38,10,0,0
 valmoor_1st_fleet,valmoor,albridia,1st Fleet,1994.83,683.58,0,0,0,0,2,1
