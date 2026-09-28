@@ -26,6 +26,11 @@ var _pause_menu: Control
 var _pause_status: Label
 var _relations_screen: RelationshipGraphScreen
 var _missive_screen: MissiveScreen
+var _report_popup: MissiveReportPopup
+## Spy report ids waiting to open, oldest first (a new letter's id is always
+## the newest, so appending keeps them in arrival order); the dialog opens
+## them one at a time, on the seal of the one before.
+var _pending_reports: Array = []
 var _bottom_bar: BottomBar
 var _news_ticker: NewsTicker
 var _info_screen: InfoScreen
@@ -88,6 +93,11 @@ func _ready() -> void:
 	_missive_screen.visible = false
 	_missive_screen.show_requested.connect(_on_missive_show)
 	add_child(_missive_screen)
+	_report_popup = load("res://scenes/missive_report_popup.tscn").instantiate()
+	_report_popup.name = "MissiveReportPopup"
+	_report_popup.visible = false
+	_report_popup.sealed.connect(_on_report_sealed)
+	add_child(_report_popup)
 	_info_screen = InfoScreen.new()
 	_info_screen.name = "InfoScreen"
 	add_child(_info_screen)
@@ -124,10 +134,16 @@ func _process(delta: float) -> void:
 	var per_day := maxf(Game.data.bal("time_day_seconds") / float(Game.clock_speed), 0.001)
 	_clock_acc += delta
 	var steps := 0
-	while _clock_acc >= per_day and steps < 8:
+	# A spy's arrival (on_new_missives) can stop the clock or leave a report
+	# waiting mid-loop; the condition is re-checked every iteration so no
+	# further day runs in the same stepped frame once one does (spec
+	# 2026-09-28 §2 — the review focus's two-spies-in-one-frame case).
+	while _clock_acc >= per_day and steps < 8 and Game.clock_speed > 0 \
+			and _pending_reports.is_empty() and not _report_popup.visible:
 		_clock_acc -= per_day
 		steps += 1
 		var before := works_progress()
+		var missives_before := Game.state.next_missive_id
 		var out := Game.advance_day()
 		# The news bar (owner 2026-09-14): a work's progress at each milestone,
 		# its completion, and the month's close.
@@ -138,7 +154,10 @@ func _process(delta: float) -> void:
 				MapManors.label_of(Game.data, int(w["cell"]))])
 		for e: Dictionary in out.get("couriers", []):
 			Game.publish_news(CourierSystem.headline(Game.data, e))
-		refresh_missive_badge()
+		var new_ids: Array = []
+		for id in range(missives_before + 1, Game.state.next_missive_id + 1):
+			new_ids.append(id)
+		on_new_missives(new_ids)
 		if bool(out["ticked"]):
 			_pending_report = Game.current_report
 			announce_month(_pending_report)
@@ -399,6 +418,48 @@ func refresh_missive_badge() -> void:
 	if _bottom_bar != null and Game.state != null:
 		_bottom_bar.set_badge("MISSIVE", MissiveLog.unread(Game.state))
 
+## Test/tool seam.
+func report_popup() -> MissiveReportPopup:
+	return _report_popup
+
+## Spy reports waiting to open, oldest first.
+func pending_reports() -> Array:
+	return _pending_reports
+
+## New letters from a day's step (spec 2026-09-28 §2): a spy's report stops the
+## clock and opens the dialog (one at a time, in id order); a receipt or a
+## monthly report flies a small envelope from the news bar and interrupts
+## nothing. Nothing here ever restarts the clock.
+func on_new_missives(ids: Array) -> void:
+	for id: int in ids:
+		var m := MissiveLog.find(Game.state, id)
+		if m.is_empty():
+			continue
+		if String(m["kind"]) == "spy":
+			Game.set_clock_speed(0)
+			_pending_reports.append(id)
+		else:
+			var from: Rect2 = _news_ticker.get_global_rect() if _news_ticker != null \
+				else Rect2(get_viewport_rect().size * 0.5, Vector2.ZERO)
+			EnvelopeFlight.fly(self, from, _bottom_bar.button("MISSIVE").get_global_rect(), false, Game.data) \
+				.landed.connect(refresh_missive_badge)
+	if not _report_popup.visible:
+		_next_report()
+
+## Opens the oldest waiting report, if any; a sealed report calls back here.
+func _next_report() -> void:
+	if _pending_reports.is_empty():
+		return
+	_report_popup.open(MissiveLog.find(Game.state, int(_pending_reports.pop_front())))
+
+## Seal (spec 2026-09-28 §2): the dialog shrinks into an envelope and flies to
+## the tab, then the next waiting report (if any) opens.
+func _on_report_sealed(from: Rect2) -> void:
+	var f := EnvelopeFlight.fly(self, from, _bottom_bar.button("MISSIVE").get_global_rect(), true, Game.data)
+	f.landed.connect(func() -> void:
+		refresh_missive_badge()
+		_next_report())
+
 ## Show on map (spec 2026-09-28 §2): the view looks at the letter's place and
 ## the left column opens its card, through the view's own signals.
 func _on_missive_show(subject: Dictionary) -> void:
@@ -637,6 +698,8 @@ func _switch_to(new_state: State) -> void:
 	if _missive_screen != null:
 		_missive_screen.visible = false
 		move_child(_missive_screen, get_child_count() - 1)
+	if _report_popup != null:
+		move_child(_report_popup, get_child_count() - 1)
 	if _pause_menu != null:
 		move_child(_pause_menu, get_child_count() - 1)
 

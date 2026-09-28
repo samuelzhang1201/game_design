@@ -1,0 +1,56 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/missive_report_popup.gd" id="1"]
+
+[node name="MissiveReportPopup" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 0
+visible = false
+script = ExtResource("1")
+
+[node name="Dim" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.35)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Window" type="PanelContainer" parent="Center"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(640, 360)
+
+[node name="Row" type="HBoxContainer" parent="Center/Window"]
+theme_override_constants/separation = 16
+
+[node name="Painting" type="TextureRect" parent="Center/Window/Row"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(220, 280)
+clip_contents = true
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Col" type="VBoxContainer" parent="Center/Window/Row"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="ReportTitle" type="Label" parent="Center/Window/Row/Col"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="ReportMeta" type="Label" parent="Center/Window/Row/Col"]
+unique_name_in_owner = true
+
+[node name="ReportFacts" type="VBoxContainer" parent="Center/Window/Row/Col"]
+unique_name_in_owner = true
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="Seal" type="Button" parent="Center/Window/Row/Col"]
+unique_name_in_owner = true
+focus_mode = 0
+text = "Seal"

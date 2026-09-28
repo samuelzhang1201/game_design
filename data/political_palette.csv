@@ -50,3 +50,6 @@ intel_truth,#D8C27A,"Missive board (spec 2026-09-28): ground truth — the colum
 intel_credible,#7FB069,highly credible
 intel_consult,#6FA3C8,worth consulting (sub-project C)
 intel_rumour,#B07A5A,rumour
+envelope_paper,#E9DCC0,"missive envelope (EnvelopeFlight) fallback: the paper, until the art is installed"
+envelope_ink,#7A5A30,"missive envelope fallback: the fold lines' ink"
+envelope_wax,#8B1E1E,"missive envelope fallback: the wax seal"
