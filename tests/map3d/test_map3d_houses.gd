@@ -3,14 +3,15 @@ extends GutTest
 ## redesign owner 2026-09-20). Pure — no world, no terrain, no Game beyond
 ## the data repository.
 
-const CSV := "user://test_map3d_houses.csv"
+const RunDir := preload("res://tests/run_dir.gd")
+var _csv := RunDir.dir("map3d_houses").path_join("test_map3d_houses.csv")
 
 var _houses: Dictionary = {}
 
 
 func before_all() -> void:
 	Game.start_campaign(42)
-	var f := FileAccess.open(CSV, FileAccess.WRITE)
+	var f := FileAccess.open(_csv, FileAccess.WRITE)
 	f.store_line("burg_code,rank,x_m,z_m,yaw_deg,type,scale,height_scale")
 	f.store_line("alpha,0,100,200,10,chapel,1.0,1.5")
 	f.store_line("alpha,1,120,200,90,cottage_a,0.95,1.1")
@@ -18,7 +19,7 @@ func before_all() -> void:
 	f.store_line("beta,0,5000,200,0,chapel,1.0,1.4")
 	f.store_line("beta,1,5020,200,45,cottage_a,1.0,0.9")
 	f.close()
-	_houses = Map3DHouses.load_csv(CSV)
+	_houses = Map3DHouses.load_csv(_csv)
 
 
 func test_the_csv_loads_grouped_by_burg_and_sorted_by_rank() -> void:

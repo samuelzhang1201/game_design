@@ -51,6 +51,10 @@ var clock_speed: int = 0
 ## it, the 3D map's sun reads it (owner 2026-09-27: the light turns with the day).
 ## Presentation only: the simulation never sees it.
 var day_progress := 0.0
+## Where the pause menu's Save / Load Game keep the campaign. The suite's
+## pre-run hook points it into its own directory, so a test pressing Save
+## never overwrites the player's save or another running suite's file.
+var save_path := "user://save.json"
 
 func set_clock_speed(speed: int) -> void:
 	var allowed := [0, 1, int(data.bal("time_speed_fast")), int(data.bal("time_speed_faster"))]
@@ -125,10 +129,12 @@ func publish_news(text: String) -> void:
 		return
 	news_published.emit(text)
 
-func save_campaign(path: String = "user://save.json") -> bool:
+func save_campaign(path: String = "") -> bool:
+	path = save_path if path == "" else path
 	return SaveLoad.save_game(state, path)
 
-func load_campaign(path: String = "user://save.json") -> bool:
+func load_campaign(path: String = "") -> bool:
+	path = save_path if path == "" else path
 	var loaded := SaveLoad.load_game(path)
 	if loaded == null:
 		return false

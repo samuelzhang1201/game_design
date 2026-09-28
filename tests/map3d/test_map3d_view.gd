@@ -5,9 +5,14 @@ extends GutTest
 ## scene is git-ignored (tools/map3d builds it), so these tests use a small
 ## fixture scene carrying the same `map3d_world` metadata.
 
-const FIXTURE := "user://test_map3d_world.tscn"
+const RunDir := preload("res://tests/run_dir.gd")
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
+## In this run's own directory (tests/run_dir.gd): user:// is shared by every
+## checkout, and a suite running at the same time deleted rivers.json here.
+var _dir := RunDir.dir("map3d_view")
+var _fixture := _dir.path_join("world.tscn")
+var _rivers_json := _dir.path_join("rivers.json")
 
 
 func before_all() -> void:
@@ -17,7 +22,7 @@ func before_all() -> void:
 	root.set_meta("map3d_world", WORLD)
 	var packed := PackedScene.new()
 	packed.pack(root)
-	ResourceSaver.save(packed, FIXTURE)
+	ResourceSaver.save(packed, _fixture)
 	root.free()
 
 
@@ -25,11 +30,11 @@ func before_all() -> void:
 ## behind even when an assert fails before their own cleanup line (final
 ## review, owner 2026-09-18).
 func after_each() -> void:
-	if FileAccess.file_exists("user://rivers.json"):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path("user://rivers.json"))
+	if FileAccess.file_exists(_rivers_json):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(_rivers_json))
 
 
-func _view(path: String = FIXTURE) -> Map3DView:
+func _view(path: String = _fixture) -> Map3DView:
 	var v := Map3DView.create(Game.data, path)
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
@@ -661,7 +666,7 @@ func test_a_compass_press_that_moves_does_not_pan_or_select() -> void:
 
 
 func test_rivers_beside_the_scene_become_the_rivers_layer() -> void:
-	var f := FileAccess.open("user://rivers.json", FileAccess.WRITE)
+	var f := FileAccess.open(_rivers_json, FileAccess.WRITE)
 	f.store_string('{"rivers": [{"code": "a", "points": [[0, 0, 10, 6, 0], [500, 0, 9, 40, 1]]}]}')
 	f.close()
 	var v := _view()
@@ -681,9 +686,9 @@ func test_the_builds_sea_wears_the_banded_water() -> void:
 	sea.owner = root
 	var packed := PackedScene.new()
 	packed.pack(root)
-	ResourceSaver.save(packed, "user://test_map3d_sea.tscn")
+	ResourceSaver.save(packed, _dir.path_join("sea.tscn"))
 	root.free()
-	var v := _view("user://test_map3d_sea.tscn")
+	var v := _view(_dir.path_join("sea.tscn"))
 	v.activate()
 	var mat := v.sea_material()
 	assert_not_null(mat)
@@ -705,9 +710,9 @@ func test_the_seas_band_colours_go_in_raw() -> void:
 	sea.owner = root
 	var packed := PackedScene.new()
 	packed.pack(root)
-	ResourceSaver.save(packed, "user://test_map3d_sea2.tscn")
+	ResourceSaver.save(packed, _dir.path_join("sea2.tscn"))
 	root.free()
-	var v := _view("user://test_map3d_sea2.tscn")
+	var v := _view(_dir.path_join("sea2.tscn"))
 	v.activate()
 	var mat := v.sea_material()
 	var raw: Color = MapTerrain.palette_color(Game.data, "sea_near", MapTerrain.FALLBACK)
@@ -731,7 +736,7 @@ func test_the_sea_turns_natural_near_and_banded_far() -> void:
 ## Same for the river material: water goes in raw, and the emission
 ## share/gamma are wired from balance.csv.
 func test_the_rivers_colours_go_in_raw() -> void:
-	var f := FileAccess.open("user://rivers.json", FileAccess.WRITE)
+	var f := FileAccess.open(_rivers_json, FileAccess.WRITE)
 	f.store_string('{"rivers": [{"code": "a", "points": [[0, 0, 10, 6, 0], [500, 0, 9, 40, 1]]}]}')
 	f.close()
 	var v := _view()

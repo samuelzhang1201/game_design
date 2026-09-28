@@ -5,7 +5,8 @@ extends GutTest
 ## split, and run after every task of the refactor. A name may move into a
 ## layer, but the view must keep a forwarder with the same shape.
 
-const FIXTURE := "user://test_map3d_api_world.tscn"
+const RunDir := preload("res://tests/run_dir.gd")
+var _fixture := RunDir.dir("map3d_api").path_join("test_map3d_api_world.tscn")
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
 
@@ -53,7 +54,7 @@ func before_all() -> void:
 	root.set_meta("map3d_world", WORLD)
 	var packed := PackedScene.new()
 	packed.pack(root)
-	ResourceSaver.save(packed, FIXTURE)
+	ResourceSaver.save(packed, _fixture)
 	root.free()
 
 
@@ -66,7 +67,7 @@ func _script_methods() -> Dictionary:
 
 
 func _view() -> Map3DView:
-	var v := Map3DView.create(Game.data, FIXTURE)
+	var v := Map3DView.create(Game.data, _fixture)
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
 	v.activate()
@@ -90,7 +91,7 @@ func test_the_statics_stay_static() -> void:
 
 
 func test_the_signals_are_kept() -> void:
-	var v := Map3DView.create(Game.data, FIXTURE)
+	var v := Map3DView.create(Game.data, _fixture)
 	add_child_autofree(v)
 	for key: String in SIGNALS:
 		assert_true(v.has_signal(key), key)
@@ -103,7 +104,7 @@ func test_the_constants_and_properties_are_kept() -> void:
 	var consts: Dictionary = (load("res://scripts/map3d/map3d_view.gd") as Script).get_script_constant_map()
 	for key: String in CONSTANTS:
 		assert_true(consts.has(key), key)
-	var v := Map3DView.create(Game.data, FIXTURE)
+	var v := Map3DView.create(Game.data, _fixture)
 	add_child_autofree(v)
 	assert_true("ruler_on" in v, "ruler_on (GameRoot sets it)")
 	assert_true("_meta" in v, "_meta (test_map3d_heights reads it)")

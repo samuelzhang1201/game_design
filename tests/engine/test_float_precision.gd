@@ -7,6 +7,9 @@ extends GutTest
 ## (GameState._float_to_hex / _hex_to_float) instead of relying on JSON's
 ## own float formatting/parsing.
 
+const RunDir := preload("res://tests/run_dir.gd")
+
+
 func test_hex_round_trip_is_bit_exact_for_10k_random_doubles() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 99
@@ -23,7 +26,8 @@ func test_save_load_bit_exact_for_adversarial_metric_values() -> void:
 		var s := GameState.new_campaign(data, 42)
 		s.metrics["treasury"] = (rng.randf() - 0.5) * pow(10.0, rng.randi_range(-2, 5))
 		s.metrics["unrest"] = rng.randf() * 100.0
-		SaveLoad.save_game(s, "user://float_test.json")
-		var loaded := SaveLoad.load_game("user://float_test.json")
+		var path := RunDir.dir("float_precision").path_join("float_test.json")
+		SaveLoad.save_game(s, path)
+		var loaded := SaveLoad.load_game(path)
 		assert_eq(SaveLoad.state_hash(loaded), SaveLoad.state_hash(s), "hash diverged at %d" % i)
 		assert_eq(var_to_bytes(loaded.metrics["treasury"]), var_to_bytes(s.metrics["treasury"]), "treasury bits at %d" % i)

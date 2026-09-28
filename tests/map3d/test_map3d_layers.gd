@@ -3,10 +3,15 @@ extends GutTest
 ## the view builds them and forwards to them; these tests hold that each
 ## layer is the node the view's seams name, with the same look as before.
 
-const FIXTURE := "user://test_map3d_layers_world.tscn"
-const SEA_FIXTURE := "user://test_map3d_layers_sea.tscn"
+const RunDir := preload("res://tests/run_dir.gd")
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
+## In this run's own directory (tests/run_dir.gd): user:// is shared by every
+## checkout, and a suite running at the same time deleted rivers.json here.
+var _dir := RunDir.dir("map3d_layers")
+var _fixture := _dir.path_join("world.tscn")
+var _sea_fixture := _dir.path_join("sea.tscn")
+var _rivers_json := _dir.path_join("rivers.json")
 
 
 func before_all() -> void:
@@ -16,7 +21,7 @@ func before_all() -> void:
 	root.set_meta("map3d_world", WORLD)
 	var packed := PackedScene.new()
 	packed.pack(root)
-	ResourceSaver.save(packed, FIXTURE)
+	ResourceSaver.save(packed, _fixture)
 	root.free()
 	var sea_root := Node3D.new()
 	sea_root.name = "SeaFixture"
@@ -33,16 +38,16 @@ func before_all() -> void:
 	sun.owner = sea_root
 	var packed_sea := PackedScene.new()
 	packed_sea.pack(sea_root)
-	ResourceSaver.save(packed_sea, SEA_FIXTURE)
+	ResourceSaver.save(packed_sea, _sea_fixture)
 	sea_root.free()
 
 
 func after_each() -> void:
-	if FileAccess.file_exists("user://rivers.json"):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path("user://rivers.json"))
+	if FileAccess.file_exists(_rivers_json):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(_rivers_json))
 
 
-func _view(path: String = FIXTURE) -> Map3DView:
+func _view(path: String = _fixture) -> Map3DView:
 	var v := Map3DView.create(Game.data, path)
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
@@ -51,7 +56,7 @@ func _view(path: String = FIXTURE) -> Map3DView:
 
 
 func test_the_rivers_are_their_own_layer() -> void:
-	var f := FileAccess.open("user://rivers.json", FileAccess.WRITE)
+	var f := FileAccess.open(_rivers_json, FileAccess.WRITE)
 	f.store_string('{"rivers": [{"code": "a", "points": [[0, 0, 10, 6, 0], [500, 0, 9, 40, 1]]}]}')
 	f.close()
 	var v := _view()
@@ -68,7 +73,7 @@ func test_no_rivers_file_no_rivers_layer_listed() -> void:
 
 
 func test_the_sea_layer_is_the_scenes_own_plane() -> void:
-	var v := _view(SEA_FIXTURE)
+	var v := _view(_sea_fixture)
 	var sea := v.viewport().get_node("Sea")
 	assert_true(sea is Map3DLayerSea)
 	assert_eq((sea as Map3DLayerSea).material_override, v.sea_material())
@@ -79,7 +84,7 @@ func test_the_sea_layer_is_the_scenes_own_plane() -> void:
 
 
 func test_the_suns_shadow_look_is_data() -> void:
-	var v := _view(SEA_FIXTURE)
+	var v := _view(_sea_fixture)
 	var sun := v.viewport().get_node("Sun") as DirectionalLight3D
 	assert_almost_eq(sun.shadow_opacity, Game.data.bal("map3d_sun_shadow_opacity"), 0.0001)
 	assert_almost_eq(sun.shadow_blur, Game.data.bal("map3d_sun_shadow_blur"), 0.0001)
@@ -189,7 +194,7 @@ func test_the_borders_rebuild_only_when_ownership_moves() -> void:
 
 
 func test_the_themes_are_one_layer_that_works_before_load() -> void:
-	var v := Map3DView.create(Game.data, FIXTURE)
+	var v := Map3DView.create(Game.data, _fixture)
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
 	v.set_manor_theme("heights")

@@ -3,7 +3,9 @@ extends GutTest
 ## data/graphics_quality.csv read by Map3DQuality — pure: the row, the GPU
 ## detection, the saved setting.
 
-const CFG := "user://test_quality_settings.cfg"
+const RunDir := preload("res://tests/run_dir.gd")
+## In this run's own directory (tests/run_dir.gd), which no other suite deletes.
+var _cfg := RunDir.dir("map3d_quality").path_join("settings.cfg")
 
 
 func before_all() -> void:
@@ -11,10 +13,10 @@ func before_all() -> void:
 
 
 func after_each() -> void:
-	if FileAccess.file_exists(CFG):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(CFG))
+	if FileAccess.file_exists(_cfg):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(_cfg))
 	# test_the_pause_menu_remembers_the_tier writes the REAL settings file
-	# (GameRoot.settings_path, not CFG); restore it here so a failing assert
+	# (GameRoot.settings_path, not _cfg); restore it here so a failing assert
 	# mid-test can't leave it pinned at a tier.
 	Map3DQuality.save_setting(GameRoot.settings_path, Map3DQuality.AUTO)
 
@@ -73,14 +75,14 @@ func test_detection_by_adapter_name() -> void:
 
 
 func test_the_setting_overrides_the_detection() -> void:
-	assert_eq(Map3DQuality.setting(CFG), Map3DQuality.AUTO, "no file: auto")
-	Map3DQuality.save_setting(CFG, "low")
-	assert_eq(Map3DQuality.setting(CFG), "low")
+	assert_eq(Map3DQuality.setting(_cfg), Map3DQuality.AUTO, "no file: auto")
+	Map3DQuality.save_setting(_cfg, "low")
+	assert_eq(Map3DQuality.setting(_cfg), "low")
 	var was := Map3DQuality.forced
 	Map3DQuality.forced = ""
-	assert_eq(Map3DQuality.resolve(CFG, "Apple M5 Pro", "Apple"), "low")
-	Map3DQuality.save_setting(CFG, Map3DQuality.AUTO)
-	assert_eq(Map3DQuality.resolve(CFG, "Apple M1", "Apple"), "medium")
+	assert_eq(Map3DQuality.resolve(_cfg, "Apple M5 Pro", "Apple"), "low")
+	Map3DQuality.save_setting(_cfg, Map3DQuality.AUTO)
+	assert_eq(Map3DQuality.resolve(_cfg, "Apple M1", "Apple"), "medium")
 	Map3DQuality.forced = was
 
 
@@ -89,7 +91,7 @@ func test_the_menu_cycles_auto_then_each_tier() -> void:
 	assert_eq(Map3DQuality.next_setting("ultra"), "auto")
 
 
-const Q_FIXTURE := "user://test_map3d_quality_world.tscn"
+var _q_fixture := RunDir.dir("map3d_quality").path_join("test_map3d_quality_world.tscn")
 
 
 func _q_view() -> Map3DView:
@@ -98,9 +100,9 @@ func _q_view() -> Map3DView:
 		"pack_px": [2560, 929], "sea_y": 5.0})
 	var packed := PackedScene.new()
 	packed.pack(root)
-	ResourceSaver.save(packed, Q_FIXTURE)
+	ResourceSaver.save(packed, _q_fixture)
 	root.free()
-	var v := Map3DView.create(Game.data, Q_FIXTURE)
+	var v := Map3DView.create(Game.data, _q_fixture)
 	# the authored scene fills its parent; pin the size these pixel counts assume
 	v.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	v.size = Vector2(800, 450)

@@ -1,5 +1,6 @@
 extends GutTest
 
+const RunDir := preload("res://tests/run_dir.gd")
 var data: DataRepository
 var s: GameState
 var es: EventSystem
@@ -117,8 +118,9 @@ func test_reload_with_pending_event_is_bit_identical() -> void:
 	# Force an event, save/load, then resolve on both independently: both should diverge identically
 	es._fire("ev_a", s)
 	var s_hash_before_save := SaveLoad.state_hash(s)
-	SaveLoad.save_game(s, "user://ev_test.json")
-	var loaded := SaveLoad.load_game("user://ev_test.json")
+	var path := RunDir.dir("event_system").path_join("ev_test.json")
+	SaveLoad.save_game(s, path)
+	var loaded := SaveLoad.load_game(path)
 
 	# (i) Hash is preserved through save/load
 	assert_eq(SaveLoad.state_hash(loaded), s_hash_before_save)

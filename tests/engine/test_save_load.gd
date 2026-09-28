@@ -1,5 +1,6 @@
 extends GutTest
 
+const RunDir := preload("res://tests/run_dir.gd")
 var data: DataRepository
 
 func before_each() -> void:
@@ -11,7 +12,7 @@ func test_save_load_round_trip_hash_equal() -> void:
 	for i in 5:
 		engine.advance(s)
 	engine.actions.execute(ActionRequest.make("CHURCH_POLICY", {"mode": "tithe"}), s)
-	var path := "user://test_save.json"
+	var path := RunDir.dir("save_load").path_join("test_save.json")
 	assert_true(SaveLoad.save_game(s, path))
 	var loaded := SaveLoad.load_game(path)
 	assert_not_null(loaded)
@@ -43,7 +44,7 @@ func test_save_load_hash_equal_with_pending_outcome() -> void:
 	var s := GameState.new_campaign(data, 42)
 	engine.advance(s)
 	engine.actions.execute(ActionRequest.make("TAX_RATE_ADJUST", {"delta": 2}), s)
-	var path := "user://test_save_pending.json"
+	var path := RunDir.dir("save_load").path_join("test_save_pending.json")
 	assert_true(SaveLoad.save_game(s, path))
 	var loaded := SaveLoad.load_game(path)
 	assert_not_null(loaded)

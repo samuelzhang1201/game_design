@@ -1,6 +1,9 @@
 extends GutTest
 
 
+const RunDir := preload("res://tests/run_dir.gd")
+
+
 func test_marks_keep_clear_of_each_other_and_inside_the_view() -> void:
 	var marks := [{"at": Vector2(10, 10), "kind": "rain"}, {"at": Vector2(15, 10), "kind": "snow"},
 		{"at": Vector2(60, 10), "kind": "mud"}, {"at": Vector2(-5, 10), "kind": "rain"}]
@@ -20,7 +23,7 @@ func test_marks_keep_off_what_is_already_drawn() -> void:
 	assert_eq(String(kept[0]["kind"]), "snow", "the mark over a dot is left off")
 
 
-const HUD_FIXTURE := "user://test_map3d_hud_weather_world.tscn"
+var _hud_fixture := RunDir.dir("map3d_hud_weather").path_join("test_map3d_hud_weather_world.tscn")
 const HUD_WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
 
@@ -31,9 +34,9 @@ func _hud_view() -> Map3DView:
 	root.set_meta("map3d_world", HUD_WORLD)
 	var packed := PackedScene.new()
 	packed.pack(root)
-	ResourceSaver.save(packed, HUD_FIXTURE)
+	ResourceSaver.save(packed, _hud_fixture)
 	root.free()
-	var v := Map3DView.create(Game.data, HUD_FIXTURE)
+	var v := Map3DView.create(Game.data, _hud_fixture)
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
 	v.activate()

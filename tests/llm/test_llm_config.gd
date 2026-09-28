@@ -1,13 +1,14 @@
 extends GutTest
 
+const RunDir := preload("res://tests/run_dir.gd")
 const FIXTURE_ENV := "res://tests/fixtures/test_env"
-const FIXTURE_JSON := "user://test_llm_config.json"
+var _fixture_json := RunDir.dir("llm_config").path_join("test_llm_config.json")
 
 # Member, not local: GDScript lambdas capture locals by value.
 var _refusals := 0
 
 func before_each() -> void:
-	var f := FileAccess.open(FIXTURE_JSON, FileAccess.WRITE)
+	var f := FileAccess.open(_fixture_json, FileAccess.WRITE)
 	f.store_string(JSON.stringify({"model_parse": "json-wins-parse"}))
 	f = null
 
@@ -23,7 +24,7 @@ func test_env_overlay_sets_key_and_models() -> void:
 	assert_true(cfg["llm_store_requests"])
 
 func test_json_overrides_env_per_field() -> void:
-	var cfg := OpenAIClient.load_config(FIXTURE_ENV, FIXTURE_JSON)
+	var cfg := OpenAIClient.load_config(FIXTURE_ENV, _fixture_json)
 	assert_eq(cfg["model_parse"], "json-wins-parse")   # json wins
 	assert_eq(cfg["model_voice"], "test-model-1")      # env survives where json silent
 

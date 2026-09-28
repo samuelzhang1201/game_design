@@ -3,16 +3,17 @@ extends GutTest
 ## not its 44 MB world; the next view re-parents it. At most one world, lent
 ## to one view at a time (Ruling 13).
 
-const FIXTURE := "user://test_map3d_cache_world.tscn"
-const OTHER := "user://test_map3d_cache_other.tscn"
-const TERRAIN := "user://test_map3d_cache_terrain.tscn"
+const RunDir := preload("res://tests/run_dir.gd")
+var _fixture := RunDir.dir("map3d_world_cache").path_join("test_map3d_cache_world.tscn")
+var _other := RunDir.dir("map3d_world_cache").path_join("test_map3d_cache_other.tscn")
+var _terrain := RunDir.dir("map3d_world_cache").path_join("test_map3d_cache_terrain.tscn")
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
 
 
 func before_all() -> void:
 	Game.start_campaign(42)
-	for path: String in [FIXTURE, OTHER]:
+	for path: String in [_fixture, _other]:
 		var root := Node3D.new()
 		root.set_meta("map3d_world", WORLD)
 		var packed := PackedScene.new()
@@ -34,7 +35,7 @@ func before_all() -> void:
 	t.owner = world
 	var ps := PackedScene.new()
 	ps.pack(world)
-	ResourceSaver.save(ps, TERRAIN)
+	ResourceSaver.save(ps, _terrain)
 	world.free()
 
 
@@ -46,7 +47,7 @@ func after_all() -> void:
 	Map3DWorldCache.clear()
 
 
-func _view(path: String = FIXTURE) -> Map3DView:
+func _view(path: String = _fixture) -> Map3DView:
 	var v := Map3DView.create(Game.data, path)
 	v.size = Vector2(800, 450)
 	add_child(v)
@@ -62,7 +63,7 @@ func test_a_new_view_reuses_the_last_views_world() -> void:
 	var v1 := _view()
 	var w1 := _world_of(v1)
 	v1.free()
-	assert_eq(Map3DWorldCache.held(), FIXTURE)
+	assert_eq(Map3DWorldCache.held(), _fixture)
 	assert_false(Map3DWorldCache.lent())
 	assert_true(is_instance_valid(w1), "kept, not freed")
 	var v2 := _view()
@@ -86,9 +87,9 @@ func test_another_pack_drops_the_old_world() -> void:
 	var v1 := _view()
 	var w1 := _world_of(v1)
 	v1.free()
-	var v2 := _view(OTHER)
+	var v2 := _view(_other)
 	assert_false(is_instance_valid(w1), "one world at most")
-	assert_eq(Map3DWorldCache.held(), OTHER)
+	assert_eq(Map3DWorldCache.held(), _other)
 	v2.free()
 
 
@@ -117,13 +118,13 @@ func _collision(v: Map3DView) -> int:
 ## outliving the old view's physics space crashed a re-parent: an opened
 ## world has it OFF, and it stays off across take -> give_back -> take.
 func test_an_opened_world_has_no_terrain_collision() -> void:
-	var v1 := _view(TERRAIN)
+	var v1 := _view(_terrain)
 	var w1 := _world_of(v1)
 	assert_eq(_collision(v1), 0, "off once opened")
 	await wait_process_frames(2)
 	v1.free()
 	assert_eq(int(w1.get_node("Terrain3D").get("collision_mode")), 0, "off while kept")
-	var v2 := _view(TERRAIN)
+	var v2 := _view(_terrain)
 	assert_true(is_same(_world_of(v2), w1), "re-parented")
 	await wait_process_frames(2)
 	assert_eq(_collision(v2), 0, "never switched back on")

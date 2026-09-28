@@ -2,9 +2,10 @@ extends GutTest
 ## Map3DLayerHouses: one MultiMesh per type, rebuilt only when the camera
 ## moves far enough (spec 2026-09-20 §3).
 
+const RunDir := preload("res://tests/run_dir.gd")
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
-const CSV := "user://test_map3d_layer_houses.csv"
+var _csv := RunDir.dir("map3d_layer_houses").path_join("test_map3d_layer_houses.csv")
 ## Fix round 1, finding 1: a distinctive, non-zero height so a refresh() that
 ## hardcoded or skipped the ctx.height_at() lookup could not pass by accident
 ## (0.0 or the fixture's own sea_y of 5.0 would both be too easy to fake).
@@ -19,7 +20,7 @@ func before_each() -> void:
 	var codes: Array = Game.data.burgs.keys()
 	codes.sort()
 	var a := String(codes[0])
-	var f := FileAccess.open(CSV, FileAccess.WRITE)
+	var f := FileAccess.open(_csv, FileAccess.WRITE)
 	f.store_line("burg_code,rank,x_m,z_m,yaw_deg,type,scale,height_scale")
 	var b: Dictionary = Game.data.burgs[a]
 	var at := Map3DGeometry.pack_to_world(WORLD, Vector2(float(b["x"]), float(b["y"])))
@@ -32,7 +33,7 @@ func before_each() -> void:
 	_ctx = Map3DContext.new(Game.data, WORLD)
 	_ctx.height_fn = func(_xz: Vector2) -> float: return HEIGHT
 	_layer = Map3DLayerHouses.new()
-	_layer.houses_override = Map3DHouses.load_csv(CSV)
+	_layer.houses_override = Map3DHouses.load_csv(_csv)
 	add_child_autofree(_layer)
 	_layer.bind(_ctx)
 
@@ -84,7 +85,7 @@ func test_instances_carry_their_yaw_and_scale() -> void:
 	# Deviation from the brief (task 6 override 4): "cottage_a".capitalize()
 	# returns "Cottage A" (capitalize() turns an underscore into a space), not
 	# "Cottage_a" — verified against a headless Godot run. The layer names its
-	# nodes after the raw CSV type instead, so the lookup here follows suit.
+	# nodes after the raw _csv type instead, so the lookup here follows suit.
 	var mmi := _layer.get_node_or_null("cottage_a") as MultiMeshInstance3D
 	assert_not_null(mmi)
 	# Second deviation, same test: read the Transform3D refresh() itself

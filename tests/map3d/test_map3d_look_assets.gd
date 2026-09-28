@@ -5,6 +5,7 @@ extends GutTest
 ## committed 512 px preview textures for a checkout without the git-ignored
 ## full-resolution ones.
 
+const RunDir := preload("res://tests/run_dir.gd")
 const MATERIALS := {
 	"border_line": "res://scripts/map3d/border_line.gdshader",
 	"road_line": "res://scripts/map3d/road_line.gdshader",
@@ -90,10 +91,11 @@ func test_a_views_materials_are_its_own_copies() -> void:
 		"pack_px": [2560, 929], "sea_y": 5.0})
 	var packed := PackedScene.new()
 	packed.pack(root)
-	ResourceSaver.save(packed, "user://test_map3d_look_world.tscn")
+	var path := RunDir.dir("map3d_look_assets").path_join("test_map3d_look_world.tscn")
+	ResourceSaver.save(packed, path)
 	root.free()
-	var a := Map3DView.create(Game.data, "user://test_map3d_look_world.tscn")
-	var b := Map3DView.create(Game.data, "user://test_map3d_look_world.tscn")
+	var a := Map3DView.create(Game.data, path)
+	var b := Map3DView.create(Game.data, path)
 	for v: Map3DView in [a, b]:
 		v.size = Vector2(800, 450)
 		add_child_autofree(v)

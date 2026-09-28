@@ -4,7 +4,8 @@ extends GutTest
 ## live in scenes/map3d/world_map_3d.tscn; nothing generated at runtime is
 ## ever saved into it.
 
-const FIXTURE := "user://test_map3d_scene_world.tscn"
+const RunDir := preload("res://tests/run_dir.gd")
+var _fixture := RunDir.dir("map3d_scene").path_join("test_map3d_scene_world.tscn")
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
 const TREE := ["Viewport", "Viewport/WorldSlot", "Viewport/CameraRig",
@@ -23,12 +24,12 @@ func before_all() -> void:
 	root.set_meta("map3d_world", WORLD)
 	var packed := PackedScene.new()
 	packed.pack(root)
-	ResourceSaver.save(packed, FIXTURE)
+	ResourceSaver.save(packed, _fixture)
 	root.free()
 
 
 func test_create_instances_the_authored_scene() -> void:
-	var v := Map3DView.create(Game.data, FIXTURE)
+	var v := Map3DView.create(Game.data, _fixture)
 	add_child_autofree(v)
 	assert_eq(v.scene_file_path, Map3DView.VIEW_SCENE)
 	for path: String in TREE:
@@ -68,7 +69,7 @@ func test_the_tooltip_chip_is_the_themes_own() -> void:
 	assert_eq(saved.content_margin_top, live.content_margin_top)
 
 
-const OLD_BUILD := "user://test_map3d_old_build.tscn"
+var _old_build_path := RunDir.dir("map3d_scene").path_join("test_map3d_old_build.tscn")
 
 
 func _old_build() -> void:
@@ -84,13 +85,13 @@ func _old_build() -> void:
 	(root.get_node("Sea") as MeshInstance3D).mesh = PlaneMesh.new()
 	var packed := PackedScene.new()
 	packed.pack(root)
-	ResourceSaver.save(packed, OLD_BUILD)
+	ResourceSaver.save(packed, _old_build_path)
 	root.free()
 
 
 func test_an_old_builds_sun_sky_sea_and_cameras_step_aside() -> void:
 	_old_build()
-	var v := Map3DView.create(Game.data, OLD_BUILD)
+	var v := Map3DView.create(Game.data, _old_build_path)
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
 	v.activate()
@@ -109,7 +110,7 @@ func test_an_old_builds_sun_sky_sea_and_cameras_step_aside() -> void:
 
 
 func test_the_sky_and_sun_are_data() -> void:
-	var v := Map3DView.create(Game.data, FIXTURE)
+	var v := Map3DView.create(Game.data, _fixture)
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
 	v.activate()

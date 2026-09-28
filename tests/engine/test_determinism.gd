@@ -1,5 +1,6 @@
 extends GutTest
 
+const RunDir := preload("res://tests/run_dir.gd")
 var data: DataRepository
 
 func before_each() -> void:
@@ -26,8 +27,9 @@ func _run_campaign(seed_value: int, reload_at: int = -1) -> String:
 		if inputs.has(s.tick) and engine.actions.validate(inputs[s.tick], s) == "":
 			engine.actions.execute(inputs[s.tick], s)
 		if s.tick == reload_at:
-			SaveLoad.save_game(s, "user://det_test.json")
-			s = SaveLoad.load_game("user://det_test.json")
+			var path := RunDir.dir("determinism").path_join("det_test.json")
+			SaveLoad.save_game(s, path)
+			s = SaveLoad.load_game(path)
 		if not s.pending_event.is_empty():
 			engine.events.apply_choice(String(s.pending_event["choices"][0]["choice_id"]), s)
 	return SaveLoad.state_hash(s)

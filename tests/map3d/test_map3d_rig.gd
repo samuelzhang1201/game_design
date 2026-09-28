@@ -2,7 +2,8 @@ extends GutTest
 ## Map3DCameraRig and Map3DInput (spec 2026-09-20 §1): the pose lives in the
 ## context and the rig moves it; the input says which events the view takes.
 
-const FIXTURE := "user://test_map3d_rig_world.tscn"
+const RunDir := preload("res://tests/run_dir.gd")
+var _fixture := RunDir.dir("map3d_rig").path_join("test_map3d_rig_world.tscn")
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
 
@@ -14,12 +15,12 @@ func before_all() -> void:
 	root.set_meta("map3d_world", WORLD)
 	var packed := PackedScene.new()
 	packed.pack(root)
-	ResourceSaver.save(packed, FIXTURE)
+	ResourceSaver.save(packed, _fixture)
 	root.free()
 
 
 func _view() -> Map3DView:
-	var v := Map3DView.create(Game.data, FIXTURE)
+	var v := Map3DView.create(Game.data, _fixture)
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
 	v.activate()
