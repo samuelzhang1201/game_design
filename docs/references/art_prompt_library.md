@@ -1600,6 +1600,29 @@ background, no numerals, no text [C-ICON]
 | `G-46` | 船只 · ships | `a small wooden model of a single-masted cog ship with a square sail on a little stand` |
 | `G-47` | 火炮 · artillery | `a short bronze bombard barrel strapped with iron bands, lying on a low wooden sled, with two round stone shot beside it` |
 | `G-48` | 成衣 · garments | `a neatly folded linen shirt under a folded wool tunic, a leather belt coiled on top and a pair of sewn cloth hose beside them` |
+| `G-49` | 黄金 · gold | `a few small cast gold ingots stacked beside a little heap of gold nuggets on a folded cloth` |
+| `G-50` | 橄榄 · olives | `a cut olive sprig with green and black olives beside a small glazed clay jar full of olives` |
+| `G-51` | 马匹 · horses | `a standing bay horse in profile wearing a simple leather bridle` |
+| `G-52` | 骆驼 · camels | `a standing one-humped camel in profile with a rope halter and a folded blanket on its back` |
+| `G-53` | 珍珠 · pearls | `an opened oyster shell holding one pearl beside a short strand of pearls` |
+| `G-54` | 乳香 · incense | `pale lumps of frankincense resin in a small wooden bowl beside a bronze censer with a thin curl of smoke` |
+| `G-55` | 丝绸 · silk | `a bolt of lustrous deep red silk partly unrolled beside a skein of silk thread` |
+| `G-56` | 香料 · spices | `three small open cloth sacks of peppercorns, cinnamon bark and nutmegs with a brass scoop` |
+| `G-57` | 焦油 · tar | `a wooden bucket brimming with black pitch with a tar brush laid across its rim` |
+| `G-58` | 硝石 · saltpeter | `a clay jar beside a small heap of white needle-like saltpetre crystals on a wooden board` |
+| `G-59` | 油 · oil | `a tall clay amphora of oil beside a small burning clay oil lamp` |
+| `G-60` | 桃花心木 · mahogany | `two sawn planks of deep red-brown mahogany showing their fine grain beside a short round log` |
+| `G-61` | 鲸 · whales | `a great dark grey sperm whale with a huge blunt square head and a small lower jaw, seen whole from the side, lying on a low swell of sea, with a small cask of whale oil beside it` |
+| `G-62` | 茶 · tea | `a small heap of dried tea leaves beside a plain round clay teapot and a small cup` |
+| `G-63` | 烟草 · tobacco | `a bundle of dried brown tobacco leaves tied at the stems beside a long clay pipe` |
+| `G-64` | 绳索 · ropes | `a thick coil of hemp rope with a knotted end` |
+| `G-65` | 船帆 · sails | `a folded bundle of heavy canvas sail with rope lines and wooden rings` |
+| `G-66` | 木桶 · barrels | `two oak barrels bound with iron hoops, one standing upright and one lying on its side` |
+| `G-67` | 青铜 · bronze | `a small bronze bell beside two bronze ingots` |
+| `G-68` | 火药 · gunpowder | `a small wooden keg of black powder with a spill of dark grains and a curved powder horn beside it` |
+| `G-69` | 钱币 · coins | `a small leather purse spilling silver and gold coins onto a cloth` |
+| `G-70` | 醋 · vinegar | `a stoneware jug stoppered with a cork beside a shallow bowl and a sprig of herbs` |
+| `G-71` | 香水 · perfume | `a small ornate glass perfume bottle with a stopper beside a few scattered rose petals` |
 
 ---
 
