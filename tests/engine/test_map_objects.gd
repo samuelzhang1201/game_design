@@ -197,6 +197,21 @@ func test_burg_card_carries_the_towns_facts_and_goods() -> void:
 	assert_gt(float(card["treasury"]), 0.0)
 	assert_eq(card["center"], Vector2(float(Game.data.burgs[code]["x"]), float(Game.data.burgs[code]["y"])))
 
+## A town card offers a spy too (owner 2026-09-28), aimed at the town's own
+## point — burg_card's SPY_SEND wiring, untested until fix round 1.
+func test_burg_card_offers_a_spy_at_its_point() -> void:
+	Game.start_campaign(42)
+	var realm: Dictionary = Game.data.kingdoms[_player_realm()]
+	var code := String(realm["capital_burg"])
+	var card := MapObjects.burg_card(Game.data, Game.state, code)
+	var spy: Dictionary = {}
+	for a: Dictionary in card["actions"]:
+		if String(a["action_code"]) == "SPY_SEND":
+			spy = a
+	assert_false(spy.is_empty(), "the town card offers SPY_SEND")
+	var p: Dictionary = spy["params"]
+	assert_eq(Vector2(float(p["x"]), float(p["y"])), card["center"], "aimed at the town's own point")
+
 func test_province_card_is_full_at_home_and_basic_abroad() -> void:
 	Game.start_campaign(42)
 	var mine := MapObjects.province_card(Game.data, Game.state, _own_province())
@@ -405,6 +420,11 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	state.metrics["treasury"] = 0.0
 	var poor := MapObjects.manor_card(real, state, theirs)
 	assert_string_contains(String(poor["actions"][0]["error"]), "afford")
+	# A spy the treasury cannot afford is disabled too (fix round 1,
+	# owner 2026-09-28): SPY_SEND's "error" is ActionSystem's own answer,
+	# exactly like every other card action, not a fixed "".
+	assert_eq(String((poor["actions"][1] as Dictionary)["action_code"]), "SPY_SEND")
+	assert_string_contains(String((poor["actions"][1] as Dictionary)["error"]), "afford")
 	# Abroad: basic, no orders.
 	var abroad := _manor_where(state, false, false)
 	var far := MapObjects.manor_card(real, state, abroad)

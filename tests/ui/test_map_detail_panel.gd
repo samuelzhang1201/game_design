@@ -202,6 +202,26 @@ func test_a_manor_card_buys_the_manor_from_its_button() -> void:
 	assert_has(after, "SELL")
 	assert_has(after, "BuildRow", "the buildings are one dropdown (owner 2026-09-14)")
 
+## A spy the treasury cannot afford is disabled too (fix round 1, owner
+## 2026-09-28) — the same treatment as every other card button, shown here
+## on the simplest land card there is.
+func test_a_towns_spy_button_is_disabled_when_the_treasury_cannot_pay() -> void:
+	Game.start_campaign(42)
+	Game.state.metrics["treasury"] = 0.0
+	var p := _panel()
+	await wait_frames(1)
+	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
+	var code := String(realm["capital_burg"])
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "burg", "code": code}})
+	await wait_frames(1)
+	var spy: Button = null
+	for b in p.actions_box().get_children():
+		if b is Button and String((b as Button).name).begins_with("SPY_SEND"):
+			spy = b as Button
+	assert_not_null(spy, "the town card offers a spy button")
+	assert_true(spy.disabled, "the treasury cannot pay for the spy")
+	assert_string_contains(spy.tooltip_text, "afford")
+
 ## The slot row (owner 2026-09-13): one box per slot; a BUILD fills one with
 ## the work's icon and its days, and the cross beneath it pulls it down.
 func test_a_manor_card_shows_its_slots_and_a_build_fills_one() -> void:

@@ -76,8 +76,9 @@ func _button(mb: InputEventMouseButton) -> bool:
 		elif not _rdragged:
 			# A right CLICK, never a turn. With the ruler up it puts the ruler
 			# away; otherwise it asks for the order menu of the regiment under
-			# it — and is taken ONLY if there was one, so a right click on open
-			# country still falls through untouched as it always did.
+			# it, or — since fix round 1, 2026-09-28 — offers to send a spy
+			# there when the ground was hit instead; only a click on the sky
+			# still falls through untouched.
 			if view.ruler_on:
 				if view.ruler().cancel():
 					view.refresh_hud()

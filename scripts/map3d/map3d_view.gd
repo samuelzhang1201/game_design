@@ -492,8 +492,8 @@ var aim_code := "":
 ## The aimed march's destination (pack px) while COMMIT / CANCEL is asked, else (-1, -1).
 var aim_dest := Vector2(-1, -1)
 
-## True when a regiment was under it and its order menu was asked for — a
-## right click on open country is NOT consumed, exactly as before.
+## True when a regiment was under it (its order menu opens) or the ground was
+## hit (SpyOrderMenu's "Send a spy here" opens); false only over the sky.
 func right_click(pos: Vector2) -> bool:
 	var picked := pick_at(pos)
 	if String(picked.get("kind", "")) == "army":
