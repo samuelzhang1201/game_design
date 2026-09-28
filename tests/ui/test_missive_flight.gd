@@ -1,9 +1,22 @@
 extends GutTest
 
+var _kept: Dictionary = {}
+
+
 func before_each() -> void:
 	Game.start_campaign(42)
+	_kept = {}
+	for key in ["missive_seal_s", "missive_fly_s"]:
+		_kept[key] = Game.data.balance[key]
 	Game.data.balance["missive_seal_s"] = 0.05
 	Game.data.balance["missive_fly_s"] = 0.05
+
+
+## M9 (final review): the flight timings are put back for every later file.
+func after_each() -> void:
+	for key: String in _kept:
+		Game.data.balance[key] = _kept[key]
+	Game.set_clock_speed(0)
 
 
 func _root() -> GameRoot:
@@ -38,10 +51,17 @@ func test_a_spy_report_stops_the_clock_and_opens_the_dialog() -> void:
 	r.on_new_missives([id])
 	assert_eq(Game.clock_speed, 0, "the clock stopped")
 	assert_true(r.report_popup().visible)
+	r.refresh_missive_badge()
+	var before := r.bottom_bar().badge("MISSIVE")
 	r.report_popup().seal_button().pressed.emit()
 	await wait_frames(30)
 	assert_false(r.report_popup().visible)
 	assert_eq(Game.clock_speed, 0, "nothing restarts the clock")
+	# M16 (final review): Seal ends with the letter counted on the tab.
+	assert_eq(r.bottom_bar().badge("MISSIVE"), MissiveLog.unread(Game.state))
+	assert_true(r.bottom_bar().button("MISSIVE").text.contains("(%d)" % MissiveLog.unread(Game.state)),
+		"the tab's label carries the count")
+	assert_gte(r.bottom_bar().badge("MISSIVE"), before)
 
 
 ## Fix round 1 finding 4: spec §2 says the dialog is "centred over the map
@@ -172,3 +192,50 @@ func test_the_restart_hotkey_also_clears_the_report_queue() -> void:
 	assert_null(Game.state, "the restart hotkey still restarts")
 	assert_false(r.report_popup().visible, "and clears the report dialog too")
 	assert_eq(r.pending_reports(), [])
+
+
+## M6 (final review): play pressed while a sealed report flies to the tab
+## and another waits must bank no time — the next report stops the clock
+## again, and no burst of days follows its Seal. The loop is driven through
+## GameRoot._process itself, the way a frame runs it.
+func test_no_days_bank_behind_a_waiting_report() -> void:
+	var r: GameRoot = await _root()
+	var a := _spy_letter()
+	var b := _spy_letter()
+	r.on_new_missives([a, b])
+	var day0 := Game.state.absolute_day()
+	r.report_popup().seal_button().pressed.emit()   # a flies; b waits
+	assert_false(r.report_popup().visible)
+	Game.set_clock_speed(1)                          # play, mid-flight
+	r._process(Game.data.bal("time_day_seconds") * 20.0)   # a long frame
+	assert_eq(Game.state.absolute_day(), day0, "no day runs past a waiting report")
+	assert_eq(r._clock_acc, 0.0, "and no time banks behind it")
+	await wait_frames(30)
+	assert_true(r.report_popup().visible, "b opens")
+	assert_eq(Game.clock_speed, 0, "and stops the clock again")
+	r.report_popup().seal_button().pressed.emit()
+	await wait_frames(30)
+	Game.set_clock_speed(1)
+	r._process(0.0)
+	assert_eq(Game.state.absolute_day(), day0, "no burst of days after the Seal")
+
+
+## M6: a spy's report that stops the clock mid-step leaves no time banked.
+func test_a_spy_stop_banks_no_time() -> void:
+	var r: GameRoot = await _root()
+	Game.set_clock_speed(1)
+	r._clock_acc = Game.data.bal("time_day_seconds") * 3.0
+	r.on_new_missives([_spy_letter()])
+	assert_eq(Game.clock_speed, 0)
+	assert_eq(r._clock_acc, 0.0, "the stop zeroes the day's accumulator")
+
+
+## M2 (final review): the news bar says when the steward's report is in.
+func test_the_news_bar_says_the_stewards_report_is_in() -> void:
+	var r: GameRoot = await _root()
+	var id := MissiveLog.add(Game.data, Game.state, MissiveWriter.monthly(Game.data, Game.state, 3))
+	watch_signals(Game)
+	r.on_new_missives([id])
+	var title := String(MissiveLog.find(Game.state, id)["title"])
+	assert_signal_emitted_with_parameters(Game, "news_published",
+		["The steward's report for %s is in." % title.get_slice(" — ", 1)])

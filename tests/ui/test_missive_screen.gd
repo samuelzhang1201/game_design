@@ -135,3 +135,38 @@ func test_the_selected_note_stands_out_and_its_date_never_breaks() -> void:
 	var room := picked.size.x - ps.content_margin_left - ps.content_margin_right
 	var widest := font.get_string_size("Autumn 90, Year 60", HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	assert_lt(widest, room, "the longest date fits a note (%d of %d px)" % [widest, room])
+
+
+## M4 (final review): an open board takes a letter in as it lands — the
+## clock can run with the board up, and it used to refresh only on showing.
+func test_an_open_board_takes_in_a_letter_as_it_lands() -> void:
+	Game.start_campaign(42)
+	var keep_fly: Variant = Game.data.balance.get("missive_fly_s")
+	Game.data.balance["missive_fly_s"] = 0.05
+	var r := _root()
+	await _enter(r)
+	r.toggle_missives()
+	await wait_frames(1)
+	var ms := r.missive_screen()
+	assert_true(ms.visible)
+	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("receipt", "credible", 3,
+		MissiveLog.subject("regiment", "x", -1, Vector2(500, 300)), "Receipt — X", []))
+	r.on_new_missives([id])
+	await wait_frames(30)
+	Game.data.balance["missive_fly_s"] = keep_fly
+	assert_not_null(ms.find_child("Note%d" % id, true, false), "the landed letter is on the open board")
+
+
+## M7 (final review): reading a letter is a state change, so it goes
+## through Game (Game.mark_missive_read), never by the screen writing
+## Game.state itself.
+func test_reading_a_letter_goes_through_game() -> void:
+	Game.start_campaign(42)
+	var id := _letter("credible")
+	var r := _root()
+	await _enter(r)
+	r.toggle_missives()
+	watch_signals(Game)
+	r.missive_screen().select(id)
+	assert_signal_emitted_with_parameters(Game, "missive_read", [id])
+	assert_true(bool(MissiveLog.find(Game.state, id)["read"]))

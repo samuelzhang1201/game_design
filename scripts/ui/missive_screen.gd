@@ -7,7 +7,6 @@ extends Control
 ## — nothing is dragged.
 
 signal show_requested(subject: Dictionary)
-signal closed
 
 const HEADERS := {"truth": "Ground truth", "credible": "Highly credible",
 	"consult": "Worth consulting", "rumour": "Rumour"}
@@ -32,9 +31,7 @@ var _selected := -1
 
 
 func _ready() -> void:
-	%Close.pressed.connect(func() -> void:
-		visible = false
-		closed.emit())
+	%Close.pressed.connect(func() -> void: visible = false)
 	%ShowOnMap.pressed.connect(_show_on_map)
 	for col: String in HEADERS:
 		var plaque := get_node("%" + col.capitalize() + "Plaque") as Label
@@ -82,11 +79,11 @@ func notes_in(col: String) -> int:
 
 func select(id: int) -> void:
 	_selected = id
-	MissiveLog.mark_read(Game.state, id)
+	Game.mark_missive_read(id)
 	refresh()
 	var root := get_parent() as GameRoot
 	if root != null:
-		root.refresh_missive_badge()
+		root.refresh_missive_badge(false)
 
 
 func selected() -> int:

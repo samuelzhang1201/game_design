@@ -131,6 +131,11 @@ func _process(delta: float) -> void:
 		return
 	if (_pause_menu != null and _pause_menu.visible) or not Game.state.pending_event.is_empty():
 		return
+	# A spy's report open or waiting (a sealed one may still be flying to the
+	# tab): no time banks behind it, or the days it held back would all run
+	# the frame after its Seal (final review M6).
+	if not _pending_reports.is_empty() or _report_popup.visible:
+		return
 	var per_day := maxf(Game.data.bal("time_day_seconds") / float(Game.clock_speed), 0.001)
 	_clock_acc += delta
 	var steps := 0
@@ -426,9 +431,13 @@ func _active_top_bar_height() -> float:
 	return 0.0
 
 ## The MISSIVE tab's badge: how many letters are unread (owner 2026-09-28).
-func refresh_missive_badge() -> void:
+## A letter landing calls it, so an OPEN board takes the letter in too
+## (final review M4) — unless the board itself asked, having just redrawn.
+func refresh_missive_badge(and_board := true) -> void:
 	if _bottom_bar != null and Game.state != null:
 		_bottom_bar.set_badge("MISSIVE", MissiveLog.unread(Game.state))
+	if and_board and _missive_screen != null and _missive_screen.visible and Game.state != null:
+		_missive_screen.refresh()
 
 ## Test/tool seam.
 func report_popup() -> MissiveReportPopup:
@@ -453,8 +462,12 @@ func on_new_missives(ids: Array) -> void:
 			continue
 		if String(m["kind"]) == "spy":
 			Game.set_clock_speed(0)
+			_clock_acc = 0.0  # a stop banks no time (final review M6)
 			_pending_reports.append(id)
 		else:
+			if String(m["kind"]) == "monthly":
+				# The writer titles it "Steward's report — <month>, Year N".
+				Game.publish_news("The steward's report for %s is in." % String(m["title"]).get_slice(" — ", 1))
 			var from: Rect2 = _news_ticker.get_global_rect() if _news_ticker != null \
 				else Rect2(get_viewport_rect().size * 0.5, Vector2.ZERO)
 			EnvelopeFlight.fly(self, from, _missive_tab_rect(), false, Game.data) \
@@ -478,6 +491,10 @@ func _next_report() -> void:
 			# finding 4) — the active screen's own %MapPanel rect.
 			if current_screen != null and current_screen.has_method("map_panel"):
 				_report_popup.center_on(current_screen.map_panel().get_global_rect())
+			# Play may have been pressed while the last one flew to the tab
+			# (final review M6): a report always opens on a stopped clock.
+			Game.set_clock_speed(0)
+			_clock_acc = 0.0
 			_report_popup.open(m)
 			return
 
@@ -515,6 +532,11 @@ func _on_missive_show(subject: Dictionary) -> void:
 			var code := String(subject["code"])
 			view.object_selected.emit({"title": String((Game.data.burgs.get(code, {}) as Dictionary).get("label", code)),
 				"obj": {"kind": "burg", "code": code}})
+		"regiment":  # a receipt: its regiment's card (final review M3)
+			var code := String(subject["code"])
+			if not ArmySystem.regiment(Game.data, code).is_empty():
+				var picked := {"kind": "army", "code": code}
+				view.object_selected.emit({"title": MapObjects.label_of(Game.data, picked), "obj": picked})
 
 ## Bottom bar routing: MAP is the default view (close every overlay — the
 ## live world map sits in the court screen's middle zone, user ruling

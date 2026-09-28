@@ -284,6 +284,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+## A right click on the ground while aiming (SpyOrderMenu hands it here,
+## final review M14): the aim is given up, as Escape gives it up.
+func withdraw_aim() -> void:
+	if visible:
+		hide()
+	_withdraw("The order is withdrawn.")
+
+
 ## Test seam: the regiment an order is being aimed for, "" when none is.
 func aiming() -> String:
 	return _aiming

@@ -48,3 +48,37 @@ func test_every_land_card_offers_a_spy() -> void:
 			MapObjects.province_card(Game.data, s, MapManors.province_of(Game.data, cell, s))]:
 		var codes: Array = (card.get("actions", []) as Array).map(func(a: Dictionary) -> String: return String(a["action_code"]))
 		assert_has(codes, "SPY_SEND", String(card["kind"]))
+
+
+class AimMap extends Node:
+	signal ground_menu_requested(pack_px: Vector2, at: Vector2)
+	signal army_menu_requested(code: String, at: Vector2)
+	signal ground_clicked(pack_px: Vector2)
+	signal route_clicked(code: String, at: Vector2)
+	var aiming := false
+	var aim_code := ""
+	var aim_dest := Vector2(-1, -1)
+
+
+## M14 (final review): while a march is being AIMED, a right click on the
+## ground gives the aim up (as Escape does) rather than offering a spy.
+func test_a_right_click_while_aiming_withdraws_the_aim_not_a_spy() -> void:
+	var map := AimMap.new()
+	add_child_autofree(map)
+	var army := ArmyOrderMenu.new()
+	add_child_autofree(army)
+	army.follow(map)
+	var spies := SpyOrderMenu.new()
+	add_child_autofree(spies)
+	spies.follow(map, army)
+	var code := String(MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"))[0]["regiment_code"])
+	map.army_menu_requested.emit(code, Vector2(10, 10))
+	army.hide()
+	army.id_pressed.emit(0)   # MARCH: aims
+	assert_eq(army.aiming(), code, "the march is being aimed")
+	map.ground_menu_requested.emit(_land(), Vector2(20, 20))
+	assert_false(spies.visible, "no spy is offered mid-aim")
+	assert_eq(army.aiming(), "", "the aim is given up")
+	assert_false(map.aiming)
+	map.ground_menu_requested.emit(_land(), Vector2(20, 20))
+	assert_true(spies.visible, "with no aim, the ground offers a spy again")

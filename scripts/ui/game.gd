@@ -2,6 +2,9 @@ extends Node
 ## Autoload "Game": owns the sim; UI talks only to this.
 
 signal report_ready(report: TickReport)
+## A letter was read on the Missive board (final review M7): the read flag
+## is saved state, so it changes only here.
+signal missive_read(id: int)
 ## Emitted after any mutation of Game.state (orders, event choices, court
 ## reactions, tick advance, load). UI that mirrors live state (e.g. the
 ## TopBar) subscribes to this instead of refreshing at call sites.
@@ -128,6 +131,14 @@ func publish_news(text: String) -> void:
 	if text.strip_edges() == "":
 		return
 	news_published.emit(text)
+
+## Mark a letter read (the Missive board's select): state changes go
+## through Game, never a screen writing Game.state itself.
+func mark_missive_read(id: int) -> void:
+	if state == null:
+		return
+	MissiveLog.mark_read(state, id)
+	missive_read.emit(id)
 
 func save_campaign(path: String = "") -> bool:
 	path = save_path if path == "" else path

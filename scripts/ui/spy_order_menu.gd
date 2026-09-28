@@ -7,6 +7,7 @@ extends PopupMenu
 const SEND := 0
 
 var _map: Node = null
+var _army: ArmyOrderMenu = null
 var _target := Vector2(-1, -1)
 
 
@@ -14,13 +15,21 @@ func _ready() -> void:
 	id_pressed.connect(_on_id)
 
 
-## Follow a map, as ArmyOrderMenu.follow does.
-func follow(map: Node) -> void:
+## Follow a map, as ArmyOrderMenu.follow does. `army` is the same screen's
+## regiment menu: while it is aiming a march, the ground's right click is
+## its to answer (final review M14).
+func follow(map: Node, army: ArmyOrderMenu = null) -> void:
 	_map = map
+	_army = army
 	map.connect("ground_menu_requested", _open_at)
 
 
 func _open_at(pack_px: Vector2, at: Vector2) -> void:
+	# A march being aimed: a right click on the ground gives the aim up, as
+	# Escape does, rather than offering a spy (final review M14).
+	if _army != null and _army.aiming() != "":
+		_army.withdraw_aim()
+		return
 	_target = pack_px
 	clear()
 	var fee := CourierSystem.fee_gold(Game.data, CourierSystem.SPY)

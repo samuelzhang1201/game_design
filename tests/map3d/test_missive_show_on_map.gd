@@ -104,8 +104,8 @@ func test_a_letter_naming_an_unknown_burg_does_not_crash() -> void:
 	assert_false(r.missive_screen().visible, "the board still closed")
 
 
-## A spy report's subject ("point") or a regiment's: GameRoot does not know
-## either kind, so Show on map only closes the board — no signal, no crash.
+## A spy report's subject ("point"), or a regiment the pack does not know:
+## Show on map only closes the board — no signal, no crash.
 func test_a_point_or_regiment_subject_only_closes_the_board() -> void:
 	var r: GameRoot = await _court()
 	var screen: CourtScreen = r.current_screen
@@ -123,6 +123,24 @@ func test_a_point_or_regiment_subject_only_closes_the_board() -> void:
 	assert_false(r.missive_screen().visible)
 	assert_signal_not_emitted(view, "object_selected")
 	assert_signal_not_emitted(view, "province_selected")
+
+
+## M3 (final review): a receipt's subject is its regiment — Show on map
+## opens the regiment's card, not only the view.
+func test_a_receipts_regiment_opens_its_card() -> void:
+	var r: GameRoot = await _court()
+	var screen: CourtScreen = r.current_screen
+	var view := screen.map3d_view()
+	var code := String(MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"))[0]["regiment_code"])
+	var id := _letter(MissiveLog.subject("regiment", code, -1, Vector2(500, 300)))
+	watch_signals(view)
+	_show(r, id)
+	assert_signal_emitted_with_parameters(view, "object_selected",
+		[{"title": MapObjects.label_of(Game.data, {"kind": "army", "code": code}),
+			"obj": {"kind": "army", "code": code}}])
+	await wait_process_frames(1)
+	assert_false(r.missive_screen().visible, "the board closed")
+	assert_true(screen.detail_panel().visible, "the left column shows the regiment's card")
 
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.
