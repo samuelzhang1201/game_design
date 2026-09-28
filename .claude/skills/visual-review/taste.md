@@ -59,6 +59,16 @@ add it here as a principle with its why — not as a changelog entry.
   it is a month's ("/mo"). The art stays — it teaches the vocabulary the map
   and top bar use.
 
+## Navigation
+- **One primary action, and controls grouped by kind** (owner 2026-09-28,
+  choosing the grouped bar and the council button). ENTER THE COUNCIL, the
+  game's core move, was a rotated strip on the map's edge — the least visible
+  thing on the screen — and the bottom bar set lenses, a tool, a placeholder
+  and screens in one row of identical boxes. The core move is now the one
+  gold primary button; the bar reads lenses | screens with a rule between,
+  tabs as words with an underline (a box inside the bar's frame was a frame
+  inside a frame); an empty strip says in the game's voice why it is empty,
+  never in a developer's.
 
 ## Shape and reading
 - **Read by width and fade, not by rule.** Roads are worn tracks with a soft

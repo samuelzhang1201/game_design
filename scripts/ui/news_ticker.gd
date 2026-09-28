@@ -26,6 +26,7 @@ var _speed := 18.0
 var _log_button: Button
 var _history_panel: PanelContainer
 var _history_list: VBoxContainer
+var _quiet: Label
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -41,6 +42,12 @@ func _ready() -> void:
 	var glass := StyleBoxFlat.new()
 	glass.bg_color = GLASS
 	glass.set_corner_radius_all(8)
+	var framed := Game.data != null and float(Game.data.balance.get("ui_nav_grouped", 0.0)) > 0.0
+	if framed:
+		# A hairline so the bar reads as a place even while it is empty
+		# (owner 2026-09-28: LOG sat alone in an unmarked dark gap).
+		glass.border_color = Color(UiPalette.BORDER_GOLD, 0.35)
+		glass.set_border_width_all(1)
 	bg.add_theme_stylebox_override("panel", glass)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -74,6 +81,16 @@ func _ready() -> void:
 	_label.add_theme_color_override("font_color", INK)
 	_clip.add_child(_label)
 	_clip.resized.connect(_centre_label)
+	# Before the first headline the bar says so instead of lying empty.
+	_quiet = Label.new()
+	_quiet.name = "Quiet"
+	_quiet.text = "No tidings yet. Word will come as the days pass."
+	_quiet.add_theme_font_size_override("font_size", 14)
+	_quiet.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+	_quiet.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_quiet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_quiet.visible = framed
+	_clip.add_child(_quiet)
 	_build_history()
 	Game.news_published.connect(add_item)
 
@@ -109,6 +126,8 @@ func add_item(text: String) -> void:
 	while _items.size() > MAX_ITEMS:
 		_items.pop_front()
 	_label.text = SEPARATOR.join(_items)
+	if _quiet != null:
+		_quiet.visible = false
 	_label.reset_size()
 	_centre_label()
 	if _label.position.x == 0.0 and _items.size() == 1:

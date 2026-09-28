@@ -29,6 +29,8 @@ const RIGHT_WIDTH := 400.0
 const TALK_WIDTH := 320.0
 const HANDLE_LENGTH := 192.0
 const HANDLE_THICKNESS := 28.0
+## How far in from the map panel's top-right corner the council button sits.
+const HANDLE_INSET := 14.0
 
 ## Room the bottom chrome needs: the news strip and the tab bar.
 static func bottom_inset() -> float:
@@ -59,13 +61,31 @@ static func make_handle(text: String) -> Button:
 	b.name = "CouncilHandle"
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
+	if _handle_is_button():
+		# The game's core move as its one primary button, level, over the
+		# map's top-right corner (owner 2026-09-28, balance ui_council_button).
+		UiPalette.primary_button(b, 15)
+		return b
 	UiPalette.style_tab(b, 14)
 	b.size = Vector2(HANDLE_LENGTH, HANDLE_THICKNESS)
 	b.pivot_offset = Vector2.ZERO
 	b.rotation = -PI / 2.0
 	return b
 
+static func _handle_is_button() -> bool:
+	return Game != null and Game.data != null and float(Game.data.balance.get("ui_council_button", 0.0)) > 0.0
+
 static func place_handle(handle: Control, top: float) -> void:
+	if _handle_is_button():
+		var w := handle.get_combined_minimum_size().x
+		var h := handle.get_combined_minimum_size().y
+		handle.anchor_left = 1.0
+		handle.anchor_right = 1.0
+		handle.offset_right = -MARGIN - HANDLE_INSET
+		handle.offset_left = handle.offset_right - w
+		handle.offset_top = top + HANDLE_INSET
+		handle.offset_bottom = handle.offset_top + h
+		return
 	# Rotated -90° about its top-left corner, a (length x thickness) button
 	# occupies x in [0, thickness] and y in [-length, 0] from its position.
 	handle.anchor_left = 1.0

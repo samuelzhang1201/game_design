@@ -325,6 +325,56 @@ static func button_looks() -> Dictionary:
 		"pressed": chip_style(CHIP_PRESSED, GOLD),
 		"disabled": chip_style(PANEL_BG, Color(EDGE, 0.6))}
 
+## A tab without a box (owner 2026-09-28, after the UI critique: a boxed tab
+## inside the bar's own rules was a frame inside a frame): the word alone, a
+## gold rule under it on hover, a thicker one while it is lit.
+static func flat_tab(button: Button, size: int, pad := 10.0) -> void:
+	style_tab(button, size)
+	var looks := {}
+	for state: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color(0, 0, 0, 0)
+		box.content_margin_left = pad
+		box.content_margin_right = pad
+		box.content_margin_top = 4.0
+		box.content_margin_bottom = 4.0
+		looks[state] = box
+	(looks["hover"] as StyleBoxFlat).border_color = Color(GOLD, 0.45)
+	(looks["hover"] as StyleBoxFlat).border_width_bottom = 1
+	for lit: String in ["pressed", "hover_pressed"]:
+		(looks[lit] as StyleBoxFlat).border_color = GOLD
+		(looks[lit] as StyleBoxFlat).border_width_bottom = 2
+	for state: String in looks:
+		button.add_theme_stylebox_override(state, looks[state])
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.add_theme_color_override("font_color", TEXT_MUTED)
+	button.add_theme_color_override("font_hover_color", GOLD)
+	button.add_theme_color_override("font_pressed_color", GOLD)
+	button.add_theme_color_override("font_hover_pressed_color", GOLD)
+
+## The screen's one PRIMARY action (owner 2026-09-28: ENTER THE COUNCIL, the
+## game's core move, was the least visible thing on the screen): gold ink on
+## a warm dark ground in a gold rule, brighter under the cursor.
+static func primary_button(button: Button, size: int) -> void:
+	style_tab(button, size)
+	var rest := chip_style(Color("54401f"), GOLD)
+	var hover := chip_style(Color("674e27"), Color("f3d99a"))
+	var pressed := chip_style(Color("735830"), Color("f3d99a"))
+	for box: StyleBoxFlat in [rest, hover, pressed]:
+		box.content_margin_left = 16.0
+		box.content_margin_right = 16.0
+		box.content_margin_top = 6.0
+		box.content_margin_bottom = 6.0
+		box.shadow_color = SHADOW
+		box.shadow_size = 6
+	button.add_theme_stylebox_override("normal", rest)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.add_theme_color_override("font_color", Color("f3d99a"))
+	button.add_theme_color_override("font_hover_color", Color("fff0c8"))
+	button.add_theme_color_override("font_pressed_color", Color("f3d99a"))
+
 ## A small button that sits in a strip without stretching to the strip's
 ## height: tight padding, a fixed height, centred in its row.
 static func compact_button(button: Button, height: float, font_px: int, pad: float = 6.0) -> void:
