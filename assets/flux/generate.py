@@ -128,6 +128,12 @@ def parse_library(text: str) -> list[dict]:
         rows.append({"id": entry_id, "chapter": entry_id[0], "title": title,
                      "canvas": TABLE_CANVAS.get(entry_id[0], ""), "subject": subject,
                      "appearance": ""})
+    # Wide table entries (§9.1, the Missive board U-20..U-26, 2026-09-28):
+    # ID | key | title | canvas | size | subject — each row names its own canvas.
+    for m in re.finditer(r"^\| `([A-Z]-\d\d)` \| `[^`]+` \| ([^|]+) \| `\[(C-[A-Z]+)\]` \| [^|]+ \| `([^`]+)` \|",
+                         text, re.M):
+        rows.append({"id": m.group(1), "chapter": m.group(1)[0], "title": m.group(2).strip(),
+                     "canvas": m.group(3), "subject": " ".join(m.group(4).split()), "appearance": ""})
     rows.sort(key=lambda r: (list(CHAPTER_DIR).index(r["chapter"]), r["id"]))
     for r in rows:
         w, h = CANVAS_SIZE.get(r["canvas"], (0, 0))
