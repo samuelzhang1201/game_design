@@ -35,6 +35,18 @@ static func _walled(repo: DataRepository, cell: int) -> bool:
 	return false
 
 
+## The town standing in this cell (MapEconomy.burg_cells, the same map a
+## town card's query resolves through), the first by code; "" for none.
+static func town_at(repo: DataRepository, cell: int) -> String:
+	var cells := MapEconomy.burg_cells(repo)
+	var codes := cells.keys()
+	codes.sort()
+	for code: String in codes:
+		if int(cells[code]) == cell:
+			return code
+	return ""
+
+
 ## [lo, hi] around the true value v: half-width by quality, centre moved by
 ## bias (per mille of v), rounded OUT to round_to, lo never below zero.
 static func estimate(repo: DataRepository, v: int, q: int, bias: int, round_to: int) -> Array:
@@ -73,6 +85,13 @@ static func report(repo: DataRepository, state: GameState, at: Vector2, q: int, 
 		for key in ["people", "tax"]:
 			var lh := estimate(repo, int(line[key]), q, bias, _round_to(repo, key))
 			facts.append(MissiveLog.span(key, _label(repo, key), int(lh[0]), int(lh[1])))
+			# A town in the cell: its own people too, under their own key
+			# (Ruling 12) — the town card reads this, never the manor's.
+			var town := town_at(repo, cell) if key == "people" else ""
+			if town != "":
+				var tp := estimate(repo, int(float((repo.burgs[town] as Dictionary).get("population", 0))),
+					q, bias, _round_to(repo, "town_people"))
+				facts.append(MissiveLog.span("town_people", _label(repo, "town_people"), int(tp[0]), int(tp[1])))
 		var units := estimate(repo, int(line.get("units", 0)), q, bias, _round_to(repo, "output"))
 		facts.append(MissiveLog.span("output", _label(repo, "output"), int(units[0]), int(units[1])))
 		var prov := MapManors.province_of(repo, cell, state)

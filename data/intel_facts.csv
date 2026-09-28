@@ -7,3 +7,4 @@ troops_own,Our troops nearby,100,,headcount within spy_radius_km
 troops_foreign,Foreign troops nearby,100,,headcount within spy_radius_km
 holder,Held by,1,,always given
 stance,Stance,1,,"the player realm's stance toward the holder (the pack's diplomacy.csv), always given"
+town_people,Town people,100,,"a town's own people, reported when the spy's point lies in the town's cell (Ruling 12, 2026-09-28); the town card reads this, never the manor's people"

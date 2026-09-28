@@ -446,12 +446,13 @@ static func burg_card(repo: DataRepository, state: GameState, code: String) -> D
 		card["wealth"] = 0.0
 		card["treasury"] = 0.0
 		var true_pop := int(float(b.get("population", 0)))
-		var pop_fact := Intel.fact(repo, state, subj, "people", true_pop)
-		for i in fields.size():
+		# The population is said ONCE, by the intel row (which carries its
+		# source), not also as a plain field (final review M5).
+		for i in range(fields.size() - 1, -1, -1):
 			if String(fields[i][0]) == "Population":
-				fields[i][1] = String(pop_fact["text"])
+				fields.remove_at(i)
 		var facts: Array = [
-			["people", "People", true_pop],
+			["town_people", "People", true_pop],
 			["wealth", "Wealth", Intel.wealth_tier(repo, state, String(b["province_code"]))],
 			["stance", "Stance", Intel.stance_of(repo, owner)]]
 		card["intel"] = _intel_rows(repo, state, subj, facts)
