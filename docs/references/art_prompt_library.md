@@ -20,10 +20,10 @@
 | [6. 地图元素与图标](#6-地图元素与图标-i) | `I-01` ~ `I-46`，`D-01` ~ `D-31`（§6.9 手绘装饰件），`G-01` ~ `G-38`（§6.10 经济产物） | 115 |
 | [7. 战术地图元素](#7-战术地图元素-w) | `W-01` ~ `W-38` | 38 |
 | [8. 事件插图](#8-事件插图-v) | `V-01` ~ `V-34` | 34 |
-| [9. UI 框架件](#9-ui-框架件-u) | `U-01` ~ `U-18` | 18 |
+| [9. UI 框架件](#9-ui-框架件-u) | `U-01` ~ `U-26`（§9.1 密函板 `U-20`~`U-26`） | 25 |
 | [10. 生产流程与质检](#10-生产流程与质检) | 工作流、排期、checklist | — |
 
-**总计 284 个资源对象。**
+**总计 291 个资源对象。**
 
 ---
 
@@ -2382,6 +2382,28 @@ foreboding [C-EVENT]
 | `U-17` | 缎带标题条 | `a horizontal banderole ribbon of vellum, each end folded sharply back on itself and cut into a deep V-notched swallowtail point, the broad flat centre band between the folds left completely blank and even in height` |
 | `U-19` | 主菜单画框 | `a deliberately asymmetric illuminated border. A handsome middle-aged crowned king occupies the BOTTOM LEFT corner alone — a strong-jawed man of about forty-five, short dark hair greying at the temples under a gold circlet, a close-trimmed beard, seated and turned three-quarters, his head tilted up and back so that he looks UP the diagonal, one small carved chess piece held between finger and thumb at chin height, brow drawn, deep in thought — his head reaching no higher than the middle of the frame. A much older grey-bearded lord occupies the TOP RIGHT corner alone, seated high with his chin resting on his hand, his head close to the top edge, looking back down at the younger man. There is no table, no board, no chessboard anywhere in the frame — only the two men, the single piece in the king's hand, and the ornament. The top left corner and the bottom right corner hold nothing but vine scrollwork and a heraldic lion. A small open crown at the top centre` | 主菜单画框 | `a deliberately asymmetric illuminated border. A young clean-shaven crowned lord occupies the BOTTOM LEFT corner alone, seated low and leaning forward on one elbow, his head reaching no higher than the middle of the frame. A much older grey-bearded lord occupies the TOP RIGHT corner alone, seated high with his chin resting on his hand, his head close to the top edge. The two look steadily at each other along the diagonal across the empty middle, two players caught between moves. There is no table, no board, no chessboard and no game pieces of any kind anywhere in the frame — only the two men and the ornament. The top left corner and the bottom right corner hold nothing but vine scrollwork and a heraldic lion. A small open crown at the top centre` | 主菜单画框 | `a deliberately asymmetric illuminated border. A young clean-shaven crowned lord occupies the BOTTOM LEFT corner alone, seated low over a chessboard on the table in front of him, his head reaching no higher than the middle of the frame. A much older grey-bearded lord occupies the TOP RIGHT corner alone, seated high with his own carved pieces before him, his head close to the top edge. The two look at each other along the diagonal across the empty middle. The top left corner and the bottom right corner hold nothing but vine scrollwork, a heraldic lion and a few scattered carved chess pieces. A small open crown at the top centre` | 主菜单画框 | `a young crowned lord seated in the LOWER LEFT corner and a much older bearded lord seated in the UPPER RIGHT corner, the two of them playing one long game of chess against each other diagonally across the empty middle of the frame, each leaning over the chessboard on the small table before him and looking toward the other, the young one clean-shaven in a bright mantle and the old one grey-bearded and heavy-browed, both worked into the border ornament rather than staged as a scene, the rails between them filled with running vine scrollwork, a heraldic lion in the upper left corner and another in the lower right, a small open crown at the top centre` | 主菜单画框 | `two seated medieval lords facing one another across one single chessboard standing in the middle of the bottom rail, one lord to the left of that board and one to its right and no other board anywhere, both drawn small and absorbed into the border ornament rather than staged as a scene, the side rails filled with running vine scrollwork, a heraldic lion at each of the two top corners, a small open crown at the top centre` |
 | `U-18` | 空白纹章盾 · **代码绘制** | `an empty heraldic shield of classic heater shape with a fine umber outline and a very subtle interior shading suggesting slight convexity, the field left entirely blank for programmatic colouring` |
+
+### 9.1 密函板 · Missive board（spec `2026-09-28-missive-board-and-spies` §3，2026-09-28 新增，**只有 prompt，未生成**）
+
+> **用途**：MISSIVE 标签打开的信件板（`MissiveScreen`：四列便笺 + 右侧阅读台）、间谍回报封成的蜡封信封（`EnvelopeFlight`）。一个条目对应 `data/missive_art.csv` 的一个 `key`；装图只需填那张表的 `texture` 列，不改代码。**在装图之前**，`UiPalette` 的平面深色样式和 `political_palette` 的 `envelope_*` 色代替它们（2026-09-28 实拍验证：深色主题下可读）。
+>
+> **风格核**：**v2 彩色核**（§1.1 `STYLE_CORE.txt` + `NEGATIVE.txt`），不是 `STYLE_CORE_ui_vellum.txt`——这些是有材质的实物（木框、软木、羊皮纸、蜡），和 §9 表头"独立物件用 v2 核"那一类同理。要九宫格拉伸的几件（`U-20` 框、`U-22` 便笺、`U-23` 信纸、`U-26` 铭牌）主体里写死直边和空白中心，**不许**出现毛边词。
+>
+> **纸上一定会长出假字**（§ 事件插图硬规矩第 2 条）：便笺、信纸、信封的主体都明写 `completely blank, no writing, no letters, no marks of any kind`；字全部由游戏画在上面。
+>
+> **尺寸按用途**（asset-resolution-per-use：设计像素 × 约 3 倍窗口缩放；1024 只是生成尺寸）。安装器 `install_map_art.py missive`（**尚未写**，owner 批准生成后再做）按下表裁切、抠图、缩放进 `assets/ui/missive/<key>.png`。
+>
+> **每一次生成都要 owner 先看 prompt 再批准**，不要排队跑批。
+
+| ID | key | 对象 | 画幅 | 安装尺寸（设计像素 → 文件） | Prompt 主体（前接 `[S]`，后接画幅） |
+|---|---|---|---|---|---|
+| `U-20` | `frame` | 信件板木框（九宫格） | `[C-UIPIECE]` | 边框带约 24 设计 px，满屏拉伸 → 512×512，九宫格边距 72 px | `a rectangular picture frame of dark waxed oak with a plain moulded profile and small carved rosettes at the four corners only, straight true edges, every side of the moulding identical so the corners are interchangeable, the whole opening inside the frame left empty as plain flat neutral grey` |
+| `U-21` | `board` | 软木板底（平铺） | `[C-TILE]` | 平铺重复约 170 设计 px → 512×512 无缝 | `a seamless cork board surface of fine warm brown granules, a few faint old pin holes scattered evenly, even soft light, no frame, no pins, no paper, nothing lying on it` |
+| `U-22` | `note` | 钉住的羊皮便笺（九宫格） | `[C-UIPIECE]` | 便笺约 180×90 设计 px → 512×256，九宫格边距 40 px | `a small rectangular slip of pale cream parchment with straight clean edges and very slightly softened corners, a faint even shadow of a thin fold across its upper third, the face completely blank, no writing, no letters, no marks of any kind` |
+| `U-23` | `letter` | 阅读台信纸（九宫格） | `[C-UIPIECE]` | 阅读台约 390×600 设计 px → 512×768，九宫格边距 64 px | `a single unfolded sheet of cream parchment lying flat and face-on, straight true edges, two faint crease lines where it was folded in three, a thin ruled margin line in pale umber inset evenly from all four edges, the face completely blank, no writing, no letters, no marks of any kind` |
+| `U-24` | `envelope` | 蜡封信封 | `[C-ICON]` | 飞行时 36×26 设计 px，封缄时从对话框大小缩下来 → 384×288（飞行中缩到 108×78 仍清晰） | `a folded parchment letter packet seen from the back, the four flaps meeting under a round blob of deep oxblood sealing wax pressed with a plain blank device, a thin tied cord crossing it, the paper completely blank, no writing, no letters, no address` |
+| `U-25` | `pin` | 图钉 | `[C-ICON]` | 便笺上约 14 设计 px → 48×48 | `a single medieval brass tack with a round domed head and a short square shank, seen from straight above at a slight angle, a tiny soft highlight on the dome` |
+| `U-26` | `plaque` | 列标题铭牌（字由游戏画上） | `[C-UIWIDE]` | 列头约 192×48 设计 px → 576×144，九宫格边距 48 px | `a horizontal carved wooden name plaque of dark oak with a raised bevelled edge and a small brass nail at each end, straight true edges, the long flat centre face left completely blank and even, no writing, no letters, no carving in the centre` |
 
 ---
 
