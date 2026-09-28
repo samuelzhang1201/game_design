@@ -39,7 +39,7 @@ func _ready() -> void:
 	var bar := PanelContainer.new()
 	bar.name = "Bar"
 	bar.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4, "column"))
 	bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bar)
 	_bar = bar

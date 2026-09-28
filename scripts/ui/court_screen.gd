@@ -54,7 +54,7 @@ var _map3d_military := false
 func _ready() -> void:
 	%Bg.color = UiPalette.BG_SCREEN
 	%MapPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4, "map"))
 	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
 	_handle.pressed.connect(enter_council)
 	add_child(_handle)
@@ -95,9 +95,9 @@ func _ready() -> void:
 		set_military_view(true))
 	_military.closed.connect(func() -> void: set_military_view(false))
 	%LogPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
 	%SidePanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
 	UiPalette.style_header(%LogHeader, 14)
 	UiPalette.style_header(%SideHeader, 14)
 	_log_scroll = %LogScroll

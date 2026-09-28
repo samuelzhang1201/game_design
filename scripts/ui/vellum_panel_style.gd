@@ -28,11 +28,47 @@ var base: StyleBox = null
 ## which disappear on the dark theme's card, so it is drawn multiplied by this.
 ## White draws the art as it is.
 var tint := Color.WHITE
+## The card's material (owner 2026-09-28, after the UI critique: the flat
+## card read cheap): a seamless grain tiled over the body at `grain_px` design
+## px a texel and `grain_alpha`, a light-to-dark shade from top to bottom, and
+## an inner hairline `inner_inset` in from the edge. All zero draws nothing.
+var grain: Texture2D = null
+## The grain's dark half (UiPalette.panel_grain), drawn the same way.
+var grain_dark: Texture2D = null
+var grain_px := 1.0
+var grain_alpha := 0.0
+var shade_top := 0.0
+var shade_bottom := 0.0
+var inner_rule := Color(0, 0, 0, 0)
+## The light that the grain's bright half and the top shade are laid in: warm
+## parchment, so the leather stays brown (white laid over it greyed it).
+var light := Color(1.0, 0.88, 0.68)
+var inner_inset := 4.0
 
 
 func _draw(to_canvas_item: RID, rect: Rect2) -> void:
 	if base != null:
 		base.draw(to_canvas_item, rect)
+	var body := rect.grow(-1.0)
+	if grain_alpha > 0.0 and body.has_area():
+		if grain != null:
+			_draw_grain(to_canvas_item, body, grain, Color(light, grain_alpha))
+		if grain_dark != null:
+			_draw_grain(to_canvas_item, body, grain_dark, Color(1, 1, 1, grain_alpha))
+	if (shade_top > 0.0 or shade_bottom > 0.0) and body.has_area():
+		var top := Color(light, shade_top)
+		var bottom := Color(0, 0, 0, shade_bottom)
+		RenderingServer.canvas_item_add_polygon(to_canvas_item,
+			PackedVector2Array([body.position, Vector2(body.end.x, body.position.y),
+				body.end, Vector2(body.position.x, body.end.y)]),
+			PackedColorArray([top, top, bottom, bottom]))
+	if inner_rule.a > 0.0:
+		var r := rect.grow(-inner_inset)
+		if r.has_area():
+			var pts := PackedVector2Array([r.position, Vector2(r.end.x, r.position.y),
+				r.end, Vector2(r.position.x, r.end.y), r.position])
+			RenderingServer.canvas_item_add_polyline(to_canvas_item, pts,
+				PackedColorArray([inner_rule]), 1.0)
 	if texture == null:
 		return
 	var tw := float(texture.get_width())
@@ -54,6 +90,25 @@ func _draw(to_canvas_item: RID, rect: Rect2) -> void:
 			var src := Rect2(sx[c], sy[r], sx[c + 1] - sx[c], sy[r + 1] - sy[r])
 			RenderingServer.canvas_item_add_texture_rect_region(
 				to_canvas_item, dst, rid, src, tint)
+
+
+## The grain tiled by hand (the canvas item's repeat is its owner's, not the
+## style's), the last row and column cut to the body.
+func _draw_grain(ci: RID, body: Rect2, tex: Texture2D, tint_grain: Color) -> void:
+	var tw := float(tex.get_width())
+	var th := float(tex.get_height())
+	var step := Vector2(tw, th) * grain_px
+	var rid := tex.get_rid()
+	var y := body.position.y
+	while y < body.end.y:
+		var h := minf(step.y, body.end.y - y)
+		var x := body.position.x
+		while x < body.end.x:
+			var w := minf(step.x, body.end.x - x)
+			RenderingServer.canvas_item_add_texture_rect_region(ci,
+				Rect2(x, y, w, h), rid, Rect2(0, 0, w / grain_px, h / grain_px), tint_grain)
+			x += step.x
+		y += step.y
 
 
 func _get_draw_rect(rect: Rect2) -> Rect2:

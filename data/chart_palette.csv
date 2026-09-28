@@ -5,7 +5,7 @@ cat_3,#76975A,categorical 3 (green)
 cat_4,#8C71A3,categorical 4 (purple)
 cat_5,#B8604D,categorical 5 (red)
 sequential,#B99A5B,single-hue magnitude bars: old gold so the realm's own gauges read as one family (owner 2026-09-28; was #5aa2ec)
-track,#2d251d,"the empty part of a bar — a shade over the dark card (bright theme #e6ebf1, parchment #cdbf9f)"
+track,#15100C,"the empty part of a bar — SUNK below the card (owner 2026-09-28: over the grained card a shade lighter than it vanished; was #2d251d, bright theme #e6ebf1, parchment #cdbf9f)"
 skill_sk_admin,#7FA2C6,"a council skill's colour (the audience window's badges and the SKILLS page) — moved here from UiPalette.SKILL_COLORS and muted, owner 2026-09-28"
 skill_sk_martial,#CF7F6C,
 skill_sk_steward,#D4B064,

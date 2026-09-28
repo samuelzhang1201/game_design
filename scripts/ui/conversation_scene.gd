@@ -89,7 +89,7 @@ const PORTRAIT_HEIGHT := 0.56
 func _ready() -> void:
 	%Bg.color = UiPalette.BG_SCREEN
 	%MapPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4, "map"))
 	# The council column is hidden until the player enters it (user ruling
 	# 2026-09-09): a handle on the right edge opens it, LEAVE closes it.
 	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
@@ -126,12 +126,12 @@ func _ready() -> void:
 		set_military_view(true))
 	_military.closed.connect(func() -> void: set_military_view(false))
 	%MinisterPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "column"))
 	_style_audience()
 	_show_dossier(false)
 	_build_skill_rows()
 	_build_dossier_tabs()
-	UiPalette.style_header(%ToolsTitle, 14, UiPalette.TEXT_MUTED)
+	UiPalette.style_section(%ToolsTitle, 14)
 	%TiesText.add_theme_font_size_override("font_size", 16)
 	%PopupPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.GOLD, 2, 24))
@@ -140,8 +140,8 @@ func _ready() -> void:
 	popup_dim.color = UiPalette.DIM_OVERLAY
 	_panel = %DialoguePanel
 	_panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 20))
-	UiPalette.style_header(%RecordTitle, 14, UiPalette.TEXT_MUTED)
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 20, "column"))
+	UiPalette.style_section(%RecordTitle, 14)
 	_name_label = %NameLabel
 	_scroll = %DialogueScroll
 	_text_label = %TextLabel

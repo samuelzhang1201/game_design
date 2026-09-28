@@ -36,3 +36,29 @@ func test_the_ornament_is_drawn_in_gold() -> void:
 func test_chart_track_is_dark() -> void:
 	Game.start_campaign(42)
 	assert_lt(UiPalette.chart_color("track").get_luminance(), 0.2)
+
+## One ornament per layer (owner 2026-09-28): under ui_panel_ornament 3 only a
+## floating window wears the vellum ornament; a column wears the gold inner
+## hairline instead, and the map's frame neither.
+func test_only_windows_wear_the_ornament() -> void:
+	var keep: float = Game.data.balance.get("ui_panel_ornament", 1.0)
+	var rule: float = Game.data.balance.get("ui_panel_inner_rule_alpha", 0.0)
+	Game.data.balance["ui_panel_ornament"] = 3.0
+	Game.data.balance["ui_panel_inner_rule_alpha"] = 0.35
+	var window := UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 12, "window") as VellumPanelStyle
+	var column := UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 12, "column") as VellumPanelStyle
+	var map := UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 12, "map") as VellumPanelStyle
+	assert_not_null(window.texture, "a window wears the ornament")
+	assert_null(column.texture, "a column does not")
+	assert_gt(column.inner_rule.a, 0.0, "a column wears the inner hairline")
+	assert_null(map.texture, "the map's frame wears no ornament")
+	assert_eq(map.inner_rule.a, 0.0, "nor a hairline: the map's edge frames it")
+	Game.data.balance["ui_panel_ornament"] = keep
+	Game.data.balance["ui_panel_inner_rule_alpha"] = rule
+
+## The grain is laid in two halves so it neither lifts nor greys the card.
+func test_the_grain_has_a_light_and_a_dark_half() -> void:
+	var grain := UiPalette.panel_grain()
+	assert_eq(grain.size(), 2)
+	for tex: Texture2D in grain:
+		assert_eq(tex.get_width(), 256)

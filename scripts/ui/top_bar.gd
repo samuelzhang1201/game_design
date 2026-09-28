@@ -51,7 +51,7 @@ var _date_arms: HeraldicShield
 
 func _ready() -> void:
 	%Bar.add_theme_stylebox_override("panel",
-		UiPalette.clear_ornament(UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 8)))
+		UiPalette.clear_ornament(UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 8, "column")))
 	UiPalette.style_header(%DateLabel, 16)
 	%EventChip.add_theme_stylebox_override("normal", UiPalette.chip_style())
 	UiPalette.style_header(%EventChip, 14)

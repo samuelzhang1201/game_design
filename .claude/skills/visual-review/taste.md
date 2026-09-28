@@ -38,6 +38,17 @@ add it here as a principle with its why — not as a changelog entry.
   ink-and-gold variant greyed the host's arms, the skills and the realms'
   counters into one another and was rejected for it.
 
+## Panels
+- **One ornament per layer; the rest is material** (owner 2026-09-28,
+  choosing W3 over keeping the scrolls on the columns). The corner scrolls
+  on every panel put a frame inside a frame and left nothing looking more
+  important than anything else; a flat card with none read cheap. The
+  answer is material, not decoration: a faint warm leather grain, light from
+  above, a gold hairline inside a column's edge, and the ornament kept for
+  what FLOATS (the audience window, events, menus). A grain laid in white
+  greyed the leather to slate, and a cellular noise read as veined marble —
+  the grain is laid light-in-parchment and dark-in-black, fine-toothed.
+
 
 ## Shape and reading
 - **Read by width and fade, not by rule.** Roads are worn tracks with a soft

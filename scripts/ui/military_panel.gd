@@ -76,7 +76,7 @@ func _ready() -> void:
 func _section(heading: String, chart_name: String) -> BarChart:
 	var h := Label.new()
 	h.text = heading
-	UiPalette.style_header(h, 14, UiPalette.TEXT_MUTED)
+	UiPalette.style_section(h, 14)
 	h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(h)
 	var chart := BarChart.new()

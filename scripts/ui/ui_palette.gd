@@ -198,26 +198,105 @@ static func panel_ornament_enabled() -> bool:
 ## A card: dark leather body, a thin trim in `border`, cut corners and a deep
 ## drop shadow — framed by the gold ornament when ui_panel_ornament is on and
 ## the art loads.
+## `kind` says where the panel stands, which decides whether it wears the
+## ornament (balance ui_panel_ornament: 1 every panel, 2 windows and the
+## columns and bars but not the map's frame, 3 floating windows only — owner
+## 2026-09-28: one ornament per layer, never a frame inside a frame):
+## "window" floats over the screen (the audience window, popups, menus),
+## "column" is a side column or the top and bottom bars, "map" frames the map.
 static func panel_style(border: Color, border_width: int = 2,
-		margin: int = 12) -> StyleBox:
+		margin: int = 12, kind := "window") -> StyleBox:
 	if panel_art_enabled():
 		var art := panel_art_style(margin)
 		if art != null:
 			return art
 	var card := _card_style(border, border_width, margin)
-	if panel_ornament_enabled():
-		var tex := load_art(PANEL_ORNAMENT_PATH)
-		if tex != null:
-			var framed := VellumPanelStyle.new()
-			framed.base = card
-			framed.texture = tex
-			framed.tint = ORNAMENT_TINT
-			framed.source_inset = PANEL_ART_SOURCE_INSET
-			framed.draw_inset = PANEL_ART_INSET
-			# Text keeps clear of the rules, as the vellum plate's floor did.
-			framed.set_content_margin_all(maxf(float(margin), PANEL_ART_INSET * 0.25))
-			return framed
-	return card
+	var framed := VellumPanelStyle.new()
+	framed.base = card
+	_dress(framed)
+	framed.set_content_margin_all(float(margin))
+	var tex := load_art(PANEL_ORNAMENT_PATH) if _wears_ornament(kind) else null
+	if tex != null:
+		framed.texture = tex
+		framed.tint = ORNAMENT_TINT
+		framed.source_inset = PANEL_ART_SOURCE_INSET
+		framed.draw_inset = PANEL_ART_INSET
+		# Text keeps clear of the rules, as the vellum plate's floor did.
+		framed.set_content_margin_all(maxf(float(margin), PANEL_ART_INSET * 0.25))
+	elif kind != "map":
+		# The map's own edge frames it: a hairline there stacked with the
+		# columns' into a run of parallel gold lines along the gutter.
+		framed.inner_rule = Color(BORDER_GOLD, _bal_or("ui_panel_inner_rule_alpha", 0.0))
+		framed.inner_inset = _bal_or("ui_panel_inner_rule_inset_px", 4.0)
+	return framed
+
+static func _wears_ornament(kind: String) -> bool:
+	if not panel_ornament_enabled():
+		return false
+	var scope := int(_bal_or("ui_panel_ornament", 1.0))
+	match scope:
+		1:
+			return true
+		2:
+			return kind != "map"
+		_:
+			return kind == "window"
+
+## The card's material, every number balance ui_panel_*.
+static func _dress(style: VellumPanelStyle) -> void:
+	style.grain_alpha = _bal_or("ui_panel_grain_alpha", 0.0)
+	if style.grain_alpha > 0.0:
+		var grain := panel_grain()
+		style.grain = grain[0]
+		style.grain_dark = grain[1]
+		style.grain_px = _bal_or("ui_panel_grain_px", 1.0)
+	style.shade_top = _bal_or("ui_panel_shade_top", 0.0)
+	style.shade_bottom = _bal_or("ui_panel_shade_bottom", 0.0)
+
+static func _bal_or(key: String, fallback: float) -> float:
+	if Game == null or Game.data == null or not Game.data.balance.has(key):
+		return fallback
+	return Game.data.bal(key)
+
+## A seamless leather grain, made once: a low mottle and a fine tooth mixed
+## (balance ui_panel_grain_freq, ui_panel_grain_tooth the tooth's frequency
+## over it, ui_panel_grain_mottle the mottle's share). It is TWO textures — white where the grain rises above its mean,
+## black where it falls below, each its alpha — so laying them over a card
+## neither lifts it nor greys it (a grey noise laid over the dark leather
+## greyed it toward slate). Procedural, so no art file; fixed seeds.
+static func panel_grain() -> Array[Texture2D]:
+	if _art_cache.has("panel_grain"):
+		return _art_cache["panel_grain"]
+	var size := 256
+	var mottle := FastNoiseLite.new()
+	mottle.seed = 1409
+	mottle.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	mottle.fractal_type = FastNoiseLite.FRACTAL_FBM
+	mottle.fractal_octaves = 4
+	mottle.frequency = _bal_or("ui_panel_grain_freq", 0.02)
+	var tooth := FastNoiseLite.new()
+	tooth.seed = 2203
+	# Simplex, not cellular: cellular's distance field joined into a crack
+	# network and the card read as veined marble.
+	tooth.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	tooth.frequency = mottle.frequency * _bal_or("ui_panel_grain_tooth", 12.0)
+	var share := _bal_or("ui_panel_grain_mottle", 0.4)
+	var a := mottle.get_seamless_image(size, size, false, false, 0.1, true)
+	var b := tooth.get_seamless_image(size, size, false, false, 0.1, true)
+	var light := Image.create(size, size, false, Image.FORMAT_LA8)
+	var dark := Image.create(size, size, false, Image.FORMAT_LA8)
+	for y in size:
+		for x in size:
+			var v := a.get_pixel(x, y).r * share + b.get_pixel(x, y).r * (1.0 - share)
+			var d := (v - 0.5) * 2.0
+			light.set_pixel(x, y, Color(1, 1, 1, clampf(d, 0.0, 1.0)))
+			dark.set_pixel(x, y, Color(0, 0, 0, clampf(-d, 0.0, 1.0)))
+	var out: Array[Texture2D] = []
+	for img: Image in [light, dark]:
+		img.generate_mipmaps()
+		out.append(ImageTexture.create_from_image(img))
+	_art_cache["panel_grain"] = out
+	return out
 
 ## How far content must stand in from a framed panel's edges to clear the
 ## ornament (owner 2026-09-14: the top bar's MENU sat on the corner
@@ -231,7 +310,7 @@ const ORNAMENT_CLEAR_V := PANEL_ART_INSET * 0.35
 ## no-op for the plain card, which has none. For a wide, short strip (the
 ## top bar), whose content would otherwise run into the corner scrolls.
 static func clear_ornament(style: StyleBox) -> StyleBox:
-	if style is VellumPanelStyle:
+	if style is VellumPanelStyle and (style as VellumPanelStyle).texture != null:
 		style.content_margin_left = maxf(style.content_margin_left, ORNAMENT_CLEAR_H)
 		style.content_margin_right = maxf(style.content_margin_right, ORNAMENT_CLEAR_H)
 		style.content_margin_top = maxf(style.content_margin_top, ORNAMENT_CLEAR_V)
@@ -509,6 +588,23 @@ static func style_title(label: Label, size: int, color: Color = GOLD) -> void:
 ## speaker names, dates, section headers, card titles.
 static func style_header(label: Label, size: int, color: Color = GOLD) -> void:
 	_style_role(label, size, color, "header")
+
+## A section header inside a card ("Temper of the Realm", "The Record"): the
+## header face, muted, over a faint gold rule the width of the column (owner
+## 2026-09-28: sections read as one run of text; balance
+## ui_section_rule_alpha, 0 draws no rule).
+static func style_section(label: Label, size: int, color: Color = TEXT_MUTED) -> void:
+	style_header(label, size, color)
+	var alpha := _bal_or("ui_section_rule_alpha", 0.0)
+	if alpha <= 0.0:
+		return
+	var rule := StyleBoxFlat.new()
+	rule.bg_color = Color(0, 0, 0, 0)
+	rule.border_color = Color(BORDER_GOLD, alpha)
+	rule.border_width_bottom = 1
+	rule.content_margin_bottom = _bal_or("ui_section_rule_gap_px", 3.0)
+	rule.content_margin_top = _bal_or("ui_section_rule_gap_px", 3.0)
+	label.add_theme_stylebox_override("normal", rule)
 
 static func _style_role(label: Label, size: int, color: Color, role: String) -> void:
 	label.add_theme_color_override("font_color", color)
