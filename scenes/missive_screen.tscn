@@ -43,80 +43,84 @@ text = "CLOSE"
 size_flags_vertical = 3
 theme_override_constants/separation = 16
 
-[node name="Board" type="HBoxContainer" parent="Frame/Col/Body"]
+[node name="BoardPanel" type="PanelContainer" parent="Frame/Col/Body"]
+unique_name_in_owner = true
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 2.0
+
+[node name="Board" type="HBoxContainer" parent="Frame/Col/Body/BoardPanel"]
 theme_override_constants/separation = 12
 
-[node name="Truth" type="VBoxContainer" parent="Frame/Col/Body/Board"]
+[node name="Truth" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board"]
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="TruthPlaque" type="Label" parent="Frame/Col/Body/Board/Truth"]
+[node name="TruthPlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Truth"]
 unique_name_in_owner = true
 text = "Ground truth"
 
-[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/Board/Truth"]
+[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Truth"]
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="TruthNotes" type="VBoxContainer" parent="Frame/Col/Body/Board/Truth/Scroll"]
+[node name="TruthNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Truth/Scroll"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="Credible" type="VBoxContainer" parent="Frame/Col/Body/Board"]
+[node name="Credible" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board"]
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="CrediblePlaque" type="Label" parent="Frame/Col/Body/Board/Credible"]
+[node name="CrediblePlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Credible"]
 unique_name_in_owner = true
 text = "Highly credible"
 
-[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/Board/Credible"]
+[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Credible"]
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="CredibleNotes" type="VBoxContainer" parent="Frame/Col/Body/Board/Credible/Scroll"]
+[node name="CredibleNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Credible/Scroll"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="Consult" type="VBoxContainer" parent="Frame/Col/Body/Board"]
+[node name="Consult" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board"]
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="ConsultPlaque" type="Label" parent="Frame/Col/Body/Board/Consult"]
+[node name="ConsultPlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Consult"]
 unique_name_in_owner = true
 text = "Worth consulting"
 
-[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/Board/Consult"]
+[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Consult"]
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="ConsultNotes" type="VBoxContainer" parent="Frame/Col/Body/Board/Consult/Scroll"]
+[node name="ConsultNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Consult/Scroll"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="Rumour" type="VBoxContainer" parent="Frame/Col/Body/Board"]
+[node name="Rumour" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board"]
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="RumourPlaque" type="Label" parent="Frame/Col/Body/Board/Rumour"]
+[node name="RumourPlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Rumour"]
 unique_name_in_owner = true
 text = "Rumour"
 
-[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/Board/Rumour"]
+[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Rumour"]
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="RumourNotes" type="VBoxContainer" parent="Frame/Col/Body/Board/Rumour/Scroll"]
+[node name="RumourNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Rumour/Scroll"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
 [node name="Desk" type="PanelContainer" parent="Frame/Col/Body"]
+unique_name_in_owner = true
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 1.0
 

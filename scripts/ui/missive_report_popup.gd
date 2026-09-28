@@ -9,7 +9,8 @@ signal sealed(from: Rect2)
 
 func _ready() -> void:
 	# a floating dialog: a window, titled in the title face
-	%Window.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 20, "window"))
+	%Window.add_theme_stylebox_override("panel",
+		MissiveArt.style(Game.data, "letter", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 20, "window")))
 	UiPalette.style_title(%ReportTitle, 20)
 	%ReportMeta.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	UiPalette.command_button(%Seal)

@@ -13,6 +13,7 @@
     python3 assets/flux/install_map_art.py app_icon   # X-01 -> icon.png (the game's application icon)
     python3 assets/flux/install_map_art.py events     # V-35..V-55 -> assets/events/<event_id>.png (the audience window's event band)
     python3 assets/flux/install_map_art.py courier_paintings  # B-43..47 -> assets/couriers/paint/<key>.png (courier card, the desk's receipt)
+    python3 assets/flux/install_map_art.py missive  # U-20..26 -> assets/missives/<key>.png (the Missive board)
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
 blue channel (see sepia_alpha_template.json for the same steps as a ComfyUI
@@ -368,6 +369,50 @@ def install_courier_paintings(size: tuple = PAINT_SIZE) -> int:
     return install_paintings(size, "courier_paint_art.csv", ROOT / "assets" / "couriers" / "paint")
 
 
+## The Missive board's pieces (owner 2026-09-28, spec 2026-09-28-courier-art
+## §5): library U-20..U-26, each sized by its USE (library §9.1). The nine-slice
+## pieces are cropped to the piece off its grey ground and resized; the
+## envelope and the pin are cut out to alpha (the ground flooded from the edges,
+## as the arms are) and fitted. Writes assets/missives/<key>.png and fills
+## data/missive_art.csv's texture column.
+def install_missive() -> int:
+    rows = list(csv.DictReader((HERE / "missive_art_install.csv").open(encoding="utf-8")))
+    dest = ROOT / "assets" / "missives"
+    dest.mkdir(parents=True, exist_ok=True)
+    installed = {}
+    for r in rows:
+        art_id, key, seed = r["art_id"], r["key"], r.get("seed", "").strip()
+        hits = _pick(sorted((HERE / "out" / "ui").glob("%s_*.png" % art_id)), seed)
+        if not hits:
+            print("  (no render for %s / %s)" % (art_id, key))
+            continue
+        w, h, ch, px = decode_png(hits[-1])
+        tw, th = int(r["width"]), int(r["height"])
+        if r["cut"] == "1":
+            rgba = flood_ground(w, h, ch, px)
+            cw, chh, cut = trim_alpha(w, h, rgba)
+            side = max(cw, chh)
+            sq = pad_square(cw, chh, cut, side)
+            small = resize_rgba(side, side, sq, tw, th)
+        else:
+            rgba = to_rgba(w, h, ch, bytearray(px))
+            box = scene_box(w, h, rgba, tw / th)
+            cw, chh, piece = crop_rgba(w, rgba, box)
+            small = resize_rgba(cw, chh, piece, tw, th)
+        encode_png(dest / ("%s.png" % key), tw, th, 4, bytes(small))
+        installed[key] = "res://assets/missives/%s.png" % key
+        print("  %-6s %-9s %dx%d" % (art_id, key, tw, th))
+    table = ROOT / "data" / "missive_art.csv"
+    lines = list(csv.DictReader(table.open(encoding="utf-8")))
+    for line in lines:
+        if line["key"] in installed:
+            line["texture"] = installed[line["key"]]
+    with table.open("w", newline="", encoding="utf-8") as f:
+        wr = csv.DictWriter(f, fieldnames=list(lines[0].keys()))
+        wr.writeheader(); wr.writerows(lines)
+    return len(installed)
+
+
 ## The map's compass (owner 2026-09-14): library I-73 cut out by post.py
 ## --tier icon, trimmed to its alpha box and fitted into COMPASS_PX — drawn
 ## at map_compass_size_px (88 design px) x ~3 on the largest window, so 256.
@@ -556,7 +601,8 @@ def main() -> int:
                 "buildings": install_buildings, "goods_icons": install_goods_icons,
                 "arms": install_arms, "army_paintings": install_army_paintings,
                 "app_icon": install_app_icon, "events": install_events,
-                "courier_paintings": install_courier_paintings}
+                "courier_paintings": install_courier_paintings,
+                "missive": install_missive}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2

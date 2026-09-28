@@ -104,6 +104,8 @@ var intel_facts: Dictionary = {}
 var spy_difficulty: Dictionary = {}
 ## data/missive_art.csv: key -> texture path ("" until installed).
 var missive_art: Dictionary = {}
+## data/missive_art.csv's margin column: key -> nine-slice edge in texture px.
+var missive_margin: Dictionary = {}
 ## data/courier_paintings.csv: a courier state's painting — foul, delivered ("" until installed).
 var courier_paintings: Dictionary = {}
 ## data/road_speed.csv: key -> per mille (road, trail, offroad, sea, tier_<tier>).
@@ -593,7 +595,9 @@ func _load(dir: String) -> bool:
 			func(r): spy_difficulty[String(r["key"])] = int(r["permille"])):
 		return false
 	if not _load_if_present(dir + "/missive_art.csv", ["key", "texture"],
-			func(r): missive_art[String(r["key"])] = String(r["texture"])):
+			func(r):
+				missive_art[String(r["key"])] = String(r["texture"])
+				missive_margin[String(r["key"])] = int(String(r.get("margin", "0")) if String(r.get("margin", "")) != "" else "0")):
 		return false
 	if not _load_if_present(dir + "/courier_paintings.csv", ["key", "texture"],
 			func(r): courier_paintings[String(r["key"])] = String(r["texture"])):

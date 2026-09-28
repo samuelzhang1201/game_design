@@ -1,8 +1,8 @@
-key,texture,notes
-frame,,"spec §3: the board's wooden frame (nine-sliced); empty until the Flux art is installed — UiPalette's flat style stands in"
-board,,the cork ground behind the columns
-note,,a pinned parchment slip
-letter,,the reading desk's parchment
-envelope,,the wax-sealed envelope that flies to the tab
-pin,,the pin on a note
-plaque,,a column header plaque
+key,texture,margin,notes
+frame,,72,spec §3: the board's wooden frame (nine-sliced); empty until the Flux art is installed — UiPalette's flat style stands in
+board,,0,the cork ground behind the columns (tiled)
+note,,40,a pinned parchment slip
+letter,,64,the reading desk's parchment
+envelope,,0,the wax-sealed envelope that flies to the tab
+pin,,0,the pin on a note
+plaque,,48,a column header plaque

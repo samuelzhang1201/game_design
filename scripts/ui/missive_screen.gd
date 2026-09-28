@@ -43,8 +43,17 @@ func _ready() -> void:
 		plaque.text = HEADERS[col]
 		# a column's plaque is a section header in its credibility's colour
 		UiPalette.style_section(plaque, PLAQUE_FONT_SIZE, MapPalette.named(Game.data, "intel_" + col))
+		plaque.add_theme_stylebox_override("normal", MissiveArt.style(Game.data, "plaque", StyleBoxEmpty.new()))
 	# the board floats over the screen: a window, titled in the title face
-	%Frame.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "window"))
+	%Frame.add_theme_stylebox_override("panel",
+		MissiveArt.style(Game.data, "frame", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "window")))
+	var board_style := MissiveArt.style(Game.data, "board", StyleBoxEmpty.new())
+	if board_style is StyleBoxTexture:
+		(board_style as StyleBoxTexture).axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+		(board_style as StyleBoxTexture).axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+	%BoardPanel.add_theme_stylebox_override("panel", board_style)
+	%Desk.add_theme_stylebox_override("panel",
+		MissiveArt.style(Game.data, "letter", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 12, "column")))
 	UiPalette.style_title(%Title, 22)
 	UiPalette.style_header(%LetterTitle, 18)
 	%LetterMeta.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
@@ -142,11 +151,31 @@ func _note(m: Dictionary) -> Button:
 	for s: StyleBoxFlat in [style, hover, pressed]:
 		s.content_margin_left = NOTE_MARGIN
 		s.content_margin_right = NOTE_MARGIN
-	b.add_theme_stylebox_override("normal", style)
+	# a selected note keeps the flat lit style — the selection still shows
+	# over parchment — everyone else wears the pinned-parchment art
+	var normal: StyleBox = style if id == _selected else MissiveArt.style(Game.data, "note", style)
+	b.add_theme_stylebox_override("normal", normal)
 	b.add_theme_stylebox_override("hover", hover)
 	b.add_theme_stylebox_override("pressed", pressed)
 	b.add_theme_font_size_override("font_size", NOTE_FONT_SIZE)
 	b.pressed.connect(func() -> void: select(id))
+	var pin := MissiveArt.texture(Game.data, "pin")
+	if pin != null:
+		var chip := TextureRect.new()
+		chip.texture = pin
+		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		chip.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		chip.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		# anchored top-centre: a 14x14 pin astride the note's top edge
+		chip.anchor_left = 0.5
+		chip.anchor_right = 0.5
+		chip.anchor_top = 0.0
+		chip.anchor_bottom = 0.0
+		chip.offset_left = -7.0
+		chip.offset_right = 7.0
+		chip.offset_top = -7.0
+		chip.offset_bottom = 7.0
+		b.add_child(chip)
 	return b
 
 
