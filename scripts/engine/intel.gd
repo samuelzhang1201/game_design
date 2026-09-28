@@ -9,6 +9,11 @@ extends RefCounted
 
 static var dev_all := false
 
+## What a poor spy writes for a word he could not make out.
+const UNCLEAR := "unclear"
+## The keys a manor's report may answer for its whole province (Ruling 11).
+const PROVINCE_KEYS := ["stance", "wealth"]
+
 static var _tiers: Dictionary = {}
 static var _tiers_key := ""
 
@@ -169,10 +174,6 @@ static func text_of(f: Dictionary) -> String:
 	return String(f.get("text", "—"))
 
 
-static func _from_fact(f: Dictionary) -> String:
-	return text_of(f)
-
-
 ## The newest report carrying `key` about `subj` (see `_latest`'s own
 ## matching rules), rendered as `fact()` would: {text, source, day, column},
 ## or {} when no report answers. Public — a caller that already knows its
@@ -188,19 +189,31 @@ static func estimate(repo: DataRepository, state: GameState, subj: Dictionary, k
 
 ## The newest letter carrying `key` about this subject:
 ## - tier 1: a manor query matches a report whose own subject is a manor of
-##   the SAME cell;
-## - tier 2: a province query matches any report whose subject lies in that
-##   same province, whatever the report's own kind;
+##   the SAME cell; a town (burg) query resolves to its cell
+##   (MapEconomy.burg_cells) and matches a report on that cell the same way
+##   (Ruling 12 — the town card asks for `town_people`, never the manor's
+##   own `people`);
+## - tier 2: a province query matches a report whose subject lies in that
+##   same province — but a manor's report answers its province only in the
+##   province's own words (PROVINCE_KEYS: stance, wealth); its people, tax,
+##   output and holder are that one manor's and answer only a query about
+##   the same manor (Ruling 11);
 ## - tier 3 (distance): only a report whose subject kind is "point", within
 ##   intel_match_km of the query's point AND in the SAME province as the
 ##   query (both province_of non-empty and equal). A manor or province
 ##   report never answers a different manor or province merely by distance
 ##   (two provinces' centers can sit a few px apart on the pack).
+## A words fact that reads "unclear" (a poor spy's holder, stance or wealth)
+## answers nothing: those are always given, so the next report or common
+## knowledge speaks instead (Ruling 13; the letter itself still says it).
 static func _latest(repo: DataRepository, state: GameState, subj: Dictionary, key: String) -> Dictionary:
 	if state == null:
 		return {}
 	var prov := province_of(repo, state, subj)
 	var qkind := String(subj.get("kind", ""))
+	var qcell := int(subj.get("cell", -2))
+	if qkind == "burg":
+		qcell = int(MapEconomy.burg_cells(repo).get(String(subj.get("code", "")), -2))
 	var reach := repo.bal("intel_match_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
 	var here := Vector2(float(subj.get("x", 0)), float(subj.get("y", 0)))
 	var best: Dictionary = {}
@@ -209,18 +222,20 @@ static func _latest(repo: DataRepository, state: GameState, subj: Dictionary, ke
 			continue
 		var f: Dictionary = {}
 		for x: Dictionary in m["facts"]:
-			if String(x["key"]) == key:
+			if String(x["key"]) == key and String(x.get("text", "")) != UNCLEAR:
 				f = x
 		if f.is_empty():
 			continue
 		var ms: Dictionary = m["subject"]
+		var mkind := String(ms.get("kind", ""))
 		var hit := false
-		if qkind == "manor" and String(ms.get("kind", "")) == "manor" \
-				and int(ms.get("cell", -1)) == int(subj.get("cell", -2)):
+		if qkind in ["manor", "burg"] and mkind == "manor" and qcell >= 0 \
+				and int(ms.get("cell", -1)) == qcell:
 			hit = true
-		elif qkind == "province" and prov != "" and province_of(repo, state, ms) == prov:
+		elif qkind == "province" and prov != "" and province_of(repo, state, ms) == prov \
+				and (mkind != "manor" or key in PROVINCE_KEYS):
 			hit = true
-		elif String(ms.get("kind", "")) == "point" and prov != "" \
+		elif mkind == "point" and prov != "" \
 				and province_of(repo, state, ms) == prov \
 				and here.distance_to(Vector2(float(ms.get("x", 0)), float(ms.get("y", 0)))) <= reach:
 			hit = true

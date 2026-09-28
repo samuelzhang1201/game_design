@@ -245,3 +245,96 @@ func test_an_estimate_with_no_width_reads_as_one_number() -> void:
 	assert_eq(Intel.text_of({"lo": 0, "hi": 0}), "none")
 	assert_eq(Intel.text_of({"lo": 1500, "hi": 1500}), "≈ " + Intel.num(1500))
 	assert_eq(Intel.text_of({"lo": 1500, "hi": 3100}), "≈ %s–%s" % [Intel.num(1500), Intel.num(3100)])
+
+
+## A manor of a foreign province, else -1.
+func _foreign_manor_cell(s: GameState) -> int:
+	var code := _foreign(s)
+	var cells := MapManors.manors_of_province(repo, code, s)
+	return int(cells[0]) if not cells.is_empty() else -1
+
+
+## T3 (final review): the positive tier-1 case — a report on a manor answers
+## a query about that same manor.
+func test_a_manor_report_answers_the_same_manor() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var cell := _foreign_manor_cell(s)
+	assert_gt(cell, -1, "a foreign manor exists on this pack")
+	var a := _manor_subj(cell)
+	MissiveLog.add(repo, s, MissiveLog.make("spy", "credible", 4, a, "x",
+		[MissiveLog.span("people", "People", 500, 700)]))
+	var got := Intel.fact(repo, s, a, "people", 600)
+	assert_eq(String(got["text"]), "≈ 500–700")
+	assert_eq(String(got["source"]), "spy")
+
+
+## T3: tier 3 alone — a POINT report near a manor, in its province, answers
+## a query about that manor (tier 1 needs a manor report, tier 2 a province
+## query, so only the distance rule can match here).
+func test_a_point_report_answers_a_manor_query_by_distance_alone() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var cell := _foreign_manor_cell(s)
+	var a := _manor_subj(cell)
+	var near := MissiveLog.subject("point", "", -1, Vector2(float(a["x"]) + 0.5, float(a["y"])))
+	assert_eq(Intel.province_of(repo, s, near), Intel.province_of(repo, s, a), "the point lies in the same province")
+	MissiveLog.add(repo, s, MissiveLog.make("spy", "credible", 4, near, "near",
+		[MissiveLog.span("troops_foreign", "Foreign troops nearby", 100, 300)]))
+	assert_eq(String(Intel.fact(repo, s, a, "troops_foreign", 200)["text"]), "≈ 100–300")
+	var far := MissiveLog.subject("point", "", -1, Vector2(float(a["x"]) + _reach() * 50.0, float(a["y"])))
+	var s2 := GameState.new_campaign(repo, 7)
+	MissiveLog.add(repo, s2, MissiveLog.make("spy", "credible", 4, far, "far",
+		[MissiveLog.span("troops_foreign", "Foreign troops nearby", 100, 300)]))
+	assert_ne(String(Intel.fact(repo, s2, a, "troops_foreign", 200)["source"]), "spy",
+		"out of reach, a point report says nothing of the manor")
+
+
+## I1 / Ruling 11: a manor report answers its PROVINCE only in the
+## province's own words (stance, wealth) — never with that one manor's
+## people, tax, output or holder, which would read at province scale.
+func test_a_manor_report_answers_its_province_only_for_stance_and_wealth() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var cell := _foreign_manor_cell(s)
+	var code := MapManors.province_of(repo, cell, s)
+	MissiveLog.add(repo, s, MissiveLog.make("spy", "credible", 4, _manor_subj(cell), "x", [
+		MissiveLog.span("people", "People", 500, 700),
+		MissiveLog.span("tax", "Tax a month", 10, 20),
+		MissiveLog.span("output", "Goods a month", 30, 40),
+		MissiveLog.words("holder", "Held by", "House Spyglass"),
+		MissiveLog.words("stance", "Stance", "Wary"),
+		MissiveLog.words("wealth", "Wealth", "rich")]))
+	var p := _subj(code)
+	var stance := Intel.fact(repo, s, p, "stance", "Neutral")
+	assert_eq(String(stance["text"]), "Wary", "the province's stance comes from the report")
+	assert_eq(String(stance["source"]), "spy")
+	assert_eq(String(Intel.fact(repo, s, p, "wealth", 0)["text"]), "rich")
+	for key in ["people", "tax", "output", "holder"]:
+		assert_ne(String(Intel.fact(repo, s, p, key, 15000)["source"]), "spy",
+			"one manor's %s never answers for its whole province" % key)
+	# and the same manor still reads all of it
+	assert_eq(String(Intel.fact(repo, s, _manor_subj(cell), "people", 600)["text"]), "≈ 500–700")
+	assert_eq(String(Intel.fact(repo, s, _manor_subj(cell), "holder", "x")["text"]), "House Spyglass")
+
+
+## I3 / Ruling 13: holder, stance and wealth are always given — a poor
+## report's "unclear" never overrides them on a card (the letter still
+## says "unclear").
+func test_an_unclear_word_never_overrides_what_is_always_given() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var cell := _foreign_manor_cell(s)
+	var m := _manor_subj(cell)
+	MissiveLog.add(repo, s, MissiveLog.make("spy", "rumour", 4, m, "x", [
+		MissiveLog.words("holder", "Held by", "unclear"),
+		MissiveLog.words("stance", "Stance", "unclear"),
+		MissiveLog.words("wealth", "Wealth", "unclear")]))
+	assert_eq(String(Intel.fact(repo, s, m, "holder", "House Vane")["text"]), "House Vane")
+	assert_eq(String(Intel.fact(repo, s, m, "stance", "Neutral")["text"]), "Neutral")
+	var w := Intel.fact(repo, s, m, "wealth", 2)
+	assert_eq(String(w["text"]), "rich")
+	assert_eq(String(w["source"]), "common knowledge")
+	# an older CLEAR word still stands behind a newer unclear one
+	var s2 := GameState.new_campaign(repo, 7)
+	MissiveLog.add(repo, s2, MissiveLog.make("spy", "credible", 3, m, "old",
+		[MissiveLog.words("stance", "Stance", "Wary")]))
+	MissiveLog.add(repo, s2, MissiveLog.make("spy", "rumour", 5, m, "new",
+		[MissiveLog.words("stance", "Stance", "unclear")]))
+	assert_eq(String(Intel.fact(repo, s2, m, "stance", "Neutral")["text"]), "Wary")

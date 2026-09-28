@@ -78,11 +78,11 @@ static func report(repo: DataRepository, state: GameState, at: Vector2, q: int, 
 		var prov := MapManors.province_of(repo, cell, state)
 		var holder := MapManors.owner_of(repo, state, cell)
 		facts.append(MissiveLog.words("holder", _label(repo, "holder"),
-			("House " + holder) if sees_words and holder != "" else "unclear"))
+			("House " + holder) if sees_words and holder != "" else Intel.UNCLEAR))
 		facts.append(MissiveLog.words("stance", _label(repo, "stance"),
-			Intel.stance_of(repo, MapOwnership.owner_of(repo, state, prov)) if sees_words else "unclear"))
+			Intel.stance_of(repo, MapOwnership.owner_of(repo, state, prov)) if sees_words else Intel.UNCLEAR))
 		facts.append(MissiveLog.words("wealth", _label(repo, "wealth"),
-			Intel.wealth_word(repo, Intel.wealth_tier(repo, state, prov)) if sees_words else "unclear"))
+			Intel.wealth_word(repo, Intel.wealth_tier(repo, state, prov)) if sees_words else Intel.UNCLEAR))
 	var troops := _troops(repo, state, at)
 	for key in ["troops_own", "troops_foreign"]:
 		var tl := estimate(repo, int(troops[key]), q, bias, _round_to(repo, key))
