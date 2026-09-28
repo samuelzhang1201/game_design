@@ -122,6 +122,12 @@ ui_panel_inner_rule_alpha,0.35,UI: the gold hairline inside a card that wears no
 ui_panel_inner_rule_inset_px,4,UI: how far in from the card's edge that hairline runs (design px)
 ui_section_rule_alpha,0.35,"UI: the faint gold rule under a section header inside a card (UiPalette.style_section), 0 none"
 ui_section_rule_gap_px,3,UI: the space above a section header and between it and its rule (design px)
+ui_dimension_labels,1,"UI: 1 writes each gauge's name beside its art on the realm card (temper and host; owner 2026-09-28, after the UI critique); 0 is the 2026-09-13 card, the art alone with the name in its tooltip"
+ui_purse_labels,1,"UI: 1 names the top bar's two purse rows (Crown / the house) and writes each change as a month's (+1,597/mo); 0 leaves the marks alone"
+ui_purse_label_w_px,64,UI: the width the purse rows' names take so the three pools stay in their columns (design px)
+ui_manor_card_rows,1,"UI: 1 lays the manor card's facts out as named rows in the sections of data/manor_card_sections.csv (owner 2026-09-28, after the UI critique: an icon grid of truncated values had to be hovered to be read); 0 is the 2026-09-14 icon grid"
+ui_manor_row_label_px,96,UI: the width a named row's name takes on the manor card (design px); the value fills the rest right-aligned
+ui_manor_row_icons,1,UI: 1 keeps each named row's art on the manor card; 0 is the name and value alone
 ui_font_scheme,1,"UI: which scheme of data/ui_fonts.csv sets the faces (title / header / body / tab / display). 1 is the owner's pick of 2026-09-28 (Crimson Pro body, Alegreya SC headers and tabs, blackletter for titles only); 0 is the 2026-09-13 set (Cinzel body in capitals, blackletter headers)"
 dashboard_max_provinces,4,realm dashboard: how many of the realm's largest provinces the bar chart lists
 map_army_badge_native_px,4.55,"military layer: height of a regiment's counter in NATIVE map px, times the zoom (owner 2026-09-17: counters scale with the map and are never thinned; 4.55 = the old 0.35 of a 0.13 settlement drawing (map_sprite_scale), so the unclamped size is unchanged), never below map_army_badge_min_px"

@@ -13,8 +13,8 @@ func test_shows_the_realm_and_its_resources() -> void:
 	await wait_frames(1)
 	var mine := Game.data.resolve_realm("player_realm")
 	assert_eq(d.title_label().text, String(Game.data.kingdoms[mine]["label"]))
-	assert_eq(d.resource_text("treasury"), str(int(Game.state.metrics["treasury"])))
-	assert_eq(d.resource_text("grain"), str(int(Game.state.metrics["grain"])))
+	assert_eq(d.resource_text("treasury"), UiPalette.format_int(int(Game.state.metrics["treasury"])))
+	assert_eq(d.resource_text("grain"), UiPalette.format_int(int(Game.state.metrics["grain"])))
 	assert_ne(d.resource_text("population"), "", "the people are counted")
 	assert_ne(d.resource_text("army"), "", "so is the host")
 

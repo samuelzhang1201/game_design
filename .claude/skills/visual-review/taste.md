@@ -49,6 +49,16 @@ add it here as a principle with its why — not as a changelog entry.
   greyed the leather to slate, and a cellular noise read as veined marble —
   the grain is laid light-in-parchment and dark-in-black, fine-toothed.
 
+## Information
+- **Name it; the icon is the anchor, not the word** (owner 2026-09-28,
+  reversing "icons, not words" of 2026-09-13/14 for the realm card and the
+  manor card). Five identical bars under five small still-lifes, and a grid
+  of "10", "0/3", "8553", "Temperate ..." had to be hovered to be read. Each
+  fact is now art + name + value, grouped under a section, values
+  right-aligned and never truncated; figures grouped by thousands; a rate says
+  it is a month's ("/mo"). The art stays — it teaches the vocabulary the map
+  and top bar use.
+
 
 ## Shape and reading
 - **Read by width and fade, not by rule.** Roads are worn tracks with a soft

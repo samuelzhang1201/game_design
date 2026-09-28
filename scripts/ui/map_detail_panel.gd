@@ -336,14 +336,17 @@ func show_card(card: Dictionary) -> void:
 	# The grid is reused across cards, so its column count must be reset
 	# per card — a regiment's card asks for fewer, wider pairs.
 	_stats.columns = int(card.get("stat_columns", DEFAULT_STAT_COLUMNS))
+	_stats.add_theme_constant_override("v_separation", 4)
 	var stats: Array = card.get("stats", [])
 	if stats.is_empty():
 		for f in card.get("fields", []):
 			_fields.add_child(_line(String(f[0]), UiPalette.TEXT_MUTED))
 			_fields.add_child(_line(String(f[1]), UiPalette.TEXT_SOFT))
+	elif _as_rows(card):
+		_fill_stat_rows(stats, card.get("rates", []))
 	else:
 		_fill_stats(stats)
-	_fill_rates(card.get("rates", []))
+		_fill_rates(card.get("rates", []))
 	_show_painting(String(card.get("painting", "")))
 	var known := String(card.get("known", "full"))
 	var basic := known == "basic"
@@ -705,14 +708,118 @@ func _fill_stats(stats: Array) -> void:
 		_stat_cells[key] = value
 
 
+## Whether a card's facts are laid out as named rows: a manor's, when the
+## balance asks for it (owner 2026-09-28, ui_manor_card_rows).
+func _as_rows(card: Dictionary) -> bool:
+	return String(card.get("kind", "")) == "manor" \
+		and Game.data.bal("ui_manor_card_rows") > 0.0 \
+		and not Game.data.manor_card_sections.is_empty()
+
+
+## The manor's facts as NAMED rows in the sections of
+## data/manor_card_sections.csv: a muted small-capitals heading over a faint
+## rule, then a row a fact — its art, its name, its value on the right, the
+## whole fact in the tooltip — and the goods it makes under the section that
+## asks for them. A fact no section names falls to the last.
+func _fill_stat_rows(stats: Array, rates: Array) -> void:
+	_stats.columns = 1
+	# Rows sit tighter than the icon grid did: more of the card above the fold.
+	_stats.add_theme_constant_override("v_separation", 1)
+	var sections: Array = Game.data.manor_card_sections
+	var placed := {}
+	var by_section: Array = []
+	for sec: Dictionary in sections:
+		var mine: Array = []
+		for want: String in sec["keys"]:
+			for st: Dictionary in stats:
+				var key := String(st["key"])
+				if placed.has(key):
+					continue
+				if key == want or (want.ends_with("_") and key.begins_with(want)):
+					mine.append(st)
+					placed[key] = true
+		by_section.append(mine)
+	for st: Dictionary in stats:
+		if not placed.has(String(st["key"])):
+			(by_section[by_section.size() - 1] as Array).append(st)
+	for i in sections.size():
+		var sec: Dictionary = sections[i]
+		var mine: Array = by_section[i]
+		var show_rates: bool = sec["rates"] and not rates.is_empty()
+		if mine.is_empty() and not show_rates:
+			continue
+		var head := Label.new()
+		head.name = "Section_" + String(sec["section"])
+		head.text = String(sec["label"])
+		head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		UiPalette.style_section(head, 12)
+		_stats.add_child(head)
+		for st: Dictionary in mine:
+			_stats.add_child(_stat_row(st))
+		if show_rates:
+			var box := VBoxContainer.new()
+			box.name = "SectionRates"
+			box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			box.add_theme_constant_override("separation", 2)
+			_stats.add_child(box)
+			_fill_rates(rates, box, false)
+
+
+## One named fact: art, name, value right-aligned.
+func _stat_row(st: Dictionary) -> HBoxContainer:
+	var key := String(st["key"])
+	var tip := String(st["tooltip"])
+	var row := HBoxContainer.new()
+	row.name = "Row_" + key
+	# A one-column grid sizes its column to the widest child's MINIMUM: the
+	# row has to ask to fill it, or the value is squeezed to one letter.
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 6)
+	var icon := ResourceIcon.create(key)
+	icon.name = "StatIcon_" + key
+	icon.custom_minimum_size = Vector2(STAT_ICON_PX, STAT_ICON_PX)
+	icon.ready.connect(func() -> void: icon.tooltip_text = tip, CONNECT_ONE_SHOT)
+	icon.tooltip_text = tip
+	# The art is optional here (ui_manor_row_icons): the name already says it.
+	icon.visible = Game.data.bal("ui_manor_row_icons") > 0.0
+	icon.custom_minimum_size = Vector2(STAT_ICON_PX - 2.0, STAT_ICON_PX - 2.0)
+	row.add_child(icon)
+	var name_l := Label.new()
+	name_l.text = String((Game.data.resource_icons.get(key, {}) as Dictionary).get("label", key))
+	if key.begins_with("weather_"):
+		name_l.text = "Weather"
+	name_l.add_theme_font_size_override("font_size", 13)
+	name_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	name_l.custom_minimum_size = Vector2(Game.data.bal("ui_manor_row_label_px"), 0)
+	name_l.mouse_filter = Control.MOUSE_FILTER_PASS
+	name_l.tooltip_text = tip
+	row.add_child(name_l)
+	var value := Label.new()
+	value.name = "Stat_" + key
+	value.text = String(st["text"])
+	value.add_theme_font_size_override("font_size", 13)
+	value.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value.clip_text = true
+	value.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	value.mouse_filter = Control.MOUSE_FILTER_PASS
+	value.tooltip_text = tip
+	row.add_child(value)
+	_stat_cells[key] = value
+	return row
+
+
 ## What the manor makes a month (owner 2026-09-14: the rate of every
 ## product): one row a good — its art in its category's colour, its name,
 ## and "+N / mo", the tooltip adding what the units are worth and to which
 ## pool they go.
-func _fill_rates(rates: Array) -> void:
+func _fill_rates(rates: Array, into: VBoxContainer = null, headed := true) -> void:
 	if rates.is_empty():
 		return
-	_rates.add_child(_line("Output a month", UiPalette.TEXT_MUTED))
+	var target := into if into != null else _rates
+	if headed:
+		target.add_child(_line("Output a month", UiPalette.TEXT_MUTED))
 	for r: Dictionary in rates:
 		var good := String(r["good"])
 		var tip := "%s — %d units a month, worth %d gold to the %s goods" % [
@@ -762,7 +869,7 @@ func _fill_rates(rates: Array) -> void:
 		rate_l.mouse_filter = Control.MOUSE_FILTER_PASS
 		rate_l.tooltip_text = tip
 		row.add_child(rate_l)
-		_rates.add_child(row)
+		target.add_child(row)
 
 
 func _set_ask(ask: String) -> void:
@@ -866,8 +973,11 @@ func select_build(code: String) -> bool:
 func stats_grid() -> GridContainer:
 	return _stats
 
+## Where the output rows are: under the section that asks for them when the
+## card is laid out as rows, else the card's own box.
 func rates_box() -> VBoxContainer:
-	return _rates
+	var in_section := _stats.get_node_or_null("SectionRates") as VBoxContainer
+	return in_section if in_section != null else _rates
 
 func painting_box() -> Control:
 	return _painting_box

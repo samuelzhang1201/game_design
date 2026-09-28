@@ -48,6 +48,8 @@ var _clock_buttons: Dictionary = {}
 var _crown_mark: Control
 var _lord_crest: HeraldicShield
 var _date_arms: HeraldicShield
+## The lord's row's name (the crown's family), when the rows are named.
+var _house_name: Label
 
 func _ready() -> void:
 	%Bar.add_theme_stylebox_override("panel",
@@ -102,6 +104,7 @@ func _ready() -> void:
 	_crown_mark.custom_minimum_size = Vector2(ICON_PX, ICON_PX)
 	%Purses.add_child(_crown_mark)
 	_crown_mark.tooltip_text = "The crown's — the realm's treasury and stores, which pay the court and buy land across the border"
+	_wrap_mark(_crown_mark, "CrownName", "Crown", _crown_mark.tooltip_text)
 	for m: String in ORDER:
 		%Purses.add_child(_cell(m))
 	_lord_crest = HeraldicShield.new()
@@ -111,6 +114,7 @@ func _ready() -> void:
 	_lord_crest.mouse_filter = Control.MOUSE_FILTER_PASS
 	_lord_crest.tooltip_text = "Your house's own — what your provinces pay you as their lord, yours to spend: it buys and builds manors inside the realm"
 	%Purses.add_child(_lord_crest)
+	_house_name = _wrap_mark(_lord_crest, "HouseName", "", _lord_crest.tooltip_text)
 	for m: String in LORD:
 		%Purses.add_child(_cell(m))
 	Game.state_changed.connect(refresh)
@@ -137,6 +141,33 @@ func _art_button(b: Button, key: String, keep_text := false) -> void:
 	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.text = ""
 	b.custom_minimum_size = Vector2(BUTTON_H + 6.0, BUTTON_H)
+
+## Name a purse row (owner 2026-09-28, after the UI critique: the two rows
+## were told apart only by a 20 px crown and a 17 px shield): the mark moves
+## into a box beside a small-capitals word — "Crown", or the house's name —
+## that keeps its place in the grid. balance ui_purse_labels 0 leaves the mark
+## alone. Returns the word's label, or null.
+func _wrap_mark(mark: Control, label_name: String, text: String, tip: String) -> Label:
+	if Game.data.bal("ui_purse_labels") <= 0.0:
+		return null
+	var box := HBoxContainer.new()
+	box.name = label_name + "Box"
+	box.add_theme_constant_override("separation", 5)
+	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var at := mark.get_index()
+	%Purses.remove_child(mark)
+	box.add_child(mark)
+	var word := Label.new()
+	word.name = label_name
+	word.text = text
+	word.tooltip_text = tip
+	word.mouse_filter = Control.MOUSE_FILTER_PASS
+	word.custom_minimum_size = Vector2(Game.data.bal("ui_purse_label_w_px"), 0)
+	UiPalette.style_header(word, 12, UiPalette.TEXT_MUTED)
+	box.add_child(word)
+	%Purses.add_child(box)
+	%Purses.move_child(box, at)
+	return word
 
 ## One pool: its icon, the stock, and its one change.
 func _cell(m: String) -> HBoxContainer:
@@ -181,6 +212,8 @@ func refresh() -> void:
 	_lord_crest.set_arms(MapPalette.color_of(Game.data, Game.data.resolve_realm("player_realm")),
 		family.substr(0, 1).to_upper())
 	_lord_crest.set_texture(arms)
+	if _house_name != null:
+		_house_name.text = family
 	var deltas := {}
 	var settled := Game.current_report != null
 	if settled:
@@ -188,21 +221,23 @@ func refresh() -> void:
 			var metric := String(d["metric"])
 			deltas[metric] = float(deltas.get(metric, 0.0)) + float(d["delta"])
 	var purses := RealmEconomy.purses(Game.data, Game.state)
+	# The change is a month's (owner 2026-09-28: "+1597" said nothing of when).
+	var per_month := "/mo" if Game.data.bal("ui_purse_labels") > 0.0 else ""
 	for m: String in _value_labels:
 		var src: Array = MONTHLY[m]
 		var monthly := int((purses[String(src[0])] as Dictionary)[String(src[1])])
 		_monthly[m] = monthly
-		_value_labels[m].text = str(int(Game.state.metrics.get(m, 0.0)))
+		_value_labels[m].text = UiPalette.format_int(int(Game.state.metrics.get(m, 0.0)))
 		var delta := int(deltas.get(m, 0.0))
 		var dl: Label = _delta_labels[m]
 		# ONE change a pool (owner 2026-09-14): the month just settled when
 		# there is one; before that, what this month should bring, in grey.
 		if settled:
-			dl.text = "%+d" % delta if delta != 0 else ""
+			dl.text = UiPalette.format_delta(delta) + per_month if delta != 0 else ""
 			dl.add_theme_color_override("font_color",
 				UiPalette.good_color() if delta > 0 else UiPalette.bad_color())
 		else:
-			dl.text = "+%d" % monthly
+			dl.text = UiPalette.format_delta(monthly) + per_month
 			dl.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 		var tip := "%s — last month %s, this month brings about +%d" % [
 			String((Game.data.resource_icons.get(m, {}) as Dictionary).get("label", m)),

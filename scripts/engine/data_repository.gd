@@ -39,6 +39,9 @@ var chart_palette: Dictionary = {}
 ## data/ui_fonts.csv: "<scheme>:<role>" -> the row (path, weight, embolden,
 ## slant, spacing, size_scale, title_case); balance ui_font_scheme picks one.
 var ui_fonts: Dictionary = {}
+## data/manor_card_sections.csv: the manor card's named sections in order,
+## each {section, label, keys (Array), rates (bool)}.
+var manor_card_sections: Array = []
 ## data/resource_icons.csv: key -> {label, icon, tooltip} for every resource
 ## and unit the UI shows as a glyph with a floating tooltip.
 var resource_icons: Dictionary = {}
@@ -468,6 +471,11 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/chart_palette.csv", ["key", "color"],
 			func(r): chart_palette[r["key"]] = r["color"]):
+		return false
+	if not _load_if_present(dir + "/manor_card_sections.csv", ["section", "label", "keys", "rates"],
+			func(r): manor_card_sections.append({"section": String(r["section"]),
+				"label": String(r["label"]), "keys": String(r["keys"]).split("|", false),
+				"rates": int(float(r["rates"])) == 1})):
 		return false
 	if not _load_if_present(dir + "/ui_fonts.csv", ["scheme", "role", "path"],
 			func(r): ui_fonts["%d:%s" % [int(float(r["scheme"])), r["role"]]] = r):

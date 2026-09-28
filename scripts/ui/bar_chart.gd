@@ -21,8 +21,17 @@ const VALUE_W := 44.0
 const ICON_W := 30.0
 const ICON_PX := 22.0
 const BAR_H := 8.0
+## NAMED rows (owner 2026-09-28, after the UI critique: five gauges told apart
+## only by their art had to be hovered to be read): the art, then the name
+## over a thin bar, the value at the end. Taller, so the bar can sit under
+## the name instead of beside it in a 240 px column.
+const NAMED_ROW_H := 26.0
+const NAMED_BAR_H := 5.0
 
 var rows: Array = []
+## Whether a dimension row writes its name beside its art (balance
+## ui_dimension_labels picks it for the realm card).
+var named := false
 var max_value := 1.0
 
 func _init() -> void:
@@ -32,7 +41,7 @@ func _init() -> void:
 
 ## The row under a point, or -1.
 func row_at(at_position: Vector2) -> int:
-	var i := int(floor(at_position.y / ROW_H))
+	var i := int(floor(at_position.y / row_h()))
 	return i if i >= 0 and i < rows.size() and at_position.x >= 0.0 else -1
 
 ## The dimension row under the pointer names itself in the tooltip.
@@ -43,10 +52,13 @@ func _get_tooltip(at_position: Vector2) -> String:
 	var key := String((rows[i] as Dictionary).get("dimension", ""))
 	return ResourceIcon.tooltip_of(key) if key != "" else ""
 
+func row_h() -> float:
+	return NAMED_ROW_H if named else ROW_H
+
 func set_rows(new_rows: Array, top: float) -> void:
 	rows = new_rows
 	max_value = maxf(top, 0.000001)
-	custom_minimum_size = Vector2(0, ROW_H * rows.size())
+	custom_minimum_size = Vector2(0, row_h() * rows.size())
 	queue_redraw()
 
 func _draw() -> void:
@@ -54,6 +66,9 @@ func _draw() -> void:
 	if font == null:
 		return
 	var track := UiPalette.chart_color("track")
+	if named:
+		_draw_named(font, track)
+		return
 	for i in rows.size():
 		var r: Dictionary = rows[i]
 		var y := ROW_H * i
@@ -81,3 +96,27 @@ func _draw() -> void:
 		var text := String(r.get("text", str(int(float(r.get("value", 0.0))))))
 		draw_string(font, Vector2(x1 + 4.0, y + 14.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14,
 			UiPalette.TEXT_SOFT)
+
+
+func _draw_named(font: Font, track: Color) -> void:
+	for i in rows.size():
+		var r: Dictionary = rows[i]
+		var y := NAMED_ROW_H * i
+		var x0 := 0.0
+		var dimension := String(r.get("dimension", ""))
+		if dimension != "":
+			ResourceIcon.draw_icon(self, dimension, Vector2(ICON_W / 2.0, y + NAMED_ROW_H / 2.0),
+				ICON_PX, UiPalette.GOLD)
+			x0 = ICON_W + 4.0
+		var x1 := maxf(size.x - VALUE_W, x0 + 8.0)
+		draw_string(font, Vector2(x0, y + 12.0), String(r.get("label", "")),
+			HORIZONTAL_ALIGNMENT_LEFT, x1 - x0, LABEL_PX, UiPalette.TEXT_MUTED)
+		var yb := y + NAMED_ROW_H - NAMED_BAR_H - 5.0
+		draw_rect(Rect2(x0, yb, x1 - x0, NAMED_BAR_H), track)
+		var frac := clampf(float(r.get("value", 0.0)) / max_value, 0.0, 1.0)
+		if frac > 0.0:
+			draw_rect(Rect2(x0, yb, (x1 - x0) * frac, NAMED_BAR_H), r.get("color", UiPalette.GOLD))
+		var text := String(r.get("text", str(int(float(r.get("value", 0.0))))))
+		# On the bar's line, where the eye already is.
+		draw_string(font, Vector2(x1, yb + NAMED_BAR_H + 1.0), text,
+			HORIZONTAL_ALIGNMENT_RIGHT, VALUE_W, 14, UiPalette.TEXT_SOFT)

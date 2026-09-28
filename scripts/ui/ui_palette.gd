@@ -559,6 +559,20 @@ static func chart_color(key: String) -> Color:
 		hex = String(Game.data.chart_palette.get("cat_%d" % n, ""))
 	return Color(hex) if hex != "" else TEXT_MUTED
 
+## A whole number with its thousands grouped ("13,272"; owner 2026-09-28:
+## "13272" beside "179k" read as two different kinds of figure).
+static func format_int(v: int) -> String:
+	var digits := str(absi(v))
+	var out := ""
+	while digits.length() > 3:
+		out = "," + digits.substr(digits.length() - 3) + out
+		digits = digits.substr(0, digits.length() - 3)
+	return ("-" if v < 0 else "") + digits + out
+
+## A change with its sign and grouping ("+1,597").
+static func format_delta(v: int) -> String:
+	return ("+" if v >= 0 else "-") + format_int(absi(v))
+
 static func title_size(size: int, role: String = "header") -> int:
 	return int(round(float(size) * role_scale(role)))
 

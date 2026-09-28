@@ -25,8 +25,8 @@ func test_shows_date_and_metric_values() -> void:
 	var t := _bar()
 	await wait_frames(1)
 	assert_string_contains(t.find_child("DateLabel", true, false).text, "Year 1")
-	assert_eq(t.metric_text("treasury"), str(int(Game.state.metrics["treasury"])))
-	assert_eq(t.metric_text("grain"), str(int(Game.state.metrics["grain"])))
+	assert_eq(t.metric_text("treasury"), UiPalette.format_int(int(Game.state.metrics["treasury"])))
+	assert_eq(t.metric_text("grain"), UiPalette.format_int(int(Game.state.metrics["grain"])))
 
 func test_shows_tick_deltas_from_current_report() -> void:
 	Game.start_campaign(42)
@@ -105,7 +105,7 @@ func test_the_bar_shows_the_crowns_pools_and_the_lords_purse() -> void:
 	await wait_frames(2)
 	var p := RealmEconomy.purses(Game.data, Game.state)
 	for m in ["treasury", "strategic", "grain", "lord_gold", "lord_strategic", "lord_civil"]:
-		assert_eq(bar.metric_text(m), str(int(Game.state.metrics[m])), m)
+		assert_eq(bar.metric_text(m), UiPalette.format_int(int(Game.state.metrics[m])), m)
 	assert_eq(bar.monthly_text("treasury"), "+%d" % int(p["realm_share"]["tax"]))
 	assert_eq(bar.monthly_text("strategic"), "+%d" % int(p["realm_share"]["strategic"]))
 	assert_eq(bar.monthly_text("grain"), "+%d" % int(p["realm_share"]["civil"]))

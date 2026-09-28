@@ -53,6 +53,11 @@ func _init() -> void:
 	_people = _section("THE PEOPLE", PieChart.new(), "People")
 	_host = _section("THE HOST", BarChart.new(), "Host")
 	_provinces = _section("LARGEST PROVINCES", BarChart.new(), "Provinces")
+	# The gauges name themselves (owner 2026-09-28) unless the balance keeps
+	# the 2026-09-13 icons-only card.
+	var named: bool = Game.data != null and float(Game.data.balance.get("ui_dimension_labels", 0.0)) > 0.0
+	_temper.named = named
+	_host.named = named
 
 func _section(heading: String, chart: Control, chart_name: String) -> Control:
 	var h := Label.new()
@@ -79,8 +84,8 @@ func refresh() -> void:
 	_title.text = String(data.kingdoms.get(mine, {}).get("label", "The realm"))
 	var m := state.metrics
 	var pop := _people_of_crown()
-	_resource_values["treasury"].text = str(int(m["treasury"]))
-	_resource_values["grain"].text = str(int(m["grain"]))
+	_resource_values["treasury"].text = UiPalette.format_int(int(m["treasury"]))
+	_resource_values["grain"].text = UiPalette.format_int(int(m["grain"]))
 	_resource_values["population"].text = _compact(pop["urban"] + pop["rural"])
 	var host := _host_of()
 	var troops := 0.0

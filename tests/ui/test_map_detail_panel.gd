@@ -295,8 +295,9 @@ func test_a_manor_card_shows_its_painting_its_facts_as_icons_and_its_output_rate
 		assert_almost_eq(p.painting_box().custom_minimum_size.y, maxf(p.size.y / 3.0, 72.0), 1.0,
 			"a third of the card")
 	assert_eq(p.fields().get_child_count(), 0, "a manor has no text rows, only icons")
-	assert_eq(p.stats_grid().columns, MapDetailPanel.DEFAULT_STAT_COLUMNS,
-		"a card with no stat_columns of its own keeps the default 2-pair grid")
+	# Named rows in sections (owner 2026-09-28, ui_manor_card_rows): one column.
+	assert_eq(p.stats_grid().columns, 1, "a manor's facts are named rows")
+	assert_not_null(p.stats_grid().get_node_or_null("Section_holding"), "grouped under their sections")
 	for key in ["manor_owner", "manor_province", "manor_people", "manor_tax", "manor_focus",
 			"manor_defence", "manor_slots", "manor_value", "manor_price"]:
 		assert_ne(p.stat_text(key), "", key)

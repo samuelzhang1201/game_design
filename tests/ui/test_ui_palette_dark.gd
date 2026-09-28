@@ -62,3 +62,12 @@ func test_the_grain_has_a_light_and_a_dark_half() -> void:
 	assert_eq(grain.size(), 2)
 	for tex: Texture2D in grain:
 		assert_eq(tex.get_width(), 256)
+
+## Figures are grouped by thousands (owner 2026-09-28).
+func test_numbers_are_grouped() -> void:
+	assert_eq(UiPalette.format_int(0), "0")
+	assert_eq(UiPalette.format_int(999), "999")
+	assert_eq(UiPalette.format_int(13272), "13,272")
+	assert_eq(UiPalette.format_int(-1234567), "-1,234,567")
+	assert_eq(UiPalette.format_delta(1597), "+1,597")
+	assert_eq(UiPalette.format_delta(-51), "-51")
