@@ -119,6 +119,16 @@ func test_a_foreign_kingdoms_population_is_a_word() -> void:
 		return
 
 
+## Task 10's look check (2026-09-28): our own kingdom's exact population read
+## as a raw run of digits ("4102026") on the hovered country card.
+func test_our_own_kingdoms_population_is_grouped() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var realm := repo.resolve_realm("player_realm")
+	var pop := int(float(repo.kingdoms[realm].get("population", 0)))
+	var lines := MapObjects._kingdom_lines(repo, repo.kingdoms[realm], s)
+	assert_has(lines, "Population: " + Intel.num(pop))
+
+
 func test_dev_mode_lifts_the_fog() -> void:
 	var s := GameState.new_campaign(repo, 7)
 	Intel.dev_all = true

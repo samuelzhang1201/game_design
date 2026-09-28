@@ -235,7 +235,7 @@ static func _kingdom_lines(repo: DataRepository, row: Dictionary,
 	# blanket "magnitude words" rule, per the task-5 controller ruling).
 	var foreign := code != repo.resolve_realm("player_realm") and not Intel.dev_all
 	var pop_text := Intel.magnitude(repo, int(float(row.get("population", 0)))) if foreign \
-		else String(row.get("population", "—"))
+		else Intel.num(int(float(row.get("population", 0))))
 	var lines: Array[String] = [
 		"Capital: %s" % _label(repo.burgs, String(row.get("capital_burg", ""))),
 		"Provinces: %d" % province_count,
