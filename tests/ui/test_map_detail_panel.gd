@@ -355,6 +355,46 @@ func test_a_manor_card_shows_its_painting_its_facts_as_icons_and_its_output_rate
 					assert_eq(pic.texture.resource_path, icon_path, "%s wears its colour icon" % good)
 					assert_eq(pic.modulate, Color.WHITE, "a colour icon is not tinted")
 
+## A reported fact on a card (Task 10's look check, 2026-09-28): in the fixed
+## 240 px column "≈ 9,600–18,800 (spy · Spring 5, Year 1)" wrapped over four
+## lines beside a label column as wide as itself. The estimate stands alone,
+## the tag under it small and in its column's colour, and the label column
+## only as wide as its words.
+func test_a_reported_fact_wears_a_small_tag_under_its_estimate() -> void:
+	Game.start_campaign(42)
+	Intel.dev_all = false
+	var p := _panel()
+	p.size = Vector2(240, 600)
+	await wait_frames(1)
+	var realm := Game.data.resolve_realm("player_realm")
+	var cell := -1
+	var ids := Game.data.manors.keys()
+	ids.sort()
+	for c: int in ids:
+		var prov := MapManors.province_of(Game.data, c, Game.state)
+		if prov != "" and MapOwnership.owner_of(Game.data, Game.state, prov) != realm:
+			cell = c
+			break
+	var at := MapTerrain.cell_center(Game.data, Game.data.cells[cell])
+	MissiveLog.add(Game.data, Game.state, SpySystem.report(Game.data, Game.state, at, 900, 0))
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "manor", "cell": cell}})
+	await wait_frames(2)
+	var kids := p.fields().get_children()
+	var i := kids.find(kids.filter(func(n: Node) -> bool: return n is Label and (n as Label).text == "People")[0])
+	var label := kids[i] as Label
+	var cell_box := kids[i + 1] as VBoxContainer
+	assert_not_null(cell_box, "the estimate and its tag stand in one cell")
+	if cell_box == null:
+		return
+	var value := cell_box.get_child(0) as Label
+	var tag := cell_box.get_child(1) as Label
+	assert_true(value.text.begins_with("≈") and not value.text.contains("("), "the estimate alone: " + value.text)
+	assert_string_contains(tag.text, "spy")
+	assert_lt(tag.get_theme_font_size("font_size"), value.get_theme_font_size("font_size"), "the tag is small")
+	assert_eq(tag.get_theme_color("font_color"), MapPalette.named(Game.data, "intel_credible"))
+	assert_lt(label.size.x, cell_box.size.x, "the label column is only as wide as its words")
+
+
 ## A foreign manor's card (Task 10's look check, 2026-09-28): the facts read
 ## "—", and Send a spy must stand close by them — the FIRST order, with no
 ## empty section's spacing between the facts and the orders. At 2560x1600

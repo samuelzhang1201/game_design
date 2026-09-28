@@ -71,6 +71,9 @@ var _slots: HBoxContainer
 var _shown_manor := -1
 ## A slot box's side, design px.
 const SLOT_PX := 34.0
+## A reported fact's source tag ("spy · Spring 5, Year 1"), design px, under
+## its estimate at the fields' 14 px (spec 2026-09-28 §2: "a small tag").
+const INTEL_TAG_FONT_SIZE := 11
 var _hint: Label
 var _ask: Button
 var _close: Button
@@ -356,14 +359,28 @@ func show_card(card: Dictionary) -> void:
 	# is a label, its text, and — when it came from a letter rather than
 	# common knowledge — a tag naming the source and the day, coloured by
 	# the column it stands in.
+	# The label column is only as wide as its words and a tag stands small
+	# under its estimate (Task 10's look check): in the fixed column the
+	# estimate and its tag on one line wrapped over four.
 	for row: Dictionary in card.get("intel", []):
-		_fields.add_child(_line(String(row["label"]), UiPalette.TEXT_MUTED))
+		var label := _line(String(row["label"]), UiPalette.TEXT_MUTED)
+		label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		label.size_flags_horizontal = Control.SIZE_FILL
+		_fields.add_child(label)
 		var value := _line(String(row["text"]), UiPalette.TEXT_SOFT)
-		if String(row["tag"]) != "":
-			value.text += "  (%s)" % String(row["tag"])
-			value.add_theme_color_override("font_color",
-				MapPalette.named(Game.data, "intel_" + String(row["column"])))
-		_fields.add_child(value)
+		if String(row["tag"]) == "":
+			_fields.add_child(value)
+			continue
+		var colour := MapPalette.named(Game.data, "intel_" + String(row["column"]))
+		value.add_theme_color_override("font_color", colour)
+		var tag := _line(String(row["tag"]), colour)
+		tag.add_theme_font_size_override("font_size", INTEL_TAG_FONT_SIZE)
+		var cell := VBoxContainer.new()
+		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cell.add_theme_constant_override("separation", 0)
+		cell.add_child(value)
+		cell.add_child(tag)
+		_fields.add_child(cell)
 	var known := String(card.get("known", "full"))
 	var basic := known in ["basic", "general"]
 	if known == "army":
