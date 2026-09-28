@@ -633,10 +633,12 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		var output_total := 0
 		for g: String in (line["units"] as Dictionary):
 			output_total += int((line["units"] as Dictionary)[g])
+		# the chief good's units, named, as a spy's report measures them (N1)
+		var made := SpySystem.chief_output(repo, state, cell, int(line["people"]), output_total)
 		var facts: Array = [
 			["people", "People", int(line["people"])],
 			["tax", "Tax", int(line["tax"])],
-			["output", "Output", output_total],
+			["output", String(made["label"]), int(made["units"])],
 			["wealth", "Wealth", Intel.wealth_tier(repo, state, province)],
 			["stance", "Stance", Intel.stance_of(repo, owner)]]
 		card["intel"] = _intel_rows(repo, state, subj, facts)

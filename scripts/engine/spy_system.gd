@@ -72,6 +72,20 @@ static func _label(repo: DataRepository, key: String) -> String:
 	return String((repo.intel_facts.get(key, {}) as Dictionary).get("label", key))
 
 
+## What a manor's "output" fact measures — the one measure the spy's report
+## and the fogged manor card share (Ruling 18 N1): its CHIEF good, named,
+## and that good's units a month; land that works nothing keeps the plain
+## output label over `all_units`, every unit it makes. {label, units}.
+static func chief_output(repo: DataRepository, state: GameState, cell: int, people: int,
+		all_units: int) -> Dictionary:
+	var chief := ManorEconomy.focus_units(repo, state, cell, people, state.tick)
+	var good_label := String((repo.world_table("economy", "goods").get(String(chief["good"]), {}) \
+		as Dictionary).get("label", ""))
+	if good_label == "":
+		return {"label": _label(repo, "output"), "units": all_units}
+	return {"label": "%s a month" % good_label, "units": int(chief["units"])}
+
+
 ## The report a spy at `at` files for quality q and bias (per mille). Pure.
 static func report(repo: DataRepository, state: GameState, at: Vector2, q: int, bias: int) -> Dictionary:
 	var credible := q >= int(repo.bal("spy_credible_threshold"))
@@ -92,15 +106,10 @@ static func report(repo: DataRepository, state: GameState, at: Vector2, q: int, 
 				var tp := estimate(repo, int(float((repo.burgs[town] as Dictionary).get("population", 0))),
 					q, bias, _round_to(repo, "town_people"))
 				facts.append(MissiveLog.span("town_people", _label(repo, "town_people"), int(tp[0]), int(tp[1])))
-		# The chief good by name and ITS units a month (final review M2); land
-		# that works nothing keeps the plain "Goods a month" over every unit.
-		var chief := ManorEconomy.focus_units(repo, state, cell, int(line["people"]), state.tick)
-		var good := String(chief["good"])
-		var good_label := String((repo.world_table("economy", "goods").get(good, {}) as Dictionary).get("label", ""))
-		var made := int(chief["units"]) if good_label != "" else int(line.get("units", 0))
-		var units := estimate(repo, made, q, bias, _round_to(repo, "output"))
-		facts.append(MissiveLog.span("output", ("%s a month" % good_label) if good_label != "" \
-			else _label(repo, "output"), int(units[0]), int(units[1])))
+		# The chief good by name and ITS units a month (final review M2).
+		var made := chief_output(repo, state, cell, int(line["people"]), int(line.get("units", 0)))
+		var units := estimate(repo, int(made["units"]), q, bias, _round_to(repo, "output"))
+		facts.append(MissiveLog.span("output", String(made["label"]), int(units[0]), int(units[1])))
 		var prov := MapManors.province_of(repo, cell, state)
 		var holder := MapManors.owner_of(repo, state, cell)
 		facts.append(MissiveLog.words("holder", _label(repo, "holder"),

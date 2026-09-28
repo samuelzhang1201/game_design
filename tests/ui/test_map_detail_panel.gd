@@ -584,3 +584,42 @@ func test_the_longest_fogged_and_reported_fact_labels_never_widen_the_left_colum
 	assert_lte(country.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH,
 		"the kingdom card fits the column (%d of %d px)" %
 		[country.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH])
+
+
+## Ruling 18 N1: the fogged manor card's output row is named for its chief
+## good ("<Good> a month"), and the row's label column never wraps — so the
+## pack's LONGEST good, with a wide reported span under it, must still fit
+## the fixed left column.
+func test_the_longest_chief_good_row_fits_the_left_column() -> void:
+	Game.start_campaign(42)
+	Intel.dev_all = false
+	var realm := Game.data.resolve_realm("player_realm")
+	var longest := ""
+	for g: Dictionary in Game.data.world_table("economy", "goods").values():
+		if String(g.get("label", "")).length() > longest.length():
+			longest = String(g["label"])
+	var cell := -1
+	var ids := Game.data.manors.keys()
+	ids.sort()
+	for c: int in ids:
+		var prov := MapManors.province_of(Game.data, c, Game.state)
+		if prov != "" and MapOwnership.owner_of(Game.data, Game.state, prov) != realm:
+			cell = c
+			break
+	var card := MapObjects.manor_card(Game.data, Game.state, cell)
+	var found := false
+	for row: Dictionary in card["intel"]:
+		if String(row["label"]).ends_with(" a month") or String(row["label"]) == "Output":
+			row["label"] = "%s a month" % longest
+			row["text"] = "≈ 10,000–20,000"
+			row["tag"] = "spy · Spring 30, Year 1"
+			row["column"] = "rumour"
+			found = true
+	assert_true(found, "the card has an output row")
+	var p := _panel()
+	await wait_frames(1)
+	p.show_card(card)
+	await wait_frames(1)
+	assert_lte(p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH,
+		"'%s a month' fits the column (%d of %d px)" % [longest, p.get_combined_minimum_size().x,
+		ScreenLayout.LEFT_WIDTH])

@@ -212,3 +212,68 @@ func test_a_fogged_town_card_shows_its_population_once() -> void:
 				n += 1
 		assert_eq(n, 1, "population once on " + code)
 		return
+
+
+## A manor of the realm the crown does not control (Intel "general") whose
+## month makes a SECOND good beside its chief one, preferring one whose chief
+## good and all its goods read as different magnitudes; -1 if none.
+func _two_goods_manor(s: GameState) -> int:
+	var realm := repo.resolve_realm("player_realm")
+	var ids := repo.manors.keys()
+	ids.sort()
+	var fallback := -1
+	for id: int in ids:
+		var prov := MapManors.province_of(repo, id, s)
+		if MapOwnership.owner_of(repo, s, prov) != realm or prov in MapManors.controlled_provinces(repo, s):
+			continue
+		var line := ManorEconomy.line_of(repo, s, id, s.tick)
+		var units: Dictionary = line["units"]
+		if units.size() < 2:
+			continue
+		var total := 0
+		for g: String in units:
+			total += int(units[g])
+		var chief := int(ManorEconomy.focus_units(repo, s, id, int(line["people"]), s.tick)["units"])
+		if chief <= 0 or chief == total:
+			continue
+		if Intel.magnitude(repo, chief) != Intel.magnitude(repo, total):
+			return id
+		if fallback < 0:
+			fallback = id
+	return fallback
+
+
+## Ruling 18 N1: the fogged card's output row measures what the spy's report
+## measures — the CHIEF good's units a month, named — so a report's estimate
+## and the card's own words are about one number.
+func test_the_cards_output_is_the_chief_good_the_spy_reports() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var cell := _two_goods_manor(s)
+	assert_gt(cell, -1, "the pack has a realm manor making two goods")
+	if cell < 0:
+		return
+	var line := ManorEconomy.line_of(repo, s, cell, s.tick)
+	var chief := ManorEconomy.focus_units(repo, s, cell, int(line["people"]), s.tick)
+	var label := "%s a month" % String((repo.world_table("economy", "goods").get(
+		String(chief["good"]), {}) as Dictionary).get("label", ""))
+	var card := MapObjects.manor_card(repo, s, cell)
+	assert_eq(String(card["known"]), "general")
+	var rows := (card["intel"] as Array).filter(func(r: Dictionary) -> bool: return String(r["label"]) == label)
+	assert_eq(rows.size(), 1, "the row is named for the chief good: %s" % label)
+	if rows.is_empty():
+		return
+	assert_eq(String(rows[0]["text"]), Intel.magnitude(repo, int(chief["units"])),
+		"in words, the chief good's own units")
+	var at := MapTerrain.cell_center(repo, repo.cells[cell])
+	var m := SpySystem.report(repo, s, at, 1000, 0)
+	MissiveLog.add(repo, s, m)
+	var said: Dictionary = (m["facts"] as Array).filter(
+		func(f: Dictionary) -> bool: return String(f["key"]) == "output")[0]
+	assert_eq(String(said["label"]), label, "the report names the same good")
+	assert_true(int(said["lo"]) <= int(chief["units"]) and int(chief["units"]) <= int(said["hi"]),
+		"the estimate brackets the chief good's units")
+	rows = (MapObjects.manor_card(repo, s, cell)["intel"] as Array).filter(
+		func(r: Dictionary) -> bool: return String(r["label"]) == label)
+	assert_eq(rows.size(), 1)
+	if not rows.is_empty():
+		assert_eq(String(rows[0]["text"]), Intel.text_of(said), "the card shows the report's estimate")
