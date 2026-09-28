@@ -45,6 +45,8 @@ func advance(state: GameState) -> TickReport:
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.
 	_settle_economy(state, r)
+	# The steward's report on the month just settled (owner 2026-09-28): ground truth.
+	MissiveLog.add(data, state, MissiveWriter.monthly(data, state, state.tick))
 	# The regiments' month (owner 2026-09-17): wounded return, supplies spent.
 	ArmySystem.settle_month(data, state)
 	state.tick += 1

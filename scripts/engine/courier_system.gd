@@ -359,6 +359,7 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 	var code := String(c["target"])
 	var entry: Dictionary = state.regiments.get(code, {})
 	if int(entry.get("order_id", 0)) > int(c["id"]):
+		MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, true))
 		return _event("stale", c)
 	var order: Dictionary = c["order"]
 	match String(order.get("action_code", "")):
@@ -369,6 +370,7 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 			ArmySystem.set_garrison(repo, state, code)
 	if state.regiments.has(code):
 		state.regiments[code]["order_id"] = int(c["id"])
+	MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, false))
 	return _event("delivered", c)
 
 
