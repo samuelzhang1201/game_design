@@ -9,6 +9,12 @@ signal landed
 
 const ENVELOPE_PX := Vector2(36, 26)
 const SMALL_PX := Vector2(22, 16)
+## A technical margin, not a design value (fix round 2): GUT's wait_for_signal
+## only confirms its own bookkeeping a couple of process frames after `landed`
+## fires (addons/gut/awaiter.gd), so freeing right on emit can race it. Kept
+## as a Tween step (below) rather than an awaited coroutine so the delay dies
+## with the node instead of trying to resume on a freed one.
+const FREE_DELAY_S := 0.1
 
 var _from: Vector2
 var _to: Vector2
@@ -44,26 +50,18 @@ func _start(from: Rect2, to: Rect2, big: bool, repo: DataRepository) -> void:
 			pivot_offset = env * 0.5)
 	t.tween_method(_arc, 0.0, 1.0, repo.bal("missive_fly_s"))
 	t.parallel().tween_property(self, "rotation", TAU * repo.bal("missive_fly_turns"), repo.bal("missive_fly_s"))
-	t.tween_callback(func() -> void:
-		landed.emit()
-		_free_after_settle())
+	t.tween_callback(func() -> void: landed.emit())
+	# The free waits one more Tween step (FREE_DELAY_S) rather than happening
+	# in the same callback as the emit (fix round 2): the Tween is bound to
+	# this node (create_tween's own behaviour), so it simply dies with the
+	# node if something else frees it first — nothing ever resumes on a freed
+	# instance, unlike the awaited coroutine this replaced.
+	t.tween_interval(FREE_DELAY_S)
+	t.tween_callback(queue_free)
 
 
 func _arc(k: float) -> void:
 	position = _from.lerp(_lift, k).lerp(_lift.lerp(_to, k), k)
-
-
-## queue_free() right in the same callback as landed.emit() frees the node
-## before GUT's wait_for_signal gets to check its bookkeeping a couple of
-## frames later (its awaiter disconnects on signal but only confirms it two
-## process frames on, res://addons/gut/awaiter.gd), which then errors on a
-## freed object. A couple of frames' grace costs nothing visually and lets
-## every listener — test or game — see the node still alive when it lands.
-func _free_after_settle() -> void:
-	await get_tree().process_frame
-	await get_tree().process_frame
-	if is_instance_valid(self):
-		queue_free()
 
 
 ## The shrink phase animates size/position via tween_property, which does not

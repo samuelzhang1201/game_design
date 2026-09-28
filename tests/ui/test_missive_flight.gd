@@ -117,12 +117,39 @@ func test_a_load_mid_report_discards_a_stale_id_without_crashing() -> void:
 	assert_eq(r.pending_reports(), [])
 
 
-## Fix round 1: _switch_to hides every overlay, the report dialog included,
-## so a stale popup can never float over the main menu or a fresh campaign.
-func test_the_popup_is_hidden_after_switching_to_the_menu() -> void:
+## Fix round 2: on_new_missives can open a report and, in the very same
+## stepped day, a pending event can still switch to CONVERSATION — an
+## actively-open report must survive that (nothing is left in
+## _pending_reports to reopen it if it were hidden), staying stacked above
+## the new screen; only a switch to MENU forces it shut (a reset already ran,
+## or the campaign is being left outright).
+func test_the_popup_survives_a_switch_to_conversation_but_not_to_menu() -> void:
 	var r: GameRoot = await _root()
 	var id := _spy_letter()
 	r.on_new_missives([id])
 	assert_true(r.report_popup().visible)
+	r._switch_to(GameRoot.State.CONVERSATION)
+	assert_true(r.report_popup().visible, "an open report survives a switch to CONVERSATION")
+	assert_true(r.report_popup().get_index() > r.current_screen.get_index(),
+		"the popup stays stacked above the new screen")
 	r._switch_to(GameRoot.State.MENU)
-	assert_false(r.report_popup().visible)
+	assert_false(r.report_popup().visible, "MENU always closes it")
+
+
+## Fix round 2: the restart hotkey (R) skipped _reset_reports() before — it
+## now routes through _on_menu_restart() like the pause menu's own button.
+func test_the_restart_hotkey_also_clears_the_report_queue() -> void:
+	var r: GameRoot = await _root()
+	var a := _spy_letter()
+	var b := _spy_letter()
+	r.on_new_missives([a, b])
+	assert_true(r.report_popup().visible)
+	assert_eq(r.pending_reports(), [b])
+	var key := InputEventKey.new()
+	key.keycode = KEY_R
+	key.pressed = true
+	r._unhandled_input(key)
+	await wait_frames(2)
+	assert_null(Game.state, "the restart hotkey still restarts")
+	assert_false(r.report_popup().visible, "and clears the report dialog too")
+	assert_eq(r.pending_reports(), [])

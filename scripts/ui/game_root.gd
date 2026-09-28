@@ -223,8 +223,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if state == State.MENU:
 		return
 	if event.is_action_pressed("restart") and not _pause_menu.visible:
-		Game.restart()
-		_switch_to(State.MENU)
+		_on_menu_restart()
 	elif event.is_action_pressed("ui_cancel"):
 		toggle_pause_menu()
 
@@ -723,7 +722,15 @@ func _switch_to(new_state: State) -> void:
 		_missive_screen.visible = false
 		move_child(_missive_screen, get_child_count() - 1)
 	if _report_popup != null:
-		_report_popup.visible = false
+		# Only a switch to MENU forces it shut (a reset already emptied
+		# _pending_reports there, or the campaign is being left outright):
+		# any other target (fix round 2) keeps an actively-open report
+		# visible — on_new_missives can open one and, in the very same
+		# stepped day, the tick can still roll a pending event into
+		# CONVERSATION, and that report must not vanish with nothing left
+		# in _pending_reports to reopen it.
+		if new_state == State.MENU:
+			_report_popup.visible = false
 		move_child(_report_popup, get_child_count() - 1)
 	if _pause_menu != null:
 		move_child(_pause_menu, get_child_count() - 1)
