@@ -91,7 +91,7 @@ def main():
         text = TEXT.format(view=v["prompt"][0].upper() + v["prompt"][1:], desc=describe(picks[w], v["parts"]))
         g = v2.graph(tpl, dict(vals, prompt=text, negative=NEGATIVE, seed=SEED + views.index(v),
                                width=width, height=height, prefix=f"courier_sheet/{t}_{w}_{v['view']}"))
-        img, dt = v2.run(g, 3600)
+        img, dt = v2.run(g, 4 * 3600)  # the wait includes other jobs queued ahead
         q = urllib.parse.urlencode({"filename": img["filename"], "subfolder": img.get("subfolder", ""),
                                     "type": img.get("type", "output")})
         dst.write_bytes(v2.call("/view?" + q))
