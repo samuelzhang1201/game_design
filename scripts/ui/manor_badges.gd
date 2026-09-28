@@ -69,6 +69,12 @@ static func draw(ci: CanvasItem, repo: DataRepository, badges: Array) -> void:
 	var disc := MapPalette.named(repo, "manor_badge")
 	var chip := MapPalette.named(repo, "manor_label_bg")
 	var ink := MapPalette.named(repo, "manor_label_ink")
+	# The chip's number: its own key (owner 2026-09-28: a dark chip with light
+	# figures), the outline ink when a palette has none.
+	var text_ink := MapPalette.named(repo, "manor_label_text") if repo.palette.has("manor_label_text") else ink
+	# A good with no art draws its category glyph on the disc: its own key, so a
+	# dark chip never takes the glyph dark with it.
+	var glyph_ink := MapPalette.named(repo, "manor_badge_glyph") if repo.palette.has("manor_badge_glyph") else chip
 	var ring_w := repo.bal("map_manor_ring_px")
 	var icon_frac := repo.bal("map_manor_icon_frac")
 	var font := UiPalette.body_font()
@@ -86,12 +92,12 @@ static func draw(ci: CanvasItem, repo: DataRepository, badges: Array) -> void:
 			var w := side * float(tex.get_width()) / float(tex.get_height())
 			ci.draw_texture_rect(tex, Rect2(c - Vector2(w, side) * 0.5, Vector2(w, side)), false)
 		elif String(b["glyph"]) != "":
-			ResourceIcon.draw_glyph(ci, String(b["glyph"]), c, side * 0.8, chip)
+			ResourceIcon.draw_glyph(ci, String(b["glyph"]), c, side * 0.8, glyph_ink)
 		if b["label"] != null:
 			var label: Rect2 = b["label"]
 			ci.draw_rect(label.grow(1.0), ink)
 			ci.draw_rect(label, chip)
-			draw_centered_text(ci, font, label, String(b["text"]), font_px, ink)
+			draw_centered_text(ci, font, label, String(b["text"]), font_px, text_ink)
 
 
 ## The colour a good's category wears (data/goods_palette.csv) — the badge's

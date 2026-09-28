@@ -23,16 +23,18 @@ hover_border,#F2A93B,"UNUSED since 2026-09-14 (owner: no amber line on hover —
 manor_pale,#FFFFFF,"economy view: the white a poor manor's colour fades toward (map_manor_pale)"
 manor_rich,#7A4A22,"economy view: the brown a rich manor deepens toward, and a working manor's fill (map_manor_deep, map_manor_rich)"
 manor_line,#55616E,economy view: the manor edges
-manor_badge,#2E3A46,economy view: the dark disc behind a produce icon
-manor_label_bg,#FFFFFF,economy view: the units chip under a badge
-manor_label_ink,#1E2530,economy view: the chip's number and every badge's outline
-army_outline,#1E2530,military layer: the outline round a regiment's counter
-army_icon_bg,#2E3A46,military layer: the square behind a counter's glyph
-army_glyph,#FFFFFF,military layer: the glyph itself
-army_count_ink,#FFFFFF,military layer: the headcount in the realm-coloured box
-army_bar_ready,#D0392B,"military layer (owner 2026-09-27: 红色是健康度): the upper bar over a regiment, its READINESS (ArmySystem.readiness_permille — arm, supply, morale, training)"
-army_bar_supply,#E8B92E,"military layer (owner 2026-09-27: 黄色是战略补给数): the lower bar, its supplies in hand over army_speed_supply_full_months"
-army_bar_track,#1A1D22,military layer: the dark track the two bars run in (what is missing reads as this)
+manor_badge,#2A221A,economy view: the dark disc behind a produce icon
+manor_badge_glyph,#EDE0C4,economy view: a good's category glyph on the disc when it has no art
+manor_label_bg,#231C15,"economy view: the units chip under a badge — dark leather with parchment figures (owner 2026-09-28, after the UI critique: was white)"
+manor_label_ink,#A88A4C,economy view: every badge's outline and the chip's edge — a gold hairline (owner 2026-09-28: was #1E2530)
+manor_label_text,#EDE0C4,economy view: the number on the units chip under a badge
+army_outline,#A88A4C,military layer: the outline round a regiment's counter — a gold hairline (owner 2026-09-28: was #1E2530)
+army_icon_bg,#2A221A,military layer: the square behind a counter's glyph
+army_glyph,#EDE0C4,military layer: the glyph itself
+army_count_ink,#F3E8CF,military layer: the headcount in the realm-coloured box
+army_bar_ready,#A8483E,"military layer (owner 2026-09-27: 红色是健康度): the upper bar over a regiment, its READINESS (ArmySystem.readiness_permille — arm, supply, morale, training)"
+army_bar_supply,#C4A050,"military layer (owner 2026-09-27: 黄色是战略补给数): the lower bar, its supplies in hand over army_speed_supply_full_months"
+army_bar_track,#17120E,military layer: the dark track the two bars run in (what is missing reads as this)
 manor_mark,#C4CBD2,"manors view: the ink of the farmsteads and chief-good marks every manor carries (data/manor_decor.csv) — one dark ink, since the manors wear their houses' colours"
 map3d_selection,#E8C35A,"3D MAP: the clicked MANOR's solid outline (a clicked province wears its own seam emphasised since 2026-09-27, balance map3d_selection_seam_width_px) — the gold of the UI trim, so it reads as a selection, not a border"
 map3d_border,#2A1E16,"3D MAP: the kingdom border's ink — a warm dark brown line over a pale halo and the realm band (implementer's recommendation 2026-09-19, pending the owner; spec 2026-09-19-map3d-border-look; was solid black #141414 of 2026-09-18); the hover outline wears it too"

@@ -119,7 +119,7 @@ func _build_badge_and_tooltip() -> void:
 		badge.text = str(c.opinion)
 		badge.add_theme_font_size_override("font_size", 24)
 		badge.add_theme_color_override("font_color",
-			UiPalette.POSITIVE if c.opinion >= 0 else UiPalette.NEGATIVE)
+			UiPalette.good_color() if c.opinion >= 0 else UiPalette.bad_color())
 		badge.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 		badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 		badge.grow_vertical = Control.GROW_DIRECTION_BEGIN

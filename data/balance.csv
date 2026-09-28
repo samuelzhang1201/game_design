@@ -119,8 +119,9 @@ map_army_count_pad_px,3.0,military layer: side padding inside the headcount box 
 map_army_outline_px,1.0,military layer: width of the dark outline round a counter in screen px
 map_army_glyph_frac,0.8,military layer: the glyph's size as a fraction of its square
 map_army_stack_gap_px,2.0,military layer: gap left between counters stacked because they would overlap
-map_army_count_sat,0.6,military layer: the least saturation the headcount box's realm colour is pushed to
-map_army_count_val,0.78,military layer: the brightness the headcount box's realm colour is set to
+map_army_count_sat,0.35,military layer: the least saturation the headcount box's realm colour is pushed to
+map_army_count_sat_max,0.5,"military layer: the most saturation the headcount box's realm colour may keep (1 = no cap)"
+map_army_count_val,0.5,military layer: the brightness the headcount box's realm colour is set to
 map_army_bar_px,3.0,"military layer (owner 2026-09-27): the height in screen px of each of the two bars (red readiness, yellow supply) stacked over a regiment's headcount, as wide as the counter"
 map_army_bar_gap_px,1.0,military layer: the dark gap in screen px between the two bars and between them and the counter
 map_army_pick_px,24.0,military layer: screen px within which a click or hover picks a regiment

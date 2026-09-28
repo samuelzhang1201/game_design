@@ -28,6 +28,16 @@ add it here as a principle with its why — not as a changelog entry.
   blackletter is kept for the game's name, window titles and the map's
   kingdom names. Numbers in a column use lining figures (an old-style 0 reads
   as an o).
+- **Data wears heraldry, not a dashboard** (owner 2026-09-28, choosing the
+  muted "heraldic" set with gold hairlines). Saturated web hues — a sky-blue
+  bar, a lime bar, white chips with black figures, a cyan counter — read as a
+  SaaS dashboard pasted over the painting. Colours come from one muted family
+  (or, azure, vert, purpure, gules); gauges of one kind share ONE hue; a chip
+  on the map is dark leather with light figures and a thin gold edge. Muting
+  must stop short of losing the distinction a colour exists to carry — the
+  ink-and-gold variant greyed the host's arms, the skills and the realms'
+  counters into one another and was rejected for it.
+
 
 ## Shape and reading
 - **Read by width and fade, not by rule.** Roads are worn tracks with a soft

@@ -758,7 +758,7 @@ func _fill_rates(rates: Array) -> void:
 		rate_l.name = "Rate"
 		rate_l.text = "+%d / mo" % int(r["units"])
 		rate_l.add_theme_font_size_override("font_size", 13)
-		rate_l.add_theme_color_override("font_color", UiPalette.POSITIVE)
+		rate_l.add_theme_color_override("font_color", UiPalette.good_color())
 		rate_l.mouse_filter = Control.MOUSE_FILTER_PASS
 		rate_l.tooltip_text = tip
 		row.add_child(rate_l)

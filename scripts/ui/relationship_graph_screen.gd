@@ -140,7 +140,7 @@ func _draw_edges() -> void:
 		if String(e["type"]) in KIN_TYPES:
 			color = UiPalette.GOLD
 		else:
-			color = UiPalette.POSITIVE if s >= 0.0 else UiPalette.NEGATIVE
+			color = UiPalette.good_color() if s >= 0.0 else UiPalette.bad_color()
 		color.a = clampf(0.25 + absf(s) / 130.0, 0.25, 0.95)
 		var side := 1.0 if e["from"] < e["to"] else -1.0
 		var offset := (b - a).orthogonal().normalized() * 2.0 * side

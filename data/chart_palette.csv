@@ -1,8 +1,15 @@
 key,color,notes
-cat_1,#e6b43a,"categorical 1 (gold) — assigned in fixed order; lifted 2026-09-15 for the dark CK3 theme with the same hue order as the CVD check of 2026-09-09 (bright theme: #d9a21b #2f7ed8 #2f9e44 #7c4ddb #d64545)"
-cat_2,#5aa2ec,categorical 2 (blue)
-cat_3,#7fcf6e,categorical 3 (green)
-cat_4,#a383ee,categorical 4 (purple)
-cat_5,#ec6f5e,categorical 5 (red)
-sequential,#5aa2ec,single-hue magnitude bars
+cat_1,#C9A24A,"categorical 1 (or) — assigned in fixed order; owner 2026-09-28 muted to the heraldic set after the UI critique, the hue order of the CVD check of 2026-09-09 kept: or azure vert purpure gules (was #e6b43a #5aa2ec #7fcf6e #a383ee #ec6f5e)"
+cat_2,#5F83A8,categorical 2 (blue)
+cat_3,#76975A,categorical 3 (green)
+cat_4,#8C71A3,categorical 4 (purple)
+cat_5,#B8604D,categorical 5 (red)
+sequential,#B99A5B,single-hue magnitude bars: old gold so the realm's own gauges read as one family (owner 2026-09-28; was #5aa2ec)
 track,#2d251d,"the empty part of a bar — a shade over the dark card (bright theme #e6ebf1, parchment #cdbf9f)"
+skill_sk_admin,#7FA2C6,"a council skill's colour (the audience window's badges and the SKILLS page) — moved here from UiPalette.SKILL_COLORS and muted, owner 2026-09-28"
+skill_sk_martial,#CF7F6C,
+skill_sk_steward,#D4B064,
+skill_sk_intrigue,#A994C2,
+skill_sk_diplomacy,#95B777,
+positive,#9DB07A,"a gain, a rising opinion, a manor's monthly output (UiPalette.good_color; was the POSITIVE constant #7fcf6e)"
+negative,#C07A66,"a loss, a falling opinion, unrest past its mark (UiPalette.bad_color; was the NEGATIVE constant #ec6f5e)"

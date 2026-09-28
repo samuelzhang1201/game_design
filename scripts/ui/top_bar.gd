@@ -200,7 +200,7 @@ func refresh() -> void:
 		if settled:
 			dl.text = "%+d" % delta if delta != 0 else ""
 			dl.add_theme_color_override("font_color",
-				UiPalette.POSITIVE if delta > 0 else UiPalette.NEGATIVE)
+				UiPalette.good_color() if delta > 0 else UiPalette.bad_color())
 		else:
 			dl.text = "+%d" % monthly
 			dl.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)

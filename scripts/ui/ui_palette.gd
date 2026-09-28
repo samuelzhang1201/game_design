@@ -60,6 +60,26 @@ const SKILL_SHORT := {
 }
 const SKILL_MAX := 20.0  # CharacterFactory clamps skills to 0..20
 
+## A gain, a rising opinion (chart_palette.csv positive; POSITIVE the fallback).
+static func good_color() -> Color:
+	return _chart_or("positive", POSITIVE)
+
+## A loss, a falling opinion, unrest past its mark (chart_palette.csv negative).
+static func bad_color() -> Color:
+	return _chart_or("negative", NEGATIVE)
+
+static func _chart_or(key: String, fallback: Color) -> Color:
+	if Game != null and Game.data != null:
+		var hex := String(Game.data.chart_palette.get(key, ""))
+		if hex != "":
+			return Color(hex)
+	return fallback
+
+## A skill's colour: data/chart_palette.csv skill_<key> (owner 2026-09-28: the
+## colours are data, muted to the heraldic set), SKILL_COLORS the fallback.
+static func skill_color(sk: String) -> Color:
+	return _chart_or("skill_" + sk, SKILL_COLORS.get(sk, TEXT_MUTED))
+
 ## Dossier SKILLS-tab tool colors (user request 2026-08-31): the accent for a
 ## seat's kingdom operations, teal for person-to-person tools, so the two
 ## kinds read apart at a glance.

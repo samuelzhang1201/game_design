@@ -94,7 +94,7 @@ func refresh() -> void:
 		var value := float(m.get(key, 0.0))
 		var color := UiPalette.chart_color("sequential")
 		if key == "unrest" and value >= data.bal("concern_unrest_high"):
-			color = UiPalette.NEGATIVE
+			color = UiPalette.bad_color()
 		# The dimension's art stands for the label on the card; the label is
 		# the tooltip (owner 2026-09-13).
 		temper.append({"label": label, "dimension": key, "value": value, "color": color,

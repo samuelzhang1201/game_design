@@ -725,7 +725,7 @@ func map_panel() -> PanelContainer:
 	return %MapPanel
 
 ## One row per council skill, mock-style: muted name, a bar in that skill's
-## own color (see UiPalette.SKILL_COLORS), the value. Built once; values set
+## own color (UiPalette.skill_color), the value. Built once; values set
 ## per speaker in _show_speaker.
 var _skill_bars: Dictionary = {}
 var _skill_values: Dictionary = {}
@@ -748,12 +748,12 @@ func _build_skill_rows() -> void:
 		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		bar.add_theme_stylebox_override("background", UiPalette.bar_bg())
 		bar.add_theme_stylebox_override("fill",
-			UiPalette.bar_fill(UiPalette.SKILL_COLORS[sk]))
+			UiPalette.bar_fill(UiPalette.skill_color(sk)))
 		row.add_child(bar)
 		_skill_bars[sk] = bar
 		var value_l := Label.new()
 		value_l.add_theme_font_size_override("font_size", 18)
-		value_l.add_theme_color_override("font_color", UiPalette.SKILL_COLORS[sk])
+		value_l.add_theme_color_override("font_color", UiPalette.skill_color(sk))
 		row.add_child(value_l)
 		_skill_values[sk] = value_l
 		%SkillRows.add_child(row)
@@ -762,7 +762,7 @@ func _build_skill_rows() -> void:
 		var badge := Label.new()
 		badge.name = "Skill_" + String(sk)
 		badge.add_theme_font_size_override("font_size", 13)
-		badge.add_theme_color_override("font_color", UiPalette.SKILL_COLORS[sk])
+		badge.add_theme_color_override("font_color", UiPalette.skill_color(sk))
 		var chip := UiPalette.chip_style()
 		chip.content_margin_left = 4.0
 		chip.content_margin_right = 4.0
@@ -1004,7 +1004,7 @@ func _show_speaker(b: Dictionary) -> void:
 	%MinisterTitle.text = String(Game.data.seats[c.seat]["label"]).to_upper() \
 		if Game.data.seats.has(c.seat) else String(c.seat).to_upper()
 	%OpinionBar.value = c.opinion
-	var tone: Color = UiPalette.POSITIVE if c.opinion >= 0 else UiPalette.NEGATIVE
+	var tone: Color = UiPalette.good_color() if c.opinion >= 0 else UiPalette.bad_color()
 	%OpinionBar.add_theme_stylebox_override("fill", UiPalette.bar_fill(tone))
 	%OpinionValue.text = "%+d" % c.opinion
 	%OpinionValue.add_theme_color_override("font_color", tone)

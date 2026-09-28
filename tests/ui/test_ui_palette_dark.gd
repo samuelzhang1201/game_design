@@ -13,7 +13,7 @@ func test_panels_are_dark_and_ink_is_light() -> void:
 	assert_gt(UiPalette.TEXT_DIM.get_luminance() - UiPalette.CHIP_BG.get_luminance(), 0.25,
 		"even a hint reads on a button")
 	for sk in UiPalette.SKILL_COLORS:
-		assert_gt(Color(UiPalette.SKILL_COLORS[sk]).get_luminance()
+		assert_gt(UiPalette.skill_color(sk).get_luminance()
 			- UiPalette.PANEL_BG.get_luminance(), 0.3, "%s reads on the card" % sk)
 
 func test_theme_has_no_light_boxes() -> void:

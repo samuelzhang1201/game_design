@@ -106,12 +106,15 @@ static func _draw_bars(ci: CanvasItem, repo: DataRepository, m: Dictionary) -> v
 		y += bar + gap
 
 
-## The colour of a realm's headcount box: the realm's own hue, pushed to at
-## least map_army_count_sat and set at map_army_count_val, so the box reads as
-## a solid counter over that realm's pale wash rather than disappearing into it.
+## The colour of a realm's headcount box: the realm's own hue, its saturation
+## held between map_army_count_sat and map_army_count_sat_max and set at
+## map_army_count_val, so the box reads as a solid counter over that realm's
+## pale wash rather than disappearing into it — and never as a sign-board
+## (owner 2026-09-28: the cyan box read as a web badge).
 static func count_color(repo: DataRepository, kingdom_code: String) -> Color:
 	var c := MapPalette.color_of(repo, kingdom_code)
-	return Color.from_hsv(c.h, maxf(c.s, repo.bal("map_army_count_sat")),
+	var top := repo.bal("map_army_count_sat_max") if repo.balance.has("map_army_count_sat_max") else 1.0
+	return Color.from_hsv(c.h, clampf(c.s, repo.bal("map_army_count_sat"), top),
 		repo.bal("map_army_count_val"))
 
 
