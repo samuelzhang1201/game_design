@@ -170,3 +170,38 @@ func test_reading_a_letter_goes_through_game() -> void:
 	r.missive_screen().select(id)
 	assert_signal_emitted_with_parameters(Game, "missive_read", [id])
 	assert_true(bool(MissiveLog.find(Game.state, id)["read"]))
+
+
+## Main's look of 2026-09-28, adopted on the rebase: the board and the spy's
+## report FLOAT, so they are windows (the ornament, under
+## ui_panel_ornament 3, marks windows only), titled in the title face; the
+## board's column plaques are section headers.
+func test_the_board_and_the_report_wear_mains_window_look() -> void:
+	var keep: float = Game.data.balance.get("ui_panel_ornament", 1.0)
+	Game.data.balance["ui_panel_ornament"] = 3.0
+	Game.start_campaign(42)
+	var ms: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	var rp: MissiveReportPopup = load("res://scenes/missive_report_popup.tscn").instantiate()
+	add_child_autofree(ms)
+	add_child_autofree(rp)
+	await wait_frames(1)
+	Game.data.balance["ui_panel_ornament"] = keep
+	for panel: Control in [ms.get_node("%Frame"), rp.get_node("%Window")]:
+		var style := panel.get_theme_stylebox("panel") as VellumPanelStyle
+		assert_not_null(style, "%s is a leather panel" % panel.name)
+		if style != null and UiPalette.load_art(UiPalette.PANEL_ORNAMENT_PATH) != null:
+			assert_not_null(style.texture, "%s is a window: it wears the ornament" % panel.name)
+	var title_font := UiPalette.role_font("title")
+	assert_eq(ms.get_node("%Title").get_theme_font("font"), title_font, "the board's title is a title")
+	assert_eq(rp.get_node("%ReportTitle").get_theme_font("font"), title_font, "the report's title is a title")
+	var plaque := ms.get_node("%TruthPlaque") as Label
+	assert_eq(plaque.get_theme_font("font"), UiPalette.role_font("header"), "a plaque is a section header")
+	assert_eq(plaque.get_theme_color("font_color"), MapPalette.named(Game.data, "intel_truth"),
+		"in its column's own colour")
+	if float(Game.data.balance.get("ui_section_rule_alpha", 0.0)) > 0.0:
+		assert_true(plaque.has_theme_stylebox_override("normal"), "over the section's gold rule")
+	# an empty column's hint is an aside, no larger than the notes beside it
+	ms.refresh()
+	var hint := ms.get_node("%ConsultNotes").get_child(0) as Label
+	assert_eq(hint.get_theme_font_size("font_size"), MissiveScreen.NOTE_FONT_SIZE, "the hint is note-sized")
+	assert_eq(hint.get_theme_color("font_color"), UiPalette.TEXT_DIM, "and dim")

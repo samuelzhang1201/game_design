@@ -17,6 +17,9 @@ const EMPTY := {"truth": "The steward's monthly reports", "credible": "Receipts 
 ## body's 18 px the date "Spring 30, Year 1" overflowed a column).
 const NOTE_FONT_SIZE := 15
 const NOTE_MARGIN := 10.0
+## A column plaque's size: the cards' section headers (MilitaryPanel, the
+## realm dashboard) are 14.
+const PLAQUE_FONT_SIZE := 14
 
 ## The frame's fixed corner margin (left/right/bottom, and the floor for its
 ## top edge before any screen's top bar height is known).
@@ -36,9 +39,13 @@ func _ready() -> void:
 	for col: String in HEADERS:
 		var plaque := get_node("%" + col.capitalize() + "Plaque") as Label
 		plaque.text = HEADERS[col]
-		plaque.add_theme_color_override("font_color", MapPalette.named(Game.data, "intel_" + col))
-	%Frame.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16))
-	UiPalette.style_header(%Title, 22)
+		# a column's plaque is a section header in its credibility's colour
+		UiPalette.style_section(plaque, PLAQUE_FONT_SIZE, MapPalette.named(Game.data, "intel_" + col))
+	# the board floats over the screen: a window, titled in the title face
+	%Frame.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "window"))
+	UiPalette.style_title(%Title, 22)
+	UiPalette.style_header(%LetterTitle, 18)
+	%LetterMeta.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	visibility_changed.connect(func() -> void:
 		if visible:
 			refresh())
@@ -66,7 +73,13 @@ func refresh() -> void:
 			var hint := Label.new()
 			hint.text = EMPTY[col]
 			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			hint.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+			# an empty column's hint is a quiet aside, no larger than its notes
+			# (the integration shot: at the body's size it outweighed the letters)
+			hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+			hint.add_theme_font_size_override("font_size", NOTE_FONT_SIZE)
+			var aside := UiPalette.role_font("body_italic")
+			if aside != null:
+				hint.add_theme_font_override("font", aside)
 			box.add_child(hint)
 		for m: Dictionary in list:
 			box.add_child(_note(m))
