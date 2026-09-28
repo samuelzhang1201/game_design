@@ -103,6 +103,12 @@ light_energy = 1.1
 shadow_enabled = true
 directional_shadow_max_distance = 60000.0
 
+[node name="FillLight" type="DirectionalLight3D" parent="Viewport" unique_id=1733042906]
+visible = false
+light_energy = 0.0
+light_specular = 0.0
+sky_mode = 1
+
 [node name="Units" type="Node3D" parent="Viewport" unique_id=157155689]
 script = ExtResource("15_exbav")
 

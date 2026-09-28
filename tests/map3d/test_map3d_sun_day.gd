@@ -46,3 +46,49 @@ func test_off_it_holds_the_fixed_sun() -> void:
 	r.balance["map3d_sun_day_sweep"] = 0.0
 	assert_eq(Map3DEnvironment.sun_angles(r, 0.4),
 		Vector2(r.bal("map3d_sun_pitch_deg"), r.bal("map3d_sun_yaw_deg")))
+
+
+## The north half is DUSK (owner 2026-09-28: 北边半圈当作黄昏): 0 through the
+## south half, rising as smoothstep(0, 1, -sin(2 pi f)) to 1 in the north.
+func test_dusk_is_nothing_by_day_and_whole_in_the_north() -> void:
+	var r := DataRepository.load_all("res://data")
+	r.balance["map3d_sun_day_sweep"] = 1.0
+	r.balance["map3d_sun_dusk"] = 1.0
+	assert_eq(Map3DEnvironment.dusk_of(r, 0.25), 0.0, "noon")
+	assert_eq(Map3DEnvironment.dusk_of(r, 0.1), 0.0, "the morning")
+	assert_almost_eq(Map3DEnvironment.dusk_of(r, 0.5), 0.0, 0.0001, "the east, dusk begins")
+	assert_almost_eq(Map3DEnvironment.dusk_of(r, 0.75), 1.0, 0.0001, "the north")
+	# f = 7/12: -sin(2 pi 7/12) = 0.5, smoothstep(0.5) = 0.5
+	assert_almost_eq(Map3DEnvironment.dusk_of(r, 7.0 / 12.0), 0.5, 0.0001)
+	r.balance["map3d_sun_dusk"] = 0.0
+	assert_eq(Map3DEnvironment.dusk_of(r, 0.75), 0.0, "switched off")
+	r.balance["map3d_sun_dusk"] = 1.0
+	r.balance["map3d_sun_day_sweep"] = 0.0
+	assert_eq(Map3DEnvironment.dusk_of(r, 0.75), 0.0, "no sweep, no dusk")
+
+
+func test_at_dusk_the_sun_dims_and_warms_and_the_fill_rises_opposite() -> void:
+	var r := DataRepository.load_all("res://data")
+	r.balance["map3d_sun_day_sweep"] = 1.0
+	r.balance["map3d_sun_dusk"] = 1.0
+	var sun := DirectionalLight3D.new()
+	var fill := DirectionalLight3D.new()
+	Map3DEnvironment.sweep_sun(r, sun, 0.25, fill)
+	assert_almost_eq(sun.light_energy, r.bal("map3d_sun_energy"), 0.0001, "noon: full sun")
+	assert_almost_eq(sun.shadow_opacity, r.bal("map3d_sun_shadow_opacity"), 0.0001)
+	assert_eq(sun.light_color, Color.WHITE)
+	assert_almost_eq(sun.light_specular, r.bal("map3d_sun_specular"), 0.0001)
+	assert_almost_eq(fill.light_energy, r.bal("map3d_sun_fill_day"), 0.0001, "a faint fill by day")
+	Map3DEnvironment.sweep_sun(r, sun, 0.75, fill)
+	assert_almost_eq(sun.light_energy, r.bal("map3d_sun_energy") * r.bal("map3d_sun_dusk_energy"), 0.0001)
+	assert_almost_eq(sun.shadow_opacity,
+		r.bal("map3d_sun_shadow_opacity") * r.bal("map3d_sun_dusk_shadow"), 0.0001)
+	assert_eq(sun.light_color, MapTerrain.palette_color(r, "map3d_sun_dusk", Color.WHITE))
+	assert_almost_eq(sun.light_specular, r.bal("map3d_sun_specular") * r.bal("map3d_sun_dusk_specular"), 0.0001)
+	assert_true(fill.visible)
+	assert_almost_eq(fill.light_energy, r.bal("map3d_sun_dusk_fill"), 0.0001)
+	# the sun stands in the north (yaw 180); the fill lights from the south
+	assert_almost_eq(fill.rotation_degrees.x, r.bal("map3d_sun_dusk_fill_pitch_deg"), 0.0001)
+	assert_almost_eq(fposmod(fill.rotation_degrees.y - sun.rotation_degrees.y, 360.0), 180.0, 0.001)
+	sun.free()
+	fill.free()

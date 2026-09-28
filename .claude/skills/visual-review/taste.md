@@ -285,3 +285,9 @@ add it here as a principle with its why — not as a changelog entry.
   player. No shadow opacity can fix that: the slope has only the ambient
   light, and SSAO darkens it further. So keep the sun high, and keep the fill
   and SSAO gentle.
+- **Dusk is an evening, never a filter** (owner: 北边半圈当作黄昏). Warm the
+  direct sun ALONE and lightly (the blue down ~10%, not ~30%): snow stays
+  near-white, grass stays noon's green, the sea keeps its blue. Light a backlit
+  slope with a fill light from the camera's side; darkening the whole map
+  hides it too.
+

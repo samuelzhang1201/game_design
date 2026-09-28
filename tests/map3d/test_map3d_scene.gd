@@ -95,7 +95,10 @@ func test_an_old_builds_sun_sky_sea_and_cameras_step_aside() -> void:
 	add_child_autofree(v)
 	v.activate()
 	var vp := v.viewport()
-	assert_eq(vp.find_children("*", "DirectionalLight3D", true, false).size(), 1, "one sun")
+	var lights := vp.find_children("*", "DirectionalLight3D", true, false)
+	assert_eq(lights.map(func(n: Node) -> String: return String(n.name)), ["Sun", "FillLight"],
+		"the scene's sun and its shadowless fill light only")
+	assert_false((vp.get_node("FillLight") as DirectionalLight3D).shadow_enabled)
 	assert_eq(vp.find_children("*", "WorldEnvironment", true, false).size(), 1, "one sky")
 	assert_eq(vp.find_children("*", "Camera3D", true, false).size(), 1, "the rig's camera only")
 	var world := vp.get_node("WorldSlot").get_child(0)

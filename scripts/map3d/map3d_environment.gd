@@ -143,6 +143,7 @@ static func fog_for_distance(repo: DataRepository, env: Environment, distance_m:
 static func apply_sun(repo: DataRepository, sun: DirectionalLight3D) -> void:
 	sun.rotation_degrees = Vector3(repo.bal("map3d_sun_pitch_deg"), repo.bal("map3d_sun_yaw_deg"), 0.0)
 	sun.light_energy = repo.bal("map3d_sun_energy")
+	sun.light_specular = repo.bal("map3d_sun_specular")
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = repo.bal("map3d_sun_shadow_max_m")
 	apply_sun_look(repo, sun)
@@ -166,10 +167,44 @@ static func sun_angles(repo: DataRepository, day_share: float) -> Vector2:
 		repo.bal("map3d_sun_day_yaw0_deg") + 360.0 * f)
 
 
-## Turn `sun` to where it stands at `day_share` of the day (Map3DView, each frame).
-static func sweep_sun(repo: DataRepository, sun: DirectionalLight3D, day_share: float) -> void:
+## How deep in DUSK the day stands at `day_share`, 0..1 (owner 2026-09-28:
+## 北边半圈当作黄昏): nothing through the south half, rising as
+## smoothstep(0, 1, -sin(2 pi f)) to 1 when the sun stands in the north. There
+## the light comes from behind the map, facing the camera, and every slope
+## turned toward the player is in its own shade — no shadow value fixes
+## that, so the north pass is an evening instead. 0 with map3d_sun_dusk or
+## the sweep off.
+static func dusk_of(repo: DataRepository, day_share: float) -> float:
+	if repo.bal("map3d_sun_day_sweep") <= 0.0 or repo.bal("map3d_sun_dusk") <= 0.0:
+		return 0.0
+	return smoothstep(0.0, 1.0, maxf(0.0, -sin(TAU * fposmod(day_share, 1.0))))
+
+
+## Turn `sun` to where it stands at `day_share` of the day (Map3DView, each
+## frame), and light the dusk, each by dusk_of: the sun dims
+## (map3d_sun_dusk_energy) and warms (terrain_palette map3d_sun_dusk), its
+## shadows fade (map3d_sun_dusk_shadow) and its glint on the water with them
+## (map3d_sun_dusk_specular: at dusk it shines toward the camera), and `fill`
+## — the scene's FillLight, a shadowless light always opposite the sun at
+## map3d_sun_dusk_fill_pitch_deg — rises from map3d_sun_fill_day to
+## map3d_sun_dusk_fill. The fill,
+## not the ambient, is what lights the slopes turned toward the player: the
+## sky's ambient is too faint to (measured 2026-09-28: sun off and ambient x4,
+## the land drew near black). It has no specular, so it lays no second glint
+## on the sea, and no sky disc.
+static func sweep_sun(repo: DataRepository, sun: DirectionalLight3D, day_share: float,
+		fill: DirectionalLight3D = null) -> void:
 	var a := sun_angles(repo, day_share)
 	sun.rotation_degrees = Vector3(a.x, a.y, 0.0)
+	var d := dusk_of(repo, day_share)
+	sun.light_energy = repo.bal("map3d_sun_energy") * lerpf(1.0, repo.bal("map3d_sun_dusk_energy"), d)
+	sun.shadow_opacity = repo.bal("map3d_sun_shadow_opacity") * lerpf(1.0, repo.bal("map3d_sun_dusk_shadow"), d)
+	sun.light_specular = repo.bal("map3d_sun_specular") * lerpf(1.0, repo.bal("map3d_sun_dusk_specular"), d)
+	sun.light_color = Color.WHITE.lerp(MapTerrain.palette_color(repo, "map3d_sun_dusk", Color.WHITE), d)
+	if fill != null:
+		fill.light_energy = lerpf(repo.bal("map3d_sun_fill_day"), repo.bal("map3d_sun_dusk_fill"), d)
+		fill.visible = fill.light_energy > 0.0
+		fill.rotation_degrees = Vector3(repo.bal("map3d_sun_dusk_fill_pitch_deg"), a.y + 180.0, 0.0)
 
 
 ## A fresh Sun (tools/map3d/shoot.gd, which renders a world without the view).

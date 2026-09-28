@@ -78,6 +78,9 @@ var _pal: Dictionary = {}
 var _zoom3d := -1.0
 ## --at3d x,y (with --zoom3d) frames that pack pixel instead of the capital.
 var _at3d := Vector2(-1, -1)
+## --day-share F holds the clock at F of the day (0..1), so a shot shows the
+## sun where it stands then: 0.25 noon in the south, 0.75 the north's dusk.
+var _day_share := -1.0
 ## --ruler fx1,fy1,fx2,fy2 (with --screen root) lights the MEASUREMENT tab
 ## and clicks the showing map at those shares of its size, so the shot shows
 ## a fixed ruler; --ruler-open leaves it stretching to the second point.
@@ -145,6 +148,8 @@ func _ready() -> void:
 		elif args[i] == "--hover3d":
 			var hparts := args[i + 1].split(",")
 			_hover3d = Vector2(float(hparts[0]), float(hparts[1]))
+		elif args[i] == "--day-share":
+			_day_share = float(args[i + 1])
 		elif args[i] == "--at3d":
 			var aparts := args[i + 1].split(",")
 			_at3d = Vector2(float(aparts[0]), float(aparts[1]))
@@ -271,6 +276,8 @@ func _minister_beat(id: String) -> Dictionary:
 
 func _process(_delta: float) -> void:
 	_frames += 1
+	if _day_share >= 0.0:
+		Game.day_progress = _day_share
 	# GameRoot boots into the menu; step it into the court so the shot shows
 	# the gameplay chrome (top bar, bottom tabs, ticker) around a real screen.
 	if _root != null and _frames == 4:

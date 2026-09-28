@@ -45,8 +45,10 @@ func _lines(path: String) -> int:
 ## bind, its step in _process and a courier_rects() forwarder — the layer
 ## does the work. (_lines() counts split("\n").size(), one more than the
 ## file's own newlines, so four added lines raise it by four, not three.)
+## 561 since the dusk (2026-09-28): the FillLight's @onready, handed to
+## Map3DEnvironment.sweep_sun, which does the work.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 560)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 561)
 
 
 func test_every_other_script_is_small() -> void:

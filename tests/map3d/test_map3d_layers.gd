@@ -80,9 +80,7 @@ func test_the_sea_layer_is_the_scenes_own_plane() -> void:
 
 func test_the_suns_shadow_look_is_data() -> void:
 	var v := _view(SEA_FIXTURE)
-	var suns := v.viewport().find_children("*", "DirectionalLight3D", true, false)
-	assert_eq(suns.size(), 1)
-	var sun := suns[0] as DirectionalLight3D
+	var sun := v.viewport().get_node("Sun") as DirectionalLight3D
 	assert_almost_eq(sun.shadow_opacity, Game.data.bal("map3d_sun_shadow_opacity"), 0.0001)
 	assert_almost_eq(sun.shadow_blur, Game.data.bal("map3d_sun_shadow_blur"), 0.0001)
 

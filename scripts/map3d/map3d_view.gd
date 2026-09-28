@@ -73,6 +73,7 @@ var _scene_path := ""
 @onready var _couriers: Map3DLayerCouriers = $Viewport/Couriers
 @onready var _env: WorldEnvironment = $Viewport/Environment
 @onready var _sun: DirectionalLight3D = $Viewport/Sun
+@onready var _fill_light: DirectionalLight3D = $Viewport/FillLight
 @onready var _display: TextureRect = $Display
 @onready var _notice: Label = $Notice
 ## The HUD waits hidden until a world loads; _load binds and shows it.
@@ -383,7 +384,7 @@ func _process(delta: float) -> void:
 		_clouds.step(delta)
 		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
 		if _couriers.step(delta): _hud.refresh()  # the couriers' roads and counters follow them
-		Map3DEnvironment.sweep_sun(_repo, _sun, Game.day_progress)  # a round a game day
+		Map3DEnvironment.sweep_sun(_repo, _sun, Game.day_progress, _fill_light)  # a round a game day, the north half dusk
 	_picker.step()
 	if not _hovered:
 		return
