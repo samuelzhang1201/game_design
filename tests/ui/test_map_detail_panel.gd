@@ -393,6 +393,9 @@ func test_a_reported_fact_wears_a_small_tag_under_its_estimate() -> void:
 	assert_lt(tag.get_theme_font_size("font_size"), value.get_theme_font_size("font_size"), "the tag is small")
 	assert_eq(tag.get_theme_color("font_color"), MapPalette.named(Game.data, "intel_credible"))
 	assert_lt(label.size.x, cell_box.size.x, "the label column is only as wide as its words")
+	# one letter's facts name it once, under the first
+	var tags := kids.filter(func(n: Node) -> bool: return n is VBoxContainer).size()
+	assert_eq(tags, 1, "one tag for one letter's run of facts")
 
 
 ## A foreign manor's card (Task 10's look check, 2026-09-28): the facts read

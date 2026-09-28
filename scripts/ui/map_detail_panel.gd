@@ -362,6 +362,9 @@ func show_card(card: Dictionary) -> void:
 	# The label column is only as wide as its words and a tag stands small
 	# under its estimate (Task 10's look check): in the fixed column the
 	# estimate and its tag on one line wrapped over four.
+	# A run of facts from one letter names it once, under the first: the same
+	# tag under every row carried nothing new (the colour still marks each).
+	var last_tag := ""
 	for row: Dictionary in card.get("intel", []):
 		var label := _line(String(row["label"]), UiPalette.TEXT_MUTED)
 		label.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -370,10 +373,15 @@ func show_card(card: Dictionary) -> void:
 		var value := _line(String(row["text"]), UiPalette.TEXT_SOFT)
 		if String(row["tag"]) == "":
 			_fields.add_child(value)
+			last_tag = ""
 			continue
 		var colour := MapPalette.named(Game.data, "intel_" + String(row["column"]))
 		value.add_theme_color_override("font_color", colour)
-		var tag := _line(String(row["tag"]), colour)
+		if String(row["tag"]) == last_tag:
+			_fields.add_child(value)
+			continue
+		last_tag = String(row["tag"])
+		var tag := _line(last_tag, colour)
 		tag.add_theme_font_size_override("font_size", INTEL_TAG_FONT_SIZE)
 		var cell := VBoxContainer.new()
 		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
