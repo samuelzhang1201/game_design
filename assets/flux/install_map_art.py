@@ -12,6 +12,7 @@
     python3 assets/flux/install_map_art.py army_paintings  # B-37..42 -> assets/armies/paint/<piece>.png (army card)
     python3 assets/flux/install_map_art.py app_icon   # X-01 -> icon.png (the game's application icon)
     python3 assets/flux/install_map_art.py events     # V-35..V-55 -> assets/events/<event_id>.png (the audience window's event band)
+    python3 assets/flux/install_map_art.py courier_paintings  # B-43..47 -> assets/couriers/paint/<key>.png (courier card, the desk's receipt)
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
 blue channel (see sepia_alpha_template.json for the same steps as a ComfyUI
@@ -303,6 +304,15 @@ def crop_rgba(w: int, px: bytearray, box: tuple) -> tuple:
     return cw, chh, out
 
 
+def _pick(hits: list, seed: str) -> list:
+    """The renders a table's `seed` cell picks: `<model>_s<seed>` (the stem's
+    own suffix) or a bare seed number as before; all of them when empty."""
+    if not seed:
+        return hits
+    suffix = "_" + seed if "_" in seed else "_s" + seed
+    return [h for h in hits if h.stem.endswith(suffix)] or hits
+
+
 def install_paintings(size: tuple = PAINT_SIZE, table: str = "estate_paint_art.csv",
                       dest: Path | None = None, key_column: str = "key",
                       src: str = "estates") -> int:
@@ -313,8 +323,7 @@ def install_paintings(size: tuple = PAINT_SIZE, table: str = "estate_paint_art.c
     for r in rows:
         art_id, key, seed = r["art_id"], r[key_column], r.get("seed", "").strip()
         hits = sorted((HERE / "out" / src).glob("%s_*.png" % art_id))
-        if seed:
-            hits = [h for h in hits if h.stem.endswith("_s" + seed)] or hits
+        hits = _pick(hits, seed)
         if not hits:
             print("  (no render for %s / %s)" % (art_id, key))
             continue
@@ -349,6 +358,14 @@ def install_events(size: tuple = EVENT_SIZE) -> int:
 ## the same crop and size, into assets/armies/paint/<piece>.png.
 def install_army_paintings(size: tuple = PAINT_SIZE) -> int:
     return install_paintings(size, "army_paint_art.csv", ROOT / "assets" / "armies" / "paint")
+
+
+## The courier card's paintings and the desk's receipt painting (owner
+## 2026-09-28, spec 2026-09-28-courier-art §4): library B-43..B-47 on the
+## [C-COURIER] 5:4 vignette, drawn in the same 240-px column box as the manor
+## and army paintings, so the same crop and size.
+def install_courier_paintings(size: tuple = PAINT_SIZE) -> int:
+    return install_paintings(size, "courier_paint_art.csv", ROOT / "assets" / "couriers" / "paint")
 
 
 ## The map's compass (owner 2026-09-14): library I-73 cut out by post.py
@@ -538,7 +555,8 @@ def main() -> int:
                 "paintings": install_paintings, "compass": install_compass,
                 "buildings": install_buildings, "goods_icons": install_goods_icons,
                 "arms": install_arms, "army_paintings": install_army_paintings,
-                "app_icon": install_app_icon, "events": install_events}
+                "app_icon": install_app_icon, "events": install_events,
+                "courier_paintings": install_courier_paintings}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:
         print(__doc__)
         return 2

@@ -43,6 +43,19 @@ static func weather_short(repo: DataRepository, kind: String) -> String:
 	return "%s ×%.2f" % [Weather.label_of(repo, kind), float(permille) / 1000.0]
 
 
+## The card's painting: the foul-weather one when the weather here slows a
+## rider to courier_paint_foul_permille or less and that art is installed,
+## else the kind's own (spec 2026-09-28-courier-art §4).
+static func painting_for(repo: DataRepository, kind: String, weather: String) -> String:
+	var own := String((repo.courier_art.get(kind, {}) as Dictionary).get("painting", ""))
+	var foul := String(repo.courier_paintings.get("foul", ""))
+	var row: Dictionary = repo.weather_kinds.get(weather, {})
+	if foul != "" and not row.is_empty() \
+			and int(row.get("speed_permille", 1000)) <= int(repo.bal("courier_paint_foul_permille")):
+		return foul
+	return own
+
+
 static func card(repo: DataRepository, state: GameState, id: int) -> Dictionary:
 	var c := courier(state, id)
 	if c.is_empty():
@@ -62,7 +75,7 @@ static func card(repo: DataRepository, state: GameState, id: int) -> Dictionary:
 			else "%s courier of %s" % [kind.capitalize(),
 			String((repo.kingdoms.get(realm, {}) as Dictionary).get("label", ""))],
 		"kingdom_code": realm, "initial": "C",
-		"painting": String((repo.courier_art.get(kind, {}) as Dictionary).get("painting", "")),
+		"painting": painting_for(repo, kind, wx),
 		"stats": [], "rates": [], "features": [], "production": [], "actions": [],
 		"fields": [
 			# short: the fixed left column wraps a long value line by line, and

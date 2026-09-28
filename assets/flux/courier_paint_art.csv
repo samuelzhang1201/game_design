@@ -1,0 +1,6 @@
+art_id,key,dest,seed,notes
+B-43,ordinary,art,,the ordinary courier at the gallop (courier_art.csv painting)
+B-44,secret,art,,the secret courier (courier_art.csv painting)
+B-45,spy,art,,the spy as merchant (courier_art.csv painting)
+B-46,foul,state,,a courier held up by foul weather (courier_paintings.csv)
+B-47,delivered,state,,a courier delivering to a camp (courier_paintings.csv)

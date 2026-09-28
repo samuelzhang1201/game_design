@@ -205,3 +205,24 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	var hint := ms.get_node("%ConsultNotes").get_child(0) as Label
 	assert_eq(hint.get_theme_font_size("font_size"), MissiveScreen.NOTE_FONT_SIZE, "the hint is note-sized")
 	assert_eq(hint.get_theme_color("font_color"), UiPalette.TEXT_DIM, "and dim")
+
+
+func test_a_receipt_on_the_desk_wears_the_delivered_painting() -> void:
+	Game.start_campaign(42)
+	var saved := String(Game.data.courier_paintings.get("delivered", ""))
+	Game.data.courier_paintings["delivered"] = "res://icon.png"
+	var subj := MissiveLog.subject("point", "", -1, Vector2(500, 300))
+	var receipt := MissiveLog.add(Game.data, Game.state,
+		MissiveLog.make("receipt", "credible", 3, subj, "Receipt", []))
+	var monthly := MissiveLog.add(Game.data, Game.state,
+		MissiveLog.make("monthly", "truth", 3, subj, "Steward's report", []))
+	var r := _root()
+	await _enter(r)
+	r.toggle_missives()
+	await wait_frames(1)
+	var ms := r.missive_screen()
+	ms.select(receipt)
+	assert_true(ms.desk_painting().visible, "a receipt shows the rider at the camp")
+	ms.select(monthly)
+	assert_false(ms.desk_painting().visible, "other letters show none")
+	Game.data.courier_paintings["delivered"] = saved

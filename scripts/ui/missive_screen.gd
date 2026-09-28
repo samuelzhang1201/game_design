@@ -116,6 +116,10 @@ func show_on_map_button() -> Button:
 	return %ShowOnMap
 
 
+func desk_painting() -> TextureRect:
+	return %DeskPainting
+
+
 func _note(m: Dictionary) -> Button:
 	var b := Button.new()
 	b.name = "Note%d" % int(m["id"])
@@ -154,9 +158,14 @@ func _fill_desk() -> void:
 	if m.is_empty():
 		%LetterTitle.text = "Choose a letter"
 		%LetterMeta.text = ""
+		%DeskPainting.visible = false
 		return
 	%LetterTitle.text = String(m["title"])
 	%LetterMeta.text = "%s · %s" % [CourierCard.date_of(int(m["day"])), HEADERS[String(m["column"])]]
+	var art := String(Game.data.courier_paintings.get("delivered", "")) if String(m.get("kind", "")) == "receipt" else ""
+	var tex: Texture2D = UiPalette.load_art(art) if art != "" else null
+	%DeskPainting.texture = tex
+	%DeskPainting.visible = tex != null
 	for f: Dictionary in m["facts"]:
 		var l := Label.new()
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

@@ -85,3 +85,25 @@ func test_province_and_manor_cards_carry_the_weather() -> void:
 func test_every_weather_icon_has_a_row() -> void:
 	for kind: String in repo.weather_kinds:
 		assert_true(repo.resource_icons.has(String(repo.weather_kinds[kind]["icon"])), kind)
+
+
+func test_the_card_wears_its_kinds_painting_or_the_foul_weather_one() -> void:
+	repo.courier_art["ordinary"]["painting"] = "res://ordinary.png"
+	repo.courier_paintings["foul"] = "res://foul.png"
+	assert_eq(CourierCard.painting_for(repo, "ordinary", "clear"), "res://ordinary.png")
+	assert_eq(CourierCard.painting_for(repo, "ordinary", "rain"), "res://ordinary.png", "850 is above the line")
+	assert_eq(CourierCard.painting_for(repo, "ordinary", "mud"), "res://foul.png", "700 is at the line")
+	assert_eq(CourierCard.painting_for(repo, "ordinary", "blizzard"), "res://foul.png")
+	assert_eq(CourierCard.painting_for(repo, "ordinary", "no_such_weather"), "res://ordinary.png")
+	repo.courier_paintings["foul"] = ""
+	assert_eq(CourierCard.painting_for(repo, "ordinary", "blizzard"), "res://ordinary.png",
+		"no foul art installed: the kind's own")
+
+
+func test_every_courier_painting_named_exists() -> void:
+	for kind: String in repo.courier_art:
+		var p := String((repo.courier_art[kind] as Dictionary).get("painting", ""))
+		assert_true(p == "" or ResourceLoader.exists(p) or FileAccess.file_exists(p), "%s: %s" % [kind, p])
+	for key: String in repo.courier_paintings:
+		var p := String(repo.courier_paintings[key])
+		assert_true(p == "" or ResourceLoader.exists(p) or FileAccess.file_exists(p), "%s: %s" % [key, p])

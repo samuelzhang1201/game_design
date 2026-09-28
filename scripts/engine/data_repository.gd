@@ -104,6 +104,8 @@ var intel_facts: Dictionary = {}
 var spy_difficulty: Dictionary = {}
 ## data/missive_art.csv: key -> texture path ("" until installed).
 var missive_art: Dictionary = {}
+## data/courier_paintings.csv: a courier state's painting — foul, delivered ("" until installed).
+var courier_paintings: Dictionary = {}
 ## data/road_speed.csv: key -> per mille (road, trail, offroad, sea, tier_<tier>).
 var road_speed: Dictionary = {}
 ## data/weather.csv: kind -> {speed_permille, icon, label, and the look: overcast,
@@ -592,6 +594,9 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/missive_art.csv", ["key", "texture"],
 			func(r): missive_art[String(r["key"])] = String(r["texture"])):
+		return false
+	if not _load_if_present(dir + "/courier_paintings.csv", ["key", "texture"],
+			func(r): courier_paintings[String(r["key"])] = String(r["texture"])):
 		return false
 	if not _load_if_present(dir + "/army_orders.csv", ["action_code", "label", "hint"],
 			func(r): army_orders.append({"action_code": String(r["action_code"]),

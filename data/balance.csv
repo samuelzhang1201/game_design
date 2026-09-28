@@ -606,3 +606,4 @@ missive_fly_s,0.9,the envelope's flight to the Missive tab
 missive_fly_turns,2,whole turns the envelope spins in flight
 map3d_courier_anim_min,0.8,"a courier's GALLOP playback rate floor (Map3DUnits.gait_rate): a slow road still reads as a gallop"
 map3d_courier_anim_max,3,"a courier's GALLOP playback rate ceiling — past it the rider slides, as the regiments do past map3d_unit_anim_max"
+courier_paint_foul_permille,700,"the courier card shows the foul-weather painting when the weather where he is slows a rider to this share or less (weather.csv speed_permille: mud 700, snow 650, blizzard 400)"
