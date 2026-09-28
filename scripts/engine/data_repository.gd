@@ -657,6 +657,7 @@ func load_map(id: String) -> bool:
 	HouseArms.forget()
 	Elevation.forget()
 	Weather.forget()
+	Intel.forget()
 	RoadGraph.forget()
 	routes.clear()
 	rivers.clear()

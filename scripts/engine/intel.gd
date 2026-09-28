@@ -16,11 +16,11 @@ static var _tiers_key := ""
 static func province_of(repo: DataRepository, state: GameState, subj: Dictionary) -> String:
 	match String(subj.get("kind", "")):
 		"province":
-			return String(subj["code"])
+			return String(subj.get("code", ""))
 		"manor":
-			return MapManors.province_of(repo, int(subj["cell"]), state)
+			return MapManors.province_of(repo, int(subj.get("cell", -1)), state)
 		"burg":
-			return String((repo.burgs.get(String(subj["code"]), {}) as Dictionary).get("province_code", ""))
+			return String((repo.burgs.get(String(subj.get("code", "")), {}) as Dictionary).get("province_code", ""))
 	var cell := MapEconomy.cell_at(repo, Vector2(float(subj.get("x", 0)), float(subj.get("y", 0))))
 	return MapManors.province_of(repo, cell, state) if cell >= 0 else ""
 
@@ -49,9 +49,13 @@ static func stance_of(repo: DataRepository, kingdom: String) -> String:
 
 
 ## 0 poor, 1 middling, 2 rich: the province's tax per person against every
-## province's terciles. Cached per pack and month.
+## province's terciles. Cached per pack, campaign (seed) and month — a fresh
+## campaign at the same tick (every new_campaign starts at tick 0) must never
+## reuse another campaign's cached tiers.
 static func wealth_tier(repo: DataRepository, state: GameState, province: String) -> int:
-	var key := "%s|%d" % [repo.map_id, state.tick if state != null else 0]
+	var seed_value := state.rng.seed_value() if state != null else 0
+	var tick := state.tick if state != null else 0
+	var key := "%s|%d|%d" % [repo.map_id, seed_value, tick]
 	if key != _tiers_key:
 		_tiers = {}
 		_tiers_key = key
@@ -70,10 +74,30 @@ static func wealth_tier(repo: DataRepository, state: GameState, province: String
 			rates.append(rate)
 		rates.sort()
 		for c: String in per:
-			var i := rates.find(per[c])
-			@warning_ignore("integer_division")  # terciles
-			_tiers[c] = clampi(i * 3 / maxi(1, rates.size()), 0, 2)
+			_tiers[c] = tercile_of(rates, int(per[c]))
 	return int(_tiers.get(province, 1))
+
+
+## Clears the cached wealth terciles (called from DataRepository.load_map
+## beside Weather.forget() / HouseArms.forget()).
+static func forget() -> void:
+	_tiers = {}
+	_tiers_key = ""
+
+
+## The tercile (0/1/2) of value v within sorted_rates. A tie takes the
+## MIDDLE rank of its run, so a run of equal values never all falls into the
+## lowest tier: [1,1,1,1,1,2,2,2,3] -> 1:0, 2:2, 3:2.
+static func tercile_of(sorted_rates: Array, v: int) -> int:
+	var n := sorted_rates.size()
+	if n == 0:
+		return 1
+	var first := sorted_rates.find(v)
+	var last := sorted_rates.rfind(v)
+	@warning_ignore("integer_division")
+	var rank := (first + last) / 2
+	@warning_ignore("integer_division")
+	return clampi(rank * 3 / n, 0, 2)
 
 
 static func wealth_word(repo: DataRepository, tier: int) -> String:
@@ -140,12 +164,21 @@ static func _from_fact(f: Dictionary) -> String:
 	return String(f.get("text", "—"))
 
 
-## The newest letter carrying `key` about this subject: the same manor cell,
-## else the same province, else a point within intel_match_km.
+## The newest letter carrying `key` about this subject:
+## - tier 1: a manor query matches a report whose own subject is a manor of
+##   the SAME cell;
+## - tier 2: a province query matches any report whose subject lies in that
+##   same province, whatever the report's own kind;
+## - tier 3 (distance): only a report whose subject kind is "point", within
+##   intel_match_km of the query's point AND in the SAME province as the
+##   query (both province_of non-empty and equal). A manor or province
+##   report never answers a different manor or province merely by distance
+##   (two provinces' centers can sit a few px apart on the pack).
 static func _latest(repo: DataRepository, state: GameState, subj: Dictionary, key: String) -> Dictionary:
 	if state == null:
 		return {}
 	var prov := province_of(repo, state, subj)
+	var qkind := String(subj.get("kind", ""))
 	var reach := repo.bal("intel_match_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
 	var here := Vector2(float(subj.get("x", 0)), float(subj.get("y", 0)))
 	var best: Dictionary = {}
@@ -160,11 +193,14 @@ static func _latest(repo: DataRepository, state: GameState, subj: Dictionary, ke
 			continue
 		var ms: Dictionary = m["subject"]
 		var hit := false
-		if String(subj.get("kind", "")) == "manor" and int(ms.get("cell", -1)) == int(subj.get("cell", -2)):
+		if qkind == "manor" and String(ms.get("kind", "")) == "manor" \
+				and int(ms.get("cell", -1)) == int(subj.get("cell", -2)):
 			hit = true
-		elif prov != "" and province_of(repo, state, ms) == prov and String(subj.get("kind", "")) == "province":
+		elif qkind == "province" and prov != "" and province_of(repo, state, ms) == prov:
 			hit = true
-		elif here.distance_to(Vector2(float(ms.get("x", 0)), float(ms.get("y", 0)))) <= reach:
+		elif String(ms.get("kind", "")) == "point" and prov != "" \
+				and province_of(repo, state, ms) == prov \
+				and here.distance_to(Vector2(float(ms.get("x", 0)), float(ms.get("y", 0)))) <= reach:
 			hit = true
 		if hit:
 			best = {"id": int(m["id"]), "kind": String(m["kind"]), "day": int(m["day"]),
