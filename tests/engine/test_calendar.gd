@@ -22,6 +22,18 @@ func test_day_within_tick_advances() -> void:
 	assert_eq(Calendar.day_of_season(2, 1), 31)
 	assert_eq(Calendar.day_of_season(2, 30), 60)
 
+## Fix round 1 finding 3: the steward's report titles must be unique per
+## month, not per season (three months a season shared one title). Calendar
+## has no named month, so the title is the season plus the month's ordinal
+## within it in Roman numerals.
+func test_month_label_is_unique_within_a_season() -> void:
+	assert_eq(Calendar.month_label(1), "Spring I")
+	assert_eq(Calendar.month_label(2), "Spring II")
+	assert_eq(Calendar.month_label(3), "Spring III")
+	assert_eq(Calendar.month_label(4), "Summer I")
+	assert_eq(Calendar.month_label(13), "Spring I")   # year 2, same month as tick 1
+
+
 func test_game_state_agrees_with_calendar() -> void:
 	var data := DataRepository.load_all("res://data")
 	var s := GameState.new_campaign(data, 42)

@@ -36,3 +36,17 @@ static func day_of_season(tick: int, day_in_tick: int = DAYS_PER_TICK) -> int:
 static func date_string(tick: int, day_in_tick: int = DAYS_PER_TICK) -> String:
 	return "%s %d, Year %d" % [
 		season_name(tick), day_of_season(tick, day_in_tick), year_of(tick)]
+
+const MONTH_ORDINALS := ["I", "II", "III"]
+
+## A tick's place among its season's three months, 1..3 (fix round 1 finding
+## 3: the steward's report needs a title unique to its month, not just its
+## season).
+static func month_ordinal_in_season(tick: int) -> int:
+	return ((maxi(tick, 1) - 1) % 3) + 1
+
+## "Spring II" — the season plus its month's ordinal in Roman numerals, since
+## Calendar names no month of its own. Unique across the whole year (unlike
+## season_name alone), used by the steward's report title.
+static func month_label(tick: int) -> String:
+	return "%s %s" % [season_name(tick), MONTH_ORDINALS[month_ordinal_in_season(tick) - 1]]

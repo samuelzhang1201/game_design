@@ -56,9 +56,14 @@ func test_a_stale_order_writes_a_receipt_that_says_so() -> void:
 	assert_string_contains(String(_fact(m, "orders")["text"]), "set aside")
 
 
+## The reign's OPENING tick (tick 0, GameRoot's one call to Game.next_tick()
+## right after start_campaign, before any day is played) settles no real
+## month, so the very first engine.advance() files no report (fix round 1
+## finding 3) — the "settled month" this test checks is the one after it.
 func test_every_settled_month_files_one_steward_report_exact_to_the_economy() -> void:
 	var s := GameState.new_campaign(repo, 7)
 	var engine := TickEngine.new(repo)
+	engine.advance(s)   # the opening tick: no report
 	var tick := s.tick
 	var expect := 0
 	for code: String in MapManors.controlled_provinces(repo, s):
@@ -69,4 +74,30 @@ func test_every_settled_month_files_one_steward_report_exact_to_the_economy() ->
 	var m: Dictionary = reports[0]
 	assert_eq(String(m["column"]), "truth")
 	assert_eq(int(_fact(m, "tax_total")["exact"]), expect, "exact against RealmEconomy for the settled month")
-	assert_string_contains(String(m["title"]), Calendar.season_name(tick))
+	assert_string_contains(String(m["title"]), Calendar.month_label(tick))
+
+
+## Fix round 1 finding 3: the opening tick itself — before GameRoot ever
+## calls next_tick(), state.tick is 0 — must file NO steward report at all.
+func test_the_opening_tick_files_no_steward_report() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	assert_eq(s.tick, 0, "the opening tick, before any day is played")
+	var engine := TickEngine.new(repo)
+	engine.advance(s)
+	var reports: Array = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "monthly")
+	assert_eq(reports.size(), 0, "the reign's opening tick writes nothing about a month never played")
+
+
+## Fix round 1 finding 3: three months of the same season used to share one
+## title ("Steward's report — Spring, Year 1"); each now names its own month.
+func test_three_months_of_one_season_get_distinct_report_titles() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var engine := TickEngine.new(repo)
+	engine.advance(s)   # the opening tick: no report
+	var titles: Dictionary = {}
+	for i in 3:
+		assert_eq(Calendar.season_name(s.tick), "Spring", "all three months share Spring")
+		engine.advance(s)
+		var reports: Array = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "monthly")
+		titles[String(reports[reports.size() - 1]["title"])] = true
+	assert_eq(titles.size(), 3, "three distinct titles: %s" % [titles.keys()])

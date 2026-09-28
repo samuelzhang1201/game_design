@@ -50,7 +50,9 @@ static func monthly(repo: DataRepository, state: GameState, tick: int) -> Dictio
 	var centre := Vector2(float(prov.get("center_x", 0)), float(prov.get("center_y", 0)))
 	return MissiveLog.make("monthly", "truth", state.absolute_day(),
 		MissiveLog.subject("province", home, -1, centre),
-		"Steward's report — %s, Year %d" % [Calendar.season_name(tick), Calendar.year_of(tick)], facts)
+		# Titled by the MONTH (fix round 1 finding 3), not just the season —
+		# three months a season shared "Steward's report — Spring, Year 1".
+		"Steward's report — %s, Year %d" % [Calendar.month_label(tick), Calendar.year_of(tick)], facts)
 
 
 static func _last_total(state: GameState) -> int:

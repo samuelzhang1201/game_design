@@ -45,8 +45,13 @@ func advance(state: GameState) -> TickReport:
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.
 	_settle_economy(state, r)
-	# The steward's report on the month just settled (owner 2026-09-28): ground truth.
-	MissiveLog.add(data, state, MissiveWriter.monthly(data, state, state.tick))
+	# The steward's report on the month just settled (owner 2026-09-28): ground
+	# truth. The reign's OPENING tick (tick 0, the one GameRoot runs once at
+	# start before any day is played) settles no real month, so it files no
+	# report (fix round 1 finding 3) — tick is 0 here only on that one call;
+	# every later settled month has already been incremented past it.
+	if state.tick > 0:
+		MissiveLog.add(data, state, MissiveWriter.monthly(data, state, state.tick))
 	# The regiments' month (owner 2026-09-17): wounded return, supplies spent.
 	ArmySystem.settle_month(data, state)
 	state.tick += 1
