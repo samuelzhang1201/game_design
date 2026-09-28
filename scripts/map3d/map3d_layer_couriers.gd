@@ -1,8 +1,11 @@
 class_name Map3DLayerCouriers
 extends Node3D
 ## The couriers on the 3D map (spec 2026-09-27-courier-core §2): one small
-## rider per courier of GameState.couriers, sized, seated and walked between
-## the engine's whole days with the regiment pieces' own rules (Map3DUnits),
+## rider per courier of GameState.couriers, sized, seated and drawn RIDING
+## the day the clock is running: the engine's own next day on the road
+## (CourierSystem.ride_ahead), walked by the share of the day already run
+## (owner 2026-09-28: drawn a day behind, he stood still a whole day after play
+## was pressed). The regiment pieces' own rules size him (Map3DUnits),
 ## galloping always. Past the counter scale no rider is drawn and his rect is
 ## a counter's, which Map3DHudCouriers paints. The model is courier_art.csv's —
 ## the cavalry until sub-project D delivers the courier's own. Takes
@@ -15,12 +18,16 @@ var _pieces: Dictionary = {}
 var _shown_xz: Dictionary = {}
 var _rects: Dictionary = {}
 var _scenes: Dictionary = {}
-## id -> the world XZ points still to ride to, in order: the road he rode
-## today, which the engine has already put behind him.
-var _queue: Dictionary = {}
-## id -> {x_m, y_m, path} as the engine last had him; id -> today's leg length.
-var _last: Dictionary = {}
-var _leg: Dictionary = {}
+## id -> {key, from, ahead, rest, length, share}: today's ride in world XZ —
+## where the day starts him, the points it takes him through, the road after
+## it, and the share of the day it takes — remade when the engine moves him or
+## the day turns (`key`).
+var _rides: Dictionary = {}
+## id -> the road still ahead of the drawn rider, in world XZ.
+var _left: Dictionary = {}
+## id -> the day's share when a courier not yet ridden was first seen: sent
+## mid-day, he rides the rest of that day from where the clock stood.
+var _start: Dictionary = {}
 
 
 func bind(p_ctx: Map3DContext) -> void:
@@ -31,9 +38,9 @@ func bind(p_ctx: Map3DContext) -> void:
 
 
 ## id -> {rect: Rect2 in design px, counter: bool, lead: the world XZ points
-## from where he is drawn to where the engine has him (Map3DHudCouriers draws
-## his road ahead from them), waiting: not yet ridden (days 0), so the town
-## he waits in wins a click on him (Map3DPicker)}.
+## from where he is drawn along the road still ahead (Map3DHudCouriers draws
+## it), waiting: not yet set out, so the town he waits in wins a click on him
+## (Map3DPicker)}.
 func screen_rects() -> Dictionary:
 	return _rects
 
@@ -47,7 +54,7 @@ func refresh() -> void:
 		var id := int(c["id"])
 		live[id] = true
 		if not _shown_xz.has(id):
-			_shown_xz[id] = _target_xz(c)
+			_shown_xz[id] = _drawn_xz(c)
 		_place(c, _shown_xz[id])
 	for id in _pieces.keys():
 		if not live.has(id):
@@ -56,65 +63,81 @@ func refresh() -> void:
 	for id in _shown_xz.keys():
 		if not live.has(id):
 			_shown_xz.erase(id)
-			_queue.erase(id)
-			_last.erase(id)
-			_leg.erase(id)
+			_rides.erase(id)
+			_left.erase(id)
+			_start.erase(id)
 
 
-## Walk each drawn rider ALONG the road he rode toward where the engine has
-## him, a day's ride per day's real seconds; true when anything changed (the
-## HUD redraws).
-func step(delta: float) -> bool:
+## Draw each rider where the day's share has him on today's ride; true when
+## anything changed (the HUD redraws). A paused clock holds the share, so he
+## holds too.
+func step(_delta: float) -> bool:
 	if ctx == null or ctx.camera == null:
 		return false
 	var list := ctx.couriers()
 	var dirty := list.size() != _rects.size()
-	var clock := ctx.clock_speed()
-	var day_s := maxf(ctx.repo.bal("time_day_seconds") / float(maxi(clock, 1)), 0.001)
 	for c: Dictionary in list:
 		var id := int(c["id"])
-		if not _shown_xz.has(id):
-			_shown_xz[id] = _target_xz(c)
-			_queue[id] = []
-			_remember(c)
+		var xz := _drawn_xz(c)
+		if not _shown_xz.has(id) or _shown_xz[id] != xz:
+			_shown_xz[id] = xz
 			dirty = true
-			continue
-		var last: Dictionary = _last[id]
-		if int(last["x_m"]) != int(c["x_m"]) or int(last["y_m"]) != int(c["y_m"]):
-			var q: Array = _queue[id]
-			var fresh: Array = []
-			for m: Vector2i in passed_points(last["path"], (c["path"] as Array).size(),
-					Vector2i(int(c["x_m"]), int(c["y_m"]))):
-				fresh.append(ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, m)))
-			# today's ride sets his pace: its length over a day's real seconds
-			_leg[id] = maxf(length_along(q.back() if not q.is_empty() else _shown_xz[id], fresh), 0.001)
-			q.append_array(fresh)
-			if length_along(_shown_xz[id], q) > float(_leg[id]) * ctx.repo.bal("map3d_unit_snap_days"):
-				_shown_xz[id] = (_queue[id] as Array).back()
-				(_queue[id] as Array).clear()
-			_remember(c)
-		var queue: Array = _queue[id]
-		if queue.is_empty() or clock <= 0:
-			continue
-		_shown_xz[id] = walk_along(_shown_xz[id], queue, float(_leg[id]) / day_s * delta)
-		dirty = true
 	if dirty:
 		refresh()
 	return dirty
 
 
-func _remember(c: Dictionary) -> void:
-	_last[int(c["id"])] = {"x_m": int(c["x_m"]), "y_m": int(c["y_m"]), "path": (c["path"] as Array).duplicate(true)}
+## Where he is drawn now, remembering the road still ahead of that spot.
+func _drawn_xz(c: Dictionary) -> Vector2:
+	var ride := _ride_of(c)
+	var queue: Array = (ride["ahead"] as Array).duplicate()
+	var done := minf(_share_of(c) / maxf(float(ride["share"]), 0.001), 1.0)  # he rides at his own pace
+	var at := walk_along(ride["from"], queue, float(ride["length"]) * done)
+	queue.append_array(ride["rest"])
+	_left[int(c["id"])] = queue
+	return at
 
 
-## The points (whole metres) a courier passed since the engine last moved him:
-## the waypoints his road has dropped from its front, then where he is now.
-static func passed_points(old_path: Array, new_size: int, now: Vector2i) -> Array:
-	var out: Array = []
-	for i in range(maxi(old_path.size() - new_size, 0)):
-		out.append(Vector2i(int(old_path[i][0]), int(old_path[i][1])))
-	out.append(now)
-	return out
+## How much of today's ride he has done: the day's share, or — sent this day —
+## the share since he was sent.
+func _share_of(c: Dictionary) -> float:
+	var id := int(c["id"])
+	var share := ctx.day_share()
+	if int(c.get("days", 0)) > 0:
+		_start.erase(id)
+		return share
+	if not _start.has(id):
+		_start[id] = share
+	var s0 := float(_start[id])
+	return clampf((share - s0) / (1.0 - s0), 0.0, 1.0) if s0 < 1.0 else 0.0
+
+
+func _ride_of(c: Dictionary) -> Dictionary:
+	var id := int(c["id"])
+	var st := ctx.state()
+	var path: Array = c["path"]
+	var key := [int(c["x_m"]), int(c["y_m"]), path.size(), int(c.get("aim_x_m", 0)),
+		int(c.get("aim_y_m", 0)), st.absolute_day() if st != null else 0]
+	if _rides.has(id) and _rides[id]["key"] == key:
+		return _rides[id]
+	var from := _target_xz(c)
+	var day: Dictionary = CourierSystem.ride_ahead(ctx.repo, st, c) if st != null else {"points": [], "share": 1.0}
+	var passed: Array = day["points"]
+	var ahead: Array = []
+	for m: Vector2i in passed:
+		ahead.append(_world_of_m(m))
+	# the road after the day: the waypoints the day does not reach
+	var rest: Array = []
+	for i in range(maxi(passed.size() - 1, 0), path.size()):
+		rest.append(_world_of_m(Vector2i(int(path[i][0]), int(path[i][1]))))
+	var ride := {"key": key, "from": from, "ahead": ahead, "rest": rest,
+		"length": length_along(from, ahead), "share": float(day["share"])}
+	_rides[id] = ride
+	return ride
+
+
+func _world_of_m(m: Vector2i) -> Vector2:
+	return ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, m))
 
 
 ## `step` along the points of `queue` from `now`, dropping each point reached.
@@ -145,6 +168,14 @@ func _target_xz(c: Dictionary) -> Vector2:
 	return ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i(int(c["x_m"]), int(c["y_m"]))))
 
 
+## He faces the next point of the road ahead of where he is drawn.
+func _heading_from(id: int, xz: Vector2, c: Dictionary) -> Vector2:
+	for p: Vector2 in _left.get(id, []):
+		if p.distance_to(xz) > 0.01:
+			return (p - xz).normalized()
+	return _heading(c)
+
+
 ## He faces the next waypoint of his road.
 func _heading(c: Dictionary) -> Vector2:
 	var path: Array = c["path"]
@@ -171,7 +202,7 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 		var at: Vector2 = ctx.camera.unproject_position(centre) / s_px
 		var half := repo.bal("map3d_courier_counter_px") * 0.5
 		_rects[id] = {"rect": Rect2(at - Vector2(half, half), Vector2(half, half) * 2.0), "counter": true,
-			"lead": _lead(id, xz), "waiting": int(c["days"]) == 0}
+			"lead": _lead(id, xz), "waiting": _waiting(c, xz)}
 		return
 	var node: Node3D = piece["node"]
 	node.visible = true
@@ -179,8 +210,7 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 	var k := Map3DUnits.scale_for(repo, ctx.camera.global_position.distance_to(centre),
 		repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m, float(piece["height_m"]), float(piece["size"]))
 	var cam := Vector2(ctx.camera.global_position.x, ctx.camera.global_position.z)
-	var queue: Array = _queue.get(id, [])
-	var heading := ((queue[0] as Vector2) - xz).normalized() if not queue.is_empty() else _heading(c)
+	var heading := _heading_from(id, xz, c)
 	var yaw := Map3DUnits.yaw_for(heading, cam, xz)
 	var sit := Map3DUnits.seat_at(repo, ctx.height_at, xz, piece["extent"], yaw, k)
 	var high := float(piece["height_m"]) * k
@@ -190,12 +220,17 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 	node.transform = Transform3D((Basis(Quaternion(Vector3.UP, up)) * Basis(Vector3.UP, yaw))
 		.scaled(Vector3(k, k, k)), ground)
 	_rects[id] = {"rect": Map3DUnits.screen_box(ctx.camera, ground, high, float(piece["half_w_m"]) * k, s_px),
-		"counter": false, "lead": _lead(id, xz), "waiting": int(c["days"]) == 0}
+		"counter": false, "lead": _lead(id, xz), "waiting": _waiting(c, xz)}
+
+
+## Not yet set out: sent and still standing where he was sent from.
+func _waiting(c: Dictionary, xz: Vector2) -> bool:
+	return int(c["days"]) == 0 and xz.distance_to(_target_xz(c)) < 0.5
 
 
 func _lead(id: int, xz: Vector2) -> Array:
 	var out: Array = [xz]
-	out.append_array(_queue.get(id, []))
+	out.append_array(_left.get(id, []))
 	return out
 
 

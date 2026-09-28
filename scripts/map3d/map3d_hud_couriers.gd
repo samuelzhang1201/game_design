@@ -22,21 +22,21 @@ func _draw() -> void:
 			_draw_counter(rects[id]["rect"], ink)
 
 
-## From where he is DRAWN (`lead`: the drawn rider and the road he is still
-## riding to where the engine has him), then the road the engine has left.
+## From where he is DRAWN along the whole road still ahead of him (`lead`,
+## Map3DLayerCouriers); without one, from where the engine has him.
 func _draw_road(c: Dictionary, lead: Array, ink: Color, w: float) -> void:
 	var pts := PackedVector2Array()
 	for xz: Vector2 in lead:
 		var p3 := Vector3(xz.x, ctx.height_at(xz), xz.y)
 		if ctx.camera.is_position_behind(p3):
-			return
+			break
 		pts.append(ctx.camera.unproject_position(p3) / ctx.viewport_px_scale())
 	if lead.is_empty():
 		var here: Variant = _screen_of_m(Vector2i(int(c["x_m"]), int(c["y_m"])))
 		if here == null:
 			return
 		pts.append(here)
-	for p: Array in c["path"]:
+	for p: Array in ([] if not lead.is_empty() else c["path"]):
 		var s: Variant = _screen_of_m(Vector2i(int(p[0]), int(p[1])))
 		if s == null:
 			break

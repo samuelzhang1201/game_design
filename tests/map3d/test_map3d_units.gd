@@ -162,29 +162,28 @@ func _walker(s: GameState) -> String:
 	return ""
 
 
-func test_a_piece_walks_a_days_march_in_a_days_real_seconds() -> void:
+func test_a_days_march_in_world_metres_and_the_snap() -> void:
 	var s := GameState.new_campaign(repo, 7)
 	var code := _walker(s)
 	var meta := {"m_per_px": 50.0}
-	# By hand: day_march_m pack metres x (50 world m / metres_per_pack_px) over
-	# time_day_seconds / 2 at the 2x clock.
+	# By hand: day_march_m pack metres x (50 world m / metres_per_pack_px).
 	var day_world := float(ArmySystem.day_march_m(repo, s, code)) * 50.0 \
 		/ float(ArmySystem.metres_per_pack_px(repo))
 	assert_almost_eq(Map3DUnits.day_world_m(repo, s, code, meta), day_world, 0.001)
-	assert_almost_eq(Map3DUnits.walk_speed(repo, s, code, meta, 2),
-		day_world / (repo.bal("time_day_seconds") / 2.0), 0.001)
-	assert_eq(Map3DUnits.walk_speed(repo, s, code, meta, 0), 0.0, "the clock stopped, the piece stands")
 	assert_almost_eq(Map3DUnits.snap_m(repo, s, code, meta),
 		day_world * repo.bal("map3d_unit_snap_days"), 0.001)
 
 
-func test_walk_steps_toward_the_target_lands_on_it_and_jumps_when_far_behind() -> void:
-	var a := Vector2.ZERO
-	var b := Vector2(30.0, 40.0)   # 50 away
-	assert_eq(Map3DUnits.walk(a, b, 10.0, 100.0), Vector2(6.0, 8.0), "ten metres along the way")
-	assert_eq(Map3DUnits.walk(a, b, 60.0, 100.0), b, "closer than a step: lands exactly")
-	assert_eq(Map3DUnits.walk(a, b, 10.0, 40.0), b, "farther than the snap: jumps")
-	assert_eq(Map3DUnits.walk(a, b, 0.0, 100.0), a, "no speed: stands")
+## Owner 2026-09-28: the piece walks the engine's NEXT day as the day runs,
+## from where it stood when the day (or its order) turned.
+func test_along_day_walks_by_the_days_share() -> void:
+	var day := {"from": Vector2.ZERO, "to": Vector2(30.0, 40.0), "s0": 0.0}
+	assert_eq(Map3DUnits.along_day(day, 0.0), Vector2.ZERO, "the day not begun: where it stood")
+	assert_eq(Map3DUnits.along_day(day, 0.5), Vector2(15.0, 20.0), "half the day, half the way")
+	assert_eq(Map3DUnits.along_day(day, 1.0), Vector2(30.0, 40.0), "the day's end: where the engine leaves it")
+	day["s0"] = 0.5  # ordered mid-day: the rest of the day carries the whole step
+	assert_eq(Map3DUnits.along_day(day, 0.5), Vector2.ZERO)
+	assert_eq(Map3DUnits.along_day(day, 0.75), Vector2(15.0, 20.0))
 
 
 # --- seating on a slope (owner 2026-09-24: 斜面上兵人的一部分会被地图盖住) ---

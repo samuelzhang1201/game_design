@@ -1,5 +1,5 @@
 key,label,hint,notes
-commit,Send courier,A courier rides from the capital with this route; the column moves when he reaches it. Fee: {fee} gold,"owner 2026-09-27: after the destination click, the order waits for COMMIT or CANCEL (ArmyOrderMenu, the confirm menu), owner 2026-09-27: the order rides by courier (spec 2026-09-27-courier-core)"
+commit,Confirm order,Issue this march order. Fee: {fee} gold,"owner 2026-09-27: after the destination click, the order waits for COMMIT or CANCEL (ArmyOrderMenu, the confirm menu); the order rides by courier (spec 2026-09-27-courier-core), but owner 2026-09-28: 不要说发送信使，就是确认命令即可 — the row only confirms the order"
 cancel,Cancel,Give this route up,the confirm menu's other row; clicking away from the menu does the same
 edit,Edit route…,Aim the march anew from where the column stands,"owner 2026-09-27: 行进路线commit后，再次点击终点可以edit路线或者cancel操作 — the route menu, opened by a click on a march's end ring"
 halt,Cancel march,Send a courier to halt the column where it has got to,"the route menu's other row: an ARMY_GARRISON, owner 2026-09-27: the order rides by courier (spec 2026-09-27-courier-core)"

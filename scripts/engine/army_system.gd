@@ -438,12 +438,14 @@ static func day_step_m(repo: DataRepository, state: GameState, code: String) -> 
 
 
 ## Metres a regiment covers TODAY (spec 2026-09-27-courier-core §1): its
-## day_step_m under the weather of the province it stands in.
-static func day_march_m(repo: DataRepository, state: GameState, code: String) -> int:
+## day_step_m under the weather of the province it stands in — on `abs_day`
+## when given (the map's preview of the next day), else today.
+static func day_march_m(repo: DataRepository, state: GameState, code: String, abs_day: int = -1) -> int:
 	var step := day_step_m(repo, state, code)
 	if step <= 0 or state == null:
 		return step
-	var kind := Weather.at(repo, state, position_of(repo, state, regiment(repo, code)), state.absolute_day())
+	var kind := Weather.at(repo, state, position_of(repo, state, regiment(repo, code)),
+		state.absolute_day() if abs_day < 0 else abs_day)
 	@warning_ignore("integer_division")  # whole metres
 	return step * Weather.speed_permille(repo, kind) / 1000
 
@@ -483,27 +485,44 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		var entry: Dictionary = state.regiments[code]
-		if String(entry.get("order", ORDER_GARRISON)) != ORDER_MARCH:
-			continue
-		if regiment(repo, code).is_empty():
-			continue
-		var step := day_march_m(repo, state, code)
-		if step <= 0:
-			continue
-		var here := Vector2(float(entry["x_m"]), float(entry["y_m"]))
-		var dest := Vector2(float(entry["dest_x_m"]), float(entry["dest_y_m"]))
-		var left := here.distance_to(dest)
-		if left <= float(step):
-			entry["x_m"] = int(entry["dest_x_m"])
-			entry["y_m"] = int(entry["dest_y_m"])
-			entry["order"] = ORDER_GARRISON
+		if _march_one(repo, state, code, state.regiments[code], state.absolute_day()):
 			arrived.append(code)
-			continue
-		var way := (dest - here) / left
-		entry["x_m"] = int(round(here.x + way.x * float(step)))
-		entry["y_m"] = int(round(here.y + way.y * float(step)))
 	return arrived
+
+
+## Where the NEXT day's march leaves a regiment whose state row is `entry`
+## (a copy, with any order a courier delivers that day already on it —
+## CourierSystem.day_ahead_of), in whole metres; the map draws the piece
+## walking it as the day runs (owner 2026-09-28: it lagged a day behind).
+## Nothing is written but `entry`.
+static func march_ahead(repo: DataRepository, state: GameState, code: String, entry: Dictionary) -> Vector2i:
+	if entry.has("x_m"):
+		# advance_day moves the calendar before the columns march
+		_march_one(repo, state, code, entry, state.absolute_day() + 1)
+		return Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	return pack_to_metres(repo, position_of(repo, state, regiment(repo, code)))
+
+
+## One regiment's day on the road, written to `entry`; true when it arrives.
+static func _march_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
+		abs_day: int) -> bool:
+	if String(entry.get("order", ORDER_GARRISON)) != ORDER_MARCH or regiment(repo, code).is_empty():
+		return false
+	var step := day_march_m(repo, state, code, abs_day)
+	if step <= 0:
+		return false
+	var here := Vector2(float(entry["x_m"]), float(entry["y_m"]))
+	var dest := Vector2(float(entry["dest_x_m"]), float(entry["dest_y_m"]))
+	var left := here.distance_to(dest)
+	if left <= float(step):
+		entry["x_m"] = int(entry["dest_x_m"])
+		entry["y_m"] = int(entry["dest_y_m"])
+		entry["order"] = ORDER_GARRISON
+		return true
+	var way := (dest - here) / left
+	entry["x_m"] = int(round(here.x + way.x * float(step)))
+	entry["y_m"] = int(round(here.y + way.y * float(step)))
+	return false
 
 
 ## Days still on the road, rounded up; 0 for a regiment that is not marching.

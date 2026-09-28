@@ -207,3 +207,65 @@ func test_headlines() -> void:
 	assert_string_contains(CourierSystem.headline(repo, {"type": "stale", "regiment": code}), "set aside")
 	assert_string_contains(CourierSystem.headline(repo, {"type": "lost", "regiment": code}), "undelivered")
 	assert_string_contains(CourierSystem.headline(repo, {"type": "fuse", "regiment": code}), "undelivered")
+
+
+## Owner 2026-09-28 (he stood still a whole day after play was pressed): the
+## map draws the courier riding his NEXT day, which ride_ahead previews on a
+## copy — the same points the day then takes him through, nothing written.
+func test_ride_ahead_previews_the_day_exactly_and_writes_nothing() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var c := _courier(s, 1, _marcher(), [[100000, 0, "road"], [400000, 0, "offroad"]],
+		{"action_code": "ARMY_GARRISON"})
+	var before: Dictionary = c.duplicate(true)
+	var day := CourierSystem.ride_ahead(repo, s, c)
+	var ahead: Array = day["points"]
+	assert_eq(ahead, [Vector2i(100000, 0), Vector2i(130000, 0)], "the waypoint he passes, then where the day leaves him")
+	assert_eq(day["share"], 1.0, "a whole day on the road")
+	assert_eq(c, before, "the courier is untouched")
+	assert_eq(s.couriers.size(), 1)
+	CourierSystem.ride_day(repo, s)
+	assert_eq(Vector2i(int(c["x_m"]), int(c["y_m"])), ahead.back(), "the day ends where the preview did")
+
+
+func test_ride_ahead_on_the_delivery_day_ends_on_the_column() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var code := _marcher()
+	_courier(s, 1, code, [[50000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
+	var day := CourierSystem.ride_ahead(repo, s, s.couriers[0])
+	assert_eq(day["points"], [Vector2i(50000, 0), Vector2i(50000, 0)])
+	# 50 km of road costs 50,000 of the day's 160,000
+	assert_almost_eq(float(day["share"]), 50000.0 / 160000.0, 0.0001, "he arrives with most of the day to spare")
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON)
+	assert_eq(s.couriers.size(), 1, "a preview delivers nothing")
+
+
+## The couriers ride before the columns march: the day's preview of a
+## regiment (day_ahead_of) marches on an order its courier delivers that day,
+## and lands where advance_day's own order of events then puts it.
+func test_day_ahead_of_marches_on_an_order_delivered_that_day() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var code := _marcher()
+	ArmySystem.ensure(repo, s)
+	var at := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)))
+	var dest := at + Vector2i(500000, 0)
+	var c := _courier(s, 1, code, [[at.x, at.y, "road"]],
+		{"action_code": "ARMY_MARCH", "dest_x_m": dest.x, "dest_y_m": dest.y})
+	c["x_m"] = at.x - 10000
+	c["y_m"] = at.y
+	var day := CourierSystem.day_ahead_of(repo, s, code)
+	var ahead: Vector2i = day["m"]
+	assert_ne(ahead, at, "the column is seen marching on the day the order reaches it")
+	assert_almost_eq(float(day["from"]), 10000.0 / 160000.0, 0.0001, "from the moment the courier reaches it")
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON, "nothing written")
+	assert_eq(s.couriers.size(), 1)
+	s.day += 1  # advance_day's order: the calendar, the couriers, the columns
+	CourierSystem.ride_day(repo, s)
+	ArmySystem.march_day(repo, s)
+	assert_eq(ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code))), ahead)
+
+
+func test_day_ahead_of_a_garrison_is_where_it_stands() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var code := _marcher()
+	var at := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)))
+	assert_eq(CourierSystem.day_ahead_of(repo, s, code), {"m": at, "from": 0.0})

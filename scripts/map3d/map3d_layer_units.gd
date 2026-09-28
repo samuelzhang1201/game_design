@@ -32,19 +32,16 @@ var _tops: Dictionary = {}
 var _want_yaw: Dictionary = {}
 var _yaw: Dictionary = {}
 var _scenes: Dictionary = {}
-## code -> where the piece is DRAWN, world XZ, walked toward the engine's (step).
+## code -> where the piece is DRAWN, world XZ, on its day's march (step).
 var _shown_xz: Dictionary = {}
+var _days: Dictionary = {}  ## code -> {key, from, to, s0}: its day's march (Map3DUnits.along_day)
 var _moves := 0
 
 
 func bind(p_ctx: Map3DContext) -> void:
 	ctx = p_ctx
-	if not ctx.camera_moved.is_connected(_on_camera_moved):
-		ctx.camera_moved.connect(_on_camera_moved)
-
-
-func _on_camera_moved() -> void:
-	refresh()
+	if not ctx.camera_moved.is_connected(refresh):
+		ctx.camera_moved.connect(refresh)
 
 
 ## Shown or hidden (built on the first showing, then only hidden).
@@ -126,8 +123,7 @@ func _place(code: String, piece: Dictionary) -> void:
 		repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	var k := Map3DUnits.scale_for(repo, ctx.camera.global_position.distance_to(centre),
 		repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m, float(piece["height_m"]), piece["size"])
-	var reg := ArmySystem.regiment(repo, code)
-	var ahead := _target_xz(reg) - xz
+	var ahead: Vector2 = (_days[code]["to"] if _days.has(code) else xz) - xz
 	var heading := ahead.normalized() if ahead.length() > 0.5 \
 		else ArmySystem.heading_of(repo, ctx.state(), code)
 	var cam := ctx.camera.global_position
@@ -153,9 +149,8 @@ func _place(code: String, piece: Dictionary) -> void:
 		float(piece["half_w_m"]) * k, s_px)
 
 
-## Per FRAME: walk every piece toward where the engine has it (a day's step
-## over the day's real seconds, Map3DUnits.walk_speed — the engine moves it a
-## day at a time) and turn it toward its facing. True when any piece moved,
+## Per FRAME: draw every piece where the day's share has it on its day's
+## march (_day_of) and turn it toward its facing. True when any piece moved,
 ## so the view redraws the headcount chips hanging over them.
 func step(delta: float) -> bool:
 	if ctx == null or not shown:
@@ -166,20 +161,16 @@ func step(delta: float) -> bool:
 		var node: Node3D = _pieces[code]["node"]
 		if not _shown_xz.has(code):
 			continue
-		var reg := ArmySystem.regiment(repo, code)
-		var want := _target_xz(reg)
 		var now: Vector2 = _shown_xz[code]
+		var want := Map3DUnits.along_day(_day_of(code), ctx.day_share())
 		var pace := 1.0
 		if now != want:
-			var speed := Map3DUnits.walk_speed(repo, ctx.state(), code, ctx.meta,
-				ctx.clock_speed())
-			_shown_xz[code] = Map3DUnits.walk(now, want, speed * delta,
-				Map3DUnits.snap_m(repo, ctx.state(), code, ctx.meta))
+			_shown_xz[code] = want
 			_place(code, _pieces[code])
 			moved = true
 			# the feet keep pace with the ground (Map3DUnits.march_rate)
-			pace = Map3DUnits.march_rate(repo, speed, node.transform.basis.get_scale().x,
-				float(_pieces[code]["clip_s"]), float(_pieces[code]["stride_m"]))
+			pace = Map3DUnits.march_rate(repo, now.distance_to(want) / maxf(delta, 0.001),
+				node.transform.basis.get_scale().x, float(_pieces[code]["clip_s"]), float(_pieces[code]["stride_m"]))
 		for anim: AnimationPlayer in _pieces[code]["anims"]:
 			anim.speed_scale = pace
 		_sync_action(code)
@@ -273,14 +264,24 @@ func _piece_of(code: String) -> Dictionary:
 	return _pieces[code]
 
 
+## A piece's day's march (Map3DUnits.day_march), remade when its row, the day
+## or the couriers turn.
+func _day_of(code: String) -> Dictionary:
+	var st := ctx.state()
+	var key := [st.regiments.get(code, {}), st.absolute_day(), st.next_courier_id, st.couriers.size()] if st != null else []
+	if not _days.has(code) or _days[code]["key"] != key:
+		var here := _target_xz(ArmySystem.regiment(ctx.repo, code))
+		_days[code] = Map3DUnits.day_march(ctx.repo, st, code, ctx.meta, here, _shown_xz.get(code, here), ctx.day_share())
+		_days[code]["key"] = key.duplicate(true)
+	return _days[code]
+
+
 ## The action follows the MARCH: a column walks while the clock runs and its
-## piece is on the road (or catching up), and stands the moment it arrives.
+## piece is on its day's march, and stands the moment it arrives.
 ## On a stopped clock it STANDS READY in the garrison pose, facing where it
 ## was sent (owner 2026-09-24: 兵棋不进行移动，直到玩家点击继续游戏按钮).
 func _sync_action(code: String) -> void:
-	var walking := ArmySystem.order_of(ctx.repo, ctx.state(), code) == ArmySystem.ORDER_MARCH
-	if _shown_xz.has(code):
-		walking = walking or _shown_xz[code] != _target_xz(ArmySystem.regiment(ctx.repo, code))
+	var walking: bool = _days.has(code) and _shown_xz.get(code) != _days[code]["to"]
 	play(code, MARCH if walking and ctx.clock_speed() > 0 else GARRISON)
 
 

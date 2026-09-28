@@ -37,6 +37,8 @@ var dev := false
 var state_fn: Callable = Callable()
 ## -> int, the clock's speed. Unset: 0 (paused).
 var clock_fn: Callable = Callable()
+## -> float, the share of the day already run (GameRoot's clock). Unset: 0.
+var day_fn: Callable = Callable()
 ## -> float, window px per design px (the canvas_items stretch). Unset: 1.
 var window_scale_fn: Callable = Callable()
 ## Test seam: when valid, replaces the terrain lookup in height_at.
@@ -65,12 +67,9 @@ static func instance_world(scene_path: String) -> Node3D:
 	return Map3DWorldLoader.instance(scene_path)
 
 
-func state() -> GameState:
-	return state_fn.call() if state_fn.is_valid() else null
-
-
-func clock_speed() -> int:
-	return int(clock_fn.call()) if clock_fn.is_valid() else 0
+func state() -> GameState: return state_fn.call() if state_fn.is_valid() else null
+func clock_speed() -> int: return int(clock_fn.call()) if clock_fn.is_valid() else 0
+func day_share() -> float: return clampf(float(day_fn.call()), 0.0, 1.0) if day_fn.is_valid() else 0.0
 
 
 func window_scale() -> float:

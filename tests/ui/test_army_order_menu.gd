@@ -282,9 +282,11 @@ func test_the_end_ring_edits_or_halts_the_march() -> void:
 		"Cancel march halts the column, once the courier delivers")
 
 
-func test_the_commit_row_names_the_courier_and_his_fee() -> void:
+## Owner 2026-09-28: the row confirms the order; it does not say "send courier".
+func test_the_commit_row_confirms_the_order_and_names_the_fee() -> void:
 	var row: Dictionary = Game.data.army_route_orders["commit"]
-	assert_eq(String(row["label"]), "Send courier")
+	assert_eq(String(row["label"]), "Confirm order")
+	assert_false(String(row["label"]).to_lower().contains("courier"))
 	assert_string_contains(String(row["hint"]), "{fee}")
 
 

@@ -225,6 +225,7 @@ func _load() -> void:
 	_ctx.view_size = size
 	_ctx.state_fn = func() -> GameState: return Game.state
 	_ctx.clock_fn = func() -> int: return Game.clock_speed
+	_ctx.day_fn = func() -> float: return Game.day_progress
 	_ctx.window_scale_fn = _window_scale
 	_tier = Map3DQuality.resolve_here(GameRoot.settings_path) if _tier == "" else _tier
 	_ctx.quality = Map3DQuality.merged(_repo, _tier, _overrides)  # the layers read the steps

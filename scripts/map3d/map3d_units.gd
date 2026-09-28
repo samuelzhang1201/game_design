@@ -67,18 +67,32 @@ static func yaw_for(heading: Vector2, camera_xz: Vector2, at_xz: Vector2,
 	return atan2(-dir.x, -dir.y) + off
 
 
-## World metres a piece WALKS in one real second: the regiment's day's march
-## (ArmySystem.day_march_m, the weather in, in the pack's own metres) turned into the built
-## world's metres, over the real seconds a day lasts at this clock speed. The
-## engine still moves it a whole day at a time; this is only how the drawing
-## gets from one day's spot to the next, so it arrives just as the next day
-## does. 0 with the clock stopped.
-static func walk_speed(repo: DataRepository, state: GameState, code: String, meta: Dictionary,
-		clock_speed: int) -> float:
-	if clock_speed <= 0 or state == null:
-		return 0.0
-	var day_s := maxf(repo.bal("time_day_seconds") / float(clock_speed), 0.001)
-	return day_world_m(repo, state, code, meta) / day_s
+## Where a piece is DRAWN on its day's march (owner 2026-09-28: drawn a day
+## behind the engine, it stood still a whole day after play was pressed):
+## `day` is {from, to, s0} — where it stood when its day (or order) last
+## turned, where the engine's next day leaves it (CourierSystem.day_ahead_of),
+## and the day's share then — walked by `share`, the day's share now. A
+## stopped clock holds the share, so the piece holds too.
+static func along_day(day: Dictionary, share: float) -> Vector2:
+	var s0 := float(day["s0"])
+	var f := clampf((share - s0) / maxf(1.0 - s0, 0.001), 0.0, 1.0)
+	return (day["from"] as Vector2).lerp(day["to"], f)
+
+
+## A piece's day's march for along_day, reckoned at the day's `share`: from
+## where it is `drawn` — or the engine's spot `here`, when farther than the
+## snap — to where the engine's next day leaves it, a courier delivering that
+## day included, the march starting when he reaches it
+## (CourierSystem.day_ahead_of). World XZ.
+static func day_march(repo: DataRepository, state: GameState, code: String, meta: Dictionary,
+		here: Vector2, drawn: Vector2, share: float) -> Dictionary:
+	if state == null:
+		return {"from": here, "to": here, "s0": 0.0}
+	var from := here if drawn.distance_to(here) > snap_m(repo, state, code, meta) else drawn
+	var day := CourierSystem.day_ahead_of(repo, state, code)
+	# a column ordered today stands until its courier reaches it
+	return {"from": from, "s0": share + float(day["from"]) * (1.0 - share),
+		"to": Map3DGeometry.pack_to_world(meta, ArmySystem.metres_to_pack(repo, day["m"]))}
 
 
 ## The MARCH clip's playback rate (owner 2026-09-27: 马的腿移动的步幅和它实际移
@@ -105,21 +119,12 @@ static func day_world_m(repo: DataRepository, state: GameState, code: String,
 		* float(meta.get("m_per_px", 50.0)) / float(ArmySystem.metres_per_pack_px(repo))
 
 
-## How far behind the engine a drawn piece may fall before it simply jumps:
-## map3d_unit_snap_days days' march. A save loaded, a column that is not
+## How far from the engine's spot a drawn piece may stand when its day turns
+## before it simply jumps there: map3d_unit_snap_days days' march. A save loaded, a column that is not
 ## walking at all, or a clock that ran several days in one frame would
 ## otherwise leave a piece crawling after its regiment across the map.
 static func snap_m(repo: DataRepository, state: GameState, code: String, meta: Dictionary) -> float:
 	return day_world_m(repo, state, code, meta) * repo.bal("map3d_unit_snap_days")
-
-
-## One frame's walk from `now` toward `want`, `step` metres at most; straight
-## onto `want` when it is closer than that or farther than `snap`.
-static func walk(now: Vector2, want: Vector2, step: float, snap: float) -> Vector2:
-	var left := now.distance_to(want)
-	if left <= step or left > snap:
-		return want
-	return now + (want - now) / left * step
 
 
 ## Where a piece samples the ground (owner 2026-09-24: 斜面上兵人的一

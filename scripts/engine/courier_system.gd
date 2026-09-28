@@ -210,6 +210,95 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 		events.append(_event("fuse", c))
 		return false
 	_reaim(repo, state, c, reg)
+	@warning_ignore("return_value_discarded")  # the budget left matters only to the preview
+	_advance(repo, state, c, today, events)
+	if (c["path"] as Array).is_empty():
+		events.append(_deliver(repo, state, c))
+		return false
+	return true
+
+
+## Where a courier's NEXT day on the road takes him: the engine's own ride run
+## on a copy, so the map draws him riding it as the day passes instead of a
+## day behind (owner 2026-09-28: he stood still a whole day after play was
+## pressed). {points: the points he passes in whole metres, ending where the
+## day leaves him ([] when he will not ride); share: the share of the day his
+## ride takes — under 1 only on the day he reaches the column}. Nothing of
+## `state` or `c` is written.
+static func ride_ahead(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
+	var before: Array = []
+	var copy := _ride_copy(repo, state, c, before)
+	if copy.is_empty():
+		return {"points": [], "share": 1.0}
+	return {"points": passed_points(before, (copy["path"] as Array).size(),
+		Vector2i(int(copy["x_m"]), int(copy["y_m"]))), "share": float(copy["ride_share"])}
+
+
+## `c` after his next day, on a copy ({} when he will not ride), its
+## `ride_share` the share of the day's ride he used; `before` receives his road
+## as the day starts.
+static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, before: Array) -> Dictionary:
+	var code := String(c["target"])
+	var reg := ArmySystem.regiment(repo, code)
+	if reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty():
+		return {}
+	var copy: Dictionary = c.duplicate(true)
+	_reaim(repo, state, copy, reg)
+	before.append_array((copy["path"] as Array).duplicate(true))
+	# advance_day moves the calendar before the couriers ride, and a tick
+	# (day 30 -> day 1) is the next absolute day as well
+	var budget := day_budget(repo, String(copy["kind"]))
+	var left := _advance(repo, state, copy, state.absolute_day() + 1, [])
+	copy["ride_share"] = 1.0 - float(left) / float(budget) if budget > 0 else 1.0
+	return copy
+
+
+## Where the next day leaves a regiment: {m: whole metres; from: the share of
+## the day its march starts at — the couriers ride first, so an order one of
+## them delivers that day is marched on that day (TickEngine.advance_day),
+## from the moment he reaches it}, then ArmySystem.march_ahead. Nothing is
+## written.
+static func day_ahead_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	var from := 0.0
+	var entry: Dictionary = (state.regiments.get(code, {}) as Dictionary).duplicate(true)
+	var list: Array = state.couriers.duplicate()
+	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["id"]) < int(b["id"]))
+	for c: Dictionary in list:
+		if String(c["target"]) != code or int(entry.get("order_id", 0)) > int(c["id"]) \
+				or int(c.get("days", 0)) + 1 > int(repo.bal("courier_max_days")):
+			continue
+		var done := _ride_copy(repo, state, c, [])
+		if done.is_empty() or not (done["path"] as Array).is_empty():
+			continue
+		var order: Dictionary = c["order"]
+		match String(order.get("action_code", "")):
+			"ARMY_MARCH":
+				# the round trip through pack px _deliver's set_march takes
+				var dest := ArmySystem.pack_to_metres(repo, ArmySystem.metres_to_pack(repo,
+					Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"]))))
+				entry["order"] = ArmySystem.ORDER_MARCH
+				entry["dest_x_m"] = dest.x
+				entry["dest_y_m"] = dest.y
+			"ARMY_GARRISON":
+				entry["order"] = ArmySystem.ORDER_GARRISON
+		entry["order_id"] = int(c["id"])
+		from = float(done["ride_share"])
+	return {"m": ArmySystem.march_ahead(repo, state, code, entry), "from": from}
+
+
+## The points (whole metres) a courier passed on a day: the waypoints his road
+## dropped from its front, then where he stands.
+static func passed_points(old_path: Array, new_size: int, now: Vector2i) -> Array:
+	var out: Array = []
+	for i in range(maxi(old_path.size() - new_size, 0)):
+		out.append(Vector2i(int(old_path[i][0]), int(old_path[i][1])))
+	out.append(now)
+	return out
+
+
+## One day's ride along `c`'s road, which it writes: his spot, his road, day_m.
+## Returns the day's budget left unridden (he arrived with some to spare).
+static func _advance(repo: DataRepository, state: GameState, c: Dictionary, today: int, events: Array) -> int:
 	var budget := day_budget(repo, String(c["kind"]))
 	var here := Vector2i(int(c["x_m"]), int(c["y_m"]))
 	var start := here
@@ -235,10 +324,7 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 	c["day_m"] = int(round(Vector2(start).distance_to(Vector2(here))))
 	c["x_m"] = here.x
 	c["y_m"] = here.y
-	if path.is_empty():
-		events.append(_deliver(repo, state, c))
-		return false
-	return true
+	return budget
 
 
 ## The column has moved more than courier_reaim_m since his road was set:
