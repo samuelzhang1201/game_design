@@ -14,6 +14,11 @@ const HEADERS := {"truth": "Ground truth", "credible": "Highly credible",
 const EMPTY := {"truth": "The steward's monthly reports", "credible": "Receipts and clear-eyed spies",
 	"consult": "Letters taken from others' couriers", "rumour": "What a spy only heard"}
 
+## A note's type and side margins, design px (Task 10's look check: at the
+## body's 18 px the date "Spring 30, Year 1" overflowed a column).
+const NOTE_FONT_SIZE := 15
+const NOTE_MARGIN := 10.0
+
 var _selected := -1
 
 @onready var _columns: Dictionary = {
@@ -42,6 +47,7 @@ func refresh() -> void:
 	for col: String in _columns:
 		var box: VBoxContainer = _columns[col]
 		for c in box.get_children():
+			box.remove_child(c)  # gone now, not at the frame's end
 			c.queue_free()
 		var list := MissiveLog.column(Game.state, col)
 		if list.is_empty():
@@ -86,13 +92,29 @@ func show_on_map_button() -> Button:
 func _note(m: Dictionary) -> Button:
 	var b := Button.new()
 	b.name = "Note%d" % int(m["id"])
-	b.text = "%s\n%s" % [String(m["title"]), CourierCard.date_of(int(m["day"]))]
+	# the date is one unbreakable unit: a narrow column broke it "Year / 1"
+	b.text = "%s\n%s" % [String(m["title"]), CourierCard.date_of(int(m["day"])).replace(" ", "\u00a0")]
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_stylebox_override("normal", UiPalette.chip_style(UiPalette.CHIP_BG,
-		UiPalette.GOLD if not bool(m.get("read", false)) else UiPalette.EDGE))
 	var id := int(m["id"])
+	# the note on the desk is lit, edged in parchment; an unread one wears gold
+	var style := UiPalette.chip_style(UiPalette.CHIP_BG,
+		UiPalette.GOLD if not bool(m.get("read", false)) else UiPalette.EDGE)
+	if id == _selected:
+		style = UiPalette.chip_style(UiPalette.CHIP_PRESSED, UiPalette.TEXT_SOFT)
+		style.set_border_width_all(2)
+	# a slip, not a button: smaller type and narrower margins, so the
+	# unbreakable date fits a quarter of the board
+	var hover := UiPalette.chip_style(UiPalette.CHIP_HOVER, UiPalette.GOLD)
+	var pressed := UiPalette.chip_style(UiPalette.CHIP_PRESSED, UiPalette.GOLD)
+	for s: StyleBoxFlat in [style, hover, pressed]:
+		s.content_margin_left = NOTE_MARGIN
+		s.content_margin_right = NOTE_MARGIN
+	b.add_theme_stylebox_override("normal", style)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("pressed", pressed)
+	b.add_theme_font_size_override("font_size", NOTE_FONT_SIZE)
 	b.pressed.connect(func() -> void: select(id))
 	return b
 

@@ -90,3 +90,33 @@ func test_a_capped_away_letter_empties_the_desk() -> void:
 	ms.refresh()
 	assert_eq(ms.selected(), -1)
 	assert_string_contains(ms.desk_text(), "Choose a letter")
+
+
+## Task 10's look check (2026-09-28): the letter on the desk looked like any
+## other read note, and a note's date broke as "Spring 30, Year / 1".
+func test_the_selected_note_stands_out_and_its_date_never_breaks() -> void:
+	Game.start_campaign(42)
+	var a := _letter("credible")
+	var b := _letter("credible")
+	var r := _root()
+	await _enter(r)
+	r.toggle_missives()
+	var ms := r.missive_screen()
+	ms.select(a)
+	MissiveLog.mark_read(Game.state, b)
+	ms.refresh()
+	var picked := ms.find_child("Note%d" % a, true, false) as Button
+	var other := ms.find_child("Note%d" % b, true, false) as Button
+	var ps := picked.get_theme_stylebox("normal") as StyleBoxFlat
+	var os := other.get_theme_stylebox("normal") as StyleBoxFlat
+	assert_ne(ps.bg_color, os.bg_color, "the note on the desk is lit")
+	var date := CourierCard.date_of(3)
+	assert_string_contains(picked.text, date.replace(" ", "\u00a0"), "the date is one unbreakable unit")
+	# ...and a long one still fits a column's note (at the body's 18 px the
+	# date overflowed and was clipped)
+	await wait_frames(2)
+	var font := picked.get_theme_font("font")
+	var px := picked.get_theme_font_size("font_size")
+	var room := picked.size.x - ps.content_margin_left - ps.content_margin_right
+	var widest := font.get_string_size("Autumn 90, Year 60", HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	assert_lt(widest, room, "the longest date fits a note (%d of %d px)" % [widest, room])
