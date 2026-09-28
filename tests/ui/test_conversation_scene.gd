@@ -26,7 +26,7 @@ func test_one_portrait_per_beat_and_continue_advances() -> void:
 	# Scoped to the dossier stage: the location panel's occupant chips
 	# (2026-08-30) are CharacterPortraits by design and don't count.
 	assert_eq(c.find_child("PortraitBox", true, false).find_children("*", "CharacterPortrait", true, false).size(), 0)
-	assert_string_contains(c.dialogue_text(), "levies")
+	assert_string_contains(c.said_text(), "levies")
 	c.continue_button().pressed.emit()
 	await wait_frames(2)
 	assert_eq(String(c.current_beat()["portrait_id"]), "round_table")
@@ -57,7 +57,7 @@ func test_quick_reply_executes_suggestion_and_speaks_prose() -> void:
 	c.reply_buttons()[0].pressed.emit()
 	await wait_frames(2)
 	assert_gt(Game.state.metrics["army_quality"], army0)
-	assert_string_contains(c.dialogue_text(), "muster")  # outcome prose, not numbers
+	assert_string_contains(c.said_text(), "muster")  # outcome prose, not numbers
 
 func test_event_beat_gates_continue_until_choice() -> void:
 	Game.start_campaign(42)
@@ -131,19 +131,19 @@ func test_transcript_narrows_to_the_selected_person() -> void:
 	await wait_frames(2)
 	c._say("You", "how stand the borders?")
 	c._say("Ser Brandt of Harrow", "The border holds.")
-	assert_string_contains(c.dialogue_text(), "ledgers")
+	assert_string_contains(c.said_text(), "ledgers")
 	c.find_child("Occupant_char_marshal", true, false).pressed.emit()
 	await wait_frames(1)
-	assert_string_contains(c.dialogue_text(), "The border holds.")
-	assert_string_contains(c.dialogue_text(), "how stand the borders?")
-	assert_false("ledgers" in c.dialogue_text(),
+	assert_string_contains(c.said_text(), "The border holds.")
+	assert_string_contains(c.said_text(), "how stand the borders?")
+	assert_false("ledgers" in c.said_text(),
 		"only the selected person's exchange with you is shown")
 	c._say("Herald", "It is done, my lord.")
-	assert_string_contains(c.dialogue_text(), "It is done, my lord.",
+	assert_string_contains(c.said_text(), "It is done, my lord.",
 		"the Herald's outcome narration is never swallowed by the filter")
 	c.find_child("Occupant_char_marshal", true, false).pressed.emit()
 	await wait_frames(1)
-	assert_string_contains(c.dialogue_text(), "ledgers",
+	assert_string_contains(c.said_text(), "ledgers",
 		"deselecting widens the box back to the whole room")
 
 ## User request 2026-08-31 (change 5): the SKILLS tab lists the tools this
@@ -340,8 +340,8 @@ func test_summary_shows_this_session_resolution_after_quick_reply() -> void:
 	await wait_frames(2)
 	c.continue_button().pressed.emit()
 	await wait_frames(2)
-	assert_string_contains(c.dialogue_text(), "Raise fresh levies")
-	assert_false("Nothing was ordered" in c.dialogue_text(),
+	assert_string_contains(c.said_text(), "Raise fresh levies")
+	assert_false("Nothing was ordered" in c.said_text(),
 		"a same-session decision must not be summarized as idle")
 
 ## "Also" item (post-Task-5 review): a quick-reply that fulfills an open
@@ -361,7 +361,7 @@ func test_quick_reply_narrates_kept_promise_effect() -> void:
 	await wait_frames(2)
 	c.reply_buttons()[0].pressed.emit()
 	await wait_frames(2)
-	assert_string_contains(c.dialogue_text(), "a promise kept")
+	assert_string_contains(c.said_text(), "a promise kept")
 
 ## The author's own scene reaches the stage, and no model is consulted to get
 ## it there (user ruling 2026-08-31). This replaces the former
@@ -384,7 +384,7 @@ func test_event_beat_shows_authored_scene_without_calling_the_model() -> void:
 		"speaker": "The Council", "event": Game.state.pending_event.duplicate(true)}]
 	var c := _scene_with(beats, report)
 	await wait_frames(3)
-	assert_string_contains(c.dialogue_text(), "fur-lined cloak",
+	assert_string_contains(c.said_text(), "fur-lined cloak",
 		"the scene is the prose written in RANDOM_EVENTS.md")
 	assert_false(c.dialogue_text().contains("A rider brings word of omens."),
 		"the model's words must never appear in an event scene")
@@ -418,7 +418,7 @@ func test_event_beat_free_text_resolves_via_event_choice() -> void:
 	c.free_text_field().text_submitted.emit("I shall accept them with thanks")
 	await wait_frames(3)
 	assert_true(Game.state.pending_event.is_empty(), "event resolves via free text")
-	assert_string_contains(c.dialogue_text(), "thanks")  # event_ev_01_accept template line
+	assert_string_contains(c.said_text(), "thanks")  # event_ev_01_accept template line
 	assert_true(c.free_text_field().visible,
 		"free text stays after resolution — the player can keep talking (user request 2026-08-31)")
 	assert_true(c.continue_button().visible, "advance re-enabled once resolved")
@@ -575,8 +575,8 @@ func test_free_text_prints_narrative_then_ledger_on_the_stage() -> void:
 	c.free_text_field().text_submitted.emit("send out the whisperers")
 	await wait_frames(3)
 	assert_lt(Game.state.metrics["treasury"], gold, "the mission was paid for")
-	assert_string_contains(c.dialogue_text(), "Coin for the whisperers, then.")
-	assert_string_contains(c.dialogue_text(), "treasury -")
+	assert_string_contains(c.said_text(), "Coin for the whisperers, then.")
+	assert_string_contains(c.said_text(), "treasury -")
 
 ## The left column shows the realm dashboard by default and the dossier only
 ## while a person speaks or is singled out (user ruling 2026-09-09).

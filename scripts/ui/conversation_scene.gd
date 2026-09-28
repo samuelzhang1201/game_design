@@ -179,6 +179,7 @@ func _ready() -> void:
 	%MoveButton.pressed.connect(_open_move_popup)
 	%AudienceLayer.resized.connect(_fit_audience)
 	%AudienceLayer.visible = false
+	%AudienceLayer.visibility_changed.connect(_render_history)
 	Game.state_changed.connect(func() -> void:
 		if is_inside_tree():
 			_refresh_location())
@@ -405,16 +406,26 @@ func _render_history() -> void:
 				allowed[Game.state.characters[id].display_name] = true
 	var shown: Array = []
 	var speech: Array = []
+	# The record holds what has PASSED (owner 2026-09-28, second critique: it
+	# repeated in full the line the window was showing): while the audience
+	# window is up, this beat's lines are the window's, and they join the
+	# record when the next beat takes the stage.
+	var window_up: bool = %AudienceLayer.visible
 	for e in _history:
 		if not allowed.is_empty() and not allowed.has(e["speaker"]):
 			continue
-		shown.append(e["line"])
+		if not (window_up and int(e["n"]) >= _beat_start):
+			shown.append(e["line"])
 		if int(e["n"]) >= _beat_start:
 			# The window already names who speaks (the plate, or the event's
 			# heading): the speech does not say it again (owner 2026-09-28).
 			var plain := String(e.get("plain", ""))
 			speech.append(plain if plain != "" and _names_shown().has(String(e["speaker"])) else e["line"])
-	_text_label.text = "\n".join(shown)
+	# An empty record says why, in the game's voice (the first beat is still
+	# on the stage).
+	_text_label.text = "\n".join(shown) if not shown.is_empty() else \
+		"[i][color=#%s]Nothing is set down yet; what is said here is written when it has passed.[/color][/i]" % \
+		UiPalette.TEXT_DIM.to_html(false)
 	_speech_label.text = "\n\n".join(speech)
 	_scroll.set_deferred("scroll_vertical", 1000000)
 	# The record keeps growing and reads from its newest line. The audience
@@ -487,8 +498,14 @@ func reply_buttons() -> Array:
 	# the MOVE list lives in the small centred popup — one seam covers both.
 	return _replies_box.get_children() + %PopupChoices.get_children()
 
+## The record as drawn: what has passed, not this beat while the window shows it.
 func dialogue_text() -> String:
 	return _text_label.get_parsed_text()
+
+## Everything said this council, the record and the window's beat together —
+## what a test asks when it means "was it said", wherever it now stands.
+func said_text() -> String:
+	return _text_label.get_parsed_text() + "\n" + _speech_label.get_parsed_text()
 
 ## Events and the opening narration share the audience window (owner
 ## 2026-09-15): CK3's events and interactions wear one frame.

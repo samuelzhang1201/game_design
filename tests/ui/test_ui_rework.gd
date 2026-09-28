@@ -52,7 +52,7 @@ func test_campaign_opens_with_nameless_background_narration() -> void:
 	assert_eq(String(scene.current_beat()["kind"]), "narration")
 	assert_eq(String(scene.current_beat()["speaker"]), "", "narration is nameless")
 	assert_true(scene.event_popup().visible, "narration pops centered")
-	assert_string_contains(scene.dialogue_text(), "ascended to the throne")
+	assert_string_contains(scene.said_text(), "ascended to the throne")
 	# Regression (user bug 2026-08-30): the full background text made the
 	# centered popup taller than the viewport, pushing the continue button off
 	# screen with no way to scroll. The narration now stands in the audience
@@ -463,8 +463,10 @@ func test_chat_after_event_resolution_shows_reply() -> void:
 	await wait_frames(1)
 	scene.free_text_field().text_submitted.emit("greetings")
 	await wait_frames(4)
-	assert_string_contains(scene.dialogue_text(), "You: greetings")
-	assert_string_contains(scene.dialogue_text(), "Aldwin Reeve:",
+	assert_string_contains(scene.said_text(), "You: greetings")
+	# The window names him on its plate, so his reply stands there without
+	# his name before it (2026-09-28): it is the words after the player's.
+	assert_ne(scene.speech_text().get_slice("greetings", 1).strip_edges(), "",
 		"the visited minister's reply is shown, not swallowed")
 
 func test_transcript_names_are_colored_per_speaker() -> void:
@@ -478,6 +480,11 @@ func test_transcript_names_are_colored_per_speaker() -> void:
 		"speaker": "Ser Brandt of Harrow", "text": "The border holds.",
 		"suggestions": []}], report)
 	await wait_frames(2)
+	# The record holds what has passed: the beat joins it once the audience
+	# window no longer shows it (owner 2026-09-28).
+	assert_false("The border holds." in scene.dialogue_text(), "not twice while the window shows it")
+	(scene.find_child("AudienceLayer", true, false) as Control).visible = false
+	await wait_frames(1)
 	var raw: String = scene.find_child("TextLabel", true, false).text
 	assert_string_contains(raw, "[color=#", "names carry bbcode colors")
 	assert_string_contains(scene.dialogue_text(), "Ser Brandt of Harrow: The border holds.")

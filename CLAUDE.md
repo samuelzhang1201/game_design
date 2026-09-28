@@ -88,7 +88,8 @@ Text-first, LLM-narrated grand strategy game: rule a kingdom for ~60 years throu
     whose tooltip lists its last reasons (`CharacterPortrait.opinion_summary`),
     trait chips with their notes, CK3's row of five skill badges — and on
     the right this beat's exchange (`speech_text`; the record keeps every
-    beat), BIO / SKILLS / TIES pages that take the speech's place and hand
+    beat once it has passed — while the window shows a beat, it is the
+    window's, owner 2026-09-28), BIO / SKILLS / TIES pages that take the speech's place and hand
     it back, the options (their trade-off and gold cost on hover) and the
     talk box. Events and the opening narration stand in the SAME window
     (`event_popup()` is it); only the MOVE list keeps the small popup. So a
