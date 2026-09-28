@@ -256,3 +256,33 @@ func test_a_spy_is_refused_beyond_the_fuse() -> void:
 	repo.balance["courier_max_days"] = 0.0
 	var why := actions.validate(req, s)
 	assert_string_contains(why, "days")
+
+
+## Rebase onto main (2026-09-28): the map draws a courier riding his NEXT day
+## through CourierSystem.ride_ahead, which runs the ride on a COPY with the
+## real state. A spy rides for a point, not a regiment, so the preview must
+## not drop him as "regiment gone" (he would be drawn a day behind, the
+## owner's complaint of that morning) nor re-aim him, and it must never file
+## his report: observe draws from GameState.rng and writes a letter.
+func test_a_spys_next_day_is_previewed_and_the_preview_files_nothing() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var f := _foreign_manor(s)
+	var c := CourierSystem.dispatch_spy(repo, s, _at(f))
+	var aim := Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))
+	# one short stretch of road left: the day ahead reaches the point
+	c["x_m"] = aim.x - 1000
+	c["y_m"] = aim.y
+	c["path"] = [[aim.x, aim.y, "road"]]
+	var before: Dictionary = c.duplicate(true)
+	var rng_before: Dictionary = s.rng.to_dict()
+	var letters := s.missives.size()
+	var day := CourierSystem.ride_ahead(repo, s, c)
+	assert_eq(day["points"], [aim, aim], "he is drawn riding onto his point")
+	assert_lt(float(day["share"]), 1.0, "he arrives with some of the day to spare")
+	assert_eq(c, before, "the spy is untouched")
+	assert_eq(s.rng.to_dict(), rng_before, "the preview draws nothing from the engine's stream")
+	assert_eq(s.missives.size(), letters, "the preview files no letter")
+	assert_eq(s.couriers.size(), 1)
+	var reports: Array = CourierSystem.ride_day(repo, s).filter(
+		func(e: Dictionary) -> bool: return String(e["type"]) == "spy_report")
+	assert_eq(reports.size(), 1, "the real day files the report")

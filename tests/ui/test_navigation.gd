@@ -21,6 +21,27 @@ func test_the_bottom_bar_groups_lenses_left_and_screens_right() -> void:
 	assert_not_null(bar.button("WAR ROOM"), "the placeholder stays while ui_show_placeholder_tabs is 1")
 	assert_gte(BottomBar.BAR_HEIGHT, bar.content_height(), "the grouped strip still fits its height")
 
+## MISSIVE (2026-09-28, rebased onto the grouped bar) is a SCREEN: it stands
+## right of the rule, and its unread count still reads on the flat tab and
+## keeps the row inside the design viewport.
+func test_the_missive_tab_is_a_screen_and_its_badge_fits() -> void:
+	Game.data.balance["ui_nav_grouped"] = 1.0
+	var bar := BottomBar.new()
+	bar.theme = UiPalette.build_theme()
+	add_child_autofree(bar)
+	await wait_frames(1)
+	var row: Control = bar.get_node("Bar/Row")
+	var names: Array = []
+	for c in row.get_children():
+		names.append(String(c.name))
+	assert_gt(names.find("Missive"), names.find("Rule"), "MISSIVE is a screen, right of the rule")
+	bar.set_badge("MISSIVE", 99)
+	await wait_frames(1)
+	assert_eq(bar.button("MISSIVE").text, "MISSIVE (99)")
+	assert_lte(row.get_combined_minimum_size().x, 1280.0, "the strip with a two-figure badge fits 1280 px")
+	bar.set_badge("MISSIVE", 0)
+	assert_eq(bar.button("MISSIVE").text, "MISSIVE", "a read board drops the count")
+
 func test_the_council_handle_is_a_level_button() -> void:
 	Game.data.balance["ui_council_button"] = 1.0
 	var b := ScreenLayout.make_handle("ENTER THE COUNCIL")

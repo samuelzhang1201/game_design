@@ -396,7 +396,7 @@ static func _note_slow(repo: DataRepository, state: GameState, c: Dictionary, we
 ## A spy rides for no regiment: his event names the place he was sent to,
 ## so the news bar can say where (final review M1).
 static func _spy_placed(repo: DataRepository, state: GameState, c: Dictionary, e: Dictionary) -> Dictionary:
-	if String(c["kind"]) == SPY:
+	if _is_spy(c):
 		e["place"] = Intel.place_label(repo, state, ArmySystem.metres_to_pack(repo,
 			Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))))
 	return e
