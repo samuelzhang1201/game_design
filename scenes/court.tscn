@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://bkm0g1bago8lo" path="res://scripts/ui/court_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/top_bar.tscn" id="2"]
 [ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="3_i1kge"]
+[ext_resource type="Script" uid="uid://dq7am4164rjll" path="res://scripts/ui/spy_order_menu.gd" id="4_sy0rd"]
 
 [node name="CourtScreen" type="Control" unique_id=626180433]
 layout_mode = 3
@@ -105,3 +106,7 @@ theme_override_constants/separation = 3
 [node name="ArmyOrders" type="PopupMenu" parent="." unique_id=1155623443]
 unique_name_in_owner = true
 script = ExtResource("3_i1kge")
+
+[node name="SpyOrders" type="PopupMenu" parent="." unique_id=695425565]
+unique_name_in_owner = true
+script = ExtResource("4_sy0rd")

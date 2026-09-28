@@ -392,7 +392,8 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	var other_codes: Array = []
 	for a: Dictionary in other["actions"]:
 		other_codes.append(String(a["action_code"]))
-	assert_eq(other_codes, ["MANOR_BUY"])
+	# Every land card offers a spy too (owner 2026-09-28), after its own orders.
+	assert_eq(other_codes, ["MANOR_BUY", "SPY_SEND"])
 	assert_true(String(other["actions"][0]["label"]).begins_with("BUY — "))
 	var of: Dictionary = {}
 	for f in other["fields"]:
@@ -408,7 +409,12 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	var abroad := _manor_where(state, false, false)
 	var far := MapObjects.manor_card(real, state, abroad)
 	assert_eq(String(far["known"]), "basic")
-	assert_true((far["actions"] as Array).is_empty())
+	# No BUY out of the border's reach, but a spy still may be sent anywhere
+	# (owner 2026-09-28).
+	var far_codes: Array = []
+	for a: Dictionary in far["actions"]:
+		far_codes.append(String(a["action_code"]))
+	assert_eq(far_codes, ["SPY_SEND"])
 
 ## The card's BUILD button spends CIVIL GOODS (spec 2026-09-14 §5), and a
 ## work in progress gets a HURRY button that buys days with gold.

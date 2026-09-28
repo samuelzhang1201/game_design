@@ -21,6 +21,13 @@ static func min_burg_pop_for_scale(repo: DataRepository, view_scale: float) -> i
 		return int(repo.bal("map_lod_town_pop"))
 	return CAPITALS_ONLY
 
+## Every land card — manor, province or burg — offers a spy to that point
+## (owner 2026-09-28): SPY_SEND is always legal to ASK for (the courier's fee
+## is ActionSystem's own refusal), so the card names no error of its own.
+static func _spy_send_action(centre: Vector2) -> Dictionary:
+	return {"action_code": "SPY_SEND", "label": "Send a spy", "params": {"x": centre.x, "y": centre.y},
+		"error": ""}
+
 static func burg_visible(b: Dictionary, min_pop: int) -> bool:
 	if String(b.get("is_capital", "0")) == "1":
 		return true
@@ -442,6 +449,9 @@ static func burg_card(repo: DataRepository, state: GameState, code: String) -> D
 			["wealth", "Wealth", Intel.wealth_tier(repo, state, String(b["province_code"]))],
 			["stance", "Stance", Intel.stance_of(repo, owner)]]
 		card["intel"] = _intel_rows(repo, state, subj, facts)
+	if not card.has("actions"):
+		card["actions"] = []
+	(card["actions"] as Array).append(_spy_send_action(center))
 	return card
 
 ## The player's own province in full; foreign land only by what is commonly
@@ -467,6 +477,7 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 			["Seat", _label(repo.burgs, String(prov.get("capital_burg", "")))],
 			["Weather", Weather.describe(repo, state, code)]],
 		"features": [], "production": [], "wealth": 0.0, "treasury": 0.0,
+		"actions": [_spy_send_action(center)],
 		"center": center,
 		"ask": "What do we know of %s?" % label,
 		"known": known,
@@ -620,6 +631,7 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 			["wealth", "Wealth", Intel.wealth_tier(repo, state, province)],
 			["stance", "Stance", Intel.stance_of(repo, owner)]]
 		card["intel"] = _intel_rows(repo, state, subj, facts)
+		(card["actions"] as Array).append(_spy_send_action(center))
 		return card
 	var cell_row: Dictionary = repo.cells.get(cell, {})
 	var biome: Dictionary = repo.biomes.get(int(cell_row.get("biome_id", -1)), {})
@@ -741,6 +753,7 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		card["wealth"] = float(e.get("product", 0.0))
 		card["treasury"] = float(e.get("treasury", 0.0))
 	card["actions"] = manor_actions(repo, state, cell)
+	(card["actions"] as Array).append(_spy_send_action(center))
 	card["slot_actions"] = slot_actions(repo, state, cell)
 	return card
 

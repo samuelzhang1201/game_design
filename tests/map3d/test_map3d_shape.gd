@@ -49,8 +49,11 @@ func _lines(path: String) -> int:
 ## Map3DEnvironment.sweep_sun, which does the work.
 ## 562 since the courier rides the day as it runs (owner 2026-09-28): one line
 ## handing Game.day_progress to the context (day_fn); the layer does the work.
+##
+## 568 since the spy's right-click on the ground (2026-09-28): a signal and its
+## emit — SpyOrderMenu does the work.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 562)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 568)
 
 
 func test_every_other_script_is_small() -> void:

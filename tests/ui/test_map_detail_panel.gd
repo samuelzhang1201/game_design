@@ -182,7 +182,8 @@ func test_a_manor_card_buys_the_manor_from_its_button() -> void:
 	# carries the exact asking price beside the BUY button that names it.
 	assert_string_contains(p.stat_tooltip("manor_price"), "Asking price", "the price is an icon with its tooltip")
 	var buttons := p.actions_box().get_children()
-	assert_eq(buttons.size(), 1, "BUY only, seizing off")
+	# BUY, seizing off, and every land card's spy button (owner 2026-09-28).
+	assert_eq(buttons.size(), 2, "BUY and Send a spy, seizing off")
 	var buy := buttons[0] as Button
 	assert_false(buy.disabled)
 	assert_true(buy.text.begins_with("BUY"))

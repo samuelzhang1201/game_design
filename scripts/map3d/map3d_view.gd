@@ -30,6 +30,8 @@ signal army_menu_requested(code: String, at: Vector2)
 signal ground_clicked(pack_px: Vector2)
 ## A click on a committed march's end ring (owner 2026-09-27): ArmyOrderMenu's route menu.
 signal route_clicked(code: String, at: Vector2)
+## A right click on open ground (owner 2026-09-28): SpyOrderMenu's "Send a spy here".
+signal ground_menu_requested(pack_px: Vector2, at: Vector2)
 
 const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
 ## The view's own authored scene (the tree, flags and anchors live there).
@@ -494,9 +496,13 @@ var aim_dest := Vector2(-1, -1)
 ## right click on open country is NOT consumed, exactly as before.
 func right_click(pos: Vector2) -> bool:
 	var picked := pick_at(pos)
-	if String(picked.get("kind", "")) != "army":
+	if String(picked.get("kind", "")) == "army":
+		army_menu_requested.emit(String(picked["code"]), pos)
+		return true
+	var hit: Variant = ground_at(pos)
+	if hit == null:
 		return false
-	army_menu_requested.emit(String(picked["code"]), pos)
+	ground_menu_requested.emit(_ctx.to_pack(Vector2((hit as Vector3).x, (hit as Vector3).z)), pos)
 	return true
 
 func select_at(pos: Vector2) -> void:

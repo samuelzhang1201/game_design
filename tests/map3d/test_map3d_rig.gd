@@ -75,7 +75,10 @@ func test_the_input_says_which_events_the_view_takes() -> void:
 	var rup := InputEventMouseButton.new()
 	rup.button_index = MOUSE_BUTTON_RIGHT
 	rup.pressed = false
-	assert_false(input.handle(rup), "a right release is not taken, as before")
+	# A right release over the ground now offers a spy there (owner
+	# 2026-09-28, SpyOrderMenu's ground_menu_requested) — only a release
+	# over the sky (no ground under the pointer) still falls through.
+	assert_true(input.handle(rup), "a right release on the ground offers a spy")
 	var hover := InputEventMouseMotion.new()
 	hover.position = Vector2(10, 10)
 	assert_false(input.handle(hover), "a bare move is only recorded for the hover")

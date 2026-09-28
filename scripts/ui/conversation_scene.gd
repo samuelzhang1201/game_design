@@ -118,6 +118,7 @@ func _ready() -> void:
 	# column (user ruling 2026-09-09), whose Ask pre-fills the talk box and
 	# never sends (spec 2026-09-08).
 	_map3d = Map3DView.attach(%MapPanel, _detail, _country_panel, _refresh_left, %ArmyOrders)
+	%SpyOrders.follow(_map3d)
 	_detail.visibility_changed.connect(_refresh_left)
 	# The host opens from a regiment's card and closes back (owner 2026-09-27:
 	# the MILITARY tab is gone; the regiments are always on the map).

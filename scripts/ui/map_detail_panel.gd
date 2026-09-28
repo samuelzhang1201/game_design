@@ -459,6 +459,15 @@ func _give_order(request: ActionRequest) -> void:
 		_hint.text = String(result.get("error", ""))
 		_hint.visible = _hint.text != ""
 		return
+	if request.action_code == "SPY_SEND":
+		# A spy is sent from any land card — manor, province or burg — and
+		# _shown_manor may be stale from an earlier manor card, so a refresh
+		# here would silently swap the shown card for the wrong manor's.
+		var outcome: Dictionary = result.get("outcome", {})
+		for e: Dictionary in outcome.get("effects", []):
+			if String(e.get("metric", "")) == "intel":
+				Game.publish_news(String(e["reason"]))
+		return
 	if _shown_manor >= 0:
 		show_manor(_shown_manor)
 
