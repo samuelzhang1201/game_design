@@ -223,6 +223,7 @@ func test_a_receipt_on_the_desk_wears_the_delivered_painting() -> void:
 	var ms := r.missive_screen()
 	ms.select(receipt)
 	assert_true(ms.desk_painting().visible, "a receipt shows the rider at the camp")
+	assert_true(ms.desk_painting().clip_contents, "a covered painting never spills out of its box")
 	ms.select(monthly)
 	assert_false(ms.desk_painting().visible, "other letters show none")
 	Game.data.courier_paintings["delivered"] = saved

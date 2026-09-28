@@ -127,6 +127,7 @@ theme_override_constants/separation = 8
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 150)
+clip_contents = true
 expand_mode = 1
 stretch_mode = 6
 
