@@ -48,7 +48,7 @@ func _build_menu() -> void:
 	add_child(_menu_col)
 	var title := Label.new()
 	title.text = "Crown and Council"
-	UiPalette.style_header(title, 52)
+	UiPalette.style_title(title, 52)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_menu_col.add_child(title)
 	_menu_col.add_child(_menu_button("Start Game", _open_setup))
@@ -92,7 +92,7 @@ func _build_setup_panel() -> void:
 	var title := Label.new()
 	title.text = "FOUND YOUR DYNASTY"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_header(title, 18)
+	UiPalette.style_title(title, 18)
 	col.add_child(title)
 	col.add_child(HSeparator.new())
 	col.add_child(_field_label("Given name"))

@@ -18,6 +18,17 @@ add it here as a principle with its why — not as a changelog entry.
 - **No base plates.** Objects stand on the map's own ground (the grass disc
   under the 3D towns was the first thing rejected).
 
+## Type
+- **Read in a book face; shout only in titles** (owner 2026-09-28, choosing
+  Crimson Pro + Alegreya SC after a critique of the UI's "AI feel"). A
+  capitals-only face for body text (Cinzel) read every sentence in capitals
+  and truncated every fact ("WALBOVE…"), and a blackletter on every section
+  header meant nothing stood out — together the template "medieval UI" look.
+  Body text has lowercase; headers are tracked small capitals; the
+  blackletter is kept for the game's name, window titles and the map's
+  kingdom names. Numbers in a column use lining figures (an old-style 0 reads
+  as an o).
+
 ## Shape and reading
 - **Read by width and fade, not by rule.** Roads are worn tracks with a soft
   shoulder, never ruled lines (2026-09-17).

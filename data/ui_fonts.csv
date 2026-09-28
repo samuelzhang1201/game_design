@@ -1,0 +1,15 @@
+scheme,role,path,weight,embolden,slant,spacing,size_scale,title_case,features,notes
+0,title,UnifrakturMaguntia-Book.ttf,0,0,0,0,1.2,1,,the 2026-09-13 set: blackletter for every header and title
+0,header,UnifrakturMaguntia-Book.ttf,0,0,0,0,1.2,1,,
+0,body,Cinzel.ttf,0,0,0,0,1.0,0,,Cinzel has no lowercase: every sentence reads in capitals
+0,body_bold,Cinzel.ttf,0,0.7,0,0,1.0,0,,one weight: bold is emboldened
+0,body_italic,Cinzel.ttf,0,0,0.2,0,1.0,0,,no italic: slanted
+0,tab,CinzelDecorative-Regular.ttf,0,0,0,0,1.0,0,,
+0,display,Cinzel.ttf,0,0,0,0,1.0,0,,scale bar / ruler / landmark metres / shield letters
+1,title,UnifrakturMaguntia-Book.ttf,0,0,0,0,1.2,1,,owner 2026-09-28: blackletter for titles only (the game's name / window and screen titles / the map's kingdom names)
+1,header,AlegreyaSC-Regular.ttf,0,0,0,1,1.0,0,lnum,section headers / names / the date in tracked small capitals
+1,body,CrimsonPro.ttf,400,0,0,0,1.1,0,,a book face with lowercase for everything read; its x-height needs 1.1
+1,body_bold,CrimsonPro.ttf,600,0,0,0,1.1,0,,
+1,body_italic,CrimsonPro.ttf,400,0,0.2,0,1.1,0,,no italic file: slanted
+1,tab,AlegreyaSC-Regular.ttf,0,0,0,1,1.0,0,lnum,
+1,display,AlegreyaSC-Regular.ttf,0,0,0,0,1.0,0,lnum,

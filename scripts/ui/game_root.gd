@@ -228,7 +228,7 @@ func _build_pause_menu() -> void:
 	var title := Label.new()
 	title.text = "COUNCIL IN RECESS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_header(title, 18)
+	UiPalette.style_title(title, 18)
 	col.add_child(title)
 	col.add_child(_menu_button("Resume", toggle_pause_menu))
 	col.add_child(_menu_button("Save Game", _on_menu_save))

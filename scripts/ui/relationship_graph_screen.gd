@@ -37,7 +37,7 @@ func _ready() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	title.offset_top = 20.0
-	UiPalette.style_header(title, 20)
+	UiPalette.style_title(title, 20)
 	add_child(title)
 	var close := Button.new()
 	close.name = "CloseButton"

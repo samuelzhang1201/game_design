@@ -135,7 +135,7 @@ func _ready() -> void:
 	%TiesText.add_theme_font_size_override("font_size", 16)
 	%PopupPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.GOLD, 2, 24))
-	UiPalette.style_header(%PopupTitle, 18)
+	UiPalette.style_title(%PopupTitle, 18)
 	var popup_dim: ColorRect = %EventPopup.get_node("PopupDim")
 	popup_dim.color = UiPalette.DIM_OVERLAY
 	_panel = %DialoguePanel
@@ -196,7 +196,7 @@ func _style_audience() -> void:
 	banner.content_margin_left = 12.0
 	banner.content_margin_right = 12.0
 	%AudienceBanner.add_theme_stylebox_override("panel", banner)
-	UiPalette.style_header(%AudienceTitle, 20)
+	UiPalette.style_title(%AudienceTitle, 20)
 	var frame := StyleBoxFlat.new()
 	frame.bg_color = UiPalette.BG_SCREEN
 	frame.border_color = UiPalette.BORDER_GOLD

@@ -33,7 +33,7 @@ func _ready() -> void:
 	panel.add_child(col)
 	_title = Label.new()
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_header(_title, 18)
+	UiPalette.style_title(_title, 18)
 	col.add_child(_title)
 	col.add_child(HSeparator.new())
 	_grid = GridContainer.new()

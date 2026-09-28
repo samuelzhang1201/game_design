@@ -36,6 +36,9 @@ var palette: Dictionary = {}
 ## data/chart_palette.csv: key -> "#rrggbb" for the dashboard's charts
 ## (cat_1.. in fixed order, sequential, track); validated CVD-safe.
 var chart_palette: Dictionary = {}
+## data/ui_fonts.csv: "<scheme>:<role>" -> the row (path, weight, embolden,
+## slant, spacing, size_scale, title_case); balance ui_font_scheme picks one.
+var ui_fonts: Dictionary = {}
 ## data/resource_icons.csv: key -> {label, icon, tooltip} for every resource
 ## and unit the UI shows as a glyph with a floating tooltip.
 var resource_icons: Dictionary = {}
@@ -465,6 +468,9 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/chart_palette.csv", ["key", "color"],
 			func(r): chart_palette[r["key"]] = r["color"]):
+		return false
+	if not _load_if_present(dir + "/ui_fonts.csv", ["scheme", "role", "path"],
+			func(r): ui_fonts["%d:%s" % [int(float(r["scheme"])), r["role"]]] = r):
 		return false
 	if not _load_if_present(dir + "/resource_icons.csv", ["key", "label", "icon", "tooltip"],
 			func(r): resource_icons[r["key"]] = r):

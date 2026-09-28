@@ -66,14 +66,11 @@ const SKILL_MAX := 20.0  # CharacterFactory clamps skills to 0..20
 const TOOL_KINGDOM := GOLD
 const TOOL_PERSONAL := Color("4cc3b0")  # (bright: 13897b)
 
-## OFL-licensed faces (assets/fonts/, licenses alongside), divided by job
-## (owner requests 2026-09-13):
-## - TITLE: UnifrakturMaguntia (blackletter) for the game title, headers and
-##   the kingdom names on the map — style_header, map_label_font.
-## - TAB: Cinzel Decorative on tab buttons — style_tab.
-## - CONTENT: Cinzel for everything else — dialogue, menu and setting options,
-##   long text — the theme's default font.
-## - The scale bar and the heraldic shield are Cinzel as well (display_font).
+## OFL-licensed faces (assets/fonts/, licenses alongside), divided by job.
+## Which file plays which role is data/ui_fonts.csv (see role_font below); the
+## owner's pick of 2026-09-28 is Crimson Pro for everything read, Alegreya SC
+## for headers and tabs, and the blackletter only for titles. These paths are
+## the 2026-09-13 set (scheme 0), used only when no table is loaded.
 const TITLE_FONT_PATH := "res://assets/fonts/UnifrakturMaguntia-Book.ttf"
 const TAB_FONT_PATH := "res://assets/fonts/CinzelDecorative-Regular.ttf"
 const CONTENT_FONT_PATH := "res://assets/fonts/Cinzel.ttf"
@@ -325,13 +322,96 @@ static func backdrop() -> Texture2D:
 	_art_cache[key] = tex
 	return tex
 
-## Headers, the game title.
+## The faces are data (owner 2026-09-28, after the UI critique): balance
+## ui_font_scheme picks a scheme of data/ui_fonts.csv, one row per role —
+## title (the game's name, window and screen titles, the map's kingdom names),
+## header (section headers, names, the date), body (the theme default and the
+## transcript) with its bold and italic, tab, display (the scale bar, ruler,
+## landmark metres, shield letters). The constants above are the fallback when
+## no table is loaded (scheme 0 restates them).
+const FONT_DIR := "res://assets/fonts/"
+const _FALLBACK_FONTS := {
+	"title": TITLE_FONT_PATH, "header": TITLE_FONT_PATH, "body": CONTENT_FONT_PATH,
+	"body_bold": CONTENT_FONT_PATH, "body_italic": CONTENT_FONT_PATH,
+	"tab": TAB_FONT_PATH, "display": MAP_FONT_PATH,
+}
+
+## The ui_fonts.csv row for a role under the current scheme, or {}.
+static func font_row(role: String) -> Dictionary:
+	if Game == null or Game.data == null or Game.data.ui_fonts.is_empty():
+		return {}
+	var scheme := 0
+	if Game.data.balance.has("ui_font_scheme"):
+		scheme = int(Game.data.bal("ui_font_scheme"))
+	return Game.data.ui_fonts.get("%d:%s" % [scheme, role], {})
+
+## The face for a role: the file, with its weight, embolden, slant and
+## tracking applied as a FontVariation when the row asks for any.
+static func role_font(role: String) -> Font:
+	var row := font_row(role)
+	if row.is_empty():
+		if role == "body_bold":
+			return _varied(_load_font(CONTENT_FONT_PATH), "fb:bold", 0, 0.7, 0.0, 0)
+		if role == "body_italic":
+			return _varied(_load_font(CONTENT_FONT_PATH), "fb:italic", 0, 0.0, 0.2, 0)
+		return _load_font(String(_FALLBACK_FONTS.get(role, CONTENT_FONT_PATH)))
+	var path := FONT_DIR + String(row["path"])
+	var weight := int(float(row.get("weight", "0")))
+	var embolden := float(row.get("embolden", "0"))
+	var slant := float(row.get("slant", "0"))
+	var spacing := int(float(row.get("spacing", "0")))
+	var features := String(row.get("features", ""))
+	var key := "%s|%d|%s|%s|%d|%s" % [path, weight, embolden, slant, spacing, features]
+	return _varied(_load_font(path), key, weight, embolden, slant, spacing, features)
+
+## `features` is OpenType feature tags joined by | turned on (lnum: lining
+## figures, so a 0 in a column of numbers never reads as an o).
+static func _varied(base: Font, key: String, weight: int, embolden: float,
+		slant: float, spacing: int, features: String = "") -> Font:
+	if base == null or (weight == 0 and embolden == 0.0 and slant == 0.0
+			and spacing == 0 and features == ""):
+		return base
+	if _art_cache.has(key):
+		return _art_cache[key]
+	var font := FontVariation.new()
+	font.base_font = base
+	if weight > 0:
+		font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
+	font.variation_embolden = embolden
+	if slant != 0.0:
+		font.variation_transform = Transform2D(Vector2(1.0, 0.0), Vector2(slant, 1.0), Vector2.ZERO)
+	font.spacing_glyph = spacing
+	var tags := {}
+	for tag in features.split("|", false):
+		tags[TextServerManager.get_primary_interface().name_to_tag(tag)] = 1
+	font.opentype_features = tags
+	_art_cache[key] = font
+	return font
+
+## A role's size multiplier (blackletter reads a size small).
+static func role_scale(role: String) -> float:
+	var row := font_row(role)
+	if row.is_empty():
+		return TITLE_SIZE_SCALE if role == "title" or role == "header" else 1.0
+	return float(row.get("size_scale", "1"))
+
+static func _role_title_case(role: String) -> bool:
+	var row := font_row(role)
+	if row.is_empty():
+		return role == "title" or role == "header"
+	return int(float(row.get("title_case", "0"))) == 1
+
+## Window and screen titles, the game's name.
 static func title_font() -> Font:
-	return _load_font(TITLE_FONT_PATH)
+	return role_font("title")
+
+## Section headers, names, the date.
+static func header_font() -> Font:
+	return role_font("header")
 
 ## Tab buttons.
 static func tab_font() -> Font:
-	return _load_font(TAB_FONT_PATH)
+	return role_font("tab")
 
 ## The kingdom names lettered across the map.
 static func map_label_font() -> Font:
@@ -339,47 +419,22 @@ static func map_label_font() -> Font:
 
 ## Dialogue, options, long text — and the theme default.
 static func content_font() -> Font:
-	return _load_font(CONTENT_FONT_PATH)
+	return role_font("body")
 
-## The shipped Cinzel file is one weight, so bold is an emboldened variation.
 static func content_bold_font() -> Font:
-	var key := "bold:" + CONTENT_FONT_PATH
-	if _art_cache.has(key):
-		return _art_cache[key]
-	var base := content_font()
-	var font: Font = null
-	if base != null:
-		var heavy := FontVariation.new()
-		heavy.base_font = base
-		heavy.variation_embolden = 0.7
-		font = heavy
-	_art_cache[key] = font
-	return font
+	return role_font("body_bold")
 
-## Cinzel has no italic; the transcript's narration is set in a slanted
-## variation of it.
 static func content_italic_font() -> Font:
-	var key := "italic:" + CONTENT_FONT_PATH
-	if _art_cache.has(key):
-		return _art_cache[key]
-	var base := content_font()
-	var font: Font = null
-	if base != null:
-		var slanted := FontVariation.new()
-		slanted.base_font = base
-		slanted.variation_transform = Transform2D(Vector2(1.0, 0.0), Vector2(0.2, 1.0), Vector2.ZERO)
-		font = slanted
-	_art_cache[key] = font
-	return font
+	return role_font("body_italic")
 
 ## What text drawn by hand uses: numbers on map counters and badges, chart
 ## labels. The content face, so they match the panels around them.
 static func body_font() -> Font:
 	return content_font()
 
-## The scale bar's distance and the heraldic shield's letters — Cinzel.
+## The scale bar's distance, the ruler, landmark metres, the shield's letters.
 static func display_font() -> Font:
-	return _load_font(MAP_FONT_PATH)
+	return role_font("display")
 
 static func _load_font(path: String) -> Font:
 	if _art_cache.has(path):
@@ -405,8 +460,8 @@ static func chart_color(key: String) -> Color:
 		hex = String(Game.data.chart_palette.get("cat_%d" % n, ""))
 	return Color(hex) if hex != "" else TEXT_MUTED
 
-static func title_size(size: int) -> int:
-	return int(round(float(size) * TITLE_SIZE_SCALE))
+static func title_size(size: int, role: String = "header") -> int:
+	return int(round(float(size) * role_scale(role)))
 
 ## Blackletter capitals set in a row cannot be read ("TEMPER OF THE REALM"
 ## came out as a picket fence, 2026-09-13), so text that is ALL capitals when
@@ -424,15 +479,25 @@ static func readable_title(text: String) -> String:
 		words[i] = w.substr(0, 1).to_upper() + w.substr(1)
 	return " ".join(words)
 
-## Header treatment: the title face in the accent (or the given color) - used
-## for speaker names, dates, section headers, the menu title.
+## Title treatment: the title face (blackletter) in the accent — the game's
+## name, window and screen titles only (owner 2026-09-28: a blackletter on
+## every header was the template look).
+static func style_title(label: Label, size: int, color: Color = GOLD) -> void:
+	_style_role(label, size, color, "title")
+
+## Header treatment: the header face in the accent (or the given color) — for
+## speaker names, dates, section headers, card titles.
 static func style_header(label: Label, size: int, color: Color = GOLD) -> void:
+	_style_role(label, size, color, "header")
+
+static func _style_role(label: Label, size: int, color: Color, role: String) -> void:
 	label.add_theme_color_override("font_color", color)
-	label.add_theme_font_size_override("font_size", title_size(size))
-	var font := title_font()
+	label.add_theme_font_size_override("font_size", title_size(size, role))
+	var font := role_font(role)
 	if font != null:
 		label.add_theme_font_override("font", font)
-		label.text = readable_title(label.text)
+		if _role_title_case(role):
+			label.text = readable_title(label.text)
 
 ## Tab treatment (owner 2026-09-13): tab buttons read in Cinzel Decorative.
 ## `pad` narrows the chip's side padding for a strip that must hold many
@@ -473,9 +538,10 @@ static func build_theme() -> Theme:
 	# The transcript is a RichTextLabel, whose ink is NOT the Label colour:
 	# left unset it was Godot's default white (owner report 2026-09-13).
 	theme.set_color("default_color", "RichTextLabel", TEXT_SOFT)
-	theme.set_font_size("normal_font_size", "RichTextLabel", DIALOGUE_FONT_SIZE)
-	theme.set_font_size("bold_font_size", "RichTextLabel", DIALOGUE_FONT_SIZE)
-	theme.set_font_size("italics_font_size", "RichTextLabel", DIALOGUE_FONT_SIZE)
+	var body_px := int(round(DIALOGUE_FONT_SIZE * role_scale("body")))
+	theme.set_font_size("normal_font_size", "RichTextLabel", body_px)
+	theme.set_font_size("bold_font_size", "RichTextLabel", body_px)
+	theme.set_font_size("italics_font_size", "RichTextLabel", body_px)
 	# Floating tooltips (user request 2026-09-09: icons explain themselves on
 	# hover) in the same chip chrome as everything else.
 	theme.set_stylebox("panel", "TooltipPanel", chip_style(PANEL_BG, BORDER_GOLD))
@@ -503,5 +569,5 @@ static func build_theme() -> Theme:
 		theme.set_font("normal_font", "RichTextLabel", body)
 		theme.set_font("bold_font", "RichTextLabel", content_bold_font())
 		theme.set_font("italics_font", "RichTextLabel", content_italic_font())
-	theme.default_font_size = BODY_FONT_SIZE
+	theme.default_font_size = int(round(BODY_FONT_SIZE * role_scale("body")))
 	return theme
