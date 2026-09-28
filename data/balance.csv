@@ -128,6 +128,14 @@ ui_purse_label_w_px,64,UI: the width the purse rows' names take so the three poo
 ui_manor_card_rows,1,"UI: 1 lays the manor card's facts out as named rows in the sections of data/manor_card_sections.csv (owner 2026-09-28, after the UI critique: an icon grid of truncated values had to be hovered to be read); 0 is the 2026-09-14 icon grid"
 ui_manor_row_label_px,96,UI: the width a named row's name takes on the manor card (design px); the value fills the rest right-aligned
 ui_manor_row_icons,1,UI: 1 keeps each named row's art on the manor card; 0 is the name and value alone
+ui_command_style,1,"UI: 1 sets every COMMAND button (a verb the player gives: Close, Ask the Council, Wave Them On) in the tab's small capitals and title case (owner 2026-09-28, second critique: three casing rules on one screen); options and replies the player says stay sentences in the book face. 0 leaves each button as written"
+ui_menu_page_dim,0.3,"UI: the title screen's painted PAPER is drawn at this brightness (menu_page.gdshader: pale unsaturated pixels only), the menu a leather window over it (owner 2026-09-28, second critique: a bright parchment title screen before a dark-leather game, the blackletter title low-contrast on cream); 1 is the page as painted"
+ui_menu_ink_dim,0.85,"UI: the title page's inked, coloured figures keep this share of their brightness (a flat dim of the whole page read as a muddy veil, critic 2026-09-28)"
+ui_menu_page_warm,0.55,"UI: the dimmed title page's candle warmth — its blue drawn at this share of the red, its green halfway (1 is a neutral grey dim, which read as dirty)"
+ui_manor_painting_aspect,2.0,"UI: the manor card's painting is cut to a band this wide to 1 high (owner 2026-09-28, second critique: at a third of the card, a third of it bare paper, the facts fell below the fold); the paintings are 5:4, so 2.0 keeps the middle 62%"
+ui_manor_painting_focus_y,0.58,UI: where the band's middle lies down the painting (0 top .. 1 bottom); the estates stand low in their paintings (measured 0.30-0.85 of the height)
+ui_manor_painting_max_share,0.25,UI: the manor card's painting never takes more than this share of the card's height (was a third; owner 2026-09-14)
+ui_manor_painting_fade_px,0,"UI: how deep the manor card painting's edges fade into the card (design px); 0 frames it in a gilt hairline like the audience portrait instead (2026-09-28: a 10 px fade in the card's colour read as a dark rim round a glowing photo)"
 ui_nav_grouped,1,"UI: 1 groups the bottom bar (map lenses and the ruler left / screens right / a gold rule between) and draws its tabs as words with a gold underline rather than boxes, and frames the news bar with an empty-state line (owner 2026-09-28, after the UI critique); 0 is one row of boxed tabs"
 ui_council_button,1,"UI: 1 makes ENTER THE COUNCIL the screen's one primary button, level, over the map's top-right corner; 0 is the upright handle on the right edge (user ruling 2026-09-09)"
 ui_show_placeholder_tabs,1,UI: 0 leaves tabs whose page is still a placeholder (BottomBar.PLACEHOLDER_TABS: WAR ROOM) out of the bottom bar
@@ -267,7 +275,9 @@ map3d_border_halo_px,3.6,"3D MAP borders: the pale halo under the ink line, scre
 map3d_border_halo_alpha,0,3D MAP borders: the halo's opacity — Phase 0 2026-09-24: was 0.7 — linear blending made the pale halo a glowing tray
 map3d_border_halo_soft,0.6,"3D MAP borders: the halo's soft edge (border_line.gdshader edge_soft, a share of its half-width)"
 map3d_hover_border_width_px,3.5,"3D MAP hover (owner 2026-09-18): the hovered kingdom's live outline, in the border's own ink (political_palette map3d_border) at this width in screen px — the 2D map's wider hover ribbon; the plain border is map3d_border_width_px"
-map3d_manor_tint,0.8,"3D MAP MANORS (owner 2026-09-19; ECONOMY folded into it): how far the ground's albedo mixes toward its manor's ManorPalette colour under a theme (Map3DGroundTint, the patched Terrain3D shader) — the colour is lit by the relief and the sun like the ground; 0 without a theme"
+map3d_manor_tint,0.6,"3D MAP MANORS (owner 2026-09-19; ECONOMY folded into it): how far the ground's albedo mixes toward its manor's ManorPalette colour under a theme (Map3DGroundTint, the patched Terrain3D shader) — the colour is lit by the relief and the sun like the ground; 0 without a theme"
+map_manor_saturation,0.75,"MANORS: every house colour's saturation is scaled by this before it washes the ground (ManorPalette.house_color; owner 2026-09-28, second critique: the pastel pink / lemon / cyan read as highlighter over the photographic ground); 1 is the colours as the palette gives them"
+map_manor_value,0.8,"MANORS: every house colour's value (brightness) is scaled by this after map_manor_saturation — a tincture is deeper than a pastel; 1 is the palette's own"
 map3d_heat_tint,0.85,"3D MAP HEIGHTS (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §4): how far the ground's albedo mixes toward the height ramp (terrain_palette heat_1..6 over 0..elevation_m_per_unit x (100 - elevation_sea_level) m) — lit by the relief like the ground"
 map3d_furrow_m,9.0,"3D MAP fields (owner 2026-09-19): the furrows' spacing in metres, drawn by the patched terrain shader along each estate's strips from the bake's field map (bake/fields.png) — only on sown ground, and faded out before their spacing falls under ~3 screen px"
 map3d_furrow_depth,0.14,3D MAP fields: how far a furrow darkens the field (0 = none)
@@ -511,7 +521,7 @@ map3d_courier_anim_rate,2.5,"the courier's MARCH clip playback rate — a gallop
 map3d_courier_route_px,1.2,"a courier's road still ahead: dashed, in the realm's colour, finer than a march's map3d_unit_route_px (Map3DHudCouriers)"
 map3d_courier_pending_alpha,0.55,"an order still on the road: its route drawn dotted at this share of the realm colour's opacity, an envelope in its ring"
 map3d_weather_view_m,60000,"the weather marks show only while the camera is nearer than this (world metres)"
-map3d_weather_icon_px,18,"a weather mark's size in design px"
+map3d_weather_icon_px,13,"a weather mark's size in design px"
 missive_keep_per_column,40,"spec 2026-09-28 §1: letters kept per board column; the oldest leaves when one more arrives"
 spy_radius_km,25,a spy counts the troops within this distance of his point
 spy_credible_threshold,500,a quality roll (0..999 after spy_difficulty) at or above this files the report as highly credible; below is rumour

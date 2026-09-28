@@ -42,6 +42,7 @@ func _ready() -> void:
 	var close := Button.new()
 	close.name = "CloseButton"
 	close.text = "CLOSE"
+	UiPalette.command_button(close)
 	close.focus_mode = Control.FOCUS_NONE
 	close.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	close.offset_left = -140.0

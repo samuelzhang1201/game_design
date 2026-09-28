@@ -50,6 +50,8 @@ var _actions: VBoxContainer
 ## with the whole in each tooltip, and its output a month good by good.
 var _painting_box: Control
 var _painting: TextureRect
+## The painting's own texture; `_painting` shows a band of it (_fit_painting).
+var _painting_source: Texture2D
 var _stats: GridContainer
 var _rates: VBoxContainer
 var _stat_cells: Dictionary = {}
@@ -113,6 +115,15 @@ func _ready() -> void:
 	_painting.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_painting.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_painting_box.add_child(_painting)
+	# Its paper edges fade into the card (owner 2026-09-28, second critique:
+	# a cream rectangle on dark leather was a hard-edged tray).
+	var fade := Control.new()
+	fade.name = "PaintingFade"
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fade.draw.connect(func() -> void: _draw_painting_fade(fade))
+	fade.resized.connect(fade.queue_redraw)
+	_painting_box.add_child(fade)
 	resized.connect(_fit_painting)
 	# The column is 120 design px wide and no taller than the screen, so a
 	# full town card does not fit: the body scrolls and ASK / CLOSE stay
@@ -208,7 +219,7 @@ func _ready() -> void:
 	_ask.name = "DetailAsk"
 	_ask.text = "ASK THE COUNCIL"
 	_ask.focus_mode = Control.FOCUS_NONE
-	_ask.add_theme_font_size_override("font_size", 14)
+	UiPalette.command_button(_ask, 14)
 	_ask.pressed.connect(func() -> void: ask_requested.emit(_ask_text))
 	_ask.visible = false
 	col.add_child(_ask)
@@ -216,7 +227,7 @@ func _ready() -> void:
 	_close.name = "DetailClose"
 	_close.text = "CLOSE"
 	_close.focus_mode = Control.FOCUS_NONE
-	_close.add_theme_font_size_override("font_size", 14)
+	UiPalette.command_button(_close, 14)
 	_close.pressed.connect(func() -> void:
 		_close_panel()
 		closed.emit())
@@ -398,7 +409,7 @@ func show_card(card: Dictionary) -> void:
 		host.name = "TheHost"
 		host.text = "The Host — all regiments"
 		host.focus_mode = Control.FOCUS_NONE
-		host.add_theme_font_size_override("font_size", 12)
+		UiPalette.command_button(host, 12)
 		host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		host.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		host.pressed.connect(func() -> void: host_requested.emit())
@@ -470,6 +481,7 @@ func show_card(card: Dictionary) -> void:
 			button.text = String(a["label"]).get_slice(" from ", 0)
 			if not button.disabled:
 				button.tooltip_text = String(a["label"])
+		UiPalette.command_button(button)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		# The column's width is fixed (CLAUDE.md invariant 10): a long
 		# order wraps rather than pushing the column over the map.
@@ -634,7 +646,7 @@ func _add_build_menu(builds: Array) -> void:
 	go.name = "BuildButton"
 	go.text = "BUILD"
 	go.focus_mode = Control.FOCUS_NONE
-	go.add_theme_font_size_override("font_size", 12)
+	UiPalette.command_button(go, 12)
 	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sync := func(index: int) -> void:
 		var chosen: Dictionary = menu.get_item_metadata(index) if index >= 0 else {}
@@ -722,6 +734,7 @@ func _clear() -> void:
 	_build_button = null
 	_painting_box.visible = false
 	_painting.texture = null
+	_painting_source = null
 	_hint.visible = false
 	_hint.text = ""
 	_preview.visible = false
@@ -731,17 +744,62 @@ func _clear() -> void:
 ## disk; the box is hidden otherwise.
 func _show_painting(path: String) -> void:
 	var tex: Texture2D = UiPalette.load_art(path) if path != "" else null
+	_painting_source = tex
 	_painting.texture = tex
 	_painting_box.visible = tex != null
 	_fit_painting()
 
 
-## A third of the card's height (owner 2026-09-14), never so small the
-## picture is a strip.
+## Four soft edges in the card's own colour, `ui_manor_painting_fade_px` deep.
+func _draw_painting_fade(on: Control) -> void:
+	var d := Game.data.bal("ui_manor_painting_fade_px")
+	var r := Rect2(Vector2.ZERO, on.size)
+	if d <= 0.0:
+		# Framed like the audience window's portrait: a gilt hairline.
+		on.draw_rect(r.grow(-0.5), UiPalette.BORDER_GOLD, false, 1.0)
+		return
+	var solid := UiPalette.PANEL_BG
+	var clear := Color(solid, 0.0)
+	var quads := [
+		[r.position, Vector2(r.end.x, r.position.y), Vector2(r.end.x, r.position.y + d), Vector2(r.position.x, r.position.y + d), true],
+		[Vector2(r.position.x, r.end.y - d), Vector2(r.end.x, r.end.y - d), r.end, Vector2(r.position.x, r.end.y), false],
+	]
+	for q: Array in quads:
+		var top_solid: bool = q[4]
+		on.draw_polygon(PackedVector2Array([q[0], q[1], q[2], q[3]]), PackedColorArray(
+			[solid, solid, clear, clear] if top_solid else [clear, clear, solid, solid]))
+	on.draw_polygon(PackedVector2Array([r.position, Vector2(r.position.x + d, r.position.y),
+		Vector2(r.position.x + d, r.end.y), Vector2(r.position.x, r.end.y)]),
+		PackedColorArray([solid, clear, clear, solid]))
+	on.draw_polygon(PackedVector2Array([Vector2(r.end.x - d, r.position.y), Vector2(r.end.x, r.position.y),
+		r.end, Vector2(r.end.x - d, r.end.y)]), PackedColorArray([clear, solid, solid, clear]))
+
+
+## The painting cut to its scene (owner 2026-09-28, second critique: a third
+## of the card, a third of it bare paper, pushed the facts below the fold):
+## a band `ui_manor_painting_aspect` wide to 1 high, centred
+## `ui_manor_painting_focus_y` down the picture where the estates stand, and
+## never more than `ui_manor_painting_max_share` of the card. Was a third of
+## the card's height (owner 2026-09-14).
 func _fit_painting() -> void:
 	if _painting_box == null:
 		return
-	_painting_box.custom_minimum_size = Vector2(0.0, maxf(size.y / 3.0, 72.0))
+	var aspect := maxf(Game.data.bal("ui_manor_painting_aspect"), 0.5)
+	var w := _painting_box.size.x if _painting_box.size.x > 0.0 else size.x
+	var h := minf(w / aspect, size.y * Game.data.bal("ui_manor_painting_max_share"))
+	_painting_box.custom_minimum_size = Vector2(0.0, maxf(h, 72.0))
+	if _painting_source == null:
+		return
+	var tw := float(_painting_source.get_width())
+	var th := float(_painting_source.get_height())
+	var band := minf(th, tw / aspect)
+	var y0 := clampf(th * Game.data.bal("ui_manor_painting_focus_y") - band * 0.5, 0.0, th - band)
+	var atlas := _painting.texture as AtlasTexture
+	if atlas == null or atlas.atlas != _painting_source:
+		atlas = AtlasTexture.new()
+		atlas.atlas = _painting_source
+		_painting.texture = atlas
+	atlas.region = Rect2(0.0, y0, tw, band)
 
 
 ## Two facts a row: an icon (its tooltip the whole fact) and a short value
@@ -811,6 +869,11 @@ func _fill_stat_rows(stats: Array, rates: Array) -> void:
 		var sec: Dictionary = sections[i]
 		var mine: Array = by_section[i]
 		var show_rates: bool = sec["rates"] and not rates.is_empty()
+		if show_rates:
+			# The goods rows carry what these rows would repeat (owner
+			# 2026-09-28): each good's tooltip names its worth and pool.
+			var dropped: Array = sec.get("drop_if_rates", [])
+			mine = mine.filter(func(st: Dictionary) -> bool: return not dropped.has(String(st["key"])))
 		if mine.is_empty() and not show_rates:
 			continue
 		var head := Label.new()
@@ -819,19 +882,21 @@ func _fill_stat_rows(stats: Array, rates: Array) -> void:
 		head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		UiPalette.style_section(head, 12)
 		_stats.add_child(head)
+		var per_month: bool = sec.get("per_month", false)
 		for st: Dictionary in mine:
-			_stats.add_child(_stat_row(st))
+			_stats.add_child(_stat_row(st, per_month))
 		if show_rates:
 			var box := VBoxContainer.new()
 			box.name = "SectionRates"
 			box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			box.add_theme_constant_override("separation", 2)
 			_stats.add_child(box)
-			_fill_rates(rates, box, false)
+			_fill_rates(rates, box, false, per_month)
 
 
-## One named fact: art, name, value right-aligned.
-func _stat_row(st: Dictionary) -> HBoxContainer:
+## One named fact: art, name, value right-aligned in tabular figures. Under a
+## heading that says it is a month's (`per_month`), the value drops its /mo.
+func _stat_row(st: Dictionary, per_month := false) -> HBoxContainer:
 	var key := String(st["key"])
 	var tip := String(st["tooltip"])
 	var row := HBoxContainer.new()
@@ -861,7 +926,8 @@ func _stat_row(st: Dictionary) -> HBoxContainer:
 	row.add_child(name_l)
 	var value := Label.new()
 	value.name = "Stat_" + key
-	value.text = String(st["text"])
+	value.text = String(st["text"]).trim_suffix("/mo") if per_month else String(st["text"])
+	value.add_theme_font_override("font", UiPalette.figures_font())
 	value.add_theme_font_size_override("font_size", 13)
 	value.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -878,8 +944,10 @@ func _stat_row(st: Dictionary) -> HBoxContainer:
 ## What the manor makes a month (owner 2026-09-14: the rate of every
 ## product): one row a good — its art in its category's colour, its name,
 ## and "+N / mo", the tooltip adding what the units are worth and to which
-## pool they go.
-func _fill_rates(rates: Array, into: VBoxContainer = null, headed := true) -> void:
+## pool they go. Under a heading that says it is a month's (`per_month`) the
+## rate is the bare figure in the same ink and face as the rows above it
+## (owner 2026-09-28: "217/mo" beside a green "+217 / mo" was two formats).
+func _fill_rates(rates: Array, into: VBoxContainer = null, headed := true, per_month := false) -> void:
 	if rates.is_empty():
 		return
 	var target := into if into != null else _rates
@@ -906,7 +974,7 @@ func _fill_rates(rates: Array, into: VBoxContainer = null, headed := true) -> vo
 			pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-			pic.custom_minimum_size = Vector2(STAT_ICON_PX, STAT_ICON_PX)
+			pic.custom_minimum_size = Vector2(STAT_ICON_PX, STAT_ICON_PX) - (Vector2(2, 2) if per_month else Vector2.ZERO)
 			if coloured == null:
 				pic.modulate = ManorBadges.tag_color(Game.data, String(r.get("tag", "")))
 			pic.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -919,7 +987,9 @@ func _fill_rates(rates: Array, into: VBoxContainer = null, headed := true) -> vo
 		var name_l := Label.new()
 		name_l.text = String(r["label"])
 		name_l.add_theme_font_size_override("font_size", 13)
-		name_l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+		# Under a per-month heading the good is one more named row: the rows'
+		# muted name and their art's size, so the column lines up.
+		name_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED if per_month else UiPalette.TEXT_SOFT)
 		name_l.clip_text = true
 		name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -928,9 +998,14 @@ func _fill_rates(rates: Array, into: VBoxContainer = null, headed := true) -> vo
 		row.add_child(name_l)
 		var rate_l := Label.new()
 		rate_l.name = "Rate"
-		rate_l.text = "+%d / mo" % int(r["units"])
+		if per_month:
+			rate_l.text = UiPalette.format_int(int(r["units"]))
+			rate_l.add_theme_font_override("font", UiPalette.figures_font())
+			rate_l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+		else:
+			rate_l.text = "+%d / mo" % int(r["units"])
+			rate_l.add_theme_color_override("font_color", UiPalette.good_color())
 		rate_l.add_theme_font_size_override("font_size", 13)
-		rate_l.add_theme_color_override("font_color", UiPalette.good_color())
 		rate_l.mouse_filter = Control.MOUSE_FILTER_PASS
 		rate_l.tooltip_text = tip
 		row.add_child(rate_l)
@@ -1048,7 +1123,7 @@ func painting_box() -> Control:
 	return _painting_box
 
 func painting_texture() -> Texture2D:
-	return _painting.texture
+	return _painting_source
 
 func slots_row() -> HBoxContainer:
 	return _slots

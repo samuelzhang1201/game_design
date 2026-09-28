@@ -42,6 +42,14 @@ static func house_color(repo: DataRepository, state: GameState, cell_id: int) ->
 	if owner(repo, state, cell_id) != mine:
 		c = c.lerp(MapPalette.named(repo, "manor_pale"), repo.bal("map_manor_foreign_pale"))
 	c = _shaded(repo, state, cell_id, c)
+	# Heraldic, not pastel (owner 2026-09-28, second critique: pink, lemon and
+	# cyan lay over the photographic ground): every house's hue kept, its
+	# saturation scaled by map_manor_saturation and its value by
+	# map_manor_value (a tincture is deeper than a pastel).
+	if repo.balance.has("map_manor_saturation"):
+		c.s = clampf(c.s * repo.bal("map_manor_saturation"), 0.0, 1.0)
+	if repo.balance.has("map_manor_value"):
+		c.v = clampf(c.v * repo.bal("map_manor_value"), 0.0, 1.0)
 	c.a = repo.bal("map_manor_alpha")
 	return c
 

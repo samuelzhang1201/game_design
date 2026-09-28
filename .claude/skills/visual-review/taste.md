@@ -59,6 +59,32 @@ add it here as a principle with its why — not as a changelog entry.
   it is a month's ("/mo"). The art stays — it teaches the vocabulary the map
   and top bar use.
 
+  *Amended 2026-09-28 (second critique, owner approved): under a section
+  heading that already says "Each Month" the rows drop their "/mo" and the
+  goods their green "+" — one format, one ink, tabular figures so a
+  right-aligned column reads straight down. A row that only repeats another
+  (a pool's worth beside the good that fills it) goes; its number lives in the
+  good's tooltip. A rank is a name ("Great farm"), never "3 of 3".*
+- **A card's picture is its scene, not its paper** (owner 2026-09-28,
+  approving the recommendation). The estate painting is cut to a 2:1 band
+  centred where the estate stands, never more than a quarter of the card, in
+  a gilt hairline like the audience portrait; a third of the card with a third
+  of it bare cream pushed the facts below the fold. A 10 px fade in the
+  card's colour read as a dark rim round a glowing photo.
+
+## Commands
+- **A command is small capitals in title case; a thing the player SAYS is a
+  sentence in the book face** (owner 2026-09-28, approving the
+  recommendation after "Start Game", "ASK THE COUNCIL" and "Wave them on" sat
+  on one screen). `UiPalette.command_button` sets every verb button in the
+  tab face and title case whatever case it was written in; replies, event
+  options and letters stay sentences.
+- **The title screen is the game's leather by candlelight.** The painted
+  page keeps its figures' colour and value; only its pale paper darkens
+  (a flat multiply over the whole page read as a muddy veil, the critic); the
+  menu is a leather window with the ornament, its one primary Start button,
+  and no footer line of key hints.
+
 ## Navigation
 - **One primary action, and controls grouped by kind** (owner 2026-09-28,
   choosing the grouped bar and the council button). ENTER THE COUNCIL, the
@@ -272,6 +298,16 @@ add it here as a principle with its why — not as a changelog entry.
   the map's own ground, like the houses ("no base plates"); whose piece it
   is, is the headcount chip's job. Do not bring a base back without the
   owner asking.
+
+- **The MANORS wash is a tincture, not a highlighter** (owner 2026-09-28,
+  approving the recommendation). Pastel pink, lemon and cyan at 0.8 over the
+  photographic ground read as marker pen; each house keeps its hue at
+  `map_manor_saturation` 0.75 and `map_manor_value` 0.8, mixed
+  `map3d_manor_tint` 0.6, so the relief and fields read through it. Desaturating
+  alone only made paler pastels — depth (value) is what makes a tincture.
+- **A map mark is ink, not a badge.** The weather mark is a bare glyph in
+  dimmed parchment over a soft shadow — a black disc with a white glyph, and
+  then a gold-rimmed leather disc, were both stickers on the ground.
 
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols

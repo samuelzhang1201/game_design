@@ -21,7 +21,7 @@ func test_main_menu_has_start_load_quit_and_setup_flow() -> void:
 	col.get_node("StartGame").pressed.emit()
 	await wait_frames(1)
 	assert_true(menu.setup_panel().visible)
-	assert_false(col.visible)
+	assert_false(col.is_visible_in_tree(), "the menu window steps aside")
 
 func test_begin_reign_applies_chosen_identity() -> void:
 	var r := _root()

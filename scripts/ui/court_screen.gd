@@ -58,7 +58,7 @@ func _ready() -> void:
 	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
 	_handle.pressed.connect(enter_council)
 	add_child(_handle)
-	%LeaveButton.add_theme_font_size_override("font_size", 14)
+	UiPalette.command_button(%LeaveButton, 14)
 	%LeaveButton.pressed.connect(leave_council)
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the column's own content returns when it leaves.

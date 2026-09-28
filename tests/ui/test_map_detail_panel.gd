@@ -186,7 +186,7 @@ func test_a_manor_card_buys_the_manor_from_its_button() -> void:
 	assert_eq(buttons.size(), 2, "BUY and Send a spy, seizing off")
 	var buy := buttons[0] as Button
 	assert_false(buy.disabled)
-	assert_true(buy.text.begins_with("BUY"))
+	assert_true(buy.text.begins_with("Buy"), "a command, in title case (ui_command_style)")
 	buy.pressed.emit()
 	await wait_frames(1)
 	assert_true(MapManors.is_crowns(Game.data, Game.state, cell), "the order ran")
@@ -199,7 +199,7 @@ func test_a_manor_card_buys_the_manor_from_its_button() -> void:
 	var after: Array[String] = []
 	for b in p.actions_box().get_children():
 		after.append((b as Button).text.get_slice(" ", 0) if b is Button else String(b.name))
-	assert_has(after, "SELL")
+	assert_has(after, "Sell")
 	assert_has(after, "BuildRow", "the buildings are one dropdown (owner 2026-09-14)")
 
 ## A spy the treasury cannot afford is disabled too (fix round 1, owner
@@ -273,8 +273,8 @@ func test_a_manor_card_shows_its_slots_and_a_build_fills_one() -> void:
 	var hurry: Button = p.actions_box().find_child("MANOR_RUSH_" + code, true, false)
 	assert_not_null(hurry, "a work in progress offers to be hurried")
 	var per_click := int(Game.data.bal("manor_rush_days_per_click"))
-	assert_eq(hurry.text, "HURRY %s — %dg" % [String(row["label"]).to_upper(),
-		per_click * int(Game.data.bal("build_rush_gold_per_day"))])
+	assert_eq(hurry.text, UiPalette.command_text("HURRY %s — %dg" % [String(row["label"]).to_upper(),
+		per_click * int(Game.data.bal("build_rush_gold_per_day"))]))
 	assert_false(hurry.disabled)
 	hurry.pressed.emit()
 	await wait_frames(1)
@@ -328,8 +328,13 @@ func test_a_manor_card_shows_its_painting_its_facts_as_icons_and_its_output_rate
 	assert_string_contains(path, "res://assets/manors/paint/", "every manor names its painting")
 	assert_eq(p.painting_box().visible, UiPalette.load_art(path) != null, "shown when the art is installed")
 	if p.painting_box().visible:
-		assert_almost_eq(p.painting_box().custom_minimum_size.y, maxf(p.size.y / 3.0, 72.0), 1.0,
-			"a third of the card")
+		# Cut to its scene (2026-09-28): a band ui_manor_painting_aspect wide
+		# to 1 high, never over ui_manor_painting_max_share of the card.
+		var h := p.painting_box().custom_minimum_size.y
+		assert_lte(h, maxf(p.size.y * Game.data.bal("ui_manor_painting_max_share"), 72.0) + 1.0,
+			"at most its share of the card")
+		assert_almost_eq(h, maxf(minf(p.painting_box().size.x / Game.data.bal("ui_manor_painting_aspect"),
+			p.size.y * Game.data.bal("ui_manor_painting_max_share")), 72.0), 1.0, "its scene's band")
 	assert_eq(p.fields().get_child_count(), 0, "a manor has no text rows, only icons")
 	# Named rows in sections (owner 2026-09-28, ui_manor_card_rows): one column.
 	assert_eq(p.stats_grid().columns, 1, "a manor's facts are named rows")
@@ -346,7 +351,8 @@ func test_a_manor_card_shows_its_painting_its_facts_as_icons_and_its_output_rate
 		var row := p.rates_box().find_child("Rate_" + good, true, false)
 		assert_not_null(row, "%s has its rate" % good)
 		if row != null:
-			assert_eq((row.find_child("Rate", true, false) as Label).text, "+%d / mo" % int(units[good]))
+			# Under "Each Month" the figure alone (2026-09-28: the heading says it).
+			assert_eq((row.find_child("Rate", true, false) as Label).text, UiPalette.format_int(int(units[good])))
 			var icon_path := String(Game.data.goods_icons.get(good, ""))
 			if icon_path != "" and ResourceLoader.exists(icon_path):
 				var pic := row.get_child(0) as TextureRect
@@ -462,7 +468,7 @@ func test_the_buy_button_fits_the_column_and_keeps_its_full_text_as_a_tooltip() 
 			buy = b as Button
 	assert_not_null(buy, "the card offers BUY")
 	assert_false(buy.disabled, "the treasury can pay")
-	assert_true(buy.text.begins_with("BUY"))
+	assert_true(buy.text.begins_with("Buy"), "a command, in title case (ui_command_style)")
 	assert_string_contains(buy.tooltip_text, "from the crown's treasury",
 		"the full line survives as the button's tooltip")
 	var font := buy.get_theme_font("font")

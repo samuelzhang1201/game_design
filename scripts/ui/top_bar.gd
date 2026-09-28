@@ -58,6 +58,7 @@ func _ready() -> void:
 	%EventChip.add_theme_stylebox_override("normal", UiPalette.chip_style())
 	UiPalette.style_header(%EventChip, 14)
 	UiPalette.compact_button(%MenuButton, BUTTON_H, 14, 10.0)
+	UiPalette.command_button(%MenuButton)
 	_art_button(%MenuButton, "menu", true)
 	%MenuButton.pressed.connect(func() -> void: Game.menu_requested.emit())
 	# The clock (owner 2026-09-13): pause, play, 2x, 4x beside the date.

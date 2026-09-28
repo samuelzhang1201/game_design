@@ -12,6 +12,7 @@ func _ready() -> void:
 	%Window.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 20, "window"))
 	UiPalette.style_title(%ReportTitle, 20)
 	%ReportMeta.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	UiPalette.command_button(%Seal)
 	%Seal.pressed.connect(func() -> void:
 		var r: Rect2 = %Window.get_global_rect()
 		visible = false

@@ -168,8 +168,11 @@ static func draw_glyph(ci: CanvasItem, glyph_name: String, c: Vector2, s: float,
 			ci.draw_rect(Rect2(c + Vector2(-3.6, -3.0) * u, Vector2(7.2, 6.0) * u), tint)
 			ci.draw_line(c + Vector2(-3.6, -1.0) * u, c + Vector2(3.6, 1.0) * u, UiPalette.PANEL_BG, 0.8 * u, true)
 		"drop":
-			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -4.0) * u, c + Vector2(2.6, 0.8) * u,
-				c + Vector2(0, 3.8) * u, c + Vector2(-2.6, 0.8) * u]), tint)
+			# A raindrop, round below and pointed above (a lozenge read as a
+			# gem, owner 2026-09-28).
+			ci.draw_circle(c + Vector2(0, 1.4) * u, 2.4 * u, tint)
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -4.2) * u,
+				c + Vector2(2.3, 0.8) * u, c + Vector2(-2.3, 0.8) * u]), tint)
 		"cloud":
 			ci.draw_circle(c + Vector2(-1.8, 0.6) * u, 2.0 * u, tint)
 			ci.draw_circle(c + Vector2(1.0, -0.6) * u, 2.6 * u, tint)

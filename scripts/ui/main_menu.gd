@@ -12,8 +12,10 @@ signal load_requested
 
 ## The arms preview's height, design px.
 const ARMS_PREVIEW_PX := 88.0
+const PAGE_SHADER := preload("res://scripts/ui/shaders/menu_page.gdshader")
 
 var _menu_col: VBoxContainer
+var _menu_card: PanelContainer
 var _setup_panel: PanelContainer
 var _first_name: LineEdit
 var _family_name: LineEdit
@@ -32,26 +34,54 @@ func _ready() -> void:
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	var frame := TextureRect.new()
+	frame.name = "Page"
 	UiPalette.setup_frame(frame)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# The painted page by candlelight (owner 2026-09-28, second critique: a
+	# bright parchment title screen before a dark-leather game): dimmed by
+	# the paper alone (menu_page.gdshader), the menu a leather window over it like the game's own.
+	if Game != null and Game.data != null:
+		var mat := ShaderMaterial.new()
+		mat.shader = PAGE_SHADER
+		mat.set_shader_parameter("paper_dim", Game.data.bal("ui_menu_page_dim"))
+		mat.set_shader_parameter("ink_dim", Game.data.bal("ui_menu_ink_dim"))
+		mat.set_shader_parameter("warm", Game.data.bal("ui_menu_page_warm"))
+		frame.material = mat
 	add_child(frame)
 	_build_menu()
 	_build_setup_panel()
 
 func _build_menu() -> void:
+	# The menu is a floating window, so it wears the window's leather and
+	# ornament (UiPalette.panel_style "window").
+	var card := PanelContainer.new()
+	card.name = "MenuCard"
+	card.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 32, "window"))
+	card.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	card.grow_vertical = Control.GROW_DIRECTION_BOTH
+	card.custom_minimum_size = Vector2(440, 0)
+	add_child(card)
+	_menu_card = card
 	_menu_col = VBoxContainer.new()
 	_menu_col.name = "MenuCol"
 	_menu_col.add_theme_constant_override("separation", 12)
-	_menu_col.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	_menu_col.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_menu_col.grow_vertical = Control.GROW_DIRECTION_BOTH
-	add_child(_menu_col)
+	card.add_child(_menu_col)
 	var title := Label.new()
 	title.text = "Crown and Council"
-	UiPalette.style_title(title, 52)
+	UiPalette.style_title(title, 48)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_menu_col.add_child(title)
-	_menu_col.add_child(_menu_button("Start Game", _open_setup))
+	var rule := HSeparator.new()
+	rule.add_theme_constant_override("separation", 10)
+	_menu_col.add_child(rule)
+	var start := _menu_button("Start Game", _open_setup)
+	# The screen's one primary action; Space takes it at once with the
+	# founding name, said where the player looks for it rather than in a
+	# footer line (owner 2026-09-28: the footer read as a debug hint).
+	UiPalette.primary_button(start, 18)
+	start.tooltip_text = "Or press Space to take the throne at once with the founding name"
+	_menu_col.add_child(start)
 	_menu_col.add_child(_menu_button("Load Game", _on_load_pressed))
 	_menu_col.add_child(_menu_button("Quit", func() -> void: get_tree().quit()))
 	_status = Label.new()
@@ -59,18 +89,13 @@ func _build_menu() -> void:
 	_status.add_theme_font_size_override("font_size", 18)
 	_status.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	_menu_col.add_child(_status)
-	var hint := Label.new()
-	hint.text = "Space: take the throne with the founding name"	
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
-	hint.add_theme_font_size_override("font_size", 16)
-	_menu_col.add_child(hint)
 
 func _menu_button(label: String, handler: Callable) -> Button:
 	var btn := Button.new()
 	btn.name = label.replace(" ", "")
 	btn.text = label
 	btn.focus_mode = Control.FOCUS_NONE
+	UiPalette.command_button(btn)
 	btn.pressed.connect(handler)
 	return btn
 
@@ -80,7 +105,7 @@ func _build_setup_panel() -> void:
 	_setup_panel.name = "SetupPanel"
 	_setup_panel.visible = false
 	_setup_panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.GOLD, 2, 24))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 28, "window"))
 	_setup_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_setup_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_setup_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
@@ -135,12 +160,12 @@ func _field_label(text: String) -> Label:
 	return l
 
 func _open_setup() -> void:
-	_menu_col.visible = false
+	_menu_card.visible = false
 	_setup_panel.visible = true
 
 func _close_setup() -> void:
 	_setup_panel.visible = false
-	_menu_col.visible = true
+	_menu_card.visible = true
 
 func _on_begin_pressed() -> void:
 	Game.player_setup = {

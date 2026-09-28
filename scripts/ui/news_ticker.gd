@@ -67,6 +67,7 @@ func _ready() -> void:
 	_log_button.focus_mode = Control.FOCUS_NONE
 	_log_button.tooltip_text = "What has been heard, newest first"
 	UiPalette.compact_button(_log_button, STRIP_HEIGHT - 8.0, 12, 8.0)
+	UiPalette.command_button(_log_button)
 	_log_button.toggled.connect(func(on: bool) -> void: show_history(on))
 	row.add_child(_log_button)
 	_clip = Control.new()

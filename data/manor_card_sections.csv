@@ -1,5 +1,5 @@
-section,label,keys,rates,notes
-holding,The Holding,manor_owner|manor_people|manor_estate|manor_focus,0,"the manor card's named rows (owner 2026-09-28, balance ui_manor_card_rows): who holds it, how many live on it, what kind of estate and what it works — first, since the card opens on them"
-month,Each Month,manor_tax|manor_strategic|manor_civil,1,"what it pays and ships a month, then every good it makes (rates 1: the card's output rows follow this section's)"
-works,Works and Worth,manor_slots|manor_defence|manor_value|manor_price,0,"what can still be built, what defends it, what it is worth and what its house asks"
-land,The Land,weather_|manor_province|manor_seat|manor_terrain|manor_land|manor_area,0,"where it lies; a key ending in _ matches every key it begins (weather_rain, weather_snow); a stat no section names falls to the last"
+section,label,keys,rates,per_month,drop_if_rates,notes
+holding,The Holding,manor_owner|manor_people|manor_estate|manor_focus,0,0,,"the manor card's named rows (owner 2026-09-28, balance ui_manor_card_rows): who holds it, how many live on it, what kind of estate and what it works — first, since the card opens on them"
+month,Each Month,manor_tax|manor_strategic|manor_civil,1,1,manor_strategic|manor_civil,"what it pays and ships a month, then every good it makes (rates 1: the card's output rows follow this section's). per_month 1: the heading says it is a month's, so the rows drop their /mo and the goods their + (owner 2026-09-28, second critique); drop_if_rates: the pool rows the goods rows already carry (each good's tooltip gives its worth and pool)"
+works,Works and Worth,manor_slots|manor_defence|manor_value|manor_price,0,0,,"what can still be built, what defends it, what it is worth and what its house asks"
+land,The Land,weather_|manor_province|manor_seat|manor_terrain|manor_land|manor_area,0,0,,"where it lies; a key ending in _ matches every key it begins (weather_rain, weather_snow); a stat no section names falls to the last"

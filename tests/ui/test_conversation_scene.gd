@@ -301,7 +301,8 @@ func test_top_bar_and_dossier_reflect_speaker_and_order() -> void:
 	assert_eq(name_label.text, Game.state.characters["char_marshal"].display_name,
 		"the dossier names the speaking minister")
 	var title_label: Label = c.find_child("MinisterTitle", true, false)
-	assert_eq(title_label.text, "MARSHAL", "the dossier shows the seat title")
+	assert_eq(title_label.text, String(Game.data.seats["marshal"]["label"]),
+		"the dossier shows the seat title, in its own case under the name (2026-09-28)")
 	assert_gt(c.find_child("TraitChips", true, false).get_child_count(), 0,
 		"the dossier shows the minister's trait chips")
 	c.select_tab(1)

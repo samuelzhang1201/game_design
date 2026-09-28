@@ -35,6 +35,8 @@ var _selected := -1
 
 func _ready() -> void:
 	%Close.pressed.connect(func() -> void: visible = false)
+	UiPalette.command_button(%Close)
+	UiPalette.command_button(%ShowOnMap)
 	%ShowOnMap.pressed.connect(_show_on_map)
 	for col: String in HEADERS:
 		var plaque := get_node("%" + col.capitalize() + "Plaque") as Label

@@ -128,6 +128,12 @@ func _draw_icon(kind: String, at: Vector2, px: float) -> void:
 	if tex != null:
 		ResourceIcon.draw_icon_texture(self, tex, at, px)
 		return
-	draw_circle(at, px * 0.62, MapPalette.named(ctx.repo, "weather_mark_bg"))
-	ResourceIcon.draw_glyph(self, String(row.get("icon", "sun")), at, px,
-		MapPalette.named(ctx.repo, "army_glyph"))
+	# No disc (owner 2026-09-28, second critique: a black disc with a white
+	# glyph was the last web-bright sticker on the map, and a gold-rimmed
+	# one was still a tray): the bare glyph in dimmed parchment over a soft
+	# dark shadow, like ink on the map rather than a badge on it.
+	var glyph := String(row.get("icon", "sun"))
+	var shade := MapPalette.named(ctx.repo, "weather_mark_bg")
+	for off: Vector2 in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1), Vector2(0, 1.5)]:
+		ResourceIcon.draw_glyph(self, glyph, at + off, px, Color(shade, 0.45))
+	ResourceIcon.draw_glyph(self, glyph, at, px, MapPalette.named(ctx.repo, "weather_mark_glyph"))

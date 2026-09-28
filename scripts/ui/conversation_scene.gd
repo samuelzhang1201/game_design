@@ -36,6 +36,9 @@ var _beat_start := 0
 var _report: TickReport
 ## The name plate's house arms, design px tall.
 const PLATE_ARMS_PX := 36.0
+## How far in from the window's edges the title band stops, clear of the
+## corner flourishes (design px).
+const BANNER_CLEAR_PX := 24.0
 var _plate_arms: HeraldicShield
 var _name_label: Label
 var _text_label: RichTextLabel
@@ -95,7 +98,7 @@ func _ready() -> void:
 	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
 	_handle.pressed.connect(enter_council)
 	add_child(_handle)
-	%LeaveButton.add_theme_font_size_override("font_size", 14)
+	UiPalette.command_button(%LeaveButton, 14)
 	%LeaveButton.pressed.connect(leave_council)
 	# %MinisterPanel is the LEFT column — the facts column (owner ruling
 	# 2026-09-10). Hovering a country swaps the column to its card and back
@@ -170,7 +173,9 @@ func _ready() -> void:
 	# theme's size the button took half the row and cut the placeholder off.
 	UiPalette.compact_button(_continue_btn, 36.0, 15, 14.0)
 	_free_text.custom_minimum_size.x = 240.0
-	%MoveButton.add_theme_font_size_override("font_size", 16)
+	# Never larger than the speech it answers (owner 2026-09-28, second critique).
+	_free_text.add_theme_font_size_override("font_size", 15)
+	UiPalette.command_button(%MoveButton, 16)
 	%MoveButton.pressed.connect(_open_move_popup)
 	%AudienceLayer.resized.connect(_fit_audience)
 	%AudienceLayer.visible = false
@@ -187,15 +192,21 @@ func _style_audience() -> void:
 	%AudienceDim.color = AUDIENCE_DIM
 	%AudienceWindow.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 20))
+	# The title stands on the window's own leather over one gold rule (owner
+	# 2026-09-28, second critique: a black band inside the ornament was a
+	# frame inside a frame, and it cut the corner scrolls).
 	var banner := StyleBoxFlat.new()
-	banner.bg_color = UiPalette.INPUT_BG
-	banner.border_color = UiPalette.BORDER_GOLD
-	banner.border_width_top = 1
+	banner.bg_color = Color(0, 0, 0, 0)
+	banner.border_color = Color(UiPalette.BORDER_GOLD, 0.7)
 	banner.border_width_bottom = 1
 	banner.content_margin_top = 4.0
 	banner.content_margin_bottom = 4.0
 	banner.content_margin_left = 12.0
 	banner.content_margin_right = 12.0
+	# The band stops short of the window's corner flourishes (owner
+	# 2026-09-28, second critique: it cut the top-left scroll in half).
+	banner.expand_margin_left = -BANNER_CLEAR_PX
+	banner.expand_margin_right = -BANNER_CLEAR_PX
 	%AudienceBanner.add_theme_stylebox_override("panel", banner)
 	UiPalette.style_title(%AudienceTitle, 20)
 	var frame := StyleBoxFlat.new()
@@ -206,8 +217,12 @@ func _style_audience() -> void:
 	frame.shadow_color = UiPalette.SHADOW
 	frame.shadow_size = 6
 	%PortraitFrame.add_theme_stylebox_override("panel", frame)
-	UiPalette.style_header(%MinisterName, 20)
-	UiPalette.style_header(%MinisterTitle, 13, UiPalette.TEXT_MUTED)
+	# The name is the plate (owner 2026-09-28, second critique: name and seat
+	# read as one size and one ink): the name large in gold, the seat a
+	# small muted line under it in the book face.
+	UiPalette.style_header(%MinisterName, 24)
+	%MinisterTitle.add_theme_font_size_override("font_size", 14)
+	%MinisterTitle.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
 	%OpinionCaption.add_theme_font_size_override("font_size", 13)
 	%OpinionCaption.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 	%OpinionBar.add_theme_stylebox_override("background", UiPalette.bar_bg())
@@ -367,7 +382,8 @@ func _say(speaker: String, text: String) -> void:
 	var line := "[i]%s[/i]" % escaped if speaker == "" else \
 		"[color=#%s]%s:[/color] %s" % [
 			_speaker_color(speaker).to_html(false), speaker, escaped]
-	_history.append({"speaker": speaker, "line": line, "n": _said})
+	_history.append({"speaker": speaker, "line": line, "n": _said,
+		"plain": escaped if speaker != "" else ""})
 	_said += 1
 	while _history.size() > HISTORY_CAP:
 		_history.pop_front()
@@ -394,7 +410,10 @@ func _render_history() -> void:
 			continue
 		shown.append(e["line"])
 		if int(e["n"]) >= _beat_start:
-			speech.append(e["line"])
+			# The window already names who speaks (the plate, or the event's
+			# heading): the speech does not say it again (owner 2026-09-28).
+			var plain := String(e.get("plain", ""))
+			speech.append(plain if plain != "" and _names_shown().has(String(e["speaker"])) else e["line"])
 	_text_label.text = "\n".join(shown)
 	_speech_label.text = "\n\n".join(speech)
 	_scroll.set_deferred("scroll_vertical", 1000000)
@@ -430,8 +449,10 @@ func _build_dossier_tabs() -> void:
 		btn.name = "Tab" + TAB_NAMES[i]
 		btn.text = TAB_NAMES[i]
 		btn.focus_mode = Control.FOCUS_NONE
-		UiPalette.style_tab(btn, 12, 8.0)
-		btn.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+		# Words with an underline, like the bottom bar's tabs (owner
+		# 2026-09-28: a boxed tab inside the window was a frame in a frame).
+		btn.toggle_mode = true
+		UiPalette.flat_tab(btn, 12, 8.0)
 		btn.pressed.connect(_select_tab.bind(i))
 		%TabsRow.add_child(btn)
 		_tab_buttons.append(btn)
@@ -446,8 +467,7 @@ var _tab_index := -1
 func _select_tab(index: int) -> void:
 	_tab_index = -1 if index == _tab_index else index
 	for i in _tab_pages.size():
-		_tab_buttons[i].add_theme_color_override("font_color",
-			UiPalette.GOLD if i == _tab_index else UiPalette.TEXT_MUTED)
+		(_tab_buttons[i] as Button).set_pressed_no_signal(i == _tab_index)
 	_refresh_dossier()
 
 func select_tab(index: int) -> void:
@@ -477,6 +497,14 @@ func event_popup() -> Control:
 
 func audience_window() -> PanelContainer:
 	return %AudienceWindow
+
+## Whoever the window names over the speech right now.
+func _names_shown() -> Array:
+	var out: Array = []
+	for l: Label in [%MinisterName, _name_label]:
+		if l != null and l.is_visible_in_tree() and l.text != "":
+			out.append(l.text)
+	return out
 
 func speech_scroll() -> ScrollContainer:
 	return %SpeechScroll
@@ -690,6 +718,7 @@ func _open_move_popup() -> void:
 	var cancel := Button.new()
 	cancel.name = "MoveCancel"
 	cancel.text = "Stay"
+	UiPalette.command_button(cancel)
 	cancel.focus_mode = Control.FOCUS_NONE
 	cancel.pressed.connect(func() -> void: %EventPopup.visible = false)
 	%PopupChoices.add_child(cancel)
@@ -760,18 +789,44 @@ func _build_skill_rows() -> void:
 		%SkillRows.add_child(row)
 		# CK3's row of five under the portrait: short name and value in the
 		# skill's colour, the full name on hover.
-		var badge := Label.new()
+		# Two lines a badge (owner 2026-09-28, second critique: "ADM 18" in
+		# one small run was hard to read on the dark): the short name small
+		# over the value large in the book face's tabular figures, the chip
+		# edged in the skill's colour.
+		var badge := PanelContainer.new()
 		badge.name = "Skill_" + String(sk)
-		badge.add_theme_font_size_override("font_size", 13)
-		badge.add_theme_color_override("font_color", UiPalette.skill_color(sk))
-		var chip := UiPalette.chip_style()
+		badge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# No box of its own: the colour is the abbreviation's, and a hairline
+		# parts one badge from the next.
+		var chip := StyleBoxFlat.new()
+		chip.bg_color = Color(0, 0, 0, 0)
 		chip.content_margin_left = 4.0
 		chip.content_margin_right = 4.0
-		chip.content_margin_top = 2.0
-		chip.content_margin_bottom = 2.0
-		badge.add_theme_stylebox_override("normal", chip)
+		if CharacterFactory.SKILLS.find(sk) > 0:
+			chip.border_color = Color(UiPalette.EDGE, 0.9)
+			chip.border_width_left = 1
+		badge.add_theme_stylebox_override("panel", chip)
 		badge.tooltip_text = String(UiPalette.SKILL_NAMES[sk])
 		badge.mouse_filter = Control.MOUSE_FILTER_STOP
+		var pair := VBoxContainer.new()
+		pair.add_theme_constant_override("separation", -3)
+		pair.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		badge.add_child(pair)
+		var abbr := Label.new()
+		abbr.name = "Abbr"
+		abbr.text = String(UiPalette.SKILL_SHORT[sk])
+		abbr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		abbr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		UiPalette.style_header(abbr, 11, UiPalette.skill_color(sk).lightened(0.15))
+		pair.add_child(abbr)
+		var num := Label.new()
+		num.name = "Value"
+		num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		num.add_theme_font_override("font", UiPalette.figures_font())
+		num.add_theme_font_size_override("font_size", 19)
+		num.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+		pair.add_child(num)
 		%SkillBadges.add_child(badge)
 
 func _advance() -> void:
@@ -795,6 +850,7 @@ func _advance() -> void:
 	_show_speaker(b)
 	_name_label.text = String(b["speaker"])
 	_continue_btn.text = "Wave them on"
+	UiPalette.command_button(_continue_btn)
 	# Deviation from the brief (pre-approved): the brief's literal `child.free()`
 	# here frees while iterating the container's own get_children() snapshot -
 	# a crash hazard idiom. queue_free() defers the actual removal to end of
@@ -1002,8 +1058,8 @@ func _show_speaker(b: Dictionary) -> void:
 		if c != null and Game.state != null else ""
 	if c == null:
 		return
-	%MinisterTitle.text = String(Game.data.seats[c.seat]["label"]).to_upper() \
-		if Game.data.seats.has(c.seat) else String(c.seat).to_upper()
+	%MinisterTitle.text = String(Game.data.seats[c.seat]["label"]) \
+		if Game.data.seats.has(c.seat) else String(c.seat).capitalize()
 	%OpinionBar.value = c.opinion
 	var tone: Color = UiPalette.good_color() if c.opinion >= 0 else UiPalette.bad_color()
 	%OpinionBar.add_theme_stylebox_override("fill", UiPalette.bar_fill(tone))
@@ -1018,8 +1074,8 @@ func _show_speaker(b: Dictionary) -> void:
 		var value := int(c.skills.get(sk, 0))
 		_skill_bars[sk].value = value
 		_skill_values[sk].text = str(value)
-		var badge: Label = %SkillBadges.get_node("Skill_" + String(sk))
-		badge.text = "%s %d" % [UiPalette.SKILL_SHORT[sk], value]
+		var badge := %SkillBadges.get_node("Skill_" + String(sk)) as Control
+		(badge.find_child("Value", true, false) as Label).text = str(value)
 	for t in c.traits:
 		var row: Dictionary = Game.data.traits.get(t, {})
 		var chip := Label.new()

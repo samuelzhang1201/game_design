@@ -53,7 +53,8 @@ func _init() -> void:
 	_summary.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
 	_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_summary)
-	var filters := HBoxContainer.new()
+	# One filter to a row: side by side the house list read "Every h".
+	var filters := VBoxContainer.new()
 	filters.name = "Filters"
 	filters.add_theme_constant_override("separation", 6)
 	add_child(filters)
@@ -141,6 +142,7 @@ func _ready() -> void:
 
 func _scope_text() -> void:
 	_scope.text = "ALL REALMS" if _all else "THE REALM"
+	UiPalette.command_button(_scope)
 
 ## The realm's manors or the map's.
 func set_scope(all_realms: bool) -> void:
@@ -237,8 +239,10 @@ func refresh() -> void:
 	_fill_houses(houses, crown)
 	_fill_tree()
 	var scope := "the realm" if not _all else "the map"
-	_summary.text = "%d manors in %s — the crown holds %d, %d gold a month in taxes%s" % [
-		cells.size(), scope, crown_count, rents,
+	# Two figures side by side read as one ("holds 12, 364 gold", owner
+	# 2026-09-28): each says what it counts.
+	_summary.text = "%d manors in %s — the crown holds %d of them, for %s gold a month in taxes%s" % [
+		cells.size(), scope, crown_count, UiPalette.format_int(rents),
 		"; %d more than the table shows" % _left_out if _left_out > 0 else ""]
 
 func _compare(a: Dictionary, b: Dictionary) -> bool:
@@ -313,7 +317,7 @@ func _fill_tree() -> void:
 ## A fogged figure (Intel: "—", or an estimate's text) prints as itself; a
 ## true one rounds like the table always has.
 static func _shown(v: Variant) -> String:
-	return String(v) if v is String else str(roundi(float(v)))
+	return String(v) if v is String else UiPalette.format_int(roundi(float(v)))
 
 ## Test seams.
 func rows() -> Array:

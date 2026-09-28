@@ -65,6 +65,7 @@ static func make_handle(text: String) -> Button:
 		# The game's core move as its one primary button, level, over the
 		# map's top-right corner (owner 2026-09-28, balance ui_council_button).
 		UiPalette.primary_button(b, 15)
+		UiPalette.command_button(b)
 		return b
 	UiPalette.style_tab(b, 14)
 	b.size = Vector2(HANDLE_LENGTH, HANDLE_THICKNESS)

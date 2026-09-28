@@ -46,6 +46,7 @@ func _ready() -> void:
 	var close := Button.new()
 	close.name = "CloseButton"
 	close.text = "CLOSE"
+	UiPalette.command_button(close)
 	close.focus_mode = Control.FOCUS_NONE
 	close.pressed.connect(func() -> void: hide())
 	col.add_child(close)

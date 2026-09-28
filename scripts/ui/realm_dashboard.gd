@@ -111,15 +111,20 @@ func refresh() -> void:
 		{"label": "Country", "dimension": "country", "value": pop["rural"],
 			"color": UiPalette.chart_color("cat_2")},
 	])
+	# One measure and one hue (owner 2026-09-28, second critique: 7 ships,
+	# 75 guns and thousands of foot on one scale in four colours): each bar is
+	# the arm's fighting STRENGTH — its count × the pack's unit_types `power` —
+	# so a ship and a footman are weighed alike, in the gauges' one old gold;
+	# the figure beside it stays the count.
 	var host_rows: Array = []
 	var top := 1.0
-	var i := 0
 	for u in host:
-		i += 1
-		top = maxf(top, float(host[u]))
+		var power := float((data.world_row("military", "unit_types", u) as Dictionary).get("power", "1"))
+		var strength := float(host[u]) * maxf(power, 0.0)
+		top = maxf(top, strength)
 		host_rows.append({"label": String((data.resource_icons.get(u, {}) as Dictionary).get("label", u)),
 			"dimension": u,
-			"value": float(host[u]), "color": UiPalette.chart_color("cat_%d" % i),
+			"value": strength, "color": UiPalette.chart_color("sequential"),
 			"text": _compact(float(host[u]))})
 	_host.set_rows(host_rows, top)
 	var provs: Array = []

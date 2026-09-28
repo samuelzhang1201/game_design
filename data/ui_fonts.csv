@@ -13,3 +13,5 @@ scheme,role,path,weight,embolden,slant,spacing,size_scale,title_case,features,no
 1,body_italic,CrimsonPro.ttf,400,0,0.2,0,1.1,0,,no italic file: slanted
 1,tab,AlegreyaSC-Regular.ttf,0,0,0,1,1.0,0,lnum,
 1,display,AlegreyaSC-Regular.ttf,0,0,0,0,1.0,0,lnum,
+0,figures,Cinzel.ttf,0,0,0,0,1.0,0,,figures in a column of values; Cinzel has no tabular figures
+1,figures,CrimsonPro.ttf,400,0,0,0,1.1,0,lnum|tnum,"owner 2026-09-28, second critique: a right-aligned column of values reads straight down only in tabular lining figures"

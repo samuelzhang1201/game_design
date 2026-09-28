@@ -384,6 +384,7 @@ func _menu_button(label: String, handler: Callable) -> Button:
 	btn.name = label.replace(" ", "")
 	btn.text = label
 	btn.focus_mode = Control.FOCUS_NONE
+	UiPalette.command_button(btn)
 	btn.pressed.connect(handler)
 	return btn
 

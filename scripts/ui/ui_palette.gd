@@ -375,6 +375,48 @@ static func primary_button(button: Button, size: int) -> void:
 	button.add_theme_color_override("font_hover_color", Color("fff0c8"))
 	button.add_theme_color_override("font_pressed_color", Color("f3d99a"))
 
+## A COMMAND (owner 2026-09-28, second critique: "Start Game", "ASK THE
+## COUNCIL" and "Wave them on" were three rules): a verb the player gives —
+## as against an option or reply, which is a sentence he says and stays in
+## the book face — is set in the tab's tracked small capitals, in title case
+## whatever case it was written in. `size` 0 keeps the button's size.
+## ui_command_style 0 leaves every button as it was written.
+static func command_button(button: Button, size: int = 0) -> void:
+	if Game != null and Game.data != null and Game.data.bal("ui_command_style") <= 0.0:
+		return
+	if size > 0:
+		button.add_theme_font_size_override("font_size", size)
+	var font := tab_font()
+	if font != null:
+		button.add_theme_font_override("font", font)
+	button.text = command_text(button.text)
+
+## "ASK THE COUNCIL" / "ask the council" -> "Ask the Council"; "BUY — 3508
+## gold" -> "Buy — 3,508 Gold"; a word with a figure in it ("20g", "5d") is
+## left as written but for its grouping.
+static func command_text(text: String) -> String:
+	var small := ["of", "the", "and", "a", "an", "as", "by", "in", "on", "to", "at", "or", "for", "from", "with"]
+	var words := text.split(" ")
+	for i in words.size():
+		var w: String = words[i]
+		if w == "":
+			continue
+		if w.is_valid_int():
+			words[i] = format_int(w.to_int())
+			continue
+		var has_digit := false
+		for c in w:
+			if c >= "0" and c <= "9":
+				has_digit = true
+				break
+		if has_digit:
+			continue
+		var lw := w.to_lower()
+		# A small word stays small but first and last (title case).
+		var inner := i > 0 and i < words.size() - 1
+		words[i] = lw if inner and small.has(lw) else lw.substr(0, 1).to_upper() + lw.substr(1)
+	return " ".join(words)
+
 ## A small button that sits in a strip without stretching to the strip's
 ## height: tight padding, a fixed height, centred in its row.
 static func compact_button(button: Button, height: float, font_px: int, pad: float = 6.0) -> void:
@@ -580,6 +622,11 @@ static func content_italic_font() -> Font:
 ## labels. The content face, so they match the panels around them.
 static func body_font() -> Font:
 	return content_font()
+
+## Values in a column (owner 2026-09-28, second critique): the body face in
+## tabular lining figures, so a right-aligned column reads straight down.
+static func figures_font() -> Font:
+	return role_font("figures")
 
 ## The scale bar's distance, the ruler, landmark metres, the shield's letters.
 static func display_font() -> Font:

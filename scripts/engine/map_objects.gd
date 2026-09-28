@@ -579,7 +579,9 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	var crowns := MapManors.is_crowns(repo, state, cell)
 	var subtitle := String(prov.get("full_name", prov.get("label", "")))
 	if not kingdom.is_empty():
-		subtitle += " · " + String(kingdom.get("label", ""))
+		# A comma, which reads at a line's end or not (a dot left hanging
+		# there, or starting the next line, owner 2026-09-28).
+		subtitle += ", " + String(kingdom.get("label", ""))
 	var manor_code := MapManors.code_of(repo, cell)
 	var center := MapTerrain.cell_center(repo, repo.cells.get(cell, {"vertex_ids": PackedInt32Array()}))
 	var subj := MissiveLog.subject("manor", manor_code, cell, center)
@@ -689,8 +691,13 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		var est := estate_tier(repo, MapManors.focus_of(repo, state, cell), float(people))
 		if not est.is_empty():
 			var industry := String((repo.manor_focus.get(String(est["focus_code"]), {}) as Dictionary).get("label", est["focus_code"])).to_lower()
-			fields.append(["Estate", "%s, size %d of %d" % [industry, int(float(est["tier"])),
-				estate_rows(repo, String(est["focus_code"])).size()]])
+			# Its name says its size (owner 2026-09-28: "3 of 3" said nothing);
+			# the field keeps the industry and the rank for tools and tooltips.
+			var est_label := String(est.get("label", ""))
+			fields.append(["Estate", "%s%s, size %d of %d" % [
+				(est_label.to_lower() + " — ") if est_label != "" else "", industry,
+				int(float(est["tier"])), estate_rows(repo, String(est["focus_code"])).size()]])
+			card["estate_label"] = est_label
 	fields.append(["Defence", str(roundi(MapManors.defence_of(repo, state, cell)))])
 	var built: Array = MapManors.buildings_of(state, cell)
 	card["buildings"] = built
@@ -738,8 +745,10 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		"Chief good — %s" % _field_text(fields, "Chief good")))
 	var estate_text := _field_text(fields, "Estate")
 	if estate_text != "":
-		stats.append(_stat("manor_estate", estate_text.get_slice(", ", estate_text.get_slice_count(", ") - 1).replace("size ", ""),
-			"Estate — %s" % estate_text))
+		var est_short := String(card.get("estate_label", ""))
+		if est_short == "":
+			est_short = estate_text.get_slice(", ", estate_text.get_slice_count(", ") - 1).replace("size ", "")
+		stats.append(_stat("manor_estate", est_short, "Estate — %s" % estate_text))
 	stats.append(_stat("manor_defence", str(roundi(MapManors.defence_of(repo, state, cell))),
 		"Defence — how hard the manor is to take"))
 	stats.append(_stat("manor_slots", "%d/%d" % [MapManors.slots_used(state, cell), MapManors.slots_of(repo, cell)],
@@ -812,7 +821,12 @@ static func _short_num(v: float) -> String:
 		return "%.1fM" % (v / 1000000.0)
 	if absf(v) >= 10000.0:
 		return "%.1fk" % (v / 1000.0)
-	return str(roundi(v))
+	# Grouped by thousands like every other whole figure (owner 2026-09-28).
+	var n := roundi(v)
+	var digits := str(absi(n))
+	if digits.length() > 3:
+		digits = digits.substr(0, digits.length() - 3) + "," + digits.substr(digits.length() - 3)
+	return ("-" if n < 0 else "") + digits
 
 ## The painting of a manor's estate (library B-, owner 2026-09-14): the
 ## `painting` of the manor_estates.csv row its industry and people choose —

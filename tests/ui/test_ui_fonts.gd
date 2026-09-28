@@ -3,7 +3,7 @@ extends GutTest
 ## owner 2026-09-28, after the UI critique): every scheme names every role,
 ## every file it names ships, and the chosen scheme resolves to real fonts.
 
-const ROLES := ["title", "header", "body", "body_bold", "body_italic", "tab", "display"]
+const ROLES := ["title", "header", "body", "body_bold", "body_italic", "tab", "display", "figures"]
 
 func test_every_scheme_names_every_role_and_its_file_ships() -> void:
 	var schemes := {}
