@@ -96,6 +96,12 @@ func validate(req: ActionRequest, state: GameState) -> String:
 				return "That is off the map"
 			if float(state.metrics["treasury"]) < needs + float(CourierSystem.fee_gold(data, CourierSystem.SPY)):
 				return "The chancery cannot pay a spy to ride"
+			# A spy out past the fuse is lost with his fee (final review M15):
+			# refuse the ride he could never finish.
+			var days := CourierSystem.spy_eta_days(data, state, to)
+			if days > int(data.bal("courier_max_days")):
+				return "No spy could get there within %d days (about %d)" % [
+					int(data.bal("courier_max_days")), days]
 	return ""
 
 ## ARMY_MARCH / ARMY_GARRISON (owner 2026-09-22). Both name a regiment of

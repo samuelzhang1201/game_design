@@ -425,3 +425,34 @@ func test_an_old_save_computes_its_wealth_tiers_once_on_load() -> void:
 	assert_eq(back.wealth_tiers, {}, "the old save carries none")
 	Intel.ensure_wealth_tiers(repo, back)
 	assert_eq(back.wealth_tiers, _tiers_by_hand(back))
+
+
+## M13 (final review): a manor with no province (the wildlands) is named
+## without empty parentheses.
+func test_place_label_drops_empty_parentheses() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var ids := repo.manors.keys()
+	ids.sort()
+	for id: int in ids:
+		if MapManors.province_of(repo, id, s) != "":
+			continue
+		var got := Intel.place_label(repo, s, MapTerrain.cell_center(repo, repo.cells[id]))
+		assert_false(got.contains("()"), got)
+		assert_eq(got, MapManors.label_of(repo, id))
+		return
+	pending("no manor outside every province on this pack")
+
+
+## M2 (final review): a foreign kingdom's card gives its wealth tier — the
+## mean of its provinces' settled tiers, rounded — in words.
+func test_a_foreign_kingdoms_card_gives_its_wealth() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var realm := repo.resolve_realm("player_realm")
+	var codes := repo.kingdoms.keys()
+	codes.sort()
+	for k: String in codes:
+		if k == realm or MapOwnership.provinces_of(repo, s, k).is_empty():
+			continue
+		var lines := MapObjects._kingdom_lines(repo, repo.kingdoms[k], s)
+		assert_has(lines, "Wealth: " + Intel.wealth_word(repo, Intel.kingdom_wealth_tier(repo, s, k)))
+		return

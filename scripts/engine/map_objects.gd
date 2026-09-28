@@ -245,6 +245,8 @@ static func _kingdom_lines(repo: DataRepository, row: Dictionary,
 	]
 	if foreign:
 		lines.append("Stance: %s" % Intel.stance_of(repo, code))
+		if state != null:
+			lines.append("Wealth: %s" % Intel.wealth_word(repo, Intel.kingdom_wealth_tier(repo, state, code)))
 	if not court.is_empty():
 		lines.append("Court: %s" % ", ".join(court))
 	return lines

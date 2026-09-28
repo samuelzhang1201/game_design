@@ -186,6 +186,15 @@ static func days_left(repo: DataRepository, state: GameState, c: Dictionary) -> 
 		Vector2i(int(c["x_m"]), int(c["y_m"])), c["path"], state.absolute_day()))
 
 
+## Days a spy sent now would ride to reach `to_px`, the route and today's
+## weather held (SPY_SEND's refusal past the fuse, final review M15).
+static func spy_eta_days(repo: DataRepository, state: GameState, to_px: Vector2) -> int:
+	var from := origin(repo, state)
+	var path := path_between(repo, from, to_px)
+	return days_for(repo, SPY, need_along(repo, state, ArmySystem.pack_to_metres(repo, from),
+		path, state.absolute_day()))
+
+
 ## The aim ruler's estimate (spec §1): days for a courier sent now to reach
 ## the regiment, the route and today's weather held. 0 for no regiment.
 static func eta_days(repo: DataRepository, state: GameState, kind: String, code: String) -> int:
@@ -229,7 +238,7 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 				Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))))
 		events.append(e)
 	if int(c["days"]) > int(repo.bal("courier_max_days")):
-		events.append(_event("fuse", c))
+		events.append(_spy_placed(repo, state, c, _event("fuse", c)))
 		return false
 	if not _is_spy(c):
 		_reaim(repo, state, c, reg)
@@ -336,7 +345,7 @@ static func _advance(repo: DataRepository, state: GameState, c: Dictionary, toda
 	while not path.is_empty() and budget > 0:
 		var to := Vector2i(int(path[0][0]), int(path[0][1]))
 		var wx := Weather.at(repo, state, ArmySystem.metres_to_pack(repo, here), today)
-		_note_slow(repo, c, wx, today, events)
+		_note_slow(repo, state, c, wx, today, events)
 		var f := stretch_factor(repo, String(path[0][2]), here, wx)
 		var length := int(round(Vector2(here).distance_to(Vector2(to))))
 		var need := RoadGraph.stretch_need(length, f)
@@ -373,14 +382,24 @@ static func _reaim(repo: DataRepository, state: GameState, c: Dictionary, reg: D
 		path[path.size() - 1] = [at.x, at.y, String(path[path.size() - 1][2])]
 
 
-static func _note_slow(repo: DataRepository, c: Dictionary, weather: String, today: int, events: Array) -> void:
+static func _note_slow(repo: DataRepository, state: GameState, c: Dictionary, weather: String,
+		today: int, events: Array) -> void:
 	if Weather.speed_permille(repo, weather) >= int(repo.bal("courier_slow_news_permille")):
 		return
 	var spell := Weather.spell_of(repo, today)
 	if int(c.get("slow_spell", -1)) == spell:
 		return
 	c["slow_spell"] = spell
-	events.append(_event("slow", c, weather))
+	events.append(_spy_placed(repo, state, c, _event("slow", c, weather)))
+
+
+## A spy rides for no regiment: his event names the place he was sent to,
+## so the news bar can say where (final review M1).
+static func _spy_placed(repo: DataRepository, state: GameState, c: Dictionary, e: Dictionary) -> Dictionary:
+	if String(c["kind"]) == SPY:
+		e["place"] = Intel.place_label(repo, state, ArmySystem.metres_to_pack(repo,
+			Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))))
+	return e
 
 
 ## The order takes effect — unless the column already obeys a NEWER one (a
@@ -449,7 +468,12 @@ static func headline(repo: DataRepository, e: Dictionary) -> String:
 		"lost":
 			return "Orders to %s undelivered: the regiment is gone." % label
 		"fuse":
+			if String(e.get("place", "")) != "":
+				return "The spy sent to %s never got there." % String(e["place"])
 			return "Orders to %s undelivered: the courier never found them." % label
 		"slow":
-			return "The courier to %s is held up by %s." % [label, Weather.label_of(repo, String(e.get("weather", ""))).to_lower()]
+			var wx := Weather.label_of(repo, String(e.get("weather", ""))).to_lower()
+			if String(e.get("place", "")) != "":
+				return "The spy riding for %s is held up by %s." % [String(e["place"]), wx]
+			return "The courier to %s is held up by %s." % [label, wx]
 	return ""

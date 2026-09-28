@@ -1,6 +1,7 @@
 extends GutTest
 ## Spies (spec 2026-09-28 §1). Rolls are forced through SpySystem.report's
-## q and bias; observe's own draw is checked for determinism only.
+## q and bias; observe's own draw is checked for determinism only
+## (test_observe_draws_the_same_report_from_the_same_state).
 
 var repo: DataRepository
 
@@ -178,3 +179,80 @@ func test_a_thin_chest_cannot_send_a_spy() -> void:
 	var f := _foreign_manor(s)
 	s.metrics["treasury"] = float(CourierSystem.fee_gold(repo, CourierSystem.SPY)) - 0.5
 	assert_ne(ActionSystem.new(repo).validate(ActionRequest.make("SPY_SEND", {"x": _at(f).x, "y": _at(f).y}), s), "")
+
+
+## M16 (final review): observe's own draws — the quality roll, then the
+## bias — come from GameState.rng alone: two identical states file the
+## identical report and leave the stream at the same place.
+func test_observe_draws_the_same_report_from_the_same_state() -> void:
+	var out: Array = []
+	for i in 2:
+		var s := GameState.new_campaign(repo, 7)
+		var f := _foreign_manor(s)
+		var c := CourierSystem.dispatch_spy(repo, s, _at(f))
+		var aim := Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))
+		c["x_m"] = aim.x
+		c["y_m"] = aim.y
+		var e := SpySystem.observe(repo, s, c)
+		out.append([JSON.stringify(MissiveLog.find(s, int(e["missive"]))), s.rng.randi_range(0, 999999)])
+	assert_eq(out[0][0], out[1][0], "the same report")
+	assert_eq(out[0][1], out[1][1], "the stream left at the same place")
+
+
+## M2 (final review): a spy's report names the manor's chief good and gives
+## ITS units a month.
+func test_the_report_names_the_chief_good() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var f := _foreign_manor(s)
+	var line := RealmEconomy.line_of(repo, s, f)
+	var chief := ManorEconomy.focus_units(repo, s, f, int(line["people"]), s.tick)
+	assert_ne(String(chief["good"]), "", "the manor works a good")
+	var good_label := String((repo.world_table("economy", "goods").get(String(chief["good"]), {}) as Dictionary).get("label", ""))
+	var out := _fact(SpySystem.report(repo, s, _at(f), 1000, 0), "output")
+	assert_eq(String(out["label"]), "%s a month" % good_label)
+	assert_true(int(out["lo"]) <= int(chief["units"]) and int(chief["units"]) <= int(out["hi"]),
+		"the chief good's own units inside the span")
+
+
+## M1 (final review): a spy's news lines name his place — a spy rides for no
+## regiment, so "The courier to  is held up" read with a hole in it.
+func test_a_spys_news_lines_name_his_place() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var f := _foreign_manor(s)
+	var c := CourierSystem.dispatch_spy(repo, s, _at(f))
+	var place := Intel.place_label(repo, s, _at(f))
+	c["days"] = int(repo.bal("courier_max_days"))
+	var fuse: Array = CourierSystem.ride_day(repo, s).filter(
+		func(e: Dictionary) -> bool: return String(e["type"]) == "fuse")
+	assert_eq(fuse.size(), 1)
+	var line := CourierSystem.headline(repo, fuse[0])
+	assert_string_contains(line, place)
+	assert_false(line.contains("to  "), line)
+	var slow := CourierSystem.headline(repo, {"type": "slow", "courier": 1, "regiment": "",
+		"place": place, "weather": "blizzard"})
+	assert_string_contains(slow, place)
+	assert_false(slow.contains("to  "), slow)
+	# and the ride itself stamps the place on a slow day
+	var s2 := GameState.new_campaign(repo, 7)
+	Weather.forget()
+	for key in repo.weather_odds:
+		repo.weather_odds[key] = {"clear": 0, "rain": 0, "mud": 0, "snow": 0, "blizzard": 1}
+	CourierSystem.dispatch_spy(repo, s2, _at(f))
+	var slows: Array = CourierSystem.ride_day(repo, s2).filter(
+		func(e: Dictionary) -> bool: return String(e["type"]) == "slow")
+	assert_eq(slows.size(), 1, "a blizzard holds him up")
+	if not slows.is_empty():
+		assert_eq(String(slows[0].get("place", "")), place)
+
+
+## M15 (final review): a spy who could not reach the place before the fuse
+## (courier_max_days) is refused with the reason, not paid for and lost.
+func test_a_spy_is_refused_beyond_the_fuse() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var f := _foreign_manor(s)
+	var req := ActionRequest.make("SPY_SEND", {"x": _at(f).x, "y": _at(f).y})
+	var actions := ActionSystem.new(repo)
+	assert_eq(actions.validate(req, s), "", "within reach")
+	repo.balance["courier_max_days"] = 0.0
+	var why := actions.validate(req, s)
+	assert_string_contains(why, "days")

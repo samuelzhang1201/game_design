@@ -96,6 +96,19 @@ static func ensure_wealth_tiers(repo: DataRepository, state: GameState) -> void:
 		settle_wealth_tiers(repo, state)
 
 
+## A kingdom's tier (final review M2): the mean of the settled tiers of
+## the provinces it holds now, rounded half up; 1 for a kingdom with none.
+static func kingdom_wealth_tier(repo: DataRepository, state: GameState, kingdom: String) -> int:
+	var provs := MapOwnership.provinces_of(repo, state, kingdom)
+	if provs.is_empty():
+		return 1
+	var total := 0
+	for p: String in provs:
+		total += wealth_tier(repo, state, p)
+	@warning_ignore("integer_division")  # whole tiers, half up
+	return clampi((total * 2 + provs.size()) / (provs.size() * 2), 0, 2)
+
+
 ## The tercile (0/1/2) of value v within sorted_rates. A tie takes the
 ## MIDDLE rank of its run, so a run of equal values never all falls into the
 ## lowest tier: [1,1,1,1,1,2,2,2,3] -> 1:0, 2:2, 3:2.
@@ -140,6 +153,8 @@ static func place_label(repo: DataRepository, state: GameState, px: Vector2) -> 
 	if cell < 0 or not MapManors.is_manor(repo, cell):
 		return "the open sea"
 	var prov := MapManors.province_of(repo, cell, state)
+	if prov == "":  # the wildlands: no province to name (final review M13)
+		return MapManors.label_of(repo, cell)
 	return "%s (%s)" % [MapManors.label_of(repo, cell), String(repo.provinces.get(prov, {}).get("label", prov))]
 
 
