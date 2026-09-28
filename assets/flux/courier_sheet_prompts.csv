@@ -1,0 +1,8 @@
+view,parts,width,height,prompt
+R1,rider,896,1344,"the rider alone standing on the ground with no horse, seen straight from the front, arms held a little out from the body, feet apart, the whole figure from hat to boots in frame"
+R2,rider,896,1344,"the rider alone standing on the ground with no horse, seen exactly from the side, arms relaxed, the whole figure from hat to boots in frame"
+R3,rider,896,1344,"the rider alone standing on the ground with no horse, seen straight from behind, arms held a little out from the body, the whole figure from hat to boots in frame"
+M1,mount,1344,896,"the saddled horse alone with no rider, standing square, seen exactly from the side, the whole animal from ears to hooves and nose to tail in frame"
+M2,mount,896,1344,"the saddled horse alone with no rider, standing square, seen straight from the front, the whole animal in frame"
+M3,mount,1344,896,"the saddled horse alone with no rider, standing square, seen from directly above, the whole animal in frame"
+A1,rider|mount,1344,896,"the rider seated on the horse, the horse standing square, seen exactly from the side, the whole piece in frame"
