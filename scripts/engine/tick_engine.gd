@@ -45,6 +45,9 @@ func advance(state: GameState) -> TickReport:
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.
 	_settle_economy(state, r)
+	# The provinces' wealth tiers are settled with the month (Ruling 15):
+	# state, so no reader's timing can decide what a spy's report says.
+	Intel.settle_wealth_tiers(data, state)
 	# The steward's report on the month just settled (owner 2026-09-28): ground
 	# truth. The reign's OPENING tick (tick 0, the one GameRoot runs once at
 	# start before any day is played) settles no real month, so it files no

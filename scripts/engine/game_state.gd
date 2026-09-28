@@ -97,6 +97,8 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	s.relationships = RelationshipGraph.init_from_data(data)
 	s.knowledge = KnowledgeBase.init_from_data(data, s)
 	s.source_trust = SourceTrust.init_from_relationships(data, s)
+	# The reign opens with its provinces' wealth already settled (Ruling 15).
+	Intel.settle_wealth_tiers(data, s)
 	return s
 
 ## Applies the player's chosen identity: the player's display name becomes
@@ -289,6 +291,11 @@ var next_courier_id := 0
 ## of Dictionaries, whole numbers and strings only.
 var missives: Array = []
 var next_missive_id := 0
+## Each province's wealth tier, 0 poor / 1 middling / 2 rich (Ruling 15,
+## 2026-09-28): settled by TickEngine right after the month's economy
+## (Intel.settle_wealth_tiers), so a card opened mid-month can never decide
+## what a spy's saved report says. province_code -> int.
+var wealth_tiers: Dictionary = {}
 
 const SAVE_VERSION := 5
 
@@ -328,6 +335,7 @@ func to_dict() -> Dictionary:
 		"next_courier_id": _encode_values(next_courier_id),
 		"missives": _encode_values(missives.duplicate(true)),
 		"next_missive_id": _encode_values(next_missive_id),
+		"wealth_tiers": _encode_values(wealth_tiers.duplicate()),
 	}
 
 static func from_dict(d: Dictionary) -> GameState:
@@ -392,5 +400,8 @@ static func from_dict(d: Dictionary) -> GameState:
 	# Saves from before the Missive board carry neither key: an empty board.
 	s.missives = _decode_values(d.get("missives", []))
 	s.next_missive_id = int(_decode_values(d.get("next_missive_id", 0)))
+	# Saves from before the tiers were state carry none: Game.load_campaign
+	# computes them once from the loaded state (Intel.ensure_wealth_tiers).
+	s.wealth_tiers = _decode_values(d.get("wealth_tiers", {}))
 	MapOwnership.invalidate()
 	return s

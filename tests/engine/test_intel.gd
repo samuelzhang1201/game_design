@@ -198,15 +198,6 @@ func test_a_point_report_in_the_same_province_within_reach_still_answers() -> vo
 	assert_eq(String(Intel.fact(repo, s, f, "people", 600)["text"]), "≈ 500–700")
 
 
-func test_wealth_tier_cache_key_includes_the_seed_and_forget_clears_it() -> void:
-	var s := GameState.new_campaign(repo, 7)
-	var home := MapManors.home_province(repo, s)
-	Intel.wealth_tier(repo, s, home)
-	assert_true(String(Intel._tiers_key).find("|7|") != -1, "the cache key carries the campaign's seed")
-	Intel.forget()
-	assert_eq(String(Intel._tiers_key), "", "forget() clears the cache")
-
-
 func test_tercile_of_ties_take_the_middle_rank() -> void:
 	var rates := [1, 1, 1, 1, 1, 2, 2, 2, 3]
 	assert_eq(Intel.tercile_of(rates, 1), 0)
@@ -338,3 +329,99 @@ func test_an_unclear_word_never_overrides_what_is_always_given() -> void:
 	MissiveLog.add(repo, s2, MissiveLog.make("spy", "rumour", 5, m, "new",
 		[MissiveLog.words("stance", "Stance", "unclear")]))
 	assert_eq(String(Intel.fact(repo, s2, m, "stance", "Neutral")["text"]), "Wary")
+
+
+## The province wealth tiers computed by hand from a state as it stands
+## (the per-person tax against every province's terciles).
+func _tiers_by_hand(s: GameState) -> Dictionary:
+	var rates: Array = []
+	var per: Dictionary = {}
+	var codes := repo.provinces.keys()
+	codes.sort()
+	for c: String in codes:
+		var people := RealmEconomy._figure(repo, s, "economy.provinces.%s.rural_population" % c) \
+			+ RealmEconomy._figure(repo, s, "economy.provinces.%s.urban_population" % c)
+		if people <= 0:
+			continue
+		@warning_ignore("integer_division")
+		var rate := int(RealmEconomy.province(repo, s, c)["tax"]) * 1000 / people
+		per[c] = rate
+		rates.append(rate)
+	rates.sort()
+	var out: Dictionary = {}
+	for c: String in per:
+		out[c] = Intel.tercile_of(rates, int(per[c]))
+	return out
+
+
+## A change within the month that moves provinces' tax per head apart: the
+## tariff lands only on towns, so town-heavy provinces climb the terciles.
+func _mid_month_change(s: GameState) -> void:
+	s.metrics["tariff_rate"] = 10.0
+	s.metrics["tax_rate"] = 1.0
+
+
+## I5 / Ruling 15 (final review): the wealth tiers are STATE, settled with
+## the month — never filled on demand at a moment the UI chooses. Two
+## identical states take the same mid-month change; on one a card is opened
+## BEFORE the change (and the game is then reloaded, as a player may), on
+## the other nothing is opened. Their spies must file identical reports.
+func test_opening_a_card_mid_month_never_changes_a_report() -> void:
+	var a := GameState.new_campaign(repo, 7)
+	var b := GameState.new_campaign(repo, 7)
+	var realm := repo.resolve_realm("player_realm")
+	# a foreign province whose tier this change moves, with a manor to spy on
+	var probe := GameState.new_campaign(repo, 7)
+	var pre := _tiers_by_hand(probe)
+	_mid_month_change(probe)
+	var post := _tiers_by_hand(probe)
+	var cell := -1
+	var codes := repo.provinces.keys()
+	codes.sort()
+	for c: String in codes:
+		if MapOwnership.owner_of(repo, probe, c) == realm or int(pre.get(c, 1)) == int(post.get(c, 1)):
+			continue
+		var cells := MapManors.manors_of_province(repo, c, probe)
+		if not cells.is_empty():
+			cell = int(cells[0])
+			break
+	assert_gt(cell, -1, "a foreign province whose tier the change moves")
+	if cell < 0:
+		return
+	var at := MapTerrain.cell_center(repo, repo.cells[cell])
+	var prov := MapManors.province_of(repo, cell, a)
+	MapObjects.province_card(repo, a, prov)  # the player looks, early in the month
+	_mid_month_change(a)
+	var report_a := JSON.stringify(SpySystem.report(repo, a, at, 900, 0))
+	repo.load_map(repo.map_id)  # the game is reloaded mid-month
+	_mid_month_change(b)
+	var report_b := JSON.stringify(SpySystem.report(repo, b, at, 900, 0))
+	assert_eq(report_a, report_b, "what a spy files never depends on when a card was opened")
+
+
+## Ruling 15: the tick settles the tiers into the state right after the
+## month's economy, and they survive a save.
+func test_the_tick_settles_the_wealth_tiers_into_the_state() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	assert_eq(s.wealth_tiers, _tiers_by_hand(s), "a new campaign starts with the tiers of its own state")
+	_mid_month_change(s)
+	var moved := _tiers_by_hand(s)
+	assert_ne(s.wealth_tiers, moved, "the change moves some tier, but not until the month is settled")
+	var engine := TickEngine.new(repo)
+	engine.advance(s)
+	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	assert_eq(back.wealth_tiers, s.wealth_tiers, "the tiers are saved")
+	var home := MapManors.home_province(repo, s)
+	assert_eq(Intel.wealth_tier(repo, s, home), int(s.wealth_tiers.get(home, 1)), "readers read the state")
+
+
+## Ruling 15: a save written before the tiers existed computes them once,
+## from the loaded state.
+func test_an_old_save_computes_its_wealth_tiers_once_on_load() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var d := s.to_dict()
+	d.erase("wealth_tiers")
+	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(d)))
+	assert_eq(back.wealth_tiers, {}, "the old save carries none")
+	Intel.ensure_wealth_tiers(repo, back)
+	assert_eq(back.wealth_tiers, _tiers_by_hand(back))

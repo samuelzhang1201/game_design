@@ -14,8 +14,6 @@ const UNCLEAR := "unclear"
 ## The keys a manor's report may answer for its whole province (Ruling 11).
 const PROVINCE_KEYS := ["stance", "wealth"]
 
-static var _tiers: Dictionary = {}
-static var _tiers_key := ""
 
 
 static func province_of(repo: DataRepository, state: GameState, subj: Dictionary) -> String:
@@ -53,41 +51,49 @@ static func stance_of(repo: DataRepository, kingdom: String) -> String:
 	return String(row.get("stance", "Unknown"))
 
 
-## 0 poor, 1 middling, 2 rich: the province's tax per person against every
-## province's terciles. Cached per pack, campaign (seed) and month — a fresh
-## campaign at the same tick (every new_campaign starts at tick 0) must never
-## reuse another campaign's cached tiers.
-static func wealth_tier(repo: DataRepository, state: GameState, province: String) -> int:
-	var seed_value := state.rng.seed_value() if state != null else 0
-	var tick := state.tick if state != null else 0
-	var key := "%s|%d|%d" % [repo.map_id, seed_value, tick]
-	if key != _tiers_key:
-		_tiers = {}
-		_tiers_key = key
-		var rates: Array = []
-		var per: Dictionary = {}
-		var codes := repo.provinces.keys()
-		codes.sort()
-		for c: String in codes:
-			var people := RealmEconomy._figure(repo, state, "economy.provinces.%s.rural_population" % c) \
-				+ RealmEconomy._figure(repo, state, "economy.provinces.%s.urban_population" % c)
-			if people <= 0:
-				continue
-			@warning_ignore("integer_division")  # gold per 1000 people, whole
-			var rate := int(RealmEconomy.province(repo, state, c)["tax"]) * 1000 / people
-			per[c] = rate
-			rates.append(rate)
-		rates.sort()
-		for c: String in per:
-			_tiers[c] = tercile_of(rates, int(per[c]))
-	return int(_tiers.get(province, 1))
+## 0 poor, 1 middling, 2 rich: the province's tier as the STATE holds it
+## (Ruling 15, final review I5) — settled by TickEngine right after the
+## month's economy, never computed here on demand, so no reader (a card the
+## player opens, say) can decide when the month's figures are sampled and
+## what a spy's saved report then says. 1 for a province (or a state) with none.
+static func wealth_tier(_repo: DataRepository, state: GameState, province: String) -> int:
+	return int(state.wealth_tiers.get(province, 1)) if state != null else 1
 
 
-## Clears the cached wealth terciles (called from DataRepository.load_map
-## beside Weather.forget() / HouseArms.forget()).
-static func forget() -> void:
-	_tiers = {}
-	_tiers_key = ""
+## Every province's tier from the state as it stands: its tax per person
+## against every province's terciles, in code order. Pure.
+static func compute_wealth_tiers(repo: DataRepository, state: GameState) -> Dictionary:
+	var rates: Array = []
+	var per: Dictionary = {}
+	var codes := repo.provinces.keys()
+	codes.sort()
+	for c: String in codes:
+		var people := RealmEconomy._figure(repo, state, "economy.provinces.%s.rural_population" % c) \
+			+ RealmEconomy._figure(repo, state, "economy.provinces.%s.urban_population" % c)
+		if people <= 0:
+			continue
+		@warning_ignore("integer_division")  # gold per 1000 people, whole
+		var rate := int(RealmEconomy.province(repo, state, c)["tax"]) * 1000 / people
+		per[c] = rate
+		rates.append(rate)
+	rates.sort()
+	var out: Dictionary = {}
+	for c: String in per:
+		out[c] = tercile_of(rates, int(per[c]))
+	return out
+
+
+## The month's settlement of the tiers into the state (TickEngine.advance,
+## and a new campaign's first state).
+static func settle_wealth_tiers(repo: DataRepository, state: GameState) -> void:
+	state.wealth_tiers = compute_wealth_tiers(repo, state)
+
+
+## A save written before the tiers were state carries none: compute them
+## once, from the loaded state (Game.load_campaign).
+static func ensure_wealth_tiers(repo: DataRepository, state: GameState) -> void:
+	if state != null and state.wealth_tiers.is_empty():
+		settle_wealth_tiers(repo, state)
 
 
 ## The tercile (0/1/2) of value v within sorted_rates. A tie takes the
