@@ -17,10 +17,20 @@ func after_all() -> void:
 	RoadGraph.forget()
 
 
+## burg_cells() is keyed by burg CODE (String) -> cell id (int), so a plain
+## `.has(cell_id)` against it is always false. This is the set of cell ids
+## that actually hold a town, built from the dictionary's VALUES.
+func _town_cells() -> Dictionary:
+	var out: Dictionary = {}
+	for cell in MapEconomy.burg_cells(repo).values():
+		out[int(cell)] = true
+	return out
+
+
 ## A foreign manor with people and no town in it (no walls to shift the roll).
 func _foreign_manor(s: GameState) -> int:
 	var realm := repo.resolve_realm("player_realm")
-	var towns := MapEconomy.burg_cells(repo)
+	var towns := _town_cells()
 	var ids := repo.manors.keys()
 	ids.sort()
 	for id: int in ids:
@@ -32,7 +42,7 @@ func _foreign_manor(s: GameState) -> int:
 
 ## A manor of the crown's home province with no town in it.
 func _home_plain(s: GameState) -> int:
-	var towns := MapEconomy.burg_cells(repo)
+	var towns := _town_cells()
 	for id in MapManors.manors_of_province(repo, MapManors.home_province(repo, s)):
 		if not towns.has(int(id)):
 			return int(id)
@@ -67,6 +77,34 @@ func test_quality_follows_the_place() -> void:
 	assert_eq(SpySystem.quality(repo, s, _at(f), 600), 450, "foreign −150, clear weather")
 	assert_eq(SpySystem.quality(repo, s, _at(_home_plain(s)), 600), 750, "home +150")
 	assert_eq(SpySystem.quality(repo, s, _at(f), 10), 0, "clamped at 0")
+
+
+## A manor holding a walled/citadel town: quality picks up the extra
+## spy_difficulty "walled" shift beside the home/foreign one (fix round 1 —
+## the previous helpers never actually excluded towns, so this path was
+## never exercised).
+func test_quality_is_shifted_by_walls() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var realm := repo.resolve_realm("player_realm")
+	var cells := MapEconomy.burg_cells(repo)
+	var codes := repo.burgs.keys()
+	codes.sort()
+	for code: String in codes:
+		var feats := String((repo.burgs[code] as Dictionary).get("features", "")).split("|")
+		if not ("walls" in feats or "citadel" in feats):
+			continue
+		if not cells.has(code):
+			continue
+		var cell := int(cells[code])
+		var prov := MapManors.province_of(repo, cell, s)
+		var home := MapOwnership.owner_of(repo, s, prov) == realm
+		var shift := int(repo.spy_difficulty.get("home" if home else "foreign", 0))
+		var walled := int(repo.spy_difficulty.get("walled", 0))
+		var expected := clampi(600 + shift + walled, 0, 999)
+		assert_eq(SpySystem.quality(repo, s, _at(cell), 600), expected,
+			"%s (%s, walled) at roll 600" % [code, "home" if home else "foreign"])
+		return
+	pass_test("no walled town on this pack")
 
 
 func test_the_column_and_the_facts() -> void:
