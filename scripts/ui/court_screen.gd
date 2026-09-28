@@ -231,6 +231,12 @@ func enter_court(report: TickReport) -> void:
 func top_bar() -> TopBar:
 	return %TopBar
 
+## The map panel's own Control (fix round 1 finding 4): GameRoot centres the
+## spy report dialog over it, the way conversation_scene.gd already exposes
+## its own %MapPanel.
+func map_panel() -> PanelContainer:
+	return %MapPanel
+
 func suggestion_buttons() -> Array:
 	return _suggestion_buttons
 

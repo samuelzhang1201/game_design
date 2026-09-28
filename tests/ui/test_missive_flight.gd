@@ -44,6 +44,25 @@ func test_a_spy_report_stops_the_clock_and_opens_the_dialog() -> void:
 	assert_eq(Game.clock_speed, 0, "nothing restarts the clock")
 
 
+## Fix round 1 finding 4: spec §2 says the dialog is "centred over the map
+## panel", not the window — with the fixed left column always on, the map
+## panel's own centre sits well right of the window's, so a window-centred
+## dialog does not sit over it. Checked on the court screen; conversation_scene
+## exposes the same map_panel() and GameRoot's fix reads neither by name.
+func test_the_report_dialog_centres_on_the_map_panel_not_the_window() -> void:
+	var r: GameRoot = await _root()
+	var id := _spy_letter()
+	r.on_new_missives([id])
+	await wait_frames(1)
+	assert_true(r.report_popup().visible)
+	var map_rect: Rect2 = r.current_screen.map_panel().get_global_rect()
+	var win_rect: Rect2 = r.report_popup().find_child("Window", true, false).get_global_rect()
+	assert_almost_eq(win_rect.get_center().x, map_rect.get_center().x, 1.0,
+		"the dialog centres on the map panel's x, not the window's")
+	assert_almost_eq(win_rect.get_center().y, map_rect.get_center().y, 1.0,
+		"the dialog centres on the map panel's y, not the window's")
+
+
 func test_two_spy_reports_in_one_frame_open_in_turn() -> void:
 	var r: GameRoot = await _root()
 	var a := _spy_letter()

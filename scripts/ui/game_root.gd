@@ -461,6 +461,10 @@ func _next_report() -> void:
 	while not _pending_reports.is_empty():
 		var m := MissiveLog.find(Game.state, int(_pending_reports.pop_front()))
 		if not m.is_empty():
+			# Centred on the map panel, not the window (spec §2, fix round 1
+			# finding 4) — the active screen's own %MapPanel rect.
+			if current_screen != null and current_screen.has_method("map_panel"):
+				_report_popup.center_on(current_screen.map_panel().get_global_rect())
 			_report_popup.open(m)
 			return
 
