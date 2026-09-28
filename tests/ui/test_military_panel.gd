@@ -49,7 +49,7 @@ func test_the_host_opens_from_a_regiments_card_and_closes_back() -> void:
 	var units: Array = Game.data.world_table("military", "unit_types").keys()
 	assert_eq(panel.arms_chart().rows.size(), units.size(), "one bar per arm")
 	for row in panel.arms_chart().rows:
-		assert_ne(String(row["icon"]), "", "each arm has its glyph")
+		assert_ne(String(row.get("dimension", "")), "", "each arm carries its dimension (its art)")
 	var regiments := MapObjects.regiments_of(Game.data, mine).size()
 	assert_eq(panel.regiments_chart().rows.size(), regiments, "every regiment of the realm")
 	var neighbours := String(Game.data.kingdoms[mine]["neighbor_codes"]).split("|", false).size()
@@ -72,7 +72,7 @@ func test_bars_follow_the_ledger() -> void:
 		"military.kingdoms.player_realm.infantry"))
 	var seen := false
 	for row in r.current_screen.military_panel().arms_chart().rows:
-		if String(row["icon"]) == "shield":
+		if String(row.get("dimension", "")) == "infantry":
 			seen = true
 			assert_almost_eq(float(row["value"]), infantry, 0.5, "the bar reads the live count")
 	assert_true(seen, "the infantry bar is there")
@@ -94,7 +94,7 @@ func test_the_column_follows_the_state_while_it_is_up() -> void:
 	var panel: MilitaryPanel = r.current_screen.military_panel()
 	var before := 0.0
 	for row in panel.arms_chart().rows:
-		if String(row["icon"]) == "shield":
+		if String(row.get("dimension", "")) == "infantry":
 			before = float(row["value"])
 	WorldLedger.apply(Game.data, Game.state, "military.kingdoms.player_realm.infantry", -500.0,
 		"a hard march", "test")
@@ -103,6 +103,6 @@ func test_the_column_follows_the_state_while_it_is_up() -> void:
 	Game.state_changed.emit()
 	await wait_frames(2)
 	for row in panel.arms_chart().rows:
-		if String(row["icon"]) == "shield":
+		if String(row.get("dimension", "")) == "infantry":
 			assert_almost_eq(float(row["value"]), before - 500.0, 0.5,
 				"the bar followed the ledger with no click")
