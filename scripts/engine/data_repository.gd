@@ -97,6 +97,12 @@ var army_height_supply: Array = []
 var courier_kinds: Dictionary = {}
 ## data/courier_art.csv: kind -> its row (model, painting, size).
 var courier_art: Dictionary = {}
+## data/intel_facts.csv: key -> {label, round_to, tiers} (spec 2026-09-28 §1).
+var intel_facts: Dictionary = {}
+## data/spy_difficulty.csv: key -> per mille added to a spy's quality roll.
+var spy_difficulty: Dictionary = {}
+## data/missive_art.csv: key -> texture path ("" until installed).
+var missive_art: Dictionary = {}
 ## data/road_speed.csv: key -> per mille (road, trail, offroad, sea, tier_<tier>).
 var road_speed: Dictionary = {}
 ## data/weather.csv: kind -> {speed_permille, icon, label}, in the file's order.
@@ -567,6 +573,17 @@ func _load(dir: String) -> bool:
 				"icon": String(r["icon"]), "label": String(r["label"])}):
 		return false
 	if not _load_if_present(dir + "/weather_odds.csv", ["season", "tier"], _add_weather_odds):
+		return false
+	if not _load_if_present(dir + "/intel_facts.csv", ["key", "label", "round_to", "tiers"],
+			func(r): intel_facts[String(r["key"])] = {"label": String(r["label"]),
+				"round_to": maxi(1, int(r["round_to"])),
+				"tiers": String(r["tiers"]).split("|", false)}):
+		return false
+	if not _load_if_present(dir + "/spy_difficulty.csv", ["key", "permille"],
+			func(r): spy_difficulty[String(r["key"])] = int(r["permille"])):
+		return false
+	if not _load_if_present(dir + "/missive_art.csv", ["key", "texture"],
+			func(r): missive_art[String(r["key"])] = String(r["texture"])):
 		return false
 	if not _load_if_present(dir + "/army_orders.csv", ["action_code", "label", "hint"],
 			func(r): army_orders.append({"action_code": String(r["action_code"]),

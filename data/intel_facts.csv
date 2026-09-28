@@ -1,0 +1,9 @@
+key,label,round_to,tiers,notes
+people,People,100,,"spec 2026-09-28-missive-board-and-spies §1: a spy's estimate is rounded out to this, so a range reads 2,800–3,200"
+tax,Tax a month,10,,gold a month
+output,Goods a month,5,,units of the manor's chief good a month
+wealth,Wealth,1,poor|middling|rich,"the province's tax per person against every province's terciles (Intel.wealth_tier); always given in words"
+troops_own,Our troops nearby,100,,headcount within spy_radius_km
+troops_foreign,Foreign troops nearby,100,,headcount within spy_radius_km
+holder,Held by,1,,always given
+stance,Stance,1,,"the player realm's stance toward the holder (the pack's diplomacy.csv), always given"

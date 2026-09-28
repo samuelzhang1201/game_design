@@ -512,3 +512,17 @@ map3d_courier_route_px,1.2,"a courier's road still ahead: dashed, in the realm's
 map3d_courier_pending_alpha,0.55,"an order still on the road: its route drawn dotted at this share of the realm colour's opacity, an envelope in its ring"
 map3d_weather_view_m,60000,"the weather marks show only while the camera is nearer than this (world metres)"
 map3d_weather_icon_px,18,"a weather mark's size in design px"
+missive_keep_per_column,40,"spec 2026-09-28 §1: letters kept per board column; the oldest leaves when one more arrives"
+spy_radius_km,25,a spy counts the troops within this distance of his point
+spy_credible_threshold,500,a quality roll (0..999 after spy_difficulty) at or above this files the report as highly credible; below is rumour
+spy_text_threshold,300,below this the holder / stance / wealth read "unclear"
+spy_width_best,100,"per mille half-width of an estimate at the best quality"
+spy_width_worst,450,per mille half-width at the worst quality
+spy_bias_max,300,"per mille: a rumour's whole report is shifted by up to this much, one sign for every fact"
+intel_match_km,10,a report about a point counts for a subject within this distance
+intel_magnitude_hundreds,100,"Intel.magnitude: under this a figure reads 'a handful'"
+intel_magnitude_thousands,1000,under this 'hundreds'
+intel_magnitude_many,5000,"under this 'thousands', else 'many thousands'"
+missive_seal_s,0.5,the report dialog's shrink into its envelope (EnvelopeFlight)
+missive_fly_s,0.9,the envelope's flight to the Missive tab
+missive_fly_turns,2,whole turns the envelope spins in flight

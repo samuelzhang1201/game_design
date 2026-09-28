@@ -46,3 +46,7 @@ landmark_high,#2B1D14,"3D MAP HEIGHTS (owner 2026-09-19, spec 2026-09-19-map3d-h
 landmark_low,#1E4257,"3D MAP HEIGHTS: a low point's triangle — the coast line's deep blue"
 landmark_text,#1A1410,"3D MAP HEIGHTS: the height beside a landmark and the legend's tier names"
 weather_mark_bg,#1A1D22,"3D HUD (2026-09-27): the dark disc behind a weather glyph until its art is installed"
+intel_truth,#D8C27A,"Missive board (spec 2026-09-28): ground truth — the column plaque and a card's intel tag"
+intel_credible,#7FB069,highly credible
+intel_consult,#6FA3C8,worth consulting (sub-project C)
+intel_rumour,#B07A5A,rumour
