@@ -276,3 +276,12 @@ add it here as a principle with its why — not as a changelog entry.
 - **Status reads as two thin bars on the counter**, red (readiness) over
   yellow (supplies), in the counter's own width.
 - **A miniature casts its shadow** — the table-top look wants it.
+
+## Sunlight (owner 2026-09-28)
+- **The sun models the ground; it never covers it** ("日照产生的阴影实在太厚重太大了…不要影响玩家的视线"). A cast shadow is a light wash
+  you can read the map through (`map3d_sun_shadow_opacity` 0.45, soft edge),
+  and the sun stays HIGH all day (-52..-60°) so shadows stay short. A low sun
+  behind the map (facing the camera) blacks out every slope turned toward the
+  player. No shadow opacity can fix that: the slope has only the ambient
+  light, and SSAO darkens it further. So keep the sun high, and keep the fill
+  and SSAO gentle.
