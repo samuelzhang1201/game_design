@@ -215,13 +215,23 @@ static func _kingdom_lines(repo: DataRepository, row: Dictionary,
 	for role: Dictionary in repo.roles:
 		if String(role.get("kingdom", "")) == code:
 			court.append(String(role["display_name"]))
+	# A foreign kingdom's population is a word, not a figure (spec
+	# 2026-09-28 §1) — but its provinces and towns stay exact: the map draws
+	# every border and every town for all to see, so counting them leaks
+	# nothing a spyglass would not (a deliberate deviation from the spec's
+	# blanket "magnitude words" rule, per the task-5 controller ruling).
+	var foreign := code != repo.resolve_realm("player_realm") and not Intel.dev_all
+	var pop_text := Intel.magnitude(repo, int(float(row.get("population", 0)))) if foreign \
+		else String(row.get("population", "—"))
 	var lines: Array[String] = [
 		"Capital: %s" % _label(repo.burgs, String(row.get("capital_burg", ""))),
 		"Provinces: %d" % province_count,
 		"Towns: %d" % town_count,
-		"Population: %s" % row.get("population", "—"),
+		"Population: %s" % pop_text,
 		"Neighbors: %s" % (", ".join(neighbors) if not neighbors.is_empty() else "—"),
 	]
+	if foreign:
+		lines.append("Stance: %s" % Intel.stance_of(repo, code))
 	if not court.is_empty():
 		lines.append("Court: %s" % ", ".join(court))
 	return lines
@@ -404,7 +414,10 @@ static func burg_card(repo: DataRepository, state: GameState, code: String) -> D
 	for f: String in String(b.get("features", "")).split("|", false):
 		features.append(f)
 	var label := String(b["label"])
-	return {
+	var center := Vector2(float(b["x"]), float(b["y"]))
+	var subj := MissiveLog.subject("burg", code, -1, center)
+	var known := Intel.level(repo, state, subj)
+	var card := {
 		"kind": "burg", "code": code, "title": label,
 		"subtitle": "%s, %s" % [String(prov.get("full_name", prov.get("label", ""))),
 			String(kingdom.get("full_name", kingdom.get("label", "")))],
@@ -412,9 +425,24 @@ static func burg_card(repo: DataRepository, state: GameState, code: String) -> D
 		"fields": fields, "features": features,
 		"production": production_of(repo, [code]),
 		"wealth": float(econ.get("product", 0.0)), "treasury": float(econ.get("treasury", 0.0)),
-		"center": Vector2(float(b["x"]), float(b["y"])),
-		"ask": "What do we know of %s?" % label, "known": "full",
+		"center": center,
+		"ask": "What do we know of %s?" % label, "known": known,
 	}
+	if known != "full":
+		card["production"] = []
+		card["wealth"] = 0.0
+		card["treasury"] = 0.0
+		var true_pop := int(float(b.get("population", 0)))
+		var pop_fact := Intel.fact(repo, state, subj, "people", true_pop)
+		for i in fields.size():
+			if String(fields[i][0]) == "Population":
+				fields[i][1] = String(pop_fact["text"])
+		var facts: Array = [
+			["people", "People", true_pop],
+			["wealth", "Wealth", Intel.wealth_tier(repo, state, String(b["province_code"]))],
+			["stance", "Stance", Intel.stance_of(repo, owner)]]
+		card["intel"] = _intel_rows(repo, state, subj, facts)
+	return card
 
 ## The player's own province in full; foreign land only by what is commonly
 ## known (name, kingdom, house, seat).
@@ -428,6 +456,9 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 	var title := String(prov.get("full_name", ""))
 	if title == "":
 		title = label
+	var center := Vector2(float(prov.get("center_x", 0.0)), float(prov.get("center_y", 0.0)))
+	var subj := MissiveLog.subject("province", code, -1, center)
+	var known := Intel.level(repo, state, subj)
 	var card := {
 		"kind": "province", "code": code, "title": title,
 		"subtitle": String(kingdom.get("full_name", kingdom.get("label", ""))),
@@ -436,11 +467,20 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 			["Seat", _label(repo.burgs, String(prov.get("capital_burg", "")))],
 			["Weather", Weather.describe(repo, state, code)]],
 		"features": [], "production": [], "wealth": 0.0, "treasury": 0.0,
-		"center": Vector2(float(prov.get("center_x", 0.0)), float(prov.get("center_y", 0.0))),
+		"center": center,
 		"ask": "What do we know of %s?" % label,
-		"known": "full" if province_is_players(repo, state, code) else "basic",
+		"known": known,
 	}
-	if card["known"] == "basic":
+	if card["known"] != "full":
+		var urban: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.urban_population" % code)
+		var rural: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.rural_population" % code)
+		var true_people := (int(urban) + int(rural)) if (urban != null and rural != null) \
+			else int(float(prov.get("population", 0)))
+		var facts: Array = [
+			["people", "People", true_people],
+			["wealth", "Wealth", Intel.wealth_tier(repo, state, code)],
+			["stance", "Stance", Intel.stance_of(repo, owner)]]
+		card["intel"] = _intel_rows(repo, state, subj, facts)
 		return card
 	var towns: Array = []
 	for b: Dictionary in repo.burgs.values():
@@ -520,16 +560,20 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	var subtitle := String(prov.get("full_name", prov.get("label", "")))
 	if not kingdom.is_empty():
 		subtitle += " · " + String(kingdom.get("label", ""))
+	var manor_code := MapManors.code_of(repo, cell)
+	var center := MapTerrain.cell_center(repo, repo.cells.get(cell, {"vertex_ids": PackedInt32Array()}))
+	var subj := MissiveLog.subject("manor", manor_code, cell, center)
+	var known := Intel.level(repo, state, subj)
 	var card := {
-		"kind": "manor", "code": MapManors.code_of(repo, cell), "cell": cell, "title": label,
+		"kind": "manor", "code": manor_code, "cell": cell, "title": label,
 		"subtitle": subtitle, "kingdom_code": owner, "initial": label.substr(0, 1),
 		"fields": [["Held by", "The crown" if crowns else ("House " + house if house != "" else "no one")],
 			["Province", String(prov.get("label", province))]],
 		"features": [], "production": [], "wealth": 0.0, "treasury": 0.0,
 		"buildings": [], "works": [], "slots": 0, "slot_actions": [], "actions": [],
-		"center": MapTerrain.cell_center(repo, repo.cells.get(cell, {"vertex_ids": PackedInt32Array()})),
+		"center": center,
 		"ask": "What do we know of %s?" % label,
-		"known": "full" if (province != "" and province_is_players(repo, state, province)) else "basic",
+		"known": known,
 	}
 	var fields: Array = card["fields"]
 	var burg := MapManors.burg_of(repo, cell)
@@ -550,12 +594,41 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	if burg != "":
 		stats.append(_stat("manor_seat", _label(repo.burgs, burg),
 			"Seat — the town of %s stands in it" % _label(repo.burgs, burg)))
-	if card["known"] == "basic":
-		# Across the border a manor that touches the realm may be bought
-		# (owner 2026-09-14): its card offers that one order.
-		if state != null and not MapManors.is_crowns(repo, state, cell) \
-				and String(MapManors.purchase_kind(repo, state, cell)["kind"]) == "foreign":
+	if card["known"] != "full":
+		# The orders stand as they always did for realm land (owner 2026-09-14):
+		# a general manor — the crown's own house holds it, or another
+		# house's, either within a province the crown does not itself
+		# control — offers manor_actions unconditionally, exactly as a
+		# crown-controlled manor's card always has, each action's own error
+		# saying when the purse, the border or (BUILD/FOCUS) the missing
+		# control refuses it. Truly foreign land (known "basic") only
+		# carries the one BUY order, and only when it touches the realm's
+		# border at all, so a distant foreign manor does not carry a button
+		# that can never fire.
+		if state != null and (known == "general" or (not crowns \
+				and String(MapManors.purchase_kind(repo, state, cell)["kind"]) == "foreign")):
 			card["actions"] = manor_actions(repo, state, cell)
+		# The price is not one of the fogged figures (people/tax/wealth/
+		# treasury, controller ruling): the BUY/SELL button's own label
+		# already states it exactly, before this task and after, so the
+		# stat beside it agrees rather than hiding what the button shows.
+		if crowns:
+			stats.append(_stat("manor_price", _short_num(MapManors.sell_price_of(repo, state, cell)),
+				"Sells for — %d gold" % roundi(MapManors.sell_price_of(repo, state, cell))))
+		else:
+			stats.append(_stat("manor_price", _short_num(MapManors.price_of(repo, state, cell)),
+				"Asking price — %d gold" % roundi(MapManors.price_of(repo, state, cell))))
+		var line := ManorEconomy.line_of(repo, state, cell, state.tick)
+		var output_total := 0
+		for g: String in (line["units"] as Dictionary):
+			output_total += int((line["units"] as Dictionary)[g])
+		var facts: Array = [
+			["people", "People", int(line["people"])],
+			["tax", "Tax", int(line["tax"])],
+			["output", "Output", output_total],
+			["wealth", "Wealth", Intel.wealth_tier(repo, state, province)],
+			["stance", "Stance", Intel.stance_of(repo, owner)]]
+		card["intel"] = _intel_rows(repo, state, subj, facts)
 		return card
 	var cell_row: Dictionary = repo.cells.get(cell, {})
 	var biome: Dictionary = repo.biomes.get(int(cell_row.get("biome_id", -1)), {})
@@ -689,6 +762,19 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 ## value for beside it, and the whole of it for the tooltip.
 static func _stat(key: String, text: String, tooltip: String) -> Dictionary:
 	return {"key": key, "text": text, "tooltip": tooltip}
+
+## The rows a fogged card shows (spec 2026-09-28): each fact through Intel,
+## tagged with where it came from.
+static func _intel_rows(repo: DataRepository, state: GameState, subj: Dictionary, facts: Array) -> Array:
+	var rows: Array = []
+	for f: Array in facts:  # [key, label, true value]
+		var got := Intel.fact(repo, state, subj, String(f[0]), f[2])
+		var tag := ""
+		if String(got["column"]) != "" and String(got["source"]) != "own records":
+			tag = "%s · %s" % [String(got["source"]), CourierCard.date_of(int(got["day"]))]
+		rows.append({"label": String(f[1]), "text": String(got["text"]), "tag": tag,
+			"column": String(got["column"])})
+	return rows
 
 ## The value of a named row in a card's fields, or "".
 static func _field_text(fields: Array, name: String) -> String:
@@ -948,12 +1034,19 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	var total := int(regiment_size(repo, r))
 	var piece := army_piece(repo, r)
 	var stats: Array = []
-	for unit: String in repo.world_table("military", "unit_types"):
-		var n := int(float(r.get(unit, 0)))
-		if n <= 0:
-			continue
-		var unit_label := String((repo.resource_icons.get(unit, {}) as Dictionary).get("label", unit.capitalize()))
-		stats.append(_stat(unit, str(n), "%s — %d" % [unit_label, n]))
+	# A foreign regiment (Intel.level "basic") is seen only in dev mode, which
+	# reads "full" everywhere, so this branch is the honest default: one
+	# headcount word rather than the per-arm muster only a look at the
+	# banners could give.
+	if Intel.level(repo, state, {"kind": "regiment", "code": code}) == "full":
+		for unit: String in repo.world_table("military", "unit_types"):
+			var n := int(float(r.get(unit, 0)))
+			if n <= 0:
+				continue
+			var unit_label := String((repo.resource_icons.get(unit, {}) as Dictionary).get("label", unit.capitalize()))
+			stats.append(_stat(unit, str(n), "%s — %d" % [unit_label, n]))
+	else:
+		stats.append(_stat("army_total", Intel.magnitude(repo, total), "Headcount — " + Intel.magnitude(repo, total)))
 	var st := ArmySystem.state_of(repo, state, code) if state != null else {}
 	if st.is_empty():
 		stats.append(_stat("army", str(total), "Under arms — %d" % total))

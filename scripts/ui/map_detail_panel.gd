@@ -348,8 +348,20 @@ func show_card(card: Dictionary) -> void:
 		_fill_stats(stats)
 		_fill_rates(card.get("rates", []))
 	_show_painting(String(card.get("painting", "")))
+	# What is known through the missive board (spec 2026-09-28 §1): each row
+	# is a label, its text, and — when it came from a letter rather than
+	# common knowledge — a tag naming the source and the day, coloured by
+	# the column it stands in.
+	for row: Dictionary in card.get("intel", []):
+		_fields.add_child(_line(String(row["label"]), UiPalette.TEXT_MUTED))
+		var value := _line(String(row["text"]), UiPalette.TEXT_SOFT)
+		if String(row["tag"]) != "":
+			value.text += "  (%s)" % String(row["tag"])
+			value.add_theme_color_override("font_color",
+				MapPalette.named(Game.data, "intel_" + String(row["column"])))
+		_fields.add_child(value)
 	var known := String(card.get("known", "full"))
-	var basic := known == "basic"
+	var basic := known in ["basic", "general"]
 	if known == "army":
 		# an army card is its painting and its icons (owner 2026-09-15), and
 		# the way to the whole host (owner 2026-09-27)
@@ -400,8 +412,10 @@ func show_card(card: Dictionary) -> void:
 			_set_preview(card.get("center", Vector2.ZERO))
 		_fill_slots(card)
 	else:
+		# The intel rows above stand in for the hint once there is something
+		# to report; only a card with nothing at all still says so.
 		_hint.text = "Little more is known of foreign land."
-		_hint.visible = true
+		_hint.visible = (card.get("intel", []) as Array).is_empty()
 	# The orders the card offers stand outside the full/basic split: a foreign
 	# manor on the border offers its BUY (owner 2026-09-14). The buildings
 	# are one dropdown, not a button apiece (owner 2026-09-14).

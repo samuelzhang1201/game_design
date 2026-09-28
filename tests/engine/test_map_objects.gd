@@ -50,6 +50,7 @@ func _tiny() -> DataRepository:
 	repo.markers = {"inn": {"marker_code": "inn", "label": "The Inn", "type": "inns",
 		"x": "1.5", "y": "2.5", "legend": "A warm hearth."}}
 	repo.biomes = {6: {"biome_id": "6", "label": "Forest", "color": "", "habitability": "50"}}
+	repo.realm_bindings = {"player_realm": "k"}
 	return repo
 
 func test_lod_rule_from_balance() -> void:
@@ -379,8 +380,15 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	assert_eq(codes.count("MANOR_FOCUS"), MapManors.focuses_for(real, own).size() - 1,
 		"one WORK per chief good the land allows, less the one it works")
 	# Another house's manor in the realm: buy, no seize while the flag is off.
+	# Fog (spec 2026-09-28-missive-board-and-spies §1): a manor of the realm
+	# the crown does not itself control reads "general", not "full" — its
+	# BUY order still stands (the button's own label and error carry the
+	# real price; that mechanism was never fogged, before this task or
+	# after), but the detailed fields (Asking price among them) are the
+	# full branch's alone, so the card falls back to the intel rows instead.
 	var theirs := _manor_where(state, false)
 	var other := MapObjects.manor_card(real, state, theirs)
+	assert_eq(String(other["known"]), "general")
 	var other_codes: Array = []
 	for a: Dictionary in other["actions"]:
 		other_codes.append(String(a["action_code"]))
@@ -390,7 +398,8 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 	for f in other["fields"]:
 		of[String(f[0])] = String(f[1])
 	assert_true(of["Held by"].begins_with("House "))
-	assert_true(of.has("Asking price"))
+	assert_false(of.has("Asking price"), "the exact price is a full-card field; general land is fogged")
+	assert_true(other.has("intel"), "the fogged card carries what is known instead")
 	# Poor: the button stays but carries its reason.
 	state.metrics["treasury"] = 0.0
 	var poor := MapObjects.manor_card(real, state, theirs)

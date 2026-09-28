@@ -41,7 +41,10 @@ func test_own_province_gets_a_card_and_foreign_land_the_basics() -> void:
 	Game.start_campaign(42)
 	var p := _panel()
 	await wait_frames(1)
-	var mine := MapOwnership.provinces_of(Game.data, Game.state, Game.data.resolve_realm("player_realm"))[0]
+	# The crown's OWN province (not merely any province of the realm — the
+	# fog, spec 2026-09-28-missive-board-and-spies §1, reads "full" only
+	# where the crown itself controls, MapManors.home_province).
+	var mine := MapManors.home_province(Game.data, Game.state)
 	p.show_province(mine)
 	await wait_frames(1)
 	assert_true(p.visible)
@@ -60,8 +63,11 @@ func test_own_province_gets_a_card_and_foreign_land_the_basics() -> void:
 	assert_has(texts, "Held by")
 	assert_false(texts.has("Population"), "no details abroad")
 	assert_false(p.preview().visible, "no window onto foreign land")
-	assert_true(p.hint_label().visible)
-	assert_string_contains(p.hint_label().text, "Little more is known")
+	# The intel rows (People, Wealth, Stance) stand in place of the old
+	# blanket hint, which now shows only when there is nothing at all to
+	# report.
+	assert_false(p.hint_label().visible, "the intel rows replace the hint")
+	assert_has(texts, "People", "the fogged row instead of an exact figure")
 
 ## The card's shield wears generated arms (owner 2026-09-15): a province its
 ## house's, a manor its holding house's, a town its province's house's.
@@ -170,6 +176,10 @@ func test_a_manor_card_buys_the_manor_from_its_button() -> void:
 	assert_true(p.visible)
 	assert_eq(p.shown_manor(), cell)
 	assert_eq(p.title_label().text, MapManors.label_of(Game.data, cell))
+	# Fog (spec 2026-09-28-missive-board-and-spies §1): this manor is
+	# "general" — a house's, in a realm province the crown does not
+	# control — but the price is not one of the fogged figures, so it still
+	# carries the exact asking price beside the BUY button that names it.
 	assert_string_contains(p.stat_tooltip("manor_price"), "Asking price", "the price is an icon with its tooltip")
 	var buttons := p.actions_box().get_children()
 	assert_eq(buttons.size(), 1, "BUY only, seizing off")
@@ -180,6 +190,11 @@ func test_a_manor_card_buys_the_manor_from_its_button() -> void:
 	await wait_frames(1)
 	assert_true(MapManors.is_crowns(Game.data, Game.state, cell), "the order ran")
 	assert_eq(p.stat_text("manor_owner"), "The crown", "the card redrew from the new state")
+	# The purchase alone does not hand the crown the whole province (its
+	# house still holds the rest), so the card stays "general" — but its
+	# orders stand exactly as a full card's would: SELL is always the
+	# crown's to give, and BUILD (which needs the province itself, not just
+	# the manor) still offers its dropdown, disabled with the reason.
 	var after: Array[String] = []
 	for b in p.actions_box().get_children():
 		after.append((b as Button).text.get_slice(" ", 0) if b is Button else String(b.name))
