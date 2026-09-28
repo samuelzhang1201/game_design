@@ -608,16 +608,7 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		if state != null and (known == "general" or (not crowns \
 				and String(MapManors.purchase_kind(repo, state, cell)["kind"]) == "foreign")):
 			card["actions"] = manor_actions(repo, state, cell)
-		# The price is not one of the fogged figures (people/tax/wealth/
-		# treasury, controller ruling): the BUY/SELL button's own label
-		# already states it exactly, before this task and after, so the
-		# stat beside it agrees rather than hiding what the button shows.
-		if crowns:
-			stats.append(_stat("manor_price", _short_num(MapManors.sell_price_of(repo, state, cell)),
-				"Sells for — %d gold" % roundi(MapManors.sell_price_of(repo, state, cell))))
-		else:
-			stats.append(_stat("manor_price", _short_num(MapManors.price_of(repo, state, cell)),
-				"Asking price — %d gold" % roundi(MapManors.price_of(repo, state, cell))))
+		stats.append(_manor_price_stat(repo, state, cell, crowns))
 		var line := ManorEconomy.line_of(repo, state, cell, state.tick)
 		var output_total := 0
 		for g: String in (line["units"] as Dictionary):
@@ -732,12 +723,7 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		"Building slots — %s; buildings: %s" % [_field_text(fields, "Slots"), _field_text(fields, "Buildings")]))
 	stats.append(_stat("manor_value", _short_num(MapManors.base_value_of(repo, state, cell)),
 		"Value — %s" % _field_text(fields, "Value")))
-	if crowns:
-		stats.append(_stat("manor_price", _short_num(MapManors.sell_price_of(repo, state, cell)),
-			"Sells for — %s" % _field_text(fields, "Sells for")))
-	else:
-		stats.append(_stat("manor_price", _short_num(MapManors.price_of(repo, state, cell)),
-			"Asking price — %s" % _field_text(fields, "Asking price")))
+	stats.append(_manor_price_stat(repo, state, cell, crowns))
 	# What it makes a month, good by good (owner 2026-09-14): the same line
 	# the month's settlement reads.
 	card["rates"] = production_rates(repo, line)
@@ -762,6 +748,18 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 ## value for beside it, and the whole of it for the tooltip.
 static func _stat(key: String, text: String, tooltip: String) -> Dictionary:
 	return {"key": key, "text": text, "tooltip": tooltip}
+
+## The manor's price stat (owner 2026-09-14): what the crown could sell it
+## for, or what its house is asking. Used by both the full card and the
+## fogged one — the price is not one of the fogged figures (people/tax/
+## wealth/treasury), and the BUY/SELL button's own label already states it
+## exactly regardless of `known`, so the stat beside it always agrees.
+static func _manor_price_stat(repo: DataRepository, state: GameState, cell: int, crowns: bool) -> Dictionary:
+	if crowns:
+		var sell := roundi(MapManors.sell_price_of(repo, state, cell))
+		return _stat("manor_price", _short_num(sell), "Sells for — %d gold" % sell)
+	var ask := roundi(MapManors.price_of(repo, state, cell))
+	return _stat("manor_price", _short_num(ask), "Asking price — %d gold" % ask)
 
 ## The rows a fogged card shows (spec 2026-09-28): each fact through Intel,
 ## tagged with where it came from.
@@ -1034,11 +1032,14 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	var total := int(regiment_size(repo, r))
 	var piece := army_piece(repo, r)
 	var stats: Array = []
-	# A foreign regiment (Intel.level "basic") is seen only in dev mode, which
-	# reads "full" everywhere, so this branch is the honest default: one
-	# headcount word rather than the per-arm muster only a look at the
-	# banners could give.
-	if Intel.level(repo, state, {"kind": "regiment", "code": code}) == "full":
+	# Only a regiment Intel.level calls "full" — the player's own for now,
+	# and (once dev mode is wired to Intel.dev_all, task 7) any regiment
+	# under dev mode — gets its arms told apart at a glance; everything else
+	# reads the honest headcount word instead, everywhere the total would
+	# otherwise show, not just the per-arm muster below.
+	var reg_known := Intel.level(repo, state, {"kind": "regiment", "code": code})
+	var total_text := str(total) if reg_known == "full" else Intel.magnitude(repo, total)
+	if reg_known == "full":
 		for unit: String in repo.world_table("military", "unit_types"):
 			var n := int(float(r.get(unit, 0)))
 			if n <= 0:
@@ -1046,15 +1047,15 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 			var unit_label := String((repo.resource_icons.get(unit, {}) as Dictionary).get("label", unit.capitalize()))
 			stats.append(_stat(unit, str(n), "%s — %d" % [unit_label, n]))
 	else:
-		stats.append(_stat("army_total", Intel.magnitude(repo, total), "Headcount — " + Intel.magnitude(repo, total)))
+		stats.append(_stat("army_total", total_text, "Headcount — " + total_text))
 	var st := ArmySystem.state_of(repo, state, code) if state != null else {}
 	if st.is_empty():
-		stats.append(_stat("army", str(total), "Under arms — %d" % total))
+		stats.append(_stat("army", total_text, "Under arms — %s" % total_text))
 	else:
 		var wounded := int(st["wounded"])
 		stats.append(_stat("army", "%d (%d wounded)" % [total, wounded],
 			"Under arms — %d, of whom %d are wounded" % [total, wounded]))
-	var fields: Array = [["Under arms", str(total)]]
+	var fields: Array = [["Under arms", total_text]]
 	if province != "":
 		var where := _label(repo.provinces, province)
 		stats.append(_stat("manor_province", where, "Quartered in %s" % where))

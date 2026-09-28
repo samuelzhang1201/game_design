@@ -20,6 +20,17 @@ func _foreign_manor(s: GameState) -> int:
 	return -1
 
 
+func _foreign_regiment() -> String:
+	var realm := repo.resolve_realm("player_realm")
+	var codes := repo.world_table("military", "regiments").keys()
+	codes.sort()
+	for code: String in codes:
+		var r: Dictionary = repo.world_table("military", "regiments")[code]
+		if String(r["kingdom_code"]) != realm and int(MapObjects.regiment_size(repo, r)) >= 100:
+			return code
+	return ""
+
+
 ## Every string anywhere in a card, flattened.
 func _texts(v: Variant) -> String:
 	if v is Dictionary:
@@ -64,6 +75,15 @@ func test_a_foreign_burg_card_is_fogged() -> void:
 		assert_eq(float(card.get("wealth", 0.0)), 0.0)
 		assert_eq(float(card.get("treasury", 0.0)), 0.0)
 		return
+
+
+func test_a_foreign_regiments_army_card_carries_no_exact_headcount() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var code := _foreign_regiment()
+	var r: Dictionary = repo.world_table("military", "regiments")[code]
+	var total := int(MapObjects.regiment_size(repo, r))
+	var card := MapObjects.army_card(repo, code, s)
+	assert_false(_leaks(_texts(card), total), "headcount")
 
 
 func test_a_report_shows_up_on_the_card_with_its_tag() -> void:
