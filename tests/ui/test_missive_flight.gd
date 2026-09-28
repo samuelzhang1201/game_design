@@ -65,3 +65,64 @@ func test_a_receipt_flies_without_stopping_the_clock() -> void:
 	assert_eq(Game.clock_speed, 1)
 	assert_false(r.report_popup().visible)
 	Game.set_clock_speed(0)
+
+
+func _menu_btn(r: GameRoot, node_name: String) -> Button:
+	return r.pause_menu().find_child(node_name, true, false)
+
+
+## Fix round 1: a spy report open (and a second waiting) when the player
+## restarts from the pause menu must not crash, and must leave nothing
+## behind to reopen or misfire once Game.state is gone.
+func test_a_restart_mid_report_clears_the_queue_without_crashing() -> void:
+	var r: GameRoot = await _root()
+	var a := _spy_letter()
+	var b := _spy_letter()
+	r.on_new_missives([a, b])
+	assert_true(r.report_popup().visible)
+	assert_eq(r.pending_reports(), [b])
+	Game.menu_requested.emit()
+	_menu_btn(r, "Restart").pressed.emit()
+	await wait_frames(2)
+	assert_null(Game.state, "the realm is gone")
+	assert_false(r.report_popup().visible, "the stale dialog is hidden by the reset")
+	assert_eq(r.pending_reports(), [], "the queue is cleared")
+	# Sealing the now-stale, already-hidden dialog must be harmless.
+	r.report_popup().seal_button().pressed.emit()
+	await wait_frames(30)
+	assert_false(r.report_popup().visible)
+	assert_eq(r.pending_reports(), [])
+
+
+## Fix round 1: same shape of bug via Load Game — the loaded (earlier-saved)
+## state never had the letters queued after the save, so their ids are
+## genuinely stale, not just discarded.
+func test_a_load_mid_report_discards_a_stale_id_without_crashing() -> void:
+	var r: GameRoot = await _root()
+	Game.save_campaign()
+	var a := _spy_letter()
+	var b := _spy_letter()
+	r.on_new_missives([a, b])
+	assert_true(r.report_popup().visible)
+	assert_eq(r.pending_reports(), [b])
+	Game.menu_requested.emit()
+	_menu_btn(r, "LoadGame").pressed.emit()
+	await wait_frames(2)
+	assert_true(MissiveLog.find(Game.state, b).is_empty(), "the loaded realm never had this letter")
+	assert_false(r.report_popup().visible)
+	assert_eq(r.pending_reports(), [])
+	r.report_popup().seal_button().pressed.emit()
+	await wait_frames(30)
+	assert_false(r.report_popup().visible)
+	assert_eq(r.pending_reports(), [])
+
+
+## Fix round 1: _switch_to hides every overlay, the report dialog included,
+## so a stale popup can never float over the main menu or a fresh campaign.
+func test_the_popup_is_hidden_after_switching_to_the_menu() -> void:
+	var r: GameRoot = await _root()
+	var id := _spy_letter()
+	r.on_new_missives([id])
+	assert_true(r.report_popup().visible)
+	r._switch_to(GameRoot.State.MENU)
+	assert_false(r.report_popup().visible)

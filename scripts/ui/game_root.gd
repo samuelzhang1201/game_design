@@ -426,6 +426,10 @@ func report_popup() -> MissiveReportPopup:
 func pending_reports() -> Array:
 	return _pending_reports
 
+## The MISSIVE tab's own rect, for both the receipt and the seal flight.
+func _missive_tab_rect() -> Rect2:
+	return _bottom_bar.button("MISSIVE").get_global_rect()
+
 ## New letters from a day's step (spec 2026-09-28 §2): a spy's report stops the
 ## clock and opens the dialog (one at a time, in id order); a receipt or a
 ## monthly report flies a small envelope from the news bar and interrupts
@@ -441,24 +445,42 @@ func on_new_missives(ids: Array) -> void:
 		else:
 			var from: Rect2 = _news_ticker.get_global_rect() if _news_ticker != null \
 				else Rect2(get_viewport_rect().size * 0.5, Vector2.ZERO)
-			EnvelopeFlight.fly(self, from, _bottom_bar.button("MISSIVE").get_global_rect(), false, Game.data) \
+			EnvelopeFlight.fly(self, from, _missive_tab_rect(), false, Game.data) \
 				.landed.connect(refresh_missive_badge)
 	if not _report_popup.visible:
 		_next_report()
 
 ## Opens the oldest waiting report, if any; a sealed report calls back here.
+## A restart or a fresh load (fix round 1) can leave a stale id queued whose
+## letter no longer exists, or exists under a coincidentally-reused id in a
+## brand new state — skip any id that does not resolve, and do nothing at all
+## once the state itself is gone (a reset always clears _pending_reports too,
+## but this guard holds even if a caller somehow doesn't).
 func _next_report() -> void:
-	if _pending_reports.is_empty():
+	if Game.state == null:
 		return
-	_report_popup.open(MissiveLog.find(Game.state, int(_pending_reports.pop_front())))
+	while not _pending_reports.is_empty():
+		var m := MissiveLog.find(Game.state, int(_pending_reports.pop_front()))
+		if not m.is_empty():
+			_report_popup.open(m)
+			return
 
 ## Seal (spec 2026-09-28 §2): the dialog shrinks into an envelope and flies to
 ## the tab, then the next waiting report (if any) opens.
 func _on_report_sealed(from: Rect2) -> void:
-	var f := EnvelopeFlight.fly(self, from, _bottom_bar.button("MISSIVE").get_global_rect(), true, Game.data)
+	var f := EnvelopeFlight.fly(self, from, _missive_tab_rect(), true, Game.data)
 	f.landed.connect(func() -> void:
 		refresh_missive_badge()
 		_next_report())
+
+## A restart, a load or a fresh campaign discards any spy report waiting or
+## open (fix round 1, spec 2026-09-28 §2): its id may no longer exist in the
+## new state, or a fresh state's own id could coincidentally collide with a
+## stale pending one. Called from every handler that replaces Game.state.
+func _reset_reports() -> void:
+	_pending_reports = []
+	if _report_popup != null:
+		_report_popup.visible = false
 
 ## Show on map (spec 2026-09-28 §2): the view looks at the letter's place and
 ## the left column opens its card, through the view's own signals.
@@ -638,6 +660,7 @@ func _on_menu_load() -> void:
 	if not Game.load_campaign():
 		_pause_status.text = "No saved realm found."
 		return
+	_reset_reports()
 	_pause_menu.visible = false
 	_pending_report = null
 	refresh_missive_badge()
@@ -654,6 +677,7 @@ func _on_menu_load() -> void:
 		current_screen.enter_court(null)
 
 func _on_menu_restart() -> void:
+	_reset_reports()
 	_pause_menu.visible = false
 	Game.restart()
 	_switch_to(State.MENU)
@@ -699,6 +723,7 @@ func _switch_to(new_state: State) -> void:
 		_missive_screen.visible = false
 		move_child(_missive_screen, get_child_count() - 1)
 	if _report_popup != null:
+		_report_popup.visible = false
 		move_child(_report_popup, get_child_count() - 1)
 	if _pause_menu != null:
 		move_child(_pause_menu, get_child_count() - 1)
@@ -706,6 +731,7 @@ func _switch_to(new_state: State) -> void:
 const BACKGROUND_STORY_PATH := "res://game_story/chapter_0/game_start.md"
 
 func _on_start_requested() -> void:
+	_reset_reports()
 	Game.start_campaign(44)
 	refresh_missive_badge()
 	_pending_report = Game.next_tick()
@@ -740,6 +766,7 @@ func _on_menu_load_from_title() -> void:
 		if current_screen is MainMenu:
 			current_screen.show_load_failed()
 		return
+	_reset_reports()
 	_pending_report = null
 	refresh_missive_badge()
 	if not Game.state.pending_event.is_empty():
