@@ -470,3 +470,117 @@ func test_the_buy_button_fits_the_column_and_keeps_its_full_text_as_a_tooltip() 
 	var width := font.get_string_size(buy.text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	assert_lt(width, ScreenLayout.LEFT_WIDTH,
 		"BUY's short text fits the fixed column on one line (%d of %d px)" % [width, ScreenLayout.LEFT_WIDTH])
+
+
+## A report on the same spot as the card's subject, so Intel._latest's
+## tier-3 "point" match hits a manor, province or burg query alike (distance
+## 0, same province).
+func _point_report(centre: Vector2) -> void:
+	MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", Game.state.absolute_day(),
+		MissiveLog.subject("point", "", -1, centre), "A spy report",
+		[MissiveLog.span("people", "People", 9600, 18800)]))
+
+
+## Fix round 1 finding 2: the fogged/reported cards' fact LABELS
+## (_intel_rows' row["label"], e.g. "People"/"Tax"/"Wealth"/"Stance") are
+## drawn with autowrap OFF ("only as wide as their words", Task 10's look
+## check) — nothing catches a label that runs wide. This builds the
+## longest-labelled cards the left column ever shows — a foreign manor,
+## province and burg, each fogged and then with a spy report on top — and
+## holds the whole card's minimum width under the fixed 240 px column
+## (ScreenLayout.LEFT_WIDTH); the panel sits in the column with nothing
+## between it and the column's own edge, so this is the real invariant, not
+## an approximation of it.
+func test_the_longest_fogged_and_reported_fact_labels_never_widen_the_left_column() -> void:
+	Game.start_campaign(42)
+	Intel.dev_all = false
+	var realm := Game.data.resolve_realm("player_realm")
+	var p := _panel()
+	await wait_frames(1)
+
+	# a foreign manor
+	var manor_cell := -1
+	var manor_ids := Game.data.manors.keys()
+	manor_ids.sort()
+	for c: int in manor_ids:
+		var prov := MapManors.province_of(Game.data, c, Game.state)
+		if prov != "" and MapOwnership.owner_of(Game.data, Game.state, prov) != realm:
+			manor_cell = c
+			break
+	assert_gt(manor_cell, -1, "a foreign manor")
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "manor", "cell": manor_cell}})
+	await wait_frames(1)
+	assert_lte(p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH,
+		"a fogged foreign manor's card fits the column (%d of %d px)" %
+		[p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH])
+	_point_report(MapTerrain.cell_center(Game.data, Game.data.cells.get(manor_cell, {"vertex_ids": PackedInt32Array()})))
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "manor", "cell": manor_cell}})
+	await wait_frames(1)
+	assert_lte(p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH,
+		"a reported foreign manor's card fits the column (%d of %d px)" %
+		[p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH])
+
+	# a foreign province
+	var foreign_prov := ""
+	var prov_codes := Game.data.provinces.keys()
+	prov_codes.sort()
+	for code: String in prov_codes:
+		if MapOwnership.owner_of(Game.data, Game.state, code) != realm:
+			foreign_prov = code
+			break
+	assert_ne(foreign_prov, "", "a foreign province")
+	var prov_row: Dictionary = Game.data.provinces[foreign_prov]
+	var prov_centre := Vector2(float(prov_row.get("center_x", 0)), float(prov_row.get("center_y", 0)))
+	p.show_province(foreign_prov)
+	await wait_frames(1)
+	assert_lte(p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH,
+		"a fogged foreign province's card fits the column (%d of %d px)" %
+		[p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH])
+	_point_report(prov_centre)
+	p.show_province(foreign_prov)
+	await wait_frames(1)
+	assert_lte(p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH,
+		"a reported foreign province's card fits the column (%d of %d px)" %
+		[p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH])
+
+	# a foreign burg
+	var foreign_burg := ""
+	var burg_codes := Game.data.burgs.keys()
+	burg_codes.sort()
+	for code: String in burg_codes:
+		var b: Dictionary = Game.data.burgs[code]
+		if MapOwnership.owner_of(Game.data, Game.state, String(b["province_code"])) != realm:
+			foreign_burg = code
+			break
+	assert_ne(foreign_burg, "", "a foreign town")
+	var burg_row: Dictionary = Game.data.burgs[foreign_burg]
+	var burg_centre := Vector2(float(burg_row["x"]), float(burg_row["y"]))
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "burg", "code": foreign_burg}})
+	await wait_frames(1)
+	assert_lte(p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH,
+		"a fogged foreign town's card fits the column (%d of %d px)" %
+		[p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH])
+	_point_report(burg_centre)
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "burg", "code": foreign_burg}})
+	await wait_frames(1)
+	assert_lte(p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH,
+		"a reported foreign town's card fits the column (%d of %d px)" %
+		[p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH])
+
+	# the kingdom card (CountryPanel), a foreign kingdom with the longest
+	# words the fog ever shows ("many thousands", stance, court)
+	var country := CountryPanel.new()
+	add_child_autofree(country)
+	var foreign_kingdom := ""
+	var kingdom_codes := Game.data.kingdoms.keys()
+	kingdom_codes.sort()
+	for code: String in kingdom_codes:
+		if code != realm:
+			foreign_kingdom = code
+			break
+	assert_ne(foreign_kingdom, "", "a foreign kingdom")
+	country.show_country(foreign_kingdom)
+	await wait_frames(1)
+	assert_lte(country.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH,
+		"the kingdom card fits the column (%d of %d px)" %
+		[country.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH])
