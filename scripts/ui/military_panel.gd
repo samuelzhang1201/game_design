@@ -16,7 +16,10 @@ var _title: Label
 var _summary: Label
 var _arms: BarChart
 var _regiments: BarChart
-var _neighbours: BarChart
+## Text rows, not a bar (owner 2026-09-28: a neighbour's strength is fogged —
+## Intel — and a bar chart cannot draw an estimate's WORDS instead of a
+## number).
+var _neighbours: VBoxContainer
 var _officers: Label
 
 ## Put the panel in a screen's left column, hidden until the tab lights it.
@@ -58,7 +61,7 @@ func _init() -> void:
 	# sets a minimum width, which would push the column over the map.
 	_arms = _section("BY ARM", "Arms")
 	_regiments = _section("REGIMENTS", "Regiments")
-	_neighbours = _section("NEIGHBOURS, AS REPORTED", "Neighbours")
+	_neighbours = _text_section("NEIGHBOURS, AS REPORTED", "Neighbours")
 	_officers = Label.new()
 	_officers.name = "Officers"
 	_officers.add_theme_font_size_override("font_size", 14)
@@ -84,6 +87,20 @@ func _section(heading: String, chart_name: String) -> BarChart:
 	chart.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(chart)
 	return chart
+
+## A heading over a plain box of text rows, for a block whose values are
+## words (an Intel estimate), not numbers a bar chart could draw.
+func _text_section(heading: String, box_name: String) -> VBoxContainer:
+	var h := Label.new()
+	h.text = heading
+	UiPalette.style_header(h, 14, UiPalette.TEXT_MUTED)
+	h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	add_child(h)
+	var box := VBoxContainer.new()
+	box.name = box_name
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	add_child(box)
+	return box
 
 func refresh() -> void:
 	if Game.state == null:
@@ -126,21 +143,21 @@ func refresh() -> void:
 			"text": RealmDashboard._compact(reg_size)})
 	reg_rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["value"] > b["value"])
 	_regiments.set_rows(reg_rows, reg_top)
-	# Neighbours: what is commonly known — their totals, in their own colours.
-	var nb_rows: Array = []
-	var nb_top := 1.0
+	# Neighbours: only what may be SAID of them (Intel) — a spy's own word on
+	# their strength if one has come in, else common talk; text rows, since a
+	# bar chart can only draw a number and the true total must never appear.
+	# The realm's own total stays exact — it is ours, never fogged.
+	for c in _neighbours.get_children():
+		c.free()
 	for code: String in String(data.kingdoms[mine].get("neighbor_codes", "")).split("|", false):
 		var theirs := 0.0
 		for u: String in units:
 			var v: Variant = WorldLedger.value_of(data, state, "military.kingdoms.%s.%s" % [code, u])
 			theirs += float(v) if v != null else 0.0
-		nb_top = maxf(nb_top, theirs)
-		nb_rows.append({"label": String(data.kingdoms[code]["label"]), "value": theirs,
-			"color": MapPalette.color_of(data, code), "text": RealmDashboard._compact(theirs)})
-	nb_rows.append({"label": String(data.kingdoms[mine]["label"]), "value": total,
-		"color": MapPalette.color_of(data, mine), "text": RealmDashboard._compact(total)})
-	nb_top = maxf(nb_top, total)
-	_neighbours.set_rows(nb_rows, nb_top)
+		_neighbours.add_child(_row("%s — %s" % [String(data.kingdoms[code]["label"]),
+			_foreign_words(data, state, code, theirs)]))
+	_neighbours.add_child(_row("%s — %s (yours)" % [String(data.kingdoms[mine]["label"]),
+		RealmDashboard._compact(total)]))
 	# Officers, as the old table listed them.
 	var lines: Array[String] = []
 	var marshal_id := String(state.council.get("marshal", ""))
@@ -161,6 +178,34 @@ func refresh() -> void:
 func _regiments_of(kingdom_code: String) -> Array:
 	return MapObjects.regiments_of(Game.data, kingdom_code)
 
+## A plain text row for the neighbours block.
+func _row(text: String) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return l
+
+## What may be said of a neighbour kingdom's strength (Intel, spec 2026-09-28
+## §1): the newest troops_foreign estimate from any spy missive whose
+## subject lies in a province that kingdom holds, in the spy's own words —
+## else only the vague magnitude common talk allows.
+func _foreign_words(repo: DataRepository, state: GameState, code: String, total: float) -> String:
+	var best: Dictionary = {}
+	for m: Dictionary in state.missives:
+		if not best.is_empty() and int(m["id"]) < int(best["id"]):
+			continue
+		var prov := Intel.province_of(repo, state, m["subject"])
+		if prov == "" or MapOwnership.owner_of(repo, state, prov) != code:
+			continue
+		for f: Dictionary in m["facts"]:
+			if String(f["key"]) == "troops_foreign":
+				best = {"id": int(m["id"]), "fact": f}
+	if not best.is_empty():
+		return Intel._from_fact(best["fact"])
+	return "%s (common talk)" % Intel.magnitude(repo, int(total))
+
 func _label(unit: String) -> String:
 	return String((Game.data.resource_icons.get(unit, {}) as Dictionary).get("label", unit.capitalize()))
 
@@ -178,5 +223,5 @@ func arms_chart() -> BarChart:
 func regiments_chart() -> BarChart:
 	return _regiments
 
-func neighbours_chart() -> BarChart:
+func neighbours_chart() -> VBoxContainer:
 	return _neighbours

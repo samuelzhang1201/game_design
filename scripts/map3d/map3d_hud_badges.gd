@@ -44,6 +44,12 @@ func _cut() -> Array:
 	var out: Array = []
 	for id: int in all:
 		var m: Dictionary = all[id]
+		var cell: int = int(m["cell"])
+		# The fog (Intel, spec 2026-09-28 §1): a badge is a true output figure,
+		# so it wears only on land the crown controls. No Game here — Intel
+		# and ctx.state() are engine-side.
+		if Intel.level(ctx.repo, ctx.state(), {"kind": "manor", "cell": cell, "code": "", "x": 0, "y": 0}) != "full":
+			continue
 		var ground := ctx.cell_ground(id)
 		if camera.is_position_behind(ground):
 			continue

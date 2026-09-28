@@ -182,10 +182,16 @@ func test_hovering_a_manor_names_it_and_its_holder() -> void:
 
 # --- the output badges (owner 2026-09-19: ECONOMY's, folded into MANORS) -------
 
+## The busiest manor whose badge the fog still allows to show (Intel, spec
+## 2026-09-28 §1: a badge is a true output figure, so only a manor of a
+## province the crown controls wears one) — every test below needs a manor
+## whose badge actually draws.
 func _busiest_manor() -> int:
 	var all: Dictionary = MapEconomy.manors(Game.data)
 	var best := -1
 	for id: int in all:
+		if Intel.level(Game.data, Game.state, {"kind": "manor", "cell": id, "code": "", "x": 0, "y": 0}) != "full":
+			continue
 		if best < 0 or float(all[id]["units"]) > float(all[best]["units"]):
 			best = id
 	return best
@@ -215,7 +221,17 @@ func test_output_badges_stand_over_the_working_manors() -> void:
 func test_badges_never_overlap() -> void:
 	var v := _view()
 	v.set_manor_theme("manors")
-	_look_at_manor(v, _busiest_manor(), 60000.0)
+	# 60000 m used to bring several manors into view; fogged (Intel), only the
+	# crown's own show badges now, so a wider or narrower view holds a
+	# different count depending on exactly how the culled ones overlap and
+	# get dropped (ManorBadges.place) — widen out until there are at least
+	# two to actually check against each other.
+	var cell := _busiest_manor()
+	var dist := 15000.0
+	_look_at_manor(v, cell, dist)
+	while v.manor_badges().size() < 2 and dist < 300000.0:
+		dist *= 1.6
+		_look_at_manor(v, cell, dist)
 	var rects: Array = []
 	for b: Dictionary in v.manor_badges():
 		for r: Rect2 in rects:

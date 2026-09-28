@@ -53,7 +53,9 @@ func test_the_host_opens_from_a_regiments_card_and_closes_back() -> void:
 	var regiments := MapObjects.regiments_of(Game.data, mine).size()
 	assert_eq(panel.regiments_chart().rows.size(), regiments, "every regiment of the realm")
 	var neighbours := String(Game.data.kingdoms[mine]["neighbor_codes"]).split("|", false).size()
-	assert_eq(panel.neighbours_chart().rows.size(), neighbours + 1, "each neighbour and the realm itself")
+	# Neighbours' strength is fogged (Intel, 2026-09-28): a text row each, not
+	# a bar, so the seam is a box of rows rather than a chart's data.
+	assert_eq(panel.neighbours_chart().get_child_count(), neighbours + 1, "each neighbour and the realm itself")
 	(panel.find_child("Close", true, false) as Button).pressed.emit()
 	await wait_frames(2)
 	assert_false(panel.visible)

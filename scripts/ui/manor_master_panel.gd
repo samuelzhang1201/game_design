@@ -204,11 +204,26 @@ func refresh() -> void:
 			rents += rent
 		if _house_filter != "" and house != _house_filter:
 			continue
+		# The fog (Intel, spec 2026-09-28 §1): a row about land the crown does
+		# not control shows no true people/rent/value — only what a letter has
+		# said, or nothing. A subject built fresh, per row, since a manor's
+		# own centre never moves.
+		var subj := MissiveLog.subject("manor", MapManors.code_of(repo, cell),
+			cell, MapTerrain.cell_center(repo, repo.cells[cell]))
+		var full := Intel.level(repo, state, subj) == "full"
+		var people_val := int(line.get("people", 0))
+		var people_text := str(people_val) if full else String(Intel.fact(repo, state, subj, "people", people_val)["text"])
+		var rent_shown: Variant = rent
+		var value_shown: Variant = MapManors.value_of_line(repo, state, cell, line)
+		if not full:
+			var tax_fact := Intel._latest(repo, state, subj, "tax")
+			rent_shown = Intel._from_fact(tax_fact["fact"]) if not tax_fact.is_empty() else "—"
+			value_shown = "—"
 		table_rows.append({"cell": cell, "label": MapManors.label_of(repo, cell),
 			"house": "The crown" if crowns else house, "family": house,
 			"province": String(repo.provinces.get(MapManors.province_of(repo, cell, Game.state), {}).get("label", "")),
-			"people": int(line.get("people", 0)), "rent": rent,
-			"value": MapManors.value_of_line(repo, state, cell, line),
+			"people": people_val, "people_text": people_text, "rent": rent_shown,
+			"value": value_shown, "full": full,
 			"buildings": MapManors.buildings_of(state, cell).size(),
 			"focus": String((repo.manor_focus.get(MapManors.focus_of(repo, state, cell), {}) as Dictionary).get("label", ""))})
 	table_rows.sort_custom(_compare)
@@ -223,17 +238,29 @@ func refresh() -> void:
 		"; %d more than the table shows" % _left_out if _left_out > 0 else ""]
 
 func _compare(a: Dictionary, b: Dictionary) -> bool:
+	# A fogged row (Intel: not full) carries no true value to sort by, so it
+	# always falls after every full row, whatever column or direction is
+	# chosen (spec 2026-09-28 §1).
+	var a_full := bool(a.get("full", true))
+	var b_full := bool(b.get("full", true))
+	if a_full != b_full:
+		return a_full
 	var less := false
 	match _sort_column:
 		0:
 			less = String(a["label"]) < String(b["label"])
 		1:
 			less = String(a["house"]) < String(b["house"]) \
-				or (String(a["house"]) == String(b["house"]) and float(a["value"]) > float(b["value"]))
+				or (String(a["house"]) == String(b["house"]) and _value_num(a) > _value_num(b))
 		_:
-			less = float(a["value"]) < float(b["value"]) \
-				or (float(a["value"]) == float(b["value"]) and String(a["label"]) < String(b["label"]))
+			less = _value_num(a) < _value_num(b) \
+				or (_value_num(a) == _value_num(b) and String(a["label"]) < String(b["label"]))
 	return not less if _sort_descending else less
+
+## The row's numeric value, or 0.0 for a fogged row whose "value" is text.
+static func _value_num(r: Dictionary) -> float:
+	var v: Variant = r["value"]
+	return float(v) if (v is float or v is int) else 0.0
 
 func _fill_houses(houses: Dictionary, crown: String) -> void:
 	_house.clear()
@@ -267,17 +294,22 @@ func _fill_tree() -> void:
 		if arms != null:
 			item.set_icon(1, arms)
 			item.set_icon_max_width(1, ARMS_PX)
-		item.set_text(2, str(roundi(float(r["value"]))))
+		item.set_text(2, _shown(r["value"]))
 		item.set_text_alignment(2, HORIZONTAL_ALIGNMENT_RIGHT)
 		item.set_metadata(0, int(r["cell"]))
 		var focus := String(r["focus"])
 		var works := ("works %s" % focus.to_lower()) if focus != "" else "subsistence"
-		var tip := "%s — %s\nPeople %d · tax %d gold a month · value %d gold\n%d building%s · %s" % [
-			String(r["label"]), String(r["province"]), int(r["people"]), int(r["rent"]),
-			roundi(float(r["value"])), int(r["buildings"]), "" if int(r["buildings"]) == 1 else "s",
+		var tip := "%s — %s\nPeople %s · tax %s gold a month · value %s gold\n%d building%s · %s" % [
+			String(r["label"]), String(r["province"]), String(r["people_text"]), _shown(r["rent"]),
+			_shown(r["value"]), int(r["buildings"]), "" if int(r["buildings"]) == 1 else "s",
 			works]
 		for i in COLUMNS.size():
 			item.set_tooltip_text(i, tip)
+
+## A fogged figure (Intel: "—", or an estimate's text) prints as itself; a
+## true one rounds like the table always has.
+static func _shown(v: Variant) -> String:
+	return String(v) if v is String else str(roundi(float(v)))
 
 ## Test seams.
 func rows() -> Array:
