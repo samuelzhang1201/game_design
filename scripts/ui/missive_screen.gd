@@ -43,7 +43,11 @@ func _ready() -> void:
 		plaque.text = HEADERS[col]
 		# a column's plaque is a section header in its credibility's colour
 		UiPalette.style_section(plaque, PLAQUE_FONT_SIZE, MapPalette.named(Game.data, "intel_" + col))
-		plaque.add_theme_stylebox_override("normal", MissiveArt.style(Game.data, "plaque", StyleBoxEmpty.new()))
+		# fix round 1: the fallback is the plaque's CURRENT look — the gold
+		# rule style_section just set — never a blank StyleBoxEmpty, which
+		# erased that rule with no art installed.
+		plaque.add_theme_stylebox_override("normal",
+			MissiveArt.style(Game.data, "plaque", plaque.get_theme_stylebox("normal")))
 	# the board floats over the screen: a window, titled in the title face
 	%Frame.add_theme_stylebox_override("panel",
 		MissiveArt.style(Game.data, "frame", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "window")))
@@ -52,8 +56,10 @@ func _ready() -> void:
 		(board_style as StyleBoxTexture).axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
 		(board_style as StyleBoxTexture).axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
 	%BoardPanel.add_theme_stylebox_override("panel", board_style)
-	%Desk.add_theme_stylebox_override("panel",
-		MissiveArt.style(Game.data, "letter", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 12, "column")))
+	# fix round 1 (ruling: the plan was wrong): %Desk had no panel style
+	# before this task, so its fallback is StyleBoxEmpty — the desk stays
+	# fully transparent, no border or inset, until its parchment is installed.
+	%Desk.add_theme_stylebox_override("panel", MissiveArt.style(Game.data, "letter", StyleBoxEmpty.new()))
 	UiPalette.style_title(%Title, 22)
 	UiPalette.style_header(%LetterTitle, 18)
 	%LetterMeta.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)

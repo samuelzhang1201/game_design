@@ -166,6 +166,28 @@ def pad_square(w: int, h: int, px: bytearray, side: int) -> bytearray:
     return out
 
 
+def pad_to_aspect(w: int, h: int, px: bytearray, aspect: float) -> tuple[int, int, bytearray]:
+    """The image centred on a transparent canvas sized to `aspect` (target
+    width / height) — the smallest canvas of that aspect that still holds
+    w x h. Fix round 1: `install_missive`'s cut path (the envelope, 384x288)
+    was padding to a SQUARE (`pad_square`) before resizing to a non-square
+    target, composing two different aspect changes and stretching the
+    result; this pads toward the target's OWN aspect first, so the later
+    resize is a uniform scale. `pad_square` itself is unchanged — a square
+    target (`aspect == 1.0`, e.g. the 48x48 pin) produces the same canvas."""
+    if w / h > aspect:
+        cw, chh = w, max(1, round(w / aspect))
+    else:
+        chh = h
+        cw = max(1, round(h * aspect))
+    out = bytearray(cw * chh * 4)
+    ox, oy = (cw - w) // 2, (chh - h) // 2
+    for y in range(h):
+        dst = ((oy + y) * cw + ox) * 4
+        out[dst:dst + w * 4] = px[y * w * 4:(y + 1) * w * 4]
+    return cw, chh, out
+
+
 def install_marks(codes: dict, chapter: str, dest, height: int, lighten: float, seeds: dict | None = None) -> int:
     dest.mkdir(parents=True, exist_ok=True)
     done = 0
@@ -391,9 +413,11 @@ def install_missive() -> int:
         if r["cut"] == "1":
             rgba = flood_ground(w, h, ch, px)
             cw, chh, cut = trim_alpha(w, h, rgba)
-            side = max(cw, chh)
-            sq = pad_square(cw, chh, cut, side)
-            small = resize_rgba(side, side, sq, tw, th)
+            # fix round 1: pad toward the TARGET's own aspect (not a square)
+            # so the resize below is a uniform scale — a square target (the
+            # pin) behaves exactly as pad_square did.
+            pw, ph, padded = pad_to_aspect(cw, chh, cut, tw / th)
+            small = resize_rgba(pw, ph, padded, tw, th)
         else:
             rgba = to_rgba(w, h, ch, bytearray(px))
             box = scene_box(w, h, rgba, tw / th)
