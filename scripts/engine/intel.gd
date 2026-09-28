@@ -139,10 +139,9 @@ static func fact(repo: DataRepository, state: GameState, subj: Dictionary, key: 
 	var today := state.absolute_day() if state != null else 0
 	if lvl == "full":
 		return {"text": _show(repo, key, exact), "source": "own records", "day": today, "column": "truth"}
-	var m := _latest(repo, state, subj, key)
+	var m := estimate(repo, state, subj, key)
 	if not m.is_empty():
-		return {"text": _from_fact(m["fact"]), "source": String(m["kind"]), "day": int(m["day"]),
-			"column": String(m["column"])}
+		return m
 	if key in ["holder", "stance", "wealth"]:
 		return {"text": _show(repo, key, exact), "source": "common knowledge", "day": today, "column": ""}
 	if lvl == "general" and exact is int:
@@ -156,12 +155,32 @@ static func _show(repo: DataRepository, key: String, v: Variant) -> String:
 	return num(int(v)) if v is int else String(v)
 
 
-static func _from_fact(f: Dictionary) -> String:
+## A fact dictionary's own words: an exact number, a span as "≈ lo–hi", or
+## its own text. Public — panels outside this file render a report's fact
+## the same way `fact()` does.
+static func text_of(f: Dictionary) -> String:
 	if f.has("exact"):
 		return num(int(f["exact"]))
 	if f.has("lo"):
 		return "≈ %s–%s" % [num(int(f["lo"])), num(int(f["hi"]))]
 	return String(f.get("text", "—"))
+
+
+static func _from_fact(f: Dictionary) -> String:
+	return text_of(f)
+
+
+## The newest report carrying `key` about `subj` (see `_latest`'s own
+## matching rules), rendered as `fact()` would: {text, source, day, column},
+## or {} when no report answers. Public — a caller that already knows its
+## subject is not `full` (a table row, say) can ask for a report's estimate
+## directly rather than reaching into `_latest` and `text_of` itself.
+static func estimate(repo: DataRepository, state: GameState, subj: Dictionary, key: String) -> Dictionary:
+	var m := _latest(repo, state, subj, key)
+	if m.is_empty():
+		return {}
+	return {"text": text_of(m["fact"]), "source": String(m["kind"]), "day": int(m["day"]),
+		"column": String(m["column"])}
 
 
 ## The newest letter carrying `key` about this subject:

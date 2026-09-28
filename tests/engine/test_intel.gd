@@ -112,6 +112,19 @@ func test_the_newest_report_wins_and_says_where_it_came_from() -> void:
 	assert_eq(String(got["source"]), "spy")
 
 
+func test_estimate_wraps_latest_and_text_of() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var f := _subj(_foreign(s))
+	assert_eq(Intel.estimate(repo, s, f, "people"), {}, "no report yet")
+	MissiveLog.add(repo, s, MissiveLog.make("spy", "credible", 9, f, "new",
+		[MissiveLog.span("people", "People", 2800, 3200)]))
+	var got := Intel.estimate(repo, s, f, "people")
+	assert_eq(String(got["text"]), "≈ 2,800–3,200")
+	assert_eq(String(got["column"]), "credible")
+	assert_eq(int(got["day"]), 9)
+	assert_eq(String(got["source"]), "spy")
+
+
 func test_a_report_counts_by_distance_for_a_nearby_point() -> void:
 	var s := GameState.new_campaign(repo, 7)
 	var f := _subj(_foreign(s))

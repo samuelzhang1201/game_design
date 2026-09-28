@@ -232,6 +232,8 @@ func test_badges_never_overlap() -> void:
 	while v.manor_badges().size() < 2 and dist < 300000.0:
 		dist *= 1.6
 		_look_at_manor(v, cell, dist)
+	# So this can never pass without actually checking anything.
+	assert_gte(v.manor_badges().size(), 2, "need at least two badges in view to test overlap")
 	var rects: Array = []
 	for b: Dictionary in v.manor_badges():
 		for r: Rect2 in rects:

@@ -216,13 +216,17 @@ func refresh() -> void:
 		var rent_shown: Variant = rent
 		var value_shown: Variant = MapManors.value_of_line(repo, state, cell, line)
 		if not full:
-			var tax_fact := Intel._latest(repo, state, subj, "tax")
-			rent_shown = Intel._from_fact(tax_fact["fact"]) if not tax_fact.is_empty() else "—"
+			var tax_est := Intel.estimate(repo, state, subj, "tax")
+			rent_shown = String(tax_est["text"]) if not tax_est.is_empty() else "—"
 			value_shown = "—"
+		# No raw "people" int here (owner review, fix round 1): nothing but
+		# people_text is ever read, and keeping the true figure around next to
+		# the fogged text it is meant to replace invites exactly the leak this
+		# task closes.
 		table_rows.append({"cell": cell, "label": MapManors.label_of(repo, cell),
 			"house": "The crown" if crowns else house, "family": house,
 			"province": String(repo.provinces.get(MapManors.province_of(repo, cell, Game.state), {}).get("label", "")),
-			"people": people_val, "people_text": people_text, "rent": rent_shown,
+			"people_text": people_text, "rent": rent_shown,
 			"value": value_shown, "full": full,
 			"buildings": MapManors.buildings_of(state, cell).size(),
 			"focus": String((repo.manor_focus.get(MapManors.focus_of(repo, state, cell), {}) as Dictionary).get("label", ""))})

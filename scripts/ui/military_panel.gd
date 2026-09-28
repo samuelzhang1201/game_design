@@ -190,7 +190,11 @@ func _row(text: String) -> Label:
 ## What may be said of a neighbour kingdom's strength (Intel, spec 2026-09-28
 ## §1): the newest troops_foreign estimate from any spy missive whose
 ## subject lies in a province that kingdom holds, in the spy's own words —
-## else only the vague magnitude common talk allows.
+## else only the vague magnitude common talk allows. This is a KINGDOM-level
+## match (any missive whose subject's province belongs to `code`), which
+## Intel.estimate() cannot express (it matches one subject's own manor,
+## province or nearby point) — the search stays here, but text_of() renders
+## the winning fact the same way estimate() would.
 func _foreign_words(repo: DataRepository, state: GameState, code: String, total: float) -> String:
 	var best: Dictionary = {}
 	for m: Dictionary in state.missives:
@@ -203,7 +207,7 @@ func _foreign_words(repo: DataRepository, state: GameState, code: String, total:
 			if String(f["key"]) == "troops_foreign":
 				best = {"id": int(m["id"]), "fact": f}
 	if not best.is_empty():
-		return Intel._from_fact(best["fact"])
+		return Intel.text_of(best["fact"])
 	return "%s (common talk)" % Intel.magnitude(repo, int(total))
 
 func _label(unit: String) -> String:
