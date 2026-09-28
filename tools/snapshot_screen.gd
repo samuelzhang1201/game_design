@@ -108,6 +108,37 @@ var _look3d := PackedFloat32Array()
 ## left column then shows.
 var _click_courier := -1
 var _shot_frame := 40
+## The Missive board and spies (2026-09-28), all with --screen root:
+## --quiet drops the chapter's scheduled beats, rolls no random event and runs the
+## reign's opening tick (as a new game does), so a
+## run can play whole months without the council taking the screen.
+var _quiet := false
+## --spy3d x,y[;x,y…] sends a spy to each PACK px as the player does: the view
+## looks at the point, a real right click at the view's centre opens
+## SpyOrderMenu, and its row is chosen (hide, then id_pressed — PopupMenu's
+## own order). One point every 4 frames from frame 26. --spy-menu-only stops
+## at the first open menu, for a shot of it.
+var _spy3d: Array = []
+var _spy_menu_only := false
+## --play-days N (with --speed) plays the clock after the orders until N days
+## have passed, pressing Seal (a real click) on each spy report and play again
+## after it, as the player would; then the clock stops.
+var _play_days := -1
+## --missives COL, once the play is done: a real click on the MISSIVE tab,
+## then on the first letter of column COL; --show-on-map then presses the
+## desk's Show on map.
+var _missives := ""
+var _show_on_map := false
+## --shot-on report|flight|board|card|spymenu takes the shot --shot-delay N
+## frames (default 6) after that moment rather than at --shot-frame.
+var _shot_on := ""
+var _shot_delay := 6
+var _shot_at := -1
+var _play_from := -1
+var _play_done := -1
+## --also F:path takes an extra shot at frame F (repeatable), so one run's
+## world load serves several pictures.
+var _also: Dictionary = {}
 
 
 func _ready() -> void:
@@ -170,6 +201,21 @@ func _ready() -> void:
 				_ruler.append(float(part))
 		elif args[i] == "--speed":
 			_speed = int(args[i + 1])
+		elif args[i] == "--spy3d":
+			for pt in args[i + 1].split(";"):
+				var sp := pt.split(",")
+				_spy3d.append(Vector2(float(sp[0]), float(sp[1])))
+		elif args[i] == "--play-days":
+			_play_days = int(args[i + 1])
+		elif args[i] == "--missives":
+			_missives = args[i + 1]
+		elif args[i] == "--shot-on":
+			_shot_on = args[i + 1]
+		elif args[i] == "--shot-delay":
+			_shot_delay = int(args[i + 1])
+		elif args[i] == "--also":
+			var fp := args[i + 1].split(":")
+			_also[int(fp[0])] = fp[1]
 		elif args[i] == "--resolution":
 			var wh := args[i + 1].split("x")
 			if wh.size() == 2:
@@ -179,6 +225,9 @@ func _ready() -> void:
 	_march_confirm = args.has("--march-confirm")
 	_march_commit = args.has("--march-commit")
 	_dev = args.has("--dev")
+	_quiet = args.has("--quiet")
+	_spy_menu_only = args.has("--spy-menu-only")
+	_show_on_map = args.has("--show-on-map")
 	if not SCENES.has(_screen):
 		push_error("unknown screen %s; choose from %s" % [_screen, SCENES.keys()])
 		Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
@@ -191,6 +240,13 @@ func _ready() -> void:
 		Game.data.balance[key] = _bal[key]
 	for key: String in _pal:
 		Game.data.terrain_palette[key] = _pal[key]
+	if _quiet:
+		Game.state.event_state["scheduled"] = []
+		Game.data.balance["event_base_chance"] = 0.0
+		Game.data.balance["event_pity_ticks"] = 1000000.0
+		# the reign's opening tick, as GameRoot._on_start_requested runs it —
+		# without it the clock starts at tick 0, whose days repeat tick 1's
+		Game.next_tick()
 	if _res != Vector2i.ZERO:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(_res)
@@ -223,6 +279,11 @@ func _ready() -> void:
 		screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if _screen == "root":
 		_root = screen as GameRoot
+		# A shot is the game as a new player sees it: the player's own DEV MODE
+		# setting (settings.cfg, which would lift the fog and show every realm's
+		# regiments) is overridden in memory, never written; --dev asks for it.
+		_root._dev_mode = _dev
+		Intel.dev_all = _dev
 	elif screen.has_method("enter_court"):
 		screen.call("enter_court", null)
 	if _event != "" and screen.has_method("enter_council"):
@@ -300,10 +361,14 @@ func _process(_delta: float) -> void:
 				_root.current_screen.detail_panel().show_manor(cell)
 		# A march is given on a PAUSED clock (owner 2026-09-27): with --march3d
 		# the clock starts only once the order is in, as the player's play would.
-		if _speed >= 0 and _march3d.x < 0.0:
-			Game.set_clock_speed(_speed)
-	if _root != null and _frames == 24 and _speed >= 0 and _march3d.x >= 0.0:
-		Game.set_clock_speed(_speed)
+		if _speed >= 0 and _march3d.x < 0.0 and _spy3d.is_empty():
+			_start_clock()
+	if _root != null and _frames == 24 and _speed >= 0 and _march3d.x >= 0.0 and _spy3d.is_empty():
+		_start_clock()
+	if _root != null and not _spy3d.is_empty():
+		_spy_step()
+	if _root != null:
+		_missive_step()
 	if _root != null and _look3d.size() == 4 and _frames == int(_look3d[3]) \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
@@ -412,17 +477,136 @@ func _process(_delta: float) -> void:
 				ArmySystem.order_of(Game.data, Game.state, code),
 				ArmySystem.days_out(Game.data, Game.state, code), Game.clock_speed, menu.aiming(),
 				Game.state.couriers])
-	if _frames == _shot_frame:
+	if _also.has(_frames):
+		_save_shot(String(_also[_frames]))
+	if (_shot_on == "" and _frames == _shot_frame) or (_shot_at >= 0 and _frames == _shot_at):
 		if Game.state != null:
 			print("state at shot: day=%d clock=%d pending_event=%s couriers=%d" % [Game.state.absolute_day(),
 				Game.clock_speed, not Game.state.pending_event.is_empty(), Game.state.couriers.size()])
-		var img := (get_viewport() if _viewport == null else _viewport).get_texture().get_image()
-		var abs_path := ProjectSettings.globalize_path(_out)
-		DirAccess.make_dir_recursive_absolute(abs_path.get_base_dir())
-		var err := img.save_png(abs_path)
+		var err := _save_shot(_out)
 		var how := ("%dx%d window" % [_res.x, _res.y]) if _res != Vector2i.ZERO else ("x%.1f" % _scale)
 		print("snapshot %s -> %s (%s, %s, filter %d)" % [
 			"ok" if err == OK else "FAILED %d" % err, _out, _screen, how,
 			int(ProjectSettings.get_setting("rendering/textures/canvas_textures/default_texture_filter", 0))])
 		Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
 		get_tree().quit()
+
+
+func _save_shot(path: String) -> int:
+	var img := (get_viewport() if _viewport == null else _viewport).get_texture().get_image()
+	var abs_path := ProjectSettings.globalize_path(path)
+	DirAccess.make_dir_recursive_absolute(abs_path.get_base_dir())
+	var err := img.save_png(abs_path)
+	print("shot %s at frame %d -> %s" % ["ok" if err == OK else "FAILED", _frames, path])
+	return err
+
+
+## Marks the moment a --shot-on names; the shot follows --shot-delay frames later.
+func _moment(what: String) -> void:
+	if _shot_on == what and _shot_at < 0:
+		_shot_at = _frames + _shot_delay
+		print("moment %s at frame %d (day %d)" % [what, _frames, Game.state.absolute_day()])
+
+
+func _start_clock() -> void:
+	Game.set_clock_speed(_speed)
+	if _play_from < 0:
+		_play_from = Game.state.absolute_day()
+
+
+## --spy3d: one point every 4 frames from frame 26 (look, right click, choose).
+func _spy_step() -> void:
+	var cs: Node = _root.current_screen
+	if not cs.has_method("map3d_view") or cs.map3d_view() == null:
+		return
+	var mv: Map3DView = cs.map3d_view()
+	var menu := cs.get_node("%SpyOrders") as SpyOrderMenu
+	var k := _frames - 26
+	if k < 0:
+		return
+	@warning_ignore("integer_division")
+	var n := k / 4
+	if n >= _spy3d.size():
+		if k == _spy3d.size() * 4 and _speed >= 0 and not _spy_menu_only:
+			_start_clock()
+		return
+	if _spy_menu_only and n > 0:
+		return
+	var at := mv.size * 0.5
+	match k % 4:
+		0:
+			mv.look_at_pack(_spy3d[n], 6000.0)
+		2:
+			_real_move(mv, at)
+			for down in [true, false]:
+				var e := InputEventMouseButton.new()
+				e.button_index = MOUSE_BUTTON_RIGHT
+				e.pressed = down
+				e.position = mv.get_global_transform_with_canvas() * at
+				e.global_position = e.position
+				mv.get_viewport().push_input(e, true)
+			print("spy3d: menu open=%s row=%s where=%s" % [menu.visible,
+				menu.get_item_text(0) if menu.item_count > 0 else "-",
+				menu.get_item_tooltip(0) if menu.item_count > 0 else "-"])
+			if menu.visible:
+				_moment("spymenu")
+		3:
+			if _spy_menu_only:
+				return
+			menu.hide()
+			menu.id_pressed.emit(SpyOrderMenu.SEND)
+			var last: Dictionary = Game.state.couriers[-1] if not Game.state.couriers.is_empty() else {}
+			print("spy3d: sent kind=%s couriers=%d treasury=%d" % [String(last.get("kind", "-")),
+				Game.state.couriers.size(), int(Game.state.metrics.get("treasury", 0))])
+
+
+## --play-days, then --missives: seal each report as the player would, press
+## play again, stop after N days; then open the board and pick a letter.
+func _missive_step() -> void:
+	var pop := _root.report_popup()
+	if pop.visible:
+		_moment("report")
+	if _play_from >= 0 and _play_done < 0 and _play_days >= 0:
+		if pop.visible and _shot_on != "report":
+			if not pop.has_meta("snap_sealed"):
+				pop.set_meta("snap_sealed", true)
+				print("report: %s" % String(pop.get_node("%ReportTitle").text))
+				_real_click(pop.seal_button(), pop.seal_button().size * 0.5)
+				_moment("flight")
+		elif not pop.visible:
+			if pop.has_meta("snap_sealed"):
+				pop.remove_meta("snap_sealed")
+			if Game.state.absolute_day() - _play_from >= _play_days:
+				Game.set_clock_speed(0)
+				_play_done = _frames
+				print("play done: day=%d missives=%s" % [Game.state.absolute_day(),
+					Game.state.missives.map(func(m: Dictionary) -> String:
+						return "%s/%s" % [String(m["column"]), String(m["title"])])])
+			elif Game.clock_speed == 0 and _root.pending_reports().is_empty() \
+					and _shot_on != "flight":
+				Game.set_clock_speed(_speed)
+	if _missives == "":
+		return
+	var start := _play_done if _play_days >= 0 else 30
+	if start < 0:
+		return
+	var board := _root.missive_screen()
+	if _frames == start + 60:
+		var tab := _root.bottom_bar().button("MISSIVE")
+		_real_click(tab, tab.size * 0.5)
+		print("missives: board open=%s" % board.visible)
+	elif _frames == start + 64:
+		var notes := board.find_child(_missives.capitalize() + "Notes", true, false) as Container
+		for c in notes.get_children():
+			if c is Button:
+				_real_click(c, (c as Button).size * 0.5)
+				break
+		print("missives: selected=%d desk=%s" % [board.selected(), board.desk_text().replace("\n", " | ")])
+		_moment("board")
+	elif _frames == start + 68 and _show_on_map:
+		var b := board.show_on_map_button()
+		_real_click(b, b.size * 0.5)
+		var title := _root.current_screen.detail_panel().find_child("Title", true, false) as Label
+		print("show-on-map: board open=%s card=%s" % [board.visible, title.text if title != null else "?"])
+		_moment("card")
+
