@@ -432,3 +432,41 @@ func test_a_foreign_manor_card_offers_its_spy_first_and_wastes_no_room() -> void
 	await wait_frames(1)
 	assert_true(p.rates_box().visible, "a manor the crown controls shows its output")
 	assert_false(String(p.actions_box().get_child(0).name).begins_with("SPY_SEND"))
+
+
+## Fix round 1 finding 1: the BUY button's full label ("BUY — 1,234 gold
+## from the crown's treasury") ran past two lines of the fixed 240 px left
+## column (ScreenLayout.LEFT_WIDTH) and was cut off. It now reads short,
+## like the BUILD button beside it, with the whole line as its tooltip.
+func test_the_buy_button_fits_the_column_and_keeps_its_full_text_as_a_tooltip() -> void:
+	Game.start_campaign(42)
+	Game.state.metrics["treasury"] = 100000.0
+	var p := _panel()
+	await wait_frames(1)
+	var realm := Game.data.resolve_realm("player_realm")
+	var cell := -1
+	var ids := Game.data.manors.keys()
+	ids.sort()
+	for c: int in ids:
+		var prov := MapManors.province_of(Game.data, c, Game.state)
+		if prov != "" and MapOwnership.owner_of(Game.data, Game.state, prov) != realm \
+				and String(MapManors.purchase_kind(Game.data, Game.state, c)["kind"]) == "foreign":
+			cell = c
+			break
+	assert_gt(cell, -1, "a manor the crown may buy across the border")
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "manor", "cell": cell}})
+	await wait_frames(1)
+	var buy: Button = null
+	for b in p.actions_box().get_children():
+		if b is Button and String(b.name).begins_with("MANOR_BUY"):
+			buy = b as Button
+	assert_not_null(buy, "the card offers BUY")
+	assert_false(buy.disabled, "the treasury can pay")
+	assert_true(buy.text.begins_with("BUY"))
+	assert_string_contains(buy.tooltip_text, "from the crown's treasury",
+		"the full line survives as the button's tooltip")
+	var font := buy.get_theme_font("font")
+	var px := buy.get_theme_font_size("font_size")
+	var width := font.get_string_size(buy.text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	assert_lt(width, ScreenLayout.LEFT_WIDTH,
+		"BUY's short text fits the fixed column on one line (%d of %d px)" % [width, ScreenLayout.LEFT_WIDTH])

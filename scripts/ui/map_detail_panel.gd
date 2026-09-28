@@ -461,6 +461,15 @@ func show_card(card: Dictionary) -> void:
 		button.add_theme_font_size_override("font_size", 12)
 		button.disabled = String(a.get("error", "")) != ""
 		button.tooltip_text = String(a.get("error", ""))
+		if String(a["action_code"]) == "MANOR_BUY":
+			# The full label ("BUY — 1,234 gold from the crown's
+			# treasury") ran past two lines of the fixed 240 px column
+			# (fix round 1 finding 1): a short button, the whole line as
+			# its tooltip when it is not disabled — the BUILD button's
+			# own pattern (_add_build_menu below).
+			button.text = String(a["label"]).get_slice(" from ", 0)
+			if not button.disabled:
+				button.tooltip_text = String(a["label"])
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		# The column's width is fixed (CLAUDE.md invariant 10): a long
 		# order wraps rather than pushing the column over the map.
