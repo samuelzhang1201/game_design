@@ -25,6 +25,7 @@ var _clock_acc := 0.0
 var _pause_menu: Control
 var _pause_status: Label
 var _relations_screen: RelationshipGraphScreen
+var _missive_screen: MissiveScreen
 var _bottom_bar: BottomBar
 var _news_ticker: NewsTicker
 var _info_screen: InfoScreen
@@ -82,6 +83,11 @@ func _ready() -> void:
 	_relations_screen.name = "RelationsScreen"
 	_relations_screen.visible = false
 	add_child(_relations_screen)
+	_missive_screen = load("res://scenes/missive_screen.tscn").instantiate()
+	_missive_screen.name = "MissiveScreen"
+	_missive_screen.visible = false
+	_missive_screen.show_requested.connect(_on_missive_show)
+	add_child(_missive_screen)
 	_info_screen = InfoScreen.new()
 	_info_screen.name = "InfoScreen"
 	add_child(_info_screen)
@@ -97,6 +103,7 @@ func _ready() -> void:
 	_news_ticker.visible = false
 	add_child(_news_ticker)
 	_load_settings()
+	Intel.dev_all = _dev_mode
 	_build_pause_menu()
 	_start_bgm()
 	_switch_to(State.MENU)
@@ -131,6 +138,7 @@ func _process(delta: float) -> void:
 				MapManors.label_of(Game.data, int(w["cell"]))])
 		for e: Dictionary in out.get("couriers", []):
 			Game.publish_news(CourierSystem.headline(Game.data, e))
+		refresh_missive_badge()
 		if bool(out["ticked"]):
 			_pending_report = Game.current_report
 			announce_month(_pending_report)
@@ -338,6 +346,7 @@ func _dev_label() -> String:
 	return "Dev mode: On" if _dev_mode else "Dev mode: Off"
 
 func _apply_dev_mode() -> void:
+	Intel.dev_all = _dev_mode
 	if current_screen != null and current_screen.has_method("map3d_view"):
 		var v: Map3DView = current_screen.map3d_view()
 		if v != null:
@@ -373,6 +382,40 @@ func toggle_relations() -> void:
 func relations_screen() -> RelationshipGraphScreen:
 	return _relations_screen
 
+## The Missive board overlay (spec 2026-09-28 §2): a screen of its own, like
+## the relationship graph, toggled by its tab.
+func missive_screen() -> MissiveScreen:
+	return _missive_screen
+
+func toggle_missives() -> void:
+	if state == State.MENU:
+		return
+	_relations_screen.visible = false
+	_info_screen.hide()
+	_missive_screen.visible = not _missive_screen.visible
+
+## The MISSIVE tab's badge: how many letters are unread (owner 2026-09-28).
+func refresh_missive_badge() -> void:
+	if _bottom_bar != null and Game.state != null:
+		_bottom_bar.set_badge("MISSIVE", MissiveLog.unread(Game.state))
+
+## Show on map (spec 2026-09-28 §2): the view looks at the letter's place and
+## the left column opens its card, through the view's own signals.
+func _on_missive_show(subject: Dictionary) -> void:
+	var view: Map3DView = current_screen.map3d_view() if current_screen != null and current_screen.has_method("map3d_view") else null
+	if view == null:
+		return
+	view.look_at_pack(Vector2(float(subject["x"]), float(subject["y"])))
+	match String(subject["kind"]):
+		"manor":
+			view.object_selected.emit({"title": MapManors.label_of(Game.data, int(subject["cell"])),
+				"obj": {"kind": "manor", "cell": int(subject["cell"])}})
+		"province":
+			view.province_selected.emit(String(subject["code"]))
+		"burg":
+			view.object_selected.emit({"title": String(Game.data.burgs[String(subject["code"])]["label"]),
+				"obj": {"kind": "burg", "code": String(subject["code"])}})
+
 ## Bottom bar routing: MAP is the default view (close every overlay — the
 ## live world map sits in the court screen's middle zone, user ruling
 ## 2026-09-03), RELATIONSHIP toggles the graph, the rest open their info
@@ -382,20 +425,28 @@ func _on_bottom_tab(tab: String) -> void:
 		"HEIGHTS":
 			_info_screen.hide()
 			_relations_screen.visible = false
+			_missive_screen.visible = false
 			set_height_view(not _height_view)
 		"MANORS":
 			_info_screen.hide()
 			_relations_screen.visible = false
+			_missive_screen.visible = false
 			set_manor_view(not _manor_view)
 		"MEASUREMENT":
 			_info_screen.hide()
 			_relations_screen.visible = false
+			_missive_screen.visible = false
 			set_ruler_view(not _ruler_view)
 		"RELATIONSHIP":
 			_info_screen.hide()
+			_missive_screen.visible = false
 			toggle_relations()
+		"MISSIVE":
+			_info_screen.hide()
+			toggle_missives()
 		_:
 			_relations_screen.visible = false
+			_missive_screen.visible = false
 			_info_screen.show_tab(tab)
 
 ## Turn the relief view on or off everywhere (owner request 2026-09-12): the
@@ -527,6 +578,7 @@ func _on_menu_load() -> void:
 		return
 	_pause_menu.visible = false
 	_pending_report = null
+	refresh_missive_badge()
 	# A loaded save with a decision still pending resumes on the conversation
 	# stage (the only screen that renders event choices); otherwise the court
 	# reconvenes on the loaded state, suggestions returning next tick.
@@ -581,6 +633,9 @@ func _switch_to(new_state: State) -> void:
 	if _relations_screen != null:
 		_relations_screen.visible = false
 		move_child(_relations_screen, get_child_count() - 1)
+	if _missive_screen != null:
+		_missive_screen.visible = false
+		move_child(_missive_screen, get_child_count() - 1)
 	if _pause_menu != null:
 		move_child(_pause_menu, get_child_count() - 1)
 
@@ -588,6 +643,7 @@ const BACKGROUND_STORY_PATH := "res://game_story/chapter_0/game_start.md"
 
 func _on_start_requested() -> void:
 	Game.start_campaign(44)
+	refresh_missive_badge()
 	_pending_report = Game.next_tick()
 	_switch_to(State.CONVERSATION)
 	# The reign opens with the game background as a nameless narration beat
@@ -621,6 +677,7 @@ func _on_menu_load_from_title() -> void:
 			current_screen.show_load_failed()
 		return
 	_pending_report = null
+	refresh_missive_badge()
 	if not Game.state.pending_event.is_empty():
 		_switch_to(State.CONVERSATION)
 		current_screen.start([{"kind": "event", "portrait_id": "round_table",
