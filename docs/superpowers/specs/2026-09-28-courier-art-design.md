@@ -30,6 +30,13 @@ spec**. D replaces every stand-in the first two left behind:
 - **The 3D models are built FROM SCRATCH in Blender** (through the Blender
   MCP), rider and mount alike, guided by a structure view. No CC0 scan and no
   AI 3D (the Hunyuan ruling of 2026-09-24 stands).
+- **No klein, and every image on TWO models to compare** (owner
+  2026-09-28, after the spec's first approval): FLUX.2 klein 4B is retired
+  for game art. Every batch in D runs on BOTH:
+  - Z-Image Turbo;
+  - Qwen-Image-2512 in its fast tier (Lightning LoRA, 8 steps, about
+    2 minutes an image).
+  The owner compares the two models' results side by side and picks.
 - **Five card paintings, by kind and state.**
   - the ordinary courier at the gallop;
   - the secret courier;
@@ -40,9 +47,10 @@ spec**. D replaces every stand-in the first two left behind:
 ## 1. Designs (Z-Image Turbo)
 
 **Tool.** `tools/units3d/gen_courier_designs.py`, modelled on
-`gen_cavalry_v2.py` and reusing its Z-Image graph
-(`zimage_turbo_template.json`, `z_image_turbo_bf16.safetensors`, 8 steps,
-cfg 1.0, 1344×896).
+`gen_cavalry_v2.py` and reusing its `TIERS`:
+- `zimage`: Z-Image Turbo, 8 steps, 1344×896;
+- `qwenfast`: Qwen-Image-2512 Q6_K with the Lightning LoRA, 8 steps,
+  1584×1056.
 
 **Prompts.** `assets/flux/courier_design_prompts.csv`: `id, subject, prompt`.
 
@@ -60,23 +68,27 @@ cfg 1.0, 1344×896).
 
 **Batch.**
 
-| Who | Designs | Seeds | Images |
-|---|---|---|---|
-| Courier | 4 | 2 | 8 |
-| Spy | 2 | 2 | 4 |
-| **Total** | | | **12** |
+| Who | Designs | Seeds | Models | Images |
+|---|---|---|---|---|
+| Courier | 4 | 2 | 2 | 16 |
+| Spy | 2 | 2 | 2 | 8 |
+| **Total** | | | | **24** |
 
-- The batch takes about 6 minutes at ~30 s per image.
-- It is written to `assets/flux/out/courier_designs/<id>_s<n>.png`, which
-  is git-ignored.
-- It ends in a contact sheet `contact_sheet.png` with each tile labelled.
+- The batch takes about 30 minutes: 12 images at ~30 s on Z-Image and 12
+  at ~2 min on Qwen.
+- It is written to `assets/flux/out/courier_designs/<model>_<id>_s<n>.png`,
+  which is git-ignored.
+- It ends in a contact sheet `contact_sheet.png`: one row per model, each
+  tile labelled.
 
-**Pick.** The owner picks ONE courier image and ONE spy image. The picks are
-recorded in the prompts CSV's `picked` column as `<id>_s<n>`.
+**Pick.** The owner picks ONE courier image and ONE spy image, from either
+model. The picks are recorded in the prompts CSV's `picked` column as
+`<model>_s<n>`.
 
-**Structure views.** `tools/units3d/gen_courier_sheet.py`, modelled on
-`gen_cavalry_sheet.py`, renders the picked designs from their own prompt
-turned to fixed views.
+**Structure views.** `tools/units3d/gen_courier_sheet.py` renders the
+picked designs from their own prompt, turned to fixed views, on both
+models. Neither model takes a reference picture here (no Qwen-Image-Edit is
+installed), so the design is kept by its words.
 
 - **Views per design:**
   - `R1` the rider alone, front, arms slightly out;
@@ -86,7 +98,9 @@ turned to fixed views.
   - `M2` the mount alone, front;
   - `M3` the mount alone, from above;
   - `A1` the mounted piece, side.
-- **Count.** Seven views per design, two designs, **14 images** (~7 min).
+- **Count.** Seven views per design, two designs, two models: **28 images**
+  (about 35 minutes). For each view, Claude models from whichever model
+  held the design better.
 - **Seeds.** Each view is seeded by `SEED + view index`, so a re-run is
   identical.
 
@@ -204,8 +218,8 @@ art_prompt_library.md §6.11 beside the estate and army paintings:
 **Table and batch.**
 - `assets/flux/courier_paint_art.csv` maps art id → key: `ordinary`,
   `secret`, `spy`, `foul`, `delivered`.
-- Two seeds each: **10 images** with klein 4B (~15 min), and the owner picks
-  per key.
+- Two seeds each on both models: **20 images** (about 25 minutes). The
+  owner picks per key.
 
 **Install.** `install_map_art.py courier_paintings` runs the same path as
 `paintings`:
@@ -245,7 +259,7 @@ art_prompt_library.md §6.11 beside the estate and army paintings:
 the library's.
 
 **Batch.**
-- klein 4B, 2 seeds each: **14 images** (~20 min).
+- 2 seeds each on both models: **28 images** (about 35 minutes).
 - The pieces go through `post.py --tone` to the cream paper (the library
   §9 check).
 - The owner picks per key.
@@ -286,8 +300,8 @@ the library's.
 
 ## 6. Order
 
-1. §1 designs: 12 images → the owner picks.
-2. §1 structure views: 14 images.
+1. §1 designs: 24 images → the owner picks.
+2. §1 structure views: 28 images.
 3. §2 the courier model: block out → owner → sculpt → owner → low, bake,
    rig, GALLOP / IDLE, export → game shots → owner.
 4. While the owner reviews step 3: §4's prompts (after the pick) and

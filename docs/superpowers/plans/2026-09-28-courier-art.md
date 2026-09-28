@@ -19,7 +19,7 @@ The art tasks then fill the data tables (`courier_art.csv`,
 picks and reviews:
 - Z-Image designs, then structure views;
 - the two Blender models;
-- the klein paintings and board pieces.
+- the paintings and board pieces, on Z-Image and Qwen side by side.
 
 **Tech Stack:**
 - Godot 4.7 with typed GDScript, tested with GUT (`./run_tests.sh`).
@@ -27,7 +27,9 @@ picks and reviews:
   `http://127.0.0.1:8188`.
 - Blender, through the Blender MCP; headless `blender -b` for the build
   scripts.
-- Z-Image Turbo and FLUX.2 klein 4B. Both are Apache-2.0.
+- Z-Image Turbo and Qwen-Image-2512 (fast tier). Both are Apache-2.0.
+  Every batch runs on BOTH for the owner to compare; klein 4B is retired
+  (owner 2026-09-28).
 
 **Spec:** `docs/superpowers/specs/2026-09-28-courier-art-design.md`
 
@@ -45,8 +47,12 @@ picks and reviews:
   helper.
 - **No AI 3D.** Hunyuan and any image-to-3D are banned (owner 2026-09-24).
   ComfyUI work ends at the image.
-- **Only these weights:** Z-Image Turbo `z_image_turbo_bf16.safetensors` and
-  FLUX.2 klein 4B base `flux-2-klein-base-4b.safetensors`.
+- **Only these weights, and always both:** Z-Image Turbo
+  `z_image_turbo_bf16.safetensors` (preset `zimage`) and Qwen-Image-2512
+  `qwen-image-2512-Q6_K.gguf` with the Lightning LoRA (preset
+  `qwen2512fast` in `generate.py`, tier `qwenfast` in `gen_cavalry_v2.py`).
+  Never FLUX.2 klein 4B (owner 2026-09-28). Every batch runs on both
+  models and its contact sheet shows them side by side.
 - **Announce every batch.** Before queuing ANY ComfyUI batch, tell the owner
   the image count and time, and wait for a yes. The owner cancels
   unrequested batches.
@@ -92,7 +98,7 @@ picks and reviews:
 
 ---
 
-### Task 1: Z-Image design sheets for the courier and the spy
+### Task 1: Z-Image and Qwen design sheets for the courier and the spy
 
 **Files:**
 - Create: `tools/units3d/gen_courier_designs.py`
@@ -100,15 +106,16 @@ picks and reviews:
 
 **Interfaces:**
 - Consumes: `tools/units3d/gen_cavalry_v2.py`:
-  - `TIERS["zimage"]`;
+  - `TIERS["zimage"]` and `TIERS["qwenfast"]`;
   - `graph(template_file, values)`;
   - `run(g, timeout)`;
   - `call(path)`.
 - Produces:
-  - `assets/flux/out/courier_designs/<id>_s<n>.png`;
-  - the contact sheet `contact_sheet.png`;
+  - `assets/flux/out/courier_designs/<tier>_<id>_s<n>.png`, where `tier`
+    is `zimage` or `qwenfast`;
+  - the contact sheet `contact_sheet.png`, one row per tier;
   - the CSV's `picked` column: exactly one `C*` row and one `S*` row get
-    `picked=s<n>`. Task 2 reads it.
+    `picked=<tier>_s<n>`. Task 2 reads it.
 
 - [ ] **Step 1: Write the prompts CSV**
 
@@ -131,14 +138,15 @@ S2,行商·驮马,"a travelling merchant riding a small shaggy dun pack pony at 
 ```python
 """Courier and spy design sheets (owner 2026-09-28, spec
 2026-09-28-courier-art §1): every row of assets/flux/courier_design_prompts.csv
-on Z-Image Turbo, 2 seeds each, for the owner to pick one courier (C*) and one
-spy (S*). The pick goes in the CSV's `picked` column as s<n>.
+on BOTH Z-Image Turbo and Qwen-Image-2512 fast (never klein, owner
+2026-09-28), 2 seeds each, for the owner to compare and pick one courier (C*)
+and one spy (S*). The pick goes in the CSV's `picked` column as <tier>_s<n>.
 
-  python3 tools/units3d/gen_courier_designs.py            # all rows, 2 seeds
-  python3 tools/units3d/gen_courier_designs.py --only C1,S2 --seeds 1
+  python3 tools/units3d/gen_courier_designs.py            # both tiers, all rows, 2 seeds
+  python3 tools/units3d/gen_courier_designs.py --tiers zimage --only C1,S2 --seeds 1
   python3 tools/units3d/gen_courier_designs.py --dry-run  # list the jobs, queue nothing
 
-Output: assets/flux/out/courier_designs/<id>_s<n>.png and contact_sheet.png.
+Output: assets/flux/out/courier_designs/<tier>_<id>_s<n>.png and contact_sheet.png.
 Existing files are kept unless --force. Needs ComfyUI at COMFY_HOST.
 """
 import csv, sys, urllib.parse
@@ -151,6 +159,8 @@ ROOT = Path(__file__).resolve().parents[2]
 ROWS = ROOT / "assets" / "flux" / "courier_design_prompts.csv"
 OUT = ROOT / "assets" / "flux" / "out" / "courier_designs"
 SEED = 20260928
+TIERS = ["zimage", "qwenfast"]  # Z-Image Turbo first: its row is done in minutes
+MINUTES = {"zimage": 0.5, "qwenfast": 2.0}
 WRAP = ("Photograph of {p}. Three-quarter side view from eye level, the entire horse and "
         "rider fully inside the frame with a generous margin, all four hooves visible. "
         "Museum-quality historical reenactment with accurate replica medieval dress, "
@@ -173,20 +183,27 @@ def arg(name, default):
 def jobs():
     only = set(filter(None, arg("--only", "").split(",")))
     seeds = int(arg("--seeds", "2"))
+    tiers = arg("--tiers", ",".join(TIERS)).split(",")
     with open(ROWS, newline="", encoding="utf-8") as f:
         rows = [r for r in csv.DictReader(f) if not only or r["id"] in only]
-    return [(r, s) for r in rows for s in range(1, seeds + 1)]
+    return [(t, r, s) for t in tiers for r in rows for s in range(1, seeds + 1)]
 
 
 def sheet(files):
+    """One row per tier, the same design and seed in the same column."""
     from PIL import Image, ImageDraw
-    cw, ch, cols = 672, 448, 4
-    im = Image.new("RGB", (cw * cols, (ch + 28) * ((len(files) + cols - 1) // cols)), "white")
+    cw, ch = 528, 352
+    tiers = [t for t in TIERS if any(f.name.startswith(t + "_") for f in files)]
+    cells = sorted({f.stem.split("_", 1)[1] for f in files})
+    im = Image.new("RGB", (cw * len(cells), (ch + 28) * len(tiers)), "white")
     d = ImageDraw.Draw(im)
-    for i, f in enumerate(files):
-        x, y = (i % cols) * cw, (i // cols) * (ch + 28)
-        im.paste(Image.open(f).convert("RGB").resize((cw, ch)), (x, y + 28))
-        d.text((x + 8, y + 6), f.stem, fill="black")
+    for r, t in enumerate(tiers):
+        for c, cell in enumerate(cells):
+            f = OUT / f"{t}_{cell}.png"
+            x, y = c * cw, r * (ch + 28)
+            if f.exists():
+                im.paste(Image.open(f).convert("RGB").resize((cw, ch)), (x, y + 28))
+            d.text((x + 8, y + 6), f"{t} / {cell}", fill="black")
     im.save(OUT / "contact_sheet.png")
     print("->", OUT / "contact_sheet.png")
 
@@ -194,20 +211,21 @@ def sheet(files):
 def main():
     todo = jobs()
     if "--dry-run" in sys.argv:
-        for r, s in todo:
-            print(f"{r['id']}_s{s}: {WRAP.format(p=r['prompt'])[:120]}...")
-        print(f"{len(todo)} image(s), about {len(todo) * 31 // 60 + 1} min on Z-Image Turbo")
+        for t, r, s in todo:
+            print(f"{t}_{r['id']}_s{s}: {WRAP.format(p=r['prompt'])[:100]}...")
+        mins = sum(MINUTES[t] for t, _, _ in todo)
+        print(f"{len(todo)} image(s), about {int(mins) + 1} min on {', '.join(sorted({t for t, _, _ in todo}))}")
         return
     OUT.mkdir(parents=True, exist_ok=True)
-    tpl, vals = v2.TIERS["zimage"]
     done = []
-    for r, s in todo:
-        dst = OUT / f"{r['id']}_s{s}.png"
+    for t, r, s in todo:
+        tpl, vals = v2.TIERS[t]
+        dst = OUT / f"{t}_{r['id']}_s{s}.png"
         if dst.exists() and "--force" not in sys.argv:
             print("keep", dst.name); done.append(dst); continue
         v = dict(vals, prompt=WRAP.format(p=r["prompt"]),
                  negative=NEGATIVE_ARMOURED if r["id"] == "C3" else NEGATIVE,
-                 seed=SEED + s - 1, prefix=f"courier_designs/{r['id']}_s{s}")
+                 seed=SEED + s - 1, prefix=f"courier_designs/{t}_{r['id']}_s{s}")
         img, dt = v2.run(v2.graph(tpl, v), 3600)
         q = urllib.parse.urlencode({"filename": img["filename"], "subfolder": img.get("subfolder", ""),
                                     "type": img.get("type", "output")})
@@ -224,8 +242,8 @@ if __name__ == "__main__":
 
 Run: `python3 tools/units3d/gen_courier_designs.py --dry-run`
 
-Expected: 12 lines `C1_s1` … `S2_s2`, then `12 image(s), about 7 min on
-Z-Image Turbo`.
+Expected: 24 lines, `zimage_C1_s1` … `qwenfast_S2_s2`, then `24 image(s),
+about 31 min on qwenfast, zimage`.
 
 - [ ] **Step 4: Commit**
 
@@ -236,15 +254,17 @@ git commit -m "tools(units3d): Z-Image design sheets for the courier and the spy
 
 - [ ] **Step 5: OWNER GATE — announce and run the batch**
 
-1. Tell the owner: "12 images on Z-Image Turbo, about 7 minutes. Start?"
+1. Tell the owner: "24 images, 12 on Z-Image Turbo and 12 on Qwen fast,
+   about 30 minutes. Start?"
 2. On a yes, check ComfyUI is up (`curl -s http://127.0.0.1:8188/system_stats`).
 3. Run `python3 tools/units3d/gen_courier_designs.py`.
 4. Send the owner `assets/flux/out/courier_designs/contact_sheet.png`.
 
 - [ ] **Step 6: OWNER GATE — record the picks**
 
-The owner names one C image and one S image. Write `s<n>` into that row's
-`picked` cell (e.g. `C2,...,s1`), and leave every other `picked` empty.
+The owner names one C image and one S image, from either model. Write
+`<tier>_s<n>` into that row's `picked` cell (e.g. `C2,...,qwenfast_s1`), and
+leave every other `picked` empty.
 
 ```bash
 git add assets/flux/courier_design_prompts.csv
@@ -261,13 +281,21 @@ git commit -m "data(flux): the owner's courier and spy design picks"
 
 **Interfaces:**
 - Consumes:
-  - Task 1's picked rows;
-  - `tools/units3d/gen_cavalry_refs.py`: `upload`, `graph(row, kind, seed,
-    ref_name)`, `run`, `SIZE`, `SHEET`, `NEGATIVE`, `HOST`. This is the
-    klein-with-reference graph `gen_cavalry_sheet.py` uses.
-- Produces: `assets/flux/out/courier_sheet/<who>_<view>.png`, where `who` is
-  `courier` or `spy` and `view` is one of `R1 R2 R3 M1 M2 M3 A1`. Tasks 6
-  and 8 model against them.
+  - Task 1's picked rows (`picked` = `<tier>_s<n>`);
+  - `tools/units3d/gen_cavalry_v2.py`: `TIERS["zimage"]`,
+    `TIERS["qwenfast"]`, `graph`, `run`, `call`.
+- Produces: `assets/flux/out/courier_sheet/<tier>_<who>_<view>.png`,
+  where:
+  - `tier` is `zimage` or `qwenfast`;
+  - `who` is `courier` or `spy`;
+  - `view` is one of `R1 R2 R3 M1 M2 M3 A1`.
+
+  Tasks 6 and 8 model against them.
+
+Both models are text-only here: no reference picture goes in (no
+Qwen-Image-Edit is installed, and klein is retired). So each view repeats
+the picked design's own words, and the contact sheet sets the two models
+side by side per view.
 
 - [ ] **Step 1: Write the views CSV** (`assets/flux/courier_sheet_prompts.csv`, exact)
 
@@ -282,6 +310,9 @@ M3,mount,1344,896,"the saddled horse alone with no rider, standing square, seen 
 A1,rider|mount,1344,896,"the rider seated on the horse, the horse standing square, seen exactly from the side, the whole piece in frame"
 ```
 
+(The widths and heights are Z-Image's. The script scales them to Qwen's
+own resolution class, ×1.18 rounded to a multiple of 16.)
+
 - [ ] **Step 2: Write the generator**
 
 `tools/units3d/gen_courier_sheet.py`:
@@ -289,26 +320,29 @@ A1,rider|mount,1344,896,"the rider seated on the horse, the horse standing squar
 ```python
 """Structure views of the owner's picked courier and spy designs (spec
 2026-09-28-courier-art §1): the rider alone front / side / back, the mount alone
-side / front / above, and the mounted piece side, each drawn by FLUX.2 klein 4B
-with the picked picture as a reference latent (the way gen_cavalry_sheet.py
-kept design C's kit) — modelling references for the Blender build, not game art.
+side / front / above, and the mounted piece side, on BOTH Z-Image Turbo and
+Qwen-Image-2512 fast (never klein, owner 2026-09-28). Text only: each view
+repeats the picked design's own words. Modelling references for the Blender
+build, not game art.
 
-  python3 tools/units3d/gen_courier_sheet.py [--who courier|spy] [--only R1,M1] [--force] [--dry-run]
+  python3 tools/units3d/gen_courier_sheet.py [--who courier|spy] [--tiers zimage] [--only R1,M1] [--force] [--dry-run]
 
-Output: assets/flux/out/courier_sheet/<who>_<view>.png and contact_sheet.png.
+Output: assets/flux/out/courier_sheet/<tier>_<who>_<view>.png and contact_sheet.png.
 """
-import csv, sys
+import csv, sys, urllib.parse
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import gen_cavalry_refs as refs  # upload / graph / run, the klein-with-reference graph
+import gen_cavalry_v2 as v2  # TIERS, graph, run, call
 
 ROOT = Path(__file__).resolve().parents[2]
 DESIGNS = ROOT / "assets" / "flux" / "courier_design_prompts.csv"
 VIEWS = ROOT / "assets" / "flux" / "courier_sheet_prompts.csv"
-PICKS = ROOT / "assets" / "flux" / "out" / "courier_designs"
 OUT = ROOT / "assets" / "flux" / "out" / "courier_sheet"
 SEED = 20260928
+TIERS = ["zimage", "qwenfast"]
+MINUTES = {"zimage": 0.5, "qwenfast": 2.0}
+QWEN_SCALE = 1.18  # Qwen-Image's native class is ~1584x1056 against Z-Image's 1344x896
 TEXT = ("Photograph. {view}. {desc}. Technical reference for a 3D modeller, realistic "
         "replica medieval dress, realistic proportions, everything asked for fully inside "
         "the frame with a margin, plain pure white background, soft even studio light, no "
@@ -319,63 +353,85 @@ NEGATIVE = ("cartoon, anime, toy, miniature figurine, chibi, big head, stylised,
             "blurry, extra fingers, fused fingers, malformed hands, extra legs, five legs")
 
 
+def arg(name, default):
+    a = sys.argv[1:]
+    return a[a.index(name) + 1] if name in a else default
+
+
 def picked():
-    """who -> (design row, picked png path) for the two picked designs."""
+    """who -> the picked design row."""
     out = {}
     with open(DESIGNS, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             if r["picked"].strip():
-                who = "courier" if r["id"].startswith("C") else "spy"
-                out[who] = (r, PICKS / f"{r['id']}_{r['picked'].strip()}.png")
+                out["courier" if r["id"].startswith("C") else "spy"] = r
     if set(out) != {"courier", "spy"}:
         sys.exit("pick one C* and one S* design first (courier_design_prompts.csv `picked`)")
     return out
 
 
+def size_for(tier, w, h):
+    if tier != "qwenfast":
+        return w, h
+    return int(round(w * QWEN_SCALE / 16)) * 16, int(round(h * QWEN_SCALE / 16)) * 16
+
+
+def describe(row, parts):
+    # a part drawn alone is not told about the other as a subject, or it draws it
+    if parts == "rider":
+        return "The person only, dressed exactly as in: " + row["prompt"]
+    if parts == "mount":
+        return "The horse and its saddle and tack only, exactly as in: " + row["prompt"]
+    return row["prompt"]
+
+
 def main():
-    a = sys.argv[1:]
-    only = set(a[a.index("--only") + 1].split(",")) if "--only" in a else set()
-    whos = [a[a.index("--who") + 1]] if "--who" in a else ["courier", "spy"]
+    only = set(filter(None, arg("--only", "").split(",")))
+    whos = [arg("--who", "")] if "--who" in sys.argv else ["courier", "spy"]
+    tiers = arg("--tiers", ",".join(TIERS)).split(",")
     with open(VIEWS, newline="", encoding="utf-8") as f:
         views = [v for v in csv.DictReader(f) if not only or v["view"] in only]
     picks = picked()
-    todo = [(w, v) for w in whos for v in views]
-    if "--dry-run" in a:
-        for w, v in todo:
-            print(f"{w}_{v['view']}  ref={picks[w][1].name}  {v['width']}x{v['height']}")
-        print(f"{len(todo)} image(s), about {len(todo) * 85 // 60 + 1} min on klein 4B")
+    todo = [(t, w, v) for t in tiers for w in whos for v in views]
+    if "--dry-run" in sys.argv:
+        for t, w, v in todo:
+            print(f"{t}_{w}_{v['view']}  {'x'.join(map(str, size_for(t, int(v['width']), int(v['height']))))}")
+        print(f"{len(todo)} image(s), about {int(sum(MINUTES[t] for t, _, _ in todo)) + 1} min")
         return
     OUT.mkdir(parents=True, exist_ok=True)
-    refs.NEGATIVE = NEGATIVE
-    for i, (w, v) in enumerate(todo):
-        dst = OUT / f"{w}_{v['view']}.png"
-        if dst.exists() and "--force" not in a:
+    for i, (t, w, v) in enumerate(todo):
+        dst = OUT / f"{t}_{w}_{v['view']}.png"
+        if dst.exists() and "--force" not in sys.argv:
             print("keep", dst.name); continue
-        row, ref_png = picks[w]
-        refs.SIZE["sheet"] = (int(v["width"]), int(v["height"]))
-        # a part drawn alone is not told about the other, or it draws it
-        desc = row["prompt"] if v["parts"] == "rider|mount" else (
-            "the person only: " + row["prompt"] if v["parts"] == "rider" else "the horse and its tack only: " + row["prompt"])
-        refs.SHEET = TEXT.format(view=v["prompt"], desc=desc).replace("{", "{{").replace("}", "}}")
-        g = refs.graph({"id": f"courier_{w}_{v['view']}"}, "sheet", SEED + i, refs.upload(str(ref_png)))
-        hist, dt = refs.run(g, 3600)
-        img = hist["outputs"]["13"]["images"][0]
-        q = "filename=%s&subfolder=%s&type=output" % (img["filename"], img["subfolder"])
-        dst.write_bytes(refs.urllib.request.urlopen(refs.HOST + "/view?" + q).read())
-        print("%s %.0fs" % (dst.name, dt), flush=True)
+        tpl, vals = v2.TIERS[t]
+        width, height = size_for(t, int(v["width"]), int(v["height"]))
+        text = TEXT.format(view=v["prompt"][0].upper() + v["prompt"][1:], desc=describe(picks[w], v["parts"]))
+        g = v2.graph(tpl, dict(vals, prompt=text, negative=NEGATIVE, seed=SEED + views.index(v),
+                               width=width, height=height, prefix=f"courier_sheet/{t}_{w}_{v['view']}"))
+        img, dt = v2.run(g, 3600)
+        q = urllib.parse.urlencode({"filename": img["filename"], "subfolder": img.get("subfolder", ""),
+                                    "type": img.get("type", "output")})
+        dst.write_bytes(v2.call("/view?" + q))
+        print(f"{dst.name}  {dt:.0f}s", flush=True)
     sheet()
 
 
 def sheet():
+    """Per design: a row per tier, a column per view."""
     from PIL import Image, ImageDraw
-    files = sorted(OUT.glob("*_[RMA][0-9].png"))
-    cw, ch, cols = 480, 480, 7
-    im = Image.new("RGB", (cw * cols, (ch + 24) * ((len(files) + cols - 1) // cols)), "white")
+    views = ["R1", "R2", "R3", "M1", "M2", "M3", "A1"]
+    cw, ch = 360, 360
+    rows = [(t, w) for w in ("courier", "spy") for t in TIERS]
+    im = Image.new("RGB", (cw * len(views), (ch + 24) * len(rows)), "white")
     d = ImageDraw.Draw(im)
-    for i, f in enumerate(files):
-        x, y = (i % cols) * cw, (i // cols) * (ch + 24)
-        p = Image.open(f).convert("RGB"); p.thumbnail((cw, ch))
-        im.paste(p, (x + (cw - p.width) // 2, y + 24)); d.text((x + 8, y + 6), f.stem, fill="black")
+    for r, (t, w) in enumerate(rows):
+        for c, v in enumerate(views):
+            x, y = c * cw, r * (ch + 24)
+            f = OUT / f"{t}_{w}_{v}.png"
+            if f.exists():
+                p = Image.open(f).convert("RGB"); p.thumbnail((cw, ch))
+                im.paste(p, (x + (cw - p.width) // 2, y + 24))
+            d.text((x + 8, y + 6), f"{t} / {w} / {v}", fill="black")
     im.save(OUT / "contact_sheet.png"); print("->", OUT / "contact_sheet.png")
 
 
@@ -383,36 +439,32 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 3: Verify against the helper module before running**
+- [ ] **Step 3: Dry-run it**
 
-1. Open `tools/units3d/gen_cavalry_refs.py`. Confirm that
-   `graph(row, kind, seed, ref_name)` builds the klein-with-reference graph
-   and that its SaveImage node id is `"13"`, as `gen_cavalry_sheet.py`
-   assumes.
-2. If the signature or node id differs, adapt the two call sites to
-   match. Do not change `gen_cavalry_refs.py`.
-3. Then run `python3 tools/units3d/gen_courier_sheet.py --dry-run`.
+Run `python3 tools/units3d/gen_courier_sheet.py --dry-run` after Task 1's
+picks are recorded.
 
-Expected: 14 lines (7 views × courier, spy) and `14 image(s), about 20 min
-on klein 4B`.
+Expected: 28 lines (2 tiers × 2 designs × 7 views), the qwenfast sizes at
+~1.18×, and `28 image(s), about 36 min`.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add tools/units3d/gen_courier_sheet.py assets/flux/courier_sheet_prompts.csv
-git commit -m "tools(units3d): structure views of the picked courier and spy"
+git commit -m "tools(units3d): structure views of the picked courier and spy on Z-Image and Qwen"
 ```
 
 - [ ] **Step 5: OWNER GATE — announce and run**
 
-1. Tell the owner: "14 structure views on klein 4B with the picked designs as
-   reference, about 20 minutes. Start?"
+1. Tell the owner: "28 structure views, 14 on Z-Image and 14 on Qwen fast,
+   about 35 minutes. Start?"
 2. On a yes, run `python3 tools/units3d/gen_courier_sheet.py`.
-3. Look at every view and re-roll any view that lost the design with
-   `--only <view> --force` plus a new seed. Seeds are `SEED + i`, so edit
-   `SEED` locally for the re-roll and note the seed used in the commit
-   message of Task 6.
-4. Send the owner `contact_sheet.png`.
+3. Send the owner `contact_sheet.png`.
+4. For each view, note which model held the design better. Tasks 6 and 8
+   model from that one.
+5. Re-roll a view that lost the design on BOTH models with `--only <view>
+   --force` after changing `SEED` locally, and name the seed in Task 6's
+   commit message.
 
 ---
 
@@ -855,6 +907,24 @@ def install_courier_paintings(size: tuple = PAINT_SIZE) -> int:
     return install_paintings(size, "courier_paint_art.csv", ROOT / "assets" / "couriers" / "paint")
 ```
 
+Picks now name a MODEL as well as a seed (owner 2026-09-28: every image on
+Z-Image and Qwen), so add one helper above `install_paintings` and use it
+there in place of its two-line seed filter:
+
+```python
+def _pick(hits: list, seed: str) -> list:
+    """The renders a table's `seed` cell picks: `<model>_s<seed>` (the stem's
+    own suffix) or a bare seed number as before; all of them when empty."""
+    if not seed:
+        return hits
+    suffix = "_" + seed if "_" in seed else "_s" + seed
+    return [h for h in hits if h.stem.endswith(suffix)] or hits
+```
+
+In `install_paintings`, replace
+`if seed:\n    hits = [h for h in hits if h.stem.endswith("_s" + seed)] or hits`
+with `hits = _pick(hits, seed)`.
+
 Register `"courier_paintings": install_courier_paintings` in `main()`'s
 `chapters`. It reads renders from `out/estates` (the B- chapter's dir), as
 the army paintings do.
@@ -1094,9 +1164,7 @@ def install_missive() -> int:
     installed = {}
     for r in rows:
         art_id, key, seed = r["art_id"], r["key"], r.get("seed", "").strip()
-        hits = sorted((HERE / "out" / "ui").glob("%s_*.png" % art_id))
-        if seed:
-            hits = [h for h in hits if h.stem.endswith("_s" + seed)] or hits
+        hits = _pick(sorted((HERE / "out" / "ui").glob("%s_*.png" % art_id)), seed)
         if not hits:
             print("  (no render for %s / %s)" % (art_id, key))
             continue
@@ -1337,7 +1405,7 @@ git commit -m "art(couriers): the courier rider, modelled from scratch — gallo
 
 ---
 
-### Task 7: The paintings and the board art (klein batches, picks, install)
+### Task 7: The paintings and the board art (Z-Image and Qwen batches, picks, install)
 
 **Files:**
 - Modify: `docs/references/art_prompt_library.md`: §6.11 rows `B-43`..`B-47`
@@ -1395,25 +1463,32 @@ explicit `--canvas` per group in Step 3.
 - [ ] **Step 3: OWNER GATE — announce and run both batches**
 
 1. Tell the owner: "Courier paintings 5 × 2 seeds and board pieces 7 × 2
-   seeds, 24 images on klein 4B, about 35 minutes. Start?"
-2. On a yes, run:
+   seeds, each on Z-Image and on Qwen fast: 48 images, about 60 minutes.
+   Start?"
+2. On a yes, run every line once per model, Z-Image first (never klein):
 
 ```bash
-python3 assets/flux/generate.py --ids B-43,B-44,B-45,B-46,B-47 --canvas C-COURIER --variants 2
-python3 assets/flux/generate.py --ids U-20,U-22,U-23 --canvas C-UIPIECE --variants 2
-python3 assets/flux/generate.py --ids U-21 --canvas C-TILE --variants 2
-python3 assets/flux/generate.py --ids U-24,U-25 --canvas C-ICON --variants 2
-python3 assets/flux/generate.py --ids U-26 --canvas C-UIWIDE --variants 2
+for M in zimage qwen2512fast; do
+  python3 assets/flux/generate.py --model $M --ids B-43,B-44,B-45,B-46,B-47 --canvas C-COURIER --variants 2
+  python3 assets/flux/generate.py --model $M --ids U-20,U-22,U-23 --canvas C-UIPIECE --variants 2
+  python3 assets/flux/generate.py --model $M --ids U-21 --canvas C-TILE --variants 2
+  python3 assets/flux/generate.py --model $M --ids U-24,U-25 --canvas C-ICON --variants 2
+  python3 assets/flux/generate.py --model $M --ids U-26 --canvas C-UIWIDE --variants 2
+done
 python3 assets/flux/post.py --tone assets/flux/out/ui/U-2*.png --out-dir assets/flux/out/ui
 ```
 
-3. Make a contact sheet per group (Pillow, as Task 1's `sheet()`) and send
-   both to the owner.
+   The `zimage` preset has no negative path, so `NEGATIVE.txt` only steers
+   Qwen. That is expected; compare as rendered.
+3. Make a contact sheet per group with Pillow, one row per model and each
+   entry's seeds side by side. Label each tile with its file stem, which
+   ends `<model>_s<seed>`. Send both sheets to the owner.
 
 - [ ] **Step 4: OWNER GATE — the picks, then install**
 
-1. Write each picked seed into the `seed` column of `courier_paint_art.csv`
-   and `missive_art_install.csv`.
+1. Write each pick into the `seed` column of `courier_paint_art.csv` and
+   `missive_art_install.csv` as the render's stem suffix `<model>_s<seed>`
+   (e.g. `qwen2512fast_s954159498`). Task 4's `_pick` matches it.
 2. Run:
 
 ```bash
