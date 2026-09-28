@@ -413,8 +413,9 @@ func _on_missive_show(subject: Dictionary) -> void:
 		"province":
 			view.province_selected.emit(String(subject["code"]))
 		"burg":
-			view.object_selected.emit({"title": String(Game.data.burgs[String(subject["code"])]["label"]),
-				"obj": {"kind": "burg", "code": String(subject["code"])}})
+			var code := String(subject["code"])
+			view.object_selected.emit({"title": String((Game.data.burgs.get(code, {}) as Dictionary).get("label", code)),
+				"obj": {"kind": "burg", "code": code}})
 
 ## Bottom bar routing: MAP is the default view (close every overlay — the
 ## live world map sits in the court screen's middle zone, user ruling
