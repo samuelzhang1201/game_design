@@ -1,32 +1,43 @@
 class_name Map3DLayerCouriers
 extends Node3D
-## The couriers on the 3D map (spec 2026-09-27-courier-core §2): one small
-## rider per courier of GameState.couriers, sized, seated and drawn RIDING
-## the day the clock is running: the engine's own next day on the road
-## (CourierSystem.ride_ahead), walked by the share of the day already run
-## (owner 2026-09-28: drawn a day behind, he stood still a whole day after play
-## was pressed). The regiment pieces' own rules size him (Map3DUnits),
-## galloping always. Past the counter scale no rider is drawn and his rect is
-## a counter's, which Map3DHudCouriers paints. The model is courier_art.csv's —
-## the cavalry until sub-project D delivers the courier's own. Takes
-## everything from Map3DContext, never the Game autoload (a test scans).
+## The couriers on the 3D map (spec 2026-09-27-courier-core §2): one small rider
+## per courier of GameState.couriers, drawn RIDING the day the clock is running
+## (CourierSystem.ride_ahead), walked by the day's share (owner 2026-09-28: drawn
+## a day behind before). Map3DUnits sizes him: gallops while the clock runs and
+## idles paused or not set out, a counter past the counter scale. Model:
+## courier_art.csv, cavalry stand-in until sub-project D. Never the Game autoload.
 
-const MARCH := "MARCH"
+const GALLOP := "GALLOP"
+const IDLE := "IDLE"
+## A stand-in model (the cavalry) has no courier clips: rides its march, stands its garrison.
+const FALLBACK := {"GALLOP": "MARCH", "IDLE": "GARRISON"}
+
+
+## GALLOP while he rides and the clock runs; IDLE when paused or not yet set out.
+static func action_for(moving: bool, clock_running: bool) -> String:
+	return GALLOP if moving and clock_running else IDLE
+
+
+## The clip for `action`, else its FALLBACK's, else "".
+static func clip_or_fallback(anim: AnimationPlayer, action: String) -> String:
+	if anim == null:
+		return ""
+	var name := Map3DUnits.clip_named(anim, action)
+	if name == "" and FALLBACK.has(action):
+		name = Map3DUnits.clip_named(anim, String(FALLBACK[action]))
+	return name
+
 
 var ctx: Map3DContext
 var _pieces: Dictionary = {}
 var _shown_xz: Dictionary = {}
 var _rects: Dictionary = {}
 var _scenes: Dictionary = {}
-## id -> {key, from, ahead, rest, length, share}: today's ride in world XZ —
-## where the day starts him, the points it takes him through, the road after
-## it, and the share of the day it takes — remade when the engine moves him or
-## the day turns (`key`).
+## id -> {key, from, ahead, rest, length, share}: today's ride, remade when the engine moves him or the day turns.
 var _rides: Dictionary = {}
 ## id -> the road still ahead of the drawn rider, in world XZ.
 var _left: Dictionary = {}
-## id -> the day's share when a courier not yet ridden was first seen: sent
-## mid-day, he rides the rest of that day from where the clock stood.
+## id -> the day's share when a courier not yet ridden was first seen (sent mid-day).
 var _start: Dictionary = {}
 
 
@@ -37,10 +48,7 @@ func bind(p_ctx: Map3DContext) -> void:
 	refresh()
 
 
-## id -> {rect: Rect2 in design px, counter: bool, lead: the world XZ points
-## from where he is drawn along the road still ahead (Map3DHudCouriers draws
-## it), waiting: not yet set out, so the town he waits in wins a click on him
-## (Map3DPicker)}.
+## id -> {rect: Rect2 design px, counter: bool, lead: road ahead (Map3DHudCouriers), waiting: bool}.
 func screen_rects() -> Dictionary:
 	return _rects
 
@@ -69,9 +77,8 @@ func refresh() -> void:
 
 
 ## Draw each rider where the day's share has him on today's ride; true when
-## anything changed (the HUD redraws). A paused clock holds the share, so he
-## holds too.
-func step(_delta: float) -> bool:
+## anything changed (the HUD redraws). Also syncs his gallop/idle and its pace.
+func step(delta: float) -> bool:
 	if ctx == null or ctx.camera == null:
 		return false
 	var list := ctx.couriers()
@@ -79,6 +86,15 @@ func step(_delta: float) -> bool:
 	for c: Dictionary in list:
 		var id := int(c["id"])
 		var xz := _drawn_xz(c)
+		var moving: bool = _shown_xz.has(id) and _shown_xz[id] != xz
+		var prev: Vector2 = _shown_xz.get(id, xz)
+		if _pieces.has(id):
+			var piece: Dictionary = _pieces[id]
+			var k := (piece["node"] as Node3D).transform.basis.get_scale().x
+			var pace := Map3DUnits.gait_rate(prev.distance_to(xz) / maxf(delta, 0.001), k,
+				float(piece["clip_s"]), float(piece["stride_m"]),
+				ctx.repo.bal("map3d_courier_anim_min"), ctx.repo.bal("map3d_courier_anim_max"))
+			_sync(piece, action_for(moving or not _waiting(c, xz), ctx.clock_speed() > 0.0), pace)
 		if not _shown_xz.has(id) or _shown_xz[id] != xz:
 			_shown_xz[id] = xz
 			dirty = true
@@ -98,8 +114,7 @@ func _drawn_xz(c: Dictionary) -> Vector2:
 	return at
 
 
-## How much of today's ride he has done: the day's share, or — sent this day —
-## the share since he was sent.
+## How much of today's ride he has done: the day's share, or — sent today — since then.
 func _share_of(c: Dictionary) -> float:
 	var id := int(c["id"])
 	var share := ctx.day_share()
@@ -126,7 +141,6 @@ func _ride_of(c: Dictionary) -> Dictionary:
 	var ahead: Array = []
 	for m: Vector2i in passed:
 		ahead.append(_world_of_m(m))
-	# the road after the day: the waypoints the day does not reach
 	var rest: Array = []
 	for i in range(maxi(passed.size() - 1, 0), path.size()):
 		rest.append(_world_of_m(Vector2i(int(path[i][0]), int(path[i][1]))))
@@ -176,8 +190,7 @@ func _heading_from(id: int, xz: Vector2, c: Dictionary) -> Vector2:
 	return _heading(c)
 
 
-## He faces the next waypoint of his road.
-func _heading(c: Dictionary) -> Vector2:
+func _heading(c: Dictionary) -> Vector2:  # the next waypoint of his road
 	var path: Array = c["path"]
 	if path.is_empty():
 		return Vector2.ZERO
@@ -223,8 +236,7 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 		"counter": false, "lead": _lead(id, xz), "waiting": _waiting(c, xz)}
 
 
-## Not yet set out: sent and still standing where he was sent from.
-func _waiting(c: Dictionary, xz: Vector2) -> bool:
+func _waiting(c: Dictionary, xz: Vector2) -> bool:  # not yet set out
 	return int(c["days"]) == 0 and xz.distance_to(_target_xz(c)) < 0.5
 
 
@@ -232,6 +244,20 @@ func _lead(id: int, xz: Vector2) -> Array:
 	var out: Array = [xz]
 	out.append_array(_left.get(id, []))
 	return out
+
+
+## Put his AnimationPlayer into `action`, blended; a pace for the gallop.
+func _sync(piece: Dictionary, action: String, pace: float) -> void:
+	var anim: AnimationPlayer = piece.get("anim")
+	if anim == null:
+		return
+	var clip := clip_or_fallback(anim, action)
+	if clip == "":
+		return
+	if String(piece["action"]) != action:
+		anim.play(clip, ctx.repo.bal("map3d_unit_blend_s"))
+		piece["action"] = action
+	anim.speed_scale = pace if action == GALLOP else 1.0
 
 
 func _piece_of(c: Dictionary) -> Dictionary:
@@ -248,18 +274,13 @@ func _piece_of(c: Dictionary) -> Dictionary:
 	add_child(node)  # no owner: never saved into the authored scene
 	var span := Map3DUnits.model_size(node)
 	var anims := Map3DUnits.find_anim(node)
-	if anims != null:
-		var clip := Map3DUnits.clip_named(anims, MARCH)
-		if clip != "":
-			anims.play(clip)
-			anims.speed_scale = ctx.repo.bal("map3d_courier_anim_rate")
-	# span.x is already a HALF-width (Map3DUnits.model_size measures from the
-	# node's own origin), exactly maxf(stand_extent().x, stand_extent().y) —
-	# the same quantity map3d_layer_units.gd's _piece_of gives half_w_m
-	# (Map3DFormation.half_extent, itself stand_extent for one figure) with no
-	# further halving; a courier has no formation, so span.x is used as-is.
+	var gallop := clip_or_fallback(anims, GALLOP)
+	var clip_s := anims.get_animation(gallop).length if anims != null and gallop != "" else 1.0
+	# span.x is already a HALF-width (model_size measures from the node's own
+	# origin); a courier has no formation, so it is used as-is, like half_w_m.
 	var piece := {"node": node, "height_m": maxf(span.y, 0.01), "half_w_m": span.x,
-		"extent": Map3DUnits.stand_extent(node), "size": float(art.get("size", "1"))}
+		"extent": Map3DUnits.stand_extent(node), "size": float(art.get("size", "1")),
+		"anim": anims, "clip_s": clip_s, "stride_m": float(art.get("stride_m", "0")), "action": ""}
 	_pieces[id] = piece
 	return piece
 

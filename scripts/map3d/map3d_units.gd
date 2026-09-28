@@ -95,6 +95,17 @@ static func day_march(repo: DataRepository, state: GameState, code: String, meta
 		"to": Map3DGeometry.pack_to_world(meta, ArmySystem.metres_to_pack(repo, day["m"]))}
 
 
+## A looped gait's playback rate so its feet keep pace with the ground: world
+## speed over the piece's scale is the model's speed; a loop of `clip_s`
+## seconds covers `stride_m` model metres. Held within [lo, hi] — a miniature
+## crossing kilometres a day outruns any leg. 1.0 when the stride is unknown.
+static func gait_rate(world_speed: float, k: float, clip_s: float, stride_m: float,
+		lo: float, hi: float) -> float:
+	if world_speed <= 0.0 or k <= 0.0 or stride_m <= 0.0:
+		return 1.0
+	return clampf(world_speed / k * clip_s / stride_m, lo, hi)
+
+
 ## The MARCH clip's playback rate (owner 2026-09-27: 马的腿移动的步幅和它实际移
 ## 动的距离不符): the ground the piece covers per second in its MODEL'S metres
 ## (world speed / its scale k) over what one loop of the clip walks
@@ -104,9 +115,7 @@ static func day_march(repo: DataRepository, state: GameState, code: String, meta
 ## any leg, and past the ceiling it slides rather than blurs.
 static func march_rate(repo: DataRepository, world_speed: float, k: float, clip_s: float,
 		stride_m: float) -> float:
-	if world_speed <= 0.0 or k <= 0.0 or stride_m <= 0.0:
-		return 1.0
-	return clampf(world_speed / k * clip_s / stride_m,
+	return gait_rate(world_speed, k, clip_s, stride_m,
 		repo.bal("map3d_unit_anim_min"), repo.bal("map3d_unit_anim_max"))
 
 

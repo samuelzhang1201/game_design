@@ -254,3 +254,11 @@ func test_the_march_plays_at_the_grounds_pace() -> void:
 	assert_eq(Map3DUnits.march_rate(repo, 200.0, 40.0, 2.0, 1.0), 3.0)
 	assert_eq(Map3DUnits.march_rate(repo, 1.0, 40.0, 2.0, 1.0), 0.5)
 	assert_eq(Map3DUnits.march_rate(repo, 20.0, 40.0, 2.0, 0.0), 1.0, "no stride: as authored")
+
+
+func test_the_gait_rate_follows_the_ground_within_its_bounds() -> void:
+	# 12 world m/s at scale 4 = 3 model m/s; a 1.2 s loop covering 2.4 model m wants 1.5x
+	assert_almost_eq(Map3DUnits.gait_rate(12.0, 4.0, 1.2, 2.4, 0.5, 3.0), 1.5, 0.0001)
+	assert_eq(Map3DUnits.gait_rate(120.0, 4.0, 1.2, 2.4, 0.5, 3.0), 3.0, "held at the top bound")
+	assert_eq(Map3DUnits.gait_rate(0.1, 4.0, 1.2, 2.4, 0.5, 3.0), 0.5, "held at the bottom bound")
+	assert_eq(Map3DUnits.gait_rate(12.0, 4.0, 1.2, 0.0, 0.5, 3.0), 1.0, "no stride known: normal speed")
