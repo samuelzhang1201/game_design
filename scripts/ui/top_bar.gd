@@ -117,7 +117,13 @@ func _ready() -> void:
 	%Purses.add_child(_lord_crest)
 	_house_name = _wrap_mark(_lord_crest, "HouseName", "", _lord_crest.tooltip_text)
 	for m: String in LORD:
-		%Purses.add_child(_cell(m))
+		var lord_cell := _cell(m)
+		# The pools' art once, over each column (owner 2026-09-28, second
+		# critique): the house's row keeps the room, so its figures stay
+		# under the crown's, and its tooltips.
+		if Game.data.bal("ui_purse_icons_once") > 0.0:
+			(_icons[m] as Control).modulate.a = 0.0
+		%Purses.add_child(lord_cell)
 	Game.state_changed.connect(refresh)
 	Game.report_ready.connect(func(_r: TickReport) -> void: refresh())
 	refresh()
@@ -214,7 +220,8 @@ func refresh() -> void:
 		family.substr(0, 1).to_upper())
 	_lord_crest.set_texture(arms)
 	if _house_name != null:
-		_house_name.text = family
+		# "House Valorin", not a bare surname that could be anyone's (2026-09-28).
+		_house_name.text = "House " + family
 	var deltas := {}
 	var settled := Game.current_report != null
 	if settled:

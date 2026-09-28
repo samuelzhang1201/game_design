@@ -124,7 +124,8 @@ ui_section_rule_alpha,0.35,"UI: the faint gold rule under a section header insid
 ui_section_rule_gap_px,3,UI: the space above a section header and between it and its rule (design px)
 ui_dimension_labels,1,"UI: 1 writes each gauge's name beside its art on the realm card (temper and host; owner 2026-09-28, after the UI critique); 0 is the 2026-09-13 card, the art alone with the name in its tooltip"
 ui_purse_labels,1,"UI: 1 names the top bar's two purse rows (Crown / the house) and writes each change as a month's (+1,597/mo); 0 leaves the marks alone"
-ui_purse_label_w_px,64,UI: the width the purse rows' names take so the three pools stay in their columns (design px)
+ui_purse_label_w_px,104,UI: the width the purse rows' names take so the three pools stay in their columns (design px)
+ui_purse_icons_once,1,"UI: 1 draws each pool's art once, on the crown's row, over its column — the house's row keeps the room so its figures stand under the crown's (owner 2026-09-28, second critique: the same three icons twice); 0 draws them on both rows"
 ui_manor_card_rows,1,"UI: 1 lays the manor card's facts out as named rows in the sections of data/manor_card_sections.csv (owner 2026-09-28, after the UI critique: an icon grid of truncated values had to be hovered to be read); 0 is the 2026-09-14 icon grid"
 ui_manor_row_label_px,96,UI: the width a named row's name takes on the manor card (design px); the value fills the rest right-aligned
 ui_manor_row_icons,1,UI: 1 keeps each named row's art on the manor card; 0 is the name and value alone
@@ -136,6 +137,7 @@ ui_manor_painting_aspect,2.0,"UI: the manor card's painting is cut to a band thi
 ui_manor_painting_focus_y,0.58,UI: where the band's middle lies down the painting (0 top .. 1 bottom); the estates stand low in their paintings (measured 0.30-0.85 of the height)
 ui_manor_painting_max_share,0.25,UI: the manor card's painting never takes more than this share of the card's height (was a third; owner 2026-09-14)
 ui_manor_painting_fade_px,0,"UI: how deep the manor card painting's edges fade into the card (design px); 0 frames it in a gilt hairline like the audience portrait instead (2026-09-28: a 10 px fade in the card's colour read as a dark rim round a glowing photo)"
+ui_card_scroll_fade_px,22,"UI: while more of a map card lies below, its scroll's foot fades into the card over this many design px (critic 2026-09-28: the last row was cut through its middle); 0 is a hard cut"
 ui_nav_grouped,1,"UI: 1 groups the bottom bar (map lenses and the ruler left / screens right / a gold rule between) and draws its tabs as words with a gold underline rather than boxes, and frames the news bar with an empty-state line (owner 2026-09-28, after the UI critique); 0 is one row of boxed tabs"
 ui_council_button,1,"UI: 1 makes ENTER THE COUNCIL the screen's one primary button, level, over the map's top-right corner; 0 is the upright handle on the right edge (user ruling 2026-09-09)"
 ui_show_placeholder_tabs,1,UI: 0 leaves tabs whose page is still a placeholder (BottomBar.PLACEHOLDER_TABS: WAR ROOM) out of the bottom bar
@@ -301,7 +303,7 @@ map3d_seam_width_px,1.4,3D MAP borders: province seams width in screen px (polit
 map3d_seam_dash_px,6.0,3D MAP borders: seam dash length in screen px
 map3d_seam_gap_px,5.0,3D MAP borders: seam gap length in screen px
 map3d_seam_alpha,0.65,3D MAP borders: seam opacity — dark dashes under the solid black kingdom border (owner 2026-09-18; bracketed 0.4/0.5/0.6 by the critic sheet) — Phase 0 2026-09-24: was 0.5 — linear blending thins a dark dash
-map3d_selection_width_px,4.0,"3D MAP: the clicked MANOR's outline (under a theme), solid, in political_palette map3d_selection"
+map3d_selection_width_px,2.4,"3D MAP: the clicked MANOR's outline (under a theme), solid, in political_palette map3d_selection (critic 2026-09-28: at 4.0 the loudest line on the map; was 4.0)"
 map3d_selection_seam_width_px,3.2,"3D MAP (owner 2026-09-27: highlight the black dashed seam itself, not a gold solid line): the clicked province's outline — the seam's own dashes (map3d_seam_dash_px / _gap_px) in its ink at full opacity, this wide in screen px (the plain seam is map3d_seam_width_px 1.4 at map3d_seam_alpha)"
 map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its ring — only while it is shown, see map3d_ring_fade_start) picks it; otherwise the province under the click"
 map3d_selected_ring_scale,1.5,"3D MAP: the clicked settlement's ring is this much larger (fix round 1, owner 2026-09-18: was 1.4x diameter AND 1.5x line — a fat smear over the tier ring rather than a second crisp ring; now diameter only, the line stays the base stroke width), in political_palette map3d_selection gold"

@@ -23,7 +23,9 @@ func _draw() -> void:
 	if not bound() or ctx.state() == null or ctx.distance > ctx.repo.bal("map3d_weather_view_m"):
 		return
 	var px := ctx.repo.bal("map3d_weather_icon_px")
-	for m: Dictionary in thin(screen_marks(), px * 1.5, Rect2(Vector2.ZERO, size), taken(), px):
+	# Whole inside the view, never cut by its edge (critic 2026-09-28).
+	var inside := Rect2(Vector2.ZERO, size).grow(-px)
+	for m: Dictionary in thin(screen_marks(), px * 1.5, inside, taken(), px):
 		_draw_icon(String(m["kind"]), m["at"], px)
 
 
@@ -68,7 +70,7 @@ func screen_marks() -> Array:
 
 
 ## Everything a weather mark keeps off, as design-px rects: the settlement
-## dots and the kingdom names (cut once per camera pose), the regiments'
+## dots and the kingdom names (cut once per camera pose), the MANORS badges, the regiments'
 ## counters with their bars, their pieces and march end rings, the couriers
 ## and their pending orders' envelope rings (read live: they walk).
 func taken() -> Array:
@@ -81,6 +83,11 @@ func taken() -> Array:
 			_dots.append_array(labels.rects())
 		_dots_key = key
 	var out := _dots.duplicate()
+	# The MANORS output badges too (critic 2026-09-28: a mark sat on "5").
+	var badges := sibling("Badges") as Map3DHudBadges
+	if badges != null:
+		for b: Dictionary in badges.badges():
+			out.append(b["rect"])
 	var armies := sibling("Armies") as Map3DHudArmies
 	if armies != null:
 		for a: Dictionary in armies.markers():

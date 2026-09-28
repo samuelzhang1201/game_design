@@ -65,6 +65,17 @@ add it here as a principle with its why — not as a changelog entry.
   right-aligned column reads straight down. A row that only repeats another
   (a pool's worth beside the good that fills it) goes; its number lives in the
   good's tooltip. A rank is a name ("Great farm"), never "3 of 3".*
+- **Every reading names itself; a column's art is drawn once** (2026-09-28,
+  second critique). The realm card's four figures carry their names under
+  them and the people pie's legend names its slices; the top bar's purse
+  rows are "Crown" and "House <name>", and the pools' art stands once over
+  each column, not on both rows. Bars share a scale only when they share a
+  measure — the host's arms are weighed by strength (count × power), in one
+  hue.
+- **A tool looks like a tool.** MEASUREMENT, which lies over any lens, wears
+  a ruler before its word in the word's own ink.
+- **A scroll that has more below fades at its foot** rather than cutting its
+  last row through the middle.
 - **A card's picture is its scene, not its paper** (owner 2026-09-28,
   approving the recommendation). The estate painting is cut to a 2:1 band
   centred where the estate stands, never more than a quarter of the card, in

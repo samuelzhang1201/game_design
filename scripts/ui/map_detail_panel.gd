@@ -52,6 +52,8 @@ var _painting_box: Control
 var _painting: TextureRect
 ## The painting's own texture; `_painting` shows a band of it (_fit_painting).
 var _painting_source: Texture2D
+var _scroll: ScrollContainer
+var _scroll_fade: Control
 var _stats: GridContainer
 var _rates: VBoxContainer
 var _stat_cells: Dictionary = {}
@@ -133,6 +135,20 @@ func _ready() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(scroll)
+	_scroll = scroll
+	# More lies below: the last row fades into the card instead of being cut
+	# through its middle (critic 2026-09-28). Top level, so the scroll does not
+	# lay it out as content; placed each frame over the scroll's foot.
+	_scroll_fade = Control.new()
+	_scroll_fade.name = "ScrollFade"
+	_scroll_fade.top_level = true
+	_scroll_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_scroll_fade.draw.connect(func() -> void:
+		var r := Rect2(Vector2.ZERO, _scroll_fade.size)
+		var solid := UiPalette.PANEL_BG
+		_scroll_fade.draw_polygon(PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end,
+			Vector2(r.position.x, r.end.y)]), PackedColorArray([Color(solid, 0.0), Color(solid, 0.0), solid, solid])))
+	scroll.add_child(_scroll_fade)
 	var body := VBoxContainer.new()
 	body.name = "CardBody"
 	body.add_theme_constant_override("separation", 8)
@@ -748,6 +764,23 @@ func _show_painting(path: String) -> void:
 	_painting.texture = tex
 	_painting_box.visible = tex != null
 	_fit_painting()
+
+
+func _process(_delta: float) -> void:
+	if _scroll_fade == null or _scroll == null:
+		return
+	var d := Game.data.bal("ui_card_scroll_fade_px")
+	var bar := _scroll.get_v_scroll_bar()
+	var more := bar.visible and _scroll.scroll_vertical < int(bar.max_value - bar.page) - 1
+	_scroll_fade.visible = d > 0.0 and more and _scroll.is_visible_in_tree()
+	if not _scroll_fade.visible:
+		return
+	var w := _scroll.size.x - (bar.size.x if bar.visible else 0.0)
+	var at := _scroll.global_position + Vector2(0.0, _scroll.size.y - d)
+	if _scroll_fade.global_position != at or _scroll_fade.size != Vector2(w, d):
+		_scroll_fade.global_position = at
+		_scroll_fade.size = Vector2(w, d)
+		_scroll_fade.queue_redraw()
 
 
 ## Four soft edges in the card's own colour, `ui_manor_painting_fade_px` deep.

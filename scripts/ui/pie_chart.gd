@@ -14,6 +14,9 @@ const LEGEND_ROW := 22.0
 const ICON_PX := 22.0
 
 var slices: Array = []
+## Whether a slice with art writes its name beside it too (balance
+## ui_dimension_labels, owner 2026-09-28).
+var named := false
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
@@ -75,7 +78,12 @@ func _draw() -> void:
 			# The swatch keeps colour and slice together; the art says which.
 			ResourceIcon.draw_icon(self, dimension, Vector2(LEGEND_X + 16.0 + ICON_PX / 2.0, y + 4.0),
 				ICON_PX, UiPalette.GOLD)
-			draw_string(font, Vector2(LEGEND_X + 20.0 + ICON_PX, y + 9.0), "%d%%" % roundi(pct),
+			var x := LEGEND_X + 20.0 + ICON_PX
+			if named:
+				var word := String(s.get("label", ""))
+				draw_string(font, Vector2(x, y + 9.0), word, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.TEXT_MUTED)
+				x += font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 6.0
+			draw_string(font, Vector2(x, y + 9.0), "%d%%" % roundi(pct),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.TEXT_SOFT)
 		else:
 			draw_string(font, Vector2(LEGEND_X + 16.0, y + 9.0),

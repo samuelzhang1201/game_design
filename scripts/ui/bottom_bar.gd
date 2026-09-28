@@ -90,9 +90,42 @@ func _ready() -> void:
 			# Tabs read in the tab face (data/ui_fonts.csv); capitals run wide, so
 			# the chips pad tighter to keep every tab inside the 1280 px row.
 			UiPalette.style_tab(btn, 16, 10.0)
+		if grouped and tab == "MEASUREMENT":
+			# A tool, not a lens (owner 2026-09-28, second critique): it wears
+			# a ruler before its word, in the word's own ink.
+			btn.icon = ruler_icon()
+			btn.add_theme_constant_override("h_separation", 8)
+			btn.add_theme_constant_override("icon_max_width", 22)
+			var inks := {"icon_normal_color": "font_color", "icon_hover_color": "font_hover_color",
+				"icon_pressed_color": "font_pressed_color", "icon_hover_pressed_color": "font_hover_pressed_color",
+				"icon_focus_color": "font_color"}
+			for state: String in inks:
+				btn.add_theme_color_override(state, btn.get_theme_color(String(inks[state])))
 		btn.pressed.connect(func() -> void: tab_selected.emit(tab))
 		row.add_child(btn)
 		_buttons[tab] = btn
+
+## A drawn ruler, white so the button's icon colours tint it: a bar with
+## ticks standing on one side, the long ones every fifth (MapRuler's own
+## reading of a ruler). Built once at 4x its 11 design px height.
+static var _ruler_icon: ImageTexture
+
+static func ruler_icon() -> ImageTexture:
+	if _ruler_icon != null:
+		return _ruler_icon
+	var w := 88
+	var h := 44
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(1, 1, 1, 0))
+	var ink := Color(1, 1, 1, 1)
+	img.fill_rect(Rect2i(0, h - 8, w, 6), ink)
+	for i in 11:
+		var x := mini(i * 8 + 2, w - 5)
+		var tall := 26 if i % 5 == 0 else 14
+		img.fill_rect(Rect2i(x, h - 8 - tall, 4, tall), ink)
+	img.generate_mipmaps()
+	_ruler_icon = ImageTexture.create_from_image(img)
+	return _ruler_icon
 
 func _gap(gap_name: String) -> Control:
 	var gap := Control.new()

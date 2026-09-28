@@ -41,14 +41,29 @@ func _init() -> void:
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 4)
 	add_child(grid)
+	var named_figures: bool = Game.data != null and float(Game.data.balance.get("ui_dimension_labels", 0.0)) > 0.0
 	for key in RESOURCES:
 		grid.add_child(ResourceIcon.create(key))
 		var v := Label.new()
 		v.name = "Value_" + key
 		v.add_theme_font_size_override("font_size", 16)
 		v.custom_minimum_size = Vector2(66, 0)
-		grid.add_child(v)
 		_resource_values[key] = v
+		if not named_figures:
+			grid.add_child(v)
+			continue
+		# Each figure names itself under it (owner 2026-09-28, second
+		# critique: the four figures were the card's last icon-only reading).
+		var pair := VBoxContainer.new()
+		pair.add_theme_constant_override("separation", -4)
+		pair.add_child(v)
+		var cap := Label.new()
+		cap.name = "Name_" + key
+		cap.text = String((Game.data.resource_icons.get(key, {}) as Dictionary).get("label", key))
+		cap.add_theme_font_size_override("font_size", 11)
+		cap.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+		pair.add_child(cap)
+		grid.add_child(pair)
 	_temper = _section("TEMPER OF THE REALM", BarChart.new(), "Temper")
 	_people = _section("THE PEOPLE", PieChart.new(), "People")
 	_host = _section("THE HOST", BarChart.new(), "Host")
@@ -58,6 +73,7 @@ func _init() -> void:
 	var named: bool = Game.data != null and float(Game.data.balance.get("ui_dimension_labels", 0.0)) > 0.0
 	_temper.named = named
 	_host.named = named
+	(_people as PieChart).named = named
 
 func _section(heading: String, chart: Control, chart_name: String) -> Control:
 	var h := Label.new()
