@@ -19,6 +19,12 @@ const EMPTY := {"truth": "The steward's monthly reports", "credible": "Receipts 
 const NOTE_FONT_SIZE := 15
 const NOTE_MARGIN := 10.0
 
+## The frame's fixed corner margin (left/right/bottom, and the floor for its
+## top edge before any screen's top bar height is known).
+const FRAME_MARGIN := 48.0
+## Clearance kept between the top bar's bottom edge and the frame.
+const FRAME_TOP_GAP := 8.0
+
 var _selected := -1
 
 @onready var _columns: Dictionary = {
@@ -39,6 +45,15 @@ func _ready() -> void:
 	visibility_changed.connect(func() -> void:
 		if visible:
 			refresh())
+
+
+## The frame's top edge, at least the fixed corner margin and never above
+## the active screen's own top bar (fix round 1 finding 5: it sat under the
+## purse row's lower half at the fixed 48 px margin, shorter than a two-line
+## TopBar). GameRoot calls this with that screen's TopBar.bar_height() —
+## 0.0 before one is known, which keeps the fixed margin.
+func set_top_inset(top_bar_bottom: float) -> void:
+	%Frame.offset_top = maxf(FRAME_MARGIN, top_bar_bottom + FRAME_TOP_GAP)
 
 
 func refresh() -> void:

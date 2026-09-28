@@ -411,6 +411,19 @@ func toggle_missives() -> void:
 	_relations_screen.visible = false
 	_info_screen.hide()
 	_missive_screen.visible = not _missive_screen.visible
+	if _missive_screen.visible:
+		# The frame must clear the active screen's own top bar (fix round 1
+		# finding 5): it used to sit under the fixed 48 px margin alone.
+		_missive_screen.set_top_inset(_active_top_bar_height())
+
+## The active screen's own TopBar height, or 0.0 before one exists (MENU) —
+## the Missive board's frame (fix round 1 finding 5) must never sit under it.
+func _active_top_bar_height() -> float:
+	if current_screen != null and current_screen.has_method("top_bar"):
+		var tb: TopBar = current_screen.top_bar()
+		if tb != null:
+			return tb.bar_height()
+	return 0.0
 
 ## The MISSIVE tab's badge: how many letters are unread (owner 2026-09-28).
 func refresh_missive_badge() -> void:

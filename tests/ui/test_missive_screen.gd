@@ -48,6 +48,21 @@ func test_the_tab_opens_the_board_with_its_letters() -> void:
 	assert_eq(ms.notes_in("truth"), 0)
 
 
+## Fix round 1 finding 5: the board's frame used a fixed 48 px top margin,
+## shorter than the court screen's own two-line TopBar, so it covered the
+## lower half of the purse row.
+func test_the_frame_sits_below_the_top_bar() -> void:
+	Game.start_campaign(42)
+	var r := _root()
+	await _enter(r)
+	r.toggle_missives()
+	await wait_frames(1)
+	var top_bar_bottom: float = r.current_screen.top_bar().get_global_rect().end.y
+	var frame_top: float = r.missive_screen().find_child("Frame", true, false).get_global_rect().position.y
+	assert_gte(frame_top, top_bar_bottom,
+		"the board's frame (%d) clears the top bar's bottom edge (%d)" % [frame_top, top_bar_bottom])
+
+
 func test_selecting_a_letter_reads_it_and_the_badge_follows() -> void:
 	Game.start_campaign(42)
 	var id := _letter("credible")
