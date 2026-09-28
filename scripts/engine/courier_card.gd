@@ -21,6 +21,9 @@ static func title(repo: DataRepository, state: GameState, id: int) -> String:
 	var c := courier(state, id)
 	if c.is_empty():
 		return "A courier"
+	if String(c["kind"]) == CourierSystem.SPY:
+		return "Spy bound for " + Intel.place_label(repo, state, ArmySystem.metres_to_pack(repo,
+			Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))))
 	return "Courier to " + String(ArmySystem.regiment(repo, String(c["target"])).get("label", c["target"]))
 
 
@@ -52,9 +55,11 @@ static func card(repo: DataRepository, state: GameState, id: int) -> Dictionary:
 	var path: Array = c["path"]
 	var ground := String(path[0][2]) if not path.is_empty() else "offroad"
 	var days := CourierSystem.days_left(repo, state, c)
+	var is_spy := kind == CourierSystem.SPY
 	return {
 		"kind": "courier", "id": int(c["id"]), "title": title(repo, state, id),
-		"subtitle": "%s courier of %s" % [kind.capitalize(),
+		"subtitle": ("Spy of %s" % String((repo.kingdoms.get(realm, {}) as Dictionary).get("label", ""))) if is_spy \
+			else "%s courier of %s" % [kind.capitalize(),
 			String((repo.kingdoms.get(realm, {}) as Dictionary).get("label", ""))],
 		"kingdom_code": realm, "initial": "C",
 		"painting": String((repo.courier_art.get(kind, {}) as Dictionary).get("painting", "")),
@@ -62,7 +67,8 @@ static func card(repo: DataRepository, state: GameState, id: int) -> Dictionary:
 		"fields": [
 			# short: the fixed left column wraps a long value line by line, and
 			# the title already names the regiment (fix round 1, 2026-09-28)
-			["Carrying", "Orders to march" if order == "ARMY_MARCH" else "Orders to stand"],
+			["Carrying", "A spy's errand" if is_spy else
+				("Orders to march" if order == "ARMY_MARCH" else "Orders to stand")],
 			["Ordered", date_of(int(c["issued"]))],
 			["Arrives", "in about %d day%s" % [days, "" if days == 1 else "s"]],
 			["Ground", String(GROUND.get(ground, ground))],

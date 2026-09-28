@@ -10,6 +10,7 @@ extends RefCounted
 
 const ORDINARY := "ordinary"
 const SECRET := "secret"
+const SPY := "spy"
 
 
 ## Whether a regiment's orders ride by courier: every land regiment; a fleet
@@ -161,6 +162,24 @@ static func dispatch(repo: DataRepository, state: GameState, kind: String, code:
 	return c
 
 
+## A spy bound for a point (spec 2026-09-28 §1): A's courier, whose target is
+## the point itself; his road is set once and never re-aimed.
+static func dispatch_spy(repo: DataRepository, state: GameState, to_px: Vector2) -> Dictionary:
+	var from := origin(repo, state)
+	var home := ArmySystem.pack_to_metres(repo, from)
+	var aim := ArmySystem.pack_to_metres(repo, to_px)
+	state.next_courier_id += 1
+	var c := {
+		"id": state.next_courier_id, "kind": SPY, "x_m": home.x, "y_m": home.y,
+		"path": path_between(repo, from, to_px), "target": "",
+		"order": {"action_code": "SPY_SEND", "x_m": aim.x, "y_m": aim.y},
+		"issued": state.absolute_day(), "aim_x_m": aim.x, "aim_y_m": aim.y,
+		"days": 0, "day_m": 0, "slow_spell": -1,
+	}
+	state.couriers.append(c)
+	return c
+
+
 ## Days a courier still has to ride, today's weather held.
 static func days_left(repo: DataRepository, state: GameState, c: Dictionary) -> int:
 	return days_for(repo, String(c["kind"]), need_along(repo, state,
@@ -198,24 +217,33 @@ static func ride_day(repo: DataRepository, state: GameState) -> Array:
 static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: int, events: Array) -> bool:
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code)
-	if reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty():
+	if not _is_spy(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
 		events.append(_event("lost", c))
 		return false
 	c["days"] = int(c.get("days", 0)) + 1
 	if int(c["days"]) == 1:  # his first day on the road: the news bar says he left
 		var e := _event("set_out", c)
 		e["capital"] = 1 if _at_capital(repo, c) else 0
+		if _is_spy(c):
+			e["place"] = Intel.place_label(repo, state, ArmySystem.metres_to_pack(repo,
+				Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))))
 		events.append(e)
 	if int(c["days"]) > int(repo.bal("courier_max_days")):
 		events.append(_event("fuse", c))
 		return false
-	_reaim(repo, state, c, reg)
+	if not _is_spy(c):
+		_reaim(repo, state, c, reg)
 	@warning_ignore("return_value_discarded")  # the budget left matters only to the preview
 	_advance(repo, state, c, today, events)
 	if (c["path"] as Array).is_empty():
-		events.append(_deliver(repo, state, c))
+		events.append(SpySystem.observe(repo, state, c) if _is_spy(c) else _deliver(repo, state, c))
 		return false
 	return true
+
+
+## A spy courier (SPY_SEND): he rides for a point, not a regiment.
+static func _is_spy(c: Dictionary) -> bool:
+	return String(c.get("kind", "")) == SPY
 
 
 ## Where a courier's NEXT day on the road takes him: the engine's own ride run
@@ -240,10 +268,12 @@ static func ride_ahead(repo: DataRepository, state: GameState, c: Dictionary) ->
 static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, before: Array) -> Dictionary:
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code)
-	if reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty():
+	# a spy rides for a point, not a regiment: nothing to lose, nothing to re-aim
+	if not _is_spy(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
 		return {}
 	var copy: Dictionary = c.duplicate(true)
-	_reaim(repo, state, copy, reg)
+	if not _is_spy(c):
+		_reaim(repo, state, copy, reg)
 	before.append_array((copy["path"] as Array).duplicate(true))
 	# advance_day moves the calendar before the couriers ride, and a tick
 	# (day 30 -> day 1) is the next absolute day as well
@@ -403,9 +433,15 @@ static func headline(repo: DataRepository, e: Dictionary) -> String:
 	var label := String(ArmySystem.regiment(repo, String(e.get("regiment", ""))).get("label", e.get("regiment", "")))
 	match String(e.get("type", "")):
 		"set_out":
+			if String(e.get("place", "")) != "":
+				if int(e.get("capital", 0)) == 1:
+					return "A spy leaves the capital for %s." % String(e["place"])
+				return "A spy rides for %s." % String(e["place"])
 			if int(e.get("capital", 0)) == 1:
 				return "A courier leaves the capital for %s." % label
 			return "A courier rides for %s." % label
+		"spy_report":
+			return "The spy at %s reports." % String(e.get("place", "the place"))
 		"delivered":
 			return "Orders delivered to %s." % label
 		"stale":

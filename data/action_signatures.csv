@@ -28,3 +28,4 @@ GOODS_SELL,,0,0,0,0,0,
 MANOR_RUSH,,10,0,0,0,0,the crown hurries its own works
 ARMY_MARCH,,0,15,0,0,5,the host takes the road
 ARMY_GARRISON,,5,5,0,0,0,the host holds its ground
+SPY_SEND,,0,5,0,0,0,eyes on another's land

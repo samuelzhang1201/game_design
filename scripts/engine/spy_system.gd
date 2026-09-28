@@ -1,0 +1,125 @@
+class_name SpySystem
+extends RefCounted
+## Spies (owner 2026-09-28, spec 2026-09-28-missive-board-and-spies §1): a
+## spy courier's arrival becomes a report. One quality roll per mission from
+## GameState.rng, shifted by the place (data/spy_difficulty.csv), decides the
+## column — highly credible or rumour — and how wide and how biased every
+## estimate is. Two spies to one place draw different rolls: their reports differ.
+
+static func quality(repo: DataRepository, state: GameState, at: Vector2, roll: int) -> int:
+	var q := roll
+	var realm := repo.resolve_realm("player_realm")
+	var cell := MapEconomy.cell_at(repo, at)
+	var prov := MapManors.province_of(repo, cell, state) if cell >= 0 else ""
+	if prov != "" and MapOwnership.owner_of(repo, state, prov) == realm:
+		q += int(repo.spy_difficulty.get("home", 0))
+	else:
+		q += int(repo.spy_difficulty.get("foreign", 0))
+	if cell >= 0 and _walled(repo, cell):
+		q += int(repo.spy_difficulty.get("walled", 0))
+	q += int(repo.spy_difficulty.get("weather_" + Weather.at(repo, state, at, state.absolute_day()), 0))
+	return clampi(q, 0, 999)
+
+
+## Whether walls or a citadel stand in this cell — mirrors ArmySystem.is_fortified's
+## own use of MapEconomy.burg_cells (burg_code -> cell_id, so the cell is
+## found by scanning for the burg whose cell matches, not looked up by cell).
+static func _walled(repo: DataRepository, cell: int) -> bool:
+	var cells := MapEconomy.burg_cells(repo)
+	for code: String in cells:
+		if int(cells[code]) != cell:
+			continue
+		var feats := String((repo.burgs.get(code, {}) as Dictionary).get("features", "")).split("|")
+		if "walls" in feats or "citadel" in feats:
+			return true
+	return false
+
+
+## [lo, hi] around the true value v: half-width by quality, centre moved by
+## bias (per mille of v), rounded OUT to round_to, lo never below zero.
+static func estimate(repo: DataRepository, v: int, q: int, bias: int, round_to: int) -> Array:
+	var best := int(repo.bal("spy_width_best"))
+	var worst := int(repo.bal("spy_width_worst"))
+	@warning_ignore("integer_division")  # whole per mille
+	var width := best + (worst - best) * (1000 - clampi(q, 0, 1000)) / 1000
+	@warning_ignore("integer_division")  # whole heads / gold
+	var half := v * width / 1000
+	@warning_ignore("integer_division")
+	var centre := v + v * bias / 1000
+	var r := maxi(1, round_to)
+	var lo := maxi(0, int(floor(float(centre - half) / float(r))) * r)
+	var hi := int(ceil(float(centre + half) / float(r))) * r
+	return [lo, maxi(lo, hi)]
+
+
+static func _round_to(repo: DataRepository, key: String) -> int:
+	return int((repo.intel_facts.get(key, {}) as Dictionary).get("round_to", 1))
+
+
+static func _label(repo: DataRepository, key: String) -> String:
+	return String((repo.intel_facts.get(key, {}) as Dictionary).get("label", key))
+
+
+## The report a spy at `at` files for quality q and bias (per mille). Pure.
+static func report(repo: DataRepository, state: GameState, at: Vector2, q: int, bias: int) -> Dictionary:
+	var credible := q >= int(repo.bal("spy_credible_threshold"))
+	var sees_words := q >= int(repo.bal("spy_text_threshold"))
+	var facts: Array = []
+	var cell := MapEconomy.cell_at(repo, at)
+	var subj := MissiveLog.subject("point", "", -1, at)
+	if cell >= 0 and MapManors.is_manor(repo, cell):
+		subj = MissiveLog.subject("manor", MapManors.code_of(repo, cell), cell, at)
+		var line := RealmEconomy.line_of(repo, state, cell)
+		for key in ["people", "tax"]:
+			var lh := estimate(repo, int(line[key]), q, bias, _round_to(repo, key))
+			facts.append(MissiveLog.span(key, _label(repo, key), int(lh[0]), int(lh[1])))
+		var units := estimate(repo, int(line.get("units", 0)), q, bias, _round_to(repo, "output"))
+		facts.append(MissiveLog.span("output", _label(repo, "output"), int(units[0]), int(units[1])))
+		var prov := MapManors.province_of(repo, cell, state)
+		var holder := MapManors.owner_of(repo, state, cell)
+		facts.append(MissiveLog.words("holder", _label(repo, "holder"),
+			("House " + holder) if sees_words and holder != "" else "unclear"))
+		facts.append(MissiveLog.words("stance", _label(repo, "stance"),
+			Intel.stance_of(repo, MapOwnership.owner_of(repo, state, prov)) if sees_words else "unclear"))
+		facts.append(MissiveLog.words("wealth", _label(repo, "wealth"),
+			Intel.wealth_word(repo, Intel.wealth_tier(repo, state, prov)) if sees_words else "unclear"))
+	var troops := _troops(repo, state, at)
+	for key in ["troops_own", "troops_foreign"]:
+		var tl := estimate(repo, int(troops[key]), q, bias, _round_to(repo, key))
+		facts.append(MissiveLog.span(key, _label(repo, key), int(tl[0]), int(tl[1])))
+	return MissiveLog.make("spy", "credible" if credible else "rumour", state.absolute_day(), subj,
+		"Spy report — " + Intel.place_label(repo, state, at), facts)
+
+
+## Heads within spy_radius_km of a point: ours (live positions) and foreign
+## (the pack's rows, which stand still until enemy AI exists).
+static func _troops(repo: DataRepository, state: GameState, at: Vector2) -> Dictionary:
+	var reach := repo.bal("spy_radius_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
+	var realm := repo.resolve_realm("player_realm")
+	var own := 0
+	var foreign := 0
+	var codes := repo.world_table("military", "regiments").keys()
+	codes.sort()
+	for code: String in codes:
+		var reg: Dictionary = repo.world_table("military", "regiments")[code]
+		if ArmySystem.position_of(repo, state, reg).distance_to(at) > reach:
+			continue
+		if String(reg.get("kingdom_code", "")) == realm:
+			own += ArmySystem.headcount(repo, reg)
+		else:
+			foreign += ArmySystem.headcount(repo, reg)
+	return {"troops_own": own, "troops_foreign": foreign}
+
+
+## A spy has arrived: draw his rolls (quality, then — for a rumour — the
+## bias), file the report, and say so for the news bar and GameRoot.
+static func observe(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
+	var at := ArmySystem.metres_to_pack(repo, Vector2i(int(c["x_m"]), int(c["y_m"])))
+	var q := quality(repo, state, at, state.rng.randi_range(0, 999))
+	var bias := 0
+	if q < int(repo.bal("spy_credible_threshold")):
+		var most := int(repo.bal("spy_bias_max"))
+		bias = state.rng.randi_range(-most, most)
+	var id := MissiveLog.add(repo, state, report(repo, state, at, q, bias))
+	return {"type": "spy_report", "courier": int(c["id"]), "missive": id, "regiment": "",
+		"place": Intel.place_label(repo, state, at), "weather": ""}

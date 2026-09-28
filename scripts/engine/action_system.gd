@@ -88,6 +88,14 @@ func validate(req: ActionRequest, state: GameState) -> String:
 				var have := int(state.metrics.get(pool_metric(pool), 0.0))
 				if have < gold:
 					return "The %s stock holds only %d gold of goods" % [pool, have]
+		"SPY_SEND":
+			var to := Vector2(float(req.params.get("x", -1.0)), float(req.params.get("y", -1.0)))
+			var w := float(data.map_info.get("width", "0"))
+			var h := float(data.map_info.get("height", "0"))
+			if to.x < 0.0 or to.y < 0.0 or (w > 0.0 and to.x > w) or (h > 0.0 and to.y > h):
+				return "That is off the map"
+			if float(state.metrics["treasury"]) < needs + float(CourierSystem.fee_gold(data, CourierSystem.SPY)):
+				return "The chancery cannot pay a spy to ride"
 	return ""
 
 ## ARMY_MARCH / ARMY_GARRISON (owner 2026-09-22). Both name a regiment of
@@ -445,6 +453,15 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				effects.append({"metric": "army", "delta": 0.0,
 					"reason": ("%s halts and takes up quarters" if was == ArmySystem.ORDER_MARCH
 						else "%s stands to its post") % String(reg["label"])})
+		"SPY_SEND":
+			var to := Vector2(float(req.params["x"]), float(req.params["y"]))
+			var place := Intel.place_label(data, state, to)
+			var c := CourierSystem.dispatch_spy(data, state, to)
+			_apply(state, effects, "treasury", -float(CourierSystem.fee_gold(data, CourierSystem.SPY)),
+				"a spy rides for " + place)
+			var days := CourierSystem.days_left(data, state, c)
+			effects.append({"metric": "intel", "delta": 0.0,
+				"reason": "A spy rides for %s; about %d day%s" % [place, days, "" if days == 1 else "s"]})
 		"GOODS_BUY":
 			var pool := String(req.params["pool"])
 			var gold := int(req.params["gold"])
