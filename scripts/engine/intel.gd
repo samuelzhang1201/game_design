@@ -162,6 +162,9 @@ static func text_of(f: Dictionary) -> String:
 	if f.has("exact"):
 		return num(int(f["exact"]))
 	if f.has("lo"):
+		# no width: one number, and a count of nobody is "none" (not "≈ 0–0")
+		if int(f["lo"]) == int(f["hi"]):
+			return "none" if int(f["lo"]) == 0 else "≈ " + num(int(f["lo"]))
 		return "≈ %s–%s" % [num(int(f["lo"])), num(int(f["hi"]))]
 	return String(f.get("text", "—"))
 

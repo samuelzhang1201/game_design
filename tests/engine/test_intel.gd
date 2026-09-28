@@ -237,3 +237,11 @@ func test_place_label_names_the_manor_and_its_province() -> void:
 func test_place_label_names_the_open_sea() -> void:
 	var s := GameState.new_campaign(repo, 7)
 	assert_eq(Intel.place_label(repo, s, Vector2(-999999.0, -999999.0)), "the open sea")
+
+
+## Task 10's look check (2026-09-28): a spy who counted nobody read
+## "≈ 0–0". An estimate with no width is one number, and nothing is "none".
+func test_an_estimate_with_no_width_reads_as_one_number() -> void:
+	assert_eq(Intel.text_of({"lo": 0, "hi": 0}), "none")
+	assert_eq(Intel.text_of({"lo": 1500, "hi": 1500}), "≈ " + Intel.num(1500))
+	assert_eq(Intel.text_of({"lo": 1500, "hi": 3100}), "≈ %s–%s" % [Intel.num(1500), Intel.num(3100)])
