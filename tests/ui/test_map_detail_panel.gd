@@ -354,3 +354,38 @@ func test_a_manor_card_shows_its_painting_its_facts_as_icons_and_its_output_rate
 				if pic != null:
 					assert_eq(pic.texture.resource_path, icon_path, "%s wears its colour icon" % good)
 					assert_eq(pic.modulate, Color.WHITE, "a colour icon is not tinted")
+
+## A foreign manor's card (Task 10's look check, 2026-09-28): the facts read
+## "—", and Send a spy must stand close by them — the FIRST order, with no
+## empty section's spacing between the facts and the orders. At 2560x1600
+## the spy button sat below the card's scroll fold, behind BUY and five
+## empty sections' separations.
+func test_a_foreign_manor_card_offers_its_spy_first_and_wastes_no_room() -> void:
+	Game.start_campaign(42)
+	Intel.dev_all = false
+	var p := _panel()
+	await wait_frames(1)
+	var realm := Game.data.resolve_realm("player_realm")
+	var cell := -1
+	var ids := Game.data.manors.keys()
+	ids.sort()
+	for c: int in ids:
+		var prov := MapManors.province_of(Game.data, c, Game.state)
+		if prov != "" and MapOwnership.owner_of(Game.data, Game.state, prov) != realm \
+				and String(MapManors.purchase_kind(Game.data, Game.state, c)["kind"]) != "":
+			cell = c
+			break
+	assert_gt(cell, -1, "a foreign manor with an order besides the spy")
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "manor", "cell": cell}})
+	await wait_frames(1)
+	var buttons := p.actions_box().get_children()
+	assert_gt(buttons.size(), 1, "the spy and at least one other order")
+	assert_true(String(buttons[0].name).begins_with("SPY_SEND"), "the spy is the first order on foreign land")
+	for box: Control in [p.rates_box(), p.features_row(), p.production_box(), p.rows()]:
+		assert_false(box.visible, "an empty section takes no room: " + String(box.name))
+	# ...and a full card keeps its own sections and order.
+	var home := MapManors.manors_of_province(Game.data, MapManors.home_province(Game.data, Game.state))
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "manor", "cell": int(home[0])}})
+	await wait_frames(1)
+	assert_true(p.rates_box().visible, "a manor the crown controls shows its output")
+	assert_false(String(p.actions_box().get_child(0).name).begins_with("SPY_SEND"))

@@ -230,6 +230,10 @@ func has_content() -> bool:
 
 
 func _open_panel() -> void:
+	# An empty section takes no room (2026-09-28): five empty boxes' spacing
+	# pushed a foreign card's orders below the scroll's fold.
+	for box: Control in [_fields, _stats, _rates, _slots, _features, _production, _money, _actions, _lines]:
+		box.visible = box.get_child_count() > 0
 	_open = true
 	show()
 
@@ -439,6 +443,10 @@ func show_card(card: Dictionary) -> void:
 		var request := ActionRequest.make(String(a["action_code"]), (a["params"] as Dictionary).duplicate())
 		button.pressed.connect(func() -> void: _give_order(request))
 		_actions.add_child(button)
+		# Foreign land's facts read "—", and the way to learn them stands
+		# close by (spec 2026-09-28 §2): the spy is its first order.
+		if known == "basic" and String(a["action_code"]) == "SPY_SEND":
+			_actions.move_child(button, 0)
 	if not builds.is_empty():
 		_add_build_menu(builds)
 	_set_ask(String(card.get("ask", "")))
