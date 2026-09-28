@@ -360,6 +360,8 @@ G-43,G,goods,兵器 · arms,C-MAPMARK,1024,1024,"a sword, a spearhead and an iro
 G-44,G,goods,麦酒 · beer,C-MAPMARK,1024,1024,a wooden ale cask on its side with a tap and a foaming wooden tankard beside it,
 G-45,G,goods,书籍 · books,C-MAPMARK,1024,1024,two closed leather-bound books with brass clasps and a goose quill beside them,
 G-46,G,goods,船只 · ships,C-MAPMARK,1024,1024,a small wooden model of a single-masted cog ship with a square sail on a little stand,
+G-47,G,goods,火炮 · artillery,C-MAPMARK,1024,1024,"a short bronze bombard barrel strapped with iron bands, lying on a low wooden sled, with two round stone shot beside it",
+G-48,G,goods,成衣 · garments,C-MAPMARK,1024,1024,"a neatly folded linen shirt under a folded wool tunic, a leather belt coiled on top and a pair of sewn cloth hose beside them",
 B-01,B,estates,庄园彩绘·粮田·小,C-ESTATE,1280,1024,"a small grain holding: a thatched cottage beside one narrow strip field of ripening wheat, a wattle fence and a haystack, shown as one painted scene of the whole holding in its own countryside, a few small figures at work",
 B-02,B,estates,庄园彩绘·粮田·中,C-ESTATE,1280,1024,"a grain manor: a stone farmhouse with a thatched barn, a windmill on a low mound, three strip fields of golden wheat in front, shown as one painted scene of the whole holding in its own countryside, a few small figures at work",
 B-03,B,estates,庄园彩绘·粮田·大,C-ESTATE,1280,1024,"a great grain estate: a manor hall with a tithe barn, two windmills, a hamlet of thatched cottages, wide strip fields of golden wheat bounded by hedges, shown as one painted scene of the whole holding in its own countryside, a few small figures at work",

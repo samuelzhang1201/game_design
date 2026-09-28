@@ -1598,6 +1598,8 @@ background, no numerals, no text [C-ICON]
 | `G-44` | 麦酒 · beer | `a wooden ale cask on its side with a tap and a foaming wooden tankard beside it` |
 | `G-45` | 书籍 · books | `two closed leather-bound books with brass clasps and a goose quill beside them` |
 | `G-46` | 船只 · ships | `a small wooden model of a single-masted cog ship with a square sail on a little stand` |
+| `G-47` | 火炮 · artillery | `a short bronze bombard barrel strapped with iron bands, lying on a low wooden sled, with two round stone shot beside it` |
+| `G-48` | 成衣 · garments | `a neatly folded linen shirt under a folded wool tunic, a leather belt coiled on top and a pair of sewn cloth hose beside them` |
 
 ---
 
