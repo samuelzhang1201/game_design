@@ -143,9 +143,10 @@ func refresh() -> void:
 			"text": RealmDashboard._compact(reg_size)})
 	reg_rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["value"] > b["value"])
 	_regiments.set_rows(reg_rows, reg_top)
-	# Neighbours: only what may be SAID of them (Intel) — a spy's own word on
-	# their strength if one has come in, else common talk; text rows, since a
-	# bar chart can only draw a number and the true total must never appear.
+	# Neighbours: only what may be SAID of them (Intel) — their strength in
+	# common talk, and beneath it the newest spy sighting inside the kingdom
+	# (a local count, never the kingdom's strength: Ruling 14); text rows,
+	# since a bar chart can only draw a number and the true total must never appear.
 	# The realm's own total stays exact — it is ours, never fogged.
 	for c in _neighbours.get_children():
 		c.free()
@@ -154,8 +155,11 @@ func refresh() -> void:
 		for u: String in units:
 			var v: Variant = WorldLedger.value_of(data, state, "military.kingdoms.%s.%s" % [code, u])
 			theirs += float(v) if v != null else 0.0
-		_neighbours.add_child(_row("%s — %s" % [String(data.kingdoms[code]["label"]),
-			_foreign_words(data, state, code, theirs)]))
+		_neighbours.add_child(_row("%s — %s (common talk)" % [String(data.kingdoms[code]["label"]),
+			Intel.magnitude(data, int(theirs))]))
+		var seen := sighting(data, state, code)
+		if seen != "":
+			_neighbours.add_child(_row(seen))
 	_neighbours.add_child(_row("%s — %s (yours)" % [String(data.kingdoms[mine]["label"]),
 		RealmDashboard._compact(total)]))
 	# Officers, as the old table listed them.
@@ -187,28 +191,33 @@ func _row(text: String) -> Label:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 
-## What may be said of a neighbour kingdom's strength (Intel, spec 2026-09-28
-## §1): the newest troops_foreign estimate from any spy missive whose
-## subject lies in a province that kingdom holds, in the spy's own words —
-## else only the vague magnitude common talk allows. This is a KINGDOM-level
+## The newest spy sighting inside kingdom `code` (Ruling 14, final review
+## I4), or "". A spy counts heads within spy_radius_km of ONE point — every
+## foreign regiment near it, whoever's — so it is never the kingdom's
+## strength: the kingdom's row keeps its common-talk magnitude, and this
+## line beneath says what was seen, where and when. This is a KINGDOM-level
 ## match (any missive whose subject's province belongs to `code`), which
-## Intel.estimate() cannot express (it matches one subject's own manor,
-## province or nearby point) — the search stays here, but text_of() renders
-## the winning fact the same way estimate() would.
-func _foreign_words(repo: DataRepository, state: GameState, code: String, total: float) -> String:
+## Intel.estimate() cannot express; text_of() renders the fact the same way.
+static func sighting(repo: DataRepository, state: GameState, code: String) -> String:
 	var best: Dictionary = {}
 	for m: Dictionary in state.missives:
 		if not best.is_empty() and int(m["id"]) < int(best["id"]):
+			continue
+		if String(m["kind"]) != "spy":
 			continue
 		var prov := Intel.province_of(repo, state, m["subject"])
 		if prov == "" or MapOwnership.owner_of(repo, state, prov) != code:
 			continue
 		for f: Dictionary in m["facts"]:
 			if String(f["key"]) == "troops_foreign":
-				best = {"id": int(m["id"]), "fact": f}
-	if not best.is_empty():
-		return Intel.text_of(best["fact"])
-	return "%s (common talk)" % Intel.magnitude(repo, int(total))
+				best = {"id": int(m["id"]), "fact": f, "day": int(m["day"]), "subject": m["subject"]}
+	if best.is_empty():
+		return ""
+	var subj: Dictionary = best["subject"]
+	var place := Intel.place_label(repo, state, Vector2(float(subj.get("x", 0)), float(subj.get("y", 0))))
+	var f: Dictionary = best["fact"]
+	var count := "No" if int(f.get("hi", -1)) == 0 else Intel.text_of(f)
+	return "%s foreign troops seen near %s (spy · %s)" % [count, place, CourierCard.date_of(int(best["day"]))]
 
 func _label(unit: String) -> String:
 	return String((Game.data.resource_icons.get(unit, {}) as Dictionary).get("label", unit.capitalize()))

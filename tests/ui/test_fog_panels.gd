@@ -16,6 +16,10 @@ func before_each() -> void:
 	Intel.dev_all = false
 
 
+func after_each() -> void:
+	Intel.dev_all = false
+
+
 func _all_text(n: Node) -> String:
 	var out := ""
 	if n is Label:
@@ -95,3 +99,45 @@ func test_the_manor_master_shows_no_foreign_figures() -> void:
 			checked += 1
 		if checked >= 5:
 			break
+
+
+## I4 / Ruling 14 (final review): a spy's count is the headcount within
+## spy_radius_km of ONE point — never a kingdom's strength. The kingdom's
+## row keeps its common-talk magnitude, and the newest sighting inside it is
+## a line of its own beneath, saying where and when it was seen.
+func test_a_spy_sighting_is_listed_beneath_its_kingdom_not_as_its_strength() -> void:
+	var repo := Game.data
+	var state := Game.state
+	var realm := repo.resolve_realm("player_realm")
+	var neighbour := String(repo.kingdoms[realm].get("neighbor_codes", "")).split("|", false)[0]
+	var provs := MapOwnership.provinces_of(repo, state, neighbour)
+	var cell := -1
+	for p: String in provs:
+		var cells := MapManors.manors_of_province(repo, p, state)
+		if not cells.is_empty():
+			cell = int(cells[0])
+			break
+	assert_gt(cell, -1, "the neighbour holds a manor")
+	var at := MapTerrain.cell_center(repo, repo.cells[cell])
+	MissiveLog.add(repo, state, MissiveLog.make("spy", "credible", 40,
+		MissiveLog.subject("manor", MapManors.code_of(repo, cell), cell, at), "Spy report",
+		[MissiveLog.span("troops_foreign", "Foreign troops nearby", 1200, 1600)]))
+	var p := MilitaryPanel.new()
+	add_child_autofree(p)
+	p.refresh()
+	await wait_frames(1)
+	var label := String(repo.kingdoms[neighbour]["label"])
+	var rows: Array[String] = []
+	for c in p.neighbours_chart().get_children():
+		rows.append((c as Label).text)
+	var at_row := -1
+	for i in rows.size():
+		if rows[i].begins_with(label + " — "):
+			at_row = i
+	assert_gt(at_row, -1, "the kingdom has its row")
+	assert_string_contains(rows[at_row], "(common talk)", "its strength stays common talk")
+	assert_false(rows[at_row].contains("1,200"), "a local count is not the kingdom's strength")
+	assert_true(at_row + 1 < rows.size(), "a sighting line follows")
+	var want := "≈ 1,200–1,600 foreign troops seen near %s (spy · %s)" % [
+		Intel.place_label(repo, state, at), CourierCard.date_of(40)]
+	assert_eq(rows[at_row + 1], want)
