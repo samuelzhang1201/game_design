@@ -331,19 +331,29 @@ func _build_threads() -> void:
 ## §4): itself, under its own id, while its accounts agree; one STRAND per
 ## account when they differ — "<link id>#<i>", the link with that account
 ## alone (its flow that account's value, so each strand its own width and
-## ink) and its place among the strands ("strand", "strands").
-static func _split(l: Dictionary) -> Array:
+## ink) and its sideways place, "strand_shift" (metres across the thread):
+## side by side, ledger_strand_gap_m between neighbours' SURFACES so no two
+## ever touch however wide, the bundle's outer surfaces centred on where the
+## one thread would run (fix round 1).
+func _split(l: Dictionary) -> Array:
 	var accs: Array = l.get("accounts", [])
 	if accs.size() <= 1:
 		return [[String(l["id"]), l]]
 	var out: Array = []
+	var centres: Array[float] = []
+	var radii: Array[float] = []
+	var gap := _repo.bal("ledger_strand_gap_m")
 	for i in accs.size():
 		var one := l.duplicate()
 		one["flow"] = (accs[i] as Dictionary)["value"]
 		one["accounts"] = [accs[i]]
-		one["strand"] = i
-		one["strands"] = accs.size()
+		var r := _width(one)
+		centres.append(0.0 if i == 0 else centres[i - 1] + radii[i - 1] + gap + r)
+		radii.append(r)
 		out.append(["%s#%d" % [l["id"], i], one])
+	var mid := (centres[0] - radii[0] + centres[-1] + radii[-1]) * 0.5
+	for i in out.size():
+		(out[i][1] as Dictionary)["strand_shift"] = centres[i] - mid
 	return out
 
 
@@ -368,8 +378,8 @@ func _pair_key(l: Dictionary) -> Array:
 
 ## Where a thread runs now: from its source sphere to its end, set aside by
 ## ledger_pair_offset_m when two threads join the same spheres both ways,
-## and a strand (_split) set beside its fellows, ledger_strand_gap_m apart
-## and centred on the thread. Empty when an end is missing or the two ends meet.
+## and a strand (_split) set its "strand_shift" across, beside its fellows.
+## Empty when an end is missing or the two ends meet.
 func _ends_of(l: Dictionary) -> Array:
 	if not _pos.has(String(l["from"])) or not _pos.has(String(l["to"])):
 		return []
@@ -387,11 +397,10 @@ func _ends_of(l: Dictionary) -> Array:
 		var sgn := 1.0 if String(l["from"]) == key[0] else -1.0
 		a += side * sgn
 		b += side * sgn
-	var n := int(l.get("strands", 1))
-	if n > 1:
-		var shift := across * (float(int(l["strand"])) - (n - 1) / 2.0) * _repo.bal("ledger_strand_gap_m")
-		a += shift
-		b += shift
+	var shift := float(l.get("strand_shift", 0.0))
+	if shift != 0.0:
+		a += across * shift
+		b += across * shift
 	return [a, b]
 
 

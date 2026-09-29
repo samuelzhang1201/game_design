@@ -29,6 +29,43 @@ const REPORT_KINDS := {"describes_province": "province", "describes_manor": "man
 	"describes_regiment": "regiment", "describes_town": "burg"}
 
 
+# One snapshot's plans (fix round 1 of M3 Task 4): Ledger.snapshot turns the
+# memo on at its start and off at its end, so SupplySystem.plan and
+# WorkshopSystem.plan run at most once a snapshot and never outlive it.
+static var _memo: Dictionary = {}
+static var _memo_on := false
+
+
+static func begin_memo() -> void:
+	_memo.clear()
+	_memo_on = true
+
+
+static func end_memo() -> void:
+	_memo.clear()
+	_memo_on = false
+
+
+static func memo_active() -> bool:
+	return _memo_on
+
+
+static func _supply_plan(repo: DataRepository, state: GameState) -> Array:
+	if not _memo_on:
+		return SupplySystem.plan(repo, state)
+	if not _memo.has("supply"):
+		_memo["supply"] = SupplySystem.plan(repo, state)
+	return _memo["supply"]
+
+
+static func _workshop_plan(repo: DataRepository, state: GameState) -> Array:
+	if not _memo_on:
+		return WorkshopSystem.plan(repo, state)
+	if not _memo.has("workshop"):
+		_memo["workshop"] = WorkshopSystem.plan(repo, state)
+	return _memo["workshop"]
+
+
 static func has(name: String) -> bool:
 	return name in NAMES
 
@@ -87,9 +124,9 @@ static func run(row: Dictionary, repo: DataRepository, state: GameState, focus: 
 		"garrisons":
 			return _garrisons(repo, state, id)
 		"governs":
-			return _governs(repo, state, id, to_t, false)
+			return _governs(repo, state, id, to_t)
 		"skims":
-			return _governs(repo, state, id, to_t, true)
+			return _skims(state, id, to_t)
 	return []
 
 
@@ -353,7 +390,7 @@ static func _relations(state: GameState, id: String, all: bool, rel_type: String
 # are the month's own; the crown's own depots, so every account is full.
 
 static func _workshops(repo: DataRepository, state: GameState, id: String, inward: bool) -> Array:
-	var rows := WorkshopSystem.plan(repo, state)
+	var rows := _workshop_plan(repo, state)
 	var key := "take" if inward else "make"
 	if id == "":
 		var n := 0
@@ -381,7 +418,7 @@ static func _workshops(repo: DataRepository, state: GameState, id: String, inwar
 
 
 static func _supply(repo: DataRepository, state: GameState, id: String, inward: bool) -> Array:
-	var rows := SupplySystem.plan(repo, state)
+	var rows := _supply_plan(repo, state)
 	if id == "":
 		var n := 0
 		var said := 0
@@ -391,7 +428,7 @@ static func _supply(repo: DataRepository, state: GameState, id: String, inward: 
 		if inward:
 			return [_type_link("strategic_goods", "supply_line", n, "gold")]
 		var t := _type_link("supply_line", "regiment", n, "units")
-		t["claims"] = _supply_claims(repo, state, said, n)
+		t["claims"] = _supply_claims(repo, state, said, n, "the regiments' own count")
 		return [t]
 	var out: Array = []
 	for row: Dictionary in rows:
@@ -401,24 +438,41 @@ static func _supply(repo: DataRepository, state: GameState, id: String, inward: 
 			out.append(_link("type:strategic_goods", line, int(row["paid"]), "gold"))
 		elif not inward and (id == line or id == "regiment:" + code):
 			var l := _link(line, "regiment:" + code, int(row["delivered"]), "units")
-			l["claims"] = _supply_claims(repo, state, int(row["claimed"]), int(row["delivered"]))
+			l["claims"] = _supply_claims(repo, state, int(row["claimed"]), int(row["delivered"]),
+				"the regiment's own count")
 			out.append(l)
 	return out
 
 
 ## A supply line's two accounts (spec 2026-09-30-ledger-governors-design §4):
-## what the marshal says he delivered, and what the regiment counted in.
-static func _supply_claims(repo: DataRepository, state: GameState, said: int, counted: int) -> Array:
+## what the marshal says he delivered, and what the regiment (or, at the
+## type level, the regiments) counted in.
+static func _supply_claims(repo: DataRepository, state: GameState, said: int, counted: int,
+		counter: String) -> Array:
 	return [{"value": said, "source": _governor_source(repo, state, "supply_line")},
-		{"value": counted, "source": "the regiment's own count"}]
+		{"value": counted, "source": counter}]
 
 
-## "Steward: Aldous Varr" — the governor's word, named by his seat's office.
+## "Steward: Mirella of the Weighhouse" — the governor's word under HIS OWN
+## seat's office, and "(given the supply lines)" when the flow was given
+## away from its seat (fix round 1: Father Odo is the Chaplain).
 static func _governor_source(repo: DataRepository, state: GameState, flow: String) -> String:
 	var gid := Governance.governor_of(repo, state, flow)
 	if gid == "":
 		return "no one's account"
-	return "%s: %s" % [Governance.seat_label(repo, flow), (state.characters[gid] as Character).display_name]
+	var seats: Array = state.council.keys()
+	seats.sort()
+	var office := ""
+	for seat: String in seats:
+		if String(state.council[seat]) == gid:
+			office = String((repo.seats.get(seat, {}) as Dictionary).get("label", seat))
+			break
+	var name := (state.characters[gid] as Character).display_name
+	var out := name if office == "" else "%s: %s" % [office, name]
+	var row: Dictionary = repo.ledger_governance.get(flow, {})
+	if gid != String(state.council.get(String(row.get("seat", "")), "")):
+		out += " (given %s)" % String(row.get("label", flow))
+	return out
 
 
 static func _instances_of_flow(repo: DataRepository, state: GameState, flow: String) -> Array:
@@ -427,36 +481,48 @@ static func _instances_of_flow(repo: DataRepository, state: GameState, flow: Str
 		for c: int in WorkshopSystem.cells(repo, state):
 			out.append("workshop:%d" % c)
 	else:
-		for row: Dictionary in SupplySystem.plan(repo, state):
+		for row: Dictionary in _supply_plan(repo, state):
 			out.append("supply_line:" + String(row["code"]))
 	return out
 
 
-## Who governs a flow's instances (spec §4): `governs`, a tie (flow -1) from
-## the governor to each workshop / supply line; `skims`, drawn only once an
-## audit has caught him (GameState.caught), carrying the total caught on
-## that flow. The link row's to_type names the flow.
-static func _governs(repo: DataRepository, state: GameState, id: String, flow: String, skims: bool) -> Array:
+## Who governs a flow's instances (spec §4): a tie (flow -1) from the man
+## who governs it now to each workshop / supply line. The link row's to_type
+## names the flow.
+static func _governs(repo: DataRepository, state: GameState, id: String, flow: String) -> Array:
 	var gid := Governance.governor_of(repo, state, flow)
 	if gid == "":
 		return []
-	var amount := -1
-	var key := "count"
-	if skims:
-		amount = 0
-		key = "gold"
-		for hit: Dictionary in state.caught.get(gid, []):
-			if String(hit["flow"]) == flow:
-				amount += int(hit["amount"])
-		if amount <= 0:
-			return []
 	if id == "":
-		return [_type_link("character", flow, amount, key)]
+		return [_type_link("character", flow, -1, "count")]
 	var who := "character:" + gid
 	var out: Array = []
 	for node: String in _instances_of_flow(repo, state, flow):
 		if id == node or id == who:
-			out.append(_link(who, node, amount, key))
+			out.append(_link(who, node, -1, "count"))
+	return out
+
+
+## What an audit caught (spec §4, fix round 1 ruling): ONE link per caught
+## man and flow, character -> the flow's TYPE, carrying his caught total on
+## it. Keyed on GameState.caught — whoever was caught, governor now or not —
+## so it survives a handover; drawn on his own ego (and the type level),
+## never on a workshop's or a supply line's.
+static func _skims(state: GameState, id: String, flow: String) -> Array:
+	var ids: Array = state.caught.keys()
+	ids.sort()
+	var all := 0
+	var out: Array = []
+	for gid: String in ids:
+		var total := 0
+		for hit: Dictionary in state.caught[gid]:
+			if String(hit["flow"]) == flow:
+				total += int(hit["amount"])
+		all += total
+		if total > 0 and id == "character:" + gid:
+			out.append(_link(id, "type:" + flow, total, "gold"))
+	if id == "":
+		return [_type_link("character", flow, all, "gold")] if all > 0 else []
 	return out
 
 
@@ -560,7 +626,7 @@ static func instances(name: String, repo: DataRepository, state: GameState) -> A
 			for c: int in WorkshopSystem.cells(repo, state):
 				out.append({"id": "workshop:%d" % c, "strain": 1000 - WorkshopSystem.rate_of(state, c)})
 		"supply_lines":
-			for row: Dictionary in SupplySystem.plan(repo, state):
+			for row: Dictionary in _supply_plan(repo, state):
 				out.append({"id": "supply_line:" + String(row["code"]), "strain": int(row["loss_permille"])})
 	for row: Dictionary in out:
 		row["label"] = label_of(repo, state, String(row["id"]))

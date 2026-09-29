@@ -68,6 +68,8 @@ static func thread_entry(repo: DataRepository, state: GameState, link: Dictionar
 	if String(link["status"]) == "planned":
 		var milestone := String(Ledger.link_row(repo, String(link["type"])).get("milestone", ""))
 		lines.append("Not yet built (%s): %s" % [milestone, link["planned_note"]])
+	if (link["accounts"] as Array).size() > 1:
+		lines.append("Accounts differ:")
 	for acc: Dictionary in link["accounts"]:
 		lines.append(_account(acc, state.absolute_day()))
 	if String(link["governor"]) != "":
@@ -76,11 +78,21 @@ static func thread_entry(repo: DataRepository, state: GameState, link: Dictionar
 			lines.append("Governed by " + c.display_name)
 	var flow := _governed_flow(repo, link)
 	if flow != "":
-		# a `governs` tie's card carries the governor's factors (spec §4) —
-		# how well he runs it, never whether he skims
-		var f := Governance.factors(repo, state, flow)
-		lines.append("Runs it at %d‰ of what it could: %s" % [int(f["efficiency"]), ", ".join(PackedStringArray(f["reasons"]))])
+		lines.append(_factors_line(repo, state, flow))
 	return {"title": title, "lines": lines}
+
+
+## A `governs` tie's factors (spec §4): how well he runs the flow, as a
+## percentage, his skill, and his opinion when it holds him back — never
+## whether he skims. "Runs it at 85% of what it could — skill 8".
+static func _factors_line(repo: DataRepository, state: GameState, flow: String) -> String:
+	var f := Governance.factors(repo, state, flow)
+	@warning_ignore("integer_division")  # whole percent from per-mille
+	var pct := int(f["efficiency"]) / 10
+	var why := "skill %d" % int(f["skill"])
+	if int(f["opinion"]) < int(repo.bal("gov_opinion_cooperate")) and String(f["governor"]) != "":
+		why += ", held back by his opinion of you (%d)" % int(f["opinion"])
+	return "Runs it at %d%% of what it could — %s" % [pct, why]
 
 
 ## The flow a `governs` link ties its governor to ("workshop",
@@ -122,6 +134,11 @@ static func _line(repo: DataRepository, state: GameState, l: Dictionary, node_id
 	if String(l["status"]) == "planned":
 		return "%s — not yet built" % head
 	var accs: Array = l["accounts"]
+	if accs.size() > 1:  # L1: accounts that differ are all named
+		var each: Array[String] = []
+		for acc: Dictionary in accs:
+			each.append(_account(acc, today))
+		return "%s — accounts differ: %s" % [head, " / ".join(each)]
 	return head if accs.is_empty() else "%s — %s" % [head, _account(accs[0], today)]
 
 

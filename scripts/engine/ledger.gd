@@ -114,6 +114,9 @@ static func _check_lenses(errors: Array[String], id: String, r: Dictionary, lens
 static func snapshot(repo: DataRepository, state: GameState, lens: String, focus: Dictionary) -> Dictionary:
 	var out := {"lens": lens, "focus_id": "", "focus_lost": false, "day": state.absolute_day(),
 		"nodes": [], "links": [], "loops": []}
+	# The month's plans are read once per snapshot, never across two
+	# (LedgerResolvers' memo, fix round 1 of M3 Task 4).
+	LedgerResolvers.begin_memo()
 	var focus_id := String(focus.get("id", ""))
 	if focus_id != "" and not exists(repo, state, focus_id):
 		out["focus_lost"] = true
@@ -130,6 +133,7 @@ static func snapshot(repo: DataRepository, state: GameState, lens: String, focus
 	else:
 		_type_level(repo, state, lens, out)
 	_loops(repo, state, out)
+	LedgerResolvers.end_memo()
 	return out
 
 
@@ -155,7 +159,7 @@ static func _type_level(repo: DataRepository, state: GameState, lens: String, ou
 		if String(r["from_type"]) == String(r["to_type"]):
 			continue  # a tie between two of one type is drawn between instances only
 		if String(r["status"]) == "planned":
-			out["links"].append(_planned(state, r))
+			out["links"].append(_planned(repo, state, r))
 			continue
 		for t: Dictionary in LedgerResolvers.run(r, repo, state, {}):
 			out["links"].append(_believed(repo, state, r, t))
@@ -216,12 +220,12 @@ static func _node(repo: DataRepository, state: GameState, id: String) -> Diction
 		"props": LedgerResolvers.props_of(repo, state, id)}
 
 
-static func _planned(state: GameState, r: Dictionary) -> Dictionary:
+static func _planned(repo: DataRepository, state: GameState, r: Dictionary) -> Dictionary:
 	var from := "type:" + String(r["from_type"])
 	var to := "type:" + String(r["to_type"])
 	return {"id": "%s|%s|%s" % [r["link_id"], from, to], "type": String(r["link_id"]), "verb": String(r["verb"]),
 		"from": from, "to": to, "status": "planned", "flow": null, "accounts": [],
-		"governor": _governor(state, r), "planned_note": String(r["planned_note"]), "sentiment": 0}
+		"governor": _governor(repo, state, r), "planned_note": String(r["planned_note"]), "sentiment": 0}
 
 
 ## A live link as the crown believes it. A governed flow's reader hands its
@@ -232,23 +236,24 @@ static func _believed(repo: DataRepository, state: GameState, r: Dictionary, t: 
 	var accs: Array = _claimed(repo, state, t) if t.has("claims") else [_account(repo, state, t)]
 	return {"id": "%s|%s|%s" % [r["link_id"], t["from"], t["to"]], "type": String(r["link_id"]),
 		"verb": String(r["verb"]), "from": String(t["from"]), "to": String(t["to"]), "status": "live",
-		"flow": (accs[0] as Dictionary)["value"], "accounts": accs, "governor": _governor(state, r),
+		"flow": (accs[0] as Dictionary)["value"], "accounts": accs, "governor": _governor(repo, state, r),
 		"planned_note": "", "sentiment": int(t.get("sentiment", 0))}
 
 
 ## The accounts of a governed flow (spec 2026-09-30-ledger-governors-design
-## §4): each claim, then the latest audit's figure for this node while it is
-## no older than gov_audit_fresh_days (instance threads only: the type level
-## keeps to the governor's word and the receiving count — a ruling of the
-## plan); equal figures merge into one account naming every source. The
-## crown's own books: every account is `full`.
+## §4): each claim, then this month's audit's figure for this node (an audit
+## is a snapshot of ITS month — a controller ruling of fix round 1; instance
+## threads only: the type level keeps to the governor's word and the
+## receiving count — a ruling of the plan); equal figures merge into one
+## account naming every source. The crown's own books: every account is
+## `full`.
 static func _claimed(repo: DataRepository, state: GameState, t: Dictionary) -> Array:
 	var today := state.absolute_day()
 	var raw: Array = []
 	for c: Dictionary in t["claims"]:
 		raw.append({"value": int(c["value"]), "source": String(c["source"]), "day": today})
 	var node := String(t["to"]) if String(t["from"]).begins_with("type:") else String(t["from"])
-	var audit := _audit_figure(repo, state, node)
+	var audit := _audit_figure(state, node)
 	if not audit.is_empty():
 		raw.append(audit)
 	var out: Array = []
@@ -266,13 +271,11 @@ static func _claimed(repo: DataRepository, state: GameState, t: Dictionary) -> A
 
 
 ## The newest audit letter's figure for `node` (an AuditWriter fact is keyed
-## by the LEDGER node id), or {} when there is none fresh enough.
-static func _audit_figure(repo: DataRepository, state: GameState, node: String) -> Dictionary:
-	var fresh := int(repo.bal("gov_audit_fresh_days"))
-	var today := state.absolute_day()
+## by the LEDGER node id) filed THIS month (the letter's `tick`), or {}.
+static func _audit_figure(state: GameState, node: String) -> Dictionary:
 	for i in range(state.missives.size() - 1, -1, -1):
 		var m: Dictionary = state.missives[i]
-		if String(m.get("kind", "")) != "audit" or today - int(m["day"]) > fresh:
+		if String(m.get("kind", "")) != "audit" or int(m.get("tick", -1)) != state.tick:
 			continue
 		for f: Dictionary in m["facts"]:
 			if String(f["key"]) == node and f.has("exact"):
@@ -310,7 +313,14 @@ static func _account(repo: DataRepository, state: GameState, t: Dictionary) -> D
 		"source": String(f["source"]), "day": int(f["day"]), "level": lvl}
 
 
-static func _governor(state: GameState, r: Dictionary) -> String:
+## Who governs a link: for a link touching a governed flow (a type of
+## data/ledger_governance.csv — the workshops, the supply lines) the man who
+## governs it NOW, given or not (Governance.governor_of); otherwise its
+## seat's holder.
+static func _governor(repo: DataRepository, state: GameState, r: Dictionary) -> String:
+	for end: String in ["from_type", "to_type"]:
+		if repo.ledger_governance.has(String(r[end])):
+			return Governance.governor_of(repo, state, String(r[end]))
 	var seat := String(r["governor_seat"])
 	return "" if seat == "" else String(state.council.get(seat, ""))
 

@@ -524,11 +524,12 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var label := String(data.ledger_governance[flow]["label"])
 			var gid := Governance.governor_of(data, state, flow)
 			var c: Character = state.characters[gid]
+			# The opinions move FIRST and the letter is written LAST — after the
+			# order's own drift and costs too, at the end of execute (fix round
+			# 1 of M3 Task 4): his opinion sets how well he runs the flow, so on
+			# the audit day the letter's figures are the live projection.
 			c.change_opinion(int(data.bal("gov_audited_opinion")),
 				"the crown's clerks went through his books on %s" % label, state.tick)
-			MissiveLog.add(data, state, MissiveLog.make("audit", "credible", state.absolute_day(),
-				MissiveLog.subject("ledger", flow, -1, Vector2.ZERO), "Audit — " + label.capitalize(),
-				AuditWriter.facts(data, state, flow)))
 			var amount := int(state.skims.get(gid, 0))
 			if amount > 0:
 				if not state.caught.has(gid):
@@ -589,12 +590,27 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		effects.append_array(OrderCosts.charge(data, state, req.action_code, req.target))
 	else:
 		OrderCosts.ensure(data, state, effects, drift, before, req.action_code, req.target)
+	if req.action_code == "LEDGER_AUDIT":
+		_file_audit(state, String(req.params["flow"]))
 	state.event_state["last_action_tick"][req.action_code] = state.tick
 	var outcome := {"action_code": req.action_code, "ok": true, "effects": effects,
 		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate(),
 		"drift": drift}
 	state.recent_outcomes.append(outcome)
 	return outcome
+
+## An audit's letter, filed LAST, once every opinion the order moves has
+## moved: its figures are then the flow as it now runs. An audit is a
+## snapshot of ITS month — the LEDGER counts it only while state.tick is the
+## `tick` it was filed in (Ledger._audit_figure; controller ruling, M3 Task 4
+## fix round 1).
+func _file_audit(state: GameState, flow: String) -> void:
+	var label := String(data.ledger_governance[flow]["label"])
+	var letter := MissiveLog.make("audit", "credible", state.absolute_day(),
+		MissiveLog.subject("ledger", flow, -1, Vector2.ZERO), "Audit — " + label.capitalize(),
+		AuditWriter.facts(data, state, flow))
+	letter["tick"] = state.tick
+	MissiveLog.add(data, state, letter)
 
 ## Every character of a house, for a trade's goodwill or a seizure's outrage.
 func _house_members(state: GameState, family: String) -> Array:

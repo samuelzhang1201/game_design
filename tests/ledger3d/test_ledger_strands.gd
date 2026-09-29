@@ -59,14 +59,20 @@ func test_two_accounts_are_two_strands_a_gap_apart() -> void:
 	assert_true(view._thread_mi.has(id + "#0") and view._thread_mi.has(id + "#1"), "two strands")
 	var e0: Array = view._thread_ends[id + "#0"]
 	var e1: Array = view._thread_ends[id + "#1"]
-	var gap := repo.bal("ledger_strand_gap_m")
-	assert_almost_eq((e0[0] as Vector3).distance_to(e1[0]), gap, 0.001, "their sources a gap apart")
-	assert_almost_eq((e0[1] as Vector3).distance_to(e1[1]), gap, 0.001, "their ends a gap apart")
-	var along := ((e0[1] as Vector3) - (e0[0] as Vector3)).normalized()
-	assert_almost_eq(((e1[0] as Vector3) - (e0[0] as Vector3)).dot(along), 0.0, 0.001, "side by side, not along")
 	var r0 := ((view._thread_mi[id + "#0"] as MeshInstance3D).mesh as CylinderMesh).top_radius
 	var r1 := ((view._thread_mi[id + "#1"] as MeshInstance3D).mesh as CylinderMesh).top_radius
 	assert_gt(r0, r1, "the claim is wider than what arrived")
+	# surface to surface: they never touch, however wide (fix round 1)
+	var apart := r0 + r1 + repo.bal("ledger_strand_gap_m")
+	assert_almost_eq((e0[0] as Vector3).distance_to(e1[0]), apart, 0.001, "their sources a gap apart")
+	assert_almost_eq((e0[1] as Vector3).distance_to(e1[1]), apart, 0.001, "their ends a gap apart")
+	var along := ((e0[1] as Vector3) - (e0[0] as Vector3)).normalized()
+	assert_almost_eq(((e1[0] as Vector3) - (e0[0] as Vector3)).dot(along), 0.0, 0.001, "side by side, not along")
+	# the bundle's outer surfaces are centred on where the one thread runs
+	var u := ((e1[0] as Vector3) - (e0[0] as Vector3)).normalized()
+	var mid: Vector3 = ((e0[0] as Vector3) + (e1[0] as Vector3)) * 0.5 + u * (r1 - r0) * 0.5
+	var line := view._ends_of(_supplies_out(snap))
+	assert_almost_eq(mid.distance_to(line[0]), 0.0, 0.001, "centred on the thread")
 
 
 func test_a_strand_is_picked_by_its_own_id() -> void:
@@ -109,6 +115,8 @@ func test_a_drag_moves_every_strand_in_place() -> void:
 		assert_ne(view._thread_ends[s], before[s], "its ends moved: " + s)
 	var e0: Array = view._thread_ends[id + "#0"]
 	var e1: Array = view._thread_ends[id + "#1"]
-	assert_almost_eq((e0[0] as Vector3).distance_to(e1[0]), repo.bal("ledger_strand_gap_m"), 0.001,
+	var r0 := ((view._thread_mi[id + "#0"] as MeshInstance3D).mesh as CylinderMesh).top_radius
+	var r1 := ((view._thread_mi[id + "#1"] as MeshInstance3D).mesh as CylinderMesh).top_radius
+	assert_almost_eq((e0[0] as Vector3).distance_to(e1[0]), r0 + r1 + repo.bal("ledger_strand_gap_m"), 0.001,
 		"still a gap apart")
 	assert_eq(view._threads_root.get_child_count(), children, "no thread was made or freed")

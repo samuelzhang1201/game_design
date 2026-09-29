@@ -122,21 +122,33 @@ whatever his integrity). No new trait.
 ## 4. The LEDGER (L1 folded in)
 
 - **Accounts may differ.** A link's `accounts` becomes a list the view
-  draws as STRANDS: one thread per account, side by side
-  (`ledger_strand_gap_m`), each with its own ink and yellowing, the
+  draws as STRANDS: one thread per account, side by side and never
+  touching (`ledger_strand_gap_m` from surface to surface, the bundle
+  centred on the thread — fix round 1 of Task 4), each with its own ink and yellowing, the
   source's name on hover and on the card. The screen's thread card lists
   every account with its source and age. This is the L1 of the charter,
   delivered with the first flow that can disagree; intel P0's claims will
   fill the same list.
 - **Governed flows** (`converts_out`, `supplies_out`): the first account is
-  the governor's claim (source "<seat>: <name>", `full`), a second the
-  receiving side's count where one exists (a regiment's own count for
-  `supplies_out`), a third the latest audit's figure if it is not older
-  than `gov_audit_fresh_days` (90).
+  the governor's claim (source "<his own seat>: <name>", plus "(given
+  <the flow>)" when the flow was given away from its seat; `full`), a
+  second the receiving side's count where one exists (a regiment's own
+  count for `supplies_out`; "the regiments' own count" at the type level),
+  a third the audit's figure on an instance thread — **an audit is a
+  snapshot of ITS month** (controller ruling, Task 4 fix round 1): it
+  counts only while `state.tick` is the tick its letter was filed in (the
+  letter's `tick`), and the order moves the governor's opinion before it
+  writes the letter, so on the audit day its figures equal the live
+  projection. Equal figures merge into one account naming every source.
+  (`gov_audit_fresh_days` was dropped with this ruling.)
 - `governs` (character → workshop / supply_line) is live: flow `-1`, the
-  governor's factors on its card. `skims` is live but DRAWN only once
-  caught (the resolver returns it only for `GameState.caught`), carrying
-  the amount caught.
+  governor's factors on its card (his efficiency as a percentage, his
+  skill and what his opinion costs; never the skim), and the link's
+  "governed by" is the man who governs the flow NOW (given or not). `skims`
+  is live but DRAWN only once caught: ONE link per caught man and flow,
+  character → the flow's TYPE, carrying his caught total on it, keyed on
+  `GameState.caught` (it survives a handover), shown on his own ego and
+  the type level, never on a workshop's or supply line's.
 - Actions: on a flow type sphere — `LEDGER_AUDIT` (flow = the type) and one
   `GOVERNOR_SET` row per councillor ("Give it to <name>") built from the
   council at runtime (**Default**: rows are generated, not CSV, because

@@ -659,7 +659,6 @@ gov_opinion_step_permille,5,LEDGER M3: efficiency lost per point of opinion belo
 gov_skim_permille,200,LEDGER M3: the share a venal governor (special_flag skims_treasury) skims
 gov_skim_integrity_below,30,LEDGER M3: integrity under which a governor skims even without the trait
 gov_skim_low_integrity_permille,100,LEDGER M3: the share a governor of low integrity skims
-gov_audit_fresh_days,90,LEDGER M3: days an audit's figures stand as an account on the LEDGER
 gov_caught_opinion,-12,LEDGER M3: a governor's opinion when an audit catches him skimming
 gov_audited_opinion,-3,LEDGER M3: a governor's opinion when the crown's clerks go through his books
 gov_passed_over_opinion,-8,LEDGER M3: the displaced governor's opinion when his flow is given to another

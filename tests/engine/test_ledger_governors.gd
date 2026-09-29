@@ -64,16 +64,44 @@ func test_a_fresh_audit_is_an_account_of_its_own() -> void:
 	assert_eq(out["accounts"].size(), 2, "the steward's word and the audit's figure")
 	assert_string_contains(String(out["accounts"][1]["source"]), "audit")
 
-## An audit older than gov_audit_fresh_days no longer stands as an account.
-func test_a_stale_audit_is_dropped() -> void:
+## An audit is a snapshot of ITS month (fix round 1 ruling): the next month
+## it no longer stands as an account.
+func test_an_audit_stands_only_for_its_own_month() -> void:
 	var st: Character = s.characters[String(s.council["steward"])]
 	st.traits = ["venal"]
 	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
-	var filed := s.absolute_day()
-	s.tick = maxi(s.tick, 1) + 4  # 120 days on: past the 90 an audit stands
-	assert_eq(s.absolute_day() - filed, 120)
+	s.tick += 1
 	var out := _link(Ledger.snapshot(data, s, "economy", {"id": "workshop:%d" % cell}), "converts_out")
 	assert_eq(out["accounts"].size(), 1, "only the steward's word")
+
+## The audit day: the letter's figures are the live projection (the
+## opinion changes land first), so a skimming marshal's audit equals the
+## regiment's own count and merges with it; the month after, it is gone.
+func test_a_same_day_audit_agrees_with_the_regiments_count() -> void:
+	var m := _marshal(["venal"])
+	m.opinion = 0  # at gov_opinion_cooperate: the audit's -3 then costs him efficiency
+	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "supply_line"}), s)
+	var row: Dictionary = SupplySystem.plan(data, s)[0]
+	var out := _link(Ledger.snapshot(data, s, "war", {"id": "regiment:" + String(row["code"])}), "supplies_out")
+	assert_eq(out["accounts"].size(), 2, "his word, and the count the audit confirms")
+	assert_eq(int(out["accounts"][1]["value"]), int(row["delivered"]))
+	assert_string_contains(String(out["accounts"][1]["source"]), "the regiment's own count; the audit of ")
+	s.tick += 1
+	out = _link(Ledger.snapshot(data, s, "war", {"id": "regiment:" + String(row["code"])}), "supplies_out")
+	assert_eq(out["accounts"].size(), 2)
+	assert_false(String(out["accounts"][1]["source"]).contains("audit"), "last month's audit is gone")
+
+## An honest successor's word and the regiment's count agree: one strand.
+func test_an_honest_successor_merges_the_thread() -> void:
+	_marshal(["venal"])
+	var heir: Character = s.characters[String(s.council["chaplain"])]
+	heir.traits = ["honest"]
+	sys.execute(ActionRequest.make("GOVERNOR_SET", {"flow": "supply_line", "character": heir.id}), s)
+	s.tick += 1
+	var code := String(SupplySystem.plan(data, s)[0]["code"])
+	var out := _link(Ledger.snapshot(data, s, "war", {"id": "regiment:" + code}), "supplies_out")
+	assert_eq(out["accounts"].size(), 1, "one strand")
+	assert_string_contains(String(out["accounts"][0]["source"]), heir.display_name)
 
 ## An honest steward's word and the audit agree: one account naming both.
 func test_an_audit_that_agrees_merges_into_the_claim() -> void:
@@ -92,7 +120,24 @@ func test_skims_are_drawn_only_once_caught() -> void:
 	var ego := {"id": "character:" + st.id}
 	assert_true(_link(Ledger.snapshot(data, s, "all", ego), "skims").is_empty())
 	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
-	var skims := _link(Ledger.snapshot(data, s, "all", ego), "skims")
+	var snap := Ledger.snapshot(data, s, "all", ego)
+	var skims := _link(snap, "skims")
+	assert_eq(String(skims["to"]), "type:workshop", "one link to the flow, not one per workshop")
+	assert_eq(int(skims["flow"]), int(s.caught[st.id][0]["amount"]))
+	assert_eq((snap["links"] as Array).filter(
+		func(l: Dictionary) -> bool: return String(l["type"]) == "skims").size(), 1)
+	assert_true(_link(Ledger.snapshot(data, s, "economy", {"id": "workshop:%d" % cell}), "skims").is_empty(),
+		"a workshop's own ego shows no skim")
+
+## A skim caught stays his after the flow is given away.
+func test_a_caught_skim_survives_a_handover() -> void:
+	var st: Character = s.characters[String(s.council["steward"])]
+	st.traits = ["venal"]
+	WorkshopSystem.settle_month(data, s)
+	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
+	sys.execute(ActionRequest.make("GOVERNOR_SET", {"flow": "workshop", "character": String(s.council["marshal"])}), s)
+	var skims := _link(Ledger.snapshot(data, s, "all", {"id": "character:" + st.id}), "skims")
+	assert_eq(String(skims["from"]), "character:" + st.id)
 	assert_eq(int(skims["flow"]), int(s.caught[st.id][0]["amount"]))
 
 func test_the_governor_is_drawn() -> void:
@@ -105,6 +150,55 @@ func test_a_given_flow_draws_its_new_governor() -> void:
 	sys.execute(ActionRequest.make("GOVERNOR_SET", {"flow": "workshop", "character": m}), s)
 	var gov := _link(Ledger.snapshot(data, s, "economy", {"id": "workshop:%d" % cell}), "governs")
 	assert_eq(String(gov["from"]), "character:" + m)
+
+## Fix round 1: a governed flow's thread names the man who governs it now,
+## not the seat holder; his word is under HIS OWN seat, "(given …)".
+func test_a_given_flows_thread_names_its_new_governor() -> void:
+	var odo: Character = s.characters[String(s.council["chaplain"])]
+	sys.execute(ActionRequest.make("GOVERNOR_SET", {"flow": "supply_line", "character": odo.id}), s)
+	var code := String(SupplySystem.plan(data, s)[0]["code"])
+	var out := _link(Ledger.snapshot(data, s, "war", {"id": "regiment:" + code}), "supplies_out")
+	assert_eq(String(out["governor"]), odo.id)
+	assert_has(LedgerCards.thread_entry(data, s, out)["lines"], "Governed by " + odo.display_name)
+	var chaplain := String(data.seats["chaplain"]["label"])
+	assert_string_contains(String(out["accounts"][0]["source"]),
+		"%s: %s (given the supply lines)" % [chaplain, odo.display_name])
+
+func test_the_type_level_counts_the_regiments_in_the_plural() -> void:
+	_marshal(["venal"])
+	var out := _link(Ledger.snapshot(data, s, "war", {}), "supplies_out")
+	assert_eq(String(out["accounts"][1]["source"]), "the regiments' own count")
+
+func test_cards_say_the_accounts_differ() -> void:
+	_marshal(["venal"])
+	var code := String(SupplySystem.plan(data, s)[0]["code"])
+	var snap := Ledger.snapshot(data, s, "war", {"id": "regiment:" + code})
+	var out := _link(snap, "supplies_out")
+	var lines: Array = LedgerCards.thread_entry(data, s, out)["lines"]
+	assert_has(lines, "Accounts differ:")
+	var card: Array = LedgerCards.entry(data, s, "supply_line:" + code, snap)["lines"]
+	var line: String = card.filter(func(t: String) -> bool: return t.contains("accounts differ"))[0]
+	assert_string_contains(line, Intel.num(int(out["accounts"][0]["value"])))
+	assert_string_contains(line, Intel.num(int(out["accounts"][1]["value"])))
+
+func test_the_governs_card_reads_a_percentage() -> void:
+	var st: Character = s.characters[String(s.council["steward"])]
+	st.skills["sk_steward"] = 8
+	st.opinion = 50
+	var gov := _link(Ledger.snapshot(data, s, "economy", {"id": "workshop:%d" % cell}), "governs")
+	var lines: Array = LedgerCards.thread_entry(data, s, gov)["lines"]
+	assert_eq(lines.filter(func(t: String) -> bool: return t.begins_with("Runs it at 85%")).size(), 1)
+	for t: String in lines:
+		assert_false(t.contains("‰"), "no per-mille on the card: " + t)
+
+## The plans are memoised for ONE snapshot only (fix round 1).
+func test_a_snapshot_leaves_no_plan_memo_behind() -> void:
+	var code := String(SupplySystem.plan(data, s)[0]["code"])
+	var a := Ledger.snapshot(data, s, "war", {"id": "supply_line:" + code})
+	assert_false(LedgerResolvers.memo_active())
+	s.regiments[code]["supplies"] = 1000000
+	var b := Ledger.snapshot(data, s, "war", {"id": "supply_line:" + code})
+	assert_ne(int(_link(a, "supplies_out")["flow"]), int(_link(b, "supplies_out")["flow"]), "read afresh")
 
 func test_the_thread_offers_the_audit_and_every_other_councillor() -> void:
 	var rows := Ledger.actions_for(data, "converts_out|workshop:%d|type:strategic_goods" % cell, s)
