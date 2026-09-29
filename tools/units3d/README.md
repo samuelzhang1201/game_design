@@ -174,3 +174,9 @@ Cleveland knight's helmet; `reanimate.py` re-authored its actions. Both scripts 
 Graf Salm source were DELETED on 2026-09-30 (the owner: delete outdated models and
 assets) — git history keeps them.
 
+## Courier
+
+The courier rider (`assets/units3d/courier.glb`, GALLOP and IDLE) has its own build:
+`blender -b --factory-startup --python tools/units3d/courier_build.py -- courier`, with its
+scripts, sources and licences in `tools/units3d/courier/README.md`. The spy still wears the
+cavalry model until it has its own.

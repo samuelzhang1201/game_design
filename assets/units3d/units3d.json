@@ -25,6 +25,30 @@
    "horse": "heat"
   }
  },
+ "courier": {
+  "actions": {
+   "GALLOP": [
+    0,
+    24
+   ],
+   "IDLE": [
+    0,
+    72
+   ]
+  },
+  "bones": 45,
+  "fps": 24,
+  "height_m": 3.256,
+  "kind": "mounted",
+  "label": "Courier",
+  "source": "CC0 Hunt Museum horse scan + CC0 Blender Human Base Meshes rider, the owner's design C4 (zimage_C4_s2), tools/units3d/courier_build.py",
+  "stride_m": 3.282,
+  "tris": 19588,
+  "weights": {
+   "horse": "heat",
+   "rider": "heat"
+  }
+ },
  "infantry": {
   "actions": {
    "GARRISON": [
