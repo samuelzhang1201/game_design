@@ -41,7 +41,7 @@
   "height_m": 2.562,
   "kind": "mounted",
   "label": "Courier",
-  "source": "Tripo 3D (owner), from zimage_C4_s2, tools/units3d/courier_build.py --source tripo",
+  "source": "Tripo 3D (owner), from zimage_C4_s2, tools/units3d/courier_build.py",
   "stride_m": 2.338,
   "tris": 19346,
   "weights": {

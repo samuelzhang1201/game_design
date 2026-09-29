@@ -36,7 +36,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 SRC = os.path.join(REPO, "assets", "units3d", "ai_src", "courier", "tripo", "courier")
 TABLE = os.path.join(HERE, "tripo_parts.csv")
 import rig
-import texture_v3 as tx
+import texture as tx
 
 HORSE_LENGTH = 2.45        # nose to tail, as the cavalry's horse
 TRIS_MAX = 19400           # the parts' budgets are scaled down to this if they add up to more
@@ -500,8 +500,8 @@ FLAT_NORMAL = {26, 35}    # the face: its baked normals washed it out under the 
 
 
 def unwrap(objs, weights):
-    """texture_v3.unwrap_all's scheme (smart project, islands scaled to metres x texel
-    weight, one 0..1 tile, packed) with fewer, larger islands."""
+    """Smart-project each part, scale its islands to metres x its texel
+    weight, put them in one 0..1 tile and pack them (a wide angle: fewer, larger islands)."""
     for ob in objs:
         tx.activate(ob)
         if not ob.data.uv_layers:
@@ -582,7 +582,7 @@ def check_misses(parts, col, tex):
 
 
 def far_bake(low, image, tex, cage=None, ray=None):
-    """texture_v3.bake with its own cage and ray (the far pass's by default)."""
+    """texture.bake with its own cage and ray (the far pass's by default)."""
     sc = bpy.context.scene
     for m in low.data.materials:
         tx.target_node(m, image)

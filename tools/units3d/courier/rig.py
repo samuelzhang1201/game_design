@@ -1,39 +1,30 @@
 """The courier's rig, its two actions and the stride (courier_build.py's second half).
 
-The skeleton is the cavalry's, so the game's helpers need nothing new:
-  * the HORSE bones are `cavalry_scan.rig_spec`'s, laid on the same Hunt Museum scan by
-    its own surface probes (the leg tops' fixed heights scaled from the cavalry's 2.60 m
-    horse to this one's 2.45 m);
+The skeleton uses the cavalry's bone names, so the game's helpers need nothing new:
+  * the HORSE bones carry `cavalry_scan.rig_spec`'s names (root, horse_body, neck_1,
+    neck_2, head_h, tail_1..3, fore_upper/lower/hoof_l|r, hind_upper/gaskin/lower/hoof_l|r),
+    placed on the Tripo horse by tripo.horse_spec;
   * the RIDER bones carry make_units' mounted names (hips, spine, chest, neck, head,
-    clavicle_/upperarm_/forearm_/hand_/thigh_/shin_/foot_ r and l), laid on the joints the
-    v3 build posed the base-mesh body on (`PJ`) — a courier sits where the knight did not;
-  * `pole` stands on the saddle (the pick's pole sits in a bucket on the flap) and carries
-    `pennon_1` / `pennon_2` along the flag's fly; `case` hangs on the saddle.
+    clavicle_/upperarm_/forearm_/hand_/thigh_/shin_/foot_ r and l);
+  * `pole` rides the off hand and carries `pennon_1` / `pennon_2` along the flag;
+    `case` hangs on the saddle.
 
-Weights, part by part (the joined model carries a `part_id` per vertex from texture_v3):
-bone heat for the horse (cavalry_scan's `mc.heat`, over the horse's bones only) and the
-rider's body (over his), with the by-distance fallback; the head, boots, bands and
-clothes by distance to their own bones; the fists, eyes, hat and feather rigid; the tack
-rigid to the horse's body; the bridle copied from the horse and handed to the fist
-toward the reins' end; the mane and tail by distance to the neck, head and tail; the flag
-along its fly between the pole and the two pennon bones.
-
-Actions (make_units' `make_action` / `stash` / `gait`), keyed as FK and then baked
-through three IK chains — both legs to their stirrups and the left arm to the pole — so
-a rider who rises, pitches and rocks keeps his feet in the irons and his fist on the
-staff; the helper bones are dropped after the bake.
+Actions (make_units' `make_action` / `stash` / `gait`), keyed as FK from `NEUTRAL` (the
+Tripo horse's raised foreleg straightened) and then baked through two IK chains - both
+legs to their stirrups - so a rider who rises, pitches and rocks keeps his feet in the
+irons; the helper bones are dropped after the bake. The weights are tripo.weigh's.
 """
-import bpy, bmesh, math, os, sys
+import bpy, math, os, sys
 import numpy as np
 from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-if HERE not in sys.path:
-    sys.path.insert(0, HERE)
-import scan_horse                       # puts tools/units3d on the path, imports cavalry_scan
-cs = scan_horse.cs
-mc = cs.mc
-mu = mc.make_units
+UNITS = os.path.dirname(HERE)            # tools/units3d: the cavalry's rig and weight helpers
+for p in (HERE, UNITS):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+import model_cavalry as mc               # heat, copy_weights, rigid, activate, export_glb
+mu = mc.make_units                       # build_armature, make_action, stash, gait, apply_pose
 
 NAME = "courier"
 FPS = 24                  # the clips' frame rate (the scene's, which the glTF exporter times by)
@@ -44,16 +35,11 @@ CAVALRY_LENGTH = 2.60     # cavalry_scan.rig_spec's leg-top heights were set on 
 # the loop each leg is in the air; the last landing is followed by the suspension
 FOOTFALL = {("hind", "l"): 0.00, ("hind", "r"): 0.12, ("fore", "l"): 0.30, ("fore", "r"): 0.42}
 GALLOP_SWING = 0.66
-PENNON_FLY = 0.52         # props_v3.pennon's FL: the flag's length along its fly
-IK_BONES = ("ik_foot_r", "ik_foot_l", "ik_hand_l")
-# set by the source: the side whose fist holds the reins, the arm held to the staff by IK
-# (None: the staff rides the hand), and a pose every key starts from (a leg the source
-# model holds raised, straightened)
-REINS = "r"
-TAIL_STREAM = 1.0        # how far the tail streams out behind in the gallop (1 = v3's)
-HIND_SWING = 25.0        # the hind legs' swing from the hip, degrees each way
-IK_ARM = "l"
-NEUTRAL = {}
+IK_BONES = ("ik_foot_r", "ik_foot_l")
+REINS = "l"               # the near fist holds the reins (the off hand the staff)
+TAIL_STREAM = 0.4         # how far the tail streams out in the gallop: it covers a notch in the rump the model never textured
+HIND_SWING = 22.0         # the hind legs' swing from the hip, degrees each way: the rump and the trailing leg are one shell
+NEUTRAL = {}              # tripo.neutral_pose: every key starts from it
 
 
 def with_neutral(pose):
@@ -67,39 +53,8 @@ def with_neutral(pose):
 
 # ------------------------------------------------------------------ helpers
 
-def _v(p):
-    return Vector((float(p[0]), float(p[1]), float(p[2])))
-
-
 def activate(ob):
     mc.activate(ob)
-
-
-def split_parts(ob, order):
-    """One object per `part_id` (vertex groups and UVs kept), named after texture_v3's parts."""
-    ids = np.empty(len(ob.data.vertices), np.int64)
-    ob.data.attributes["part_id"].data.foreach_get("value", ids)
-    out = {}
-    for pid, name in enumerate(order):
-        if not (ids == pid).any():
-            continue
-        o = ob.copy()
-        o.data = ob.data.copy()
-        o.name = o.data.name = "part_" + name
-        bpy.context.scene.collection.objects.link(o)
-        bm = bmesh.new(); bm.from_mesh(o.data)
-        lay = bm.verts.layers.int.get("part_id")
-        bmesh.ops.delete(bm, geom=[v for v in bm.verts if v[lay] != pid], context="VERTS")
-        bm.to_mesh(o.data); bm.free()
-        out[name] = o
-    bpy.data.objects.remove(ob, do_unlink=True)
-    return out
-
-
-def seg_dist(p, a, b):
-    ab = b - a
-    t = max(0.0, min(1.0, (p - a).dot(ab) / max(ab.length_squared, 1e-12)))
-    return (p - a.lerp(b, t)).length
 
 
 def rigid(ob, bone):
@@ -121,185 +76,12 @@ def set_weights(ob, table):
             g.add([vi], w / tot, "REPLACE")
 
 
-# ---------------------------------------------------------------- the spec
-
-def pennon_frame(butt, top, d):
-    d = np.asarray(d, float)
-    fly0 = np.array((0.0, -1.0, 0.0)) - d * (d @ np.array((0.0, -1.0, 0.0)))
-    return fly0 / np.linalg.norm(fly0)
-
-
-def rig_spec(surf, PJ, pole, case_c):
-    k = scan_horse.cs.HORSE_LENGTH / CAVALRY_LENGTH
-    horse = []
-    for name, parent, head, tail in cs.rig_spec(surf):
-        if name == "root" or name in HORSE:
-            if name.startswith(("fore_upper_", "hind_upper_")):
-                head = Vector((head.x, head.y, head.z * k))
-            horse.append((name, parent, head, tail))
-    J = lambda key: Vector(PJ[key][:])
-    b = list(horse)
-    b += [("hips", "horse_body", J("pelvis:h"), J("pelvis:t")),
-          ("spine", "hips", J("spine:h"), J("spine:t")),
-          ("chest", "spine", J("chest:h"), J("chest:t")),
-          ("neck", "chest", J("neck:h"), J("neck:t")),
-          ("head", "neck", J("head:h"), J("head:t"))]
-    for n, s in (("r", ".R"), ("l", ".L")):
-        b += [("clavicle_" + n, "chest", J("clavicle" + s + ":h"), J("clavicle" + s + ":t")),
-              ("upperarm_" + n, "clavicle_" + n, J("upper_arm" + s + ":h"), J("upper_arm" + s + ":t")),
-              ("forearm_" + n, "upperarm_" + n, J("forearm" + s + ":h"), J("forearm" + s + ":t")),
-              ("hand_" + n, "forearm_" + n, J("hand" + s + ":h"), J("hand" + s + ":t")),
-              ("thigh_" + n, "hips", J("thigh" + s + ":h"), J("thigh" + s + ":t")),
-              ("shin_" + n, "thigh_" + n, J("shin" + s + ":h"), J("shin" + s + ":t")),
-              ("foot_" + n, "shin_" + n, J("foot" + s + ":h"), J("foot" + s + ":t"))]
-    butt, top, d = [np.asarray(x, float) for x in pole]
-    d = d / np.linalg.norm(d)
-    fly = pennon_frame(butt, top, d)
-    hoist = top - d * 0.22
-    b += [("pole", "horse_body", _v(butt), _v(butt + d * 0.6)),
-          ("pennon_1", "pole", _v(hoist), _v(hoist + fly * PENNON_FLY * 0.5)),
-          ("pennon_2", "pennon_1", _v(hoist + fly * PENNON_FLY * 0.5), _v(hoist + fly * PENNON_FLY)),
-          ("case", "horse_body", _v(np.asarray(case_c) + (0, 0, 0.10)), _v(np.asarray(case_c) - (0, 0, 0.06)))]
-    # IK helpers (dropped after the bake): the stirrups on the saddle, the grip on the pole
-    for n, s in (("r", ".R"), ("l", ".L")):
-        a = J("shin" + s + ":t")
-        b.append(("ik_foot_" + n, "horse_body", a, a + Vector((0, 0.08, 0))))
-    w = J("forearm.L:t")
-    b.append(("ik_hand_l", "pole", w, w + Vector((0, 0.08, 0))))
-    return b
-
 
 HORSE = {"horse_body", "neck_1", "neck_2", "head_h", "tail_1", "tail_2", "tail_3"} | {
     "fore_%s_%s" % (j, n) for j in ("upper", "lower", "hoof") for n in "lr"} | {
     "hind_%s_%s" % (j, n) for j in ("upper", "gaskin", "lower", "hoof") for n in "lr"}
 RIDER = {"hips", "spine", "chest", "neck", "head"} | {
     p + s for p in ("clavicle_", "upperarm_", "forearm_", "hand_", "thigh_", "shin_", "foot_") for s in "rl"}
-
-
-# ----------------------------------------------------------------- weights
-
-def by_distance(ob, arm, bones, power=5.0, k=3):
-    """model_cavalry.by_distance (nearest bone segments, distance to the fifth), for any
-    number of bones (its k=3 needs three)."""
-    segs = [(b.name, np.array(b.head_local), np.array(b.tail_local)) for b in arm.data.bones if b.name in bones]
-    n = len(ob.data.vertices)
-    co = np.empty(n * 3)
-    ob.data.vertices.foreach_get("co", co)
-    co = co.reshape(n, 3)
-    d = np.empty((len(segs), n))
-    for i, (_, a, b) in enumerate(segs):
-        ab = b - a
-        t = np.clip(((co - a) @ ab) / max(float(ab @ ab), 1e-9), 0, 1)
-        d[i] = np.linalg.norm(co - (a + t[:, None] * ab), axis=1)
-    k = min(k, len(segs))
-    order = np.argsort(d, axis=0)[:k]
-    w = 1.0 / np.power(np.take_along_axis(d, order, axis=0) + 1e-4, power)
-    w /= w.sum(axis=0, keepdims=True)
-    tab = {}
-    for vi in range(n):
-        tab[vi] = {segs[order[s_, vi]][0]: float(w[s_, vi]) for s_ in range(k) if w[s_, vi] > 1e-3}
-    set_weights(ob, tab)
-
-
-def weigh(parts, arm, pole, case_c, head):
-    how = {}
-    horse = parts["horse"]
-    how["horse"] = mc.heat(horse, arm, HORSE)
-    how["rider"] = mc.heat(parts["rider"], arm, RIDER)
-    by_distance(parts["rider_head"], arm, ("neck", "head"))
-    for key in ("rider_boots", "boot_bands"):
-        if key in parts:
-            by_distance(parts[key], arm, ("shin_r", "foot_r", "shin_l", "foot_l"))
-    for key in ("clothes", "clothes_trim"):
-        if key in parts:
-            by_distance(parts[key], arm, ("hips", "spine", "chest", "neck", "clavicle_r", "clavicle_l",
-                                          "upperarm_r", "upperarm_l", "forearm_r", "forearm_l",
-                                          "thigh_r", "thigh_l"))
-    # the fists: each whole to its own hand
-    hands = parts["rider_hands"]
-    hb = {n: arm.data.bones["hand_" + n] for n in "rl"}
-    tab = {}
-    for v in hands.data.vertices:
-        n = min("rl", key=lambda n: seg_dist(v.co, hb[n].head_local, hb[n].tail_local))
-        tab[v.index] = {"hand_" + n: 1.0}
-    set_weights(hands, tab)
-    rigid(parts["horse_eyes"], "head_h")
-    rigid(parts["tack"], "horse_body")
-    # the bridle as the horse under it, handed over to the fist along the reins' last 30 cm
-    br = parts["bridle"]
-    mc.copy_weights(br, horse)
-    hr = arm.data.bones["hand_r"].head_local
-    idx = {g.index: g.name for g in br.vertex_groups}
-    tab = {}
-    for v in br.data.vertices:
-        ws = {idx[g.group]: g.weight for g in v.groups if g.weight > 1e-4}
-        f = max(0.0, min(1.0, (0.30 - (v.co - hr).length) / 0.20))
-        if f > 0:
-            ws = {b: w * (1 - f) for b, w in ws.items()}
-            ws["hand_r"] = ws.get("hand_r", 0.0) + f
-        tab[v.index] = ws or {"head_h": 1.0}
-    set_weights(br, tab)
-    by_distance(parts["horse_hair"], arm, ("horse_body", "neck_1", "neck_2", "head_h", "tail_1", "tail_2", "tail_3"))
-    # props by loose part: hat and feather to the head, the staff (pole, bucket, finial) to
-    # the pole, the flag along its fly, the case to its bone, the strap between case and hips
-    butt, top, d = [np.asarray(x, float) for x in pole]
-    d = d / np.linalg.norm(d)
-    fly = pennon_frame(butt, top, d)
-    hoist = top - d * 0.22
-    hd = arm.data.bones["head"]
-
-    def along_flag(co):
-        """Hoist edge on the pole, the middle on pennon_1, the fly's end on pennon_2."""
-        u = max(0.0, float((np.asarray(co) - hoist) @ fly)) / PENNON_FLY
-        if u < 0.35:
-            t = u / 0.35
-            return {"pole": 1 - t, "pennon_1": t}
-        if u < 0.8:
-            t = (u - 0.35) / 0.45
-            return {"pennon_1": 1 - t, "pennon_2": t}
-        return {"pennon_2": 1.0}
-
-    def radial(co):
-        r = np.asarray(co) - butt
-        return float(np.linalg.norm(r - d * (r @ d)))
-
-    pr = parts["props"]
-    bm = bmesh.new(); bm.from_mesh(pr.data)
-    loose = cs.loose_parts(bm)
-    bm.free()
-    co = [v.co.copy() for v in pr.data.vertices]
-    tab = {}
-    kinds = {}
-    for comp in loose:
-        c = sum((co[i] for i in comp), Vector()) / len(comp)
-        rmax = max(radial(co[i]) for i in comp)
-        if seg_dist(c, hd.head_local, hd.tail_local) < 0.30 and c.z > hd.head_local.z - 0.08:
-            kind = "head"
-        elif rmax < 0.07:
-            kind = "pole"
-        elif c.z > 2.3:
-            kind = "flag"
-        elif (c - _v(case_c)).length < 0.20:
-            kind = "case"
-        else:
-            kind = "strap"
-        kinds[kind] = kinds.get(kind, 0) + 1
-        for i in comp:
-            if kind == "flag":
-                tab[i] = along_flag(co[i])
-            elif kind == "strap":
-                cb, hb_ = arm.data.bones["case"], arm.data.bones["hips"]
-                dc = seg_dist(co[i], cb.head_local, cb.tail_local)
-                dh = seg_dist(co[i], hb_.head_local, hb_.tail_local)
-                tab[i] = {"case": 1.0 / (dc + 1e-3) ** 3, "hips": 1.0 / (dh + 1e-3) ** 3}
-            else:
-                tab[i] = {kind: 1.0}
-    set_weights(pr, tab)
-    print("PROPS loose parts", kinds)
-    if "props_crowns" in parts:
-        cr = parts["props_crowns"]
-        set_weights(cr, {v.index: along_flag(v.co) for v in cr.data.vertices})
-    return how
 
 
 # ----------------------------------------------------------------- actions
@@ -391,18 +173,6 @@ def ik_constraints(arm, on):
         else:
             for c in list(pb.constraints):
                 pb.constraints.remove(c)
-    if IK_ARM is None:
-        return
-    pb = arm.pose.bones["forearm_" + IK_ARM]
-    if on:
-        c = pb.constraints.new("IK")
-        c.name = "ik"
-        c.target, c.subtarget = arm, "ik_hand_" + IK_ARM
-        c.chain_count = 2
-        c.use_tail = True
-    else:
-        for c in list(pb.constraints):
-            pb.constraints.remove(c)
 
 
 def bake(arm, fk, name):
