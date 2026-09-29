@@ -19,7 +19,10 @@ static func seat_label(repo: DataRepository, flow: String) -> String:
 
 static func governor_of(repo: DataRepository, state: GameState, flow: String) -> String:
 	var given := String(state.governors.get(flow, ""))
-	if given != "" and state.characters.has(given):
+	# A governor given a flow who no longer sits on the council loses it
+	# (controller ruling, Task 1 review): falls back to the seat holder,
+	# same as a governor who never existed.
+	if given != "" and state.characters.has(given) and given in state.council.values():
 		return given
 	var seat := String((repo.ledger_governance.get(flow, {}) as Dictionary).get("seat", ""))
 	return String(state.council.get(seat, ""))

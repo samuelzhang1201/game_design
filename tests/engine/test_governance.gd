@@ -25,6 +25,17 @@ func test_a_gone_governor_falls_back_to_the_seat() -> void:
 	s.governors["workshop"] = "char_nobody"
 	assert_eq(Governance.governor_of(data, s, "workshop"), String(s.council["steward"]))
 
+func test_a_governor_who_leaves_the_council_loses_the_flow() -> void:
+	# Controller ruling (Task 1 review): a governor given a flow who no
+	# longer sits on the council loses it, falling back to the seat holder,
+	# same as a governor who never existed.
+	var former := String(s.council["chancellor"])
+	s.governors["workshop"] = former
+	assert_eq(Governance.governor_of(data, s, "workshop"), former, "still on the council")
+	s.council.erase("chancellor")
+	assert_eq(Governance.governor_of(data, s, "workshop"), String(s.council["steward"]),
+		"passed over a councillor, he loses the flow")
+
 func test_skill_sets_the_ceiling() -> void:
 	_plain(_steward(), "sk_steward", 8)
 	assert_eq(int(Governance.factors(data, s, "workshop")["efficiency"]), 850)

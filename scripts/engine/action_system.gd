@@ -73,6 +73,21 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			return _validate_manor(req, state, needs)
 		"ARMY_MARCH", "ARMY_GARRISON":
 			return _validate_army(req, state)
+		"GOVERNOR_SET":
+			var flow := String(req.params.get("flow", ""))
+			if not data.ledger_governance.has(flow):
+				return "No such flow: " + flow
+			var who := String(req.params.get("character", ""))
+			if not who in state.council.values():
+				return "Only a councillor can govern %s" % String(data.ledger_governance[flow]["label"])
+			if who == Governance.governor_of(data, state, flow):
+				return "He already governs %s" % String(data.ledger_governance[flow]["label"])
+		"LEDGER_AUDIT":
+			var flow := String(req.params.get("flow", ""))
+			if not data.ledger_governance.has(flow):
+				return "No such flow: " + flow
+			if Governance.governor_of(data, state, flow) == "":
+				return "No one governs %s: there are no books to audit" % String(data.ledger_governance[flow]["label"])
 		"GOODS_BUY", "GOODS_SELL":
 			var pool := String(req.params.get("pool", ""))
 			if not pool in ["strategic", "civil"]:
@@ -487,6 +502,46 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var days := CourierSystem.days_left(data, state, c)
 			effects.append({"metric": "intel", "delta": 0.0,
 				"reason": "A spy rides for %s; about %d day%s" % [place, days, "" if days == 1 else "s"]})
+		"GOVERNOR_SET":
+			var flow := String(req.params["flow"])
+			var label := String(data.ledger_governance[flow]["label"])
+			var was := Governance.governor_of(data, state, flow)
+			var who := String(req.params["character"])
+			var seat_holder := String(state.council.get(String(data.ledger_governance[flow]["seat"]), ""))
+			if who == seat_holder:
+				state.governors.erase(flow)
+			else:
+				state.governors[flow] = who
+			if was != "" and state.characters.has(was):
+				(state.characters[was] as Character).change_opinion(int(data.bal("gov_passed_over_opinion")),
+					"passed over: %s given to another" % label, state.tick)
+			(state.characters[who] as Character).change_opinion(int(data.bal("gov_new_governor_opinion")),
+				"given %s to govern" % label, state.tick)
+			effects.append({"metric": "council", "delta": 0.0, "reason": "%s now governs %s"
+				% [(state.characters[who] as Character).display_name, label]})
+		"LEDGER_AUDIT":
+			var flow := String(req.params["flow"])
+			var label := String(data.ledger_governance[flow]["label"])
+			var gid := Governance.governor_of(data, state, flow)
+			var c: Character = state.characters[gid]
+			c.change_opinion(int(data.bal("gov_audited_opinion")),
+				"the crown's clerks went through his books on %s" % label, state.tick)
+			MissiveLog.add(data, state, MissiveLog.make("audit", "credible", state.absolute_day(),
+				MissiveLog.subject("ledger", flow, -1, Vector2.ZERO), "Audit — " + label.capitalize(),
+				AuditWriter.facts(data, state, flow)))
+			var amount := int(state.skims.get(gid, 0))
+			if amount > 0:
+				if not state.caught.has(gid):
+					state.caught[gid] = []
+				state.caught[gid].append({"flow": flow, "day": state.absolute_day(), "amount": amount})
+				if not state.records.has(gid):
+					state.records[gid] = []
+				state.records[gid].append("Caught skimming %s, %s of year %d (%d gold)"
+					% [label, state.season(), state.year(), amount])
+				state.skims.erase(gid)
+				c.change_opinion(int(data.bal("gov_caught_opinion")), "caught skimming %s" % label, state.tick)
+				effects.append({"metric": "council", "delta": 0.0, "reason": "%s caught skimming %s"
+					% [c.display_name, label]})
 		"GOODS_BUY":
 			var pool := String(req.params["pool"])
 			var gold := int(req.params["gold"])

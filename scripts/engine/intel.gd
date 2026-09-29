@@ -249,6 +249,13 @@ static func _latest(repo: DataRepository, state: GameState, subj: Dictionary, ke
 			continue
 		var ms: Dictionary = m["subject"]
 		var mkind := String(ms.get("kind", ""))
+		if mkind == "ledger":
+			# An audit's letter (LEDGER_AUDIT) is about a governed flow, never
+			# a place — its subject carries no cell and sits at (0,0), which
+			# province_of's point fallback would otherwise resolve to
+			# whatever cell sits at the map's origin. Never let it stand in
+			# for a place's own estimate (spec 2026-09-30-ledger-governors-design §3).
+			continue
 		var hit := false
 		if qkind in ["manor", "burg"] and mkind == "manor" and qcell >= 0 \
 				and int(ms.get("cell", -1)) == qcell:
