@@ -528,3 +528,5 @@ ledger (it is derived; a dragged sphere is forgotten).
   A's values in `data/ledger_palette.csv` and `balance.csv` unchanged, and
   the owner's pick — if it differs from A — is a follow-up re-tint, not a
   blocker on L0.
+
+**For the intelligence alignment draft** (`2026-09-28-intelligence-layer-alignment.md`, still the owner's uncommitted draft, so this branch does not carry it): its §8 phase table should gain, in P0's content, "the LEDGER's L1 (split strands, accounts differ)" and, in P3's, "the LEDGER's M3 audit (`LEDGER_AUDIT`) beside the countermeasures".
