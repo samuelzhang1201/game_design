@@ -50,6 +50,38 @@ func test_a_regiment_at_the_depot_loses_nothing() -> void:
 	assert_eq(int(line["length_km"]), 0)
 	assert_eq(int(line["loss_permille"]), 0)
 
+## A hand-checked multi-waypoint line: pins the CONVENTION (walk every leg
+## from the depot, path_between's own waypoints included), not the
+## implementation — the expected length is summed here straight off
+## CourierSystem.path_between's output, independently of SupplySystem.
+func test_the_road_length_sums_every_leg_from_the_depot() -> void:
+	var code: String = _land_codes()[0]
+	var from_px := CourierSystem.origin(data, s)
+	var codes: Array = data.burgs.keys()
+	codes.sort()
+	var path: Array = []
+	var to_px := Vector2.ZERO
+	for bcode: String in codes:
+		var b: Dictionary = data.burgs[bcode]
+		var candidate := Vector2(float(b["x"]), float(b["y"]))
+		var p := CourierSystem.path_between(data, from_px, candidate)
+		if p.size() >= 2:
+			path = p
+			to_px = candidate
+			break
+	assert_false(path.is_empty(), "the pack has a burg whose road from the depot has more than one waypoint")
+	var origin_m := ArmySystem.pack_to_metres(data, from_px)
+	var here := Vector2(origin_m)
+	var metres := 0.0
+	for wp: Array in path:
+		var to_wp := Vector2(float(wp[0]), float(wp[1]))
+		metres += here.distance_to(to_wp)
+		here = to_wp
+	var expect_km := int(metres / 1000.0)
+	_place(code, to_px)
+	var line := SupplySystem.line_of(data, s, code)
+	assert_eq(int(line["length_km"]), expect_km)
+
 func test_a_garrison_in_the_crowns_province_draws_on_its_town() -> void:
 	var code: String = _land_codes()[0]
 	var home := MapManors.home_province(data, s)

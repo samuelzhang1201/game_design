@@ -58,20 +58,72 @@ static func stronghold_of(repo: DataRepository, state: GameState, code: String) 
 	return String((repo.provinces.get(prov, {}) as Dictionary).get("capital_burg", ""))
 
 
+## The depot's shortest-path tree (RoadGraph.shortest), built once and
+## shared by every regiment's line — the depot is the same point for all of
+## them, so plan() need not run Dijkstra once per regiment. `line_of` builds
+## its own single-use context so it keeps working standalone.
+static func _road_context(repo: DataRepository, state: GameState) -> Dictionary:
+	var from := CourierSystem.origin(repo, state)
+	var a := ArmySystem.pack_to_metres(repo, from)
+	var g := RoadGraph.of_pack(repo)
+	var reach := float(repo.bal("courier_offroad_max_km")) * 1000.0
+	var start := g.nearest(a)
+	var ctx := {"a": a, "g": g, "start": start}
+	if start >= 0 and Vector2(a).distance_to(Vector2(g.nodes[start])) <= reach:
+		ctx["tree"] = g.shortest(start)
+	return ctx
+
+
+## The road from the depot to `to_px`, exactly as CourierSystem.path_between
+## computes it, but off a precomputed depot tree (_road_context) instead of
+## running Dijkstra again.
+static func _path_from_ctx(repo: DataRepository, ctx: Dictionary, to_px: Vector2) -> Array:
+	var a: Vector2i = ctx["a"]
+	var b := ArmySystem.pack_to_metres(repo, to_px)
+	if not ctx.has("tree"):
+		return [[b.x, b.y, CourierSystem._leg_kind(repo, a, b)]]
+	var g: RoadGraph = ctx["g"]
+	var start: int = ctx["start"]
+	var tree: Dictionary = ctx["tree"]
+	var goal := g.nearest(b, tree["dist"])
+	# a start ON the network (the capital is a road node) takes no leg to itself
+	var way: Array = [] if g.nodes[start] == a else \
+		[[g.nodes[start].x, g.nodes[start].y, CourierSystem._leg_kind(repo, a, g.nodes[start])]]
+	way.append_array(g.route(tree, goal))
+	way.append([b.x, b.y, CourierSystem._leg_kind(repo, g.nodes[goal], b)])
+	return way
+
+
 static func line_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	return _line_of(repo, state, code, _road_context(repo, state))
+
+
+static func _line_of(repo: DataRepository, state: GameState, code: String, ctx: Dictionary) -> Dictionary:
 	var town := stronghold_of(repo, state, code)
 	if town != "":
 		return {"length_km": 0, "loss_permille": 0, "garrison": true, "stronghold": town}
-	var from := CourierSystem.origin(repo, state)
 	var to := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
+	var origin_m: Vector2i = ctx["a"]
+	var dest_m := ArmySystem.pack_to_metres(repo, to)
+	var path := _path_from_ctx(repo, ctx, to)
 	var metres := 0.0
-	var path := CourierSystem.path_between(repo, from, to)
-	if path.size() >= 2:
-		for i in range(1, path.size()):
-			metres += Vector2(float(path[i - 1][0]), float(path[i - 1][1])).distance_to(
-				Vector2(float(path[i][0]), float(path[i][1])))
+	if path.is_empty():
+		metres = Vector2(origin_m).distance_to(Vector2(dest_m))
 	else:
-		metres = Vector2(ArmySystem.pack_to_metres(repo, from)).distance_to(Vector2(ArmySystem.pack_to_metres(repo, to)))
+		# Walk it exactly as CourierSystem.need_along does: `here` starts at
+		# the depot, and each waypoint (path_between never includes the
+		# origin itself — RoadGraph.route()'s own doc: "the start node itself
+		# is not included") adds its own distance from `here`. The old code
+		# summed only the legs BETWEEN waypoints and dropped this first one.
+		var here := Vector2(origin_m)
+		for p: Array in path:
+			var wp := Vector2(float(p[0]), float(p[1]))
+			metres += here.distance_to(wp)
+			here = wp
+		# path_between's last entry is always the target itself, but guard it
+		# in case that ever changes.
+		if here != Vector2(dest_m):
+			metres += here.distance_to(Vector2(dest_m))
 	var km := int(metres / 1000.0)
 	return {"length_km": km, "loss_permille": loss_of(repo, km), "garrison": false, "stronghold": ""}
 
@@ -87,13 +139,14 @@ static func _land_codes(repo: DataRepository, state: GameState) -> Array:
 
 
 static func plan(repo: DataRepository, state: GameState) -> Array:
+	var ctx := _road_context(repo, state)
 	var rows: Array = []
 	var golds: Array = []
 	for code: String in _land_codes(repo, state):
 		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code))
 		var target := use * int(repo.bal("army_supply_target_months"))
 		var short := maxi(target - int(state.regiments[code]["supplies"]), 0)
-		var line := line_of(repo, state, code)
+		var line := _line_of(repo, state, code, ctx)
 		var loss := int(line["loss_permille"])
 		var ship := ship_for(short, loss)
 		var gold := gold_for(repo, ship)
@@ -102,6 +155,9 @@ static func plan(repo: DataRepository, state: GameState) -> Array:
 			"loss_permille": loss, "length_km": int(line["length_km"]), "garrison": bool(line["garrison"]),
 			"stronghold": String(line["stronghold"])})
 	var avail := maxi(int(state.metrics.get("strategic", 0.0)), 0) + maxi(int(state.metrics.get("lord_strategic", 0.0)), 0)
+	# The pool being shared is GOLD, and every unit costs the same
+	# (army_supply_gold_permille), so splitting it by gold need is exactly
+	# splitting the ship need in the same proportion.
 	var paid := share(avail, golds)
 	var price := int(repo.bal("army_supply_gold_permille"))
 	for i in rows.size():
