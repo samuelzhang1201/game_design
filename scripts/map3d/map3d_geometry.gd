@@ -63,6 +63,35 @@ static func pitch_for(distance: float, min_d: float, max_d: float, near_deg: flo
 	return lerpf(near_deg, far_deg, t)
 
 
+## The pitch at which the camera, `distance` back from `target` on `yaw_deg`,
+## stands clear of the ground: every point of its sight line at share s from
+## the target to the camera at least `clear_m` * s over `height_fn(xz)`.
+## `pitch_deg` when that already holds, else steepened by `step_deg` until it
+## does, no further than `limit_deg`. The oblique near pitch put the camera
+## INSIDE a ridge behind the target (2026-09-29): the hill, seen from within,
+## was culled away and a trail over it crossed the view as a black streak.
+## Steepening keeps the target and the distance, so the scale bar holds.
+static func clear_pitch(target: Vector3, distance: float, yaw_deg: float, pitch_deg: float,
+		height_fn: Callable, clear_m: float, step_deg: float, samples: int, limit_deg := -89.0) -> float:
+	var p := pitch_deg
+	while p > limit_deg:
+		if _sight_clear(target, distance, yaw_deg, p, height_fn, clear_m, samples):
+			return p
+		p = maxf(p - step_deg, limit_deg)
+	return limit_deg
+
+
+static func _sight_clear(target: Vector3, distance: float, yaw_deg: float, pitch_deg: float,
+		height_fn: Callable, clear_m: float, samples: int) -> bool:
+	var cam := pose(target, distance, yaw_deg, pitch_deg).origin
+	for i in range(1, samples + 1):
+		var s := float(i) / float(samples)
+		var q := target.lerp(cam, s)
+		if q.y < float(height_fn.call(Vector2(q.x, q.z))) + clear_m * s:
+			return false
+	return true
+
+
 ## The camera's transform: `distance` back from the target along the view,
 ## turned by `yaw_deg` about +Y and tilted by `pitch_deg` (negative looks down).
 static func pose(target: Vector3, distance: float, yaw_deg: float, pitch_deg: float) -> Transform3D:

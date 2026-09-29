@@ -124,6 +124,8 @@ func apply() -> void:
 	var pitch := Map3DGeometry.pitch_for(ctx.distance, r.bal("map3d_zoom_min_m"),
 		r.bal("map3d_zoom_max_m"), r.bal("map3d_pitch_near_deg"), r.bal("map3d_pitch_far_deg"))
 	var ground := Vector3(ctx.target.x, ctx.height_at(ctx.target), ctx.target.y)
+	pitch = Map3DGeometry.clear_pitch(ground, ctx.distance, ctx.yaw, pitch, ctx.height_at,
+		r.bal("map3d_camera_clear_m"), r.bal("map3d_camera_clear_step_deg"), int(r.bal("map3d_camera_clear_samples")))
 	_camera.transform = Map3DGeometry.pose(ground, ctx.distance, ctx.yaw, pitch)
 	ctx.camera_moved.emit()
 

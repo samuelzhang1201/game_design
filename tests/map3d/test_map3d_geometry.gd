@@ -64,6 +64,52 @@ func test_pose_looks_at_the_target_from_behind_and_above() -> void:
 	assert_almost_eq(forward.dot(to_target), 1.0, 0.0001)
 
 
+# A ridge 600 m high everywhere more than 500 m south (+Z) of the target, flat
+# ground (0 m) elsewhere: the camera of yaw 0 sits south, so at the oblique
+# -22 deg and 1000 m it stands 1000 sin22 = 375 m up — inside the ridge.
+func _ridge(xz: Vector2) -> float:
+	return 600.0 if xz.y > 500.0 else 0.0
+
+
+func _flat(_xz: Vector2) -> float:
+	return 0.0
+
+
+# The clearance rule, restated from the doc comment rather than called: every
+# point of the sight line at share s from the target to the camera stands at
+# least clear_m * s over the ground.
+func _clears(pitch: float, height: Callable, clear_m: float) -> bool:
+	var cam := Map3DGeometry.pose(Vector3.ZERO, 1000.0, 0.0, pitch).origin
+	for i in range(1, 65):
+		var s := i / 64.0
+		var q := cam * s
+		if q.y < float(height.call(Vector2(q.x, q.z))) + clear_m * s:
+			return false
+	return true
+
+
+func test_clear_pitch_keeps_the_pitch_over_open_ground() -> void:
+	assert_eq(Map3DGeometry.clear_pitch(Vector3.ZERO, 1000.0, 0.0, -22.0, _flat, 60.0, 1.0, 64), -22.0)
+
+
+func test_clear_pitch_lifts_the_camera_out_of_a_ridge_behind_the_target() -> void:
+	# at -22 the camera is 375 m up, under the 600 m ridge: the pitch steepens
+	# to the first 1-degree step whose whole sight line clears the ridge by
+	# the ramped 60 m, and the step before it does not.
+	assert_false(_clears(-22.0, _ridge, 60.0), "the oblique pose is inside the ridge")
+	var p := Map3DGeometry.clear_pitch(Vector3.ZERO, 1000.0, 0.0, -22.0, _ridge, 60.0, 1.0, 64)
+	assert_lt(p, -22.0)
+	assert_true(_clears(p, _ridge, 60.0), "the camera and its sight line stand over the ridge")
+	assert_false(_clears(p + 1.0, _ridge, 60.0), "no steeper than it has to be")
+	var cam := Map3DGeometry.pose(Vector3.ZERO, 1000.0, 0.0, p).origin
+	assert_gt(cam.y, 660.0)
+
+
+func test_clear_pitch_stops_at_its_limit_when_nothing_clears() -> void:
+	var wall := func(_xz: Vector2) -> float: return 5000.0
+	assert_eq(Map3DGeometry.clear_pitch(Vector3.ZERO, 1000.0, 0.0, -22.0, wall, 60.0, 5.0, 16, -85.0), -85.0)
+
+
 func test_pose_turns_with_the_yaw() -> void:
 	# yaw 90 degrees: the camera swings from the south to the east (+X).
 	var t := Map3DGeometry.pose(Vector3.ZERO, 1000.0, 90.0, -45.0)
