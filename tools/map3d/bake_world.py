@@ -69,8 +69,8 @@ BEACH_MAX_M = 40.0       # and no higher
 # Texture ids = build_terrain.gd TEXTURES order.
 CLIFF, GRASS, LEAVES, DIRT, ROCKY, SOIL, SAND, FOREST, SNOW = range(9)
 NT = 9
-TEXTURE_KEYS = ["cliff", "leafy_grass", "dry_decay_leaves", "dirt_floor", "rocky_trail",
-                "excavated_soil_wall", "sand_03", "leafy_grass",
+TEXTURE_KEYS = ["cliff", "aerial_meadow", "dry_decay_leaves", "dirt_floor", "aerial_upland",
+                "excavated_soil_wall", "sand_03", "aerial_canopy",
                 # the snow line (owner 2026-09-19): Poly Haven snow_02 since the
                 # same day (snow_field_aerial read blue-grey and blotchy)
                 "snow_02"]
@@ -98,8 +98,8 @@ SLOPE_CLIFF = (0.93, 0.99)
 # multiplies the ground by the map, so a target is reached by the ratio to the
 # texture's own mean colour, in linear light, and can only darken.
 FAR_COLOR = {
-    CLIFF: "#7E7B77", GRASS: "#6F7A40", LEAVES: "#4E4A2C", DIRT: "#9A7A55",
-    ROCKY: "#7C7264", SOIL: "#5E4A30", FOREST: "#3A5026",
+    CLIFF: "#7E7B77", GRASS: "#687B44", LEAVES: "#4E4A2C", DIRT: "#9A7A55",
+    ROCKY: "#7A7656", SOIL: "#5E4A30", FOREST: "#4A6430",
 }  # SAND's, SNOW's and CLIFF's are data/map3d_bake.csv far_color_sand / _snow / _cliff
 MACRO_WAVE_M = 9000.0    # large patches of lighter and darker country
 # (their depth and the green-yellow drift are data/map3d_bake.csv macro_*)
@@ -863,8 +863,10 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     tw *= (1.0 - 0.85 * farm)[..., None]
     for t in range(NT):
         tw[..., t] += rules["field_strength"] * farm * (crop == t)
-    tw *= (1.0 - 0.9 * foot)[..., None]
-    tw[..., DIRT] += 2.0 * foot
+    # the built ground: trodden earth among the yards' grass (look route
+    # 2026-09-30: all dirt under a light tint read as a brown pad)
+    tw *= (1.0 - rules["footprint_ground_cut"] * foot)[..., None]
+    tw[..., DIRT] += rules["footprint_dirt"] * foot
     built = srgb_to_lin(hex_rgb(rules["footprint_tint"])).astype(np.float32)
     block_amt = rules["footprint_block_depth"] * (1.0 - r_house_mask)
     blocks = (1.0 - block_amt * block_n)[..., None] * built
@@ -1081,6 +1083,12 @@ def main(argv=None):
     t_cliff *= 1.0 - bank
     t_rock *= 1.0 - bank
     del bank
+    # scree and bare soil belong to the uplands (look route 2026-09-30): on a
+    # lowland slope -- a valley side, a coastal bank -- they drew pale grey
+    # blotches that read as mould on the grass
+    up = np.clip((height - SEA_Y - rules["rock_from_m"]) / max(rules["rock_full_m"] - rules["rock_from_m"], 1.0), 0, 1)
+    t_rock *= rules["rock_low_share"] + (1.0 - rules["rock_low_share"]) * up
+    del up
     hn = np.clip(height / max(float(height.max()), 1.0), 0, 1)
     keep = 1.0 - 0.85 * t_rock
     for t in (GRASS, LEAVES, DIRT, SAND, FOREST):
@@ -1172,6 +1180,19 @@ def main(argv=None):
     color_lin[..., 0] *= 1.0 - rules["macro_hue_depth"] * hue
     color_lin[..., 2] *= 1.0 - rules["macro_hue_depth"] * (1.0 - hue)
     color_lin *= (1.0 - rules["river_wet_darken"] * wet)[..., None]
+    # moisture (look route 2026-09-30, critic: one yellow-olive note from
+    # coast to hill): the country by its rivers and its coast greener and
+    # cooler, the dry high ground golden — a warm/cool split under the macro
+    # drift. Reads no random stream, so nothing after it moves.
+    river_near = np.clip(box(wet, int(rules["moist_river_m"] / VERTEX_M)) * rules["moist_river_gain"], 0, 1)
+    coast_near = 1.0 - box(land.astype(np.float32), int(rules["moist_coast_m"] / VERTEX_M))
+    moist = np.clip(river_near + coast_near * rules["moist_coast_gain"], 0, 1)
+    dry = (1.0 - moist) * np.clip((height - SEA_Y - rules["dry_from_m"]) / max(rules["dry_full_m"] - rules["dry_from_m"], 1.0), 0, 1)
+    color_lin[..., 0] *= 1.0 - rules["moist_green"] * moist
+    color_lin[..., 2] *= 1.0 - 0.4 * rules["moist_green"] * moist
+    color_lin[..., 1] *= 1.0 - 0.35 * rules["dry_gold"] * dry
+    color_lin[..., 2] *= 1.0 - rules["dry_gold"] * dry
+    del river_near, coast_near, moist, dry
     # the patchwork's fields, hedges, villages and each manor's own shade
     color_lin *= tint
     del tint

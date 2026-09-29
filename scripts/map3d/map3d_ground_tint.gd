@@ -45,6 +45,21 @@ uniform vec4 heat_c2 = vec4(1.0);
 uniform vec4 heat_c3 = vec4(1.0);
 uniform vec4 heat_c4 = vec4(1.0);
 uniform vec4 heat_c5 = vec4(1.0);
+// The WOODS (look route 2026-09-30): tools/map3d/bake_trees.py's woods.png,
+// R the canopy's share of a 40 m texel, G its conifer share. Under the drawn
+// clumps the floor darkens toward the canopy (wood_floor); far out, where no
+// clump is drawn, the canopy itself carries the wood (wood_far), mottled.
+uniform highp sampler2D wood_map : filter_linear, repeat_disable;
+uniform float wood_on = 0.0;
+uniform float wood_m_per_texel = 40.0;
+uniform float wood_floor = 0.5;
+uniform float wood_far = 0.9;
+uniform float wood_far_near_m = 3000.0;
+uniform float wood_far_far_m = 12000.0;
+uniform float wood_mottle_m = 180.0;
+uniform float wood_mottle = 0.5;
+uniform vec4 wood_broadleaf = vec4(0.18, 0.26, 0.12, 1.0);
+uniform vec4 wood_conifer = vec4(0.12, 0.2, 0.13, 1.0);
 // The weather (spec 2026-09-29-weather-visuals): Map3DWeatherField's
 // (wet, mud, snow, overcast) for this spell and the next, blended by
 // weather_blend; texel = weather_step_px pack px; colours raw sRGB.
@@ -112,6 +127,17 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 		float aa = 1.0 - smoothstep(0.2, 0.45, fwidth(ph));
 		float stripe = 0.5 + 0.5 * sin(ph * 6.2831853);
 		base_albedo *= 1.0 - furrow_depth * sown * aa * stripe;
+	}
+	if (wood_on > 0.0) {
+		vec2 wuv0 = (v_vertex.xz - pack_origin) / wood_m_per_texel / vec2(textureSize(wood_map, 0));
+		vec4 wd = texture(wood_map, wuv0);
+		float w_far = smoothstep(wood_far_near_m, wood_far_far_m, length(v_vertex - _camera_pos));
+		float w_mott = wx_noise(v_vertex.xz / wood_mottle_m) * 0.6
+			+ wx_noise(v_vertex.xz / (wood_mottle_m * 0.37) + vec2(7.1, 2.9)) * 0.4;
+		vec3 canopy = mix(wx_linear(wood_broadleaf.rgb), wx_linear(wood_conifer.rgb), wd.g)
+			* (1.0 + wood_mottle * (w_mott - 0.5) * 2.0);
+		float w_k = clamp(wd.r * mix(wood_floor, wood_far, w_far), 0.0, 1.0);
+		base_albedo = mix(base_albedo, canopy, w_k);
 	}
 	// The weather under the themes: the ground's own look, which a theme's
 	// tint then mixes over, like the relief and the sun.

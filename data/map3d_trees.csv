@@ -1,0 +1,29 @@
+key,value,notes
+spacing_m,32,"3D map woods (look route 2026-09-30): the grid a tree CLUMP is offered on, metres — one clump is 5-7 trees drawn larger than life like the houses, about 40 m across"
+jitter,0.9,woods: how far a candidate moves off its grid point as a share of spacing_m (1 = anywhere in its cell)
+grove_wave_m,2400,woods: the wavelength of the noise that gathers woods and opens clearings (taste: clustered not scattered)
+grove_gain,1.1,woods: how far that noise swings a place's woodedness (0 = the biome's share everywhere)
+edge_sharp,3.2,"woods: how hard the chance is squeezed toward 0 or 1 round 0.5, so a wood has an edge instead of thinning out over kilometres (1 = no squeeze)"
+lone_chance,0.006,woods: the chance of a lone clump on open land (savanna and grassland) — hedgerow and field trees
+min_above_sea_m,3,woods: no clump lower than this over the water plane (the shore and every lake)
+max_slope,0.55,woods: no clump on ground steeper than this rise over run (cliff faces stay bare rock)
+max_height_share,0.62,woods: no clump above this share of the highest ground (bake snow_line_lo — the tree line)
+road_clear_m,18,woods: a road or trail keeps this many metres clear each side
+river_clear_m,25,woods: a river keeps this many metres clear beyond its widest half-width
+house_clear_m,50,woods: no clump within this many metres of a house (the settlement and its yards)
+scale_min,0.8,woods: the smallest clump scale
+scale_max,1.25,woods: the largest
+biome_3,0.06|0.0,"woods by biome id: density|conifer share — savanna, a few copses"
+biome_4,0.04|0.0,grassland: a few copses
+biome_5,0.5|0.0,tropical seasonal forest
+biome_6,0.82|0.12,temperate deciduous forest
+biome_7,0.85|0.0,tropical rainforest
+biome_8,0.85|0.55,temperate rainforest
+biome_9,0.8|0.92,taiga
+biome_12,0.25|0.1,wetland: carr woods
+biome_13,0.32|0.4,hill band: woods on the hills
+biome_14,0.14|0.85,mountain band: pines on the lower mountains
+crown_reach_m,17,woods: a clump's crowns cover about a disc this wide in radius (before its scale) — woods.png's canopy share
+canopy_blur_texels,1,woods: woods.png is box-blurred this many 40 m texels each way so the canopy's edge is soft on the ground
+species_wave_m,900,"woods: the wavelength of the noise that gathers conifers and broadleaves into patches of one kind (critic: cones and spheres mixed tree by tree read as salt and pepper)"
+sown_keep_chance,0.97,woods: a sown field is left clear unless the wood's chance there is at least this (deep woods cover the patchwork instead of showing it as a grid)

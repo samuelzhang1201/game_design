@@ -71,6 +71,7 @@ var _scene_path := ""
 @onready var _clouds: Map3DLayerClouds = $Viewport/Clouds
 @onready var _markers: Map3DLayerSettlements = $Viewport/Markers
 @onready var _houses: Map3DLayerHouses = $Viewport/Houses
+@onready var _trees: Map3DLayerTrees = $Viewport/Trees
 @onready var _units: Map3DLayerUnits = $Viewport/Units
 @onready var _couriers: Map3DLayerCouriers = $Viewport/Couriers
 @onready var _env: WorldEnvironment = $Viewport/Environment
@@ -244,6 +245,7 @@ func _load() -> void:
 	_ctx.settle_ground()
 	_markers.build()
 	_houses.build()  # warm here (~91 ms), not on the first refresh() mid-play
+	_trees.build(_ctx)  # once: fixed chunks, Godot's visibility ranges do the rest
 	_sea.build(_ctx)
 	# The sky and sun are the scene's, their numbers data (Task 14); the
 	# environment is this view's own copy of the shared .tres.
@@ -551,7 +553,7 @@ func look_at_home(at_distance: float) -> void:
 func layer_names() -> PackedStringArray:
 	var out := PackedStringArray()
 	if _loaded:
-		out.append_array(["Markers", "Houses", "Lines", "Clouds", "Precip"])
+		out.append_array(["Markers", "Houses", "Trees", "Lines", "Clouds", "Precip"])
 		out.append_array(["Rivers"] if _rivers.mesh != null else [])
 		out.append_array(["Sea"] if _sea.has_water() else [])
 	out.append_array(["Shadows", "Hud"] if _loaded else [])

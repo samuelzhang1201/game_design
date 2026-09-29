@@ -31,6 +31,7 @@
 [ext_resource type="Script" uid="uid://bula280a44q8l" path="res://scripts/map3d/map3d_hud_needle.gd" id="17_geqxk"]
 [ext_resource type="StyleBox" uid="uid://btdf8fw324b5o" path="res://scenes/map3d/tooltip_chip.tres" id="19_rbqyb"]
 [ext_resource type="Script" uid="uid://ef76stqaenwo" path="res://scripts/map3d/map3d_layer_houses.gd" id="20_houses"]
+[ext_resource type="Script" path="res://scripts/map3d/map3d_layer_trees.gd" id="44_trees"]
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_au2na"]
 viewport_path = NodePath("Viewport")
@@ -94,6 +95,9 @@ script = ExtResource("7_wti7n")
 
 [node name="Houses" type="Node3D" parent="Viewport" unique_id=1359289226]
 script = ExtResource("20_houses")
+
+[node name="Trees" type="Node3D" parent="Viewport" unique_id=1359289300]
+script = ExtResource("44_trees")
 
 [node name="Environment" type="WorldEnvironment" parent="Viewport" unique_id=1880847201]
 environment = ExtResource("8_mtfpr")
