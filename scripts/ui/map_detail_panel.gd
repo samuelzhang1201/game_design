@@ -18,6 +18,8 @@ signal closed
 ## gone and the host overview opens from a regiment): the screen puts the
 ## MilitaryPanel in the left column.
 signal host_requested
+## A row of a LEDGER instance list was chosen (show_list).
+signal list_row_chosen(id: String)
 
 ## Sized for the left column's content width (ScreenLayout.LEFT_WIDTH less
 ## the column panel's margins).
@@ -308,6 +310,31 @@ func show_entry(entry: Dictionary) -> void:
 	for line in entry.get("lines", []):
 		_lines.add_child(_line(String(line), UiPalette.TEXT_SOFT))
 	_set_ask(String(entry.get("ask", "")))
+	_open_panel()
+
+
+## A clickable list in the left column (the LEDGER's instances of a type,
+## spec 2026-09-30 §6.1): each row a flat button that ellipsises rather than
+## widening the fixed column.
+func show_list(title: String, rows: Array) -> void:
+	_shown_province = ""
+	_clear()
+	_shield.visible = false
+	_title.text = title
+	_subtitle.visible = false
+	for row: Dictionary in rows:
+		var b := Button.new()
+		b.text = String(row["text"])
+		b.flat = true
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.clip_text = true
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		b.set_meta("ledger_id", String(row["id"]))
+		b.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+		var id := String(row["id"])
+		b.pressed.connect(func() -> void: list_row_chosen.emit(id))
+		_lines.add_child(b)
+	_set_ask("")
 	_open_panel()
 
 

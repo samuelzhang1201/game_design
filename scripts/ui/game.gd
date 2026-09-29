@@ -13,10 +13,6 @@ signal state_changed
 ## menu; GameRoot (the flow owner) listens and shows it.
 @warning_ignore("unused_signal")
 signal menu_requested
-## The TopBar's RELATIONS button asks for the relationship graph overlay;
-## GameRoot listens and toggles it.
-@warning_ignore("unused_signal")
-signal relations_requested
 ## A chronicle headline for the persistent bottom news strip (user request
 ## 2026-08-31). Emitted via publish_news — GameRoot feeds it as works
 ## progress and the month closes; the NewsTicker (GameRoot-owned) displays it.

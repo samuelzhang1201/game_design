@@ -24,7 +24,7 @@ var _pending_report: TickReport
 var _clock_acc := 0.0
 var _pause_menu: Control
 var _pause_status: Label
-var _relations_screen: RelationshipGraphScreen
+var _ledger_screen: LedgerScreen
 var _missive_screen: MissiveScreen
 var _report_popup: MissiveReportPopup
 ## Spy report ids waiting to open, oldest first (a new letter's id is always
@@ -83,11 +83,12 @@ func _ready() -> void:
 	# One game-wide Theme, inherited by every screen (see UiPalette).
 	theme = UiPalette.build_theme()
 	Game.menu_requested.connect(toggle_pause_menu)
-	Game.relations_requested.connect(toggle_relations)
-	_relations_screen = RelationshipGraphScreen.new()
-	_relations_screen.name = "RelationsScreen"
-	_relations_screen.visible = false
-	add_child(_relations_screen)
+	_ledger_screen = load("res://scenes/ledger_screen.tscn").instantiate()
+	_ledger_screen.name = "LedgerScreen"
+	_ledger_screen.show_requested.connect(_on_ledger_show)
+	_ledger_screen.closed.connect(_sync_map_view)
+	add_child(_ledger_screen)
+	get_viewport().size_changed.connect(_fit_ledger)
 	_missive_screen = load("res://scenes/missive_screen.tscn").instantiate()
 	_missive_screen.name = "MissiveScreen"
 	_missive_screen.visible = false
@@ -374,6 +375,8 @@ func _apply_dev_mode() -> void:
 		var v: Map3DView = current_screen.map3d_view()
 		if v != null:
 			v.set_dev_mode(_dev_mode)
+	if _ledger_screen != null:  # DEV MODE lifts the fog on the next snapshot
+		_ledger_screen.refresh()
 
 ## Test seam.
 func bgm_player() -> AudioStreamPlayer:
@@ -397,24 +400,59 @@ func toggle_pause_menu() -> void:
 func pause_menu() -> Control:
 	return _pause_menu
 
-## The relationship graph overlay sits below the pause menu, above screens.
-func toggle_relations() -> void:
+## LEDGER (spec 2026-09-30-ledger-ontology-design §6.1): the realm's ontology,
+## laid exactly over the map panel so both columns keep their kinds; the map
+## stops rendering underneath it and resumes when it closes. It sits below
+## the pause menu, above screens.
+func toggle_ledger() -> void:
 	if state == State.MENU:
 		return
-	_relations_screen.visible = not _relations_screen.visible
+	_missive_screen.visible = false
+	_info_screen.hide()
+	if _ledger_screen.visible:
+		_ledger_screen.close()
+		return
+	if current_screen == null or not current_screen.has_method("map_panel"):
+		return
+	var map: Control = current_screen.map_panel()
+	# The map panel narrows for the council column and moves with the left
+	# column: the LEDGER follows it (the connection dies with the screen).
+	if not map.item_rect_changed.is_connected(_fit_ledger):
+		map.item_rect_changed.connect(_fit_ledger)
+	_fit_ledger()
+	# The map stops rendering under the LEDGER. map3d_view() is null until the
+	# map was first shown (and always in the suite, map3d_default 0), so the
+	# view is put away directly rather than through set_map3d_view.
+	var map_view: Map3DView = current_screen.map3d_view() if current_screen.has_method("map3d_view") else null
+	if map_view != null:
+		map_view.deactivate()
+	_ledger_screen.open(current_screen.detail_panel())
 
-func relations_screen() -> RelationshipGraphScreen:
-	return _relations_screen
+func _fit_ledger() -> void:
+	if current_screen == null or not current_screen.has_method("map_panel"):
+		return
+	var map: Control = current_screen.map_panel()
+	_ledger_screen.position = map.global_position
+	_ledger_screen.size = map.size
+
+func ledger_screen() -> LedgerScreen:
+	return _ledger_screen
+
+## An order that needs the map (LedgerScreen.show_requested): the LEDGER has
+## already closed, and its `closed` ran _sync_map_view, which brought the map
+## back before this centres it and opens the subject's card.
+func _on_ledger_show(subject: Dictionary) -> void:
+	_on_missive_show(subject)
 
 ## The Missive board overlay (spec 2026-09-28 §2): a screen of its own, like
-## the relationship graph, toggled by its tab.
+## the LEDGER, toggled by its tab.
 func missive_screen() -> MissiveScreen:
 	return _missive_screen
 
 func toggle_missives() -> void:
 	if state == State.MENU:
 		return
-	_relations_screen.visible = false
+	_ledger_screen.close()
 	_info_screen.hide()
 	_missive_screen.visible = not _missive_screen.visible
 	if _missive_screen.visible:
@@ -541,34 +579,34 @@ func _on_missive_show(subject: Dictionary) -> void:
 
 ## Bottom bar routing: MAP is the default view (close every overlay — the
 ## live world map sits in the court screen's middle zone, user ruling
-## 2026-09-03), RELATIONSHIP toggles the graph, the rest open their info
-## table.
+## 2026-09-03), LEDGER and MISSIVE toggle their screens, the rest open
+## their info table.
 func _on_bottom_tab(tab: String) -> void:
 	match tab:
 		"HEIGHTS":
 			_info_screen.hide()
-			_relations_screen.visible = false
+			_ledger_screen.close()
 			_missive_screen.visible = false
 			set_height_view(not _height_view)
 		"MANORS":
 			_info_screen.hide()
-			_relations_screen.visible = false
+			_ledger_screen.close()
 			_missive_screen.visible = false
 			set_manor_view(not _manor_view)
 		"MEASUREMENT":
 			_info_screen.hide()
-			_relations_screen.visible = false
+			_ledger_screen.close()
 			_missive_screen.visible = false
 			set_ruler_view(not _ruler_view)
-		"RELATIONSHIP":
+		"LEDGER":
 			_info_screen.hide()
 			_missive_screen.visible = false
-			toggle_relations()
+			toggle_ledger()
 		"MISSIVE":
 			_info_screen.hide()
 			toggle_missives()
 		_:
-			_relations_screen.visible = false
+			_ledger_screen.close()
 			_missive_screen.visible = false
 			_info_screen.show_tab(tab)
 
@@ -745,7 +783,7 @@ func _switch_to(new_state: State) -> void:
 		current_screen.set_military_view(_army_view)
 	_sync_map_view()
 	# Overlays stay above screens across swaps: bottom bar, then info and
-	# relations, with the pause menu topmost.
+	# the LEDGER, with the pause menu topmost.
 	if _bottom_bar != null:
 		_bottom_bar.visible = new_state != State.MENU
 		move_child(_bottom_bar, get_child_count() - 1)
@@ -755,9 +793,9 @@ func _switch_to(new_state: State) -> void:
 	if _info_screen != null:
 		_info_screen.hide()
 		move_child(_info_screen, get_child_count() - 1)
-	if _relations_screen != null:
-		_relations_screen.visible = false
-		move_child(_relations_screen, get_child_count() - 1)
+	if _ledger_screen != null:
+		_ledger_screen.close()
+		move_child(_ledger_screen, get_child_count() - 1)
 	if _missive_screen != null:
 		_missive_screen.visible = false
 		move_child(_missive_screen, get_child_count() - 1)
