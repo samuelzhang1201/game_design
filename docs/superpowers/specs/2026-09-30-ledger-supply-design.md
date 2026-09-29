@@ -74,7 +74,13 @@ and morale never moves. After M1 + M2:
   `action_signatures.csv` (steward, no ideology swing), `order_costs.csv`
   (`opinion:steward:-1:the workshop's reeve re-set`), validated in
   `ActionSystem` (the manor holds a standing workshop and is the lord's;
-  rate ∈ {0, 500, 1000}). Saved; an old save has none.
+  rate ∈ {0, 500, 1000}). Saved; an old save has none. (Final review: the
+  rates, their words and the LEDGER's order labels are `data/workshop_rates.csv`
+  — `rate_permille,word,ledger_label` — and validation reads that table; a
+  rate is saved through `_encode_values` so it comes back a whole number,
+  and it is forgotten when its workshop is demolished or its manor leaves
+  the crown — `WorkshopSystem.rate_of` reads 1000 for a cell with no
+  standing workshop.)
 - **Settlement** `WorkshopSystem.settle_month(repo, state, r)` in
   `TickEngine.advance` right AFTER `_settle_economy` (so this month's civil
   goods are in) and BEFORE `ArmySystem.settle_month` (so this month's
@@ -85,7 +91,10 @@ and morale never moves. After M1 + M2:
   strategic goods" (one pair per month, summed).
 - `WorkshopSystem.plan(repo, state) -> Array[{cell, rate, take, make}]` is
   the pure function the tick and the LEDGER both read (the ration
-  precedent), so the LEDGER shows this month's projection exactly.
+  precedent). The LEDGER projects this month's flows from the pools AS THEY
+  STAND NOW; the settlement runs the same function on the pools after the
+  month's intake has landed, so the two agree whenever that intake does not
+  change what the pools can cover.
 
 ## 3. Supply lines (M1)
 
@@ -98,7 +107,11 @@ and morale never moves. After M1 + M2:
   the king's host; costs a one-line change if the owner wants the purses
   apart).
 - **Need.** A regiment is shipped what brings it to
-  `army_supply_target_months` (3) months of its own use
+  `army_supply_target_months` (4; 3 until the final review — a regiment
+  refilled to exactly `army_speed_supply_full_months` read a 2/3 supply
+  score all month once its use was spent, so the target is that full mark
+  plus the month about to be eaten; the steady cost is unchanged) months of
+  its own use at the ground it stands on NOW
   (`ArmySystem.supply_use`, which already carries the height tier), plus
   what the road will lose: `ship = ceil(short × 1000 / (1000 − loss))`.
 - **The line.** `SupplySystem.line_of(repo, state, code) -> {length_km,
@@ -106,10 +119,12 @@ and morale never moves. After M1 + M2:
   `CourierSystem.origin` to `ArmySystem.position_of` along
   `CourierSystem.path_between` (summed waypoint metres ÷ 1000); `loss =
   min(length_km × army_supply_loss_permille_per_100km / 100,
-  army_supply_loss_cap_permille)` (60 per 100 km, cap 600). A regiment with
-  order garrison standing in a province the crown controls has
-  `garrison: true`, `stronghold` = that province's `capital_burg`,
-  length 0, loss 0. A naval regiment (fleet) is skipped (fleets are
+  army_supply_loss_cap_permille)` (60 per 100 km, cap 600). A regiment
+  STANDING — standby or garrison, anything but a march — in a province the
+  crown controls has `stronghold` = that province's `capital_burg`, length
+  0, loss 0 (controller ruling, final review; before it only a GARRISON
+  order drew through the town), and `garrison: true` only under an explicit
+  GARRISON order (`SupplySystem.garrisoned_in`). A naval regiment (fleet) is skipped (fleets are
   exempt, as for couriers), and its morale does not drift.
 - **Short pools.** When the pools cannot cover every ship, each regiment
   gets `pool × its ship / total ships` (integer division, code order), so
@@ -122,7 +137,9 @@ and morale never moves. After M1 + M2:
 - `SupplySystem.plan(repo, state) -> Array[{code, need, ship, paid,
   delivered, loss_permille, length_km, garrison, stronghold}]` is the one
   pure function the tick, the regiment card (`army_supply_line` row: "412
-  km of road, a fifth lost" / "in garrison at X") and the LEDGER read.
+  km · 24% lost" / "at home", supplied through X / "in garrison" at X) and
+  the LEDGER read (a supply line's card opens on "N km, X% lost on the way"
+  or "through X, nothing lost").
 
 ## 4. Morale (M1)
 
@@ -132,8 +149,9 @@ regiment refilled to three months would read two and never feel fed), each
 regiment's morale moves
 `army_morale_drift_per_month` (6) points toward its **mark**:
 `mark = army_morale_starving + (army_morale_fed − army_morale_starving) ×
-supply_score / 1000` (20 … 75), `+ army_morale_garrison_bonus` (5) in
-garrison, clamped 0..100 (the clamp `readiness_permille` already assumes).
+supply_score / 1000` (20 … 75), `+ army_morale_garrison_bonus` (5) under
+an explicit GARRISON order in a controlled province (not for a regiment
+merely standing by there), clamped 0..100 (the clamp `readiness_permille` already assumes).
 Whole numbers. The regiment card's morale row gains the mark's reason
 ("well fed" / "on short rations" / "starving"; words from a new
 `data/army_morale_words.csv` by supply-score floor).
@@ -149,8 +167,8 @@ Whole numbers. The regiment card's morale row gains the mark's reason
   `take`), `converts_out` (workshop → strategic_goods, flow `make`),
   `supplies_in` (strategic_goods → supply_line, flow `paid`), `supplies_out`
   (supply_line → regiment, flow `delivered` units), `garrisons` (regiment →
-  town). Each reads the ONE plan function, so the LEDGER's figures are the
-  month's own. Accounts are `full` (the crown's own depots) — M3 is where a
+  town, an explicit GARRISON order only). Each reads the ONE plan function
+  the tick settles, projected from the pools as they stand now (§2). Accounts are `full` (the crown's own depots) — M3 is where a
   governor starts to lie about them.
 - Actions: `workshop` → `WORKSHOP_RATE` three rows (Off / Half / Full,
   `params rate=0|500|1000`, `manor=@cell`); `supply_line` → none in M1.
