@@ -25,7 +25,8 @@ and morale never moves. After M1 + M2:
   network to where the regiment stands NOW. Each month the crown ships
   what the regiment is short of; the longer the road, the more is lost on
   the way (charter rule 6). A regiment in garrison inside a province the
-  crown controls lives off its town instead: no road, no loss.
+  crown controls draws its stores through its town: no road, no loss (the
+  crown still pays for them).
 - **Morale follows the stores.** A fed regiment's morale climbs toward a
   high mark, a hungry one's sinks, a garrison's a little higher. Morale
   already scales power and readiness (`ArmySystem.power`,
@@ -90,7 +91,7 @@ and morale never moves. After M1 + M2:
   order garrison standing in a province the crown controls has
   `garrison: true`, `stronghold` = that province's `capital_burg`,
   length 0, loss 0. A naval regiment (fleet) is skipped (fleets are
-  exempt, as for couriers).
+  exempt, as for couriers), and its morale does not drift.
 - **Short pools.** When the pools cannot cover every ship, each regiment
   gets `pool × its ship / total ships` (integer division, code order), so
   shortage is shared, not decided by alphabet.
@@ -106,7 +107,10 @@ and morale never moves. After M1 + M2:
 
 ## 4. Morale (M1)
 
-Monthly, after supplies are settled and spent, each regiment's morale moves
+Monthly, after this month's supplies have ARRIVED and before its use is
+spent (the stores in hand as the month turns — computed after the spend, a
+regiment refilled to three months would read two and never feel fed), each
+regiment's morale moves
 `army_morale_drift_per_month` (6) points toward its **mark**:
 `mark = army_morale_starving + (army_morale_fed − army_morale_starving) ×
 supply_score / 1000` (20 … 75), `+ army_morale_garrison_bonus` (5) in
