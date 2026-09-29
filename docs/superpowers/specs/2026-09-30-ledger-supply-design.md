@@ -1,12 +1,31 @@
 # LEDGER M1 + M2 — supply lines, morale and the war workshop — design
 
-Status: designed 2026-09-30 overnight under the owner's standing order
-("完成游戏本体论的设计…plan和implementation，补全缺少的部分。根据你自己的判断
-行动，不用问我了"). Every choice below that the owner has not ruled on is
-marked **Default** with what it costs if wrong. Charter:
-`2026-09-30-ledger-ontology-design.md` §8 (M1, M2). These two milestones
-land together because a supply line needs a source of strategic goods and
-a workshop needs somewhere its goods go.
+Status: built 2026-09-30 (branch ledger-supply). Designed 2026-09-30
+overnight under the owner's standing order ("完成游戏本体论的设计…plan和
+implementation，补全缺少的部分。根据你自己的判断行动，不用问我了"). Every
+choice below that the owner has not ruled on is marked **Default** with
+what it costs if wrong. Charter: `2026-09-30-ledger-ontology-design.md` §8
+(M1, M2). These two milestones land together because a supply line needs a
+source of strategic goods and a workshop needs somewhere its goods go.
+
+Three rulings were made during the build, none by the owner (asleep,
+autonomous): **a war workshop works for the lord only while the crown's
+own house holds its manor** — sold or seized away, it stands idle
+(`WorkshopSystem.cells(repo, state)` filters by `MapManors.is_crowns`;
+`WORKSHOP_RATE` refuses a manor the crown does not hold) — rather than
+letting a foreign workshop go on converting or taking orders. **The road's
+supply line walks its first leg**, from the depot to the road network,
+the same way `CourierSystem.need_along` walks a courier's road, rather
+than the original code's start at the first waypoint (a review found it
+dropped that leg entirely whenever a route left the depot's own road
+node); `plan()` also builds one shortest-path tree per call, shared by
+every regiment, rather than one Dijkstra run per regiment. **The LEDGER's
+property gauges moved here from L0**: `2026-09-30-ledger-ontology-design.md`
+§6.3 left them for M1 without settling their shape, and its own §7.2's
+`{key, text, accounts}` sketch was never built; this plan's Task 5 instead
+draws `{key, label, value, max}` rings over a sphere's name — a regiment's
+supplies and morale, a goods pool's stock against 12 months of intake —
+the shape that spec's §12 now records as built.
 
 ## 1. What changes for the player
 
