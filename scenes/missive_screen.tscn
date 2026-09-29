@@ -141,6 +141,7 @@ autowrap_mode = 3
 
 [node name="LetterMeta" type="Label" parent="Frame/Col/Body/Desk/Letter"]
 unique_name_in_owner = true
+autowrap_mode = 3
 
 [node name="LetterFacts" type="VBoxContainer" parent="Frame/Col/Body/Desk/Letter"]
 unique_name_in_owner = true

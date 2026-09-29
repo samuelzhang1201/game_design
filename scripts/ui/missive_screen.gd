@@ -41,6 +41,11 @@ func _ready() -> void:
 	for col: String in HEADERS:
 		var plaque := get_node("%" + col.capitalize() + "Plaque") as Label
 		plaque.text = HEADERS[col]
+		# board art fix round finding #1: an unbroken plaque ("Worth
+		# consulting") forced its whole column to its full text width, which
+		# alone pushed the frame past the viewport. Letting it wrap means the
+		# column's minimum width is only its longest WORD.
+		plaque.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		# a column's plaque is a section header in its credibility's colour
 		UiPalette.style_section(plaque, PLAQUE_FONT_SIZE, MapPalette.named(Game.data, "intel_" + col))
 		# fix round 1: the fallback is the plaque's CURRENT look — the gold
@@ -60,7 +65,11 @@ func _ready() -> void:
 	# before this task, so its fallback is StyleBoxEmpty — the desk stays
 	# fully transparent, no border or inset, until its parchment is installed.
 	%Desk.add_theme_stylebox_override("panel", MissiveArt.style(Game.data, "letter", StyleBoxEmpty.new()))
-	UiPalette.style_title(%Title, 22)
+	# board art fix round finding #4: gold (the theme default) reads faint
+	# once the frame's carved wood is installed — the title sits on its
+	# cream opening, not the dark leather the gold was tuned for.
+	UiPalette.style_title(%Title, 22,
+		MapPalette.named(Game.data, "missive_ink") if MissiveArt.texture(Game.data, "frame") != null else UiPalette.GOLD)
 	# Board art follow-up: with the letter parchment installed the desk is
 	# cream, and the theme's light ink (gold title, muted meta) is
 	# unreadable on it — dark umber ink stands in instead. %LetterTitle and
@@ -175,6 +184,12 @@ func _note(m: Dictionary) -> Button:
 	b.add_theme_stylebox_override("hover", hover)
 	b.add_theme_stylebox_override("pressed", pressed)
 	b.add_theme_font_size_override("font_size", NOTE_FONT_SIZE)
+	# board art fix round finding #5's install: an unselected note now wears
+	# pale parchment (see above), where the theme's light chip text
+	# disappears — only the NORMAL state's colour, so hover/pressed (still
+	# flat dark chips) keep their own readable default.
+	if id != _selected and MissiveArt.texture(Game.data, "note") != null:
+		b.add_theme_color_override("font_color", MapPalette.named(Game.data, "missive_ink"))
 	b.pressed.connect(func() -> void: select(id))
 	var pin := MissiveArt.texture(Game.data, "pin")
 	if pin != null:
@@ -197,7 +212,13 @@ func _note(m: Dictionary) -> Button:
 
 
 func _fill_desk() -> void:
+	# board art fix round finding #3: remove_child() BEFORE queue_free(), as
+	# refresh()'s note-clearing loop already does — a queue_free() alone
+	# leaves the old label in the tree (and in get_children()) until the
+	# deferred free actually runs, so get_child(0) right after a re-fill can
+	# still read the PREVIOUS call's label.
 	for c in %LetterFacts.get_children():
+		%LetterFacts.remove_child(c)
 		c.queue_free()
 	var m := MissiveLog.find(Game.state, _selected)
 	%ShowOnMap.visible = not m.is_empty()

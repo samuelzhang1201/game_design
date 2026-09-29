@@ -1,7 +1,7 @@
 key,texture,margin,content,notes
 frame,res://assets/missives/frame.png,72,76,spec §3: the board's wooden frame (nine-sliced); empty until the Flux art is installed — UiPalette's flat style stands in
-board,,0,,the cork ground behind the columns (tiled)
-note,,40,10,a pinned parchment slip
+board,res://assets/missives/board.png,0,,the cork ground behind the columns (tiled)
+note,res://assets/missives/note.png,40,10,a pinned parchment slip
 letter,res://assets/missives/letter.png,64,40,the reading desk's parchment
 envelope,res://assets/missives/envelope.png,0,,the wax-sealed envelope that flies to the tab
 pin,res://assets/missives/pin.png,0,,the pin on a note

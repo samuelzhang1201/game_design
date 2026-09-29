@@ -63,6 +63,39 @@ func test_the_frame_sits_below_the_top_bar() -> void:
 		"the board's frame (%d) clears the top bar's bottom edge (%d)" % [frame_top, top_bar_bottom])
 
 
+## Board art fix round finding #1: at 1280x720 the desk's right edge (and
+## CLOSE) ran past the window in board_art_v2_desk.png. With all installed
+## art (the frame's texture margin, the content inset, four plaques' own
+## texture-margin floor, a note's unbreakable date, the letter's inset) the
+## Frame's combined minimum width must still fit inside its own offsets —
+## nothing may push it wider than the design viewport.
+func test_the_frame_fits_inside_the_viewport_with_all_art_installed() -> void:
+	Game.start_campaign(42)
+	# the real steward's report (five facts, unbreakable names like "Tax,
+	# all your provinces") is the letter board_art_v2_desk.png showed cut off.
+	var id := MissiveLog.add(Game.data, Game.state, MissiveWriter.monthly(Game.data, Game.state, 3))
+	_letter("credible")
+	_letter("consult")
+	_letter("rumour")
+	var r := _root()
+	await _enter(r)
+	get_tree().root.size = Vector2i(1280, 720)
+	await wait_frames(2)
+	r.toggle_missives()
+	await wait_frames(1)
+	r.missive_screen().select(id)
+	await wait_frames(2)
+	var frame := r.missive_screen().get_node("%Frame") as Control
+	var viewport := r.get_viewport_rect().size
+	var rect := frame.get_global_rect()
+	assert_true(rect.position.x >= -0.5,
+		"the frame's left edge (%.1f) is inside the viewport" % rect.position.x)
+	assert_true(rect.end.x <= viewport.x + 0.5,
+		"the frame's right edge (%.1f) fits inside the %d-wide viewport" % [rect.end.x, int(viewport.x)])
+	assert_true(rect.end.y <= viewport.y + 0.5,
+		"the frame's bottom edge (%.1f) fits inside the %d-tall viewport" % [rect.end.y, int(viewport.y)])
+
+
 func test_selecting_a_letter_reads_it_and_the_badge_follows() -> void:
 	Game.start_campaign(42)
 	var id := _letter("credible")
@@ -122,9 +155,19 @@ func test_the_selected_note_stands_out_and_its_date_never_breaks() -> void:
 	ms.refresh()
 	var picked := ms.find_child("Note%d" % a, true, false) as Button
 	var other := ms.find_child("Note%d" % b, true, false) as Button
-	var ps := picked.get_theme_stylebox("normal") as StyleBoxFlat
-	var os := other.get_theme_stylebox("normal") as StyleBoxFlat
-	assert_ne(ps.bg_color, os.bg_color, "the note on the desk is lit")
+	var ps := picked.get_theme_stylebox("normal")
+	var os := other.get_theme_stylebox("normal")
+	# board art fix round finding #5's install: with note art installed, an
+	# UNSELECTED note now wears the pinned-parchment texture instead of a
+	# flat chip — the selected one still keeps the flat lit style (fix round
+	# 1: "the selection still shows over parchment"), so the two are simply
+	# different STYLEBOX TYPES now, not just different bg_colors.
+	if MissiveArt.texture(Game.data, "note") != null:
+		assert_true(ps is StyleBoxFlat, "the selected note keeps the flat lit style")
+		assert_true(os is StyleBoxTexture, "an unselected note wears the pinned-parchment art")
+	else:
+		assert_true(ps is StyleBoxFlat and os is StyleBoxFlat)
+		assert_ne((ps as StyleBoxFlat).bg_color, (os as StyleBoxFlat).bg_color, "the note on the desk is lit")
 	var date := CourierCard.date_of(3)
 	assert_string_contains(picked.text, date.replace(" ", "\u00a0"), "the date is one unbreakable unit")
 	# ...and a long one still fits a column's note (at the body's 18 px the
@@ -291,13 +334,72 @@ func test_ink_on_parchment_once_the_letter_art_is_installed() -> void:
 	var inked_fact := inked.get_node("%LetterFacts").get_child(0) as Label
 	assert_eq(inked_fact.get_theme_color("font_color"), ink, "a fact, freshly created by _fill_desk")
 	# re-select (a fresh set of fact labels) to prove the colour is applied
-	# every time, not just the first _fill_desk call.
+	# every time, not just the first _fill_desk call. Board art fix round
+	# finding #3: _fill_desk only queue_free()d the old facts, so without
+	# remove_child() first, get_child(0) right after re-filling could still
+	# read the FIRST call's (already-inked) label — assert instance
+	# inequality too, so a regression here cannot pass by reading stale data.
 	inked.select(-1)
 	inked.select(id)
 	var inked_fact2 := inked.get_node("%LetterFacts").get_child(0) as Label
+	assert_ne(inked_fact2, inked_fact, "a fresh label from the second fill, not the first's")
 	assert_eq(inked_fact2.get_theme_color("font_color"), ink, "still inked after a second fill")
 
 	Game.data.missive_art["letter"] = saved
+
+
+## Board art fix round finding #4: with the frame's carved wood installed
+## the "Missives" title sits on its cream opening, where gold (the theme's
+## default title colour) reads faint. Plaques and CLOSE are unaffected —
+## the plaques already read well on the dark plaque art, and CLOSE is a
+## button, not text on the wood.
+func test_the_title_inks_over_the_frames_cream_opening_once_installed() -> void:
+	var saved := String(Game.data.missive_art.get("frame", ""))
+
+	Game.data.missive_art["frame"] = ""
+	var plain: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	add_child_autofree(plain)
+	assert_eq(plain.get_node("%Title").get_theme_color("font_color"), UiPalette.GOLD,
+		"unchanged without frame art")
+
+	Game.data.missive_art["frame"] = "res://icon.png"
+	var framed: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	add_child_autofree(framed)
+	assert_eq(framed.get_node("%Title").get_theme_color("font_color"),
+		MapPalette.named(Game.data, "missive_ink"), "reads on the frame's cream opening")
+
+	Game.data.missive_art["frame"] = saved
+
+
+## Board art fix round finding #5 (the install look check): an unselected
+## note's title/date kept the theme's light chip text, unreadable once the
+## note wears the pale parchment art — dark ink stands in, the same pattern
+## as the desk. The selected note keeps its flat lit chip and default text.
+func test_an_unselected_note_inks_over_installed_parchment() -> void:
+	Game.start_campaign(42)
+	var id := _letter("credible")
+	var saved := String(Game.data.missive_art.get("note", ""))
+
+	Game.data.missive_art["note"] = ""
+	var plain: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	add_child_autofree(plain)
+	plain.refresh()
+	var plain_note := plain.find_child("Note%d" % id, true, false) as Button
+	assert_false(plain_note.has_theme_color_override("font_color"), "unchanged without note art")
+
+	Game.data.missive_art["note"] = "res://icon.png"
+	var inked: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	add_child_autofree(inked)
+	inked.refresh()
+	var inked_note := inked.find_child("Note%d" % id, true, false) as Button
+	assert_eq(inked_note.get_theme_color("font_color"), MapPalette.named(Game.data, "missive_ink"),
+		"reads on the installed parchment")
+	inked.select(id)
+	var selected_note := inked.find_child("Note%d" % id, true, false) as Button
+	assert_false(selected_note.has_theme_color_override("font_color"),
+		"the selected note keeps its flat lit chip and default text")
+
+	Game.data.missive_art["note"] = saved
 
 
 func test_a_receipt_on_the_desk_wears_the_delivered_painting() -> void:

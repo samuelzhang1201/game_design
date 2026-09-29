@@ -90,6 +90,28 @@ def test_a_ground_that_lightens_toward_the_floor_is_grown_over_but_a_crisp_piece
     box = ia.alpha_box(w, h, ia.grow_ground(w, h, 3, bytes(px)))
     assert box == (4, 5, 8, 21), box
 
+
+def test_guarded_intersection_overlapping_boxes_intersect_as_normal():
+    assert ia.guarded_intersection((2, 2, 10, 10), (5, 5, 12, 12), 20, 20) == (5, 5, 10, 10)
+
+
+def test_guarded_intersection_falls_back_to_the_shadow_flood_box_when_the_two_do_not_overlap():
+    # board art fix round finding #2: a future render where the shadow-aware
+    # flood and the gradient-grow flood disagree could leave two valid but
+    # non-overlapping boxes; crop_rgba would get a negative-size box and
+    # raise, aborting the whole install_missive batch. The guard falls back
+    # to the shadow-flood box (`a`) alone instead of crashing.
+    a = (2, 2, 8, 8)
+    b = (20, 20, 30, 30)  # does not overlap a at all
+    assert ia.guarded_intersection(a, b, 40, 40) == a
+
+
+def test_guarded_intersection_falls_back_to_the_whole_render_when_even_that_is_empty():
+    a = (5, 5, 5, 5)  # degenerate: zero width and height
+    b = (20, 20, 30, 30)
+    assert ia.guarded_intersection(a, b, 40, 40) == (0, 0, 40, 40)
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

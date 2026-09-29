@@ -332,6 +332,27 @@ def alpha_box(w: int, h: int, rgba: bytearray) -> tuple:
     return (0, 0, w, h) if x1 < 0 else (x0, y0, x1 + 1, y1 + 1)
 
 
+def guarded_intersection(a: tuple, b: tuple, w: int, h: int, label: str = "") -> tuple:
+    """The intersection of two (x0, y0, x1, y1) boxes (install_missive's two
+    independent ground floods). `alpha_box` degrades to the whole w x h
+    canvas when ITS OWN flood ate everything, but nothing guaranteed the two
+    boxes actually overlap — a future render where the shadow-aware flood
+    and the gradient-grow flood disagree enough would hand crop_rgba a
+    negative-size box (`bytearray(cw * chh * 4)` with cw or chh < 0), which
+    raises and aborts the whole batch mid-loop (board art fix round finding
+    #2). Falls back to `a` alone, then to the full canvas if `a` is itself
+    degenerate, printing a warning instead of crashing."""
+    box = (max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3]))
+    if box[2] <= box[0] or box[3] <= box[1]:
+        tag = (" for " + label) if label else ""
+        print("  (WARNING%s: the two ground floods do not overlap; using the shadow-flood box alone)" % tag)
+        box = a
+        if box[2] <= box[0] or box[3] <= box[1]:
+            print("  (WARNING%s: the shadow-flood box is empty too; using the whole render)" % tag)
+            box = (0, 0, w, h)
+    return box
+
+
 def crop_rgba(w: int, px: bytearray, box: tuple) -> tuple:
     x0, y0, x1, y1 = box
     cw, chh = x1 - x0, y1 - y0
@@ -447,7 +468,7 @@ def install_missive() -> int:
             # the floor, step by small step); the piece is what both leave
             a = alpha_box(w, h, flood_ground(w, h, ch, px, shadows=True))
             b = alpha_box(w, h, grow_ground(w, h, ch, px))
-            box = (max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3]))
+            box = guarded_intersection(a, b, w, h, "%s / %s" % (art_id, key))
             cw, chh, piece = crop_rgba(w, rgba, box)
             small = resize_rgba(cw, chh, piece, tw, th)
         encode_png(dest / ("%s.png" % key), tw, th, 4, bytes(small))
