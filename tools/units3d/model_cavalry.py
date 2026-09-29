@@ -1,6 +1,6 @@
 """The cavalry piece, MODELLED BY HAND in Blender (owner 2026-09-25: the
 Hunyuan3D knight is replaced; design "Z-Image C", references in
-assets/flux/out/cavalry_c_sheet/, made by tools/units3d/gen_cavalry_sheet.py).
+assets/flux/out/cavalry_c_sheet/, made by tools/units3d/gen_cavalry_sheet.py — both deleted 2026-09-30).
 
   blender -b --factory-startup --python tools/units3d/model_cavalry.py
   # or inside a running Blender (the Blender MCP):
