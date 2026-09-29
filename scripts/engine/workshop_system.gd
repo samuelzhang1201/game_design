@@ -1,0 +1,72 @@
+class_name WorkshopSystem
+extends RefCounted
+## The war workshops (spec 2026-09-30-ledger-supply-design §2): each standing
+## war workshop turns up to workshop_capacity_gold of the LORD's civil goods
+## a month, times its rate, into workshop_ratio_permille as much strategic
+## goods. Whole gold, cell order; plan() is the one function the tick, the
+## cards and the LEDGER read.
+
+const BUILDING := "war_workshop"
+const RATES := [0, 500, 1000]
+
+
+static func cells(state: GameState) -> Array:
+	var out: Array = []
+	for key: String in state.manor_buildings:
+		if BUILDING in (state.manor_buildings[key] as Array):
+			out.append(int(key))
+	out.sort()
+	return out
+
+
+static func rate_of(state: GameState, cell: int) -> int:
+	return int(state.workshop_rate.get(str(cell), 1000))
+
+
+static func set_rate(state: GameState, cell: int, rate: int) -> void:
+	if rate == 1000:
+		state.workshop_rate.erase(str(cell))
+	else:
+		state.workshop_rate[str(cell)] = rate
+
+
+static func rate_word(rate: int) -> String:
+	match rate:
+		0:
+			return "cold"
+		500:
+			return "at half"
+	return "in full"
+
+
+## Cell order, running out the lord's civil goods as it goes: {cell, rate,
+## take, make}. Never reaches into anyone's civil goods but the LORD's, and
+## never takes more than what is left once every cell before it has taken
+## its share.
+static func plan(repo: DataRepository, state: GameState) -> Array:
+	var out: Array = []
+	var left := maxi(int(state.metrics.get("lord_civil", 0.0)), 0)
+	var cap := int(repo.bal("workshop_capacity_gold"))
+	var ratio := int(repo.bal("workshop_ratio_permille"))
+	for cell: int in cells(state):
+		var rate := rate_of(state, cell)
+		@warning_ignore("integer_division")
+		var take := mini(cap * rate / 1000, left)
+		left -= take
+		@warning_ignore("integer_division")
+		var make := take * ratio / 1000
+		out.append({"cell": cell, "rate": rate, "take": take, "make": make})
+	return out
+
+
+## The month's lines for the tick to apply (it owns the report).
+static func settle_month(repo: DataRepository, state: GameState) -> Array:
+	var took := 0
+	var made := 0
+	for row: Dictionary in plan(repo, state):
+		took += int(row["take"])
+		made += int(row["make"])
+	if took == 0:
+		return []
+	return [{"metric": "lord_civil", "delta": -took, "reason": "the war workshops take civil goods"},
+		{"metric": "lord_strategic", "delta": made, "reason": "the war workshops make strategic goods"}]

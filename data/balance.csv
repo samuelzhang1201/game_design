@@ -631,3 +631,5 @@ ledger_disc_thickness_m,0.04,LEDGER: thickness of each layer's disc
 ledger_disc_offset_m,0.6,LEDGER: how far below its layer's spheres a disc floats
 ledger_disc_segments,64,LEDGER: a disc's radial segments
 ledger_pick_radius_min_m,0.25,LEDGER: a thread is picked within at least this radius (metres) however thin it is drawn
+workshop_capacity_gold,40,"LEDGER M2 (spec 2026-09-30-ledger-supply-design §2): gold of the lord's civil goods one war workshop takes a month at full rate"
+workshop_ratio_permille,700,LEDGER M2: strategic goods made per mille of civil goods taken

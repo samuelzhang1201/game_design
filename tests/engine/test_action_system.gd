@@ -442,6 +442,10 @@ func test_buildings_need_their_land_and_their_prerequisites() -> void:
 		for col in ["tax_bonus", "output_bonus", "defence_bonus", "church_bonus", "gold_per_tick",
 				"grain_per_tick", "contentment_per_tick", "unrest_per_tick"]:
 			yields = yields or absf(float(row.get(col, 0))) > 0.0
+		# The war workshop yields nothing in these columns: it turns the
+		# lord's civil goods into strategic goods through WorkshopSystem
+		# instead (spec 2026-09-30-ledger-supply-design §2).
+		yields = yields or code == WorkshopSystem.BUILDING
 		assert_true(yields, "%s yields something" % code)
 		for p in MapManors.building_prereqs(data, code):
 			assert_true(data.manor_buildings.has(p), "%s needs %s, a real building" % [code, p])

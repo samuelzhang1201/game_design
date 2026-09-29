@@ -271,6 +271,9 @@ var manor_works: Dictionary = {}
 ## work at (data/manor_focus.csv) and the tick it was set, ONLY for manors
 ## whose focus was chosen — an absent manor works its terrain's default.
 var manor_focus: Dictionary = {}
+## cell id (String) -> permille (0 or 500) for each war workshop set away
+## from full (spec 2026-09-30-ledger-supply-design §2); full is not stored.
+var workshop_rate: Dictionary = {}
 ## cell id (String) -> province_code, ONLY for manors moved out of their pack
 ## province: a manor bought across the border joins the realm's province it
 ## borders (owner 2026-09-14). Read through MapManors.province_of, never directly.
@@ -328,6 +331,7 @@ func to_dict() -> Dictionary:
 		"manor_province": manor_province.duplicate(),
 		"manor_buildings": manor_buildings.duplicate(true),
 		"manor_focus": manor_focus.duplicate(true),
+		"workshop_rate": workshop_rate.duplicate(true),
 		"manor_works": _encode_values(manor_works.duplicate(true)),
 		"manor_log": _encode_values(manor_log.duplicate(true)),
 		"regiments": _encode_values(regiments.duplicate(true)),
@@ -391,6 +395,9 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.manor_province = d.get("manor_province", {}).duplicate()
 	s.manor_buildings = d.get("manor_buildings", {}).duplicate(true)
 	s.manor_focus = d.get("manor_focus", {}).duplicate(true)
+	# Saves from before the war workshops carry no key: every workshop runs
+	# in full (WorkshopSystem.rate_of's own default).
+	s.workshop_rate = d.get("workshop_rate", {}).duplicate(true)
 	s.manor_works = _decode_values(d.get("manor_works", {}))
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	s.regiments = _decode_values(d.get("regiments", {}))

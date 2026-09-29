@@ -45,6 +45,11 @@ func advance(state: GameState) -> TickReport:
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.
 	_settle_economy(state, r)
+	# The war workshops (spec 2026-09-30-ledger-supply-design §2): this
+	# month's civil goods are in; turn the lord's share into arms before the
+	# supply lines ship.
+	for l: Dictionary in WorkshopSystem.settle_month(data, state):
+		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
 	# The provinces' wealth tiers are settled with the month (Ruling 15):
 	# state, so no reader's timing can decide what a spy's report says.
 	Intel.settle_wealth_tiers(data, state)
