@@ -69,7 +69,7 @@ func validate(req: ActionRequest, state: GameState) -> String:
 		"CHARACTER_REWARD":
 			if not req.params.get("mode", "gold") in ["gold"]:
 				return "mode must be gold (slice 1)"
-		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE", "MANOR_FOCUS", "MANOR_DEMOLISH", "MANOR_RUSH":
+		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE", "MANOR_FOCUS", "MANOR_DEMOLISH", "MANOR_RUSH", "WORKSHOP_RATE":
 			return _validate_manor(req, state, needs)
 		"ARMY_MARCH", "ARMY_GARRISON":
 			return _validate_army(req, state)
@@ -263,6 +263,14 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			var fee := float(data.manor_focus[focus]["switch_cost_gold"])
 			if float(state.metrics.get("lord_gold", 0.0)) < fee:
 				return "Your own purse cannot afford to turn %s to %s (%d gold)" % [label, name, int(fee)]
+		"WORKSHOP_RATE":
+			if not WorkshopSystem.BUILDING in MapManors.buildings_of(state, cell):
+				return "%s has no war workshop" % label
+			var rate := int(req.params.get("rate", -1))
+			if not rate in WorkshopSystem.RATES:
+				return "A war workshop runs cold, at half or in full"
+			if rate == WorkshopSystem.rate_of(state, cell):
+				return "The war workshop at %s already runs %s" % [label, WorkshopSystem.rate_word(rate)]
 	return ""
 
 func execute(req: ActionRequest, state: GameState) -> Dictionary:
@@ -417,6 +425,12 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			MapManors.set_focus(data, state, cell, focus, "turned from %s to %s by the crown" % [was, String(row_f["label"]).to_lower()])
 			effects.append({"metric": "manor", "delta": 0.0,
 				"reason": "%s turns to %s; %d ticks to settle in" % [label, String(row_f["label"]).to_lower(), int(float(row_f["transition_ticks"]))]})
+		"WORKSHOP_RATE":
+			var cell := manor_of(req)
+			var rate := int(req.params["rate"])
+			WorkshopSystem.set_rate(state, cell, rate)
+			effects.append({"metric": "manor", "delta": 0.0, "reason": "the war workshop at %s now runs %s"
+				% [MapManors.label_of(data, cell), WorkshopSystem.rate_word(rate)]})
 		"MANOR_SEIZE":
 			# The skeleton (MANOR_SYSTEM.md §5): the outcome is automatic success
 			# until the military system can roll defence against the host.
