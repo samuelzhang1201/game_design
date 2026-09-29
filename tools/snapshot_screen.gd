@@ -81,6 +81,10 @@ var _at3d := Vector2(-1, -1)
 ## --day-share F holds the clock at F of the day (0..1), so a shot shows the
 ## sun where it stands then: 0.25 noon in the south, 0.75 the north's dusk.
 var _day_share := -1.0
+## --weather KIND (with --screen root) lays that weather over every province on
+## the 3D map (spec 2026-09-29-weather-visuals) — the look only, the engine's
+## weather is untouched.
+var _weather := ""
 ## --ruler fx1,fy1,fx2,fy2 (with --screen root) lights the MEASUREMENT tab
 ## and clicks the showing map at those shares of its size, so the shot shows
 ## a fixed ruler; --ruler-open leaves it stretching to the second point.
@@ -179,6 +183,8 @@ func _ready() -> void:
 		elif args[i] == "--hover3d":
 			var hparts := args[i + 1].split(",")
 			_hover3d = Vector2(float(hparts[0]), float(hparts[1]))
+		elif args[i] == "--weather":
+			_weather = args[i + 1]
 		elif args[i] == "--day-share":
 			_day_share = float(args[i + 1])
 		elif args[i] == "--at3d":
@@ -396,6 +402,8 @@ func _process(_delta: float) -> void:
 		var v3: Map3DView = _root.current_screen.map3d_view()
 		if _dev:
 			v3.set_dev_mode(true)
+		if _weather != "":
+			v3.set_weather_override(_weather)
 		if _at3d.x >= 0.0:
 			v3.look_at_pack(_at3d, _zoom3d)
 		else:

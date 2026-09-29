@@ -53,3 +53,5 @@ house_wall_daub,#8C7856,"3D MAP houses (2026-09-21): plain unlimewashed daub, da
 house_wall_stone,#A29C89,"3D MAP houses (2026-09-21): bare dressed stone, greyer than house_wall — the grander material (a landmark, a merchant's house) alongside house_roof_slate"
 house_beam,#3E2A1D,"3D MAP houses (v4, 2026-09-21): dark weathered oak — corner posts, a mid rail and a couple of studs standing proud of a daub/plaster wall (TIMBER_TYPES in make_houses.py), the third of up to four material slots (wall, roof, beam, void)"
 house_void,#211C19,"3D MAP houses (v4, 2026-09-21): a door or window's recess — no frame, no mullions, just a dark box let a few centimetres into the wall (make_houses.py's opening()), the fourth material slot"
+weather_snow,#E9EDEF,"3D MAP weather look (spec 2026-09-29-weather-visuals): fresh snow over the ground in a province under snow or a blizzard — a touch below white, since the AgX tonemap at exposure 1.4 blows a white albedo out"
+weather_mud,#6E5536,"3D MAP weather look: the brown the ground moves toward in a province under mud"

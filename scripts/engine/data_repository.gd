@@ -106,7 +106,8 @@ var spy_difficulty: Dictionary = {}
 var missive_art: Dictionary = {}
 ## data/road_speed.csv: key -> per mille (road, trail, offroad, sea, tier_<tier>).
 var road_speed: Dictionary = {}
-## data/weather.csv: kind -> {speed_permille, icon, label}, in the file's order.
+## data/weather.csv: kind -> {speed_permille, icon, label, and the look: overcast,
+## wet, mud, snow, rainfall, snowfall (0..1)}, in the file's order.
 var weather_kinds: Dictionary = {}
 ## data/weather_odds.csv: "season|tier" -> {kind: weight}, kinds in weather_kinds' order.
 var weather_odds: Dictionary = {}
@@ -573,7 +574,10 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/weather.csv", ["kind", "speed_permille", "icon", "label"],
 			func(r): weather_kinds[String(r["kind"])] = {"speed_permille": int(r["speed_permille"]),
-				"icon": String(r["icon"]), "label": String(r["label"])}):
+				"icon": String(r["icon"]), "label": String(r["label"]),
+				"overcast": float(r.get("overcast", 0)), "wet": float(r.get("wet", 0)),
+				"mud": float(r.get("mud", 0)), "snow": float(r.get("snow", 0)),
+				"rainfall": float(r.get("rainfall", 0)), "snowfall": float(r.get("snowfall", 0))}):
 		return false
 	if not _load_if_present(dir + "/weather_odds.csv", ["season", "tier"], _add_weather_odds):
 		return false

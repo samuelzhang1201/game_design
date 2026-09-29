@@ -183,6 +183,12 @@ func _build_manor_edges() -> void:
 		Map3DLineStyle.solid(ink, "map_manor_line_width", Map3DPriority.MANOR_EDGES))
 
 
+## The terrain material carrying the patch (null without a Terrain3D, or when
+## the addon's code would not patch) — the weather's uniforms go on it too.
+func tint_material() -> Resource:
+	return _tint_mat
+
+
 ## The LUT the terrain shader reads (null before the first theme).
 func cell_lut() -> ImageTexture:
 	return _cell_lut

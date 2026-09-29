@@ -88,6 +88,7 @@ var _roads := Map3DLayerRoads.new()
 var _borders := Map3DLayerBorders.new()
 ## Made before _ready: a theme or a clear_hover may come before the first load.
 var _themes := Map3DLayerThemes.new()
+var _weather := Map3DLayerWeather.new()  # the weather's look (spec 2026-09-29-weather-visuals)
 var _picker := Map3DPicker.new()
 var _selection := Map3DSelection.new()
 var _input := Map3DInput.new()
@@ -257,6 +258,7 @@ func _load() -> void:
 	_borders.bind(_ctx, _lines)
 	_themes.bind(_ctx, _lines)
 	_themes.prepare(_scene_path)
+	_weather.bind(_ctx, _themes.tint_material())
 	_picker.bind(_ctx, self, _tooltip, _borders)
 	_selection.bind(_ctx, _lines, _markers, self)
 	_loaded = true
@@ -341,6 +343,8 @@ func _refresh_theme() -> void:
 		_hud.refresh()
 
 func heat_on() -> bool: return _themes.heat_on()
+## Every province under `kind` on the map ("" the real weather) — snapshot_screen --weather.
+func set_weather_override(kind: String) -> void: _weather.set_override(kind)
 func cell_lut() -> ImageTexture: return _themes.cell_lut()
 func lut_color(id: int) -> Color: return _themes.lut_color(id)
 
@@ -384,6 +388,7 @@ func _process(delta: float) -> void:
 		_border_clock = 0.0
 		refresh_borders()
 	if _loaded:
+		_weather.step()
 		_clouds.step(delta)
 		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
 		if _couriers.step(delta): _hud.refresh()  # the couriers' roads and counters follow them
@@ -516,7 +521,7 @@ func select_object(picked: Dictionary) -> void: if _loaded: _selection.select(pi
 
 ## Test seam (Ruling 18): the inner part named `key`, or null.
 func component(key: String) -> Object:
-	return {"roads": _roads, "borders": _borders, "themes": _themes, "input": _input,
+	return {"roads": _roads, "borders": _borders, "themes": _themes, "weather": _weather, "input": _input,
 		"rig": _rig, "picker": _picker, "selection": _selection}.get(key)
 
 # --- test seams and the bench -------------------------------------------------------

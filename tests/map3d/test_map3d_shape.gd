@@ -52,8 +52,11 @@ func _lines(path: String) -> int:
 ##
 ## 568 since the spy's right-click on the ground (2026-09-28): a signal and its
 ## emit — SpyOrderMenu does the work.
+## 573 since the weather's look (2026-09-29): the layer's var, its bind, its
+## step in _process and set_weather_override with its note — Map3DLayerWeather
+## does the work.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 568)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 573)
 
 
 func test_every_other_script_is_small() -> void:

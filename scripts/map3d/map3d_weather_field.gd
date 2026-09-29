@@ -1,0 +1,199 @@
+class_name Map3DWeatherField
+extends RefCounted
+## The weather as the 3D map draws it (spec 2026-09-29-weather-visuals): a
+## low-resolution FIELD over the pack, one texel per map3d_weather_field_step_px
+## pack px, each land texel the look of its cell's province's weather that
+## spell (data/weather.csv's overcast, wet, mud, snow, rainfall, snowfall),
+## blurred over land only (map3d_weather_field_blur_halvings halvings) — the sea
+## by a coast takes the coast's weather — so a front, not a province outline,
+## is what the ground shows. Pure and look-only: Weather.of is read, nothing is written.
+##
+## `ground` is RGBA8 (wet, mud, snow, overcast), `fall` RG8 (rainfall,
+## snowfall); a texel (i, j) covers pack px [i, i + 1) × step, sampled at its
+## centre.
+
+var step_px := 16
+var size := Vector2i.ONE
+## Texel → cell id (-1 water), row-major; cut once per pack.
+var _cells := PackedInt32Array()
+## Texel → ordinal in _prov_codes, cut again when a manor changes province.
+var _texel_prov := PackedInt32Array()
+var _prov_codes: Array = []
+var _prov_key := -1
+
+
+func _init(repo: DataRepository) -> void:
+	step_px = maxi(1, int(repo.bal("map3d_weather_field_step_px")))
+	var img := _cell_index(repo)
+	if img == null:
+		return
+	@warning_ignore("integer_division")  # whole texels over the pack
+	size = Vector2i(maxi(1, (img.get_width() + step_px - 1) / step_px),
+		maxi(1, (img.get_height() + step_px - 1) / step_px))
+	_cells.resize(size.x * size.y)
+	@warning_ignore("integer_division")  # the texel's centre pixel
+	var half := step_px / 2
+	for j in size.y:
+		for i in size.x:
+			var x := mini(i * step_px + half, img.get_width() - 1)
+			var y := mini(j * step_px + half, img.get_height() - 1)
+			var c := img.get_pixel(x, y)
+			var id := int(round(c.r * 255.0)) + int(round(c.g * 255.0)) * 256
+			_cells[j * size.x + i] = id if repo.cells.has(id) else -1
+
+
+## The pack's world_cell_index.png read as a file (it is data: R + G × 256,
+## white water), or null.
+static func _cell_index(repo: DataRepository) -> Image:
+	if repo.cell_texture_path == "":
+		return null
+	var tex := load(repo.cell_texture_path) as Texture2D if ResourceLoader.exists(repo.cell_texture_path) else null
+	if tex != null:
+		return tex.get_image()
+	var path := ProjectSettings.globalize_path(repo.cell_texture_path)
+	return Image.load_from_file(path) if FileAccess.file_exists(path) else null
+
+
+## A kind's ground look: (wet, mud, snow, overcast).
+static func channels(repo: DataRepository, kind: String) -> Color:
+	var k: Dictionary = repo.weather_kinds.get(kind, {})
+	return Color(float(k.get("wet", 0.0)), float(k.get("mud", 0.0)),
+		float(k.get("snow", 0.0)), float(k.get("overcast", 0.0)))
+
+
+## A kind's falling weather: (rainfall, snowfall).
+static func fall(repo: DataRepository, kind: String) -> Vector2:
+	var k: Dictionary = repo.weather_kinds.get(kind, {})
+	return Vector2(float(k.get("rainfall", 0.0)), float(k.get("snowfall", 0.0)))
+
+
+## The first absolute day of a spell.
+static func first_day_of(repo: DataRepository, spell: int) -> int:
+	return spell * maxi(1, int(repo.bal("weather_spell_days"))) + 1
+
+
+## {spell, t}: the spell a moment falls in and how far its field has turned to
+## the NEXT spell's — 0 until the last map3d_weather_blend_days of the spell,
+## then eased to 1 at its end (a front arriving, not a switch).
+static func blend_of(repo: DataRepository, abs_day: int, day_share: float) -> Dictionary:
+	var days := maxi(1, int(repo.bal("weather_spell_days")))
+	var spell := Weather.spell_of(repo, abs_day)
+	var pos := float(maxi(abs_day, 1) - 1 - spell * days) + clampf(day_share, 0.0, 1.0)
+	var span := clampf(repo.bal("map3d_weather_blend_days"), 0.0, float(days))
+	var t := 0.0 if span <= 0.0 else smoothstep(float(days) - span, float(days), pos)
+	return {"spell": spell, "t": t}
+
+
+## The field for a spell: {ground: Image, fall: Image, kinds: {province: kind}}.
+## `kind_of` (province -> kind) stands in for Weather.of — a tool's forced sky.
+func build(repo: DataRepository, state: GameState, spell: int, kind_of: Callable = Callable()) -> Dictionary:
+	var day := first_day_of(repo, spell)
+	_index_provinces(repo, state)
+	# each province's look as bytes: premultiplied by land, so the blur below is
+	# a land-weighted one — RGBA (wet, mud, snow, overcast), RGB (rainfall,
+	# snowfall, land)
+	var kinds: Dictionary = {}
+	var g_look := PackedByteArray()
+	var f_look := PackedByteArray()
+	g_look.resize(_prov_codes.size() * 4)
+	f_look.resize(_prov_codes.size() * 3)
+	for p in _prov_codes.size():
+		var code: String = _prov_codes[p]
+		var kind := String(kind_of.call(code)) if kind_of.is_valid() else Weather.of(repo, state, code, day)
+		kinds[code] = kind
+		var c := channels(repo, kind)
+		var f := fall(repo, kind)
+		g_look.encode_u32(p * 4, c.to_abgr32())
+		f_look[p * 3] = int(round(f.x * 255.0))
+		f_look[p * 3 + 1] = int(round(f.y * 255.0))
+		f_look[p * 3 + 2] = 255
+	var n := size.x * size.y
+	var g := PackedByteArray()
+	g.resize(n * 4)
+	var fb := PackedByteArray()
+	fb.resize(n * 3)
+	for t in n:
+		var p := _texel_prov[t]
+		if p < 0:
+			continue
+		g[t * 4] = g_look[p * 4]
+		g[t * 4 + 1] = g_look[p * 4 + 1]
+		g[t * 4 + 2] = g_look[p * 4 + 2]
+		g[t * 4 + 3] = g_look[p * 4 + 3]
+		fb[t * 3] = f_look[p * 3]
+		fb[t * 3 + 1] = f_look[p * 3 + 1]
+		fb[t * 3 + 2] = 255
+	var ground := Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGBA8, g)
+	var falls := Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGB8, fb)
+	var halvings := int(repo.bal("map3d_weather_field_blur_halvings"))
+	_blur(ground, halvings)
+	_blur(falls, halvings)
+	# un-premultiply; a texel's look fades with the land in its reach, so the
+	# sea by a coast keeps the coast's weather and open sea stays clear
+	g = ground.get_data()
+	fb = falls.get_data()
+	var out_f := PackedByteArray()
+	out_f.resize(n * 2)
+	for t in n:
+		var land := fb[t * 3 + 2]
+		if land < 2:
+			g[t * 4] = 0
+			g[t * 4 + 1] = 0
+			g[t * 4 + 2] = 0
+			g[t * 4 + 3] = 0
+			continue
+		var k := minf(2.0, 255.0 / float(land))  # full weather from half land in reach
+		for c in 4:
+			g[t * 4 + c] = mini(255, int(float(g[t * 4 + c]) * k + 0.5))
+		out_f[t * 2] = mini(255, int(float(fb[t * 3]) * k + 0.5))
+		out_f[t * 2 + 1] = mini(255, int(float(fb[t * 3 + 1]) * k + 0.5))
+	return {"ground": Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGBA8, g),
+		"fall": Image.create_from_data(size.x, size.y, false, Image.FORMAT_RG8, out_f), "kinds": kinds}
+
+
+## Texel → province ordinal (-1 water) under the state's holdings: annexed
+## manors carry their new province's weather, as Weather.at does.
+func _index_provinces(repo: DataRepository, state: GameState) -> void:
+	var key := 0 if state == null else state.manor_province.hash()
+	if key == _prov_key and not _texel_prov.is_empty():
+		return
+	_prov_key = key
+	var ordinal: Dictionary = {}
+	_prov_codes = []
+	var prov_of_cell: Dictionary = {}
+	_texel_prov = PackedInt32Array()
+	_texel_prov.resize(_cells.size())
+	for t in _cells.size():
+		var cell := _cells[t]
+		if cell < 0:
+			_texel_prov[t] = -1
+			continue
+		if not prov_of_cell.has(cell):
+			var code := MapManors.province_of(repo, cell, state)
+			if code != "" and not ordinal.has(code):
+				ordinal[code] = _prov_codes.size()
+				_prov_codes.append(code)
+			prov_of_cell[cell] = int(ordinal.get(code, -1))
+		_texel_prov[t] = int(prov_of_cell[cell])
+
+
+## Softens `img` over about `halvings` octaves: halved that many times (each a
+## 2x2 mean) and grown back by a cubic — native Image work, a few ms.
+static func _blur(img: Image, halvings: int) -> void:
+	var w := img.get_width()
+	var h := img.get_height()
+	for i in halvings:
+		@warning_ignore("integer_division")  # whole texels
+		img.resize(maxi(1, img.get_width() / 2), maxi(1, img.get_height() / 2), Image.INTERPOLATE_BILINEAR)
+	if halvings > 0:
+		img.resize(w, h, Image.INTERPOLATE_CUBIC)
+
+
+## The ground look (wet, mud, snow, overcast) of `ground` at a pack point
+## (nearest texel), for the clouds to read on the CPU.
+func sample(ground: Image, pack_px: Vector2) -> Color:
+	if ground == null:
+		return Color(0, 0, 0, 0)
+	var i := clampi(int(floor(pack_px.x / float(step_px))), 0, size.x - 1)
+	var j := clampi(int(floor(pack_px.y / float(step_px))), 0, size.y - 1)
+	return ground.get_pixel(i, j)

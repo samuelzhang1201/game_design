@@ -1,6 +1,6 @@
-kind,speed_permille,icon,label,notes
-clear,1000,weather_clear,Clear,"owner 2026-09-27: regional weather changes SPEED only — a courier's ride and a regiment's march (Weather)"
-rain,850,weather_rain,Rain,wet roads
-mud,700,weather_mud,Mud,the spring and autumn roads
-snow,650,weather_snow,Snow,
-blizzard,400,weather_blizzard,Blizzard,"under courier_slow_news_permille, so the news bar says a courier is held up"
+kind,speed_permille,icon,label,overcast,wet,mud,snow,rainfall,snowfall,notes
+clear,1000,weather_clear,Clear,0,0,0,0,0,0,"owner 2026-09-27: regional weather changes SPEED only — a courier's ride and a regiment's march (Weather). The six 0..1 columns after label are the LOOK only (spec 2026-09-29-weather-visuals): overcast dims the ground and darkens the clouds, wet darkens it with a sheen, mud browns it, snow covers it, rainfall and snowfall are the falling rain and snow drawn near the camera"
+rain,850,weather_rain,Rain,0.7,1,0,0,1,0,wet roads
+mud,700,weather_mud,Mud,0.3,0.6,1,0,0,0,"the spring and autumn roads: wet brown ground under a lifting sky, nothing falling"
+snow,650,weather_snow,Snow,0.6,0,0,1,0,0.7,
+blizzard,400,weather_blizzard,Blizzard,1,0,0,1,0,1,"under courier_slow_news_permille, so the news bar says a courier is held up"

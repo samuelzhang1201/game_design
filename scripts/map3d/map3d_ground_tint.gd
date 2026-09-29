@@ -45,6 +45,46 @@ uniform vec4 heat_c2 = vec4(1.0);
 uniform vec4 heat_c3 = vec4(1.0);
 uniform vec4 heat_c4 = vec4(1.0);
 uniform vec4 heat_c5 = vec4(1.0);
+// The weather (spec 2026-09-29-weather-visuals): Map3DWeatherField's
+// (wet, mud, snow, overcast) for this spell and the next, blended by
+// weather_blend; texel = weather_step_px pack px; colours raw sRGB.
+uniform highp sampler2D weather_now : filter_linear, repeat_disable;
+uniform highp sampler2D weather_next : filter_linear, repeat_disable;
+uniform float weather_on = 0.0;
+uniform float weather_blend = 0.0;
+uniform float weather_step_px = 8.0;
+uniform float weather_warp_m = 600.0;
+uniform float weather_warp_scale_m = 3000.0;
+uniform float weather_dim = 0.2;
+uniform float weather_flat = 0.25;
+uniform float weather_wet_dark = 0.22;
+uniform float weather_wet_rough = 0.35;
+uniform float weather_mud_mix = 0.35;
+uniform vec4 weather_mud_color = vec4(0.43, 0.33, 0.21, 1.0);
+uniform vec4 weather_snow_color = vec4(0.91, 0.93, 0.94, 1.0);
+uniform float weather_snow_slope = 0.8;
+uniform float weather_snow_patch_m = 420.0;
+uniform float weather_snow_rough = 0.7;
+uniform float weather_snow_detail = 0.35;
+
+float wx_hash(vec2 p) {
+	p = fract(p * vec2(123.34, 456.21));
+	p += dot(p, p + 45.32);
+	return fract(p.x * p.y);
+}
+
+// Value noise in 0..1, smooth between whole-number lattice points.
+float wx_noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(wx_hash(i), wx_hash(i + vec2(1.0, 0.0)), u.x),
+		mix(wx_hash(i + vec2(0.0, 1.0)), wx_hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+vec3 wx_linear(vec3 c) {
+	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
+}
 """
 
 const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.rgb * macrov;
@@ -65,6 +105,37 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 		float aa = 1.0 - smoothstep(0.2, 0.45, fwidth(ph));
 		float stripe = 0.5 + 0.5 * sin(ph * 6.2831853);
 		base_albedo *= 1.0 - furrow_depth * sown * aa * stripe;
+	}
+	// The weather under the themes: the ground's own look, which a theme's
+	// tint then mixes over, like the relief and the sun.
+	if (weather_on > 0.0) {
+		vec2 wq = v_vertex.xz / weather_warp_scale_m;
+		vec2 warp = vec2(wx_noise(wq), wx_noise(wq + vec2(17.3, 5.1))) * 2.0 - 1.0;
+		vec2 wpx = (v_vertex.xz + warp * weather_warp_m - pack_origin) / m_per_px;
+		vec2 wuv = wpx / (weather_step_px * vec2(textureSize(weather_now, 0)));
+		vec4 wx = mix(texture(weather_now, wuv), texture(weather_next, wuv), weather_blend) * weather_on;
+		float lum = dot(base_albedo, vec3(0.2126, 0.7152, 0.0722));
+		base_albedo = mix(base_albedo, vec3(lum), wx.a * weather_flat);
+		base_albedo *= 1.0 - wx.a * weather_dim;
+		// mud: the brown's hue at the ground's own value
+		vec3 mud = wx_linear(weather_mud_color.rgb);
+		mud *= lum / max(dot(mud, vec3(0.2126, 0.7152, 0.0722)), 0.001);
+		base_albedo = mix(base_albedo, mud, clamp(wx.g * weather_mud_mix, 0.0, 1.0));
+		base_albedo *= 1.0 - wx.r * weather_wet_dark;
+		roughness = mix(roughness, weather_wet_rough, wx.r);
+		// snow: the flat first, cliffs bare; light snow lies in patches, and the
+		// texture's high points (stones, tussocks) show through until it is deep
+		float flat_k = smoothstep(weather_snow_slope - 0.2, weather_snow_slope + 0.1, w_normal.y);
+		float patchy = wx_noise(v_vertex.xz / weather_snow_patch_m);
+		float edge = patchy * 0.6 + mat.albedo_height.a * 0.4;
+		float snow = smoothstep(edge - 0.15, edge + 0.15, wx.b * flat_k * 1.2);
+		// the ground's own light and dark show through the snow a little —
+		// fields, woods and tracks under it — so a snowbound land keeps its map
+		float under = clamp(lum / 0.12, 0.55, 1.25);
+		vec3 snow_col = wx_linear(weather_snow_color.rgb) * mix(1.0, under, weather_snow_detail)
+			* (0.95 + 0.05 * patchy);
+		base_albedo = mix(base_albedo, snow_col, snow);
+		roughness = mix(roughness, weather_snow_rough, snow);
 	}
 	vec4 tint = vec4(0.0);
 	if (tint_mix > 0.0) {
