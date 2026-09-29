@@ -52,7 +52,7 @@ bench (`tools/map3d/bench.gd`, the tier gates) → CLAUDE.md / taste notes.
 Implemented 2026-09-29 on branch `weather-visuals` (CLAUDE.md "The weather is
 DRAWN"). Changes from the plan above, after the look check and an independent
 critic: the field is 8 px with ONE halving (provinces are tiny: 13 cells at the
-median), the warp is 900 m, not 2.5 km, so a province keeps its own weather;
+median), the warp is 500 m, not 2.5 km, so a province keeps its own weather;
 the houses take the snow and the rain too; the clouds turn wholly slate from an
 overcast of 0.6 up; snow sits below white, lightly on steep ground, and a
 blizzard adds a grey veil; mud is a dark umber (ochre read as drought); the
