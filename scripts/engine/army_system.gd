@@ -77,8 +77,9 @@ static func wound_recovery(repo: DataRepository, wounded: int) -> int:
 	return maxi(1, wounded * int(repo.bal("army_wound_recovery_permille")) / 1000)
 
 ## The month's end for every regiment of the player's realm, in code order:
-## wounded return, supplies are spent (nothing resupplies yet), training
-## grows by its rate up to 100. Morale does not move yet.
+## wounded return, supplies are spent (the supply lines refill it first,
+## SupplySystem, called by TickEngine before this), training grows by its
+## rate up to 100. Morale does not move yet.
 static func settle_month(repo: DataRepository, state: GameState) -> void:
 	ensure(repo, state)
 	var codes := state.regiments.keys()

@@ -60,6 +60,10 @@ func advance(state: GameState) -> TickReport:
 	# every later settled month has already been incremented past it.
 	if state.tick > 0:
 		MissiveLog.add(data, state, MissiveWriter.monthly(data, state, state.tick))
+	# The supply lines (spec 2026-09-30-ledger-supply-design §3): the host is
+	# refilled before its month is spent.
+	for l: Dictionary in SupplySystem.settle_month(data, state):
+		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
 	# The regiments' month (owner 2026-09-17): wounded return, supplies spent.
 	ArmySystem.settle_month(data, state)
 	state.tick += 1
