@@ -274,6 +274,14 @@ var manor_focus: Dictionary = {}
 ## cell id (String) -> permille (0 or 500) for each war workshop set away
 ## from full (spec 2026-09-30-ledger-supply-design §2); full is not stored.
 var workshop_rate: Dictionary = {}
+## flow type -> character id, only flows given away from their seat (M3).
+var governors: Dictionary = {}
+## character id -> whole gold skimmed since his last audit (M3; the truth).
+var skims: Dictionary = {}
+## character id -> [{flow, day, amount}] every time an audit caught him (M3).
+var caught: Dictionary = {}
+## character id -> [record lines], permanent, each a reason (M3; the debrief's data).
+var records: Dictionary = {}
 ## cell id (String) -> province_code, ONLY for manors moved out of their pack
 ## province: a manor bought across the border joins the realm's province it
 ## borders (owner 2026-09-14). Read through MapManors.province_of, never directly.
@@ -332,6 +340,10 @@ func to_dict() -> Dictionary:
 		"manor_buildings": manor_buildings.duplicate(true),
 		"manor_focus": manor_focus.duplicate(true),
 		"workshop_rate": _encode_values(workshop_rate.duplicate(true)),
+		"governors": governors.duplicate(true),
+		"skims": _encode_values(skims.duplicate(true)),
+		"caught": _encode_values(caught.duplicate(true)),
+		"records": records.duplicate(true),
 		"manor_works": _encode_values(manor_works.duplicate(true)),
 		"manor_log": _encode_values(manor_log.duplicate(true)),
 		"regiments": _encode_values(regiments.duplicate(true)),
@@ -398,6 +410,12 @@ static func from_dict(d: Dictionary) -> GameState:
 	# Saves from before the war workshops carry no key: every workshop runs
 	# in full (WorkshopSystem.rate_of's own default).
 	s.workshop_rate = _decode_values(d.get("workshop_rate", {}))
+	# Saves from before governors could be reassigned or skim carry none of
+	# these: every flow runs at its seat holder, honestly, with no record.
+	s.governors = d.get("governors", {}).duplicate(true)
+	s.skims = _decode_values(d.get("skims", {}))
+	s.caught = _decode_values(d.get("caught", {}))
+	s.records = d.get("records", {}).duplicate(true)
 	s.manor_works = _decode_values(d.get("manor_works", {}))
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	s.regiments = _decode_values(d.get("regiments", {}))

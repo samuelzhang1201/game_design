@@ -653,3 +653,13 @@ ledger_gauge_radius_px,7,LEDGER: a property gauge's ring radius (design px) unde
 ledger_gauge_width_px,3,LEDGER: a property gauge's ring width (design px)
 ledger_gauge_gap_px,3,LEDGER: design px between a sphere's name and its row of gauges
 ledger_gauge_caption_px,12,LEDGER: font size of a gauge's caption (design px)
+gov_opinion_cooperate,0,"LEDGER M3 (spec 2026-09-30-ledger-governors-design §2): a governor's opinion of the king at and above which he gives all his skill"
+gov_opinion_step_permille,5,LEDGER M3: efficiency lost per point of opinion below gov_opinion_cooperate
+gov_skim_permille,200,LEDGER M3: the share a venal governor (special_flag skims_treasury) skims
+gov_skim_integrity_below,30,LEDGER M3: integrity under which a governor skims even without the trait
+gov_skim_low_integrity_permille,100,LEDGER M3: the share a governor of low integrity skims
+gov_audit_fresh_days,90,LEDGER M3: days an audit's figures stand as an account on the LEDGER
+gov_caught_opinion,-12,LEDGER M3: a governor's opinion when an audit catches him skimming
+gov_audited_opinion,-3,LEDGER M3: a governor's opinion when the crown's clerks go through his books
+gov_passed_over_opinion,-8,LEDGER M3: the displaced governor's opinion when his flow is given to another
+gov_new_governor_opinion,4,LEDGER M3: the new governor's opinion when he is given a flow

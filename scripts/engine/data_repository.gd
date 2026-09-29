@@ -113,6 +113,10 @@ var ledger_actions: Array = []
 var ledger_loops: Array = []
 ## key -> Color (data/ledger_palette.csv).
 var ledger_palette: Dictionary = {}
+## data/ledger_governance.csv: flow_type -> {seat, skill, base_permille,
+## skill_mid, skill_step_permille, min_permille, max_permille, label} (LEDGER
+## M3, Governance; spec 2026-09-30-ledger-governors-design §2).
+var ledger_governance: Dictionary = {}
 ## data/courier_art.csv: kind -> its row (model, painting, size).
 var courier_art: Dictionary = {}
 ## data/intel_facts.csv: key -> {label, round_to, tiers} (spec 2026-09-28 §1).
@@ -604,6 +608,15 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/ledger_palette.csv", ["key", "color"],
 			func(r): ledger_palette[String(r["key"])] = Color(String(r["color"]))):
+		return false
+	if not _load_if_present(dir + "/ledger_governance.csv",
+			["flow_type", "seat", "skill", "base_permille", "skill_mid", "skill_step_permille", "min_permille",
+				"max_permille", "label"],
+			func(r): ledger_governance[String(r["flow_type"])] = {"seat": String(r["seat"]),
+				"skill": String(r["skill"]), "base_permille": int(r["base_permille"]),
+				"skill_mid": int(r["skill_mid"]), "skill_step_permille": int(r["skill_step_permille"]),
+				"min_permille": int(r["min_permille"]), "max_permille": int(r["max_permille"]),
+				"label": String(r["label"])}):
 		return false
 	if not _load_if_present(dir + "/courier_art.csv", ["kind", "model", "painting", "size"],
 			func(r): courier_art[String(r["kind"])] = r):
