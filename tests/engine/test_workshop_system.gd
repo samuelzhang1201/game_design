@@ -21,6 +21,16 @@ func _home_cells(n: int) -> Array:
 func _build(cell: int) -> void:
 	assert_true(MapManors.build(data, s, cell, WorkshopSystem.BUILDING, "a test workshop"))
 
+## A house of the realm that is not the crown's, for moving a manor away
+## from the crown's hold.
+func _another_family() -> String:
+	var realm := data.resolve_realm("player_realm")
+	for province: String in MapOwnership.provinces_of(data, s, realm):
+		for cell: int in MapManors.manors_of_province(data, province):
+			if not MapManors.is_crowns(data, s, cell):
+				return MapManors.owner_of(data, s, cell)
+	return ""
+
 func test_the_building_row_exists() -> void:
 	var row: Dictionary = data.manor_buildings["war_workshop"]
 	assert_eq(String(row["land"]), "town")
@@ -76,6 +86,16 @@ func test_the_tick_runs_the_workshops() -> void:
 	eng.advance(twin)
 	assert_eq(int(s.metrics["lord_strategic"]) - int(twin.metrics["lord_strategic"]), 28)
 	assert_eq(int(s.metrics["lord_civil"]) - int(twin.metrics["lord_civil"]), -40)
+
+func test_a_workshop_sold_away_works_for_nobody() -> void:
+	var cell: int = _home_cells(1)[0]
+	_build(cell)
+	s.metrics["lord_civil"] = 100.0
+	var family := _another_family()
+	assert_ne(family, "", "the realm has another house to sell to")
+	assert_true(MapManors.set_owner(data, s, cell, family, "a test sale"))
+	assert_eq(WorkshopSystem.plan(data, s), [], "no workshop is the crown's any more")
+	assert_eq(WorkshopSystem.settle_month(data, s), [], "a workshop not the crown's takes and makes nothing")
 
 func test_workshop_rates_survive_a_save() -> void:
 	var cell: int = _home_cells(1)[0]

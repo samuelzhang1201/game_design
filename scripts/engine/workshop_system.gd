@@ -10,11 +10,14 @@ const BUILDING := "war_workshop"
 const RATES := [0, 500, 1000]
 
 
-static func cells(state: GameState) -> Array:
+## A war workshop works for the LORD only while the crown's own house holds
+## its manor: sold or seized away, it stands idle (owner ruling 2026-09-30).
+static func cells(repo: DataRepository, state: GameState) -> Array:
 	var out: Array = []
 	for key: String in state.manor_buildings:
-		if BUILDING in (state.manor_buildings[key] as Array):
-			out.append(int(key))
+		var cell := int(key)
+		if BUILDING in (state.manor_buildings[key] as Array) and MapManors.is_crowns(repo, state, cell):
+			out.append(cell)
 	out.sort()
 	return out
 
@@ -48,7 +51,7 @@ static func plan(repo: DataRepository, state: GameState) -> Array:
 	var left := maxi(int(state.metrics.get("lord_civil", 0.0)), 0)
 	var cap := int(repo.bal("workshop_capacity_gold"))
 	var ratio := int(repo.bal("workshop_ratio_permille"))
-	for cell: int in cells(state):
+	for cell: int in cells(repo, state):
 		var rate := rate_of(state, cell)
 		@warning_ignore("integer_division")
 		var take := mini(cap * rate / 1000, left)

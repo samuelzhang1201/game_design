@@ -264,6 +264,8 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			if float(state.metrics.get("lord_gold", 0.0)) < fee:
 				return "Your own purse cannot afford to turn %s to %s (%d gold)" % [label, name, int(fee)]
 		"WORKSHOP_RATE":
+			if not crowns:
+				return "The crown does not hold %s" % label
 			if not WorkshopSystem.BUILDING in MapManors.buildings_of(state, cell):
 				return "%s has no war workshop" % label
 			var rate := int(req.params.get("rate", -1))

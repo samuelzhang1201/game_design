@@ -27,6 +27,20 @@ func test_refusals() -> void:
 	var bare := int(MapManors.manors_of_province(data, MapManors.home_province(data, s), s)[1])
 	assert_string_contains(sys.validate(ActionRequest.make("WORKSHOP_RATE", {"cell": bare, "rate": 0}), s), "no war workshop")
 
+## A war workshop works for the LORD only while the crown holds its manor
+## (owner ruling 2026-09-30): sold away, WORKSHOP_RATE on it is refused.
+func test_refused_on_a_manor_the_crown_does_not_hold() -> void:
+	var realm := data.resolve_realm("player_realm")
+	var family := ""
+	for province: String in MapOwnership.provinces_of(data, s, realm):
+		for c: int in MapManors.manors_of_province(data, province):
+			if not MapManors.is_crowns(data, s, c):
+				family = MapManors.owner_of(data, s, c)
+	assert_ne(family, "", "the realm has another house to sell to")
+	assert_true(MapManors.set_owner(data, s, cell, family, "a test sale"))
+	assert_string_contains(sys.validate(ActionRequest.make("WORKSHOP_RATE", {"cell": cell, "rate": 0}), s),
+		"The crown does not hold")
+
 func test_the_order_is_catalogued() -> void:
 	assert_true(data.actions.has("WORKSHOP_RATE"))
 	assert_true(data.order_costs.has("WORKSHOP_RATE"))
