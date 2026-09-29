@@ -619,6 +619,7 @@ ledger_ink_general,0.6,LEDGER: ink of a figure the crown has in words (Intel gen
 ledger_ink_basic,0.35,LEDGER: ink of a figure the crown barely knows (Intel basic)
 ledger_age_full_days,90,LEDGER: days after which a report's thread has fully yellowed
 ledger_pair_offset_m,0.25,LEDGER: sideways offset of two threads joining the same spheres both ways
+ledger_strand_gap_m,0.35,"LEDGER L1 (spec 2026-09-30-ledger-governors-design §4): the gap between two strands of one thread whose accounts differ"
 ledger_focus_fade,0.15,LEDGER: opacity of what is not linked to the selected sphere
 ledger_ego_ring_m,5,LEDGER: radius of an ego network's first ring
 ledger_layout_iterations,40,LEDGER: force-layout passes (fixed: the layout is deterministic)

@@ -133,3 +133,41 @@ func test_closing_keeps_a_card_the_ledger_did_not_put_there() -> void:
 	screen.drill(id)
 	screen.close()
 	assert_false(detail.has_content(), "closing takes the LEDGER's own card")
+
+## LEDGER M3: a strand ("<link id>#<i>") is its link's — its card lists every
+## account, and its orders give the flow to another councillor for real.
+func test_a_strand_opens_its_links_card_and_gives_its_flow_away() -> void:
+	var r: GameRoot = await _court()
+	var m: Character = Game.state.characters[String(Game.state.council["marshal"])]
+	m.traits = ["venal"]
+	m.skills["sk_admin"] = 16
+	m.opinion = 50
+	Game.state.metrics["strategic"] = 1000000.0
+	for c in Game.state.regiments.keys():
+		Game.state.regiments[c]["supplies"] = 0
+	r.bottom_bar().button("LEDGER").pressed.emit()
+	await wait_frames(2)
+	var screen := r.ledger_screen()
+	screen.set_lens("war")
+	var code := String(SupplySystem.plan(Game.data, Game.state)[0]["code"])
+	screen.drill("regiment:" + code)
+	var link: Dictionary = (screen.snapshot()["links"] as Array).filter(
+		func(l: Dictionary) -> bool: return String(l["type"]) == "supplies_out")[0]
+	assert_eq((link["accounts"] as Array).size(), 2, "two strands")
+	var strand := String(link["id"]) + "#1"
+	screen.view().thread_selected.emit(strand)
+	await wait_frames(1)
+	var detail: MapDetailPanel = r.current_screen.detail_panel()
+	assert_eq(detail.title_label().text, LedgerCards.thread_entry(Game.data, Game.state, link)["title"])
+	var menu: LedgerOrderMenu = screen.find_child("Orders", true, false)
+	screen.view().orders_requested.emit(strand, Vector2(100, 100))
+	await wait_frames(1)
+	var gives: Array = []
+	for i in menu.item_count:
+		if menu.get_item_text(i).begins_with("Give it to "):
+			gives.append(i)
+	assert_eq(gives.size(), Game.state.council.size() - 1, "every councillor but the marshal")
+	menu.hide()
+	menu.id_pressed.emit(menu.get_item_id(int(gives[0])))
+	await wait_frames(1)
+	assert_ne(Governance.governor_of(Game.data, Game.state, "supply_line"), m.id, "the supply lines changed hands")

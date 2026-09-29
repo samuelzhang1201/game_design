@@ -34,8 +34,9 @@ var _pos: Dictionary = {}          # node id -> Vector3
 var _dragged: Dictionary = {}      # node id -> Vector3: spheres the player moved this viewing
 var _nodes: Dictionary = {}        # node id -> node dict
 var _sphere_mi: Dictionary = {}    # node id -> MeshInstance3D
-var _thread_mi: Dictionary = {}    # link id -> MeshInstance3D
-var _thread_ends: Dictionary = {}  # link id -> [Vector3, Vector3], as drawn
+var _thread_mi: Dictionary = {}    # thread id -> MeshInstance3D
+var _thread_ends: Dictionary = {}  # thread id -> [Vector3, Vector3], as drawn
+var _strands: Dictionary = {}      # link id -> [[thread id, the link as that thread draws it]]
 var _pairs: Dictionary = {}        # [id, id] sorted -> threads joining those two spheres
 var _sphere_alpha: Dictionary = {} # node id -> its material's own alpha, before any fade
 var _disc_mi: Dictionary = {}      # layer -> its disc's MeshInstance3D
@@ -309,18 +310,54 @@ func _build_threads() -> void:
 		c.queue_free()
 	_thread_mi.clear()
 	_thread_ends.clear()
+	_strands.clear()
 	var running := _running_links()
 	_pairs.clear()
 	for l: Dictionary in _snap["links"]:
 		var key := _pair_key(l)
 		_pairs[key] = int(_pairs.get(key, 0)) + 1
 	for l: Dictionary in _snap["links"]:
-		var ends := _ends_of(l)
-		if ends.is_empty():
-			continue
-		var id := String(l["id"])
-		_thread_mi[id] = _add_thread(l, ends[0], ends[1], running)
-		_thread_ends[id] = ends
+		_strands[String(l["id"])] = _split(l)
+		for st: Array in _strands[String(l["id"])]:
+			var ends := _ends_of(st[1])
+			if ends.is_empty():
+				continue
+			var id := String(st[0])
+			_thread_mi[id] = _add_thread(st[1], ends[0], ends[1], running)
+			_thread_ends[id] = ends
+
+
+## The threads a link is drawn as (spec 2026-09-30-ledger-governors-design
+## §4): itself, under its own id, while its accounts agree; one STRAND per
+## account when they differ — "<link id>#<i>", the link with that account
+## alone (its flow that account's value, so each strand its own width and
+## ink) and its place among the strands ("strand", "strands").
+static func _split(l: Dictionary) -> Array:
+	var accs: Array = l.get("accounts", [])
+	if accs.size() <= 1:
+		return [[String(l["id"]), l]]
+	var out: Array = []
+	for i in accs.size():
+		var one := l.duplicate()
+		one["flow"] = (accs[i] as Dictionary)["value"]
+		one["accounts"] = [accs[i]]
+		one["strand"] = i
+		one["strands"] = accs.size()
+		out.append(["%s#%d" % [l["id"], i], one])
+	return out
+
+
+## The link a picked thread belongs to: a strand's id less its "#<i>".
+static func link_id_of(thread_id: String) -> String:
+	var at := thread_id.rfind("#")
+	if at > 0 and thread_id.substr(at + 1).is_valid_int():
+		return thread_id.substr(0, at)
+	return thread_id
+
+
+## The threads drawn for a link: [[thread id, the link as drawn]].
+func _threads_of(l: Dictionary) -> Array:
+	return _strands.get(String(l["id"]), [[String(l["id"]), l]])
 
 
 func _pair_key(l: Dictionary) -> Array:
@@ -330,8 +367,9 @@ func _pair_key(l: Dictionary) -> Array:
 
 
 ## Where a thread runs now: from its source sphere to its end, set aside by
-## ledger_pair_offset_m when two threads join the same spheres both ways.
-## Empty when an end is missing or the two ends meet.
+## ledger_pair_offset_m when two threads join the same spheres both ways,
+## and a strand (_split) set beside its fellows, ledger_strand_gap_m apart
+## and centred on the thread. Empty when an end is missing or the two ends meet.
 func _ends_of(l: Dictionary) -> Array:
 	if not _pos.has(String(l["from"])) or not _pos.has(String(l["to"])):
 		return []
@@ -339,15 +377,21 @@ func _ends_of(l: Dictionary) -> Array:
 	var b: Vector3 = _pos[String(l["to"])]
 	if a.is_equal_approx(b):
 		return []
+	var across := (b - a).cross(Vector3.UP)
+	if across.length_squared() < 1e-6:  # one straight above the other
+		across = Vector3.RIGHT
+	across = across.normalized()
 	var key := _pair_key(l)
 	if int(_pairs.get(key, 0)) > 1:  # both ways between the same spheres: side by side
-		var across := (b - a).cross(Vector3.UP)
-		if across.length_squared() < 1e-6:  # one straight above the other
-			across = Vector3.RIGHT
-		var side := across.normalized() * _repo.bal("ledger_pair_offset_m")
+		var side := across * _repo.bal("ledger_pair_offset_m")
 		var sgn := 1.0 if String(l["from"]) == key[0] else -1.0
 		a += side * sgn
 		b += side * sgn
+	var n := int(l.get("strands", 1))
+	if n > 1:
+		var shift := across * (float(int(l["strand"])) - (n - 1) / 2.0) * _repo.bal("ledger_strand_gap_m")
+		a += shift
+		b += shift
 	return [a, b]
 
 
@@ -407,11 +451,11 @@ func _apply_focus_fade() -> void:
 		var mat := (_sphere_mi[id] as MeshInstance3D).material_override as StandardMaterial3D
 		mat.albedo_color.a = float(_sphere_alpha[id]) * (1.0 if near.is_empty() or near.has(id) else faint)
 	for l: Dictionary in _snap.get("links", []):
-		var mi: MeshInstance3D = _thread_mi.get(String(l["id"]))
-		if mi == null:
-			continue
 		var lit := near.is_empty() or (near.has(String(l["from"])) and near.has(String(l["to"])))
-		(mi.material_override as ShaderMaterial).set_shader_parameter("fade", 1.0 if lit else faint)
+		for st: Array in _threads_of(l):
+			var mi: MeshInstance3D = _thread_mi.get(String(st[0]))
+			if mi != null:
+				(mi.material_override as ShaderMaterial).set_shader_parameter("fade", 1.0 if lit else faint)
 
 
 # --- camera and names ------------------------------------------------------
@@ -480,11 +524,12 @@ func _pick(pos: Vector2) -> Dictionary:
 			spheres.append({"id": id, "pos": _pos[id], "radius": _radius(_nodes[id])})
 	var threads: Array = []
 	for l: Dictionary in _snap.get("links", []):
-		var id := String(l["id"])
-		if _thread_ends.has(id):
-			var ends: Array = _thread_ends[id]
-			threads.append({"id": id, "a": ends[0], "b": ends[1],
-				"radius": maxf(_width(l), _repo.bal("ledger_pick_radius_min_m"))})
+		for st: Array in _threads_of(l):
+			var id := String(st[0])
+			if _thread_ends.has(id):
+				var ends: Array = _thread_ends[id]
+				threads.append({"id": id, "a": ends[0], "b": ends[1],
+					"radius": maxf(_width(st[1]), _repo.bal("ledger_pick_radius_min_m"))})
 	return LedgerPick.pick(ray[0], ray[1], spheres, threads)
 
 
@@ -609,14 +654,15 @@ func _move_threads_of(id: String) -> void:
 	for l: Dictionary in _snap.get("links", []):
 		if String(l["from"]) != id and String(l["to"]) != id:
 			continue
-		var tid := String(l["id"])
-		var mi: MeshInstance3D = _thread_mi.get(tid)
-		if mi == null:
-			continue
-		var ends := _ends_of(l)
-		mi.visible = not ends.is_empty()
-		if ends.is_empty():
-			_thread_ends.erase(tid)
-			continue
-		_place_thread(mi, ends[0], ends[1])
-		_thread_ends[tid] = ends
+		for st: Array in _threads_of(l):
+			var tid := String(st[0])
+			var mi: MeshInstance3D = _thread_mi.get(tid)
+			if mi == null:
+				continue
+			var ends := _ends_of(st[1])
+			mi.visible = not ends.is_empty()
+			if ends.is_empty():
+				_thread_ends.erase(tid)
+				continue
+			_place_thread(mi, ends[0], ends[1])
+			_thread_ends[tid] = ends

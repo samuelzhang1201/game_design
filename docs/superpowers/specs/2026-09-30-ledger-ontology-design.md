@@ -143,7 +143,7 @@ text rules as every other screen.
 | `holds` | house → manor | ✅ |
 | `sits` | character → seat | ✅ |
 | `member` | character → house | ✅ (family name) |
-| `governs` | character (or faction) → workshop / supply line / trade route / building works | ○ M3 |
+| `governs` | character (or faction) → workshop / supply line / trade route / building works | ✅ M3 (`governs`, `governs_supply`: workshop and supply line; a faction, trade routes and building works later) |
 | `commands` | character → regiment | ○ M4 (intel P1's commanders) |
 
 **Knowledge**
@@ -156,7 +156,7 @@ text rules as every other screen.
 | `witnessed` | source → object | ○ intel P1 |
 | `rides_home` | report → court (the return leg) | ○ intel P0 |
 | `contradicts` | report ⇄ report | ○ L1 (intel P0) |
-| `skims` | governor → the flow he governs (hidden) | ○ M3 |
+| `skims` | governor → the flow he governs (hidden) | ✅ M3 (`skims`, `skims_supply`: drawn only once an audit has caught him) |
 
 ## 4. The rules that make it play
 
@@ -197,10 +197,10 @@ Written into the charter; every milestone is checked against them.
 | On | Orders | Status |
 |---|---|---|
 | a thing | build, change the chief good, buy / sell goods | ✅ `MANOR_BUILD`, `MANOR_FOCUS`, `GOODS_BUY` / `GOODS_SELL` |
-| a reified flow | set the ratio, reassign the governor | ○ M2 / M3 |
+| a reified flow | set the ratio, reassign the governor | ✅ M2 `WORKSHOP_RATE` / M3 `GOVERNOR_SET` ("Give it to …" on the flow's thread, one row per councillor) |
 | a person | the existing character orders | ✅ |
 | a report or a link | send a spy | ✅ `SPY_SEND` |
-| | audit a governed flow | ○ M3 `LEDGER_AUDIT` |
+| | audit a governed flow | ✅ M3 `LEDGER_AUDIT` (on the flow's thread) |
 | | ask the guild / the parish | ○ intel P3 (`INTEL_ASK_GUILD` / `_CHURCH`) |
 | | attach an observer | ○ intel P3 |
 
@@ -360,7 +360,7 @@ The same split as the map: nothing under `scripts/ledger3d/` may reach the
 | | Sub-project | Lights | Needs | Placement | Spec / plan |
 |---|---|---|---|---|---|
 | **L0** | **The LEDGER and its 3D view** (this spec) | every ✅ link; ○ links drawn grey; the court's web moved in | nothing new — reads existing state | **now, ahead of PRD Step 3** (ruling 12) | this spec → `docs/superpowers/plans/2026-09-30-ledger-l0.md` |
-| **L1** | Accounts differ | split strands, "accounts differ" on the card | intel P0 | with intel P0 | `2026-09-28-intelligence-layer-alignment.md` §8 P0 (L1 rides with it); the split-strand mechanics are also written up in `2026-09-30-ledger-governors-design.md` |
+| **L1** | Accounts differ | split strands, "accounts differ" on the card | intel P0 | **delivered with M3** (the governed flows are the first that can disagree; intel P0's claims will fill the same list) | `2026-09-28-intelligence-layer-alignment.md` §8 P0 (L1 rides with it); the split-strand mechanics are also written up in `2026-09-30-ledger-governors-design.md` |
 | **M1** | Supply and morale | `supplies`, `garrisons` (stores and defence from the stronghold), `feeds_morale` | L0 | PRD Step 8, with raid defense and intel P1–P3 | `2026-09-30-ledger-supply-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m1-m2-supply.md` |
 | **M2** | The war workshop | `converts` | L0 | with M1 (supply needs a source) | `2026-09-30-ledger-supply-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m1-m2-supply.md` |
 | **M3** | **Governors, skimming and the audit** (the core) | `governs`, `skims`, `LEDGER_AUDIT`, reassigning a governor | L1, M2 | after Step 8, before or with Step 5's factions; a faction may govern once factions exist | `2026-09-30-ledger-governors-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m3-governors.md` |

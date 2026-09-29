@@ -21,7 +21,8 @@ extends RefCounted
 
 const NAMES := ["works", "part_of", "yields_civil", "yields_strategic", "taxed", "trade_gold",
 	"rations", "stands_on", "holds", "member", "sits", "based_in", "carries", "spies_on",
-	"describes", "court_relations", "converts_in", "converts_out", "supplies_in", "supplies_out", "garrisons"]
+	"describes", "court_relations", "converts_in", "converts_out", "supplies_in", "supplies_out", "garrisons",
+	"governs", "skims"]
 const INSTANCE_LISTS := ["peasants", "manors", "provinces", "regiments", "characters", "houses",
 	"seats", "reports", "couriers", "workshops", "supply_lines"]
 const REPORT_KINDS := {"describes_province": "province", "describes_manor": "manor",
@@ -85,6 +86,10 @@ static func run(row: Dictionary, repo: DataRepository, state: GameState, focus: 
 			return _supply(repo, state, id, false)
 		"garrisons":
 			return _garrisons(repo, state, id)
+		"governs":
+			return _governs(repo, state, id, to_t, false)
+		"skims":
+			return _governs(repo, state, id, to_t, true)
 	return []
 
 
@@ -352,16 +357,26 @@ static func _workshops(repo: DataRepository, state: GameState, id: String, inwar
 	var key := "take" if inward else "make"
 	if id == "":
 		var n := 0
+		var said := 0
 		for row: Dictionary in rows:
 			n += int(row[key])
-		return [_type_link("civil_goods", "workshop", n, "gold") if inward
-			else _type_link("workshop", "strategic_goods", n, "gold")]
+			said += int(row["claimed"])
+		if inward:
+			return [_type_link("civil_goods", "workshop", n, "gold")]
+		var t := _type_link("workshop", "strategic_goods", n, "gold")
+		t["claims"] = [{"value": said, "source": _governor_source(repo, state, "workshop")}]
+		return [t]
 	var out: Array = []
 	for row: Dictionary in rows:
 		var wid := "workshop:%d" % int(row["cell"])
-		if id == wid:
-			out.append(_link("type:civil_goods", wid, int(row[key]), "gold") if inward
-				else _link(wid, "type:strategic_goods", int(row[key]), "gold"))
+		if id != wid:
+			continue
+		if inward:
+			out.append(_link("type:civil_goods", wid, int(row["take"]), "gold"))
+		else:
+			var l := _link(wid, "type:strategic_goods", int(row["make"]), "gold")
+			l["claims"] = [{"value": int(row["claimed"]), "source": _governor_source(repo, state, "workshop")}]
+			out.append(l)
 	return out
 
 
@@ -369,10 +384,15 @@ static func _supply(repo: DataRepository, state: GameState, id: String, inward: 
 	var rows := SupplySystem.plan(repo, state)
 	if id == "":
 		var n := 0
+		var said := 0
 		for row: Dictionary in rows:
 			n += int(row["paid"] if inward else row["delivered"])
-		return [_type_link("strategic_goods", "supply_line", n, "gold") if inward
-			else _type_link("supply_line", "regiment", n, "units")]
+			said += int(row["claimed"])
+		if inward:
+			return [_type_link("strategic_goods", "supply_line", n, "gold")]
+		var t := _type_link("supply_line", "regiment", n, "units")
+		t["claims"] = _supply_claims(repo, state, said, n)
+		return [t]
 	var out: Array = []
 	for row: Dictionary in rows:
 		var code := String(row["code"])
@@ -380,7 +400,63 @@ static func _supply(repo: DataRepository, state: GameState, id: String, inward: 
 		if inward and id == line:
 			out.append(_link("type:strategic_goods", line, int(row["paid"]), "gold"))
 		elif not inward and (id == line or id == "regiment:" + code):
-			out.append(_link(line, "regiment:" + code, int(row["delivered"]), "units"))
+			var l := _link(line, "regiment:" + code, int(row["delivered"]), "units")
+			l["claims"] = _supply_claims(repo, state, int(row["claimed"]), int(row["delivered"]))
+			out.append(l)
+	return out
+
+
+## A supply line's two accounts (spec 2026-09-30-ledger-governors-design §4):
+## what the marshal says he delivered, and what the regiment counted in.
+static func _supply_claims(repo: DataRepository, state: GameState, said: int, counted: int) -> Array:
+	return [{"value": said, "source": _governor_source(repo, state, "supply_line")},
+		{"value": counted, "source": "the regiment's own count"}]
+
+
+## "Steward: Aldous Varr" — the governor's word, named by his seat's office.
+static func _governor_source(repo: DataRepository, state: GameState, flow: String) -> String:
+	var gid := Governance.governor_of(repo, state, flow)
+	if gid == "":
+		return "no one's account"
+	return "%s: %s" % [Governance.seat_label(repo, flow), (state.characters[gid] as Character).display_name]
+
+
+static func _instances_of_flow(repo: DataRepository, state: GameState, flow: String) -> Array:
+	var out: Array = []
+	if flow == "workshop":
+		for c: int in WorkshopSystem.cells(repo, state):
+			out.append("workshop:%d" % c)
+	else:
+		for row: Dictionary in SupplySystem.plan(repo, state):
+			out.append("supply_line:" + String(row["code"]))
+	return out
+
+
+## Who governs a flow's instances (spec §4): `governs`, a tie (flow -1) from
+## the governor to each workshop / supply line; `skims`, drawn only once an
+## audit has caught him (GameState.caught), carrying the total caught on
+## that flow. The link row's to_type names the flow.
+static func _governs(repo: DataRepository, state: GameState, id: String, flow: String, skims: bool) -> Array:
+	var gid := Governance.governor_of(repo, state, flow)
+	if gid == "":
+		return []
+	var amount := -1
+	var key := "count"
+	if skims:
+		amount = 0
+		key = "gold"
+		for hit: Dictionary in state.caught.get(gid, []):
+			if String(hit["flow"]) == flow:
+				amount += int(hit["amount"])
+		if amount <= 0:
+			return []
+	if id == "":
+		return [_type_link("character", flow, amount, key)]
+	var who := "character:" + gid
+	var out: Array = []
+	for node: String in _instances_of_flow(repo, state, flow):
+		if id == node or id == who:
+			out.append(_link(who, node, amount, key))
 	return out
 
 

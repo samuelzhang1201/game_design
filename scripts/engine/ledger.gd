@@ -224,12 +224,68 @@ static func _planned(state: GameState, r: Dictionary) -> Dictionary:
 		"governor": _governor(state, r), "planned_note": String(r["planned_note"]), "sentiment": 0}
 
 
+## A live link as the crown believes it. A governed flow's reader hands its
+## `claims` (spec 2026-09-30-ledger-governors-design §4): the accounts are
+## built from them, and the thread's flow is the first account's (the
+## governor's word).
 static func _believed(repo: DataRepository, state: GameState, r: Dictionary, t: Dictionary) -> Dictionary:
-	var acc := _account(repo, state, t)
+	var accs: Array = _claimed(repo, state, t) if t.has("claims") else [_account(repo, state, t)]
 	return {"id": "%s|%s|%s" % [r["link_id"], t["from"], t["to"]], "type": String(r["link_id"]),
 		"verb": String(r["verb"]), "from": String(t["from"]), "to": String(t["to"]), "status": "live",
-		"flow": acc["value"], "accounts": [acc], "governor": _governor(state, r), "planned_note": "",
-		"sentiment": int(t.get("sentiment", 0))}
+		"flow": (accs[0] as Dictionary)["value"], "accounts": accs, "governor": _governor(state, r),
+		"planned_note": "", "sentiment": int(t.get("sentiment", 0))}
+
+
+## The accounts of a governed flow (spec 2026-09-30-ledger-governors-design
+## §4): each claim, then the latest audit's figure for this node while it is
+## no older than gov_audit_fresh_days (instance threads only: the type level
+## keeps to the governor's word and the receiving count — a ruling of the
+## plan); equal figures merge into one account naming every source. The
+## crown's own books: every account is `full`.
+static func _claimed(repo: DataRepository, state: GameState, t: Dictionary) -> Array:
+	var today := state.absolute_day()
+	var raw: Array = []
+	for c: Dictionary in t["claims"]:
+		raw.append({"value": int(c["value"]), "source": String(c["source"]), "day": today})
+	var node := String(t["to"]) if String(t["from"]).begins_with("type:") else String(t["from"])
+	var audit := _audit_figure(repo, state, node)
+	if not audit.is_empty():
+		raw.append(audit)
+	var out: Array = []
+	for a: Dictionary in raw:
+		var merged := false
+		for o: Dictionary in out:
+			if int(o["value"]) == int(a["value"]):
+				o["source"] = String(o["source"]) + "; " + String(a["source"])
+				merged = true
+				break
+		if not merged:
+			out.append({"value": int(a["value"]), "text": Intel.num(int(a["value"])),
+				"source": String(a["source"]), "day": int(a["day"]), "level": "full"})
+	return out
+
+
+## The newest audit letter's figure for `node` (an AuditWriter fact is keyed
+## by the LEDGER node id), or {} when there is none fresh enough.
+static func _audit_figure(repo: DataRepository, state: GameState, node: String) -> Dictionary:
+	var fresh := int(repo.bal("gov_audit_fresh_days"))
+	var today := state.absolute_day()
+	for i in range(state.missives.size() - 1, -1, -1):
+		var m: Dictionary = state.missives[i]
+		if String(m.get("kind", "")) != "audit" or today - int(m["day"]) > fresh:
+			continue
+		for f: Dictionary in m["facts"]:
+			if String(f["key"]) == node and f.has("exact"):
+				return {"value": int(f["exact"]), "source": "the audit of " + _date_words(int(m["day"])),
+					"day": int(m["day"])}
+	return {}
+
+
+## "Spring 5, Year 1" for an absolute day (Calendar.date_string's words).
+static func _date_words(abs_day: int) -> String:
+	var d := maxi(abs_day, 1) - 1
+	@warning_ignore("integer_division")  # whole months
+	return Calendar.date_string(d / Calendar.DAYS_PER_TICK + 1, d % Calendar.DAYS_PER_TICK + 1)
 
 
 ## The truth turned into what the crown has been told (Intel is the one
@@ -276,7 +332,11 @@ static func _loops(repo: DataRepository, state: GameState, out: Dictionary) -> v
 ## The orders a sphere or a thread offers (data/ledger_actions.csv). A type
 ## with an instance list takes its orders per instance; a type without one
 ## (a pool) takes them on its type sphere; a thread takes its link's rows.
-static func actions_for(repo: DataRepository, node_id: String) -> Array:
+## A row whose params name `character=@council` is generated from the
+## council as it sits (spec 2026-09-30-ledger-governors-design §4): one row
+## per councillor by seat, "<label> <name>", the flow's own governor left
+## out; without a state there is no council to read, and no such row.
+static func actions_for(repo: DataRepository, node_id: String, state: GameState = null) -> Array:
 	var target := node_id.get_slice("|", 0) if node_id.contains("|") else type_of(node_id)
 	var on_type := node_id.begins_with("type:")
 	var has_list := String(type_row(repo, target).get("instances", "")) != ""
@@ -286,8 +346,35 @@ static func actions_for(repo: DataRepository, node_id: String) -> Array:
 			continue
 		if not node_id.contains("|") and on_type == has_list:
 			continue  # an instance order on a type sphere, or a pool order on an instance
-		out.append({"code": String(a["action_code"]), "label": String(a["label"]),
-			"params": String(a["params"]), "needs_map": String(a["needs_map"]) == "1"})
+		var row := {"code": String(a["action_code"]), "label": String(a["label"]),
+			"params": String(a["params"]), "needs_map": String(a["needs_map"]) == "1"}
+		if String(row["params"]).contains("=@council"):
+			if state != null:
+				out.append_array(_per_councillor(repo, state, row))
+			continue
+		out.append(row)
+	return out
+
+
+static func _per_councillor(repo: DataRepository, state: GameState, row: Dictionary) -> Array:
+	var flow := ""
+	for pair: String in String(row["params"]).split("|", false):
+		if pair.get_slice("=", 0) == "flow":
+			flow = pair.get_slice("=", 1)
+	var skip := Governance.governor_of(repo, state, flow) if flow != "" else ""
+	var seats: Array = state.council.keys()
+	seats.sort()
+	var seen := {}
+	var out: Array = []
+	for seat: String in seats:
+		var cid := String(state.council[seat])
+		if cid == "" or cid == skip or seen.has(cid) or not state.characters.has(cid):
+			continue
+		seen[cid] = true
+		var r := row.duplicate()
+		r["label"] = "%s %s" % [row["label"], (state.characters[cid] as Character).display_name]
+		r["params"] = String(row["params"]).replace("=@council", "=" + cid)
+		out.append(r)
 	return out
 
 

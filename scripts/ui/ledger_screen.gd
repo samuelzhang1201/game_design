@@ -205,21 +205,26 @@ func _on_sphere(id: String) -> void:
 	_show_card(LedgerCards.entry(Game.data, Game.state, id, _snap))
 
 
-## A thread's card: its accounts, each with its source and its age.
+## A thread's card: its accounts, each with its source and its age. A
+## strand ("<link id>#<i>") opens its whole link's card, every account on it.
 func _on_thread(id: String) -> void:
 	if not _has_detail():
 		return
+	var link_id := LedgerView3D.link_id_of(id)
 	for l: Dictionary in _snap["links"]:
-		if String(l["id"]) == id:
+		if String(l["id"]) == link_id:
 			_show_card(LedgerCards.thread_entry(Game.data, Game.state, l))
 			return
 
 
+## A strand's orders are its link's; a governed thread offers one "Give it
+## to …" row per councillor, read from the council as it sits now.
 func _on_orders(id: String, at: Vector2) -> void:
-	var rows := Ledger.actions_for(Game.data, id)
+	var node_id := LedgerView3D.link_id_of(id)
+	var rows := Ledger.actions_for(Game.data, node_id, Game.state)
 	if rows.is_empty():
 		return
-	_orders.open_for(id, rows, _view.global_position + at)
+	_orders.open_for(node_id, rows, _view.global_position + at)
 
 
 ## An order that needs the map (a place to build, a point to send a spy to)

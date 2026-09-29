@@ -31,6 +31,10 @@ static func entry(repo: DataRepository, state: GameState, node_id: String, snap:
 		if String(l["from"]) != node_id and String(l["to"]) != node_id:
 			continue
 		lines.append(_line(repo, state, l, node_id, int(snap.get("day", 0))))
+	if kind == "character":
+		# his record (GameState.records): what the crown has caught him at
+		for rec in state.records.get(rest, []):
+			lines.append(String(rec))
 	return {"title": LedgerResolvers.label_of(repo, state, node_id), "lines": lines}
 
 
@@ -70,7 +74,23 @@ static func thread_entry(repo: DataRepository, state: GameState, link: Dictionar
 		var c: Character = state.characters.get(String(link["governor"]))
 		if c != null:
 			lines.append("Governed by " + c.display_name)
+	var flow := _governed_flow(repo, link)
+	if flow != "":
+		# a `governs` tie's card carries the governor's factors (spec §4) —
+		# how well he runs it, never whether he skims
+		var f := Governance.factors(repo, state, flow)
+		lines.append("Runs it at %d‰ of what it could: %s" % [int(f["efficiency"]), ", ".join(PackedStringArray(f["reasons"]))])
 	return {"title": title, "lines": lines}
+
+
+## The flow a `governs` link ties its governor to ("workshop",
+## "supply_line"), or "" for any other link.
+static func _governed_flow(repo: DataRepository, link: Dictionary) -> String:
+	var row := Ledger.link_row(repo, String(link["type"]))
+	if String(row.get("resolver", "")) != "governs" or String(link["status"]) != "live":
+		return ""
+	var flow := String(row["to_type"])
+	return flow if repo.ledger_governance.has(flow) else ""
 
 
 static func subject_of(repo: DataRepository, state: GameState, node_id: String) -> Dictionary:
