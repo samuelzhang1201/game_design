@@ -410,3 +410,15 @@ add it here as a principle with its why — not as a changelog entry.
   slope with a fill light from the camera's side; darkening the whole map
   hides it too.
 
+
+## Weather (owner 2026-09-29)
+- **Weather is a patch, not a blanket** ("天气效果不用铺满整个省份，再小一点").
+  A province's rain or snow is a soft, irregular cell round its centre that
+  fades out well before the border, with clear country between the cells.
+  The rule stays province-wide (the whole province slows a march, and its HUD
+  mark names it). Only the LOOK is smaller than the rule.
+- **Kinds of the same family must part at a glance, even on a paused clock**
+  ("暴风雪和普通雪再拉开一点差别"). A blizzard is not just more flakes. It
+  greys its ground blue-grey where snow stays white, and its flakes streak
+  sideways where snow drifts down. A difference that only shows while the
+  clock runs is not enough, because orders are given paused.
