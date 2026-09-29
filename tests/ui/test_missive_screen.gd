@@ -96,6 +96,40 @@ func test_the_frame_fits_inside_the_viewport_with_all_art_installed() -> void:
 		"the frame's bottom edge (%.1f) fits inside the %d-tall viewport" % [rect.end.y, int(viewport.y)])
 
 
+## Plaques on one line: board_art_v3_desk.png showed "WORTH CONSULTING"
+## breaking INSIDE a word ("CONSULTI / NG"), spilling a third line below the
+## plaque's own box, while the other three plaques wrapped to one or two
+## lines each — the four plaques (and the hints under them) sat at
+## different heights. Every plaque must read on ONE line, at both the
+## default design size and the smallest supported window.
+func test_every_plaque_reads_on_one_line_and_all_are_the_same_height() -> void:
+	Game.start_campaign(42)
+	var r := _root()
+	await _enter(r)
+	for shape in [Vector2i(1280, 720), Vector2i(1512, 982)]:
+		get_tree().root.size = shape
+		await wait_frames(2)
+		r.toggle_missives()
+		await wait_frames(1)
+		var ms := r.missive_screen()
+		var heights: Array[float] = []
+		for col: String in MissiveScreen.HEADERS:
+			var plaque := ms.get_node("%" + col.capitalize() + "Plaque") as Label
+			assert_eq(plaque.get_line_count(), 1,
+				"%s reads on one line at %s (%s)" % [col, shape, plaque.text])
+			heights.append(plaque.size.y)
+		for h in heights:
+			assert_almost_eq(h, heights[0], 0.5,
+				"every plaque is the same height at %s (%s)" % [shape, heights])
+		var frame := ms.get_node("%Frame") as Control
+		var viewport := r.get_viewport_rect().size
+		var rect := frame.get_global_rect()
+		assert_true(rect.end.x <= viewport.x + 0.5,
+			"the frame still fits the %s viewport (right edge %.1f)" % [shape, rect.end.x])
+		r.toggle_missives()
+		await wait_frames(1)
+
+
 func test_selecting_a_letter_reads_it_and_the_badge_follows() -> void:
 	Game.start_campaign(42)
 	var id := _letter("credible")

@@ -45,7 +45,13 @@ func _ready() -> void:
 		# consulting") forced its whole column to its full text width, which
 		# alone pushed the frame past the viewport. Letting it wrap means the
 		# column's minimum width is only its longest WORD.
-		plaque.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		# Plaques-on-one-line fix: with the plaque art's real (smaller)
+		# texture margin freeing up column width, every plaque now fits on
+		# ONE line — AUTOWRAP_WORD (never AUTOWRAP_WORD_SMART, which fell
+		# back to breaking INSIDE a word — "CONSULTI / NG" — when a single
+		# word barely didn't fit) is the last-resort guarantee that a plaque
+		# never splits a word if a future column somehow narrows further.
+		plaque.autowrap_mode = TextServer.AUTOWRAP_WORD
 		# a column's plaque is a section header in its credibility's colour
 		UiPalette.style_section(plaque, PLAQUE_FONT_SIZE, MapPalette.named(Game.data, "intel_" + col))
 		# fix round 1: the fallback is the plaque's CURRENT look — the gold
