@@ -22,7 +22,16 @@ static func style(repo: DataRepository, key: String, fallback: StyleBox) -> Styl
 	s.texture_margin_top = m
 	s.texture_margin_right = m
 	s.texture_margin_bottom = m
-	if fallback != null:  # keep the fallback's content margins so text sits where it did
+	# Board art follow-up: the fallback's content margin was copied over
+	# unconditionally, so the frame's 72px of wood (its texture margin) drew
+	# over only the fallback's 16px inset and the first note sat on the wood.
+	# missive_content names each piece's OWN inset once its art is installed;
+	# only an unset content (-1) falls back to the caller's own margin.
+	var content := int(repo.missive_content.get(key, -1))
+	if content >= 0:
+		for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+			s.set_content_margin(side, float(content))
+	elif fallback != null:  # keep the fallback's content margins so text sits where it did
 		for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
 			s.set_content_margin(side, fallback.get_content_margin(side))
 	return s

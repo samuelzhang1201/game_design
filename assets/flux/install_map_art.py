@@ -459,7 +459,10 @@ def install_missive() -> int:
         if line["key"] in installed:
             line["texture"] = installed[line["key"]]
     with table.open("w", newline="", encoding="utf-8") as f:
-        wr = csv.DictWriter(f, fieldnames=list(lines[0].keys()))
+        # lineterminator="\n": csv.DictWriter defaults to "\r\n", which put
+        # CRLF into a working copy the rest of the repo keeps at LF (git then
+        # warns "CRLF will be replaced by LF" on every subsequent touch).
+        wr = csv.DictWriter(f, fieldnames=list(lines[0].keys()), lineterminator="\n")
         wr.writeheader(); wr.writerows(lines)
     return len(installed)
 

@@ -106,6 +106,12 @@ var spy_difficulty: Dictionary = {}
 var missive_art: Dictionary = {}
 ## data/missive_art.csv's margin column: key -> nine-slice edge in texture px.
 var missive_margin: Dictionary = {}
+## data/missive_art.csv's content column: key -> the content inset (design px)
+## to use once that piece's texture is installed; -1 when the column is
+## empty, meaning MissiveArt.style keeps the caller's fallback inset instead
+## (board art follow-up: the frame's 72px of wood was drawing over the
+## fallback's 16px inset, so the first note sat on the wood).
+var missive_content: Dictionary = {}
 ## data/courier_paintings.csv: a courier state's painting — foul, delivered ("" until installed).
 var courier_paintings: Dictionary = {}
 ## data/road_speed.csv: key -> per mille (road, trail, offroad, sea, tier_<tier>).
@@ -597,7 +603,8 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/missive_art.csv", ["key", "texture"],
 			func(r):
 				missive_art[String(r["key"])] = String(r["texture"])
-				missive_margin[String(r["key"])] = int(String(r.get("margin", "0")) if String(r.get("margin", "")) != "" else "0")):
+				missive_margin[String(r["key"])] = int(String(r.get("margin", "0")) if String(r.get("margin", "")) != "" else "0")
+				missive_content[String(r["key"])] = int(String(r.get("content", "-1"))) if String(r.get("content", "")) != "" else -1):
 		return false
 	if not _load_if_present(dir + "/courier_paintings.csv", ["key", "texture"],
 			func(r): courier_paintings[String(r["key"])] = String(r["texture"])):

@@ -61,8 +61,15 @@ func _ready() -> void:
 	# fully transparent, no border or inset, until its parchment is installed.
 	%Desk.add_theme_stylebox_override("panel", MissiveArt.style(Game.data, "letter", StyleBoxEmpty.new()))
 	UiPalette.style_title(%Title, 22)
-	UiPalette.style_header(%LetterTitle, 18)
-	%LetterMeta.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	# Board art follow-up: with the letter parchment installed the desk is
+	# cream, and the theme's light ink (gold title, muted meta) is
+	# unreadable on it — dark umber ink stands in instead. %LetterTitle and
+	# %LetterMeta are never recreated, so setting this once here holds.
+	var on_parchment := MissiveArt.texture(Game.data, "letter") != null
+	UiPalette.style_header(%LetterTitle, 18,
+		MapPalette.named(Game.data, "missive_ink") if on_parchment else UiPalette.GOLD)
+	%LetterMeta.add_theme_color_override("font_color",
+		MapPalette.named(Game.data, "missive_ink_soft") if on_parchment else UiPalette.TEXT_MUTED)
 	visibility_changed.connect(func() -> void:
 		if visible:
 			refresh())
@@ -92,7 +99,11 @@ func refresh() -> void:
 			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			# an empty column's hint is a quiet aside, no larger than its notes
 			# (the integration shot: at the body's size it outweighed the letters)
-			hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+			# Board art follow-up: once the frame's wood is installed the hint
+			# sits on its cream opening, where the theme's dim ink disappears.
+			hint.add_theme_color_override("font_color",
+				MapPalette.named(Game.data, "missive_ink_soft") if MissiveArt.texture(Game.data, "frame") != null
+				else UiPalette.TEXT_DIM)
 			hint.add_theme_font_size_override("font_size", NOTE_FONT_SIZE)
 			var aside := UiPalette.role_font("body_italic")
 			if aside != null:
@@ -201,10 +212,17 @@ func _fill_desk() -> void:
 	var tex: Texture2D = UiPalette.load_art(art) if art != "" else null
 	%DeskPainting.texture = tex
 	%DeskPainting.visible = tex != null
+	# Board art follow-up: facts are recreated every call, so the ink colour
+	# (unreadable in the theme's light default once the desk is cream) must
+	# be re-applied here each time, not just once in _ready.
+	var on_parchment := MissiveArt.texture(Game.data, "letter") != null
+	var ink := MapPalette.named(Game.data, "missive_ink")
 	for f: Dictionary in m["facts"]:
 		var l := Label.new()
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.text = "%s: %s" % [String(f["label"]), Intel.text_of(f)]
+		if on_parchment:
+			l.add_theme_color_override("font_color", ink)
 		%LetterFacts.add_child(l)
 
 

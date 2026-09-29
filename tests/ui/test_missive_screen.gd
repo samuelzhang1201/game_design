@@ -186,11 +186,20 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	add_child_autofree(rp)
 	await wait_frames(1)
 	Game.data.balance["ui_panel_ornament"] = keep
-	for panel: Control in [ms.get_node("%Frame"), rp.get_node("%Window")]:
-		var style := panel.get_theme_stylebox("panel") as VellumPanelStyle
-		assert_not_null(style, "%s is a leather panel" % panel.name)
-		if style != null and UiPalette.load_art(UiPalette.PANEL_ORNAMENT_PATH) != null:
-			assert_not_null(style.texture, "%s is a window: it wears the ornament" % panel.name)
+	# board art follow-up: frame/letter art is now installed on this branch,
+	# so the panel wears its own nine-sliced piece instead of the vellum
+	# ornament — check whichever the current data actually names.
+	for entry in [{"panel": ms.get_node("%Frame"), "key": "frame"},
+			{"panel": rp.get_node("%Window"), "key": "letter"}]:
+		var panel: Control = entry["panel"]
+		if MissiveArt.texture(Game.data, String(entry["key"])) != null:
+			assert_true(panel.get_theme_stylebox("panel") is StyleBoxTexture,
+				"%s wears its installed piece art" % panel.name)
+		else:
+			var style := panel.get_theme_stylebox("panel") as VellumPanelStyle
+			assert_not_null(style, "%s is a leather panel" % panel.name)
+			if style != null and UiPalette.load_art(UiPalette.PANEL_ORNAMENT_PATH) != null:
+				assert_not_null(style.texture, "%s is a window: it wears the ornament" % panel.name)
 	var title_font := UiPalette.role_font("title")
 	assert_eq(ms.get_node("%Title").get_theme_font("font"), title_font, "the board's title is a title")
 	assert_eq(rp.get_node("%ReportTitle").get_theme_font("font"), title_font, "the report's title is a title")
@@ -201,9 +210,14 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	# fix round 1: MissiveArt's fallback must be the rule style_section already
 	# set, not a blank StyleBoxEmpty that erases it — with no plaque art
 	# installed, the gold rule (and its spacing) must still be there.
+	# Board art follow-up: plaque art is now installed on this branch, so the
+	# rule is already superseded by a StyleBoxTexture — check whichever the
+	# current data actually names, same as the frame/window check above.
 	var rule_alpha := float(Game.data.balance.get("ui_section_rule_alpha", 0.0))
 	var got := plaque.get_theme_stylebox("normal")
-	if rule_alpha > 0.0:
+	if MissiveArt.texture(Game.data, "plaque") != null:
+		assert_true(got is StyleBoxTexture, "installed plaque art nine-slices over the rule")
+	elif rule_alpha > 0.0:
 		var ref := Label.new()
 		UiPalette.style_section(ref, MissiveScreen.PLAQUE_FONT_SIZE, MapPalette.named(Game.data, "intel_truth"))
 		var want := ref.get_theme_stylebox("normal") as StyleBoxFlat
@@ -216,9 +230,15 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	else:
 		assert_false(got is StyleBoxTexture, "no rule configured and no art installed: nothing to nine-slice")
 	# the desk had no panel style before this task; with no letter art
-	# installed it must stay fully transparent, not gain a border/inset.
-	assert_true(ms.get_node("%Desk").get_theme_stylebox("panel") is StyleBoxEmpty,
-		"the desk stays transparent until its parchment art is installed")
+	# installed it must stay fully transparent, not gain a border/inset —
+	# board art follow-up: letter art is now installed on this branch, so
+	# the desk wears its own nine-sliced parchment instead.
+	if MissiveArt.texture(Game.data, "letter") != null:
+		assert_true(ms.get_node("%Desk").get_theme_stylebox("panel") is StyleBoxTexture,
+			"the desk wears its installed parchment")
+	else:
+		assert_true(ms.get_node("%Desk").get_theme_stylebox("panel") is StyleBoxEmpty,
+			"the desk stays transparent until its parchment art is installed")
 	# once art IS installed, the plaque nine-slices over the rule.
 	var saved_plaque := String(Game.data.missive_art.get("plaque", ""))
 	Game.data.missive_art["plaque"] = "res://icon.png"
@@ -232,7 +252,52 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	ms.refresh()
 	var hint := ms.get_node("%ConsultNotes").get_child(0) as Label
 	assert_eq(hint.get_theme_font_size("font_size"), MissiveScreen.NOTE_FONT_SIZE, "the hint is note-sized")
-	assert_eq(hint.get_theme_color("font_color"), UiPalette.TEXT_DIM, "and dim")
+	# Board art follow-up: once the frame's wood is installed, the hint sits
+	# on its cream opening and needs dark ink instead of the theme's dim one.
+	if MissiveArt.texture(Game.data, "frame") != null:
+		assert_eq(hint.get_theme_color("font_color"), MapPalette.named(Game.data, "missive_ink_soft"),
+			"reads on the frame's cream opening")
+	else:
+		assert_eq(hint.get_theme_color("font_color"), UiPalette.TEXT_DIM, "and dim")
+
+
+## Board art follow-up: with the letter parchment installed, the desk's
+## title/meta/facts must use dark ink (missive_ink/_soft) instead of the
+## theme's light ink, which is unreadable on cream; without it, unchanged.
+## _fill_desk re-creates the fact labels every call, so each call must
+## re-apply the colour, not just the first.
+func test_ink_on_parchment_once_the_letter_art_is_installed() -> void:
+	Game.start_campaign(42)
+	var id := _letter("credible")
+	var saved := String(Game.data.missive_art.get("letter", ""))
+
+	Game.data.missive_art["letter"] = ""
+	var plain: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	add_child_autofree(plain)
+	plain.select(id)
+	assert_eq(plain.get_node("%LetterMeta").get_theme_color("font_color"), UiPalette.TEXT_MUTED,
+		"unchanged without letter art")
+	var plain_fact := plain.get_node("%LetterFacts").get_child(0) as Label
+	assert_false(plain_fact.has_theme_color_override("font_color"), "the theme's own colour, untouched")
+
+	Game.data.missive_art["letter"] = "res://icon.png"
+	var inked: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	add_child_autofree(inked)
+	inked.select(id)
+	var ink := MapPalette.named(Game.data, "missive_ink")
+	var ink_soft := MapPalette.named(Game.data, "missive_ink_soft")
+	assert_eq(inked.get_node("%LetterTitle").get_theme_color("font_color"), ink, "the title")
+	assert_eq(inked.get_node("%LetterMeta").get_theme_color("font_color"), ink_soft, "the meta line")
+	var inked_fact := inked.get_node("%LetterFacts").get_child(0) as Label
+	assert_eq(inked_fact.get_theme_color("font_color"), ink, "a fact, freshly created by _fill_desk")
+	# re-select (a fresh set of fact labels) to prove the colour is applied
+	# every time, not just the first _fill_desk call.
+	inked.select(-1)
+	inked.select(id)
+	var inked_fact2 := inked.get_node("%LetterFacts").get_child(0) as Label
+	assert_eq(inked_fact2.get_theme_color("font_color"), ink, "still inked after a second fill")
+
+	Game.data.missive_art["letter"] = saved
 
 
 func test_a_receipt_on_the_desk_wears_the_delivered_painting() -> void:

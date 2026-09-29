@@ -55,3 +55,5 @@ intel_rumour,#B07A5A,rumour
 envelope_paper,#E9DCC0,"missive envelope (EnvelopeFlight) fallback: the paper, until the art is installed"
 envelope_ink,#7A5A30,"missive envelope fallback: the fold lines' ink"
 envelope_wax,#8B1E1E,"missive envelope fallback: the wax seal"
+missive_ink,#2E2418,"Missive board art follow-up: dark umber ink for the desk's title/meta/facts once the cream parchment art is installed — the theme's light ink is unreadable on it"
+missive_ink_soft,#6B5A45,"Missive board art follow-up: the softer umber for the desk's meta line and, once the frame's wood is installed, an empty column's hint"
