@@ -66,6 +66,13 @@ uniform float weather_snow_slope = 0.8;
 uniform float weather_snow_patch_m = 420.0;
 uniform float weather_snow_rough = 0.7;
 uniform float weather_snow_detail = 0.35;
+uniform float weather_snow_steep = 0.4;
+uniform float weather_snow_soft = 0.35;
+uniform float weather_mud_dark = 0.18;
+uniform float weather_wet_cool = 0.15;
+uniform vec4 weather_wet_color = vec4(0.45, 0.5, 0.55, 1.0);
+uniform float weather_haze = 0.35;
+uniform vec4 weather_haze_color = vec4(0.72, 0.75, 0.77, 1.0);
 
 float wx_hash(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
@@ -117,18 +124,25 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 		float lum = dot(base_albedo, vec3(0.2126, 0.7152, 0.0722));
 		base_albedo = mix(base_albedo, vec3(lum), wx.a * weather_flat);
 		base_albedo *= 1.0 - wx.a * weather_dim;
-		// mud: the brown's hue at the ground's own value
+		// mud: a dark umber at the ground's own value, a little darker again
 		vec3 mud = wx_linear(weather_mud_color.rgb);
 		mud *= lum / max(dot(mud, vec3(0.2126, 0.7152, 0.0722)), 0.001);
 		base_albedo = mix(base_albedo, mud, clamp(wx.g * weather_mud_mix, 0.0, 1.0));
+		base_albedo *= 1.0 - wx.g * weather_mud_dark;
+		// rain: darker, cooler (toward a wet blue-grey at the ground's value), a sheen
+		vec3 cool = wx_linear(weather_wet_color.rgb);
+		cool *= lum / max(dot(cool, vec3(0.2126, 0.7152, 0.0722)), 0.001);
+		base_albedo = mix(base_albedo, cool, wx.r * weather_wet_cool);
 		base_albedo *= 1.0 - wx.r * weather_wet_dark;
 		roughness = mix(roughness, weather_wet_rough, wx.r);
-		// snow: the flat first, cliffs bare; light snow lies in patches, and the
-		// texture's high points (stones, tussocks) show through until it is deep
-		float flat_k = smoothstep(weather_snow_slope - 0.2, weather_snow_slope + 0.1, w_normal.y);
+		// snow: the flat first, steep ground only lightly; light snow lies in
+		// patches, and the texture's high points (stones, tussocks) show
+		// through until it is deep; its edge is a soft ramp, not a line
+		float flat_k = mix(weather_snow_steep, 1.0,
+			smoothstep(weather_snow_slope - 0.2, weather_snow_slope + 0.1, w_normal.y));
 		float patchy = wx_noise(v_vertex.xz / weather_snow_patch_m);
 		float edge = patchy * 0.6 + mat.albedo_height.a * 0.4;
-		float snow = smoothstep(edge - 0.15, edge + 0.15, wx.b * flat_k * 1.2);
+		float snow = smoothstep(edge - weather_snow_soft, edge + weather_snow_soft, wx.b * flat_k * 1.3);
 		// the ground's own light and dark show through the snow a little —
 		// fields, woods and tracks under it — so a snowbound land keeps its map
 		float under = clamp(lum / 0.12, 0.55, 1.25);
@@ -136,6 +150,9 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 			* (0.95 + 0.05 * patchy);
 		base_albedo = mix(base_albedo, snow_col, snow);
 		roughness = mix(roughness, weather_snow_rough, snow);
+		// the thickest overcast (a blizzard) veils the ground in grey
+		float haze = smoothstep(0.7, 1.0, wx.a) * weather_haze;
+		base_albedo = mix(base_albedo, wx_linear(weather_haze_color.rgb), haze);
 	}
 	vec4 tint = vec4(0.0);
 	if (tint_mix > 0.0) {

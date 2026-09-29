@@ -21,8 +21,25 @@ uniform int wall_count = 1;
 uniform int roof_count = 1;
 
 varying flat vec3 tint;
+// The weather (spec 2026-09-29-weather-visuals, Map3DLayerWeather): the
+// field's (wet, mud, snow, overcast) under the house — snow lies on what faces
+// up (roofs), rain darkens every surface.
+uniform highp sampler2D weather_now : filter_linear, repeat_disable;
+uniform highp sampler2D weather_next : filter_linear, repeat_disable;
+uniform float weather_on = 0.0;
+uniform float weather_blend = 0.0;
+uniform vec2 weather_origin = vec2(0.0);
+uniform float weather_m_per_px = 50.0;
+uniform float weather_step_px = 8.0;
+uniform vec4 weather_snow_color : source_color = vec4(0.91, 0.93, 0.94, 1.0);
+uniform float weather_roof_snow = 0.85;
+uniform float weather_wet_dark = 0.22;
+varying vec3 w_pos;
+varying vec3 w_up;
 
 void vertex() {
+	w_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	w_up = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	tint = vec3(1.0);
 	if (role == 1) {
 		tint = wall_tints[clamp(int(INSTANCE_CUSTOM.r + 0.5), 0, wall_count - 1)];
@@ -35,6 +52,13 @@ void fragment() {
 	vec3 c = texture(albedo_tex, UV).rgb * albedo_color.rgb * tint;
 	if (use_vertex_color) {
 		c *= COLOR.rgb;
+	}
+	if (weather_on > 0.0) {
+		vec2 uv = ((w_pos.xz - weather_origin) / weather_m_per_px) / (weather_step_px * vec2(textureSize(weather_now, 0)));
+		vec4 wx = mix(texture(weather_now, uv), texture(weather_next, uv), weather_blend);
+		c *= 1.0 - wx.r * weather_wet_dark;
+		float up = smoothstep(0.3, 0.6, abs(w_up.y));  // a roof pitch, either face
+		c = mix(c, weather_snow_color.rgb, clamp(wx.b * up * weather_roof_snow, 0.0, 1.0));
 	}
 	ALBEDO = c;
 	ROUGHNESS = roughness;

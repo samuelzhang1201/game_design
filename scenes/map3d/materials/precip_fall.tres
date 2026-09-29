@@ -1,0 +1,6 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://scripts/map3d/precip_fall.gdshader" id="1_fall"]
+
+[resource]
+shader = ExtResource("1_fall")

@@ -65,7 +65,11 @@ func _positions() -> Array:
 ## caller that never sets it sees byte-identical positions.
 func _cloud(view: Rect2, p: Dictionary, wind: Vector2, existing: Array) -> Dictionary:
 	var min_gap := float(p.get("min_gap_m", 0.0))
-	var attempts := 6 if min_gap > 0.0 and not existing.is_empty() else 1
+	# With a `weight_fn` (world XZ -> 0..1, the weather's overcast) the sky
+	# favours bad weather: of the candidates, the one under the most overcast
+	# wins, a well-spaced one breaking ties (spec 2026-09-29-weather-visuals).
+	var weigh: Callable = p.get("weight_fn", Callable())
+	var attempts := 6 if (min_gap > 0.0 and not existing.is_empty()) or weigh.is_valid() else 1
 	var best_pos := Vector2.ZERO
 	var best_size := 0.0
 	var best_d := -1.0
@@ -78,11 +82,13 @@ func _cloud(view: Rect2, p: Dictionary, wind: Vector2, existing: Array) -> Dicti
 		var d := INF
 		for e: Vector2 in existing:
 			d = minf(d, pos.distance_to(e))
+		if weigh.is_valid():
+			d = float(weigh.call(pos)) + 0.35 * (minf(d / min_gap, 1.0) if min_gap > 0.0 else 1.0)
 		if d > best_d:
 			best_pos = pos
 			best_size = size
 			best_d = d
-		if d >= min_gap:
+		if d >= min_gap and not weigh.is_valid():
 			break
 	return {"pos": best_pos, "size": best_size, "rot": _rng.randf_range(0.0, TAU),
 		"life": 1.0 if wind == Vector2.ZERO else 0.0}

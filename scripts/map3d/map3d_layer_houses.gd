@@ -27,6 +27,10 @@ extends Node3D
 
 ## Test seam: the baked houses, in place of the build's own houses.csv.
 var houses_override: Dictionary = {}
+## Every house surface's material, and the weather's uniforms laid on each
+## one made (Map3DLayerWeather sets both: snow on the roofs, rain's dark).
+var surface_mats: Array = []
+var weather: Dictionary = {}
 
 const HOUSE_SHADER := preload("res://scripts/map3d/house_surface.gdshader")
 
@@ -259,6 +263,8 @@ func _tinted(mesh: Mesh) -> Mesh:
 		mat.set_shader_parameter("roof_tints", _roof_tints)
 		mat.set_shader_parameter("wall_count", _wall_tints.size())
 		mat.set_shader_parameter("roof_count", _roof_tints.size())
+		surface_mats.append(mat)
+		for key: String in weather: mat.set_shader_parameter(key, weather[key])
 		(out as ArrayMesh).surface_set_material(i, mat)
 	return out
 

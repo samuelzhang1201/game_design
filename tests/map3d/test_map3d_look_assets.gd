@@ -15,6 +15,8 @@ const MATERIALS := {
 	"cloud_shadow": "res://scripts/map3d/cloud_shadow.gdshader",
 	"settlement_ring": "res://scripts/map3d/settlement_ring.gdshader",
 	"selection_ring": "res://scripts/map3d/settlement_ring.gdshader",
+	"precip_fall": "res://scripts/map3d/precip_fall.gdshader",
+	"precip_drop": "res://scripts/map3d/precip_drop.gdshader",
 }
 const PREVIEWS := ["rocky_trail_02_alb_ht", "rocky_trail_02_nrm_rgh", "medieval_blocks_03_alb_ht",
 	"medieval_blocks_03_nrm_rgh", "cloud_shape"]

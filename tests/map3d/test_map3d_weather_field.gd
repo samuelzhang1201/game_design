@@ -29,7 +29,7 @@ func test_each_kind_names_its_look_in_weather_csv() -> void:
 	assert_eq(Map3DWeatherField.channels(repo, "clear"), Color(0, 0, 0, 0), "clear draws nothing")
 	assert_eq(Map3DWeatherField.channels(repo, "rain"), Color(1, 0, 0, 0.7), "rain: wet under an overcast")
 	assert_eq(Map3DWeatherField.fall(repo, "rain"), Vector2(1, 0), "rain falls")
-	assert_eq(Map3DWeatherField.fall(repo, "snow"), Vector2(0, 0.7), "snow falls")
+	assert_eq(Map3DWeatherField.fall(repo, "snow"), Vector2(0, 0.4), "snow falls, lighter than a blizzard")
 	assert_eq(Map3DWeatherField.channels(repo, "blizzard").b, 1.0, "a blizzard covers the ground")
 	for kind: String in repo.weather_kinds:
 		for key in ["overcast", "wet", "mud", "snow", "rainfall", "snowfall"]:

@@ -80,3 +80,17 @@ func test_no_min_gap_key_behaves_exactly_as_before() -> void:
 	b.step(0.1, true, 1, VIEW, p2)
 	for i in a.clouds.size():
 		assert_eq(a.clouds[i]["pos"], b.clouds[i]["pos"])
+
+
+## The weather's look (spec 2026-09-29-weather-visuals): with a weight, the
+## first sky gathers where the overcast is.
+func test_a_weight_gathers_the_sky_over_bad_weather() -> void:
+	var p := P.duplicate()
+	p["min_gap_m"] = 4000.0
+	p["weight_fn"] = func(xz: Vector2) -> float: return 1.0 if xz.x > 50000.0 else 0.0
+	var f := Map3DCloudField.new(11)
+	f.step(0.1, true, 1, VIEW, p)
+	var east := 0
+	for c: Dictionary in f.clouds:
+		east += 1 if (c["pos"] as Vector2).x > 50000.0 else 0
+	assert_gt(east, 20, "of 24, nearly all over the overcast east (%d)" % east)

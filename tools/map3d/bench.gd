@@ -144,6 +144,11 @@ func _ready() -> void:
 		return
 	_view = v
 	_rig = v.component("rig") as Map3DCameraRig
+	# --weather KIND[,KIND] lays that weather over the map (spec 2026-09-29-
+	# weather-visuals) so the rain and snow are priced where they fall
+	var wi := args.find("--weather")
+	if wi >= 0 and wi + 1 < args.size():
+		v.set_weather_override(args[wi + 1])
 	var overrides := {}
 	var ri := args.find("--render-scale")
 	if ri >= 0 and ri + 1 < args.size():

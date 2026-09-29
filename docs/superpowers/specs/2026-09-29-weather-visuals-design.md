@@ -49,7 +49,16 @@ field (pure, tested) → CSV columns + loader → ground patch + `Map3DLayerWeat
 bench (`tools/map3d/bench.gd`, the tier gates) → CLAUDE.md / taste notes.
 
 ## Status
-Design only. Implementation NOT started (usage limit hit 2026-09-29). Work in a
-worktree: another session is busy in the main checkout and the editor is open
-(it clobbers files — memory `godot-editor-buffer-clobbers-files`); symlink
-`assets/map3d/` into the worktree for the built world.
+Implemented 2026-09-29 on branch `weather-visuals` (CLAUDE.md "The weather is
+DRAWN"). Changes from the plan above, after the look check and an independent
+critic: the field is 8 px with ONE halving (provinces are tiny: 13 cells at the
+median), the warp is 900 m, not 2.5 km, so a province keeps its own weather;
+the houses take the snow and the rain too; the clouds turn wholly slate from an
+overcast of 0.6 up; snow sits below white, lightly on steep ground, and a
+blizzard adds a grey veil; mud is a dark umber (ochre read as drought); the
+falling weather stops at 13 km (a flake far out read as a settlement dot).
+Open: the bench's absolute numbers could not be read that night (the GPU was
+shared with ComfyUI and Chrome; even the weather-off run read 32 fps) — the
+weather's rows were within the noise of the same run. Re-run
+`tools/map3d/bench.gd --quality high --size 3024x1964 --weather rain,snow,blizzard`
+on a quiet machine.

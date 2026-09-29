@@ -26,6 +26,7 @@
 [ext_resource type="Script" path="res://scripts/map3d/map3d_layer_couriers.gd" id="40_cour"]
 [ext_resource type="Script" path="res://scripts/map3d/map3d_hud_weather.gd" id="41_hwea"]
 [ext_resource type="Script" path="res://scripts/map3d/map3d_hud_couriers.gd" id="42_hcou"]
+[ext_resource type="Script" path="res://scripts/map3d/map3d_layer_precip.gd" id="43_prec"]
 [ext_resource type="Script" uid="uid://kumuxikla7vf" path="res://scripts/ui/compass_layer.gd" id="16_nceau"]
 [ext_resource type="Script" uid="uid://bula280a44q8l" path="res://scripts/map3d/map3d_hud_needle.gd" id="17_geqxk"]
 [ext_resource type="StyleBox" uid="uid://btdf8fw324b5o" path="res://scenes/map3d/tooltip_chip.tres" id="19_rbqyb"]
@@ -114,6 +115,17 @@ script = ExtResource("15_exbav")
 
 [node name="Couriers" type="Node3D" parent="Viewport" unique_id=210987654]
 script = ExtResource("40_cour")
+
+[node name="Precip" type="Node3D" parent="Viewport" unique_id=1618033988]
+script = ExtResource("43_prec")
+
+[node name="Rain" type="GPUParticles3D" parent="Viewport/Precip" unique_id=1414213562]
+emitting = false
+cast_shadow = 0
+
+[node name="Snow" type="GPUParticles3D" parent="Viewport/Precip" unique_id=1732050807]
+emitting = false
+cast_shadow = 0
 
 [node name="Display" type="TextureRect" parent="." unique_id=499707313]
 layout_mode = 1

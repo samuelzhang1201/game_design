@@ -23,6 +23,9 @@ const CLOUD_SHADOW_MAT := preload("res://scenes/map3d/materials/cloud_shadow.tre
 @export var preview := false: set = set_preview
 
 var ctx: Map3DContext
+## The weather's look (the view hands it over): clouds gather over bad weather
+## and darken there (spec 2026-09-29-weather-visuals).
+var weather: Map3DLayerWeather
 var _field: Map3DCloudField
 var _params: Dictionary
 var _depth_ratio := 0.6
@@ -61,8 +64,9 @@ func preview_build(p_ctx: Map3DContext) -> void:
 	deck.step(0.1)
 
 
-func build(p_ctx: Map3DContext) -> void:
+func build(p_ctx: Map3DContext, p_weather: Map3DLayerWeather = null) -> void:
 	ctx = p_ctx
+	weather = p_weather
 	_field = Map3DCloudField.new(int(ctx.repo.bal("map3d_cloud_seed")))
 	_params = {"max": int(ctx.repo.bal("map3d_cloud_max")),
 		"size_min": ctx.repo.bal("map3d_cloud_size_min_m"), "size_max": ctx.repo.bal("map3d_cloud_size_max_m"),
@@ -104,6 +108,8 @@ func _cloud_material(shape: Texture2D) -> ShaderMaterial:
 	mat.set_shader_parameter("near_fade_m", ctx.repo.bal("map3d_cloud_near_fade_m"))
 	mat.set_shader_parameter("near_fade_start_ratio", ctx.repo.bal("map3d_cloud_near_fade_start_ratio"))
 	mat.set_shader_parameter("emission_share", ctx.repo.bal("map3d_cloud_emission_share"))
+	mat.set_shader_parameter("storm_color", MapTerrain.palette_color(ctx.repo, "weather_storm_cloud", Color("#5C636B")))
+	mat.set_shader_parameter("storm_full", ctx.repo.bal("map3d_weather_cloud_full"))
 	return mat
 
 
@@ -147,8 +153,15 @@ func _visible_ground() -> Rect2:
 func step(delta: float) -> void:
 	if _field == null:
 		return
+	var wet := weather != null and weather.on()
+	if wet:
+		_params["weight_fn"] = func(xz: Vector2) -> float: return weather.look_at(xz).a
+	else:
+		_params.erase("weight_fn")
 	_field.step(delta, ctx.clock_speed() > 0, ctx.clock_speed(), _visible_ground(), _params)
 	var h := ctx.repo.bal("map3d_cloud_height_m")
+	var dark := ctx.repo.bal("map3d_weather_cloud_dark")
+	var thick := ctx.repo.bal("map3d_weather_cloud_thick")
 	var n := _field.clouds.size()
 	multimesh.visible_instance_count = n
 	for i in n:
@@ -157,7 +170,18 @@ func step(delta: float) -> void:
 		var puff := Basis(Vector3.UP, float(c["rot"])).scaled(Vector3(s, 1.0, s * _depth_ratio))
 		var p := c["pos"] as Vector2
 		multimesh.set_instance_transform(i, Transform3D(puff, Vector3(p.x, h, p.y)))
-		multimesh.set_instance_color(i, Color(1, 1, 1, float(c["life"]) * _field.fade))
+		var a := float(c["life"]) * _field.fade
+		var storm := _overcast_under(p, s * 0.3) * dark if wet else 0.0  # its overcast greys and thickens it
+		multimesh.set_instance_color(i, Color(storm, 0.0, 0.0, minf(a * (1.0 + storm * thick), 1.0)))
+
+
+## The overcast under a cloud: the most of its centre and four points `r`
+## out, so a cloud whose middle hangs over a bay still wears the land's weather.
+func _overcast_under(p: Vector2, r: float) -> float:
+	var most := 0.0
+	for o: Vector2 in [Vector2.ZERO, Vector2(r, 0), Vector2(-r, 0), Vector2(0, r), Vector2(0, -r)]:
+		most = maxf(most, weather.look_at(p + o).a)
+	return most
 
 
 func count() -> int:

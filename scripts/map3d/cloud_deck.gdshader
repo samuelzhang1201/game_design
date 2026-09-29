@@ -20,6 +20,9 @@ uniform float opacity = 0.6;
 uniform float near_fade_m = 6000.0;
 uniform float near_fade_start_ratio = 0.3;
 uniform float emission_share = 0.0;
+// a cloud over bad weather (COLOR.r, Map3DLayerClouds) is this slate grey
+uniform vec4 storm_color : source_color = vec4(0.36, 0.39, 0.42, 1.0);
+uniform float storm_full = 0.6;
 
 // VERTEX in fragment() is not a usable view-space position for a MultiMesh
 // instance here (fix, owner 2026-09-18, Task 9: it read near zero for every
@@ -36,7 +39,9 @@ void vertex() {
 void fragment() {
 	float a = texture(shape, UV).a * COLOR.a;
 	float dist = length(world_pos - CAMERA_POSITION_WORLD);
-	ALBEDO = vec3(0.97);
+	// wholly the storm's grey from an overcast of storm_full up: the deck is lit
+	// ~3x by the sun and sky, so any white left in the mix reads white again
+	ALBEDO = mix(vec3(0.97), storm_color.rgb, smoothstep(0.0, storm_full, COLOR.r));
 	EMISSION = ALBEDO * emission_share;
 	ALPHA = a * opacity * smoothstep(near_fade_m * near_fade_start_ratio, near_fade_m, dist);
 }

@@ -251,14 +251,14 @@ func _load() -> void:
 	Map3DEnvironment.apply_environment(_repo, _env.environment)
 	Map3DEnvironment.apply_sun(_repo, _sun)
 	_ctx.camera_moved.connect(func() -> void: Map3DEnvironment.follow_camera(_repo, _env.environment, _sun, _ctx))
-	_clouds.build(_ctx)
+	_clouds.build(_ctx, _weather)
 	_lines.bind(_ctx)
 	_roads.bind(_ctx, _lines, _viewport)
 	Map3DLayerBake.build_layers(_ctx, _scene_path, _rivers, _roads)  # baked, or built now
 	_borders.bind(_ctx, _lines)
 	_themes.bind(_ctx, _lines)
 	_themes.prepare(_scene_path)
-	_weather.bind(_ctx, _themes.tint_material())
+	_weather.bind(_ctx, _themes.tint_material(), $Viewport/Precip as Map3DLayerPrecip, _houses)
 	_picker.bind(_ctx, self, _tooltip, _borders)
 	_selection.bind(_ctx, _lines, _markers, self)
 	_loaded = true
@@ -304,6 +304,7 @@ func _apply_quality() -> void:
 		_repo, _env.environment)
 	Map3DEnvironment.follow_camera(_repo, _env.environment, _sun, _ctx)
 	_clouds.apply_quality(_ctx.quality)
+	_weather.apply_quality(_ctx.quality)
 	_hud.apply_quality(_ctx.quality)
 
 func context() -> Map3DContext: return _ctx
@@ -550,7 +551,7 @@ func look_at_home(at_distance: float) -> void:
 func layer_names() -> PackedStringArray:
 	var out := PackedStringArray()
 	if _loaded:
-		out.append_array(["Markers", "Houses", "Lines", "Clouds"])
+		out.append_array(["Markers", "Houses", "Lines", "Clouds", "Precip"])
 		out.append_array(["Rivers"] if _rivers.mesh != null else [])
 		out.append_array(["Sea"] if _sea.has_water() else [])
 	out.append_array(["Shadows", "Hud"] if _loaded else [])
