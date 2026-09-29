@@ -233,14 +233,21 @@ static func _believed(repo: DataRepository, state: GameState, r: Dictionary, t: 
 
 ## The truth turned into what the crown has been told (Intel is the one
 ## gate). A figure the crown only has in words has no value: the view draws
-## its thread at a fixed vague width and fainter ink.
+## its thread at a fixed vague width and fainter ink. A TIE (flow < 0) is
+## structural, never a figure — it never asks Intel for a magnitude word
+## (fix round 1: `Intel.fact` on -1 fell through to `magnitude()`'s "a
+## handful", a bogus quantity on a yes/no tie); its value stays -1 (not
+## null) so the view keeps drawing it at base width.
 static func _account(repo: DataRepository, state: GameState, t: Dictionary) -> Dictionary:
 	var subj: Dictionary = t["subj"]
 	var flow := int(t["flow"])
+	var lvl := "full" if subj.is_empty() else Intel.level(repo, state, subj)
+	if flow < 0:
+		return {"value": -1, "text": "", "source": "own records" if lvl == "full" else "common knowledge",
+			"day": state.absolute_day(), "level": lvl}
 	if subj.is_empty():
-		return {"value": flow, "text": Intel.num(flow) if flow >= 0 else "", "source": "own records",
+		return {"value": flow, "text": Intel.num(flow), "source": "own records",
 			"day": state.absolute_day(), "level": "full"}
-	var lvl := Intel.level(repo, state, subj)
 	var f := Intel.fact(repo, state, subj, String(t["key"]), flow)
 	return {"value": flow if lvl == "full" else null, "text": String(f["text"]),
 		"source": String(f["source"]), "day": int(f["day"]), "level": lvl}

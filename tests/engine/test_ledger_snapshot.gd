@@ -106,6 +106,23 @@ func test_the_intel_gate_blurs_what_the_crown_does_not_control() -> void:
 	assert_eq(String(acc["level"]), "full")
 	assert_eq(int(acc["value"]), int(RealmEconomy.line_of(data, s, cell)["civil"]))
 
+func test_a_tie_is_never_a_belief_word() -> void:
+	var realm := data.resolve_realm("player_realm")
+	var mine := MapManors.controlled_provinces(data, s)
+	var other := ""
+	for code: String in MapOwnership.provinces_of(data, s, realm):
+		if not code in mine:
+			other = code
+			break
+	assert_ne(other, "", "the realm has a province the crown does not control")
+	var cell := int(MapManors.manors_of_province(data, other, s)[0])
+	var id := "manor:%d" % cell
+	var snap := Ledger.snapshot(data, s, "economy", {"id": id})
+	var acc: Dictionary = _link(snap, "part_of")["accounts"][0]
+	assert_eq(String(acc["text"]), "")
+	assert_eq(int(acc["value"]), -1)
+	assert_eq(String(acc["level"]), "general")
+
 func test_the_type_level_is_the_crowns_own_record() -> void:
 	var acc: Dictionary = _link(Ledger.snapshot(data, s, "economy", {}), "taxed")["accounts"][0]
 	assert_eq(String(acc["level"]), "full")
