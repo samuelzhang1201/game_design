@@ -85,6 +85,9 @@ var _rows: Array = []
 var _tier := "high"
 ## --pan: every measured frame pans the view and asks for a hover pick.
 var _pan := false
+## --at X,Y: frame this pack px instead of home (a wood, a range) — the look
+## route's woods are priced where they stand (2026-09-30)
+var _at := Vector2(-1, -1)
 ## --layer's bottom-bar tab ("" for none), tagged onto every row's label.
 var _layer := ""
 var _rig: Map3DCameraRig
@@ -99,6 +102,10 @@ func _ready() -> void:
 		var wh := args[at + 1].split("x")
 		size = Vector2i(int(wh[0]), int(wh[1]))
 	_pan = args.has("--pan")
+	var ai := args.find("--at")
+	if ai >= 0 and ai + 1 < args.size():
+		var xy := args[ai + 1].split(",")
+		_at = Vector2(float(xy[0]), float(xy[1]))
 	var oi := args.find("--out")
 	if oi >= 0 and oi + 1 < args.size():
 		_out = args[oi + 1]
@@ -172,7 +179,10 @@ func _ready() -> void:
 		"PANNING (per-move CPU priced)" if _pan else "still (per-move CPU NOT priced)"])
 	var worst := 0.0
 	for stop: Array in STOPS:
-		v.look_at_home(Game.data.bal(String(stop[1])))
+		if _at.x >= 0.0:
+			v.look_at_pack(_at, Game.data.bal(String(stop[1])))
+		else:
+			v.look_at_home(Game.data.bal(String(stop[1])))
 		worst = maxf(worst, await _measure("%s  all on" % stop[0]))
 		for layer: String in v.layer_names():
 			v.set_layer_visible(layer, false)

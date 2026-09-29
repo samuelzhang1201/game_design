@@ -73,6 +73,7 @@ func prepare(scene_path: String) -> void:
 	for i in 6:
 		mat.call("set_shader_param", "heat_c%d" % i,
 			MapTerrain.palette_color(repo, "heat_%d" % (i + 1), MapTerrain.FALLBACK))
+	_apply_woods(scene_path)
 	# the bake's field map (owner 2026-09-19): furrows up close, the crops'
 	# colour eased back far out; without it both stay off
 	var fields := load_field_map(scene_path)
@@ -97,6 +98,26 @@ static func load_field_map(scene_path: String) -> Texture2D:
 		return null
 	var img := Image.load_from_file(path)
 	return null if img == null else ImageTexture.create_from_image(img)
+
+
+## The woods' canopy on the ground (bake/woods.png, tools/map3d/bake_trees.py):
+## off without the file or while map3d_tree_on is 0.
+func _apply_woods(scene_path: String) -> void:
+	var repo := ctx.repo
+	var path := ProjectSettings.globalize_path(scene_path.get_base_dir().path_join("bake/woods.png"))
+	if repo.bal("map3d_tree_on") <= 0.0 or not FileAccess.file_exists(path):
+		_tint_mat.call("set_shader_param", "wood_on", 0.0)
+		return
+	var img := Image.load_from_file(path)
+	if img == null:
+		return
+	_tint_mat.call("set_shader_param", "wood_map", ImageTexture.create_from_image(img))
+	_tint_mat.call("set_shader_param", "wood_on", 1.0)
+	for key in ["floor", "far", "far_near_m", "far_far_m", "mottle_m", "mottle"]:
+		_tint_mat.call("set_shader_param", "wood_" + key, repo.bal("map3d_wood_" + key))
+	for c in ["broadleaf", "conifer"]:
+		_tint_mat.call("set_shader_param", "wood_" + c,
+			MapTerrain.palette_color(repo, "map3d_wood_" + c, MapTerrain.FALLBACK))
 
 
 ## Store the theme: "manors", "heights", or "" for none. refresh() puts it

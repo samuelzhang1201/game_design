@@ -52,6 +52,22 @@ func _build(st: GameState) -> void:
 		for r: PackedVector2Array in Map3DBorders.inward_rings(own):
 			bands.append(r)
 			band_colours.append(c)
+	# the coast is the shore's to draw (look route 2026-09-30): the ink, the
+	# halo and the band keep to the land borders
+	# (without a terrain — a fixture — every point would read as water)
+	if repo.bal("map3d_border_skip_coast") > 0.0 and ctx.terrain != null:
+		var sea_y := float(ctx.meta.get("sea_y", 0.0))
+		var wet := func(xz: Vector2) -> bool: return ctx.height_at(xz) < sea_y + 0.5
+		var probe := repo.bal("map3d_border_coast_probe_m")
+		rings = Map3DBorders.land_runs(rings, wet, probe)
+		var kept_bands: Array = []
+		var kept_colours: Array = []
+		for bi in bands.size():
+			for run: PackedVector2Array in Map3DBorders.land_runs([bands[bi]], wet, probe):
+				kept_bands.append(run)
+				kept_colours.append(band_colours[bi])
+		bands = kept_bands
+		band_colours = kept_colours
 	var band := Color(1, 1, 1, repo.bal("map3d_border_band_alpha"))
 	var band_style := Map3DLineStyle.solid(band, "map3d_border_band_px", Map3DPriority.KINGDOM_BAND)
 	band_style.one_sided = true

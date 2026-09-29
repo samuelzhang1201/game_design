@@ -446,3 +446,27 @@ by the same margin.
   changes.
 - Compare Compatibility vs Forward+ on the target PC (without trees
   Compatibility measured 5.0 vs 8.4 ms at 1440p).
+
+
+## Woods and aerial ground (look route, 2026-09-30)
+
+- **Woods** are `bake_trees.py` (run by `build_pack.sh` after `bake_world.py`;
+  numpy, ~2 s): tree CLUMPS on a jittered grid by each biome's woodedness
+  (`data/map3d_trees.csv`), gathered by a grove noise into woods with an edge,
+  conifers and broadleaves in patches of one kind, never in water, on a sown
+  field, a road, a river bank, a settlement, a cliff or above the tree line
+  (`test_bake_trees.py` checks the built pack). It writes `bake/trees.bin`
+  (x, y, z, yaw, scale, kind) and `bake/woods.png` (the canopy's share per
+  40 m texel). `Map3DLayerTrees` draws the clumps — `Map3DTreeMesh`'s
+  procedural low-poly crowns, two levels of detail — as one MultiMesh per 2 km
+  square, kind, variant and level, shown by Godot's own visibility ranges
+  (`map3d_tree_near_m` / `_far_m`): built once at load, nothing per frame.
+  Past the far range the ground's canopy tint (`Map3DGroundTint`'s woods
+  stage, `map3d_wood_*`) carries the wood. Measured primitive cost on high:
+  ~+2.5 M near, ~+1.9 M mid.
+- **Aerial ground layers** (`aerial_meadow`, `aerial_canopy`,
+  `aerial_upland`) replace `leafy_grass` and `rocky_trail` — see
+  `assets/map3d_aerial/README.md`. `pack_aerial.py` makes a picture seamless
+  (an offset cross-fade that keeps its contrast, after taking out the
+  photograph's own slow light) and writes the two maps AND their `.import`
+  with the VRAM compression every Terrain3D layer must share.

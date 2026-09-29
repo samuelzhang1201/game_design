@@ -22,13 +22,13 @@ static var map_id := ""
 # colour, so the far view and the near view agree.
 const TEXTURES := [
 	["cliff", 320.0, 0.1],
-	["leafy_grass", 160.0, 0.16],
+	["aerial_meadow", 120.0, 0.16],   # look route 2026-09-30: aerial pictures, tools/map3d/pack_aerial.py
 	["dry_decay_leaves", 160.0, 0.2],
 	["dirt_floor", 180.0, 0.16],
-	["rocky_trail", 240.0, 0.12],
+	["aerial_upland", 200.0, 0.12],
 	["excavated_soil_wall", 240.0, 0.1],
 	["sand_03", 120.0, 0.2],
-	["leafy_grass", 200.0, 0.22],
+	["aerial_canopy", 170.0, 0.22],
 	["snow_02", 110.0, 0.14],  # the snow line (owner 2026-09-19; snow_02 at 110 m, not snow_field_aerial: at 260 m its dark marks read as ink worms)
 ]
 

@@ -1,0 +1,1 @@
+text, letters, watermark, logo, signature, border, frame, vignette, horizon, sky, clouds, perspective, oblique view, buildings, houses, roads, paths, tracks, fences, walls, people, animals, vehicles, water, river, grid, regular pattern, visible tile seams, lens flare, strong cast shadows, oversaturated, neon, cartoon, illustration, painting, drawing, 3d render, blurry

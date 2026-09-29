@@ -305,3 +305,33 @@ func test_line_colours_go_on_their_vertices() -> void:
 	assert_eq(cols[4], Color.BLUE)
 	assert_null(Map3DBorders.ribbon_arrays([a], func(_xz: Vector2) -> float: return 0.0)[Mesh.ARRAY_COLOR],
 		"no colours asked, none written")
+
+
+## The kingdom's ink and band keep to its LAND borders (look route
+## 2026-09-30): along the sea or a lake the outline is the coast itself.
+func test_land_runs_drop_the_coast_and_keep_the_rings_direction() -> void:
+	# a square ring, the sea to the west of x = 0.5 (the left side)
+	var ring := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(2, 0), Vector2(3, 0),
+		Vector2(3, 1), Vector2(3, 2), Vector2(2, 2), Vector2(1, 2), Vector2(0, 2), Vector2(0, 1), Vector2(0, 0)])
+	var wet := func(xz: Vector2) -> bool: return xz.x < 0.5
+	var runs := Map3DBorders.land_runs([ring], wet, 0.3, 2)
+	assert_eq(runs.size(), 1, "one land run: the coast breaks the ring once")
+	var run: PackedVector2Array = runs[0]
+	for p in run:
+		assert_gt(p.x, 0.5, "no coastal point is kept: %s" % p)
+	assert_eq(run[0], Vector2(1, 0), "the run starts where the coast ends, in the ring's own order")
+	assert_eq(run[run.size() - 1], Vector2(1, 2))
+
+
+func test_a_ring_with_no_coast_is_kept_whole() -> void:
+	var ring := PackedVector2Array([Vector2(0, 0), Vector2(4, 0), Vector2(4, 4), Vector2(0, 0)])
+	var runs := Map3DBorders.land_runs([ring], func(_xz: Vector2) -> bool: return false, 1.0)
+	assert_eq(runs.size(), 1)
+	assert_eq((runs[0] as PackedVector2Array).size(), ring.size())
+
+
+func test_a_sliver_of_land_between_two_coasts_is_dropped() -> void:
+	# an open line: coast, two land points, coast — shorter than min_points
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(5, 0), Vector2(6, 0), Vector2(20, 0)])
+	var wet := func(xz: Vector2) -> bool: return xz.x < 1.0 or xz.x > 10.0
+	assert_eq(Map3DBorders.land_runs([line], wet, 0.1, 3).size(), 0)

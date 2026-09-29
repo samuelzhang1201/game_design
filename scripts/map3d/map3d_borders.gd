@@ -197,6 +197,55 @@ static func kingdom_lines(repo: DataRepository, state: GameState, world: Diction
 	return out
 
 
+## The stretches of `rings` (world metres, in order) that run over LAND, as
+## open polylines in the rings' own direction — so a one-sided band keeps its
+## side. A point is coast when the ground `probe_m` to either side of it is
+## water (`is_water(xz)`): a kingdom's outline along the sea or a lake is the
+## coast itself, which the shore already draws (look route 2026-09-30: an ink
+## line and a band round every coast read as a tray). A run shorter than
+## `min_points` (a river mouth's sliver) is dropped.
+static func land_runs(rings: Array, is_water: Callable, probe_m: float, min_points: int = 3) -> Array:
+	var out: Array = []
+	for ring: PackedVector2Array in rings:
+		var n := ring.size()
+		if n < 2:
+			continue
+		var closed := ring[0].distance_to(ring[n - 1]) < 0.01
+		var land := PackedByteArray()
+		land.resize(n)
+		for i in n:
+			var a := ring[maxi(i - 1, 0)]
+			var b := ring[mini(i + 1, n - 1)]
+			var t := (b - a).normalized()
+			var nrm := Vector2(-t.y, t.x)
+			var p := ring[i]
+			land[i] = 0 if (is_water.call(p + nrm * probe_m) or is_water.call(p - nrm * probe_m)) else 1
+		# a closed ring starts its runs at a coast point, so no land run is
+		# cut in two where the ring happens to begin
+		var start := 0
+		if closed:
+			start = -1
+			for i in n:
+				if land[i] == 0:
+					start = i
+					break
+			if start < 0:
+				out.append(ring)
+				continue
+		var run := PackedVector2Array()
+		for k in n:
+			var i := (start + k) % n
+			if land[i] == 1:
+				run.append(ring[i])
+			else:
+				if run.size() >= min_points:
+					out.append(run)
+				run = PackedVector2Array()
+		if run.size() >= min_points:
+			out.append(run)
+	return out
+
+
 ## Every kingdom's province seams in world metres, chained through their
 ## shared joints into as few polylines as possible (chain_segments) — one
 ## strip per seam, no overlapping caps at a junction and one unbroken dash —

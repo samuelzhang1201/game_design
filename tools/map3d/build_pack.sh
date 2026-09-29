@@ -1,7 +1,7 @@
 #!/bin/sh
 # Build one pack's 3D map, the whole chain (spec 2026-09-20 §3):
 #   tools/map3d/build_pack.sh [--map ID]      (default: data/maps.csv is_default)
-# export_manor_land -> bake_world.py -> build_world.gd -> bake_layers.gd, into
+# export_manor_land -> bake_world.py -> bake_trees.py -> build_world.gd -> bake_layers.gd, into
 # the pack's maps.csv map3d_dir (default assets/map3d/<id>): manifest.json
 # once the scene saves, then the static layers baked against it (layers/).
 # The textures (pack_textures.py, Blender) are shared by every pack and built
@@ -26,11 +26,13 @@ export GDAI_MCP_SERVER_PORT=3999
 if [ -n "$MAP" ]; then
   "$GODOT" --headless --path . -s tools/map3d/export_manor_land.gd -- --map "$MAP"
   python3 tools/map3d/bake_world.py --map "$MAP"
+  python3 tools/map3d/bake_trees.py --map "$MAP"
   "$GODOT" --headless --path . -s tools/map3d/build_world.gd -- --map "$MAP"
   "$GODOT" --headless --path . -s tools/map3d/bake_layers.gd -- --map "$MAP"
 else
   "$GODOT" --headless --path . -s tools/map3d/export_manor_land.gd
   python3 tools/map3d/bake_world.py
+  python3 tools/map3d/bake_trees.py
   "$GODOT" --headless --path . -s tools/map3d/build_world.gd
   "$GODOT" --headless --path . -s tools/map3d/bake_layers.gd
 fi
