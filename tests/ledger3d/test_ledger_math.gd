@@ -91,3 +91,14 @@ func test_no_script_under_the_ledger_view_reads_game() -> void:
 			n += 1
 			assert_false(FileAccess.get_file_as_string("res://scripts/ledger3d/" + f).contains("Game."), f)
 	assert_gt(n, 2)
+
+func test_a_crowded_layer_stays_on_its_disc() -> void:
+	# the court's 21, repelling one another, once spread to twice the disc
+	var nodes := []
+	for i in 21:
+		nodes.append({"id": "character:%02d" % i, "layer": "people"})
+	var pos := LedgerLayout.positions(data, {"focus_id": "", "nodes": nodes, "links": []})
+	var limit := data.bal("ledger_disc_radius_m") - data.bal("ledger_layout_margin_m")
+	for id: String in pos:
+		var p: Vector3 = pos[id]
+		assert_lte(Vector2(p.x, p.z).length(), limit + 1e-4, "%s stands on the disc" % id)

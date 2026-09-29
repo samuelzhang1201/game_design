@@ -375,11 +375,15 @@ func _update_hud() -> void:
 	order.sort_custom(func(a: String, b: String) -> bool:
 		return _rank(a) < _rank(b) if _rank(a) != _rank(b) else a < b)
 	var lift := Vector2(0, -_repo.bal("ledger_label_lift_px"))
+	# under the sphere, as far below its centre as the name stands above,
+	# plus the name's own height: where a crowded name goes instead
+	var drop := Vector2(0, _repo.bal("ledger_label_lift_px") + _repo.bal("ledger_label_px"))
 	for id: String in order:
 		var at: Variant = screen_pos_of(id)
 		if at == null:
 			continue
 		entries.append({"text": String(_nodes[id]["label"]), "at": (at as Vector2) + lift,
+			"alt": (at as Vector2) + drop,
 			"strong": id == _selected or id == String(_snap.get("focus_id", ""))})
 	_hud.show_entries(entries)
 

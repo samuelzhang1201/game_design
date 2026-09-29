@@ -22,27 +22,45 @@ func style(font: Font, px: float, ink: Color, halo: Color, halo_px: int) -> void
 
 
 func show_entries(entries: Array) -> void:
-	_entries = cull(entries, _px)
+	_entries = cull(entries, _px, _font)
 	queue_redraw()
 
 
 ## Keeps entries in order, dropping any whose box overlaps one already kept.
-## The box is estimated from the text length at the font size (0.55 em a
-## glyph), centred on `at`, so the cull needs no Font and is testable.
-static func cull(entries: Array, font_px: float) -> Array:
+## An entry may carry `alt`, a second place (under its sphere): a name whose
+## own place is taken stands there if that is clear, so a type in a close row
+## keeps its name. The box is the text's measured width when a font is given,
+## else estimated at 0.55 em a glyph (so the cull is testable without one),
+## centred on the place, with a quarter em of air at each end.
+static func cull(entries: Array, font_px: float, font: Font = null) -> Array:
 	var kept: Array = []
 	var boxes: Array[Rect2] = []
 	for e: Dictionary in entries:
-		var w := float(String(e["text"]).length()) * font_px * 0.55
-		var box := Rect2((e["at"] as Vector2) - Vector2(w * 0.5, font_px), Vector2(w, font_px * 1.2))
-		var clear := true
-		for b in boxes:
-			if b.intersects(box):
-				clear = false
+		var text := String(e["text"])
+		var w := float(text.length()) * font_px * 0.55
+		if font != null:
+			w = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(font_px)).x
+		var places: Array = [e["at"]]
+		if e.has("alt"):
+			places.append(e["alt"])
+		for at: Vector2 in places:
+			# the box the name is drawn in (_draw sets its baseline 0.35 em
+			# below the place: capitals reach ~0.45 em above the place,
+			# descenders ~0.6 em below), with a quarter em of air each side
+			# so two names in a row never butt into one another and read as one
+			var box := Rect2(at - Vector2(w * 0.5 + font_px * 0.25, font_px * 0.45),
+				Vector2(w + font_px * 0.5, font_px * 1.05))
+			var clear := true
+			for b in boxes:
+				if b.intersects(box):
+					clear = false
+					break
+			if clear:
+				boxes.append(box)
+				var put := e.duplicate()
+				put["at"] = at
+				kept.append(put)
 				break
-		if clear:
-			boxes.append(box)
-			kept.append(e)
 	return kept
 
 

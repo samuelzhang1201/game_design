@@ -591,7 +591,7 @@ missive_seal_s,0.5,the report dialog's shrink into its envelope (EnvelopeFlight)
 missive_fly_s,0.9,the envelope's flight to the Missive tab
 missive_fly_turns,2,whole turns the envelope spins in flight
 ledger_layer_gap_m,6,"LEDGER (spec 2026-09-30 §6.2): metres between the THINGS, PEOPLE and KNOW discs"
-ledger_disc_radius_m,14,LEDGER: radius of each layer's disc
+ledger_disc_radius_m,11.5,LEDGER: radius of each layer's disc
 ledger_sphere_radius_type,0.9,LEDGER: radius of a TYPE sphere
 ledger_sphere_radius_instance,0.5,LEDGER: radius of an instance sphere
 ledger_orb_metallic,0.7,LEDGER: brass spheres' metallic
@@ -613,9 +613,10 @@ ledger_ego_ring_m,5,LEDGER: radius of an ego network's first ring
 ledger_layout_iterations,40,LEDGER: force-layout passes (fixed: the layout is deterministic)
 ledger_layout_repel,4,LEDGER: force layout: repulsion between spheres of one layer
 ledger_layout_spring,0.1,LEDGER: force layout: pull toward the layer's axis
+ledger_layout_margin_m,1.5,"LEDGER: a laid-out layer (the court, an ego network) is drawn in to this far inside its disc's rim"
 ledger_instance_cap,24,LEDGER: neighbours shown per link type before the rest fold into one +N more sphere
 ledger_list_cap,60,LEDGER: rows of a type's instance list in the left column
-ledger_camera_distance,34,LEDGER: the camera's opening distance (metres)
+ledger_camera_distance,27,LEDGER: the camera's opening distance (metres)
 ledger_camera_min_m,8,LEDGER: closest zoom
 ledger_camera_max_m,90,LEDGER: farthest zoom
 ledger_camera_pitch_deg,-24,LEDGER: the front view's pitch (negative looks down)

@@ -71,4 +71,28 @@ static func positions(repo: DataRepository, snap: Dictionary) -> Dictionary:
 				if side.has(id) and signf(nx) != float(side[id]):
 					nx = float(side[id]) * 0.1  # a side is kept: upstream stays left
 				out[id] = Vector3(nx, p.y, p.z + step.y)
+	_fit_to_disc(repo, out, by_layer, focus)
 	return out
+
+
+## The spheres stand ON their disc: a laid-out layer that the force pass
+## spread wider than the disc (the court's 21, repelling one another, reached
+## twice its radius) is drawn in about the disc's centre, its shape kept, to
+## ledger_layout_margin_m inside the rim.
+static func _fit_to_disc(repo: DataRepository, out: Dictionary, by_layer: Dictionary, focus: String) -> void:
+	var limit := repo.bal("ledger_disc_radius_m") - repo.bal("ledger_layout_margin_m")
+	if limit <= 0.0:
+		return
+	for layer: String in by_layer:
+		var reach := 0.0
+		for id: String in by_layer[layer]:
+			var p: Vector3 = out[id]
+			reach = maxf(reach, Vector2(p.x, p.z).length())
+		if reach <= limit:
+			continue
+		var k := limit / reach
+		for id: String in by_layer[layer]:
+			if id == focus:
+				continue
+			var p: Vector3 = out[id]
+			out[id] = Vector3(p.x * k, p.y, p.z * k)

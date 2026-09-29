@@ -133,6 +133,12 @@ var _play_days := -1
 ## desk's Show on map.
 var _missives := ""
 var _show_on_map := false
+## --ledger LENS (with --screen root): the LEDGER through real clicks — its
+## tab, then the lens chip; --ledger-focus TYPE then clicks that type's
+## sphere and the first row of the list it puts in the left column (its ego
+## network). The moment is `ledger`.
+var _ledger := ""
+var _ledger_focus := ""
 ## --shot-on report|flight|board|card|spymenu takes the shot --shot-delay N
 ## frames (default 6) after that moment rather than at --shot-frame.
 var _shot_on := ""
@@ -215,6 +221,10 @@ func _ready() -> void:
 			_play_days = int(args[i + 1])
 		elif args[i] == "--missives":
 			_missives = args[i + 1]
+		elif args[i] == "--ledger":
+			_ledger = args[i + 1]
+		elif args[i] == "--ledger-focus":
+			_ledger_focus = args[i + 1]
 		elif args[i] == "--shot-on":
 			_shot_on = args[i + 1]
 		elif args[i] == "--shot-delay":
@@ -375,6 +385,8 @@ func _process(_delta: float) -> void:
 		_spy_step()
 	if _root != null:
 		_missive_step()
+	if _root != null and _ledger != "":
+		_ledger_step()
 	if _root != null and _look3d.size() == 4 and _frames == int(_look3d[3]) \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
@@ -566,6 +578,48 @@ func _spy_step() -> void:
 			var last: Dictionary = Game.state.couriers[-1] if not Game.state.couriers.is_empty() else {}
 			print("spy3d: sent kind=%s couriers=%d treasury=%d" % [String(last.get("kind", "-")),
 				Game.state.couriers.size(), int(Game.state.metrics.get("treasury", 0))])
+
+
+## --ledger LENS [--ledger-focus TYPE]: the LEDGER through real clicks — the
+## tab, the lens chip, the type sphere, the first row of the left column's
+## list — then the moment `ledger`.
+func _ledger_step() -> void:
+	var start := 30
+	var screen := _root.ledger_screen()
+	if _frames == start:
+		var tab := _root.bottom_bar().button("LEDGER")
+		_real_click(tab, tab.size * 0.5)
+		print("ledger: open=%s" % screen.visible)
+	elif _frames == start + 6:
+		var chip := screen.find_child("Lens_" + _ledger, true, false) as Button
+		if chip == null:
+			push_error("ledger: no lens chip Lens_" + _ledger)
+			return
+		_real_click(chip, chip.size * 0.5)
+		print("ledger: lens=%s nodes=%d links=%d" % [screen.lens(),
+			(screen.snapshot()["nodes"] as Array).size(), (screen.snapshot()["links"] as Array).size()])
+	elif _frames == start + 20 and _ledger_focus != "":
+		var at: Variant = screen.view().screen_pos_of("type:" + _ledger_focus)
+		if at == null:
+			push_error("ledger: no sphere type:" + _ledger_focus + " in view")
+			return
+		_real_click(screen.view(), at)
+		print("ledger: clicked type:%s at %s" % [_ledger_focus, at])
+	elif _frames == start + 26 and _ledger_focus != "":
+		var detail: MapDetailPanel = _root.current_screen.detail_panel()
+		var row: Button = null
+		for b in detail.find_children("*", "Button", true, false):
+			if b.has_meta("ledger_id"):
+				row = b
+				break
+		if row == null:
+			push_error("ledger: the left column lists no instance")
+			return
+		_real_click(row, row.size * 0.5)
+		print("ledger: drilled %s -> focus=%s nodes=%d" % [row.get_meta("ledger_id"),
+			String(screen.snapshot().get("focus_id", "")), (screen.snapshot()["nodes"] as Array).size()])
+	elif _frames == start + 60:
+		_moment("ledger")
 
 
 ## --play-days, then --missives: seal each report as the player would, press

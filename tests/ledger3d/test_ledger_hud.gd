@@ -13,3 +13,14 @@ func test_an_overlapping_name_is_dropped_and_order_kept() -> void:
 
 func test_nothing_to_draw_is_nothing_kept() -> void:
 	assert_eq(LedgerHud.cull([], 14.0), [])
+
+
+func test_a_crowded_name_takes_its_place_under_the_sphere() -> void:
+	var entries := [
+		{"text": "Regiments", "at": Vector2(100, 100), "alt": Vector2(100, 132), "strong": false},
+		{"text": "Couriers", "at": Vector2(104, 102), "alt": Vector2(104, 134), "strong": false},
+	]
+	var kept := LedgerHud.cull(entries, 14.0)
+	assert_eq(kept.size(), 2, "the second name stands under its sphere")
+	assert_eq(kept[0]["at"], Vector2(100, 100))
+	assert_eq(kept[1]["at"], Vector2(104, 134))
