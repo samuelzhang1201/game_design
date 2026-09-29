@@ -96,3 +96,65 @@ static func _fit_to_disc(repo: DataRepository, out: Dictionary, by_layer: Dictio
 				continue
 			var p: Vector3 = out[id]
 			out[id] = Vector3(p.x * k, p.y, p.z * k)
+
+
+## The layers that hold at least one sphere in this snapshot, bottom to top:
+## only their discs are drawn (Task 10: the court lens stands on one disc,
+## not over two empty ones).
+static func layers_present(snap: Dictionary) -> Array[String]:
+	var seen := {}
+	for n: Dictionary in snap.get("nodes", []):
+		seen[String(n["layer"])] = true
+	var out: Array[String] = []
+	for layer: String in Ledger.LAYERS:
+		if seen.has(layer):
+			out.append(layer)
+	return out
+
+
+## What the camera frames (LedgerOrbit.frame): each sphere's reach along the
+## three axes and ledger_frame_rim_samples points round the rim of each disc
+## drawn, so neither a sphere nor a disc runs off the opening view.
+static func frame_points(repo: DataRepository, snap: Dictionary, pos: Dictionary) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	for n: Dictionary in snap.get("nodes", []):
+		var id := String(n["id"])
+		if not pos.has(id):
+			continue
+		var p: Vector3 = pos[id]
+		var r := repo.bal("ledger_sphere_radius_instance") if bool(n.get("instance", false)) \
+			else repo.bal("ledger_sphere_radius_type")
+		for axis: Vector3 in [Vector3.RIGHT, Vector3.UP, Vector3.BACK]:
+			out.append(p + axis * r)
+			out.append(p - axis * r)
+	var samples := maxi(int(repo.bal("ledger_frame_rim_samples")), 4)
+	for layer: String in layers_present(snap):
+		var y := disc_y(repo, layer)
+		var rim := disc_radius(repo, snap, pos, layer)
+		for i in samples:
+			var a := TAU * float(i) / float(samples)
+			out.append(Vector3(cos(a) * rim, y, sin(a) * rim))
+	return out
+
+
+## A disc's radius: it reaches ledger_disc_pad_m past the farthest edge of
+## its own layer's spheres from the axis, never under ledger_disc_min_m nor
+## over ledger_disc_radius_m — so a two-sphere ego network stands on a
+## small disc the camera can come close to, and the type level on its full
+## disc. The discs stay on one axis, an orrery's tiers.
+static func disc_radius(repo: DataRepository, snap: Dictionary, pos: Dictionary, layer: String) -> float:
+	var reach := 0.0
+	for n: Dictionary in snap.get("nodes", []):
+		var id := String(n["id"])
+		if String(n["layer"]) != layer or not pos.has(id):
+			continue
+		var p: Vector3 = pos[id]
+		var r := repo.bal("ledger_sphere_radius_instance") if bool(n.get("instance", false)) \
+			else repo.bal("ledger_sphere_radius_type")
+		reach = maxf(reach, Vector2(p.x, p.z).length() + r)
+	return clampf(reach + repo.bal("ledger_disc_pad_m"), repo.bal("ledger_disc_min_m"), repo.bal("ledger_disc_radius_m"))
+
+
+## The height a layer's disc floats at, under its spheres.
+static func disc_y(repo: DataRepository, layer: String) -> float:
+	return layer_y(repo, layer) - repo.bal("ledger_disc_offset_m")

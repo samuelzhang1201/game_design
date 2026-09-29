@@ -102,3 +102,70 @@ func test_a_crowded_layer_stays_on_its_disc() -> void:
 	for id: String in pos:
 		var p: Vector3 = pos[id]
 		assert_lte(Vector2(p.x, p.z).length(), limit + 1e-4, "%s stands on the disc" % id)
+
+func _disc(r: float, y: float) -> Array:
+	var pts := []
+	for i in 32:
+		var a := TAU * float(i) / 32.0
+		pts.append(Vector3(cos(a) * r, y, sin(a) * r))
+	return pts
+
+func test_framing_puts_every_point_inside_the_safe_rect_and_fills_it() -> void:
+	var pts := _disc(11.5, 0.0) + _disc(11.5, 6.0)
+	var safe := Rect2(0.05, 0.12, 0.9, 0.84)
+	var f := LedgerOrbit.frame(pts, 0.0, -24.0, 40.0, 16.0 / 9.0, safe)
+	var lo := Vector2(safe.position.x * 2.0 - 1.0, 1.0 - safe.end.y * 2.0)
+	var hi := Vector2(safe.end.x * 2.0 - 1.0, 1.0 - safe.position.y * 2.0)
+	var mn := Vector2(INF, INF)
+	var mx := Vector2(-INF, -INF)
+	for p: Vector3 in pts:
+		var s := LedgerOrbit.ndc_of(p, f["target"], f["distance"], 0.0, -24.0, 40.0, 16.0 / 9.0)
+		mn = mn.min(s)
+		mx = mx.max(s)
+	assert_true(mn.x >= lo.x - 1e-4 and mn.y >= lo.y - 1e-4 and mx.x <= hi.x + 1e-4 and mx.y <= hi.y + 1e-4,
+		"inside the safe rect: %s..%s in %s..%s" % [mn, mx, lo, hi])
+	# tight: the content touches the safe rect along one axis, and is centred in it
+	var touch := maxf((mx.x - mn.x) / (hi.x - lo.x), (mx.y - mn.y) / (hi.y - lo.y))
+	assert_gt(touch, 0.98, "as large as it fits")
+	assert_almost_eq((mn.y + mx.y) * 0.5, (lo.y + hi.y) * 0.5, 0.02, "centred in the safe rect")
+	assert_almost_eq((mn.x + mx.x) * 0.5, (lo.x + hi.x) * 0.5, 0.02, "centred in the safe rect")
+
+func test_framing_is_a_pure_function_of_the_points() -> void:
+	var pts := _disc(5.0, 6.0) + [Vector3(3, 6.5, 1)]
+	var safe := Rect2(0, 0, 1, 1)
+	var a := LedgerOrbit.frame(pts, 0.0, -24.0, 40.0, 1.6, safe)
+	assert_eq(a, LedgerOrbit.frame(pts, 0.0, -24.0, 40.0, 1.6, safe), "the same points frame the same")
+	var moved := pts.map(func(p: Vector3) -> Vector3: return p + Vector3(4, -2, 7))
+	var b := LedgerOrbit.frame(moved, 0.0, -24.0, 40.0, 1.6, safe)
+	assert_almost_eq(float(b["distance"]), float(a["distance"]), 1e-3, "moving the content keeps the distance")
+	assert_almost_eq(((b["target"] as Vector3) - (a["target"] as Vector3)).distance_to(Vector3(4, -2, 7)), 0.0, 1e-3,
+		"and moves the target with it")
+	var small := LedgerOrbit.frame(_disc(2.5, 6.0), 0.0, -24.0, 40.0, 1.6, safe)
+	var big := LedgerOrbit.frame(_disc(10.0, 6.0), 0.0, -24.0, 40.0, 1.6, safe)
+	assert_almost_eq(float(big["distance"]) / float(small["distance"]), 4.0, 1e-2, "a disc four times as wide, four times as far")
+	assert_eq(LedgerOrbit.frame([], 0.0, -24.0, 40.0, 1.6, safe), {}, "nothing to frame")
+
+func test_only_layers_holding_a_sphere_have_a_disc() -> void:
+	var snap := {"nodes": [{"id": "character:a", "layer": "people"}, {"id": "report:1", "layer": "know"}], "links": []}
+	assert_eq(LedgerLayout.layers_present(snap), ["people", "know"] as Array[String])
+	assert_eq(LedgerLayout.layers_present({"nodes": [], "links": []}), [] as Array[String])
+	var pos := LedgerLayout.positions(data, {"focus_id": "", "links": [],
+		"nodes": [{"id": "type:a", "layer": "people", "x": 2.0, "z": -3.0}]})
+	var pts := LedgerLayout.frame_points(data, {"nodes": [{"id": "type:a", "layer": "people", "x": 2.0, "z": -3.0}]}, pos)
+	var ys := {}
+	for p: Vector3 in pts:
+		ys[snappedf(p.y, 0.001)] = true
+	assert_false(ys.has(snappedf(LedgerLayout.disc_y(data, "things"), 0.001)), "no rim of an empty layer's disc")
+	assert_true(ys.has(snappedf(LedgerLayout.disc_y(data, "people"), 0.001)), "the people disc's rim is framed")
+
+func test_a_disc_reaches_just_past_its_own_spheres() -> void:
+	var snap := {"focus_id": "regiment:r", "links": [], "nodes": [
+		{"id": "regiment:r", "layer": "things", "instance": true},
+		{"id": "province:p", "layer": "things", "instance": true, "x": 4.0, "z": 0.0},
+		{"id": "type:far", "layer": "know", "x": 30.0, "z": 0.0}]}
+	var pos := {"regiment:r": Vector3.ZERO, "province:p": Vector3(4, 0, 0), "type:far": Vector3(30, 12, 0)}
+	var r_inst := data.bal("ledger_sphere_radius_instance")
+	assert_almost_eq(LedgerLayout.disc_radius(data, snap, pos, "things"), 4.0 + r_inst + data.bal("ledger_disc_pad_m"), 1e-5,
+		"the province's far edge plus the pad")
+	assert_eq(LedgerLayout.disc_radius(data, snap, pos, "know"), data.bal("ledger_disc_radius_m"), "never over the full disc")
+	assert_eq(LedgerLayout.disc_radius(data, snap, pos, "people"), data.bal("ledger_disc_min_m"), "never under the least")

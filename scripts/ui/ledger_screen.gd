@@ -88,17 +88,25 @@ func set_lens(lens_id: String) -> void:
 	_rebuild(false)
 
 
-## Into an instance's ego network; a type sphere or a "more" sphere has none.
+## Into an instance's ego network — from the left column's list or a
+## double click — with THAT instance's card in the left column (the map's
+## own card for a manor, town, regiment or courier; LedgerCards.entry's
+## threads otherwise). A type sphere or a "more" sphere has none.
 func drill(id: String) -> void:
 	if id.begins_with("type:") or id.begins_with("more:") or id == "":
 		return
 	_focus_id = id
 	_rebuild(false)
+	if _has_detail() and _focus_id != "":
+		_detail.show_entry(LedgerCards.entry(Game.data, Game.state, _focus_id, _snap))
 
 
+## Out to the type level: the focus's card goes with its network.
 func back() -> void:
 	_focus_id = ""
 	_rebuild(false)
+	if _has_detail():
+		_detail.show_entry({})
 
 
 func _has_detail() -> bool:

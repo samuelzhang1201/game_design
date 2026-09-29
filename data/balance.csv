@@ -591,7 +591,9 @@ missive_seal_s,0.5,the report dialog's shrink into its envelope (EnvelopeFlight)
 missive_fly_s,0.9,the envelope's flight to the Missive tab
 missive_fly_turns,2,whole turns the envelope spins in flight
 ledger_layer_gap_m,6,"LEDGER (spec 2026-09-30 §6.2): metres between the THINGS, PEOPLE and KNOW discs"
-ledger_disc_radius_m,11.5,LEDGER: radius of each layer's disc
+ledger_disc_radius_m,11.5,"LEDGER: the largest radius of a layer's disc (the type level's; a laid-out layer is drawn in to this, less ledger_layout_margin_m)"
+ledger_disc_pad_m,1,LEDGER: how far a disc reaches past the farthest edge of its own layer's spheres (LedgerLayout.disc_radius)
+ledger_disc_min_m,3,LEDGER: the smallest radius of a layer's disc
 ledger_sphere_radius_type,0.9,LEDGER: radius of a TYPE sphere
 ledger_sphere_radius_instance,0.5,LEDGER: radius of an instance sphere
 ledger_orb_metallic,0.7,LEDGER: brass spheres' metallic
@@ -616,7 +618,7 @@ ledger_layout_spring,0.1,LEDGER: force layout: pull toward the layer's axis
 ledger_layout_margin_m,1.5,"LEDGER: a laid-out layer (the court, an ego network) is drawn in to this far inside its disc's rim"
 ledger_instance_cap,24,LEDGER: neighbours shown per link type before the rest fold into one +N more sphere
 ledger_list_cap,60,LEDGER: rows of a type's instance list in the left column
-ledger_camera_distance,27,LEDGER: the camera's opening distance (metres)
+ledger_camera_distance,27,"LEDGER: the camera's distance when there is nothing to frame (metres); otherwise the opening view and Front frame the spheres and discs drawn (LedgerOrbit.frame)"
 ledger_camera_min_m,8,LEDGER: closest zoom
 ledger_camera_max_m,90,LEDGER: farthest zoom
 ledger_camera_pitch_deg,-24,LEDGER: the front view's pitch (negative looks down)
@@ -631,3 +633,7 @@ ledger_disc_thickness_m,0.04,LEDGER: thickness of each layer's disc
 ledger_disc_offset_m,0.6,LEDGER: how far below its layer's spheres a disc floats
 ledger_disc_segments,64,LEDGER: a disc's radial segments
 ledger_pick_radius_min_m,0.25,LEDGER: a thread is picked within at least this radius (metres) however thin it is drawn
+ledger_frame_top_px,92,"LEDGER: design px at the top of the view the framing keeps clear: the title, the lenses and the crumb, and a name over the highest sphere"
+ledger_frame_side_px,40,LEDGER: design px at each side of the view the framing keeps clear (half a long name beside the widest sphere)
+ledger_frame_bottom_px,28,LEDGER: design px at the bottom of the view the framing keeps clear (a name set under the lowest sphere)
+ledger_frame_rim_samples,32,LEDGER: points round each drawn disc's rim that the framing keeps in view

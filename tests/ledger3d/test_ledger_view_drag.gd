@@ -64,3 +64,20 @@ func test_a_drag_moves_only_the_dragged_spheres_threads_in_place() -> void:
 		assert_eq((view._thread_mi[tid] as MeshInstance3D).get_instance_id(), own[tid], "re-laid in place: " + tid)
 		assert_ne(view._thread_ends[tid], ends_before[tid], "its ends moved: " + tid)
 	assert_eq(view._threads_root.get_child_count(), children_before, "no thread was made or freed")
+
+
+func test_the_court_stands_on_one_disc_and_is_framed_whole() -> void:
+	var repo := DataRepository.load_all("res://data")
+	var state := GameState.new_campaign(repo, 42)
+	var view: LedgerView3D = (load("res://scenes/ledger/ledger_view.tscn") as PackedScene).instantiate()
+	add_child_autofree(view)
+	view.size = Vector2(1000, 600)
+	view.bind(repo)
+	view.show_snapshot(Ledger.snapshot(repo, state, "court", {}), false)
+	assert_true(view.disc_of("people").visible, "the court's disc")
+	assert_false(view.disc_of("things").visible, "no empty THINGS disc")
+	assert_false(view.disc_of("know").visible, "no empty KNOW disc")
+	assert_ne(view.orbit().distance, repo.bal("ledger_camera_distance"), "framed, not the fixed distance")
+	view.show_snapshot(Ledger.snapshot(repo, state, "economy", {}), false)
+	for layer: String in Ledger.LAYERS:
+		assert_true(view.disc_of(layer).visible, "economy draws the %s disc" % layer)
