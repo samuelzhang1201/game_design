@@ -118,14 +118,8 @@ func _settle_economy(state: GameState, r: TickReport) -> void:
 	for seat: String in state.council:
 		salaries += int(float((data.seats.get(seat, {}) as Dictionary).get("salary_gold", 0)))
 	_apply(r, m, "treasury", float(-salaries), "ministers' salaries")
-	var people := 0
-	for code: String in MapManors.controlled_provinces(data, state):
-		people += RealmEconomy._figure(data, state, "economy.provinces.%s.rural_population" % code)
-		people += RealmEconomy._figure(data, state, "economy.provinces.%s.urban_population" % code)
-	var ration := int(roundf(float(people) / 1000.0 * data.bal("ration_gold_per_1000")))
-	if m.get("grain_ration", 0.0) > 0.0:
-		@warning_ignore("integer_division")  # whole gold (invariant 11)
-		ration = ration / 2
+	var people := court_people(data, state)
+	var ration := ration_of(data, state)
 	_apply(r, m, "grain", float(-ration), "the court's ration")
 	# The harvest and the buildings are the lord's own fields and walls.
 	if Calendar.season_name(state.tick + 1) == "Autumn":
@@ -143,6 +137,24 @@ func _settle_economy(state: GameState, r: TickReport) -> void:
 		var bad := RealmEconomy.check_full(data, state)
 		if not bad.is_empty():
 			push_error("economy_check_full: %d province(s) differ from the cache: %s" % [bad.size(), str(bad[0])])
+
+## The people of the provinces the crown controls — the mouths the court's
+## ration feeds and the harvest is counted by. Also read by the LEDGER.
+static func court_people(data: DataRepository, state: GameState) -> int:
+	var people := 0
+	for code: String in MapManors.controlled_provinces(data, state):
+		people += RealmEconomy._figure(data, state, "economy.provinces.%s.rural_population" % code)
+		people += RealmEconomy._figure(data, state, "economy.provinces.%s.urban_population" % code)
+	return people
+
+## The court's ration of civil goods this month, halved under the ration
+## order. Whole gold (invariant 11).
+static func ration_of(data: DataRepository, state: GameState) -> int:
+	var ration := int(roundf(float(court_people(data, state)) / 1000.0 * data.bal("ration_gold_per_1000")))
+	if state.metrics.get("grain_ration", 0.0) > 0.0:
+		@warning_ignore("integer_division")  # whole gold (invariant 11)
+		ration = ration / 2
+	return ration
 
 func _drift(state: GameState, r: TickReport) -> void:
 	var m := state.metrics
