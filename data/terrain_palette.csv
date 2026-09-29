@@ -61,4 +61,4 @@ weather_wet,#737F8C,"3D MAP weather look: the cool blue-grey rain moves the grou
 weather_haze,#8C96A0,"3D MAP weather look: the grey veil of a blizzard over the ground"
 weather_storm_cloud,#5C636B,"3D MAP weather look: a cloud over bad weather — slate grey"
 map3d_wood_broadleaf,#4E6A30,"3D MAP woods (look route 2026-09-30): the broadleaf canopy the ground wears under and beyond the drawn clumps (bake/woods.png), sRGB"
-map3d_wood_conifer,#476A42,3D MAP woods: the conifer canopy
+map3d_wood_conifer,#44643A,3D MAP woods: the conifer canopy

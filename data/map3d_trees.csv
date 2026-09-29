@@ -27,3 +27,4 @@ crown_reach_m,17,woods: a clump's crowns cover about a disc this wide in radius 
 canopy_blur_texels,1,woods: woods.png is box-blurred this many 40 m texels each way so the canopy's edge is soft on the ground
 species_wave_m,900,"woods: the wavelength of the noise that gathers conifers and broadleaves into patches of one kind (critic: cones and spheres mixed tree by tree read as salt and pepper)"
 sown_keep_chance,0.97,woods: a sown field is left clear unless the wood's chance there is at least this (deep woods cover the patchwork instead of showing it as a grid)
+species_edge_dither,0.3,"woods: how far each clump's own draw blurs the edge between a conifer patch and a broadleaf one (0 = a clean line)"

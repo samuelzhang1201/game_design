@@ -16,8 +16,8 @@ const LONE := 2
 ## sRGB crown colours by kind: [dark, light]; the vertex colour runs from the
 ## first under the crown to the second on its crown.
 const COLOURS := {
-	BROADLEAF: [Color("#132010"), Color("#3a5424")],
-	CONIFER: [Color("#0f1c14"), Color("#2c4630")],
+	BROADLEAF: [Color("#142110"), Color("#36502a")],
+	CONIFER: [Color("#111e14"), Color("#304c30")],
 	LONE: [Color("#18260f"), Color("#46602a")],
 }
 const TRUNK := Color("#4a3a2a")

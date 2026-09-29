@@ -186,7 +186,9 @@ def main(argv=None):
     y = (height[z0, x0] * (1 - tx) * (1 - tz) + height[z0, x0 + 1] * tx * (1 - tz)
          + height[z0 + 1, x0] * (1 - tx) * tz + height[z0 + 1, x0 + 1] * tx * tz)
     species = value_noise(np.random.default_rng(SEED + 7), vw, vh, rules["species_wave_m"] / vm)
-    kind = np.where(species[zi, xi] < coni[zi, xi], KINDS["conifer"], KINDS["broadleaf"])
+    # the patches' edge dithers over a few clumps instead of ruling a line
+    edge = rng.uniform(-0.5, 0.5, len(X)) * rules["species_edge_dither"]
+    kind = np.where(species[zi, xi] + edge < coni[zi, xi], KINDS["conifer"], KINDS["broadleaf"])
     del species
     kind = np.where(dens[zi, xi] < 0.05, KINDS["lone"], kind)
     # the mask tested the vertex a clump fell in; its own spot, between four

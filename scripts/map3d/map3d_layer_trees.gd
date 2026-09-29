@@ -89,16 +89,18 @@ func build(p_ctx: Map3DContext) -> void:
 				var node := MultiMeshInstance3D.new()
 				node.multimesh = mm
 				node.position = centre
+				# both levels cast: a plain square without its shadows read as a
+				# lighter tile in the wood; the switch dithers over the margin
+				node.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+				node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 				if lod == 0:
 					node.visibility_range_end = near
 					node.visibility_range_end_margin = margin
-					node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 				else:
 					node.visibility_range_begin = near
 					node.visibility_range_begin_margin = margin
 					node.visibility_range_end = far
 					node.visibility_range_end_margin = margin
-					node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 				add_child(node)
 				_nodes += 1
 			_count += rows.size()
