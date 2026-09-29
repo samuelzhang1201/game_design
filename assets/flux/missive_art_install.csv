@@ -1,8 +1,8 @@
 art_id,key,width,height,cut,seed,notes
-U-20,frame,512,512,0,,nine-slice margin 72
-U-21,board,512,512,0,,seamless tile
-U-22,note,512,256,0,,nine-slice margin 40
-U-23,letter,512,768,0,,nine-slice margin 64
-U-24,envelope,384,288,1,,cut out
-U-25,pin,48,48,1,,cut out
-U-26,plaque,576,144,0,,nine-slice margin 48
+U-20,frame,512,512,0,ui_object_qwen2512fast_s954159497,nine-slice margin 72
+U-21,board,512,512,0,-,seamless tile
+U-22,note,512,256,0,-,nine-slice margin 40
+U-23,letter,512,768,0,ui_object_qwen2512fast_s954159498,nine-slice margin 64
+U-24,envelope,384,288,1,qwen2512fast_s954159497,cut out
+U-25,pin,48,48,1,ui_object_zimage_s954159497,cut out
+U-26,plaque,576,144,0,qwen2512fast_s954159497,nine-slice margin 48

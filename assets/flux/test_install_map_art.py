@@ -53,6 +53,43 @@ def test_pad_to_aspect_then_resize_does_not_distort_a_non_square_target():
     assert abs(cw / chh - tw / th) < 0.03
 
 
+
+def test_alpha_box_is_the_piece_a_flood_left_standing():
+    # a nine-slice piece is cropped tight to what the ground's flood left:
+    # a 4x3 opaque block at (5, 2) in a 12x8 transparent image
+    w, h = 12, 8
+    px = bytearray(w * h * 4)
+    for y in range(2, 5):
+        for x in range(5, 9):
+            px[(y * w + x) * 4 + 3] = 255
+    assert ia.alpha_box(w, h, px) == (5, 2, 9, 5)
+    assert ia.alpha_box(w, h, bytearray(w * h * 4)) == (0, 0, w, h), "nothing left: the whole render"
+
+
+def test_a_shadow_on_the_ground_floods_with_it_but_the_piece_stands():
+    # grey ground (160), a darker grey shadow strip (90) touching a brown piece
+    w, h = 10, 4
+    px = bytearray()
+    for y in range(h):
+        for x in range(w):
+            px += bytes((100, 65, 40)) if 4 <= x <= 5 else bytes((90, 90, 90)) if x == 6 else bytes((160, 160, 160))
+    plain = ia.flood_ground(w, h, 3, bytes(px))
+    shaded = ia.flood_ground(w, h, 3, bytes(px), shadows=True)
+    assert ia.alpha_box(w, h, plain) == (4, 0, 7, 4), "without: the shadow stays part of the piece"
+    assert ia.alpha_box(w, h, shaded) == (4, 0, 6, 4), "with: only the brown piece stands"
+
+
+def test_a_ground_that_lightens_toward_the_floor_is_grown_over_but_a_crisp_piece_stands():
+    # a grey ground lightening 2 per row down to the floor, a cream sheet in the middle
+    w, h = 12, 30
+    px = bytearray()
+    for y in range(h):
+        for x in range(w):
+            g = 150 + 2 * y
+            px += bytes((236, 226, 200)) if 4 <= x <= 7 and 5 <= y <= 20 else bytes((g, g, g))
+    box = ia.alpha_box(w, h, ia.grow_ground(w, h, 3, bytes(px)))
+    assert box == (4, 5, 8, 21), box
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

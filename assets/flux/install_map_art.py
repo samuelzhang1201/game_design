@@ -317,6 +317,21 @@ def scene_box(w: int, h: int, px: bytearray, aspect: float) -> tuple:
     return x0, y0, x1, y1
 
 
+def alpha_box(w: int, h: int, rgba: bytearray) -> tuple:
+    """The (x0, y0, x1, y1) box of every pixel with any alpha: the piece a
+    flood of its ground left standing (flood_ground)."""
+    x0, y0, x1, y1 = w, h, -1, -1
+    for y in range(h):
+        row = y * w * 4
+        for x in range(w):
+            if rgba[row + x * 4 + 3]:
+                if x < x0: x0 = x
+                if x > x1: x1 = x
+                if y < y0: y0 = y
+                if y > y1: y1 = y
+    return (0, 0, w, h) if x1 < 0 else (x0, y0, x1 + 1, y1 + 1)
+
+
 def crop_rgba(w: int, px: bytearray, box: tuple) -> tuple:
     x0, y0, x1, y1 = box
     cw, chh = x1 - x0, y1 - y0
@@ -404,6 +419,9 @@ def install_missive() -> int:
     installed = {}
     for r in rows:
         art_id, key, seed = r["art_id"], r["key"], r.get("seed", "").strip()
+        if seed == "-":  # not picked yet: keep the flat stand-in rather than any render
+            print("  (%s / %s not picked yet)" % (art_id, key))
+            continue
         hits = _pick(sorted((HERE / "out" / "ui").glob("%s_*.png" % art_id)), seed)
         if not hits:
             print("  (no render for %s / %s)" % (art_id, key))
@@ -419,8 +437,17 @@ def install_missive() -> int:
             pw, ph, padded = pad_to_aspect(cw, chh, cut, tw / th)
             small = resize_rgba(pw, ph, padded, tw, th)
         else:
+            # a nine-slice piece stands on a grey ground: crop TIGHT to the
+            # piece (the box its ground's flood leaves), not scene_box's padded
+            # scene, or the ground shows around every stretched edge; the
+            # piece keeps its own opaque pixels
             rgba = to_rgba(w, h, ch, bytearray(px))
-            box = scene_box(w, h, rgba, tw / th)
+            # two floods, each blind to one ground: a SHADOW (the ground's
+            # colour, darker) and a GRADIENT (the ground lightening toward
+            # the floor, step by small step); the piece is what both leave
+            a = alpha_box(w, h, flood_ground(w, h, ch, px, shadows=True))
+            b = alpha_box(w, h, grow_ground(w, h, ch, px))
+            box = (max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3]))
             cw, chh, piece = crop_rgba(w, rgba, box)
             small = resize_rgba(cw, chh, piece, tw, th)
         encode_png(dest / ("%s.png" % key), tw, th, 4, bytes(small))
@@ -530,15 +557,54 @@ ARMS_GROUND_TOLERANCE = 40
 ARMS_SEEDS: dict = {"A-084": "954159498", "A-107": "954159498"}  # re-rolled 2026-09-15: a banner read as a field, a bordure did not show
 
 
-def flood_ground(w: int, h: int, ch: int, px: bytes, tolerance: int = ARMS_GROUND_TOLERANCE) -> bytearray:
-    """RGBA with the render's plain ground, flooded in from the edges, made clear."""
+def grow_ground(w: int, h: int, ch: int, px: bytes, step: int = 6, cap: int = 110) -> bytearray:
+    """RGBA with the ground grown in from the edges pixel by pixel — each step
+    within `step` of the pixel it grows from and within `cap` of the corners'
+    colour — made clear: follows a ground that shades smoothly (a studio
+    floor), stops at a piece's crisp edge."""
     rgba = to_rgba(w, h, ch, bytearray(px))
     corners = (0, w - 1, (h - 1) * w, h * w - 1)
     ground = [sum(rgba[i * 4 + c] for i in corners) // 4 for c in range(3)]
+    seen = bytearray(w * h)
+    stack = []
+    for i in list(range(w)) + list(range((h - 1) * w, h * w)) + list(range(0, h * w, w)) + list(range(w - 1, h * w, w)):
+        if not seen[i]:
+            seen[i] = 1
+            stack.append(i)
+    while stack:
+        i = stack.pop()
+        x, y = i % w, i // w
+        for n, ok in ((i - 1, x > 0), (i + 1, x < w - 1), (i - w, y > 0), (i + w, y < h - 1)):
+            if ok and not seen[n] \
+                    and max(abs(rgba[i * 4 + c] - rgba[n * 4 + c]) for c in range(3)) <= step \
+                    and max(abs(rgba[n * 4 + c] - ground[c]) for c in range(3)) <= cap:
+                seen[n] = 1
+                stack.append(n)
+    for i in range(w * h):
+        if seen[i]:
+            rgba[i * 4 + 3] = 0
+    return rgba
+
+
+def flood_ground(w: int, h: int, ch: int, px: bytes, tolerance: int = ARMS_GROUND_TOLERANCE,
+                 shadows: bool = False) -> bytearray:
+    """RGBA with the render's plain ground, flooded in from the edges, made clear.
+    `shadows`: a pixel that is the ground's own colour only DARKER (a cast shadow
+    on it) counts as ground too — the Missive board's pieces stand on a ground
+    they shade, and a nine-slice must not keep that shadow as its edge."""
+    rgba = to_rgba(w, h, ch, bytearray(px))
+    corners = (0, w - 1, (h - 1) * w, h * w - 1)
+    ground = [sum(rgba[i * 4 + c] for i in corners) // 4 for c in range(3)]
+    ground_sum = max(1, sum(ground))
 
     def distance(i: int) -> int:
         o = i * 4
-        return max(abs(rgba[o] - ground[0]), abs(rgba[o + 1] - ground[1]), abs(rgba[o + 2] - ground[2]))
+        d = max(abs(rgba[o] - ground[0]), abs(rgba[o + 1] - ground[1]), abs(rgba[o + 2] - ground[2]))
+        if shadows:
+            k = ground_sum / max(1, rgba[o] + rgba[o + 1] + rgba[o + 2])
+            if 1.0 < k <= 4.0:
+                d = min(d, int(max(abs(rgba[o + c] * k - ground[c]) for c in range(3))))
+        return d
 
     seen = bytearray(w * h)
     stack = []
