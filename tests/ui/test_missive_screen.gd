@@ -456,3 +456,31 @@ func test_a_receipt_on_the_desk_wears_the_delivered_painting() -> void:
 	ms.select(monthly)
 	assert_false(ms.desk_painting().visible, "other letters show none")
 	Game.data.courier_paintings["delivered"] = saved
+
+
+## Desk painting aspect fix: the box was a fixed 150 design px tall
+## regardless of its own (flexible, per-screen-width) column — far wider and
+## shallower than delivered.png's 5:4, so the cover-crop cut the mounted
+## courier's head off (card-look-report.md, desk_receipt.png). The box's
+## height now follows its OWN width at ui_missive_desk_painting_aspect.
+func test_the_desk_paintings_height_follows_its_width_at_the_aspect_key() -> void:
+	Game.start_campaign(42)
+	var saved := String(Game.data.courier_paintings.get("delivered", ""))
+	Game.data.courier_paintings["delivered"] = "res://icon.png"
+	var subj := MissiveLog.subject("point", "", -1, Vector2(500, 300))
+	var receipt := MissiveLog.add(Game.data, Game.state,
+		MissiveLog.make("receipt", "credible", 3, subj, "Receipt", []))
+	var r := _root()
+	await _enter(r)
+	r.toggle_missives()
+	await wait_frames(1)
+	var ms := r.missive_screen()
+	ms.select(receipt)
+	await wait_frames(3)
+	var painting := ms.desk_painting()
+	assert_true(painting.visible, "the receipt shows its painting")
+	var aspect := Game.data.bal("ui_missive_desk_painting_aspect")
+	assert_almost_eq(painting.size.y, painting.size.x / aspect, 1.0,
+		"the box's height (%.1f) follows its own width (%.1f) at the aspect key (%.2f)" %
+			[painting.size.y, painting.size.x, aspect])
+	Game.data.courier_paintings["delivered"] = saved

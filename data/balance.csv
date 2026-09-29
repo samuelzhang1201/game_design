@@ -608,3 +608,4 @@ map3d_courier_anim_min,0.8,"a courier's GALLOP playback rate floor (Map3DUnits.g
 map3d_courier_anim_max,3,"a courier's GALLOP playback rate ceiling — past it the rider slides, as the regiments do past map3d_unit_anim_max"
 courier_paint_foul_permille,700,"the courier card shows the foul-weather painting when the weather where he is slows a rider to this share or less (weather.csv speed_permille: mud 700, snow 650, blizzard 400)"
 ui_missive_art_px_per_design,3,"the Missive board's art is installed at this many texture px per design px (sized for the ~3x window scale); a nine-slice border and the cork tile are drawn at texture px / this"
+ui_missive_desk_painting_aspect,1.6,"the desk's %DeskPainting box (width / this = its drawn height) — was a fixed 150 design px, far wider and shallower than the delivered.png paintings' own 5:4 (1.25), so the KEEP_ASPECT_COVERED crop cut the mounted courier's head off; the box now follows the desk's own (flexible) width instead"

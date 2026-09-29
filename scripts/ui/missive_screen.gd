@@ -84,9 +84,27 @@ func _ready() -> void:
 		MapPalette.named(Game.data, "missive_ink") if on_parchment else UiPalette.GOLD)
 	%LetterMeta.add_theme_color_override("font_color",
 		MapPalette.named(Game.data, "missive_ink_soft") if on_parchment else UiPalette.TEXT_MUTED)
+	# Receipt look fix: %DeskPainting's box was a fixed 150 design px tall
+	# regardless of its own (flexible, per-screen-width) column, far wider
+	# and shallower than the delivered.png paintings' 5:4, so the cover-crop
+	# trimmed enough off the top to cut the mounted courier's head off. The
+	# box now follows its OWN width at ui_missive_desk_painting_aspect,
+	# recomputed live whenever the desk column's width changes.
+	%DeskPainting.resized.connect(_fit_desk_painting)
 	visibility_changed.connect(func() -> void:
 		if visible:
 			refresh())
+
+
+## width / ui_missive_desk_painting_aspect = height, so a wider desk column
+## still shows the whole rider, not a taller crop of the same slice.
+func _fit_desk_painting() -> void:
+	var aspect := Game.data.bal("ui_missive_desk_painting_aspect")
+	if aspect <= 0.0:
+		return
+	var h: float = %DeskPainting.size.x / aspect
+	if not is_equal_approx(%DeskPainting.custom_minimum_size.y, h):
+		%DeskPainting.custom_minimum_size.y = h
 
 
 ## The frame's top edge, at least the fixed corner margin and never above
