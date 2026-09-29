@@ -332,6 +332,19 @@ def alpha_box(w: int, h: int, rgba: bytearray) -> tuple:
     return (0, 0, w, h) if x1 < 0 else (x0, y0, x1 + 1, y1 + 1)
 
 
+def trim_box(box: tuple, trim: str) -> tuple:
+    """A render's crop narrowed by a table's `trim` cell, "left|top|right|bottom"
+    in source px: what the ground floods left behind that is still ground (the
+    plaque's lit strip under its edge); empty keeps the box."""
+    if not trim.strip():
+        return box
+    l, t, r, b = (int(v) for v in trim.split("|"))
+    x0, y0, x1, y1 = box
+    if x1 - x0 <= l + r or y1 - y0 <= t + b:
+        return box
+    return x0 + l, y0 + t, x1 - r, y1 - b
+
+
 def guarded_intersection(a: tuple, b: tuple, w: int, h: int, label: str = "") -> tuple:
     """The intersection of two (x0, y0, x1, y1) boxes (install_missive's two
     independent ground floods). `alpha_box` degrades to the whole w x h
@@ -469,6 +482,7 @@ def install_missive() -> int:
             a = alpha_box(w, h, flood_ground(w, h, ch, px, shadows=True))
             b = alpha_box(w, h, grow_ground(w, h, ch, px))
             box = guarded_intersection(a, b, w, h, "%s / %s" % (art_id, key))
+            box = trim_box(box, r.get("trim", ""))
             cw, chh, piece = crop_rgba(w, rgba, box)
             small = resize_rgba(cw, chh, piece, tw, th)
         encode_png(dest / ("%s.png" % key), tw, th, 4, bytes(small))

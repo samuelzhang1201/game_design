@@ -5,4 +5,4 @@ note,res://assets/missives/note.png,40,10,a pinned parchment slip
 letter,res://assets/missives/letter.png,64,40,the reading desk's parchment
 envelope,res://assets/missives/envelope.png,0,,the wax-sealed envelope that flies to the tab
 pin,res://assets/missives/pin.png,0,,the pin on a note
-plaque,res://assets/missives/plaque.png,24,12,a column header plaque (margin measured off the art's own carved border: the 48 guess was ~2x the real ~20-24px bevel, forcing a min width/height floor that helped push the frame past the viewport and left no room for "Worth consulting" on one line)
+plaque,res://assets/missives/plaque.png,24,12,"a column header plaque (margin measured off the art's own carved border: the 48 guess was ~2x the real ~20-24px bevel, forcing a min width/height floor that helped push the frame past the viewport and left no room for ""Worth consulting"" on one line)"

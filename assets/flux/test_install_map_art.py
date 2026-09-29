@@ -112,6 +112,12 @@ def test_guarded_intersection_falls_back_to_the_whole_render_when_even_that_is_e
     assert ia.guarded_intersection(a, b, 40, 40) == (0, 0, 40, 40)
 
 
+
+def test_a_trim_cell_narrows_the_crop_and_an_empty_one_keeps_it():
+    assert ia.trim_box((10, 20, 110, 70), "0|0|0|15") == (10, 20, 110, 55)
+    assert ia.trim_box((10, 20, 110, 70), "") == (10, 20, 110, 70)
+    assert ia.trim_box((10, 20, 110, 70), "0|30|0|30") == (10, 20, 110, 70), "a trim that eats the piece is ignored"
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):
