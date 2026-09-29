@@ -35,6 +35,8 @@ var _nodes: Dictionary = {}        # node id -> node dict
 var _sphere_mi: Dictionary = {}    # node id -> MeshInstance3D
 var _thread_mi: Dictionary = {}    # link id -> MeshInstance3D
 var _thread_ends: Dictionary = {}  # link id -> [Vector3, Vector3], as drawn
+var _pairs: Dictionary = {}        # [id, id] sorted -> threads joining those two spheres
+var _sphere_alpha: Dictionary = {} # node id -> its material's own alpha, before any fade
 var _selected := ""
 var _button := 0
 var _press_at := Vector2.ZERO
@@ -133,8 +135,8 @@ func _build_discs() -> void:
 		var mesh := CylinderMesh.new()
 		mesh.top_radius = _repo.bal("ledger_disc_radius_m")
 		mesh.bottom_radius = mesh.top_radius
-		mesh.height = 0.04
-		mesh.radial_segments = 64
+		mesh.height = _repo.bal("ledger_disc_thickness_m")
+		mesh.radial_segments = int(_repo.bal("ledger_disc_segments"))
 		var mat := StandardMaterial3D.new()
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -142,7 +144,7 @@ func _build_discs() -> void:
 		var mi := MeshInstance3D.new()
 		mi.mesh = mesh
 		mi.material_override = mat
-		mi.position.y = LedgerLayout.layer_y(_repo, layer) - 0.6
+		mi.position.y = LedgerLayout.layer_y(_repo, layer) - _repo.bal("ledger_disc_offset_m")
 		_discs.add_child(mi)
 
 
@@ -159,6 +161,8 @@ func _sphere_material(n: Dictionary) -> StandardMaterial3D:
 	mat.albedo_color = _sphere_color(n)
 	mat.metallic = _repo.bal("ledger_orb_metallic")
 	mat.roughness = _repo.bal("ledger_orb_roughness")
+	# Blended even when opaque: the focus fade (ledger_focus_fade) turns
+	# every sphere not linked to the selected one see-through.
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	if String(n["layer"]) == "know":
 		mat.metallic = 0.1
@@ -174,6 +178,7 @@ func _build_spheres() -> void:
 	for c in _spheres_root.get_children():
 		c.queue_free()
 	_sphere_mi.clear()
+	_sphere_alpha.clear()
 	for id: String in _nodes:
 		var n: Dictionary = _nodes[id]
 		var mesh := SphereMesh.new()
@@ -185,6 +190,7 @@ func _build_spheres() -> void:
 		mi.position = _pos[id]
 		_spheres_root.add_child(mi)
 		_sphere_mi[id] = mi
+		_sphere_alpha[id] = (mi.material_override as StandardMaterial3D).albedo_color.a
 
 
 func _width(l: Dictionary) -> float:
@@ -241,31 +247,55 @@ func _build_threads() -> void:
 	_thread_mi.clear()
 	_thread_ends.clear()
 	var running := _running_links()
-	var pairs := {}
+	_pairs.clear()
 	for l: Dictionary in _snap["links"]:
-		var key := [String(l["from"]), String(l["to"])]
-		key.sort()
-		pairs[key] = int(pairs.get(key, 0)) + 1
+		var key := _pair_key(l)
+		_pairs[key] = int(_pairs.get(key, 0)) + 1
 	for l: Dictionary in _snap["links"]:
-		if not _pos.has(String(l["from"])) or not _pos.has(String(l["to"])):
+		var ends := _ends_of(l)
+		if ends.is_empty():
 			continue
-		var a: Vector3 = _pos[String(l["from"])]
-		var b: Vector3 = _pos[String(l["to"])]
-		if a.is_equal_approx(b):
-			continue
-		var key := [String(l["from"]), String(l["to"])]
-		key.sort()
-		if int(pairs[key]) > 1:  # both ways between the same spheres: side by side
-			var across := (b - a).cross(Vector3.UP)
-			if across.length_squared() < 1e-6:  # one straight above the other
-				across = Vector3.RIGHT
-			var side := across.normalized() * _repo.bal("ledger_pair_offset_m")
-			var sgn := 1.0 if String(l["from"]) == key[0] else -1.0
-			a += side * sgn
-			b += side * sgn
 		var id := String(l["id"])
-		_thread_mi[id] = _add_thread(l, a, b, running)
-		_thread_ends[id] = [a, b]
+		_thread_mi[id] = _add_thread(l, ends[0], ends[1], running)
+		_thread_ends[id] = ends
+
+
+func _pair_key(l: Dictionary) -> Array:
+	var key := [String(l["from"]), String(l["to"])]
+	key.sort()
+	return key
+
+
+## Where a thread runs now: from its source sphere to its end, set aside by
+## ledger_pair_offset_m when two threads join the same spheres both ways.
+## Empty when an end is missing or the two ends meet.
+func _ends_of(l: Dictionary) -> Array:
+	if not _pos.has(String(l["from"])) or not _pos.has(String(l["to"])):
+		return []
+	var a: Vector3 = _pos[String(l["from"])]
+	var b: Vector3 = _pos[String(l["to"])]
+	if a.is_equal_approx(b):
+		return []
+	var key := _pair_key(l)
+	if int(_pairs.get(key, 0)) > 1:  # both ways between the same spheres: side by side
+		var across := (b - a).cross(Vector3.UP)
+		if across.length_squared() < 1e-6:  # one straight above the other
+			across = Vector3.RIGHT
+		var side := across.normalized() * _repo.bal("ledger_pair_offset_m")
+		var sgn := 1.0 if String(l["from"]) == key[0] else -1.0
+		a += side * sgn
+		b += side * sgn
+	return [a, b]
+
+
+## Lays a thread's cylinder from a to b: its length and its transform, in
+## place. The cylinder's +Y is the link's end, so the light runs source -> end.
+func _place_thread(mi: MeshInstance3D, a: Vector3, b: Vector3) -> void:
+	(mi.mesh as CylinderMesh).height = a.distance_to(b)
+	var up := (b - a).normalized()
+	var ref := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
+	var x := ref.cross(up).normalized()
+	mi.transform = Transform3D(Basis(x, up, x.cross(up)), (a + b) * 0.5)
 
 
 func _add_thread(l: Dictionary, a: Vector3, b: Vector3, running: Dictionary) -> MeshInstance3D:
@@ -273,7 +303,6 @@ func _add_thread(l: Dictionary, a: Vector3, b: Vector3, running: Dictionary) -> 
 	var r := _width(l)
 	mesh.top_radius = r
 	mesh.bottom_radius = r
-	mesh.height = a.distance_to(b)
 	mesh.radial_segments = 8
 	mesh.rings = 1
 	mesh.cap_top = false     # thread.gdshader reads the side's UV only
@@ -297,11 +326,7 @@ func _add_thread(l: Dictionary, a: Vector3, b: Vector3, running: Dictionary) -> 
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = mat
-	# The cylinder's +Y is the link's end: the light runs source -> end.
-	var up := (b - a).normalized()
-	var ref := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
-	var x := ref.cross(up).normalized()
-	mi.transform = Transform3D(Basis(x, up, x.cross(up)), (a + b) * 0.5)
+	_place_thread(mi, a, b)
 	_threads_root.add_child(mi)
 	return mi
 
@@ -317,8 +342,7 @@ func _apply_focus_fade() -> void:
 	var faint := _repo.bal("ledger_focus_fade")
 	for id: String in _sphere_mi:
 		var mat := (_sphere_mi[id] as MeshInstance3D).material_override as StandardMaterial3D
-		var base := _sphere_color(_nodes[id])
-		mat.albedo_color.a = base.a * (1.0 if near.is_empty() or near.has(id) else faint)
+		mat.albedo_color.a = float(_sphere_alpha[id]) * (1.0 if near.is_empty() or near.has(id) else faint)
 	for l: Dictionary in _snap.get("links", []):
 		var mi: MeshInstance3D = _thread_mi.get(String(l["id"]))
 		if mi == null:
@@ -385,7 +409,8 @@ func _pick(pos: Vector2) -> Dictionary:
 		var id := String(l["id"])
 		if _thread_ends.has(id):
 			var ends: Array = _thread_ends[id]
-			threads.append({"id": id, "a": ends[0], "b": ends[1], "radius": maxf(_width(l), 0.25)})
+			threads.append({"id": id, "a": ends[0], "b": ends[1],
+				"radius": maxf(_width(l), _repo.bal("ledger_pick_radius_min_m"))})
 	return LedgerPick.pick(ray[0], ray[1], spheres, threads)
 
 
@@ -480,6 +505,25 @@ func _drag_to(id: String, pos: Vector2) -> void:
 		return
 	_pos[id] = o + d * t
 	(_sphere_mi[id] as MeshInstance3D).position = _pos[id]
-	_build_threads()
-	_apply_focus_fade()
+	_move_threads_of(id)
 	_update_hud()
+
+
+## Re-lays, in place, only the threads that touch the dragged sphere: no
+## mesh or material is made during a drag. A thread whose ends come to meet
+## is hidden until they part.
+func _move_threads_of(id: String) -> void:
+	for l: Dictionary in _snap.get("links", []):
+		if String(l["from"]) != id and String(l["to"]) != id:
+			continue
+		var tid := String(l["id"])
+		var mi: MeshInstance3D = _thread_mi.get(tid)
+		if mi == null:
+			continue
+		var ends := _ends_of(l)
+		mi.visible = not ends.is_empty()
+		if ends.is_empty():
+			_thread_ends.erase(tid)
+			continue
+		_place_thread(mi, ends[0], ends[1])
+		_thread_ends[tid] = ends
