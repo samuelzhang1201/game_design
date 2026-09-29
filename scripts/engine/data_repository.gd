@@ -577,7 +577,8 @@ func _load(dir: String) -> bool:
 				"icon": String(r["icon"]), "label": String(r["label"]),
 				"overcast": float(r.get("overcast", 0)), "wet": float(r.get("wet", 0)),
 				"mud": float(r.get("mud", 0)), "snow": float(r.get("snow", 0)),
-				"rainfall": float(r.get("rainfall", 0)), "snowfall": float(r.get("snowfall", 0))}):
+				"rainfall": float(r.get("rainfall", 0)), "snowfall": float(r.get("snowfall", 0)),
+				"gust": float(r.get("gust", 0))}):
 		return false
 	if not _load_if_present(dir + "/weather_odds.csv", ["season", "tier"], _add_weather_odds):
 		return false

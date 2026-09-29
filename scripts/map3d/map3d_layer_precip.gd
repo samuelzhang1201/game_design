@@ -104,6 +104,9 @@ func step() -> void:
 		fall.set_shader_parameter("box_height", height)
 		fall.set_shader_parameter("fall_m_s", speed)
 		fall.set_shader_parameter("wind_m_s", wind * slant)
+		fall.set_shader_parameter("wind_dir", wind)
+		fall.set_shader_parameter("gust_push", repo.bal("map3d_weather_gust_push"))
+		fall.set_shader_parameter("gust_stretch", repo.bal("map3d_weather_gust_stretch"))
 		fall.set_shader_parameter("sway_m_s", speed * repo.bal("map3d_weather_snow_sway"))
 		fall.set_shader_parameter("strength", _strength)
 		fall.set_shader_parameter("fall_now", weather.texture("fall_now"))
@@ -111,7 +114,6 @@ func step() -> void:
 		fall.set_shader_parameter("blend", weather.blend())
 		drop.set_shader_parameter("length_m", d * repo.bal("map3d_weather_%s_length_share" % kind))
 		drop.set_shader_parameter("width_m", d * repo.bal("map3d_weather_%s_width_share" % kind))
-		drop.set_shader_parameter("fall_dir", Vector3(wind.x * slant, -speed, wind.y * slant).normalized())
 
 
 func strength() -> float: return _strength

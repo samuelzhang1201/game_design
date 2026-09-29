@@ -14,15 +14,20 @@ uniform float opacity = 0.3;
 uniform float gain = 1.0;
 uniform float length_m = 40.0;
 uniform float width_m = 4.0;
-uniform vec3 fall_dir = vec3(0.0, -1.0, 0.0);
 
 void vertex() {
 	vec3 centre = MODEL_MATRIX[3].xyz;
 	vec3 to_cam = normalize(CAMERA_POSITION_WORLD - centre);
-	vec3 up = normalize(-fall_dir);
+	// precip_fall.gdshader lays the drop's flight in its Y axis, as long as a
+	// gust stretches it
+	vec3 axis = MODEL_MATRIX[1].xyz;
+	float stretch = max(length(axis), 0.001);
+	vec3 up = -axis / stretch;
 	vec3 side = normalize(cross(up, to_cam));
-	float h = kind < 0.5 ? length_m : width_m * 1.5;  // a flake a touch streaked by its fall
-	vec3 world = centre + side * VERTEX.x * width_m + up * VERTEX.y * h;
+	float h = (kind < 0.5 ? length_m : width_m * 1.5) * stretch;  // a flake a touch streaked by its fall
+	// a gusting flake is a thin streak, not a fat ellipse: narrowed as it stretches
+	float w = width_m / sqrt(stretch);
+	vec3 world = centre + side * VERTEX.x * w + up * VERTEX.y * h;
 	VERTEX = (VIEW_MATRIX * vec4(world, 1.0)).xyz;
 }
 

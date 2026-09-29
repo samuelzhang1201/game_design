@@ -19,6 +19,18 @@ func _a_province() -> String:
 	return String(codes[0])
 
 
+## The province with the most manors.
+func _largest() -> String:
+	var best := ""
+	var most := 0
+	for code: String in repo.provinces:
+		var n := MapManors.manors_of_province(repo, code).size()
+		if n > most:
+			most = n
+			best = code
+	return best
+
+
 ## A land texel deep inside `province`: its seat's pack point.
 func _seat_px(province: String) -> Vector2:
 	var p: Dictionary = repo.provinces[province]
@@ -28,11 +40,12 @@ func _seat_px(province: String) -> Vector2:
 func test_each_kind_names_its_look_in_weather_csv() -> void:
 	assert_eq(Map3DWeatherField.channels(repo, "clear"), Color(0, 0, 0, 0), "clear draws nothing")
 	assert_eq(Map3DWeatherField.channels(repo, "rain"), Color(1, 0, 0, 0.7), "rain: wet under an overcast")
-	assert_eq(Map3DWeatherField.fall(repo, "rain"), Vector2(1, 0), "rain falls")
-	assert_eq(Map3DWeatherField.fall(repo, "snow"), Vector2(0, 0.4), "snow falls, lighter than a blizzard")
+	assert_eq(Map3DWeatherField.fall(repo, "rain"), Vector3(1, 0, 0.2), "rain falls on a light wind")
+	assert_eq(Map3DWeatherField.fall(repo, "snow"), Vector3(0, 0.4, 0), "snow falls, lighter than a blizzard")
+	assert_eq(Map3DWeatherField.fall(repo, "blizzard"), Vector3(0, 1, 1), "a blizzard drives it sideways")
 	assert_eq(Map3DWeatherField.channels(repo, "blizzard").b, 1.0, "a blizzard covers the ground")
 	for kind: String in repo.weather_kinds:
-		for key in ["overcast", "wet", "mud", "snow", "rainfall", "snowfall"]:
+		for key in ["overcast", "wet", "mud", "snow", "rainfall", "snowfall", "gust"]:
 			var v := float(repo.weather_kinds[kind][key])
 			assert_true(v >= 0.0 and v <= 1.0, "%s %s within 0..1" % [kind, key])
 
@@ -47,9 +60,11 @@ func test_a_snowbound_land_is_white_under_the_field_and_the_open_sea_is_clear() 
 	var out := field.build(repo, state, 0, func(_p: String) -> String: return "snow")
 	var ground: Image = out["ground"]
 	assert_eq(ground.get_size(), field.size)
-	var inland := field.sample(ground, _seat_px(_a_province()))
+	var inland := field.sample(ground, _seat_px(_largest()))
 	assert_almost_eq(inland.b, 1.0, 0.02, "snow over the province's seat")
 	assert_almost_eq(inland.a, 0.6, 0.02, "under snow's overcast")
+	assert_gt(field.sample(ground, _seat_px(_a_province())).b, 0.6,
+		"even a five-cell province keeps its weather at its seat (map3d_weather_cell_min_px)")
 	assert_almost_eq(field.sample(ground, Vector2.ZERO).b, 0.0, 0.02, "the far sea corner stays clear")
 
 
@@ -99,3 +114,31 @@ func test_a_spell_turns_to_the_next_only_at_its_end() -> void:
 	assert_almost_eq(mid, 0.5, 0.001, "half way through the blend")
 	assert_eq(Map3DWeatherField.blend_of(repo, 4, 0.0), {"spell": 1, "t": 0.0}, "the next spell begins clear of blend")
 	assert_eq(Map3DWeatherField.first_day_of(repo, 1), 4)
+
+
+## Owner 2026-09-29 (天气效果不用铺满整个省份，再小一点): a province's weather
+## is a cell round its centre, fading out well before its border.
+func test_a_provinces_weather_is_a_cell_round_its_centre_not_a_blanket() -> void:
+	var out := field.build(repo, state, 0, func(_p: String) -> String: return "snow")
+	var ground: Image = out["ground"]
+	var land := 0
+	var covered := 0
+	for j in field.size.y:
+		for i in field.size.x:
+			if field._texel_prov[j * field.size.x + i] < 0:
+				continue
+			land += 1
+			covered += 1 if ground.get_pixel(i, j).b > 0.5 else 0
+	assert_gt(land, 0)
+	var share := float(covered) / float(land)
+	assert_true(share > 0.1 and share < 0.6, "a snowbound land is patches, not a sheet (%.2f of it)" % share)
+	# along a line from the largest province's centre outward, the snow fades
+	var best := _largest()
+	var most := MapManors.manors_of_province(repo, best).size()
+	var c := _seat_px(best)
+	assert_gt(field.sample(ground, c).b, 0.8, "whole at the centre")
+	var r := sqrt(float(most) * 250.0 / PI)  # a cell is ~250 pack px²: well past the core
+	var rim := 1.0
+	for a in 8:
+		rim = minf(rim, field.sample(ground, c + Vector2.from_angle(a * TAU / 8.0) * r * 1.2).b)
+	assert_lt(rim, 0.5, "fading toward the border")

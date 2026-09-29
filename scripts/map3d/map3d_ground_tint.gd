@@ -122,8 +122,6 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 		vec2 wuv = wpx / (weather_step_px * vec2(textureSize(weather_now, 0)));
 		vec4 wx = mix(texture(weather_now, wuv), texture(weather_next, wuv), weather_blend) * weather_on;
 		float lum = dot(base_albedo, vec3(0.2126, 0.7152, 0.0722));
-		base_albedo = mix(base_albedo, vec3(lum), wx.a * weather_flat);
-		base_albedo *= 1.0 - wx.a * weather_dim;
 		// mud: a dark umber at the ground's own value, a little darker again
 		vec3 mud = wx_linear(weather_mud_color.rgb);
 		mud *= lum / max(dot(mud, vec3(0.2126, 0.7152, 0.0722)), 0.001);
@@ -150,8 +148,16 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 			* (0.95 + 0.05 * patchy);
 		base_albedo = mix(base_albedo, snow_col, snow);
 		roughness = mix(roughness, weather_snow_rough, snow);
-		// the thickest overcast (a blizzard) veils the ground in grey
-		float haze = smoothstep(0.7, 1.0, wx.a) * weather_haze;
+		// the overcast last, over the snow too: a flat, dimmer light (a
+		// snowfall under a grey sky is darker than snow in the sun) ...
+		float lum2 = dot(base_albedo, vec3(0.2126, 0.7152, 0.0722));
+		base_albedo = mix(base_albedo, vec3(lum2), wx.a * weather_flat);
+		base_albedo *= 1.0 - wx.a * weather_dim;
+		// ... and a blizzard veils it in grey: told from a snowfall by its
+		// overcast against its snow (1 to 0.6), a ratio that holds out to the
+		// cell's rim, where the overcast alone fades and left dark blotches
+		float storm = smoothstep(0.75, 0.95, wx.a / max(wx.b, 0.01)) * clamp(wx.b * 1.5, 0.0, 1.0);
+		float haze = storm * weather_haze;
 		base_albedo = mix(base_albedo, wx_linear(weather_haze_color.rgb), haze);
 	}
 	vec4 tint = vec4(0.0);

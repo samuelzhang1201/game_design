@@ -12,6 +12,11 @@ uniform vec2 box_half = vec2(1000.0);
 uniform float box_height = 400.0;
 uniform float fall_m_s = 400.0;
 uniform vec2 wind_m_s = vec2(0.0);
+// a gust (the fall texture's B: a blizzard) drives a drop sideways by this
+// share of its fall speed and stretches it by gust_stretch
+uniform vec2 wind_dir = vec2(1.0, 0.0);
+uniform float gust_push = 0.0;
+uniform float gust_stretch = 0.0;
 uniform float sway_m_s = 0.0;
 uniform float strength = 0.0;
 uniform highp sampler2D fall_now : filter_linear, repeat_disable;
@@ -27,10 +32,9 @@ float fall_hash(inout uint s) {
 	return float((w >> 22u) ^ w) / 4294967295.0;
 }
 
-float fall_at(vec2 xz) {
+vec3 fall_at(vec2 xz) {
 	vec2 uv = ((xz - pack_origin) / m_per_px) / (step_px * vec2(textureSize(fall_now, 0)));
-	vec2 f = mix(texture(fall_now, uv).rg, texture(fall_next, uv).rg, blend);
-	return kind < 0.5 ? f.r : f.g;
+	return mix(texture(fall_now, uv).rgb, texture(fall_next, uv).rgb, blend);
 }
 
 void start() {
@@ -39,18 +43,27 @@ void start() {
 	float y = box_center.y + box_height * (0.9 + 0.2 * fall_hash(s));
 	TRANSFORM = mat4(1.0);
 	TRANSFORM[3].xyz = vec3(at.x, y, at.y);
+	vec3 f = fall_at(at);
+	float gust = f.b;
 	VELOCITY = vec3(wind_m_s.x, -fall_m_s * (0.85 + 0.3 * fall_hash(s)), wind_m_s.y);
-	// thinned by the weather under it: a drop where it does not rain is born unseen
-	float keep = step(fall_hash(s), fall_at(at) * strength);
-	CUSTOM = vec4(fall_hash(s), keep, 0.0, 0.0);
+	VELOCITY.xz += wind_dir * fall_m_s * gust_push * gust;
+	// thinned by the weather under it: a drop where it does not fall is born unseen
+	float keep = step(fall_hash(s), (kind < 0.5 ? f.r : f.g) * strength);
+	CUSTOM = vec4(fall_hash(s), keep, 0.0, gust);
 	COLOR = vec4(1.0, 1.0, 1.0, keep);
 }
 
 void process() {
 	if (kind > 0.5) {
 		float ph = CUSTOM.x * 6.2831853;
-		VELOCITY.xz = wind_m_s + vec2(sin(TIME * 1.3 + ph), cos(TIME * 0.9 + ph)) * sway_m_s;
+		VELOCITY.xz = wind_m_s + wind_dir * fall_m_s * gust_push * CUSTOM.w
+			+ vec2(sin(TIME * 1.3 + ph), cos(TIME * 0.9 + ph)) * sway_m_s * (1.0 - CUSTOM.w);
 	}
+	// the drop's own axis: along its flight, as long as its gust stretches it
+	// (precip_drop.gdshader reads it back from MODEL_MATRIX[1])
+	TRANSFORM[0] = vec4(1.0, 0.0, 0.0, 0.0);
+	TRANSFORM[1] = vec4(normalize(VELOCITY) * (1.0 + gust_stretch * CUSTOM.w), 0.0);
+	TRANSFORM[2] = vec4(0.0, 0.0, 1.0, 0.0);
 	// fade in as it enters the box and out at the ground
 	float life = clamp(CUSTOM.z / max(LIFETIME, 0.001), 0.0, 1.0);
 	CUSTOM.z += DELTA;

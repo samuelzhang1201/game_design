@@ -8,16 +8,18 @@ extends RefCounted
 ## by a coast takes the coast's weather — so a front, not a province outline,
 ## is what the ground shows. Pure and look-only: Weather.of is read, nothing is written.
 ##
-## `ground` is RGBA8 (wet, mud, snow, overcast), `fall` RG8 (rainfall,
-## snowfall); a texel (i, j) covers pack px [i, i + 1) × step, sampled at its
+## `ground` is RGBA8 (wet, mud, snow, overcast), `fall` RGB8 (rainfall,
+## snowfall, gust — the wind that drives a blizzard's snow sideways); a texel (i, j) covers pack px [i, i + 1) × step, sampled at its
 ## centre.
 
 var step_px := 16
 var size := Vector2i.ONE
 ## Texel → cell id (-1 water), row-major; cut once per pack.
 var _cells := PackedInt32Array()
-## Texel → ordinal in _prov_codes, cut again when a manor changes province.
+## Texel → ordinal in _prov_codes, cut again when a manor changes province,
+## and how much of its province's weather it wears (the CELL, below).
 var _texel_prov := PackedInt32Array()
+var _texel_cell := PackedFloat32Array()
 var _prov_codes: Array = []
 var _prov_key := -1
 
@@ -61,10 +63,10 @@ static func channels(repo: DataRepository, kind: String) -> Color:
 		float(k.get("snow", 0.0)), float(k.get("overcast", 0.0)))
 
 
-## A kind's falling weather: (rainfall, snowfall).
-static func fall(repo: DataRepository, kind: String) -> Vector2:
+## A kind's falling weather: (rainfall, snowfall, gust).
+static func fall(repo: DataRepository, kind: String) -> Vector3:
 	var k: Dictionary = repo.weather_kinds.get(kind, {})
-	return Vector2(float(k.get("rainfall", 0.0)), float(k.get("snowfall", 0.0)))
+	return Vector3(float(k.get("rainfall", 0.0)), float(k.get("snowfall", 0.0)), float(k.get("gust", 0.0)))
 
 
 ## The first absolute day of a spell.
@@ -90,41 +92,37 @@ func build(repo: DataRepository, state: GameState, spell: int, kind_of: Callable
 	var day := first_day_of(repo, spell)
 	_index_provinces(repo, state)
 	# each province's look as bytes: premultiplied by land, so the blur below is
-	# a land-weighted one — RGBA (wet, mud, snow, overcast), RGB (rainfall,
-	# snowfall, land)
+	# a land-weighted one — RGBA (wet, mud, snow, overcast) and RGBA (rainfall,
+	# snowfall, gust, land); every texel takes its share of its province's cell
 	var kinds: Dictionary = {}
 	var g_look := PackedByteArray()
 	var f_look := PackedByteArray()
 	g_look.resize(_prov_codes.size() * 4)
-	f_look.resize(_prov_codes.size() * 3)
+	f_look.resize(_prov_codes.size() * 4)
 	for p in _prov_codes.size():
 		var code: String = _prov_codes[p]
 		var kind := String(kind_of.call(code)) if kind_of.is_valid() else Weather.of(repo, state, code, day)
 		kinds[code] = kind
-		var c := channels(repo, kind)
+		g_look.encode_u32(p * 4, channels(repo, kind).to_abgr32())
 		var f := fall(repo, kind)
-		g_look.encode_u32(p * 4, c.to_abgr32())
-		f_look[p * 3] = int(round(f.x * 255.0))
-		f_look[p * 3 + 1] = int(round(f.y * 255.0))
-		f_look[p * 3 + 2] = 255
+		f_look.encode_u32(p * 4, Color(f.x, f.y, f.z, 0.0).to_abgr32())
 	var n := size.x * size.y
 	var g := PackedByteArray()
 	g.resize(n * 4)
 	var fb := PackedByteArray()
-	fb.resize(n * 3)
+	fb.resize(n * 4)
 	for t in n:
 		var p := _texel_prov[t]
 		if p < 0:
 			continue
-		g[t * 4] = g_look[p * 4]
-		g[t * 4 + 1] = g_look[p * 4 + 1]
-		g[t * 4 + 2] = g_look[p * 4 + 2]
-		g[t * 4 + 3] = g_look[p * 4 + 3]
-		fb[t * 3] = f_look[p * 3]
-		fb[t * 3 + 1] = f_look[p * 3 + 1]
-		fb[t * 3 + 2] = 255
+		var k := _texel_cell[t]
+		for c in 4:
+			g[t * 4 + c] = int(float(g_look[p * 4 + c]) * k + 0.5)
+		for c in 3:
+			fb[t * 4 + c] = int(float(f_look[p * 4 + c]) * k + 0.5)
+		fb[t * 4 + 3] = 255
 	var ground := Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGBA8, g)
-	var falls := Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGB8, fb)
+	var falls := Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGBA8, fb)
 	var halvings := int(repo.bal("map3d_weather_field_blur_halvings"))
 	_blur(ground, halvings)
 	_blur(falls, halvings)
@@ -133,22 +131,20 @@ func build(repo: DataRepository, state: GameState, spell: int, kind_of: Callable
 	g = ground.get_data()
 	fb = falls.get_data()
 	var out_f := PackedByteArray()
-	out_f.resize(n * 2)
+	out_f.resize(n * 3)
 	for t in n:
-		var land := fb[t * 3 + 2]
+		var land := fb[t * 4 + 3]
 		if land < 2:
-			g[t * 4] = 0
-			g[t * 4 + 1] = 0
-			g[t * 4 + 2] = 0
-			g[t * 4 + 3] = 0
+			for c in 4:
+				g[t * 4 + c] = 0
 			continue
 		var k := minf(2.0, 255.0 / float(land))  # full weather from half land in reach
 		for c in 4:
 			g[t * 4 + c] = mini(255, int(float(g[t * 4 + c]) * k + 0.5))
-		out_f[t * 2] = mini(255, int(float(fb[t * 3]) * k + 0.5))
-		out_f[t * 2 + 1] = mini(255, int(float(fb[t * 3 + 1]) * k + 0.5))
+		for c in 3:
+			out_f[t * 3 + c] = mini(255, int(float(fb[t * 4 + c]) * k + 0.5))
 	return {"ground": Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGBA8, g),
-		"fall": Image.create_from_data(size.x, size.y, false, Image.FORMAT_RG8, out_f), "kinds": kinds}
+		"fall": Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGB8, out_f), "kinds": kinds}
 
 
 ## Texel → province ordinal (-1 water) under the state's holdings: annexed
@@ -175,6 +171,49 @@ func _index_provinces(repo: DataRepository, state: GameState) -> void:
 				_prov_codes.append(code)
 			prov_of_cell[cell] = int(ordinal.get(code, -1))
 		_texel_prov[t] = int(prov_of_cell[cell])
+	_cut_cells(repo)
+
+
+## A province's weather is a CELL round its centre, not a blanket over it
+## (owner 2026-09-29: 天气效果不用铺满整个省份，再小一点): whole out to
+## map3d_weather_cell_core of the province's own radius (its area's), gone by
+## map3d_weather_cell_edge (the core never under map3d_weather_cell_min_px, or
+## the blur ate a small province's weather), the rim wobbled by map3d_weather_cell_wobble with
+## the angle so no cell is a circle — well inside the province, clear of its
+## neighbours. The whole province still slows a march: the look is smaller
+## than the rule, and the HUD mark at the centre names it.
+func _cut_cells(repo: DataRepository) -> void:
+	var count := PackedInt32Array()
+	count.resize(_prov_codes.size())
+	for t in _texel_prov.size():
+		if _texel_prov[t] >= 0:
+			count[_texel_prov[t]] += 1
+	var centre: Array = []
+	var radius := PackedFloat32Array()
+	var phase := PackedFloat32Array()
+	for p in _prov_codes.size():
+		var row: Dictionary = repo.provinces.get(_prov_codes[p], {})
+		centre.append(Vector2(float(row.get("center_x", 0.0)), float(row.get("center_y", 0.0))))
+		radius.append(sqrt(float(count[p]) * step_px * step_px / PI))
+		phase.append(float(posmod(String(_prov_codes[p]).hash(), 6283)) / 1000.0)
+	var core := repo.bal("map3d_weather_cell_core")
+	var edge := maxf(repo.bal("map3d_weather_cell_edge"), core + 0.01)
+	var wobble := repo.bal("map3d_weather_cell_wobble")
+	var min_px := repo.bal("map3d_weather_cell_min_px")
+	_texel_cell = PackedFloat32Array()
+	_texel_cell.resize(_texel_prov.size())
+	for j in size.y:
+		for i in size.x:
+			var t := j * size.x + i
+			var p := _texel_prov[t]
+			if p < 0:
+				continue
+			var off := (Vector2(i + 0.5, j + 0.5) * step_px) - (centre[p] as Vector2)
+			var a := off.angle()
+			var w := 1.0 + wobble * (0.6 * sin(3.0 * a + phase[p]) + 0.4 * sin(5.0 * a + 2.0 * phase[p]))
+			var core_px := maxf(core * radius[p], min_px)
+			_texel_cell[t] = 1.0 - smoothstep(core_px, maxf(edge * radius[p], core_px * 1.8),
+				off.length() / w)
 
 
 ## Softens `img` over about `halvings` octaves: halved that many times (each a
