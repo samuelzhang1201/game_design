@@ -158,3 +158,39 @@ func test_orders_follow_the_node() -> void:
 	assert_eq(Ledger.params_of(garrison, "regiment:r7"), {"regiment": "r7"})
 	var buy: Dictionary = Ledger.actions_for(data, "type:civil_goods")[0]
 	assert_eq(Ledger.params_of(buy, "type:civil_goods"), {"pool": "civil", "gold": 50})
+	# final fix M2: a numeric id is a number, as an order's params expect
+	assert_eq(Ledger.params_of({"params": "cell=@id|rate=0"}, "manor:12"), {"cell": 12, "rate": 0})
+
+## Final fix M1: an order that spends a sum says so, and its fee apart.
+func test_an_order_names_what_it_spends_and_its_fee() -> void:
+	var buy: Dictionary = Ledger.actions_for(data, "type:civil_goods")[0]
+	var gold := int(Ledger.params_of(buy, "type:civil_goods")["gold"])
+	var fee := int(OrderCosts.gold_of(data, String(buy["code"])))
+	var text := Ledger.order_text(data, buy, "type:civil_goods")
+	assert_string_contains(text, "%d gold of civil goods" % gold)
+	assert_string_contains(text, "+%d fee" % fee)
+	for a: Dictionary in Ledger.actions_for(data, "regiment:r7"):
+		assert_false(Ledger.order_text(data, a, "regiment:r7").contains("{"), "no placeholder left")
+
+## Final fix I1: a spy's `tax` estimate reaches the LEDGER's `taxed` thread —
+## the first report to reach a LEDGER thread. Shaped as SpySystem.report
+## files one: a "spy" letter in the credible column about a manor subject of
+## that cell, its tax as a span under the key `tax`.
+func test_a_spy_report_on_a_manors_tax_reaches_its_taxed_thread() -> void:
+	var realm := data.resolve_realm("player_realm")
+	var mine := MapManors.controlled_provinces(data, s)
+	var other := ""
+	for code: String in MapOwnership.provinces_of(data, s, realm):
+		if not code in mine:
+			other = code
+			break
+	assert_ne(other, "", "the realm has a province the crown does not control")
+	var cell := int(MapManors.manors_of_province(data, other, s)[0])
+	var at := MapTerrain.cell_center(data, data.cells[cell])
+	MissiveLog.add(data, s, MissiveLog.make("spy", "credible", s.absolute_day(),
+		MissiveLog.subject("manor", MapManors.code_of(data, cell), cell, at), "A spy report",
+		[MissiveLog.span("tax", "Tax", 40, 60)]))
+	var acc: Dictionary = _link(Ledger.snapshot(data, s, "economy", {"id": "manor:%d" % cell}),
+		"taxed")["accounts"][0]
+	assert_eq(String(acc["source"]), "spy", "the report's own kind")
+	assert_string_contains(String(acc["text"]), "40")

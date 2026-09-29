@@ -153,14 +153,19 @@ static func _part_of(repo: DataRepository, state: GameState, id: String) -> Arra
 	return []
 
 
+## A manor's yield of `key` (tax, civil, strategic). The tax thread asks
+## Intel by the fact key a spy files it under ("tax", SpySystem.report), so
+## a report's estimate reaches it; the goods keep "gold" (no report carries
+## them yet).
 static func _yields(repo: DataRepository, state: GameState, id: String, key: String,
 		to_t: String) -> Array:
+	var fact := "tax" if key == "tax" else "gold"
 	if id == "":
-		return [_type_link("manor", to_t, int(_intake(repo, state)[key]), "gold")]
+		return [_type_link("manor", to_t, int(_intake(repo, state)[key]), fact)]
 	if id.begins_with("manor:"):
 		var cell := int(_rest(id))
 		var line := RealmEconomy.line_of(repo, state, cell)
-		return [_link(id, "type:" + to_t, int(line[key]), "gold", _manor_subj(repo, cell))]
+		return [_link(id, "type:" + to_t, int(line[key]), fact, _manor_subj(repo, cell))]
 	return []
 
 
@@ -394,7 +399,9 @@ static func label_of(repo: DataRepository, state: GameState, id: String) -> Stri
 		"building":
 			var cell := int(rest.get_slice(":", 0))
 			var b: Dictionary = repo.manor_buildings.get(rest.get_slice(":", 1), {})
-			if b.is_empty() or not repo.manors.has(cell):
+			# a building that no longer stands (demolished) names nothing
+			if b.is_empty() or not repo.manors.has(cell) \
+					or not MapManors.has_building(state, cell, rest.get_slice(":", 1)):
 				return ""
 			return "%s at %s" % [String(b["label"]), MapManors.label_of(repo, cell)]
 		"character":

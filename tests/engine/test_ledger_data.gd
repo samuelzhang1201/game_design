@@ -40,3 +40,10 @@ func test_the_look_numbers_are_balance() -> void:
 	for key in ["ledger_layer_gap_m", "ledger_instance_cap", "ledger_camera_distance",
 			"ledger_layout_iterations", "ledger_thread_width_max"]:
 		assert_true(data.balance.has(key), key)
+
+## Final fix I3: an order that needs the map promises only what it does —
+## it shows the place on the map; the order itself is given there.
+func test_an_order_that_needs_the_map_says_it_shows_the_map() -> void:
+	for a: Dictionary in data.ledger_actions:
+		if String(a["needs_map"]) == "1":
+			assert_true(String(a["label"]).begins_with("Show on the map to "), String(a["label"]))

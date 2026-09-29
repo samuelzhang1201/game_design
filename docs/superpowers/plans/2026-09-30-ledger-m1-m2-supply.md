@@ -871,6 +871,8 @@ In `_clause` before the `"<" in c` fallback, and rename the unused `_data` param
 **Interfaces:**
 - Consumes: `WorkshopSystem.cells / plan / rate_of`, `SupplySystem.plan / stronghold_of`, Task-2-of-L0 `LedgerResolvers` conventions.
 - Produces: live types `workshop` (instances `workshops`, ids `workshop:<cell>`), `supply_line` (instances `supply_lines`, ids `supply_line:<regiment>`); live links `converts_in`, `converts_out`, `supplies_in`, `supplies_out`, `garrisons` (regiment → town); loop `hungry_host`; `workshop` orders.
+- **Gauges** (added by the L0 final review, not yet specified in the steps below): supplies and morale inside a regiment's sphere, stock inside a pool's — spec 2026-09-30-ledger-ontology-design §6.3 (its "a property" row; §12 records it as M1's). L0 draws no gauge.
+- Note (L0 final fix M2): `Ledger.params_of` already returns a numeric `@id` as an int, so `{"cell": cell, "rate": 0}` below holds as written.
 
 - [ ] **Step 1: Write the failing test**
 

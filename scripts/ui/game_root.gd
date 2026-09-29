@@ -689,7 +689,10 @@ func _sync_map_view() -> void:
 		var theme_name := "manors" if _manor_view else ("heights" if _height_view else "")
 		current_screen.set_map3d_theme(theme_name, true)   # the regiments always show
 	if current_screen != null and current_screen.has_method("set_map3d_view"):
-		current_screen.set_map3d_view(on)
+		# The map stays put away under an open LEDGER (a theme, DEV MODE or a
+		# screen swap must not wake it); the LEDGER's `closed` syncs it back.
+		var ledger_open := _ledger_screen != null and _ledger_screen.visible
+		current_screen.set_map3d_view(on and not ledger_open)
 	_apply_ruler()
 	_apply_dev_mode()
 

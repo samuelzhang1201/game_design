@@ -297,9 +297,23 @@ static func params_of(row: Dictionary, node_id: String) -> Dictionary:
 		var k := pair.get_slice("=", 0)
 		var v := pair.get_slice("=", 1)
 		if v == "@id":
-			out[k] = own
+			out[k] = int(own) if own.is_valid_int() else own  # a manor's cell is a number
 		elif v.is_valid_int():
 			out[k] = int(v)
 		else:
 			out[k] = v
 	return out
+
+
+## An order's line in the menu: its label with the params filled in
+## ("Buy {gold} gold of civil goods" -> "Buy 50 gold of civil goods"), then
+## what order_costs.csv charges. An order that spends a sum of its own names
+## that sum in its label, so the charge is written as the fee beside it;
+## any other order writes its charge as its cost.
+static func order_text(repo: DataRepository, row: Dictionary, node_id: String) -> String:
+	var params := params_of(row, node_id)
+	var text := String(row["label"]).format(params)
+	var fee := absi(int(OrderCosts.gold_of(repo, String(row["code"]))))
+	if fee == 0:
+		return text
+	return text + ("  (+%d fee)" % fee if params.has("gold") else "  (%d gold)" % fee)

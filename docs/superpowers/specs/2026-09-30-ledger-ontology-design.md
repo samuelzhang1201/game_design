@@ -529,4 +529,48 @@ ledger (it is derived; a dragged sphere is forgotten).
   the owner's pick — if it differs from A — is a follow-up re-tint, not a
   blocker on L0.
 
+- **What §6 describes that L0 did not build, and who owns it** (final
+  review, 2026-09-30):
+  - **Property gauges inside spheres** (§6.3's last row) → **M1**, the
+    supply-and-morale plan (`docs/superpowers/plans/2026-09-30-ledger-m1-m2-supply.md`
+    Task 5 carries the note): supplies and morale inside a regiment's
+    sphere, stock inside a pool's. L0 draws no gauge.
+  - **"Unknown abroad" — a dashed thread with a "?"** (§6.3) → **intel P0 /
+    L1**, when a link can be about a place abroad at all. L0's readers only
+    walk the crown's own realm, so no such thread arises; a figure the crown
+    has only in words draws at the fixed vague width and fainter ink.
+  - **The breadcrumb** (§6.2: Realm › Regiments › 3rd Regiment) → L0 built
+    **Back plus one label**: `%Back` shows while a focus is drawn and
+    `%Crumb` names the focus (`LedgerResolvers.label_of`). The full trail
+    waits for drilling more than one level deep.
+  - **A planned thread names its milestone** (§6.3) — BUILT in the final
+    fix pass: its card reads "Not yet built (M2): lit by the war workshop",
+    the milestone taken from the link row's `milestone`
+    (`LedgerCards.thread_entry`).
+  - **Orders that need the map promise only what they do** (owner asleep;
+    controller ruling): `ledger_actions.csv` labels them "Show on the map to
+    build…", "…to change its work…", "…to send a spy…", "…to march…". The
+    LEDGER closes and shows the subject on the map; the player gives the
+    order there. **Arming the march aim** (or the build menu) straight from
+    the LEDGER is left for later.
+  - **An order's menu line names what it spends**: a label may carry its
+    params (`Buy {gold} gold of civil goods`), and an order that spends a
+    sum of its own writes the `order_costs.csv` charge as a fee beside it
+    (`Ledger.order_text`: "Buy 50 gold of civil goods  (+1 fee)").
+- **The LEDGER draws the live state at most once a frame.** `Game.state_changed`
+  fires once a game day, several times a frame at 4x: `LedgerScreen.refresh`
+  only marks it dirty and `_process` draws it once. A redraw of the same
+  lens and focus keeps the spheres the player dragged where he put them
+  (`LedgerView3D._dragged`, forgotten on a new lens or focus); a drag whose
+  sphere is no longer drawn ends quietly; a focus that vanished frames the
+  camera afresh and closes its card. The LEDGER closes only a card or list
+  it put in the left column (`LedgerScreen._card_mine`), and the map stays
+  put away while it is open (`GameRoot._sync_map_view`).
+- **The tax thread reads a spy's `tax` estimate.** `LedgerResolvers._yields`
+  asks Intel by the fact key a spy files the figure under (`tax`), so a
+  report's "≈ 40–60 · spy" reaches the `taxed` thread as it reaches the map
+  card; the goods threads keep `gold` (no report carries them yet).
+  `describes_town` is live but no report is filed on a town subject yet —
+  spy reports land on the manor cell.
+
 **For the intelligence alignment draft** (`2026-09-28-intelligence-layer-alignment.md`, still the owner's uncommitted draft, so this branch does not carry it): its §8 phase table should gain, in P0's content, "the LEDGER's L1 (split strands, accounts differ)" and, in P3's, "the LEDGER's M3 audit (`LEDGER_AUDIT`) beside the countermeasures".

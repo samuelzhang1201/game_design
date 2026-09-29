@@ -31,6 +31,7 @@ var _pal: Dictionary = {}
 var _orbit := LedgerOrbit.new()
 var _snap: Dictionary = {}
 var _pos: Dictionary = {}          # node id -> Vector3
+var _dragged: Dictionary = {}      # node id -> Vector3: spheres the player moved this viewing
 var _nodes: Dictionary = {}        # node id -> node dict
 var _sphere_mi: Dictionary = {}    # node id -> MeshInstance3D
 var _thread_mi: Dictionary = {}    # link id -> MeshInstance3D
@@ -92,12 +93,25 @@ func set_active(on: bool) -> void:
 		_fit_viewport()
 
 
+## Draw a snapshot. The same lens and focus again (a state change) keeps
+## the spheres the player dragged where he put them; a new lens or focus
+## forgets them. A sphere under a drag that is no longer drawn ends the drag.
 func show_snapshot(snap: Dictionary, keep_camera: bool) -> void:
+	if _snap.is_empty() or String(snap.get("lens", "")) != String(_snap.get("lens", "")) \
+			or String(snap.get("focus_id", "")) != String(_snap.get("focus_id", "")):
+		_dragged.clear()
 	_snap = snap
 	_nodes.clear()
 	for n: Dictionary in snap["nodes"]:
 		_nodes[String(n["id"])] = n
 	_pos = LedgerLayout.positions(_repo, snap)
+	for id: String in _dragged.keys():
+		if _pos.has(id):
+			_pos[id] = _dragged[id]
+		else:
+			_dragged.erase(id)
+	if _drag_id != "" and not _pos.has(_drag_id):
+		_end_gesture()
 	var present := LedgerLayout.layers_present(snap)
 	for layer: String in _disc_mi:
 		var disc := _disc_mi[layer] as MeshInstance3D
@@ -454,7 +468,8 @@ func _pick(pos: Vector2) -> Dictionary:
 	var ray := _ray(pos)
 	var spheres: Array = []
 	for id: String in _nodes:
-		spheres.append({"id": id, "pos": _pos[id], "radius": _radius(_nodes[id])})
+		if _pos.has(id):
+			spheres.append({"id": id, "pos": _pos[id], "radius": _radius(_nodes[id])})
 	var threads: Array = []
 	for l: Dictionary in _snap.get("links", []):
 		var id := String(l["id"])
@@ -531,6 +546,14 @@ func _on_button(mb: InputEventMouseButton) -> void:
 			sphere_selected.emit("")
 
 
+## The pressed button's gesture ends quietly: the rest of its motion and its
+## release do nothing (the sphere it was dragging is no longer drawn).
+func _end_gesture() -> void:
+	_button = 0
+	_drag_id = ""
+	_moved = false
+
+
 func _on_drag(mm: InputEventMouseMotion) -> void:
 	if not _moved and mm.position.distance_to(_press_at) < CLICK_SLOP:
 		return
@@ -550,6 +573,9 @@ func _on_drag(mm: InputEventMouseMotion) -> void:
 ## A dragged sphere slides on its own layer's plane; the drag is for this
 ## viewing only and is never saved (spec §6.2).
 func _drag_to(id: String, pos: Vector2) -> void:
+	if not _pos.has(id) or not _sphere_mi.has(id):
+		_end_gesture()
+		return
 	var ray := _ray(pos)
 	var o: Vector3 = ray[0]
 	var d: Vector3 = ray[1]
@@ -560,6 +586,7 @@ func _drag_to(id: String, pos: Vector2) -> void:
 	if t <= 0.0:
 		return
 	_pos[id] = o + d * t
+	_dragged[id] = _pos[id]
 	(_sphere_mi[id] as MeshInstance3D).position = _pos[id]
 	_move_threads_of(id)
 	_update_hud()
@@ -569,6 +596,8 @@ func _drag_to(id: String, pos: Vector2) -> void:
 ## mesh or material is made during a drag. A thread whose ends come to meet
 ## is hidden until they part.
 func _move_threads_of(id: String) -> void:
+	if not _pos.has(id):
+		return
 	for l: Dictionary in _snap.get("links", []):
 		if String(l["from"]) != id and String(l["to"]) != id:
 			continue

@@ -36,7 +36,8 @@ static func thread_entry(repo: DataRepository, state: GameState, link: Dictionar
 		LedgerResolvers.label_of(repo, state, String(link["to"]))]
 	var lines: Array[String] = []
 	if String(link["status"]) == "planned":
-		lines.append("Not yet built: " + String(link["planned_note"]))
+		var milestone := String(Ledger.link_row(repo, String(link["type"])).get("milestone", ""))
+		lines.append("Not yet built (%s): %s" % [milestone, link["planned_note"]])
 	for acc: Dictionary in link["accounts"]:
 		lines.append(_account(acc, state.absolute_day()))
 	if String(link["governor"]) != "":

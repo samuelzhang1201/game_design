@@ -103,3 +103,19 @@ func test_what_is_gone_has_no_label() -> void:
 	assert_eq(LedgerResolvers.label_of(data, s, "character:nobody"), "")
 	assert_eq(LedgerResolvers.label_of(data, s, "courier:424242"), "")
 	assert_eq(LedgerResolvers.label_of(data, s, "type:regiment"), "Regiments")
+
+## Final fix, deferred #4: a demolished building's node names nothing, so a
+## focus on it falls back to the type level.
+func test_a_building_that_no_longer_stands_has_no_name() -> void:
+	var cell := _home_manor()
+	var code := ""
+	for c: String in data.manor_buildings:
+		if MapManors.build(data, s, cell, c, "a test building"):
+			code = c
+			break
+	assert_ne(code, "", "some building stands on the home manor")
+	var id := "building:%d:%s" % [cell, code]
+	assert_ne(LedgerResolvers.label_of(data, s, id), "")
+	(s.manor_buildings[str(cell)] as Array).erase(code)
+	assert_eq(LedgerResolvers.label_of(data, s, id), "", "demolished: it names nothing")
+	assert_true(Ledger.snapshot(data, s, "economy", {"id": id})["focus_lost"])

@@ -16,7 +16,7 @@ spies_on,courier,province,rides to,intelligence|all,live,spies_on,spymaster,seat
 describes_province,report,province,tells of,economy|intelligence|all,live,describes,,,,,
 describes_manor,report,manor,tells of,intelligence|all,live,describes,,,,,
 describes_regiment,report,regiment,tells of,war|intelligence|all,live,describes,,,,,
-describes_town,report,town,tells of,intelligence|all,live,describes,,,,,
+describes_town,report,town,tells of,intelligence|all,live,describes,,,,,no report is filed on a town subject yet (spy reports land on the manor cell)
 kin,character,character,kin of,court|all,live,court_relations,,,,,
 marriage,character,character,married to,court|all,live,court_relations,,,,,
 ally,character,character,allied with,court|all,live,court_relations,,,,,
