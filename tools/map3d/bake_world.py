@@ -98,7 +98,7 @@ SLOPE_CLIFF = (0.93, 0.99)
 # multiplies the ground by the map, so a target is reached by the ratio to the
 # texture's own mean colour, in linear light, and can only darken.
 FAR_COLOR = {
-    CLIFF: "#7E7B77", GRASS: "#687B44", LEAVES: "#4E4A2C", DIRT: "#9A7A55",
+    CLIFF: "#7E7B77", GRASS: "#747A40", LEAVES: "#4E4A2C", DIRT: "#9A7A55",
     ROCKY: "#7A7656", SOIL: "#5E4A30", FOREST: "#4A6430",
 }  # SAND's, SNOW's and CLIFF's are data/map3d_bake.csv far_color_sand / _snow / _cliff
 MACRO_WAVE_M = 9000.0    # large patches of lighter and darker country

@@ -37,7 +37,7 @@ func build(p_ctx: Map3DContext) -> void:
 		return
 	var data := FileAccess.get_file_as_bytes(path).to_float32_array()
 	var n := data.size() / ROW
-	var density := clampf(repo.bal("map3d_tree_density"), 0.0, 1.0) * float(ctx.q().get("tree_density", 1.0))
+	var density := clampf(repo.bal("map3d_tree_density"), 0.0, 1.0) * Map3DQuality.num(ctx.q(), "tree_density", 1.0)
 	var chunk := repo.bal("map3d_tree_chunk_m")
 	var scale := repo.bal("map3d_tree_scale")
 	var near := repo.bal("map3d_tree_near_m")
@@ -85,7 +85,8 @@ func build(p_ctx: Map3DContext) -> void:
 					var at := Vector3(data[i * ROW], data[i * ROW + 1], data[i * ROW + 2]) - centre
 					mm.set_instance_transform(j, Transform3D(basis, at))
 					var h := float((i * 40503) % 997) / 997.0
-					mm.set_instance_color(j, Color(0.9 + 0.2 * h, 0.92 + 0.16 * h, 0.9 + 0.1 * (1.0 - h)))
+					var h2 := float((i * 69069) % 991) / 991.0
+					mm.set_instance_color(j, Color(0.8 + 0.35 * h, 0.82 + 0.28 * h2, 0.8 + 0.2 * (1.0 - h)))
 				var node := MultiMeshInstance3D.new()
 				node.multimesh = mm
 				node.position = centre

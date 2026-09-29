@@ -383,8 +383,8 @@ map3d_sea_emission_share_near,0.75,"3D MAP sea (final review): the emission shar
 map3d_sea_natural_full_m,40000,"3D MAP sea (owner 2026-09-24: natural water near, the flat bands far — look route Phase 3): at or under this camera distance the sea is natural water"
 map3d_sea_bands_full_m,100000,3D MAP sea (Phase 3): at or past this camera distance the sea is the flat bands again; between the two it crossfades (was 60000 on the first pass: at the opening 24 km the few percent of the pale bands still mixed in drew a cyan ring outside every coast)
 map3d_sea_nat_shallow_px,2.0,"3D MAP sea (Phase 3): natural water stays its shallow colour this many pack px (km) out from the shore"
-map3d_sea_nat_mid_px,12,"[2026-09-30: 35 -> 12, look route: bracketed at the capital's bay — a small bay never left the shallow colour and read as one flat sheet] 3D MAP sea (Phase 3): natural water reaches its mid colour this many pack px out"
-map3d_sea_nat_deep_px,50,"[2026-09-30: 90 -> 50 with nat_mid_px] 3D MAP sea (Phase 3): natural water reaches its deep colour this many pack px out"
+map3d_sea_nat_mid_px,16,"[2026-09-30: 35 -> 12, look route: bracketed at the capital's bay — a small bay never left the shallow colour and read as one flat sheet] 3D MAP sea (Phase 3): natural water reaches its mid colour this many pack px out"
+map3d_sea_nat_deep_px,70,"[2026-09-30: 90 -> 50 with nat_mid_px] 3D MAP sea (Phase 3): natural water reaches its deep colour this many pack px out"
 map3d_sea_nat_warp_px,3.0,"3D MAP sea (Phase 3): a slow world noise warps the natural gradient's distance by up to this many pack px — the distance map steps a whole pack px (1 km) at a time, and an unwarped gradient drew those steps as contour rings at the opening zoom"
 map3d_sea_nat_emission_share,0.15,"3D MAP sea (Phase 3): natural water's share of colour sent out unlit — low, so the sun and sky light it"
 map3d_sea_nat_roughness,0.18,3D MAP sea (Phase 3): natural water's roughness (glossy: the sun's highlight reads)
@@ -500,7 +500,7 @@ map3d_house_view_m,9000,3D MAP houses (spec 2026-09-20 §3): a settlement farthe
 map3d_tree_on,1,"3D MAP woods (look route 2026-09-30, owner: 树木也是可以3d建模吗): 1 draws the bake's tree clumps (tools/map3d/bake_trees.py, Map3DLayerTrees), 0 leaves the ground bare"
 map3d_tree_density,1.0,"3D MAP woods: the share of the baked clumps drawn (a stable thinning by row), times graphics_quality.csv tree_density"
 map3d_tree_chunk_m,2000,"3D MAP woods: the side of one square of clumps, metres — one MultiMesh per square, kind, variant and level of detail, shown by Godot's own visibility range from the camera"
-map3d_tree_scale,1.7,"3D MAP woods: every clump's size against the mesh's own (Map3DTreeMesh builds crowns ~12-17 m across, drawn larger than life like the houses)"
+map3d_tree_scale,1.2,"3D MAP woods: every clump's size against the mesh's own (Map3DTreeMesh builds crowns ~12-17 m across, drawn larger than life like the houses)"
 map3d_tree_near_m,2500,3D MAP woods: the near clump (LOD 0) is drawn out to this camera distance to its square
 map3d_tree_far_m,12000,"3D MAP woods: the plain clump (LOD 1) out to this; past it no tree is drawn and the ground's colour carries the wood"
 map3d_tree_margin_m,400,3D MAP woods: the visibility ranges' hysteresis margin

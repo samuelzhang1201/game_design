@@ -158,6 +158,8 @@ def main(argv=None):
     grove = value_noise(rng, vw, vh, rules["grove_wave_m"] / vm) * 0.65 \
         + value_noise(rng, vw, vh, rules["grove_wave_m"] * 0.3 / vm) * 0.35
     chance = dens * np.clip(1.0 + rules["grove_gain"] * (grove - 0.5) * 2.0, 0, 2)
+    chance *= 1.0 + rules["fray_gain"] * (value_noise(np.random.default_rng(SEED + 11), vw, vh,
+                                                     rules["fray_wave_m"] / vm) - 0.5) * 2.0
     # a wood has an edge: squeeze the chance toward 0 or 1 round its middle
     e = rules["edge_sharp"]
     chance = np.clip((chance - 0.5) * e + 0.5, 0, 1) * (dens > 0.02)

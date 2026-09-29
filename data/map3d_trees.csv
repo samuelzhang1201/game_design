@@ -1,9 +1,9 @@
 key,value,notes
-spacing_m,32,"3D map woods (look route 2026-09-30): the grid a tree CLUMP is offered on, metres — one clump is 5-7 trees drawn larger than life like the houses, about 40 m across"
+spacing_m,28,"3D map woods (look route 2026-09-30): the grid a tree CLUMP is offered on, metres — one clump is 5-7 trees drawn larger than life like the houses, about 40 m across"
 jitter,0.9,woods: how far a candidate moves off its grid point as a share of spacing_m (1 = anywhere in its cell)
 grove_wave_m,2400,woods: the wavelength of the noise that gathers woods and opens clearings (taste: clustered not scattered)
 grove_gain,1.1,woods: how far that noise swings a place's woodedness (0 = the biome's share everywhere)
-edge_sharp,3.2,"woods: how hard the chance is squeezed toward 0 or 1 round 0.5, so a wood has an edge instead of thinning out over kilometres (1 = no squeeze)"
+edge_sharp,2.4,"woods: how hard the chance is squeezed toward 0 or 1 round 0.5, so a wood has an edge instead of thinning out over kilometres (1 = no squeeze)"
 lone_chance,0.006,woods: the chance of a lone clump on open land (savanna and grassland) — hedgerow and field trees
 min_above_sea_m,3,woods: no clump lower than this over the water plane (the shore and every lake)
 max_slope,0.55,woods: no clump on ground steeper than this rise over run (cliff faces stay bare rock)
@@ -24,7 +24,9 @@ biome_12,0.25|0.1,wetland: carr woods
 biome_13,0.32|0.4,hill band: woods on the hills
 biome_14,0.14|0.85,mountain band: pines on the lower mountains
 crown_reach_m,17,woods: a clump's crowns cover about a disc this wide in radius (before its scale) — woods.png's canopy share
-canopy_blur_texels,1,woods: woods.png is box-blurred this many 40 m texels each way so the canopy's edge is soft on the ground
+canopy_blur_texels,2,woods: woods.png is box-blurred this many 40 m texels each way so the canopy's edge is soft on the ground
 species_wave_m,900,"woods: the wavelength of the noise that gathers conifers and broadleaves into patches of one kind (critic: cones and spheres mixed tree by tree read as salt and pepper)"
 sown_keep_chance,0.97,woods: a sown field is left clear unless the wood's chance there is at least this (deep woods cover the patchwork instead of showing it as a grid)
 species_edge_dither,0.3,"woods: how far each clump's own draw blurs the edge between a conifer patch and a broadleaf one (0 = a clean line)"
+fray_wave_m,260,"woods: the wavelength of a fine noise laid on the woodedness before the edge squeeze, so a wood's rim frays in tongues and outliers instead of following its cells' straight sides"
+fray_gain,0.35,woods: how far that noise swings the woodedness

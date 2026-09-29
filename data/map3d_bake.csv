@@ -131,7 +131,7 @@ moist_river_m,1500,"3D bake moisture (look route 2026-09-30): the reach, metres,
 moist_river_gain,6.0,3D bake moisture: how strongly (the band is thin: its mean over that reach is small)
 moist_coast_m,2500,3D bake moisture: the reach over which the coast greens the land behind it
 moist_coast_gain,1.2,3D bake moisture: how strongly
-moist_green,0.14,"3D bake moisture: how far wet country turns green — red down this share, blue by 0.4 of it (the colour map can only darken)"
-dry_gold,0.22,"3D bake moisture: how far dry high ground turns golden — blue down this share, green by 0.35 of it"
-dry_from_m,120,3D bake moisture: dry ground starts turning golden this many metres over the sea
+moist_green,0.1,"3D bake moisture: how far wet country turns green — red down this share, blue by 0.4 of it (the colour map can only darken)"
+dry_gold,0.3,"3D bake moisture: how far dry high ground turns golden — blue down this share, green by 0.35 of it"
+dry_from_m,60,3D bake moisture: dry ground starts turning golden this many metres over the sea
 dry_full_m,700,3D bake moisture: ...fully by here

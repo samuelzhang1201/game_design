@@ -29,7 +29,7 @@ static func clump(kind: int, lod: int, variant: int) -> ArrayMesh:
 	rng.seed = 7919 * (kind + 1) + 104729 * (variant + 1)
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var count := 3 if kind == LONE else (7 if kind == CONIFER else 6)
+	var count := 3 if kind == LONE else (8 if kind == CONIFER else 8)
 	var spread := 7.0 if kind == LONE else 15.0
 	var placed: Array[Vector2] = []
 	for i in count:
@@ -49,7 +49,7 @@ static func clump(kind: int, lod: int, variant: int) -> ArrayMesh:
 			var r := rng.randf_range(5.8, 7.6)
 			_conifer(st, Vector3(at.x, 0, at.y), h, r, lod, tone, rng)
 		else:
-			var r := rng.randf_range(6.0, 8.5)
+			var r := rng.randf_range(4.2, 7.4)
 			var trunk := rng.randf_range(4.0, 7.0)
 			_broadleaf(st, Vector3(at.x, 0, at.y), trunk, r, lod, tone, kind, rng)
 	return st.commit()
@@ -69,8 +69,8 @@ static func _broadleaf(st: SurfaceTool, base: Vector3, trunk: float, r: float, l
 	var verts: Array[Vector3] = _icosphere(1 if lod == 0 else 0)
 	var lump := []
 	for v in verts.size():
-		lump.append(1.0 + rng.randf_range(-0.14, 0.14))
-	var squash := Vector3(r, r * 0.82, r)
+		lump.append(1.0 + rng.randf_range(-0.24, 0.24))
+	var squash := Vector3(r * rng.randf_range(0.85, 1.15), r * rng.randf_range(0.7, 0.9), r * rng.randf_range(0.85, 1.15))
 	var tris: Array = _ico_faces(1 if lod == 0 else 0)
 	for f in tris:
 		for k in 3:
