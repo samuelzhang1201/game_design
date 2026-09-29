@@ -2,7 +2,7 @@
 
 Animated wargame pieces: one glTF per unit holding the figure, its skeleton
 and its actions. No base (owner 2026-09-27). Both are now built from CC0
-scans, each by its own script (`cavalry_scan.py`, `infantry_scan.py`, below);
+scans or by hand, each by its own script (`cavalry_scan.py`, `infantry_blueprint/`, below);
 `make_units.py` is the Hunyuan-era build they reuse the rig, weighting and
 actions of, and it skips both rows.
 
@@ -146,7 +146,15 @@ lowering the figure onto z = 0 and writing its actions back unchanged. The
 runtime seats a piece on its own half extents (`Map3DUnits.stand_extent`).
 `shoot_glb.py GLB OUT feet` photographs the hooves and boots.
 
-## The infantry is built from CC0 scans too (2026-09-27)
+## The infantry is the blueprint man-at-arms (2026-09-29)
+
+Since 2026-09-29 `assets/units3d/infantry.glb` is hand-built from the owner's
+blueprint and textured with the owner's swatches: `infantry_blueprint/build.sh`,
+see `infantry_blueprint/README.md`. `infantry_scan.py` below is kept as the
+record of the Graf Salm scan it replaced; `unit_models.csv`'s row names
+`infantry_blueprint/build_model.py`, so `make_units.py` still skips it.
+
+## The infantry was built from CC0 scans too (2026-09-27, replaced 2026-09-29)
 
 The owner asked for the infantry "the cavalry's way". `infantry_scan.py`
 builds it; `make_units.py` skips its row (source `infantry_scan.py`).

@@ -27,26 +27,23 @@
  },
  "infantry": {
   "actions": {
-   "ATTACK": [
-    1,
-    61
-   ],
    "GARRISON": [
     1,
     121
    ],
    "MARCH": [
     1,
-    41
+    33
    ]
   },
-  "bones": 22,
+  "bones": 29,
   "fps": 30,
-  "height_m": 1.796,
+  "height_m": 1.847,
   "kind": "humanoid",
   "label": "Man-at-arms",
-  "source": "CC0 scans (noe-3d.at Graf Salm statue, Cleveland Museum of Art 1964.88 helmet), tools/units3d/infantry_scan.py",
-  "tris": 11212,
-  "weights": "heat"
+  "source": "hand-built from the owner's blueprint (assets/flux/out/infantry_kit/blueprint), textured with the owner's material swatches (infantry_kit/D), tools/units3d/infantry_blueprint/",
+  "stride_m": 1.177,
+  "tris": 23570,
+  "weights": "rigid plates + distance"
  }
 }

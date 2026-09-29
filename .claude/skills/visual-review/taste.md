@@ -376,6 +376,26 @@ add it here as a principle with its why — not as a changelog entry.
   yellow (supplies), in the counter's own width.
 - **A miniature casts its shadow** — the table-top look wants it.
 
+## The infantry figure (owner 2026-09-29, the blueprint man-at-arms)
+
+- **Armour is worn field kit, not a museum piece**: no mirror of the sky
+  ("为什么铠甲上会有环境反光"), dirty and old ("太干净太亮了，做脏做旧"), the
+  shield old painted WOOD, rivets BRASS on the plate edges. But dirty is
+  judged IN THE GAME: a dark, fully metallic plate that looked grimy in Blender
+  was a black silhouette at the map's 30 px. Mid-grey steel, metallic ~0.25,
+  grime and rust over it; Blender's studio light then makes it look pale —
+  that is expected.
+- **A close helmet reads by its openings**: a real eye slit under a jutting
+  brim (a gap you see into, not a painted line), breaths in the visor, the
+  visor pointed and slanting up — but held close ("面罩太突出了，收进去一点").
+- **Cloth moves and matches**: the cloak is the shield's colour ("和盾牌同色")
+  and streams on the march ("走路的时候披风要飘动"); a spear on the march is
+  SHOULDERED, tip up and back ("长矛应该扛在肩上").
+- **A piece's colour must face the camera**: standing square to the view, a
+  shield hung flat along the arm shows only its edge and the figure is a grey
+  knight with no signature (independent critic); the shield turns to the
+  front-left.
+
 ## Sunlight (owner 2026-09-28)
 - **The sun models the ground; it never covers it** ("日照产生的阴影实在太厚重太大了…不要影响玩家的视线"). A cast shadow is a light wash
   you can read the map through (`map3d_sun_shadow_opacity` 0.45, soft edge),
