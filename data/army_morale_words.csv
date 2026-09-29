@@ -1,0 +1,4 @@
+min_score,word,notes
+800,well fed,supply score per mille at or above which the ranks eat well (spec 2026-09-30-ledger-supply-design §4)
+400,on short rations,
+0,starving,

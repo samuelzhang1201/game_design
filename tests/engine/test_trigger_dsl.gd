@@ -38,3 +38,11 @@ func test_action_since_and_flags() -> void:
 	assert_false(TriggerDsl.evaluate("flag=black_market", s, data))
 	s.event_state["flags"].append("black_market")
 	assert_true(TriggerDsl.evaluate("flag=black_market", s, data))
+
+func test_host_hungry_reads_the_regiments() -> void:
+	for c in s.regiments.keys():
+		s.regiments[c]["supplies"] = 0
+	assert_true(TriggerDsl.evaluate("host_hungry", s, data))
+	for c in s.regiments.keys():
+		s.regiments[c]["supplies"] = 1000000
+	assert_false(TriggerDsl.evaluate("host_hungry", s, data))

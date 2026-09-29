@@ -227,6 +227,10 @@ army_supply_target_months,3,LEDGER M1: months of its own use a regiment is refil
 army_supply_loss_permille_per_100km,60,LEDGER M1: supplies lost on the road per mille for every 100 km of it
 army_supply_loss_cap_permille,600,LEDGER M1: the most a road can lose
 army_supply_warn_permille,500,"LEDGER M1: a regiment whose supply score is under this is hungry (TriggerDsl host_hungry, the hungry_host loop)"
+army_morale_starving,20,"LEDGER M1 (spec 2026-09-30-ledger-supply-design §4): the morale a regiment with no stores sinks toward"
+army_morale_fed,75,LEDGER M1: the morale a regiment with full stores climbs toward
+army_morale_garrison_bonus,5,LEDGER M1: a garrison's mark stands this much higher
+army_morale_drift_per_month,6,LEDGER M1: points morale moves toward its mark a month
 army_wound_recovery_permille,200,"regiments: share of the wounded who return to the ranks each month, per mille, at least 1 while any are wounded"
 army_training_per_month,0,regiments: training gained each month (placeholder: none)
 army_float_permille,150,"regiments: how far a regiment's hidden attack/defence against an arm floats round its base each month, per mille"

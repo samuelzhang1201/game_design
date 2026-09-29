@@ -1113,6 +1113,20 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 				metres, String(tier["tier"]), mult,
 				int(repo.bal("army_height_bonus_permille_per_100m")) / 10,
 				int(repo.bal("army_height_bonus_cap_permille")) / 10]))
+		if state != null and state.regiments.has(code) and not naval:
+			var line := SupplySystem.line_of(repo, state, code)
+			var word := ArmySystem.morale_word(repo, ArmySystem.supply_score(repo, int(st["supplies"]),
+				ArmySystem.supply_use(repo, r)))
+			if bool(line["garrison"]):
+				var town := String((repo.burgs.get(String(line["stronghold"]), {}) as Dictionary).get("label", ""))
+				stats.append(_stat("army_supply_line", "in garrison",
+					"Supplied through %s — no road to lose them on; the ranks are %s" % [town, word]))
+			else:
+				@warning_ignore("integer_division")  # whole percent from per-mille
+				stats.append(_stat("army_supply_line", "%d km · %d%% lost" % [int(line["length_km"]),
+					int(line["loss_permille"]) / 10],
+					"Supplied from the capital over %d km of road, which loses %d%% of every shipment; the ranks are %s"
+					% [int(line["length_km"]), int(line["loss_permille"]) / 10, word]))
 		stats.append(_stat("army_morale", str(int(st["morale"])), "Morale — %d of 100" % int(st["morale"])))
 		var back := ArmySystem.wound_recovery(repo, int(st["wounded"]))
 		stats.append(_stat("army_wounded", "+%d / mo" % back,

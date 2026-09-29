@@ -77,9 +77,8 @@ static func wound_recovery(repo: DataRepository, wounded: int) -> int:
 	return maxi(1, wounded * int(repo.bal("army_wound_recovery_permille")) / 1000)
 
 ## The month's end for every regiment of the player's realm, in code order:
-## wounded return, supplies are spent (the supply lines refill it first,
-## SupplySystem, called by TickEngine before this), training grows by its
-## rate up to 100. Morale does not move yet.
+## wounded return, morale drifts toward what its stores allow, supplies are
+## spent, training grows.
 static func settle_month(repo: DataRepository, state: GameState) -> void:
 	ensure(repo, state)
 	var codes := state.regiments.keys()
@@ -93,8 +92,41 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 		var heads := headcount(repo, reg)
 		var wounded := clampi(int(entry["wounded"]), 0, heads)
 		entry["wounded"] = clampi(wounded - wound_recovery(repo, wounded), 0, heads)
-		entry["supplies"] = maxi(0, int(entry["supplies"]) - supply_use(repo, reg))
+		var use := supply_use(repo, reg)
+		if String(reg.get("is_naval", "0")) != "1":
+			# Morale reads the stores in hand as the month turns, after the
+			# supply lines refilled them and before the month is eaten.
+			var mark := morale_mark(repo, supply_score(repo, int(entry["supplies"]), use),
+				SupplySystem.stronghold_of(repo, state, code) != "")
+			entry["morale"] = drift_morale(int(entry["morale"]), mark, int(repo.bal("army_morale_drift_per_month")))
+		entry["supplies"] = maxi(0, int(entry["supplies"]) - use)
 		entry["training"] = mini(100, int(entry["training"]) + int(repo.bal("army_training_per_month")))
+
+## Where a regiment's morale is heading (spec 2026-09-30-ledger-supply-design
+## §4): from army_morale_starving with no stores to army_morale_fed with
+## full ones, higher in garrison.
+static func morale_mark(repo: DataRepository, score: int, garrison: bool) -> int:
+	var lo := int(repo.bal("army_morale_starving"))
+	var hi := int(repo.bal("army_morale_fed"))
+	@warning_ignore("integer_division")
+	var mark := lo + (hi - lo) * clampi(score, 0, 1000) / 1000
+	if garrison:
+		mark += int(repo.bal("army_morale_garrison_bonus"))
+	return clampi(mark, 0, 100)
+
+## One month's drift of morale toward its mark, never overshooting.
+static func drift_morale(morale: int, mark: int, step: int) -> int:
+	if morale < mark:
+		return mini(morale + step, mark)
+	return maxi(morale - step, mark)
+
+## "well fed" / "on short rations" / "starving" — the word a supply score
+## reads as (data/army_morale_words.csv, highest min_score first).
+static func morale_word(repo: DataRepository, score: int) -> String:
+	for row: Dictionary in repo.army_morale_words:
+		if score >= int(row["min_score"]):
+			return String(row["word"])
+	return ""
 
 ## --- Terrain (spec §4) ---------------------------------------------------
 

@@ -93,6 +93,10 @@ var army_speed: Dictionary = {}
 ## data/army_height_supply.csv: [{tier, min_height, supply_permille}],
 ## highest min_height first (Elevation.tier_of reads the first it reaches).
 var army_height_supply: Array = []
+## data/army_morale_words.csv: [{min_score, word}], highest min_score first
+## (ArmySystem.morale_word reads the first it reaches; spec
+## 2026-09-30-ledger-supply-design §4).
+var army_morale_words: Array = []
 ## data/courier_kinds.csv: kind -> {speed_permille, fee_gold, offered}
 ## (spec 2026-09-27-courier-core §3).
 var courier_kinds: Dictionary = {}
@@ -649,6 +653,10 @@ func _load(dir: String) -> bool:
 		return false
 	army_height_supply.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["min_height"]) > int(b["min_height"]))
+	if not _load_if_present(dir + "/army_morale_words.csv", ["min_score", "word"],
+			func(r): army_morale_words.append({"min_score": int(r["min_score"]), "word": String(r["word"])})):
+		return false
+	army_morale_words.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["min_score"]) > int(b["min_score"]))
 	if not _load_if_present(dir + "/landmark_names.csv", ["kind", "pattern"],
 			func(r):
 				var k := String(r["kind"])

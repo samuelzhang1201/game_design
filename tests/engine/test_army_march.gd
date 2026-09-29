@@ -132,11 +132,24 @@ func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
 	var step := float(ArmySystem.day_step_m(repo, s, code))
 	var k := float(ArmySystem.metres_per_pack_px(repo))
 	ArmySystem.set_march(repo, s, code, home + Vector2(step * 1000.0 / k, 0.0))
+	# The tick's ArmySystem.settle_month runs before this second day's march
+	# (TickEngine.advance), and morale now follows the stores there (spec
+	# 2026-09-30-ledger-supply-design §4) — so the second day is not paced
+	# like the first. Predict it from the same functions settle_month uses.
+	var use := ArmySystem.supply_use(repo, r)
+	var supplies_before := int(s.regiments[code]["supplies"])
+	var mark := ArmySystem.morale_mark(repo, ArmySystem.supply_score(repo, supplies_before, use), false)
+	var morale2 := ArmySystem.drift_morale(int(s.regiments[code]["morale"]), mark,
+		int(repo.bal("army_morale_drift_per_month")))
+	var step2 := float(ArmySystem.pace_tenths(repo, ArmySystem.base_pace_km(repo, r),
+		ArmySystem.supply_score(repo, maxi(0, supplies_before - use), use), morale2,
+		int(s.regiments[code]["training"]))) * 100.0
 	s.day = Calendar.DAYS_PER_TICK - 1
 	engine.advance_day(s)   # day 30
 	engine.advance(s)       # the tick: day 1 of the next month
 	var gone := (ArmySystem.position_of(repo, s, r).x - home.x) * k
-	assert_almost_eq(gone, step * 2.0, 1.0, "two days, two days' march")
+	assert_almost_eq(gone, step + step2, 1.0,
+		"two days, the second at the tick's drifted morale (spec 2026-09-30-ledger-supply-design §4)")
 
 
 func test_the_same_orders_from_the_same_save_give_the_same_march() -> void:
