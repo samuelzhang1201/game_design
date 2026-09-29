@@ -33,7 +33,7 @@ func test_a_new_campaign_seats_every_regiment_where_the_pack_put_it() -> void:
 	var home := Vector2(float(r["x"]), float(r["y"]))
 	assert_almost_eq(ArmySystem.position_of(repo, s, r).x, home.x, 0.001)
 	assert_almost_eq(ArmySystem.position_of(repo, s, r).y, home.y, 0.001)
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON)
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY)
 	assert_eq(ArmySystem.heading_of(repo, s, code), Vector2.ZERO, "a standing regiment faces nowhere")
 
 
@@ -82,8 +82,8 @@ func test_it_stops_dead_on_the_spot_it_was_sent_to_and_garrisons() -> void:
 	var arrived := ArmySystem.march_day(repo, s)
 	assert_eq(arrived, [code], "it reports the day it arrives")
 	assert_almost_eq(ArmySystem.position_of(repo, s, r).x, near.x, 0.0011)
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON,
-		"arriving is itself the order to stand")
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY,
+		"arriving, it stands by: a garrison is an order (owner 2026-09-29)")
 	assert_eq(ArmySystem.march_day(repo, s), [], "and it does not arrive twice")
 
 
@@ -116,7 +116,7 @@ func test_the_clock_marches_it_a_day_at_a_time() -> void:
 	assert_eq(engine.day_arrivals, [], "day one, still on the road")
 	engine.advance_day(s)
 	assert_eq(engine.day_arrivals, [code], "day two, it is there")
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON)
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY)
 
 
 func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
@@ -168,7 +168,7 @@ func test_an_old_save_with_no_position_is_seated_where_the_pack_put_it() -> void
 	ArmySystem.ensure(repo, s)
 	assert_true(s.regiments[code].has("x_m"), "ensure seats it")
 	assert_almost_eq(ArmySystem.position_of(repo, s, r).x, float(r["x"]), 0.001)
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON)
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY)
 
 
 func test_the_orders_validate_against_the_regiment_and_the_ground() -> void:

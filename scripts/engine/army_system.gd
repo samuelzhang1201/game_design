@@ -26,7 +26,7 @@ static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
 		"y_m": home.y,
 		"dest_x_m": home.x,
 		"dest_y_m": home.y,
-		"order": ORDER_GARRISON,
+		"order": ORDER_STANDBY,
 	}
 
 ## Seeds every regiment of the player's realm that has no state yet — a new
@@ -46,7 +46,7 @@ static func ensure(repo: DataRepository, state: GameState) -> void:
 			entry["y_m"] = home.y
 			entry["dest_x_m"] = home.x
 			entry["dest_y_m"] = home.y
-			entry["order"] = ORDER_GARRISON
+			entry["order"] = ORDER_STANDBY
 
 ## A regiment's state for reading: the stored one, else what it would start
 ## with. Never writes. {} for a regiment that is not the player's.
@@ -365,6 +365,11 @@ static func speed_km_per_day(repo: DataRepository, state: GameState, code: Strin
 ## pace_tenths x 100 metres, which is already a whole number, so nothing is
 ## lost by keeping the whole thing in metres.
 
+## STANDBY is a column under no order: at the campaign's start and once a march
+## arrives. GARRISON is the order to hold the ground, given only by ARMY_GARRISON
+## (owner 2026-09-29: the old garrison stance was a standby; a garrison stands
+## behind the shield, the spear laid over it). The 3D piece plays one clip each.
+const ORDER_STANDBY := "standby"
 const ORDER_GARRISON := "garrison"
 const ORDER_MARCH := "march"
 
@@ -399,10 +404,10 @@ static func position_of(repo: DataRepository, state: GameState, reg: Dictionary)
 	return metres_to_pack(repo, Vector2i(int(entry["x_m"]), int(entry["y_m"])))
 
 
-## The order a regiment is under: "march" or "garrison".
+## The order a regiment is under: "march", "garrison" or "standby" (no order).
 static func order_of(repo: DataRepository, state: GameState, code: String) -> String:
 	var entry: Dictionary = state_of(repo, state, code)
-	return String(entry.get("order", ORDER_GARRISON)) if not entry.is_empty() else ORDER_GARRISON
+	return String(entry.get("order", ORDER_STANDBY)) if not entry.is_empty() else ORDER_STANDBY
 
 
 ## Where a marching regiment is headed, in pack pixels; its own position when
@@ -506,7 +511,7 @@ static func march_ahead(repo: DataRepository, state: GameState, code: String, en
 ## One regiment's day on the road, written to `entry`; true when it arrives.
 static func _march_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
 		abs_day: int) -> bool:
-	if String(entry.get("order", ORDER_GARRISON)) != ORDER_MARCH or regiment(repo, code).is_empty():
+	if String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH or regiment(repo, code).is_empty():
 		return false
 	var step := day_march_m(repo, state, code, abs_day)
 	if step <= 0:
@@ -517,7 +522,7 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 	if left <= float(step):
 		entry["x_m"] = int(entry["dest_x_m"])
 		entry["y_m"] = int(entry["dest_y_m"])
-		entry["order"] = ORDER_GARRISON
+		entry["order"] = ORDER_STANDBY           # arrived: it stands by until it is told to hold
 		return true
 	var way := (dest - here) / left
 	entry["x_m"] = int(round(here.x + way.x * float(step)))

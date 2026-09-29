@@ -160,7 +160,7 @@ add it here as a principle with its why — not as a changelog entry.
   pennants, no shrubs, no little figures, and no ground slab under the
   building. **No AI 3D (owner 2026-09-24: Hunyuan3D removed over its
   licence) — houses are hand-modelled in Blender against a photoreal Flux
-  reference; ComfyUI stops at the image.** The lesson from the Hunyuan
+  reference; ComfyUI stops at the image.** (2026-09-29: every Hunyuan asset is deleted, the 2D counter art included; Tripo 3D on the owner's paid plan is allowed for UNIT sources, processed to budget in Blender — `tools/units3d/infantry_tripo/`.) The lesson from the Hunyuan
   rounds still holds for any prompt: **never ask for a "game asset" in
   words.** Three text-to-3D attempts saying "game asset for a grand strategy
   game" each came back a toy castle with orange flags and a grass base,
@@ -395,6 +395,24 @@ add it here as a principle with its why — not as a changelog entry.
   shield hung flat along the arm shows only its edge and the figure is a grey
   knight with no signature (independent critic); the shield turns to the
   front-left.
+
+## The infantry's actions (owner 2026-09-29/30, the Tripo man-at-arms)
+
+- **A walk is square**: the feet point where he goes and pass under the
+  hips, never splayed ("士兵走路外八字太严重，很不美观").
+- **Standing at ease is not a garrison** ("你现在的驻防动作其实应该算是待命动作"):
+  STANDBY is the relaxed stance with the spear grounded; GARRISON is a
+  fighting guard, played only under that order.
+- **The guard is a fighting stance, not a pose on a plinth**: the left foot
+  forward under a bent knee, the right leg back and the stance open, the body
+  low, the shield up to the chin, the spear held overhand LEVEL with the eyes
+  ("左腿弯曲向前，右腿在后，侧向打开…盾牌抬起到下巴附近"; "长矛…和士兵的视线方向平齐").
+  Nothing invented beyond what was asked ("脚谁让你交叉的？").
+- **Joints bend as a body bends**: no wrist wrung about the spear, no arm
+  thrown straight through its shield, no plate torn across a joint
+  ("驻防的手臂动作太扭曲了").
+- **The steel is matte and warm, like the cavalry's**: Tripo's delit silver
+  read white on the map; toned down, roughness at least 0.55.
 
 ## Sunlight (owner 2026-09-28)
 - **The sun models the ground; it never covers it** ("日照产生的阴影实在太厚重太大了…不要影响玩家的视线"). A cast shadow is a light wash

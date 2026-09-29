@@ -272,7 +272,12 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 	assert_gt(checked, 0)
 	assert_true(MapObjects.army_card(Game.data, "no_such_regiment").is_empty())
 	for row: Dictionary in Game.data.army_art.values():
-		assert_true(ResourceLoader.exists(String(row["texture"])), "%s's piece is installed" % row["piece"])
+		# a piece may have no counter art (the Hunyuan renders were deleted 2026-09-29):
+		# the counter draws its glyph; but art that is named must be installed
+		var tex := String(row["texture"])
+		if tex != "":
+			assert_true(ResourceLoader.exists(tex), "%s's piece is installed" % row["piece"])
+		assert_true(ResourceLoader.exists(String(row["painting"])), "%s's card painting is installed" % row["piece"])
 
 ## The card of a player's regiment reads its state (owner 2026-09-17): the
 ## ground, morale, the wounded beside the headcount, the month's recovery

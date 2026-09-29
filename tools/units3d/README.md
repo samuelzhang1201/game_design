@@ -30,8 +30,11 @@ blender -b --factory-startup --python tools/units3d/measure_units.py -- OUTDIR
 | `unit_common.py` | import, place, measure |
 | `assets/units3d/units3d.json` | what was built: tris, bones, which weighting was used, the action frame ranges |
 
-The sources are `assets/units3d/ai_src/<code>.glb`, generated through the
-Blender MCP's Hunyuan3D at 35 credits each.
+The sources WERE `assets/units3d/ai_src/<code>.glb`, generated through the
+Blender MCP's Hunyuan3D; every Hunyuan source and render was deleted on
+2026-09-29 (licence), so `make_units.py` now builds nothing on its own —
+it is the library the scan and blueprint builds borrow from. A Tripo 3D
+generation (paid plan only) is processed by `infantry_tripo/tripo.py`.
 
 ## The contract
 
@@ -146,7 +149,18 @@ lowering the figure onto z = 0 and writing its actions back unchanged. The
 runtime seats a piece on its own half extents (`Map3DUnits.stand_extent`).
 `shoot_glb.py GLB OUT feet` photographs the hooves and boots.
 
-## The infantry is the blueprint man-at-arms (2026-09-29)
+## The infantry is a Tripo 3D generation (2026-09-30)
+
+`assets/units3d/infantry.glb` is built by `infantry_tripo/tripo.py` in the owner's open Blender
+from a Tripo 3D generation on the owner's paid plan (Tripo's terms §5.2.2: paid outputs are
+ours; free-tier outputs are Tripo's). See `infantry_tripo/README.md`. It reuses the blueprint's
+MARCH and old garrison stance (as STANDBY) through the injection points added to
+`infantry_blueprint/march.py` / `garrison.py` / `export.py` (`R`, `A_REST`, `SH_*`, `STANCE`,
+`CLIP`, `FEET_FORWARD`, `CLIPS`; absent, the blueprint builds exactly as before, save that each
+foot now turns by its OWN rest direction). `unit_models.csv`'s row names it; `make_units.py`
+skips it.
+
+## The infantry was the blueprint man-at-arms (2026-09-29, replaced 2026-09-30)
 
 Since 2026-09-29 `assets/units3d/infantry.glb` is hand-built from the owner's
 blueprint and textured with the owner's swatches: `infantry_blueprint/build.sh`,

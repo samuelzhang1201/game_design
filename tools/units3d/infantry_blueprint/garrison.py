@@ -10,7 +10,7 @@ import bpy, math
 from mathutils import Vector, Matrix, Quaternion
 
 HERE = "/Users/samuelzhang/game_design/tools/units3d/infantry_blueprint/"
-G = {"BAKE": False}
+G = {"BAKE": False, **{k: globals()[k] for k in ("R", "A_REST", "SH_GRIP", "SH_REST") if k in globals()}}
 exec(open(HERE + "march.py").read(), G)
 REST, rot, two_bone, R = G["REST"], G["rot"], G["two_bone"], G["R"]
 rig = G["rig"]
@@ -20,12 +20,17 @@ SHIELD_ABD = globals().get("SHIELD_ABD", 8.0)      # and out from the body, so i
 SHIELD_BEND = globals().get("SHIELD_BEND", 6.0)   # the elbow bent a little more, the shield carried
 SHIELD_FWD = globals().get("SHIELD_FWD", 10.0)      # the upper arm a little forward: the shield before the tassets
 ANK_Z = R["ANKLE"].z
+CLIP = globals().get("CLIP", "GARRISON")          # infantry_tripo bakes this stance as STANDBY (owner 2026-09-29)
+FEET_FORWARD = globals().get("FEET_FORWARD", False)
+FEET_OUT = globals().get("FEET_OUT", 5.0)
+GRIP = Vector(globals().get("GRIP", (-0.29, -0.26, 1.26)))   # the right fist on the grounded spear
 
 # the spear's axis and its butt, in the spear bone's rest frame
 _sp = bpy.data.objects["inf_spear"]
 _vs = [v.co.copy() for v in _sp.data.vertices]
 _c = sum(_vs, Vector()) / len(_vs)
-_ax = max(((a - b) for a in _vs[:40] for b in _vs[-40:]), key=lambda d: d.length).normalized()
+_ax = Vector(globals()["A_REST"]).normalized() if "A_REST" in globals() else \
+    max(((a - b) for a in _vs[:40] for b in _vs[-40:]), key=lambda d: d.length).normalized()
 if _ax.z < 0:
     _ax = -_ax                                            # butt -> tip
 _head = REST["spear"].translation
@@ -88,7 +93,7 @@ def pose_g(t):
             put(hd, Rfa, fa_head + Rfa @ (REST[hd].translation - REST[fa].translation))
             continue
         # the right hand holds the grounded spear at chest height, out beside the body
-        grip = Vector((-0.29, -0.26, 1.26)) + Vector((0.0, 0.0, 0.004 * breath))
+        grip = GRIP + Vector((0.0, 0.0, 0.004 * breath))
         L1a = (REST[fa].translation - REST[ua].translation).length
         L2a = (REST[hd].translation - REST[fa].translation).length + 0.058
         El, Wt = arm_ik(ua_head, grip, L1a, L2a, Vector((-0.6, 0.5, -0.4)).normalized())
@@ -119,13 +124,17 @@ def pose_g(t):
         r_sh = (REST[ft].translation - REST[sh].translation).normalized()
         Rsh = (Rth @ r_sh).rotation_difference((A - Kn).normalized()).to_matrix() @ Rth
         put(sh, Rsh, Kn)
-        r_ft = (R["TOE"] - R["ANKLE"]).normalized()
-        want = rot("Z", -6.0 * sg) @ r_ft
+        r_ft = (REST[ft].to_3x3() @ Vector((0, 1, 0))).normalized()   # THIS foot's rest direction
+        if FEET_FORWARD:        # a body whose feet were built splayed: square them, then turn them out a touch
+            p_ = math.atan2(r_ft.z, Vector((r_ft.x, r_ft.y)).length)
+            want = rot("Z", FEET_OUT * sg) @ Vector((0, -math.cos(p_), math.sin(p_)))
+        else:
+            want = rot("Z", -6.0 * sg) @ r_ft
         put(ft, (Rsh @ r_ft).rotation_difference(want).to_matrix() @ Rsh, A)
     return M
 
 
-G["bake"]("GARRISON", pose_g, NF)
+G["bake"](CLIP, pose_g, NF)
 # leave MARCH on the rig for the viewer
 rig.animation_data.action = bpy.data.actions["MARCH"]
 bpy.context.scene.frame_start, bpy.context.scene.frame_end = 1, G["N"]

@@ -17,6 +17,7 @@ extends Node3D
 @export var preview := false: set = set_preview
 
 const GARRISON := "GARRISON"
+const STANDBY := "STANDBY"
 const MARCH := "MARCH"
 
 var ctx: Map3DContext
@@ -222,7 +223,7 @@ func play(code: String, action: String) -> void:
 		if name == "" or anim.current_animation == name:
 			continue
 		anim.play(name, ctx.repo.bal("map3d_unit_blend_s"))  # blended, never a snap
-		if action == GARRISON:  # men at rest are not clones; a column marches in step
+		if action != MARCH:  # men at rest are not clones; a column marches in step
 			anim.seek(fposmod(i * 0.37, anim.current_animation_length))
 
 
@@ -276,13 +277,12 @@ func _day_of(code: String) -> Dictionary:
 	return _days[code]
 
 
-## The action follows the MARCH: a column walks while the clock runs and its
-## piece is on its day's march, and stands the moment it arrives.
-## On a stopped clock it STANDS READY in the garrison pose, facing where it
-## was sent (owner 2026-09-24: 兵棋不进行移动，直到玩家点击继续游戏按钮).
+## The action follows the ORDER (owner 2026-09-29): MARCH while the clock runs and it walks;
+## GARRISON under that order; else STANDBY (the start, on arrival, ready on a stopped clock).
 func _sync_action(code: String) -> void:
 	var walking: bool = _days.has(code) and _shown_xz.get(code) != _days[code]["to"]
-	play(code, MARCH if walking and ctx.clock_speed() > 0 else GARRISON)
+	var held := ctx.state() != null and ArmySystem.order_of(ctx.repo, ctx.state(), code) == ArmySystem.ORDER_GARRISON
+	play(code, MARCH if walking and ctx.clock_speed() > 0 else (GARRISON if held else STANDBY))
 
 
 func _scene(path: String) -> PackedScene:

@@ -98,7 +98,7 @@ def spear_upright(acts):
 
 
 def main():
-    acts = [bpy.data.actions[n] for n in ("GARRISON", "MARCH")]
+    acts = [bpy.data.actions[n] for n in globals().get("CLIPS", ("GARRISON", "MARCH"))]
     step = stride(bpy.data.actions["MARCH"])
     spear_upright(acts)
     rig.animation_data.action = None

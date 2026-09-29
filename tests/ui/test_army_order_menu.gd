@@ -65,7 +65,7 @@ func test_choosing_march_only_AIMS_it_and_gives_the_map_the_word() -> void:
 	_menu.id_pressed.emit(0)   # ARMY_MARCH is the first row
 	assert_eq(_menu.aiming(), code, "the order waits for a destination")
 	assert_true(_map.aiming, "and the map knows not to pick with the next click")
-	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON,
+	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY,
 		"nothing is ordered until it is aimed")
 
 
@@ -105,7 +105,7 @@ func test_an_order_on_a_stopped_clock_does_not_start_it() -> void:
 	watch_signals(Game)
 	_commit()
 	assert_eq(Game.state.couriers.size(), 1, "the order is given: a courier waits to ride")
-	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON, "the column waits for him")
+	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY, "the column waits for him")
 	assert_eq(Game.clock_speed, 0, "but time stays stopped")
 	assert_signal_emitted_with_parameters(Game, "news_published",
 		["A courier will ride for %s when time runs." % String(ArmySystem.regiment(Game.data, code)["label"])])
@@ -140,7 +140,7 @@ func test_the_next_click_on_the_ground_sends_it_on_commit() -> void:
 func test_a_click_on_the_ground_with_nothing_aimed_orders_nothing() -> void:
 	var code := _marcher()
 	_map.ground_clicked.emit(Vector2(500.0, 300.0))
-	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON)
+	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY)
 
 
 func test_garrison_rides_and_halts_a_march_on_delivery() -> void:
@@ -199,7 +199,7 @@ func test_the_destination_click_only_ASKS() -> void:
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(there)
-	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON,
+	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY,
 		"nothing is sent before COMMIT")
 	assert_eq(_menu.pending(), there)
 	assert_eq(_map.aim_dest, there, "the route is drawn to where it was clicked")
@@ -221,7 +221,7 @@ func test_cancel_gives_the_march_up() -> void:
 	_menu.id_pressed.emit(ArmyOrderMenu.CANCEL)
 	assert_eq(_menu.aiming(), "")
 	assert_eq(_map.aim_dest, Vector2(-1, -1))
-	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON)
+	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY)
 
 
 func test_clicking_away_from_the_confirm_gives_it_up() -> void:
@@ -236,7 +236,7 @@ func test_clicking_away_from_the_confirm_gives_it_up() -> void:
 	_menu.hide()   # closed with no row chosen
 	await wait_process_frames(2)
 	assert_eq(_menu.aiming(), "")
-	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON)
+	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY)
 
 
 ## owner 2026-09-27: 兵人行进路线只能在暂停模式下选择，时间流逝的时候不可以操作.

@@ -70,7 +70,7 @@ func test_delivery_applies_the_order_on_that_day_and_not_before() -> void:
 	var dest := Vector2i(123000, 456000)
 	_courier(s, 1, code, [[200000, 0, "road"]], {"action_code": "ARMY_MARCH", "dest_x_m": dest.x, "dest_y_m": dest.y})
 	CourierSystem.ride_day(repo, s)
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON, "still on the road")
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY, "still on the road")
 	CourierSystem.ride_day(repo, s)
 	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_MARCH)
 	assert_eq(ArmySystem.pack_to_metres(repo, ArmySystem.destination_of(repo, s, code)), dest)
@@ -235,7 +235,7 @@ func test_ride_ahead_on_the_delivery_day_ends_on_the_column() -> void:
 	assert_eq(day["points"], [Vector2i(50000, 0), Vector2i(50000, 0)])
 	# 50 km of road costs 50,000 of the day's 160,000
 	assert_almost_eq(float(day["share"]), 50000.0 / 160000.0, 0.0001, "he arrives with most of the day to spare")
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON)
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY)
 	assert_eq(s.couriers.size(), 1, "a preview delivers nothing")
 
 
@@ -256,7 +256,7 @@ func test_day_ahead_of_marches_on_an_order_delivered_that_day() -> void:
 	var ahead: Vector2i = day["m"]
 	assert_ne(ahead, at, "the column is seen marching on the day the order reaches it")
 	assert_almost_eq(float(day["from"]), 10000.0 / 160000.0, 0.0001, "from the moment the courier reaches it")
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON, "nothing written")
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY, "nothing written")
 	assert_eq(s.couriers.size(), 1)
 	s.day += 1  # advance_day's order: the calendar, the couriers, the columns
 	CourierSystem.ride_day(repo, s)

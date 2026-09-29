@@ -13,8 +13,9 @@ import bpy, json, math
 from mathutils import Vector, Matrix, Quaternion
 
 HERE = "/Users/samuelzhang/game_design/tools/units3d/infantry_blueprint/"
-R = {}
-exec(open(HERE + "rig.py").read().split("\nrig = build_rig()")[0], R)
+R = globals().get("R") or {}         # another body (infantry_tripo) passes its own HIP / KNEE / ANKLE / TOE
+if not R:
+    exec(open(HERE + "rig.py").read().split("\nrig = build_rig()")[0], R)
 DATA = json.load(open(HERE + "walk_02_01.json"))
 FR = DATA["frames"]
 N = 32
@@ -24,6 +25,8 @@ HIP_LIFT = globals().get("HIP_LIFT", 0.022)  # the pelvis higher than the take's
                                              # this soldier's long thigh bent the stance knee ~30 deg
 TORSO = globals().get("TORSO", 1.0)          # the take's pelvis / chest turn and roll, x this
 SWAY = globals().get("SWAY", 1.0)            # the take's side-to-side, x this
+STANCE = globals().get("STANCE", 1.0)        # the ankles' rest offset out from the hips, x this: a body built
+                                             # standing wide (infantry_tripo) walks with its feet under it
 KIT = {  # side: (upper arm forward, elbow, abduction, wrist, swing scale, elbow swing scale)
     "R": (8.0, 34.0, 4.0, 30.0, 0.7, 0.45),     # the spear hand, hanging a little off the body
     "L": (4.0, 14.0, 4.0, 0.0, 0.7, 0.45),      # the shield arm, hanging and swinging with the walk
@@ -51,7 +54,7 @@ def _spear_axis():
     return ax if ax.z > 0 else -ax
 
 
-A_REST = _spear_axis()
+A_REST = Vector(globals()["A_REST"]) if "A_REST" in globals() else _spear_axis()   # a spear whose vertices are not in loft order passes its axis
 HB_REST = (REST["hand.R"] @ Vector((0, 1, 0)) - REST["hand.R"].translation).normalized()
 
 
@@ -197,7 +200,7 @@ def pose(t):
         th, sh, ft = "thigh." + sd, "shin." + sd, "foot." + sd
         H = hips_head + Rh @ (REST[th].translation - rest_h)
         a = s["ank_" + sd]
-        A = Vector((H.x + (a.x - MEAN["ax_" + sd]) * K + (REST[ft].translation.x - REST[th].translation.x),
+        A = Vector((H.x + (a.x - MEAN["ax_" + sd]) * K + STANCE * (REST[ft].translation.x - REST[th].translation.x),
                     H.y + a.y * K, H.z + a.z * K - HIP_LIFT))
         A.z = max(A.z, ANK_Z)
         Kn, A = two_bone(H, A, Vector((0, -1, 0)))
@@ -209,7 +212,7 @@ def pose(t):
         put(sh, Rsh, Kn)
         # the foot's pitch RELATIVE to the take's own flat foot, on this soldier's flat foot
         toe = s["toe_" + sd]
-        r_ft = (R["TOE"] - R["ANKLE"]).normalized()
+        r_ft = (REST[ft].to_3x3() @ Vector((0, 1, 0))).normalized()   # THIS foot's rest direction (R's TOE is the left one's)
         rest_p = math.atan2(r_ft.z, Vector((r_ft.x, r_ft.y)).length)
         dp = math.atan2(toe.z, max(1e-6, Vector((toe.x, toe.y)).length)) - FLAT[sd]
         pitch = max(rest_p + dp, rest_p - TOE_DOWN_MAX)
@@ -272,12 +275,18 @@ def bake(name="MARCH", fn=None, frames=N):
     for b in pb:
         b.rotation_mode = "QUATERNION"
     names = ORDER + ["spear"] + CLOAK
+    extra = [b.name for b in rig.data.bones if b.name not in names]    # e.g. infantry_tripo's shield: rigid on its parent
+    names = names + extra
     order = sorted(names, key=lambda n: depth(pb[n]))
     for f in range(frames + 1):
         M = fn(f / frames)
         if "spear" not in M:          # carried: rigid in the fist
             M["spear"] = M["hand.R"] @ REST["hand.R"].inverted() @ REST["spear"]
         cloak_fill(M, f / frames, name)
+        for nme in sorted(extra, key=lambda n: depth(pb[n])):
+            if nme not in M:
+                par = rig.data.bones[nme].parent.name
+                M[nme] = M[par] @ REST[par].inverted() @ REST[nme]
         for nme in order:
             pb[nme].matrix = M[nme]
             bpy.context.view_layer.update()

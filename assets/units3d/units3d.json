@@ -34,16 +34,20 @@
    "MARCH": [
     1,
     33
+   ],
+   "STANDBY": [
+    1,
+    121
    ]
   },
-  "bones": 29,
+  "bones": 30,
   "fps": 30,
-  "height_m": 1.847,
+  "height_m": 1.85,
   "kind": "humanoid",
   "label": "Man-at-arms",
-  "source": "hand-built from the owner's blueprint (assets/flux/out/infantry_kit/blueprint), textured with the owner's material swatches (infantry_kit/D), tools/units3d/infantry_blueprint/",
-  "stride_m": 1.177,
-  "tris": 23570,
-  "weights": "rigid plates + distance"
+  "source": "Tripo 3D generation on the owner's paid plan (assets/units3d/ai_src/tripo/: the textured export baked onto the 51-part segmented export), tools/units3d/infantry_tripo/tripo.py",
+  "stride_m": 1.207,
+  "tris": 19480,
+  "weights": "rigid parts + distance"
  }
 }

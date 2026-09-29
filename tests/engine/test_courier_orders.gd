@@ -44,7 +44,7 @@ func test_the_order_rides_and_the_regiment_waits() -> void:
 	assert_eq(actions.validate(req, s), "")
 	var out: Dictionary = actions.execute(req, s)
 	assert_eq(s.couriers.size(), 1, "one courier rides")
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON, "the column waits for him")
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY, "the column waits for him")
 	assert_eq(ArmySystem.position_of(repo, s, r), home, "and has not moved")
 	var fee := false
 	for e: Dictionary in out.get("effects", []):
