@@ -358,18 +358,18 @@ The same split as the map: nothing under `scripts/ledger3d/` may reach the
 
 ## 8. Milestones — what lights which links
 
-| | Sub-project | Lights | Needs | Placement |
-|---|---|---|---|---|
-| **L0** | **The LEDGER and its 3D view** (this spec) | every ✅ link; ○ links drawn grey; the court's web moved in | nothing new — reads existing state | **now, ahead of PRD Step 3** (ruling 12) |
-| **L1** | Accounts differ | split strands, "accounts differ" on the card | intel P0 | with intel P0 |
-| **M1** | Supply and morale | `supplies`, `garrisons` (stores and defence from the stronghold), `feeds_morale` | L0 | PRD Step 8, with raid defense and intel P1–P3 |
-| **M2** | The war workshop | `converts` | L0 | with M1 (supply needs a source) |
-| **M3** | **Governors, skimming and the audit** (the core) | `governs`, `skims`, `LEDGER_AUDIT`, reassigning a governor | L1, M2 | after Step 8, before or with Step 5's factions; a faction may govern once factions exist |
-| **M4** | Battle | `attacks`, `commands` (`battle_odds` made real; the raid host the first enemy) | M1 | PRD Step 8 |
-| **M5** | Raw materials and artisans | `builds`, `consumes` (the smithy really eats iron and coal) | L0 | in the MVP (ruling 11) |
-| **M6** | Markets and trade routes | `trades` (reads the imported `markets` / `market_goods` / `deals`) | M5 | in the MVP (ruling 11) |
+| | Sub-project | Lights | Needs | Placement | Spec / plan |
+|---|---|---|---|---|---|
+| **L0** | **The LEDGER and its 3D view** (this spec) | every ✅ link; ○ links drawn grey; the court's web moved in | nothing new — reads existing state | **now, ahead of PRD Step 3** (ruling 12) | this spec → `docs/superpowers/plans/2026-09-30-ledger-l0.md` |
+| **L1** | Accounts differ | split strands, "accounts differ" on the card | intel P0 | with intel P0 | `2026-09-28-intelligence-layer-alignment.md` §8 P0 (L1 rides with it); the split-strand mechanics are also written up in `2026-09-30-ledger-governors-design.md` |
+| **M1** | Supply and morale | `supplies`, `garrisons` (stores and defence from the stronghold), `feeds_morale` | L0 | PRD Step 8, with raid defense and intel P1–P3 | `2026-09-30-ledger-supply-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m1-m2-supply.md` |
+| **M2** | The war workshop | `converts` | L0 | with M1 (supply needs a source) | `2026-09-30-ledger-supply-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m1-m2-supply.md` |
+| **M3** | **Governors, skimming and the audit** (the core) | `governs`, `skims`, `LEDGER_AUDIT`, reassigning a governor | L1, M2 | after Step 8, before or with Step 5's factions; a faction may govern once factions exist | `2026-09-30-ledger-governors-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m3-governors.md` |
+| **M4** | Battle | `attacks`, `commands` (`battle_odds` made real; the raid host the first enemy) | M1 | PRD Step 8 | `2026-09-30-ledger-battle-design.md` — no plan yet: not implementable before intel P2's raid host exists |
+| **M5** | Raw materials and artisans | `builds`, `consumes` (the smithy really eats iron and coal) | L0 | in the MVP (ruling 11) | `2026-09-30-ledger-industry-trade-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m5-m6-industry-trade.md` |
+| **M6** | Markets and trade routes | `trades` (reads the imported `markets` / `market_goods` / `deals`) | M5 | in the MVP (ruling 11) | `2026-09-30-ledger-industry-trade-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m5-m6-industry-trade.md` |
 
-Each milestone gets its own spec → plan → build.
+Each milestone gets its own spec → plan → build. Every spec's own filename in this table is under `docs/superpowers/specs/`.
 
 ## 9. Tests (GUT, written before the code)
 
@@ -411,3 +411,166 @@ Each milestone gets its own spec → plan → build.
 Every ○ mechanic (M1–M6), several accounts per subject (L1), a governor's
 effect on a flow, the audit, faction governors, and any save state for the
 ledger (it is derived; a dragged sphere is forgotten).
+
+## 12. What L0 settled (2026-09-30 plan)
+
+- **`group` and `layer` are one column, `layer`.** §2's "Group" column and
+  §7.1's `ledger_object_types.csv` `group` column collapse to the single
+  `layer` column (values `know` / `people` / `things`) `Ledger.LAYERS`
+  reads; nothing in the schema or the resolvers carries both.
+- **The Intel subject is carried per link by its reader (`subj`), not an
+  `intel_subject` column.** §3 and §7.1 name `intel_subject` as a
+  `ledger_link_types.csv` column; the built schema has no such column.
+  `LedgerResolvers.run` returns `subj` on each link dictionary it produces,
+  and `Ledger._account` reads that `subj` straight through `Intel.level` /
+  `Intel.fact` — the gate is data the resolver already had at hand (which
+  province, manor, regiment or character a flow is really about), not a
+  second table to keep in step with the first.
+- **A tie never becomes an Intel word.** A structural yes/no link (`part_of`,
+  `stands_on`, `based_in`, `describes_*`, `sits`, `member`, …) carries
+  `flow: -1` and no magnitude. `Ledger._account` short-circuits on
+  `flow < 0` before ever calling `Intel.fact`, returning
+  `{"value": -1, "text": "", "source": "own records"/"common knowledge", ...}`
+  — never `Intel.magnitude`'s vague-quantity words ("a handful"), which
+  would otherwise turn "a manor lies in a province" into a bogus figure.
+  The thread still draws at its fixed vague width; only a real flow (
+  `flow >= 0`) ever carries a number or a word for one.
+- **The `CylinderMesh` UV correction.** A cylinder's side V does not run
+  0..1 top to bottom under Godot 4.7.2: it runs 0 at the top to **0.5** at
+  the bottom, with the caps taking 0.5..1. `thread.gdshader`'s running
+  light is `along = 1.0 - 2.0 * UV.y` (not `1.0 - UV.y`, which the brief
+  had), with the cylinder's caps turned off (`cap_top = false`,
+  `cap_bottom = false`) — the shader never reads them.
+- **Spheres are one `MeshInstance3D` each (up to ~300 in an ego network),
+  not a `MultiMesh`.** Each sphere needs its own focus-fade alpha and its
+  own drag; a `MultiMesh` shares one material and instance-transform array
+  across every instance it draws, which cannot carry a per-instance fade
+  without a second per-instance buffer that defeats the point of batching
+  at this count. `LedgerView3D._build_spheres` allocates one
+  `MeshInstance3D.new()` a node.
+- **A drag moves only the dragged sphere's incident threads.** The first
+  cut rebuilt every thread mesh (`_build_threads()`) on every drag motion
+  event; the reviewed fix, `_move_threads_of(id)`, walks only the links
+  whose `from` or `to` is the dragged sphere, recomputes their ends (the
+  pair-offset included) and re-lays the existing `MeshInstance3D` in place
+  (`_place_thread`) — no mesh or material is allocated per motion event.
+  Every non-incident thread keeps its instance id untouched.
+- **Discs are drawn only for occupied layers, each sized to its spheres.**
+  `LedgerLayout.layers_present(snap)` lists which of `Ledger.LAYERS` the
+  snapshot actually has a sphere on (the court lens has PEOPLE alone, so it
+  shows one disc, not three empty rings); `LedgerLayout.disc_radius` sizes
+  each shown disc to (its farthest sphere's edge from the axis) +
+  `ledger_disc_pad_m`, clamped to `ledger_disc_min_m` .. `ledger_disc_radius_m`
+  — an ego network's two-sphere disc no longer frames itself with 10 m of
+  empty brass.
+- **The camera frames what is drawn.** `LedgerOrbit.frame(points, yaw,
+  pitch, fov, aspect, safe)` is a pure function that bisects the least
+  camera distance at which every given point (each sphere ± its radius,
+  plus sample points on each drawn disc's rim, from
+  `LedgerLayout.frame_points`) projects inside a safe rect, then centres
+  the content in it. The safe rect is the view minus `ledger_frame_top_px`
+  (92: the title, lenses, crumb and a name over the top sphere),
+  `ledger_frame_side_px` (40) and `ledger_frame_bottom_px` (28) — all
+  `balance.csv` rows. `LedgerView3D._frame()` runs this on the opening pose
+  and on Front; an unmoved camera re-frames on a resize, and any turn, pan,
+  wheel or pinch by the player clears the "framed" flag so the fixed
+  `ledger_camera_distance` becomes only the fallback when nothing is drawn.
+- **A drill opens the instance's card, not the list.** `LedgerScreen.drill`
+  rebuilds the ego network on the chosen id and calls
+  `_detail.show_entry(LedgerCards.entry(...))`: a manor, town, regiment or
+  courier gets the map's own card (`MapObjects` art and fields); anything
+  else gets the LEDGER's own thread card. `back()` closes the card and
+  returns to the list. This is a correction from the first cut, which left
+  the type's list showing with only the drilled row lit.
+- **A type's instance list is `MapDetailPanel.show_list`.** Clicking a TYPE
+  sphere (rather than an instance) puts its instances in the left column
+  through a new `MapDetailPanel.show_list(title, rows)` and
+  `list_row_chosen(id)` signal — flat, left-aligned, clipped buttons
+  carrying the row's id — reusing the existing card panel rather than a
+  second list widget.
+- **The screen follows the map panel.** `GameRoot.toggle_ledger` connects
+  `map_panel().item_rect_changed` to `_fit_ledger()` (besides the
+  viewport's own `size_changed`), so the LEDGER's SubViewport display
+  resizes and repositions when the map panel narrows for the council
+  column or otherwise moves — `size_changed` alone would miss a panel
+  resize that leaves the window untouched. The connection is torn down
+  with the screen.
+- **Selecting a minister does not yet light him in the right column.**
+  §6.1 describes this as the eventual behaviour; no API for it exists yet
+  (the court screen — `CourtScreen` — has no council column to light a
+  character in, unlike the conversation stage), so `LedgerScreen` does not
+  attempt it in L0. A selected character's card names his seat instead
+  (`LedgerCards.entry`), which is what the left column can show today.
+- **The snapshot flags.** `tools/snapshot_screen.gd --ledger LENS
+  [--ledger-focus TYPE] --shot-on ledger` drives the LEDGER through real
+  clicks, not internals: the bottom bar's LEDGER tab, the lens chip, and
+  (with a focus) the `type:<TYPE>` sphere at `LedgerView3D.screen_pos_of`
+  and the first left-column row carrying `ledger_id`.
+- **Link rows added beyond §3.** The built `ledger_link_types.csv` carries
+  more rows than §3's table names: `part_of` (manor → province, "lies
+  in"), `based_in` (regiment → province, "stands in"), one `describes_*`
+  row per subject kind a report can be about (`describes_province`,
+  `describes_manor`, `describes_regiment`, `describes_town` — §3's single
+  `describes` row, split so each has its own `from_type`/`to_type`), and
+  one character-to-character row per `rel_type` of `data/relationships.csv`
+  (`kin`, `marriage`, `ally`, `rival`, `grudge`, `liege`, `envoy`,
+  `patron`, `puppet`, `admires`, `acquaintance` — more than §3's shorter
+  list, matching whatever `relationships.csv` actually seeds), all read by
+  `court_relations`. **`produces` folds into the manor's `yields_civil` /
+  `yields_strategic` links until M5** gives buildings their own consuming
+  link (`consumes`) and a reason to draw `produces` separately from a
+  manor's total output.
+- **The look: variant A shipped, pending the owner's pick.** The look pass
+  (Task 10) shot three palette/material variants (A: warm brass and glass,
+  as designed; B and C: alternate metals) side by side, with a written
+  critique ranking A first. A comparison was prepared for the owner (at
+  the session's scratchpad, not committed to the repo); L0 ships variant
+  A's values in `data/ledger_palette.csv` and `balance.csv` unchanged, and
+  the owner's pick — if it differs from A — is a follow-up re-tint, not a
+  blocker on L0.
+
+- **What §6 describes that L0 did not build, and who owns it** (final
+  review, 2026-09-30):
+  - **Property gauges inside spheres** (§6.3's last row) → **M1**, the
+    supply-and-morale plan (`docs/superpowers/plans/2026-09-30-ledger-m1-m2-supply.md`
+    Task 5 carries the note): supplies and morale inside a regiment's
+    sphere, stock inside a pool's. L0 draws no gauge.
+  - **"Unknown abroad" — a dashed thread with a "?"** (§6.3) → **intel P0 /
+    L1**, when a link can be about a place abroad at all. L0's readers only
+    walk the crown's own realm, so no such thread arises; a figure the crown
+    has only in words draws at the fixed vague width and fainter ink.
+  - **The breadcrumb** (§6.2: Realm › Regiments › 3rd Regiment) → L0 built
+    **Back plus one label**: `%Back` shows while a focus is drawn and
+    `%Crumb` names the focus (`LedgerResolvers.label_of`). The full trail
+    waits for drilling more than one level deep.
+  - **A planned thread names its milestone** (§6.3) — BUILT in the final
+    fix pass: its card reads "Not yet built (M2): lit by the war workshop",
+    the milestone taken from the link row's `milestone`
+    (`LedgerCards.thread_entry`).
+  - **Orders that need the map promise only what they do** (owner asleep;
+    controller ruling): `ledger_actions.csv` labels them "Show on the map to
+    build…", "…to change its work…", "…to send a spy…", "…to march…". The
+    LEDGER closes and shows the subject on the map; the player gives the
+    order there. **Arming the march aim** (or the build menu) straight from
+    the LEDGER is left for later.
+  - **An order's menu line names what it spends**: a label may carry its
+    params (`Buy {gold} gold of civil goods`), and an order that spends a
+    sum of its own writes the `order_costs.csv` charge as a fee beside it
+    (`Ledger.order_text`: "Buy 50 gold of civil goods  (+1 fee)").
+- **The LEDGER draws the live state at most once a frame.** `Game.state_changed`
+  fires once a game day, several times a frame at 4x: `LedgerScreen.refresh`
+  only marks it dirty and `_process` draws it once. A redraw of the same
+  lens and focus keeps the spheres the player dragged where he put them
+  (`LedgerView3D._dragged`, forgotten on a new lens or focus); a drag whose
+  sphere is no longer drawn ends quietly; a focus that vanished frames the
+  camera afresh and closes its card. The LEDGER closes only a card or list
+  it put in the left column (`LedgerScreen._card_mine`), and the map stays
+  put away while it is open (`GameRoot._sync_map_view`).
+- **The tax thread reads a spy's `tax` estimate.** `LedgerResolvers._yields`
+  asks Intel by the fact key a spy files the figure under (`tax`), so a
+  report's "≈ 40–60 · spy" reaches the `taxed` thread as it reaches the map
+  card; the goods threads keep `gold` (no report carries them yet).
+  `describes_town` is live but no report is filed on a town subject yet —
+  spy reports land on the manor cell.
+
+**For the intelligence alignment draft** (`2026-09-28-intelligence-layer-alignment.md`, still the owner's uncommitted draft, so this branch does not carry it): its §8 phase table should gain, in P0's content, "the LEDGER's L1 (split strands, accounts differ)" and, in P3's, "the LEDGER's M3 audit (`LEDGER_AUDIT`) beside the countermeasures".

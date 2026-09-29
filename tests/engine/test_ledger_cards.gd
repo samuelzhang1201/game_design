@@ -34,13 +34,27 @@ func test_a_type_not_yet_built_says_so() -> void:
 	assert_string_contains("\n".join(e["lines"]), "Not yet built (M2)")
 
 func test_a_thread_card_names_its_governor() -> void:
+	var chancellor := String(s.council.get("chancellor", ""))
+	assert_ne(chancellor, "", "a fresh reign fills the chancellor's seat")
 	var snap := Ledger.snapshot(data, s, "economy", {})
+	var taxed: Dictionary = {}
 	for l: Dictionary in snap["links"]:
 		if String(l["type"]) == "taxed":
+			taxed = l
+	assert_false(taxed.is_empty(), "the economy lens draws the tax thread")
+	assert_eq(String(taxed["governor"]), chancellor)
+	var e := LedgerCards.thread_entry(data, s, taxed)
+	assert_eq(String(e["title"]), "Manors pays tax Gold")
+	assert_has(e["lines"], "Governed by " + (s.characters[chancellor] as Character).display_name)
+
+## Final fix I3: a thread not yet built names the milestone that lights it.
+func test_a_planned_thread_names_its_milestone() -> void:
+	for l: Dictionary in Ledger.snapshot(data, s, "economy", {})["links"]:
+		if String(l["type"]) == "converts_in":
 			var e := LedgerCards.thread_entry(data, s, l)
-			assert_eq(String(e["title"]), "Manors pays tax Gold")
-			if String(l["governor"]) != "":
-				assert_string_contains("\n".join(e["lines"]), "Governed by")
+			assert_has(e["lines"], "Not yet built (M2): lit by the war workshop")
+			return
+	fail_test("the economy lens draws the planned converts_in thread")
 
 func test_show_on_map_has_a_place_for_places_only() -> void:
 	var home := MapManors.home_province(data, s)

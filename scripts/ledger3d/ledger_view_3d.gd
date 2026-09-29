@@ -31,12 +31,15 @@ var _pal: Dictionary = {}
 var _orbit := LedgerOrbit.new()
 var _snap: Dictionary = {}
 var _pos: Dictionary = {}          # node id -> Vector3
+var _dragged: Dictionary = {}      # node id -> Vector3: spheres the player moved this viewing
 var _nodes: Dictionary = {}        # node id -> node dict
 var _sphere_mi: Dictionary = {}    # node id -> MeshInstance3D
 var _thread_mi: Dictionary = {}    # link id -> MeshInstance3D
 var _thread_ends: Dictionary = {}  # link id -> [Vector3, Vector3], as drawn
 var _pairs: Dictionary = {}        # [id, id] sorted -> threads joining those two spheres
 var _sphere_alpha: Dictionary = {} # node id -> its material's own alpha, before any fade
+var _disc_mi: Dictionary = {}      # layer -> its disc's MeshInstance3D
+var _framed := false               # the camera still stands where the framing put it
 var _selected := ""
 var _button := 0
 var _press_at := Vector2.ZERO
@@ -76,6 +79,10 @@ func _window_scale() -> float:
 func _fit_viewport() -> void:
 	var s := _window_scale()
 	_viewport.size = Vector2i(maxi(1, int(size.x * s)), maxi(1, int(size.y * s)))
+	# a view the player has not moved keeps its framing as the view resizes
+	if _framed and _repo != null and not _snap.is_empty():
+		_frame()
+		_apply_camera()
 
 
 func set_active(on: bool) -> void:
@@ -86,12 +93,33 @@ func set_active(on: bool) -> void:
 		_fit_viewport()
 
 
+## Draw a snapshot. The same lens and focus again (a state change) keeps
+## the spheres the player dragged where he put them; a new lens or focus
+## forgets them. A sphere under a drag that is no longer drawn ends the drag.
 func show_snapshot(snap: Dictionary, keep_camera: bool) -> void:
+	if _snap.is_empty() or String(snap.get("lens", "")) != String(_snap.get("lens", "")) \
+			or String(snap.get("focus_id", "")) != String(_snap.get("focus_id", "")):
+		_dragged.clear()
 	_snap = snap
 	_nodes.clear()
 	for n: Dictionary in snap["nodes"]:
 		_nodes[String(n["id"])] = n
 	_pos = LedgerLayout.positions(_repo, snap)
+	for id: String in _dragged.keys():
+		if _pos.has(id):
+			_pos[id] = _dragged[id]
+		else:
+			_dragged.erase(id)
+	if _drag_id != "" and not _pos.has(_drag_id):
+		_end_gesture()
+	var present := LedgerLayout.layers_present(snap)
+	for layer: String in _disc_mi:
+		var disc := _disc_mi[layer] as MeshInstance3D
+		disc.visible = layer in present
+		if disc.visible:
+			var mesh := disc.mesh as CylinderMesh
+			mesh.top_radius = LedgerLayout.disc_radius(_repo, snap, _pos, layer)
+			mesh.bottom_radius = mesh.top_radius
 	if not _nodes.has(_selected):
 		_selected = ""
 	_build_spheres()
@@ -108,16 +136,47 @@ func select(id: String) -> void:
 	_update_hud()
 
 
-## Back to the front: the target snaps to the PEOPLE disc's centre, the yaw
-## and pitch ease home over ledger_front_ease_s while the view runs.
+## Back to the front: the target and distance snap to the framing of what
+## is drawn (_frame), the yaw and pitch ease home over ledger_front_ease_s
+## while the view runs.
 func front_view() -> void:
-	_orbit.target = Vector3(0, LedgerLayout.layer_y(_repo, "people"), 0)
+	_frame()
+	_framed = true
 	_ease_from = Vector2(_orbit.yaw, _orbit.pitch)
 	_ease_left = _repo.bal("ledger_front_ease_s")
 	if _ease_left <= 0.0:
 		_orbit.yaw = 0.0
 		_orbit.pitch = _repo.bal("ledger_camera_pitch_deg")
 	_apply_camera()
+
+
+## Target and distance that frame the spheres and discs drawn, seen from
+## the front (LedgerOrbit.frame), inside the part of the view the screen's
+## title, lenses and crumb leave clear; the PEOPLE disc's centre at
+## ledger_camera_distance when nothing is drawn.
+func _frame() -> void:
+	var sz := size if size.x >= 2.0 and size.y >= 2.0 else Vector2(1280, 720)
+	var side := _repo.bal("ledger_frame_side_px") / sz.x
+	var top := _repo.bal("ledger_frame_top_px") / sz.y
+	var bottom := _repo.bal("ledger_frame_bottom_px") / sz.y
+	var safe := Rect2(side, top, maxf(1.0 - 2.0 * side, 0.1), maxf(1.0 - top - bottom, 0.1))
+	var f := LedgerOrbit.frame(LedgerLayout.frame_points(_repo, _snap, _pos), 0.0,
+		_repo.bal("ledger_camera_pitch_deg"), _camera.fov, sz.x / sz.y, safe)
+	if f.is_empty():
+		_orbit.target = Vector3(0, LedgerLayout.layer_y(_repo, "people"), 0)
+		_orbit.distance = _repo.bal("ledger_camera_distance")
+		return
+	_orbit.target = f["target"]
+	_orbit.distance = clampf(float(f["distance"]), _orbit.min_distance, _orbit.max_distance)
+
+
+## The disc drawn for `layer`, or null (the tests' seam).
+func disc_of(layer: String) -> MeshInstance3D:
+	return _disc_mi.get(layer)
+
+
+func orbit() -> LedgerOrbit:
+	return _orbit
 
 
 func screen_pos_of(id: String) -> Variant:
@@ -131,6 +190,7 @@ func screen_pos_of(id: String) -> Variant:
 func _build_discs() -> void:
 	for c in _discs.get_children():
 		c.queue_free()
+	_disc_mi.clear()
 	for layer: String in Ledger.LAYERS:
 		var mesh := CylinderMesh.new()
 		mesh.top_radius = _repo.bal("ledger_disc_radius_m")
@@ -144,8 +204,9 @@ func _build_discs() -> void:
 		var mi := MeshInstance3D.new()
 		mi.mesh = mesh
 		mi.material_override = mat
-		mi.position.y = LedgerLayout.layer_y(_repo, layer) - _repo.bal("ledger_disc_offset_m")
+		mi.position.y = LedgerLayout.disc_y(_repo, layer)
 		_discs.add_child(mi)
+		_disc_mi[layer] = mi
 
 
 func _sphere_color(n: Dictionary) -> Color:
@@ -407,7 +468,8 @@ func _pick(pos: Vector2) -> Dictionary:
 	var ray := _ray(pos)
 	var spheres: Array = []
 	for id: String in _nodes:
-		spheres.append({"id": id, "pos": _pos[id], "radius": _radius(_nodes[id])})
+		if _pos.has(id):
+			spheres.append({"id": id, "pos": _pos[id], "radius": _radius(_nodes[id])})
 	var threads: Array = []
 	for l: Dictionary in _snap.get("links", []):
 		var id := String(l["id"])
@@ -426,10 +488,12 @@ func _gui_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and _button != 0:
 		_on_drag(event as InputEventMouseMotion)
 	elif event is InputEventMagnifyGesture:
+		_framed = false
 		_orbit.zoom(1.0 / maxf((event as InputEventMagnifyGesture).factor, 0.01))
 		_apply_camera()
 		accept_event()
 	elif event is InputEventPanGesture:
+		_framed = false
 		_orbit.pan(-(event as InputEventPanGesture).delta * _repo.bal("ledger_pan_gesture_px"),
 			_orbit.metres_per_px(_camera.fov, size.y))
 		_apply_camera()
@@ -439,6 +503,7 @@ func _gui_input(event: InputEvent) -> void:
 func _on_button(mb: InputEventMouseButton) -> void:
 	if mb.pressed and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 		var f := _repo.bal("ledger_zoom_factor")
+		_framed = false
 		_orbit.zoom(1.0 / f if mb.button_index == MOUSE_BUTTON_WHEEL_UP else f)
 		_apply_camera()
 		accept_event()
@@ -481,10 +546,20 @@ func _on_button(mb: InputEventMouseButton) -> void:
 			sphere_selected.emit("")
 
 
+## The pressed button's gesture ends quietly: the rest of its motion and its
+## release do nothing (the sphere it was dragging is no longer drawn).
+func _end_gesture() -> void:
+	_button = 0
+	_drag_id = ""
+	_moved = false
+
+
 func _on_drag(mm: InputEventMouseMotion) -> void:
 	if not _moved and mm.position.distance_to(_press_at) < CLICK_SLOP:
 		return
 	_moved = true
+	if _drag_id == "":
+		_framed = false
 	if _button == MOUSE_BUTTON_RIGHT:
 		_orbit.turn(mm.relative.x, mm.relative.y, _repo.bal("ledger_turn_deg_per_px"))
 	elif _drag_id != "":
@@ -498,6 +573,9 @@ func _on_drag(mm: InputEventMouseMotion) -> void:
 ## A dragged sphere slides on its own layer's plane; the drag is for this
 ## viewing only and is never saved (spec §6.2).
 func _drag_to(id: String, pos: Vector2) -> void:
+	if not _pos.has(id) or not _sphere_mi.has(id):
+		_end_gesture()
+		return
 	var ray := _ray(pos)
 	var o: Vector3 = ray[0]
 	var d: Vector3 = ray[1]
@@ -508,6 +586,7 @@ func _drag_to(id: String, pos: Vector2) -> void:
 	if t <= 0.0:
 		return
 	_pos[id] = o + d * t
+	_dragged[id] = _pos[id]
 	(_sphere_mi[id] as MeshInstance3D).position = _pos[id]
 	_move_threads_of(id)
 	_update_hud()
@@ -517,6 +596,8 @@ func _drag_to(id: String, pos: Vector2) -> void:
 ## mesh or material is made during a drag. A thread whose ends come to meet
 ## is hidden until they part.
 func _move_threads_of(id: String) -> void:
+	if not _pos.has(id):
+		return
 	for l: Dictionary in _snap.get("links", []):
 		if String(l["from"]) != id and String(l["to"]) != id:
 			continue

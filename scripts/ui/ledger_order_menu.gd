@@ -23,6 +23,5 @@ func open_for(node_id: String, rows: Array, at: Vector2) -> void:
 	clear()
 	for i in rows.size():
 		var row: Dictionary = rows[i]
-		var gold := int(OrderCosts.gold_of(Game.data, String(row["code"])))
-		add_item(String(row["label"]) + ("  (%d gold)" % absi(gold) if gold != 0 else ""), i)
+		add_item(Ledger.order_text(Game.data, row, node_id), i)
 	popup_on_parent(Rect2i(Vector2i(at.round()), Vector2i(1, 1)))
