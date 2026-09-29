@@ -284,9 +284,15 @@ func test_building_needs_a_free_slot_and_can_be_pulled_down() -> void:
 	s.metrics["treasury"] = 100000.0
 	s.metrics["lord_civil"] = 100000.0
 	var slots := MapManors.slots_of(data, cell)
-	var codes: Array = data.manor_buildings.keys()
+	# Only what this ground takes with nothing yet standing: a building
+	# whose prerequisite is missing (the abbey before its chapel) is refused,
+	# and ActionSystem.execute asserts on a refused request.
+	var codes: Array = []
+	for code: String in data.manor_buildings.keys():
+		if MapManors.building_blocked(data, s, cell, code) == "":
+			codes.append(code)
 	codes.sort()
-	assert_gt(codes.size(), slots, "more kinds of building than room")
+	assert_gt(codes.size(), slots, "more kinds of building the ground takes than room")
 	for i in slots:
 		var built := sys.execute(ActionRequest.make("MANOR_BUILD", {"manor": cell, "building": codes[i]}), s)
 		assert_true(built["ok"])

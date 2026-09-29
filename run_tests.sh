@@ -62,6 +62,25 @@ if [ "$ERROR_COUNT" != "$EXPECTED_ERRORS" ]; then
   exit 1
 fi
 
+# GUT does not count a runtime SCRIPT ERROR: a test that dies partway (an
+# engine assert, a bad key on a result) stops at that line and is still
+# reported as passing on the asserts it made before — verified 2026-09-30
+# when test_building_needs_a_free_slot_and_can_be_pulled_down died on its
+# first build ("An abbey needs a chapel standing first") and passed with 1
+# assert of 21. So any SCRIPT ERROR is fatal unless its location is on this
+# allow-list, one res://path:line per line, each with its reason:
+#   res://addons/gut/gut_loader.gd:35 — GUT's own loader reads an unset
+#     project setting into a bool at startup, once per run, before any test.
+SCRIPT_ERROR_ALLOW="res://addons/gut/gut_loader.gd:35"
+UNEXPECTED=$(awk '/SCRIPT ERROR:/ { msg = $0; getline; sub(/^[ \t]+/, ""); print msg " " $0 }' "$TEST_OUTPUT" \
+  | grep -v -F "$(printf '%s\n' "$SCRIPT_ERROR_ALLOW" | sed 's/.*/(&)/')" || true)
+if [ -n "$UNEXPECTED" ]; then
+  echo ""
+  echo "FATAL: SCRIPT ERROR outside the allow-list (a test may have aborted partway):"
+  echo "$UNEXPECTED"
+  exit 1
+fi
+
 # GUT sets a nonzero exit code when any test fails (see
 # addons/gut/gui/GutRunner.gd:_handle_quit). Propagate it so a red suite
 # fails the script.
