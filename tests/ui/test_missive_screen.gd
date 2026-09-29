@@ -198,7 +198,7 @@ func test_the_selected_note_stands_out_and_its_date_never_breaks() -> void:
 	# different STYLEBOX TYPES now, not just different bg_colors.
 	if MissiveArt.texture(Game.data, "note") != null:
 		assert_true(ps is StyleBoxFlat, "the selected note keeps the flat lit style")
-		assert_true(os is StyleBoxTexture, "an unselected note wears the pinned-parchment art")
+		assert_true(os is ScaledNineSlice, "an unselected note wears the pinned-parchment art")
 	else:
 		assert_true(ps is StyleBoxFlat and os is StyleBoxFlat)
 		assert_ne((ps as StyleBoxFlat).bg_color, (os as StyleBoxFlat).bg_color, "the note on the desk is lit")
@@ -270,7 +270,7 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 			{"panel": rp.get_node("%Window"), "key": "letter"}]:
 		var panel: Control = entry["panel"]
 		if MissiveArt.texture(Game.data, String(entry["key"])) != null:
-			assert_true(panel.get_theme_stylebox("panel") is StyleBoxTexture,
+			assert_true(panel.get_theme_stylebox("panel") is ScaledNineSlice,
 				"%s wears its installed piece art" % panel.name)
 		else:
 			var style := panel.get_theme_stylebox("panel") as VellumPanelStyle
@@ -288,12 +288,12 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	# set, not a blank StyleBoxEmpty that erases it — with no plaque art
 	# installed, the gold rule (and its spacing) must still be there.
 	# Board art follow-up: plaque art is now installed on this branch, so the
-	# rule is already superseded by a StyleBoxTexture — check whichever the
+	# rule is already superseded by a ScaledNineSlice — check whichever the
 	# current data actually names, same as the frame/window check above.
 	var rule_alpha := float(Game.data.balance.get("ui_section_rule_alpha", 0.0))
 	var got := plaque.get_theme_stylebox("normal")
 	if MissiveArt.texture(Game.data, "plaque") != null:
-		assert_true(got is StyleBoxTexture, "installed plaque art nine-slices over the rule")
+		assert_true(got is ScaledNineSlice, "installed plaque art nine-slices over the rule")
 	elif rule_alpha > 0.0:
 		var ref := Label.new()
 		UiPalette.style_section(ref, MissiveScreen.PLAQUE_FONT_SIZE, MapPalette.named(Game.data, "intel_truth"))
@@ -305,13 +305,13 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 			assert_eq((got as StyleBoxFlat).content_margin_bottom, want.content_margin_bottom, "same rule spacing")
 		ref.queue_free()
 	else:
-		assert_false(got is StyleBoxTexture, "no rule configured and no art installed: nothing to nine-slice")
+		assert_false(got is ScaledNineSlice, "no rule configured and no art installed: nothing to nine-slice")
 	# the desk had no panel style before this task; with no letter art
 	# installed it must stay fully transparent, not gain a border/inset —
 	# board art follow-up: letter art is now installed on this branch, so
 	# the desk wears its own nine-sliced parchment instead.
 	if MissiveArt.texture(Game.data, "letter") != null:
-		assert_true(ms.get_node("%Desk").get_theme_stylebox("panel") is StyleBoxTexture,
+		assert_true(ms.get_node("%Desk").get_theme_stylebox("panel") is ScaledNineSlice,
 			"the desk wears its installed parchment")
 	else:
 		assert_true(ms.get_node("%Desk").get_theme_stylebox("panel") is StyleBoxEmpty,
@@ -322,7 +322,7 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	var ms2: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
 	add_child_autofree(ms2)
 	var plaque2 := ms2.get_node("%TruthPlaque") as Label
-	assert_true(plaque2.get_theme_stylebox("normal") is StyleBoxTexture,
+	assert_true(plaque2.get_theme_stylebox("normal") is ScaledNineSlice,
 		"installed plaque art nine-slices over the rule")
 	Game.data.missive_art["plaque"] = saved_plaque
 	# an empty column's hint is an aside, no larger than the notes beside it

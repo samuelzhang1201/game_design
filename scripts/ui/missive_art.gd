@@ -11,17 +11,22 @@ static func texture(repo: DataRepository, key: String) -> Texture2D:
 	return UiPalette.load_art(path) if path != "" else null
 
 
+## Scaled nine-slice fix: the pieces are installed at
+## ui_missive_art_px_per_design texture px per design px (hi-res for the
+## game's ~3x window scale, the same convention as every portrait/icon/manor
+## painting), but StyleBoxTexture draws one texture px per DESIGN px — it has
+## no scale, so a 72-texture-px margin drew as 72 design px of wood, three
+## times the intended border. ScaledNineSlice keeps the two separate, the same
+## split VellumPanelStyle already draws the vellum plate with; a margin of 0
+## (the board) has no corners to slice, so it tiles instead of stretching.
 static func style(repo: DataRepository, key: String, fallback: StyleBox) -> StyleBox:
 	var tex := texture(repo, key)
 	if tex == null:
 		return fallback
-	var s := StyleBoxTexture.new()
+	var s := ScaledNineSlice.new()
 	s.texture = tex
-	var m := float(int(repo.missive_margin.get(key, 0)))
-	s.texture_margin_left = m
-	s.texture_margin_top = m
-	s.texture_margin_right = m
-	s.texture_margin_bottom = m
+	s.source_inset = float(int(repo.missive_margin.get(key, 0)))
+	s.scale = repo.bal("ui_missive_art_px_per_design")
 	# Board art follow-up: the fallback's content margin was copied over
 	# unconditionally, so the frame's 72px of wood (its texture margin) drew
 	# over only the fallback's 16px inset and the first note sat on the wood.

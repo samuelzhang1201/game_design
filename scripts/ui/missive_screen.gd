@@ -62,11 +62,10 @@ func _ready() -> void:
 	# the board floats over the screen: a window, titled in the title face
 	%Frame.add_theme_stylebox_override("panel",
 		MissiveArt.style(Game.data, "frame", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "window")))
-	var board_style := MissiveArt.style(Game.data, "board", StyleBoxEmpty.new())
-	if board_style is StyleBoxTexture:
-		(board_style as StyleBoxTexture).axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
-		(board_style as StyleBoxTexture).axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
-	%BoardPanel.add_theme_stylebox_override("panel", board_style)
+	# ScaledNineSlice fix round: a margin of 0 (the board's own cork) tiles the
+	# art at its own size / scale rather than stretching it, so no separate
+	# AXIS_STRETCH_MODE_TILE setup is needed here any more.
+	%BoardPanel.add_theme_stylebox_override("panel", MissiveArt.style(Game.data, "board", StyleBoxEmpty.new()))
 	# fix round 1 (ruling: the plan was wrong): %Desk had no panel style
 	# before this task, so its fallback is StyleBoxEmpty — the desk stays
 	# fully transparent, no border or inset, until its parchment is installed.

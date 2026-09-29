@@ -10,21 +10,31 @@ func before_each() -> void:
 	repo = DataRepository.load_all("res://data")
 
 
+## Scaled nine-slice: the art is installed at ui_missive_art_px_per_design
+## texture px per design px (hi-res for the ~3x window scale), so the DRAWN
+## corner is the margin divided by that scale, not the margin itself —
+## StyleBoxTexture has no such scale (CLAUDE.md notes the same trap for the
+## vellum plate), which is why a piece needs its own StyleBox.
 func test_an_installed_piece_is_nine_sliced_by_its_margin() -> void:
 	repo.missive_art["note"] = "res://icon.png"
 	repo.missive_margin["note"] = 40
 	var s := MissiveArt.style(repo, "note", StyleBoxFlat.new())
-	assert_true(s is StyleBoxTexture)
-	assert_eq((s as StyleBoxTexture).texture_margin_left, 40.0)
-	assert_eq((s as StyleBoxTexture).texture_margin_bottom, 40.0)
+	assert_true(s is ScaledNineSlice)
+	var n := s as ScaledNineSlice
+	assert_eq(n.source_inset, 40.0, "the SOURCE inset is the margin, in texture px")
+	assert_eq(n.scale, repo.bal("ui_missive_art_px_per_design"))
+	assert_eq(n.draw_inset(), 40.0 / repo.bal("ui_missive_art_px_per_design"),
+		"the DRAWN inset is the margin over the scale, in design px")
 
 
-func test_a_piece_with_no_margin_still_draws_stretched() -> void:
+func test_a_piece_with_no_margin_tiles_instead_of_nine_slicing() -> void:
 	repo.missive_art["board"] = "res://icon.png"
 	repo.missive_margin["board"] = 0
 	var s := MissiveArt.style(repo, "board", StyleBoxFlat.new())
-	assert_true(s is StyleBoxTexture)
-	assert_eq((s as StyleBoxTexture).texture_margin_left, 0.0)
+	assert_true(s is ScaledNineSlice)
+	var n := s as ScaledNineSlice
+	assert_eq(n.source_inset, 0.0)
+	assert_eq(n.draw_inset(), 0.0, "no corners: the whole box tiles")
 
 
 ## Board art follow-up: MissiveArt.style was copying the FALLBACK's content
@@ -39,7 +49,7 @@ func test_an_installed_piece_with_content_set_uses_it_over_the_fallback() -> voi
 	var fallback := StyleBoxFlat.new()
 	fallback.content_margin_left = 16
 	fallback.content_margin_top = 16
-	var s := MissiveArt.style(repo, "frame", fallback) as StyleBoxTexture
+	var s := MissiveArt.style(repo, "frame", fallback) as ScaledNineSlice
 	assert_not_null(s)
 	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
 		assert_eq(s.get_content_margin(side), 76.0, "side %d" % side)
@@ -51,7 +61,7 @@ func test_an_installed_piece_with_no_content_keeps_the_fallbacks_margin() -> voi
 	repo.missive_content["board"] = -1
 	var fallback := StyleBoxFlat.new()
 	fallback.content_margin_left = 8
-	var s := MissiveArt.style(repo, "board", fallback) as StyleBoxTexture
+	var s := MissiveArt.style(repo, "board", fallback) as ScaledNineSlice
 	assert_not_null(s)
 	assert_eq(s.get_content_margin(SIDE_LEFT), 8.0)
 
@@ -81,5 +91,5 @@ func test_the_board_wears_an_installed_frame() -> void:
 	Game.data.missive_margin["frame"] = 8
 	var screen: MissiveScreen = (load("res://scenes/missive_screen.tscn") as PackedScene).instantiate()
 	add_child_autofree(screen)
-	assert_true(screen.get_node("%Frame").get_theme_stylebox("panel") is StyleBoxTexture)
+	assert_true(screen.get_node("%Frame").get_theme_stylebox("panel") is ScaledNineSlice)
 	Game.data.missive_art["frame"] = saved
