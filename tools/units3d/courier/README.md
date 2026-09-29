@@ -114,7 +114,7 @@ dropped after the bake. Keyed from frame 0 so the glTF clip runs exactly 0..N/24
   nod; the rider looks left and back.
 
 `stride_m` is how far the near hind hoof moves back through its stance over the share of the loop
-that stance takes — the model metres one GALLOP loop covers (tripo 2.479; v3 3.282).
+that stance takes — the model metres one GALLOP loop covers (tripo 2.338; v3 3.282).
 
 Per source (`courier_build.build_tripo`): the reins side (`rig.REINS`), the IK arm (`rig.IK_ARM`;
 none for tripo, whose staff rides the hand), the hind swing (`rig.HIND_SWING`, 22° for tripo) and
