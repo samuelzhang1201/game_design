@@ -9,10 +9,21 @@ func before_each() -> void:
 	data = DataRepository.load_all("res://data")
 	assert_not_null(data, DataRepository.last_error)
 	s = GameState.new_campaign(data, 42)
+	_able_honest_governors()
 	RealmEconomy.forget()
 
 func after_each() -> void:
 	RealmEconomy.forget()
+
+## An able, honest governor: efficiency 1000, no skim — so the M1/M2
+## figures stay the plain arithmetic they were written against (M3 Task 2).
+func _able_honest_governors() -> void:
+	for pair in [["steward", "sk_steward"], ["marshal", "sk_admin"]]:
+		var c: Character = s.characters[String(s.council[pair[0]])]
+		c.skills[pair[1]] = 16
+		c.opinion = 50
+		c.traits = []
+		c.attributes["integrity"] = 50
 
 func _home_cells(n: int) -> Array:
 	var cells: Array = MapManors.manors_of_province(data, MapManors.home_province(data, s), s)
@@ -41,14 +52,16 @@ func test_one_workshop_at_full_takes_its_capacity() -> void:
 	var cell: int = _home_cells(1)[0]
 	_build(cell)
 	s.metrics["lord_civil"] = 100.0
-	assert_eq(WorkshopSystem.plan(data, s), [{"cell": cell, "rate": 1000, "take": 40, "make": 28}])
+	assert_eq(WorkshopSystem.plan(data, s), [{"cell": cell, "rate": 1000, "take": 40, "made": 28, "skimmed": 0,
+		"make": 28, "claimed": 28, "efficiency": 1000, "skim": 0, "governor": String(s.council["steward"])}])
 
 func test_half_rate_halves_it() -> void:
 	var cell: int = _home_cells(1)[0]
 	_build(cell)
 	WorkshopSystem.set_rate(s, cell, 500)
 	s.metrics["lord_civil"] = 100.0
-	assert_eq(WorkshopSystem.plan(data, s)[0], {"cell": cell, "rate": 500, "take": 20, "make": 14})
+	assert_eq(WorkshopSystem.plan(data, s)[0], {"cell": cell, "rate": 500, "take": 20, "made": 14, "skimmed": 0,
+		"make": 14, "claimed": 14, "efficiency": 1000, "skim": 0, "governor": String(s.council["steward"])})
 
 func test_the_lords_civil_goods_run_out_in_cell_order() -> void:
 	var cells := _home_cells(2)

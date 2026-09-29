@@ -58,3 +58,16 @@ static func factors(repo: DataRepository, state: GameState, flow: String) -> Dic
 		reasons.append("opinion %d: −%d‰" % [c.opinion, cut])
 	return {"governor": gid, "skill": skill, "opinion": c.opinion, "efficiency": clampi(eff, lo, hi),
 		"skim": skim_of(repo, c), "reasons": reasons}
+
+
+## A settled month's skim into each governor's own purse (GameState.skims,
+## whole gold): every plan row carrying `governor` and `skimmed` (the
+## workshops', the supply lines'). Nobody governs "", and a zero skim
+## leaves no entry.
+static func add_skims(state: GameState, rows: Array) -> void:
+	for row: Dictionary in rows:
+		var gid := String(row.get("governor", ""))
+		var amount := int(row.get("skimmed", 0))
+		if gid == "" or amount <= 0:
+			continue
+		state.skims[gid] = int(state.skims.get(gid, 0)) + amount

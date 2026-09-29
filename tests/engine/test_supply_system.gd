@@ -7,10 +7,21 @@ var s: GameState
 func before_each() -> void:
 	data = DataRepository.load_all("res://data")
 	s = GameState.new_campaign(data, 42)
+	_able_honest_governors()
 	RealmEconomy.forget()
 
 func after_each() -> void:
 	RealmEconomy.forget()
+
+## An able, honest governor: efficiency 1000, no skim — so the M1/M2
+## figures stay the plain arithmetic they were written against (M3 Task 2).
+func _able_honest_governors() -> void:
+	for pair in [["steward", "sk_steward"], ["marshal", "sk_admin"]]:
+		var c: Character = s.characters[String(s.council[pair[0]])]
+		c.skills[pair[1]] = 16
+		c.opinion = 50
+		c.traits = []
+		c.attributes["integrity"] = 50
 
 func _land_codes() -> Array:
 	var out: Array = []

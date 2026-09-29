@@ -12,6 +12,7 @@ func before_each() -> void:
 	data = DataRepository.load_all("res://data")
 	assert_not_null(data, DataRepository.last_error)
 	s = GameState.new_campaign(data, 42)
+	_able_honest_governors()
 	RealmEconomy.forget()
 	cell = int(MapManors.manors_of_province(data, MapManors.home_province(data, s), s)[0])
 	MapManors.build(data, s, cell, WorkshopSystem.BUILDING, "a test workshop")
@@ -20,6 +21,16 @@ func before_each() -> void:
 func after_each() -> void:
 	Intel.dev_all = false
 	RealmEconomy.forget()
+
+## An able, honest governor: efficiency 1000, no skim — so the M1/M2
+## figures stay the plain arithmetic they were written against (M3 Task 2).
+func _able_honest_governors() -> void:
+	for pair in [["steward", "sk_steward"], ["marshal", "sk_admin"]]:
+		var c: Character = s.characters[String(s.council[pair[0]])]
+		c.skills[pair[1]] = 16
+		c.opinion = 50
+		c.traits = []
+		c.attributes["integrity"] = 50
 
 func _link(snap: Dictionary, type: String) -> Dictionary:
 	for l: Dictionary in snap["links"]:

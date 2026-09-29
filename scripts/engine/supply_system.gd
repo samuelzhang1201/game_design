@@ -10,7 +10,11 @@ extends RefCounted
 ## loss (controller ruling, final review).
 ## The crown's strategic goods pay first, then the lord's; a short pool is
 ## shared by need. Whole numbers, code order. plan() is the one function
-## the tick, the regiment card and the LEDGER read.
+## the tick, the regiment card and the LEDGER read. The lines run as their
+## governor (the marshal, Governance) runs them: his efficiency thins what
+## arrives, his skim takes gold before it buys, and he reports the line as
+## if nothing were skimmed (rows' `delivered` is the truth, `claimed` his
+## word).
 
 
 static func loss_of(repo: DataRepository, km: int) -> int:
@@ -173,14 +177,35 @@ static func plan(repo: DataRepository, state: GameState) -> Array:
 	# (army_supply_gold_permille), so splitting it by gold need is exactly
 	# splitting the ship need in the same proportion.
 	var paid := share(avail, golds)
-	var price := int(repo.bal("army_supply_gold_permille"))
+	var price := maxi(int(repo.bal("army_supply_gold_permille")), 1)
+	# The lines run as their governor runs them (spec
+	# 2026-09-30-ledger-governors-design §3): the pools pay `paid` in full,
+	# he pockets `skimmed` of it and buys with the rest, and his efficiency
+	# thins what the road delivers. `delivered` is the truth; `claimed` is
+	# what he reports — the same line as if nothing were skimmed.
+	var g := Governance.factors(repo, state, "supply_line")
+	var eff := int(g["efficiency"])
+	var skim := int(g["skim"])
 	for i in rows.size():
 		var row: Dictionary = rows[i]
-		row["paid"] = int(paid[i])
+		var gold_paid := int(paid[i])
+		row["paid"] = gold_paid
 		@warning_ignore("integer_division")
-		var units := int(row["ship"]) if int(paid[i]) >= int(row["gold"]) else int(paid[i]) * 1000 / maxi(price, 1)
+		var skimmed := gold_paid * skim / 1000
+		var in_full := gold_paid >= int(row["gold"])
 		@warning_ignore("integer_division")
-		row["delivered"] = mini(units * (1000 - int(row["loss_permille"])) / 1000, int(row["need"]))
+		var bought := int(row["ship"]) if in_full and skimmed == 0 else (gold_paid - skimmed) * 1000 / price
+		@warning_ignore("integer_division")
+		var said := int(row["ship"]) if in_full else gold_paid * 1000 / price
+		var keep := 1000 - int(row["loss_permille"])
+		@warning_ignore("integer_division")
+		row["delivered"] = mini(bought * keep * eff / 1000000, int(row["need"]))
+		@warning_ignore("integer_division")
+		row["claimed"] = mini(said * keep * eff / 1000000, int(row["need"]))
+		row["skimmed"] = skimmed
+		row["efficiency"] = eff
+		row["skim"] = skim
+		row["governor"] = String(g["governor"])
 	return rows
 
 
@@ -189,10 +214,13 @@ static func plan(repo: DataRepository, state: GameState) -> Array:
 ## the lord).
 static func settle_month(repo: DataRepository, state: GameState) -> Array:
 	var total := 0
-	for row: Dictionary in plan(repo, state):
+	var rows := plan(repo, state)
+	for row: Dictionary in rows:
 		total += int(row["paid"])
 		var entry: Dictionary = state.regiments[String(row["code"])]
 		entry["supplies"] = int(entry["supplies"]) + int(row["delivered"])
+	# the pools pay in full; what the marshal skimmed is his (GameState.skims)
+	Governance.add_skims(state, rows)
 	if total == 0:
 		return []
 	var crown := mini(maxi(int(state.metrics.get("strategic", 0.0)), 0), total)
