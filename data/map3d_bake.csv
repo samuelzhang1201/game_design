@@ -26,8 +26,8 @@ river_min_drop_m,0.04,"3D bake: the bed falls at least this much per 20 m step, 
 river_bank_slope,0.35,3D bake: the banks rise this many metres per metre out from the water's edge (a valley)
 river_bank_max_m,1500.0,3D bake: a bank never reaches further out than this
 river_wet_m,120.0,3D bake: the wet-soil band beside the water reaches this far
-river_wet_weight,1.5,3D bake: how strongly that band pulls dirt_floor in
-river_wet_darken,0.55,"3D bake: how much it darkens the colour map (bracketed 0.15 / 0.35 / 0.55 on 2026-09-18: dirt_floor reads lighter than grass, so below ~0.5 the band read as a sand road, not wet earth)"
+river_wet_weight,0.4,3D bake: how strongly that band pulls dirt_floor in
+river_wet_darken,0.25,"3D bake: how much it darkens the colour map (bracketed 0.15 / 0.35 / 0.55 on 2026-09-18: dirt_floor reads lighter than grass, so below ~0.5 the band read as a sand road, not wet earth)"
 river_mouth_m,600.0,3D bake: the last stretch widens (x2) and shades to the sea's near band
 river_smooth_steps,8,"3D bake: B-spline points per pack segment before a course is resampled (the 2D map's curve, map_river_smoothing_steps, but finer: at 20 m a vertex its 3 left straight 400 m runs)"
 river_ridge_fade_m,1000.0,"3D bake (2026-09-18): the synthetic ridges fade to nothing over this distance from a river's course, so the carve never cuts a gorge through a ridge the noise threw across a valley (the 2D relief detail holds itself down near rivers the same way)"
@@ -126,7 +126,7 @@ rock_from_m,180,"3D bake (look route 2026-09-30): below this many metres over th
 rock_full_m,450,3D bake: ...and the full share from here up
 rock_low_share,0.15,3D bake: the share of the slope's scree kept on low ground
 footprint_ground_cut,0.35,"3D bake village footprints (look route 2026-09-30, was 0.9 fixed): how much of the ground under the built ground gives way"
-footprint_dirt,0.6,"3D bake village footprints (was 2.0 fixed): the trodden earth laid over it — with the grass kept, a village stands on yards, not a brown pad"
+footprint_dirt,0.35,"3D bake village footprints (was 2.0 fixed): the trodden earth laid over it — with the grass kept, a village stands on yards, not a brown pad"
 moist_river_m,1500,"3D bake moisture (look route 2026-09-30): the reach, metres, over which a river's wet band greens the country round it"
 moist_river_gain,6.0,3D bake moisture: how strongly (the band is thin: its mean over that reach is small)
 moist_coast_m,2500,3D bake moisture: the reach over which the coast greens the land behind it

@@ -1,7 +1,7 @@
 focus,crop,share,texture,tint,reach_m,notes
 grain,ripe_wheat,35,aerial_meadow,#F4E4A6,2200,"3D bake fields (owner 2026-09-19: the ground between villages read as one flat plain; make it look like a satellite map): a manor's chief good (manor_land.csv, exported by tools/map3d/export_manor_land.gd) sows the fields within reach_m of a settlement — crops by share, each on a bake texture whose far colour is multiplied by tint (the colour map can only darken, so a tint is <= #FFFFFF per channel). A field is a Voronoi cell of map3d_bake.csv field_cell_m, stretched into strips"
 grain,green_corn,35,aerial_meadow,#EEF2D8,2200,
-grain,ploughed,10,dirt_floor,#A89880,2200,
+grain,ploughed,10,dirt_floor,#D2C0A4,2200,
 grain,fallow,20,aerial_meadow,#EAE3C0,2200,
 cattle,meadow,50,aerial_meadow,#F4F8E4,1600,"pasture: meadows of light and dark green, hay cut pale"
 cattle,rough_grazing,30,aerial_meadow,#D6DAC0,1600,
@@ -10,6 +10,6 @@ sheep,downland,60,aerial_meadow,#F0EEDA,1400,sheep runs: pale open downland
 sheep,rough_grazing,40,aerial_meadow,#D0D2B8,1400,
 fish,garden,55,aerial_meadow,#EEF2D8,1000,a fishing village still farms a little behind the shore
 fish,ripe_wheat,30,aerial_meadow,#F4E4A6,1000,
-fish,ploughed,15,dirt_floor,#A89880,1000,
+fish,ploughed,15,dirt_floor,#D2C0A4,1000,
 *,garden,60,aerial_meadow,#EEF2D8,600,"any other focus (quarry, mine, timber...): kitchen gardens and a few plots by the houses"
 *,plot,40,aerial_meadow,#E6DDB0,600,

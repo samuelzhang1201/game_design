@@ -392,7 +392,7 @@ map3d_sea_nat_specular,0.08,"[2026-09-28: 0.5 -> 0.08 — with the sun raised, i
 map3d_sea_nat_fresnel_sky_mix,0.3,3D MAP sea (Phase 3): how much of the sky natural water reflects at grazing angles
 map3d_sea_foam_px,1.6,"3D MAP sea (Phase 3): the shore foam's reach out from the waterline, pack px"
 map3d_sea_foam_strength,0.7,3D MAP sea (Phase 3): the shore foam's opacity at its thickest
-map3d_sea_shore_warp_px,1.2,"3D MAP sea (final review): the shore's alpha fade reads a 50 m-per-texel distance map, so up close the waterline was a chain of straight 50 m facets; a fixed world noise warps the distance by up to this many pack px before the fade (a stopgap until a finer coast coverage map exists)"
+map3d_sea_shore_warp_px,0.8,"3D MAP sea (final review): the shore's alpha fade reads a 50 m-per-texel distance map, so up close the waterline was a chain of straight 50 m facets; a fixed world noise warps the distance by up to this many pack px before the fade (a stopgap until a finer coast coverage map exists)"
 map3d_sea_shore_warp_m,30.0,3D MAP sea (final review): about one shore-warp bump every this many metres (the noise tile holds ~8)
 map_ruler_width_px,2.0,"MEASUREMENT ruler (owner 2026-09-18): the dashed line's and the ticks' width in screen px, on both maps"
 map_ruler_arrow_px,16,"the MARCH aim's ruler (owner 2026-09-24): the arrowhead's length in design px at the pointer end, where the measuring ruler has its crossbar"
