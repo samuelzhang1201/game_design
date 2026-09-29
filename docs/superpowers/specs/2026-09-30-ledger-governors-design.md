@@ -1,11 +1,30 @@
 # LEDGER M3 (+ L1) — governors, skimming and the audit — design
 
-Status: designed 2026-09-30 overnight under the owner's standing order (see
+Status: built 2026-09-30 (branch ledger-supply). Designed 2026-09-30
+overnight under the owner's standing order (see
 `2026-09-30-ledger-supply-design.md`'s status line). Choices the owner has
 not ruled on are marked **Default** with their cost if wrong. Charter:
 `2026-09-30-ledger-ontology-design.md` §4 rule 4 ("the governor is usually
 the reporter — the core") and §8 (M3, L1). Needs M1 + M2 (the flows a
 governor can hold).
+
+Three rulings were made during the build, none by the owner (asleep,
+autonomous): `WorkshopSystem.plan` / `SupplySystem.plan` had moved on since
+this plan was written (M1's final review fixes), so the implementers
+applied the plan's INTENT — efficiency and skim landing on the truth, the
+claim reported whole — onto the code as it now stands, rather than pasting
+the plan's snippets over it; **a governor given a flow who no longer sits
+on the council loses it** (`Governance.governor_of` falls back to the seat
+holder the moment `given` drops out of `state.council.values()`, exactly
+as for a governor who never existed); and the spec's **Default** was kept
+— supply lines stay governed by `sk_admin`, not `sk_martial` — on the
+controller's steady-state arithmetic: the default council's marshal
+(`sk_admin` 3 → `Governance.factors` 750‰) leaves the stores converging to
+~3.7 months refilled / ~2.7 after the spend (score ~890, still "well fed"),
+so the host is not starved, and the extra ~34% gold a month (270 vs 202)
+makes reassigning a real lever — the owner's to confirm; reading
+`sk_martial` instead would give 1000‰ (a one-cell change in
+`data/ledger_governance.csv`).
 
 ## 1. The loop the player plays
 
