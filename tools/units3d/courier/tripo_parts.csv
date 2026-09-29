@@ -1,0 +1,44 @@
+part,role,group,weights,tris,texel
+0,rider coat: torso and both arms,rider,rider,2600,1.6
+1,horse hindquarters and the trailing (near) hind leg,horse,horse_self,2100,1.0
+2,horse tail,horse,horse_tail,1100,1.0
+3,horse neck and head skin,horse,horse,1200,1.2
+4,horse near shoulder and the raised near foreleg's forearm,horse,horse,700,1.0
+5,dispatch case,tack,rigid:case,500,1.6
+6,horse leading (off) hind leg,horse,horse,800,1.0
+7,rider off boot,rider,rider,500,1.3
+8,horse off shoulder and the standing off foreleg,horse,horse,850,1.0
+9,breast collar and its straps,tack,horse,500,1.2
+10,rider off thigh,rider,rider,350,1.3
+11,pennon and finial,prop,flag,500,1.5
+12,hat and feather,prop,rigid:head,700,1.8
+13,saddle,tack,rigid:horse_body,900,1.2
+14,rider near boot,rider,rider,450,1.3
+15,bridle,tack,horse,500,1.3
+16,horse barrel underside,horse,horse,500,1.0
+17,stirrup leathers,tack,rigid:horse_body,350,1.2
+18,off stirrup iron,tack,rigid:horse_body,150,1.2
+19,horse raised near foreleg below the knee,horse,horse,400,1.0
+20,off saddle flap,tack,rigid:horse_body,180,1.2
+21,rein end at the near hand,tack,rigid:hand_l,100,1.2
+22,horse mane,horse,horse_mane,700,1.0
+23,horse muzzle,horse,horse,350,1.3
+24,rider near thigh,rider,rider,300,1.3
+25,saddle cloth strap,tack,rigid:horse_body,250,1.2
+26,rider head and hair,rider,rider,400,2.6
+27,off stirrup,tack,rigid:horse_body,200,1.2
+28,horse face,horse,horse,200,1.3
+29,rider off hand (holds the staff),rider,rigid:hand_r,200,2.2
+30,reins,tack,reins,180,1.2
+31,case strap and buckle,tack,rigid:case,120,1.4
+32,rider near hand (holds the reins),rider,rigid:hand_l,180,2.2
+33,off saddle cloth piece,tack,rigid:horse_body,198,1.2
+34,near saddle cloth piece,tack,rigid:horse_body,177,1.2
+35,rider face,rider,rider,172,2.6
+36,rider collar,rider,rider,169,1.6
+37,near saddle cloth piece,tack,rigid:horse_body,161,1.2
+38,staff,prop,rigid:pole,125,1.4
+39,near stirrup,tack,rigid:horse_body,118,1.2
+40,rider neck,rider,rider,103,1.8
+41,off cuff,rider,rigid:hand_r,105,1.6
+42,off girth strap,tack,rigid:horse_body,86,1.2

@@ -177,6 +177,6 @@ assets) — git history keeps them.
 ## Courier
 
 The courier rider (`assets/units3d/courier.glb`, GALLOP and IDLE) has its own build:
-`blender -b --factory-startup --python tools/units3d/courier_build.py -- courier`, with its
+`blender -b --factory-startup --python tools/units3d/courier_build.py -- courier [--source tripo|v3]` (the owner's Tripo 3D model by default), with its
 scripts, sources and licences in `tools/units3d/courier/README.md`. The spy still wears the
 cavalry model until it has its own.

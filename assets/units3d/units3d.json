@@ -38,12 +38,12 @@
   },
   "bones": 45,
   "fps": 24,
-  "height_m": 3.256,
+  "height_m": 2.562,
   "kind": "mounted",
   "label": "Courier",
-  "source": "CC0 Hunt Museum horse scan + CC0 Blender Human Base Meshes rider, the owner's design C4 (zimage_C4_s2), tools/units3d/courier_build.py",
-  "stride_m": 3.282,
-  "tris": 19588,
+  "source": "Tripo 3D (owner), from zimage_C4_s2, tools/units3d/courier_build.py --source tripo",
+  "stride_m": 2.338,
+  "tris": 19346,
   "weights": {
    "horse": "heat",
    "rider": "heat"

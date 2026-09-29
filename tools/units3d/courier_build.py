@@ -1,7 +1,11 @@
 """The courier rider (spec 2026-09-28-courier-art §2; the owner's design C4, zimage_C4_s2)
 from its sources, headless, in ONE command:
 
-  blender -b --factory-startup --python tools/units3d/courier_build.py -- courier
+  blender -b --factory-startup --python tools/units3d/courier_build.py -- courier [--source tripo|v3]
+
+--source tripo (the default): the owner's Tripo 3D model (tools/units3d/courier/tripo.py,
+tripo_parts.csv) - its 43 parts reduced, baked from its textured twin, rigged. --source v3:
+the fallback, built as below.
 
 What it builds, from what:
   1. the static model, courier v3 (tools/units3d/courier/rebuild_v3.py): the cavalry's
@@ -44,25 +48,20 @@ FPS = 24                   # the clips' frame rate
 OUT = os.path.join(REPO, "assets", "units3d")
 
 
-def main():
-    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["courier"]
-    code = argv[0] if argv else "courier"
-    if code != "courier":
-        raise SystemExit("courier_build.py builds the courier only (got %r)" % code)
-    t0 = time.time()
-    bpy.ops.wm.read_factory_settings(use_empty=True)
+SOURCES = ("tripo", "v3")    # the default first
+
+
+def build_v3(code):
+    """courier v3, built from the CC0 scan and base mesh (the fallback source)."""
     import rebuild_v3, texture_v3, props_v3, rig
-    assert rig.GALLOP_FRAMES == GALLOP_FRAMES and rig.IDLE_FRAMES == IDLE_FRAMES and rig.FPS == FPS
     assert texture_v3.ATLAS == ATLAS_PX and texture_v3.BUDGET["horse"] == MOUNT_TRIS
     ob, objs, PJ, head, audit = rebuild_v3.rebuild()
     if audit is not None and not audit["pass"]:
         raise SystemExit("audit failed: %s" % audit["fails"])
-    mu, mc, cs = rig.mu, rig.mc, rig.cs
-
-    surf = cs.Surface(objs["horse_high"])
+    surf = rig.cs.Surface(objs["horse_high"])
     pole = props_v3.pole_axis()
     spec = rig.rig_spec(surf, PJ, pole, props_v3.CASE_C)
-    arm = mu.build_armature(code, spec)
+    arm = rig.mu.build_armature(code, spec)
     parts = rig.split_parts(ob, texture_v3.PART_ORDER)
     how = rig.weigh(parts, arm, pole, props_v3.CASE_C, head)
     first = parts["horse"]
@@ -76,6 +75,41 @@ def main():
     ob.data.attributes.remove(ob.data.attributes["part_id"])
     bpy.ops.object.vertex_group_limit_total(limit=4)
     bpy.ops.object.vertex_group_normalize_all(lock_active=False)
+    for n in ("horse_high", "rider_high", "rider_hands_high"):
+        o = bpy.data.objects.get(n)
+        if o:
+            bpy.data.objects.remove(o, do_unlink=True)
+    src = ("CC0 Hunt Museum horse scan + CC0 Blender Human Base Meshes rider, the owner's design C4 "
+           "(zimage_C4_s2), tools/units3d/courier_build.py --source v3")
+    return ob, arm, how, src, {}
+
+
+def build_tripo(code):
+    """The owner's Tripo 3D courier (the default source)."""
+    import tripo, rig
+    rig.REINS, rig.IK_ARM = "l", None
+    rig.IK_BONES = ("ik_foot_r", "ik_foot_l")
+    rig.HIND_SWING = 22.0
+    rig.TAIL_STREAM = 0.4      # the tail covers a notch in the rump the model never textured
+    ob, arm, how, info = tripo.build()
+    src = "Tripo 3D (owner), from zimage_C4_s2, tools/units3d/courier_build.py --source tripo"
+    return ob, arm, how, src, info
+
+
+def main():
+    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["courier"]
+    code = argv[0] if argv and not argv[0].startswith("--") else "courier"
+    if code != "courier":
+        raise SystemExit("courier_build.py builds the courier only (got %r)" % code)
+    source = argv[argv.index("--source") + 1] if "--source" in argv else SOURCES[0]
+    if source not in SOURCES:
+        raise SystemExit("--source is one of %s" % "|".join(SOURCES))
+    t0 = time.time()
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    import rig, rebuild_v3
+    assert rig.GALLOP_FRAMES == GALLOP_FRAMES and rig.IDLE_FRAMES == IDLE_FRAMES and rig.FPS == FPS
+    mu, mc = rig.mu, rig.mc
+    ob, arm, how, source_note, info = (build_tripo if source == "tripo" else build_v3)(code)
     bare = mu.unweighted_share(ob, arm)
     print("WEIGHTS unweighted share %.3f%%  horse %s  rider %s" % (bare * 100, how["horse"], how["rider"]))
     if bare >= 0.01:
@@ -93,10 +127,6 @@ def main():
         track.name = track.name[len(code) + 1:]
         for s in track.strips:
             s.name = track.name
-    for n in ("horse_high", "rider_high", "rider_hands_high"):
-        o = bpy.data.objects.get(n)
-        if o:
-            bpy.data.objects.remove(o, do_unlink=True)
     sc = bpy.context.scene
     sc.render.fps = FPS
     sc.frame_start, sc.frame_end = 0, IDLE_FRAMES
@@ -104,6 +134,9 @@ def main():
     tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
     if tris > MOUNT_TRIS + RIDER_TRIS:
         raise SystemExit("%d tris is over the %d budget" % (tris, MOUNT_TRIS + RIDER_TRIS))
+    mats = len([m for m in ob.data.materials if m])
+    if mats != 1:
+        raise SystemExit("%d materials: the courier wears ONE" % mats)
     path = os.path.join(OUT, code + ".glb")
     mc.export_glb([arm, ob], path)
     mpath = os.path.join(OUT, "units3d.json")
@@ -111,8 +144,7 @@ def main():
     manifest[code] = {
         "label": "Courier", "kind": "mounted",
         "height_m": round(max(v.co.z for v in ob.data.vertices), 3),
-        "source": "CC0 Hunt Museum horse scan + CC0 Blender Human Base Meshes rider, the owner's design C4 "
-                  "(zimage_C4_s2), tools/units3d/courier_build.py",
+        "source": source_note,
         "tris": tris, "bones": len(arm.data.bones), "weights": how,
         "actions": {a.name[len(code) + 1:]: [int(a.frame_range[0]), int(a.frame_range[1])] for a in acts},
         "stride_m": round(stride, 3), "fps": FPS,
@@ -120,9 +152,9 @@ def main():
     with open(mpath, "w") as f:
         json.dump(manifest, f, indent=1, sort_keys=True)
         f.write("\n")
-    print("EXPORTED %s  %d tris, %d bones, clips %s" % (path, tris, len(arm.data.bones),
-                                                         sorted(manifest[code]["actions"])))
-    blend = os.path.join(rebuild_v3.WORK, "courier_rigged.blend")
+    print("EXPORTED %s  %d tris, %d bones, clips %s, source %s" % (path, tris, len(arm.data.bones),
+                                                                  sorted(manifest[code]["actions"]), source))
+    blend = os.path.join(rebuild_v3.WORK, "courier_rigged_%s.blend" % source)
     bpy.ops.wm.save_as_mainfile(filepath=blend)
     print("SAVED", blend, round(time.time() - t0, 1), "s")
 

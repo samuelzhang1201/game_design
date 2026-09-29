@@ -46,6 +46,23 @@ FOOTFALL = {("hind", "l"): 0.00, ("hind", "r"): 0.12, ("fore", "l"): 0.30, ("for
 GALLOP_SWING = 0.66
 PENNON_FLY = 0.52         # props_v3.pennon's FL: the flag's length along its fly
 IK_BONES = ("ik_foot_r", "ik_foot_l", "ik_hand_l")
+# set by the source: the side whose fist holds the reins, the arm held to the staff by IK
+# (None: the staff rides the hand), and a pose every key starts from (a leg the source
+# model holds raised, straightened)
+REINS = "r"
+TAIL_STREAM = 1.0        # how far the tail streams out behind in the gallop (1 = v3's)
+HIND_SWING = 25.0        # the hind legs' swing from the hip, degrees each way
+IK_ARM = "l"
+NEUTRAL = {}
+
+
+def with_neutral(pose):
+    out = dict(pose)
+    for b, e in NEUTRAL.items():
+        have = dict(out.get(b, {}))
+        have["rot"] = list(e.get("rot", [])) + list(have.get("rot", []))
+        out[b] = have
+    return out
 
 
 # ------------------------------------------------------------------ helpers
@@ -303,17 +320,17 @@ def gallop_pose(u):
             "neck_2": {"rot": [("x", -5.0 * s(0.25))]},
             "head_h": {"rot": [("x", 6.0 * s(0.28))]},
             # the tail streams out behind and flutters
-            "tail_1": {"rot": [("x", -32.0 + 4.0 * s(0.1)), ("y", 5.0 * s(0.3))]},
-            "tail_2": {"rot": [("x", -14.0 + 5.0 * s(0.2)), ("y", 7.0 * s(0.4))]},
-            "tail_3": {"rot": [("x", -8.0 + 6.0 * s(0.3)), ("y", 9.0 * s(0.5))]},
+            "tail_1": {"rot": [("x", (-32.0 + 4.0 * s(0.1)) * TAIL_STREAM), ("y", 5.0 * s(0.3))]},
+            "tail_2": {"rot": [("x", (-14.0 + 5.0 * s(0.2)) * TAIL_STREAM), ("y", 7.0 * s(0.4))]},
+            "tail_3": {"rot": [("x", (-8.0 + 6.0 * s(0.3)) * TAIL_STREAM), ("y", 9.0 * s(0.5))]},
             # the rider up in the irons, pitched ~15 deg forward, rocking against the horse
             "hips": {"loc": (0, 0.035, 0.06 + 0.012 * s(0.60))},
             "spine": {"rot": [("x", -8.0 - 2.5 * s(0.10))]},
             "chest": {"rot": [("x", -9.0 - 1.5 * s(0.15))]},
             "neck": {"rot": [("x", 5.0)]},
             "head": {"rot": [("x", 11.0 + 2.0 * s(0.15))]},
-            "upperarm_r": {"rot": [("x", 5.0 * s(0.30))]},
-            "forearm_r": {"rot": [("x", 4.0 * s(0.35))]},
+            "upperarm_" + REINS: {"rot": [("x", 5.0 * s(0.30))]},
+            "forearm_" + REINS: {"rot": [("x", 4.0 * s(0.35))]},
             # the pennon streams, the case bounces a frame behind the saddle
             "pennon_1": {"rot": [("z", 10.0 * math.sin(4 * math.pi * u))]},
             "pennon_2": {"rot": [("z", 16.0 * math.sin(4 * math.pi * u - 1.0))]},
@@ -325,7 +342,7 @@ def gallop_pose(u):
             pose["fore_lower_" + n] = {"rot": [("x", bf * 42.0)]}
             pose["fore_hoof_" + n] = {"rot": [("x", bf * 26.0)]}
         else:
-            pose["hind_upper_" + n] = {"rot": [("x", a * 25.0)]}
+            pose["hind_upper_" + n] = {"rot": [("x", a * HIND_SWING)]}
             pose["hind_gaskin_" + n] = {"rot": [("x", -bf * 16.0)]}
             pose["hind_lower_" + n] = {"rot": [("x", bf * 30.0)]}
             pose["hind_hoof_" + n] = {"rot": [("x", bf * 22.0)]}
@@ -374,11 +391,13 @@ def ik_constraints(arm, on):
         else:
             for c in list(pb.constraints):
                 pb.constraints.remove(c)
-    pb = arm.pose.bones["forearm_l"]
+    if IK_ARM is None:
+        return
+    pb = arm.pose.bones["forearm_" + IK_ARM]
     if on:
         c = pb.constraints.new("IK")
         c.name = "ik"
-        c.target, c.subtarget = arm, "ik_hand_l"
+        c.target, c.subtarget = arm, "ik_hand_" + IK_ARM
         c.chain_count = 2
         c.use_tail = True
     else:
@@ -440,17 +459,19 @@ def grounded_gallop(arm):
     floats. Frames with no hoof of a pair down are eased between their neighbours, and
     the suspension (no hoof down at all) is lifted by the leap."""
     stance = 1.0 - GALLOP_SWING
-    mu.apply_pose(arm, {})
+    mu.apply_pose(arm, NEUTRAL)
     bpy.context.view_layer.update()
     hoof = lambda leg: arm.matrix_world @ arm.pose.bones[leg[0] + "_hoof_" + leg[1]].tail
-    rest = {leg: hoof(leg).z for leg in FOOTFALL}
+    # every hoof down is set on the GROUND: the lowest hoof of the standing (neutral) pose
+    ground = min(hoof(leg).z for leg in FOOTFALL)
+    rest = {leg: ground for leg in FOOTFALL}
     pivot = arm.pose.bones["horse_body"].head.y
     reach = sum(hoof(leg).y for leg in FOOTFALL if leg[0] == "fore") / 2 - pivot
     frames = list(range(1, GALLOP_FRAMES + 1))
     poses, lift = {}, {"hind": {}, "fore": {}}
     for f in frames:
         u = (f - 1) / GALLOP_FRAMES
-        pose = gallop_pose(u)
+        pose = with_neutral(gallop_pose(u))
         pose.pop("root", None)
         poses[f] = pose
         mu.apply_pose(arm, pose)
@@ -501,7 +522,7 @@ def actions(arm):
     # 1 starts at 1/FPS and holds its first pose a frame, a hitch at every loop)
     zero = lambda ks: [(f - 1, p) for f, p in ks]
     fk_g = mu.make_action(arm, NAME + "_GALLOP_fk", zero(grounded_gallop(arm)))
-    fk_i = mu.make_action(arm, NAME + "_IDLE_fk", zero(keys(idle_pose, IDLE_FRAMES, 2)))
+    fk_i = mu.make_action(arm, NAME + "_IDLE_fk", zero(keys(lambda u: with_neutral(idle_pose(u)), IDLE_FRAMES, 2)))
     ik_constraints(arm, True)
     gallop = bake(arm, fk_g, NAME + "_GALLOP")
     idle = bake(arm, fk_i, NAME + "_IDLE")
