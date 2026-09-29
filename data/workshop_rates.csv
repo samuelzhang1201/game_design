@@ -1,0 +1,4 @@
+rate_permille,word,ledger_label,notes
+0,cold,Let it go cold,"LEDGER M2 (spec 2026-09-30-ledger-supply-design §2): the rates WORKSHOP_RATE accepts, per mille of workshop_capacity_gold; word is how a card says it runs, ledger_label the LEDGER's order (data/ledger_actions.csv keeps its rows, one per rate here)"
+500,at half,Run it at half,
+1000,in full,Run it in full,

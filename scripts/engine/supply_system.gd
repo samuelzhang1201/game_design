@@ -4,8 +4,10 @@ extends RefCounted
 ## regiment of the realm is refilled every month to army_supply_target_months
 ## of its own use, shipped from the depot (CourierSystem.origin) over the
 ## road network to where it stands NOW; the road loses
-## army_supply_loss_permille_per_100km per 100 km (capped). A garrison in a
-## province the crown controls draws through its town: no road, no loss.
+## army_supply_loss_permille_per_100km per 100 km (capped). A regiment
+## STANDING (standby or garrison — anything but a march) in a province the
+## crown controls draws through that province's capital town: no road, no
+## loss (controller ruling, final review).
 ## The crown's strategic goods pay first, then the lord's; a short pool is
 ## shared by need. Whole numbers, code order. plan() is the one function
 ## the tick, the regiment card and the LEDGER read.
@@ -44,10 +46,12 @@ static func share(avail: int, golds: Array) -> Array:
 	return out
 
 
-## The town a garrison draws on: a regiment under a GARRISON order standing
-## in a province the crown controls draws on that province's capital town.
+## The town a standing regiment draws on: a regiment NOT on the march
+## (standby or garrison) standing in a province the crown controls draws on
+## that province's capital town, loss-free. "" when it marches, stands
+## outside the crown's provinces, or the province has no town.
 static func stronghold_of(repo: DataRepository, state: GameState, code: String) -> String:
-	if ArmySystem.order_of(repo, state, code) != ArmySystem.ORDER_GARRISON:
+	if ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH:
 		return ""
 	var cell := MapEconomy.cell_at(repo, ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code)))
 	if cell < 0:
@@ -56,6 +60,15 @@ static func stronghold_of(repo: DataRepository, state: GameState, code: String) 
 	if prov == "" or not MapManors.crown_controls(repo, state, prov):
 		return ""
 	return String((repo.provinces.get(prov, {}) as Dictionary).get("capital_burg", ""))
+
+
+## The town a regiment is GARRISONED in: its stronghold, but only under an
+## explicit GARRISON order — what earns the garrison's morale and the
+## LEDGER's "garrisons in" thread. "" otherwise.
+static func garrisoned_in(repo: DataRepository, state: GameState, code: String) -> String:
+	if ArmySystem.order_of(repo, state, code) != ArmySystem.ORDER_GARRISON:
+		return ""
+	return stronghold_of(repo, state, code)
 
 
 ## The depot's shortest-path tree (RoadGraph.shortest), built once and
@@ -101,7 +114,8 @@ static func line_of(repo: DataRepository, state: GameState, code: String) -> Dic
 static func _line_of(repo: DataRepository, state: GameState, code: String, ctx: Dictionary) -> Dictionary:
 	var town := stronghold_of(repo, state, code)
 	if town != "":
-		return {"length_km": 0, "loss_permille": 0, "garrison": true, "stronghold": town}
+		return {"length_km": 0, "loss_permille": 0, "stronghold": town,
+			"garrison": ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_GARRISON}
 	var to := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
 	var origin_m: Vector2i = ctx["a"]
 	var dest_m := ArmySystem.pack_to_metres(repo, to)
@@ -143,7 +157,7 @@ static func plan(repo: DataRepository, state: GameState) -> Array:
 	var rows: Array = []
 	var golds: Array = []
 	for code: String in _land_codes(repo, state):
-		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code))
+		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), state)
 		var target := use * int(repo.bal("army_supply_target_months"))
 		var short := maxi(target - int(state.regiments[code]["supplies"]), 0)
 		var line := _line_of(repo, state, code, ctx)

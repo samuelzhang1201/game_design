@@ -58,15 +58,17 @@ static func state_of(repo: DataRepository, state: GameState, code: String) -> Di
 		return state.regiments[code]
 	return starting_state(repo, reg)
 
-## Supplies a regiment uses in a month: the headcount's use times its cell's
-## height tier (data/army_height_supply.csv, spec 2026-09-19-map3d-heights
-## §2) — a fleet is not scaled. ONE rounding, at the end (owner review
+## Supplies a regiment uses in a month: the headcount's use times the height
+## tier of the cell it stands on NOW (position_of; the pack's own quarters
+## when `state` is null — a campaign's opening stores, a regiment with no
+## state) (data/army_height_supply.csv, spec 2026-09-19-map3d-heights §2) —
+## a fleet is not scaled. ONE rounding, at the end (owner review
 ## 2026-09-19): two per-mille divisions in a row lost heads a first
 ## regiment's worth of supply to truncation twice.
-static func supply_use(repo: DataRepository, reg: Dictionary) -> int:
+static func supply_use(repo: DataRepository, reg: Dictionary, state: GameState = null) -> int:
 	@warning_ignore("integer_division")  # whole supplies, one rounding at the end
 	return headcount(repo, reg) * int(repo.bal("army_supply_per_head_permille")) \
-		* int(height_tier(repo, reg)["supply_permille"]) / 1_000_000
+		* int(height_tier(repo, reg, state)["supply_permille"]) / 1_000_000
 
 ## Wounded who return to the ranks in a month: a share, at least one while
 ## any are wounded.
@@ -92,12 +94,15 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 		var heads := headcount(repo, reg)
 		var wounded := clampi(int(entry["wounded"]), 0, heads)
 		entry["wounded"] = clampi(wounded - wound_recovery(repo, wounded), 0, heads)
-		var use := supply_use(repo, reg)
+		var use := supply_use(repo, reg, state)
 		if String(reg.get("is_naval", "0")) != "1":
 			# Morale reads the stores in hand as the month turns, after the
-			# supply lines refilled them and before the month is eaten.
+			# supply lines refilled them and before the month is eaten. Only
+			# an explicit GARRISON order earns the garrison's bonus; a column
+			# merely standing by at home is supplied through the town but is
+			# not behind its walls (controller ruling, final review).
 			var mark := morale_mark(repo, supply_score(repo, int(entry["supplies"]), use),
-				SupplySystem.stronghold_of(repo, state, code) != "")
+				SupplySystem.garrisoned_in(repo, state, code) != "")
 			entry["morale"] = drift_morale(int(entry["morale"]), mark, int(repo.bal("army_morale_drift_per_month")))
 		entry["supplies"] = maxi(0, int(entry["supplies"]) - use)
 		entry["training"] = mini(100, int(entry["training"]) + int(repo.bal("army_training_per_month")))
@@ -190,9 +195,10 @@ static func _cell_of(repo: DataRepository, reg: Dictionary, state: GameState = n
 static func elevation_of(repo: DataRepository, reg: Dictionary, state: GameState = null) -> int:
 	return Elevation.metres_of_cell(repo, _cell_of(repo, reg, state))
 
-## {tier, supply_permille} of the regiment's cell; plains / 1000 for a fleet.
-static func height_tier(repo: DataRepository, reg: Dictionary) -> Dictionary:
-	var id := _cell_of(repo, reg)
+## {tier, supply_permille} of the cell the regiment stands on now (the
+## pack's quarters when `state` is null); plains / 1000 for a fleet.
+static func height_tier(repo: DataRepository, reg: Dictionary, state: GameState = null) -> Dictionary:
+	var id := _cell_of(repo, reg, state)
 	if id < 0:
 		return {"tier": "plains", "supply_permille": 1000}
 	return Elevation.tier_of(repo, float(repo.cells[id]["height"]))
@@ -359,7 +365,7 @@ static func bars_of(repo: DataRepository, state: GameState, code: String) -> Vec
 	var st := state_of(repo, state, code)
 	if st.is_empty():
 		st = starting_state(repo, reg)
-	var supply := supply_score(repo, int(st["supplies"]), supply_use(repo, reg))
+	var supply := supply_score(repo, int(st["supplies"]), supply_use(repo, reg, state))
 	return Vector2i(readiness_permille(repo, supply, int(st["morale"]), int(st["training"])), supply)
 
 
@@ -378,7 +384,7 @@ static func speed_km_per_day(repo: DataRepository, state: GameState, code: Strin
 	if reg.is_empty() or st.is_empty():
 		return 0.0
 	return pace_tenths(repo, base_pace_km(repo, reg),
-		supply_score(repo, int(st["supplies"]), supply_use(repo, reg)),
+		supply_score(repo, int(st["supplies"]), supply_use(repo, reg, state)),
 		int(st["morale"]), int(st["training"])) / 10.0
 
 
@@ -471,7 +477,7 @@ static func day_step_m(repo: DataRepository, state: GameState, code: String) -> 
 	if reg.is_empty() or st.is_empty():
 		return 0
 	return pace_tenths(repo, base_pace_km(repo, reg),
-		supply_score(repo, int(st["supplies"]), supply_use(repo, reg)),
+		supply_score(repo, int(st["supplies"]), supply_use(repo, reg, state)),
 		int(st["morale"]), int(st["training"])) * 100
 
 

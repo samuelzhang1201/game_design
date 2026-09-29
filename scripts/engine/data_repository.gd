@@ -97,6 +97,10 @@ var army_height_supply: Array = []
 ## (ArmySystem.morale_word reads the first it reaches; spec
 ## 2026-09-30-ledger-supply-design §4).
 var army_morale_words: Array = []
+## data/workshop_rates.csv: [{rate_permille, word, ledger_label}], lowest
+## rate first — the rates WORKSHOP_RATE accepts and how each is said
+## (WorkshopSystem; spec 2026-09-30-ledger-supply-design §2).
+var workshop_rates: Array = []
 ## data/courier_kinds.csv: kind -> {speed_permille, fee_gold, offered}
 ## (spec 2026-09-27-courier-core §3).
 var courier_kinds: Dictionary = {}
@@ -657,6 +661,12 @@ func _load(dir: String) -> bool:
 			func(r): army_morale_words.append({"min_score": int(r["min_score"]), "word": String(r["word"])})):
 		return false
 	army_morale_words.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["min_score"]) > int(b["min_score"]))
+	if not _load_if_present(dir + "/workshop_rates.csv", ["rate_permille", "word", "ledger_label"],
+			func(r): workshop_rates.append({"rate_permille": int(r["rate_permille"]), "word": String(r["word"]),
+				"ledger_label": String(r["ledger_label"])})):
+		return false
+	workshop_rates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a["rate_permille"]) < int(b["rate_permille"]))
 	if not _load_if_present(dir + "/landmark_names.csv", ["kind", "pattern"],
 			func(r):
 				var k := String(r["kind"])

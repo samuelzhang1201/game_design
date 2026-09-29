@@ -146,3 +146,124 @@ func test_full_supply_costs_about_half_the_crowns_strategic_intake() -> void:
 	var intake := int(p["lord"]["strategic"]) + int(p["realm_share"]["strategic"])
 	gut.p("full supply %d gold a month against a strategic intake of %d" % [monthly, intake])
 	assert_between(float(monthly) / float(maxi(intake, 1)), 0.3, 0.7)
+
+## I1 (final review): refilled to army_supply_target_months, a regiment
+## still holds a full supply score once its month is spent — the target is
+## the full mark plus one month of use.
+func test_after_a_month_with_ample_pools_the_ranks_are_well_fed() -> void:
+	assert_eq(int(data.bal("army_supply_target_months")),
+		int(data.bal("army_speed_supply_full_months")) + 1, "full, plus the month about to be eaten")
+	for c in _land_codes():
+		s.regiments[c]["supplies"] = 0
+	s.metrics["strategic"] = 1000000.0
+	s.metrics["lord_strategic"] = 1000000.0
+	TickEngine.new(data).advance(s)
+	for c: String in _land_codes():
+		var score := ArmySystem.bars_of(data, s, c).y
+		assert_eq(score, 1000, "%s holds a full train after the month" % c)
+		assert_eq(ArmySystem.morale_word(data, score), "well fed")
+	var code: String = _land_codes()[0]
+	var morale_tip := ""
+	for st: Dictionary in MapObjects.army_card(data, code, s)["stats"]:
+		if String(st["key"]) == "army_morale":
+			morale_tip = String(st["tooltip"])
+	assert_string_contains(morale_tip, "well fed")
+
+## I2 (final review): supply use, the card's height row and the supply plan
+## read the ground the regiment stands on NOW.
+func _mountain_cell() -> int:
+	var ids: Array = data.cells.keys()
+	ids.sort()
+	for id: int in ids:
+		var cell: Dictionary = data.cells[id]
+		if MapTerrain.is_water(cell) or (cell["vertex_ids"] as PackedInt32Array).size() < 3:
+			continue
+		if not String(Elevation.tier_of(data, float(cell["height"]))["tier"]) in ["mountains", "peak"]:
+			continue
+		if MapEconomy.cell_at(data, MapTerrain.cell_center(data, cell)) == id:
+			return id
+	return -1
+
+func test_a_regiment_on_the_mountains_uses_more_than_at_home() -> void:
+	var code: String = _land_codes()[0]
+	var reg := ArmySystem.regiment(data, code)
+	var at_home := ArmySystem.supply_use(data, reg, s)
+	var home_tier := ArmySystem.height_tier(data, reg, s)
+	var id := _mountain_cell()
+	assert_gte(id, 0, "the pack has mountains")
+	_place(code, MapTerrain.cell_center(data, data.cells[id]))
+	var there := ArmySystem.height_tier(data, reg, s)
+	assert_gt(int(there["supply_permille"]), int(home_tier["supply_permille"]), "the mountains cost more than home")
+	var up_there := ArmySystem.supply_use(data, reg, s)
+	assert_gt(up_there, at_home)
+	assert_eq(ArmySystem.supply_use(data, reg), at_home, "no state: the pack's own quarters")
+	s.regiments[code]["supplies"] = 0
+	for row: Dictionary in SupplySystem.plan(data, s):
+		if String(row["code"]) == code:
+			assert_eq(int(row["need"]), up_there * int(data.bal("army_supply_target_months")))
+	var height_text := ""
+	for st: Dictionary in MapObjects.army_card(data, code, s)["stats"]:
+		if String(st["key"]) == "army_height":
+			height_text = String(st["tooltip"])
+	assert_string_contains(height_text, String(there["tier"]))
+
+## Minor3 (controller ruling): a regiment STANDING in a province the crown
+## controls draws through its capital town, loss-free; only a GARRISON
+## order earns the garrison's morale.
+func _stand_at_home(code: String, order: String) -> Dictionary:
+	var home := MapManors.home_province(data, s)
+	var p: Dictionary = data.provinces[home]
+	_place(code, Vector2(float(p["center_x"]), float(p["center_y"])))
+	s.regiments[code]["order"] = order
+	return p
+
+func _card_stat(code: String, key: String) -> Dictionary:
+	for st: Dictionary in MapObjects.army_card(data, code, s)["stats"]:
+		if String(st["key"]) == key:
+			return st
+	return {}
+
+func test_a_regiment_standing_at_home_draws_through_its_town() -> void:
+	var code: String = _land_codes()[0]
+	var p := _stand_at_home(code, ArmySystem.ORDER_STANDBY)
+	var line := SupplySystem.line_of(data, s, code)
+	assert_eq(String(line["stronghold"]), String(p["capital_burg"]))
+	assert_eq(int(line["loss_permille"]), 0)
+	assert_eq(int(line["length_km"]), 0)
+	assert_false(line["garrison"], "standing by is not a garrison")
+	var town := String(data.burgs[String(p["capital_burg"])]["label"])
+	assert_eq(String(_card_stat(code, "army_supply_line")["text"]), "at home")
+	assert_string_contains(String(_card_stat(code, "army_supply_line")["tooltip"]).to_lower(),
+		("at home, supplied through " + town).to_lower())
+
+func test_a_garrison_reads_in_garrison_at_its_town() -> void:
+	var code: String = _land_codes()[0]
+	var p := _stand_at_home(code, ArmySystem.ORDER_GARRISON)
+	var town := String(data.burgs[String(p["capital_burg"])]["label"])
+	assert_true(SupplySystem.line_of(data, s, code)["garrison"])
+	assert_eq(String(_card_stat(code, "army_supply_line")["text"]), "in garrison")
+	assert_string_contains(String(_card_stat(code, "army_supply_line")["tooltip"]).to_lower(),
+		("in garrison at " + town).to_lower())
+
+func test_a_marching_regiment_in_the_same_province_is_on_the_road() -> void:
+	var code: String = _land_codes()[0]
+	_stand_at_home(code, ArmySystem.ORDER_MARCH)
+	s.regiments[code]["dest_x_m"] = int(s.regiments[code]["x_m"]) + 5000
+	var line := SupplySystem.line_of(data, s, code)
+	assert_eq(String(line["stronghold"]), "")
+	assert_false(line["garrison"])
+	var km := int(line["length_km"])
+	assert_eq(int(line["loss_permille"]), SupplySystem.loss_of(data, km), "the road's own loss")
+
+func test_only_a_garrison_order_earns_the_garrison_morale() -> void:
+	var codes := _land_codes()
+	var standing: String = codes[0]
+	var holding: String = codes[1]
+	for pair: Array in [[standing, ArmySystem.ORDER_STANDBY], [holding, ArmySystem.ORDER_GARRISON]]:
+		var c: String = pair[0]
+		_stand_at_home(c, String(pair[1]))
+		s.regiments[c]["morale"] = 74
+		s.regiments[c]["supplies"] = ArmySystem.supply_use(data, ArmySystem.regiment(data, c), s) * 4
+	ArmySystem.settle_month(data, s)
+	assert_eq(int(s.regiments[standing]["morale"]), 75, "standing by at home: the fed mark")
+	assert_eq(int(s.regiments[holding]["morale"]), 80, "in garrison: the fed mark and the bonus")

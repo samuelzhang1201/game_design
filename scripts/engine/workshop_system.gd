@@ -7,7 +7,6 @@ extends RefCounted
 ## cards and the LEDGER read.
 
 const BUILDING := "war_workshop"
-const RATES := [0, 500, 1000]
 
 
 ## A war workshop works for the LORD only while the crown's own house holds
@@ -22,7 +21,12 @@ static func cells(repo: DataRepository, state: GameState) -> Array:
 	return out
 
 
+## The rate a workshop runs at, per mille; 1000 (in full, the default) for
+## a cell with no war workshop standing — a rate never outlives its
+## workshop (final review), whatever the state still holds.
 static func rate_of(state: GameState, cell: int) -> int:
+	if not BUILDING in MapManors.buildings_of(state, cell):
+		return 1000
 	return int(state.workshop_rate.get(str(cell), 1000))
 
 
@@ -33,13 +37,26 @@ static func set_rate(state: GameState, cell: int, rate: int) -> void:
 		state.workshop_rate[str(cell)] = rate
 
 
-static func rate_word(rate: int) -> String:
-	match rate:
-		0:
-			return "cold"
-		500:
-			return "at half"
-	return "in full"
+## Forget a cell's rate: its workshop is pulled down, or its manor has left
+## the crown (MapManors.demolish / set_owner).
+static func forget(state: GameState, cell: int) -> void:
+	state.workshop_rate.erase(str(cell))
+
+
+## The rates WORKSHOP_RATE accepts (data/workshop_rates.csv), lowest first.
+static func rates(repo: DataRepository) -> Array:
+	var out: Array = []
+	for row: Dictionary in repo.workshop_rates:
+		out.append(int(row["rate_permille"]))
+	return out
+
+
+## "cold" / "at half" / "in full" — the table's word for a rate.
+static func rate_word(repo: DataRepository, rate: int) -> String:
+	for row: Dictionary in repo.workshop_rates:
+		if int(row["rate_permille"]) == rate:
+			return String(row["word"])
+	return "at %d per mille" % rate
 
 
 ## Cell order, running out the lord's civil goods as it goes: {cell, rate,

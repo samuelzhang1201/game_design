@@ -385,13 +385,14 @@ static func _supply(repo: DataRepository, state: GameState, id: String, inward: 
 
 
 ## A regiment under a GARRISON order in a province the crown controls
-## stands in that province's capital town (SupplySystem.stronghold_of).
+## stands in that province's capital town (SupplySystem.garrisoned_in; one
+## merely standing by there draws through the town but is not garrisoned).
 static func _garrisons(repo: DataRepository, state: GameState, id: String) -> Array:
 	var codes: Array = state.regiments.keys()
 	codes.sort()
 	var out: Array = []
 	for c in codes:
-		var town := SupplySystem.stronghold_of(repo, state, String(c))
+		var town := SupplySystem.garrisoned_in(repo, state, String(c))
 		if town == "":
 			continue
 		var rid := "regiment:" + String(c)

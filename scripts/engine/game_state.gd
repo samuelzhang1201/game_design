@@ -331,7 +331,7 @@ func to_dict() -> Dictionary:
 		"manor_province": manor_province.duplicate(),
 		"manor_buildings": manor_buildings.duplicate(true),
 		"manor_focus": manor_focus.duplicate(true),
-		"workshop_rate": workshop_rate.duplicate(true),
+		"workshop_rate": _encode_values(workshop_rate.duplicate(true)),
 		"manor_works": _encode_values(manor_works.duplicate(true)),
 		"manor_log": _encode_values(manor_log.duplicate(true)),
 		"regiments": _encode_values(regiments.duplicate(true)),
@@ -397,7 +397,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.manor_focus = d.get("manor_focus", {}).duplicate(true)
 	# Saves from before the war workshops carry no key: every workshop runs
 	# in full (WorkshopSystem.rate_of's own default).
-	s.workshop_rate = d.get("workshop_rate", {}).duplicate(true)
+	s.workshop_rate = _decode_values(d.get("workshop_rate", {}))
 	s.manor_works = _decode_values(d.get("manor_works", {}))
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	s.regiments = _decode_values(d.get("regiments", {}))

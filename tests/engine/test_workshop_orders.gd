@@ -44,3 +44,10 @@ func test_refused_on_a_manor_the_crown_does_not_hold() -> void:
 func test_the_order_is_catalogued() -> void:
 	assert_true(data.actions.has("WORKSHOP_RATE"))
 	assert_true(data.order_costs.has("WORKSHOP_RATE"))
+
+## Minor7: the order's rates are the table's, not a constant.
+func test_the_order_reads_the_rate_table() -> void:
+	var req := ActionRequest.make("WORKSHOP_RATE", {"cell": cell, "rate": 250})
+	assert_ne(sys.validate(req, s), "", "no such rate in the table")
+	data.workshop_rates.append({"rate_permille": 250, "word": "at a quarter", "ledger_label": "Run it at a quarter"})
+	assert_eq(sys.validate(req, s), "", "a row added to the table is a rate")

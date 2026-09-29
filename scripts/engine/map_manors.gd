@@ -244,6 +244,9 @@ static func set_owner(repo: DataRepository, state: GameState, cell_id: int, fami
 	state.manor_owner[str(cell_id)] = family
 	state.manor_log.append({"tick": state.tick, "cell": cell_id, "from": from, "to": family,
 		"reason": reason})
+	# a war workshop's rate is the crown's order: it does not pass with the land
+	if family != crown(state):
+		WorkshopSystem.forget(state, cell_id)
 	return true
 
 ## Who CONTROLS a province (owner 2026-09-13): the house holding the most
@@ -734,6 +737,8 @@ static func demolish(repo: DataRepository, state: GameState, cell_id: int, build
 		(state.manor_buildings[key] as Array).erase(building_code)
 		if (state.manor_buildings[key] as Array).is_empty():
 			state.manor_buildings.erase(key)
+		if building_code == WorkshopSystem.BUILDING:
+			WorkshopSystem.forget(state, cell_id)  # its rate goes with it
 		found = true
 	elif is_building(state, cell_id, building_code):
 		var left: Array = []

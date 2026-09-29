@@ -148,3 +148,35 @@ func test_a_foreign_regiment_shows_no_gauge_unless_in_dev_mode() -> void:
 	assert_eq(LedgerResolvers.props_of(data, s, "regiment:" + foreign), [])
 	Intel.dev_all = true
 	assert_eq(LedgerResolvers.props_of(data, s, "regiment:" + foreign).size(), 2)
+
+# --- cards (final review Minor5) ---------------------------------------------
+
+func test_a_supply_lines_card_states_its_road() -> void:
+	var code := String(SupplySystem.plan(data, s)[0]["code"])
+	s.regiments[code]["order"] = ArmySystem.ORDER_MARCH
+	var id := "supply_line:" + code
+	var line := SupplySystem.line_of(data, s, code)
+	var card := LedgerCards.entry(data, s, id, Ledger.snapshot(data, s, "war", {"id": id}))
+	@warning_ignore("integer_division")
+	assert_eq(String(card["lines"][0]), "%d km, %d%% lost on the way" % [int(line["length_km"]),
+		int(line["loss_permille"]) / 10])
+	# standing at home, it draws through the town
+	var p: Dictionary = data.provinces[MapManors.home_province(data, s)]
+	var m := ArmySystem.pack_to_metres(data, Vector2(float(p["center_x"]), float(p["center_y"])))
+	s.regiments[code]["x_m"] = m.x
+	s.regiments[code]["y_m"] = m.y
+	s.regiments[code]["order"] = ArmySystem.ORDER_STANDBY
+	card = LedgerCards.entry(data, s, id, Ledger.snapshot(data, s, "war", {"id": id}))
+	assert_eq(String(card["lines"][0]), "through %s, nothing lost"
+		% String(data.burgs[String(p["capital_burg"])]["label"]))
+
+func test_a_workshops_card_names_its_rate() -> void:
+	var id := "workshop:%d" % cell
+	var card := LedgerCards.entry(data, s, id, Ledger.snapshot(data, s, "economy", {"id": id}))
+	assert_eq(String(card["lines"][0]), "Runs in full")
+	WorkshopSystem.set_rate(s, cell, 500)
+	card = LedgerCards.entry(data, s, id, Ledger.snapshot(data, s, "economy", {"id": id}))
+	assert_eq(String(card["lines"][0]), "Runs at half")
+	WorkshopSystem.set_rate(s, cell, 0)
+	card = LedgerCards.entry(data, s, id, Ledger.snapshot(data, s, "economy", {"id": id}))
+	assert_eq(String(card["lines"][0]), "Runs cold")

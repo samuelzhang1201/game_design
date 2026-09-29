@@ -64,7 +64,9 @@ func advance(state: GameState) -> TickReport:
 	# refilled before its month is spent.
 	for l: Dictionary in SupplySystem.settle_month(data, state):
 		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
-	# The regiments' month (owner 2026-09-17): wounded return, supplies spent.
+	# The regiments' month (owner 2026-09-17; morale, spec 2026-09-30-ledger-
+	# supply-design §4): wounded return, morale drifts toward what the stores
+	# just refilled allow, supplies are spent, training grows.
 	ArmySystem.settle_month(data, state)
 	state.tick += 1
 	state.day = 1

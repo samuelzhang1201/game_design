@@ -24,11 +24,37 @@ static func entry(repo: DataRepository, state: GameState, node_id: String, snap:
 	var row := Ledger.type_row(repo, t)
 	if String(row.get("status", "")) == "planned":
 		lines.append("Not yet built (%s). %s" % [row["milestone"], String(row.get("notes", ""))])
+	var head := _head(repo, state, kind, rest)
+	if head != "":
+		lines.append(head)
 	for l: Dictionary in snap.get("links", []):
 		if String(l["from"]) != node_id and String(l["to"]) != node_id:
 			continue
 		lines.append(_line(repo, state, l, node_id, int(snap.get("day", 0))))
 	return {"title": LedgerResolvers.label_of(repo, state, node_id), "lines": lines}
+
+
+## The first line of a supply chain card (final review): a supply line's
+## road — "250 km, 15% lost on the way", or "through Walbover, nothing lost"
+## for a regiment standing in the crown's province — and a war workshop's
+## rate ("Runs at half"). The crown's own depots: exact, like their threads.
+static func _head(repo: DataRepository, state: GameState, kind: String, rest: String) -> String:
+	match kind:
+		"supply_line":
+			if not state.regiments.has(rest) \
+					or String(ArmySystem.regiment(repo, rest).get("is_naval", "0")) == "1":
+				return ""  # a fleet has no supply line
+			var line := SupplySystem.line_of(repo, state, rest)
+			var town := String(line["stronghold"])
+			if town != "":
+				return "through %s, nothing lost" % String((repo.burgs.get(town, {}) as Dictionary).get("label", town))
+			@warning_ignore("integer_division")  # whole percent from per-mille
+			return "%d km, %d%% lost on the way" % [int(line["length_km"]), int(line["loss_permille"]) / 10]
+		"workshop":
+			if not rest.is_valid_int():
+				return ""
+			return "Runs " + WorkshopSystem.rate_word(repo, WorkshopSystem.rate_of(state, int(rest)))
+	return ""
 
 
 static func thread_entry(repo: DataRepository, state: GameState, link: Dictionary) -> Dictionary:

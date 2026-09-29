@@ -269,10 +269,13 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			if not WorkshopSystem.BUILDING in MapManors.buildings_of(state, cell):
 				return "%s has no war workshop" % label
 			var rate := int(req.params.get("rate", -1))
-			if not rate in WorkshopSystem.RATES:
-				return "A war workshop runs cold, at half or in full"
+			if not rate in WorkshopSystem.rates(data):
+				var words: Array = []
+				for r: int in WorkshopSystem.rates(data):
+					words.append(WorkshopSystem.rate_word(data, r))
+				return "A war workshop runs " + ", ".join(words)
 			if rate == WorkshopSystem.rate_of(state, cell):
-				return "The war workshop at %s already runs %s" % [label, WorkshopSystem.rate_word(rate)]
+				return "The war workshop at %s already runs %s" % [label, WorkshopSystem.rate_word(data, rate)]
 	return ""
 
 func execute(req: ActionRequest, state: GameState) -> Dictionary:
@@ -432,7 +435,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var rate := int(req.params["rate"])
 			WorkshopSystem.set_rate(state, cell, rate)
 			effects.append({"metric": "manor", "delta": 0.0, "reason": "the war workshop at %s now runs %s"
-				% [MapManors.label_of(data, cell), WorkshopSystem.rate_word(rate)]})
+				% [MapManors.label_of(data, cell), WorkshopSystem.rate_word(data, rate)]})
 		"MANOR_SEIZE":
 			# The skeleton (MANOR_SYSTEM.md §5): the outcome is automatic success
 			# until the military system can roll defence against the host.

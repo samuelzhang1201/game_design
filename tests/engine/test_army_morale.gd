@@ -52,3 +52,18 @@ func test_the_regiment_card_states_its_supply_line() -> void:
 	for st: Dictionary in MapObjects.army_card(data, code, s)["stats"]:
 		keys.append(String(st["key"]))
 	assert_has(keys, "army_supply_line")
+
+## Minor6 (final review): the stores' word belongs to the MORALE row, once.
+func test_the_morale_row_names_the_stores() -> void:
+	var codes: Array = []
+	for c in s.regiments.keys():
+		if String(ArmySystem.regiment(data, String(c)).get("is_naval", "0")) != "1":
+			codes.append(String(c))
+	codes.sort()
+	var code: String = codes[0]
+	s.regiments[code]["supplies"] = 0
+	var tips := {}
+	for st: Dictionary in MapObjects.army_card(data, code, s)["stats"]:
+		tips[String(st["key"])] = String(st["tooltip"])
+	assert_string_contains(tips["army_morale"], "starving")
+	assert_false(tips["army_supply_line"].contains("starving"), "said once, on the morale row")

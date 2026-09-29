@@ -99,6 +99,7 @@ func test_a_workshop_sold_away_works_for_nobody() -> void:
 
 func test_workshop_rates_survive_a_save() -> void:
 	var cell: int = _home_cells(1)[0]
+	_build(cell)
 	WorkshopSystem.set_rate(s, cell, 500)
 	var back := GameState.from_dict(s.to_dict())
 	assert_eq(WorkshopSystem.rate_of(back, cell), 500)
@@ -107,3 +108,55 @@ func test_workshop_rates_survive_a_save() -> void:
 	var old := s.to_dict()
 	old.erase("workshop_rate")
 	assert_eq(WorkshopSystem.rate_of(GameState.from_dict(old), cell), 1000, "an old save runs every workshop in full")
+
+## Minor1 (final review): a rate comes back through a JSON save as the
+## same whole number, never a float.
+func test_a_rate_round_trips_through_json_as_an_int() -> void:
+	var cell: int = _home_cells(1)[0]
+	_build(cell)
+	WorkshopSystem.set_rate(s, cell, 500)
+	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	var v: Variant = back.workshop_rate[str(cell)]
+	assert_eq(typeof(v), TYPE_INT)
+	assert_eq(v, 500)
+
+## Minor2 (final review): a rate never outlives its workshop.
+func test_a_demolished_workshop_forgets_its_rate() -> void:
+	var cell: int = _home_cells(1)[0]
+	_build(cell)
+	WorkshopSystem.set_rate(s, cell, 0)
+	assert_true(MapManors.demolish(data, s, cell, WorkshopSystem.BUILDING, "a test demolition") >= 0.0)
+	assert_false(s.workshop_rate.has(str(cell)), "the demolished workshop's rate is gone")
+	_build(cell)
+	assert_eq(WorkshopSystem.rate_of(s, cell), 1000, "a new workshop starts in full")
+
+func test_a_workshop_sold_away_forgets_its_rate() -> void:
+	var cell: int = _home_cells(1)[0]
+	_build(cell)
+	WorkshopSystem.set_rate(s, cell, 500)
+	var family := _another_family()
+	assert_true(MapManors.set_owner(data, s, cell, family, "a test sale"))
+	assert_false(s.workshop_rate.has(str(cell)))
+
+func test_a_cell_without_a_workshop_reads_in_full() -> void:
+	var cell: int = _home_cells(1)[0]
+	s.workshop_rate[str(cell)] = 0
+	assert_eq(WorkshopSystem.rate_of(s, cell), 1000, "no standing workshop: no rate")
+
+## Minor7 (final review): the rates and their words are data.
+func test_the_rates_are_a_table() -> void:
+	var rates: Array = data.workshop_rates.map(func(r: Dictionary) -> int: return int(r["rate_permille"]))
+	assert_eq(rates, [0, 500, 1000])
+	assert_eq(WorkshopSystem.rate_word(data, 0), "cold")
+	assert_eq(WorkshopSystem.rate_word(data, 500), "at half")
+	assert_eq(WorkshopSystem.rate_word(data, 1000), "in full")
+	# the LEDGER's rate orders are the table's own rows
+	var labels := {}
+	for r: Dictionary in data.workshop_rates:
+		labels[int(r["rate_permille"])] = String(r["ledger_label"])
+	for row: Dictionary in data.ledger_actions:
+		if String(row["action_code"]) != "WORKSHOP_RATE":
+			continue
+		var rate := int(Ledger.params_of(row, "workshop:1")["rate"])
+		assert_true(labels.has(rate), "rate %d is in the table" % rate)
+		assert_eq(String(row["label"]), String(labels.get(rate, "")))
