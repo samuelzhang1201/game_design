@@ -10,6 +10,6 @@ workshop,res://assets/map3d_houses/workshop.glb,house,0.35,19.0,15.73,19.00,15.3
 barn,res://assets/map3d_houses/barn.glb,barn,1.0,20.0,15.28,20.00,17.89,house_roof_tile_dark,house_wall_daub,village,0,the outlying kind: barns and byres sit in the thinning ring
 byre,res://assets/map3d_houses/byre.glb,barn,0.8,17.0,12.80,17.00,10.31,house_roof_slate,house_wall_stone,village,0,an open-fronted byre
 chapel,res://assets/map3d_houses/chapel.glb,landmark,1.0,24.0,15.62,24.00,27.81,house_roof_slate,house_wall_stone,village,0,a village's centre
-church,res://assets/map3d_houses/church.glb,landmark,1.0,36.0,19.14,36.00,27.20,house_roof_tile,house_wall_stone,fort,0,a town's and a fort's centre; min_group is fort, not town, because a fort ranks BELOW a town and the landmark is now the highest its group allows (2026-09-22)
+church,res://assets/map3d_houses/church.glb,landmark,1.0,36.0,19.14,36.00,27.20,house_roof_tile,house_wall_stone,fort,0,"a town's and a fort's centre; min_group is fort, not town, because a fort ranks BELOW a town and the landmark is now the highest its group allows (2026-09-22)"
 church_tower,res://assets/map3d_houses/church_tower.glb,landmark,1.0,44.0,44.00,17.34,53.56,house_roof_slate,house_wall_stone,city,0,a city's centre: the tower is the silhouette that reads at 9 px
 palace,res://assets/map3d_houses/palace.glb,landmark,1.0,68.0,68.00,41.62,49.93,house_roof_tile_dark,house_wall_stone,capital,0,a capital's centre

@@ -1,6 +1,6 @@
 key,texture,margin,content,notes
 frame,res://assets/missives/frame.png,72,32,"scaled nine-slice fix: the margin is TEXTURE px (drawn at margin / ui_missive_art_px_per_design = 24 design px); 76 was tuned for the old unscaled 72-design-px border and left a 52px gap of bare cream — 32 is the drawn 24px border plus an 8px buffer"
-board,res://assets/missives/board.png,0,,the cork ground behind the columns (tiled at texture size / ui_missive_art_px_per_design, not stretched)
+board,res://assets/missives/board.png,0,,"the cork ground behind the columns (tiled at texture size / ui_missive_art_px_per_design, not stretched)"
 note,res://assets/missives/note.png,40,16,"a pinned parchment slip; content 16 clears the drawn ~13px border (40 texture px / scale) with a small buffer — was 10, under the border, before the scale fix"
 letter,res://assets/missives/letter.png,64,32,"the reading desk's parchment; content 32 clears the drawn ~21px border (64 texture px / scale) — was 40, tuned for the old unscaled 64-design-px border"
 envelope,res://assets/missives/envelope.png,0,,the wax-sealed envelope that flies to the tab

@@ -85,6 +85,20 @@ func test_every_board_piece_named_exists() -> void:
 		assert_true(repo.missive_content.has(key), key)
 
 
+## CSV guard follow-up: a misconfigured scale (never a real
+## ui_missive_art_px_per_design) must not divide the tile step to 0 or
+## negative and loop forever — it completes, which a hanging test would not.
+func test_drawing_a_tiled_piece_with_a_non_positive_scale_completes() -> void:
+	var s := ScaledNineSlice.new()
+	s.texture = load("res://icon.png")
+	s.source_inset = 0.0
+	s.scale = -1.0
+	var ci := RenderingServer.canvas_item_create()
+	s.draw(ci, Rect2(0, 0, 50, 50))
+	RenderingServer.free_rid(ci)
+	assert_true(true, "drawing with scale <= 0 returned instead of looping forever")
+
+
 func test_the_board_wears_an_installed_frame() -> void:
 	var saved := String(Game.data.missive_art.get("frame", ""))
 	Game.data.missive_art["frame"] = "res://icon.png"

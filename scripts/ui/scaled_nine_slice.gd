@@ -61,11 +61,15 @@ func _draw(to_canvas_item: RID, rect: Rect2) -> void:
 
 ## Tiled at the art's own size / scale a design-px tile (VellumPanelStyle's
 ## grain drawing, the same idea: a texel is `1 / scale` design px), the last
-## row and column cut to the box.
+## row and column cut to the box. A non-positive `scale` (misconfigured data,
+## never a real ui_missive_art_px_per_design) is treated as 1 rather than
+## dividing by it — the same fallback draw_inset() uses — since a step that
+## never advances (0) or runs backwards (negative) would loop forever.
 func _draw_tiled(ci: RID, rect: Rect2) -> void:
 	var tw := float(texture.get_width())
 	var th := float(texture.get_height())
-	var step := Vector2(tw, th) / scale
+	var s := scale if scale > 0.0 else 1.0
+	var step := Vector2(tw, th) / s
 	if step.x <= 0.0 or step.y <= 0.0:
 		return
 	var rid := texture.get_rid()
@@ -76,7 +80,7 @@ func _draw_tiled(ci: RID, rect: Rect2) -> void:
 		while x < rect.end.x:
 			var w := minf(step.x, rect.end.x - x)
 			RenderingServer.canvas_item_add_texture_rect_region(ci,
-				Rect2(x, y, w, h), rid, Rect2(0, 0, w * scale, h * scale), tint)
+				Rect2(x, y, w, h), rid, Rect2(0, 0, w * s, h * s), tint)
 			x += step.x
 		y += step.y
 

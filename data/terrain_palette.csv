@@ -38,7 +38,7 @@ heat_2,#C4D35E,rising ground
 heat_3,#F0C04E,upland yellow
 heat_4,#E08A45,hill orange
 heat_5,#B55A3C,mountain
-heat_6,#FFFFFF,the summit, snow
+heat_6,#FFFFFF,"the summit, snow"
 map3d_road_surface,#EDE0CE,"3D MAP roads (2026-09-19): the multiplier on the road texture (Poly Haven rocky_trail_02) up close, so the lit earth reads warm like the fields around it, not grey"
 map3d_bridge,#E0CBA8,"3D MAP bridges (2026-09-19): the multiplier on the bridges' stone (Poly Haven medieval_blocks_03) — the lit stone read near-white against the fields; also the flat colour when the texture is missing"
 map3d_sky_top,#2F5878,3D MAP sky (2026-09-20): the ProceduralSkyMaterial's sky_top_color (the horizon and the fog are map3d_sky) — from tools/map3d/build_terrain.gd build_scene (2026-09-18)
