@@ -1,0 +1,20 @@
+key,color,notes
+background,#14100C,the room behind the orrery
+disc_things,#6B4F2A2E,the THINGS disc
+disc_people,#5C4A6E2E,the PEOPLE disc
+disc_know,#4E64702E,the KNOW disc
+sphere_things,#B08D57,brass
+sphere_people,#7A5C8E,purpure
+sphere_know,#9FB7C4,glass
+sphere_planned,#5A5550,a thing not yet built
+thread_live,#E0BB6A,gold wire
+thread_planned,#6E6862,not yet built
+thread_aged,#B89A5A,a report yellowing with age
+thread_kin,#E0BB6A,kin and marriage
+thread_pos,#7FA36B,warm ties
+thread_neg,#A8453A,cold ties
+loop_virtuous,#F2D27A,a virtuous loop running
+loop_vicious,#B0322A,a vicious loop running
+label_ink,#EEE3CB,sphere names
+label_halo,#14100C,the halo under a name
+focus_ring,#E0BB6A,the selected sphere

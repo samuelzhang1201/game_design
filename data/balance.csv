@@ -590,3 +590,37 @@ intel_magnitude_many,5000,"under this 'thousands', else 'many thousands'"
 missive_seal_s,0.5,the report dialog's shrink into its envelope (EnvelopeFlight)
 missive_fly_s,0.9,the envelope's flight to the Missive tab
 missive_fly_turns,2,whole turns the envelope spins in flight
+ledger_layer_gap_m,6,"LEDGER (spec 2026-09-30 §6.2): metres between the THINGS, PEOPLE and KNOW discs"
+ledger_disc_radius_m,14,LEDGER: radius of each layer's disc
+ledger_sphere_radius_type,0.9,LEDGER: radius of a TYPE sphere
+ledger_sphere_radius_instance,0.5,LEDGER: radius of an instance sphere
+ledger_orb_metallic,0.7,LEDGER: brass spheres' metallic
+ledger_orb_roughness,0.35,LEDGER: brass spheres' roughness
+ledger_orb_glass_alpha,0.55,LEDGER: the KNOW layer's glass spheres' opacity
+ledger_thread_width_min,0.04,LEDGER: a thread's radius at no flow (metres)
+ledger_thread_width_max,0.28,LEDGER: a thread's radius at ledger_thread_flow_ref and above
+ledger_thread_flow_ref,5000,"LEDGER: the flow at which a thread reaches its widest (log scale)"
+ledger_thread_vague_width,0.08,LEDGER: a thread whose figure the crown only has in words
+ledger_light_speed,0.6,LEDGER: pulses per second along a thread at its widest
+ledger_light_pulses,4,LEDGER: pulses along one thread
+ledger_dashes,14,LEDGER: dashes along a not-yet-built thread
+ledger_ink_general,0.6,LEDGER: ink of a figure the crown has in words (Intel general)
+ledger_ink_basic,0.35,LEDGER: ink of a figure the crown barely knows (Intel basic)
+ledger_age_full_days,90,LEDGER: days after which a report's thread has fully yellowed
+ledger_pair_offset_m,0.25,LEDGER: sideways offset of two threads joining the same spheres both ways
+ledger_focus_fade,0.15,LEDGER: opacity of what is not linked to the selected sphere
+ledger_ego_ring_m,5,LEDGER: radius of an ego network's first ring
+ledger_layout_iterations,40,LEDGER: force-layout passes (fixed: the layout is deterministic)
+ledger_layout_repel,4,LEDGER: force layout: repulsion between spheres of one layer
+ledger_layout_spring,0.1,LEDGER: force layout: pull toward the layer's axis
+ledger_instance_cap,24,LEDGER: neighbours shown per link type before the rest fold into one +N more sphere
+ledger_list_cap,60,LEDGER: rows of a type's instance list in the left column
+ledger_camera_distance,34,LEDGER: the camera's opening distance (metres)
+ledger_camera_min_m,8,LEDGER: closest zoom
+ledger_camera_max_m,90,LEDGER: farthest zoom
+ledger_camera_pitch_deg,-24,LEDGER: the front view's pitch (negative looks down)
+ledger_turn_deg_per_px,0.3,LEDGER: degrees turned per pointer px of a right-drag
+ledger_zoom_factor,1.12,LEDGER: distance factor per wheel notch
+ledger_pan_gesture_px,12,LEDGER: pointer px per unit of a trackpad pan gesture
+ledger_front_ease_s,0.4,LEDGER: seconds the camera eases back to the front view
+ledger_label_px,14,LEDGER: sphere names' font size (design px)

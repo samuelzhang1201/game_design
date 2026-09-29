@@ -96,6 +96,15 @@ var army_height_supply: Array = []
 ## data/courier_kinds.csv: kind -> {speed_permille, fee_gold, offered}
 ## (spec 2026-09-27-courier-core §3).
 var courier_kinds: Dictionary = {}
+## The LEDGER's ontology (spec 2026-09-30-ledger-ontology-design §7.1):
+## rows as read, in file order.
+var ledger_lenses: Array = []
+var ledger_types: Array = []
+var ledger_links: Array = []
+var ledger_actions: Array = []
+var ledger_loops: Array = []
+## key -> Color (data/ledger_palette.csv).
+var ledger_palette: Dictionary = {}
 ## data/courier_art.csv: kind -> its row (model, painting, size).
 var courier_art: Dictionary = {}
 ## data/intel_facts.csv: key -> {label, round_to, tiers} (spec 2026-09-28 §1).
@@ -565,6 +574,28 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/courier_kinds.csv", ["kind", "speed_permille", "fee_gold", "offered"],
 			func(r): courier_kinds[String(r["kind"])] = {"speed_permille": int(r["speed_permille"]),
 				"fee_gold": int(r["fee_gold"]), "offered": int(r["offered"]) == 1}):
+		return false
+	if not _load_if_present(dir + "/ledger_lenses.csv", ["lens", "label", "instance_type"],
+			func(r): ledger_lenses.append(r)):
+		return false
+	if not _load_if_present(dir + "/ledger_object_types.csv",
+			["type_id", "layer", "lenses", "label", "icon", "x", "z", "instances", "status", "milestone"],
+			func(r): ledger_types.append(r)):
+		return false
+	if not _load_if_present(dir + "/ledger_link_types.csv",
+			["link_id", "from_type", "to_type", "verb", "lenses", "status", "resolver",
+				"governor_seat", "governor_kind", "milestone", "planned_note"],
+			func(r): ledger_links.append(r)):
+		return false
+	if not _load_if_present(dir + "/ledger_actions.csv",
+			["target", "action_code", "label", "params", "needs_map"],
+			func(r): ledger_actions.append(r)):
+		return false
+	if not _load_if_present(dir + "/ledger_loops.csv", ["loop_id", "links", "kind", "running", "label"],
+			func(r): ledger_loops.append(r)):
+		return false
+	if not _load_if_present(dir + "/ledger_palette.csv", ["key", "color"],
+			func(r): ledger_palette[String(r["key"])] = Color(String(r["color"]))):
 		return false
 	if not _load_if_present(dir + "/courier_art.csv", ["kind", "model", "painting", "size"],
 			func(r): courier_art[String(r["kind"])] = r):

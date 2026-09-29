@@ -1,0 +1,12 @@
+target,action_code,label,params,needs_map
+civil_goods,GOODS_BUY,Buy civil goods,pool=civil|gold=50,0
+civil_goods,GOODS_SELL,Sell civil goods,pool=civil|gold=50,0
+strategic_goods,GOODS_BUY,Buy strategic goods,pool=strategic|gold=50,0
+strategic_goods,GOODS_SELL,Sell strategic goods,pool=strategic|gold=50,0
+trade_gold,GOODS_BUY,Buy civil goods,pool=civil|gold=50,0
+manor,MANOR_BUILD,Build here…,,1
+manor,MANOR_FOCUS,Change its work…,,1
+province,SPY_SEND,Send a spy…,,1
+town,SPY_SEND,Send a spy…,,1
+regiment,ARMY_MARCH,March…,,1
+regiment,ARMY_GARRISON,Garrison,regiment=@id,0

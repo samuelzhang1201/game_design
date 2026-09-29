@@ -1,0 +1,3 @@
+loop_id,links,kind,running,label
+famine,rations|works|yields_civil,vicious,grain<1,hunger: empty stores feed unrest and the fields fall behind
+war_chest,supplies_out|attacks,virtuous,never,victory: fed regiments win spoils that refill the stores
