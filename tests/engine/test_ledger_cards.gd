@@ -30,8 +30,8 @@ func test_a_type_card_lists_its_threads_with_their_sources() -> void:
 	assert_false(joined.contains("%"), "no numeric credibility")
 
 func test_a_type_not_yet_built_says_so() -> void:
-	var e := LedgerCards.entry(data, s, "type:workshop", Ledger.snapshot(data, s, "economy", {}))
-	assert_string_contains("\n".join(e["lines"]), "Not yet built (M2)")
+	var e := LedgerCards.entry(data, s, "type:market", Ledger.snapshot(data, s, "economy", {}))
+	assert_string_contains("\n".join(e["lines"]), "Not yet built (M6)")
 
 func test_a_thread_card_names_its_governor() -> void:
 	var chancellor := String(s.council.get("chancellor", ""))
@@ -50,11 +50,11 @@ func test_a_thread_card_names_its_governor() -> void:
 ## Final fix I3: a thread not yet built names the milestone that lights it.
 func test_a_planned_thread_names_its_milestone() -> void:
 	for l: Dictionary in Ledger.snapshot(data, s, "economy", {})["links"]:
-		if String(l["type"]) == "converts_in":
+		if String(l["type"]) == "trades":
 			var e := LedgerCards.thread_entry(data, s, l)
-			assert_has(e["lines"], "Not yet built (M2): lit by the war workshop")
+			assert_has(e["lines"], "Not yet built (M6): lit by markets and trade routes")
 			return
-	fail_test("the economy lens draws the planned converts_in thread")
+	fail_test("the economy lens draws the planned trades thread")
 
 func test_show_on_map_has_a_place_for_places_only() -> void:
 	var home := MapManors.home_province(data, s)

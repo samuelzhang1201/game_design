@@ -136,9 +136,11 @@ var _show_on_map := false
 ## --ledger LENS (with --screen root): the LEDGER through real clicks — its
 ## tab, then the lens chip; --ledger-focus TYPE then clicks that type's
 ## sphere and the first row of the list it puts in the left column (its ego
-## network). The moment is `ledger`.
+## network). The moment is `ledger`. --ledger-row TEXT picks the first row
+## whose id contains TEXT instead (a land regiment rather than a fleet).
 var _ledger := ""
 var _ledger_focus := ""
+var _ledger_row := ""
 ## --shot-on report|flight|board|card|spymenu takes the shot --shot-delay N
 ## frames (default 6) after that moment rather than at --shot-frame.
 var _shot_on := ""
@@ -225,6 +227,8 @@ func _ready() -> void:
 			_ledger = args[i + 1]
 		elif args[i] == "--ledger-focus":
 			_ledger_focus = args[i + 1]
+		elif args[i] == "--ledger-row":
+			_ledger_row = args[i + 1]
 		elif args[i] == "--shot-on":
 			_shot_on = args[i + 1]
 		elif args[i] == "--shot-delay":
@@ -609,7 +613,7 @@ func _ledger_step() -> void:
 		var detail: MapDetailPanel = _root.current_screen.detail_panel()
 		var row: Button = null
 		for b in detail.find_children("*", "Button", true, false):
-			if b.has_meta("ledger_id"):
+			if b.has_meta("ledger_id") and String(b.get_meta("ledger_id")).contains(_ledger_row):
 				row = b
 				break
 		if row == null:

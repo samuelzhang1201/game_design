@@ -21,9 +21,9 @@ extends RefCounted
 
 const NAMES := ["works", "part_of", "yields_civil", "yields_strategic", "taxed", "trade_gold",
 	"rations", "stands_on", "holds", "member", "sits", "based_in", "carries", "spies_on",
-	"describes", "court_relations"]
+	"describes", "court_relations", "converts_in", "converts_out", "supplies_in", "supplies_out", "garrisons"]
 const INSTANCE_LISTS := ["peasants", "manors", "provinces", "regiments", "characters", "houses",
-	"seats", "reports", "couriers"]
+	"seats", "reports", "couriers", "workshops", "supply_lines"]
 const REPORT_KINDS := {"describes_province": "province", "describes_manor": "manor",
 	"describes_regiment": "regiment", "describes_town": "burg"}
 
@@ -75,6 +75,16 @@ static func run(row: Dictionary, repo: DataRepository, state: GameState, focus: 
 			return _describes(state, id, String(row["link_id"]), to_t)
 		"court_relations":
 			return _relations(state, id, all, String(row["link_id"]))
+		"converts_in":
+			return _workshops(repo, state, id, true)
+		"converts_out":
+			return _workshops(repo, state, id, false)
+		"supplies_in":
+			return _supply(repo, state, id, true)
+		"supplies_out":
+			return _supply(repo, state, id, false)
+		"garrisons":
+			return _garrisons(repo, state, id)
 	return []
 
 
@@ -105,6 +115,10 @@ static func _province_subj(repo: DataRepository, code: String) -> Dictionary:
 
 
 ## The crown's own intake a month — what reaches its two purses.
+static func intake_of(repo: DataRepository, state: GameState) -> Dictionary:
+	return _intake(repo, state)
+
+
 static func _intake(repo: DataRepository, state: GameState) -> Dictionary:
 	var p := RealmEconomy.purses(repo, state)
 	var lord: Dictionary = p["lord"]
@@ -329,6 +343,103 @@ static func _relations(state: GameState, id: String, all: bool, rel_type: String
 	return out
 
 
+# --- the supply chain (spec 2026-09-30-ledger-supply-design §5) --------------
+# Each reads the ONE plan function the tick settles, so the LEDGER's figures
+# are the month's own; the crown's own depots, so every account is full.
+
+static func _workshops(repo: DataRepository, state: GameState, id: String, inward: bool) -> Array:
+	var rows := WorkshopSystem.plan(repo, state)
+	var key := "take" if inward else "make"
+	if id == "":
+		var n := 0
+		for row: Dictionary in rows:
+			n += int(row[key])
+		return [_type_link("civil_goods", "workshop", n, "gold") if inward
+			else _type_link("workshop", "strategic_goods", n, "gold")]
+	var out: Array = []
+	for row: Dictionary in rows:
+		var wid := "workshop:%d" % int(row["cell"])
+		if id == wid:
+			out.append(_link("type:civil_goods", wid, int(row[key]), "gold") if inward
+				else _link(wid, "type:strategic_goods", int(row[key]), "gold"))
+	return out
+
+
+static func _supply(repo: DataRepository, state: GameState, id: String, inward: bool) -> Array:
+	var rows := SupplySystem.plan(repo, state)
+	if id == "":
+		var n := 0
+		for row: Dictionary in rows:
+			n += int(row["paid"] if inward else row["delivered"])
+		return [_type_link("strategic_goods", "supply_line", n, "gold") if inward
+			else _type_link("supply_line", "regiment", n, "units")]
+	var out: Array = []
+	for row: Dictionary in rows:
+		var code := String(row["code"])
+		var line := "supply_line:" + code
+		if inward and id == line:
+			out.append(_link("type:strategic_goods", line, int(row["paid"]), "gold"))
+		elif not inward and (id == line or id == "regiment:" + code):
+			out.append(_link(line, "regiment:" + code, int(row["delivered"]), "units"))
+	return out
+
+
+## A regiment under a GARRISON order in a province the crown controls
+## stands in that province's capital town (SupplySystem.stronghold_of).
+static func _garrisons(repo: DataRepository, state: GameState, id: String) -> Array:
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	var out: Array = []
+	for c in codes:
+		var town := SupplySystem.stronghold_of(repo, state, String(c))
+		if town == "":
+			continue
+		var rid := "regiment:" + String(c)
+		if id == "" or id == rid or id == "town:" + town:
+			out.append(_link(rid, "town:" + town, -1, "count"))
+	if id == "":
+		return [_type_link("regiment", "town", out.size(), "count")]
+	return out
+
+
+# --- properties (spec 2026-09-30-ledger-ontology-design §6.3 "a property") ---
+
+## The gauges a sphere carries: [{key, label, value, max}], whole numbers.
+## A regiment the crown knows in full (its own; any in DEV MODE) carries its
+## supply score (ArmySystem.bars_of, per mille) and its morale (0..100); the
+## civil and strategic goods TYPE spheres carry the crown's and the lord's
+## stock against ledger_gauge_stock_months of the month's intake. Anything
+## else carries none.
+static func props_of(repo: DataRepository, state: GameState, id: String) -> Array:
+	match id:
+		"type:civil_goods":
+			return [_stock(repo, state, "civil", ["grain", "lord_civil"])]
+		"type:strategic_goods":
+			return [_stock(repo, state, "strategic", ["strategic", "lord_strategic"])]
+	if not id.begins_with("regiment:"):
+		return []
+	var code := _rest(id)
+	var reg := ArmySystem.regiment(repo, code)
+	if reg.is_empty():
+		return []
+	var subj := MissiveLog.subject("regiment", code, -1, ArmySystem.position_of(repo, state, reg))
+	if Intel.level(repo, state, subj) != "full":
+		return []
+	var st := ArmySystem.state_of(repo, state, code)
+	if st.is_empty():
+		st = ArmySystem.starting_state(repo, reg)  # a foreign regiment, read as it would start
+	return [{"key": "supplies", "label": "Supplies", "value": ArmySystem.bars_of(repo, state, code).y, "max": 1000},
+		{"key": "morale", "label": "Morale", "value": clampi(int(st["morale"]), 0, 100), "max": 100}]
+
+
+static func _stock(repo: DataRepository, state: GameState, pool: String, metrics: Array) -> Dictionary:
+	var n := 0
+	for m: String in metrics:
+		n += maxi(int(state.metrics.get(m, 0.0)), 0)
+	var cap := maxi(int(_intake(repo, state)[pool]) * int(repo.bal("ledger_gauge_stock_months")), 1)
+	return {"key": "stock", "label": "Stock", "value": n, "max": cap}
+
+
 # --- instances and names ---------------------------------------------------
 
 static func instances(name: String, repo: DataRepository, state: GameState) -> Array:
@@ -368,6 +479,12 @@ static func instances(name: String, repo: DataRepository, state: GameState) -> A
 		"couriers":
 			for c: Dictionary in state.couriers:
 				out.append({"id": "courier:%d" % int(c["id"]), "strain": int(c.get("days", 0))})
+		"workshops":
+			for c: int in WorkshopSystem.cells(repo, state):
+				out.append({"id": "workshop:%d" % c, "strain": 1000 - WorkshopSystem.rate_of(state, c)})
+		"supply_lines":
+			for row: Dictionary in SupplySystem.plan(repo, state):
+				out.append({"id": "supply_line:" + String(row["code"]), "strain": int(row["loss_permille"])})
 	for row: Dictionary in out:
 		row["label"] = label_of(repo, state, String(row["id"]))
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -413,6 +530,15 @@ static func label_of(repo: DataRepository, state: GameState, id: String) -> Stri
 			return String((repo.seats.get(rest, {}) as Dictionary).get("label", ""))
 		"regiment":
 			return String(ArmySystem.regiment(repo, rest).get("label", ""))
+		"workshop":
+			return "War workshop at " + MapManors.label_of(repo, int(rest)) \
+				if rest.is_valid_int() and int(rest) in WorkshopSystem.cells(repo, state) else ""
+		"supply_line":
+			var reg := ArmySystem.regiment(repo, rest)
+			# one per supplied regiment: a land regiment of the crown's (a fleet has none)
+			return "Supply line to " + String(reg["label"]) \
+				if not reg.is_empty() and state.regiments.has(rest) \
+					and String(reg.get("is_naval", "0")) != "1" else ""
 		"courier":
 			for c: Dictionary in state.couriers:
 				if str(int(c["id"])) == rest:

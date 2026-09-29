@@ -30,7 +30,7 @@ func test_a_planned_link_names_its_milestone() -> void:
 	assert_true(_has(Ledger.validate(data), "y: planned without a milestone"))
 
 func test_a_live_link_cannot_touch_a_planned_type() -> void:
-	data.ledger_links.append({"link_id": "z", "from_type": "regiment", "to_type": "stronghold", "verb": "v",
+	data.ledger_links.append({"link_id": "z", "from_type": "regiment", "to_type": "enemy_host", "verb": "v",
 		"lenses": "all", "status": "live", "resolver": "based_in", "governor_seat": "", "governor_kind": "",
 		"milestone": "", "planned_note": ""})
 	assert_true(_has(Ledger.validate(data), "z: live on a planned type"))

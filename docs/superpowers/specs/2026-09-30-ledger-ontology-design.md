@@ -86,16 +86,15 @@ in the middle, THINGS at the bottom.
 |---|---|---|---|---|
 | Things | Manor | `manor` | people, chief good, output, tax, holder | ✅ |
 | | Province | `province` | people, wealth tier, controller | ✅ |
-| | Town | `town` | people, tariff | ✅ |
+| | Town | `town` | people, tariff; where a garrison stands (M1: the `stronghold` type was dropped — a garrison stands in a town) | ✅ |
 | | Market | `market` | goods traded, prices | ○ M6 |
-| | Stronghold | `stronghold` | defence, garrison, local stores | ○ M1 |
 | | Civil goods | `civil_goods` | stock, monthly flow (crown / lord purse) | ✅ |
 | | Strategic goods | `strategic_goods` | stock, monthly flow | ✅ |
 | | Gold | `gold` | treasury, lord's gold | ✅ |
 | | Raw material | `raw_material` | stock of a named good | ○ M5 |
 | | Building | `building` | produce, bonuses, slot | ✅ |
-| | War workshop | `workshop` | ratio, efficiency, governor | ○ M2 |
-| | Supply line | `supply_line` | length, loss, delay, governor | ○ M1 |
+| | War workshop | `workshop` | ratio, efficiency, governor | ✅ M2 (`workshop:<cell>`, `WorkshopSystem.plan`) |
+| | Supply line | `supply_line` | length, loss, delay, governor | ✅ M1 (`supply_line:<regiment>`, `SupplySystem.plan`) |
 | | Trade route | `trade_route` | volume, toll, governor | ○ M6 |
 | | Peasants | `peasants` | people per province | ✅ (a province's rural people) |
 | | Artisans | `artisans` | people per town | ○ M5 |
@@ -127,9 +126,9 @@ text rules as every other screen.
 | `rations` | civil goods → peasants | feeds | ✅ | steward |
 | `stands_on` | building → manor | stands on | ✅ | — |
 | `produces` | building → goods | produces | ✅ | — |
-| `converts` | civil goods → workshop → strategic goods | converts | ○ M2 | steward |
-| `supplies` | strategic goods → supply line → regiment | supplies | ○ M1 | marshal |
-| `garrisons` | regiment → stronghold | garrisons | ⚠️ an order state only; ○ M1 gives it stores and defence | marshal |
+| `converts` | civil goods → workshop → strategic goods (`converts_in` / `converts_out`) | converts | ✅ M2 | steward |
+| `supplies` | strategic goods → supply line → regiment (`supplies_in` / `supplies_out`) | supplies | ✅ M1 | marshal |
+| `garrisons` | regiment → town | garrisons in | ✅ M1 (a garrison stands in a town: `SupplySystem.stronghold_of`) | marshal |
 | `feeds_morale` | regiment.supplies → regiment.morale | a property function | ○ M1 | — |
 | `attacks` | regiment → enemy host | attacks | ○ M4 | the commander |
 | `builds` | artisans → building | build | ○ M5 | master of works |
@@ -534,7 +533,20 @@ ledger (it is derived; a dragged sphere is forgotten).
   - **Property gauges inside spheres** (§6.3's last row) → **M1**, the
     supply-and-morale plan (`docs/superpowers/plans/2026-09-30-ledger-m1-m2-supply.md`
     Task 5 carries the note): supplies and morale inside a regiment's
-    sphere, stock inside a pool's. L0 draws no gauge.
+    sphere, stock inside a pool's. L0 draws no gauge. **BUILT in M1**
+    (plan Task 5): a snapshot node carries `props: [{key, label, value,
+    max}]` (`LedgerResolvers.props_of`, whole numbers — not §7.2's
+    `{key, text, accounts}`: every gauge today is the crown's own figure):
+    a regiment the crown knows in full (its own; any in DEV MODE) its
+    supply score out of 1000 (`ArmySystem.bars_of`) and its morale out of
+    100; the civil and strategic goods type spheres the crown's plus the
+    lord's stock against `ledger_gauge_stock_months` (12) of the month's
+    intake. `LedgerHud` draws each as a small ring gauge with its caption
+    ("Supplies 64%", "Morale 70", "Stock 24,633") on the far side of the
+    sphere's name from the sphere — over a name above it, under one set
+    beneath it — so the row never covers the sphere or its threads
+    (`ledger_gauge_*`, palette `gauge_fill` / `gauge_track`); a type not
+    yet built now yields its name's place to a live neighbour's.
   - **"Unknown abroad" — a dashed thread with a "?"** (§6.3) → **intel P0 /
     L1**, when a link can be about a place abroad at all. L0's readers only
     walk the crown's own realm, so no such thread arises; a figure the crown

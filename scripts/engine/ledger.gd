@@ -195,7 +195,7 @@ static func _ego(repo: DataRepository, state: GameState, lens: String, focus_id:
 				var other_type := String(r["to_type"]) if outward else String(r["from_type"])
 				out["nodes"].append({"id": more, "type": "more", "label": LedgerResolvers.label_of(repo, state, more),
 					"layer": String(type_row(repo, other_type)["layer"]), "status": "live", "milestone": "",
-					"instance": true})
+					"instance": true, "props": []})
 				var folded := {"from": focus_id if outward else more, "to": more if outward else focus_id,
 					"flow": -1, "subj": {}, "key": "count"}
 				out["links"].append(_believed(repo, state, r, folded))
@@ -212,7 +212,8 @@ static func _node(repo: DataRepository, state: GameState, id: String) -> Diction
 	var row := type_row(repo, t)
 	return {"id": id, "type": t, "label": LedgerResolvers.label_of(repo, state, id),
 		"layer": String(row.get("layer", "things")), "status": String(row.get("status", "live")),
-		"milestone": String(row.get("milestone", "")), "instance": not id.begins_with("type:")}
+		"milestone": String(row.get("milestone", "")), "instance": not id.begins_with("type:"),
+		"props": LedgerResolvers.props_of(repo, state, id)}
 
 
 static func _planned(state: GameState, r: Dictionary) -> Dictionary:

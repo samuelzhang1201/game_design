@@ -68,6 +68,8 @@ func bind(repo: DataRepository) -> void:
 	_orbit.target = Vector3(0, LedgerLayout.layer_y(repo, "people"), 0)
 	_hud.style(UiPalette.role_font("body"), repo.bal("ledger_label_px"), _pal["label_ink"], _pal["label_halo"],
 		int(repo.bal("ledger_label_halo_px")))
+	_hud.style_gauges(repo.bal("ledger_gauge_radius_px"), repo.bal("ledger_gauge_width_px"),
+		repo.bal("ledger_gauge_gap_px"), repo.bal("ledger_gauge_caption_px"), _pal["gauge_fill"], _pal["gauge_track"])
 	_build_discs()
 	_apply_camera()
 
@@ -445,16 +447,22 @@ func _update_hud() -> void:
 			continue
 		entries.append({"text": String(_nodes[id]["label"]), "at": (at as Vector2) + lift,
 			"alt": (at as Vector2) + drop,
-			"strong": id == _selected or id == String(_snap.get("focus_id", ""))})
+			"strong": id == _selected or id == String(_snap.get("focus_id", "")),
+			"props": _nodes[id].get("props", [])})
 	_hud.show_entries(entries)
 
 
+## Whose name wins a crowded place: the selected sphere, the focus, a type
+## the engine holds, a type not yet built (LEDGER M1: its name yields to a
+## live neighbour's), then an instance.
 func _rank(id: String) -> int:
 	if id == _selected:
 		return 0
 	if id == String(_snap.get("focus_id", "")):
 		return 1
-	return 2 if not bool(_nodes[id]["instance"]) else 3
+	if bool(_nodes[id]["instance"]):
+		return 4
+	return 3 if String(_nodes[id].get("status", "live")) == "planned" else 2
 
 
 # --- input -----------------------------------------------------------------

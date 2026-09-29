@@ -18,3 +18,5 @@ loop_vicious,#B0322A,a vicious loop running
 label_ink,#EEE3CB,sphere names
 label_halo,#14100C,the halo under a name
 focus_ring,#E0BB6A,the selected sphere
+gauge_fill,#E0BB6A,a property gauge's filled arc
+gauge_track,#4A3C2C,a property gauge's empty ring

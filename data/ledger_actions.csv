@@ -10,3 +10,6 @@ province,SPY_SEND,Show on the map to send a spy…,,1
 town,SPY_SEND,Show on the map to send a spy…,,1
 regiment,ARMY_MARCH,Show on the map to march…,,1
 regiment,ARMY_GARRISON,Garrison,regiment=@id,0
+workshop,WORKSHOP_RATE,Let it go cold,cell=@id|rate=0,0
+workshop,WORKSHOP_RATE,Run it at half,cell=@id|rate=500,0
+workshop,WORKSHOP_RATE,Run it in full,cell=@id|rate=1000,0

@@ -648,3 +648,8 @@ ledger_frame_top_px,92,"LEDGER: design px at the top of the view the framing kee
 ledger_frame_side_px,40,LEDGER: design px at each side of the view the framing keeps clear (half a long name beside the widest sphere)
 ledger_frame_bottom_px,28,LEDGER: design px at the bottom of the view the framing keeps clear (a name set under the lowest sphere)
 ledger_frame_rim_samples,32,LEDGER: points round each drawn disc's rim that the framing keeps in view
+ledger_gauge_stock_months,12,"LEDGER M1 (spec 2026-09-30-ledger-ontology-design §6.3, a property): a goods pool's stock gauge reads full at this many months of the crown's and the lord's intake"
+ledger_gauge_radius_px,7,LEDGER: a property gauge's ring radius (design px) under its sphere's name
+ledger_gauge_width_px,3,LEDGER: a property gauge's ring width (design px)
+ledger_gauge_gap_px,3,LEDGER: design px between a sphere's name and its row of gauges
+ledger_gauge_caption_px,12,LEDGER: font size of a gauge's caption (design px)
