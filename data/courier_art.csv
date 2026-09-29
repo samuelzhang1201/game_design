@@ -1,4 +1,4 @@
 kind,model,painting,size,stride_m,notes
-ordinary,res://assets/units3d/cavalry.glb,,0.7,0,"INTERIM (spec 2026-09-27-courier-core §2): the cavalry model stands in until sub-project D delivers the courier rider — D changes the model and painting columns and nothing else"
-secret,res://assets/units3d/cavalry.glb,,0.7,0,the same stand-in
-spy,res://assets/units3d/cavalry.glb,,0.7,0,the same INTERIM stand-in until sub-project D
+ordinary,res://assets/units3d/cavalry.glb,res://assets/couriers/paint/ordinary.png,0.7,0,INTERIM (spec 2026-09-27-courier-core §2): the cavalry model stands in until sub-project D delivers the courier rider — D changes the model and painting columns and nothing else
+secret,res://assets/units3d/cavalry.glb,res://assets/couriers/paint/secret.png,0.7,0,the same stand-in
+spy,res://assets/units3d/cavalry.glb,res://assets/couriers/paint/spy.png,0.7,0,the same INTERIM stand-in until sub-project D
