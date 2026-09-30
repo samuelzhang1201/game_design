@@ -27,7 +27,7 @@ signal country_hovered(kingdom_code: String)
 signal army_menu_requested(code: String, at: Vector2)
 ## Where on the pack a left click landed — an order being AIMED needs the
 ## ground, not the thing picked.
-signal ground_clicked(pack_px: Vector2)
+signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
 ## A click on a committed march's end ring (owner 2026-09-27): ArmyOrderMenu's route menu (Map3DSelection emits it).
 @warning_ignore("unused_signal") signal route_clicked(code: String, at: Vector2)
 ## A right click on open ground (owner 2026-09-28): SpyOrderMenu's "Send a spy here".
@@ -463,6 +463,7 @@ func set_military(on: bool) -> void:
 
 # MILITARY's 3D pieces: heads (the chip hangs there), boxes (clicks), count, motion.
 func unit_tops() -> Dictionary: return _units.screen_tops() if _loaded else {}
+func unit_positions() -> Dictionary: return _units.shown_positions() if _loaded else {}
 func unit_rects() -> Dictionary: return _units.screen_rects() if _loaded else {}
 func unit_count() -> int: return _units.drawn_count() if _loaded else 0
 func unit_moves() -> int: return _units.moves() if _loaded else 0
@@ -518,7 +519,7 @@ func select_at(pos: Vector2) -> void:
 	var hit: Variant = ground_at(pos)
 	var at: Variant = null if hit == null else (_ctx.to_pack(Vector2((hit as Vector3).x, (hit as Vector3).z)) as Variant)
 	var was_aiming := aiming  # the click that ends an aim selects nothing
-	if at != null: ground_clicked.emit(at)
+	if at != null: ground_clicked.emit(at, pos)
 	if not was_aiming: _selection.click(pick_at(pos), pos)
 func clear_selection() -> void: _selection.clear()
 func select_object(picked: Dictionary) -> void: if _loaded: _selection.select(picked)  # the Manor Master

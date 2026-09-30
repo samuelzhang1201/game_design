@@ -85,9 +85,12 @@ static func ticks(length_units: float, step: float) -> PackedFloat32Array:
 ## balance px value (1 for a Control drawn in design px). `ink_over` (alpha
 ## > 0) replaces the ink, and `arrow` ends the rule at `b` in an arrowhead
 ## instead of a crossbar — the MARCH aim's ruler (owner 2026-09-24: 像那个
-## measurement的标尺类似，但是颜色是玩家国家颜色).
+## measurement的标尺类似，但是颜色是玩家国家颜色). `path` (a..b, at least two
+## points) lays the rule along it instead of the straight line — the aim's,
+## draped on the ground the column will walk (owner 2026-09-30: 瞄准测距尺也改成贴地).
 static func draw(ci: CanvasItem, a: Vector2, b: Vector2, tick_pts: PackedVector2Array,
-		text: String, px: float = 1.0, ink_over := Color(0, 0, 0, 0), arrow := false) -> void:
+		text: String, px: float = 1.0, ink_over := Color(0, 0, 0, 0), arrow := false,
+		path := PackedVector2Array()) -> void:
 	var data := Game.data
 	var ink := ink_over if ink_over.a > 0.0 else MapPalette.named(data, "ruler_ink")
 	var halo := MapPalette.named(data, "ruler_halo")
@@ -96,8 +99,13 @@ static func draw(ci: CanvasItem, a: Vector2, b: Vector2, tick_pts: PackedVector2
 	var hw := w + 2.0 * data.bal("map_ruler_halo_px") * px
 	var anchor_r := data.bal("map_ruler_anchor_px") * px
 	var tick_len := data.bal("map_ruler_tick_px") * px
+	var line := path if path.size() >= 2 else PackedVector2Array([a, b])
 	var dir := (b - a).normalized() if a.distance_to(b) > 0.001 else Vector2.RIGHT
 	var side := Vector2(-dir.y, dir.x)
+	# each end is square to the line where it ends, which a draped rule bends
+	var side_a := _normal(line[1] - line[0], side)
+	var side_b := _normal(line[line.size() - 1] - line[line.size() - 2], side)
+	var dir_b := Vector2(side_b.y, -side_b.x)
 	# Ticks stand on ONE side, off the line's edge (the side away from the
 	# reading), so a tick never crosses a dash into a "+" or a gap into a
 	# "T"; each end is a crossbar over a dot, the way a rule ends — nothing
@@ -108,17 +116,17 @@ static func draw(ci: CanvasItem, a: Vector2, b: Vector2, tick_pts: PackedVector2
 	var tick_segs: Array = []
 	for t in tick_pts:
 		tick_segs.append([t + down * foot, t + down * (foot + tick_len)])
-	var caps: Array = []
-	for e in ([a] if arrow else [a, b]):
-		caps.append([e - side * tick_len * 1.6, e + side * tick_len * 1.6])
+	var caps: Array = [[a - side_a * tick_len * 1.6, a + side_a * tick_len * 1.6]]
+	if not arrow:
+		caps.append([b - side_b * tick_len * 1.6, b + side_b * tick_len * 1.6])
 	var head := PackedVector2Array()
 	if arrow:
 		var hl := data.bal("map_ruler_arrow_px") * px
-		head = PackedVector2Array([b, b - dir * hl + side * hl * 0.55, b - dir * hl - side * hl * 0.55])
+		head = PackedVector2Array([b, b - dir_b * hl + side_b * hl * 0.55, b - dir_b * hl - side_b * hl * 0.55])
 	# Halo first — the line, every tick, both ends — so the ink above reads
 	# over snow, sea and grass alike.
 	if a.distance_to(b) > 0.001:
-		ci.draw_line(a, b, halo, hw, true)
+		ci.draw_polyline(line, halo, hw, true)
 	for seg in tick_segs + caps:
 		ci.draw_line(seg[0], seg[1], halo, hw, true)
 	ci.draw_circle(a, anchor_r + hw * 0.5, halo)
@@ -127,7 +135,7 @@ static func draw(ci: CanvasItem, a: Vector2, b: Vector2, tick_pts: PackedVector2
 	else:
 		ci.draw_circle(b, anchor_r + hw * 0.5, halo)
 	if a.distance_to(b) > 0.001:
-		ci.draw_dashed_line(a, b, ink, w, data.bal("map_ruler_dash_px") * px, true, true)
+		dashed_path(ci, line, ink, w, data.bal("map_ruler_dash_px") * px)
 	for seg in tick_segs + caps:
 		ci.draw_line(seg[0], seg[1], ink, w, true)
 	ci.draw_circle(a, anchor_r, ink)
@@ -142,8 +150,40 @@ static func draw(ci: CanvasItem, a: Vector2, b: Vector2, tick_pts: PackedVector2
 	var size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px)
 	# The reading sits off the line's middle on the side that points up the
 	# screen, so it never lies across the dashes or the ticks.
-	var centre := (a + b) * 0.5 + up * (data.bal("map_ruler_label_offset_px") * px + size.y * 0.5)
+	var centre := line[int(line.size() * 0.5)] if line.size() > 2 else (a + b) * 0.5
+	centre += up * (data.bal("map_ruler_label_offset_px") * px + size.y * 0.5)
 	var pos := centre + Vector2(-size.x * 0.5, size.y * 0.25)
 	ci.draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px,
 		int(data.bal("map_ruler_label_outline_px") * px), halo)
 	ci.draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, ink)
+
+
+## `v`'s left normal, or `fallback` for a segment too short to have one.
+static func _normal(v: Vector2, fallback: Vector2) -> Vector2:
+	return Vector2(-v.y, v.x).normalized() if v.length() > 0.001 else fallback
+
+
+## A dashed polyline whose dashes run on across its joints (draw_dashed_line
+## per segment would restart the pattern at every sample) — the draped rule
+## and a march's road ahead.
+static func dashed_path(ci: CanvasItem, pts: PackedVector2Array, ink: Color, w: float,
+		dash: float) -> void:
+	if dash <= 0.0:
+		ci.draw_polyline(pts, ink, w, true)
+		return
+	var on := true
+	var left := dash
+	for i in range(pts.size() - 1):
+		var a := pts[i]
+		var b := pts[i + 1]
+		var seg := a.distance_to(b)
+		var at := 0.0
+		while at < seg:
+			var run := minf(left, seg - at)
+			if on:
+				ci.draw_line(a.lerp(b, at / seg), a.lerp(b, (at + run) / seg), ink, w, true)
+			at += run
+			left -= run
+			if left <= 0.0:
+				on = not on
+				left = dash

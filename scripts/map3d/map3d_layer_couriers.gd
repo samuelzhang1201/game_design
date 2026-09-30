@@ -91,7 +91,7 @@ func step(delta: float) -> bool:
 		if _pieces.has(id):
 			var piece: Dictionary = _pieces[id]
 			var k := (piece["node"] as Node3D).transform.basis.get_scale().x
-			var pace := Map3DUnits.gait_rate(prev.distance_to(xz) / maxf(delta, 0.001), k,
+			var pace := Map3DUnitRig.gait_rate(prev.distance_to(xz) / maxf(delta, 0.001), k,
 				float(piece["clip_s"]), float(piece["stride_m"]),
 				ctx.repo.bal("map3d_courier_anim_min"), ctx.repo.bal("map3d_courier_anim_max"))
 			_sync(piece, action_for(moving or not _waiting(c, xz), ctx.clock_speed() > 0.0), pace)
@@ -220,8 +220,8 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 	var node: Node3D = piece["node"]
 	node.visible = true
 	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
-	var k := Map3DUnits.scale_for(repo, ctx.camera.global_position.distance_to(centre),
-		repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m, float(piece["height_m"]), float(piece["size"]))
+	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
+		float(piece["height_m"]), float(piece["size"]))
 	var cam := Vector2(ctx.camera.global_position.x, ctx.camera.global_position.z)
 	var heading := _heading_from(id, xz, c)
 	var yaw := Map3DUnits.yaw_for(heading, cam, xz)
