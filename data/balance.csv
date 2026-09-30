@@ -705,7 +705,7 @@ ledger_star_roughness,0.22,LEDGER galaxy: a star's roughness
 ledger_haze_strength,0.075,LEDGER galaxy: a cluster haze's brightness
 ledger_haze_scale,3.4,LEDGER galaxy: a cluster haze's size as a multiple of the cluster's mean radius
 ledger_link_min_px,1,LEDGER galaxy: a link's width at no flow (screen px)
-ledger_link_max_px,4,LEDGER galaxy: a link's width at ledger_thread_flow_ref and above (screen px)
+ledger_link_max_px,3,LEDGER galaxy: a link's width at ledger_thread_flow_ref and above (screen px)
 ledger_link_count_ref,30,"LEDGER galaxy: a link with no figure (words only, or a structure tie) is as wide as the links it stands for, log scale, ledger_link_max_px at this many"
 ledger_tie_min_px,1,LEDGER galaxy: a court tie's width at no feeling (screen px)
 ledger_tie_max_px,2.6,LEDGER galaxy: a court tie's width at ledger_tie_ref (screen px)
