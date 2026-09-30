@@ -15,6 +15,21 @@ add it here as a principle with its why — not as a changelog entry.
   cut-outs feather their rim; biome tiles cross-fade per pixel, never per
   Voronoi cell. A hard-edged tray, slab, disc or ring around an object is
   the most frequent reason something was called ugly.
+- **A grade cannot rescue the ground; material and life do** (owner
+  2026-09-30: "配色我觉得救不了画面"). Four colour grades of the same map were
+  shown and none fixed "ugly and fake": the causes were ground-level photo
+  textures stretched to 160-320 m tiles (grey noise from the air), bare land
+  with no woods, an ink line round every coast and rust field decals. The
+  ground wears pictures made AT map height (aerial, Z-Image — Qwen drew grass
+  close-ups), the land carries woods (the "no trees" ruling is lifted for the
+  3D map), and borders stop at the shore.
+- **Motion must read at the zoom the map is played at** (owner 2026-09-30:
+  "我并没有看到麦浪和树摇"). A wind shown only in a 1.5 km close-up is a wind the
+  player never sees: judge an effect at the opening view (~24 km) too, with
+  the clock running, the sun turning and the clouds passing — they move the
+  frame far more than a faint effect does. Far out, scale the effect up (broad
+  gusts, not true-size waves), not merely its strength until it reads as
+  cloud shadow.
 - **No base plates.** Objects stand on the map's own ground (the grass disc
   under the 3D towns was the first thing rejected).
 
