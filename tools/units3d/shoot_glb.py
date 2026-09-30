@@ -1,5 +1,5 @@
 """Photograph ONE built unit .glb from set angles into a contact sheet — for
-checking a trial build that is not (yet) assets/units3d/<code>.glb, which is
+checking a trial build that is not (yet) assets/3D/units/<code>/<code>.glb, which is
 what shoot_units.py reads.
 
   blender -b --python tools/units3d/shoot_glb.py -- GLB OUT_PREFIX MODE

@@ -5,7 +5,7 @@ from the owner's Tripo 3D models, headless, in ONE command:
 
 What it builds, from what:
   1. the model (tools/units3d/courier/tripo.py, tripo_parts.csv): the owner's Tripo 3D
-     courier, git-ignored in assets/units3d/ai_src/courier/tripo/courier/ - its 43 parts
+     courier, git-ignored in assets/3D/units/courier/model_wip/tripo/courier/ - its 43 parts
      fitted onto its textured twin, turned to face +Y, the horse 2.45 m nose to tail on
      z = 0, hidden faces dropped, each part reduced to its budget (<= 20,000 tris in all),
      unwrapped into ONE 2048 atlas and baked from the textured mesh (colour, tangent
@@ -18,11 +18,11 @@ What it builds, from what:
      four-beat transverse gallop) and IDLE (a 72-frame loop), keyed FK and baked through
      IK so the rider's feet stay in the irons; `stride_m`, the model metres one GALLOP
      loop covers, is measured off the near hind hoof and printed;
-  4. the export: assets/units3d/courier.glb (the atlas embedded as JPEG; Godot extracts
-     assets/units3d/courier_courier_atlas*.jpg beside it) and the "courier" entry of
-     assets/units3d/units3d.json.
+  4. the export: assets/3D/units/courier/courier.glb (the atlas embedded as JPEG; Godot extracts
+     assets/3D/units/courier/courier_courier_atlas*.jpg beside it) and the "courier" entry of
+     assets/3D/units/units3d.json.
 
-The rigged build is also saved to assets/units3d/ai_src/courier/courier_rigged_tripo.blend
+The rigged build is also saved to assets/3D/units/courier/model_wip/courier_rigged_tripo.blend
 for shots.
 """
 import bpy, json, os, sys, time
@@ -38,8 +38,8 @@ ATLAS_PX = 2048            # the one atlas
 GALLOP_FRAMES = 24         # one gallop stride, a loop
 IDLE_FRAMES = 72           # the standing loop
 FPS = 24                   # the clips' frame rate
-OUT = os.path.join(REPO, "assets", "units3d")
-WORK = os.path.join(OUT, "ai_src", "courier")      # git-ignored: the owner's sources and the saved build
+OUT = os.path.join(REPO, "assets", "3D", "units")
+WORK = os.path.join(OUT, "courier", "model_wip")      # git-ignored: the owner's sources and the saved build
 SOURCE_NOTE = "Tripo 3D (owner), from zimage_C4_s2, tools/units3d/courier_build.py"
 
 
@@ -82,7 +82,7 @@ def main():
     mats = len([m for m in ob.data.materials if m])
     if mats != 1:
         raise SystemExit("%d materials: the courier wears ONE" % mats)
-    path = os.path.join(OUT, code + ".glb")
+    path = os.path.join(OUT, code, code + ".glb")
     mc.export_glb([arm, ob], path)
     mpath = os.path.join(OUT, "units3d.json")
     manifest = json.load(open(mpath))

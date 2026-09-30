@@ -2,7 +2,7 @@
 default source.
 
 The owner generated the piece in Tripo 3D from our pick (zimage_C4_s2) and supplied two
-models of the same rider, git-ignored in assets/units3d/ai_src/courier/tripo/courier/:
+models of the same rider, git-ignored in assets/3D/units/courier/model_wip/tripo/courier/:
   * textured.glb - one fused mesh (93k tris) with the colour, a normal map and a
     metal-roughness map, 4096 px each;
   * parts.glb    - the same shape as 43 untextured parts (tripo_part_0..42).
@@ -33,7 +33,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
-SRC = os.path.join(REPO, "assets", "units3d", "ai_src", "courier", "tripo", "courier")
+SRC = os.path.join(REPO, "assets", "3D", "units", "courier", "model_wip", "tripo", "courier")
 TABLE = os.path.join(HERE, "tripo_parts.csv")
 import rig
 import texture as tx

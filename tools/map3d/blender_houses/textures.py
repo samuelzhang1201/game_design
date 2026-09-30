@@ -3,7 +3,7 @@
   python3 tools/map3d/blender_houses/textures.py
 
 Downloads each source's 1k diffuse and GL normal into
-assets/map3d/sources/polyhaven/houses/ (git-ignored), then writes one tinted
+assets/3D/buildings/model_wip/polyhaven/ (git-ignored), then writes one tinted
 diffuse per material KEY into its tinted/ folder: desaturated, contrast
 softened and its mean shifted onto the key's target colour, so a roof or a
 wall is the palette's colour and the texture only carries its courses. The
@@ -30,7 +30,7 @@ import subprocess
 from PIL import Image, ImageEnhance, ImageStat
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-SRC = os.path.join(ROOT, "assets", "map3d", "sources", "polyhaven", "houses")
+SRC = os.path.join(ROOT, "assets", "3D", "buildings", "model_wip", "polyhaven")
 OUT = os.path.join(SRC, "tinted")
 
 SOURCES = ["clay_roof_tiles_03", "roof_slates_02", "rustic_stone_wall_02", "medieval_blocks_03",

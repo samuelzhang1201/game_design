@@ -15,16 +15,16 @@ Compatibility (see the traps below).
 | Path | What | In git |
 |---|---|---|
 | `tools/map3d/` | the pipeline scripts (this folder) | yes |
-| `assets/map3d/sources/polyhaven/` | Poly Haven 4K `.blend` texture sets and `models/` (CC0) | no — local download, `.gdignore` |
-| `assets/map3d/sources/ambientcg/` | ambientCG Rock023 cliff (CC0), `asset_licenses.txt` | no — local download |
-| `assets/map3d/textures/` | packed Terrain3D texture pairs (`*_alb_ht`, `*_nrm_rgh`, 2048 px) | no — `pack_textures.py` |
-| `assets/map3d/trees/` | tree impostor cards + `trees.json` | no — `render_impostors.py` |
-| `assets/map3d_houses/` | the settlement house meshes (`<type>.glb`) + `houses.json` | **yes** — `make_houses.py`; committed like `assets/map3d_preview/`'s stand-ins, since `assets/map3d/` is git-ignored and a fresh clone should still see settlements |
-| `assets/map3d/<map>/bake/` | `height.r32`, `control.r32`, `color.rgba8`, `world.json`, `manor_land.csv`, `fields.png`, `houses.csv`, previews | no — `export_manor_land.gd`, `bake_world.py` |
-| `assets/map3d/<map>/world.tscn`, `terrain_assets.tres`, `terrain/`, `rivers.json` | the Terrain3D scene (root metadata `map3d_world`: scale, origin, canvas, sea level, format version), its assets, region data and river courses — DATA only: sun, sky and sea are `scenes/map3d/world_map_3d.tscn`'s | no — `bake_world.py`, `build_world.gd` |
-| `assets/map3d/<map>/manifest.json` | what built it (below) | no — `build_world.gd` |
+| `assets/3D/terrain/model_wip/polyhaven/` | Poly Haven 4K `.blend` texture sets and `models/` (CC0) | no — local download, `.gdignore` |
+| `assets/3D/terrain/model_wip/ambientcg/` | ambientCG Rock023 cliff (CC0), `asset_licenses.txt` | no — local download |
+| `assets/3D/terrain/textures/` | packed Terrain3D texture pairs (`*_alb_ht`, `*_nrm_rgh`, 2048 px) | no — `pack_textures.py` |
+| `assets/3D/terrain/trees/` | tree impostor cards + `trees.json` | no — `render_impostors.py` |
+| `assets/3D/buildings/` | the settlement house meshes (`<type>/<type>.glb`, each type's references in its `model_wip/`) + `houses.json` | **yes** — `make_houses.py`; committed like `assets/3D/terrain/textures_preview/`'s stand-ins, since the terrain build is git-ignored and a fresh clone should still see settlements |
+| `assets/3D/terrain/<map>/bake/` | `height.r32`, `control.r32`, `color.rgba8`, `world.json`, `manor_land.csv`, `fields.png`, `houses.csv`, previews | no — `export_manor_land.gd`, `bake_world.py` |
+| `assets/3D/terrain/<map>/world.tscn`, `terrain_assets.tres`, `terrain/`, `rivers.json` | the Terrain3D scene (root metadata `map3d_world`: scale, origin, canvas, sea level, format version), its assets, region data and river courses — DATA only: sun, sky and sea are `scenes/map3d/world_map_3d.tscn`'s | no — `bake_world.py`, `build_world.gd` |
+| `assets/3D/terrain/<map>/manifest.json` | what built it (below) | no — `build_world.gd` |
 
-`assets/map3d/<map>/` is the default; a pack can keep its build elsewhere
+`assets/3D/terrain/<map>/` is the default; a pack can keep its build elsewhere
 (`map3d_dir`, below).
 
 Runtime game code is `scripts/map3d/` — `Map3DGeometry` (pure: pack px ↔
@@ -51,8 +51,8 @@ written. Steps 1–2 (sources and the packed textures) are
 shared by every pack and built once. The steps one by one:
 
 1. **Sources** — download the Poly Haven sets named in `pack_textures.py`
-   into `assets/map3d/sources/polyhaven/` and Rock023 into
-   `assets/map3d/sources/ambientcg/`. The snow line's `snow_02`, the roads'
+   into `assets/3D/terrain/model_wip/polyhaven/` and Rock023 into
+   `assets/3D/terrain/model_wip/ambientcg/`. The snow line's `snow_02`, the roads'
    `rocky_trail_02` and the bridges' `medieval_blocks_03` (2026-09-19; the
    first snow, `snow_field_aerial`, read blue-grey and blotchy) are 4K JPEGs
    from the Poly Haven API (`https://api.polyhaven.com/files/<id>`: Diffuse,
@@ -125,7 +125,7 @@ render lifted to a near-white otherwise), and writes one low-poly `.glb` per
 type plus `houses.json` (each type's footprint and height in metres — echoed
 from the CSV, not independently measured off the generated mesh; see Open
 items below for why that matters — and its triangle count) into
-`assets/map3d_houses/`. **These files are
+`assets/3D/buildings/`. **These files are
 committed** — see "Where things live" above — so a fresh clone shows
 settlements with no Blender install. It is NOT part of `build_pack.sh`
 (Blender is a separate dependency from the pipeline's headless Godot chain)
@@ -150,7 +150,7 @@ nodes and workflows, the reference meshes and every tool of that pipeline
 `align_house_source.py`, `project_house_texture.py`, `restart_comfy.sh`) are
 gone. ComfyUI's job ends at the IMAGE: `gen_house_refs.py` renders the
 photoreal reference pictures (`assets/flux/house_ref_prompts.csv`, Flux.2
-klein 4B, into `assets/flux/out/house_ref/<type>.png`; `cottage_a`'s is the
+klein 4B, into `assets/3D/buildings/<type>/model_wip/<type>_ref.png`; `cottage_a`'s is the
 owner's own and is never overwritten without `--force`) that the houses are
 modelled against. A building is SIMPLE REALISM, never toy; roofs are tile or
 slate, never thatch.
@@ -215,12 +215,12 @@ to any script in `Map3DLayerBake.GEOMETRY_SOURCES` fails
 ## `map3d_dir`
 
 `data/maps.csv`'s `map3d_dir` column says where a pack's 3D build lives (a
-`res://` path; empty means `res://assets/map3d/<id>`). The game reads it
+`res://` path; empty means `res://assets/3D/terrain/<id>`). The game reads it
 through `DataRepository.map3d_dir(id)` (`Map3DView.scene_path_for`), the
 GDScript tools through the static `DataRepository.map3d_dir_of(id)`
 (`build_terrain.gd` `root()`, `export_manor_land.gd`, `shoot.gd`) and the
 Python tools through `tools/packs.py` `map3d_dir(id)` (`bake_world.py`'s
-`bake/`). The shared `assets/map3d/textures/`, `sources/` and `trees/` do not
+`bake/`). The shared `assets/3D/terrain/textures/`, `model_wip/` and `trees/` do not
 move with it.
 
 ## Known traps (macOS, GL Compatibility)
@@ -466,7 +466,7 @@ by the same margin.
   ~+2.5 M near, ~+1.9 M mid.
 - **Aerial ground layers** (`aerial_meadow`, `aerial_canopy`,
   `aerial_upland`) replace `leafy_grass` and `rocky_trail` — see
-  `assets/map3d_aerial/README.md`. `pack_aerial.py` makes a picture seamless
+  `assets/3D/terrain/model_wip/aerial/README.md`. `pack_aerial.py` makes a picture seamless
   (an offset cross-fade that keeps its contrast, after taking out the
   photograph's own slow light) and writes the two maps AND their `.import`
   with the VRAM compression every Terrain3D layer must share.

@@ -106,13 +106,13 @@ const LINE_SPACING := 0
 
 ## Static 2D map placeholder shown behind the gameplay screens (user-provided
 ## screenshot; the crop trims the foreign UI chrome baked into its edges).
-const MAP_BACKDROP_PATH := "res://assets/portraits/full/map_example.jpeg"
+const MAP_BACKDROP_PATH := "res://assets/2D/portraits/cast/full/map_example.jpeg"
 const MAP_EDGE_CROP := 34.0
 
 ## Decorative screen frame (two kings at a chess game, user-provided art;
 ## tools/key_frame_interior.py produced the real-alpha PNG). Drawn above the
 ## map backdrop, below the UI panels, on every screen.
-const FRAME_PATH := "res://assets/ui/frame.png"
+const FRAME_PATH := "res://assets/2D/ui/panels/frame.png"
 
 static func frame() -> Texture2D:
 	return load_art(FRAME_PATH)
@@ -148,7 +148,7 @@ static var _art_cache: Dictionary = {}
 ## Drawn by VellumPanelStyle, not StyleBoxTexture, so the plate stays at its
 ## full 475 px while the corner draws at 20 design px — see that class for why
 ## the built-in one cannot. Off since the bright theme (ui_panel_art 0).
-const PANEL_ART_PATH := "res://assets/ui/panel_vellum.png"
+const PANEL_ART_PATH := "res://assets/2D/ui/panels/panel_vellum.png"
 ## The border-and-ornament band, in the plate's own pixels.
 const PANEL_ART_SOURCE_INSET := 75.0
 ## The same band as drawn on screen, in design px.
@@ -188,7 +188,7 @@ static func panel_art_style(margin: int) -> VellumPanelStyle:
 ## border"): panel_vellum.png with its cream made clear, leaving the double
 ## rule, the hairline and the corner flourishes. Drawn over the card in
 ## ORNAMENT_TINT, since its own dark ink cannot be seen on the dark theme.
-const PANEL_ORNAMENT_PATH := "res://assets/ui/panel_ornament.png"
+const PANEL_ORNAMENT_PATH := "res://assets/2D/ui/panels/panel_ornament.png"
 
 static func panel_ornament_enabled() -> bool:
 	if Game == null or Game.data == null or not Game.data.balance.has("ui_panel_ornament"):

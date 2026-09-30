@@ -1,7 +1,7 @@
 [gd_resource type="StandardMaterial3D" format=3 uid="uid://ckxs4cm6uye8q"]
 
-[ext_resource type="Texture2D" uid="uid://clnjnom60x3wq" path="res://assets/map3d_preview/medieval_blocks_03_alb_ht.png" id="1_j0w5l"]
-[ext_resource type="Texture2D" uid="uid://dw6xj6sn874pv" path="res://assets/map3d_preview/medieval_blocks_03_nrm_rgh.png" id="2_esh67"]
+[ext_resource type="Texture2D" uid="uid://clnjnom60x3wq" path="res://assets/3D/terrain/textures_preview/medieval_blocks_03_alb_ht.png" id="1_j0w5l"]
+[ext_resource type="Texture2D" uid="uid://dw6xj6sn874pv" path="res://assets/3D/terrain/textures_preview/medieval_blocks_03_nrm_rgh.png" id="2_esh67"]
 
 [resource]
 cull_mode = 2

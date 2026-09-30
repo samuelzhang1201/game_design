@@ -10,7 +10,7 @@ extends RefCounted
 ## from which forest biome it is. Seeded, so a re-run plants the same wood.
 
 const BuildTerrain := preload("res://tools/map3d/build_terrain.gd")
-const TREES := "res://assets/map3d/trees"
+const TREES := "res://assets/3D/terrain/trees"
 const SEED := 20260917
 const SPACING := 3.5            # m between candidates
 const SEA_LEVEL := 20.0

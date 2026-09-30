@@ -823,7 +823,7 @@ leaning in confidentially, eyebrows raised, a broad genuinely warm salesman's sm
 >
 > **每条都有 `**外貌**` 行**（只写长相和衣着，不写道具）——这是 `[C-BUST]` 和 `[C-FULL]` 两档的必要条件，没有它脚本会退回用带道具的主 prompt，效果差。
 >
-> **角色 id** 那一行把条目接回游戏：`data/cast_art.csv` 按它把 `K-` 编号映射到 `assets/portraits/<id>.png`。
+> **角色 id** 那一行把条目接回游戏：`data/cast_art.csv` 按它把 `K-` 编号映射到 `assets/2D/portraits/cast/<id>.png`。
 >
 > 年龄、性格、身份都取自那两张 CSV，不是编的——例如马尔文领主七十一岁且 `sickly`，所以外貌写的是佝偻、消瘦、穿着不合时令的厚皮袍。
 >
@@ -1391,7 +1391,7 @@ background, no numerals, no text [C-ICON]
 | `I-60` | 城镇 · Towns | `a cluster of three timber-framed town houses with steep red tile roofs behind a low stone wall` |
 | `I-61` | 乡村 · Country | `a thatched farmhouse beside a small field of ripe wheat and an apple tree` |
 
-> **manor 信息卡图标与罗盘**（owner 2026-09-14）：信息卡上各属性的图标（`manor_*`，与界面维度图标同一画幅、同一风格核、同一静物片段），以及地图右上角的**木质罗盘**（`I-73`：做旧橡木、船舵、齿轮，一点立体感，`install_map_art.py compass` 装进 `assets/ui/compass.png`，游戏里随时间流逝顺时针转）。
+> **manor 信息卡图标与罗盘**（owner 2026-09-14）：信息卡上各属性的图标（`manor_*`，与界面维度图标同一画幅、同一风格核、同一静物片段），以及地图右上角的**木质罗盘**（`I-73`：做旧橡木、船舵、齿轮，一点立体感，`install_map_art.py compass` 装进 `assets/2D/ui/compass/compass.png`，游戏里随时间流逝顺时针转）。
 
 | ID | 维度 | Prompt 主体 |
 |---|---|---|
@@ -1408,7 +1408,7 @@ background, no numerals, no text [C-ICON]
 | `I-72` | 价格 · Price | `a brass merchant's balance scale with a few gold coins in one pan, arranged as a small still-life group on bare paper, no container beyond what is described` |
 | `I-73` | 罗盘 · Compass | `a round wooden compass rose set inside a carved wooden ship's steering wheel with eight turned spokes ending in handles, interlocking brass gear wheels showing behind the rose between the spokes, the rose painted with a sixteen-point star and a north mark, weathered aged oak with worn varnish, scratches and darkened edges, brass rim and pins, seen face-on from straight above with a little raised relief and a soft shadow under the rim, the whole wheel isolated on bare paper` |
 
-> **顶栏时钟、菜单、城镇特征与货物类别图标**（owner 2026-09-15：信息卡和顶栏里所有只靠代码画的字形都换成彩绘图标，"特别是 top bar 太丑"）：同一画幅 `[C-ICON]`、同一风格核、同一静物片段；装进 `assets/icons/<key>.png`（`install_map_art.py ui`，64 px）。顶栏的王冠复用 `I-52`，城镇财富与金库复用 `I-71` / `I-47`。编号到 `I-99` 为止（两位数是库的格式）。
+> **顶栏时钟、菜单、城镇特征与货物类别图标**（owner 2026-09-15：信息卡和顶栏里所有只靠代码画的字形都换成彩绘图标，"特别是 top bar 太丑"）：同一画幅 `[C-ICON]`、同一风格核、同一静物片段；装进 `assets/2D/icons/resources/<key>.png`（`install_map_art.py ui`，64 px）。顶栏的王冠复用 `I-52`，城镇财富与金库复用 `I-71` / `I-47`。编号到 `I-99` 为止（两位数是库的格式）。
 
 | ID | 维度 | Prompt 主体 |
 |---|---|---|
@@ -1629,7 +1629,7 @@ background, no numerals, no text [C-ICON]
 
 ### 6.11 庄园彩绘 `B-`（2026-09-14 新增）
 
-> **manor 信息卡顶部的建筑彩绘**（owner 2026-09-14）：点开一座 manor，左栏信息卡上方三分之一显示它的产业庄园画——和地图图例 `D-43`~`D-78` **一一对应**（十二种主业 × 小/中/大，同一 `key`，`assets/flux/estate_paint_art.csv`），但**风格与人物立绘一致**：§1.1 的 v2 彩铅 `STYLE_CORE.txt`（风格核本身就要求建筑与人物同样上色），画幅 `[C-ESTATE]`（5:4 横幅、边缘淡入奶油纸）。不去底、保留颜色，按用途装入 `assets/manors/paint/<key>.png`（信息卡画面约 216×190 设计像素 × 最大约 3 倍窗口缩放 → 720×576）。
+> **manor 信息卡顶部的建筑彩绘**（owner 2026-09-14）：点开一座 manor，左栏信息卡上方三分之一显示它的产业庄园画——和地图图例 `D-43`~`D-78` **一一对应**（十二种主业 × 小/中/大，同一 `key`，`assets/flux/estate_paint_art.csv`），但**风格与人物立绘一致**：§1.1 的 v2 彩铅 `STYLE_CORE.txt`（风格核本身就要求建筑与人物同样上色），画幅 `[C-ESTATE]`（5:4 横幅、边缘淡入奶油纸）。不去底、保留颜色，按用途装入 `assets/2D/paintings/estates/<key>.png`（信息卡画面约 216×190 设计像素 × 最大约 3 倍窗口缩放 → 720×576）。
 >
 > 主体沿用 `D-` 的内容（主宅 + 该产业的作业场），改成一幅上了色的乡间小景，允许几个劳作的小人物；不写"map symbol / flat side elevation"那类地图词。
 
@@ -1672,7 +1672,7 @@ background, no numerals, no text [C-ICON]
 | `B-35` | 庄园彩绘·铁矿·中 | `an iron manor: a stone house with a bloomery furnace giving smoke, a timbered mine adit into the hill, ore carts and heaps of dark ore, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
 | `B-36` | 庄园彩绘·铁矿·大 | `a great iron estate: a manor house with several bloomery furnaces giving smoke, mine adits into the hill, ore carts on wooden rails, heaps of ore and a hamlet of cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
 
-> **军队信息卡彩绘**（owner 2026-09-15："军队的 card info 还是 2D 彩绘风格"）：点地图上的军队棋子，左栏信息卡顶部显示这支军队主兵种的彩绘——与庄园彩绘同一风格核（v2 彩铅）、同一 `[C-ESTATE]` 画幅，装进 `assets/armies/paint/<arm>.png`（`assets/flux/army_paint_art.csv`）。
+> **军队信息卡彩绘**（owner 2026-09-15："军队的 card info 还是 2D 彩绘风格"）：点地图上的军队棋子，左栏信息卡顶部显示这支军队主兵种的彩绘——与庄园彩绘同一风格核（v2 彩铅）、同一 `[C-ESTATE]` 画幅，装进 `assets/2D/paintings/armies/<arm>.png`（`assets/flux/army_paint_art.csv`）。
 
 | ID | 主题 | Prompt 主体 |
 |---|---|---|
@@ -1683,7 +1683,7 @@ background, no numerals, no text [C-ICON]
 | `B-41` | 军队彩绘·舰队 | `a small fleet of medieval cogs with square sails and blue pennants sailing out of a harbour on a calm sea, shown as one painted scene on its own stretch of coast` |
 | `B-42` | 军队彩绘·王军 | `the king's own guard on parade: a mounted commander in a blue surcoat beneath a large royal banner, ranks of spearmen behind him before a castle gate, shown as one painted scene in its own countryside` |
 
-> **信使彩绘**（owner 2026-09-28，spec `2026-09-28-courier-art-design.md` §4）：信使卡顶部（B-43..45，按种类）与恶劣天气（B-46）、看板回执阅读台（B-47）的彩绘。v2 彩铅核，`[C-COURIER]` 画幅（`generate.py --canvas C-COURIER`），骑手的衣着取自 owner 选定的设计稿 C4（传令旗手）/ S2（行商驮马），与地图上的 3D 模型一致；Z-Image 与 Qwen 各出图对比（owner 2026-09-28，不用 klein），`install_map_art.py courier_paintings` 按 `assets/flux/courier_paint_art.csv` 装进 `assets/couriers/paint/<key>.png`。
+> **信使彩绘**（owner 2026-09-28，spec `2026-09-28-courier-art-design.md` §4）：信使卡顶部（B-43..45，按种类）与恶劣天气（B-46）、看板回执阅读台（B-47）的彩绘。v2 彩铅核，`[C-COURIER]` 画幅（`generate.py --canvas C-COURIER`），骑手的衣着取自 owner 选定的设计稿 C4（传令旗手）/ S2（行商驮马），与地图上的 3D 模型一致；Z-Image 与 Qwen 各出图对比（owner 2026-09-28，不用 klein），`install_map_art.py courier_paintings` 按 `assets/flux/courier_paint_art.csv` 装进 `assets/2D/paintings/couriers/<key>.png`。
 
 | ID | 主题 | Prompt 主体 |
 |---|---|---|
@@ -1695,7 +1695,7 @@ background, no numerals, no text [C-ICON]
 
 ### 6.12 庄园建筑图标 `H-`（2026-09-14 新增）
 
-> **manor 建筑槽位与建造菜单里的建筑图标**（owner 2026-09-14）：风格与 manor 彩绘（§6.11 `B-`）和人物立绘一致——§1.1 的 v2 彩铅 `STYLE_CORE.txt`，画幅 `[C-ICON]`；每条只画**一座**建筑的完整剪影。出图经 `post.py --tier icon` 去底，`install_map_art.py buildings` 按 `assets/flux/building_art.csv` 装进 `assets/icons/bld_<code>.png`（槽位格 34 设计像素 × 最大约 3 倍窗口缩放 → 128 px），由 `data/resource_icons.csv` 的 `bld_<code>` 行引用。建筑清单和地理约束见 `data/manor_buildings.csv`。
+> **manor 建筑槽位与建造菜单里的建筑图标**（owner 2026-09-14）：风格与 manor 彩绘（§6.11 `B-`）和人物立绘一致——§1.1 的 v2 彩铅 `STYLE_CORE.txt`，画幅 `[C-ICON]`；每条只画**一座**建筑的完整剪影。出图经 `post.py --tier icon` 去底，`install_map_art.py buildings` 按 `assets/flux/building_art.csv` 装进 `assets/2D/icons/buildings/bld_<code>.png`（槽位格 34 设计像素 × 最大约 3 倍窗口缩放 → 128 px），由 `data/resource_icons.csv` 的 `bld_<code>` 行引用。建筑清单和地理约束见 `data/manor_buildings.csv`。
 
 | ID | 对象 | Prompt 主体 |
 |---|---|---|
@@ -2131,7 +2131,7 @@ above, cold slate blue with the comet in pale ochre [C-SCENE]
 
 > 序章（`game_story/chapter_0/chapter_0_events.md`）21 个节拍一图一条，一一对应，`assets/flux/event_art.csv` 把编号接回 `event_id`。
 >
-> **画布是 `[C-EVENT]` 而不是 `[C-SCENE]`**：事件图在会见窗（`%AudienceWindow`，760×500 设计像素）顶端横幅里显示，所以构图是宽带，主体居中，上下留空。装进 `assets/events/<event_id>.png`，1280×533。
+> **画布是 `[C-EVENT]` 而不是 `[C-SCENE]`**：事件图在会见窗（`%AudienceWindow`，760×500 设计像素）顶端横幅里显示，所以构图是宽带，主体居中，上下留空。装进 `assets/2D/events/illustrations/<event_id>.png`，1280×533。
 >
 > **人物外貌必须照抄 §2.6 的 `**外貌**` 行**（这里为长度做了压缩，但发色、年龄、衣着颜色一个都不能改），否则同一个人在立绘和事件图里会是两个人。
 >

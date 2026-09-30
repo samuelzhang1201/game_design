@@ -7,7 +7,7 @@ as a handsome built object instead of flat-shaded primitives).
   blender -b --factory-startup --python tools/map3d/make_houses.py
 
 Reads data/map3d_houses.csv and writes one glTF per type into
-assets/map3d_houses/, plus houses.json. Every mesh stands ON its origin
+assets/3D/buildings/, plus houses.json. Every mesh stands ON its origin
 (min y = 0, centred on its footprint) and faces +Z, because
 Map3DLayerHouses places it with a yaw and sinks it by map3d_house_sink_m —
 a mesh that carries its own base plate or offset would defeat both.
@@ -70,7 +70,7 @@ from mathutils import Vector
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 TABLE = os.path.join(ROOT, "data", "map3d_houses.csv")
-OUT = os.path.join(ROOT, "assets", "map3d_houses")
+OUT = os.path.join(ROOT, "assets", "3D", "buildings")
 PALETTE = os.path.join(ROOT, "data", "terrain_palette.csv")
 
 # Types with a daub/plaster wall get real timber framing; the grander,
@@ -1032,7 +1032,8 @@ def main():
             objs += list(voids)
         ob = join_and_normalise(t, objs, fp, ht)
         self_check(ob)
-        path = os.path.join(OUT, t + ".glb")
+        os.makedirs(os.path.join(OUT, t), exist_ok=True)
+        path = os.path.join(OUT, t, t + ".glb")
         export(ob, path)
         # len(polygons) is Blender's FACE count (a quad counts as 1), but the
         # glTF exporter triangulates on export — an n-vertex polygon becomes

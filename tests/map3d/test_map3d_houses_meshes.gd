@@ -3,7 +3,7 @@ extends GutTest
 ## claims (spec 2026-09-20 §2). The same shape as the existing
 ## "every named texture exists" tests.
 
-const MANIFEST := "res://assets/map3d_houses/houses.json"
+const MANIFEST := "res://assets/3D/buildings/houses.json"
 
 
 func before_all() -> void:

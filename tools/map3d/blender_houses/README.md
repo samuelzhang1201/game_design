@@ -6,7 +6,7 @@ looking at Hunyuan3D meshes as reference (no geometry or texture copied);
 those meshes and the whole Hunyuan3D pipeline were DELETED later that day
 over the licence (owner 2026-09-24). The references now are the Flux
 pictures `tools/map3d/gen_house_refs.py` renders into
-`assets/flux/out/house_ref/`.
+`assets/3D/buildings/<type>/model_wip/`.
 
 Why: the Hunyuan3D community licence does not cover the EU, the UK or South
 Korea, and its meshes were heavy (2,000 to 9,000 triangles after decimation,
@@ -27,7 +27,7 @@ for t in BUILDERS: print(build_and_export(t))
 ```
 
 `export()` fits each model to its row's `footprint_m`, writes
-`assets/map3d_houses/<type>.glb` and records `width_m` / `depth_m` / `height_m`
+`assets/3D/buildings/<type>/<type>.glb` and records `width_m` / `depth_m` / `height_m`
 in the CSV and `tris` in `houses.json`. After it:
 
 1. Reimport: `Godot --headless --path . --import`.

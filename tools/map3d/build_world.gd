@@ -1,5 +1,5 @@
 extends SceneTree
-## Build assets/map3d/<map>/world.tscn headless — no editor step.
+## Build assets/3D/terrain/<map>/world.tscn headless — no editor step.
 ##   python3 tools/map3d/bake_world.py
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/build_world.gd [-- --map ID]
 ## (default: data/maps.csv's is_default pack)

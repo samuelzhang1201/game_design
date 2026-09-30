@@ -145,7 +145,7 @@ def main():
         code = row["code"]
         if WANTED and code not in WANTED:
             continue
-        glb = os.path.join(OUT, code + ".glb")
+        glb = os.path.join(OUT, code, code + ".glb")
         if not os.path.exists(glb) or code not in manifest:
             continue
         info = manifest[code]

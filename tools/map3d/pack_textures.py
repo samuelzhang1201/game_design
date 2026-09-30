@@ -1,8 +1,8 @@
-"""SPIKE: pack the Poly Haven sets (assets/map3d/sources/polyhaven, .gdignored 4K sources)
+"""SPIKE: pack the Poly Haven sets (assets/3D/terrain/model_wip/polyhaven, .gdignored 4K sources)
 into Terrain3D's two maps per texture, at SIZE px:
   <key>_alb_ht.png   albedo RGB + displacement in A (height blending)
   <key>_nrm_rgh.png  OpenGL normal RGB + roughness in A
-plus the ambientCG Cliff (rock023, assets/map3d/sources/ambientcg) resized to match - a texture array needs
+plus the ambientCG Cliff (rock023, assets/3D/terrain/model_wip/ambientcg) resized to match - a texture array needs
 every layer the same size. Runs inside Blender (it reads the EXRs):
   Blender -b --factory-startup --python tools/map3d/pack_textures.py
 """
@@ -12,8 +12,8 @@ import bpy
 import numpy as np
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-SRC = os.path.join(ROOT, "assets", "map3d", "sources", "polyhaven")
-OUT = os.path.join(ROOT, "assets", "map3d", "textures")
+SRC = os.path.join(ROOT, "assets", "3D", "terrain", "model_wip", "polyhaven")
+OUT = os.path.join(ROOT, "assets", "3D", "terrain", "textures")
 SIZE = 2048
 DEFAULT_ROUGH = 0.85  # rocky_trail ships no roughness map
 SETS = ["leafy_grass", "dry_decay_leaves", "dirt_floor", "rocky_trail",
@@ -84,6 +84,6 @@ for key in SETS:
     print("packed", key, "height", float(disp[..., 0].min()), float(disp[..., 0].max()))
 
 for src, dst in [("rock023_alb_ht", "cliff_alb_ht"), ("rock023_nrm_rgh", "cliff_nrm_rgh")]:
-    arr = load(os.path.join(ROOT, "assets", "map3d", "sources", "ambientcg", src + ".png"), "Non-Color")
+    arr = load(os.path.join(ROOT, "assets", "3D", "terrain", "model_wip", "ambientcg", src + ".png"), "Non-Color")
     save(arr, os.path.join(OUT, dst + ".png"))
 print("packed cliff")

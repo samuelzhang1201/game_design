@@ -11,7 +11,7 @@
     T["animate"]()       # MARCH and STANDBY (the blueprint's), GARRISON (guard.py)
     T["export"](out_dir) # infantry.glb (+Y forward), GARRISON / STANDBY / MARCH
 
-Two Tripo exports of the SAME generation, in assets/units3d/ai_src/tripo/ (git-ignored):
+Two Tripo exports of the SAME generation, in assets/3D/units/infantry/model_wip/tripo/ (git-ignored):
   * "medieval knight 3d model.glb" — one 94k-tri mesh with 4K PBR maps (base colour,
     roughness-metallic, normal): the TEXTURE source, baked onto the game mesh;
   * knight_parts.glb — Tripo's part segmentation, 51 untextured parts, 46k tris: the
@@ -29,7 +29,7 @@ import numpy as np
 from mathutils import Vector, Matrix
 
 ROOT = "/Users/samuelzhang/game_design/"
-SRC = ROOT + "assets/units3d/ai_src/tripo/"
+SRC = ROOT + "assets/3D/units/infantry/model_wip/tripo/"
 TEX_FILE = SRC + "medieval knight 3d model.glb"
 PARTS_FILE = SRC + "knight_parts.glb"
 BLUEPRINT = ROOT + "tools/units3d/infantry_blueprint/"

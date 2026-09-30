@@ -126,7 +126,7 @@ func test_a_binding_pins_a_key_and_leaves_the_pool() -> void:
 	var kingdoms: Array = HouseArms.needed_keys(data)["kingdoms"]
 	var pinned := String(kingdoms[0])
 	var art := HouseArms.arms_path("beria/" + String(kingdoms[1]))
-	assert_eq(art, "res://assets/arms/beria/%s.png" % kingdoms[1], "the <pack>/<key> shorthand")
+	assert_eq(art, "res://assets/2D/arms/beria/%s.png" % kingdoms[1], "the <pack>/<key> shorthand")
 	data.arms_bindings[pinned] = art
 	HouseArms.forget()
 	assert_eq(HouseArms.resolved_path(data, pinned), art)

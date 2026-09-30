@@ -80,18 +80,18 @@ python3 assets/flux/generate.py --build-csv                      # after editing
 
 | Chapter | From → to |
 |---|---|
-| `goods` | G- → `assets/goods/` (greyscale, tinted by category) |
-| `goods_icons` | colour G- → `assets/goods/colour/` (64 px) |
+| `goods` | G- → `assets/2D/goods/marks/` (greyscale, tinted by category) |
+| `goods_icons` | colour G- → `assets/2D/icons/goods/` (64 px) |
 | `decor` | D- ships and whale → `assets/decor/` |
 | `estates` | D-43..D-78 → `assets/manors/<focus>_<size>.png` (greyed, lightened) |
-| `paintings` | B-01..B-36 → `assets/manors/paint/` (720×576, colour) |
-| `army_paintings` | B-37..B-42 → `assets/armies/paint/` |
-| `buildings` | H- → `assets/icons/bld_<code>.png` (128 px) |
-| `ui` | I- → `assets/icons/<key>.png` (64 px, colour) |
-| `compass` | I-73 → `assets/ui/compass.png` (256 px) |
-| `cast` | K- → `assets/portraits/` (96 px chip) and `assets/portraits/full/` (1024 px tall) |
+| `paintings` | B-01..B-36 → `assets/2D/paintings/estates/` (720×576, colour) |
+| `army_paintings` | B-37..B-42 → `assets/2D/paintings/armies/` |
+| `buildings` | H- → `assets/2D/icons/buildings/bld_<code>.png` (128 px) |
+| `ui` | I- → `assets/2D/icons/resources/<key>.png` (64 px, colour) |
+| `compass` | I-73 → `assets/2D/ui/compass/compass.png` (256 px) |
+| `cast` | K- → `assets/2D/portraits/cast/` (96 px chip) and `assets/2D/portraits/cast/full/` (1024 px tall) |
 | `biomes` | satellite T- tiles → `assets/biomes/<key>.png` (1024 px, seamless) |
-| `arms` | A- → `assets/arms/<pack>/<key>.png` (256 px; `ARMS_PACK=<id>`, default the `data/maps.csv` default pack via `tools/packs.py`) |
+| `arms` | A- → `assets/2D/arms/<pack>/<key>.png` (256 px; `ARMS_PACK=<id>`, default the `data/maps.csv` default pack via `tools/packs.py`) |
 | `app_icon` | X-01 → `icon.png` (1024 px, full bleed) |
 
 Every file is sized by its USE (design px × the ~3x largest window scale), never one size for all.

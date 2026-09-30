@@ -18,8 +18,8 @@ const BRIDGE_MAT := preload("res://scenes/map3d/materials/bridge_stone.tres")
 ## The road surface and the bridges' stone at full resolution (Poly Haven,
 ## packed by tools/map3d/pack_textures.py into the git-ignored textures
 ## folder): they replace the previews when present (Ruling 15).
-const ROAD_TEXTURE := "res://assets/map3d/textures/rocky_trail_02"
-const BRIDGE_TEXTURE := "res://assets/map3d/textures/medieval_blocks_03"
+const ROAD_TEXTURE := "res://assets/3D/terrain/textures/rocky_trail_02"
+const BRIDGE_TEXTURE := "res://assets/3D/terrain/textures/medieval_blocks_03"
 
 var ctx: Map3DContext
 var lines: Map3DLayerLines

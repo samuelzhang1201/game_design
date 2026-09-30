@@ -15,7 +15,7 @@ import model_cavalry as mc
 import cavalry_scan as cs
 
 OUT = sys.argv[sys.argv.index("--") + 1]
-TEX = "/Users/samuelzhang/game_design/assets/units3d/ai_src/cc0/cleveland_armor/textures/"
+TEX = "/Users/samuelzhang/game_design/assets/3D/units/cavalry/model_wip/cc0/cleveland_armor/textures/"
 ATLAS = 2048
 CELL = ATLAS // 4
 TILES = {"steel": (0, 0, 2, 2), "mail": (2, 0, 1, 1), "cloth": (3, 0, 1, 1), "leather": (2, 1, 1, 1),

@@ -3,7 +3,7 @@ extends RefCounted
 ## The coats of arms of houses and kingdoms (owner 2026-09-15, spec
 ## docs/superpowers/specs/2026-09-15-house-arms-design.md). The art is
 ## generated from the map pack's Azgaar `coa` (assets/flux/arms_prompts.py)
-## and installed as assets/arms/<map_id>/<key>.png:
+## and installed as assets/2D/arms/<map_id>/<key>.png:
 ##   kingdom_<code>        a kingdom's state arms
 ##   seat_<capital burg>   a house's: the arms of its seat town
 ##   province_<code>       a house seated in a province with no town
@@ -13,7 +13,7 @@ extends RefCounted
 ##
 ## A NEW MAP NEEDS NO NEW ARMS (owner 2026-09-18): which art a key wears is
 ##   1. maps/<id>/arms_bindings.csv, when it pins the key;
-##   2. the pack's own assets/arms/<id>/<key>.png, when installed;
+##   2. the pack's own assets/2D/arms/<id>/<key>.png, when installed;
 ##   3. else BORROWED from every other pack's installed arms — kingdoms from
 ##      the kingdom_ art, houses from the seat_ / province_ art — handed out
 ##      in the pack's own order (kingdoms by state_id, houses' seats by province_id),
@@ -29,7 +29,7 @@ static var _textures: Dictionary = {}
 ## "<repo id>|<map_id>" -> {key: borrowed path, "_report": {...}}.
 static var _borrowed: Dictionary = {}
 
-const ARMS_ROOT := "res://assets/arms"
+const ARMS_ROOT := "res://assets/2D/arms"
 
 static func forget() -> void:
 	_seats.clear()
@@ -37,7 +37,7 @@ static func forget() -> void:
 	_borrowed.clear()
 
 ## An arms_bindings.csv value as a path: a res:// path as it is, or the
-## shorthand <pack>/<key> for assets/arms/<pack>/<key>.png.
+## shorthand <pack>/<key> for assets/2D/arms/<pack>/<key>.png.
 static func arms_path(value: String) -> String:
 	if value.begins_with("res://"):
 		return value
@@ -89,7 +89,7 @@ static func key_of_kingdom(kingdom_code: String) -> String:
 	return "kingdom_" + kingdom_code
 
 static func path_of(repo: DataRepository, key: String) -> String:
-	return "res://assets/arms/%s/%s.png" % [repo.map_id, key]
+	return "res://assets/2D/arms/%s/%s.png" % [repo.map_id, key]
 
 ## The art a key actually wears: a binding, the pack's own, or borrowed
 ## (see the top of this file); "" when there is none anywhere.

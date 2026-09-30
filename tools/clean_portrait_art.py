@@ -18,8 +18,8 @@ into a JPEG and stamp a watermark. This tool recovers real alpha:
 
 Needs Pillow, numpy, scipy (not stdlib - run in any venv with those).
 Usage:  python3 tools/clean_portrait_art.py SRC DST [--height 660]
-e.g.    python3 tools/clean_portrait_art.py assets/portraits/minister_1.jpeg \
-            assets/portraits/full/char_chancellor.png
+e.g.    python3 tools/clean_portrait_art.py assets/2D/portraits/cast/minister_1.jpeg \
+            assets/2D/portraits/cast/full/char_chancellor.png
 """
 import argparse
 

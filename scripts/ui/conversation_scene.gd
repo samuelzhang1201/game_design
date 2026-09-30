@@ -616,11 +616,11 @@ func _refresh_banner() -> void:
 	%AudienceBanner.visible = text != ""
 
 ## The event's own illustration, across the top of the audience window
-## (chapter 0, 2026-09-21): assets/events/<event_id>.png, installed from the
+## (chapter 0, 2026-09-21): assets/2D/events/illustrations/<event_id>.png, installed from the
 ## art library's V- chapter by install_map_art.py events. An event with no
 ## art installed simply has no band — the window is complete without it, so
 ## a fresh checkout is never broken by a missing render.
-const EVENT_ART_DIR := "res://assets/events/"
+const EVENT_ART_DIR := "res://assets/2D/events/illustrations/"
 
 func _show_event_art(b: Dictionary) -> void:
 	var art: Texture2D = null

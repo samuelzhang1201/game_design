@@ -11,7 +11,7 @@ extends SceneTree
 ##     -s tools/map3d/export_manor_land.gd [-- --map ID]
 ##
 ## writes <map3d_dir>/bake/manor_land.csv (maps.csv map3d_dir, default
-## assets/map3d/<map>): cell_id,focus
+## assets/3D/terrain/<map>): cell_id,focus
 
 
 func _init() -> void:

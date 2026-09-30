@@ -15,8 +15,17 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TABLE = os.path.join(ROOT, "data", "unit_models.csv")
-OUT = os.path.join(ROOT, "assets", "units3d")
-SRC = os.path.join(OUT, "ai_src")
+OUT = os.path.join(ROOT, "assets", "3D", "units")
+SRC = os.path.join(OUT, "model_wip")
+
+
+def glb_path(out_dir, code):
+    """Where a unit's .glb goes: assets/3D/units/<code>/<code>.glb for the shipped
+    set (its model_wip/ beside it), flat in any trial directory."""
+    if os.path.abspath(out_dir) == os.path.abspath(OUT):
+        os.makedirs(os.path.join(out_dir, code), exist_ok=True)
+        return os.path.join(out_dir, code, code + ".glb")
+    return os.path.join(out_dir, code + ".glb")
 
 
 def log(msg):

@@ -39,7 +39,7 @@ func test_each_material_is_its_shader() -> void:
 
 func test_the_previews_are_committed_and_small() -> void:
 	for key: String in PREVIEWS:
-		var tex := load("res://assets/map3d_preview/%s.png" % key) as Texture2D
+		var tex := load("res://assets/3D/terrain/textures_preview/%s.png" % key) as Texture2D
 		assert_not_null(tex, key)
 		assert_lte(maxi(tex.get_width(), tex.get_height()), 512, key)
 
@@ -53,7 +53,7 @@ func test_no_material_carries_a_tuned_number() -> void:
 			var param := line.get_slice("=", 0).trim_prefix("shader_parameter/").strip_edges()
 			assert_true(param in ASSET_PARAMS, "%s: %s is CSV's, not the .tres's" % [key, param])
 	var road := FileAccess.get_file_as_string("res://scenes/map3d/materials/road_line.tres")
-	assert_true(road.contains("map3d_preview/rocky_trail_02_alb_ht.png"))
+	assert_true(road.contains("3D/terrain/textures_preview/rocky_trail_02_alb_ht.png"))
 
 
 ## A pack ships no picture (CLAUDE.md): every world_*.png is DATA — ids,

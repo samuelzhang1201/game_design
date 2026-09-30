@@ -7,7 +7,7 @@ mesh and the armature are turned 180 degrees about Z in their DATA (an action's 
 each bone's own frame, so they turn with it). GARRISON and MARCH go down onto muted NLA
 tracks, one glTF animation each (model_cavalry.export_glb). Prints the MARCH loop's stride —
 the ground a planted foot covers in one loop — for data/army_art.csv's stride_m, and with
---manifest writes assets/units3d/units3d.json's entry.
+--manifest writes assets/3D/units/units3d.json's entry.
 """
 import bpy, json, math, os, sys
 from mathutils import Matrix, Vector
@@ -112,7 +112,7 @@ def main():
     bpy.ops.object.vertex_group_normalize_all(lock_active=False)
     mu.stash(rig, acts)
     os.makedirs(OUT, exist_ok=True)
-    path = os.path.join(OUT, NAME + ".glb")
+    path = os.path.join(OUT, NAME, NAME + ".glb") if "--manifest" in args else os.path.join(OUT, NAME + ".glb")
     mc.export_glb([rig, ob], path)
     tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
     zs = sorted(v.co.z for v in ob.data.vertices)
@@ -124,7 +124,7 @@ def main():
         manifest = json.load(open(mpath))
         manifest[NAME] = {
             "label": "Man-at-arms", "kind": "humanoid", "height_m": h,
-            "source": "hand-built from the owner's blueprint (assets/flux/out/infantry_kit/blueprint), textured with the "
+            "source": "hand-built from the owner's blueprint (assets/3D/units/infantry/model_wip/infantry_kit/blueprint), textured with the "
                       "owner's material swatches (infantry_kit/D), tools/units3d/infantry_blueprint/",
             "tris": tris, "bones": len(rig.data.bones), "weights": "rigid plates + distance",
             "actions": {a.name: [int(a.frame_range[0]), int(a.frame_range[1])] for a in acts},

@@ -102,7 +102,7 @@ func test_a_pack_can_keep_its_3d_build_elsewhere() -> void:
 	row["map3d_dir"] = "res://elsewhere/" + id
 	assert_eq(Map3DView.scene_path_for(id), "res://elsewhere/%s/world.tscn" % id)
 	row["map3d_dir"] = before
-	assert_eq(Map3DView.scene_path_for(id), "res://assets/map3d/%s/world.tscn" % id)
+	assert_eq(Map3DView.scene_path_for(id), "res://assets/3D/terrain/%s/world.tscn" % id)
 
 
 func test_the_house_table_is_in_the_steps_hash() -> void:

@@ -1,7 +1,7 @@
 # The blueprint man-at-arms (the game's infantry piece)
 
-`assets/units3d/infantry.glb` since 2026-09-29: hand-built in Blender from the owner's
-turnaround blueprint (`assets/flux/out/infantry_kit/blueprint/`, git-ignored) and textured
+`assets/3D/units/infantry/infantry.glb` since 2026-09-29: hand-built in Blender from the owner's
+turnaround blueprint (`assets/3D/units/infantry/model_wip/infantry_kit/blueprint/`, git-ignored) and textured
 with the owner's material swatches (`infantry_kit/D`, the seven it uses copied here at 512 px
 into `swatches/`). It replaced `infantry_scan.py`'s Graf Salm scan. One command:
 
@@ -11,8 +11,8 @@ tools/units3d/infantry_blueprint/build.sh [WORK_DIR]
 
 builds from an EMPTY scene (`build_model.py`: `base_mesh.py` → `armour.py` → `rig.py` →
 `march.py` → `garrison.py`), bakes the atlas (`texture.py`), and exports (`export.py`) into
-`assets/units3d/` with its `units3d.json` entry. `WORK_DIR` (default
-`assets/units3d/ai_src/cc0/infantry_build/`, git-ignored) keeps the untextured and the textured
+`assets/3D/units/` with its `units3d.json` entry. `WORK_DIR` (default
+`assets/3D/units/infantry/model_wip/infantry_build/`, git-ignored) keeps the untextured and the textured
 `.blend` to open by hand. Then run Godot's import (`Godot --headless --path . --import`).
 23,570 tris, 29 bones (the humanoid, the spear, three three-link cloak chains), one 2048 atlas.
 

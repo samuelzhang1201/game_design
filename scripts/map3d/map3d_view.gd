@@ -33,7 +33,7 @@ signal ground_clicked(pack_px: Vector2)
 ## A right click on open ground (owner 2026-09-28): SpyOrderMenu's "Send a spy here".
 signal ground_menu_requested(pack_px: Vector2, at: Vector2)
 
-const SCENE_PATTERN := "res://assets/map3d/%s/world.tscn"
+const SCENE_PATTERN := "res://assets/3D/terrain/%s/world.tscn"
 ## The view's own authored scene (the tree, flags and anchors live there).
 const VIEW_SCENE := "res://scenes/map3d/world_map_3d.tscn"
 const NOTICE_TEXT := "The 3D map has not been built for this map.\nRun tools/map3d (see tools/map3d/README.md)."
@@ -118,7 +118,7 @@ var _tier := ""
 var _overrides: Dictionary = {}
 
 ## Where `map_id`'s built world lives: its maps.csv `map3d_dir` (default
-## res://assets/map3d/<id>), or SCENE_PATTERN when no repository is loaded.
+## res://assets/3D/terrain/<id>), or SCENE_PATTERN when no repository is loaded.
 static func scene_path_for(map_id: String) -> String:
 	if Game.data != null and Game.data.maps.has(map_id):
 		return Game.data.map3d_dir(map_id).path_join("world.tscn")

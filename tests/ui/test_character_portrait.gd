@@ -32,13 +32,13 @@ func test_non_character_portrait_has_no_badge() -> void:
 	assert_ne(p.get_child_count(), 0)  # default visual built
 
 ## User ruling (2026-08-29): every council minister has full-body art in
-## assets/portraits/full/ (the two provided artworks reused by archetype
+## assets/2D/portraits/cast/full/ (the two provided artworks reused by archetype
 ## until per-minister art lands).
 func test_full_art_exists_for_all_five_ministers() -> void:
 	for id in ["char_chancellor", "char_marshal", "char_steward",
 			"char_spymaster", "char_chaplain"]:
 		assert_not_null(CharacterPortrait.full_texture_for(id),
-			"assets/portraits/full/%s.png should load" % id)
+			"assets/2D/portraits/cast/full/%s.png should load" % id)
 
 func test_full_art_null_for_character_without_it() -> void:
 	assert_null(CharacterPortrait.full_texture_for("herald"))

@@ -1,7 +1,7 @@
 class_name CompassLayer
 extends Node2D
 ## The map's compass as game art (owner 2026-09-14): aged oak with a ship's
-## wheel and brass gears (library I-73, assets/ui/compass.png), drawn in the
+## wheel and brass gears (library I-73, assets/2D/ui/compass/compass.png), drawn in the
 ## top-right box WorldMapView.compass_rect() gives, and TURNING clockwise
 ## while time runs — map_compass_turn_deg_per_s at 1x, faster at 2x and 4x —
 ## holding still when the clock is paused. A child of the view over its own
@@ -9,7 +9,7 @@ extends Node2D
 ## art is not installed the layer draws nothing and the view keeps its
 ## vector rose. Purely a look: the angle is never game state.
 
-const ART_PATH := "res://assets/ui/compass.png"
+const ART_PATH := "res://assets/2D/ui/compass/compass.png"
 
 ## Asked every frame for the box to draw in (screen px of the view).
 var box: Callable = func() -> Rect2: return Rect2()

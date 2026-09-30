@@ -5,7 +5,7 @@ extends Control
 ## tooltip). Since 2026-09-13 (owner) the icon is GAME ART where
 ## data/resource_icons.csv names a texture — library I-40 and I-47..I-61,
 ## one still-life per dimension, rendered through assets/flux and installed
-## by install_map_art.py ui into assets/icons/ — and the art keeps its
+## by install_map_art.py ui into assets/2D/icons/resources/ — and the art keeps its
 ## colour: it is looked at, not tinted. A key without art falls back to the
 ## drawn glyph, simple strokes in the UI's gold. Which art or glyph, and
 ## what the tooltip says, are all data in that CSV.

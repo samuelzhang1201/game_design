@@ -2,7 +2,7 @@
 
   blender -b --factory-startup --python tools/map3d/census_house_meshes.py
 
-Read-only. For each `assets/map3d_houses/*.glb` it prints the triangle count,
+Read-only. For each `assets/3D/buildings/*/*.glb` it prints the triangle count,
 the number of holes and the widest one in metres, and the winding conflicts —
 all over Blender's real topology — the mesh WELDED BY DISTANCE first, which
 is the step that makes such a census mean anything: glTF stores a vertex per
@@ -27,7 +27,7 @@ import os
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUT = os.path.join(ROOT, "assets", "map3d_houses")
+OUT = os.path.join(ROOT, "assets", "3D", "buildings")
 
 
 def census(ob):
@@ -82,11 +82,11 @@ def census(ob):
 
 def main():
     print("%-14s %8s %7s %11s %9s" % ("type", "tris", "holes", "widest_m", "flipped"))
-    for name in sorted(os.listdir(OUT)):
+    for name in sorted(n + ".glb" for n in os.listdir(OUT) if os.path.isfile(os.path.join(OUT, n, n + ".glb"))):
         if not name.endswith(".glb"):
             continue
         bpy.ops.wm.read_factory_settings(use_empty=True)
-        bpy.ops.import_scene.gltf(filepath=os.path.join(OUT, name))
+        bpy.ops.import_scene.gltf(filepath=os.path.join(OUT, name[:-4], name))
         ob = next(o for o in bpy.data.objects if o.type == "MESH")
         tris, holes, widest, bad = census(ob)
         print("%-14s %8d %7d %11.2f %9d" % (name[:-4], tris, holes, widest, bad))

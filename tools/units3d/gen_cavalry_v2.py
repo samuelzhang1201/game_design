@@ -11,7 +11,7 @@ Tiers (all Apache-2.0, see claude/t2i-model-evaluation-2026-09.md):
   zimage  Z-Image Turbo, 8 steps              ~31 s / image
   qwenfast Qwen-Image-2512 Q6_K + Lightning LoRA, 8 steps  ~2 min / image
   qwen    Qwen-Image-2512 Q6_K full, 50 steps ~18 min / image (run overnight)
-Output: assets/flux/out/cavalry_v2/<tier>_<id>_s<n>.png, then a contact sheet
+Output: assets/3D/units/cavalry/model_wip/cavalry_v2/<tier>_<id>_s<n>.png, then a contact sheet
 contact_sheet.png if Pillow is importable. Existing files are kept unless --force.
 Needs ComfyUI running at COMFY_HOST (default http://127.0.0.1:8188).
 """
@@ -20,7 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 FLUX = ROOT / "assets" / "flux"
-OUT = FLUX / "out" / "cavalry_v2"
+OUT = FLUX.parent / "3D" / "units" / "cavalry" / "model_wip" / "cavalry_v2"
 HOST = os.environ.get("COMFY_HOST", "http://127.0.0.1:8188")
 SEED = 20260925
 

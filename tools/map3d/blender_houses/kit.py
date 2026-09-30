@@ -2,7 +2,7 @@
 
 Owner 2026-09-24: every house type is modelled anew in Blender (through the
 Blender MCP), against the Flux reference pictures in
-assets/flux/out/house_ref/ (no AI 3D: Hunyuan3D was removed over its
+assets/3D/buildings/<type>/model_wip/ (no AI 3D: Hunyuan3D was removed over its
 licence). Load it in Blender with
 
     exec(open("<repo>/tools/map3d/blender_houses/kit.py").read())
@@ -38,8 +38,8 @@ import bpy
 from mathutils import Matrix, Vector
 
 ROOT = "/Users/samuelzhang/game_design"
-TEX = ROOT + "/assets/map3d/sources/polyhaven/houses/"
-HOUSES = ROOT + "/assets/map3d_houses/"
+TEX = ROOT + "/assets/3D/buildings/model_wip/polyhaven/"
+HOUSES = ROOT + "/assets/3D/buildings/"
 
 # key: (tinted diffuse, normal source, tile metres, roughness)
 MATS = {
@@ -661,7 +661,7 @@ def side(hw, sign):
 def export(ob, type_):
     """Scale `ob` so its longer ground span is the type's footprint_m, centre
     it on its own footprint, stand it on z = 0, write
-    assets/map3d_houses/<type>.glb and record its measured size in
+    assets/3D/buildings/<type>/<type>.glb and record its measured size in
     houses.json and data/map3d_houses.csv."""
     import csv
     import io
@@ -685,7 +685,8 @@ def export(ob, type_):
     bpy.ops.object.select_all(action="DESELECT")
     exp.select_set(True)
     bpy.context.view_layer.objects.active = exp
-    bpy.ops.export_scene.gltf(filepath=HOUSES + type_ + ".glb", export_format="GLB", use_selection=True,
+    os.makedirs(HOUSES + type_, exist_ok=True)
+    bpy.ops.export_scene.gltf(filepath=HOUSES + type_ + "/" + type_ + ".glb", export_format="GLB", use_selection=True,
                               export_image_format="JPEG", export_jpeg_quality=88, export_yup=True,
                               export_apply=True, export_cameras=False, export_lights=False,
                               export_vertex_color="ACTIVE")

@@ -1,15 +1,15 @@
 extends SceneTree
 ## The 3D map's committed PREVIEW textures (spec 2026-09-20 §2, Ruling 15):
 ## 512 px copies of the git-ignored Poly Haven pairs the roads and bridges
-## wear, plus the clouds' shape, into res://assets/map3d_preview/, so the
+## wear, plus the clouds' shape, into res://assets/3D/terrain/textures_preview/, so the
 ## look's .tres (scenes/map3d/materials/) show a real texture in the editor on
 ## any checkout. The game swaps in the full-resolution pair when it is packed
 ## (Map3DLayerRoads.texture_pair). Re-run after tools/map3d/pack_textures.py
 ## changes a pair, then --import:
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/make_previews.gd
 
-const SRC_DIR := "res://assets/map3d/textures/"
-const OUT_DIR := "res://assets/map3d_preview/"
+const SRC_DIR := "res://assets/3D/terrain/textures/"
+const OUT_DIR := "res://assets/3D/terrain/textures_preview/"
 const PAIRS := ["rocky_trail_02_alb_ht", "rocky_trail_02_nrm_rgh", "medieval_blocks_03_alb_ht",
 	"medieval_blocks_03_nrm_rgh"]
 ## The previews' longest side, px.

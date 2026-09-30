@@ -21,7 +21,7 @@ def default_pack(maps_csv: str = os.path.join(ROOT, "data", "maps.csv")) -> str:
 
 def map3d_dir(map_id: str, maps_csv: str = os.path.join(ROOT, "data", "maps.csv")) -> str:
     """Where map_id's 3D build lives, as a filesystem path: its maps.csv
-    map3d_dir (res:// mapped to the repo root), else ROOT/assets/map3d/<id>."""
+    map3d_dir (res:// mapped to the repo root), else ROOT/assets/3D/terrain/<id>."""
     with open(maps_csv, encoding="utf-8") as f:
         for row in csv.DictReader(f):
             d = (row.get("map3d_dir") or "").strip()
@@ -29,4 +29,4 @@ def map3d_dir(map_id: str, maps_csv: str = os.path.join(ROOT, "data", "maps.csv"
                 if d.startswith("res://"):
                     return os.path.join(ROOT, d[len("res://"):])
                 return d
-    return os.path.join(ROOT, "assets", "map3d", map_id)
+    return os.path.join(ROOT, "assets", "3D", "terrain", map_id)

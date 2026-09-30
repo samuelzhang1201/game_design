@@ -1,8 +1,8 @@
 [gd_resource type="ShaderMaterial" format=3 uid="uid://e4k47qmygywv"]
 
 [ext_resource type="Shader" uid="uid://bi1d1n2agaect" path="res://scripts/map3d/road_line.gdshader" id="1_6o33f"]
-[ext_resource type="Texture2D" uid="uid://dgtw7yvgyp2r7" path="res://assets/map3d_preview/rocky_trail_02_alb_ht.png" id="2_nswfu"]
-[ext_resource type="Texture2D" uid="uid://ox113onk6ddf" path="res://assets/map3d_preview/rocky_trail_02_nrm_rgh.png" id="3_thhdt"]
+[ext_resource type="Texture2D" uid="uid://dgtw7yvgyp2r7" path="res://assets/3D/terrain/textures_preview/rocky_trail_02_alb_ht.png" id="2_nswfu"]
+[ext_resource type="Texture2D" uid="uid://ox113onk6ddf" path="res://assets/3D/terrain/textures_preview/rocky_trail_02_nrm_rgh.png" id="3_thhdt"]
 
 [resource]
 render_priority = 1

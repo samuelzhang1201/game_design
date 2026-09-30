@@ -29,7 +29,7 @@ the same numbers:
     world-axis pose helpers;
   * no base (owner 2026-09-27: 撤除所有底座).
 
-Writes assets/units3d/cavalry.glb and its entry in units3d.json. Live, it
+Writes assets/3D/units/cavalry/cavalry.glb and its entry in units3d.json. Live, it
 builds into its own scene `cavalry_c` and leaves every other scene alone.
 """
 import bpy
@@ -49,7 +49,7 @@ import make_units
 importlib.reload(unit_common)
 importlib.reload(make_units)
 from make_units import apply_pose, make_action, stash, gait, FPS
-from unit_common import OUT, log, tri_count
+from unit_common import OUT, glb_path, log, tri_count
 
 NAME = "cavalry"
 SCENE = "cavalry_c"
@@ -1059,7 +1059,7 @@ def build(write=True):
     log("cavalry: %d tris, %d bones, weights %s" % (tris, len(arm.data.bones), how))
     out_dir = os.environ.get("CAV_OUT", OUT)
     if write:
-        path = os.path.join(out_dir, NAME + ".glb")
+        path = glb_path(out_dir, NAME)
         export_glb([arm, ob], path)
         if out_dir != OUT:          # a trial build: the manifest is the shipped model's
             log("wrote " + path)

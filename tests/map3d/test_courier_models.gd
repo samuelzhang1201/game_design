@@ -20,7 +20,7 @@ func test_every_courier_model_gallops_and_idles() -> void:
 
 
 func test_the_courier_models_are_within_budget() -> void:
-	var info: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/units3d/units3d.json"))
+	var info: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/3D/units/units3d.json"))
 	for code in ["courier", "spy"]:
 		if info.has(code):
 			assert_between(int(info[code]["tris"]), 15000, 20000, code)

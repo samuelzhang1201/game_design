@@ -23,14 +23,14 @@ blender -b --factory-startup --python tools/units3d/measure_units.py -- OUTDIR
 | --- | --- |
 | `data/unit_models.csv` | every tuning number: height, yaw, voxel, tri budget, the weapon and prop boxes |
 | `measure_units.py` | prints each source's slice profile and shoots four orthographic views — **run this first for a new source**; every number in the CSV is read off it |
-| `make_units.py` | the build: retopo → bake → skeleton → skin → lock the props → actions → `assets/units3d/<code>.glb` |
+| `make_units.py` | the build: retopo → bake → skeleton → skin → lock the props → actions → `assets/3D/units/<code>/<code>.glb` |
 | `shoot_units.py` | photographs the BUILT glb (contact sheet + a strip per action), so a shot also proves the export round-trips |
 | `data/army_art.csv` | which .glb each arm wears in the game (`model`) |
 | `data/army_orders.csv` | the rows of the right-click order menu |
 | `unit_common.py` | import, place, measure |
-| `assets/units3d/units3d.json` | what was built: tris, bones, which weighting was used, the action frame ranges |
+| `assets/3D/units/units3d.json` | what was built: tris, bones, which weighting was used, the action frame ranges |
 
-The sources WERE `assets/units3d/ai_src/<code>.glb`, generated through the
+The sources WERE `assets/3D/units/<code>/model_wip/<code>.glb`, generated through the
 Blender MCP's Hunyuan3D; every Hunyuan source and render was deleted on
 2026-09-29 (licence), so `make_units.py` now builds nothing on its own —
 it is the library the scan and blueprint builds borrow from. A Tripo 3D
@@ -119,13 +119,13 @@ budget:
 
 ```
 blender -b --factory-startup --python tools/units3d/cavalry_scan.py
-CAV_BLEND=assets/units3d/ai_src/cc0/cavalry_knight.blend blender -b --factory-startup --python tools/units3d/cavalry_scan.py
+CAV_BLEND=assets/3D/units/cavalry/model_wip/cc0/cavalry_knight.blend blender -b --factory-startup --python tools/units3d/cavalry_scan.py
 ```
 
-writes `assets/units3d/cavalry.glb` and `units3d.json`'s entry; `CAV_BLEND`
+writes `assets/3D/units/cavalry/cavalry.glb` and `units3d.json`'s entry; `CAV_BLEND`
 also saves an openable `.blend` (the piece alone, GARRISON playing);
 `CAV_OUT=dir` writes a trial glb elsewhere. It needs the two scans in
-`assets/units3d/ai_src/cc0/` (Sketchfab `faca2ad5…` Cleveland armour, whose
+`assets/3D/units/cavalry/model_wip/cc0/` (Sketchfab `faca2ad5…` Cleveland armour, whose
 knight is kept, and `1cd8a30c…` Hunt Museum horse, whose shape is kept),
 downloaded with the owner's Sketchfab key; both CC0-1.0. `model_cavalry.py`
 stays as the library of lofts, tiles, rig helpers and actions it reuses.
@@ -150,7 +150,7 @@ runtime seats a piece on its own half extents (`Map3DUnits.stand_extent`).
 
 ## The infantry is a Tripo 3D generation (2026-09-30)
 
-`assets/units3d/infantry.glb` is built by `infantry_tripo/tripo.py` in the owner's open Blender
+`assets/3D/units/infantry/infantry.glb` is built by `infantry_tripo/tripo.py` in the owner's open Blender
 from a Tripo 3D generation on the owner's paid plan (Tripo's terms §5.2.2: paid outputs are
 ours; free-tier outputs are Tripo's). See `infantry_tripo/README.md`. It reuses the blueprint's
 MARCH and old garrison stance (as STANDBY) through the injection points added to
@@ -161,7 +161,7 @@ skips it.
 
 ## The infantry was the blueprint man-at-arms (2026-09-29, replaced 2026-09-30)
 
-Since 2026-09-29 `assets/units3d/infantry.glb` is hand-built from the owner's
+Since 2026-09-29 `assets/3D/units/infantry/infantry.glb` is hand-built from the owner's
 blueprint and textured with the owner's swatches: `infantry_blueprint/build.sh`,
 see `infantry_blueprint/README.md`. It replaced `infantry_scan.py`'s Graf Salm scan
 (deleted 2026-09-30, below); `unit_models.csv`'s row names
@@ -176,7 +176,7 @@ assets) — git history keeps them.
 
 ## Courier
 
-The courier rider (`assets/units3d/courier.glb`, GALLOP and IDLE) has its own build:
+The courier rider (`assets/3D/units/courier/courier.glb`, GALLOP and IDLE) has its own build:
 `blender -b --factory-startup --python tools/units3d/courier_build.py -- courier` (from the owner's Tripo 3D model), with its
 scripts, sources and licences in `tools/units3d/courier/README.md`. The spy still wears the
 cavalry model until it has its own.

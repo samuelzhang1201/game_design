@@ -15,7 +15,7 @@ silhouette, the UVs, the baked albedo/normal and the triangle count are
 bit-for-bit what the retopo produced, only bigger.
 
 It reads data/map3d_houses.csv (footprint_m, the authored input) against
-assets/map3d_houses/houses.json (the built mesh's measured size), scales any
+assets/3D/buildings/houses.json (the built mesh's measured size), scales any
 type whose two disagree, and writes the new measured height_m back into both
 — the same writeback contract retopo_houses.py has, which
 tests/map3d/test_map3d_houses_meshes.gd pins.
@@ -30,7 +30,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TABLE = os.path.join(ROOT, "data", "map3d_houses.csv")
-OUT = os.path.join(ROOT, "assets", "map3d_houses")
+OUT = os.path.join(ROOT, "assets", "3D", "buildings")
 MANIFEST = os.path.join(OUT, "houses.json")
 
 
@@ -107,7 +107,7 @@ def main():
         cells = line.split(",")
         t, want = cells[ti], float(cells[fi])
         entry = manifest.get(t)
-        path = os.path.join(OUT, t + ".glb")
+        path = os.path.join(OUT, t, t + ".glb")
         if entry is None or not os.path.exists(path):
             out.append(line)
             continue

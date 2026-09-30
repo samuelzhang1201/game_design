@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """Turn a chapter's renders into game assets.
 
-    python3 assets/flux/install_map_art.py goods    # G-xx -> assets/goods/
-    python3 assets/flux/install_map_art.py ui       # post.py icon tier -> assets/icons/ (resource strip, realm card)
-    python3 assets/flux/install_map_art.py cast     # K-xx -> assets/portraits/
-    python3 assets/flux/install_map_art.py paintings  # B-xx -> assets/manors/paint/ (the manor card's painted estate)
-    python3 assets/flux/install_map_art.py buildings  # H-xx -> assets/icons/bld_<code>.png (slots and the build menu)
-    python3 assets/flux/install_map_art.py goods_icons  # G-xx colour -> assets/goods/colour/ (the manor card's output rows)
-    python3 assets/flux/install_map_art.py compass    # I-73 -> assets/ui/compass.png
-    python3 assets/flux/install_map_art.py arms       # A-xxx -> assets/arms/<pack>/<key>.png (ARMS_PACK=id, default maps.csv) (house and kingdom arms)
-    python3 assets/flux/install_map_art.py army_paintings  # B-37..42 -> assets/armies/paint/<piece>.png (army card)
+    python3 assets/flux/install_map_art.py goods    # G-xx -> assets/2D/goods/marks/
+    python3 assets/flux/install_map_art.py ui       # post.py icon tier -> assets/2D/icons/resources/ (resource strip, realm card)
+    python3 assets/flux/install_map_art.py cast     # K-xx -> assets/2D/portraits/cast/
+    python3 assets/flux/install_map_art.py paintings  # B-xx -> assets/2D/paintings/estates/ (the manor card's painted estate)
+    python3 assets/flux/install_map_art.py buildings  # H-xx -> assets/2D/icons/buildings/bld_<code>.png (slots and the build menu)
+    python3 assets/flux/install_map_art.py goods_icons  # G-xx colour -> assets/2D/icons/goods/ (the manor card's output rows)
+    python3 assets/flux/install_map_art.py compass    # I-73 -> assets/2D/ui/compass/compass.png
+    python3 assets/flux/install_map_art.py arms       # A-xxx -> assets/2D/arms/<pack>/<key>.png (ARMS_PACK=id, default maps.csv) (house and kingdom arms)
+    python3 assets/flux/install_map_art.py army_paintings  # B-37..42 -> assets/2D/paintings/armies/<piece>.png (army card)
     python3 assets/flux/install_map_art.py app_icon   # X-01 -> icon.png (the game's application icon)
-    python3 assets/flux/install_map_art.py events     # V-35..V-55 -> assets/events/<event_id>.png (the audience window's event band)
-    python3 assets/flux/install_map_art.py courier_paintings  # B-43..47 -> assets/couriers/paint/<key>.png (courier card, the desk's receipt)
-    python3 assets/flux/install_map_art.py missive  # U-20..26 -> assets/missives/<key>.png (the Missive board)
+    python3 assets/flux/install_map_art.py events     # V-35..V-55 -> assets/2D/events/illustrations/<event_id>.png (the audience window's event band)
+    python3 assets/flux/install_map_art.py courier_paintings  # B-43..47 -> assets/2D/paintings/couriers/<key>.png (courier card, the desk's receipt)
+    python3 assets/flux/install_map_art.py missive  # U-20..26 -> assets/2D/ui/missive_board/<key>.png (the Missive board)
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
 blue channel (see sepia_alpha_template.json for the same steps as a ComfyUI
@@ -104,7 +104,7 @@ def grey_and_lighten(px: bytearray, k: float) -> None:
 
 def install_goods(height: int = 128, lighten: float = 0.45) -> int:
     codes = {r["art_id"]: r["good_code"] for r in csv.DictReader((HERE / "goods_art.csv").open())}
-    return install_marks(codes, "goods", ROOT / "assets" / "goods", height, lighten)
+    return install_marks(codes, "goods", ROOT / "assets" / "2D" / "goods" / "marks", height, lighten)
 
 
 UI_ICON_PX = 64
@@ -113,7 +113,7 @@ UI_ALPHA_MIN = 8
 
 def install_ui() -> int:
     codes = {r["art_id"]: r["key"] for r in csv.DictReader((HERE / "ui_icon_art.csv").open())}
-    dest = ROOT / "assets" / "icons"
+    dest = ROOT / "assets" / "2D" / "icons" / "resources"
     dest.mkdir(parents=True, exist_ok=True)
     done = 0
     for art_id, key in sorted(codes.items()):
@@ -214,12 +214,12 @@ def install_marks(codes: dict, chapter: str, dest, height: int, lighten: float, 
 ## chip from the [C-BUST] render for the portrait box, and a 660 px tall
 ## real-alpha figure from the [C-FULL] render for the conversation stage.
 CAST_TIERS = [
-    ("c-bust", "chip", 96, "assets/portraits"),
+    ("c-bust", "chip", 96, "assets/2D/portraits/cast"),
     # 1024 rather than the tier's own 660: the conversation stage
     # cover-crops this into a box that is a few hundred DESIGN px tall, and
     # the design viewport is 1280x720 now — the source has to stay above the
     # drawn size or the face is being upscaled.
-    ("c-full", "full", 1024, "assets/portraits/full"),
+    ("c-full", "full", 1024, "assets/2D/portraits/cast/full"),
 ]
 
 
@@ -389,7 +389,7 @@ def install_paintings(size: tuple = PAINT_SIZE, table: str = "estate_paint_art.c
                       dest: Path | None = None, key_column: str = "key",
                       src: str = "estates") -> int:
     rows = list(csv.DictReader((HERE / table).open(encoding="utf-8")))
-    dest = dest or ROOT / "assets" / "manors" / "paint"
+    dest = dest or ROOT / "assets" / "2D" / "paintings" / "estates"
     dest.mkdir(parents=True, exist_ok=True)
     done = 0
     for r in rows:
@@ -421,15 +421,15 @@ EVENT_SIZE = (1280, 533)
 
 
 def install_events(size: tuple = EVENT_SIZE) -> int:
-    return install_paintings(size, "event_art.csv", ROOT / "assets" / "events",
+    return install_paintings(size, "event_art.csv", ROOT / "assets" / "2D" / "events" / "illustrations",
                              key_column="event_id", src="events")
 
 
 ## The army card's painting (owner 2026-09-15): library B-37..B-42 on the
 ## same [C-ESTATE] vignette and the same card box as the manor paintings, so
-## the same crop and size, into assets/armies/paint/<piece>.png.
+## the same crop and size, into assets/2D/paintings/armies/<piece>.png.
 def install_army_paintings(size: tuple = PAINT_SIZE) -> int:
-    return install_paintings(size, "army_paint_art.csv", ROOT / "assets" / "armies" / "paint")
+    return install_paintings(size, "army_paint_art.csv", ROOT / "assets" / "2D" / "paintings" / "armies")
 
 
 ## The courier card's paintings and the desk's receipt painting (owner
@@ -437,18 +437,18 @@ def install_army_paintings(size: tuple = PAINT_SIZE) -> int:
 ## [C-COURIER] 5:4 vignette, drawn in the same 240-px column box as the manor
 ## and army paintings, so the same crop and size.
 def install_courier_paintings(size: tuple = PAINT_SIZE) -> int:
-    return install_paintings(size, "courier_paint_art.csv", ROOT / "assets" / "couriers" / "paint")
+    return install_paintings(size, "courier_paint_art.csv", ROOT / "assets" / "2D" / "paintings" / "couriers")
 
 
 ## The Missive board's pieces (owner 2026-09-28, spec 2026-09-28-courier-art
 ## §5): library U-20..U-26, each sized by its USE (library §9.1). The nine-slice
 ## pieces are cropped to the piece off its grey ground and resized; the
 ## envelope and the pin are cut out to alpha (the ground flooded from the edges,
-## as the arms are) and fitted. Writes assets/missives/<key>.png and fills
+## as the arms are) and fitted. Writes assets/2D/ui/missive_board/<key>.png and fills
 ## data/missive_art.csv's texture column.
 def install_missive() -> int:
     rows = list(csv.DictReader((HERE / "missive_art_install.csv").open(encoding="utf-8")))
-    dest = ROOT / "assets" / "missives"
+    dest = ROOT / "assets" / "2D" / "ui" / "missive_board"
     dest.mkdir(parents=True, exist_ok=True)
     installed = {}
     for r in rows:
@@ -486,7 +486,7 @@ def install_missive() -> int:
             cw, chh, piece = crop_rgba(w, rgba, box)
             small = resize_rgba(cw, chh, piece, tw, th)
         encode_png(dest / ("%s.png" % key), tw, th, 4, bytes(small))
-        installed[key] = "res://assets/missives/%s.png" % key
+        installed[key] = "res://assets/2D/ui/missive_board/%s.png" % key
         print("  %-6s %-9s %dx%d" % (art_id, key, tw, th))
     table = ROOT / "data" / "missive_art.csv"
     lines = list(csv.DictReader(table.open(encoding="utf-8")))
@@ -526,7 +526,7 @@ def install_compass(size: int = COMPASS_PX) -> int:
     tw, th = max(1, round(cw * scale)), max(1, round(chh * scale))
     small = resize_rgba(cw, chh, rgba, tw, th)
     canvas = pad_square(tw, th, small, size)
-    dest = ROOT / "assets" / "ui"
+    dest = ROOT / "assets" / "2D" / "ui" / "compass"
     dest.mkdir(parents=True, exist_ok=True)
     encode_png(dest / "compass.png", size, size, 4, bytes(canvas))
     print("  I-73   compass  %dx%d in %d (from %s)" % (tw, th, size, hits[-1].name))
@@ -566,7 +566,7 @@ BUILDING_ICON_PX = 128
 
 def install_buildings(size: int = BUILDING_ICON_PX) -> int:
     codes = {r["art_id"]: r["building_code"] for r in csv.DictReader((HERE / "building_art.csv").open(encoding="utf-8"))}
-    return _install_icon_cutouts(codes, ROOT / "assets" / "icons", "bld_%s.png", size)
+    return _install_icon_cutouts(codes, ROOT / "assets" / "2D" / "icons" / "buildings", "bld_%s.png", size)
 
 
 ## The card's colour goods icons (library G- rendered on [C-ICON] in the v2
@@ -576,7 +576,7 @@ GOODS_ICON_PX = 64
 
 def install_goods_icons(size: int = GOODS_ICON_PX) -> int:
     codes = {r["art_id"]: r["good_code"] for r in csv.DictReader((HERE / "goods_art.csv").open(encoding="utf-8"))}
-    return _install_icon_cutouts(codes, ROOT / "assets" / "goods" / "colour", "%s.png", size)
+    return _install_icon_cutouts(codes, ROOT / "assets" / "2D" / "icons" / "goods", "%s.png", size)
 
 
 ## House and kingdom arms (A-, owner 2026-09-15; arms_prompts.py, arms_art.csv).
@@ -668,10 +668,10 @@ def flood_ground(w: int, h: int, ch: int, px: bytes, tolerance: int = ARMS_GROUN
 
 
 def install_arms(size: int = ARMS_PX) -> int:
-    """Into assets/arms/<pack>/: the pack is ARMS_PACK in the environment,
+    """Into assets/2D/arms/<pack>/: the pack is ARMS_PACK in the environment,
     else data/maps.csv's default."""
     rows = list(csv.DictReader((HERE / "arms_art.csv").open(encoding="utf-8")))
-    dest = ROOT / "assets" / "arms" / (os.environ.get("ARMS_PACK", "") or default_pack())
+    dest = ROOT / "assets" / "2D" / "arms" / (os.environ.get("ARMS_PACK", "") or default_pack())
     dest.mkdir(parents=True, exist_ok=True)
     done = 0
     for r in rows:

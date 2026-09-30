@@ -325,7 +325,7 @@ func test_a_manor_card_shows_its_painting_its_facts_as_icons_and_its_output_rate
 	await wait_process_frames(2)
 	var card := MapObjects.manor_card(Game.data, Game.state, cell)
 	var path := String(card["painting"])
-	assert_string_contains(path, "res://assets/manors/paint/", "every manor names its painting")
+	assert_string_contains(path, "res://assets/2D/paintings/estates/", "every manor names its painting")
 	assert_eq(p.painting_box().visible, UiPalette.load_art(path) != null, "shown when the art is installed")
 	if p.painting_box().visible:
 		# Cut to its scene (2026-09-28): a band ui_manor_painting_aspect wide

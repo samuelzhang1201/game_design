@@ -49,7 +49,7 @@ func _capital_xz() -> Vector2:
 
 func test_the_default_path_is_the_packs_built_scene() -> void:
 	assert_eq(Map3DView.scene_path_for(Game.data.map_id),
-		"res://assets/map3d/%s/world.tscn" % Game.data.map_id)
+		"res://assets/3D/terrain/%s/world.tscn" % Game.data.map_id)
 
 
 func test_nothing_loads_until_the_view_is_first_shown() -> void:

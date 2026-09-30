@@ -1,3 +1,3 @@
 key,texture,notes
-foul,res://assets/couriers/paint/foul.png,"spec 2026-09-28-courier-art §4: library B-46, a courier held up by foul weather — the card shows it when the weather where he is slows a rider to courier_paint_foul_permille or less"
-delivered,res://assets/couriers/paint/delivered.png,"library B-47, a courier delivering to a camp — heads a RECEIPT on the Missive board's reading desk (a courier vanishes on delivery, so his card never shows it)"
+foul,res://assets/2D/paintings/couriers/foul.png,"spec 2026-09-28-courier-art §4: library B-46, a courier held up by foul weather — the card shows it when the weather where he is slows a rider to courier_paint_foul_permille or less"
+delivered,res://assets/2D/paintings/couriers/delivered.png,"library B-47, a courier delivering to a camp — heads a RECEIPT on the Missive board's reading desk (a courier vanishes on delivery, so his card never shows it)"

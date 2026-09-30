@@ -1,5 +1,5 @@
 """SPIKE: download Poly Haven models (glTF, 1k textures) into
-assets/map3d/sources/polyhaven/models/<id>/ — the same files the Blender MCP's Poly Haven
+assets/3D/terrain/model_wip/polyhaven/models/<id>/ — the same files the Blender MCP's Poly Haven
 download fetches, through the public API (https://api.polyhaven.com, CC0).
   python3 tools/map3d/fetch_polyhaven.py fir_tree_01 tree_small_02 ...
 """
@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-DEST = os.path.join(ROOT, "assets", "map3d", "sources", "polyhaven", "models")
+DEST = os.path.join(ROOT, "assets", "3D", "terrain", "model_wip", "polyhaven", "models")
 
 
 def get(url):

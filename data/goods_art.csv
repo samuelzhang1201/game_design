@@ -1,72 +1,72 @@
 good_code,texture,icon,notes
-preserved_food,res://assets/goods/preserved_food.png,res://assets/goods/colour/preserved_food.png,
-cloth,res://assets/goods/cloth.png,res://assets/goods/colour/cloth.png,
-glass,res://assets/goods/glass.png,res://assets/goods/colour/glass.png,
-grain,res://assets/goods/grain.png,res://assets/goods/colour/grain.png,
-liquor,res://assets/goods/liquor.png,res://assets/goods/colour/liquor.png,
-boots,res://assets/goods/boots.png,res://assets/goods/colour/boots.png,
-ink,res://assets/goods/ink.png,res://assets/goods/colour/ink.png,
-hemp,res://assets/goods/hemp.png,res://assets/goods/colour/hemp.png,
-candles,res://assets/goods/candles.png,res://assets/goods/colour/candles.png,
-honey,res://assets/goods/honey.png,res://assets/goods/colour/honey.png,
-coal,res://assets/goods/coal.png,res://assets/goods/colour/coal.png,
-iron,res://assets/goods/iron.png,res://assets/goods/colour/iron.png,
-wood,res://assets/goods/wood.png,res://assets/goods/colour/wood.png,
-cheese,res://assets/goods/cheese.png,res://assets/goods/colour/cheese.png,
-silver,res://assets/goods/silver.png,res://assets/goods/colour/silver.png,
-dyes,res://assets/goods/dyes.png,res://assets/goods/colour/dyes.png,
-paper,res://assets/goods/paper.png,res://assets/goods/colour/paper.png,
-slaves,res://assets/goods/slaves.png,res://assets/goods/colour/slaves.png,
-ceramics,res://assets/goods/ceramics.png,res://assets/goods/colour/ceramics.png,
-clay,res://assets/goods/clay.png,res://assets/goods/colour/clay.png,
-gemstones,res://assets/goods/gemstones.png,res://assets/goods/colour/gemstones.png,
-cattle,res://assets/goods/cattle.png,res://assets/goods/colour/cattle.png,
-white_sand,res://assets/goods/white_sand.png,res://assets/goods/colour/white_sand.png,
-wine,res://assets/goods/wine.png,res://assets/goods/colour/wine.png,
-leather,res://assets/goods/leather.png,res://assets/goods/colour/leather.png,
-tin,res://assets/goods/tin.png,res://assets/goods/colour/tin.png,
-sugarcane,res://assets/goods/sugarcane.png,res://assets/goods/colour/sugarcane.png,
-marble,res://assets/goods/marble.png,res://assets/goods/colour/marble.png,
-furs,res://assets/goods/furs.png,res://assets/goods/colour/furs.png,
-elephants,res://assets/goods/elephants.png,res://assets/goods/colour/elephants.png,
-game,res://assets/goods/game.png,res://assets/goods/colour/game.png,
-soap,res://assets/goods/soap.png,res://assets/goods/colour/soap.png,
-harnesses,res://assets/goods/harnesses.png,res://assets/goods/colour/harnesses.png,
-amber,res://assets/goods/amber.png,res://assets/goods/colour/amber.png,
-tools,res://assets/goods/tools.png,res://assets/goods/colour/tools.png,
-jewelry,res://assets/goods/jewelry.png,res://assets/goods/colour/jewelry.png,
-copper,res://assets/goods/copper.png,res://assets/goods/colour/copper.png,
-sheep,res://assets/goods/sheep.png,res://assets/goods/colour/sheep.png,
-arms,,res://assets/goods/colour/arms.png,no map art yet: the card shows its colour icon (2026-09-14)
-beer,,res://assets/goods/colour/beer.png,no map art yet: the card shows its colour icon (2026-09-14)
-books,,res://assets/goods/colour/books.png,no map art yet: the card shows its colour icon (2026-09-14)
-dates,,res://assets/goods/colour/dates.png,no map art yet: the card shows its colour icon (2026-09-14)
-fish,,res://assets/goods/colour/fish.png,no map art yet: the card shows its colour icon (2026-09-14)
-salt,,res://assets/goods/colour/salt.png,no map art yet: the card shows its colour icon (2026-09-14)
-ships,,res://assets/goods/colour/ships.png,no map art yet: the card shows its colour icon (2026-09-14)
-stone,,res://assets/goods/colour/stone.png,no map art yet: the card shows its colour icon (2026-09-14)
-artillery,,res://assets/goods/colour/artillery.png,library G-47 (2026-09-29): no map art yet: the card shows its colour icon
-garments,,res://assets/goods/colour/garments.png,library G-48 (2026-09-29): no map art yet: the card shows its colour icon
-gold,,res://assets/goods/colour/gold.png,library G-49 (2026-09-29): no map art yet: the card shows its colour icon
-olives,,res://assets/goods/colour/olives.png,library G-50 (2026-09-29): no map art yet: the card shows its colour icon
-horses,,res://assets/goods/colour/horses.png,library G-51 (2026-09-29): no map art yet: the card shows its colour icon
-camels,,res://assets/goods/colour/camels.png,library G-52 (2026-09-29): no map art yet: the card shows its colour icon
-pearls,,res://assets/goods/colour/pearls.png,library G-53 (2026-09-29): no map art yet: the card shows its colour icon
-incense,,res://assets/goods/colour/incense.png,library G-54 (2026-09-29): no map art yet: the card shows its colour icon
-silk,,res://assets/goods/colour/silk.png,library G-55 (2026-09-29): no map art yet: the card shows its colour icon
-spices,,res://assets/goods/colour/spices.png,library G-56 (2026-09-29): no map art yet: the card shows its colour icon
-tar,,res://assets/goods/colour/tar.png,library G-57 (2026-09-29): no map art yet: the card shows its colour icon
-saltpeter,,res://assets/goods/colour/saltpeter.png,library G-58 (2026-09-29): no map art yet: the card shows its colour icon
-oil,,res://assets/goods/colour/oil.png,library G-59 (2026-09-29): no map art yet: the card shows its colour icon
-mahogany,,res://assets/goods/colour/mahogany.png,library G-60 (2026-09-29): no map art yet: the card shows its colour icon
-whales,,res://assets/goods/colour/whales.png,library G-61 (2026-09-29): no map art yet: the card shows its colour icon
-tea,,res://assets/goods/colour/tea.png,library G-62 (2026-09-29): no map art yet: the card shows its colour icon
-tobacco,,res://assets/goods/colour/tobacco.png,library G-63 (2026-09-29): no map art yet: the card shows its colour icon
-ropes,,res://assets/goods/colour/ropes.png,library G-64 (2026-09-29): no map art yet: the card shows its colour icon
-sails,,res://assets/goods/colour/sails.png,library G-65 (2026-09-29): no map art yet: the card shows its colour icon
-barrels,,res://assets/goods/colour/barrels.png,library G-66 (2026-09-29): no map art yet: the card shows its colour icon
-bronze,,res://assets/goods/colour/bronze.png,library G-67 (2026-09-29): no map art yet: the card shows its colour icon
-gunpowder,,res://assets/goods/colour/gunpowder.png,library G-68 (2026-09-29): no map art yet: the card shows its colour icon
-coins,,res://assets/goods/colour/coins.png,library G-69 (2026-09-29): no map art yet: the card shows its colour icon
-vinegar,,res://assets/goods/colour/vinegar.png,library G-70 (2026-09-29): no map art yet: the card shows its colour icon
-perfume,,res://assets/goods/colour/perfume.png,library G-71 (2026-09-29): no map art yet: the card shows its colour icon
+preserved_food,res://assets/2D/goods/marks/preserved_food.png,res://assets/2D/icons/goods/preserved_food.png,
+cloth,res://assets/2D/goods/marks/cloth.png,res://assets/2D/icons/goods/cloth.png,
+glass,res://assets/2D/goods/marks/glass.png,res://assets/2D/icons/goods/glass.png,
+grain,res://assets/2D/goods/marks/grain.png,res://assets/2D/icons/goods/grain.png,
+liquor,res://assets/2D/goods/marks/liquor.png,res://assets/2D/icons/goods/liquor.png,
+boots,res://assets/2D/goods/marks/boots.png,res://assets/2D/icons/goods/boots.png,
+ink,res://assets/2D/goods/marks/ink.png,res://assets/2D/icons/goods/ink.png,
+hemp,res://assets/2D/goods/marks/hemp.png,res://assets/2D/icons/goods/hemp.png,
+candles,res://assets/2D/goods/marks/candles.png,res://assets/2D/icons/goods/candles.png,
+honey,res://assets/2D/goods/marks/honey.png,res://assets/2D/icons/goods/honey.png,
+coal,res://assets/2D/goods/marks/coal.png,res://assets/2D/icons/goods/coal.png,
+iron,res://assets/2D/goods/marks/iron.png,res://assets/2D/icons/goods/iron.png,
+wood,res://assets/2D/goods/marks/wood.png,res://assets/2D/icons/goods/wood.png,
+cheese,res://assets/2D/goods/marks/cheese.png,res://assets/2D/icons/goods/cheese.png,
+silver,res://assets/2D/goods/marks/silver.png,res://assets/2D/icons/goods/silver.png,
+dyes,res://assets/2D/goods/marks/dyes.png,res://assets/2D/icons/goods/dyes.png,
+paper,res://assets/2D/goods/marks/paper.png,res://assets/2D/icons/goods/paper.png,
+slaves,res://assets/2D/goods/marks/slaves.png,res://assets/2D/icons/goods/slaves.png,
+ceramics,res://assets/2D/goods/marks/ceramics.png,res://assets/2D/icons/goods/ceramics.png,
+clay,res://assets/2D/goods/marks/clay.png,res://assets/2D/icons/goods/clay.png,
+gemstones,res://assets/2D/goods/marks/gemstones.png,res://assets/2D/icons/goods/gemstones.png,
+cattle,res://assets/2D/goods/marks/cattle.png,res://assets/2D/icons/goods/cattle.png,
+white_sand,res://assets/2D/goods/marks/white_sand.png,res://assets/2D/icons/goods/white_sand.png,
+wine,res://assets/2D/goods/marks/wine.png,res://assets/2D/icons/goods/wine.png,
+leather,res://assets/2D/goods/marks/leather.png,res://assets/2D/icons/goods/leather.png,
+tin,res://assets/2D/goods/marks/tin.png,res://assets/2D/icons/goods/tin.png,
+sugarcane,res://assets/2D/goods/marks/sugarcane.png,res://assets/2D/icons/goods/sugarcane.png,
+marble,res://assets/2D/goods/marks/marble.png,res://assets/2D/icons/goods/marble.png,
+furs,res://assets/2D/goods/marks/furs.png,res://assets/2D/icons/goods/furs.png,
+elephants,res://assets/2D/goods/marks/elephants.png,res://assets/2D/icons/goods/elephants.png,
+game,res://assets/2D/goods/marks/game.png,res://assets/2D/icons/goods/game.png,
+soap,res://assets/2D/goods/marks/soap.png,res://assets/2D/icons/goods/soap.png,
+harnesses,res://assets/2D/goods/marks/harnesses.png,res://assets/2D/icons/goods/harnesses.png,
+amber,res://assets/2D/goods/marks/amber.png,res://assets/2D/icons/goods/amber.png,
+tools,res://assets/2D/goods/marks/tools.png,res://assets/2D/icons/goods/tools.png,
+jewelry,res://assets/2D/goods/marks/jewelry.png,res://assets/2D/icons/goods/jewelry.png,
+copper,res://assets/2D/goods/marks/copper.png,res://assets/2D/icons/goods/copper.png,
+sheep,res://assets/2D/goods/marks/sheep.png,res://assets/2D/icons/goods/sheep.png,
+arms,,res://assets/2D/icons/goods/arms.png,no map art yet: the card shows its colour icon (2026-09-14)
+beer,,res://assets/2D/icons/goods/beer.png,no map art yet: the card shows its colour icon (2026-09-14)
+books,,res://assets/2D/icons/goods/books.png,no map art yet: the card shows its colour icon (2026-09-14)
+dates,,res://assets/2D/icons/goods/dates.png,no map art yet: the card shows its colour icon (2026-09-14)
+fish,,res://assets/2D/icons/goods/fish.png,no map art yet: the card shows its colour icon (2026-09-14)
+salt,,res://assets/2D/icons/goods/salt.png,no map art yet: the card shows its colour icon (2026-09-14)
+ships,,res://assets/2D/icons/goods/ships.png,no map art yet: the card shows its colour icon (2026-09-14)
+stone,,res://assets/2D/icons/goods/stone.png,no map art yet: the card shows its colour icon (2026-09-14)
+artillery,,res://assets/2D/icons/goods/artillery.png,library G-47 (2026-09-29): no map art yet: the card shows its colour icon
+garments,,res://assets/2D/icons/goods/garments.png,library G-48 (2026-09-29): no map art yet: the card shows its colour icon
+gold,,res://assets/2D/icons/goods/gold.png,library G-49 (2026-09-29): no map art yet: the card shows its colour icon
+olives,,res://assets/2D/icons/goods/olives.png,library G-50 (2026-09-29): no map art yet: the card shows its colour icon
+horses,,res://assets/2D/icons/goods/horses.png,library G-51 (2026-09-29): no map art yet: the card shows its colour icon
+camels,,res://assets/2D/icons/goods/camels.png,library G-52 (2026-09-29): no map art yet: the card shows its colour icon
+pearls,,res://assets/2D/icons/goods/pearls.png,library G-53 (2026-09-29): no map art yet: the card shows its colour icon
+incense,,res://assets/2D/icons/goods/incense.png,library G-54 (2026-09-29): no map art yet: the card shows its colour icon
+silk,,res://assets/2D/icons/goods/silk.png,library G-55 (2026-09-29): no map art yet: the card shows its colour icon
+spices,,res://assets/2D/icons/goods/spices.png,library G-56 (2026-09-29): no map art yet: the card shows its colour icon
+tar,,res://assets/2D/icons/goods/tar.png,library G-57 (2026-09-29): no map art yet: the card shows its colour icon
+saltpeter,,res://assets/2D/icons/goods/saltpeter.png,library G-58 (2026-09-29): no map art yet: the card shows its colour icon
+oil,,res://assets/2D/icons/goods/oil.png,library G-59 (2026-09-29): no map art yet: the card shows its colour icon
+mahogany,,res://assets/2D/icons/goods/mahogany.png,library G-60 (2026-09-29): no map art yet: the card shows its colour icon
+whales,,res://assets/2D/icons/goods/whales.png,library G-61 (2026-09-29): no map art yet: the card shows its colour icon
+tea,,res://assets/2D/icons/goods/tea.png,library G-62 (2026-09-29): no map art yet: the card shows its colour icon
+tobacco,,res://assets/2D/icons/goods/tobacco.png,library G-63 (2026-09-29): no map art yet: the card shows its colour icon
+ropes,,res://assets/2D/icons/goods/ropes.png,library G-64 (2026-09-29): no map art yet: the card shows its colour icon
+sails,,res://assets/2D/icons/goods/sails.png,library G-65 (2026-09-29): no map art yet: the card shows its colour icon
+barrels,,res://assets/2D/icons/goods/barrels.png,library G-66 (2026-09-29): no map art yet: the card shows its colour icon
+bronze,,res://assets/2D/icons/goods/bronze.png,library G-67 (2026-09-29): no map art yet: the card shows its colour icon
+gunpowder,,res://assets/2D/icons/goods/gunpowder.png,library G-68 (2026-09-29): no map art yet: the card shows its colour icon
+coins,,res://assets/2D/icons/goods/coins.png,library G-69 (2026-09-29): no map art yet: the card shows its colour icon
+vinegar,,res://assets/2D/icons/goods/vinegar.png,library G-70 (2026-09-29): no map art yet: the card shows its colour icon
+perfume,,res://assets/2D/icons/goods/perfume.png,library G-71 (2026-09-29): no map art yet: the card shows its colour icon

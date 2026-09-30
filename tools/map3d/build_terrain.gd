@@ -13,7 +13,7 @@ extends RefCounted
 ## format_version): Map3DView reads it rather than the git-ignored, .gdignored
 ## bake/. The build is DATA only — no sun, sky, sea or cameras (2026-09-20).
 
-const TEX := "res://assets/map3d/textures"
+const TEX := "res://assets/3D/terrain/textures"
 ## The pack to build (build_world.gd's --map); "" is data/maps.csv's default.
 static var map_id := ""
 
@@ -69,7 +69,7 @@ static func map() -> String:
 
 
 ## Where the built scene, its assets and region data go: the pack's
-## maps.csv map3d_dir, default res://assets/map3d/<map>.
+## maps.csv map3d_dir, default res://assets/3D/terrain/<map>.
 static func root() -> String:
 	return DataRepository.map3d_dir_of(map())
 

@@ -32,7 +32,7 @@ func test_no_spoken_numbers_in_new_templates() -> void:
 			assert_false(has_digit, key + " contains a literal digit: " + text)
 
 func test_round_table_portrait_resolves() -> void:
-	assert_true(FileAccess.file_exists("res://assets/portraits/round_table.png"))
+	assert_true(FileAccess.file_exists("res://assets/2D/portraits/cast/round_table.png"))
 	var p := CharacterPortrait.instantiate_for("round_table")
 	add_child_autofree(p)
 	assert_string_contains(p.scene_file_path, "round_table.tscn")

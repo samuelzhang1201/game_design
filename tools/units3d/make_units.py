@@ -2,7 +2,7 @@
 
   blender -b --factory-startup --python tools/units3d/make_units.py [-- CODE ...]
 
-Reads data/unit_models.csv and writes assets/units3d/<code>.glb — one glTF
+Reads data/unit_models.csv and writes assets/3D/units/<code>/<code>.glb — one glTF
 per unit holding TWO things:
 
   * the retopologised, texture-baked figure, skinned to a skeleton,
@@ -35,7 +35,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from unit_common import (ROOT, OUT, SRC, rows, clear, import_joined, place,
+from unit_common import (ROOT, OUT, SRC, glb_path, rows, clear, import_joined, place,
                          bounds, tri_count, apply_transform, log)
 
 BAKE_PX = 2048
@@ -949,7 +949,7 @@ def main():
         stash(arm, acts)
         bpy.context.scene.frame_end = int(max(a.frame_range[1] for a in acts))
 
-        path = os.path.join(OUT, code + ".glb")
+        path = glb_path(OUT, code)
         export([arm, low], path)
         manifest[code] = {
             "label": row["label"],

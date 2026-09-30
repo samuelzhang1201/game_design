@@ -7,7 +7,7 @@
 Each file is uploaded to ComfyUI's input folder, run through
 post_cutout_template.json (BiRefNet cutout -> alpha -> lanczos resize), and
 the RGBA PNG is saved under assets/flux/out/game/<tier>/<ID>.png — never
-into assets/portraits/, so nothing in the game changes until you copy it.
+into assets/2D/portraits/cast/, so nothing in the game changes until you copy it.
 
 Tiers (sizes follow the game's existing art: scripts/ui/character_portrait.gd
 draws 48x48 design px chips from 96x96 files, and full-body art is 660 px tall):

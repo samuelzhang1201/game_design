@@ -6,7 +6,7 @@ noise; these are pictures of the ground as seen from 200 m up).
 
     python3 tools/map3d/pack_aerial.py SOURCE.png KEY [--height-gain G] [--rough R]
 
-writes assets/map3d/textures/<KEY>_alb_ht.png (albedo + height in A) and
+writes assets/3D/terrain/textures/<KEY>_alb_ht.png (albedo + height in A) and
 <KEY>_nrm_rgh.png (OpenGL normal + roughness in A) at 2048 px, the size every
 layer of Terrain3D's texture array shares (pack_textures.py's SIZE).
 
@@ -24,7 +24,7 @@ import numpy as np
 from PIL import Image
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-OUT = os.path.join(ROOT, "assets", "map3d", "textures")
+OUT = os.path.join(ROOT, "assets", "3D", "terrain", "textures")
 SIZE = 2048
 
 
@@ -78,7 +78,7 @@ type="CompressedTexture2D"
 
 [deps]
 
-source_file="res://assets/map3d/textures/{name}"
+source_file="res://assets/3D/terrain/textures/{name}"
 
 [params]
 

@@ -26,7 +26,7 @@ the LLM persona prompts are written from. Skills vocabulary:
 - **House:** Valorin, the royal line of {player_realm}. Your first wife, of House
   O-kala, died years ago; your second marriage merged the crown with the
   Weighhouse banking clan.
-- Portrait: `assets/portraits/you.png` (chip) / `assets/portraits/full/you.png` (full).
+- Portrait: `assets/2D/portraits/cast/you.png` (chip) / `assets/2D/portraits/cast/full/you.png` (full).
 
 ## Numeric attributes (all roles)
 
@@ -276,8 +276,8 @@ contains, in order:
 Portraits come from the art library's `K-` chapter (one entry per character
 id, looks and clothing from its `**外貌**` line), mapped by
 `assets/flux/cast_art.csv` and installed by `assets/flux/install_map_art.py
-cast` into `assets/portraits/<id>.png` (96 px chip, `[C-BUST]`) and
-`assets/portraits/full/<id>.png` (660 px figure, `[C-FULL]`). They keep their
+cast` into `assets/2D/portraits/cast/<id>.png` (96 px chip, `[C-BUST]`) and
+`assets/2D/portraits/cast/full/<id>.png` (660 px figure, `[C-FULL]`). They keep their
 colour. Roles without art render as seat-coloured initial chips. (Superseded:
 deriving chips from provided full-body art with `tools/make_portrait_chips.gd`;
 the tool is still in the repo.) The audience window cuts the full figure head

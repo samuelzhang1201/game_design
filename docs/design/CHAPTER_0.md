@@ -194,7 +194,7 @@ lord_gold 861    unrest 0           legitimacy 50   contentment 50
 | 动乱度 35 起步 | 0 起步 | `WorldLedger.seed_metrics` 就是 0。动乱在本章里只能由玩家自己制造 |
 | "行省粮仓储备""城镇贸易收入"作为变量 | 王室民用池、国库、动乱、民心 | 引擎没有"行省粮仓"这种状态——省是求和出来的，`metrics.grain` 是全realm的民用池 |
 | 2,568 条路径、四结局全可达（靠外部脚本遍历） | `test_chapter_zero.gd` 遍历可达性、分支兜底、选项不可能全被关掉、整章可通关 | 校验跟着代码走，随 `./run_tests.sh` 一起跑 |
-| 20 张油画风插图，另有 6 张角色参考 | 21 张插图（一拍一张），本作的彩铅风；角色参考不做 | 21 个角色的立绘（chip + full）**已经全部存在**于 `assets/portraits/`。风格必须是 `STYLE_CORE.txt` 的彩铅，"写实历史油画"和游戏里其他任何一张图都不搭 |
+| 20 张油画风插图，另有 6 张角色参考 | 21 张插图（一拍一张），本作的彩铅风；角色参考不做 | 21 个角色的立绘（chip + full）**已经全部存在**于 `assets/2D/portraits/cast/`。风格必须是 `STYLE_CORE.txt` 的彩铅，"写实历史油画"和游戏里其他任何一张图都不搭 |
 
 ### 两处死内容，改成了玩家的选择
 
@@ -220,17 +220,17 @@ lord_gold 861    unrest 0           legitimacy 50   contentment 50
 python3 assets/flux/generate.py --build-csv          # 库 → prompts.csv（已做）
 python3 assets/flux/generate.py --ids V-35,V-36 --variants 3   # 先出两张看风格
 python3 assets/flux/generate.py --chapter V --variants 2       # 全章
-python3 assets/flux/install_map_art.py events        # → assets/events/<event_id>.png，1280×533
+python3 assets/flux/install_map_art.py events        # → assets/2D/events/illustrations/<event_id>.png，1280×533
 ```
 
-装好之后不需要改任何代码：`ConversationScene._show_event_art` 按 `assets/events/<event_id>.png` 找图，找不到就不画那条横幅——所以新克隆的仓库不会因为缺图而坏掉。
+装好之后不需要改任何代码：`ConversationScene._show_event_art` 按 `assets/2D/events/illustrations/<event_id>.png` 找图，找不到就不画那条横幅——所以新克隆的仓库不会因为缺图而坏掉。
 
 一致性三条：
 - 人物外貌照抄 `art_prompt_library.md` §2.6 的 `**外貌**` 行；
 - 纹章只用地图包自己的（红底金浑天仪 / 红底银镰刀 / 一捆麦子）；
 - 画面里不能有文字——账簿、petition、旗帜最容易诱发，出图后专门查。
 
-人物美术**已经齐了**：本章出现的 10 个角色在 `assets/portraits/<id>.png`（96 px 头像）和 `assets/portraits/full/<id>.png`（1024 px 全身）都有，`cast_art.csv` 的 `K-` 映射早就建好。
+人物美术**已经齐了**：本章出现的 10 个角色在 `assets/2D/portraits/cast/<id>.png`（96 px 头像）和 `assets/2D/portraits/cast/full/<id>.png`（1024 px 全身）都有，`cast_art.csv` 的 `K-` 映射早就建好。
 
 ---
 

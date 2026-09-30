@@ -16,7 +16,7 @@ func test_bgm_plays_from_startup_and_loops() -> void:
 	await wait_frames(2)
 	var bgm := r.bgm_player()
 	assert_not_null(bgm, "BGM player exists from app start")
-	assert_not_null(bgm.stream, "assets/BGM.mp3 loaded")
+	assert_not_null(bgm.stream, "assets/audio/BGM.mp3 loaded")
 	assert_true((bgm.stream as AudioStreamMP3).loop, "track loops")
 	assert_true(bgm.playing, "music is playing on the menu")
 	# Survives screen swaps: GameRoot owns it, screens come and go.

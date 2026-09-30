@@ -14,7 +14,7 @@ const MENU_SCENE := preload("res://scenes/main_menu.tscn")
 const CONVERSATION_SCENE := preload("res://scenes/conversation.tscn")
 const COURT_SCENE := preload("res://scenes/court.tscn")
 
-const BGM_PATH := "res://assets/BGM.mp3"
+const BGM_PATH := "res://assets/audio/BGM.mp3"
 const BGM_VOLUME_DB := -12.0
 
 var state: State = State.MENU

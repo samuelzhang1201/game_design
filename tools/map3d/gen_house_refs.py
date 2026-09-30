@@ -1,6 +1,6 @@
 """Render the settlement buildings' photoreal REFERENCE images on the LOCAL
 ComfyUI: one Flux.2 klein 4B picture per type from
-assets/flux/house_ref_prompts.csv into assets/flux/out/house_ref/<type>.png.
+assets/flux/house_ref_prompts.csv into assets/3D/buildings/<type>/model_wip/<type>_ref.png.
 
   python3 tools/map3d/gen_house_refs.py [--only a,b] [--seed N] [--force]
 
@@ -22,7 +22,7 @@ import uuid
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROMPTS = os.path.join(ROOT, "assets", "flux", "house_ref_prompts.csv")
-REF_DIR = os.path.join(ROOT, "assets", "flux", "out", "house_ref")
+BUILDINGS = os.path.join(ROOT, "assets", "3D", "buildings")
 HOST = os.environ.get("COMFY_HOST", "http://127.0.0.1:8188")
 COMFY = os.path.expanduser(os.environ.get(
     "COMFY_ROOT", "~/ComfyUI-Installs/GameDev/ComfyUI"))
@@ -94,10 +94,11 @@ def main():
     args = sys.argv[1:]
     only = set(args[args.index("--only") + 1].split(",")) if "--only" in args else set()
     seed = int(args[args.index("--seed") + 1]) if "--seed" in args else SEED
-    os.makedirs(REF_DIR, exist_ok=True)
     for row in rows(only):
         t = row["type"]
-        ref = os.path.join(REF_DIR, t + ".png")
+        wip = os.path.join(BUILDINGS, t, "model_wip")
+        os.makedirs(wip, exist_ok=True)
+        ref = os.path.join(wip, t + "_ref.png")
         if os.path.exists(ref) and "--force" not in args:
             print("keep", ref)
             continue

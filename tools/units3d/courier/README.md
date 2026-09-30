@@ -1,7 +1,7 @@
 # The courier rider (sub-project D)
 
 The mounted courier the 3D map draws for every `ordinary` and `secret` courier
-(`data/courier_art.csv`): the owner's design C4 (`assets/flux/out/courier_designs/zimage_C4_s2.png`,
+(`data/courier_art.csv`): the owner's design C4 (`assets/3D/units/courier/model_wip/designs/zimage_C4_s2.png`,
 spec `docs/superpowers/specs/2026-09-28-courier-art-design.md` §2) — a herald on a white dapple
 horse, blue tabard with gold shoulder pieces, grey hat and feather, dispatch case, and a pennon on a
 staff — as the owner modelled it in **Tripo 3D** from that pick.
@@ -14,25 +14,25 @@ staff — as the owner modelled it in **Tripo 3D** from that pick.
 ```
 
 ~90 s headless (Metal GPU for the bakes). It builds the model, rigs it, authors the actions,
-measures the stride, and writes `assets/units3d/courier.glb` and the `courier` entry of
-`assets/units3d/units3d.json`; the rigged file is saved to
-`assets/units3d/ai_src/courier/courier_rigged_tripo.blend` for shots. Then:
+measures the stride, and writes `assets/3D/units/courier/courier.glb` and the `courier` entry of
+`assets/3D/units/units3d.json`; the rigged file is saved to
+`assets/3D/units/courier/model_wip/courier_rigged_tripo.blend` for shots. Then:
 
 ```
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . --import
 ```
 
-`assets/units3d/courier.glb.import` is committed with `meshes/force_disable_compression=true`,
+`assets/3D/units/courier/courier.glb.import` is committed with `meshes/force_disable_compression=true`,
 `animation/fps=24` and both clips set to loop (`_subresources`); Godot extracts the embedded atlas
-as `assets/units3d/courier_courier_atlas*.jpg`, which are git-ignored like every unit's.
+as `assets/3D/units/courier/courier_courier_atlas*.jpg`, which are git-ignored like every unit's.
 `data/courier_art.csv`'s `stride_m` is the `STRIDE_M` the build prints (2.338).
 
 ## Sources and licences
 
 | source | where | licence |
 | --- | --- | --- |
-| **The Tripo 3D courier**: `textured.glb` (one fused mesh, 93k tris, colour + normal + metal-roughness at 4096 px) and `parts.glb` (the same shape as 43 untextured parts) | `assets/units3d/ai_src/courier/tripo/courier/` (git-ignored) | the owner's own generation in Tripo 3D from our pick; commercial rights per the owner's Tripo plan. The raw Tripo files stay git-ignored. |
-| The design pick | `assets/flux/out/courier_designs/zimage_C4_s2.png` | our own render |
+| **The Tripo 3D courier**: `textured.glb` (one fused mesh, 93k tris, colour + normal + metal-roughness at 4096 px) and `parts.glb` (the same shape as 43 untextured parts) | `assets/3D/units/courier/model_wip/tripo/courier/` (git-ignored) | the owner's own generation in Tripo 3D from our pick; commercial rights per the owner's Tripo plan. The raw Tripo files stay git-ignored. |
+| The design pick | `assets/3D/units/courier/model_wip/designs/zimage_C4_s2.png` | our own render |
 | The horse bone names and the rig / weight helpers | `tools/units3d/cavalry_scan.py` (`rig_spec`'s names), `model_cavalry.py`, `make_units.py` | this repository |
 
 ## The scripts

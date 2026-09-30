@@ -12,14 +12,14 @@ extends Control
 ##      tooltip. Remember Sprite2D positions from its center: place it at
 ##      (24, 24) to sit inside the 48x48 portrait box.
 ##
-## CHIP ART: assets/portraits/<id>.png are 96x96 chips, installed from the
+## CHIP ART: assets/2D/portraits/cast/<id>.png are 96x96 chips, installed from the
 ## library's K- renders by assets/flux/install_map_art.py cast (the old pixel
 ## art is retired). Roles without art fall back to a seat-colored initial.
 ##
 ## Instantiate via CharacterPortrait.instantiate_for(id) - it picks the
 ## character's own scene when one exists, else the base scene.
 ##
-## FULL-BODY ART: drop a real-alpha PNG at assets/portraits/full/<id>.png
+## FULL-BODY ART: drop a real-alpha PNG at assets/2D/portraits/cast/full/<id>.png
 ## (tools/clean_portrait_art.py turns raw exports into one) and the VN
 ## conversation stage uses it instead of the 4x-scaled chip. The 48x48 chip
 ## above is still what council/court screens show.
@@ -27,8 +27,8 @@ extends Control
 const PORTRAIT_SIZE := Vector2(96, 96)
 const SCENE_DIR := "res://scenes/characters/"
 const BASE_SCENE := SCENE_DIR + "character_portrait.tscn"
-const PNG_DIR := "res://assets/portraits/"
-const FULL_PNG_DIR := "res://assets/portraits/full/"
+const PNG_DIR := "res://assets/2D/portraits/cast/"
+const FULL_PNG_DIR := "res://assets/2D/portraits/cast/full/"
 
 const SEAT_COLORS := {
 	"chancellor": Color("4a6fa5"), "marshal": Color("a54a4a"),
@@ -140,7 +140,7 @@ static func opinion_summary(c: Character, count: int = 5) -> String:
 static func texture_for(id: String) -> Texture2D:
 	return _load_png(PNG_DIR + id + ".png")
 
-## Full-body art for the VN conversation stage (assets/portraits/full/<id>.png,
+## Full-body art for the VN conversation stage (assets/2D/portraits/cast/full/<id>.png,
 ## produced by tools/clean_portrait_art.py). Null when the character has none;
 ## callers fall back to the 48x48 chip.
 static func full_texture_for(id: String) -> Texture2D:
