@@ -514,6 +514,7 @@ map3d_wind_near_m,1500,"3D MAP wind: the crop's own waves (map3d_wind_wave_m) ou
 map3d_wind_mid_m,5000,"[2026-09-30, owner: 我并没有看到麦浪和树摇 — the waves were gone by 9 km, the opening view stands at ~24 km] 3D MAP wind: from here the broad gusts alone, full strength"
 map3d_wind_far_m,40000,"3D MAP wind: ...fading out by here (was 9000: nothing moved at the zooms the map is played at)"
 map3d_wind_far_scale,8,"3D MAP wind: the broad gusts are this many times the crop waves' size and speed — at the opening zoom a pixel is ~20 m, and a true-speed wave would not move one"
+map3d_wind_far_amp,2.0,"3D MAP wind: the broad gusts' strength against the crop waves' (a multiplier on field_amp and grass_amp far out) — the sun's daily round and the cloud shadows change the far view a great deal, and a faint gust drowns in them"
 map3d_wind_storm_gain,1.2,"3D MAP wind: how much harder the waves run in a wet or overcast province (the weather field's rain and overcast), 0 = the same everywhere"
 map3d_wind_tree_sway_m,2.2,3D MAP wind: how far a crown's top leans down the wind (world metres at the mesh's full height)
 map3d_wind_tree_hz,0.22,3D MAP wind: how many times a second a tree sways
