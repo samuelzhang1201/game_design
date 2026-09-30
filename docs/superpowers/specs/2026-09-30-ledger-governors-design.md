@@ -26,6 +26,12 @@ makes reassigning a real lever — the owner's to confirm; reading
 `sk_martial` instead would give 1000‰ (a one-cell change in
 `data/ledger_governance.csv`).
 
+The final review's one fix wave (2026-09-30, the controller's rulings, the
+owner asleep) changed the shapes marked **final review** below: skims kept
+per flow and an audit catching every skimmer of its flow (I1), the audit's
+account standing only beside the claim it audited (I2), unknown flows
+refused loudly (I3), and minors M1–M9.
+
 ## 1. The loop the player plays
 
 1. A flow the crown depends on — the war workshops, the supply lines — is
@@ -70,7 +76,7 @@ gives all his skill), `gov_opinion_step_permille` 5 (efficiency lost per
 opinion point below it, down to `min_permille`), `gov_skim_permille` 200
 (a venal governor's share), `gov_skim_integrity_below` 30 and
 `gov_skim_low_integrity_permille` 100 (a man of low integrity skims less
-but still skims, even without the trait), `gov_audit_gold` 15,
+but still skims, even without the trait),
 `gov_caught_opinion` −12, `gov_audited_opinion` −3,
 `gov_passed_over_opinion` −8, `gov_new_governor_opinion` 4.
 
@@ -98,22 +104,33 @@ whatever his integrity). No new trait.
   - Each plan row gains `governor`, `efficiency`, `skim`, `skimmed` (the
     truth), and `claimed` — what the governor REPORTS: the flow as if
     nothing were skimmed.
-  - `GameState.skims: Dictionary` character → whole gold skimmed so far
-    (saved; the debrief's record and the audit's evidence).
+  - `GameState.skims: Dictionary` character → {flow → whole gold skimmed
+    on that flow since an audit of it last caught him} (saved; the
+    debrief's record and the audit's evidence). **Per flow** (final
+    review I1): both flows are gold-valued (the workshop's make is gold of
+    strategic goods), and a save from before holds one number per man,
+    kept under `"unknown"`, which no audit finds.
 - **Orders**:
   - `GOVERNOR_SET {flow, character}` — a councillor (a seat holder) other
     than the current governor; cost row: the passed-over seat holder's
     opinion `gov_passed_over_opinion` and the new governor's
     `gov_new_governor_opinion`, each with its reason (invariant 4).
-  - `LEDGER_AUDIT {flow}` — cost `gov_audit_gold` from the treasury and the
-    audited governor's opinion `gov_audited_opinion` ("the crown's clerks
-    in his books"). It files a missive (`MissiveLog`, kind `audit`, column
-    `credible`, subject `{kind: "ledger", code: flow}`) with this month's
-    true figures, and when `GameState.skims[governor] > 0` since his last
-    audit: `GameState.caught[governor]` gains `{flow, day, amount}`, a
-    record line on his card (`GameState.records[id]`, a reason string like
-    every log: "Caught skimming the war workshops, spring of year 1"), and
-    `gov_caught_opinion` with its reason.
+  - `LEDGER_AUDIT {flow}` — its gold fee is the `LEDGER_AUDIT` row of
+    `order_costs.csv` (there is no `gov_audit_gold` key — final review M9),
+    and the audited governor's opinion `gov_audited_opinion` ("the crown's
+    clerks in his books"). It files a missive (`MissiveLog`, kind `audit`,
+    column `credible`, subject `{kind: "ledger", code: flow}`) with this
+    month's true figures — each fact also carrying `claimed`, what the
+    governor reported for it (final review I2) — and **the books are the
+    FLOW's** (final review I1): EVERY man with an uncaught skim on that
+    flow — the governor now, or one it was taken from — is caught:
+    `GameState.caught[id]` gains `{flow, day, amount}`, a record line on
+    his card (`GameState.records[id]`, a reason string like every log:
+    "Caught skimming the war workshops, spring of year 1 (25 gold)"),
+    `gov_caught_opinion` with its reason, and his `skims[id][flow]` starts
+    again. An audit that finds nothing says "The books on <flow> are in
+    order" (M2). Refused when no one governs the flow; `GOVERNOR_SET`
+    refuses an id missing from the characters (M3).
   - Both are ordinary actions: rows in `policy_actions_court_additions.csv`,
     `action_signatures.csv`, `order_costs.csv`, validated in `ActionSystem`.
 - **No RNG anywhere**: a skim is a fixed share decided by traits and
@@ -134,17 +151,26 @@ whatever his integrity). No new trait.
   <the flow>)" when the flow was given away from its seat; `full`), a
   second the receiving side's count where one exists (a regiment's own
   count for `supplies_out`; "the regiments' own count" at the type level),
-  a third the audit's figure on an instance thread — **an audit is a
-  snapshot of ITS month** (controller ruling, Task 4 fix round 1): it
-  counts only while `state.tick` is the tick its letter was filed in (the
-  letter's `tick`), and the order moves the governor's opinion before it
-  writes the letter, so on the audit day its figures equal the live
-  projection. Equal figures merge into one account naming every source.
+  a third the audit's figure — the node's fact on an instance thread, the
+  audit's `total` at the type level (final review M5) — and **an audit is
+  a snapshot of ITS month and of HIS WORD**: it counts only while
+  `state.tick` is the tick its letter was filed in (the letter's `tick`,
+  controller ruling of Task 4 fix round 1) AND the governor's live claim
+  for that thread equals the `claimed` the letter recorded (final review
+  I2) — once his projection moves (the civil goods rose, a regiment
+  marched) the audit no longer speaks to it and is dropped, so an honest
+  governor is never drawn split against a stale audit. The order moves the
+  governor's opinion before it writes the letter, so on the audit day its
+  figures equal the live projection. Equal figures merge into one account naming every source.
   (`gov_audit_fresh_days` was dropped with this ruling.)
 - `governs` (character → workshop / supply_line) is live: flow `-1`, the
   governor's factors on its card (his efficiency as a percentage, his
   skill and what his opinion costs; never the skim), and the link's
-  "governed by" is the man who governs the flow NOW (given or not). `skims`
+  "governed by" is the man who governs the flow NOW (given or not); an
+  empty seat draws the type-level tie greyed, "no one governs it" (M8);
+  the tie carries the flow's audit and give orders (M6); and a
+  character's card folds his ties into one line per flow with his factors
+  (M4). `skims`
   is live but DRAWN only once caught: ONE link per caught man and flow,
   character → the flow's TYPE, carrying his caught total on it, keyed on
   `GameState.caught` (it survives a handover), shown on his own ego and
