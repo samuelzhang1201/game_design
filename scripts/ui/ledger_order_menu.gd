@@ -24,4 +24,7 @@ func open_for(node_id: String, rows: Array, at: Vector2) -> void:
 	for i in rows.size():
 		var row: Dictionary = rows[i]
 		add_item(Ledger.order_text(Game.data, row, node_id), i)
+		var hint := String(row.get("hint", ""))
+		if hint != "":
+			set_item_tooltip(i, hint)
 	popup_on_parent(Rect2i(Vector2i(at.round()), Vector2i(1, 1)))

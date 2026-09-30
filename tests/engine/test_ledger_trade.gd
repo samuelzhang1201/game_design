@@ -131,6 +131,21 @@ func test_a_route_that_is_not_there_or_a_bad_flag_is_refused() -> void:
 	assert_ne(sys.validate(ActionRequest.make("TRADE_ROUTE_SET", {"kingdom": k, "open": 2}), s), "")
 	assert_string_contains(sys.validate(ActionRequest.make("TRADE_ROUTE_SET", {"kingdom": k, "open": 1}), s),
 		"already open")
+	# Final fix wave, I2b: a missing or unknown kingdom is refused on its
+	# own, with player wording — never "no trade route to " with nothing
+	# after it (an empty label reads as a hole in the sentence).
+	var missing := sys.validate(ActionRequest.make("TRADE_ROUTE_SET", {"open": 0}), s)
+	assert_ne(missing, "")
+	assert_false(missing.contains(" to "), missing)
+	var unknown := sys.validate(ActionRequest.make("TRADE_ROUTE_SET", {"kingdom": "atlantis", "open": 0}), s)
+	assert_false(unknown.contains(" to "), unknown)
+	# open must be exactly 0/1 or "0"/"1" (final fix wave, I2b): int("abc")
+	# is silently 0 in GDScript, which must never read as a real CLOSE
+	# order — a string "0"/"1" is still accepted, since that is how a
+	# player-typed or LLM-proposed order can arrive.
+	assert_ne(sys.validate(ActionRequest.make("TRADE_ROUTE_SET", {"kingdom": k, "open": "abc"}), s), "")
+	assert_eq(sys.validate(ActionRequest.make("TRADE_ROUTE_SET", {"kingdom": k, "open": "0"}), s), "",
+		"a string \"0\" is still a real close order")
 
 func test_closing_a_route_angers_the_guildmaster_with_a_reason() -> void:
 	var k := String(_first_route()["kingdom"])
@@ -164,6 +179,25 @@ func test_the_route_offers_close_audit_and_give() -> void:
 	assert_has(on_thread, "LEDGER_AUDIT")
 	assert_has(on_thread, "GOVERNOR_SET")
 
+## Final fix wave, Minor5: the CLOSE order's own tooltip says closing only
+## stops the tolls — there is no diplomacy yet — so the player is not left
+## thinking it touches a relationship the game does not track. The OPEN
+## order needs no such caveat.
+func test_closing_a_route_says_it_only_stops_the_tolls() -> void:
+	var k := String(_first_route()["kingdom"])
+	var rows: Array = Ledger.actions_for(data, "trade_route:" + k, s)
+	var close := {}
+	var open := {}
+	for a: Dictionary in rows:
+		if String(a["label"]) == "Close the route":
+			close = a
+		elif String(a["label"]) == "Open the route":
+			open = a
+	assert_false(close.is_empty())
+	assert_false(open.is_empty())
+	assert_string_contains(String(close["hint"]), "no diplomacy yet")
+	assert_eq(String(open["hint"]), "")
+
 func test_a_route_and_a_market_are_named_by_the_live_labels() -> void:
 	var k := String(_first_route()["kingdom"])
 	assert_eq(LedgerResolvers.label_of(data, s, "trade_route:" + k), "Trade with " + MarketSystem.label_of(data, k))
@@ -179,7 +213,7 @@ func test_a_market_trades_its_value() -> void:
 	assert_eq(int(_link(ego, "trades")["flow"]), MarketSystem.market_value(data, m, "civil"))
 	assert_eq(int(_link(ego, "trades_strategic")["flow"]), MarketSystem.market_value(data, m, "strategic"))
 
-func test_a_market_offers_buying_and_selling_there() -> void:
+func test_a_market_offers_buying_and_not_selling_there() -> void:
 	var m := String(MarketSystem.realm_markets(data, s)[0])
 	var rows := Ledger.actions_for(data, "market:" + m, s)
 	var buy: Array = rows.filter(func(a: Dictionary) -> bool: return String(a["code"]) == "GOODS_BUY")
@@ -211,6 +245,22 @@ func test_the_artisans_build_their_provinces_buildings() -> void:
 	assert_eq(int(b["flow"]), MapManors.work_speed_permille(data, s, home) - 1000)
 	assert_eq(LedgerResolvers.label_of(data, s, "artisans:" + home),
 		"Artisans of " + String(data.provinces[home]["label"]))
+
+## Final fix wave, Minor2: an artisans card for a province the crown does
+## not control carries no "Works go N% faster" head — it matches
+## work_speed_permille's own plain 1000‰ there and label_of's "".
+func test_an_uncontrolled_provinces_artisans_have_no_card_head() -> void:
+	var home := MapManors.home_province(data, s)
+	var foreign := ""
+	for p: String in data.provinces:
+		if p != home and not MapManors.controlled_provinces(data, s).has(p):
+			foreign = p
+			break
+	assert_ne(foreign, "", "the pack has an uncontrolled province")
+	var id := "artisans:" + foreign
+	var e := LedgerCards.entry(data, s, id, Ledger.snapshot(data, s, "economy", {"id": id}))
+	for line: String in (e["lines"] as Array):
+		assert_false(String(line).begins_with("Works go"), str(e["lines"]))
 
 func test_a_work_in_hand_is_a_building_the_artisans_raise() -> void:
 	var home := MapManors.home_province(data, s)

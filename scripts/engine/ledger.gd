@@ -383,7 +383,8 @@ static func actions_for(repo: DataRepository, node_id: String, state: GameState 
 		if not node_id.contains("|") and on_type == has_list:
 			continue  # an instance order on a type sphere, or a pool order on an instance
 		var row := {"code": String(a["action_code"]), "label": String(a["label"]),
-			"params": String(a["params"]), "needs_map": String(a["needs_map"]) == "1"}
+			"params": String(a["params"]), "needs_map": String(a["needs_map"]) == "1",
+			"hint": String(a.get("hint", ""))}
 		if String(row["params"]).contains("=@council"):
 			if state != null:
 				out.append_array(_per_councillor(repo, state, row))
