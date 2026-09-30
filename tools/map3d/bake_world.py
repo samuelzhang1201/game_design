@@ -73,7 +73,7 @@ TEXTURE_KEYS = ["aerial_cliff", "aerial_meadow", "dry_decay_leaves", "dirt_floor
                 "excavated_soil_wall", "sand_03", "aerial_canopy",
                 # the snow line (owner 2026-09-19): Poly Haven snow_02 since the
                 # same day (snow_field_aerial read blue-grey and blotchy)
-                "snow_02"]
+                "aerial_snow"]
 BIOME_MIX = {
     1: {SAND: 1.0},
     2: {DIRT: 0.8, ROCKY: 0.2},
@@ -1100,8 +1100,31 @@ def main(argv=None):
     # ground snow comes in, full by snow_line_hi — on the 3D map's own ridges
     # as well as the 2D map's peak band — thinner on the steepest faces,
     # where rock shows through.
-    snow = np.clip((hn - rules["snow_line_lo"]) / max(rules["snow_line_hi"] - rules["snow_line_lo"], 1e-6), 0, 1)
-    tw[..., SNOW] += rules["snow_weight"] * snow * (1.0 - 0.6 * t_cliff)
+    # The line itself (look route 2026-09-30, owner: 山顶雪帽 read as pale plaster
+    # with a ruled rim): broken by its own noise — its own stream, so nothing
+    # sown after it moves — into tongues and patches, and thinned on the steep
+    # rock, where snow does not lie, so ribs of crag show through the cap.
+    snow_rng = np.random.default_rng(SEED + 13)
+    snow_n = (value_noise(snow_rng, vw, vh, rules["snow_edge_wave_m"] / VERTEX_M) * 0.65
+              + value_noise(snow_rng, vw, vh, rules["snow_edge_wave_m"] * 0.3 / VERTEX_M) * 0.35)
+    hn_snow = hn + (snow_n - 0.5) * 2.0 * rules["snow_edge_noise"]
+    # snow lies longer on the slopes turned from the sun: the north faces take
+    # the line lower, so a cap runs down its shaded side instead of ruling an arc
+    # (the pack's rows run south, so ground rising toward the south faces north)
+    # (one-sided: a south face keeps the height's own line — lowering it bared
+    # a scree tongue across the glacier)
+    north = np.maximum(np.tanh(np.gradient(height, VERTEX_M, axis=0) / 0.3), 0.0)
+    hn_snow += rules["snow_north_gain"] * north
+    del north
+    snow = np.clip((hn_snow - rules["snow_line_lo"]) / max(rules["snow_line_hi"] - rules["snow_line_lo"], 1e-6), 0, 1)
+    # under the snow a band of scree and bare rock, not grass up to its rim —
+    # a mountain's snow ends above a grey margin, not on a lawn
+    band = np.clip((hn_snow - (rules["snow_line_lo"] - rules["snow_scree_band"]))
+                   / max(rules["snow_scree_band"], 1e-6), 0, 1) * (1.0 - snow)
+    tw[..., ROCKY] += rules["snow_scree_weight"] * band
+    del snow_n, hn_snow, band
+    tw[..., SNOW] += rules["snow_weight"] * snow * (1.0 - rules["snow_steep_cut"] * t_cliff) \
+        * (1.0 - rules["snow_scree_cut"] * t_rock)
     del snow
     # The beach fades out by the share of land around a vertex (a box of
     # BEACH_M: a 4-neighbour step count cut it on a diamond staircase) and

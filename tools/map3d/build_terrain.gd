@@ -29,7 +29,7 @@ const TEXTURES := [
 	["excavated_soil_wall", 240.0, 0.1],
 	["sand_03", 120.0, 0.2],
 	["aerial_canopy", 170.0, 0.22],
-	["snow_02", 110.0, 0.14],  # the snow line (owner 2026-09-19; snow_02 at 110 m, not snow_field_aerial: at 260 m its dark marks read as ink worms)
+	["aerial_snow", 180.0, 0.14],  # the snow line — an aerial snow picture since 2026-09-30 (山顶雪帽, tools/map3d/pack_aerial.py); was (owner 2026-09-19; snow_02 at 110 m, not snow_field_aerial: at 260 m its dark marks read as ink worms)
 ]
 
 # Terrain3D material: demo/Demo.tscn's parameters, every one of them — a
