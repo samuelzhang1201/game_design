@@ -128,8 +128,10 @@ neighbour's route can be closed on you — enemy AI waits for sub-project C).
 
 ### Trade routes
 
-- A **trade route** is the aggregate of every deal between a realm market
-  (or town) and a buyer outside the realm, grouped by the buyer's kingdom:
+- A **trade route** is the aggregate of every deal a realm MARKET sells to a
+  buyer outside the realm, grouped by the buyer's kingdom (a town's sale into
+  a market supplies that market, domestic, never tolled — Task 3 review
+  ruling: counting towns made losing a province RAISE the tolls):
   `trade_route:<kingdom>`. `MarketSystem.routes(repo, state) -> Array[{kingdom,
   gold, deals}]` sums `units × price` a month (the export's units are a
   month's — **Default**, as its `production.csv` is) — cached by the
@@ -154,7 +156,13 @@ neighbour's route can be closed on you — enemy AI waits for sub-project C).
   domestic market is `full`; a route's foreign side is `basic` (words) —
   the crown knows its own toll, not what the buyer pays.
 - Actions: `trade_route` → Close / Open (`TRADE_ROUTE_SET`), audit and
-  reassign (M3); `market` → Buy / Sell there.
+  reassign (M3); `market` → Buy there (civil and strategic). Not Sell: on
+  this pack selling at a market never beats the factor's flat price (Task 3
+  review ruling; the engine's GOODS_SELL still takes a `market` param).
+  The toll floors once: value × toll‰ × efficiency‰ / 1,000,000. The works
+  (the flow `works`) keep no books: `ledger_governance.csv` `books` 0, and
+  LEDGER_AUDIT refuses them; they are governed on the LEDGER as
+  `governs_works` → the artisans.
 
 ## Tests
 

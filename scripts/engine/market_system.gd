@@ -2,11 +2,13 @@ class_name MarketSystem
 extends RefCounted
 ## Markets and trade routes (spec 2026-09-30-ledger-industry-trade-design,
 ## M6): the pack's markets and trade flows (deals.csv) read through LIVE
-## ownership (invariant 6). A trade route is every deal a seller in the
-## realm (a market it holds, or one of its towns) makes with a buyer of one
-## foreign kingdom, a month's units × price; the crown takes
+## ownership (invariant 6). A trade route is every deal a market the realm
+## holds makes with a buyer of one foreign kingdom, a month's units × price; the crown takes
 ## trade_toll_permille of an open route, scaled and skimmed by the steward
-## (Governance flow "trade_route"). Pure; no RNG.
+## (Governance flow "trade_route"). Only a realm MARKET sells abroad: a
+## town's sale into a market supplies that market, domestic and never
+## tolled (Task 3 review ruling — counting a town's sales made losing the
+## home province RAISE the crown's tolls). Pure; no RNG.
 
 ## The routes' per-kingdom sums ({kingdom: {value (float), deals}}), cached
 ## against the ownership signature: 10,815 deals are walked only when a
@@ -145,7 +147,8 @@ static func sell_price(repo: DataRepository, state: GameState, market_id: String
 	return int(roundf(float(gold) * float(sell_permille(repo, state, market_id, pool)) / 1000.0))
 
 
-## The per-kingdom sums of the realm's exports, {kingdom: {value, deals}},
+## The per-kingdom sums of the realm's exports — every deal a realm MARKET
+## sells to a buyer abroad — {kingdom: {value, deals}},
 ## deals walked in file order (a float sum in a fixed order is a fixed sum).
 static func _route_sums(repo: DataRepository, state: GameState) -> Dictionary:
 	var realm := repo.resolve_realm("player_realm")
@@ -156,7 +159,9 @@ static func _route_sums(repo: DataRepository, state: GameState) -> Dictionary:
 	var kingdom_of: Dictionary = {}
 	var by: Dictionary = {}
 	for d: Dictionary in repo.deals:
-		var seller := _party_kingdom(repo, state, kingdom_of, String(d["seller_type"]), String(d["seller"]))
+		if String(d["seller_type"]) != "market":
+			continue  # a town supplies a market; only a market exports
+		var seller := _party_kingdom(repo, state, kingdom_of, "market", String(d["seller"]))
 		if seller != realm:
 			continue
 		var buyer := _party_kingdom(repo, state, kingdom_of, String(d["buyer_type"]), String(d["buyer"]))
@@ -198,8 +203,9 @@ static func routes(repo: DataRepository, state: GameState) -> Array:
 	for k: String in codes:
 		var value := int(roundf(float(by[k]["value"])))
 		var open := not k in state.closed_routes
+		# the toll floors ONCE (Task 3 review ruling), whole gold
 		@warning_ignore("integer_division")
-		var claimed := value * toll_permille / 1000 * eff / 1000 if open else 0
+		var claimed := value * toll_permille * eff / 1000000 if open else 0
 		@warning_ignore("integer_division")
 		var skimmed := claimed * skim / 1000
 		out.append({"kingdom": k, "value": value, "deals": int(by[k]["deals"]), "open": open,

@@ -613,7 +613,8 @@ func _ledger_step() -> void:
 		var detail: MapDetailPanel = _root.current_screen.detail_panel()
 		var row: Button = null
 		for b in detail.find_children("*", "Button", true, false):
-			if b.has_meta("ledger_id") and String(b.get_meta("ledger_id")).contains(_ledger_row):
+			# "x".contains("") is false in Godot: no --ledger-row takes the first row
+			if b.has_meta("ledger_id") and (_ledger_row == "" or String(b.get_meta("ledger_id")).contains(_ledger_row)):
 				row = b
 				break
 		if row == null:

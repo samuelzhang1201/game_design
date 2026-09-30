@@ -35,14 +35,19 @@ supplies_out,supply_line,regiment,supplies,war|all,live,supplies_out,marshal,sea
 garrisons,regiment,town,garrisons in,war|all,live,garrisons,marshal,seat,,,
 attacks,regiment,enemy_host,attacks,war|all,planned,,,,M4,lit by battle,
 commands,character,regiment,commands,war|all,planned,,,,M4,lit by battle: each regiment gets its commander,
-builds,artisans,building,build,economy|all,planned,,master_of_works,seat,M5,lit by raw materials and artisans,
-consumes,building,raw_material,consumes,economy|all,planned,,master_of_works,seat,M5,lit by raw materials and artisans,
-trades,market,civil_goods,trades,economy|all,planned,,steward,seat,M6,lit by markets and trade routes,
-routes,trade_route,market,serves,economy|all,planned,,admiral,seat,M6,lit by markets and trade routes,
+builds,artisans,building,raise,economy|all,live,builds,master_of_works,seat,,,the pace the artisans add to the works (per mille); governed as the flow `works`
+consumes,building,civil_goods,eats,economy|all,live,consumes,master_of_works,seat,,,
+consumes_strategic,building,strategic_goods,eats,economy|war|all,live,consumes,master_of_works,seat,,,
+trades,market,civil_goods,trades,economy|all,live,trades,steward,seat,,,
+trades_strategic,market,strategic_goods,trades,economy|war|all,live,trades,steward,seat,,,
+routes,trade_route,gold,pays tolls,economy|all,live,routes,steward,seat,,,
 governs,character,workshop,governs,economy|war|court|all,live,governs,,,,,
 governs_supply,character,supply_line,governs,war|court|all,live,governs,,,,,
 skims,character,workshop,skims,intelligence|economy|all,live,skims,,,,,drawn only once an audit has caught him
 skims_supply,character,supply_line,skims,intelligence|war|all,live,skims,,,,,drawn only once an audit has caught him
+governs_trade,character,trade_route,governs,economy|court|all,live,governs,,,,,
+skims_trade,character,trade_route,skims,intelligence|economy|all,live,skims,,,,,drawn only once an audit has caught him
+governs_works,character,artisans,governs,economy|court|all,live,governs,,,,,the master of works (the flow `works`); no skims link: the works keep no books
 witnessed,source,regiment,saw,intelligence|all,planned,,,,intel P1,lit when every report has its source,
 contradicts,report,report,contradicts,intelligence|all,planned,,,,L1,lit when accounts may differ,
 faction_governs,faction,workshop,governs,court|all,planned,,,faction,PRD Step 5,lit when factions exist,

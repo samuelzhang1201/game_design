@@ -257,7 +257,7 @@ static func _claimed(repo: DataRepository, state: GameState, r: Dictionary, t: D
 	var from := String(t["from"])
 	var to := String(t["to"])
 	var node := "total" if from.begins_with("type:") and to.begins_with("type:") \
-		else (from if from.begins_with(flow + ":") else to)
+		else (from if from.begins_with(Governance.type_of_flow(repo, flow) + ":") else to)
 	var audit := _audit_figure(state, flow, node, int((t["claims"][0] as Dictionary)["value"]))
 	if not audit.is_empty():
 		raw.append(audit)
@@ -275,11 +275,13 @@ static func _claimed(repo: DataRepository, state: GameState, r: Dictionary, t: D
 	return out
 
 
-## The governed flow a link row touches ("workshop", "supply_line"), or "".
+## The governed flow a link row touches ("workshop", "supply_line",
+## "trade_route"; "works" for a link touching the artisans), or "".
 static func governed_flow(repo: DataRepository, r: Dictionary) -> String:
 	for end: String in ["from_type", "to_type"]:
-		if repo.ledger_governance.has(String(r[end])):
-			return String(r[end])
+		var flow := Governance.flow_of_type(repo, String(r[end]))
+		if flow != "":
+			return flow
 	return ""
 
 

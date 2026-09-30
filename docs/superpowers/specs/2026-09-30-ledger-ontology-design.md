@@ -87,17 +87,16 @@ in the middle, THINGS at the bottom.
 | Things | Manor | `manor` | people, chief good, output, tax, holder | ✅ |
 | | Province | `province` | people, wealth tier, controller | ✅ |
 | | Town | `town` | people, tariff; where a garrison stands (M1: the `stronghold` type was dropped — a garrison stands in a town) | ✅ |
-| | Market | `market` | goods traded, prices | ○ M6 |
+| | Market | `market` | goods traded, prices | ✅ M6 (`market:<id>`, the realm's by live ownership, `MarketSystem.realm_markets`) |
 | | Civil goods | `civil_goods` | stock, monthly flow (crown / lord purse) | ✅ |
 | | Strategic goods | `strategic_goods` | stock, monthly flow | ✅ |
 | | Gold | `gold` | treasury, lord's gold | ✅ |
-| | Raw material | `raw_material` | stock of a named good | ○ M5 |
 | | Building | `building` | produce, bonuses, slot | ✅ |
 | | War workshop | `workshop` | ratio, efficiency, governor | ✅ M2 (`workshop:<cell>`, `WorkshopSystem.plan`) |
 | | Supply line | `supply_line` | length, loss, delay, governor | ✅ M1 (`supply_line:<regiment>`, `SupplySystem.plan`) |
-| | Trade route | `trade_route` | volume, toll, governor | ○ M6 |
+| | Trade route | `trade_route` | volume, toll, governor | ✅ M6 (`trade_route:<kingdom>`, `MarketSystem.routes`) |
 | | Peasants | `peasants` | people per province | ✅ (a province's rural people) |
-| | Artisans | `artisans` | people per town | ○ M5 |
+| | Artisans | `artisans` | a province's townsfolk, the pace they add to its works | ✅ M5 (`artisans:<province>`, `MapManors.work_speed_permille`); a raw material is a GOOD, not a type (M5: `raw_material` retired) |
 | | Regiment | `regiment` | heads, supplies, morale, training, readiness | ✅ |
 | | Enemy host | `enemy_host` | believed heads, heading | ○ M4 (the raid host) |
 | People | Character | `character` | skills, opinion, traits, record | ✅ |
@@ -131,9 +130,10 @@ text rules as every other screen.
 | `garrisons` | regiment → town | garrisons in | ✅ M1 (a garrison stands in a town: `SupplySystem.stronghold_of`) | marshal |
 | `feeds_morale` | regiment.supplies → regiment.morale | a property function | ○ M1 | — |
 | `attacks` | regiment → enemy host | attacks | ○ M4 | the commander |
-| `builds` | artisans → building | build | ○ M5 | master of works |
-| `consumes` | building → raw material | consumes | ○ M5 | master of works |
-| `trades` | market ⇄ goods, along a trade route | trades | ○ M6 | steward / admiral (sea) |
+| `builds` | artisans → building | raise | ✅ M5 (flow: the pace in per mille over 1000) | master of works (the flow `works`) |
+| `consumes` | building → civil / strategic goods (`consumes` / `consumes_strategic`, by the input's pool) | eats | ✅ M5 (`IndustrySystem.plan`: gold bought a month) | master of works |
+| `trades` | market → civil / strategic goods (`trades` / `trades_strategic`) | trades | ✅ M6 (`MarketSystem.market_value`) | steward |
+| `routes` | trade route → gold | pays tolls | ✅ M6 (the toll; the steward's word and the treasury's count, like a supply line) | steward (the flow `trade_route`) |
 
 **People**
 
@@ -143,7 +143,7 @@ text rules as every other screen.
 | `holds` | house → manor | ✅ |
 | `sits` | character → seat | ✅ |
 | `member` | character → house | ✅ (family name) |
-| `governs` | character (or faction) → workshop / supply line / trade route / building works | ✅ M3 (`governs`, `governs_supply`: workshop and supply line; a faction, trade routes and building works later) |
+| `governs` | character (or faction) → workshop / supply line / trade route / building works | ✅ M3 (`governs`, `governs_supply`), M6 (`governs_trade`, `governs_works` → the artisans); a faction later |
 | `commands` | character → regiment | ○ M4 (intel P1's commanders) |
 
 **Knowledge**
@@ -156,7 +156,7 @@ text rules as every other screen.
 | `witnessed` | source → object | ○ intel P1 |
 | `rides_home` | report → court (the return leg) | ○ intel P0 |
 | `contradicts` | report ⇄ report | ○ L1 (intel P0) |
-| `skims` | governor → the flow he governs (hidden) | ✅ M3 (`skims`, `skims_supply`: drawn only once an audit has caught him) |
+| `skims` | governor → the flow he governs (hidden) | ✅ M3 (`skims`, `skims_supply`), M6 (`skims_trade`): drawn only once an audit has caught him; the building works keep no books (`ledger_governance.csv` `books` 0) |
 
 ## 4. The rules that make it play
 

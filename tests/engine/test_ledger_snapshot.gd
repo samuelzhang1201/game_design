@@ -27,13 +27,15 @@ func _link(snap: Dictionary, type: String) -> Dictionary:
 func test_the_type_level_draws_every_type_of_its_lens_built_or_not() -> void:
 	var snap := Ledger.snapshot(data, s, "economy", {})
 	assert_has(_ids(snap), "type:manor")
-	assert_has(_ids(snap), "type:market", "a type not yet built is still drawn")
 	for n: Dictionary in snap["nodes"]:
 		assert_true(n.has("x") and n.has("z"), "a type sphere stands at its hand-set place")
-	var planned := _link(snap, "trades")
+	# M6 built the last economy type; the factions are still to come (PRD Step 5)
+	var all := Ledger.snapshot(data, s, "all", {})
+	assert_has(_ids(all), "type:faction", "a type not yet built is still drawn")
+	var planned := _link(all, "faction_governs")
 	assert_eq(String(planned["status"]), "planned")
 	assert_null(planned["flow"])
-	assert_eq(String(planned["planned_note"]), "lit by markets and trade routes")
+	assert_eq(String(planned["planned_note"]), "lit when factions exist")
 
 func test_no_link_joins_a_sphere_to_itself() -> void:
 	for lens in ["economy", "war", "court", "intelligence", "all"]:

@@ -119,8 +119,12 @@ var ledger_loops: Array = []
 ## key -> Color (data/ledger_palette.csv).
 var ledger_palette: Dictionary = {}
 ## data/ledger_governance.csv: flow_type -> {seat, skill, base_permille,
-## skill_mid, skill_step_permille, min_permille, max_permille, label} (LEDGER
-## M3, Governance; spec 2026-09-30-ledger-governors-design §2).
+## skill_mid, skill_step_permille, min_permille, max_permille, label, books,
+## ledger_type} (LEDGER M3, Governance; spec 2026-09-30-ledger-governors-design
+## §2). `books`: whether the flow keeps books an audit can read (LEDGER_AUDIT
+## refuses one without, M5/M6 ruling); `ledger_type`: the LEDGER type its
+## instances are drawn as (the flow's own name when empty; the works are
+## drawn on the artisans).
 var ledger_governance: Dictionary = {}
 ## data/courier_art.csv: kind -> its row (model, painting, size).
 var courier_art: Dictionary = {}
@@ -621,12 +625,14 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/ledger_governance.csv",
 			["flow_type", "seat", "skill", "base_permille", "skill_mid", "skill_step_permille", "min_permille",
-				"max_permille", "label"],
+				"max_permille", "label", "books", "ledger_type"],
 			func(r): ledger_governance[String(r["flow_type"])] = {"seat": String(r["seat"]),
 				"skill": String(r["skill"]), "base_permille": int(r["base_permille"]),
 				"skill_mid": int(r["skill_mid"]), "skill_step_permille": int(r["skill_step_permille"]),
 				"min_permille": int(r["min_permille"]), "max_permille": int(r["max_permille"]),
-				"label": String(r["label"])}):
+				"label": String(r["label"]), "books": String(r["books"]) != "0",
+				"ledger_type": String(r["flow_type"]) if String(r["ledger_type"]) == "" \
+					else String(r["ledger_type"])}):
 		return false
 	if not _load_if_present(dir + "/courier_art.csv", ["kind", "model", "painting", "size"],
 			func(r): courier_art[String(r["kind"])] = r):

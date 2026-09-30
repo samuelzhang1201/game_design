@@ -28,7 +28,18 @@ static func facts(repo: DataRepository, state: GameState, flow: String) -> Array
 					int(row["claimed"])))
 				total += int(row["delivered"])
 				said += int(row["claimed"])
+		"trade_route":
+			# The true toll that reached the treasury, beside the steward's
+			# word (the toll he collected, whole) — per route (M6).
+			for row: Dictionary in MarketSystem.routes(repo, state):
+				var k := String(row["kingdom"])
+				out.append(_fact("trade_route:" + k, "Trade with " + MarketSystem.label_of(repo, k),
+					int(row["toll"]), int(row["claimed"])))
+				total += int(row["toll"])
+				said += int(row["claimed"])
 		_:
+			# `works` never reaches here: it keeps no books, and LEDGER_AUDIT
+			# refuses it (data/ledger_governance.csv `books`).
 			push_error("AuditWriter: no books for flow '%s'" % flow)
 			return []
 	out.append(_fact("total", "In all, this month", total, said))

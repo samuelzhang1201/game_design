@@ -11,10 +11,9 @@ regiment,things,war|intelligence|all,Regiments,,9,0,regiments,live,,
 workshop,things,economy|war|all,War workshops,,1,0,workshops,live,,civil goods made into strategic
 supply_line,things,war|all,Supply lines,,6.5,0,supply_lines,live,,
 enemy_host,things,war|intelligence|all,Enemy hosts,,9,-5,,planned,M4,
-raw_material,things,economy|all,Raw materials,,-9,-5,,planned,M5,
-artisans,things,economy|all,Artisans,,-9,5,,planned,M5,
-market,things,economy|all,Markets,,2,5,,planned,M6,
-trade_route,things,economy|all,Trade routes,,2,-5,,planned,M6,
+artisans,things,economy|all,Artisans,,-9,5,artisans,live,,the townsfolk of each province the crown controls: they raise its buildings (M5)
+market,things,economy|all,Markets,,2,5,markets,live,,the pack's markets whose centre town the realm holds now (M6)
+trade_route,things,economy|all,Trade routes,,2,-5,trade_routes,live,,the realm's exports to one foreign kingdom a month; the crown tolls it (M6)
 character,people,economy|war|court|intelligence|all,People,,0,0,characters,live,,
 house,people,economy|court|all,Houses,,-6,0,houses,live,,
 seat,people,economy|war|court|all,Council seats,,4,0,seats,live,,

@@ -74,6 +74,19 @@ static func _head(repo: DataRepository, state: GameState, kind: String, rest: St
 			if not rest.is_valid_int():
 				return ""
 			return "Runs " + WorkshopSystem.rate_word(repo, WorkshopSystem.rate_of(state, int(rest)))
+		"trade_route":
+			# M6: the route's state and its trade; closing it touches no treaty
+			# yet (diplomacy is not state — the spec's no-op hook).
+			for r: Dictionary in MarketSystem.routes(repo, state):
+				if String(r["kingdom"]) == rest:
+					return "%s — %s gold of exports a month in %d deals" % [
+						"Open" if bool(r["open"]) else "Closed", Intel.num(int(r["value"])), int(r["deals"])]
+			return ""
+		"artisans":
+			if not repo.provinces.has(rest):
+				return ""
+			@warning_ignore("integer_division")  # whole percent from per-mille
+			return "Works go %d%% faster" % ((MapManors.work_speed_permille(repo, state, rest) - 1000) / 10)
 	return ""
 
 
@@ -121,13 +134,13 @@ static func _factors_text(repo: DataRepository, state: GameState, flow: String) 
 
 
 ## The flow a `governs` link ties its governor to ("workshop",
-## "supply_line"), or "" for any other link.
+## "supply_line", "trade_route"; "works" for a tie to the artisans), or ""
+## for any other link.
 static func _governed_flow(repo: DataRepository, link: Dictionary) -> String:
 	var row := Ledger.link_row(repo, String(link["type"]))
 	if String(row.get("resolver", "")) != "governs" or String(link["status"]) != "live":
 		return ""
-	var flow := String(row["to_type"])
-	return flow if repo.ledger_governance.has(flow) else ""
+	return Governance.flow_of_type(repo, String(row["to_type"]))
 
 
 static func subject_of(repo: DataRepository, state: GameState, node_id: String) -> Dictionary:

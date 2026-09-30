@@ -1,5 +1,5 @@
-flow_type,seat,skill,base_permille,skill_mid,skill_step_permille,min_permille,max_permille,label,notes
-workshop,steward,sk_steward,850,8,20,600,1000,the war workshops,spec 2026-09-30-ledger-governors-design §2
-supply_line,marshal,sk_admin,850,8,20,600,1000,the supply lines,logistics is administration (Default)
-works,master_of_works,sk_steward,850,8,20,600,1000,the building works,the artisans' bonus is scaled by his efficiency (M5)
-trade_route,steward,sk_steward,850,8,20,600,1000,the trade tolls,the toll is scaled by his efficiency and skimmed by a venal steward (M6)
+flow_type,seat,skill,base_permille,skill_mid,skill_step_permille,min_permille,max_permille,label,books,ledger_type,notes
+workshop,steward,sk_steward,850,8,20,600,1000,the war workshops,1,workshop,spec 2026-09-30-ledger-governors-design §2
+supply_line,marshal,sk_admin,850,8,20,600,1000,the supply lines,1,supply_line,logistics is administration (Default)
+works,master_of_works,sk_steward,850,8,20,600,1000,the building works,0,artisans,"the artisans' bonus is scaled by his efficiency (M5); no books (LEDGER_AUDIT refuses it) until he has a skim to hide — the LEDGER draws the flow on the artisans (ledger_type)"
+trade_route,steward,sk_steward,850,8,20,600,1000,the trade tolls,1,trade_route,the toll is scaled by his efficiency and skimmed by a venal steward (M6)

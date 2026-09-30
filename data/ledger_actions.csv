@@ -21,3 +21,13 @@ governs,LEDGER_AUDIT,Audit the war workshops,flow=workshop,0
 governs,GOVERNOR_SET,Give it to,flow=workshop|character=@council,0
 governs_supply,LEDGER_AUDIT,Audit the supply lines,flow=supply_line,0
 governs_supply,GOVERNOR_SET,Give it to,flow=supply_line|character=@council,0
+trade_route,TRADE_ROUTE_SET,Close the route,kingdom=@id|open=0,0
+trade_route,TRADE_ROUTE_SET,Open the route,kingdom=@id|open=1,0
+routes,LEDGER_AUDIT,Audit the trade tolls,flow=trade_route,0
+routes,GOVERNOR_SET,Give it to,flow=trade_route|character=@council,0
+governs_trade,LEDGER_AUDIT,Audit the trade tolls,flow=trade_route,0
+governs_trade,GOVERNOR_SET,Give it to,flow=trade_route|character=@council,0
+builds,GOVERNOR_SET,Give it to,flow=works|character=@council,0
+governs_works,GOVERNOR_SET,Give it to,flow=works|character=@council,0
+market,GOODS_BUY,Buy {gold} gold of civil goods here,pool=civil|gold=50|market=@id,0
+market,GOODS_BUY,Buy {gold} gold of strategic goods here,pool=strategic|gold=50|market=@id,0

@@ -95,7 +95,10 @@ func test_a_route_sums_its_deals_by_buyer_kingdom() -> void:
 	var sum := 0.0
 	var n := 0
 	for d: Dictionary in data.deals:
-		if MarketSystem.kingdom_of_party(data, s, String(d["seller_type"]), String(d["seller"])) == realm \
+		# only a realm MARKET sells abroad (Task 3 review ruling): a town's
+		# sale supplies a market, domestic and never tolled
+		if String(d["seller_type"]) == "market" \
+				and MarketSystem.kingdom_of_party(data, s, "market", String(d["seller"])) == realm \
 				and MarketSystem.kingdom_of_party(data, s, String(d["buyer_type"]), String(d["buyer"])) == String(r["kingdom"]):
 			sum += float(d["units"]) * float(d["price"])
 			n += 1
@@ -115,10 +118,60 @@ func test_routes_follow_a_conquest() -> void:
 	for after: Dictionary in MarketSystem.routes(data, s):
 		assert_ne(String(after["kingdom"]), String(r["kingdom"]))
 
+func _tolls() -> int:
+	var n := 0
+	for r: Dictionary in MarketSystem.routes(data, s):
+		n += int(r["toll"])
+	return n
+
+## Task 3 review ruling: only a realm MARKET sells abroad. Counting a
+## town's sales made LOSING the home province raise the crown's tolls (its
+## towns' sales into its market turned foreign on the realm's side).
+func test_losing_a_province_and_its_market_never_raises_the_tolls() -> void:
+	var before := _tolls()
+	var home := MapManors.home_province(data, s)
+	# a kingdom bordering the realm (the home province itself lies inland)
+	var neighbour := ""
+	for mine: String in MapOwnership.provinces_of(data, s, realm):
+		for p: String in MapManors.province_neighbours(data).get(mine, []):
+			var k := MapOwnership.owner_of(data, s, p)
+			if neighbour == "" and k != realm:
+				neighbour = k
+	assert_ne(neighbour, "", "the realm borders a foreign kingdom")
+	var had := MarketSystem.realm_markets(data, s).size()
+	assert_true(MapOwnership.set_owner(data, s, home, neighbour, "a test conquest"))
+	assert_lt(MarketSystem.realm_markets(data, s).size(), had, "the home province's market went with it")
+	assert_lte(_tolls(), before, "losing land never raises the tolls")
+
+## ...while taking a foreign market still can: its sales abroad become the
+## realm's exports.
+func test_taking_a_foreign_market_can_raise_the_tolls() -> void:
+	var before := _tolls()
+	var mine := MarketSystem.realm_markets(data, s)
+	var best := -1
+	var best_prov := ""
+	for id: String in data.world_table("economy", "markets"):
+		if id in mine:
+			continue
+		var burg := String(data.world_table("economy", "markets")[id]["center_burg"])
+		var prov := String((data.burgs.get(burg, {}) as Dictionary).get("province_code", ""))
+		if prov == "":
+			continue
+		var n := 0
+		for d: Dictionary in data.deals:
+			if String(d["seller_type"]) == "market" and String(d["seller"]) == id:
+				n += 1
+		if n > best:
+			best = n
+			best_prov = prov
+	assert_ne(best_prov, "")
+	assert_true(MapOwnership.set_owner(data, s, best_prov, realm, "a test conquest"))
+	assert_gt(_tolls(), before, "a taken market's exports are tolled")
+
 func test_the_toll_and_closing() -> void:
 	var r: Dictionary = MarketSystem.routes(data, s)[0]
 	@warning_ignore("integer_division")
-	assert_eq(int(r["toll"]), int(r["value"]) * int(data.bal("trade_toll_permille")) / 1000)
+	assert_eq(int(r["toll"]), int(r["value"]) * int(data.bal("trade_toll_permille")) * 1000 / 1000000)
 	assert_eq(int(r["claimed"]), int(r["toll"]), "an honest steward claims what he takes")
 	assert_eq(int(r["skimmed"]), 0)
 	assert_true(r["open"])
@@ -150,8 +203,9 @@ func test_a_venal_steward_skims_the_tolls_into_his_own_books() -> void:
 	var skimmed := 0
 	var tolls := 0
 	for r: Dictionary in routes:
+		# the toll floors ONCE (Task 3 review ruling)
 		@warning_ignore("integer_division")
-		var claimed := int(r["value"]) * int(data.bal("trade_toll_permille")) / 1000 * int(g["efficiency"]) / 1000
+		var claimed := int(r["value"]) * int(data.bal("trade_toll_permille")) * int(g["efficiency"]) / 1000000
 		assert_eq(int(r["claimed"]), claimed)
 		@warning_ignore("integer_division")
 		assert_eq(int(r["skimmed"]), claimed * int(g["skim"]) / 1000)

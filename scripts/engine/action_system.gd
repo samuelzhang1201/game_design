@@ -14,6 +14,12 @@ const TONE_DELTAS := {
 	"threatening": -3, "dismissive": -3,
 }
 
+## The realm's merchants speak through their guildmaster (TRADE_ROUTE_SET):
+## no roles.csv column names the guild — his row has no seat and the
+## `celebrity` category — so the id is named here, and a campaign without
+## him simply has no one to anger.
+const GUILDMASTER := "char_guildmaster_tessa"
+
 func _init(d: DataRepository) -> void:
 	data = d
 
@@ -86,8 +92,27 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			var flow := String(req.params.get("flow", ""))
 			if not data.ledger_governance.has(flow):
 				return "No such flow: " + flow
+			var label := String(data.ledger_governance[flow]["label"])
+			# The building works keep no books (M5 ruling): nothing to audit
+			# until their master has a skim to hide.
+			if not Governance.keeps_books(data, flow):
+				return "%s keeps no books to audit" % (label.left(1).to_upper() + label.substr(1))
 			if Governance.governor_of(data, state, flow) == "":
-				return "No one governs %s: there are no books to audit" % String(data.ledger_governance[flow]["label"])
+				return "No one governs %s: there are no books to audit" % label
+		"TRADE_ROUTE_SET":
+			var k := str(req.params.get("kingdom", ""))
+			var route := {}
+			for r: Dictionary in MarketSystem.routes(data, state):
+				if String(r["kingdom"]) == k:
+					route = r
+			if route.is_empty():
+				return "The realm has no trade route to %s" % MarketSystem.label_of(data, k)
+			var open := int(req.params.get("open", -1))
+			if not open in [0, 1]:
+				return "open must be 0 or 1"
+			if bool(route["open"]) == (open == 1):
+				return "The trade with %s is already %s" % [MarketSystem.label_of(data, k),
+					"open" if open == 1 else "closed"]
 		"GOODS_BUY", "GOODS_SELL":
 			var pool := String(req.params.get("pool", ""))
 			if not pool in ["strategic", "civil"]:
@@ -564,6 +589,22 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			if found.is_empty():
 				effects.append({"metric": "council", "delta": 0.0, "reason": "The books on %s are in order"
 					% label})
+		"TRADE_ROUTE_SET":
+			var k := str(req.params["kingdom"])
+			var label := MarketSystem.label_of(data, k)
+			if int(req.params["open"]) == 1:
+				state.closed_routes.erase(k)
+				effects.append({"metric": "trade", "delta": 0.0, "reason": "the trade with %s is open again" % label})
+			else:
+				state.closed_routes.append(k)
+				state.closed_routes.sort()
+				effects.append({"metric": "trade", "delta": 0.0,
+					"reason": "the trade with %s is closed; its tolls are forgone" % label})
+				# The merchants' goodwill (spec M6); the kingdom's own
+				# relationship waits for diplomacy to be state (a no-op hook).
+				if state.characters.has(GUILDMASTER):
+					(state.characters[GUILDMASTER] as Character).change_opinion(
+						int(data.bal("trade_close_opinion")), "the crown closed the trade with " + label, state.tick)
 		"GOODS_BUY":
 			var pool := String(req.params["pool"])
 			var gold := int(req.params["gold"])

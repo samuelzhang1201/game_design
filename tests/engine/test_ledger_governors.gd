@@ -311,7 +311,10 @@ func test_a_governors_card_has_one_line_per_flow() -> void:
 	assert_gt(n, 1, "a tie per supply line on the ego")
 	var lines: Array = LedgerCards.entry(data, s, "character:" + st.id, snap)["lines"]
 	var gov: Array = lines.filter(func(t: String) -> bool: return t.begins_with("governs "))
-	assert_eq(gov.size(), 2, "one line per flow: " + str(gov))
+	# the steward governs the war workshops and (M6) the trade tolls too
+	assert_eq(gov.size(), 3, "one line per flow: " + str(gov))
+	assert_has(lines, "governs the trade tolls (%d) — %s" % [MarketSystem.routes(data, s).size(),
+		LedgerCards._factors_text(data, s, "trade_route")])
 	assert_has(lines, "governs the supply lines (%d) — %s" % [n,
 		LedgerCards._factors_text(data, s, "supply_line")])
 	assert_has(lines, "governs the war workshops (1) — runs it at 85% of what it could — skill 8")

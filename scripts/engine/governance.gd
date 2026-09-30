@@ -12,6 +12,26 @@ static func flows(repo: DataRepository) -> Array:
 	return out
 
 
+## The LEDGER type a flow's instances are drawn as (data/ledger_governance.csv
+## `ledger_type`): the flow's own name, but the building works are drawn on
+## the artisans who do them.
+static func type_of_flow(repo: DataRepository, flow: String) -> String:
+	return String((repo.ledger_governance.get(flow, {}) as Dictionary).get("ledger_type", flow))
+
+
+## The governed flow drawn as a LEDGER type, or "" when none is.
+static func flow_of_type(repo: DataRepository, type_id: String) -> String:
+	for flow: String in flows(repo):
+		if type_of_flow(repo, flow) == type_id:
+			return flow
+	return ""
+
+
+## Whether an audit can read the flow's books (`books`; the works keep none).
+static func keeps_books(repo: DataRepository, flow: String) -> bool:
+	return bool((repo.ledger_governance.get(flow, {}) as Dictionary).get("books", false))
+
+
 static func seat_label(repo: DataRepository, flow: String) -> String:
 	var seat := String((repo.ledger_governance.get(flow, {}) as Dictionary).get("seat", ""))
 	return String((repo.seats.get(seat, {}) as Dictionary).get("label", seat))

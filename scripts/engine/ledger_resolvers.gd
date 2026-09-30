@@ -22,16 +22,17 @@ extends RefCounted
 const NAMES := ["works", "part_of", "yields_civil", "yields_strategic", "taxed", "trade_gold",
 	"rations", "stands_on", "holds", "member", "sits", "based_in", "carries", "spies_on",
 	"describes", "court_relations", "converts_in", "converts_out", "supplies_in", "supplies_out", "garrisons",
-	"governs", "skims"]
+	"governs", "skims", "builds", "consumes", "trades", "routes"]
 const INSTANCE_LISTS := ["peasants", "manors", "provinces", "regiments", "characters", "houses",
-	"seats", "reports", "couriers", "workshops", "supply_lines"]
+	"seats", "reports", "couriers", "workshops", "supply_lines", "artisans", "markets", "trade_routes"]
 const REPORT_KINDS := {"describes_province": "province", "describes_manor": "manor",
 	"describes_regiment": "regiment", "describes_town": "burg"}
 
 
 # One snapshot's plans (fix round 1 of M3 Task 4): Ledger.snapshot turns the
-# memo on at its start and off at its end, so SupplySystem.plan and
-# WorkshopSystem.plan run at most once a snapshot and never outlive it.
+# memo on at its start and off at its end, so SupplySystem.plan,
+# WorkshopSystem.plan, IndustrySystem.plan and MarketSystem.routes run at
+# most once a snapshot and never outlive it.
 static var _memo: Dictionary = {}
 static var _memo_on := false
 
@@ -64,6 +65,22 @@ static func _workshop_plan(repo: DataRepository, state: GameState) -> Array:
 	if not _memo.has("workshop"):
 		_memo["workshop"] = WorkshopSystem.plan(repo, state)
 	return _memo["workshop"]
+
+
+static func _industry_plan(repo: DataRepository, state: GameState) -> Array:
+	if not _memo_on:
+		return IndustrySystem.plan(repo, state)
+	if not _memo.has("industry"):
+		_memo["industry"] = IndustrySystem.plan(repo, state)
+	return _memo["industry"]
+
+
+static func _routes(repo: DataRepository, state: GameState) -> Array:
+	if not _memo_on:
+		return MarketSystem.routes(repo, state)
+	if not _memo.has("routes"):
+		_memo["routes"] = MarketSystem.routes(repo, state)
+	return _memo["routes"]
 
 
 static func has(name: String) -> bool:
@@ -126,7 +143,15 @@ static func run(row: Dictionary, repo: DataRepository, state: GameState, focus: 
 		"governs":
 			return _governs(repo, state, id, to_t)
 		"skims":
-			return _skims(state, id, to_t)
+			return _skims(repo, state, id, to_t)
+		"builds":
+			return _builds(repo, state, id)
+		"consumes":
+			return _consumes(repo, state, id, to_t)
+		"trades":
+			return _trades(repo, state, id, to_t)
+		"routes":
+			return _routes_to_gold(repo, state, id)
 	return []
 
 
@@ -241,6 +266,9 @@ static func _stands_on(repo: DataRepository, state: GameState, id: String) -> Ar
 		return out
 	if id.begins_with("building:"):
 		var cell := int(_rest(id).get_slice(":", 0))
+		# a work still in hand stands on nothing yet (M5: the artisans raise it)
+		if not MapManors.has_building(state, cell, _rest(id).get_slice(":", 1)):
+			return []
 		return [_link(id, "manor:%d" % cell, -1, "count", _manor_subj(repo, cell))]
 	return []
 
@@ -484,15 +512,24 @@ static func _instances_of_flow(repo: DataRepository, state: GameState, flow: Str
 		"supply_line":
 			for row: Dictionary in _supply_plan(repo, state):
 				out.append("supply_line:" + String(row["code"]))
+		"trade_route":
+			for row: Dictionary in _routes(repo, state):
+				out.append("trade_route:" + String(row["kingdom"]))
+		"works":
+			# the building works are drawn on the artisans who do them
+			for code: String in MapManors.controlled_provinces(repo, state):
+				out.append("artisans:" + code)
 		_:
 			push_error("LedgerResolvers: no instances for flow '%s'" % flow)
 	return out
 
 
 ## Who governs a flow's instances (spec §4): a tie (flow -1) from the man
-## who governs it now to each workshop / supply line. The link row's to_type
-## names the flow.
-static func _governs(repo: DataRepository, state: GameState, id: String, flow: String) -> Array:
+## who governs it now to each workshop / supply line / trade route / the
+## artisans of each province. The link row's to_type names the flow through
+## its LEDGER type (Governance.flow_of_type: the artisans are the works').
+static func _governs(repo: DataRepository, state: GameState, id: String, to_t: String) -> Array:
+	var flow := Governance.flow_of_type(repo, to_t)
 	var gid := Governance.governor_of(repo, state, flow)
 	if gid == "":
 		# An empty seat (final review M8): the type level still draws the tie,
@@ -500,11 +537,11 @@ static func _governs(repo: DataRepository, state: GameState, id: String, flow: S
 		# at the instance level.
 		if id != "":
 			return []
-		var t := _type_link("character", flow, -1, "count")
+		var t := _type_link("character", to_t, -1, "count")
 		t["vacant"] = true
 		return [t]
 	if id == "":
-		return [_type_link("character", flow, -1, "count")]
+		return [_type_link("character", to_t, -1, "count")]
 	var who := "character:" + gid
 	var out: Array = []
 	for node: String in _instances_of_flow(repo, state, flow):
@@ -518,7 +555,8 @@ static func _governs(repo: DataRepository, state: GameState, id: String, flow: S
 ## it. Keyed on GameState.caught — whoever was caught, governor now or not —
 ## so it survives a handover; drawn on his own ego (and the type level),
 ## never on a workshop's or a supply line's.
-static func _skims(state: GameState, id: String, flow: String) -> Array:
+static func _skims(repo: DataRepository, state: GameState, id: String, to_t: String) -> Array:
+	var flow := Governance.flow_of_type(repo, to_t)
 	var ids: Array = state.caught.keys()
 	ids.sort()
 	var all := 0
@@ -530,9 +568,9 @@ static func _skims(state: GameState, id: String, flow: String) -> Array:
 				total += int(hit["amount"])
 		all += total
 		if total > 0 and id == "character:" + gid:
-			out.append(_link(id, "type:" + flow, total, "gold"))
+			out.append(_link(id, "type:" + to_t, total, "gold"))
 	if id == "":
-		return [_type_link("character", flow, all, "gold")] if all > 0 else []
+		return [_type_link("character", to_t, all, "gold")] if all > 0 else []
 	return out
 
 
@@ -553,6 +591,125 @@ static func _garrisons(repo: DataRepository, state: GameState, id: String) -> Ar
 	if id == "":
 		return [_type_link("regiment", "town", out.size(), "count")]
 	return out
+
+
+# --- industry and trade (spec 2026-09-30-ledger-industry-trade-design) -------
+# Each reads the ONE function the tick settles (IndustrySystem.plan,
+# MapManors.work_speed_permille, MarketSystem.routes / market_value): the
+# crown's own books, every account full.
+
+## The pool a goods type sphere stands for.
+static func _pool_of_type(to_t: String) -> String:
+	return "strategic" if to_t == "strategic_goods" else "civil"
+
+
+## The buildings the artisans of a crown province raise: every building
+## standing, or in work, on a crown manor of that province, cells ascending,
+## codes sorted. [[cell, code]].
+static func _raised_in(repo: DataRepository, state: GameState, province: String) -> Array:
+	var out: Array = []
+	for cell: int in MapManors.manors_of_province(repo, province, state):
+		if not MapManors.is_crowns(repo, state, cell):
+			continue
+		var codes: Array = MapManors.buildings_of(state, cell)
+		for w: Dictionary in MapManors.works_of(state, cell):
+			if not String(w["building"]) in codes:
+				codes.append(String(w["building"]))
+		codes.sort()
+		for code: String in codes:
+			out.append([cell, code])
+	return out
+
+
+## artisans -> building (M5): the pace the artisans add to a province's
+## works, per mille over the plain 1000 (work_speed_permille − 1000). The type
+## level carries the home province's bonus.
+static func _builds(repo: DataRepository, state: GameState, id: String) -> Array:
+	if id == "":
+		var home := MapManors.home_province(repo, state)
+		var bonus := 0 if home == "" else MapManors.work_speed_permille(repo, state, home) - 1000
+		return [_type_link("artisans", "building", bonus, "permille")]
+	var provinces: Array = []
+	if id.begins_with("artisans:"):
+		provinces = [_rest(id)]
+	elif id.begins_with("building:"):
+		provinces = [MapManors.province_of(repo, int(_rest(id).get_slice(":", 0)), state)]
+	var mine := MapManors.controlled_provinces(repo, state)
+	var out: Array = []
+	for p: String in provinces:
+		if not p in mine:
+			continue
+		var bonus := MapManors.work_speed_permille(repo, state, p) - 1000
+		for pair: Array in _raised_in(repo, state, p):
+			var bid := "building:%d:%s" % [int(pair[0]), String(pair[1])]
+			if id == bid or id == "artisans:" + p:
+				out.append(_link("artisans:" + p, bid, bonus, "permille"))
+	return out
+
+
+## building -> civil / strategic goods (M5): the gold of inputs a building
+## buys from the lord's pool of `to_t` a month (IndustrySystem.plan's rows of
+## that pool, summed per building); the type level every building's.
+static func _consumes(repo: DataRepository, state: GameState, id: String, to_t: String) -> Array:
+	var pool := _pool_of_type(to_t)
+	var by: Dictionary = {}  # building node id -> gold, in the plan's order
+	var total := 0
+	for row: Dictionary in _industry_plan(repo, state):
+		if String(row["pool"]) != pool:
+			continue
+		var bid := "building:%d:%s" % [int(row["cell"]), String(row["code"])]
+		by[bid] = int(by.get(bid, 0)) + int(row["gold"])
+		total += int(row["gold"])
+	if id == "":
+		return [_type_link("building", to_t, total, "gold")]
+	return [_link(id, "type:" + to_t, int(by[id]), "gold")] if by.has(id) else []
+
+
+## market -> civil / strategic goods (M6): a realm market's stock of the
+## pool's goods at its own prices (MarketSystem.market_value); the type
+## level every realm market's.
+static func _trades(repo: DataRepository, state: GameState, id: String, to_t: String) -> Array:
+	var pool := _pool_of_type(to_t)
+	var markets := MarketSystem.realm_markets(repo, state)
+	if id == "":
+		var total := 0
+		for m: String in markets:
+			total += MarketSystem.market_value(repo, m, pool)
+		return [_type_link("market", to_t, total, "gold")]
+	if id.begins_with("market:") and _rest(id) in markets:
+		return [_link(id, "type:" + to_t, MarketSystem.market_value(repo, _rest(id), pool), "gold")]
+	return []
+
+
+## trade_route -> gold (M6): the toll a route pays the treasury a month, as
+## a governed flow (spec 2026-09-30-ledger-governors-design §4): the
+## steward's word (the toll he collects, whole) and the treasury's own count
+## (what reaches it, less his skim) — a venal steward splits the thread.
+static func _routes_to_gold(repo: DataRepository, state: GameState, id: String) -> Array:
+	var rows := _routes(repo, state)
+	if id == "":
+		var said := 0
+		var paid := 0
+		for r: Dictionary in rows:
+			said += int(r["claimed"])
+			paid += int(r["toll"])
+		var t := _type_link("trade_route", "gold", paid, "gold")
+		t["claims"] = _toll_claims(repo, state, said, paid)
+		return [t]
+	var out: Array = []
+	for r: Dictionary in rows:
+		var rid := "trade_route:" + String(r["kingdom"])
+		if id != rid:
+			continue
+		var l := _link(rid, "type:gold", int(r["toll"]), "gold")
+		l["claims"] = _toll_claims(repo, state, int(r["claimed"]), int(r["toll"]))
+		out.append(l)
+	return out
+
+
+static func _toll_claims(repo: DataRepository, state: GameState, said: int, paid: int) -> Array:
+	return [{"value": said, "source": _governor_source(repo, state, "trade_route")},
+		{"value": paid, "source": "the treasury's own count"}]
 
 
 # --- properties (spec 2026-09-30-ledger-ontology-design §6.3 "a property") ---
@@ -638,6 +795,17 @@ static func instances(name: String, repo: DataRepository, state: GameState) -> A
 		"supply_lines":
 			for row: Dictionary in _supply_plan(repo, state):
 				out.append({"id": "supply_line:" + String(row["code"]), "strain": int(row["loss_permille"])})
+		"artisans":
+			for code: String in MapManors.controlled_provinces(repo, state):
+				out.append({"id": "artisans:" + code,
+					"strain": MapManors.work_speed_permille(repo, state, code) - 1000})
+		"markets":
+			for m: String in MarketSystem.realm_markets(repo, state):
+				out.append({"id": "market:" + m, "strain": MarketSystem.market_value(repo, m, "civil")
+					+ MarketSystem.market_value(repo, m, "strategic")})
+		"trade_routes":
+			for r: Dictionary in _routes(repo, state):
+				out.append({"id": "trade_route:" + String(r["kingdom"]), "strain": int(r["value"])})
 	for row: Dictionary in out:
 		row["label"] = label_of(repo, state, String(row["id"]))
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -669,11 +837,28 @@ static func label_of(repo: DataRepository, state: GameState, id: String) -> Stri
 		"building":
 			var cell := int(rest.get_slice(":", 0))
 			var b: Dictionary = repo.manor_buildings.get(rest.get_slice(":", 1), {})
-			# a building that no longer stands (demolished) names nothing
-			if b.is_empty() or not repo.manors.has(cell) \
-					or not MapManors.has_building(state, cell, rest.get_slice(":", 1)):
+			# a building that no longer stands (demolished) names nothing; one
+			# still in work is named as a work (M5: the artisans raise it)
+			if b.is_empty() or not repo.manors.has(cell):
 				return ""
-			return "%s at %s" % [String(b["label"]), MapManors.label_of(repo, cell)]
+			if MapManors.has_building(state, cell, rest.get_slice(":", 1)):
+				return "%s at %s" % [String(b["label"]), MapManors.label_of(repo, cell)]
+			if MapManors.is_building(state, cell, rest.get_slice(":", 1)):
+				return "%s at %s (in work)" % [String(b["label"]), MapManors.label_of(repo, cell)]
+			return ""
+		"artisans":
+			var p := String((repo.provinces.get(rest, {}) as Dictionary).get("label", ""))
+			return "" if p == "" else "Artisans of " + p
+		"market":
+			var town := String((repo.world_table("economy", "markets").get(rest, {}) as Dictionary).get(
+				"center_burg", ""))
+			return "" if town == "" else "Market of " + String((repo.burgs.get(town, {}) as Dictionary).get(
+				"label", town))
+		"trade_route":
+			for r: Dictionary in _routes(repo, state):
+				if String(r["kingdom"]) == rest:
+					return "Trade with " + MarketSystem.label_of(repo, rest)
+			return ""
 		"character":
 			var c: Character = state.characters.get(rest)
 			return "" if c == null else c.display_name
