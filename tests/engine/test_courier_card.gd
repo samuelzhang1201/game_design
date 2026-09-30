@@ -22,9 +22,9 @@ func _code() -> String:
 	return ""
 
 
-func _field(card: Dictionary, name: String) -> String:
+func _field(card: Dictionary, label: String) -> String:
 	for f: Array in card["fields"]:
-		if String(f[0]) == name:
+		if String(f[0]) == label:
 			return String(f[1])
 	return ""
 

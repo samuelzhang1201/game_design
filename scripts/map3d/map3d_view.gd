@@ -28,8 +28,8 @@ signal army_menu_requested(code: String, at: Vector2)
 ## Where on the pack a left click landed — an order being AIMED needs the
 ## ground, not the thing picked.
 signal ground_clicked(pack_px: Vector2)
-## A click on a committed march's end ring (owner 2026-09-27): ArmyOrderMenu's route menu.
-signal route_clicked(code: String, at: Vector2)
+## A click on a committed march's end ring (owner 2026-09-27): ArmyOrderMenu's route menu (Map3DSelection emits it).
+@warning_ignore("unused_signal") signal route_clicked(code: String, at: Vector2)
 ## A right click on open ground (owner 2026-09-28): SpyOrderMenu's "Send a spy here".
 signal ground_menu_requested(pack_px: Vector2, at: Vector2)
 
@@ -515,7 +515,7 @@ func right_click(pos: Vector2) -> bool:
 
 func select_at(pos: Vector2) -> void:
 	var hit: Variant = ground_at(pos)
-	var at: Variant = null if hit == null else _ctx.to_pack(Vector2((hit as Vector3).x, (hit as Vector3).z))
+	var at: Variant = null if hit == null else (_ctx.to_pack(Vector2((hit as Vector3).x, (hit as Vector3).z)) as Variant)
 	var was_aiming := aiming  # the click that ends an aim selects nothing
 	if at != null: ground_clicked.emit(at)
 	if not was_aiming: _selection.click(pick_at(pos), pos)

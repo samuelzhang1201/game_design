@@ -69,7 +69,7 @@ func test_every_settled_month_files_one_steward_report_exact_to_the_economy() ->
 	for code: String in MapManors.controlled_provinces(repo, s):
 		expect += int(RealmEconomy.province(repo, s, code)["tax"])
 	engine.advance(s)
-	var reports: Array = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "monthly")
+	var reports: Array = s.missives.filter(func(x: Dictionary) -> bool: return String(x["kind"]) == "monthly")
 	assert_eq(reports.size(), 1)
 	var m: Dictionary = reports[0]
 	assert_eq(String(m["column"]), "truth")

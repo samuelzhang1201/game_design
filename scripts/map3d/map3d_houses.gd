@@ -86,7 +86,7 @@ static func footprint_radius_m(burg: Dictionary, repo: DataRepository) -> float:
 ## settlement that IS built shows every house the bake gave it: the bake's
 ## own house_count_<group> already decided how many that is, so there is no
 ## further thinning by population here (redesign owner 2026-09-20).
-static func visible_set(houses: Dictionary, repo: DataRepository, burg_pos: Dictionary,
+static func visible_set(houses: Dictionary, _repo: DataRepository, burg_pos: Dictionary,
 		camera_xz: Vector2, view_m: float, budget: int) -> Dictionary:
 	var near: Array = []
 	for code: String in houses:

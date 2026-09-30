@@ -23,9 +23,9 @@ static func words(key: String, label: String, text: String) -> Dictionary:
 	return {"key": key, "label": label, "text": text}
 
 
-static func make(kind: String, column: String, day: int, subj: Dictionary, title: String,
+static func make(kind: String, col: String, day: int, subj: Dictionary, title: String,
 		facts: Array) -> Dictionary:
-	return {"kind": kind, "column": column, "day": day, "subject": subj, "title": title,
+	return {"kind": kind, "column": col, "day": day, "subject": subj, "title": title,
 		"facts": facts.duplicate(true)}
 
 

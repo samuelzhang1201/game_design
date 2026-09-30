@@ -16,11 +16,11 @@ func test_every_top_level_csv_row_matches_its_header_column_count() -> void:
 	assert_not_null(dir, "res://data must be readable")
 	var names: Array[String] = []
 	dir.list_dir_begin()
-	var name := dir.get_next()
-	while name != "":
-		if not dir.current_is_dir() and name.ends_with(".csv"):
-			names.append(name)
-		name = dir.get_next()
+	var entry := dir.get_next()
+	while entry != "":
+		if not dir.current_is_dir() and entry.ends_with(".csv"):
+			names.append(entry)
+		entry = dir.get_next()
 	dir.list_dir_end()
 	assert_gt(names.size(), 0, "should find at least one top-level data/*.csv")
 	var failures: Array[String] = []

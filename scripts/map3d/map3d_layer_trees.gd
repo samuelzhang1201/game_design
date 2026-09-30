@@ -36,10 +36,11 @@ func build(p_ctx: Map3DContext) -> void:
 			"Map3DView: no bake/trees.bin — no woods (tools/map3d/bake_trees.py)")
 		return
 	var data := FileAccess.get_file_as_bytes(path).to_float32_array()
+	@warning_ignore("integer_division")
 	var n := data.size() / ROW
 	var density := clampf(repo.bal("map3d_tree_density"), 0.0, 1.0) * Map3DQuality.num(ctx.q(), "tree_density", 1.0)
 	var chunk := repo.bal("map3d_tree_chunk_m")
-	var scale := repo.bal("map3d_tree_scale")
+	var size_k := repo.bal("map3d_tree_scale")
 	var near := repo.bal("map3d_tree_near_m")
 	var far := repo.bal("map3d_tree_far_m")
 	var margin := repo.bal("map3d_tree_margin_m")
@@ -80,10 +81,10 @@ func build(p_ctx: Map3DContext) -> void:
 				mm.instance_count = rows.size()
 				for j in rows.size():
 					var i := rows[j]
-					var s := data[i * ROW + 4] * scale
-					var basis := Basis(Vector3.UP, data[i * ROW + 3]).scaled(Vector3(s, s, s))
+					var s := data[i * ROW + 4] * size_k
+					var turn := Basis(Vector3.UP, data[i * ROW + 3]).scaled(Vector3(s, s, s))
 					var at := Vector3(data[i * ROW], data[i * ROW + 1], data[i * ROW + 2]) - centre
-					mm.set_instance_transform(j, Transform3D(basis, at))
+					mm.set_instance_transform(j, Transform3D(turn, at))
 					var h := float((i * 40503) % 997) / 997.0
 					var h2 := float((i * 69069) % 991) / 991.0
 					mm.set_instance_color(j, Color(0.8 + 0.35 * h, 0.82 + 0.28 * h2, 0.8 + 0.2 * (1.0 - h)))

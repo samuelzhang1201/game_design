@@ -106,8 +106,8 @@ func taken() -> Array:
 
 
 ## The marks inside `bounds`, each at least `min_px` from every mark kept
-## before it, and — `box_px` square about its point — over none of `taken`.
-static func thin(marks: Array, min_px: float, bounds: Rect2, taken: Array = [], box_px: float = 0.0) -> Array:
+## before it, and — `box_px` square about its point — over none of `occupied`.
+static func thin(marks: Array, min_px: float, bounds: Rect2, occupied: Array = [], box_px: float = 0.0) -> Array:
 	var out: Array = []
 	for m: Dictionary in marks:
 		var at: Vector2 = m["at"]
@@ -115,7 +115,7 @@ static func thin(marks: Array, min_px: float, bounds: Rect2, taken: Array = [], 
 			continue
 		var box := Rect2(at - Vector2(box_px, box_px) * 0.5, Vector2(box_px, box_px))
 		var clear := true
-		for r: Rect2 in taken:
+		for r: Rect2 in occupied:
 			if box.intersects(r):
 				clear = false
 				break

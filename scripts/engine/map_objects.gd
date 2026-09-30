@@ -491,9 +491,9 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 		"ask": "What do we know of %s?" % label,
 		"known": known,
 	}
+	var urban: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.urban_population" % code)
+	var rural: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.rural_population" % code)
 	if card["known"] != "full":
-		var urban: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.urban_population" % code)
-		var rural: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.rural_population" % code)
 		var true_people := (int(urban) + int(rural)) if (urban != null and rural != null) \
 			else int(float(prov.get("population", 0)))
 		var facts: Array = [
@@ -514,8 +514,6 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 		codes.append(String(t["burg_code"]))
 	for i in mini(towns.size(), int(repo.bal("province_card_max_towns"))):
 		names.append(String(towns[i]["label"]))
-	var urban: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.urban_population" % code)
-	var rural: Variant = WorldLedger.value_of(repo, state, "economy.provinces.%s.rural_population" % code)
 	var fields: Array = card["fields"]
 	# Who holds the province's manors (MANOR_SYSTEM.md §4) — the crown's
 	# own land is known in this detail; abroad it is not.
@@ -616,6 +614,10 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	if burg != "":
 		stats.append(_stat("manor_seat", _label(repo.burgs, burg),
 			"Seat — the town of %s stands in it" % _label(repo.burgs, burg)))
+	# One economy on the card (2026-09-14): people, tax and yield are all
+	# ManorEconomy's whole-number month, the same figures the tick settles
+	# and the ECONOMY column sums.
+	var line := ManorEconomy.line_of(repo, state, cell, state.tick)
 	if card["known"] != "full":
 		# The orders stand as they always did for realm land (owner 2026-09-14):
 		# a general manor — the crown's own house holds it, or another
@@ -631,7 +633,6 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 				and String(MapManors.purchase_kind(repo, state, cell)["kind"]) == "foreign")):
 			card["actions"] = manor_actions(repo, state, cell)
 		stats.append(_manor_price_stat(repo, state, cell, crowns))
-		var line := ManorEconomy.line_of(repo, state, cell, state.tick)
 		var output_total := 0
 		for g: String in (line["units"] as Dictionary):
 			output_total += int((line["units"] as Dictionary)[g])
@@ -659,10 +660,6 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	var scale := float(repo.map_info.get("distance_scale", "1"))
 	fields.append(["Area", "%d %s²" % [roundi(MapManors.area_of(repo, cell) * scale * scale),
 		String(repo.map_info.get("distance_unit", "px"))]])
-	# One economy on the card (2026-09-14): people, tax and yield are all
-	# ManorEconomy's whole-number month, the same figures the tick settles
-	# and the ECONOMY column sums.
-	var line := ManorEconomy.line_of(repo, state, cell, state.tick)
 	var people := int(line["people"])
 	var town := MapManors.burg_of(repo, cell)
 	if town != "":
