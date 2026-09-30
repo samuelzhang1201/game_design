@@ -1,9 +1,9 @@
 # tests/ledger3d/test_ledger_strands.gd
 extends GutTest
 ## Accounts that differ are drawn as STRANDS (spec 2026-09-30-ledger-
-## governors-design §4): one thread per account, ledger_strand_gap_m apart,
-## each picked as "<link id>#<i>", and a drag re-lays every strand of a
-## thread in place.
+## governors-design §4, galaxy-design §5): one ribbon per account,
+## ledger_strand_gap_px apart edge to edge on the screen, each picked as
+## "<link id>#<i>".
 
 var repo: DataRepository
 var state: GameState
@@ -34,89 +34,34 @@ func after_each() -> void:
 	RealmEconomy.forget()
 
 
-func _supplies_out(snap: Dictionary) -> Dictionary:
-	for l: Dictionary in snap["links"]:
-		if String(l["type"]) == "supplies_out":
-			return l
-	return {}
-
-
-func _press(at: Vector2, pressed: bool) -> void:
-	var mb := InputEventMouseButton.new()
-	mb.button_index = MOUSE_BUTTON_LEFT
-	mb.pressed = pressed
-	mb.position = at
-	view._gui_input(mb)
+func _strands(g: Dictionary) -> Array:
+	var link := ""
+	for l: Dictionary in g["links"]:
+		if String(l["type"]) == "supplies_out" and (l["accounts"] as Array).size() == 2:
+			link = String(l["id"])
+	return view.segments().filter(func(seg: Dictionary) -> bool: return String(seg["link"]) == link)
 
 
 func test_two_accounts_are_two_strands_a_gap_apart() -> void:
-	var snap := Ledger.snapshot(repo, state, "war", {"id": "regiment:" + code})
-	view.show_snapshot(snap, false)
-	var l := _supplies_out(snap)
-	assert_eq((l["accounts"] as Array).size(), 2, "a venal marshal's word and the regiment's count")
-	var id := String(l["id"])
-	assert_false(view._thread_mi.has(id), "no single thread for a split link")
-	assert_true(view._thread_mi.has(id + "#0") and view._thread_mi.has(id + "#1"), "two strands")
-	var e0: Array = view._thread_ends[id + "#0"]
-	var e1: Array = view._thread_ends[id + "#1"]
-	var r0 := ((view._thread_mi[id + "#0"] as MeshInstance3D).mesh as CylinderMesh).top_radius
-	var r1 := ((view._thread_mi[id + "#1"] as MeshInstance3D).mesh as CylinderMesh).top_radius
-	assert_gt(r0, r1, "the claim is wider than what arrived")
-	# surface to surface: they never touch, however wide (fix round 1)
-	var apart := r0 + r1 + repo.bal("ledger_strand_gap_m")
-	assert_almost_eq((e0[0] as Vector3).distance_to(e1[0]), apart, 0.001, "their sources a gap apart")
-	assert_almost_eq((e0[1] as Vector3).distance_to(e1[1]), apart, 0.001, "their ends a gap apart")
-	var along := ((e0[1] as Vector3) - (e0[0] as Vector3)).normalized()
-	assert_almost_eq(((e1[0] as Vector3) - (e0[0] as Vector3)).dot(along), 0.0, 0.001, "side by side, not along")
-	# the bundle's outer surfaces are centred on where the one thread runs
-	var u := ((e1[0] as Vector3) - (e0[0] as Vector3)).normalized()
-	var mid: Vector3 = ((e0[0] as Vector3) + (e1[0] as Vector3)) * 0.5 + u * (r1 - r0) * 0.5
-	var line := view._ends_of(_supplies_out(snap))
-	assert_almost_eq(mid.distance_to(line[0]), 0.0, 0.001, "centred on the thread")
+	var g := Ledger.galaxy(repo, state, {})
+	view.show_snapshot(g, false)
+	view.settle_now()
+	var st := _strands(g)
+	assert_eq(st.size(), 2, "a venal marshal's word and the regiment's count")
+	assert_true(String(st[0]["id"]).ends_with("#0") and String(st[1]["id"]).ends_with("#1"))
+	var w0 := float(st[0]["width_px"])
+	var w1 := float(st[1]["width_px"])
+	assert_gt(w0, w1, "the claim is wider than what arrived")
+	assert_almost_eq(absf(float(st[1]["shift_px"]) - float(st[0]["shift_px"])),
+		(w0 + w1) * 0.5 + repo.bal("ledger_strand_gap_px") * view._window_scale(), 0.001, "edge to edge, a gap apart")
 
 
 func test_a_strand_is_picked_by_its_own_id() -> void:
-	var snap := Ledger.snapshot(repo, state, "war", {"id": "regiment:" + code})
-	view.show_snapshot(snap, false)
-	var id := String(_supplies_out(snap)["id"])
-	var ends: Array = view._thread_ends[id + "#1"]
+	var g := Ledger.galaxy(repo, state, {})
+	view.show_snapshot(g, false)
+	view.settle_now()
+	var seg: Dictionary = _strands(g)[1]
+	var ends := view.seg_ends(seg)
 	var mid: Vector3 = ((ends[0] as Vector3) + (ends[1] as Vector3)) * 0.5
-	var at := view._camera.unproject_position(mid) / view._window_scale()
-	assert_eq(view._pick(at), {"kind": "thread", "id": id + "#1"})
-
-
-func test_a_drag_moves_every_strand_in_place() -> void:
-	var snap := Ledger.snapshot(repo, state, "war", {"id": "regiment:" + code})
-	view.show_snapshot(snap, false)
-	var id := String(_supplies_out(snap)["id"])
-	var end_id := ""
-	var at := Vector2.ZERO
-	for nid: String in ["regiment:" + code, "supply_line:" + code]:
-		var p: Variant = view.screen_pos_of(nid)
-		if p != null and view._pick(p as Vector2) == {"kind": "sphere", "id": nid}:
-			end_id = nid
-			at = p
-			break
-	assert_ne(end_id, "", "an end of the split thread can be grabbed")
-	var nodes := {}
-	var before := {}
-	for s: String in [id + "#0", id + "#1"]:
-		nodes[s] = (view._thread_mi[s] as MeshInstance3D).get_instance_id()
-		before[s] = view._thread_ends[s]
-	var children := view._threads_root.get_child_count()
-	_press(at, true)
-	var mm := InputEventMouseMotion.new()
-	mm.position = at + Vector2(60, 25)
-	mm.relative = Vector2(60, 25)
-	view._gui_input(mm)
-	_press(mm.position, false)
-	for s: String in nodes:
-		assert_eq((view._thread_mi[s] as MeshInstance3D).get_instance_id(), nodes[s], "re-laid in place: " + s)
-		assert_ne(view._thread_ends[s], before[s], "its ends moved: " + s)
-	var e0: Array = view._thread_ends[id + "#0"]
-	var e1: Array = view._thread_ends[id + "#1"]
-	var r0 := ((view._thread_mi[id + "#0"] as MeshInstance3D).mesh as CylinderMesh).top_radius
-	var r1 := ((view._thread_mi[id + "#1"] as MeshInstance3D).mesh as CylinderMesh).top_radius
-	assert_almost_eq((e0[0] as Vector3).distance_to(e1[0]), r0 + r1 + repo.bal("ledger_strand_gap_m"), 0.001,
-		"still a gap apart")
-	assert_eq(view._threads_root.get_child_count(), children, "no thread was made or freed")
+	var at := view.camera().unproject_position(mid) / view._window_scale()
+	assert_eq(view._pick(at), {"kind": "thread", "id": String(seg["id"])})
