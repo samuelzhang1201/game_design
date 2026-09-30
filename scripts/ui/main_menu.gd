@@ -1,25 +1,17 @@
 class_name MainMenu
 extends Control
 ## Title screen (user rulings 2026-08-30): a visible menu — Start Game, Load
-## Game, Quit — instead of the old press-Space-only screen. Start Game opens
-## character creation: first name and family name, over the crown's arms
-## (owner 2026-09-15; they replaced the family-flag glyphs). The chosen
-## family name is inherited by every role of the player's house
-## (GameState.apply_player_setup). Space still quick-starts with defaults.
+## Game, Quit — instead of the old press-Space-only screen. Start Game and
+## Space both begin the reign at once with the founding names: the realm and
+## the ruler are not customised (owner 2026-09-30; the character-creation
+## panel of 2026-09-15 is gone).
 
 signal start_requested
 signal load_requested
 
-## The arms preview's height, design px.
-const ARMS_PREVIEW_PX := 88.0
 const PAGE_SHADER := preload("res://scripts/ui/shaders/menu_page.gdshader")
 
 var _menu_col: VBoxContainer
-var _menu_card: PanelContainer
-var _setup_panel: PanelContainer
-var _first_name: LineEdit
-var _family_name: LineEdit
-var _arms_preview: HeraldicShield
 var _status: Label
 
 func _ready() -> void:
@@ -49,7 +41,6 @@ func _ready() -> void:
 		frame.material = mat
 	add_child(frame)
 	_build_menu()
-	_build_setup_panel()
 
 func _build_menu() -> void:
 	# The menu is a floating window, so it wears the window's leather and
@@ -62,7 +53,6 @@ func _build_menu() -> void:
 	card.grow_vertical = Control.GROW_DIRECTION_BOTH
 	card.custom_minimum_size = Vector2(440, 0)
 	add_child(card)
-	_menu_card = card
 	_menu_col = VBoxContainer.new()
 	_menu_col.name = "MenuCol"
 	_menu_col.add_theme_constant_override("separation", 12)
@@ -75,12 +65,12 @@ func _build_menu() -> void:
 	var rule := HSeparator.new()
 	rule.add_theme_constant_override("separation", 10)
 	_menu_col.add_child(rule)
-	var start := _menu_button("Start Game", _open_setup)
-	# The screen's one primary action; Space takes it at once with the
-	# founding name, said where the player looks for it rather than in a
-	# footer line (owner 2026-09-28: the footer read as a debug hint).
+	var start := _menu_button("Start Game", _start)
+	# The screen's one primary action, said where the player looks for it
+	# rather than in a footer line (owner 2026-09-28: the footer read as a
+	# debug hint).
 	UiPalette.primary_button(start, 18)
-	start.tooltip_text = "Or press Space to take the throne at once with the founding name"
+	start.tooltip_text = "Or press Space to take the throne"
 	_menu_col.add_child(start)
 	_menu_col.add_child(_menu_button("Load Game", _on_load_pressed))
 	_menu_col.add_child(_menu_button("Quit", func() -> void: get_tree().quit()))
@@ -99,79 +89,9 @@ func _menu_button(label: String, handler: Callable) -> Button:
 	btn.pressed.connect(handler)
 	return btn
 
-## Character creation: names over the crown's arms, then Begin Reign.
-func _build_setup_panel() -> void:
-	_setup_panel = PanelContainer.new()
-	_setup_panel.name = "SetupPanel"
-	_setup_panel.visible = false
-	_setup_panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 28, "window"))
-	_setup_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	_setup_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_setup_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	_setup_panel.custom_minimum_size = Vector2(380, 0)
-	add_child(_setup_panel)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
-	_setup_panel.add_child(col)
-	var title := Label.new()
-	title.text = "FOUND YOUR DYNASTY"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_title(title, 18)
-	col.add_child(title)
-	col.add_child(HSeparator.new())
-	col.add_child(_field_label("Given name"))
-	_first_name = LineEdit.new()
-	_first_name.name = "FirstName"
-	_first_name.text = "Aldric"
-	_first_name.max_length = 16
-	col.add_child(_first_name)
-	col.add_child(_field_label("Family name"))
-	_family_name = LineEdit.new()
-	_family_name.name = "FamilyName"
-	_family_name.text = "Valorin"
-	_family_name.max_length = 16
-	col.add_child(_family_name)
-	# The crown's arms (owner 2026-09-15): the royal seat's, whatever the
-	# family is named.
-	col.add_child(_field_label("House arms"))
-	_arms_preview = HeraldicShield.new()
-	_arms_preview.name = "ArmsPreview"
-	_arms_preview.custom_minimum_size = Vector2(ARMS_PREVIEW_PX * 0.85, ARMS_PREVIEW_PX)
-	_arms_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var royal := HouseArms.royal_family(Game.data)
-	_arms_preview.set_arms(MapPalette.color_of(Game.data, Game.data.resolve_realm("player_realm")),
-		royal.substr(0, 1).to_upper())
-	_arms_preview.set_texture(HouseArms.texture_of_house(Game.data, null, royal))
-	col.add_child(_arms_preview)
-	col.add_child(HSeparator.new())
-	var begin := _menu_button("Begin Reign", _on_begin_pressed)
-	begin.name = "BeginReign"
-	col.add_child(begin)
-	var back := _menu_button("Back", _close_setup)
-	back.name = "Back"
-	col.add_child(back)
-
-func _field_label(text: String) -> Label:
-	var l := Label.new()
-	l.text = text.to_upper()
-	l.add_theme_font_size_override("font_size", 16)
-	l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	return l
-
-func _open_setup() -> void:
-	_menu_card.visible = false
-	_setup_panel.visible = true
-
-func _close_setup() -> void:
-	_setup_panel.visible = false
-	_menu_card.visible = true
-
-func _on_begin_pressed() -> void:
-	Game.player_setup = {
-		"first_name": _first_name.text.strip_edges(),
-		"family_name": _family_name.text.strip_edges(),
-	}
+## The reign begins with the founding names (no player setup).
+func _start() -> void:
+	Game.player_setup = {}
 	start_requested.emit()
 
 func _on_load_pressed() -> void:
@@ -180,21 +100,10 @@ func _on_load_pressed() -> void:
 func show_load_failed() -> void:
 	_status.text = "No saved realm found."
 
-## Test seams.
-func setup_panel() -> PanelContainer:
-	return _setup_panel
-
+## Test seam.
 func menu_column() -> VBoxContainer:
 	return _menu_col
 
-func arms_preview() -> HeraldicShield:
-	return _arms_preview
-
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("start_game") and not _setup_panel.visible:
-		Game.player_setup = {}
-		start_requested.emit()
-
-
-func _on_load_requested() -> void:
-	pass # Replace with function body.
+	if event.is_action_pressed("start_game"):
+		_start()

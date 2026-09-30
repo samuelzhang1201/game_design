@@ -18,7 +18,7 @@ func _click(at: Vector2) -> void:
 		get_viewport().push_input(e)
 		await wait_frames(1)
 
-func test_a_real_click_on_start_game_opens_character_creation() -> void:
+func test_a_real_click_on_start_game_begins_the_reign() -> void:
 	var r := _root()
 	await wait_frames(3)
 	var menu: MainMenu = r.current_screen
@@ -26,4 +26,4 @@ func test_a_real_click_on_start_game_opens_character_creation() -> void:
 	var at := start.get_global_rect().get_center()
 	await _click(at)
 	await wait_frames(2)
-	assert_true(menu.setup_panel().visible, "the click reached Start Game (button at %s)" % at)
+	assert_false(r.current_screen is MainMenu, "the click reached Start Game (button at %s)" % at)
