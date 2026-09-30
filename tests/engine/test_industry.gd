@@ -128,6 +128,28 @@ func test_a_paid_month_wakes_an_idle_forge() -> void:
 		"reason": "the lord's workshops buy their inputs"}], "an idle forge still buys its whole need")
 	assert_eq(s.idle_buildings, {}, "rewritten whole every settlement")
 
+## Final fix wave, Minor1: two DIFFERENT buildings on ONE manor wanting the
+## SAME good (armoury and smithy both eat iron) idle TOGETHER when the pool
+## cannot pay either, and wake together once it can pay both — each bills
+## its own whole need, in the plan's own cell-then-code order.
+func test_two_buildings_on_one_manor_wanting_the_same_good_idle_and_wake_together() -> void:
+	_smithy()
+	assert_true(MapManors.build(data, s, cell, "armoury", "a test armoury"))
+	s.metrics["lord_strategic"] = 0.0
+	assert_eq(IndustrySystem.settle_month(data, s), [])
+	assert_true(MapManors.is_idle(s, cell, "smithy"), "no iron of its own, no gold: idle")
+	assert_true(MapManors.is_idle(s, cell, "armoury"), "wants the SAME iron: idle too")
+	assert_eq(s.idle_buildings, {str(cell): ["armoury", "smithy"]})
+	# armoury: 2 iron + 1 tools = 8 + 12 = 20; smithy: 3 iron = 12; 32 pays
+	# both whole bills (neither manor makes iron or tools of its own).
+	s.metrics["lord_strategic"] = 32.0
+	var lines := IndustrySystem.settle_month(data, s)
+	assert_eq(lines, [{"metric": "lord_strategic", "delta": -32,
+		"reason": "the lord's workshops buy their inputs"}], "both whole bills paid at once")
+	assert_false(MapManors.is_idle(s, cell, "smithy"))
+	assert_false(MapManors.is_idle(s, cell, "armoury"))
+	assert_eq(s.idle_buildings, {}, "both woke")
+
 func test_a_civil_input_is_bought_from_the_civil_stores() -> void:
 	var dry := _home_manor(func(c: int) -> bool:
 		return not (ManorEconomy.line_of(data, s, c, s.tick)["units"] as Dictionary).has("grain"))
