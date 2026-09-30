@@ -651,7 +651,7 @@ ledger_turn_deg_per_px,0.3,LEDGER: degrees turned per pointer px of a right-drag
 ledger_zoom_factor,1.12,LEDGER: distance factor per wheel notch
 ledger_pan_gesture_px,12,LEDGER: pointer px per unit of a trackpad pan gesture
 ledger_label_px,14,LEDGER: sphere names' font size (design px)
-ledger_label_lift_px,18,LEDGER: how far above its sphere's centre a name stands (design px)
+ledger_label_lift_px,12,LEDGER: how far above its sphere's centre a name stands (design px)
 ledger_label_halo_px,4,LEDGER: the dark halo under a sphere's name (design px)
 ledger_pick_min_px,4,"LEDGER galaxy: a link is picked within at least this many design px of its line, however thin it is drawn"
 workshop_capacity_gold,40,"LEDGER M2 (spec 2026-09-30-ledger-supply-design §2): gold of the lord's civil goods one war workshop takes a month at full rate"
@@ -691,14 +691,14 @@ ledger_galaxy_ms_per_frame,4,LEDGER galaxy: milliseconds of layout a frame while
 ledger_galaxy_mode_ease_s,0.6,LEDGER galaxy: seconds the stars ease between the 3D and 2D places
 ledger_galaxy_fly_s,0.6,LEDGER galaxy: seconds the camera flies to a cluster
 ledger_galaxy_other_fade,0.25,LEDGER galaxy: perceived opacity of the other clusters while one is chosen
-ledger_cross_rest_fade,0.45,LEDGER galaxy: perceived opacity of a link crossing clusters while nothing is selected (outside the Court tab)
+ledger_cross_rest_fade,0.3,LEDGER galaxy: perceived opacity of a link crossing clusters while nothing is selected (outside the Court tab)
 ledger_focus_width,1.5,LEDGER galaxy: how much wider the selected star's links are drawn
 ledger_star_min,0.45,LEDGER galaxy: the smallest star's radius (metres)
 ledger_star_max,2.8,LEDGER galaxy: the largest star's radius (metres)
 ledger_star_pool,2.6,LEDGER galaxy: a goods pool's radius (gold / civil / strategic)
 ledger_star_per_link,0.22,LEDGER galaxy: radius added per square root of a star's links
 ledger_star_per_fold,0.27,LEDGER galaxy: radius added per square root of what a province folds
-ledger_star_emit,1.4,LEDGER galaxy: a star's glow
+ledger_star_emit,1.8,LEDGER galaxy: a star's glow
 ledger_star_rim,1.6,LEDGER galaxy: a star's rim light
 ledger_star_metallic,0.35,LEDGER galaxy: a star's metallic
 ledger_star_roughness,0.22,LEDGER galaxy: a star's roughness
@@ -719,3 +719,10 @@ ledger_label_hubs,12,LEDGER galaxy: the largest stars in view that are always na
 ledger_label_strong_px,16,"LEDGER galaxy: the larger name size, for the selected star and the hubs (design px; spec §7)"
 ledger_title_px,20,LEDGER galaxy: a cluster title's font size (design px)
 ledger_ring_px,3,LEDGER galaxy: the selected star's ring width (screen px)
+ledger_light_gain,1.5,"LEDGER galaxy: how much a link's running light brightens its own colour (Task 11 fix round 1: a mix toward white read as grey chips)"
+ledger_star_draw_scale,0.6,"LEDGER galaxy: a star is drawn at this share of its layout radius (Task 11 fix round 1: small stars whose glow carries the size, not pearls); the layout keeps the full radius"
+ledger_star_planned_max,0.9,"LEDGER galaxy: a planned (ghost) star's radius at most (metres, before ledger_star_draw_scale): an ordinary small star's, never a pool's (Task 11 fix round 1)"
+ledger_star_planned_sat,0.3,"LEDGER galaxy: a planned star wears its own cluster's colour at this share of its saturation"
+ledger_star_planned_fade,0.5,"LEDGER galaxy: a planned star's perceived opacity (faint: not yet built)"
+ledger_label_halo_soft_px,10,"LEDGER galaxy: the soft wide halo under every name and title (design px), so a link never cuts a letter"
+ledger_label_halo_soft_alpha,0.6,"LEDGER galaxy: the soft halo's opacity"

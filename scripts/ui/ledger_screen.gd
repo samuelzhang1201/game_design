@@ -138,10 +138,17 @@ func drill(id: String) -> void:
 		else:
 			_opened[code] = true
 			_open_order.append(code)
-		_rebuild(true)
+		# the province is selected AS the new chart is drawn: one restyle,
+		# not a second one after it (Task 11 fix round 1, F7: ~12 ms of the
+		# third province's stall)
+		_rebuild(true, id)
+		# opening frames the province and what it unfolded; closing frames
+		# nothing (Task 11 fix round 1, F8)
+		if _opened.has(code):
+			_view.frame_opened(id)
 	else:
 		_view.frame_web(id)
-	_view.select(id)
+		_view.select(id)
 	_show_card(LedgerCards.entry(Game.data, Game.state, id, _snap))
 
 
@@ -178,11 +185,11 @@ func _clear_card() -> void:
 	_card_mine = false
 
 
-func _rebuild(keep_camera: bool) -> void:
+func _rebuild(keep_camera: bool, select_id: String = "") -> void:
 	_rebuilds += 1
 	var selected := _view._selected
 	_snap = Ledger.galaxy(Game.data, Game.state, _opened)
-	_view.show_snapshot(_snap, keep_camera)
+	_view.show_snapshot(_snap, keep_camera, select_id)
 	if selected != "" and _view._selected == "":
 		_clear_card()  # the selected star is gone (a courier arrived, a report aged out)
 	_crumb()

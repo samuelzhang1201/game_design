@@ -439,3 +439,125 @@ func test_a_dimmed_hub_never_stands_on_a_star() -> void:
 			var box := Rect2((e["at"] as Vector2) - Vector2(w * 0.5, px * 0.45), Vector2(w, px * 1.05))
 			for d in discs:
 				assert_false(d.intersects(box), "the dimmed hub %s stands on a star" % id)
+
+
+## Task 11 fix round 1 (F1): a dimmed star is drawn blended — its colour
+## kept, its opacity lowered — never darkened on an opaque sphere.
+func test_a_dimmed_star_fades_toward_the_sky() -> void:
+	_show()
+	view.select("character:you")
+	var dim := ""
+	for id: String in view.stars():
+		if not view._near.has(id):
+			dim = id
+			break
+	var c := view.star_colour(dim)
+	assert_almost_eq(c.a, repo.bal("ledger_focus_fade"), 0.001, "its opacity is the fade")
+	assert_eq(Color(c, 1.0), Color(view._cluster_col[view._cluster_of(dim)], 1.0), "its colour is kept")
+	assert_true(view._faint.has(dim), "a dimmed star is drawn by the blended MultiMesh")
+	assert_false(view._whole.has(dim))
+	assert_true(view._whole.has("character:you"), "the selected star is drawn whole")
+	assert_eq(view._faint_stars.multimesh.instance_count, view._faint.size())
+	assert_eq(view._stars.multimesh.instance_count, view._whole.size())
+	var code := (load("res://scenes/ledger/star_faint.gdshader") as Shader).code
+	assert_true(code.contains("ALPHA = pow(clamp(col.a"), "the fade is the star's perceived opacity")
+	assert_true(code.contains("depth_draw_never"), "it hides nothing behind it: the haze and links show through")
+	var whole := (load("res://scenes/ledger/star.gdshader") as Shader).code
+	assert_false(whole.contains("col.a"), "a whole star is never darkened by a fade")
+	view.select("")
+	assert_true(view._faint.is_empty() or view._faint.all(func(id: String) -> bool:
+		return String(view._nodes[id].get("status", "live")) == "planned"), "at rest only the ghosts are faint")
+
+
+## Task 11 fix round 1 (F2): at rest the player's cluster is read one web at
+## a time — a tie or a structure link inside it that does not touch the
+## player stands back at ledger_tie_rest_fade; one touching the player is
+## whole; a link across clusters at ledger_cross_rest_fade.
+func test_at_rest_the_players_cluster_is_read_one_web_at_a_time() -> void:
+	_show()
+	var c := view._cluster_of(LedgerView3D.EGO_AT_REST)
+	var mine := 0
+	var others := 0
+	for l: Dictionary in view._snap["links"]:
+		var a := String(l["from"])
+		var b := String(l["to"])
+		if view._cluster_of(a) == c and view._cluster_of(b) == c:
+			var touches := a == LedgerView3D.EGO_AT_REST or b == LedgerView3D.EGO_AT_REST
+			assert_almost_eq(view._link_fade(l), 1.0 if touches else repo.bal("ledger_tie_rest_fade"), 0.001, String(l["id"]))
+			if touches:
+				mine += 1
+			else:
+				others += 1
+		elif view._cluster_of(a) != view._cluster_of(b):
+			assert_almost_eq(view._link_fade(l), repo.bal("ledger_cross_rest_fade"), 0.001, String(l["id"]))
+	assert_gt(mine, 0)
+	assert_gt(others, 0, "the court's structure links (member, sits) are among the context")
+	var seg: Dictionary = view.segments()[0]
+	var l0: Dictionary = {}
+	for l: Dictionary in view._snap["links"]:
+		if String(l["id"]) == String(seg["link"]):
+			l0 = l
+	assert_almost_eq((seg["ca"] as Color).a, view._ink(l0) * pow(view._link_fade(l0), 2.2), 0.001,
+		"the fade reaches the vertex colour as perceived opacity")
+
+
+## Task 11 fix round 1 (F3): a planned (ghost) star is small and faint in its
+## own cluster's colour, desaturated — never a big neutral grey sphere.
+func test_a_planned_star_is_small_faint_and_its_clusters() -> void:
+	_show()
+	var ghost := "type:enemy_host"
+	assert_true(view._nodes.has(ghost))
+	assert_lte(float(view._size[ghost]), repo.bal("ledger_star_planned_max") * repo.bal("ledger_star_draw_scale") + 0.0001)
+	var c := view.star_colour(ghost)
+	assert_almost_eq(c.a, repo.bal("ledger_star_planned_fade"), 0.001)
+	var own: Color = view._cluster_col[view._cluster_of(ghost)]
+	assert_almost_eq(c.h, own.h, 0.01, "its own cluster's hue")
+	assert_almost_eq(c.s, own.s * repo.bal("ledger_star_planned_sat"), 0.01, "desaturated")
+
+
+## Task 11 fix round 1 (F4, F5): the running light is a gain on the link's
+## own colour, bound from data; a star is drawn at ledger_star_draw_scale of
+## its layout radius.
+func test_the_light_brightens_its_own_hue_and_stars_are_drawn_small() -> void:
+	_show()
+	assert_almost_eq(float(view.link_material().get_shader_parameter("light_gain")), repo.bal("ledger_light_gain"), 0.0001)
+	var code := (load("res://scenes/ledger/link.gdshader") as Shader).code
+	assert_false(code.contains("vec3(1.0, 0.95, 0.82)"), "no neutral chip")
+	var id := "character:you"
+	var degree := 0
+	for l: Dictionary in view._snap["links"]:
+		if String(l["from"]) == id or String(l["to"]) == id:
+			degree += 1
+	assert_almost_eq(float(view._size[id]), LedgerGalaxyLayout.size_of(repo, view._nodes[id], degree)
+		* repo.bal("ledger_star_draw_scale"), 0.0001)
+
+
+## Task 11 fix round 1 (F9): in a chosen cluster only its own stars are hubs,
+## and a dimmed star's name is drawn dim.
+func test_a_chosen_clusters_hubs_are_its_own_and_dim_names_dim() -> void:
+	_show()
+	view.focus_cluster("war")
+	for i in 60:
+		view._process(1.0 / 60.0)
+	for id: String in view._hubs():
+		assert_eq(view._cluster_of(id), "war", id)
+	for e: Dictionary in view._hud._entries:
+		if bool(e.get("title", false)):
+			continue
+		for id: String in view.stars():
+			if String(view._nodes[id]["label"]) == String(e["text"]) and view._cluster_of(id) != "war":
+				assert_lt((e["ink"] as Color).a, 0.8, "a dimmed star's name is dim: " + id)
+
+
+## Task 11 fix round 1 (F7): a snapshot drawn with a star to select selects it
+## in the same restyle — as select() after it would.
+func test_a_snapshot_can_be_drawn_with_its_selection() -> void:
+	var g := Ledger.galaxy(repo, s, {})
+	view.show_snapshot(g, false, "character:you")
+	assert_eq(view._selected, "character:you")
+	var with_arg := view.segments().map(func(seg: Dictionary) -> Color: return seg["ca"])
+	view.show_snapshot(g, false)
+	view.select("character:you")
+	assert_eq(view.segments().map(func(seg: Dictionary) -> Color: return seg["ca"]), with_arg)
+	view.show_snapshot(g, false, "no:such")
+	assert_eq(view._selected, "", "a star not drawn is not selected")

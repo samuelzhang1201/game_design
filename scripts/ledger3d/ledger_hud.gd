@@ -30,6 +30,8 @@ var _fill := Color(0.88, 0.73, 0.42)
 var _track := Color(0.29, 0.24, 0.17)
 var _ring := Color(0.88, 0.73, 0.42)
 var _ring_w := 3.0
+var _soft_px := 0.0
+var _soft_alpha := 0.0
 
 
 func style(font: Font, px: float, ink: Color, halo: Color, halo_px: int) -> void:
@@ -50,6 +52,24 @@ func style_gauges(radius: float, width: float, gap: float, caption_px: float, fi
 func style_title(font: Font, px: float) -> void:
 	_title_font = font
 	_title_px = px
+
+
+## The soft wide halo laid under every name and title before its crisp
+## outline (Task 11 fix round 1, F6): a link passing behind a name fades out
+## round its letters instead of cutting them.
+func style_halo(soft_px: float, soft_alpha: float) -> void:
+	_soft_px = soft_px
+	_soft_alpha = soft_alpha
+
+
+## The outline passes drawn under a name, widest first: [size px, colour] —
+## the soft halo (when styled), then the crisp one.
+func halo_passes() -> Array:
+	var out: Array = []
+	if _soft_px > float(_halo_px) and _soft_alpha > 0.0:
+		out.append([int(_soft_px), Color(_halo, _soft_alpha)])
+	out.append([_halo_px, _halo])
+	return out
 
 
 func style_ring(colour: Color, width_px: float) -> void:
@@ -121,7 +141,8 @@ static func _font_of(e: Dictionary, font: Font, title_font: Font) -> Font:
 ## An entry may carry `alt`, a second place (under its sphere): a name whose
 ## own place is taken stands there if that is clear, so a type in a close row
 ## keeps its name; and `beside` ([its star's centre, its screen radius]): then
-## it may also stand level with its star, to the right or the left. The box is
+## it may also stand level with its star, to the right or the left, then at
+## its four corners. The box is
 ## the text's measured width when a font is given, else estimated at 0.55 em a
 ## glyph (so the cull is testable without one), centred on the place, with a
 ## quarter em of air at each end. A `title: true` entry is measured in
@@ -159,6 +180,12 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 			var reach := float(e["beside"][1]) + px * 0.5 + w * 0.5
 			places.append(star + Vector2(reach, 0.0))
 			places.append(star - Vector2(reach, 0.0))
+			# then the four corners, a name's height off level, so a hub in a
+			# crowd still finds a place attached to its own star
+			var up := float(e["beside"][1]) + px * 0.6
+			for sx: float in [1.0, -1.0]:
+				for sy: float in [-1.0, 1.0]:
+					places.append(star + Vector2(sx * reach, sy * up))
 		var boxes: Array[Rect2] = []
 		for k in places.size():
 			var at: Vector2 = places[k]
@@ -209,7 +236,10 @@ func _draw() -> void:
 		var text := String(e["text"])
 		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
 		var at := (e["at"] as Vector2) - Vector2(w * 0.5, -px * 0.35)
-		draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px), _halo_px, _halo)
+		for pass_: Array in halo_passes():
+			var halo: Color = pass_[1]
+			draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px), int(pass_[0]),
+				Color(halo, halo.a * minf(ink.a / 0.8, 1.0)))
 		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px), ink)
 		var props: Array = e.get("props", [])
 		if not props.is_empty():

@@ -6,6 +6,7 @@ extends GutTest
 const MATERIALS := {
 	"res://scenes/ledger/materials/sky.tres": "res://scenes/ledger/sky.gdshader",
 	"res://scenes/ledger/materials/star.tres": "res://scenes/ledger/star.gdshader",
+	"res://scenes/ledger/materials/star_faint.tres": "res://scenes/ledger/star_faint.gdshader",
 	"res://scenes/ledger/materials/haze.tres": "res://scenes/ledger/haze.gdshader",
 	"res://scenes/ledger/materials/link.tres": "res://scenes/ledger/link.gdshader",
 }

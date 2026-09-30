@@ -58,6 +58,10 @@ cast_shadow = 0
 unique_name_in_owner = true
 cast_shadow = 0
 
+[node name="FaintStars" type="MultiMeshInstance3D" parent="Viewport"]
+unique_name_in_owner = true
+cast_shadow = 0
+
 [node name="Display" type="TextureRect" parent="."]
 unique_name_in_owner = true
 layout_mode = 1

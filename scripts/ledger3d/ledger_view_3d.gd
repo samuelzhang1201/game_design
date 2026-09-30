@@ -25,6 +25,7 @@ const TITLE_INK_BLEND := 0.45      # a cluster's title: its colour this far towa
 const HAZE_MIN_RADIUS_M := 8.0     # a cluster's haze never smaller than this mean spread
 const RING_GAP_RINGS := 2.0        # the selection ring stands this many ring widths off the star
 const STAR_MAT := preload("res://scenes/ledger/materials/star.tres")
+const STAR_FAINT_MAT := preload("res://scenes/ledger/materials/star_faint.tres")
 const LINK_MAT := preload("res://scenes/ledger/materials/link.tres")
 const HAZE_MAT := preload("res://scenes/ledger/materials/haze.tres")
 
@@ -33,6 +34,7 @@ const HAZE_MAT := preload("res://scenes/ledger/materials/haze.tres")
 @onready var _env: WorldEnvironment = %Env
 @onready var _camera: Camera3D = %Camera
 @onready var _stars: MultiMeshInstance3D = %Stars
+@onready var _faint_stars: MultiMeshInstance3D = %FaintStars   # the dimmed ones, blended toward the sky (F1)
 @onready var _links: MeshInstance3D = %Links
 @onready var _haze_root: Node3D = %Haze
 @onready var _hud: LedgerHud = %Hud
@@ -58,8 +60,11 @@ var _mode_pos: Dictionary = {}        # true (flat) / false (3D) -> {"pos": the 
 var _frame_ids: Array = []            # what the camera frames while _framed
 var _title_font: Font
 var _star_cols := PackedColorArray()  # what each star wears, in _order (the MultiMesh's own copy is the renderer's)
+var _whole: Array[String] = []        # the stars drawn whole (opaque), in _order
+var _faint: Array[String] = []        # the dimmed stars (alpha under 1), drawn blended, in _order
 var _near: Dictionary = {}
 var _star_mat: ShaderMaterial
+var _faint_mat: ShaderMaterial
 var _link_mat: ShaderMaterial
 var _sky_mat: ShaderMaterial
 var _haze: Dictionary = {}
@@ -105,15 +110,19 @@ func bind(repo: DataRepository) -> void:
 	_sky_mat.set_shader_parameter("neb_b", _pal["nebula_b"])
 	_sky_mat.set_shader_parameter("star_col", _pal["stars"])
 	_star_mat = STAR_MAT.duplicate() as ShaderMaterial
-	_star_mat.set_shader_parameter("emit", repo.bal("ledger_star_emit"))
-	_star_mat.set_shader_parameter("rim_gain", repo.bal("ledger_star_rim"))
-	_star_mat.set_shader_parameter("metal", repo.bal("ledger_star_metallic"))
-	_star_mat.set_shader_parameter("rough", repo.bal("ledger_star_roughness"))
+	_faint_mat = STAR_FAINT_MAT.duplicate() as ShaderMaterial
+	for m: ShaderMaterial in [_star_mat, _faint_mat]:
+		m.set_shader_parameter("emit", repo.bal("ledger_star_emit"))
+		m.set_shader_parameter("rim_gain", repo.bal("ledger_star_rim"))
+		m.set_shader_parameter("metal", repo.bal("ledger_star_metallic"))
+		m.set_shader_parameter("rough", repo.bal("ledger_star_roughness"))
 	_stars.material_override = _star_mat
+	_faint_stars.material_override = _faint_mat
 	_link_mat = LINK_MAT.duplicate() as ShaderMaterial
 	_link_mat.set_shader_parameter("pulses", repo.bal("ledger_light_pulses"))
 	_link_mat.set_shader_parameter("dashes_per_m", repo.bal("ledger_dashes_per_m"))
 	_link_mat.set_shader_parameter("edge_soft", repo.bal("ledger_link_edge_soft"))
+	_link_mat.set_shader_parameter("light_gain", repo.bal("ledger_light_gain"))
 	_link_mat.set_shader_parameter("glow_virtuous", _pal["loop_virtuous"])
 	_link_mat.set_shader_parameter("glow_vicious", _pal["loop_vicious"])
 	_links.material_override = _link_mat
@@ -124,6 +133,7 @@ func bind(repo: DataRepository) -> void:
 	_title_font = UiPalette.role_font("header")
 	_hud.style_title(_title_font, repo.bal("ledger_title_px"))
 	_hud.style_ring(_pal["focus_ring"], repo.bal("ledger_ring_px"))
+	_hud.style_halo(repo.bal("ledger_label_halo_soft_px"), repo.bal("ledger_label_halo_soft_alpha"))
 	_apply_camera()
 
 
@@ -152,7 +162,9 @@ func set_active(on: bool) -> void:
 
 ## Draw a snapshot. Stars already placed keep their places (the layout is
 ## warm); a star under a drag or the selection that is no longer drawn lets go.
-func show_snapshot(snap: Dictionary, keep_camera: bool) -> void:
+## `select_id`, when given, is selected as the chart is drawn (one restyle,
+## not a second by select()).
+func show_snapshot(snap: Dictionary, keep_camera: bool, select_id: String = "") -> void:
 	_snap = snap
 	_nodes.clear()
 	_looks.clear()
@@ -170,11 +182,13 @@ func show_snapshot(snap: Dictionary, keep_camera: bool) -> void:
 	_order.sort()
 	_size.clear()
 	for id: String in _order:
-		_size[id] = LedgerGalaxyLayout.size_of(_repo, _nodes[id], int(degree.get(id, 0)))
+		_size[id] = drawn_radius(_nodes[id], int(degree.get(id, 0)))
 	_lay.setup(_repo, snap, _flat)
 	for id: String in _drawn.keys():
 		if not _nodes.has(id):
 			_drawn.erase(id)
+	if select_id != "":
+		_selected = select_id
 	if not _nodes.has(_selected):
 		_selected = ""
 	if not _nodes.has(_hovered):
@@ -188,6 +202,17 @@ func show_snapshot(snap: Dictionary, keep_camera: bool) -> void:
 	if not keep_camera:
 		_frame_on(_cluster_ids(), true)
 	_update_hud()
+
+
+## A star's DRAWN radius (metres): its layout radius, a planned (ghost)
+## star's held to an ordinary small star's (ledger_star_planned_max), all at
+## ledger_star_draw_scale — small stars whose glow carries the size (Task 11
+## fix round 1, F3 / F5). The layout keeps the full radius for its forces.
+func drawn_radius(node: Dictionary, degree: int) -> float:
+	var r := LedgerGalaxyLayout.size_of(_repo, node, degree)
+	if String(node.get("status", "live")) == "planned":
+		r = minf(r, _repo.bal("ledger_star_planned_max"))
+	return r * _repo.bal("ledger_star_draw_scale")
 
 
 func select(id: String) -> void:
@@ -219,6 +244,19 @@ func frame_web(id: String) -> void:
 			ids.append(String(l["to"]))
 		elif String(l["to"]) == id:
 			ids.append(String(l["from"]))
+	_frame_on(ids, false)
+
+
+## Frame an opened province and the stars it unfolded (its manors, towns
+## and buildings: every star whose home is it), as frame_web frames a web
+## (Task 11 fix round 1, F8).
+func frame_opened(province_id: String) -> void:
+	if not _nodes.has(province_id):
+		return
+	var ids: Array = [province_id]
+	for id: String in _order:
+		if String((_nodes[id] as Dictionary).get("home_id", "")) == province_id:
+			ids.append(id)
 	_frame_on(ids, false)
 
 
@@ -341,27 +379,49 @@ func _sync_drawn() -> void:
 
 
 func _build_stars() -> void:
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.use_colors = true
 	var sphere := SphereMesh.new()
 	sphere.radius = 1.0
 	sphere.height = 2.0
 	sphere.radial_segments = STAR_SEGMENTS
 	sphere.rings = STAR_RINGS
-	mm.mesh = sphere
-	mm.instance_count = _order.size()
-	_stars.multimesh = mm
+	for mi: MultiMeshInstance3D in [_stars, _faint_stars]:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = true
+		mm.mesh = sphere
+		mi.multimesh = mm
+
+
+## Deals the stars between the whole (opaque) and the dimmed (blended)
+## MultiMesh by what each wears now, then places them.
+func _fill_stars() -> void:
+	_whole.clear()
+	_faint.clear()
+	for i in _order.size():
+		if _star_cols[i].a >= 1.0:
+			_whole.append(_order[i])
+		else:
+			_faint.append(_order[i])
+	for pair: Array in [[_stars, _whole], [_faint_stars, _faint]]:
+		var mm: MultiMesh = (pair[0] as MultiMeshInstance3D).multimesh
+		if mm == null:
+			continue
+		var ids: Array[String] = pair[1]
+		mm.instance_count = ids.size()
+		for k in ids.size():
+			mm.set_instance_color(k, _star_cols[_order.find(ids[k])])
 	_place_stars()
 
 
 func _place_stars() -> void:
-	var mm := _stars.multimesh
-	if mm == null:
-		return
-	for i in _order.size():
-		var r := float(_size[_order[i]])
-		mm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3(r, r, r)), _drawn[_order[i]]))
+	for pair: Array in [[_stars, _whole], [_faint_stars, _faint]]:
+		var mm: MultiMesh = (pair[0] as MultiMeshInstance3D).multimesh
+		var ids: Array[String] = pair[1]
+		if mm == null or mm.instance_count != ids.size():
+			continue
+		for k in ids.size():
+			var r := float(_size[ids[k]])
+			mm.set_instance_transform(k, Transform3D(Basis().scaled(Vector3(r, r, r)), _drawn[ids[k]]))
 
 
 func _cluster_of(id: String) -> String:
@@ -384,19 +444,20 @@ func _restyle() -> void:
 	_star_cols.resize(_order.size())
 	for i in _order.size():
 		_star_cols[i] = _star_colour(_order[i])
-	var mm := _stars.multimesh
-	if mm != null and mm.instance_count == _order.size():
-		for i in _order.size():
-			mm.set_instance_color(i, _star_cols[i])
+	_fill_stars()
 	_rebuild_links()
 	_place_haze()
 
 
 func _star_colour(id: String) -> Color:
 	var n: Dictionary = _nodes[id]
-	var c: Color = _pal["sphere_planned"] if String(n.get("status", "live")) == "planned" \
-		else _cluster_col.get(_cluster_of(id), _pal["sphere_planned"])
+	var c: Color = _cluster_col.get(_cluster_of(id), _pal["sphere_planned"])
 	var f := 1.0
+	# a planned (ghost) star: its own cluster's colour, desaturated and
+	# faint — not yet built, never a neutral grey clay ball (F3)
+	if String(n.get("status", "live")) == "planned":
+		c = Color.from_hsv(c.h, c.s * _repo.bal("ledger_star_planned_sat"), c.v)
+		f = _repo.bal("ledger_star_planned_fade")
 	if _selected != "" and not _near.has(id):
 		f = minf(f, _repo.bal("ledger_focus_fade"))
 	if _cluster != "all" and _cluster_of(id) != _cluster:
@@ -596,7 +657,11 @@ func _link_fade(l: Dictionary) -> float:
 	var f := 1.0
 	if _selected != "":
 		f = 1.0 if a == _selected or b == _selected else _repo.bal("ledger_focus_fade")
-	elif _look(l) in ["tie", "kin"] and _nodes.has(EGO_AT_REST):
+	elif _nodes.has(EGO_AT_REST) and (_look(l) in ["tie", "kin"] or (_cluster_of(a) == _cluster_of(EGO_AT_REST)
+			and _cluster_of(b) == _cluster_of(EGO_AT_REST))):
+		# at rest the player's own cluster (the court) is read one web at a
+		# time: its ties AND its structure (member, sits) stand back unless
+		# they touch the player (Task 11 fix round 1, F2)
 		if a != EGO_AT_REST and b != EGO_AT_REST:
 			f = _repo.bal("ledger_tie_rest_fade")
 	elif _cluster_of(a) != _cluster_of(b):
@@ -872,6 +937,10 @@ func _update_hud() -> void:
 			"strong": id == _selected or _near.has(id), "props": _nodes[id].get("props", [])}
 		if keep.has(id):
 			e["keep"] = true
+		# a dimmed star's name dims with it (F9)
+		var fade := _star_colour(id).a
+		if fade < 1.0 and id != _selected:
+			e["ink"] = Color(_pal["label_ink"] as Color, 0.8 * fade)
 		if id == _selected:
 			e["ring"] = r + _repo.bal("ledger_ring_px") * RING_GAP_RINGS
 			e["ring_at"] = at
@@ -897,7 +966,10 @@ func _seen() -> Dictionary:
 func _hubs(seen: Dictionary = {}) -> Array[String]:
 	if seen.is_empty():
 		seen = _seen()
-	var by_size := _order.filter(func(id: String) -> bool: return seen.has(id))
+	# in a chosen cluster only its own stars are hubs (F9: another cluster's
+	# star named as a hub read as one of this cluster's)
+	var by_size := _order.filter(func(id: String) -> bool:
+		return seen.has(id) and (_cluster == "all" or _cluster_of(id) == _cluster))
 	by_size.sort_custom(func(a: String, b: String) -> bool:
 		return float(_size[a]) > float(_size[b]) if float(_size[a]) != float(_size[b]) else a < b)
 	var out: Array[String] = []

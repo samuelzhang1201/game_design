@@ -152,3 +152,22 @@ func test_a_strand_opens_its_links_card() -> void:
 	await wait_frames(1)
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
 	assert_eq(detail.title_label().text, LedgerCards.thread_entry(Game.data, Game.state, link)["title"])
+
+
+## Task 11 fix round 1 (F8): opening a province frames it and the stars it
+## unfolded; closing it frames nothing new.
+func test_opening_a_province_frames_it_and_what_it_unfolded() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	var home := MapManors.home_province(Game.data, Game.state)
+	screen.view().drill_requested.emit("province:" + home)
+	await wait_frames(1)
+	var framed: Array = screen.view()._frame_ids
+	assert_true(framed.has("province:" + home), "the province itself")
+	var manors := MapManors.manors_of_province(Game.data, home, Game.state)
+	assert_eq(framed.size(), 1 + (screen.snapshot()["nodes"] as Array).filter(func(n: Dictionary) -> bool:
+		return String(n.get("home_id", "")) == "province:" + home).size(), "and every star whose home it is")
+	assert_gt(framed.size(), manors.size(), "its manors among them")
+	screen.view().drill_requested.emit("province:" + home)
+	await wait_frames(1)
+	assert_eq(screen.view()._frame_ids, framed, "closing frames nothing new")

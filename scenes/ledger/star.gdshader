@@ -1,9 +1,11 @@
 // scenes/ledger/star.gdshader
 // A galaxy star (spec 2026-09-30-ledger-galaxy-design §5): one MultiMesh of
-// spheres, each instance's COLOR its cluster's sRGB colour, its alpha a
-// brightness factor read as the EYE reads it (pow 2.2). Emission plus a real
-// specular and a rim, so close in a star reads as polished metal or glass and
-// far out as a point of light under the view's glow.
+// spheres, each instance's COLOR its cluster's sRGB colour. Emission plus a
+// real specular and a rim, so close in a star reads as polished metal or
+// glass and far out as a point of light under the view's glow.
+// This is a WHOLE star, opaque, hiding what stands behind it; a dimmed star
+// is drawn by star_faint.gdshader instead (Task 11 fix round 1, F1: dimmed
+// on an opaque sphere it was a black disc with a white pin over the haze).
 shader_type spatial;
 render_mode specular_schlick_ggx;
 
@@ -24,10 +26,9 @@ void vertex() {
 
 void fragment() {
 	vec3 c = to_linear(col.rgb);
-	float a = pow(clamp(col.a, 0.0, 1.0), 2.2);
-	ALBEDO = c * 0.55 * a;
+	ALBEDO = c * 0.55;
 	METALLIC = metal;
 	ROUGHNESS = rough;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.4);
-	EMISSION = (c * emit + c * rim * rim_gain) * a;
+	EMISSION = c * emit + c * rim * rim_gain;
 }

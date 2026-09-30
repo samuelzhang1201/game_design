@@ -159,3 +159,18 @@ func test_a_name_stands_beside_its_star_when_over_and_under_are_taken() -> void:
 	var at: Vector2 = kept[0]["at"]
 	assert_almost_eq(at.y, 100.0, 0.01, "level with its star")
 	assert_true(absf(at.x - 100.0) > 10.0, "to one side of it")
+
+
+## Task 11 fix round 1 (F6): every name is drawn over a soft wide halo, then
+## its crisp outline — a link behind it never cuts a letter.
+func test_a_name_wears_a_soft_halo_under_its_outline() -> void:
+	var hud := LedgerHud.new()
+	autofree(hud)
+	hud.style(null, 14.0, Color.WHITE, Color(0.08, 0.06, 0.05), 4)
+	assert_eq(hud.halo_passes().size(), 1, "unstyled: the crisp outline alone")
+	hud.style_halo(10.0, 0.6)
+	var passes := hud.halo_passes()
+	assert_eq(passes.size(), 2)
+	assert_eq(int(passes[0][0]), 10, "the soft halo first, widest")
+	assert_almost_eq((passes[0][1] as Color).a, 0.6, 0.001)
+	assert_eq(int(passes[1][0]), 4, "then the crisp outline")
