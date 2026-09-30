@@ -29,14 +29,14 @@ static func halo(repo: DataRepository) -> Color:
 ## label read as engraved rather than typed — so the glyphs are placed one at
 ## a time with the extra advance added between them.
 static func draw_tracked(ci: CanvasItem, font: Font, text: String, origin: Vector2,
-		font_px: int, tracking: float, color: Color, halo := Color(0, 0, 0, 0),
+		font_px: int, tracking: float, color: Color, halo_color := Color(0, 0, 0, 0),
 		halo_px := 0) -> void:
 	var pen := origin
 	for i in text.length():
 		var ch := text.substr(i, 1)
-		if halo.a > 0.0 and halo_px > 0:
+		if halo_color.a > 0.0 and halo_px > 0:
 			font.draw_string_outline(ci.get_canvas_item(), pen, ch, HORIZONTAL_ALIGNMENT_LEFT,
-				-1.0, font_px, halo_px, halo)
+				-1.0, font_px, halo_px, halo_color)
 		font.draw_string(ci.get_canvas_item(), pen, ch, HORIZONTAL_ALIGNMENT_LEFT,
 			-1.0, font_px, color)
 		pen.x += font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_px).x \

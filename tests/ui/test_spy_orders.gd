@@ -20,6 +20,7 @@ func before_each() -> void:
 func _land() -> Vector2:
 	var ids := Game.data.manors.keys()
 	ids.sort()
+	@warning_ignore("integer_division")
 	return MapTerrain.cell_center(Game.data, Game.data.cells[int(ids[ids.size() / 2])])
 
 
@@ -53,7 +54,9 @@ func test_every_land_card_offers_a_spy() -> void:
 class AimMap extends Node:
 	signal ground_menu_requested(pack_px: Vector2, at: Vector2)
 	signal army_menu_requested(code: String, at: Vector2)
+	@warning_ignore("unused_signal")
 	signal ground_clicked(pack_px: Vector2)
+	@warning_ignore("unused_signal")
 	signal route_clicked(code: String, at: Vector2)
 	var aiming := false
 	var aim_code := ""

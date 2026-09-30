@@ -169,8 +169,8 @@ static func zoom_ceiling_m(zoom_max_m: float, max_units: float, units_per_metre:
 ## `floor`. Pure and generic on purpose, so its name cannot be mistaken for
 ## settlement_dot_min_view_m below, which is the one settlement-specific
 ## reader (fix round 1 review: the two used to share a name).
-static func threshold_from_share(ceiling: float, floor: float, share: float) -> float:
-	return ceiling - share * (ceiling - floor)
+static func threshold_from_share(ceiling: float, bottom: float, share: float) -> float:
+	return ceiling - share * (ceiling - bottom)
 
 
 ## The settlement dot's near threshold in world metres (owner 2026-09-21

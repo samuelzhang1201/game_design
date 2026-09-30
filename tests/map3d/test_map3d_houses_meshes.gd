@@ -154,6 +154,7 @@ func _manifold_check(mesh: Mesh) -> Dictionary:
 		var arrays := mesh.surface_get_arrays(s)
 		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		@warning_ignore("integer_division")
 		var n := indices.size() / 3 if indices.size() > 0 else verts.size() / 3
 		for tri in range(n):
 			var tri_verts: Array[Vector3] = []
@@ -264,8 +265,10 @@ func _mesh_tris(mesh: Mesh) -> int:
 		var arrays := mesh.surface_get_arrays(s)
 		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 		if indices != null and indices.size() > 0:
+			@warning_ignore("integer_division")
 			total += indices.size() / 3
 		else:
 			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			@warning_ignore("integer_division")
 			total += verts.size() / 3
 	return total

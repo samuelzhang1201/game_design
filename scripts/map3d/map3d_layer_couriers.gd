@@ -22,10 +22,10 @@ static func action_for(moving: bool, clock_running: bool) -> String:
 static func clip_or_fallback(anim: AnimationPlayer, action: String) -> String:
 	if anim == null:
 		return ""
-	var name := Map3DUnits.clip_named(anim, action)
-	if name == "" and FALLBACK.has(action):
-		name = Map3DUnits.clip_named(anim, String(FALLBACK[action]))
-	return name
+	var clip := Map3DUnits.clip_named(anim, action)
+	if clip == "" and FALLBACK.has(action):
+		clip = Map3DUnits.clip_named(anim, String(FALLBACK[action]))
+	return clip
 
 
 var ctx: Map3DContext
@@ -154,10 +154,10 @@ func _world_of_m(m: Vector2i) -> Vector2:
 	return ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, m))
 
 
-## `step` along the points of `queue` from `now`, dropping each point reached.
-static func walk_along(now: Vector2, queue: Array, step: float) -> Vector2:
+## `dist` along the points of `queue` from `now`, dropping each point reached.
+static func walk_along(now: Vector2, queue: Array, dist: float) -> Vector2:
 	var at := now
-	var left := step
+	var left := dist
 	while not queue.is_empty():
 		var to: Vector2 = queue[0]
 		var d := at.distance_to(to)

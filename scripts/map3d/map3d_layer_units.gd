@@ -81,7 +81,6 @@ func preview_build(p_ctx: Map3DContext) -> void:
 func refresh() -> void:
 	if ctx == null or not shown or ctx.camera == null:
 		return
-	var repo := ctx.repo
 	var live: Dictionary = {}
 	_tops.clear()
 	_rects.clear()
@@ -219,10 +218,10 @@ func play(code: String, action: String) -> void:
 	var anims: Array = _pieces[code]["anims"]
 	for i in anims.size():
 		var anim: AnimationPlayer = anims[i]
-		var name := Map3DUnits.clip_named(anim, action)
-		if name == "" or anim.current_animation == name:
+		var clip := Map3DUnits.clip_named(anim, action)
+		if clip == "" or anim.current_animation == clip:
 			continue
-		anim.play(name, ctx.repo.bal("map3d_unit_blend_s"))  # blended, never a snap
+		anim.play(clip, ctx.repo.bal("map3d_unit_blend_s"))  # blended, never a snap
 		if action != MARCH:  # men at rest are not clones; a column marches in step
 			anim.seek(fposmod(i * 0.37, anim.current_animation_length))
 

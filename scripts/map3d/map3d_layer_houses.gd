@@ -223,9 +223,9 @@ static func transform_of(h: Dictionary, height: float) -> Transform3D:
 	var at: Vector2 = h["at"]
 	var s: float = float(h["scale"])
 	var height_scale: float = float(h["height_scale"])
-	var basis := Basis(Vector3.UP, deg_to_rad(float(h["yaw_deg"])))
-	basis = basis.scaled(Vector3(s, s * height_scale, s))
-	return Transform3D(basis, Vector3(at.x, height, at.y))
+	var turn := Basis(Vector3.UP, deg_to_rad(float(h["yaw_deg"])))
+	turn = turn.scaled(Vector3(s, s * height_scale, s))
+	return Transform3D(turn, Vector3(at.x, height, at.y))
 
 
 ## Test seam: the (wall, roof) variant each instance of `type` wore in the
@@ -252,11 +252,11 @@ func _tinted(mesh: Mesh) -> Mesh:
 		mat.set_shader_parameter("albedo_color", src.albedo_color)
 		mat.set_shader_parameter("roughness", src.roughness)
 		mat.set_shader_parameter("use_vertex_color", src.vertex_color_use_as_albedo)
-		var name := src.resource_name
+		var mat_name := src.resource_name
 		var role := 0
-		if name.begins_with("hh_wall_"):
+		if mat_name.begins_with("hh_wall_"):
 			role = 1
-		elif name.begins_with("hh_roof_") and name != "hh_roof_slate":
+		elif mat_name.begins_with("hh_roof_") and mat_name != "hh_roof_slate":
 			role = 2
 		mat.set_shader_parameter("role", role)
 		mat.set_shader_parameter("wall_tints", _wall_tints)

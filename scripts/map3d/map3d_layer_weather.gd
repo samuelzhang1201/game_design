@@ -91,20 +91,20 @@ func step() -> void:
 	if st == null:
 		return
 	var b := Map3DWeatherField.blend_of(ctx.repo, st.absolute_day(), ctx.day_share())
-	var spell := int(b["spell"])
+	var now_spell := int(b["spell"])
 	var key := [ctx.repo.map_id, st.rng.seed_value() if st.rng != null else 0, override,
 		st.manor_province.hash()]
-	if key != _key or spell != _spell:
+	if key != _key or now_spell != _spell:
 		var kinds := override.split(",", false)
-		var kind_of := Callable() if kinds.is_empty() else func(p: String) -> String:
+		var pick_kind := Callable() if kinds.is_empty() else func(p: String) -> String:
 			return kinds[posmod(p.hash(), kinds.size())]
-		if key == _key and spell == _spell + 1 and not _next.is_empty():
+		if key == _key and now_spell == _spell + 1 and not _next.is_empty():
 			_now = _next
 		else:
-			_now = field.build(ctx.repo, st, spell, kind_of)
-		_next = field.build(ctx.repo, st, spell + 1, kind_of)
+			_now = field.build(ctx.repo, st, now_spell, pick_kind)
+		_next = field.build(ctx.repo, st, now_spell + 1, pick_kind)
 		_key = key
-		_spell = spell
+		_spell = now_spell
 		_key_changed = true
 		_upload()
 	var turned := not is_equal_approx(_blend, float(b["t"])) or _key_changed
