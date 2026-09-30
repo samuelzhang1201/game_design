@@ -72,8 +72,23 @@ fi
 #   res://addons/gut/gut_loader.gd:35 — GUT's own loader reads an unset
 #     project setting into a bool at startup, once per run, before any test.
 SCRIPT_ERROR_ALLOW="res://addons/gut/gut_loader.gd:35"
+# While the gdai-mcp-plugin-godot extension is installed (the same condition
+# as EXPECTED_ERRORS=2 above), the class-database probing behind those 2
+# errors also prints ~195 SCRIPT ERRORs, all before any test runs: the
+# dynamic script listing every class fails to parse on each GDAI* native
+# class ('Identifier "GDAI..." not declared', at gut_dynamic_script_N.gd),
+# and stubber.gd:35 then calls new() on the int error code it got back
+# instead of a script. They are the probe failing, not a test aborting, so
+# they are allowed by their whole message — only then; without the
+# extension the gate stays strict and any such line is fatal. Each is one
+# extended regex over the joined "SCRIPT ERROR: <message> at: <where>" line.
+SCRIPT_ERROR_ALLOW_GDAI='^SCRIPT ERROR: Parse Error: Identifier "GDAI[A-Za-z0-9_]*" not declared in the current scope\. at: GDScript::reload \(res://addons/gut/not_a_real_file/gut_dynamic_script_[0-9]+\.gd:[0-9]+\)$'"
+^SCRIPT ERROR: Invalid call\. Nonexistent function 'new' in base 'int'\. at: _make_crazy_dynamic_over_engineered_class_db_hash \(res://addons/gut/stubber\.gd:35\)$"
 UNEXPECTED=$(awk '/SCRIPT ERROR:/ { msg = $0; getline; sub(/^[ \t]+/, ""); print msg " " $0 }' "$TEST_OUTPUT" \
   | grep -v -F "$(printf '%s\n' "$SCRIPT_ERROR_ALLOW" | sed 's/.*/(&)/')" || true)
+if [ -n "$UNEXPECTED" ] && [ "$EXPECTED_ERRORS" = "2" ]; then
+  UNEXPECTED=$(printf '%s\n' "$UNEXPECTED" | grep -v -E "$SCRIPT_ERROR_ALLOW_GDAI" || true)
+fi
 if [ -n "$UNEXPECTED" ]; then
   echo ""
   echo "FATAL: SCRIPT ERROR outside the allow-list (a test may have aborted partway):"
