@@ -104,7 +104,14 @@ month for one standing building). **Default** rows (only buildings whose
   building-code order (an armoury before a smithy), so a manor short of a
   good feeds the first in that order; `IndustrySystem.own_supply` walks the
   same order to estimate what an IDLE building's manor could give it, and a
-  waking building is billed only that shortfall (fix round 1).
+  waking building is billed only that shortfall (fix round 1). When a whole
+  CHAIN wakes together (a mine shaft, a smithy and an armoury all idle,
+  then all paid the same month), the downstream building's first month may
+  still BUY an input its upstream makes that same month — `line_of` reads
+  last month's idle set to decide what an about-to-wake building fed the
+  manor, so the armoury cannot yet see the smithy's own tools this month —
+  a one-month overbill, ACCEPTED (final fix wave, Minor1): the chain reads
+  true from its second month on.
 - **Only the lord's.** Only buildings on manors the crown's own house holds
   buy and idle through the lord (`IndustrySystem.buildings`, like
   `WorkshopSystem.cells`); one on another house's manor still eats its own
@@ -209,8 +216,9 @@ neighbour's route can be closed on you — enemy AI waits for sub-project C).
   `trade_route:<kingdom>`); `trades` market → civil_goods / strategic_goods
   (flow = the market's value a month in that pool), `routes` trade_route →
   gold (flow = the toll), `governs` extended to trade routes. Accounts: a
-  domestic market is `full`; a route's foreign side is `basic` (words) —
-  the crown knows its own toll, not what the buyer pays.
+  domestic market is `full`; a route's export value is the crown's own
+  customs count, not the buyer's book — so the toll derived from it is
+  shown EXACTLY, never as words.
 - Actions: `trade_route` → Close / Open (`TRADE_ROUTE_SET`), audit and
   reassign (M3); `market` → Buy there (civil and strategic). Not Sell: on
   this pack selling at a market never beats the factor's flat price (Task 3
