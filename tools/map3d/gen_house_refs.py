@@ -1,17 +1,28 @@
 """Render the settlement buildings' photoreal REFERENCE images on the LOCAL
-ComfyUI: one Flux.2 klein 4B picture per type from
-assets/flux/house_ref_prompts.csv into assets/3D/buildings/<type>/model_wip/<type>_ref.png.
+ComfyUI from assets/flux/house_ref_prompts.csv, one picture per type per
+model, into assets/3D/buildings/<type>/model_wip/<type>_ref_<model>.png.
 
-  python3 tools/map3d/gen_house_refs.py [--only a,b] [--seed N] [--force]
+  python3 tools/map3d/gen_house_refs.py [--model zimage,qwen2512fast] [--only a,b] [--seed N] [--variants N] [--force] [--front]
 
-A file already there is kept unless --force, so a hand-picked reference
-(cottage_a is the owner's own) is never overwritten. The pictures are what
-the hand-modelled houses (tools/map3d/blender_houses/) are modelled against.
-ComfyUI stops at the image (owner 2026-09-24): Hunyuan3D image-to-3D was
-removed over its licence, and no 3D is generated here.
+The models are Z-Image Turbo and Qwen-Image-2512 (owner 2026-09-30: no Flux
+any more; both side by side for the owner to pick), filled from
+assets/flux/generate.py's MODEL_PRESETS and templates with the SAME prompt
+every model gets. Z-Image has no negative path, so NEGATIVE reaches Qwen
+only. The old Flux.2 klein pictures stay as <type>_ref.png, the record the
+shipped meshes were modelled against. Every job is queued first and
+collected after; it waits its turn in ComfyUI's one shared queue unless
+--front puts it ahead (the last model listed is queued first, so with
+--front the first model listed runs first). --variants N renders N seeds
+(seed, seed+1, ...) as <type>_ref_<model>_v1.png .. _vN.png beside the one
+picture.
+
+A file already there is kept unless --force. The pictures are what the
+hand-modelled houses (tools/map3d/blender_houses/) are modelled against.
+ComfyUI stops at the image (owner 2026-09-24): no 3D is generated here.
 """
 
 import csv
+import importlib.util
 import json
 import os
 import shutil
@@ -37,6 +48,15 @@ NEGATIVE = ("landscape, terrain, grass, trees, sky, multiple buildings, "
             "village, map, top-down, text, watermark, signature, cropped, "
             "out of frame, blurry, clutter, flags, banners, cartoon, toy")
 SEED = 20260923
+MODELS = ["zimage", "qwen2512fast"]
+FLUX_DIR = os.path.join(ROOT, "assets", "flux")
+
+
+def _generate_module():
+    spec = importlib.util.spec_from_file_location("flux_generate", os.path.join(FLUX_DIR, "generate.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def rows(only):
@@ -56,8 +76,7 @@ def get(path):
     return json.loads(urllib.request.urlopen(HOST + path).read())
 
 
-def run(graph, timeout_s):
-    pid = post("/prompt", {"prompt": graph, "client_id": str(uuid.uuid4())})["prompt_id"]
+def wait(pid, timeout_s):
     t0 = time.time()
     while time.time() - t0 < timeout_s:
         h = get("/history/" + pid)
@@ -66,49 +85,64 @@ def run(graph, timeout_s):
             if st.get("status_str") == "error":
                 raise RuntimeError(json.dumps(st.get("messages"))[-2000:])
             if st.get("completed"):
-                return h[pid], time.time() - t0
+                return h[pid]
         time.sleep(3)
     raise TimeoutError(pid)
 
 
-def image_graph(row, seed):
-    text = PROMPT.format(subject=row["subject"], features=row["features"])
-    return {
-        "1": {"class_type": "UNETLoader", "inputs": {"unet_name": "flux-2-klein-base-4b.safetensors", "weight_dtype": "default"}},
-        "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": "qwen_3_4b.safetensors", "type": "flux2", "device": "default"}},
-        "3": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}},
-        "4": {"class_type": "CLIPTextEncode", "inputs": {"text": text, "clip": ["2", 0]}},
-        "5": {"class_type": "CLIPTextEncode", "inputs": {"text": NEGATIVE, "clip": ["2", 0]}},
-        "6": {"class_type": "CFGGuider", "inputs": {"cfg": 4.0, "model": ["1", 0], "positive": ["4", 0], "negative": ["5", 0]}},
-        "7": {"class_type": "Flux2Scheduler", "inputs": {"steps": 20, "width": 1024, "height": 1024}},
-        "8": {"class_type": "EmptyFlux2LatentImage", "inputs": {"width": 1024, "height": 1024, "batch_size": 1}},
-        "9": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
-        "10": {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "euler"}},
-        "11": {"class_type": "SamplerCustomAdvanced", "inputs": {"noise": ["9", 0], "guider": ["6", 0], "sampler": ["10", 0], "sigmas": ["7", 0], "latent_image": ["8", 0]}},
-        "12": {"class_type": "VAEDecode", "inputs": {"samples": ["11", 0], "vae": ["3", 0]}},
-        "13": {"class_type": "SaveImage", "inputs": {"images": ["12", 0], "filename_prefix": "house_ref/%s" % row["type"]}},
-    }
+def image_graph(gen, model, row, seed):
+    preset = gen.MODEL_PRESETS[model]
+    with open(os.path.join(FLUX_DIR, preset["template"])) as f:
+        template = json.load(f)
+    values = {"unet": preset["unet"], "steps": preset["steps"], "cfg": preset["cfg"],
+              "guidance": preset["guidance"], "width": 1024, "height": 1024, "seed": seed,
+              "prompt": PROMPT.format(subject=row["subject"], features=row["features"]),
+              "negative": NEGATIVE, "prefix": "house_ref/%s_%s" % (row["type"], model)}
+    if "lora_strength" in preset:
+        values["lora_strength"] = preset["lora_strength"]
+    return gen.make_graph(template, values)
+
+
+def fetch(img, dest):
+    src = os.path.join(COMFY, "output", img["subfolder"], img["filename"])
+    if not os.path.exists(src):
+        src = os.path.join(os.path.expanduser("~/ComfyUI-Shared/output"), img["subfolder"], img["filename"])
+    shutil.copyfile(src, dest)
 
 
 def main():
     args = sys.argv[1:]
     only = set(args[args.index("--only") + 1].split(",")) if "--only" in args else set()
     seed = int(args[args.index("--seed") + 1]) if "--seed" in args else SEED
-    for row in rows(only):
-        t = row["type"]
-        wip = os.path.join(BUILDINGS, t, "model_wip")
-        os.makedirs(wip, exist_ok=True)
-        ref = os.path.join(wip, t + "_ref.png")
-        if os.path.exists(ref) and "--force" not in args:
-            print("keep", ref)
-            continue
-        hist, dt = run(image_graph(row, seed), 3600)
-        img = hist["outputs"]["13"]["images"][0]
-        src = os.path.join(COMFY, "output", img["subfolder"], img["filename"])
-        if not os.path.exists(src):
-            src = os.path.join(os.path.expanduser("~/ComfyUI-Shared/output"), img["subfolder"], img["filename"])
-        shutil.copyfile(src, ref)
-        print("%s %.0fs -> %s" % (t, dt, ref), flush=True)
+    models = args[args.index("--model") + 1].split(",") if "--model" in args else MODELS
+    gen = _generate_module()
+    for m in models:
+        if m not in gen.MODEL_PRESETS or m in ("klein", "schnell"):
+            sys.exit("not a model for the house references: %s" % m)
+    variants = int(args[args.index("--variants") + 1]) if "--variants" in args else 1
+    front = "--front" in args
+    jobs = []
+    for model in (list(reversed(models)) if front else models):
+        for row in rows(only):
+            t = row["type"]
+            wip = os.path.join(BUILDINGS, t, "model_wip")
+            os.makedirs(wip, exist_ok=True)
+            for v in range(variants):
+                name = "%s_ref_%s%s.png" % (t, model, "_v%d" % (v + 1) if variants > 1 else "")
+                ref = os.path.join(wip, name)
+                if os.path.exists(ref) and "--force" not in args:
+                    print("keep", ref)
+                    continue
+                pid = post("/prompt", {"prompt": image_graph(gen, model, row, seed + v),
+                                       "client_id": str(uuid.uuid4()), "front": front})["prompt_id"]
+                jobs.append((pid, ref))
+                print("queued", model, t, v + 1, pid, flush=True)
+    t0 = time.time()
+    for pid, ref in jobs:
+        hist = wait(pid, 4 * 3600)
+        img = [i for out in hist["outputs"].values() for i in out.get("images", [])][0]
+        fetch(img, ref)
+        print("%.0fs -> %s" % (time.time() - t0, ref), flush=True)
 
 
 if __name__ == "__main__":

@@ -850,3 +850,37 @@ def test_a_landmark_stands_on_a_levelled_terrace():
     assert np.array_equal(height[:, :4], before[:, :4]), "the sea is never touched"
     far = int(CENTRE + (max(half) + RULES["house_plaza_m"] + 20 + RULES["house_pad_blend_m"]) / 20) + 2
     assert np.array_equal(height[:, far:], before[:, far:]), "past the blend the hill is as it was"
+
+
+def test_landmark_variants_of_one_rank_are_picked_per_settlement():
+    """Owner 2026-09-30: the church and the palace keep every Tripo version as
+    a VARIANT of the same rank. A capital still shows a palace (never a lower
+    rank), the same burg shows the same palace every bake, and across burgs
+    every variant turns up."""
+    types = dict(TYPES)
+    types["palace_b"] = dict(TYPES["palace"])
+    types["palace_c"] = dict(TYPES["palace"])
+    picks = [bake_houses._pick_landmark(types, "capital", "cap%03d" % i) for i in range(300)]
+    assert set(picks) == {"palace", "palace_b", "palace_c"}
+    assert all(bake_houses._pick_landmark(types, "capital", "cap%03d" % i) == p
+               for i, p in enumerate(picks))
+    for name in ("palace", "palace_b", "palace_c"):
+        assert 50 < picks.count(name) < 150, (name, picks.count(name))
+    # a lower rank never draws a capital's variants, and a lone rank is untouched
+    assert bake_houses._pick_landmark(types, "village", "v1") == "chapel"
+    # weight 0 retires a variant without deleting it
+    types["palace_c"] = dict(TYPES["palace"], weight=0.0)
+    assert "palace_c" not in {bake_houses._pick_landmark(types, "capital", "cap%03d" % i) for i in range(300)}
+
+
+def test_the_real_table_gives_every_capital_a_palace_variant():
+    """Over the real data/map3d_houses.csv every rank keeps its centrepiece
+    kind: capital → a palace variant, fort/town → a church variant."""
+    with open(os.path.join(ROOT, "data", "map3d_houses.csv"), newline="") as f:
+        types = {r["type"]: r for r in csv.DictReader(f)}
+    caps = {bake_houses._pick_landmark(types, "capital", "c%d" % i) for i in range(200)}
+    towns = {bake_houses._pick_landmark(types, "town", "t%d" % i) for i in range(200)}
+    assert caps == {"palace", "palace_b", "palace_c"}
+    assert towns == {"church", "church_b"}
+    assert bake_houses._pick_landmark(types, "city", "x") == "church_tower"
+    assert bake_houses._pick_landmark(types, "village", "x") == "chapel"
