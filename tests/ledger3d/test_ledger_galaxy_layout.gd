@@ -108,3 +108,20 @@ func test_a_star_is_sized_by_its_kind() -> void:
 	assert_gt(prov, small, "a province grows with what it folds")
 	assert_lte(LedgerGalaxyLayout.size_of(repo, {"type": "province", "folded": {"manor": 9999}}, 999),
 		repo.bal("ledger_star_max"))
+
+
+## Task 11 (the budget): a frame's share of the settle runs at least one pass
+## and never starts one it cannot finish inside the budget — with no budget
+## to spare it runs exactly one, with room for all it settles the chart.
+func test_a_frame_never_starts_a_pass_past_its_budget() -> void:
+	var snap := _snap()
+	var lay := LedgerGalaxyLayout.new()
+	lay.setup(repo, snap, false)
+	var total := lay.passes_left
+	assert_eq(lay.step_within(0.0), 1, "no budget to spare: one pass")
+	assert_eq(lay.passes_left, total - 1)
+	var ran := lay.step_within(1.0e9)
+	assert_eq(ran, total - 1, "room for every pass: the rest")
+	assert_true(lay.settled())
+	assert_eq(lay.step_within(1.0e9), 0, "a settled chart runs nothing")
+

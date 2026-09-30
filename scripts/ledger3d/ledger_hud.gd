@@ -57,8 +57,8 @@ func style_ring(colour: Color, width_px: float) -> void:
 	_ring_w = width_px
 
 
-func show_entries(entries: Array, obstacles: Array = []) -> void:
-	_entries = cull(entries, _px, _font, _gauge, obstacles, _title_font)
+func show_entries(entries: Array, obstacles: Array = [], walls: Array = []) -> void:
+	_entries = cull(entries, _px, _font, _gauge, obstacles, _title_font, walls)
 	_rings.clear()
 	for e: Dictionary in entries:
 		if e.has("ring"):
@@ -120,16 +120,26 @@ static func _font_of(e: Dictionary, font: Font, title_font: Font) -> Font:
 ## Keeps entries in order, dropping any whose box overlaps one already kept.
 ## An entry may carry `alt`, a second place (under its sphere): a name whose
 ## own place is taken stands there if that is clear, so a type in a close row
-## keeps its name. The box is the text's measured width when a font is given,
-## else estimated at 0.55 em a glyph (so the cull is testable without one),
-## centred on the place, with a quarter em of air at each end. A `title: true`
-## entry is measured in `title_font` (falling back to `font`), matching `_draw`.
+## keeps its name; and `beside` ([its star's centre, its screen radius]): then
+## it may also stand level with its star, to the right or the left. The box is
+## the text's measured width when a font is given, else estimated at 0.55 em a
+## glyph (so the cull is testable without one), centred on the place, with a
+## quarter em of air at each end. A `title: true` entry is measured in
+## `title_font` (falling back to `font`), matching `_draw`.
+## `obstacles` are the star discs: no name is set on one — except an entry
+## with `keep: true` (the selected star, a hub: spec §7 names them always),
+## which, when every place is on a star, takes the first place clear of the
+## names and titles already kept. `walls` (the screen's top chrome) are never
+## entered by anything.
 static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dictionary = DEFAULT_GAUGE,
-		obstacles: Array = [], title_font: Font = null) -> Array:
+		obstacles: Array = [], title_font: Font = null, walls: Array = []) -> Array:
 	var kept: Array = []
-	var boxes: Array[Rect2] = []
+	var names: Array[Rect2] = []   # the walls and every box kept: never overlapped
+	var discs: Array[Rect2] = []   # the stars: overlapped only by a `keep` name
+	for w in walls:
+		names.append(w)
 	for o in obstacles:
-		boxes.append(o)
+		discs.append(o)
 	for e: Dictionary in entries:
 		var px := float(e.get("px", font_px))
 		var entry_font := _font_of(e, font, title_font)
@@ -144,6 +154,12 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 		var places: Array = [e["at"]]
 		if e.has("alt"):
 			places.append(e["alt"])
+		if e.has("beside"):
+			var star: Vector2 = e["beside"][0]
+			var reach := float(e["beside"][1]) + px * 0.5 + w * 0.5
+			places.append(star + Vector2(reach, 0.0))
+			places.append(star - Vector2(reach, 0.0))
+		var boxes: Array[Rect2] = []
 		for k in places.size():
 			var at: Vector2 = places[k]
 			var up := k == 0  # the first place stands above the sphere: its gauges go over it
@@ -151,21 +167,34 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 			# below the place: capitals reach ~0.45 em above the place,
 			# descenders ~0.6 em below), with a quarter em of air each side
 			# so two names in a row never butt into one another and read as one
-			var box := Rect2(at - Vector2(w * 0.5 + px * 0.25, px * 0.45 + (extra_h if up else 0.0)),
-				Vector2(w + px * 0.5, px * 1.05 + extra_h))
-			var clear := true
-			for b in boxes:
-				if b.intersects(box):
-					clear = false
-					break
-			if clear:
-				boxes.append(box)
-				var put := e.duplicate()
-				put["at"] = at
-				put["gauges_up"] = up
-				kept.append(put)
-				break
+			boxes.append(Rect2(at - Vector2(w * 0.5 + px * 0.25, px * 0.45 + (extra_h if up else 0.0)),
+				Vector2(w + px * 0.5, px * 1.05 + extra_h)))
+		var pick := _first_clear(boxes, names, discs)
+		if pick < 0 and bool(e.get("keep", false)):
+			pick = _first_clear(boxes, names, [])
+		if pick < 0:
+			continue
+		names.append(boxes[pick])
+		var put := e.duplicate()
+		put["at"] = places[pick]
+		put["gauges_up"] = pick == 0
+		kept.append(put)
 	return kept
+
+
+## The first of `boxes` that meets none of `a` and none of `b`, or -1.
+static func _first_clear(boxes: Array[Rect2], a: Array[Rect2], b: Array[Rect2]) -> int:
+	for k in boxes.size():
+		if not _meets(boxes[k], a) and not _meets(boxes[k], b):
+			return k
+	return -1
+
+
+static func _meets(box: Rect2, others: Array[Rect2]) -> bool:
+	for o in others:
+		if o.intersects(box):
+			return true
+	return false
 
 
 func _draw() -> void:

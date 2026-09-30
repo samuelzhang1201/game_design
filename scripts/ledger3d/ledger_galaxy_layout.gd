@@ -133,32 +133,62 @@ func pin(id: String, at: Vector3) -> void:
 		passes_left = int(_total * 0.3)
 
 
+## Runs passes for at most `budget_ms` of this frame (the view's
+## ledger_galaxy_ms_per_frame): always one, then another only while the
+## dearest pass so far still fits in what is left, so a frame never runs
+## past its budget by starting a pass it cannot finish. Returns the passes run.
+func step_within(budget_ms: float) -> int:
+	var t0 := Time.get_ticks_usec()
+	var budget := budget_ms * 1000.0
+	var ran := 0
+	var dearest := 0.0
+	while not settled():
+		var t1 := Time.get_ticks_usec()
+		if ran > 0 and float(t1 - t0) + dearest > budget:
+			break
+		step(1)
+		dearest = maxf(dearest, float(Time.get_ticks_usec() - t1))
+		ran += 1
+	return ran
+
+
 ## Runs up to `passes` passes, cooling as the chart settles.
 func step(passes: int) -> void:
 	var n := _ids.size()
 	if n == 0:
 		passes_left = 0
 		return
-	var p: Array[Vector3] = []
-	for id: String in _ids:
-		p.append(pos[id])
+	var p := PackedVector3Array()
+	p.resize(n)
+	for i in n:
+		p[i] = pos[_ids[i]]
 	var rep := _repo.bal("ledger_galaxy_repel")
 	var home := _repo.bal("ledger_galaxy_home")
 	var rest := _repo.bal("ledger_galaxy_rest_m")
 	var cap := _repo.bal("ledger_galaxy_step_max_m")
-	var f: Array[Vector3] = []
+	var half := PackedFloat32Array()   # each star's share of a pair's repulsion
+	half.resize(n)
+	for i in n:
+		half[i] = rep * _size[i] * 0.5
+	var f := PackedVector3Array()
 	f.resize(n)
 	for _k in mini(passes, passes_left):
 		for i in n:
 			var h := _home_of[i]
 			var target: Vector3 = p[h] if h >= 0 else _anchor[i]
 			f[i] = (target - p[i]) * home
+		# every pair repels (the hot loop: each star's own place, share and
+		# force held in locals, one read and one write of the other's a pair)
 		for i in n:
+			var pi := p[i]
+			var hi := half[i]
+			var fi := f[i]
 			for j in range(i + 1, n):
-				var d := p[i] - p[j]
-				var push := d / (d.length_squared() + 0.5) * rep * (_size[i] + _size[j]) * 0.5
-				f[i] += push
+				var d := pi - p[j]
+				var push := d * ((hi + half[j]) / (d.length_squared() + 0.5))
+				fi += push
 				f[j] -= push
+			f[i] = fi
 		for e in range(0, _edges.size(), 2):
 			var a := _edges[e]
 			var b := _edges[e + 1]

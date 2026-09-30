@@ -683,7 +683,7 @@ func _frame_target(ids: Array) -> Array:
 		return []
 	var sz := size if size.x >= 2.0 and size.y >= 2.0 else Vector2(1280, 720)
 	var side := _repo.bal("ledger_frame_side_px") / sz.x
-	var top := _repo.bal("ledger_frame_top_px") / sz.y
+	var top := (_repo.bal("ledger_frame_top_px") + _title_reach_px()) / sz.y
 	var bottom := _repo.bal("ledger_frame_bottom_px") / sz.y
 	var safe := Rect2(side, top, maxf(1.0 - 2.0 * side, 0.1), maxf(1.0 - top - bottom, 0.1))
 	var pitch := FLAT_PITCH if _flat else _repo.bal("ledger_camera_pitch_deg")
@@ -691,6 +691,13 @@ func _frame_target(ids: Array) -> Array:
 	if f.is_empty():
 		return []
 	return [f["target"], clampf(float(f["distance"]), _orbit.min_distance, _orbit.max_distance), 0.0, pitch]
+
+
+## Design px from the highest star's disc to the top of its cluster's title
+## (a name line, then the title over it — see _update_hud), which the framing
+## keeps clear under the screen's top chrome.
+func _title_reach_px() -> float:
+	return _repo.bal("ledger_label_lift_px") + _repo.bal("ledger_label_px") + _repo.bal("ledger_title_px") * 0.95
 
 
 func _ease_camera(t: float) -> void:
@@ -714,10 +721,7 @@ func _process(delta: float) -> void:
 		return
 	var moved := false
 	if not _lay.settled():
-		var t0 := Time.get_ticks_usec()
-		var budget := _repo.bal("ledger_galaxy_ms_per_frame") * 1000.0
-		while not _lay.settled() and float(Time.get_ticks_usec() - t0) < budget:
-			_lay.step(1)
+		_lay.step_within(_repo.bal("ledger_galaxy_ms_per_frame"))
 		moved = true
 	if _mode_left > 0.0:
 		_mode_left = maxf(_mode_left - delta, 0.0)
@@ -782,23 +786,48 @@ func _update_hud() -> void:
 	var strong_px := _repo.bal("ledger_label_strong_px")
 	var title_px := _repo.bal("ledger_title_px")
 	var lift := _repo.bal("ledger_label_lift_px")
-	var seen := {}   # id -> [its screen place, its screen radius], for the stars in view
+	var chrome := _repo.bal("ledger_frame_top_px")
+	var seen := _seen()   # id -> [its screen place, its screen radius], for the stars in view
 	var middle := Vector2.ZERO
-	for id: String in _order:
-		var at: Variant = screen_pos_of(id)
-		if not _in_view(at):
-			continue
-		seen[id] = [at, _screen_radius(id)]
-		middle += at as Vector2
+	for id: String in seen:
+		middle += seen[id][0] as Vector2
 	if not seen.is_empty():
 		middle /= float(seen.size())
 	for id: String in seen:
 		var at: Vector2 = seen[id][0]
 		var r: float = seen[id][1]
 		obstacles.append(Rect2(at - Vector2(r, r), Vector2(r, r) * 2.0))
+	# The selected star first (spec §7: always named, as a `keep` entry that
+	# may stand on a star's disc when nothing else is clear, but never on
+	# another name), then the titles, the hubs (`keep` while not dimmed), its
+	# neighbours and the hovered star.
+	var named: Array[String] = []
+	var big := {}   # names set in the larger size: the selected star and the hubs
+	var keep := {}
+	if _selected != "":
+		named.append(_selected)
+		big[_selected] = true
+		keep[_selected] = true
+	for id: String in _hubs(seen):
+		if not named.has(id):
+			named.append(id)
+		big[id] = true
+		# a hub dimmed by the selection or the chosen cluster names itself
+		# only where there is room: it never crosses a star to stand over
+		# the web being read
+		if _star_colour(id).a >= 1.0:
+			keep[id] = true
+	if _selected != "":
+		for id: String in _near:
+			if not named.has(id):
+				named.append(id)
+	if _hovered != "" and not named.has(_hovered):
+		named.append(_hovered)
+	var titles: Array = []
 	# Each cluster's title (spec §7): over its highest star's disc and one
 	# name line above that, set outward from the galaxy's middle — sideways,
-	# and up but never down — so it never sits on a star of its own.
+	# and up but never down, nor into the screen's top chrome — so it never
+	# sits on a star of its own.
 	for row: Dictionary in _repo.ledger_clusters:
 		var c := String(row["cluster"])
 		var n := 0
@@ -824,33 +853,14 @@ func _update_hud() -> void:
 		place += Vector2(out.x, minf(out.y, 0.0)) * title_px
 		var half := _title_width(title, title_px) * 0.5
 		place.x = clampf(place.x, minf(half, size.x * 0.5), maxf(size.x - half, size.x * 0.5))
-		place.y = maxf(place.y, title_px)
+		place.y = maxf(place.y, chrome + title_px * 0.45)
 		var ink: Color = (_cluster_col[c] as Color).lerp(_pal["label_ink"], TITLE_INK_BLEND)
 		if _cluster != "all" and c != _cluster:
 			ink.a = _repo.bal("ledger_galaxy_other_fade")
-		entries.append({"text": title, "strong": true, "title": true, "px": title_px, "ink": ink, "at": place})
-	var named: Array[String] = []
-	var big := {}   # names set in the larger size: the selected star and the hubs
-	if _selected != "":
-		named.append(_selected)
-		big[_selected] = true
-		for id: String in _near:
-			if id != _selected:
-				named.append(id)
-	if _hovered != "" and not named.has(_hovered):
-		named.append(_hovered)
-	var by_size := _order.duplicate()
-	by_size.sort_custom(func(a: String, b: String) -> bool:
-		return float(_size[a]) > float(_size[b]) if float(_size[a]) != float(_size[b]) else a < b)
-	var hubs := 0
-	for id: String in by_size:
-		if hubs >= int(_repo.bal("ledger_label_hubs")):
-			break
-		if seen.has(id):
-			if not named.has(id):
-				named.append(id)
-			big[id] = true
-			hubs += 1
+		# the chosen cluster's title (every title in All) is `keep`: it may
+		# cross a dimmed star of another cluster rather than go unnamed
+		titles.append({"text": title, "strong": true, "title": true, "px": title_px, "ink": ink, "at": place,
+			"keep": _cluster == "all" or c == _cluster})
 	for id: String in named:
 		var at: Variant = screen_pos_of(id)
 		if at == null:
@@ -858,13 +868,42 @@ func _update_hud() -> void:
 		var r := _screen_radius(id)
 		var px := strong_px if big.has(id) else label_px
 		var e := {"text": String(_nodes[id]["label"]), "px": px, "at": (at as Vector2) - Vector2(0, r + lift),
-			"alt": (at as Vector2) + Vector2(0, r + lift + px), "strong": id == _selected or _near.has(id),
-			"props": _nodes[id].get("props", [])}
+			"alt": (at as Vector2) + Vector2(0, r + lift + px), "beside": [at, r],
+			"strong": id == _selected or _near.has(id), "props": _nodes[id].get("props", [])}
+		if keep.has(id):
+			e["keep"] = true
 		if id == _selected:
 			e["ring"] = r + _repo.bal("ledger_ring_px") * RING_GAP_RINGS
 			e["ring_at"] = at
+			e["beside"] = [at, float(e["ring"]) + _repo.bal("ledger_ring_px")]  # clear of its ring
 		entries.append(e)
-	_hud.show_entries(entries, obstacles)
+	var first := 1 if _selected != "" and not entries.is_empty() and entries[0].has("ring") else 0
+	entries = entries.slice(0, first) + titles + entries.slice(first)
+	_hud.show_entries(entries, obstacles, [Rect2(0.0, -size.y, size.x, size.y + chrome)])
+
+
+## The stars in view: id -> [its screen place (design px), its screen radius].
+func _seen() -> Dictionary:
+	var seen := {}
+	for id: String in _order:
+		var at: Variant = screen_pos_of(id)
+		if _in_view(at):
+			seen[id] = [at, _screen_radius(id)]
+	return seen
+
+
+## The `ledger_label_hubs` largest stars in view (spec §7: always named),
+## largest first, ties by id.
+func _hubs(seen: Dictionary = {}) -> Array[String]:
+	if seen.is_empty():
+		seen = _seen()
+	var by_size := _order.filter(func(id: String) -> bool: return seen.has(id))
+	by_size.sort_custom(func(a: String, b: String) -> bool:
+		return float(_size[a]) > float(_size[b]) if float(_size[a]) != float(_size[b]) else a < b)
+	var out: Array[String] = []
+	for id: String in by_size.slice(0, int(_repo.bal("ledger_label_hubs"))):
+		out.append(id)
+	return out
 
 
 ## A title's width in design px, measured in the title font as the HUD cull

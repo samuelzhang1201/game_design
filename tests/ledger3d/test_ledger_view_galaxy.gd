@@ -354,3 +354,88 @@ func test_the_selected_star_and_hubs_are_named_larger() -> void:
 			big += 1
 	assert_gt(big, 0, "the hubs in view are named in the larger size")
 
+
+
+## Task 11 (the look pass, 2a): no name or title is drawn in the LEDGER
+## screen's own top chrome (ledger_frame_top_px: its title, lenses and crumb)
+## — the framing keeps a title and a name line clear under it — at the
+## opening view and at every cluster the camera flies to; the framed
+## cluster's own title always stands.
+func test_no_name_stands_in_the_top_chrome() -> void:
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
+	_settle_by_frames()
+	var chrome := repo.bal("ledger_frame_top_px")
+	for c: String in ["all", "economy", "war", "court", "intelligence"]:
+		view.focus_cluster(c)
+		for i in 120:
+			view._process(1.0 / 60.0)
+		var titled := {}
+		for e: Dictionary in view._hud._entries:
+			var px := float(e.get("px", repo.bal("ledger_label_px")))
+			var top := (e["at"] as Vector2).y - px * 0.45
+			if bool(e.get("gauges_up", false)):
+				top -= LedgerHud.gauge_row_h(e.get("props", []), view._hud._gauge)
+			assert_true(top >= chrome - 0.01, "%s: '%s' at %.1f stands in the chrome" % [c, e["text"], top])
+			if bool(e.get("title", false)):
+				titled[String(e["text"]).get_slice(" ", 0)] = true
+		if c != "all":
+			var label := ""
+			for row: Dictionary in repo.ledger_clusters:
+				if String(row["cluster"]) == c:
+					label = String(row["label"])
+			assert_true(titled.has(label), "%s: its own title stands (%s)" % [c, titled.keys()])
+
+
+## Task 11 (2b, spec §7): the selected star is always named, however dense
+## its neighbourhood — selected by a single click at the opening view, with
+## no web framed.
+func test_the_selected_star_is_always_named() -> void:
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
+	_settle_by_frames()
+	for id: String in ["character:you", _first("character:"), _first("regiment:")]:
+		view.select(id)
+		var names: Array = view._hud._entries.map(func(e: Dictionary) -> String: return String(e["text"]))
+		assert_true(names.has(String(view._nodes[id]["label"])), "named: " + id)
+
+
+## Task 11 (2c, spec §7 `ledger_label_hubs`): the hubs — the largest stars in
+## view — are always named at the opening view, a pool with its gauge row.
+func test_the_hubs_are_always_named_at_the_opening_view() -> void:
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
+	_settle_by_frames()
+	var by_name := {}
+	for e: Dictionary in view._hud._entries:
+		by_name[String(e["text"])] = e
+	var hubs := view._hubs()
+	assert_eq(hubs.size(), int(repo.bal("ledger_label_hubs")))
+	for id: String in hubs:
+		var label := String(view._nodes[id]["label"])
+		assert_true(by_name.has(label), "the hub is named: " + id)
+	var pool: Dictionary = by_name.get(String(view._nodes["type:strategic_goods"]["label"]), {})
+	assert_false((pool.get("props", []) as Array).is_empty(), "the strategic pool keeps its gauge")
+
+
+## Task 11: a hub dimmed by the selection is named only where there is room —
+## it never stands on a star's disc over the web being read.
+func test_a_dimmed_hub_never_stands_on_a_star() -> void:
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
+	_settle_by_frames()
+	view.select("character:you")
+	var discs: Array[Rect2] = []
+	for id: String in view.stars():
+		var at: Variant = view.screen_pos_of(id)
+		if view._in_view(at):
+			var r := view._screen_radius(id)
+			discs.append(Rect2((at as Vector2) - Vector2(r, r), Vector2(r, r) * 2.0))
+	var px := repo.bal("ledger_label_strong_px")
+	for id: String in view._hubs():
+		if view.star_colour(id).a >= 1.0:
+			continue
+		for e: Dictionary in view._hud._entries:
+			if String(e["text"]) != String(view._nodes[id]["label"]):
+				continue
+			var font: Font = view._hud._font
+			var w := font.get_string_size(String(e["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
+			var box := Rect2((e["at"] as Vector2) - Vector2(w * 0.5, px * 0.45), Vector2(w, px * 1.05))
+			for d in discs:
+				assert_false(d.intersects(box), "the dimmed hub %s stands on a star" % id)

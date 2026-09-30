@@ -125,3 +125,37 @@ func test_a_title_is_measured_in_the_title_font() -> void:
 	var without_title_font := LedgerHud.cull(entries, float(px), body, LedgerHud.DEFAULT_GAUGE, [], null)
 	assert_eq(without_title_font.size(), 2,
 		"without a title font the title falls back to the body face and clears Gold")
+
+
+## Task 11 (2b/2c): a `keep` name (the selected star, a hub) whose places are
+## all on stars stands anyway — beside its star if that is clear of names,
+## else over it — but never on another name or in a wall (the top chrome).
+func test_a_kept_name_stands_on_a_star_but_never_on_a_name() -> void:
+	var discs := [Rect2(60, 60, 80, 120)]  # stars over and under the place
+	var e := {"text": "Walbover", "at": Vector2(100, 80), "alt": Vector2(100, 160), "strong": true, "keep": true}
+	var plain := LedgerHud.cull([e.duplicate()].map(func(x: Dictionary) -> Dictionary:
+		x.erase("keep")
+		return x), 14.0, null, LedgerHud.DEFAULT_GAUGE, discs)
+	assert_eq(plain.size(), 0, "without keep it is dropped")
+	var kept := LedgerHud.cull([e], 14.0, null, LedgerHud.DEFAULT_GAUGE, discs)
+	assert_eq(kept.size(), 1, "kept")
+	var other := LedgerHud.cull([{"text": "Walbover", "at": Vector2(100, 80), "strong": false, "keep": true}, e],
+		14.0, null, LedgerHud.DEFAULT_GAUGE, discs)
+	assert_eq(other.size(), 2, "both kept")
+	assert_ne(other[1]["at"], other[0]["at"], "the second clear of the first name")
+	var wall := LedgerHud.cull([e], 14.0, null, LedgerHud.DEFAULT_GAUGE, [], null, [Rect2(0, 0, 400, 400)])
+	assert_eq(wall.size(), 0, "never in a wall")
+
+
+## Task 11: a name with `beside` (its star's centre and radius) may stand to
+## the right or left of its star when over and under are taken.
+func test_a_name_stands_beside_its_star_when_over_and_under_are_taken() -> void:
+	var discs := [Rect2(90, 90, 20, 20)]
+	var taken := [Rect2(40, 50, 120, 30), Rect2(40, 120, 120, 30)]
+	var e := {"text": "Rothin", "at": Vector2(100, 70), "alt": Vector2(100, 135), "strong": false,
+		"beside": [Vector2(100, 100), 10.0]}
+	var kept := LedgerHud.cull([e], 14.0, null, LedgerHud.DEFAULT_GAUGE, discs + taken)
+	assert_eq(kept.size(), 1)
+	var at: Vector2 = kept[0]["at"]
+	assert_almost_eq(at.y, 100.0, 0.01, "level with its star")
+	assert_true(absf(at.x - 100.0) > 10.0, "to one side of it")
