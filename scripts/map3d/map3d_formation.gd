@@ -1,18 +1,19 @@
 class_name Map3DFormation
 extends RefCounted
-## A regiment's piece as a FORMATION of figures (owner 2026-09-27: 兵人模型需要有
-## 人数区分，分成6个人数等级 — one; two side by side; three in a triangle; two
-## ranks of two; the five of a die; a 1+2+3 wedge). The tiers and their slots
-## are data/army_formations.csv; the maths is pure and the one scene-tree
+## A regiment's piece as a FORMATION of figures by its STRENGTH (owner
+## 2026-09-30: 满员 3×3; 减员 前中后 1/2/3; 残兵 前后排 1/2 — replacing the six
+## headcount tiers of 2026-09-27). The tiers and their slots are
+## data/army_formations.csv; the maths is pure and the one scene-tree
 ## function, build(), only instances and places figures. Never reaches for
 ## the Game autoload.
 
 
-## The formation row for `heads` men: the last row whose min_heads it reaches.
-static func tier_of(repo: DataRepository, heads: float) -> Dictionary:
+## The formation row for a regiment at `fit_permille` strength
+## (ArmySystem.fit_permille): the last row whose min_fit_permille it reaches.
+static func tier_of(repo: DataRepository, fit_permille: int) -> Dictionary:
 	var best: Dictionary = {}
 	for row: Dictionary in repo.army_formations:
-		if heads >= float(row["min_heads"]):
+		if fit_permille >= int(row["min_fit_permille"]):
 			best = row
 	return best if not best.is_empty() else {"figures": 1, "slots": [Vector2.ZERO]}
 
@@ -20,12 +21,19 @@ static func tier_of(repo: DataRepository, heads: float) -> Dictionary:
 ## The slots in the model's own metres (x right, z toward the rear): each
 ## slot's spacing units times the figure's own footprint — `extent` its half
 ## width and half length — times `gap`, so horses stand a horse apart and
-## men a man apart.
-static func offsets(row: Dictionary, extent: Vector2, gap: float) -> PackedVector2Array:
+## men a man apart; the ranks a further `depth` apart (army_art.csv
+## rank_depth: a man seen from the front hides the man behind him).
+static func offsets(row: Dictionary, extent: Vector2, gap: float, depth := 1.0) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	for s: Vector2 in row.get("slots", [Vector2.ZERO]):
-		out.append(Vector2(s.x * extent.x * 2.0 * gap, s.y * extent.y * 2.0 * gap))
+		out.append(Vector2(s.x * extent.x * 2.0 * gap, s.y * extent.y * 2.0 * gap * depth))
 	return out
+
+
+## An arm's army_art.csv rank_depth, 1 when it names none.
+static func rank_depth(art: Dictionary) -> float:
+	var d := String(art.get("rank_depth", ""))
+	return float(d) if d != "" else 1.0
 
 
 ## The whole formation's half extents (model metres): the farthest slot plus

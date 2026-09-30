@@ -1,7 +1,4 @@
-figures,min_heads,slots,notes
-1,0,0:0,"owner 2026-09-27: a regiment's piece shows its strength in figures, six tiers — one figure under 1200 heads. The thresholds are the SEXTILES of the 46 land regiments on the default pack (1273 / 1732 / 2308 / 2896 / 3566), rounded. Slots are x:z in spacing units (x to the figure's right, z toward its REAR), Map3DFormation"
-2,1200,-0.5:0|0.5:0,two side by side
-3,1700,0:-0.5|-0.5:0.5|0.5:0.5,"a triangle, its point forward"
-4,2300,-0.5:-0.5|0.5:-0.5|-0.5:0.5|0.5:0.5,two ranks of two side by side
-5,2900,-0.6:-0.55|0.6:-0.55|0:0|-0.6:0.55|0.6:0.55,"the five of a die: four corners and the middle"
-6,3500,0:-1|-0.5:0|0.5:0|-1:1|0:1|1:1,"a wedge: one, two, three from the point back"
+figures,min_fit_permille,slots,notes
+3,0,0:-0.5|-0.5:0.5|0.5:0.5,"owner 2026-09-30 (单个军事模型的密度增加): a regiment's piece shows its STRENGTH, three tiers by its FIT men — headcount less the wounded — per mille of its headcount (ArmySystem.fit_permille). REMNANTS (残兵), under a third: three figures, one in front and two behind. Slots are x:z in spacing units (x to the figure's right, z toward its REAR), Map3DFormation. Replaced the six headcount tiers of 2026-09-27"
+6,334,0:-1|-0.5:0|0.5:0|-1:1|0:1|1:1,"DEPLETED (减员), a third or more: six, one, two and three from the front back"
+9,667,-1:-1|0:-1|1:-1|-1:0|0:0|1:0|-1:1|0:1|1:1,"FULL STRENGTH (满员), two thirds or more: nine, three ranks of three"

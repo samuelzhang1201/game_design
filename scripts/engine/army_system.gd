@@ -14,6 +14,20 @@ static func regiment(repo: DataRepository, code: String) -> Dictionary:
 static func headcount(repo: DataRepository, reg: Dictionary) -> int:
 	return int(MapObjects.regiment_size(repo, reg))
 
+## A regiment's STRENGTH: its fit men (headcount less the wounded) per mille
+## of its headcount — what its piece shows (owner 2026-09-30: 满员 / 减员 /
+## 残兵, Map3DFormation). A regiment that is not the player's has no state and
+## reads as it would start (full); one with no one under arms is 0.
+static func fit_permille(repo: DataRepository, state: GameState, code: String) -> int:
+	var reg := regiment(repo, code)
+	var heads := headcount(repo, reg)
+	if heads <= 0:
+		return 0
+	var st := state_of(repo, state, code)
+	var wounded := clampi(int(st.get("wounded", 0)), 0, heads)
+	@warning_ignore("integer_division")  # whole per-mille
+	return (heads - wounded) * 1000 / heads
+
 ## What a regiment starts a campaign with.
 static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
 	var home := pack_to_metres(repo, Vector2(float(reg.get("x", 0)), float(reg.get("y", 0))))

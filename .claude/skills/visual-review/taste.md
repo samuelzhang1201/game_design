@@ -440,3 +440,14 @@ add it here as a principle with its why — not as a changelog entry.
   greys its ground blue-grey where snow stays white, and its flakes streak
   sideways where snow drifts down. A difference that only shows while the
   clock runs is not enough, because orders are given paused.
+
+## The regiment's formation (owner 2026-09-30)
+
+- **Strength reads as a block of figures**: 满员 3×3, 减员 前中后 1/2/3, 残兵
+  前后排 1/2 ("单个军事模型的密度增加"). A DENSE block, not three squads: at
+  1.1 footprints apart the 3×3 split into three files wider than a town; at
+  0.7 the lances ran through the next horse. 0.85.
+- **Nine must READ as nine**: a piece stands square to the camera, so ranks a
+  man's (short) depth apart stacked into one grey totem and nine read as three
+  (independent critic). The infantry's ranks stand 1.6× further apart
+  (`army_art.csv` `rank_depth`); the horse's own length already spaces its.
