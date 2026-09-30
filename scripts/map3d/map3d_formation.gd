@@ -1,18 +1,19 @@
 class_name Map3DFormation
 extends RefCounted
-## A regiment's piece as a FORMATION of figures (owner 2026-09-27: 兵人模型需要有
-## 人数区分，分成6个人数等级 — one; two side by side; three in a triangle; two
-## ranks of two; the five of a die; a 1+2+3 wedge). The tiers and their slots
-## are data/army_formations.csv; the maths is pure and the one scene-tree
+## A regiment's piece as a FORMATION of figures by its STRENGTH (owner
+## 2026-09-30: 满员 3×3; 减员 前中后 1/2/3; 残兵 前后排 1/2 — replacing the six
+## headcount tiers of 2026-09-27). The tiers and their slots are
+## data/army_formations.csv; the maths is pure and the one scene-tree
 ## function, build(), only instances and places figures. Never reaches for
 ## the Game autoload.
 
 
-## The formation row for `heads` men: the last row whose min_heads it reaches.
-static func tier_of(repo: DataRepository, heads: float) -> Dictionary:
+## The formation row for a regiment at `fit_permille` strength
+## (ArmySystem.fit_permille): the last row whose min_fit_permille it reaches.
+static func tier_of(repo: DataRepository, fit_permille: int) -> Dictionary:
 	var best: Dictionary = {}
 	for row: Dictionary in repo.army_formations:
-		if heads >= float(row["min_heads"]):
+		if fit_permille >= int(row["min_fit_permille"]):
 			best = row
 	return best if not best.is_empty() else {"figures": 1, "slots": [Vector2.ZERO]}
 
