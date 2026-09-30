@@ -510,10 +510,12 @@ map3d_wind_speed_mps,7,3D MAP wind: how fast a wave runs down the wind over the 
 map3d_wind_wave_m,55,3D MAP wind: the wavelength of the waves over the crops (world metres)
 map3d_wind_field_amp,0.25,3D MAP wind: how far a wave lightens and darkens a sown field (bake/fields.png) — wheat shows its pale bent side
 map3d_wind_grass_amp,0.12,"3D MAP wind: the same over open, level grass away from the woods"
-map3d_wind_near_m,1500,3D MAP wind: the waves are full out to this camera distance
-map3d_wind_far_m,9000,"3D MAP wind: ...and gone by here (far out a moving wave reads as flicker, not wind)"
+map3d_wind_near_m,1500,"3D MAP wind: the crop's own waves (map3d_wind_wave_m) out to about this distance from the camera, giving way to the broad gusts by map3d_wind_mid_m"
+map3d_wind_mid_m,5000,"[2026-09-30, owner: 我并没有看到麦浪和树摇 — the waves were gone by 9 km, the opening view stands at ~24 km] 3D MAP wind: from here the broad gusts alone, full strength"
+map3d_wind_far_m,40000,"3D MAP wind: ...fading out by here (was 9000: nothing moved at the zooms the map is played at)"
+map3d_wind_far_scale,8,"3D MAP wind: the broad gusts are this many times the crop waves' size and speed — at the opening zoom a pixel is ~20 m, and a true-speed wave would not move one"
 map3d_wind_storm_gain,1.2,"3D MAP wind: how much harder the waves run in a wet or overcast province (the weather field's rain and overcast), 0 = the same everywhere"
-map3d_wind_tree_sway_m,0.9,3D MAP wind: how far a crown's top leans down the wind (world metres at the mesh's full height)
+map3d_wind_tree_sway_m,2.2,3D MAP wind: how far a crown's top leans down the wind (world metres at the mesh's full height)
 map3d_wind_tree_hz,0.22,3D MAP wind: how many times a second a tree sways
 map3d_wood_floor,0.75,"3D MAP woods: how far the ground under the woods (bake/woods.png's canopy share) goes toward the canopy colour where clumps are drawn — the dark floor between the crowns"
 map3d_wood_far,0.75,"3D MAP woods: the same far out, where no clump is drawn and the canopy colour IS the wood"
