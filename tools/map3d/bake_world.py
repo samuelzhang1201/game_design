@@ -617,6 +617,26 @@ def footprint_radius_m(burg, rules):
     return house_radius_m(burg, rules) / rules["house_built_share"]
 
 
+def house_types(path=None):
+    """data/map3d_houses.csv as the house bake reads it: each type's role,
+    weight, footprint, measured rectangle, least group and — for a landmark
+    that stands in true proportion (owner 2026-09-30, the palaces) — its own
+    `landmark_height_scale` ("" takes house_height_max)."""
+    types = {}
+    with open(path or os.path.join(ROOT, "data", "map3d_houses.csv")) as f:
+        for r in csv.DictReader(f):
+            types[r["type"]] = {"role": r["role"], "weight": float(r["weight"]),
+                                "footprint_m": float(r["footprint_m"]),
+                                # measured off the built mesh: the packer
+                                # reserves the building's real rectangle, not
+                                # a square of its long side (density v5)
+                                "width_m": float(r.get("width_m") or 0.0),
+                                "depth_m": float(r.get("depth_m") or 0.0),
+                                "min_group": r["min_group"],
+                                "landmark_height_scale": r.get("landmark_height_scale", "") or ""}
+    return types
+
+
 def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn, t_rock,
                   beach, wet, k, vw, vh, pw, ph, origin):
     """Village footprints, the fields round them, each manor's own shade
@@ -678,17 +698,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         mf = np.clip((edge - d) / rules["footprint_fade"], 0, 1) ** 1.5 * land[y0:y1, x0:x1]
         foot[y0:y1, x0:x1] = np.maximum(foot[y0:y1, x0:x1], mf)
 
-    types = {}
-    with open(os.path.join(ROOT, "data", "map3d_houses.csv")) as f:
-        for r in csv.DictReader(f):
-            types[r["type"]] = {"role": r["role"], "weight": float(r["weight"]),
-                                "footprint_m": float(r["footprint_m"]),
-                                # measured off the built mesh: the packer
-                                # reserves the building's real rectangle, not
-                                # a square of its long side (density v5)
-                                "width_m": float(r.get("width_m") or 0.0),
-                                "depth_m": float(r.get("depth_m") or 0.0),
-                                "min_group": r["min_group"]}
+    types = house_types()
     # world_cell_index.png is the GAME's own land test (MapManors.cell_at,
     # what test_no_house_stands_in_the_sea checks against): a pack-px raster,
     # coarser than this bake's own fine coastline coverage (`land`). A house

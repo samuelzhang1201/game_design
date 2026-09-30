@@ -51,3 +51,26 @@ the world's `steps_hash`). A new type's `<type>.glb.import` must carry
   black, the gutters and missed texels bled black into every mip.
 * **The footing** is traced from the walls' cross-section `SLICE_Z` above the floor, and
   takes its UVs from the wall's own foot only — the eaves' roof UVs painted it orange.
+
+## The palaces in high definition (owner 2026-09-30)
+
+After seeing them in game (宫殿的模型还是太丑太失真了 … 多边形可以多一些，整体要清晰，有细节,
+then 房顶怎么那么扭曲，可以修一下平整一下吗), the three palaces take their own path,
+`T["build_hd"](t)` — only seven stand on the map, so they can afford it:
+
+* **Tripo's own UVs and 2K texture, no re-bake** (the re-bake blurred them), colour
+  unsharp-masked by `HD_SHARPEN`, Tripo's **normal map** carried into the glb — the one
+  house kind that has one; `house_surface.gdshader` draws it where a surface brings it.
+* Welded, filled and collapsed to **`HD_BUDGET` 60k triangles**, then checked clean.
+* **Roofs laid flat** (`flatten_roofs`): patches within `FLAT_ANGLE_DEG` of their own mean
+  normal, at least `FLAT_MIN_M2`, projected on their best plane (a ridge vertex takes the
+  mean), `FLAT_ROUNDS` passes; the turrets' small cones stay round.
+* **Straight slates** (`_slate_roofs`): a roof face painted slate-coloured in the source
+  (`SLATE_LUM_MAX`, `SLATE_BLUE_MIN`) wears the kit's tiling `roof_slate`, tinted to the
+  palace's own mean slate, in courses along its eave — Tripo paints wavering ones.
+* **Hard ridges** (`_shade_by_angle`, `HD_SHARP_DEG`): Tripo's smooth normals melted every
+  eave. **Outward faces** (`_outward`): `recalc_face_normals` turned palace_b inside out.
+* No runtime tint on a palace (`hh_slate_` / `hh_stone_`), its footing its own tiling stone.
+* `map3d_houses.csv` `landmark_height_scale` 1.0: a palace stands in true proportion
+  (`bake_houses.landmark_height_scale`); every other landmark still takes
+  `house_height_max` (1.5), which drew the palaces' towers thin and false.

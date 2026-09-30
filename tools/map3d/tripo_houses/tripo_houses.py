@@ -368,6 +368,45 @@ def census(ob):
             "flipped": len(flipped), "bad": flipped}
 
 
+def _outward(bm):
+    """Every connected piece faces OUT: recalc_face_normals guesses inside
+    from outside, and on open Tripo sheets it guessed palace_b inside out
+    (4,565 of its high faces pointing down) — a piece whose signed volume is
+    negative is turned over whole."""
+    seen = set()
+    for f0 in bm.faces:
+        if f0 in seen:
+            continue
+        piece, stack = [], [f0]
+        seen.add(f0)
+        while stack:
+            f = stack.pop()
+            piece.append(f)
+            for e in f.edges:
+                for g in e.link_faces:
+                    if g not in seen:
+                        seen.add(g)
+                        stack.append(g)
+        vol = sum(f.calc_center_median().dot(f.normal) * f.calc_area() for f in piece)
+        if vol < 0.0:
+            bmesh.ops.reverse_faces(bm, faces=piece)
+
+
+def _reclose(ob, rounds=4):
+    """Fan, pinch and tidy again until the census is clean — after anything
+    that moves vertices (the roof flattening) and can fold a sliver shut."""
+    for _ in range(rounds):
+        c = census(ob)
+        if c["biggest_hole_m"] < 0.5 and not c["flipped"]:
+            return c
+        _fan_fill(ob)
+        for _ in range(PINCH_ROUNDS):
+            if not _pinch(ob):
+                break
+        _tidy(ob)
+    return census(ob)
+
+
 def _tidy(ob):
     """What the glTF export would do to the mesh, done first so it opens
     nothing: triangles thinner than DEGENERATE_M dissolved, normals made
@@ -377,6 +416,7 @@ def _tidy(ob):
     bmesh.ops.dissolve_degenerate(bm, dist=DEGENERATE_M, edges=bm.edges)
     bmesh.ops.triangulate(bm, faces=bm.faces)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    _outward(bm)
     bm.to_mesh(ob.data)
     bm.free()
     ob.data.validate()
@@ -575,10 +615,12 @@ def _simplify(pts, tol):
     return out
 
 
-def _footing(ob):
+def _footing(ob, slot=1, tile_m=0.0):
     """A closed prism under each outer wall loop, from kit.FOOT_TOP above the
-    floor to kit.FOOT_M below it, kit.FOOT_PROUD proud of the wall; slot 1
-    (the wall), UVs from the nearest wall vertex near the floor."""
+    floor to kit.FOOT_M below it, kit.FOOT_PROUD proud of the wall; material
+    `slot` (the wall), UVs from the nearest wall vertex near the floor — or,
+    with `tile_m`, its own tiling stone laid by world position (a palace's
+    footing took one texel of the atlas per column and read as streaks)."""
     loops = [l for l in _loops_at(ob, SLICE_Z) if abs(_area(l)) > 4.0]
     outer = [l for l in loops if not any(m is not l and _inside(l[0], m) for m in loops)]
     if not outer:
@@ -607,11 +649,18 @@ def _footing(ob):
         faces.append(bm.faces.new(top))
         faces.append(bm.faces.new(bot[::-1]))
         for f in faces:
-            f.material_index = 1
+            f.material_index = slot
+            f.normal_update()
             for lp in f.loops:
                 co = lp.vert.co
-                _, idx, _ = kd.find((co.x, co.y, max(co.z, 0.0) * 4.0))
-                lp[uv_layer].uv = uvl[idx].uv
+                if tile_m > 0.0:
+                    n = f.normal
+                    u = co.y if abs(n.x) > abs(n.y) else co.x
+                    v = co.z if abs(n.z) < 0.5 else co.y
+                    lp[uv_layer].uv = (u / tile_m, v / tile_m)
+                else:
+                    _, idx, _ = kd.find((co.x, co.y, max(co.z, 0.0) * 4.0))
+                    lp[uv_layer].uv = uvl[idx].uv
         added += len(faces)
     bm.to_mesh(ob.data)
     bm.free()
@@ -716,3 +765,293 @@ def arrange():
             x += foot + ROW_GAP
         y -= 2 * big + ROW_GAP * 2.5
     return y
+
+
+# The palaces in HIGH DEFINITION (owner 2026-09-30, after seeing them in game:
+# 宫殿的模型还是太丑太失真了 … 多边形可以多一些，整体要清晰，有细节). Only seven stand on the
+# map, so a palace keeps Tripo's OWN UVs and 2K texture — no re-bake, which
+# blurred it — collapsed only to HD_BUDGET, with its colour sharpened by
+# HD_SHARPEN and Tripo's normal map carried into the glb (house_surface.gdshader
+# draws it where a surface has one). Walls and roofs take no runtime tint
+# (hh_stone_ / hh_slate_: the palace's own white stone and blue slate), and the
+# footing wears its own tiling stone (HD_FOOT_TEX) laid by world position.
+HD_BUDGET = {"palace": 60000, "palace_b": 60000, "palace_c": 60000}
+HD_SHARPEN = 0.6          # unsharp-mask amount on the source colour
+HD_FOOT_TEX = K["TEX"] + "tinted/wall_ashlar.jpg"
+HD_FOOT_TILE_M = 4.5
+
+
+def _source_images(ob):
+    """(colour, normal) images of the Tripo material, by the socket they feed."""
+    colour = normal = None
+    for m in ob.data.materials:
+        if not (m and m.use_nodes):
+            continue
+        for link in m.node_tree.links:
+            n = link.from_node
+            if n.type == "TEX_IMAGE" and link.to_socket.name == "Base Color":
+                colour = n.image
+            elif n.type == "TEX_IMAGE" and link.to_node.type == "NORMAL_MAP":
+                normal = n.image
+    return colour, normal
+
+
+def _sharpened(img, t):
+    """An unsharp-masked copy of `img` saved beside the sources."""
+    import numpy as np
+    w, h = img.size
+    px = np.empty(w * h * 4, dtype=np.float32)
+    img.pixels.foreach_get(px)
+    a = px.reshape(h, w, 4)
+    blur = a.copy()
+    for axis in (0, 1):
+        blur = (np.roll(blur, 1, axis) + blur + np.roll(blur, -1, axis)) / 3.0
+    out = a.copy()
+    out[..., :3] = np.clip(a[..., :3] + HD_SHARPEN * (a[..., :3] - blur[..., :3]), 0.0, 1.0)
+    name = t + "_colour"
+    if name in bpy.data.images:
+        bpy.data.images.remove(bpy.data.images[name])
+    new = bpy.data.images.new(name, w, h)
+    new.pixels.foreach_set(out.ravel())
+    new.filepath_raw = HOUSES + t + "/model_wip/tripo/" + t + "_colour.png"
+    new.file_format = "PNG"
+    new.save()
+    return new
+
+
+def _mat_hd(name, colour, normal, rough=0.85):
+    m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    for n in list(nt.nodes):
+        if n.type not in ("BSDF_PRINCIPLED", "OUTPUT_MATERIAL"):
+            nt.nodes.remove(n)
+    b = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
+    it = nt.nodes.new("ShaderNodeTexImage")
+    it.image = colour
+    nt.links.new(it.outputs["Color"], b.inputs["Base Color"])
+    if normal is not None:
+        nn = nt.nodes.new("ShaderNodeTexImage")
+        nn.image = normal
+        nn.image.colorspace_settings.name = "Non-Color"
+        nm = nt.nodes.new("ShaderNodeNormalMap")
+        nt.links.new(nn.outputs["Color"], nm.inputs["Color"])
+        nt.links.new(nm.outputs["Normal"], b.inputs["Normal"])
+    b.inputs["Roughness"].default_value = rough
+    b.inputs["Metallic"].default_value = 0.0
+    nt.nodes.active = it
+    return m
+
+
+def _mark_faces(ob):
+    a = ob.data.attributes.get("orig") or ob.data.attributes.new("orig", "INT", "FACE")
+    a.data.foreach_set("value", [1] * len(ob.data.polygons))
+
+
+def _uv_new_faces(ob, src):
+    """Faces the fills made (orig 0) take each corner's UV from the nearest
+    corner of the source mesh: without it they sample the texture's corner."""
+    kd = kdtree.KDTree(len(src.data.loops))
+    for i, lp in enumerate(src.data.loops):
+        kd.insert(src.data.vertices[lp.vertex_index].co, i)
+    kd.balance()
+    suv = src.data.uv_layers.active.data
+    uv = ob.data.uv_layers.active.data
+    orig = ob.data.attributes["orig"].data
+    n = 0
+    for p in ob.data.polygons:
+        if orig[p.index].value:
+            continue
+        for li in p.loop_indices:
+            _, j, _ = kd.find(ob.data.vertices[ob.data.loops[li].vertex_index].co)
+            uv[li].uv = suv[j].uv
+        n += 1
+    return n
+
+
+def _shade_by_angle(ob, deg):
+    """Smooth below `deg`, hard above: Tripo's own smooth normals rounded
+    every ridge and eave into a melted slope."""
+    _select(ob)
+    if ob.data.has_custom_normals:
+        bpy.ops.mesh.customdata_custom_splitnormals_clear()
+    bpy.ops.object.shade_smooth_by_angle(angle=math.radians(deg), keep_sharp_edges=False)
+
+
+def build_hd(t):
+    """One palace in high definition, beside its source as <type>_game."""
+    _scene()
+    src_name = JOBS[t][0]
+    src = bpy.data.objects[src_name + "_src"]
+    if t + "_game" in bpy.data.objects:
+        bpy.data.objects.remove(bpy.data.objects[t + "_game"], do_unlink=True)
+    low = src.copy()
+    low.data = src.data.copy()
+    low.name = t + "_game"
+    low["house_type"] = t
+    bpy.context.scene.collection.objects.link(low)
+    colour, normal = _source_images(src)
+    _mark_faces(low)
+    lo0, hi0 = _bounds(src)
+    closed = _reduce(low, HD_BUDGET[t], max(hi0.x - lo0.x, hi0.y - lo0.y))
+    flattened = flatten_roofs(low)
+    _tidy(low)                       # a vertex laid on a plane can fold a sliver over
+    _reclose(low)
+    filled = _uv_new_faces(low, src)
+    sharp = _sharpened(colour, t)
+    if normal is not None:
+        normal.filepath_raw = HOUSES + t + "/model_wip/tripo/" + t + "_normal.png"
+        normal.file_format = "PNG"
+        normal.save()
+    low.data.materials.clear()
+    low.data.materials.append(_mat_hd("hh_slate_" + t, sharp, normal, 0.7))
+    low.data.materials.append(_mat_hd("hh_stone_" + t, sharp, normal, 0.9))
+    foot = bpy.data.images.load(HD_FOOT_TEX, check_existing=True)
+    low.data.materials.append(_mat_hd("hh_stone_" + t + "_foot", foot, None, 0.95))
+    for p in low.data.polygons:
+        p.material_index = 1
+    slate, n_slate = _slate_roofs(low, colour, t)
+    low.data.materials[0] = _mat_hd("hh_slate_" + t, slate, None, 0.7)
+    loops, _ = _footing(low, slot=2, tile_m=HD_FOOT_TILE_M)
+    _grime(low)
+    _shade_by_angle(low, HD_SHARP_DEG)
+    low.location = src.location + GAME_OFFSET
+    c = census(low)
+    c.pop("bad")
+    return {"type": t, "tris": sum(len(p.vertices) - 2 for p in low.data.polygons),
+            "filled_faces": filled, "footing_loops": loops, "census": c, "flattened": flattened,
+            "slate_faces": n_slate}
+
+
+# Flat roofs (owner 2026-09-30, looking at the HD palaces: 房顶怎么那么扭曲，可以修一下
+# 平整一下吗). Tripo models a slate roof as a rippling sheet; each roof face is
+# grown into a PATCH of faces within FLAT_ANGLE_DEG of the patch's own mean
+# normal, and every patch of at least FLAT_MIN_M2 is laid on its best plane
+# (area-weighted centroid and normal); a vertex on two patches (a ridge, a hip)
+# takes the mean of its projections. Smaller patches — the turrets' cones —
+# are left round. FLAT_ROUNDS passes, the patches regrown each time.
+FLAT_ANGLE_DEG = 30.0
+FLAT_MIN_M2 = 3.0
+FLAT_ROUNDS = 3
+HD_SHARP_DEG = 35.0   # edges folding more than this are hard: ridges, eaves and corners read cut, not melted
+
+
+def _roof_patches(bm, top):
+    roof = [f for f in bm.faces if f.normal.z > ROOF_NZ and f.calc_center_median().z > ROOF_ABOVE * top]
+    free = set(roof)
+    patches = []
+    lim = math.radians(FLAT_ANGLE_DEG)
+    for seed in sorted(roof, key=lambda f: -f.calc_area()):
+        if seed not in free:
+            continue
+        free.discard(seed)
+        patch, stack = [seed], [seed]
+        nsum = seed.normal * seed.calc_area()
+        while stack:
+            f = stack.pop()
+            n = nsum.normalized()
+            for e in f.edges:
+                for g in e.link_faces:
+                    if g in free and g.normal.angle(n, math.pi) < lim:
+                        free.discard(g)
+                        patch.append(g)
+                        stack.append(g)
+                        nsum += g.normal * g.calc_area()
+        patches.append(patch)
+    return patches
+
+
+def flatten_roofs(ob):
+    """Every roof patch of at least FLAT_MIN_M2 laid flat on its own plane;
+    returns (patches flattened, mean vertex move in m) per round."""
+    out = []
+    for _ in range(FLAT_ROUNDS):
+        bm = bmesh.new()
+        bm.from_mesh(ob.data)
+        bm.normal_update()
+        top = max(v.co.z for v in bm.verts)
+        moves = {}
+        flat = 0
+        for patch in _roof_patches(bm, top):
+            area = sum(f.calc_area() for f in patch)
+            if area < FLAT_MIN_M2:
+                continue
+            c = sum((f.calc_center_median() * f.calc_area() for f in patch), Vector()) / area
+            n = sum((f.normal * f.calc_area() for f in patch), Vector()).normalized()
+            for v in {v for f in patch for v in f.verts}:
+                moves.setdefault(v, []).append(v.co - n * (v.co - c).dot(n))
+            flat += 1
+        moved = 0.0
+        for v, ps in moves.items():
+            p = sum(ps, Vector()) / len(ps)
+            moved += (p - v.co).length
+            v.co = p
+        bm.to_mesh(ob.data)
+        bm.free()
+        out.append((flat, round(moved / max(1, len(moves)), 3)))
+    return out
+
+
+# Slate roofs laid straight (owner 2026-09-30: 房顶怎么那么扭曲). Flattening fixed the
+# roofs' SHAPE, but Tripo paints its slates in wavering courses. A palace's roof
+# faces — tilted up past SLATE_NZ and painted slate-coloured in the source
+# texture (darker than SLATE_LUM_MAX and bluer than red by SLATE_BLUE_MIN, so a
+# battlement's pale stone top is never taken for roof) — get the kit's tiling
+# `roof_slate` instead, tinted to the palace's own mean slate colour, laid in
+# straight courses along each face's eave (u along the slope's level line, v up
+# the slope, SLATE_TILE_M a repeat).
+SLATE_TEX = K["TEX"] + "tinted/roof_slate.jpg"
+SLATE_NZ = 0.2
+SLATE_LUM_MAX = 0.6
+SLATE_BLUE_MIN = 0.02
+SLATE_TILE_M = 5.0
+
+
+def _slate_roofs(ob, colour, t):
+    """Slot 0 becomes the tinted tiling slate on every slate-painted roof
+    face, with its UVs laid straight; returns how many faces took it."""
+    import numpy as np
+    w, h = colour.size
+    px = np.empty(w * h * 4, dtype=np.float32)
+    colour.pixels.foreach_get(px)
+    img = px.reshape(h, w, 4)
+    me = ob.data
+    uv = me.uv_layers.active.data
+    roof, cols = [], []
+    for p in me.polygons:
+        if p.normal.z <= SLATE_NZ:
+            continue
+        u = sum(uv[li].uv.x for li in p.loop_indices) / p.loop_total
+        v = sum(uv[li].uv.y for li in p.loop_indices) / p.loop_total
+        r, g, b = img[int(min(max(v, 0.0), 0.999) * h), int(min(max(u, 0.0), 0.999) * w), :3]
+        if 0.2126 * r + 0.7152 * g + 0.0722 * b < SLATE_LUM_MAX and b - r > SLATE_BLUE_MIN:
+            roof.append(p.index)
+            cols.append((r, g, b))
+    target = np.array(cols).mean(axis=0) if cols else np.array([0.35, 0.4, 0.5])
+    base = bpy.data.images.load(SLATE_TEX, check_existing=True)
+    bw, bh = base.size
+    bp = np.empty(bw * bh * 4, dtype=np.float32)
+    base.pixels.foreach_get(bp)
+    bp = bp.reshape(bh, bw, 4)
+    gain = target / np.maximum(bp[..., :3].reshape(-1, 3).mean(axis=0), 1e-3)
+    bp[..., :3] = np.clip(bp[..., :3] * gain, 0.0, 1.0)
+    name = t + "_slate"
+    if name in bpy.data.images:
+        bpy.data.images.remove(bpy.data.images[name])
+    slate = bpy.data.images.new(name, bw, bh)
+    slate.pixels.foreach_set(bp.ravel())
+    slate.filepath_raw = HOUSES + t + "/model_wip/tripo/" + t + "_slate.png"
+    slate.file_format = "PNG"
+    slate.save()
+    up = Vector((0.0, 0.0, 1.0))
+    for i in roof:
+        p = me.polygons[i]
+        n = p.normal
+        along = up.cross(n)
+        along = along.normalized() if along.length > 1e-4 else Vector((1.0, 0.0, 0.0))
+        slope = n.cross(along).normalized()
+        for li in p.loop_indices:
+            co = me.vertices[me.loops[li].vertex_index].co
+            uv[li].uv = (co.dot(along) / SLATE_TILE_M, co.dot(slope) / SLATE_TILE_M)
+        p.material_index = 0
+    return slate, len(roof)

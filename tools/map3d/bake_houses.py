@@ -120,6 +120,15 @@ def _group_allows(group, min_group):
         return min_group == "village"
 
 
+def landmark_height_scale(row, rules):
+    """A landmark stands house_height_max tall — the tallest thing in its
+    settlement — unless its row names its own `landmark_height_scale`: a
+    Tripo palace is modelled in true proportion, and stretched 1.5x upright
+    its towers read thin and false (owner 2026-09-30: 宫殿…太失真了)."""
+    own = str(row.get("landmark_height_scale", "") or "").strip()
+    return float(own) if own else float(rules["house_height_max"])
+
+
 def _pick(rng, types, role, group):
     """One type of this role that the group allows, by weight."""
     keys = sorted(t for t, r in types.items()
@@ -640,7 +649,7 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
     if landmark is not None:
         rows.append({"burg_code": code, "rank": 0, "x_m": 0.0, "z_m": 0.0, "yaw_deg": yaw0,
                      "type": landmark, "scale": 1.0,
-                     "height_scale": float(rules["house_height_max"])})
+                     "height_scale": landmark_height_scale(types[landmark], rules)})
         # an open square round it, and a lane round the square: the first
         # houses face the landmark from every side rather than all turning
         # to whichever radial lane happens to pass
