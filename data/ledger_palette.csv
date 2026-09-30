@@ -20,3 +20,12 @@ label_halo,#14100C,the halo under a name
 focus_ring,#E0BB6A,the selected sphere
 gauge_fill,#E0BB6A,a property gauge's filled arc
 gauge_track,#4A3C2C,a property gauge's empty ring
+sky_top,#120E0B,the warm black night over the galaxy (palette D)
+sky_bottom,#070605,the night's foot
+nebula_a,#3A2A1A,faint warm dust in the sky
+nebula_b,#1A2230,faint cool dust in the sky
+stars,#F0E2C4,the background stars
+cluster_economy,#D4A24C,brass: the economy's stars
+cluster_war,#C24A3C,gules: the war's stars
+cluster_court,#9066C0,purpure: the court's stars
+cluster_intelligence,#5E8CCB,steel-azure: the intelligence's stars

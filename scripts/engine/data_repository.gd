@@ -117,6 +117,10 @@ var ledger_types: Array = []
 var ledger_links: Array = []
 var ledger_actions: Array = []
 var ledger_loops: Array = []
+## data/ledger_clusters.csv, in file order: {cluster, label, colour (a
+## ledger_palette.csv key), at (Vector3, the 3D anchor), at2 (Vector3 with
+## y 0, the 2D anchor), lens (the lens chip it answers to)}.
+var ledger_clusters: Array = []
 ## key -> Color (data/ledger_palette.csv).
 var ledger_palette: Dictionary = {}
 ## data/ledger_governance.csv: flow_type -> {seat, skill, base_permille,
@@ -615,13 +619,20 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/ledger_lenses.csv", ["lens", "label", "instance_type"],
 			func(r): ledger_lenses.append(r)):
 		return false
+	if not _load_if_present(dir + "/ledger_clusters.csv", ["cluster", "label", "colour", "x", "y", "z", "x2", "z2", "lens"],
+			func(r): ledger_clusters.append({"cluster": String(r["cluster"]), "label": String(r["label"]),
+				"colour": String(r["colour"]), "lens": String(r["lens"]),
+				"at": Vector3(float(r["x"]), float(r["y"]), float(r["z"])),
+				"at2": Vector3(float(r["x2"]), 0.0, float(r["z2"]))})):
+		return false
 	if not _load_if_present(dir + "/ledger_object_types.csv",
-			["type_id", "layer", "lenses", "label", "icon", "x", "z", "instances", "status", "milestone"],
+			["type_id", "layer", "lenses", "label", "icon", "x", "z", "instances", "status", "milestone",
+				"cluster", "fold_to", "star"],
 			func(r): ledger_types.append(r)):
 		return false
 	if not _load_if_present(dir + "/ledger_link_types.csv",
 			["link_id", "from_type", "to_type", "verb", "lenses", "status", "resolver",
-				"governor_seat", "governor_kind", "milestone", "planned_note"],
+				"governor_seat", "governor_kind", "milestone", "planned_note", "look"],
 			func(r): ledger_links.append(r)):
 		return false
 	if not _load_if_present(dir + "/ledger_actions.csv",

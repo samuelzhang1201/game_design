@@ -55,6 +55,21 @@ static func validate(repo: DataRepository) -> Array[String]:
 		var it := String(lenses[lens]["instance_type"])
 		if it != "" and not types.has(it):
 			errors.append("lens %s: unknown instance type %s" % [lens, it])
+	var clusters := {}
+	for c: Dictionary in repo.ledger_clusters:
+		clusters[String(c["cluster"])] = true
+	for r: Dictionary in repo.ledger_types:
+		var id := String(r["type_id"])
+		if not clusters.has(String(r.get("cluster", ""))):
+			errors.append("%s: unknown cluster %s" % [id, r.get("cluster", "")])
+		var fold := String(r.get("fold_to", ""))
+		if fold != "" and not types.has(fold):
+			errors.append("%s: folds into unknown type %s" % [id, fold])
+		if not String(r.get("star", "")) in ["pool", "instance"]:
+			errors.append("%s: unknown star %s" % [id, r.get("star", "")])
+	for r: Dictionary in repo.ledger_links:
+		if not String(r.get("look", "")) in ["flow", "tie", "kin", "structure"]:
+			errors.append("%s: unknown look %s" % [r["link_id"], r.get("look", "")])
 	var links := {}
 	for r: Dictionary in repo.ledger_links:
 		var id := String(r["link_id"])
