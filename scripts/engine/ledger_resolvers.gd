@@ -51,6 +51,37 @@ static func memo_active() -> bool:
 	return _memo_on
 
 
+## One named cache of the running memo (a Dictionary kept by reference, made
+## on first ask); callers check `memo_active()` first — outside a memo the
+## bucket is thrown away at the next begin_memo.
+static func memo_bucket(bucket: String) -> Dictionary:
+	if not _memo.has(bucket):
+		_memo[bucket] = {}
+	return _memo[bucket]
+
+
+## A value remembered within the memo under a SUBJECT dictionary (an Intel
+## subject: kind and code or cell): keyed by the dictionary's hash and
+## confirmed by equality, so two subjects whose hashes collide never share
+## an answer, and no subject is stringified (str() of a dictionary per call
+## cost the opened galaxy ~6 ms; Task 11 fix round 1, F7). Returns [found,
+## value].
+static func memo_subject(bucket: String, subj: Dictionary) -> Array:
+	var hits: Array = memo_bucket(bucket).get(subj.hash(), [])
+	for e: Array in hits:
+		if e[0] == subj:
+			return [true, e[1]]
+	return [false, null]
+
+
+static func memo_subject_put(bucket: String, subj: Dictionary, value: Variant) -> void:
+	var cache := memo_bucket(bucket)
+	var h := subj.hash()
+	var hits: Array = cache.get(h, [])
+	hits.append([subj.duplicate(true), value])
+	cache[h] = hits
+
+
 static func _supply_plan(repo: DataRepository, state: GameState) -> Array:
 	if not _memo_on:
 		return SupplySystem.plan(repo, state)
@@ -93,12 +124,12 @@ static func _manors_of_house(repo: DataRepository, state: GameState, family: Str
 static func intel_level(repo: DataRepository, state: GameState, subj: Dictionary) -> String:
 	if not _memo_on:
 		return Intel.level(repo, state, subj)
-	var key := str(subj)
-	var cache: Dictionary = _memo.get("intel_level", {})
-	if not cache.has(key):
-		cache[key] = Intel.level(repo, state, subj)
-		_memo["intel_level"] = cache
-	return cache[key]
+	var got := memo_subject("intel_level", subj)
+	if bool(got[0]):
+		return String(got[1])
+	var lvl := Intel.level(repo, state, subj)
+	memo_subject_put("intel_level", subj, lvl)
+	return lvl
 
 
 ## MarketSystem.province_of_burg, cached per burg within one memo

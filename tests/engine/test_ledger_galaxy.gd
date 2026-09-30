@@ -233,3 +233,43 @@ func test_the_galaxy_is_read_within_its_budget() -> void:
 	# is measured on a quiet machine (Task 11).
 	assert_lt(ms, 2.0 * 60.0, "a regression tripwire at twice spec §3's 60 ms budget; " +
 		"the true budget is measured on a quiet machine (Task 11)")
+
+
+## Task 11 fix round 1 (F7): the readers remembered within one read give what
+## the unremembered ones give — a governor per link row, Intel's level and
+## fact per subject — and two different subjects never share an answer.
+func test_the_read_memos_give_what_the_readers_give() -> void:
+	var truth := {}
+	for r: Dictionary in data.ledger_links:
+		truth[String(r["link_id"])] = Ledger._governor(data, s, r)
+	var subj_a := {"kind": "province", "code": MapManors.home_province(data, s)}
+	var subj_b := {"kind": "regiment", "code": String(s.regiments.keys()[0])}
+	var lvl_a := Intel.level(data, s, subj_a)
+	var lvl_b := Intel.level(data, s, subj_b)
+	var fact_a := Intel.fact(data, s, subj_a, "people", 1234)
+	LedgerResolvers.begin_memo()
+	for r: Dictionary in data.ledger_links:
+		assert_eq(Ledger._governor(data, s, r), truth[String(r["link_id"])], String(r["link_id"]))
+		assert_eq(Ledger._governor(data, s, r), truth[String(r["link_id"])], "remembered: " + String(r["link_id"]))
+	for i in 2:
+		assert_eq(LedgerResolvers.intel_level(data, s, subj_a), lvl_a)
+		assert_eq(LedgerResolvers.intel_level(data, s, subj_b), lvl_b)
+		assert_eq(Ledger._fact(data, s, subj_a, "people", 1234), fact_a)
+	LedgerResolvers.memo_subject_put("probe", subj_a, "a")
+	assert_eq(LedgerResolvers.memo_subject("probe", subj_a), [true, "a"])
+	assert_eq(LedgerResolvers.memo_subject("probe", subj_b), [false, null], "another subject is not found")
+	LedgerResolvers.end_memo()
+
+
+## Task 11 fix round 1 (F7): the opened galaxy's links carry the governor
+## the unremembered reader names, row by row.
+func test_the_opened_galaxys_governors_are_the_readers() -> void:
+	var opened := {MapManors.home_province(data, s): true}
+	var g := Ledger.galaxy(data, s, opened)
+	var n := 0
+	for l: Dictionary in g["links"]:
+		if String(l["status"]) != "live":
+			continue
+		assert_eq(String(l["governor"]), Ledger._governor(data, s, Ledger.link_row(data, String(l["type"]))), String(l["id"]))
+		n += 1
+	assert_gt(n, 0)

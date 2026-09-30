@@ -133,6 +133,9 @@ func pin(id: String, at: Vector3) -> void:
 		passes_left = int(_total * 0.3)
 
 
+const PASS_MARGIN := 1.25   # a pass on a busy machine can cost a quarter more than the dearest yet
+
+
 ## Runs passes for at most `budget_ms` of this frame (the view's
 ## ledger_galaxy_ms_per_frame): always one, then another only while the
 ## dearest pass so far still fits in what is left, so a frame never runs
@@ -144,7 +147,7 @@ func step_within(budget_ms: float) -> int:
 	var dearest := 0.0
 	while not settled():
 		var t1 := Time.get_ticks_usec()
-		if ran > 0 and float(t1 - t0) + dearest > budget:
+		if ran > 0 and float(t1 - t0) + dearest * PASS_MARGIN > budget:
 			break
 		step(1)
 		dearest = maxf(dearest, float(Time.get_ticks_usec() - t1))

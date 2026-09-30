@@ -217,14 +217,22 @@ static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -
 			if not nodes.has(id):
 				nodes[id] = _galaxy_node(repo, state, id)
 				queue.append(id)
+	# each type's live rows, once a read rather than a scan of every row per
+	# node (Task 11 fix round 1, F7)
+	var rows_of := {}
+	for r: Dictionary in repo.ledger_links:
+		if String(r["status"]) != "live":
+			continue
+		for end: String in [String(r["from_type"]), String(r["to_type"])]:
+			var rows: Array = rows_of.get(end, [])
+			if not rows.has(r):
+				rows.append(r)
+			rows_of[end] = rows
 	var i := 0
 	while i < queue.size():
 		var id: String = queue[i]
 		i += 1
-		var t := type_of(id)
-		for r: Dictionary in repo.ledger_links:
-			if String(r["status"]) != "live" or (String(r["from_type"]) != t and String(r["to_type"]) != t):
-				continue
+		for r: Dictionary in rows_of.get(type_of(id), []):
 			for l: Dictionary in LedgerResolvers.run(r, repo, state, {"id": id}):
 				var a := String(l["from"])
 				var b := String(l["to"])
@@ -638,7 +646,7 @@ static func _account(repo: DataRepository, state: GameState, t: Dictionary) -> D
 	if subj.is_empty():
 		return {"value": flow, "text": Intel.num(flow), "source": "own records",
 			"day": state.absolute_day(), "level": "full"}
-	var f := Intel.fact(repo, state, subj, String(t["key"]), flow)
+	var f := _fact(repo, state, subj, String(t["key"]), flow)
 	return {"value": flow if lvl == "full" else null, "text": String(f["text"]),
 		"source": String(f["source"]), "day": int(f["day"]), "level": lvl}
 
@@ -648,6 +656,31 @@ static func _account(repo: DataRepository, state: GameState, t: Dictionary) -> D
 ## governs it NOW, given or not (Governance.governor_of); otherwise its
 ## seat's holder.
 static func _governor(repo: DataRepository, state: GameState, r: Dictionary) -> String:
+	# once per link row within one read (Task 11 fix round 1, F7: asked
+	# ~1,800 times opening three provinces, ~40 rows)
+	if LedgerResolvers.memo_active():
+		var cache := LedgerResolvers.memo_bucket("governor")
+		var k := String(r["link_id"])
+		if not cache.has(k):
+			cache[k] = _governor_now(repo, state, r)
+		return cache[k]
+	return _governor_now(repo, state, r)
+
+
+## Intel.fact, remembered within one read per subject, key and figure (F7).
+static func _fact(repo: DataRepository, state: GameState, subj: Dictionary, key: String, flow: int) -> Dictionary:
+	if not LedgerResolvers.memo_active():
+		return Intel.fact(repo, state, subj, key, flow)
+	var probe := {"s": subj, "k": key, "f": flow}
+	var got := LedgerResolvers.memo_subject("fact", probe)
+	if bool(got[0]):
+		return got[1]
+	var f := Intel.fact(repo, state, subj, key, flow)
+	LedgerResolvers.memo_subject_put("fact", probe, f)
+	return f
+
+
+static func _governor_now(repo: DataRepository, state: GameState, r: Dictionary) -> String:
 	var flow := governed_flow(repo, r)
 	if flow != "":
 		return Governance.governor_of(repo, state, flow)
