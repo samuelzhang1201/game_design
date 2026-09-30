@@ -278,7 +278,7 @@ func test_a_manor_card_shows_its_slots_and_a_build_fills_one() -> void:
 	assert_false(hurry.disabled)
 	hurry.pressed.emit()
 	await wait_frames(1)
-	assert_eq(MapManors.work_days_left(Game.state, cell, code),
+	assert_eq(MapManors.work_days_left(Game.data, Game.state, cell, code),
 		int(float(row["build_days"])) - per_click, "the days came off")
 	assert_eq(p.slots_row().get_child_count(), slots)
 	assert_false(p.build_menu_codes().has(code), "no second one offered")

@@ -718,14 +718,15 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	# row says so.
 	var works: Array = []
 	var artisan_pct := roundi(float(MapManors.work_speed_permille(repo, state, province) - 1000) / 10.0)
+	var province_label := String(prov.get("label", province))
 	for w: Dictionary in MapManors.works_of(state, cell):
 		var b := String(w["building"])
-		var left := MapManors.work_days_left(state, cell, b)
+		var left := MapManors.work_days_left(repo, state, cell, b)
 		var name := String((repo.manor_buildings.get(b, {}) as Dictionary).get("label", b))
 		works.append({"building": b, "label": name, "days_left": left,
 			"progress": MapManors.work_progress(state, cell, b), "artisan_pct": artisan_pct})
 		names.append("%s (%d days to go%s)" % [name, left,
-			", artisans: +%d%%" % artisan_pct if artisan_pct > 0 else ""])
+			", artisans of %s: +%d%%" % [province_label, artisan_pct] if artisan_pct > 0 else ""])
 	card["works"] = works
 	card["slots"] = MapManors.slots_of(repo, cell)
 	fields.append(["Buildings", ", ".join(names) if not names.is_empty() else "none"])

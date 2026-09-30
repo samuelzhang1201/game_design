@@ -316,6 +316,24 @@ func test_buying_at_a_realm_market_pays_its_basket_price() -> void:
 	assert_eq(int(s.metrics["treasury"]), 1000 - price - 1, "the market's price and the factor's paperwork fee")
 	assert_lt(price, int(roundf(100.0 * (1.0 + data.bal("goods_trade_spread")))), "cheaper than the factor")
 
+## Final fix wave, Minor9: a market trades at its own basket price, not the
+## factor's flat rate, so a refusal at a market must not blame "the
+## factor's cut" — a plain (no-market) refusal still does, since that one
+## really is the factor's.
+func test_an_unaffordable_buy_at_a_market_does_not_blame_the_factors_cut() -> void:
+	var id := String(MarketSystem.realm_markets(data, s)[0])
+	# Just enough for the order's own flat fee (order_costs.csv), not for
+	# the goods themselves: the market-specific refusal below, not the
+	# generic "needs N gold" order-cost gate above it in validate().
+	s.metrics["treasury"] = float(OrderCosts.gold_of(data, "GOODS_BUY"))
+	var at_market := sys.validate(ActionRequest.make("GOODS_BUY",
+		{"pool": "civil", "gold": 100, "market": int(id)}), s)
+	assert_string_contains(at_market, "afford")
+	assert_false(at_market.contains("factor's cut"), at_market)
+	assert_string_contains(at_market, "market", "still says where")
+	var plain := sys.validate(ActionRequest.make("GOODS_BUY", {"pool": "civil", "gold": 100}), s)
+	assert_string_contains(plain, "factor's cut", "the plain trade really is the factor's")
+
 func test_selling_at_a_realm_market_pays_its_basket_less_the_spread() -> void:
 	var id := String(MarketSystem.realm_markets(data, s)[0])
 	var basket := MarketSystem.basket_price_permille(data, id, "civil")

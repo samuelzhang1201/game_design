@@ -847,9 +847,19 @@ static func label_of(repo: DataRepository, state: GameState, id: String) -> Stri
 				return "%s at %s (in work)" % [String(b["label"]), MapManors.label_of(repo, cell)]
 			return ""
 		"artisans":
+			# The artisans are the LEDGER's own (M5: work_speed_permille gives
+			# the plain 1000‰ outside a controlled province, Minor2) — one not
+			# controlled names nothing, and the focus falls back to whatever
+			# reads it next.
+			if not MapManors.controlled_provinces(repo, state).has(rest):
+				return ""
 			var p := String((repo.provinces.get(rest, {}) as Dictionary).get("label", ""))
 			return "" if p == "" else "Artisans of " + p
 		"market":
+			# A market not the crown's own kingdom's names nothing (Task 4
+			# ruled minors): a foreign market is not the LEDGER's to show.
+			if not MarketSystem.is_realm_market(repo, state, rest):
+				return ""
 			var town := String((repo.world_table("economy", "markets").get(rest, {}) as Dictionary).get(
 				"center_burg", ""))
 			return "" if town == "" else "Market of " + String((repo.burgs.get(town, {}) as Dictionary).get(

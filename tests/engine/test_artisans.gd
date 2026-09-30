@@ -43,6 +43,19 @@ func test_a_master_of_works_never_slows_the_artisans_below_the_empty_seat() -> v
 			assert_gte(MapManors.work_speed_permille(data, s, home), empty_speed,
 				"skill %d, opinion %d must never be slower than a vacant seat" % [skill, opinion])
 
+## Final fix wave, Minor2: the artisans are the LEDGER's own — a province
+## the crown does not control has no master of works, so work_speed_permille
+## gives it the plain 1000‰ regardless of its own urban population.
+func test_an_uncontrolled_province_builds_at_the_plain_pace() -> void:
+	var home := MapManors.home_province(data, s)
+	var foreign := ""
+	for p: String in data.provinces:
+		if p != home and not MapManors.controlled_provinces(data, s).has(p):
+			foreign = p
+			break
+	assert_ne(foreign, "", "the pack has an uncontrolled province")
+	assert_eq(MapManors.work_speed_permille(data, s, foreign), 1000)
+
 func test_a_work_finishes_sooner_with_artisans() -> void:
 	var home := MapManors.home_province(data, s)
 	var cell := int(MapManors.manors_of_province(data, home, s)[0])

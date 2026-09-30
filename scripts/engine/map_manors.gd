@@ -660,11 +660,26 @@ static func start_work(repo: DataRepository, state: GameState, cell_id: int, bui
 		"begun": days, "reason": reason})
 	return true
 
-## Days a work still needs, 0 when it is done; -1 for no such work.
-static func work_days_left(state: GameState, cell_id: int, building_code: String) -> int:
+## Days a work still needs, 0 when it is done; -1 for no such work. Once
+## advance_works has stepped the work at least once (its "done"
+## permille-days set — M5, the artisans' pace), this is
+## ceil((build_days*1000 - done) / work_speed_permille(province)) at the
+## province's CURRENT speed, the same figure MANOR_RUSH caps its cut by and
+## prices in gold — so a province with faster artisans shows fewer days to
+## go and costs less to hurry. A work with no "done" (a save from before
+## M5, or one advance_works has never touched) falls back to the plain
+## elapsed-days share, as before.
+static func work_days_left(repo: DataRepository, state: GameState, cell_id: int, building_code: String) -> int:
 	for w: Dictionary in works_of(state, cell_id):
 		if String(w["building"]) == building_code:
-			return maxi(int(w["start"]) + int(w["days"]) - state.absolute_day(), 0)
+			var days := int(w["days"])
+			if w.has("done"):
+				var remaining := days * 1000 - int(w["done"])
+				if remaining <= 0:
+					return 0
+				var speed := maxi(work_speed_permille(repo, state, province_of(repo, cell_id, state)), 1)
+				return int(ceil(float(remaining) / float(speed)))
+			return maxi(int(w["start"]) + days - state.absolute_day(), 0)
 	return -1
 
 ## How far along a work is, 0..1. Once advance_works has touched it at
@@ -683,9 +698,17 @@ static func work_progress(state: GameState, cell_id: int, building_code: String)
 	return 0.0
 
 ## Cut `days` off a work in progress (spec 2026-09-14 §5: gold hurries the
-## masons), never below done. Returns the days actually cut; 0 for no
+## masons), never past what work_days_left already reports for the
+## province's own artisan pace — the cap and the price both follow that
+## corrected figure. A work advance_works has already touched (its "done"
+## permille-days set, M5) is hurried by ADDING cut*work_speed_permille to
+## "done" (the same currency advance_works itself spends each day), so a
+## rush at a faster province's pace finishes the same number of DAYS
+## sooner, not the same number of permille-days; a work with no "done" yet
+## (never ticked, or a save from before M5) falls back to cutting the plain
+## "days" field, exactly as before. Returns the days actually cut; 0 for no
 ## such work or an empty reason. Logs into manor_log with a "rushed" field.
-static func rush_work(_repo: DataRepository, state: GameState, cell_id: int, building_code: String,
+static func rush_work(repo: DataRepository, state: GameState, cell_id: int, building_code: String,
 		days: int, reason: String) -> int:
 	if days <= 0 or reason.strip_edges() == "":
 		return 0
@@ -695,11 +718,15 @@ static func rush_work(_repo: DataRepository, state: GameState, cell_id: int, bui
 	for w: Dictionary in state.manor_works[key]:
 		if String(w["building"]) != building_code:
 			continue
-		var left := maxi(int(w["start"]) + int(w["days"]) - state.absolute_day(), 0)
+		var left := work_days_left(repo, state, cell_id, building_code)
 		var cut := mini(days, left)
 		if cut <= 0:
 			return 0
-		w["days"] = int(w["days"]) - cut
+		if w.has("done"):
+			var speed := maxi(work_speed_permille(repo, state, province_of(repo, cell_id, state)), 1)
+			w["done"] = int(w["done"]) + cut * speed
+		else:
+			w["days"] = int(w["days"]) - cut
 		state.manor_log.append({"tick": state.tick, "cell": cell_id, "building": building_code,
 			"rushed": cut, "reason": reason})
 		return cut
@@ -719,6 +746,12 @@ static func rush_work(_repo: DataRepository, state: GameState, cell_id: int, bui
 ## a poor appointment be WORSE than an empty seat, which no appointment
 ## should ever be).
 static func work_speed_permille(repo: DataRepository, state: GameState, province: String) -> int:
+	# The artisans are the LEDGER's own (final fix wave, Minor2): a province
+	# the crown does not control has no master of works speeding anything,
+	# so a manor bought abroad builds at the plain pace, like the LEDGER's
+	# own artisans:<p> node, which names nothing there either.
+	if not controlled_provinces(repo, state).has(province):
+		return 1000
 	var urban := RealmEconomy._figure(repo, state, "economy.provinces.%s.urban_population" % province)
 	@warning_ignore("integer_division")
 	var bonus := mini(int(repo.bal("artisan_speed_cap_permille")),

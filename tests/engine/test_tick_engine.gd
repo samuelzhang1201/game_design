@@ -211,12 +211,15 @@ func test_a_work_longer_than_a_month_survives_the_tick() -> void:
 	# work's ACTUAL length under a month even when its build_days does not,
 	# and chapel's 40 no longer clears Calendar.DAYS_PER_TICK once a real
 	# campaign's townsfolk are speeding it along — manor_house's 60 still
-	# does. work_days_left is unaffected (it still reads plain build_days),
-	# so those assertions stand as they were.
+	# does. work_days_left now reads the artisans' own pace once advance_works
+	# has touched the work (final fix wave, I1: ceil((days*1000-done)/speed)),
+	# so its expected values below are `need`'s own figure less the real days
+	# elapsed, not the plain build_days.
 	var days := int(float(data.manor_buildings["manor_house"]["build_days"]))
 	assert_gt(days, Calendar.DAYS_PER_TICK, "a manor house outlasts a month")
 	assert_true(MapManors.start_work(data, s, cell, "manor_house", "test"))
-	assert_eq(MapManors.work_days_left(s, cell, "manor_house"), days)
+	assert_eq(MapManors.work_days_left(data, s, cell, "manor_house"), days,
+		"no done yet: the plain elapsed-days fallback")
 	var province := MapManors.province_of(data, cell, s)
 	var speed := MapManors.work_speed_permille(data, s, province)
 	var need := int(ceil(float(days) * 1000.0 / float(speed)))
@@ -224,12 +227,12 @@ func test_a_work_longer_than_a_month_survives_the_tick() -> void:
 	for i in Calendar.DAYS_PER_TICK - 1:
 		assert_eq(engine.advance_day(s), [], "day %d" % (i + 2))
 	assert_eq(s.day, Calendar.DAYS_PER_TICK)
-	assert_eq(MapManors.work_days_left(s, cell, "manor_house"), days - (Calendar.DAYS_PER_TICK - 1))
+	assert_eq(MapManors.work_days_left(data, s, cell, "manor_house"), need - (Calendar.DAYS_PER_TICK - 1))
 	var r := engine.advance(s)
 	assert_eq(s.tick, 2)
 	assert_eq(s.day, 1)
 	assert_eq(r.finished_works, [], "still under construction after the tick")
-	assert_eq(MapManors.work_days_left(s, cell, "manor_house"), days - Calendar.DAYS_PER_TICK,
+	assert_eq(MapManors.work_days_left(data, s, cell, "manor_house"), need - Calendar.DAYS_PER_TICK,
 		"the day count carried across the tick boundary, one day fewer than before advance()")
 	for i in need - Calendar.DAYS_PER_TICK - 1:
 		assert_eq(engine.advance_day(s), [])

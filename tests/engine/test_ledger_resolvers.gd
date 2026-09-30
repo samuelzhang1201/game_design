@@ -119,3 +119,31 @@ func test_a_building_that_no_longer_stands_has_no_name() -> void:
 	(s.manor_buildings[str(cell)] as Array).erase(code)
 	assert_eq(LedgerResolvers.label_of(data, s, id), "", "demolished: it names nothing")
 	assert_true(Ledger.snapshot(data, s, "economy", {"id": id})["focus_lost"])
+
+## Final fix wave, I2a: an artisans node for a province the crown does not
+## control names nothing (Minor2: work_speed_permille gives that province
+## the plain 1000‰ too — the artisans are the LEDGER's own), and a market
+## node for a market that is not the crown's own kingdom's names nothing
+## (Task 4's ruled minors) — both fall back to the type level, like the
+## demolished building above.
+func test_artisans_and_a_foreign_market_have_no_name() -> void:
+	var home := MapManors.home_province(data, s)
+	var foreign_province := ""
+	for p: String in data.provinces:
+		if p != home:
+			foreign_province = p
+			break
+	assert_ne(foreign_province, "", "the pack has more than one province")
+	assert_ne(LedgerResolvers.label_of(data, s, "artisans:" + home), "",
+		"the crown's own province names its artisans")
+	assert_eq(LedgerResolvers.label_of(data, s, "artisans:" + foreign_province), "",
+		"not controlled: no name")
+	var realm_market := String(MarketSystem.realm_markets(data, s)[0])
+	var foreign_market := ""
+	for id: String in data.world_table("economy", "markets"):
+		if not MarketSystem.is_realm_market(data, s, id):
+			foreign_market = id
+			break
+	assert_ne(foreign_market, "", "the pack has a market that is not the realm's")
+	assert_ne(LedgerResolvers.label_of(data, s, "market:" + realm_market), "")
+	assert_eq(LedgerResolvers.label_of(data, s, "market:" + foreign_market), "", "not the realm's: no name")

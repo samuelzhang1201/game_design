@@ -101,14 +101,28 @@ func validate(req: ActionRequest, state: GameState) -> String:
 				return "No one governs %s: there are no books to audit" % label
 		"TRADE_ROUTE_SET":
 			var k := str(req.params.get("kingdom", ""))
+			# A missing or unknown kingdom is refused on its own (final fix
+			# wave, I2b): the "no trade route to %s" wording below is for a
+			# REAL kingdom the realm merely has no route to, and reads oddly
+			# ("to " with nothing after it) for an empty or made-up code.
+			if k == "" or not data.kingdoms.has(k):
+				return "No such kingdom" if k == "" else "No such kingdom: " + k
 			var route := {}
 			for r: Dictionary in MarketSystem.routes(data, state):
 				if String(r["kingdom"]) == k:
 					route = r
 			if route.is_empty():
 				return "The realm has no trade route to %s" % MarketSystem.label_of(data, k)
-			var open := int(req.params.get("open", -1))
-			if not open in [0, 1]:
+			# open must be exactly 0/1 or "0"/"1" (final fix wave, I2b): a
+			# stray value must never fall through int()'s own leniency
+			# (int("abc") is 0, which would silently CLOSE the route).
+			var open_raw: Variant = req.params.get("open")
+			var open := -1
+			if (open_raw is int or open_raw is float) and int(open_raw) in [0, 1]:
+				open = int(open_raw)
+			elif open_raw is String and String(open_raw) in ["0", "1"]:
+				open = int(String(open_raw))
+			if open == -1:
 				return "open must be 0 or 1"
 			if bool(route["open"]) == (open == 1):
 				return "The trade with %s is already %s" % [MarketSystem.label_of(data, k),
@@ -126,6 +140,11 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			if req.action_code == "GOODS_BUY":
 				var price := goods_trade_gold(req, state)
 				if state.metrics["treasury"] < price + needs:
+					# A market's price is its own basket, not the factor's flat
+					# rate (final fix wave, Minor9): the refusal must not name
+					# a cut the market never takes.
+					if req.params.has("market"):
+						return "Cannot afford %d gold of %s goods%s (%d gold)" % [gold, pool, _at_market(req), price]
 					return "Cannot afford %d gold of %s goods (%d with the factor's cut)" % [gold, pool, price]
 			else:
 				var have := int(state.metrics.get(pool_metric(pool), 0.0))
@@ -296,7 +315,7 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			var building_r := String(req.params.get("building", ""))
 			# 0 is a work whose days are up but which the day step has not
 			# turned into a building yet: there is nothing left to hurry.
-			if MapManors.work_days_left(state, cell, building_r) <= 0:
+			if MapManors.work_days_left(data, state, cell, building_r) <= 0:
 				return "There is no work left on a %s at %s" % [building_r, label]
 			var days := int(req.params.get("days", 0))
 			if days <= 0:

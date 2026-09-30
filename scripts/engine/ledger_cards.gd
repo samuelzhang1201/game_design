@@ -83,7 +83,10 @@ static func _head(repo: DataRepository, state: GameState, kind: String, rest: St
 						"Open" if bool(r["open"]) else "Closed", Intel.num(int(r["value"])), int(r["deals"])]
 			return ""
 		"artisans":
-			if not repo.provinces.has(rest):
+			# Uncontrolled: no master of works, no card (final fix wave,
+			# Minor2) — matches work_speed_permille's own plain 1000‰ there
+			# and LedgerResolvers.label_of's "" (the focus falls back).
+			if not repo.provinces.has(rest) or not MapManors.controlled_provinces(repo, state).has(rest):
 				return ""
 			@warning_ignore("integer_division")  # whole percent from per-mille
 			return "Works go %d%% faster" % ((MapManors.work_speed_permille(repo, state, rest) - 1000) / 10)
