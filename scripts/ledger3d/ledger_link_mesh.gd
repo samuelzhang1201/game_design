@@ -46,6 +46,39 @@ static func arrays(segments: Array) -> Array:
 	return arr
 
 
+## Moves every link's two ends in arrays already built by `arrays` (the same
+## segments, in the same order): `ends` holds [a, b] per segment. Only the
+## positions and the far ends change, so a chart that is settling re-lays its
+## links without restyling them.
+static func move_ends(arr: Array, ends: Array) -> void:
+	var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var c0: PackedFloat32Array = arr[Mesh.ARRAY_CUSTOM0]
+	for k in ends.size():
+		var a: Vector3 = ends[k][0]
+		var b: Vector3 = ends[k][1]
+		var v := k * 4
+		verts[v] = a
+		verts[v + 1] = a
+		verts[v + 2] = b
+		verts[v + 3] = b
+		for j in 4:
+			var there := b if j < 2 else a
+			var at := (v + j) * 4
+			c0[at] = there.x
+			c0[at + 1] = there.y
+			c0[at + 2] = there.z
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_CUSTOM0] = c0
+
+
+## A mesh of arrays built by `arrays` (empty when there are no segments).
+static func mesh_of(arr: Array) -> ArrayMesh:
+	var m := ArrayMesh.new()
+	if not (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).is_empty():
+		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, FORMAT)
+	return m
+
+
 static func mesh(segments: Array) -> ArrayMesh:
 	var m := ArrayMesh.new()
 	if not segments.is_empty():

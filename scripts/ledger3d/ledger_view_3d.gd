@@ -50,7 +50,13 @@ var _drawn: Dictionary = {}
 var _from: Dictionary = {}
 var _mode_left := 0.0
 var _flat := false
-var _segs: Array = []
+var _segs: Array = []                 # the links drawn now: every styled strand whose two ends are apart
+var _styled: Array = []               # every strand of every link, styled at the last restyle (ends refreshed as the chart moves)
+var _link_arrays: Array = []          # LedgerLinkMesh.arrays of _styled, its ends moved in place while settling
+var _styled_ws := 0.0                 # the window scale _styled was styled at
+var _mode_pos: Dictionary = {}        # true (flat) / false (3D) -> {"pos": the layout's places, "settled": bool}
+var _frame_ids: Array = []            # what the camera frames while _framed
+var _title_font: Font
 var _star_cols := PackedColorArray()  # what each star wears, in _order (the MultiMesh's own copy is the renderer's)
 var _near: Dictionary = {}
 var _star_mat: ShaderMaterial
@@ -115,7 +121,8 @@ func bind(repo: DataRepository) -> void:
 		int(repo.bal("ledger_label_halo_px")))
 	_hud.style_gauges(repo.bal("ledger_gauge_radius_px"), repo.bal("ledger_gauge_width_px"),
 		repo.bal("ledger_gauge_gap_px"), repo.bal("ledger_gauge_caption_px"), _pal["gauge_fill"], _pal["gauge_track"])
-	_hud.style_title(UiPalette.role_font("header"), repo.bal("ledger_title_px"))
+	_title_font = UiPalette.role_font("header")
+	_hud.style_title(_title_font, repo.bal("ledger_title_px"))
 	_hud.style_ring(_pal["focus_ring"], repo.bal("ledger_ring_px"))
 	_apply_camera()
 
@@ -127,8 +134,10 @@ func _window_scale() -> float:
 func _fit_viewport() -> void:
 	var s := _window_scale()
 	_viewport.size = Vector2i(maxi(1, int(size.x * s)), maxi(1, int(size.y * s)))
+	if _repo != null and not _snap.is_empty() and not is_equal_approx(_window_scale(), _styled_ws):
+		_rebuild_links()  # widths and shifts are in window px
 	if _framed and _repo != null and not _snap.is_empty():
-		_frame_on(_cluster_ids(), true)
+		_frame_on(_frame_ids, true)
 	if _repo != null:
 		_update_link_uniforms()
 
@@ -225,11 +234,38 @@ func set_flat(on: bool) -> void:
 		_apply_camera()
 		return
 	_from = _drawn.duplicate()
+	_mode_pos[not on] = {"pos": _lay.pos.duplicate(), "settled": _lay.settled()}
 	_lay.setup(_repo, _snap, on)
+	_restore_mode_places(on)
 	_mode_left = _repo.bal("ledger_galaxy_mode_ease_s")
 	_orbit.yaw = 0.0
 	_orbit.pitch = FLAT_PITCH if on else _repo.bal("ledger_camera_pitch_deg")
 	_frame_on(_cluster_ids(), true)
+
+
+## Each mode keeps its own places (a round trip 3D → 2D → 3D gives back the
+## chart as it stood, not a flattened one): the places this mode last held
+## come back for every star still drawn — a star pinned meanwhile keeps
+## where the pointer put it, lifted to its old height in 3D — and a chart
+## that came back whole and settled stays settled.
+func _restore_mode_places(on: bool) -> void:
+	var saved: Dictionary = _mode_pos.get(on, {})
+	if saved.is_empty():
+		return
+	var pos: Dictionary = saved["pos"]
+	var whole := true
+	for id: String in _order:
+		if not pos.has(id):
+			whole = false
+			continue
+		var was: Vector3 = pos[id]
+		if _lay.pinned.has(id):
+			var now: Vector3 = _lay.pos[id]
+			_lay.pos[id] = Vector3(now.x, 0.0, now.z) if on else Vector3(now.x, was.y, now.z)
+		else:
+			_lay.pos[id] = was
+	if whole and bool(saved["settled"]):
+		_lay.passes_left = 0
 
 
 func is_flat() -> bool:
@@ -276,10 +312,10 @@ func settle_now() -> void:
 	_mode_left = 0.0
 	_sync_drawn()
 	_place_stars()
-	_rebuild_links()
+	_relay_links()
 	_place_haze()
 	if _framed:
-		_frame_on(_cluster_ids(), true)
+		_frame_on(_frame_ids, true)
 	elif not _fly_to.is_empty():
 		_ease_camera(1.0)
 	_fly_left = 0.0
@@ -368,10 +404,35 @@ func _star_colour(id: String) -> Color:
 	return Color(c, f)
 
 
+## Styles every link afresh (a new snapshot, selection, cluster or window
+## scale) and draws it.
 func _rebuild_links() -> void:
-	_segs = _segments()
-	_links.mesh = LedgerLinkMesh.mesh(_segs)
+	_styled = _segments()
+	_styled_ws = _window_scale()
+	_link_arrays = LedgerLinkMesh.arrays(_styled)
+	_segs = _styled.filter(func(seg: Dictionary) -> bool: return not (seg["a"] as Vector3).is_equal_approx(seg["b"]))
+	_links.mesh = LedgerLinkMesh.mesh_of(_link_arrays)
 	_update_link_uniforms()
+
+
+## Re-lays the links where their stars now stand, their styling kept (a
+## settling or dragged chart): only the ends move. A link whose two ends meet
+## draws nothing (its quad has no length) and is not picked.
+func _relay_links() -> void:
+	var ends: Array = []
+	_segs = []
+	for seg: Dictionary in _styled:
+		var a: Vector3 = _drawn.get(String(seg["a_id"]), seg["a"])
+		var b: Vector3 = _drawn.get(String(seg["b_id"]), seg["b"])
+		seg["a"] = a
+		seg["b"] = b
+		ends.append([a, b])
+		if not a.is_equal_approx(b):
+			_segs.append(seg)
+	if _styled.is_empty():
+		return
+	LedgerLinkMesh.move_ends(_link_arrays, ends)
+	_links.mesh = LedgerLinkMesh.mesh_of(_link_arrays)
 
 
 func _update_link_uniforms() -> void:
@@ -412,8 +473,6 @@ func _segments() -> Array:
 			continue
 		var a: Vector3 = _drawn[a_id]
 		var b: Vector3 = _drawn[b_id]
-		if a.is_equal_approx(b):
-			continue
 		var cols := _link_colours(l)
 		var alpha := _ink(l) * pow(_link_fade(l), 2.2)
 		var wide := _repo.bal("ledger_focus_width") if _selected != "" and (a_id == _selected or b_id == _selected) else 1.0
@@ -477,13 +536,21 @@ func _width_px(l: Dictionary) -> float:
 			return lerpf(_repo.bal("ledger_tie_min_px"), _repo.bal("ledger_tie_max_px"),
 				clampf(feel / _repo.bal("ledger_tie_ref"), 0.0, 1.0))
 		"structure":
-			return _repo.bal("ledger_link_min_px")
+			return _count_width_px(l)
 	if l["flow"] == null:
-		return _repo.bal("ledger_link_vague_px")
+		return _count_width_px(l)
 	var f := float(l["flow"])
 	if f <= 0.0:
 		return _repo.bal("ledger_link_min_px")
 	var t := clampf(log(1.0 + f) / log(1.0 + _repo.bal("ledger_thread_flow_ref")), 0.0, 1.0)
+	return lerpf(_repo.bal("ledger_link_min_px"), _repo.bal("ledger_link_max_px"), t)
+
+
+## A link with no figure (words only, or a structural tie) is as wide as
+## how many links it stands for: log scale to ledger_link_count_ref.
+func _count_width_px(l: Dictionary) -> float:
+	var n := maxf(float(l.get("count", 1)), 1.0)
+	var t := clampf(log(1.0 + n) / log(1.0 + _repo.bal("ledger_link_count_ref")), 0.0, 1.0)
 	return lerpf(_repo.bal("ledger_link_min_px"), _repo.bal("ledger_link_max_px"), t)
 
 
@@ -587,7 +654,24 @@ func _cluster_ids() -> Array:
 	return _order.filter(func(id: String) -> bool: return _cluster_of(id) == _cluster)
 
 
+## Frames `ids` (the camera flies there unless `instant`) and holds them
+## framed: while the chart settles or eases, each moved frame frames them
+## again, until the player moves the camera.
 func _frame_on(ids: Array, instant: bool) -> void:
+	_frame_ids = ids
+	var to := _frame_target(ids)
+	if to.is_empty():
+		return
+	_fly_from = [_orbit.target, _orbit.distance, _orbit.yaw, _orbit.pitch]
+	_fly_to = to
+	_framed = true
+	_fly_left = 0.0 if instant else _repo.bal("ledger_galaxy_fly_s")
+	if _fly_left <= 0.0:
+		_ease_camera(1.0)
+
+
+## [target, distance, yaw, pitch] that frame `ids` as they stand now, or [].
+func _frame_target(ids: Array) -> Array:
 	var points: Array[Vector3] = []
 	for id: String in ids:
 		if not _drawn.has(id):
@@ -596,7 +680,7 @@ func _frame_on(ids: Array, instant: bool) -> void:
 		points.append((_drawn[id] as Vector3) - Vector3(r, r, r))
 		points.append((_drawn[id] as Vector3) + Vector3(r, r, r))
 	if points.is_empty():
-		return
+		return []
 	var sz := size if size.x >= 2.0 and size.y >= 2.0 else Vector2(1280, 720)
 	var side := _repo.bal("ledger_frame_side_px") / sz.x
 	var top := _repo.bal("ledger_frame_top_px") / sz.y
@@ -605,13 +689,8 @@ func _frame_on(ids: Array, instant: bool) -> void:
 	var pitch := FLAT_PITCH if _flat else _repo.bal("ledger_camera_pitch_deg")
 	var f := LedgerOrbit.frame(points, 0.0, pitch, _camera.fov, sz.x / sz.y, safe)
 	if f.is_empty():
-		return
-	_fly_from = [_orbit.target, _orbit.distance, _orbit.yaw, _orbit.pitch]
-	_fly_to = [f["target"], clampf(float(f["distance"]), _orbit.min_distance, _orbit.max_distance), 0.0, pitch]
-	_framed = true
-	_fly_left = 0.0 if instant else _repo.bal("ledger_galaxy_fly_s")
-	if _fly_left <= 0.0:
-		_ease_camera(1.0)
+		return []
+	return [f["target"], clampf(float(f["distance"]), _orbit.min_distance, _orbit.max_distance), 0.0, pitch]
 
 
 func _ease_camera(t: float) -> void:
@@ -644,10 +723,7 @@ func _process(delta: float) -> void:
 		_mode_left = maxf(_mode_left - delta, 0.0)
 		moved = true
 	if moved:
-		_sync_drawn()
-		_place_stars()
-		_rebuild_links()
-		_place_haze()
+		_settle_frame()
 	if _fly_left > 0.0:
 		_fly_left = maxf(_fly_left - delta, 0.0)
 		_ease_camera(1.0 - _fly_left / maxf(_repo.bal("ledger_galaxy_fly_s"), 0.001))
@@ -655,6 +731,27 @@ func _process(delta: float) -> void:
 		_last_pose = _camera.transform
 		_update_link_uniforms()
 		_update_hud()
+
+
+## One frame of a moving chart (settling, or easing between 2D and 3D): the
+## stars, the links' ends and the haze follow, and a framed camera frames
+## what it framed again — mid-flight, the flight's end is re-aimed instead.
+func _settle_frame() -> void:
+	_sync_drawn()
+	_place_stars()
+	_relay_links()
+	_place_haze()
+	if not _framed:
+		return
+	var to := _frame_target(_frame_ids)
+	if to.is_empty():
+		return
+	if _fly_left > 0.0:
+		_fly_to = to
+	else:
+		_fly_from = to
+		_fly_to = to
+		_ease_camera(1.0)
 
 
 # --- names ---------------------------------------------------------------------
@@ -671,36 +768,72 @@ func _screen_radius(id: String) -> float:
 	return float(_size[id]) / _m_per_px_at(_drawn[id]) / _window_scale()
 
 
+## A place on the screen (design px) inside the view.
+func _in_view(at: Variant) -> bool:
+	return at != null and Rect2(Vector2.ZERO, size).has_point(at as Vector2)
+
+
 func _update_hud() -> void:
 	if _repo == null:
 		return
 	var entries: Array = []
 	var obstacles: Array = []
 	var label_px := _repo.bal("ledger_label_px")
+	var strong_px := _repo.bal("ledger_label_strong_px")
+	var title_px := _repo.bal("ledger_title_px")
 	var lift := _repo.bal("ledger_label_lift_px")
+	var seen := {}   # id -> [its screen place, its screen radius], for the stars in view
+	var middle := Vector2.ZERO
+	for id: String in _order:
+		var at: Variant = screen_pos_of(id)
+		if not _in_view(at):
+			continue
+		seen[id] = [at, _screen_radius(id)]
+		middle += at as Vector2
+	if not seen.is_empty():
+		middle /= float(seen.size())
+	for id: String in seen:
+		var at: Vector2 = seen[id][0]
+		var r: float = seen[id][1]
+		obstacles.append(Rect2(at - Vector2(r, r), Vector2(r, r) * 2.0))
+	# Each cluster's title (spec §7): over its highest star's disc and one
+	# name line above that, set outward from the galaxy's middle — sideways,
+	# and up but never down — so it never sits on a star of its own.
 	for row: Dictionary in _repo.ledger_clusters:
 		var c := String(row["cluster"])
 		var n := 0
-		var box := Rect2()
-		for id: String in _order:
+		var sum := Vector2.ZERO
+		var left := INF
+		var right := -INF
+		var top := INF
+		for id: String in seen:
 			if _cluster_of(id) != c:
 				continue
-			var at: Variant = screen_pos_of(id)
-			if at == null:
-				continue
-			box = Rect2(at as Vector2, Vector2.ZERO) if n == 0 else box.expand(at as Vector2)
+			var at: Vector2 = seen[id][0]
+			var r: float = seen[id][1]
 			n += 1
+			sum += at
+			left = minf(left, at.x)
+			right = maxf(right, at.x)
+			top = minf(top, at.y - r)
 		if n == 0:
 			continue
+		var out := (sum / float(n) - middle).normalized()
+		var title := "%s  ·  %d" % [row["label"], n]
+		var place := Vector2((left + right) * 0.5, top - lift - label_px - title_px * 0.5)
+		place += Vector2(out.x, minf(out.y, 0.0)) * title_px
+		var half := _title_width(title, title_px) * 0.5
+		place.x = clampf(place.x, minf(half, size.x * 0.5), maxf(size.x - half, size.x * 0.5))
+		place.y = maxf(place.y, title_px)
 		var ink: Color = (_cluster_col[c] as Color).lerp(_pal["label_ink"], TITLE_INK_BLEND)
 		if _cluster != "all" and c != _cluster:
 			ink.a = _repo.bal("ledger_galaxy_other_fade")
-		entries.append({"text": "%s  ·  %d" % [row["label"], n], "strong": true, "title": true,
-			"px": _repo.bal("ledger_title_px"), "ink": ink,
-			"at": Vector2(box.get_center().x, box.position.y - _repo.bal("ledger_title_px"))})
+		entries.append({"text": title, "strong": true, "title": true, "px": title_px, "ink": ink, "at": place})
 	var named: Array[String] = []
+	var big := {}   # names set in the larger size: the selected star and the hubs
 	if _selected != "":
 		named.append(_selected)
+		big[_selected] = true
 		for id: String in _near:
 			if id != _selected:
 				named.append(id)
@@ -713,28 +846,33 @@ func _update_hud() -> void:
 	for id: String in by_size:
 		if hubs >= int(_repo.bal("ledger_label_hubs")):
 			break
-		if screen_pos_of(id) != null and not named.has(id):
-			named.append(id)
+		if seen.has(id):
+			if not named.has(id):
+				named.append(id)
+			big[id] = true
 			hubs += 1
-	for id: String in _order:
-		var at: Variant = screen_pos_of(id)
-		if at == null:
-			continue
-		var r := _screen_radius(id)
-		obstacles.append(Rect2((at as Vector2) - Vector2(r, r), Vector2(r, r) * 2.0))
 	for id: String in named:
 		var at: Variant = screen_pos_of(id)
 		if at == null:
 			continue
 		var r := _screen_radius(id)
-		var e := {"text": String(_nodes[id]["label"]), "at": (at as Vector2) - Vector2(0, r + lift),
-			"alt": (at as Vector2) + Vector2(0, r + lift + label_px), "strong": id == _selected or _near.has(id),
+		var px := strong_px if big.has(id) else label_px
+		var e := {"text": String(_nodes[id]["label"]), "px": px, "at": (at as Vector2) - Vector2(0, r + lift),
+			"alt": (at as Vector2) + Vector2(0, r + lift + px), "strong": id == _selected or _near.has(id),
 			"props": _nodes[id].get("props", [])}
 		if id == _selected:
 			e["ring"] = r + _repo.bal("ledger_ring_px") * RING_GAP_RINGS
 			e["ring_at"] = at
 		entries.append(e)
 	_hud.show_entries(entries, obstacles)
+
+
+## A title's width in design px, measured in the title font as the HUD cull
+## measures it.
+func _title_width(text: String, px: float) -> float:
+	if _title_font == null:
+		return float(text.length()) * px * 0.55
+	return _title_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
 
 
 # --- input ---------------------------------------------------------------------
@@ -753,7 +891,10 @@ func seg_ends(seg: Dictionary) -> Array:
 	if shift == 0.0:
 		return [a, b]
 	var mid := (a + b) * 0.5
-	var across := (b - a).cross(_camera.global_position - mid)
+	# link.gdshader's rule: toward the eye, which for the flat chart's
+	# orthographic camera is the camera's own back, not the eye's position
+	var to_cam := _camera.global_transform.basis.z if _flat else _camera.global_position - mid
+	var across := (b - a).cross(to_cam)
 	if across.length_squared() < 1e-8:
 		return [a, b]
 	var off := across.normalized() * shift * _m_per_px_at(mid)
@@ -775,14 +916,14 @@ func _pick(pos: Vector2) -> Dictionary:
 	if not hit.is_empty():
 		return hit
 	var best := INF
+	var least := _repo.bal("ledger_pick_min_px") * _window_scale()
 	for seg: Dictionary in _segs:
 		var ends := seg_ends(seg)
-		var mid: Vector3 = ((ends[0] as Vector3) + (ends[1] as Vector3)) * 0.5
-		var reach := maxf(float(seg["width_px"]) * 0.5 * _m_per_px_at(mid), _repo.bal("ledger_pick_radius_min_m"))
 		var q := LedgerPick.ray_segment(o, d, ends[0], ends[1])
-		if q.x > reach:
-			continue
+		# how far off the link the pointer is, in SubViewport px at the link
 		var px := q.x / maxf(_m_per_px_at(o + d * q.y), 1e-9)
+		if px > maxf(float(seg["width_px"]) * 0.5, least):
+			continue
 		if px < best:
 			best = px
 			hit = {"kind": "thread", "id": String(seg["id"])}
@@ -882,8 +1023,9 @@ func _on_drag(mm: InputEventMouseMotion) -> void:
 	if not _moved and mm.position.distance_to(_press_at) < CLICK_SLOP:
 		return
 	_moved = true
-	if _drag_id == "":
-		_framed = false
+	# any drag drops the framing: a pan or turn moves the camera, and a star
+	# held under the pointer must not have the camera re-frame beneath it
+	_framed = false
 	if _button == MOUSE_BUTTON_RIGHT:
 		if not _flat:
 			_orbit.turn(mm.relative.x, mm.relative.y, _repo.bal("ledger_turn_deg_per_px"))
@@ -918,5 +1060,5 @@ func _drag_to(id: String, pos: Vector2) -> void:
 	_lay.pin(id, at)
 	_drawn[id] = _lay.pos[id]
 	_place_stars()
-	_rebuild_links()
+	_relay_links()
 	_update_hud()

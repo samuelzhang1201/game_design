@@ -15,6 +15,7 @@ func before_each() -> void:
 	RealmEconomy.forget()
 	view = (load("res://scenes/ledger/ledger_view.tscn") as PackedScene).instantiate()
 	add_child_autofree(view)
+	view.set_anchors_preset(Control.PRESET_TOP_LEFT)  # set its own size, not the parent's
 	view.size = Vector2(1000, 600)
 	view.bind(repo)
 
@@ -232,3 +233,124 @@ func test_a_lens_snapshot_draws_without_error() -> void:
 	view.show_snapshot(snap, false)
 	view.settle_now()
 	assert_eq(view.stars().size(), (snap["nodes"] as Array).size())
+
+
+## The chart settles as the player sees it: frame by frame through _process
+## (never settle_now), the layout's own step and budget.
+func _settle_by_frames() -> void:
+	for i in 5000:
+		if view._lay.settled() and view._mode_left <= 0.0:
+			break
+		view._process(1.0 / 60.0)
+	view._process(1.0 / 60.0)
+
+
+## I1: the opening frame is not the unsettled chart's — a framed camera
+## frames again while the chart settles, so once settled every star is on
+## the screen.
+func test_the_opening_view_holds_every_star_once_settled() -> void:
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
+	_settle_by_frames()
+	assert_true(view._lay.settled())
+	var box := Rect2(Vector2.ZERO, view.size)
+	for id: String in view.stars():
+		var at: Variant = view.screen_pos_of(id)
+		assert_not_null(at, id)
+		var r := view._screen_radius(id)
+		assert_true(box.encloses(Rect2((at as Vector2) - Vector2(r, r), Vector2(r, r) * 2.0)), "on screen: " + id)
+
+
+## I1: a camera gesture takes the framing away; the settling chart no longer
+## moves the camera.
+func test_a_camera_gesture_ends_the_framing() -> void:
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	wheel.pressed = true
+	view._gui_input(wheel)
+	var pose := view.orbit().pose()
+	_settle_by_frames()
+	assert_false(view._framed)
+	assert_eq(view.orbit().pose(), pose, "the camera stays where the player put it")
+
+
+## I2: at the opening view every cluster's title survives the cull — over its
+## highest star and a name line, never on a disc.
+func test_every_cluster_title_stands_at_the_opening_view() -> void:
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
+	_settle_by_frames()
+	var titles: Array = view._hud._entries.filter(func(e: Dictionary) -> bool: return bool(e.get("title", false)))
+	var want := {}
+	for id: String in view.stars():
+		want[String(view._nodes[id].get("cluster", ""))] = true
+	assert_eq(titles.size(), want.size(), "one title per cluster: %s" % [titles.map(func(e: Dictionary) -> String:
+		return String(e["text"]))])
+
+
+## I6: a star behind the camera's edge is not counted in its title nor named
+## as a hub.
+func test_only_stars_in_view_count() -> void:
+	_show()
+	view.orbit().zoom(0.2)
+	view._framed = false
+	view._apply_camera()
+	view._update_hud()
+	var inside := 0
+	for id: String in view.stars():
+		if view._in_view(view.screen_pos_of(id)):
+			inside += 1
+	assert_lt(inside, view.stars().size(), "zoomed in, some stars leave the view")
+	var counted := 0
+	for e: Dictionary in view._hud._entries:
+		if bool(e.get("title", false)):
+			counted += int(String(e["text"]).get_slice("·", 1).strip_edges())
+	assert_lte(counted, inside, "titles count only what is in view")
+
+
+## I4: 3D -> 2D -> 3D gives the chart back as it stood.
+func test_a_round_trip_through_the_flat_chart_keeps_the_3d_places() -> void:
+	_show()
+	var before := {}
+	for id: String in view.stars():
+		before[id] = view.drawn(id)
+	view.set_flat(true)
+	view.settle_now()
+	view.set_flat(false)
+	view.settle_now()
+	for id: String in view.stars():
+		assert_almost_eq(view.drawn(id), before[id] as Vector3, Vector3.ONE * 1e-4, id)
+
+
+## I5: a link with no figure is as wide as the links it stands for.
+func test_a_merged_link_is_as_wide_as_its_count() -> void:
+	_show()
+	var lo := repo.bal("ledger_link_min_px")
+	var hi := repo.bal("ledger_link_max_px")
+	var ref := repo.bal("ledger_link_count_ref")
+	var one := {"type": "no_such_link", "flow": null, "count": 1}
+	var many := {"type": "no_such_link", "flow": null, "count": int(ref)}
+	assert_almost_eq(view._width_px(one), lerpf(lo, hi, log(2.0) / log(1.0 + ref)), 1e-5)
+	assert_almost_eq(view._width_px(many), hi, 1e-5, "at ledger_link_count_ref, as wide as a link gets")
+	var structure := {"type": "part_of", "flow": 5, "count": 3}
+	assert_almost_eq(view._width_px(structure), lerpf(lo, hi, log(4.0) / log(1.0 + ref)), 1e-5,
+		"a structure tie by its count, whatever its flow")
+
+
+## M-a: the selected star and the hubs are named in the larger size.
+func test_the_selected_star_and_hubs_are_named_larger() -> void:
+	_show()
+	view.select("character:you")
+	var strong := repo.bal("ledger_label_strong_px")
+	var label := repo.bal("ledger_label_px")
+	var big := 0
+	for e: Dictionary in view._hud._entries:
+		if bool(e.get("title", false)):
+			continue
+		var px := float(e.get("px", label))
+		assert_true(px == strong or px == label, String(e["text"]))
+		if String(e["text"]) == String(view._nodes["character:you"]["label"]):
+			assert_eq(px, strong, "the selected star")
+		if px == strong:
+			big += 1
+	assert_gt(big, 0, "the hubs in view are named in the larger size")
+

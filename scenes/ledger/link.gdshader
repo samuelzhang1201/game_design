@@ -35,7 +35,10 @@ void vertex() {
 	vec3 dir = there - here;
 	v_len = length(dir);
 	dir = v_len > 1e-5 ? dir / v_len : vec3(1.0, 0.0, 0.0);
-	vec3 to_cam = normalize(CAMERA_POSITION_WORLD - here);
+	// toward the eye: under the flat chart's orthographic camera every point
+	// sees the camera straight back along its direction (LedgerView3D.seg_ends
+	// mirrors this rule)
+	vec3 to_cam = ortho_m_per_px > 0.0 ? -CAMERA_DIRECTION_WORLD : normalize(CAMERA_POSITION_WORLD - here);
 	vec3 across = cross(dir, to_cam);
 	across = length(across) < 1e-4 ? vec3(0.0, 1.0, 0.0) : normalize(across);
 	float m_per_px = ortho_m_per_px > 0.0 ? ortho_m_per_px : length(here - CAMERA_POSITION_WORLD) * px_per_dist;

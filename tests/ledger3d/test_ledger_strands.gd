@@ -26,6 +26,7 @@ func before_each() -> void:
 	code = String(SupplySystem.plan(repo, state)[0]["code"])
 	view = (load("res://scenes/ledger/ledger_view.tscn") as PackedScene).instantiate()
 	add_child_autofree(view)
+	view.set_anchors_preset(Control.PRESET_TOP_LEFT)  # set its own size, not the parent's
 	view.size = Vector2(1000, 600)
 	view.bind(repo)
 
@@ -65,3 +66,36 @@ func test_a_strand_is_picked_by_its_own_id() -> void:
 	var mid: Vector3 = ((ends[0] as Vector3) + (ends[1] as Vector3)) * 0.5
 	var at := view.camera().unproject_position(mid) / view._window_scale()
 	assert_eq(view._pick(at), {"kind": "thread", "id": String(seg["id"])})
+
+
+## Review focus 5 / M-c: at a fractional window scale (1.5) the SubViewport
+## renders at window px, and a strand's width and shift are window px.
+func test_a_fractional_window_scale_draws_in_window_px() -> void:
+	var root := get_tree().root
+	var was_size := root.size
+	var was_factor := root.content_scale_factor
+	root.size = Vector2i(1280, 720)
+	root.content_scale_factor = 1.5
+	view._fit_viewport()
+	var g := Ledger.galaxy(repo, state, {})
+	view.show_snapshot(g, false)
+	view.settle_now()
+	var ws := view._window_scale()
+	assert_almost_eq(ws, 1.5, 1e-4, "the window scale follows the content scale")
+	assert_eq(view._viewport.size, Vector2i(int(view.size.x * 1.5), int(view.size.y * 1.5)), "window px")
+	var st := _strands(g)
+	assert_eq(st.size(), 2)
+	var w0 := float(st[0]["width_px"])
+	var w1 := float(st[1]["width_px"])
+	var l: Dictionary = {}
+	for x: Dictionary in g["links"]:
+		if String(x["id"]) == String(st[0]["link"]):
+			l = x
+	var one := l.duplicate()
+	one["flow"] = (l["accounts"] as Array)[0]["value"]
+	one["accounts"] = [(l["accounts"] as Array)[0]]
+	assert_almost_eq(w0, view._width_px(one) * 1.5, 1e-4, "the width in window px")
+	assert_almost_eq(absf(float(st[1]["shift_px"]) - float(st[0]["shift_px"])),
+		(w0 + w1) * 0.5 + repo.bal("ledger_strand_gap_px") * 1.5, 0.001, "the gap in window px")
+	root.content_scale_factor = was_factor
+	root.size = was_size

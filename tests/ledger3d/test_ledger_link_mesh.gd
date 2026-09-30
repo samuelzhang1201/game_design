@@ -48,3 +48,13 @@ func test_the_mesh_carries_both_custom_channels() -> void:
 
 func test_no_segments_is_an_empty_mesh() -> void:
 	assert_eq(LedgerLinkMesh.mesh([]).get_surface_count(), 0)
+
+
+func test_moving_the_ends_rewrites_only_the_positions() -> void:
+	var segs := [_seg(Vector3.ZERO, Vector3(10, 0, 0)), _seg(Vector3(1, 1, 1), Vector3(2, 2, 2))]
+	var arr := LedgerLinkMesh.arrays(segs)
+	var moved := [[Vector3(5, 0, 0), Vector3(10, 0, 0)], [Vector3(1, 1, 1), Vector3(3, 3, 3)]]
+	var want := LedgerLinkMesh.arrays([_seg(moved[0][0], moved[0][1]), _seg(moved[1][0], moved[1][1])])
+	LedgerLinkMesh.move_ends(arr, moved)
+	for k: int in [Mesh.ARRAY_VERTEX, Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_COLOR, Mesh.ARRAY_INDEX]:
+		assert_eq(arr[k], want[k], "array %d as if built afresh" % k)
