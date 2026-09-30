@@ -69,7 +69,7 @@ BEACH_MAX_M = 40.0       # and no higher
 # Texture ids = build_terrain.gd TEXTURES order.
 CLIFF, GRASS, LEAVES, DIRT, ROCKY, SOIL, SAND, FOREST, SNOW = range(9)
 NT = 9
-TEXTURE_KEYS = ["cliff", "aerial_meadow", "dry_decay_leaves", "dirt_floor", "aerial_upland",
+TEXTURE_KEYS = ["aerial_cliff", "aerial_meadow", "dry_decay_leaves", "dirt_floor", "aerial_upland",
                 "excavated_soil_wall", "sand_03", "aerial_canopy",
                 # the snow line (owner 2026-09-19): Poly Haven snow_02 since the
                 # same day (snow_field_aerial read blue-grey and blotchy)

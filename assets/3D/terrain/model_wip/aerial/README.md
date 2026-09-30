@@ -13,11 +13,23 @@ they replace are ground-level photos of 1-2 m of ground, stretched to
 | `aerial_meadow.png` | T-51 | 954159498 | GRASS | 120 m |
 | `aerial_canopy.png` | T-52 | 954159498 | FOREST | 170 m |
 | `aerial_upland.png` | T-54 | 954159497 | ROCKY | 200 m |
+| `aerial_cliff.png` | T-57 | 954159499 | CLIFF | 160 m |
 
-Committed (6.5 MB) because a seeded generation is only reproducible on the
+Committed (~9 MB) because a seeded generation is only reproducible on the
 same models and nodes; `assets/3D/terrain/` itself stays git-ignored. Pack each
 into Terrain3D's two maps before `build_pack.sh`:
 
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_meadow.png aerial_meadow
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_canopy.png aerial_canopy --height-gain 1.3 --rough 0.95
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_upland.png aerial_upland --height-gain 1.2
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_cliff.png aerial_cliff --saturation 0.85 --lift-darks 0.6 --black 0.05 --warm 0.03 --height-gain 1.3
+
+The cliff (owner 2026-09-30, "先做悬崖纹理"): the escarpments wore ambientCG
+rock023, which read as smeared pale plaster. A FRONTAL rock-wall picture (T-55)
+drew its strata as bent tiger stripes down a slope (a top-down projection);
+T-56's broken limestone read as crazy paving (taste: paving slabs). T-57, a
+crag seen from above, won the critic's ranking with its black point lifted a
+little, a touch warmer to sit with the golden grass (v4's cool grey read as a
+second photograph), its dark shrub clumps lifted (they read as burn holes).
+Known limits: the steepest faces still stretch (a top-down photo on a steep
+face), and the scarps have no cliff silhouette — that is geometry.

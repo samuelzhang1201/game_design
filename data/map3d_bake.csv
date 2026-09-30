@@ -5,7 +5,7 @@ coast_supersample,4,3D bake: the shore loops are rasterised at this many samples
 edge_warp_m,220.0,"3D bake: biome weights are sampled this far off (at most) along a noise field, so the edges between grounds interlock instead of blurring"
 edge_warp_wave_m,900.0,3D bake: the wavelength of that warp field
 blend_dither,0.03,3D bake: seeded dither on the second texture's share before it becomes the blend byte — no contour bands
-sharp_cliff,2.2,"3D bake: cliff weight is raised to this power after normalising — a narrow, outcrop-like edge (~60 m) where grass is wide"
+sharp_cliff,1.6,"[2026-09-30: 2.2 -> 1.6 with the aerial crag texture — a wider blend where rock meets the scree; the critic found the patch edge a ruled line] 3D bake: cliff weight is raised to this power after normalising — a narrow, outcrop-like edge (~60 m) where grass is wide"
 sharp_rocky_trail,1.8,3D bake: likewise for scree
 macro_depth,0.13,"3D bake: the colour map's large lighter/darker patches (was 0.16, which hid the materials)"
 macro_hue_depth,0.08,3D bake: the colour map's green-yellow drift (was 0.10)

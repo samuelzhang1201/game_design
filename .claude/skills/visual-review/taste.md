@@ -23,6 +23,12 @@ add it here as a principle with its why — not as a changelog entry.
   ground wears pictures made AT map height (aerial, Z-Image — Qwen drew grass
   close-ups), the land carries woods (the "no trees" ruling is lifted for the
   3D map), and borders stop at the shore.
+- **Rock is photographed from where the player looks** (owner 2026-09-30,
+  cliff texture). A frontal photograph of a rock wall, laid on a slope seen
+  from above, bent its strata into tiger stripes; a top-down crag photograph
+  reads as rock. Rock sits WARM beside the golden grass — a cool blue-grey
+  crag read as a second photograph pasted on — and its baked-in black holes
+  are lifted, or they read as burns.
 - **Motion must read at the zoom the map is played at** (owner 2026-09-30:
   "我并没有看到麦浪和树摇"). A wind shown only in a 1.5 km close-up is a wind the
   player never sees: judge an effect at the opening view (~24 km) too, with

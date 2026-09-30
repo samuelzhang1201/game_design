@@ -21,7 +21,7 @@ static var map_id := ""
 # texture ids. No per-texture tint: bake_world.py's colour map carries every
 # colour, so the far view and the near view agree.
 const TEXTURES := [
-	["cliff", 320.0, 0.1],
+	["aerial_cliff", 160.0, 0.1],   # look route 2026-09-30: the escarpments, tools/map3d/pack_aerial.py
 	["aerial_meadow", 120.0, 0.16],   # look route 2026-09-30: aerial pictures, tools/map3d/pack_aerial.py
 	["dry_decay_leaves", 160.0, 0.2],
 	["dirt_floor", 180.0, 0.16],
