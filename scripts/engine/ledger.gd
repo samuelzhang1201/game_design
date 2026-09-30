@@ -152,6 +152,198 @@ static func snapshot(repo: DataRepository, state: GameState, lens: String, focus
 	return out
 
 
+## The whole realm as ONE picture (spec 2026-09-30-ledger-galaxy-design
+## §3): every listed instance, every pool, every planned type as a ghost,
+## and the links that are the union of their egos — read by a worklist that
+## expands every node it finds EXCEPT a foldable one (a manor, building or
+## town) outside a controlled or opened province. Then the fold: each
+## foldable node not in an opened province becomes its province's, its links
+## re-pointed there and merged (counted; flows summed within one Intel
+## level). `opened` is a set of province codes. Nodes and links by id.
+static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -> Dictionary:
+	var out := {"lens": "galaxy", "focus_id": "", "focus_lost": false, "day": state.absolute_day(),
+		"nodes": [], "links": [], "loops": []}
+	LedgerResolvers.begin_memo()
+	var controlled := {}
+	for code: String in MapManors.controlled_provinces(repo, state):
+		controlled[code] = true
+	var nodes := {}
+	var raw := {}
+	var queue: Array = []
+	for r: Dictionary in repo.ledger_types:
+		var tid := String(r["type_id"])
+		if String(r["status"]) == "planned":
+			nodes["type:" + tid] = _galaxy_node(repo, state, "type:" + tid)
+			continue
+		var list := String(r["instances"])
+		if list == "":
+			if String(r["fold_to"]) == "":
+				nodes["type:" + tid] = _galaxy_node(repo, state, "type:" + tid)
+			continue
+		for row: Dictionary in LedgerResolvers.instances(list, repo, state):
+			var id := String(row["id"])
+			if not nodes.has(id):
+				nodes[id] = _galaxy_node(repo, state, id)
+				queue.append(id)
+	var i := 0
+	while i < queue.size():
+		var id: String = queue[i]
+		i += 1
+		var t := type_of(id)
+		for r: Dictionary in repo.ledger_links:
+			if String(r["status"]) != "live" or (String(r["from_type"]) != t and String(r["to_type"]) != t):
+				continue
+			for l: Dictionary in LedgerResolvers.run(r, repo, state, {"id": id}):
+				var a := String(l["from"])
+				var b := String(l["to"])
+				if a != id and b != id:
+					continue
+				# a link both of whose ends fold to the same province is
+				# dropped at the merge below (`a == b`) however it is
+				# believed — skip believing it now (province -> its own
+				# manors is most of the worklist's edges, and its belief is
+				# never read).
+				var fa := _fold_target(repo, state, a, opened)
+				var fb := _fold_target(repo, state, b, opened)
+				if (fa if fa != "" else a) != (fb if fb != "" else b):
+					var bl := _believed(repo, state, r, l)
+					raw[String(bl["id"])] = bl
+				for e: String in [a, b]:
+					if nodes.has(e):
+						continue
+					nodes[e] = _galaxy_node(repo, state, e)
+					if _expands(repo, state, e, controlled, opened):
+						queue.append(e)
+	# a row between two types that have no instances (pool to pool) once
+	for r: Dictionary in repo.ledger_links:
+		if String(r["status"]) != "live":
+			continue
+		if not nodes.has("type:" + String(r["from_type"])) or not nodes.has("type:" + String(r["to_type"])):
+			continue
+		for l: Dictionary in LedgerResolvers.run(r, repo, state, {}):
+			var bl := _believed(repo, state, r, l)
+			raw[String(bl["id"])] = bl
+	# the fold
+	var fold := {}
+	for id: String in nodes:
+		var p := _fold_target(repo, state, id, opened)
+		if p != "":
+			fold[id] = p
+	for id: String in fold:
+		var pid := String(fold[id])
+		if not nodes.has(pid):
+			nodes[pid] = _galaxy_node(repo, state, pid)
+		var f: Dictionary = nodes[pid].get("folded", {})
+		f[type_of(id)] = int(f.get(type_of(id), 0)) + 1
+		nodes[pid]["folded"] = f
+	for id: String in nodes:
+		var fold_to := String(type_row(repo, type_of(id)).get("fold_to", ""))
+		if fold_to != "" and not fold.has(id):
+			nodes[id]["home_id"] = "province:" + _province_code(repo, state, id)
+	var merged := {}
+	var keys: Array = raw.keys()
+	keys.sort()
+	for k: String in keys:
+		var l: Dictionary = raw[k]
+		var a := String(fold.get(String(l["from"]), String(l["from"])))
+		var b := String(fold.get(String(l["to"]), String(l["to"])))
+		if a == b:
+			continue
+		var mid := "%s|%s|%s" % [l["type"], a, b]
+		if merged.has(mid):
+			_merge_into(merged[mid], l)
+		else:
+			var m: Dictionary = l.duplicate(true)
+			m["id"] = mid
+			m["from"] = a
+			m["to"] = b
+			m["count"] = 1
+			merged[mid] = m
+	for id: String in fold:
+		nodes.erase(id)
+	var ids: Array = nodes.keys()
+	ids.sort()
+	for id: String in ids:
+		out["nodes"].append(nodes[id])
+	var lids: Array = merged.keys()
+	lids.sort()
+	for lid: String in lids:
+		out["links"].append(merged[lid])
+	_loops(repo, state, out)
+	LedgerResolvers.end_memo()
+	return out
+
+
+static func _galaxy_node(repo: DataRepository, state: GameState, id: String) -> Dictionary:
+	var n := _node(repo, state, id)
+	n["cluster"] = String(type_row(repo, type_of(id)).get("cluster", "economy"))
+	return n
+
+
+## Whether the worklist reads a node's own ego: a foldable node only inside a
+## controlled or opened province (elsewhere it only folds); a pool never
+## (its links come from the other end).
+static func _expands(repo: DataRepository, state: GameState, id: String, controlled: Dictionary,
+		opened: Dictionary) -> bool:
+	if id.begins_with("type:") or id.begins_with("more:"):
+		return false
+	if String(type_row(repo, type_of(id)).get("fold_to", "")) == "":
+		return true
+	var code := _province_code(repo, state, id)
+	return controlled.has(code) or opened.has(code)
+
+
+## The province a foldable node stands in (live state), or "".
+static func _province_code(repo: DataRepository, state: GameState, id: String) -> String:
+	var rest := id.substr(id.get_slice(":", 0).length() + 1)
+	match type_of(id):
+		"manor":
+			return MapManors.province_of(repo, int(rest), state)
+		"building":
+			return MapManors.province_of(repo, int(rest.get_slice(":", 0)), state)
+		"town":
+			return MarketSystem.province_of_burg(repo, state, rest)
+	return ""
+
+
+## The province node a node folds into, or "" (not foldable, no province,
+## or its province is opened).
+static func _fold_target(repo: DataRepository, state: GameState, id: String, opened: Dictionary) -> String:
+	if String(type_row(repo, type_of(id)).get("fold_to", "")) == "":
+		return ""
+	var code := _province_code(repo, state, id)
+	if code == "" or opened.has(code):
+		return ""
+	return "province:" + code
+
+
+const _LEVELS := ["full", "general", "basic"]
+
+
+## Adds a folded link into the one it merges with: one more counted; the
+## flow sums only while both are figures at one Intel level — else the
+## merged figure is words at the worse level (never words added to numbers).
+static func _merge_into(m: Dictionary, l: Dictionary) -> void:
+	m["count"] = int(m["count"]) + 1
+	var ma: Dictionary = (m["accounts"] as Array)[0]
+	var la: Dictionary = (l["accounts"] as Array)[0] if not (l["accounts"] as Array).is_empty() else ma
+	var worse := String(ma["level"]) if _LEVELS.find(String(ma["level"])) >= _LEVELS.find(String(la["level"])) \
+		else String(la["level"])
+	var f: Variant = null
+	if m["flow"] != null and l["flow"] != null and String(ma["level"]) == String(la["level"]):
+		var a := int(m["flow"])
+		var b := int(l["flow"])
+		f = -1 if a < 0 and b < 0 else maxi(a, 0) + maxi(b, 0)
+	m["flow"] = f
+	var text := ""
+	if f == null:
+		text = String(ma["text"]) if String(ma["level"]) == worse else String(la["text"])
+	elif int(f) >= 0:
+		text = Intel.num(int(f))
+	m["accounts"] = [{"value": f, "text": text, "source": String(ma["source"]),
+		"day": mini(int(ma["day"]), int(la["day"])), "level": worse}]
+
+
 static func exists(repo: DataRepository, state: GameState, node_id: String) -> bool:
 	if node_id.begins_with("type:"):
 		return not type_row(repo, node_id.substr(5)).is_empty()
@@ -342,7 +534,7 @@ static func _date_words(abs_day: int) -> String:
 static func _account(repo: DataRepository, state: GameState, t: Dictionary) -> Dictionary:
 	var subj: Dictionary = t["subj"]
 	var flow := int(t["flow"])
-	var lvl := "full" if subj.is_empty() else Intel.level(repo, state, subj)
+	var lvl := "full" if subj.is_empty() else LedgerResolvers.intel_level(repo, state, subj)
 	if flow < 0:
 		return {"value": -1, "text": "", "source": "own records" if lvl == "full" else "common knowledge",
 			"day": state.absolute_day(), "level": lvl}
