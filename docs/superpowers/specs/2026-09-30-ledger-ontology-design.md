@@ -365,10 +365,12 @@ The same split as the map: nothing under `scripts/ledger3d/` may reach the
 | **M2** | The war workshop | `converts` | L0 | with M1 (supply needs a source) | `2026-09-30-ledger-supply-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m1-m2-supply.md` |
 | **M3** | **Governors, skimming and the audit** (the core) | `governs`, `skims`, `LEDGER_AUDIT`, reassigning a governor | L1, M2 | after Step 8, before or with Step 5's factions; a faction may govern once factions exist | `2026-09-30-ledger-governors-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m3-governors.md` |
 | **M4** | Battle | `attacks`, `commands` (`battle_odds` made real; the raid host the first enemy) | M1 | PRD Step 8 | `2026-09-30-ledger-battle-design.md` — no plan yet: not implementable before intel P2's raid host exists |
-| **M5** | Raw materials and artisans | `builds`, `consumes` (the smithy really eats iron and coal) | L0 | in the MVP (ruling 11) | `2026-09-30-ledger-industry-trade-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m5-m6-industry-trade.md` |
-| **M6** | Markets and trade routes | `trades` (reads the imported `markets` / `market_goods` / `deals`) | M5 | in the MVP (ruling 11) | `2026-09-30-ledger-industry-trade-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m5-m6-industry-trade.md` |
+| **M5** | Raw materials and artisans | `builds`, `consumes` (the smithy really eats iron and coal) | L0 | in the MVP (ruling 11); **BUILT 2026-09-30** (branch `ledger-supply`) | `2026-09-30-ledger-industry-trade-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m5-m6-industry-trade.md` |
+| **M6** | Markets and trade routes | `trades`, `routes` (reads the imported `markets` / `market_goods` / `deals`) | M5 | in the MVP (ruling 11); **BUILT 2026-09-30** (branch `ledger-supply`, with `TRADE_ROUTE_SET`) | `2026-09-30-ledger-industry-trade-design.md` → `docs/superpowers/plans/2026-09-30-ledger-m5-m6-industry-trade.md` |
 
 Each milestone gets its own spec → plan → build. Every spec's own filename in this table is under `docs/superpowers/specs/`.
+
+**What is built and what remains** (2026-09-30): L0, L1, M1, M2, M3, M5 and M6 are built — every charter link is now live except `faction` (§2's Faction type and every `governs` tie a faction could someday hold — PRD Step 5), `source` (§2's Source type, still ⚠️ implicit — intel P1) and the pair M4 needs (`attacks`, `commands`, and §2's Enemy host — M4, waiting on intel P2's raid host). Those three are the only rows in §2/§3 still ○ or ⚠️.
 
 ## 9. Tests (GUT, written before the code)
 

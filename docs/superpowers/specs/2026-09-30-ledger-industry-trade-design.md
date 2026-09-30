@@ -7,6 +7,61 @@ owner has not ruled on, with its cost if wrong. Charter:
 `2026-09-30-ledger-ontology-design.md` §8 (M5, M6). Needs M3 (a trade
 route is a governed flow).
 
+**Built 2026-09-30 (branch `ledger-supply`)**: commits `33be2f1`..`b010eed`;
+`tests/engine` 900/900 for this pair alone, the whole suite 1644/1643 (the
+one known pre-existing `test_map3d_layers.gd` failure only). Controller
+rulings made during the build, each one superseding the **Default** it
+replaces:
+
+- **An idle building gives NOTHING while idle** — no goods, no bonus, no
+  per-tick effect (a starved smithy's own output bonus lapses along with its
+  tools; "no iron, no work"). A waking building is billed only its
+  SHORTFALL (`IndustrySystem.own_supply`, walking the manor's input
+  buildings in the same sorted code order as `line_of`), never its whole
+  need.
+- **Only manors the crown's own house holds** buy and idle through the lord
+  (`IndustrySystem.buildings`, exactly like `WorkshopSystem.cells`); a
+  building on any other house's manor still eats its own manor's units in
+  its line and is never billed or idled by the lord.
+- **An empty Master of Works seat reads `Governance.factors`'s own floor**
+  (`min_permille` 600) like every other governed flow, never an unscaled
+  1000‰ — implemented once the other way and reversed, because
+  unscaled-while-vacant would let appointing a poor Master of Works make the
+  artisans SLOWER than having no one in the office, which no appointment
+  should ever do. Since `Governance.factors` already clamps a seated
+  governor's efficiency to `[600, 1000]`, this holds for free: nobody's
+  artisans ever run slower than the vacant-seat pace.
+- `data/ledger_governance.csv` gained a `books` column (1 for `workshop`,
+  `supply_line`, `trade_route`; 0 for `works`): `LEDGER_AUDIT` refuses a
+  flow with no books ("The building works keeps no books to audit"), while
+  `GOVERNOR_SET` still reassigns it — the master of works cannot be
+  audited until his skim exists.
+- **A trade route counts only deals whose SELLER is a realm market** — a
+  town's own sale into a market is domestic supply, not export, so losing a
+  home TOWN never raises the tolls (losing the MARKET itself still does,
+  since its exports move abroad). Losing a non-market realm province still
+  raises the tolls modestly (measured 240 → up to 271 on the beria fixture),
+  because that province's towns become foreign buyers of the realm's
+  remaining markets, which is a real export; accepted, not fixed — the
+  owner may rule otherwise.
+- **A market offers no "Sell here"**: on this pack selling at a market never
+  beats the flat factor, so pricing guards against a round-trip arbitrage
+  instead of following the plan's "buy at basket, sell at basket" rule
+  literally — buying at a market costs at least the flat sell price (never
+  cheaper than `max(basket, factor's selling price)`), and selling at a
+  market pays at most the cheapest purchase anywhere in the realm
+  (`min(basket × (1 − spread), the realm's cheapest buy)`); no sale ever
+  pays more than any purchase costs. The toll floors once:
+  `value × toll_permille × efficiency / 1,000,000`.
+- **`trade_toll_permille` is 250, not the 50 first written below** — the
+  50‰ default gave tolls of only 47 gold against 1,961 of tax (2.4% of the
+  crown's treasury tax, well under the brief's 5% floor and the Azgaar
+  export's deal values run small); following the brief's Step 6 formula
+  (`round(50 × 0.12 / 0.024)`) brings it to 250‰, which pays 240 gold of
+  tolls against the same 1,961 (12.2% — ≈15% was the target, near enough on
+  this pack). The six opening routes at 250‰: brackmoor 35, corwyn 35,
+  farhold 107, irongate 12, valmoor 11, yorwald 40.
+
 ## M5 — buildings eat, artisans build
 
 ### What changes
@@ -136,10 +191,11 @@ neighbour's route can be closed on you — enemy AI waits for sub-project C).
   gold, deals}]` sums `units × price` a month (the export's units are a
   month's — **Default**, as its `production.csv` is) — cached by the
   ownership signature, since a conquest moves markets and buyers.
-- **Toll**: the crown takes `trade_toll_permille` (50) of each open route's
-  monthly value into the TREASURY at the settlement (ledger line "tolls on
-  the trade with X"). Governed by the STEWARD (M3 flow type `trade_route`:
-  efficiency scales the toll, a venal steward skims it, reports it whole).
+- **Toll**: the crown takes `trade_toll_permille` (250, calibrated in the
+  build — see the Status line above) of each open route's monthly value
+  into the TREASURY at the settlement (ledger line "tolls on the trade with
+  X"). Governed by the STEWARD (M3 flow type `trade_route`: efficiency
+  scales the toll, a venal steward skims it, reports it whole).
 - **Open / closed**: `GameState.closed_routes` (kingdom codes, saved) and an
   order `TRADE_ROUTE_SET {kingdom, open}`. Closing a route costs its toll
   and the realm's merchants' goodwill (the guildmaster character's opinion,
