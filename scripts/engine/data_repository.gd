@@ -283,6 +283,11 @@ var landmark_name_overrides: Dictionary = {}
 ## routes, rivers, markers, biomes) are the SAME Dictionary objects, so the
 ## old callers and the world ledger see one set of rows.
 var world_tables: Dictionary = {}
+## economy/deals.csv (LEDGER M6, spec 2026-09-30-ledger-industry-trade-design):
+## the export's trade flows in FILE order, {seller_type, seller, buyer_type,
+## buyer, good, units (float), price (float)} — a month's units, read by
+## MarketSystem through live ownership. Cleared by load_map.
+var deals: Array = []
 
 ## [domain, area, required columns, key columns, key separator]. A table absent
 ## from a pack simply loads as {} (the ledger reads null for its paths).
@@ -756,6 +761,8 @@ func load_map(id: String) -> bool:
 	manor_by_label.clear()
 	landmark_name_overrides.clear()
 	world_tables.clear()
+	deals.clear()
+	MarketSystem.forget()
 	if not _load_if_present(dir + "/political/kingdoms.csv",
 			["kingdom_code", "state_id", "label", "capital_burg"],
 			func(r): kingdoms[r["kingdom_code"]] = r):
@@ -824,6 +831,13 @@ func load_map(id: String) -> bool:
 					table[sep.join(parts)] = r):
 			return false
 		_register_table(String(spec[0]), String(spec[1]), table)
+	if not _load_if_present(dir + "/economy/deals.csv",
+			["seller_type", "seller", "buyer_type", "buyer", "good_code", "units", "price"],
+			func(r: Dictionary) -> void:
+				deals.append({"seller_type": String(r["seller_type"]), "seller": String(r["seller"]),
+					"buyer_type": String(r["buyer_type"]), "buyer": String(r["buyer"]),
+					"good": String(r["good_code"]), "units": float(r["units"]), "price": float(r["price"])})):
+		return false
 	if not _load_if_present(dir + "/realm_bindings.csv", ["slot", "kingdom_code"],
 			func(r): realm_bindings[r["slot"]] = r["kingdom_code"]):
 		return false

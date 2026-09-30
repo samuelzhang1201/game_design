@@ -292,6 +292,9 @@ var workshop_rate: Dictionary = {}
 ## inputs the lord's stores could not pay for makes and eats nothing.
 ## Rewritten whole by every settlement (IndustrySystem.settle_month).
 var idle_buildings: Dictionary = {}
+## Kingdom codes whose trade route the crown has closed (LEDGER M6): a
+## closed route still carries its trade in the books, and pays no toll.
+var closed_routes: Array = []
 ## flow type -> character id, only flows given away from their seat (M3).
 var governors: Dictionary = {}
 ## character id -> {flow type -> whole gold skimmed on that flow since an
@@ -361,6 +364,7 @@ func to_dict() -> Dictionary:
 		"manor_focus": manor_focus.duplicate(true),
 		"workshop_rate": _encode_values(workshop_rate.duplicate(true)),
 		"idle_buildings": idle_buildings.duplicate(true),
+		"closed_routes": closed_routes.duplicate(),
 		"governors": governors.duplicate(true),
 		"skims": _encode_values(skims.duplicate(true)),
 		"caught": _encode_values(caught.duplicate(true)),
@@ -440,6 +444,8 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.manor_works = _decode_values(d.get("manor_works", {}))
 	# Saves from before buildings ate (M5) carry none: nothing stands idle.
 	s.idle_buildings = d.get("idle_buildings", {}).duplicate(true)
+	# Saves from before the trade routes (M6) carry none: every route is open.
+	s.closed_routes = (d.get("closed_routes", []) as Array).duplicate()
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	s.regiments = _decode_values(d.get("regiments", {}))
 	# Saves from before the couriers carry neither key: no one is on the road.

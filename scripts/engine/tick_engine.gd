@@ -78,6 +78,15 @@ func advance(state: GameState) -> TickReport:
 	# supply lines ship.
 	for l: Dictionary in WorkshopSystem.settle_month(data, state):
 		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
+	# The trade tolls (spec 2026-09-30-ledger-industry-trade-design, M6):
+	# after the workshops, with the month's other flows. A toll reads only
+	# ownership, the deals and the steward, and pays into the TREASURY, which
+	# neither the workshops (the lord's goods) nor the supply lines (the
+	# strategic goods) touch — so its place among them changes no figure;
+	# it stands here, before the supply lines, so the month's income is all
+	# in before anything of the month is spent.
+	for l: Dictionary in MarketSystem.settle_month(data, state):
+		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
 	# The provinces' wealth tiers are settled with the month (Ruling 15):
 	# state, so no reader's timing can decide what a spy's report says.
 	Intel.settle_wealth_tiers(data, state)

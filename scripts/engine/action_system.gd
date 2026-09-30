@@ -95,8 +95,11 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			var gold := int(req.params.get("gold", 0))
 			if gold <= 0:
 				return "gold must be a whole number above zero"
+			# At a market (M6): only one the realm holds now.
+			if req.params.has("market") and not MarketSystem.is_realm_market(data, state, req.params["market"]):
+				return "No market of the realm is market %s" % MarketSystem.market_key(req.params["market"])
 			if req.action_code == "GOODS_BUY":
-				var price := int(roundf(float(gold) * (1.0 + data.bal("goods_trade_spread"))))
+				var price := goods_trade_gold(req, state)
 				if state.metrics["treasury"] < price + needs:
 					return "Cannot afford %d gold of %s goods (%d with the factor's cut)" % [gold, pool, price]
 			else:
@@ -169,6 +172,28 @@ func manor_of(req: ActionRequest) -> int:
 
 ## The metric that holds a pool: strategic -> strategic, civil -> grain
 ## (the civil pool's key, kept for its readers; spec §5).
+## The treasury's side of a GOODS_BUY (what it pays) or GOODS_SELL (what it
+## gets), whole gold: at a realm market (`market`, M6) that market's price
+## (MarketSystem.buy_price / sell_price), else the flat factor's spread.
+func goods_trade_gold(req: ActionRequest, state: GameState) -> int:
+	var pool := String(req.params.get("pool", ""))
+	var gold := int(req.params.get("gold", 0))
+	var buying := req.action_code == "GOODS_BUY"
+	if req.params.has("market"):
+		var id := MarketSystem.market_key(req.params["market"])
+		return MarketSystem.buy_price(data, id, pool, gold) if buying \
+			else MarketSystem.sell_price(data, state, id, pool, gold)
+	var spread := data.bal("goods_trade_spread")
+	return int(roundf(float(gold) * (1.0 + spread if buying else 1.0 - spread)))
+
+## " at <the market's town>" for a trade at a market, else "".
+func _at_market(req: ActionRequest) -> String:
+	if not req.params.has("market"):
+		return ""
+	var id := MarketSystem.market_key(req.params["market"])
+	var burg := String((data.world_table("economy", "markets").get(id, {}) as Dictionary).get("center_burg", ""))
+	return " at the market of " + String((data.burgs.get(burg, {}) as Dictionary).get("label", burg))
+
 static func pool_metric(pool: String) -> String:
 	return "strategic" if pool == "strategic" else "grain"
 
@@ -542,15 +567,15 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		"GOODS_BUY":
 			var pool := String(req.params["pool"])
 			var gold := int(req.params["gold"])
-			var price := int(roundf(float(gold) * (1.0 + data.bal("goods_trade_spread"))))
-			_apply(state, effects, "treasury", float(-price), "bought %d gold of %s goods" % [gold, pool])
+			var price := goods_trade_gold(req, state)
+			_apply(state, effects, "treasury", float(-price), "bought %d gold of %s goods%s" % [gold, pool, _at_market(req)])
 			_apply(state, effects, pool_metric(pool), float(gold), "%s goods bought" % pool)
 		"GOODS_SELL":
 			var pool := String(req.params["pool"])
 			var gold := int(req.params["gold"])
-			var paid := int(roundf(float(gold) * (1.0 - data.bal("goods_trade_spread"))))
+			var paid := goods_trade_gold(req, state)
 			_apply(state, effects, pool_metric(pool), float(-gold), "%s goods sold" % pool)
-			_apply(state, effects, "treasury", float(paid), "sold %d gold of %s goods" % [gold, pool])
+			_apply(state, effects, "treasury", float(paid), "sold %d gold of %s goods%s" % [gold, pool, _at_market(req)])
 	var cd := int(row.get("cooldown_ticks", 0))
 	if cd > 0:
 		state.cooldowns[req.action_code] = state.tick + cd

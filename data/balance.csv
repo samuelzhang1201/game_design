@@ -668,3 +668,5 @@ ui_slot_work_alpha,0.35,"the opacity of a work in progress's art in the manor ca
 artisan_per_step,2000,"LEDGER M5 (spec 2026-09-30-ledger-industry-trade-design): townsfolk of a province per step of faster building"
 artisan_step_permille,50,LEDGER M5: per mille faster a work goes for each step of townsfolk
 artisan_speed_cap_permille,500,LEDGER M5: the most the artisans can add
+trade_toll_permille,250,"LEDGER M6 (spec 2026-09-30-ledger-industry-trade-design): the crown's toll on each open trade route's monthly value; calibrated so tolls are 5-25% of the crown's tax (test_markets): at the spec's 50 the six routes (965 gold a month of exports, 2026-09-30 beria seed 42) paid 47 against 1961 of tax (2.4%), so 250 pays 240 (12.2%)"
+trade_close_opinion,-6,LEDGER M6: the guildmaster's opinion when the crown closes a trade route
