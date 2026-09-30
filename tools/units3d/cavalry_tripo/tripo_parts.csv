@@ -1,0 +1,67 @@
+part,role,group,weights
+0,horse tail,horse,horse_tail
+1,horse hindquarters and rear barrel,horse,horse
+6,horse off (right) hind leg,horse,horse
+7,horse near (left) hind leg,horse,horse
+8,horse off (right) foreleg,horse,horse
+9,horse belly under the girth,horse,horse
+11,horse near (left) foreleg,horse,horse
+19,horse off fore hoof,horse,horse
+22,horse near hind hoof,horse,horse
+23,horse off hind hoof,horse,horse
+26,horse chest shoulders and neck,horse,horse
+27,horse mane and forelock,horse,horse_mane
+30,horse muzzle,horse,rigid:head_h
+31,horse head,horse,rigid:head_h
+40,horse near fore hoof,horse,horse
+57,horse near ear,horse,rigid:head_h
+60,horse off ear,horse,rigid:head_h
+10,bridle headstall,tack,rigid:head_h
+33,off rein,tack,reins
+50,near rein,tack,reins
+41,breast strap near side,tack,horse
+44,breast strap off side,tack,horse
+63,breast strap boss,tack,horse
+3,saddle cloth near side,tack,rigid:horse_body
+5,saddle cloth off side,tack,rigid:horse_body
+15,saddle seat,tack,rigid:horse_body
+32,saddle flaps,tack,rigid:horse_body
+37,near stirrup iron,tack,rigid:horse_body
+38,off stirrup iron,tack,rigid:horse_body
+62,near stirrup leather,tack,rigid:horse_body
+2,helmet,rider,rigid:head
+4,breastplate and backplate,rider,rigid:chest
+16,near pauldron,rider,rigid:upperarm_l
+17,off pauldron,rider,rigid:upperarm_r
+20,near rerebrace,rider,near:upperarm_l|forearm_l|hand_l
+43,near arm plate,rider,near:upperarm_l|forearm_l|hand_l
+53,near arm plate,rider,near:upperarm_l|forearm_l|hand_l
+64,near arm plate,rider,near:upperarm_l|forearm_l|hand_l
+52,near vambrace,rider,near:upperarm_l|forearm_l|hand_l
+49,near gauntlet,rider,near:upperarm_l|forearm_l|hand_l
+54,near gauntlet cuff,rider,near:upperarm_l|forearm_l|hand_l
+21,off rerebrace,rider,near:upperarm_r|forearm_r|hand_r
+48,off arm plate,rider,near:upperarm_r|forearm_r|hand_r
+61,off arm plate,rider,near:upperarm_r|forearm_r|hand_r
+68,off arm plate,rider,near:upperarm_r|forearm_r|hand_r
+47,off couter,rider,near:upperarm_r|forearm_r|hand_r
+45,off vambrace,rider,near:upperarm_r|forearm_r|hand_r
+58,off gauntlet,rider,near:upperarm_r|forearm_r|hand_r
+55,off gauntlet cuff,rider,near:upperarm_r|forearm_r|hand_r
+39,off fist on the lance,rider,near:upperarm_r|forearm_r|hand_r
+34,off tasset,rider,near:hips|thigh_r
+46,near tasset,rider,near:hips|thigh_l
+56,near tasset lower,rider,near:hips|thigh_l
+59,back plate lame,rider,near:hips|spine|chest
+65,fauld piece,rider,near:hips|spine|chest
+66,fauld piece,rider,near:hips|spine|chest
+67,fauld front,rider,near:hips|spine|chest
+18,off cuisse,rider,near:thigh_r|shin_r
+42,off cuisse lower,rider,near:thigh_r|shin_r
+24,off poleyn,rider,near:thigh_r|shin_r
+13,off greave,rider,rigid:shin_r
+29,off sabaton,rider,rigid:foot_r
+25,near cuisse,rider,near:thigh_l|shin_l
+36,near poleyn,rider,near:thigh_l|shin_l
+12,near greave,rider,rigid:shin_l
+28,near sabaton,rider,rigid:foot_l
