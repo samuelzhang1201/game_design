@@ -4,7 +4,9 @@ extends Map3DHudPiece
 ## road still ahead as a thin dashed line in the realm's colour, finer than a
 ## march line; a march order still on the road as a faint dotted line from
 ## the column to where it will go, an envelope in its end ring; and, past the
-## counter scale, each courier as a small square counter with a letter.
+## counter scale, each courier as a small square counter with a letter. A
+## courier who has delivered draws no road and no pending order, and his
+## counter fades with his rider (Map3DLayerCouriers, `gone` / `alpha`).
 
 
 func _draw() -> void:
@@ -15,11 +17,14 @@ func _draw() -> void:
 	var w := repo.bal("map3d_courier_route_px")
 	var rects: Dictionary = view.courier_rects()
 	for c: Dictionary in ctx.couriers():
-		_draw_road(c, (rects.get(int(c["id"]), {}) as Dictionary).get("lead", []), ink, w)
+		var r: Dictionary = rects.get(int(c["id"]), {})
+		if bool(r.get("gone", false)):
+			continue
+		_draw_road(c, r.get("lead", []), ink, w)
 		_draw_pending(c, ink, w)
 	for id in rects:
 		if bool(rects[id]["counter"]):
-			_draw_counter(rects[id]["rect"], ink)
+			_draw_counter(rects[id]["rect"], ink, float(rects[id].get("alpha", 1.0)))
 
 
 ## From where he is DRAWN along the whole road still ahead of him (`lead`,
@@ -91,12 +96,13 @@ func pending_rects() -> Array:
 	return out
 
 
-func _draw_counter(rect: Rect2, ink: Color) -> void:
-	draw_rect(rect, MapPalette.named(ctx.repo, "army_icon_bg"))
-	draw_rect(rect, MapPalette.named(ctx.repo, "army_outline"), false, 1.0)
-	draw_rect(Rect2(rect.position.x, rect.end.y - 2.0, rect.size.x, 2.0), ink)
+func _draw_counter(rect: Rect2, ink: Color, alpha := 1.0) -> void:
+	var a := func(c: Color) -> Color: return Color(c, c.a * alpha)
+	draw_rect(rect, a.call(MapPalette.named(ctx.repo, "army_icon_bg")))
+	draw_rect(rect, a.call(MapPalette.named(ctx.repo, "army_outline")), false, 1.0)
+	draw_rect(Rect2(rect.position.x, rect.end.y - 2.0, rect.size.x, 2.0), a.call(ink))
 	ResourceIcon.draw_glyph(self, "letter", rect.get_center(), rect.size.x * 0.8,
-		MapPalette.named(ctx.repo, "army_glyph"))
+		a.call(MapPalette.named(ctx.repo, "army_glyph")))
 
 
 func _screen_of(pack: Vector2) -> Variant:

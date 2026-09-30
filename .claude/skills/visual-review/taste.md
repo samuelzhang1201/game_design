@@ -75,6 +75,17 @@ add it here as a principle with its why — not as a changelog entry.
   greyed the leather to slate, and a cellular noise read as veined marble —
   the grain is laid light-in-parchment and dark-in-black, fine-toothed.
 
+- **A board is a real material, and paper on it is old** (owner 2026-09-30,
+  the Missive board: "外框和木质我是满意的，但是背景就是平淡整齐的羊皮纸颜色很突兀…
+  每一个信息框都有边框，做旧的感觉"). A flat, even parchment or cork fill inside a
+  carved frame read as a placeholder; the frame's opening is wood with real
+  grain (a photographed CC0 texture, its knots lifted so they do not outshout
+  the notes, tiled large enough that no knot repeats in view), and every slip
+  on it is aged — yellowed, foxed, a burnt and frayed edge, its own ruled
+  border — the letter being read aged to the same paper, casting a shadow onto
+  the wood. Coloured header text on carved plaques read pasted on: the game's
+  own ink.
+
 ## Information
 - **Name it; the icon is the anchor, not the word** (owner 2026-09-28,
   reversing "icons, not words" of 2026-09-13/14 for the realm card and the

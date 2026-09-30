@@ -10,13 +10,23 @@ signal show_requested(subject: Dictionary)
 
 const HEADERS := {"truth": "Ground truth", "credible": "Highly credible",
 	"consult": "Worth consulting", "rumour": "Rumour"}
-const EMPTY := {"truth": "The steward's monthly reports", "credible": "Receipts and clear-eyed spies",
-	"consult": "Letters taken from others' couriers", "rumour": "What a spy only heard"}
+## An empty column is simply empty (owner 2026-09-30: missive看版移除掉每一个信息
+## 种类下面的text说明 — each column's one-line description is gone).
 
 ## A note's type and side margins, design px (Task 10's look check: at the
-## body's 18 px the date "Spring 30, Year 1" overflowed a column).
-const NOTE_FONT_SIZE := 15
-const NOTE_MARGIN := 10.0
+## body's 18 px the date "Spring 30, Year 1" overflowed a column; owner
+## 2026-09-30: size再小一点 — 15 px until then).
+const NOTE_FONT_SIZE := 13
+const NOTE_MARGIN := 8.0
+## The pin astride a note's top edge, design px (at 12 it read as a speck).
+const PIN_PX := 18.0
+## A note's width, design px: a slip pinned in its column, not the column's
+## full width (owner 2026-09-30: size再小一点).
+const NOTE_WIDTH := 150.0
+## The frame's clear opening begins this many TEXTURE px in from its edge
+## (frame_open.png, tools/missive_board_art.py FRAME_OPEN_FROM): the wood is
+## laid from there, under the moulding's shadowed lip.
+const FRAME_OPEN_FROM := 62.0
 ## A column plaque's size: the cards' section headers (MilitaryPanel, the
 ## realm dashboard) are 14.
 const PLAQUE_FONT_SIZE := 14
@@ -52,29 +62,40 @@ func _ready() -> void:
 		# word barely didn't fit) is the last-resort guarantee that a plaque
 		# never splits a word if a future column somehow narrows further.
 		plaque.autowrap_mode = TextServer.AUTOWRAP_WORD
-		# a column's plaque is a section header in its credibility's colour
-		UiPalette.style_section(plaque, PLAQUE_FONT_SIZE, MapPalette.named(Game.data, "intel_" + col))
+		# a column's plaque is a section header in the game's own ink (owner
+		# 2026-09-30: ground truth那行的字体色号太出戏 — the four credibility
+		# hues read as pasted on the carved wood)
+		UiPalette.style_section(plaque, PLAQUE_FONT_SIZE, UiPalette.TEXT_SOFT)
 		# fix round 1: the fallback is the plaque's CURRENT look — the gold
 		# rule style_section just set — never a blank StyleBoxEmpty, which
 		# erased that rule with no art installed.
-		plaque.add_theme_stylebox_override("normal",
-			MissiveArt.style(Game.data, "plaque", plaque.get_theme_stylebox("normal")))
-	# the board floats over the screen: a window, titled in the title face
-	%Frame.add_theme_stylebox_override("panel",
-		MissiveArt.style(Game.data, "frame", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "window")))
-	# ScaledNineSlice fix round: a margin of 0 (the board's own cork) tiles the
-	# art at its own size / scale rather than stretching it, so no separate
-	# AXIS_STRETCH_MODE_TILE setup is needed here any more.
-	%BoardPanel.add_theme_stylebox_override("panel", MissiveArt.style(Game.data, "board", StyleBoxEmpty.new()))
+		var plaque_art := MissiveArt.style(Game.data, "plaque", plaque.get_theme_stylebox("normal"))
+		# on the board's own wood a plaque needs its shadow to stand off it
+		if plaque_art is ScaledNineSlice:
+			(plaque_art as ScaledNineSlice).fill = _shadow(6, Vector2(0, 3))
+		plaque.add_theme_stylebox_override("normal", plaque_art)
+	# the board floats over the screen: a window, titled in the title face.
+	# Its whole opening is WOOD (owner 2026-09-30: 请改的有真实木质的质感): the
+	# carved frame's clear centre shows the board's planks laid under it, so
+	# the title row, the columns and the desk all sit on one wooden board.
+	var frame := MissiveArt.style(Game.data, "frame", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "window"))
+	var wood := MissiveArt.style(Game.data, "board", null)
+	if frame is ScaledNineSlice and wood != null:
+		(frame as ScaledNineSlice).fill = wood
+		(frame as ScaledNineSlice).fill_inset = FRAME_OPEN_FROM
+	%Frame.add_theme_stylebox_override("panel", frame)
+	%BoardPanel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	# fix round 1 (ruling: the plan was wrong): %Desk had no panel style
 	# before this task, so its fallback is StyleBoxEmpty — the desk stays
 	# fully transparent, no border or inset, until its parchment is installed.
-	%Desk.add_theme_stylebox_override("panel", MissiveArt.style(Game.data, "letter", StyleBoxEmpty.new()))
-	# board art fix round finding #4: gold (the theme default) reads faint
-	# once the frame's carved wood is installed — the title sits on its
-	# cream opening, not the dark leather the gold was tuned for.
-	UiPalette.style_title(%Title, 22,
-		MapPalette.named(Game.data, "missive_ink") if MissiveArt.texture(Game.data, "frame") != null else UiPalette.GOLD)
+	var desk := MissiveArt.style(Game.data, "letter", StyleBoxEmpty.new())
+	# the letter lies ON the board: a soft shadow onto the wood under it
+	if desk is ScaledNineSlice:
+		(desk as ScaledNineSlice).fill = _shadow(14, Vector2(0, 6))
+	%Desk.add_theme_stylebox_override("panel", desk)
+	# the title stands on the board's wood now, where the gold reads (on the
+	# old cream opening it needed the dark ink)
+	UiPalette.style_title(%Title, 22, UiPalette.GOLD)
 	# Board art follow-up: with the letter parchment installed the desk is
 	# cream, and the theme's light ink (gold title, muted meta) is
 	# unreadable on it — dark umber ink stands in instead. %LetterTitle and
@@ -82,8 +103,10 @@ func _ready() -> void:
 	var on_parchment := MissiveArt.texture(Game.data, "letter") != null
 	UiPalette.style_header(%LetterTitle, 18,
 		MapPalette.named(Game.data, "missive_ink") if on_parchment else UiPalette.GOLD)
+	# the letter's own ink, like its facts (owner 2026-09-30: ground truth那行
+	# 的字体色号太出戏 — the date · column line was a paler grey)
 	%LetterMeta.add_theme_color_override("font_color",
-		MapPalette.named(Game.data, "missive_ink_soft") if on_parchment else UiPalette.TEXT_MUTED)
+		MapPalette.named(Game.data, "missive_ink") if on_parchment else UiPalette.TEXT_SOFT)
 	# Receipt look fix: %DeskPainting's box was a fixed 150 design px tall
 	# regardless of its own (flexible, per-screen-width) column, far wider
 	# and shallower than the delivered.png paintings' 5:4, so the cover-crop
@@ -94,6 +117,17 @@ func _ready() -> void:
 	visibility_changed.connect(func() -> void:
 		if visible:
 			refresh())
+
+
+## A soft shadow cast by a piece lying on the board (drawn under it as its
+## ScaledNineSlice.fill): nothing but the shadow — the art covers the rest.
+static func _shadow(size: int, offset: Vector2) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(0, 0, 0, 0)
+	s.shadow_color = Color(0, 0, 0, 0.55)
+	s.shadow_size = size
+	s.shadow_offset = offset
+	return s
 
 
 ## width / ui_missive_desk_painting_aspect = height, so a wider desk column
@@ -124,24 +158,7 @@ func refresh() -> void:
 		for c in box.get_children():
 			box.remove_child(c)  # gone now, not at the frame's end
 			c.queue_free()
-		var list := MissiveLog.column(Game.state, col)
-		if list.is_empty():
-			var hint := Label.new()
-			hint.text = EMPTY[col]
-			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			# an empty column's hint is a quiet aside, no larger than its notes
-			# (the integration shot: at the body's size it outweighed the letters)
-			# Board art follow-up: once the frame's wood is installed the hint
-			# sits on its cream opening, where the theme's dim ink disappears.
-			hint.add_theme_color_override("font_color",
-				MapPalette.named(Game.data, "missive_ink_soft") if MissiveArt.texture(Game.data, "frame") != null
-				else UiPalette.TEXT_DIM)
-			hint.add_theme_font_size_override("font_size", NOTE_FONT_SIZE)
-			var aside := UiPalette.role_font("body_italic")
-			if aside != null:
-				hint.add_theme_font_override("font", aside)
-			box.add_child(hint)
-		for m: Dictionary in list:
+		for m: Dictionary in MissiveLog.column(Game.state, col):
 			box.add_child(_note(m))
 	_fill_desk()
 
@@ -185,9 +202,12 @@ func _note(m: Dictionary) -> Button:
 	b.text = "%s\n%s" % [String(m["title"]), CourierCard.date_of(int(m["day"])).replace(" ", "\u00a0")]
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	b.custom_minimum_size.x = NOTE_WIDTH
+	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	b.focus_mode = Control.FOCUS_NONE
 	var id := int(m["id"])
-	# the note on the desk is lit, edged in parchment; an unread one wears gold
+	# the flat stand-ins (no art installed): the note on the desk is lit,
+	# edged in parchment; an unread one wears gold
 	var style := UiPalette.chip_style(UiPalette.CHIP_BG,
 		UiPalette.GOLD if not bool(m.get("read", false)) else UiPalette.EDGE)
 	if id == _selected:
@@ -200,19 +220,25 @@ func _note(m: Dictionary) -> Button:
 	for s: StyleBoxFlat in [style, hover, pressed]:
 		s.content_margin_left = NOTE_MARGIN
 		s.content_margin_right = NOTE_MARGIN
-	# a selected note keeps the flat lit style — the selection still shows
-	# over parchment — everyone else wears the pinned-parchment art
-	var normal: StyleBox = style if id == _selected else MissiveArt.style(Game.data, "note", style)
+	# Every note is an AGED SLIP with its own ruled border (owner 2026-09-30:
+	# 每一个信息框都有边框，做旧的感觉): the one on the desk wears the gold-ruled
+	# slip, hover and press a shade darker, all in the letter's dark ink.
+	var art := MissiveArt.texture(Game.data, "note") != null
+	var normal: StyleBox = MissiveArt.style(Game.data, "note_lit" if id == _selected else "note", style)
+	var hover_art: StyleBox = MissiveArt.style(Game.data, "note", hover)
+	var pressed_art: StyleBox = MissiveArt.style(Game.data, "note_lit", pressed)
+	if hover_art is ScaledNineSlice:
+		(hover_art as ScaledNineSlice).tint = Color(0.9, 0.86, 0.8)
+	if pressed_art is ScaledNineSlice:
+		(pressed_art as ScaledNineSlice).tint = Color(0.84, 0.8, 0.74)
 	b.add_theme_stylebox_override("normal", normal)
-	b.add_theme_stylebox_override("hover", hover)
-	b.add_theme_stylebox_override("pressed", pressed)
+	b.add_theme_stylebox_override("hover", hover_art)
+	b.add_theme_stylebox_override("pressed", pressed_art)
 	b.add_theme_font_size_override("font_size", NOTE_FONT_SIZE)
-	# board art fix round finding #5's install: an unselected note now wears
-	# pale parchment (see above), where the theme's light chip text
-	# disappears — only the NORMAL state's colour, so hover/pressed (still
-	# flat dark chips) keep their own readable default.
-	if id != _selected and MissiveArt.texture(Game.data, "note") != null:
-		b.add_theme_color_override("font_color", MapPalette.named(Game.data, "missive_ink"))
+	if art:
+		var ink := MapPalette.named(Game.data, "missive_ink")
+		for c: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+			b.add_theme_color_override(c, ink)
 	b.pressed.connect(func() -> void: select(id))
 	var pin := MissiveArt.texture(Game.data, "pin")
 	if pin != null:
@@ -226,10 +252,10 @@ func _note(m: Dictionary) -> Button:
 		chip.anchor_right = 0.5
 		chip.anchor_top = 0.0
 		chip.anchor_bottom = 0.0
-		chip.offset_left = -7.0
-		chip.offset_right = 7.0
-		chip.offset_top = -7.0
-		chip.offset_bottom = 7.0
+		chip.offset_left = -PIN_PX * 0.5
+		chip.offset_right = PIN_PX * 0.5
+		chip.offset_top = -PIN_PX * 0.5
+		chip.offset_bottom = PIN_PX * 0.5
 		b.add_child(chip)
 	return b
 

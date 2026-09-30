@@ -1,7 +1,10 @@
 class_name MainMenu
 extends Control
 ## Title screen (user rulings 2026-08-30): a visible menu — Start Game, Load
-## Game, Quit — instead of the old press-Space-only screen. Start Game and
+## Game, the settings rows and Quit to Desktop, the SAME settings rows, Quit
+## and window as the pause menu (owner 2026-09-30: 游戏开始的UI和游戏内的menu
+## 功能要一致; GameRoot hands both menus their rows) — instead of the old
+## press-Space-only screen. Start Game and
 ## Space both begin the reign at once with the founding names: the realm and
 ## the ruler are not customised (owner 2026-09-30; the character-creation
 ## panel of 2026-09-15 is gone).
@@ -10,6 +13,14 @@ signal start_requested
 signal load_requested
 
 const PAGE_SHADER := preload("res://scripts/ui/shaders/menu_page.gdshader")
+## Both menus' window width, design px (the pause menu wears it too).
+const MENU_WIDTH := 440.0
+
+## The settings rows and the Quit row, handed in by GameRoot before the menu
+## enters the tree (GameRoot.settings_buttons / quit_button); a menu made
+## alone (a test, a tool) makes its own plain Quit.
+var settings: Array[Button] = []
+var quit: Button = null
 
 var _menu_col: VBoxContainer
 var _status: Label
@@ -51,7 +62,7 @@ func _build_menu() -> void:
 	card.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	card.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	card.grow_vertical = Control.GROW_DIRECTION_BOTH
-	card.custom_minimum_size = Vector2(440, 0)
+	card.custom_minimum_size = Vector2(MENU_WIDTH, 0)
 	add_child(card)
 	_menu_col = VBoxContainer.new()
 	_menu_col.name = "MenuCol"
@@ -73,7 +84,12 @@ func _build_menu() -> void:
 	start.tooltip_text = "Or press Space to take the throne"
 	_menu_col.add_child(start)
 	_menu_col.add_child(_menu_button("Load Game", _on_load_pressed))
-	_menu_col.add_child(_menu_button("Quit", func() -> void: get_tree().quit()))
+	for b: Button in settings:
+		_menu_col.add_child(b)
+	if quit == null:
+		quit = _menu_button("Quit to Desktop", func() -> void: get_tree().quit())
+		quit.name = "Quit"
+	_menu_col.add_child(quit)
 	_status = Label.new()
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status.add_theme_font_size_override("font_size", 18)

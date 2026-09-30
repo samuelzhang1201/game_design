@@ -24,6 +24,12 @@ var source_inset := 0.0
 ## Texture px per design px the art was authored at.
 var scale := 1.0
 var tint := Color.WHITE
+## A style drawn FIRST, under the art, over the box shrunk by `fill_inset`
+## TEXTURE px (scaled like the corners): what shows through a frame whose
+## opening is clear — the Missive board's wood under its carved frame (owner
+## 2026-09-30). null draws nothing under.
+var fill: StyleBox = null
+var fill_inset := 0.0
 
 
 ## The corner's drawn size in design px (source_inset scaled down); what a
@@ -33,6 +39,10 @@ func draw_inset() -> float:
 
 
 func _draw(to_canvas_item: RID, rect: Rect2) -> void:
+	if fill != null:
+		var f := rect.grow(-(fill_inset / scale if scale > 0.0 else fill_inset))
+		if f.size.x > 0.0 and f.size.y > 0.0:
+			fill.draw(to_canvas_item, f)
 	if texture == null:
 		return
 	if source_inset <= 0.0:

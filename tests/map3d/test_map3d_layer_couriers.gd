@@ -19,20 +19,20 @@ func test_a_day_within_one_stretch_passes_no_waypoint() -> void:
 
 func test_he_walks_along_the_corners_not_across_them() -> void:
 	var queue: Array = [Vector2(10, 0), Vector2(10, 10)]
-	var at := Map3DLayerCouriers.walk_along(Vector2.ZERO, queue, 5.0)
+	var at := Map3DCourierRide.walk_along(Vector2.ZERO, queue, 5.0)
 	assert_eq(at, Vector2(5, 0), "half the first stretch")
 	assert_eq(queue.size(), 2)
-	at = Map3DLayerCouriers.walk_along(at, queue, 8.0)
+	at = Map3DCourierRide.walk_along(at, queue, 8.0)
 	assert_eq(at, Vector2(10, 3), "round the corner, the step carried over")
 	assert_eq(queue.size(), 1, "the corner is passed")
-	at = Map3DLayerCouriers.walk_along(at, queue, 100.0)
+	at = Map3DCourierRide.walk_along(at, queue, 100.0)
 	assert_eq(at, Vector2(10, 10), "never past the last point")
 	assert_true(queue.is_empty())
 
 
 func test_the_length_of_what_is_left() -> void:
-	assert_almost_eq(Map3DLayerCouriers.length_along(Vector2.ZERO, [Vector2(3, 4), Vector2(3, 10)]), 11.0, 0.001)
-	assert_eq(Map3DLayerCouriers.length_along(Vector2.ZERO, []), 0.0)
+	assert_almost_eq(Map3DCourierRide.length_along(Vector2.ZERO, [Vector2(3, 4), Vector2(3, 10)]), 11.0, 0.001)
+	assert_eq(Map3DCourierRide.length_along(Vector2.ZERO, []), 0.0)
 
 
 func _player(names: Array) -> AnimationPlayer:
@@ -69,3 +69,16 @@ func test_the_courier_art_rows_carry_a_stride() -> void:
 		assert_true((repo.courier_art[kind] as Dictionary).has("stride_m"), kind)
 	assert_false(repo.balance.has("map3d_courier_anim_rate"), "the old fixed rate is gone")
 	assert_gt(repo.bal("map3d_courier_anim_max"), repo.bal("map3d_courier_anim_min"))
+
+
+## Owner 2026-09-30 (信使送到信息后要立即淡化消失): he fades the moment his
+## delivering ride is done, over map3d_courier_fade_s of real time.
+func test_a_courier_fades_out_the_moment_he_delivers() -> void:
+	var delivering := {"ends": true, "share": 0.4}
+	assert_false(Map3DCourierRide.delivered(delivering, 0.39), "still riding up to the column")
+	assert_true(Map3DCourierRide.delivered(delivering, 0.4), "there: delivered")
+	assert_false(Map3DCourierRide.delivered({"ends": false, "share": 1.0}, 1.0), "a whole day's ride that does not deliver")
+	assert_eq(Map3DCourierRide.alpha(-1.0, 0.6), 1.0, "not delivered: whole")
+	assert_almost_eq(Map3DCourierRide.alpha(0.3, 0.6), 0.5, 0.0001, "half way through the fade")
+	assert_eq(Map3DCourierRide.alpha(0.6, 0.6), 0.0, "gone")
+	assert_eq(Map3DCourierRide.alpha(0.0, 0.0), 0.0, "no fade time: gone at once")

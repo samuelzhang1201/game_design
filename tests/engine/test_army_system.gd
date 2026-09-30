@@ -1,7 +1,7 @@
 extends GutTest
 ## ArmySystem (owner 2026-09-17, spec 2026-09-17-regiment-state §2-3): the
 ## player's regiments carry morale, wounded, supplies and training; the
-## month's end returns wounded to the ranks and spends supplies.
+## month's end returns wounded to the ranks; each day eats its share of supplies.
 
 var repo: DataRepository
 
@@ -35,17 +35,16 @@ func test_wound_recovery_is_a_share_with_a_floor_of_one() -> void:
 	assert_eq(ArmySystem.wound_recovery(repo, 3), 1, "200 per mille of 3 is 0, floored up to 1")
 	assert_eq(ArmySystem.wound_recovery(repo, 250), 50)
 
-func test_the_month_returns_wounded_and_spends_supplies() -> void:
+func test_the_month_returns_wounded_and_the_days_eat_the_supplies() -> void:
 	var s := GameState.new_campaign(repo, 7)
 	var r: Dictionary = _mine()[0]
 	var code := String(r["regiment_code"])
 	var use := ArmySystem.supply_use(repo, r)
 	s.regiments[code]["wounded"] = 250
 	s.regiments[code]["supplies"] = use + 5
-	# Morale now follows the stores each call (spec
-	# 2026-09-30-ledger-supply-design §4): predict the two drifts from the
-	# same functions settle_month uses, reading the mark from what is in
-	# hand before each call's own spend.
+	# Morale follows the stores in hand as the month turns (spec
+	# 2026-09-30-ledger-supply-design §4); the month itself is eaten a day at
+	# a time (owner 2026-09-30: 军事单位的补给要每天都在以一定速率减少).
 	var naval := String(r.get("is_naval", "0")) == "1"
 	var mark1 := ArmySystem.morale_mark(repo, ArmySystem.supply_score(repo, use + 5, use), false)
 	var morale1 := 70 if naval else ArmySystem.drift_morale(70, mark1, int(repo.bal("army_morale_drift_per_month")))
@@ -53,10 +52,50 @@ func test_the_month_returns_wounded_and_spends_supplies() -> void:
 	var expected := morale1 if naval else ArmySystem.drift_morale(morale1, mark2, int(repo.bal("army_morale_drift_per_month")))
 	ArmySystem.settle_month(repo, s)
 	assert_eq(int(s.regiments[code]["wounded"]), 200)
-	assert_eq(int(s.regiments[code]["supplies"]), 5)
+	assert_eq(int(s.regiments[code]["supplies"]), use + 5, "the month's end spends nothing itself")
+	var last := use + 5
+	for d in range(1, Calendar.DAYS_PER_TICK + 1):
+		s.day = d
+		ArmySystem.eat_day(repo, s)
+		var now := int(s.regiments[code]["supplies"])
+		assert_true(now <= last, "day %d eats, never adds" % d)
+		last = now
+	assert_eq(int(s.regiments[code]["supplies"]), 5, "the thirty days eat exactly a month")
 	ArmySystem.settle_month(repo, s)
+	for d in range(1, Calendar.DAYS_PER_TICK + 1):
+		s.day = d
+		ArmySystem.eat_day(repo, s)
 	assert_eq(int(s.regiments[code]["supplies"]), 0, "supplies stop at zero")
 	assert_eq(int(s.regiments[code]["morale"]), expected, "morale follows the stores (spec 2026-09-30-ledger-supply-design §4)")
+
+
+func test_a_day_bites_its_share_and_the_month_sums_exactly() -> void:
+	for use: int in [0, 1, 29, 30, 31, 1000, 12345]:
+		var total := 0
+		for d in range(1, Calendar.DAYS_PER_TICK + 1):
+			var b := ArmySystem.day_bite(use, d)
+			assert_true(b >= 0)
+			total += b
+			assert_eq(ArmySystem.left_to_eat(use, d), use - total, "what is left after day %d" % d)
+		assert_eq(total, use, "a month of %d" % use)
+	assert_eq(ArmySystem.day_bite(300, 1), 10, "a steady rate: 300 a month is 10 a day")
+
+
+## The map's yellow bar is the stores against a full train, so it falls every day.
+func test_the_yellow_bar_falls_day_by_day() -> void:
+	var s := GameState.new_campaign(repo, 7)
+	var r: Dictionary = _mine()[0]
+	var code := String(r["regiment_code"])
+	var use := ArmySystem.supply_use(repo, r)
+	if use < Calendar.DAYS_PER_TICK:
+		return
+	s.regiments[code]["supplies"] = use * int(repo.bal("army_supply_target_months"))
+	var bar := ArmySystem.bars_of(repo, s, code).y
+	assert_eq(bar, 1000, "a full train")
+	s.day = 1
+	ArmySystem.eat_day(repo, s)
+	assert_lt(ArmySystem.bars_of(repo, s, code).y, bar, "one day later it has fallen")
+
 
 func test_supply_use_is_the_base_scaled_by_the_cells_height_tier() -> void:
 	var r: Dictionary = _mine()[0]

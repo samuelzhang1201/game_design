@@ -248,3 +248,54 @@ func test_the_menu_switches_the_music_off_and_remembers() -> void:
 	again.set_music_on(true)
 	assert_false(again.bgm_player().stream_paused, "and back on")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(GameRoot.settings_path))
+
+func _space() -> InputEventKey:
+	var key := InputEventKey.new()
+	key.keycode = KEY_SPACE
+	key.pressed = true
+	return key
+
+## Owner 2026-09-30 (空格键可以暂停或者继续游戏): Space stops a running clock
+## and runs a stopped one again at the speed it last ran.
+func test_space_pauses_and_resumes_the_game() -> void:
+	var r := _root()
+	await wait_frames(2)
+	r.current_screen.start_requested.emit()
+	await wait_frames(2)
+	Game.set_clock_speed(int(Game.data.bal("time_speed_fast")))
+	r._input(_space())
+	assert_eq(Game.clock_speed, 0, "Space pauses")
+	r._input(_space())
+	assert_eq(Game.clock_speed, int(Game.data.bal("time_speed_fast")), "and resumes at the speed it ran")
+	Game.set_clock_speed(0)
+	r.toggle_pause_menu()
+	r._input(_space())
+	assert_eq(Game.clock_speed, 0, "not under the pause menu")
+	r.toggle_pause_menu()
+	var box := LineEdit.new()
+	r.add_child(box)
+	box.grab_focus()
+	r._input(_space())
+	assert_eq(Game.clock_speed, 0, "a space typed in a text box is a space")
+	box.queue_free()
+
+## Owner 2026-09-30 (游戏开始的UI和游戏内的menu功能要一致): the title screen and
+## the pause menu carry the same settings rows and the same Quit, and a
+## setting turned in one is read in the other.
+func test_the_title_and_pause_menus_share_their_settings() -> void:
+	var r := _root()
+	await wait_frames(2)
+	var title: MainMenu = r.current_screen
+	for n: String in ["MusicToggle", "GraphicsQuality", "DevMode", "Quit"]:
+		var a := title.menu_column().get_node_or_null(n) as Button
+		var b := _menu_btn(r, n)
+		assert_not_null(a, "the title screen has " + n)
+		assert_not_null(b, "the pause menu has " + n)
+		if a != null and b != null:
+			assert_eq(a.text, b.text, n + " reads the same in both")
+	var was := r.dev_mode()
+	(title.menu_column().get_node("DevMode") as Button).pressed.emit()
+	assert_eq(r.dev_mode(), not was)
+	assert_eq(_menu_btn(r, "DevMode").text, (title.menu_column().get_node("DevMode") as Button).text,
+		"the pause menu's row follows")
+	r.set_dev_mode(was)

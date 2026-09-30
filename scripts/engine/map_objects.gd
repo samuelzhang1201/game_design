@@ -1150,7 +1150,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		stats.append(_stat("army_wounded", "+%d / mo" % back,
 			"%d wounded return to the ranks each month" % back))
 		stats.append(_stat("army_supply", "%d (−%d / mo)" % [int(st["supplies"]), use],
-			"Supplies — %d held, %d used each month" % [int(st["supplies"]), use]))
+			"Supplies — %d held, %d eaten each month, a share every day" % [int(st["supplies"]), use]))
 		var drill := ArmySystem.training_grade(repo, int(st["training"]))
 		stats.append(_stat("army_training", drill, "Training — %s" % drill))
 		var might := ArmySystem.strength_grade(repo, state, code)

@@ -125,8 +125,10 @@ func test_the_bars_are_readiness_and_supply() -> void:
 	var code := String(reg["regiment_code"])
 	var use := ArmySystem.supply_use(repo, reg)
 	st.regiments[code] = {"morale": 50, "training": 20, "supplies": use, "wounded": 0}
-	# one month of three: 333; (40*1000 + 25*333 + 20*500 + 15*200) / 100 = 61325 / 100 = 613
-	assert_eq(ArmySystem.bars_of(repo, st, code), Vector2i(613, 333))
+	# readiness scores one month of three: 333; (40*1000 + 25*333 + 20*500 + 15*200) / 100 = 613.
+	# The yellow bar is the stores against a full train (owner 2026-09-30: it falls
+	# every day): one month of army_supply_target_months 4 = 250.
+	assert_eq(ArmySystem.bars_of(repo, st, code), Vector2i(613, 250))
 
 
 func test_a_foreign_regiment_reads_as_it_would_start() -> void:

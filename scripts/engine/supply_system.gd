@@ -163,7 +163,11 @@ static func plan(repo: DataRepository, state: GameState) -> Array:
 	for code: String in _land_codes(repo, state):
 		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), state)
 		var target := use * int(repo.bal("army_supply_target_months"))
-		var short := maxi(target - int(state.regiments[code]["supplies"]), 0)
+		# against the stores the month's end will leave: the regiments eat a
+		# day at a time (ArmySystem.eat_day), and at the settlement nothing is
+		# left to eat, so this is the stores themselves
+		var at_end := maxi(int(state.regiments[code]["supplies"]) - ArmySystem.left_to_eat(use, state.day), 0)
+		var short := maxi(target - at_end, 0)
 		var line := _line_of(repo, state, code, ctx)
 		var loss := int(line["loss_permille"])
 		var ship := ship_for(short, loss)
@@ -232,9 +236,13 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array:
 	return lines
 
 
-## Any land regiment under army_supply_warn_permille (TriggerDsl host_hungry).
+## Any land regiment whose supply SCORE is under army_supply_warn_permille
+## (TriggerDsl host_hungry).
 static func any_hungry(repo: DataRepository, state: GameState) -> bool:
 	for code: String in _land_codes(repo, state):
-		if ArmySystem.bars_of(repo, state, code).y < int(repo.bal("army_supply_warn_permille")):
+		var reg := ArmySystem.regiment(repo, code)
+		var score := ArmySystem.supply_score(repo, int(state.regiments[code]["supplies"]),
+			ArmySystem.supply_use(repo, reg, state))
+		if score < int(repo.bal("army_supply_warn_permille")):
 			return true
 	return false

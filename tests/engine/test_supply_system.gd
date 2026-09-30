@@ -170,7 +170,8 @@ func test_after_a_month_with_ample_pools_the_ranks_are_well_fed() -> void:
 	s.metrics["lord_strategic"] = 1000000.0
 	TickEngine.new(data).advance(s)
 	for c: String in _land_codes():
-		var score := ArmySystem.bars_of(data, s, c).y
+		var score := ArmySystem.supply_score(data, int(s.regiments[c]["supplies"]),
+			ArmySystem.supply_use(data, ArmySystem.regiment(data, c), s))
 		assert_eq(score, 1000, "%s holds a full train after the month" % c)
 		assert_eq(ArmySystem.morale_word(data, score), "well fed")
 	var code: String = _land_codes()[0]

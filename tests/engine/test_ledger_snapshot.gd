@@ -153,11 +153,9 @@ func test_orders_follow_the_node() -> void:
 	assert_has(codes.call("manor:12"), "MANOR_BUILD")
 	assert_false("MANOR_BUILD" in codes.call("type:manor"), "a type with instances takes orders per instance")
 	assert_has(codes.call("trade_gold|type:gold|type:civil_goods"), "GOODS_BUY", "a thread's own orders")
-	var garrison: Dictionary = {}
-	for a: Dictionary in Ledger.actions_for(data, "regiment:r7"):
-		if String(a["code"]) == "ARMY_GARRISON":
-			garrison = a
-	assert_eq(Ledger.params_of(garrison, "regiment:r7"), {"regiment": "r7"})
+	# owner 2026-09-30: a march garrisons on arrival, so no Garrison order is offered
+	assert_false("ARMY_GARRISON" in codes.call("regiment:r7"), "no Garrison button")
+	assert_eq(Ledger.params_of({"params": "regiment=@id"}, "regiment:r7"), {"regiment": "r7"})
 	var buy: Dictionary = Ledger.actions_for(data, "type:civil_goods")[0]
 	assert_eq(Ledger.params_of(buy, "type:civil_goods"), {"pool": "civil", "gold": 50})
 	# final fix M2: a numeric id is a number, as an order's params expect
