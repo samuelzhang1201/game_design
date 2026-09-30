@@ -212,8 +212,9 @@ and tonemap, so the map's environment is untouched.
   full weight and `ledger_focus_width` × wider, everything else at
   `ledger_focus_fade`, its neighbours named, its card in the left column.
   Click empty sky: clear.
-- **At rest in the Court tab** the player's own web is lit (the existing
-  `EGO_AT_REST` rule); **at rest elsewhere** a link crossing clusters stands
+- **At rest the player's own web of ties is lit in every tab** (a controller
+  ruling of Task 8: in All the court's ties would otherwise tangle again; the
+  existing `EGO_AT_REST` rule); **at rest elsewhere** a link crossing clusters stands
   back at `ledger_cross_rest_fade` so the clusters read first.
 - **Double-click a province** opens it (its manors, towns and buildings
   settle round it); double-click it again closes it. Double-click any other

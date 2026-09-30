@@ -1,11 +1,4 @@
 key,color,notes
-background,#14100C,the room behind the orrery
-disc_things,#6B4F2A2E,the THINGS disc
-disc_people,#5C4A6E2E,the PEOPLE disc
-disc_know,#4E64702E,the KNOW disc
-sphere_things,#B08D57,brass
-sphere_people,#7A5C8E,purpure
-sphere_know,#9FB7C4,glass
 sphere_planned,#5A5550,a thing not yet built
 thread_live,#E0BB6A,gold wire
 thread_planned,#6E6862,not yet built

@@ -134,13 +134,15 @@ var _play_days := -1
 var _missives := ""
 var _show_on_map := false
 ## --ledger LENS (with --screen root): the LEDGER through real clicks — its
-## tab, then the lens chip; --ledger-focus TYPE then clicks that type's
-## sphere and the first row of the list it puts in the left column (its ego
-## network). The moment is `ledger`. --ledger-row TEXT picks the first row
-## whose id contains TEXT instead (a land regiment rather than a fleet).
+## tab, then the lens chip (a ledger_lenses.csv id: all, economy, war, court,
+## intelligence). --ledger-open CODE then opens that province (a double click
+## on its star), --ledger-select ID double-clicks that star (selected, its web
+## framed), --ledger-mode 2d presses Mode. The moment is `ledger`, once the
+## chart has settled.
 var _ledger := ""
-var _ledger_focus := ""
-var _ledger_row := ""
+var _ledger_open := ""
+var _ledger_select := ""
+var _ledger_mode := ""
 ## --shot-on report|flight|board|card|spymenu takes the shot --shot-delay N
 ## frames (default 6) after that moment rather than at --shot-frame.
 var _shot_on := ""
@@ -225,10 +227,12 @@ func _ready() -> void:
 			_missives = args[i + 1]
 		elif args[i] == "--ledger":
 			_ledger = args[i + 1]
-		elif args[i] == "--ledger-focus":
-			_ledger_focus = args[i + 1]
-		elif args[i] == "--ledger-row":
-			_ledger_row = args[i + 1]
+		elif args[i] == "--ledger-open":
+			_ledger_open = args[i + 1]
+		elif args[i] == "--ledger-select":
+			_ledger_select = args[i + 1]
+		elif args[i] == "--ledger-mode":
+			_ledger_mode = args[i + 1]
 		elif args[i] == "--shot-on":
 			_shot_on = args[i + 1]
 		elif args[i] == "--shot-delay":
@@ -584,9 +588,8 @@ func _spy_step() -> void:
 				Game.state.couriers.size(), int(Game.state.metrics.get("treasury", 0))])
 
 
-## --ledger LENS [--ledger-focus TYPE]: the LEDGER through real clicks — the
-## tab, the lens chip, the type sphere, the first row of the left column's
-## list — then the moment `ledger`.
+## --ledger LENS [--ledger-open CODE] [--ledger-select ID] [--ledger-mode 2d]:
+## the LEDGER through its own controls, then the moment `ledger`.
 func _ledger_step() -> void:
 	var start := 30
 	var screen := _root.ledger_screen()
@@ -600,30 +603,21 @@ func _ledger_step() -> void:
 			push_error("ledger: no lens chip Lens_" + _ledger)
 			return
 		_real_click(chip, chip.size * 0.5)
-		print("ledger: lens=%s nodes=%d links=%d" % [screen.lens(),
+		print("ledger: lens=%s cluster=%s stars=%d links=%d" % [screen.lens(), screen.view().cluster(),
 			(screen.snapshot()["nodes"] as Array).size(), (screen.snapshot()["links"] as Array).size()])
-	elif _frames == start + 20 and _ledger_focus != "":
-		var at: Variant = screen.view().screen_pos_of("type:" + _ledger_focus)
-		if at == null:
-			push_error("ledger: no sphere type:" + _ledger_focus + " in view")
-			return
-		_real_click(screen.view(), at)
-		print("ledger: clicked type:%s at %s" % [_ledger_focus, at])
-	elif _frames == start + 26 and _ledger_focus != "":
-		var detail: MapDetailPanel = _root.current_screen.detail_panel()
-		var row: Button = null
-		for b in detail.find_children("*", "Button", true, false):
-			# "x".contains("") is false in Godot: no --ledger-row takes the first row
-			if b.has_meta("ledger_id") and (_ledger_row == "" or String(b.get_meta("ledger_id")).contains(_ledger_row)):
-				row = b
-				break
-		if row == null:
-			push_error("ledger: the left column lists no instance")
-			return
-		_real_click(row, row.size * 0.5)
-		print("ledger: drilled %s -> focus=%s nodes=%d" % [row.get_meta("ledger_id"),
-			String(screen.snapshot().get("focus_id", "")), (screen.snapshot()["nodes"] as Array).size()])
-	elif _frames == start + 60:
+	elif _frames == start + 10 and _ledger_open != "":
+		screen.view().drill_requested.emit("province:" + _ledger_open)
+		print("ledger: opened %s -> stars=%d" % [_ledger_open, (screen.snapshot()["nodes"] as Array).size()])
+	elif _frames == start + 14 and _ledger_select != "":
+		screen.view().drill_requested.emit(_ledger_select)
+		print("ledger: selected %s" % screen.view()._selected)
+	elif _frames == start + 16 and _ledger_mode == "2d":
+		var mode := screen.find_child("Mode", true, false) as Button
+		_real_click(mode, mode.size * 0.5)
+		print("ledger: flat=%s" % screen.view().is_flat())
+	elif _frames == start + 20:
+		screen.view().settle_now()
+	elif _frames == start + 40:
 		_moment("ledger")
 
 

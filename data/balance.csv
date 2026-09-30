@@ -632,37 +632,15 @@ map3d_courier_anim_max,3,"a courier's GALLOP playback rate ceiling — past it t
 courier_paint_foul_permille,700,"the courier card shows the foul-weather painting when the weather where he is slows a rider to this share or less (weather.csv speed_permille: mud 700, snow 650, blizzard 400)"
 ui_missive_art_px_per_design,3,"the Missive board's art is installed at this many texture px per design px (sized for the ~3x window scale); a nine-slice border and the cork tile are drawn at texture px / this"
 ui_missive_desk_painting_aspect,1.6,"the desk's %DeskPainting box (width / this = its drawn height) — was a fixed 150 design px, far wider and shallower than the delivered.png paintings' own 5:4 (1.25), so the KEEP_ASPECT_COVERED crop cut the mounted courier's head off; the box now follows the desk's own (flexible) width instead"
-ledger_layer_gap_m,6,"LEDGER (spec 2026-09-30 §6.2): metres between the THINGS, PEOPLE and KNOW discs"
-ledger_disc_radius_m,11.5,"LEDGER: the largest radius of a layer's disc (the type level's; a laid-out layer is drawn in to this, less ledger_layout_margin_m)"
-ledger_disc_pad_m,1,LEDGER: how far a disc reaches past the farthest edge of its own layer's spheres (LedgerLayout.disc_radius)
-ledger_disc_min_m,3,LEDGER: the smallest radius of a layer's disc
-ledger_sphere_radius_type,0.9,LEDGER: radius of a TYPE sphere
-ledger_sphere_radius_instance,0.5,LEDGER: radius of an instance sphere
-ledger_orb_metallic,0.7,LEDGER: brass spheres' metallic
-ledger_orb_roughness,0.35,LEDGER: brass spheres' roughness
-ledger_orb_glass_alpha,0.55,LEDGER: the KNOW layer's glass spheres' opacity
-ledger_thread_width_min,0.04,LEDGER: a thread's radius at no flow (metres)
-ledger_thread_width_max,0.28,LEDGER: a thread's radius at ledger_thread_flow_ref and above
 ledger_thread_flow_ref,5000,"LEDGER: the flow at which a thread reaches its widest (log scale)"
-ledger_thread_vague_width,0.08,LEDGER: a thread whose figure the crown only has in words
 ledger_tie_ref,80,"LEDGER (owner 2026-09-30: the court's 49 thick ties tangled): the strength of feeling (|sentiment|) at which a court tie reaches ledger_tie_width_max"
-ledger_tie_width_min,0.025,"LEDGER: a court tie's radius at no feeling (metres) — a thin cord, not a flow's wire"
-ledger_tie_width_max,0.07,LEDGER: a court tie's radius at ledger_tie_ref and above
 ledger_tie_rest_fade,0.25,"LEDGER: opacity of a court tie that does not touch the player while nothing is selected (the court is read one person's web at a time; selecting anyone makes them the one)"
 ledger_light_speed,0.6,LEDGER: pulses per second along a thread at its widest
 ledger_light_pulses,4,LEDGER: pulses along one thread
-ledger_dashes,14,LEDGER: dashes along a not-yet-built thread
 ledger_ink_general,0.6,LEDGER: ink of a figure the crown has in words (Intel general)
 ledger_ink_basic,0.35,LEDGER: ink of a figure the crown barely knows (Intel basic)
 ledger_age_full_days,90,LEDGER: days after which a report's thread has fully yellowed
-ledger_pair_offset_m,0.25,LEDGER: sideways offset of two threads joining the same spheres both ways
-ledger_strand_gap_m,0.35,"LEDGER L1 (spec 2026-09-30-ledger-governors-design §4): the gap between two strands of one thread whose accounts differ"
 ledger_focus_fade,0.15,LEDGER: opacity of what is not linked to the selected sphere
-ledger_ego_ring_m,5,LEDGER: radius of an ego network's first ring
-ledger_layout_iterations,40,LEDGER: force-layout passes (fixed: the layout is deterministic)
-ledger_layout_repel,4,LEDGER: force layout: repulsion between spheres of one layer
-ledger_layout_spring,0.1,LEDGER: force layout: pull toward the layer's axis
-ledger_layout_margin_m,1.5,"LEDGER: a laid-out layer (the court, an ego network) is drawn in to this far inside its disc's rim"
 ledger_instance_cap,24,LEDGER: neighbours shown per link type before the rest fold into one +N more sphere
 ledger_list_cap,60,LEDGER: rows of a type's instance list in the left column
 ledger_camera_distance,160,"LEDGER: the camera's distance when there is nothing to frame (metres); otherwise the opening view and Front frame the spheres and discs drawn (LedgerOrbit.frame)"
@@ -672,21 +650,15 @@ ledger_camera_pitch_deg,-24,LEDGER: the front view's pitch (negative looks down)
 ledger_turn_deg_per_px,0.3,LEDGER: degrees turned per pointer px of a right-drag
 ledger_zoom_factor,1.12,LEDGER: distance factor per wheel notch
 ledger_pan_gesture_px,12,LEDGER: pointer px per unit of a trackpad pan gesture
-ledger_front_ease_s,0.4,LEDGER: seconds the camera eases back to the front view
 ledger_label_px,14,LEDGER: sphere names' font size (design px)
 ledger_label_lift_px,18,LEDGER: how far above its sphere's centre a name stands (design px)
 ledger_label_halo_px,4,LEDGER: the dark halo under a sphere's name (design px)
-ledger_disc_fade_m,4,"LEDGER (owner 2026-09-30: no hard-edged disc): metres of soft rim over which every layer's disc fades out to nothing (disc.gdshader) — the same on a small disc as on a large one"
-ledger_disc_fade_max_share,0.6,LEDGER: the most of a small disc's radius its fade may take
-ledger_disc_offset_m,0.6,LEDGER: how far below its layer's spheres a disc floats
-ledger_pick_radius_min_m,0.25,LEDGER: a thread is picked within at least this radius (metres) however thin it is drawn
 ledger_pick_min_px,4,"LEDGER galaxy: a link is picked within at least this many design px of its line, however thin it is drawn"
 workshop_capacity_gold,40,"LEDGER M2 (spec 2026-09-30-ledger-supply-design §2): gold of the lord's civil goods one war workshop takes a month at full rate"
 workshop_ratio_permille,700,LEDGER M2: strategic goods made per mille of civil goods taken
 ledger_frame_top_px,92,"LEDGER: design px at the top of the view the framing keeps clear: the title, the lenses and the crumb, and a name over the highest sphere"
 ledger_frame_side_px,40,LEDGER: design px at each side of the view the framing keeps clear (half a long name beside the widest sphere)
 ledger_frame_bottom_px,28,LEDGER: design px at the bottom of the view the framing keeps clear (a name set under the lowest sphere)
-ledger_frame_rim_samples,32,LEDGER: points round each drawn disc's rim that the framing keeps in view
 ledger_gauge_stock_months,12,"LEDGER M1 (spec 2026-09-30-ledger-ontology-design §6.3, a property): a goods pool's stock gauge reads full at this many months of the crown's and the lord's intake"
 ledger_gauge_radius_px,7,LEDGER: a property gauge's ring radius (design px) under its sphere's name
 ledger_gauge_width_px,3,LEDGER: a property gauge's ring width (design px)
@@ -734,7 +706,6 @@ ledger_haze_strength,0.075,LEDGER galaxy: a cluster haze's brightness
 ledger_haze_scale,3.4,LEDGER galaxy: a cluster haze's size as a multiple of the cluster's mean radius
 ledger_link_min_px,1,LEDGER galaxy: a link's width at no flow (screen px)
 ledger_link_max_px,4,LEDGER galaxy: a link's width at ledger_thread_flow_ref and above (screen px)
-ledger_link_vague_px,1.6,LEDGER galaxy: a link whose figure the crown only has in words (screen px)
 ledger_link_count_ref,30,"LEDGER galaxy: a link with no figure (words only, or a structure tie) is as wide as the links it stands for, log scale, ledger_link_max_px at this many"
 ledger_tie_min_px,1,LEDGER galaxy: a court tie's width at no feeling (screen px)
 ledger_tie_max_px,2.6,LEDGER galaxy: a court tie's width at ledger_tie_ref (screen px)
