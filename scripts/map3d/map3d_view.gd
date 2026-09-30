@@ -246,6 +246,7 @@ func _load() -> void:
 	_markers.build()
 	_houses.build()  # warm here (~91 ms), not on the first refresh() mid-play
 	_trees.build(_ctx)  # once: fixed chunks, Godot's visibility ranges do the rest
+	($Viewport/Wind as Map3DLayerWind).bind(_ctx)  # the waves and the sway; steps itself
 	_sea.build(_ctx)
 	# The sky and sun are the scene's, their numbers data (Task 14); the
 	# environment is this view's own copy of the shared .tres.
