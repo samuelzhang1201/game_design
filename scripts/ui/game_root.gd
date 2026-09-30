@@ -33,6 +33,8 @@ var _report_popup: MissiveReportPopup
 var _pending_reports: Array = []
 var _bottom_bar: BottomBar
 var _news_ticker: NewsTicker
+## DEV MODE's frame counter, top-right over every screen (owner 2026-09-30).
+var _fps_counter: FpsCounter
 var _info_screen: InfoScreen
 var _bgm: AudioStreamPlayer
 ## The player's own settings, apart from any save (owner 2026-09-19: the menu
@@ -114,8 +116,11 @@ func _ready() -> void:
 	_news_ticker.name = "NewsTicker"
 	_news_ticker.visible = false
 	add_child(_news_ticker)
+	_fps_counter = load("res://scenes/fps_counter.tscn").instantiate()
+	add_child(_fps_counter)
 	_load_settings()
 	Intel.dev_all = _dev_mode
+	_fps_counter.visible = _dev_mode
 	_build_pause_menu()
 	_start_bgm()
 	_switch_to(State.MENU)
@@ -398,12 +403,18 @@ func _dev_label() -> String:
 
 func _apply_dev_mode() -> void:
 	Intel.dev_all = _dev_mode
+	if _fps_counter != null:
+		_fps_counter.visible = _dev_mode
 	if current_screen != null and current_screen.has_method("map3d_view"):
 		var v: Map3DView = current_screen.map3d_view()
 		if v != null:
 			v.set_dev_mode(_dev_mode)
 	if _ledger_screen != null:  # DEV MODE lifts the fog on the next snapshot
 		_ledger_screen.refresh()
+
+## Test seam.
+func fps_counter() -> FpsCounter:
+	return _fps_counter
 
 ## Test seam.
 func bgm_player() -> AudioStreamPlayer:

@@ -299,3 +299,16 @@ func test_the_title_and_pause_menus_share_their_settings() -> void:
 	assert_eq(_menu_btn(r, "DevMode").text, (title.menu_column().get_node("DevMode") as Button).text,
 		"the pause menu's row follows")
 	r.set_dev_mode(was)
+
+## Owner 2026-09-30 (dev 模式下，右上角帮我加上游戏实时FPS): DEV MODE shows the
+## frame counter, and turning it off hides it again.
+func test_dev_mode_shows_the_fps_counter() -> void:
+	var r := _root()
+	await wait_frames(2)
+	var was := r.dev_mode()
+	r.set_dev_mode(true)
+	assert_true(r.fps_counter().visible, "dev mode shows the counter")
+	assert_true(r.fps_counter().text().ends_with(" FPS"), "it reads frames a second")
+	r.set_dev_mode(false)
+	assert_false(r.fps_counter().visible, "off, it is gone")
+	r.set_dev_mode(was)
