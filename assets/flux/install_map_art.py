@@ -224,20 +224,24 @@ CAST_TIERS = [
 
 
 def install_cast() -> int:
-    codes = {r["art_id"]: r["character_id"] for r in csv.DictReader((HERE / "cast_art.csv").open())}
+    rows = list(csv.DictReader((HERE / "cast_art.csv").open()))
+    codes = {r["art_id"]: r["character_id"] for r in rows}
+    seeds = {r["art_id"]: r.get("seed", "").strip() for r in rows}
     done = 0
     for tag, tier, size, out_dir in CAST_TIERS:
         print("-- %s tier" % tier)
-        done += _install_cast_tier(codes, tag, tier, size, ROOT / out_dir)
+        done += _install_cast_tier(codes, tag, tier, size, ROOT / out_dir, seeds)
     return done
 
 
-def _install_cast_tier(codes: dict, tag: str, tier: str, size: int, dest: Path) -> int:
+def _install_cast_tier(codes: dict, tag: str, tier: str, size: int, dest: Path,
+                       seeds: dict | None = None) -> int:
     dest.mkdir(parents=True, exist_ok=True)
     staged = HERE / "out" / "game" / tier
     done = 0
     for art_id, code in sorted(codes.items()):
         hits = sorted((HERE / "out" / "cast").glob("%s_*%s*.png" % (art_id, tag)))
+        hits = _pick(hits, (seeds or {}).get(art_id, ""))
         if not hits:
             print("  (no %s render for %s / %s)" % (tag, art_id, code))
             continue
@@ -743,6 +747,25 @@ APP_ICON_PX = 1024
 APP_ICON_SEED = "954159499"  # owner 2026-09-18: of four seeds, the one that reads at 16 px
 
 
+## The title screen's frame (owner 2026-09-30): library U-27 on the 16:9
+## [C-TITLE] canvas, drawn full-bleed behind the main menu at the render's own
+## 1792x1008 (the menu dims it by menu_page.gdshader). TITLE_SEED picks the
+## render as `<model>_s<seed>`.
+TITLE_SEED = "qwen2512fast_s954159497"
+
+
+def install_title(seed: str = TITLE_SEED) -> int:
+    hits = _pick(sorted((HERE / "out" / "ui").glob("U-27_*.png")), seed)
+    if not hits:
+        print("  (no U-27 render)")
+        return 0
+    w, h, ch, px = decode_png(hits[-1])
+    dest = ROOT / "assets" / "2D" / "ui" / "panels" / "frame.png"
+    encode_png(dest, w, h, ch, bytes(px))
+    print("  U-27   %s -> %s %dx%d" % (hits[-1].name, dest.relative_to(ROOT), w, h))
+    return 1
+
+
 def install_app_icon(size: int = APP_ICON_PX) -> int:
     hits = sorted((HERE / "out" / "app_icon").glob("X-01_*.png"), key=lambda p: p.stat().st_mtime)
     if APP_ICON_SEED:
@@ -767,7 +790,7 @@ def main() -> int:
                 "paintings": install_paintings, "compass": install_compass,
                 "buildings": install_buildings, "goods_icons": install_goods_icons,
                 "arms": install_arms, "army_paintings": install_army_paintings,
-                "app_icon": install_app_icon, "events": install_events,
+                "app_icon": install_app_icon, "title": install_title, "events": install_events,
                 "courier_paintings": install_courier_paintings,
                 "missive": install_missive}
     if len(sys.argv) < 2 or sys.argv[1] not in chapters:

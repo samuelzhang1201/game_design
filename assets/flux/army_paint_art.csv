@@ -1,7 +1,7 @@
 art_id,key,seed,notes
-B-37,infantry,,army card painting (owner 2026-09-15)
-B-38,archers,,army card painting
-B-39,cavalry,,army card painting
-B-40,artillery,,army card painting
-B-41,fleet,,army card painting
-B-42,royal,,army card painting: the crown's own regiment
+B-37,infantry,qwen2512fast_s954159497,army card painting (owner 2026-09-15)
+B-38,archers,qwen2512fast_s954159497,army card painting
+B-39,cavalry,qwen2512fast_s954159497,army card painting
+B-40,artillery,qwen2512fast_s954159497,army card painting
+B-41,fleet,qwen2512fast_s954159497,army card painting
+B-42,royal,qwen2512fast_s954159497,army card painting: the crown's own regiment
