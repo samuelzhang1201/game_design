@@ -1,5 +1,6 @@
 extends GutTest
-## The 2026-08-30 UI change batch: menu buttons + character creation,
+## The 2026-08-30 UI change batch: menu buttons (character creation went
+## 2026-09-30),
 ## opening narration popup, centered event popup, dossier tabs, bottom tab
 ## bar with info tables, colored transcript names, top-bar event chip out of
 ## the metrics row.
@@ -9,7 +10,7 @@ func _root() -> GameRoot:
 	add_child_autofree(r)
 	return r
 
-func test_main_menu_has_start_load_quit_and_setup_flow() -> void:
+func test_main_menu_has_start_load_quit_and_starts_with_the_founding_names() -> void:
 	var r := _root()
 	await wait_frames(2)
 	var menu: MainMenu = r.current_screen
@@ -17,30 +18,15 @@ func test_main_menu_has_start_load_quit_and_setup_flow() -> void:
 	assert_not_null(col.get_node("StartGame"))
 	assert_not_null(col.get_node("LoadGame"))
 	assert_not_null(col.get_node("Quit"))
-	# Start Game opens character creation instead of starting directly.
+	# The realm and the ruler are not customised (owner 2026-09-30): Start
+	# Game begins the reign at once, with no character creation.
+	assert_null(menu.find_child("SetupPanel", true, false))
+	Game.player_setup = {"first_name": "Edmund"}
 	col.get_node("StartGame").pressed.emit()
-	await wait_frames(1)
-	assert_true(menu.setup_panel().visible)
-	assert_false(col.is_visible_in_tree(), "the menu window steps aside")
-
-func test_begin_reign_applies_chosen_identity() -> void:
-	var r := _root()
 	await wait_frames(2)
-	var menu: MainMenu = r.current_screen
-	menu.menu_column().get_node("StartGame").pressed.emit()
-	await wait_frames(1)
-	var panel := menu.setup_panel()
-	# The crown's arms stand where the family-flag glyphs were (2026-09-15).
-	assert_null(panel.find_child("FlagRow", true, false))
-	assert_not_null(menu.arms_preview().texture, "the royal seat's arms")
-	var arms := menu.arms_preview().texture
-	panel.find_child("FirstName", true, false).text = "Edmund"
-	panel.find_child("FamilyName", true, false).text = "Blackwood"
-	panel.find_child("BeginReign", true, false).pressed.emit()
-	await wait_frames(2)
-	assert_eq(Game.state.characters["you"].display_name, "King Edmund Blackwood")
-	assert_same(HouseArms.texture_of_house(Game.data, Game.state, "Blackwood"), arms,
-		"the renamed crown keeps its arms")
+	assert_eq(Game.player_setup, {}, "no chosen identity survives")
+	assert_false(r.current_screen is MainMenu, "the reign began")
+	assert_eq(Game.state.characters["you"].display_name, "King Aldric Valorin")
 
 func test_campaign_opens_with_nameless_background_narration() -> void:
 	var r := _root()
