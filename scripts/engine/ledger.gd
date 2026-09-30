@@ -472,7 +472,7 @@ static func _type_level(repo: DataRepository, state: GameState, lens: String, ou
 static func _all_instances(repo: DataRepository, state: GameState, lens: String, inst_type: String,
 		out: Dictionary) -> void:
 	var list := String(type_row(repo, inst_type).get("instances", ""))
-	for row: Dictionary in LedgerResolvers.instances(list, repo, state):
+	for row: Dictionary in LedgerResolvers.instances(list, repo, state, inst_type):
 		out["nodes"].append(_node(repo, state, String(row["id"])))
 	for r: Dictionary in repo.ledger_links:
 		if String(r["status"]) != "live" or not in_lens(r, lens):
