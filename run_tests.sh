@@ -74,11 +74,11 @@ fi
 SCRIPT_ERROR_ALLOW="res://addons/gut/gut_loader.gd:35"
 # While the gdai-mcp-plugin-godot extension is installed (the same condition
 # as EXPECTED_ERRORS=2 above), the class-database probing behind those 2
-# errors also prints ~195 SCRIPT ERRORs, all before any test runs: the
-# dynamic script listing every class fails to parse on each GDAI* native
-# class ('Identifier "GDAI..." not declared', at gut_dynamic_script_N.gd),
-# and stubber.gd:35 then calls new() on the int error code it got back
-# instead of a script. They are the probe failing, not a test aborting, so
+# errors also prints ~100 SCRIPT ERRORs (98 measured 2026-09-30), all
+# before any test runs: the dynamic script listing every class fails to
+# parse on each GDAI* native class ('Identifier "GDAI..." not declared', at
+# gut_dynamic_script_N.gd; 96 lines), and stubber.gd:35 then calls new() on
+# the int error code it got back instead of a script (2 lines). They are the probe failing, not a test aborting, so
 # they are allowed by their whole message — only then; without the
 # extension the gate stays strict and any such line is fatal. Each is one
 # extended regex over the joined "SCRIPT ERROR: <message> at: <where>" line.
