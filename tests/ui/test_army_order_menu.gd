@@ -90,13 +90,23 @@ func test_a_row_chosen_the_way_PopupMenu_chooses_it_still_takes() -> void:
 	assert_eq(_menu.aiming(), code, "MARCH chosen from a closing menu still aims")
 	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
 	ArmySystem.set_march(Game.data, Game.state, code, here + Vector2(30.0, 0.0))
-	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
 	_menu.hide()
-	_menu.id_pressed.emit(1)   # ARMY_GARRISON
+	_menu.id_pressed.emit(ArmyOrderMenu.HALT)
 	assert_eq(Game.state.couriers.size(), 1, "a courier rides with the halt")
 	_deliver_all()
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON,
-		"GARRISON chosen from a closing menu still halts it, once the courier delivers")
+		"Cancel march chosen from a closing menu still halts it, once the courier delivers")
+
+
+## Owner 2026-09-30 (军队到达目的地后自动驻防，取消驻防按钮): the regiment's
+## menu has no Garrison row — a march garrisons on arrival.
+func test_the_menu_offers_no_garrison() -> void:
+	_map.army_menu_requested.emit(_marcher(), Vector2(10.0, 10.0))
+	for i in _menu.item_count:
+		assert_ne(_menu.get_item_text(i), "Garrison")
+	for row: Dictionary in Game.data.army_orders:
+		assert_ne(String(row["action_code"]), "ARMY_GARRISON")
 
 
 func test_an_order_on_a_stopped_clock_does_not_start_it() -> void:
@@ -155,8 +165,8 @@ func test_garrison_rides_and_halts_a_march_on_delivery() -> void:
 	var code := _marcher()
 	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
 	ArmySystem.set_march(Game.data, Game.state, code, here + Vector2(30.0, 0.0))
-	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
-	_menu.id_pressed.emit(1)   # ARMY_GARRISON
+	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
+	_menu.id_pressed.emit(ArmyOrderMenu.HALT)
 	assert_eq(Game.state.couriers.size(), 1, "a courier rides with the halt")
 	_deliver_all()
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON)

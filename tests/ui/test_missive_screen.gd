@@ -191,14 +191,12 @@ func test_the_selected_note_stands_out_and_its_date_never_breaks() -> void:
 	var other := ms.find_child("Note%d" % b, true, false) as Button
 	var ps := picked.get_theme_stylebox("normal")
 	var os := other.get_theme_stylebox("normal")
-	# board art fix round finding #5's install: with note art installed, an
-	# UNSELECTED note now wears the pinned-parchment texture instead of a
-	# flat chip — the selected one still keeps the flat lit style (fix round
-	# 1: "the selection still shows over parchment"), so the two are simply
-	# different STYLEBOX TYPES now, not just different bg_colors.
+	# with note art installed every note is an aged slip (owner 2026-09-30):
+	# the one on the desk wears the gold-ruled slip, the rest the ink-ruled one
 	if MissiveArt.texture(Game.data, "note") != null:
-		assert_true(ps is StyleBoxFlat, "the selected note keeps the flat lit style")
-		assert_true(os is ScaledNineSlice, "an unselected note wears the pinned-parchment art")
+		assert_true(ps is ScaledNineSlice and os is ScaledNineSlice, "both are slips")
+		assert_ne((ps as ScaledNineSlice).texture, (os as ScaledNineSlice).texture,
+			"the note on the desk is ruled in gold")
 	else:
 		assert_true(ps is StyleBoxFlat and os is StyleBoxFlat)
 		assert_ne((ps as StyleBoxFlat).bg_color, (os as StyleBoxFlat).bg_color, "the note on the desk is lit")
@@ -282,8 +280,8 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	assert_eq(rp.get_node("%ReportTitle").get_theme_font("font"), title_font, "the report's title is a title")
 	var plaque := ms.get_node("%TruthPlaque") as Label
 	assert_eq(plaque.get_theme_font("font"), UiPalette.role_font("header"), "a plaque is a section header")
-	assert_eq(plaque.get_theme_color("font_color"), MapPalette.named(Game.data, "intel_truth"),
-		"in its column's own colour")
+	assert_eq(plaque.get_theme_color("font_color"), UiPalette.TEXT_SOFT,
+		"in the game's own ink (owner 2026-09-30: the credibility hues read as pasted on)")
 	# fix round 1: MissiveArt's fallback must be the rule style_section already
 	# set, not a blank StyleBoxEmpty that erases it — with no plaque art
 	# installed, the gold rule (and its spacing) must still be there.
@@ -296,7 +294,7 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 		assert_true(got is ScaledNineSlice, "installed plaque art nine-slices over the rule")
 	elif rule_alpha > 0.0:
 		var ref := Label.new()
-		UiPalette.style_section(ref, MissiveScreen.PLAQUE_FONT_SIZE, MapPalette.named(Game.data, "intel_truth"))
+		UiPalette.style_section(ref, MissiveScreen.PLAQUE_FONT_SIZE, UiPalette.TEXT_SOFT)
 		var want := ref.get_theme_stylebox("normal") as StyleBoxFlat
 		assert_true(got is StyleBoxFlat, "with no plaque art installed the plaque keeps its gold section rule")
 		if got is StyleBoxFlat and want != null:
@@ -325,17 +323,9 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	assert_true(plaque2.get_theme_stylebox("normal") is ScaledNineSlice,
 		"installed plaque art nine-slices over the rule")
 	Game.data.missive_art["plaque"] = saved_plaque
-	# an empty column's hint is an aside, no larger than the notes beside it
+	# an empty column is simply empty (owner 2026-09-30: 移除掉每一个信息种类下面的text说明)
 	ms.refresh()
-	var hint := ms.get_node("%ConsultNotes").get_child(0) as Label
-	assert_eq(hint.get_theme_font_size("font_size"), MissiveScreen.NOTE_FONT_SIZE, "the hint is note-sized")
-	# Board art follow-up: once the frame's wood is installed, the hint sits
-	# on its cream opening and needs dark ink instead of the theme's dim one.
-	if MissiveArt.texture(Game.data, "frame") != null:
-		assert_eq(hint.get_theme_color("font_color"), MapPalette.named(Game.data, "missive_ink_soft"),
-			"reads on the frame's cream opening")
-	else:
-		assert_eq(hint.get_theme_color("font_color"), UiPalette.TEXT_DIM, "and dim")
+	assert_eq(ms.get_node("%ConsultNotes").get_child_count(), 0, "no description under an empty column")
 
 
 ## Board art follow-up: with the letter parchment installed, the desk's
@@ -352,8 +342,8 @@ func test_ink_on_parchment_once_the_letter_art_is_installed() -> void:
 	var plain: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
 	add_child_autofree(plain)
 	plain.select(id)
-	assert_eq(plain.get_node("%LetterMeta").get_theme_color("font_color"), UiPalette.TEXT_MUTED,
-		"unchanged without letter art")
+	assert_eq(plain.get_node("%LetterMeta").get_theme_color("font_color"), UiPalette.TEXT_SOFT,
+		"the game's own ink without letter art")
 	var plain_fact := plain.get_node("%LetterFacts").get_child(0) as Label
 	assert_false(plain_fact.has_theme_color_override("font_color"), "the theme's own colour, untouched")
 
@@ -364,7 +354,9 @@ func test_ink_on_parchment_once_the_letter_art_is_installed() -> void:
 	var ink := MapPalette.named(Game.data, "missive_ink")
 	var ink_soft := MapPalette.named(Game.data, "missive_ink_soft")
 	assert_eq(inked.get_node("%LetterTitle").get_theme_color("font_color"), ink, "the title")
-	assert_eq(inked.get_node("%LetterMeta").get_theme_color("font_color"), ink_soft, "the meta line")
+	assert_eq(inked.get_node("%LetterMeta").get_theme_color("font_color"), ink,
+		"the meta line in the letter's own ink (owner 2026-09-30: the paler grey read out of place)")
+	assert_ne(ink, ink_soft)
 	var inked_fact := inked.get_node("%LetterFacts").get_child(0) as Label
 	assert_eq(inked_fact.get_theme_color("font_color"), ink, "a fact, freshly created by _fill_desk")
 	# re-select (a fresh set of fact labels) to prove the colour is applied
@@ -382,12 +374,10 @@ func test_ink_on_parchment_once_the_letter_art_is_installed() -> void:
 	Game.data.missive_art["letter"] = saved
 
 
-## Board art fix round finding #4: with the frame's carved wood installed
-## the "Missives" title sits on its cream opening, where gold (the theme's
-## default title colour) reads faint. Plaques and CLOSE are unaffected —
-## the plaques already read well on the dark plaque art, and CLOSE is a
-## button, not text on the wood.
-func test_the_title_inks_over_the_frames_cream_opening_once_installed() -> void:
+## Owner 2026-09-30 (请改的有真实木质的质感): the frame's opening is WOOD —
+## the board's planks laid under the carved frame, whose cream centre is
+## clear — so the "Missives" title stands on wood, in gold, art or none.
+func test_the_board_is_wood_under_the_frame_and_the_title_gold() -> void:
 	var saved := String(Game.data.missive_art.get("frame", ""))
 
 	Game.data.missive_art["frame"] = ""
@@ -399,16 +389,28 @@ func test_the_title_inks_over_the_frames_cream_opening_once_installed() -> void:
 	Game.data.missive_art["frame"] = "res://icon.png"
 	var framed: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
 	add_child_autofree(framed)
-	assert_eq(framed.get_node("%Title").get_theme_color("font_color"),
-		MapPalette.named(Game.data, "missive_ink"), "reads on the frame's cream opening")
+	assert_eq(framed.get_node("%Title").get_theme_color("font_color"), UiPalette.GOLD, "gold on the wood")
 
 	Game.data.missive_art["frame"] = saved
+	var board: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	add_child_autofree(board)
+	var frame: StyleBox = (board.get_node("%Frame") as Control).get_theme_stylebox("panel")
+	if frame is ScaledNineSlice and MissiveArt.texture(Game.data, "board") != null:
+		var fill := (frame as ScaledNineSlice).fill as ScaledNineSlice
+		assert_not_null(fill, "the wood is laid under the frame")
+		if fill != null:
+			assert_eq(fill.texture, MissiveArt.texture(Game.data, "board"), "the board's own wood")
+			assert_eq(fill.source_inset, 0.0, "tiled, not stretched")
+	assert_true(board.get_node("%BoardPanel").get_theme_stylebox("panel") is StyleBoxEmpty,
+		"the columns sit on the frame's wood, no second board over it")
 
 
-## Board art fix round finding #5 (the install look check): an unselected
-## note's title/date kept the theme's light chip text, unreadable once the
-## note wears the pale parchment art — dark ink stands in, the same pattern
-## as the desk. The selected note keeps its flat lit chip and default text.
+## Board art fix round finding #5 (the install look check): a note's
+## title/date kept the theme's light chip text, unreadable once the note
+## wears the pale parchment art — dark ink stands in, the same pattern as the
+## desk. Owner 2026-09-30 (每一个信息框都有边框，做旧的感觉，size再小一点): every
+## note is an aged, ruled slip — the one on the desk ruled in gold, in the
+## same ink — narrower than its column.
 func test_an_unselected_note_inks_over_installed_parchment() -> void:
 	Game.start_campaign(42)
 	var id := _letter("credible")
@@ -430,8 +432,13 @@ func test_an_unselected_note_inks_over_installed_parchment() -> void:
 		"reads on the installed parchment")
 	inked.select(id)
 	var selected_note := inked.find_child("Note%d" % id, true, false) as Button
-	assert_false(selected_note.has_theme_color_override("font_color"),
-		"the selected note keeps its flat lit chip and default text")
+	assert_eq(selected_note.get_theme_color("font_color"), MapPalette.named(Game.data, "missive_ink"),
+		"the note on the desk is a slip too, in the same ink")
+	var lit := selected_note.get_theme_stylebox("normal") as ScaledNineSlice
+	if lit != null and MissiveArt.texture(Game.data, "note_lit") != null:
+		assert_eq(lit.texture, MissiveArt.texture(Game.data, "note_lit"), "the gold-ruled slip")
+	assert_eq(selected_note.custom_minimum_size.x, MissiveScreen.NOTE_WIDTH)
+	assert_eq(selected_note.size_flags_horizontal, Control.SIZE_SHRINK_CENTER, "narrower than its column")
 
 	Game.data.missive_art["note"] = saved
 

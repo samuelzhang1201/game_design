@@ -4,7 +4,8 @@ extends Node3D
 ## per courier of GameState.couriers, drawn RIDING the day the clock is running
 ## (CourierSystem.ride_ahead), walked by the day's share (owner 2026-09-28: drawn
 ## a day behind before). Map3DUnits sizes him: gallops while the clock runs and
-## idles paused or not set out, a counter past the counter scale. Model:
+## idles paused or not set out, a counter past the counter scale, and fades out
+## on delivery (Map3DCourierRide). Model:
 ## courier_art.csv, cavalry stand-in until sub-project D. Never the Game autoload.
 
 const GALLOP := "GALLOP"
@@ -39,6 +40,7 @@ var _rides: Dictionary = {}
 var _left: Dictionary = {}
 ## id -> the day's share when a courier not yet ridden was first seen (sent mid-day).
 var _start: Dictionary = {}
+var _fade: Dictionary = {}  # id -> real seconds since he delivered
 
 
 func bind(p_ctx: Map3DContext) -> void:
@@ -74,6 +76,7 @@ func refresh() -> void:
 			_rides.erase(id)
 			_left.erase(id)
 			_start.erase(id)
+			_fade.erase(id)
 
 
 ## Draw each rider where the day's share has him on today's ride; true when
@@ -88,13 +91,17 @@ func step(delta: float) -> bool:
 		var xz := _drawn_xz(c)
 		var moving: bool = _shown_xz.has(id) and _shown_xz[id] != xz
 		var prev: Vector2 = _shown_xz.get(id, xz)
+		if Map3DCourierRide.delivered(_ride_of(c), _share_of(c)):
+			_fade[id] = float(_fade.get(id, 0.0)) + delta
+			dirty = dirty or _fade[id] - delta < ctx.repo.bal("map3d_courier_fade_s")  # still fading
+			moving = false
 		if _pieces.has(id):
 			var piece: Dictionary = _pieces[id]
 			var k := (piece["node"] as Node3D).transform.basis.get_scale().x
 			var pace := Map3DUnitRig.gait_rate(prev.distance_to(xz) / maxf(delta, 0.001), k,
 				float(piece["clip_s"]), float(piece["stride_m"]),
 				ctx.repo.bal("map3d_courier_anim_min"), ctx.repo.bal("map3d_courier_anim_max"))
-			_sync(piece, action_for(moving or not _waiting(c, xz), ctx.clock_speed() > 0.0), pace)
+			_sync(piece, action_for(moving or not (_waiting(c, xz) or _fade.has(id)), ctx.clock_speed() > 0.0), pace)
 		if not _shown_xz.has(id) or _shown_xz[id] != xz:
 			_shown_xz[id] = xz
 			dirty = true
@@ -108,7 +115,7 @@ func _drawn_xz(c: Dictionary) -> Vector2:
 	var ride := _ride_of(c)
 	var queue: Array = (ride["ahead"] as Array).duplicate()
 	var done := minf(_share_of(c) / maxf(float(ride["share"]), 0.001), 1.0)  # he rides at his own pace
-	var at := walk_along(ride["from"], queue, float(ride["length"]) * done)
+	var at := Map3DCourierRide.walk_along(ride["from"], queue, float(ride["length"]) * done)
 	queue.append_array(ride["rest"])
 	_left[int(c["id"])] = queue
 	return at
@@ -136,7 +143,7 @@ func _ride_of(c: Dictionary) -> Dictionary:
 	if _rides.has(id) and _rides[id]["key"] == key:
 		return _rides[id]
 	var from := _target_xz(c)
-	var day: Dictionary = CourierSystem.ride_ahead(ctx.repo, st, c) if st != null else {"points": [], "share": 1.0}
+	var day: Dictionary = CourierSystem.ride_ahead(ctx.repo, st, c) if st != null else {"points": [], "share": 1.0, "ends": false}
 	var passed: Array = day["points"]
 	var ahead: Array = []
 	for m: Vector2i in passed:
@@ -145,37 +152,13 @@ func _ride_of(c: Dictionary) -> Dictionary:
 	for i in range(maxi(passed.size() - 1, 0), path.size()):
 		rest.append(_world_of_m(Vector2i(int(path[i][0]), int(path[i][1]))))
 	var ride := {"key": key, "from": from, "ahead": ahead, "rest": rest,
-		"length": length_along(from, ahead), "share": float(day["share"])}
+		"length": Map3DCourierRide.length_along(from, ahead), "share": float(day["share"]), "ends": bool(day["ends"])}
 	_rides[id] = ride
 	return ride
 
 
 func _world_of_m(m: Vector2i) -> Vector2:
 	return ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, m))
-
-
-## `dist` along the points of `queue` from `now`, dropping each point reached.
-static func walk_along(now: Vector2, queue: Array, dist: float) -> Vector2:
-	var at := now
-	var left := dist
-	while not queue.is_empty():
-		var to: Vector2 = queue[0]
-		var d := at.distance_to(to)
-		if d > left:
-			return at + (to - at) / d * left
-		left -= d
-		at = to
-		queue.pop_front()
-	return at
-
-
-static func length_along(now: Vector2, points: Array) -> float:
-	var total := 0.0
-	var at := now
-	for p: Vector2 in points:
-		total += at.distance_to(p)
-		at = p
-	return total
 
 
 func _target_xz(c: Dictionary) -> Vector2:
@@ -203,6 +186,12 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 	var repo := ctx.repo
 	var s_px := ctx.viewport_px_scale()
 	var centre := Vector3(xz.x, ctx.height_at(xz), xz.y)
+	var alpha := Map3DCourierRide.alpha(float(_fade.get(id, -1.0)), repo.bal("map3d_courier_fade_s"))
+	if alpha <= 0.0:  # delivered and faded: nothing drawn, nothing to click
+		if _pieces.has(id):
+			(_pieces[id]["node"] as Node3D).visible = false
+		_rects[id] = {"rect": Rect2(), "counter": false, "lead": [], "waiting": false, "gone": true, "alpha": 0.0}
+		return
 	if ctx.camera.is_position_behind(centre):
 		if _pieces.has(id):
 			(_pieces[id]["node"] as Node3D).visible = false
@@ -215,10 +204,11 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 		var at: Vector2 = ctx.camera.unproject_position(centre) / s_px
 		var half := repo.bal("map3d_courier_counter_px") * 0.5
 		_rects[id] = {"rect": Rect2(at - Vector2(half, half), Vector2(half, half) * 2.0), "counter": true,
-			"lead": _lead(id, xz), "waiting": _waiting(c, xz)}
+			"lead": _lead(id, xz), "waiting": _waiting(c, xz), "gone": alpha < 1.0, "alpha": alpha}
 		return
 	var node: Node3D = piece["node"]
 	node.visible = true
+	Map3DCourierRide.apply(piece, alpha)
 	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
 		float(piece["height_m"]), float(piece["size"]))
@@ -233,7 +223,7 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 	node.transform = Transform3D((Basis(Quaternion(Vector3.UP, up)) * Basis(Vector3.UP, yaw))
 		.scaled(Vector3(k, k, k)), ground)
 	_rects[id] = {"rect": Map3DUnits.screen_box(ctx.camera, ground, high, float(piece["half_w_m"]) * k, s_px),
-		"counter": false, "lead": _lead(id, xz), "waiting": _waiting(c, xz)}
+		"counter": false, "lead": _lead(id, xz), "waiting": _waiting(c, xz), "gone": alpha < 1.0, "alpha": alpha}
 
 
 func _waiting(c: Dictionary, xz: Vector2) -> bool:  # not yet set out

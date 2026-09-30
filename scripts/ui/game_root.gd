@@ -40,9 +40,11 @@ var _bgm: AudioStreamPlayer
 ## file so a developer's own choice never reaches a test.
 static var settings_path := "user://settings.cfg"
 var _music_on := true
-var _music_button: Button
-## The pause menu's 3D-map graphics tier (Map3DQuality), cycled in place.
-var _quality_button: Button
+## Every live settings button — Music, Graphics (the 3D map's Map3DQuality
+## tier, cycled in place), Dev mode — of BOTH menus, the title screen's and
+## the pause menu (owner 2026-09-30: 游戏开始的UI和游戏内的menu功能要一致):
+## [{button, kind}], each relabelled whenever a setting turns.
+var _setting_buttons: Array = []
 ## The PROVINCES tab's state (user request 2026-09-09): root-owned so it
 ## survives moving between screens, applied to whichever screen's map shows.
 var _height_view := false
@@ -52,7 +54,6 @@ var _manor_view := false
 var _army_view := false
 ## DEV MODE (the pause menu's switch, owner 2026-09-27).
 var _dev_mode := false
-var _dev_button: Button
 var _ruler_view := false
 ## Which map the panel shows (owner 2026-09-18: the 3D map is the default):
 ## the last result of _sync_map_view, never set by hand.
@@ -231,6 +232,25 @@ func announce_month(report: TickReport) -> void:
 	if Game.state != null and not Game.state.pending_event.is_empty():
 		Game.publish_news("An event awaits the council.")
 
+## Space pauses and resumes the game (owner 2026-09-30: 空格键可以暂停或者继续
+## 游戏) on every screen of play — taken in _input, before a focused button
+## could read it as ui_accept, but never from a text box (the talk box) and
+## never under the pause menu.
+func _input(event: InputEvent) -> void:
+	if state == State.MENU or not event is InputEventKey:
+		return
+	var key := event as InputEventKey
+	if not key.pressed or key.echo or key.keycode != KEY_SPACE \
+			or key.ctrl_pressed or key.alt_pressed or key.meta_pressed or key.shift_pressed:
+		return
+	if _pause_menu != null and _pause_menu.visible:
+		return
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus is LineEdit or focus is TextEdit:
+		return
+	Game.toggle_clock()
+	get_viewport().set_input_as_handled()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if state == State.MENU:
 		return
@@ -252,36 +272,39 @@ func _build_pause_menu() -> void:
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_pause_menu.add_child(dim)
+	# The same window as the title screen's menu (MainMenu._build_menu): the
+	# window leather and ornament, the width, the primary first row, the same
+	# settings rows and the same Quit (owner 2026-09-30: 游戏开始的UI和游戏内的
+	# menu功能要一致).
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.GOLD, 2, 28))
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 32, "window"))
 	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.custom_minimum_size = Vector2(300, 0)
+	panel.custom_minimum_size = Vector2(MainMenu.MENU_WIDTH, 0)
 	_pause_menu.add_child(panel)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 12)
 	panel.add_child(col)
 	var title := Label.new()
-	title.text = "COUNCIL IN RECESS"
+	title.text = "Council in Recess"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_title(title, 18)
+	UiPalette.style_title(title, 32)
 	col.add_child(title)
-	col.add_child(_menu_button("Resume", toggle_pause_menu))
+	var rule := HSeparator.new()
+	rule.add_theme_constant_override("separation", 10)
+	col.add_child(rule)
+	var resume := _menu_button("Resume", toggle_pause_menu)
+	UiPalette.primary_button(resume, 18)
+	resume.tooltip_text = "Or press Esc"
+	col.add_child(resume)
 	col.add_child(_menu_button("Save Game", _on_menu_save))
 	col.add_child(_menu_button("Load Game", _on_menu_load))
 	col.add_child(_menu_button("Restart", _on_menu_restart))
-	_music_button = _menu_button(_music_label(), func() -> void: set_music_on(not _music_on))
-	_music_button.name = "MusicToggle"
-	col.add_child(_music_button)
-	_quality_button = _menu_button(_quality_label(), _cycle_quality)
-	_quality_button.name = "GraphicsQuality"
-	col.add_child(_quality_button)
-	_dev_button = _menu_button(_dev_label(), func() -> void: set_dev_mode(not _dev_mode))
-	_dev_button.name = "DevMode"
-	col.add_child(_dev_button)
-	col.add_child(_menu_button("Quit to Desktop", func() -> void: get_tree().quit()))
+	for b: Button in settings_buttons():
+		col.add_child(b)
+	col.add_child(quit_button())
 	_pause_status = Label.new()
 	_pause_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_pause_status.add_theme_font_size_override("font_size", 18)
@@ -319,8 +342,7 @@ func set_music_on(on: bool) -> void:
 	_music_on = on
 	if _bgm != null:
 		_bgm.stream_paused = not on
-	if _music_button != null:
-		_music_button.text = _music_label()
+	_refresh_settings()
 	var cfg := ConfigFile.new()
 	cfg.load(settings_path)  # a missing file is a fresh one
 	cfg.set_value("audio", "music", on)
@@ -344,7 +366,7 @@ func _quality_label() -> String:
 ## The next choice (auto, low .. ultra), saved and worn by the showing 3D map.
 func _cycle_quality() -> void:
 	Map3DQuality.save_setting(settings_path, Map3DQuality.next_setting(quality_setting()))
-	_quality_button.text = _quality_label()
+	_refresh_settings()
 	if current_screen != null and current_screen.has_method("map3d_view"):
 		var v: Map3DView = current_screen.map3d_view()
 		if v != null:
@@ -361,8 +383,7 @@ func _load_settings() -> void:
 ## follows at once, a map made later on its first sync.
 func set_dev_mode(on: bool) -> void:
 	_dev_mode = on
-	if _dev_button != null:
-		_dev_button.text = _dev_label()
+	_refresh_settings()
 	var cfg := ConfigFile.new()
 	cfg.load(settings_path)
 	cfg.set_value("game", "dev_mode", on)
@@ -387,6 +408,49 @@ func _apply_dev_mode() -> void:
 ## Test seam.
 func bgm_player() -> AudioStreamPlayer:
 	return _bgm
+
+## A fresh set of the settings rows — Music, Graphics, Dev mode — for a menu
+## (the pause menu here, the title screen through MainMenu.add_settings); every
+## one is relabelled whenever its setting turns, in whichever menu it stands.
+func settings_buttons() -> Array[Button]:
+	var out: Array[Button] = []
+	for kind: String in ["music", "quality", "dev"]:
+		var b := _menu_button(_setting_label(kind), _setting_action(kind))
+		b.name = {"music": "MusicToggle", "quality": "GraphicsQuality", "dev": "DevMode"}[kind]
+		_setting_buttons.append({"button": b, "kind": kind})
+		out.append(b)
+	return out
+
+## Both menus' last row, the same words in both.
+func quit_button() -> Button:
+	var b := _menu_button("Quit to Desktop", func() -> void: get_tree().quit())
+	b.name = "Quit"
+	return b
+
+func _setting_label(kind: String) -> String:
+	match kind:
+		"music":
+			return _music_label()
+		"quality":
+			return _quality_label()
+	return _dev_label()
+
+func _setting_action(kind: String) -> Callable:
+	match kind:
+		"music":
+			return func() -> void: set_music_on(not _music_on)
+		"quality":
+			return _cycle_quality
+	return func() -> void: set_dev_mode(not _dev_mode)
+
+func _refresh_settings() -> void:
+	var live: Array = []
+	for e: Dictionary in _setting_buttons:
+		var b: Variant = e["button"]
+		if is_instance_valid(b):
+			(b as Button).text = _setting_label(String(e["kind"]))
+			live.append(e)
+	_setting_buttons = live
 
 func _menu_button(label: String, handler: Callable) -> Button:
 	var btn := Button.new()
@@ -796,6 +860,8 @@ func _switch_to(new_state: State) -> void:
 			current_screen = MENU_SCENE.instantiate()
 			current_screen.start_requested.connect(_on_start_requested)
 			current_screen.load_requested.connect(_on_menu_load_from_title)
+			current_screen.settings = settings_buttons()
+			current_screen.quit = quit_button()
 		State.CONVERSATION:
 			current_screen = CONVERSATION_SCENE.instantiate()
 			current_screen.finished.connect(_on_conversation_finished)

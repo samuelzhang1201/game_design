@@ -59,10 +59,20 @@ func set_clock_speed(speed: int) -> void:
 	var allowed := [0, 1, int(data.bal("time_speed_fast")), int(data.bal("time_speed_faster"))]
 	if not speed in allowed:
 		return
+	if speed > 0:
+		_resume_speed = speed
 	if clock_speed == speed:
 		return
 	clock_speed = speed
 	clock_changed.emit(speed)
+
+## The speed the Space bar resumes at: the last one that ran (1 before any).
+var _resume_speed := 1
+
+## Space in play (owner 2026-09-30: 空格键可以暂停或者继续游戏): a running
+## clock stops, a stopped one runs again at the speed it last ran.
+func toggle_clock() -> void:
+	set_clock_speed(0 if clock_speed > 0 else _resume_speed)
 
 ## Tools only (tools/map3d/bench.gd, through GameRoot): roll the day back
 ## to 1 once it passes `day_ceiling`, so a timed run never reaches the

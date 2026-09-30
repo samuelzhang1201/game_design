@@ -27,6 +27,8 @@ func advance_day(state: GameState) -> Array:
 	# return value, which is the finished WORKS and is asserted as such by
 	# tests/engine/test_tick_engine.gd.
 	day_arrivals = ArmySystem.march_day(data, state)
+	# The host eats a day of its month (owner 2026-09-30).
+	ArmySystem.eat_day(data, state)
 	# The month's economy is computed a bucket a day (spec §11.2).
 	RealmEconomy.step_day(data, state)
 	return done
@@ -103,7 +105,7 @@ func advance(state: GameState) -> TickReport:
 		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
 	# The regiments' month (owner 2026-09-17; morale, spec 2026-09-30-ledger-
 	# supply-design §4): wounded return, morale drifts toward what the stores
-	# just refilled allow, supplies are spent, training grows.
+	# just refilled allow, training grows (the supplies are eaten daily).
 	ArmySystem.settle_month(data, state)
 	state.tick += 1
 	state.day = 1
@@ -115,6 +117,8 @@ func advance(state: GameState) -> TickReport:
 	# 的速度相符): without this a regiment marched 29 days in every 30 and
 	# its piece stood still for one day each month.
 	day_arrivals = ArmySystem.march_day(data, state)
+	# ...and the first day of the new month is eaten like any other.
+	ArmySystem.eat_day(data, state)
 	r.tick = state.tick
 	r.season = state.season()
 	r.year = state.year()

@@ -82,8 +82,8 @@ func test_it_stops_dead_on_the_spot_it_was_sent_to_and_garrisons() -> void:
 	var arrived := ArmySystem.march_day(repo, s)
 	assert_eq(arrived, [code], "it reports the day it arrives")
 	assert_almost_eq(ArmySystem.position_of(repo, s, r).x, near.x, 0.0011)
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY,
-		"arriving, it stands by: a garrison is an order (owner 2026-09-29)")
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON,
+		"arriving, it garrisons (owner 2026-09-30: 军队到达目的地后自动驻防)")
 	assert_eq(ArmySystem.march_day(repo, s), [], "and it does not arrive twice")
 
 
@@ -116,7 +116,7 @@ func test_the_clock_marches_it_a_day_at_a_time() -> void:
 	assert_eq(engine.day_arrivals, [], "day one, still on the road")
 	engine.advance_day(s)
 	assert_eq(engine.day_arrivals, [code], "day two, it is there")
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY)
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON)
 
 
 func test_the_months_last_day_is_a_day_on_the_road_too() -> void:

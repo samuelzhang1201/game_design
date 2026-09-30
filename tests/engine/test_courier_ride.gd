@@ -221,6 +221,7 @@ func test_ride_ahead_previews_the_day_exactly_and_writes_nothing() -> void:
 	var ahead: Array = day["points"]
 	assert_eq(ahead, [Vector2i(100000, 0), Vector2i(130000, 0)], "the waypoint he passes, then where the day leaves him")
 	assert_eq(day["share"], 1.0, "a whole day on the road")
+	assert_false(bool(day["ends"]), "he rides on tomorrow")
 	assert_eq(c, before, "the courier is untouched")
 	assert_eq(s.couriers.size(), 1)
 	CourierSystem.ride_day(repo, s)
@@ -235,6 +236,7 @@ func test_ride_ahead_on_the_delivery_day_ends_on_the_column() -> void:
 	assert_eq(day["points"], [Vector2i(50000, 0), Vector2i(50000, 0)])
 	# 50 km of road costs 50,000 of the day's 160,000
 	assert_almost_eq(float(day["share"]), 50000.0 / 160000.0, 0.0001, "he arrives with most of the day to spare")
+	assert_true(bool(day["ends"]), "the day delivers: the map fades him out on arrival")
 	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY)
 	assert_eq(s.couriers.size(), 1, "a preview delivers nothing")
 

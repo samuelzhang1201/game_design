@@ -260,15 +260,18 @@ static func _is_spy(c: Dictionary) -> bool:
 ## day behind (owner 2026-09-28: he stood still a whole day after play was
 ## pressed). {points: the points he passes in whole metres, ending where the
 ## day leaves him ([] when he will not ride); share: the share of the day his
-## ride takes — under 1 only on the day he reaches the column}. Nothing of
-## `state` or `c` is written.
+## ride takes — under 1 only on the day he reaches the column; ends: true when
+## that day's ride delivers (the map fades him out the moment he arrives,
+## owner 2026-09-30: 信使送到信息后要立即淡化消失)}. Nothing of `state` or `c`
+## is written.
 static func ride_ahead(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
 	var before: Array = []
 	var copy := _ride_copy(repo, state, c, before)
 	if copy.is_empty():
-		return {"points": [], "share": 1.0}
+		return {"points": [], "share": 1.0, "ends": false}
 	return {"points": passed_points(before, (copy["path"] as Array).size(),
-		Vector2i(int(copy["x_m"]), int(copy["y_m"]))), "share": float(copy["ride_share"])}
+		Vector2i(int(copy["x_m"]), int(copy["y_m"]))), "share": float(copy["ride_share"]),
+		"ends": (copy["path"] as Array).is_empty()}
 
 
 ## `c` after his next day, on a copy ({} when he will not ride), its

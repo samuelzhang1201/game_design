@@ -104,6 +104,14 @@ var _march_commit := false
 ## --dev: the 3D map in DEV MODE (every realm's regiments) for this shot only —
 ## the view's switch, never GameRoot's, which would write the player's settings.
 var _dev := false
+## --pause-menu (with --screen root): opens the pause menu at frame 20, as the
+## MENU button does, to set it beside the title screen's (owner 2026-09-30:
+## the two are one menu).
+var _pause_menu := false
+## --title (with --screen root): stays on GameRoot's own title screen, the menu
+## as the player meets it (GameRoot hands it its settings rows; --screen
+## main_menu shows the bare scene without them).
+var _title := false
 ## --look3d x,y,M,F (with --screen root) frames pack px (x,y) M metres away at
 ## frame F — after an order, to follow its courier from the capital.
 var _look3d := PackedFloat32Array()
@@ -245,6 +253,8 @@ func _ready() -> void:
 	_march_confirm = args.has("--march-confirm")
 	_march_commit = args.has("--march-commit")
 	_dev = args.has("--dev")
+	_pause_menu = args.has("--pause-menu")
+	_title = args.has("--title")
 	_quiet = args.has("--quiet")
 	_spy_menu_only = args.has("--spy-menu-only")
 	_show_on_map = args.has("--show-on-map")
@@ -357,11 +367,13 @@ func _minister_beat(id: String) -> Dictionary:
 
 func _process(_delta: float) -> void:
 	_frames += 1
+	if _root != null and _pause_menu and _frames == 20:
+		_root.toggle_pause_menu()
 	if _day_share >= 0.0:
 		Game.day_progress = _day_share
 	# GameRoot boots into the menu; step it into the court so the shot shows
 	# the gameplay chrome (top bar, bottom tabs, ticker) around a real screen.
-	if _root != null and _frames == 4:
+	if _root != null and _frames == 4 and not _title:
 		_root._switch_to(GameRoot.State.COURT)
 		_root.current_screen.enter_court(null)
 		if _layer != "":

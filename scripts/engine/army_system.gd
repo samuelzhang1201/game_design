@@ -3,8 +3,10 @@ extends RefCounted
 ## The player's regiments as more than a headcount (owner 2026-09-17, spec
 ## docs/superpowers/specs/2026-09-17-regiment-state-design.md): morale,
 ## wounded, supplies and a hidden training value, stored in
-## GameState.regiments, moved once a month by settle_month. Every number is a
-## whole number and every rate is data (balance.csv army_*).
+## GameState.regiments, moved once a month by settle_month — but for the
+## supplies, eaten a DAY at a time by eat_day (owner 2026-09-30: 军事单位的补给
+## 要每天都在以一定速率减少). Every number is a whole number and every rate is
+## data (balance.csv army_*).
 
 ## The pack's row for a regiment, {} when there is none.
 static func regiment(repo: DataRepository, code: String) -> Dictionary:
@@ -93,8 +95,9 @@ static func wound_recovery(repo: DataRepository, wounded: int) -> int:
 	return maxi(1, wounded * int(repo.bal("army_wound_recovery_permille")) / 1000)
 
 ## The month's end for every regiment of the player's realm, in code order:
-## wounded return, morale drifts toward what its stores allow, supplies are
-## spent, training grows.
+## wounded return, morale drifts toward what its stores allow, training
+## grows. The supplies are not spent here: eat_day eats the month a day at a
+## time, so the stores fall under the player's eyes.
 static func settle_month(repo: DataRepository, state: GameState) -> void:
 	ensure(repo, state)
 	var codes := state.regiments.keys()
@@ -118,8 +121,55 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 			var mark := morale_mark(repo, supply_score(repo, int(entry["supplies"]), use),
 				SupplySystem.garrisoned_in(repo, state, code) != "")
 			entry["morale"] = drift_morale(int(entry["morale"]), mark, int(repo.bal("army_morale_drift_per_month")))
-		entry["supplies"] = maxi(0, int(entry["supplies"]) - use)
 		entry["training"] = mini(100, int(entry["training"]) + int(repo.bal("army_training_per_month")))
+
+## The supplies a regiment eats on day `day` (1..DAYS_PER_TICK) of a month
+## whose use is `use`: the month spread over its days in whole supplies, so
+## the thirty days sum to exactly `use` (owner 2026-09-30: 每天都在以一定速率
+## 减少).
+static func day_bite(use: int, day: int) -> int:
+	var n := Calendar.DAYS_PER_TICK
+	var d := clampi(day, 1, n)
+	@warning_ignore("integer_division")  # whole supplies, the month exact
+	return use * d / n - use * (d - 1) / n
+
+
+## What is still to be eaten of `use` after day `day` of the month: the
+## supply lines refill against the stores the month's END will leave
+## (SupplySystem.plan), so their projection holds all month.
+static func left_to_eat(use: int, day: int) -> int:
+	@warning_ignore("integer_division")  # the same whole split as day_bite
+	return use - use * clampi(day, 0, Calendar.DAYS_PER_TICK) / Calendar.DAYS_PER_TICK
+
+
+## One DAY of eating for every regiment of the player's realm, in code order
+## (TickEngine, every day of the thirty, the tick's included): today's share of
+## the month's use where it stands now.
+static func eat_day(repo: DataRepository, state: GameState) -> void:
+	ensure(repo, state)
+	var codes := state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var code := String(c)
+		var reg := regiment(repo, code)
+		if reg.is_empty():
+			continue
+		var entry: Dictionary = state.regiments[code]
+		entry["supplies"] = maxi(0, int(entry["supplies"]) - day_bite(supply_use(repo, reg, state), state.day))
+
+
+## A regiment's stores per mille of a FULL train — army_supply_target_months
+## of its use, what the supply lines refill it to — capped at 1000: the map's
+## yellow bar, which therefore falls day by day as the month is eaten (the
+## supply SCORE, over army_speed_supply_full_months, stays full for the first
+## of those months and would not show it).
+static func stores_permille(repo: DataRepository, supplies: int, use_per_month: int) -> int:
+	if use_per_month <= 0:
+		return 1000
+	var full := maxi(1, int(repo.bal("army_supply_target_months")))
+	@warning_ignore("integer_division")  # whole per-mille of a full train
+	return clampi(maxi(supplies, 0) * 1000 / (use_per_month * full), 0, 1000)
+
 
 ## Where a regiment's morale is heading (spec 2026-09-30-ledger-supply-design
 ## §4): from army_morale_starving with no stores to army_morale_fed with
@@ -370,8 +420,9 @@ static func readiness_permille(repo: DataRepository, supply_permille: int, moral
 
 ## The two bars over a regiment on the map (owner 2026-09-27: 红色是健康度 — 综合
 ## 战备, the readiness — 黄色是战略补给数), per mille: Vector2i(readiness,
-## supply score). A regiment that is not the player's has no state, and reads
-## as it would start (dev mode shows every realm's).
+## stores against a full train, stores_permille — it falls every day). A
+## regiment that is not the player's has no state, and reads as it would
+## start (dev mode shows every realm's).
 static func bars_of(repo: DataRepository, state: GameState, code: String) -> Vector2i:
 	var reg := regiment(repo, code)
 	if reg.is_empty():
@@ -379,8 +430,10 @@ static func bars_of(repo: DataRepository, state: GameState, code: String) -> Vec
 	var st := state_of(repo, state, code)
 	if st.is_empty():
 		st = starting_state(repo, reg)
-	var supply := supply_score(repo, int(st["supplies"]), supply_use(repo, reg, state))
-	return Vector2i(readiness_permille(repo, supply, int(st["morale"]), int(st["training"])), supply)
+	var use := supply_use(repo, reg, state)
+	var supply := supply_score(repo, int(st["supplies"]), use)
+	return Vector2i(readiness_permille(repo, supply, int(st["morale"]), int(st["training"])),
+		stores_permille(repo, int(st["supplies"]), use))
 
 
 ## The march in TENTHS of a km a day: base_km x 10 x readiness / 1000.
@@ -418,10 +471,12 @@ static func speed_km_per_day(repo: DataRepository, state: GameState, code: Strin
 ## pace_tenths x 100 metres, which is already a whole number, so nothing is
 ## lost by keeping the whole thing in metres.
 
-## STANDBY is a column under no order: at the campaign's start and once a march
-## arrives. GARRISON is the order to hold the ground, given only by ARMY_GARRISON
-## (owner 2026-09-29: the old garrison stance was a standby; a garrison stands
-## behind the shield, the spear laid over it). The 3D piece plays one clip each.
+## STANDBY is a column under no order: at the campaign's start. GARRISON is the
+## order to hold the ground: a march that ARRIVES garrisons where it stops
+## (owner 2026-09-30: 军队到达目的地后自动驻防，取消驻防按钮), and ARMY_GARRISON —
+## now only the route menu's Cancel march — halts a column into one (owner
+## 2026-09-29: a garrison stands behind the shield, the spear laid over it). The
+## 3D piece plays one clip each.
 const ORDER_STANDBY := "standby"
 const ORDER_GARRISON := "garrison"
 const ORDER_MARCH := "march"
@@ -575,7 +630,7 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 	if left <= float(step):
 		entry["x_m"] = int(entry["dest_x_m"])
 		entry["y_m"] = int(entry["dest_y_m"])
-		entry["order"] = ORDER_STANDBY           # arrived: it stands by until it is told to hold
+		entry["order"] = ORDER_GARRISON          # arrived: it holds the ground it was sent to
 		return true
 	var way := (dest - here) / left
 	entry["x_m"] = int(round(here.x + way.x * float(step)))
