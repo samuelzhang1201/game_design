@@ -11,8 +11,9 @@ extends Control
 signal show_requested(subject: Dictionary)
 signal closed
 
-var _lens := "economy"
-var _focus_id := ""
+var _lens := "all"
+var _opened: Dictionary = {}       # province code -> true: opened this viewing (never saved)
+var _open_order: Array[String] = []
 var _snap: Dictionary = {}
 var _detail: MapDetailPanel
 var _bound := false
@@ -31,6 +32,7 @@ func _ready() -> void:
 	UiPalette.style_title(%Title, 18)
 	%Close.pressed.connect(close)
 	%Front.pressed.connect(func() -> void: _view.front_view())
+	%Mode.pressed.connect(toggle_flat)
 	%Back.pressed.connect(back)
 	_view.sphere_selected.connect(_on_sphere)
 	_view.thread_selected.connect(_on_thread)
@@ -73,6 +75,7 @@ func open(detail: MapDetailPanel) -> void:
 	_dirty = false
 	_view.set_active(true)
 	_rebuild(false)
+	set_lens(_lens)
 
 
 func close() -> void:
@@ -99,33 +102,60 @@ func _process(_delta: float) -> void:
 		_rebuild(true)
 
 
+func opened() -> Dictionary:
+	return _opened
+
+
+## A tab chooses its cluster (data/ledger_clusters.csv `lens`); All is the
+## whole galaxy. The camera flies; nothing is read again.
 func set_lens(lens_id: String) -> void:
 	_lens = lens_id
-	_focus_id = ""
 	for b: Node in %Lenses.get_children():
 		(b as Button).set_pressed_no_signal(String(b.name) == "Lens_" + lens_id)
-	_rebuild(false)
-	_clear_card()  # the old lens's card or list names what is no longer drawn
+	_view.focus_cluster(_cluster_for(lens_id))
+	_clear_card()  # the old tab's card names a star the camera has left
+	_crumb()
 
 
-## Into an instance's ego network — from the left column's list or a
-## double click — with THAT instance's card in the left column (the map's
-## own card for a manor, town, regiment or courier; LedgerCards.entry's
-## threads otherwise). A type sphere or a "more" sphere has none.
+func _cluster_for(lens_id: String) -> String:
+	for c: Dictionary in Game.data.ledger_clusters:
+		if String(c["lens"]) == lens_id:
+			return String(c["cluster"])
+	return "all"
+
+
+## From the left column's list or a double click: a province opens (its
+## manors, towns and buildings settle round it) or closes; any other star is
+## selected, its web framed and its card put in the left column.
 func drill(id: String) -> void:
-	if id.begins_with("type:") or id.begins_with("more:") or id == "":
+	if id == "" or id.begins_with("more:"):
 		return
-	_focus_id = id
-	_rebuild(false)
-	if _focus_id != "":
-		_show_card(LedgerCards.entry(Game.data, Game.state, _focus_id, _snap))
+	if id.begins_with("province:"):
+		var code := id.substr(9)
+		if _opened.has(code):
+			_opened.erase(code)
+			_open_order.erase(code)
+		else:
+			_opened[code] = true
+			_open_order.append(code)
+		_rebuild(true)
+	else:
+		_view.frame_web(id)
+	_view.select(id)
+	_show_card(LedgerCards.entry(Game.data, Game.state, id, _snap))
 
 
-## Out to the type level: the focus's card goes with its network.
+## Closes the last province opened.
 func back() -> void:
-	_focus_id = ""
-	_rebuild(false)
-	_clear_card()
+	if _open_order.is_empty():
+		return
+	_opened.erase(_open_order.pop_back())
+	_rebuild(true)
+
+
+func toggle_flat() -> void:
+	_view.set_flat(not _view.is_flat())
+	%Mode.text = "3D" if _view.is_flat() else "2D"
 
 
 func _has_detail() -> bool:
@@ -140,13 +170,6 @@ func _show_card(entry: Dictionary) -> void:
 	_card_mine = not entry.is_empty()
 
 
-func _show_list(title: String, rows: Array) -> void:
-	if not _has_detail():
-		return
-	_detail.show_list(title, rows)
-	_card_mine = true
-
-
 ## Closes the left column's card only if the LEDGER put it there: a card the
 ## player opened before the LEDGER stays when it closes.
 func _clear_card() -> void:
@@ -157,16 +180,23 @@ func _clear_card() -> void:
 
 func _rebuild(keep_camera: bool) -> void:
 	_rebuilds += 1
-	_snap = Ledger.snapshot(Game.data, Game.state, _lens, {"id": _focus_id} if _focus_id != "" else {})
-	if bool(_snap["focus_lost"]):
-		# The focus is gone (a courier arrived, a building came down): back to
-		# the type level as a new picture — framed afresh, its card closed.
-		_focus_id = ""
-		keep_camera = false
-		_clear_card()
+	var selected := _view._selected
+	_snap = Ledger.galaxy(Game.data, Game.state, _opened)
 	_view.show_snapshot(_snap, keep_camera)
-	%Back.visible = _focus_id != ""
-	%Crumb.text = "" if _focus_id == "" else LedgerResolvers.label_of(Game.data, Game.state, _focus_id)
+	if selected != "" and _view._selected == "":
+		_clear_card()  # the selected star is gone (a courier arrived, a report aged out)
+	_crumb()
+
+
+func _crumb() -> void:
+	var parts: Array[String] = ["Realm"]
+	for c: Dictionary in Game.data.ledger_clusters:
+		if String(c["cluster"]) == _view.cluster():
+			parts.append(String(c["label"]))
+	for code: String in _open_order:
+		parts.append(LedgerResolvers.label_of(Game.data, Game.state, "province:" + code))
+	%Crumb.text = " › ".join(parts)
+	%Back.visible = not _open_order.is_empty()
 
 
 ## One flat tab per data/ledger_lenses.csv row, so a new lens needs no scene edit.
@@ -184,23 +214,12 @@ func _build_lenses() -> void:
 		%Lenses.add_child(b)
 
 
-## A type sphere with instances lists them in the left column; anything else
-## opens its card there (LedgerCards.entry); empty ground or "more" closes it.
+## A star's card in the left column; empty sky closes it.
 func _on_sphere(id: String) -> void:
 	if not _has_detail():
 		return
 	if id == "" or id.begins_with("more:"):
 		_clear_card()
-		return
-	var row := Ledger.type_row(Game.data, Ledger.type_of(id))
-	if id.begins_with("type:") and String(row.get("instances", "")) != "":
-		var rows: Array = []
-		var cap := int(Game.data.bal("ledger_list_cap"))
-		for r: Dictionary in LedgerResolvers.instances(String(row["instances"]), Game.data, Game.state):
-			if rows.size() >= cap:
-				break
-			rows.append({"text": String(r["label"]), "id": String(r["id"])})
-		_show_list(String(row["label"]), rows)
 		return
 	_show_card(LedgerCards.entry(Game.data, Game.state, id, _snap))
 
