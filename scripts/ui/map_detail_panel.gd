@@ -619,6 +619,23 @@ func _fill_slots(card: Dictionary) -> void:
 				column.add_child(box)
 				column.add_child(days)
 				box.tooltip_text = "%s — %d days to go" % [label, int(entry["days_left"])]
+			elif (card.get("idle", {}) as Dictionary).has(code):
+				# An idle building (LEDGER M5: its inputs went unpaid) is its
+				# art dimmed with the word under it, like a work's days, and
+				# why in the tooltip ("idle: no iron").
+				var why := String(card["idle"][code])
+				icon.modulate.a = 0.4
+				var word := Label.new()
+				word.name = "Idle"
+				word.text = "idle"
+				word.add_theme_font_size_override("font_size", 11)
+				word.add_theme_color_override("font_color", UiPalette.bad_color())
+				word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				word.tooltip_text = why
+				word.mouse_filter = Control.MOUSE_FILTER_PASS
+				column.add_child(box)
+				column.add_child(word)
+				box.tooltip_text = "%s — %s" % [label, why]
 			else:
 				column.add_child(box)
 				box.tooltip_text = label

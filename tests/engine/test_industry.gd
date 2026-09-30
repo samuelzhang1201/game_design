@@ -55,23 +55,24 @@ func test_its_own_iron_feeds_it_first() -> void:
 	# A focus set long ago has settled in whole (MapManors.focus_ramp).
 	s.manor_focus[str(miner)] = {"focus": "iron", "since": -1000}
 	_smithy(miner)
-	# The same manor with its forge idle: the forge's output bonus (5%) still
-	# stands, but it makes and eats nothing — the line to compare against.
-	s.idle_buildings[str(miner)] = ["smithy"]
+	# The same manor with its forge working but eating nothing (this test's
+	# own repository, its inputs row set aside): the line to compare against.
+	var inputs: Array = data.building_inputs["smithy"]
+	data.building_inputs.erase("smithy")
 	var bare := ManorEconomy.line_of(data, s, miner, s.tick)
-	s.idle_buildings.clear()
+	data.building_inputs["smithy"] = inputs
 	var iron := int((bare["units"] as Dictionary).get("iron", 0))
 	assert_gt(iron, 0, "a manor working iron makes iron")
 	var line := ManorEconomy.line_of(data, s, miner, s.tick)
 	var own := int((line["fed"]["smithy"] as Dictionary).get("iron", 0))
 	assert_eq(own, mini(iron, 3), "a manor working iron feeds its own forge first")
 	assert_eq(int((line["units"] as Dictionary).get("iron", 0)), iron - own, "what it ate is not shipped")
-	# Hand-computed: the strategic pool loses the eaten iron (4 gold a unit)
-	# and gains the forge's tools (12 gold a unit); nothing else moved.
-	var tools := int((line["units"] as Dictionary).get("tools", 0))
-	assert_eq(tools, 3, "3 tools a month at growth index 1000")
-	assert_eq(int(line["strategic"]), int(bare["strategic"]) - own * 4 + tools * 12)
+	# Hand-computed: the strategic pool loses the eaten iron (4 gold a unit);
+	# the tools are made either way; nothing else moved.
+	assert_eq(int((line["units"] as Dictionary).get("tools", 0)), 3, "3 tools a month at growth index 1000")
+	assert_eq(int(line["strategic"]), int(bare["strategic"]) - own * 4)
 	assert_eq(int(line["tax"]), int(bare["tax"]), "eating moves no tax")
+	assert_eq(IndustrySystem.missing_of(data, s, miner, "smithy"), [] if own == 3 else ["iron"])
 	var rows := IndustrySystem.plan(data, s).filter(func(r: Dictionary) -> bool: return int(r["cell"]) == miner)
 	assert_eq(rows.size(), 1)
 	assert_eq(int(rows[0]["own"]), own)
@@ -190,3 +191,69 @@ func test_a_demolished_building_leaves_no_idle_mark() -> void:
 	s.idle_buildings[str(cell)] = ["smithy"]
 	assert_gt(MapManors.demolish(data, s, cell, "smithy", "a test clearance"), -1.0)
 	assert_eq(s.idle_buildings, {})
+
+# ---- controller rulings after review (2026-09-30): an idle building gives
+# NOTHING — no goods and no bonus — and it says why, once ----------------
+
+func test_an_idle_smithy_lifts_nothing() -> void:
+	var bare := ManorEconomy.line_of(data, s, cell, s.tick)
+	_smithy()
+	var working := ManorEconomy.line_of(data, s, cell, s.tick)
+	s.idle_buildings[str(cell)] = ["smithy"]
+	var idle := ManorEconomy.line_of(data, s, cell, s.tick)
+	assert_eq(idle["units"], bare["units"], "its output bonus no longer lifts the manor's goods")
+	assert_eq(int(idle["strategic"]), int(bare["strategic"]))
+	assert_eq(int(idle["civil"]), int(bare["civil"]))
+	assert_eq(int(idle["tax"]), int(bare["tax"]))
+	assert_eq(idle["fed"], {})
+	assert_gt(int(working["strategic"]), int(idle["strategic"]), "working, it did lift the line")
+
+func test_an_idle_armoury_does_not_defend() -> void:
+	var base := MapManors.defence_of(data, s, cell)
+	assert_true(MapManors.build(data, s, cell, "armoury", "a test armoury"))
+	assert_eq(MapManors.defence_of(data, s, cell), base + 10.0)
+	s.idle_buildings[str(cell)] = ["armoury"]
+	assert_eq(MapManors.defence_of(data, s, cell), base, "idle, its defence bonus lapses")
+
+func test_an_idle_brewery_cheers_no_one() -> void:
+	assert_true(MapManors.build(data, s, cell, "brewery", "a test brewery"))
+	assert_almost_eq(float(MapManors.building_effects(data, s, [cell])["peasant_contentment"]), 0.1, 0.0001)
+	s.idle_buildings[str(cell)] = ["brewery"]
+	assert_eq(float(MapManors.building_effects(data, s, [cell])["peasant_contentment"]), 0.0,
+		"idle, its monthly effect lapses")
+
+func test_what_an_idle_building_lacks() -> void:
+	_smithy()
+	assert_eq(IndustrySystem.missing_of(data, s, cell, "smithy"), ["iron"], "no iron of its own")
+	assert_eq(IndustrySystem.missing_of(data, s, cell, "mill"), [], "a mill eats nothing")
+	assert_eq(IndustrySystem.idle_text(data, s, cell, "smithy"), "idle: no iron")
+
+func test_the_card_says_a_building_is_idle() -> void:
+	_smithy()
+	assert_eq(MapObjects.manor_card(data, s, cell).get("idle", {}), {}, "a working forge is not idle")
+	s.idle_buildings[str(cell)] = ["smithy"]
+	var card := MapObjects.manor_card(data, s, cell)
+	assert_eq(card["idle"], {"smithy": "idle: no iron"})
+	var buildings := ""
+	for f: Array in card["fields"]:
+		if String(f[0]) == "Buildings":
+			buildings = String(f[1])
+	assert_string_contains(buildings, "Smithy (idle: no iron)")
+
+func test_the_tick_names_a_newly_idle_building_once() -> void:
+	_smithy()
+	var tick := TickEngine.new(data)
+	s.metrics["lord_strategic"] = -1000000.0
+	tick.advance(s)
+	assert_eq(tick.newly_idle, [{"cell": cell, "building": "smithy", "missing": ["iron"]}],
+		"the month it first goes idle")
+	s.metrics["lord_strategic"] = -1000000.0
+	tick.advance(s)
+	assert_true(MapManors.is_idle(s, cell, "smithy"), "still idle")
+	assert_eq(tick.newly_idle, [], "said once, not every month")
+	s.metrics["lord_strategic"] = 1000000.0
+	tick.advance(s)
+	assert_eq(tick.newly_idle, [], "paid: nothing new stands idle")
+	s.metrics["lord_strategic"] = -1000000.0
+	tick.advance(s)
+	assert_eq(tick.newly_idle.size(), 1, "idle again after working: news again")

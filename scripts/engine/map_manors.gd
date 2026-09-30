@@ -801,10 +801,15 @@ static func building_output_of(repo: DataRepository, state: GameState, cell_id: 
 			out[good] = float(out.get(good, 0.0)) + units
 	return out
 
-## The sum of one bonus column over a manor's buildings.
+## The sum of one bonus column over a manor's WORKING buildings: an idle
+## one (M5: its inputs went unpaid) gives nothing while idle — no goods and
+## no bonus, so its tax, output, defence and church bonuses and its
+## *_per_tick effects all lapse (controller ruling 2026-09-30).
 static func building_bonus(repo: DataRepository, state: GameState, cell_id: int, column: String) -> float:
 	var sum := 0.0
 	for code: String in buildings_of(state, cell_id):
+		if is_idle(state, cell_id, code):
+			continue
 		sum += float((repo.manor_buildings.get(code, {}) as Dictionary).get(column, 0))
 	return sum
 

@@ -160,6 +160,12 @@ func _process(delta: float) -> void:
 				MapManors.label_of(Game.data, int(w["cell"]))])
 		for e: Dictionary in out.get("couriers", []):
 			Game.publish_news(CourierSystem.headline(Game.data, e))
+		# A building that first stands idle for want of inputs (M5), once.
+		for w: Dictionary in out.get("idled", []):
+			Game.publish_news("The %s at %s stands %s." % [
+				String((Game.data.manor_buildings.get(String(w["building"]), {}) as Dictionary).get("label", w["building"])).to_lower(),
+				MapManors.label_of(Game.data, int(w["cell"])),
+				IndustrySystem.idle_text(Game.data, Game.state, int(w["cell"]), String(w["building"]))])
 		var new_ids: Array = []
 		for id in range(missives_before + 1, Game.state.next_missive_id + 1):
 			new_ids.append(id)

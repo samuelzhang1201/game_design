@@ -38,6 +38,24 @@ var day_arrivals: Array = []
 ## The couriers' events of the last day (CourierSystem.ride_day), for the news bar.
 var day_couriers: Array = []
 
+## The buildings the last advance() left idle that were working the month
+## before (M5), [{cell, building, missing}] in cell then code order — read
+## by Game for the news bar, ONCE per spell idle; never in the TickReport.
+var newly_idle: Array = []
+
+func _newly_idle(state: GameState, was_idle: Dictionary) -> Array:
+	var out: Array = []
+	var keys: Array = state.idle_buildings.keys()
+	keys.sort_custom(func(a: String, b: String) -> bool: return int(a) < int(b))
+	for key: String in keys:
+		var codes: Array = (state.idle_buildings[key] as Array).duplicate()
+		codes.sort()
+		for code: String in codes:
+			if not code in (was_idle.get(key, []) as Array):
+				out.append({"cell": int(key), "building": code,
+					"missing": IndustrySystem.missing_of(data, state, int(key), code)})
+	return out
+
 
 func advance(state: GameState) -> TickReport:
 	var r := TickReport.new()
@@ -51,8 +69,10 @@ func advance(state: GameState) -> TickReport:
 	# the realm signature carry idle_buildings, so only a province whose
 	# idle set moved goes stale — and the tick below stales them all anyway,
 	# to be recomputed by the day buckets, not in one lump at the month's turn.
+	var was_idle: Dictionary = state.idle_buildings.duplicate(true)
 	for l: Dictionary in IndustrySystem.settle_month(data, state):
 		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
+	newly_idle = _newly_idle(state, was_idle)
 	# The war workshops (spec 2026-09-30-ledger-supply-design §2): this
 	# month's civil goods are in; turn the lord's share into arms before the
 	# supply lines ship.

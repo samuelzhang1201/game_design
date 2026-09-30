@@ -79,12 +79,13 @@ func hold_day_before_month_end(day_ceiling: int) -> bool:
 
 ## One day of the clock (owner 2026-09-13). Works step; when the day is the
 ## tick's last, the tick itself runs and its report goes out. Returns
-## {ticked, finished: [{cell, building}]}.
+## {ticked, finished: [{cell, building}], arrived, couriers} and, on the
+## tick, idled: the buildings newly idle for want of inputs (M5).
 func advance_day() -> Dictionary:
 	if state.day >= Calendar.DAYS_PER_TICK:
 		var r := next_tick()
 		return {"ticked": true, "finished": r.finished_works, "arrived": engine.day_arrivals,
-			"couriers": engine.day_couriers}
+			"couriers": engine.day_couriers, "idled": engine.newly_idle}
 	var finished := engine.advance_day(state)
 	state_changed.emit()
 	return {"ticked": false, "finished": finished, "arrived": engine.day_arrivals,

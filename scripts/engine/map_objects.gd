@@ -592,7 +592,7 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		"fields": [["Held by", "The crown" if crowns else ("House " + house if house != "" else "no one")],
 			["Province", String(prov.get("label", province))]],
 		"features": [], "production": [], "wealth": 0.0, "treasury": 0.0,
-		"buildings": [], "works": [], "slots": 0, "slot_actions": [], "actions": [],
+		"buildings": [], "idle": {}, "works": [], "slots": 0, "slot_actions": [], "actions": [],
 		"center": center,
 		"ask": "What do we know of %s?" % label,
 		"known": known,
@@ -701,9 +701,17 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	fields.append(["Defence", str(roundi(MapManors.defence_of(repo, state, cell)))])
 	var built: Array = MapManors.buildings_of(state, cell)
 	card["buildings"] = built
+	# An idle building (M5: its inputs went unpaid) says so and why: the slot
+	# row reads `idle`, the field names it.
+	var idle: Dictionary = {}
 	var names: Array[String] = []
 	for b: String in built:
-		names.append(String((repo.manor_buildings.get(b, {}) as Dictionary).get("label", b)))
+		var b_label := String((repo.manor_buildings.get(b, {}) as Dictionary).get("label", b))
+		if MapManors.is_idle(state, cell, b):
+			idle[b] = IndustrySystem.idle_text(repo, state, cell, b)
+			b_label += " (%s)" % String(idle[b])
+		names.append(b_label)
+	card["idle"] = idle
 	# Works in progress (2026-09-13): the slot row draws them dim with the
 	# days left; the field names them too.
 	var works: Array = []

@@ -91,3 +91,29 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array:
 		if int(spent[metric]) > 0:
 			lines.append({"metric": metric, "delta": -int(spent[metric]), "reason": REASON})
 	return lines
+
+## The goods a building's own manor cannot feed it, in input order — what
+## it must buy, and so what an idle one lacks ("idle: no iron"). A working
+## building reads its line's `fed`; an idle one ate nothing, so the manor's
+## units of each good are all its own supply.
+static func missing_of(repo: DataRepository, state: GameState, cell: int, code: String) -> Array:
+	var out: Array = []
+	if not repo.building_inputs.has(code):
+		return out
+	var line := ManorEconomy.line_of(repo, state, cell, state.tick)
+	var fed: Dictionary = line["fed"]
+	var units: Dictionary = line["units"]
+	for inp: Dictionary in repo.building_inputs[code]:
+		var good := String(inp["good"])
+		var own := int((fed[code] as Dictionary).get(good, 0)) if fed.has(code) \
+			else mini(int(units.get(good, 0)), int(inp["units"]))
+		if own < int(inp["units"]):
+			out.append(good)
+	return out
+
+## The words an idle building wears on its card and in the news:
+## "idle: no iron", "idle: no tools and iron"; "idle" alone if it lacks
+## nothing of its own manor's (a pool that could not pay for what it had).
+static func idle_text(repo: DataRepository, state: GameState, cell: int, code: String) -> String:
+	var missing := missing_of(repo, state, cell, code)
+	return "idle" if missing.is_empty() else "idle: no " + " and ".join(PackedStringArray(missing))
