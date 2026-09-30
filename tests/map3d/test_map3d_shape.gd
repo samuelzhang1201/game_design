@@ -55,10 +55,10 @@ func _lines(path: String) -> int:
 ## 574 since the weather's look (2026-09-29): the layer's var, its bind, its
 ## step in _process, its apply_quality and set_weather_override with its note —
 ## Map3DLayerWeather (and the Precip layer it steps) does the work.
-## 576 since the woods (look route 2026-09-30): the layer's var and its one
+## 577 since the woods and the wind (2026-09-30): the trees layer's var, its one
 ## build line — Map3DLayerTrees does the work.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 576)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 577)
 
 
 func test_every_other_script_is_small() -> void:

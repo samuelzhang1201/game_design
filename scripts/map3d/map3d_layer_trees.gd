@@ -10,6 +10,7 @@ extends Node3D
 ## frame. Takes everything from Map3DContext — never the Game autoload.
 
 const VARIANTS := 2
+const SWAY_SHADER := preload("res://scripts/map3d/tree_sway.gdshader")
 const ROW := 6
 
 var ctx: Map3DContext
@@ -107,11 +108,12 @@ func build(p_ctx: Map3DContext) -> void:
 			_count += rows.size()
 
 
-func _material() -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.vertex_color_use_as_albedo = true
-	m.vertex_color_is_srgb = true
-	m.roughness = 0.95
-	m.metallic_specular = 0.15
-	m.albedo_color = Color.WHITE
-	return m
+## The one material every clump shares: tree_sway.gdshader (the wind's sway;
+## Map3DLayerWind sets its uniforms each frame).
+var material: ShaderMaterial
+
+
+func _material() -> ShaderMaterial:
+	material = ShaderMaterial.new()
+	material.shader = SWAY_SHADER
+	return material
