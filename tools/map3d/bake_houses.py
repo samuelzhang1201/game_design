@@ -83,11 +83,11 @@ def footprint_radius_m(burg, rules):
     return house_radius_m(burg, rules) / rules["house_built_share"]
 
 
-def _square_reach(types, group, rules):
+def _square_reach(types, group, rules, code=""):
     """(half along, half across) of a landmark's open square out to the far
-    kerb of the lane round it — the ground no house of this group's
-    settlement may take — or None when the group has no landmark."""
-    lm = _pick_landmark(types, group)
+    kerb of the lane round it — the ground no house of this settlement may
+    take — or None when the group has no landmark."""
+    lm = _pick_landmark(types, group, code)
     if lm is None:
         return None
     hx, hz = half_extents(types[lm])
@@ -100,7 +100,7 @@ def cluster_radius_m(burg, rules, types):
     owner 2026-09-25): the houses keep the ground their group's density gives
     them, and the square is added to it rather than taken out of it."""
     r = house_radius_m(burg, rules)
-    reach = _square_reach(types, str(burg.get("group", "village")), rules)
+    reach = _square_reach(types, str(burg.get("group", "village")), rules, str(burg.get("burg_code", "")))
     if reach is None:
         return r
     return math.sqrt(r * r + 4.0 * reach[0] * reach[1] / math.pi)
@@ -109,7 +109,7 @@ def cluster_radius_m(burg, rules, types):
 def square_inner_m(burg, rules, types):
     """How near its landmark's centre the first house can stand: the square's
     shorter reach (0 with no landmark). The ring quotas start here."""
-    reach = _square_reach(types, str(burg.get("group", "village")), rules)
+    reach = _square_reach(types, str(burg.get("group", "village")), rules, str(burg.get("burg_code", "")))
     return 0.0 if reach is None else min(reach)
 
 
@@ -130,9 +130,10 @@ def _pick(rng, types, role, group):
     return keys[int(rng.choice(len(keys), p=w / w.sum()))]
 
 
-def _pick_landmark(types, group):
-    """The building at a settlement's centre: the HIGHEST-ranked landmark its
-    group allows, never a weighted draw (owner 2026-09-22, 要改成按等级固定).
+def _pick_landmark(types, group, code=""):
+    """The building at a settlement's centre: a landmark of the HIGHEST rank
+    its group allows, never a weighted draw across ranks (owner 2026-09-22,
+    要改成按等级固定).
 
     Since density v5 compressed the per-group house counts to 100/80/50/30/20,
     the centrepiece is the only thing left that tells a capital from a town —
@@ -140,15 +141,28 @@ def _pick_landmark(types, group):
     measured over the pack, 4 of the 7 capitals drew a plain church, which is
     what a TOWN shows, and one drew a chapel, which is what a VILLAGE shows.
     Ranking by `min_group` gives capital → palace, city → church tower,
-    town and fort → church, village → chapel, with weight then name breaking
-    a tie between two landmarks of the same rank."""
+    town and fort → church, village → chapel.
+
+    Several landmarks of that one rank are VARIANTS (owner 2026-09-30: the
+    church and the palace keep every Tripo version, 全部用作variant … 增加多样性):
+    the settlement's `code` picks one by weight through its stable _seed, so
+    the same burg shows the same building every bake. Without a code, weight
+    then name decide, as before."""
     keys = [t for t, r in types.items()
             if r["role"] == "landmark" and _group_allows(group, r["min_group"])]
     if not keys:
         return None
-    return sorted(keys, key=lambda t: (GROUP_ORDER.index(types[t]["min_group"])
-                                       if types[t]["min_group"] in GROUP_ORDER else -1,
-                                       float(types[t]["weight"]), t))[-1]
+
+    def rank(t):
+        g = types[t]["min_group"]
+        return GROUP_ORDER.index(g) if g in GROUP_ORDER else -1
+    top = max(rank(t) for t in keys)
+    same = sorted((t for t in keys if rank(t) == top), key=lambda t: (float(types[t]["weight"]), t))
+    if not code or len(same) == 1:
+        return same[-1]
+    w = np.array([float(types[t]["weight"]) for t in same], dtype=np.float64)
+    u = (_seed("landmark:" + code) % 1_000_003) / 1_000_003.0
+    return same[int(np.searchsorted(np.cumsum(w / w.sum()), u, side="right").clip(0, len(same) - 1))]
 
 
 def _slope(height, vx, vy, vw, vh):
@@ -439,7 +453,7 @@ def _landmark_site(burg, rules, types, land, height, k, vw, vh, wet, rng, r_hous
     None when no ground within reach takes it, and the type None when the
     group allows no landmark at all."""
     group = str(burg.get("group", "village"))
-    landmark = _pick_landmark(types, group)
+    landmark = _pick_landmark(types, group, str(burg["burg_code"]))
     if landmark is None:
         return None, 0.0, None
     cx, cy = float(burg["x"]) * k, float(burg["y"]) * k
