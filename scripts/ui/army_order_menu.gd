@@ -182,16 +182,19 @@ func _on_chosen(id: int) -> void:
 
 
 ## The aimed march's destination: held, drawn to, and asked about — the
-## order goes in only on COMMIT.
-func _on_ground(pack_px: Vector2) -> void:
+## order goes in only on COMMIT. The confirm opens at `screen_px`, the click's
+## own point in the map's px: the OS cursor (get_local_mouse_position) is not
+## the click's when the click was pushed rather than made — the snapshot
+## harness's, which put the menu wherever the real cursor was (2026-09-30).
+func _on_ground(pack_px: Vector2, screen_px := Vector2(-1, -1)) -> void:
 	if _aiming == "" or _pending.x >= 0.0:
 		return
 	_pending = pack_px
 	if _map != null and "aim_dest" in _map:
 		_map.set("aim_dest", pack_px)
-	var at := Vector2.ZERO
-	if _map is Control:
-		at = (_map as Control).get_local_mouse_position()
+	var at := screen_px
+	if at.x < 0.0:
+		at = (_map as Control).get_local_mouse_position() if _map is Control else Vector2.ZERO
 	_open_confirm(at)
 
 

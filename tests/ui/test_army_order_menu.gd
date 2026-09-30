@@ -14,6 +14,14 @@ class FakeMap extends Node:
 	var aim_dest := Vector2(-1, -1)
 
 
+## The 3D view's own signature: the click's point rides with it.
+class ClickMap extends Node:
+	signal army_menu_requested(code: String, at: Vector2)
+	signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
+	var aiming := false
+	var aim_dest := Vector2(-1, -1)
+
+
 var _menu: ArmyOrderMenu
 var _map: FakeMap
 
@@ -333,3 +341,24 @@ func test_a_fleets_route_menus_promise_no_courier() -> void:
 	ArmySystem.set_march(Game.data, Game.state, code, there + Vector2(30.0, 0.0))
 	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
 	assert_string_contains(_menu.get_item_tooltip(_menu.get_item_index(ArmyOrderMenu.HALT)), "courier")
+
+
+## The confirm opens at the CLICK, not wherever the OS cursor is (2026-09-30:
+## a pushed click put it in the window's corner).
+func test_the_confirm_opens_where_the_ground_was_clicked() -> void:
+	var map := ClickMap.new()
+	add_child_autofree(map)
+	var menu := ArmyOrderMenu.new()
+	add_child_autofree(menu)
+	menu.follow(map)
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var there := _land_near(here)
+	if there == Vector2.ZERO:
+		return
+	map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+	menu.hide()
+	menu.id_pressed.emit(0)
+	map.ground_clicked.emit(there, Vector2(120.0, 70.0))
+	assert_true(menu.visible, "COMMIT / CANCEL asked")
+	assert_eq(menu.position, Vector2i(120, 70))
