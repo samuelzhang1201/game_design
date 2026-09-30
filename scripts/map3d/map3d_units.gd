@@ -9,40 +9,38 @@ extends RefCounted
 ## checked without a 3D view. Never reaches for the Game autoload.
 
 
-## The world height one piece is drawn at (owner 2026-09-27: "随着镜头的缩放，
-## 兵人大小没有变化这是不对的"): `map3d_unit_ref_px` of SCREEN with the camera
-## `ref_m` from it — the opening view's distance, so about 20 px as the game
-## opens — and, as the camera comes in, growing with it like anything on the
-## ground until it reaches `map3d_unit_max_px`, where it holds. Below the cap
-## that is ONE world height (px x metres-per-px cancel the distance), so a
-## piece is a miniature of a fixed size on the table; the cap keeps it from
-## towering over the houses close in. Far out it is not drawn at all: the
-## regiment is a flat counter (as_counters).
-static func height_m(repo: DataRepository, distance_m: float, fov_deg: float,
-		view_h_px: float, ref_m: float) -> float:
-	var d := maxf(distance_m, 1.0)
-	var px := minf(repo.bal("map3d_unit_max_px"), repo.bal("map3d_unit_ref_px") * ref_m / d)
-	return px * Map3DGeometry.metres_per_pixel(d, fov_deg, view_h_px)
+## The world height one piece is drawn at: `map3d_unit_ref_px` of SCREEN as
+## seen from `ref_m` — the opening view's distance — and from there ONE world
+## height at every zoom, so a piece grows and shrinks with the camera exactly
+## as the ground and the houses do (owner 2026-09-30: 兵人模型的比例缩放需要和游戏
+## 视角缩放一致; the map3d_unit_max_px cap of 2026-09-27 held it at a fixed
+## screen size close in, so it stopped growing and its gait sped up). Far out
+## it is not drawn at all: the regiment is a flat counter (as_counters).
+## px x metres-per-px: the window's height cancels, since ref_m grows with it.
+static func height_m(repo: DataRepository, fov_deg: float, view_h_px: float, ref_m: float) -> float:
+	return repo.bal("map3d_unit_ref_px") * Map3DGeometry.metres_per_pixel(maxf(ref_m, 1.0), fov_deg, view_h_px)
 
 
-## Whether the camera is far enough out that every regiment is a square
-## counter instead of a piece (owner 2026-09-27: "拉远后在50km的[比例尺]后，兵人
-## 缩减成为一个方形色块，并且可以点击查看状态"): once the scale bar would span
-## map3d_unit_counter_scale of the pack's measure — it then reads that rung.
+## Whether the camera is far enough out that every regiment is its square
+## counter — its MARK — instead of a piece: once a piece, one world size at
+## every zoom (height_m), would be drawn under `map3d_unit_mark_px` design px
+## at the camera's target, where a miniature no longer reads as one (owner
+## 2026-09-30: zoom out最高处应该显示为一个标志即可 — replacing the 50 km scale
+## bar of 2026-09-27). Its px there: ref_px x ref_m / distance.
 static func as_counters(repo: DataRepository, meta: Dictionary, camera_distance_m: float,
 		view_h_px: float) -> bool:
-	return camera_distance_m >= Map3DGeometry.distance_for_bar(repo, meta,
-		repo.bal("map3d_unit_counter_scale"), view_h_px)
+	var ref_m := Map3DGeometry.distance_for_bar(repo, meta, repo.bal("map3d_zoom_start_scale"), view_h_px)
+	return repo.bal("map3d_unit_ref_px") * ref_m < repo.bal("map3d_unit_mark_px") * maxf(camera_distance_m, 1.0)
 
 
 ## That height as a scale on the model's own metres, times `size`
 ## (data/army_art.csv): one arm may stand bigger than the rest (all 1 since
 ## the owner's 2026-09-27 "1.5倍不合适").
-static func scale_for(repo: DataRepository, distance_m: float, fov_deg: float,
-		view_h_px: float, ref_m: float, model_h_m: float, size: float = 1.0) -> float:
+static func scale_for(repo: DataRepository, fov_deg: float, view_h_px: float, ref_m: float,
+		model_h_m: float, size: float = 1.0) -> float:
 	if model_h_m <= 0.0:
 		return 1.0
-	return height_m(repo, distance_m, fov_deg, view_h_px, ref_m) / model_h_m * size
+	return height_m(repo, fov_deg, view_h_px, ref_m) / model_h_m * size
 
 
 ## The yaw a piece stands at: the way it MARCHES (a heading in PACK space,
@@ -79,6 +77,15 @@ static func along_day(day: Dictionary, share: float) -> Vector2:
 	return (day["from"] as Vector2).lerp(day["to"], f)
 
 
+## Whether a piece WALKS its day's march at the day's `share`: it has somewhere
+## to go and its start has come (a column ordered today stands until its
+## courier reaches it, s0). Not "it moved this frame": a frame that happened
+## not to move it read as a halt and blended the gait out and back.
+static func walking(day: Dictionary, share: float) -> bool:
+	# a few world metres: the last frame of a day lands just short of its end
+	return (day["from"] as Vector2).distance_to(day["to"]) > 0.5 and share >= float(day["s0"])
+
+
 ## A piece's day's march for along_day, reckoned at the day's `share`: from
 ## where it is `drawn` — or the engine's spot `here`, when farther than the
 ## snap — to where the engine's next day leaves it, a courier delivering that
@@ -93,30 +100,6 @@ static func day_march(repo: DataRepository, state: GameState, code: String, meta
 	# a column ordered today stands until its courier reaches it
 	return {"from": from, "s0": share + float(day["from"]) * (1.0 - share),
 		"to": Map3DGeometry.pack_to_world(meta, ArmySystem.metres_to_pack(repo, day["m"]))}
-
-
-## A looped gait's playback rate so its feet keep pace with the ground: world
-## speed over the piece's scale is the model's speed; a loop of `clip_s`
-## seconds covers `stride_m` model metres. Held within [lo, hi] — a miniature
-## crossing kilometres a day outruns any leg. 1.0 when the stride is unknown.
-static func gait_rate(world_speed: float, k: float, clip_s: float, stride_m: float,
-		lo: float, hi: float) -> float:
-	if world_speed <= 0.0 or k <= 0.0 or stride_m <= 0.0:
-		return 1.0
-	return clampf(world_speed / k * clip_s / stride_m, lo, hi)
-
-
-## The MARCH clip's playback rate (owner 2026-09-27: 马的腿移动的步幅和它实际移
-## 动的距离不符): the ground the piece covers per second in its MODEL'S metres
-## (world speed / its scale k) over what one loop of the clip walks
-## (`stride_m`, data/army_art.csv, the model metres a loop carries it) in the
-## clip's `clip_s` — so the feet keep pace with the ground — held within
-## map3d_unit_anim_min..max: a miniature crossing kilometres a second outruns
-## any leg, and past the ceiling it slides rather than blurs.
-static func march_rate(repo: DataRepository, world_speed: float, k: float, clip_s: float,
-		stride_m: float) -> float:
-	return gait_rate(world_speed, k, clip_s, stride_m,
-		repo.bal("map3d_unit_anim_min"), repo.bal("map3d_unit_anim_max"))
 
 
 ## A day's march in the built world's metres.

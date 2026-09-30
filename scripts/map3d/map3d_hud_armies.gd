@@ -87,10 +87,13 @@ func _draw() -> void:
 	ArmyCounters.draw(self, ctx.repo, list, view.selected_army())
 
 
-## Each marching regiment's road still ahead: a dashed line on the ground
-## from where the engine has it to where it was sent, and a ring there, in
-## the realm's own colour as its aim was — the
-## order made visible, so a click that sent a column is seen to have.
+## Each marching regiment's road still ahead: a dashed line DRAPED on the
+## ground from where its piece is DRAWN to where it was sent, and a ring
+## there, in the realm's own colour as its aim was — the order made visible,
+## so a click that sent a column is seen to have. Draped, not a straight line
+## between two projected ends: the column walks the ground's rises and falls,
+## and at the camera's tilt a chord over a hill left the piece walking off its
+## own road (owner 2026-09-30: 实际行进路线也和画的不一致).
 func _draw_routes() -> void:
 	if not view.military():
 		return
@@ -100,17 +103,21 @@ func _draw_routes() -> void:
 		return
 	var s := ctx.viewport_px_scale()
 	var w := repo.bal("map3d_unit_route_px")
+	var shown := view.unit_positions()
 	for r: Dictionary in ctx.regiments():
 		var code := String(r["regiment_code"])
 		if ArmySystem.order_of(repo, st, code) != ArmySystem.ORDER_MARCH:
 			continue
-		var from: Variant = _screen_of(ArmySystem.position_of(repo, st, r))
-		var to: Variant = _screen_of(ArmySystem.destination_of(repo, st, code))
-		if from == null or to == null:
+		var from_xz: Vector2 = shown.get(code, ctx.to_world(ArmySystem.position_of(repo, st, r)))
+		var to_xz := ctx.to_world(ArmySystem.destination_of(repo, st, code))
+		var pts := draped(from_xz, to_xz)
+		if pts.size() < 2:
 			continue
 		var ink := MapPalette.color_of(repo, String(r.get("kingdom_code", "")))
-		draw_dashed_line((from as Vector2) / s, (to as Vector2) / s, ink, w, w * 4.0)
-		draw_arc((to as Vector2) / s, w * 4.0, 0.0, TAU, 24, ink, w, true)
+		MapRuler.dashed_path(self, pts, ink, w, w * 4.0)
+		var to: Variant = _screen_of(ArmySystem.destination_of(repo, st, code))
+		if to != null:
+			draw_arc((to as Vector2) / s, w * 4.0, 0.0, TAU, 24, ink, w, true)
 
 
 ## Every committed march's end ring, [{code, pos}] in design px — what a click

@@ -14,65 +14,78 @@ func before_all() -> void:
 	Weather.forget()
 
 
-## The size rule (owner 2026-09-27), by hand at fov 45 and a 1080 px view:
-## metres per px = 2 d tan(22.5) / 1080 = d x 7.67063e-4; the reference
-## (the opening view) 25 km away, 20 px there, 32 px at most.
+## The size rule (owner 2026-09-30: 比例缩放需要和游戏视角缩放一致), by hand at
+## fov 45 and a 1080 px view: metres per px = 2 d tan(22.5) / 1080 =
+## d x 7.67063e-4; the reference (the opening view) 25 km away, 20 px there.
 func _rule() -> void:
 	repo.balance["map3d_unit_ref_px"] = 20.0
-	repo.balance["map3d_unit_max_px"] = 32.0
 
 
 func test_a_piece_is_its_ref_px_at_the_opening_distance() -> void:
 	_rule()
 	# 20 px x 25000 x 7.67063e-4 = 383.53 m
-	assert_almost_eq(Map3DUnits.height_m(repo, 25000.0, 45.0, 1080.0, 25000.0), 383.53, 0.05)
+	assert_almost_eq(Map3DUnits.height_m(repo, 45.0, 1080.0, 25000.0), 383.53, 0.05)
 
 
-func test_below_the_cap_a_piece_is_one_world_height() -> void:
+func test_a_piece_is_one_world_height_at_every_zoom() -> void:
+	# No distance goes in: close in or far out the same miniature, so its size
+	# on screen follows the zoom exactly — 100 px at 5 km, 625 px at 800 m.
 	_rule()
-	# 50 km: 10 px x 38.353 m = 383.53 m — the same miniature, half the px
-	assert_almost_eq(Map3DUnits.height_m(repo, 50000.0, 45.0, 1080.0, 25000.0), 383.53, 0.05)
-	# 18 km: 27.78 px x 13.807 m = 383.53 m
-	assert_almost_eq(Map3DUnits.height_m(repo, 18000.0, 45.0, 1080.0, 25000.0), 383.53, 0.05)
+	var h := Map3DUnits.height_m(repo, 45.0, 1080.0, 25000.0)
+	assert_almost_eq(h / Map3DGeometry.metres_per_pixel(5000.0, 45.0, 1080.0), 100.0, 0.01)
+	assert_almost_eq(h / Map3DGeometry.metres_per_pixel(800.0, 45.0, 1080.0), 625.0, 0.01)
 
 
-func test_close_in_it_holds_at_the_cap() -> void:
+func test_the_window_height_does_not_change_a_pieces_world_size() -> void:
+	# ref_m grows with the view (distance_for_bar), so px x metres-per-px cancels.
 	_rule()
-	# 5 km: 20 x 25000 / 5000 = 100 px, held at 32 px x 3.83532 m = 122.73 m
-	assert_almost_eq(Map3DUnits.height_m(repo, 5000.0, 45.0, 1080.0, 25000.0), 122.73, 0.05)
-	# 800 m: 32 px x 0.613650 m = 19.64 m
-	assert_almost_eq(Map3DUnits.height_m(repo, 800.0, 45.0, 1080.0, 25000.0), 19.64, 0.01)
+	assert_almost_eq(Map3DUnits.height_m(repo, 45.0, 2160.0, 50000.0),
+		Map3DUnits.height_m(repo, 45.0, 1080.0, 25000.0), 0.01)
 
 
-## By the scale bar: 1 km per pack px, 50 m per pack px (0.02 km a metre), a
-## 220 px bar, fov 45, a 600 px view — the bar spans 50 km at
-## 50 / 220 / 0.02 x 600 / 0.828427 = 8230.2 m.
-func test_far_out_the_pieces_become_counters() -> void:
-	repo.balance["map3d_unit_counter_scale"] = 50.0
+## By the piece's own px (owner 2026-09-30): 1 km per pack px, 50 m per pack
+## px, a 220 px bar, fov 45, a 600 px view, the opening bar 25 km — the
+## reference 25 / 220 / 0.02 x 600 / 0.828427 = 4115.1 m. At 12 px there and a
+## 14 px mark, the pieces go at 4115.1 x 12 / 14 = 3527.2 m.
+func test_far_out_the_pieces_become_marks() -> void:
+	repo.balance["map3d_unit_ref_px"] = 12.0
+	repo.balance["map3d_unit_mark_px"] = 14.0
+	repo.balance["map3d_zoom_start_scale"] = 25.0
 	repo.balance["map_scale_bar_max_px"] = 220.0
 	repo.balance["map3d_fov_deg"] = 45.0
 	var meta := {"m_per_px": 50.0}
 	var info := repo.map_info.duplicate()
 	repo.map_info["distance_scale"] = "1"
-	assert_false(Map3DUnits.as_counters(repo, meta, 8229.0, 600.0))
-	assert_true(Map3DUnits.as_counters(repo, meta, 8231.0, 600.0))
+	assert_false(Map3DUnits.as_counters(repo, meta, 3526.0, 600.0))
+	assert_true(Map3DUnits.as_counters(repo, meta, 3529.0, 600.0))
 	repo.map_info = info
+
+
+## A piece walks while it has somewhere to go and its start has come — not
+## "it moved this frame" (owner 2026-09-30: 走路速度怎么时快时慢).
+func test_a_piece_walks_from_its_start_to_its_end() -> void:
+	var day := {"from": Vector2.ZERO, "to": Vector2(100.0, 0.0), "s0": 0.4}
+	assert_false(Map3DUnits.walking(day, 0.3), "its courier has not reached it yet")
+	assert_true(Map3DUnits.walking(day, 0.4))
+	assert_true(Map3DUnits.walking(day, 0.99))
+	day["to"] = Vector2(0.2, 0.0)
+	assert_false(Map3DUnits.walking(day, 0.5), "a frame short of its end is no march")
 
 
 func test_the_scale_is_that_height_over_the_models_own() -> void:
 	var fov := repo.bal("map3d_fov_deg")
-	var want := Map3DUnits.height_m(repo, 5000.0, fov, 1080.0, 25000.0)
-	assert_almost_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 25000.0, 2.0), want / 2.0, 0.0001)
-	assert_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 25000.0, 0.0), 1.0,
+	var want := Map3DUnits.height_m(repo, fov, 1080.0, 25000.0)
+	assert_almost_eq(Map3DUnits.scale_for(repo, fov, 1080.0, 25000.0, 2.0), want / 2.0, 0.0001)
+	assert_eq(Map3DUnits.scale_for(repo, fov, 1080.0, 25000.0, 0.0), 1.0,
 		"a model with no height is left alone rather than scaled by infinity")
 
 
 func test_an_arm_can_stand_bigger_than_the_rest() -> void:
 	# army_art's size multiplies the drawn height; 1 leaves a piece as it was.
 	var fov := repo.bal("map3d_fov_deg")
-	var one := Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 25000.0, 2.0)
-	assert_almost_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 25000.0, 2.0, 1.5), one * 1.5, 0.0001)
-	assert_almost_eq(Map3DUnits.scale_for(repo, 5000.0, fov, 1080.0, 25000.0, 2.0, 1.0), one, 0.0001)
+	var one := Map3DUnits.scale_for(repo, fov, 1080.0, 25000.0, 2.0)
+	assert_almost_eq(Map3DUnits.scale_for(repo, fov, 1080.0, 25000.0, 2.0, 1.5), one * 1.5, 0.0001)
+	assert_almost_eq(Map3DUnits.scale_for(repo, fov, 1080.0, 25000.0, 2.0, 1.0), one, 0.0001)
 
 
 func test_a_marching_piece_faces_its_heading() -> void:
@@ -247,18 +260,44 @@ func test_a_footprint_turns_and_scales_with_the_piece() -> void:
 func test_the_march_plays_at_the_grounds_pace() -> void:
 	repo.balance["map3d_unit_anim_min"] = 0.5
 	repo.balance["map3d_unit_anim_max"] = 3.0
-	assert_almost_eq(Map3DUnits.march_rate(repo, 20.0, 40.0, 2.0, 1.0), 1.0, 0.0001)
+	assert_almost_eq(Map3DUnitRig.march_rate(repo, 20.0, 40.0, 2.0, 1.0), 1.0, 0.0001)
 	# twice as fast on the ground: 2.0
-	assert_almost_eq(Map3DUnits.march_rate(repo, 40.0, 40.0, 2.0, 1.0), 2.0, 0.0001)
+	assert_almost_eq(Map3DUnitRig.march_rate(repo, 40.0, 40.0, 2.0, 1.0), 2.0, 0.0001)
 	# 200 m/s would be 10x: held at the ceiling; a crawl held at the floor
-	assert_eq(Map3DUnits.march_rate(repo, 200.0, 40.0, 2.0, 1.0), 3.0)
-	assert_eq(Map3DUnits.march_rate(repo, 1.0, 40.0, 2.0, 1.0), 0.5)
-	assert_eq(Map3DUnits.march_rate(repo, 20.0, 40.0, 2.0, 0.0), 1.0, "no stride: as authored")
+	assert_eq(Map3DUnitRig.march_rate(repo, 200.0, 40.0, 2.0, 1.0), 3.0)
+	assert_eq(Map3DUnitRig.march_rate(repo, 1.0, 40.0, 2.0, 1.0), 0.5)
+	assert_eq(Map3DUnitRig.march_rate(repo, 20.0, 40.0, 2.0, 0.0), 1.0, "no stride: as authored")
 
 
 func test_the_gait_rate_follows_the_ground_within_its_bounds() -> void:
 	# 12 world m/s at scale 4 = 3 model m/s; a 1.2 s loop covering 2.4 model m wants 1.5x
-	assert_almost_eq(Map3DUnits.gait_rate(12.0, 4.0, 1.2, 2.4, 0.5, 3.0), 1.5, 0.0001)
-	assert_eq(Map3DUnits.gait_rate(120.0, 4.0, 1.2, 2.4, 0.5, 3.0), 3.0, "held at the top bound")
-	assert_eq(Map3DUnits.gait_rate(0.1, 4.0, 1.2, 2.4, 0.5, 3.0), 0.5, "held at the bottom bound")
-	assert_eq(Map3DUnits.gait_rate(12.0, 4.0, 1.2, 0.0, 0.5, 3.0), 1.0, "no stride known: normal speed")
+	assert_almost_eq(Map3DUnitRig.gait_rate(12.0, 4.0, 1.2, 2.4, 0.5, 3.0), 1.5, 0.0001)
+	assert_eq(Map3DUnitRig.gait_rate(120.0, 4.0, 1.2, 2.4, 0.5, 3.0), 3.0, "held at the top bound")
+	assert_eq(Map3DUnitRig.gait_rate(0.1, 4.0, 1.2, 2.4, 0.5, 3.0), 0.5, "held at the bottom bound")
+	assert_eq(Map3DUnitRig.gait_rate(12.0, 4.0, 1.2, 0.0, 0.5, 3.0), 1.0, "no stride known: normal speed")
+
+
+## The gait is timed from the day's PLAN (owner 2026-09-30: 走路速度怎么时快时
+## 慢), by hand: 800 world m over a whole 8 s day at 1x is 100 m/s; at 4x 400;
+## a day whose march starts at share 0.5 has 4 s left, so 200 m/s at 1x.
+func test_the_walk_speed_is_the_days_plan() -> void:
+	var day := {"from": Vector2.ZERO, "to": Vector2(800.0, 0.0), "s0": 0.0}
+	assert_almost_eq(Map3DUnitRig.walk_speed(day, 8.0, 1), 100.0, 0.001)
+	assert_almost_eq(Map3DUnitRig.walk_speed(day, 8.0, 4), 400.0, 0.001)
+	day["s0"] = 0.5
+	assert_almost_eq(Map3DUnitRig.walk_speed(day, 8.0, 1), 200.0, 0.001)
+	assert_eq(Map3DUnitRig.walk_speed(day, 8.0, 0), 0.0, "a stopped clock walks nowhere")
+
+
+## The chip hangs over the HEAD (owner 2026-09-30: 兵人的icon和模型间隔太远了):
+## the infantry's head bone stands ~1.56 m, its box's top is the spear's 2.66.
+func test_the_head_is_below_the_spear_tip() -> void:
+	var node := (load("res://assets/3D/units/infantry/infantry.glb") as PackedScene).instantiate() as Node3D
+	var box := Map3DUnits.model_size(node).y
+	var head := Map3DUnitRig.head_m(repo, node, box)
+	assert_between(head, 1.5, 2.0, "a man's head with its helmet, not the spear tip")
+	assert_lt(head, box)
+	var bare := Node3D.new()
+	assert_eq(Map3DUnitRig.head_m(repo, bare, 3.0), 3.0, "no head bone: the box's top")
+	bare.free()
+	node.free()

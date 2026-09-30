@@ -7,8 +7,8 @@ extends Node3D
 ## Nine, six or three .glb figures per regiment by its strength (Map3DFormation),
 ## each posed by its own AnimationPlayer — the one layer that cannot be a MultiMesh.
 ##
-## THE SIZE IS NOT THE MODEL'S SIZE: a miniature's, by the camera's distance
-## (past map3d_unit_counter_scale none: the HUD's square counter). That rule,
+## THE SIZE IS NOT THE MODEL'S SIZE: a miniature's, one world size at every
+## zoom (under map3d_unit_mark_px none: the HUD's square counter). That rule,
 ## the facing, seating, measuring and screen box are Map3DUnits, the pure half.
 ##
 ## Takes everything from Map3DContext, never the Game autoload (a test scans).
@@ -119,17 +119,14 @@ func _place(code: String, piece: Dictionary) -> void:
 		node.visible = false
 		return
 	node.visible = true
-	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta,
-		repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
-	var k := Map3DUnits.scale_for(repo, ctx.camera.global_position.distance_to(centre),
-		repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m, float(piece["height_m"]), piece["size"])
+	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
+	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
+		float(piece["height_m"]), piece["size"])
 	var ahead: Vector2 = (_days[code]["to"] if _days.has(code) else xz) - xz
-	var heading := ahead.normalized() if ahead.length() > 0.5 \
-		else ArmySystem.heading_of(repo, ctx.state(), code)
+	var heading := ahead.normalized() if ahead.length() > 0.5 else ArmySystem.heading_of(repo, ctx.state(), code)
 	var cam := ctx.camera.global_position
 	_want_yaw[code] = Map3DUnits.yaw_for(heading, Vector2(cam.x, cam.z), xz, piece.get("stand_deg", 0.0))
-	if not _yaw.has(code):
-		_yaw[code] = _want_yaw[code]
+	_yaw[code] = _yaw.get(code, _want_yaw[code])
 	var yaw := float(_yaw[code])
 	var sit := Map3DUnits.seat_at(repo, ctx.height_at, xz, piece["extent"], yaw, k)
 	var high := float(piece["height_m"]) * k
@@ -140,7 +137,8 @@ func _place(code: String, piece: Dictionary) -> void:
 	var up: Vector3 = sit["normal"]
 	node.transform = Transform3D((Basis(Quaternion(Vector3.UP, up)) * Basis(Vector3.UP, yaw))
 		.scaled(Vector3(k, k, k)), ground)
-	var top := ground + up * high
+	# the chip hangs over the figures' HEADS, not the spear tips (Map3DUnitRig.head_m)
+	var top := ground + up * float(piece["head_m"]) * k
 	if ctx.camera.is_position_behind(top):
 		return
 	var s_px := ctx.viewport_px_scale()
@@ -162,15 +160,16 @@ func step(delta: float) -> bool:
 		if not _shown_xz.has(code):
 			continue
 		var now: Vector2 = _shown_xz[code]
-		var want := Map3DUnits.along_day(_day_of(code), ctx.day_share())
-		var pace := 1.0
+		var day := _day_of(code)
+		var want := Map3DUnits.along_day(day, ctx.day_share())
 		if now != want:
 			_shown_xz[code] = want
 			_place(code, _pieces[code])
 			moved = true
-			# the feet keep pace with the ground (Map3DUnits.march_rate)
-			pace = Map3DUnits.march_rate(repo, now.distance_to(want) / maxf(delta, 0.001),
-				node.transform.basis.get_scale().x, float(_pieces[code]["clip_s"]), float(_pieces[code]["stride_m"]))
+		# the feet keep pace with the ground, timed from the day's PLAN (Map3DUnitRig.walk_speed)
+		var pace := Map3DUnitRig.march_rate(repo, Map3DUnitRig.walk_speed(day, repo.bal("time_day_seconds"),
+			ctx.clock_speed()), node.transform.basis.get_scale().x, float(_pieces[code]["clip_s"]),
+			float(_pieces[code]["stride_m"])) if Map3DUnits.walking(day, ctx.day_share()) else 1.0
 		for anim: AnimationPlayer in _pieces[code]["anims"]:
 			anim.speed_scale = pace
 		_sync_action(code)
@@ -178,17 +177,17 @@ func step(delta: float) -> bool:
 			var rate := deg_to_rad(repo.bal("map3d_unit_turn_deg_per_s")) * delta
 			_yaw[code] = rotate_toward(float(_yaw.get(code, 0.0)),
 				float(_want_yaw.get(code, 0.0)), rate)
-			# Re-seated as it turns: a long (cavalry) piece turned across a
-			# slope reaches different ground.
-			_place(code, _pieces[code])
+			_place(code, _pieces[code])  # re-seated: a long piece turned across a slope meets other ground
 	if moved:
 		_moves += 1
 	return moved
 
 
 ## Bumped each frame a piece moves (the chips' cache key).
-func moves() -> int:
-	return _moves
+func moves() -> int: return _moves
+
+## Where each piece is DRAWN, {code: world XZ} — where its road ahead starts.
+func shown_positions() -> Dictionary: return _shown_xz
 
 
 ## The pieces' TOPS in design px, {code: Vector2} — where the chip hangs.
@@ -257,6 +256,7 @@ func _piece_of(code: String) -> Dictionary:
 	var half := Map3DFormation.half_extent(offs, ext)
 	var clip := Map3DUnits.clip_named(anims[0], MARCH) if not anims.is_empty() else ""
 	_pieces[code] = {"node": node, "anims": anims, "height_m": span.y,
+		"head_m": Map3DUnitRig.head_m(ctx.repo, one, span.y),
 		"half_w_m": maxf(half.x, half.y), "extent": half, "figures": offs.size(),
 		"stand_deg": float(art.get("stand_deg", "0")),
 		"size": float(art.get("size", "1")), "stride_m": float(art.get("stride_m", "0")),
@@ -280,7 +280,7 @@ func _day_of(code: String) -> Dictionary:
 ## The action follows the ORDER (owner 2026-09-29): MARCH while the clock runs and it walks;
 ## GARRISON under that order; else STANDBY (the start, on arrival, ready on a stopped clock).
 func _sync_action(code: String) -> void:
-	var walking: bool = _days.has(code) and _shown_xz.get(code) != _days[code]["to"]
+	var walking: bool = _days.has(code) and Map3DUnits.walking(_days[code], ctx.day_share())
 	var held := ctx.state() != null and ArmySystem.order_of(ctx.repo, ctx.state(), code) == ArmySystem.ORDER_GARRISON
 	play(code, MARCH if walking and ctx.clock_speed() > 0 else (GARRISON if held else STANDBY))
 

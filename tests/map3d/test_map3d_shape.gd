@@ -57,8 +57,10 @@ func _lines(path: String) -> int:
 ## Map3DLayerWeather (and the Precip layer it steps) does the work.
 ## 577 since the woods and the wind (2026-09-30): the trees layer's var, its one
 ## build line — Map3DLayerTrees does the work.
+## 578 since the march's road is draped from where its piece is DRAWN
+## (2026-09-30): one line handing the HUD the pieces' positions.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 577)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 578)
 
 
 func test_every_other_script_is_small() -> void:

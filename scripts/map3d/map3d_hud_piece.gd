@@ -28,3 +28,29 @@ func bound() -> bool:
 func sibling(piece_name: String) -> Map3DHudPiece:
 	var hud := get_parent() as Map3DHud
 	return hud.piece(piece_name) if hud != null else null
+
+
+## A world XZ point on the ground, projected into design px; null behind the camera.
+func on_ground(xz: Vector2) -> Variant:
+	var p := Vector3(xz.x, ctx.height_at(xz), xz.y)
+	if ctx.camera.is_position_behind(p):
+		return null
+	return ctx.camera.unproject_position(p) / ctx.viewport_px_scale()
+
+
+## The ground between two world XZ points, sampled every map3d_line_step_m
+## (at most MAX_DRAPE_POINTS) and projected, design px — a line that walks the
+## ground's rises and falls, as a column does, where a straight chord between
+## the two projected ends cut across them (owner 2026-09-30: 实际行进路线也和画的
+## 不一致). It stops at the first point behind the camera.
+const MAX_DRAPE_POINTS := 400
+
+func draped(a: Vector2, b: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var n := clampi(int(ceil(a.distance_to(b) / maxf(ctx.repo.bal("map3d_line_step_m"), 1.0))), 1, MAX_DRAPE_POINTS)
+	for i in n + 1:
+		var p: Variant = on_ground(a.lerp(b, float(i) / float(n)))
+		if p == null:
+			break
+		out.append(p)
+	return out
