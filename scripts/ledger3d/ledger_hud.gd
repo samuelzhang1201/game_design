@@ -58,7 +58,7 @@ func style_ring(colour: Color, width_px: float) -> void:
 
 
 func show_entries(entries: Array, obstacles: Array = []) -> void:
-	_entries = cull(entries, _px, _font, _gauge, obstacles)
+	_entries = cull(entries, _px, _font, _gauge, obstacles, _title_font)
 	_rings.clear()
 	for e: Dictionary in entries:
 		if e.has("ring"):
@@ -109,24 +109,34 @@ static func gauge_row_h(props: Array, gauge: Dictionary) -> float:
 		float(gauge["caption_px"]))
 
 
+## The font an entry draws in: its cluster's `title_font` when it carries
+## `title: true` and one is set, else the body `font` — the one rule `cull`
+## and `_draw` both call, so a title's measured box can never disagree with
+## what is drawn in it.
+static func _font_of(e: Dictionary, font: Font, title_font: Font) -> Font:
+	return title_font if bool(e.get("title", false)) and title_font != null else font
+
+
 ## Keeps entries in order, dropping any whose box overlaps one already kept.
 ## An entry may carry `alt`, a second place (under its sphere): a name whose
 ## own place is taken stands there if that is clear, so a type in a close row
 ## keeps its name. The box is the text's measured width when a font is given,
 ## else estimated at 0.55 em a glyph (so the cull is testable without one),
-## centred on the place, with a quarter em of air at each end.
+## centred on the place, with a quarter em of air at each end. A `title: true`
+## entry is measured in `title_font` (falling back to `font`), matching `_draw`.
 static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dictionary = DEFAULT_GAUGE,
-		obstacles: Array = []) -> Array:
+		obstacles: Array = [], title_font: Font = null) -> Array:
 	var kept: Array = []
 	var boxes: Array[Rect2] = []
 	for o in obstacles:
 		boxes.append(o)
 	for e: Dictionary in entries:
 		var px := float(e.get("px", font_px))
+		var entry_font := _font_of(e, font, title_font)
 		var text := String(e["text"])
 		var w := float(text.length()) * px * 0.55
-		if font != null:
-			w = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
+		if entry_font != null:
+			w = entry_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
 		var props: Array = e.get("props", [])
 		var extra_h := gauge_row_h(props, gauge)
 		if not props.is_empty():
@@ -165,7 +175,7 @@ func _draw() -> void:
 		return
 	for e: Dictionary in _entries:
 		var px := float(e.get("px", _px))
-		var font: Font = _title_font if bool(e.get("title", false)) and _title_font != null else _font
+		var font := _font_of(e, _font, _title_font)
 		var ink: Color = e.get("ink", _ink if bool(e["strong"]) else Color(_ink, 0.8))
 		var text := String(e["text"])
 		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x

@@ -94,3 +94,34 @@ func test_a_bigger_name_takes_more_room() -> void:
 		{"text": "War", "at": Vector2(100, 122), "strong": false}], 14.0)
 	assert_eq(small.size(), 2)
 	assert_eq(big.size(), 1, "the title's box reaches the name below it")
+
+
+## I1 (fix round 1): cull() must measure a title entry in the SAME font
+## _draw() paints it with, or a cluster title's box can disagree with what
+## is drawn and a name can end up sitting on it. Two real, clearly
+## different-width faces prove it: at px 20 "War" measures 34px wide in the
+## body face (CrimsonPro) and 39px in the title face (UnifrakturMaguntia).
+func test_a_title_is_measured_in_the_title_font() -> void:
+	var body := load("res://assets/fonts/CrimsonPro.ttf") as Font
+	var title_font := load("res://assets/fonts/UnifrakturMaguntia-Book.ttf") as Font
+	var px := 20
+	var body_w := body.get_string_size("War", HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	var title_w := title_font.get_string_size("War", HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	assert_ne(body_w, title_w, "the two faces must measure the string differently for this test to prove anything")
+	assert_almost_eq(body_w, 34.0, 0.01)
+	assert_almost_eq(title_w, 39.0, 0.01)
+
+	# a gap that overlaps the neighbour's box only when "War" is measured in
+	# the wider title font (half-widths 24.5 + 24.5 = 49 > 47.5) and clears
+	# it when (wrongly) measured in the narrower body font (22 + 24.5 = 46.5 < 47.5)
+	var entries := [
+		{"text": "War", "at": Vector2(100, 100), "strong": false, "title": true, "px": float(px)},
+		{"text": "Gold", "at": Vector2(147.5, 100), "strong": false, "px": float(px)},
+	]
+	var with_title_font := LedgerHud.cull(entries, float(px), body, LedgerHud.DEFAULT_GAUGE, [], title_font)
+	assert_eq(with_title_font.size(), 1, "measured in the wider title font, the title's box reaches Gold")
+	assert_eq(with_title_font[0]["text"], "War")
+
+	var without_title_font := LedgerHud.cull(entries, float(px), body, LedgerHud.DEFAULT_GAUGE, [], null)
+	assert_eq(without_title_font.size(), 2,
+		"without a title font the title falls back to the body face and clears Gold")
