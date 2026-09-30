@@ -298,7 +298,12 @@ def main() -> None:
             continue
         full_dst = os.path.join(ROOT, dst)
         if os.path.exists(full_dst):
-            print("  EXISTS, left in place:", src, "->", dst)
+            if _md5_file(full_dst) == _md5_file(os.path.join(ROOT, src)) and not _tracked(src):
+                print("  duplicate", src)
+                if apply:
+                    os.remove(os.path.join(ROOT, src))
+            else:
+                print("  EXISTS, left in place:", src, "->", dst)
             continue
         if apply:
             os.makedirs(os.path.dirname(full_dst), exist_ok=True)
