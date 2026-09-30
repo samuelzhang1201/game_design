@@ -9,7 +9,15 @@ git-ignored; nothing reaches the game until an installer copies it into
 
 ## Model
 
-Only **Flux.2 [klein] 4B base** (`--model klein`, the default) makes game
+**Since 2026-09-30 the game's art is re-rendered on Qwen-Image-2512**
+(`--model qwen2512fast`, owner: klein is retired, and after comparing it with
+Z-Image on the 21 chapter events the owner picked Qwen, seed 954159497, and
+Qwen alone for the rest). A table's `seed` cell names the pick as
+`<model>_s<seed>` (`event_art.csv`: `qwen2512fast_s954159497`). The title
+screen's frame is `title_frame_prompts.csv` (U-27, canvas `C-TITLE`). The
+klein notes below are history.
+
+Until then only **Flux.2 [klein] 4B base** (`--model klein`, the default) makes game
 assets: Apache 2.0, commercial use allowed, undistilled, 20 steps, CFG 4.0
 (`--cfg`, library suggests 3.5–4.5), negative prompt applied. Files:
 `diffusion_models/flux-2-klein-base-4b.safetensors`,
@@ -84,6 +92,7 @@ python3 assets/flux/generate.py --build-csv                      # after editing
 | `goods_icons` | colour G- → `assets/2D/icons/goods/` (64 px) |
 | `decor` | D- ships and whale → `assets/decor/` |
 | `estates` | D-43..D-78 → `assets/manors/<focus>_<size>.png` (greyed, lightened) |
+| `events` | V-35..V-55 → `assets/2D/events/illustrations/<event_id>.png` (1280×533, colour; cut INTO the scene, so a paper margin round a full-bleed render is trimmed off) |
 | `paintings` | B-01..B-36 → `assets/2D/paintings/estates/` (720×576, colour) |
 | `army_paintings` | B-37..B-42 → `assets/2D/paintings/armies/` |
 | `buildings` | H- → `assets/2D/icons/buildings/bld_<code>.png` (128 px) |

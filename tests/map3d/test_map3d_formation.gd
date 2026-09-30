@@ -47,6 +47,14 @@ func test_depleted_is_one_two_three_from_the_front() -> void:
 	assert_eq(Map3DFormation.half_extent(offs, Vector2(0.5, 1.5)), Vector2(1.75, 5.25))
 
 
+func test_rank_depth_spreads_the_ranks_only() -> void:
+	var offs := Map3DFormation.offsets(Map3DFormation.tier_of(repo, 1000), Vector2(0.5, 1.5), 1.0, 1.6)
+	assert_eq(offs[0], Vector2(-1, -4.8))
+	assert_eq(offs[4], Vector2(0, 0))
+	assert_eq(offs[8], Vector2(1, 4.8))
+	assert_eq(String(repo.army_art["infantry"]["rank_depth"]), "1.6")
+
+
 func test_remnants_are_one_in_front_two_behind() -> void:
 	var offs := Map3DFormation.offsets(Map3DFormation.tier_of(repo, 100), Vector2(0.5, 1.5), 1.0)
 	assert_eq(offs, PackedVector2Array([Vector2(0, -1.5), Vector2(-0.5, 1.5), Vector2(0.5, 1.5)]))

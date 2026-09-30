@@ -280,9 +280,48 @@ PAINT_PAD = 0.04
 PAINT_PAPER_TOL = 26
 
 
-def scene_box(w: int, h: int, px: bytearray, aspect: float) -> tuple:
+def _paper(px: bytearray, i: int) -> bool:
+    """A cream-paper pixel: bright, warm (red over blue), even where the
+    paper is vignetted darker toward the corners. A sky is blue or grey."""
+    r, g, b = px[i], px[i + 1], px[i + 2]
+    return r >= 200 and g >= 185 and 15 <= r - b <= 75 and r >= g >= b
+
+
+def paper_margins(w: int, h: int, px: bytearray, share: float = 0.9) -> tuple:
+    """(x0, y0, x1, y1) inside the rows and columns at the edges that are at
+    least `share` paper, for a picture drawn full-bleed with a paper margin."""
+    step = 4
+    def row_paper(y: int) -> bool:
+        n = sum(_paper(px, (y * w + x) * 4) for x in range(0, w, step))
+        return n >= share * len(range(0, w, step))
+    def col_paper(x: int) -> bool:
+        n = sum(_paper(px, (y * w + x) * 4) for y in range(0, h, step))
+        return n >= share * len(range(0, h, step))
+    y0, y1, x0, x1 = 0, h, 0, w
+    while y0 < h // 3 and row_paper(y0): y0 += 1
+    while y1 > h - h // 3 and row_paper(y1 - 1): y1 -= 1
+    while x0 < w // 3 and col_paper(x0): x0 += 1
+    while x1 > w - w // 3 and col_paper(x1 - 1): x1 -= 1
+    return x0, y0, x1, y1
+
+
+def scene_box(w: int, h: int, px: bytearray, aspect: float, cover: bool = False) -> tuple:
     """The crop (x0, y0, x1, y1) that holds everything not paper, padded and
-    widened to `aspect`, clamped to the image."""
+    widened to `aspect`, clamped to the image. With `cover` the box is cut
+    INTO the scene instead — no pad, the longer side trimmed to `aspect` —
+    so a full-bleed picture drawn with a paper margin loses the margin."""
+    if cover:
+        # Step inside the paper margin (and a few px past its soft edge),
+        # then trim the longer side to `aspect`.
+        x0, y0, x1, y1 = paper_margins(w, h, px)
+        if (x0, y0, x1, y1) != (0, 0, w, h):
+            x0, y0, x1, y1 = x0 + 6, y0 + 6, x1 - 6, y1 - 6
+        bw, bh = x1 - x0, y1 - y0
+        if bw / bh > aspect:
+            cut = bw - int(bh * aspect)
+            return x0 + cut // 2, y0, x1 - (cut - cut // 2), y1
+        cut = bh - int(bw / aspect)
+        return x0, y0 + cut // 2, x1, y1 - (cut - cut // 2)
     corners = [(4, 4), (w - 5, 4), (4, h - 5), (w - 5, h - 5)]
     ref = [sum(px[(y * w + x) * 4 + c] for x, y in corners) // 4 for c in range(3)]
     x0, y0, x1, y1 = w, h, -1, -1
@@ -387,7 +426,7 @@ def _pick(hits: list, seed: str) -> list:
 
 def install_paintings(size: tuple = PAINT_SIZE, table: str = "estate_paint_art.csv",
                       dest: Path | None = None, key_column: str = "key",
-                      src: str = "estates") -> int:
+                      src: str = "estates", cover: bool = False) -> int:
     rows = list(csv.DictReader((HERE / table).open(encoding="utf-8")))
     dest = dest or ROOT / "assets" / "2D" / "paintings" / "estates"
     dest.mkdir(parents=True, exist_ok=True)
@@ -402,7 +441,7 @@ def install_paintings(size: tuple = PAINT_SIZE, table: str = "estate_paint_art.c
         w, h, ch, px = decode_png(hits[-1])
         rgba = to_rgba(w, h, ch, bytearray(px))
         tw, th = size
-        box = scene_box(w, h, rgba, tw / th)
+        box = scene_box(w, h, rgba, tw / th, cover)
         cw, chh, scene = crop_rgba(w, rgba, box)
         small = resize_rgba(cw, chh, scene, tw, th)
         encode_png(dest / ("%s.png" % key), tw, th, 4, bytes(small))
@@ -422,7 +461,7 @@ EVENT_SIZE = (1280, 533)
 
 def install_events(size: tuple = EVENT_SIZE) -> int:
     return install_paintings(size, "event_art.csv", ROOT / "assets" / "2D" / "events" / "illustrations",
-                             key_column="event_id", src="events")
+                             key_column="event_id", src="events", cover=True)
 
 
 ## The army card's painting (owner 2026-09-15): library B-37..B-42 on the
