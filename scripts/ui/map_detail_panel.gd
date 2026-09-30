@@ -580,7 +580,8 @@ func _fill_slots(card: Dictionary) -> void:
 	for b: String in card.get("buildings", []):
 		filled.append({"building": b, "work": false})
 	for w: Dictionary in card.get("works", []):
-		filled.append({"building": String(w["building"]), "work": true, "days_left": int(w["days_left"])})
+		filled.append({"building": String(w["building"]), "work": true, "days_left": int(w["days_left"]),
+			"artisan_pct": int(w.get("artisan_pct", 0))})
 	for i in total:
 		var column := VBoxContainer.new()
 		column.add_theme_constant_override("separation", 2)
@@ -618,7 +619,9 @@ func _fill_slots(card: Dictionary) -> void:
 				days.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 				column.add_child(box)
 				column.add_child(days)
-				box.tooltip_text = "%s — %d days to go" % [label, int(entry["days_left"])]
+				var artisan_pct := int(entry.get("artisan_pct", 0))
+				box.tooltip_text = "%s — %d days to go%s" % [label, int(entry["days_left"]),
+					(" (artisans: +%d%%)" % artisan_pct) if artisan_pct > 0 else ""]
 			elif (card.get("idle", {}) as Dictionary).has(code):
 				# An idle building (LEDGER M5: its inputs went unpaid) is its
 				# art dimmed with the word under it, like a work's days, and

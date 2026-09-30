@@ -15,7 +15,11 @@ func _repo() -> DataRepository:
 		"tariff_per_sales_tax": 2.0, "manor_price_per_1000": 40.0,
 		"manor_price_per_unit": 2.0, "manor_price_building_ratio": 0.5,
 		"manor_price_land_swing": 0.6, "manor_markup_max": 0.5, "manor_sell_ratio": 0.7,
-		"manor_defence_base": 10.0}
+		"manor_defence_base": 10.0,
+		# LEDGER M5: no urban population is seeded on this fixture's state, so
+		# these three never move the artisans' bonus off 0 — they only keep
+		# work_speed_permille's repo.bal() calls from asserting.
+		"artisan_per_step": 2000.0, "artisan_step_permille": 50.0, "artisan_speed_cap_permille": 500.0}
 	r.biomes = {1: {"habitability": "80"}, 2: {"habitability": "40"}}
 	r.vertices = {0: Vector2(0, 0), 1: Vector2(10, 0), 2: Vector2(10, 10), 3: Vector2(0, 10),
 		4: Vector2(30, 0), 5: Vector2(30, 10), 6: Vector2(0, 20), 7: Vector2(10, 20),
@@ -403,6 +407,11 @@ func test_works_take_days_and_slots_and_can_be_pulled_down() -> void:
 	assert_eq(MapManors.advance_works(r, s), [], "nothing done yet")
 	assert_almost_eq(MapManors.work_progress(s, 1, "mill"), 0.5, 0.001)
 	assert_eq(MapManors.work_days_left(s, 1, "mill"), 2)
+	# advance_works is a once-a-day step (spec 2026-09-30-ledger-industry-
+	# trade-design, M5: its "done" permille-days only accrue one day's speed
+	# a call), so day 4 must be stepped through too, not skipped.
+	s.day = 4
+	assert_eq(MapManors.advance_works(r, s), [], "still not, one day short")
 	s.day = 5
 	assert_eq(MapManors.advance_works(r, s), [{"cell": 1, "building": "mill"}])
 	assert_eq(MapManors.buildings_of(s, 1), ["mill"])

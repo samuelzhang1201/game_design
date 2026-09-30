@@ -665,3 +665,6 @@ gov_passed_over_opinion,-8,LEDGER M3: the displaced governor's opinion when his 
 gov_new_governor_opinion,4,LEDGER M3: the new governor's opinion when he is given a flow
 ui_slot_idle_alpha,0.4,"LEDGER M5: the opacity of an IDLE building's art in the manor card's slot row (its inputs went unpaid; the word idle stands under it)"
 ui_slot_work_alpha,0.35,"the opacity of a work in progress's art in the manor card's slot row (the ghost of the building, owner 2026-09-14)"
+artisan_per_step,2000,"LEDGER M5 (spec 2026-09-30-ledger-industry-trade-design): townsfolk of a province per step of faster building"
+artisan_step_permille,50,LEDGER M5: per mille faster a work goes for each step of townsfolk
+artisan_speed_cap_permille,500,LEDGER M5: the most the artisans can add

@@ -667,13 +667,18 @@ static func work_days_left(state: GameState, cell_id: int, building_code: String
 			return maxi(int(w["start"]) + int(w["days"]) - state.absolute_day(), 0)
 	return -1
 
-## How far along a work is, 0..1.
+## How far along a work is, 0..1. Once advance_works has touched it at
+## least once, its "done" field (permille-days, M5: the artisans' pace) is
+## the true measure; before that (and for a work with no days) the plain
+## elapsed-days share stands in.
 static func work_progress(state: GameState, cell_id: int, building_code: String) -> float:
 	for w: Dictionary in works_of(state, cell_id):
 		if String(w["building"]) == building_code:
 			var days := int(w["days"])
 			if days <= 0:
 				return 1.0
+			if w.has("done"):
+				return clampf(float(w["done"]) / (float(days) * 1000.0), 0.0, 1.0)
 			return clampf(float(state.absolute_day() - int(w["start"])) / float(days), 0.0, 1.0)
 	return 0.0
 
@@ -700,17 +705,46 @@ static func rush_work(_repo: DataRepository, state: GameState, cell_id: int, bui
 		return cut
 	return 0
 
-## The day's step for every work: those whose days are up become
-## buildings. Returns [{cell, building}] finished today, cell order.
+## How fast a province's works go (spec 2026-09-30-ledger-industry-trade-design,
+## M5): 1000 per mille a day, plus its townsfolk's bonus scaled by the master
+## of works' efficiency (Governance flow "works"), exactly as every other
+## governed flow reads it (WorkshopSystem, SupplySystem) — an empty Master of
+## Works seat (never filled by data/founding_council.csv on a fresh
+## campaign) is not a special case: Governance.factors gives a vacant flow
+## the row's min_permille (600) like any other, which is also the FLOOR a
+## seated governor's efficiency clamps to — so appointing anyone, however
+## unskilled or resentful, can never make the artisans slower than having no
+## Master of Works at all (controller ruling 2026-09-30, reversing an
+## earlier "unscaled when vacant" implementation choice: that would have let
+## a poor appointment be WORSE than an empty seat, which no appointment
+## should ever be).
+static func work_speed_permille(repo: DataRepository, state: GameState, province: String) -> int:
+	var urban := RealmEconomy._figure(repo, state, "economy.provinces.%s.urban_population" % province)
+	@warning_ignore("integer_division")
+	var bonus := mini(int(repo.bal("artisan_speed_cap_permille")),
+		urban / maxi(int(repo.bal("artisan_per_step")), 1) * int(repo.bal("artisan_step_permille")))
+	var eff := int(Governance.factors(repo, state, "works")["efficiency"])
+	@warning_ignore("integer_division")
+	return 1000 + bonus * eff / 1000
+
+## The day's step for every work: those whose progress (permille-days,
+## accumulated in "done" — M5, the artisans' pace) has reached days × 1000
+## become buildings. An old work carrying only "start" (a save from before
+## M5) is not stalled or jumped: its days already spent are reconstructed at
+## the plain 1000‰ pace before today's own speed is added. Returns
+## [{cell, building}] finished today, cell order.
 static func advance_works(repo: DataRepository, state: GameState) -> Array:
 	var done: Array = []
 	var today := state.absolute_day()
 	var keys: Array = state.manor_works.keys()
 	keys.sort_custom(func(a: String, b: String) -> bool: return int(a) < int(b))
 	for key: String in keys:
+		var speed := work_speed_permille(repo, state, province_of(repo, int(key), state))
 		var left: Array = []
 		for w: Dictionary in state.manor_works[key]:
-			if today - int(w["start"]) >= int(w["days"]):
+			var progressed := int(w.get("done", maxi(today - 1 - int(w["start"]), 0) * 1000)) + speed
+			w["done"] = progressed
+			if progressed >= int(w["days"]) * 1000:
 				var code := String(w["building"])
 				if build(repo, state, int(key), code, "finished after %d days" % int(w["days"])):
 					done.append({"cell": int(key), "building": code})

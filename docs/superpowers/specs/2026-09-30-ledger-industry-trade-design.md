@@ -81,6 +81,19 @@ month for one standing building). **Default** rows (only buildings whose
 - The master of works governs `builds` (an M3 governed flow: efficiency
   scales the artisan bonus; a venal master's skim takes part of each build's
   civil cost — reported whole, found by audit).
+- **Controller ruling 2026-09-30 (Task 2)**: the Master of Works seat is
+  never filled by `GameState.new_campaign` (`data/founding_council.csv` and
+  `data/roles.csv` name no one to it), so the flow reads VACANT on every
+  fresh campaign. `work_speed_permille` reads `Governance.factors(repo,
+  state, "works")["efficiency"]` exactly as every other governed flow does
+  — an empty seat gives the row's `min_permille` (600), the same floor a
+  seated governor's own efficiency is clamped to. This was implemented once
+  as "unscaled (1000) while vacant" and then reversed: unscaled-while-vacant
+  would let appointing a poor Master of Works (low skill, low opinion) make
+  the artisans SLOWER than having no one in the office at all, which no
+  appointment should ever do. `tests/engine/test_artisans.gd` holds this
+  structurally (every skill/opinion combination clamps to at least the
+  vacant seat's speed).
 
 ### The ontology
 
