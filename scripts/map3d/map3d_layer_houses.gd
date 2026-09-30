@@ -235,7 +235,8 @@ func variants_of(type: String) -> Array:
 
 
 ## A copy of `mesh` whose every surface is drawn by house_surface.gdshader
-## with that surface's own imported texture, roughness and vertex-colour use:
+## with that surface's own imported texture, roughness, vertex-colour use and
+## normal map when it has one (the palaces):
 ## a wall surface (material hh_wall_*) takes the wall tints, a tile roof
 ## (hh_roof_*, not slate) the roof tints, anything else none.
 func _tinted(mesh: Mesh) -> Mesh:
@@ -252,6 +253,11 @@ func _tinted(mesh: Mesh) -> Mesh:
 		mat.set_shader_parameter("albedo_color", src.albedo_color)
 		mat.set_shader_parameter("roughness", src.roughness)
 		mat.set_shader_parameter("use_vertex_color", src.vertex_color_use_as_albedo)
+		# a surface that brought a normal map (the palaces) draws it; the rest have none
+		mat.set_shader_parameter("use_normal", src.normal_enabled and src.normal_texture != null)
+		if src.normal_texture != null:
+			mat.set_shader_parameter("normal_tex", src.normal_texture)
+			mat.set_shader_parameter("normal_depth", src.normal_scale)
 		var mat_name := src.resource_name
 		var role := 0
 		if mat_name.begins_with("hh_wall_"):

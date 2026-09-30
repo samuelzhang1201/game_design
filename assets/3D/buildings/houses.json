@@ -70,25 +70,25 @@
   "tris": 1276
  },
  "palace": {
-  "footing_m": 17.95,
+  "footing_m": 17.934,
   "footprint_m": 68.0,
-  "height_m": 59.571,
+  "height_m": 59.585,
   "source": "tripo",
-  "tris": 12645
+  "tris": 60676
  },
  "palace_b": {
-  "footing_m": 17.979,
+  "footing_m": 17.991,
   "footprint_m": 68.0,
-  "height_m": 51.559,
+  "height_m": 51.851,
   "source": "tripo",
-  "tris": 12550
+  "tris": 60916
  },
  "palace_c": {
-  "footing_m": 17.944,
+  "footing_m": 17.94,
   "footprint_m": 68.0,
-  "height_m": 58.085,
+  "height_m": 58.145,
   "source": "tripo",
-  "tris": 12596
+  "tris": 60569
  },
  "townhouse_a": {
   "footing_m": 18.061,

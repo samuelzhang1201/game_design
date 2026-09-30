@@ -884,3 +884,27 @@ def test_the_real_table_gives_every_capital_a_palace_variant():
     assert towns == {"church", "church_b"}
     assert bake_houses._pick_landmark(types, "city", "x") == "church_tower"
     assert bake_houses._pick_landmark(types, "village", "x") == "chapel"
+
+
+def test_a_landmark_keeps_its_own_height_scale_when_its_row_names_one():
+    """Owner 2026-09-30: the palaces stand in true proportion (1.0), every
+    other landmark still at house_height_max."""
+    assert bake_houses.landmark_height_scale({"landmark_height_scale": "1.0"}, RULES) == 1.0
+    assert bake_houses.landmark_height_scale({"landmark_height_scale": ""}, RULES) == RULES["house_height_max"]
+    assert bake_houses.landmark_height_scale({}, RULES) == RULES["house_height_max"]
+    with open(os.path.join(ROOT, "data", "map3d_houses.csv"), newline="") as f:
+        types = {r["type"]: r for r in csv.DictReader(f)}
+    for t in ("palace", "palace_b", "palace_c"):
+        assert bake_houses.landmark_height_scale(types[t], RULES) == 1.0
+    assert bake_houses.landmark_height_scale(types["church"], RULES) == RULES["house_height_max"]
+
+
+def test_the_world_bake_hands_the_landmark_height_scale_through():
+    """bake_world reads the house table for the bake: it must carry the
+    palaces' landmark_height_scale (it dropped the column once, 2026-09-30,
+    and every palace still stood 1.5x tall)."""
+    import bake_world
+    types = bake_world.house_types()
+    for t in ("palace", "palace_b", "palace_c"):
+        assert bake_houses.landmark_height_scale(types[t], RULES) == 1.0
+    assert bake_houses.landmark_height_scale(types["church"], RULES) == RULES["house_height_max"]

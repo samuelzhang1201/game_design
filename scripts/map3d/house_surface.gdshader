@@ -12,6 +12,12 @@ uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, r
 uniform vec4 albedo_color : source_color = vec4(1.0);
 uniform float roughness = 0.9;
 uniform bool use_vertex_color = true;
+// A surface whose .glb material carries a normal map draws it (the palaces
+// since 2026-09-30: Tripo's own normals, owner 宫殿…整体要清晰，有细节); every
+// other house has none and draws exactly as before.
+uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform bool use_normal = false;
+uniform float normal_depth = 1.0;
 // 0 takes no tint (a recess, timber, slate), 1 a wall's, 2 a roof's
 uniform int role = 0;
 // linear multipliers, already raised from the table's sRGB hexes
@@ -61,6 +67,10 @@ void fragment() {
 		c = mix(c, weather_snow_color.rgb, clamp(wx.b * up * weather_roof_snow, 0.0, 1.0));
 	}
 	ALBEDO = c;
+	if (use_normal) {
+		NORMAL_MAP = texture(normal_tex, UV).rgb;
+		NORMAL_MAP_DEPTH = normal_depth;
+	}
 	ROUGHNESS = roughness;
 	METALLIC = 0.0;
 }
