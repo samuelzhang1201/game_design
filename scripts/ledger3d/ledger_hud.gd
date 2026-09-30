@@ -17,7 +17,10 @@ const GAUGE_SPACING_EM := 0.9   # between two gauges of one row, in caption ems
 const GAUGE_CAPTION_GAP := 3.0  # design px between a ring and its caption
 
 var _entries: Array = []
+var _rings: Array = []
 var _font: Font
+var _title_font: Font
+var _title_px := 20.0
 var _ink := Color.WHITE
 var _halo := Color.BLACK
 var _px := 14.0
@@ -25,6 +28,8 @@ var _halo_px := 4
 var _gauge: Dictionary = DEFAULT_GAUGE.duplicate()
 var _fill := Color(0.88, 0.73, 0.42)
 var _track := Color(0.29, 0.24, 0.17)
+var _ring := Color(0.88, 0.73, 0.42)
+var _ring_w := 3.0
 
 
 func style(font: Font, px: float, ink: Color, halo: Color, halo_px: int) -> void:
@@ -42,8 +47,22 @@ func style_gauges(radius: float, width: float, gap: float, caption_px: float, fi
 	_track = track
 
 
-func show_entries(entries: Array) -> void:
-	_entries = cull(entries, _px, _font, _gauge)
+func style_title(font: Font, px: float) -> void:
+	_title_font = font
+	_title_px = px
+
+
+func style_ring(colour: Color, width_px: float) -> void:
+	_ring = colour
+	_ring_w = width_px
+
+
+func show_entries(entries: Array, obstacles: Array = []) -> void:
+	_entries = cull(entries, _px, _font, _gauge, obstacles)
+	_rings.clear()
+	for e: Dictionary in entries:
+		if e.has("ring"):
+			_rings.append([e["ring_at"], float(e["ring"])])
 	queue_redraw()
 
 
@@ -96,14 +115,18 @@ static func gauge_row_h(props: Array, gauge: Dictionary) -> float:
 ## keeps its name. The box is the text's measured width when a font is given,
 ## else estimated at 0.55 em a glyph (so the cull is testable without one),
 ## centred on the place, with a quarter em of air at each end.
-static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dictionary = DEFAULT_GAUGE) -> Array:
+static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dictionary = DEFAULT_GAUGE,
+		obstacles: Array = []) -> Array:
 	var kept: Array = []
 	var boxes: Array[Rect2] = []
+	for o in obstacles:
+		boxes.append(o)
 	for e: Dictionary in entries:
+		var px := float(e.get("px", font_px))
 		var text := String(e["text"])
-		var w := float(text.length()) * font_px * 0.55
+		var w := float(text.length()) * px * 0.55
 		if font != null:
-			w = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(font_px)).x
+			w = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
 		var props: Array = e.get("props", [])
 		var extra_h := gauge_row_h(props, gauge)
 		if not props.is_empty():
@@ -118,8 +141,8 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 			# below the place: capitals reach ~0.45 em above the place,
 			# descenders ~0.6 em below), with a quarter em of air each side
 			# so two names in a row never butt into one another and read as one
-			var box := Rect2(at - Vector2(w * 0.5 + font_px * 0.25, font_px * 0.45 + (extra_h if up else 0.0)),
-				Vector2(w + font_px * 0.5, font_px * 1.05 + extra_h))
+			var box := Rect2(at - Vector2(w * 0.5 + px * 0.25, px * 0.45 + (extra_h if up else 0.0)),
+				Vector2(w + px * 0.5, px * 1.05 + extra_h))
 			var clear := true
 			for b in boxes:
 				if b.intersects(box):
@@ -136,21 +159,25 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 
 
 func _draw() -> void:
+	for r: Array in _rings:
+		draw_arc(r[0], r[1], 0.0, TAU, 48, _ring, _ring_w, true)
 	if _font == null:
 		return
 	for e: Dictionary in _entries:
+		var px := float(e.get("px", _px))
+		var font: Font = _title_font if bool(e.get("title", false)) and _title_font != null else _font
+		var ink: Color = e.get("ink", _ink if bool(e["strong"]) else Color(_ink, 0.8))
 		var text := String(e["text"])
-		var w := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(_px)).x
-		var at := (e["at"] as Vector2) - Vector2(w * 0.5, -_px * 0.35)
-		draw_string_outline(_font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(_px), _halo_px, _halo)
-		draw_string(_font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(_px),
-			_ink if bool(e["strong"]) else Color(_ink, 0.8))
+		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
+		var at := (e["at"] as Vector2) - Vector2(w * 0.5, -px * 0.35)
+		draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px), _halo_px, _halo)
+		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px), ink)
 		var props: Array = e.get("props", [])
 		if not props.is_empty():
 			var row_h := gauge_row_h(props, _gauge)
-			var top := (e["at"] as Vector2) + Vector2(0, _px * 0.6 + float(_gauge["gap"]))
+			var top := (e["at"] as Vector2) + Vector2(0, px * 0.6 + float(_gauge["gap"]))
 			if bool(e.get("gauges_up", false)):
-				top = (e["at"] as Vector2) - Vector2(0, _px * 0.45 + row_h)
+				top = (e["at"] as Vector2) - Vector2(0, px * 0.45 + row_h)
 			_draw_gauges(props, top)
 
 
