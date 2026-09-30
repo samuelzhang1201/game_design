@@ -60,21 +60,6 @@ uniform float wood_mottle_m = 180.0;
 uniform float wood_mottle = 0.5;
 uniform vec4 wood_broadleaf = vec4(0.18, 0.26, 0.12, 1.0);
 uniform vec4 wood_conifer = vec4(0.12, 0.2, 0.13, 1.0);
-// The WIND (owner 2026-09-30: 草缓缓的随风摇摆…麦穗摇曳): waves of light and
-// shade rolling down the wind over the crops (bake/fields.png's sown share)
-// and, fainter, the open grass; stalks bent by a gust show their lighter
-// side. Map3DLayerWind advances wind_time only while the clock runs; a wet or
-// overcast province blows harder; it fades out with the camera's distance.
-uniform float wind_on = 0.0;
-uniform float wind_time = 0.0;
-uniform vec2 wind_dir = vec2(1.0, 0.0);
-uniform float wind_speed_mps = 6.0;
-uniform float wind_wave_m = 60.0;
-uniform float wind_field_amp = 0.12;
-uniform float wind_grass_amp = 0.05;
-uniform float wind_near_m = 1500.0;
-uniform float wind_far_m = 9000.0;
-uniform float wind_storm_gain = 1.2;
 // The weather (spec 2026-09-29-weather-visuals): Map3DWeatherField's
 // (wet, mud, snow, overcast) for this spell and the next, blended by
 // weather_blend; texel = weather_step_px pack px; colours raw sRGB.
@@ -154,36 +139,7 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 		float w_k = clamp(wd.r * mix(wood_floor, wood_far, w_far), 0.0, 1.0);
 		base_albedo = mix(base_albedo, canopy, w_k);
 	}
-	if (wind_on > 0.0) {
-		float wd_k = 1.0 - smoothstep(wind_near_m, wind_far_m, length(v_vertex - CAMERA_POSITION_WORLD));
-		if (wd_k > 0.0) {
-			float wd_along = dot(v_vertex.xz, wind_dir) - wind_time * wind_speed_mps;
-			float wd_across = dot(v_vertex.xz, vec2(-wind_dir.y, wind_dir.x));
-			vec2 wd_q = vec2(wd_along / wind_wave_m, wd_across / (wind_wave_m * 2.5));
-			// a warp so the crests bend and break instead of ruling lines
-			wd_q += (vec2(wx_noise(wd_q * 0.31 + vec2(3.1, 7.7)), wx_noise(wd_q * 0.31 + vec2(9.4, 1.3))) - 0.5) * 1.6;
-			float wd_wave = wx_noise(wd_q) * 0.65 + wx_noise(wd_q * 2.3 + vec2(5.2, 1.9)) * 0.35;
-			// gusts: a slower field that swells and slackens the waves
-			float wd_gust = wx_noise(vec2(wd_along / (wind_wave_m * 7.0), wd_across / (wind_wave_m * 7.0)));
-			float wd_val = (wd_wave - 0.5) * 2.0 * mix(0.35, 1.0, wd_gust);
-			vec2 wd_fuv = (v_vertex.xz - pack_origin) / field_m_per_texel / vec2(textureSize(field_map, 0));
-			vec3 wd_ft = max(texture(field_map, wd_fuv).rgb, vec3(0.2));
-			float wd_sown = clamp((1.0 - min(min(wd_ft.r, wd_ft.g), wd_ft.b)) / 0.25, 0.0, 1.0);
-			float wd_grass = smoothstep(0.8, 0.93, w_normal.y);
-			if (wood_on > 0.0) {
-				vec2 wd_wuv = (v_vertex.xz - pack_origin) / wood_m_per_texel / vec2(textureSize(wood_map, 0));
-				wd_grass *= 1.0 - clamp(texture(wood_map, wd_wuv).r * 2.0, 0.0, 1.0);
-			}
-			float wd_storm = 1.0;
-			if (weather_on > 0.0) {
-				vec2 wd_uv = (v_vertex.xz - pack_origin) / m_per_px / (weather_step_px * vec2(textureSize(weather_now, 0)));
-				vec4 wd_wx = mix(texture(weather_now, wd_uv), texture(weather_next, wd_uv), weather_blend);
-				wd_storm += wind_storm_gain * clamp(max(wd_wx.r, wd_wx.a * 0.7), 0.0, 1.0) * (1.0 - wd_wx.b);
-			}
-			float wd_amp = max(wind_field_amp * wd_sown, wind_grass_amp * wd_grass) * wd_k * wd_storm;
-			base_albedo *= 1.0 + wd_amp * wd_val;
-		}
-	}
+	// @WIND (Map3DGroundWind.STAGE)
 	// The weather under the themes: the ground's own look, which a theme's
 	// tint then mixes over, like the relief and the sun.
 	if (weather_on > 0.0) {
@@ -285,8 +241,9 @@ static func patch(code: String) -> String:
 			at = i
 	if at < 0:
 		return ""
-	lines.insert(at + 1, UNIFORMS)
-	return "\n".join(lines).replace(ALBEDO_LINE, TINTED_ALBEDO)
+	lines.insert(at + 1, UNIFORMS + Map3DGroundWind.UNIFORMS)
+	return "\n".join(lines).replace(ALBEDO_LINE,
+		TINTED_ALBEDO.replace("\t// @WIND (Map3DGroundWind.STAGE)\n", Map3DGroundWind.STAGE))
 
 
 ## Whether `code` already carries the tint (a view loaded the world before).
