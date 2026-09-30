@@ -104,6 +104,25 @@ static func validate(repo: DataRepository) -> Array[String]:
 				errors.append("loop %s: unknown link %s" % [lp["loop_id"], l])
 		if not String(lp["kind"]) in ["virtuous", "vicious"]:
 			errors.append("loop %s: unknown kind %s" % [lp["loop_id"], lp["kind"]])
+	for n: Dictionary in repo.ledger_static_nodes:
+		var tid := String(n["type_id"])
+		if not types.has(tid):
+			errors.append("static node %s: unknown type %s" % [n["node_id"], tid])
+		elif String(types[tid]["instances"]) != "static":
+			errors.append("static node %s: type %s does not list static instances" % [n["node_id"], tid])
+		elif type_of(String(n["node_id"])) != tid:
+			errors.append("static node %s: its id must begin %s:" % [n["node_id"], tid])
+	for l: Dictionary in repo.ledger_static_links:
+		var lid := String(l["link_id"])
+		if not links.has(lid):
+			errors.append("static link %s: unknown link type" % lid)
+			continue
+		if String(links[lid]["resolver"]) != "static":
+			errors.append("static link %s: its link type is not read from the table" % lid)
+		for end: String in ["from", "to"]:
+			var want := String(links[lid]["from_type" if end == "from" else "to_type"])
+			if type_of(String(l[end])) != want:
+				errors.append("static link %s: %s %s is not a %s" % [lid, end, l[end], want])
 	return errors
 
 
@@ -193,7 +212,7 @@ static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -
 			if String(r["fold_to"]) == "":
 				nodes["type:" + tid] = _galaxy_node(repo, state, "type:" + tid)
 			continue
-		for row: Dictionary in LedgerResolvers.instances(list, repo, state):
+		for row: Dictionary in LedgerResolvers.instances(list, repo, state, tid):
 			var id := String(row["id"])
 			if not nodes.has(id):
 				nodes[id] = _galaxy_node(repo, state, id)
@@ -210,6 +229,13 @@ static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -
 				var a := String(l["from"])
 				var b := String(l["to"])
 				if a != id and b != id:
+					continue
+				var gone := false
+				for e: String in [a, b]:
+					if not nodes.has(e) and not e.begins_with("type:") \
+							and LedgerResolvers.label_of(repo, state, e) == "":
+						gone = true
+				if gone:
 					continue
 				# a link both of whose ends fold to the same province is
 				# dropped at the merge below (`a == b`) however it is

@@ -20,6 +20,9 @@ static func entry(repo: DataRepository, state: GameState, node_id: String, snap:
 		"courier":
 			return {"obj": {"kind": "courier", "id": int(rest)}}
 	var lines: Array[String] = []
+	var written := LedgerResolvers.static_node(repo, node_id)
+	if not written.is_empty() and String(written["note"]) != "":
+		lines.append(String(written["note"]))
 	var t := Ledger.type_of(node_id)
 	var row := Ledger.type_row(repo, t)
 	if String(row.get("status", "")) == "planned":

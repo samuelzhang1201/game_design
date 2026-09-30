@@ -22,9 +22,9 @@ extends RefCounted
 const NAMES := ["works", "part_of", "yields_civil", "yields_strategic", "taxed", "trade_gold",
 	"rations", "stands_on", "holds", "member", "sits", "based_in", "carries", "spies_on",
 	"describes", "court_relations", "converts_in", "converts_out", "supplies_in", "supplies_out", "garrisons",
-	"governs", "skims", "builds", "consumes", "trades", "routes"]
+	"governs", "skims", "builds", "consumes", "trades", "routes", "static"]
 const INSTANCE_LISTS := ["peasants", "manors", "provinces", "regiments", "characters", "houses",
-	"seats", "reports", "couriers", "workshops", "supply_lines", "artisans", "markets", "trade_routes"]
+	"seats", "reports", "couriers", "workshops", "supply_lines", "artisans", "markets", "trade_routes", "static"]
 const REPORT_KINDS := {"describes_province": "province", "describes_manor": "manor",
 	"describes_regiment": "regiment", "describes_town": "burg"}
 
@@ -202,6 +202,8 @@ static func run(row: Dictionary, repo: DataRepository, state: GameState, focus: 
 			return _trades(repo, state, id, to_t)
 		"routes":
 			return _routes_to_gold(repo, state, id)
+		"static":
+			return _static_links(row, repo, id, all)
 	return []
 
 
@@ -218,6 +220,30 @@ static func _link(from_id: String, to_id: String, flow: int, key: String,
 
 static func _rest(id: String) -> String:
 	return id.substr(id.get_slice(":", 0).length() + 1)
+
+
+## A link type whose links are written down (data/ledger_static_links.csv,
+## spec 2026-09-30-ledger-galaxy-design §3b): the crown's own figure, no
+## Intel subject. The type level is one link counting them.
+static func _static_links(row: Dictionary, repo: DataRepository, id: String, all: bool) -> Array:
+	var out: Array = []
+	for l: Dictionary in repo.ledger_static_links:
+		if String(l["link_id"]) != String(row["link_id"]):
+			continue
+		if all or id == "" or id == String(l["from"]) or id == String(l["to"]):
+			out.append(_link(String(l["from"]), String(l["to"]), int(l["flow"]), "count"))
+	if id == "" and not all:
+		return [_type_link(String(row["from_type"]), String(row["to_type"]), out.size(), "count")] \
+			if not out.is_empty() else []
+	return out
+
+
+## The written-down node `id` (data/ledger_static_nodes.csv), or {}.
+static func static_node(repo: DataRepository, id: String) -> Dictionary:
+	for n: Dictionary in repo.ledger_static_nodes:
+		if String(n["node_id"]) == id:
+			return n
+	return {}
 
 
 ## A manor's Intel subject, from ONE build per cell per memo — a galaxy asks
@@ -839,7 +865,7 @@ static func _stock(repo: DataRepository, state: GameState, pool: String, metrics
 
 # --- instances and names ---------------------------------------------------
 
-static func instances(name: String, repo: DataRepository, state: GameState) -> Array:
+static func instances(name: String, repo: DataRepository, state: GameState, type_id: String = "") -> Array:
 	var out: Array = []
 	var realm := repo.resolve_realm("player_realm")
 	match name:
@@ -893,6 +919,10 @@ static func instances(name: String, repo: DataRepository, state: GameState) -> A
 		"trade_routes":
 			for r: Dictionary in _routes(repo, state):
 				out.append({"id": "trade_route:" + String(r["kingdom"]), "strain": int(r["value"])})
+		"static":
+			for n: Dictionary in repo.ledger_static_nodes:
+				if String(n["type_id"]) == type_id:
+					out.append({"id": String(n["node_id"]), "strain": 0})
 	for row: Dictionary in out:
 		row["label"] = label_of(repo, state, String(row["id"]))
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -902,8 +932,26 @@ static func instances(name: String, repo: DataRepository, state: GameState) -> A
 	return out
 
 
-## A node's name, or "" when what it names no longer exists.
+## A node's name, or "" when what it names no longer exists, cached per id
+## within one memo (fix round: the galaxy's worklist checks a new end's
+## label once to tell whether it still exists, then `_node` asked for the
+## same label again to build it — a manor's or a building's label rebuilds
+## MapManors.label_of's lookups each time, doubling the cost of every newly
+## discovered node and pushing the galaxy over its ms budget).
 static func label_of(repo: DataRepository, state: GameState, id: String) -> String:
+	if not _memo_on:
+		return _label_of_raw(repo, state, id)
+	var cache: Dictionary = _memo.get("label_of", {})
+	if not cache.has(id):
+		cache[id] = _label_of_raw(repo, state, id)
+		_memo["label_of"] = cache
+	return cache[id]
+
+
+static func _label_of_raw(repo: DataRepository, state: GameState, id: String) -> String:
+	var written := static_node(repo, id)
+	if not written.is_empty():
+		return String(written["label"])
 	var kind := id.get_slice(":", 0)
 	var rest := _rest(id)
 	match kind:
