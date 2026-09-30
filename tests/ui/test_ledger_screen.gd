@@ -7,9 +7,8 @@ func _court() -> GameRoot:
 	add_child_autofree(r)
 	await wait_frames(2)
 	var menu: MainMenu = r.current_screen
+	# Start Game begins the reign at once (owner 2026-09-30: no character creation).
 	menu.menu_column().get_node("StartGame").pressed.emit()
-	await wait_frames(1)
-	menu.setup_panel().find_child("BeginReign", true, false).pressed.emit()
 	await wait_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)

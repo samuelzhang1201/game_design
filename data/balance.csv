@@ -646,7 +646,7 @@ ledger_thread_width_max,0.28,LEDGER: a thread's radius at ledger_thread_flow_ref
 ledger_thread_flow_ref,5000,"LEDGER: the flow at which a thread reaches its widest (log scale)"
 ledger_thread_vague_width,0.08,LEDGER: a thread whose figure the crown only has in words
 ledger_tie_ref,80,"LEDGER (owner 2026-09-30: the court's 49 thick ties tangled): the strength of feeling (|sentiment|) at which a court tie reaches ledger_tie_width_max"
-ledger_tie_width_min,0.025,LEDGER: a court tie's radius at no feeling (metres) — a thin cord, not a flow's wire
+ledger_tie_width_min,0.025,"LEDGER: a court tie's radius at no feeling (metres) — a thin cord, not a flow's wire"
 ledger_tie_width_max,0.07,LEDGER: a court tie's radius at ledger_tie_ref and above
 ledger_tie_rest_fade,0.25,"LEDGER: opacity of a court tie that does not touch the player while nothing is selected (the court is read one person's web at a time; selecting anyone makes them the one)"
 ledger_light_speed,0.6,LEDGER: pulses per second along a thread at its widest
