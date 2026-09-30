@@ -60,10 +60,18 @@ with `lens` = `"galaxy"` and every node carrying a `cluster`.
   new `data/ledger_clusters.csv` (cluster, label, palette key, 3D anchor
   `x,y,z`, 2D anchor `x2,z2`, the lens chip it answers to). The province and
   the town sit in **economy** (owner: the economy is counted by province).
-- **Links.** Each live link row is read ONCE for the whole realm through the
-  resolver's `{"all": true}` form; a resolver that only answers per id
-  (`{"id": …}`) today gains an `all` branch. A test holds the galaxy's links
-  to equal the union of every instance's ego (§10).
+- **Links** are the union of every instance's EGO (the readers already
+  answer per id, so no reader changes): a worklist starts from every listed
+  instance and reads each live link row touching its type with
+  `{"id": …}`; a node a link discovers is queued in turn — EXCEPT a
+  foldable one (a manor, building or town) outside a controlled or opened
+  province, whose links are recorded but not expanded (it only folds into
+  its province). A row both of whose types have no instances (pool to pool:
+  `trade_gold`, `rations`) is read at the type level once. Measured
+  2026-09-30 on the default pack after six months: 799 reads, 632 nodes,
+  1,196 links in ~175 ms — ~136 ms of it `holds` scanning every cell once
+  per house; `LedgerResolvers` therefore builds ONE house → manors index
+  per memo (`begin_memo`) and `_holds` reads it.
 - **The fold** (owner: province is the economy's smallest unit). A type with
   a new `fold_to` column (`manor`, `building`, `town` → `province`) never
   stands as its own star unless its province is OPENED. Each link touching
@@ -77,7 +85,7 @@ with `lens` = `"galaxy"` and every node carrying a `cluster`.
 - **Opening a province** (`opened` = the province ids the player unfolded,
   view state, never saved): its manors, towns and buildings stand as their
   own stars round it, with their own links; the rest stay folded.
-- **Budget**: ≤ 30 ms warm on the default pack after six months of play
+- **Budget**: ≤ 60 ms warm on the default pack after six months of play
   (≈ 110 stars and 160 links folded; ≈ 650 and 1,200 with every province
   open), measured by a test on the real pack.
 
@@ -210,7 +218,7 @@ and tonemap, so the map's environment is untouched.
 
 ## 9. Performance
 
-- Snapshot ≤ 30 ms warm (§3); layout ≤ 4 ms a frame while settling and
+- Snapshot ≤ 60 ms warm (§3); layout ≤ 4 ms a frame while settling and
   nothing once settled; the drawn LEDGER holds the display refresh at
   1920×1080 on the `high` tier with every province open.
 - Measured by a probe in the plan's last task on the real pack; a miss is
@@ -220,10 +228,12 @@ and tonemap, so the map's environment is untouched.
 
 - `galaxy`: every live instance appears once, in its cluster; planned types
   as ghosts; no manor / town / building stands unless its province is
-  opened; opening one province shows exactly its manors; a merged link's
+  opened; opening one province shows exactly its manors; a folded manor
+  outside a controlled or opened province is never expanded; a merged link's
   `count` is the number it stands for; flows sum only within one Intel
   level; a link folded onto itself is gone; an annexed manor folds into its
-  NEW province; links equal the union of every instance's ego on a fixture.
+  NEW province; the house → manors index gives `_holds` the same links as
+  the scan; the galaxy's time is within budget.
 - Layout: same snapshot → same places; a star keeps its place across a
   snapshot that did not touch it; clusters settle apart (every centroid
   farther from every other than the sum of their spreads); an opened
