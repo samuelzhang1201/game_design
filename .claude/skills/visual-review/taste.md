@@ -414,6 +414,22 @@ add it here as a principle with its why — not as a changelog entry.
 - **The steel is matte and warm, like the cavalry's**: Tripo's delit silver
   read white on the map; toned down, roughness at least 0.55.
 
+## The Tripo knight (owner 2026-09-30, the cavalry remade the infantry's way)
+
+- **Keep the design; change the maker**: the Tripo knight wears the in-game
+  look (plate, a charcoal dappled horse with a white star, no barding, a
+  green saddle cloth with a brass edge, a green heater with a white pale,
+  an upright lance) — "沿用现在设计".
+- **The shield is big and rides his back** ("盾牌太小，盾牌要背在身后"),
+  with NO strap ("盾牌不要那根带子"); it is modelled on its own, not
+  generated on the man ("盾牌单独做，骑士不带盾出图" — every picture of
+  a shield "on the back" came back on the arm).
+- **On guard the shield comes to the arm** ("用第一种"): GARRISON takes it
+  from the back to his near arm, raised before him; every other clip wears
+  it on the back.
+- **A mounted piece gets a STANDBY too** ("加STANDBY"): the horse at rest,
+  the lance upright — not the guard.
+
 ## Sunlight (owner 2026-09-28)
 - **The sun models the ground; it never covers it** ("日照产生的阴影实在太厚重太大了…不要影响玩家的视线"). A cast shadow is a light wash
   you can read the map through (`map3d_sun_shadow_opacity` 0.45, soft edge),

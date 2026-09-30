@@ -2,16 +2,20 @@
  "cavalry": {
   "actions": {
    "ATTACK": [
-    1,
-    76
+    0,
+    75
    ],
    "GARRISON": [
-    1,
-    121
+    0,
+    120
    ],
    "MARCH": [
-    1,
-    49
+    0,
+    48
+   ],
+   "STANDBY": [
+    0,
+    120
    ]
   },
   "bones": 43,
@@ -19,10 +23,12 @@
   "height_m": 3.319,
   "kind": "mounted",
   "label": "Knight",
-  "source": "CC0 scans (Cleveland Museum of Art 1964.88 knight, Hunt Museum horse) + design C tack, tools/units3d/cavalry_scan.py",
-  "tris": 18444,
+  "source": "Tripo 3D (owner, paid plan) from tripo_kit/zimage_threequarter_s1.png; tools/units3d/cavalry_tripo/",
+  "stride_m": 1.546,
+  "tris": 19047,
   "weights": {
-   "horse": "heat"
+   "horse": "heat",
+   "rider": "rigid"
   }
  },
  "courier": {
