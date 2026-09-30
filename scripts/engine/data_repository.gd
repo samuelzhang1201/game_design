@@ -101,6 +101,11 @@ var army_morale_words: Array = []
 ## rate first — the rates WORKSHOP_RATE accepts and how each is said
 ## (WorkshopSystem; spec 2026-09-30-ledger-supply-design §2).
 var workshop_rates: Array = []
+## data/building_inputs.csv: building code -> [{good, units}] in file order,
+## what one standing building eats a month (IndustrySystem; spec
+## 2026-09-30-ledger-industry-trade-design M5). A building with no rows eats
+## nothing.
+var building_inputs: Dictionary = {}
 ## data/courier_kinds.csv: kind -> {speed_permille, fee_gold, offered}
 ## (spec 2026-09-27-courier-core §3).
 var courier_kinds: Dictionary = {}
@@ -680,6 +685,13 @@ func _load(dir: String) -> bool:
 		return false
 	workshop_rates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["rate_permille"]) < int(b["rate_permille"]))
+	if not _load_if_present(dir + "/building_inputs.csv", ["building_code", "good_code", "units"],
+			func(r):
+				var code := String(r["building_code"])
+				if not building_inputs.has(code):
+					building_inputs[code] = []
+				(building_inputs[code] as Array).append({"good": String(r["good_code"]), "units": int(r["units"])})):
+		return false
 	if not _load_if_present(dir + "/landmark_names.csv", ["kind", "pattern"],
 			func(r):
 				var k := String(r["kind"])

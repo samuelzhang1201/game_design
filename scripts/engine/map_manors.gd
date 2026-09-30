@@ -739,6 +739,12 @@ static func demolish(repo: DataRepository, state: GameState, cell_id: int, build
 			state.manor_buildings.erase(key)
 		if building_code == WorkshopSystem.BUILDING:
 			WorkshopSystem.forget(state, cell_id)  # its rate goes with it
+		# An idle mark goes with it too (M5): a new one raised this month
+		# starts working, not idle for its predecessor's unpaid bill.
+		if state.idle_buildings.has(key):
+			(state.idle_buildings[key] as Array).erase(building_code)
+			if (state.idle_buildings[key] as Array).is_empty():
+				state.idle_buildings.erase(key)
 		found = true
 	elif is_building(state, cell_id, building_code):
 		var left: Array = []
@@ -776,10 +782,18 @@ static func crown_building_effects(repo: DataRepository, state: GameState) -> Di
 	return building_effects(repo, state,
 		manors_of_house(repo, state, crown(state), repo.resolve_realm("player_realm")))
 
-## Goods a manor's finished buildings make: {good: units}.
+## Whether a standing building stands IDLE this month for want of inputs
+## (spec 2026-09-30-ledger-industry-trade-design M5; IndustrySystem).
+static func is_idle(state: GameState, cell_id: int, code: String) -> bool:
+	return code in (state.idle_buildings.get(str(cell_id), []) as Array)
+
+## Goods a manor's finished buildings make: {good: units}. An idle building
+## (M5: its inputs went unpaid) makes nothing.
 static func building_output_of(repo: DataRepository, state: GameState, cell_id: int) -> Dictionary:
 	var out: Dictionary = {}
 	for code: String in buildings_of(state, cell_id):
+		if is_idle(state, cell_id, code):
+			continue
 		var row: Dictionary = repo.manor_buildings.get(code, {})
 		var good := String(row.get("produce_good", "")).strip_edges()
 		var units := float(row.get("produce_units", 0))

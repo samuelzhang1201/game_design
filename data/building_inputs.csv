@@ -1,0 +1,9 @@
+building_code,good_code,units,notes
+smithy,iron,3,"spec 2026-09-30-ledger-industry-trade-design M5: what one standing building EATS a month, in whole units of a good. A building is fed from its own manor's units of the good first (ManorEconomy.line_of nets them), then IndustrySystem buys the rest from the lord's pool of that good (goods_economy.csv pool and price_gold) at the month's end; a building the pool cannot pay for stands IDLE the next month (GameState.idle_buildings). A forge eats iron."
+armoury,tools,1,
+armoury,iron,2,
+tannery,cattle,2,
+loom,sheep,2,
+brewery,grain,4,
+shipwright,wood,10,
+shipwright,ropes,2,

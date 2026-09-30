@@ -45,6 +45,14 @@ func advance(state: GameState) -> TickReport:
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.
 	_settle_economy(state, r)
+	# Buildings eat (spec 2026-09-30-ledger-industry-trade-design, M5): with
+	# this month's goods in, the lord's input buildings buy next month's
+	# inputs, or stand idle. No RealmEconomy.forget(): the province key and
+	# the realm signature carry idle_buildings, so only a province whose
+	# idle set moved goes stale — and the tick below stales them all anyway,
+	# to be recomputed by the day buckets, not in one lump at the month's turn.
+	for l: Dictionary in IndustrySystem.settle_month(data, state):
+		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
 	# The war workshops (spec 2026-09-30-ledger-supply-design §2): this
 	# month's civil goods are in; turn the lord's share into arms before the
 	# supply lines ship.

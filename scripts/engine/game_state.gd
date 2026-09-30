@@ -287,6 +287,11 @@ var manor_focus: Dictionary = {}
 ## cell id (String) -> permille (0 or 500) for each war workshop set away
 ## from full (spec 2026-09-30-ledger-supply-design §2); full is not stored.
 var workshop_rate: Dictionary = {}
+## cell id (String) -> [building codes] idle THIS month for want of inputs
+## (spec 2026-09-30-ledger-industry-trade-design M5): a building whose
+## inputs the lord's stores could not pay for makes and eats nothing.
+## Rewritten whole by every settlement (IndustrySystem.settle_month).
+var idle_buildings: Dictionary = {}
 ## flow type -> character id, only flows given away from their seat (M3).
 var governors: Dictionary = {}
 ## character id -> {flow type -> whole gold skimmed on that flow since an
@@ -355,6 +360,7 @@ func to_dict() -> Dictionary:
 		"manor_buildings": manor_buildings.duplicate(true),
 		"manor_focus": manor_focus.duplicate(true),
 		"workshop_rate": _encode_values(workshop_rate.duplicate(true)),
+		"idle_buildings": idle_buildings.duplicate(true),
 		"governors": governors.duplicate(true),
 		"skims": _encode_values(skims.duplicate(true)),
 		"caught": _encode_values(caught.duplicate(true)),
@@ -432,6 +438,8 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.caught = _decode_values(d.get("caught", {}))
 	s.records = d.get("records", {}).duplicate(true)
 	s.manor_works = _decode_values(d.get("manor_works", {}))
+	# Saves from before buildings ate (M5) carry none: nothing stands idle.
+	s.idle_buildings = d.get("idle_buildings", {}).duplicate(true)
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	s.regiments = _decode_values(d.get("regiments", {}))
 	# Saves from before the couriers carry neither key: no one is on the road.

@@ -46,7 +46,9 @@ static func focus_units(repo: DataRepository, state: GameState, cell: int, peopl
 		* float(growth_index(repo, good, tick)) / 1000.0
 	return {"good": good, "units": int(roundf(exact))}
 
-## The manor's month: {people, tax, tariff, strategic, civil, units}.
+## The manor's month: {people, tax, tariff, strategic, civil, units, fed}
+## — `fed` is building code -> {good: own units eaten} for each working
+## input building (M5), `units` what is left after it ate.
 ## `tax` INCLUDES the tariff (the tariff is also given on its own for the
 ## card). tax = round(people / 1000 x manor_tax_per_1000 x tax_rate /
 ## tax_rate_base x (1 + Σ tax_bonus)); tariff = round(town goods' gold x
@@ -85,6 +87,28 @@ static func line_of(repo: DataRepository, state: GameState, cell: int, tick: int
 	if town_gold > 0:
 		tariff = int(roundf(float(town_gold) * float(m.get("tariff_rate", 0.0))
 			* repo.bal("tariff_per_sales_tax") / 100.0))
+	# Buildings eat (spec 2026-09-30-ledger-industry-trade-design, M5): each
+	# standing, working input building is fed from this manor's own units
+	# first — so the pools below count only what is left, and a forge's own
+	# iron is not sold as well as eaten; what it still needs the lord's
+	# stores sell it at the month's end (IndustrySystem). Buildings in code
+	# order, inputs in file order: one order on every machine.
+	var fed: Dictionary = {}
+	var standing: Array = MapManors.buildings_of(state, cell)
+	standing.sort()
+	for code: String in standing:
+		if MapManors.is_idle(state, cell, code) or not repo.building_inputs.has(code):
+			continue
+		var eaten: Dictionary = {}
+		for inp: Dictionary in repo.building_inputs[code]:
+			var good := String(inp["good"])
+			var own := mini(int(units.get(good, 0)), int(inp["units"]))
+			if own > 0:
+				units[good] = int(units[good]) - own
+				if int(units[good]) == 0:
+					units.erase(good)
+			eaten[good] = own
+		fed[code] = eaten
 	var strategic := 0
 	var civil := 0
 	var codes: Array = units.keys()
@@ -97,4 +121,4 @@ static func line_of(repo: DataRepository, state: GameState, cell: int, tick: int
 		else:
 			civil += gold
 	return {"people": people, "tax": tax + tariff, "tariff": tariff,
-		"strategic": strategic, "civil": civil, "units": units}
+		"strategic": strategic, "civil": civil, "units": units, "fed": fed}
