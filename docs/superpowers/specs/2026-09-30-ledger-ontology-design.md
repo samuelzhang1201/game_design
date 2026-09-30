@@ -464,6 +464,20 @@ ledger (it is derived; a dragged sphere is forgotten).
   `ledger_disc_pad_m`, clamped to `ledger_disc_min_m` .. `ledger_disc_radius_m`
   — an ego network's two-sphere disc no longer frames itself with 10 m of
   empty brass.
+- **The look, as the owner ruled it (2026-09-30: variant A, brass and
+  glass, and "两个问题一起改").** Each disc is a flat pool that FADES OUT
+  over its last `ledger_disc_fade_m` (4) metres — the same soft rim on the
+  small KNOW disc as on the large ones, never more than
+  `ledger_disc_fade_max_share` of its radius (`disc.gdshader`, a PlaneMesh:
+  no slab, no hard edge). A court tie is a thin CORD, not a flow's wire —
+  `ledger_tie_width_min` .. `_max` by |sentiment| up to `ledger_tie_ref` —
+  and the court is read ONE PERSON'S WEB AT A TIME: while nothing is
+  selected the player's own ties (`LedgerView3D.EGO_AT_REST`,
+  `character:you`) are lit and every other tie stands back at
+  `ledger_tie_rest_fade` 0.25; selecting anyone makes them the lit one.
+  `thread.gdshader`'s `fade` is PERCEIVED opacity (turned linear by
+  `pow(fade, 2.2)`): Forward+ blends in linear light, where alpha 0.25 of a
+  bright wire on the dark ground read nearly full.
 - **The camera frames what is drawn.** `LedgerOrbit.frame(points, yaw,
   pitch, fov, aspect, safe)` is a pure function that bisects the least
   camera distance at which every given point (each sphere ± its radius,

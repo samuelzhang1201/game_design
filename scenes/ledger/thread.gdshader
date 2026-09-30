@@ -10,6 +10,9 @@ render_mode unshaded, blend_mix, cull_disabled, depth_draw_opaque;
 uniform vec4 color : source_color = vec4(0.88, 0.73, 0.42, 1.0);
 uniform vec4 glow_color : source_color = vec4(1.0, 0.85, 0.5, 1.0);
 uniform float ink = 1.0;
+// How much of the thread shows as the EYE reads it (focus and rest fades):
+// Forward+ blends in linear light, where alpha 0.25 of a bright wire on the
+// dark ground still reads about half as bright, so it is turned linear here.
 uniform float fade = 1.0;
 uniform float speed = 0.0;
 uniform float pulses = 4.0;
@@ -32,5 +35,5 @@ void fragment() {
 	vec3 c = mix(color.rgb, vec3(1.0, 0.95, 0.82), light * 0.8);
 	c = mix(c, glow_color.rgb, glow * (0.55 + 0.45 * sin(TIME * 1.6)));
 	ALBEDO = c;
-	ALPHA = clamp((ink * color.a + light * 0.3) * fade, 0.0, 1.0);
+	ALPHA = clamp((ink * color.a + light * 0.3) * pow(fade, 2.2), 0.0, 1.0);
 }

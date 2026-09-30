@@ -14,8 +14,10 @@ signal drill_requested(id: String)
 signal orders_requested(id: String, at: Vector2)
 
 const THREAD_SHADER := preload("res://scenes/ledger/thread.gdshader")
+const DISC_SHADER := preload("res://scenes/ledger/disc.gdshader")
 const CLICK_SLOP := 10.0
 const KIN_TYPES := ["kin", "marriage"]
+const EGO_AT_REST := "character:you"  # the player, whose court ties show while no one is selected
 
 @onready var _viewport: SubViewport = %Viewport
 @onready var _display: TextureRect = %Display
@@ -120,9 +122,9 @@ func show_snapshot(snap: Dictionary, keep_camera: bool) -> void:
 		var disc := _disc_mi[layer] as MeshInstance3D
 		disc.visible = layer in present
 		if disc.visible:
-			var mesh := disc.mesh as CylinderMesh
-			mesh.top_radius = LedgerLayout.disc_radius(_repo, snap, _pos, layer)
-			mesh.bottom_radius = mesh.top_radius
+			var r := LedgerLayout.disc_radius(_repo, snap, _pos, layer)
+			(disc.mesh as PlaneMesh).size = Vector2(2.0 * r, 2.0 * r)
+			(disc.material_override as ShaderMaterial).set_shader_parameter("fade_start", _fade_start(r))
 	if not _nodes.has(_selected):
 		_selected = ""
 	_build_spheres()
@@ -195,21 +197,30 @@ func _build_discs() -> void:
 		c.queue_free()
 	_disc_mi.clear()
 	for layer: String in Ledger.LAYERS:
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = _repo.bal("ledger_disc_radius_m")
-		mesh.bottom_radius = mesh.top_radius
-		mesh.height = _repo.bal("ledger_disc_thickness_m")
-		mesh.radial_segments = int(_repo.bal("ledger_disc_segments"))
-		var mat := StandardMaterial3D.new()
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.albedo_color = _pal["disc_" + layer]
+		# A flat pool that fades toward its rim (disc.gdshader) — no slab, no
+		# hard edge (taste: "Nothing ends on a hard cut").
+		var mesh := PlaneMesh.new()
+		var r := _repo.bal("ledger_disc_radius_m")
+		mesh.size = Vector2(2.0 * r, 2.0 * r)
+		var mat := ShaderMaterial.new()
+		mat.shader = DISC_SHADER
+		mat.set_shader_parameter("color", _pal["disc_" + layer])
+		mat.set_shader_parameter("fade_start", _fade_start(r))
 		var mi := MeshInstance3D.new()
 		mi.mesh = mesh
 		mi.material_override = mat
 		mi.position.y = LedgerLayout.disc_y(_repo, layer)
 		_discs.add_child(mi)
 		_disc_mi[layer] = mi
+
+
+## Where a disc of radius `r` begins to fade, as a share of r: the same
+## ledger_disc_fade_m of soft rim on every disc (a share alone left the
+## small KNOW disc a hard edge), never more than ledger_disc_fade_max_share.
+func _fade_start(r: float) -> float:
+	if r <= 0.0:
+		return 0.0
+	return 1.0 - minf(_repo.bal("ledger_disc_fade_m"), r * _repo.bal("ledger_disc_fade_max_share")) / r
 
 
 func _sphere_color(n: Dictionary) -> Color:
@@ -259,6 +270,11 @@ func _build_spheres() -> void:
 
 func _width(l: Dictionary) -> float:
 	var lo := _repo.bal("ledger_thread_width_min")
+	if _is_tie(l):
+		# A court tie is a thin cord (the court drew 49 thick ties into a
+		# tangle): its width by the strength of feeling, linear to ledger_tie_ref.
+		var s := clampf(_tie_strength(l) / _repo.bal("ledger_tie_ref"), 0.0, 1.0)
+		return lerpf(_repo.bal("ledger_tie_width_min"), _repo.bal("ledger_tie_width_max"), s)
 	if l["flow"] == null:
 		return _repo.bal("ledger_thread_vague_width")
 	var f := float(l["flow"])
@@ -268,13 +284,34 @@ func _width(l: Dictionary) -> float:
 	return lerpf(lo, _repo.bal("ledger_thread_width_max"), t)
 
 
+## A tie between two people of the court (court_relations), not a flow.
+func _is_tie(l: Dictionary) -> bool:
+	return String(Ledger.link_row(_repo, String(l["type"])).get("resolver", "")) == "court_relations"
+
+
+## How much of a thread shows while nothing is selected: the court is read
+## one person's web at a time (owner 2026-09-30: the 49 ties tangled), so at
+## rest the player's own ties (EGO_AT_REST) are lit and every other tie
+## stands back at ledger_tie_rest_fade; selecting anyone makes them the one.
+func _rest_fade(l: Dictionary) -> float:
+	if not _is_tie(l) or not _nodes.has(EGO_AT_REST):
+		return 1.0
+	if String(l["from"]) == EGO_AT_REST or String(l["to"]) == EGO_AT_REST:
+		return 1.0
+	return _repo.bal("ledger_tie_rest_fade")
+
+
+## A court tie's strength of feeling: its flow, the sentiment's size.
+func _tie_strength(l: Dictionary) -> float:
+	return absf(float(l["flow"])) if l["flow"] != null else 0.0
+
+
 func _thread_color(l: Dictionary) -> Color:
 	if String(l["status"]) == "planned" or bool(l.get("vacant", false)):
 		return _pal["thread_planned"]  # not built, or a seat no one holds (M3 final review M8)
 	if String(l["type"]) in KIN_TYPES:
 		return _pal["thread_kin"]
-	var rel := Ledger.link_row(_repo, String(l["type"]))
-	if String(rel.get("resolver", "")) == "court_relations":
+	if _is_tie(l):
 		return _pal["thread_pos"] if int(l["sentiment"]) >= 0 else _pal["thread_neg"]
 	var accs: Array = l["accounts"]
 	var c: Color = _pal["thread_live"]
@@ -432,7 +469,7 @@ func _add_thread(l: Dictionary, a: Vector3, b: Vector3, running: Dictionary) -> 
 	mat.set_shader_parameter("dashes", _repo.bal("ledger_dashes"))
 	mat.set_shader_parameter("pulses", _repo.bal("ledger_light_pulses"))
 	var flowing := not planned and l["flow"] != null and int(l["flow"]) > 0 \
-		and String(Ledger.link_row(_repo, String(l["type"])).get("resolver", "")) != "court_relations"
+		and not _is_tie(l)
 	var width_t := inverse_lerp(_repo.bal("ledger_thread_width_min"), _repo.bal("ledger_thread_width_max"), r)
 	mat.set_shader_parameter("speed", _repo.bal("ledger_light_speed") * (0.4 + 0.6 * width_t) if flowing else 0.0)
 	var loop_kind := String(running.get(String(l["type"]), ""))
@@ -461,10 +498,11 @@ func _apply_focus_fade() -> void:
 		mat.albedo_color.a = float(_sphere_alpha[id]) * (1.0 if near.is_empty() or near.has(id) else faint)
 	for l: Dictionary in _snap.get("links", []):
 		var lit := near.is_empty() or (near.has(String(l["from"])) and near.has(String(l["to"])))
+		var fade := (_rest_fade(l) if near.is_empty() else 1.0) if lit else faint
 		for st: Array in _threads_of(l):
 			var mi: MeshInstance3D = _thread_mi.get(String(st[0]))
 			if mi != null:
-				(mi.material_override as ShaderMaterial).set_shader_parameter("fade", 1.0 if lit else faint)
+				(mi.material_override as ShaderMaterial).set_shader_parameter("fade", fade)
 
 
 # --- camera and names ------------------------------------------------------
