@@ -167,13 +167,13 @@ func test_bottom_bar_tabs_and_info_tables() -> void:
 	for i in range(0, r.info_screen().table().get_child_count(), 2):
 		names.append(r.info_screen().table().get_child(i).text)
 	assert_has(names, "Treasury")
-	r.bottom_bar().button("RELATIONSHIP").pressed.emit()
+	r.bottom_bar().button("LEDGER").pressed.emit()
 	await wait_frames(1)
-	assert_false(r.info_screen().visible, "info yields to the graph")
-	assert_true(r.relations_screen().visible)
-	r.bottom_bar().button("RELATIONSHIP").pressed.emit()
+	assert_false(r.info_screen().visible, "info yields to the ledger")
+	assert_true(r.ledger_screen().visible)
+	r.bottom_bar().button("LEDGER").pressed.emit()
 	await wait_frames(1)
-	assert_false(r.relations_screen().visible, "the tab toggles the graph off again")
+	assert_false(r.ledger_screen().visible, "the tab toggles the ledger off again")
 
 ## FAMILIES (user request 2026-09-09): the noble houses of the player's own
 ## realm, with the seats they hold and how they regard the king. Four columns,

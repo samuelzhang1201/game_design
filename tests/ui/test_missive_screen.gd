@@ -484,3 +484,26 @@ func test_the_desk_paintings_height_follows_its_width_at_the_aspect_key() -> voi
 		"the box's height (%.1f) follows its own width (%.1f) at the aspect key (%.2f)" %
 			[painting.size.y, painting.size.x, aspect])
 	Game.data.courier_paintings["delivered"] = saved
+
+
+## Final review M1 (LEDGER M3): an audit letter is about the LEDGER's books,
+## not a place — its button opens the LEDGER on a lens that draws the flow.
+func test_an_audit_letter_opens_the_ledger() -> void:
+	Game.start_campaign(42)
+	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("audit", "credible", 3,
+		MissiveLog.subject("ledger", "supply_line", -1, Vector2.ZERO), "Audit — The supply lines",
+		[MissiveLog.exact("total", "In all, this month", 5)]))
+	var r := _root()
+	await _enter(r)
+	r.toggle_missives()
+	var ms := r.missive_screen()
+	ms.select(id)
+	assert_eq(ms.show_on_map_button().text, "Open the LEDGER")
+	ms.show_on_map_button().pressed.emit()
+	await wait_frames(1)
+	assert_false(ms.visible)
+	assert_true(r.ledger_screen().visible, "the LEDGER opened")
+	assert_eq(r.ledger_screen().lens(), "war", "on the first lens that draws the supply lines")
+	r.ledger_screen().close()
+	ms.select(_letter("credible"))
+	assert_eq(ms.show_on_map_button().text, "Show on map", "a letter about a place keeps its words")

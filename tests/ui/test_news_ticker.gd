@@ -96,3 +96,40 @@ func test_works_are_announced_at_their_milestones() -> void:
 	assert_string_contains(joined, "is 30% done")
 	assert_string_contains(joined, "is 70% done")
 	assert_string_contains(joined, "is complete")
+
+## A building that first stands idle for want of inputs (LEDGER M5) is news,
+## once, at the month's close.
+func test_a_newly_idle_building_is_announced() -> void:
+	var r := _root()
+	await wait_frames(2)
+	r.current_screen.start_requested.emit()
+	await wait_frames(2)
+	r._switch_to(GameRoot.State.COURT)
+	r.current_screen.enter_court(null)
+	await wait_frames(1)
+	Game.state.pending_event = {}
+	var cell := -1
+	for c: int in MapManors.manors_of_house(Game.data, Game.state, MapManors.crown(Game.state),
+			Game.data.resolve_realm("player_realm")):
+		if not (ManorEconomy.line_of(Game.data, Game.state, c, Game.state.tick)["units"] as Dictionary).has("iron"):
+			cell = c
+			break
+	assert_true(MapManors.build(Game.data, Game.state, cell, "smithy", "test: a forge"))
+	Game.state.metrics["lord_strategic"] = -1000000.0
+	Game.state.day = Calendar.DAYS_PER_TICK
+	var tick := Game.state.tick
+	var got: Array = []
+	var handler := func(text: String) -> void: got.append(text)
+	Game.news_published.connect(handler)
+	Game.data.balance["time_day_seconds"] = 0.001
+	Game.set_clock_speed(1)
+	for i in 30:
+		await wait_process_frames(1)
+		Game.state.pending_event = {}
+		if Game.state.tick > tick:
+			break
+	Game.set_clock_speed(0)
+	Game.data.balance["time_day_seconds"] = 1.0
+	Game.news_published.disconnect(handler)
+	var joined := "\n".join(got)
+	assert_string_contains(joined, "The smithy at %s stands idle: no iron." % MapManors.label_of(Game.data, cell))

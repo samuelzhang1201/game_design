@@ -21,3 +21,4 @@ abbey,Abbey,2,any,chapel,60,200,60,0,0,0,0.8,0,0,0.1,0,books,1,"monks and a scri
 castle,Castle,3,any,palisade|manor_house,120,400,90,0.05,0,30,0,0,0,0,-0.3,,0,"a stone keep behind the palisade, the lord's hall within: very hard to take, and the land is quiet"
 harbour,Harbour,3,coast,fishing_quay|market,100,350,80,0.2,0,5,0,6,0,0,0,fish,6,a stone quay where the market meets the boats: harbour dues and a larger catch
 armoury,Armoury,3,any,smithy,80,260,60,0,0,10,0,0,0,0,0,arms,3,"a store of arms beside the smithy: weapons for the levy, and a harder yard"
+war_workshop,War workshop,2,town,smithy,60,180,50,0,0,0,0,0,0,0,0,,0,"turns the lord's civil goods into strategic goods each month, as fast as its rate allows (spec 2026-09-30-ledger-supply-design)"

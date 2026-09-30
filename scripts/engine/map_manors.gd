@@ -244,6 +244,9 @@ static func set_owner(repo: DataRepository, state: GameState, cell_id: int, fami
 	state.manor_owner[str(cell_id)] = family
 	state.manor_log.append({"tick": state.tick, "cell": cell_id, "from": from, "to": family,
 		"reason": reason})
+	# a war workshop's rate is the crown's order: it does not pass with the land
+	if family != crown(state):
+		WorkshopSystem.forget(state, cell_id)
 	return true
 
 ## Who CONTROLS a province (owner 2026-09-13): the house holding the most
@@ -657,27 +660,55 @@ static func start_work(repo: DataRepository, state: GameState, cell_id: int, bui
 		"begun": days, "reason": reason})
 	return true
 
-## Days a work still needs, 0 when it is done; -1 for no such work.
-static func work_days_left(state: GameState, cell_id: int, building_code: String) -> int:
+## Days a work still needs, 0 when it is done; -1 for no such work. Once
+## advance_works has stepped the work at least once (its "done"
+## permille-days set — M5, the artisans' pace), this is
+## ceil((build_days*1000 - done) / work_speed_permille(province)) at the
+## province's CURRENT speed, the same figure MANOR_RUSH caps its cut by and
+## prices in gold — so a province with faster artisans shows fewer days to
+## go and costs less to hurry. A work with no "done" (a save from before
+## M5, or one advance_works has never touched) falls back to the plain
+## elapsed-days share, as before.
+static func work_days_left(repo: DataRepository, state: GameState, cell_id: int, building_code: String) -> int:
 	for w: Dictionary in works_of(state, cell_id):
 		if String(w["building"]) == building_code:
-			return maxi(int(w["start"]) + int(w["days"]) - state.absolute_day(), 0)
+			var days := int(w["days"])
+			if w.has("done"):
+				var remaining := days * 1000 - int(w["done"])
+				if remaining <= 0:
+					return 0
+				var speed := maxi(work_speed_permille(repo, state, province_of(repo, cell_id, state)), 1)
+				return int(ceil(float(remaining) / float(speed)))
+			return maxi(int(w["start"]) + days - state.absolute_day(), 0)
 	return -1
 
-## How far along a work is, 0..1.
+## How far along a work is, 0..1. Once advance_works has touched it at
+## least once, its "done" field (permille-days, M5: the artisans' pace) is
+## the true measure; before that (and for a work with no days) the plain
+## elapsed-days share stands in.
 static func work_progress(state: GameState, cell_id: int, building_code: String) -> float:
 	for w: Dictionary in works_of(state, cell_id):
 		if String(w["building"]) == building_code:
 			var days := int(w["days"])
 			if days <= 0:
 				return 1.0
+			if w.has("done"):
+				return clampf(float(w["done"]) / (float(days) * 1000.0), 0.0, 1.0)
 			return clampf(float(state.absolute_day() - int(w["start"])) / float(days), 0.0, 1.0)
 	return 0.0
 
 ## Cut `days` off a work in progress (spec 2026-09-14 §5: gold hurries the
-## masons), never below done. Returns the days actually cut; 0 for no
+## masons), never past what work_days_left already reports for the
+## province's own artisan pace — the cap and the price both follow that
+## corrected figure. A work advance_works has already touched (its "done"
+## permille-days set, M5) is hurried by ADDING cut*work_speed_permille to
+## "done" (the same currency advance_works itself spends each day), so a
+## rush at a faster province's pace finishes the same number of DAYS
+## sooner, not the same number of permille-days; a work with no "done" yet
+## (never ticked, or a save from before M5) falls back to cutting the plain
+## "days" field, exactly as before. Returns the days actually cut; 0 for no
 ## such work or an empty reason. Logs into manor_log with a "rushed" field.
-static func rush_work(_repo: DataRepository, state: GameState, cell_id: int, building_code: String,
+static func rush_work(repo: DataRepository, state: GameState, cell_id: int, building_code: String,
 		days: int, reason: String) -> int:
 	if days <= 0 or reason.strip_edges() == "":
 		return 0
@@ -687,27 +718,66 @@ static func rush_work(_repo: DataRepository, state: GameState, cell_id: int, bui
 	for w: Dictionary in state.manor_works[key]:
 		if String(w["building"]) != building_code:
 			continue
-		var left := maxi(int(w["start"]) + int(w["days"]) - state.absolute_day(), 0)
+		var left := work_days_left(repo, state, cell_id, building_code)
 		var cut := mini(days, left)
 		if cut <= 0:
 			return 0
-		w["days"] = int(w["days"]) - cut
+		if w.has("done"):
+			var speed := maxi(work_speed_permille(repo, state, province_of(repo, cell_id, state)), 1)
+			w["done"] = int(w["done"]) + cut * speed
+		else:
+			w["days"] = int(w["days"]) - cut
 		state.manor_log.append({"tick": state.tick, "cell": cell_id, "building": building_code,
 			"rushed": cut, "reason": reason})
 		return cut
 	return 0
 
-## The day's step for every work: those whose days are up become
-## buildings. Returns [{cell, building}] finished today, cell order.
+## How fast a province's works go (spec 2026-09-30-ledger-industry-trade-design,
+## M5): 1000 per mille a day, plus its townsfolk's bonus scaled by the master
+## of works' efficiency (Governance flow "works"), exactly as every other
+## governed flow reads it (WorkshopSystem, SupplySystem) — an empty Master of
+## Works seat (never filled by data/founding_council.csv on a fresh
+## campaign) is not a special case: Governance.factors gives a vacant flow
+## the row's min_permille (600) like any other, which is also the FLOOR a
+## seated governor's efficiency clamps to — so appointing anyone, however
+## unskilled or resentful, can never make the artisans slower than having no
+## Master of Works at all (controller ruling 2026-09-30, reversing an
+## earlier "unscaled when vacant" implementation choice: that would have let
+## a poor appointment be WORSE than an empty seat, which no appointment
+## should ever be).
+static func work_speed_permille(repo: DataRepository, state: GameState, province: String) -> int:
+	# The artisans are the LEDGER's own (final fix wave, Minor2): a province
+	# the crown does not control has no master of works speeding anything,
+	# so a manor bought abroad builds at the plain pace, like the LEDGER's
+	# own artisans:<p> node, which names nothing there either.
+	if not controlled_provinces(repo, state).has(province):
+		return 1000
+	var urban := RealmEconomy._figure(repo, state, "economy.provinces.%s.urban_population" % province)
+	@warning_ignore("integer_division")
+	var bonus := mini(int(repo.bal("artisan_speed_cap_permille")),
+		urban / maxi(int(repo.bal("artisan_per_step")), 1) * int(repo.bal("artisan_step_permille")))
+	var eff := int(Governance.factors(repo, state, "works")["efficiency"])
+	@warning_ignore("integer_division")
+	return 1000 + bonus * eff / 1000
+
+## The day's step for every work: those whose progress (permille-days,
+## accumulated in "done" — M5, the artisans' pace) has reached days × 1000
+## become buildings. An old work carrying only "start" (a save from before
+## M5) is not stalled or jumped: its days already spent are reconstructed at
+## the plain 1000‰ pace before today's own speed is added. Returns
+## [{cell, building}] finished today, cell order.
 static func advance_works(repo: DataRepository, state: GameState) -> Array:
 	var done: Array = []
 	var today := state.absolute_day()
 	var keys: Array = state.manor_works.keys()
 	keys.sort_custom(func(a: String, b: String) -> bool: return int(a) < int(b))
 	for key: String in keys:
+		var speed := work_speed_permille(repo, state, province_of(repo, int(key), state))
 		var left: Array = []
 		for w: Dictionary in state.manor_works[key]:
-			if today - int(w["start"]) >= int(w["days"]):
+			var progressed := int(w.get("done", maxi(today - 1 - int(w["start"]), 0) * 1000)) + speed
+			w["done"] = progressed
+			if progressed >= int(w["days"]) * 1000:
 				var code := String(w["building"])
 				if build(repo, state, int(key), code, "finished after %d days" % int(w["days"])):
 					done.append({"cell": int(key), "building": code})
@@ -734,6 +804,14 @@ static func demolish(repo: DataRepository, state: GameState, cell_id: int, build
 		(state.manor_buildings[key] as Array).erase(building_code)
 		if (state.manor_buildings[key] as Array).is_empty():
 			state.manor_buildings.erase(key)
+		if building_code == WorkshopSystem.BUILDING:
+			WorkshopSystem.forget(state, cell_id)  # its rate goes with it
+		# An idle mark goes with it too (M5): a new one raised this month
+		# starts working, not idle for its predecessor's unpaid bill.
+		if state.idle_buildings.has(key):
+			(state.idle_buildings[key] as Array).erase(building_code)
+			if (state.idle_buildings[key] as Array).is_empty():
+				state.idle_buildings.erase(key)
 		found = true
 	elif is_building(state, cell_id, building_code):
 		var left: Array = []
@@ -771,10 +849,18 @@ static func crown_building_effects(repo: DataRepository, state: GameState) -> Di
 	return building_effects(repo, state,
 		manors_of_house(repo, state, crown(state), repo.resolve_realm("player_realm")))
 
-## Goods a manor's finished buildings make: {good: units}.
+## Whether a standing building stands IDLE this month for want of inputs
+## (spec 2026-09-30-ledger-industry-trade-design M5; IndustrySystem).
+static func is_idle(state: GameState, cell_id: int, code: String) -> bool:
+	return code in (state.idle_buildings.get(str(cell_id), []) as Array)
+
+## Goods a manor's finished buildings make: {good: units}. An idle building
+## (M5: its inputs went unpaid) makes nothing.
 static func building_output_of(repo: DataRepository, state: GameState, cell_id: int) -> Dictionary:
 	var out: Dictionary = {}
 	for code: String in buildings_of(state, cell_id):
+		if is_idle(state, cell_id, code):
+			continue
 		var row: Dictionary = repo.manor_buildings.get(code, {})
 		var good := String(row.get("produce_good", "")).strip_edges()
 		var units := float(row.get("produce_units", 0))
@@ -782,10 +868,15 @@ static func building_output_of(repo: DataRepository, state: GameState, cell_id: 
 			out[good] = float(out.get(good, 0.0)) + units
 	return out
 
-## The sum of one bonus column over a manor's buildings.
+## The sum of one bonus column over a manor's WORKING buildings: an idle
+## one (M5: its inputs went unpaid) gives nothing while idle — no goods and
+## no bonus, so its tax, output, defence and church bonuses and its
+## *_per_tick effects all lapse (controller ruling 2026-09-30).
 static func building_bonus(repo: DataRepository, state: GameState, cell_id: int, column: String) -> float:
 	var sum := 0.0
 	for code: String in buildings_of(state, cell_id):
+		if is_idle(state, cell_id, code):
+			continue
 		sum += float((repo.manor_buildings.get(code, {}) as Dictionary).get(column, 0))
 	return sum
 

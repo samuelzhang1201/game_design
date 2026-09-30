@@ -38,10 +38,16 @@ func test_the_months_end_settles_the_three_pools() -> void:
 	for m in ["treasury", "strategic", "grain", "lord_gold", "lord_strategic", "lord_civil"]:
 		before[m] = int(s.metrics[m])
 	var built := MapManors.crown_building_effects(data, s)
+	# The trade tolls (LEDGER M6) land in the treasury with the month.
+	var tolls := 0
+	for route: Dictionary in MarketSystem.routes(data, s):
+		tolls += int(route["toll"])
+	assert_gt(tolls, 0, "the realm trades abroad")
 	s.tick = 0  # spring: no harvest
 	var r := engine.advance(s)
-	# The crown: its share of the realm, less the court's salaries and table.
-	assert_eq(int(s.metrics["treasury"]), before["treasury"] + int(p["realm_share"]["tax"]) - salaries)
+	# The crown: its share of the realm and its tolls, less the court's
+	# salaries and table.
+	assert_eq(int(s.metrics["treasury"]), before["treasury"] + int(p["realm_share"]["tax"]) + tolls - salaries)
 	assert_eq(int(s.metrics["strategic"]), before["strategic"] + int(p["realm_share"]["strategic"]))
 	assert_eq(int(s.metrics["grain"]), before["grain"] + int(p["realm_share"]["civil"]) - ration)
 	# The lord: his own provinces in full, and his buildings.
@@ -165,11 +171,17 @@ func test_days_step_works_and_the_thirtieth_is_a_tick() -> void:
 	var days := int(float(data.manor_buildings["palisade"]["build_days"]))
 	assert_lt(days, Calendar.DAYS_PER_TICK, "a palisade is done within a month")
 	assert_true(MapManors.start_work(data, s, cell, "palisade", "test"))
-	for i in days - 1:
+	# LEDGER M5: the province's artisans can speed a work along, so how many
+	# CALLS to advance_day it actually takes is work_speed_permille's, not
+	# build_days' own count — compute it the same way test_artisans.gd does.
+	var province := MapManors.province_of(data, cell, s)
+	var speed := MapManors.work_speed_permille(data, s, province)
+	var need := int(ceil(float(days) * 1000.0 / float(speed)))
+	for i in need - 1:
 		assert_eq(engine.advance_day(s), [], "day %d" % (i + 2))
 	assert_eq(engine.advance_day(s), [{"cell": cell, "building": "palisade"}], "done on its last day")
 	var finished_at_day := s.absolute_day()
-	for i in Calendar.DAYS_PER_TICK - 1 - days:
+	for i in Calendar.DAYS_PER_TICK - 1 - need:
 		assert_eq(engine.advance_day(s), [])
 	assert_eq(s.day, Calendar.DAYS_PER_TICK)
 	assert_eq(engine.advance_day(s), [], "the day does not pass the tick's end on its own")
@@ -179,7 +191,7 @@ func test_days_step_works_and_the_thirtieth_is_a_tick() -> void:
 	assert_eq(s.day, 1)
 	assert_eq(s.absolute_day(), Calendar.DAYS_PER_TICK + 1)
 	assert_eq(r.finished_works, [])
-	assert_eq(finished_at_day, 1 + days, "it stood on the day its days were up")
+	assert_eq(finished_at_day, 1 + need, "it stood on the day its artisans had it done")
 	assert_eq(MapManors.buildings_of(s, cell), ["palisade"])
 
 ## A work longer than a month survives the tick (owner 2026-09-14): the day
@@ -195,27 +207,40 @@ func test_a_work_longer_than_a_month_survives_the_tick() -> void:
 		cell = c
 		break
 	assert_gt(cell, -1)
-	var days := int(float(data.manor_buildings["chapel"]["build_days"]))
-	assert_gt(days, Calendar.DAYS_PER_TICK, "a chapel outlasts a month")
-	assert_true(MapManors.start_work(data, s, cell, "chapel", "test"))
-	assert_eq(MapManors.work_days_left(s, cell, "chapel"), days)
+	# manor_house, not chapel (LEDGER M5): the artisans' bonus can bring a
+	# work's ACTUAL length under a month even when its build_days does not,
+	# and chapel's 40 no longer clears Calendar.DAYS_PER_TICK once a real
+	# campaign's townsfolk are speeding it along — manor_house's 60 still
+	# does. work_days_left now reads the artisans' own pace once advance_works
+	# has touched the work (final fix wave, I1: ceil((days*1000-done)/speed)),
+	# so its expected values below are `need`'s own figure less the real days
+	# elapsed, not the plain build_days.
+	var days := int(float(data.manor_buildings["manor_house"]["build_days"]))
+	assert_gt(days, Calendar.DAYS_PER_TICK, "a manor house outlasts a month")
+	assert_true(MapManors.start_work(data, s, cell, "manor_house", "test"))
+	assert_eq(MapManors.work_days_left(data, s, cell, "manor_house"), days,
+		"no done yet: the plain elapsed-days fallback")
+	var province := MapManors.province_of(data, cell, s)
+	var speed := MapManors.work_speed_permille(data, s, province)
+	var need := int(ceil(float(days) * 1000.0 / float(speed)))
+	assert_gt(need, Calendar.DAYS_PER_TICK, "it outlasts a month even at the artisans' pace")
 	for i in Calendar.DAYS_PER_TICK - 1:
 		assert_eq(engine.advance_day(s), [], "day %d" % (i + 2))
 	assert_eq(s.day, Calendar.DAYS_PER_TICK)
-	assert_eq(MapManors.work_days_left(s, cell, "chapel"), days - (Calendar.DAYS_PER_TICK - 1))
+	assert_eq(MapManors.work_days_left(data, s, cell, "manor_house"), need - (Calendar.DAYS_PER_TICK - 1))
 	var r := engine.advance(s)
 	assert_eq(s.tick, 2)
 	assert_eq(s.day, 1)
 	assert_eq(r.finished_works, [], "still under construction after the tick")
-	assert_eq(MapManors.work_days_left(s, cell, "chapel"), days - Calendar.DAYS_PER_TICK,
+	assert_eq(MapManors.work_days_left(data, s, cell, "manor_house"), need - Calendar.DAYS_PER_TICK,
 		"the day count carried across the tick boundary, one day fewer than before advance()")
-	for i in days - Calendar.DAYS_PER_TICK - 1:
+	for i in need - Calendar.DAYS_PER_TICK - 1:
 		assert_eq(engine.advance_day(s), [])
-	assert_eq(engine.advance_day(s), [{"cell": cell, "building": "chapel"}],
+	assert_eq(engine.advance_day(s), [{"cell": cell, "building": "manor_house"}],
 		"finishes on its last day, in the tick after the one it began in")
 	assert_eq(s.tick, 2, "it finished without a further tick passing")
-	assert_eq(s.absolute_day(), 1 + days, "it stands on the day its days are up")
-	assert_eq(MapManors.buildings_of(s, cell), ["chapel"])
+	assert_eq(s.absolute_day(), 1 + need, "it stands on the day its artisans had it done")
+	assert_eq(MapManors.buildings_of(s, cell), ["manor_house"])
 
 ## A finished building works each tick (owner 2026-09-13): a market's tolls
 ## are a treasury line of their own.

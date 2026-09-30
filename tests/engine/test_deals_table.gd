@@ -1,9 +1,9 @@
 extends GutTest
 ## economy/deals.csv (importer-only, spec: 10,815 Azgaar trade flows): every
-## recorded flow between a market and a burg, or between two markets. Nothing
-## reads this table yet (DataRepository is deliberately not wired to it), so
-## these assertions read the pack file directly, the way test_map_pack.gd's
-## maps.csv row-shape test does.
+## recorded flow between a market and a burg, or between two markets. These
+## assertions read the pack file directly, the way test_map_pack.gd's maps.csv
+## row-shape test does; DataRepository.deals (LEDGER M6, MarketSystem's trade
+## routes) must hold every row of it, in file order.
 
 var repo: DataRepository
 var deals_path: String
@@ -42,3 +42,14 @@ func test_every_deal_resolves_its_good_and_its_market_or_burg_party() -> void:
 	for kind: String in types_seen:
 		assert_true(kind == "market" or kind == "burg",
 			"only market/burg party types appear, saw '%s'" % kind)
+
+func test_the_repository_loads_every_deal_in_file_order() -> void:
+	var rows := DataRepository.parse_csv(deals_path,
+		["seller_type", "seller", "buyer_type", "buyer", "good_code", "units", "price", "tax"])
+	assert_eq(repo.deals.size(), rows.size())
+	for i in [0, rows.size() - 1]:
+		var d: Dictionary = repo.deals[i]
+		assert_eq(String(d["seller"]), String(rows[i]["seller"]))
+		assert_eq(String(d["buyer"]), String(rows[i]["buyer"]))
+		assert_eq(String(d["good"]), String(rows[i]["good_code"]))
+		assert_almost_eq(float(d["units"]), float(rows[i]["units"]), 0.0001)

@@ -6,7 +6,8 @@ extends RefCounted
 ## (provinces by code, manors by cell id), so a province is a contiguous
 ## slice — with a KEY per province standing in for a dirty flag: the key strings together
 ## everything a line depends on (the tick, the tax levels, the province's
-## two ledger figures, and its manors' owner, buildings and focus), so a
+## two ledger figures, and its manors' owner, buildings, focus and idle
+## buildings), so a
 ## province is recomputed exactly when one of those moved and never
 ## otherwise, and nothing can forget to mark it (architecture RK-1). The
 ## realm's answer is cached on a signature of the same state, so a day
@@ -142,6 +143,9 @@ static func province_key(repo: DataRepository, state: GameState, code: String) -
 			parts.append("b%s=%s" % [k, str(state.manor_buildings[k])])
 		if state.manor_focus.has(k):
 			parts.append("f%s=%s" % [k, str(state.manor_focus[k])])
+		# An idle building makes and eats nothing (M5): its line moves.
+		if state.idle_buildings.has(k):
+			parts.append("i%s=%s" % [k, str(state.idle_buildings[k])])
 	return "|".join(parts)
 
 static func recompute_province(repo: DataRepository, state: GameState, code: String) -> void:
@@ -236,8 +240,9 @@ static func tax_table(repo: DataRepository, state: GameState, cells: Array) -> D
 ## only what moved hash in C++ — ownership included, so a conquest that
 ## moves no manor and touches no ledger figure still turns the signature.
 static func realm_signature(state: GameState) -> String:
-	return "%d|%d|%d|%d|%d|%d|%d|%d|%d" % [state.tick, state.manor_owner.hash(),
-		state.manor_buildings.hash(), state.manor_focus.hash(), state.world.hash(),
+	return "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [state.tick, state.manor_owner.hash(),
+		state.manor_buildings.hash(), state.manor_focus.hash(), state.idle_buildings.hash(),
+		state.world.hash(),
 		state.province_owner.hash(), state.manor_province.hash(),
 		int(state.metrics.get("tax_rate", 0)), int(state.metrics.get("tariff_rate", 0))]
 

@@ -590,7 +590,7 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 		"fields": [["Held by", "The crown" if crowns else ("House " + house if house != "" else "no one")],
 			["Province", String(prov.get("label", province))]],
 		"features": [], "production": [], "wealth": 0.0, "treasury": 0.0,
-		"buildings": [], "works": [], "slots": 0, "slot_actions": [], "actions": [],
+		"buildings": [], "idle": {}, "works": [], "slots": 0, "slot_actions": [], "actions": [],
 		"center": center,
 		"ask": "What do we know of %s?" % label,
 		"known": known,
@@ -698,19 +698,32 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	fields.append(["Defence", str(roundi(MapManors.defence_of(repo, state, cell)))])
 	var built: Array = MapManors.buildings_of(state, cell)
 	card["buildings"] = built
+	# An idle building (M5: its inputs went unpaid) says so and why: the slot
+	# row reads `idle`, the field names it.
+	var idle: Dictionary = {}
 	var names: Array[String] = []
 	for b: String in built:
-		names.append(String((repo.manor_buildings.get(b, {}) as Dictionary).get("label", b)))
+		var b_label := String((repo.manor_buildings.get(b, {}) as Dictionary).get("label", b))
+		if MapManors.is_idle(state, cell, b):
+			idle[b] = IndustrySystem.idle_text(repo, state, cell, b)
+			b_label += " (%s)" % String(idle[b])
+		names.append(b_label)
+	card["idle"] = idle
 	# Works in progress (2026-09-13): the slot row draws them dim with the
-	# days left; the field names them too.
+	# days left; the field names them too. Its artisans (M5, the province's
+	# townsfolk under the master of works) may be speeding it along, and the
+	# row says so.
 	var works: Array = []
+	var artisan_pct := roundi(float(MapManors.work_speed_permille(repo, state, province) - 1000) / 10.0)
+	var province_label := String(prov.get("label", province))
 	for w: Dictionary in MapManors.works_of(state, cell):
 		var b := String(w["building"])
-		var left := MapManors.work_days_left(state, cell, b)
+		var left := MapManors.work_days_left(repo, state, cell, b)
 		var name := String((repo.manor_buildings.get(b, {}) as Dictionary).get("label", b))
 		works.append({"building": b, "label": name, "days_left": left,
-			"progress": MapManors.work_progress(state, cell, b)})
-		names.append("%s (%d days to go)" % [name, left])
+			"progress": MapManors.work_progress(state, cell, b), "artisan_pct": artisan_pct})
+		names.append("%s (%d days to go%s)" % [name, left,
+			", artisans of %s: +%d%%" % [province_label, artisan_pct] if artisan_pct > 0 else ""])
 	card["works"] = works
 	card["slots"] = MapManors.slots_of(repo, cell)
 	fields.append(["Buildings", ", ".join(names) if not names.is_empty() else "none"])
@@ -1028,7 +1041,7 @@ static func _describe_army(repo: DataRepository, code: String, state: GameState 
 	# 2026-09-19: a click on a counter shows the regiment).
 	var st := ArmySystem.state_of(repo, state, code)
 	if not st.is_empty():
-		var use := ArmySystem.supply_use(repo, r)
+		var use := ArmySystem.supply_use(repo, r, state)
 		var supplies := int(st["supplies"])
 		lines.append("Morale: %d / 100" % int(st["morale"]))
 		lines.append("Wounded: %d" % int(st["wounded"]))
@@ -1036,7 +1049,7 @@ static func _describe_army(repo: DataRepository, code: String, state: GameState 
 			("%.1f" % (float(supplies) / float(use))) if use > 0 else "-"])
 		lines.append("Training: %s" % ArmySystem.training_grade(repo, int(st["training"])))
 		lines.append("Strength: %s" % ArmySystem.strength_grade(repo, state, code))
-		lines.append("Ground: %s" % ArmySystem.terrain_label(repo, r))
+		lines.append("Ground: %s" % ArmySystem.terrain_label(repo, r, state))
 		lines.append("March: %.1f km a day" % ArmySystem.speed_km_per_day(repo, state, code))
 	return {"title": label, "lines": lines,
 		"ask": "What is the state of the %s?" % label}
@@ -1102,7 +1115,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		var ground := ArmySystem.terrain_label(repo, r, state)
 		stats.append(_stat("army_terrain", ground, "Quartered on %s" % ground.to_lower()))
 		var metres := ArmySystem.elevation_of(repo, r, state)
-		var tier := ArmySystem.height_tier(repo, r)
+		var tier := ArmySystem.height_tier(repo, r, state)
 		var mult := float(int(tier["supply_permille"])) / 1000.0
 		@warning_ignore("integer_division")  # whole percent from per-mille
 		stats.append(_stat("army_height", "%d m · ×%.1f" % [metres, mult],
@@ -1110,11 +1123,32 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 				metres, String(tier["tier"]), mult,
 				int(repo.bal("army_height_bonus_permille_per_100m")) / 10,
 				int(repo.bal("army_height_bonus_cap_permille")) / 10]))
-		stats.append(_stat("army_morale", str(int(st["morale"])), "Morale — %d of 100" % int(st["morale"])))
+		var use := ArmySystem.supply_use(repo, r, state)
+		if state != null and state.regiments.has(code) and not naval:
+			var line := SupplySystem.line_of(repo, state, code)
+			var town := String((repo.burgs.get(String(line["stronghold"]), {}) as Dictionary).get("label", ""))
+			if bool(line["garrison"]):
+				stats.append(_stat("army_supply_line", "in garrison",
+					"In garrison at %s — supplied through the town, with no road to lose them on" % town))
+			elif String(line["stronghold"]) != "":
+				stats.append(_stat("army_supply_line", "at home",
+					"Standing at home, supplied through %s — no road to lose them on" % town))
+			else:
+				@warning_ignore("integer_division")  # whole percent from per-mille
+				stats.append(_stat("army_supply_line", "%d km · %d%% lost" % [int(line["length_km"]),
+					int(line["loss_permille"]) / 10],
+					"Supplied from the capital over %d km of road, which loses %d%% of every shipment"
+					% [int(line["length_km"]), int(line["loss_permille"]) / 10]))
+		if naval:
+			stats.append(_stat("army_morale", str(int(st["morale"])), "Morale — %d of 100" % int(st["morale"])))
+		else:
+			# the stores' word (data/army_morale_words.csv) is what morale is heading by
+			var word := ArmySystem.morale_word(repo, ArmySystem.supply_score(repo, int(st["supplies"]), use))
+			stats.append(_stat("army_morale", str(int(st["morale"])),
+				"Morale — %d of 100; the ranks are %s" % [int(st["morale"]), word]))
 		var back := ArmySystem.wound_recovery(repo, int(st["wounded"]))
 		stats.append(_stat("army_wounded", "+%d / mo" % back,
 			"%d wounded return to the ranks each month" % back))
-		var use := ArmySystem.supply_use(repo, r)
 		stats.append(_stat("army_supply", "%d (−%d / mo)" % [int(st["supplies"]), use],
 			"Supplies — %d held, %d used each month" % [int(st["supplies"]), use]))
 		var drill := ArmySystem.training_grade(repo, int(st["training"]))

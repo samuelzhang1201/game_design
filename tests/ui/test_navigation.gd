@@ -16,7 +16,7 @@ func test_the_bottom_bar_groups_lenses_left_and_screens_right() -> void:
 	assert_gt(rule, -1, "a rule divides the groups")
 	for tab: String in BottomBar.MAP_TABS:
 		assert_lt(names.find(String(tab.capitalize())), rule, "%s is a lens, left of the rule" % tab)
-	for tab: String in ["REALM", "FAMILIES", "RELATIONSHIP"]:
+	for tab: String in ["REALM", "FAMILIES", "LEDGER"]:
 		assert_gt(names.find(String(tab.capitalize())), rule, "%s is a screen, right of it" % tab)
 	assert_not_null(bar.button("WAR ROOM"), "the placeholder stays while ui_show_placeholder_tabs is 1")
 	assert_gte(BottomBar.BAR_HEIGHT, bar.content_height(), "the grouped strip still fits its height")

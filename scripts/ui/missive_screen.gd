@@ -250,6 +250,10 @@ func _fill_desk() -> void:
 		%LetterMeta.text = ""
 		%DeskPainting.visible = false
 		return
+	# A letter about the LEDGER's books (an audit) has no place on the map:
+	# its button opens the LEDGER instead (final review M1).
+	var about_books := String((m.get("subject", {}) as Dictionary).get("kind", "")) == "ledger"
+	%ShowOnMap.text = "Open the LEDGER" if about_books else "Show on map"
 	%LetterTitle.text = String(m["title"])
 	%LetterMeta.text = "%s · %s" % [CourierCard.date_of(int(m["day"])), HEADERS[String(m["column"])]]
 	var art := String(Game.data.courier_paintings.get("delivered", "")) if String(m.get("kind", "")) == "receipt" else ""

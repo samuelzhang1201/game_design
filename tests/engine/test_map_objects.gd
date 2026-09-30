@@ -470,11 +470,11 @@ func test_the_manor_card_prices_a_build_in_civil_goods_and_offers_to_hurry_it() 
 	assert_eq(String(hurry["label"]), "HURRY MILL — %dg" % (per_click * int(real.bal("build_rush_gold_per_day"))))
 	assert_eq(String(hurry["error"]), "", "the order can be given: " + String(hurry["error"]))
 	# The order it carries is the one that runs.
-	var before := MapManors.work_days_left(state, own, "mill")
+	var before := MapManors.work_days_left(real, state, own, "mill")
 	var outcome := ActionSystem.new(real).execute(
 		ActionRequest.make("MANOR_RUSH", (hurry["params"] as Dictionary).duplicate()), state)
 	assert_true(bool(outcome["ok"]), "the order the button carries runs")
-	assert_eq(MapManors.work_days_left(state, own, "mill"), before - per_click, "the days came off")
+	assert_eq(MapManors.work_days_left(real, state, own, "mill"), before - per_click, "the days came off")
 
 func test_the_province_card_counts_its_manors_by_house() -> void:
 	var state := _campaign()

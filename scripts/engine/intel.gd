@@ -186,6 +186,10 @@ static func _show(repo: DataRepository, key: String, v: Variant) -> String:
 ## the same way `fact()` does.
 static func text_of(f: Dictionary) -> String:
 	if f.has("exact"):
+		# an audit's fact carries the governor's word too (AuditWriter): the
+		# letter names it when the truth is not what he said
+		if f.has("claimed") and int(f["claimed"]) != int(f["exact"]):
+			return "%s (he reported %s)" % [num(int(f["exact"])), num(int(f["claimed"]))]
 		return num(int(f["exact"]))
 	if f.has("lo"):
 		# no width: one number, and a count of nobody is "none" (not "≈ 0–0")
@@ -249,6 +253,13 @@ static func _latest(repo: DataRepository, state: GameState, subj: Dictionary, ke
 			continue
 		var ms: Dictionary = m["subject"]
 		var mkind := String(ms.get("kind", ""))
+		if mkind == "ledger":
+			# An audit's letter (LEDGER_AUDIT) is about a governed flow, never
+			# a place — its subject carries no cell and sits at (0,0), which
+			# province_of's point fallback would otherwise resolve to
+			# whatever cell sits at the map's origin. Never let it stand in
+			# for a place's own estimate (spec 2026-09-30-ledger-governors-design §3).
+			continue
 		var hit := false
 		if qkind in ["manor", "burg"] and mkind == "manor" and qcell >= 0 \
 				and int(ms.get("cell", -1)) == qcell:

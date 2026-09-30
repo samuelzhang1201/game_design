@@ -3,18 +3,19 @@ extends Control
 ## Bottom tab strip on every gameplay screen (user ruling 2026-08-30),
 ## outside the map: HEIGHTS | MANORS | REALM | MEASUREMENT |
 ## WAR ROOM (a placeholder page, owner 2026-09-17) | FAMILIES | LAWS |
-## RELIGION | RELATIONSHIP | MISSIVE (the Missive board, owner 2026-09-28).
+## RELIGION | LEDGER (the realm's ontology, spec 2026-09-30) | MISSIVE (the
+## Missive board, owner 2026-09-28).
 ## MAP and PROVINCES went 2026-09-13 (owner):
 ## the province view is always on, and MAP did nothing a tab needed.
 ## Pure chrome — GameRoot owns it and decides what each tab opens (MAP
-## closes overlays, RELATIONSHIP and MISSIVE toggle their overlay, the
+## closes overlays, LEDGER and MISSIVE toggle their screens, the
 ## rest open the matching InfoScreen table). Replaces the TopBar's
 ## RELATIONS button.
 
 signal tab_selected(tab: String)
 
 const TABS := ["HEIGHTS", "MANORS", "REALM", "MEASUREMENT",
-	"WAR ROOM", "FAMILIES", "LAWS", "RELIGION", "RELATIONSHIP", "MISSIVE"]
+	"WAR ROOM", "FAMILIES", "LAWS", "RELIGION", "LEDGER", "MISSIVE"]
 ## Tabs that stay lit while their view is on rather than opening an overlay
 ## (MILITARY went 2026-09-27: the regiments are always on the map): HEIGHTS
 ## the height ramp over the land (owner request 2026-09-12, remade

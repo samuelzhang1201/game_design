@@ -213,6 +213,19 @@ static func _encode_values(value):
 		return "f" + _float_to_hex(value)
 	return value
 
+## A save written before skims were kept per flow (final review I1) holds
+## one whole number per man: no one can say which flow it came from, so it
+## is kept under "unknown" — his, but no audit of a flow will find it.
+static func _migrate_skims(raw: Dictionary) -> Dictionary:
+	var out := {}
+	for gid in raw:
+		var v: Variant = raw[gid]
+		if v is Dictionary:
+			out[gid] = v
+		elif int(v) > 0:
+			out[gid] = {"unknown": int(v)}
+	return out
+
 ## Inverse of _encode_values: recursively decodes hex-encoded floats back to
 ## float and encoded ints back to int, leaving everything else (plain
 ## strings, bools, already-nested structures) untouched. Saves written before
@@ -271,6 +284,27 @@ var manor_works: Dictionary = {}
 ## work at (data/manor_focus.csv) and the tick it was set, ONLY for manors
 ## whose focus was chosen — an absent manor works its terrain's default.
 var manor_focus: Dictionary = {}
+## cell id (String) -> permille (0 or 500) for each war workshop set away
+## from full (spec 2026-09-30-ledger-supply-design §2); full is not stored.
+var workshop_rate: Dictionary = {}
+## cell id (String) -> [building codes] idle THIS month for want of inputs
+## (spec 2026-09-30-ledger-industry-trade-design M5): a building whose
+## inputs the lord's stores could not pay for makes and eats nothing.
+## Rewritten whole by every settlement (IndustrySystem.settle_month).
+var idle_buildings: Dictionary = {}
+## Kingdom codes whose trade route the crown has closed (LEDGER M6): a
+## closed route still carries its trade in the books, and pays no toll.
+var closed_routes: Array = []
+## flow type -> character id, only flows given away from their seat (M3).
+var governors: Dictionary = {}
+## character id -> {flow type -> whole gold skimmed on that flow since an
+## audit of it last caught him} (M3; the truth). Per FLOW (final review I1):
+## the audit of a flow reads that flow's books, whoever kept them.
+var skims: Dictionary = {}
+## character id -> [{flow, day, amount}] every time an audit caught him (M3).
+var caught: Dictionary = {}
+## character id -> [record lines], permanent, each a reason (M3; the debrief's data).
+var records: Dictionary = {}
 ## cell id (String) -> province_code, ONLY for manors moved out of their pack
 ## province: a manor bought across the border joins the realm's province it
 ## borders (owner 2026-09-14). Read through MapManors.province_of, never directly.
@@ -328,6 +362,13 @@ func to_dict() -> Dictionary:
 		"manor_province": manor_province.duplicate(),
 		"manor_buildings": manor_buildings.duplicate(true),
 		"manor_focus": manor_focus.duplicate(true),
+		"workshop_rate": _encode_values(workshop_rate.duplicate(true)),
+		"idle_buildings": idle_buildings.duplicate(true),
+		"closed_routes": closed_routes.duplicate(),
+		"governors": governors.duplicate(true),
+		"skims": _encode_values(skims.duplicate(true)),
+		"caught": _encode_values(caught.duplicate(true)),
+		"records": records.duplicate(true),
 		"manor_works": _encode_values(manor_works.duplicate(true)),
 		"manor_log": _encode_values(manor_log.duplicate(true)),
 		"regiments": _encode_values(regiments.duplicate(true)),
@@ -391,7 +432,20 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.manor_province = d.get("manor_province", {}).duplicate()
 	s.manor_buildings = d.get("manor_buildings", {}).duplicate(true)
 	s.manor_focus = d.get("manor_focus", {}).duplicate(true)
+	# Saves from before the war workshops carry no key: every workshop runs
+	# in full (WorkshopSystem.rate_of's own default).
+	s.workshop_rate = _decode_values(d.get("workshop_rate", {}))
+	# Saves from before governors could be reassigned or skim carry none of
+	# these: every flow runs at its seat holder, honestly, with no record.
+	s.governors = d.get("governors", {}).duplicate(true)
+	s.skims = _migrate_skims(_decode_values(d.get("skims", {})))
+	s.caught = _decode_values(d.get("caught", {}))
+	s.records = d.get("records", {}).duplicate(true)
 	s.manor_works = _decode_values(d.get("manor_works", {}))
+	# Saves from before buildings ate (M5) carry none: nothing stands idle.
+	s.idle_buildings = d.get("idle_buildings", {}).duplicate(true)
+	# Saves from before the trade routes (M6) carry none: every route is open.
+	s.closed_routes = (d.get("closed_routes", []) as Array).duplicate()
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	s.regiments = _decode_values(d.get("regiments", {}))
 	# Saves from before the couriers carry neither key: no one is on the road.

@@ -15,7 +15,11 @@ func _repo() -> DataRepository:
 		"tariff_per_sales_tax": 2.0, "manor_price_per_1000": 40.0,
 		"manor_price_per_unit": 2.0, "manor_price_building_ratio": 0.5,
 		"manor_price_land_swing": 0.6, "manor_markup_max": 0.5, "manor_sell_ratio": 0.7,
-		"manor_defence_base": 10.0}
+		"manor_defence_base": 10.0,
+		# LEDGER M5: no urban population is seeded on this fixture's state, so
+		# these three never move the artisans' bonus off 0 — they only keep
+		# work_speed_permille's repo.bal() calls from asserting.
+		"artisan_per_step": 2000.0, "artisan_step_permille": 50.0, "artisan_speed_cap_permille": 500.0}
 	r.biomes = {1: {"habitability": "80"}, 2: {"habitability": "40"}}
 	r.vertices = {0: Vector2(0, 0), 1: Vector2(10, 0), 2: Vector2(10, 10), 3: Vector2(0, 10),
 		4: Vector2(30, 0), 5: Vector2(30, 10), 6: Vector2(0, 20), 7: Vector2(10, 20),
@@ -392,7 +396,7 @@ func test_works_take_days_and_slots_and_can_be_pulled_down() -> void:
 	assert_true(MapManors.is_building(s, 1, "mill"))
 	assert_eq(MapManors.buildings_of(s, 1), [], "not standing yet")
 	assert_eq(MapManors.free_slots(r, s, 1), 1)
-	assert_eq(MapManors.work_days_left(s, 1, "mill"), 4)
+	assert_eq(MapManors.work_days_left(r, s, 1, "mill"), 4)
 	assert_almost_eq(MapManors.work_progress(s, 1, "mill"), 0.0, 0.001)
 	assert_true(MapManors.start_work(r, s, 1, "chapel", "begun"))
 	assert_eq(MapManors.free_slots(r, s, 1), 0)
@@ -402,7 +406,12 @@ func test_works_take_days_and_slots_and_can_be_pulled_down() -> void:
 	s.day = 3
 	assert_eq(MapManors.advance_works(r, s), [], "nothing done yet")
 	assert_almost_eq(MapManors.work_progress(s, 1, "mill"), 0.5, 0.001)
-	assert_eq(MapManors.work_days_left(s, 1, "mill"), 2)
+	assert_eq(MapManors.work_days_left(r, s, 1, "mill"), 2)
+	# advance_works is a once-a-day step (spec 2026-09-30-ledger-industry-
+	# trade-design, M5: its "done" permille-days only accrue one day's speed
+	# a call), so day 4 must be stepped through too, not skipped.
+	s.day = 4
+	assert_eq(MapManors.advance_works(r, s), [], "still not, one day short")
 	s.day = 5
 	assert_eq(MapManors.advance_works(r, s), [{"cell": 1, "building": "mill"}])
 	assert_eq(MapManors.buildings_of(s, 1), ["mill"])
@@ -429,7 +438,7 @@ func test_works_take_days_and_slots_and_can_be_pulled_down() -> void:
 	assert_eq(back.manor_works.keys(), ["1"])
 	assert_eq(String(back.manor_works["1"][0]["building"]), "chapel")
 	assert_eq(int(back.manor_works["1"][0]["start"]), 65)
-	assert_eq(MapManors.work_days_left(back, 1, "chapel"), 10)
+	assert_eq(MapManors.work_days_left(r, back, 1, "chapel"), 10)
 
 ## What buildings do each tick (owner 2026-09-13): the *_per_tick columns
 ## summed over the crown's finished buildings, works not counting.
@@ -527,9 +536,53 @@ func test_rushing_cuts_days_off_a_work() -> void:
 	s.tick = 1
 	s.day = 1
 	assert_true(MapManors.start_work(r, s, 1, "mill", "test"))
-	assert_eq(MapManors.work_days_left(s, 1, "mill"), 30)
+	assert_eq(MapManors.work_days_left(r, s, 1, "mill"), 30)
 	assert_eq(MapManors.rush_work(r, s, 1, "mill", 10, "test: gold"), 10)
-	assert_eq(MapManors.work_days_left(s, 1, "mill"), 20)
+	assert_eq(MapManors.work_days_left(r, s, 1, "mill"), 20)
 	assert_eq(MapManors.rush_work(r, s, 1, "mill", 50, "test: gold"), 20, "only what is left")
-	assert_eq(MapManors.work_days_left(s, 1, "mill"), 0)
+	assert_eq(MapManors.work_days_left(r, s, 1, "mill"), 0)
 	assert_eq(MapManors.rush_work(r, s, 1, "chapel", 5, "test"), 0, "no such work")
+
+## Final fix wave (I1): once advance_works has stepped a work (its "done"
+## permille-days set), work_days_left follows the province's own artisan
+## PACE, not the plain elapsed-days count — a brewery (build_days 35) in a
+## province whose artisans run at 1300‰ is further along after 12 real days
+## than 35-12=23 would say, and MANOR_RUSH's cap and price follow the same
+## corrected figure.
+func test_work_days_left_follows_the_artisans_pace() -> void:
+	var r := _repo()
+	r.balance["manor_slots_base"] = 1.0
+	r.balance["manor_slots_burg_bonus"] = 0.0
+	r.manor_buildings["brewery"] = {"building_code": "brewery", "label": "Brewery",
+		"cost_gold": "45", "civil_cost": "140", "build_days": "35", "tax_bonus": "0",
+		"output_bonus": "0", "defence_bonus": "0", "church_bonus": "0"}
+	# 30 urban / 10 a step * 100‰ a step = 300‰ bonus over the plain 1000‰
+	# (no governor seated, so Governance.factors gives the same 1000‰
+	# floor): 1300‰ even.
+	r.balance["artisan_per_step"] = 10.0
+	r.balance["artisan_step_permille"] = 100.0
+	r.balance["artisan_speed_cap_permille"] = 1000.0
+	# The crown must CONTROL "p" for its artisans to run above the plain
+	# 1000‰ (Minor2: an uncontrolled province's artisans are not the
+	# LEDGER's) — bind it to the crown's own family, so every manor there
+	# defaults to the crown's house, exactly as house_bindings.csv would.
+	r.house_bindings["p"] = "Rex"
+	r._register_table("economy", "provinces", {
+		"p": {"province_code": "p", "rural_population": "3000", "urban_population": "30"},
+		"q": {"province_code": "q", "rural_population": "800", "urban_population": "0"},
+	})
+	var s := _state()
+	s.tick = 1
+	s.day = 1
+	assert_eq(MapManors.work_speed_permille(r, s, "p"), 1300, "the fixture's own speed")
+	assert_true(MapManors.start_work(r, s, 1, "brewery", "begun"))
+	assert_eq(MapManors.work_days_left(r, s, 1, "brewery"), 35, "no done yet: the plain fallback")
+	for i in 12:
+		s.day += 1
+		MapManors.advance_works(r, s)
+	# done = 12 * 1300 = 15,600 permille-days; remaining = 35,000 - 15,600 =
+	# 19,400; ceil(19,400 / 1300) = 15 — not the old formula's 35-12=23.
+	assert_eq(MapManors.work_days_left(r, s, 1, "brewery"), 15)
+	assert_eq(MapManors.rush_work(r, s, 1, "brewery", 100, "test: gold"), 15,
+		"capped at the true (artisan-paced) days left, not the old elapsed figure")
+	assert_eq(MapManors.work_days_left(r, s, 1, "brewery"), 0)

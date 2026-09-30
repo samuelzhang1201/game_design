@@ -94,9 +94,39 @@ var army_speed: Dictionary = {}
 ## data/army_height_supply.csv: [{tier, min_height, supply_permille}],
 ## highest min_height first (Elevation.tier_of reads the first it reaches).
 var army_height_supply: Array = []
+## data/army_morale_words.csv: [{min_score, word}], highest min_score first
+## (ArmySystem.morale_word reads the first it reaches; spec
+## 2026-09-30-ledger-supply-design §4).
+var army_morale_words: Array = []
+## data/workshop_rates.csv: [{rate_permille, word, ledger_label}], lowest
+## rate first — the rates WORKSHOP_RATE accepts and how each is said
+## (WorkshopSystem; spec 2026-09-30-ledger-supply-design §2).
+var workshop_rates: Array = []
+## data/building_inputs.csv: building code -> [{good, units}] in file order,
+## what one standing building eats a month (IndustrySystem; spec
+## 2026-09-30-ledger-industry-trade-design M5). A building with no rows eats
+## nothing.
+var building_inputs: Dictionary = {}
 ## data/courier_kinds.csv: kind -> {speed_permille, fee_gold, offered}
 ## (spec 2026-09-27-courier-core §3).
 var courier_kinds: Dictionary = {}
+## The LEDGER's ontology (spec 2026-09-30-ledger-ontology-design §7.1):
+## rows as read, in file order.
+var ledger_lenses: Array = []
+var ledger_types: Array = []
+var ledger_links: Array = []
+var ledger_actions: Array = []
+var ledger_loops: Array = []
+## key -> Color (data/ledger_palette.csv).
+var ledger_palette: Dictionary = {}
+## data/ledger_governance.csv: flow_type -> {seat, skill, base_permille,
+## skill_mid, skill_step_permille, min_permille, max_permille, label, books,
+## ledger_type} (LEDGER M3, Governance; spec 2026-09-30-ledger-governors-design
+## §2). `books`: whether the flow keeps books an audit can read (LEDGER_AUDIT
+## refuses one without, M5/M6 ruling); `ledger_type`: the LEDGER type its
+## instances are drawn as (the flow's own name when empty; the works are
+## drawn on the artisans).
+var ledger_governance: Dictionary = {}
 ## data/courier_art.csv: kind -> its row (model, painting, size).
 var courier_art: Dictionary = {}
 ## data/intel_facts.csv: key -> {label, round_to, tiers} (spec 2026-09-28 §1).
@@ -268,6 +298,11 @@ var landmark_name_overrides: Dictionary = {}
 ## routes, rivers, markers, biomes) are the SAME Dictionary objects, so the
 ## old callers and the world ledger see one set of rows.
 var world_tables: Dictionary = {}
+## economy/deals.csv (LEDGER M6, spec 2026-09-30-ledger-industry-trade-design):
+## the export's trade flows in FILE order, {seller_type, seller, buyer_type,
+## buyer, good, units (float), price (float)} — a month's units, read by
+## MarketSystem through live ownership. Cleared by load_map.
+var deals: Array = []
 
 ## [domain, area, required columns, key columns, key separator]. A table absent
 ## from a pack simply loads as {} (the ledger reads null for its paths).
@@ -577,6 +612,39 @@ func _load(dir: String) -> bool:
 			func(r): courier_kinds[String(r["kind"])] = {"speed_permille": int(r["speed_permille"]),
 				"fee_gold": int(r["fee_gold"]), "offered": int(r["offered"]) == 1}):
 		return false
+	if not _load_if_present(dir + "/ledger_lenses.csv", ["lens", "label", "instance_type"],
+			func(r): ledger_lenses.append(r)):
+		return false
+	if not _load_if_present(dir + "/ledger_object_types.csv",
+			["type_id", "layer", "lenses", "label", "icon", "x", "z", "instances", "status", "milestone"],
+			func(r): ledger_types.append(r)):
+		return false
+	if not _load_if_present(dir + "/ledger_link_types.csv",
+			["link_id", "from_type", "to_type", "verb", "lenses", "status", "resolver",
+				"governor_seat", "governor_kind", "milestone", "planned_note"],
+			func(r): ledger_links.append(r)):
+		return false
+	if not _load_if_present(dir + "/ledger_actions.csv",
+			["target", "action_code", "label", "params", "needs_map"],
+			func(r): ledger_actions.append(r)):
+		return false
+	if not _load_if_present(dir + "/ledger_loops.csv", ["loop_id", "links", "kind", "running", "label"],
+			func(r): ledger_loops.append(r)):
+		return false
+	if not _load_if_present(dir + "/ledger_palette.csv", ["key", "color"],
+			func(r): ledger_palette[String(r["key"])] = Color(String(r["color"]))):
+		return false
+	if not _load_if_present(dir + "/ledger_governance.csv",
+			["flow_type", "seat", "skill", "base_permille", "skill_mid", "skill_step_permille", "min_permille",
+				"max_permille", "label", "books", "ledger_type"],
+			func(r): ledger_governance[String(r["flow_type"])] = {"seat": String(r["seat"]),
+				"skill": String(r["skill"]), "base_permille": int(r["base_permille"]),
+				"skill_mid": int(r["skill_mid"]), "skill_step_permille": int(r["skill_step_permille"]),
+				"min_permille": int(r["min_permille"]), "max_permille": int(r["max_permille"]),
+				"label": String(r["label"]), "books": String(r["books"]) != "0",
+				"ledger_type": String(r["flow_type"]) if String(r["ledger_type"]) == "" \
+					else String(r["ledger_type"])}):
+		return false
 	if not _load_if_present(dir + "/courier_art.csv", ["kind", "model", "painting", "size"],
 			func(r): courier_art[String(r["kind"])] = r):
 		return false
@@ -635,6 +703,23 @@ func _load(dir: String) -> bool:
 		return false
 	army_height_supply.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["min_height"]) > int(b["min_height"]))
+	if not _load_if_present(dir + "/army_morale_words.csv", ["min_score", "word"],
+			func(r): army_morale_words.append({"min_score": int(r["min_score"]), "word": String(r["word"])})):
+		return false
+	army_morale_words.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["min_score"]) > int(b["min_score"]))
+	if not _load_if_present(dir + "/workshop_rates.csv", ["rate_permille", "word", "ledger_label"],
+			func(r): workshop_rates.append({"rate_permille": int(r["rate_permille"]), "word": String(r["word"]),
+				"ledger_label": String(r["ledger_label"])})):
+		return false
+	workshop_rates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a["rate_permille"]) < int(b["rate_permille"]))
+	if not _load_if_present(dir + "/building_inputs.csv", ["building_code", "good_code", "units"],
+			func(r):
+				var code := String(r["building_code"])
+				if not building_inputs.has(code):
+					building_inputs[code] = []
+				(building_inputs[code] as Array).append({"good": String(r["good_code"]), "units": int(r["units"])})):
+		return false
 	if not _load_if_present(dir + "/landmark_names.csv", ["kind", "pattern"],
 			func(r):
 				var k := String(r["kind"])
@@ -699,6 +784,8 @@ func load_map(id: String) -> bool:
 	manor_by_label.clear()
 	landmark_name_overrides.clear()
 	world_tables.clear()
+	deals.clear()
+	MarketSystem.forget()
 	if not _load_if_present(dir + "/political/kingdoms.csv",
 			["kingdom_code", "state_id", "label", "capital_burg"],
 			func(r): kingdoms[r["kingdom_code"]] = r):
@@ -767,6 +854,13 @@ func load_map(id: String) -> bool:
 					table[sep.join(parts)] = r):
 			return false
 		_register_table(String(spec[0]), String(spec[1]), table)
+	if not _load_if_present(dir + "/economy/deals.csv",
+			["seller_type", "seller", "buyer_type", "buyer", "good_code", "units", "price"],
+			func(r: Dictionary) -> void:
+				deals.append({"seller_type": String(r["seller_type"]), "seller": String(r["seller"]),
+					"buyer_type": String(r["buyer_type"]), "buyer": String(r["buyer"]),
+					"good": String(r["good_code"]), "units": float(r["units"]), "price": float(r["price"])})):
+		return false
 	if not _load_if_present(dir + "/realm_bindings.csv", ["slot", "kingdom_code"],
 			func(r): realm_bindings[r["slot"]] = r["kingdom_code"]):
 		return false
