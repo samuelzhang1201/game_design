@@ -13,8 +13,11 @@ git-ignored; nothing reaches the game until an installer copies it into
 (`--model qwen2512fast`, owner: klein is retired, and after comparing it with
 Z-Image on the 21 chapter events the owner picked Qwen, seed 954159497, and
 Qwen alone for the rest). A table's `seed` cell names the pick as
-`<model>_s<seed>` (`event_art.csv`: `qwen2512fast_s954159497`). The title
-screen's frame is `title_frame_prompts.csv` (U-27, canvas `C-TITLE`). The
+`<model>_s<seed>` (`event_art.csv`, `cast_art.csv`, `estate_paint_art.csv`,
+`army_paint_art.csv`: `qwen2512fast_s954159497`, B-22 `_s954159498`). The
+title screen's frame is `title_frame_prompts.csv` (U-27, canvas `C-TITLE`),
+installed by `install_map_art.py title` (`TITLE_SEED`). The icons are not
+re-rendered yet. The
 klein notes below are history.
 
 Until then only **Flux.2 [klein] 4B base** (`--model klein`, the default) makes game
@@ -102,6 +105,7 @@ python3 assets/flux/generate.py --build-csv                      # after editing
 | `biomes` | satellite T- tiles → `assets/biomes/<key>.png` (1024 px, seamless) |
 | `arms` | A- → `assets/2D/arms/<pack>/<key>.png` (256 px; `ARMS_PACK=<id>`, default the `data/maps.csv` default pack via `tools/packs.py`) |
 | `app_icon` | X-01 → `icon.png` (1024 px, full bleed) |
+| `title` | U-27 → `assets/2D/ui/panels/frame.png` (1792×1008, the render as it is) |
 
 Every file is sized by its USE (design px × the ~3x largest window scale), never one size for all.
 
