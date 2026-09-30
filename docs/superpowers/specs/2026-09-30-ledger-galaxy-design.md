@@ -89,6 +89,47 @@ with `lens` = `"galaxy"` and every node carrying a `cluster`.
   (≈ 110 stars and 160 links folded; ≈ 650 and 1,200 with every province
   open), measured by a test on the real pack.
 
+## 3b. Nodes and edges can be added, changed or removed at any time
+
+Owner 2026-09-30: "另外要保证接口，我可以随时添加，修改，减少nodes和edges". The
+galaxy is an OPEN schema; nothing about a particular type is written in the
+view or the layout.
+
+- **A new kind of node** is one row of `ledger_object_types.csv`: its
+  `cluster`, its `fold_to` (or none), its `instances` list, and a new `star`
+  column — `pool` (one fixed-size star for the whole type) or `instance`
+  (sized by its links, or, on a province, by what it folds). A kind whose
+  instances come from live state names a reader in `LedgerResolvers`; a
+  kind whose instances are simply WRITTEN DOWN names the list `static`.
+- **A new kind of edge** is one row of `ledger_link_types.csv`: its ends,
+  lenses, status, its reader, and a new `look` column that alone decides
+  how it is drawn — `flow` (width by the believed flow, shaded between the
+  two clusters, light running along it), `tie` (warm or cold by sentiment),
+  `kin` (kin gold) or `structure` (a thin line by count). The view's
+  `KIN_TYPES` and every `court_relations` check go; it reads `look`.
+- **Single nodes and edges, in data only.** `data/ledger_static_nodes.csv`
+  (`node_id,type_id,label,note`) and `data/ledger_static_links.csv`
+  (`link_id,from,to,flow,note`) are read by the generic `static` instance
+  list and the generic `static` reader: a node of any type whose row says
+  `instances` = `static`, an edge of any link type whose row says `resolver`
+  = `static`, between two static nodes or a static node and any live one
+  (`character:you`, `province:<code>` …). Adding a row adds it; editing a
+  row changes it; deleting a row removes it — with no code. A static
+  node's label and note are its card; a static edge's flow is the crown's
+  own figure (`full`).
+- **Removing** a kind is deleting its row; `Ledger.validate` names every
+  link type, static node or static edge left pointing at it, once, when
+  the LEDGER opens (as today). A static edge whose live end no longer
+  exists (the character died) is simply not drawn.
+- **When**: the tables are read with the rest of `data/` when the game
+  starts; a change shows on the next start. (Reloading them while the game
+  runs is out of scope.)
+- **A contract test** holds this: it adds a type, a link type, two static
+  nodes and a static edge to the loaded tables in memory, and asserts the
+  galaxy returns them, the layout places them in their cluster and the
+  view draws a star and a link for them; then it removes the rows and
+  asserts they are gone.
+
 ## 4. The layout (pure)
 
 `LedgerGalaxyLayout` (`scripts/ledger3d/`, `RefCounted`, no nodes):
@@ -204,7 +245,7 @@ and tonemap, so the map's environment is untouched.
 |---|---|---|
 | `Ledger.galaxy`, `_fold` | `scripts/engine/ledger.gd` | the snapshot (§3) |
 | resolvers' `all` branches | `scripts/engine/ledger_resolvers.gd` | one read per link row |
-| `cluster`, `fold_to` columns; `ledger_clusters.csv` | `data/` | clusters and folding as data |
+| `cluster`, `fold_to`, `star` columns; `look` column; `ledger_clusters.csv`; `ledger_static_nodes.csv`, `ledger_static_links.csv` | `data/` | clusters, folding, look and single nodes and edges as data (§3b) |
 | `LedgerGalaxyLayout` | `scripts/ledger3d/ledger_galaxy_layout.gd` | forces, warm start, 2D (§4) |
 | `LedgerLinkMesh` | `scripts/ledger3d/ledger_link_mesh.gd` | pure ribbon arrays for every link and strand |
 | `LedgerView3D` | `scripts/ledger3d/ledger_view_3d.gd` | coordinator: stars, links, haze, camera, input, signals |
