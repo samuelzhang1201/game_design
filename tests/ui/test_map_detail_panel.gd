@@ -278,7 +278,7 @@ func test_a_manor_card_shows_its_slots_and_a_build_fills_one() -> void:
 	assert_false(hurry.disabled)
 	hurry.pressed.emit()
 	await wait_frames(1)
-	assert_eq(MapManors.work_days_left(Game.state, cell, code),
+	assert_eq(MapManors.work_days_left(Game.data, Game.state, cell, code),
 		int(float(row["build_days"])) - per_click, "the days came off")
 	assert_eq(p.slots_row().get_child_count(), slots)
 	assert_false(p.build_menu_codes().has(code), "no second one offered")
@@ -629,3 +629,36 @@ func test_the_longest_chief_good_row_fits_the_left_column() -> void:
 	assert_lte(p.get_combined_minimum_size().x, ScreenLayout.LEFT_WIDTH,
 		"'%s a month' fits the column (%d of %d px)" % [longest, p.get_combined_minimum_size().x,
 		ScreenLayout.LEFT_WIDTH])
+
+## An idle building (LEDGER M5: its inputs went unpaid) says so in its slot:
+## the art dimmed, an "idle" word under it, and why in the tooltip.
+func test_an_idle_building_says_so_in_its_slot() -> void:
+	Game.start_campaign(42)
+	var p := _panel()
+	await wait_frames(1)
+	var cell := -1
+	for c: int in MapManors.manors_of_house(Game.data, Game.state, MapManors.crown(Game.state),
+			Game.data.resolve_realm("player_realm")):
+		if not (ManorEconomy.line_of(Game.data, Game.state, c, Game.state.tick)["units"] as Dictionary).has("iron"):
+			cell = c
+			break
+	assert_true(MapManors.build(Game.data, Game.state, cell, "smithy", "test: a forge"))
+	p.show_manor(cell)
+	await wait_frames(1)
+	var working: Control = p.slots_row().find_child("Slot_smithy", true, false)
+	assert_not_null(working)
+	assert_null(p.slots_row().find_child("Idle", true, false), "a working forge is not idle")
+	Game.state.idle_buildings[str(cell)] = ["smithy"]
+	p.show_manor(cell)
+	await wait_frames(1)
+	var slot: Control = p.slots_row().find_child("Slot_smithy", true, false)
+	assert_not_null(slot)
+	assert_string_contains(slot.tooltip_text, "idle: no iron")
+	var word: Label = p.slots_row().find_child("Idle", true, false)
+	assert_not_null(word, "an idle word under the slot")
+	var icon: ResourceIcon = null
+	for n: Node in slot.find_children("*", "", true, false):
+		if n is ResourceIcon:
+			icon = n
+	assert_not_null(icon)
+	assert_almost_eq(icon.modulate.a, Game.data.bal("ui_slot_idle_alpha"), 0.001, "its art dimmed by the balance row")

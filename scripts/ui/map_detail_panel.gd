@@ -18,6 +18,8 @@ signal closed
 ## gone and the host overview opens from a regiment): the screen puts the
 ## MilitaryPanel in the left column.
 signal host_requested
+## A row of a LEDGER instance list was chosen (show_list).
+signal list_row_chosen(id: String)
 
 ## Sized for the left column's content width (ScreenLayout.LEFT_WIDTH less
 ## the column panel's margins).
@@ -311,6 +313,31 @@ func show_entry(entry: Dictionary) -> void:
 	_open_panel()
 
 
+## A clickable list in the left column (the LEDGER's instances of a type,
+## spec 2026-09-30 §6.1): each row a flat button that ellipsises rather than
+## widening the fixed column.
+func show_list(title: String, rows: Array) -> void:
+	_shown_province = ""
+	_clear()
+	_shield.visible = false
+	_title.text = title
+	_subtitle.visible = false
+	for row: Dictionary in rows:
+		var b := Button.new()
+		b.text = String(row["text"])
+		b.flat = true
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.clip_text = true
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		b.set_meta("ledger_id", String(row["id"]))
+		b.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+		var id := String(row["id"])
+		b.pressed.connect(func() -> void: list_row_chosen.emit(id))
+		_lines.add_child(b)
+	_set_ask("")
+	_open_panel()
+
+
 ## The province card: full for the player's own land, basic abroad; "" hides.
 func show_province(province_code: String) -> void:
 	_shown_province = province_code
@@ -553,7 +580,8 @@ func _fill_slots(card: Dictionary) -> void:
 	for b: String in card.get("buildings", []):
 		filled.append({"building": b, "work": false})
 	for w: Dictionary in card.get("works", []):
-		filled.append({"building": String(w["building"]), "work": true, "days_left": int(w["days_left"])})
+		filled.append({"building": String(w["building"]), "work": true, "days_left": int(w["days_left"]),
+			"artisan_pct": int(w.get("artisan_pct", 0))})
 	for i in total:
 		var column := VBoxContainer.new()
 		column.add_theme_constant_override("separation", 2)
@@ -582,7 +610,7 @@ func _fill_slots(card: Dictionary) -> void:
 				# building's art faint inside it, until the days are up.
 				box.add_theme_stylebox_override("panel", _work_style())
 				box.draw.connect(_draw_dashed_edge.bind(box))
-				icon.modulate.a = 0.35
+				icon.modulate.a = Game.data.bal("ui_slot_work_alpha")
 				var days := Label.new()
 				days.name = "Days"
 				days.text = "%dd" % int(entry["days_left"])
@@ -591,7 +619,26 @@ func _fill_slots(card: Dictionary) -> void:
 				days.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 				column.add_child(box)
 				column.add_child(days)
-				box.tooltip_text = "%s — %d days to go" % [label, int(entry["days_left"])]
+				var artisan_pct := int(entry.get("artisan_pct", 0))
+				box.tooltip_text = "%s — %d days to go%s" % [label, int(entry["days_left"]),
+					(" (artisans: +%d%%)" % artisan_pct) if artisan_pct > 0 else ""]
+			elif (card.get("idle", {}) as Dictionary).has(code):
+				# An idle building (LEDGER M5: its inputs went unpaid) is its
+				# art dimmed with the word under it, like a work's days, and
+				# why in the tooltip ("idle: no iron").
+				var why := String(card["idle"][code])
+				icon.modulate.a = Game.data.bal("ui_slot_idle_alpha")
+				var word := Label.new()
+				word.name = "Idle"
+				word.text = "idle"
+				word.add_theme_font_size_override("font_size", 11)
+				word.add_theme_color_override("font_color", UiPalette.bad_color())
+				word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				word.tooltip_text = why
+				word.mouse_filter = Control.MOUSE_FILTER_PASS
+				column.add_child(box)
+				column.add_child(word)
+				box.tooltip_text = "%s — %s" % [label, why]
 			else:
 				column.add_child(box)
 				box.tooltip_text = label

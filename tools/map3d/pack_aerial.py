@@ -128,12 +128,44 @@ def main():
                     help="how far the picture's light and dark become height (bumps, height blending)")
     ap.add_argument("--normal-strength", type=float, default=2.0)
     ap.add_argument("--rough", type=float, default=0.92)
+    ap.add_argument("--contrast", type=float, default=1.0,
+                    help="the picture's contrast about its mean (under 1 calms a busy rock that reads as noise far out)")
+    ap.add_argument("--lift-darks", type=float, default=0.0,
+                    help="0..1: how far the darkest spots (moss clumps, shadowed holes) rise toward their surroundings")
+    ap.add_argument("--lift-radius", type=int, default=12,
+                    help="px (at 2048) of the neighbourhood --lift-darks compares with: as big as the dark clumps")
+    ap.add_argument("--black", type=float, default=0.0,
+                    help="0..1: the black point lifted to this (a rock photo's baked-in shadow fights the scene's sun)")
+    ap.add_argument("--warm", type=float, default=0.0,
+                    help="how far the picture's hue moves warm (red up, blue down by this share)")
+    ap.add_argument("--flatten-keep", type=float, default=0.2,
+                    help="the share of the photograph's own slow light kept (flatten)")
+    ap.add_argument("--saturation", type=float, default=1.0,
+                    help="the picture's saturation (1 = as generated; a rock's ochre fills read loud at map size)")
     args = ap.parse_args()
     a = np.asarray(Image.open(args.source).convert("RGB"), dtype=np.float32) / 255.0
-    a = np.clip(seamless(flatten(a)), 0, 1)
+    a = np.clip(seamless(flatten(a, keep=args.flatten_keep)), 0, 1)
     a = np.asarray(Image.fromarray(np.round(a * 255).astype(np.uint8)).resize((SIZE, SIZE), Image.LANCZOS),
                    dtype=np.float32) / 255.0
     lum = a @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+    if args.lift_darks > 0.0:
+        # a spot darker than its neighbourhood is lifted toward it: holes and
+        # dark moss read as black pits on a rock face at map size
+        near = np.dstack([box(a[..., c], args.lift_radius) for c in range(3)])
+        lum_n = near @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+        dark = np.clip((lum_n - lum) / 0.15, 0, 1)[..., None] * args.lift_darks
+        a = a + (near - a) * dark
+        lum = a @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+    if args.contrast != 1.0:
+        mean = a.reshape(-1, 3).mean(0)
+        a = np.clip(mean + (a - mean) * args.contrast, 0, 1)
+        lum = a @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+    if args.saturation != 1.0:
+        a = np.clip(lum[..., None] + (a - lum[..., None]) * args.saturation, 0, 1)
+    if args.warm:
+        a = np.clip(a * np.array([1.0 + args.warm, 1.0, 1.0 - args.warm], np.float32), 0, 1)
+    if args.black > 0.0:
+        a = args.black + a * (1.0 - args.black)
     # height: the local light against its neighbourhood (a crown stands, a
     # gap sinks), not the tile's overall brightness
     local = lum - box(lum, 24)

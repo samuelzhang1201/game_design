@@ -22,11 +22,13 @@ static func evaluate(expr: String, state: GameState, data: DataRepository) -> bo
 			return false
 	return true
 
-static func _clause(c: String, state: GameState, _data: DataRepository) -> bool:
+static func _clause(c: String, state: GameState, data: DataRepository) -> bool:
 	if c == "always":
 		return true
 	if c == "never":
 		return false
+	if c == "host_hungry":
+		return SupplySystem.any_hungry(data, state)
 	if c.begins_with("season="):
 		return state.season() == c.substr(7)
 	if c.begins_with("year>="):

@@ -1,0 +1,82 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/ledger_screen.gd" id="1_screen"]
+[ext_resource type="PackedScene" path="res://scenes/ledger/ledger_view.tscn" id="2_view"]
+[ext_resource type="Script" path="res://scripts/ui/ledger_order_menu.gd" id="3_menu"]
+
+[node name="LedgerScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 0
+script = ExtResource("1_screen")
+
+[node name="Frame" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="View" parent="Frame" instance=ExtResource("2_view")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Top" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = 44.0
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Top"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "THE LEDGER OF THE REALM"
+
+[node name="Lenses" type="HBoxContainer" parent="Top"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="Front" type="Button" parent="Top"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Front"
+
+[node name="Close" type="Button" parent="Top"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "×"
+
+[node name="Crumbs" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 50.0
+offset_right = -16.0
+offset_bottom = 74.0
+mouse_filter = 2
+
+[node name="Back" type="Button" parent="Crumbs"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "‹ Realm"
+
+[node name="Crumb" type="Label" parent="Crumbs"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Orders" type="PopupMenu" parent="."]
+unique_name_in_owner = true
+script = ExtResource("3_menu")

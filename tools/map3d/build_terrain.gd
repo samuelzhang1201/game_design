@@ -21,7 +21,7 @@ static var map_id := ""
 # texture ids. No per-texture tint: bake_world.py's colour map carries every
 # colour, so the far view and the near view agree.
 const TEXTURES := [
-	["cliff", 320.0, 0.1],
+	["aerial_cliff", 160.0, 0.1],   # look route 2026-09-30: the escarpments, tools/map3d/pack_aerial.py
 	["aerial_meadow", 120.0, 0.16],   # look route 2026-09-30: aerial pictures, tools/map3d/pack_aerial.py
 	["dry_decay_leaves", 160.0, 0.2],
 	["dirt_floor", 180.0, 0.16],
@@ -29,7 +29,7 @@ const TEXTURES := [
 	["excavated_soil_wall", 240.0, 0.1],
 	["sand_03", 120.0, 0.2],
 	["aerial_canopy", 170.0, 0.22],
-	["snow_02", 110.0, 0.14],  # the snow line (owner 2026-09-19; snow_02 at 110 m, not snow_field_aerial: at 260 m its dark marks read as ink worms)
+	["aerial_snow", 180.0, 0.14],  # the snow line — an aerial snow picture since 2026-09-30 (山顶雪帽, tools/map3d/pack_aerial.py); was (owner 2026-09-19; snow_02 at 110 m, not snow_field_aerial: at 260 m its dark marks read as ink worms)
 ]
 
 # Terrain3D material: demo/Demo.tscn's parameters, every one of them — a

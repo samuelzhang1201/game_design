@@ -14,6 +14,12 @@ const TONE_DELTAS := {
 	"threatening": -3, "dismissive": -3,
 }
 
+## The realm's merchants speak through their guildmaster (TRADE_ROUTE_SET):
+## no roles.csv column names the guild — his row has no seat and the
+## `celebrity` category — so the id is named here, and a campaign without
+## him simply has no one to anger.
+const GUILDMASTER := "char_guildmaster_tessa"
+
 func _init(d: DataRepository) -> void:
 	data = d
 
@@ -69,10 +75,58 @@ func validate(req: ActionRequest, state: GameState) -> String:
 		"CHARACTER_REWARD":
 			if not req.params.get("mode", "gold") in ["gold"]:
 				return "mode must be gold (slice 1)"
-		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE", "MANOR_FOCUS", "MANOR_DEMOLISH", "MANOR_RUSH":
+		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE", "MANOR_FOCUS", "MANOR_DEMOLISH", "MANOR_RUSH", "WORKSHOP_RATE":
 			return _validate_manor(req, state, needs)
 		"ARMY_MARCH", "ARMY_GARRISON":
 			return _validate_army(req, state)
+		"GOVERNOR_SET":
+			var flow := String(req.params.get("flow", ""))
+			if not data.ledger_governance.has(flow):
+				return "No such flow: " + flow
+			var who := String(req.params.get("character", ""))
+			if not who in state.council.values() or not state.characters.has(who):
+				return "Only a councillor can govern %s" % String(data.ledger_governance[flow]["label"])
+			if who == Governance.governor_of(data, state, flow):
+				return "He already governs %s" % String(data.ledger_governance[flow]["label"])
+		"LEDGER_AUDIT":
+			var flow := String(req.params.get("flow", ""))
+			if not data.ledger_governance.has(flow):
+				return "No such flow: " + flow
+			var label := String(data.ledger_governance[flow]["label"])
+			# The building works keep no books (M5 ruling): nothing to audit
+			# until their master has a skim to hide.
+			if not Governance.keeps_books(data, flow):
+				return "%s keeps no books to audit" % (label.left(1).to_upper() + label.substr(1))
+			if Governance.governor_of(data, state, flow) == "":
+				return "No one governs %s: there are no books to audit" % label
+		"TRADE_ROUTE_SET":
+			var k := str(req.params.get("kingdom", ""))
+			# A missing or unknown kingdom is refused on its own (final fix
+			# wave, I2b): the "no trade route to %s" wording below is for a
+			# REAL kingdom the realm merely has no route to, and reads oddly
+			# ("to " with nothing after it) for an empty or made-up code.
+			if k == "" or not data.kingdoms.has(k):
+				return "No such kingdom" if k == "" else "No such kingdom: " + k
+			var route := {}
+			for r: Dictionary in MarketSystem.routes(data, state):
+				if String(r["kingdom"]) == k:
+					route = r
+			if route.is_empty():
+				return "The realm has no trade route to %s" % MarketSystem.label_of(data, k)
+			# open must be exactly 0/1 or "0"/"1" (final fix wave, I2b): a
+			# stray value must never fall through int()'s own leniency
+			# (int("abc") is 0, which would silently CLOSE the route).
+			var open_raw: Variant = req.params.get("open")
+			var open := -1
+			if (open_raw is int or open_raw is float) and int(open_raw) in [0, 1]:
+				open = int(open_raw)
+			elif open_raw is String and String(open_raw) in ["0", "1"]:
+				open = int(String(open_raw))
+			if open == -1:
+				return "open must be 0 or 1"
+			if bool(route["open"]) == (open == 1):
+				return "The trade with %s is already %s" % [MarketSystem.label_of(data, k),
+					"open" if open == 1 else "closed"]
 		"GOODS_BUY", "GOODS_SELL":
 			var pool := String(req.params.get("pool", ""))
 			if not pool in ["strategic", "civil"]:
@@ -80,9 +134,17 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			var gold := int(req.params.get("gold", 0))
 			if gold <= 0:
 				return "gold must be a whole number above zero"
+			# At a market (M6): only one the realm holds now.
+			if req.params.has("market") and not MarketSystem.is_realm_market(data, state, req.params["market"]):
+				return "No market of the realm is market %s" % MarketSystem.market_key(req.params["market"])
 			if req.action_code == "GOODS_BUY":
-				var price := int(roundf(float(gold) * (1.0 + data.bal("goods_trade_spread"))))
+				var price := goods_trade_gold(req, state)
 				if state.metrics["treasury"] < price + needs:
+					# A market's price is its own basket, not the factor's flat
+					# rate (final fix wave, Minor9): the refusal must not name
+					# a cut the market never takes.
+					if req.params.has("market"):
+						return "Cannot afford %d gold of %s goods%s (%d gold)" % [gold, pool, _at_market(req), price]
 					return "Cannot afford %d gold of %s goods (%d with the factor's cut)" % [gold, pool, price]
 			else:
 				var have := int(state.metrics.get(pool_metric(pool), 0.0))
@@ -154,6 +216,28 @@ func manor_of(req: ActionRequest) -> int:
 
 ## The metric that holds a pool: strategic -> strategic, civil -> grain
 ## (the civil pool's key, kept for its readers; spec §5).
+## The treasury's side of a GOODS_BUY (what it pays) or GOODS_SELL (what it
+## gets), whole gold: at a realm market (`market`, M6) that market's price
+## (MarketSystem.buy_price / sell_price), else the flat factor's spread.
+func goods_trade_gold(req: ActionRequest, state: GameState) -> int:
+	var pool := String(req.params.get("pool", ""))
+	var gold := int(req.params.get("gold", 0))
+	var buying := req.action_code == "GOODS_BUY"
+	if req.params.has("market"):
+		var id := MarketSystem.market_key(req.params["market"])
+		return MarketSystem.buy_price(data, id, pool, gold) if buying \
+			else MarketSystem.sell_price(data, state, id, pool, gold)
+	var spread := data.bal("goods_trade_spread")
+	return int(roundf(float(gold) * (1.0 + spread if buying else 1.0 - spread)))
+
+## " at <the market's town>" for a trade at a market, else "".
+func _at_market(req: ActionRequest) -> String:
+	if not req.params.has("market"):
+		return ""
+	var id := MarketSystem.market_key(req.params["market"])
+	var burg := String((data.world_table("economy", "markets").get(id, {}) as Dictionary).get("center_burg", ""))
+	return " at the market of " + String((data.burgs.get(burg, {}) as Dictionary).get("label", burg))
+
 static func pool_metric(pool: String) -> String:
 	return "strategic" if pool == "strategic" else "grain"
 
@@ -231,7 +315,7 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			var building_r := String(req.params.get("building", ""))
 			# 0 is a work whose days are up but which the day step has not
 			# turned into a building yet: there is nothing left to hurry.
-			if MapManors.work_days_left(state, cell, building_r) <= 0:
+			if MapManors.work_days_left(data, state, cell, building_r) <= 0:
 				return "There is no work left on a %s at %s" % [building_r, label]
 			var days := int(req.params.get("days", 0))
 			if days <= 0:
@@ -263,6 +347,19 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 			var fee := float(data.manor_focus[focus]["switch_cost_gold"])
 			if float(state.metrics.get("lord_gold", 0.0)) < fee:
 				return "Your own purse cannot afford to turn %s to %s (%d gold)" % [label, name, int(fee)]
+		"WORKSHOP_RATE":
+			if not crowns:
+				return "The crown does not hold %s" % label
+			if not WorkshopSystem.BUILDING in MapManors.buildings_of(state, cell):
+				return "%s has no war workshop" % label
+			var rate := int(req.params.get("rate", -1))
+			if not rate in WorkshopSystem.rates(data):
+				var words: Array = []
+				for r: int in WorkshopSystem.rates(data):
+					words.append(WorkshopSystem.rate_word(data, r))
+				return "A war workshop runs " + ", ".join(words)
+			if rate == WorkshopSystem.rate_of(state, cell):
+				return "The war workshop at %s already runs %s" % [label, WorkshopSystem.rate_word(data, rate)]
 	return ""
 
 func execute(req: ActionRequest, state: GameState) -> Dictionary:
@@ -417,6 +514,12 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			MapManors.set_focus(data, state, cell, focus, "turned from %s to %s by the crown" % [was, String(row_f["label"]).to_lower()])
 			effects.append({"metric": "manor", "delta": 0.0,
 				"reason": "%s turns to %s; %d ticks to settle in" % [label, String(row_f["label"]).to_lower(), int(float(row_f["transition_ticks"]))]})
+		"WORKSHOP_RATE":
+			var cell := manor_of(req)
+			var rate := int(req.params["rate"])
+			WorkshopSystem.set_rate(state, cell, rate)
+			effects.append({"metric": "manor", "delta": 0.0, "reason": "the war workshop at %s now runs %s"
+				% [MapManors.label_of(data, cell), WorkshopSystem.rate_word(data, rate)]})
 		"MANOR_SEIZE":
 			# The skeleton (MANOR_SYSTEM.md §5): the outcome is automatic success
 			# until the military system can roll defence against the host.
@@ -468,18 +571,71 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var days := CourierSystem.days_left(data, state, c)
 			effects.append({"metric": "intel", "delta": 0.0,
 				"reason": "A spy rides for %s; about %d day%s" % [place, days, "" if days == 1 else "s"]})
+		"GOVERNOR_SET":
+			var flow := String(req.params["flow"])
+			var label := String(data.ledger_governance[flow]["label"])
+			var was := Governance.governor_of(data, state, flow)
+			var who := String(req.params["character"])
+			var seat_holder := String(state.council.get(String(data.ledger_governance[flow]["seat"]), ""))
+			if who == seat_holder:
+				state.governors.erase(flow)
+			else:
+				state.governors[flow] = who
+			if was != "" and state.characters.has(was):
+				(state.characters[was] as Character).change_opinion(int(data.bal("gov_passed_over_opinion")),
+					"passed over: %s given to another" % label, state.tick)
+			(state.characters[who] as Character).change_opinion(int(data.bal("gov_new_governor_opinion")),
+				"given %s to govern" % label, state.tick)
+			effects.append({"metric": "council", "delta": 0.0, "reason": "%s now governs %s"
+				% [(state.characters[who] as Character).display_name, label]})
+		"LEDGER_AUDIT":
+			var flow := String(req.params["flow"])
+			var label := String(data.ledger_governance[flow]["label"])
+			var gid := Governance.governor_of(data, state, flow)
+			var c: Character = state.characters[gid]
+			# The opinions move FIRST and the letter is written LAST — after the
+			# order's own drift and costs too, at the end of execute (fix round
+			# 1 of M3 Task 4): his opinion sets how well he runs the flow, so on
+			# the audit day the letter's figures are the live projection.
+			c.change_opinion(int(data.bal("gov_audited_opinion")),
+				"the crown's clerks went through his books on %s" % label, state.tick)
+			# The books are the FLOW's (final review I1): the audit finds every
+			# man's uncaught skim on this flow, the governor now or one the flow
+			# was taken from.
+			var found := Governance.skimmers_of(state, flow)
+			for who: String in found:
+				_catch(state, effects, who, flow, label)
+			if found.is_empty():
+				effects.append({"metric": "council", "delta": 0.0, "reason": "The books on %s are in order"
+					% label})
+		"TRADE_ROUTE_SET":
+			var k := str(req.params["kingdom"])
+			var label := MarketSystem.label_of(data, k)
+			if int(req.params["open"]) == 1:
+				state.closed_routes.erase(k)
+				effects.append({"metric": "trade", "delta": 0.0, "reason": "the trade with %s is open again" % label})
+			else:
+				state.closed_routes.append(k)
+				state.closed_routes.sort()
+				effects.append({"metric": "trade", "delta": 0.0,
+					"reason": "the trade with %s is closed; its tolls are forgone" % label})
+				# The merchants' goodwill (spec M6); the kingdom's own
+				# relationship waits for diplomacy to be state (a no-op hook).
+				if state.characters.has(GUILDMASTER):
+					(state.characters[GUILDMASTER] as Character).change_opinion(
+						int(data.bal("trade_close_opinion")), "the crown closed the trade with " + label, state.tick)
 		"GOODS_BUY":
 			var pool := String(req.params["pool"])
 			var gold := int(req.params["gold"])
-			var price := int(roundf(float(gold) * (1.0 + data.bal("goods_trade_spread"))))
-			_apply(state, effects, "treasury", float(-price), "bought %d gold of %s goods" % [gold, pool])
+			var price := goods_trade_gold(req, state)
+			_apply(state, effects, "treasury", float(-price), "bought %d gold of %s goods%s" % [gold, pool, _at_market(req)])
 			_apply(state, effects, pool_metric(pool), float(gold), "%s goods bought" % pool)
 		"GOODS_SELL":
 			var pool := String(req.params["pool"])
 			var gold := int(req.params["gold"])
-			var paid := int(roundf(float(gold) * (1.0 - data.bal("goods_trade_spread"))))
+			var paid := goods_trade_gold(req, state)
 			_apply(state, effects, pool_metric(pool), float(-gold), "%s goods sold" % pool)
-			_apply(state, effects, "treasury", float(paid), "sold %d gold of %s goods" % [gold, pool])
+			_apply(state, effects, "treasury", float(paid), "sold %d gold of %s goods%s" % [gold, pool, _at_market(req)])
 	var cd := int(row.get("cooldown_ticks", 0))
 	if cd > 0:
 		state.cooldowns[req.action_code] = state.tick + cd
@@ -515,12 +671,51 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		effects.append_array(OrderCosts.charge(data, state, req.action_code, req.target))
 	else:
 		OrderCosts.ensure(data, state, effects, drift, before, req.action_code, req.target)
+	if req.action_code == "LEDGER_AUDIT":
+		_file_audit(state, String(req.params["flow"]))
 	state.event_state["last_action_tick"][req.action_code] = state.tick
 	var outcome := {"action_code": req.action_code, "ok": true, "effects": effects,
 		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate(),
 		"drift": drift}
 	state.recent_outcomes.append(outcome)
 	return outcome
+
+## An audit's letter, filed LAST, once every opinion the order moves has
+## moved: its figures are then the flow as it now runs. An audit is a
+## snapshot of ITS month — the LEDGER counts it only while state.tick is the
+## `tick` it was filed in (Ledger._audit_figure; controller ruling, M3 Task 4
+## fix round 1).
+func _file_audit(state: GameState, flow: String) -> void:
+	var label := String(data.ledger_governance[flow]["label"])
+	var letter := MissiveLog.make("audit", "credible", state.absolute_day(),
+		MissiveLog.subject("ledger", flow, -1, Vector2.ZERO), "Audit — " + label.capitalize(),
+		AuditWriter.facts(data, state, flow))
+	letter["tick"] = state.tick
+	MissiveLog.add(data, state, letter)
+
+## One man caught skimming `flow` by its audit: his `caught` entry, his
+## record line and the opinion it costs him (with its reason); his count
+## on that flow starts again.
+func _catch(state: GameState, effects: Array, who: String, flow: String, label: String) -> void:
+	var amount := Governance.skimmed_on(state, who, flow)
+	if not state.caught.has(who):
+		state.caught[who] = []
+	state.caught[who].append({"flow": flow, "day": state.absolute_day(), "amount": amount})
+	if not state.records.has(who):
+		state.records[who] = []
+	state.records[who].append("Caught skimming %s, %s of year %d (%d gold)"
+		% [label, state.season(), state.year(), amount])
+	var his: Dictionary = state.skims[who]
+	his.erase(flow)
+	if his.is_empty():
+		state.skims.erase(who)
+	var name := who
+	if state.characters.has(who):
+		var c: Character = state.characters[who]
+		name = c.display_name
+		c.change_opinion(int(data.bal("gov_caught_opinion")), "caught skimming %s" % label, state.tick)
+	effects.append({"metric": "council", "delta": 0.0, "reason": "%s caught skimming %s (%d gold)"
+		% [name, label, amount]})
 
 ## Every character of a house, for a trade's goodwill or a seizure's outrage.
 func _house_members(state: GameState, family: String) -> Array:

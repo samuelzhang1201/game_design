@@ -15,6 +15,32 @@ add it here as a principle with its why — not as a changelog entry.
   cut-outs feather their rim; biome tiles cross-fade per pixel, never per
   Voronoi cell. A hard-edged tray, slab, disc or ring around an object is
   the most frequent reason something was called ugly.
+- **A grade cannot rescue the ground; material and life do** (owner
+  2026-09-30: "配色我觉得救不了画面"). Four colour grades of the same map were
+  shown and none fixed "ugly and fake": the causes were ground-level photo
+  textures stretched to 160-320 m tiles (grey noise from the air), bare land
+  with no woods, an ink line round every coast and rust field decals. The
+  ground wears pictures made AT map height (aerial, Z-Image — Qwen drew grass
+  close-ups), the land carries woods (the "no trees" ruling is lifted for the
+  3D map), and borders stop at the shore.
+- **Rock is photographed from where the player looks** (owner 2026-09-30,
+  cliff texture). A frontal photograph of a rock wall, laid on a slope seen
+  from above, bent its strata into tiger stripes; a top-down crag photograph
+  reads as rock. Rock sits WARM beside the golden grass — a cool blue-grey
+  crag read as a second photograph pasted on — and its baked-in black holes
+  are lifted, or they read as burns.
+- **Snow lies ON rock, not on a lawn** (owner 2026-09-30, the snow caps:
+  "山顶雪帽"). A beige snow tile with a rim that follows a contour read as a
+  plaster lid set on a green dome. Snow is near-white with no colour of its
+  own, its line broken by noise and lower on the shaded (north) side, and it
+  ends above a margin of grey scree — never straight into grass.
+- **Motion must read at the zoom the map is played at** (owner 2026-09-30:
+  "我并没有看到麦浪和树摇"). A wind shown only in a 1.5 km close-up is a wind the
+  player never sees: judge an effect at the opening view (~24 km) too, with
+  the clock running, the sun turning and the clouds passing — they move the
+  frame far more than a faint effect does. Far out, scale the effect up (broad
+  gusts, not true-size waves), not merely its strength until it reads as
+  cloud shadow.
 - **No base plates.** Objects stand on the map's own ground (the grass disc
   under the 3D towns was the first thing rejected).
 
@@ -319,6 +345,16 @@ add it here as a principle with its why — not as a changelog entry.
 - **A map mark is ink, not a badge.** The weather mark is a bare glyph in
   dimmed parchment over a soft shadow — a black disc with a white glyph, and
   then a gold-rimmed leather disc, were both stickers on the ground.
+
+- **The LEDGER is an orrery of brass and glass, read one web at a time**
+  (owner 2026-09-30, choosing variant A over a darker bronze and a
+  silver-gilt: built things warm brass, unbuilt dark, the wire the brass's
+  own gold — one metal family, and built-against-planned is carried by both
+  hue and value). Its layer discs are pools that fade out over their rim,
+  never trays; a web too dense to read (the court's 49 ties) shows one
+  person's ties lit and the rest as faint context, not every line at full
+  weight. A fade is set as the eye reads it: under linear blending an
+  "alpha 0.25" line on a dark ground reads nearly whole.
 
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols

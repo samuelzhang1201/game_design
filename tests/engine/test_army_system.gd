@@ -42,12 +42,21 @@ func test_the_month_returns_wounded_and_spends_supplies() -> void:
 	var use := ArmySystem.supply_use(repo, r)
 	s.regiments[code]["wounded"] = 250
 	s.regiments[code]["supplies"] = use + 5
+	# Morale now follows the stores each call (spec
+	# 2026-09-30-ledger-supply-design §4): predict the two drifts from the
+	# same functions settle_month uses, reading the mark from what is in
+	# hand before each call's own spend.
+	var naval := String(r.get("is_naval", "0")) == "1"
+	var mark1 := ArmySystem.morale_mark(repo, ArmySystem.supply_score(repo, use + 5, use), false)
+	var morale1 := 70 if naval else ArmySystem.drift_morale(70, mark1, int(repo.bal("army_morale_drift_per_month")))
+	var mark2 := ArmySystem.morale_mark(repo, ArmySystem.supply_score(repo, 5, use), false)
+	var expected := morale1 if naval else ArmySystem.drift_morale(morale1, mark2, int(repo.bal("army_morale_drift_per_month")))
 	ArmySystem.settle_month(repo, s)
 	assert_eq(int(s.regiments[code]["wounded"]), 200)
 	assert_eq(int(s.regiments[code]["supplies"]), 5)
 	ArmySystem.settle_month(repo, s)
 	assert_eq(int(s.regiments[code]["supplies"]), 0, "supplies stop at zero")
-	assert_eq(int(s.regiments[code]["morale"]), 70, "morale does not move yet")
+	assert_eq(int(s.regiments[code]["morale"]), expected, "morale follows the stores (spec 2026-09-30-ledger-supply-design §4)")
 
 func test_supply_use_is_the_base_scaled_by_the_cells_height_tier() -> void:
 	var r: Dictionary = _mine()[0]

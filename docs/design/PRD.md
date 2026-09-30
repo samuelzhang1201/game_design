@@ -21,7 +21,7 @@ The core architectural bet is unchanged: **the deterministic engine decides ever
 **Goals (Chapter 1 MVP):**
 
 - A complete, self-contained Chapter 1: three authored arcs (§7) that open in the coronation narration, escalate through events and factions, and each reach an explicit resolution, capped by a chapter-close scene.
-- **All play methods present and finished:** guided briefings and clickable suggestions, free-text orders, one-on-one conversations at locations, movement between locations, random events with choices, council debates, recruitment, the relationship graph and info tabs, the interactive world map, factions through **stage 6** (scoped to Duke Tomas's faction), and raid defense.
+- **All play methods present and finished:** guided briefings and clickable suggestions, free-text orders, one-on-one conversations at locations, movement between locations, random events with choices, council debates, recruitment, the LEDGER (the realm's ontology, with the web of the court as its Court lens) and info tabs, the interactive world map, factions through **stage 6** (scoped to Duke Tomas's faction), and raid defense.
 - **Full art:** every chapter-1 character has final full-body art; every chapter-1 event scene has an illustration; the chapter has title and closing cards. No placeholders visible in a chapter-1 playthrough.
 - A campaign that runs, saves, and loads deterministically across the whole chapter.
 - Losing is real: Tomas can depose you (chapter-1 game over with an authored scene).
@@ -104,7 +104,7 @@ Build strictly in this order; each step is independently playtestable. Steps 1�
 - **CS-4.1** Candidate pool + `RECRUIT_COURTIER` unlocks after year 1.
 - **CS-4.2** Relationship graph per `character_relation` with deterministic formation rules.
 
-*Status: CS-4.1 not yet built (`RECRUIT_COURTIER` is a data row only). CS-4.2 partly: `RelationshipGraph` seeds edges from `data/relationships.csv`, drifts them monthly and shows them on the RELATIONSHIP tab; formation of new edges is not built.*
+*Status: CS-4.1 not yet built (`RECRUIT_COURTIER` is a data row only). CS-4.2 partly: `RelationshipGraph` seeds edges from `data/relationships.csv`, drifts them monthly and shows them on the LEDGER's Court lens (2026-09-30); formation of new edges is not built.*
 
 ### Step 5 — Factions through stage 3
 
@@ -167,6 +167,8 @@ Full design in `RANDOM_EVENTS.md`.
 - **AR-2 Event art.** One illustration per chapter-1 chain event and per ambient event used in chapter 1, shown in the event popup where the placeholder frame sits today. Same pipeline; a shared default per event category is acceptable as fallback during development but **no placeholder may be visible at MVP sign-off**. *Status: not yet built — events stand in the CK3-style audience window with the round-table portrait, no illustration.*
 - **AR-3 Chapter cards.** Chapter-1 title card, chapter-close card (variant art or tinting per major outcome mix is a stretch goal; one card minimum), and the game-over (deposition) card. *Status: not yet built.*
 - **AR-4** The world map is done and interactive in all gameplay screens, and is the standing bar for art finish: nothing shipped in chapter 1 should look less finished than the map view. *Status (2026-09-18): there is no render PNG any more (owner 2026-09-11) — the game draws the Azgaar pack's cells itself, the ground in satellite-photograph biome tiles lit by the pack's height (owner 2026-09-17), aerial-photograph settlements, banded sea, dashed borders, and generated house arms; a 3D MAP tab shows the same world as a Terrain3D landscape with clickable towns and provinces and live borders (owner 2026-09-18, `scripts/map3d/`). The UI around it is a dark theme after Crusader Kings III (owner 2026-09-15).*
+
+**LEDGER (owner 2026-09-30):** L0 built ahead of Step 3 (it adds no mechanic); M1 supply and morale, M2 the war workshop and M4 battle land with Step 8; M3 governors, skimming and the audit after Step 8; M5 raw materials and artisans and M6 markets are in the MVP (spec `2026-09-30-ledger-ontology-design.md` §8).
 
 ## 7. Chapter 1 — "The Crown Unsettled" (working title)
 

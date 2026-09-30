@@ -38,6 +38,24 @@ var day_arrivals: Array = []
 ## The couriers' events of the last day (CourierSystem.ride_day), for the news bar.
 var day_couriers: Array = []
 
+## The buildings the last advance() left idle that were working the month
+## before (M5), [{cell, building, missing}] in cell then code order — read
+## by Game for the news bar, ONCE per spell idle; never in the TickReport.
+var newly_idle: Array = []
+
+func _newly_idle(state: GameState, was_idle: Dictionary) -> Array:
+	var out: Array = []
+	var keys: Array = state.idle_buildings.keys()
+	keys.sort_custom(func(a: String, b: String) -> bool: return int(a) < int(b))
+	for key: String in keys:
+		var codes: Array = (state.idle_buildings[key] as Array).duplicate()
+		codes.sort()
+		for code: String in codes:
+			if not code in (was_idle.get(key, []) as Array):
+				out.append({"cell": int(key), "building": code,
+					"missing": IndustrySystem.missing_of(data, state, int(key), code)})
+	return out
+
 
 func advance(state: GameState) -> TickReport:
 	var r := TickReport.new()
@@ -45,6 +63,30 @@ func advance(state: GameState) -> TickReport:
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.
 	_settle_economy(state, r)
+	# Buildings eat (spec 2026-09-30-ledger-industry-trade-design, M5): with
+	# this month's goods in, the lord's input buildings buy next month's
+	# inputs, or stand idle. No RealmEconomy.forget(): the province key and
+	# the realm signature carry idle_buildings, so only a province whose
+	# idle set moved goes stale — and the tick below stales them all anyway,
+	# to be recomputed by the day buckets, not in one lump at the month's turn.
+	var was_idle: Dictionary = state.idle_buildings.duplicate(true)
+	for l: Dictionary in IndustrySystem.settle_month(data, state):
+		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
+	newly_idle = _newly_idle(state, was_idle)
+	# The war workshops (spec 2026-09-30-ledger-supply-design §2): this
+	# month's civil goods are in; turn the lord's share into arms before the
+	# supply lines ship.
+	for l: Dictionary in WorkshopSystem.settle_month(data, state):
+		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
+	# The trade tolls (spec 2026-09-30-ledger-industry-trade-design, M6):
+	# after the workshops, with the month's other flows. A toll reads only
+	# ownership, the deals and the steward, and pays into the TREASURY, which
+	# neither the workshops (the lord's goods) nor the supply lines (the
+	# strategic goods) touch — so its place among them changes no figure;
+	# it stands here, before the supply lines, so the month's income is all
+	# in before anything of the month is spent.
+	for l: Dictionary in MarketSystem.settle_month(data, state):
+		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
 	# The provinces' wealth tiers are settled with the month (Ruling 15):
 	# state, so no reader's timing can decide what a spy's report says.
 	Intel.settle_wealth_tiers(data, state)
@@ -55,7 +97,13 @@ func advance(state: GameState) -> TickReport:
 	# every later settled month has already been incremented past it.
 	if state.tick > 0:
 		MissiveLog.add(data, state, MissiveWriter.monthly(data, state, state.tick))
-	# The regiments' month (owner 2026-09-17): wounded return, supplies spent.
+	# The supply lines (spec 2026-09-30-ledger-supply-design §3): the host is
+	# refilled before its month is spent.
+	for l: Dictionary in SupplySystem.settle_month(data, state):
+		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
+	# The regiments' month (owner 2026-09-17; morale, spec 2026-09-30-ledger-
+	# supply-design §4): wounded return, morale drifts toward what the stores
+	# just refilled allow, supplies are spent, training grows.
 	ArmySystem.settle_month(data, state)
 	state.tick += 1
 	state.day = 1
@@ -118,14 +166,8 @@ func _settle_economy(state: GameState, r: TickReport) -> void:
 	for seat: String in state.council:
 		salaries += int(float((data.seats.get(seat, {}) as Dictionary).get("salary_gold", 0)))
 	_apply(r, m, "treasury", float(-salaries), "ministers' salaries")
-	var people := 0
-	for code: String in MapManors.controlled_provinces(data, state):
-		people += RealmEconomy._figure(data, state, "economy.provinces.%s.rural_population" % code)
-		people += RealmEconomy._figure(data, state, "economy.provinces.%s.urban_population" % code)
-	var ration := int(roundf(float(people) / 1000.0 * data.bal("ration_gold_per_1000")))
-	if m.get("grain_ration", 0.0) > 0.0:
-		@warning_ignore("integer_division")  # whole gold (invariant 11)
-		ration = ration / 2
+	var people := court_people(data, state)
+	var ration := ration_of(data, state)
 	_apply(r, m, "grain", float(-ration), "the court's ration")
 	# The harvest and the buildings are the lord's own fields and walls.
 	if Calendar.season_name(state.tick + 1) == "Autumn":
@@ -143,6 +185,24 @@ func _settle_economy(state: GameState, r: TickReport) -> void:
 		var bad := RealmEconomy.check_full(data, state)
 		if not bad.is_empty():
 			push_error("economy_check_full: %d province(s) differ from the cache: %s" % [bad.size(), str(bad[0])])
+
+## The people of the provinces the crown controls — the mouths the court's
+## ration feeds and the harvest is counted by. Also read by the LEDGER.
+static func court_people(data: DataRepository, state: GameState) -> int:
+	var people := 0
+	for code: String in MapManors.controlled_provinces(data, state):
+		people += RealmEconomy._figure(data, state, "economy.provinces.%s.rural_population" % code)
+		people += RealmEconomy._figure(data, state, "economy.provinces.%s.urban_population" % code)
+	return people
+
+## The court's ration of civil goods this month, halved under the ration
+## order. Whole gold (invariant 11).
+static func ration_of(data: DataRepository, state: GameState) -> int:
+	var ration := int(roundf(float(court_people(data, state)) / 1000.0 * data.bal("ration_gold_per_1000")))
+	if state.metrics.get("grain_ration", 0.0) > 0.0:
+		@warning_ignore("integer_division")  # whole gold (invariant 11)
+		ration = ration / 2
+	return ration
 
 func _drift(state: GameState, r: TickReport) -> void:
 	var m := state.metrics

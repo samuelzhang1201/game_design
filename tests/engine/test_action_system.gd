@@ -377,9 +377,9 @@ func test_building_spends_civil_goods_and_rushing_spends_gold() -> void:
 	var per_day := int(data.bal("build_rush_gold_per_day"))
 	t = int(s.metrics["treasury"])
 	var purse := int(s.metrics["lord_gold"])
-	var left := MapManors.work_days_left(s, cell, "palisade")
+	var left := MapManors.work_days_left(data, s, cell, "palisade")
 	assert_true(sys.execute(ActionRequest.make("MANOR_RUSH", {"manor": cell, "building": "palisade", "days": 5}), s)["ok"])
-	assert_eq(MapManors.work_days_left(s, cell, "palisade"), left - 5)
+	assert_eq(MapManors.work_days_left(data, s, cell, "palisade"), left - 5)
 	assert_eq(int(s.metrics["lord_gold"]), purse - 5 * per_day, "the lord pays the masons")
 	assert_eq(int(s.metrics["treasury"]), t - int(OrderCosts.gold_of(data, "MANOR_RUSH")))
 	assert_string_contains(sys.validate(ActionRequest.make("MANOR_RUSH", {"manor": cell, "building": "chapel", "days": 1}), s), "no work")
@@ -448,6 +448,10 @@ func test_buildings_need_their_land_and_their_prerequisites() -> void:
 		for col in ["tax_bonus", "output_bonus", "defence_bonus", "church_bonus", "gold_per_tick",
 				"grain_per_tick", "contentment_per_tick", "unrest_per_tick"]:
 			yields = yields or absf(float(row.get(col, 0))) > 0.0
+		# The war workshop yields nothing in these columns: it turns the
+		# lord's civil goods into strategic goods through WorkshopSystem
+		# instead (spec 2026-09-30-ledger-supply-design §2).
+		yields = yields or code == WorkshopSystem.BUILDING
 		assert_true(yields, "%s yields something" % code)
 		for p in MapManors.building_prereqs(data, code):
 			assert_true(data.manor_buildings.has(p), "%s needs %s, a real building" % [code, p])
