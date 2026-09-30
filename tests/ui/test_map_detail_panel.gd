@@ -656,3 +656,9 @@ func test_an_idle_building_says_so_in_its_slot() -> void:
 	assert_string_contains(slot.tooltip_text, "idle: no iron")
 	var word: Label = p.slots_row().find_child("Idle", true, false)
 	assert_not_null(word, "an idle word under the slot")
+	var icon: ResourceIcon = null
+	for n: Node in slot.find_children("*", "", true, false):
+		if n is ResourceIcon:
+			icon = n
+	assert_not_null(icon)
+	assert_almost_eq(icon.modulate.a, Game.data.bal("ui_slot_idle_alpha"), 0.001, "its art dimmed by the balance row")

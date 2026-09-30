@@ -663,3 +663,5 @@ gov_caught_opinion,-12,LEDGER M3: a governor's opinion when an audit catches him
 gov_audited_opinion,-3,LEDGER M3: a governor's opinion when the crown's clerks go through his books
 gov_passed_over_opinion,-8,LEDGER M3: the displaced governor's opinion when his flow is given to another
 gov_new_governor_opinion,4,LEDGER M3: the new governor's opinion when he is given a flow
+ui_slot_idle_alpha,0.4,"LEDGER M5: the opacity of an IDLE building's art in the manor card's slot row (its inputs went unpaid; the word idle stands under it)"
+ui_slot_work_alpha,0.35,"the opacity of a work in progress's art in the manor card's slot row (the ghost of the building, owner 2026-09-14)"

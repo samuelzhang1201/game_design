@@ -11,13 +11,19 @@ extends RefCounted
 
 const REASON := "the lord's workshops buy their inputs"
 
-## Every standing building as [cell, code]: cells ascending, codes sorted —
-## the one order the plan and the settlement walk.
-static func buildings(state: GameState) -> Array:
+## Every standing building of the LORD's as [cell, code]: only manors the
+## crown's own house holds, like WorkshopSystem.cells (fix round 1 ruling:
+## a building on another house's manor neither buys nor idles through the
+## lord — it works as the pack's economy counts it, eating its own manor's
+## units, the holder's affair). Cells ascending, codes sorted — the one
+## order the plan and the settlement walk.
+static func buildings(repo: DataRepository, state: GameState) -> Array:
 	var out: Array = []
 	var keys: Array = state.manor_buildings.keys()
 	keys.sort_custom(func(a: String, b: String) -> bool: return int(a) < int(b))
 	for key: String in keys:
+		if not MapManors.is_crowns(repo, state, int(key)):
+			continue
 		var codes: Array = (state.manor_buildings[key] as Array).duplicate()
 		codes.sort()
 		for code: String in codes:
@@ -28,24 +34,23 @@ static func buildings(state: GameState) -> Array:
 static func pool_metric(pool: String) -> String:
 	return "lord_strategic" if pool == "strategic" else "lord_civil"
 
-## One row per input of every standing input building, cell then code then
-## the input's file order: {cell, code, good, need, own, buy, gold, pool} —
-## `own` what the manor's own units fed it this month (0 for an idle
-## building, which ate nothing), `buy` the rest, `gold` its price, `pool`
-## the good's pool (civil / strategic). Pure.
+## One row per input of every standing input building of the lord's, cell
+## then code then the input's file order: {cell, code, good, need, own,
+## buy, gold, pool} — `own` what the manor's own units feed it (own_supply:
+## a working building's line `fed`, an idle one's estimate, so a waking
+## building is billed only its shortfall), `buy` the rest, `gold` its
+## price, `pool` the good's pool (civil / strategic). Pure.
 static func plan(repo: DataRepository, state: GameState) -> Array:
 	var rows: Array = []
-	var fed_of: Dictionary = {}  # cell -> the line's `fed`, one line per cell
-	for pair: Array in buildings(state):
+	var own_of: Dictionary = {}  # cell -> own_supply, one line per cell
+	for pair: Array in buildings(repo, state):
 		var cell := int(pair[0])
 		var code := String(pair[1])
 		if not repo.building_inputs.has(code):
 			continue
-		var fed: Dictionary = {}
-		if not MapManors.is_idle(state, cell, code):
-			if not fed_of.has(cell):
-				fed_of[cell] = ManorEconomy.line_of(repo, state, cell, state.tick)["fed"]
-			fed = (fed_of[cell] as Dictionary).get(code, {})
+		if not own_of.has(cell):
+			own_of[cell] = own_supply(repo, state, cell)
+		var fed: Dictionary = (own_of[cell] as Dictionary).get(code, {})
 		for inp: Dictionary in repo.building_inputs[code]:
 			var good := String(inp["good"])
 			var need := int(inp["units"])
@@ -54,6 +59,33 @@ static func plan(repo: DataRepository, state: GameState) -> Array:
 			rows.append({"cell": cell, "code": code, "good": good, "need": need, "own": own,
 				"buy": need - own, "gold": (need - own) * int(ge["price_gold"]), "pool": String(ge["pool"])})
 	return rows
+
+## What each input building of a manor is fed from the manor's own units:
+## code -> {good: units}. A working building's is its line's `fed`; an idle
+## one ate nothing, so its estimate is what the idle line's units could
+## give it, min(units, need), taken in the same sorted code order line_of
+## eats in — the figure the plan bills against and missing_of reads.
+static func own_supply(repo: DataRepository, state: GameState, cell: int) -> Dictionary:
+	var line := ManorEconomy.line_of(repo, state, cell, state.tick)
+	var fed: Dictionary = line["fed"]
+	var left: Dictionary = (line["units"] as Dictionary).duplicate()
+	var out: Dictionary = {}
+	var standing: Array = MapManors.buildings_of(state, cell)
+	standing.sort()
+	for code: String in standing:
+		if not repo.building_inputs.has(code):
+			continue
+		if fed.has(code):
+			out[code] = (fed[code] as Dictionary).duplicate()
+			continue
+		var eaten: Dictionary = {}
+		for inp: Dictionary in repo.building_inputs[code]:
+			var good := String(inp["good"])
+			var own := mini(int(left.get(good, 0)), int(inp["units"]))
+			left[good] = int(left.get(good, 0)) - own
+			eaten[good] = own
+		out[code] = eaten
+	return out
 
 ## The month's purchase: building by building in the plan's order, each
 ## pays its whole bill out of the lord's pools or none of it; a building
@@ -93,27 +125,24 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array:
 	return lines
 
 ## The goods a building's own manor cannot feed it, in input order — what
-## it must buy, and so what an idle one lacks ("idle: no iron"). A working
-## building reads its line's `fed`; an idle one ate nothing, so the manor's
-## units of each good are all its own supply.
+## it must buy, and so what an idle one lacks ("idle: no iron"); the same
+## own_supply figures the plan bills against.
 static func missing_of(repo: DataRepository, state: GameState, cell: int, code: String) -> Array:
 	var out: Array = []
 	if not repo.building_inputs.has(code):
 		return out
-	var line := ManorEconomy.line_of(repo, state, cell, state.tick)
-	var fed: Dictionary = line["fed"]
-	var units: Dictionary = line["units"]
+	var fed: Dictionary = own_supply(repo, state, cell).get(code, {})
 	for inp: Dictionary in repo.building_inputs[code]:
-		var good := String(inp["good"])
-		var own := int((fed[code] as Dictionary).get(good, 0)) if fed.has(code) \
-			else mini(int(units.get(good, 0)), int(inp["units"]))
-		if own < int(inp["units"]):
-			out.append(good)
+		if int(fed.get(String(inp["good"]), 0)) < int(inp["units"]):
+			out.append(String(inp["good"]))
 	return out
 
-## The words an idle building wears on its card and in the news:
-## "idle: no iron", "idle: no tools and iron"; "idle" alone if it lacks
-## nothing of its own manor's (a pool that could not pay for what it had).
-static func idle_text(repo: DataRepository, state: GameState, cell: int, code: String) -> String:
-	var missing := missing_of(repo, state, cell, code)
+## The words for a list of missing goods: "idle: no iron", "idle: no tools
+## and iron"; "idle" alone for none (a pool that could not pay for a need
+## its manor could partly give).
+static func idle_words(missing: Array) -> String:
 	return "idle" if missing.is_empty() else "idle: no " + " and ".join(PackedStringArray(missing))
+
+## The words an idle building wears on its card.
+static func idle_text(repo: DataRepository, state: GameState, cell: int, code: String) -> String:
+	return idle_words(missing_of(repo, state, cell, code))

@@ -609,7 +609,7 @@ func _fill_slots(card: Dictionary) -> void:
 				# building's art faint inside it, until the days are up.
 				box.add_theme_stylebox_override("panel", _work_style())
 				box.draw.connect(_draw_dashed_edge.bind(box))
-				icon.modulate.a = 0.35
+				icon.modulate.a = Game.data.bal("ui_slot_work_alpha")
 				var days := Label.new()
 				days.name = "Days"
 				days.text = "%dd" % int(entry["days_left"])
@@ -624,7 +624,7 @@ func _fill_slots(card: Dictionary) -> void:
 				# art dimmed with the word under it, like a work's days, and
 				# why in the tooltip ("idle: no iron").
 				var why := String(card["idle"][code])
-				icon.modulate.a = 0.4
+				icon.modulate.a = Game.data.bal("ui_slot_idle_alpha")
 				var word := Label.new()
 				word.name = "Idle"
 				word.text = "idle"

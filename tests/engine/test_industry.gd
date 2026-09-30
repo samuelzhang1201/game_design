@@ -175,7 +175,7 @@ func test_the_tick_buys_after_the_economy_and_idles_the_unpaid() -> void:
 func test_the_plan_is_deterministic() -> void:
 	_smithy()
 	assert_eq(IndustrySystem.plan(data, s), IndustrySystem.plan(data, s))
-	assert_eq(IndustrySystem.buildings(s), [[cell, "smithy"]])
+	assert_eq(IndustrySystem.buildings(data, s), [[cell, "smithy"]])
 
 func test_idle_state_survives_a_save() -> void:
 	s.idle_buildings[str(cell)] = ["smithy"]
@@ -257,3 +257,76 @@ func test_the_tick_names_a_newly_idle_building_once() -> void:
 	s.metrics["lord_strategic"] = -1000000.0
 	tick.advance(s)
 	assert_eq(tick.newly_idle.size(), 1, "idle again after working: news again")
+
+# ---- fix round 1 (task review, controller rulings 2026-09-30) -----------
+
+func _iron_manor() -> int:
+	var miner := _home_manor(func(c: int) -> bool: return MapManors.focus_allowed(data, c, "iron"))
+	if miner != -1:
+		s.manor_focus[str(miner)] = {"focus": "iron", "since": -1000}
+	return miner
+
+func test_a_waking_forge_pays_only_what_its_manor_cannot_give() -> void:
+	var miner := _iron_manor()
+	if miner == -1:
+		pending("no home manor may work iron on this pack")
+		return
+	_smithy(miner)
+	s.idle_buildings[str(miner)] = ["smithy"]
+	# Idle, it ate nothing: the manor's whole iron is its own supply.
+	var iron := int((ManorEconomy.line_of(data, s, miner, s.tick)["units"] as Dictionary).get("iron", 0))
+	var own := mini(iron, 3)
+	var row: Dictionary = IndustrySystem.plan(data, s).filter(
+		func(r: Dictionary) -> bool: return int(r["cell"]) == miner)[0]
+	assert_eq(int(row["own"]), own, "an idle forge's own is what its manor could give it")
+	assert_eq(int(row["buy"]), 3 - own, "only the shortfall is bought")
+	s.metrics["lord_strategic"] = 100.0
+	var want: Array = [] if own == 3 else [{"metric": "lord_strategic", "delta": -(3 - own) * 4,
+		"reason": "the lord's workshops buy their inputs"}]
+	assert_eq(IndustrySystem.settle_month(data, s), want, "its own iron is not bought back")
+	assert_false(MapManors.is_idle(s, miner, "smithy"), "it wakes")
+
+func test_an_iron_manor_forge_wakes_on_empty_stores() -> void:
+	var miner := _iron_manor()
+	if miner == -1:
+		pending("no home manor may work iron on this pack")
+		return
+	var iron := int((ManorEconomy.line_of(data, s, miner, s.tick)["units"] as Dictionary).get("iron", 0))
+	if iron < 3:
+		pending("this pack's iron manor makes under 3 iron")
+		return
+	_smithy(miner)
+	s.idle_buildings[str(miner)] = ["smithy"]
+	s.metrics["lord_strategic"] = 0.0
+	assert_eq(IndustrySystem.settle_month(data, s), [], "a bill of 0")
+	assert_eq(s.idle_buildings, {}, "a forge its own manor feeds never needs the lord's stores")
+
+## A house the player's is not: another province's own house.
+func _other_house() -> String:
+	var home := MapManors.home_province(data, s)
+	var codes: Array = data.provinces.keys()
+	codes.sort()
+	for code: String in codes:
+		var house := MapObjects.house_name_of(data, code)
+		if code != home and house != "" and house != MapManors.crown(s):
+			return house
+	return ""
+
+func test_only_the_crowns_manors_buy_through_the_lord() -> void:
+	_smithy()
+	s.idle_buildings[str(cell)] = ["smithy"]
+	var house := _other_house()
+	assert_ne(house, "")
+	assert_true(MapManors.set_owner(data, s, cell, house, "test: sold away"))
+	assert_eq(IndustrySystem.buildings(data, s), [], "not the lord's building any more")
+	assert_eq(IndustrySystem.plan(data, s), [])
+	s.metrics["lord_strategic"] = 1000.0
+	assert_eq(IndustrySystem.settle_month(data, s), [], "the lord is charged nothing")
+	assert_eq(s.idle_buildings, {}, "and nothing is idle for it")
+	var line := ManorEconomy.line_of(data, s, cell, s.tick)
+	assert_gt(int((line["units"] as Dictionary).get("tools", 0)), 0, "it keeps working as the pack counts it")
+
+func test_the_idle_words() -> void:
+	assert_eq(IndustrySystem.idle_words([]), "idle")
+	assert_eq(IndustrySystem.idle_words(["iron"]), "idle: no iron")
+	assert_eq(IndustrySystem.idle_words(["tools", "iron"]), "idle: no tools and iron")

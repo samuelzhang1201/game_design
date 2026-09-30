@@ -165,7 +165,7 @@ func _process(delta: float) -> void:
 			Game.publish_news("The %s at %s stands %s." % [
 				String((Game.data.manor_buildings.get(String(w["building"]), {}) as Dictionary).get("label", w["building"])).to_lower(),
 				MapManors.label_of(Game.data, int(w["cell"])),
-				IndustrySystem.idle_text(Game.data, Game.state, int(w["cell"]), String(w["building"]))])
+				IndustrySystem.idle_words(w["missing"] as Array)])
 		var new_ids: Array = []
 		for id in range(missives_before + 1, Game.state.next_missive_id + 1):
 			new_ids.append(id)

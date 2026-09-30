@@ -45,10 +45,25 @@ month for one standing building). **Default** rows (only buildings whose
   strategic) at its `price_gold`, at the month's settlement
   (`IndustrySystem.settle_month`, right after `_settle_economy`, before the
   workshops). Ledger line: "the lord's workshops buy their iron".
+- **In a fixed order.** Input buildings on one manor eat in SORTED
+  building-code order (an armoury before a smithy), so a manor short of a
+  good feeds the first in that order; `IndustrySystem.own_supply` walks the
+  same order to estimate what an IDLE building's manor could give it, and a
+  waking building is billed only that shortfall (fix round 1).
+- **Only the lord's.** Only buildings on manors the crown's own house holds
+  buy and idle through the lord (`IndustrySystem.buildings`, like
+  `WorkshopSystem.cells`); one on another house's manor still eats its own
+  manor's units in its line and works as the pack's economy counts it.
 - **Unfed, it idles.** A building whose remaining need the pool cannot pay
   is IDLE next month: `GameState.idle_buildings` (cell → codes, saved,
   rebuilt every settlement) and `line_of` skips an idle building's output.
   The card's slot shows it ("idle: no iron"); the news bar says it once.
+  An idle building gives NOTHING while idle — no goods and no bonus (its
+  tax, output, defence and church bonuses and its *_per_tick effects lapse;
+  controller ruling). The month's settlement reads the idle set of the
+  month it settles, but the per-tick effects (church, contentment, unrest)
+  are applied after the tick turns and so read the NEW month's idle set —
+  accepted: they are the new month's effects.
 - `IndustrySystem.plan(repo, state) -> Array[{cell, code, good, need,
   own, bought, gold, fed}]` is the pure function the tick and the LEDGER
   read.
