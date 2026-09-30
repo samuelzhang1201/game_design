@@ -31,9 +31,17 @@ func step(delta: float, running: bool, clock_speed: int, view: Rect2, p: Diction
 	var move := wind * float(p["speed_m_s"]) * float(maxi(clock_speed, 1)) * delta
 	var keep: Array = []
 	var margin := float(p["size_max"]) * 2.0
+	# `wrap` (owner 2026-09-30: 稀疏的分布在大地图): the view is the whole map,
+	# and a cloud blown off its downwind side comes back in on the upwind
+	# side, so the sky stays spread over the map instead of thinning out
+	var wrap := bool(p.get("wrap", false))
+	var span := absf(view.size.x * wind.x) + absf(view.size.y * wind.y) + margin * 2.0
 	for c: Dictionary in clouds:
 		c["pos"] = (c["pos"] as Vector2) + move
 		c["life"] = minf(float(c["life"]) + delta / fade_s, 1.0)
+		if wrap and not view.grow(margin).has_point(c["pos"]):
+			c["pos"] = (c["pos"] as Vector2) - wind * span
+			c["life"] = 0.0
 		if view.grow(margin).has_point(c["pos"]):
 			keep.append(c)
 	clouds = keep
@@ -69,7 +77,15 @@ func _cloud(view: Rect2, p: Dictionary, wind: Vector2, existing: Array) -> Dicti
 	# favours bad weather: of the candidates, the one under the most overcast
 	# wins, a well-spaced one breaking ties (spec 2026-09-29-weather-visuals).
 	var weigh: Callable = p.get("weight_fn", Callable())
+	# `spread` (owner 2026-09-30: 云…稀疏的分布在大地图，不要集中): Mitchell's
+	# best candidate — every one of `candidates` is tried and the furthest
+	# from the others wins, so the sky is even, and the weather's overcast
+	# only nudges it by `weight_pull` instead of gathering it.
+	var spread := bool(p.get("spread", false))
+	var pull := float(p.get("weight_pull", 1.0))
 	var attempts := 6 if (min_gap > 0.0 and not existing.is_empty()) or weigh.is_valid() else 1
+	if spread and attempts > 1:
+		attempts = int(p.get("candidates", 6))
 	var best_pos := Vector2.ZERO
 	var best_size := 0.0
 	var best_d := -1.0
@@ -82,13 +98,16 @@ func _cloud(view: Rect2, p: Dictionary, wind: Vector2, existing: Array) -> Dicti
 		var d := INF
 		for e: Vector2 in existing:
 			d = minf(d, pos.distance_to(e))
-		if weigh.is_valid():
+		if spread:
+			d = (minf(d / min_gap, 2.0) if min_gap > 0.0 else 1.0) \
+				+ (pull * float(weigh.call(pos)) if weigh.is_valid() else 0.0)
+		elif weigh.is_valid():
 			d = float(weigh.call(pos)) + 0.35 * (minf(d / min_gap, 1.0) if min_gap > 0.0 else 1.0)
 		if d > best_d:
 			best_pos = pos
 			best_size = size
 			best_d = d
-		if d >= min_gap and not weigh.is_valid():
+		if d >= min_gap and not weigh.is_valid() and not spread:
 			break
 	return {"pos": best_pos, "size": best_size, "rot": _rng.randf_range(0.0, TAU),
 		"life": 1.0 if wind == Vector2.ZERO else 0.0}

@@ -72,7 +72,9 @@ func build(p_ctx: Map3DContext, p_weather: Map3DLayerWeather = null) -> void:
 		"size_min": ctx.repo.bal("map3d_cloud_size_min_m"), "size_max": ctx.repo.bal("map3d_cloud_size_max_m"),
 		"speed_m_s": ctx.repo.bal("map3d_cloud_speed_m_s"), "wind_deg": ctx.repo.bal("map3d_cloud_wind_deg"),
 		"fade_s": ctx.repo.bal("map3d_cloud_fade_s"), "interval_s": ctx.repo.bal("map3d_cloud_interval_s"),
-		"min_gap_m": ctx.repo.bal("map3d_cloud_min_gap_m")}
+		"min_gap_m": ctx.repo.bal("map3d_cloud_min_gap_m"), "spread": true,
+		"candidates": int(ctx.repo.bal("map3d_cloud_candidates")),
+		"weight_pull": ctx.repo.bal("map3d_weather_cloud_pull"), "wrap": true}
 	_depth_ratio = ctx.repo.bal("map3d_cloud_depth_ratio")
 	var quad := PlaneMesh.new()
 	quad.size = Vector2.ONE
@@ -158,7 +160,7 @@ func step(delta: float) -> void:
 		_params["weight_fn"] = func(xz: Vector2) -> float: return weather.look_at(xz).a
 	else:
 		_params.erase("weight_fn")
-	_field.step(delta, ctx.clock_speed() > 0, ctx.clock_speed(), _visible_ground(), _params)
+	_field.step(delta, ctx.clock_speed() > 0, ctx.clock_speed(), _sky_rect(), _params)
 	var h := ctx.repo.bal("map3d_cloud_height_m")
 	var dark := ctx.repo.bal("map3d_weather_cloud_dark")
 	var thick := ctx.repo.bal("map3d_weather_cloud_thick")
@@ -173,6 +175,20 @@ func step(delta: float) -> void:
 		var a := float(c["life"]) * _field.fade
 		var storm := _overcast_under(p, s * 0.3) * dark if wet else 0.0  # its overcast greys and thickens it
 		multimesh.set_instance_color(i, Color(storm, 0.0, 0.0, minf(a * (1.0 + storm * thick), 1.0)))
+
+
+## The sky the clouds are spread over (owner 2026-09-30: 云…稀疏的分布在大
+## 地图，不要集中): the WHOLE map, from the build's meta — over the view's
+## ground alone, the sky filled only where the camera stood when play began
+## and read, zoomed out, as one clump there. Without the meta (the editor's
+## preview), the view's ground as before.
+func _sky_rect() -> Rect2:
+	var origin: Array = ctx.meta.get("pack_origin", [])
+	var px: Array = ctx.meta.get("pack_px", [])
+	if origin.size() < 2 or px.size() < 2:
+		return _visible_ground()
+	var m := float(ctx.meta.get("m_per_px", 50.0))
+	return Rect2(Vector2(float(origin[0]), float(origin[1])), Vector2(float(px[0]), float(px[1])) * m)
 
 
 ## The overcast under a cloud: the most of its centre and four points `r`

@@ -94,3 +94,26 @@ func test_a_weight_gathers_the_sky_over_bad_weather() -> void:
 	for c: Dictionary in f.clouds:
 		east += 1 if (c["pos"] as Vector2).x > 50000.0 else 0
 	assert_gt(east, 20, "of 24, nearly all over the overcast east (%d)" % east)
+
+
+## Owner 2026-09-30 (云…稀疏的分布在大地图，不要集中): with `spread` the sky is
+## even — best of many candidates, the furthest wins — and the overcast only
+## nudges it, so a cloudy half no longer draws the whole sky.
+func test_spread_keeps_the_sky_even_under_a_weight() -> void:
+	var p := P.duplicate()
+	p["max"] = 8
+	p["min_gap_m"] = 20000.0
+	p["spread"] = true
+	p["candidates"] = 16
+	p["weight_pull"] = 0.3
+	p["weight_fn"] = func(xz: Vector2) -> float: return 1.0 if xz.x > 50000.0 else 0.0
+	var f := Map3DCloudField.new(11)
+	f.step(0.1, true, 1, VIEW, p)
+	var east := 0
+	var nearest := INF
+	for i in f.clouds.size():
+		east += 1 if (f.clouds[i]["pos"] as Vector2).x > 50000.0 else 0
+		for j in range(i + 1, f.clouds.size()):
+			nearest = minf(nearest, (f.clouds[i]["pos"] as Vector2).distance_to(f.clouds[j]["pos"] as Vector2))
+	assert_between(east, 2, 6, "of 8, spread over both halves (%d east)" % east)
+	assert_gt(nearest, 15000.0, "no two clouds bunched (nearest pair %.0f m)" % nearest)

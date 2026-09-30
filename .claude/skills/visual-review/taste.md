@@ -41,6 +41,29 @@ add it here as a principle with its why — not as a changelog entry.
   frame far more than a faint effect does. Far out, scale the effect up (broad
   gusts, not true-size waves), not merely its strength until it reads as
   cloud shadow.
+- **Wind over grass is a travelling crest, never a drifting veil** (owner
+  2026-09-30: "看上去就像是雾气飘过一下，不像是草地的起伏"). Round, soft noise
+  blobs that lighten and grey the ground read as mist or cloud shadow. Grass
+  in wind, seen from above, is thin crests ACROSS the wind — a quick rise, a
+  slow fall behind — broken into dashes, coming in runs where a gust passes;
+  the crest LIGHTENS the grass and keeps its colour (a greyed crest is fog),
+  and far out a darkened trough reads as cloud shadow. Evenly spaced dashes
+  read as ploughed ridges: break them into long, tapering pieces.
+- **A ground picture must be sharp at the scale it is laid** (owner
+  2026-09-30: "草地拉近看太模糊了", chose the patchy meadow T-64). A grass photo
+  taken from 20 m and spread over a 120 m tile smears into brush strokes; a
+  detail texture cannot rescue it (at the closest zoom a pixel is ~0.5-1 m).
+  What reads as sharp from map height is crisp structure at 1-10 m — patches
+  of long and short grass with clean edges, a few bushes — not fine grain.
+- **The sky is sparse and even over the whole map, and faint** (owner
+  2026-09-30: "云的效果请再淡一点，稀疏的分布在大地图，不要集中"). Clouds spawned
+  over the view where play began read, zoomed out, as one clump there; they
+  belong to the map, spread evenly, and wrap round it on the wind.
+- **The ground remembers what crossed it, briefly** (owner 2026-10-01: "军事
+  单位路过的时候…留下一段行走印记，后逐步消失"). A marching column leaves a trodden
+  track that fades over a few game days. On olive turf trodden grass reads
+  LIGHTER (flattened, straw and earth), never darker — a dark trail vanished —
+  and in lanes, one a file, ragged at the sides, so it is never a painted road.
 - **No base plates.** Objects stand on the map's own ground (the grass disc
   under the 3D towns was the first thing rejected).
 
