@@ -4,8 +4,7 @@ extends Node3D
 ## MILITARY's PIECES: the player's regiments as animated wargame models
 ## standing on the ground (owner 2026-09-22, "把这两个兵棋人应用到游戏中去").
 ##
-## Three, six or nine instanced .glb figures per regiment (Map3DFormation, by
-## its strength — remnants, depleted, full),
+## Nine, six or three .glb figures per regiment by its strength (Map3DFormation),
 ## each posed by its own AnimationPlayer — the one layer that cannot be a MultiMesh.
 ##
 ## THE SIZE IS NOT THE MODEL'S SIZE: a miniature's, by the camera's distance
@@ -233,18 +232,15 @@ func _piece_of(code: String) -> Dictionary:
 	if reg.is_empty():
 		return {}
 	var tier := Map3DFormation.tier_of(ctx.repo, ArmySystem.fit_permille(ctx.repo, ctx.state(), code))
-	if _pieces.has(code):
-		if int(_pieces[code]["figures"]) == (tier["slots"] as Array).size():
-			_sync_action(code)
-			return _pieces[code]
-		# its strength crossed a tier: the formation is built anew
+	if int(_pieces.get(code, {}).get("figures", -1)) == (tier["slots"] as Array).size():
+		_sync_action(code)
+		return _pieces[code]
+	if _pieces.has(code):  # its strength crossed a tier: the formation is built anew
 		(_pieces[code]["node"] as Node3D).queue_free()
 		_pieces.erase(code)
 	var art: Dictionary = ctx.repo.army_art.get(MapObjects.army_piece(ctx.repo, reg), {})
 	var path := String(art.get("model", ""))
-	if path == "":
-		return {}
-	var scene := _scene(path)
+	var scene := _scene(path) if path != "" else null
 	if scene == null:
 		return {}
 	var one := scene.instantiate() as Node3D
@@ -253,7 +249,7 @@ func _piece_of(code: String) -> Dictionary:
 	# One figure measured, then its FORMATION by strength (Map3DFormation).
 	var span := Map3DUnits.model_size(one)
 	var ext := Map3DUnits.stand_extent(one)
-	var offs := Map3DFormation.offsets(tier, ext, ctx.repo.bal("map3d_unit_formation_gap"))
+	var offs := Map3DFormation.offsets(tier, ext, ctx.repo.bal("map3d_unit_formation_gap"), Map3DFormation.rank_depth(art))
 	var node := Map3DFormation.build(scene, offs, one)
 	node.name = code
 	add_child(node)  # no owner: never saved into the authored scene

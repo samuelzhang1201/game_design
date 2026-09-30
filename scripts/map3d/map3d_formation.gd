@@ -21,12 +21,19 @@ static func tier_of(repo: DataRepository, fit_permille: int) -> Dictionary:
 ## The slots in the model's own metres (x right, z toward the rear): each
 ## slot's spacing units times the figure's own footprint — `extent` its half
 ## width and half length — times `gap`, so horses stand a horse apart and
-## men a man apart.
-static func offsets(row: Dictionary, extent: Vector2, gap: float) -> PackedVector2Array:
+## men a man apart; the ranks a further `depth` apart (army_art.csv
+## rank_depth: a man seen from the front hides the man behind him).
+static func offsets(row: Dictionary, extent: Vector2, gap: float, depth := 1.0) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	for s: Vector2 in row.get("slots", [Vector2.ZERO]):
-		out.append(Vector2(s.x * extent.x * 2.0 * gap, s.y * extent.y * 2.0 * gap))
+		out.append(Vector2(s.x * extent.x * 2.0 * gap, s.y * extent.y * 2.0 * gap * depth))
 	return out
+
+
+## An arm's army_art.csv rank_depth, 1 when it names none.
+static func rank_depth(art: Dictionary) -> float:
+	var d := String(art.get("rank_depth", ""))
+	return float(d) if d != "" else 1.0
 
 
 ## The whole formation's half extents (model metres): the farthest slot plus
