@@ -101,6 +101,22 @@ static func intel_level(repo: DataRepository, state: GameState, subj: Dictionary
 	return cache[key]
 
 
+## MarketSystem.province_of_burg, cached per burg within one memo
+## (Ledger._province_code's `town` branch calls this instead). The
+## uncached call scans every entry of `state.manor_province` looking for
+## one that names this burg; a town's LEDGER links (`stands_on`,
+## `garrisons`, `describes_town`) ask its province up to four times over
+## (fix round 1, controller ruling).
+static func burg_province(repo: DataRepository, state: GameState, burg: String) -> String:
+	if not _memo_on:
+		return MarketSystem.province_of_burg(repo, state, burg)
+	var cache: Dictionary = _memo.get("burg_province", {})
+	if not cache.has(burg):
+		cache[burg] = MarketSystem.province_of_burg(repo, state, burg)
+		_memo["burg_province"] = cache
+	return cache[burg]
+
+
 static func _industry_plan(repo: DataRepository, state: GameState) -> Array:
 	if not _memo_on:
 		return IndustrySystem.plan(repo, state)
@@ -208,7 +224,8 @@ static func _rest(id: String) -> String:
 ## for the same manor's subject from several readers (works, yields, holds,
 ## stands_on, part_of), each rebuilding MapTerrain.cell_center's vertex
 ## average afresh; a pure function of repo + cell, safe to cache for the
-## length of one memo.
+## length of one memo. The cached Dictionary is SHARED across every caller
+## within that memo — callers must not mutate the returned `subj`.
 static func _manor_subj(repo: DataRepository, cell: int) -> Dictionary:
 	if not _memo_on:
 		return _manor_subj_raw(repo, cell)
@@ -380,38 +397,38 @@ static func _province_now(repo: DataRepository, state: GameState, reg: Dictionar
 	return Intel.province_of(repo, state, MissiveLog.subject("point", "", -1, at))
 
 
-## Every regiment's province NOW (_province_now), from ONE pass built per
-## memo — a galaxy asks `_based_in` once per province AND once per regiment,
+## Every regiment's province NOW (_province_now) plus its own row, from ONE
+## pass — a galaxy asks `_based_in` once per province AND once per regiment,
 ## and each call scanned every regiment's position afresh (the costliest
 ## reader after `holds`'s house index, spec 2026-09-30-ledger-galaxy-design
-## §3). Outside a memo, the scan.
+## §3). Built once regardless of the memo (fix round 1, M2: no duplicated
+## loop) and cached only while a memo is on, so `_based_in` never has to
+## call `MapObjects.regiments_of` a second time to get at the regiment rows.
 static func _regiment_provinces(repo: DataRepository, state: GameState) -> Dictionary:
-	var regs: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
-	if not _memo_on:
-		var out := {}
-		for reg: Dictionary in regs:
-			out[String(reg["regiment_code"])] = _province_now(repo, state, reg)
-		return out
-	if not _memo.has("regiment_provinces"):
-		var idx := {}
-		for reg: Dictionary in regs:
-			idx[String(reg["regiment_code"])] = _province_now(repo, state, reg)
+	if _memo_on and _memo.has("regiment_provinces"):
+		return _memo["regiment_provinces"]
+	var idx := {}
+	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		idx[String(reg["regiment_code"])] = {"province": _province_now(repo, state, reg), "reg": reg}
+	if _memo_on:
 		_memo["regiment_provinces"] = idx
-	return _memo["regiment_provinces"]
+	return idx
 
 
 static func _based_in(repo: DataRepository, state: GameState, id: String) -> Array:
-	var regs := MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
-	if id == "":
-		return [_type_link("regiment", "province", regs.size(), "count")]
 	var here_of := _regiment_provinces(repo, state)
+	if id == "":
+		return [_type_link("regiment", "province", here_of.size(), "count")]
 	var out: Array = []
-	for reg: Dictionary in regs:
-		var code := String(reg["regiment_code"])
-		var here := String(here_of.get(code, ""))
+	var codes: Array = here_of.keys()
+	codes.sort()
+	for code: String in codes:
+		var entry: Dictionary = here_of[code]
+		var here := String(entry["province"])
 		if here == "":
 			continue
 		if id == "regiment:" + code or id == "province:" + here:
+			var reg: Dictionary = entry["reg"]
 			out.append(_link("regiment:" + code, "province:" + here, ArmySystem.headcount(repo, reg), "heads",
 				MissiveLog.subject("regiment", code, -1, ArmySystem.position_of(repo, state, reg))))
 	return out

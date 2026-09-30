@@ -170,6 +170,19 @@ static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -
 	var nodes := {}
 	var raw := {}
 	var queue: Array = []
+	# _fold_target / _province_code once per node id (fix round 1, IMPORTANT
+	# 1b): the skip below and the fold loop each asked a busy id's province
+	# afresh every time it turned up as an edge's end.
+	var fold_cache := {}
+	var fold_of := func(id: String) -> String:
+		if not fold_cache.has(id):
+			fold_cache[id] = _fold_target(repo, state, id, opened)
+		return fold_cache[id]
+	var prov_cache := {}
+	var prov_of := func(id: String) -> String:
+		if not prov_cache.has(id):
+			prov_cache[id] = _province_code(repo, state, id)
+		return prov_cache[id]
 	for r: Dictionary in repo.ledger_types:
 		var tid := String(r["type_id"])
 		if String(r["status"]) == "planned":
@@ -203,8 +216,8 @@ static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -
 				# believed — skip believing it now (province -> its own
 				# manors is most of the worklist's edges, and its belief is
 				# never read).
-				var fa := _fold_target(repo, state, a, opened)
-				var fb := _fold_target(repo, state, b, opened)
+				var fa: String = fold_of.call(a)
+				var fb: String = fold_of.call(b)
 				if (fa if fa != "" else a) != (fb if fb != "" else b):
 					var bl := _believed(repo, state, r, l)
 					raw[String(bl["id"])] = bl
@@ -226,7 +239,7 @@ static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -
 	# the fold
 	var fold := {}
 	for id: String in nodes:
-		var p := _fold_target(repo, state, id, opened)
+		var p: String = fold_of.call(id)
 		if p != "":
 			fold[id] = p
 	for id: String in fold:
@@ -239,7 +252,7 @@ static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -
 	for id: String in nodes:
 		var fold_to := String(type_row(repo, type_of(id)).get("fold_to", ""))
 		if fold_to != "" and not fold.has(id):
-			nodes[id]["home_id"] = "province:" + _province_code(repo, state, id)
+			nodes[id]["home_id"] = "province:" + String(prov_of.call(id))
 	var merged := {}
 	var keys: Array = raw.keys()
 	keys.sort()
@@ -261,6 +274,33 @@ static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -
 			merged[mid] = m
 	for id: String in fold:
 		nodes.erase(id)
+	# a planned row touching at least one ghost (planned) type (owner
+	# ruling, fix round 1, IMPORTANT 2): its ghost end is its type sphere;
+	# its other end is that type's pool sphere if one stands, else the
+	# instance of that type with the most links in the galaxy (ties: lowest
+	# id); the row is left out if neither end can be found. `commands` and
+	# `contradicts` touch no ghost type and are never drawn.
+	var link_counts := {}
+	for lid: String in merged:
+		var m: Dictionary = merged[lid]
+		link_counts[String(m["from"])] = int(link_counts.get(String(m["from"]), 0)) + 1
+		link_counts[String(m["to"])] = int(link_counts.get(String(m["to"]), 0)) + 1
+	for r: Dictionary in repo.ledger_links:
+		if String(r["status"]) != "planned":
+			continue
+		var from_ghost := String(type_row(repo, String(r["from_type"])).get("status", "live")) == "planned"
+		var to_ghost := String(type_row(repo, String(r["to_type"])).get("status", "live")) == "planned"
+		if not from_ghost and not to_ghost:
+			continue
+		var from_id := _planned_end(repo, nodes, link_counts, String(r["from_type"]))
+		var to_id := _planned_end(repo, nodes, link_counts, String(r["to_type"]))
+		if from_id == "" or to_id == "":
+			continue
+		var pl := _planned(repo, state, r)
+		pl["id"] = "%s|%s|%s" % [r["link_id"], from_id, to_id]
+		pl["from"] = from_id
+		pl["to"] = to_id
+		merged[String(pl["id"])] = pl
 	var ids: Array = nodes.keys()
 	ids.sort()
 	for id: String in ids:
@@ -272,6 +312,29 @@ static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -
 	_loops(repo, state, out)
 	LedgerResolvers.end_memo()
 	return out
+
+
+## The node a planned row's `type_id` end draws as: its own ghost sphere if
+## the type itself is planned, else that type's pool sphere if one stands
+## in `nodes`, else the instance of that type with the most links (ties:
+## the lowest id) — "" when nothing of that type stands at all.
+static func _planned_end(repo: DataRepository, nodes: Dictionary, link_counts: Dictionary, type_id: String) -> String:
+	if String(type_row(repo, type_id).get("status", "live")) == "planned":
+		return "type:" + type_id
+	if nodes.has("type:" + type_id):
+		return "type:" + type_id
+	var best := ""
+	var best_n := -1
+	var ids: Array = nodes.keys()
+	ids.sort()
+	for id: String in ids:
+		if id.begins_with("type:") or type_of(id) != type_id:
+			continue
+		var n := int(link_counts.get(id, 0))
+		if n > best_n:
+			best_n = n
+			best = id
+	return best
 
 
 static func _galaxy_node(repo: DataRepository, state: GameState, id: String) -> Dictionary:
@@ -302,13 +365,16 @@ static func _province_code(repo: DataRepository, state: GameState, id: String) -
 		"building":
 			return MapManors.province_of(repo, int(rest.get_slice(":", 0)), state)
 		"town":
-			return MarketSystem.province_of_burg(repo, state, rest)
+			return LedgerResolvers.burg_province(repo, state, rest)
 	return ""
 
 
 ## The province node a node folds into, or "" (not foldable, no province,
-## or its province is opened).
+## its province is opened, or a type sphere — a `type:` id is never
+## foldable, however its type_id happens to parse; fix round 1, M6).
 static func _fold_target(repo: DataRepository, state: GameState, id: String, opened: Dictionary) -> String:
+	if id.begins_with("type:"):
+		return ""
 	if String(type_row(repo, type_of(id)).get("fold_to", "")) == "":
 		return ""
 	var code := _province_code(repo, state, id)
@@ -323,24 +389,29 @@ const _LEVELS := ["full", "general", "basic"]
 ## Adds a folded link into the one it merges with: one more counted; the
 ## flow sums only while both are figures at one Intel level — else the
 ## merged figure is words at the worse level (never words added to numbers).
+## When the incoming link is the strictly worse one, its SOURCE travels with
+## its words (fix round 1, M5: provenance follows the words) — a tie keeps
+## the accumulator's own source, as it always has.
 static func _merge_into(m: Dictionary, l: Dictionary) -> void:
 	m["count"] = int(m["count"]) + 1
 	var ma: Dictionary = (m["accounts"] as Array)[0]
 	var la: Dictionary = (l["accounts"] as Array)[0] if not (l["accounts"] as Array).is_empty() else ma
-	var worse := String(ma["level"]) if _LEVELS.find(String(ma["level"])) >= _LEVELS.find(String(la["level"])) \
-		else String(la["level"])
+	var from_la := _LEVELS.find(String(la["level"])) > _LEVELS.find(String(ma["level"]))
+	var worse := String(la["level"]) if from_la else String(ma["level"])
 	var f: Variant = null
 	if m["flow"] != null and l["flow"] != null and String(ma["level"]) == String(la["level"]):
 		var a := int(m["flow"])
 		var b := int(l["flow"])
 		f = -1 if a < 0 and b < 0 else maxi(a, 0) + maxi(b, 0)
 	m["flow"] = f
-	var text := ""
-	if f == null:
-		text = String(ma["text"]) if String(ma["level"]) == worse else String(la["text"])
-	elif int(f) >= 0:
-		text = Intel.num(int(f))
-	m["accounts"] = [{"value": f, "text": text, "source": String(ma["source"]),
+	var text := String(ma["text"])
+	var source := String(ma["source"])
+	if f == null and from_la:
+		text = String(la["text"])
+		source = String(la["source"])
+	elif f != null:
+		text = Intel.num(int(f)) if int(f) >= 0 else ""
+	m["accounts"] = [{"value": f, "text": text, "source": source,
 		"day": mini(int(ma["day"]), int(la["day"])), "level": worse}]
 
 

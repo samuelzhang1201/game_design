@@ -140,6 +140,77 @@ func test_the_house_index_gives_the_scans_manors() -> void:
 	LedgerResolvers.end_memo()
 
 
+## Fix round 1, M4: the regiment→province index built per memo answers the
+## same as the scan (LedgerResolvers._province_now) it replaces.
+func test_the_regiment_province_index_matches_the_scan() -> void:
+	LedgerResolvers.begin_memo()
+	var idx := LedgerResolvers._regiment_provinces(data, s)
+	LedgerResolvers.end_memo()
+	for reg: Dictionary in MapObjects.regiments_of(data, data.resolve_realm("player_realm")):
+		var code := String(reg["regiment_code"])
+		assert_eq(String((idx[code] as Dictionary)["province"]), LedgerResolvers._province_now(data, s, reg), code)
+
+
+## Fix round 1, M4: a manor's cached Intel subject, read within a memo,
+## matches the same build made outside one.
+func test_the_manor_subject_cache_matches_the_build() -> void:
+	var home := MapManors.home_province(data, s)
+	var cell: int = MapManors.manors_of_province(data, home, s)[0]
+	LedgerResolvers.begin_memo()
+	var cached := LedgerResolvers._manor_subj(data, cell)
+	LedgerResolvers.end_memo()
+	assert_eq(cached, LedgerResolvers._manor_subj(data, cell))
+
+
+## Fix round 1, M4: Intel.level, cached within a memo, matches the same
+## call made outside one.
+func test_the_intel_level_cache_matches_the_call() -> void:
+	var home := MapManors.home_province(data, s)
+	var cell: int = MapManors.manors_of_province(data, home, s)[0]
+	var subj := LedgerResolvers._manor_subj(data, cell)
+	LedgerResolvers.begin_memo()
+	var cached := LedgerResolvers.intel_level(data, s, subj)
+	LedgerResolvers.end_memo()
+	assert_eq(cached, LedgerResolvers.intel_level(data, s, subj))
+
+
+## Fix round 1, IMPORTANT 2 (owner ruling): a planned row is drawn only
+## when at least one of its ends is a ghost (planned) type — its own type
+## sphere — and the other end is that type's pool sphere if one stands,
+## else its busiest instance. `commands` and `contradicts` touch no ghost
+## type and are never drawn.
+func test_planned_links_touch_a_ghost_end() -> void:
+	var g := Ledger.galaxy(data, s, {})
+	var nodes := _nodes(g)
+	var by_type := {}
+	for l: Dictionary in g["links"]:
+		if String(l["status"]) != "planned":
+			continue
+		(by_type.get_or_add(String(l["type"]), []) as Array).append(l)
+		var from_ghost := String(nodes[String(l["from"])]["status"]) == "planned"
+		var to_ghost := String(nodes[String(l["to"])]["status"]) == "planned"
+		assert_true(from_ghost or to_ghost, "%s has a ghost end" % l["id"])
+	assert_true((by_type.get("commands", []) as Array).is_empty(), "commands touches no ghost type")
+	assert_true((by_type.get("contradicts", []) as Array).is_empty(), "contradicts touches no ghost type")
+	var attacks: Array = by_type.get("attacks", [])
+	assert_eq(attacks.size(), 1, "enemy_host has exactly one planned link")
+	assert_eq(String(attacks[0]["to"]), "type:enemy_host")
+	assert_true(String(attacks[0]["from"]).begins_with("regiment:"), String(attacks[0]["from"]))
+	var has_workshop := false
+	for id: String in nodes:
+		if id.begins_with("workshop:"):
+			has_workshop = true
+			break
+	if has_workshop:
+		var governs: Array = by_type.get("faction_governs", [])
+		assert_eq(governs.size(), 1, "faction governs a workshop when one stands")
+		assert_eq(String(governs[0]["from"]), "type:faction")
+		assert_true(String(governs[0]["to"]).begins_with("workshop:"), String(governs[0]["to"]))
+
+
+## Controller ruling, fix round 1, IMPORTANT 1a: the min of three WARM
+## calls (after the warm-up), so a shared machine's noise on any one call
+## cannot fail the budget — it measures the code, not the machine.
 func test_the_galaxy_is_read_within_its_budget() -> void:
 	var engine := TickEngine.new(data)
 	for m in 6:
@@ -147,8 +218,15 @@ func test_the_galaxy_is_read_within_its_budget() -> void:
 			engine.advance_day(s)
 		engine.advance(s)
 	Ledger.galaxy(data, s, {})  # warm the economy's caches
-	var t0 := Time.get_ticks_usec()
-	var g := Ledger.galaxy(data, s, {})
-	var ms := (Time.get_ticks_usec() - t0) / 1000.0
-	gut.p("galaxy: %d stars, %d links, %.1f ms" % [(g["nodes"] as Array).size(), (g["links"] as Array).size(), ms])
-	assert_lt(ms, 60.0, "spec §3 budget")
+	var times: Array[float] = []
+	var stars := 0
+	var links := 0
+	for i in 3:
+		var t0 := Time.get_ticks_usec()
+		var g := Ledger.galaxy(data, s, {})
+		times.append((Time.get_ticks_usec() - t0) / 1000.0)
+		stars = (g["nodes"] as Array).size()
+		links = (g["links"] as Array).size()
+	gut.p("galaxy: %d stars, %d links, %.1f/%.1f/%.1f ms" % [stars, links, times[0], times[1], times[2]])
+	var ms: float = minf(minf(times[0], times[1]), times[2])
+	assert_lt(ms, 60.0, "spec §3 budget (min of 3 warm calls)")
