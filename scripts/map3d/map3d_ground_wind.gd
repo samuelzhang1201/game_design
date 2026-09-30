@@ -28,6 +28,7 @@ uniform float wind_far_m = 9000.0;
 uniform float wind_storm_gain = 1.2;
 uniform float wind_far_scale = 8.0;
 uniform float wind_mid_m = 5000.0;
+uniform float wind_far_amp = 1.0;
 """
 
 const STAGE := """	if (wind_on > 0.0) {
@@ -62,7 +63,7 @@ const STAGE := """	if (wind_on > 0.0) {
 				vec4 wd_wx = mix(texture(weather_now, wd_uv), texture(weather_next, wd_uv), weather_blend);
 				wd_storm += wind_storm_gain * clamp(max(wd_wx.r, wd_wx.a * 0.7), 0.0, 1.0) * (1.0 - wd_wx.b);
 			}
-			float wd_amp = max(wind_field_amp * wd_sown, wind_grass_amp * wd_grass) * wd_k * wd_storm;
+			float wd_amp = max(wind_field_amp * wd_sown, wind_grass_amp * wd_grass) * wd_k * wd_storm * mix(1.0, wind_far_amp, wd_far);
 			base_albedo *= 1.0 + wd_amp * wd_val;
 		}
 	}
