@@ -27,10 +27,26 @@ static func entry(repo: DataRepository, state: GameState, node_id: String, snap:
 	var head := _head(repo, state, kind, rest)
 	if head != "":
 		lines.append(head)
+	# A governor's ties to each workshop or supply line fold into ONE line
+	# per flow, carrying his factors (final review M4).
+	var governs := {}
 	for l: Dictionary in snap.get("links", []):
 		if String(l["from"]) != node_id and String(l["to"]) != node_id:
 			continue
+		var gflow := _governed_flow(repo, l) if String(l["from"]) == node_id else ""
+		if gflow != "":
+			if not governs.has(gflow):
+				governs[gflow] = lines.size()
+				lines.append("")
+			continue
 		lines.append(_line(repo, state, l, node_id, int(snap.get("day", 0))))
+	for gflow: String in governs:
+		var n := 0
+		for l: Dictionary in snap.get("links", []):
+			if String(l["from"]) == node_id and _governed_flow(repo, l) == gflow:
+				n += 1
+		lines[int(governs[gflow])] = "governs %s (%d) — %s" % [
+			String(repo.ledger_governance[gflow]["label"]), n, _factors_text(repo, state, gflow)]
 	if kind == "character":
 		# his record (GameState.records): what the crown has caught him at
 		for rec in state.records.get(rest, []):
@@ -86,13 +102,22 @@ static func thread_entry(repo: DataRepository, state: GameState, link: Dictionar
 ## percentage, his skill, and his opinion when it holds him back — never
 ## whether he skims. "Runs it at 85% of what it could — skill 8".
 static func _factors_line(repo: DataRepository, state: GameState, flow: String) -> String:
+	var text := _factors_text(repo, state, flow)
+	return text.substr(0, 1).to_upper() + text.substr(1)
+
+
+## "runs it at 85% of what it could — skill 8"; an empty seat's flow "no one
+## governs it: it runs at 60% of what it could" (final review M8).
+static func _factors_text(repo: DataRepository, state: GameState, flow: String) -> String:
 	var f := Governance.factors(repo, state, flow)
 	@warning_ignore("integer_division")  # whole percent from per-mille
 	var pct := int(f["efficiency"]) / 10
+	if String(f["governor"]) == "":
+		return "no one governs it: it runs at %d%% of what it could" % pct
 	var why := "skill %d" % int(f["skill"])
-	if int(f["opinion"]) < int(repo.bal("gov_opinion_cooperate")) and String(f["governor"]) != "":
+	if bool(f["held_back"]):
 		why += ", held back by his opinion of you (%d)" % int(f["opinion"])
-	return "Runs it at %d%% of what it could — %s" % [pct, why]
+	return "runs it at %d%% of what it could — %s" % [pct, why]
 
 
 ## The flow a `governs` link ties its governor to ("workshop",

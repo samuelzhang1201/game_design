@@ -557,6 +557,9 @@ func _reset_reports() -> void:
 ## Show on map (spec 2026-09-28 §2): the view looks at the letter's place and
 ## the left column opens its card, through the view's own signals.
 func _on_missive_show(subject: Dictionary) -> void:
+	if String(subject.get("kind", "")) == "ledger":
+		_open_ledger_on(String(subject.get("code", "")))
+		return
 	var view: Map3DView = current_screen.map3d_view() if current_screen != null and current_screen.has_method("map3d_view") else null
 	if view == null:
 		return
@@ -576,6 +579,17 @@ func _on_missive_show(subject: Dictionary) -> void:
 			if not ArmySystem.regiment(Game.data, code).is_empty():
 				var picked := {"kind": "army", "code": code}
 				view.object_selected.emit({"title": MapObjects.label_of(Game.data, picked), "obj": picked})
+
+## An audit letter's "Open the LEDGER" (final review M1): the LEDGER opens
+## on the first lens that draws the audited flow's type.
+func _open_ledger_on(flow: String) -> void:
+	if not _ledger_screen.visible:
+		toggle_ledger()
+	if not _ledger_screen.visible:
+		return
+	var lenses := String(Ledger.type_row(Game.data, flow).get("lenses", "")).split("|", false)
+	if not lenses.is_empty() and String(lenses[0]) != _ledger_screen.lens():
+		_ledger_screen.set_lens(String(lenses[0]))
 
 ## Bottom bar routing: MAP is the default view (close every overlay — the
 ## live world map sits in the court screen's middle zone, user ruling

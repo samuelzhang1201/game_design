@@ -186,6 +186,10 @@ static func _show(repo: DataRepository, key: String, v: Variant) -> String:
 ## the same way `fact()` does.
 static func text_of(f: Dictionary) -> String:
 	if f.has("exact"):
+		# an audit's fact carries the governor's word too (AuditWriter): the
+		# letter names it when the truth is not what he said
+		if f.has("claimed") and int(f["claimed"]) != int(f["exact"]):
+			return "%s (he reported %s)" % [num(int(f["exact"])), num(int(f["claimed"]))]
 		return num(int(f["exact"]))
 	if f.has("lo"):
 		# no width: one number, and a count of nobody is "none" (not "≈ 0–0")

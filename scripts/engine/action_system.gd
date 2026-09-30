@@ -78,7 +78,7 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			if not data.ledger_governance.has(flow):
 				return "No such flow: " + flow
 			var who := String(req.params.get("character", ""))
-			if not who in state.council.values():
+			if not who in state.council.values() or not state.characters.has(who):
 				return "Only a councillor can govern %s" % String(data.ledger_governance[flow]["label"])
 			if who == Governance.governor_of(data, state, flow):
 				return "He already governs %s" % String(data.ledger_governance[flow]["label"])
@@ -530,19 +530,15 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			# the audit day the letter's figures are the live projection.
 			c.change_opinion(int(data.bal("gov_audited_opinion")),
 				"the crown's clerks went through his books on %s" % label, state.tick)
-			var amount := int(state.skims.get(gid, 0))
-			if amount > 0:
-				if not state.caught.has(gid):
-					state.caught[gid] = []
-				state.caught[gid].append({"flow": flow, "day": state.absolute_day(), "amount": amount})
-				if not state.records.has(gid):
-					state.records[gid] = []
-				state.records[gid].append("Caught skimming %s, %s of year %d (%d gold)"
-					% [label, state.season(), state.year(), amount])
-				state.skims.erase(gid)
-				c.change_opinion(int(data.bal("gov_caught_opinion")), "caught skimming %s" % label, state.tick)
-				effects.append({"metric": "council", "delta": 0.0, "reason": "%s caught skimming %s"
-					% [c.display_name, label]})
+			# The books are the FLOW's (final review I1): the audit finds every
+			# man's uncaught skim on this flow, the governor now or one the flow
+			# was taken from.
+			var found := Governance.skimmers_of(state, flow)
+			for who: String in found:
+				_catch(state, effects, who, flow, label)
+			if found.is_empty():
+				effects.append({"metric": "council", "delta": 0.0, "reason": "The books on %s are in order"
+					% label})
 		"GOODS_BUY":
 			var pool := String(req.params["pool"])
 			var gold := int(req.params["gold"])
@@ -611,6 +607,30 @@ func _file_audit(state: GameState, flow: String) -> void:
 		AuditWriter.facts(data, state, flow))
 	letter["tick"] = state.tick
 	MissiveLog.add(data, state, letter)
+
+## One man caught skimming `flow` by its audit: his `caught` entry, his
+## record line and the opinion it costs him (with its reason); his count
+## on that flow starts again.
+func _catch(state: GameState, effects: Array, who: String, flow: String, label: String) -> void:
+	var amount := Governance.skimmed_on(state, who, flow)
+	if not state.caught.has(who):
+		state.caught[who] = []
+	state.caught[who].append({"flow": flow, "day": state.absolute_day(), "amount": amount})
+	if not state.records.has(who):
+		state.records[who] = []
+	state.records[who].append("Caught skimming %s, %s of year %d (%d gold)"
+		% [label, state.season(), state.year(), amount])
+	var his: Dictionary = state.skims[who]
+	his.erase(flow)
+	if his.is_empty():
+		state.skims.erase(who)
+	var name := who
+	if state.characters.has(who):
+		var c: Character = state.characters[who]
+		name = c.display_name
+		c.change_opinion(int(data.bal("gov_caught_opinion")), "caught skimming %s" % label, state.tick)
+	effects.append({"metric": "council", "delta": 0.0, "reason": "%s caught skimming %s (%d gold)"
+		% [name, label, amount]})
 
 ## Every character of a house, for a trade's goodwill or a seizure's outrage.
 func _house_members(state: GameState, family: String) -> Array:

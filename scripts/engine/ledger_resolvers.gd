@@ -477,12 +477,15 @@ static func _governor_source(repo: DataRepository, state: GameState, flow: Strin
 
 static func _instances_of_flow(repo: DataRepository, state: GameState, flow: String) -> Array:
 	var out: Array = []
-	if flow == "workshop":
-		for c: int in WorkshopSystem.cells(repo, state):
-			out.append("workshop:%d" % c)
-	else:
-		for row: Dictionary in _supply_plan(repo, state):
-			out.append("supply_line:" + String(row["code"]))
+	match flow:
+		"workshop":
+			for c: int in WorkshopSystem.cells(repo, state):
+				out.append("workshop:%d" % c)
+		"supply_line":
+			for row: Dictionary in _supply_plan(repo, state):
+				out.append("supply_line:" + String(row["code"]))
+		_:
+			push_error("LedgerResolvers: no instances for flow '%s'" % flow)
 	return out
 
 
@@ -492,7 +495,14 @@ static func _instances_of_flow(repo: DataRepository, state: GameState, flow: Str
 static func _governs(repo: DataRepository, state: GameState, id: String, flow: String) -> Array:
 	var gid := Governance.governor_of(repo, state, flow)
 	if gid == "":
-		return []
+		# An empty seat (final review M8): the type level still draws the tie,
+		# greyed and saying no one governs it; there is no man to draw it from
+		# at the instance level.
+		if id != "":
+			return []
+		var t := _type_link("character", flow, -1, "count")
+		t["vacant"] = true
+		return [t]
 	if id == "":
 		return [_type_link("character", flow, -1, "count")]
 	var who := "character:" + gid

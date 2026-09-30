@@ -229,3 +229,125 @@ func test_a_characters_card_carries_his_record() -> void:
 	s.records[st.id] = ["Caught skimming the war workshops, spring of year 1 (5 gold)"]
 	var e := LedgerCards.entry(data, s, "character:" + st.id, Ledger.snapshot(data, s, "court", {}))
 	assert_has(e["lines"], "Caught skimming the war workshops, spring of year 1 (5 gold)")
+
+
+# --- final review fixes ---------------------------------------------------------
+
+## I2: an honest steward's audit, then the lord's civil goods move the same
+## month — his claim moves with them, the audit no longer speaks to it and
+## is dropped: one account, never a false split.
+func test_an_audit_of_an_honest_man_drops_once_his_claim_moves() -> void:
+	var st: Character = s.characters[String(s.council["steward"])]
+	st.traits = ["honest"]
+	s.metrics["lord_civil"] = 20.0
+	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
+	var id := {"id": "workshop:%d" % cell}
+	var out := _link(Ledger.snapshot(data, s, "economy", id), "converts_out")
+	assert_eq(out["accounts"].size(), 1)
+	assert_string_contains(String(out["accounts"][0]["source"]), "; the audit of ")
+	for civil: float in [500.0, 5.0]:
+		s.metrics["lord_civil"] = civil
+		out = _link(Ledger.snapshot(data, s, "economy", id), "converts_out")
+		assert_eq(out["accounts"].size(), 1, "one account at %d civil goods" % int(civil))
+		assert_false(String(out["accounts"][0]["source"]).contains("audit"), "the audit is dropped")
+
+## I2: an honest marshal's audit, then the regiment's stores move — one account.
+func test_an_audit_of_an_honest_marshal_drops_once_the_line_moves() -> void:
+	_marshal(["honest"])
+	var code := String(SupplySystem.plan(data, s)[0]["code"])
+	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "supply_line"}), s)
+	s.regiments[code]["supplies"] = 400
+	var out := _link(Ledger.snapshot(data, s, "war", {"id": "regiment:" + code}), "supplies_out")
+	assert_eq(out["accounts"].size(), 1, "his word and the count, one account")
+	assert_false(String(out["accounts"][0]["source"]).contains("audit"))
+
+## I2: a venal steward's audit stands beside his word while his word stands.
+func test_an_audit_of_a_venal_man_stands_beside_his_word() -> void:
+	var st: Character = s.characters[String(s.council["steward"])]
+	st.traits = ["venal"]
+	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
+	var row: Dictionary = WorkshopSystem.plan(data, s)[0]
+	var out := _link(Ledger.snapshot(data, s, "economy", {"id": "workshop:%d" % cell}), "converts_out")
+	assert_eq(out["accounts"].size(), 2)
+	assert_eq(int(out["accounts"][0]["value"]), int(row["claimed"]))
+	assert_eq(int(out["accounts"][1]["value"]), int(row["make"]))
+	var m: Dictionary = s.missives[-1]
+	var fact: Dictionary = (m["facts"] as Array).filter(
+		func(f: Dictionary) -> bool: return String(f["key"]) == "workshop:%d" % cell)[0]
+	assert_eq(int(fact["claimed"]), int(row["claimed"]), "the letter keeps his word beside the truth")
+	assert_eq(Intel.text_of(fact), "%s (he reported %s)" % [Intel.num(int(row["make"])), Intel.num(int(row["claimed"]))])
+
+## M5: the type level carries the audit's total under the same rule.
+func test_the_type_level_carries_the_audits_total() -> void:
+	var st: Character = s.characters[String(s.council["steward"])]
+	st.traits = ["venal"]
+	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
+	var row: Dictionary = WorkshopSystem.plan(data, s)[0]
+	var out := _link(Ledger.snapshot(data, s, "economy", {}), "converts_out")
+	assert_eq(out["accounts"].size(), 2, "his word, and the audit's total")
+	assert_eq(int(out["accounts"][1]["value"]), int(row["make"]))
+	assert_string_contains(String(out["accounts"][1]["source"]), "the audit of ")
+	s.metrics["lord_civil"] = 5.0
+	out = _link(Ledger.snapshot(data, s, "economy", {}), "converts_out")
+	assert_eq(out["accounts"].size(), 1, "his word moved: the audit's total is dropped")
+
+## An audit of the other flow never lends its figures to this one.
+func test_an_audit_speaks_only_for_its_own_flow() -> void:
+	var st: Character = s.characters[String(s.council["steward"])]
+	st.traits = ["venal"]
+	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "supply_line"}), s)
+	var out := _link(Ledger.snapshot(data, s, "economy", {}), "converts_out")
+	assert_eq(out["accounts"].size(), 1, "the supply lines' total is not the workshops'")
+
+## M4: a governor's card folds his ties into one line per flow, with his factors.
+func test_a_governors_card_has_one_line_per_flow() -> void:
+	var st: Character = s.characters[String(s.council["steward"])]
+	st.skills["sk_steward"] = 8
+	st.opinion = 50
+	sys.execute(ActionRequest.make("GOVERNOR_SET", {"flow": "supply_line", "character": st.id}), s)
+	var snap := Ledger.snapshot(data, s, "all", {"id": "character:" + st.id})
+	var n := (snap["links"] as Array).filter(func(l: Dictionary) -> bool:
+		return String(l["type"]) == "governs_supply").size()
+	assert_gt(n, 1, "a tie per supply line on the ego")
+	var lines: Array = LedgerCards.entry(data, s, "character:" + st.id, snap)["lines"]
+	var gov: Array = lines.filter(func(t: String) -> bool: return t.begins_with("governs "))
+	assert_eq(gov.size(), 2, "one line per flow: " + str(gov))
+	assert_has(lines, "governs the supply lines (%d) — %s" % [n,
+		LedgerCards._factors_text(data, s, "supply_line")])
+	assert_has(lines, "governs the war workshops (1) — runs it at 85% of what it could — skill 8")
+
+## M6: the governs tie carries the flow's audit and give orders.
+func test_the_governs_tie_offers_audit_and_give() -> void:
+	for pair: Array in [["governs", "workshop:%d" % cell, "workshop"], ["governs_supply", "", "supply_line"]]:
+		var rows := Ledger.actions_for(data, "%s|character:%s|%s" % [pair[0], String(s.council["steward"]), pair[1]], s)
+		var audit: Array = rows.filter(func(a: Dictionary) -> bool: return String(a["code"]) == "LEDGER_AUDIT")
+		assert_eq(audit.size(), 1)
+		assert_eq(String(Ledger.params_of(audit[0], "x")["flow"]), String(pair[2]))
+		assert_gt(rows.filter(func(a: Dictionary) -> bool: return String(a["code"]) == "GOVERNOR_SET").size(), 0)
+
+## M8: an empty seat's flow is still tied at the type level — greyed, "no
+## one governs it" — and its card says so.
+func test_an_empty_seat_draws_a_vacant_tie() -> void:
+	s.council["steward"] = ""
+	var gov := _link(Ledger.snapshot(data, s, "economy", {}), "governs")
+	assert_false(gov.is_empty(), "the tie is drawn")
+	assert_true(bool(gov["vacant"]))
+	assert_eq(String(gov["accounts"][0]["source"]), "no one governs it")
+	assert_eq(String(gov["governor"]), "")
+	assert_has(LedgerCards.thread_entry(data, s, gov)["lines"], "No one governs it: it runs at 60% of what it could")
+	assert_true(_link(Ledger.snapshot(data, s, "economy", {"id": "workshop:%d" % cell}), "governs").is_empty(),
+		"no man to draw it from on the instance")
+
+## I3: an unknown flow has no instances and no books, and says so.
+func test_an_unknown_flow_has_no_instances_and_no_books() -> void:
+	assert_eq(LedgerResolvers._instances_of_flow(data, s, "moat"), [])
+	assert_eq(AuditWriter.facts(data, s, "moat"), [])
+
+## M7: a fresh snapshot never reads a plan memoised before it began.
+func test_begin_memo_clears_a_stale_memo() -> void:
+	LedgerResolvers.begin_memo()
+	var stale := LedgerResolvers._workshop_plan(data, s)
+	s.metrics["lord_civil"] = 5.0
+	LedgerResolvers.begin_memo()
+	assert_ne(LedgerResolvers._workshop_plan(data, s), stale, "begin threw the stale plan away")
+	LedgerResolvers.end_memo()

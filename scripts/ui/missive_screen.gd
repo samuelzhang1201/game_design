@@ -155,6 +155,10 @@ func _fill_desk() -> void:
 		%LetterTitle.text = "Choose a letter"
 		%LetterMeta.text = ""
 		return
+	# A letter about the LEDGER's books (an audit) has no place on the map:
+	# its button opens the LEDGER instead (final review M1).
+	var about_books := String((m.get("subject", {}) as Dictionary).get("kind", "")) == "ledger"
+	%ShowOnMap.text = "Open the LEDGER" if about_books else "Show on map"
 	%LetterTitle.text = String(m["title"])
 	%LetterMeta.text = "%s · %s" % [CourierCard.date_of(int(m["day"])), HEADERS[String(m["column"])]]
 	for f: Dictionary in m["facts"]:

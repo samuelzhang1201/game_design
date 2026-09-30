@@ -17,3 +17,7 @@ converts_out,LEDGER_AUDIT,Audit the war workshops,flow=workshop,0
 converts_out,GOVERNOR_SET,Give it to,flow=workshop|character=@council,0
 supplies_out,LEDGER_AUDIT,Audit the supply lines,flow=supply_line,0
 supplies_out,GOVERNOR_SET,Give it to,flow=supply_line|character=@council,0
+governs,LEDGER_AUDIT,Audit the war workshops,flow=workshop,0
+governs,GOVERNOR_SET,Give it to,flow=workshop|character=@council,0
+governs_supply,LEDGER_AUDIT,Audit the supply lines,flow=supply_line,0
+governs_supply,GOVERNOR_SET,Give it to,flow=supply_line|character=@council,0

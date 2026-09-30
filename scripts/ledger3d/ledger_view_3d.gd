@@ -269,8 +269,8 @@ func _width(l: Dictionary) -> float:
 
 
 func _thread_color(l: Dictionary) -> Color:
-	if String(l["status"]) == "planned":
-		return _pal["thread_planned"]
+	if String(l["status"]) == "planned" or bool(l.get("vacant", false)):
+		return _pal["thread_planned"]  # not built, or a seat no one holds (M3 final review M8)
 	if String(l["type"]) in KIN_TYPES:
 		return _pal["thread_kin"]
 	var rel := Ledger.link_row(_repo, String(l["type"]))

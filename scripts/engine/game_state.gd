@@ -213,6 +213,19 @@ static func _encode_values(value):
 		return "f" + _float_to_hex(value)
 	return value
 
+## A save written before skims were kept per flow (final review I1) holds
+## one whole number per man: no one can say which flow it came from, so it
+## is kept under "unknown" — his, but no audit of a flow will find it.
+static func _migrate_skims(raw: Dictionary) -> Dictionary:
+	var out := {}
+	for gid in raw:
+		var v: Variant = raw[gid]
+		if v is Dictionary:
+			out[gid] = v
+		elif int(v) > 0:
+			out[gid] = {"unknown": int(v)}
+	return out
+
 ## Inverse of _encode_values: recursively decodes hex-encoded floats back to
 ## float and encoded ints back to int, leaving everything else (plain
 ## strings, bools, already-nested structures) untouched. Saves written before
@@ -276,7 +289,9 @@ var manor_focus: Dictionary = {}
 var workshop_rate: Dictionary = {}
 ## flow type -> character id, only flows given away from their seat (M3).
 var governors: Dictionary = {}
-## character id -> whole gold skimmed since his last audit (M3; the truth).
+## character id -> {flow type -> whole gold skimmed on that flow since an
+## audit of it last caught him} (M3; the truth). Per FLOW (final review I1):
+## the audit of a flow reads that flow's books, whoever kept them.
 var skims: Dictionary = {}
 ## character id -> [{flow, day, amount}] every time an audit caught him (M3).
 var caught: Dictionary = {}
@@ -413,7 +428,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	# Saves from before governors could be reassigned or skim carry none of
 	# these: every flow runs at its seat holder, honestly, with no record.
 	s.governors = d.get("governors", {}).duplicate(true)
-	s.skims = _decode_values(d.get("skims", {}))
+	s.skims = _migrate_skims(_decode_values(d.get("skims", {})))
 	s.caught = _decode_values(d.get("caught", {}))
 	s.records = d.get("records", {}).duplicate(true)
 	s.manor_works = _decode_values(d.get("manor_works", {}))

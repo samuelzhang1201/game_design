@@ -25,7 +25,11 @@ static func governor_of(repo: DataRepository, state: GameState, flow: String) ->
 	if given != "" and state.characters.has(given) and given in state.council.values():
 		return given
 	var seat := String((repo.ledger_governance.get(flow, {}) as Dictionary).get("seat", ""))
-	return String(state.council.get(seat, ""))
+	var holder := String(state.council.get(seat, ""))
+	# A seat naming no living character governs nothing (final review M3):
+	# every reader of a governor then sees an ungoverned flow, never a
+	# missing Character.
+	return holder if state.characters.has(holder) else ""
 
 
 static func skim_of(repo: DataRepository, c: Character) -> int:
@@ -47,7 +51,7 @@ static func factors(repo: DataRepository, state: GameState, flow: String) -> Dic
 	var hi := int(row.get("max_permille", 1000))
 	var gid := governor_of(repo, state, flow)
 	if gid == "":
-		return {"governor": "", "skill": 0, "opinion": 0, "efficiency": lo, "skim": 0,
+		return {"governor": "", "skill": 0, "opinion": 0, "efficiency": lo, "held_back": false, "skim": 0,
 			"reasons": ["no one governs it"]}
 	var c: Character = state.characters[gid]
 	var skill := int(c.skills.get(String(row["skill"]), 0))
@@ -55,22 +59,45 @@ static func factors(repo: DataRepository, state: GameState, flow: String) -> Dic
 	var reasons: Array[String] = ["skill %d: %+d‰" % [skill, by_skill]]
 	var eff := int(row["base_permille"]) + by_skill
 	var coop := int(repo.bal("gov_opinion_cooperate"))
+	var willing := clampi(eff, lo, hi)
 	if c.opinion < coop:
 		var cut := (coop - c.opinion) * int(repo.bal("gov_opinion_step_permille"))
 		eff -= cut
 		reasons.append("opinion %d: −%d‰" % [c.opinion, cut])
+	# held_back: his opinion actually costs the flow something (a man whose
+	# skill runs past the ceiling can sulk and still run it in full)
 	return {"governor": gid, "skill": skill, "opinion": c.opinion, "efficiency": clampi(eff, lo, hi),
-		"skim": skim_of(repo, c), "reasons": reasons}
+		"held_back": clampi(eff, lo, hi) < willing, "skim": skim_of(repo, c), "reasons": reasons}
 
 
-## A settled month's skim into each governor's own purse (GameState.skims,
-## whole gold): every plan row carrying `governor` and `skimmed` (the
-## workshops', the supply lines'). Nobody governs "", and a zero skim
-## leaves no entry.
-static func add_skims(state: GameState, rows: Array) -> void:
+## A settled month's skim into each governor's own purse on THAT flow
+## (GameState.skims[character][flow], whole gold; final review I1): every
+## plan row carrying `governor` and `skimmed` (the workshops', the supply
+## lines'). Nobody governs "", and a zero skim leaves no entry.
+static func add_skims(state: GameState, rows: Array, flow: String) -> void:
 	for row: Dictionary in rows:
 		var gid := String(row.get("governor", ""))
 		var amount := int(row.get("skimmed", 0))
 		if gid == "" or amount <= 0:
 			continue
-		state.skims[gid] = int(state.skims.get(gid, 0)) + amount
+		if not state.skims.has(gid):
+			state.skims[gid] = {}
+		var his: Dictionary = state.skims[gid]
+		his[flow] = int(his.get(flow, 0)) + amount
+
+
+## What `character` has skimmed on `flow` since an audit of that flow last
+## caught him (0 when nothing).
+static func skimmed_on(state: GameState, character: String, flow: String) -> int:
+	return int((state.skims.get(character, {}) as Dictionary).get(flow, 0))
+
+
+## Every man with an uncaught skim on `flow`, sorted by id — the books are
+## the FLOW's, so an audit of it finds all of them, governor now or not.
+static func skimmers_of(state: GameState, flow: String) -> Array:
+	var out: Array = []
+	for gid: String in state.skims:
+		if skimmed_on(state, gid, flow) > 0:
+			out.append(gid)
+	out.sort()
+	return out

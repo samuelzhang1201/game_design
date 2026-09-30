@@ -49,9 +49,9 @@ func test_a_venal_steward_skims_the_workshops_and_reports_them_whole() -> void:
 	var lines := WorkshopSystem.settle_month(data, s)
 	assert_eq(lines[1], {"metric": "lord_strategic", "delta": 23,
 		"reason": "the war workshops make strategic goods"}, "the lord's stores take only what reached them")
-	assert_eq(int(s.skims[st.id]), 5)
+	assert_eq(s.skims[st.id], {"workshop": 5}, "kept under the flow he skimmed")
 	WorkshopSystem.settle_month(data, s)
-	assert_eq(int(s.skims[st.id]), 10, "a skim adds up month on month")
+	assert_eq(Governance.skimmed_on(s, st.id, "workshop"), 10, "a skim adds up month on month")
 
 ## Skill 8: 850 + 0 = 850‰. made = 40 × 700 × 850 / 10⁶ = 23.8 → 23.
 func test_a_clumsy_steward_makes_less_and_says_so() -> void:
@@ -106,8 +106,8 @@ func test_a_venal_marshal_skims_the_supply_gold() -> void:
 	var lines := SupplySystem.settle_month(data, s)
 	assert_eq(lines, [{"metric": "strategic", "delta": -paid, "reason": "supplies sent to the host"}],
 		"the pools pay in full")
-	assert_eq(int(s.skims[m.id]), skimmed)
-	assert_gt(int(s.skims[m.id]), 0)
+	assert_eq(s.skims[m.id], {"supply_line": skimmed})
+	assert_gt(skimmed, 0)
 
 func test_an_honest_able_marshal_delivers_what_he_says() -> void:
 	var m := _govern("marshal", "sk_admin", 16, ["honest"])
@@ -131,3 +131,57 @@ func test_a_clumsy_marshal_delivers_less_and_says_so() -> void:
 	assert_eq(int(row["efficiency"]), 770)
 	assert_eq(int(row["delivered"]), int(row["claimed"]))
 	assert_lt(int(row["delivered"]), int(row["need"]))
+
+
+# --- Task 2's missing cases (final review) --------------------------------------
+
+## A clumsy AND venal steward: the skim is taken from what his skill made.
+## Skill 8: 850‰. made = 40 × 700 × 850 / 10⁶ = 23.8 → 23; skimmed =
+## 23 × 200 / 1000 = 4.6 → 4; make = 19; he reports 23.
+func test_a_clumsy_venal_steward_skims_what_he_made() -> void:
+	var st := _govern("steward", "sk_steward", 8, ["venal"])
+	var row: Dictionary = WorkshopSystem.plan(data, s)[0]
+	assert_eq(int(row["efficiency"]), 850)
+	assert_eq(int(row["made"]), 23)
+	assert_eq(int(row["skimmed"]), 4)
+	assert_eq(int(row["make"]), 19)
+	assert_eq(int(row["claimed"]), 23)
+	WorkshopSystem.settle_month(data, s)
+	assert_eq(Governance.skimmed_on(s, st.id, "workshop"), 4)
+
+## A venal marshal on a SHORT pool: the pools pay less than the lines cost;
+## he skims a fifth of what was paid, buys with the rest, and reports what
+## the whole payment would have bought.
+func test_a_venal_marshal_skims_a_partly_paid_line() -> void:
+	var m := _govern("marshal", "sk_admin", 16, ["venal"])
+	for c in s.regiments.keys():
+		s.regiments[c]["supplies"] = 0
+	s.metrics["strategic"] = 1000000.0
+	s.metrics["lord_strategic"] = 0.0
+	var full: Dictionary = SupplySystem.plan(data, s)[0]
+	var cost := 0
+	for row: Dictionary in SupplySystem.plan(data, s):
+		cost += int(row["gold"])
+	@warning_ignore("integer_division")
+	s.metrics["strategic"] = float(cost / 2)
+	var rows := SupplySystem.plan(data, s)
+	var row: Dictionary = rows[0]
+	assert_eq(String(row["code"]), String(full["code"]))
+	assert_lt(int(row["paid"]), int(row["gold"]), "the line is only partly paid")
+	assert_gt(int(row["paid"]), 0)
+	var price := int(data.bal("army_supply_gold_permille"))
+	var keep := 1000 - int(row["loss_permille"])
+	@warning_ignore("integer_division")
+	assert_eq(int(row["skimmed"]), int(row["paid"]) * 200 / 1000)
+	@warning_ignore("integer_division")
+	var bought := (int(row["paid"]) - int(row["skimmed"])) * 1000 / price
+	@warning_ignore("integer_division")
+	var said := int(row["paid"]) * 1000 / price
+	@warning_ignore("integer_division")
+	assert_eq(int(row["delivered"]), mini(bought * keep * 1000 / 1000000, int(row["need"])))
+	@warning_ignore("integer_division")
+	assert_eq(int(row["claimed"]), mini(said * keep * 1000 / 1000000, int(row["need"])))
+	assert_lt(int(row["delivered"]), int(row["claimed"]))
+	var skimmed := _sum(rows, "skimmed")
+	SupplySystem.settle_month(data, s)
+	assert_eq(Governance.skimmed_on(s, m.id, "supply_line"), skimmed)

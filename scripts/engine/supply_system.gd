@@ -220,7 +220,7 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array:
 		var entry: Dictionary = state.regiments[String(row["code"])]
 		entry["supplies"] = int(entry["supplies"]) + int(row["delivered"])
 	# the pools pay in full; what the marshal skimmed is his (GameState.skims)
-	Governance.add_skims(state, rows)
+	Governance.add_skims(state, rows, "supply_line")
 	if total == 0:
 		return []
 	var crown := mini(maxi(int(state.metrics.get("strategic", 0.0)), 0), total)

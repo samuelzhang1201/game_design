@@ -101,7 +101,7 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array:
 	for row: Dictionary in rows:
 		took += int(row["take"])
 		reached += int(row["make"])
-	Governance.add_skims(state, rows)
+	Governance.add_skims(state, rows, "workshop")
 	if took == 0:
 		return []
 	return [{"metric": "lord_civil", "delta": -took, "reason": "the war workshops take civil goods"},

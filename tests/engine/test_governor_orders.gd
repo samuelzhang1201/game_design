@@ -44,7 +44,7 @@ func test_an_audit_catches_a_skimmer() -> void:
 	st.traits = ["venal"]
 	s.metrics["lord_civil"] = 100.0
 	WorkshopSystem.settle_month(data, s)
-	var skimmed := int(s.skims[st.id])
+	var skimmed := Governance.skimmed_on(s, st.id, "workshop")
 	assert_gt(skimmed, 0)
 	var n := s.missives.size()
 	var op := st.opinion
@@ -54,17 +54,22 @@ func test_an_audit_catches_a_skimmer() -> void:
 	assert_eq(String(m["kind"]), "audit")
 	assert_eq(String(m["column"]), "credible")
 	assert_eq(int(s.caught[st.id][0]["amount"]), skimmed)
-	assert_eq(int(s.skims.get(st.id, 0)), 0, "the count starts again")
+	assert_eq(Governance.skimmed_on(s, st.id, "workshop"), 0, "the count starts again")
 	assert_string_contains(String(s.records[st.id][0]), "Caught skimming the war workshops")
+	assert_string_contains(String(s.records[st.id][0]), "(%d gold)" % skimmed)
+	assert_has(st.opinion_log, {"tick": s.tick, "delta": int(data.bal("gov_caught_opinion")),
+		"reason": "caught skimming the war workshops"})
 	assert_eq(st.opinion, op + int(data.bal("gov_audited_opinion")) + int(data.bal("gov_caught_opinion")))
 
 func test_an_audit_of_an_honest_man_finds_nothing() -> void:
 	var st := _steward()
 	st.traits = ["honest"]
 	var op := st.opinion
-	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
+	var out := sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
 	assert_false(s.caught.has(st.id))
 	assert_eq(st.opinion, op + int(data.bal("gov_audited_opinion")))
+	var reasons: Array = (out["effects"] as Array).map(func(e: Dictionary) -> String: return String(e["reason"]))
+	assert_has(reasons, "The books on the war workshops are in order", "M2: the audit says it found nothing")
 
 func test_no_governor_no_audit() -> void:
 	s.council.erase("steward")
@@ -82,3 +87,95 @@ func test_both_orders_are_catalogued_with_costs() -> void:
 	for code in ["GOVERNOR_SET", "LEDGER_AUDIT"]:
 		assert_true(data.actions.has(code))
 		assert_true(data.order_costs.has(code))
+
+
+# --- final review I1: the books are the FLOW's -----------------------------
+
+func _month() -> void:
+	var e := TickEngine.new(data)
+	while s.day < Calendar.DAYS_PER_TICK:
+		e.advance_day(s)
+	e.advance(s)
+
+## A venal marshal skims the supply gold, the lines are given to the
+## chancellor, and the audit of the supply lines still catches the marshal
+## — the books are the lines', whoever kept them.
+func test_an_audit_catches_a_skimmer_the_flow_was_taken_from() -> void:
+	var ma: Character = s.characters[String(s.council["marshal"])]
+	ma.traits = ["venal"]
+	var ch: Character = s.characters[String(s.council["chancellor"])]
+	ch.traits = ["honest"]
+	s.metrics["strategic"] = 1000000.0
+	for c in s.regiments.keys():
+		s.regiments[c]["supplies"] = 0
+	SupplySystem.settle_month(data, s)
+	var skimmed := Governance.skimmed_on(s, ma.id, "supply_line")
+	assert_gt(skimmed, 0)
+	sys.execute(ActionRequest.make("GOVERNOR_SET", {"flow": "supply_line", "character": ch.id}), s)
+	var ma_log := ma.opinion_log.size()
+	var ch_log := ch.opinion_log.size()
+	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "supply_line"}), s)
+	assert_eq(s.caught[ma.id], [{"flow": "supply_line", "day": s.absolute_day(), "amount": skimmed}])
+	var caught_entry := {"tick": s.tick, "delta": int(data.bal("gov_caught_opinion")),
+		"reason": "caught skimming the supply lines"}
+	var audited_entry := {"tick": s.tick, "delta": int(data.bal("gov_audited_opinion")),
+		"reason": "the crown's clerks went through his books on the supply lines"}
+	var ma_new := ma.opinion_log.slice(ma_log)
+	assert_has(ma_new, caught_entry, "caught, with its reason")
+	assert_does_not_have(ma_new, audited_entry, "not audited: he no longer keeps the books")
+	assert_string_contains(String(s.records[ma.id][0]), "Caught skimming the supply lines")
+	assert_string_contains(String(s.records[ma.id][0]), "(%d gold)" % skimmed)
+	assert_false(s.skims.has(ma.id), "his count starts again")
+	assert_false(s.caught.has(ch.id), "the honest chancellor is not caught")
+	var ch_new := ch.opinion_log.slice(ch_log)
+	assert_has(ch_new, audited_entry, "the governor now is the one audited")
+	assert_does_not_have(ch_new, {"tick": s.tick, "delta": int(data.bal("gov_caught_opinion")),
+		"reason": "caught skimming the supply lines"})
+
+## The steward holding both flows is caught per flow, each audit for its own
+## flow's amount only.
+func test_a_man_holding_two_flows_is_caught_per_flow() -> void:
+	var st := _steward()
+	st.traits = ["venal"]
+	sys.execute(ActionRequest.make("GOVERNOR_SET", {"flow": "supply_line", "character": st.id}), s)
+	s.metrics["lord_civil"] = 100.0
+	s.metrics["strategic"] = 1000000.0
+	for c in s.regiments.keys():
+		s.regiments[c]["supplies"] = 0
+	WorkshopSystem.settle_month(data, s)
+	SupplySystem.settle_month(data, s)
+	var goods := Governance.skimmed_on(s, st.id, "workshop")
+	var gold := Governance.skimmed_on(s, st.id, "supply_line")
+	assert_gt(goods, 0)
+	assert_gt(gold, 0)
+	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
+	assert_eq((s.caught[st.id] as Array).size(), 1)
+	assert_eq(int(s.caught[st.id][0]["amount"]), goods)
+	assert_eq(Governance.skimmed_on(s, st.id, "supply_line"), gold, "the supply books were not opened")
+	assert_eq(Governance.skimmed_on(s, st.id, "workshop"), 0)
+	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "supply_line"}), s)
+	assert_eq(s.caught[st.id][1], {"flow": "supply_line", "day": s.absolute_day(), "amount": gold})
+	assert_false(s.skims.has(st.id))
+	assert_eq((s.records[st.id] as Array).size(), 2)
+	assert_string_contains(String(s.records[st.id][1]), "the supply lines")
+	assert_string_contains(String(s.records[st.id][1]), "(%d gold)" % gold)
+
+## Every skimmer on the flow is caught, in id order.
+func test_an_audit_catches_every_skimmer_of_the_flow() -> void:
+	var st := _steward()
+	var other := String(s.council["marshal"])
+	s.skims[st.id] = {"workshop": 4}
+	s.skims[other] = {"workshop": 7, "supply_line": 3}
+	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
+	assert_eq(int(s.caught[st.id][0]["amount"]), 4)
+	assert_eq(int(s.caught[other][0]["amount"]), 7)
+	assert_eq(s.skims, {other: {"supply_line": 3}})
+
+## M3: a governor id missing from the characters is refused.
+func test_a_missing_character_cannot_govern_or_be_audited() -> void:
+	s.council["chancellor"] = "ghost"
+	assert_ne(sys.validate(ActionRequest.make("GOVERNOR_SET", {"flow": "workshop", "character": "ghost"}), s), "",
+		"a seat naming no living character")
+	s.council["steward"] = "ghost"
+	assert_eq(Governance.governor_of(data, s, "workshop"), "", "no one governs through a ghost")
+	assert_ne(sys.validate(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s), "")

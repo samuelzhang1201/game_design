@@ -233,27 +233,32 @@ static func _planned(repo: DataRepository, state: GameState, r: Dictionary) -> D
 ## built from them, and the thread's flow is the first account's (the
 ## governor's word).
 static func _believed(repo: DataRepository, state: GameState, r: Dictionary, t: Dictionary) -> Dictionary:
-	var accs: Array = _claimed(repo, state, t) if t.has("claims") else [_account(repo, state, t)]
+	var accs: Array = _claimed(repo, state, r, t) if t.has("claims") else [_account(repo, state, t)]
+	if bool(t.get("vacant", false)):
+		accs = [{"value": -1, "text": "", "source": "no one governs it", "day": state.absolute_day(),
+			"level": "full"}]
 	return {"id": "%s|%s|%s" % [r["link_id"], t["from"], t["to"]], "type": String(r["link_id"]),
 		"verb": String(r["verb"]), "from": String(t["from"]), "to": String(t["to"]), "status": "live",
 		"flow": (accs[0] as Dictionary)["value"], "accounts": accs, "governor": _governor(repo, state, r),
-		"planned_note": "", "sentiment": int(t.get("sentiment", 0))}
+		"planned_note": "", "sentiment": int(t.get("sentiment", 0)), "vacant": bool(t.get("vacant", false))}
 
 
 ## The accounts of a governed flow (spec 2026-09-30-ledger-governors-design
-## §4): each claim, then this month's audit's figure for this node (an audit
-## is a snapshot of ITS month — a controller ruling of fix round 1; instance
-## threads only: the type level keeps to the governor's word and the
-## receiving count — a ruling of the plan); equal figures merge into one
-## account naming every source. The crown's own books: every account is
-## `full`.
-static func _claimed(repo: DataRepository, state: GameState, t: Dictionary) -> Array:
+## §4): each claim, then this month's audit's figure for this thread — an
+## instance thread its node's fact, the type level the audit's total (final
+## review M5) — equal figures merged into one account naming every source.
+## The crown's own books: every account is `full`.
+static func _claimed(repo: DataRepository, state: GameState, r: Dictionary, t: Dictionary) -> Array:
 	var today := state.absolute_day()
 	var raw: Array = []
 	for c: Dictionary in t["claims"]:
 		raw.append({"value": int(c["value"]), "source": String(c["source"]), "day": today})
-	var node := String(t["to"]) if String(t["from"]).begins_with("type:") else String(t["from"])
-	var audit := _audit_figure(state, node)
+	var flow := governed_flow(repo, r)
+	var from := String(t["from"])
+	var to := String(t["to"])
+	var node := "total" if from.begins_with("type:") and to.begins_with("type:") \
+		else (from if from.begins_with(flow + ":") else to)
+	var audit := _audit_figure(state, flow, node, int((t["claims"][0] as Dictionary)["value"]))
 	if not audit.is_empty():
 		raw.append(audit)
 	var out: Array = []
@@ -270,17 +275,36 @@ static func _claimed(repo: DataRepository, state: GameState, t: Dictionary) -> A
 	return out
 
 
-## The newest audit letter's figure for `node` (an AuditWriter fact is keyed
-## by the LEDGER node id) filed THIS month (the letter's `tick`), or {}.
-static func _audit_figure(state: GameState, node: String) -> Dictionary:
+## The governed flow a link row touches ("workshop", "supply_line"), or "".
+static func governed_flow(repo: DataRepository, r: Dictionary) -> String:
+	for end: String in ["from_type", "to_type"]:
+		if repo.ledger_governance.has(String(r[end])):
+			return String(r[end])
+	return ""
+
+
+## The newest audit of `flow` filed THIS month (the letter's `tick`): its
+## figure for `node` (an AuditWriter fact is keyed by the LEDGER node id, or
+## "total"), or {}. An audit is a snapshot of ITS month and of HIS WORD
+## (final review I2): it stands only while the governor's live claim is
+## the one the audit found beside the truth. When his claim has moved — the
+## civil goods rose, a regiment marched — the audit no longer speaks to it
+## and is dropped, so an honest governor's thread never splits against a
+## stale audit.
+static func _audit_figure(state: GameState, flow: String, node: String, claim: int) -> Dictionary:
 	for i in range(state.missives.size() - 1, -1, -1):
 		var m: Dictionary = state.missives[i]
 		if String(m.get("kind", "")) != "audit" or int(m.get("tick", -1)) != state.tick:
 			continue
+		if String((m.get("subject", {}) as Dictionary).get("code", "")) != flow:
+			continue
 		for f: Dictionary in m["facts"]:
 			if String(f["key"]) == node and f.has("exact"):
+				if int(f.get("claimed", -1)) != claim:
+					return {}
 				return {"value": int(f["exact"]), "source": "the audit of " + _date_words(int(m["day"])),
 					"day": int(m["day"])}
+		return {}
 	return {}
 
 
@@ -318,9 +342,9 @@ static func _account(repo: DataRepository, state: GameState, t: Dictionary) -> D
 ## governs it NOW, given or not (Governance.governor_of); otherwise its
 ## seat's holder.
 static func _governor(repo: DataRepository, state: GameState, r: Dictionary) -> String:
-	for end: String in ["from_type", "to_type"]:
-		if repo.ledger_governance.has(String(r[end])):
-			return Governance.governor_of(repo, state, String(r[end]))
+	var flow := governed_flow(repo, r)
+	if flow != "":
+		return Governance.governor_of(repo, state, flow)
 	var seat := String(r["governor_seat"])
 	return "" if seat == "" else String(state.council.get(seat, ""))
 
