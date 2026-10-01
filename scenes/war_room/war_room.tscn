@@ -1,8 +1,9 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/war_room/war_room_view.gd" id="1_view"]
 [ext_resource type="Script" path="res://scripts/war_room/war_ink_painter.gd" id="2_ink"]
 [ext_resource type="Material" path="res://scenes/war_room/materials/war_table.tres" id="3_table"]
+[ext_resource type="Script" path="res://scripts/war_room/war_pieces.gd" id="4_pieces"]
 
 [sub_resource type="Environment" id="Environment_room"]
 background_mode = 1
@@ -144,6 +145,7 @@ unique_name_in_owner = true
 
 [node name="Pieces" type="Node3D" parent="Viewport"]
 unique_name_in_owner = true
+script = ExtResource("4_pieces")
 
 [node name="Pennants" type="Node3D" parent="Viewport"]
 unique_name_in_owner = true

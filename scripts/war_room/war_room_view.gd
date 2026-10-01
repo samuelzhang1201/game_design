@@ -31,6 +31,7 @@ var aim_code := ""
 @onready var _ink: WarInkPainter = %Ink
 @onready var _chart: MeshInstance3D = %IndexChart
 @onready var _arrows: Node3D = %EdgeArrows
+@onready var _pieces: WarPieces = %Pieces
 
 var _repo: DataRepository
 var _state_fn: Callable
@@ -51,8 +52,7 @@ var _selected := ""
 var _font: Font
 var _chart_built := false
 var _swap := WarSheetSwap.new()
-var _press_at := Vector2.ZERO
-var _pressed := false
+var _picks := WarRoomPicks.new()
 
 
 func _ready() -> void:
@@ -70,6 +70,7 @@ func bind(repo: DataRepository, state_fn: Callable, paused_fn: Callable) -> void
 	_repo = repo
 	_state_fn = state_fn
 	_paused_fn = paused_fn
+	_pieces.setup(repo, self)
 	_table_w = repo.bal("war_table_w_m")
 	_rig.distance = repo.bal("war_cam_distance_m")
 	_rig.pitch_deg = repo.bal("war_cam_pitch_deg")
@@ -163,6 +164,7 @@ func lay_sheet(index: int) -> void:
 		_chart_built = true
 		WarRoomWall.build_chart(_chart, _repo, _font_or_default())
 	WarRoomWall.lay_arrows(_arrows, _repo, index, _table_w, _depth, _font_or_default())
+	_pieces.rebuild(state())
 	sheet_laid.emit(index)
 	await _paint_ink(mat)
 
@@ -185,6 +187,7 @@ func _process(delta: float) -> void:
 	if _swap.step(delta):
 		lay_sheet(_swap.to)
 	_table.scale = Vector3(1.0, 1.0, _swap.z_scale())
+	_pieces.visible = not _swap.active()   # the pieces are put away while a sheet rolls
 
 
 ## A roll cut short (the room closed) lays its sheet and stands the table up.
@@ -194,6 +197,7 @@ func _finish_swap() -> void:
 		if _swap.to != _sheet:
 			lay_sheet(_swap.to)
 	_table.scale = Vector3.ONE
+	_pieces.visible = true
 
 
 ## The sheet's ink onto the table's material (WarRoomInk draws and keeps it).
@@ -237,7 +241,7 @@ func pack_at(screen_px: Vector2) -> Vector2:
 
 
 func refresh() -> void:
-	pass  # Task 10 rebuilds the pieces here; Task 11 the pennants
+	_pieces.update(state())   # Task 11 adds the pennants
 
 
 ## The rake's march was refused: let go of the piece (Task 11 draws the rake).
@@ -254,30 +258,27 @@ func clear_selection() -> void:
 	selection_cleared.emit()
 
 
-## The sheet a left click at `screen_px` asks for: an edge arrow, then the wall
-## chart; -1 when it is neither (the pennant, piece and ground picks follow in
-## their own tasks, in that order).
-func _pick_sheet_target(screen_px: Vector2) -> int:
-	var i := WarRoomWall.pick_arrow(_arrows, _camera, screen_px, _window_scale(), _repo.bal("war_pick_px"))
-	if i < 0:
-		i = WarRoomWall.pick_chart(_chart, _camera, _repo, screen_px * _window_scale())
-	return i
-
-
 func _on_left(mb: InputEventMouseButton) -> void:
-	if mb.pressed:
-		_press_at = mb.position
-		_pressed = true
+	if not _picks.released_click(mb, _repo.bal("war_rake_min_px")):
 		return
-	if not _pressed:
-		return
-	_pressed = false
-	if mb.position.distance_to(_press_at) >= _repo.bal("war_rake_min_px"):
-		return
-	var i := _pick_sheet_target(mb.position)
+	var i := WarRoomPicks.sheet_target(_arrows, _chart, _camera, _repo, mb.position, _window_scale())
 	if i >= 0:
 		sheet_requested.emit(i)
 		accept_event()
+		return
+	var code := _piece_under(mb.position)
+	if code != "":
+		_selected = code
+		piece_selected.emit(code)
+		accept_event()
+
+
+## The code of the piece under a screen px, "" when none (and none while a
+## sheet rolls: the pieces are put away).
+func _piece_under(screen_px: Vector2) -> String:
+	if _swap.active():
+		return ""
+	return _pieces.pick(_camera, _window_scale(), screen_px, _repo.bal("war_pick_px"))
 
 
 func _ground_under(screen_px: Vector2) -> Vector3:
@@ -288,8 +289,12 @@ func _ground_under(screen_px: Vector2) -> Vector3:
 func _gui_input(event: InputEvent) -> void:
 	if _sheet < 0:
 		return
-	if event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-		_on_left(event as InputEventMouseButton)
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
+		_on_left(mb)
+	elif mb != null and mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed and _piece_under(mb.position) != "":
+		army_menu_requested.emit(_piece_under(mb.position), mb.position)
+		accept_event()
 	elif WarRoomGestures.apply(event, _rig, _repo, _ground_under):
 		_apply_camera()
 		accept_event()
