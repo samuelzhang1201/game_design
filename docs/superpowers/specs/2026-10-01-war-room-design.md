@@ -277,10 +277,21 @@ step a real input (memory: verify UI through real input).
 
 ## 8. Art (each piece shown to the owner before it is installed)
 
+**The look is Qwen-Image-2512's** (owner 2026-10-01, from a Z-Image /
+Qwen pair of concept pictures of the room and the folio): the room after
+Qwen's — the vellum RAISED over the relief, red-painted bases with brass
+plates and pinned paper tags standing ON the map, a planted pennant, the
+rake at the table's edge, a wall index chart of numbered sheets; the folio
+after Qwen's left page — the exploded parts drawn apart in a row, the
+dotted formation and the drill tabs beneath — with a whole standing figure
+rather than a bust, and no face (a closed helm). Later reference passes
+run on Qwen only unless the owner asks again; their prompts carry what the
+concepts lacked: ONE sheet on the table, not the whole island, and dense
+ink contours and a lettered grid on the relief.
+
 - The room, table, candlesticks, rake and wall chart: modelled in the
   OWNER's Blender through the MCP (memory: work in the owner's Blender),
-  Poly Haven CC0 textures; reference pictures on Z-Image AND Qwen-Image-2512
-  side by side for the owner to pick (memory: no klein). Meshes committed
+  Poly Haven CC0 textures; reference pictures on Qwen-Image-2512 (above). Meshes committed
   under `assets/3D/war_room/`, sources in its `model_wip/`, so a fresh clone
   shows the room with no Blender.
 - The per-arm `_parts.glb`: split in Blender from the Tripo sources of the
