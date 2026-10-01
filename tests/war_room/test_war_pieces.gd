@@ -93,6 +93,9 @@ func test_the_figures_wear_the_tin_shader_over_their_own_albedo() -> void:
 				assert_not_null(mat, "each surface is painted tin")
 				assert_true(bool(mat.get_shader_parameter("has_tex")), "the Tripo atlas is read")
 				assert_not_null(mat.get_shader_parameter("albedo_tex"))
+				for uniform: String in WarRoomMaterial.TIN_KEYS:   # every number bound from data
+					assert_almost_eq(float(mat.get_shader_parameter(uniform)),
+						repo.bal(String(WarRoomMaterial.TIN_KEYS[uniform])), 0.0001, uniform)
 				checked += 1
 	assert_gt(checked, 0)
 

@@ -471,3 +471,12 @@ func test_the_tier_sets_the_rooms_msaa_from_the_table() -> void:
 		view.set_tier(tier)
 		var msaa := int(Map3DQuality.num(Map3DQuality.row(repo, tier), "msaa", 0.0))
 		assert_eq(vp.msaa_3d, want[msaa], tier)
+
+
+func test_the_tin_shader_has_no_uniform_left_unbound() -> void:
+	var code := (load("res://scenes/war_room/tin_miniature.gdshader") as Shader).code
+	for line: String in code.split("\n"):
+		if not line.begins_with("uniform float"):
+			continue
+		var uniform := line.split(" ")[2]
+		assert_true(WarRoomMaterial.TIN_KEYS.has(uniform), "%s is bound from balance.csv" % uniform)

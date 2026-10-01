@@ -7,7 +7,6 @@ extends Node3D
 ## where WarRoom.believed_position puts it; when that moves, the plotter's rake
 ## pushes it there over war_plot_push_s. Never reaches the Game autoload.
 
-const TIN := preload("res://scenes/war_room/materials/tin_miniature.tres")
 
 var _repo: DataRepository
 var _view: WarRoomView
@@ -315,10 +314,7 @@ func _fill_figures(state: GameState, code: String, reg: Dictionary, into: Node3D
 func _tin_of(src: BaseMaterial3D) -> ShaderMaterial:
 	if _tins.has(src):
 		return _tins[src]
-	var mat := TIN.duplicate() as ShaderMaterial
-	mat.set_shader_parameter("levels", _repo.bal("war_tin_levels"))
-	mat.set_shader_parameter("wear", _repo.bal("war_tin_wear"))
-	mat.set_shader_parameter("tin", _repo.war_palette["tin"])
+	var mat := WarRoomMaterial.tin(_repo)
 	mat.set_shader_parameter("has_tex", src != null and src.albedo_texture != null)
 	if src != null:
 		mat.set_shader_parameter("albedo_tex", src.albedo_texture)
@@ -337,10 +333,7 @@ func _fill_token(reg: Dictionary, into: Node3D) -> void:
 	cyl.bottom_radius = cyl.top_radius
 	cyl.height = h
 	token.mesh = cyl
-	var mat := TIN.duplicate() as ShaderMaterial
-	mat.set_shader_parameter("levels", _repo.bal("war_tin_levels"))
-	mat.set_shader_parameter("wear", _repo.bal("war_tin_wear"))
-	mat.set_shader_parameter("tin", _repo.war_palette["tin"])
+	var mat := WarRoomMaterial.tin(_repo)
 	mat.set_shader_parameter("has_tex", false)
 	mat.set_shader_parameter("albedo_tint", MapPalette.color_of(_repo, String(reg["kingdom_code"])))
 	token.material_override = mat

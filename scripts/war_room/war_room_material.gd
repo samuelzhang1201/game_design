@@ -1,7 +1,17 @@
 class_name WarRoomMaterial
 extends RefCounted
 ## The table material's uniforms (spec 2026-10-01-war-room-design §2), bound
-## at every lay from the palette and balance.csv.
+## at every lay from the palette and balance.csv; and the pieces' tin paint (§3).
+
+const TIN := preload("res://scenes/war_room/materials/tin_miniature.tres")
+## Tin shader uniform -> its balance key (the tin colour is war_palette's).
+const TIN_KEYS := {
+	"levels": "war_tin_levels", "wear": "war_tin_wear", "edge_gain": "war_tin_edge_gain",
+	"rim_power": "war_tin_rim_power", "rim_weight": "war_tin_rim_weight",
+	"paint_metallic": "war_tin_paint_metallic", "tin_metallic": "war_tin_metallic",
+	"paint_roughness": "war_tin_paint_roughness", "tin_roughness": "war_tin_roughness",
+	"specular": "war_tin_specular",
+}
 
 ## Shader uniform -> the balance key it is bound from at lay (every tuned
 ## number is data; the shader's own defaults are only a fallback).
@@ -27,3 +37,12 @@ static func bind(mat: ShaderMaterial, repo: DataRepository, sheet_rect: Rect2, t
 	var grid := repo.bal("war_grid_km") * WarSheets.px_per_unit(repo)
 	mat.set_shader_parameter("grid_cells", sheet_rect.size / grid)
 	mat.set_shader_parameter("tex_aspect", WarRoomInk.used_share(repo, sheet_rect))
+
+
+## A fresh tin paint, every number bound from data (each caller sets its albedo).
+static func tin(repo: DataRepository) -> ShaderMaterial:
+	var mat := TIN.duplicate() as ShaderMaterial
+	for uniform: String in TIN_KEYS:
+		mat.set_shader_parameter(uniform, repo.bal(String(TIN_KEYS[uniform])))
+	mat.set_shader_parameter("tin", repo.war_palette["tin"])
+	return mat
