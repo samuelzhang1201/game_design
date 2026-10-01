@@ -11,9 +11,15 @@ extends Node3D
 const SLIPS := {"riding": "courier riding · %s", "countermanded": "countermand riding · %s",
 		"received": "order received"}
 
+## The pennant's model (assets/3D/war_room/pennant: a red swallowtail on a
+## brass pin with a paper slip, its foot at the origin), set in the scene;
+## scaled to the pole height war_piece_figure_mm × war_pennant_h_ratio.
+@export var model: PackedScene
+
 var _repo: DataRepository
 var _view: WarRoomView
 var _sig: Array = []   # [sheet, [code, at, status, issued]...] it was built from
+var _box := AABB()    # the model's box at its own scale, measured once
 
 
 func setup(repo: DataRepository, view: WarRoomView) -> void:
@@ -50,35 +56,27 @@ func _height() -> float:
 	return _repo.bal("war_piece_figure_mm") / 1000.0 * _repo.bal("war_pennant_h_ratio")
 
 
+## The model's box at its own scale (measured once).
+func _model_box() -> AABB:
+	if _box.size.y <= 0.0:
+		var art := model.instantiate() as Node3D
+		for m: MeshInstance3D in Map3DUnits.meshes(art):
+			var a := m.transform * m.get_aabb()
+			_box = a if _box.size.y <= 0.0 else _box.merge(a)
+		art.free()
+	return _box
+
+
 func _build(code: String, at: Vector2, status: String, issued: int) -> Node3D:
 	var root := Node3D.new()
 	root.name = code
 	root.set_meta("code", code)
 	root.position = _view.table_point(at)
 	var h := _height()
-	var pole := MeshInstance3D.new()
-	pole.name = "Pole"
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = _repo.bal("war_pennant_pole_m")
-	cyl.bottom_radius = cyl.top_radius
-	cyl.height = h
-	pole.mesh = cyl
-	pole.position.y = h * 0.5
-	var wood := StandardMaterial3D.new()
-	wood.albedo_color = _repo.war_palette["table_wood"]
-	pole.material_override = wood
-	root.add_child(pole)
-	var cloth := MeshInstance3D.new()
-	cloth.name = "Cloth"
-	var q := QuadMesh.new()
-	q.size = Vector2(h * _repo.bal("war_pennant_cloth_w"), h * _repo.bal("war_pennant_cloth_h"))
-	cloth.mesh = q
-	cloth.position = Vector3(q.size.x * 0.5, h * _repo.bal("war_pennant_cloth_y"), 0.0)
-	var red := StandardMaterial3D.new()
-	red.albedo_color = _repo.war_palette["pennant"]
-	red.cull_mode = BaseMaterial3D.CULL_DISABLED
-	cloth.material_override = red
-	root.add_child(cloth)
+	var art := model.instantiate() as Node3D
+	art.name = "Art"
+	art.scale = Vector3.ONE * (h / _model_box().size.y)
+	root.add_child(art)
 	var slip := Label3D.new()
 	slip.name = "Slip"
 	slip.text = SLIPS[status] % CourierCard.date_of(issued) if SLIPS[status].contains("%s") else SLIPS[status]
@@ -105,9 +103,11 @@ func screen_hits(camera: Camera3D, scale: float) -> Array:
 		var at := camera.unproject_position(c.global_position) / scale
 		var rect := Rect2(at, Vector2.ZERO)
 		var slip := c.get_node("Slip") as Label3D
-		var wide := h * _repo.bal("war_pennant_cloth_w")
+		var box := _model_box()
+		var k := h / box.size.y
+		var wide := box.end.x * k
 		var span := (slip.get_aabb().size.x if slip.get_aabb().size.x > 0.0 else wide) * 0.5
-		for corner: Vector3 in [Vector3.ZERO, Vector3(wide, h, 0.0), Vector3(-span, slip.position.y, 0.0),
+		for corner: Vector3 in [Vector3(box.position.x * k, 0.0, 0.0), Vector3(wide, h, 0.0), Vector3(-span, slip.position.y, 0.0),
 				Vector3(span, slip.position.y, 0.0)]:
 			var world: Vector3 = c.global_position + corner
 			if not camera.is_position_behind(world):

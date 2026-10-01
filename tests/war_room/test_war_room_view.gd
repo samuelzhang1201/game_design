@@ -371,6 +371,13 @@ func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -
 	var node := pennants.pennant(code)
 	assert_not_null(node)
 	assert_string_starts_with((node.get_node("Slip") as Label3D).text, "courier riding · ")
+	var art := node.get_node("Art") as Node3D
+	assert_not_null(art, "the pennant is the room art's model, not a drawn pole and quad")
+	var tall := 0.0
+	for m: MeshInstance3D in Map3DUnits.meshes(art):
+		tall = maxf(tall, ((m.transform * m.get_aabb()).end.y) * art.scale.y)
+	assert_almost_eq(tall, repo.bal("war_piece_figure_mm") / 1000.0 * repo.bal("war_pennant_h_ratio"), 0.0005,
+		"scaled to the pole height the war_* keys give")
 	watch_signals(view)
 	var hit: Dictionary = pennants.screen_hits(view.get_node("%Camera"), view.window_scale())[0]
 	var at := (hit["rect"] as Rect2).get_center()
@@ -480,3 +487,21 @@ func test_the_tin_shader_has_no_uniform_left_unbound() -> void:
 			continue
 		var uniform := line.split(" ")[2]
 		assert_true(WarRoomMaterial.TIN_KEYS.has(uniform), "%s is bound from balance.csv" % uniform)
+
+
+## The room art (Ruling 24): the oak table's top lies just under the sheet's
+## sea (y 0) and the index chart lies on it, not floating over it.
+func test_the_sheet_and_the_chart_lie_on_the_oak_table() -> void:
+	view.lay_sheet(0)
+	var oak := view.get_node("Viewport/Room/OakTable") as Node3D
+	var top := -INF
+	for m: MeshInstance3D in Map3DUnits.meshes(oak):
+		var box := oak.transform * (m.transform * m.get_aabb())
+		top = maxf(top, box.end.y)
+	assert_between(top, -0.006, 0.0025, "the oak top (its iron clamps) meets the sheet's sea at y 0")
+	var chart: MeshInstance3D = view.get_node("%IndexChart")
+	assert_between(chart.position.y, top - 0.004, top + 0.004, "the chart lies on the oak, not above it")
+	assert_almost_eq(chart.rotation_degrees.x, -90.0, 0.01, "flat")
+	var near: Vector3 = oak.transform * Vector3(0.0, -0.8, 0.0)
+	assert_almost_eq(near.y, -0.8, 0.002, "and its feet still stand on the floor")
+
