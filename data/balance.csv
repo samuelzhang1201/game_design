@@ -304,8 +304,8 @@ map3d_army_badge_min_px,18,"3D MAP MILITARY (owner 2026-09-19: '注意兵棋大�
 map3d_army_chip_px,15,"3D MAP MILITARY (2026-09-27 critic: the chip outranked the soldier): the headcount chip that hangs over a 3D PIECE is at most this tall, design px — the piece is the counter, the chip only its tag; a flat counter (far out, a fleet) keeps map3d_army_badge_min_px..max_px"
 map3d_army_badge_max_px,30,"3D MAP MILITARY: the largest a counter gets close in, design px, so the counters never swamp the ground"
 map3d_line_lift_px,2.5,"3D MAP borders: every line is lifted this many screen px off the ground at its distance, so it clears the relief between its samples"
-map3d_road_width_px,4.0,"3D MAP roads (owner 2026-09-18): a road's width in screen px — the pack's roads draped on the relief in terrain_palette road, solid with a soft shoulder"
-map3d_trail_width_px,2.5,3D MAP roads: a trail's width in screen px (terrain_palette trail)
+map3d_road_width_px,7.0,"3D MAP roads (owner 2026-09-18): a road's width in screen px — the pack's roads draped on the relief in terrain_palette road, solid with a soft shoulder"
+map3d_trail_width_px,4.5,3D MAP roads: a trail's width in screen px (terrain_palette trail; 2.5 until the owner's 道路太细了，请加宽一点 of 2026-10-01)
 map3d_road_alpha,1.0,3D MAP roads: a road's opacity at its centre
 map3d_trail_alpha,0.6,"3D MAP march trails: the trodden grass's strength over the turf at its freshest, on its lanes"
 map3d_trail_hide_from_m,12000,"3D MAP far-zoom denoise (owner 2026-09-25: 进行远景降噪): trails start fading out this far from the camera — the road web at the opening zoom was the critics' commonest complaint"
@@ -419,8 +419,8 @@ map_ruler_font_px,22.0,MEASUREMENT ruler: the reading's font size (display_font)
 map_ruler_label_offset_px,10.0,"MEASUREMENT ruler: the reading's distance off the line's middle, on the side up the screen"
 map_ruler_label_outline_px,7.0,MEASUREMENT ruler: the halo outline round the reading's letters
 map3d_road_step_m,25.0,"3D MAP roads (owner 2026-09-19: a textured road): roads and trails are resampled to a point every this many metres — a road is now drawn at its real width up close, and at the borders' 150 m it cut into the relief between its samples"
-map3d_road_width_m,14.0,"3D MAP roads: a road's width in metres, drawn wider than life as the rivers are (a 7 m road was 2-3 px at the closest zoom, ~3 m a px; bracketed 16 / 24 / 32; the critic: 24 read wider than the rivers, a highway); the ribbon is this wide, or map3d_road_width_px on screen when that is wider (far away)"
-map3d_trail_width_m,9.0,3D MAP roads: a trail's width in metres (wider than life like the roads')
+map3d_road_width_m,25.0,"3D MAP roads: a road's width in metres (14 until 2026-10-01, owner: 道路太细了，请加宽一点 — bracketed x1.4 and x1.8, the wider chosen), drawn wider than life as the rivers are (a 7 m road was 2-3 px at the closest zoom, ~3 m a px; bracketed 16 / 24 / 32; the critic: 24 read wider than the rivers, a highway); the ribbon is this wide, or map3d_road_width_px on screen when that is wider (far away)"
+map3d_trail_width_m,16.0,3D MAP roads: a trail's width in metres (wider than life like the roads'; 9 until 2026-10-01)
 map3d_road_tile_m,60.0,"3D MAP roads: metres per repeat of the road texture (Poly Haven rocky_trail_02, packed earth and stones) — deliberately huge: at the closest zoom a screen px is ~3 m, and at 20 m a repeat was 7 px and the stones averaged away to a flat colour (bracketed 40 / 70 / 110 at 24 m wide, scaled with the width)"
 map3d_road_near_mpp,2.5,3D MAP roads: at this many metres per screen px and closer the road shows its texture in full
 map3d_road_far_mpp,7.0,3D MAP roads: at this many metres per screen px and further the road is the flat palette colour (map3d_road / map3d_trail): the stones are smaller than a pixel
@@ -517,6 +517,26 @@ map3d_tree_scale,1.2,"3D MAP woods: every clump's size against the mesh's own (M
 map3d_tree_near_m,2500,3D MAP woods: the near clump (LOD 0) is drawn out to this camera distance to its square
 map3d_tree_far_m,12000,"3D MAP woods: the plain clump (LOD 1) out to this; past it no tree is drawn and the ground's colour carries the wood"
 map3d_tree_margin_m,400,3D MAP woods: the visibility ranges' hysteresis margin
+map3d_tree_leaf_m,2.4,"3D MAP woods (owner 2026-10-01: below a 20 km scale the woods read fake): the leaf clumps a crown is broken into, metres across — tree_sway.gdshader darkens their gaps and tilts their normals by a world-space noise, faded where a pixel spans more than a clump so it never shimmers"
+map3d_tree_leaf_contrast,0.45,"3D MAP woods: how far the leaf clumps lighten and darken a crown (0 = smooth balls)"
+map3d_tree_leaf_bump,0.55,"3D MAP woods: how far the leaf clumps tilt a crown's normal, so the sun catches clumps rather than one smooth dome"
+map3d_tree_hue_spread,0.04,"3D MAP woods: each crown's hue turned by up to this share of a full turn either way about map3d_tree_hue_bias, by its own place"
+map3d_tree_hue_bias,-0.03,"3D MAP woods: the centre of that turn — negative toward yellow-olive (a critic, 2026-10-01: crowns turned toward teal read as a second picture on the golden grass)"
+map3d_tree_size_spread,0.3,"3D MAP woods: each clump drawn up to this share bigger or smaller than its baked size, by its own row — old trees and young, not one even carpet"
+map3d_tree_cards,1,"3D MAP woods (owner 2026-10-01): 1 draws every crown as a PHOTO CARD (tree_card.gdshader over assets/3D/vegetation/crowns/crowns_atlas.png, cells by data/map3d_tree_crowns.csv), 0 the procedural 3D crowns; without the atlas or the table the 3D crowns stay"
+map3d_tree_card_far_m,20000,"3D MAP woods: the photo cards are drawn out to this camera distance to their square (two triangles a tree, so farther than the 3D crowns' 12 km)"
+map3d_tree_card_alpha_cut,0.5,"3D MAP woods: the crown photo's alpha a card is cut at"
+map3d_tree_card_sphere,0.6,"3D MAP woods: how far a card's normal bulges from flat-to-camera toward a sphere, so the sun still turns a crown"
+map3d_tree_card_lift,0.15,"3D MAP woods: a card's centre drawn toward the camera by this share of its size, so the slope behind it does not cut its foot"
+map3d_tree_card_saturation,1.15,"3D MAP woods: the crown photographs' saturation"
+map3d_tree_card_value,0.6,"3D MAP woods: the crown photographs' brightness gain"
+map3d_tree_card_alpha_far,0.6,"3D MAP woods: per mip level a card's cut-out alpha is raised — a far crown's mips average its rim with clear texels and the woods thinned to a grey stipple (2026-10-01)"
+map3d_tree_card_far_value,0.65,"3D MAP woods: the brightness a crown keeps at its farthest mips (a whole crown in a texel reads lighter than the crown seen near)"
+map3d_tree_card_tint,0.5,"3D MAP woods: how far each clump's own tint colours its photographs (variety between neighbours)"
+map3d_tree_saturation,0.8,"3D MAP woods: the crowns' saturation against the mesh's own colours (1 = as built; the built greens read toy-bright against the aerial ground)"
+map3d_tree_value,1.0,"3D MAP woods: the crowns' brightness gain"
+map3d_tree_roughness,1.0,"3D MAP woods: the foliage's roughness — leaves scatter, a crown has no sheen"
+map3d_tree_specular,0.0,"3D MAP woods: the foliage's specular (0: the smooth balls' highlight read as plastic)"
 map3d_wind_on,1,"3D MAP wind (owner 2026-09-30: 草缓缓的随风摇摆…麦穗摇曳): 1 rolls waves of light and shade over the crops and grass (Map3DGroundTint) and sways the woods (tree_sway.gdshader), Map3DLayerWind; presentation only, running only while the clock does"
 map3d_wind_deg,12,"3D MAP wind: the wind, degrees from east toward south (the clouds' map3d_cloud_wind_deg)"
 map3d_wind_speed_mps,7,3D MAP wind: how fast a wave runs down the wind over the ground (world metres a real second)
@@ -533,6 +553,8 @@ map3d_wind_tree_sway_m,2.2,3D MAP wind: how far a crown's top leans down the win
 map3d_wind_tree_hz,0.22,3D MAP wind: how many times a second a tree sways
 map3d_trail_on,1,"3D MAP MARCH TRAILS (owner 2026-10-01: 当军事单位路过的时候，希望可以和地形互动，比如留下一段行走印记，后逐步消失): 1 lays the ground a marching column trod behind each piece (Map3DLayerTrails, march_trail.gdshader), fading over game time; 0 = none"
 map3d_trail_days,4,"3D MAP march trails: game days a stretch of trodden ground takes to fade away (the clock's own time: a paused clock holds it). 1.5 at first: the piece is a MINIATURE some 200 m across at the map's scale and a column covers a few hundred metres a day, so a day and a half of trail lay hidden under the piece itself"
+map3d_trail_hold_share,0.4,"3D MAP march trails: the share of map3d_trail_days a stretch holds at full strength before it fades (owner 2026-10-01: a fade from the first moment left even the freshest track faint)"
+map3d_trail_crop_gain,1.8,"3D MAP march trails: on the corn (the bake's field map) the track is this much stronger and its lanes run together (a trail of the turf's strength vanished on the pale crop)"
 map3d_trail_step_m,25,3D MAP march trails: a point of trail every this many world metres of a piece's walk
 map3d_trail_half_width_m,50,"3D MAP march trails: the trail's half width, world metres — a piece is a miniature of one world size at every zoom (some 220 m across its nine figures), and a trail as wide as it read as a pad under the piece, not a track behind it"
 map3d_trail_edge_soft,0.5,3D MAP march trails: the share of each side that fades to the grass (a ragged soft edge; never a painted road)

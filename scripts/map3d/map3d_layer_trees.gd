@@ -11,6 +11,9 @@ extends Node3D
 
 const VARIANTS := 2
 const SWAY_SHADER := preload("res://scripts/map3d/tree_sway.gdshader")
+const CARD_SHADER := preload("res://scripts/map3d/tree_card.gdshader")
+## The crown atlas the photo cards wear (tools/map3d/build_tree_atlas.py).
+const CROWN_ATLAS := "res://assets/3D/vegetation/crowns/crowns_atlas.png"
 const ROW := 6
 
 var ctx: Map3DContext
@@ -42,6 +45,7 @@ func build(p_ctx: Map3DContext) -> void:
 	var density := clampf(repo.bal("map3d_tree_density"), 0.0, 1.0) * Map3DQuality.num(ctx.q(), "tree_density", 1.0)
 	var chunk := repo.bal("map3d_tree_chunk_m")
 	var size_k := repo.bal("map3d_tree_scale")
+	var size_spread := repo.bal("map3d_tree_size_spread")
 	var near := repo.bal("map3d_tree_near_m")
 	var far := repo.bal("map3d_tree_far_m")
 	var margin := repo.bal("map3d_tree_margin_m")
@@ -62,11 +66,23 @@ func build(p_ctx: Map3DContext) -> void:
 		rows_of.append(i)   # a packed array is a value: write it back
 		g[sub] = rows_of
 	var meshes := {}
-	var mat := _material()
+	# photo cards (owner 2026-10-01: the 3D crowns read fake below a 20 km
+	# scale): one level, drawn out to map3d_tree_card_far_m
+	var cards := repo.bal("map3d_tree_cards") > 0.0 and ResourceLoader.exists(CROWN_ATLAS) \
+		and not repo.map3d_tree_crowns.is_empty()
+	var mat := _card_material() if cards else _material()
+	var lods := 1 if cards else 2
+	if cards:
+		far = repo.bal("map3d_tree_card_far_m")
+		near = far
 	for kind in 3:
+		var cells := PackedInt32Array()
+		for r: Dictionary in repo.map3d_tree_crowns:
+			if int(r["kind"]) == kind:
+				cells.append(int(r["cell"]))
 		for v in VARIANTS:
-			for lod in 2:
-				var m := Map3DTreeMesh.clump(kind, lod, v)
+			for lod in lods:
+				var m := Map3DTreeMesh.cards(kind, v, cells) if cards else Map3DTreeMesh.clump(kind, lod, v)
 				m.surface_set_material(0, mat)
 				meshes["%d:%d:%d" % [kind, v, lod]] = m
 	for key: Vector2i in groups:
@@ -74,7 +90,7 @@ func build(p_ctx: Map3DContext) -> void:
 		for sub: String in g:
 			var rows: PackedInt32Array = g[sub]
 			var centre := Vector3((key.x + 0.5) * chunk, 0.0, (key.y + 0.5) * chunk)
-			for lod in 2:
+			for lod in lods:
 				var mm := MultiMesh.new()
 				mm.transform_format = MultiMesh.TRANSFORM_3D
 				mm.use_colors = true
@@ -82,7 +98,9 @@ func build(p_ctx: Map3DContext) -> void:
 				mm.instance_count = rows.size()
 				for j in rows.size():
 					var i := rows[j]
-					var s := data[i * ROW + 4] * size_k
+					# a wood of old trees and young ones, not one even carpet
+					var grow := 1.0 + size_spread * (float((i * 2246822519) % 1009) / 1009.0 * 2.0 - 1.0)
+					var s := data[i * ROW + 4] * size_k * grow
 					var turn := Basis(Vector3.UP, data[i * ROW + 3]).scaled(Vector3(s, s, s))
 					var at := Vector3(data[i * ROW], data[i * ROW + 1], data[i * ROW + 2]) - centre
 					mm.set_instance_transform(j, Transform3D(turn, at))
@@ -117,4 +135,46 @@ var material: ShaderMaterial
 func _material() -> ShaderMaterial:
 	material = ShaderMaterial.new()
 	material.shader = SWAY_SHADER
+	# the foliage's look (owner 2026-10-01: below a 20 km scale the woods read
+	# fake): leaf clumps, a hue per crown, a natural saturation, no sheen
+	for key: String in LOOK:
+		material.set_shader_parameter(LOOK[key], ctx.repo.bal(key))
 	return material
+
+
+## balance.csv key -> tree_sway.gdshader uniform
+const LOOK := {
+	"map3d_tree_leaf_m": "leaf_m",
+	"map3d_tree_leaf_contrast": "leaf_contrast",
+	"map3d_tree_leaf_bump": "leaf_bump",
+	"map3d_tree_hue_spread": "hue_spread",
+	"map3d_tree_hue_bias": "hue_bias",
+	"map3d_tree_saturation": "saturation",
+	"map3d_tree_value": "value_gain",
+	"map3d_tree_roughness": "roughness_value",
+	"map3d_tree_specular": "specular_value",
+}
+
+
+## The photo cards' material: tree_card.gdshader over the crown atlas, the
+## look bound from balance.csv map3d_tree_card_* (Map3DLayerWind sets the
+## wind's uniforms on `material` each frame, as for the 3D crowns).
+func _card_material() -> ShaderMaterial:
+	material = ShaderMaterial.new()
+	material.shader = CARD_SHADER
+	material.set_shader_parameter("atlas", load(CROWN_ATLAS))
+	for key: String in CARD_LOOK:
+		material.set_shader_parameter(CARD_LOOK[key], ctx.repo.bal(key))
+	return material
+
+
+const CARD_LOOK := {
+	"map3d_tree_card_alpha_cut": "alpha_cut",
+	"map3d_tree_card_sphere": "sphere",
+	"map3d_tree_card_lift": "lift",
+	"map3d_tree_card_saturation": "saturation",
+	"map3d_tree_card_value": "value_gain",
+	"map3d_tree_card_tint": "tint_k",
+	"map3d_tree_card_alpha_far": "alpha_far_gain",
+	"map3d_tree_card_far_value": "far_value",
+}

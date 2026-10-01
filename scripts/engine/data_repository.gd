@@ -61,6 +61,10 @@ var map3d_houses: Dictionary = {}
 ## data/map3d_house_variants.csv rows (part, variant, tint): the per-house
 ## wall and roof tints the 3D map's houses wear (owner 2026-09-25).
 var map3d_house_variants: Array = []
+## data/map3d_tree_crowns.csv rows (cell, kind, ...): which cell of the woods'
+## crown atlas shows which kind of tree (0 broadleaf, 1 conifer, 2 lone) —
+## the photo cards of 2026-10-01 (tree_card.gdshader).
+var map3d_tree_crowns: Array = []
 ## data/map3d_bake.csv as key -> number: the 3D build's own tuning. The bake
 ## (tools/map3d/bake_world.py) has always read this file; the runtime reads
 ## it too for the settlements' house clusters, so the two can never disagree
@@ -615,6 +619,9 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present("res://data/map3d_house_variants.csv", ["part", "variant", "tint"],
 			func(r): map3d_house_variants.append(r)):
+		return false
+	if not _load_if_present("res://data/map3d_tree_crowns.csv", ["cell", "kind"],
+			func(r): map3d_tree_crowns.append(r)):
 		return false
 	if not _load_if_present("res://data/map3d_bake.csv", ["key", "value"],
 			func(r): map3d_bake[String(r["key"])] = float(r["value"])):

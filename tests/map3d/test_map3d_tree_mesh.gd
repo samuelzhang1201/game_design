@@ -39,3 +39,20 @@ func test_a_crown_is_lit_on_top_and_dark_beneath() -> void:
 		if cols[i] != Map3DTreeMesh.TRUNK and verts[i].y < verts[lo].y:
 			lo = i
 	assert_gt(cols[hi].get_luminance(), cols[lo].get_luminance())
+
+func test_a_photo_card_clump_is_two_triangles_a_crown_from_its_own_cells() -> void:
+	# owner 2026-10-01: the woods as photo cards (tree_card.gdshader)
+	var cells := PackedInt32Array([3, 7])
+	var m := Map3DTreeMesh.cards(Map3DTreeMesh.BROADLEAF, 0, cells)
+	var arrays := m.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	assert_eq(verts.size(), 8 * 6, "eight crowns, two triangles each")
+	var custom: PackedFloat32Array = arrays[Mesh.ARRAY_CUSTOM0]
+	for i in verts.size():
+		var cell := int(round(custom[i * 4 + 3]))
+		assert_true(cells.has(cell), "every card wears a cell of its own kind")
+		assert_gt(custom[i * 4 + 2], 4.0, "a card is a whole tree, metres across")
+	# every vertex sits at a crown's centre: the box must still hold the cards
+	# the vertex box only spans the centres: culling reads the custom box
+	assert_gt(m.custom_aabb.size.x, m.get_aabb().size.x + 8.0,
+		"the clump's culling box holds its cards, not just their centres")

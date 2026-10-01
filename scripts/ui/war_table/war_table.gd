@@ -151,6 +151,11 @@ static func paper_theme() -> Theme:
 	t.set_color("font_color", "Label", soft)
 	t.set_color("default_color", "RichTextLabel", soft)
 	t.set_color("font_color", "LinkButton", UiPalette.ink("rubric"))
+	# A tooltip floats OFF the paper, in the dark chip every tooltip wears —
+	# but Godot looks its label up through the hovered control's theme first,
+	# and TooltipLabel falls back to Label, so the paper's ink above drew it
+	# dark on dark (owner 2026-10-01: 鼠标移动到icon上的tooltip字体完全看不见了).
+	t.set_color("font_color", "TooltipLabel", UiPalette.TEXT_SOFT)
 	return t
 
 static func _num(key: String, fallback: float) -> float:

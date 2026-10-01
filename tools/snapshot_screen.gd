@@ -57,6 +57,14 @@ var _tab := -1
 ## --manor <code|label|cell id> opens that manor's card in the left column
 ## (its fields and order buttons) and centres the map on it.
 var _manor := ""
+## --town CODE selects that settlement as a click on the map does and opens
+## its card in the left column; --hover-icon N then rests the pointer, by
+## real mouse-motion events, on the Nth control of that card that carries a
+## tooltip (0 the first), so the shot shows the tooltip as the player sees it
+## (owner 2026-10-01: a town card's icon tooltip read dark on dark).
+var _town := ""
+var _hover_icon := -1
+var _hover_target: Control
 ## --build <building> begins that building on the shot's manor (with
 ## --manor), so the slot row shows a work; --speed N lights the clock.
 var _build := ""
@@ -211,6 +219,10 @@ func _ready() -> void:
 			_tab = int(args[i + 1])
 		elif args[i] == "--manor":
 			_manor = args[i + 1]
+		elif args[i] == "--town":
+			_town = args[i + 1]
+		elif args[i] == "--hover-icon":
+			_hover_icon = int(args[i + 1])
 		elif args[i] == "--build":
 			_build = args[i + 1]
 		elif args[i] == "--click3d":
@@ -595,6 +607,31 @@ func _process(_delta: float) -> void:
 				ArmySystem.order_of(Game.data, Game.state, code),
 				ArmySystem.days_out(Game.data, Game.state, code), Game.clock_speed, menu.aiming(),
 				Game.state.couriers])
+	if _root != null and _frames == 6 and _town != "" and _root.current_screen.has_method("detail_panel"):
+		var burg: Dictionary = Game.data.burgs.get(_town, {})
+		if burg.is_empty():
+			push_error("no such town: " + _town)
+		else:
+			var v3: Map3DView = _root.current_screen.map3d_view()
+			if v3 != null:
+				v3.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])))
+				v3.select_object({"kind": "burg", "code": _town})
+			_root.current_screen.detail_panel().show_entry(
+				{"title": String(burg.get("label", _town)), "obj": {"kind": "burg", "code": _town}})
+	if _root != null and _hover_icon >= 0 and _frames == 40 and _root.current_screen.has_method("detail_panel"):
+		var found: Array[Control] = []
+		_tooltipped(_root.current_screen.detail_panel(), found)
+		if _hover_icon < found.size():
+			_hover_target = found[_hover_icon]
+			print("hover-icon: %s \"%s\"" % [_hover_target.get_class(), _hover_target.tooltip_text])
+		else:
+			push_error("hover-icon: only %d controls with a tooltip" % found.size())
+	if _hover_target != null and _frames > 40:
+		var ev := InputEventMouseMotion.new()
+		ev.position = get_viewport().get_final_transform() * (_hover_target.get_global_rect().get_center()
+			+ Vector2(float(_frames % 2), 0.0))
+		ev.global_position = ev.position
+		get_viewport().push_input(ev)
 	if _also.has(_frames):
 		_save_shot(String(_also[_frames]))
 	if (_shot_on == "" and _frames == _shot_frame) or (_shot_at >= 0 and _frames == _shot_at):
@@ -863,3 +900,10 @@ func _missive_step() -> void:
 		print("show-on-map: board open=%s card=%s" % [board.visible, title.text if title != null else "?"])
 		_moment("card")
 
+
+## Every visible control under `n` that carries a tooltip, in tree order.
+func _tooltipped(n: Node, out: Array[Control]) -> void:
+	if n is Control and (n as Control).is_visible_in_tree() and (n as Control).tooltip_text != "":
+		out.append(n)
+	for c in n.get_children():
+		_tooltipped(c, out)
