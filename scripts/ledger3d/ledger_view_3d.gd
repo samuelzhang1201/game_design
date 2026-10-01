@@ -899,10 +899,10 @@ func _update_hud() -> void:
 		var at: Vector2 = seen[id][0]
 		var r: float = seen[id][1]
 		obstacles.append(Rect2(at - Vector2(r, r), Vector2(r, r) * 2.0))
-	# The selected star first (spec §7: always named, as a `keep` entry that
-	# may stand on a star's disc when nothing else is clear, but never on
-	# another name), then the titles, the hubs (`keep` while not dimmed), its
-	# neighbours and the hovered star.
+	# The selected star first (spec §7: always named, as a `keep` entry: never
+	# on another star's disc, and crowded by names it takes the least-covered
+	# place round its own star), then the titles, the hubs (`keep` while not
+	# dimmed), its neighbours and the hovered star.
 	var named: Array[String] = []
 	var big := {}   # names set in the larger size: the selected star and the hubs
 	var keep := {}
@@ -971,7 +971,10 @@ func _update_hud() -> void:
 		var px := strong_px if big.has(id) else label_px
 		var e := {"id": id, "text": drawn_name(id), "px": px, "at": (at as Vector2) - Vector2(0, r + lift),
 			"alt": (at as Vector2) + Vector2(0, r + lift + px), "beside": [at, r],
-			"strong": id == _selected or _near.has(id), "props": _nodes[id].get("props", [])}
+			"strong": id == _selected or _near.has(id),
+			# a star's gauges only for the selected and the hovered star (Task
+			# 11 fix round 3, S1a: a row on every hub only repeated the next)
+			"props": _nodes[id].get("props", []) if id == _selected or id == _hovered else []}
 		if keep.has(id):
 			e["keep"] = true
 		# a dimmed star's name dims with it (F9)
@@ -985,7 +988,7 @@ func _update_hud() -> void:
 		entries.append(e)
 	var first := 1 if _selected != "" and not entries.is_empty() and entries[0].has("ring") else 0
 	entries = entries.slice(0, first) + titles + entries.slice(first)
-	_hud.show_entries(entries, obstacles, [Rect2(0.0, -size.y, size.x, size.y + chrome)])
+	_hud.show_entries(entries, obstacles, [Rect2(0.0, -size.y, size.x, size.y + chrome)], Rect2(Vector2.ZERO, size))
 
 
 ## Whether a star may be an always-named hub: its type's `hub` is not 0, and
@@ -998,19 +1001,25 @@ func _may_be_hub(id: String) -> bool:
 
 ## The name a star is DRAWN with in the galaxy: its label less the words its
 ## type already says — the type's `short_name` in ledger_object_types.csv,
-## a pattern whose `*` is the part kept ("Supply line to * Regiment": "8th
-## (Canceswest)"); a label that does not match is kept whole. The card and
-## the tooltip keep the full label (Task 11 fix round 2, R2).
+## a pattern whose `*` is the part kept ("* Regiment": "8th (Canceswest)"),
+## optionally followed by " -> " and a template the kept part is set in
+## ("Supply line to * Regiment -> Supplies for *": "Supplies for 8th
+## (Canceswest)", so a supply line never reads as its regiment); a label
+## that does not match is kept whole. The card and the tooltip keep the full
+## label (Task 11 fix rounds 2-3, R2 / S1b).
 func drawn_name(id: String) -> String:
 	var label := String(_nodes[id]["label"])
-	var pattern := String(Ledger.type_row(_repo, String(_nodes[id]["type"])).get("short_name", ""))
+	var rule := String(Ledger.type_row(_repo, String(_nodes[id]["type"])).get("short_name", ""))
+	var pattern := rule.get_slice(" -> ", 0)
+	var template := rule.get_slice(" -> ", 1) if rule.contains(" -> ") else "*"
 	var star := pattern.find("*")
 	if star < 0:
 		return label
 	var head := pattern.substr(0, star)
 	var tail := pattern.substr(star + 1)
 	if label.length() > head.length() + tail.length() and label.begins_with(head) and label.ends_with(tail):
-		return label.substr(head.length(), label.length() - head.length() - tail.length()).strip_edges()
+		var kept := label.substr(head.length(), label.length() - head.length() - tail.length()).strip_edges()
+		return template.replace("*", kept)
 	return label
 
 

@@ -15,7 +15,8 @@ extends Control
 const DEFAULT_GAUGE := {"radius": 7.0, "width": 3.0, "gap": 3.0, "caption_px": 12.0}
 const GAUGE_SPACING_EM := 0.9   # between two gauges of one row, in caption ems
 const GAUGE_CAPTION_GAP := 3.0  # design px between a ring and its caption
-const RINGS := 3                # how many distances round its star a name tries, a line apart
+const RINGS := 5                # how many distances round its star a name tries, RING_STEP_EM apart
+const RING_STEP_EM := 0.6       # between two of those distances, in the name's ems
 
 var _entries: Array = []
 var _rings: Array = []
@@ -85,8 +86,8 @@ func style_ring(colour: Color, width_px: float) -> void:
 	_ring_w = width_px
 
 
-func show_entries(entries: Array, obstacles: Array = [], walls: Array = []) -> void:
-	_entries = cull(entries, _px, _font, _gauge, obstacles, _title_font, walls)
+func show_entries(entries: Array, obstacles: Array = [], walls: Array = [], bounds: Rect2 = Rect2()) -> void:
+	_entries = cull(entries, _px, _font, _gauge, obstacles, _title_font, walls, bounds)
 	_rings.clear()
 	for e: Dictionary in entries:
 		if e.has("ring"):
@@ -148,10 +149,11 @@ static func _font_of(e: Dictionary, font: Font, title_font: Font) -> Font:
 ## Keeps entries in order, dropping any whose box overlaps one already kept.
 ## An entry may carry `alt`, a second place (under its sphere): a name whose
 ## own place is taken stands there if that is clear, so a type in a close row
-## keeps its name; and `beside` ([its star's centre, its screen radius]): then
-## it may also stand round its own star in eight directions at three distances
-## (Task 11 fix round 2, R3), so a name in a crowd stays attached to its
-## star. The box is the text's measured width when a font is given, else
+## keeps its name; or `beside` ([its star's centre, its screen radius]): then
+## it stands round its own star in eight directions at RINGS distances,
+## nearest first (Task 11 fix rounds 2-3, R3 / S1c), so a name in a crowd
+## stays attached to its star. A name with gauges carries them UNDER it.
+## Inside `bounds` (when given) no box is clipped by the view's edge. The box is the text's measured width when a font is given, else
 ## estimated at 0.55 em a glyph (so the cull is testable without one),
 ## centred on the place, with a quarter em of air at each end. A
 ## `title: true` entry is measured in `title_font` (falling back to `font`),
@@ -163,7 +165,7 @@ static func _font_of(e: Dictionary, font: Font, title_font: Font) -> Font:
 ## kept TITLE may cross a star when nothing else is clear. `walls` (the
 ## screen's top chrome) are never entered by anything.
 static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dictionary = DEFAULT_GAUGE,
-		obstacles: Array = [], title_font: Font = null, walls: Array = []) -> Array:
+		obstacles: Array = [], title_font: Font = null, walls: Array = [], bounds: Rect2 = Rect2()) -> Array:
 	var kept: Array = []
 	var names: Array[Rect2] = []   # every box kept: never overlapped by an ordinary name
 	var hard: Array[Rect2] = []    # the walls: never entered
@@ -204,6 +206,8 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 		for k in boxes.size():
 			if _meets(boxes[k], hard) or _on_other_disc(boxes[k], discs, own):
 				continue
+			if bounds.has_area() and not bounds.encloses(boxes[k]):
+				continue  # never clipped by the view's edge (Task 11 fix round 3, S1d)
 			var cover := _cover(boxes[k], names)
 			if cover <= 0.0:
 				pick = k
@@ -220,29 +224,37 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 			continue
 		names.append(boxes[pick])
 		var put := e.duplicate()
-		put["at"] = places[pick][0]
-		put["gauges_up"] = places[pick][1]
+		# the gauge row always sits UNDER its name, tight to it (Task 11 fix
+		# round 3, S1a): a name over its star is lifted by the row's height,
+		# so the row lies between the name and the star
+		put["at"] = (places[pick][0] as Vector2) - Vector2(0.0, extra_h if bool(places[pick][1]) else 0.0)
+		put["gauges_up"] = false
 		kept.append(put)
 	return kept
 
 
 ## Where an entry's name may stand, in order, each [place, over the star]:
-## its own place, its `alt`, then round its `beside` star in eight
-## directions — level right and left, the four corners, over and under — at
-## a name's gap from the disc and again a line, and two, further out.
+## round its `beside` star in eight directions — over, under, level right and
+## left, the four corners — at a name's gap from the disc and then RINGS-1
+## more distances RING_STEP_EM apart, nearest first, then its own place and
+## its `alt`; an entry with no `beside` (a title) at
+## its own place, then its `alt`.
 static func _places(e: Dictionary, w: float, px: float) -> Array:
-	var out: Array = [[e["at"], true]]
-	if e.has("alt"):
-		out.append([e["alt"], false])
 	if not e.has("beside"):
-		return out
+		var own: Array = [[e["at"], true]]
+		if e.has("alt"):
+			own.append([e["alt"], false])
+		return own
+	# round its own star, nearest ring first (Task 11 fix round 3, S1c: the
+	# name sits by its star): over, under, level right and left, the corners
+	var out: Array = []
 	var c: Vector2 = e["beside"][0]
 	var r := float(e["beside"][1])
 	var gap := px * 0.35
 	for ring in RINGS:
-		var far := float(ring) * px * 1.2
-		for d: Vector2 in [Vector2(1, 0), Vector2(-1, 0), Vector2(1, -1), Vector2(-1, -1), Vector2(1, 1),
-				Vector2(-1, 1), Vector2(0, -1), Vector2(0, 1)]:
+		var far := float(ring) * px * RING_STEP_EM
+		for d: Vector2 in [Vector2(0, -1), Vector2(0, 1), Vector2(1, 0), Vector2(-1, 0), Vector2(1, -1),
+				Vector2(-1, -1), Vector2(1, 1), Vector2(-1, 1)]:
 			var x := c.x + d.x * (r + gap + far + w * 0.5)
 			var y := c.y
 			if d.y < 0.0:
@@ -250,6 +262,11 @@ static func _places(e: Dictionary, w: float, px: float) -> Array:
 			elif d.y > 0.0:
 				y = c.y + (r + gap + far) + px * 0.45
 			out.append([Vector2(x, y), d.y < 0.0])
+	# then its own place and its `alt`, the view's lifted places over and
+	# under it, last
+	out.append([e["at"], true])
+	if e.has("alt"):
+		out.append([e["alt"], false])
 	return out
 
 

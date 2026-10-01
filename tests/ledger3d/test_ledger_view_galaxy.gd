@@ -395,7 +395,7 @@ func test_the_selected_star_is_always_named() -> void:
 	for id: String in ["character:you", _first("character:"), _first("regiment:")]:
 		view.select(id)
 		var names: Array = view._hud._entries.map(func(e: Dictionary) -> String: return String(e["text"]))
-		assert_true(names.has(String(view._nodes[id]["label"])), "named: " + id)
+		assert_true(names.has(view.drawn_name(id)), "named: " + id)
 
 
 ## Task 11 (2c, spec §7 `ledger_label_hubs`): the hubs — the largest stars in
@@ -409,10 +409,16 @@ func test_the_hubs_are_always_named_at_the_opening_view() -> void:
 	var hubs := view._hubs()
 	assert_eq(hubs.size(), int(repo.bal("ledger_label_hubs")))
 	for id: String in hubs:
-		var label := String(view._nodes[id]["label"])
+		var label := view.drawn_name(id)
 		assert_true(by_name.has(label), "the hub is named: " + id)
-	var pool: Dictionary = by_name.get(String(view._nodes["type:strategic_goods"]["label"]), {})
-	assert_false((pool.get("props", []) as Array).is_empty(), "the strategic pool keeps its gauge")
+	# its gauge row is drawn when it is hovered or selected (Task 11 fix round
+	# 3, S1a), under its name
+	view.select("type:strategic_goods")
+	var pool: Dictionary = {}
+	for e: Dictionary in view._hud._entries:
+		if String(e.get("id", "")) == "type:strategic_goods":
+			pool = e
+	assert_false((pool.get("props", []) as Array).is_empty(), "the strategic pool, selected, shows its gauge")
 
 
 ## Task 11: a hub dimmed by the selection is named only where there is room —
@@ -432,7 +438,7 @@ func test_a_dimmed_hub_never_stands_on_a_star() -> void:
 		if view.star_colour(id).a >= 1.0:
 			continue
 		for e: Dictionary in view._hud._entries:
-			if String(e["text"]) != String(view._nodes[id]["label"]):
+			if String(e["text"]) != view.drawn_name(id):
 				continue
 			var font: Font = view._hud._font
 			var w := font.get_string_size(String(e["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
@@ -545,7 +551,7 @@ func test_a_chosen_clusters_hubs_are_its_own_and_dim_names_dim() -> void:
 		if bool(e.get("title", false)):
 			continue
 		for id: String in view.stars():
-			if String(view._nodes[id]["label"]) == String(e["text"]) and view._cluster_of(id) != "war":
+			if view.drawn_name(id) == String(e["text"]) and view._cluster_of(id) != "war":
 				assert_lt((e["ink"] as Color).a, 0.8, "a dimmed star's name is dim: " + id)
 
 
@@ -587,7 +593,11 @@ func test_a_supply_line_is_drawn_short_and_is_no_hub() -> void:
 	var short := view.drawn_name(id)
 	assert_false(short.contains("Supply line"), short)
 	assert_false(short.ends_with("Regiment"), short)
-	assert_true(label.contains(short))
+	assert_true(short.begins_with("Supplies for "), "a template sets the kept part: " + short)
+	assert_true(label.contains(short.trim_prefix("Supplies for ")))
+	var reg := _first("regiment:")
+	assert_ne(view.drawn_name(reg), String(view._nodes[reg]["label"]), "a regiment drops its type's word")
+	assert_false(view.drawn_name(reg).ends_with("Regiment"))
 	assert_eq(view.drawn_name("character:you"), String(view._nodes["character:you"]["label"]), "no pattern, whole")
 	view.focus_cluster("war")
 	for i in 60:
@@ -678,3 +688,44 @@ func test_ghosts_wear_their_hue_stars_are_capped_and_dealt_right() -> void:
 		assert_eq(view._faint_cols[k], view.star_colour(view._faint[k]), view._faint[k])
 	for k in view._whole.size():
 		assert_eq(view._whole_cols[k], view.star_colour(view._whole[k]), view._whole[k])
+
+
+## Task 11 fix round 3 (S1a, S1b, S1c, S1d): in the War view at rest no hub
+## carries a gauge row and no name says "Regiment"; the names sit by their
+## stars and inside the view; a selected regiment's gauges stand under its
+## name.
+func test_the_war_names_are_short_near_and_only_the_selected_has_gauges() -> void:
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
+	_settle_by_frames()
+	view.focus_cluster("war")
+	for i in 90:
+		view._process(1.0 / 60.0)
+	var box := Rect2(Vector2.ZERO, view.size)
+	var font: Font = view._hud._font
+	var near := 0
+	var names := 0
+	for e: Dictionary in view._hud._entries:
+		if bool(e.get("title", false)):
+			continue
+		names += 1
+		assert_true((e.get("props", []) as Array).is_empty(), "no gauges at rest: " + String(e["text"]))
+		assert_false(String(e["text"]).ends_with("Regiment"), String(e["text"]))
+		var px := float(e["px"])
+		var w := font.get_string_size(String(e["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
+		var r := Rect2((e["at"] as Vector2) - Vector2(w * 0.5, px * 0.45), Vector2(w, px * 1.05))
+		assert_true(box.encloses(r), "inside the view: " + String(e["text"]))
+		var c: Vector2 = view.screen_pos_of(String(e["id"]))
+		var gap := maxf(0.0, maxf(absf(c.x - r.get_center().x) - r.size.x * 0.5, absf(c.y - r.get_center().y) - r.size.y * 0.5)) \
+			- view._screen_radius(String(e["id"]))
+		if gap <= px * 0.6:
+			near += 1
+	assert_gt(names, 4)
+	assert_gte(near, int(ceil(names * 0.7)), "most names sit at the nearest ring (%d of %d)" % [near, names])
+	var reg := _first("regiment:")
+	view.select(reg)
+	var mine: Dictionary = {}
+	for e: Dictionary in view._hud._entries:
+		if String(e.get("id", "")) == reg:
+			mine = e
+	assert_false((mine.get("props", []) as Array).is_empty(), "the selected regiment carries its gauges")
+	assert_false(bool(mine["gauges_up"]), "under its name")

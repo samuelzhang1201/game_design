@@ -7,9 +7,9 @@ building,things,economy|all,Buildings,,-6,-5,,live,,economy,province,instance,,1
 civil_goods,things,economy|war|all,Civil goods,,-2,0,,live,,economy,,pool,,1,the crown's and the lord's civil stores
 gold,things,economy|all,Gold,,-2,-5,,live,,economy,,pool,,1,the treasury and the lord's purse
 strategic_goods,things,economy|war|all,Strategic goods,,4,0,,live,,war,,pool,,1,
-regiment,things,war|intelligence|all,Regiments,,9,0,regiments,live,,war,,instance,,1,
+regiment,things,war|intelligence|all,Regiments,,9,0,regiments,live,,war,,instance,* Regiment,1,
 workshop,things,economy|war|all,War workshops,,1,0,workshops,live,,economy,,instance,,1,civil goods made into strategic
-supply_line,things,war|all,Supply lines,,6.5,0,supply_lines,live,,war,,instance,Supply line to * Regiment,0,
+supply_line,things,war|all,Supply lines,,6.5,0,supply_lines,live,,war,,instance,Supply line to * Regiment -> Supplies for *,0,
 enemy_host,things,war|intelligence|all,Enemy hosts,,9,-5,,planned,M4,war,,pool,,1,
 artisans,things,economy|all,Artisans,,-9,5,artisans,live,,economy,,instance,,1,the townsfolk of each province the crown controls: they raise its buildings (M5)
 market,things,economy|all,Markets,,2,5,markets,live,,economy,,instance,,1,the pack's markets whose centre town the realm holds now (M6)

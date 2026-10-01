@@ -47,7 +47,11 @@ func test_a_names_gauges_take_room_in_the_cull() -> void:
 	]
 	var kept := LedgerHud.cull(entries, 14.0)
 	assert_eq(kept.size(), 1, "a name just over another's gauges is dropped")
-	assert_true(kept[0]["gauges_up"], "a name over its sphere carries its gauges over it")
+	# Task 11 fix round 3 (S1a): a name over its star carries its gauges UNDER
+	# it — the name is lifted by the row, the row between it and the star
+	assert_false(kept[0]["gauges_up"], "the gauges sit under the name")
+	assert_almost_eq((kept[0]["at"] as Vector2).y, 100.0 - LedgerHud.gauge_row_h(entries[0]["props"],
+		LedgerHud.DEFAULT_GAUGE), 0.001, "lifted by the row's height")
 	var plain := [entries[0].duplicate(), entries[1]]
 	plain[0].erase("props")
 	assert_eq(LedgerHud.cull(plain, 14.0).size(), 2, "without gauges the two names are clear")
@@ -188,3 +192,26 @@ func test_a_name_wears_a_soft_halo_under_its_outline() -> void:
 	assert_eq(int(passes[0][0]), 10, "the soft halo first, widest")
 	assert_almost_eq((passes[0][1] as Color).a, 0.6, 0.001)
 	assert_eq(int(passes[1][0]), 4, "then the crisp outline")
+
+
+## Task 11 fix round 3 (S1c, S1d): a name round its own star takes the
+## nearest clear ring first, and never a place the view's edge would clip.
+func test_a_name_takes_the_nearest_ring_and_is_never_clipped() -> void:
+	var e := {"text": "8th (Canceswest)", "at": Vector2(100, 60), "strong": false, "beside": [Vector2(100, 100), 6.0]}
+	var kept := LedgerHud.cull([e], 14.0)
+	var at: Vector2 = kept[0]["at"]
+	assert_almost_eq(at.y, 100.0 - 6.0 - 14.0 * 0.35 - 14.0 * 0.6, 0.001, "over its star at the nearest ring")
+	var low := e.duplicate()
+	low["beside"] = [Vector2(100, 395), 6.0]
+	var view := Rect2(0, 0, 400, 400)
+	var placed := LedgerHud.cull([low], 14.0, null, LedgerHud.DEFAULT_GAUGE, [], null, [], view)
+	assert_eq(placed.size(), 1)
+	var w := 16.0 * 14.0 * 0.55
+	var p: Vector2 = placed[0]["at"]
+	assert_true(view.encloses(Rect2(p - Vector2(w * 0.5, 14.0 * 0.45), Vector2(w, 14.0 * 1.05))), "inside the view")
+	var corner := e.duplicate()
+	corner["beside"] = [Vector2(398, 398), 6.0]
+	var gone := LedgerHud.cull([corner], 14.0, null, LedgerHud.DEFAULT_GAUGE, [], null, [], Rect2(0, 0, 400, 400))
+	for k: Dictionary in gone:
+		var q: Vector2 = k["at"]
+		assert_true(Rect2(0, 0, 400, 400).encloses(Rect2(q - Vector2(w * 0.5 + 3.5, 14.0 * 0.45), Vector2(w + 7.0, 14.0 * 1.05))))
