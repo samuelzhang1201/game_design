@@ -113,6 +113,7 @@ func build() -> void:
 	_aabbs.clear()
 	_transforms.clear()
 	_variants.clear()
+	_chunks.clear()
 	_built_at = Vector2.INF
 	_built = true
 	ctx.houses()
@@ -151,60 +152,112 @@ func refresh(camera_xz: Vector2) -> bool:
 		return false
 	_built_at = camera_xz
 	var houses := houses_override if not houses_override.is_empty() else ctx.houses()
-	var pos: Dictionary = {}
-	for code: String in houses:
-		if ctx.repo.burgs.has(code):
-			var b: Dictionary = ctx.repo.burgs[code]
-			pos[code] = ctx.to_world(Vector2(float(b["x"]), float(b["y"])))
-	var buckets := Map3DHouses.visible_set(houses, ctx.repo, pos,
-		camera_xz, ctx.repo.bal("map3d_house_view_m"), _budget())
-	var clear := ctx.repo.bal("map3d_house_seat_clear_m")
-	var ground_inset := ctx.repo.bal("map3d_house_ground_inset")
-	var samples := int(ctx.repo.bal("map3d_house_ground_samples"))
+	if not is_same(_pos_of, houses):
+		_burg_pos = {}
+		for code: String in houses:
+			if ctx.repo.burgs.has(code):
+				var b: Dictionary = ctx.repo.burgs[code]
+				_burg_pos[code] = ctx.to_world(Vector2(float(b["x"]), float(b["y"])))
+		_pos_of = houses
+		_chunks.clear()
+	var shown := Map3DHouses.visible_burgs(houses, _burg_pos, camera_xz,
+		ctx.repo.bal("map3d_house_view_m"), _budget())
 	_transforms.clear()
 	_variants.clear()
-	var sea_y := float(ctx.meta.get("sea_y", 0.0))
-	var deck := ctx.repo.bal("map3d_pier_deck_m")
-	var piers: Dictionary = {}
-	for t: String in ctx.repo.map3d_houses:
-		if String(ctx.repo.map3d_houses[t].get("role", "")) == "pier":
-			piers[t] = true
+	# Each settlement's houses of a type are placed ONCE and kept, packed the
+	# way a MultiMesh buffer holds them (perf 2026-10-02: ~2,500 single-
+	# instance calls a rebuild, ~3.7 ms every map3d_house_rebuild_move_m of a
+	# pan); a rebuild joins the chunks of the settlements in view, in
+	# visible_set's order: settlement by settlement, each in its rows' order.
 	for type: String in _instances:
 		var mmi: MultiMeshInstance3D = _instances[type]
-		var rows: Array = buckets.get(type, [])
-		mmi.multimesh.instance_count = rows.size()
+		var buf := PackedFloat32Array()
 		var xforms: Array[Transform3D] = []
 		var picks: Array[Vector2i] = []
-		var box: AABB = _aabbs[type]
-		for i in rows.size():
-			var h: Dictionary = rows[i]
-			# The seat is sampled ONCE per house and kept on its row: the ground
-			# never moves, and re-sampling a 5x5 grid under every visible house on
-			# each rebuild cost ~40 ms a pan step at the high tier's 5000 houses
-			# (measured 2026-09-24). A new world loads new rows.
-			var ground: Vector2
-			if h.has("_seat"):
-				ground = h["_seat"]
-			elif piers.has(type):
-				# a pier's deck lies on the SEA (owner 2026-10-01: 码头延伸到海里),
-				# not on the highest ground under it, which is the bank at one
-				# end and the sea floor along the rest
-				ground = Vector2(sea_y, sea_y + deck)
-				h["_seat"] = ground
-			else:
-				ground = Map3DHouses.seat(
-					Map3DHouses.ground_under(h, box, ground_inset, samples, ctx.height_at), clear)
-				h["_seat"] = ground
-			var t := Map3DHouses.transform_of(h, ground.y)
-			mmi.multimesh.set_instance_transform(i, t)
-			xforms.append(t)
-			var pick := Vector2i(Map3DHouses.variant_of(h, _wall_tints.size(), 0),
-				Map3DHouses.variant_of(h, _roof_tints.size(), 1))
-			mmi.multimesh.set_instance_custom_data(i, Color(pick.x, pick.y, 0.0, 0.0))
-			picks.append(pick)
+		for code: String in shown:
+			var chunk := _chunk(code, type, houses[code])
+			if (chunk["xf"] as Array).is_empty():
+				continue
+			buf.append_array(chunk["buf"])
+			xforms.append_array(chunk["xf"])
+			picks.append_array(chunk["picks"])
+		mmi.multimesh.instance_count = xforms.size()
+		if not xforms.is_empty():
+			mmi.multimesh.buffer = buf
 		_transforms[type] = xforms
 		_variants[type] = picks
 	return true
+
+
+## Each settlement's world XZ, {code: Vector2}, for the houses dictionary it
+## was cut from (`_pos_of`): the settlements never move.
+var _burg_pos: Dictionary = {}
+var _pos_of: Variant = null
+
+
+## Floats one instance takes in a TRANSFORM_3D MultiMesh with custom data
+## and no colour: the 3x4 transform row by row, then the custom Color.
+const BUFFER_STRIDE := 16
+## {burg code + type: {buf, xf, picks}} — each settlement's houses of a type,
+## placed and packed (_chunk). A new world builds new ones (build()).
+var _chunks: Dictionary = {}
+
+
+## A settlement's houses of `type` (from `rows`, all of its houses, in their
+## order) placed and packed, kept for the next rebuild — a settlement's
+## houses never change for a houses dictionary (refresh() forgets the chunks
+## when it is another). The seat is sampled ONCE per house: the ground never
+## moves, and re-sampling a 5x5 grid under every visible house on each
+## rebuild cost ~40 ms a pan step at the high tier's 5000 houses (measured
+## 2026-09-24).
+func _chunk(code: String, type: String, all_rows: Array) -> Dictionary:
+	var key := code + "|" + type
+	if _chunks.has(key):
+		return _chunks[key]
+	var rows: Array = all_rows.filter(func(h: Dictionary) -> bool: return h["type"] == type)
+	var from := 0
+	var to := rows.size()
+	var clear := ctx.repo.bal("map3d_house_seat_clear_m")
+	var ground_inset := ctx.repo.bal("map3d_house_ground_inset")
+	var samples := int(ctx.repo.bal("map3d_house_ground_samples"))
+	var sea_y := float(ctx.meta.get("sea_y", 0.0))
+	var pier := String((ctx.repo.map3d_houses.get(type, {}) as Dictionary).get("role", "")) == "pier"
+	var box: AABB = _aabbs[type]
+	var buf := PackedFloat32Array()
+	buf.resize((to - from) * BUFFER_STRIDE)
+	var xforms: Array[Transform3D] = []
+	var picks: Array[Vector2i] = []
+	for n in to - from:
+		var h: Dictionary = rows[from + n]
+		var ground: Vector2
+		if h.has("_seat"):
+			ground = h["_seat"]
+		elif pier:
+			# a pier's deck lies on the SEA (owner 2026-10-01: 码头延伸到海里),
+			# not on the highest ground under it, which is the bank at one end
+			# and the sea floor along the rest
+			ground = Vector2(sea_y, sea_y + ctx.repo.bal("map3d_pier_deck_m"))
+			h["_seat"] = ground
+		else:
+			ground = Map3DHouses.seat(
+				Map3DHouses.ground_under(h, box, ground_inset, samples, ctx.height_at), clear)
+			h["_seat"] = ground
+		var t := Map3DHouses.transform_of(h, ground.y)
+		var pick := Vector2i(Map3DHouses.variant_of(h, _wall_tints.size(), 0),
+			Map3DHouses.variant_of(h, _roof_tints.size(), 1))
+		xforms.append(t)
+		picks.append(pick)
+		var o := n * BUFFER_STRIDE
+		for r in 3:
+			buf[o + r * 4] = t.basis.x[r]
+			buf[o + r * 4 + 1] = t.basis.y[r]
+			buf[o + r * 4 + 2] = t.basis.z[r]
+			buf[o + r * 4 + 3] = t.origin[r]
+		buf[o + 12] = float(pick.x)
+		buf[o + 13] = float(pick.y)
+	var out := {"buf": buf, "xf": xforms, "picks": picks}
+	_chunks[key] = out
+	return out
 
 
 ## Instances per type, for the tests and the bench.

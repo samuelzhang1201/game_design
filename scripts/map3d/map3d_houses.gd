@@ -88,6 +88,20 @@ static func footprint_radius_m(burg: Dictionary, repo: DataRepository) -> float:
 ## further thinning by population here (redesign owner 2026-09-20).
 static func visible_set(houses: Dictionary, _repo: DataRepository, burg_pos: Dictionary,
 		camera_xz: Vector2, view_m: float, budget: int) -> Dictionary:
+	var out: Dictionary = {}
+	for code: String in visible_burgs(houses, burg_pos, camera_xz, view_m, budget):
+		for h: Dictionary in houses[code]:
+			var type: String = h["type"]
+			if not out.has(type):
+				out[type] = []
+			(out[type] as Array).append(h)
+	return out
+
+
+## The settlements visible_set builds, nearest first (ties by code): those
+## within `view_m`, whole, until the next would pass `budget` houses.
+static func visible_burgs(houses: Dictionary, burg_pos: Dictionary, camera_xz: Vector2,
+		view_m: float, budget: int) -> Array:
 	var near: Array = []
 	for code: String in houses:
 		if not burg_pos.has(code):
@@ -97,20 +111,13 @@ static func visible_set(houses: Dictionary, _repo: DataRepository, burg_pos: Dic
 			continue
 		near.append({"code": code, "d": d})
 	near.sort_custom(func(a, b): return a["d"] < b["d"] if a["d"] != b["d"] else a["code"] < b["code"])
-	var out: Dictionary = {}
+	var out: Array = []
 	var used := 0
 	for e: Dictionary in near:
-		var code: String = e["code"]
-		var rows: Array = houses[code]
-		var want := rows.size()
+		var want := (houses[e["code"]] as Array).size()
 		if used + want > budget:
 			break
-		for i in want:
-			var h: Dictionary = rows[i]
-			var type: String = h["type"]
-			if not out.has(type):
-				out[type] = []
-			(out[type] as Array).append(h)
+		out.append(e["code"])
 		used += want
 	return out
 
