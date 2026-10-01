@@ -80,6 +80,11 @@ func update(state: GameState) -> void:
 			_remove(c)
 
 
+## Whether any piece is being pushed now.
+func pushing() -> bool:
+	return not _push.is_empty()
+
+
 ## Test seam: finish every push now.
 func settle() -> void:
 	for code: String in _push:
@@ -90,6 +95,8 @@ func settle() -> void:
 
 
 func _process(delta: float) -> void:
+	if _push.is_empty():
+		return
 	var total := maxf(_repo.bal("war_plot_push_s"), 0.0001) if _repo != null else 0.0001
 	for code: String in _push.keys():
 		var j: Dictionary = _push[code]
@@ -104,6 +111,7 @@ func _process(delta: float) -> void:
 		n.position = pos
 		if t >= 1.0:
 			_push.erase(code)
+	_view.redraw_marks()   # the chalk ring and the pennant's dashes follow a pushed piece, only while one moves
 
 
 ## Every piece on the screen (the view's design px): its base centre `at`, the

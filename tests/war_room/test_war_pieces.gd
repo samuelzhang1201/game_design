@@ -361,3 +361,29 @@ func test_the_nine_figures_stand_inside_the_base_and_are_centred_on_it() -> void
 	assert_almost_eq((lo.x + hi.x) * 0.5, 0.0, 0.0005, "centred side to side")
 	assert_almost_eq((lo.y + hi.y) * 0.5, 0.0, 0.0005, "centred front to back")
 	assert_lt(maxf(hi.x - lo.x, hi.y - lo.y), side, "the slots stand within the base")
+
+
+func test_the_chalk_ring_follows_a_pushed_piece() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var hud: WarHud = view.get_node("%Hud")
+	var p: Dictionary = WarRoom.on_sheet(repo, state, _home_sheet())[0]
+	var code := String(p["code"])
+	view.select(code)
+	var before: Vector2 = hud._chalk
+	ArmySystem.ensure(repo, state)
+	var to: Vector2 = (p["at"] as Vector2) + Vector2(20.0, 0.0)
+	var m := ArmySystem.pack_to_metres(repo, to)
+	state.regiments[code]["x_m"] = m.x
+	state.regiments[code]["y_m"] = m.y
+	view.refresh()
+	assert_true(pieces.pushing())
+	await wait_seconds(repo.bal("war_plot_push_s") * 0.5)
+	assert_true(pieces.pushing(), "half way")
+	var cam: Camera3D = view.get_node("%Camera")
+	var now := cam.unproject_position(pieces.piece(code).global_position) / view.window_scale()
+	assert_almost_eq(hud._chalk.x, now.x, 0.5, "the ring stands where the piece is mid-push")
+	assert_ne(hud._chalk.x, before.x, "and it has moved with it")
+	await wait_seconds(repo.bal("war_plot_push_s"))
+	assert_false(pieces.pushing(), "the push is over and the redraws stop")

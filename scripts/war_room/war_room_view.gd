@@ -306,6 +306,12 @@ func refresh() -> void:
 	_rake.redraw()
 
 
+## Redraw the HUD's marks (the rake, the chalk ring, the pennants' dashes):
+## WarPieces asks each frame a piece is pushed, so they follow it.
+func redraw_marks() -> void:
+	_rake.redraw()
+
+
 ## The rake's march was refused (or its order is done): let go of the piece.
 func cancel_rake() -> void:
 	_rake.cancel()

@@ -85,10 +85,14 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	return out
 
 
-## The line cut into dashes: `on` px drawn, `off` px left, along its whole length.
+## The line cut into dashes: `on` px drawn, `off` px left, along its whole
+## length. A dash or gap of no length cannot cut it: the whole line is one dash.
 static func dashed(poly: PackedVector2Array, on: float, off: float) -> Array[PackedVector2Array]:
 	var out: Array[PackedVector2Array] = []
 	if poly.size() < 2:
+		return out
+	if on <= 0.0 or off <= 0.0:
+		out.append(poly.duplicate())
 		return out
 	var drawing := true
 	var left := on

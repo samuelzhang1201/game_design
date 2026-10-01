@@ -170,7 +170,9 @@ func _routes() -> Array:
 		var pen := WarRoom.pennant_of(_repo, state, String(p["code"]))
 		if pen.is_empty() or not _view.sheet_rect().has_point(pen["at"]):
 			continue
-		var a: Variant = _view.screen_pos_of_px(p["at"])
+		var node := _pieces.piece(String(p["code"]))   # where the piece stands now, mid-push included
+		var a: Variant = _view.screen_pos_of_px(p["at"]) if node == null or _camera.is_position_behind(node.global_position) \
+			else _camera.unproject_position(node.global_position) / _view.window_scale()
 		var b: Variant = _view.screen_pos_of_px(pen["at"])
 		if a != null and b != null:
 			out.append([a, b])

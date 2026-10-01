@@ -44,3 +44,11 @@ func test_a_conquest_changes_the_cache_key() -> void:
 	assert_ne(WarSheetInk.cache_key(state, 0), before)
 	state.province_owner.erase(prov)
 	assert_eq(WarSheetInk.cache_key(state, 0), before)
+
+
+func test_a_dash_or_gap_of_no_length_gives_the_whole_line() -> void:
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(100, 0), Vector2(100, 50)])
+	for pair: Array in [[0.0, 10.0], [10.0, 0.0], [-1.0, 5.0], [0.0, 0.0]]:
+		var parts := WarSheetInk.dashed(line, float(pair[0]), float(pair[1]))
+		assert_eq(parts.size(), 1, str(pair))
+		assert_eq(parts[0], line, "the line itself, uncut")
