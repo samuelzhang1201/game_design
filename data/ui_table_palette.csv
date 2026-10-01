@@ -1,0 +1,30 @@
+key,color,notes
+ink,#2B1F15,"WAR TABLE (owner 2026-10-01, B3 + C1 bookmarks): body ink on paper — the report, the sheet's margin, the slip, the seal's tag"
+ink_muted,#5A4632,secondary ink on paper: captions and labels
+ink_dim,#7D6A52,faint ink on paper: hints and the empty-state line
+rubric,#7A1C17,the red rubric: section headers (¶) and the report's title
+track,#5A463238,a bar's empty track drawn on paper (with alpha)
+fill,#9A7433,a bar's fill on paper (old gold one shade deeper than on leather)
+good,#3E6B2F,a gain written on paper
+bad,#A8321E,a loss written on paper
+paper,#E6D6B0,the colour a paper surface multiplies its texture by
+sheet,#DDCBA2,the map sheet's vellum (a shade deeper than the report)
+paper_rule,#3B2A1B,the ink rules drawn round the map on the sheet
+brass_light,#F4DB9A,brass (dial / studs / pin / nails): the lit side
+brass_mid,#B08A3E,brass: the body
+brass_dark,#6B4E1C,brass: the shadowed rim
+wax_light,#A63A2F,the council seal's wax: the lit side
+wax_mid,#7A1C17,the council seal's wax: the body
+wax_dark,#5A1410,the council seal's wax: the rim and the pressed crown
+board,#2A1C12,the tally board's oak under its darkening
+board_ink,#F4EAD2,figures on the tally board
+board_label,#C7AE7F,labels (CROWN / HOUSE) on the tally board
+table_ink,#F0E3C4,words written straight on the table (the season and Menu)
+table_ink_soft,#CDBB93,the year line beside the dial
+table_tone,#A0703A22,a warm darkening laid over the oak planks (with alpha)
+light,#FFF2D024,the window's shaft of light across the table (with alpha)
+vignette,#0000002C,the table's darkening toward the far corners (with alpha)
+shadow,#000000,every object's shadow on the table (its alpha is ui_table_shadow_alpha)
+paper_lift,#F6EEDC52,"a pale wash over the report's paper art, so it reads cream rather than ochre (the critic of 2026-10-01: report, slip and sheet sat at one mid-gold value)"
+sheet_lift,#F4EAD440,a paler wash over the map sheet's vellum
+paper_ground,#D2BD90,"the report paper as it reads on screen, for fades that melt a card into the paper (MapDetailPanels scroll and painting fades; sampled from the 2026-10-01 shot)"

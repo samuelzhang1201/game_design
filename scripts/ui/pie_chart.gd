@@ -81,11 +81,11 @@ func _draw() -> void:
 			var x := LEGEND_X + 20.0 + ICON_PX
 			if named:
 				var word := String(s.get("label", ""))
-				draw_string(font, Vector2(x, y + 9.0), word, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.TEXT_MUTED)
+				draw_string(font, Vector2(x, y + 9.0), word, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.ink("muted"))
 				x += font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 6.0
 			draw_string(font, Vector2(x, y + 9.0), "%d%%" % roundi(pct),
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.TEXT_SOFT)
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.ink("soft"))
 		else:
 			draw_string(font, Vector2(LEGEND_X + 16.0, y + 9.0),
 				"%s %d%%" % [String(s.get("label", "")), roundi(pct)],
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.TEXT_SOFT)
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiPalette.ink("soft"))

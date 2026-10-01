@@ -109,6 +109,27 @@ add it here as a principle with its why — not as a changelog entry.
   the wood. Coloured header text on carved plaques read pasted on: the game's
   own ink.
 
+- **The main screens are a WAR TABLE: every piece is an object lying on
+  pale oak by daylight** (owner 2026-10-01, choosing B3 + C1's bookmarks
+  from three rounds of mock-ups: "就用这个，在游戏里做出来"; he had found the
+  leather chrome 简陋 with an AI feel — a sidebar/top-bar/bottom-bar admin
+  template that framed the 3D map as a small window). The map is a vellum
+  sheet with a deckled edge and ink rules; the facts column the steward's
+  pinned report in dark ink with red ¶ rubrics and tally marks, sized to what
+  is written on it; the purses a dark oak tally board with brass nails; the
+  date a brass dial; the clock brass studs; ENTER THE COUNCIL a red wax seal;
+  the tabs silk bookmarks hanging from under the sheet, coloured by group; the
+  news a paper slip between them. ONE light, upper left, every shadow soft and
+  down-right. What is held up to the eye (the audience window, events, menus,
+  the council column) stays dark leather. Lessons from the critic's two
+  passes: a paper texture's own ruled rim stretched over a big sheet reads
+  as a gilt frame (lay only the paper's middle); a solid offset shadow is a
+  sticker (step it soft); a filled vector polygon has no antialiasing (edge
+  it with an antialiased line); painted icons on 20 px studs are unreadable
+  (engrave a glyph); saturated royal hues on silk come from another picture
+  (heraldic tinctures); and a tally that rounds draws 49 and 50 alike (count
+  whole tens).
+
 ## Information
 - **Name it; the icon is the anchor, not the word** (owner 2026-09-28,
   reversing "icons, not words" of 2026-09-13/14 for the realm card and the
@@ -397,7 +418,9 @@ add it here as a principle with its why — not as a changelog entry.
 - **Lighten in the file, not with alpha.** A translucent mark cannot occlude
   the one under it.
 - **Dark UI after Crusader Kings III:** parchment ink on dark leather, gold accent. Test
-  contrast, not hexes.
+  contrast, not hexes. *Since 2026-10-01 only for what is held up to the eye
+  (windows, events, menus, the council column); the main screens lie on the
+  war table (see Panels).*
 - **Blackletter only where it can be read:** headers in title case, never
   all-caps runs.
 

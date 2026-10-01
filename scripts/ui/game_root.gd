@@ -116,6 +116,8 @@ func _ready() -> void:
 	_news_ticker.name = "NewsTicker"
 	_news_ticker.visible = false
 	add_child(_news_ticker)
+	# THE WAR TABLE: the news slip lies between the bookmark groups.
+	_bottom_bar.slip_moved.connect(_news_ticker.place_on_table)
 	_fps_counter = load("res://scenes/fps_counter.tscn").instantiate()
 	add_child(_fps_counter)
 	_load_settings()

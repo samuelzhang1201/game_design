@@ -131,6 +131,8 @@ func _ready() -> void:
 	_military.closed.connect(func() -> void: set_military_view(false))
 	%MinisterPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "column"))
+	if WarTable.dress_screen(self, %Bg, %MapPanel, %MinisterPanel):
+		WarTable.fit_report(%MinisterPanel, _dashboard)
 	_style_audience()
 	_show_dossier(false)
 	_build_skill_rows()

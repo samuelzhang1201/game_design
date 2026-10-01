@@ -1,0 +1,84 @@
+extends GutTest
+## THE WAR TABLE (owner 2026-10-01, B3 + C1's bookmarks; spec
+## docs/superpowers/specs/2026-10-01-war-table-ui-design.md): the main screens
+## laid out as objects on an oak table. These hold the pieces that carry
+## meaning — the switch, the paper ink, the bookmark colours as data, the
+## report that no longer runs under the bottom bar, the seal as the one
+## primary action — not the look, which the snapshots judge.
+
+func _root() -> GameRoot:
+	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
+	add_child_autofree(r)
+	return r
+
+func _court(r: GameRoot) -> CourtScreen:
+	Game.start_campaign(42)
+	Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	r._switch_to(GameRoot.State.COURT)
+	r.current_screen.enter_court(null)
+	return r.current_screen as CourtScreen
+
+func test_the_table_is_on_by_default_and_its_tables_load() -> void:
+	assert_true(UiPalette.war_table(), "balance ui_war_table 1")
+	for key in ["ink", "ink_muted", "rubric", "paper", "sheet", "brass_mid", "wax_mid", "board", "light"]:
+		assert_true(Game.data.ui_table_palette.has(key), "ui_table_palette.csv has " + key)
+
+func test_paper_takes_dark_ink_that_reads_on_it() -> void:
+	var ink := UiPalette.ink("soft")
+	assert_eq(ink, UiPalette.table_color("ink"))
+	var paper := UiPalette.table_color("paper")
+	assert_gt(paper.get_luminance() - ink.get_luminance(), 0.45, "dark ink on pale paper")
+	assert_eq(UiPalette.ink("rubric"), UiPalette.table_color("rubric"))
+
+func test_every_tab_has_a_bookmark_colour_in_the_data() -> void:
+	for tab: String in BottomBar.TABS:
+		assert_true(Game.data.ui_bookmarks.has(tab), "ui_bookmarks.csv colours " + tab)
+	# the lenses share one colour, and it is not a screen's
+	var lens := UiPalette.bookmark_color("HEIGHTS")
+	for tab: String in BottomBar.MAP_TABS:
+		assert_eq(UiPalette.bookmark_color(tab), lens)
+	assert_ne(UiPalette.bookmark_color("REALM"), lens)
+
+func test_the_report_ends_above_the_bookmarks_and_scrolls() -> void:
+	var r := _root()
+	var court := _court(r)
+	await wait_frames(3)
+	var column: Control = court.get_node("%LogPanel")
+	var bar_top := r.size.y - BottomBar.BAR_HEIGHT
+	assert_lt(column.get_global_rect().end.y, bar_top + 1.0,
+		"the left column never runs under the bottom bar (it did, 2026-10-01)")
+	var scroll: ScrollContainer = court.dashboard().find_child("Scroll", true, false)
+	assert_not_null(scroll, "the realm's card scrolls inside the column")
+
+func test_the_map_is_a_sheet_and_the_column_a_report() -> void:
+	var r := _root()
+	var court := _court(r)
+	await wait_frames(2)
+	assert_true(court.map_panel().get_theme_stylebox("panel") is PaperStyle, "the map lies on a vellum sheet")
+	var report := court.get_node("%LogPanel").get_theme_stylebox("panel") as PaperStyle
+	assert_not_null(report, "the left column is paper")
+	assert_true(report.pin, "pinned at its head")
+	assert_not_null(court.find_child("WarTable", false, false), "the oak table lies under the panels")
+
+func test_the_council_is_a_wax_seal_and_still_the_order() -> void:
+	var r := _root()
+	var court := _court(r)
+	await wait_frames(2)
+	var seal := court.council_handle()
+	assert_true(seal is WaxSeal, "ENTER THE COUNCIL is the council's seal")
+	assert_eq(seal.text, "ENTER THE COUNCIL", "its text stays the order")
+
+func test_tally_marks_count_whole_tens() -> void:
+	var chart := BarChart.new()
+	add_child_autofree(chart)
+	chart.named = true
+	chart.tally = true
+	chart.size = Vector2(220, 60)
+	chart.set_rows([{"label": "Legitimacy", "value": 49.0, "text": "49"},
+		{"label": "Church", "value": 50.0, "text": "50"}], 100.0)
+	await wait_frames(1)
+	assert_eq(BarChart.tally_marks(49.0, 10.0), 4, "49 is four strokes")
+	assert_eq(BarChart.tally_marks(50.0, 10.0), 5, "50 is a gate")
+	assert_eq(BarChart.tally_marks(0.0, 10.0), 0)
