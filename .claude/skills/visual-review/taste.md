@@ -609,3 +609,8 @@ add it here as a principle with its why — not as a changelog entry.
   Smooth low-poly crowns read as CG moss on the aerial ground however they are
   tinted; crowns are cut-out aerial photographs of real trees, warm olive,
   over a DARK floor so the gaps between crowns read as depth.
+- **Fortifications are as refined as the houses, never kit boxes** (owner
+  2026-10-01, on walls and a pier built from the house kit's primitives:
+  城墙和码头都太丑太简陋了，我要更精致的感觉，走game arts流程). Walls, towers, gates
+  and piers go through the art route the houses took — photoreal references,
+  Tripo, processed in Blender — not boxes and merlons laid by script.

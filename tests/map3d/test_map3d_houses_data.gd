@@ -4,6 +4,10 @@ extends GutTest
 ## generated them.
 
 const ROLES := ["landmark", "house", "barn"]
+## Roles the bake lays by their own rules, never drawn for a plot: a town's
+## walls (bake_houses.fortify) and a port's pier (bake_houses.harbour) —
+## owner 2026-10-01.
+const LAID_ROLES := ["wall", "pier"]
 const GROUPS := ["capital", "city", "fort", "town", "village"]
 ## Redesign owner 2026-09-20 (lanes, not a jittered grid): the density/edge/
 ## spacing/road-align/per-population keys are gone, replaced by the
@@ -32,7 +36,8 @@ func test_the_table_loads_and_every_row_is_well_formed() -> void:
 	assert_gt(rows.size(), 6, "the type table has a usable set of houses")
 	for type: String in rows:
 		var r: Dictionary = rows[type]
-		assert_true(ROLES.has(String(r["role"])), type + " has a known role")
+		assert_true(ROLES.has(String(r["role"])) or LAID_ROLES.has(String(r["role"])),
+			type + " has a known role")
 		assert_gt(float(r["weight"]), 0.0, type + " has a positive weight")
 		assert_gt(float(r["footprint_m"]), 0.0, type + " has a footprint")
 		assert_gt(float(r["height_m"]), 0.0, type + " has a height")

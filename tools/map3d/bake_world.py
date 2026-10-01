@@ -740,6 +740,16 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         foot[y0:y1, x0:x1] = np.maximum(foot[y0:y1, x0:x1], mf)
 
     types = house_types()
+    # the drawn roads, smoothed as the runtime smooths them, in world metres:
+    # a walled town's gates stand where they cross its wall (owner 2026-10-01)
+    road_lines = []
+    with open(os.path.join(ROOT, "data", "maps", MAP, "geography", "routes.csv")) as f:
+        steps = int(next(r["value"] for r in csv.DictReader(open(os.path.join(ROOT, "data", "balance.csv")))
+                         if r["key"] == "map_route_smoothing_steps"))
+        for r in csv.DictReader(f):
+            pts = [tuple(float(v) for v in p.split()) for p in r["points"].split("|") if p.strip()]
+            line = bake_houses.smooth_open(pts, steps)
+            road_lines.append([(ORIGIN_X + x * M_PER_PX, ORIGIN_Y + y * M_PER_PX) for x, y in line])
     # world_cell_index.png is the GAME's own land test (MapManors.cell_at,
     # what test_no_house_stands_in_the_sea checks against): a pack-px raster,
     # coarser than this bake's own fine coastline coverage (`land`). A house
@@ -752,6 +762,9 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     pxi_g = np.clip((np.arange(vw) / k).astype(np.int64), 0, pw - 1)
     pyi_g = np.clip((np.arange(vh) / k).astype(np.int64), 0, ph - 1)
     land_gate = land & has_cell[pyi_g][:, pxi_g]
+    # open water by BOTH tests: a pier's head must stand where the game's
+    # cell index is sea too (owner 2026-10-01, 码头延伸到海里)
+    open_water = ~(land.astype(bool) | has_cell[pyi_g][:, pxi_g])
     del pxi_g, pyi_g
     # every settlement is laid out round its LANDMARK's own spot (owner
     # 2026-09-25: 标志性建筑要在中间附近), which moves off water or a slope,
@@ -827,6 +840,16 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
             built.append((cx, cy, min(spread / VERTEX_M / rules["house_built_share"],
                                       r_house / rules["house_built_share"])))
             built_r[bi] = built[-1][2]
+        # a walled town's wall and a port's pier (owner 2026-10-01), as more
+        # rows of its own, laid round the houses that just got placed
+        if rows:
+            ox, oz = ORIGIN_X + float(b["x"]) * M_PER_PX, ORIGIN_Y + float(b["y"]) * M_PER_PX
+            near = (bake_houses.cluster_radius_m(b, rules, types) + rules["wall_margin_m"]) * 3.0
+            roads = [[(x - ox, z - oz) for x, z in line] for line in road_lines
+                     if any(abs(x - ox) < near and abs(z - oz) < near for x, z in line)]
+            rows = rows + bake_houses.fortify(b, rows, rules, types, land_gate, wet, k, vw, vh, roads)
+            rows = rows + bake_houses.harbour(b, rows, rules, land_gate, height, k, vw, vh, rules["sea_y_m"],
+                                              water=open_water)
         for r in rows:
             r["x_m"] = ORIGIN_X + float(b["x"]) * M_PER_PX + r["x_m"]
             r["z_m"] = ORIGIN_Y + float(b["y"]) * M_PER_PX + r["z_m"]
