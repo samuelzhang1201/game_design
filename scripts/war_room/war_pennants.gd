@@ -3,8 +3,13 @@ extends Node3D
 ## Order pennants on the sheet (spec 2026-10-01-war-room-design §3): one per
 ## march order, planted at its destination; its slip reads "courier riding ·
 ## <the day he left>" until the courier hands the order over, then "order
-## received"; struck when the column arrives (WarRoom.pennant_of turns {}).
+## received" (a newer garrison courier turns it to "countermand riding");
+## struck when the column arrives (WarRoom.pennant_of turns {}).
 ## Never reaches the Game autoload.
+
+## A pennant's slip by status (the dated ones take the day their courier left).
+const SLIPS := {"riding": "courier riding · %s", "countermanded": "countermand riding · %s",
+		"received": "order received"}
 
 var _repo: DataRepository
 var _view: WarRoomView
@@ -76,7 +81,7 @@ func _build(code: String, at: Vector2, status: String, issued: int) -> Node3D:
 	root.add_child(cloth)
 	var slip := Label3D.new()
 	slip.name = "Slip"
-	slip.text = "courier riding · %s" % WarRoom.date_of(issued) if status == "riding" else "order received"
+	slip.text = SLIPS[status] % CourierCard.date_of(issued) if SLIPS[status].contains("%s") else SLIPS[status]
 	slip.font_size = int(_repo.bal("war_pennant_font_px"))
 	slip.pixel_size = h / _repo.bal("war_pennant_pixel_ratio")
 	slip.billboard = BaseMaterial3D.BILLBOARD_ENABLED

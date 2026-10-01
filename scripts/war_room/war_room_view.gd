@@ -16,6 +16,7 @@ signal army_menu_requested(code: String, at: Vector2)
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
 signal route_clicked(code: String, at: Vector2)
 signal rake_started(code: String)
+signal rake_dropped
 signal sheet_requested(index: int)
 signal sheet_laid(index: int)
 
@@ -39,7 +40,6 @@ var aim_code := ""
 @onready var _arrows: Node3D = %EdgeArrows
 @onready var _pieces: WarPieces = %Pieces
 @onready var _pennants: WarPennants = %Pennants
-@onready var _hud: WarHud = %Hud
 
 var _repo: DataRepository
 var _state_fn: Callable
@@ -80,7 +80,7 @@ func bind(repo: DataRepository, state_fn: Callable, paused_fn: Callable) -> void
 	_paused_fn = paused_fn
 	_pieces.setup(repo, self)
 	_pennants.setup(repo, self)
-	_rake.setup(self, repo, {"hud": _hud, "pieces": _pieces, "pennants": _pennants, "camera": _camera,
+	_rake.setup(self, repo, {"hud": %Hud, "pieces": _pieces, "pennants": _pennants, "camera": _camera,
 		"arrows": _arrows, "chart": _chart})
 	_table_w = repo.bal("war_table_w_m")
 	_rig.distance = repo.bal("war_cam_distance_m")
@@ -195,7 +195,7 @@ func swap_to(index: int) -> void:
 	if _sheet < 0 or not is_processing():
 		lay_sheet(index)
 		return
-	_rake.cancel()   # a rake does not follow the table up
+	_rake.drop()   # a rake does not follow the table up
 	_swap.start(index, _repo)
 
 
@@ -205,7 +205,8 @@ func _process(delta: float) -> void:
 	if _swap.step(delta):
 		lay_sheet(_swap.to)
 	_table.scale = Vector3(1.0, 1.0, _swap.z_scale())
-	_pieces.visible = not _swap.active()   # the pieces are put away while a sheet rolls
+	_pieces.visible = not _swap.active()   # the pieces and pennants are put away while a sheet rolls
+	_pennants.visible = _pieces.visible
 
 
 ## A roll cut short (the room closed) lays its sheet and stands the table up.
@@ -216,6 +217,7 @@ func _finish_swap() -> void:
 			lay_sheet(_swap.to)
 	_table.scale = Vector3.ONE
 	_pieces.visible = true
+	_pennants.visible = true
 
 
 ## The sheet's ink onto the table's material (WarRoomInk draws and keeps it).
@@ -285,6 +287,10 @@ func clear_selection() -> void:
 	_rake.redraw()
 
 
+func rolling() -> bool:
+	return _swap.active()
+
+
 func select(code: String) -> void:
 	_selected = code
 	piece_selected.emit(code)
@@ -294,7 +300,7 @@ func select(code: String) -> void:
 ## The code of the piece under a screen px, "" when none (and none while a
 ## sheet rolls: the pieces are put away).
 func piece_under(screen_px: Vector2) -> String:
-	if _swap.active():
+	if rolling():
 		return ""
 	return _pieces.pick(_camera, window_scale(), screen_px, _repo.bal("war_pick_px"))
 

@@ -27,6 +27,7 @@ func _ready() -> void:
 	_view.piece_selected.connect(_on_piece)
 	_view.selection_cleared.connect(_clear_card)
 	_view.rake_started.connect(_on_rake)
+	_view.rake_dropped.connect(_orders.withdraw_aim)   # a rake given up takes its armed march with it
 	_view.sheet_requested.connect(_view.swap_to)
 	_view.sheet_laid.connect(_on_laid)
 

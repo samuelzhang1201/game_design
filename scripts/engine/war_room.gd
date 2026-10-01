@@ -72,32 +72,43 @@ static func pose_action(order: String) -> String:
 	return "STANDBY"
 
 
-## The pennant over a march order: where the newest ARMY_MARCH courier for the
-## regiment carries it ("riding"; a newer courier with another order, a
-## garrison say, does not hide it; `issued` is the absolute day he left), else
-## the march the column is under ("received"); {} when neither.
+## The pennant over a march order: where the newest ARMY_MARCH courier still
+## riding for the regiment carries it ("riding"; one the regiment has since
+## been ordered past — a newer order delivered — is set aside and plants
+## nothing), else the march the column is under ("received"); {} when neither.
+## A garrison courier NEWER than the march's countermands it: the pennant
+## stands with status "countermanded" (its `issued` the garrison courier's day)
+## until he arrives, so Cancel march visibly lands on it. `issued` is the
+## absolute day the courier left (riding / countermanded).
 static func pennant_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
-	var best: Dictionary = {}
+	var delivered := int(ArmySystem.state_of(repo, state, code).get("order_id", 0))
+	var march: Dictionary = {}
+	var halt: Dictionary = {}
 	for c: Dictionary in state.couriers:
-		var order: Dictionary = c.get("order", {})
-		if String(c["target"]) == code and String(order.get("action_code", "")) == "ARMY_MARCH" \
-				and (best.is_empty() or int(c["id"]) > int(best["id"])):
-			best = c
-	if not best.is_empty():
-		var o: Dictionary = best["order"]
-		return {"at": ArmySystem.metres_to_pack(repo, Vector2i(int(o["dest_x_m"]), int(o["dest_y_m"]))),
-			"status": "riding", "issued": int(best.get("issued", 0))}
-	if ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH:
-		return {"at": ArmySystem.destination_of(repo, state, code), "status": "received"}
-	return {}
-
-
-## An absolute day written as the calendar writes it ("Spring 12, Year 1"): the
-## date on a riding pennant's slip.
-static func date_of(abs_day: int) -> String:
-	var d := maxi(abs_day, 1) - 1
-	@warning_ignore("integer_division")  # whole ticks
-	return Calendar.date_string(d / Calendar.DAYS_PER_TICK + 1, d % Calendar.DAYS_PER_TICK + 1)
+		if String(c["target"]) != code or int(c["id"]) < delivered:
+			continue
+		var kind := String(c.get("order", {}).get("action_code", ""))
+		if kind == "ARMY_MARCH" and (march.is_empty() or int(c["id"]) > int(march["id"])):
+			march = c
+		elif kind == "ARMY_GARRISON" and (halt.is_empty() or int(c["id"]) > int(halt["id"])):
+			halt = c
+	var at := Vector2(-1, -1)
+	var status := ""
+	var issued := 0
+	if not march.is_empty():
+		var o: Dictionary = march["order"]
+		at = ArmySystem.metres_to_pack(repo, Vector2i(int(o["dest_x_m"]), int(o["dest_y_m"])))
+		status = "riding"
+		issued = int(march.get("issued", 0))
+	elif ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH:
+		at = ArmySystem.destination_of(repo, state, code)
+		status = "received"
+	else:
+		return {}
+	if not halt.is_empty() and (march.is_empty() or int(halt["id"]) > int(march["id"])):
+		status = "countermanded"
+		issued = int(halt.get("issued", 0))
+	return {"at": at, "status": status, "issued": issued}
 
 
 ## The slip pinned beside a piece: heads under arms and whole months of stores.

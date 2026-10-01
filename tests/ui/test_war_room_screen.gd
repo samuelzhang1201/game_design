@@ -123,9 +123,11 @@ func test_the_rake_on_a_running_clock_says_why_and_arms_nothing() -> void:
 	Game.set_clock_speed(1)
 	var screen := r.war_room_screen()
 	var code := String(WarRoom.on_sheet(Game.data, Game.state, screen.view().sheet_index())[0]["code"])
+	watch_signals(Game)
 	screen.view().rake_started.emit(code)
 	Game.set_clock_speed(0)
 	assert_eq(screen.orders().aiming(), "")
+	assert_signal_emitted(Game, "news_published", "the reason is published")
 
 
 func test_a_committed_rake_plants_a_pennant_with_a_riding_slip() -> void:
@@ -147,7 +149,123 @@ func test_a_committed_rake_plants_a_pennant_with_a_riding_slip() -> void:
 		to = (p["at"] as Vector2) + Vector2(0.0, 6.0)
 	screen.view().ground_clicked.emit(to, Vector2(100, 100))
 	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_eq(String(WarRoom.pennant_of(Game.data, Game.state, code).get("status", "")), "riding")
 	var pennants: WarPennants = screen.view().get_node("%Pennants")
 	assert_not_null(pennants.get_node_or_null(NodePath(code)))
+
+
+func _real_press(view: WarRoomView, at: Vector2, pressed: bool) -> void:
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = pressed
+	e.position = at
+	view._gui_input(e)
+
+
+func _land_piece(screen: WarRoomScreen) -> Dictionary:
+	for q: Dictionary in WarRoom.on_sheet(Game.data, Game.state, screen.view().sheet_index()):
+		if not bool(q["naval"]):
+			return q
+	return {}
+
+
+## A land point of the sheet, at least war_rake_min_px + 4 design px from `at` on the screen.
+func _land_near(screen: WarRoomScreen, at: Vector2) -> Vector2:
+	var from: Vector2 = screen.view().screen_pos_of_px(at)
+	for k: float in [6.0, 12.0, 24.0, 40.0]:
+		for d: Vector2 in [Vector2(-k, 0), Vector2(0, -k), Vector2(k, 0), Vector2(0, k)]:
+			var scr: Variant = screen.view().screen_pos_of_px(at + d)
+			if scr != null and MapEconomy.cell_at(Game.data, at + d) >= 0 \
+					and (scr as Vector2).distance_to(from) >= Game.data.bal("war_rake_min_px") + 4.0 \
+					and screen.view().pack_at(scr).x >= 0.0:
+				return at + d
+	return at
+
+
+func test_a_real_drag_from_a_piece_commits_a_march_and_plants_a_riding_pennant() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(3)
+	Game.set_clock_speed(0)
+	var screen := r.war_room_screen()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	var from: Vector2 = view.screen_pos_of_px(p["at"])
+	var to: Vector2 = view.screen_pos_of_px(_land_near(screen, p["at"]))
+	_real_press(view, from, true)
+	var e := InputEventMouseMotion.new()
+	e.position = to
+	e.button_mask = MOUSE_BUTTON_MASK_LEFT
+	view._gui_input(e)
+	assert_eq(screen.orders().aiming(), code, "the drag armed the march")
+	_real_press(view, to, false)
+	assert_true(screen.orders().pending().x >= 0.0, "the release named a destination and asked COMMIT / CANCEL")
+	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	await wait_process_frames(2)
+	assert_eq(String(WarRoom.pennant_of(Game.data, Game.state, code).get("status", "")), "riding")
+	assert_not_null((view.get_node("%Pennants") as WarPennants).pennant(code))
+
+
+func test_a_click_on_a_riding_pennant_opens_edit_route_and_cancel_march() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(3)
+	Game.set_clock_speed(0)
+	var screen := r.war_room_screen()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	var to := _land_near(screen, p["at"])
+	screen.orders().aim_for(code)
+	view.ground_clicked.emit(to, Vector2(100, 100))
+	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	await wait_process_frames(2)
+	var hit: Dictionary = (view.get_node("%Pennants") as WarPennants).screen_hits(
+		view.get_node("%Camera"), view.window_scale())[0]
+	var at := (hit["rect"] as Rect2).get_center()
+	_real_press(view, at, true)
+	_real_press(view, at, false)
+	var menu := screen.orders()
+	assert_gte(menu.get_item_index(ArmyOrderMenu.EDIT), 0, "Edit route is offered over a march whose courier still rides")
+	assert_gte(menu.get_item_index(ArmyOrderMenu.HALT), 0, "and Cancel march")
+	assert_false(menu.is_item_disabled(menu.get_item_index(ArmyOrderMenu.HALT)), "Cancel march can be chosen")
+
+
+func test_a_rake_released_off_the_table_withdraws_the_armed_march() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(3)
+	Game.set_clock_speed(0)
+	var screen := r.war_room_screen()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	var from: Vector2 = view.screen_pos_of_px(p["at"])
+	_real_press(view, from, true)
+	var e := InputEventMouseMotion.new()
+	e.position = from + Vector2(50, 0)
+	e.button_mask = MOUSE_BUTTON_MASK_LEFT
+	view._gui_input(e)
+	assert_eq(screen.orders().aiming(), String(p["code"]))
+	_real_press(view, Vector2(-50, -50), false)
+	assert_eq(screen.orders().aiming(), "")
+
+
+func test_a_sheet_roll_withdraws_a_rake_in_hand_s_armed_march() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(3)
+	Game.set_clock_speed(0)
+	var screen := r.war_room_screen()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	var from: Vector2 = view.screen_pos_of_px(p["at"])
+	_real_press(view, from, true)
+	var e := InputEventMouseMotion.new()
+	e.position = from + Vector2(50, 0)
+	e.button_mask = MOUSE_BUTTON_MASK_LEFT
+	view._gui_input(e)
+	assert_eq(screen.orders().aiming(), String(p["code"]))
+	view.swap_to((view.sheet_index() + 1) % WarSheets.series(Game.data).size())
+	assert_eq(screen.orders().aiming(), "")

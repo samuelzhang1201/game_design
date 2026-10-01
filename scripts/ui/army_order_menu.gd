@@ -77,9 +77,12 @@ func _open_for(code: String, at: Vector2) -> void:
 	_pop(at)
 
 
-## A committed march's end ring was clicked: Edit route… or Cancel march.
+## A committed march's end ring (or the war room's pennant, which also stands
+## over a march whose courier still rides) was clicked: Edit route… or Cancel
+## march.
 func _open_route(code: String, at: Vector2) -> void:
-	if Game.state == null or ArmySystem.order_of(Game.data, Game.state, code) != ArmySystem.ORDER_MARCH:
+	if Game.state == null or (ArmySystem.order_of(Game.data, Game.state, code) != ArmySystem.ORDER_MARCH \
+			and WarRoom.pennant_of(Game.data, Game.state, code).is_empty()):
 		return
 	_set_aim("")
 	_code = code

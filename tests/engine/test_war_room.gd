@@ -77,7 +77,7 @@ func test_no_order_no_pennant_then_riding_then_received() -> void:
 	assert_almost_eq((p["at"] as Vector2).x, to.x, 0.01)
 
 
-func test_a_newer_non_march_courier_hides_neither_a_riding_march_nor_a_received_one() -> void:
+func test_a_newer_garrison_courier_countermands_a_riding_march_and_a_received_one() -> void:
 	var code := _land_code()
 	var here := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
 	var to := here + Vector2(20.0, 0.0)
@@ -86,13 +86,24 @@ func test_a_newer_non_march_courier_hides_neither_a_riding_march_nor_a_received_
 		{"action_code": "ARMY_MARCH", "dest_x_m": dest_m.x, "dest_y_m": dest_m.y})
 	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
 	var p := WarRoom.pennant_of(repo, state, code)
-	assert_eq(String(p["status"]), "riding", "the older march still rides under a newer garrison")
-	assert_almost_eq((p["at"] as Vector2).x, to.x, 0.01)
+	assert_eq(String(p["status"]), "countermanded", "the older march still rides under a newer garrison, countermanded")
+	assert_almost_eq((p["at"] as Vector2).x, to.x, 0.01, "the pennant stays where the march was bound")
 	state.couriers.clear()
 	ArmySystem.set_march(repo, state, code, to)
 	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
 	p = WarRoom.pennant_of(repo, state, code)
-	assert_eq(String(p["status"]), "received")
+	assert_eq(String(p["status"]), "countermanded", "a received march under a garrison courier is countermanded too")
+	assert_almost_eq((p["at"] as Vector2).x, to.x, 0.01)
+
+
+func test_a_march_older_than_a_delivered_order_plants_no_pennant() -> void:
+	var code := _land_code()
+	var here := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
+	var dest_m := ArmySystem.pack_to_metres(repo, here + Vector2(20.0, 0.0))
+	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code,
+		{"action_code": "ARMY_MARCH", "dest_x_m": dest_m.x, "dest_y_m": dest_m.y})
+	state.regiments[code]["order_id"] = int(state.next_courier_id) + 1   # a newer order already arrived
+	assert_eq(WarRoom.pennant_of(repo, state, code), {}, "set aside: it will plant nothing")
 
 
 func test_a_garrison_courier_alone_strikes_no_pennant() -> void:
@@ -120,13 +131,12 @@ func test_grouping() -> void:
 	assert_eq(WarRoom.group(-6448), "-6,448")
 
 
-func test_a_riding_pennant_carries_the_day_its_courier_left_and_dates_read_as_the_calendar() -> void:
+func test_a_riding_pennant_carries_the_day_its_courier_left() -> void:
 	var code := _land_code()
 	var here := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
 	var dest_m := ArmySystem.pack_to_metres(repo, here + Vector2(20.0, 0.0))
 	var c := CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code,
 		{"action_code": "ARMY_MARCH", "dest_x_m": dest_m.x, "dest_y_m": dest_m.y})
 	assert_eq(int(WarRoom.pennant_of(repo, state, code)["issued"]), int(c["issued"]))
-	assert_eq(WarRoom.date_of(1), Calendar.date_string(1, 1))
-	assert_eq(WarRoom.date_of(31), Calendar.date_string(2, 1))
-	assert_eq(WarRoom.date_of(Calendar.DAYS_PER_YEAR + 5), "Spring 5, Year 2")
+	var h := CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
+	assert_eq(int(WarRoom.pennant_of(repo, state, code)["issued"]), int(h["issued"]), "a countermand is dated by its own courier")

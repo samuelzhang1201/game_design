@@ -303,15 +303,31 @@ func test_a_refused_rake_lets_go_and_the_rest_of_the_drag_does_nothing() -> void
 	assert_signal_not_emitted(view, "piece_selected")
 
 
-func test_the_arrow_reads_the_distance_and_the_days() -> void:
+func test_the_arrow_reads_the_distance_in_the_packs_measure_and_the_days() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_frames(2)
 	var p := _first_land_piece()
 	var code := String(p["code"])
 	var to: Vector2 = (p["at"] as Vector2) + Vector2(10.0, 0.0)
-	var km := 10.0 * float(ArmySystem.metres_per_pack_px(repo)) / 1000.0
-	var days := ArmySystem.march_days(repo, state, code, km * 1000.0)
-	assert_eq(view.rake_reading(code, to), "%d km · ~%d day%s" % [int(round(km)), days, "" if days == 1 else "s"])
+	var dist := 10.0 * float(repo.map_info.get("distance_scale", "1"))
+	var days := ArmySystem.march_days(repo, state, code, 10.0 * float(ArmySystem.metres_per_pack_px(repo)))
+	assert_eq(view.rake_reading(code, to), "%s %s · ~%d day%s" % [WarRoom.group(int(round(dist))),
+		String(repo.map_info.get("distance_unit", "km")), days, "" if days == 1 else "s"])
+
+
+func test_a_regiment_that_cannot_move_reads_a_word_not_zero_days() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_frames(2)
+	var p := _first_land_piece()
+	var code := String(p["code"])
+	var reg := ArmySystem.regiment(repo, code)
+	var kept: Dictionary = reg.duplicate()
+	for arm: String in repo.army_speed:
+		reg[arm] = "0"   # no one under arms: no pace at all
+	assert_eq(ArmySystem.day_march_m(repo, state, code), 0, "premise: it cannot march")
+	var text := view.rake_reading(code, (p["at"] as Vector2) + Vector2(10.0, 0.0))
+	reg.merge(kept, true)   # the pack's row is shared: put it back
+	assert_string_ends_with(text, "cannot march")
 
 
 func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -> void:
@@ -334,6 +350,10 @@ func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -
 	_press(at)
 	_release(at)
 	assert_signal_emitted_with_parameters(view, "route_clicked", [code, at])
+	assert_eq(view._rake._routes().size(), 1, "a dashed line from the piece to its pennant")
+	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
+	view.refresh()
+	assert_string_starts_with((pennants.pennant(code).get_node("Slip") as Label3D).text, "countermand riding · ")
 	state.couriers.clear()
 	ArmySystem.set_march(repo, state, code, to)
 	view.refresh()
@@ -364,3 +384,54 @@ func test_the_hud_draws_an_arrow_only_between_two_real_points() -> void:
 	assert_true(hud.drawing())
 	hud.draw_state(Vector2(10, 10), Vector2(10, 10), "", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null)
 	assert_false(hud.drawing(), "no length, no arrow")
+
+
+func test_a_rake_released_off_the_table_says_it_was_dropped() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_frames(2)
+	var p := _first_land_piece()
+	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	watch_signals(view)
+	_press(at)
+	_move(at + Vector2(40, 0))
+	view.aiming = true
+	_release(Vector2(-50, -50))   # off the table
+	assert_signal_emitted(view, "rake_dropped")
+	assert_signal_not_emitted(view, "ground_clicked")
+	assert_eq(view._rake.code, "")
+
+
+func test_a_sheet_roll_drops_a_rake_in_hand_and_hides_the_pennants() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_frames(2)
+	var p := _first_land_piece()
+	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	_press(at)
+	_move(at + Vector2(40, 0))
+	watch_signals(view)
+	view.swap_to((view.sheet_index() + 1) % WarSheets.series(repo).size())
+	assert_signal_emitted(view, "rake_dropped")
+	view._process(0.01)
+	assert_false((view.get_node("%Pennants") as Node3D).visible, "pennants are put away while the sheet rolls")
+	assert_eq(view._rake._routes(), [], "and so are their lines")
+	view._process(repo.bal("war_sheet_swap_s"))
+	assert_true((view.get_node("%Pennants") as Node3D).visible)
+
+
+func test_no_rake_in_hand_means_nothing_is_dropped_by_a_roll() -> void:
+	view.lay_sheet(0)
+	await wait_frames(2)
+	watch_signals(view)
+	view.swap_to(1)
+	assert_signal_not_emitted(view, "rake_dropped")
+
+
+func test_the_hud_draws_a_pennants_line_and_its_min_length_is_data() -> void:
+	var hud: WarHud = view.get_node("%Hud")
+	var pal: Dictionary = repo.war_palette
+	hud.draw_state(Vector2(-1, -1), Vector2(-1, -1), "", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null, false,
+		[[Vector2(10, 10), Vector2(200, 10)]])
+	assert_true(hud.drawing(), "a route alone is drawn")
+	var short := repo.bal("war_hud_min_len_px") - 1.0
+	hud.draw_state(Vector2(10, 10), Vector2(10 + short, 10), "", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null)
+	assert_false(hud.drawing())

@@ -37,7 +37,7 @@ func setup(view: WarRoomView, repo: DataRepository, nodes: Dictionary) -> void:
 	_hud.setup(repo)
 
 
-## The rake let go (refused, a sheet rolling, the aim ended): no arrow.
+## The rake let go (refused, the aim ended): no arrow.
 func cancel() -> void:
 	code = ""
 	_press_code = ""
@@ -45,12 +45,28 @@ func cancel() -> void:
 	redraw()
 
 
-## "<km> km · ~<days> day(s)" from the regiment to a pack point.
+## A rake in hand is given up for good (released off the table, cut by a sheet
+## rolling): the view says so (`rake_dropped`), for the screen to withdraw the
+## armed march with it. Nothing in hand, nothing said.
+func drop() -> void:
+	var held := code != ""
+	cancel()
+	if held:
+		_view.rake_dropped.emit()
+
+
+## "<distance> <unit> · ~<days> day(s)" from the regiment to a pack point, in
+## the pack's own measure; "cannot march" for a banner with no one to march.
 func reading(regiment: String, to_px: Vector2) -> String:
-	var from := WarRoom.believed_position(_repo, _view.state(), ArmySystem.regiment(_repo, regiment))
-	var metres := from.distance_to(to_px) * float(ArmySystem.metres_per_pack_px(_repo))
-	var days := ArmySystem.march_days(_repo, _view.state(), regiment, metres)
-	return "%d km · ~%d day%s" % [int(round(metres / 1000.0)), days, "" if days == 1 else "s"]
+	var state := _view.state()
+	var from := WarRoom.believed_position(_repo, state, ArmySystem.regiment(_repo, regiment))
+	var unit := String(_repo.map_info.get("distance_unit", "")).strip_edges()
+	var dist := from.distance_to(to_px) * float(_repo.map_info.get("distance_scale", "1"))
+	var text := "%s %s" % [WarRoom.group(int(round(dist))), unit if unit != "" else "km"]
+	if ArmySystem.day_march_m(_repo, state, regiment) <= 0:
+		return text + " · cannot march"
+	var days := ArmySystem.march_days(_repo, state, regiment, from.distance_to(to_px) * float(ArmySystem.metres_per_pack_px(_repo)))
+	return text + " · ~%d day%s" % [days, "" if days == 1 else "s"]
 
 
 func on_left(mb: InputEventMouseButton) -> void:
@@ -66,9 +82,11 @@ func on_left(mb: InputEventMouseButton) -> void:
 	if code != "":
 		var px := _view.pack_at(mb.position)
 		to = mb.position
-		code = ""
 		if _view.aiming and px.x >= 0.0:
+			code = ""
 			_view.ground_clicked.emit(px, mb.position)
+		else:
+			drop()   # off the table: no destination, so the armed march goes too
 		redraw()
 		_view.accept_event()
 		return
@@ -77,7 +95,7 @@ func on_left(mb: InputEventMouseButton) -> void:
 	var scale := _view.window_scale()
 	var i := WarRoomPicks.sheet_target(_arrows, _chart, _camera, _repo, mb.position, scale)
 	var radius := _repo.bal("war_pick_px")
-	var pennant := WarRoomPicks.nearest(_pennants.screen_hits(_camera, scale), mb.position, radius)
+	var pennant := "" if _view.rolling() else WarRoomPicks.nearest(_pennants.screen_hits(_camera, scale), mb.position, radius)
 	var piece := _view.piece_under(mb.position)
 	if i >= 0:
 		_view.sheet_requested.emit(i)
@@ -117,6 +135,8 @@ func redraw() -> void:
 	var text := ""
 	var held := _view.aim_dest.x >= 0.0
 	var who := code if code != "" else (_view.aim_code if _view.aiming else "")
+	if _view.rolling():
+		who = ""   # the table is rolling up: the pieces, pennants and their marks are put away
 	if who != "":
 		var home := WarRoom.believed_position(_repo, _view.state(), ArmySystem.regiment(_repo, who))
 		var at: Variant = _view.screen_pos_of_px(home) if _view.sheet_rect().has_point(home) else null
@@ -133,7 +153,25 @@ func redraw() -> void:
 			text = reading(who, px) if px.x >= 0.0 else ""
 	var chalk := Vector2(-1, -1)
 	var node := _pieces.piece(_view.selected_army()) if _view.selected_army() != "" else null
-	if node != null and not _camera.is_position_behind(node.global_position):
+	if node != null and not _view.rolling() and not _camera.is_position_behind(node.global_position):
 		chalk = _camera.unproject_position(node.global_position) / _view.window_scale()
 	_hud.draw_state(from, tip, text, chalk, _repo.bal("war_pick_px") * _repo.bal("war_hud_chalk_ratio"),
-		pal["ink"], pal["arrow"], pal["chalk"], _view.lettering(), held)
+		pal["ink"], pal["arrow"], pal["chalk"], _view.lettering(), held, _routes())
+
+
+## Each pennant's dashed line from its piece (where we know it stands) to the
+## pennant, in screen px; none while the table rolls.
+func _routes() -> Array:
+	var out: Array = []
+	if _view.rolling():
+		return out
+	var state := _view.state()
+	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index()):
+		var pen := WarRoom.pennant_of(_repo, state, String(p["code"]))
+		if pen.is_empty() or not _view.sheet_rect().has_point(pen["at"]):
+			continue
+		var a: Variant = _view.screen_pos_of_px(p["at"])
+		var b: Variant = _view.screen_pos_of_px(pen["at"])
+		if a != null and b != null:
+			out.append([a, b])
+	return out

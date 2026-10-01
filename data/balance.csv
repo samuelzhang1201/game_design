@@ -920,3 +920,4 @@ war_pennant_slip_y,1.15,"WAR ROOM (Task 11): where the slip stands over the pole
 war_pennant_font_px,26,"WAR ROOM (Task 11): a pennant slip's lettering size (Label3D font_size)"
 war_pennant_pixel_ratio,500,"WAR ROOM (Task 11): a slip's pixel_size is the pole's height over this"
 war_pennant_outline_px,10,"WAR ROOM (Task 11): a slip's paper outline (Label3D outline_size)"
+war_hud_min_len_px,4,"WAR ROOM (Task 11 fix 1): an arrow shorter than this many design px is not drawn (a press that has not gone anywhere)"
