@@ -37,5 +37,9 @@ assets/3D/units/*/*.jpg
 assets/3D/units/*/*.jpg.import
 assets/3D/units/*/*.png
 assets/3D/units/*/*.png.import
+assets/3D/war_room/*/*.jpg
+assets/3D/war_room/*/*.jpg.import
+assets/3D/war_room/*/*.png
+assets/3D/war_room/*/*.png.import
 # the unit tools' contact sheets
 assets/3D/units/shots/

@@ -1,0 +1,171 @@
+class_name WarMarginKey
+extends Control
+## The laid sheet's key in the WAR ROOM's margin (spec 2026-10-01-war-room-design
+## §2): a compass rose, north up and turned with the officer's view; the shared
+## ScaleBar in the pack's own measure, on MapGeometry.nice_step's 1-2-5 ladder
+## and restated at every zoom (WarRoomView.units_per_px: the table metres a
+## screen px spans at the camera's target, back to pack px, times the pack's
+## distance_scale); and a legend of the sheet's ink — every mark DRAWN, the
+## same strokes WarInkPainter lays on the vellum. Off the sheet: it stands in
+## the screen's top-right corner under the close button. Every size a
+## balance.csv war_key_* key.
+
+## The legend's entries in reading order (the sheet's ink, spec §2).
+const LEGEND := [
+	{"key": "road", "label": "Road"}, {"key": "trail", "label": "Trail"},
+	{"key": "river", "label": "River"}, {"key": "border", "label": "Border"},
+	{"key": "seam", "label": "Seam"}, {"key": "town", "label": "Town"},
+	{"key": "peak", "label": "Peak"}, {"key": "contour", "label": "Contour"},
+]
+
+var _repo: DataRepository
+var _view: WarRoomView
+
+
+func setup(repo: DataRepository, view: WarRoomView) -> void:
+	_repo = repo
+	_view = view
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	update_minimum_size()
+	queue_redraw()
+
+
+## The legend's entry keys, in order (what the slip lists).
+static func legend_keys() -> PackedStringArray:
+	var out := PackedStringArray()
+	for e: Dictionary in LEGEND:
+		out.append(String(e["key"]))
+	return out
+
+
+## {distance, text, width_px} the scale bar shows now ({} with no sheet laid).
+func bar() -> Dictionary:
+	if _repo == null or _view == null:
+		return {}
+	var unit := String(_repo.map_info.get("distance_unit", ""))
+	if float(_repo.map_info.get("distance_scale", "0")) <= 0.0:
+		unit = "km"
+	return Map3DHud.scale_bar_for(_view.units_per_px(), _repo.bal("war_key_scale_max_px"), unit)
+
+
+func _get_minimum_size() -> Vector2:
+	if _repo == null:
+		return Vector2.ZERO
+	var rows := _rows(_repo)
+	return Vector2(_repo.bal("war_key_width_px"),
+		_repo.bal("war_key_rose_px") + _repo.bal("war_key_gap_px") + float(rows) * _repo.bal("war_key_row_px"))
+
+
+func _draw() -> void:
+	if _repo == null:
+		return
+	var ink := _ink()
+	var rose := _repo.bal("war_key_rose_px")
+	_draw_rose(Vector2(rose * 0.5, rose * 0.5), rose * 0.5, ink)
+	# the shared bar draws in the bottom-right of `area`, map_scale_bar_margin_px in
+	var inset := _repo.bal("map_scale_bar_margin_px")
+	ScaleBar.draw(self, bar(), Vector2(size.x + inset, rose + inset - _repo.bal("war_key_gap_px")))
+	var top := rose + _repo.bal("war_key_gap_px")
+	var row_h := _repo.bal("war_key_row_px")
+	var cols := maxi(1, int(_repo.bal("war_key_columns")))
+	var col_w := size.x / float(cols)
+	var font := UiPalette.role_font("body")
+	var font_px := int(_repo.bal("war_key_font_px"))
+	var mark_w := _repo.bal("war_key_mark_px")
+	var per_col := _rows(_repo)
+	for i in LEGEND.size():
+		@warning_ignore("integer_division")
+		var col := i / per_col
+		var row := i % per_col
+		var y := top + row_h * (float(row) + 0.5)
+		var x := col_w * float(col)
+		_draw_mark(String(LEGEND[i]["key"]), Rect2(x, y - row_h * 0.35, mark_w, row_h * 0.7), ink)
+		if font != null:
+			draw_string(font, Vector2(x + mark_w + _repo.bal("war_key_gap_px"), y + float(font_px) * 0.35),
+				String(LEGEND[i]["label"]), HORIZONTAL_ALIGNMENT_LEFT, col_w - mark_w, font_px, ink)
+
+
+## The legend's rows: its entries over war_key_columns columns, rounded up.
+static func _rows(repo: DataRepository) -> int:
+	var cols := maxi(1, int(repo.bal("war_key_columns")))
+	@warning_ignore("integer_division")
+	var rows := (LEGEND.size() + cols - 1) / cols
+	return rows
+
+
+## The sepia ink on the war table's paper; the light type of a dark card.
+func _ink() -> Color:
+	return _repo.war_palette["ink"] if UiPalette.war_table() else UiPalette.ink("soft")
+
+
+## A four-point rose, its north point filled and lettered N, turned clockwise
+## by the officer's yaw (north is the sheet's top edge).
+func _draw_rose(c: Vector2, r: float, ink: Color) -> void:
+	var reach := r * _repo.bal("war_key_rose_reach")
+	var w := r * _repo.bal("war_key_rose_width")
+	var yaw := deg_to_rad(_view.camera_rig().yaw_deg) if _view != null else 0.0
+	draw_arc(c, r * _repo.bal("war_key_rose_ring"), 0.0, TAU, 40, ink, 1.0, true)
+	draw_set_transform(c, yaw, Vector2.ONE)
+	for k in 4:
+		var a := float(k) * PI * 0.5
+		var tip := Vector2(0, -reach).rotated(a)
+		var side := Vector2(w, 0).rotated(a)
+		# a point is two halves: the north one wholly inked, the others half
+		draw_colored_polygon(PackedVector2Array([tip, -side, Vector2.ZERO]), ink)
+		if k == 0:
+			draw_colored_polygon(PackedVector2Array([tip, side, Vector2.ZERO]), ink)
+		else:
+			draw_polyline(PackedVector2Array([tip, side, Vector2.ZERO, tip]), ink, 1.0, true)
+	var font := UiPalette.display_font()
+	if font != null:
+		var px := int(_repo.bal("war_key_font_px"))
+		var tw := font.get_string_size("N", HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+		draw_string(font, Vector2(-tw * 0.5, -reach - 2.0), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, px, ink)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## One legend mark in `r`: the stroke the painter lays for `key`.
+func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
+	var pal: Dictionary = _repo.war_palette
+	var a := Vector2(r.position.x, r.get_center().y)
+	var b := Vector2(r.end.x, r.get_center().y)
+	var line := _repo.bal("war_key_line_px")
+	var dash := _repo.bal("war_key_dash_px")
+	match key:
+		"road":
+			draw_line(a, b, ink, line * 1.6, true)
+		"trail":
+			for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([a, b]), dash, dash * 0.6):
+				draw_polyline(d, ink, line, true)
+		"river":
+			var wave := PackedVector2Array()
+			for i in 9:
+				var t := float(i) / 8.0
+				wave.append(Vector2(lerpf(a.x, b.x, t), a.y + sin(t * TAU) * r.size.y * 0.25))
+			draw_polyline(wave, pal["river_ink"], line * 1.3, true)
+		"border":
+			var parts := WarSheetInk.dashed(PackedVector2Array([a, b]), dash, dash * 0.8)
+			for i in parts.size():
+				draw_polyline(parts[i], ink, line * 1.3, true)
+				if i + 1 < parts.size():
+					draw_circle(parts[i][parts[i].size() - 1].lerp(parts[i + 1][0], 0.5), line * 0.8, ink)
+		"seam":
+			var faint := Color(ink, ink.a * _repo.bal("war_key_faint_alpha"))
+			for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([a, b]), dash * 0.5, dash * 0.5):
+				draw_polyline(d, faint, line * 0.7, true)
+		"town":
+			var c := r.get_center()
+			var rr := r.size.y * 0.42
+			draw_arc(c, rr, 0.0, TAU, 20, ink, line, true)
+			draw_circle(c, rr * 0.35, ink)
+		"peak":
+			var c := r.get_center()
+			var s := r.size.y * 0.5
+			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -s), c + Vector2(s * 0.9, s * 0.6),
+				c + Vector2(-s * 0.9, s * 0.6)]), ink)
+		"contour":
+			var faint := Color(ink, ink.a * _repo.bal("war_contour_alpha"))
+			draw_arc(Vector2(r.get_center().x, r.end.y + r.size.y * 0.6), r.size.x * 0.55, PI * 1.15, PI * 1.85,
+				16, faint, line * 0.8, true)
+			draw_arc(Vector2(r.get_center().x, r.end.y + r.size.y * 1.1), r.size.x * 0.55, PI * 1.2, PI * 1.8,
+				16, faint, line * 0.8, true)

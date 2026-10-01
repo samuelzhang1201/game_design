@@ -372,3 +372,62 @@ func test_the_confirm_opens_where_the_ground_was_clicked() -> void:
 	map.ground_clicked.emit(there, Vector2(120.0, 70.0))
 	assert_true(menu.visible, "COMMIT / CANCEL asked")
 	assert_eq(menu.position, Vector2i(120, 70))
+
+
+func test_aim_for_arms_a_march_on_a_paused_clock() -> void:
+	var code := _marcher()
+	assert_eq(_menu.aim_for(code), "")
+	assert_eq(_menu.aiming(), code)
+	assert_true(_map.aiming)
+
+
+func test_aim_for_refuses_while_time_runs_and_arms_nothing() -> void:
+	Game.set_clock_speed(1)
+	var why := _menu.aim_for(_marcher())
+	Game.set_clock_speed(0)
+	assert_eq(why, String(Game.data.army_route_orders["paused_only"]["hint"]))
+	assert_eq(_menu.aiming(), "")
+
+
+func test_aim_for_then_ground_then_commit_runs_the_march() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var to := _land_near(here + Vector2(8.0, 0.0))
+	assert_eq(_menu.aim_for(code), "")
+	_map.ground_clicked.emit(to)
+	assert_eq(_menu.pending(), to)
+	_menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
+	assert_eq(_menu.aiming(), "")
+	assert_false(CourierSystem.pending_for(Game.state, code).is_empty(), "a courier rides with the order")
+
+
+## A map that is hidden never takes Escape (the closed WAR ROOM's view).
+class SelMap extends Control:
+	signal army_menu_requested(code: String, at: Vector2)
+	signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
+	var picked := "x"
+	func selected_army() -> String:
+		return picked
+	func clear_selection() -> void:
+		picked = ""
+
+
+func _escape() -> InputEventKey:
+	var e := InputEventKey.new()
+	e.pressed = true
+	e.keycode = KEY_ESCAPE
+	return e
+
+
+func test_escape_lets_a_shown_maps_selection_go_but_a_hidden_map_keeps_it() -> void:
+	var m := SelMap.new()
+	add_child_autofree(m)
+	var menu := ArmyOrderMenu.new()
+	add_child_autofree(menu)
+	menu.follow(m)
+	m.visible = false
+	menu._unhandled_input(_escape())
+	assert_eq(m.picked, "x", "a hidden map is left alone")
+	m.visible = true
+	menu._unhandled_input(_escape())
+	assert_eq(m.picked, "", "a shown map lets go")

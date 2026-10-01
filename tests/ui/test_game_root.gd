@@ -145,8 +145,9 @@ func test_heights_tab_toggles_the_maps_height_theme() -> void:
 	assert_true(r.height_view())
 	assert_eq(r.current_screen.map3d_view().manor_theme(), "heights", "the map follows the tab")
 
-## Owner 2026-09-17: a WAR ROOM tab, a placeholder page for now.
-func test_the_war_room_tab_opens_its_placeholder() -> void:
+## Owner 2026-09-17: a WAR ROOM tab; since 2026-10-01 it opens the plotting
+## room over the map, not an info table.
+func test_the_war_room_tab_opens_the_plotting_room() -> void:
 	assert_true("WAR ROOM" in BottomBar.TABS)
 	assert_false("WAR ROOM" in BottomBar.TOGGLES, "it opens a page, it is not a map toggle")
 	Game.start_campaign(42)
@@ -157,10 +158,8 @@ func test_the_war_room_tab_opens_its_placeholder() -> void:
 	r.current_screen.enter_court(null)
 	await wait_frames(2)
 	r._on_bottom_tab("WAR ROOM")
-	var info := r.info_screen()
-	assert_true(info.visible)
-	assert_eq(info._current_tab, "WAR ROOM")
-	assert_eq(info._rows_for("WAR ROOM"), [["War Room", "The war room is being prepared."]])
+	assert_true(r.war_room_screen().visible)
+	assert_false(r.info_screen().visible, "no info table opens for it")
 
 ## The clock (owner 2026-09-13): on the court, at a speed, days pass in real
 ## time and works finish; paused, nothing moves.

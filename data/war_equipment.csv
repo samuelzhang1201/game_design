@@ -1,0 +1,15 @@
+arm,part,label,note
+infantry,helmet,Close helm,"steel, with an eye slit and a pointed visor"
+infantry,cuirass,Breastplate,riveted plate over a padded coat
+infantry,arms,Arm harness,"vambraces, couters and gauntlets"
+infantry,legs,Leg harness,cuisses and knee plates over leather
+infantry,shield,Heater shield,"painted wood, green with a white pale"
+infantry,spear,Spear,"ash shaft, steel head; 2.6 m"
+archers,helmet,Sallet,"an open sallet, the face left bare to sight along a shaft"
+archers,cuirass,Jack,"a quilted jack with a steel plate at the breast"
+archers,shield,Buckler,"a small painted target slung at the back"
+cavalry,helmet,Great helm,"a knight's helm, the visor down"
+cavalry,cuirass,Plate harness,full plate over mail
+cavalry,shield,Heater shield,"green with a white pale; carried on his back, taken to the arm on guard"
+cavalry,lance,Lance,"ash with a vamplate; 3.3 m"
+cavalry,horse,Destrier,the horse under him

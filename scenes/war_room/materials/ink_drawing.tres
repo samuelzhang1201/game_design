@@ -1,0 +1,8 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://scenes/war_room/ink_drawing.gdshader" id="1_shader"]
+[ext_resource type="Material" path="res://scenes/war_room/materials/ink_outline.tres" id="2_outline"]
+
+[resource]
+next_pass = ExtResource("2_outline")
+shader = ExtResource("1_shader")

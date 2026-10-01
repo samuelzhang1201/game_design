@@ -25,6 +25,7 @@ var _clock_acc := 0.0
 var _pause_menu: Control
 var _pause_status: Label
 var _ledger_screen: LedgerScreen
+var _war_room_screen: WarRoomScreen
 var _missive_screen: MissiveScreen
 var _report_popup: MissiveReportPopup
 ## Spy report ids waiting to open, oldest first (a new letter's id is always
@@ -92,6 +93,11 @@ func _ready() -> void:
 	_ledger_screen.closed.connect(_sync_map_view)
 	add_child(_ledger_screen)
 	get_viewport().size_changed.connect(_fit_ledger)
+	_war_room_screen = load("res://scenes/war_room_screen.tscn").instantiate()
+	_war_room_screen.name = "WarRoomScreen"
+	_war_room_screen.closed.connect(_sync_map_view)
+	add_child(_war_room_screen)
+	get_viewport().size_changed.connect(_fit_war_room)
 	_missive_screen = load("res://scenes/missive_screen.tscn").instantiate()
 	_missive_screen.name = "MissiveScreen"
 	_missive_screen.visible = false
@@ -378,6 +384,8 @@ func _cycle_quality() -> void:
 		var v: Map3DView = current_screen.map3d_view()
 		if v != null:
 			v.set_quality(Map3DQuality.resolve_here(settings_path))
+	if _war_room_screen != null:
+		_war_room_screen.set_tier(Map3DQuality.resolve_here(settings_path))
 
 func _load_settings() -> void:
 	var cfg := ConfigFile.new()
@@ -492,6 +500,7 @@ func toggle_ledger() -> void:
 		return
 	_missive_screen.visible = false
 	_info_screen.hide()
+	_war_room_screen.close()
 	if _ledger_screen.visible:
 		_ledger_screen.close()
 		return
@@ -521,6 +530,43 @@ func _fit_ledger() -> void:
 func ledger_screen() -> LedgerScreen:
 	return _ledger_screen
 
+## WAR ROOM (spec 2026-10-01-war-room-design §1): the plotting room, laid over
+## the map panel like the LEDGER; the map stops rendering under it.
+func toggle_war_room() -> void:
+	if state == State.MENU:
+		return
+	_missive_screen.visible = false
+	_info_screen.hide()
+	_ledger_screen.close()
+	if _war_room_screen.visible:
+		_war_room_screen.close()
+		return
+	if current_screen == null or not current_screen.has_method("map_panel"):
+		return
+	var map: Control = current_screen.map_panel()
+	if not map.item_rect_changed.is_connected(_fit_war_room):
+		map.item_rect_changed.connect(_fit_war_room)
+	_fit_war_room()
+	var map_view: Map3DView = current_screen.map3d_view() if current_screen.has_method("map3d_view") else null
+	if map_view != null:
+		map_view.deactivate()
+	# An aim armed on the map's own menu (piece, MARCH…) must not survive into
+	# the room: both menus would hold one.
+	var map_orders := current_screen.find_child("ArmyOrders", true, false) as ArmyOrderMenu
+	if map_orders != null:
+		map_orders.withdraw_aim()
+	_war_room_screen.open(current_screen.detail_panel())
+
+func _fit_war_room() -> void:
+	if current_screen == null or not current_screen.has_method("map_panel"):
+		return
+	var map: Control = current_screen.map_panel()
+	_war_room_screen.position = map.global_position
+	_war_room_screen.size = map.size
+
+func war_room_screen() -> WarRoomScreen:
+	return _war_room_screen
+
 ## An order that needs the map (LedgerScreen.show_requested): the LEDGER has
 ## already closed, and its `closed` ran _sync_map_view, which brought the map
 ## back before this centres it and opens the subject's card.
@@ -536,6 +582,7 @@ func toggle_missives() -> void:
 	if state == State.MENU:
 		return
 	_ledger_screen.close()
+	_war_room_screen.close()
 	_info_screen.hide()
 	_missive_screen.visible = not _missive_screen.visible
 	if _missive_screen.visible:
@@ -685,27 +732,35 @@ func _on_bottom_tab(tab: String) -> void:
 		"HEIGHTS":
 			_info_screen.hide()
 			_ledger_screen.close()
+			_war_room_screen.close()
 			_missive_screen.visible = false
 			set_height_view(not _height_view)
 		"MANORS":
 			_info_screen.hide()
 			_ledger_screen.close()
+			_war_room_screen.close()
 			_missive_screen.visible = false
 			set_manor_view(not _manor_view)
 		"MEASUREMENT":
 			_info_screen.hide()
 			_ledger_screen.close()
+			_war_room_screen.close()
 			_missive_screen.visible = false
 			set_ruler_view(not _ruler_view)
 		"LEDGER":
 			_info_screen.hide()
 			_missive_screen.visible = false
 			toggle_ledger()
+		"WAR ROOM":
+			_info_screen.hide()
+			_missive_screen.visible = false
+			toggle_war_room()
 		"MISSIVE":
 			_info_screen.hide()
 			toggle_missives()
 		_:
 			_ledger_screen.close()
+			_war_room_screen.close()
 			_missive_screen.visible = false
 			_info_screen.show_tab(tab)
 
@@ -790,8 +845,9 @@ func _sync_map_view() -> void:
 	if current_screen != null and current_screen.has_method("set_map3d_view"):
 		# The map stays put away under an open LEDGER (a theme, DEV MODE or a
 		# screen swap must not wake it); the LEDGER's `closed` syncs it back.
-		var ledger_open := _ledger_screen != null and _ledger_screen.visible
-		current_screen.set_map3d_view(on and not ledger_open)
+		var covered := (_ledger_screen != null and _ledger_screen.visible) \
+			or (_war_room_screen != null and _war_room_screen.visible)
+		current_screen.set_map3d_view(on and not covered)
 	_apply_ruler()
 	_apply_dev_mode()
 
@@ -900,6 +956,9 @@ func _switch_to(new_state: State) -> void:
 	if _ledger_screen != null:
 		_ledger_screen.close()
 		move_child(_ledger_screen, get_child_count() - 1)
+	if _war_room_screen != null:
+		_war_room_screen.close()
+		move_child(_war_room_screen, get_child_count() - 1)
 	if _missive_screen != null:
 		_missive_screen.visible = false
 		move_child(_missive_screen, get_child_count() - 1)

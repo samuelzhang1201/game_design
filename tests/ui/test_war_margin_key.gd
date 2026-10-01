@@ -1,0 +1,74 @@
+extends GutTest
+## The WAR ROOM margin's key (spec 2026-10-01-war-room-design §2): a compass
+## rose, the shared scale bar in the pack's measure restated on zoom, and the
+## legend of the sheet's ink.
+
+var repo: DataRepository
+var state: GameState
+var view: WarRoomView
+var key: WarMarginKey
+
+
+func before_each() -> void:
+	repo = DataRepository.load_all("res://data")
+	state = GameState.new_campaign(repo, 42)
+	WarSheets.forget()
+	view = load("res://scenes/war_room/war_room.tscn").instantiate()
+	view.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	view.size = Vector2(1000, 600)
+	add_child_autofree(view)
+	view.bind(repo, func() -> GameState: return state, func() -> bool: return true)
+	view.set_active(true)
+	key = WarMarginKey.new()
+	add_child_autofree(key)
+	key.setup(repo, view)
+
+
+func _is_125(d: float) -> bool:
+	var mag := pow(10.0, floorf(log(d) / log(10.0)))
+	var lead := d / mag
+	for step: float in [1.0, 2.0, 5.0]:
+		if absf(lead - step) < 0.001:
+			return true
+	return false
+
+
+func test_the_legend_lists_the_eight_inks() -> void:
+	assert_eq(WarMarginKey.legend_keys(), PackedStringArray(
+		["road", "trail", "river", "border", "seam", "town", "peak", "contour"]))
+	for e: Dictionary in WarMarginKey.LEGEND:
+		assert_false(String(e["label"]).is_empty(), String(e["key"]))
+
+
+func test_units_per_px_by_hand() -> void:
+	# 1 m away, 90° fov over 200 px: 2·1·tan(45°)/200 = 0.01 m a px; the sheet's
+	# 400 pack px over a 2 m table is 200 px a metre, at 0.5 units a pack px
+	assert_almost_eq(WarRoomView.units_per_px_at(1.0, 90.0, 200.0, 400.0, 2.0, 0.5), 1.0, 0.0001)
+	assert_eq(WarRoomView.units_per_px_at(1.0, 90.0, 0.0, 400.0, 2.0, 0.5), 0.0, "no view, no scale")
+
+
+func test_no_sheet_no_bar() -> void:
+	assert_true(key.bar().is_empty())
+
+
+func test_the_bar_restates_on_zoom_on_the_125_ladder() -> void:
+	view.lay_sheet(0)
+	await wait_frames(2)
+	view.lean_to(repo.bal("war_cam_max_m"))
+	var far := key.bar()
+	view.lean_to(repo.bal("war_cam_min_m"))
+	var near := key.bar()
+	assert_false(far.is_empty())
+	assert_false(near.is_empty())
+	assert_true(_is_125(float(far["distance"])), "far: %s" % far["text"])
+	assert_true(_is_125(float(near["distance"])), "near: %s" % near["text"])
+	assert_gt(float(far["distance"]), float(near["distance"]), "leaning in shortens the bar's distance")
+	assert_lte(float(near["width_px"]), repo.bal("war_key_scale_max_px") + 0.001)
+	assert_true(String(far["text"]).ends_with(String(repo.map_info.get("distance_unit", "km"))))
+
+
+func test_the_key_sizes_itself_from_data() -> void:
+	var m := key.get_combined_minimum_size()
+	assert_eq(m.x, repo.bal("war_key_width_px"))
+	var rows := ceili(8.0 / repo.bal("war_key_columns"))
+	assert_almost_eq(m.y, repo.bal("war_key_rose_px") + repo.bal("war_key_gap_px") + float(rows) * repo.bal("war_key_row_px"), 0.01)

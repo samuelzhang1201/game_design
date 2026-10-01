@@ -2,7 +2,7 @@ class_name BottomBar
 extends Control
 ## Bottom tab strip on every gameplay screen (user ruling 2026-08-30),
 ## outside the map: HEIGHTS | MANORS | REALM | MEASUREMENT |
-## WAR ROOM (a placeholder page, owner 2026-09-17) | FAMILIES | LAWS |
+## WAR ROOM (the plotting room, owner 2026-10-01) | FAMILIES | LAWS |
 ## RELIGION | LEDGER (the realm's ontology, spec 2026-09-30) | MISSIVE (the
 ## Missive board, owner 2026-09-28).
 ## MAP and PROVINCES went 2026-09-13 (owner):
@@ -31,8 +31,9 @@ const TOGGLES := ["HEIGHTS", "MANORS", "MEASUREMENT"]
 ## strip had put a lens, a tool and five screens in one undifferentiated row.
 const MAP_TABS := ["HEIGHTS", "MANORS", "MEASUREMENT"]
 ## Tabs that open a page still to be built; balance ui_show_placeholder_tabs
-## 0 leaves them out of the strip.
-const PLACEHOLDER_TABS := ["WAR ROOM"]
+## 0 leaves them out of the strip. None now: WAR ROOM left the placeholders
+## 2026-10-01 (it opens the plotting room).
+const PLACEHOLDER_TABS := []
 ## The strip's height. A constant on purpose — NewsTicker and ScreenLayout
 ## both place themselves off it, so it cannot float — but it
 ## must stay at least content_height(), and a test pins that. It went stale

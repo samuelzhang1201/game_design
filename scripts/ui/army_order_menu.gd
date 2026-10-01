@@ -77,9 +77,12 @@ func _open_for(code: String, at: Vector2) -> void:
 	_pop(at)
 
 
-## A committed march's end ring was clicked: Edit route… or Cancel march.
+## A committed march's end ring (or the war room's pennant, which also stands
+## over a march whose courier still rides) was clicked: Edit route… or Cancel
+## march.
 func _open_route(code: String, at: Vector2) -> void:
-	if Game.state == null or ArmySystem.order_of(Game.data, Game.state, code) != ArmySystem.ORDER_MARCH:
+	if Game.state == null or (ArmySystem.order_of(Game.data, Game.state, code) != ArmySystem.ORDER_MARCH \
+			and WarRoom.pennant_of(Game.data, Game.state, code).is_empty()):
 		return
 	_set_aim("")
 	_code = code
@@ -275,7 +278,10 @@ func _name_of(code: String) -> String:
 ## Escape gives an aimed order up — the player changed their mind and should
 ## not have to click the map to get out of it.
 func _unhandled_input(event: InputEvent) -> void:
-	if _aiming == "" and _map != null and _map.has_method("selected_army") \
+	# A map that is hidden (the WAR ROOM closed, the LEDGER over the map) never
+	# takes Escape: only a map on screen lets its selection go.
+	var map_shown := not (_map is CanvasItem) or (_map as CanvasItem).is_visible_in_tree()
+	if _aiming == "" and _map != null and map_shown and _map.has_method("selected_army") \
 			and String(_map.call("selected_army")) != "" and event is InputEventKey \
 			and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
 		_map.call("clear_selection")   # Escape lets the selected regiment go
@@ -293,6 +299,20 @@ func withdraw_aim() -> void:
 	if visible:
 		hide()
 	_withdraw("The order is withdrawn.")
+
+
+## Arm a MARCH for `code` without the menu — the WAR ROOM's rake (spec
+## 2026-10-01-war-room-design §3): the same questions MARCH… asks before it is
+## offered. "" when armed, else why not (nothing is armed).
+func aim_for(code: String) -> String:
+	if Game.state == null:
+		return "No reign is under way."
+	var why := _refusal("ARMY_MARCH", code)
+	if why != "":
+		return why
+	_code = code
+	_set_aim(code)
+	return ""
 
 
 ## Test seam: the regiment an order is being aimed for, "" when none is.

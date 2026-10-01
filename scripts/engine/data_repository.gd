@@ -108,6 +108,16 @@ var army_height_supply: Array = []
 ## (ArmySystem.morale_word reads the first it reaches; spec
 ## 2026-09-30-ledger-supply-design §4).
 var army_morale_words: Array = []
+## data/war_palette.csv: key -> Color (WAR ROOM, spec 2026-10-01 §5).
+var war_palette: Dictionary = {}
+## data/war_drills.csv, file order: [{key, clip, label, arms: PackedStringArray}].
+var war_drills: Array = []
+## data/war_equipment.csv, file order: [{arm, part, label, note}].
+var war_equipment: Array = []
+## data/war_folio_sections.csv, file order: [{key, label}].
+var war_folio_sections: Array = []
+## data/war_order_words.csv: order key (ArmySystem.ORDER_*) -> the folio's word for it.
+var war_order_words: Dictionary = {}
 ## data/workshop_rates.csv: [{rate_permille, word, ledger_label}], lowest
 ## rate first — the rates WORKSHOP_RATE accepts and how each is said
 ## (WorkshopSystem; spec 2026-09-30-ledger-supply-design §2).
@@ -742,6 +752,26 @@ func _load(dir: String) -> bool:
 		return false
 	army_formations.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["min_fit_permille"]) < int(b["min_fit_permille"]))
+	if not _load_if_present(dir + "/war_palette.csv", ["key", "color"],
+			func(r): war_palette[String(r["key"])] = Color(String(r["color"]))):
+		return false
+	if not _load_if_present(dir + "/war_drills.csv", ["key", "clip", "label", "arms"],
+			func(r): war_drills.append({"key": String(r["key"]), "clip": String(r["clip"]),
+				"label": String(r["label"]), "arms": PackedStringArray(String(r["arms"]).split("|", false))})):
+		return false
+	# war_equipment.csv: one row per piece of kit the folio's exploded view names;
+	# part = the object's name in assets/3D/units/<arm>/<arm>_parts.glb; note is
+	# SHOWN to the player, so it is a plain description, never empty, never a design note.
+	if not _load_if_present(dir + "/war_equipment.csv", ["arm", "part", "label", "note"],
+			func(r): war_equipment.append({"arm": String(r["arm"]), "part": String(r["part"]),
+				"label": String(r["label"]), "note": String(r["note"])})):
+		return false
+	if not _load_if_present(dir + "/war_folio_sections.csv", ["key", "label"],
+			func(r): war_folio_sections.append({"key": String(r["key"]), "label": String(r["label"])})):
+		return false
+	if not _load_if_present(dir + "/war_order_words.csv", ["key", "word"],
+			func(r): war_order_words[String(r["key"])] = String(r["word"])):
+		return false
 	if not _load_if_present(dir + "/army_height_supply.csv", ["tier", "min_height", "supply_permille"],
 			func(r): army_height_supply.append({"tier": String(r["tier"]),
 				"min_height": int(r["min_height"]), "supply_permille": int(r["supply_permille"])})):
@@ -813,6 +843,7 @@ func load_map(id: String) -> bool:
 	Elevation.forget()
 	Weather.forget()
 	RoadGraph.forget()
+	WarSheets.forget()
 	routes.clear()
 	rivers.clear()
 	markers.clear()

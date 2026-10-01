@@ -167,6 +167,31 @@ var _ledger_search := ""
 var _ledger_search_pick := false
 var _ledger_open := ""
 var _ledger_select := ""
+## --war-room (with --screen root): the WAR ROOM through real input — its tab,
+## then --war-sheet N lays that sheet (WarRoomView.swap_to; the later steps wait
+## until it is laid and the roll is over), --war-zoom M leans the camera to M
+## metres (on --war-piece's place when given, or --war-focus CODE's, which
+## centres on that piece without clicking it), --war-piece CODE
+## clicks that regiment's piece (a chalk ring, its card) or, with
+## --war-drag fx,fy (a share of the view), RAKES it there: a real left press
+## on the piece, eight pushed motion events with the left button held, a real
+## release (the arrow and its COMMIT / CANCEL menu show; --war-commit then
+## chooses COMMIT the way PopupMenu.activate_item does, so the order's pennant
+## is planted). --war-folio
+## DRILL|explode opens the folio's drill or presses Take apart — it says so
+## and skips while the folio, its drill tabs or its Take apart button are not
+## built; an explode waits out its flight (war_explode_s) before the moment.
+## The moment is `war`, taken at frame +90 unless --shot-on says otherwise.
+var _war_room := false
+var _war_focus := ""
+var _war_commit := false
+var _war_sheet := -1
+var _war_piece := ""
+var _war_folio := ""
+var _war_drag := Vector2(-1, -1)
+var _war_zoom := -1.0
+var _war_phase := 0
+var _war_at := 0
 ## --shot-on report|flight|board|card|spymenu takes the shot --shot-delay N
 ## frames (default 6) after that moment rather than at --shot-frame.
 var _shot_on := ""
@@ -261,6 +286,19 @@ func _ready() -> void:
 			_ledger_search = args[i + 1]
 		elif args[i] == "--ledger-select":
 			_ledger_select = args[i + 1]
+		elif args[i] == "--war-sheet":
+			_war_sheet = int(args[i + 1])
+		elif args[i] == "--war-piece":
+			_war_piece = args[i + 1]
+		elif args[i] == "--war-focus":
+			_war_focus = args[i + 1]
+		elif args[i] == "--war-zoom":
+			_war_zoom = float(args[i + 1])
+		elif args[i] == "--war-folio":
+			_war_folio = args[i + 1].to_lower()
+		elif args[i] == "--war-drag":
+			var dparts := args[i + 1].split(",")
+			_war_drag = Vector2(float(dparts[0]), float(dparts[1]))
 		elif args[i] == "--shot-on":
 			_shot_on = args[i + 1]
 		elif args[i] == "--shot-delay":
@@ -277,6 +315,12 @@ func _ready() -> void:
 			if wh.size() == 2:
 				_res = Vector2i(int(wh[0]), int(wh[1]))
 		i += 1
+	_war_room = args.has("--war-room")
+	_war_commit = args.has("--war-commit")
+	if _war_room and _shot_on == "":
+		_shot_on = "war"
+	if _war_drag.x >= 0.0 and _war_piece == "":
+		push_warning("--war-drag needs --war-piece (the piece to rake); there is nothing to drag")
 	_ruler_open = args.has("--ruler-open")
 	_march_confirm = args.has("--march-confirm")
 	_ledger_search_pick = args.has("--ledger-search-pick")
@@ -386,6 +430,37 @@ func _real_key(c: Control, code: Key, unicode: int) -> void:
 		c.get_viewport().push_input(e, true)
 
 
+## A real left DRAG across a control: press at `from`, eight motion events with
+## the left button held walking to `to`, release at `to` — all pushed through
+## the viewport, like a hand.
+func _real_drag(c: Control, from: Vector2, to: Vector2) -> void:
+	_real_move(c, from)
+	var origin := c.get_global_transform_with_canvas()
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.button_mask = MOUSE_BUTTON_MASK_LEFT
+	press.position = origin * from
+	press.global_position = press.position
+	c.get_viewport().push_input(press, true)
+	var last := from
+	for i in range(1, 9):
+		var at := from.lerp(to, float(i) / 8.0)
+		var m := InputEventMouseMotion.new()
+		m.button_mask = MOUSE_BUTTON_MASK_LEFT
+		m.position = origin * at
+		m.global_position = m.position
+		m.relative = at - last
+		last = at
+		c.get_viewport().push_input(m, true)
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	release.position = origin * to
+	release.global_position = release.position
+	c.get_viewport().push_input(release, true)
+
+
 func _real_move(c: Control, local: Vector2) -> void:
 	var m := InputEventMouseMotion.new()
 	m.position = c.get_global_transform_with_canvas() * local
@@ -448,6 +523,8 @@ func _process(_delta: float) -> void:
 		_missive_step()
 	if _root != null and _ledger != "":
 		_ledger_step()
+	if _root != null and _war_room:
+		_war_room_step()
 	if _root != null and _look3d.size() == 4 and _frames == int(_look3d[3]) \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
@@ -707,6 +784,108 @@ func _ledger_step() -> void:
 		screen.view().settle_now()
 	elif _frames == start + 40:
 		_moment("ledger")
+
+
+## --war-room [--war-sheet N] [--war-zoom M] [--war-piece CODE [--war-drag fx,fy]]
+## [--war-folio DRILL|arm:ARM|explode]: the WAR ROOM through its own tab and its own
+## gestures, then the moment `war`. Each step waits for the one before it by
+## CONDITION, never by a fixed frame: the tab opened and a sheet laid, the
+## requested sheet laid and the roll over (then a few frames for its ink), the
+## camera leant, the piece clicked or raked (its screen place read AFTER the
+## camera and the sheet are settled), then the folio, then the shot.
+func _war_room_step() -> void:
+	var screen := _root.war_room_screen()
+	var view := screen.view()
+	if _war_phase == 0:
+		if _frames == 30:
+			var tab := _root.bottom_bar().button("WAR ROOM")
+			_real_click(tab, tab.size * 0.5)
+			print("war: open=%s sheet=%d" % [screen.visible, view.sheet_index()])
+			print("war: pieces=%s" % [WarRoom.pieces(Game.data, Game.state).map(func(q: Dictionary) -> String:
+				return "%s@%d" % [q["code"], int(q["sheet"])])])
+			_war_to(1)
+	elif _war_phase == 1:
+		# the room is open and a sheet is laid and not rolling: ask for the other
+		if screen.visible and view.sheet_index() >= 0 and not view.rolling():
+			if _war_sheet >= 0 and view.sheet_index() != _war_sheet:
+				view.swap_to(_war_sheet)
+				print("war: swapping to sheet %d" % _war_sheet)
+			_war_to(2)
+	elif _war_phase == 2:
+		# the requested sheet is laid, the roll is over; let its ink settle
+		var laid := _war_sheet < 0 or view.sheet_index() == _war_sheet
+		if laid and not view.rolling() and _frames - _war_at >= 12:
+			if _war_zoom > 0.0:
+				var focus := Vector2(-1, -1)
+				var on := _war_focus if _war_focus != "" else _war_piece
+				if on != "":
+					focus = WarRoom.believed_position(Game.data, Game.state, ArmySystem.regiment(Game.data, on))
+				view.lean_to(_war_zoom, focus)
+				print("war: leant to %.2f m" % view.camera_rig().distance)
+			_war_to(3)
+	elif _war_phase == 3:
+		if _frames - _war_at < 6:
+			return
+		if _war_piece != "":
+			var p := ArmySystem.regiment(Game.data, _war_piece)
+			var at: Variant = view.screen_pos_of_px(WarRoom.believed_position(Game.data, Game.state, p))
+			if at == null:
+				push_error("war: piece %s not in view" % _war_piece)
+			elif _war_drag.x >= 0.0:
+				_real_drag(view, at, Vector2(view.size) * _war_drag)
+			else:
+				_real_click(view, at)
+			print("war: piece=%s sheet=%d at=%s selected=%s aiming=%s" % [_war_piece, view.sheet_index(), at,
+				view.selected_army(), screen.orders().aiming()])
+		_war_to(4)
+	elif _war_phase == 4:
+		if _frames - _war_at < 6:
+			return
+		if _war_commit:
+			var menu := screen.orders()
+			menu.hide()   # PopupMenu.activate_item's order: hidden first, then id_pressed
+			menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
+			print("war: committed order=%s pennant=%s" % [ArmySystem.order_of(Game.data, Game.state, _war_piece),
+				WarRoom.pennant_of(Game.data, Game.state, _war_piece)])
+		if _war_folio != "":
+			var folio := screen.get_node_or_null("%Folio")
+			if folio == null:
+				print("war: no folio yet")
+			elif _war_folio == "explode":
+				var b := folio.get_node_or_null("%TakeApart") as Button
+				if b == null:
+					print("war: no Take apart button yet")
+				else:
+					_real_click(b, b.size * 0.5)
+			elif _war_folio.begins_with("arm:"):
+				# an arms button of the left page, by its arm key (arm:artillery)
+				var hit_arm := false
+				for t: Button in folio.get_node("%Arms").get_children():
+					if String(t.get_meta("arm")) == _war_folio.substr(4):
+						_real_click(t, t.size * 0.5)
+						hit_arm = true
+				if not hit_arm:
+					print("war: no arms button '%s'" % _war_folio)
+			else:
+				var drills := folio.get_node_or_null("%Drills")
+				var hit := false
+				if drills != null:
+					for t: Button in drills.get_children():
+						if String(t.text).to_lower().contains(_war_folio):
+							_real_click(t, t.size * 0.5)
+							hit = true
+				if not hit:
+					print("war: no drill tab '%s' yet" % _war_folio)
+		_war_to(5)
+	elif _war_phase == 5 and _frames - _war_at >= 40 + (ceili(Game.data.bal("war_explode_s") * 120.0)   # a 120 Hz display's frames
+			if _war_folio == "explode" else 0):
+		_moment("war")
+		_war_to(6)
+
+
+func _war_to(phase: int) -> void:
+	_war_phase = phase
+	_war_at = _frames
 
 
 ## --play-days, then --missives: seal each report as the player would, press
