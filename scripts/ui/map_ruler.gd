@@ -165,12 +165,23 @@ static func _normal(v: Vector2, fallback: Vector2) -> Vector2:
 
 ## A dashed polyline whose dashes run on across its joints (draw_dashed_line
 ## per segment would restart the pattern at every sample) — the draped rule
-## and a march's road ahead.
+## and a march's road ahead. The dashes go down as ONE draw_multiline (perf
+## 2026-10-02: a draw call per dash was ~30 calls a route at mid zoom).
 static func dashed_path(ci: CanvasItem, pts: PackedVector2Array, ink: Color, w: float,
 		dash: float) -> void:
 	if dash <= 0.0:
 		ci.draw_polyline(pts, ink, w, true)
 		return
+	var pieces := dash_pieces(pts, dash)
+	if not pieces.is_empty():
+		ci.draw_multiline(pieces, ink, w, true)
+
+
+## The dashes of dashed_path as segment pairs [a0, b0, a1, b1, …]: each dash
+## `dash` long, running on across the polyline's joints (a dash that turns a
+## corner is one piece a side of it).
+static func dash_pieces(pts: PackedVector2Array, dash: float) -> PackedVector2Array:
+	var out := PackedVector2Array()
 	var on := true
 	var left := dash
 	for i in range(pts.size() - 1):
@@ -181,9 +192,11 @@ static func dashed_path(ci: CanvasItem, pts: PackedVector2Array, ink: Color, w: 
 		while at < seg:
 			var run := minf(left, seg - at)
 			if on:
-				ci.draw_line(a.lerp(b, at / seg), a.lerp(b, (at + run) / seg), ink, w, true)
+				out.append(a.lerp(b, at / seg))
+				out.append(a.lerp(b, (at + run) / seg))
 			at += run
 			left -= run
 			if left <= 0.0:
 				on = not on
 				left = dash
+	return out

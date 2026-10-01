@@ -116,8 +116,28 @@ func nearest(at_m: Vector2i, reached: Array = []) -> int:
 	return best
 
 
-## Dijkstra from one node over a binary heap of [cost, id] (ties by id).
+## Dijkstra from one node over a binary heap of [cost, id] (ties by id). A
+## graph never changes once built, so each start's tree is run ONCE and kept
+## (perf 2026-10-02: the month's supply plan ran it afresh every time, ~4 ms);
+## the tree is shared, so its arrays are read-only.
 func shortest(from_id: int) -> Dictionary:
+	if _trees.has(from_id):
+		return _trees[from_id]
+	var tree := _dijkstra(from_id)
+	(tree["dist"] as Array).make_read_only()
+	(tree["prev"] as Array).make_read_only()
+	tree.make_read_only()
+	_trees[from_id] = tree
+	return tree
+
+
+## Trees run so far by shortest(), {start id: tree}, and how many (a test seam).
+var _trees: Dictionary = {}
+var dijkstra_runs := 0
+
+
+func _dijkstra(from_id: int) -> Dictionary:
+	dijkstra_runs += 1
 	var n := nodes.size()
 	var dist: Array[int] = []
 	var prev: Array[int] = []

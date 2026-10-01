@@ -66,12 +66,27 @@ static func _land_grid(repo: DataRepository) -> Dictionary:
 		reach = maxf(reach, MapTerrain.cell_radius(repo, cell))
 	var bucket := maxf(reach * 2.0, 1.0)
 	var grid: Dictionary = {}
+	# Each land cell's polygon, its bounding box (grown a hair, so a point it
+	# leaves out is surely outside the polygon) and its centre, built ONCE:
+	# cell_at is asked every frame by the map's counters (ArmySystem.bars_of →
+	# supply_use), and building them per ask cost ~0.15 ms a regiment (perf
+	# 2026-10-02). Same polygons, same centres, so the same answers.
+	var polys: Dictionary = {}
+	var boxes: Dictionary = {}
+	var centres: Dictionary = {}
 	for id: int in land:
-		var g := Vector2i((MapTerrain.cell_center(repo, repo.cells[id]) / bucket).floor())
+		var poly := cell_polygon(repo, repo.cells[id])
+		var box := Rect2(poly[0], Vector2.ZERO)
+		for q: Vector2 in poly:
+			box = box.expand(q)
+		polys[id] = poly
+		boxes[id] = box.grow(0.001)
+		centres[id] = MapTerrain.cell_center(repo, repo.cells[id])
+		var g := Vector2i(((centres[id] as Vector2) / bucket).floor())
 		if not grid.has(g):
 			grid[g] = []
 		(grid[g] as Array).append(id)
-	var out := {"bucket": bucket, "grid": grid}
+	var out := {"bucket": bucket, "grid": grid, "polys": polys, "boxes": boxes, "centres": centres}
 	_land_grid_cache[key] = out
 	return out
 
@@ -83,16 +98,18 @@ static func cell_at(repo: DataRepository, p: Vector2) -> int:
 	var lg := _land_grid(repo)
 	var bucket: float = lg["bucket"]
 	var grid: Dictionary = lg["grid"]
+	var polys: Dictionary = lg["polys"]
+	var boxes: Dictionary = lg["boxes"]
+	var centres: Dictionary = lg["centres"]
 	var home := Vector2i((p / bucket).floor())
 	var nearest := -1
 	var nearest_d := INF
 	for dy in range(-1, 2):
 		for dx in range(-1, 2):
 			for id: int in grid.get(home + Vector2i(dx, dy), []):
-				var cell: Dictionary = repo.cells[id]
-				if Geometry2D.is_point_in_polygon(p, cell_polygon(repo, cell)):
+				if (boxes[id] as Rect2).has_point(p) and Geometry2D.is_point_in_polygon(p, polys[id]):
 					return id
-				var d := p.distance_squared_to(MapTerrain.cell_center(repo, cell))
+				var d := p.distance_squared_to(centres[id])
 				if d < nearest_d:
 					nearest_d = d
 					nearest = id

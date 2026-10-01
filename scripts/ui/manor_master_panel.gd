@@ -136,6 +136,7 @@ func _style_tree() -> void:
 	_tree.add_theme_constant_override("draw_guides", 1)
 
 func _ready() -> void:
+	Game.report_ready.connect(func(_r: TickReport) -> void: _settled_frame = Engine.get_process_frames())
 	Game.state_changed.connect(func() -> void:
 		if visible:
 			refresh())
@@ -171,10 +172,50 @@ func sort_by(column: int) -> void:
 		_sort_descending = column == 2
 	refresh()
 
-## Rebuild the rows from the live state.
+## Rebuild the rows from the live state — only when something the table
+## shows can have moved (perf 2026-10-02: it was rebuilt every game day while
+## MANORS was lit, 9-20 ms on that frame): the economy's own signature (the
+## month, holdings, buildings, focus, idle works, ledger figures, borders,
+## tax rates), the letters that lift the fog, DEV MODE, and the table's
+## scope, filter and sort. Right after a month's settlement every line is
+## cold; that read waits for the next frame, off the tick's own.
 func refresh() -> void:
 	if Game.state == null or Game.data == null:
 		return
+	var sig := [Game.state.get_instance_id(), RealmEconomy.realm_signature(Game.state),
+		Game.state.next_missive_id, Intel.dev_all, _all, _house_filter, _sort_column, _sort_descending]
+	if sig == _sig:
+		return
+	if not _read_now and is_inside_tree() and Engine.get_process_frames() == _settled_frame \
+			and not RealmEconomy.is_warm(Game.data, Game.state):
+		if not _waiting:
+			_waiting = true
+			get_tree().process_frame.connect(_refresh_later, CONNECT_ONE_SHOT)
+		return
+	_sig = sig
+	rebuilds += 1
+	_rebuild()
+
+
+## What the rows were last built under (refresh()), and a test seam counting rebuilds.
+var _sig: Array = []
+var rebuilds := 0
+var _waiting := false
+var _read_now := false
+## The frame a month was settled on (Game.report_ready): only then is a cold
+## read left for the next frame.
+var _settled_frame := -1
+
+
+func _refresh_later() -> void:
+	_waiting = false
+	if is_inside_tree() and visible:
+		_read_now = true
+		refresh()
+		_read_now = false
+
+
+func _rebuild() -> void:
 	var repo := Game.data
 	var state := Game.state
 	var realm := repo.resolve_realm("player_realm")

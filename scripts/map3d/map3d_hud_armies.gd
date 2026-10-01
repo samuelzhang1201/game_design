@@ -7,6 +7,8 @@ var _drawn := 0
 ## markers()' cut and the pose it was cut for (see there).
 var _cache: Array = []
 var _key: Array = []
+## Each regiment's bars and what they were read under, {code: {key, bars}} (_bars_of).
+var _bars: Dictionary = {}
 
 
 ## A counter's height in design px: map_army_badge_native_px of the map at
@@ -70,8 +72,24 @@ func _cut() -> Array:
 				continue
 			sp = camera.unproject_position(ground) / s
 		if frame.has_point(sp):
-			points.append({"reg": r, "pos": sp, "h": ph, "bars": ArmySystem.bars_of(repo, st, code)})
+			points.append({"reg": r, "pos": sp, "h": ph, "bars": _bars_of(code)})
 	return ArmyCounters.layout(repo, points, h, ctx.settlement_rects(), tops)
+
+
+## ArmySystem.bars_of, kept while nothing it reads moves: the day (the
+## stores are eaten, the columns march and the month settles only as days
+## turn) and the regiment's own row (anything else that touches its stores,
+## morale or training) — perf 2026-10-02: ~0.1 ms a regiment, every frame a
+## column walks. A save loaded or a new reign is another state, another key.
+func _bars_of(code: String) -> Vector2i:
+	var st := ctx.state()
+	var key := [st.get_instance_id(), st.tick, st.day,
+		(st.regiments.get(code, {}) as Dictionary).hash()] if st != null else []
+	var kept: Dictionary = _bars.get(code, {})
+	if kept.get("key") != key:
+		kept = {"key": key, "bars": ArmySystem.bars_of(ctx.repo, st, code)}
+		_bars[code] = kept
+	return kept["bars"]
 
 
 func drawn_count() -> int:

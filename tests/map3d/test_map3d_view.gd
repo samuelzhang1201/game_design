@@ -333,6 +333,10 @@ func test_hiding_the_view_stops_its_rendering() -> void:
 	v.deactivate()
 	assert_eq(v.viewport().render_target_update_mode, SubViewport.UPDATE_DISABLED)
 	assert_false(v.visible)
+	# perf 2026-10-02: nothing under it runs unseen (animations, wind, clouds)
+	assert_eq(v.viewport().process_mode, Node.PROCESS_MODE_DISABLED)
+	v.activate()
+	assert_eq(v.viewport().process_mode, Node.PROCESS_MODE_INHERIT, "and runs again when shown")
 
 
 func test_clouds_come_with_play_and_go_with_pause() -> void:

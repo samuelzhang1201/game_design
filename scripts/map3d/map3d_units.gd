@@ -21,6 +21,20 @@ static func height_m(repo: DataRepository, fov_deg: float, view_h_px: float, ref
 	return repo.bal("map3d_unit_ref_px") * Map3DGeometry.metres_per_pixel(maxf(ref_m, 1.0), fov_deg, view_h_px)
 
 
+## A piece ({node, anims}) shown or hidden; its figures' AnimationPlayers run
+## only while it is shown (perf 2026-10-02: every regiment's nine figures kept
+## posing their skeletons far out, where each is a flat mark, and behind the
+## camera; under the LEDGER or the WAR ROOM the view's whole subtree stops,
+## Map3DView.deactivate).
+static func show_piece(piece: Dictionary, on: bool) -> void:
+	(piece["node"] as Node3D).visible = on
+	if bool(piece.get("running", true)) == on:
+		return
+	piece["running"] = on
+	for anim: AnimationPlayer in piece["anims"]:
+		anim.active = on
+
+
 ## Whether the camera is far enough out that every regiment is its square
 ## counter — its MARK — instead of a piece: once a piece, one world size at
 ## every zoom (height_m), would be drawn under `map3d_unit_mark_px` design px

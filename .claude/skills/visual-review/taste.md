@@ -614,3 +614,10 @@ add it here as a principle with its why — not as a changelog entry.
   城墙和码头都太丑太简陋了，我要更精致的感觉，走game arts流程). Walls, towers, gates
   and piers go through the art route the houses took — photoreal references,
   Tripo, processed in Blender — not boxes and merlons laid by script.
+
+## 2026-10-02 rulings
+- **The far zoom stays the real 3D world — no strategic "paper map"** (owner,
+  rejecting the CK3 / Humankind option of the performance report: 缩远后切换成
+  战略纸图，隐藏房屋和树 — 不同意). Performance at the far zoom is won by LOD,
+  shadow distance, instance budgets and CPU work, never by swapping the
+  landscape for a flat stylised map or hiding houses and woods wholesale.

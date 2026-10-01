@@ -113,6 +113,7 @@ func build() -> void:
 	_aabbs.clear()
 	_transforms.clear()
 	_variants.clear()
+	_chunks.clear()
 	_built_at = Vector2.INF
 	_built = true
 	ctx.houses()
@@ -151,60 +152,74 @@ func refresh(camera_xz: Vector2) -> bool:
 		return false
 	_built_at = camera_xz
 	var houses := houses_override if not houses_override.is_empty() else ctx.houses()
-	var pos: Dictionary = {}
-	for code: String in houses:
-		if ctx.repo.burgs.has(code):
-			var b: Dictionary = ctx.repo.burgs[code]
-			pos[code] = ctx.to_world(Vector2(float(b["x"]), float(b["y"])))
-	var buckets := Map3DHouses.visible_set(houses, ctx.repo, pos,
-		camera_xz, ctx.repo.bal("map3d_house_view_m"), _budget())
-	var clear := ctx.repo.bal("map3d_house_seat_clear_m")
-	var ground_inset := ctx.repo.bal("map3d_house_ground_inset")
-	var samples := int(ctx.repo.bal("map3d_house_ground_samples"))
+	if not is_same(_pos_of, houses):
+		_burg_pos = {}
+		for code: String in houses:
+			if ctx.repo.burgs.has(code):
+				var b: Dictionary = ctx.repo.burgs[code]
+				_burg_pos[code] = ctx.to_world(Vector2(float(b["x"]), float(b["y"])))
+		_pos_of = houses
+		_chunks.clear()
+	var shown := Map3DHouses.visible_burgs(houses, _burg_pos, camera_xz,
+		ctx.repo.bal("map3d_house_view_m"), _budget())
 	_transforms.clear()
 	_variants.clear()
-	var sea_y := float(ctx.meta.get("sea_y", 0.0))
-	var deck := ctx.repo.bal("map3d_pier_deck_m")
-	var piers: Dictionary = {}
-	for t: String in ctx.repo.map3d_houses:
-		if String(ctx.repo.map3d_houses[t].get("role", "")) == "pier":
-			piers[t] = true
+	# Each settlement's houses of a type are packed ONCE (perf 2026-10-02:
+	# ~2,500 single-instance calls a rebuild, ~3.7 ms a pan step); a rebuild
+	# joins the chunks of the settlements in view, in visible_set's order.
 	for type: String in _instances:
 		var mmi: MultiMeshInstance3D = _instances[type]
-		var rows: Array = buckets.get(type, [])
-		mmi.multimesh.instance_count = rows.size()
+		var buf := PackedFloat32Array()
 		var xforms: Array[Transform3D] = []
 		var picks: Array[Vector2i] = []
-		var box: AABB = _aabbs[type]
-		for i in rows.size():
-			var h: Dictionary = rows[i]
-			# The seat is sampled ONCE per house and kept on its row: the ground
-			# never moves, and re-sampling a 5x5 grid under every visible house on
-			# each rebuild cost ~40 ms a pan step at the high tier's 5000 houses
-			# (measured 2026-09-24). A new world loads new rows.
-			var ground: Vector2
-			if h.has("_seat"):
-				ground = h["_seat"]
-			elif piers.has(type):
-				# a pier's deck lies on the SEA (owner 2026-10-01: 码头延伸到海里),
-				# not on the highest ground under it, which is the bank at one
-				# end and the sea floor along the rest
-				ground = Vector2(sea_y, sea_y + deck)
-				h["_seat"] = ground
-			else:
-				ground = Map3DHouses.seat(
-					Map3DHouses.ground_under(h, box, ground_inset, samples, ctx.height_at), clear)
-				h["_seat"] = ground
-			var t := Map3DHouses.transform_of(h, ground.y)
-			mmi.multimesh.set_instance_transform(i, t)
-			xforms.append(t)
-			var pick := Vector2i(Map3DHouses.variant_of(h, _wall_tints.size(), 0),
-				Map3DHouses.variant_of(h, _roof_tints.size(), 1))
-			mmi.multimesh.set_instance_custom_data(i, Color(pick.x, pick.y, 0.0, 0.0))
-			picks.append(pick)
+		for code: String in shown:
+			var chunk := _chunk(code, type, houses[code])
+			if (chunk["xf"] as Array).is_empty():
+				continue
+			buf.append_array(chunk["buf"])
+			xforms.append_array(chunk["xf"])
+			picks.append_array(chunk["picks"])
+		mmi.multimesh.instance_count = xforms.size()
+		if not xforms.is_empty():
+			mmi.multimesh.buffer = buf
 		_transforms[type] = xforms
 		_variants[type] = picks
 	return true
+
+
+## Each settlement's world XZ, kept for the houses dictionary `_pos_of`.
+var _burg_pos: Dictionary = {}
+var _pos_of: Variant = null
+
+
+## {burg code + type: Map3DHouses.pack's {buf, xf, picks}} — each settlement's
+## houses of a type, kept for the next rebuild: they never change for a houses
+## dictionary (refresh() forgets them when it is another, as does build()).
+var _chunks: Dictionary = {}
+
+
+func _chunk(code: String, type: String, all_rows: Array) -> Dictionary:
+	var key := code + "|" + type
+	if not _chunks.has(key):
+		var rows: Array = all_rows.filter(func(h: Dictionary) -> bool: return h["type"] == type)
+		_chunks[key] = Map3DHouses.pack(rows, _seat.bind(type), _wall_tints.size(), _roof_tints.size())
+	return _chunks[key]
+
+
+## Where a house stands, (lowest, seat) — sampled ONCE and kept on its row:
+## the ground never moves, and re-sampling a 5x5 grid under every visible
+## house on each rebuild cost ~40 ms a pan step at the high tier's 5000
+## houses (measured 2026-09-24). A pier's deck lies on the SEA (owner
+## 2026-10-01: 码头延伸到海里), not on the bank or the sea floor under it.
+func _seat(h: Dictionary, type: String) -> Vector2:
+	if not h.has("_seat"):
+		var r := ctx.repo
+		var sea_y := float(ctx.meta.get("sea_y", 0.0))
+		h["_seat"] = Vector2(sea_y, sea_y + r.bal("map3d_pier_deck_m")) \
+			if String((r.map3d_houses.get(type, {}) as Dictionary).get("role", "")) == "pier" \
+			else Map3DHouses.seat(Map3DHouses.ground_under(h, _aabbs[type], r.bal("map3d_house_ground_inset"),
+				int(r.bal("map3d_house_ground_samples")), ctx.height_at), r.bal("map3d_house_seat_clear_m"))
+	return h["_seat"]
 
 
 ## Instances per type, for the tests and the bench.

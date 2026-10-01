@@ -209,6 +209,7 @@ func activate() -> void:
 		else SubViewport.UPDATE_DISABLED)
 	if _loaded:
 		refresh_borders()
+	_viewport.process_mode = Node.PROCESS_MODE_INHERIT
 	set_process(_loaded)
 
 func deactivate() -> void:
@@ -217,6 +218,7 @@ func deactivate() -> void:
 	clear_hover()
 	if _viewport != null:
 		_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		_viewport.process_mode = Node.PROCESS_MODE_DISABLED  # no animation, wind or cloud runs unseen (perf 2026-10-02)
 	set_process(false)
 
 ## Put the built world (Map3DWorldCache's kept one when free) under WorldSlot and
