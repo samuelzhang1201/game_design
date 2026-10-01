@@ -12,6 +12,11 @@ extends Control
 
 signal swept
 
+## The view handed to the game's first screen as the reign begins
+## (`hand_over`), so the map the title showed IS the map laid on the table —
+## not a second one built from nothing (~2.5 s of the screen swap).
+static var handed: Map3DView
+
 var view: Map3DView
 var preview: GameState
 var _yaw := 0.0
@@ -19,6 +24,7 @@ var _day := 0.0
 var _distance := 0.0
 var _sweep_t := -1.0
 var _sweep_from := Vector3.ZERO  # distance, yaw, day share at the sweep's start
+var _view_filter := Control.MOUSE_FILTER_STOP
 
 ## Whether the title can show the realm: the war table on, the 3D map on and
 ## the pack's world built.
@@ -34,6 +40,7 @@ func _ready() -> void:
 		preview = GameState.new_campaign(Game.data, int(Game.data.bal("ui_title_seed")))
 	view = Map3DView.create(Game.data)
 	view.set_meta("state_fn", func() -> GameState: return preview)  # whose reign the map draws
+	_view_filter = view.mouse_filter
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(view)
@@ -85,6 +92,30 @@ func _step_sweep(delta: float) -> void:
 	if _sweep_t >= 1.0:
 		_sweep_t = -2.0
 		swept.emit()
+
+## Give the view to the game (TitleRealm.handed, taken by the first screen's
+## Map3DView.attach): out of the title, made a map again — the live reign's
+## state and clock, its HUD, its picking. Nothing when the world never opened.
+func hand_over() -> void:
+	var ctx := view.context() if view != null else null
+	if ctx == null:
+		return
+	set_process(false)
+	remove_child(view)
+	view.remove_meta("state_fn")
+	ctx.state_fn = func() -> GameState: return Game.state
+	ctx.clock_fn = func() -> int: return Game.clock_speed
+	ctx.day_fn = func() -> float: return Game.day_progress
+	view.get_node("Hud").visible = true
+	view.mouse_filter = _view_filter
+	handed = view
+	view = null
+
+## The handed view, once (null when the title handed none).
+static func take_handed() -> Map3DView:
+	var v := handed
+	handed = null
+	return v
 
 ## The place the title shows, for its caption: the home province's capital
 ## town and the house that holds it.

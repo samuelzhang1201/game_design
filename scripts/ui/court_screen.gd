@@ -86,7 +86,8 @@ func _ready() -> void:
 	# map, the only one since 2026-09-24; a click opens its fact card in the
 	# left column (user ruling 2026-09-09), whose Ask drops the question into
 	# the order box and the player still presses Enter (spec 2026-09-08).
-	_map3d = Map3DView.attach(%MapPanel, _detail, _country_panel, _refresh_left, %ArmyOrders)
+	_map3d = Map3DView.attach(%MapPanel, _detail, _country_panel, _refresh_left, %ArmyOrders,
+		TitleRealm.take_handed())  # the title's live map, as the reign begins
 	%SpyOrders.follow(_map3d, %ArmyOrders)
 	_detail.visibility_changed.connect(_refresh_left)
 	# The host opens from a regiment's card and closes back (owner 2026-09-27:

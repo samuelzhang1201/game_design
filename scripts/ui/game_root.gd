@@ -933,6 +933,13 @@ func _on_start_requested() -> void:
 		beats.push_front({"kind": "narration", "portrait_id": "round_table",
 			"speaker": "", "text": story})
 	current_screen.start(beats, _pending_report)
+	# THE MAP LAID ON THE TABLE (owner 2026-10-01): from the title's last frame
+	var frame := MainMenu.landing_frame
+	MainMenu.landing_frame = null
+	var table_pieces: Array[Control] = [_bottom_bar, _news_ticker]
+	var landing := TableLanding.play(self, current_screen, frame, table_pieces)
+	if landing != null and _pause_menu != null:
+		move_child(_pause_menu, get_child_count() - 1)
 
 ## The story background (game_story/chapter_0/game_start.md) with markdown
 ## chrome stripped for in-game narration and {player_realm}-style tokens
