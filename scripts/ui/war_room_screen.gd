@@ -55,6 +55,7 @@ func open(detail: MapDetailPanel) -> void:
 		(%Key as WarMarginKey).setup(Game.data, _view)
 		_folio.set_tier(Game.data, Map3DQuality.resolve_here(GameRoot.settings_path))
 		_view.camera_moved.connect((%Key as WarMarginKey).queue_redraw)
+		(%Key as WarMarginKey).north_pressed.connect(_view.start_north)
 	if detail != _detail:
 		_card_mine = false
 	_detail = detail

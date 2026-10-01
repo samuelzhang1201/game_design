@@ -120,6 +120,11 @@ func candles() -> Array[OmniLight3D]:
 	return WarRoomLights.candles(%Room)
 
 
+## The key's compass: ease the room back to the sheet's foot (yaw 0).
+func start_north() -> void:
+	_rig.start_north()
+
+
 func camera_rig() -> WarCamera:
 	return _rig
 
