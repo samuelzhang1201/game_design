@@ -42,7 +42,8 @@ func test_the_tree_carries_the_nodes_later_tasks_fill() -> void:
 	for n in ["Viewport", "Display", "Camera", "Table", "Pieces", "Pennants", "Room", "Hud", "InkViewport", "Ink"]:
 		assert_not_null(view.get_node_or_null("%" + n), n)
 	assert_true((view.get_node("%Viewport") as SubViewport).own_world_3d)
-	assert_null((view.get_node("%Hud") as Control).get_script(), "the HUD has no script until Task 11")
+	assert_true(view.get_node("%Hud") is WarHud)
+	assert_true(view.get_node("%Pennants") is WarPennants)
 
 
 func test_a_second_lay_supersedes_the_first() -> void:
@@ -128,7 +129,7 @@ func test_a_click_on_an_edge_arrow_requests_its_sheet() -> void:
 	await wait_frames(2)
 	watch_signals(view)
 	var arrow := view.get_node("%EdgeArrows").get_child(0) as Label3D
-	var at: Vector2 = (view.get_node("%Camera") as Camera3D).unproject_position(arrow.global_position) / view._window_scale()
+	var at: Vector2 = (view.get_node("%Camera") as Camera3D).unproject_position(arrow.global_position) / view.window_scale()
 	_click(at)
 	assert_signal_emitted_with_parameters(view, "sheet_requested", [int(arrow.get_meta("sheet"))])
 
@@ -144,9 +145,9 @@ func test_every_numeral_on_the_wall_chart_is_in_the_opening_view_and_picks_its_s
 		for k in numerals.size():
 			var l := numerals[k] as Label3D
 			assert_false(cam.is_position_behind(l.global_position), "%s is in front of the camera" % l.text)
-			var at := cam.unproject_position(l.global_position) / view._window_scale()
+			var at := cam.unproject_position(l.global_position) / view.window_scale()
 			assert_true(inside.has_point(at), "numeral %s at %s is inside the view %s" % [l.text, at, inside])
-			assert_eq(view._pick_sheet_target(at), k, "sheet %d laid: numeral %s picks its own sheet" % [laid, l.text])
+			assert_eq(WarRoomPicks.sheet_target(view.get_node("%EdgeArrows"), view.get_node("%IndexChart"), cam, repo, at, view.window_scale()), k, "sheet %d laid: numeral %s picks its own sheet" % [laid, l.text])
 
 
 func test_every_chart_corner_stands_in_the_opening_view() -> void:
@@ -156,7 +157,7 @@ func test_every_chart_corner_stands_in_the_opening_view() -> void:
 	var chart: MeshInstance3D = view.get_node("%IndexChart")
 	var half := (chart.mesh as QuadMesh).size * 0.5
 	for c: Vector2 in [Vector2(-half.x, -half.y), Vector2(half.x, -half.y), Vector2(-half.x, half.y), Vector2(half.x, half.y)]:
-		var at := cam.unproject_position(chart.global_transform * Vector3(c.x, c.y, 0.0)) / view._window_scale()
+		var at := cam.unproject_position(chart.global_transform * Vector3(c.x, c.y, 0.0)) / view.window_scale()
 		assert_true(Rect2(Vector2.ZERO, view.size).has_point(at), "corner %s at %s" % [c, at])
 
 
@@ -190,7 +191,7 @@ func test_a_drag_is_not_a_click_on_the_chart() -> void:
 	await wait_frames(2)
 	watch_signals(view)
 	var arrow := view.get_node("%EdgeArrows").get_child(0) as Label3D
-	var at: Vector2 = (view.get_node("%Camera") as Camera3D).unproject_position(arrow.global_position) / view._window_scale()
+	var at: Vector2 = (view.get_node("%Camera") as Camera3D).unproject_position(arrow.global_position) / view.window_scale()
 	var press := InputEventMouseButton.new()
 	press.button_index = MOUSE_BUTTON_LEFT
 	press.pressed = true
@@ -225,3 +226,141 @@ func test_closing_the_room_mid_roll_lays_the_sheet_and_stands_the_table_up() -> 
 	view.set_active(false)
 	assert_eq(view.sheet_index(), 1)
 	assert_eq((view.get_node("%Table") as Node3D).scale, Vector3.ONE)
+
+
+func _press(at: Vector2) -> void:
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = true
+	e.position = at
+	view._gui_input(e)
+
+
+func _move(at: Vector2) -> void:
+	var e := InputEventMouseMotion.new()
+	e.position = at
+	e.button_mask = MOUSE_BUTTON_MASK_LEFT
+	view._gui_input(e)
+
+
+func _release(at: Vector2) -> void:
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = false
+	e.position = at
+	view._gui_input(e)
+
+
+func _first_land_piece() -> Dictionary:
+	for p: Dictionary in WarRoom.on_sheet(repo, state, view.sheet_index()):
+		if not bool(p["naval"]):
+			return p
+	return {}
+
+
+func test_a_click_on_a_piece_selects_it_and_arms_nothing() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_frames(2)
+	var p := _first_land_piece()
+	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	watch_signals(view)
+	_press(at)
+	_move(at + Vector2(2, 0))   # under war_rake_min_px
+	_release(at + Vector2(2, 0))
+	assert_signal_emitted_with_parameters(view, "piece_selected", [String(p["code"])])
+	assert_signal_not_emitted(view, "rake_started")
+
+
+func test_a_drag_from_a_piece_takes_up_the_rake_and_a_release_names_the_ground() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_frames(2)
+	var p := _first_land_piece()
+	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	watch_signals(view)
+	_press(at)
+	_move(at + Vector2(60, 0))
+	assert_signal_emitted_with_parameters(view, "rake_started", [String(p["code"])])
+	view.aiming = true   # what ArmyOrderMenu.aim_for sets
+	_release(at + Vector2(60, 0))
+	assert_signal_emitted(view, "ground_clicked")
+	var args: Array = get_signal_parameters(view, "ground_clicked")
+	assert_almost_eq((args[1] as Vector2).x, at.x + 60.0, 0.001)
+
+
+func test_a_refused_rake_lets_go_and_the_rest_of_the_drag_does_nothing() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_frames(2)
+	var p := _first_land_piece()
+	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	watch_signals(view)
+	_press(at)
+	_move(at + Vector2(30, 0))
+	view.cancel_rake()   # what the screen does when the clock runs
+	_move(at + Vector2(60, 0))
+	_release(at + Vector2(60, 0))
+	assert_signal_emit_count(view, "rake_started", 1)
+	assert_signal_not_emitted(view, "ground_clicked")
+	assert_signal_not_emitted(view, "piece_selected")
+
+
+func test_the_arrow_reads_the_distance_and_the_days() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_frames(2)
+	var p := _first_land_piece()
+	var code := String(p["code"])
+	var to: Vector2 = (p["at"] as Vector2) + Vector2(10.0, 0.0)
+	var km := 10.0 * float(ArmySystem.metres_per_pack_px(repo)) / 1000.0
+	var days := ArmySystem.march_days(repo, state, code, km * 1000.0)
+	assert_eq(view.rake_reading(code, to), "%d km · ~%d day%s" % [int(round(km)), days, "" if days == 1 else "s"])
+
+
+func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_frames(2)
+	var p := _first_land_piece()
+	var code := String(p["code"])
+	var to: Vector2 = (p["at"] as Vector2) + Vector2(6.0, 0.0)
+	var dest := ArmySystem.pack_to_metres(repo, to)
+	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code,
+		{"action_code": "ARMY_MARCH", "dest_x_m": dest.x, "dest_y_m": dest.y})
+	view.refresh()
+	var pennants: WarPennants = view.get_node("%Pennants")
+	var node := pennants.pennant(code)
+	assert_not_null(node)
+	assert_string_starts_with((node.get_node("Slip") as Label3D).text, "courier riding · ")
+	watch_signals(view)
+	var hit: Dictionary = pennants.screen_hits(view.get_node("%Camera"), view.window_scale())[0]
+	var at := (hit["rect"] as Rect2).get_center()
+	_press(at)
+	_release(at)
+	assert_signal_emitted_with_parameters(view, "route_clicked", [code, at])
+	state.couriers.clear()
+	ArmySystem.set_march(repo, state, code, to)
+	view.refresh()
+	assert_eq((pennants.pennant(code).get_node("Slip") as Label3D).text, "order received")
+	ArmySystem.set_garrison(repo, state, code)
+	view.refresh()
+	assert_null(pennants.pennant(code), "struck when the column stands down")
+
+
+func test_a_sheet_roll_lets_go_of_the_rake() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_frames(2)
+	var p := _first_land_piece()
+	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	_press(at)
+	_move(at + Vector2(40, 0))
+	assert_eq(view._rake.code, String(p["code"]))
+	view.swap_to((view.sheet_index() + 1) % WarSheets.series(repo).size())
+	assert_eq(view._rake.code, "")
+
+
+func test_the_hud_draws_an_arrow_only_between_two_real_points() -> void:
+	var hud: WarHud = view.get_node("%Hud")
+	var pal: Dictionary = repo.war_palette
+	hud.draw_state(Vector2(-1, -1), Vector2(-1, -1), "", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null)
+	assert_false(hud.drawing())
+	hud.draw_state(Vector2(10, 10), Vector2(90, 10), "80 km · ~2 days", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null)
+	assert_true(hud.drawing())
+	hud.draw_state(Vector2(10, 10), Vector2(10, 10), "", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null)
+	assert_false(hud.drawing(), "no length, no arrow")

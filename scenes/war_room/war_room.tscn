@@ -1,9 +1,11 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=19 format=3]
 
 [ext_resource type="Script" path="res://scripts/war_room/war_room_view.gd" id="1_view"]
 [ext_resource type="Script" path="res://scripts/war_room/war_ink_painter.gd" id="2_ink"]
 [ext_resource type="Material" path="res://scenes/war_room/materials/war_table.tres" id="3_table"]
 [ext_resource type="Script" path="res://scripts/war_room/war_pieces.gd" id="4_pieces"]
+[ext_resource type="Script" path="res://scripts/war_room/war_pennants.gd" id="5_pennants"]
+[ext_resource type="Script" path="res://scripts/war_room/war_hud.gd" id="6_hud"]
 
 [sub_resource type="Environment" id="Environment_room"]
 background_mode = 1
@@ -149,6 +151,7 @@ script = ExtResource("4_pieces")
 
 [node name="Pennants" type="Node3D" parent="Viewport"]
 unique_name_in_owner = true
+script = ExtResource("5_pennants")
 
 [node name="Display" type="TextureRect" parent="."]
 unique_name_in_owner = true
@@ -180,3 +183,4 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+script = ExtResource("6_hud")

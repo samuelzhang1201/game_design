@@ -114,3 +114,40 @@ func test_a_regiment_on_another_sheet_is_listed_and_its_row_lays_that_sheet() ->
 ## Run the roll-up's seconds at once, as the clock would over time.
 func _roll(view: WarRoomView) -> void:
 	view._process(10.0)
+
+
+func test_the_rake_on_a_running_clock_says_why_and_arms_nothing() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(2)
+	Game.set_clock_speed(1)
+	var screen := r.war_room_screen()
+	var code := String(WarRoom.on_sheet(Game.data, Game.state, screen.view().sheet_index())[0]["code"])
+	screen.view().rake_started.emit(code)
+	Game.set_clock_speed(0)
+	assert_eq(screen.orders().aiming(), "")
+
+
+func test_a_committed_rake_plants_a_pennant_with_a_riding_slip() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(2)
+	Game.set_clock_speed(0)
+	var screen := r.war_room_screen()
+	var p: Dictionary = {}
+	for q: Dictionary in WarRoom.on_sheet(Game.data, Game.state, screen.view().sheet_index()):
+		if not bool(q["naval"]):
+			p = q
+			break
+	var code := String(p["code"])
+	screen.view().rake_started.emit(code)
+	assert_eq(screen.orders().aiming(), code)
+	var to: Vector2 = (p["at"] as Vector2) + Vector2(6.0, 0.0)
+	if MapEconomy.cell_at(Game.data, to) < 0:
+		to = (p["at"] as Vector2) + Vector2(0.0, 6.0)
+	screen.view().ground_clicked.emit(to, Vector2(100, 100))
+	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	await wait_frames(2)
+	assert_eq(String(WarRoom.pennant_of(Game.data, Game.state, code).get("status", "")), "riding")
+	var pennants: WarPennants = screen.view().get_node("%Pennants")
+	assert_not_null(pennants.get_node_or_null(NodePath(code)))

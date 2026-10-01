@@ -74,8 +74,8 @@ static func pose_action(order: String) -> String:
 
 ## The pennant over a march order: where the newest ARMY_MARCH courier for the
 ## regiment carries it ("riding"; a newer courier with another order, a
-## garrison say, does not hide it), else the march the column is under
-## ("received"); {} when neither.
+## garrison say, does not hide it; `issued` is the absolute day he left), else
+## the march the column is under ("received"); {} when neither.
 static func pennant_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	var best: Dictionary = {}
 	for c: Dictionary in state.couriers:
@@ -86,10 +86,18 @@ static func pennant_of(repo: DataRepository, state: GameState, code: String) -> 
 	if not best.is_empty():
 		var o: Dictionary = best["order"]
 		return {"at": ArmySystem.metres_to_pack(repo, Vector2i(int(o["dest_x_m"]), int(o["dest_y_m"]))),
-			"status": "riding"}
+			"status": "riding", "issued": int(best.get("issued", 0))}
 	if ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH:
 		return {"at": ArmySystem.destination_of(repo, state, code), "status": "received"}
 	return {}
+
+
+## An absolute day written as the calendar writes it ("Spring 12, Year 1"): the
+## date on a riding pennant's slip.
+static func date_of(abs_day: int) -> String:
+	var d := maxi(abs_day, 1) - 1
+	@warning_ignore("integer_division")  # whole ticks
+	return Calendar.date_string(d / Calendar.DAYS_PER_TICK + 1, d % Calendar.DAYS_PER_TICK + 1)
 
 
 ## The slip pinned beside a piece: heads under arms and whole months of stores.

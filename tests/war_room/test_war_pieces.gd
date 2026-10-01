@@ -161,10 +161,10 @@ func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_its_orders() ->
 	await wait_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var cam: Camera3D = view.get_node("%Camera")
-	var hit: Dictionary = pieces.screen_hits(cam, view._window_scale())[0]
+	var hit: Dictionary = pieces.screen_hits(cam, view.window_scale())[0]
 	var at: Vector2 = hit["at"]
-	assert_eq(pieces.pick(cam, view._window_scale(), at, repo.bal("war_pick_px")), String(hit["code"]))
-	assert_eq(pieces.pick(cam, view._window_scale(), at + Vector2(5000, 5000), repo.bal("war_pick_px")), "")
+	assert_eq(pieces.pick(cam, view.window_scale(), at, repo.bal("war_pick_px")), String(hit["code"]))
+	assert_eq(pieces.pick(cam, view.window_scale(), at + Vector2(5000, 5000), repo.bal("war_pick_px")), "")
 	watch_signals(view)
 	var down := InputEventMouseButton.new()
 	down.button_index = MOUSE_BUTTON_LEFT
@@ -227,7 +227,7 @@ func test_a_click_on_the_figures_top_picks_the_piece_and_the_nearer_one_wins() -
 	await wait_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var cam: Camera3D = view.get_node("%Camera")
-	var sc: float = view._window_scale()
+	var sc: float = view.window_scale()
 	var code := _land_code()
 	var node := pieces.piece(code)
 	var top := node.global_position + Vector3(0.0, (repo.bal("war_piece_base_h_mm") + repo.bal("war_piece_figure_mm")) / 1000.0, 0.0)

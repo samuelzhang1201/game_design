@@ -19,7 +19,13 @@ signal rake_started(code: String)
 signal sheet_requested(index: int)
 signal sheet_laid(index: int)
 
-var aiming := false
+var aiming := false:
+	set(v):
+		aiming = v
+		if not v:
+			_rake.to = Vector2(-1, -1)
+		if _repo != null and is_inside_tree():
+			_rake.redraw()
 var aim_dest := Vector2(-1, -1)
 var aim_code := ""
 
@@ -32,6 +38,8 @@ var aim_code := ""
 @onready var _chart: MeshInstance3D = %IndexChart
 @onready var _arrows: Node3D = %EdgeArrows
 @onready var _pieces: WarPieces = %Pieces
+@onready var _pennants: WarPennants = %Pennants
+@onready var _hud: WarHud = %Hud
 
 var _repo: DataRepository
 var _state_fn: Callable
@@ -52,7 +60,7 @@ var _selected := ""
 var _font: Font
 var _chart_built := false
 var _swap := WarSheetSwap.new()
-var _picks := WarRoomPicks.new()
+var _rake := WarRoomRake.new()
 
 
 func _ready() -> void:
@@ -71,6 +79,9 @@ func bind(repo: DataRepository, state_fn: Callable, paused_fn: Callable) -> void
 	_state_fn = state_fn
 	_paused_fn = paused_fn
 	_pieces.setup(repo, self)
+	_pennants.setup(repo, self)
+	_rake.setup(self, repo, {"hud": _hud, "pieces": _pieces, "pennants": _pennants, "camera": _camera,
+		"arrows": _arrows, "chart": _chart})
 	_table_w = repo.bal("war_table_w_m")
 	_rig.distance = repo.bal("war_cam_distance_m")
 	_rig.pitch_deg = repo.bal("war_cam_pitch_deg")
@@ -115,16 +126,20 @@ func set_font(f: Font) -> void:
 	_font = f
 
 
-func _font_or_default() -> Font:
+func lettering() -> Font:
 	return _font if _font != null else ThemeDB.fallback_font
 
 
-func _window_scale() -> float:
+func sheet_rect() -> Rect2:
+	return _rect
+
+
+func window_scale() -> float:
 	return maxf(get_viewport().get_final_transform().get_scale().x, 1.0) * _render_scale
 
 
 func _fit_viewport() -> void:
-	var s := _window_scale()
+	var s := window_scale()
 	_viewport.size = Vector2i(maxi(1, int(size.x * s)), maxi(1, int(size.y * s)))
 
 
@@ -162,9 +177,11 @@ func lay_sheet(index: int) -> void:
 	_apply_camera()
 	if not _chart_built:
 		_chart_built = true
-		WarRoomWall.build_chart(_chart, _repo, _font_or_default())
-	WarRoomWall.lay_arrows(_arrows, _repo, index, _table_w, _depth, _font_or_default())
+		WarRoomWall.build_chart(_chart, _repo, lettering())
+	WarRoomWall.lay_arrows(_arrows, _repo, index, _table_w, _depth, lettering())
 	_pieces.rebuild(state())
+	_pennants.rebuild(state(), true)
+	_rake.redraw()
 	sheet_laid.emit(index)
 	await _paint_ink(mat)
 
@@ -178,6 +195,7 @@ func swap_to(index: int) -> void:
 	if _sheet < 0 or not is_processing():
 		lay_sheet(index)
 		return
+	_rake.cancel()   # a rake does not follow the table up
 	_swap.start(index, _repo)
 
 
@@ -203,7 +221,7 @@ func _finish_swap() -> void:
 ## The sheet's ink onto the table's material (WarRoomInk draws and keeps it).
 func _paint_ink(mat: ShaderMaterial) -> void:
 	var sheet := _sheet
-	var tex := await _inks.texture_for(_repo, state(), sheet, _ink_viewport, _ink, _font_or_default(),
+	var tex := await _inks.texture_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(),
 		func() -> bool: return is_inside_tree() and sheet == _sheet)
 	if tex != null:
 		mat.set_shader_parameter("ink_tex", tex)
@@ -211,6 +229,8 @@ func _paint_ink(mat: ShaderMaterial) -> void:
 
 func _apply_camera() -> void:
 	_camera.transform = _rig.transform()
+	if _repo != null:
+		_rake.redraw()
 
 
 func y_at(xz: Vector2) -> float:
@@ -228,12 +248,12 @@ func screen_pos_of_px(pack_px: Vector2) -> Variant:
 	var p := table_point(pack_px)
 	if _camera.is_position_behind(p):
 		return null
-	return _camera.unproject_position(p) / _window_scale()
+	return _camera.unproject_position(p) / window_scale()
 
 
 ## The pack point under a screen px, Vector2(-1, -1) off the table.
 func pack_at(screen_px: Vector2) -> Vector2:
-	var s := screen_px * _window_scale()
+	var s := screen_px * window_scale()
 	var hit := WarRoomTable.ray_hit(_camera.project_ray_origin(s), _camera.project_ray_normal(s), y_at)
 	if hit == Vector3.INF or not _rig.bounds.has_point(Vector2(hit.x, hit.z)):
 		return Vector2(-1, -1)
@@ -241,12 +261,18 @@ func pack_at(screen_px: Vector2) -> Vector2:
 
 
 func refresh() -> void:
-	_pieces.update(state())   # Task 11 adds the pennants
+	_pieces.update(state())
+	_pennants.rebuild(state())
+	_rake.redraw()
 
 
-## The rake's march was refused: let go of the piece (Task 11 draws the rake).
+## The rake's march was refused (or its order is done): let go of the piece.
 func cancel_rake() -> void:
-	pass
+	_rake.cancel()
+
+
+func rake_reading(code: String, to_px: Vector2) -> String:
+	return _rake.reading(code, to_px)
 
 
 func selected_army() -> String:
@@ -256,29 +282,21 @@ func selected_army() -> String:
 func clear_selection() -> void:
 	_selected = ""
 	selection_cleared.emit()
+	_rake.redraw()
 
 
-func _on_left(mb: InputEventMouseButton) -> void:
-	if not _picks.released_click(mb, _repo.bal("war_rake_min_px")):
-		return
-	var i := WarRoomPicks.sheet_target(_arrows, _chart, _camera, _repo, mb.position, _window_scale())
-	if i >= 0:
-		sheet_requested.emit(i)
-		accept_event()
-		return
-	var code := _piece_under(mb.position)
-	if code != "":
-		_selected = code
-		piece_selected.emit(code)
-		accept_event()
+func select(code: String) -> void:
+	_selected = code
+	piece_selected.emit(code)
+	_rake.redraw()
 
 
 ## The code of the piece under a screen px, "" when none (and none while a
 ## sheet rolls: the pieces are put away).
-func _piece_under(screen_px: Vector2) -> String:
+func piece_under(screen_px: Vector2) -> String:
 	if _swap.active():
 		return ""
-	return _pieces.pick(_camera, _window_scale(), screen_px, _repo.bal("war_pick_px"))
+	return _pieces.pick(_camera, window_scale(), screen_px, _repo.bal("war_pick_px"))
 
 
 func _ground_under(screen_px: Vector2) -> Vector3:
@@ -291,9 +309,11 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	var mb := event as InputEventMouseButton
 	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
-		_on_left(mb)
-	elif mb != null and mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed and _piece_under(mb.position) != "":
-		army_menu_requested.emit(_piece_under(mb.position), mb.position)
+		_rake.on_left(mb)
+	elif event is InputEventMouseMotion and not ((event as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_MIDDLE):
+		_rake.on_motion(event as InputEventMouseMotion)
+	elif mb != null and mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed and piece_under(mb.position) != "":
+		army_menu_requested.emit(piece_under(mb.position), mb.position)
 		accept_event()
 	elif WarRoomGestures.apply(event, _rig, _repo, _ground_under):
 		_apply_camera()
