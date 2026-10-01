@@ -106,3 +106,92 @@ func test_the_drill_comes_back_and_the_parts_go() -> void:
 	assert_null(fig.parts_root())
 	assert_eq(cam.transform, before, "the camera is back on the figure")
 	assert_true(fig.model_visible())
+
+
+func _to_root(m: Node3D) -> Vector3:
+	return (fig.parts_root().global_transform.affine_inverse() * m.global_transform).origin
+
+
+func test_each_labelled_part_has_a_leader_line_from_its_centre_to_its_label() -> void:
+	fig.show_parts_from(Game.data, "infantry", _parts_scene())
+	fig.explode(1.0)
+	for row: Dictionary in WarFolio.kit_of(Game.data, "infantry"):
+		var part := String(row["part"])
+		if _part(part) == null:
+			continue
+		var ends := fig.leader_ends(part)
+		assert_eq(ends.size(), 2, "%s has a line" % part)
+		var label := fig.parts_root().find_child("Label_" + part, true, false) as Label3D
+		assert_almost_eq(ends[0].distance_to(_part(part).position), 0.0, 0.0001, "starts at the part's centre (a box about its origin)")
+		assert_almost_eq(ends[1].distance_to(label.position), 0.0, 0.0001, "ends at its label")
+		var line := fig.parts_root().find_child("Leader_" + part, true, false) as MeshInstance3D
+		assert_not_null(line)
+		assert_eq(((line.mesh as ImmediateMesh).get_surface_count()), 1, "and it is drawn")
+		var mat := line.material_override as StandardMaterial3D
+		assert_true(mat.no_depth_test)
+		assert_eq(mat.shading_mode, BaseMaterial3D.SHADING_MODE_UNSHADED)
+	assert_eq(fig.leader_ends("nothing").size(), 0)
+
+
+func test_the_line_follows_the_flight() -> void:
+	fig.show_parts_from(Game.data, "infantry", _parts_scene())
+	fig.explode(0.5)
+	var half := fig.leader_ends("shield")
+	fig.explode(1.0)
+	var full := fig.leader_ends("shield")
+	assert_gt(full[0].distance_to(full[1]) + 0.0001, 0.0)
+	assert_ne(half[0], full[0])
+
+
+func test_a_label_carries_its_note_in_a_smaller_line_under_the_name() -> void:
+	fig.show_parts_from(Game.data, "infantry", _parts_scene())
+	fig.explode(1.0)
+	var notes := fig.note_labels()
+	assert_eq(notes.size(), 4)
+	var shield_note := fig.parts_root().find_child("Note_shield", true, false) as Label3D
+	var name_label := fig.parts_root().find_child("Label_shield", true, false) as Label3D
+	var want := ""
+	for row: Dictionary in WarFolio.kit_of(Game.data, "infantry"):
+		if String(row["part"]) == "shield":
+			want = String(row["note"])
+	assert_ne(want, "")
+	assert_eq(shield_note.text, want)
+	assert_lt(shield_note.font_size, name_label.font_size, "smaller")
+	assert_lt(shield_note.position.y, name_label.position.y, "under the name")
+
+
+func test_nested_parts_are_measured_and_flown_in_the_roots_space() -> void:
+	var root := Node3D.new()
+	var group := Node3D.new()
+	group.name = "Group"
+	group.position = Vector3(0, 1, 0)
+	group.scale = Vector3.ONE * 2.0
+	root.add_child(group)
+	group.owner = root
+	var ps := PackedScene.new()
+	for spot: Array in [["helmet", Vector3(0, 0.5, 0)], ["shield", Vector3(-0.5, 0, 0)]]:
+		var m := MeshInstance3D.new()
+		m.name = spot[0]
+		m.mesh = BoxMesh.new()
+		m.position = spot[1]
+		group.add_child(m)
+		m.owner = root
+	ps.pack(root)
+	root.free()
+	assert_true(fig.show_parts_from(Game.data, "infantry", ps))
+	var home := _to_root(_part("shield"))
+	fig.explode(1.0)
+	var moved := _to_root(_part("shield")) - home
+	assert_almost_eq(moved.length(), Game.data.bal("war_explode_m"), 0.0001, "the flight is war_explode_m in the root's space, not the group's doubled one")
+	assert_lt(moved.x, 0.0)
+
+
+func test_a_resize_re_pitches_the_kits_hatching_and_the_frame_matches_the_drill() -> void:
+	fig.show_parts_from(Game.data, "infantry", _parts_scene())
+	var mat: ShaderMaterial = fig._parts_mat
+	var before := float(mat.get_shader_parameter("stroke_px"))
+	assert_almost_eq(before, Game.data.bal("war_figure_stroke_px") * fig.window_scale(), 0.0001)
+	fig._stroke_px = 11.0
+	fig._fit_viewport()
+	assert_almost_eq(float(mat.get_shader_parameter("stroke_px")), 11.0 * fig.window_scale(), 0.0001)
+	assert_almost_eq((fig.get_node("%FigCamera") as Camera3D).fov, Game.data.bal("war_figure_fov"), 0.0001)

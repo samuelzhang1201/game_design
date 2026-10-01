@@ -964,3 +964,6 @@ war_figure_glyph_px,170,"WAR ROOM (Task 13 fix): the side of the large ink icon 
 war_explode_label_px,22,"WAR ROOM (Task 14): the exploded view's leader labels' font size, Label3D px"
 war_explode_label_pixel_m,0.004,"WAR ROOM (Task 14): the exploded view's leader labels' world size per font px, model metres"
 war_explode_label_reach,1.25,"WAR ROOM (Task 14): a leader label stands this many times its part's flight out from the figure's centre"
+war_explode_note_px,15,"WAR ROOM (Task 14 fix): the exploded view's part notes' font size under each name, Label3D px (smaller than war_explode_label_px)"
+war_explode_note_w_px,230,"WAR ROOM (Task 14 fix): the width a part's note wraps at, Label3D px"
+war_explode_note_drop,1.1,"WAR ROOM (Task 14 fix): how far under its name a note hangs, in name-label heights"

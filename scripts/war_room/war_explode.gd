@@ -5,9 +5,16 @@ extends RefCounted
 ## The game's skinned mesh cannot be taken apart at runtime (a shader has no
 ## bone index), so the parts are their own file, exported from Blender.
 
+## arm -> a parts model to read in place of the arm's own file (a seam for
+## tests, which have no Blender export to point at; empty in the game).
+static var overrides: Dictionary = {}
+
+
 ## The parts model of `arm` (archers wear the spearman's kit).
 static func parts_path(arm: String) -> String:
 	var a := "infantry" if arm == "archers" else arm
+	if overrides.has(a):
+		return String(overrides[a])
 	return "res://assets/3D/units/%s/%s_parts.glb" % [a, a]
 
 

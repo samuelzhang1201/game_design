@@ -21,9 +21,17 @@ var _material: ShaderMaterial
 var label_font: Font      # the leader labels' face, handed in by the folio (this script never reaches UiPalette)
 var _parts: Node3D        # the exploded view's static kit, when it is shown
 var _part_home: Dictionary = {}    # object name -> its assembled position
-var _part_off: Dictionary = {}     # object name -> WarExplode's offset when fully apart
+var _part_off: Dictionary = {}     # object name -> WarExplode's offset when fully apart (parts space)
+var _part_parent: Dictionary = {}  # object name -> the basis taking a parts-space offset into its parent's
 var _part_labels: Array[Label3D] = []
-var _label_home: Dictionary = {}   # Label3D -> [its part's centre, its part's offset]
+var _label_home: Dictionary = {}   # Label3D -> [its part's centre, its label's reach, its note's Label3D]
+var _note_labels: Array[Label3D] = []
+var _leaders: Dictionary = {}      # part name -> its leader line's MeshInstance3D
+var _leader_ends: Dictionary = {}  # part name -> PackedVector3Array [part centre, label position], parts space
+var _leader_mat: StandardMaterial3D
+var _parts_mat: ShaderMaterial     # the kit's ink, kept so a resize can re-pitch its hatching
+var _label_h_m := 0.0              # a name label's height in model metres (the note hangs under it)
+var _note_drop := 0.0
 var _model_cam := Transform3D.IDENTITY   # the camera as the drill framed it, for show_drill
 
 
@@ -43,6 +51,8 @@ func _fit_viewport() -> void:
 	_viewport.size = Vector2i(maxi(1, int(size.x * s)), maxi(1, int(size.y * s)))
 	if _material != null:
 		_material.set_shader_parameter("stroke_px", _stroke_px * s)
+	if _parts_mat != null:
+		_parts_mat.set_shader_parameter("stroke_px", _stroke_px * s)
 
 
 func window_scale() -> float:
@@ -174,6 +184,7 @@ func show_parts(repo: DataRepository, arm: String) -> bool:
 
 
 ## show_parts from a scene in hand — the seam the tests (and any other source) use.
+## Parts may be nested: every measure is taken in the parts root's own space.
 func show_parts_from(repo: DataRepository, arm: String, scene: PackedScene) -> bool:
 	if scene == null:
 		return false
@@ -185,45 +196,81 @@ func show_parts_from(repo: DataRepository, arm: String, scene: PackedScene) -> b
 	if _model != null:
 		_model.visible = false
 	_glyph.visible = false
-	var mat := INK.duplicate(true) as ShaderMaterial
-	mat.set_shader_parameter("ink", repo.war_palette["ink"])
-	mat.set_shader_parameter("paper", repo.war_palette["paper"])
-	mat.set_shader_parameter("stroke_px", _stroke_px * window_scale())
-	(mat.next_pass as ShaderMaterial).set_shader_parameter("ink", repo.war_palette["ink"])
+	_stroke_px = repo.bal("war_figure_stroke_px")
+	var ink: Color = repo.war_palette["ink"]
+	_parts_mat = INK.duplicate(true) as ShaderMaterial
+	_parts_mat.set_shader_parameter("ink", ink)
+	_parts_mat.set_shader_parameter("paper", repo.war_palette["paper"])
+	_parts_mat.set_shader_parameter("stroke_px", _stroke_px * window_scale())
+	(_parts_mat.next_pass as ShaderMaterial).set_shader_parameter("ink", ink)
+	var to_root := _parts.global_transform.affine_inverse()
 	var centres: Dictionary = {}
 	var all := AABB()
 	var first := true
 	for m: MeshInstance3D in Map3DUnits.meshes(_parts):
-		m.material_override = mat
-		var a := m.transform * m.get_aabb()
+		m.material_override = _parts_mat
+		var rel := to_root * m.global_transform
+		var a := rel * m.get_aabb()
 		all = a if first else all.merge(a)
 		first = false
 		centres[String(m.name)] = a.get_center()
 		_part_home[String(m.name)] = m.position
+		# a flight is measured in the root's space; the mesh moves in its parent's
+		var parent_rel := to_root * (m.get_parent() as Node3D).global_transform if m.get_parent() is Node3D else Transform3D.IDENTITY
+		_part_parent[String(m.name)] = parent_rel.basis.inverse()
 	var apart := repo.bal("war_explode_m")
 	_part_off = WarExplode.offsets(centres, all.get_center(), apart)
-	(mat.next_pass as ShaderMaterial).set_shader_parameter("width", maxf(all.size.y, 0.01) * repo.bal("war_figure_outline_ratio"))
+	(_parts_mat.next_pass as ShaderMaterial).set_shader_parameter("width", maxf(all.size.y, 0.01) * repo.bal("war_figure_outline_ratio"))
+	_leader_mat = StandardMaterial3D.new()
+	_leader_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_leader_mat.no_depth_test = true
+	_leader_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_leader_mat.albedo_color = Color(ink, 0.0)
+	var px := repo.bal("war_explode_label_pixel_m")
+	_label_h_m = repo.bal("war_explode_label_px") * px
+	_note_drop = _label_h_m * repo.bal("war_explode_note_drop")
 	for k: Dictionary in WarFolio.kit_of(repo, arm):
 		var part := String(k["part"])
-		if _parts.find_child(part, true, false) == null:
+		if not centres.has(part):
 			continue
-		var tag := Label3D.new()
+		var tag := _label3d(String(k["label"]), int(repo.bal("war_explode_label_px")), px, ink)
 		tag.name = "Label_" + part
-		tag.text = String(k["label"])
-		tag.font = label_font
-		tag.font_size = int(repo.bal("war_explode_label_px"))
-		tag.pixel_size = repo.bal("war_explode_label_pixel_m")
-		tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		tag.no_depth_test = true
-		tag.shaded = false
-		tag.outline_size = 0
-		tag.modulate = Color(repo.war_palette["ink"], 0.0)
-		_parts.add_child(tag)
+		tag.set_meta("part", part)
+		var note: Label3D = null
+		if String(k["note"]) != "":
+			note = _label3d(String(k["note"]), int(repo.bal("war_explode_note_px")), px, Color(ink, repo.bal("war_folio_label_alpha")))
+			note.name = "Note_" + part
+			note.width = repo.bal("war_explode_note_w_px")
+			note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			note.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+			_note_labels.append(note)
 		_part_labels.append(tag)
-		_label_home[tag] = [centres.get(part, Vector3.ZERO), _part_off.get(part, Vector3.ZERO) * repo.bal("war_explode_label_reach")]
+		_label_home[tag] = [centres[part], (_part_off[part] as Vector3) * repo.bal("war_explode_label_reach"), note]
+		var line := MeshInstance3D.new()
+		line.name = "Leader_" + part
+		line.mesh = ImmediateMesh.new()
+		line.material_override = _leader_mat
+		line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_parts.add_child(line)
+		_leaders[part] = line
 	_frame_parts(repo, all, apart)
 	explode(0.0)
 	return true
+
+
+func _label3d(text: String, font_px: int, pixel_m: float, colour: Color) -> Label3D:
+	var tag := Label3D.new()
+	tag.text = text
+	tag.font = label_font
+	tag.font_size = font_px
+	tag.pixel_size = pixel_m
+	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	tag.no_depth_test = true
+	tag.shaded = false
+	tag.outline_size = 0
+	tag.modulate = Color(colour, 0.0)
+	_parts.add_child(tag)
+	return tag
 
 
 ## The camera looks at the kit and the room it flies into.
@@ -231,21 +278,39 @@ func _frame_parts(repo: DataRepository, all: AABB, apart: float) -> void:
 	var height := all.size.y + 2.0 * apart
 	var centre := all.get_center()
 	var feet := Vector3(centre.x, all.position.y - apart, centre.z)
+	_camera.fov = repo.bal("war_figure_fov")
 	_camera.position = feet + Vector3(repo.bal("war_figure_cam_x"), repo.bal("war_figure_cam_y"), repo.bal("war_figure_cam_z")) * height
 	_camera.look_at(centre)
 
 
-## 0 is the kit assembled, 1 flown apart; its labels fade in with it.
+## 0 is the kit assembled, 1 flown apart; its labels, notes and leader lines
+## fade in with it.
 func explode(t: float) -> void:
 	if _parts == null:
 		return
 	for m: MeshInstance3D in Map3DUnits.meshes(_parts):
 		var n := String(m.name)
-		m.position = (_part_home.get(n, Vector3.ZERO) as Vector3) + (_part_off.get(n, Vector3.ZERO) as Vector3) * t
+		var flight := (_part_off.get(n, Vector3.ZERO) as Vector3) * t
+		m.position = (_part_home.get(n, Vector3.ZERO) as Vector3) + (_part_parent.get(n, Basis.IDENTITY) as Basis) * flight
+	var a := clampf(t, 0.0, 1.0)
+	_leader_mat.albedo_color.a = a
 	for tag: Label3D in _part_labels:
 		var at: Array = _label_home[tag]
+		var part := String(tag.get_meta("part"))
+		var from := (at[0] as Vector3) + (_part_off.get(part, Vector3.ZERO) as Vector3) * t   # the part's centre now
 		tag.position = (at[0] as Vector3) + (at[1] as Vector3) * t
-		tag.modulate.a = clampf(t, 0.0, 1.0)
+		tag.modulate.a = a
+		var note: Label3D = at[2]
+		if note != null:
+			note.position = tag.position - Vector3(0.0, _note_drop, 0.0)
+			note.modulate.a = a
+		_leader_ends[part] = PackedVector3Array([from, tag.position])
+		var im := (_leaders[part] as MeshInstance3D).mesh as ImmediateMesh
+		im.clear_surfaces()
+		im.surface_begin(Mesh.PRIMITIVE_LINES)
+		im.surface_add_vertex(from)
+		im.surface_add_vertex(tag.position)
+		im.surface_end()
 
 
 ## Put the drill's figure back and the kit away.
@@ -267,8 +332,14 @@ func _drop_parts() -> void:
 		_parts = null
 	_part_home = {}
 	_part_off = {}
+	_part_parent = {}
 	_part_labels = []
+	_note_labels = []
 	_label_home = {}
+	_leaders = {}
+	_leader_ends = {}
+	_parts_mat = null
+	_leader_mat = null
 
 
 func parts_root() -> Node3D:
@@ -277,6 +348,16 @@ func parts_root() -> Node3D:
 
 func part_labels() -> Array[Label3D]:
 	return _part_labels
+
+
+func note_labels() -> Array[Label3D]:
+	return _note_labels
+
+
+## A part's leader line as its two ends in the parts' space: the part's centre
+## now and its label's position. Empty for a part with no label.
+func leader_ends(part: String) -> PackedVector3Array:
+	return _leader_ends.get(part, PackedVector3Array())
 
 
 func model_visible() -> bool:

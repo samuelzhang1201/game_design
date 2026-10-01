@@ -63,6 +63,7 @@ func close() -> void:
 	if not visible:
 		return
 	visible = false
+	_set_apart(false)   # the kit goes back together, its tween stopped
 	(%Figure as WarInkFigure).set_active(false)
 	closed.emit()
 

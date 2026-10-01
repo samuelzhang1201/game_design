@@ -1,6 +1,8 @@
 extends GutTest
 ## The folio opens on a chosen piece and closes on ×, Escape or a click outside (spec §4).
 
+const RunDir := preload("res://tests/run_dir.gd")
+
 var panel: WarFolioPanel
 var code := ""
 
@@ -383,3 +385,51 @@ func _stand_in() -> PackedScene:
 	ps.pack(root)
 	root.free()
 	return ps
+
+
+func after_each() -> void:
+	WarExplode.overrides = {}
+
+
+## A parts file on disk (a stand-in for the owner's Blender export), so the
+## button's real exists-check and the real load path run.
+func _parts_file(arm: String) -> String:
+	var path := RunDir.dir("war_parts").path_join("%s_parts.tscn" % arm)
+	assert_eq(ResourceSaver.save(_stand_in(), path), OK)
+	WarExplode.overrides[arm] = path
+	return path
+
+
+func test_take_apart_shows_when_the_arms_parts_file_exists() -> void:
+	panel.open_for(code)
+	var arm := MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code))
+	assert_true(WarFolio.modelled(Game.data, arm))
+	_parts_file(arm)
+	panel._show_arm(arm)
+	var btn: Button = panel.get_node("%TakeApart")
+	assert_true(btn.visible)
+	btn.pressed.emit()   # the real press: the file is loaded, not handed in
+	assert_not_null((panel.get_node("%Figure") as WarInkFigure).parts_root())
+	assert_eq(btn.text, "Put together")
+
+
+func test_a_second_press_kills_the_running_tween() -> void:
+	panel.open_for(code)
+	panel._show_arm(MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code)))
+	panel.toggle_take_apart(_stand_in())
+	var tween: Tween = panel._fly
+	assert_not_null(tween)
+	assert_true(tween.is_valid())
+	panel.toggle_take_apart(null)
+	assert_false(tween.is_valid(), "killed")
+	assert_null(panel._fly)
+
+
+func test_closing_puts_the_kit_back_together() -> void:
+	panel.open_for(code)
+	panel._show_arm(MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code)))
+	panel.toggle_take_apart(_stand_in())
+	panel.close()
+	assert_null((panel.get_node("%Figure") as WarInkFigure).parts_root())
+	assert_null(panel._fly)
+	assert_true((panel.get_node("%Drills") as Control).visible)
