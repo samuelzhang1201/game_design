@@ -60,6 +60,9 @@ var _mode_pos: Dictionary = {}        # true (flat) / false (3D) -> {"pos": the 
 var _frame_ids: Array = []            # what the camera frames while _framed
 var _title_font: Font
 var _star_cols := PackedColorArray()  # what each star wears, in _order (the MultiMesh's own copy is the renderer's)
+var _index_of: Dictionary = {}       # id -> its place in _order
+var _whole_cols := PackedColorArray()  # the colours dealt to the whole MultiMesh, in _whole
+var _faint_cols := PackedColorArray()  # and to the blended one, in _faint
 var _whole: Array[String] = []        # the stars drawn whole (opaque), in _order
 var _faint: Array[String] = []        # the dimmed stars (alpha under 1), drawn blended, in _order
 var _near: Dictionary = {}
@@ -180,6 +183,9 @@ func show_snapshot(snap: Dictionary, keep_camera: bool, select_id: String = "") 
 	for id: String in _nodes:
 		_order.append(id)
 	_order.sort()
+	_index_of.clear()
+	for i in _order.size():
+		_index_of[_order[i]] = i
 	_size.clear()
 	for id: String in _order:
 		_size[id] = drawn_radius(_nodes[id], int(degree.get(id, 0)))
@@ -339,7 +345,7 @@ func segments() -> Array:
 
 
 func star_colour(id: String) -> Color:
-	var i := _order.find(id)
+	var i := int(_index_of.get(id, -1))
 	return _star_cols[i] if i >= 0 and i < _star_cols.size() else Color(0, 0, 0, 0)
 
 
@@ -397,19 +403,26 @@ func _build_stars() -> void:
 func _fill_stars() -> void:
 	_whole.clear()
 	_faint.clear()
+	var whole_cols := PackedColorArray()
+	var faint_cols := PackedColorArray()
 	for i in _order.size():
 		if _star_cols[i].a >= 1.0:
 			_whole.append(_order[i])
+			whole_cols.append(_star_cols[i])
 		else:
 			_faint.append(_order[i])
-	for pair: Array in [[_stars, _whole], [_faint_stars, _faint]]:
+			faint_cols.append(_star_cols[i])
+	_whole_cols = whole_cols
+	_faint_cols = faint_cols
+	for pair: Array in [[_stars, whole_cols], [_faint_stars, faint_cols]]:
 		var mm: MultiMesh = (pair[0] as MultiMeshInstance3D).multimesh
 		if mm == null:
 			continue
-		var ids: Array[String] = pair[1]
-		mm.instance_count = ids.size()
-		for k in ids.size():
-			mm.set_instance_color(k, _star_cols[_order.find(ids[k])])
+		var cols: PackedColorArray = pair[1]
+		if mm.instance_count != cols.size():
+			mm.instance_count = cols.size()
+		for k in cols.size():
+			mm.set_instance_color(k, cols[k])
 	_place_stars()
 
 
@@ -420,8 +433,16 @@ func _place_stars() -> void:
 		if mm == null or mm.instance_count != ids.size():
 			continue
 		for k in ids.size():
-			var r := float(_size[ids[k]])
+			var r := _draw_r(ids[k])
 			mm.set_instance_transform(k, Transform3D(Basis().scaled(Vector3(r, r, r)), _drawn[ids[k]]))
+
+
+## A star's radius as drawn NOW (metres): its drawn radius, held to
+## ledger_star_max_px of screen (Task 11 fix round 2, R6: close in, a pool
+## grew into a 70 px shaded ball).
+func _draw_r(id: String) -> float:
+	var cap := _repo.bal("ledger_star_max_px") * _window_scale() * _m_per_px_at(_drawn[id])
+	return minf(float(_size[id]), cap)
 
 
 func _cluster_of(id: String) -> String:
@@ -536,7 +557,7 @@ func _segments() -> Array:
 		var b: Vector3 = _drawn[b_id]
 		var cols := _link_colours(l)
 		var alpha := _ink(l) * pow(_link_fade(l), 2.2)
-		var wide := _repo.bal("ledger_focus_width") if _selected != "" and (a_id == _selected or b_id == _selected) else 1.0
+		var wide := _repo.bal("ledger_focus_width") if _lit_web(l) else 1.0
 		var key := _pair_key(l)
 		var pair_shift := 0.0
 		if int(pairs[key]) > 1:
@@ -644,6 +665,20 @@ func _ink(l: Dictionary) -> float:
 		"basic":
 			return _repo.bal("ledger_ink_basic")
 	return 1.0
+
+
+## Whether a link is drawn ledger_focus_width wider: the selected star's
+## web, or — at rest — the player's own web in their cluster, so the knot of
+## their ties reads over the rest (Task 11 fix round 2, R4).
+func _lit_web(l: Dictionary) -> bool:
+	var a := String(l["from"])
+	var b := String(l["to"])
+	if _selected != "":
+		return a == _selected or b == _selected
+	if not _nodes.has(EGO_AT_REST) or (a != EGO_AT_REST and b != EGO_AT_REST):
+		return false
+	var c := _cluster_of(EGO_AT_REST)
+	return _look(l) in ["tie", "kin"] or (_cluster_of(a) == c and _cluster_of(b) == c)
 
 
 ## How much of a link shows, as the EYE reads it (spec §6): the selected
@@ -797,6 +832,8 @@ func _process(delta: float) -> void:
 		_fly_left = maxf(_fly_left - delta, 0.0)
 		_ease_camera(1.0 - _fly_left / maxf(_repo.bal("ledger_galaxy_fly_s"), 0.001))
 	if moved or not _camera.transform.is_equal_approx(_last_pose):
+		if not moved:
+			_place_stars()  # the screen cap moves with the camera (R6)
 		_last_pose = _camera.transform
 		_update_link_uniforms()
 		_update_hud()
@@ -834,7 +871,7 @@ func _m_per_px_at(p: Vector3) -> float:
 
 
 func _screen_radius(id: String) -> float:
-	return float(_size[id]) / _m_per_px_at(_drawn[id]) / _window_scale()
+	return _draw_r(id) / _m_per_px_at(_drawn[id]) / _window_scale()
 
 
 ## A place on the screen (design px) inside the view.
@@ -880,7 +917,7 @@ func _update_hud() -> void:
 		# a hub dimmed by the selection or the chosen cluster names itself
 		# only where there is room: it never crosses a star to stand over
 		# the web being read
-		if _star_colour(id).a >= 1.0:
+		if star_colour(id).a >= 1.0:
 			keep[id] = true
 	if _selected != "":
 		for id: String in _near:
@@ -932,13 +969,13 @@ func _update_hud() -> void:
 			continue
 		var r := _screen_radius(id)
 		var px := strong_px if big.has(id) else label_px
-		var e := {"text": String(_nodes[id]["label"]), "px": px, "at": (at as Vector2) - Vector2(0, r + lift),
+		var e := {"id": id, "text": drawn_name(id), "px": px, "at": (at as Vector2) - Vector2(0, r + lift),
 			"alt": (at as Vector2) + Vector2(0, r + lift + px), "beside": [at, r],
 			"strong": id == _selected or _near.has(id), "props": _nodes[id].get("props", [])}
 		if keep.has(id):
 			e["keep"] = true
 		# a dimmed star's name dims with it (F9)
-		var fade := _star_colour(id).a
+		var fade := star_colour(id).a
 		if fade < 1.0 and id != _selected:
 			e["ink"] = Color(_pal["label_ink"] as Color, 0.8 * fade)
 		if id == _selected:
@@ -949,6 +986,32 @@ func _update_hud() -> void:
 	var first := 1 if _selected != "" and not entries.is_empty() and entries[0].has("ring") else 0
 	entries = entries.slice(0, first) + titles + entries.slice(first)
 	_hud.show_entries(entries, obstacles, [Rect2(0.0, -size.y, size.x, size.y + chrome)])
+
+
+## Whether a star may be an always-named hub: its type's `hub` is not 0, and
+## in a chosen cluster it is that cluster's.
+func _may_be_hub(id: String) -> bool:
+	if _cluster != "all" and _cluster_of(id) != _cluster:
+		return false
+	return String(Ledger.type_row(_repo, String(_nodes[id]["type"])).get("hub", "1")) != "0"
+
+
+## The name a star is DRAWN with in the galaxy: its label less the words its
+## type already says — the type's `short_name` in ledger_object_types.csv,
+## a pattern whose `*` is the part kept ("Supply line to * Regiment": "8th
+## (Canceswest)"); a label that does not match is kept whole. The card and
+## the tooltip keep the full label (Task 11 fix round 2, R2).
+func drawn_name(id: String) -> String:
+	var label := String(_nodes[id]["label"])
+	var pattern := String(Ledger.type_row(_repo, String(_nodes[id]["type"])).get("short_name", ""))
+	var star := pattern.find("*")
+	if star < 0:
+		return label
+	var head := pattern.substr(0, star)
+	var tail := pattern.substr(star + 1)
+	if label.length() > head.length() + tail.length() and label.begins_with(head) and label.ends_with(tail):
+		return label.substr(head.length(), label.length() - head.length() - tail.length()).strip_edges()
+	return label
 
 
 ## The stars in view: id -> [its screen place (design px), its screen radius].
@@ -968,8 +1031,10 @@ func _hubs(seen: Dictionary = {}) -> Array[String]:
 		seen = _seen()
 	# in a chosen cluster only its own stars are hubs (F9: another cluster's
 	# star named as a hub read as one of this cluster's)
-	var by_size := _order.filter(func(id: String) -> bool:
-		return seen.has(id) and (_cluster == "all" or _cluster_of(id) == _cluster))
+	# a type whose stars only mirror another's (`hub` 0 in
+	# ledger_object_types.csv: a supply line mirrors its regiment) is never
+	# an always-named hub; it is named on hover and selection (R2)
+	var by_size := _order.filter(func(id: String) -> bool: return seen.has(id) and _may_be_hub(id))
 	by_size.sort_custom(func(a: String, b: String) -> bool:
 		return float(_size[a]) > float(_size[b]) if float(_size[a]) != float(_size[b]) else a < b)
 	var out: Array[String] = []
@@ -1021,8 +1086,13 @@ func _pick(pos: Vector2) -> Dictionary:
 	var o: Vector3 = ray[0]
 	var d: Vector3 = ray[1]
 	var spheres: Array = []
+	# a star is picked within its drawn disc or ledger_star_pick_min_px of
+	# screen, whichever is larger (Task 11 fix round 2, R1: a ghost star is a
+	# few px across)
+	var least_px := _repo.bal("ledger_star_pick_min_px") * _window_scale()
 	for id: String in _order:
-		spheres.append({"id": id, "pos": _drawn[id], "radius": float(_size[id])})
+		spheres.append({"id": id, "pos": _drawn[id],
+			"radius": maxf(_draw_r(id), least_px * _m_per_px_at(_drawn[id]))})
 	var hit := LedgerPick.pick(o, d, spheres, [])
 	if not hit.is_empty():
 		return hit

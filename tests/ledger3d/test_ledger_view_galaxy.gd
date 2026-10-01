@@ -561,3 +561,120 @@ func test_a_snapshot_can_be_drawn_with_its_selection() -> void:
 	assert_eq(view.segments().map(func(seg: Dictionary) -> Color: return seg["ca"]), with_arg)
 	view.show_snapshot(g, false, "no:such")
 	assert_eq(view._selected, "", "a star not drawn is not selected")
+
+
+## Task 11 fix round 2 (R1): a star is picked within ledger_star_pick_min_px
+## of screen, however small it is drawn — a ghost at the opening view.
+func test_a_small_star_is_picked_a_few_px_off_its_centre() -> void:
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
+	_settle_by_frames()
+	var ghost := "type:enemy_host"
+	var at: Vector2 = view.screen_pos_of(ghost)
+	assert_lt(view._screen_radius(ghost), 4.0, "drawn a few px across")
+	var hit := view._pick(at + Vector2(5, 3))
+	assert_eq(String(hit.get("id", "")), ghost)
+
+
+## Task 11 fix round 2 (R2): a supply line is drawn by its short name — the
+## words its type says left off by the type's `short_name` — and is never an
+## always-named hub (`hub` 0); its label (card, tooltip) stays whole.
+func test_a_supply_line_is_drawn_short_and_is_no_hub() -> void:
+	_show()
+	var id := _first("supply_line:")
+	assert_ne(id, "")
+	var label := String(view._nodes[id]["label"])
+	assert_true(label.begins_with("Supply line to "), label)
+	var short := view.drawn_name(id)
+	assert_false(short.contains("Supply line"), short)
+	assert_false(short.ends_with("Regiment"), short)
+	assert_true(label.contains(short))
+	assert_eq(view.drawn_name("character:you"), String(view._nodes["character:you"]["label"]), "no pattern, whole")
+	view.focus_cluster("war")
+	for i in 60:
+		view._process(1.0 / 60.0)
+	for h: String in view._hubs():
+		assert_false(h.begins_with("supply_line:"), h)
+
+
+## Task 11 fix round 2 (R3): no drawn name lies on ANOTHER star's disc — the
+## court with the player selected and his web framed (court+you).
+func test_no_name_lies_on_another_star() -> void:
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
+	_settle_by_frames()
+	view.focus_cluster("court")
+	view.frame_web("character:you")
+	view.select("character:you")
+	for i in 90:
+		view._process(1.0 / 60.0)
+	var discs := {}
+	for id: String in view.stars():
+		var at: Variant = view.screen_pos_of(id)
+		if view._in_view(at):
+			var r := view._screen_radius(id)
+			discs[id] = Rect2((at as Vector2) - Vector2(r, r), Vector2(r, r) * 2.0)
+	var font: Font = view._hud._font
+	var named := 0
+	for e: Dictionary in view._hud._entries:
+		if bool(e.get("title", false)):
+			continue
+		named += 1
+		var px := float(e["px"])
+		var w := font.get_string_size(String(e["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
+		var box := Rect2((e["at"] as Vector2) - Vector2(w * 0.5, px * 0.45), Vector2(w, px * 1.05))
+		for id: String in discs:
+			if id != String(e["id"]):
+				assert_false((discs[id] as Rect2).intersects(box), "%s lies on %s" % [e["text"], id])
+	assert_gt(named, 3)
+	var names: Array = view._hud._entries.map(func(e: Dictionary) -> String: return String(e.get("id", "")))
+	assert_true(names.has("character:you"), "the selected star is named")
+
+
+## Task 11 fix round 2 (R4): at rest the player's own ties are whole and
+## ledger_focus_width wider; another tie stands back at ledger_tie_rest_fade.
+func test_at_rest_the_players_ties_read_over_the_rest() -> void:
+	_show()
+	var mine: Dictionary = {}
+	var other: Dictionary = {}
+	for seg: Dictionary in view.segments():
+		var l: Dictionary = {}
+		for x: Dictionary in view._snap["links"]:
+			if String(x["id"]) == String(seg["link"]):
+				l = x
+		if not view._look(l) in ["tie", "kin"]:
+			continue
+		if String(l["from"]) == LedgerView3D.EGO_AT_REST or String(l["to"]) == LedgerView3D.EGO_AT_REST:
+			mine = {"seg": seg, "l": l}
+		else:
+			other = {"seg": seg, "l": l}
+	assert_false(mine.is_empty() or other.is_empty())
+	var ws := view._window_scale()
+	assert_almost_eq(float(mine["seg"]["width_px"]), view._width_px(mine["l"]) * repo.bal("ledger_focus_width") * ws, 0.001)
+	assert_almost_eq(float(other["seg"]["width_px"]), view._width_px(other["l"]) * ws, 0.001)
+	assert_almost_eq((mine["seg"]["ca"] as Color).a, view._ink(mine["l"]), 0.001, "whole")
+	assert_almost_eq((other["seg"]["ca"] as Color).a, view._ink(other["l"]) * pow(repo.bal("ledger_tie_rest_fade"), 2.2),
+		0.001, "the rest stand back")
+
+
+## Task 11 fix round 2 (R5, R6, R7): a ghost keeps most of its cluster's
+## saturation; no star is drawn over ledger_star_max_px however close; the
+## blended MultiMesh wears each faint star's own colour.
+func test_ghosts_wear_their_hue_stars_are_capped_and_dealt_right() -> void:
+	_show()
+	var ghost := "type:enemy_host"
+	var own: Color = view._cluster_col[view._cluster_of(ghost)]
+	assert_gt(view.star_colour(ghost).s, own.s * 0.6, "recognisably its cluster's hue")
+	view.orbit().zoom(0.05)
+	view._framed = false
+	view._apply_camera()
+	view._process(1.0 / 60.0)
+	for id: String in view.stars():
+		if view._in_view(view.screen_pos_of(id)):
+			assert_lte(view._screen_radius(id), repo.bal("ledger_star_max_px") + 0.01, id)
+	view.select("character:you")
+	var mm: MultiMesh = view._faint_stars.multimesh
+	assert_eq(mm.instance_count, view._faint.size())
+	assert_eq(view._faint_cols.size(), view._faint.size())
+	for k in view._faint.size():
+		assert_eq(view._faint_cols[k], view.star_colour(view._faint[k]), view._faint[k])
+	for k in view._whole.size():
+		assert_eq(view._whole_cols[k], view.star_colour(view._whole[k]), view._whole[k])

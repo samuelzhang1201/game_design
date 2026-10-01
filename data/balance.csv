@@ -634,7 +634,7 @@ ui_missive_art_px_per_design,3,"the Missive board's art is installed at this man
 ui_missive_desk_painting_aspect,1.6,"the desk's %DeskPainting box (width / this = its drawn height) — was a fixed 150 design px, far wider and shallower than the delivered.png paintings' own 5:4 (1.25), so the KEEP_ASPECT_COVERED crop cut the mounted courier's head off; the box now follows the desk's own (flexible) width instead"
 ledger_thread_flow_ref,5000,"LEDGER: the flow at which a thread reaches its widest (log scale)"
 ledger_tie_ref,80,"LEDGER (owner 2026-09-30: the court's 49 thick ties tangled): the strength of feeling (|sentiment|) at which a court tie reaches ledger_tie_width_max"
-ledger_tie_rest_fade,0.25,"LEDGER: opacity of a court tie that does not touch the player while nothing is selected (the court is read one person's web at a time; selecting anyone makes them the one)"
+ledger_tie_rest_fade,0.18,"LEDGER: opacity of a court tie that does not touch the player while nothing is selected (the court is read one person's web at a time; selecting anyone makes them the one)"
 ledger_light_speed,0.6,LEDGER: pulses per second along a thread at its widest
 ledger_light_pulses,4,LEDGER: pulses along one thread
 ledger_ink_general,0.6,LEDGER: ink of a figure the crown has in words (Intel general)
@@ -722,7 +722,9 @@ ledger_ring_px,3,LEDGER galaxy: the selected star's ring width (screen px)
 ledger_light_gain,1.5,"LEDGER galaxy: how much a link's running light brightens its own colour (Task 11 fix round 1: a mix toward white read as grey chips)"
 ledger_star_draw_scale,0.6,"LEDGER galaxy: a star is drawn at this share of its layout radius (Task 11 fix round 1: small stars whose glow carries the size, not pearls); the layout keeps the full radius"
 ledger_star_planned_max,0.9,"LEDGER galaxy: a planned (ghost) star's radius at most (metres, before ledger_star_draw_scale): an ordinary small star's, never a pool's (Task 11 fix round 1)"
-ledger_star_planned_sat,0.3,"LEDGER galaxy: a planned star wears its own cluster's colour at this share of its saturation"
+ledger_star_planned_sat,0.75,"LEDGER galaxy: a planned star wears its own cluster's colour at this share of its saturation"
 ledger_star_planned_fade,0.5,"LEDGER galaxy: a planned star's perceived opacity (faint: not yet built)"
 ledger_label_halo_soft_px,10,"LEDGER galaxy: the soft wide halo under every name and title (design px), so a link never cuts a letter"
 ledger_label_halo_soft_alpha,0.6,"LEDGER galaxy: the soft halo's opacity"
+ledger_star_pick_min_px,8,"LEDGER galaxy: a star is picked within its drawn disc or this many design px of it, whichever is larger (Task 11 fix round 2: a ghost star is a few px across)"
+ledger_star_max_px,14,"LEDGER galaxy: no star is drawn with a radius over this many design px, however close the camera (Task 11 fix round 2: about twice an ordinary hub)"

@@ -127,24 +127,38 @@ func test_a_title_is_measured_in_the_title_font() -> void:
 		"without a title font the title falls back to the body face and clears Gold")
 
 
-## Task 11 (2b/2c): a `keep` name (the selected star, a hub) whose places are
-## all on stars stands anyway — beside its star if that is clear of names,
-## else over it — but never on another name or in a wall (the top chrome).
-func test_a_kept_name_stands_on_a_star_but_never_on_a_name() -> void:
-	var discs := [Rect2(60, 60, 80, 120)]  # stars over and under the place
-	var e := {"text": "Walbover", "at": Vector2(100, 80), "alt": Vector2(100, 160), "strong": true, "keep": true}
-	var plain := LedgerHud.cull([e.duplicate()].map(func(x: Dictionary) -> Dictionary:
-		x.erase("keep")
-		return x), 14.0, null, LedgerHud.DEFAULT_GAUGE, discs)
-	assert_eq(plain.size(), 0, "without keep it is dropped")
-	var kept := LedgerHud.cull([e], 14.0, null, LedgerHud.DEFAULT_GAUGE, discs)
+## Task 11 fix round 2 (R3, replacing 2b/2c's "a kept name may stand on a
+## star"): a `keep` name never lies on ANOTHER star's disc; crowded by names
+## it takes the least-covered place that is on no other star; a wall is
+## never entered.
+func test_a_kept_name_never_lies_on_another_star() -> void:
+	var own := [Vector2(100, 100), 10.0]
+	var other := Rect2(60, 40, 80, 40)   # a star over its own
+	var e := {"text": "Walbover", "at": Vector2(100, 76), "alt": Vector2(100, 130), "strong": true, "keep": true,
+		"beside": own}
+	var kept := LedgerHud.cull([e], 14.0, null, LedgerHud.DEFAULT_GAUGE, [other, Rect2(90, 90, 20, 20)])
 	assert_eq(kept.size(), 1, "kept")
-	var other := LedgerHud.cull([{"text": "Walbover", "at": Vector2(100, 80), "strong": false, "keep": true}, e],
-		14.0, null, LedgerHud.DEFAULT_GAUGE, discs)
-	assert_eq(other.size(), 2, "both kept")
-	assert_ne(other[1]["at"], other[0]["at"], "the second clear of the first name")
+	var at: Vector2 = kept[0]["at"]
+	var w := 8.0 * 14.0 * 0.55
+	assert_false(other.intersects(Rect2(at - Vector2(w * 0.5, 14.0 * 0.45), Vector2(w, 14.0 * 1.05))),
+		"not on the other star")
+	var crowd := {"text": "Walbover", "at": Vector2(100, 76), "strong": false, "keep": true}
+	var first := LedgerHud.cull([crowd, e], 14.0)
+	assert_eq(first.size(), 2, "crowded by a name, a kept name still stands")
 	var wall := LedgerHud.cull([e], 14.0, null, LedgerHud.DEFAULT_GAUGE, [], null, [Rect2(0, 0, 400, 400)])
 	assert_eq(wall.size(), 0, "never in a wall")
+	var plain := e.duplicate()
+	plain.erase("keep")
+	var boxed := [Rect2(0, 0, 400, 88), Rect2(0, 112, 400, 300), Rect2(0, 88, 88, 24), Rect2(112, 88, 300, 24)]
+	assert_eq(LedgerHud.cull([plain], 14.0, null, LedgerHud.DEFAULT_GAUGE, boxed).size(), 0,
+		"an ordinary name with every place on other stars is dropped")
+
+
+## Task 11 fix round 2 (R6): a dimmed name's halo and gauges fade with it.
+func test_a_dim_names_gauges_fade_with_it() -> void:
+	assert_almost_eq(LedgerHud.fade_of(Color(1, 1, 1, 0.8)), 1.0, 0.001)
+	assert_almost_eq(LedgerHud.fade_of(Color(1, 1, 1, 1.0)), 1.0, 0.001, "never past whole")
+	assert_almost_eq(LedgerHud.fade_of(Color(1, 1, 1, 0.2)), 0.25, 0.001)
 
 
 ## Task 11: a name with `beside` (its star's centre and radius) may stand to

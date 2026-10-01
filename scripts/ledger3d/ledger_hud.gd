@@ -15,6 +15,7 @@ extends Control
 const DEFAULT_GAUGE := {"radius": 7.0, "width": 3.0, "gap": 3.0, "caption_px": 12.0}
 const GAUGE_SPACING_EM := 0.9   # between two gauges of one row, in caption ems
 const GAUGE_CAPTION_GAP := 3.0  # design px between a ring and its caption
+const RINGS := 3                # how many distances round its star a name tries, a line apart
 
 var _entries: Array = []
 var _rings: Array = []
@@ -70,6 +71,13 @@ func halo_passes() -> Array:
 		out.append([int(_soft_px), Color(_halo, _soft_alpha)])
 	out.append([_halo_px, _halo])
 	return out
+
+
+## How far a name's halo and its gauge row fade with it: its ink's alpha
+## over an ordinary name's 0.8, at most whole (a dimmed star's name, and so
+## its gauges, dim with the star — Task 11 fix round 2, R6).
+static func fade_of(ink: Color) -> float:
+	return minf(ink.a / 0.8, 1.0)
 
 
 func style_ring(colour: Color, width_px: float) -> void:
@@ -141,24 +149,27 @@ static func _font_of(e: Dictionary, font: Font, title_font: Font) -> Font:
 ## An entry may carry `alt`, a second place (under its sphere): a name whose
 ## own place is taken stands there if that is clear, so a type in a close row
 ## keeps its name; and `beside` ([its star's centre, its screen radius]): then
-## it may also stand level with its star, to the right or the left, then at
-## its four corners. The box is
-## the text's measured width when a font is given, else estimated at 0.55 em a
-## glyph (so the cull is testable without one), centred on the place, with a
-## quarter em of air at each end. A `title: true` entry is measured in
-## `title_font` (falling back to `font`), matching `_draw`.
-## `obstacles` are the star discs: no name is set on one — except an entry
-## with `keep: true` (the selected star, a hub: spec §7 names them always),
-## which, when every place is on a star, takes the first place clear of the
-## names and titles already kept. `walls` (the screen's top chrome) are never
-## entered by anything.
+## it may also stand round its own star in eight directions at three distances
+## (Task 11 fix round 2, R3), so a name in a crowd stays attached to its
+## star. The box is the text's measured width when a font is given, else
+## estimated at 0.55 em a glyph (so the cull is testable without one),
+## centred on the place, with a quarter em of air at each end. A
+## `title: true` entry is measured in `title_font` (falling back to `font`),
+## matching `_draw`.
+## `obstacles` are the star discs: NO name is set on another star's disc (its
+## own disc, from `beside`, it may touch). An entry with `keep: true` (the
+## selected star, a hub: spec §7 names them always) whose places are all
+## taken by names takes the least-covered place that is on no other star; a
+## kept TITLE may cross a star when nothing else is clear. `walls` (the
+## screen's top chrome) are never entered by anything.
 static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dictionary = DEFAULT_GAUGE,
 		obstacles: Array = [], title_font: Font = null, walls: Array = []) -> Array:
 	var kept: Array = []
-	var names: Array[Rect2] = []   # the walls and every box kept: never overlapped
-	var discs: Array[Rect2] = []   # the stars: overlapped only by a `keep` name
+	var names: Array[Rect2] = []   # every box kept: never overlapped by an ordinary name
+	var hard: Array[Rect2] = []    # the walls: never entered
+	var discs: Array[Rect2] = []   # the stars: never under another star's name
 	for w in walls:
-		names.append(w)
+		hard.append(w)
 	for o in obstacles:
 		discs.append(o)
 	for e: Dictionary in entries:
@@ -172,49 +183,91 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 		var extra_h := gauge_row_h(props, gauge)
 		if not props.is_empty():
 			w = maxf(w, gauge_row_w(props, gauge, font))
-		var places: Array = [e["at"]]
-		if e.has("alt"):
-			places.append(e["alt"])
+		var places := _places(e, w, px)
+		var own := Rect2()
 		if e.has("beside"):
-			var star: Vector2 = e["beside"][0]
-			var reach := float(e["beside"][1]) + px * 0.5 + w * 0.5
-			places.append(star + Vector2(reach, 0.0))
-			places.append(star - Vector2(reach, 0.0))
-			# then the four corners, a name's height off level, so a hub in a
-			# crowd still finds a place attached to its own star
-			var up := float(e["beside"][1]) + px * 0.6
-			for sx: float in [1.0, -1.0]:
-				for sy: float in [-1.0, 1.0]:
-					places.append(star + Vector2(sx * reach, sy * up))
+			var c: Vector2 = e["beside"][0]
+			var r := float(e["beside"][1])
+			own = Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0)
 		var boxes: Array[Rect2] = []
-		for k in places.size():
-			var at: Vector2 = places[k]
-			var up := k == 0  # the first place stands above the sphere: its gauges go over it
+		for pl: Array in places:
+			var at: Vector2 = pl[0]
+			var up: bool = pl[1]  # a place over the sphere: its gauges go over it
 			# the box the name is drawn in (_draw sets its baseline 0.35 em
 			# below the place: capitals reach ~0.45 em above the place,
 			# descenders ~0.6 em below), with a quarter em of air each side
 			# so two names in a row never butt into one another and read as one
 			boxes.append(Rect2(at - Vector2(w * 0.5 + px * 0.25, px * 0.45 + (extra_h if up else 0.0)),
 				Vector2(w + px * 0.5, px * 1.05 + extra_h)))
-		var pick := _first_clear(boxes, names, discs)
-		if pick < 0 and bool(e.get("keep", false)):
-			pick = _first_clear(boxes, names, [])
+		var pick := -1
+		var least := INF
+		for k in boxes.size():
+			if _meets(boxes[k], hard) or _on_other_disc(boxes[k], discs, own):
+				continue
+			var cover := _cover(boxes[k], names)
+			if cover <= 0.0:
+				pick = k
+				break
+			if bool(e.get("keep", false)) and not bool(e.get("title", false)) and cover < least:
+				least = cover
+				pick = k
+		if pick < 0 and bool(e.get("keep", false)) and bool(e.get("title", false)):
+			for k in boxes.size():
+				if not _meets(boxes[k], hard) and not _meets(boxes[k], names):
+					pick = k
+					break
 		if pick < 0:
 			continue
 		names.append(boxes[pick])
 		var put := e.duplicate()
-		put["at"] = places[pick]
-		put["gauges_up"] = pick == 0
+		put["at"] = places[pick][0]
+		put["gauges_up"] = places[pick][1]
 		kept.append(put)
 	return kept
 
 
-## The first of `boxes` that meets none of `a` and none of `b`, or -1.
-static func _first_clear(boxes: Array[Rect2], a: Array[Rect2], b: Array[Rect2]) -> int:
-	for k in boxes.size():
-		if not _meets(boxes[k], a) and not _meets(boxes[k], b):
-			return k
-	return -1
+## Where an entry's name may stand, in order, each [place, over the star]:
+## its own place, its `alt`, then round its `beside` star in eight
+## directions — level right and left, the four corners, over and under — at
+## a name's gap from the disc and again a line, and two, further out.
+static func _places(e: Dictionary, w: float, px: float) -> Array:
+	var out: Array = [[e["at"], true]]
+	if e.has("alt"):
+		out.append([e["alt"], false])
+	if not e.has("beside"):
+		return out
+	var c: Vector2 = e["beside"][0]
+	var r := float(e["beside"][1])
+	var gap := px * 0.35
+	for ring in RINGS:
+		var far := float(ring) * px * 1.2
+		for d: Vector2 in [Vector2(1, 0), Vector2(-1, 0), Vector2(1, -1), Vector2(-1, -1), Vector2(1, 1),
+				Vector2(-1, 1), Vector2(0, -1), Vector2(0, 1)]:
+			var x := c.x + d.x * (r + gap + far + w * 0.5)
+			var y := c.y
+			if d.y < 0.0:
+				y = c.y - (r + gap + far) - px * 0.6
+			elif d.y > 0.0:
+				y = c.y + (r + gap + far) + px * 0.45
+			out.append([Vector2(x, y), d.y < 0.0])
+	return out
+
+
+## Whether `box` lies on any disc but the entry's own.
+static func _on_other_disc(box: Rect2, discs: Array[Rect2], own: Rect2) -> bool:
+	for d in discs:
+		if d.intersects(box) and not d.is_equal_approx(own):
+			return true
+	return false
+
+
+## The area of `box` the kept names cover.
+static func _cover(box: Rect2, others: Array[Rect2]) -> float:
+	var area := 0.0
+	for o in others:
+		if o.intersects(box):
+			area += o.intersection(box).get_area()
+	return area
 
 
 static func _meets(box: Rect2, others: Array[Rect2]) -> bool:
@@ -236,10 +289,11 @@ func _draw() -> void:
 		var text := String(e["text"])
 		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
 		var at := (e["at"] as Vector2) - Vector2(w * 0.5, -px * 0.35)
+		var fade := fade_of(ink)
 		for pass_: Array in halo_passes():
 			var halo: Color = pass_[1]
 			draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px), int(pass_[0]),
-				Color(halo, halo.a * minf(ink.a / 0.8, 1.0)))
+				Color(halo, halo.a * fade))
 		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px), ink)
 		var props: Array = e.get("props", [])
 		if not props.is_empty():
@@ -247,13 +301,15 @@ func _draw() -> void:
 			var top := (e["at"] as Vector2) + Vector2(0, px * 0.6 + float(_gauge["gap"]))
 			if bool(e.get("gauges_up", false)):
 				top = (e["at"] as Vector2) - Vector2(0, px * 0.45 + row_h)
-			_draw_gauges(props, top)
+			_draw_gauges(props, top, fade)
 
 
 ## One row of ring gauges centred under a name, `top` its top centre: each a
 ## dark track ring with its share filled clockwise from twelve o'clock, then
 ## its caption in the name's ink over the same halo.
-func _draw_gauges(props: Array, top: Vector2) -> void:
+## `fade` (0..1) dims the whole row with its star's name (Task 11 fix round
+## 2, R6: a ghosted star's gauge stood at full ink).
+func _draw_gauges(props: Array, top: Vector2, fade: float = 1.0) -> void:
 	var r := float(_gauge["radius"])
 	var width := float(_gauge["width"])
 	var cpx := int(_gauge["caption_px"])
@@ -265,14 +321,14 @@ func _draw_gauges(props: Array, top: Vector2) -> void:
 		if i > 0:
 			x += float(cpx) * GAUGE_SPACING_EM
 		var c := Vector2(x + r, cy)
-		draw_arc(c, r + width * 0.5 + 1.0, 0.0, TAU, 32, _halo, 1.5, true)
-		draw_arc(c, r, 0.0, TAU, 32, _track, width, true)
+		draw_arc(c, r + width * 0.5 + 1.0, 0.0, TAU, 32, Color(_halo, _halo.a * fade), 1.5, true)
+		draw_arc(c, r, 0.0, TAU, 32, Color(_track, _track.a * fade), width, true)
 		var f := fill_of(p)
 		if f > 0.0:
-			draw_arc(c, r, -PI * 0.5, -PI * 0.5 + TAU * f, maxi(4, int(32.0 * f)), _fill, width, true)
+			draw_arc(c, r, -PI * 0.5, -PI * 0.5 + TAU * f, maxi(4, int(32.0 * f)), Color(_fill, _fill.a * fade), width, true)
 		x += r * 2.0 + GAUGE_CAPTION_GAP
 		var cap := caption_of(p)
 		var base := Vector2(x, cy + float(cpx) * 0.35)
-		draw_string_outline(_font, base, cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cpx, maxi(_halo_px - 1, 1), _halo)
-		draw_string(_font, base, cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cpx, Color(_ink, 0.9))
+		draw_string_outline(_font, base, cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cpx, maxi(_halo_px - 1, 1), Color(_halo, _halo.a * fade))
+		draw_string(_font, base, cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cpx, Color(_ink, 0.9 * fade))
 		x += _font.get_string_size(cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cpx).x

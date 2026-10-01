@@ -29,7 +29,11 @@ func _ties() -> Array:
 func test_a_court_tie_is_a_thin_cord_by_its_feeling() -> void:
 	for seg: Dictionary in _ties():
 		var w := float(seg["width_px"]) / view._window_scale()
-		assert_true(w >= repo.bal("ledger_tie_min_px") - 0.001 and w <= repo.bal("ledger_tie_max_px") + 0.001,
+		# at rest the player's own ties are drawn ledger_focus_width wider
+		# (Task 11 fix round 2, R4)
+		var mine := String(seg["a_id"]) == LedgerView3D.EGO_AT_REST or String(seg["b_id"]) == LedgerView3D.EGO_AT_REST
+		var k := repo.bal("ledger_focus_width") if mine else 1.0
+		assert_true(w >= repo.bal("ledger_tie_min_px") * k - 0.001 and w <= repo.bal("ledger_tie_max_px") * k + 0.001,
 			String(seg["id"]))
 
 
