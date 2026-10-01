@@ -219,6 +219,36 @@ static func tints_of(variants: Array, part: String) -> PackedVector3Array:
 ## the highest ground under its footprint, so nothing of it is buried). Pure,
 ## so a test can check the maths directly rather than reading it back off a
 ## MultiMesh.
+## Floats one instance takes in a TRANSFORM_3D MultiMesh with custom data
+## and no colour: the 3x4 transform row by row, then the custom Color.
+const BUFFER_STRIDE := 16
+
+
+## Houses placed and packed for a MultiMesh: {buf: its buffer (BUFFER_STRIDE
+## floats each, the custom data the (wall, roof) variant), xf: [Transform3D],
+## picks: [Vector2i]}, in row order. `seat_of` gives a row's (lowest, seat).
+static func pack(rows: Array, seat_of: Callable, walls: int, roofs: int) -> Dictionary:
+	var buf := PackedFloat32Array()
+	buf.resize(rows.size() * BUFFER_STRIDE)
+	var xforms: Array[Transform3D] = []
+	var picks: Array[Vector2i] = []
+	for n in rows.size():
+		var h: Dictionary = rows[n]
+		var t := transform_of(h, (seat_of.call(h) as Vector2).y)
+		var pick := Vector2i(variant_of(h, walls, 0), variant_of(h, roofs, 1))
+		xforms.append(t)
+		picks.append(pick)
+		var o := n * BUFFER_STRIDE
+		for r in 3:
+			buf[o + r * 4] = t.basis.x[r]
+			buf[o + r * 4 + 1] = t.basis.y[r]
+			buf[o + r * 4 + 2] = t.basis.z[r]
+			buf[o + r * 4 + 3] = t.origin[r]
+		buf[o + 12] = float(pick.x)
+		buf[o + 13] = float(pick.y)
+	return {"buf": buf, "xf": xforms, "picks": picks}
+
+
 static func transform_of(h: Dictionary, height: float) -> Transform3D:
 	var at: Vector2 = h["at"]
 	var s: float = float(h["scale"])

@@ -3,14 +3,11 @@ class_name Map3DLayerUnits
 extends Node3D
 ## MILITARY's PIECES: the player's regiments as animated wargame models
 ## standing on the ground (owner 2026-09-22, "把这两个兵棋人应用到游戏中去").
-##
 ## Nine, six or three .glb figures per regiment by its strength (Map3DFormation),
 ## each posed by its own AnimationPlayer — the one layer that cannot be a MultiMesh.
-##
 ## THE SIZE IS NOT THE MODEL'S SIZE: a miniature's, one world size at every
 ## zoom (under map3d_unit_mark_px none: the HUD's square counter). That rule,
 ## the facing, seating, measuring and screen box are Map3DUnits, the pure half.
-##
 ## Takes everything from Map3DContext, never the Game autoload (a test scans).
 
 ## Editor preview: the player's regiments from the pack alone.
@@ -186,29 +183,7 @@ func step(delta: float) -> bool:
 ## Bumped each frame a piece moves (the chips' cache key).
 func moves() -> int: return _moves
 
-
-## A piece shown or hidden; its figures' AnimationPlayers run only while it
-## is shown AND the layer animates (perf 2026-10-02: every regiment's nine
-## figures kept posing their skeletons far out, where each is a flat mark,
-## behind the camera, and under the LEDGER or the WAR ROOM).
-func show_piece(piece: Dictionary, on: bool) -> void:
-	(piece["node"] as Node3D).visible = on
-	var run := on and _animating
-	if bool(piece.get("running", true)) == run:
-		return
-	piece["running"] = run
-	for anim: AnimationPlayer in piece["anims"]:
-		anim.active = run
-
-
-## Whether the pieces animate at all (the view off: Map3DView.deactivate).
-func set_animating(on: bool) -> void:
-	_animating = on
-	for code: String in _pieces:
-		show_piece(_pieces[code], (_pieces[code]["node"] as Node3D).visible)
-
-
-var _animating := true
+func show_piece(piece: Dictionary, on: bool) -> void: Map3DUnits.show_piece(piece, on)
 
 ## Where each piece is DRAWN, {code: world XZ} — where its road ahead starts.
 func shown_positions() -> Dictionary: return _shown_xz

@@ -65,26 +65,19 @@ func test_far_out_the_pieces_become_marks() -> void:
 ## A piece walks while it has somewhere to go and its start has come — not
 ## "it moved this frame" (owner 2026-09-30: 走路速度怎么时快时慢).
 ## Perf 2026-10-02: a figure's animation runs only while its piece is shown
-## and the layer animates (far out it is a mark; under the LEDGER the map is off).
-func test_a_hidden_piece_and_a_map_put_away_stop_animating() -> void:
-	var layer := Map3DLayerUnits.new()
+## (far out it is a mark; behind the camera it is hidden).
+func test_a_hidden_piece_stops_animating() -> void:
 	var node := Node3D.new()
 	var anim := AnimationPlayer.new()
 	node.add_child(anim)
 	var piece := {"node": node, "anims": [anim]}
-	layer.show_piece(piece, false)
+	Map3DUnits.show_piece(piece, false)
 	assert_false(node.visible)
 	assert_false(anim.active, "a hidden piece's figures stand still")
-	layer.show_piece(piece, true)
+	Map3DUnits.show_piece(piece, true)
+	assert_true(node.visible)
 	assert_true(anim.active, "shown again, they move again")
-	layer._pieces = {"t": piece}
-	layer.set_animating(false)
-	assert_true(node.visible, "the map put away hides nothing itself")
-	assert_false(anim.active, "but nothing moves under it")
-	layer.set_animating(true)
-	assert_true(anim.active)
 	node.free()
-	layer.free()
 
 
 func test_a_piece_walks_from_its_start_to_its_end() -> void:

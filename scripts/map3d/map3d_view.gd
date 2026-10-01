@@ -209,7 +209,6 @@ func activate() -> void:
 		else SubViewport.UPDATE_DISABLED)
 	if _loaded:
 		refresh_borders()
-		_units.set_animating(true)
 	_viewport.process_mode = Node.PROCESS_MODE_INHERIT
 	set_process(_loaded)
 
@@ -219,11 +218,7 @@ func deactivate() -> void:
 	clear_hover()
 	if _viewport != null:
 		_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
-		# nothing under it runs while it draws nothing (perf 2026-10-02): the
-		# figures' animations, the wind, the trees' and clouds' own processing
-		_viewport.process_mode = Node.PROCESS_MODE_DISABLED
-	if _loaded:
-		_units.set_animating(false)
+		_viewport.process_mode = Node.PROCESS_MODE_DISABLED  # no animation, wind or cloud runs unseen (perf 2026-10-02)
 	set_process(false)
 
 ## Put the built world (Map3DWorldCache's kept one when free) under WorldSlot and
@@ -391,25 +386,13 @@ func _zoom_at(pos: Vector2, new_distance: float) -> void:
 		_rig.zoom_at(pos, new_distance)
 
 func _gui_input(event: InputEvent) -> void:
-	if Engine.is_editor_hint() or not _loaded:
-		return
-	# the frame's moves are told to the listeners once, in _process (rig.flush);
-	# a click is picked against what they placed, so they hear first
-	var mb := event as InputEventMouseButton
-	if mb != null and mb.button_index not in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN,
-			MOUSE_BUTTON_WHEEL_LEFT, MOUSE_BUTTON_WHEEL_RIGHT]:
-		_rig.flush()
-	_rig.hold_moved = true
-	var took := _input.handle(event)
-	_rig.hold_moved = false
-	if took:
+	if not Engine.is_editor_hint() and _loaded and _input.handle(event):
 		accept_event()
 
 ## The rig's ease, the border poll, the clouds, the hover, and WASD / arrows.
 func _process(delta: float) -> void:
 	if Engine.is_editor_hint(): return
 	if _loaded:
-		_rig.flush()  # the input's moves this frame, told once
 		_rig.step(delta)
 	_border_clock += delta
 	if _border_clock >= _repo.bal("map3d_border_refresh_s"):

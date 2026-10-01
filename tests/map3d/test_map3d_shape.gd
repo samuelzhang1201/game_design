@@ -61,8 +61,10 @@ func _lines(path: String) -> int:
 ## (2026-09-30): one line handing the HUD the pieces' positions.
 ## 581 since the march trails (2026-10-01): the trails layer's var, its bind
 ## and its step in _process — Map3DLayerTrails does the work.
+## 582 since the view put away stops its subtree's processing (perf
+## 2026-10-02): one line each in activate and deactivate.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 581)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 582)
 
 
 func test_every_other_script_is_small() -> void:

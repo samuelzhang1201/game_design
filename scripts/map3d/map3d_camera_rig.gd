@@ -179,8 +179,10 @@ func start_north() -> void:
 	_north_t = 0.0
 
 
-## The compass's ease back to north, a frame at a time.
+## Once a frame: the input's held moves told (flush), then the compass's ease
+## back to north.
 func step(delta: float) -> void:
+	flush()
 	if _north_t < 0.0:
 		return
 	_north_t += delta / maxf(ctx.repo.bal("map3d_compass_reset_s"), 0.01)
