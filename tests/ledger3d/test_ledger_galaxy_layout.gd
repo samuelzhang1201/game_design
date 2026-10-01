@@ -141,6 +141,80 @@ func test_the_clusters_stand_nearer_and_their_stars_spread() -> void:
 	assert_gt(sum / float(court.size()), 13.0, "the court's stars spread")
 
 
+## Critic, round 2 (owner 2026-10-01: node更分散一点 — the King's inner ring
+## had got tighter while the court's edge spread): a hub's springs lengthen
+## with its links and no two stars' drawn discs come within reach of each
+## other, so the core opens as well as the edge — its mean nearest neighbour
+## over 16 m (11.0 before, 14.4 in round 1) and over 0.23 of the court's
+## extent, the share of the framed view it gets (0.187 before, 0.197 round 1).
+func test_the_kings_core_opens_and_no_discs_touch() -> void:
+	var s := GameState.new_campaign(repo, 42)
+	var g := Ledger.galaxy(repo, s, {})
+	var lay := LedgerGalaxyLayout.new()
+	lay.setup(repo, g, false)
+	lay.step(lay.passes_left)
+	var deg := {}
+	var core := {"character:you": true}
+	for l: Dictionary in g["links"]:
+		for e: String in [String(l["from"]), String(l["to"])]:
+			deg[e] = int(deg.get(e, 0)) + 1
+		if String(l["from"]) == "character:you":
+			core[String(l["to"])] = true
+		elif String(l["to"]) == "character:you":
+			core[String(l["from"])] = true
+	var court: Array[String] = []
+	var by := {}
+	for n: Dictionary in g["nodes"]:
+		by[String(n["id"])] = n
+		if String(n["cluster"]) == "court":
+			court.append(String(n["id"]))
+	var draw := repo.bal("ledger_star_draw_scale")
+	for a in court.size():
+		for b in range(a + 1, court.size()):
+			var ra := LedgerGalaxyLayout.size_of(repo, by[court[a]], int(deg.get(court[a], 0))) * draw
+			var rb := LedgerGalaxyLayout.size_of(repo, by[court[b]], int(deg.get(court[b], 0))) * draw
+			assert_gt((lay.pos[court[a]] as Vector3).distance_to(lay.pos[court[b]]), ra + rb,
+				"%s and %s do not touch" % [court[a], court[b]])
+	var ring: Array[String] = court.filter(func(id: String) -> bool: return core.has(id))
+	assert_gt(ring.size(), 5, "the King and his court")
+	var nn := 0.0
+	for i in ring:
+		var best := INF
+		for j in ring:
+			if i != j:
+				best = minf(best, (lay.pos[i] as Vector3).distance_to(lay.pos[j]))
+		nn += best / float(ring.size())
+	var mid := Vector3.ZERO
+	for id in court:
+		mid += lay.pos[id]
+	mid /= float(court.size())
+	var extent := 0.0
+	for id in court:
+		extent = maxf(extent, (lay.pos[id] as Vector3).distance_to(mid))
+	assert_gt(nn, 16.0, "the core's stars stand apart")
+	assert_gt(nn / extent, 0.23, "and take more of the court's framed view")
+
+
+## Critic, round 2: the flat chart lays every cluster in one plane, where at
+## the 3D share they bled together — it has its own cross-cluster share, and
+## the 3D chart does not read it.
+func test_the_flat_chart_has_its_own_cross_share() -> void:
+	var s := GameState.new_campaign(repo, 42)
+	var g := Ledger.galaxy(repo, s, {})
+	var lays := []
+	for v: float in [0.2, 1.0]:
+		repo.balance["ledger_galaxy_cross_repel_flat"] = v
+		var flat := LedgerGalaxyLayout.new()
+		flat.setup(repo, g, true)
+		flat.step(30)
+		var deep := LedgerGalaxyLayout.new()
+		deep.setup(repo, g, false)
+		deep.step(30)
+		lays.append([flat, deep])
+	assert_ne(lays[0][0].pos["character:you"], lays[1][0].pos["character:you"], "the flat chart reads it")
+	assert_eq(lays[0][1].pos["character:you"], lays[1][1].pos["character:you"], "the 3D chart does not")
+
+
 func test_a_star_is_sized_by_its_kind() -> void:
 	var pool := LedgerGalaxyLayout.size_of(repo, {"type": "gold"}, 30)
 	assert_eq(pool, repo.bal("ledger_star_pool"), "a pool is one fixed size")

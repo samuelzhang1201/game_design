@@ -31,6 +31,7 @@ const float GATE_SOFT = 0.4;       // a run's ends fade over this share of `cove
 const float FLICKER_CELLS = 2.0;   // flicker cells per spark run
 const float TAPER_THIN = 0.4;      // a spark's thickness at its tapered ends
 const float EDGE_FADE = 0.85;      // the quad's last share fades out
+const float SECTOR_SOFT = 0.08;    // the dark sector's edges fade over this share of the rim
 const float SEED_A = 97.0;         // the seed's two hash spreads
 const float SEED_B = 89.0;
 const float SEED_MIX = 7.0;
@@ -44,12 +45,14 @@ uniform float width = 0.35;        // the sparks' ring, a share of the star's ra
 uniform float arcs = 6.0;          // spark runs round the rim
 uniform float speed = 0.1;         // how fast they crawl round it (turns a second)
 uniform float cover = 0.45;        // the share of the rim they run along
+uniform float max_cover = 0.66;    // and never more than this share: a dark sector crawls with them (critic, round 2: on a 10 px star the runs closed into a ring)
 uniform float flicker = 0.6;       // how deep they flicker (0 steady)
 uniform float flicker_hz = 6.0;    // how fast
 uniform float lift = 0.5;          // a spark's CORE, the star's hue this far toward white
 uniform float saturation = 1.6;    // the star's colour pushed this far from grey for the halo
 uniform float core_px = 0.6;       // a spark's bright core (screen px, half width)
 uniform float glow_px = 2.0;       // its soft halo (screen px, the falloff)
+uniform float glow_share = 0.25;   // and never more than this share of the star's own radius (on a small star the halo fanned a radius wide)
 uniform float glow = 0.55;         // the halo's light against the core's 1
 uniform float jag = 0.35;          // how uneven its straight jags run (0 even)
 uniform float min_px = 6.0;        // a star drawn smaller than this (radius, screen px) wears none
@@ -94,7 +97,7 @@ void vertex() {
 	float sel = INSTANCE_CUSTOM.a * sel_out;
 	v_out = sel * ring_out_px * px_r;
 	v_band = mix(width, min(width, ring_band_px * px_r), sel);
-	v_reach = 1.0 + v_out + v_band * REACH_BAND + glow_px * REACH_GLOW * px_r;
+	v_reach = 1.0 + v_out + v_band * REACH_BAND + min(glow_px, glow_share / max(px_r, 1e-6)) * REACH_GLOW * px_r;
 	v_p = (UV * 2.0 - 1.0) * v_reach;
 	// no light at all (strength 0, a weight of 0, a speck under min_px): the
 	// quad collapses to its centre and draws no fragment
@@ -120,6 +123,10 @@ void fragment() {
 	// as it turns over; `run` falls to 0 at both ends, so a spark tapers out
 	float n = mix(pnoise(a * arcs, arcs, s), pnoise(a * arcs, arcs, s + SALT_RUNS), 0.5 + 0.5 * sin(t * GATE_SWAP_HZ + s));
 	float run = smoothstep(1.0 - cover, 1.0 - cover * GATE_SOFT, n);
+	// a dark sector, (1 - max_cover) of the rim, turning with the filaments
+	// from the star's own phase: the current never closes into a ring
+	float sector = fract(a + v_seed.y);
+	run *= 1.0 - smoothstep(max_cover - SECTOR_SOFT, max_cover, sector);
 	// its path: straight jags between random heights across the band, the jags
 	// of uneven length (the angle itself warped by a smooth noise)
 	float fine = arcs * JAGS_PER_RUN;
@@ -136,7 +143,8 @@ void fragment() {
 	float d = abs(rr - at_r) / sqrt(1.0 + slope * slope) / px;
 	float thin = mix(TAPER_THIN, 1.0, run);
 	float core = exp(-pow(d / (core_px * thin), 2.0));
-	float soft = exp(-d / (glow_px * thin));
+	float halo = min(glow_px, glow_share / px);   // 1 / px is the radius in screen px
+	float soft = exp(-d / (halo * thin));
 	// and it flickers: a quicker noise sliding along the rim
 	float fl = pnoise(a * arcs * FLICKER_CELLS + t * flicker_hz, arcs * FLICKER_CELLS, s + SALT_FLICKER);
 	float energy = run * (1.0 - flicker * (1.0 - fl * fl));

@@ -524,17 +524,52 @@ func _place_stars() -> void:
 		for id: String in ids:
 			var r := _draw_r(id)
 			laid[id] = Transform3D(Basis().scaled(Vector3(r, r, r)), _drawn[id])
+	# a dimmed star the camera has come right up to (another cluster's, seen
+	# from inside the chosen one) fades out rather than fill the view as a
+	# blurred disc (critic, round 2): its body's alpha and its current's weight
+	var faint_cols := _faint_cols
+	var spark_cols := _spark_cols
+	var custom := _custom
+	var near := {}
+	for k in _faint.size():
+		var f := near_fade(_faint[k])
+		if f < 1.0:
+			near[k] = f
+	if not near.is_empty():
+		faint_cols = _faint_cols.duplicate()
+		custom = _custom.duplicate()
+		for k: int in near:
+			var id := _faint[k]
+			var c: Color = faint_cols[k]
+			c.a *= float(near[k])
+			faint_cols[k] = c
+			var u: Color = custom[id]
+			u.b *= float(near[k])
+			custom[id] = u
+		if not _spark_ids.is_empty():
+			spark_cols = _whole_cols + faint_cols
 	_buffers.clear()
-	for group: Array in [[_stars, _whole, _whole_cols], [_faint_stars, _faint, _faint_cols],
-			[_sparks, _spark_ids, _spark_cols]]:
+	for group: Array in [[_stars, _whole, _whole_cols], [_faint_stars, _faint, faint_cols],
+			[_sparks, _spark_ids, spark_cols]]:
 		var mi: MultiMeshInstance3D = group[0]
 		var ids: Array[String] = group[1]
 		if mi.multimesh == null or mi.multimesh.instance_count != ids.size():
 			continue
-		var buf := LedgerStarMotion.pack(ids, laid, group[2], _custom)
+		var buf := LedgerStarMotion.pack(ids, laid, group[2], custom)
 		_buffers[String(mi.name)] = buf
 		if not ids.is_empty():
 			mi.multimesh.buffer = buf
+
+
+## How much of a star stands as the camera nears it: 1, down to 0 between
+## ledger_near_fade_start and _end of the camera's distance to its target
+## (a share, so it holds at every zoom); the flat chart's camera never nears.
+func near_fade(id: String) -> float:
+	if _flat or not _drawn.has(id):
+		return 1.0
+	var ref := maxf(_orbit.distance, 1e-3)
+	var d := (_drawn[id] as Vector3).distance_to(_camera.transform.origin)
+	return smoothstep(ref * _repo.bal("ledger_near_fade_end"), ref * _repo.bal("ledger_near_fade_start"), d)
 
 
 ## A star's radius as drawn NOW (metres): its drawn radius, held to

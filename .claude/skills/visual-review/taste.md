@@ -429,7 +429,9 @@ add it here as a principle with its why — not as a changelog entry.
   its card, never a foreign hue; the lit web is told by opacity.
   "3个cluster布局可以靠的再近一点，node更分散一点": the clusters close enough
   to read as one sky, each loose enough to read its stars — told apart by
-  colour and haze, not by empty space.
+  colour and haze, not by empty space. Spread means the CORE the player
+  reads (the King's own ring), not only the edge; and each view keeps its
+  own ground — the flat chart's clusters must not bleed into one another.
 
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols

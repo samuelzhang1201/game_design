@@ -31,6 +31,8 @@ const SPARK := {
 	"ledger_spark_arcs": "arcs",
 	"ledger_spark_speed": "speed",
 	"ledger_spark_cover": "cover",
+	"ledger_spark_max_cover": "max_cover",
+	"ledger_spark_glow_share": "glow_share",
 	"ledger_spark_flicker": "flicker",
 	"ledger_spark_flicker_hz": "flicker_hz",
 	"ledger_spark_lift": "lift",
