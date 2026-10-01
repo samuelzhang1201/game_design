@@ -15,9 +15,15 @@ extends Control
 const DEFAULT_GAUGE := {"radius": 7.0, "width": 3.0, "gap": 3.0, "caption_px": 12.0}
 const GAUGE_SPACING_EM := 0.9   # between two gauges of one row, in caption ems
 const GAUGE_CAPTION_GAP := 3.0  # design px between a ring and its caption
+const RINGS := 5                # how many distances round its star a name tries, RING_STEP_EM apart
+const RING_STEP_EM := 0.6       # between two of those distances, in the name's ems
+const DISC_CELL_PX := 48.0      # the disc grid's cell (design px): only speed, never which place wins
 
 var _entries: Array = []
+var _rings: Array = []
 var _font: Font
+var _title_font: Font
+var _title_px := 20.0
 var _ink := Color.WHITE
 var _halo := Color.BLACK
 var _px := 14.0
@@ -25,6 +31,10 @@ var _halo_px := 4
 var _gauge: Dictionary = DEFAULT_GAUGE.duplicate()
 var _fill := Color(0.88, 0.73, 0.42)
 var _track := Color(0.29, 0.24, 0.17)
+var _ring := Color(0.88, 0.73, 0.42)
+var _ring_w := 3.0
+var _soft_px := 0.0
+var _soft_alpha := 0.0
 
 
 func style(font: Font, px: float, ink: Color, halo: Color, halo_px: int) -> void:
@@ -42,8 +52,48 @@ func style_gauges(radius: float, width: float, gap: float, caption_px: float, fi
 	_track = track
 
 
-func show_entries(entries: Array) -> void:
-	_entries = cull(entries, _px, _font, _gauge)
+func style_title(font: Font, px: float) -> void:
+	_title_font = font
+	_title_px = px
+
+
+## The soft wide halo laid under every name and title before its crisp
+## outline (Task 11 fix round 1, F6): a link passing behind a name fades out
+## round its letters instead of cutting them.
+func style_halo(soft_px: float, soft_alpha: float) -> void:
+	_soft_px = soft_px
+	_soft_alpha = soft_alpha
+
+
+## The outline passes drawn under a name, widest first: [size px, colour] —
+## the soft halo (when styled), then the crisp one.
+func halo_passes() -> Array:
+	var out: Array = []
+	if _soft_px > float(_halo_px) and _soft_alpha > 0.0:
+		out.append([int(_soft_px), Color(_halo, _soft_alpha)])
+	out.append([_halo_px, _halo])
+	return out
+
+
+## How far a name's halo and its gauge row fade with it: its ink's alpha
+## over an ordinary name's 0.8, at most whole (a dimmed star's name, and so
+## its gauges, dim with the star — Task 11 fix round 2, R6).
+static func fade_of(ink: Color) -> float:
+	return minf(ink.a / 0.8, 1.0)
+
+
+func style_ring(colour: Color, width_px: float) -> void:
+	_ring = colour
+	_ring_w = width_px
+
+
+func show_entries(entries: Array, obstacles: Array = [], walls: Array = [], bounds: Rect2 = Rect2(),
+		dashes: Array = []) -> void:
+	_entries = cull(entries, _px, _font, _gauge, obstacles, _title_font, walls, bounds, dashes)
+	_rings.clear()
+	for e: Dictionary in entries:
+		if e.has("ring"):
+			_rings.append([e["ring_at"], float(e["ring"])])
 	queue_redraw()
 
 
@@ -90,74 +140,319 @@ static func gauge_row_h(props: Array, gauge: Dictionary) -> float:
 		float(gauge["caption_px"]))
 
 
+## The font an entry draws in: its cluster's `title_font` when it carries
+## `title: true` and one is set, else the body `font` — the one rule `cull`
+## and `_draw` both call, so a title's measured box can never disagree with
+## what is drawn in it.
+static func _font_of(e: Dictionary, font: Font, title_font: Font) -> Font:
+	return title_font if bool(e.get("title", false)) and title_font != null else font
+
+
 ## Keeps entries in order, dropping any whose box overlaps one already kept.
 ## An entry may carry `alt`, a second place (under its sphere): a name whose
 ## own place is taken stands there if that is clear, so a type in a close row
-## keeps its name. The box is the text's measured width when a font is given,
-## else estimated at 0.55 em a glyph (so the cull is testable without one),
-## centred on the place, with a quarter em of air at each end.
-static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dictionary = DEFAULT_GAUGE) -> Array:
+## keeps its name; or `beside` ([its star's centre, its screen radius]): then
+## it stands round its own star in eight directions at RINGS distances,
+## nearest first (Task 11 fix rounds 2-3, R3 / S1c), so a name in a crowd
+## stays attached to its star. A name with gauges carries them UNDER it.
+## Inside `bounds` (when given) no box is clipped by the view's edge. The box is the text's measured width when a font is given, else
+## estimated at 0.55 em a glyph (so the cull is testable without one),
+## centred on the place, with a quarter em of air at each end. A
+## `title: true` entry is measured in `title_font` (falling back to `font`),
+## matching `_draw`.
+## `obstacles` are the star discs: NO name is set on another star's disc (its
+## own disc, from `beside`, it may touch). An entry with `keep: true` (the
+## selected star, a hub: spec §7 names them always) whose places are all
+## taken by names takes the least-covered place that is on no other star; a
+## kept TITLE may cross a star when nothing else is clear. `walls` (the
+## screen's top chrome) are never entered by anything.
+## Task 11 fix round 4 (T1): an entry with `first: true` (the selected star,
+## put first by the view) becomes a wall once placed, so no later name touches
+## its label; a `lit: true` entry prefers, within each ring, a place no
+## planned link's dashes (`dashes`: screen segments [a, b]) cross; a `dim:
+## true` (ghost) entry only tries its nearest ring and is dropped rather than
+## moved further off. Over and under its star a name slides along the view's
+## edge to stay inside `bounds` rather than leave its star.
+static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dictionary = DEFAULT_GAUGE,
+		obstacles: Array = [], title_font: Font = null, walls: Array = [], bounds: Rect2 = Rect2(),
+		dashes: Array = []) -> Array:
 	var kept: Array = []
-	var boxes: Array[Rect2] = []
+	var names: Array[Rect2] = []   # every box kept: never overlapped by an ordinary name
+	var name_grid := {}            # the same boxes by DISC_CELL_PX cell (only speed: _cover_in)
+	var hard: Array[Rect2] = []    # the walls: never entered
+	var discs: Array[Rect2] = []   # the stars: never under another star's name
+	for w in walls:
+		hard.append(w)
+	for o in obstacles:
+		discs.append(o)
+	var disc_grid := _disc_grid(discs)
 	for e: Dictionary in entries:
+		var px := float(e.get("px", font_px))
+		var entry_font := _font_of(e, font, title_font)
 		var text := String(e["text"])
-		var w := float(text.length()) * font_px * 0.55
-		if font != null:
-			w = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(font_px)).x
+		var w := float(text.length()) * px * 0.55
+		if entry_font != null:
+			w = entry_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
 		var props: Array = e.get("props", [])
 		var extra_h := gauge_row_h(props, gauge)
 		if not props.is_empty():
 			w = maxf(w, gauge_row_w(props, gauge, font))
-		var places: Array = [e["at"]]
-		if e.has("alt"):
-			places.append(e["alt"])
-		for k in places.size():
-			var at: Vector2 = places[k]
-			var up := k == 0  # the first place stands above the sphere: its gauges go over it
+		var places := _places(e, w, px)
+		var own := Rect2()
+		if e.has("beside"):
+			var c: Vector2 = e["beside"][0]
+			var r := float(e["beside"][1])
+			own = Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0)
+		var boxes: Array[Rect2] = []
+		for pl: Array in places:
+			var at: Vector2 = pl[0]
+			var up: bool = pl[1]  # a place over the sphere: the name is lifted over its gauges
 			# the box the name is drawn in (_draw sets its baseline 0.35 em
 			# below the place: capitals reach ~0.45 em above the place,
 			# descenders ~0.6 em below), with a quarter em of air each side
 			# so two names in a row never butt into one another and read as one
-			var box := Rect2(at - Vector2(w * 0.5 + font_px * 0.25, font_px * 0.45 + (extra_h if up else 0.0)),
-				Vector2(w + font_px * 0.5, font_px * 1.05 + extra_h))
-			var clear := true
-			for b in boxes:
-				if b.intersects(box):
-					clear = false
-					break
-			if clear:
-				boxes.append(box)
-				var put := e.duplicate()
-				put["at"] = at
-				put["gauges_up"] = up
-				kept.append(put)
+			var b := Rect2(at - Vector2(w * 0.5 + px * 0.25, px * 0.45 + (extra_h if up else 0.0)),
+				Vector2(w + px * 0.5, px * 1.05 + extra_h))
+			if bool(pl[3]) and bounds.has_area() and b.size.x <= bounds.size.x:
+				# over or under its star: slide along the view's edge
+				var dx := maxf(bounds.position.x - b.position.x, 0.0) - maxf(b.end.x - bounds.end.x, 0.0)
+				b.position.x += dx
+				pl[0] = at + Vector2(dx, 0.0)
+			boxes.append(b)
+		# the places in the order they are tried — no lambda here: the cull
+		# runs once a camera move over every named star (final wave I1d)
+		var dim := bool(e.get("dim", false))
+		var order: Array[int] = []
+		for k in boxes.size():
+			if not dim or int(places[k][2]) == 0:
+				order.append(k)
+		if bool(e.get("lit", false)) and not dashes.is_empty():
+			# by ring, a place no planned link's dashes cross first in each,
+			# the list's own order within a key (a stable bucket sort)
+			var key := PackedInt32Array()
+			key.resize(boxes.size())
+			var top := 0
+			for k: int in order:
+				key[k] = int(places[k][2]) * 2 + (1 if _crossed(boxes[k], dashes) else 0)
+				top = maxi(top, key[k])
+			var sorted: Array[int] = []
+			for want in top + 1:
+				for k: int in order:
+					if key[k] == want:
+						sorted.append(k)
+			order = sorted
+		var pick := -1
+		var least := INF
+		for k: int in order:
+			if _meets(boxes[k], hard) or _on_other_disc_in(boxes[k], discs, disc_grid, own):
+				continue
+			if bounds.has_area() and not bounds.encloses(boxes[k]):
+				continue  # never clipped by the view's edge (Task 11 fix round 3, S1d)
+			var cover := _cover_in(boxes[k], names, name_grid)
+			if cover <= 0.0:
+				pick = k
 				break
+			if bool(e.get("keep", false)) and not bool(e.get("title", false)) and cover < least:
+				least = cover
+				pick = k
+		if pick < 0 and bool(e.get("keep", false)) and bool(e.get("title", false)):
+			for k: int in order:
+				if not _meets(boxes[k], hard) and not _meets(boxes[k], names):
+					pick = k
+					break
+		if pick < 0:
+			continue
+		names.append(boxes[pick])
+		_grid_add(name_grid, boxes[pick], names.size() - 1)
+		if bool(e.get("first", false)):
+			hard.append(boxes[pick])  # no other name touches the selected label
+		var put := e.duplicate()
+		# the gauge row always sits UNDER its name, tight to it (Task 11 fix
+		# round 3, S1a): a name over its star is lifted by the row's height,
+		# so the row lies between the name and the star
+		put["at"] = (places[pick][0] as Vector2) - Vector2(0.0, extra_h if bool(places[pick][1]) else 0.0)
+		put["gauges_up"] = false
+		kept.append(put)
 	return kept
 
 
+## Where an entry's name may stand, in order, each [place, over the star,
+## its ring (0 nearest), over or under it (it may slide along the edge)]:
+## round its `beside` star in eight directions — over, under, level right and
+## left, the four corners — at a name's gap from the disc and then RINGS-1
+## more distances RING_STEP_EM apart, nearest first, then its own place and
+## its `alt`; an entry with no `beside` (a title) at
+## its own place, then its `alt`.
+static func _places(e: Dictionary, w: float, px: float) -> Array:
+	if not e.has("beside"):
+		var own: Array = [[e["at"], true, 0, false]]
+		if e.has("alt"):
+			own.append([e["alt"], false, 0, false])
+		return own
+	# round its own star, nearest ring first (Task 11 fix round 3, S1c: the
+	# name sits by its star): over, under, level right and left, the corners
+	var out: Array = []
+	var c: Vector2 = e["beside"][0]
+	var r := float(e["beside"][1])
+	var gap := px * 0.35
+	for ring in RINGS:
+		var far := float(ring) * px * RING_STEP_EM
+		for d: Vector2 in [Vector2(0, -1), Vector2(0, 1), Vector2(1, 0), Vector2(-1, 0), Vector2(1, -1),
+				Vector2(-1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+			var x := c.x + d.x * (r + gap + far + w * 0.5)
+			var y := c.y
+			if d.y < 0.0:
+				y = c.y - (r + gap + far) - px * 0.6
+			elif d.y > 0.0:
+				y = c.y + (r + gap + far) + px * 0.45
+			out.append([Vector2(x, y), d.y < 0.0, ring, d.x == 0.0])
+	# then its own place and its `alt`, the view's lifted places over and
+	# under it, last
+	out.append([e["at"], true, RINGS, true])
+	if e.has("alt"):
+		out.append([e["alt"], false, RINGS, true])
+	return out
+
+
+## Whether any of `dashes` (screen segments [a, b]) crosses `box`.
+static func _crossed(box: Rect2, dashes: Array) -> bool:
+	var corners := [box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)]
+	for seg: Array in dashes:
+		var a: Vector2 = seg[0]
+		var b: Vector2 = seg[1]
+		# a segment whose own box misses `box` neither ends in it nor crosses
+		# an edge of it (final wave I1d: the edge tests ran for every place)
+		if not Rect2(a, Vector2.ZERO).expand(b).intersects(box, true):
+			continue
+		if box.has_point(a) or box.has_point(b):
+			return true
+		for i in 4:
+			if Geometry2D.segment_intersects_segment(a, b, corners[i], corners[(i + 1) % 4]) != null:
+				return true
+	return false
+
+
+## The discs by the DISC_CELL_PX cells they touch: cell -> their indices
+## (final wave I1d: every star open, every place against every disc cost
+## ~12 ms a camera move).
+static func _disc_grid(discs: Array[Rect2]) -> Dictionary:
+	var grid := {}
+	for i in discs.size():
+		_grid_add(grid, discs[i], i)
+	return grid
+
+
+## Files box `i` under every DISC_CELL_PX cell it touches.
+static func _grid_add(grid: Dictionary, box: Rect2, i: int) -> void:
+	var lo := Vector2i((box.position / DISC_CELL_PX).floor())
+	var hi := Vector2i((box.end / DISC_CELL_PX).floor())
+	for y in range(lo.y, hi.y + 1):
+		for x in range(lo.x, hi.x + 1):
+			var key := Vector2i(x, y)
+			if grid.has(key):
+				(grid[key] as Array).append(i)
+			else:
+				grid[key] = [i]
+
+
+## _cover through the grid: the kept names in the cells `box` touches, each
+## once, summed in the order they were kept — the scan's own sum.
+static func _cover_in(box: Rect2, others: Array[Rect2], grid: Dictionary) -> float:
+	var lo := Vector2i((box.position / DISC_CELL_PX).floor())
+	var hi := Vector2i((box.end / DISC_CELL_PX).floor())
+	var near := {}
+	for y in range(lo.y, hi.y + 1):
+		for x in range(lo.x, hi.x + 1):
+			var got: Variant = grid.get(Vector2i(x, y))
+			if got == null:
+				continue
+			for i: int in got as Array:
+				near[i] = true
+	if near.is_empty():
+		return 0.0
+	var ids: Array = near.keys()
+	ids.sort()
+	var area := 0.0
+	for i: int in ids:
+		var o := others[i]
+		if o.intersects(box):
+			area += o.intersection(box).get_area()
+	return area
+
+
+## _on_other_disc through the grid: only the discs in the cells `box` touches.
+static func _on_other_disc_in(box: Rect2, discs: Array[Rect2], grid: Dictionary, own: Rect2) -> bool:
+	var lo := Vector2i((box.position / DISC_CELL_PX).floor())
+	var hi := Vector2i((box.end / DISC_CELL_PX).floor())
+	for y in range(lo.y, hi.y + 1):
+		for x in range(lo.x, hi.x + 1):
+			var near: Variant = grid.get(Vector2i(x, y))
+			if near == null:
+				continue
+			for i: int in near as Array:
+				var d := discs[i]
+				if d.intersects(box) and not d.is_equal_approx(own):
+					return true
+	return false
+
+
+## Whether `box` lies on any disc but the entry's own.
+static func _on_other_disc(box: Rect2, discs: Array[Rect2], own: Rect2) -> bool:
+	for d in discs:
+		if d.intersects(box) and not d.is_equal_approx(own):
+			return true
+	return false
+
+
+## The area of `box` the kept names cover.
+static func _cover(box: Rect2, others: Array[Rect2]) -> float:
+	var area := 0.0
+	for o in others:
+		if o.intersects(box):
+			area += o.intersection(box).get_area()
+	return area
+
+
+static func _meets(box: Rect2, others: Array[Rect2]) -> bool:
+	for o in others:
+		if o.intersects(box):
+			return true
+	return false
+
+
 func _draw() -> void:
+	for r: Array in _rings:
+		draw_arc(r[0], r[1], 0.0, TAU, 48, _ring, _ring_w, true)
 	if _font == null:
 		return
 	for e: Dictionary in _entries:
+		var px := float(e.get("px", _px))
+		var font := _font_of(e, _font, _title_font)
+		var ink: Color = e.get("ink", _ink if bool(e["strong"]) else Color(_ink, 0.8))
 		var text := String(e["text"])
-		var w := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(_px)).x
-		var at := (e["at"] as Vector2) - Vector2(w * 0.5, -_px * 0.35)
-		draw_string_outline(_font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(_px), _halo_px, _halo)
-		draw_string(_font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(_px),
-			_ink if bool(e["strong"]) else Color(_ink, 0.8))
+		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
+		var at := (e["at"] as Vector2) - Vector2(w * 0.5, -px * 0.35)
+		var fade := fade_of(ink)
+		for pass_: Array in halo_passes():
+			var halo: Color = pass_[1]
+			draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px), int(pass_[0]),
+				Color(halo, halo.a * fade))
+		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px), ink)
 		var props: Array = e.get("props", [])
 		if not props.is_empty():
 			var row_h := gauge_row_h(props, _gauge)
-			var top := (e["at"] as Vector2) + Vector2(0, _px * 0.6 + float(_gauge["gap"]))
+			var top := (e["at"] as Vector2) + Vector2(0, px * 0.6 + float(_gauge["gap"]))
 			if bool(e.get("gauges_up", false)):
-				top = (e["at"] as Vector2) - Vector2(0, _px * 0.45 + row_h)
-			_draw_gauges(props, top)
+				top = (e["at"] as Vector2) - Vector2(0, px * 0.45 + row_h)
+			_draw_gauges(props, top, fade)
 
 
 ## One row of ring gauges centred under a name, `top` its top centre: each a
 ## dark track ring with its share filled clockwise from twelve o'clock, then
 ## its caption in the name's ink over the same halo.
-func _draw_gauges(props: Array, top: Vector2) -> void:
+## `fade` (0..1) dims the whole row with its star's name (Task 11 fix round
+## 2, R6: a ghosted star's gauge stood at full ink).
+func _draw_gauges(props: Array, top: Vector2, fade: float = 1.0) -> void:
 	var r := float(_gauge["radius"])
 	var width := float(_gauge["width"])
 	var cpx := int(_gauge["caption_px"])
@@ -169,14 +464,14 @@ func _draw_gauges(props: Array, top: Vector2) -> void:
 		if i > 0:
 			x += float(cpx) * GAUGE_SPACING_EM
 		var c := Vector2(x + r, cy)
-		draw_arc(c, r + width * 0.5 + 1.0, 0.0, TAU, 32, _halo, 1.5, true)
-		draw_arc(c, r, 0.0, TAU, 32, _track, width, true)
+		draw_arc(c, r + width * 0.5 + 1.0, 0.0, TAU, 32, Color(_halo, _halo.a * fade), 1.5, true)
+		draw_arc(c, r, 0.0, TAU, 32, Color(_track, _track.a * fade), width, true)
 		var f := fill_of(p)
 		if f > 0.0:
-			draw_arc(c, r, -PI * 0.5, -PI * 0.5 + TAU * f, maxi(4, int(32.0 * f)), _fill, width, true)
+			draw_arc(c, r, -PI * 0.5, -PI * 0.5 + TAU * f, maxi(4, int(32.0 * f)), Color(_fill, _fill.a * fade), width, true)
 		x += r * 2.0 + GAUGE_CAPTION_GAP
 		var cap := caption_of(p)
 		var base := Vector2(x, cy + float(cpx) * 0.35)
-		draw_string_outline(_font, base, cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cpx, maxi(_halo_px - 1, 1), _halo)
-		draw_string(_font, base, cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cpx, Color(_ink, 0.9))
+		draw_string_outline(_font, base, cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cpx, maxi(_halo_px - 1, 1), Color(_halo, _halo.a * fade))
+		draw_string(_font, base, cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cpx, Color(_ink, 0.9 * fade))
 		x += _font.get_string_size(cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cpx).x

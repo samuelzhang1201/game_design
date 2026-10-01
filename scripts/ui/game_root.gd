@@ -122,6 +122,8 @@ func _ready() -> void:
 	_news_ticker.name = "NewsTicker"
 	_news_ticker.visible = false
 	add_child(_news_ticker)
+	# THE WAR TABLE: the news slip lies between the bookmark groups.
+	_bottom_bar.slip_moved.connect(_news_ticker.place_on_table)
 	_fps_counter = load("res://scenes/fps_counter.tscn").instantiate()
 	add_child(_fps_counter)
 	_load_settings()
@@ -707,15 +709,17 @@ func _on_missive_show(subject: Dictionary) -> void:
 				view.object_selected.emit({"title": MapObjects.label_of(Game.data, picked), "obj": picked})
 
 ## An audit letter's "Open the LEDGER" (final review M1): the LEDGER opens
-## on the first lens that draws the audited flow's type.
+## on the cluster that holds the audited flow's type.
 func _open_ledger_on(flow: String) -> void:
 	if not _ledger_screen.visible:
 		toggle_ledger()
 	if not _ledger_screen.visible:
 		return
-	var lenses := String(Ledger.type_row(Game.data, flow).get("lenses", "")).split("|", false)
-	if not lenses.is_empty() and String(lenses[0]) != _ledger_screen.lens():
-		_ledger_screen.set_lens(String(lenses[0]))
+	var cluster := String(Ledger.type_row(Game.data, flow).get("cluster", ""))
+	for c: Dictionary in Game.data.ledger_clusters:
+		if String(c["cluster"]) == cluster:
+			_ledger_screen.set_lens(String(c["lens"]))
+			break
 
 ## Bottom bar routing: MAP is the default view (close every overlay — the
 ## live world map sits in the court screen's middle zone, user ruling

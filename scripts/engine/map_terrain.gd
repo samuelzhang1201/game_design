@@ -91,7 +91,7 @@ static func shade_of(repo: DataRepository, cell: Dictionary) -> float:
 
 ## A terrain_palette colour, or `fallback` when the key is not authored.
 static func palette_color(repo: DataRepository, key: String, fallback: Color) -> Color:
-	var hex := String(repo.terrain_palette.get(key, ""))
+	var hex := String(repo.terrain_palette.get(MapPalette.table_key(repo, repo.terrain_palette, key), ""))
 	return Color(hex) if hex != "" else fallback
 
 static func _land_tint(repo: DataRepository, cell: Dictionary) -> Color:

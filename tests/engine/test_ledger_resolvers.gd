@@ -147,3 +147,29 @@ func test_artisans_and_a_foreign_market_have_no_name() -> void:
 	assert_ne(foreign_market, "", "the pack has a market that is not the realm's")
 	assert_ne(LedgerResolvers.label_of(data, s, "market:" + realm_market), "")
 	assert_eq(LedgerResolvers.label_of(data, s, "market:" + foreign_market), "", "not the realm's: no name")
+
+
+## Final review minors: the memoised burg_province is the uncached scan,
+## a town annexed into another province included.
+func test_the_memoised_burg_province_is_the_scan() -> void:
+	var moved := ""
+	for cell: int in data.manors:
+		var burg := MapManors.burg_of(data, cell)
+		if burg == "":
+			continue
+		for code: String in data.provinces:
+			if code != String(data.burgs[burg]["province_code"]):
+				s.manor_province[str(cell)] = code
+				moved = burg
+				break
+		break
+	assert_ne(moved, "", "a town's cell was annexed")
+	var memo := {}
+	LedgerResolvers.begin_memo()
+	for burg: String in data.burgs:
+		memo[burg] = LedgerResolvers.burg_province(data, s, burg)
+		assert_eq(LedgerResolvers.burg_province(data, s, burg), memo[burg], "the cache answers the same: " + burg)
+	LedgerResolvers.end_memo()
+	for burg: String in data.burgs:
+		assert_eq(memo[burg], MarketSystem.province_of_burg(data, s, burg), burg)
+	assert_eq(memo[moved], String(s.manor_province.values()[0]), "the annexed town's new province")

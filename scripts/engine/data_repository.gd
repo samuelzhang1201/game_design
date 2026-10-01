@@ -36,6 +36,12 @@ var palette: Dictionary = {}
 ## data/chart_palette.csv: key -> "#rrggbb" for the dashboard's charts
 ## (cat_1.. in fixed order, sequential, track); validated CVD-safe.
 var chart_palette: Dictionary = {}
+## data/ui_table_palette.csv: key -> "#rrggbb[aa]" for the WAR TABLE chrome
+## (paper ink, brass, wax, the tally board, the table's light; owner 2026-10-01).
+var ui_table_palette: Dictionary = {}
+## data/ui_bookmarks.csv: bottom-bar tab -> "#rrggbb", the colour of its silk
+## bookmark under the war table (lenses green, screens by group).
+var ui_bookmarks: Dictionary = {}
 ## data/ui_fonts.csv: "<scheme>:<role>" -> the row (path, weight, embolden,
 ## slant, spacing, size_scale, title_case); balance ui_font_scheme picks one.
 var ui_fonts: Dictionary = {}
@@ -125,6 +131,10 @@ var ledger_types: Array = []
 var ledger_links: Array = []
 var ledger_actions: Array = []
 var ledger_loops: Array = []
+## data/ledger_clusters.csv, in file order: {cluster, label, colour (a
+## ledger_palette.csv key), at (Vector3, the 3D anchor), at2 (Vector3 with
+## y 0, the 2D anchor), lens (the lens chip it answers to)}.
+var ledger_clusters: Array = []
 ## key -> Color (data/ledger_palette.csv).
 var ledger_palette: Dictionary = {}
 ## data/ledger_governance.csv: flow_type -> {seat, skill, base_permille,
@@ -135,6 +145,13 @@ var ledger_palette: Dictionary = {}
 ## instances are drawn as (the flow's own name when empty; the works are
 ## drawn on the artisans).
 var ledger_governance: Dictionary = {}
+## data/ledger_static_nodes.csv (spec 2026-09-30-ledger-galaxy-design §3b):
+## single nodes written down — {node_id, type_id, label, note}; the type's
+## row names the instance list `static`.
+var ledger_static_nodes: Array = []
+## data/ledger_static_links.csv: single edges written down — {link_id, from,
+## to, flow (-1 when blank), note}; the link type's row names the reader `static`.
+var ledger_static_links: Array = []
 ## data/courier_art.csv: kind -> its row (model, painting, size).
 var courier_art: Dictionary = {}
 ## data/intel_facts.csv: key -> {label, round_to, tiers} (spec 2026-09-28 §1).
@@ -534,6 +551,12 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/chart_palette.csv", ["key", "color"],
 			func(r): chart_palette[r["key"]] = r["color"]):
 		return false
+	if not _load_if_present(dir + "/ui_table_palette.csv", ["key", "color"],
+			func(r): ui_table_palette[r["key"]] = r["color"]):
+		return false
+	if not _load_if_present(dir + "/ui_bookmarks.csv", ["tab", "color"],
+			func(r): ui_bookmarks[r["tab"]] = r["color"]):
+		return false
 	if not _load_if_present(dir + "/manor_card_sections.csv", ["section", "label", "keys", "rates"],
 			func(r): manor_card_sections.append({"section": String(r["section"]),
 				"label": String(r["label"]), "keys": String(r["keys"]).split("|", false),
@@ -623,13 +646,29 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/ledger_lenses.csv", ["lens", "label", "instance_type"],
 			func(r): ledger_lenses.append(r)):
 		return false
+	if not _load_if_present(dir + "/ledger_clusters.csv", ["cluster", "label", "colour", "x", "y", "z", "x2", "z2", "lens"],
+			func(r): ledger_clusters.append({"cluster": String(r["cluster"]), "label": String(r["label"]),
+				"colour": String(r["colour"]), "lens": String(r["lens"]),
+				"at": Vector3(float(r["x"]), float(r["y"]), float(r["z"])),
+				"at2": Vector3(float(r["x2"]), 0.0, float(r["z2"]))})):
+		return false
+	if not _load_if_present(dir + "/ledger_static_nodes.csv", ["node_id", "type_id", "label", "note"],
+			func(r): ledger_static_nodes.append({"node_id": String(r["node_id"]), "type_id": String(r["type_id"]),
+				"label": String(r["label"]), "note": String(r["note"])})):
+		return false
+	if not _load_if_present(dir + "/ledger_static_links.csv", ["link_id", "from", "to", "flow", "note"],
+			func(r): ledger_static_links.append({"link_id": String(r["link_id"]), "from": String(r["from"]),
+				"to": String(r["to"]), "flow": -1 if String(r["flow"]).strip_edges() == "" else int(r["flow"]),
+				"note": String(r["note"])})):
+		return false
 	if not _load_if_present(dir + "/ledger_object_types.csv",
-			["type_id", "layer", "lenses", "label", "icon", "x", "z", "instances", "status", "milestone"],
+			["type_id", "layer", "lenses", "label", "icon", "x", "z", "instances", "status", "milestone",
+				"cluster", "fold_to", "star"],
 			func(r): ledger_types.append(r)):
 		return false
 	if not _load_if_present(dir + "/ledger_link_types.csv",
 			["link_id", "from_type", "to_type", "verb", "lenses", "status", "resolver",
-				"governor_seat", "governor_kind", "milestone", "planned_note"],
+				"governor_seat", "governor_kind", "milestone", "planned_note", "look"],
 			func(r): ledger_links.append(r)):
 		return false
 	if not _load_if_present(dir + "/ledger_actions.csv",

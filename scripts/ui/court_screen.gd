@@ -99,6 +99,10 @@ func _ready() -> void:
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
 	%SidePanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
+	# THE WAR TABLE (owner 2026-10-01): oak behind, the map a vellum sheet,
+	# the left column the steward's report; nothing when balance ui_war_table is 0.
+	if WarTable.dress_screen(self, %Bg, %MapPanel, %LogPanel):
+		WarTable.fit_report(%LogPanel, _dashboard)
 	UiPalette.style_header(%LogHeader, 14)
 	UiPalette.style_header(%SideHeader, 14)
 	_log_scroll = %LogScroll

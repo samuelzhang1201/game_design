@@ -1,61 +1,97 @@
 # scripts/ledger3d/ledger_view_3d.gd
 class_name LedgerView3D
 extends Control
-## The LEDGER's orrery (spec 2026-09-30 §6.2-6.3): spheres for objects,
-## threads for links, on three floating discs — KNOW over PEOPLE over
-## THINGS. It draws a snapshot and signals what the player did; it reads no
-## autoload and changes no state. It renders into a SubViewport at WINDOW
-## resolution shown by a TextureRect (never a SubViewportContainer, which
-## renders at design size and blurs), and only while active.
+## The LEDGER's galaxy (spec 2026-09-30-ledger-galaxy-design §5-§6): every
+## object the crown knows of is a small bright star in its tab's cluster, the
+## links shade from one cluster's colour to the other's, on a warm black
+## night. It draws a snapshot (Ledger.galaxy) and signals what the player did;
+## it reads no autoload and changes no state. It renders into a SubViewport at
+## WINDOW resolution shown by a TextureRect, and only while active. How a
+## star or a link is drawn comes from its type's row alone (`cluster`, `star`,
+## `look` — spec §3b): no type is named here, so a type or link type the owner
+## adds in data is drawn with no change here.
 
 signal sphere_selected(id: String)
 signal thread_selected(id: String)
 signal drill_requested(id: String)
 signal orders_requested(id: String, at: Vector2)
 
-const THREAD_SHADER := preload("res://scenes/ledger/thread.gdshader")
-const DISC_SHADER := preload("res://scenes/ledger/disc.gdshader")
 const CLICK_SLOP := 10.0
-const KIN_TYPES := ["kin", "marriage"]
-const EGO_AT_REST := "character:you"  # the player, whose court ties show while no one is selected
+const EGO_AT_REST := "character:you"  # the player, whose ties are lit while no one is selected
+const FLAT_PITCH := -89.9          # the flat chart, seen straight down
+const STAR_SEGMENTS := 24          # a star sphere's radial segments
+const STAR_RINGS := 12             # and its rings
+const TITLE_INK_BLEND := 0.45      # a cluster's title: its colour this far toward the label ink
+const HAZE_MIN_RADIUS_M := 8.0     # a cluster's haze never smaller than this mean spread
+const RING_GAP_RINGS := 2.0        # the selection ring stands this many ring widths off the star
+const STAR_MAT := preload("res://scenes/ledger/materials/star.tres")
+const STAR_FAINT_MAT := preload("res://scenes/ledger/materials/star_faint.tres")
+const LINK_MAT := preload("res://scenes/ledger/materials/link.tres")
+const HAZE_MAT := preload("res://scenes/ledger/materials/haze.tres")
 
 @onready var _viewport: SubViewport = %Viewport
 @onready var _display: TextureRect = %Display
 @onready var _env: WorldEnvironment = %Env
 @onready var _camera: Camera3D = %Camera
-@onready var _discs: Node3D = %Discs
-@onready var _threads_root: Node3D = %Threads
-@onready var _spheres_root: Node3D = %Spheres
+@onready var _stars: MultiMeshInstance3D = %Stars
+@onready var _faint_stars: MultiMeshInstance3D = %FaintStars   # the dimmed ones, blended toward the sky (F1)
+@onready var _links: MeshInstance3D = %Links
+@onready var _haze_root: Node3D = %Haze
 @onready var _hud: LedgerHud = %Hud
 
 var _repo: DataRepository
 var _pal: Dictionary = {}
+var _cluster_col: Dictionary = {}   # cluster -> Color
 var _orbit := LedgerOrbit.new()
+var _lay := LedgerGalaxyLayout.new()
 var _snap: Dictionary = {}
-var _pos: Dictionary = {}          # node id -> Vector3
-var _dragged: Dictionary = {}      # node id -> Vector3: spheres the player moved this viewing
-var _nodes: Dictionary = {}        # node id -> node dict
-var _sphere_mi: Dictionary = {}    # node id -> MeshInstance3D
-var _thread_mi: Dictionary = {}    # thread id -> MeshInstance3D
-var _thread_ends: Dictionary = {}  # thread id -> [Vector3, Vector3], as drawn
-var _strands: Dictionary = {}      # link id -> [[thread id, the link as that thread draws it]]
-var _pairs: Dictionary = {}        # [id, id] sorted -> threads joining those two spheres
-var _sphere_alpha: Dictionary = {} # node id -> its material's own alpha, before any fade
-var _disc_mi: Dictionary = {}      # layer -> its disc's MeshInstance3D
-var _framed := false               # the camera still stands where the framing put it
+var _nodes: Dictionary = {}
+var _order: Array[String] = []
+var _size: Dictionary = {}
+var _drawn: Dictionary = {}
+var _from: Dictionary = {}
+var _mode_left := 0.0
+var _flat := false
+var _segs: Array = []                 # the links drawn now: every styled strand whose two ends are apart
+var _styled: Array = []               # every strand of every link, styled at the last restyle (ends refreshed as the chart moves)
+var _link_arrays: Array = []          # LedgerLinkMesh.arrays of _styled, its ends moved in place while settling
+var _styled_ws := 0.0                 # the window scale _styled was styled at
+var _mode_pos: Dictionary = {}        # true (flat) / false (3D) -> {"pos": the layout's places, "settled": bool}
+var _frame_ids: Array = []            # what the camera frames while _framed
+var _title_font: Font
+var _star_cols := PackedColorArray()  # what each star wears, in _order (the MultiMesh's own copy is the renderer's)
+var _index_of: Dictionary = {}       # id -> its place in _order
+var _whole_cols := PackedColorArray()  # the colours dealt to the whole MultiMesh, in _whole
+var _faint_cols := PackedColorArray()  # and to the blended one, in _faint
+var _whole: Array[String] = []        # the stars drawn whole (opaque), in _order
+var _faint: Array[String] = []        # the dimmed stars (alpha under 1), drawn blended, in _order
+var _near: Dictionary = {}
+var _star_mat: ShaderMaterial
+var _faint_mat: ShaderMaterial
+var _link_mat: ShaderMaterial
+var _sky_mat: ShaderMaterial
+var _haze: Dictionary = {}
+var _ids_of_cluster: Dictionary = {}  # cluster -> its stars' ids, in _order (read once a snapshot)
+var _hub_type: Dictionary = {}        # type -> whether its stars may be hubs (`hub` not 0), read once a snapshot
+var _looks: Dictionary = {}         # link type -> its look (ledger_link_types.csv), read once a snapshot
+var _cluster := "all"
 var _selected := ""
+var _hovered := ""
+var _framed := false
 var _button := 0
 var _press_at := Vector2.ZERO
 var _moved := false
 var _drag_id := ""
-var _ease_left := 0.0
-var _ease_from := Vector2.ZERO
+var _fly_left := 0.0
+var _fly_from: Array = []
+var _fly_to: Array = []
 var _last_pose := Transform3D()
 
 
 func _ready() -> void:
 	_display.texture = _viewport.get_texture()
 	resized.connect(_fit_viewport)
+	mouse_exited.connect(_on_exit)
 	_fit_viewport()
 	set_process(false)
 
@@ -63,17 +99,48 @@ func _ready() -> void:
 func bind(repo: DataRepository) -> void:
 	_repo = repo
 	_pal = repo.ledger_palette
-	_env.environment.background_color = _pal["background"]
+	for c: Dictionary in repo.ledger_clusters:
+		# a colour not in the palette (validate names it) draws in the planned grey
+		_cluster_col[String(c["cluster"])] = _pal.get(String(c["colour"]), _pal["sphere_planned"])
 	_orbit.distance = repo.bal("ledger_camera_distance")
 	_orbit.pitch = repo.bal("ledger_camera_pitch_deg")
 	_orbit.min_distance = repo.bal("ledger_camera_min_m")
 	_orbit.max_distance = repo.bal("ledger_camera_max_m")
-	_orbit.target = Vector3(0, LedgerLayout.layer_y(repo, "people"), 0)
+	var env := _env.environment
+	env.glow_intensity = repo.bal("ledger_glow_intensity")
+	env.glow_hdr_threshold = repo.bal("ledger_glow_threshold")
+	_sky_mat = env.sky.sky_material.duplicate() as ShaderMaterial
+	env.sky.sky_material = _sky_mat
+	_sky_mat.set_shader_parameter("bg_top", _pal["sky_top"])
+	_sky_mat.set_shader_parameter("bg_bottom", _pal["sky_bottom"])
+	_sky_mat.set_shader_parameter("neb_a", _pal["nebula_a"])
+	_sky_mat.set_shader_parameter("neb_b", _pal["nebula_b"])
+	_sky_mat.set_shader_parameter("star_col", _pal["stars"])
+	_star_mat = STAR_MAT.duplicate() as ShaderMaterial
+	_faint_mat = STAR_FAINT_MAT.duplicate() as ShaderMaterial
+	for m: ShaderMaterial in [_star_mat, _faint_mat]:
+		m.set_shader_parameter("emit", repo.bal("ledger_star_emit"))
+		m.set_shader_parameter("rim_gain", repo.bal("ledger_star_rim"))
+		m.set_shader_parameter("metal", repo.bal("ledger_star_metallic"))
+		m.set_shader_parameter("rough", repo.bal("ledger_star_roughness"))
+	_stars.material_override = _star_mat
+	_faint_stars.material_override = _faint_mat
+	_link_mat = LINK_MAT.duplicate() as ShaderMaterial
+	_link_mat.set_shader_parameter("pulses", repo.bal("ledger_light_pulses"))
+	_link_mat.set_shader_parameter("dashes_per_m", repo.bal("ledger_dashes_per_m"))
+	_link_mat.set_shader_parameter("edge_soft", repo.bal("ledger_link_edge_soft"))
+	_link_mat.set_shader_parameter("light_gain", repo.bal("ledger_light_gain"))
+	_link_mat.set_shader_parameter("glow_virtuous", _pal["loop_virtuous"])
+	_link_mat.set_shader_parameter("glow_vicious", _pal["loop_vicious"])
+	_links.material_override = _link_mat
 	_hud.style(UiPalette.role_font("body"), repo.bal("ledger_label_px"), _pal["label_ink"], _pal["label_halo"],
 		int(repo.bal("ledger_label_halo_px")))
 	_hud.style_gauges(repo.bal("ledger_gauge_radius_px"), repo.bal("ledger_gauge_width_px"),
 		repo.bal("ledger_gauge_gap_px"), repo.bal("ledger_gauge_caption_px"), _pal["gauge_fill"], _pal["gauge_track"])
-	_build_discs()
+	_title_font = UiPalette.role_font("header")
+	_hud.style_title(_title_font, repo.bal("ledger_title_px"))
+	_hud.style_ring(_pal["focus_ring"], repo.bal("ledger_ring_px"))
+	_hud.style_halo(repo.bal("ledger_label_halo_soft_px"), repo.bal("ledger_label_halo_soft_alpha"))
 	_apply_camera()
 
 
@@ -84,10 +151,12 @@ func _window_scale() -> float:
 func _fit_viewport() -> void:
 	var s := _window_scale()
 	_viewport.size = Vector2i(maxi(1, int(size.x * s)), maxi(1, int(size.y * s)))
-	# a view the player has not moved keeps its framing as the view resizes
+	if _repo != null and not _snap.is_empty() and not is_equal_approx(_window_scale(), _styled_ws):
+		_rebuild_links()  # widths and shifts are in window px
 	if _framed and _repo != null and not _snap.is_empty():
-		_frame()
-		_apply_camera()
+		_frame_on(_frame_ids, true)
+	if _repo != null:
+		_update_link_uniforms()
 
 
 func set_active(on: bool) -> void:
@@ -98,227 +167,523 @@ func set_active(on: bool) -> void:
 		_fit_viewport()
 
 
-## Draw a snapshot. The same lens and focus again (a state change) keeps
-## the spheres the player dragged where he put them; a new lens or focus
-## forgets them. A sphere under a drag that is no longer drawn ends the drag.
-func show_snapshot(snap: Dictionary, keep_camera: bool) -> void:
-	if _snap.is_empty() or String(snap.get("lens", "")) != String(_snap.get("lens", "")) \
-			or String(snap.get("focus_id", "")) != String(_snap.get("focus_id", "")):
-		_dragged.clear()
+## Draw a snapshot. Stars already placed keep their places (the layout is
+## warm: the same stars settle no further, other stars only briefly — final
+## review I1b); a star under a drag or the selection that is no longer drawn
+## lets go. `keep_camera` holds the camera where it stands — no framing, and a
+## framing in hand stops following the chart — else the camera frames the
+## chosen cluster. `select_id`, when given, is selected as the chart is drawn
+## (one restyle, not a second by select()).
+func show_snapshot(snap: Dictionary, keep_camera: bool, select_id: String = "") -> void:
 	_snap = snap
 	_nodes.clear()
+	_looks.clear()
+	for r: Dictionary in _repo.ledger_links:
+		_looks[String(r["link_id"])] = String(r.get("look", "flow"))
+	_hub_type.clear()
+	for r: Dictionary in _repo.ledger_types:
+		_hub_type[String(r["type_id"])] = String(r.get("hub", "1")) != "0"
+	var degree := {}
 	for n: Dictionary in snap["nodes"]:
 		_nodes[String(n["id"])] = n
-	_pos = LedgerLayout.positions(_repo, snap)
-	for id: String in _dragged.keys():
-		if _pos.has(id):
-			_pos[id] = _dragged[id]
-		else:
-			_dragged.erase(id)
-	if _drag_id != "" and not _pos.has(_drag_id):
-		_end_gesture()
-	var present := LedgerLayout.layers_present(snap)
-	for layer: String in _disc_mi:
-		var disc := _disc_mi[layer] as MeshInstance3D
-		disc.visible = layer in present
-		if disc.visible:
-			var r := LedgerLayout.disc_radius(_repo, snap, _pos, layer)
-			(disc.mesh as PlaneMesh).size = Vector2(2.0 * r, 2.0 * r)
-			(disc.material_override as ShaderMaterial).set_shader_parameter("fade_start", _fade_start(r))
+	for l: Dictionary in snap["links"]:
+		for e: String in [String(l["from"]), String(l["to"])]:
+			degree[e] = int(degree.get(e, 0)) + 1
+	_order.clear()
+	for id: String in _nodes:
+		_order.append(id)
+	_order.sort()
+	_index_of.clear()
+	_ids_of_cluster.clear()
+	for i in _order.size():
+		_index_of[_order[i]] = i
+		var c := _cluster_of(_order[i])
+		if not _ids_of_cluster.has(c):
+			_ids_of_cluster[c] = []
+		(_ids_of_cluster[c] as Array).append(_order[i])
+	_size.clear()
+	for id: String in _order:
+		_size[id] = drawn_radius(_nodes[id], int(degree.get(id, 0)))
+	_lay.setup(_repo, snap, _flat)
+	for id: String in _drawn.keys():
+		if not _nodes.has(id):
+			_drawn.erase(id)
+	if select_id != "":
+		_selected = select_id
 	if not _nodes.has(_selected):
 		_selected = ""
-	_build_spheres()
-	_build_threads()
-	_apply_focus_fade()
-	if not keep_camera:
-		front_view()
+	if not _nodes.has(_hovered):
+		_hovered = ""
+	if _drag_id != "" and not _nodes.has(_drag_id):
+		_end_gesture()
+	_sync_drawn()
+	_build_stars()
+	_build_haze()
+	_restyle()
+	if keep_camera:
+		_framed = false
+	else:
+		_frame_on(_cluster_ids(), true)
 	_update_hud()
+
+
+## A star's DRAWN radius (metres): its layout radius, a planned (ghost)
+## star's held to an ordinary small star's (ledger_star_planned_max), all at
+## ledger_star_draw_scale — small stars whose glow carries the size (Task 11
+## fix round 1, F3 / F5). The layout keeps the full radius for its forces.
+func drawn_radius(node: Dictionary, degree: int) -> float:
+	var r := LedgerGalaxyLayout.size_of(_repo, node, degree)
+	if String(node.get("status", "live")) == "planned":
+		r = minf(r, _repo.bal("ledger_star_planned_max"))
+	return r * _repo.bal("ledger_star_draw_scale")
 
 
 func select(id: String) -> void:
-	_selected = id
-	_apply_focus_fade()
+	_selected = id if _nodes.has(id) else ""
+	_restyle()
 	_update_hud()
 
 
-## Back to the front: the target and distance snap to the framing of what
-## is drawn (_frame), the yaw and pitch ease home over ledger_front_ease_s
-## while the view runs.
 func front_view() -> void:
-	_frame()
-	_framed = true
-	_ease_from = Vector2(_orbit.yaw, _orbit.pitch)
-	_ease_left = _repo.bal("ledger_front_ease_s")
-	if _ease_left <= 0.0:
-		_orbit.yaw = 0.0
-		_orbit.pitch = _repo.bal("ledger_camera_pitch_deg")
-	_apply_camera()
+	_frame_on(_cluster_ids(), false)
 
 
-## Target and distance that frame the spheres and discs drawn, seen from
-## the front (LedgerOrbit.frame), inside the part of the view the screen's
-## title, lenses and crumb leave clear; the PEOPLE disc's centre at
-## ledger_camera_distance when nothing is drawn.
-func _frame() -> void:
-	var sz := size if size.x >= 2.0 and size.y >= 2.0 else Vector2(1280, 720)
-	var side := _repo.bal("ledger_frame_side_px") / sz.x
-	var top := _repo.bal("ledger_frame_top_px") / sz.y
-	var bottom := _repo.bal("ledger_frame_bottom_px") / sz.y
-	var safe := Rect2(side, top, maxf(1.0 - 2.0 * side, 0.1), maxf(1.0 - top - bottom, 0.1))
-	var f := LedgerOrbit.frame(LedgerLayout.frame_points(_repo, _snap, _pos), 0.0,
-		_repo.bal("ledger_camera_pitch_deg"), _camera.fov, sz.x / sz.y, safe)
-	if f.is_empty():
-		_orbit.target = Vector3(0, LedgerLayout.layer_y(_repo, "people"), 0)
-		_orbit.distance = _repo.bal("ledger_camera_distance")
+## Choose a cluster ("all" for the whole galaxy): the camera flies to frame it
+## and the other clusters dim (spec §6); nothing is hidden.
+func focus_cluster(cluster_id: String) -> void:
+	_cluster = cluster_id
+	_restyle()
+	_frame_on(_cluster_ids(), false)
+	_update_hud()
+
+
+## Frame a star and its neighbours by its live ties.
+func frame_web(id: String) -> void:
+	if not _nodes.has(id):
 		return
-	_orbit.target = f["target"]
-	_orbit.distance = clampf(float(f["distance"]), _orbit.min_distance, _orbit.max_distance)
+	var ids: Array = [id]
+	for l: Dictionary in _snap.get("links", []):
+		# its LIVE ties only: a planned (ghost) link's far end does not pull
+		# the camera (Task 11 fix round 4, T1c)
+		if String(l.get("status", "live")) == "planned":
+			continue
+		if String(l["from"]) == id:
+			ids.append(String(l["to"]))
+		elif String(l["to"]) == id:
+			ids.append(String(l["from"]))
+	_frame_on(ids, false)
 
 
-## The disc drawn for `layer`, or null (the tests' seam).
-func disc_of(layer: String) -> MeshInstance3D:
-	return _disc_mi.get(layer)
+## Frame an opened province and the stars it unfolded (its manors, towns
+## and buildings: every star whose home is it), as frame_web frames a web
+## (Task 11 fix round 1, F8).
+func frame_opened(province_id: String) -> void:
+	if not _nodes.has(province_id):
+		return
+	var ids: Array = [province_id]
+	for id: String in _order:
+		if String((_nodes[id] as Dictionary).get("home_id", "")) == province_id:
+			ids.append(id)
+	_frame_on(ids, false)
+
+
+## Lay the chart flat (2D, seen straight down) or stand it up again; the
+## stars ease between their two places over ledger_galaxy_mode_ease_s.
+func set_flat(on: bool) -> void:
+	if on == _flat:
+		return
+	_flat = on
+	_sky_mat.set_shader_parameter("flat_mode", 1.0 if on else 0.0)
+	if _snap.is_empty():
+		_orbit.pitch = FLAT_PITCH if on else _repo.bal("ledger_camera_pitch_deg")
+		_apply_camera()
+		return
+	_from = _drawn.duplicate()
+	_mode_pos[not on] = {"pos": _lay.pos.duplicate(), "settled": _lay.settled()}
+	_lay.setup(_repo, _snap, on)
+	_restore_mode_places(on)
+	_mode_left = _repo.bal("ledger_galaxy_mode_ease_s")
+	_orbit.yaw = 0.0
+	_orbit.pitch = FLAT_PITCH if on else _repo.bal("ledger_camera_pitch_deg")
+	_frame_on(_cluster_ids(), true)
+
+
+## Each mode keeps its own places (a round trip 3D → 2D → 3D gives back the
+## chart as it stood, not a flattened one): the places this mode last held
+## come back for every star still drawn — a star pinned meanwhile keeps
+## where the pointer put it, lifted to its old height in 3D — and a chart
+## that came back whole and settled stays settled.
+func _restore_mode_places(on: bool) -> void:
+	var saved: Dictionary = _mode_pos.get(on, {})
+	if saved.is_empty():
+		return
+	var pos: Dictionary = saved["pos"]
+	var whole := true
+	for id: String in _order:
+		if not pos.has(id):
+			whole = false
+			continue
+		var was: Vector3 = pos[id]
+		if _lay.pinned.has(id):
+			var now: Vector3 = _lay.pos[id]
+			_lay.pos[id] = Vector3(now.x, 0.0, now.z) if on else Vector3(now.x, was.y, now.z)
+		else:
+			_lay.pos[id] = was
+	if whole and bool(saved["settled"]):
+		_lay.passes_left = 0
+
+
+func is_flat() -> bool:
+	return _flat
+
+
+func cluster() -> String:
+	return _cluster
+
+
+## The selected star's id, or "".
+func selected() -> String:
+	return _selected
+
+
+## Where the stars stand and how much settling is left (tests, tools).
+func layout() -> LedgerGalaxyLayout:
+	return _lay
 
 
 func orbit() -> LedgerOrbit:
 	return _orbit
 
 
+func camera() -> Camera3D:
+	return _camera
+
+
+func link_material() -> ShaderMaterial:
+	return _link_mat
+
+
+func stars() -> Array[String]:
+	return _order
+
+
+func drawn(id: String) -> Vector3:
+	return _drawn.get(id, Vector3.ZERO)
+
+
+func segments() -> Array:
+	return _segs
+
+
+func star_colour(id: String) -> Color:
+	var i := int(_index_of.get(id, -1))
+	return _star_cols[i] if i >= 0 and i < _star_cols.size() else Color(0, 0, 0, 0)
+
+
+## Settles the chart at once and ends any ease (tests and shots).
+func settle_now() -> void:
+	while not _lay.settled():
+		_lay.step(10)
+	_mode_left = 0.0
+	_sync_drawn()
+	_place_stars()
+	_relay_links()
+	_place_haze()
+	if _framed:
+		_frame_on(_frame_ids, true)
+	elif not _fly_to.is_empty():
+		_ease_camera(1.0)
+	_fly_left = 0.0
+	_apply_camera()
+	_update_link_uniforms()
+	_update_hud()
+
+
 func screen_pos_of(id: String) -> Variant:
-	if not _pos.has(id) or _camera.is_position_behind(_pos[id]):
+	if not _drawn.has(id) or _camera.is_position_behind(_drawn[id]):
 		return null
-	return _camera.unproject_position(_pos[id]) / _window_scale()
+	return _camera.unproject_position(_drawn[id]) / _window_scale()
 
 
-# --- building --------------------------------------------------------------
+# --- stars, links, haze ------------------------------------------------------
 
-func _build_discs() -> void:
-	for c in _discs.get_children():
-		c.queue_free()
-	_disc_mi.clear()
-	for layer: String in Ledger.LAYERS:
-		# A flat pool that fades toward its rim (disc.gdshader) — no slab, no
-		# hard edge (taste: "Nothing ends on a hard cut").
-		var mesh := PlaneMesh.new()
-		var r := _repo.bal("ledger_disc_radius_m")
-		mesh.size = Vector2(2.0 * r, 2.0 * r)
-		var mat := ShaderMaterial.new()
-		mat.shader = DISC_SHADER
-		mat.set_shader_parameter("color", _pal["disc_" + layer])
-		mat.set_shader_parameter("fade_start", _fade_start(r))
-		var mi := MeshInstance3D.new()
-		mi.mesh = mesh
-		mi.material_override = mat
-		mi.position.y = LedgerLayout.disc_y(_repo, layer)
-		_discs.add_child(mi)
-		_disc_mi[layer] = mi
+func _sync_drawn() -> void:
+	var total := maxf(_repo.bal("ledger_galaxy_mode_ease_s"), 0.001)
+	var t := 1.0 if _mode_left <= 0.0 else 1.0 - _mode_left / total
+	for id: String in _order:
+		var to: Vector3 = _lay.pos[id]
+		_drawn[id] = (_from.get(id, to) as Vector3).lerp(to, t) if t < 1.0 else to
 
 
-## Where a disc of radius `r` begins to fade, as a share of r: the same
-## ledger_disc_fade_m of soft rim on every disc (a share alone left the
-## small KNOW disc a hard edge), never more than ledger_disc_fade_max_share.
-func _fade_start(r: float) -> float:
-	if r <= 0.0:
-		return 0.0
-	return 1.0 - minf(_repo.bal("ledger_disc_fade_m"), r * _repo.bal("ledger_disc_fade_max_share")) / r
+func _build_stars() -> void:
+	var sphere := SphereMesh.new()
+	sphere.radius = 1.0
+	sphere.height = 2.0
+	sphere.radial_segments = STAR_SEGMENTS
+	sphere.rings = STAR_RINGS
+	for mi: MultiMeshInstance3D in [_stars, _faint_stars]:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = true
+		mm.mesh = sphere
+		mi.multimesh = mm
 
 
-func _sphere_color(n: Dictionary) -> Color:
-	var layer := String(n["layer"])
-	var c: Color = _pal["sphere_planned"] if String(n["status"]) == "planned" else _pal["sphere_" + layer]
-	if layer == "know":
-		c.a = _repo.bal("ledger_orb_glass_alpha")
-	return c
+## Deals the stars between the whole (opaque) and the dimmed (blended)
+## MultiMesh by what each wears now, then places them.
+func _fill_stars() -> void:
+	_whole.clear()
+	_faint.clear()
+	var whole_cols := PackedColorArray()
+	var faint_cols := PackedColorArray()
+	for i in _order.size():
+		if _star_cols[i].a >= 1.0:
+			_whole.append(_order[i])
+			whole_cols.append(_star_cols[i])
+		else:
+			_faint.append(_order[i])
+			faint_cols.append(_star_cols[i])
+	_whole_cols = whole_cols
+	_faint_cols = faint_cols
+	for pair: Array in [[_stars, whole_cols], [_faint_stars, faint_cols]]:
+		var mm: MultiMesh = (pair[0] as MultiMeshInstance3D).multimesh
+		if mm == null:
+			continue
+		var cols: PackedColorArray = pair[1]
+		if mm.instance_count != cols.size():
+			mm.instance_count = cols.size()
+		for k in cols.size():
+			mm.set_instance_color(k, cols[k])
+	_place_stars()
 
 
-func _sphere_material(n: Dictionary) -> StandardMaterial3D:
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = _sphere_color(n)
-	mat.metallic = _repo.bal("ledger_orb_metallic")
-	mat.roughness = _repo.bal("ledger_orb_roughness")
-	# Blended even when opaque: the focus fade (ledger_focus_fade) turns
-	# every sphere not linked to the selected one see-through.
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	if String(n["layer"]) == "know":
-		mat.metallic = 0.1
-	return mat
+func _place_stars() -> void:
+	for pair: Array in [[_stars, _whole], [_faint_stars, _faint]]:
+		var mm: MultiMesh = (pair[0] as MultiMeshInstance3D).multimesh
+		var ids: Array[String] = pair[1]
+		if mm == null or mm.instance_count != ids.size():
+			continue
+		for k in ids.size():
+			var r := _draw_r(ids[k])
+			mm.set_instance_transform(k, Transform3D(Basis().scaled(Vector3(r, r, r)), _drawn[ids[k]]))
 
 
-func _radius(n: Dictionary) -> float:
-	return _repo.bal("ledger_sphere_radius_instance") if bool(n["instance"]) \
-		else _repo.bal("ledger_sphere_radius_type")
+## A star's radius as drawn NOW (metres): its drawn radius, held to
+## ledger_star_max_px of screen (Task 11 fix round 2, R6: close in, a pool
+## grew into a 70 px shaded ball).
+func _draw_r(id: String) -> float:
+	var cap := _repo.bal("ledger_star_max_px") * _window_scale() * _m_per_px_at(_drawn[id])
+	return minf(float(_size[id]), cap)
 
 
-func _build_spheres() -> void:
-	for c in _spheres_root.get_children():
-		c.queue_free()
-	_sphere_mi.clear()
-	_sphere_alpha.clear()
-	for id: String in _nodes:
-		var n: Dictionary = _nodes[id]
-		var mesh := SphereMesh.new()
-		mesh.radius = _radius(n)
-		mesh.height = mesh.radius * 2.0
-		var mi := MeshInstance3D.new()
-		mi.mesh = mesh
-		mi.material_override = _sphere_material(n)
-		mi.position = _pos[id]
-		_spheres_root.add_child(mi)
-		_sphere_mi[id] = mi
-		_sphere_alpha[id] = (mi.material_override as StandardMaterial3D).albedo_color.a
+func _cluster_of(id: String) -> String:
+	return String((_nodes.get(id, {}) as Dictionary).get("cluster", ""))
 
 
-func _width(l: Dictionary) -> float:
-	var lo := _repo.bal("ledger_thread_width_min")
-	if _is_tie(l):
-		# A court tie is a thin cord (the court drew 49 thick ties into a
-		# tangle): its width by the strength of feeling, linear to ledger_tie_ref.
-		var s := clampf(_tie_strength(l) / _repo.bal("ledger_tie_ref"), 0.0, 1.0)
-		return lerpf(_repo.bal("ledger_tie_width_min"), _repo.bal("ledger_tie_width_max"), s)
+func _look(l: Dictionary) -> String:
+	return String(_looks.get(String(l["type"]), "flow"))
+
+
+## Colours and fades from the selection and the chosen cluster, then the links.
+func _restyle() -> void:
+	_near.clear()
+	if _selected != "":
+		_near[_selected] = true
+		for l: Dictionary in _snap.get("links", []):
+			if String(l["from"]) == _selected or String(l["to"]) == _selected:
+				_near[String(l["from"])] = true
+				_near[String(l["to"])] = true
+	_star_cols.resize(_order.size())
+	for i in _order.size():
+		_star_cols[i] = _star_colour(_order[i])
+	_fill_stars()
+	_rebuild_links()
+	_place_haze()
+
+
+func _star_colour(id: String) -> Color:
+	var n: Dictionary = _nodes[id]
+	var c: Color = _cluster_col.get(_cluster_of(id), _pal["sphere_planned"])
+	var f := 1.0
+	# a planned (ghost) star: its own cluster's colour, desaturated and
+	# faint — not yet built, never a neutral grey clay ball (F3)
+	if String(n.get("status", "live")) == "planned":
+		c = Color.from_hsv(c.h, c.s * _repo.bal("ledger_star_planned_sat"), c.v)
+		f = _repo.bal("ledger_star_planned_fade")
+	if _selected != "" and not _near.has(id):
+		f = minf(f, _repo.bal("ledger_focus_fade"))
+	if _cluster != "all" and _cluster_of(id) != _cluster:
+		f = minf(f, _repo.bal("ledger_galaxy_other_fade"))
+	return Color(c, f)
+
+
+## Styles every link afresh (a new snapshot, selection, cluster or window
+## scale) and draws it.
+func _rebuild_links() -> void:
+	_styled = _segments()
+	_styled_ws = _window_scale()
+	_link_arrays = LedgerLinkMesh.arrays(_styled)
+	_segs = _styled.filter(func(seg: Dictionary) -> bool: return not (seg["a"] as Vector3).is_equal_approx(seg["b"]))
+	_links.mesh = LedgerLinkMesh.mesh_of(_link_arrays)
+	_update_link_uniforms()
+
+
+## Re-lays the links where their stars now stand, their styling kept (a
+## settling or dragged chart): only the ends move. A link whose two ends meet
+## draws nothing (its quad has no length) and is not picked.
+func _relay_links() -> void:
+	var ends: Array = []
+	_segs = []
+	for seg: Dictionary in _styled:
+		var a: Vector3 = _drawn.get(String(seg["a_id"]), seg["a"])
+		var b: Vector3 = _drawn.get(String(seg["b_id"]), seg["b"])
+		seg["a"] = a
+		seg["b"] = b
+		ends.append([a, b])
+		if not a.is_equal_approx(b):
+			_segs.append(seg)
+	if _styled.is_empty():
+		return
+	LedgerLinkMesh.move_ends(_link_arrays, ends)
+	_links.mesh = LedgerLinkMesh.mesh_of(_link_arrays)
+
+
+func _update_link_uniforms() -> void:
+	if _link_mat == null:
+		return
+	var h := float(maxi(_viewport.size.y, 1))
+	_link_mat.set_shader_parameter("px_per_dist", 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / h)
+	_link_mat.set_shader_parameter("ortho_m_per_px", _camera.size / h if _flat else 0.0)
+
+
+func _running_links() -> Dictionary:
+	var out := {}
+	for lp: Dictionary in _snap.get("loops", []):
+		if bool(lp["running"]):
+			for t: String in lp["links"]:
+				out[t] = String(lp["kind"])
+	return out
+
+
+func _pair_key(l: Dictionary) -> Array:
+	var key := [String(l["from"]), String(l["to"])]
+	key.sort()
+	return key
+
+
+func _segments() -> Array:
+	var out: Array = []
+	var pairs := {}
+	for l: Dictionary in _snap.get("links", []):
+		var key := _pair_key(l)
+		pairs[key] = int(pairs.get(key, 0)) + 1
+	var running := _running_links()
+	var ws := _window_scale()
+	for l: Dictionary in _snap.get("links", []):
+		var a_id := String(l["from"])
+		var b_id := String(l["to"])
+		if not _drawn.has(a_id) or not _drawn.has(b_id):
+			continue
+		var a: Vector3 = _drawn[a_id]
+		var b: Vector3 = _drawn[b_id]
+		var cols := _link_colours(l)
+		var alpha := _ink(l) * pow(_link_fade(l), 2.2)
+		var wide := _repo.bal("ledger_focus_width") if _lit_web(l) else 1.0
+		var key := _pair_key(l)
+		var pair_shift := 0.0
+		if int(pairs[key]) > 1:
+			pair_shift = _repo.bal("ledger_pair_offset_px") * (1.0 if a_id == key[0] else -1.0)
+		var planned := String(l["status"]) == "planned" or bool(l.get("vacant", false))
+		var speed := 0.0
+		if not planned and _look(l) == "flow" and l["flow"] != null and int(l["flow"]) > 0:
+			var t := inverse_lerp(_repo.bal("ledger_link_min_px"), _repo.bal("ledger_link_max_px"), _width_px(l))
+			speed = _repo.bal("ledger_light_speed") * (0.4 + 0.6 * clampf(t, 0.0, 1.0))
+		var glow := {"virtuous": 1, "vicious": 2}.get(String(running.get(String(l["type"]), "")), 0) as int
+		for st: Array in _split(l):
+			out.append({"id": String(st[0]), "link": String(l["id"]), "a_id": a_id, "b_id": b_id, "a": a, "b": b,
+				"ca": Color(cols[0] as Color, alpha), "cb": Color(cols[1] as Color, alpha),
+				"width_px": _width_px(st[1]) * wide * ws, "shift_px": (float(st[2]) + pair_shift) * ws,
+				"dashed": planned, "speed": speed, "glow": glow})
+	return out
+
+
+## The strands a link is drawn as: itself while its accounts agree; one per
+## account when they differ — "<link id>#<i>", each its own width, side by side
+## ledger_strand_gap_px apart edge to edge, the bundle centred on the link.
+## Each entry is [thread id, the link as that strand, its shift in px].
+func _split(l: Dictionary) -> Array:
+	var accs: Array = l.get("accounts", [])
+	if accs.size() <= 1:
+		return [[String(l["id"]), l, 0.0]]
+	var items: Array = []
+	var widths: Array[float] = []
+	for acc: Dictionary in accs:
+		var one := l.duplicate()
+		one["flow"] = acc["value"]
+		one["accounts"] = [acc]
+		items.append(one)
+		widths.append(_width_px(one))
+	var gap := _repo.bal("ledger_strand_gap_px")
+	var centres: Array[float] = [0.0]
+	for i in range(1, items.size()):
+		centres.append(centres[i - 1] + widths[i - 1] * 0.5 + gap + widths[i] * 0.5)
+	var mid := (centres[0] - widths[0] * 0.5 + centres[-1] + widths[-1] * 0.5) * 0.5
+	var out: Array = []
+	for i in items.size():
+		out.append(["%s#%d" % [l["id"], i], items[i], centres[i] - mid])
+	return out
+
+
+## The link a picked thread belongs to: a strand's id less its "#<i>".
+static func link_id_of(thread_id: String) -> String:
+	var at := thread_id.rfind("#")
+	if at > 0 and thread_id.substr(at + 1).is_valid_int():
+		return thread_id.substr(0, at)
+	return thread_id
+
+
+func _width_px(l: Dictionary) -> float:
+	match _look(l):
+		"tie", "kin":
+			var feel := absf(float(l["flow"])) if l["flow"] != null else 0.0
+			return lerpf(_repo.bal("ledger_tie_min_px"), _repo.bal("ledger_tie_max_px"),
+				clampf(feel / _repo.bal("ledger_tie_ref"), 0.0, 1.0))
+		"structure":
+			return _count_width_px(l)
 	if l["flow"] == null:
-		return _repo.bal("ledger_thread_vague_width")
+		return _count_width_px(l)
 	var f := float(l["flow"])
 	if f <= 0.0:
-		return lo
+		return _repo.bal("ledger_link_min_px")
 	var t := clampf(log(1.0 + f) / log(1.0 + _repo.bal("ledger_thread_flow_ref")), 0.0, 1.0)
-	return lerpf(lo, _repo.bal("ledger_thread_width_max"), t)
+	return lerpf(_repo.bal("ledger_link_min_px"), _repo.bal("ledger_link_max_px"), t)
 
 
-## A tie between two people of the court (court_relations), not a flow.
-func _is_tie(l: Dictionary) -> bool:
-	return String(Ledger.link_row(_repo, String(l["type"])).get("resolver", "")) == "court_relations"
+## A link with no figure (words only, or a structural tie) is as wide as
+## how many links it stands for: log scale to ledger_link_count_ref.
+func _count_width_px(l: Dictionary) -> float:
+	var n := maxf(float(l.get("count", 1)), 1.0)
+	var t := clampf(log(1.0 + n) / log(1.0 + _repo.bal("ledger_link_count_ref")), 0.0, 1.0)
+	return lerpf(_repo.bal("ledger_link_min_px"), _repo.bal("ledger_link_max_px"), t)
 
 
-## How much of a thread shows while nothing is selected: the court is read
-## one person's web at a time (owner 2026-09-30: the 49 ties tangled), so at
-## rest the player's own ties (EGO_AT_REST) are lit and every other tie
-## stands back at ledger_tie_rest_fade; selecting anyone makes them the one.
-func _rest_fade(l: Dictionary) -> float:
-	if not _is_tie(l) or not _nodes.has(EGO_AT_REST):
-		return 1.0
-	if String(l["from"]) == EGO_AT_REST or String(l["to"]) == EGO_AT_REST:
-		return 1.0
-	return _repo.bal("ledger_tie_rest_fade")
-
-
-## A court tie's strength of feeling: its flow, the sentiment's size.
-func _tie_strength(l: Dictionary) -> float:
-	return absf(float(l["flow"])) if l["flow"] != null else 0.0
-
-
-func _thread_color(l: Dictionary) -> Color:
+func _link_colours(l: Dictionary) -> Array:
 	if String(l["status"]) == "planned" or bool(l.get("vacant", false)):
-		return _pal["thread_planned"]  # not built, or a seat no one holds (M3 final review M8)
-	if String(l["type"]) in KIN_TYPES:
-		return _pal["thread_kin"]
-	if _is_tie(l):
-		return _pal["thread_pos"] if int(l["sentiment"]) >= 0 else _pal["thread_neg"]
+		return [_pal["thread_planned"], _pal["thread_planned"]]
+	match _look(l):
+		"kin":
+			return [_pal["thread_kin"], _pal["thread_kin"]]
+		"tie":
+			var c: Color = _pal["thread_pos"] if int(l.get("sentiment", 0)) >= 0 else _pal["thread_neg"]
+			return [c, c]
+	var ca: Color = _cluster_col.get(_cluster_of(String(l["from"])), _pal["thread_live"])
+	var cb: Color = _cluster_col.get(_cluster_of(String(l["to"])), _pal["thread_live"])
 	var accs: Array = l["accounts"]
-	var c: Color = _pal["thread_live"]
 	if not accs.is_empty():
-		var age := float(int(_snap["day"]) - int(accs[0]["day"]))
-		c = c.lerp(_pal["thread_aged"], clampf(age / _repo.bal("ledger_age_full_days"), 0.0, 1.0))
-	return c
+		var age := clampf(float(int(_snap["day"]) - int(accs[0]["day"])) / _repo.bal("ledger_age_full_days"), 0.0, 1.0)
+		ca = ca.lerp(_pal["thread_aged"], age)
+		cb = cb.lerp(_pal["thread_aged"], age)
+	return [ca, cb]
 
 
 func _ink(l: Dictionary) -> float:
@@ -333,251 +698,499 @@ func _ink(l: Dictionary) -> float:
 	return 1.0
 
 
-func _running_links() -> Dictionary:
-	var out := {}
-	for lp: Dictionary in _snap.get("loops", []):
-		if bool(lp["running"]):
-			for t: String in lp["links"]:
-				out[t] = String(lp["kind"])
-	return out
-
-
-func _build_threads() -> void:
-	for c in _threads_root.get_children():
-		c.queue_free()
-	_thread_mi.clear()
-	_thread_ends.clear()
-	_strands.clear()
-	var running := _running_links()
-	_pairs.clear()
-	for l: Dictionary in _snap["links"]:
-		var key := _pair_key(l)
-		_pairs[key] = int(_pairs.get(key, 0)) + 1
-	for l: Dictionary in _snap["links"]:
-		_strands[String(l["id"])] = _split(l)
-		for st: Array in _strands[String(l["id"])]:
-			var ends := _ends_of(st[1])
-			if ends.is_empty():
-				continue
-			var id := String(st[0])
-			_thread_mi[id] = _add_thread(st[1], ends[0], ends[1], running)
-			_thread_ends[id] = ends
-
-
-## The threads a link is drawn as (spec 2026-09-30-ledger-governors-design
-## §4): itself, under its own id, while its accounts agree; one STRAND per
-## account when they differ — "<link id>#<i>", the link with that account
-## alone (its flow that account's value, so each strand its own width and
-## ink) and its sideways place, "strand_shift" (metres across the thread):
-## side by side, ledger_strand_gap_m between neighbours' SURFACES so no two
-## ever touch however wide, the bundle's outer surfaces centred on where the
-## one thread would run (fix round 1).
-func _split(l: Dictionary) -> Array:
-	var accs: Array = l.get("accounts", [])
-	if accs.size() <= 1:
-		return [[String(l["id"]), l]]
-	var out: Array = []
-	var centres: Array[float] = []
-	var radii: Array[float] = []
-	var gap := _repo.bal("ledger_strand_gap_m")
-	for i in accs.size():
-		var one := l.duplicate()
-		one["flow"] = (accs[i] as Dictionary)["value"]
-		one["accounts"] = [accs[i]]
-		var r := _width(one)
-		centres.append(0.0 if i == 0 else centres[i - 1] + radii[i - 1] + gap + r)
-		radii.append(r)
-		out.append(["%s#%d" % [l["id"], i], one])
-	var mid := (centres[0] - radii[0] + centres[-1] + radii[-1]) * 0.5
-	for i in out.size():
-		(out[i][1] as Dictionary)["strand_shift"] = centres[i] - mid
-	return out
-
-
-## The link a picked thread belongs to: a strand's id less its "#<i>".
-static func link_id_of(thread_id: String) -> String:
-	var at := thread_id.rfind("#")
-	if at > 0 and thread_id.substr(at + 1).is_valid_int():
-		return thread_id.substr(0, at)
-	return thread_id
-
-
-## The threads drawn for a link: [[thread id, the link as drawn]].
-func _threads_of(l: Dictionary) -> Array:
-	return _strands.get(String(l["id"]), [[String(l["id"]), l]])
-
-
-func _pair_key(l: Dictionary) -> Array:
-	var key := [String(l["from"]), String(l["to"])]
-	key.sort()
-	return key
-
-
-## Where a thread runs now: from its source sphere to its end, set aside by
-## ledger_pair_offset_m when two threads join the same spheres both ways,
-## and a strand (_split) set its "strand_shift" across, beside its fellows.
-## Empty when an end is missing or the two ends meet.
-func _ends_of(l: Dictionary) -> Array:
-	if not _pos.has(String(l["from"])) or not _pos.has(String(l["to"])):
-		return []
-	var a: Vector3 = _pos[String(l["from"])]
-	var b: Vector3 = _pos[String(l["to"])]
-	if a.is_equal_approx(b):
-		return []
-	var across := (b - a).cross(Vector3.UP)
-	if across.length_squared() < 1e-6:  # one straight above the other
-		across = Vector3.RIGHT
-	across = across.normalized()
-	var key := _pair_key(l)
-	if int(_pairs.get(key, 0)) > 1:  # both ways between the same spheres: side by side
-		var side := across * _repo.bal("ledger_pair_offset_m")
-		var sgn := 1.0 if String(l["from"]) == key[0] else -1.0
-		a += side * sgn
-		b += side * sgn
-	var shift := float(l.get("strand_shift", 0.0))
-	if shift != 0.0:
-		a += across * shift
-		b += across * shift
-	return [a, b]
-
-
-## Lays a thread's cylinder from a to b: its length and its transform, in
-## place. The cylinder's +Y is the link's end, so the light runs source -> end.
-func _place_thread(mi: MeshInstance3D, a: Vector3, b: Vector3) -> void:
-	(mi.mesh as CylinderMesh).height = a.distance_to(b)
-	var up := (b - a).normalized()
-	var ref := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
-	var x := ref.cross(up).normalized()
-	mi.transform = Transform3D(Basis(x, up, x.cross(up)), (a + b) * 0.5)
-
-
-func _add_thread(l: Dictionary, a: Vector3, b: Vector3, running: Dictionary) -> MeshInstance3D:
-	var mesh := CylinderMesh.new()
-	var r := _width(l)
-	mesh.top_radius = r
-	mesh.bottom_radius = r
-	mesh.radial_segments = 8
-	mesh.rings = 1
-	mesh.cap_top = false     # thread.gdshader reads the side's UV only
-	mesh.cap_bottom = false
-	var mat := ShaderMaterial.new()
-	mat.shader = THREAD_SHADER
-	mat.set_shader_parameter("color", _thread_color(l))
-	mat.set_shader_parameter("ink", _ink(l))
-	var planned := String(l["status"]) == "planned"
-	mat.set_shader_parameter("dashed", 1.0 if planned else 0.0)
-	mat.set_shader_parameter("dashes", _repo.bal("ledger_dashes"))
-	mat.set_shader_parameter("pulses", _repo.bal("ledger_light_pulses"))
-	var flowing := not planned and l["flow"] != null and int(l["flow"]) > 0 \
-		and not _is_tie(l)
-	var width_t := inverse_lerp(_repo.bal("ledger_thread_width_min"), _repo.bal("ledger_thread_width_max"), r)
-	mat.set_shader_parameter("speed", _repo.bal("ledger_light_speed") * (0.4 + 0.6 * width_t) if flowing else 0.0)
-	var loop_kind := String(running.get(String(l["type"]), ""))
-	if loop_kind != "":
-		mat.set_shader_parameter("glow", 1.0)
-		mat.set_shader_parameter("glow_color", _pal["loop_" + loop_kind])
-	var mi := MeshInstance3D.new()
-	mi.mesh = mesh
-	mi.material_override = mat
-	_place_thread(mi, a, b)
-	_threads_root.add_child(mi)
-	return mi
-
-
-func _apply_focus_fade() -> void:
-	var near := {}
+## Whether a link is drawn ledger_focus_width wider: the selected star's
+## web, or — at rest — the player's own web in their cluster, so the knot of
+## their ties reads over the rest (Task 11 fix round 2, R4).
+func _lit_web(l: Dictionary) -> bool:
+	var a := String(l["from"])
+	var b := String(l["to"])
 	if _selected != "":
-		near[_selected] = true
-		for l: Dictionary in _snap.get("links", []):
-			if String(l["from"]) == _selected or String(l["to"]) == _selected:
-				near[String(l["from"])] = true
-				near[String(l["to"])] = true
-	var faint := _repo.bal("ledger_focus_fade")
-	for id: String in _sphere_mi:
-		var mat := (_sphere_mi[id] as MeshInstance3D).material_override as StandardMaterial3D
-		mat.albedo_color.a = float(_sphere_alpha[id]) * (1.0 if near.is_empty() or near.has(id) else faint)
-	for l: Dictionary in _snap.get("links", []):
-		var lit := near.is_empty() or (near.has(String(l["from"])) and near.has(String(l["to"])))
-		var fade := (_rest_fade(l) if near.is_empty() else 1.0) if lit else faint
-		for st: Array in _threads_of(l):
-			var mi: MeshInstance3D = _thread_mi.get(String(st[0]))
-			if mi != null:
-				(mi.material_override as ShaderMaterial).set_shader_parameter("fade", fade)
+		return a == _selected or b == _selected
+	if not _nodes.has(EGO_AT_REST) or (a != EGO_AT_REST and b != EGO_AT_REST):
+		return false
+	var c := _cluster_of(EGO_AT_REST)
+	return _look(l) in ["tie", "kin"] or (_cluster_of(a) == c and _cluster_of(b) == c)
 
 
-# --- camera and names ------------------------------------------------------
+## How much of a link shows, as the EYE reads it (spec §6): the selected
+## star's web lit, the rest at ledger_focus_fade; at rest the court is read
+## one person's web at a time (the player's ties lit, other ties at
+## ledger_tie_rest_fade) and a link crossing clusters stands back at
+## ledger_cross_rest_fade; a chosen cluster dims links that do not touch it.
+func _link_fade(l: Dictionary) -> float:
+	var a := String(l["from"])
+	var b := String(l["to"])
+	var f := 1.0
+	if _selected != "":
+		f = 1.0 if a == _selected or b == _selected else _repo.bal("ledger_focus_fade")
+	elif _nodes.has(EGO_AT_REST) and (_look(l) in ["tie", "kin"] or (_cluster_of(a) == _cluster_of(EGO_AT_REST)
+			and _cluster_of(b) == _cluster_of(EGO_AT_REST))):
+		# at rest the player's own cluster (the court) is read one web at a
+		# time: its ties AND its structure (member, sits) stand back unless
+		# they touch the player (Task 11 fix round 1, F2)
+		if a != EGO_AT_REST and b != EGO_AT_REST:
+			f = _repo.bal("ledger_tie_rest_fade")
+	elif _cluster_of(a) != _cluster_of(b):
+		f = _repo.bal("ledger_cross_rest_fade")
+	if _cluster != "all" and _cluster_of(a) != _cluster and _cluster_of(b) != _cluster:
+		f = minf(f, _repo.bal("ledger_galaxy_other_fade"))
+	return f
+
+
+func _build_haze() -> void:
+	for c in _haze_root.get_children():
+		c.queue_free()
+	_haze.clear()
+	for row: Dictionary in _repo.ledger_clusters:
+		var mi := MeshInstance3D.new()
+		mi.mesh = QuadMesh.new()
+		var m := HAZE_MAT.duplicate() as ShaderMaterial
+		m.set_shader_parameter("tint", _pal.get(String(row["colour"]), _pal["sphere_planned"]))
+		mi.material_override = m
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_haze_root.add_child(mi)
+		_haze[String(row["cluster"])] = mi
+	_place_haze()
+
+
+func _place_haze() -> void:
+	for c: String in _haze:
+		var mi: MeshInstance3D = _haze[c]
+		var ids: Array = _ids_of_cluster.get(c, [])
+		var sum := Vector3.ZERO
+		var n := ids.size()
+		for id: String in ids:
+			sum += _drawn[id]
+		mi.visible = n > 0
+		if n == 0:
+			continue
+		var mid := sum / float(n)
+		var rad := 0.0
+		for id: String in ids:
+			rad += (_drawn[id] as Vector3).distance_to(mid)
+		rad = maxf(rad / float(n), HAZE_MIN_RADIUS_M)
+		(mi.mesh as QuadMesh).size = Vector2.ONE * rad * _repo.bal("ledger_haze_scale")
+		mi.position = mid
+		var dim := _repo.bal("ledger_galaxy_other_fade") if _cluster != "all" and c != _cluster else 1.0
+		(mi.material_override as ShaderMaterial).set_shader_parameter("strength", _repo.bal("ledger_haze_strength") * dim)
+
+
+# --- camera ------------------------------------------------------------------
+
+func _cluster_ids() -> Array:
+	if _cluster == "all":
+		return _order.duplicate()
+	return _order.filter(func(id: String) -> bool: return _cluster_of(id) == _cluster)
+
+
+## Frames `ids` (the camera flies there unless `instant`) and holds them
+## framed: while the chart settles or eases, each moved frame frames them
+## again, until the player moves the camera.
+func _frame_on(ids: Array, instant: bool) -> void:
+	_frame_ids = ids
+	var to := _frame_target(ids)
+	if to.is_empty():
+		return
+	_fly_from = [_orbit.target, _orbit.distance, _orbit.yaw, _orbit.pitch]
+	_fly_to = to
+	_framed = true
+	_fly_left = 0.0 if instant else _repo.bal("ledger_galaxy_fly_s")
+	if _fly_left <= 0.0:
+		_ease_camera(1.0)
+
+
+## [target, distance, yaw, pitch] that frame `ids` as they stand now, or [].
+func _frame_target(ids: Array) -> Array:
+	var points: Array[Vector3] = []
+	for id: String in ids:
+		if not _drawn.has(id):
+			continue
+		var r := float(_size.get(id, 1.0))
+		points.append((_drawn[id] as Vector3) - Vector3(r, r, r))
+		points.append((_drawn[id] as Vector3) + Vector3(r, r, r))
+	if points.is_empty():
+		return []
+	var sz := size if size.x >= 2.0 and size.y >= 2.0 else Vector2(1280, 720)
+	var side := _repo.bal("ledger_frame_side_px") / sz.x
+	var top := (_repo.bal("ledger_frame_top_px") + _title_reach_px()) / sz.y
+	var bottom := _repo.bal("ledger_frame_bottom_px") / sz.y
+	var safe := Rect2(side, top, maxf(1.0 - 2.0 * side, 0.1), maxf(1.0 - top - bottom, 0.1))
+	var pitch := FLAT_PITCH if _flat else _repo.bal("ledger_camera_pitch_deg")
+	var f := LedgerOrbit.frame(points, 0.0, pitch, _camera.fov, sz.x / sz.y, safe)
+	if f.is_empty():
+		return []
+	return [f["target"], clampf(float(f["distance"]), _orbit.min_distance, _orbit.max_distance), 0.0, pitch]
+
+
+## Design px from the highest star's disc to the top of its cluster's title
+## (a name line, then the title over it — see _update_hud), which the framing
+## keeps clear under the screen's top chrome.
+func _title_reach_px() -> float:
+	return _repo.bal("ledger_label_lift_px") + _repo.bal("ledger_label_px") + _repo.bal("ledger_title_px") * 0.95
+
+
+func _ease_camera(t: float) -> void:
+	var k := smoothstep(0.0, 1.0, t)
+	_orbit.target = (_fly_from[0] as Vector3).lerp(_fly_to[0], k)
+	_orbit.distance = lerpf(float(_fly_from[1]), float(_fly_to[1]), k)
+	_orbit.yaw = lerpf(float(_fly_from[2]), float(_fly_to[2]), k)
+	_orbit.pitch = lerpf(float(_fly_from[3]), float(_fly_to[3]), k)
+	_apply_camera()
+
 
 func _apply_camera() -> void:
+	_camera.projection = Camera3D.PROJECTION_ORTHOGONAL if _flat else Camera3D.PROJECTION_PERSPECTIVE
+	if _flat:
+		_camera.size = _orbit.distance * 2.0 * tan(deg_to_rad(_camera.fov) * 0.5)
 	_camera.transform = _orbit.pose()
 
 
 func _process(delta: float) -> void:
-	if _ease_left > 0.0:
-		_ease_left = maxf(_ease_left - delta, 0.0)
-		var t := 1.0 - _ease_left / maxf(_repo.bal("ledger_front_ease_s"), 0.001)
-		_orbit.yaw = lerpf(_ease_from.x, 0.0, t)
-		_orbit.pitch = lerpf(_ease_from.y, _repo.bal("ledger_camera_pitch_deg"), t)
-		_apply_camera()
-	if not _camera.transform.is_equal_approx(_last_pose):
+	if _repo == null or _snap.is_empty():
+		return
+	var moved := false
+	if not _lay.settled():
+		_lay.step_within(_repo.bal("ledger_galaxy_ms_per_frame"))
+		moved = true
+	if _mode_left > 0.0:
+		_mode_left = maxf(_mode_left - delta, 0.0)
+		moved = true
+	if moved:
+		_settle_frame()
+	if _fly_left > 0.0:
+		_fly_left = maxf(_fly_left - delta, 0.0)
+		_ease_camera(1.0 - _fly_left / maxf(_repo.bal("ledger_galaxy_fly_s"), 0.001))
+	if moved or not _camera.transform.is_equal_approx(_last_pose):
+		if not moved:
+			_place_stars()  # the screen cap moves with the camera (R6)
 		_last_pose = _camera.transform
+		_update_link_uniforms()
 		_update_hud()
 
 
+## One frame of a moving chart (settling, or easing between 2D and 3D): the
+## stars, the links' ends and the haze follow, and a framed camera frames
+## what it framed again — mid-flight, the flight's end is re-aimed instead.
+func _settle_frame() -> void:
+	_sync_drawn()
+	_place_stars()
+	_relay_links()
+	_place_haze()
+	if not _framed:
+		return
+	var to := _frame_target(_frame_ids)
+	if to.is_empty():
+		return
+	if _fly_left > 0.0:
+		_fly_to = to
+	else:
+		_fly_from = to
+		_fly_to = to
+		_ease_camera(1.0)
+
+
+# --- names ---------------------------------------------------------------------
+
+## Metres per SubViewport px at a point.
+func _m_per_px_at(p: Vector3) -> float:
+	var h := float(maxi(_viewport.size.y, 1))
+	if _flat:
+		return _camera.size / h
+	return p.distance_to(_camera.global_position) * 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / h
+
+
+func _screen_radius(id: String) -> float:
+	return _draw_r(id) / _m_per_px_at(_drawn[id]) / _window_scale()
+
+
+## A place on the screen (design px) inside the view.
+func _in_view(at: Variant) -> bool:
+	return at != null and Rect2(Vector2.ZERO, size).has_point(at as Vector2)
+
+
 func _update_hud() -> void:
+	if _repo == null:
+		return
 	var entries: Array = []
-	var order: Array = _nodes.keys()
-	order.sort_custom(func(a: String, b: String) -> bool:
-		return _rank(a) < _rank(b) if _rank(a) != _rank(b) else a < b)
-	var lift := Vector2(0, -_repo.bal("ledger_label_lift_px"))
-	# under the sphere, as far below its centre as the name stands above,
-	# plus the name's own height: where a crowded name goes instead
-	var drop := Vector2(0, _repo.bal("ledger_label_lift_px") + _repo.bal("ledger_label_px"))
-	for id: String in order:
+	var obstacles: Array = []
+	var label_px := _repo.bal("ledger_label_px")
+	var strong_px := _repo.bal("ledger_label_strong_px")
+	var title_px := _repo.bal("ledger_title_px")
+	var lift := _repo.bal("ledger_label_lift_px")
+	var chrome := _repo.bal("ledger_frame_top_px")
+	var seen := _seen()   # id -> [its screen place, its screen radius], for the stars in view
+	var middle := Vector2.ZERO
+	for id: String in seen:
+		middle += seen[id][0] as Vector2
+	if not seen.is_empty():
+		middle /= float(seen.size())
+	for id: String in seen:
+		var at: Vector2 = seen[id][0]
+		var r: float = seen[id][1]
+		obstacles.append(Rect2(at - Vector2(r, r), Vector2(r, r) * 2.0))
+	# The selected star first (spec §7: always named, as a `keep` entry: never
+	# on another star's disc, and crowded by names it takes the least-covered
+	# place round its own star), then the titles, the hubs (`keep` while not
+	# dimmed), its neighbours and the hovered star.
+	var named: Array[String] = []
+	var big := {}   # names set in the larger size: the selected star and the hubs
+	var keep := {}
+	if _selected != "":
+		named.append(_selected)
+		big[_selected] = true
+		keep[_selected] = true
+	for id: String in _hubs(seen):
+		if not named.has(id):
+			named.append(id)
+		big[id] = true
+		# a hub dimmed by the selection or the chosen cluster names itself
+		# only where there is room: it never crosses a star to stand over
+		# the web being read
+		if star_colour(id).a >= 1.0:
+			keep[id] = true
+	if _selected != "":
+		for id: String in _near:
+			if not named.has(id):
+				named.append(id)
+	if _hovered != "" and not named.has(_hovered):
+		named.append(_hovered)
+	var titles: Array = []
+	# Each cluster's title (spec §7): over its highest star's disc and one
+	# name line above that, set outward from the galaxy's middle — sideways,
+	# and up but never down, nor into the screen's top chrome — so it never
+	# sits on a star of its own.
+	for row: Dictionary in _repo.ledger_clusters:
+		var c := String(row["cluster"])
+		var n := 0
+		var sum := Vector2.ZERO
+		var left := INF
+		var right := -INF
+		var top := INF
+		for id: String in seen:
+			if _cluster_of(id) != c:
+				continue
+			var at: Vector2 = seen[id][0]
+			var r: float = seen[id][1]
+			n += 1
+			sum += at
+			left = minf(left, at.x)
+			right = maxf(right, at.x)
+			top = minf(top, at.y - r)
+		if n == 0:
+			continue
+		var out := (sum / float(n) - middle).normalized()
+		var title := "%s  ·  %d" % [row["label"], n]
+		var place := Vector2((left + right) * 0.5, top - lift - label_px - title_px * 0.5)
+		place += Vector2(out.x, minf(out.y, 0.0)) * title_px
+		var half := _title_width(title, title_px) * 0.5
+		place.x = clampf(place.x, minf(half, size.x * 0.5), maxf(size.x - half, size.x * 0.5))
+		place.y = maxf(place.y, chrome + title_px * 0.45)
+		var ink: Color = (_cluster_col[c] as Color).lerp(_pal["label_ink"], TITLE_INK_BLEND)
+		if _cluster != "all" and c != _cluster:
+			ink.a = _repo.bal("ledger_galaxy_other_fade")
+		# the chosen cluster's title (every title in All) is `keep`: it may
+		# cross a dimmed star of another cluster rather than go unnamed
+		titles.append({"text": title, "strong": true, "title": true, "px": title_px, "ink": ink, "at": place,
+			"keep": _cluster == "all" or c == _cluster})
+	for id: String in named:
 		var at: Variant = screen_pos_of(id)
 		if at == null:
 			continue
-		entries.append({"text": String(_nodes[id]["label"]), "at": (at as Vector2) + lift,
-			"alt": (at as Vector2) + drop,
-			"strong": id == _selected or id == String(_snap.get("focus_id", "")),
-			"props": _nodes[id].get("props", [])})
-	_hud.show_entries(entries)
+		var r := _screen_radius(id)
+		var px := strong_px if big.has(id) else label_px
+		var e := {"id": id, "text": drawn_name(id), "px": px, "at": (at as Vector2) - Vector2(0, r + lift),
+			"alt": (at as Vector2) + Vector2(0, r + lift + px), "beside": [at, r],
+			"strong": id == _selected or _near.has(id),
+			# a star's gauges only for the selected and the hovered star (Task
+			# 11 fix round 3, S1a: a row on every hub only repeated the next)
+			"props": _nodes[id].get("props", []) if id == _selected or id == _hovered else []}
+		if keep.has(id):
+			e["keep"] = true
+		# a dimmed star's name dims with it (F9)
+		var fade := star_colour(id).a
+		if fade < 1.0 and id != _selected:
+			e["ink"] = Color(_pal["label_ink"] as Color, 0.8 * fade)
+		if id == _selected:
+			e["ring"] = r + _repo.bal("ledger_ring_px") * RING_GAP_RINGS
+			e["ring_at"] = at
+			e["beside"] = [at, float(e["ring"]) + _repo.bal("ledger_ring_px")]  # clear of its ring
+			e["first"] = true  # placed first; no other name touches its label (T1a)
+		if id == _selected or _near.has(id):
+			e["lit"] = true    # off the planned dashes where a near place allows (T1b)
+		elif fade < 1.0:
+			e["dim"] = true    # a ghost name drops rather than wander (T1a)
+		entries.append(e)
+	var first := 1 if _selected != "" and not entries.is_empty() and entries[0].has("ring") else 0
+	entries = entries.slice(0, first) + titles + entries.slice(first)
+	_hud.show_entries(entries, obstacles, [Rect2(0.0, -size.y, size.x, size.y + chrome)], Rect2(Vector2.ZERO, size),
+		_dash_paths())
 
 
-## Whose name wins a crowded place: the selected sphere, the focus, a type
-## the engine holds, a type not yet built (LEDGER M1: its name yields to a
-## live neighbour's), then an instance.
-func _rank(id: String) -> int:
-	if id == _selected:
-		return 0
-	if id == String(_snap.get("focus_id", "")):
-		return 1
-	if bool(_nodes[id]["instance"]):
-		return 4
-	return 3 if String(_nodes[id].get("status", "live")) == "planned" else 2
+## The planned (dashed) links on the screen, [a, b] in design px: a lit label
+## keeps off them where a near place allows (Task 11 fix round 4, T1b).
+func _dash_paths() -> Array:
+	var out: Array = []
+	for seg: Dictionary in _segs:
+		if not bool(seg["dashed"]):
+			continue
+		var a: Variant = screen_pos_of(String(seg["a_id"]))
+		var b: Variant = screen_pos_of(String(seg["b_id"]))
+		if a != null and b != null:
+			out.append([a, b])
+	return out
 
 
-# --- input -----------------------------------------------------------------
+## Whether a star may be an always-named hub: its type's `hub` is not 0, and
+## in a chosen cluster it is that cluster's.
+func _may_be_hub(id: String) -> bool:
+	if _cluster != "all" and _cluster_of(id) != _cluster:
+		return false
+	return bool(_hub_type.get(String(_nodes[id]["type"]), true))
+
+
+## The name a star is DRAWN with in the galaxy: its label less the words its
+## type already says — the type's `short_name` in ledger_object_types.csv,
+## a pattern whose `*` is the part kept ("* Regiment": "8th (Canceswest)"),
+## optionally followed by " -> " and a template the kept part is set in
+## ("Supply line to * Regiment -> Supplies for *": "Supplies for 8th
+## (Canceswest)", so a supply line never reads as its regiment); a label
+## that does not match — or would leave a blank name — is kept whole. The
+## card and the tooltip keep the full label (Task 11 fix rounds 2-3, R2 / S1b).
+func drawn_name(id: String) -> String:
+	var label := String(_nodes[id]["label"])
+	var rule := String(Ledger.type_row(_repo, String(_nodes[id]["type"])).get("short_name", ""))
+	var pattern := rule.get_slice(" -> ", 0)
+	var template := rule.get_slice(" -> ", 1) if rule.contains(" -> ") else "*"
+	var star := pattern.find("*")
+	if star < 0:
+		return label
+	var head := pattern.substr(0, star)
+	var tail := pattern.substr(star + 1)
+	if label.length() > head.length() + tail.length() and label.begins_with(head) and label.ends_with(tail):
+		var kept := label.substr(head.length(), label.length() - head.length() - tail.length()).strip_edges()
+		var short := template.replace("*", kept).strip_edges()
+		if short != "":
+			return short
+	return label
+
+
+## The stars in view: id -> [its screen place (design px), its screen radius]
+## (screen_pos_of and _screen_radius, the window's scale read once).
+func _seen() -> Dictionary:
+	var seen := {}
+	var ws := _window_scale()
+	var view := Rect2(Vector2.ZERO, size)
+	var cap_px := _repo.bal("ledger_star_max_px") * ws
+	for id: String in _order:
+		var p: Vector3 = _drawn[id]
+		if _camera.is_position_behind(p):
+			continue
+		var at := _camera.unproject_position(p) / ws
+		if not view.has_point(at):
+			continue
+		var mpp := _m_per_px_at(p)
+		seen[id] = [at, minf(float(_size[id]), cap_px * mpp) / mpp / ws]
+	return seen
+
+
+## The `ledger_label_hubs` largest stars in view (spec §7: always named),
+## largest first, ties by id.
+func _hubs(seen: Dictionary = {}) -> Array[String]:
+	if seen.is_empty():
+		seen = _seen()
+	# in a chosen cluster only its own stars are hubs (F9: another cluster's
+	# star named as a hub read as one of this cluster's)
+	# a type whose stars only mirror another's (`hub` 0 in
+	# ledger_object_types.csv: a supply line mirrors its regiment) is never
+	# an always-named hub; it is named on hover and selection (R2)
+	# the largest few kept in order as the stars go by (no sort of every
+	# star: final wave I1d) — largest first, ties by id
+	var want := int(_repo.bal("ledger_label_hubs"))
+	var out: Array[String] = []
+	var sizes: Array[float] = []
+	for id: String in _order:
+		if not seen.has(id) or not _may_be_hub(id):
+			continue
+		var r := float(_size[id])
+		var at := out.size()
+		while at > 0 and (sizes[at - 1] < r or (sizes[at - 1] == r and out[at - 1] > id)):
+			at -= 1
+		if at >= want:
+			continue
+		out.insert(at, id)
+		sizes.insert(at, r)
+		if out.size() > want:
+			out.resize(want)
+			sizes.resize(want)
+	return out
+
+
+## A title's width in design px, measured in the title font as the HUD cull
+## measures it.
+func _title_width(text: String, px: float) -> float:
+	if _title_font == null:
+		return float(text.length()) * px * 0.55
+	return _title_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
+
+
+# --- input ---------------------------------------------------------------------
 
 func _ray(pos: Vector2) -> Array:
 	var px := LedgerPick.screen_to_viewport(pos, _window_scale())
 	return [_camera.project_ray_origin(px), _camera.project_ray_normal(px)]
 
 
+## A segment's two ends in the world, its strand's screen shift applied (what
+## link.gdshader draws, so what a click meets).
+func seg_ends(seg: Dictionary) -> Array:
+	var a: Vector3 = seg["a"]
+	var b: Vector3 = seg["b"]
+	var shift := float(seg["shift_px"])
+	if shift == 0.0:
+		return [a, b]
+	var mid := (a + b) * 0.5
+	# link.gdshader's rule: toward the eye, which for the flat chart's
+	# orthographic camera is the camera's own back, not the eye's position
+	var to_cam := _camera.global_transform.basis.z if _flat else _camera.global_position - mid
+	var across := (b - a).cross(to_cam)
+	if across.length_squared() < 1e-8:
+		return [a, b]
+	var off := across.normalized() * shift * _m_per_px_at(mid)
+	return [a + off, b + off]
+
+
+## A star under the pointer (the nearest along the ray), else the link
+## NEAREST the pointer on the screen among those within reach: the ribbons
+## are drawn without depth, so which one is "in front" means nothing to the
+## eye, and two links of a dense galaxy can cross or run side by side.
 func _pick(pos: Vector2) -> Dictionary:
 	var ray := _ray(pos)
+	var o: Vector3 = ray[0]
+	var d: Vector3 = ray[1]
 	var spheres: Array = []
-	for id: String in _nodes:
-		if _pos.has(id):
-			spheres.append({"id": id, "pos": _pos[id], "radius": _radius(_nodes[id])})
-	var threads: Array = []
-	for l: Dictionary in _snap.get("links", []):
-		for st: Array in _threads_of(l):
-			var id := String(st[0])
-			if _thread_ends.has(id):
-				var ends: Array = _thread_ends[id]
-				threads.append({"id": id, "a": ends[0], "b": ends[1],
-					"radius": maxf(_width(st[1]), _repo.bal("ledger_pick_radius_min_m"))})
-	return LedgerPick.pick(ray[0], ray[1], spheres, threads)
+	# a star is picked within its drawn disc or ledger_star_pick_min_px of
+	# screen, whichever is larger (Task 11 fix round 2, R1: a ghost star is a
+	# few px across)
+	var least_px := _repo.bal("ledger_star_pick_min_px") * _window_scale()
+	for id: String in _order:
+		spheres.append({"id": id, "pos": _drawn[id],
+			"radius": maxf(_draw_r(id), least_px * _m_per_px_at(_drawn[id]))})
+	var hit := LedgerPick.pick(o, d, spheres)
+	if not hit.is_empty():
+		return hit
+	var best := INF
+	var least := _repo.bal("ledger_pick_min_px") * _window_scale()
+	for seg: Dictionary in _segs:
+		var ends := seg_ends(seg)
+		var q := LedgerPick.ray_segment(o, d, ends[0], ends[1])
+		# how far off the link the pointer is, in SubViewport px at the link
+		var px := q.x / maxf(_m_per_px_at(o + d * q.y), 1e-9)
+		if px > maxf(float(seg["width_px"]) * 0.5, least):
+			continue
+		if px < best:
+			best = px
+			hit = {"kind": "thread", "id": String(seg["id"])}
+	return hit
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -585,8 +1198,11 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton:
 		_on_button(event as InputEventMouseButton)
-	elif event is InputEventMouseMotion and _button != 0:
-		_on_drag(event as InputEventMouseMotion)
+	elif event is InputEventMouseMotion:
+		if _button != 0:
+			_on_drag(event as InputEventMouseMotion)
+		else:
+			_on_hover((event as InputEventMouseMotion).position)
 	elif event is InputEventMagnifyGesture:
 		_framed = false
 		_orbit.zoom(1.0 / maxf((event as InputEventMagnifyGesture).factor, 0.01))
@@ -594,10 +1210,40 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 	elif event is InputEventPanGesture:
 		_framed = false
-		_orbit.pan(-(event as InputEventPanGesture).delta * _repo.bal("ledger_pan_gesture_px"),
-			_orbit.metres_per_px(_camera.fov, size.y))
+		_orbit.pan(-(event as InputEventPanGesture).delta * _repo.bal("ledger_pan_gesture_px"), _pan_m_per_px())
 		_apply_camera()
 		accept_event()
+
+
+func _pan_m_per_px() -> float:
+	return _camera.size / maxf(size.y, 1.0) if _flat else _orbit.metres_per_px(_camera.fov, size.y)
+
+
+## The hovered star's id, or "".
+func hovered() -> String:
+	return _hovered
+
+
+## The pointer left the view: nothing is hovered — its tooltip, its gauges
+## and its name go with it.
+func _on_exit() -> void:
+	if _hovered == "":
+		return
+	_hovered = ""
+	tooltip_text = ""
+	if _repo != null:
+		_update_hud()
+
+
+## Hover names a star (it draws nothing: only a clicked object is ringed).
+func _on_hover(pos: Vector2) -> void:
+	var hit := _pick(pos)
+	var id := String(hit["id"]) if String(hit.get("kind", "")) == "sphere" else ""
+	if id == _hovered:
+		return
+	_hovered = id
+	tooltip_text = String(_nodes[id]["label"]) if id != "" else ""
+	_update_hud()
 
 
 func _on_button(mb: InputEventMouseButton) -> void:
@@ -646,8 +1292,6 @@ func _on_button(mb: InputEventMouseButton) -> void:
 			sphere_selected.emit("")
 
 
-## The pressed button's gesture ends quietly: the rest of its motion and its
-## release do nothing (the sphere it was dragging is no longer drawn).
 func _end_gesture() -> void:
 	_button = 0
 	_drag_id = ""
@@ -658,58 +1302,42 @@ func _on_drag(mm: InputEventMouseMotion) -> void:
 	if not _moved and mm.position.distance_to(_press_at) < CLICK_SLOP:
 		return
 	_moved = true
-	if _drag_id == "":
-		_framed = false
+	# any drag drops the framing: a pan or turn moves the camera, and a star
+	# held under the pointer must not have the camera re-frame beneath it
+	_framed = false
 	if _button == MOUSE_BUTTON_RIGHT:
-		_orbit.turn(mm.relative.x, mm.relative.y, _repo.bal("ledger_turn_deg_per_px"))
+		if not _flat:
+			_orbit.turn(mm.relative.x, mm.relative.y, _repo.bal("ledger_turn_deg_per_px"))
 	elif _drag_id != "":
 		_drag_to(_drag_id, mm.position)
 	else:
-		_orbit.pan(mm.relative, _orbit.metres_per_px(_camera.fov, size.y))
+		_orbit.pan(mm.relative, _pan_m_per_px())
 	_apply_camera()
 	accept_event()
 
 
-## A dragged sphere slides on its own layer's plane; the drag is for this
-## viewing only and is never saved (spec §6.2).
+## A dragged star slides in the plane through it facing the camera (in the
+## flat chart, on the plane) and is PINNED there for this viewing; the rest
+## settle round it.
 func _drag_to(id: String, pos: Vector2) -> void:
-	if not _pos.has(id) or not _sphere_mi.has(id):
+	if not _drawn.has(id):
 		_end_gesture()
 		return
 	var ray := _ray(pos)
 	var o: Vector3 = ray[0]
 	var d: Vector3 = ray[1]
-	var y := (_pos[id] as Vector3).y
-	if absf(d.y) < 1e-4:
+	var n := -_camera.global_transform.basis.z
+	var denom := d.dot(n)
+	if absf(denom) < 1e-5:
 		return
-	var t := (y - o.y) / d.y
+	var t := ((_drawn[id] as Vector3) - o).dot(n) / denom
 	if t <= 0.0:
 		return
-	_pos[id] = o + d * t
-	_dragged[id] = _pos[id]
-	(_sphere_mi[id] as MeshInstance3D).position = _pos[id]
-	_move_threads_of(id)
+	var at := o + d * t
+	if _flat:
+		at.y = 0.0
+	_lay.pin(id, at)
+	_drawn[id] = _lay.pos[id]
+	_place_stars()
+	_relay_links()
 	_update_hud()
-
-
-## Re-lays, in place, only the threads that touch the dragged sphere: no
-## mesh or material is made during a drag. A thread whose ends come to meet
-## is hidden until they part.
-func _move_threads_of(id: String) -> void:
-	if not _pos.has(id):
-		return
-	for l: Dictionary in _snap.get("links", []):
-		if String(l["from"]) != id and String(l["to"]) != id:
-			continue
-		for st: Array in _threads_of(l):
-			var tid := String(st[0])
-			var mi: MeshInstance3D = _thread_mi.get(tid)
-			if mi == null:
-				continue
-			var ends := _ends_of(st[1])
-			mi.visible = not ends.is_empty()
-			if ends.is_empty():
-				_thread_ends.erase(tid)
-				continue
-			_place_thread(mi, ends[0], ends[1])
-			_thread_ends[tid] = ends

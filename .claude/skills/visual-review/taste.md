@@ -64,6 +64,14 @@ add it here as a principle with its why — not as a changelog entry.
   track that fades over a few game days. On olive turf trodden grass reads
   LIGHTER (flattened, straw and earth), never darker — a dark trail vanished —
   and in lanes, one a file, ragged at the sides, so it is never a painted road.
+- **Farmland is a system, not a scatter** (owner 2026-10-01: "地图上那一块块的
+  土是什么" → "田地的布局要更合理真实"). Lone brown plots on green grass read as
+  stains: fields belong to a settlement — crofts behind the houses, great
+  fields in rotation, each split into furlongs of strips, meadow by the water,
+  pasture beyond — and each furlong is ONE crop. Crops must READ (gold, green,
+  olive) or only the bare earth shows; ploughed earth is a dark grey-brown, never
+  orange; the lines between furlongs are thin and light (thick dark ones made a
+  tiled floor at 3 km).
 - **No base plates.** Objects stand on the map's own ground (the grass disc
   under the 3D towns was the first thing rejected).
 
@@ -108,6 +116,27 @@ add it here as a principle with its why — not as a changelog entry.
   border — the letter being read aged to the same paper, casting a shadow onto
   the wood. Coloured header text on carved plaques read pasted on: the game's
   own ink.
+
+- **The main screens are a WAR TABLE: every piece is an object lying on
+  pale oak by daylight** (owner 2026-10-01, choosing B3 + C1's bookmarks
+  from three rounds of mock-ups: "就用这个，在游戏里做出来"; he had found the
+  leather chrome 简陋 with an AI feel — a sidebar/top-bar/bottom-bar admin
+  template that framed the 3D map as a small window). The map is a vellum
+  sheet with a deckled edge and ink rules; the facts column the steward's
+  pinned report in dark ink with red ¶ rubrics and tally marks, sized to what
+  is written on it; the purses a dark oak tally board with brass nails; the
+  date a brass dial; the clock brass studs; ENTER THE COUNCIL a red wax seal;
+  the tabs silk bookmarks hanging from under the sheet, coloured by group; the
+  news a paper slip between them. ONE light, upper left, every shadow soft and
+  down-right. What is held up to the eye (the audience window, events, menus,
+  the council column) stays dark leather. Lessons from the critic's two
+  passes: a paper texture's own ruled rim stretched over a big sheet reads
+  as a gilt frame (lay only the paper's middle); a solid offset shadow is a
+  sticker (step it soft); a filled vector polygon has no antialiasing (edge
+  it with an antialiased line); painted icons on 20 px studs are unreadable
+  (engrave a glyph); saturated royal hues on silk come from another picture
+  (heraldic tinctures); and a tally that rounds draws 49 and 50 alike (count
+  whole tens).
 
 ## Information
 - **Name it; the icon is the anchor, not the word** (owner 2026-09-28,
@@ -380,15 +409,15 @@ add it here as a principle with its why — not as a changelog entry.
   dimmed parchment over a soft shadow — a black disc with a white glyph, and
   then a gold-rimmed leather disc, were both stickers on the ground.
 
-- **The LEDGER is an orrery of brass and glass, read one web at a time**
-  (owner 2026-09-30, choosing variant A over a darker bronze and a
-  silver-gilt: built things warm brass, unbuilt dark, the wire the brass's
-  own gold — one metal family, and built-against-planned is carried by both
-  hue and value). Its layer discs are pools that fade out over their rim,
-  never trays; a web too dense to read (the court's 49 ties) shows one
-  person's ties lit and the rest as faint context, not every line at full
-  weight. A fade is set as the eye reads it: under linear blending an
-  "alpha 0.25" line on a dark ground reads nearly whole.
+- **The LEDGER is a star chart, read one web at a time** (owner 2026-09-30:
+  a warm black night, one cluster per tab in brass, gules, purpure and
+  steel-azure, small stars with a real shine, links shading between
+  clusters; it replaces the palette part of the earlier "orrery of brass and
+  glass" ruling and keeps its "one web at a time"). A web too dense to read
+  (the court's 49 ties) shows one person's ties lit and the rest as faint
+  context, not every line at full weight. A fade is set as the eye reads it:
+  under linear blending an "alpha 0.25" line on a dark ground reads nearly
+  whole.
 
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols
@@ -397,7 +426,9 @@ add it here as a principle with its why — not as a changelog entry.
 - **Lighten in the file, not with alpha.** A translucent mark cannot occlude
   the one under it.
 - **Dark UI after Crusader Kings III:** parchment ink on dark leather, gold accent. Test
-  contrast, not hexes.
+  contrast, not hexes. *Since 2026-10-01 only for what is held up to the eye
+  (windows, events, menus, the council column); the main screens lie on the
+  war table (see Panels).*
 - **Blackletter only where it can be read:** headers in title case, never
   all-caps runs.
 

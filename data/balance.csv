@@ -295,7 +295,9 @@ map_manor_value,0.8,"MANORS: every house colour's value (brightness) is scaled b
 map3d_heat_tint,0.85,"3D MAP HEIGHTS (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §4): how far the ground's albedo mixes toward the height ramp (terrain_palette heat_1..6 over 0..elevation_m_per_unit x (100 - elevation_sea_level) m) — lit by the relief like the ground"
 map3d_furrow_m,9.0,"3D MAP fields (owner 2026-09-19): the furrows' spacing in metres, drawn by the patched terrain shader along each estate's strips from the bake's field map (bake/fields.png) — only on sown ground, and faded out before their spacing falls under ~3 screen px"
 map3d_furrow_depth,0.14,3D MAP fields: how far a furrow darkens the field (0 = none)
-map3d_field_fade,0.9,"3D MAP fields: how much of the fields' own colour the shader takes back far out — the farmland reads as a tone, not a speckle (0 = none, 1 = all)"
+map3d_strip_m,22,"3D MAP OPEN FIELDS (owner 2026-10-01: 田地的布局要更合理真实): each furlong is long narrow strips along its direction (bake/fields.png alpha), this many metres wide, each its own shade (Map3DGroundTint); gone before a strip is under a pixel or two"
+map3d_strip_shade,0.25,"3D MAP open fields: how far a strip's own shade lifts or darkens it, +- this share (0 = no strips)"
+map3d_field_fade,0.35,"3D MAP fields: how much of the fields' own colour the shader takes back far out (0 = none, 1 = all). 0.9 until the open fields of 2026-10-01: the crops came out weak and only the ploughed patches read; whole great fields read as country, not speckle"
 map3d_field_fade_near_m,5000,3D MAP fields: the camera distance where that fade begins
 map3d_field_fade_far_m,22000,3D MAP fields: the camera distance where it is full (15-60 km took back only ~16% at 30 km)
 map3d_army_badge_min_px,18,"3D MAP MILITARY (owner 2026-09-19: '注意兵棋大小'): the smallest a regiment's counter gets, design px — map_army_badge_native_px of the map at the scale the camera's target is seen at, held between this and map3d_army_badge_max_px"
@@ -664,60 +666,32 @@ map3d_courier_anim_max,3,"a courier's GALLOP playback rate ceiling — past it t
 courier_paint_foul_permille,700,"the courier card shows the foul-weather painting when the weather where he is slows a rider to this share or less (weather.csv speed_permille: mud 700, snow 650, blizzard 400)"
 ui_missive_art_px_per_design,3,"the Missive board's art is installed at this many texture px per design px (sized for the ~3x window scale); a nine-slice border and the cork tile are drawn at texture px / this"
 ui_missive_desk_painting_aspect,1.6,"the desk's %DeskPainting box (width / this = its drawn height) — was a fixed 150 design px, far wider and shallower than the delivered.png paintings' own 5:4 (1.25), so the KEEP_ASPECT_COVERED crop cut the mounted courier's head off; the box now follows the desk's own (flexible) width instead"
-ledger_layer_gap_m,6,"LEDGER (spec 2026-09-30 §6.2): metres between the THINGS, PEOPLE and KNOW discs"
-ledger_disc_radius_m,11.5,"LEDGER: the largest radius of a layer's disc (the type level's; a laid-out layer is drawn in to this, less ledger_layout_margin_m)"
-ledger_disc_pad_m,1,LEDGER: how far a disc reaches past the farthest edge of its own layer's spheres (LedgerLayout.disc_radius)
-ledger_disc_min_m,3,LEDGER: the smallest radius of a layer's disc
-ledger_sphere_radius_type,0.9,LEDGER: radius of a TYPE sphere
-ledger_sphere_radius_instance,0.5,LEDGER: radius of an instance sphere
-ledger_orb_metallic,0.7,LEDGER: brass spheres' metallic
-ledger_orb_roughness,0.35,LEDGER: brass spheres' roughness
-ledger_orb_glass_alpha,0.55,LEDGER: the KNOW layer's glass spheres' opacity
-ledger_thread_width_min,0.04,LEDGER: a thread's radius at no flow (metres)
-ledger_thread_width_max,0.28,LEDGER: a thread's radius at ledger_thread_flow_ref and above
 ledger_thread_flow_ref,5000,"LEDGER: the flow at which a thread reaches its widest (log scale)"
-ledger_thread_vague_width,0.08,LEDGER: a thread whose figure the crown only has in words
-ledger_tie_ref,80,"LEDGER (owner 2026-09-30: the court's 49 thick ties tangled): the strength of feeling (|sentiment|) at which a court tie reaches ledger_tie_width_max"
-ledger_tie_width_min,0.025,"LEDGER: a court tie's radius at no feeling (metres) — a thin cord, not a flow's wire"
-ledger_tie_width_max,0.07,LEDGER: a court tie's radius at ledger_tie_ref and above
-ledger_tie_rest_fade,0.25,"LEDGER: opacity of a court tie that does not touch the player while nothing is selected (the court is read one person's web at a time; selecting anyone makes them the one)"
+ledger_tie_ref,80,"LEDGER (owner 2026-09-30: the court's 49 thick ties tangled): the strength of feeling (|sentiment|) at which a court tie reaches ledger_tie_max_px"
+ledger_tie_rest_fade,0.18,"LEDGER: opacity of a court tie that does not touch the player while nothing is selected (the court is read one person's web at a time; selecting anyone makes them the one)"
 ledger_light_speed,0.6,LEDGER: pulses per second along a thread at its widest
 ledger_light_pulses,4,LEDGER: pulses along one thread
-ledger_dashes,14,LEDGER: dashes along a not-yet-built thread
 ledger_ink_general,0.6,LEDGER: ink of a figure the crown has in words (Intel general)
 ledger_ink_basic,0.35,LEDGER: ink of a figure the crown barely knows (Intel basic)
 ledger_age_full_days,90,LEDGER: days after which a report's thread has fully yellowed
-ledger_pair_offset_m,0.25,LEDGER: sideways offset of two threads joining the same spheres both ways
-ledger_strand_gap_m,0.35,"LEDGER L1 (spec 2026-09-30-ledger-governors-design §4): the gap between two strands of one thread whose accounts differ"
 ledger_focus_fade,0.15,LEDGER: opacity of what is not linked to the selected sphere
-ledger_ego_ring_m,5,LEDGER: radius of an ego network's first ring
-ledger_layout_iterations,40,LEDGER: force-layout passes (fixed: the layout is deterministic)
-ledger_layout_repel,4,LEDGER: force layout: repulsion between spheres of one layer
-ledger_layout_spring,0.1,LEDGER: force layout: pull toward the layer's axis
-ledger_layout_margin_m,1.5,"LEDGER: a laid-out layer (the court, an ego network) is drawn in to this far inside its disc's rim"
 ledger_instance_cap,24,LEDGER: neighbours shown per link type before the rest fold into one +N more sphere
-ledger_list_cap,60,LEDGER: rows of a type's instance list in the left column
-ledger_camera_distance,27,"LEDGER: the camera's distance when there is nothing to frame (metres); otherwise the opening view and Front frame the spheres and discs drawn (LedgerOrbit.frame)"
-ledger_camera_min_m,8,LEDGER: closest zoom
-ledger_camera_max_m,90,LEDGER: farthest zoom
+ledger_camera_distance,160,"LEDGER: the camera's distance when there is nothing to frame (metres); otherwise the opening view and Front frame the spheres and discs drawn (LedgerOrbit.frame)"
+ledger_camera_min_m,20,LEDGER: closest zoom
+ledger_camera_max_m,420,LEDGER: farthest zoom
 ledger_camera_pitch_deg,-24,LEDGER: the front view's pitch (negative looks down)
 ledger_turn_deg_per_px,0.3,LEDGER: degrees turned per pointer px of a right-drag
 ledger_zoom_factor,1.12,LEDGER: distance factor per wheel notch
 ledger_pan_gesture_px,12,LEDGER: pointer px per unit of a trackpad pan gesture
-ledger_front_ease_s,0.4,LEDGER: seconds the camera eases back to the front view
 ledger_label_px,14,LEDGER: sphere names' font size (design px)
-ledger_label_lift_px,18,LEDGER: how far above its sphere's centre a name stands (design px)
+ledger_label_lift_px,12,LEDGER: how far above its sphere's centre a name stands (design px)
 ledger_label_halo_px,4,LEDGER: the dark halo under a sphere's name (design px)
-ledger_disc_fade_m,4,"LEDGER (owner 2026-09-30: no hard-edged disc): metres of soft rim over which every layer's disc fades out to nothing (disc.gdshader) — the same on a small disc as on a large one"
-ledger_disc_fade_max_share,0.6,LEDGER: the most of a small disc's radius its fade may take
-ledger_disc_offset_m,0.6,LEDGER: how far below its layer's spheres a disc floats
-ledger_pick_radius_min_m,0.25,LEDGER: a thread is picked within at least this radius (metres) however thin it is drawn
+ledger_pick_min_px,4,"LEDGER galaxy: a link is picked within at least this many design px of its line, however thin it is drawn"
 workshop_capacity_gold,40,"LEDGER M2 (spec 2026-09-30-ledger-supply-design §2): gold of the lord's civil goods one war workshop takes a month at full rate"
 workshop_ratio_permille,700,LEDGER M2: strategic goods made per mille of civil goods taken
-ledger_frame_top_px,92,"LEDGER: design px at the top of the view the framing keeps clear: the title, the lenses and the crumb, and a name over the highest sphere"
+ledger_frame_top_px,84,"LEDGER: design px at the top of the view the LEDGER screen's own chrome covers (its title, the lenses, the crumb and its Close button): no name or title is drawn in it, and the framing keeps a cluster title and a name line clear under it"
 ledger_frame_side_px,40,LEDGER: design px at each side of the view the framing keeps clear (half a long name beside the widest sphere)
 ledger_frame_bottom_px,28,LEDGER: design px at the bottom of the view the framing keeps clear (a name set under the lowest sphere)
-ledger_frame_rim_samples,32,LEDGER: points round each drawn disc's rim that the framing keeps in view
 ledger_gauge_stock_months,12,"LEDGER M1 (spec 2026-09-30-ledger-ontology-design §6.3, a property): a goods pool's stock gauge reads full at this many months of the crown's and the lord's intake"
 ledger_gauge_radius_px,7,LEDGER: a property gauge's ring radius (design px) under its sphere's name
 ledger_gauge_width_px,3,LEDGER: a property gauge's ring width (design px)
@@ -812,3 +786,90 @@ war_paper_age_mix,0.6,"WAR ROOM (owner 2026-10-01, spec §1-2): how far the edge
 war_paper_roughness,0.9,"WAR ROOM (owner 2026-10-01, spec §1-2): the vellum's roughness"
 war_crease_alpha,0.12,"WAR ROOM (owner 2026-10-01, spec §1-2): the strength of the two fold creases (sheet's vertical and horizontal middle)"
 war_crease_px,1.5,"WAR ROOM (owner 2026-10-01, spec §1-2): the fold creases' width in screen px"
+ui_war_table,1,"UI (owner 2026-10-01, B3 + C1 bookmarks): 1 lays the main screens on the WAR TABLE — oak planks by daylight, the map a vellum sheet, the realm dashboard the steward's pinned report, the purses a tally board, the date a brass dial, ENTER THE COUNCIL a wax seal, the tabs silk bookmarks (spec docs/superpowers/specs/2026-10-01-war-table-ui-design.md); 0 keeps the dark leather chrome of 2026-09-28"
+ui_table_tile_px,560,"WAR TABLE: design px of one repeat of the oak planks (assets/2D/ui/war_table/table_oak.jpg, 2048 px)"
+ui_table_light_angle_deg,28,"WAR TABLE: the window-light shaft's slant from vertical, degrees (it falls from the upper left)"
+ui_table_light_width,0.3,WAR TABLE: the shaft's width as a share of the screen's width
+ui_table_light_center,0.5,"WAR TABLE: where the shaft crosses the screen's middle, as a share of its width"
+ui_table_shadow_dx,6,WAR TABLE: design px every object's shadow falls to the right (the light is upper left)
+ui_table_shadow_dy,10,WAR TABLE: design px every object's shadow falls down
+ui_table_shadow_alpha,0.34,WAR TABLE: the darkest of an object's shadow (three soft layers step out from it)
+ui_table_shadow_soft_px,7,WAR TABLE: design px each of the shadow's three layers grows by
+ui_paper_deckle_px,2.5,WAR TABLE: design px a paper edge wanders in and out (the deckle)
+ui_paper_deckle_step_px,11,WAR TABLE: design px between the deckle's points
+ui_sheet_margin_px,13,WAR TABLE: design px of vellum round the map on the sheet (the ink rule sits inside it)
+ui_sheet_rule_px,1.5,WAR TABLE: design px of the sheet's inner ink rule round the map
+ui_sheet_rule_gap_px,4,WAR TABLE: design px between the sheet's two ink rules
+ui_report_tilt_deg,-1.2,WAR TABLE: degrees the report's PAPER is drawn off square (its text and buttons stay square: nothing that takes input turns)
+ui_report_margin_px,22,WAR TABLE: design px inside the report's paper to its text
+ui_pin_px,12,WAR TABLE: design px across the brass pin at the report's head
+ui_dial_px,52,WAR TABLE: design px across the brass date dial
+ui_stud_px,20,WAR TABLE: design px across each brass clock stud
+ui_board_nail_px,9,WAR TABLE: design px across a tally-board nail
+ui_seal_px,100,WAR TABLE: design px across the council's wax seal
+ui_bookmark_tail_px,8,WAR TABLE: design px of a bookmark's swallow-tail notch
+ui_bookmark_drop_px,14,WAR TABLE: design px a bookmark hangs below its label (the silk past the words)
+ui_tally_per_mark,10,WAR TABLE: points of a temper gauge one tally mark stands for (gated in fives)
+ui_slip_width_px,420,WAR TABLE: design px wide the news slip lies between the two bookmark groups (at most the gap between them)
+ui_slip_height_px,32,WAR TABLE: design px tall the news slip
+ui_slip_drop_px,6,WAR TABLE: design px below the sheet's lower edge the news slip lies
+ui_table_margin_px,12,WAR TABLE: design px of table between the screen's edge and the papers (leather keeps ScreenLayout.MARGIN 8)
+ui_table_gap_px,16,WAR TABLE: design px of table between the report and the map sheet (leather keeps ScreenLayout.GAP 8)
+ui_table_right_gap_px,8,"WAR TABLE: design px between the map sheet and the council column while it is open (the column is leather, and the audience window needs the map's width: at 1280 it must keep ~668 design px)"
+ui_sheet_deckle_px,4,"WAR TABLE: design px the map sheet's edge wanders (a bigger sheet, a bolder deckle than the report's ui_paper_deckle_px)"
+ui_bookmark_tuck_px,8,WAR TABLE: design px of each bookmark's top hidden under the map sheet's lower edge (the sheet draws over the bookmarks by z order; input keeps the tree's order)
+ui_seal_minis,3,"WAR TABLE: at most this many ministers' miniatures stand under the council's seal, those this month's report would have speak (ConversationBeats.waiting); the tag counts them all"
+ui_seal_mini_px,40,WAR TABLE: design px across a waiting minister's miniature (a round portrait in a brass ring)
+map_army_outline_px_table,1.5,WAR TABLE: design px of the realm-hued ring round a counter's token on the map sheet
+ledger_galaxy_repel,2,"LEDGER galaxy (spec 2026-09-30-ledger-galaxy-design §4): repulsion between two stars, scaled by their sizes"
+ledger_galaxy_spring,0.05,LEDGER galaxy: a link's spring within a cluster
+ledger_galaxy_cross_spring,0.15,LEDGER galaxy: a link's spring across clusters as a share of ledger_galaxy_spring
+ledger_galaxy_rest_m,4,LEDGER galaxy: a link spring's rest length (metres)
+ledger_galaxy_home,0.06,LEDGER galaxy: the pull of a star toward its cluster's anchor (an opened manor's toward its province)
+ledger_galaxy_step_max_m,3,LEDGER galaxy: the most a star moves in one pass
+ledger_galaxy_passes,150,LEDGER galaxy: passes that settle the chart after a snapshot
+ledger_galaxy_ms_per_frame,4,LEDGER galaxy: milliseconds of layout a frame while settling
+ledger_galaxy_resettle_passes,40,"LEDGER galaxy (final review I1b): passes a redraw runs when its star set differs from the drawn one (a province opened, a courier gone) — the surviving stars keep their places and only the new ones are warm-started; an unchanged set runs none"
+ledger_galaxy_pin_share,0.3,"LEDGER galaxy: share of ledger_galaxy_passes a settled chart runs again when a star is dragged and pinned"
+ledger_galaxy_grid_min_stars,300,"LEDGER galaxy (final review I1c): at this many stars a pass repels only pairs nearer than ledger_galaxy_repel_cutoff_m, found through a uniform grid, so one pass fits ledger_galaxy_ms_per_frame (every pair of 629 stars cost ~9 ms a pass)"
+ledger_galaxy_repel_cutoff_m,12,"LEDGER galaxy (final review I1c): beyond this distance two stars do not repel (only at ledger_galaxy_grid_min_stars and above); the grid's cell size. Measured 2026-10-01, every realm province opened one by one (629 stars): worst pass 3.0 ms at 12, 3.6 at 16, 2.5 at 8"
+ledger_galaxy_mode_ease_s,0.6,LEDGER galaxy: seconds the stars ease between the 3D and 2D places
+ledger_galaxy_fly_s,0.6,LEDGER galaxy: seconds the camera flies to a cluster
+ledger_galaxy_other_fade,0.25,LEDGER galaxy: perceived opacity of the other clusters while one is chosen
+ledger_cross_rest_fade,0.3,LEDGER galaxy: perceived opacity of a link crossing clusters while nothing is selected (outside the Court tab)
+ledger_focus_width,1.5,LEDGER galaxy: how much wider the selected star's links are drawn
+ledger_star_min,0.45,LEDGER galaxy: the smallest star's radius (metres)
+ledger_star_max,2.8,LEDGER galaxy: the largest star's radius (metres)
+ledger_star_pool,2.6,LEDGER galaxy: a goods pool's radius (gold / civil / strategic)
+ledger_star_per_link,0.22,LEDGER galaxy: radius added per square root of a star's links
+ledger_star_per_fold,0.27,LEDGER galaxy: radius added per square root of what a province folds
+ledger_star_emit,1.8,LEDGER galaxy: a star's glow
+ledger_star_rim,1.6,LEDGER galaxy: a star's rim light
+ledger_star_metallic,0.35,LEDGER galaxy: a star's metallic
+ledger_star_roughness,0.22,LEDGER galaxy: a star's roughness
+ledger_haze_strength,0.075,LEDGER galaxy: a cluster haze's brightness
+ledger_haze_scale,3.4,LEDGER galaxy: a cluster haze's size as a multiple of the cluster's mean radius
+ledger_link_min_px,1,LEDGER galaxy: a link's width at no flow (screen px)
+ledger_link_max_px,3,LEDGER galaxy: a link's width at ledger_thread_flow_ref and above (screen px)
+ledger_link_count_ref,30,"LEDGER galaxy: a link with no figure (words only, or a structure tie) is as wide as the links it stands for, log scale, ledger_link_max_px at this many"
+ledger_tie_min_px,1,LEDGER galaxy: a court tie's width at no feeling (screen px)
+ledger_tie_max_px,2.6,LEDGER galaxy: a court tie's width at ledger_tie_ref (screen px)
+ledger_strand_gap_px,2,LEDGER galaxy: screen px between two strands' edges
+ledger_pair_offset_px,3,LEDGER galaxy: screen px between two links joining the same stars both ways
+ledger_link_edge_soft,0.35,LEDGER galaxy: share of a link's half-width over which its sides soften
+ledger_dashes_per_m,0.5,LEDGER galaxy: dashes per metre along a planned link
+ledger_glow_intensity,0.9,LEDGER galaxy: the view's glow intensity
+ledger_glow_threshold,0.8,LEDGER galaxy: the view's glow HDR threshold
+ledger_label_hubs,12,LEDGER galaxy: the largest stars in view that are always named
+ledger_label_strong_px,16,"LEDGER galaxy: the larger name size, for the selected star and the hubs (design px; spec §7)"
+ledger_title_px,20,LEDGER galaxy: a cluster title's font size (design px)
+ledger_ring_px,3,LEDGER galaxy: the selected star's ring width (screen px)
+ledger_light_gain,1.5,"LEDGER galaxy: how much a link's running light brightens its own colour (Task 11 fix round 1: a mix toward white read as grey chips)"
+ledger_star_draw_scale,0.6,"LEDGER galaxy: a star is drawn at this share of its layout radius (Task 11 fix round 1: small stars whose glow carries the size, not pearls); the layout keeps the full radius"
+ledger_star_planned_max,0.9,"LEDGER galaxy: a planned (ghost) star's radius at most (metres, before ledger_star_draw_scale): an ordinary small star's, never a pool's (Task 11 fix round 1)"
+ledger_star_planned_sat,0.75,"LEDGER galaxy: a planned star wears its own cluster's colour at this share of its saturation"
+ledger_star_planned_fade,0.5,"LEDGER galaxy: a planned star's perceived opacity (faint: not yet built)"
+ledger_label_halo_soft_px,10,"LEDGER galaxy: the soft wide halo under every name and title (design px), so a link never cuts a letter"
+ledger_label_halo_soft_alpha,0.6,"LEDGER galaxy: the soft halo's opacity"
+ledger_star_pick_min_px,8,"LEDGER galaxy: a star is picked within its drawn disc or this many design px of it, whichever is larger (Task 11 fix round 2: a ghost star is a few px across)"
+ledger_star_max_px,14,"LEDGER galaxy: no star is drawn with a radius over this many design px, however close the camera (Task 11 fix round 2: about twice an ordinary hub)"

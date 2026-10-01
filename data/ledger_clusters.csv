@@ -1,0 +1,5 @@
+cluster,label,colour,x,y,z,x2,z2,lens,notes
+economy,Economy,cluster_economy,-42,-6,8,-46,10,economy,the realm's goods and gold counted by province (owner 2026-09-30)
+war,War,cluster_war,45,6,40,48,40,war,the host and what feeds it
+court,Court,cluster_court,40,14,-45,46,-42,court,the people of the court and their ties
+intelligence,Intelligence,cluster_intelligence,-10,38,-30,-18,-52,intelligence,who told the crown what

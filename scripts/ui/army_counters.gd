@@ -128,6 +128,12 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 	var glyph_ink := MapPalette.named(repo, "army_glyph")
 	var count_ink := MapPalette.named(repo, "army_count_ink")
 	var line := repo.bal("map_army_outline_px")
+	# THE WAR TABLE: a dark token printed on the sheet, ringed in its realm's hue
+	# (the realm still tells the counters apart) rather than a box OF that hue
+	var table := MapPalette.war_table(repo)
+	var token := MapPalette.named(repo, "army_count_box")
+	if table:
+		line = maxf(line, repo.bal("map_army_outline_px_table") if repo.balance.has("map_army_outline_px_table") else line)
 	var glyph_frac := repo.bal("map_army_glyph_frac")
 	var font := UiPalette.body_font()
 	for m: Dictionary in markers:
@@ -139,8 +145,8 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 		# counter's square on its own base; the glyph square only without art.
 		if bool(m.get("solo", false)):
 			# The 3D piece is the counter; this is only its headcount.
-			ci.draw_rect(count.grow(line), outline)
-			ci.draw_rect(count, m["color"])
+			ci.draw_rect(count.grow(line), m["color"] if table else outline)
+			ci.draw_rect(count, token if table else m["color"])
 			ManorBadges.draw_centered_text(ci, font, count, String(m["text"]),
 				int(m["font_px"]), count_ink)
 			if String(m["code"]) == selected and selected != "":
@@ -156,9 +162,9 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 			var drawn := ts * (icon.size.y / ts.y)
 			ci.draw_texture_rect(art, Rect2(icon.position + (icon.size - drawn) * Vector2(0.5, 1.0), drawn), false)
 		else:
-			ci.draw_rect(icon.merge(count).grow(line), outline)
+			ci.draw_rect(icon.merge(count).grow(line), m["color"] if table else outline)
 			ci.draw_rect(icon, icon_bg)
-			ci.draw_rect(count, m["color"])
+			ci.draw_rect(count, token if table else m["color"])
 			ci.draw_line(Vector2(icon.end.x, icon.position.y), Vector2(icon.end.x, icon.end.y),
 				outline, line)
 			ResourceIcon.draw_glyph(ci, String(m["glyph"]), icon.get_center(),

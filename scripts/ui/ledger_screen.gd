@@ -3,21 +3,26 @@ extends Control
 ## The LEDGER screen (spec 2026-09-30-ledger-ontology-design §6.1): laid
 ## exactly over the map panel (GameRoot fits it), so the left column keeps
 ## FACTS and the right column keeps the council (invariant 10). The only
-## LEDGER piece that touches Game: it asks Ledger for a snapshot after a
-## state change while open (coalesced: at most once a frame, however many
-## days the clock ran), fills the left column, and runs an order through
-## Game.try_execute. It clears only a card it put in the left column.
+## LEDGER piece that touches Game: opening it STOPS the clock and holds it
+## still while it is open, and it stays stopped until the player starts it
+## again (owner 2026-10-01: the chart reflects the present); it reads the galaxy (Ledger.galaxy) again
+## after a state change while open (an order, DEV MODE — at most once a
+## frame), fills the left column with a star's or a thread's card, and runs
+## an order through Game.try_execute. It clears only a card it put in the
+## left column.
 
 signal show_requested(subject: Dictionary)
 signal closed
 
-var _lens := "economy"
-var _focus_id := ""
+var _lens := "all"
+var _opened: Dictionary = {}       # province code -> true: opened this viewing (never saved)
+var _open_order: Array[String] = []
 var _snap: Dictionary = {}
 var _detail: MapDetailPanel
 var _bound := false
 var _dirty := false        # a state change waits to be drawn (drained in _process)
-var _card_mine := false    # the left column's card or list is the LEDGER's own
+var _card_mine := false    # the left column's card is the LEDGER's own
+var _card_star := ""       # the star whose card it is ("" for a thread's or an order's)
 var _rebuilds := 0         # snapshots drawn (the tests' seam)
 
 @onready var _view: LedgerView3D = %View
@@ -31,12 +36,20 @@ func _ready() -> void:
 	UiPalette.style_title(%Title, 18)
 	%Close.pressed.connect(close)
 	%Front.pressed.connect(func() -> void: _view.front_view())
+	%Mode.pressed.connect(toggle_flat)
 	%Back.pressed.connect(back)
 	_view.sphere_selected.connect(_on_sphere)
 	_view.thread_selected.connect(_on_thread)
 	_view.drill_requested.connect(drill)
 	_view.orders_requested.connect(_on_orders)
 	_orders.chosen.connect(_on_order)
+
+
+## Freed while open (the game quits, a test ends): the clock is let go, never
+## left held for whatever comes next.
+func _exit_tree() -> void:
+	if visible:
+		Game.hold_clock(false)
 
 
 func view() -> LedgerView3D:
@@ -63,16 +76,16 @@ func open(detail: MapDetailPanel) -> void:
 		_view.bind(Game.data)
 		_build_lenses()
 		Game.state_changed.connect(refresh)
-	if _has_detail() and _detail.list_row_chosen.is_connected(drill):
-		_detail.list_row_chosen.disconnect(drill)
 	if not _has_detail() or detail != _detail:
 		_card_mine = false  # a new screen's column holds nothing of the LEDGER's
 	_detail = detail
-	_detail.list_row_chosen.connect(drill)
+	# the clock stops and nothing starts it while the LEDGER is open
+	Game.hold_clock(true)
 	visible = true
 	_dirty = false
 	_view.set_active(true)
 	_rebuild(false)
+	set_lens(_lens)
 
 
 func close() -> void:
@@ -80,14 +93,20 @@ func close() -> void:
 		return
 	visible = false
 	_dirty = false
+	_opened.clear()       # the provinces opened belong to this viewing
+	_open_order.clear()
 	_view.set_active(false)
 	_clear_card()
+	# let go, but not restarted: the player starts the clock again (owner
+	# 2026-10-01)
+	Game.hold_clock(false)
 	closed.emit()
 
 
-## Draw the live state again, keeping the camera (a state change, DEV MODE).
-## Only marks the LEDGER dirty: Game.state_changed fires once a game day,
-## several times a frame at high speed, and one snapshot a frame is enough.
+## Draw the live state again, keeping the camera (an order, DEV MODE). Only
+## marks the LEDGER dirty: several changes in one frame are one snapshot.
+## (The clock is held still while the LEDGER is open, so no day passes under
+## it — owner 2026-10-01.)
 func refresh() -> void:
 	if visible:
 		_dirty = true
@@ -99,52 +118,81 @@ func _process(_delta: float) -> void:
 		_rebuild(true)
 
 
+func opened() -> Dictionary:
+	return _opened
+
+
+## A tab chooses its cluster (data/ledger_clusters.csv `lens`); All is the
+## whole galaxy. The camera flies; nothing is read again.
 func set_lens(lens_id: String) -> void:
 	_lens = lens_id
-	_focus_id = ""
 	for b: Node in %Lenses.get_children():
 		(b as Button).set_pressed_no_signal(String(b.name) == "Lens_" + lens_id)
-	_rebuild(false)
-	_clear_card()  # the old lens's card or list names what is no longer drawn
+	_view.focus_cluster(_cluster_for(lens_id))
+	_clear_card()  # the old tab's card names a star the camera has left
+	_crumb()
 
 
-## Into an instance's ego network — from the left column's list or a
-## double click — with THAT instance's card in the left column (the map's
-## own card for a manor, town, regiment or courier; LedgerCards.entry's
-## threads otherwise). A type sphere or a "more" sphere has none.
+func _cluster_for(lens_id: String) -> String:
+	for c: Dictionary in Game.data.ledger_clusters:
+		if String(c["lens"]) == lens_id:
+			return String(c["cluster"])
+	return "all"
+
+
+## A double click: a province opens (its manors, towns and buildings settle
+## round it) or closes; any other star is selected, its web framed and its
+## card put in the left column.
 func drill(id: String) -> void:
-	if id.begins_with("type:") or id.begins_with("more:") or id == "":
+	if id == "" or id.begins_with("more:"):
 		return
-	_focus_id = id
-	_rebuild(false)
-	if _focus_id != "":
-		_show_card(LedgerCards.entry(Game.data, Game.state, _focus_id, _snap))
+	if id.begins_with("province:"):
+		var code := id.substr(9)
+		if _opened.has(code):
+			_opened.erase(code)
+			_open_order.erase(code)
+		else:
+			_opened[code] = true
+			_open_order.append(code)
+		# the province is selected AS the new chart is drawn: one restyle,
+		# not a second one after it (Task 11 fix round 1, F7: ~12 ms of the
+		# third province's stall)
+		_rebuild(true, id)
+		# opening frames the province and what it unfolded; closing frames
+		# nothing (Task 11 fix round 1, F8)
+		if _opened.has(code):
+			_view.frame_opened(id)
+	else:
+		_view.frame_web(id)
+		_view.select(id)
+	_show_card(LedgerCards.entry(Game.data, Game.state, id, _snap), id)
 
 
-## Out to the type level: the focus's card goes with its network.
+## Closes the last province opened.
 func back() -> void:
-	_focus_id = ""
-	_rebuild(false)
-	_clear_card()
+	if _open_order.is_empty():
+		return
+	_opened.erase(_open_order.pop_back())
+	_rebuild(true)
+
+
+func toggle_flat() -> void:
+	_view.set_flat(not _view.is_flat())
+	%Mode.text = "3D" if _view.is_flat() else "2D"
 
 
 func _has_detail() -> bool:
 	return _detail != null and is_instance_valid(_detail)
 
 
-## The left column's card, put there by the LEDGER.
-func _show_card(entry: Dictionary) -> void:
+## The left column's card, put there by the LEDGER; `star` is the star it
+## is the card of, if any (a redraw draws it again).
+func _show_card(entry: Dictionary, star: String = "") -> void:
 	if not _has_detail():
 		return
 	_detail.show_entry(entry)
 	_card_mine = not entry.is_empty()
-
-
-func _show_list(title: String, rows: Array) -> void:
-	if not _has_detail():
-		return
-	_detail.show_list(title, rows)
-	_card_mine = true
+	_card_star = star if _card_mine else ""
 
 
 ## Closes the left column's card only if the LEDGER put it there: a card the
@@ -153,20 +201,31 @@ func _clear_card() -> void:
 	if _card_mine and _has_detail():
 		_detail.show_entry({})
 	_card_mine = false
+	_card_star = ""
 
 
-func _rebuild(keep_camera: bool) -> void:
+func _rebuild(keep_camera: bool, select_id: String = "") -> void:
 	_rebuilds += 1
-	_snap = Ledger.snapshot(Game.data, Game.state, _lens, {"id": _focus_id} if _focus_id != "" else {})
-	if bool(_snap["focus_lost"]):
-		# The focus is gone (a courier arrived, a building came down): back to
-		# the type level as a new picture — framed afresh, its card closed.
-		_focus_id = ""
-		keep_camera = false
-		_clear_card()
-	_view.show_snapshot(_snap, keep_camera)
-	%Back.visible = _focus_id != ""
-	%Crumb.text = "" if _focus_id == "" else LedgerResolvers.label_of(Game.data, Game.state, _focus_id)
+	var selected := _view.selected()
+	_snap = Ledger.galaxy(Game.data, Game.state, _opened)
+	_view.show_snapshot(_snap, keep_camera, select_id)
+	if selected != "" and _view.selected() == "":
+		_clear_card()  # the selected star is gone (a courier arrived, a report aged out)
+	elif _card_mine and _card_star != "" and _card_star == _view.selected():
+		# the selected star's card follows the day it is redrawn on
+		_show_card(LedgerCards.entry(Game.data, Game.state, _card_star, _snap), _card_star)
+	_crumb()
+
+
+func _crumb() -> void:
+	var parts: Array[String] = ["Realm"]
+	for c: Dictionary in Game.data.ledger_clusters:
+		if String(c["cluster"]) == _view.cluster():
+			parts.append(String(c["label"]))
+	for code: String in _open_order:
+		parts.append(LedgerResolvers.label_of(Game.data, Game.state, "province:" + code))
+	%Crumb.text = " › ".join(parts)
+	%Back.visible = not _open_order.is_empty()
 
 
 ## One flat tab per data/ledger_lenses.csv row, so a new lens needs no scene edit.
@@ -184,25 +243,14 @@ func _build_lenses() -> void:
 		%Lenses.add_child(b)
 
 
-## A type sphere with instances lists them in the left column; anything else
-## opens its card there (LedgerCards.entry); empty ground or "more" closes it.
+## A star's card in the left column; empty sky closes it.
 func _on_sphere(id: String) -> void:
 	if not _has_detail():
 		return
 	if id == "" or id.begins_with("more:"):
 		_clear_card()
 		return
-	var row := Ledger.type_row(Game.data, Ledger.type_of(id))
-	if id.begins_with("type:") and String(row.get("instances", "")) != "":
-		var rows: Array = []
-		var cap := int(Game.data.bal("ledger_list_cap"))
-		for r: Dictionary in LedgerResolvers.instances(String(row["instances"]), Game.data, Game.state):
-			if rows.size() >= cap:
-				break
-			rows.append({"text": String(r["label"]), "id": String(r["id"])})
-		_show_list(String(row["label"]), rows)
-		return
-	_show_card(LedgerCards.entry(Game.data, Game.state, id, _snap))
+	_show_card(LedgerCards.entry(Game.data, Game.state, id, _snap), id)
 
 
 ## A thread's card: its accounts, each with its source and its age. A
