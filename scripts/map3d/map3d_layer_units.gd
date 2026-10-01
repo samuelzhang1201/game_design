@@ -95,7 +95,7 @@ func refresh() -> void:
 		_place(code, piece)
 	for code: String in _pieces.keys():
 		if not live.has(code):
-			(_pieces[code]["node"] as Node3D).visible = false
+			show_piece(_pieces[code], false)
 
 
 ## Where the ENGINE has a regiment today, world XZ.
@@ -116,9 +116,9 @@ func _place(code: String, piece: Dictionary) -> void:
 	# Far out every regiment is its flat counter instead (Map3DUnits.as_counters).
 	if ctx.camera.is_position_behind(centre) \
 			or Map3DUnits.as_counters(repo, ctx.meta, ctx.distance, ctx.view_size.y):
-		node.visible = false
+		show_piece(piece, false)
 		return
-	node.visible = true
+	show_piece(piece, true)
 	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
 		float(piece["height_m"]), piece["size"])
@@ -185,6 +185,30 @@ func step(delta: float) -> bool:
 
 ## Bumped each frame a piece moves (the chips' cache key).
 func moves() -> int: return _moves
+
+
+## A piece shown or hidden; its figures' AnimationPlayers run only while it
+## is shown AND the layer animates (perf 2026-10-02: every regiment's nine
+## figures kept posing their skeletons far out, where each is a flat mark,
+## behind the camera, and under the LEDGER or the WAR ROOM).
+func show_piece(piece: Dictionary, on: bool) -> void:
+	(piece["node"] as Node3D).visible = on
+	var run := on and _animating
+	if bool(piece.get("running", true)) == run:
+		return
+	piece["running"] = run
+	for anim: AnimationPlayer in piece["anims"]:
+		anim.active = run
+
+
+## Whether the pieces animate at all (the view off: Map3DView.deactivate).
+func set_animating(on: bool) -> void:
+	_animating = on
+	for code: String in _pieces:
+		show_piece(_pieces[code], (_pieces[code]["node"] as Node3D).visible)
+
+
+var _animating := true
 
 ## Where each piece is DRAWN, {code: world XZ} — where its road ahead starts.
 func shown_positions() -> Dictionary: return _shown_xz
