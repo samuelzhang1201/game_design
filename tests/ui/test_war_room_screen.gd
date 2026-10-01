@@ -301,3 +301,41 @@ func test_a_new_graphics_tier_reaches_the_room_and_the_folio() -> void:
 		var msaa: int = want[int(Map3DQuality.num(Map3DQuality.row(Game.data, tier), "msaa", 0.0))]
 		assert_eq((screen.view().get_node("%Viewport") as SubViewport).msaa_3d, msaa, tier + ": the room")
 		assert_eq((screen.get_node("%Folio").get_node("%FigViewport") as SubViewport).msaa_3d, msaa, tier + ": the figure")
+
+
+
+func test_the_margin_keeps_its_buttons_while_the_list_stands_and_refills_on_reopen() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(2)
+	var screen := r.war_room_screen()
+	var box := screen.get_node("%Margin")
+	var first := box.get_children()
+	screen._fill_margin()
+	assert_eq(box.get_children(), first, "an unchanged list keeps the very same buttons")
+	# shut, a regiment walks onto another sheet, and the room opens again
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(1)
+	var sheet := screen.view().sheet_index()
+	var mover := ""
+	for p: Dictionary in WarRoom.on_sheet(Game.data, Game.state, sheet):
+		if not bool(p["naval"]):
+			mover = String(p["code"])
+			break
+	assert_ne(mover, "")
+	var far := -1
+	for i in WarSheets.series(Game.data).size():
+		var rect: Rect2 = WarSheets.series(Game.data)[i]["rect"]
+		if WarSheets.sheet_of(Game.data, rect.get_center()) == i and i != sheet:
+			far = i
+			break
+	ArmySystem.ensure(Game.data, Game.state)
+	var m := ArmySystem.pack_to_metres(Game.data, (WarSheets.series(Game.data)[far]["rect"] as Rect2).get_center())
+	Game.state.regiments[mover]["x_m"] = m.x
+	Game.state.regiments[mover]["y_m"] = m.y
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(2)
+	var texts: Array = box.get_children().filter(func(n: Node) -> bool: return n is Button) \
+		.map(func(b: Button) -> String: return b.text)
+	var label := String(ArmySystem.regiment(Game.data, mover).get("label", mover))
+	assert_true(texts.any(func(t: String) -> bool: return t.begins_with(label)), "%s is in the margin now" % label)

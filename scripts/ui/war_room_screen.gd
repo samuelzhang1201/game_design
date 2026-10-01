@@ -13,6 +13,7 @@ var _detail: MapDetailPanel
 var _bound := false
 var _dirty := false
 var _card_mine := false
+var _margin_sig: Array = []   # [sheet, the off-sheet (code, sheet) pairs, none on this sheet] last filled
 
 @onready var _view: WarRoomView = %View
 @onready var _orders: ArmyOrderMenu = %Orders
@@ -63,6 +64,7 @@ func open(detail: MapDetailPanel) -> void:
 		lay_sheet(_home_sheet())
 	else:
 		_view.refresh()
+		_fill_margin()   # the regiments moved while the room was shut
 
 
 func _home_sheet() -> int:
@@ -111,13 +113,19 @@ func _dress_slip() -> void:
 ## One flat button per regiment off this sheet ("label → numeral") that lays
 ## its sheet; an empty sheet says so (spec §6).
 func _fill_margin() -> void:
+	var series := WarSheets.series(Game.data)
+	var sheet := _view.sheet_index()
+	var off := WarRoom.off_sheet(Game.data, Game.state, sheet)
+	var sig: Array = [sheet, off.map(func(p: Dictionary) -> String: return "%s@%d" % [p["code"], int(p["sheet"])]),
+		WarRoom.on_sheet(Game.data, Game.state, sheet).is_empty()]
+	if sig == _margin_sig:
+		return   # the same list: its buttons stand (a click mid-refresh is not lost)
+	_margin_sig = sig
 	var box: VBoxContainer = %Margin
 	for c in box.get_children():
 		box.remove_child(c)
 		c.queue_free()
-	var series := WarSheets.series(Game.data)
-	var sheet := _view.sheet_index()
-	for p: Dictionary in WarRoom.off_sheet(Game.data, Game.state, sheet):
+	for p: Dictionary in off:
 		var to := int(p["sheet"])
 		var b := Button.new()
 		b.flat = true
@@ -141,7 +149,7 @@ func _fill_margin() -> void:
 	var cap := int(Game.data.bal("war_margin_rows"))
 	var row_h := (box.get_child(0) as Control).get_combined_minimum_size().y if rows > 0 else 0.0
 	var height := row_h * float(mini(rows, cap))
-	if WarRoom.on_sheet(Game.data, Game.state, sheet).is_empty():
+	if bool(sig[2]):
 		var none := Label.new()
 		none.text = "No regiment of ours on this sheet."
 		UiPalette.style_header(none, 13, UiPalette.ink("muted"))
