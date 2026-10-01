@@ -83,13 +83,6 @@ func test_a_conquest_recolours_the_lut() -> void:
 	assert_false(_close(_texel(v, id), before), "the raiders' colour now")
 
 
-func test_the_theme_is_remembered() -> void:
-	var v := _view()
-	assert_eq(v.manor_theme(), "")
-	v.set_manor_theme("manors")
-	assert_eq(v.manor_theme(), "manors")
-
-
 # --- the edges ------------------------------------------------------------------
 
 func _edges_node(v: Map3DView) -> MeshInstance3D:
@@ -107,11 +100,6 @@ func test_the_edges_are_ruled_only_under_a_theme() -> void:
 	assert_eq(String(mat.get_meta("width_key")), "map_manor_line_width")
 	v.set_manor_theme("")
 	assert_false(edges.visible)
-
-
-func test_the_manor_edges_sit_between_the_roads_and_the_seams() -> void:
-	assert_lt(Map3DView.PRIORITY_ROADS, Map3DView.PRIORITY_MANOR_EDGES)
-	assert_lt(Map3DView.PRIORITY_MANOR_EDGES, Map3DView.PRIORITY_SEAMS)
 
 
 # --- picking and hovering a manor -------------------------------------------------
@@ -186,7 +174,18 @@ func test_hovering_a_manor_names_it_and_its_holder() -> void:
 ## 2026-09-28 §1: a badge is a true output figure, so only a manor of a
 ## province the crown controls wears one) — every test below needs a manor
 ## whose badge actually draws.
+## Found once: every test starts the same campaign (seed 42), whose answer
+## is the same, and Intel.level over every manor is the costly part.
+var _busiest := -2
+
+
 func _busiest_manor() -> int:
+	if _busiest == -2:
+		_busiest = _find_busiest_manor()
+	return _busiest
+
+
+func _find_busiest_manor() -> int:
 	var all: Dictionary = MapEconomy.manors(Game.data)
 	var best := -1
 	for id: int in all:

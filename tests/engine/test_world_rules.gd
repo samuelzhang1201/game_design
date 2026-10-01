@@ -1,20 +1,25 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The deterministic floor that overrides any model verdict (spec D8).
 
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
-func test_data_loads() -> void:
-	assert_gte(data.world_rules.size(), 8, "world rules loaded")
-	assert_true(data.claim_types.has("army_size"), "claim taxonomy loaded")
 
-func test_ontology_claim_is_vetoed() -> void:
-	var v := WorldRules.veto(data, "identity", "I am a dragon", 0.0)
-	assert_true(v["vetoed"])
-	assert_eq(String(v["rule_code"]), "onto_dragon")
-	assert_ne(String(v["reason"]), "", "veto carries a reason")
+## Each kind of impossible claim is vetoed by its own rule, with a reason.
+func test_impossible_claims_are_vetoed_by_their_rule() -> void:
+	for case in [
+			["identity", "I am a dragon", "onto_dragon"],
+			["event_report", "He came back from the dead", "onto_resurrection"],
+			["identity", "She is immortal", "onto_magic"],
+			["event_report", "They fired a cannon", "era_gunpowder"],
+			["event_report", "He watched through a telescope", "era_optics"]]:
+		var v := WorldRules.veto(data, String(case[0]), String(case[1]), 0.0)
+		assert_true(v["vetoed"], String(case[1]))
+		assert_eq(String(v["rule_code"]), String(case[2]))
+		assert_ne(String(v["reason"]), "", "%s: the veto carries a reason" % case[2])
 
 func test_ontology_match_is_case_insensitive() -> void:
 	assert_true(WorldRules.veto(data, "identity", "I AM A DRAGON", 0.0)["vetoed"])
@@ -35,23 +40,3 @@ func test_plausible_claim_is_not_vetoed() -> void:
 func test_magnitude_rule_ignores_other_claim_types() -> void:
 	# A huge number in a claim type with no magnitude rule must pass.
 	assert_false(WorldRules.veto(data, "intent", "I mean to build much", 100000000.0)["vetoed"])
-
-func test_resurrection_claim_is_vetoed() -> void:
-	var v := WorldRules.veto(data, "event_report", "He came back from the dead", 0.0)
-	assert_true(v["vetoed"])
-	assert_eq(String(v["rule_code"]), "onto_resurrection")
-
-func test_magic_claim_is_vetoed() -> void:
-	var v := WorldRules.veto(data, "identity", "She is immortal", 0.0)
-	assert_true(v["vetoed"])
-	assert_eq(String(v["rule_code"]), "onto_magic")
-
-func test_gunpowder_anachronism_is_vetoed() -> void:
-	var v := WorldRules.veto(data, "event_report", "They fired a cannon", 0.0)
-	assert_true(v["vetoed"])
-	assert_eq(String(v["rule_code"]), "era_gunpowder")
-
-func test_optics_anachronism_is_vetoed() -> void:
-	var v := WorldRules.veto(data, "event_report", "He watched through a telescope", 0.0)
-	assert_true(v["vetoed"])
-	assert_eq(String(v["rule_code"]), "era_optics")

@@ -1,5 +1,6 @@
 # tests/engine/test_war_folio.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The folio's right page and its drill tabs (spec 2026-10-01-war-room-design §4).
 
 var repo: DataRepository
@@ -8,8 +9,8 @@ var code := ""
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(repo, 42)
+	repo = SuiteData.repo()
+	state = SuiteData.campaign(repo, 42)
 	WarSheets.forget()
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, r) > 0 \

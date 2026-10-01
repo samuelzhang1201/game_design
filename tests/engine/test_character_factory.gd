@@ -1,43 +1,50 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
+
+## A character's authored row (founding_council.csv or roles.csv).
+func _row(id: String) -> Dictionary:
+	for r: Dictionary in data.founding + data.roles:
+		if String(r["id"]) == id:
+			return r
+	return {}
 
 func test_builds_full_roster_with_five_seated() -> void:
-	var s := GameState.new_campaign(data, 42)
-	# 5 founding council + 16 extended roles (data/roles.csv).
-	assert_eq(s.characters.size(), 21)
+	var s := SuiteData.campaign(data, 42)
+	# the founding council + the extended roles (data/roles.csv), each once
+	assert_eq(s.characters.size(), data.founding.size() + data.roles.size())
 	assert_eq(s.council.size(), 5, "only seated ministers occupy council")
 	for seat in ["chancellor", "marshal", "steward", "spymaster", "chaplain"]:
 		assert_true(s.council.has(seat), seat + " seated")
 
 func test_roster_roles_carry_taxonomy_and_role_metrics() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var king: Character = s.characters["you"]
 	assert_eq(king.category, "player")
-	assert_eq(king.family_name, "Valorin")
+	assert_eq(king.family_name, String(_row("you")["family_name"]))
 	# Not a literal: the king lives in whatever kingdom the loaded map binds
 	# player_realm to, so this survives a map swap.
 	assert_eq(king.kingdom, data.resolve_realm("player_realm"))
 	assert_true(data.kingdoms.has(king.kingdom), "and it is a real kingdom")
-	assert_eq(int(king.attributes["prestige"]), 85)
-	assert_eq(int(king.attributes["influence"]), 90)
-	# Personal data from the story background (game_start.md): the king is 40,
-	# his general daughter 19.
-	assert_eq(int(king.attributes["age"]), 40)
-	assert_eq(int(s.characters["char_princess"].attributes["age"]), 19)
+	# The role metrics and the personal data (the story background's ages)
+	# come from the authored row.
+	for key in ["prestige", "influence", "age"]:
+		assert_eq(int(king.attributes[key]), int(_row("you")[key]), key)
+	assert_eq(int(s.characters["char_princess"].attributes["age"]), int(_row("char_princess")["age"]))
 	var osric: Character = s.characters["char_king_osric"]
 	assert_eq(osric.category, "foreign")
 	assert_eq(osric.kingdom, data.resolve_realm("raider_realm"))
 	# Founding rows gained the same columns.
 	var aldwin: Character = s.characters["char_chancellor"]
 	assert_eq(aldwin.category, "council")
-	assert_eq(int(aldwin.attributes["influence"]), 70)
+	assert_eq(int(aldwin.attributes["influence"]), int(_row("char_chancellor")["influence"]))
 
 func test_trait_modifiers_applied() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var brandt: Character = s.characters[s.council["marshal"]]
 	# base temper 65 + wrathful +35 + bold +10 + noble_born +5 + born_soldier +5 = 120 -> clamp 100
 	assert_eq(brandt.attributes["temper"], 100)
@@ -53,7 +60,7 @@ func test_opinion_change_logs_reason_and_clamps() -> void:
 	assert_eq(c.opinion_log[0]["reason"], "test reason")
 
 func test_character_round_trip() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var c: Character = s.characters[s.council["chaplain"]]
 	c.change_opinion(-5, "rt", 1)
 	var c2 := Character.from_dict(c.to_dict())

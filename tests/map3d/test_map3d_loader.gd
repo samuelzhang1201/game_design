@@ -107,17 +107,20 @@ func test_a_pack_can_keep_its_3d_build_elsewhere() -> void:
 
 func test_the_house_table_is_in_the_steps_hash() -> void:
 	# a changed house table must report the build stale, not draw the old one
-	var before := Map3DWorldLoader.steps_hash()
-	var path := "res://data/map3d_houses.csv"
-	var original := FileAccess.get_file_as_string(path)
-	var f := FileAccess.open(path, FileAccess.WRITE)
-	f.store_string(original + "\n# probe\n")
+	# — hashed over copies in this run's own directory, never writing data/
+	var copies: Array = []
+	for path: String in Map3DWorldLoader.STEPS_TABLES:
+		var copy := _dir.path_join(path.get_file())
+		DirAccess.copy_absolute(ProjectSettings.globalize_path(path), ProjectSettings.globalize_path(copy))
+		copies.append(copy)
+	assert_eq(Map3DWorldLoader.steps_hash(copies), Map3DWorldLoader.steps_hash(), "the copies hash as the tables")
+	var houses: String = copies[Map3DWorldLoader.STEPS_TABLES.find("res://data/map3d_houses.csv")]
+	var f := FileAccess.open(houses, FileAccess.WRITE_READ)
+	f.seek_end()
+	f.store_string("\n# probe\n")
 	f.close()
-	var after := Map3DWorldLoader.steps_hash()
-	var g := FileAccess.open(path, FileAccess.WRITE)
-	g.store_string(original)
-	g.close()
-	assert_ne(before, after, "map3d_houses.csv is part of the build's steps hash")
+	assert_ne(Map3DWorldLoader.steps_hash(copies), Map3DWorldLoader.steps_hash(),
+		"map3d_houses.csv is part of the build's steps hash")
 
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.

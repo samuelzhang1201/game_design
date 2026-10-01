@@ -124,7 +124,6 @@ func _menu_button(label: String, handler: Callable) -> Button:
 func _start() -> void:
 	if _starting:
 		return
-	Game.player_setup = {}
 	if not leave(func() -> void: start_requested.emit()):
 		start_requested.emit()
 

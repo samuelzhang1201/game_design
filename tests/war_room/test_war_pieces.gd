@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The tin pieces (spec 2026-10-01-war-room-design §3).
 
 var repo: DataRepository
@@ -7,8 +8,8 @@ var view: WarRoomView
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(repo, 42)
+	repo = SuiteData.repo()
+	state = SuiteData.campaign(repo, 42)
 	WarSheets.forget()
 	view = load("res://scenes/war_room/war_room.tscn").instantiate()
 	view.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -49,7 +50,7 @@ func _move_to(code: String, pack_px: Vector2) -> void:
 
 func test_every_regiment_on_the_sheet_stands_as_a_piece_where_we_know_it_is() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var on := WarRoom.on_sheet(repo, state, _home_sheet())
 	assert_eq(pieces.get_child_count(), on.size())
@@ -63,7 +64,7 @@ func test_every_regiment_on_the_sheet_stands_as_a_piece_where_we_know_it_is() ->
 
 func test_a_land_piece_carries_its_figures_plate_and_tag() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var seen := 0
 	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
@@ -81,7 +82,7 @@ func test_a_land_piece_carries_its_figures_plate_and_tag() -> void:
 
 func test_the_figures_wear_the_tin_shader_over_their_own_albedo() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var checked := 0
 	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
@@ -102,7 +103,7 @@ func test_the_figures_wear_the_tin_shader_over_their_own_albedo() -> void:
 
 func test_a_moved_regiment_is_pushed_to_its_new_place() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var p: Dictionary = WarRoom.on_sheet(repo, state, _home_sheet())[0]
 	var code := String(p["code"])
@@ -119,7 +120,7 @@ func test_a_moved_regiment_is_pushed_to_its_new_place() -> void:
 
 func test_a_changed_order_rebuilds_the_piece_in_its_new_pose() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var p: Dictionary = WarRoom.on_sheet(repo, state, _home_sheet())[0]
 	var code := String(p["code"])
@@ -128,14 +129,14 @@ func test_a_changed_order_rebuilds_the_piece_in_its_new_pose() -> void:
 	var now := ArmySystem.order_of(repo, state, code)
 	state.regiments[code]["order"] = ArmySystem.ORDER_MARCH if now != ArmySystem.ORDER_MARCH else ArmySystem.ORDER_GARRISON
 	view.refresh()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_ne(pieces.piece(code), before, "a new pose is a new piece")
 	assert_eq(pieces.get_child_count(), WarRoom.on_sheet(repo, state, _home_sheet()).size())
 
 
 func test_screen_hits_name_each_piece() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var hits := pieces.screen_hits(view.get_node("%Camera"), 1.0)
 	assert_eq(hits.size(), pieces.get_child_count())
@@ -145,7 +146,7 @@ func test_screen_hits_name_each_piece() -> void:
 
 func test_a_piece_is_frozen_in_its_orders_pose() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var code := _land_code()
 	var action := WarRoom.pose_action(ArmySystem.order_of(repo, state, code))
@@ -161,7 +162,7 @@ func test_a_piece_is_frozen_in_its_orders_pose() -> void:
 
 func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_its_orders() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var cam: Camera3D = view.get_node("%Camera")
 	var hit: Dictionary = pieces.screen_hits(cam, view.window_scale())[0]
@@ -189,7 +190,7 @@ func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_its_orders() ->
 
 func test_a_piece_sits_level_on_the_highest_relief_under_its_base() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
 		var node := pieces.piece(String(p["code"]))
@@ -201,7 +202,7 @@ func test_a_piece_sits_level_on_the_highest_relief_under_its_base() -> void:
 
 func test_a_piece_moved_onto_a_slope_rests_on_its_highest_corner() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var code := _land_code()
 	var rect: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
@@ -227,7 +228,7 @@ func test_a_piece_moved_onto_a_slope_rests_on_its_highest_corner() -> void:
 
 func test_a_click_on_the_figures_top_picks_the_piece_and_the_nearer_one_wins() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var cam: Camera3D = view.get_node("%Camera")
 	var sc: float = view.window_scale()
@@ -249,7 +250,7 @@ func test_a_click_on_the_figures_top_picks_the_piece_and_the_nearer_one_wins() -
 
 func test_a_fleet_stands_as_a_flat_tin_token() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var seen := 0
 	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
@@ -263,7 +264,7 @@ func test_a_fleet_stands_as_a_flat_tin_token() -> void:
 
 func test_a_regiment_leaving_the_sheet_loses_its_piece() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var n := pieces.get_child_count()
 	var code := _land_code()
@@ -280,7 +281,7 @@ func test_a_regiment_leaving_the_sheet_loses_its_piece() -> void:
 
 func test_a_regiment_that_loses_men_is_rebuilt_with_fewer_figures() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var code := _land_code()
 	assert_eq(pieces.piece(code).get_node("Figures/Formation").get_child_count(), 9)
@@ -296,7 +297,7 @@ func test_a_regiment_that_loses_men_is_rebuilt_with_fewer_figures() -> void:
 
 func test_a_push_in_flight_to_the_same_place_is_not_restarted() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var code := _land_code()
 	var at: Vector2 = WarRoom.on_sheet(repo, state, _home_sheet())[0]["at"]
@@ -316,7 +317,7 @@ func test_a_push_in_flight_to_the_same_place_is_not_restarted() -> void:
 
 func test_a_figure_is_measured_through_its_transforms_and_never_taller_than_the_target() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var want := repo.bal("war_piece_figure_mm") / 1000.0
 	var form := pieces.piece(_land_code()).get_node("Figures/Formation") as Node3D
@@ -327,7 +328,7 @@ func test_a_figure_is_measured_through_its_transforms_and_never_taller_than_the_
 
 func test_the_tags_show_only_near_the_table() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var code := _land_code()
 	var tag := pieces.piece(code).get_node("Tag") as Label3D
@@ -339,7 +340,7 @@ func test_the_tags_show_only_near_the_table() -> void:
 	view.lean_to(repo.bal("war_tag_view_m") * 0.5)
 	view.swap_to((_home_sheet() + 1) % WarSheets.series(repo).size())
 	view._process(10.0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	view.lay_sheet(_home_sheet())
 	view.lean_to(repo.bal("war_tag_view_m") * 0.5)
 	assert_true((pieces.piece(code).get_node("Tag") as Label3D).visible, "a rebuilt piece wears the current setting")
@@ -347,7 +348,7 @@ func test_the_tags_show_only_near_the_table() -> void:
 
 func test_the_nine_figures_stand_inside_the_base_and_are_centred_on_it() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var node := pieces.piece(_land_code())
 	var form := node.get_node("Figures/Formation") as Node3D
@@ -365,7 +366,7 @@ func test_the_nine_figures_stand_inside_the_base_and_are_centred_on_it() -> void
 
 func test_the_chalk_ring_follows_a_pushed_piece() -> void:
 	view.lay_sheet(_home_sheet())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var hud: WarHud = view.get_node("%Hud")
 	var p: Dictionary = WarRoom.on_sheet(repo, state, _home_sheet())[0]
@@ -385,5 +386,5 @@ func test_the_chalk_ring_follows_a_pushed_piece() -> void:
 	var now := cam.unproject_position(pieces.piece(code).global_position) / view.window_scale()
 	assert_almost_eq(hud._chalk.x, now.x, 0.5, "the ring stands where the piece is mid-push")
 	assert_ne(hud._chalk.x, before.x, "and it has moved with it")
-	await wait_seconds(repo.bal("war_plot_push_s"))
+	await wait_until(func() -> bool: return not pieces.pushing(), repo.bal("war_plot_push_s") * 2.0)
 	assert_false(pieces.pushing(), "the push is over and the redraws stop")

@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 const PITCH_KEYS := ["grain_ration", "build_granary", "raise_tax", "tithe_church",
 	"ease_tax", "harsh_justice", "endow_church", "raise_levies", "quiet_rumors", "build_road"]
@@ -6,7 +7,7 @@ const PITCH_KEYS := ["grain_ration", "build_granary", "raise_tax", "tithe_church
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
 func test_reply_templates_exist_for_every_pitch() -> void:
 	var keys := {}

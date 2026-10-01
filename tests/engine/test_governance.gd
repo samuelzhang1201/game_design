@@ -1,12 +1,13 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Governance (spec 2026-09-30-ledger-governors-design §2-3).
 
 var data: DataRepository
 var s: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 
 func _steward() -> Character:
 	return s.characters[String(s.council["steward"])]

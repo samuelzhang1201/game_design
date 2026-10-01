@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The sun turns once round a game day (owner 2026-09-27: 随着时间的流逝，光照
 ## 光源从西向东缓慢变化), by hand at yaw0 -90, high -40, low -18:
 ## pitch = -18 + (-22) x (0.5 + 0.5 sin(2 pi f)), yaw = -90 + 360 f.
@@ -7,7 +8,7 @@ var repo: DataRepository
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	repo.balance["map3d_sun_day_sweep"] = 1.0
 	repo.balance["map3d_sun_day_yaw0_deg"] = -90.0
 	repo.balance["map3d_sun_day_high_deg"] = -40.0
@@ -42,7 +43,7 @@ func test_the_day_wraps_without_a_jump() -> void:
 
 
 func test_off_it_holds_the_fixed_sun() -> void:
-	var r := DataRepository.load_all("res://data")
+	var r := SuiteData.repo()
 	r.balance["map3d_sun_day_sweep"] = 0.0
 	assert_eq(Map3DEnvironment.sun_angles(r, 0.4),
 		Vector2(r.bal("map3d_sun_pitch_deg"), r.bal("map3d_sun_yaw_deg")))
@@ -51,7 +52,7 @@ func test_off_it_holds_the_fixed_sun() -> void:
 ## The north half is DUSK (owner 2026-09-28: 北边半圈当作黄昏): 0 through the
 ## south half, rising as smoothstep(0, 1, -sin(2 pi f)) to 1 in the north.
 func test_dusk_is_nothing_by_day_and_whole_in_the_north() -> void:
-	var r := DataRepository.load_all("res://data")
+	var r := SuiteData.repo()
 	r.balance["map3d_sun_day_sweep"] = 1.0
 	r.balance["map3d_sun_dusk"] = 1.0
 	assert_eq(Map3DEnvironment.dusk_of(r, 0.25), 0.0, "noon")
@@ -68,7 +69,7 @@ func test_dusk_is_nothing_by_day_and_whole_in_the_north() -> void:
 
 
 func test_at_dusk_the_sun_dims_and_warms_and_the_fill_rises_opposite() -> void:
-	var r := DataRepository.load_all("res://data")
+	var r := SuiteData.repo()
 	r.balance["map3d_sun_day_sweep"] = 1.0
 	r.balance["map3d_sun_dusk"] = 1.0
 	var sun := DirectionalLight3D.new()

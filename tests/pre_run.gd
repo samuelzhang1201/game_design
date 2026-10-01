@@ -6,10 +6,13 @@ extends GutHookScript
 ## It also gives the suite its own settings file.
 
 const RunDir := preload("res://tests/run_dir.gd")
+const SuiteData := preload("res://tests/suite_data.gd")
 
 
 func run() -> void:
 	Game.data.balance["map3d_default"] = 0.0
+	# every Game.start_campaign copies a cached campaign of the same data
+	Game.campaign_maker = SuiteData.campaign
 	# the suite runs at high, today's look (Ruling 7)
 	Map3DQuality.forced = "high"
 	# The player's settings (music on/off) live in user://; the suite reads

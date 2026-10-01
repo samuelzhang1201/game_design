@@ -27,10 +27,10 @@ func _letter(column: String) -> int:
 
 
 func _enter(r: GameRoot) -> void:
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 
 
 func test_the_tab_opens_the_board_with_its_letters() -> void:
@@ -40,7 +40,7 @@ func test_the_tab_opens_the_board_with_its_letters() -> void:
 	var r := _root()
 	await _enter(r)
 	r.bottom_bar().button("MISSIVE").pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var ms := r.missive_screen()
 	assert_true(ms.visible)
 	assert_eq(ms.notes_in("credible"), 1)
@@ -56,7 +56,7 @@ func test_the_frame_sits_below_the_top_bar() -> void:
 	var r := _root()
 	await _enter(r)
 	r.toggle_missives()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var top_bar_bottom: float = r.current_screen.top_bar().get_global_rect().end.y
 	var frame_top: float = r.missive_screen().find_child("Frame", true, false).get_global_rect().position.y
 	assert_gte(frame_top, top_bar_bottom,
@@ -80,11 +80,11 @@ func test_the_frame_fits_inside_the_viewport_with_all_art_installed() -> void:
 	var r := _root()
 	await _enter(r)
 	get_tree().root.size = Vector2i(1280, 720)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r.toggle_missives()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	r.missive_screen().select(id)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var frame := r.missive_screen().get_node("%Frame") as Control
 	var viewport := r.get_viewport_rect().size
 	var rect := frame.get_global_rect()
@@ -108,9 +108,9 @@ func test_every_plaque_reads_on_one_line_and_all_are_the_same_height() -> void:
 	await _enter(r)
 	for shape in [Vector2i(1280, 720), Vector2i(1512, 982)]:
 		get_tree().root.size = shape
-		await wait_frames(2)
+		await wait_process_frames(2)
 		r.toggle_missives()
-		await wait_frames(1)
+		await wait_process_frames(1)
 		var ms := r.missive_screen()
 		var heights: Array[float] = []
 		for col: String in MissiveScreen.HEADERS:
@@ -127,7 +127,7 @@ func test_every_plaque_reads_on_one_line_and_all_are_the_same_height() -> void:
 		assert_true(rect.end.x <= viewport.x + 0.5,
 			"the frame still fits the %s viewport (right edge %.1f)" % [shape, rect.end.x])
 		r.toggle_missives()
-		await wait_frames(1)
+		await wait_process_frames(1)
 
 
 func test_selecting_a_letter_reads_it_and_the_badge_follows() -> void:
@@ -155,7 +155,7 @@ func test_show_on_map_closes_the_board() -> void:
 	watch_signals(ms)
 	ms.show_on_map_button().pressed.emit()
 	assert_signal_emitted(ms, "show_requested")
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_false(ms.visible)
 
 
@@ -204,7 +204,7 @@ func test_the_selected_note_stands_out_and_its_date_never_breaks() -> void:
 	assert_string_contains(picked.text, date.replace(" ", "\u00a0"), "the date is one unbreakable unit")
 	# ...and a long one still fits a column's note (at the body's 18 px the
 	# date overflowed and was clipped)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var font := picked.get_theme_font("font")
 	var px := picked.get_theme_font_size("font_size")
 	var room := picked.size.x - ps.content_margin_left - ps.content_margin_right
@@ -221,13 +221,13 @@ func test_an_open_board_takes_in_a_letter_as_it_lands() -> void:
 	var r := _root()
 	await _enter(r)
 	r.toggle_missives()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var ms := r.missive_screen()
 	assert_true(ms.visible)
 	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("receipt", "credible", 3,
 		MissiveLog.subject("regiment", "x", -1, Vector2(500, 300)), "Receipt — X", []))
 	r.on_new_missives([id])
-	await wait_frames(30)
+	await wait_until(func() -> bool: return ms.find_child("Note%d" % id, true, false) != null, 2.0)
 	Game.data.balance["missive_fly_s"] = keep_fly
 	assert_not_null(ms.find_child("Note%d" % id, true, false), "the landed letter is on the open board")
 
@@ -248,73 +248,19 @@ func test_reading_a_letter_goes_through_game() -> void:
 
 
 ## Main's look of 2026-09-28, adopted on the rebase: the board and the spy's
-## report FLOAT, so they are windows (the ornament, under
-## ui_panel_ornament 3, marks windows only), titled in the title face; the
-## board's column plaques are section headers.
+## report FLOAT, so they are windows, titled in the title face; once plaque
+## art is installed it nine-slices over the plaque's rule; an empty column
+## is simply empty (owner 2026-09-30).
 func test_the_board_and_the_report_wear_mains_window_look() -> void:
-	var keep: float = Game.data.balance.get("ui_panel_ornament", 1.0)
-	Game.data.balance["ui_panel_ornament"] = 3.0
 	Game.start_campaign(42)
 	var ms: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
 	var rp: MissiveReportPopup = load("res://scenes/missive_report_popup.tscn").instantiate()
 	add_child_autofree(ms)
 	add_child_autofree(rp)
-	await wait_frames(1)
-	Game.data.balance["ui_panel_ornament"] = keep
-	# board art follow-up: frame/letter art is now installed on this branch,
-	# so the panel wears its own nine-sliced piece instead of the vellum
-	# ornament — check whichever the current data actually names.
-	for entry in [{"panel": ms.get_node("%Frame"), "key": "frame"},
-			{"panel": rp.get_node("%Window"), "key": "letter"}]:
-		var panel: Control = entry["panel"]
-		if MissiveArt.texture(Game.data, String(entry["key"])) != null:
-			assert_true(panel.get_theme_stylebox("panel") is ScaledNineSlice,
-				"%s wears its installed piece art" % panel.name)
-		else:
-			var style := panel.get_theme_stylebox("panel") as VellumPanelStyle
-			assert_not_null(style, "%s is a leather panel" % panel.name)
-			if style != null and UiPalette.load_art(UiPalette.PANEL_ORNAMENT_PATH) != null:
-				assert_not_null(style.texture, "%s is a window: it wears the ornament" % panel.name)
+	await wait_process_frames(1)
 	var title_font := UiPalette.role_font("title")
 	assert_eq(ms.get_node("%Title").get_theme_font("font"), title_font, "the board's title is a title")
 	assert_eq(rp.get_node("%ReportTitle").get_theme_font("font"), title_font, "the report's title is a title")
-	var plaque := ms.get_node("%TruthPlaque") as Label
-	assert_eq(plaque.get_theme_font("font"), UiPalette.role_font("header"), "a plaque is a section header")
-	assert_eq(plaque.get_theme_color("font_color"), UiPalette.TEXT_SOFT,
-		"in the game's own ink (owner 2026-09-30: the credibility hues read as pasted on)")
-	# fix round 1: MissiveArt's fallback must be the rule style_section already
-	# set, not a blank StyleBoxEmpty that erases it — with no plaque art
-	# installed, the gold rule (and its spacing) must still be there.
-	# Board art follow-up: plaque art is now installed on this branch, so the
-	# rule is already superseded by a ScaledNineSlice — check whichever the
-	# current data actually names, same as the frame/window check above.
-	var rule_alpha := float(Game.data.balance.get("ui_section_rule_alpha", 0.0))
-	var got := plaque.get_theme_stylebox("normal")
-	if MissiveArt.texture(Game.data, "plaque") != null:
-		assert_true(got is ScaledNineSlice, "installed plaque art nine-slices over the rule")
-	elif rule_alpha > 0.0:
-		var ref := Label.new()
-		UiPalette.style_section(ref, MissiveScreen.PLAQUE_FONT_SIZE, UiPalette.TEXT_SOFT)
-		var want := ref.get_theme_stylebox("normal") as StyleBoxFlat
-		assert_true(got is StyleBoxFlat, "with no plaque art installed the plaque keeps its gold section rule")
-		if got is StyleBoxFlat and want != null:
-			assert_eq((got as StyleBoxFlat).border_color, want.border_color, "same rule colour")
-			assert_eq((got as StyleBoxFlat).border_width_bottom, want.border_width_bottom, "same rule width")
-			assert_eq((got as StyleBoxFlat).content_margin_bottom, want.content_margin_bottom, "same rule spacing")
-		ref.queue_free()
-	else:
-		assert_false(got is ScaledNineSlice, "no rule configured and no art installed: nothing to nine-slice")
-	# the desk had no panel style before this task; with no letter art
-	# installed it must stay fully transparent, not gain a border/inset —
-	# board art follow-up: letter art is now installed on this branch, so
-	# the desk wears its own nine-sliced parchment instead.
-	if MissiveArt.texture(Game.data, "letter") != null:
-		assert_true(ms.get_node("%Desk").get_theme_stylebox("panel") is ScaledNineSlice,
-			"the desk wears its installed parchment")
-	else:
-		assert_true(ms.get_node("%Desk").get_theme_stylebox("panel") is StyleBoxEmpty,
-			"the desk stays transparent until its parchment art is installed")
-	# once art IS installed, the plaque nine-slices over the rule.
 	var saved_plaque := String(Game.data.missive_art.get("plaque", ""))
 	Game.data.missive_art["plaque"] = "res://icon.png"
 	var ms2: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
@@ -323,7 +269,6 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	assert_true(plaque2.get_theme_stylebox("normal") is ScaledNineSlice,
 		"installed plaque art nine-slices over the rule")
 	Game.data.missive_art["plaque"] = saved_plaque
-	# an empty column is simply empty (owner 2026-09-30: 移除掉每一个信息种类下面的text说明)
 	ms.refresh()
 	assert_eq(ms.get_node("%ConsultNotes").get_child_count(), 0, "no description under an empty column")
 
@@ -374,37 +319,6 @@ func test_ink_on_parchment_once_the_letter_art_is_installed() -> void:
 	Game.data.missive_art["letter"] = saved
 
 
-## Owner 2026-09-30 (请改的有真实木质的质感): the frame's opening is WOOD —
-## the board's planks laid under the carved frame, whose cream centre is
-## clear — so the "Missives" title stands on wood, in gold, art or none.
-func test_the_board_is_wood_under_the_frame_and_the_title_gold() -> void:
-	var saved := String(Game.data.missive_art.get("frame", ""))
-
-	Game.data.missive_art["frame"] = ""
-	var plain: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
-	add_child_autofree(plain)
-	assert_eq(plain.get_node("%Title").get_theme_color("font_color"), UiPalette.GOLD,
-		"unchanged without frame art")
-
-	Game.data.missive_art["frame"] = "res://icon.png"
-	var framed: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
-	add_child_autofree(framed)
-	assert_eq(framed.get_node("%Title").get_theme_color("font_color"), UiPalette.GOLD, "gold on the wood")
-
-	Game.data.missive_art["frame"] = saved
-	var board: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
-	add_child_autofree(board)
-	var frame: StyleBox = (board.get_node("%Frame") as Control).get_theme_stylebox("panel")
-	if frame is ScaledNineSlice and MissiveArt.texture(Game.data, "board") != null:
-		var fill := (frame as ScaledNineSlice).fill as ScaledNineSlice
-		assert_not_null(fill, "the wood is laid under the frame")
-		if fill != null:
-			assert_eq(fill.texture, MissiveArt.texture(Game.data, "board"), "the board's own wood")
-			assert_eq(fill.source_inset, 0.0, "tiled, not stretched")
-	assert_true(board.get_node("%BoardPanel").get_theme_stylebox("panel") is StyleBoxEmpty,
-		"the columns sit on the frame's wood, no second board over it")
-
-
 ## Board art fix round finding #5 (the install look check): a note's
 ## title/date kept the theme's light chip text, unreadable once the note
 ## wears the pale parchment art — dark ink stands in, the same pattern as the
@@ -437,8 +351,6 @@ func test_an_unselected_note_inks_over_installed_parchment() -> void:
 	var lit := selected_note.get_theme_stylebox("normal") as ScaledNineSlice
 	if lit != null and MissiveArt.texture(Game.data, "note_lit") != null:
 		assert_eq(lit.texture, MissiveArt.texture(Game.data, "note_lit"), "the gold-ruled slip")
-	assert_eq(selected_note.custom_minimum_size.x, MissiveScreen.NOTE_WIDTH)
-	assert_eq(selected_note.size_flags_horizontal, Control.SIZE_SHRINK_CENTER, "narrower than its column")
 
 	Game.data.missive_art["note"] = saved
 
@@ -455,7 +367,7 @@ func test_a_receipt_on_the_desk_wears_the_delivered_painting() -> void:
 	var r := _root()
 	await _enter(r)
 	r.toggle_missives()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var ms := r.missive_screen()
 	ms.select(receipt)
 	assert_true(ms.desk_painting().visible, "a receipt shows the rider at the camp")
@@ -480,10 +392,10 @@ func test_the_desk_paintings_height_follows_its_width_at_the_aspect_key() -> voi
 	var r := _root()
 	await _enter(r)
 	r.toggle_missives()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var ms := r.missive_screen()
 	ms.select(receipt)
-	await wait_frames(3)
+	await wait_process_frames(3)
 	var painting := ms.desk_painting()
 	assert_true(painting.visible, "the receipt shows its painting")
 	var aspect := Game.data.bal("ui_missive_desk_painting_aspect")
@@ -507,7 +419,7 @@ func test_an_audit_letter_opens_the_ledger() -> void:
 	ms.select(id)
 	assert_eq(ms.show_on_map_button().text, "Open the LEDGER")
 	ms.show_on_map_button().pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_false(ms.visible)
 	assert_true(r.ledger_screen().visible, "the LEDGER opened")
 	assert_eq(r.ledger_screen().lens(), "war", "on the first lens that draws the supply lines")

@@ -49,12 +49,13 @@ func test_a_click_on_the_dim_closes_it() -> void:
 	assert_false(panel.visible)
 
 
+## The court on a fresh reign, as Start Game begins it but without the
+## opening narration's screen, which no test here needs.
 func _court() -> GameRoot:
+	Game.start_campaign(44)   # the seed Start Game begins
+	Game.next_tick()
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
-	await wait_process_frames(2)
-	var menu: MainMenu = r.current_screen
-	menu.menu_column().get_node("StartGame").pressed.emit()
 	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)

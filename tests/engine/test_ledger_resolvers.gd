@@ -1,5 +1,6 @@
 # tests/engine/test_ledger_resolvers.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The LEDGER's readers return the truth the real systems hold (spec
 ## 2026-09-30 §7.2); Ledger turns it into belief (Task 4).
 
@@ -7,9 +8,9 @@ var data: DataRepository
 var s: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	assert_not_null(data, DataRepository.last_error)
-	s = GameState.new_campaign(data, 42)
+	s = SuiteData.campaign(data, 42)
 	RealmEconomy.forget()
 
 func after_each() -> void:

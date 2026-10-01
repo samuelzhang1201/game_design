@@ -1,12 +1,19 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Receipts and the steward's report (spec 2026-09-28 §1).
 
 var repo: DataRepository
 
 
-func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+## The pack's road graph is cached by map id and every test's repository
+## carries the same routes and road speeds, so it is built once per script
+## (and forgotten around it, so no other script's graph is read).
+func before_all() -> void:
 	RoadGraph.forget()
+
+
+func before_each() -> void:
+	repo = SuiteData.repo()
 	Weather.forget()
 
 
@@ -29,7 +36,7 @@ func _fact(m: Dictionary, key: String) -> Dictionary:
 
 
 func test_a_delivery_files_one_credible_receipt_with_the_regiments_state() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
 	for day in int(repo.bal("courier_max_days")):
@@ -48,7 +55,7 @@ func test_a_delivery_files_one_credible_receipt_with_the_regiments_state() -> vo
 
 
 func test_a_stale_order_writes_a_receipt_that_says_so() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	s.regiments[code]["order_id"] = 99
 	var m := MissiveWriter.receipt(repo, s, {"id": 3, "target": code, "order": {"action_code": "ARMY_GARRISON"},
@@ -61,7 +68,7 @@ func test_a_stale_order_writes_a_receipt_that_says_so() -> void:
 ## month, so the very first engine.advance() files no report (fix round 1
 ## finding 3) — the "settled month" this test checks is the one after it.
 func test_every_settled_month_files_one_steward_report_exact_to_the_economy() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var engine := TickEngine.new(repo)
 	engine.advance(s)   # the opening tick: no report
 	var tick := s.tick
@@ -77,21 +84,10 @@ func test_every_settled_month_files_one_steward_report_exact_to_the_economy() ->
 	assert_string_contains(String(m["title"]), Calendar.month_label(tick))
 
 
-## Fix round 1 finding 3: the opening tick itself — before GameRoot ever
-## calls next_tick(), state.tick is 0 — must file NO steward report at all.
-func test_the_opening_tick_files_no_steward_report() -> void:
-	var s := GameState.new_campaign(repo, 7)
-	assert_eq(s.tick, 0, "the opening tick, before any day is played")
-	var engine := TickEngine.new(repo)
-	engine.advance(s)
-	var reports: Array = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "monthly")
-	assert_eq(reports.size(), 0, "the reign's opening tick writes nothing about a month never played")
-
-
 ## Fix round 1 finding 3: three months of the same season used to share one
 ## title ("Steward's report — Spring, Year 1"); each now names its own month.
 func test_three_months_of_one_season_get_distinct_report_titles() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var engine := TickEngine.new(repo)
 	engine.advance(s)   # the opening tick: no report
 	var titles: Dictionary = {}

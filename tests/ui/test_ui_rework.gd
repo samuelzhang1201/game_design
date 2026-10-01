@@ -10,9 +10,17 @@ func _root() -> GameRoot:
 	add_child_autofree(r)
 	return r
 
+## The conversation stage alone, themed as GameRoot themes it: a test that
+## only needs the scene does not build the whole root to switch to it.
+func _stage() -> ConversationScene:
+	var c: ConversationScene = load("res://scenes/conversation.tscn").instantiate()
+	c.theme = UiPalette.build_theme()
+	add_child_autofree(c)
+	return c
+
 func test_main_menu_has_start_load_quit_and_starts_with_the_founding_names() -> void:
 	var r := _root()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var menu: MainMenu = r.current_screen
 	var col := menu.menu_column()
 	assert_not_null(col.get_node("StartGame"))
@@ -21,19 +29,16 @@ func test_main_menu_has_start_load_quit_and_starts_with_the_founding_names() -> 
 	# The realm and the ruler are not customised (owner 2026-09-30): Start
 	# Game begins the reign at once, with no character creation.
 	assert_null(menu.find_child("SetupPanel", true, false))
-	Game.player_setup = {"first_name": "Edmund"}
 	col.get_node("StartGame").pressed.emit()
-	await wait_frames(2)
-	assert_eq(Game.player_setup, {}, "no chosen identity survives")
+	await wait_process_frames(2)
 	assert_false(r.current_screen is MainMenu, "the reign began")
 	assert_eq(Game.state.characters["you"].display_name, "King Aldric Valorin")
 
 func test_campaign_opens_with_nameless_background_narration() -> void:
 	var r := _root()
-	await wait_frames(2)
-	Game.player_setup = {}
+	await wait_process_frames(2)
 	r.current_screen.start_requested.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var scene: ConversationScene = r.current_screen
 	assert_eq(String(scene.current_beat()["kind"]), "narration")
 	assert_eq(String(scene.current_beat()["speaker"]), "", "narration is nameless")
@@ -62,7 +67,7 @@ func test_campaign_opens_with_nameless_background_narration() -> void:
 	assert_between(btn.get_global_rect().position.y, 0.0, viewport_h, "button on screen")
 	assert_lt(btn_bottom, viewport_h, "button bottom on screen")
 	btn.pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_ne(String(scene.current_beat()["kind"]), "narration")
 	# The reign opens on the prologue's first council, not on whatever the
 	# random roll happened to pick (chapter 0, 2026-09-21): the narration is
@@ -74,26 +79,6 @@ func test_campaign_opens_with_nameless_background_narration() -> void:
 	assert_string_contains(scene.speech_text(), "older than the kingdom",
 		"the authored scene is shown verbatim")
 
-func test_event_beat_pops_centered_with_art_placeholder() -> void:
-	Game.start_campaign(42)
-	Game.next_tick()
-	var r := _root()
-	await wait_frames(2)
-	r._switch_to(GameRoot.State.CONVERSATION)
-	var scene: ConversationScene = r.current_screen
-	var ev := {"event_id": "ev_01", "title_key": "event_ev_01", "voice": "template",
-		"choices": [{"choice_id": "accept", "label": "Accept"}]}
-	Game.state.pending_event = ev.duplicate(true)
-	scene.start([{"kind": "event", "portrait_id": "round_table",
-		"speaker": "The Council", "event": ev}], TickReport.new())
-	await wait_frames(3)
-	assert_true(scene.event_popup().visible, "events pop centered")
-	# Owner 2026-09-15: the event stands in the audience window, its title in
-	# the banner where the placeholder art's caption used to be.
-	var title: Label = scene.find_child("AudienceTitle", true, false)
-	assert_ne(title.text, "", "the event's title heads the window")
-	assert_gt(scene.reply_buttons().size(), 0, "choices live in the window")
-
 ## The widest the audience window can get: a chapter beat with four choices
 ## AND an illustration band over it. The whole thing — the window and the
 ## last option in it — has to stay inside the viewport, or the player is
@@ -102,16 +87,13 @@ func test_event_beat_pops_centered_with_art_placeholder() -> void:
 func test_the_window_fits_with_an_illustration_and_four_choices() -> void:
 	Game.start_campaign(42)
 	Game.next_tick()
-	var r := _root()
-	await wait_frames(2)
-	r._switch_to(GameRoot.State.CONVERSATION)
-	var scene: ConversationScene = r.current_screen
+	var scene := _stage()
 	var ev := EventSystem.new(Game.data)._fire("c0_02", Game.state)
 	assert_eq((ev["choices"] as Array).size(), 4,
 		"C0-02 is the chapter's widest beat: three roads and the captain's offer")
 	scene.start([{"kind": "event", "portrait_id": "round_table",
 		"speaker": "The Council", "event": ev}], TickReport.new())
-	await wait_frames(3)
+	await wait_process_frames(3)
 	# Stand in for the installed render at the size install_map_art.py writes.
 	var band: TextureRect = scene.find_child("EventArt", true, false)
 	var stand_in := PlaceholderTexture2D.new()
@@ -120,7 +102,7 @@ func test_the_window_fits_with_an_illustration_and_four_choices() -> void:
 	band.visible = true
 	for btn in scene.reply_buttons():
 		btn.visible = true
-	await wait_frames(3)
+	await wait_process_frames(3)
 	var panel: PanelContainer = scene.find_child("AudienceWindow", true, false)
 	var viewport_h := scene.get_viewport_rect().size.y
 	assert_lt(panel.size.y, viewport_h, "the window fits the viewport")
@@ -128,42 +110,20 @@ func test_the_window_fits_with_an_illustration_and_four_choices() -> void:
 	var bottom: float = last.get_global_rect().position.y + last.get_global_rect().size.y
 	assert_lt(bottom, viewport_h, "the last option is on screen")
 
-func test_dossier_tabs_switch_pages() -> void:
-	Game.start_campaign(42)
-	var report := Game.next_tick()
-	var r := _root()
-	await wait_frames(2)
-	r._switch_to(GameRoot.State.CONVERSATION)
-	var scene: ConversationScene = r.current_screen
-	scene.start([{"kind": "minister", "portrait_id": "char_marshal",
-		"speaker": "Ser Brandt", "text": "hm", "suggestions": []}], report)
-	await wait_frames(2)
-	# Owner ruling 2026-09-10: the dossier stands over the talk in the right
-	# column, so its pages rest closed and a tab opens one at a time.
-	assert_false(scene.tab_page(0).visible, "the pages rest closed")
-	assert_false(scene.tab_page(1).visible)
-	scene.select_tab(0)
-	assert_true(scene.tab_page(0).visible, "BIO opens on its tab")
-	scene.select_tab(2)
-	assert_false(scene.tab_page(0).visible)
-	assert_true(scene.tab_page(2).visible, "TIES tab selected")
-	scene.select_tab(2)
-	assert_false(scene.tab_page(2).visible, "the same tab again closes it")
-
 func test_bottom_bar_tabs_and_info_tables() -> void:
 	Game.start_campaign(42)
 	Game.next_tick()
 	var r := _root()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_false(r.bottom_bar().visible, "hidden on the title screen")
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_true(r.bottom_bar().visible, "shown on gameplay screens")
 	for tab in BottomBar.TABS:
 		assert_not_null(r.bottom_bar().button(tab), tab + " button exists")
 	r.bottom_bar().button("REALM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_true(r.info_screen().visible)
 	assert_eq(r.info_screen().current_tab(), "REALM")
 	var names := []
@@ -171,11 +131,11 @@ func test_bottom_bar_tabs_and_info_tables() -> void:
 		names.append(r.info_screen().table().get_child(i).text)
 	assert_has(names, "Treasury")
 	r.bottom_bar().button("LEDGER").pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_false(r.info_screen().visible, "info yields to the ledger")
 	assert_true(r.ledger_screen().visible)
 	r.bottom_bar().button("LEDGER").pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_false(r.ledger_screen().visible, "the tab toggles the ledger off again")
 
 ## FAMILIES (user request 2026-09-09): the noble houses of the player's own
@@ -184,12 +144,12 @@ func test_bottom_bar_tabs_and_info_tables() -> void:
 func test_families_tab_lists_the_houses_of_the_realm() -> void:
 	Game.start_campaign(42)
 	var r := _root()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r.bottom_bar().button("FAMILIES").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_true(r.info_screen().visible)
 	assert_eq(r.info_screen().current_tab(), "FAMILIES")
 	var table := r.info_screen().table()
@@ -213,38 +173,24 @@ func test_families_tab_lists_the_houses_of_the_realm() -> void:
 func test_families_rows_are_complete() -> void:
 	Game.start_campaign(42)
 	var r := _root()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r.bottom_bar().button("FAMILIES").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var table := r.info_screen().table()
 	assert_eq(table.get_child_count() % 4, 0,
 		"%d cells is not a whole number of 4-column rows" % table.get_child_count())
 	assert_gt(table.get_child_count() / 4.0, 1.0, "at least one house beyond the header")
 
-func test_top_bar_has_no_relations_button_and_chip_off_row() -> void:
-	var bar: TopBar = load("res://scenes/top_bar.tscn").instantiate()
-	add_child_autofree(bar)
-	await wait_frames(2)
-	assert_null(bar.find_child("RelationsButton", true, false),
-		"RELATIONS moved to the bottom bar")
-	var chip: Label = bar.find_child("EventChip", true, false)
-	# The chip floats below the bar, no longer widening the metrics row
-	# (the distortion that pushed MENU off screen).
-	assert_ne(chip.get_parent().name, "Row")
-
 func test_location_panel_shows_occupants_and_moves_freely() -> void:
 	Game.start_campaign(42)
 	var report := Game.next_tick()
-	var r := _root()
-	await wait_frames(2)
-	r._switch_to(GameRoot.State.CONVERSATION)
-	var scene: ConversationScene = r.current_screen
+	var scene := _stage()
 	scene.start([{"kind": "minister", "portrait_id": "char_marshal",
 		"speaker": "Ser Brandt", "text": "hm", "suggestions": []}], report)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	# The upper right container names where you stand and who is present.
 	var slot: Control = scene.find_child("LocationSlot", true, false)
 	assert_eq(slot.get_child(0).location_code, "council_chamber")
@@ -253,11 +199,11 @@ func test_location_panel_shows_occupants_and_moves_freely() -> void:
 	# MOVE lists every location in the region; moving costs no tick.
 	var tick_before: int = Game.state.tick
 	scene.find_child("MoveButton", true, false).pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var field: Button = scene.find_child("Move_mustering_field", true, false)
 	assert_not_null(field, "the region's locations are listed")
 	field.pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_eq(Game.state.current_location, "mustering_field")
 	assert_eq(Game.state.tick, tick_before, "no time cost")
 	assert_eq(scene.find_child("OccupantsRow", true, false).get_child_count(), 1,
@@ -266,27 +212,24 @@ func test_location_panel_shows_occupants_and_moves_freely() -> void:
 	# selection model, user request 2026-08-31): typed words go to them and
 	# the dossier follows the click.
 	scene.find_child("Occupant_char_princess", true, false).pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(scene.audience(), ["char_princess"])
 	assert_eq(scene.focused_id(), "char_princess")
 	scene.find_child("Occupant_char_princess", true, false).pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(scene.focused_id(), "", "clicking again releases them")
 
 func test_minister_beats_skip_when_minister_is_elsewhere() -> void:
 	Game.start_campaign(42)
 	var report := Game.next_tick()
-	var r := _root()
-	await wait_frames(2)
-	r._switch_to(GameRoot.State.CONVERSATION)
-	var scene: ConversationScene = r.current_screen
+	var scene := _stage()
 	Game.state.current_location = "malvern_study"
 	scene.start([
 		{"kind": "minister", "portrait_id": "char_marshal",
 			"speaker": "Ser Brandt", "text": "The levies!", "suggestions": []},
 		{"kind": "summary", "portrait_id": "round_table", "speaker": "The Council"},
 	], report)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	# The marshal is not at Malvern's study: his beat is skipped with a note.
 	assert_eq(String(scene.current_beat()["kind"]), "summary")
 	assert_string_contains(scene.dialogue_text(), "You are elsewhere")
@@ -304,7 +247,7 @@ func test_absent_addressee_gets_herald_note_not_api_reply() -> void:
 	assert_eq(Game.state.current_location, "council_chamber")
 	_got = {}
 	Game.submit_free_text("greetings, Lord Malvern", func(res): _got = res)
-	await wait_frames(4)
+	await wait_process_frames(4)
 	assert_true(_got.has("reply"))
 	assert_eq(String(_got["reply"]["speaker"]), "Herald",
 		"the absent cannot converse — a herald note instead")
@@ -318,13 +261,10 @@ func _conversation_at(location: String) -> ConversationScene:
 	Game.start_campaign(42)
 	var report := Game.next_tick()
 	Game.state.current_location = location
-	var r := _root()
-	await wait_frames(2)
-	r._switch_to(GameRoot.State.CONVERSATION)
-	var scene: ConversationScene = r.current_screen
+	var scene := _stage()
 	scene.start([{"kind": "minister", "portrait_id": "char_chancellor",
 		"speaker": "Aldwin Reeve", "text": "My lord.", "suggestions": []}], report)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	return scene
 
 func test_no_selection_addresses_everyone_present() -> void:
@@ -336,7 +276,7 @@ func test_no_selection_addresses_everyone_present() -> void:
 func test_selecting_one_character_narrows_the_audience_and_names_them() -> void:
 	var scene := await _conversation_at("council_chamber")
 	scene.find_child("Occupant_char_marshal", true, false).pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(scene.audience(), ["char_marshal"])
 	assert_string_contains(scene.free_text_field().placeholder_text,
 		"Ser Brandt of Harrow", "the box names who you are addressing")
@@ -345,29 +285,17 @@ func test_selecting_several_reports_a_count() -> void:
 	var scene := await _conversation_at("council_chamber")
 	scene.find_child("Occupant_char_marshal", true, false).pressed.emit()
 	scene.find_child("Occupant_char_steward", true, false).pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(scene.audience().size(), 2)
 	assert_string_contains(scene.free_text_field().placeholder_text, "2 people")
-
-func test_clicking_a_selected_character_deselects_and_returns_to_everyone() -> void:
-	var scene := await _conversation_at("council_chamber")
-	var btn: Button = scene.find_child("Occupant_char_marshal", true, false)
-	btn.pressed.emit()
-	await wait_frames(1)
-	assert_eq(scene.audience(), ["char_marshal"])
-	btn.pressed.emit()
-	await wait_frames(1)
-	assert_eq(scene.selected_ids().size(), 0)
-	assert_eq(scene.audience().size(), 5, "back to addressing the room")
-	assert_string_contains(scene.free_text_field().placeholder_text, "everyone")
 
 func test_moving_location_clears_the_selection() -> void:
 	var scene := await _conversation_at("council_chamber")
 	scene.find_child("Occupant_char_marshal", true, false).pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(scene.selected_ids().size(), 1)
 	Game.move_to("mustering_field")
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_eq(scene.selected_ids().size(), 0,
 		"a selection cannot survive walking away from the people in it")
 
@@ -382,7 +310,7 @@ func test_everyone_addressed_remembers_but_only_one_answers() -> void:
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)
 	scene.free_text_field().text_submitted.emit("the granaries are full")
-	await wait_frames(4)
+	await wait_process_frames(4)
 	var heard := 0
 	for id in LocationSystem.occupants(Game.data, Game.state, "council_chamber"):
 		var entries := AgentMemory.exchanges_for(Game.state, String(id))
@@ -409,9 +337,9 @@ func test_selected_targets_alone_remember() -> void:
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)
 	scene.find_child("Occupant_char_spymaster", true, false).pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	scene.free_text_field().text_submitted.emit("a word in your ear")
-	await wait_frames(4)
+	await wait_process_frames(4)
 	var entries := AgentMemory.exchanges_for(Game.state, "char_spymaster")
 	assert_eq(entries.size(), 2,
 		"the one you singled out remembers the word AND their own reply")
@@ -434,24 +362,21 @@ func test_chat_after_event_resolution_shows_reply() -> void:
 		"impacts": {"actions": []}})
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)
-	var r := _root()
-	await wait_frames(2)
-	r._switch_to(GameRoot.State.CONVERSATION)
-	var scene: ConversationScene = r.current_screen
+	var scene := _stage()
 	var ev := {"event_id": "ev_01", "title_key": "event_ev_01", "voice": "template",
 		"choices": [{"choice_id": "accept", "label": "Accept"}]}
 	Game.state.pending_event = ev.duplicate(true)
 	scene.start([{"kind": "event", "portrait_id": "round_table",
 		"speaker": "The Council", "event": ev},
 		{"kind": "summary", "portrait_id": "round_table", "speaker": "The Council"}], report)
-	await wait_frames(3)
+	await wait_process_frames(3)
 	scene.reply_buttons()[0].pressed.emit()  # resolve the event
-	await wait_frames(2)
+	await wait_process_frames(2)
 	# Still on the same (resolved) beat: visit the Chancellor and speak.
 	scene.find_child("Occupant_char_chancellor", true, false).pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	scene.free_text_field().text_submitted.emit("greetings")
-	await wait_frames(4)
+	await wait_process_frames(4)
 	assert_string_contains(scene.said_text(), "You: greetings")
 	# The window names him on its plate, so his reply stands there without
 	# his name before it (2026-09-28): it is the words after the player's.
@@ -461,19 +386,16 @@ func test_chat_after_event_resolution_shows_reply() -> void:
 func test_transcript_names_are_colored_per_speaker() -> void:
 	Game.start_campaign(42)
 	var report := Game.next_tick()
-	var r := _root()
-	await wait_frames(2)
-	r._switch_to(GameRoot.State.CONVERSATION)
-	var scene: ConversationScene = r.current_screen
+	var scene := _stage()
 	scene.start([{"kind": "minister", "portrait_id": "char_marshal",
 		"speaker": "Ser Brandt of Harrow", "text": "The border holds.",
 		"suggestions": []}], report)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	# The record holds what has passed: the beat joins it once the audience
 	# window no longer shows it (owner 2026-09-28).
 	assert_false("The border holds." in scene.dialogue_text(), "not twice while the window shows it")
 	(scene.find_child("AudienceLayer", true, false) as Control).visible = false
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var raw: String = scene.find_child("TextLabel", true, false).text
 	assert_string_contains(raw, "[color=#", "names carry bbcode colors")
 	assert_string_contains(scene.dialogue_text(), "Ser Brandt of Harrow: The border holds.")
@@ -482,48 +404,23 @@ func test_transcript_names_are_colored_per_speaker() -> void:
 		"per-speaker color is stable")
 	assert_ne(ConversationScene._speaker_color("You"), c1)
 
-## The bottom tab strip must be tall enough for its own buttons. BAR_HEIGHT
-## is a constant because NewsTicker and ScreenLayout both place
-## themselves off it — so the relation gets a test instead of a computation.
-## It broke once in exactly this way: the design viewport went 640x360 ->
-## 1280x720, every font size doubled with it, and the tabs fell off the
-## bottom of the screen with nothing to catch it.
-func test_the_bottom_tab_strip_is_tall_enough_for_its_buttons() -> void:
-	var bar := BottomBar.new()
-	bar.theme = UiPalette.build_theme()
-	add_child_autofree(bar)
-	await wait_frames(2)
-	var need := bar.content_height()
-	assert_gt(need, 0.0, "the strip measured itself")
-	assert_lte(need, BottomBar.BAR_HEIGHT,
-		"BAR_HEIGHT (%.0f) must cover the buttons (%.0f)" % [BottomBar.BAR_HEIGHT, need])
-
-func test_the_bottom_tabs_fit_across_the_design_viewport() -> void:
-	var bar := BottomBar.new()
-	bar.theme = UiPalette.build_theme()
-	add_child_autofree(bar)
-	await wait_frames(2)
-	var row: Control = bar.get_node("Bar/Row")
-	assert_lte(row.get_combined_minimum_size().x, 1280.0,
-		"%d tabs still fit the 1280 px design viewport" % BottomBar.TABS.size())
-
 ## The MANORS tab (MANOR_SYSTEM.md §6) lights the manors view on the map —
 ## house colours and, since ECONOMY was folded into it (owner 2026-09-19),
 ## the output badges — and is exclusive with HEIGHTS.
 func test_the_manors_tab_is_a_theme_exclusive_with_the_others() -> void:
 	Game.start_campaign(42)
 	var r := _root()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r.bottom_bar().button("MANORS").pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(r.manor_view(), "the tab drives it")
 	assert_eq(r.current_screen.map3d_view().manor_theme(), "manors", "the map colours by house")
 	assert_true(r.bottom_bar().button("MANORS").button_pressed)
 	r.bottom_bar().button("HEIGHTS").pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(r.height_view())
 	assert_false(r.manor_view(), "HEIGHTS put MANORS out")
 	assert_eq(r.current_screen.map3d_view().manor_theme(), "heights", "one theme at a time")

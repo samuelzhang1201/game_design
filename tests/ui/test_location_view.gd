@@ -17,7 +17,7 @@ func test_the_banner_fits_a_thin_slot() -> void:
 	var slot := _slot(Vector2(128, 22))
 	var view := LocationView.instantiate_for("council_chamber")
 	slot.add_child(view)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_almost_eq(view.size.y, 22.0, 0.5,
 		"the view takes the slot's height, not the 52 px design height")
 	var label: Label = view.get_node("Gen_Label")
@@ -32,6 +32,6 @@ func test_a_roomy_slot_keeps_the_design_size() -> void:
 	add_child_autofree(host)
 	var view := LocationView.instantiate_for("council_chamber")
 	host.add_child(view)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_almost_eq(view.size.y, LocationView.VIEW_SIZE.y, 0.5,
 		"with no slot minimum the view keeps its own design size")

@@ -28,21 +28,18 @@ var engine: TickEngine
 var current_report: TickReport
 var client: OpenAIClient
 var voicer: Voicer
+## Makes a new campaign from (data, seed): GameState.new_campaign unless the
+## test suite hands its cached copier here (tests/pre_run.gd, tests/suite_data.gd).
+var campaign_maker: Callable = GameState.new_campaign
 
 func _ready() -> void:
 	data = DataRepository.load_all("res://data")
 	assert(data != null, "data load failed: " + DataRepository.last_error)
 
-## Set by the main menu's character creation before start_requested fires;
-## applied to the fresh campaign, then kept in the save via GameState.
-var player_setup: Dictionary = {}
-
 func start_campaign(seed_value: int = 42) -> void:
 	_reset_llm()
 	hold_clock(false)  # a reign never begins held (the LEDGER's hold is its viewing's)
-	state = GameState.new_campaign(data, seed_value)
-	if not player_setup.is_empty():
-		state.apply_player_setup(player_setup)
+	state = campaign_maker.call(data, seed_value)
 	engine = TickEngine.new(data)
 
 ## The clock (owner 2026-09-13): 0 is paused, 1 a day per time_day_seconds,

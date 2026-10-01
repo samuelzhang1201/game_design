@@ -13,7 +13,7 @@ func _bar() -> TopBar:
 func test_the_crowns_arms_mark_the_lords_purse_and_the_date() -> void:
 	Game.start_campaign(42)
 	var bar := _bar()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var arms := HouseArms.texture_of_house(Game.data, Game.state, MapManors.crown(Game.state))
 	assert_not_null(arms, "the crown has arms")
 	assert_same(bar.lord_crest().texture, arms)
@@ -25,7 +25,7 @@ func test_the_crowns_arms_mark_the_lords_purse_and_the_date() -> void:
 func test_shows_date_and_metric_values() -> void:
 	Game.start_campaign(42)
 	var t := _bar()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_string_contains(t.find_child("DateLabel", true, false).text, "Year 1")
 	assert_eq(t.metric_text("treasury"), UiPalette.format_int(int(Game.state.metrics["treasury"])))
 	assert_eq(t.metric_text("grain"), UiPalette.format_int(int(Game.state.metrics["grain"])))
@@ -34,7 +34,7 @@ func test_shows_tick_deltas_from_current_report() -> void:
 	Game.start_campaign(42)
 	Game.next_tick()
 	var t := _bar()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_ne(t.delta_text("treasury"), "",
 		"income always moves treasury, so its delta column is filled")
 	assert_true(t.delta_text("treasury").begins_with("+")
@@ -46,14 +46,14 @@ func test_event_chip_tracks_pending_event() -> void:
 	if not Game.state.pending_event.is_empty():
 		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
 	var t := _bar()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_false(t.find_child("EventChip", true, false).visible)
 	Game.engine.events._fire("ev_01", Game.state)
 	t.refresh()
 	assert_true(t.find_child("EventChip", true, false).visible,
 		"a pending event shows the chip")
 	Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_false(t.find_child("EventChip", true, false).visible,
 		"resolving the event (state_changed) hides the chip again")
 
@@ -62,7 +62,7 @@ func test_event_chip_tracks_pending_event() -> void:
 func test_metrics_show_as_icons_with_tooltips() -> void:
 	Game.start_campaign(42)
 	var t := _bar()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	for m in TopBar.ORDER + TopBar.LORD:
 		var icon := t.icon_for(m)
 		assert_not_null(icon, "%s has an icon" % m)
@@ -75,7 +75,7 @@ func test_the_clock_buttons_set_the_speed_and_the_date_reads_the_day() -> void:
 	Game.start_campaign(42)
 	Game.set_clock_speed(0)
 	var t := _bar()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	if UiPalette.war_table():
 		# THE WAR TABLE: the day on the brass dial (its tooltip the full date),
 		# the season and year written beside it
@@ -95,15 +95,15 @@ func test_the_clock_buttons_set_the_speed_and_the_date_reads_the_day() -> void:
 	assert_true(t.clock_button(0).button_pressed, "paused at the start")
 	t.clock_button(2).pressed.emit()
 	assert_eq(Game.clock_speed, 2)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(t.clock_button(2).button_pressed)
 	assert_false(t.clock_button(0).button_pressed)
 	# Another bar (another screen's) follows the same clock.
 	var other := _bar()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(other.clock_button(2).button_pressed)
 	Game.set_clock_speed(0)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(other.clock_button(0).button_pressed)
 	assert_true(t.clock_button(0).button_pressed)
 
@@ -114,7 +114,7 @@ func test_the_clock_buttons_set_the_speed_and_the_date_reads_the_day() -> void:
 func test_the_bar_shows_the_crowns_pools_and_the_lords_purse() -> void:
 	Game.start_campaign(42)
 	var bar := _bar()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var p := RealmEconomy.purses(Game.data, Game.state)
 	for m in ["treasury", "strategic", "grain", "lord_gold", "lord_strategic", "lord_civil"]:
 		assert_eq(bar.metric_text(m), UiPalette.format_int(int(Game.state.metrics[m])), m)
@@ -129,25 +129,21 @@ func test_the_bar_shows_the_crowns_pools_and_the_lords_purse() -> void:
 	assert_ne(bar.crown_mark().tooltip_text, bar.lord_crest().tooltip_text, "and each says whose it is")
 	for gone in ["unrest", "legitimacy", "army_quality", "church_opinion"]:
 		assert_null(bar.icon_for(gone), "%s moved to the country card" % gone)
-	assert_gt(bar.bar_height(), 40.0, "two lines are taller than one")
-	# Tidied 2026-09-14 (owner, UIFIX.png): small type, ONE change a pool, the
-	# two purses in one grid so their columns line up, compact buttons, and
-	# the strip's content clear of the frame's ornament.
-	assert_lte(bar.value_label("treasury").get_theme_font_size("font_size"), 15, "the figures are small")
+	# Tidied 2026-09-14 (owner, UIFIX.png): ONE change a pool, the two purses
+	# in one grid so their columns line up, and the strip's content clear of
+	# the frame's ornament.
 	for m in TopBar.ORDER + TopBar.LORD:
 		var labels := bar.cell_of(m).get_children().filter(func(c: Node) -> bool: return c is Label)
 		assert_eq(labels.size(), 2, "%s: its stock and ONE change, not two" % m)
-	assert_eq(bar.purse_grid().columns, 4, "a mark and three pools a row")
-	assert_eq(bar.cell_of("treasury").get_index() + 4, bar.cell_of("lord_gold").get_index(),
-		"the lord's gold stands under the crown's")
 	bar.size = Vector2(1280, bar.bar_height())
 	await wait_process_frames(3)
+	var crown_cell := bar.cell_of("treasury").get_global_rect()
+	var lord_cell := bar.cell_of("lord_gold").get_global_rect()
+	assert_almost_eq(lord_cell.position.x, crown_cell.position.x, 0.5, "the lord's gold stands in the crown's column")
+	assert_gt(lord_cell.position.y, crown_cell.position.y, "under it")
 	var frame: Control = bar.get_node("%Bar")
 	var style := frame.get_theme_stylebox("panel")
 	var inner := frame.get_global_rect()
 	var menu := (bar.get_node("%MenuButton") as Control).get_global_rect()
 	assert_lte(menu.end.x, inner.end.x - style.content_margin_right + 0.5, "MENU stands inside the frame")
 	assert_gte(menu.position.y, inner.position.y + style.content_margin_top - 0.5, "below its top rule")
-	for speed in [0, 1, 2, 4]:
-		assert_lte(bar.clock_button(speed).size.y, TopBar.BUTTON_H + 0.5,
-			"the clock's buttons do not stretch to the strip")

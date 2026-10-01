@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## LedgerSearch (owner 2026-10-01: 在ledger界面新增一个搜索栏，可以搜索node):
 ## stars and folded instances found by label, case-insensitively.
 
@@ -8,8 +9,8 @@ var snap: Dictionary
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(repo, 42)
+	repo = SuiteData.repo()
+	state = SuiteData.campaign(repo, 42)
 	snap = Ledger.galaxy(repo, state, {})
 
 

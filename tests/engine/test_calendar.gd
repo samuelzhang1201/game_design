@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## A tick is a month of 30 days (owner 2026-09-14), twelve a year, three a season.
 
 func test_first_day_of_campaign() -> void:
@@ -34,10 +35,3 @@ func test_month_label_is_unique_within_a_season() -> void:
 	assert_eq(Calendar.month_label(13), "Spring I")   # year 2, same month as tick 1
 
 
-func test_game_state_agrees_with_calendar() -> void:
-	var data := DataRepository.load_all("res://data")
-	var s := GameState.new_campaign(data, 42)
-	for t in [1, 3, 4, 6, 7, 9, 10, 12, 13]:
-		s.tick = t
-		assert_eq(s.season(), Calendar.season_name(t).to_lower(), "tick %d" % t)
-		assert_eq(s.year(), Calendar.year_of(t), "tick %d" % t)

@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The sheet's ink (spec 2026-10-01-war-room-design §2).
 
 var repo: DataRepository
@@ -6,8 +7,8 @@ var state: GameState
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(repo, 42)
+	repo = SuiteData.repo()
+	state = SuiteData.campaign(repo, 42)
 	WarSheets.forget()
 
 

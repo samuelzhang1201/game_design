@@ -19,7 +19,7 @@ func test_minister_portrait_has_badge_and_tooltip() -> void:
 		"tithed the church (opposes, orthodoxy)", 1)
 	var p := CharacterPortrait.instantiate_for("char_chaplain")
 	add_child_autofree(p)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_not_null(p.get_node_or_null("Gen_Badge"))
 	assert_string_contains(p.tooltip_text, "Father Odo")
 	assert_string_contains(p.tooltip_text, "opposes, orthodoxy")
@@ -27,7 +27,7 @@ func test_minister_portrait_has_badge_and_tooltip() -> void:
 func test_non_character_portrait_has_no_badge() -> void:
 	var p := CharacterPortrait.instantiate_for("herald")
 	add_child_autofree(p)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_null(p.get_node_or_null("Gen_Badge"))
 	assert_ne(p.get_child_count(), 0)  # default visual built
 
@@ -49,7 +49,7 @@ func test_custom_art_node_suppresses_default_visual() -> void:
 	custom.name = "CustomArt"
 	p.add_child(custom)
 	add_child_autofree(p)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_null(p.get_node_or_null("Gen_Texture"), "default art skipped when CustomArt present")
 	assert_null(p.get_node_or_null("Gen_Fallback"))
 	assert_not_null(p.get_node_or_null("Gen_Badge"), "badge still maintained")

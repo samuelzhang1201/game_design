@@ -15,6 +15,10 @@ const TREE := ["Viewport", "Viewport/WorldSlot", "Viewport/CameraRig",
 	"Display", "Notice", "Hud", "Hud/Labels", "Hud/Landmarks", "Hud/Weather", "Hud/HeatLegend",
 	"Hud/Badges", "Hud/Armies", "Hud/Couriers", "Hud/Backdrop", "Hud/ScaleBar", "Hud/Ruler",
 	"Hud/Compass", "Hud/Needle", "Tooltip"]
+## What the layers build under the view at load (+ refresh_borders).
+const BUILT := ["Viewport/Markers/Selected", "Viewport/Markers/Capital", "Viewport/Markers/Village",
+	"Viewport/Lines/Kingdoms", "Viewport/Lines/KingdomHalo", "Viewport/Lines/KingdomBand",
+	"Viewport/Lines/Seams", "Viewport/Lines/Roads"]
 
 
 func before_all() -> void:
@@ -43,6 +47,18 @@ func test_create_instances_the_authored_scene() -> void:
 	assert_eq((v.get_node("Viewport/Clouds/Shadows") as GeometryInstance3D).cast_shadow,
 		GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY)
 	assert_eq(v.get_child(v.get_child_count() - 1).name, &"Tooltip", "the name over everything")
+	# what the layers build at load (+ refresh_borders), at the paths tests and
+	# tools reach them by (once test_map3d_api.gd's)
+	v.size = Vector2(800, 450)
+	v.activate()
+	v.refresh_borders()
+	for path: String in BUILT:
+		assert_not_null(v.get_node_or_null(path), path)
+	assert_true(v.get_node("Viewport/Markers/Capital") is MultiMeshInstance3D)
+	assert_true(v.get_node("Viewport/Clouds") is MultiMeshInstance3D)
+	assert_true(v.get_node("Hud") is Map3DHud)
+	assert_eq(String(v.camera().name), "RigCamera")
+	assert_true(v.viewport().is_ancestor_of(v.camera()))
 
 
 func test_the_hud_waits_for_a_world() -> void:

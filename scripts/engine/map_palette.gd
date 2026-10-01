@@ -4,12 +4,12 @@ extends RefCounted
 ## terrain only, so every kingdom's colour is ours to choose). Read from
 ## data/political_palette.csv: a realm slot's kingdom takes the slot's
 ## colour, every other kingdom takes other_1, other_2, ... in state order,
-## and the line colours (state_border, province_line, hover_border) are
-## named rows. Engine-pure.
+## and the line colours (map3d_border, manor_line, ...) are named rows.
+## Engine-pure.
 
 const FALLBACK := Color(0.6, 0.6, 0.6)
 
-## A named palette entry (state_border, hover_border, ...), or FALLBACK.
+## A named palette entry (map3d_border, manor_line, ...), or FALLBACK.
 static func named(data: DataRepository, key: String) -> Color:
 	var hex := String(data.palette.get(table_key(data, data.palette, key), ""))
 	return Color(hex) if hex != "" else FALLBACK

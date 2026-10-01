@@ -27,23 +27,20 @@ func test_project_stretch_settings_scale_to_any_screen() -> void:
 	assert_eq(int(ProjectSettings.get_setting("display/window/size/mode")), 3,
 		"launches fullscreen on the player's monitor")
 
-func test_window_cannot_shrink_below_design_size() -> void:
-	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
-	add_child_autofree(r)
-	await wait_frames(2)
-	assert_eq(get_window().min_size, GameRoot.MIN_WINDOW_SIZE)
-	assert_eq(GameRoot.MIN_WINDOW_SIZE, DESIGN,
-		"minimum window = design viewport, so nothing can ever clip")
-
+## The window can never shrink below the design size, and at every common
+## screen shape the gameplay fills the viewport.
 func test_gameplay_fills_viewport_at_common_screen_shapes() -> void:
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
-	await wait_frames(2)
+	await wait_process_frames(2)
+	assert_eq(get_window().min_size, GameRoot.MIN_WINDOW_SIZE)
+	assert_eq(GameRoot.MIN_WINDOW_SIZE, DESIGN,
+		"minimum window = design viewport, so nothing can ever clip")
 	# 16:9 monitor, 16:10 MacBook, 4:3 legacy, 21:9 ultrawide.
 	for shape in [Vector2i(1920, 1080), Vector2i(1512, 982),
 			Vector2i(1024, 768), Vector2i(2560, 1080)]:
 		get_tree().root.size = shape
-		await wait_frames(2)
+		await wait_process_frames(2)
 		var viewport := r.get_viewport_rect().size
 		# Expand-stretch: the scaled viewport is never smaller than the
 		# design space in either axis (nothing squeezed off screen)...

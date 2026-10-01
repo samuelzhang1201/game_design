@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## ArmySystem (owner 2026-09-17, spec 2026-09-17-regiment-state §2-3): the
 ## player's regiments carry morale, wounded, supplies and training; the
 ## month's end returns wounded to the ranks; each day eats its share of supplies.
@@ -6,7 +7,7 @@ extends GutTest
 var repo: DataRepository
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 func _mine() -> Array:
 	return MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
@@ -19,7 +20,7 @@ func _other_code() -> String:
 	return ""
 
 func test_a_new_campaign_seeds_only_the_players_regiments() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	assert_eq(s.regiments.size(), _mine().size())
 	var r: Dictionary = _mine()[0]
 	var entry: Dictionary = s.regiments[String(r["regiment_code"])]
@@ -36,7 +37,7 @@ func test_wound_recovery_is_a_share_with_a_floor_of_one() -> void:
 	assert_eq(ArmySystem.wound_recovery(repo, 250), 50)
 
 func test_the_month_returns_wounded_and_the_days_eat_the_supplies() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var r: Dictionary = _mine()[0]
 	var code := String(r["regiment_code"])
 	var use := ArmySystem.supply_use(repo, r)
@@ -83,7 +84,7 @@ func test_a_day_bites_its_share_and_the_month_sums_exactly() -> void:
 
 ## The map's yellow bar is the stores against a full train, so it falls every day.
 func test_the_yellow_bar_falls_day_by_day() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var r: Dictionary = _mine()[0]
 	var code := String(r["regiment_code"])
 	var use := ArmySystem.supply_use(repo, r)
@@ -105,7 +106,7 @@ func test_supply_use_is_the_base_scaled_by_the_cells_height_tier() -> void:
 		heads * 100 * int(ArmySystem.height_tier(repo, r)["supply_permille"]) / 1_000_000)
 
 func test_wounded_never_exceed_the_headcount() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var r: Dictionary = _mine()[0]
 	var code := String(r["regiment_code"])
 	var heads := int(MapObjects.regiment_size(repo, r))
@@ -115,7 +116,7 @@ func test_wounded_never_exceed_the_headcount() -> void:
 	assert_gte(int(s.regiments[code]["wounded"]), 0)
 
 func test_training_is_capped_at_100() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := String(_mine()[0]["regiment_code"])
 	s.regiments[code]["training"] = 100
 	var saved: float = repo.balance["army_training_per_month"]
@@ -125,7 +126,7 @@ func test_training_is_capped_at_100() -> void:
 	assert_eq(int(s.regiments[code]["training"]), 100)
 
 func test_state_of_reads_without_writing() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := String(_mine()[0]["regiment_code"])
 	s.regiments.erase(code)
 	var view := ArmySystem.state_of(repo, s, code)
@@ -136,7 +137,7 @@ func test_state_of_reads_without_writing() -> void:
 	assert_true(s.regiments.has(code), "ensure fills an old save in")
 
 func test_the_state_survives_a_save() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := String(_mine()[0]["regiment_code"])
 	s.regiments[code]["wounded"] = 12
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
@@ -144,7 +145,7 @@ func test_the_state_survives_a_save() -> void:
 	assert_eq(int(back.regiments[code]["morale"]), 70)
 
 func test_the_tick_settles_the_regiments() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := String(_mine()[0]["regiment_code"])
 	s.regiments[code]["wounded"] = 250
 	TickEngine.new(repo).advance(s)

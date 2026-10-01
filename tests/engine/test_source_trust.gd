@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Directed speaker->listener trust (spec §4.3). Derived from relationships at
 ## campaign start, then moved only by the reckoning, so it stays auditable.
 
@@ -6,8 +7,8 @@ var data: DataRepository
 var state: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 
 func test_trust_is_derived_from_how_the_listener_feels_about_the_speaker() -> void:
 	# Malvern feels +75 toward the king (liege), so he trusts the king's word:

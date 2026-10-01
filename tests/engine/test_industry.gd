@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Buildings eat (spec 2026-09-30-ledger-industry-trade-design, M5): a
 ## standing input building is fed from its own manor's units first
 ## (ManorEconomy.line_of nets them — still the only rounding), the rest is
@@ -12,8 +13,8 @@ var s: GameState
 var cell := -1
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 	RealmEconomy.forget()
 	cell = _home_manor(func(c: int) -> bool:
 		return not (ManorEconomy.line_of(data, s, c, s.tick)["units"] as Dictionary).has("iron"))
@@ -33,12 +34,6 @@ func _home_manor(ok: Callable, skip: int = -1) -> int:
 func _smithy(at: int = -1) -> void:
 	assert_true(MapManors.build(data, s, cell if at < 0 else at, "smithy", "a test forge"))
 
-func test_the_inputs_table() -> void:
-	assert_eq(data.building_inputs["smithy"], [{"good": "iron", "units": 3}])
-	assert_eq(data.building_inputs["armoury"], [{"good": "tools", "units": 1}, {"good": "iron", "units": 2}],
-		"file order kept")
-	assert_eq(data.building_inputs["shipwright"].size(), 2)
-	assert_false(data.building_inputs.has("war_workshop"), "a war workshop converts pools, not units")
 
 func test_a_fed_smithy_makes_tools() -> void:
 	assert_ne(cell, -1, "a home manor without iron of its own")

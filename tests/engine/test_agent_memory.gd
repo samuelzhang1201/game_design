@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Per-character conversational memory (spec D4, §4.3): what the player said,
 ## where, and who else heard it. No belief scoring here — remembering being
 ## told a thing is not the same as believing it (that is ClaimLedger's job).
@@ -7,8 +8,8 @@ var data: DataRepository
 var state: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 
 func test_new_campaign_starts_with_no_memories() -> void:
 	assert_eq(state.agent_memory.size(), 0)

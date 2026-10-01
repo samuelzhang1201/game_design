@@ -1,12 +1,13 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Supply lines (spec 2026-09-30-ledger-supply-design §3).
 
 var data: DataRepository
 var s: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 	_able_honest_governors()
 	RealmEconomy.forget()
 
@@ -39,10 +40,15 @@ func _place(code: String, px: Vector2) -> void:
 	s.regiments[code]["dest_y_m"] = m.y
 
 func test_the_loss_grows_with_the_road_and_is_capped() -> void:
+	var per := int(data.bal("army_supply_loss_permille_per_100km"))
+	var cap := int(data.bal("army_supply_loss_cap_permille"))
+	assert_gt(per, 0)
 	assert_eq(SupplySystem.loss_of(data, 0), 0)
-	assert_eq(SupplySystem.loss_of(data, 100), 60)
-	assert_eq(SupplySystem.loss_of(data, 250), 150)
-	assert_eq(SupplySystem.loss_of(data, 5000), 600)
+	assert_eq(SupplySystem.loss_of(data, 100), per)
+	@warning_ignore("integer_division")
+	assert_eq(SupplySystem.loss_of(data, 250), mini(per * 5 / 2, cap))
+	@warning_ignore("integer_division")
+	assert_eq(SupplySystem.loss_of(data, cap * 100 / per + 1000), cap, "the cap holds a long road")
 
 func test_what_is_shipped_covers_what_the_road_loses() -> void:
 	assert_eq(SupplySystem.ship_for(90, 100), 100)
@@ -271,11 +277,17 @@ func test_only_a_garrison_order_earns_the_garrison_morale() -> void:
 	var codes := _land_codes()
 	var standing: String = codes[0]
 	var holding: String = codes[1]
+	var fed := int(data.bal("army_morale_fed"))
+	var bonus := int(data.bal("army_morale_garrison_bonus"))
+	var drift := int(data.bal("army_morale_drift_per_month"))
+	assert_gt(bonus, 0)
+	assert_gt(drift, 1, "the drift reaches past the fed mark")
 	for pair: Array in [[standing, ArmySystem.ORDER_STANDBY], [holding, ArmySystem.ORDER_GARRISON]]:
 		var c: String = pair[0]
 		_stand_at_home(c, String(pair[1]))
-		s.regiments[c]["morale"] = 74
+		s.regiments[c]["morale"] = fed - 1
 		s.regiments[c]["supplies"] = ArmySystem.supply_use(data, ArmySystem.regiment(data, c), s) * 4
 	ArmySystem.settle_month(data, s)
-	assert_eq(int(s.regiments[standing]["morale"]), 75, "standing by at home: the fed mark")
-	assert_eq(int(s.regiments[holding]["morale"]), 80, "in garrison: the fed mark and the bonus")
+	assert_eq(int(s.regiments[standing]["morale"]), fed, "standing by at home: the fed mark")
+	assert_eq(int(s.regiments[holding]["morale"]), mini(fed + bonus, fed - 1 + drift),
+		"in garrison: toward the fed mark and the bonus")

@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## CharacterTools (user request 2026-08-31): the dossier's SKILLS tab lists
 ## the tools a courtier can be called on to use — kingdom operations bound to
 ## their council seat, and person-to-person tools everyone has — with
@@ -8,8 +9,8 @@ var data: DataRepository
 var state: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 
 func test_marshal_kingdom_tools_are_his_seats_implemented_actions() -> void:
 	var tools := CharacterTools.kingdom_tools(data, state.characters["char_marshal"])

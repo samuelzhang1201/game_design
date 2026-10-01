@@ -1,11 +1,12 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The game's own political colours (user ruling 2026-09-09): the render is
 ## terrain only, so kingdoms are painted from data/political_palette.csv.
 
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
 func test_every_kingdom_has_a_distinct_colour() -> void:
 	var seen: Dictionary = {}
@@ -34,7 +35,7 @@ func test_unbound_kingdoms_take_other_colours_in_state_order() -> void:
 	assert_gt(n, 0, "some kingdom is unbound")
 
 func test_line_colours_are_named() -> void:
-	for key in ["state_border", "province_line", "hover_border"]:
+	for key in ["map3d_border", "manor_line"]:
 		assert_ne(MapPalette.named(data, key), MapPalette.FALLBACK, key)
 	assert_eq(MapPalette.named(data, "no_such_key"), MapPalette.FALLBACK)
 	assert_eq(MapPalette.color_of(data, "no_such_kingdom"), MapPalette.FALLBACK)

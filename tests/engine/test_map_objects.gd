@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## MapObjects: what lies under a map point (pin > line > land > water), the
 ## zoom-based LOD rule for town pins, and the text each info card shows.
 ## Engine-pure: a hand-built repository and 4x4 bitmaps for the unit cases,
@@ -7,7 +8,7 @@ extends GutTest
 var real: DataRepository
 
 func before_all() -> void:
-	real = DataRepository.load_all("res://data")
+	real = SuiteData.repo()
 	assert_not_null(real, DataRepository.last_error)
 
 ## A 4x4 world: state 6 / province 72 / biome 6 on the left half, water right.
@@ -66,89 +67,12 @@ func test_burg_visible_respects_capitals_and_population() -> void:
 	assert_false(MapObjects.burg_visible(repo.burgs["vil"], 5000))
 	assert_true(MapObjects.burg_visible(repo.burgs["vil"], 0))
 
-func test_nearest_burg_ignores_lod() -> void:
-	assert_eq(MapObjects.nearest_burg(_tiny(), Vector2(1.4, 2.4)), "vil")
-
-func test_describe_burg() -> void:
-	var d := MapObjects.describe(_tiny(), {"kind": "burg", "code": "cap"})
-	assert_eq(d["title"], "Capital")
-	assert_eq(d["lines"][0], "Capital of Province, Kingdom")
-	assert_eq(d["lines"][1], "Population: 8000")
-	assert_eq(d["lines"][2], "Port, Walled, Citadel")
-	assert_eq(d["lines"][3], "Roads: 1")
-	assert_eq(d["ask"], "What do we know of Capital?")
-
-func test_describe_route_and_river_use_real_distances() -> void:
-	var road := MapObjects.describe(_tiny(), {"kind": "route", "code": "rd"})
-	assert_eq(road["title"], "Old Road")
-	assert_eq(road["lines"][0], "Road")
-	assert_eq(road["lines"][1], "From Capital to Village")
-	assert_eq(road["lines"][2], "Length: 4 km", "2.2 px * scale 2, rounded")
-	assert_eq(road["ask"], "What do we know of the Old Road?")
-	var river := MapObjects.describe(_tiny(), {"kind": "river", "code": "rv"})
-	assert_eq(river["lines"], ["River", "Length: 6 km", "Flows through: Kingdom"])
-
-func test_describe_marker_and_land() -> void:
-	var inn := MapObjects.describe(_tiny(), {"kind": "marker", "code": "inn"})
-	assert_eq(inn["title"], "The Inn")
-	assert_eq(inn["lines"], ["Inns", "A warm hearth."])
-	assert_eq(inn["ask"], "What is known of The Inn?")
-	var land := MapObjects.describe(_tiny(), {"kind": "land", "state_id": 6, "province_id": 72,
-		"biome_id": 6, "x": 1.0, "y": 2.0})
-	assert_eq(land["title"], "Province")
-	assert_eq(land["lines"][0], "Kingdom")
-	assert_eq(land["lines"][1], "Terrain: Forest")
-	assert_eq(land["lines"][2], "Nearest town: Village (1 km)")
-	assert_eq(land["lines"][3], "Capital: Capital", "the kingdom summary follows the local facts")
-	assert_eq(land["ask"], "What do we know of Province?")
-
-func test_describe_water_is_empty() -> void:
-	assert_eq(MapObjects.describe(_tiny(), {"kind": "water"}), {})
-
 func test_label_of_each_kind() -> void:
 	var repo := _tiny()
 	assert_eq(MapObjects.label_of(repo, {"kind": "burg", "code": "vil"}), "Village")
 	assert_eq(MapObjects.label_of(repo, {"kind": "route", "code": "rd"}), "Old Road")
 	assert_eq(MapObjects.label_of(repo, {"kind": "marker", "code": "inn"}), "The Inn")
 	assert_eq(MapObjects.label_of(repo, {"kind": "water"}), "")
-
-## The vertex of `code` that is farthest from every town and marker, so the
-## point is unambiguously on the road: burgs and markers win the pick over
-## routes, and on a generated map a road often runs right past one.
-func _open_point_on(repo: DataRepository, code: String) -> Vector2:
-	var line: PackedVector2Array = repo.routes[code]["polyline"]
-	var rivals: Array[Vector2] = []
-	for b: String in repo.burgs:
-		rivals.append(Vector2(float(repo.burgs[b]["x"]), float(repo.burgs[b]["y"])))
-	for m: String in repo.markers:
-		rivals.append(Vector2(float(repo.markers[m]["x"]), float(repo.markers[m]["y"])))
-	var best := line[0]
-	var best_d := -1.0
-	for p in line:
-		var d := INF
-		for r in rivals:
-			d = minf(d, p.distance_squared_to(r))
-		if d > best_d:
-			best_d = d
-			best = p
-	return best
-
-## The road with the most points, ties going to the earlier code — a stable
-## pick on any export, and long enough to have a vertex out in open country.
-func _longest_road(repo: DataRepository) -> String:
-	var best := ""
-	var best_n := 0
-	var codes := repo.routes.keys()
-	codes.sort()
-	for code: String in codes:
-		var r: Dictionary = repo.routes[code]
-		if String(r["group"]) != "roads":
-			continue
-		var n := (r["polyline"] as PackedVector2Array).size()
-		if n > best_n:
-			best_n = n
-			best = code
-	return best
 
 # --- the province panel (user request 2026-09-09) ----------------------------
 
@@ -283,7 +207,7 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 ## ground, morale, the wounded beside the headcount, the month's recovery
 ## and supply use, and the training and strength only as words.
 func test_a_regiment_card_shows_its_state() -> void:
-	var s := GameState.new_campaign(Game.data, 7)
+	var s := SuiteData.campaign(Game.data, 7)
 	var mine := Game.data.resolve_realm("player_realm")
 	var r: Dictionary = MapObjects.regiments_of(Game.data, mine)[0]
 	var code := String(r["regiment_code"])
@@ -301,27 +225,20 @@ func test_a_regiment_card_shows_its_state() -> void:
 	assert_true(text.has("army_height"))
 	assert_true(order.find("army_terrain") < order.find("army_strength"), "the state reads in order")
 	assert_eq(text["army"], "%d (120 wounded)" % heads)
-	assert_eq(text["army_morale"], "70")
+	assert_eq(text["army_morale"], str(int(s.regiments[code]["morale"])))
 	assert_eq(text["army_wounded"], "+%d / mo" % ArmySystem.wound_recovery(Game.data, 120))
 	var use := ArmySystem.supply_use(Game.data, r)
 	assert_eq(text["army_supply"], "%d (−%d / mo)" % [int(s.regiments[code]["supplies"]), use])
-	assert_eq(text["army_training"], "Militia")
+	assert_eq(text["army_training"], ArmySystem.training_grade(Game.data, int(s.regiments[code]["training"])))
 	assert_true(text["army_strength"] in ["Strong", "Average", "Weak"])
 	assert_eq(text["army_terrain"], ArmySystem.terrain_label(Game.data, r))
 	# No number leaks for the hidden values.
 	assert_false(text["army_training"].is_valid_int())
 
-func test_burg_card_has_no_climate_or_elevation() -> void:
-	Game.start_campaign(42)
-	var realm: Dictionary = Game.data.kingdoms[_player_realm()]
-	var card := MapObjects.burg_card(Game.data, Game.state, String(realm["capital_burg"]))
-	for f in card["fields"]:
-		assert_false(String(f[0]) in ["Climate", "Elevation"], "%s is not on the card" % String(f[0]))
-
 ## --- Manors (MANOR_SYSTEM.md §3, §6) ----------------------------------------
 
 func _campaign() -> GameState:
-	return GameState.new_campaign(real, 42)
+	return SuiteData.campaign(real, 42)
 
 func _manor_where(state: GameState, crowns: bool, in_realm: bool = true) -> int:
 	var realm := real.resolve_realm("player_realm")

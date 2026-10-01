@@ -19,6 +19,7 @@ func before_all() -> void:
 	packed.pack(root)
 	ResourceSaver.save(packed, _fixture)
 	root.free()
+	Map3DView.world_override = _fixture  # GameRoot's own views open it too
 
 
 func before_each() -> void:
@@ -176,4 +177,5 @@ func test_counters_are_cut_once_per_pose() -> void:
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
+	Map3DView.world_override = ""
 	Map3DWorldCache.clear()

@@ -27,11 +27,13 @@ func _view() -> Map3DView:
 
 func test_heights_is_a_theme_of_its_own() -> void:
 	var v := _view()
+	assert_eq(v.manor_theme(), "", "the view opens on no theme")
 	v.set_manor_theme("heights")
 	assert_eq(v.manor_theme(), "heights")
 	assert_true(v.heat_on())
 	assert_null(v.cell_lut(), "no manor colours under HEIGHTS")
 	v.set_manor_theme("manors")
+	assert_eq(v.manor_theme(), "manors", "the theme is remembered")
 	assert_false(v.heat_on())
 	v.set_manor_theme("")
 	assert_false(v.heat_on())
@@ -109,6 +111,8 @@ func test_far_out_only_the_big_ones_show() -> void:
 	assert_gt(marks.size(), 0)
 	for mk: Dictionary in marks:
 		assert_eq(int(Elevation.landmark_at(Game.data, int(mk["cell"]))["lod"]), 0)
+	await wait_process_frames(3)  # and the HUD draws the marks and the legend without error
+	assert_gt(v.landmark_marks().size(), 0)
 
 func test_close_in_smaller_ones_join() -> void:
 	var v := _view()
@@ -177,20 +181,24 @@ func test_the_legend_names_the_tier_lines_under_heights() -> void:
 	v.set_manor_theme("heights")
 	var box := v.heat_legend_rect()
 	var m := Game.data.bal("map_compass_margin_px")
-	assert_eq(box, Rect2(Vector2(m, v.size.y - m - 160.0), Vector2(14.0, 160.0)))
+	var h := Game.data.bal("map3d_heat_legend_h_px")
+	assert_eq(box, Rect2(Vector2(m, v.size.y - m - h), Vector2(Game.data.bal("map3d_heat_legend_w_px"), h)),
+		"bottom-left, inside the compass margin")
+	# every supply tier above the sea line (plains is below it), bottom up, named
+	# with its metres at their share of the ramp (0..the land's whole height)
+	var top_m := Game.data.bal("elevation_m_per_unit") * (100.0 - Game.data.bal("elevation_sea_level"))
+	var want: Array = []
+	for r: Dictionary in Game.data.army_height_supply:
+		var metres := Elevation.metres_of_height(Game.data, float(r["min_height"]))
+		if metres > 0:
+			want.push_front([String(r["tier"]).capitalize(), metres])
 	var ticks := v.heat_legend_ticks()
-	# (45-20)*30, (62-20)*30, (72-20)*30 over a 2400 m ramp; plains (0) is below the sea line.
-	assert_eq(ticks.map(func(t: Dictionary) -> String: return String(t["label"])),
-		["Hills 750 m", "Mountains 1260 m", "Peak 1560 m"])
-	assert_almost_eq(float(ticks[0]["y"]), box.end.y - 160.0 * 750.0 / 2400.0, 0.01)
-	assert_almost_eq(float(ticks[2]["y"]), box.end.y - 160.0 * 1560.0 / 2400.0, 0.01)
-
-func test_the_hud_draws_marks_and_legend_without_error() -> void:
-	var v := _view()
-	v.set_manor_theme("heights")
-	_frame_on(v, Elevation.landmarks(Game.data)[0], 20000.0)
-	await wait_process_frames(3)
-	assert_gt(v.landmark_marks().size(), 0)
+	assert_eq(ticks.size(), want.size())
+	assert_gt(ticks.size(), 0, "the high ground has tiers to name")
+	for i in mini(ticks.size(), want.size()):
+		assert_eq(String(ticks[i]["label"]), "%s %d m" % want[i])
+		assert_almost_eq(float(ticks[i]["y"]), box.end.y - h * float(want[i][1]) / top_m, 0.01)
+		assert_true(float(ticks[i]["y"]) >= box.position.y and float(ticks[i]["y"]) <= box.end.y, "inside the ramp")
 
 ## test_a_click_on_a_settlement_dot_beside_a_mark_opens_the_settlement was
 ## removed here (final review, 2026-09-20): it probed a two-tier pick_reach_px

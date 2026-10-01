@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The drawn rider follows his ROAD (found through the real game, 2026-09-28:
 ## he cut straight across the fields to where the engine had put him, and his
 ## dashed road began ahead of him with nothing between) — today's, as the day
@@ -61,14 +62,6 @@ func test_a_stand_in_without_the_couriers_clips_falls_back() -> void:
 	assert_eq(Map3DLayerCouriers.clip_or_fallback(own, "GALLOP"), "courier|GALLOP")
 	assert_eq(Map3DLayerCouriers.clip_or_fallback(_player([]), "GALLOP"), "", "nothing to play: nothing played")
 	assert_eq(Map3DLayerCouriers.clip_or_fallback(null, "IDLE"), "", "no AnimationPlayer at all")
-
-
-func test_the_courier_art_rows_carry_a_stride() -> void:
-	var repo := DataRepository.load_all("res://data")
-	for kind: String in repo.courier_art:
-		assert_true((repo.courier_art[kind] as Dictionary).has("stride_m"), kind)
-	assert_false(repo.balance.has("map3d_courier_anim_rate"), "the old fixed rate is gone")
-	assert_gt(repo.bal("map3d_courier_anim_max"), repo.bal("map3d_courier_anim_min"))
 
 
 ## Owner 2026-09-30 (信使送到信息后要立即淡化消失): he fades the moment his

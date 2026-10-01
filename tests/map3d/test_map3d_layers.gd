@@ -118,30 +118,18 @@ func test_the_markers_are_their_own_layer() -> void:
 	assert_false((markers as Map3DLayerSettlements).selected_visible())
 
 
-func test_the_view_owns_a_houses_layer() -> void:
-	var v := _view()
-	var houses := v.viewport().get_node("Houses")
-	assert_true(houses is Map3DLayerHouses)
-	assert_eq((houses as Map3DLayerHouses).counts(), v.house_counts())
-
-
-func test_the_view_builds_the_houses_layer_at_load_not_lazily() -> void:
-	# Task 7: build() (which warms Map3DHouses.load_csv, ~91 ms over the real
-	# table) must run during _load(), not wait for the first refresh() mid-play.
-	# A layer that never had build() called has no MultiMeshInstance3D children
-	# yet — one per house type is made only inside build().
-	var v := _view()
-	var houses := v.viewport().get_node("Houses") as Map3DLayerHouses
-	assert_gt(houses.get_child_count(), 0,
-		"build() ran at load: one MultiMeshInstance3D child per house type")
-
-
 func test_a_camera_move_refreshes_the_houses() -> void:
 	# The initial _rig.place() in _load() already fired one camera_moved, so
 	# the clusters over the player's capital (_view's home) are populated by
 	# the time the view is loaded.
 	var v := _view()
-	var houses := v.viewport().get_node("Houses") as Map3DLayerHouses
+	var node := v.viewport().get_node("Houses")
+	assert_true(node is Map3DLayerHouses, "the view owns a houses layer")
+	var houses := node as Map3DLayerHouses
+	assert_eq(houses.counts(), v.house_counts())
+	# Task 7: build() (which warms Map3DHouses.load_csv) runs during _load(), not
+	# on the first refresh() mid-play — one MultiMeshInstance3D per house type.
+	assert_gt(houses.get_child_count(), 0, "build() ran at load")
 	var at_home := houses.counts().duplicate()
 	var total_home := 0
 	for type: String in at_home:

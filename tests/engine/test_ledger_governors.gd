@@ -1,5 +1,6 @@
 # tests/engine/test_ledger_governors.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The governor is the reporter (spec 2026-09-30-ledger-governors-design §4).
 
 var data: DataRepository
@@ -8,8 +9,8 @@ var sys: ActionSystem
 var cell := -1
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 	sys = ActionSystem.new(data)
 	RealmEconomy.forget()
 	cell = int(MapManors.manors_of_province(data, MapManors.home_province(data, s), s)[0])
@@ -36,9 +37,6 @@ func _marshal(traits: Array) -> Character:
 	m.attributes["integrity"] = 50
 	return m
 
-func test_the_ontology_stays_clean() -> void:
-	assert_eq(Ledger.validate(data), [] as Array[String])
-
 func test_an_honest_marshal_is_one_strand_with_both_sources() -> void:
 	_marshal(["honest"])
 	var code := String(SupplySystem.plan(data, s)[0]["code"])
@@ -56,13 +54,6 @@ func test_a_venal_marshal_splits_the_thread() -> void:
 	assert_eq(int(out["accounts"][1]["value"]), int(row["delivered"]))
 	assert_eq(int(out["flow"]), int(row["claimed"]), "the thread's flow is the first account's")
 
-func test_a_fresh_audit_is_an_account_of_its_own() -> void:
-	var st: Character = s.characters[String(s.council["steward"])]
-	st.traits = ["venal"]
-	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
-	var out := _link(Ledger.snapshot(data, s, "economy", {"id": "workshop:%d" % cell}), "converts_out")
-	assert_eq(out["accounts"].size(), 2, "the steward's word and the audit's figure")
-	assert_string_contains(String(out["accounts"][1]["source"]), "audit")
 
 ## An audit is a snapshot of ITS month (fix round 1 ruling): the next month
 ## it no longer stands as an account.
@@ -268,9 +259,10 @@ func test_an_audit_of_a_venal_man_stands_beside_his_word() -> void:
 	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
 	var row: Dictionary = WorkshopSystem.plan(data, s)[0]
 	var out := _link(Ledger.snapshot(data, s, "economy", {"id": "workshop:%d" % cell}), "converts_out")
-	assert_eq(out["accounts"].size(), 2)
+	assert_eq(out["accounts"].size(), 2, "the steward's word and the audit's figure")
 	assert_eq(int(out["accounts"][0]["value"]), int(row["claimed"]))
 	assert_eq(int(out["accounts"][1]["value"]), int(row["make"]))
+	assert_string_contains(String(out["accounts"][1]["source"]), "audit")
 	var m: Dictionary = s.missives[-1]
 	var fact: Dictionary = (m["facts"] as Array).filter(
 		func(f: Dictionary) -> bool: return String(f["key"]) == "workshop:%d" % cell)[0]

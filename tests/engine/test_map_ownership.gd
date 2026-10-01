@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Province ownership and the borders that follow from it (user request
 ## 2026-09-09: territory must be able to change hands and the map must show
 ## it). The pack ships the starting map; GameState carries what moved.
@@ -7,8 +8,8 @@ var data: DataRepository
 var state: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 	MapOwnership.invalidate()
 
 func _player() -> String:

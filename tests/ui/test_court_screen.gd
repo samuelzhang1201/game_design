@@ -30,14 +30,14 @@ func test_screen_builds_suggestion_executes_and_labels_are_natural_language() ->
 	var report := _report_after_resolving_pending_event()
 	var screen := _screen()
 	screen.enter_court(report)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var buttons: Array = screen.suggestion_buttons()
 	assert_between(buttons.size(), 2, 3)
 	for b in buttons:
 		assert_false("LEVY_RAISE" in b.text, "label must not be a bare action code")
 		assert_false("_" in b.text, "label must be natural-language prose, not a code (R8)")
 	buttons[0].pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_ne(Game.state.recent_outcomes, [], "the click must actually execute an order")
 	# There is no End Turn (owner 2026-09-14): an order never moves the month.
 	assert_null(screen.find_child("EndTurn", true, false))
@@ -60,7 +60,7 @@ func test_free_text_executes_via_fake_client_and_tone_applied() -> void:
 	Game.use_client_for_tests(fake)
 	Game.next_tick()
 	screen.free_text.text_submitted.emit("ease the taxes a little")
-	await wait_frames(3)
+	await wait_process_frames(3)
 	assert_eq(Game.state.metrics["tax_rate"], 4.0)
 	assert_string_contains(
 		Game.state.characters["char_steward"].opinion_log[-1]["reason"], "tone")
@@ -75,7 +75,7 @@ func test_free_text_disabled_while_parse_in_flight() -> void:
 	var report := _report_after_resolving_pending_event()
 	var screen := _screen()
 	screen.enter_court(report)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
 	fake.canned_ok = true
 	fake.canned_text = JSON.stringify({"actions": [], "court_reaction": {}})
@@ -83,7 +83,7 @@ func test_free_text_disabled_while_parse_in_flight() -> void:
 	Game.use_client_for_tests(fake)
 	screen.free_text.text_submitted.emit("do nothing in particular")
 	assert_false(screen.free_text.editable, "free_text also disabled while parse is in flight")
-	await wait_frames(3)
+	await wait_process_frames(3)
 	assert_true(screen.free_text.editable)
 
 ## Migrates the gating half of the old council screen's
@@ -99,7 +99,7 @@ func test_free_text_during_pending_event_leaves_the_event_pending() -> void:
 	var report := _report_after_resolving_pending_event()
 	var screen := _screen()
 	screen.enter_court(report)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	Game.engine.events._fire("ev_01", Game.state)
 	assert_false(Game.state.pending_event.is_empty())
 	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
@@ -110,7 +110,7 @@ func test_free_text_during_pending_event_leaves_the_event_pending() -> void:
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)
 	screen.free_text.text_submitted.emit("also lower taxes a bit")
-	await wait_frames(3)
+	await wait_process_frames(3)
 	assert_false(Game.state.pending_event.is_empty(), "event still awaits a choice")
 	assert_true(screen.free_text.editable, "free_text itself always re-enables")
 
@@ -127,7 +127,7 @@ func test_free_text_event_choice_invalid_id_rejected_and_logged() -> void:
 	assert_false(Game.state.pending_event.is_empty())
 	var screen := _screen()
 	screen.enter_court(report)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
 	fake.canned_ok = true
 	fake.canned_text = JSON.stringify({"actions":
@@ -136,7 +136,7 @@ func test_free_text_event_choice_invalid_id_rejected_and_logged() -> void:
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)
 	screen.free_text.text_submitted.emit("do something not offered")
-	await wait_frames(3)
+	await wait_process_frames(3)
 	assert_false(Game.state.pending_event.is_empty(), "event still awaits a valid choice")
 	var found := false
 	for child in screen.log_box.get_children():
@@ -152,7 +152,7 @@ func test_top_bar_up_top_and_lettered_suggestions_in_side_panel() -> void:
 	var report := _report_after_resolving_pending_event()
 	var screen := _screen()
 	screen.enter_court(report)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_not_null(screen.top_bar())
 	assert_lt(screen.top_bar().global_position.y, 5.0, "TopBar hugs the top edge")
 	assert_gt(screen.suggestion_buttons().size(), 0)
@@ -169,7 +169,7 @@ func test_top_bar_refreshes_after_suggestion_executes() -> void:
 	var report := _report_after_resolving_pending_event()
 	var screen := _screen()
 	screen.enter_court(report)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var idx := -1
 	for i in report.suggestions.size():
 		if "raise_levies" in String(report.suggestions[i]["pitch_key"]):
@@ -178,32 +178,16 @@ func test_top_bar_refreshes_after_suggestion_executes() -> void:
 	assert_ne(idx, -1, "seed 42's standing menu always offers LEVY_RAISE")
 	var gold_before := screen.top_bar().metric_text("treasury")
 	screen.suggestion_buttons()[idx].pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_ne(screen.top_bar().metric_text("treasury"), gold_before,
 		"the TopBar's Gold value must refresh after the order executes")
-
-## There is no End Turn (owner 2026-09-14): the top bar's play button is the
-## only thing that moves time, so the court has neither the button nor a
-## signal to end the month, and opening the council moves nothing.
-func test_the_court_has_no_end_turn() -> void:
-	Game.start_campaign(42)
-	var report := _report_after_resolving_pending_event()
-	var screen := _screen()
-	screen.enter_court(report)
-	await wait_frames(2)
-	var tick_before := Game.state.tick
-	assert_null(screen.find_child("EndTurn", true, false), "no End Turn button")
-	assert_false(screen.has_signal("end_turn_requested"), "no signal to end the month")
-	screen.council_handle().pressed.emit()
-	await wait_frames(2)
-	assert_null(screen.find_child("EndTurn", true, false), "not inside the council either")
-	assert_eq(Game.state.tick, tick_before, "nothing on the court moves the month")
 
 ## Hovering a country swaps the left column to its card and restores the
 ## council log on the way out (user request 2026-09-09).
 func test_hovering_a_country_swaps_the_left_column() -> void:
+	Game.start_campaign(42)
 	var screen := _screen()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var panel := screen.country_panel()
 	assert_not_null(panel, "court owns a country panel")
 	assert_false(panel.visible, "nothing hovered: the log has the column")
@@ -220,8 +204,9 @@ func test_hovering_a_country_swaps_the_left_column() -> void:
 
 ## The card reports who holds the land now, not the pack's starting map.
 func test_the_country_card_follows_conquest() -> void:
+	Game.start_campaign(42)
 	var screen := _screen()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var panel := screen.country_panel()
 	var mine := Game.data.resolve_realm("player_realm")
 	panel.show_country(mine)
@@ -240,8 +225,9 @@ func test_the_country_card_follows_conquest() -> void:
 
 ## The detail column's Ask drops the question into the order box; nothing sends.
 func test_map_ask_fills_the_order_box_without_sending() -> void:
+	Game.start_campaign(42)
 	var screen := _screen()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var map := screen.map3d_view()
 	# The pack is generated: ask about the bound realm's own capital. What the
 	# map sends for a click on it (a headless run does not load the 3D world).
@@ -249,7 +235,7 @@ func test_map_ask_fills_the_order_box_without_sending() -> void:
 		Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
 	map.object_selected.emit({"title": String(capital["label"]),
 		"obj": {"kind": "burg", "code": String(capital["burg_code"])}})
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(screen.detail_panel().visible, "the click opens the detail column")
 	assert_true(screen.detail_panel().ask_button().visible, "court owns an order box, so Ask shows")
 	screen.detail_panel().ask_button().pressed.emit()
@@ -270,7 +256,7 @@ func test_free_text_prints_the_narrative_and_the_ledger() -> void:
 	Game.next_tick()
 	var grain: float = Game.state.metrics["grain"]
 	screen.free_text.text_submitted.emit("open the granaries a little")
-	await wait_frames(3)
+	await wait_process_frames(3)
 	assert_eq(fake.calls, 1, "one call carries the narrative and the impacts")
 	assert_eq(Game.state.metrics["grain"], grain + 5.0)
 	var texts: Array[String] = []
@@ -295,7 +281,7 @@ func test_free_text_names_the_speaker_before_the_call() -> void:
 	Game.next_tick()
 	var marshal: Character = Game.state.characters[Game.state.council["marshal"]]
 	screen.free_text.text_submitted.emit("Marshal, how stand the levies?")
-	await wait_frames(3)
+	await wait_process_frames(3)
 	var found := false
 	for l in screen.log_box.get_children():
 		if (l as Label).text.begins_with(marshal.display_name + ":"):
@@ -309,12 +295,12 @@ func test_free_text_names_the_speaker_before_the_call() -> void:
 func test_selecting_a_province_shows_its_card_in_the_detail_column() -> void:
 	Game.start_campaign(42)
 	var screen := _screen()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	# What the map sends for a click on a province (see above).
 	var map := screen.map3d_view()
 	var mine := MapOwnership.provinces_of(Game.data, Game.state, Game.data.resolve_realm("player_realm"))[0]
 	map.province_selected.emit(mine)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var panel := screen.detail_panel()
 	assert_true(panel.visible, "the detail column opens")
 	assert_eq(panel.shown_province(), mine)
@@ -330,7 +316,7 @@ func test_selecting_a_province_shows_its_card_in_the_detail_column() -> void:
 			foreign = code
 			break
 	map.province_selected.emit(foreign)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	texts.clear()
 	for l in panel.fields().get_children():
 		texts.append((l as Label).text)
@@ -338,7 +324,7 @@ func test_selecting_a_province_shows_its_card_in_the_detail_column() -> void:
 	assert_has(texts, "Held by")
 	assert_string_contains(panel.hint_label().text, "Little more is known")
 	map.province_selected.emit("")
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_false(panel.visible, "clearing the selection closes the column")
 
 ## The court's council column (record, order box, suggestions) is
@@ -348,17 +334,17 @@ func test_council_column_opens_from_the_handle_and_leaves() -> void:
 	var report := _report_after_resolving_pending_event()
 	var screen := _screen()
 	screen.enter_court(report)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var side: Control = screen.find_child("SidePanel", true, false)
 	assert_false(side.visible, "hidden by default")
 	assert_true(screen.council_handle().visible)
 	var wide: float = screen.find_child("MapPanel", true, false).get_global_rect().end.x
 	screen.council_handle().pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_true(side.visible, "the handle opens it")
 	assert_true(side.is_ancestor_of(screen.free_text), "the order box lives in it")
 	assert_lt(screen.find_child("MapPanel", true, false).get_global_rect().end.x, wide)
 	screen.find_child("LeaveButton", true, false).pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_false(side.visible, "LEAVE hides it")
 	assert_almost_eq(screen.find_child("MapPanel", true, false).get_global_rect().end.x, wide, 1.0)

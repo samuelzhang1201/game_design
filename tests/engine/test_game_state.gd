@@ -1,9 +1,10 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
 ## One truth (owner ruling 2026-09-09): the player's rates are seeded from
 ## the pack's economy row through balance factors, and the treasury (owner
@@ -38,7 +39,7 @@ func test_new_campaign_seeds_from_the_pack_and_balance() -> void:
 	assert_true(s.world.is_empty(), "seeding writes the metric, not an override")
 
 func test_a_pack_without_an_economy_row_falls_back_to_balance() -> void:
-	var stripped := DataRepository.load_all("res://data")
+	var stripped := SuiteData.repo()
 	stripped.world_tables["economy"]["kingdoms"].clear()
 	var s := GameState.new_campaign(stripped, 42)
 	assert_eq(s.metrics["treasury"], stripped.bal("start_treasury"))

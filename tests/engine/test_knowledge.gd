@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Per-character knowledge (spec D5): facts carry knower lists, so who knows
 ## what is the engine's business, never the model's.
 
@@ -6,8 +7,8 @@ var data: DataRepository
 var state: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 
 func test_seed_facts_load_into_state() -> void:
 	assert_gte(state.knowledge.size(), 9, "seed facts present")

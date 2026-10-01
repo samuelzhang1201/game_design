@@ -278,10 +278,8 @@ func _piece_of(c: Dictionary) -> Dictionary:
 func _scene(path: String) -> PackedScene:
 	if _scenes.has(path):
 		return _scenes[path]
-	var scene: PackedScene = null
-	if ResourceLoader.exists(path):
-		scene = load(path) as PackedScene
-	else:
+	var scene := Map3DAssetCache.scene(path)  # loaded once, kept between views
+	if scene == null:
 		Map3DWorldLoader.warn_once("couriers:" + path, "map3d couriers: no model at " + path)
 	_scenes[path] = scene
 	return scene

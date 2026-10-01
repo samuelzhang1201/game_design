@@ -1,9 +1,10 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
 func test_valid_payload() -> void:
 	var text := JSON.stringify({
@@ -41,7 +42,7 @@ func test_missing_court_reaction_defaults_neutral() -> void:
 	assert_eq(out["court_reaction"]["tone"], "neutral")
 
 func test_tone_applied_clamped_with_reason() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var sys := ActionSystem.new(data)
 	var before: int = s.characters["char_marshal"].opinion
 	sys.apply_court_reaction(
@@ -99,7 +100,7 @@ func _order(narrative: String, world: Array, actions: Array = []) -> String:
 		"court_reaction": {"addressed": [], "tone": "neutral", "promises": []}}})
 
 func test_order_parses_narrative_actions_and_world_impacts() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	# The model may touch the crown's own provinces (2026-09-13), not the
 	# kingdom's figures.
 	var own: String = MapManors.controlled_provinces(data, s)[0]
@@ -115,7 +116,7 @@ func test_order_parses_narrative_actions_and_world_impacts() -> void:
 	assert_false(out["world"][0]["clamped"])
 
 func test_order_impacts_need_a_reason_a_listed_path_and_your_own_land() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var foreign := ""
 	for code: String in data.provinces:
 		if String(data.provinces[code]["kingdom_code"]) != data.resolve_realm("player_realm"):
@@ -136,14 +137,14 @@ func test_order_impacts_need_a_reason_a_listed_path_and_your_own_land() -> void:
 	assert_string_contains(String(out["world_rejected"][3]["error"]), "yours")
 
 func test_order_clamps_a_delta_beyond_the_cap() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var out := ResponseValidator.parse_order(_order("Gold rains.",
 		[{"path": "metrics.treasury", "delta": 5000, "reason": "a miracle"}]), data, s)
 	assert_eq(float(out["world"][0]["delta"]), WorldLedger.llm_cap(data, "metrics.treasury"))
 	assert_true(out["world"][0]["clamped"])
 
 func test_order_empty_reply_is_ok_but_carries_nothing_and_long_ones_are_capped() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var empty := ResponseValidator.parse_order(_order("", []), data, s)
 	assert_true(empty["ok"], "silence is not an error; the screens say 'So noted.'")
 	assert_eq(empty["narrative"], "")
@@ -155,7 +156,7 @@ func test_order_empty_reply_is_ok_but_carries_nothing_and_long_ones_are_capped()
 ## Older canned replies (and older tests) put actions at the top level; the
 ## validator still reads them so nothing regresses.
 func test_order_accepts_the_flat_legacy_shape() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var out := ResponseValidator.parse_order(JSON.stringify({"actions":
 		[{"action_code": "TAX_RATE_ADJUST", "params": {"delta": -1}, "target": ""}],
 		"court_reaction": {"addressed": ["char_steward"], "tone": "respectful", "promises": []}}),

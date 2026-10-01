@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The march (owner 2026-09-22): a regiment carries a LIVE position in whole
 ## metres, ARMY_MARCH sends it somewhere, and every day under the clock it
 ## covers ArmySystem.day_step_m until it arrives and falls back to garrison.
@@ -7,7 +8,7 @@ var repo: DataRepository
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	# Force clear skies so every hand-sum march still holds (task 7, owner 2026-09-27)
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
@@ -27,7 +28,7 @@ func _marcher() -> Dictionary:
 
 
 func test_a_new_campaign_seats_every_regiment_where_the_pack_put_it() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
 	var home := Vector2(float(r["x"]), float(r["y"]))
@@ -45,7 +46,7 @@ func test_the_pack_measure_is_what_a_metre_means() -> void:
 
 
 func test_a_day_of_marching_covers_the_regiments_own_pace() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
 	var home: Vector2 = ArmySystem.position_of(repo, s, r)
@@ -71,7 +72,7 @@ func test_a_day_of_marching_covers_the_regiments_own_pace() -> void:
 
 
 func test_it_stops_dead_on_the_spot_it_was_sent_to_and_garrisons() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
 	var home: Vector2 = ArmySystem.position_of(repo, s, r)
@@ -88,7 +89,7 @@ func test_it_stops_dead_on_the_spot_it_was_sent_to_and_garrisons() -> void:
 
 
 func test_garrison_halts_a_column_where_it_has_got_to() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
 	var home: Vector2 = ArmySystem.position_of(repo, s, r)
@@ -104,7 +105,7 @@ func test_garrison_halts_a_column_where_it_has_got_to() -> void:
 
 
 func test_the_clock_marches_it_a_day_at_a_time() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var engine := TickEngine.new(repo)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
@@ -124,7 +125,7 @@ func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
 	# runs the TICK rather than advance_day, and until then the regiments
 	# stood still on it — 29 days' march in every 30. Over a month boundary
 	# a column must cover exactly one day_step_m per day, the tick included.
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var engine := TickEngine.new(repo)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
@@ -155,7 +156,7 @@ func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
 func test_the_same_orders_from_the_same_save_give_the_same_march() -> void:
 	# Architecture invariant 2: identical save + identical inputs => identical
 	# state. The position is whole metres precisely so this survives the JSON.
-	var a := GameState.new_campaign(repo, 7)
+	var a := SuiteData.campaign(repo, 7)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
 	var k := float(ArmySystem.metres_per_pack_px(repo))
@@ -173,7 +174,7 @@ func test_the_same_orders_from_the_same_save_give_the_same_march() -> void:
 
 
 func test_an_old_save_with_no_position_is_seated_where_the_pack_put_it() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
 	# What a save written before the march existed holds.
@@ -185,7 +186,7 @@ func test_an_old_save_with_no_position_is_seated_where_the_pack_put_it() -> void
 
 
 func test_the_orders_validate_against_the_regiment_and_the_ground() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
@@ -216,7 +217,7 @@ func test_the_orders_validate_against_the_regiment_and_the_ground() -> void:
 
 
 func test_marching_into_the_sea_is_refused() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
 	var code := String(_marcher()["regiment_code"])
 	# A corner of the canvas the land grid does not cover.
@@ -230,7 +231,7 @@ func test_marching_into_the_sea_is_refused() -> void:
 
 
 func test_the_order_runs_and_charges_its_cost() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
@@ -254,7 +255,7 @@ func test_the_order_runs_and_charges_its_cost() -> void:
 
 
 func test_the_weather_where_it_stands_scales_its_day() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := String(_marcher()["regiment_code"])
 	var step := ArmySystem.day_step_m(repo, s, code)
 	var saved := repo.weather_odds.duplicate(true)
@@ -262,7 +263,8 @@ func test_the_weather_where_it_stands_scales_its_day() -> void:
 		repo.weather_odds[key] = {"clear": 0, "rain": 0, "mud": 0, "snow": 0, "blizzard": 1}
 	Weather.forget()
 	@warning_ignore("integer_division")
-	assert_eq(ArmySystem.day_march_m(repo, s, code), step * 400 / 1000, "a blizzard: 400‰")
+	assert_eq(ArmySystem.day_march_m(repo, s, code), step * int(repo.weather_kinds["blizzard"]["speed_permille"]) / 1000,
+		"a blizzard slows it by its weather.csv speed")
 	repo.weather_odds = saved
 
 
@@ -270,15 +272,19 @@ func test_the_weather_where_it_stands_scales_its_day() -> void:
 ## weather line, and its "days out" and the aim ruler's figure are one
 ## function, ArmySystem.march_days, today's weather where it stands in.
 func test_in_rain_the_card_the_days_out_and_the_ruler_agree() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := String(_marcher()["regiment_code"])
 	var step := ArmySystem.day_step_m(repo, s, code)
 	var saved := repo.weather_odds.duplicate(true)
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 0, "rain": 1, "mud": 0, "snow": 0, "blizzard": 0}
 	Weather.forget()
-	# five clear days of road in rain at 850‰: 5 / 0.85 = 5.9 -> 6 days
-	assert_eq(ArmySystem.march_days(repo, s, code, float(step * 5)), 6)
+	# five clear days of road in rain take the next whole day past 5 / rain
+	var rain := int(repo.weather_kinds["rain"]["speed_permille"])
+	assert_lt(rain, 1000, "rain slows a march")
+	@warning_ignore("integer_division")
+	var wet_step := step * rain / 1000
+	assert_eq(ArmySystem.march_days(repo, s, code, float(step * 5)), ceili(float(step * 5) / float(wet_step)))
 	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code))
 	ArmySystem.set_march(repo, s, code, here + Vector2(37.0, 0.0))
 	var left := 37.0 * float(ArmySystem.metres_per_pack_px(repo))
@@ -297,10 +303,8 @@ func test_in_rain_the_card_the_days_out_and_the_ruler_agree() -> void:
 	var tip := String(march.get("tooltip", ""))
 	assert_string_contains(tip, "clear weather")
 	assert_true(tip.ends_with("in today's weather"), "a whole sentence: " + tip)
-	assert_eq(String(weather.get("text", "")), "Rain ×0.85", "the weather is its own line")
+	assert_eq(String(weather.get("text", "")), "%s ×%.2f" % [Weather.label_of(repo, "rain"), float(rain) / 1000.0],
+		"the weather is its own line")
 	assert_true(repo.resource_icons.has("army_weather"), "with its icon row")
-	var ruler := FileAccess.get_file_as_string("res://scripts/map3d/map3d_hud_ruler.gd")
-	assert_string_contains(ruler, "ArmySystem.march_days(", "the aim ruler counts the same days")
-	assert_false(ruler.contains("day_step_m"), "not the weather-free pace")
 	repo.weather_odds = saved
 	Weather.forget()

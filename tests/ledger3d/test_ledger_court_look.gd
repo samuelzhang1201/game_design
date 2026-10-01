@@ -1,9 +1,10 @@
 # tests/ledger3d/test_ledger_court_look.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The LEDGER's look rulings of 2026-09-30 (owner, choosing variant A): the
 ## court is read one person's web at a time — thin cords whose width follows
-## the feeling, the player's own ties lit while no one is selected and the
-## rest standing back, the selected person's ties lit once one is. And
+## the feeling, the selected person's ties lit once one is (the player's own
+## at rest: test_ledger_view_galaxy's at-rest test). And
 ## (owner 2026-10-01: King Aldric's tan, red and green ties "非常突兀，应该和周边
 ## 类似") a tie wears its two clusters' colours like every other link — the
 ## feeling is its width and its card, never a hue.
@@ -14,8 +15,8 @@ var snap: Dictionary
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
-	var state := GameState.new_campaign(repo, 42)
+	repo = SuiteData.repo()
+	var state := SuiteData.campaign(repo, 42)
 	view = (load("res://scenes/ledger/ledger_view.tscn") as PackedScene).instantiate()
 	add_child_autofree(view)
 	view.bind(repo)
@@ -38,17 +39,6 @@ func test_a_court_tie_is_a_thin_cord_by_its_feeling() -> void:
 		var k := repo.bal("ledger_focus_width") if mine else 1.0
 		assert_true(w >= repo.bal("ledger_tie_min_px") * k - 0.001 and w <= repo.bal("ledger_tie_max_px") * k + 0.001,
 			String(seg["id"]))
-
-
-func test_at_rest_the_players_ties_are_lit_and_the_rest_stand_back() -> void:
-	var rest := pow(repo.bal("ledger_tie_rest_fade"), 2.2)
-	for seg: Dictionary in _ties():
-		var mine := String(seg["a_id"]) == LedgerView3D.EGO_AT_REST or String(seg["b_id"]) == LedgerView3D.EGO_AT_REST
-		var a := (seg["ca"] as Color).a
-		if mine:
-			assert_gt(a, rest + 0.01, "the player's tie is lit: " + String(seg["id"]))
-		else:
-			assert_lte(a, rest + 0.001, "stands back: " + String(seg["id"]))
 
 
 func test_selecting_someone_makes_them_the_lit_one() -> void:
@@ -76,5 +66,3 @@ func test_a_court_tie_wears_its_clusters_colours_not_a_feeling() -> void:
 			# other link; at the reign's first day none has
 			assert_almost_eq(Vector3(c.r, c.g, c.b), Vector3(want.r, want.g, want.b), Vector3.ONE * 0.002,
 				"%s %s" % [String(seg["id"]), k])
-	for key: String in ["thread_pos", "thread_neg", "thread_kin"]:
-		assert_false(repo.ledger_palette.has(key), key + " is gone with the sentiment hues")

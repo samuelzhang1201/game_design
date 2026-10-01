@@ -11,10 +11,10 @@ func _root() -> GameRoot:
 func _court() -> GameRoot:
 	Game.start_campaign(42)
 	var r := _root()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	return r
 
 func test_the_manors_tab_lists_the_realms_manors_biggest_first() -> void:
@@ -23,7 +23,7 @@ func test_the_manors_tab_lists_the_realms_manors_biggest_first() -> void:
 	var panel: ManorMasterPanel = screen.manor_master()
 	assert_false(panel.visible, "off by default")
 	r.bottom_bar().button("MANORS").pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(panel.visible, "the tab drives it")
 	assert_false(screen.dashboard().visible, "in place of the dashboard")
 	var realm := Game.data.resolve_realm("player_realm")
@@ -58,7 +58,7 @@ func test_each_row_wears_its_houses_arms() -> void:
 	var r: GameRoot = await _court()
 	var panel: ManorMasterPanel = (r.current_screen as CourtScreen).manor_master()
 	r.bottom_bar().button("MANORS").pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var item := panel.table().get_root().get_first_child()
 	var i := 0
 	while item != null:
@@ -73,7 +73,7 @@ func test_scope_and_house_narrow_or_widen_the_table() -> void:
 	var r: GameRoot = await _court()
 	var panel: ManorMasterPanel = r.current_screen.manor_master()
 	r.bottom_bar().button("MANORS").pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var realm_rows := panel.rows().size()
 	panel.set_scope(true)
 	var cap := int(Game.data.bal("manor_master_max_rows"))
@@ -104,17 +104,17 @@ func test_activating_a_row_opens_its_card() -> void:
 	var screen: CourtScreen = r.current_screen
 	var panel: ManorMasterPanel = screen.manor_master()
 	r.bottom_bar().button("MANORS").pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var cell: int = panel.rows()[3]["cell"]
 	# (Centring and ringing it are the 3D map's, which a headless run does
 	# not load: tests/map3d cover the selection outline.)
 	assert_true(panel.choose(cell), "the row is in the table")
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(panel.visible, "a click keeps the table")
 	panel.manor_activated.emit(cell)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(screen.detail_panel().shown_manor(), cell, "activating opens the card")
 	assert_false(panel.visible, "which takes the column until it closes")
 	screen.detail_panel().close_button().pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(panel.visible, "and the table returns")

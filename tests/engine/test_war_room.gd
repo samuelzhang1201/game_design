@@ -1,5 +1,6 @@
 # tests/engine/test_war_room.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## What the plotting table draws (spec 2026-10-01-war-room-design §3).
 
 var repo: DataRepository
@@ -7,8 +8,8 @@ var state: GameState
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(repo, 42)
+	repo = SuiteData.repo()
+	state = SuiteData.campaign(repo, 42)
 	WarSheets.forget()
 
 

@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## economy/deals.csv (importer-only, spec: 10,815 Azgaar trade flows): every
 ## recorded flow between a market and a burg, or between two markets. These
 ## assertions read the pack file directly, the way test_map_pack.gd's maps.csv
@@ -9,7 +10,7 @@ var repo: DataRepository
 var deals_path: String
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	assert_not_null(repo, DataRepository.last_error)
 	deals_path = String(repo.maps[repo.map_id]["data_dir"]) + "/economy/deals.csv"
 

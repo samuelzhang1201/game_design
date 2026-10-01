@@ -1,12 +1,13 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
 func test_minister_beats_group_concern_with_pitch() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var engine := TickEngine.new(data)
 	var r := engine.advance(s)
 	# The month's settlement fills the civil pool (spec 2026-09-14 §5), so
@@ -35,7 +36,7 @@ func test_minister_beats_group_concern_with_pitch() -> void:
 ## neither speaks a pitch line nor renders a reply option in conversation —
 ## the court screen's order bar is its home.
 func test_standing_suggestions_stay_off_the_conversation_stage() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var r := TickReport.new()
 	r.tick = 1
 	r.suggestions = [{"seat": "marshal", "request": ActionRequest.make("LEVY_RAISE"),
@@ -55,7 +56,7 @@ func test_standing_suggestions_stay_off_the_conversation_stage() -> void:
 	assert_true(found, "a concern-driven suggestion renders on its minister's beat")
 
 func test_event_beat_first_when_pending() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var engine := TickEngine.new(data)
 	var r := engine.advance(s)
 	engine.events._fire("ev_01", s)
@@ -73,7 +74,7 @@ func test_event_beat_first_when_pending() -> void:
 ## (state.recent_outcomes -> council_summary_now) is covered in
 ## tests/ui/test_conversation_scene.gd, since it needs a live quick-reply.
 func test_summary_reflects_outcomes_without_numbers() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var engine := TickEngine.new(data)
 	engine.advance(s)
 	engine.actions.execute(ActionRequest.make("LEVY_RAISE"), s)
@@ -94,7 +95,7 @@ func test_summary_reflects_outcomes_without_numbers() -> void:
 ## (right after the event beat, if any) - here it lands first outright since
 ## r.event is cleared and no other minister beat can precede index 0.
 func test_broken_promise_becomes_minister_beat_before_concerns() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var engine := TickEngine.new(data)
 	var r := engine.advance(s)
 	if not s.pending_event.is_empty():

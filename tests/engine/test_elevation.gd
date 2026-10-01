@@ -1,11 +1,12 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Elevation (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §1):
 ## cell height into metres and supply tiers.
 
 var repo: DataRepository
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 func test_metres_from_the_cell_height() -> void:
 	assert_eq(Elevation.metres_of_height(repo, 20.0), 0, "the waterline")
@@ -35,7 +36,9 @@ func test_tier_edges() -> void:
 
 func test_the_table_is_read_highest_first() -> void:
 	var mins: Array = repo.army_height_supply.map(func(r: Dictionary) -> int: return int(r["min_height"]))
-	assert_eq(mins, [72, 62, 45, 0])
+	assert_gt(mins.size(), 1)
+	for i in range(1, mins.size()):
+		assert_lt(int(mins[i]), int(mins[i - 1]), "row %d is lower than the one before" % i)
 
 ## The supply tiers ARE the ground bands (spec §1: "the lines are the biome
 ## bands'"), so army_height_supply.csv must never drift from balance.csv.

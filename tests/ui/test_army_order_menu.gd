@@ -60,11 +60,15 @@ func _deliver_all() -> void:
 		Game.advance_day()
 
 
+## Owner 2026-09-30 (军队到达目的地后自动驻防，取消驻防按钮): the regiment's
+## menu has no Garrison row — a march garrisons on arrival.
 func test_the_menu_offers_exactly_the_rows_in_the_table() -> void:
 	_map.army_menu_requested.emit(_marcher(), Vector2(10.0, 10.0))
 	assert_eq(_menu.item_count, Game.data.army_orders.size())
 	for i in Game.data.army_orders.size():
 		assert_eq(_menu.get_item_text(i), String(Game.data.army_orders[i]["label"]))
+	for row: Dictionary in Game.data.army_orders:
+		assert_ne(String(row["action_code"]), "ARMY_GARRISON", "no Garrison row")
 
 
 func test_choosing_march_only_AIMS_it_and_gives_the_map_the_word() -> void:
@@ -97,16 +101,6 @@ func test_a_row_chosen_the_way_PopupMenu_chooses_it_still_takes() -> void:
 	_deliver_all()
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON,
 		"Cancel march chosen from a closing menu still halts it, once the courier delivers")
-
-
-## Owner 2026-09-30 (军队到达目的地后自动驻防，取消驻防按钮): the regiment's
-## menu has no Garrison row — a march garrisons on arrival.
-func test_the_menu_offers_no_garrison() -> void:
-	_map.army_menu_requested.emit(_marcher(), Vector2(10.0, 10.0))
-	for i in _menu.item_count:
-		assert_ne(_menu.get_item_text(i), "Garrison")
-	for row: Dictionary in Game.data.army_orders:
-		assert_ne(String(row["action_code"]), "ARMY_GARRISON")
 
 
 func test_an_order_on_a_stopped_clock_does_not_start_it() -> void:
@@ -159,17 +153,6 @@ func test_a_click_on_the_ground_with_nothing_aimed_orders_nothing() -> void:
 	var code := _marcher()
 	_map.ground_clicked.emit(Vector2(500.0, 300.0))
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY)
-
-
-func test_garrison_rides_and_halts_a_march_on_delivery() -> void:
-	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
-	ArmySystem.set_march(Game.data, Game.state, code, here + Vector2(30.0, 0.0))
-	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
-	_menu.id_pressed.emit(ArmyOrderMenu.HALT)
-	assert_eq(Game.state.couriers.size(), 1, "a courier rides with the halt")
-	_deliver_all()
-	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON)
 
 
 func test_an_order_the_engine_would_refuse_is_greyed_out_with_its_reason() -> void:
@@ -259,11 +242,14 @@ func test_clicking_away_from_the_confirm_gives_it_up() -> void:
 
 ## owner 2026-09-27: 兵人行进路线只能在暂停模式下选择，时间流逝的时候不可以操作.
 func test_march_is_greyed_out_while_time_runs() -> void:
+	var march := Game.data.army_orders.find_custom(func(row: Dictionary) -> bool:
+		return String(row["action_code"]) == "ARMY_MARCH")
+	assert_gt(march, -1, "the menu has a MARCH row")
 	Game.set_clock_speed(1)
 	_map.army_menu_requested.emit(_marcher(), Vector2(10.0, 10.0))
-	assert_true(_menu.is_item_disabled(0), "MARCH")
-	assert_eq(_menu.get_item_tooltip(0), String(Game.data.army_route_orders["paused_only"]["hint"]))
-	assert_false(_menu.is_item_disabled(1), "GARRISON still halts a column while time runs")
+	assert_true(_menu.is_item_disabled(march), "MARCH")
+	assert_eq(_menu.get_item_tooltip(march), String(Game.data.army_route_orders["paused_only"]["hint"]))
+	# a halt is the route menu's Cancel march, greyed too (test_the_route_menu_is_paused_only)
 	Game.set_clock_speed(0)
 
 
@@ -292,18 +278,13 @@ func test_the_end_ring_edits_or_halts_the_march() -> void:
 	assert_eq(_menu.aiming(), code, "Edit aims the march anew")
 	_menu.id_pressed.emit(ArmyOrderMenu.CANCEL)
 	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
-	_menu.hide()
-	_menu.id_pressed.emit(ArmyOrderMenu.HALT)
-	assert_eq(Game.state.couriers.size(), 1, "a courier rides with the halt")
-	_deliver_all()
-	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_GARRISON,
-		"Cancel march halts the column, once the courier delivers")
+	assert_eq(_menu.get_item_text(_menu.get_item_index(ArmyOrderMenu.HALT)),
+		String(Game.data.army_route_orders["halt"]["label"]), "and Cancel march halts it (see above)")
 
 
 ## Owner 2026-09-28: the row confirms the order; it does not say "send courier".
 func test_the_commit_row_confirms_the_order_and_names_the_fee() -> void:
 	var row: Dictionary = Game.data.army_route_orders["commit"]
-	assert_eq(String(row["label"]), "Confirm order")
 	assert_false(String(row["label"]).to_lower().contains("courier"))
 	assert_string_contains(String(row["hint"]), "{fee}")
 

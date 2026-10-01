@@ -1,14 +1,29 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Dispatch (spec 2026-09-27-courier-core §1): from the capital, along the
 ## road network, to the regiment where it stands.
 
 var repo: DataRepository
+var _own_roads := false
+
+
+## The pack's road graph is cached by map id and every test's repository
+## carries the same routes and road speeds, so it is built once per script
+## (and forgotten around it, so no other script's graph is read).
+func before_all() -> void:
+	RoadGraph.forget()
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
-	RoadGraph.forget()
+	repo = SuiteData.repo()
 	Weather.forget()
+
+
+## A test that sets its own road speeds may have built the graph with them.
+func after_each() -> void:
+	if _own_roads:
+		RoadGraph.forget()
+		_own_roads = false
 
 
 func after_all() -> void:
@@ -36,7 +51,7 @@ func _capital_px() -> Vector2:
 
 
 func test_a_courier_rides_from_the_capital_to_the_regiment() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	var c := CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
 	var home := ArmySystem.pack_to_metres(repo, _capital_px())
@@ -52,7 +67,7 @@ func test_a_courier_rides_from_the_capital_to_the_regiment() -> void:
 
 
 func test_most_of_the_way_is_on_the_roads() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var c := CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, _marcher(), {"action_code": "ARMY_GARRISON"})
 	var kinds: Dictionary = {}
 	for p: Array in c["path"]:
@@ -62,7 +77,7 @@ func test_most_of_the_way_is_on_the_roads() -> void:
 
 
 func test_the_capital_lost_he_rides_from_the_most_populous_town_of_the_first_held_province() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
 	var cap_code := String(repo.kingdoms[realm]["capital_burg"])
 	var prov := String(repo.burgs[cap_code]["province_code"])
@@ -84,8 +99,9 @@ func test_the_capital_lost_he_rides_from_the_most_populous_town_of_the_first_hel
 
 
 func test_need_along_a_path_by_hand() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	_skies("clear")
+	_own_roads = true
 	repo.road_speed = {"road": 1000, "trail": 800, "offroad": 500, "sea": 625,
 		"tier_plains": 1000, "tier_hills": 1000, "tier_mountains": 1000, "tier_peak": 1000}
 	# 100 km of road + 100 km across country at 500‰ = 100,000 + 200,000.
@@ -98,7 +114,7 @@ func test_need_along_a_path_by_hand() -> void:
 
 
 func test_the_estimate_is_the_dispatched_couriers() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	var eta := CourierSystem.eta_days(repo, s, CourierSystem.ORDINARY, code)
 	var c := CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
@@ -115,7 +131,7 @@ func test_a_fleet_takes_no_courier() -> void:
 ## node, so the road began with a zero-length leg back to where he stood,
 ## "offroad" — and his card read "Across country" while he sat in the capital.
 func test_his_road_does_not_begin_where_he_stands() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var c := CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, _marcher(), {"action_code": "ARMY_GARRISON"})
 	var first: Array = (c["path"] as Array)[0]
 	assert_ne(Vector2i(int(first[0]), int(first[1])), Vector2i(int(c["x_m"]), int(c["y_m"])),
@@ -147,8 +163,9 @@ func _open_sea_px() -> Vector2:
 ## Spec §1: a leg that leaves the land grid is a sea crossing — the sea's
 ## per mille, no height tier (1000), clear weather at sea.
 func test_a_leg_off_the_land_is_a_sea_crossing_by_hand() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	_skies("clear")
+	_own_roads = true
 	repo.road_speed = {"road": 1000, "trail": 800, "offroad": 500, "sea": 625,
 		"tier_plains": 300, "tier_hills": 300, "tier_mountains": 300, "tier_peak": 300}
 	var sea := _open_sea_px()

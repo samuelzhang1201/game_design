@@ -84,7 +84,7 @@ func test_prompt_cap_refuses_without_api_call() -> void:
 		Game.submit_free_text("hold court", func(res):
 			if not res["ok"] and "no more orders" in String(res["error"]):
 				_refusals += 1)
-		await wait_frames(2)
+		await wait_process_frames(2)
 	assert_eq(_refusals, 2, "calls beyond the cap are refused in-fiction")
 	Game.next_tick()
 	if not Game.state.pending_event.is_empty():
@@ -93,7 +93,7 @@ func test_prompt_cap_refuses_without_api_call() -> void:
 	Game.submit_free_text("hold court", func(res):
 		if not res["ok"] and "no more orders" in String(res["error"]):
 			_refusals += 1)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_eq(_refusals, 0, "cap resets on a new tick")
 
 ## The two-part order call has its own tier (spec 2026-09-09 §4.3).

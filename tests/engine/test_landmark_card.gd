@@ -42,12 +42,11 @@ func test_the_where_line_collapses_a_shared_name() -> void:
 ## Proved against the real pack too, wherever an unmoved manor's landmark
 ## reads as its own province's house.
 func test_the_where_line_never_doubles_on_the_pack() -> void:
-	var found_a_case := false
+	var doubled: Array = []
 	for m: Dictionary in Elevation.landmarks(Game.data):
 		var lines := MapObjects.landmark_lines(Game.data, Game.state, int(m["cell"]))
 		var where_line := String(lines[1])
 		var parts := where_line.split(" — ")
 		if parts.size() == 2 and parts[0] == parts[1]:
-			found_a_case = true
-			fail_test("%s repeats itself: %s" % [String(m["name"]), where_line])
-	assert_false(found_a_case)
+			doubled.append("%s: %s" % [String(m["name"]), where_line])
+	assert_eq(doubled, [], "no landmark's where line repeats itself")

@@ -288,10 +288,8 @@ func _sync_action(code: String) -> void:
 func _scene(path: String) -> PackedScene:
 	if _scenes.has(path):
 		return _scenes[path]
-	var scene: PackedScene = null
-	if ResourceLoader.exists(path):
-		scene = load(path) as PackedScene
-	else:
+	var scene := Map3DAssetCache.scene(path)  # loaded once, kept between views
+	if scene == null:
 		Map3DWorldLoader.warn_once("units:" + path, "map3d units: no model at " + path)
 	_scenes[path] = scene
 	return scene

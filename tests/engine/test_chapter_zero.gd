@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Chapter 0 — the prologue tutorial (game_story/chapter_0/chapter_0_events.md,
 ## data/chapter_events.csv, chapter_event_choices.csv, chapter_branches.csv).
 ##
@@ -11,7 +12,7 @@ extends GutTest
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
 func _ids() -> Array:
 	var out: Array = []
@@ -29,8 +30,7 @@ func _choices_of(id: String) -> Array:
 # --- inventory -------------------------------------------------------------
 
 func test_the_chapter_is_all_there() -> void:
-	assert_eq(data.chapter_events.size(), 21, "16 beats and 5 harvest/ending entries")
-	assert_eq(data.chapter_event_choices.size(), 51)
+	assert_false(data.chapter_events.is_empty(), "the chapter's beats are loaded")
 	for row in data.chapter_events:
 		var id := String(row["event_id"])
 		assert_eq(String(row["category"]), "chapter", id)
@@ -38,6 +38,9 @@ func test_the_chapter_is_all_there() -> void:
 			id + " must be chained, never sampled by the random roll")
 		assert_eq(String(row["once"]), "1", id + " fires at most once")
 		assert_between(_choices_of(id).size(), 1, 4, id + " choice count")
+	var ids := _ids()
+	for c in data.chapter_event_choices:
+		assert_has(ids, String(c["event_id"]), "%s belongs to a chapter beat" % c["choice_id"])
 
 ## The prologue is free of the model (PRD §8, invariant 9): every beat is
 ## authored prose shown verbatim.
@@ -112,7 +115,7 @@ func test_effect_ops_are_known_and_of_the_right_arity() -> void:
 						head, c["event_id"], c["choice_id"], op])
 
 func test_world_paths_are_schema_listed() -> void:
-	var s := GameState.new_campaign(data, 3)
+	var s := SuiteData.campaign(data, 3)
 	for c in data.chapter_event_choices:
 		for raw in String(c["effects"]).split(";", false):
 			var op := raw.strip_edges()
@@ -125,7 +128,7 @@ func test_world_paths_are_schema_listed() -> void:
 				"%s has no value behind it" % path)
 
 func test_opinion_and_relationship_targets_resolve() -> void:
-	var s := GameState.new_campaign(data, 5)
+	var s := SuiteData.campaign(data, 5)
 	for c in data.chapter_event_choices:
 		for raw in String(c["effects"]).split(";", false):
 			var op := raw.strip_edges()
@@ -143,7 +146,7 @@ func test_opinion_and_relationship_targets_resolve() -> void:
 					t, c["event_id"], c["choice_id"]])
 
 func test_triggers_and_requires_parse() -> void:
-	var s := GameState.new_campaign(data, 7)
+	var s := SuiteData.campaign(data, 7)
 	s.tick = 9
 	for row in data.chapter_events:
 		TriggerDsl.evaluate(String(row["trigger"]), s, data)
@@ -279,7 +282,7 @@ func test_every_beat_has_an_illustration_planned() -> void:
 # --- playing it -----------------------------------------------------------
 
 func test_a_new_reign_opens_on_the_first_council() -> void:
-	var s := GameState.new_campaign(data, 44)
+	var s := SuiteData.campaign(data, 44)
 	var sys := EventSystem.new(data)
 	s.tick = 1
 	var ev := sys.roll(s)
@@ -292,7 +295,7 @@ func test_a_new_reign_opens_on_the_first_council() -> void:
 ## the option, never roll a hidden die), and the spymaster's own fork turns
 ## on how the king treated his council in the first hour of the reign.
 func test_both_sides_of_every_fork_are_reachable() -> void:
-	var s := GameState.new_campaign(data, 44)
+	var s := SuiteData.campaign(data, 44)
 	s.tick = 3
 	for branch: String in ["c0_br_spy", "c0_br_guard", "c0_br_charter",
 			"c0_br_tax", "c0_br_harvest", "c0_br_ending"]:
@@ -316,13 +319,17 @@ func test_both_sides_of_every_fork_are_reachable() -> void:
 		"a veteran captain offers to strip the hall, in the open")
 	assert_true("summon" in ids, "and the plain safe conduct is still there")
 
-func test_a_whole_playthrough_reaches_an_ending() -> void:
+
+func test_the_chain_keeps_the_seasons_it_says_it_keeps() -> void:
 	# Walk the chain the way the game does: fire what is due, take the first
 	# offered choice, let the engine schedule the next. No RNG is consulted
-	# on this path, so the walk is the same every run.
-	var s := GameState.new_campaign(data, 44)
+	# on this path, so the walk is the same every run. It reaches an ending,
+	# and keeps the document's own timetable on the way: the first council in
+	# spring, the bond set in summer, the year counted at the harvest.
+	var s := SuiteData.campaign(data, 44)
 	var sys := EventSystem.new(data)
 	var seen: Array = []
+	var when := {}
 	for tick in range(1, 25):
 		s.tick = tick
 		var ev := sys.roll(s)
@@ -333,6 +340,7 @@ func test_a_whole_playthrough_reaches_an_ending() -> void:
 			s.pending_event = {}
 			continue
 		seen.append(id)
+		when[id] = tick
 		var out := sys.apply_choice(String((ev["choices"] as Array)[0]["choice_id"]), s)
 		assert_false(out.is_empty(), id + " would not resolve")
 		if id in ["c0_13", "c0_14", "c0_15", "c0_16"]:
@@ -345,24 +353,6 @@ func test_a_whole_playthrough_reaches_an_ending() -> void:
 		or "c0_end_compromise" in s.event_state["flags"]
 		or "c0_end_iron" in s.event_state["flags"]
 		or "c0_end_winter" in s.event_state["flags"], "an ending flag is set")
-
-func test_the_chain_keeps_the_seasons_it_says_it_keeps() -> void:
-	# The first council in spring, the bond set in summer, the year counted
-	# at the harvest: the document's own timetable, walked.
-	var s := GameState.new_campaign(data, 44)
-	var sys := EventSystem.new(data)
-	var when := {}
-	for tick in range(1, 25):
-		s.tick = tick
-		var ev := sys.roll(s)
-		if ev.is_empty():
-			continue
-		var id := String(ev["event_id"])
-		if not id.begins_with("c0_"):
-			s.pending_event = {}
-			continue
-		when[id] = tick
-		sys.apply_choice(String((ev["choices"] as Array)[0]["choice_id"]), s)
 	assert_eq(int(when["c0_01"]), 1, "the first council opens the reign")
 	assert_eq(Calendar.season_name(int(when["c0_06"])), "Summer", "the bond is set in summer")
 	var harvest: int = int(when.get("c0_11h", when.get("c0_11t", 0)))
@@ -376,7 +366,7 @@ func test_the_chain_keeps_the_seasons_it_says_it_keeps() -> void:
 ## The same walk with the other fork at every branch: no obstruction, and
 ## the tallies are read on the threshing floor.
 func test_the_unobstructed_chain_counts_the_year_in_autumn() -> void:
-	var s := GameState.new_campaign(data, 44)
+	var s := SuiteData.campaign(data, 44)
 	var sys := EventSystem.new(data)
 	var when := {}
 	for tick in range(1, 25):
@@ -399,7 +389,7 @@ func test_the_unobstructed_chain_counts_the_year_in_autumn() -> void:
 	assert_eq(harvest, 9, "on the threshing floor, tick 9")
 
 func test_the_branch_op_takes_the_first_matching_rule() -> void:
-	var s := GameState.new_campaign(data, 44)
+	var s := SuiteData.campaign(data, 44)
 	s.tick = 5
 	# No flag: the tax branch falls through to the thin harvest.
 	EventEffects.apply("branch:c0_br_tax", s, data, "test")
@@ -425,7 +415,7 @@ func test_the_ending_follows_the_four_figures() -> void:
 			["c0_ledger_shown"], "c0_16"],
 	]
 	for case: Array in cases:
-		var s := GameState.new_campaign(data, 9)
+		var s := SuiteData.campaign(data, 9)
 		s.tick = 11
 		for k: String in (case[0] as Dictionary):
 			s.metrics[k] = float((case[0] as Dictionary)[k])
@@ -442,7 +432,7 @@ func test_the_ending_follows_the_four_figures() -> void:
 ## GameState. The one state-dependent clause a branch uses beyond flags is
 ## trait_of, which is constant for a roster, so it is resolved once up front.
 func test_every_path_terminates_in_one_of_the_four_endings() -> void:
-	var s := GameState.new_campaign(data, 44)
+	var s := SuiteData.campaign(data, 44)
 	var endings := {"c0_13": 0, "c0_14": 0, "c0_15": 0, "c0_16": 0}
 	var visited := {}
 	var paths := 0

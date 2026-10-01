@@ -2,22 +2,23 @@ extends GutTest
 ## The LEDGER's search box (owner 2026-10-01: 在ledger界面新增一个搜索栏，
 ## 可以搜索node), driven by real key events through the window.
 
+## The court on a fresh reign, as Start Game begins it but without the
+## opening narration's screen, which no test here needs.
 func _court() -> GameRoot:
+	Game.start_campaign(44)   # the seed Start Game begins
+	Game.next_tick()
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
-	await wait_frames(2)
-	var menu: MainMenu = r.current_screen
-	menu.menu_column().get_node("StartGame").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	return r
 
 
 func _open(r: GameRoot) -> LedgerScreen:
 	r.bottom_bar().button("LEDGER").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	return r.ledger_screen()
 
 
@@ -36,7 +37,7 @@ func _type(screen: LedgerScreen, text: String) -> void:
 	for ch in text:
 		var u := ch.unicode_at(0)
 		_key(OS.find_keycode_from_string(ch.to_upper()) if ch != " " else KEY_SPACE, u)
-	await wait_frames(1)
+	await wait_process_frames(1)
 
 
 func test_typing_lists_matches_by_label_in_any_case() -> void:
@@ -62,7 +63,7 @@ func test_enter_picks_the_first_match() -> void:
 	assert_false(found.is_empty())
 	var first := String(found[0]["id"])
 	_key(KEY_ENTER)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(screen.view().selected(), first, "selected")
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
 	assert_eq(detail.title_label().text, LedgerResolvers.label_of(Game.data, Game.state, first), "its card")
@@ -92,7 +93,7 @@ func test_a_folded_manor_opens_its_province_and_is_selected() -> void:
 		screen.go_to(manor, prov)
 	else:
 		(screen.find_child("Match%d" % at, true, false) as Button).pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(screen.opened().has(prov.substr(9)), "its province opened")
 	assert_true((screen.snapshot()["nodes"] as Array).any(func(n: Dictionary) -> bool:
 		return String(n["id"]) == manor), "so its star exists")
@@ -105,7 +106,7 @@ func test_escape_clears_the_box_and_opens_no_menu() -> void:
 	await _type(screen, "a")
 	assert_true(screen.find_child("SearchList", true, false).visible)
 	_key(KEY_ESCAPE)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(screen.search_box().text, "")
 	assert_false(screen.find_child("SearchList", true, false).visible)
 	assert_false(screen.search_box().has_focus())

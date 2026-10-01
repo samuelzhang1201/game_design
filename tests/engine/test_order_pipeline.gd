@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## One order end to end (spec 2026-09-09 §4.3): actions, world impacts, the
 ## court reaction, the cost rule, and the ledger lines the screens print.
 
@@ -7,8 +8,8 @@ var state: GameState
 var engine: TickEngine
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 	engine = TickEngine.new(data)
 	engine.advance(state)
 	state.pending_event = {}

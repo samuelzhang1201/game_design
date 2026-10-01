@@ -22,11 +22,17 @@ func after_each() -> void:
 func _root() -> GameRoot:
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	return r
+
+
+## Every envelope has landed and freed itself (a flight is a tween of
+## missive_seal_s + missive_fly_s, real time, so frames are not the measure).
+func _flown(r: GameRoot) -> bool:
+	return r.get_children().all(func(c: Node) -> bool: return not c is EnvelopeFlight)
 
 
 func _spy_letter() -> int:
@@ -58,7 +64,7 @@ func test_a_spy_report_stops_the_clock_and_opens_the_dialog() -> void:
 	r.refresh_missive_badge()
 	var before := r.bottom_bar().badge("MISSIVE")
 	r.report_popup().seal_button().pressed.emit()
-	await wait_frames(30)
+	await wait_until(func() -> bool: return _flown(r), 2.0)
 	assert_false(r.report_popup().visible)
 	assert_eq(Game.clock_speed, 0, "nothing restarts the clock")
 	# M16 (final review): Seal ends with the letter counted on the tab.
@@ -77,7 +83,7 @@ func test_the_report_dialog_centres_on_the_map_panel_not_the_window() -> void:
 	var r: GameRoot = await _root()
 	var id := _spy_letter()
 	r.on_new_missives([id])
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(r.report_popup().visible)
 	var map_rect: Rect2 = r.current_screen.map_panel().get_global_rect()
 	var win_rect: Rect2 = r.report_popup().find_child("Window", true, false).get_global_rect()
@@ -94,7 +100,7 @@ func test_two_spy_reports_in_one_frame_open_in_turn() -> void:
 	r.on_new_missives([a, b])
 	assert_eq(r.pending_reports(), [b])
 	r.report_popup().seal_button().pressed.emit()
-	await wait_frames(30)
+	await wait_until(func() -> bool: return r.report_popup().visible, 2.0)
 	assert_true(r.report_popup().visible, "the second opens after the first is sealed")
 	assert_eq(r.pending_reports(), [])
 
@@ -116,7 +122,9 @@ func _menu_btn(r: GameRoot, node_name: String) -> Button:
 
 ## Fix round 1: a spy report open (and a second waiting) when the player
 ## restarts from the pause menu must not crash, and must leave nothing
-## behind to reopen or misfire once Game.state is gone.
+## behind to reopen or misfire once Game.state is gone. Fix round 2: the
+## restart hotkey (R) skipped _reset_reports() before — it now routes
+## through _on_menu_restart() like the pause menu's own button.
 func test_a_restart_mid_report_clears_the_queue_without_crashing() -> void:
 	var r: GameRoot = await _root()
 	var a := _spy_letter()
@@ -126,14 +134,29 @@ func test_a_restart_mid_report_clears_the_queue_without_crashing() -> void:
 	assert_eq(r.pending_reports(), [b])
 	Game.menu_requested.emit()
 	_menu_btn(r, "Restart").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_null(Game.state, "the realm is gone")
 	assert_false(r.report_popup().visible, "the stale dialog is hidden by the reset")
 	assert_eq(r.pending_reports(), [], "the queue is cleared")
 	# Sealing the now-stale, already-hidden dialog must be harmless.
 	r.report_popup().seal_button().pressed.emit()
-	await wait_frames(30)
+	await wait_until(func() -> bool: return _flown(r), 2.0)
 	assert_false(r.report_popup().visible)
+	assert_eq(r.pending_reports(), [])
+	# The hotkey, on a fresh reign.
+	Game.start_campaign(42)
+	r._switch_to(GameRoot.State.COURT)
+	r.current_screen.enter_court(null)
+	r.on_new_missives([_spy_letter(), _spy_letter()])
+	assert_true(r.report_popup().visible)
+	assert_eq(r.pending_reports().size(), 1)
+	var key := InputEventKey.new()
+	key.keycode = KEY_R
+	key.pressed = true
+	r._unhandled_input(key)
+	await wait_process_frames(2)
+	assert_null(Game.state, "the restart hotkey still restarts")
+	assert_false(r.report_popup().visible, "and clears the report dialog too")
 	assert_eq(r.pending_reports(), [])
 
 
@@ -150,12 +173,12 @@ func test_a_load_mid_report_discards_a_stale_id_without_crashing() -> void:
 	assert_eq(r.pending_reports(), [b])
 	Game.menu_requested.emit()
 	_menu_btn(r, "LoadGame").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_true(MissiveLog.find(Game.state, b).is_empty(), "the loaded realm never had this letter")
 	assert_false(r.report_popup().visible)
 	assert_eq(r.pending_reports(), [])
 	r.report_popup().seal_button().pressed.emit()
-	await wait_frames(30)
+	await wait_until(func() -> bool: return _flown(r), 2.0)
 	assert_false(r.report_popup().visible)
 	assert_eq(r.pending_reports(), [])
 
@@ -179,34 +202,20 @@ func test_the_popup_survives_a_switch_to_conversation_but_not_to_menu() -> void:
 	assert_false(r.report_popup().visible, "MENU always closes it")
 
 
-## Fix round 2: the restart hotkey (R) skipped _reset_reports() before — it
-## now routes through _on_menu_restart() like the pause menu's own button.
-func test_the_restart_hotkey_also_clears_the_report_queue() -> void:
-	var r: GameRoot = await _root()
-	var a := _spy_letter()
-	var b := _spy_letter()
-	r.on_new_missives([a, b])
-	assert_true(r.report_popup().visible)
-	assert_eq(r.pending_reports(), [b])
-	var key := InputEventKey.new()
-	key.keycode = KEY_R
-	key.pressed = true
-	r._unhandled_input(key)
-	await wait_frames(2)
-	assert_null(Game.state, "the restart hotkey still restarts")
-	assert_false(r.report_popup().visible, "and clears the report dialog too")
-	assert_eq(r.pending_reports(), [])
-
-
 ## M6 (final review): play pressed while a sealed report flies to the tab
 ## and another waits must bank no time — the next report stops the clock
 ## again, and no burst of days follows its Seal. The loop is driven through
-## GameRoot._process itself, the way a frame runs it.
+## GameRoot._process itself, the way a frame runs it. A spy's report that
+## stops the clock mid-step leaves no time banked either.
 func test_no_days_bank_behind_a_waiting_report() -> void:
 	var r: GameRoot = await _root()
 	var a := _spy_letter()
 	var b := _spy_letter()
+	Game.set_clock_speed(1)
+	r._clock_acc = Game.data.bal("time_day_seconds") * 3.0
 	r.on_new_missives([a, b])
+	assert_eq(Game.clock_speed, 0)
+	assert_eq(r._clock_acc, 0.0, "the stop zeroes the day's accumulator")
 	var day0 := Game.state.absolute_day()
 	r.report_popup().seal_button().pressed.emit()   # a flies; b waits
 	assert_false(r.report_popup().visible)
@@ -214,24 +223,14 @@ func test_no_days_bank_behind_a_waiting_report() -> void:
 	r._process(Game.data.bal("time_day_seconds") * 20.0)   # a long frame
 	assert_eq(Game.state.absolute_day(), day0, "no day runs past a waiting report")
 	assert_eq(r._clock_acc, 0.0, "and no time banks behind it")
-	await wait_frames(30)
+	await wait_until(func() -> bool: return r.report_popup().visible, 2.0)
 	assert_true(r.report_popup().visible, "b opens")
 	assert_eq(Game.clock_speed, 0, "and stops the clock again")
 	r.report_popup().seal_button().pressed.emit()
-	await wait_frames(30)
+	await wait_until(func() -> bool: return _flown(r), 2.0)
 	Game.set_clock_speed(1)
 	r._process(0.0)
 	assert_eq(Game.state.absolute_day(), day0, "no burst of days after the Seal")
-
-
-## M6: a spy's report that stops the clock mid-step leaves no time banked.
-func test_a_spy_stop_banks_no_time() -> void:
-	var r: GameRoot = await _root()
-	Game.set_clock_speed(1)
-	r._clock_acc = Game.data.bal("time_day_seconds") * 3.0
-	r.on_new_missives([_spy_letter()])
-	assert_eq(Game.clock_speed, 0)
-	assert_eq(r._clock_acc, 0.0, "the stop zeroes the day's accumulator")
 
 
 ## M2 (final review): the news bar says when the steward's report is in.

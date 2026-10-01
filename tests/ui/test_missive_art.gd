@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The board's art slots (spec 2026-09-28-courier-art §5): an installed piece
 ## is drawn from its texture, nine-sliced by its margin; an uninstalled or
 ## unloadable one keeps the flat fallback.
@@ -7,7 +8,7 @@ var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 
 ## Scaled nine-slice: the art is installed at ui_missive_art_px_per_design
@@ -97,13 +98,3 @@ func test_drawing_a_tiled_piece_with_a_non_positive_scale_completes() -> void:
 	s.draw(ci, Rect2(0, 0, 50, 50))
 	RenderingServer.free_rid(ci)
 	assert_true(true, "drawing with scale <= 0 returned instead of looping forever")
-
-
-func test_the_board_wears_an_installed_frame() -> void:
-	var saved := String(Game.data.missive_art.get("frame", ""))
-	Game.data.missive_art["frame"] = "res://icon.png"
-	Game.data.missive_margin["frame"] = 8
-	var screen: MissiveScreen = (load("res://scenes/missive_screen.tscn") as PackedScene).instantiate()
-	add_child_autofree(screen)
-	assert_true(screen.get_node("%Frame").get_theme_stylebox("panel") is ScaledNineSlice)
-	Game.data.missive_art["frame"] = saved

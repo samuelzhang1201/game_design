@@ -1,12 +1,13 @@
 # tests/ledger3d/test_ledger_math.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The LEDGER view's pure maths (spec 2026-09-30 §7.3), and the rule that
 ## nothing under scripts/ledger3d reads the Game autoload.
 
 var data: DataRepository
 
 func before_all() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
 func test_a_ray_meets_a_sphere_at_its_near_side() -> void:
 	assert_almost_eq(LedgerPick.ray_sphere(Vector3(0, 0, 10), Vector3(0, 0, -1), Vector3.ZERO, 1.0), 9.0, 1e-5)

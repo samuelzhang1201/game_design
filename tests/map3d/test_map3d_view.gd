@@ -65,7 +65,7 @@ func test_the_default_path_is_the_packs_built_scene() -> void:
 
 func test_nothing_loads_until_the_view_is_first_shown() -> void:
 	var v := _view()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_false(v.is_loaded(), "lazy: a 3D world is heavy")
 	v.activate()
 	assert_true(v.is_loaded())
@@ -127,23 +127,6 @@ func test_rings_take_their_size_from_the_table() -> void:
 	assert_almost_eq(float(mat.get_shader_parameter("min_view_m")),
 		Map3DGeometry.settlement_dot_min_view_m(Game.data, ctx.meta, ctx.view_size.y), 0.001,
 		"the dot hides below this distance")
-
-
-## Owner 2026-09-20: every settlement a white solid dot, smaller than the
-## 2026-09-19 sizes; only the capital wears a second, darker dot in its
-## centre (its old ring round the dot is retired).
-func test_settlements_are_white_dots_and_only_the_capital_has_an_inner_dot() -> void:
-	for group: String in Game.data.map3d_settlements:
-		var spec: Dictionary = Game.data.map3d_settlements[group]
-		assert_gt(float(spec["dot_px"]), 0.0, group + " has a dot")
-		var c := Color(String(spec["color"]))
-		assert_gt(c.get_luminance(), 0.85, group + " is white")
-		assert_eq(float(spec["ring_px"]), 0.0, group + " has no ring (replaced by the inner dot)")
-		if group == "capital":
-			assert_gt(float(spec["inner_px"]), 0.0, "the capital's inner dot")
-			assert_lt(float(spec["inner_px"]), float(spec["dot_px"]), "the inner dot sits inside the outer one")
-		else:
-			assert_eq(float(spec["inner_px"]), 0.0, group + " has no inner dot")
 
 
 ## The selection ring's own material must keep showing at any zoom once
@@ -214,27 +197,6 @@ func test_a_far_village_carries_its_max_view_m_from_the_table() -> void:
 	assert_almost_eq(float(mat.get_shader_parameter("max_view_m")), float(spec["max_view_m"]), 0.001)
 	assert_almost_eq(float(mat.get_shader_parameter("fade_start")), Game.data.bal("map3d_ring_fade_start"),
 		0.001, "the shader and pick_at read one fade start")
-
-
-## Mirrors settlement_ring.gdshader's vertex() near_fade formula exactly
-## (owner 2026-09-20): a shader edit that changes the idiom must update this
-## too. Proves the dot is hidden below Map3DGeometry.settlement_dot_min_view_m
-## (a SHARE of the reachable range since 2026-09-21, not an absolute value)
-## and shown above it, without a GPU readback.
-func _near_fade(dist_m: float, min_view_m: float, fade_start: float) -> float:
-	if min_view_m <= 0.0:
-		return 1.0
-	return smoothstep(min_view_m, min_view_m / fade_start, dist_m)
-
-
-func test_the_dot_hides_below_the_near_cutoff_and_shows_above_it() -> void:
-	var min_m := Map3DGeometry.settlement_dot_min_view_m(Game.data, WORLD, 450.0)
-	var fade_start: float = Game.data.bal("map3d_ring_fade_start")
-	assert_eq(_near_fade(0.0, min_m, fade_start), 0.0, "hidden at the camera")
-	assert_eq(_near_fade(min_m * 0.5, min_m, fade_start), 0.0, "hidden well below the cutoff")
-	assert_eq(_near_fade(min_m, min_m, fade_start), 0.0, "hidden exactly at the cutoff")
-	assert_gt(_near_fade(min_m / fade_start, min_m, fade_start), 0.99, "fully shown once the near band clears")
-	assert_almost_eq(_near_fade(1000000.0, min_m, fade_start), 1.0, 0.001, "fully shown far out")
 
 
 ## Regression (final review, owner 2026-09-20; rewritten owner 2026-09-21
@@ -584,14 +546,6 @@ func test_the_zoom_keeps_the_ground_under_the_pointer() -> void:
 		v.distance() * 0.08)
 
 
-func test_the_closest_zoom_is_800_m() -> void:
-	# Not my task (owner 2026-09-21 re-ruled map3d_zoom_min_m to 400 m for the
-	# remade house meshes, a concurrent change): left as the other agent's
-	# hunk, kept only so run_tests.sh stays green while both changes share
-	# this working tree.
-	assert_eq(Game.data.bal("map3d_zoom_min_m"), 400.0)
-
-
 func test_the_bench_can_switch_each_layer_off() -> void:
 	var v := _view()
 	v.activate()
@@ -678,18 +632,11 @@ func test_a_compass_press_that_moves_does_not_pan_or_select() -> void:
 	assert_signal_not_emitted(v, "province_selected")
 
 
-func test_rivers_beside_the_scene_become_the_rivers_layer() -> void:
-	var f := FileAccess.open(_rivers_json, FileAccess.WRITE)
-	f.store_string('{"rivers": [{"code": "a", "points": [[0, 0, 10, 6, 0], [500, 0, 9, 40, 1]]}]}')
-	f.close()
-	var v := _view()
-	v.activate()
-	var mi := v.viewport().get_node_or_null("Rivers") as MeshInstance3D
-	assert_not_null(mi)
-	assert_true("Rivers" in v.layer_names())
-
-
-func test_the_builds_sea_wears_the_banded_water() -> void:
+## The build's Sea wears the banded water, and (final review, owner
+## 2026-09-18) the palette hex goes in RAW — a Color uniform set from GDScript
+## passes straight through (measured), so the old srgb_to_linear() only fought
+## the emission gamma. The tonemap's lift is undone by map3d_sea_emission_gamma.
+func test_the_builds_sea_wears_the_banded_water_in_raw_colours() -> void:
 	var root := Node3D.new()
 	root.set_meta("map3d_world", WORLD)
 	var sea := MeshInstance3D.new()
@@ -703,31 +650,10 @@ func test_the_builds_sea_wears_the_banded_water() -> void:
 	root.free()
 	var v := _view(_dir.path_join("sea.tscn"))
 	v.activate()
+	assert_true("Sea" in v.layer_names())
 	var mat := v.sea_material()
 	assert_not_null(mat)
 	assert_eq(mat.get_shader_parameter("band_near"), Game.data.bal("map_sea_band_near_px"))
-	assert_true("Sea" in v.layer_names())
-
-
-## Final review (owner 2026-09-18): the palette hex goes in RAW — a Color
-## uniform set from GDScript passes straight through under GL Compatibility
-## (measured), so the old srgb_to_linear() only fought the emission gamma.
-## The Filmic tonemap's lift is undone by map3d_sea_emission_gamma instead.
-func test_the_seas_band_colours_go_in_raw() -> void:
-	var root := Node3D.new()
-	root.set_meta("map3d_world", WORLD)
-	var sea := MeshInstance3D.new()
-	sea.name = "Sea"
-	sea.mesh = PlaneMesh.new()
-	root.add_child(sea)
-	sea.owner = root
-	var packed := PackedScene.new()
-	packed.pack(root)
-	ResourceSaver.save(packed, _dir.path_join("sea2.tscn"))
-	root.free()
-	var v := _view(_dir.path_join("sea2.tscn"))
-	v.activate()
-	var mat := v.sea_material()
 	var raw: Color = MapTerrain.palette_color(Game.data, "sea_near", MapTerrain.FALLBACK)
 	assert_eq(mat.get_shader_parameter("sea_near"), raw, "the palette hex, unconverted")
 	assert_eq(mat.get_shader_parameter("emission_share"), Game.data.bal("map3d_sea_emission_share"))

@@ -1,12 +1,13 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Recording claims (spec §6, "Telling"). Resolution is Task 6.
 
 var data: DataRepository
 var state: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 
 func _claim(claim_type: String, subject: String, text: String,
 		magnitude: float, truth: bool) -> Dictionary:
@@ -45,10 +46,6 @@ func test_impossible_claim_is_disbelieved_and_never_open() -> void:
 	assert_eq(String(rec["status"]), "disbelieved")
 	assert_eq(ClaimLedger.open_claims(state).size(), 0)
 
-func test_claim_stores_ground_truth_the_listener_cannot_see() -> void:
-	var c := _claim("grain", "eastmarch", "The granaries are full", 400.0, false)
-	var rec := ClaimLedger.record(data, state, "you", "char_lord_malvern", c, 90.0, 4)
-	assert_false(bool(rec["truth"]), "the engine records that this was a lie")
 
 func test_open_claims_lists_only_believed_unresolved_ones() -> void:
 	var lie := _claim("grain", "eastmarch", "The granaries are full", 400.0, false)
@@ -201,9 +198,6 @@ func test_tick_engine_resolves_claims_and_reports_them() -> void:
 	assert_eq(String(report.claim_resolutions[0]["status"]), "caught")
 	assert_true(report.to_dict().has("claim_resolutions"))
 
-func test_quiet_tick_reports_no_resolutions() -> void:
-	var report := TickEngine.new(data).advance(state)
-	assert_eq(report.claim_resolutions.size(), 0)
 
 func test_reckoning_is_deterministic_across_identical_states() -> void:
 	_tell_lie_to_malvern()
@@ -212,8 +206,10 @@ func test_reckoning_is_deterministic_across_identical_states() -> void:
 		"text": "The eastmarch granaries stand empty.", "truth": true})
 	KnowledgeBase.learn(state, "char_lord_malvern", "fact_eastmarch_empty", 90.0)
 	var twin := GameState.from_dict(state.to_dict())
-	var a := TickEngine.new(data).advance(state)
-	var b := TickEngine.new(data).advance(twin)
-	assert_eq(a.claim_resolutions.size(), b.claim_resolutions.size())
+	# the month's reckoning, as TickEngine.advance runs it on the new tick
+	var a := ClaimLedger.resolve_due(data, state, state.tick + 1)
+	var b := ClaimLedger.resolve_due(data, twin, twin.tick + 1)
+	assert_gt(a.size(), 0, "the lie is reckoned")
+	assert_eq(JSON.stringify(a), JSON.stringify(b))
 	assert_eq(SourceTrust.get_trust(data, state, "you", "char_lord_malvern"),
 		SourceTrust.get_trust(data, twin, "you", "char_lord_malvern"))

@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Regions/locations (data/regions.csv, data/locations.csv): free movement
 ## within a region, occupant resolution, save persistence.
 
@@ -6,8 +7,8 @@ var data: DataRepository
 var state: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 
 func test_data_loads_and_every_occupant_exists_in_roster() -> void:
 	assert_true(data.regions.has("crown_district"))

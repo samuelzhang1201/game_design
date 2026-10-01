@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Hidden strength (owner 2026-09-17, spec §5-6): a float round each arm's
 ## base, power from heads, training, morale and terrain, grades that show only
 ## words, and a placeholder battle odds.
@@ -6,7 +7,7 @@ extends GutTest
 var repo: DataRepository
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 func _land_codes() -> Array:
 	var out: Array = []
@@ -45,7 +46,7 @@ func test_training_grades_at_their_edges() -> void:
 	assert_eq(ArmySystem.training_grade(repo, 81), "Elite")
 
 func test_power_follows_training_morale_and_wounds() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code: String = _land_codes()[0]
 	var base := ArmySystem.power(repo, s, code, "defend")
 	assert_gt(base, 0)
@@ -62,7 +63,7 @@ func test_power_follows_training_morale_and_wounds() -> void:
 ## regiment's total, so a small fleet (few ships against the regiment's
 ## whole headcount) always read as 0 power no matter its training.
 func test_the_smallest_fleet_has_power_and_training_still_raises_it() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var codes := _naval_codes()
 	assert_gt(codes.size(), 0, "the player has a fleet")
 	var smallest: String = codes[0]
@@ -79,7 +80,7 @@ func test_the_smallest_fleet_has_power_and_training_still_raises_it() -> void:
 	assert_gt(drilled, base, "raising training raises its power")
 
 func test_strength_grades_against_the_mean_of_its_kind() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var codes := _land_codes()
 	assert_gt(codes.size(), 1, "the player has several land regiments")
 	var code: String = codes[0]
@@ -95,7 +96,7 @@ func test_a_lone_kind_is_average() -> void:
 	# own repository and strips every fleet but the first, to assert the
 	# spec's rule ("a kind with one regiment is Average") for real rather
 	# than skipping via pass_test whenever the pack happens to have several.
-	var repo2 := DataRepository.load_all("res://data")
+	var repo2 := SuiteData.repo()
 	var realm := repo2.resolve_realm("player_realm")
 	var fleets: Array = []
 	for r: Dictionary in MapObjects.regiments_of(repo2, realm):
@@ -106,14 +107,14 @@ func test_a_lone_kind_is_average() -> void:
 	for i in range(1, fleets.size()):
 		table.erase(String(fleets[i]["regiment_code"]))
 	var lone_code: String = String(fleets[0]["regiment_code"])
-	var s := GameState.new_campaign(repo2, 7)
+	var s := SuiteData.campaign(repo2, 7)
 	# Differ the lone fleet's power from its starting value so the assertion
 	# is not trivially satisfied by the untouched default state.
 	s.regiments[lone_code]["training"] = 100
 	assert_eq(ArmySystem.strength_grade(repo2, s, lone_code), "Average")
 
 func test_battle_odds_placeholder() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var codes := _land_codes()
 	var odds := ArmySystem.battle_odds(repo, s, codes[0], codes[1])
 	assert_between(odds, 0.0, 1.0)

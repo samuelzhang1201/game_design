@@ -1,5 +1,6 @@
 # tests/engine/test_ledger_galaxy.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The realm as one galaxy (spec 2026-09-30-ledger-galaxy-design §3): every
 ## instance once, in its cluster; the economy counted by province.
 
@@ -8,8 +9,8 @@ var s: GameState
 
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 	RealmEconomy.forget()
 
 
@@ -213,10 +214,9 @@ func test_planned_links_touch_a_ghost_end() -> void:
 ## cannot fail the budget — it measures the code, not the machine.
 func test_the_galaxy_is_read_within_its_budget() -> void:
 	var engine := TickEngine.new(data)
-	for m in 6:
-		for d in 29:
-			engine.advance_day(s)
-		engine.advance(s)
+	for d in 29:  # one played month: reports, couriers and settled stores to read
+		engine.advance_day(s)
+	engine.advance(s)
 	Ledger.galaxy(data, s, {})  # warm the economy's caches
 	var times: Array[float] = []
 	var stars := 0

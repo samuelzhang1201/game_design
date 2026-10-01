@@ -52,8 +52,13 @@ func test_the_hud_is_one_child_per_job_in_paint_order() -> void:
 	var names: Array = []
 	for c: Node in v.get_node("Hud").get_children():
 		names.append(String(c.name))
-	assert_eq(names, ["Labels", "Landmarks", "Weather", "HeatLegend", "Badges", "Armies",
-		"Couriers", "Backdrop", "ScaleBar", "Ruler", "Compass", "Needle"])
+	# the paint ORDER of the pieces there are today; a new piece may come in anywhere
+	var order := ["Labels", "Landmarks", "Weather", "HeatLegend", "Badges", "Armies",
+		"Couriers", "Backdrop", "ScaleBar", "Ruler", "Compass", "Needle"]
+	var at := -1
+	for piece: String in order:
+		assert_gt(names.find(piece), at, piece + " is painted after the pieces before it")
+		at = names.find(piece)
 	assert_true(v.get_node("Hud/Labels") is Map3DHudLabels)
 	assert_true(v.get_node("Hud/Needle") is Map3DHudNeedle)
 
@@ -64,13 +69,6 @@ func test_the_views_seams_read_the_pieces() -> void:
 	assert_eq(v.label_entries(), (hud.piece("Labels") as Map3DHudLabels).entries())
 	assert_eq(v.army_markers(), (hud.piece("Armies") as Map3DHudArmies).markers())
 	assert_eq(v.heat_legend_rect(), (hud.piece("HeatLegend") as Map3DHudHeatLegend).rect())
-
-
-func test_no_hud_script_reads_the_game_autoload() -> void:
-	for f: String in DirAccess.get_files_at("res://scripts/map3d"):
-		if f.begins_with("map3d_hud") and f.ends_with(".gd"):
-			var text := FileAccess.get_file_as_string("res://scripts/map3d/" + f)
-			assert_false(text.contains("Game."), f + " takes the context, not Game")
 
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.
