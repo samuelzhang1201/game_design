@@ -98,6 +98,49 @@ func test_the_clusters_settle_apart() -> void:
 	assert_true(lay.settled())
 
 
+## Owner 2026-10-01 (3个cluster布局可以靠的再近一点，node更分散一点): the
+## three clusters' anchors stand nearer (each pair under 72 m, 85-100 before;
+## the lone Intelligence star stands where its title clears the others'), a
+## star repels another cluster's only ledger_galaxy_cross_repel as hard, so the
+## settled clusters are nearer too (under 80 m apart, ~95-130 before), and a
+## cluster's stars stand further apart — the court's mean nearest neighbour
+## over 13 m (11.2 before) — while the clusters still settle apart (above).
+func test_the_clusters_stand_nearer_and_their_stars_spread() -> void:
+	var at := LedgerGalaxyLayout.anchors(repo, false)
+	for a: String in ["economy", "war", "court"]:
+		for b: String in ["economy", "war", "court"]:
+			if a < b:
+				assert_lt((at[a] as Vector3).distance_to(at[b]), 72.0, "%s and %s anchored nearer" % [a, b])
+	assert_lt(repo.bal("ledger_galaxy_cross_repel"), 1.0, "another cluster's stars push less")
+	var s := GameState.new_campaign(repo, 42)
+	var g := Ledger.galaxy(repo, s, {})
+	var lay := LedgerGalaxyLayout.new()
+	lay.setup(repo, g, false)
+	lay.step(lay.passes_left)
+	var court: Array[Vector3] = []
+	var sums := {}
+	var counts := {}
+	for n: Dictionary in g["nodes"]:
+		var c := String(n["cluster"])
+		sums[c] = (sums.get(c, Vector3.ZERO) as Vector3) + (lay.pos[String(n["id"])] as Vector3)
+		counts[c] = int(counts.get(c, 0)) + 1
+		if c == "court":
+			court.append(lay.pos[String(n["id"])])
+	for a: String in sums:
+		for b: String in sums:
+			if a < b and counts[a] > 1 and counts[b] > 1:
+				var d := ((sums[a] as Vector3) / float(counts[a])).distance_to((sums[b] as Vector3) / float(counts[b]))
+				assert_lt(d, 80.0, "%s and %s settle near" % [a, b])
+	var sum := 0.0
+	for i in court.size():
+		var best := INF
+		for j in court.size():
+			if i != j:
+				best = minf(best, court[i].distance_to(court[j]))
+		sum += best
+	assert_gt(sum / float(court.size()), 13.0, "the court's stars spread")
+
+
 func test_a_star_is_sized_by_its_kind() -> void:
 	var pool := LedgerGalaxyLayout.size_of(repo, {"type": "gold"}, 30)
 	assert_eq(pool, repo.bal("ledger_star_pool"), "a pool is one fixed size")

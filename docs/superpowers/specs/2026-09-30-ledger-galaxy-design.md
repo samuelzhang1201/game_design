@@ -190,9 +190,10 @@ and tonemap, so the map's environment is untouched.
   (the `border_line.gdshader` practice), `link.gdshader`:
   - width by weight (flow, or a merged link's count), log scale, between
     `ledger_link_min_px` and `_max_px`;
-  - colour shaded from the source's cluster to the target's — except a
-    court tie, which keeps its meaning (`thread_pos` / `thread_neg` /
-    `thread_kin`), and a planned link (`thread_planned`, dashed);
+  - colour shaded from the source's cluster to the target's — a court tie
+    too (owner 2026-10-01: the King's tan, red and green ties read as a
+    foreign overlay; its feeling is its width and its card) — except a
+    planned link (`thread_planned`, dashed);
   - ink (alpha) is credibility, yellowing is age, light runs along a flow at
     its speed, a running loop glows — all as today;
   - strands (accounts differ) are parallel ribbons offset in screen px;

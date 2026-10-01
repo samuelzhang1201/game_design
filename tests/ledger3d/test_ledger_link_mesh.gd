@@ -46,6 +46,26 @@ func test_the_mesh_carries_both_custom_channels() -> void:
 	assert_true(m.surface_get_format(0) & (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT) != 0)
 
 
+## Owner 2026-10-01 (a bigger wobble): each vertex carries its own end's star
+## and the far end's — seed, drawn radius, selected — so link.gdshader moves
+## both ends by their stars' own wobble.
+func test_each_vertex_carries_both_ends_stars() -> void:
+	var seg := _seg(Vector3.ZERO, Vector3(10, 0, 0))
+	seg["a_star"] = Color(0.25, 0.5, 1.5, 1.0)
+	seg["b_star"] = Color(0.75, 0.125, 0.5, 0.0)
+	var arr := LedgerLinkMesh.arrays([seg])
+	var c2: PackedFloat32Array = arr[Mesh.ARRAY_CUSTOM2]
+	var c3: PackedFloat32Array = arr[Mesh.ARRAY_CUSTOM3]
+	assert_eq(c2.size(), 16)
+	assert_eq(Array(c2.slice(0, 4)), [0.25, 0.5, 1.5, 1.0], "a's vertices: a's own star")
+	assert_eq(Array(c3.slice(0, 4)), [0.75, 0.125, 0.5, 0.0], "a's vertices: the far star, b")
+	assert_eq(Array(c2.slice(8, 12)), [0.75, 0.125, 0.5, 0.0], "b's vertices: b's own star")
+	assert_eq(Array(c3.slice(12, 16)), [0.25, 0.5, 1.5, 1.0], "b's vertices: the far star, a")
+	var m := LedgerLinkMesh.mesh([seg])
+	for ch: int in [Mesh.ARRAY_FORMAT_CUSTOM2_SHIFT, Mesh.ARRAY_FORMAT_CUSTOM3_SHIFT]:
+		assert_true(m.surface_get_format(0) & (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << ch) != 0)
+
+
 func test_no_segments_is_an_empty_mesh() -> void:
 	assert_eq(LedgerLinkMesh.mesh([]).get_surface_count(), 0)
 
@@ -56,5 +76,6 @@ func test_moving_the_ends_rewrites_only_the_positions() -> void:
 	var moved := [[Vector3(5, 0, 0), Vector3(10, 0, 0)], [Vector3(1, 1, 1), Vector3(3, 3, 3)]]
 	var want := LedgerLinkMesh.arrays([_seg(moved[0][0], moved[0][1]), _seg(moved[1][0], moved[1][1])])
 	LedgerLinkMesh.move_ends(arr, moved)
-	for k: int in [Mesh.ARRAY_VERTEX, Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_COLOR, Mesh.ARRAY_INDEX]:
+	for k: int in [Mesh.ARRAY_VERTEX, Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_CUSTOM2, Mesh.ARRAY_CUSTOM3,
+			Mesh.ARRAY_COLOR, Mesh.ARRAY_INDEX]:
 		assert_eq(arr[k], want[k], "array %d as if built afresh" % k)

@@ -2,9 +2,11 @@
 class_name LedgerGalaxyLayout
 extends RefCounted
 ## Where each star of the LEDGER's galaxy stands (spec 2026-09-30-ledger-
-## galaxy-design §4). Every pair of stars repels by their sizes, a link is a
-## spring (weaker across clusters), every star is pulled home to its
-## cluster's anchor — an opened manor to its province's star. A new star's
+## galaxy-design §4). Every pair of stars repels by their sizes (two of
+## different clusters only ledger_galaxy_cross_repel as hard — owner
+## 2026-10-01: the clusters closer together, the stars within one more spread),
+## a link is a spring (weaker across clusters), every star is pulled home to
+## its cluster's anchor — an opened manor to its province's star. A new star's
 ## first place is hashed from its id (no RNG) and passes run over sorted ids,
 ## so one snapshot always lays out the same way; a star keeps its place
 ## across snapshots — a redraw of the same stars runs no pass, one that adds
@@ -26,6 +28,7 @@ var _index: Dictionary = {}
 var _size := PackedFloat32Array()
 var _anchor: Array[Vector3] = []
 var _home_of := PackedInt32Array()     # the index of the star it settles round, or -1
+var _cluster_of := PackedInt32Array()  # each star's cluster, as an index
 var _edges := PackedInt32Array()       # pairs of indices
 var _edge_k := PackedFloat32Array()
 var _total := 1
@@ -88,9 +91,15 @@ func setup(repo: DataRepository, snap: Dictionary, as_flat: bool) -> void:
 		_index[_ids[i]] = i
 	_size.resize(_ids.size())
 	_home_of.resize(_ids.size())
+	_cluster_of.resize(_ids.size())
 	_anchor.clear()
+	var cluster_index := {}
 	for i in _ids.size():
 		var n: Dictionary = by_id[_ids[i]]
+		var c := String(n.get("cluster", ""))
+		if not cluster_index.has(c):
+			cluster_index[c] = cluster_index.size()
+		_cluster_of[i] = int(cluster_index[c])
 		_size[i] = size_of(repo, n, int(degree.get(_ids[i], 0)))
 		_anchor.append(at.get(String(n.get("cluster", "")), Vector3.ZERO))
 		_home_of[i] = int(_index.get(String(n.get("home_id", "")), -1))
@@ -192,13 +201,15 @@ func step(passes: int) -> void:
 	f.resize(n)
 	var grid := float(n) >= _repo.bal("ledger_galaxy_grid_min_stars")
 	var cut := _repo.bal("ledger_galaxy_repel_cutoff_m")
+	var cross := _repo.bal("ledger_galaxy_cross_repel")
+	var cl := _cluster_of
 	for _k in mini(passes, passes_left):
 		for i in n:
 			var h := _home_of[i]
 			var target: Vector3 = p[h] if h >= 0 else _anchor[i]
 			f[i] = (target - p[i]) * home
 		if grid:
-			_repel_near(p, half, f, cut)
+			_repel_near(p, half, f, cut, cross)
 		else:
 			# every pair repels (the hot loop: each star's own place, share and
 			# force held in locals, one read and one write of the other's a pair)
@@ -206,9 +217,10 @@ func step(passes: int) -> void:
 				var pi := p[i]
 				var hi := half[i]
 				var fi := f[i]
+				var ci := cl[i]
 				for j in range(i + 1, n):
 					var d := pi - p[j]
-					var push := d * ((hi + half[j]) / (d.length_squared() + 0.5))
+					var push := d * ((hi + half[j]) / (d.length_squared() + 0.5) * (1.0 if cl[j] == ci else cross))
 					fi += push
 					f[j] -= push
 				f[i] = fi
@@ -245,7 +257,9 @@ const _FORWARD: Array[Vector3i] = [Vector3i(1, -1, -1), Vector3i(1, -1, 0), Vect
 ## met with itself and its 13 forward neighbours (gathered once a cell, in
 ## _FORWARD's order) in the order it was first filled — the same sums in the
 ## same order for the same places.
-func _repel_near(p: PackedVector3Array, half: PackedFloat32Array, f: PackedVector3Array, cut: float) -> void:
+func _repel_near(p: PackedVector3Array, half: PackedFloat32Array, f: PackedVector3Array, cut: float,
+		cross: float) -> void:
+	var cl := _cluster_of
 	var inv := 1.0 / maxf(cut, 1e-6)
 	var cut2 := cut * cut
 	var cells := {}
@@ -274,19 +288,20 @@ func _repel_near(p: PackedVector3Array, half: PackedFloat32Array, f: PackedVecto
 			var pi := p[i]
 			var hi := half[i]
 			var fi := f[i]
+			var ci := cl[i]
 			for b in range(a + 1, m):
 				var j := mine[b]
 				var d := pi - p[j]
 				var dd := d.length_squared()
 				if dd < cut2:
-					var push := d * ((hi + half[j]) / (dd + 0.5))
+					var push := d * ((hi + half[j]) / (dd + 0.5) * (1.0 if cl[j] == ci else cross))
 					fi += push
 					f[j] -= push
 			for j in near:
 				var d := pi - p[j]
 				var dd := d.length_squared()
 				if dd < cut2:
-					var push := d * ((hi + half[j]) / (dd + 0.5))
+					var push := d * ((hi + half[j]) / (dd + 0.5) * (1.0 if cl[j] == ci else cross))
 					fi += push
 					f[j] -= push
 			f[i] = fi

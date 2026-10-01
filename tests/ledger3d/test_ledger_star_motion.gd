@@ -122,6 +122,43 @@ func test_every_star_shader_wobbles_by_the_shared_formula() -> void:
 		assert_true(text.contains(call), path + " calls " + call)
 
 
+## Owner 2026-10-01 (晃动幅度也可以更大更明显): a link's two ends move by the
+## same wobble as their stars — link.gdshader includes the shared formula and
+## moves each end by it, from that end's own star data per vertex.
+func test_the_links_wobble_with_their_stars() -> void:
+	var text := FileAccess.get_file_as_string("res://scenes/ledger/link.gdshader")
+	assert_true(text.contains('#include "res://scenes/ledger/star_motion.gdshaderinc"'))
+	assert_true(text.contains("star_wobble("), "moves by the shared formula")
+	assert_true(text.contains("wobbled(VERTEX, CUSTOM2"), "this end by its own star")
+	assert_true(text.contains("wobbled(CUSTOM0.xyz, CUSTOM3"), "the far end by the far star")
+	_view()
+	_show()
+	for key: String in LedgerStarMotion.WOBBLE:
+		assert_almost_eq(float(view.link_material().get_shader_parameter(LedgerStarMotion.WOBBLE[key])),
+			repo.bal(key), 1e-5, "the links bind " + key)
+	assert_almost_eq(float(view.link_material().get_shader_parameter("star_cap_px")),
+		repo.bal("ledger_star_max_px") * view._window_scale(), 1e-4, "the stars' screen cap")
+	view.select("character:you")
+	var segs := view.segments()
+	assert_gt(segs.size(), 0)
+	for seg: Dictionary in segs:
+		for end: String in ["a", "b"]:
+			var id := String(seg[end + "_id"])
+			var st: Color = seg[end + "_star"]
+			var seed := LedgerStarMotion.seed_of(id)
+			assert_eq(Vector2(st.r, st.g), Vector2(seed.r, seed.g), "%s: its seed" % id)
+			assert_almost_eq(st.b, float(view._size[id]), 1e-5, "%s: its drawn radius" % id)
+			assert_eq(st.a, 1.0 if id == "character:you" else 0.0, "%s: selected or not" % id)
+
+
+## The selected star keeps a smaller wobble (inside its gold ring), its links'
+## ends with it.
+func test_the_selected_star_wobbles_less() -> void:
+	assert_lt(repo.bal("ledger_star_wobble_selected"), repo.bal("ledger_star_wobble_share"))
+	var text := FileAccess.get_file_as_string("res://scenes/ledger/star_motion.gdshaderinc")
+	assert_true(text.contains("mix(wobble_share, wobble_selected_share, clamp(seed.w, 0.0, 1.0))"))
+
+
 func test_the_current_is_rebuilt_with_the_stars() -> void:
 	_view()
 	_show()
@@ -149,7 +186,7 @@ func test_strength_zero_draws_no_current() -> void:
 func test_share_zero_holds_every_star_still() -> void:
 	repo.balance["ledger_star_wobble_share"] = 0.0
 	_view()
-	for m: ShaderMaterial in view.star_materials() + [view.spark_material()]:
+	for m: ShaderMaterial in view.star_materials() + [view.spark_material(), view.link_material()]:
 		assert_eq(float(m.get_shader_parameter("wobble_share")), 0.0)
 
 

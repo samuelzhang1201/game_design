@@ -419,8 +419,17 @@ add it here as a principle with its why — not as a changelog entry.
   under linear blending an "alpha 0.25" line on a dark ground reads nearly
   whole.
   Its stars move (owner 2026-10-01: 轻微小幅度晃动，周边带有类似细微电流的感觉):
-  a slight wobble, every star on its own phase, never a group shake; and a
-  faint current at the rim.
+  a wobble, every star on its own phase, never a group shake; and a current
+  at the rim. Then, the same day: "球体周边电流可以更大更明显一点，晃动幅度也可以
+  更大更明显，现在太小了像静止的" — motion must READ at a tab's normal zoom,
+  several screen px, not a sub-pixel shimmer; judge it in a strip of frames at
+  1×, and let the links' ends move with their stars.
+  "在court那里king aldric valorin关联的几个任务不应该都是几个彩色实线，非常突兀，
+  应该和周边类似": one web wears one palette — a tie's feeling is its width and
+  its card, never a foreign hue; the lit web is told by opacity.
+  "3个cluster布局可以靠的再近一点，node更分散一点": the clusters close enough
+  to read as one sky, each loose enough to read its stars — told apart by
+  colour and haze, not by empty space.
 
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols
