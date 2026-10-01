@@ -155,15 +155,21 @@ var _ledger_mode := ""
 ## --war-room (with --screen root): the WAR ROOM through real input — its tab,
 ## then --war-sheet N lays that sheet (WarRoomView.swap_to; the later steps wait
 ## until it is laid and the roll is over), --war-zoom M leans the camera to M
-## metres (on --war-piece's place when given), --war-piece CODE
+## metres (on --war-piece's place when given, or --war-focus CODE's, which
+## centres on that piece without clicking it), --war-piece CODE
 ## clicks that regiment's piece (a chalk ring, its card) or, with
 ## --war-drag fx,fy (a share of the view), RAKES it there: a real left press
 ## on the piece, eight pushed motion events with the left button held, a real
-## release (the arrow and its COMMIT / CANCEL menu show). --war-folio
+## release (the arrow and its COMMIT / CANCEL menu show; --war-commit then
+## chooses COMMIT the way PopupMenu.activate_item does, so the order's pennant
+## is planted). --war-folio
 ## DRILL|explode opens the folio's drill or presses Take apart — it says so
 ## and skips while the folio, its drill tabs or its Take apart button are not
-## built. The moment is `war`, taken at frame +90 unless --shot-on says otherwise.
+## built; an explode waits out its flight (war_explode_s) before the moment.
+## The moment is `war`, taken at frame +90 unless --shot-on says otherwise.
 var _war_room := false
+var _war_focus := ""
+var _war_commit := false
 var _war_sheet := -1
 var _war_piece := ""
 var _war_folio := ""
@@ -265,6 +271,8 @@ func _ready() -> void:
 			_war_sheet = int(args[i + 1])
 		elif args[i] == "--war-piece":
 			_war_piece = args[i + 1]
+		elif args[i] == "--war-focus":
+			_war_focus = args[i + 1]
 		elif args[i] == "--war-zoom":
 			_war_zoom = float(args[i + 1])
 		elif args[i] == "--war-folio":
@@ -285,6 +293,7 @@ func _ready() -> void:
 				_res = Vector2i(int(wh[0]), int(wh[1]))
 		i += 1
 	_war_room = args.has("--war-room")
+	_war_commit = args.has("--war-commit")
 	if _war_room and _shot_on == "":
 		_shot_on = "war"
 	if _war_drag.x >= 0.0 and _war_piece == "":
@@ -733,8 +742,9 @@ func _war_room_step() -> void:
 		if laid and not view.rolling() and _frames - _war_at >= 12:
 			if _war_zoom > 0.0:
 				var focus := Vector2(-1, -1)
-				if _war_piece != "":
-					focus = WarRoom.believed_position(Game.data, Game.state, ArmySystem.regiment(Game.data, _war_piece))
+				var on := _war_focus if _war_focus != "" else _war_piece
+				if on != "":
+					focus = WarRoom.believed_position(Game.data, Game.state, ArmySystem.regiment(Game.data, on))
 				view.lean_to(_war_zoom, focus)
 				print("war: leant to %.2f m" % view.camera_rig().distance)
 			_war_to(3)
@@ -756,6 +766,12 @@ func _war_room_step() -> void:
 	elif _war_phase == 4:
 		if _frames - _war_at < 6:
 			return
+		if _war_commit:
+			var menu := screen.orders()
+			menu.hide()   # PopupMenu.activate_item's order: hidden first, then id_pressed
+			menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
+			print("war: committed order=%s pennant=%s" % [ArmySystem.order_of(Game.data, Game.state, _war_piece),
+				WarRoom.pennant_of(Game.data, Game.state, _war_piece)])
 		if _war_folio != "":
 			var folio := screen.get_node_or_null("%Folio")
 			if folio == null:
@@ -786,7 +802,8 @@ func _war_room_step() -> void:
 				if not hit:
 					print("war: no drill tab '%s' yet" % _war_folio)
 		_war_to(5)
-	elif _war_phase == 5 and _frames - _war_at >= 40:
+	elif _war_phase == 5 and _frames - _war_at >= 40 + (ceili(Game.data.bal("war_explode_s") * 120.0)   # a 120 Hz display's frames
+			if _war_folio == "explode" else 0):
 		_moment("war")
 		_war_to(6)
 
