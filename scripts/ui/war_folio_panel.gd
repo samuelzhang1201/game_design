@@ -15,6 +15,7 @@ signal closed
 var _code := ""
 var _shown: Array = []   # the sections last laid, so a refresh that changes nothing rebuilds nothing
 var _arm := ""           # the arm the figure shows
+var _inked: Dictionary = {}   # arm -> its icon redrawn in ink
 var _left_key: Array = []   # [order, figures, arms] the left page was last laid for
 
 
@@ -266,6 +267,8 @@ func _fill_arms() -> void:
 		b.text = "%s %s" % [String((Game.data.resource_icons.get(arm, {}) as Dictionary)
 			.get("label", arm.capitalize())), UiPalette.format_int(int(a["heads"]))]
 		_ink_tab(b)
+		b.icon = _ink_icon(arm)
+		b.add_theme_constant_override("icon_max_width", int(_px("war_arm_icon_px")))
 		b.pressed.connect(func() -> void:
 			_show_arm(arm)
 			for t: Button in arms.get_children():
@@ -315,6 +318,15 @@ func _play_current() -> void:
 func _light_tab(clip: String) -> void:
 	for t: Button in (%Drills as Container).get_children():
 		t.set_pressed_no_signal(String(t.get_meta("clip")) == clip)
+
+
+## The arm's resource icon redrawn as sepia ink (WarInkIcon), once.
+func _ink_icon(arm: String) -> Texture2D:
+	if not _inked.has(arm):
+		var path := String((Game.data.resource_icons.get(arm, {}) as Dictionary).get("texture", ""))
+		_inked[arm] = WarInkIcon.inked(UiPalette.load_art(path) if path != "" else null,
+			Game.data.war_palette["ink"], _px("war_ink_icon_light_keep"))
+	return _inked[arm]
 
 
 ## A tab on the vellum: ink words, the lit one red rubric under a rubric rule

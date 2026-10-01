@@ -703,7 +703,7 @@ func _ledger_step() -> void:
 
 
 ## --war-room [--war-sheet N] [--war-zoom M] [--war-piece CODE [--war-drag fx,fy]]
-## [--war-folio DRILL|explode]: the WAR ROOM through its own tab and its own
+## [--war-folio DRILL|arm:ARM|explode]: the WAR ROOM through its own tab and its own
 ## gestures, then the moment `war`. Each step waits for the one before it by
 ## CONDITION, never by a fixed frame: the tab opened and a sheet laid, the
 ## requested sheet laid and the roll over (then a few frames for its ink), the
@@ -766,6 +766,15 @@ func _war_room_step() -> void:
 					print("war: no Take apart button yet")
 				else:
 					_real_click(b, b.size * 0.5)
+			elif _war_folio.begins_with("arm:"):
+				# an arms button of the left page, by its arm key (arm:artillery)
+				var hit_arm := false
+				for t: Button in folio.get_node("%Arms").get_children():
+					if String(t.get_meta("arm")) == _war_folio.substr(4):
+						_real_click(t, t.size * 0.5)
+						hit_arm = true
+				if not hit_arm:
+					print("war: no arms button '%s'" % _war_folio)
 			else:
 				var drills := folio.get_node_or_null("%Drills")
 				var hit := false

@@ -233,6 +233,16 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 	return rows
 
 
+## Whether an arm has a figure of its own to drill: some war_drills row lists
+## it. The guns have none (army_art gives them the spearman as a map stand-in,
+## which the folio never shows), so the folio draws their icon instead.
+static func modelled(repo: DataRepository, arm: String) -> bool:
+	for d: Dictionary in repo.war_drills:
+		if arm in (d["arms"] as PackedStringArray):
+			return true
+	return false
+
+
 static func drills_for(repo: DataRepository, arm: String, clips: PackedStringArray) -> Array:
 	var out: Array = []
 	for d: Dictionary in repo.war_drills:

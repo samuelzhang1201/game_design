@@ -244,3 +244,91 @@ func test_a_changed_order_replays_the_current_drill_without_a_reload() -> void:
 	var drills := WarFolio.drills_for(Game.data, arm, fig.clips())
 	var cur := WarFolio.current_drill(drills, ArmySystem.ORDER_MARCH)
 	assert_eq(fig.playing(), String(drills[cur]["clip_name"]))
+
+
+## A crown land regiment with the given arm among its men ("" when none).
+func _code_with(arm: String) -> String:
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+		if String(r.get("is_naval", "0")) != "1" and int(float(r.get(arm, 0))) > 0:
+			return String(r["regiment_code"])
+	return ""
+
+
+func _arm_button(arm: String) -> Button:
+	for b: Button in panel.get_node("%Arms").get_children():
+		if String(b.get_meta("arm")) == arm:
+			return b
+	return null
+
+
+func test_an_arms_button_wears_its_icon_drawn_in_ink() -> void:
+	panel.open_for(code)
+	var ink: Color = Game.data.war_palette["ink"]
+	for b: Button in panel.get_node("%Arms").get_children():
+		assert_not_null(b.icon, "arm %s has its icon" % b.get_meta("arm"))
+		var bytes := b.icon.get_image().get_data()   # every mip level: a small draw shows the lower ones
+		var inked := 0
+		for i in range(0, bytes.size() - 3, 4):
+			if bytes[i + 3] > 3:
+				inked += 1
+				assert_almost_eq(float(bytes[i]) / 255.0, ink.r, 0.02)
+				assert_almost_eq(float(bytes[i + 1]) / 255.0, ink.g, 0.02)
+				assert_almost_eq(float(bytes[i + 2]) / 255.0, ink.b, 0.02)
+		assert_gt(inked, 0, "arm %s's icon has ink" % b.get_meta("arm"))
+
+
+func test_clicking_an_arm_switches_the_figure_and_retargets_the_tabs() -> void:
+	var c := _code_with("cavalry")
+	assert_ne(c, "")
+	panel.open_for(c)
+	var fig: WarInkFigure = panel.get_node("%Figure")
+	for arm: String in ["infantry", "cavalry"]:
+		var b := _arm_button(arm)
+		if b == null:
+			continue
+		b.pressed.emit()
+		var drills := WarFolio.drills_for(Game.data, arm, fig.clips())
+		assert_gt(drills.size(), 0)
+		assert_eq(panel.get_node("%Drills").get_child_count(), drills.size(), arm)
+		assert_false(fig.glyph_shown())
+		assert_ne(fig.playing(), "")
+		for t: Button in panel.get_node("%Drills").get_children():
+			assert_true(fig.clips().has(String(t.get_meta("clip"))), "tab clip belongs to the shown model")
+
+
+func test_artillery_has_no_model_so_it_draws_its_glyph_with_no_tabs() -> void:
+	var c := _code_with("artillery")
+	assert_ne(c, "", "a crown regiment fields guns")
+	assert_false(WarFolio.modelled(Game.data, "artillery"))
+	assert_true(WarFolio.modelled(Game.data, "infantry"))
+	panel.open_for(c)
+	var fig: WarInkFigure = panel.get_node("%Figure")
+	var loads := fig.loads()
+	_arm_button("artillery").pressed.emit()
+	assert_true(fig.glyph_shown())
+	assert_eq(panel.get_node("%Drills").get_child_count(), 0)
+	assert_eq(fig.playing(), "")
+	assert_eq(fig.loads(), loads, "no model is loaded for the guns")
+	_arm_button("infantry").pressed.emit()
+	assert_false(fig.glyph_shown())
+	assert_gt(panel.get_node("%Drills").get_child_count(), 0)
+
+
+func test_playing_a_clip_loops_a_copy_never_the_shared_animation() -> void:
+	var fig: WarInkFigure = panel.get_node("%Figure")
+	var clips := fig.show_arm(Game.data, "cavalry")
+	var attack := ""
+	for n in clips:
+		if n.to_upper().ends_with("ATTACK"):
+			attack = n
+	assert_ne(attack, "", "the cavalry model has an ATTACK clip")
+	var path := String(Game.data.army_art["cavalry"]["model"])
+	var fresh := (load(path) as PackedScene).instantiate() as Node3D
+	var shared := Map3DUnits.find_anim(fresh).get_animation(attack)
+	var was := shared.loop_mode
+	fig.play(attack)
+	assert_eq(fig.loop_of(attack), Animation.LOOP_LINEAR, "the folio's own copy loops")
+	var again := (load(path) as PackedScene).instantiate() as Node3D
+	assert_eq(Map3DUnits.find_anim(again).get_animation(attack).loop_mode, was, "the shared clip is untouched")
+	fresh.free()
+	again.free()
