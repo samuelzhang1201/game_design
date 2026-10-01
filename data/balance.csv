@@ -749,7 +749,7 @@ war_cam_max_m,3.0,"WAR ROOM (owner 2026-10-01, spec §1; v2 2026-10-02 plan A Ta
 war_cam_zoom_step,1.12,"WAR ROOM (owner 2026-10-01, spec §1): distance factor per wheel notch"
 war_cam_pitch_near_deg,30,"WAR ROOM v2 (owner 2026-10-02, spec §1.1): the look down at the closest lean, degrees — oblique over the pieces, as the 3D map near"
 war_cam_pitch_mid_deg,52,"WAR ROOM v2 (spec §1.1; plan A Task 9 ruling): the officer's look at the opening distance war_cam_distance_m, degrees — the 2026-10-01 room's fixed 52; log-scaled to the near look leaning in and to the far look stepping back"
-war_cam_pitch_far_deg,28,"WAR ROOM v2 (spec §1.1; plan A Task 9 ruling): the look down stepped right back — FLATTER than the opening look, so the room, its easel and its furniture come into view (at 55 nothing beyond the table was ever seen)"
+war_cam_pitch_far_deg,24,"WAR ROOM v2 (spec §1.1; plan A Task 9 ruling, then the critic's pick of 22/28/34 — 22 showed the easel best, 24 keeps the table's near edge): the look down stepped right back — FLATTER than the opening look, so the room, its easel and its furniture come into view (at 55 nothing beyond the table was ever seen)"
 war_cam_turn_deg_per_px,0.25,"WAR ROOM v2 (owner 2026-10-02, spec §1.1): a right drag turns the room this many degrees per design px (the 3D map's map3d_rotate_deg_per_px)"
 war_cam_north_s,0.4,"WAR ROOM v2 (owner 2026-10-02, spec §1.1): seconds the key's compass takes to ease the room back to the sheet's foot"
 war_cam_wall_clear_m,0.35,"WAR ROOM v2 (owner 2026-10-02, spec §1.1): the camera keeps this far inside the room's walls; nearer, its distance is shortened"

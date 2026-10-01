@@ -49,6 +49,8 @@ func _ready() -> void:
 	if UiPalette.war_table():
 		roll.add_theme_stylebox_override("panel", WarTable.report_style())
 		WarTable.ink_column(roll)
+		# the card's scroll fades into this paper, as it does in the column
+		roll.set_meta("paper_ground", UiPalette.table_color("paper_ground", UiPalette.PANEL_BG))
 	else:
 		roll.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
 	roll.draw.connect(func() -> void:

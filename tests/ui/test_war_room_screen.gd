@@ -63,6 +63,7 @@ func test_a_picked_piece_unrolls_its_card_over_the_room_and_closing_gives_it_bac
 	await wait_process_frames(1)
 	var card := MapObjects.army_card(Game.data, code, Game.state)
 	assert_eq(detail.get_parent(), screen.card_roll(), "the card is borrowed into the room's roll")
+	assert_eq(UiPalette.card_ground(detail), UiPalette.card_ground(home), "its scroll fades into the same paper as in the column")
 	assert_true(screen.card_roll().visible)
 	assert_eq(detail.title_label().text, String(card["title"]))
 	# the BODY is there too, not only the title: a regiment's stat rows
