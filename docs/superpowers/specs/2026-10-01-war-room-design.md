@@ -127,7 +127,7 @@ the session, not saved. A regiment on another sheet is listed in the margin
 
 **A piece** stands for each land regiment of the crown. A fleet has no
 model: it is a flat tin token engraved with waves.
-- **The base**: `war_piece_base_mm` 40 × 40 mm (about 18 km of the sheet),
+- **The base**: `war_piece_base_mm` square,
   wood painted the realm's colour, a brass plate at the front with the
   regiment's label, the house's arms on its side (`HouseArms`).
 - **The figures**: the `.glb` of the regiment's largest arm among

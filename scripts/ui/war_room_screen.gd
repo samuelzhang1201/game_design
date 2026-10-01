@@ -16,6 +16,7 @@ var _card_mine := false
 
 @onready var _view: WarRoomView = %View
 @onready var _orders: ArmyOrderMenu = %Orders
+@onready var _folio: WarFolioPanel = %Folio
 
 
 func _ready() -> void:
@@ -31,6 +32,7 @@ func _ready() -> void:
 	_view.rake_dropped.connect(_orders.withdraw_aim)   # a rake given up takes its armed march with it
 	_view.sheet_requested.connect(_view.swap_to)
 	_view.sheet_laid.connect(_on_laid)
+	_folio.closed.connect(_view.clear_selection)
 
 
 func view() -> WarRoomView:
@@ -143,6 +145,7 @@ func close() -> void:
 	if _orders.visible:
 		_orders.hide()
 	_orders.withdraw_aim()
+	_folio.close()
 	visible = false
 	_dirty = false
 	_view.set_active(false)
@@ -168,6 +171,7 @@ func _on_piece(code: String) -> void:
 		return
 	_detail.show_card(MapObjects.army_card(Game.data, code, Game.state))
 	_card_mine = true
+	_folio.open_for(code)
 
 
 func _clear_card() -> void:

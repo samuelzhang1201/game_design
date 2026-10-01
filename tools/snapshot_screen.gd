@@ -160,9 +160,9 @@ var _ledger_mode := ""
 ## --war-drag fx,fy (a share of the view), RAKES it there: a real left press
 ## on the piece, eight pushed motion events with the left button held, a real
 ## release (the arrow and its COMMIT / CANCEL menu show). --war-folio
-## DRILL|explode opens the folio's drill or presses Take apart — it prints
-## "war: no folio yet" and skips while the folio (%Folio) is not built. The
-## moment is `war`, taken at frame +90 unless --shot-on says otherwise.
+## DRILL|explode opens the folio's drill or presses Take apart — it says so
+## and skips while the folio, its drill tabs or its Take apart button are not
+## built. The moment is `war`, taken at frame +90 unless --shot-on says otherwise.
 var _war_room := false
 var _war_sheet := -1
 var _war_piece := ""
@@ -761,12 +761,21 @@ func _war_room_step() -> void:
 			if folio == null:
 				print("war: no folio yet")
 			elif _war_folio == "explode":
-				var b: Button = folio.get_node("%TakeApart")
-				_real_click(b, b.size * 0.5)
+				var b := folio.get_node_or_null("%TakeApart") as Button
+				if b == null:
+					print("war: no Take apart button yet")
+				else:
+					_real_click(b, b.size * 0.5)
 			else:
-				for t: Button in folio.get_node("%Drills").get_children():
-					if String(t.text).to_lower().contains(_war_folio):
-						_real_click(t, t.size * 0.5)
+				var drills := folio.get_node_or_null("%Drills")
+				var hit := false
+				if drills != null:
+					for t: Button in drills.get_children():
+						if String(t.text).to_lower().contains(_war_folio):
+							_real_click(t, t.size * 0.5)
+							hit = true
+				if not hit:
+					print("war: no drill tab '%s' yet" % _war_folio)
 		_war_to(5)
 	elif _war_phase == 5 and _frames - _war_at >= 40:
 		_moment("war")

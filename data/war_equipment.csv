@@ -1,5 +1,5 @@
 arm,part,label,note
-infantry,helmet,Close helm,"WAR ROOM (owner 2026-10-01, spec §4): one row per piece of kit the folio's exploded view names; part = the object in assets/3D/units/<arm>/<arm>_parts.glb. Steel, an eye slit and a pointed visor"
+infantry,helmet,Close helm,"steel, with an eye slit and a pointed visor"
 infantry,cuirass,Breastplate,riveted plate over a padded coat
 infantry,arms,Arm harness,"vambraces, couters and gauntlets"
 infantry,legs,Leg harness,cuisses and knee plates over leather
