@@ -103,6 +103,7 @@ func _ready() -> void:
 	# the left column the steward's report; nothing when balance ui_war_table is 0.
 	if WarTable.dress_screen(self, %Bg, %MapPanel, %LogPanel):
 		WarTable.fit_report(%LogPanel, _dashboard)
+		WarTable.place_compass(self, %LogPanel, _map3d)
 	UiPalette.style_header(%LogHeader, 14)
 	UiPalette.style_header(%SideHeader, 14)
 	_log_scroll = %LogScroll

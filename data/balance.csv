@@ -989,3 +989,16 @@ war_explode_label_reach,1.25,"WAR ROOM (Task 14): a leader label stands this man
 war_explode_note_px,15,"WAR ROOM (Task 14 fix): the exploded view's part notes' font size under each name, Label3D px (smaller than war_explode_label_px)"
 war_explode_note_w_px,230,"WAR ROOM (Task 14 fix): the width a part's note wraps at, Label3D px"
 war_explode_note_drop,1.1,"WAR ROOM (Task 14 fix): how far under its name a note hangs, in name-label heights"
+ui_title_living,1,"TITLE (owner 2026-10-01, plan A 'The Living Realm'): 1 shows the live 3D map of the home province behind the title menu while the war table is on and the world is built (TitleRealm); 0 keeps the painted page"
+ui_title_seed,42,"TITLE: the seed of the preview reign the title shows — the one Start begins (Game.start_campaign's default), so the picture is the reign the player takes"
+ui_title_distance_m,5000,"TITLE: the camera's distance from the home province's middle while the title stands, world metres (the opening view is ~24 km; nearer shows fields, towns and woods)"
+ui_title_yaw_deg,185,"TITLE: the camera's bearing when the title opens, degrees (0 north up)"
+ui_title_drift_deg_per_s,0.8,TITLE: degrees a second the camera drifts round the home province while the title stands
+ui_title_day_share,0.62,"TITLE: the share of the day the title opens on (0.25 noon in the south, past 0.5 the north's dusk): a low warm sun"
+ui_title_day_per_s,0.004,"TITLE: how fast the title's sun turns, day shares a second (a slow sweep, not the game's clock)"
+ui_title_sweep_s,1.8,TITLE: seconds the camera sweeps from the title's height down to the game's opening view when the reign begins
+ui_title_shade,0.92,"TITLE: the darkness of the reading side (left) at its darkest, 0..1"
+ui_title_shade_reach,0.62,"TITLE: how far across the screen the reading side's shade reaches, a share of its width"
+map_compass_size_px_table,0,"WAR TABLE (owner 2026-10-01): the compass lies on the table (TableCompass), so the map draws none and its corner takes no click"
+ui_table_compass_px,104,WAR TABLE: design px across the compass lying on the table under the report
+ui_table_compass_inset_px,18,WAR TABLE: design px from the table's left edge to the compass

@@ -133,6 +133,7 @@ func _ready() -> void:
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "column"))
 	if WarTable.dress_screen(self, %Bg, %MapPanel, %MinisterPanel):
 		WarTable.fit_report(%MinisterPanel, _dashboard)
+		WarTable.place_compass(self, %MinisterPanel, _map3d)
 	_style_audience()
 	_show_dossier(false)
 	_build_skill_rows()

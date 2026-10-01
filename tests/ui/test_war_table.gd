@@ -106,3 +106,14 @@ func test_the_seal_shows_who_waits_until_the_council_is_entered() -> void:
 	seal.pressed.emit()
 	seal.refresh()
 	assert_eq(seal.waiting_ids().size(), 0, "entering the council hears them")
+
+func test_the_compass_lies_on_the_table_under_the_report() -> void:
+	var r := _root()
+	var court := _court(r)
+	await wait_frames(2)
+	var compass: TableCompass = court.find_child("TableCompass", false, false)
+	assert_not_null(compass, "the compass lies on the table")
+	assert_lt(compass.get_index(), court.get_node("%LogPanel").get_index(), "under the report's paper")
+	assert_lt(compass.get_global_rect().end.y, r.size.y - BottomBar.BAR_HEIGHT + 1.0, "above the bookmarks")
+	assert_eq(Game.data.bal(MapPalette.table_key(Game.data, Game.data.balance, "map_compass_size_px")), 0.0,
+		"and the map draws none of its own")
