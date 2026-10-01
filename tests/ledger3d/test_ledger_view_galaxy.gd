@@ -65,19 +65,50 @@ func test_choosing_a_cluster_dims_the_others() -> void:
 	assert_eq(view.star_colour(_first("regiment:")).a, 1.0, "All dims nothing")
 
 
-func test_selecting_a_star_lights_its_web_and_fades_the_rest() -> void:
+func test_selecting_a_star_lights_its_lineage_and_fades_the_rest() -> void:
 	_show()
 	view.select("character:you")
+	var links: Dictionary = view.lineage("character:you")["links"]
 	var lit := -1.0
+	var far := -1.0
 	var faint := -1.0
 	for seg: Dictionary in view.segments():
+		var a := (seg["ca"] as Color).a
+		match int(links.get(String(seg["link"]), 0)):
+			LedgerLineage.FULL:
+				lit = maxf(lit, a)
+			LedgerLineage.FAR:
+				far = maxf(far, a)
+			_:
+				faint = maxf(faint, a)
 		var mine := String(seg["a_id"]) == "character:you" or String(seg["b_id"]) == "character:you"
 		if mine:
-			lit = maxf(lit, (seg["ca"] as Color).a)
-		else:
-			faint = maxf(faint, (seg["ca"] as Color).a)
-	assert_gt(lit, faint, "his web stands out")
+			assert_eq(int(links.get(String(seg["link"]), 0)), LedgerLineage.FULL, "every link of his own is lit")
+	assert_gt(lit, far, "his web stands out")
+	assert_gt(far, faint, "his ties' ties dimmer, but over the rest")
+	assert_almost_eq(far, pow(repo.bal("ledger_lineage_far_fade"), 2.2), 0.01, "at the far fade, as the eye reads it")
 	assert_lte(faint, pow(repo.bal("ledger_focus_fade"), 2.2) + 0.001, "the rest at the focus fade, as the eye reads it")
+
+
+## Owner 2026-10-01 (the hybrid lineage): a regiment lights its supply chain
+## beyond its neighbours, and the camera frames the full-strength lineage.
+func test_a_regiment_lights_and_frames_its_supply_chain() -> void:
+	_show()
+	var reg := ""
+	for id: String in view.stars():
+		if id.begins_with("regiment:") and view.stars().has("supply_line:" + id.substr(9)):
+			reg = id
+			break
+	assert_ne(reg, "")
+	view.frame_web(reg)
+	view.select(reg)
+	assert_eq(view.star_colour("type:strategic_goods").a, 1.0, "two hops up the chain, lit")
+	var stars: Dictionary = view.lineage(reg, false)["stars"]
+	var framed: Array = view._frame_ids
+	for id: String in stars:
+		if int(stars[id]) == LedgerLineage.FULL:
+			assert_true(framed.has(id), "framed: " + id)
+	assert_gt(framed.size(), 3, "more than its neighbours")
 
 
 func test_a_vanished_selection_clears() -> void:

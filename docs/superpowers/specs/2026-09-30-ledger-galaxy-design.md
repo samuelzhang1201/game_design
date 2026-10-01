@@ -232,6 +232,11 @@ and tonemap, so the map's environment is untouched.
   straight down on the flat layout; turning is off, panning and zoom stay.
   The choice is remembered for the session only. *The flat 2D view was
   removed (owner 2026-10-01).*
+- **Lineage** (owner 2026-10-01: highlight整个lineage, the hybrid): a
+  selected star lights its own links, its flow chain down and up from it and
+  its neighbours, and its ties two hops, the second dimmer
+  (`LedgerLineage`, `ledger_lineage_*`); the camera frames the full-strength
+  part.
 - **Search** (owner 2026-10-01): a box in the top row finds a star, or an
   instance folded into a province's star, by its label (`LedgerSearch`);
   picking one does what a double click does, opening a folded one's

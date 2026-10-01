@@ -66,7 +66,8 @@ var _spark_ids: Array[String] = []    # the stars the current is dealt to: _whol
 var _custom: Dictionary = {}          # id -> its seed and its current's weight (LedgerStarMotion.custom_of)
 var _spark_cols := PackedColorArray() # the colours dealt to the current, in _spark_ids
 var _buffers: Dictionary = {}         # MultiMesh node name -> the instance buffer last handed to it
-var _near: Dictionary = {}
+var _near: Dictionary = {}           # the selected star's lineage: id -> LedgerLineage.FULL / FAR
+var _lineage_links: Dictionary = {}  # and its links: link id -> LedgerLineage.FULL / FAR
 var _star_mat: ShaderMaterial
 var _faint_mat: ShaderMaterial
 var _spark_mat: ShaderMaterial
@@ -264,21 +265,26 @@ func focus_cluster(cluster_id: String) -> void:
 	_update_hud()
 
 
-## Frame a star and its neighbours by its live ties.
+## Frame a star and its lineage at full strength (LedgerLineage: its links,
+## its flow chain, its own ties — not the dimmer ties of its ties), by LIVE
+## links only: a planned (ghost) link's far end does not pull the camera
+## (Task 11 fix round 4, T1c).
 func frame_web(id: String) -> void:
 	if not _nodes.has(id):
 		return
 	var ids: Array = [id]
-	for l: Dictionary in _snap.get("links", []):
-		# its LIVE ties only: a planned (ghost) link's far end does not pull
-		# the camera (Task 11 fix round 4, T1c)
-		if String(l.get("status", "live")) == "planned":
-			continue
-		if String(l["from"]) == id:
-			ids.append(String(l["to"]))
-		elif String(l["to"]) == id:
-			ids.append(String(l["from"]))
+	var stars: Dictionary = lineage(id, false)["stars"]
+	for s: String in stars:
+		if s != id and int(stars[s]) == LedgerLineage.FULL:
+			ids.append(s)
 	_frame_on(ids, false)
+
+
+## The lineage a selection of `id` lights (LedgerLineage.of over this
+## snapshot, ledger_lineage_tie_hops); `with_planned` false leaves out a
+## planned link's far end.
+func lineage(id: String, with_planned: bool = true) -> Dictionary:
+	return LedgerLineage.of(_snap, id, _look, int(_repo.bal("ledger_lineage_tie_hops")), with_planned)
 
 
 ## Frame an opened province and the stars it unfolded (its manors, towns
@@ -532,12 +538,11 @@ func _look(l: Dictionary) -> String:
 ## Colours and fades from the selection and the chosen cluster, then the links.
 func _restyle() -> void:
 	_near.clear()
+	_lineage_links.clear()
 	if _selected != "":
-		_near[_selected] = true
-		for l: Dictionary in _snap.get("links", []):
-			if String(l["from"]) == _selected or String(l["to"]) == _selected:
-				_near[String(l["from"])] = true
-				_near[String(l["to"])] = true
+		var lin := lineage(_selected)
+		_near = lin["stars"]
+		_lineage_links = lin["links"]
 	_star_cols.resize(_order.size())
 	for i in _order.size():
 		_star_cols[i] = _star_colour(_order[i])
@@ -557,6 +562,8 @@ func _star_colour(id: String) -> Color:
 		f = _repo.bal("ledger_star_planned_fade")
 	if _selected != "" and not _near.has(id):
 		f = minf(f, _repo.bal("ledger_focus_fade"))
+	elif _selected != "" and int(_near[id]) == LedgerLineage.FAR:
+		f = minf(f, _repo.bal("ledger_lineage_far_fade"))
 	if _cluster != "all" and _cluster_of(id) != _cluster:
 		f = minf(f, _repo.bal("ledger_galaxy_other_fade"))
 	return Color(c, f)
@@ -753,7 +760,7 @@ func _lit_web(l: Dictionary) -> bool:
 	var a := String(l["from"])
 	var b := String(l["to"])
 	if _selected != "":
-		return a == _selected or b == _selected
+		return int(_lineage_links.get(String(l["id"]), 0)) == LedgerLineage.FULL
 	if not _nodes.has(EGO_AT_REST) or (a != EGO_AT_REST and b != EGO_AT_REST):
 		return false
 	var c := _cluster_of(EGO_AT_REST)
@@ -761,7 +768,8 @@ func _lit_web(l: Dictionary) -> bool:
 
 
 ## How much of a link shows, as the EYE reads it (spec §6): the selected
-## star's web lit, the rest at ledger_focus_fade; at rest the court is read
+## star's lineage lit (its far ties at ledger_lineage_far_fade), the rest at
+## ledger_focus_fade; at rest the court is read
 ## one person's web at a time (the player's ties lit, other ties at
 ## ledger_tie_rest_fade) and a link crossing clusters stands back at
 ## ledger_cross_rest_fade; a chosen cluster dims links that do not touch it.
@@ -770,7 +778,13 @@ func _link_fade(l: Dictionary) -> float:
 	var b := String(l["to"])
 	var f := 1.0
 	if _selected != "":
-		f = 1.0 if a == _selected or b == _selected else _repo.bal("ledger_focus_fade")
+		match int(_lineage_links.get(String(l["id"]), 0)):
+			LedgerLineage.FULL:
+				f = 1.0
+			LedgerLineage.FAR:
+				f = _repo.bal("ledger_lineage_far_fade")
+			_:
+				f = _repo.bal("ledger_focus_fade")
 	elif _nodes.has(EGO_AT_REST) and (_look(l) in ["tie", "kin"] or (_cluster_of(a) == _cluster_of(EGO_AT_REST)
 			and _cluster_of(b) == _cluster_of(EGO_AT_REST))):
 		# at rest the player's own cluster (the court) is read one web at a
@@ -987,9 +1001,12 @@ func _update_hud() -> void:
 		if star_colour(id).a >= 1.0:
 			keep[id] = true
 	if _selected != "":
-		for id: String in _near:
-			if not named.has(id):
-				named.append(id)
+		# its lineage at full strength first; the far ties only where there
+		# is room (they are dimmer, and a dimmed name drops rather than wander)
+		for level: int in [LedgerLineage.FULL, LedgerLineage.FAR]:
+			for id: String in _near:
+				if int(_near[id]) == level and not named.has(id):
+					named.append(id)
 	if _hovered != "" and not named.has(_hovered):
 		named.append(_hovered)
 	var titles: Array = []
@@ -1038,7 +1055,7 @@ func _update_hud() -> void:
 		var px := strong_px if big.has(id) else label_px
 		var e := {"id": id, "text": drawn_name(id), "px": px, "at": (at as Vector2) - Vector2(0, r + lift),
 			"alt": (at as Vector2) + Vector2(0, r + lift + px), "beside": [at, r],
-			"strong": id == _selected or _near.has(id),
+			"strong": id == _selected or int(_near.get(id, 0)) == LedgerLineage.FULL,
 			# a star's gauges only for the selected and the hovered star (Task
 			# 11 fix round 3, S1a: a row on every hub only repeated the next)
 			"props": _nodes[id].get("props", []) if id == _selected or id == _hovered else []}
@@ -1053,7 +1070,7 @@ func _update_hud() -> void:
 			e["ring_at"] = at
 			e["beside"] = [at, float(e["ring"]) + _repo.bal("ledger_ring_px")]  # clear of its ring
 			e["first"] = true  # placed first; no other name touches its label (T1a)
-		if id == _selected or _near.has(id):
+		if id == _selected or int(_near.get(id, 0)) == LedgerLineage.FULL:
 			e["lit"] = true    # off the planned dashes where a near place allows (T1b)
 		elif fade < 1.0:
 			e["dim"] = true    # a ghost name drops rather than wander (T1a)
