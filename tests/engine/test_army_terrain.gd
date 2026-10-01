@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Terrain under a regiment (owner 2026-09-17, spec §4): height makes hills
 ## and mountains, else the cell's biome decides; walls or a citadel in the
 ## same cell fortify it; the modifier table is per mille and defaults to 1000.
@@ -6,7 +7,7 @@ extends GutTest
 var repo: DataRepository
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 ## A regiment dict standing at a cell's centre (the pack is generated, so the
 ## test finds its cells by what they are, never by id).
@@ -66,11 +67,19 @@ func test_walls_in_the_cell_fortify() -> void:
 	assert_true(ArmySystem.is_fortified(repo, reg))
 	assert_string_contains(ArmySystem.terrain_label(repo, reg), "(fortified)")
 
+func _row(key: String, stance: String) -> int:
+	return int((repo.army_terrain[key] as Dictionary)[stance])
+
 func test_the_modifier_table() -> void:
-	assert_eq(ArmySystem.terrain_factor(repo, "mountains", "cavalry", "defend", false), 700)
-	assert_eq(ArmySystem.terrain_factor(repo, "mountains", "cavalry", "attack", false), 650)
+	assert_eq(ArmySystem.terrain_factor(repo, "mountains", "cavalry", "defend", false), _row("mountains|cavalry", "defend"))
+	assert_eq(ArmySystem.terrain_factor(repo, "mountains", "cavalry", "attack", false), _row("mountains|cavalry", "attack"))
+	assert_false(repo.army_terrain.has("plains|cavalry"))
 	assert_eq(ArmySystem.terrain_factor(repo, "plains", "cavalry", "attack", false), 1000, "a missing row is 1000")
-	assert_eq(ArmySystem.terrain_factor(repo, "plains", "infantry", "defend", true), 1300, "walls on open ground")
+	var walls := _row("fortified|infantry", "defend")
+	assert_gt(walls, 1000, "walls help")
+	assert_eq(ArmySystem.terrain_factor(repo, "plains", "infantry", "defend", true), walls, "walls on open ground")
+	var jungle := _row("jungle|infantry", "defend")
 	@warning_ignore("integer_division")  # the formula's own whole per-mille
-	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "defend", true), 800 * 1300 / 1000)
-	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "attack", true), 800, "walls only help the defender")
+	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "defend", true), jungle * walls / 1000)
+	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "attack", true), _row("jungle|infantry", "attack"),
+		"walls only help the defender")

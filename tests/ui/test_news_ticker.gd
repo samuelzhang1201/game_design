@@ -13,11 +13,11 @@ func test_ticker_hidden_on_menu_pinned_bottom_and_transparent_in_game() -> void:
 	Game.start_campaign(42)
 	Game.next_tick()
 	var r := _root()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_false(r.news_ticker().visible, "no ticker on the title screen")
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var ticker := r.news_ticker()
 	assert_true(ticker.visible, "the strip shows on every gameplay screen")
 	var rect := ticker.get_global_rect()
@@ -51,12 +51,12 @@ func test_published_news_joins_the_crawl_and_moves_leftward() -> void:
 	Game.start_campaign(42)
 	Game.next_tick()
 	var r := _root()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	Game.publish_news("Wolves were heard close to the north villages.")
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var ticker := r.news_ticker()
 	assert_has(ticker.items(), "Wolves were heard close to the north villages.")
 	assert_string_contains(ticker.crawl_label().text, "Wolves")
@@ -83,12 +83,12 @@ func test_published_news_joins_the_crawl_and_moves_leftward() -> void:
 ## complete, as the clock runs.
 func test_works_are_announced_at_their_milestones() -> void:
 	var r := _root()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r.current_screen.start_requested.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	Game.state.pending_event = {}
 	var cell := -1
 	for c: int in MapManors.manors_of_house(Game.data, Game.state, MapManors.crown(Game.state),
@@ -119,12 +119,12 @@ func test_works_are_announced_at_their_milestones() -> void:
 ## once, at the month's close.
 func test_a_newly_idle_building_is_announced() -> void:
 	var r := _root()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r.current_screen.start_requested.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	Game.state.pending_event = {}
 	var cell := -1
 	for c: int in MapManors.manors_of_house(Game.data, Game.state, MapManors.crown(Game.state),

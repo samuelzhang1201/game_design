@@ -1,13 +1,14 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 var data: DataRepository
 var sys: ActionSystem
 var s: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	sys = ActionSystem.new(data)
-	s = GameState.new_campaign(data, 42)
+	s = SuiteData.campaign(data, 42)
 
 func test_unknown_action_rejected() -> void:
 	assert_string_contains(sys.validate(ActionRequest.make("FLY_TO_MOON"), s), "Unknown")

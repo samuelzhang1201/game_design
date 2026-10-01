@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 class FakeClient:
 	extends Node
@@ -21,7 +22,7 @@ var data: DataRepository
 var got: Dictionary = {}
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
 func test_parse_path_validates_model_output() -> void:
 	var fake := FakeClient.new()
@@ -31,11 +32,11 @@ func test_parse_path_validates_model_output() -> void:
 	add_child_autofree(fake)
 	var v := Voicer.new(fake)
 	add_child_autofree(v)
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var r := TickEngine.new(data).advance(s)
 	got = {}
 	v.parse_player_text("lower taxes", r, s, data, func(res): got = res)
-	await wait_frames(3)
+	await wait_process_frames(3)
 	assert_true(got["ok"])
 	assert_eq(got["actions"][0].action_code, "TAX_RATE_ADJUST")
 
@@ -46,11 +47,11 @@ func test_parse_bad_model_output_reports_error_not_crash() -> void:
 	add_child_autofree(fake)
 	var v := Voicer.new(fake)
 	add_child_autofree(v)
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var r := TickEngine.new(data).advance(s)
 	got = {}
 	v.parse_player_text("lower taxes", r, s, data, func(res): got = res)
-	await wait_frames(3)
+	await wait_process_frames(3)
 	assert_false(got["ok"])
 	assert_ne(got["error"], "")
 
@@ -70,7 +71,7 @@ func test_submit_free_text_conversational_ride_along_replies() -> void:
 	Game.next_tick()
 	got = {}
 	Game.submit_free_text("Marshal, who are you?", func(res): got = res)
-	await wait_frames(4)
+	await wait_process_frames(4)
 	assert_true(got["ok"])
 	assert_eq(got["executed"], [])
 	assert_true(got.has("reply"), "conversational text carries a reply")
@@ -93,7 +94,7 @@ func test_submit_free_text_consult_gets_in_character_reply() -> void:
 	Game.next_tick()
 	got = {}
 	Game.submit_free_text("how is my army?", func(res): got = res)
-	await wait_frames(4)
+	await wait_process_frames(4)
 	assert_true(got["ok"])
 	assert_eq(got["executed"].size(), 1, "the consult still executes")
 	assert_true(got.has("reply"), "the consulted minister answers")
@@ -101,7 +102,7 @@ func test_submit_free_text_consult_gets_in_character_reply() -> void:
 		"the consult's target seat answers")
 
 func test_voice_event_never_calls_the_model_whatever_the_voice_value() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	for tier in ["template", "mini", "flagship"]:
 		var fake := FakeClient.new()
 		fake.canned_ok = true
@@ -113,7 +114,7 @@ func test_voice_event_never_calls_the_model_whatever_the_voice_value() -> void:
 			"voice": tier, "choices": []}
 		got = {}
 		v.voice_event(ev, s, data, func(res): got = res)
-		await wait_frames(3)
+		await wait_process_frames(3)
 		assert_true(got["ok"], tier)
 		assert_false(got["degraded"], tier + ": authored prose cannot degrade")
 		assert_ne(String(got["text"]), "", tier)
@@ -126,11 +127,11 @@ func test_voice_event_serves_the_authored_scene() -> void:
 	add_child_autofree(fake)
 	var v := Voicer.new(fake)
 	add_child_autofree(v)
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var ev := {"event_id": "ev_01", "title_key": "event_ev_01", "choices": []}
 	got = {}
 	v.voice_event(ev, s, data, func(res): got = res)
-	await wait_frames(3)
+	await wait_process_frames(3)
 	assert_eq(String(got["text"]), String(data.event_scenes["ev_01"]),
 		"the scene is exactly what RANDOM_EVENTS.md says")
 
@@ -139,11 +140,11 @@ func test_voice_event_marks_an_unauthored_scene_rather_than_inventing_one() -> v
 	add_child_autofree(fake)
 	var v := Voicer.new(fake)
 	add_child_autofree(v)
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	got = {}
 	v.voice_event({"event_id": "ev_nonexistent", "choices": []}, s, data,
 		func(res): got = res)
-	await wait_frames(3)
+	await wait_process_frames(3)
 	assert_string_contains(String(got["text"]), "missing scene",
 		"a gap in the story document is visible, never papered over")
 	assert_eq(fake.calls, 0)
@@ -159,11 +160,11 @@ func test_order_returns_both_parts_through_one_call() -> void:
 	add_child_autofree(fake)
 	var v := Voicer.new(fake)
 	add_child_autofree(v)
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	var r := TickEngine.new(data).advance(s)
 	got = {}
 	v.order("lower taxes", "char_steward", r, s, data, func(res): got = res)
-	await wait_frames(3)
+	await wait_process_frames(3)
 	assert_true(got["ok"])
 	assert_eq(fake.calls, 1, "one call carries narrative and impacts")
 	assert_eq(got["narrative"], "The rolls are cut.")

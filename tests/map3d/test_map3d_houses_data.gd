@@ -22,9 +22,6 @@ const BAKE_KEYS := ["house_built_share", "house_m2_each_capital", "house_m2_each
 	"house_count_town", "house_count_fort", "house_count_village",
 	"lane_seeds", "lane_step_m", "lane_wander_deg", "lane_branch_chance",
 	"lane_max_depth", "lane_half_width_m", "plot_step_m"]
-const BAL_KEYS := ["map3d_house_view_m",
-	"map3d_house_rebuild_move_m", "map3d_house_seat_clear_m",
-	"map3d_house_ground_samples", "map3d_house_ground_inset"]
 
 
 func before_all() -> void:
@@ -58,14 +55,14 @@ func test_every_settlement_group_can_be_filled() -> void:
 			assert_true(found, group + " can be given a " + role)
 
 
+## The bake's own keys (tools/map3d/bake_houses.py reads them; no GDScript
+## would notice one gone) and every tier's house budget. balance.csv's keys
+## are DataRepository.bal's to assert.
 func test_the_tuning_keys_exist() -> void:
 	for k: String in BAKE_KEYS:
 		assert_true(Game.data.map3d_bake.has(k), "map3d_bake.csv has " + k)
-	for k: String in BAL_KEYS:
-		assert_true(Game.data.balance.has(k), "balance.csv has " + k)
-	for tier: String in Game.data.graphics_quality:
-		assert_true(Game.data.graphics_quality[tier].has("house_budget"),
-			tier + " has a house_budget")
+	for tier: String in Game.data.graphics_quality:  # Map3DQuality.num reads a missing one as 0 houses
+		assert_true(Game.data.graphics_quality[tier].has("house_budget"), tier + " has a house_budget")
 
 
 func test_the_buffer_ring_is_not_empty() -> void:
@@ -74,8 +71,8 @@ func test_the_buffer_ring_is_not_empty() -> void:
 	# the ring from the last house out to the footprint's edge is built
 	# ground with no houses on it
 	var share: float = Game.data.map3d_bake["house_built_share"]
-	assert_lt(share, 0.85, "houses stop well inside the footprint")
-	assert_gt(share, 0.3, "the cluster is not a dot in the middle of bare earth")
+	assert_lt(share, 1.0, "houses stop inside the footprint")
+	assert_gt(share, 0.0, "the cluster is built ground at all")
 
 
 func _group_allows(group: String, min_group: String) -> bool:

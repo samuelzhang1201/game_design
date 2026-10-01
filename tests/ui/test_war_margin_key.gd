@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The WAR ROOM margin's key (spec 2026-10-01-war-room-design §2): a compass
 ## rose, the shared scale bar in the pack's measure restated on zoom, and the
 ## legend of the sheet's ink.
@@ -10,8 +11,8 @@ var key: WarMarginKey
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(repo, 42)
+	repo = SuiteData.repo()
+	state = SuiteData.campaign(repo, 42)
 	WarSheets.forget()
 	view = load("res://scenes/war_room/war_room.tscn").instantiate()
 	view.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -53,7 +54,7 @@ func test_no_sheet_no_bar() -> void:
 
 func test_the_bar_restates_on_zoom_on_the_125_ladder() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	view.lean_to(repo.bal("war_cam_max_m"))
 	var far := key.bar()
 	view.lean_to(repo.bal("war_cam_min_m"))

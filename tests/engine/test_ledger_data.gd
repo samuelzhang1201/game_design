@@ -1,14 +1,17 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The LEDGER's ontology is data (spec 2026-09-30-ledger-ontology-design §7.1).
 
 var data: DataRepository
 
 func before_all() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	assert_not_null(data, DataRepository.last_error)
 
 func test_the_tables_load_in_file_order() -> void:
-	assert_eq(String(data.ledger_lenses[0]["lens"]), "economy")
+	var f := FileAccess.open("res://data/ledger_lenses.csv", FileAccess.READ)
+	f.get_csv_line()  # the header
+	assert_eq(String(data.ledger_lenses[0]["lens"]), String(f.get_csv_line()[0]), "the file's first row first")
 	assert_gt(data.ledger_types.size(), 20)
 	assert_gt(data.ledger_links.size(), 30)
 	assert_gt(data.ledger_actions.size(), 5)
@@ -20,7 +23,7 @@ func test_a_type_row_carries_its_place_and_layer() -> void:
 		if String(r["type_id"]) == "regiment":
 			row = r
 	assert_eq(String(row["layer"]), "things")
-	assert_eq(float(row["x"]), 9.0)
+	assert_true(String(row["x"]).is_valid_float() and String(row["z"]).is_valid_float(), "a place on the chart")
 	assert_eq(String(row["instances"]), "regiments")
 
 func test_every_court_relation_type_has_a_link_row() -> void:

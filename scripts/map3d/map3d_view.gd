@@ -128,12 +128,15 @@ static func scene_path_for(map_id: String) -> String:
 ## Whether `map_id`'s 3D world has been built (tools/map3d; git-ignored).
 static func has_scene(map_id: String) -> bool: return ResourceLoader.exists(scene_path_for(map_id))
 
+## Test seam: the world every view made from here on opens in place of the
+## pack's build ("" the build) — GameRoot's tests open the empty fixture world.
+static var world_override := ""
 ## A view of `repo`'s map, instanced from VIEW_SCENE; `scene_path` is a test seam.
 static func create(repo: DataRepository, scene_path: String = "") -> Map3DView:
 	var v := (load(VIEW_SCENE) as PackedScene).instantiate() as Map3DView
 	v.name = "Map3DView"
 	v._repo = repo
-	v._scene_path = scene_path if scene_path != "" else scene_path_for(repo.map_id)
+	v._scene_path = scene_path if scene_path != "" else (world_override if world_override != "" else scene_path_for(repo.map_id))
 	return v
 
 ## THE map of a screen (the 2D map was deleted 2026-09-24): made once in the
@@ -411,9 +414,7 @@ func _process(delta: float) -> void:
 
 func request_hover(pos: Vector2) -> void: _picker.request(pos)
 
-func refresh_hud() -> void:
-	if _loaded:
-		_hud.refresh()
+func refresh_hud() -> void: if _loaded: _hud.refresh()
 
 func compass_rect() -> Rect2: return _hud.compass_rect() if _loaded else Rect2()
 
@@ -550,9 +551,7 @@ func look_at_pack(pack_px: Vector2, at_distance: float = -1.0) -> void:
 	if _loaded:
 		_rig.place(_ctx.to_world(pack_px), at_distance if at_distance > 0.0 else _ctx.distance, _ctx.yaw)
 
-func look_at_home(at_distance: float) -> void:
-	if _loaded:
-		_rig.place(_home(), at_distance, _ctx.yaw)
+func look_at_home(at_distance: float) -> void: if _loaded: _rig.place(_home(), at_distance, _ctx.yaw)
 
 ## Layers the bench can switch off to price them.
 func layer_names() -> PackedStringArray:

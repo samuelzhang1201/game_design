@@ -1,13 +1,20 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The courier's card (spec 2026-09-27-courier-core §2, invariant 10), and the
 ## weather now on the province and manor cards.
 
 var repo: DataRepository
 
 
-func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+## The pack's road graph is cached by map id and every test's repository
+## carries the same routes and road speeds, so it is built once per script
+## (and forgotten around it, so no other script's graph is read).
+func before_all() -> void:
 	RoadGraph.forget()
+
+
+func before_each() -> void:
+	repo = SuiteData.repo()
 	Weather.forget()
 
 
@@ -30,7 +37,7 @@ func _field(card: Dictionary, label: String) -> String:
 
 
 func test_the_card_says_what_he_carries_and_when() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _code()
 	var c := CourierSystem.dispatch(repo, s, "ordinary", code, {"action_code": "ARMY_GARRISON"})
 	var card := CourierCard.card(repo, s, int(c["id"]))
@@ -51,7 +58,7 @@ func test_the_weather_reads_short_on_his_card() -> void:
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 0, "rain": 1, "mud": 0, "snow": 0, "blizzard": 0}
 	Weather.forget()
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var c := CourierSystem.dispatch(repo, s, "ordinary", _code(), {"action_code": "ARMY_MARCH",
 		"dest_x_m": 0, "dest_y_m": 0})
 	var card := CourierCard.card(repo, s, int(c["id"]))
@@ -62,12 +69,12 @@ func test_the_weather_reads_short_on_his_card() -> void:
 
 
 func test_a_gone_courier_has_no_card() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	assert_eq(CourierCard.card(repo, s, 99), {})
 
 
 func test_province_and_manor_cards_carry_the_weather() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var codes := repo.provinces.keys()
 	codes.sort()
 	var p := String(codes[0])

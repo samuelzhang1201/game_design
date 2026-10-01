@@ -1,9 +1,13 @@
 extends GutTest
 ## The 3D map refactor's safety net (spec 2026-09-20 §5 step 0): every name,
-## argument count, static, signal, property and node path of Map3DView that
-## the screens, GameRoot, tools and tests use — pinned BEFORE the view is
-## split, and run after every task of the refactor. A name may move into a
-## layer, but the view must keep a forwarder with the same shape.
+## argument count and signal of Map3DView that the screens, GameRoot, tools
+## and tests use — pinned BEFORE the view is split, and run after every task
+## of the refactor. A name may move into a layer, but the view must keep a
+## forwarder with the same shape. (2026-10-02: the statics, constants and
+## properties pins went — every one has a typed caller in tests or scripts,
+## which fails to compile on the same break; the node paths are
+## test_map3d_scene.gd's. The method shapes stay: Map3DInput and the HUD
+## call the view's helpers untyped, which no compiler checks.)
 
 const RunDir := preload("res://tests/run_dir.gd")
 var _fixture := RunDir.dir("map3d_api").path_join("test_map3d_api_world.tscn")
@@ -32,19 +36,7 @@ const METHODS := {
 	"_gui_input": 1, "_process": 1, "_render_scale": 0, "_burg_xz": 1, "_height_at": 1,
 	"_pan_by": 1, "_zoom_at": 2, "_ruler_click": 1,
 }
-const STATICS := ["scene_path_for", "has_scene", "create", "attach",
-	"load_field_map", "kingdom_of_pick"]
 const SIGNALS := {"object_selected": 1, "province_selected": 1, "country_hovered": 1}
-const CONSTANTS := ["PRIORITY_SEA", "PRIORITY_RIVERS", "PRIORITY_ROADS",
-	"PRIORITY_MANOR_EDGES", "PRIORITY_KINGDOM_BAND", "PRIORITY_SEAMS",
-	"PRIORITY_KINGDOM_HALO", "PRIORITY_KINGDOMS", "PRIORITY_HOVER", "PRIORITY_SELECTION",
-	"PRIORITY_CLOUDS", "PRIORITY_RING_BASE"]
-## Paths under the view after activate() on the fixture (+ refresh_borders).
-const PATHS := ["Viewport", "Display", "Notice", "Tooltip", "Hud", "Hud/Compass",
-	"Hud/Needle", "Viewport/Markers", "Viewport/Markers/Selected", "Viewport/Markers/Capital",
-	"Viewport/Markers/Village", "Viewport/Houses", "Viewport/Clouds", "Viewport/Clouds/Shadows",
-	"Viewport/Lines", "Viewport/Lines/Kingdoms", "Viewport/Lines/KingdomHalo",
-	"Viewport/Lines/KingdomBand", "Viewport/Lines/Seams", "Viewport/Lines/Roads"]
 
 
 func before_all() -> void:
@@ -84,12 +76,6 @@ func test_every_method_keeps_its_name_and_shape() -> void:
 				"Map3DView.%s keeps %d argument(s)" % [key, METHODS[key]])
 
 
-func test_the_statics_stay_static() -> void:
-	var have := _script_methods()
-	for key: String in STATICS:
-		assert_true((int(have[key]["flags"]) & METHOD_FLAG_STATIC) != 0, key + " is static")
-
-
 func test_the_signals_are_kept() -> void:
 	var v := Map3DView.create(Game.data, _fixture)
 	add_child_autofree(v)
@@ -98,28 +84,6 @@ func test_the_signals_are_kept() -> void:
 		for s: Dictionary in v.get_signal_list():
 			if String(s["name"]) == key:
 				assert_eq((s["args"] as Array).size(), int(SIGNALS[key]), key + " arguments")
-
-
-func test_the_constants_and_properties_are_kept() -> void:
-	var consts: Dictionary = (load("res://scripts/map3d/map3d_view.gd") as Script).get_script_constant_map()
-	for key: String in CONSTANTS:
-		assert_true(consts.has(key), key)
-	var v := Map3DView.create(Game.data, _fixture)
-	add_child_autofree(v)
-	assert_true("ruler_on" in v, "ruler_on (GameRoot sets it)")
-	assert_true("_meta" in v, "_meta (test_map3d_heights reads it)")
-
-
-func test_the_node_paths_tests_and_tools_use_are_kept() -> void:
-	var v := _view()
-	for path: String in PATHS:
-		assert_not_null(v.get_node_or_null(path), path)
-	assert_true(v.get_node("Viewport") is SubViewport)
-	assert_true(v.get_node("Viewport/Clouds") is MultiMeshInstance3D)
-	assert_true(v.get_node("Viewport/Markers/Capital") is MultiMeshInstance3D)
-	assert_true(v.get_node("Hud") is Map3DHud)
-	assert_eq(String(v.camera().name), "RigCamera")
-	assert_true(v.viewport().is_ancestor_of(v.camera()))
 
 
 func test_an_empty_line_has_no_mesh() -> void:
@@ -134,11 +98,6 @@ func test_create_takes_a_fixture_path() -> void:
 	var v := _view()
 	assert_true(v.is_loaded(), "a bare Node3D with map3d_world meta is a world")
 	assert_eq(Map3DView.scene_path_for("no_such_pack"), "res://assets/3D/terrain/no_such_pack/world.tscn")
-
-
-func test_the_hud_statics_are_kept() -> void:
-	assert_eq(Map3DHud.scale_bar_for(1.5, 220.0, "km")["text"], "200 km")
-	assert_eq(Map3DHud.needle_angle(0.0), 0.0)
 
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.

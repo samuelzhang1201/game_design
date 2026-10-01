@@ -54,10 +54,18 @@ func _view() -> Map3DView:
 	return v
 
 
+## A step set names a tier's road and river steps (r<road ×100>_v<river ×100>),
+## so two tiers share a bake exactly when they share those steps.
 func test_the_step_sets() -> void:
-	assert_eq(Map3DLayerBake.step_set(Map3DQuality.row(Game.data, "high")), "r100_v100")
-	assert_eq(Map3DLayerBake.step_set(Map3DQuality.row(Game.data, "medium")), "r140_v150")
-	assert_eq(Map3DLayerBake.step_set(Map3DQuality.row(Game.data, "low")), "r200_v250")
+	var re := RegEx.create_from_string("^r\\d+_v\\d+$")
+	for tier: String in Game.data.graphics_quality:
+		var row := Map3DQuality.row(Game.data, tier)
+		assert_not_null(re.search(Map3DLayerBake.step_set(row)), tier)
+		for other: String in Game.data.graphics_quality:
+			var o := Map3DQuality.row(Game.data, other)
+			var same := is_equal_approx(Map3DQuality.num(row, "road_step_mul"), Map3DQuality.num(o, "road_step_mul")) \
+				and is_equal_approx(Map3DQuality.num(row, "river_step_mul"), Map3DQuality.num(o, "river_step_mul"))
+			assert_eq(Map3DLayerBake.step_set(row) == Map3DLayerBake.step_set(o), same, tier + " / " + other)
 
 
 func test_the_key_follows_its_inputs() -> void:

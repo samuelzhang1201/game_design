@@ -10,7 +10,7 @@ func _dashboard() -> RealmDashboard:
 func test_shows_the_realm_and_its_resources() -> void:
 	Game.start_campaign(42)
 	var d := _dashboard()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var mine := Game.data.resolve_realm("player_realm")
 	assert_eq(d.title_label().text, String(Game.data.kingdoms[mine]["label"]))
 	assert_eq(d.resource_text("treasury"), UiPalette.format_int(int(Game.state.metrics["treasury"])))
@@ -21,7 +21,7 @@ func test_shows_the_realm_and_its_resources() -> void:
 func test_charts_carry_engine_truth() -> void:
 	Game.start_campaign(42)
 	var d := _dashboard()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(d.temper_chart().rows.size(), RealmDashboard.TEMPER.size(), "four gauges")
 	assert_eq(d.temper_chart().max_value, 100.0)
 	# The people and the provinces are the crown's OWN (2026-09-13): the
@@ -47,7 +47,7 @@ func test_charts_carry_engine_truth() -> void:
 func test_refreshes_on_state_change() -> void:
 	Game.start_campaign(42)
 	var d := _dashboard()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	Game.state.metrics["treasury"] = 999.0
 	Game.state_changed.emit()
 	assert_eq(d.resource_text("treasury"), "999")
@@ -61,7 +61,7 @@ func test_every_shown_resource_and_unit_has_an_icon_with_a_tooltip() -> void:
 		assert_ne(String(row["tooltip"]), "", "%s explains itself" % key)
 	var icon := ResourceIcon.create("treasury")
 	add_child_autofree(icon)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(icon.glyph(), "coin")
 	assert_string_contains(icon.tooltip_text, "Gold")
 
@@ -82,7 +82,7 @@ func test_compact_numbers() -> void:
 func test_the_cards_dimensions_are_icons_with_tooltips() -> void:
 	Game.start_campaign(42)
 	var d := _dashboard()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	for row: Dictionary in d.temper_chart().rows:
 		assert_true(RealmDashboard.TEMPER.has(String(row["dimension"])), "a temper key")
 	for row: Dictionary in d.host_chart().rows:

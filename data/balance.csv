@@ -97,7 +97,6 @@ order_prompt_max_burgs,12,largest towns of the player's realm listed in the orde
 order_narrative_max_chars,600,longest narrative the validator keeps from an order reply
 province_card_max_towns,5,province panel: how many town names to list
 province_card_max_goods,4,province panel: how many produced goods to list
-map_state_border_dash_px,9,world map: length of the DARK run of a kingdom border in screen px (0 draws it solid)
 map_scale_bar_max_px,220.0,world map: the longest the scale bar may run in screen px — the bar takes the biggest round distance that fits inside it
 map_scale_bar_divisions,4,world map: alternating filled and open segments along the scale bar (library M-14)
 map_scale_bar_height_px,8.0,world map: height of the scale bar in screen px
@@ -167,15 +166,8 @@ map_sea_band_nearer_px,55,"terrain: out to here is the NEARER band, sea_nearer"
 map_sea_band_far_px,200,"terrain: out to here is the FAR band, sea_far; beyond is the deep, sea_deep (the field caps at 255)"
 map_sea_band_soft_px,8,"terrain: half-width of the fade between two bands, in native px — 0 is a hard edge"
 map_coast_width,0,"terrain: shore stroke width in screen px. 0 = NO coast line at all (owner request 2026-09-13): the land colour, the political wash and the sea tell you where the shore is, and a drawn outline over them only fought the kingdom borders. Above 0 the stroke comes back"
-map_river_min_px,1.2,"terrain: the least a river's SOURCE width may be in screen px. It floors only the widest point: the course still tapers to nothing from there (map_river_taper_gamma), so rivers no longer all draw one width at this floor the way they did when it floored the whole course (0.44 then, owner 2026-09-12)"
 map_river_taper_gamma,1.4,"terrain: how a river thins along its course (owner request 2026-09-13): a point at the SOURCE, widest at the mouth, swelling as t^gamma (owner 2026-09-13, reversing the same morning's source-wide taper; WorldMapView.river_taper). 1 swells evenly; higher stays fine longer"
-map_river_smoothing_steps,3,terrain: B-spline samples per segment on a river — the pack stores rivers as raw polylines and the corners read as hard kinks without this (owner 2026-09-12)
-map_river_discharge_scale,0.11,"terrain: a river's SOURCE width in native px per sqrt(discharge) — raised from 0.05 with the solid taper (owner 2026-09-13), since a river now spends most of its course thinner than this"
-map_road_width,2.4,"terrain: road stroke width in screen px — a road is a worn track, and in the reference it reads by width and a soft edge rather than by a dark line (owner 2026-09-12; widened from 1.3 with the sand-track colour, owner 2026-09-17, after docs/references/ChatGPT Image Sep 16, 2026, 05_58_06 PM.png)"
-map_road_soft_ratio,0.6,"terrain: how far a road's soft shoulder reaches past its body, as a multiple of the body's own width on each side (0 = a hard edge). On since the painted-track roads (owner 2026-09-17): the reference's tracks fade into the grass rather than ending on a ruled edge"
 map_route_smoothing_steps,3,terrain: B-spline samples per segment on a road or trail — the pack stores routes as raw polylines and a wide stroke makes every kink obvious
-map_trail_width,0.9,terrain: trail and sea-route stroke width in screen px
-map_trail_min_scale,2.4,terrain: view scale at/above which trails and sea routes draw (roads always draw)
 manor_price_per_1000,400,manors §5: the value of a manor per 1 000 people
 manor_price_per_unit,10,manors §5: the value per unit of goods a working manor makes
 manor_price_building_ratio,0.5,manors §5: the share of a building's cost that stays in the manor's value

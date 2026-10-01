@@ -1,5 +1,6 @@
 # tests/engine/test_ledger_trade.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The LEDGER lights industry and trade (spec 2026-09-30-ledger-industry-trade-design).
 
 var data: DataRepository
@@ -7,8 +8,8 @@ var s: GameState
 var sys: ActionSystem
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 	sys = ActionSystem.new(data)
 	RealmEconomy.forget()
 
@@ -36,16 +37,22 @@ func _able_honest_steward() -> Character:
 func _first_route() -> Dictionary:
 	return MarketSystem.routes(data, s)[0]
 
-func test_the_ontology_stays_clean() -> void:
-	assert_eq(Ledger.validate(data), [] as Array[String])
-
-func test_every_charter_type_is_now_built_but_factions_and_sources() -> void:
+## A type is built exactly when something reads it: no live link reaches a
+## planned type, and every live type is an end of some live link.
+func test_a_type_is_live_exactly_when_a_live_link_reads_it() -> void:
+	var live := {}
 	for r: Dictionary in data.ledger_types:
-		if String(r["status"]) == "planned":
-			assert_true(String(r["type_id"]) in ["faction", "source", "enemy_host"], String(r["type_id"]))
-
-func test_a_raw_material_is_a_good_not_a_type() -> void:
-	assert_true(Ledger.type_row(data, "raw_material").is_empty())
+		live[String(r["type_id"])] = String(r["status"]) == "live"
+	var touched := {}
+	for r: Dictionary in data.ledger_links:
+		if String(r["status"]) != "live":
+			continue
+		for end in ["from_type", "to_type"]:
+			assert_true(live.get(String(r[end]), false), "%s reaches a planned type %s" % [r["link_id"], r[end]])
+			touched[String(r[end])] = true
+	for id: String in live:
+		if live[id]:
+			assert_true(touched.has(id), "%s is live with nothing reading it" % id)
 
 func test_a_route_is_its_toll() -> void:
 	var r := _first_route()

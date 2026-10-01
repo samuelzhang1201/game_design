@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Map3DContext (spec 2026-09-20 §1): what every layer of the 3D map shares —
 ## the pack <-> world round trip, the ground under a point, the scales and the
 ## camera pose, with no Game autoload and no view.
@@ -227,8 +228,8 @@ func test_settlement_rects_sizes_on_the_drawn_dot_not_the_footprint() -> void:
 
 
 func test_the_context_hands_out_the_live_couriers() -> void:
-	var repo := DataRepository.load_all("res://data")
-	var s := GameState.new_campaign(repo, 7)
+	var repo := SuiteData.repo()
+	var s := SuiteData.campaign(repo, 7)
 	s.couriers = [{"id": 1}]
 	var ctx := Map3DContext.new(repo, {}, null)
 	ctx.state_fn = func() -> GameState: return s

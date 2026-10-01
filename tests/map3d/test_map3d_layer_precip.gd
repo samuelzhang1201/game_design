@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The falling rain and snow (spec 2026-09-29-weather-visuals): only while the
 ## clock runs, only near the camera, sized from balance.csv.
 
@@ -6,7 +7,7 @@ var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 
 func test_it_falls_only_while_the_clock_runs() -> void:

@@ -16,14 +16,14 @@ func _click(at: Vector2) -> void:
 		e.position = at
 		e.global_position = at
 		get_viewport().push_input(e)
-		await wait_frames(1)
+		await wait_process_frames(1)
 
 func test_a_real_click_on_start_game_begins_the_reign() -> void:
 	var r := _root()
-	await wait_frames(3)
+	await wait_process_frames(3)
 	var menu: MainMenu = r.current_screen
 	var start: Button = menu.menu_column().get_node("StartGame")
 	var at := start.get_global_rect().get_center()
 	await _click(at)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_false(r.current_screen is MainMenu, "the click reached Start Game (button at %s)" % at)

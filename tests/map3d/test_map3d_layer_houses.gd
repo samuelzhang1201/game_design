@@ -214,15 +214,6 @@ func test_houses_wear_their_own_colour_variants() -> void:
 	assert_gt(seen.size(), 6, "neighbours vary")
 
 
-## A variant never makes a wall or a roof LIGHTER than its mesh (taste.md:
-## limewash too bright twice; a lighter tile reads pink).
-func test_no_variant_lightens() -> void:
-	for r: Dictionary in Game.data.map3d_house_variants:
-		var c := Color(String(r["tint"]))
-		assert_true(c.r <= 1.0 and c.g <= 1.0 and c.b <= 1.0, "%s" % r)
-		assert_lte(c.get_luminance(), 1.0, "%s" % r)
-
-
 func _home() -> Vector2:
 	var codes: Array = Game.data.burgs.keys()
 	codes.sort()

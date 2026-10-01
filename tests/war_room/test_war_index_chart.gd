@@ -1,11 +1,12 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The sheet index on the war room's wall: the chart's image and its pick (spec §2).
 
 var repo: DataRepository
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	WarSheets.forget()
 
 

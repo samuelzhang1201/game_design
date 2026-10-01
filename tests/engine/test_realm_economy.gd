@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## RealmEconomy (spec §4.4, §11.2): province sums from the columnar cache,
 ## the realm and the crown over the real pack, exact tie-out, and a cache
 ## that recomputes only what changed.
@@ -7,8 +8,8 @@ var data: DataRepository
 var s: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 	RealmEconomy.forget()
 
 func after_each() -> void:

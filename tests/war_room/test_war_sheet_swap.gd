@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The roll-up's timing: the midpoint lays, the table's depth goes 1 -> sliver -> 1.
 
 var repo: DataRepository
@@ -6,7 +7,7 @@ var total: float
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	total = repo.bal("war_sheet_swap_s")
 
 

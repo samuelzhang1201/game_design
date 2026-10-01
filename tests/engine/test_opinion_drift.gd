@@ -1,14 +1,13 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 var data: DataRepository
 var s: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 
-func test_signatures_loaded() -> void:
-	assert_gt(data.signatures.size(), 10)
 
 func test_variant_matching() -> void:
 	var pos := OpinionDrift.signature_for(data, "TAX_RATE_ADJUST", {"delta": 2})

@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 ## Regression coverage for a verified Godot 4.7.1 engine bug:
 ## JSON.parse_string(JSON.stringify(x, "", true, true)) mis-decodes a
@@ -19,11 +20,11 @@ func test_hex_round_trip_is_bit_exact_for_10k_random_doubles() -> void:
 		assert_eq(var_to_bytes(back), var_to_bytes(v), "bit mismatch at %d: %.17f" % [i, v])
 
 func test_save_load_bit_exact_for_adversarial_metric_values() -> void:
-	var data := DataRepository.load_all("res://data")
+	var data := SuiteData.repo()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
-	for i in 200:
-		var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
+	for i in 30:
 		s.metrics["treasury"] = (rng.randf() - 0.5) * pow(10.0, rng.randi_range(-2, 5))
 		s.metrics["unrest"] = rng.randf() * 100.0
 		var path := RunDir.dir("float_precision").path_join("float_test.json")

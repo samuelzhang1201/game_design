@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 const RunDir := preload("res://tests/run_dir.gd")
 var data: DataRepository
@@ -6,7 +7,7 @@ var s: GameState
 var es: EventSystem
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	# Synthetic pool: deterministic, independent of the real content task.
 	data.events = [
 		{"event_id": "ev_a", "category": "folk", "trigger": "always", "weight": "1",
@@ -40,7 +41,7 @@ func before_each() -> void:
 			"centralism": "0", "militarism": "0", "orthodoxy": "0",
 			"tax_incidence": "0", "expansionism": "0", "effects": "", "requires": ""},
 	]
-	s = GameState.new_campaign(data, 42)
+	s = SuiteData.campaign(data, 42)
 	s.tick = 1
 	es = EventSystem.new(data)
 
@@ -102,17 +103,12 @@ func test_apply_choice_metric_effect_carries_choice_label_as_reason() -> void:
 func test_scheduled_event_fires_regardless_of_roll() -> void:
 	EventEffects.apply("schedule:ev_once:2", s, data)
 	s.tick += 1
-	assert_true(es.roll(s).is_empty() or true)  # may or may not fire random event
+	es.roll(s)  # a tick on, the random roll may fire anything (ev_once included)
 	s.pending_event = {}
 	s.tick += 2
 	var ev := es.roll(s)
 	assert_eq(String(ev.get("event_id", "")), "ev_once")
 
-func test_pending_event_round_trip() -> void:
-	es._fire("ev_a", s)
-	var s2 := GameState.from_dict(s.to_dict())
-	assert_eq(SaveLoad.state_hash(s2), SaveLoad.state_hash(s))
-	assert_eq(String(s2.pending_event.get("event_id", "")), "ev_a")
 
 func test_reload_with_pending_event_is_bit_identical() -> void:
 	# Force an event, save/load, then resolve on both independently: both should diverge identically

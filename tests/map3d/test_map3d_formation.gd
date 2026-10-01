@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## A regiment's piece as three, six or nine figures by its strength (owner
 ## 2026-09-30: 满员 3×3, 减员 前中后 1/2/3, 残兵 前后排 1/2), data/army_formations.csv.
 
@@ -6,7 +7,7 @@ var repo: DataRepository
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 
 func test_three_tiers_three_six_nine_figures() -> void:
@@ -52,7 +53,10 @@ func test_rank_depth_spreads_the_ranks_only() -> void:
 	assert_eq(offs[0], Vector2(-1, -4.8))
 	assert_eq(offs[4], Vector2(0, 0))
 	assert_eq(offs[8], Vector2(1, 4.8))
-	assert_eq(String(repo.army_art["infantry"]["rank_depth"]), "1.6")
+	# the man-at-arms' ranks stand further apart than his files (seen from the
+	# front they hid each other), the horse's no closer than its own length
+	assert_gt(Map3DFormation.rank_depth(repo.army_art["infantry"]), 1.0)
+	assert_gte(Map3DFormation.rank_depth(repo.army_art["cavalry"]), 1.0)
 
 
 func test_remnants_are_one_in_front_two_behind() -> void:

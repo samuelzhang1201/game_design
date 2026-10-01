@@ -1,5 +1,6 @@
 # tests/engine/test_ledger_open_schema.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The owner adds, changes or removes nodes and edges at any time, in data
 ## (spec 2026-09-30-ledger-galaxy-design §3b): a new type, a new link type,
 ## single nodes and edges written down — with no code.
@@ -9,8 +10,8 @@ var s: GameState
 
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 	RealmEconomy.forget()
 
 

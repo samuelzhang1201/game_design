@@ -20,8 +20,11 @@ var source_trust: Dictionary = {}
 var claims: Array = []
 ## What each character remembers being told; shape and API in AgentMemory.
 var agent_memory: Dictionary = {}
-## Character creation (main menu): {"first_name", "family_name", "flag"}.
-## Applied by apply_player_setup; kept so saves restore the chosen identity.
+## A save's chosen identity from the days of character creation
+## ({"first_name", "family_name", "house_was"}): the realm and the ruler are
+## no longer customised (owner 2026-09-30), so a new reign leaves it empty,
+## but an old save may carry it and HouseArms / MapManors still read
+## house_was, the royal house's name before it was renamed.
 var player_setup: Dictionary = {}
 ## Where the player stands (data/locations.csv). Moving within a region is
 ## free (LocationSystem); saved with everything else.
@@ -100,36 +103,6 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	# The reign opens with its provinces' wealth already settled (Ruling 15).
 	Intel.settle_wealth_tiers(data, s)
 	return s
-
-## Applies the player's chosen identity: the player's display name becomes
-## "King <first> <family>", and the royal family name is inherited by every
-## role of the player's house (family_name match), in both their family_name
-## and display_name. Deterministic string work only — no RNG.
-func apply_player_setup(setup: Dictionary) -> void:
-	player_setup = setup.duplicate(true)
-	var first := String(setup.get("first_name", "")).strip_edges()
-	var family := String(setup.get("family_name", "")).strip_edges()
-	if first == "" and family == "":
-		return
-	var you: Character = characters.get("you")
-	if you == null:
-		return
-	var old_family := you.family_name
-	if first == "":
-		first = you.display_name.get_slice(" ", 1)
-	if family == "":
-		family = old_family
-	for id in characters:
-		var c: Character = characters[id]
-		if c.family_name == old_family and old_family != "":
-			c.family_name = family
-			c.display_name = c.display_name.replace(old_family, family)
-	# The pack's house_bindings still name the royal house as it was; the
-	# manors bound to that name are the crown's (MapManors.default_owner).
-	if old_family != "" and old_family != family:
-		player_setup["house_was"] = old_family
-	you.family_name = family
-	you.display_name = "King %s %s" % [first, family]
 
 ## The day counted from the reign's first: what works in progress are
 ## measured against.

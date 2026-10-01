@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Map3DBorders: the 3D map's kingdom borders and province seams, from the
 ## same live outlines the 2D map draws (MapOwnership), laid on the ground as
 ## ribbons the border shader widens to a constant screen width.
@@ -81,8 +82,8 @@ func test_a_three_way_joint_ends_the_chains() -> void:
 
 
 func test_seam_lines_are_fewer_chains_than_segments() -> void:
-	var repo := DataRepository.load_all("res://data")
-	var st := GameState.new_campaign(repo, 7)
+	var repo := SuiteData.repo()
+	var st := SuiteData.campaign(repo, 7)
 	var segments := 0
 	for code: String in repo.kingdoms:
 		segments += MapOwnership.seams_of(repo, st, code).size()
@@ -115,8 +116,8 @@ func test_seam_lines_cover_every_kingdoms_seams() -> void:
 
 ## No kingdom ring curls (owner 2026-09-19).
 func test_kingdom_lines_do_not_curl() -> void:
-	var repo := DataRepository.load_all("res://data")
-	var st := GameState.new_campaign(repo, 7)
+	var repo := SuiteData.repo()
+	var st := SuiteData.campaign(repo, 7)
 	for code: String in repo.kingdoms:
 		for line: PackedVector2Array in Map3DBorders.kingdom_lines(repo, st, WORLD, code, 150.0):
 			var n := line.size()
@@ -144,8 +145,8 @@ func test_kingdom_lines_do_not_curl() -> void:
 ## probe's own divergence check use) and compares that edge's two smoothed
 ## copies directly — 323 shared kingdom-kingdom edges on the default pack.
 func test_shared_borders_draw_one_curve() -> void:
-	var repo := DataRepository.load_all("res://data")
-	var st := GameState.new_campaign(repo, 7)
+	var repo := SuiteData.repo()
+	var st := SuiteData.campaign(repo, 7)
 	var steps := int(repo.bal("map_border_smoothing_steps"))
 	# edge key (quantised endpoints, smaller first) -> Array of
 	# {code, seg}: that edge's `steps + 1` smoothed points, oriented so the

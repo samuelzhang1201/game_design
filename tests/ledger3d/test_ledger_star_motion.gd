@@ -1,5 +1,6 @@
 # tests/ledger3d/test_ledger_star_motion.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The stars' wobble and the current round them (owner 2026-10-01): every
 ## number is a balance.csv key bound to a uniform, the current is one MultiMesh
 ## instance per drawn star laid as its star, and 0 turns each off. Headless:
@@ -12,8 +13,8 @@ var view: LedgerView3D
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(repo, 42)
+	repo = SuiteData.repo()
+	s = SuiteData.campaign(repo, 42)
 	RealmEconomy.forget()
 
 

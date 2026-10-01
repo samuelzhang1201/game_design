@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## WORKSHOP_RATE (spec 2026-09-30-ledger-supply-design §2).
 
 var data: DataRepository
@@ -7,8 +8,8 @@ var sys: ActionSystem
 var cell := -1
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 	sys = ActionSystem.new(data)
 	cell = int(MapManors.manors_of_province(data, MapManors.home_province(data, s), s)[0])
 	MapManors.build(data, s, cell, WorkshopSystem.BUILDING, "a test workshop")
@@ -41,9 +42,6 @@ func test_refused_on_a_manor_the_crown_does_not_hold() -> void:
 	assert_string_contains(sys.validate(ActionRequest.make("WORKSHOP_RATE", {"cell": cell, "rate": 0}), s),
 		"The crown does not hold")
 
-func test_the_order_is_catalogued() -> void:
-	assert_true(data.actions.has("WORKSHOP_RATE"))
-	assert_true(data.order_costs.has("WORKSHOP_RATE"))
 
 ## Minor7: the order's rates are the table's, not a constant.
 func test_the_order_reads_the_rate_table() -> void:

@@ -1,5 +1,6 @@
 # tests/engine/test_ledger_supply.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The LEDGER reads the supply chain from its one plan each (spec
 ## 2026-09-30-ledger-supply-design §5), and a sphere carries its gauges
 ## (spec 2026-09-30-ledger-ontology-design §6.3, "a property").
@@ -9,9 +10,9 @@ var s: GameState
 var cell := -1
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	assert_not_null(data, DataRepository.last_error)
-	s = GameState.new_campaign(data, 42)
+	s = SuiteData.campaign(data, 42)
 	_able_honest_governors()
 	RealmEconomy.forget()
 	cell = int(MapManors.manors_of_province(data, MapManors.home_province(data, s), s)[0])
@@ -49,9 +50,6 @@ func _prop(node: Dictionary, key: String) -> Dictionary:
 		if String(p["key"]) == key:
 			return p
 	return {}
-
-func test_the_ontology_stays_clean() -> void:
-	assert_eq(Ledger.validate(data), [] as Array[String])
 
 func test_the_workshop_threads_carry_its_plan() -> void:
 	var snap := Ledger.snapshot(data, s, "economy", {})

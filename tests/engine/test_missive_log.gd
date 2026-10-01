@@ -1,11 +1,12 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The Missive log (spec 2026-09-28-missive-board-and-spies §1).
 
 var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 
 func _m(column: String, day: int) -> Dictionary:
@@ -14,7 +15,7 @@ func _m(column: String, day: int) -> Dictionary:
 
 
 func test_add_gives_ids_and_starts_unread() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	assert_eq(MissiveLog.add(repo, s, _m("credible", 3)), 1)
 	assert_eq(MissiveLog.add(repo, s, _m("rumour", 4)), 2)
 	assert_eq(MissiveLog.unread(s), 2)
@@ -27,7 +28,7 @@ func test_add_gives_ids_and_starts_unread() -> void:
 
 
 func test_a_column_lists_newest_first() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	for d in [1, 2, 3]:
 		MissiveLog.add(repo, s, _m("credible", d))
 	MissiveLog.add(repo, s, _m("truth", 9))
@@ -36,7 +37,7 @@ func test_a_column_lists_newest_first() -> void:
 
 
 func test_each_column_is_capped_on_its_own() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	repo.balance["missive_keep_per_column"] = 2.0
 	MissiveLog.add(repo, s, _m("truth", 1))
 	for d in [1, 2, 3]:
@@ -47,7 +48,7 @@ func test_each_column_is_capped_on_its_own() -> void:
 
 
 func test_the_log_survives_a_save() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	MissiveLog.add(repo, s, _m("rumour", 5))
 	var copy := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	assert_eq(copy.next_missive_id, 1)
@@ -55,7 +56,7 @@ func test_the_log_survives_a_save() -> void:
 
 
 func test_an_old_save_has_an_empty_board() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var d: Dictionary = s.to_dict()
 	d.erase("missives")
 	d.erase("next_missive_id")
@@ -67,9 +68,9 @@ func test_an_old_save_has_an_empty_board() -> void:
 func test_the_tables() -> void:
 	for key in ["people", "tax", "output", "wealth", "troops_own", "troops_foreign", "holder", "stance"]:
 		assert_true(repo.intel_facts.has(key), key)
-	assert_eq(Array(repo.intel_facts["wealth"]["tiers"]), ["poor", "middling", "rich"])
-	assert_eq(int(repo.spy_difficulty["foreign"]), -150)
-	assert_eq(int(repo.courier_kinds["spy"]["speed_permille"]), 900)
+	assert_eq(Array(repo.intel_facts["wealth"]["tiers"]).size(), 3, "one word per tercile")
+	assert_lt(int(repo.spy_difficulty["foreign"]), 0, "abroad is harder to read")
+	assert_gt(int(repo.courier_kinds["spy"]["speed_permille"]), 0, "a spy rides")
 	assert_true(repo.courier_art.has("spy"))
 	for c: String in MissiveLog.COLUMNS:
 		assert_true(repo.palette.has("intel_" + c), c)

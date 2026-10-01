@@ -4,8 +4,17 @@ extends GutTest
 ## the map panel shows Map3DView on every screen, with every theme on it, and
 ## without a built scene the view shows its notice naming build_pack.sh.
 ## The scene is git-ignored, so the tests force its presence through
-## GameRoot.force_map3d_scene. The suite holds the view unloaded
-## (tests/pre_run.gd, map3d_default 0); these tests lift that.
+## GameRoot.force_map3d_scene, and open the empty fixture world in its place
+## (tests/map3d/fixture_world.gd) — all but one, which opens the real build.
+## The suite holds the view unloaded (tests/pre_run.gd, map3d_default 0);
+## these tests lift that.
+
+const FixtureWorld := preload("res://tests/map3d/fixture_world.gd")
+
+
+func before_all() -> void:
+	FixtureWorld.open_in_views("map3d_tab")
+
 
 func before_each() -> void:
 	Game.data.balance["map3d_default"] = 1.0
@@ -20,10 +29,10 @@ func _court(has_scene: bool = true) -> GameRoot:
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
 	r.force_map3d_scene(has_scene)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	return r
 
 
@@ -101,11 +110,11 @@ func test_map3d_default_zero_holds_the_view_unloaded() -> void:
 func test_the_choice_follows_the_player_to_the_next_screen() -> void:
 	var r: GameRoot = await _court()
 	r._switch_to(GameRoot.State.COURT)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_true(_shows_3d(r), "3D on the new screen")
 	r.set_height_view(true)
 	r._switch_to(GameRoot.State.COURT)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_true(_shows_3d(r), "HEIGHTS keeps the new screen 3D")
 	assert_eq(r.current_screen.map3d_view().manor_theme(), "heights")
 
@@ -116,20 +125,36 @@ func test_the_real_scene_check_reads_the_pack() -> void:
 
 func test_a_3d_selection_opens_the_card_in_the_left_column() -> void:
 	var r: GameRoot = await _court()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var screen: CourtScreen = r.current_screen
 	var view := screen.map3d_view()
 	var code := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
 	view.object_selected.emit({"title": "x", "obj": {"kind": "burg", "code": code}})
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(screen.detail_panel().visible, "the town's card, as a 2D click would open")
 	assert_false(screen.dashboard().visible, "in place of the dashboard")
 	var province := String(Game.data.burgs[code]["province_code"])
 	view.province_selected.emit(province)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(screen.detail_panel().visible, "a province's card too")
 
 
-## The kept world (Map3DWorldCache) must not leak into the next file.
+## The one test that opens the pack's REAL build (git-ignored: a checkout
+## without one skips it); every other GameRoot test opens the fixture.
+func test_the_court_loads_the_packs_built_world() -> void:
+	if not Map3DView.has_scene(Game.data.map_id):
+		pending("no built world in this checkout (tools/map3d/build_pack.sh)")
+		return
+	var fixture := Map3DView.world_override
+	Map3DView.world_override = ""
+	var r: GameRoot = await _court()
+	Map3DView.world_override = fixture
+	var v: Map3DView = r.current_screen.map3d_view()
+	assert_true(v.is_loaded(), "the pack's build opened")
+	assert_not_null(v.context().terrain, "with its Terrain3D")
+	assert_gt(v.house_counts().size(), 0, "and its settlements")
+
+
+## The kept world (Map3DWorldCache) must not leak into the next file, nor the fixture.
 func after_all() -> void:
-	Map3DWorldCache.clear()
+	FixtureWorld.close_in_views()

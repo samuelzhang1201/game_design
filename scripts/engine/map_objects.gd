@@ -9,10 +9,6 @@ extends RefCounted
 ## min_burg_pop sentinel: only capitals get pins.
 const CAPITALS_ONLY := -1
 
-const GROUP_WORDS := {"roads": "Road", "trails": "Trail", "searoutes": "Sea route"}
-const FEATURE_WORDS := {"walls": "Walled", "citadel": "Citadel", "temple": "Temple",
-	"plaza": "Plaza", "shanty": "Shanty town"}
-
 ## LOD rule from balance.csv. view_scale = screen px per native map px.
 static func min_burg_pop_for_scale(repo: DataRepository, view_scale: float) -> int:
 	if view_scale >= repo.bal("map_lod_village_scale"):
@@ -81,20 +77,6 @@ static func estate_rows(repo: DataRepository, focus_code: String) -> Array:
 		return by[focus_code]
 	return by.get(String(cache["first"]), [])
 
-
-
-## Closest burg regardless of LOD ("" if the pack has none).
-static func nearest_burg(repo: DataRepository, native: Vector2) -> String:
-	var best := ""
-	var best_d := INF
-	for code: String in repo.burgs:
-		var b: Dictionary = repo.burgs[code]
-		var d := native.distance_to(Vector2(float(b["x"]), float(b["y"])))
-		if d < best_d:
-			best_d = d
-			best = code
-	return best
-
 ## Tooltip text: the object's name ("" for land/water, which have no pin).
 static func label_of(repo: DataRepository, obj: Dictionary, state: GameState = null) -> String:
 	match String(obj.get("kind", "")):
@@ -119,48 +101,21 @@ static func label_of(repo: DataRepository, obj: Dictionary, state: GameState = n
 			return String(m["name"]) + "\n" + "\n".join(landmark_lines(repo, state, id))
 	return ""
 
-## Card text per kind: {title, lines, ask}. {} means "nothing to show".
+## A kingdom's card text: {title, lines, ask} ({} for anything else) —
+## the country card under the cursor (CountryPanel). The other kinds' cards
+## are burg_card / province_card / manor_card / army_card.
 static func describe(repo: DataRepository, obj: Dictionary,
 		state: GameState = null) -> Dictionary:
-	match String(obj.get("kind", "")):
-		"kingdom":
-			return _describe_kingdom(repo,
-				_kingdom_by_state(repo, int(obj.get("state_id", -1))), state)
-		"burg":
-			return _describe_burg(repo, String(obj["code"]))
-		"route":
-			return _describe_route(repo, String(obj["code"]))
-		"river":
-			return _describe_river(repo, String(obj["code"]))
-		"marker":
-			return _describe_marker(repo, String(obj["code"]))
-		"army":
-			return _describe_army(repo, String(obj["code"]), state)
-		"land":
-			return _describe_land(repo, obj, state)
-		"manor":
-			return _describe_manor(repo, int(obj.get("cell", -1)), state)
-	return {}
-
-## A manor's entry: its card's title and a few lines, for the floating
-## card; the detail column asks for manor_card itself.
-static func _describe_manor(repo: DataRepository, cell: int, state: GameState) -> Dictionary:
-	var card := manor_card(repo, state, cell)
-	if card.is_empty():
+	if String(obj.get("kind", "")) != "kingdom":
 		return {}
-	var lines: Array[String] = []
-	for f in card["fields"]:
-		lines.append("%s: %s" % [String(f[0]), String(f[1])])
-	return {"title": card["title"], "lines": lines, "ask": card["ask"]}
+	return _describe_kingdom(repo,
+		_kingdom_by_state(repo, int(obj.get("state_id", -1))), state)
 
 static func _kingdom_by_state(repo: DataRepository, sid: int) -> Dictionary:
 	for row: Dictionary in repo.kingdoms.values():
 		if int(row["state_id"]) == sid:
 			return row
 	return {}
-
-static func _province_by_id(repo: DataRepository, pid: int) -> Dictionary:
-	return repo.province_by_id(pid)
 
 static func _label(table: Dictionary, code: String) -> String:
 	return String(table.get(code, {}).get("label", code))
@@ -199,12 +154,6 @@ static func landmark_lines(repo: DataRepository, state: GameState, cell: int) ->
 	else:
 		out.append("%d m below the land around — −%d%% fighting up out of it" % [-edge, pct])
 	return out
-
-## Native px -> "N unit" via map_info.csv (falls back to px when absent).
-static func format_distance(repo: DataRepository, native_px: float) -> String:
-	var scale := float(repo.map_info.get("distance_scale", "1"))
-	var unit := String(repo.map_info.get("distance_unit", "px"))
-	return "%d %s" % [roundi(native_px * scale), unit]
 
 ## The kingdom overview lines (the pre-2026-09-08 card, unchanged in content).
 static func _kingdom_lines(repo: DataRepository, row: Dictionary,
@@ -259,101 +208,6 @@ static func _describe_kingdom(repo: DataRepository, row: Dictionary,
 	return {"title": label, "lines": _kingdom_lines(repo, row, state),
 		"ask": "What do we know of %s?" % label}
 
-static func _describe_burg(repo: DataRepository, code: String) -> Dictionary:
-	var b: Dictionary = repo.burgs.get(code, {})
-	if b.is_empty():
-		return {}
-	var label := String(b["label"])
-	var where := "%s, %s" % [_label(repo.provinces, String(b["province_code"])),
-		_label(repo.kingdoms, String(b["kingdom_code"]))]
-	var lines: Array[String] = []
-	lines.append(("Capital of %s" if String(b.get("is_capital", "0")) == "1" else "Town in %s") % where)
-	lines.append("Population: %s" % b.get("population", "—"))
-	var traits: Array[String] = []
-	if String(b.get("is_port", "0")) == "1":
-		traits.append("Port")
-	for f: String in String(b.get("features", "")).split("|", false):
-		traits.append(String(FEATURE_WORDS.get(f, f.capitalize())))
-	if not traits.is_empty():
-		lines.append(", ".join(traits))
-	var roads := 0
-	for r: Dictionary in repo.routes.values():
-		if String(r["from_burg"]) == code or String(r["to_burg"]) == code:
-			roads += 1
-	if roads > 0:
-		lines.append("Roads: %d" % roads)
-	return {"title": label, "lines": lines, "ask": "What do we know of %s?" % label}
-
-static func _describe_route(repo: DataRepository, code: String) -> Dictionary:
-	var r: Dictionary = repo.routes.get(code, {})
-	if r.is_empty():
-		return {}
-	var label := String(r["label"])
-	var lines: Array[String] = [String(GROUP_WORDS.get(String(r["group"]), "Route"))]
-	var from := String(r["from_burg"])
-	var to := String(r["to_burg"])
-	if from != "" and to != "":
-		lines.append("From %s to %s" % [_label(repo.burgs, from), _label(repo.burgs, to)])
-	elif from != "" or to != "":
-		lines.append("Ends at %s" % _label(repo.burgs, from if from != "" else to))
-	lines.append("Length: %s" % format_distance(repo, float(r["length"])))
-	return {"title": label, "lines": lines, "ask": "What do we know of the %s?" % label}
-
-static func _describe_river(repo: DataRepository, code: String) -> Dictionary:
-	var rv: Dictionary = repo.rivers.get(code, {})
-	if rv.is_empty():
-		return {}
-	var label := String(rv["label"])
-	var lines: Array[String] = [String(rv.get("type", "River")),
-		"Length: %s" % format_distance(repo, float(rv["length"]))]
-	var through: Array[String] = []
-	for k: String in String(rv.get("kingdom_codes", "")).split("|", false):
-		through.append(_label(repo.kingdoms, k))
-	if not through.is_empty():
-		lines.append("Flows through: %s" % ", ".join(through))
-	return {"title": label, "lines": lines, "ask": "What do we know of the %s?" % label}
-
-static func _describe_marker(repo: DataRepository, code: String) -> Dictionary:
-	var m: Dictionary = repo.markers.get(code, {})
-	if m.is_empty():
-		return {}
-	var label := String(m["label"])
-	var lines: Array[String] = [humanize(String(m.get("type", "")))]
-	var legend := String(m.get("legend", ""))
-	if legend != "":
-		lines.append(legend)
-	return {"title": label, "lines": lines, "ask": "What is known of %s?" % label}
-
-## Land: the province first, then terrain and the nearest town, then the
-## kingdom overview so the old kingdom card stays one click away.
-static func _describe_land(repo: DataRepository, obj: Dictionary,
-		state: GameState = null) -> Dictionary:
-	var kingdom := _kingdom_by_state(repo, int(obj.get("state_id", -1)))
-	if kingdom.is_empty():
-		return {}
-	var province := _province_by_id(repo, int(obj.get("province_id", -1)))
-	var title := String(province.get("label", kingdom["label"]))
-	var lines: Array[String] = [String(kingdom["label"])]
-	var biome: Dictionary = repo.biomes.get(int(obj.get("biome_id", -1)), {})
-	if not biome.is_empty():
-		lines.append("Terrain: %s" % biome["label"])
-	var here := Vector2(float(obj.get("x", 0.0)), float(obj.get("y", 0.0)))
-	var near := nearest_burg(repo, here)
-	if near != "":
-		var b: Dictionary = repo.burgs[near]
-		var dist := here.distance_to(Vector2(float(b["x"]), float(b["y"])))
-		lines.append("Nearest town: %s (%s)" % [b["label"], format_distance(repo, dist)])
-	lines.append_array(_kingdom_lines(repo, kingdom, state))
-	return {"title": title, "lines": lines, "ask": "What do we know of %s?" % title}
-
-## "hot-springs" -> "Hot springs".
-static func humanize(kind: String) -> String:
-	var t := kind.replace("-", " ").replace("_", " ")
-	return t.substr(0, 1).to_upper() + t.substr(1) if t != "" else ""
-
-## The house holding a province: the pack's house_bindings.csv when it binds
-## one, else a house named after the province's capital town (so foreign
-## land always has a holder without authoring anything).
 static func house_of(repo: DataRepository, province_code: String) -> String:
 	return "House " + house_name_of(repo, province_code)
 
@@ -1019,40 +873,6 @@ static func royal_regiment(repo: DataRepository, kingdom_code: String) -> String
 			best_d = d
 			best = code
 	return best
-
-static func _describe_army(repo: DataRepository, code: String, state: GameState = null) -> Dictionary:
-	var r: Dictionary = repo.world_table("military", "regiments").get(code, {})
-	if r.is_empty():
-		return {}
-	var label := String(r["label"])
-	var lines: Array[String] = ["%s of %s" % [
-		"Fleet" if String(r.get("is_naval", "0")) == "1" else "Regiment",
-		_label(repo.kingdoms, String(r["kingdom_code"]))]]
-	var province := String(r.get("province_code", ""))
-	if province != "":
-		lines.append("Quartered in %s" % _label(repo.provinces, province))
-	for unit: String in repo.world_table("military", "unit_types"):
-		var n := float(r.get(unit, 0))
-		if n > 0.0:
-			lines.append("%s: %d" % [String((repo.resource_icons.get(unit, {}) as Dictionary)
-				.get("label", unit.capitalize())), int(n)])
-	lines.append("Under arms: %d" % int(regiment_size(repo, r)))
-	# The player's own regiment shows its state and its march (owner
-	# 2026-09-19: a click on a counter shows the regiment).
-	var st := ArmySystem.state_of(repo, state, code)
-	if not st.is_empty():
-		var use := ArmySystem.supply_use(repo, r, state)
-		var supplies := int(st["supplies"])
-		lines.append("Morale: %d / 100" % int(st["morale"]))
-		lines.append("Wounded: %d" % int(st["wounded"]))
-		lines.append("Supplies: %d (%s months)" % [supplies,
-			("%.1f" % (float(supplies) / float(use))) if use > 0 else "-"])
-		lines.append("Training: %s" % ArmySystem.training_grade(repo, int(st["training"])))
-		lines.append("Strength: %s" % ArmySystem.strength_grade(repo, state, code))
-		lines.append("Ground: %s" % ArmySystem.terrain_label(repo, r, state))
-		lines.append("March: %.1f km a day" % ArmySystem.speed_km_per_day(repo, state, code))
-	return {"title": label, "lines": lines,
-		"ask": "What is the state of the %s?" % label}
 
 ## The painted piece a regiment is drawn with, whose painting heads its card
 ## (owner 2026-09-15, data/army_art.csv): the fleet for a naval regiment, the

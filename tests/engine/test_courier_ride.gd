@@ -1,13 +1,21 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## A day's ride and delivery (spec 2026-09-27-courier-core §1). Every
 ## height tier and the weather are forced so the hand sums hold.
 
 var repo: DataRepository
 
 
-func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+## The pack's road graph is cached by map id and every test's repository
+## carries the same routes and road speeds (this script's own, set below),
+## so it is built once per script
+## (and forgotten around it, so no other script's graph is read).
+func before_all() -> void:
 	RoadGraph.forget()
+
+
+func before_each() -> void:
+	repo = SuiteData.repo()
 	Weather.forget()
 	repo.road_speed = {"road": 1000, "trail": 800, "offroad": 500, "sea": 625,
 		"tier_plains": 1000, "tier_hills": 1000, "tier_mountains": 1000, "tier_peak": 1000}
@@ -44,7 +52,7 @@ func _courier(s: GameState, id: int, code: String, path: Array, order: Dictionar
 
 
 func test_a_days_ride_by_hand() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var c := _courier(s, 1, _marcher(), [[100000, 0, "road"], [400000, 0, "offroad"]],
 		{"action_code": "ARMY_GARRISON"})
 	# Day 1: 160,000 of budget. 100 km of road costs 100,000; 60,000 left at
@@ -65,7 +73,7 @@ func test_a_days_ride_by_hand() -> void:
 
 
 func test_delivery_applies_the_order_on_that_day_and_not_before() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	var dest := Vector2i(123000, 456000)
 	_courier(s, 1, code, [[200000, 0, "road"]], {"action_code": "ARMY_MARCH", "dest_x_m": dest.x, "dest_y_m": dest.y})
@@ -78,7 +86,7 @@ func test_delivery_applies_the_order_on_that_day_and_not_before() -> void:
 
 
 func test_an_older_order_arriving_late_is_set_aside() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	# id 1 (march) has far to go; id 2 (garrison, newer) arrives first.
 	_courier(s, 1, code, [[400000, 0, "road"]], {"action_code": "ARMY_MARCH", "dest_x_m": 5000, "dest_y_m": 5000})
@@ -94,7 +102,7 @@ func test_an_older_order_arriving_late_is_set_aside() -> void:
 
 
 func test_a_vanished_regiment_leaves_the_orders_undelivered() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	_courier(s, 1, "no_such_regiment", [[10000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
 	var ev := CourierSystem.ride_day(repo, s)
 	assert_eq(String(ev[0]["type"]), "lost")
@@ -102,7 +110,7 @@ func test_a_vanished_regiment_leaves_the_orders_undelivered() -> void:
 
 
 func test_the_fuse() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	repo.balance["courier_max_days"] = 2.0
 	_courier(s, 1, _marcher(), [[9000000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
 	assert_eq(_types(CourierSystem.ride_day(repo, s)), ["set_out"])
@@ -112,7 +120,7 @@ func test_the_fuse() -> void:
 
 
 func test_bad_weather_slows_him_and_is_announced_once_a_spell() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	# He rides on land so the weather applies: from the regiment's own spot.
 	var at := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)))
@@ -129,7 +137,7 @@ func test_bad_weather_slows_him_and_is_announced_once_a_spell() -> void:
 
 
 func test_a_courier_catches_a_column_on_the_march() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	var reg := ArmySystem.regiment(repo, code)
 	var home: Vector2 = ArmySystem.position_of(repo, s, reg)
@@ -147,7 +155,7 @@ func test_a_courier_catches_a_column_on_the_march() -> void:
 
 
 func test_a_ride_survives_a_save_mid_road() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
 	CourierSystem.ride_day(repo, s)
@@ -170,7 +178,7 @@ func _types(events: Array) -> Array:
 ## the road, before anything else that day; "the capital" only when he rode
 ## from it.
 func test_he_is_seen_to_leave_the_capital_once() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	var c := CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
 	var ev := CourierSystem.ride_day(repo, s)
@@ -184,19 +192,13 @@ func test_he_is_seen_to_leave_the_capital_once() -> void:
 
 
 func test_a_courier_not_from_the_capital_just_rides() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	_courier(s, 1, code, [[100000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
 	var ev := CourierSystem.ride_day(repo, s)
 	assert_eq(int(ev[0]["capital"]), 0)
 	var label := String(ArmySystem.regiment(repo, code)["label"])
 	assert_eq(CourierSystem.headline(repo, ev[0]), "A courier rides for %s." % label)
-
-
-func test_a_courier_for_a_vanished_regiment_never_sets_out() -> void:
-	var s := GameState.new_campaign(repo, 7)
-	_courier(s, 1, "no_such_regiment", [[10000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
-	assert_eq(_types(CourierSystem.ride_day(repo, s)), ["lost"])
 
 
 func test_headlines() -> void:
@@ -213,7 +215,7 @@ func test_headlines() -> void:
 ## map draws the courier riding his NEXT day, which ride_ahead previews on a
 ## copy — the same points the day then takes him through, nothing written.
 func test_ride_ahead_previews_the_day_exactly_and_writes_nothing() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var c := _courier(s, 1, _marcher(), [[100000, 0, "road"], [400000, 0, "offroad"]],
 		{"action_code": "ARMY_GARRISON"})
 	var before: Dictionary = c.duplicate(true)
@@ -229,7 +231,7 @@ func test_ride_ahead_previews_the_day_exactly_and_writes_nothing() -> void:
 
 
 func test_ride_ahead_on_the_delivery_day_ends_on_the_column() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	_courier(s, 1, code, [[50000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
 	var day := CourierSystem.ride_ahead(repo, s, s.couriers[0])
@@ -245,7 +247,7 @@ func test_ride_ahead_on_the_delivery_day_ends_on_the_column() -> void:
 ## regiment (day_ahead_of) marches on an order its courier delivers that day,
 ## and lands where advance_day's own order of events then puts it.
 func test_day_ahead_of_marches_on_an_order_delivered_that_day() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	ArmySystem.ensure(repo, s)
 	var at := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)))
@@ -267,7 +269,7 @@ func test_day_ahead_of_marches_on_an_order_delivered_that_day() -> void:
 
 
 func test_day_ahead_of_a_garrison_is_where_it_stands() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	var at := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)))
 	assert_eq(CourierSystem.day_ahead_of(repo, s, code), {"m": at, "from": 0.0})

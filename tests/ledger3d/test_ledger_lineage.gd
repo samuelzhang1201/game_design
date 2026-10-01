@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## A selected star's LINEAGE (owner 2026-10-01: 我需要点击一个node的时候，
 ## highlight整个lineage — the hybrid): its own links, the flow chain down and
 ## up from it and its neighbours, its ties two hops (the second far).
@@ -8,7 +9,7 @@ var looks := {}
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	for r: Dictionary in repo.ledger_links:
 		looks[String(r["link_id"])] = String(r["look"])
 
@@ -63,7 +64,7 @@ func test_the_hybrid_by_hand() -> void:
 ## derived from the data: a regiment lights its supply chain; the King his
 ## ties and his house, and his ties' ties dimmer.
 func test_the_real_pack_anchors() -> void:
-	var s := GameState.new_campaign(repo, 42)
+	var s := SuiteData.campaign(repo, 42)
 	var eng := TickEngine.new(repo)
 	for i in 6:
 		eng.advance(s)

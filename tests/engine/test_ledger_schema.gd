@@ -1,11 +1,12 @@
 # tests/engine/test_ledger_schema.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The ontology is checked as data (spec 2026-09-30 §7.2, §9).
 
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	assert_not_null(data, DataRepository.last_error)
 
 func _has(errors: Array[String], fragment: String) -> bool:
@@ -62,7 +63,8 @@ func test_every_type_has_a_known_cluster() -> void:
 	var clusters := {}
 	for c: Dictionary in data.ledger_clusters:
 		clusters[String(c["cluster"])] = c
-	assert_eq(clusters.keys().size(), 4, "economy, war, court, intelligence")
+	for want in ["economy", "war", "court", "intelligence"]:
+		assert_true(clusters.has(want), want)
 	for r: Dictionary in data.ledger_types:
 		assert_true(clusters.has(String(r["cluster"])), "%s: cluster %s" % [r["type_id"], r["cluster"]])
 

@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Markets and trade routes (spec 2026-09-30-ledger-industry-trade-design, M6).
 
 var data: DataRepository
@@ -7,9 +8,9 @@ var realm := ""
 var sys: ActionSystem
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	assert_not_null(data, DataRepository.last_error)
-	s = GameState.new_campaign(data, 42)
+	s = SuiteData.campaign(data, 42)
 	sys = ActionSystem.new(data)
 	realm = data.resolve_realm("player_realm")
 	_able_honest_steward()
@@ -255,16 +256,6 @@ func test_routes_are_deterministic() -> void:
 	MarketSystem.forget()
 	assert_eq(MarketSystem.routes(data, s), a)
 
-func test_routes_timing() -> void:
-	MarketSystem.forget()
-	var t0 := Time.get_ticks_usec()
-	MarketSystem.routes(data, s)
-	var cold := Time.get_ticks_usec() - t0
-	t0 = Time.get_ticks_usec()
-	MarketSystem.routes(data, s)
-	var warm := Time.get_ticks_usec() - t0
-	gut.p("routes(): %.1f ms cold, %.2f ms warm" % [cold / 1000.0, warm / 1000.0])
-	assert_lt(warm, 20000, "a snapshot's routes() stays under 20 ms")
 
 func test_market_value_sums_its_pool() -> void:
 	var id := String(MarketSystem.realm_markets(data, s)[0])

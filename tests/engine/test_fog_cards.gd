@@ -1,11 +1,12 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The fog on the cards (spec 2026-09-28 §1 "Closing the leaks").
 
 var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	Intel.dev_all = false
 
 
@@ -57,7 +58,7 @@ func _leaks(text: String, n: int) -> bool:
 
 
 func test_a_foreign_manor_card_shows_no_true_figures() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var cell := _foreign_manor(s)
 	var line := RealmEconomy.line_of(repo, s, cell)
 	var card := MapObjects.manor_card(repo, s, cell)
@@ -69,7 +70,7 @@ func test_a_foreign_manor_card_shows_no_true_figures() -> void:
 
 
 func test_a_foreign_burg_card_is_fogged() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
 	for code: String in repo.burgs:
 		var b: Dictionary = repo.burgs[code]
@@ -84,7 +85,7 @@ func test_a_foreign_burg_card_is_fogged() -> void:
 
 
 func test_a_foreign_regiments_army_card_carries_no_exact_headcount() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _foreign_regiment()
 	var r: Dictionary = repo.world_table("military", "regiments")[code]
 	var total := int(MapObjects.regiment_size(repo, r))
@@ -93,7 +94,7 @@ func test_a_foreign_regiments_army_card_carries_no_exact_headcount() -> void:
 
 
 func test_a_report_shows_up_on_the_card_with_its_tag() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var cell := _foreign_manor(s)
 	var at := MapTerrain.cell_center(repo, repo.cells[cell])
 	MissiveLog.add(repo, s, SpySystem.report(repo, s, at, 900, 0))
@@ -106,7 +107,7 @@ func test_a_report_shows_up_on_the_card_with_its_tag() -> void:
 
 
 func test_our_own_land_is_still_exact() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var home := MapManors.home_province(repo, s)
 	var cell := int(MapManors.manors_of_province(repo, home)[0])
 	assert_eq(String(MapObjects.manor_card(repo, s, cell)["known"]), "full")
@@ -114,7 +115,7 @@ func test_our_own_land_is_still_exact() -> void:
 
 
 func test_a_foreign_kingdoms_population_is_a_word() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
 	for k: String in repo.kingdoms:
 		if k == realm:
@@ -128,7 +129,7 @@ func test_a_foreign_kingdoms_population_is_a_word() -> void:
 ## Task 10's look check (2026-09-28): our own kingdom's exact population read
 ## as a raw run of digits ("4102026") on the hovered country card.
 func test_our_own_kingdoms_population_is_grouped() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
 	var pop := int(float(repo.kingdoms[realm].get("population", 0)))
 	var lines := MapObjects._kingdom_lines(repo, repo.kingdoms[realm], s)
@@ -136,7 +137,7 @@ func test_our_own_kingdoms_population_is_grouped() -> void:
 
 
 func test_dev_mode_lifts_the_fog() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	Intel.dev_all = true
 	assert_eq(String(MapObjects.manor_card(repo, s, _foreign_manor(s))["known"]), "full")
 	Intel.dev_all = false
@@ -148,7 +149,7 @@ func test_dev_mode_lifts_the_fog() -> void:
 ## estimate — and the town card reads that, never the manor's people.
 func test_a_spy_sent_to_a_town_answers_its_card() -> void:
 	RoadGraph.forget()
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
 	var realm := repo.resolve_realm("player_realm")
 	var cells := MapEconomy.burg_cells(repo)
@@ -195,7 +196,7 @@ func test_a_spy_sent_to_a_town_answers_its_card() -> void:
 ## M5 (final review): a fogged town card says its population once — the
 ## intel row, which carries its source — not also as a plain field.
 func test_a_fogged_town_card_shows_its_population_once() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
 	var codes := repo.burgs.keys()
 	codes.sort()
@@ -247,7 +248,7 @@ func _two_goods_manor(s: GameState) -> int:
 ## measures — the CHIEF good's units a month, named — so a report's estimate
 ## and the card's own words are about one number.
 func test_the_cards_output_is_the_chief_good_the_spy_reports() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var cell := _two_goods_manor(s)
 	assert_gt(cell, -1, "the pack has a realm manor making two goods")
 	if cell < 0:

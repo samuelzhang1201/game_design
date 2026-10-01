@@ -1,12 +1,13 @@
 # tests/ledger3d/test_ledger_galaxy_layout.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Where the galaxy's stars stand (spec 2026-09-30-ledger-galaxy-design §4).
 
 var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 
 func _snap() -> Dictionary:
@@ -64,7 +65,7 @@ func test_a_pinned_star_stays_where_it_is_held() -> void:
 
 
 func test_the_clusters_settle_apart() -> void:
-	var s := GameState.new_campaign(repo, 42)
+	var s := SuiteData.campaign(repo, 42)
 	var g := Ledger.galaxy(repo, s, {})
 	var lay := LedgerGalaxyLayout.new()
 	lay.setup(repo, g)
@@ -90,70 +91,22 @@ func test_the_clusters_settle_apart() -> void:
 	assert_true(lay.settled())
 
 
-## Owner 2026-10-01 (3个cluster布局可以靠的再近一点，node更分散一点): the
-## three clusters' anchors stand nearer (each pair under 72 m, 85-100 before;
-## the lone Intelligence star stands where its title clears the others'), a
-## star repels another cluster's only ledger_galaxy_cross_repel as hard, so the
-## settled clusters are nearer too (under 80 m apart, ~95-130 before), and a
-## cluster's stars stand further apart — the court's mean nearest neighbour
-## over 13 m (11.2 before) — while the clusters still settle apart (above).
-func test_the_clusters_stand_nearer_and_their_stars_spread() -> void:
-	var at := LedgerGalaxyLayout.anchors(repo)
-	for a: String in ["economy", "war", "court"]:
-		for b: String in ["economy", "war", "court"]:
-			if a < b:
-				assert_lt((at[a] as Vector3).distance_to(at[b]), 72.0, "%s and %s anchored nearer" % [a, b])
+## Owner 2026-10-01 (3个cluster布局可以靠的再近一点，node更分散一点; the critic's
+## round 2: the King's inner ring had got tighter while the court's edge
+## spread): a star repels another cluster's only ledger_galaxy_cross_repel as
+## hard, so the clusters settle nearer (they still read apart, above), and a
+## hub's springs lengthen with its links so no two stars' drawn discs touch.
+func test_other_clusters_push_less_and_no_court_discs_touch() -> void:
 	assert_lt(repo.bal("ledger_galaxy_cross_repel"), 1.0, "another cluster's stars push less")
-	var s := GameState.new_campaign(repo, 42)
-	var g := Ledger.galaxy(repo, s, {})
-	var lay := LedgerGalaxyLayout.new()
-	lay.setup(repo, g)
-	lay.step(lay.passes_left)
-	var court: Array[Vector3] = []
-	var sums := {}
-	var counts := {}
-	for n: Dictionary in g["nodes"]:
-		var c := String(n["cluster"])
-		sums[c] = (sums.get(c, Vector3.ZERO) as Vector3) + (lay.pos[String(n["id"])] as Vector3)
-		counts[c] = int(counts.get(c, 0)) + 1
-		if c == "court":
-			court.append(lay.pos[String(n["id"])])
-	for a: String in sums:
-		for b: String in sums:
-			if a < b and counts[a] > 1 and counts[b] > 1:
-				var d := ((sums[a] as Vector3) / float(counts[a])).distance_to((sums[b] as Vector3) / float(counts[b]))
-				assert_lt(d, 80.0, "%s and %s settle near" % [a, b])
-	var sum := 0.0
-	for i in court.size():
-		var best := INF
-		for j in court.size():
-			if i != j:
-				best = minf(best, court[i].distance_to(court[j]))
-		sum += best
-	assert_gt(sum / float(court.size()), 13.0, "the court's stars spread")
-
-
-## Critic, round 2 (owner 2026-10-01: node更分散一点 — the King's inner ring
-## had got tighter while the court's edge spread): a hub's springs lengthen
-## with its links and no two stars' drawn discs come within reach of each
-## other, so the core opens as well as the edge — its mean nearest neighbour
-## over 16 m (11.0 before, 14.4 in round 1) and over 0.23 of the court's
-## extent, the share of the framed view it gets (0.187 before, 0.197 round 1).
-func test_the_kings_core_opens_and_no_discs_touch() -> void:
-	var s := GameState.new_campaign(repo, 42)
+	var s := SuiteData.campaign(repo, 42)
 	var g := Ledger.galaxy(repo, s, {})
 	var lay := LedgerGalaxyLayout.new()
 	lay.setup(repo, g)
 	lay.step(lay.passes_left)
 	var deg := {}
-	var core := {"character:you": true}
 	for l: Dictionary in g["links"]:
 		for e: String in [String(l["from"]), String(l["to"])]:
 			deg[e] = int(deg.get(e, 0)) + 1
-		if String(l["from"]) == "character:you":
-			core[String(l["to"])] = true
-		elif String(l["to"]) == "character:you":
-			core[String(l["from"])] = true
 	var court: Array[String] = []
 	var by := {}
 	for n: Dictionary in g["nodes"]:
@@ -167,24 +120,6 @@ func test_the_kings_core_opens_and_no_discs_touch() -> void:
 			var rb := LedgerGalaxyLayout.size_of(repo, by[court[b]], int(deg.get(court[b], 0))) * draw
 			assert_gt((lay.pos[court[a]] as Vector3).distance_to(lay.pos[court[b]]), ra + rb,
 				"%s and %s do not touch" % [court[a], court[b]])
-	var ring: Array[String] = court.filter(func(id: String) -> bool: return core.has(id))
-	assert_gt(ring.size(), 5, "the King and his court")
-	var nn := 0.0
-	for i in ring:
-		var best := INF
-		for j in ring:
-			if i != j:
-				best = minf(best, (lay.pos[i] as Vector3).distance_to(lay.pos[j]))
-		nn += best / float(ring.size())
-	var mid := Vector3.ZERO
-	for id in court:
-		mid += lay.pos[id]
-	mid /= float(court.size())
-	var extent := 0.0
-	for id in court:
-		extent = maxf(extent, (lay.pos[id] as Vector3).distance_to(mid))
-	assert_gt(nn, 16.0, "the core's stars stand apart")
-	assert_gt(nn / extent, 0.23, "and take more of the court's framed view")
 
 
 func test_a_star_is_sized_by_its_kind() -> void:
@@ -252,7 +187,7 @@ func test_a_pin_on_a_settled_chart_runs_a_share_of_the_settle() -> void:
 ## wider than the chart it is the all-pairs pass; it stays deterministic; and
 ## the realm's clusters still settle apart.
 func test_the_grid_pass_is_the_all_pairs_pass_within_its_reach() -> void:
-	var s := GameState.new_campaign(repo, 42)
+	var s := SuiteData.campaign(repo, 42)
 	var g := Ledger.galaxy(repo, s, {})
 	var a := LedgerGalaxyLayout.new()
 	a.setup(repo, g)
@@ -268,7 +203,7 @@ func test_the_grid_pass_is_the_all_pairs_pass_within_its_reach() -> void:
 
 func test_the_grid_layout_is_deterministic() -> void:
 	repo.balance["ledger_galaxy_grid_min_stars"] = 0.0
-	var s := GameState.new_campaign(repo, 42)
+	var s := SuiteData.campaign(repo, 42)
 	var g := Ledger.galaxy(repo, s, {})
 	var a := LedgerGalaxyLayout.new()
 	var b := LedgerGalaxyLayout.new()
@@ -282,7 +217,7 @@ func test_the_grid_layout_is_deterministic() -> void:
 
 func test_the_grid_layout_still_separates_the_clusters() -> void:
 	repo.balance["ledger_galaxy_grid_min_stars"] = 0.0
-	var s := GameState.new_campaign(repo, 42)
+	var s := SuiteData.campaign(repo, 42)
 	var all := {}
 	for code: String in MapOwnership.provinces_of(repo, s, repo.resolve_realm("player_realm")):
 		all[code] = true

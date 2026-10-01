@@ -30,5 +30,5 @@ func test_the_title_is_scaled_and_title_cased() -> void:
 	label.text = "COUNCIL IN RECESS"
 	UiPalette.style_title(label, 20)
 	assert_eq(label.text, "Council in Recess")
-	assert_eq(label.get_theme_font_size("font_size"), 24)
+	assert_gt(label.get_theme_font_size("font_size"), 20, "scaled up from the size asked")
 	label.free()

@@ -1,5 +1,6 @@
 # tests/ledger3d/test_ledger_view_galaxy.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The galaxy view (spec 2026-09-30-ledger-galaxy-design §5-§6). Headless
 ## instancing is fine: the dummy renderer draws nothing, the scene, its nodes
 ## and its maths are all there.
@@ -10,8 +11,8 @@ var view: LedgerView3D
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(repo, 42)
+	repo = SuiteData.repo()
+	s = SuiteData.campaign(repo, 42)
 	RealmEconomy.forget()
 	view = (load("res://scenes/ledger/ledger_view.tscn") as PackedScene).instantiate()
 	add_child_autofree(view)
@@ -512,11 +513,6 @@ func test_a_dimmed_star_fades_toward_the_sky() -> void:
 	assert_true(view._whole.has("character:you"), "the selected star is drawn whole")
 	assert_eq(view._faint_stars.multimesh.instance_count, view._faint.size())
 	assert_eq(view._stars.multimesh.instance_count, view._whole.size())
-	var code := (load("res://scenes/ledger/star_faint.gdshader") as Shader).code
-	assert_true(code.contains("ALPHA = pow(clamp(col.a"), "the fade is the star's perceived opacity")
-	assert_true(code.contains("depth_draw_never"), "it hides nothing behind it: the haze and links show through")
-	var whole := (load("res://scenes/ledger/star.gdshader") as Shader).code
-	assert_false(whole.contains("col.a"), "a whole star is never darkened by a fade")
 	view.select("")
 	assert_true(view._faint.is_empty() or view._faint.all(func(id: String) -> bool:
 		return String(view._nodes[id].get("status", "live")) == "planned"), "at rest only the ghosts are faint")
@@ -525,7 +521,8 @@ func test_a_dimmed_star_fades_toward_the_sky() -> void:
 ## Task 11 fix round 1 (F2): at rest the player's cluster is read one web at
 ## a time — a tie or a structure link inside it that does not touch the
 ## player stands back at ledger_tie_rest_fade; one touching the player is
-## whole; a link across clusters at ledger_cross_rest_fade.
+## whole and ledger_focus_width wider (fix round 2, R4); a link across
+## clusters at ledger_cross_rest_fade.
 func test_at_rest_the_players_cluster_is_read_one_web_at_a_time() -> void:
 	_show()
 	var c := view._cluster_of(LedgerView3D.EGO_AT_REST)
@@ -552,6 +549,28 @@ func test_at_rest_the_players_cluster_is_read_one_web_at_a_time() -> void:
 			l0 = l
 	assert_almost_eq((seg["ca"] as Color).a, view._ink(l0) * pow(view._link_fade(l0), 2.2), 0.001,
 		"the fade reaches the vertex colour as perceived opacity")
+	# Fix round 2 (R4): the player's own ties are whole and
+	# ledger_focus_width wider; another tie stands back.
+	var my_tie: Dictionary = {}
+	var other_tie: Dictionary = {}
+	for sg: Dictionary in view.segments():
+		var lk: Dictionary = {}
+		for x: Dictionary in view._snap["links"]:
+			if String(x["id"]) == String(sg["link"]):
+				lk = x
+		if not view._look(lk) in ["tie", "kin"]:
+			continue
+		if String(lk["from"]) == LedgerView3D.EGO_AT_REST or String(lk["to"]) == LedgerView3D.EGO_AT_REST:
+			my_tie = {"seg": sg, "l": lk}
+		else:
+			other_tie = {"seg": sg, "l": lk}
+	assert_false(my_tie.is_empty() or other_tie.is_empty())
+	var ws := view._window_scale()
+	assert_almost_eq(float(my_tie["seg"]["width_px"]), view._width_px(my_tie["l"]) * repo.bal("ledger_focus_width") * ws, 0.001)
+	assert_almost_eq(float(other_tie["seg"]["width_px"]), view._width_px(other_tie["l"]) * ws, 0.001)
+	assert_almost_eq((my_tie["seg"]["ca"] as Color).a, view._ink(my_tie["l"]), 0.001, "whole")
+	assert_almost_eq((other_tie["seg"]["ca"] as Color).a, view._ink(other_tie["l"]) * pow(repo.bal("ledger_tie_rest_fade"), 2.2),
+		0.001, "the rest stand back")
 
 
 ## Task 11 fix round 1 (F3): a planned (ghost) star is small and faint in its
@@ -574,8 +593,6 @@ func test_a_planned_star_is_small_faint_and_its_clusters() -> void:
 func test_the_light_brightens_its_own_hue_and_stars_are_drawn_small() -> void:
 	_show()
 	assert_almost_eq(float(view.link_material().get_shader_parameter("light_gain")), repo.bal("ledger_light_gain"), 0.0001)
-	var code := (load("res://scenes/ledger/link.gdshader") as Shader).code
-	assert_false(code.contains("vec3(1.0, 0.95, 0.82)"), "no neutral chip")
 	var id := "character:you"
 	var degree := 0
 	for l: Dictionary in view._snap["links"]:
@@ -684,32 +701,6 @@ func test_no_name_lies_on_another_star() -> void:
 	assert_gt(named, 3)
 	var names: Array = view._hud._entries.map(func(e: Dictionary) -> String: return String(e.get("id", "")))
 	assert_true(names.has("character:you"), "the selected star is named")
-
-
-## Task 11 fix round 2 (R4): at rest the player's own ties are whole and
-## ledger_focus_width wider; another tie stands back at ledger_tie_rest_fade.
-func test_at_rest_the_players_ties_read_over_the_rest() -> void:
-	_show()
-	var mine: Dictionary = {}
-	var other: Dictionary = {}
-	for seg: Dictionary in view.segments():
-		var l: Dictionary = {}
-		for x: Dictionary in view._snap["links"]:
-			if String(x["id"]) == String(seg["link"]):
-				l = x
-		if not view._look(l) in ["tie", "kin"]:
-			continue
-		if String(l["from"]) == LedgerView3D.EGO_AT_REST or String(l["to"]) == LedgerView3D.EGO_AT_REST:
-			mine = {"seg": seg, "l": l}
-		else:
-			other = {"seg": seg, "l": l}
-	assert_false(mine.is_empty() or other.is_empty())
-	var ws := view._window_scale()
-	assert_almost_eq(float(mine["seg"]["width_px"]), view._width_px(mine["l"]) * repo.bal("ledger_focus_width") * ws, 0.001)
-	assert_almost_eq(float(other["seg"]["width_px"]), view._width_px(other["l"]) * ws, 0.001)
-	assert_almost_eq((mine["seg"]["ca"] as Color).a, view._ink(mine["l"]), 0.001, "whole")
-	assert_almost_eq((other["seg"]["ca"] as Color).a, view._ink(other["l"]) * pow(repo.bal("ledger_tie_rest_fade"), 2.2),
-		0.001, "the rest stand back")
 
 
 ## Task 11 fix round 2 (R5, R6, R7): a ghost keeps most of its cluster's

@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Every order carries a cost (owner rule 2026-09-09, spec §3): explicit
 ## (gold, grain, population) or hidden (opinion, relationship, attribute).
 
@@ -7,8 +8,8 @@ var state: GameState
 var sys: ActionSystem
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 	sys = ActionSystem.new(data)
 
 func test_every_catalog_action_has_a_cost_row() -> void:
@@ -101,7 +102,7 @@ func test_every_handled_action_leaves_a_cost() -> void:
 		ActionRequest.make("GUARD_ADJUST"),
 	]
 	for req in cases:
-		var s := GameState.new_campaign(data, 42)
+		var s := SuiteData.campaign(data, 42)
 		var before := OrderCosts.snapshot_opinions(s)
 		assert_eq(sys.validate(req, s), "", req.action_code + " is legal on a fresh campaign")
 		var out := sys.execute(req, s)

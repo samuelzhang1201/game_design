@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The truth and the claim (spec 2026-09-30-ledger-governors-design §3):
 ## a flow runs as its governor runs it — his skill and opinion set how much
 ## is made, a venal man skims a share of it — and he reports it whole.
@@ -8,9 +9,9 @@ var s: GameState
 var cell := -1
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	assert_not_null(data, DataRepository.last_error)
-	s = GameState.new_campaign(data, 42)
+	s = SuiteData.campaign(data, 42)
 	RealmEconomy.forget()
 	cell = int(MapManors.manors_of_province(data, MapManors.home_province(data, s), s)[0])
 	MapManors.build(data, s, cell, WorkshopSystem.BUILDING, "a test workshop")

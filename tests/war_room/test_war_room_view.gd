@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The room's view laid with a sheet: the table, the ink, the picks (spec §1–2).
 
 var repo: DataRepository
@@ -7,8 +8,8 @@ var view: WarRoomView
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(repo, 42)
+	repo = SuiteData.repo()
+	state = SuiteData.campaign(repo, 42)
 	WarSheets.forget()
 	view = load("res://scenes/war_room/war_room.tscn").instantiate()
 	view.set_anchors_preset(Control.PRESET_TOP_LEFT)  # a sized view, not one stretched to its parent
@@ -20,7 +21,7 @@ func before_each() -> void:
 
 func test_laying_a_sheet_builds_the_table_at_the_sheets_ratio() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_eq(view.sheet_index(), 0)
 	var table: MeshInstance3D = view.get_node("%Table")
 	var aabb := table.mesh.get_aabb()
@@ -31,7 +32,7 @@ func test_laying_a_sheet_builds_the_table_at_the_sheets_ratio() -> void:
 
 func test_a_point_on_the_sheet_projects_into_the_view() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var r: Rect2 = WarSheets.series(repo)[0]["rect"]
 	var at: Variant = view.screen_pos_of_px(r.get_center())
 	assert_not_null(at)
@@ -49,7 +50,7 @@ func test_the_tree_carries_the_nodes_later_tasks_fill() -> void:
 func test_a_second_lay_supersedes_the_first() -> void:
 	view.lay_sheet(0)
 	view.lay_sheet(1)  # the first is still awaiting its ink
-	await wait_frames(3)
+	await wait_process_frames(3)
 	assert_eq(view.sheet_index(), 1)
 	var r: Rect2 = WarSheets.series(repo)[1]["rect"]
 	var table: MeshInstance3D = view.get_node("%Table")
@@ -82,7 +83,8 @@ func test_the_ink_viewport_is_smallest_at_rest_and_after_a_paint() -> void:
 	assert_eq(ink.size, WarRoomInk.REST, "nothing is allocated before a sheet is laid")
 	view._inks.frame_done = get_tree().process_frame   # headless never posts a draw
 	view.lay_sheet(0)
-	await wait_seconds(1.0)
+	# frame_done is the process frame here: the paint is over a frame or two on
+	await wait_process_frames(5)
 	assert_eq(ink.size, WarRoomInk.REST, "the render target is given back after the paint")
 
 
@@ -96,13 +98,13 @@ func test_the_ink_texture_is_sized_to_the_sheet_not_square() -> void:
 
 func test_a_sheet_out_of_range_is_ignored() -> void:
 	view.lay_sheet(999)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(view.sheet_index(), -1)
 
 
 func test_pack_at_inverts_screen_pos_of_px_on_land() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var r: Rect2 = WarSheets.series(repo)[0]["rect"]
 	var codes: Array = repo.burgs.keys()
 	codes.sort()
@@ -132,7 +134,7 @@ func test_two_views_do_not_share_a_material_or_an_environment() -> void:
 
 func test_a_laid_sheet_stands_an_arrow_at_each_neighbouring_side() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var near := WarSheets.neighbours(repo, 0)
 	var arrows: Array = view.get_node("%EdgeArrows").get_children()
 	assert_eq(arrows.size(), near.size())
@@ -153,7 +155,7 @@ func _click(at: Vector2) -> void:
 
 func test_a_click_on_an_edge_arrow_requests_its_sheet() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	watch_signals(view)
 	var arrow := view.get_node("%EdgeArrows").get_child(0) as Label3D
 	var at: Vector2 = (view.get_node("%Camera") as Camera3D).unproject_position(arrow.global_position) / view.window_scale()
@@ -166,7 +168,7 @@ func test_every_numeral_on_the_wall_chart_is_in_the_opening_view_and_picks_its_s
 	var inside := Rect2(Vector2.ZERO, view.size)
 	for laid in WarSheets.series(repo).size():   # whichever sheet is laid, its arrows must not shadow the chart
 		view.lay_sheet(laid)
-		await wait_frames(2)
+		await wait_process_frames(2)
 		var numerals := view.get_node("%IndexChart").get_children()
 		assert_eq(numerals.size(), WarSheets.series(repo).size(), "a numeral a sheet")
 		for k in numerals.size():
@@ -179,7 +181,7 @@ func test_every_numeral_on_the_wall_chart_is_in_the_opening_view_and_picks_its_s
 
 func test_every_chart_corner_stands_in_the_opening_view() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var cam: Camera3D = view.get_node("%Camera")
 	var chart: MeshInstance3D = view.get_node("%IndexChart")
 	var half := (chart.mesh as QuadMesh).size * 0.5
@@ -190,7 +192,7 @@ func test_every_chart_corner_stands_in_the_opening_view() -> void:
 
 func test_a_ray_that_misses_the_chart_picks_nothing() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var cam: Camera3D = view.get_node("%Camera")
 	var chart: MeshInstance3D = view.get_node("%IndexChart")
 	var far_left := chart.global_transform * Vector3(-(chart.mesh as QuadMesh).size.x, 0.0, 0.0)
@@ -205,7 +207,7 @@ func test_a_ray_that_misses_the_chart_picks_nothing() -> void:
 
 func test_a_swap_requested_mid_roll_is_ignored() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	view.swap_to(1)
 	view._process(0.01)
 	view.swap_to(2)
@@ -215,7 +217,7 @@ func test_a_swap_requested_mid_roll_is_ignored() -> void:
 
 func test_a_drag_is_not_a_click_on_the_chart() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	watch_signals(view)
 	var arrow := view.get_node("%EdgeArrows").get_child(0) as Label3D
 	var at: Vector2 = (view.get_node("%Camera") as Camera3D).unproject_position(arrow.global_position) / view.window_scale()
@@ -233,7 +235,7 @@ func test_a_drag_is_not_a_click_on_the_chart() -> void:
 
 func test_swap_to_lays_the_new_sheet_at_the_midpoint_and_stands_the_table_up_again() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var swap_s := repo.bal("war_sheet_swap_s")
 	view.swap_to(1)
 	view._process(swap_s * 0.25)
@@ -247,7 +249,7 @@ func test_swap_to_lays_the_new_sheet_at_the_midpoint_and_stands_the_table_up_aga
 
 func test_closing_the_room_mid_roll_lays_the_sheet_and_stands_the_table_up() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	view.swap_to(1)
 	view._process(0.01)
 	view.set_active(false)
@@ -287,7 +289,7 @@ func _first_land_piece() -> Dictionary:
 
 func test_a_click_on_a_piece_selects_it_and_arms_nothing() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var at: Vector2 = view.screen_pos_of_px(p["at"])
 	watch_signals(view)
@@ -300,7 +302,7 @@ func test_a_click_on_a_piece_selects_it_and_arms_nothing() -> void:
 
 func test_a_drag_from_a_piece_takes_up_the_rake_and_a_release_names_the_ground() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var at: Vector2 = view.screen_pos_of_px(p["at"])
 	watch_signals(view)
@@ -316,7 +318,7 @@ func test_a_drag_from_a_piece_takes_up_the_rake_and_a_release_names_the_ground()
 
 func test_a_refused_rake_lets_go_and_the_rest_of_the_drag_does_nothing() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var at: Vector2 = view.screen_pos_of_px(p["at"])
 	watch_signals(view)
@@ -332,7 +334,7 @@ func test_a_refused_rake_lets_go_and_the_rest_of_the_drag_does_nothing() -> void
 
 func test_the_arrow_reads_the_distance_in_the_packs_measure_and_the_days() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var code := String(p["code"])
 	var to: Vector2 = (p["at"] as Vector2) + Vector2(10.0, 0.0)
@@ -344,7 +346,7 @@ func test_the_arrow_reads_the_distance_in_the_packs_measure_and_the_days() -> vo
 
 func test_a_regiment_that_cannot_move_reads_a_word_not_zero_days() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var code := String(p["code"])
 	var reg := ArmySystem.regiment(repo, code)
@@ -359,7 +361,7 @@ func test_a_regiment_that_cannot_move_reads_a_word_not_zero_days() -> void:
 
 func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var code := String(p["code"])
 	var to: Vector2 = (p["at"] as Vector2) + Vector2(6.0, 0.0)
@@ -399,7 +401,7 @@ func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -
 
 func test_a_sheet_roll_lets_go_of_the_rake() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var at: Vector2 = view.screen_pos_of_px(p["at"])
 	_press(at)
@@ -422,7 +424,7 @@ func test_the_hud_draws_an_arrow_only_between_two_real_points() -> void:
 
 func test_a_rake_released_off_the_table_says_it_was_dropped() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var at: Vector2 = view.screen_pos_of_px(p["at"])
 	watch_signals(view)
@@ -437,7 +439,7 @@ func test_a_rake_released_off_the_table_says_it_was_dropped() -> void:
 
 func test_a_sheet_roll_drops_a_rake_in_hand_and_hides_the_pennants() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var at: Vector2 = view.screen_pos_of_px(p["at"])
 	_press(at)
@@ -454,7 +456,7 @@ func test_a_sheet_roll_drops_a_rake_in_hand_and_hides_the_pennants() -> void:
 
 func test_no_rake_in_hand_means_nothing_is_dropped_by_a_roll() -> void:
 	view.lay_sheet(0)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	watch_signals(view)
 	view.swap_to(1)
 	assert_signal_not_emitted(view, "rake_dropped")

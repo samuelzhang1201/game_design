@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The world ledger (spec 2026-09-09 §2): one addressable schema over the
 ## player's metrics, the court's opinions and attributes, and the pack's
 ## domain tables; every write clamped, reasoned, and logged.
@@ -7,8 +8,8 @@ var data: DataRepository
 var state: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 
 func _player() -> String:
 	return data.resolve_realm("player_realm")

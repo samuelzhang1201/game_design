@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Height in war (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §2):
 ## the higher side of a fight gains, the lower loses by as much; a regiment
 ## uses supplies by its cell's height tier.
@@ -6,7 +7,7 @@ extends GutTest
 var repo: DataRepository
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 func _at_cell(id: int, naval := false) -> Dictionary:
 	var c := MapTerrain.cell_center(repo, repo.cells[id])
@@ -62,7 +63,7 @@ func test_battle_odds_swap_symmetrically_with_the_ground() -> void:
 	# the higher side's odds beat what they would be on equal ground (height
 	# factor 1000 both ways, power alone), and the formula matches a
 	# hand-checked value.
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var mine := MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
 	var land: Array = mine.filter(func(r: Dictionary) -> bool: return String(r.get("is_naval", "0")) != "1")
 	assert_gte(land.size(), 2)

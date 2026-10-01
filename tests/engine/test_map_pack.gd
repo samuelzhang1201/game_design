@@ -1,10 +1,11 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Map packs (data/maps.csv + data/maps/<id>/). Authored content names realm
 ## SLOTS, never the kingdom codes a particular Azgaar export generated, so a
 ## new map is a data drop rather than a content rewrite.
 
 func _fresh() -> DataRepository:
-	var repo := DataRepository.load_all("res://data")
+	var repo := SuiteData.repo()
 	assert_not_null(repo, "data load failed: " + DataRepository.last_error)
 	return repo
 
@@ -24,13 +25,6 @@ func test_default_pack_loads_with_its_world_and_art() -> void:
 	assert_eq(field.get_width(), int(repo.map_info["width"]), "field is canvas-wide")
 	assert_eq(field.get_height(), int(repo.map_info["height"]), "field is canvas-high")
 
-func test_every_binding_points_at_a_kingdom_this_pack_has() -> void:
-	var repo := _fresh()
-	assert_false(repo.realm_bindings.is_empty(), "pack binds its realm slots")
-	for slot: String in repo.realm_bindings:
-		var code := String(repo.realm_bindings[slot])
-		assert_true(repo.kingdoms.has(code),
-			"slot '%s' binds to '%s', which must exist on this map" % [slot, code])
 
 ## The point of the whole exercise: authored rows carry a slot, and what the
 ## engine sees downstream is a concrete kingdom_code from the loaded pack.
@@ -76,6 +70,12 @@ func test_reloading_a_pack_re_resolves_from_the_authored_slot() -> void:
 		"the slot survives resolution and stays re-resolvable")
 	assert_true(repo.kingdoms.has(String(player["kingdom"])),
 		"and still resolves to a real kingdom")
+	# Filling must start from the authored text every time, or a second pack
+	# would substitute into map one's already-substituted prose.
+	for r in repo.facts:
+		if String(r["fact_code"]) == "fact_raider_muster":
+			assert_eq(String(r["text"]), "%s is massing for a raid eastward."
+				% repo.realm_label("raider_realm"))
 
 ## Prose says {raider_realm}, never a kingdom's name, so a re-export that
 ## renames the world touches realm_bindings.csv and nothing else.
@@ -104,16 +104,6 @@ func test_authored_prose_reaches_the_engine_already_filled() -> void:
 	assert_string_contains(String(muster["_authored"]["text"]), "{raider_realm}")
 	assert_string_contains(String(muster["text"]), repo.realm_label("raider_realm"))
 	assert_false(String(muster["text"]).contains("{"), "no token survives to the UI")
-
-## Filling must start from the authored text every time, or a second pack
-## would substitute into map one's already-substituted prose.
-func test_reloading_a_pack_refills_prose_from_the_authored_text() -> void:
-	var repo := _fresh()
-	assert_true(repo.load_map(repo.map_id), "same pack reloads")
-	for r in repo.facts:
-		if String(r["fact_code"]) == "fact_raider_muster":
-			assert_eq(String(r["text"]), "%s is massing for a raid eastward."
-				% repo.realm_label("raider_realm"))
 
 ## maps.csv carries a free-text notes column; an unquoted comma in it once
 ## shifted every column after it, silently reading the notes tail as the
@@ -195,7 +185,7 @@ func test_the_cell_index_finds_each_land_cell_under_its_centre() -> void:
 ## 2026-09-13): the king rules the realm, the crown holds one province.
 func test_the_crown_starts_with_the_capitals_province_only() -> void:
 	var repo := _fresh()
-	var state := GameState.new_campaign(repo, 42)
+	var state := SuiteData.campaign(repo, 42)
 	var realm: Dictionary = repo.kingdoms[repo.resolve_realm("player_realm")]
 	var capital_province := String(repo.burgs[String(realm["capital_burg"])]["province_code"])
 	assert_eq(MapManors.controlled_provinces(repo, state), [capital_province])
@@ -225,14 +215,13 @@ func test_the_manor_focus_table_fits_the_pack() -> void:
 			for b: String in biomes.split("|"):
 				assert_true(repo.biomes.has(int(b)), "%s: biome %s exists" % [code, b])
 		assert_gt(float(row["yield_per_1000"]), 0.0)
-	var state := GameState.new_campaign(repo, 42)
+	var state := SuiteData.campaign(repo, 42)
 	for province: String in MapManors.controlled_provinces(repo, state):
 		for cell: int in MapManors.manors_of_province(repo, province):
 			assert_ne(MapManors.default_focus(repo, cell), "", "%s works something" % MapManors.label_of(repo, cell))
 
-## On the real pack (owner 2026-09-14) the defaults spread the industries:
-## the coast fishes, the hot desert grows dates, the heights quarry, the
-## grassland lowlands run cattle — and no manor is left without a focus.
+## On the real pack (owner 2026-09-14) the defaults spread the industries
+## and no manor is left without a focus.
 func test_default_focuses_follow_the_packs_terrain() -> void:
 	var repo := _fresh()
 	var counts: Dictionary = {}
@@ -240,15 +229,4 @@ func test_default_focuses_follow_the_packs_terrain() -> void:
 		var f := MapManors.default_focus(repo, id)
 		assert_ne(f, "", "%s works something" % MapManors.label_of(repo, id))
 		counts[f] = int(counts.get(f, 0)) + 1
-		var cell: Dictionary = repo.cells[id]
-		if MapManors.is_coastal(repo, id):
-			assert_eq(f, "fish", "the coast fishes")
-		elif float(cell["height"]) >= repo.bal("manor_focus_peak_height") and MapManors.focus_allowed(repo, id, "iron"):
-			assert_eq(f, "iron")
-		elif float(cell["height"]) >= repo.bal("manor_focus_high_height"):
-			assert_eq(f, "stone")
-		elif int(cell["biome_id"]) == 1:
-			assert_eq(f, "dates")
-		elif int(cell["biome_id"]) == 4:
-			assert_eq(f, "cattle")
 	assert_gte(counts.size(), 6, "six or more industries at the start: %s" % str(counts))

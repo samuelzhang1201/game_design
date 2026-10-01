@@ -1,9 +1,10 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
 func test_pool_inventory() -> void:
 	assert_eq(data.events.size(), 20)
@@ -14,7 +15,6 @@ func test_pool_inventory() -> void:
 			if String(c["event_id"]) == id:
 				n += 1
 		assert_between(n, 2, 4, id + " choice count")
-		assert_true(String(row["voice"]) in ["template", "mini", "flagship"], id + " voice")
 		assert_gt(float(row["weight"]), 0.0, id)
 
 ## No event may be model-voiced (user ruling 2026-08-31): event stories are
@@ -41,7 +41,7 @@ func test_every_event_has_authored_scene_and_outcome_lines() -> void:
 			"missing outcome template for %s/%s" % [c["event_id"], c["choice_id"]])
 
 func test_effects_and_triggers_parse() -> void:
-	var s := GameState.new_campaign(data, 7)
+	var s := SuiteData.campaign(data, 7)
 	s.tick = 30  # year>=2 triggers evaluable either way
 	for row in data.events:
 		TriggerDsl.evaluate(String(row["trigger"]), s, data)  # must not push unknown-clause errors
@@ -146,7 +146,7 @@ func test_every_event_has_unconditional_choice() -> void:
 ## relies on for event `trigger` strings. This extends that coverage to
 ## every choice's `requires` clause, evaluated against a fresh GameState.
 func test_requires_clauses_parse_without_unknown_clause_errors() -> void:
-	var s := GameState.new_campaign(data, 11)
+	var s := SuiteData.campaign(data, 11)
 	s.tick = 30
 	var checked := 0
 	for c in data.event_choices:

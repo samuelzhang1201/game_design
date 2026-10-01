@@ -27,26 +27,25 @@ func test_every_tier_has_a_row() -> void:
 	assert_eq(Map3DQuality.row(Game.data, "nonsense"), Map3DQuality.row(Game.data, "high"))
 
 
+## high is today's look: every multiplier 1 (balance.csv's own steps at the
+## window's resolution), the clouds and shadows balance.csv's, the HUD unthrottled.
 func test_high_is_todays_look() -> void:
 	var r := Map3DQuality.row(Game.data, "high")
-	assert_eq(Map3DQuality.num(r, "render_scale"), 1.0)
-	assert_eq(Map3DQuality.num(r, "line_step_mul"), 1.0)
-	assert_eq(Map3DQuality.num(r, "road_step_mul"), 1.0)
-	assert_eq(Map3DQuality.num(r, "river_step_mul"), 1.0)
+	for col: String in ["render_scale", "line_step_mul", "road_step_mul", "river_step_mul"]:
+		assert_eq(Map3DQuality.num(r, col), 1.0, col)
 	assert_eq(Map3DQuality.num(r, "clouds"), Game.data.bal("map3d_cloud_max"))
 	assert_eq(Map3DQuality.num(r, "shadow_max_m"), Game.data.bal("map3d_sun_shadow_max_m"))
 	assert_eq(Map3DQuality.num(r, "hud_hz"), 0.0)
 
 
-func test_the_spec_steps_come_out_in_metres() -> void:
-	var low := Map3DQuality.row(Game.data, "low")
-	assert_almost_eq(Game.data.bal("map3d_line_step_m") * Map3DQuality.num(low, "line_step_mul"), 300.0, 0.01)
-	assert_almost_eq(Game.data.bal("map3d_road_step_m") * Map3DQuality.num(low, "road_step_mul"), 50.0, 0.01)
-	assert_almost_eq(Game.data.bal("map3d_river_mesh_step_m") * Map3DQuality.num(low, "river_step_mul"), 30.0, 0.01)
-	var med := Map3DQuality.row(Game.data, "medium")
-	assert_almost_eq(Game.data.bal("map3d_line_step_m") * Map3DQuality.num(med, "line_step_mul"), 200.0, 0.01)
-	assert_almost_eq(Game.data.bal("map3d_road_step_m") * Map3DQuality.num(med, "road_step_mul"), 35.0, 0.01)
-	assert_almost_eq(Game.data.bal("map3d_river_mesh_step_m") * Map3DQuality.num(med, "river_step_mul"), 18.0, 0.01)
+## A cheaper tier never draws a line, road or river in FINER steps than a dearer one.
+func test_the_cheaper_tiers_take_longer_steps() -> void:
+	for col: String in ["line_step_mul", "road_step_mul", "river_step_mul"]:
+		var low := Map3DQuality.num(Map3DQuality.row(Game.data, "low"), col)
+		var med := Map3DQuality.num(Map3DQuality.row(Game.data, "medium"), col)
+		var high := Map3DQuality.num(Map3DQuality.row(Game.data, "high"), col)
+		assert_gte(low, med, col + ": low over medium")
+		assert_gte(med, high, col + ": medium over high")
 
 
 func test_detection_by_adapter_name() -> void:
@@ -154,10 +153,11 @@ func test_the_tier_reaches_clouds_steps_and_shadows() -> void:
 	var v := _q_view()
 	v.set_quality("low")
 	var c := v.context()
-	assert_almost_eq(c.line_step(), 300.0, 0.01)
+	var low := Map3DQuality.row(Game.data, "low")
+	assert_almost_eq(c.line_step(), Game.data.bal("map3d_line_step_m") * Map3DQuality.num(low, "line_step_mul"), 0.01)
 	Game.set_clock_speed(1)
 	v._process(0.1)
-	assert_eq(v.cloud_count(), 8, "low tier: 8 clouds over the whole map (graphics_quality.csv, owner 2026-09-30)")
+	assert_eq(v.cloud_count(), int(Map3DQuality.num(low, "clouds")), "the low tier's clouds over the whole map (owner 2026-09-30)")
 	Game.set_clock_speed(0)
 	assert_false((v.get_node("Viewport/Clouds/Shadows") as Node3D).visible)
 	assert_false((v.get_node("Viewport/Sun") as DirectionalLight3D).shadow_enabled)
@@ -181,7 +181,7 @@ func test_a_throttled_hud_redraws_at_most_at_its_rate() -> void:
 func test_the_pause_menu_remembers_the_tier() -> void:
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var button := r.pause_menu().find_child("GraphicsQuality", true, false) as Button
 	assert_not_null(button)
 	var before := r.quality_setting()

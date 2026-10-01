@@ -3,6 +3,18 @@
 export CC_FORCE_OFFLINE=1
 set -e
 
+# ./run_tests.sh         the whole suite (run it before a merge)
+# ./run_tests.sh --fast  only the directories that build no screen and no 3D
+#                        view (FAST_DIRS): the engine, the LEDGER's pieces and
+#                        the model plumbing, for the edit-run loop
+FAST_DIRS="engine ledger3d llm"
+DIRS="res://tests"
+SCRIPT_DIRS="tests"
+if [ "$1" = "--fast" ]; then
+  DIRS=$(for d in $FAST_DIRS; do printf 'res://tests/%s,' "$d"; done | sed 's/,$//')
+  SCRIPT_DIRS=$(for d in $FAST_DIRS; do printf 'tests/%s ' "$d"; done)
+fi
+
 TEST_OUTPUT="/tmp/gut_test_output_$$.txt"
 trap 'rm -f "$TEST_OUTPUT"' EXIT
 
@@ -21,7 +33,7 @@ fi
 # which is tee's exit code, not Godot's — a red suite would exit 0.
 code=0
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-  -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gpre_run_script=res://tests/pre_run.gd -gpost_run_script=res://tests/post_run.gd -gexit > "$TEST_OUTPUT" 2>&1 || code=$?
+  -s addons/gut/gut_cmdln.gd -gdir="$DIRS" -ginclude_subdirs -gpre_run_script=res://tests/pre_run.gd -gpost_run_script=res://tests/post_run.gd -gexit > "$TEST_OUTPUT" 2>&1 || code=$?
 cat "$TEST_OUTPUT"
 
 # GUT silently SKIPS a test script that fails to parse ("Ignoring script ...
@@ -35,7 +47,7 @@ if grep -q "Ignoring script" "$TEST_OUTPUT"; then
   grep "Ignoring script" "$TEST_OUTPUT"
   exit 1
 fi
-DISK_SCRIPTS=$(find tests -name "test_*.gd" | wc -l | tr -d ' ')
+DISK_SCRIPTS=$(find $SCRIPT_DIRS -name "test_*.gd" | wc -l | tr -d ' ')
 RAN_SCRIPTS=$(grep "^Scripts" "$TEST_OUTPUT" | awk '{print $NF}')
 if [ "$DISK_SCRIPTS" != "$RAN_SCRIPTS" ]; then
   echo ""

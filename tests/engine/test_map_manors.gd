@@ -195,7 +195,8 @@ func test_a_renamed_royal_house_keeps_its_manors() -> void:
 	assert_eq(MapManors.crown(s), "Regis", "the player character's live name wins")
 
 ## Province p: 3 000 country folk split by weight (both 80 -> 1 500 each),
-## 1 000 townsfolk to the one burg cell. The manors sum to the province.
+## 1 000 townsfolk to the one burg cell. The manors sum EXACTLY to the
+## province, whole people by largest remainder.
 func test_people_are_the_provinces_shared_by_land_and_town() -> void:
 	var r := _repo()
 	var s := _state()
@@ -203,6 +204,7 @@ func test_people_are_the_provinces_shared_by_land_and_town() -> void:
 	assert_almost_eq(MapManors.area_of(r, 2), 200.0, 0.001)
 	assert_almost_eq(MapManors.weight_of(r, 1), 80.0, 0.001)
 	assert_almost_eq(MapManors.weight_of(r, 2), 80.0, 0.001)
+	assert_eq(MapManors.people_table(r, s, "p"), {1: 1500, 2: 2500})
 	assert_eq(MapManors.people_of(r, s, 1), 1500)
 	assert_eq(MapManors.people_of(r, s, 2), 2500, "the burg's cell holds the town too")
 	assert_eq(MapManors.people_of(r, s, 1) + MapManors.people_of(r, s, 2), 4000,
@@ -213,6 +215,9 @@ func test_people_are_the_provinces_shared_by_land_and_town() -> void:
 	# A ledger move on the province reaches its manors with nothing stored.
 	WorldLedger.apply(r, s, "economy.provinces.p.rural_population", -1000.0, "plague", "test")
 	assert_eq(MapManors.people_of(r, s, 1), 1000)
+	WorldLedger.apply(r, s, "economy.provinces.p.rural_population", 1, "test: one more", "test")
+	assert_eq(MapManors.people_table(r, s, "p"), {1: 1001, 2: 2000},
+		"an odd one goes to the lower id; the cache keys on the figure")
 
 ## The card's "rent" IS the manor's month of tax (spec 2026-09-14 §4.2):
 ## 2 500 people x 20 gold per 1 000 at tax level 5 = 50 whole gold, and a
@@ -513,18 +518,6 @@ func test_apportion_hands_the_remainder_to_the_largest_fractions() -> void:
 	assert_eq(MapManors.apportion([], PackedFloat64Array(), 5), {})
 	assert_eq(MapManors.apportion([4], PackedFloat64Array([0.0]), 5), {4: 0}, "no weight, no people")
 
-## Province p: 3 000 country folk over weights 80 and 80, and Shole's 1 000
-## townsfolk to cell 2 -> 1 500 and 2 500, summing to the province's 4 000.
-func test_people_sum_exactly_to_the_province() -> void:
-	var r := _repo()
-	var s := _state()
-	var t := MapManors.people_table(r, s, "p")
-	assert_eq(t, {1: 1500, 2: 2500})
-	assert_eq(MapManors.people_of(r, s, 1), 1500)
-	assert_eq(MapManors.people_of(r, s, 2), 2500)
-	assert_eq(MapManors.people_of(r, s, 4), 800, "q's 800 go to its one manor")
-	WorldLedger.apply(r, s, "economy.provinces.p.rural_population", 1, "test: one more", "test")
-	assert_eq(MapManors.people_table(r, s, "p"), {1: 1501, 2: 2500}, "an odd one goes to the lower id; the cache keys on the figure")
 
 ## Rushing (spec §5): gold takes days off a work, never below done.
 func test_rushing_cuts_days_off_a_work() -> void:

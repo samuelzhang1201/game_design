@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Event scene prose comes from RANDOM_EVENTS.md, the author's own story
 ## document (user ruling 2026-08-31). No model ever writes or rewrites an
 ## event; the markdown is the single source and templates.csv no longer
@@ -7,7 +8,7 @@ extends GutTest
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
 func test_every_event_in_events_csv_has_a_scene() -> void:
 	# The random pool's 20, plus every beat of every scripted chapter: the
@@ -21,30 +22,21 @@ func test_every_event_in_events_csv_has_a_scene() -> void:
 		assert_ne(String(data.event_scenes[id]).strip_edges(), "",
 			id + "'s scene is not blank")
 
-func test_heading_ids_are_normalised_to_event_ids() -> void:
-	# The document heads entries "### EV-08 ·"; events.csv calls it "ev_08".
-	assert_true(data.event_scenes.has("ev_08"))
-	assert_true(data.event_scenes.has("ev_01"))
-	assert_true(data.event_scenes.has("ev_20"))
 
-func test_scene_text_comes_from_the_markdown_not_the_csv() -> void:
+## ev_08 read from the document: its own words, emphasis stripped, and the
+## Scene field alone though Trigger shares its line.
+func test_ev_08_is_the_documents_scene_as_displayed() -> void:
+	var scene := String(data.event_scenes["ev_08"])
 	# The document's calf scene says the Steward notes it "mildly" — a word
 	# that never appeared in the old templates.csv copy. If this passes, the
 	# text genuinely came from RANDOM_EVENTS.md.
-	var scene := String(data.event_scenes["ev_08"])
 	assert_string_contains(scene, "two heads")
 	assert_string_contains(scene, "mildly",
 		"proves the source is the markdown, not the retired CSV row")
-
-func test_markdown_emphasis_is_stripped_for_display() -> void:
 	# "*two heads, two kings.*" must not reach a Label with its asterisks.
-	var scene := String(data.event_scenes["ev_08"])
 	assert_false(scene.contains("*"), "no markdown emphasis survives")
 	assert_false(scene.contains("**Choices:**"), "the scene stops at its own field")
-
-func test_scene_excludes_the_trigger_that_precedes_it_on_the_line() -> void:
 	# Trigger and Scene share a line; only the Scene half is the story.
-	var scene := String(data.event_scenes["ev_08"])
 	assert_false(scene.contains("Trigger"))
 	assert_false(scene.contains("weight"))
 	assert_true(scene.begins_with("A calf"), "scene starts at its own first word")

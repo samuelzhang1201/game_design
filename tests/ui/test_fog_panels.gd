@@ -67,7 +67,7 @@ func test_the_neighbours_are_not_counted_for_you() -> void:
 	var p := MilitaryPanel.new()
 	add_child_autofree(p)
 	p.refresh()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var text := _all_text(p) + " " + " ".join(_chart_texts(p))
 	var realm := Game.data.resolve_realm("player_realm")
 	for code: String in String(Game.data.kingdoms[realm].get("neighbor_codes", "")).split("|", false):
@@ -84,7 +84,7 @@ func test_the_manor_master_shows_no_foreign_figures() -> void:
 	add_child_autofree(p)
 	p.set_scope(true)
 	p.refresh()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var text := _all_text(p) + " " + " ".join(_tree_texts(p.table(), ManorMasterPanel.COLUMNS.size()))
 	var realm := Game.data.resolve_realm("player_realm")
 	var ids := Game.data.manors.keys()
@@ -125,7 +125,7 @@ func test_a_spy_sighting_is_listed_beneath_its_kingdom_not_as_its_strength() -> 
 	var p := MilitaryPanel.new()
 	add_child_autofree(p)
 	p.refresh()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var label := String(repo.kingdoms[neighbour]["label"])
 	var rows: Array[String] = []
 	for c in p.neighbours_chart().get_children():

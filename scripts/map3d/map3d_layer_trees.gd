@@ -39,16 +39,59 @@ func build(p_ctx: Map3DContext) -> void:
 		Map3DWorldLoader.warn_once("trees:" + path,
 			"Map3DView: no bake/trees.bin — no woods (tools/map3d/bake_trees.py)")
 		return
-	var data := FileAccess.get_file_as_bytes(path).to_float32_array()
+	var density := clampf(repo.bal("map3d_tree_density"), 0.0, 1.0) * Map3DQuality.num(ctx.q(), "tree_density", 1.0)
+	# photo cards (owner 2026-10-01: the 3D crowns read fake below a 20 km
+	# scale): one level, drawn out to map3d_tree_card_far_m
+	var cards := repo.bal("map3d_tree_cards") > 0.0 and ResourceLoader.exists(CROWN_ATLAS) \
+		and not repo.map3d_tree_crowns.is_empty()
+	# The clumps are kept between views (Map3DAssetCache's rule: ~0.5 s a
+	# screen swap), by every input they are made of; the nodes are this view's.
+	var look: Array = [path, FileAccess.get_modified_time(path), density, cards, repo.map3d_tree_crowns]
+	for k: String in ["map3d_tree_chunk_m", "map3d_tree_scale", "map3d_tree_size_spread"] \
+			+ LOOK.keys() + CARD_LOOK.keys():
+		look.append(repo.bal(k))
+	var key := var_to_str(look).md5_text()
+	if key != _kept_key:
+		_kept = _plan(FileAccess.get_file_as_bytes(path).to_float32_array(), density, cards)
+		_kept_key = key
+	material = _kept["material"]
+	var near := repo.bal("map3d_tree_card_far_m") if cards else repo.bal("map3d_tree_near_m")
+	var far := repo.bal("map3d_tree_card_far_m") if cards else repo.bal("map3d_tree_far_m")
+	var margin := repo.bal("map3d_tree_margin_m")
+	for one: Array in _kept["chunks"]:
+		var node := MultiMeshInstance3D.new()
+		node.multimesh = one[0]
+		node.position = one[1]
+		# both levels cast: a plain square without its shadows read as a
+		# lighter tile in the wood; the switch dithers over the margin
+		node.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		if int(one[2]) == 0:
+			node.visibility_range_end = near
+			node.visibility_range_end_margin = margin
+		else:
+			node.visibility_range_begin = near
+			node.visibility_range_begin_margin = margin
+			node.visibility_range_end = far
+			node.visibility_range_end_margin = margin
+		add_child(node)
+		_nodes += 1
+	_count = int(_kept["count"])
+
+
+static var _kept_key := ""
+static var _kept: Dictionary = {}
+
+
+## The woods' MultiMeshes from the bake's rows: {material, count, chunks: [[the
+## MultiMesh, its square's centre, its level]]}.
+func _plan(data: PackedFloat32Array, density: float, cards: bool) -> Dictionary:
+	var repo := ctx.repo
 	@warning_ignore("integer_division")
 	var n := data.size() / ROW
-	var density := clampf(repo.bal("map3d_tree_density"), 0.0, 1.0) * Map3DQuality.num(ctx.q(), "tree_density", 1.0)
 	var chunk := repo.bal("map3d_tree_chunk_m")
 	var size_k := repo.bal("map3d_tree_scale")
 	var size_spread := repo.bal("map3d_tree_size_spread")
-	var near := repo.bal("map3d_tree_near_m")
-	var far := repo.bal("map3d_tree_far_m")
-	var margin := repo.bal("map3d_tree_margin_m")
 	# chunk key -> "kind:variant" -> PackedInt32Array of rows
 	var groups := {}
 	for i in n:
@@ -66,15 +109,8 @@ func build(p_ctx: Map3DContext) -> void:
 		rows_of.append(i)   # a packed array is a value: write it back
 		g[sub] = rows_of
 	var meshes := {}
-	# photo cards (owner 2026-10-01: the 3D crowns read fake below a 20 km
-	# scale): one level, drawn out to map3d_tree_card_far_m
-	var cards := repo.bal("map3d_tree_cards") > 0.0 and ResourceLoader.exists(CROWN_ATLAS) \
-		and not repo.map3d_tree_crowns.is_empty()
 	var mat := _card_material() if cards else _material()
 	var lods := 1 if cards else 2
-	if cards:
-		far = repo.bal("map3d_tree_card_far_m")
-		near = far
 	for kind in 3:
 		var cells := PackedInt32Array()
 		for r: Dictionary in repo.map3d_tree_crowns:
@@ -85,6 +121,8 @@ func build(p_ctx: Map3DContext) -> void:
 				var m := Map3DTreeMesh.cards(kind, v, cells) if cards else Map3DTreeMesh.clump(kind, lod, v)
 				m.surface_set_material(0, mat)
 				meshes["%d:%d:%d" % [kind, v, lod]] = m
+	var chunks: Array = []
+	var count := 0
 	for key: Vector2i in groups:
 		var g: Dictionary = groups[key]
 		for sub: String in g:
@@ -107,24 +145,9 @@ func build(p_ctx: Map3DContext) -> void:
 					var h := float((i * 40503) % 997) / 997.0
 					var h2 := float((i * 69069) % 991) / 991.0
 					mm.set_instance_color(j, Color(0.8 + 0.35 * h, 0.82 + 0.28 * h2, 0.8 + 0.2 * (1.0 - h)))
-				var node := MultiMeshInstance3D.new()
-				node.multimesh = mm
-				node.position = centre
-				# both levels cast: a plain square without its shadows read as a
-				# lighter tile in the wood; the switch dithers over the margin
-				node.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-				node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-				if lod == 0:
-					node.visibility_range_end = near
-					node.visibility_range_end_margin = margin
-				else:
-					node.visibility_range_begin = near
-					node.visibility_range_begin_margin = margin
-					node.visibility_range_end = far
-					node.visibility_range_end_margin = margin
-				add_child(node)
-				_nodes += 1
-			_count += rows.size()
+				chunks.append([mm, centre, lod])
+			count += rows.size()
+	return {"material": mat, "count": count, "chunks": chunks}
 
 
 ## The one material every clump shares: tree_sway.gdshader (the wind's sway;

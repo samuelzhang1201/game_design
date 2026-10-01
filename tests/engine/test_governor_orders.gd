@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## GOVERNOR_SET and LEDGER_AUDIT (spec 2026-09-30-ledger-governors-design §3).
 
 var data: DataRepository
@@ -7,8 +8,8 @@ var sys: ActionSystem
 var cell := -1
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 	sys = ActionSystem.new(data)
 	RealmEconomy.forget()
 	cell = int(MapManors.manors_of_province(data, MapManors.home_province(data, s), s)[0])
@@ -83,19 +84,9 @@ func test_an_audit_letter_is_no_estimate_of_a_place() -> void:
 	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "workshop"}), s)
 	assert_eq(Intel.fact(data, s, subj, "people", 1234), before)
 
-func test_both_orders_are_catalogued_with_costs() -> void:
-	for code in ["GOVERNOR_SET", "LEDGER_AUDIT"]:
-		assert_true(data.actions.has(code))
-		assert_true(data.order_costs.has(code))
-
 
 # --- final review I1: the books are the FLOW's -----------------------------
 
-func _month() -> void:
-	var e := TickEngine.new(data)
-	while s.day < Calendar.DAYS_PER_TICK:
-		e.advance_day(s)
-	e.advance(s)
 
 ## A venal marshal skims the supply gold, the lines are given to the
 ## chancellor, and the audit of the supply lines still catches the marshal

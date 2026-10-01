@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The terrain the game draws itself (spec 2026-09-11): hand-computed colour
 ## and shading formulas over tiny fixture repos, no map pack needed.
 
@@ -184,9 +185,10 @@ func test_shared_mesh_is_built_once_per_repo() -> void:
 ## The committed pack builds, in native coordinates. Azgaar's packed graph
 ## drops the deep ocean far from any coast, so the cells stop short of the
 ## canvas; the view paints what lies outside as deep sea. The mesh must stay
-## inside the canvas and hold every kingdom's centre.
+## inside the canvas and hold every kingdom's centre, and is rebuilt when
+## the pack loads again.
 func test_the_pack_builds_a_mesh_inside_the_canvas_that_covers_the_land() -> void:
-	var repo := DataRepository.load_all("res://data")
+	var repo := SuiteData.repo()
 	assert_not_null(repo, DataRepository.last_error)
 	var built := MapTerrain.build(repo)
 	var b := MapGeometry.bounds(built["vertices"])
@@ -199,12 +201,8 @@ func test_the_pack_builds_a_mesh_inside_the_canvas_that_covers_the_land() -> voi
 		assert_true(b.has_point(center), "%s's centre is on the mesh" % code)
 	assert_eq((built["colors"] as PackedColorArray).size(),
 		(built["vertices"] as PackedVector2Array).size())
-
-## A repo that loads a pack again must rebuild its mesh: load_map clears the
-## terrain tables and the cache with them.
-func test_reloading_a_pack_rebuilds_the_shared_mesh() -> void:
-	var repo := DataRepository.load_all("res://data")
-	assert_not_null(repo, DataRepository.last_error)
+	# A repo that loads a pack again must rebuild its mesh: load_map clears
+	# the terrain tables and the cache with them.
 	var before := MapTerrain.shared_mesh(repo)
 	assert_not_null(before)
 	assert_true(repo.load_map(repo.map_id), DataRepository.last_error)
@@ -220,12 +218,3 @@ func test_blend_off_keeps_each_cell_flat() -> void:
 	var cols: PackedColorArray = MapTerrain.build(r)["colors"]
 	assert_eq(cols[1], Color(1, 1, 1, 1), "A's ring vertex is A's own white")
 	assert_eq(cols[5], Color(0, 0, 0, 1), "B's ring vertex is B's own black")
-
-## The HEIGHTS view (owner request 2026-09-13): contour lines read badly, so
-## the relief is a heat map — land ramped through the palette's heat_N stops
-## between sea level and the pack's OWN summit, water left alone.
-func _ramped() -> DataRepository:
-	var r := _two_cells()
-	r.terrain_palette["heat_1"] = "#000000"
-	r.terrain_palette["heat_2"] = "#ffffff"
-	return r

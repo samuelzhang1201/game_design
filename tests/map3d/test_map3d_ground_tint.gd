@@ -51,17 +51,6 @@ func test_patched_code_is_patched_already() -> void:
 	assert_eq(Map3DGroundTint.patch(once), once, "patching twice changes nothing")
 
 
-func test_terrain3ds_shader_survives_a_second_view() -> void:
-	var t := Terrain3D.new()
-	add_child_autofree(t)
-	t.material.shader_override_enabled = true
-	await wait_process_frames(1)
-	var shader: Shader = t.material.shader_override
-	shader.code = Map3DGroundTint.patch(shader.code)
-	# a second view reads the same material
-	assert_ne(Map3DGroundTint.patch(shader.code), "", "the second view keeps the tint")
-
-
 func test_code_without_the_albedo_line_is_not_patched() -> void:
 	assert_eq(Map3DGroundTint.patch("shader_type spatial;\nvoid fragment() {}\n"), "")
 
@@ -107,3 +96,4 @@ func test_terrain3ds_own_shader_carries_the_albedo_line() -> void:
 	assert_string_contains(shader.code, Map3DGroundTint.ALBEDO_LINE,
 		"the addon's line the patch rewrites — re-check the patch after an addon update")
 	assert_ne(Map3DGroundTint.patch(shader.code), "")
+	assert_ne(Map3DGroundTint.patch(Map3DGroundTint.patch(shader.code)), "", "a second view reads the patched code and keeps the tint")

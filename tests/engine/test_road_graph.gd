@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The road network (spec 2026-09-27-courier-core §1). Fixtures in pack px on
 ## beria's measure (1 px = 1000 m). Every height tier is forced to 1000‰ so
 ## the hand sums hold whatever cells lie under the fixture.
@@ -7,7 +8,7 @@ var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	RoadGraph.forget()
 	repo.road_speed = {"road": 1000, "trail": 500, "offroad": 250, "sea": 625,
 		"tier_plains": 1000, "tier_hills": 1000, "tier_mountains": 1000, "tier_peak": 1000}
@@ -60,7 +61,7 @@ func test_stretch_need_rounds_up() -> void:
 
 
 func test_the_capital_reaches_nearly_the_whole_pack() -> void:
-	var fresh := DataRepository.load_all("res://data")
+	var fresh := SuiteData.repo()
 	RoadGraph.forget()
 	var g := RoadGraph.of_pack(fresh)
 	var cap: Dictionary = fresh.burgs[String(fresh.kingdoms[fresh.resolve_realm("player_realm")]["capital_burg"])]

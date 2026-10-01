@@ -1,14 +1,15 @@
 # tests/engine/test_ledger_snapshot.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The picture the LEDGER draws (spec 2026-09-30 §6-§7): belief, not truth.
 
 var data: DataRepository
 var s: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	assert_not_null(data, DataRepository.last_error)
-	s = GameState.new_campaign(data, 42)
+	s = SuiteData.campaign(data, 42)
 	RealmEconomy.forget()
 
 func after_each() -> void:

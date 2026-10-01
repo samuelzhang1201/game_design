@@ -1,12 +1,13 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Artisans raise buildings faster (spec 2026-09-30-ledger-industry-trade-design, M5).
 
 var data: DataRepository
 var s: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 	var mw: Character = s.characters.get(String(s.council.get("master_of_works", "")))
 	if mw != null:
 		mw.skills["sk_steward"] = 16

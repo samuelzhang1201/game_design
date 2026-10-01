@@ -1,13 +1,14 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 var data: DataRepository
 var engine: TickEngine
 var s: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	engine = TickEngine.new(data)
-	s = GameState.new_campaign(data, 42)
+	s = SuiteData.campaign(data, 42)
 	engine.advance(s)
 
 func _promise(code: String, due: int) -> void:
@@ -17,8 +18,17 @@ func _promise(code: String, due: int) -> void:
 func test_kept_when_action_executes_before_due() -> void:
 	_promise("LEVY_RAISE", s.tick + 4)
 	var before: int = s.characters["char_marshal"].opinion
-	engine.actions.execute(ActionRequest.make("LEVY_RAISE"), s)
+	var outcome := engine.actions.execute(ActionRequest.make("LEVY_RAISE"), s)
 	assert_eq(s.promises[0]["status"], "kept")
+	# The outcome narrates it: before a fix the kept-check only called
+	# change_opinion, leaving nothing in `effects` for the promise-kept
+	# suffix helpers (conversation_scene.gd / court_screen.gd) to pick up.
+	var narrated := false
+	for e in outcome["effects"]:
+		if String(e.get("metric", "")) == "promise" and int(e["delta"]) == 15 \
+				and "a promise kept:" in String(e["reason"]):
+			narrated = true
+	assert_true(narrated, "kept-promise outcome should carry a narratable 'promise' effect")
 	# +15 kept, minus whatever ideology drift the levy itself causes — assert the log entry
 	var found := false
 	for e in s.characters["char_marshal"].opinion_log:
@@ -27,19 +37,6 @@ func test_kept_when_action_executes_before_due() -> void:
 	assert_true(found)
 	assert_gt(s.characters["char_marshal"].opinion, before)
 
-## Kept promises apply +15 opinion but, before this fix, never narrated: the
-## kept-check only called change_opinion, leaving nothing in the outcome's
-## `effects` array for the promise-kept suffix helpers (conversation_scene.gd/
-## court_screen.gd) to pick up.
-func test_kept_promise_outcome_carries_narratable_effect() -> void:
-	_promise("LEVY_RAISE", s.tick + 4)
-	var outcome := engine.actions.execute(ActionRequest.make("LEVY_RAISE"), s)
-	var found := false
-	for e in outcome["effects"]:
-		if String(e.get("metric", "")) == "promise" and int(e["delta"]) == 15 \
-				and "a promise kept:" in String(e["reason"]):
-			found = true
-	assert_true(found, "kept-promise outcome should carry a narratable 'promise' effect")
 
 func test_targeted_promise_needs_matching_target() -> void:
 	_promise("CHARACTER_REWARD", s.tick + 4)

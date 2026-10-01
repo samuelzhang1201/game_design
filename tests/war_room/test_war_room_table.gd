@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The table's maths (spec 2026-10-01-war-room-design §2).
 
 var repo: DataRepository
@@ -6,7 +7,7 @@ const R := Rect2(630, 0, 670, 485)
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 
 func test_the_sheet_maps_onto_the_table_centred() -> void:

@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The weather's look on the ground (spec 2026-09-29-weather-visuals):
 ## Map3DLayerWeather hands the field to the terrain material and turns it to
 ## the next spell's as the spell ends. The material is a stand-in: headless
@@ -19,8 +20,8 @@ var share := 0.0
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(repo, 7)
+	repo = SuiteData.repo()
+	state = SuiteData.campaign(repo, 7)
 	ctx = Map3DContext.new(repo, {"pack_origin": [0.0, 0.0], "m_per_px": 50.0})
 	ctx.state_fn = func() -> GameState: return state
 	ctx.day_fn = func() -> float: return share

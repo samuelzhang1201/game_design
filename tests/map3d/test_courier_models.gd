@@ -1,10 +1,11 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Every rider courier_art.csv names is a real model that gallops and idles
 ## (spec 2026-09-28-courier-art §2–3), within the game budget.
 
 
 func test_every_courier_model_gallops_and_idles() -> void:
-	var repo := DataRepository.load_all("res://data")
+	var repo := SuiteData.repo()
 	for kind: String in repo.courier_art:
 		var path := String((repo.courier_art[kind] as Dictionary)["model"])
 		if path.ends_with("cavalry.glb"):
@@ -17,6 +18,8 @@ func test_every_courier_model_gallops_and_idles() -> void:
 		assert_ne(Map3DUnits.clip_named(anim, "GALLOP"), "", path)
 		assert_ne(Map3DUnits.clip_named(anim, "IDLE"), "", path)
 		assert_gt(float((repo.courier_art[kind] as Dictionary).get("stride_m", "0")), 0.0, kind)
+	# the gallop is timed by the stride, held within its rate range
+	assert_gt(repo.bal("map3d_courier_anim_max"), repo.bal("map3d_courier_anim_min"))
 
 
 func test_the_courier_models_are_within_budget() -> void:

@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The WAR ROOM's tables (spec 2026-10-01-war-room-design §5): they load, and
 ## every row names something that exists.
 
@@ -6,7 +7,7 @@ var repo: DataRepository
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 
 
 func test_every_balance_key_the_room_reads_is_there() -> void:

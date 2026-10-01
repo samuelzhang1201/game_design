@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## RelationshipGraph: loading, shocks, healing drift, LLM serialization,
 ## event op, save round-trip. Hand-computed expectations per convention.
 
@@ -6,17 +7,18 @@ var data: DataRepository
 var state: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 
 func test_campaign_starts_with_csv_graph() -> void:
 	assert_gt(state.relationships.size(), 0)
+	var row: Dictionary = data.relationships.filter(func(r: Dictionary) -> bool:
+		return String(r["from_id"]) == "you" and String(r["to_id"]) == "char_queen")[0]
 	var e := RelationshipGraph.edge(state, "you", "char_queen")
-	assert_eq(String(e["type"]), "marriage")
-	assert_eq(float(e["sentiment"]), 55.0)
-	assert_eq(float(e["baseline"]), 55.0)
-	assert_eq(String(e["log"][0]["reason"]),
-		"a marriage that merged crown and counting-house")
+	assert_eq(String(e["type"]), String(row["rel_type"]))
+	assert_eq(float(e["sentiment"]), float(row["sentiment"]))
+	assert_eq(float(e["baseline"]), float(row["sentiment"]))
+	assert_eq(String(e["log"][0]["reason"]), String(row["reason"]), "the CSV's reason opens the log")
 
 func test_adjust_shocks_clamp_and_log_reason() -> void:
 	RelationshipGraph.adjust(state, "you", "char_queen", -25.0, "a forgotten anniversary", 7)

@@ -1,12 +1,19 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## ARMY_MARCH / ARMY_GARRISON send a courier (spec 2026-09-27-courier-core §1).
 
 var repo: DataRepository
 
 
-func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+## The pack's road graph is cached by map id and every test's repository
+## carries the same routes and road speeds, so it is built once per script
+## (and forgotten around it, so no other script's graph is read).
+func before_all() -> void:
 	RoadGraph.forget()
+
+
+func before_each() -> void:
+	repo = SuiteData.repo()
 	Weather.forget()
 
 
@@ -31,7 +38,7 @@ func _land_near(s: GameState, r: Dictionary) -> Vector2:
 
 
 func test_the_order_rides_and_the_regiment_waits() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
@@ -60,7 +67,7 @@ func test_the_order_rides_and_the_regiment_waits() -> void:
 
 
 func test_garrison_rides_too() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
@@ -70,16 +77,6 @@ func test_garrison_rides_too() -> void:
 	assert_eq(s.couriers.size(), 1)
 
 
-func test_a_chest_too_thin_for_the_courier_is_refused() -> void:
-	var s := GameState.new_campaign(repo, 7)
-	var actions := ActionSystem.new(repo)
-	var code := String(_marcher()["regiment_code"])
-	# ARMY_GARRISON's own cost is 1 gold (order_costs.csv); the fee is more
-	# than what is left over it.
-	s.metrics["treasury"] = float(CourierSystem.fee_gold(repo, CourierSystem.ORDINARY)) - 0.5
-	assert_string_contains(actions.validate(ActionRequest.make("ARMY_GARRISON", {"regiment": code}), s), "courier")
-
-
 ## Fix round 1 (review finding): the courier's fee and the order's own
 ## always-charged cost were checked independently against the same starting
 ## treasury, so a chest could pass both checks and still go negative
@@ -87,54 +84,33 @@ func test_a_chest_too_thin_for_the_courier_is_refused() -> void:
 ## Pin the exact window: refused half a gold under fee + the order's own
 ## cost, and clear exactly at it — the same pattern MANOR_BUY already uses
 ## (price + needs).
-func test_a_garrison_chest_half_a_gold_under_the_full_window_is_refused() -> void:
-	var s := GameState.new_campaign(repo, 7)
+func test_the_garrison_window_is_the_fee_and_the_orders_own_cost() -> void:
+	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
-	var code := String(_marcher()["regiment_code"])
+	var req := ActionRequest.make("ARMY_GARRISON", {"regiment": String(_marcher()["regiment_code"])})
 	var needs := OrderCosts.gold_of(repo, "ARMY_GARRISON") + float(CourierSystem.fee_gold(repo, CourierSystem.ORDINARY))
 	s.metrics["treasury"] = needs - 0.5
-	assert_string_contains(actions.validate(ActionRequest.make("ARMY_GARRISON", {"regiment": code}), s), "courier")
-
-
-func test_a_garrison_chest_exactly_at_the_full_window_validates() -> void:
-	var s := GameState.new_campaign(repo, 7)
-	var actions := ActionSystem.new(repo)
-	var code := String(_marcher()["regiment_code"])
-	var needs := OrderCosts.gold_of(repo, "ARMY_GARRISON") + float(CourierSystem.fee_gold(repo, CourierSystem.ORDINARY))
+	assert_string_contains(actions.validate(req, s), "courier", "half a gold under the window")
 	s.metrics["treasury"] = needs
-	assert_eq(actions.validate(ActionRequest.make("ARMY_GARRISON", {"regiment": code}), s), "")
+	assert_eq(actions.validate(req, s), "", "exactly at the window")
 
 
-func test_a_march_chest_half_a_gold_under_the_full_window_is_refused() -> void:
-	var s := GameState.new_campaign(repo, 7)
+func test_the_march_window_is_the_fee_and_the_orders_own_cost() -> void:
+	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
 	var r := _marcher()
-	var code := String(r["regiment_code"])
 	var dest := _land_near(s, r)
-	if dest == Vector2.ZERO:
-		return
+	assert_ne(dest, Vector2.ZERO, "open land near the regiment")
+	var req := ActionRequest.make("ARMY_MARCH", {"regiment": String(r["regiment_code"]), "x": dest.x, "y": dest.y})
 	var needs := OrderCosts.gold_of(repo, "ARMY_MARCH") + float(CourierSystem.fee_gold(repo, CourierSystem.ORDINARY))
 	s.metrics["treasury"] = needs - 0.5
-	assert_string_contains(actions.validate(ActionRequest.make("ARMY_MARCH",
-		{"regiment": code, "x": dest.x, "y": dest.y}), s), "courier")
-
-
-func test_a_march_chest_exactly_at_the_full_window_validates() -> void:
-	var s := GameState.new_campaign(repo, 7)
-	var actions := ActionSystem.new(repo)
-	var r := _marcher()
-	var code := String(r["regiment_code"])
-	var dest := _land_near(s, r)
-	if dest == Vector2.ZERO:
-		return
-	var needs := OrderCosts.gold_of(repo, "ARMY_MARCH") + float(CourierSystem.fee_gold(repo, CourierSystem.ORDINARY))
+	assert_string_contains(actions.validate(req, s), "courier", "half a gold under the window")
 	s.metrics["treasury"] = needs
-	assert_eq(actions.validate(ActionRequest.make("ARMY_MARCH",
-		{"regiment": code, "x": dest.x, "y": dest.y}), s), "")
+	assert_eq(actions.validate(req, s), "", "exactly at the window")
 
 
 func test_a_fleets_orders_apply_at_once() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
 		if String(r.get("is_naval", "0")) == "1":

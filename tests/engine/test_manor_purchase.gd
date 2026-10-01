@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Buying land (owner 2026-09-14): where the crown may buy a manor, from
 ## which purse, and what a manor bought across the border becomes.
 ##
@@ -16,12 +17,12 @@ var sys: ActionSystem
 var s: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	RealmEconomy.forget()
 	MapManors.invalidate()
 	MapOwnership.invalidate()
 	sys = ActionSystem.new(data)
-	s = GameState.new_campaign(data, 42)
+	s = SuiteData.campaign(data, 42)
 
 func _realm() -> String:
 	return data.resolve_realm("player_realm")

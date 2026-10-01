@@ -1,5 +1,6 @@
 # tests/ledger3d/test_ledger_strands.gd
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Accounts that differ are drawn as STRANDS (spec 2026-09-30-ledger-
 ## governors-design §4, galaxy-design §5): one ribbon per account,
 ## ledger_strand_gap_px apart edge to edge on the screen, each picked as
@@ -12,8 +13,8 @@ var code := ""
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(repo, 42)
+	repo = SuiteData.repo()
+	state = SuiteData.campaign(repo, 42)
 	RealmEconomy.forget()
 	state.metrics["strategic"] = 1000000.0
 	for c in state.regiments.keys():

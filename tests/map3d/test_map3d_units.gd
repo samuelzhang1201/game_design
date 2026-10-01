@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## MILITARY's 3D pieces (owner 2026-09-22): how big one is drawn, which way
 ## it faces, and the box a click hits. Map3DUnits is pure, so all of it is
 ## checked without a camera or a world.
@@ -7,7 +8,7 @@ var repo: DataRepository
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	# Force clear skies so every hand-sum match still holds (task 7, owner 2026-09-27)
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
@@ -176,7 +177,7 @@ func _walker(s: GameState) -> String:
 
 
 func test_a_days_march_in_world_metres_and_the_snap() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _walker(s)
 	var meta := {"m_per_px": 50.0}
 	# By hand: day_march_m pack metres x (50 world m / metres_per_pack_px).

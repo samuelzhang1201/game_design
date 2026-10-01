@@ -280,11 +280,5 @@ func _mesh_of(type: String) -> Mesh:
 	if not ResourceLoader.exists(path):
 		Map3DWorldLoader.warn_once("houses:" + path, "map3d houses: no mesh at " + path)
 		return null
-	var scene := load(path) as PackedScene
-	if scene == null:
-		return null
-	var node := scene.instantiate()
-	var mesh := Map3DHouses.first_mesh(node)
-	node.free()
-	return mesh
+	return Map3DAssetCache.mesh(path)  # loaded once, kept between views
 

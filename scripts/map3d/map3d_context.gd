@@ -279,12 +279,12 @@ func settlement_rects() -> Array:
 	return out
 
 
-## The build's baked houses, grouped by burg (spec 2026-09-20 §3). Loaded
-## once; a build without them is {} and no houses are drawn.
+## The build's baked houses, grouped by burg (spec 2026-09-20 §3), parsed once
+## (Map3DAssetCache); a build without them is {} and no houses are drawn.
 func houses() -> Dictionary:
 	if not _houses_loaded:
 		_houses_loaded = true
-		_houses = Map3DHouses.load_csv(repo.map3d_dir() + "/bake/houses.csv")
+		_houses = Map3DAssetCache.houses(repo.map3d_dir() + "/bake/houses.csv", world)
 	return _houses
 
 

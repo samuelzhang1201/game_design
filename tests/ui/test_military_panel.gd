@@ -13,17 +13,11 @@ func _court() -> GameRoot:
 	Game.start_campaign(42)
 	Game.next_tick()
 	var r := _root()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	return r
-
-func test_there_is_no_military_tab() -> void:
-	var r: GameRoot = await _court()
-	assert_null(r.bottom_bar().button("MILITARY"), "the tab is gone")
-	assert_false(BottomBar.TABS.has("MILITARY"))
-
 
 func test_the_host_opens_from_a_regiments_card_and_closes_back() -> void:
 	var r: GameRoot = await _court()
@@ -34,11 +28,11 @@ func test_the_host_opens_from_a_regiments_card_and_closes_back() -> void:
 	var first: Dictionary = MapObjects.regiments_of(Game.data, mine)[0]
 	var detail: MapDetailPanel = screen.find_child("DetailPanel", true, false)
 	detail.show_entry({"title": "x", "obj": {"kind": "army", "code": String(first["regiment_code"])}})
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var host: Button = detail.find_child("TheHost", true, false)
 	assert_not_null(host, "a regiment's card offers the whole host")
 	host.pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var panel := screen.military_panel()
 	assert_true(panel.visible, "the host takes the left column")
 	assert_false(detail.visible, "in place of the card")
@@ -57,51 +51,42 @@ func test_the_host_opens_from_a_regiments_card_and_closes_back() -> void:
 	# a bar, so the seam is a box of rows rather than a chart's data.
 	assert_eq(panel.neighbours_chart().get_child_count(), neighbours + 1, "each neighbour and the realm itself")
 	(panel.find_child("Close", true, false) as Button).pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_false(panel.visible)
 	assert_true(screen.dashboard().visible, "the dashboard has the column back")
 	assert_true(screen.map3d_view().military(), "and the regiments stay on the map")
-
-func test_bars_follow_the_ledger() -> void:
-	var r: GameRoot = await _court()
-	WorldLedger.apply(Game.data, Game.state, "military.kingdoms.player_realm.infantry", -300.0,
-		"a bad winter", "test")
-	r.set_army_view(true)
-	await wait_frames(1)
-	var infantry := float(WorldLedger.value_of(Game.data, Game.state,
-		"military.kingdoms.player_realm.infantry"))
-	var seen := false
-	for row in r.current_screen.military_panel().arms_chart().rows:
-		if String(row.get("dimension", "")) == "infantry":
-			seen = true
-			assert_almost_eq(float(row["value"]), infantry, 0.5, "the bar reads the live count")
-	assert_true(seen, "the infantry bar is there")
 
 ## The regiments are on every screen's map, with no tab to light.
 func test_the_regiments_are_on_every_screens_map() -> void:
 	var r: GameRoot = await _court()
 	assert_true(r.current_screen.map3d_view().military())
 	r._switch_to(GameRoot.State.CONVERSATION)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_true(r.current_screen.map3d_view().military(),
 		"the council stage's map draws the regiments too")
 
-## The table it replaced refreshed live; the column does too.
+## The bars read the ledger when the host opens, and — as the table it
+## replaced refreshed live — the column follows the state while it is up.
 func test_the_column_follows_the_state_while_it_is_up() -> void:
 	var r: GameRoot = await _court()
+	WorldLedger.apply(Game.data, Game.state, "military.kingdoms.player_realm.infantry", -300.0,
+		"a bad winter", "test")
 	r.set_army_view(true)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var panel: MilitaryPanel = r.current_screen.military_panel()
-	var before := 0.0
+	var infantry := float(WorldLedger.value_of(Game.data, Game.state,
+		"military.kingdoms.player_realm.infantry"))
+	var before := -1.0
 	for row in panel.arms_chart().rows:
 		if String(row.get("dimension", "")) == "infantry":
 			before = float(row["value"])
+	assert_almost_eq(before, infantry, 0.5, "the infantry bar reads the live count")
 	WorldLedger.apply(Game.data, Game.state, "military.kingdoms.player_realm.infantry", -500.0,
 		"a hard march", "test")
 	# The same contract the dashboard has: the column redraws on the signal
 	# the engine raises after a tick or an order, not on every ledger write.
 	Game.state_changed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	for row in panel.arms_chart().rows:
 		if String(row.get("dimension", "")) == "infantry":
 			assert_almost_eq(float(row["value"]), before - 500.0, 0.5,

@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## HouseArms (docs/superpowers/specs/2026-09-15-house-arms-design.md): every
 ## house wears the generated arms of its seat — its first province's capital
 ## town — and every kingdom its state's; the crown keeps its arms when
@@ -7,7 +8,7 @@ extends GutTest
 var data: DataRepository
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 
 func _royal_family() -> String:
 	var capital := String(data.kingdoms[data.resolve_realm("player_realm")]["capital_burg"])

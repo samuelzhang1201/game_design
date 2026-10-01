@@ -1,12 +1,13 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Morale follows the stores (spec 2026-09-30-ledger-supply-design §4).
 
 var data: DataRepository
 var s: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	s = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	s = SuiteData.campaign(data, 42)
 	RealmEconomy.forget()
 
 func after_each() -> void:
@@ -46,12 +47,6 @@ func test_the_words_name_the_stores() -> void:
 	assert_eq(ArmySystem.morale_word(data, 500), "on short rations")
 	assert_eq(ArmySystem.morale_word(data, 0), "starving")
 
-func test_the_regiment_card_states_its_supply_line() -> void:
-	var code := String(s.regiments.keys()[0])
-	var keys: Array = []
-	for st: Dictionary in MapObjects.army_card(data, code, s)["stats"]:
-		keys.append(String(st["key"]))
-	assert_has(keys, "army_supply_line")
 
 ## Minor6 (final review): the stores' word belongs to the MORALE row, once.
 func test_the_morale_row_names_the_stores() -> void:

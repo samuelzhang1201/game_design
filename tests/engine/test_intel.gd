@@ -1,11 +1,12 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The knowledge gate (spec 2026-09-28 §1).
 
 var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	Intel.dev_all = false
 
 
@@ -77,7 +78,7 @@ func _two_manors_one_province(s: GameState) -> Array:
 
 
 func test_three_levels() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var home := MapManors.home_province(repo, s)
 	assert_eq(Intel.level(repo, s, _subj(home)), "full")
 	var ours := _ours_uncontrolled(s)
@@ -89,7 +90,7 @@ func test_three_levels() -> void:
 
 
 func test_basic_says_little_and_general_says_words() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var f := _subj(_foreign(s))
 	assert_eq(String(Intel.fact(repo, s, f, "people", 2837)["text"]), "—")
 	assert_eq(String(Intel.fact(repo, s, f, "holder", "House Vane")["text"]), "House Vane")
@@ -100,7 +101,7 @@ func test_basic_says_little_and_general_says_words() -> void:
 
 
 func test_the_newest_report_wins_and_says_where_it_came_from() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var code := _foreign(s)
 	var f := _subj(code)
 	MissiveLog.add(repo, s, MissiveLog.make("spy", "rumour", 5, f, "old", [MissiveLog.span("people", "People", 1000, 2000)]))
@@ -113,7 +114,7 @@ func test_the_newest_report_wins_and_says_where_it_came_from() -> void:
 
 
 func test_estimate_wraps_latest_and_text_of() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var f := _subj(_foreign(s))
 	assert_eq(Intel.estimate(repo, s, f, "people"), {}, "no report yet")
 	MissiveLog.add(repo, s, MissiveLog.make("spy", "credible", 9, f, "new",
@@ -126,7 +127,7 @@ func test_estimate_wraps_latest_and_text_of() -> void:
 
 
 func test_a_report_counts_by_distance_for_a_nearby_point() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var f := _subj(_foreign(s))
 	var near := MissiveLog.subject("point", "", -1, Vector2(float(f["x"]) + 3.0, float(f["y"])))
 	MissiveLog.add(repo, s, MissiveLog.make("spy", "credible", 4, near, "near", [MissiveLog.span("people", "People", 500, 700)]))
@@ -134,7 +135,7 @@ func test_a_report_counts_by_distance_for_a_nearby_point() -> void:
 
 
 func test_full_knowledge_beats_a_report() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var h := _subj(MapManors.home_province(repo, s))
 	MissiveLog.add(repo, s, MissiveLog.make("spy", "rumour", 4, h, "x", [MissiveLog.span("people", "People", 1, 2)]))
 	var got := Intel.fact(repo, s, h, "people", 2837)
@@ -163,7 +164,7 @@ func test_the_stance_comes_from_the_packs_diplomacy() -> void:
 
 
 func test_a_report_never_answers_a_different_nearby_province() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var pair := _nearby_province_pair()
 	if pair.is_empty():
 		pending("no two provinces within intel_match_km on this pack")
@@ -177,7 +178,7 @@ func test_a_report_never_answers_a_different_nearby_province() -> void:
 
 
 func test_a_report_never_answers_a_different_manor_of_the_same_province() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var pair := _two_manors_one_province(s)
 	if pair.size() < 2:
 		pending("no province with two manors on this pack")
@@ -188,14 +189,6 @@ func test_a_report_never_answers_a_different_manor_of_the_same_province() -> voi
 	var got := Intel.fact(repo, s, b, "people", 999)
 	assert_ne(String(got["text"]), "≈ 500–700", "a's report must never answer for manor b, same province or not")
 	assert_ne(String(got["source"]), "spy")
-
-
-func test_a_point_report_in_the_same_province_within_reach_still_answers() -> void:
-	var s := GameState.new_campaign(repo, 7)
-	var f := _subj(_foreign(s))
-	var near := MissiveLog.subject("point", "", -1, Vector2(float(f["x"]) + 3.0, float(f["y"])))
-	MissiveLog.add(repo, s, MissiveLog.make("spy", "credible", 4, near, "near", [MissiveLog.span("people", "People", 500, 700)]))
-	assert_eq(String(Intel.fact(repo, s, f, "people", 600)["text"]), "≈ 500–700")
 
 
 func test_tercile_of_ties_take_the_middle_rank() -> void:
@@ -213,7 +206,7 @@ func test_tercile_of_ties_take_the_middle_rank() -> void:
 
 
 func test_place_label_names_the_manor_and_its_province() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var home := MapManors.home_province(repo, s)
 	var cells := MapManors.manors_of_province(repo, home, s)
 	if cells.is_empty():
@@ -226,7 +219,7 @@ func test_place_label_names_the_manor_and_its_province() -> void:
 
 
 func test_place_label_names_the_open_sea() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	assert_eq(Intel.place_label(repo, s, Vector2(-999999.0, -999999.0)), "the open sea")
 
 
@@ -248,7 +241,7 @@ func _foreign_manor_cell(s: GameState) -> int:
 ## T3 (final review): the positive tier-1 case — a report on a manor answers
 ## a query about that same manor.
 func test_a_manor_report_answers_the_same_manor() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var cell := _foreign_manor_cell(s)
 	assert_gt(cell, -1, "a foreign manor exists on this pack")
 	var a := _manor_subj(cell)
@@ -263,7 +256,7 @@ func test_a_manor_report_answers_the_same_manor() -> void:
 ## a query about that manor (tier 1 needs a manor report, tier 2 a province
 ## query, so only the distance rule can match here).
 func test_a_point_report_answers_a_manor_query_by_distance_alone() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var cell := _foreign_manor_cell(s)
 	var a := _manor_subj(cell)
 	var near := MissiveLog.subject("point", "", -1, Vector2(float(a["x"]) + 0.5, float(a["y"])))
@@ -272,7 +265,7 @@ func test_a_point_report_answers_a_manor_query_by_distance_alone() -> void:
 		[MissiveLog.span("troops_foreign", "Foreign troops nearby", 100, 300)]))
 	assert_eq(String(Intel.fact(repo, s, a, "troops_foreign", 200)["text"]), "≈ 100–300")
 	var far := MissiveLog.subject("point", "", -1, Vector2(float(a["x"]) + _reach() * 50.0, float(a["y"])))
-	var s2 := GameState.new_campaign(repo, 7)
+	var s2 := SuiteData.campaign(repo, 7)
 	MissiveLog.add(repo, s2, MissiveLog.make("spy", "credible", 4, far, "far",
 		[MissiveLog.span("troops_foreign", "Foreign troops nearby", 100, 300)]))
 	assert_ne(String(Intel.fact(repo, s2, a, "troops_foreign", 200)["source"]), "spy",
@@ -283,7 +276,7 @@ func test_a_point_report_answers_a_manor_query_by_distance_alone() -> void:
 ## province's own words (stance, wealth) — never with that one manor's
 ## people, tax, output or holder, which would read at province scale.
 func test_a_manor_report_answers_its_province_only_for_stance_and_wealth() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var cell := _foreign_manor_cell(s)
 	var code := MapManors.province_of(repo, cell, s)
 	MissiveLog.add(repo, s, MissiveLog.make("spy", "credible", 4, _manor_subj(cell), "x", [
@@ -310,7 +303,7 @@ func test_a_manor_report_answers_its_province_only_for_stance_and_wealth() -> vo
 ## report's "unclear" never overrides them on a card (the letter still
 ## says "unclear").
 func test_an_unclear_word_never_overrides_what_is_always_given() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var cell := _foreign_manor_cell(s)
 	var m := _manor_subj(cell)
 	MissiveLog.add(repo, s, MissiveLog.make("spy", "rumour", 4, m, "x", [
@@ -323,7 +316,7 @@ func test_an_unclear_word_never_overrides_what_is_always_given() -> void:
 	assert_eq(String(w["text"]), "rich")
 	assert_eq(String(w["source"]), "common knowledge")
 	# an older CLEAR word still stands behind a newer unclear one
-	var s2 := GameState.new_campaign(repo, 7)
+	var s2 := SuiteData.campaign(repo, 7)
 	MissiveLog.add(repo, s2, MissiveLog.make("spy", "credible", 3, m, "old",
 		[MissiveLog.words("stance", "Stance", "Wary")]))
 	MissiveLog.add(repo, s2, MissiveLog.make("spy", "rumour", 5, m, "new",
@@ -367,11 +360,11 @@ func _mid_month_change(s: GameState) -> void:
 ## BEFORE the change (and the game is then reloaded, as a player may), on
 ## the other nothing is opened. Their spies must file identical reports.
 func test_opening_a_card_mid_month_never_changes_a_report() -> void:
-	var a := GameState.new_campaign(repo, 7)
-	var b := GameState.new_campaign(repo, 7)
+	var a := SuiteData.campaign(repo, 7)
+	var b := SuiteData.campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
 	# a foreign province whose tier this change moves, with a manor to spy on
-	var probe := GameState.new_campaign(repo, 7)
+	var probe := SuiteData.campaign(repo, 7)
 	var pre := _tiers_by_hand(probe)
 	_mid_month_change(probe)
 	var post := _tiers_by_hand(probe)
@@ -402,7 +395,7 @@ func test_opening_a_card_mid_month_never_changes_a_report() -> void:
 ## Ruling 15: the tick settles the tiers into the state right after the
 ## month's economy, and they survive a save.
 func test_the_tick_settles_the_wealth_tiers_into_the_state() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	assert_eq(s.wealth_tiers, _tiers_by_hand(s), "a new campaign starts with the tiers of its own state")
 	_mid_month_change(s)
 	var moved := _tiers_by_hand(s)
@@ -418,7 +411,7 @@ func test_the_tick_settles_the_wealth_tiers_into_the_state() -> void:
 ## Ruling 15: a save written before the tiers existed computes them once,
 ## from the loaded state.
 func test_an_old_save_computes_its_wealth_tiers_once_on_load() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var d := s.to_dict()
 	d.erase("wealth_tiers")
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(d)))
@@ -430,7 +423,7 @@ func test_an_old_save_computes_its_wealth_tiers_once_on_load() -> void:
 ## M13 (final review): a manor with no province (the wildlands) is named
 ## without empty parentheses.
 func test_place_label_drops_empty_parentheses() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var ids := repo.manors.keys()
 	ids.sort()
 	for id: int in ids:
@@ -446,7 +439,7 @@ func test_place_label_drops_empty_parentheses() -> void:
 ## M2 (final review): a foreign kingdom's card gives its wealth tier — the
 ## mean of its provinces' settled tiers, rounded — in words.
 func test_a_foreign_kingdoms_card_gives_its_wealth() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
 	var codes := repo.kingdoms.keys()
 	codes.sort()

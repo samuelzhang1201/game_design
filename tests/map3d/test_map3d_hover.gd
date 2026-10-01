@@ -19,6 +19,7 @@ func before_all() -> void:
 	packed.pack(root)
 	ResourceSaver.save(packed, _fixture)
 	root.free()
+	Map3DView.world_override = _fixture  # GameRoot's own views open it too
 
 
 func before_each() -> void:
@@ -112,14 +113,10 @@ func test_the_hovered_kingdom_is_outlined_from_its_live_outline() -> void:
 	var mat := hover.surface_get_material(0) as ShaderMaterial
 	assert_eq(mat.render_priority, Map3DView.PRIORITY_HOVER)
 	assert_eq(String(mat.get_meta("width_key")), "map3d_hover_border_width_px")
+	assert_gt(Game.data.bal("map3d_hover_border_width_px"), Game.data.bal("map3d_border_width_px"),
+		"bolder than the border it follows")
 	v.hover_pick({}, Vector2.ZERO)
 	assert_null(v.line_mesh("Hover"), "gone with the hover")
-
-
-func test_the_hover_outline_sits_over_the_borders_and_under_the_selection() -> void:
-	assert_lt(Map3DView.PRIORITY_KINGDOMS, Map3DView.PRIORITY_HOVER)
-	assert_lt(Map3DView.PRIORITY_HOVER, Map3DView.PRIORITY_SELECTION)
-	assert_gt(Game.data.bal("map3d_hover_border_width_px"), Game.data.bal("map3d_border_width_px"))
 
 
 func test_a_real_pointer_move_hovers_on_the_next_frame() -> void:
@@ -203,4 +200,5 @@ func test_a_clicked_card_outranks_the_3d_hover() -> void:
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
+	Map3DView.world_override = ""
 	Map3DWorldCache.clear()

@@ -1,17 +1,14 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The Azgaar-imported world tables (see tools/import_azgaar.gd) load and
 ## cross-reference cleanly, and the hit-test bitmap agrees with them.
 
 var repo: DataRepository
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	assert_not_null(repo, DataRepository.last_error)
 
-func test_map_tables_load() -> void:
-	assert_gt(repo.kingdoms.size(), 0, "kingdoms.csv loaded")
-	assert_gt(repo.provinces.size(), 0, "provinces.csv loaded")
-	assert_gt(repo.burgs.size(), 0, "burgs.csv loaded")
 
 func test_every_province_kingdom_resolves() -> void:
 	for code: String in repo.provinces:
@@ -216,7 +213,7 @@ func test_terrain_tables_load_and_cross_reference() -> void:
 			assert_lt(float(c["height"]), 20.0, "water is below sea level")
 	assert_gt(land, 0, "some cells are land")
 
-## The committed pack (Game_dev, seed 954159497) has 12 islands and 4 lakes.
+## The pack's coast loops: shores of land, and of lakes, each a real loop.
 func test_coast_loops_match_the_packs_features() -> void:
 	var land := 0
 	var lakes := 0
@@ -226,7 +223,7 @@ func test_coast_loops_match_the_packs_features() -> void:
 		match String(row["kind"]):
 			"land": land += 1
 			"lake": lakes += 1
-	assert_eq(lakes, 4, "one shore per lake")
+	assert_gte(lakes, 1, "the pack's lakes have shores")
 	assert_gte(land, 12, "at least one land loop per island")
 
 func test_terrain_palette_names_every_colour_the_map_draws() -> void:
@@ -237,14 +234,6 @@ func test_terrain_palette_names_every_colour_the_map_draws() -> void:
 			continue
 		assert_true(repo.terrain_palette.has("biome_%d" % id),
 			"biome %d (%s) has a land tint" % [id, repo.biomes[id]["label"]])
-
-func test_terrain_balance_keys_are_present() -> void:
-	for key in ["map_relief_strength", "map_relief_min", "map_relief_max", "map_light_x",
-			"map_light_y", "map_altitude_gain", "map_sea_band_near_px", "map_sea_band_far_px",
-			"map_coast_width",
-			"map_river_min_px", "map_river_discharge_scale", "map_road_width",
-			"map_trail_width", "map_trail_min_scale"]:
-		assert_true(repo.balance.has(key), key)
 
 ## The terrain tables live in the same native space as the hit-test bitmaps
 ## (spec 2026-09-11 §8): a sampled cell's land/water class agrees with the

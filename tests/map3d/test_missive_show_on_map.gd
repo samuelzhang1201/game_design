@@ -5,7 +5,14 @@ extends GutTest
 ## nothing (but never crashes) for a subject kind it does not know — a spy
 ## report's "point" or a regiment. A live view is needed to see the left
 ## column's card follow, so this uses the GameRoot.force_map3d_scene(true)
-## seam (tests/map3d/test_map3d_hover.gd, tests/map3d/test_map3d_military.gd).
+## seam (tests/map3d/test_map3d_hover.gd, tests/map3d/test_map3d_military.gd),
+## on the empty fixture world (tests/map3d/fixture_world.gd).
+
+const FixtureWorld := preload("res://tests/map3d/fixture_world.gd")
+
+
+func before_all() -> void:
+	FixtureWorld.open_in_views("missive_show_on_map")
 
 
 func before_each() -> void:
@@ -145,4 +152,4 @@ func test_a_receipts_regiment_opens_its_card() -> void:
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
-	Map3DWorldCache.clear()
+	FixtureWorld.close_in_views()

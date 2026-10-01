@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Belief scoring (spec 2.1, 5 node 2). Plausibility comes from outside;
 ## this unit is the engine half that turns it into a number, so every value
 ## below is hand-computed.
@@ -7,8 +8,8 @@ var data: DataRepository
 var state: GameState
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(data, 42)
+	data = SuiteData.repo()
+	state = SuiteData.campaign(data, 42)
 
 func _claim(claim_type: String, subject: String, text: String,
 		magnitude: float, truth: bool) -> Dictionary:

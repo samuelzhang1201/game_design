@@ -6,8 +6,23 @@ extends GutTest
 const MANIFEST := "res://assets/3D/buildings/houses.json"
 
 
+## type -> its PackedScene (null when it does not load) and its first Mesh,
+## loaded ONCE for the file: the palaces are 60k triangles with 2K maps.
+var _scenes: Dictionary = {}
+var _meshes: Dictionary = {}
+
+
 func before_all() -> void:
 	Game.start_campaign(42)
+	for type: String in Game.data.map3d_houses:
+		var path := String(Game.data.map3d_houses[type]["mesh"])
+		var scene: PackedScene = load(path) as PackedScene if ResourceLoader.exists(path) else null
+		_scenes[type] = scene
+		_meshes[type] = null
+		if scene != null:
+			var node := scene.instantiate()
+			_meshes[type] = _first_mesh(node)
+			node.free()
 
 
 func test_every_type_has_a_mesh_on_disk() -> void:
@@ -18,17 +33,13 @@ func test_every_type_has_a_mesh_on_disk() -> void:
 
 func test_every_mesh_loads_and_carries_geometry() -> void:
 	for type: String in Game.data.map3d_houses:
-		var path := String(Game.data.map3d_houses[type]["mesh"])
-		var scene := load(path) as PackedScene
-		assert_not_null(scene, type + " loads as a PackedScene")
-		if scene == null:
+		assert_not_null(_scenes[type], type + " loads as a PackedScene")
+		if _scenes[type] == null:
 			continue
-		var node := scene.instantiate()
-		var mesh := _first_mesh(node)
+		var mesh: Mesh = _meshes[type]
 		assert_not_null(mesh, type + " holds a mesh")
 		if mesh != null:
 			assert_gt(mesh.get_surface_count(), 0, type + " has a surface")
-		node.free()
 
 
 ## The smallest a house is ever drawn: the bake's rim scale less its
@@ -42,11 +53,7 @@ var MIN_DRAWN_SCALE: float:
 func test_every_mesh_stands_on_its_origin_at_the_claimed_size() -> void:
 	for type: String in Game.data.map3d_houses:
 		var row: Dictionary = Game.data.map3d_houses[type]
-		var scene := load(String(row["mesh"])) as PackedScene
-		if scene == null:
-			continue
-		var node := scene.instantiate()
-		var mesh := _first_mesh(node)
+		var mesh: Mesh = _meshes[type]
 		if mesh != null:
 			var aabb := mesh.get_aabb()
 			# the floor is the origin; below it only the stone footing under the
@@ -65,7 +72,6 @@ func test_every_mesh_stands_on_its_origin_at_the_claimed_size() -> void:
 				"min(fp/span, ht/tall) tied together, so the taller ratio always won and left " +
 				"every mesh 12-25% narrower than its declared footprint — an upper-only bound " +
 				"never caught that)")
-		node.free()
 
 
 func test_the_manifest_covers_every_type() -> void:
@@ -83,17 +89,11 @@ func test_the_manifests_tris_is_the_meshs_real_triangle_count() -> void:
 	for type: String in Game.data.map3d_houses:
 		if not man.has(type):
 			continue
-		var path := String(Game.data.map3d_houses[type]["mesh"])
-		var scene := load(path) as PackedScene
-		if scene == null:
-			continue
-		var node := scene.instantiate()
-		var mesh := _first_mesh(node)
+		var mesh: Mesh = _meshes[type]
 		if mesh != null:
 			var claimed: int = int(man[type]["tris"])
 			assert_eq(_mesh_tris(mesh), claimed,
 				type + "'s houses.json tris must equal the mesh's real triangle count, not its face count")
-		node.free()
 
 
 ## The largest hole a house mesh may carry, in metres across (owner
@@ -123,12 +123,7 @@ func test_no_mesh_has_a_hole_you_could_see_through() -> void:
 	## came back clean on all three (the real cause was the UV atlas's
 	## undilated black, now flooded by tools/map3d/dilate_house_atlas.py).
 	for type: String in Game.data.map3d_houses:
-		var row: Dictionary = Game.data.map3d_houses[type]
-		var scene := load(String(row["mesh"])) as PackedScene
-		if scene == null:
-			continue
-		var node := scene.instantiate()
-		var mesh := _first_mesh(node)
+		var mesh: Mesh = _meshes[type]
 		if mesh != null:
 			var result := _manifold_check(mesh)
 			assert_lt(float(result["biggest_hole_m"]), HOLE_MAX_M,
@@ -137,7 +132,6 @@ func test_no_mesh_has_a_hole_you_could_see_through() -> void:
 			assert_eq(int(result["flipped_faces"]), 0,
 				"%s has a flipped face — %d of its triangles disagree with two or more of their own neighbours"
 					% [type, int(result["flipped_faces"])])
-		node.free()
 
 
 func _manifold_check(mesh: Mesh) -> Dictionary:
@@ -147,56 +141,70 @@ func _manifold_check(mesh: Mesh) -> Dictionary:
 	# solid has every edge walked exactly once forward and once backward
 	# by its two triangles; an edge walked only once is a hole, and an
 	# edge walked twice in the SAME direction is a local winding conflict.
-	var edge_dir := {}
-	var edge_any := {}
-	var edge_tris := {}           # undirected key -> the triangles that walk it
+	# A position is its millimetre grid point, numbered on first sight, and
+	# an edge is its two numbers in one int (2026-10-02: the same census over
+	# formatted strings cost ~9 s across the three 60k-triangle palaces).
+	var ids := {}                 # Vector3i (mm) -> vertex number
+	var at_mm: Array[Vector3i] = []
+	var edge_dir := {}            # (a << 32) | b -> times walked a -> b
+	var edge_any := {}            # (lo << 32) | hi -> times walked either way
+	var first_tri := {}           # undirected key -> the first triangle to walk it
+	var second_tri := {}          # undirected key -> the second
+	var tri_base := 0
 	for s in mesh.get_surface_count():
 		var arrays := mesh.surface_get_arrays(s)
 		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var indexed := indices.size() > 0
 		@warning_ignore("integer_division")
-		var n := indices.size() / 3 if indices.size() > 0 else verts.size() / 3
+		var n := indices.size() / 3 if indexed else verts.size() / 3
+		var v := PackedInt64Array([0, 0, 0])
 		for tri in range(n):
-			var tri_verts: Array[Vector3] = []
 			for k in range(3):
-				var idx := tri * 3 + k
-				var vi := indices[idx] if indices.size() > 0 else idx
-				tri_verts.append(verts[vi])
+				var p: Vector3 = verts[indices[tri * 3 + k] if indexed else tri * 3 + k]
+				var q := Vector3i(roundi(p.x * 1000.0), roundi(p.y * 1000.0), roundi(p.z * 1000.0))
+				var id: int = ids.get(q, -1)
+				if id < 0:
+					id = at_mm.size()
+					ids[q] = id
+					at_mm.append(q)
+				v[k] = id
+			var t := tri_base + tri
 			for k in range(3):
-				var a: Vector3 = tri_verts[k]
-				var b: Vector3 = tri_verts[(k + 1) % 3]
-				var ka := "%.3f,%.3f,%.3f" % [a.x, a.y, a.z]
-				var kb := "%.3f,%.3f,%.3f" % [b.x, b.y, b.z]
-				var dkey: String = ka + ">" + kb
-				edge_dir[dkey] = int(edge_dir.get(dkey, 0)) + 1
-				var ukey: String = (ka + "<>" + kb) if ka < kb else (kb + "<>" + ka)
-				edge_any[ukey] = int(edge_any.get(ukey, 0)) + 1
-				var owners: Array = edge_tris.get(ukey, [])
-				owners.append(tri)
-				edge_tris[ukey] = owners
+				var a := v[k]
+				var b := v[(k + 1) % 3]
+				var d := (a << 32) | b
+				edge_dir[d] = int(edge_dir.get(d, 0)) + 1
+				var u := (mini(a, b) << 32) | maxi(a, b)
+				var c := int(edge_any.get(u, 0))
+				edge_any[u] = c + 1
+				if c == 0:
+					first_tri[u] = t
+				elif c == 1:
+					second_tri[u] = t
+		tri_base += n
 	var open_boundary := 0
 	var winding_conflicts := 0
 	var tri_bad := {}             # triangle -> how many of its edges conflict
-	var border_adj := {}          # vertex key -> its boundary neighbours
-	for ukey: String in edge_any:
-		var count: int = edge_any[ukey]
-		var parts := ukey.split("<>")
+	var border_adj := {}          # vertex number -> its boundary neighbours
+	for u: int in edge_any:
+		var count: int = edge_any[u]
+		var lo := u >> 32
+		var hi := u & 0xFFFFFFFF
 		if count == 1:
 			open_boundary += 1
 			# remember the hole's own edges: a count of them says nothing
 			# about whether anything can be seen through them, and the
 			# boundary of a shell's open underside is as long as the
 			# building is round
-			for pair: Array in [[parts[0], parts[1]], [parts[1], parts[0]]]:
-				var at: Array = border_adj.get(pair[0], [])
-				at.append(pair[1])
-				border_adj[pair[0]] = at
+			for pair: Array in [[lo, hi], [hi, lo]]:
+				var near: Array = border_adj.get(pair[0], [])
+				near.append(pair[1])
+				border_adj[pair[0]] = near
 		elif count == 2:
-			var fwd: String = parts[0] + ">" + parts[1]
-			var bwd: String = parts[1] + ">" + parts[0]
-			if int(edge_dir.get(fwd, 0)) != 1 or int(edge_dir.get(bwd, 0)) != 1:
+			if int(edge_dir.get((lo << 32) | hi, 0)) != 1 or int(edge_dir.get((hi << 32) | lo, 0)) != 1:
 				winding_conflicts += 1
-				for tri: int in edge_tris.get(ukey, []):
+				for tri: int in [first_tri[u], second_tri[u]]:
 					tri_bad[tri] = int(tri_bad.get(tri, 0)) + 1
 	# A FLIPPED face disagrees with every neighbour it has, so it shows up on
 	# two or three of its own edges. A lone conflicting edge is the census's
@@ -216,34 +224,32 @@ func _manifold_check(mesh: Mesh) -> Dictionary:
 		if int(tri_bad[tri]) >= 2:
 			flipped += 1
 	return {"open_boundary_edges": open_boundary, "winding_conflicts": winding_conflicts,
-		"flipped_faces": flipped, "biggest_hole_m": _biggest_hole_m(border_adj)}
+		"flipped_faces": flipped, "biggest_hole_m": _biggest_hole_m(border_adj, at_mm)}
 
 
 ## The widest hole in a shell, in metres: boundary edges walked into the
 ## connected loops they form, each loop measured by its own bounding box's
 ## diagonal. One hole a metre across is a defect; a thousand cracks a
 ## centimetre wide are what a decimated mesh is made of.
-func _biggest_hole_m(border_adj: Dictionary) -> float:
+func _biggest_hole_m(border_adj: Dictionary, at_mm: Array[Vector3i]) -> float:
 	var seen := {}
 	var biggest := 0.0
-	for start: String in border_adj:
+	for start: int in border_adj:
 		if seen.has(start):
 			continue
-		var stack: Array[String] = [start]
+		var stack: Array[int] = [start]
 		seen[start] = true
-		var lo := Vector3(INF, INF, INF)
-		var hi := Vector3(-INF, -INF, -INF)
+		var lo := Vector3i(2147483647, 2147483647, 2147483647)
+		var hi := -lo
 		while not stack.is_empty():
-			var at: String = stack.pop_back()
-			var xyz := at.split(",")
-			var p := Vector3(float(xyz[0]), float(xyz[1]), float(xyz[2]))
-			lo = lo.min(p)
-			hi = hi.max(p)
-			for next: String in border_adj[at]:
+			var at: int = stack.pop_back()
+			lo = lo.min(at_mm[at])
+			hi = hi.max(at_mm[at])
+			for next: int in border_adj[at]:
 				if not seen.has(next):
 					seen[next] = true
 					stack.append(next)
-		biggest = maxf(biggest, (hi - lo).length())
+		biggest = maxf(biggest, Vector3(hi - lo).length() / 1000.0)
 	return biggest
 
 

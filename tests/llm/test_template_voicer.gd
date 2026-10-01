@@ -1,10 +1,11 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 
 var data: DataRepository
 var engine: TickEngine
 
 func before_each() -> void:
-	data = DataRepository.load_all("res://data")
+	data = SuiteData.repo()
 	engine = TickEngine.new(data)
 
 ## A trait-tinted line beats the generic one for a speaker who has the trait
@@ -16,7 +17,7 @@ func test_trait_variant_preferred() -> void:
 	assert_false(plain.contains("worth fearing"), "a speaker without the trait gets the generic line")
 
 func test_outcomes_narrated_deterministically() -> void:
-	var s := GameState.new_campaign(data, 42)
+	var s := SuiteData.campaign(data, 42)
 	engine.advance(s)
 	engine.actions.execute(ActionRequest.make("LEVY_RAISE"), s)
 	var r := engine.advance(s)

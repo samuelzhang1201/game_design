@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Spies (spec 2026-09-28 §1). Rolls are forced through SpySystem.report's
 ## q and bias; observe's own draw is checked for determinism only
 ## (test_observe_draws_the_same_report_from_the_same_state).
@@ -6,9 +7,15 @@ extends GutTest
 var repo: DataRepository
 
 
-func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+## The pack's road graph is cached by map id and every test's repository
+## carries the same routes and road speeds, so it is built once per script
+## (and forgotten around it, so no other script's graph is read).
+func before_all() -> void:
 	RoadGraph.forget()
+
+
+func before_each() -> void:
+	repo = SuiteData.repo()
 	Weather.forget()
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
@@ -73,10 +80,10 @@ func test_an_estimate_by_hand() -> void:
 
 
 func test_quality_follows_the_place() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var f := _foreign_manor(s)
-	assert_eq(SpySystem.quality(repo, s, _at(f), 600), 450, "foreign −150, clear weather")
-	assert_eq(SpySystem.quality(repo, s, _at(_home_plain(s)), 600), 750, "home +150")
+	assert_eq(SpySystem.quality(repo, s, _at(f), 600), 600 + int(repo.spy_difficulty["foreign"]), "foreign, clear weather")
+	assert_eq(SpySystem.quality(repo, s, _at(_home_plain(s)), 600), 600 + int(repo.spy_difficulty["home"]), "home")
 	assert_eq(SpySystem.quality(repo, s, _at(f), 10), 0, "clamped at 0")
 
 
@@ -85,7 +92,7 @@ func test_quality_follows_the_place() -> void:
 ## the previous helpers never actually excluded towns, so this path was
 ## never exercised).
 func test_quality_is_shifted_by_walls() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
 	var cells := MapEconomy.burg_cells(repo)
 	var codes := repo.burgs.keys()
@@ -109,7 +116,7 @@ func test_quality_is_shifted_by_walls() -> void:
 
 
 func test_the_column_and_the_facts() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var f := _foreign_manor(s)
 	var line := RealmEconomy.line_of(repo, s, f)
 	var good := SpySystem.report(repo, s, _at(f), 800, 0)
@@ -124,7 +131,7 @@ func test_the_column_and_the_facts() -> void:
 
 
 func test_troops_near_the_point_split_own_and_foreign() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var reg: Dictionary = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))[0]
 	var at := ArmySystem.position_of(repo, s, reg)
 	var m := SpySystem.report(repo, s, at, 1000, 0)
@@ -133,7 +140,7 @@ func test_troops_near_the_point_split_own_and_foreign() -> void:
 
 
 func test_a_spy_at_sea_reports_troops_only() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var wet := Vector2(1.0, 1.0)
 	if MapEconomy.cell_at(repo, wet) >= 0:
 		return
@@ -144,14 +151,14 @@ func test_a_spy_at_sea_reports_troops_only() -> void:
 
 
 func test_two_spies_can_disagree() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var f := _foreign_manor(s)
 	assert_ne(JSON.stringify(SpySystem.report(repo, s, _at(f), 900, 0)["facts"]),
 		JSON.stringify(SpySystem.report(repo, s, _at(f), 150, -250)["facts"]))
 
 
 func test_send_ride_arrive_file() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
 	var f := _foreign_manor(s)
 	var req := ActionRequest.make("SPY_SEND", {"x": _at(f).x, "y": _at(f).y})
@@ -175,7 +182,7 @@ func test_send_ride_arrive_file() -> void:
 
 
 func test_a_thin_chest_cannot_send_a_spy() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var f := _foreign_manor(s)
 	s.metrics["treasury"] = float(CourierSystem.fee_gold(repo, CourierSystem.SPY)) - 0.5
 	assert_ne(ActionSystem.new(repo).validate(ActionRequest.make("SPY_SEND", {"x": _at(f).x, "y": _at(f).y}), s), "")
@@ -187,7 +194,7 @@ func test_a_thin_chest_cannot_send_a_spy() -> void:
 func test_observe_draws_the_same_report_from_the_same_state() -> void:
 	var out: Array = []
 	for i in 2:
-		var s := GameState.new_campaign(repo, 7)
+		var s := SuiteData.campaign(repo, 7)
 		var f := _foreign_manor(s)
 		var c := CourierSystem.dispatch_spy(repo, s, _at(f))
 		var aim := Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))
@@ -202,7 +209,7 @@ func test_observe_draws_the_same_report_from_the_same_state() -> void:
 ## M2 (final review): a spy's report names the manor's chief good and gives
 ## ITS units a month.
 func test_the_report_names_the_chief_good() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var f := _foreign_manor(s)
 	var line := RealmEconomy.line_of(repo, s, f)
 	var chief := ManorEconomy.focus_units(repo, s, f, int(line["people"]), s.tick)
@@ -217,7 +224,7 @@ func test_the_report_names_the_chief_good() -> void:
 ## M1 (final review): a spy's news lines name his place — a spy rides for no
 ## regiment, so "The courier to  is held up" read with a hole in it.
 func test_a_spys_news_lines_name_his_place() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var f := _foreign_manor(s)
 	var c := CourierSystem.dispatch_spy(repo, s, _at(f))
 	var place := Intel.place_label(repo, s, _at(f))
@@ -233,7 +240,7 @@ func test_a_spys_news_lines_name_his_place() -> void:
 	assert_string_contains(slow, place)
 	assert_false(slow.contains("to  "), slow)
 	# and the ride itself stamps the place on a slow day
-	var s2 := GameState.new_campaign(repo, 7)
+	var s2 := SuiteData.campaign(repo, 7)
 	Weather.forget()
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 0, "rain": 0, "mud": 0, "snow": 0, "blizzard": 1}
@@ -248,7 +255,7 @@ func test_a_spys_news_lines_name_his_place() -> void:
 ## M15 (final review): a spy who could not reach the place before the fuse
 ## (courier_max_days) is refused with the reason, not paid for and lost.
 func test_a_spy_is_refused_beyond_the_fuse() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var f := _foreign_manor(s)
 	var req := ActionRequest.make("SPY_SEND", {"x": _at(f).x, "y": _at(f).y})
 	var actions := ActionSystem.new(repo)
@@ -265,7 +272,7 @@ func test_a_spy_is_refused_beyond_the_fuse() -> void:
 ## owner's complaint of that morning) nor re-aim him, and it must never file
 ## his report: observe draws from GameState.rng and writes a letter.
 func test_a_spys_next_day_is_previewed_and_the_preview_files_nothing() -> void:
-	var s := GameState.new_campaign(repo, 7)
+	var s := SuiteData.campaign(repo, 7)
 	var f := _foreign_manor(s)
 	var c := CourierSystem.dispatch_spy(repo, s, _at(f))
 	var aim := Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))

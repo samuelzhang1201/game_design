@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The weather field the 3D map draws (spec 2026-09-29-weather-visuals):
 ## each land texel its province's weather look, softened into fronts.
 
@@ -8,8 +9,8 @@ var field: Map3DWeatherField
 
 
 func before_all() -> void:
-	repo = DataRepository.load_all("res://data")
-	state = GameState.new_campaign(repo, 7)
+	repo = SuiteData.repo()
+	state = SuiteData.campaign(repo, 7)
 	field = Map3DWeatherField.new(repo)
 
 
@@ -39,15 +40,19 @@ func _seat_px(province: String) -> Vector2:
 
 func test_each_kind_names_its_look_in_weather_csv() -> void:
 	assert_eq(Map3DWeatherField.channels(repo, "clear"), Color(0, 0, 0, 0), "clear draws nothing")
-	assert_eq(Map3DWeatherField.channels(repo, "rain"), Color(1, 0, 0, 0.7), "rain: wet under an overcast")
-	assert_eq(Map3DWeatherField.fall(repo, "rain"), Vector3(1, 0, 0.2), "rain falls on a light wind")
-	assert_eq(Map3DWeatherField.fall(repo, "snow"), Vector3(0, 0.4, 0), "snow falls, lighter than a blizzard")
-	assert_eq(Map3DWeatherField.fall(repo, "blizzard"), Vector3(0, 1, 1), "a blizzard drives it sideways")
-	assert_eq(Map3DWeatherField.channels(repo, "blizzard").b, 1.0, "a blizzard covers the ground")
+	assert_eq(Map3DWeatherField.fall(repo, "clear"), Vector3.ZERO, "and nothing falls")
 	for kind: String in repo.weather_kinds:
+		var row: Dictionary = repo.weather_kinds[kind]
+		assert_eq(Map3DWeatherField.channels(repo, kind), Color(float(row["wet"]), float(row["mud"]),
+			float(row["snow"]), float(row["overcast"])), kind + ": ground (wet, mud, snow, overcast)")
+		assert_eq(Map3DWeatherField.fall(repo, kind), Vector3(float(row["rainfall"]),
+			float(row["snowfall"]), float(row["gust"])), kind + ": falling (rain, snow, gust)")
 		for key in ["overcast", "wet", "mud", "snow", "rainfall", "snowfall", "gust"]:
-			var v := float(repo.weather_kinds[kind][key])
+			var v := float(row[key])
 			assert_true(v >= 0.0 and v <= 1.0, "%s %s within 0..1" % [kind, key])
+	# a blizzard drives harder snow sideways than a snowfall
+	assert_gt(Map3DWeatherField.fall(repo, "blizzard").y, Map3DWeatherField.fall(repo, "snow").y)
+	assert_gt(Map3DWeatherField.fall(repo, "blizzard").z, Map3DWeatherField.fall(repo, "snow").z)
 
 
 func test_the_field_covers_the_pack_at_its_step() -> void:

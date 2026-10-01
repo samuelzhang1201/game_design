@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## A regiment's march in km a day (owner 2026-09-19: "每个兵种都要有自己的速度，
 ## 多少km每天，速度需要有一套计算公式，取决于兵种，物资，士气，训练四方面按一定权重").
 ## Whole numbers throughout: the pace is kept in TENTHS of a km.
@@ -14,7 +15,7 @@ var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = DataRepository.load_all("res://data")
+	repo = SuiteData.repo()
 	# Fix the table and weights so the hand sums below hold whatever the
 	# design data is tuned to later.
 	repo.army_speed = {"infantry": 20, "archers": 22, "cavalry": 40, "artillery": 12, "fleet": 100}
@@ -26,7 +27,7 @@ func before_each() -> void:
 
 
 func test_every_arm_has_a_pace() -> void:
-	var fresh := DataRepository.load_all("res://data")
+	var fresh := SuiteData.repo()
 	for arm: String in fresh.world_table("military", "unit_types"):
 		assert_gt(int(fresh.army_speed.get(arm, 0)), 0, arm + " has a km/day in army_speed.csv")
 
@@ -89,21 +90,6 @@ func test_hunger_and_low_morale_slow_the_march() -> void:
 
 ## Owner 2026-09-19: clicking a counter shows the regiment — its state and
 ## its march, not only its heads.
-func test_the_regiments_card_shows_its_state_and_its_march() -> void:
-	Game.start_campaign(42)
-	var mine := Game.data.resolve_realm("player_realm")
-	var code := String(MapObjects.regiments_of(Game.data, mine)[0]["regiment_code"])
-	var st := ArmySystem.state_of(Game.data, Game.state, code)
-	var card := MapObjects.describe(Game.data, {"kind": "army", "code": code}, Game.state)
-	var text := "\n".join(card["lines"])
-	assert_string_contains(text, "Morale: %d / 100" % int(st["morale"]))
-	assert_string_contains(text, "Training: %s" % ArmySystem.training_grade(Game.data, int(st["training"])))
-	assert_string_contains(text, "Strength: %s" % ArmySystem.strength_grade(Game.data, Game.state, code))
-	assert_string_contains(text, "March: %.1f km a day" % ArmySystem.speed_km_per_day(Game.data, Game.state, code))
-	assert_string_contains(text, "Supplies:")
-	assert_string_contains(text, "Wounded:")
-
-
 func test_the_regiments_detail_card_carries_its_march() -> void:
 	Game.start_campaign(42)
 	var mine := Game.data.resolve_realm("player_realm")
