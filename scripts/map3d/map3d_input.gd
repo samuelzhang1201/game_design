@@ -27,7 +27,22 @@ func bind(p_view: Map3DView, p_rig: Map3DCameraRig, p_repo: DataRepository) -> v
 	repo = p_repo
 
 
+## Takes one event; true when the view takes it. Its camera moves are told to
+## the listeners once a frame (Map3DCameraRig.hold_moved, flushed by the rig's
+## step) — a trackpad sends several gestures a frame (perf 2026-10-02); a click
+## is picked against what they placed, so they hear first.
 func handle(event: InputEvent) -> bool:
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.button_index not in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN,
+			MOUSE_BUTTON_WHEEL_LEFT, MOUSE_BUTTON_WHEEL_RIGHT]:
+		rig.flush()
+	rig.hold_moved = true
+	var took := _take(event)
+	rig.hold_moved = false
+	return took
+
+
+func _take(event: InputEvent) -> bool:
 	if event is InputEventMagnifyGesture:
 		var mg := event as InputEventMagnifyGesture
 		var gain := repo.bal("map3d_pinch_zoom_gain")

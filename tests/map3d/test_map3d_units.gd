@@ -64,6 +64,22 @@ func test_far_out_the_pieces_become_marks() -> void:
 
 ## A piece walks while it has somewhere to go and its start has come — not
 ## "it moved this frame" (owner 2026-09-30: 走路速度怎么时快时慢).
+## Perf 2026-10-02: a figure's animation runs only while its piece is shown
+## (far out it is a mark; behind the camera it is hidden).
+func test_a_hidden_piece_stops_animating() -> void:
+	var node := Node3D.new()
+	var anim := AnimationPlayer.new()
+	node.add_child(anim)
+	var piece := {"node": node, "anims": [anim]}
+	Map3DUnits.show_piece(piece, false)
+	assert_false(node.visible)
+	assert_false(anim.active, "a hidden piece's figures stand still")
+	Map3DUnits.show_piece(piece, true)
+	assert_true(node.visible)
+	assert_true(anim.active, "shown again, they move again")
+	node.free()
+
+
 func test_a_piece_walks_from_its_start_to_its_end() -> void:
 	var day := {"from": Vector2.ZERO, "to": Vector2(100.0, 0.0), "s0": 0.4}
 	assert_false(Map3DUnits.walking(day, 0.3), "its courier has not reached it yet")

@@ -30,6 +30,7 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 	var font := UiPalette.body_font()
 	var bars_h := bars_height(repo)
 	var out: Array = []
+	var colors: Dictionary = {}  # kingdom -> count_color, once a layout (perf 2026-10-02)
 	for p: Dictionary in points:
 		var r: Dictionary = p["reg"]
 		var sp: Vector2 = p["pos"]
@@ -43,14 +44,21 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var font_px := maxi(int(round(ph * repo.bal("map_army_font_frac"))), 1)
 		var count_w := maxf(ph, ManorBadges.text_width(font, text, font_px) + pad * 2.0)
 		var w := count_w if solo else ph + count_w
+		var kingdom := String(r.get("kingdom_code", mine))
+		if not colors.has(kingdom):
+			colors[kingdom] = count_color(repo, kingdom)
+		# MapObjects.army_piece's rule, with the royal regiment found once above
+		# (army_piece looks it up again for every regiment)
+		var piece := "fleet" if naval else ("royal" if code == royal and kingdom == mine \
+			else (MapObjects.army_piece(repo, r) if kingdom != mine else MapObjects.regiment_arm(repo, r)))
 		out.append({"code": code, "pos": sp, "size": strength, "text": text, "solo": solo,
 			"font_px": font_px,
 			"h": ph,
 			"rect": Rect2(sp - Vector2(w, ph) / 2.0 - Vector2(0.0, bars_h), Vector2(w, ph + bars_h)),
 			"bars": p.get("bars", Vector2i(-1, -1)),
 			"glyph": "waves" if naval else ("crown" if code == royal else "swords"),
-			"piece": MapObjects.army_piece(repo, r),
-			"color": count_color(repo, String(r.get("kingdom_code", mine))),
+			"piece": piece,
+			"color": colors[kingdom],
 			"naval": naval, "royal": code == royal})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ay := (a["pos"] as Vector2).y

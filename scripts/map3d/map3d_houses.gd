@@ -88,6 +88,20 @@ static func footprint_radius_m(burg: Dictionary, repo: DataRepository) -> float:
 ## further thinning by population here (redesign owner 2026-09-20).
 static func visible_set(houses: Dictionary, _repo: DataRepository, burg_pos: Dictionary,
 		camera_xz: Vector2, view_m: float, budget: int) -> Dictionary:
+	var out: Dictionary = {}
+	for code: String in visible_burgs(houses, burg_pos, camera_xz, view_m, budget):
+		for h: Dictionary in houses[code]:
+			var type: String = h["type"]
+			if not out.has(type):
+				out[type] = []
+			(out[type] as Array).append(h)
+	return out
+
+
+## The settlements visible_set builds, nearest first (ties by code): those
+## within `view_m`, whole, until the next would pass `budget` houses.
+static func visible_burgs(houses: Dictionary, burg_pos: Dictionary, camera_xz: Vector2,
+		view_m: float, budget: int) -> Array:
 	var near: Array = []
 	for code: String in houses:
 		if not burg_pos.has(code):
@@ -97,20 +111,13 @@ static func visible_set(houses: Dictionary, _repo: DataRepository, burg_pos: Dic
 			continue
 		near.append({"code": code, "d": d})
 	near.sort_custom(func(a, b): return a["d"] < b["d"] if a["d"] != b["d"] else a["code"] < b["code"])
-	var out: Dictionary = {}
+	var out: Array = []
 	var used := 0
 	for e: Dictionary in near:
-		var code: String = e["code"]
-		var rows: Array = houses[code]
-		var want := rows.size()
+		var want := (houses[e["code"]] as Array).size()
 		if used + want > budget:
 			break
-		for i in want:
-			var h: Dictionary = rows[i]
-			var type: String = h["type"]
-			if not out.has(type):
-				out[type] = []
-			(out[type] as Array).append(h)
+		out.append(e["code"])
 		used += want
 	return out
 
@@ -212,6 +219,36 @@ static func tints_of(variants: Array, part: String) -> PackedVector3Array:
 ## the highest ground under its footprint, so nothing of it is buried). Pure,
 ## so a test can check the maths directly rather than reading it back off a
 ## MultiMesh.
+## Floats one instance takes in a TRANSFORM_3D MultiMesh with custom data
+## and no colour: the 3x4 transform row by row, then the custom Color.
+const BUFFER_STRIDE := 16
+
+
+## Houses placed and packed for a MultiMesh: {buf: its buffer (BUFFER_STRIDE
+## floats each, the custom data the (wall, roof) variant), xf: [Transform3D],
+## picks: [Vector2i]}, in row order. `seat_of` gives a row's (lowest, seat).
+static func pack(rows: Array, seat_of: Callable, walls: int, roofs: int) -> Dictionary:
+	var buf := PackedFloat32Array()
+	buf.resize(rows.size() * BUFFER_STRIDE)
+	var xforms: Array[Transform3D] = []
+	var picks: Array[Vector2i] = []
+	for n in rows.size():
+		var h: Dictionary = rows[n]
+		var t := transform_of(h, (seat_of.call(h) as Vector2).y)
+		var pick := Vector2i(variant_of(h, walls, 0), variant_of(h, roofs, 1))
+		xforms.append(t)
+		picks.append(pick)
+		var o := n * BUFFER_STRIDE
+		for r in 3:
+			buf[o + r * 4] = t.basis.x[r]
+			buf[o + r * 4 + 1] = t.basis.y[r]
+			buf[o + r * 4 + 2] = t.basis.z[r]
+			buf[o + r * 4 + 3] = t.origin[r]
+		buf[o + 12] = float(pick.x)
+		buf[o + 13] = float(pick.y)
+	return {"buf": buf, "xf": xforms, "picks": picks}
+
+
 static func transform_of(h: Dictionary, height: float) -> Transform3D:
 	var at: Vector2 = h["at"]
 	var s: float = float(h["scale"])

@@ -246,6 +246,15 @@ static func realm_signature(state: GameState) -> String:
 		state.province_owner.hash(), state.manor_province.hash(),
 		int(state.metrics.get("tax_rate", 0)), int(state.metrics.get("tariff_rate", 0))]
 
+## Whether realm() (and so purses()) would answer from its cache: the realm
+## is cut for this state and none of its provinces has gone stale since — a
+## UI that can wait asks this before a read that would recompute (perf
+## 2026-10-02: the first read after a month's settlement costs ~9 ms).
+static func is_warm(repo: DataRepository, state: GameState) -> bool:
+	return repo.get_instance_id() == _repo_id and not _realm.is_empty() \
+		and realm_signature(state) == _realm_sig
+
+
 ## {realm, crown, per_province}: the player's realm's provinces (live
 ## ownership), the crown's controlled ones summed apart.
 static func realm(repo: DataRepository, state: GameState) -> Dictionary:

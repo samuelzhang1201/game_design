@@ -54,6 +54,20 @@ func test_a_separate_network_is_unreached() -> void:
 		"among the reached, the nearest is on the capital's own network")
 
 
+## Perf 2026-10-02: a graph never changes once built, so a start's tree is
+## run once and kept — the same tree, asked again, with no second Dijkstra.
+func test_a_start_s_tree_is_run_once_and_kept() -> void:
+	var g := RoadGraph.build(repo, _routes())
+	var a := g.shortest(0)
+	var runs := g.dijkstra_runs
+	var b := g.shortest(0)
+	assert_eq(g.dijkstra_runs, runs, "asked again, not run again")
+	assert_eq(b["dist"], a["dist"])
+	assert_eq(b["prev"], a["prev"])
+	g.shortest(1)
+	assert_eq(g.dijkstra_runs, runs + 1, "another start is its own tree")
+
+
 func test_stretch_need_rounds_up() -> void:
 	assert_eq(RoadGraph.stretch_need(1000, 1_000_000_000), 1000)
 	assert_eq(RoadGraph.stretch_need(1000, 500_000_000), 2000)

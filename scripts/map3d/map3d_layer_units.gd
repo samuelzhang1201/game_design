@@ -3,14 +3,11 @@ class_name Map3DLayerUnits
 extends Node3D
 ## MILITARY's PIECES: the player's regiments as animated wargame models
 ## standing on the ground (owner 2026-09-22, "把这两个兵棋人应用到游戏中去").
-##
 ## Nine, six or three .glb figures per regiment by its strength (Map3DFormation),
 ## each posed by its own AnimationPlayer — the one layer that cannot be a MultiMesh.
-##
 ## THE SIZE IS NOT THE MODEL'S SIZE: a miniature's, one world size at every
 ## zoom (under map3d_unit_mark_px none: the HUD's square counter). That rule,
 ## the facing, seating, measuring and screen box are Map3DUnits, the pure half.
-##
 ## Takes everything from Map3DContext, never the Game autoload (a test scans).
 
 ## Editor preview: the player's regiments from the pack alone.
@@ -95,7 +92,7 @@ func refresh() -> void:
 		_place(code, piece)
 	for code: String in _pieces.keys():
 		if not live.has(code):
-			(_pieces[code]["node"] as Node3D).visible = false
+			show_piece(_pieces[code], false)
 
 
 ## Where the ENGINE has a regiment today, world XZ.
@@ -116,9 +113,9 @@ func _place(code: String, piece: Dictionary) -> void:
 	# Far out every regiment is its flat counter instead (Map3DUnits.as_counters).
 	if ctx.camera.is_position_behind(centre) \
 			or Map3DUnits.as_counters(repo, ctx.meta, ctx.distance, ctx.view_size.y):
-		node.visible = false
+		show_piece(piece, false)
 		return
-	node.visible = true
+	show_piece(piece, true)
 	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
 		float(piece["height_m"]), piece["size"])
@@ -185,6 +182,8 @@ func step(delta: float) -> bool:
 
 ## Bumped each frame a piece moves (the chips' cache key).
 func moves() -> int: return _moves
+
+func show_piece(piece: Dictionary, on: bool) -> void: Map3DUnits.show_piece(piece, on)
 
 ## Where each piece is DRAWN, {code: world XZ} — where its road ahead starts.
 func shown_positions() -> Dictionary: return _shown_xz

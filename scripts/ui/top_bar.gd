@@ -287,13 +287,9 @@ func refresh() -> void:
 		for d in Game.current_report.metric_deltas:
 			var metric := String(d["metric"])
 			deltas[metric] = float(deltas.get(metric, 0.0)) + float(d["delta"])
-	var purses := RealmEconomy.purses(Game.data, Game.state)
 	# The change is a month's (owner 2026-09-28: "+1597" said nothing of when).
 	var per_month := "/mo" if Game.data.bal("ui_purse_labels") > 0.0 else ""
 	for m: String in _value_labels:
-		var src: Array = MONTHLY[m]
-		var monthly := int((purses[String(src[0])] as Dictionary)[String(src[1])])
-		_monthly[m] = monthly
 		_value_labels[m].text = UiPalette.format_int(int(Game.state.metrics.get(m, 0.0)))
 		var delta := int(deltas.get(m, 0.0))
 		var dl: Label = _delta_labels[m]
@@ -303,7 +299,42 @@ func refresh() -> void:
 			dl.text = UiPalette.format_delta(delta) + per_month if delta != 0 else ""
 			dl.add_theme_color_override("font_color",
 				UiPalette.good_color() if delta > 0 else UiPalette.bad_color())
-		else:
+	%EventChip.visible = not Game.state.pending_event.is_empty()
+	# What the month brings (RealmEconomy.purses). Right after the month's
+	# settlement every province's line is stale and the first read recomputes
+	# the realm (~9 ms, perf 2026-10-02): a settled month shows its report's
+	# figures, so that read waits for the NEXT frame instead of landing on the
+	# tick's. Before a month is settled the figures are the label itself.
+	if settled and not _read_now and not RealmEconomy.is_warm(Game.data, Game.state) and is_inside_tree():
+		if not _monthly_waiting:
+			_monthly_waiting = true
+			get_tree().process_frame.connect(_fill_monthly_later, CONNECT_ONE_SHOT)
+		return
+	_fill_monthly(deltas, settled, per_month)
+
+
+var _monthly_waiting := false
+var _read_now := false
+
+
+func _fill_monthly_later() -> void:
+	_monthly_waiting = false
+	if is_inside_tree() and Game.state != null:
+		_read_now = true
+		refresh()
+		_read_now = false
+
+
+## The month's figures beside each pool, and the tooltips naming both months.
+func _fill_monthly(deltas: Dictionary, settled: bool, per_month: String) -> void:
+	var purses := RealmEconomy.purses(Game.data, Game.state)
+	for m: String in _value_labels:
+		var src: Array = MONTHLY[m]
+		var monthly := int((purses[String(src[0])] as Dictionary)[String(src[1])])
+		_monthly[m] = monthly
+		var delta := int(deltas.get(m, 0.0))
+		var dl: Label = _delta_labels[m]
+		if not settled:
 			dl.text = UiPalette.format_delta(monthly) + per_month
 			dl.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
 		var tip := "%s — last month %s, this month brings about +%d" % [
@@ -311,7 +342,6 @@ func refresh() -> void:
 			("%+d" % delta) if settled else "not yet settled", monthly]
 		_value_labels[m].tooltip_text = tip
 		dl.tooltip_text = tip
-	%EventChip.visible = not Game.state.pending_event.is_empty()
 
 ## The lit clock button is the speed the game runs at.
 func _refresh_clock() -> void:

@@ -107,6 +107,25 @@ func test_the_clock_buttons_set_the_speed_and_the_date_reads_the_day() -> void:
 	assert_true(other.clock_button(0).button_pressed)
 	assert_true(t.clock_button(0).button_pressed)
 
+## Perf 2026-10-02: right after a month's settlement every province is stale
+## and the first realm read recomputes them all; the bar shows the settled
+## month's report at once and leaves that read to the next frame, off the
+## tick's own.
+func test_the_months_figures_wait_a_frame_after_the_settlement() -> void:
+	Game.start_campaign(42)
+	var bar := _bar()
+	await wait_process_frames(2)
+	var before := RealmEconomy.compute_count
+	Game.next_tick()
+	assert_eq(RealmEconomy.compute_count, before, "the tick's frame recomputes no province for the bar")
+	for m in ["treasury", "lord_gold"]:
+		assert_eq(bar.metric_text(m), UiPalette.format_int(int(Game.state.metrics[m])), "%s shows at once" % m)
+	await wait_process_frames(2)
+	var p := RealmEconomy.purses(Game.data, Game.state)
+	assert_eq(bar.monthly_text("treasury"), "+%d" % int(p["realm_share"]["tax"]), "and the month's figures follow")
+	assert_eq(bar.monthly_text("lord_gold"), "+%d" % int(p["lord"]["tax"]))
+
+
 ## Two purses (owner 2026-09-14): the crown's row — treasury, strategic and
 ## civil goods under a crown — and the lord's own purse under the house's
 ## arms, each with what the month brings (RealmEconomy.purses). Nothing

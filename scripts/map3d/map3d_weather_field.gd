@@ -89,20 +89,35 @@ static func blend_of(repo: DataRepository, abs_day: int, day_share: float) -> Di
 ## The field for a spell: {ground: Image, fall: Image, kinds: {province: kind}}.
 ## `kind_of` (province -> kind) stands in for Weather.of — a tool's forced sky.
 func build(repo: DataRepository, state: GameState, spell: int, kind_of: Callable = Callable()) -> Dictionary:
+	return build_kinds(repo, kinds_for(repo, state, spell, kind_of))
+
+
+## Each province's kind of weather that spell, {province: kind} — the part of
+## build() that reads the STATE, so it stays on the main thread; build_kinds()
+## is pure and may run on a worker (perf 2026-10-02: Map3DLayerWeather builds
+## the next spell's field there).
+func kinds_for(repo: DataRepository, state: GameState, spell: int, kind_of: Callable = Callable()) -> Dictionary:
 	var day := first_day_of(repo, spell)
 	_index_provinces(repo, state)
+	var kinds: Dictionary = {}
+	for code: String in _prov_codes:
+		kinds[code] = String(kind_of.call(code)) if kind_of.is_valid() else Weather.of(repo, state, code, day)
+	return kinds
+
+
+## The field for `kinds` (kinds_for's) over the provinces as last indexed: no
+## state read, only this field's own tables and the repository's — safe off
+## the main thread while nothing re-indexes it.
+func build_kinds(repo: DataRepository, kinds: Dictionary) -> Dictionary:
 	# each province's look as bytes: premultiplied by land, so the blur below is
 	# a land-weighted one — RGBA (wet, mud, snow, overcast) and RGBA (rainfall,
 	# snowfall, gust, land); every texel takes its share of its province's cell
-	var kinds: Dictionary = {}
 	var g_look := PackedByteArray()
 	var f_look := PackedByteArray()
 	g_look.resize(_prov_codes.size() * 4)
 	f_look.resize(_prov_codes.size() * 4)
 	for p in _prov_codes.size():
-		var code: String = _prov_codes[p]
-		var kind := String(kind_of.call(code)) if kind_of.is_valid() else Weather.of(repo, state, code, day)
-		kinds[code] = kind
+		var kind := String(kinds.get(_prov_codes[p], Weather.CLEAR))
 		g_look.encode_u32(p * 4, channels(repo, kind).to_abgr32())
 		var f := fall(repo, kind)
 		f_look.encode_u32(p * 4, Color(f.x, f.y, f.z, 0.0).to_abgr32())
