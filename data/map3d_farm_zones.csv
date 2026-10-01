@@ -1,0 +1,6 @@
+focus,reach_m,croft_m,arable_share,notes
+grain,2200,180,0.8,"3D bake OPEN FIELDS (owner 2026-10-01: 田地的布局要更合理真实): round each settlement, out from its built ground — the CROFTS (small hedged closes and gardens behind the houses) out to croft_m past the built ground; the ARABLE (two or three great fields in rotation, each split into furlongs of long strips) out to arable_share of reach_m; then common PASTURE to reach_m; MEADOW on the wet ground by the water anywhere within reach. A grain manor is mostly arable"
+cattle,1800,160,0.4,"cattle: a smaller arable, the rest grazing and hay"
+sheep,1600,150,0.3,sheep runs: little arable and wide pasture
+fish,1100,140,0.55,a fishing village farms a little behind the shore
+*,800,130,0.45,"any other focus (quarry, mine, timber...): crofts and a small arable"

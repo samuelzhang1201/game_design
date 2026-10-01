@@ -67,13 +67,16 @@ BEACH_M = 100.0          # sand reaches this far inland
 BEACH_MAX_M = 40.0       # and no higher
 
 # Texture ids = build_terrain.gd TEXTURES order.
-CLIFF, GRASS, LEAVES, DIRT, ROCKY, SOIL, SAND, FOREST, SNOW = range(9)
-NT = 9
+CLIFF, GRASS, LEAVES, DIRT, ROCKY, SOIL, SAND, FOREST, SNOW, CROP = range(10)
+NT = 10
 TEXTURE_KEYS = ["aerial_cliff", "aerial_meadow", "dry_decay_leaves", "dirt_floor", "aerial_upland",
                 "excavated_soil_wall", "sand_03", "aerial_canopy",
                 # the snow line (owner 2026-09-19): Poly Haven snow_02 since the
                 # same day (snow_field_aerial read blue-grey and blotchy)
-                "aerial_snow"]
+                "aerial_snow",
+                # the crops (owner 2026-10-01, open fields): a pale straw ground
+                # each field's tint darkens to its crop's colour
+                "aerial_crop"]
 BIOME_MIX = {
     1: {SAND: 1.0},
     2: {DIRT: 0.8, ROCKY: 0.2},
@@ -553,17 +556,60 @@ def field_cells(xs, ys, cell_v, stretch, angle):
     return key, np.minimum(du, dv)
 
 
-def load_fields(path, texture_keys):
-    """data/map3d_fields.csv as {focus: {"reach": m, "crops": [(share, tex, tint)]}};
-    a crop's texture by its bake key (the first layer of that name)."""
+FARM_ZONES = ("croft", "arable", "meadow", "pasture", "bare")
+
+
+def load_fields(path, texture_keys, zones_path=None):
+    """The open fields (owner 2026-10-01): data/map3d_farm_zones.csv (each
+    focus's reach, croft ring and arable share) with data/map3d_fields.csv
+    (its crops, zone by zone) as {focus: {"reach": m, "croft": m, "arable":
+    share, "zones": {zone: [(share, tex, tint, bare_share)]}}}; a crop's
+    texture by its bake key (the first layer of that name)."""
+    zones_path = zones_path or os.path.join(os.path.dirname(path), "map3d_farm_zones.csv")
     out = {}
+    with open(zones_path) as f:
+        for r in csv.DictReader(f):
+            out[r["focus"]] = {"reach": float(r["reach_m"]), "croft": float(r["croft_m"]),
+                               "arable": float(r["arable_share"]), "zones": {z: [] for z in FARM_ZONES}}
     with open(path) as f:
         for r in csv.DictReader(f):
-            e = out.setdefault(r["focus"], {"reach": 0.0, "crops": []})
-            e["reach"] = max(e["reach"], float(r["reach_m"]))
-            e["crops"].append((float(r["share"]), texture_keys.index(r["texture"]),
-                               srgb_to_lin(hex_rgb(r["tint"]))))
+            if r["focus"] not in out:
+                raise ValueError("map3d_fields.csv: focus %r has no row in map3d_farm_zones.csv" % r["focus"])
+            if r["zone"] not in FARM_ZONES:
+                raise ValueError("map3d_fields.csv: unknown zone %r" % r["zone"])
+            out[r["focus"]]["zones"][r["zone"]].append(
+                (float(r["share"]), texture_keys.index(r["texture"]),
+                 srgb_to_lin(hex_rgb(r["tint"])), float(r["bare_share"] or 0)))
     return out
+
+
+def jitter_cells(xs, ys, cell, salt=0):
+    """A jittered-grid Voronoi of `cell` (units of xs/ys): for each point the
+    id of its nearest seed, that seed's position, and the distance to the
+    cell's edge (half the gap between the nearest and second-nearest seed).
+    The FURLONGS of the open fields: blocks of a few hundred metres, each one
+    whole (one crop, one strip direction)."""
+    fx = np.floor(xs / cell).astype(np.int64)
+    fy = np.floor(ys / cell).astype(np.int64)
+    d1 = np.full(xs.shape, np.inf)
+    d2 = np.full(xs.shape, np.inf)
+    best = np.zeros(xs.shape, dtype=np.int64)
+    bx = np.zeros(xs.shape)
+    by = np.zeros(xs.shape)
+    for oy in (-1, 0, 1):
+        for ox in (-1, 0, 1):
+            gx, gy = fx + ox, fy + oy
+            key = (gx & 0xFFFFFF) | ((gy & 0xFFFFFF) << 24)
+            sx = (gx + 0.15 + 0.7 * hash01(key, 30 + salt)) * cell
+            sy = (gy + 0.15 + 0.7 * hash01(key, 31 + salt)) * cell
+            d = np.hypot(xs - sx, ys - sy)
+            closer = d < d1
+            d2 = np.where(closer, d1, np.minimum(d2, d))
+            d1 = np.where(closer, d, d1)
+            best = np.where(closer, key, best)
+            bx = np.where(closer, sx, bx)
+            by = np.where(closer, sy, by)
+    return best, bx, by, 0.5 * (d2 - d1)
 
 
 def pick_crop(h, crops):
@@ -664,13 +710,8 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     else:
         print("bake_world: no manor_land.csv (tools/map3d/export_manor_land.gd) — every manor sown as '*'")
     reach_of = np.array([fields[f]["reach"] for f in focus_keys], dtype=np.float32)
-    crop_tex_of = [np.array([c[1] for c in fields[f]["crops"]]) for f in focus_keys]
-    crop_tint_of = [np.array([c[2] for c in fields[f]["crops"]], dtype=np.float32) for f in focus_keys]
-    # distance to the nearest settlement: the pack's own bake, a unit per pack px
-    sd = np.asarray(Image.open(os.path.join(PACK, "world_settlement_distance.png")).convert("L"),
-                    dtype=np.float32) * M_PER_PX
-    settle_m = resize(sd, vw, vh)
-    del sd
+    croft_of = np.array([fields[f]["croft"] for f in focus_keys], dtype=np.float32)
+    arable_of = np.array([fields[f]["arable"] for f in focus_keys], dtype=np.float32)
     edge_n = value_noise(prng, vw, vh, rules["field_edge_noise_m"] / VERTEX_M)
     block_n = value_noise(prng, vw, vh, rules["footprint_block_m"] / VERTEX_M)
     fray_n = value_noise(prng, vw, vh, 3.0 * rules["footprint_block_m"] / VERTEX_M)
@@ -739,6 +780,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     # the sea" are the same test the footprint already passed.
     house_rows = []
     built = []          # (cx, cy, r) per settlement that actually built something
+    built_r = np.zeros(len(burgs), dtype=np.float32)   # the same r, by burg (0: none)
     r_house_mask = np.zeros((vh, vw), dtype=np.float32)
     # A RIVER IS WATER TOO (2026-09-21). `land` is the COASTLINE's mask, so a
     # carved river ran straight through the gate and a riverside town put a
@@ -753,7 +795,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     # does not stand 25 m back from its own river — it stands ON it, which
     # is what the bridge is for. Tried: Shole, a town of 50, came out with
     # four buildings and its bridge crossing an empty bank.
-    for b, cx, cy, site in burgs:
+    for bi, (b, cx, cy, site) in enumerate(burgs):
         rows = bake_houses.place(b, rules, types, foot, land_gate, height, k, vw, vh,
                                  wet=wet, site=site)
         lx, lz = (cx - float(b["x"]) * k) * VERTEX_M, (cy - float(b["y"]) * k) * VERTEX_M
@@ -784,6 +826,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         if spread > 0.0:
             built.append((cx, cy, min(spread / VERTEX_M / rules["house_built_share"],
                                       r_house / rules["house_built_share"])))
+            built_r[bi] = built[-1][2]
         for r in rows:
             r["x_m"] = ORIGIN_X + float(b["x"]) * M_PER_PX + r["x_m"]
             r["z_m"] = ORIGIN_Y + float(b["y"]) * M_PER_PX + r["z_m"]
@@ -798,15 +841,61 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     del fray_n
 
     tint = np.ones((vh, vw, 3), dtype=np.float32)
-    # the field-only part of the tint, and each estate's strip direction
-    # (0..1 of a half turn): the terrain shader's field map (furrows up
-    # close, the crops' colour eased back far out)
+    # the field-only part of the tint, and each furlong's strip direction
+    # (0..1 of a half turn): the terrain shader's field map (furrows and
+    # strips up close, the crops' colour eased back far out)
     ftint = np.ones((vh, vw, 3), dtype=np.float16)
     fangle = np.zeros((vh, vw), dtype=np.float16)
     farm = np.zeros((vh, vw), dtype=np.float32)
     crop = np.zeros((vh, vw), dtype=np.int8)
-    cell_v = rules["field_cell_m"] / VERTEX_M
-    hedge_v = rules["hedge_m"] / VERTEX_M
+    # THE OPEN FIELDS (owner 2026-10-01: 田地的布局要更合理真实). Each
+    # vertex belongs to its NEAREST settlement (a Voronoi of their centres,
+    # cut at a coarse step and read back), and lies in one of its zones:
+    # the crofts behind the houses, the arable — two or three great fields
+    # in rotation, split into furlongs, each furlong whole (one crop, one
+    # strip direction, decided at its SEED so no furlong is cut in two) — the
+    # meadow on wet ground, the common pasture to the edge of reach.
+    nb = len(burgs)
+    bcx = np.array([c[1] for c in burgs], dtype=np.float64)
+    bcy = np.array([c[2] for c in burgs], dtype=np.float64)
+    step = 4
+    seedmask = np.ones(((vh + step - 1) // step, (vw + step - 1) // step), dtype=bool)
+    gix = np.clip((bcx / step).astype(np.int64), 0, seedmask.shape[1] - 1)
+    giy = np.clip((bcy / step).astype(np.int64), 0, seedmask.shape[0] - 1)
+    owner = np.full(seedmask.shape, -1, dtype=np.int64)
+    seedmask[giy, gix] = False
+    owner[giy, gix] = np.arange(nb)
+    from scipy import ndimage
+    _, (iy, ix) = ndimage.distance_transform_edt(seedmask, return_indices=True)
+    near_burg = owner[iy, ix].astype(np.int32)
+    del seedmask, owner, iy, ix
+    meadow_n = np.clip(box(wet.astype(np.float32), int(rules["meadow_reach_m"] / VERTEX_M))
+                       * rules["meadow_gain"], 0, 1)
+    great_warp = rules["great_warp_m"] / VERTEX_M
+    gwx = (2.0 * value_noise(prng, vw, vh, rules["great_warp_wave_m"] / VERTEX_M) - 1.0) * great_warp
+    gwy = (2.0 * value_noise(prng, vw, vh, rules["great_warp_wave_m"] / VERTEX_M) - 1.0) * great_warp
+    fray2 = value_noise(prng, vw, vh, rules["croft_edge_wave_m"] / VERTEX_M)
+    furlong_v = rules["furlong_m"] / VERTEX_M
+    croft_v = rules["croft_close_m"] / VERTEX_M
+    zone_rows = [{z: fields[f]["zones"][z] for z in FARM_ZONES} for f in focus_keys]
+
+    def great_field(px, py, b, nrot, reach_v):
+        """Which great field of settlement `b` the point (px, py) lies in: the
+        Voronoi of `nrot` seeds set round it at half its reach, each turned
+        by its own hash — the fields' shapes vary village to village."""
+        best = np.full(px.shape, np.inf)
+        g = np.zeros(px.shape, dtype=np.int64)
+        off = hash01(b, 21) * 2.0 * np.pi
+        for j in range(3):
+            a = off + j * 2.0 * np.pi / np.maximum(nrot, 1) + (hash01(b * 8 + j, 22) - 0.5) * 0.8
+            rr = reach_v * (0.4 + 0.25 * hash01(b * 8 + j, 23))
+            d = np.hypot(px - (bcx[b] + rr * np.cos(a)), py - (bcy[b] + rr * np.sin(a)))
+            d = np.where(j < nrot, d, np.inf)
+            closer = d < best
+            best = np.where(closer, d, best)
+            g = np.where(closer, j, g)
+        return g
+
     for y0 in range(0, vh, 256):
         y1 = min(y0 + 256, vh)
         ys, xs = np.mgrid[y0:y1, 0:vw].astype(np.float64)
@@ -815,58 +904,95 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         cid = np.where(has_cell[pyi, pxi], cell_id[pyi, pxi], -1)
         cz = np.maximum(cid, 0)
         fi = cell_focus[cz]
-        reach = reach_of[fi]
-        # farmland: within reach of a settlement, its edge frayed, on land that
-        # is neither steep, snowed, shore nor built on
-        r_eff = reach * (1.0 + rules["field_edge_noise"] * (2.0 * edge_n[y0:y1] - 1.0))
-        near = np.clip((r_eff - settle_m[y0:y1]) / (0.25 * reach), 0, 1)
-        # fields thin outward (critic round 2: an even carpet read as
-        # scattered): near the village nearly every field is sown, toward
-        # the reach fewer, the rest left to the ground under them — decided
-        # per field below, once its id is known
-        closeness = np.clip(1.0 - settle_m[y0:y1] / np.maximum(r_eff, 1.0), 0, 1)
-        m = (near * (land[y0:y1] & (cid >= 0))
-             * np.clip(1.0 - t_rock[y0:y1] / rules["field_slope_max"], 0, 1)
-             * (1.0 - snow[y0:y1]) * (1.0 - np.clip(2.0 * beach[y0:y1], 0, 1))
-             * (1.0 - foot[y0:y1]))
-        # each manor its own field layout and orientation: a field never
-        # spans two manors, and the strips turn from estate to estate
-        fid, edge_d = field_cells(xs + warp_x[y0:y1], ys + warp_y[y0:y1], cell_v,
-                                  rules["field_stretch"], hash01(cz, 3) * np.pi)
-        hf = hash01(fid ^ (cz.astype(np.int64) << 40), 4)
-        sown = hash01(fid ^ (cz.astype(np.int64) << 40), 8) < closeness ** rules["field_thin_power"] * rules["field_thin_gain"]
-        m = m * sown
-        tex = np.zeros(m.shape, dtype=np.int8)
-        tt = np.ones(m.shape + (3,), dtype=np.float32)
+        bid = near_burg[(ys / step).astype(np.int64), (xs / step).astype(np.int64)].astype(np.int64)
+        if nb == 0:
+            bid = np.zeros_like(bid)
+        reach_v = reach_of[fi] / VERTEX_M * (1.0 + rules["field_edge_noise"] * (2.0 * edge_n[y0:y1] - 1.0))
+        r_v = np.hypot(xs - bcx[bid], ys - bcy[bid]) if nb else np.full(xs.shape, np.inf)
+        # what may be farmed at all: land, not steep, snowed, shore or built on
+        ok = ((land[y0:y1] & (cid >= 0)) * np.clip(1.0 - t_rock[y0:y1] / rules["field_slope_max"], 0, 1)
+              * (1.0 - snow[y0:y1]) * (1.0 - np.clip(2.0 * beach[y0:y1], 0, 1)) * (1.0 - foot[y0:y1]))
+        within = np.clip((reach_v - r_v) / (0.2 * reach_v), 0, 1)
+        # the furlongs, through the hedges' own warp
+        wxs, wys = xs + warp_x[y0:y1], ys + warp_y[y0:y1]
+        fid, fsx, fsy, fedge = jitter_cells(wxs, wys, furlong_v)
+        # each furlong decided at its seed: in the arable or not, which great field
+        seed_r = np.hypot(fsx - bcx[bid], fsy - bcy[bid]) if nb else np.full(xs.shape, np.inf)
+        sxi = np.clip(fsx.astype(np.int64), 0, vw - 1)
+        syi = np.clip(fsy.astype(np.int64), 0, vh - 1)
+        seed_reach = reach_of[fi] / VERTEX_M * (1.0 + rules["field_edge_noise"] * (2.0 * edge_n[syi, sxi] - 1.0))
+        # the crofts' edge frays like the farmland's: never a ring round the village
+        croft_r = built_r[bid] + croft_of[fi] / VERTEX_M * (1.0 + rules["croft_edge_noise"] * (2.0 * fray2[y0:y1] - 1.0))
+        arable = (seed_r < seed_reach * arable_of[fi]) & (r_v > croft_r)
+        nrot = np.array([len(zr["arable"]) for zr in zone_rows])[fi]
+        g = great_field(fsx + gwx[syi, sxi], fsy + gwy[syi, sxi], bid, nrot, seed_reach)
+        state = (g + (hash01(bid, 24) * np.maximum(nrot, 1)).astype(np.int64)) % np.maximum(nrot, 1)
+        fh = hash01(fid ^ (bid << 48), 25)
+        waste = hash01(fid ^ (bid << 48), 26) < rules["furlong_waste_share"]
+        croft = (r_v <= croft_r) & ~arable
+        meadow = (meadow_n[y0:y1] > 0.35) & ~croft
+        arable &= ~meadow & ~waste
+        # croft closes: small hedged plots behind the houses
+        cfid, cedge = field_cells(wxs, wys, croft_v, 1.3, hash01(bid, 27) * np.pi)
+        tex = np.full(xs.shape, GRASS, dtype=np.int8)
+        tt = np.ones(xs.shape + (3,), dtype=np.float32)
+        sown = np.zeros(xs.shape, dtype=bool)          # arable: strips and furrows, far-fade
+        weight = np.zeros(xs.shape, dtype=np.float32)  # the zone's texture strength
+        edge = np.where(croft, cedge, fedge) * VERTEX_M
         for f in range(len(focus_keys)):
-            sel = fi == f
-            if sel.any():
-                ci = pick_crop(hf[sel], fields[focus_keys[f]]["crops"])
-                tex[sel] = crop_tex_of[f][ci]
-                tt[sel] = crop_tint_of[f][ci]
-        hedge = 1.0 - rules["hedge_depth"] * np.clip(1.0 - edge_d / hedge_v, 0, 1) ** 2
-        # each field its own shade, and a fine grain inside it (critic: one
-        # flat colour per field read as a sticker up close)
-        own = 1.0 + rules["field_shade"] * (2.0 * hash01(fid ^ (cz.astype(np.int64) << 40), 7) - 1.0)
+            zr = zone_rows[f]
+            sel_f = fi == f
+            if not sel_f.any():
+                continue
+            # the arable: the great field's crop, but some furlongs bare
+            if zr["arable"]:
+                for si, (_, t_, tn, bare) in enumerate(zr["arable"]):
+                    sel = sel_f & arable & (state == si)
+                    if not sel.any():
+                        continue
+                    is_bare = fh[sel] < bare
+                    tex_s = np.full(is_bare.shape, t_, dtype=np.int8)
+                    tint_s = np.broadcast_to(tn, is_bare.shape + (3,)).copy()
+                    if zr["bare"] and is_bare.any():
+                        tex_s[is_bare] = zr["bare"][0][1]
+                        tint_s[is_bare] = zr["bare"][0][2]
+                    tex[sel] = tex_s
+                    tt[sel] = tint_s
+                    sown[sel] = True
+                    weight[sel] = 1.0
+            for zone, mask in (("croft", croft), ("meadow", meadow), ("pasture", ~croft & ~arable & ~meadow)):
+                rows = zr[zone]
+                sel = sel_f & mask
+                if not rows or not sel.any():
+                    continue
+                key = (cfid if zone == "croft" else fid) ^ (bid << 48)
+                ci = pick_crop(hash01(key[sel], 28), rows)
+                tex[sel] = np.array([r_[1] for r_ in rows])[ci]
+                tt[sel] = np.array([r_[2] for r_ in rows], dtype=np.float32)[ci]
+                weight[sel] = rules["zone_weight_" + zone]
+        m = ok * within * (weight > 0)
+        # a hedge round each croft close; a grass balk between furlongs
+        hedge = np.where(croft, 1.0 - rules["croft_hedge_depth"] * np.clip(1.0 - edge / rules["croft_hedge_m"], 0, 1) ** 2, 1.0)
+        own = 1.0 + rules["field_shade"] * (2.0 * hash01(np.where(croft, cfid, fid) ^ (bid << 48), 7) - 1.0)
         grain = 1.0 + rules["field_grain"] * (2.0 * grain_n[y0:y1] - 1.0)
         tt *= (hedge * own * grain)[..., None].astype(np.float32)
-        # The crop gives way to the natural ground over the last
-        # field_edge_soft_m before its edge: Terrain3D switches a vertex's
-        # texture whole, so two crops meeting head on drew a 20 m staircase;
-        # through the ground between them the control map blends.
-        soft = np.clip(edge_d / (rules["field_edge_soft_m"] / VERTEX_M), 0, 1)
-        farm[y0:y1] = m * soft
+        soft = np.where(sown, np.clip(edge / rules["field_edge_soft_m"], 0, 1), 1.0)
+        farm[y0:y1] = m * soft * weight
         crop[y0:y1] = tex
         tint[y0:y1] = 1.0 + (tt - 1.0) * m[..., None]
-        ftint[y0:y1] = tint[y0:y1]
-        fangle[y0:y1] = hash01(cz, 3)
+        # the field map: only the arable's colour (far-fade, furrows, strips)
+        ftint[y0:y1] = np.where((sown & (m > 0))[..., None], tint[y0:y1], 1.0)
+        # each furlong's strips run along or across the line to its village
+        ang = np.arctan2(fsy - bcy[bid], fsx - bcx[bid]) + np.where(hash01(fid, 29) < 0.5, 0.0, np.pi / 2) \
+            + (hash01(fid, 32) - 0.5) * 0.6
+        fangle[y0:y1] = np.mod(ang, np.pi) / np.pi
         # each manor's own shade: a patchwork even where nothing is sown
         jv = (2.0 * hash01(cz, 5) - 1.0) * rules["manor_jitter_value"] * (cid >= 0)
         jh = (2.0 * hash01(cz, 6) - 1.0) * rules["manor_jitter_hue"] * (cid >= 0)
         tint[y0:y1] *= (1.0 + jv)[..., None].astype(np.float32)
         tint[y0:y1, :, 0] *= (1.0 + jh).astype(np.float32)
         tint[y0:y1, :, 2] *= (1.0 - jh).astype(np.float32)
-    del settle_m, edge_n, snow, warp_x, warp_y, grain_n
+    del edge_n, snow, warp_x, warp_y, grain_n, gwx, gwy, near_burg, meadow_n, fray2
 
     # the grounds: a field's crop over what grew there, the footprint's
     # trodden earth over both
@@ -1196,6 +1322,9 @@ def main(argv=None):
     for t, key in enumerate(TEXTURE_KEYS):
         a = np.asarray(Image.open(os.path.join(TEX, f"{key}_alb_ht.png")).convert("RGB").resize((64, 64)), dtype=np.float64) / 255.0
         mean_lin = srgb_to_lin(a).reshape(-1, 3).mean(0)
+        if t == CROP:
+            mult_lin[t] = 1.0   # the crops wear their own tint (sow_patchwork)
+            continue
         far = rules["far_color_sand"] if t == SAND else rules["far_color_snow"] if t == SNOW \
             else rules["far_color_cliff"] if t == CLIFF else FAR_COLOR[t]
         mult_lin[t] = np.clip(srgb_to_lin(hex_rgb(far)) / np.maximum(mean_lin, 1e-4), 0, 1)

@@ -15,6 +15,7 @@ they replace are ground-level photos of 1-2 m of ground, stretched to
 | `aerial_upland.png` | T-54 | 954159497 | ROCKY | 200 m |
 | `aerial_cliff.png` | T-57 | 954159499 | CLIFF | 160 m |
 | `aerial_snow.png` | T-58 | 954159498 | SNOW | 180 m |
+| `aerial_crop.png` | T-62 | 954159497 | CROP | 140 m |
 
 Committed (~11 MB) because a seeded generation is only reproducible on the
 same models and nodes; `assets/3D/terrain/` itself stays git-ignored. Pack each
@@ -60,3 +61,10 @@ a close-up grass grain is sub-pixel and only averages away. Compared and
 rejected: T-60 pasture and T-62 downland (softer), T-61 hay meadow (both
 models drew blade close-ups), T-63 tussocks (black polka dots), and every
 Qwen-2512 tile but one (close-ups again).
+
+The crops (owner 2026-10-01, open fields): `aerial_crop.png` is T-62 (the even
+chalk downland, `STYLE_CORE_aerial_grass.txt`) packed into a PALE STRAW ground
+that each field's tint darkens to its crop — the colour map can only darken, so
+no crop drawn on the grass layer could be gold:
+
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_crop.png aerial_crop --saturation 0.25 --contrast 0.8 --lift-darks 0.9 --lift-radius 16 --match-mean '#D4C89C' --normal-strength 0.25 --rough 0.95

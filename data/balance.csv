@@ -295,7 +295,9 @@ map_manor_value,0.8,"MANORS: every house colour's value (brightness) is scaled b
 map3d_heat_tint,0.85,"3D MAP HEIGHTS (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §4): how far the ground's albedo mixes toward the height ramp (terrain_palette heat_1..6 over 0..elevation_m_per_unit x (100 - elevation_sea_level) m) — lit by the relief like the ground"
 map3d_furrow_m,9.0,"3D MAP fields (owner 2026-09-19): the furrows' spacing in metres, drawn by the patched terrain shader along each estate's strips from the bake's field map (bake/fields.png) — only on sown ground, and faded out before their spacing falls under ~3 screen px"
 map3d_furrow_depth,0.14,3D MAP fields: how far a furrow darkens the field (0 = none)
-map3d_field_fade,0.9,"3D MAP fields: how much of the fields' own colour the shader takes back far out — the farmland reads as a tone, not a speckle (0 = none, 1 = all)"
+map3d_strip_m,22,"3D MAP OPEN FIELDS (owner 2026-10-01: 田地的布局要更合理真实): each furlong is long narrow strips along its direction (bake/fields.png alpha), this many metres wide, each its own shade (Map3DGroundTint); gone before a strip is under a pixel or two"
+map3d_strip_shade,0.25,"3D MAP open fields: how far a strip's own shade lifts or darkens it, +- this share (0 = no strips)"
+map3d_field_fade,0.35,"3D MAP fields: how much of the fields' own colour the shader takes back far out (0 = none, 1 = all). 0.9 until the open fields of 2026-10-01: the crops came out weak and only the ploughed patches read; whole great fields read as country, not speckle"
 map3d_field_fade_near_m,5000,3D MAP fields: the camera distance where that fade begins
 map3d_field_fade_far_m,22000,3D MAP fields: the camera distance where it is full (15-60 km took back only ~16% at 30 km)
 map3d_army_badge_min_px,18,"3D MAP MILITARY (owner 2026-09-19: '注意兵棋大小'): the smallest a regiment's counter gets, design px — map_army_badge_native_px of the map at the scale the camera's target is seen at, held between this and map3d_army_badge_max_px"

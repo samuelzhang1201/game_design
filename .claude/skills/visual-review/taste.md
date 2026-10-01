@@ -64,6 +64,14 @@ add it here as a principle with its why — not as a changelog entry.
   track that fades over a few game days. On olive turf trodden grass reads
   LIGHTER (flattened, straw and earth), never darker — a dark trail vanished —
   and in lanes, one a file, ragged at the sides, so it is never a painted road.
+- **Farmland is a system, not a scatter** (owner 2026-10-01: "地图上那一块块的
+  土是什么" → "田地的布局要更合理真实"). Lone brown plots on green grass read as
+  stains: fields belong to a settlement — crofts behind the houses, great
+  fields in rotation, each split into furlongs of strips, meadow by the water,
+  pasture beyond — and each furlong is ONE crop. Crops must READ (gold, green,
+  olive) or only the bare earth shows; ploughed earth is a dark grey-brown, never
+  orange; the lines between furlongs are thin and light (thick dark ones made a
+  tiled floor at 3 km).
 - **No base plates.** Objects stand on the map's own ground (the grass disc
   under the 3D towns was the first thing rejected).
 
