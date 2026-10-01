@@ -1,13 +1,13 @@
 """Cavalry redesign v2 (owner 2026-09-25): armoured rider WITH lance and
 shield, four designs (assets/flux/cavalry_v2_prompts.csv) rendered on three
-local model tiers so the owner can compare and pick one.
+local model tiers so the owner can compare and pick one (klein, a Flux
+model, was dropped 2026-10-01: no Flux).
 
   python3 tools/units3d/gen_cavalry_v2.py                 # all tiers, all designs
-  python3 tools/units3d/gen_cavalry_v2.py --tiers klein,zimage --only A,C
+  python3 tools/units3d/gen_cavalry_v2.py --tiers zimage,qwenfast --only A,C
   python3 tools/units3d/gen_cavalry_v2.py --seeds 2       # 2 seeds per cell
 
 Tiers (all Apache-2.0, see claude/t2i-model-evaluation-2026-09.md):
-  klein   FLUX.2 klein 4B, 20 steps          ~85 s / image
   zimage  Z-Image Turbo, 8 steps              ~31 s / image
   qwenfast Qwen-Image-2512 Q6_K + Lightning LoRA, 8 steps  ~2 min / image
   qwen    Qwen-Image-2512 Q6_K full, 50 steps ~18 min / image (run overnight)
@@ -37,7 +37,6 @@ NEGATIVE = ("cartoon, anime, toy, miniature, figurine, chibi, big head, stylised
             "head, cut off lance, blurry, extra fingers, fused fingers, malformed hands, extra legs, "
             "five legs, broken lance, two lances")
 TIERS = {  # name: (template, values)
-    "klein": ("flux2_klein_template.json", dict(unet="flux-2-klein-base-4b.safetensors", steps=20, cfg=4.0, width=1344, height=896)),
     "zimage": ("zimage_turbo_template.json", dict(unet="z_image_turbo_bf16.safetensors", steps=8, cfg=1.0, width=1344, height=896)),
     "qwenfast": ("qwen2512_template.json", dict(unet="qwen-image-2512-Q6_K.gguf", steps=8, cfg=1.0, lora_strength=1.0, width=1584, height=1056)),
     "qwen": ("qwen2512_template.json", dict(unet="qwen-image-2512-Q6_K.gguf", steps=50, cfg=4.0, lora_strength=0.0, width=1584, height=1056)),

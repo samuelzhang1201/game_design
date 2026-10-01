@@ -117,7 +117,7 @@ def main():
     models = args[args.index("--model") + 1].split(",") if "--model" in args else MODELS
     gen = _generate_module()
     for m in models:
-        if m not in gen.MODEL_PRESETS or m in ("klein", "schnell"):
+        if m not in gen.MODEL_PRESETS:
             sys.exit("not a model for the house references: %s" % m)
     variants = int(args[args.index("--variants") + 1]) if "--variants" in args else 1
     front = "--front" in args

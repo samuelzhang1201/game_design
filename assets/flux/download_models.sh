@@ -39,8 +39,8 @@ fetch() {  # <models subdir> <file name> <url>
 }
 
 if [[ "$WHAT" == all || "$WHAT" == zimage ]]; then
-  # Z-Image Turbo (Tongyi-MAI). Text encoder and VAE are shared with klein and
-  # are normally already present; fetch skips files that exist.
+  # Z-Image Turbo (Tongyi-MAI): the model, its text encoder and its VAE.
+  # fetch skips files that already exist.
   fetch diffusion_models z_image_turbo_bf16.safetensors \
     "$HF/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors"
   fetch text_encoders qwen_3_4b.safetensors \
