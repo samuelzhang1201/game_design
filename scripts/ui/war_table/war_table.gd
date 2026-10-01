@@ -34,9 +34,9 @@ static func dress_screen(screen: Control, bg: ColorRect, map_panel: PanelContain
 	ink_column(column)
 	return true
 
-## The compass lies on the table, not on the map (owner 2026-10-01): under the
-## report's foot, above the news slip; the paper covers it when a card fills
-## the column. `view` is the screen's map, which it turns north on a click.
+## The compass lies on the table, not on the map (owner 2026-10-01): below the
+## report's foot, where the news slip lay before it moved between the
+## bookmark groups — clear of the paper, which fills its column. `view` is the screen's map, which it turns north on a click.
 static func place_compass(screen: Control, column: Control, view: Map3DView) -> TableCompass:
 	if not UiPalette.war_table() or view == null:
 		return null

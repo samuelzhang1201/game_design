@@ -87,8 +87,8 @@ func test_every_type_says_how_its_star_is_sized_and_every_link_how_it_is_drawn()
 
 func test_a_cluster_anchor_is_read_as_vectors() -> void:
 	var c: Dictionary = data.ledger_clusters[0]
-	assert_true(c["at"] is Vector3 and c["at2"] is Vector3)
-	assert_eq((c["at2"] as Vector3).y, 0.0, "the 2D anchor lies in the plane")
+	assert_true(c["at"] is Vector3)
+	assert_false(c.has("at2"), "no 2D anchor: the flat view was removed (owner 2026-10-01)")
 	assert_true(data.ledger_palette.has(String(c["colour"])), "its colour is a palette key")
 
 

@@ -107,14 +107,23 @@ func test_the_seal_shows_who_waits_until_the_council_is_entered() -> void:
 	seal.refresh()
 	assert_eq(seal.waiting_ids().size(), 0, "entering the council hears them")
 
-func test_the_compass_lies_on_the_table_under_the_report() -> void:
+## Owner 2026-10-01: 指南针被盖住了，往下挪，露出来 — the report fills its
+## column, so the compass lies below it, wholly on the screen and clear of the
+## paper, the news slip and every bookmark.
+func test_the_compass_lies_on_the_table_below_the_report() -> void:
 	var r := _root()
 	var court := _court(r)
-	await wait_frames(2)
+	await wait_frames(3)
 	var compass: TableCompass = court.find_child("TableCompass", false, false)
 	assert_not_null(compass, "the compass lies on the table")
-	assert_lt(compass.get_index(), court.get_node("%LogPanel").get_index(), "under the report's paper")
-	assert_lt(compass.get_global_rect().end.y, r.size.y - BottomBar.BAR_HEIGHT + 1.0, "above the bookmarks")
+	var rect := compass.get_global_rect()
+	assert_true(Rect2(Vector2.ZERO, r.size).encloses(rect), "wholly on the screen")
+	assert_false(rect.intersects(court.get_node("%LogPanel").get_global_rect()), "clear of the report's paper")
+	assert_false(rect.intersects(r.news_ticker().get_global_rect()), "clear of the news slip")
+	for tab: String in BottomBar.TABS:
+		var b := r.bottom_bar().button(tab)
+		if b != null and b.visible:
+			assert_false(rect.intersects(b.get_global_rect()), "clear of the " + tab + " bookmark")
 	assert_eq(Game.data.bal(MapPalette.table_key(Game.data, Game.data.balance, "map_compass_size_px")), 0.0,
 		"and the map draws none of its own")
 

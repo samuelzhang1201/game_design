@@ -91,17 +91,12 @@ func test_a_vanished_selection_clears() -> void:
 	assert_eq(view.selected(), "")
 
 
-func test_a_star_is_picked_in_3d_and_in_2d() -> void:
+func test_a_star_is_picked() -> void:
 	_show()
 	var id := "character:you"
 	assert_eq(view._pick(view.screen_pos_of(id) as Vector2), {"kind": "sphere", "id": id})
-	view.set_flat(true)
-	view.settle_now()
-	assert_true(view.is_flat())
-	assert_eq(view.camera().projection, Camera3D.PROJECTION_ORTHOGONAL)
-	for sid: String in view.stars():
-		assert_eq(view.drawn(sid).y, 0.0, sid)
-	assert_eq(String(view._pick(view.screen_pos_of(id) as Vector2).get("id", "")), id, "picked in the flat chart")
+	assert_eq(view.camera().projection, Camera3D.PROJECTION_PERSPECTIVE, "the chart is only ever 3D (owner 2026-10-01)")
+	assert_false(view.has_method("set_flat"), "the flat 2D view is gone")
 
 
 func test_link_width_uniform_follows_the_viewport() -> void:
@@ -176,9 +171,9 @@ func _drag(id: String, by: Vector2) -> void:
 	view._gui_input(up)
 
 
-## Review focus 4: a pinned star keeps its pin across a redraw and a turn to
-## the flat chart, and a click there still finds it.
-func test_a_pin_survives_a_redraw_and_the_flat_chart() -> void:
+## Review focus 4: a pinned star keeps its pin across a redraw, and a click
+## there still finds it.
+func test_a_pin_survives_a_redraw() -> void:
 	var g := _show()
 	var id := "character:you"
 	_drag(id, Vector2(60, 0))
@@ -187,10 +182,6 @@ func test_a_pin_survives_a_redraw_and_the_flat_chart() -> void:
 	view.settle_now()
 	assert_true(view._lay.pinned.has(id), "a redraw keeps the pin")
 	assert_eq(view.drawn(id), held, "and the star where the pointer left it")
-	view.set_flat(true)
-	view.settle_now()
-	assert_true(view._lay.pinned.has(id), "the flat chart keeps the pin")
-	assert_eq(view.drawn(id), Vector3(held.x, 0.0, held.z), "laid flat where it was held")
 	assert_eq(String(view._pick(view.screen_pos_of(id) as Vector2).get("id", "")), id, "and a click finds it")
 
 
@@ -239,7 +230,7 @@ func test_a_lens_snapshot_draws_without_error() -> void:
 ## (never settle_now), the layout's own step and budget.
 func _settle_by_frames() -> void:
 	for i in 5000:
-		if view._lay.settled() and view._mode_left <= 0.0:
+		if view._lay.settled():
 			break
 		view._process(1.0 / 60.0)
 	view._process(1.0 / 60.0)
@@ -305,20 +296,6 @@ func test_only_stars_in_view_count() -> void:
 		if bool(e.get("title", false)):
 			counted += int(String(e["text"]).get_slice("·", 1).strip_edges())
 	assert_lte(counted, inside, "titles count only what is in view")
-
-
-## I4: 3D -> 2D -> 3D gives the chart back as it stood.
-func test_a_round_trip_through_the_flat_chart_keeps_the_3d_places() -> void:
-	_show()
-	var before := {}
-	for id: String in view.stars():
-		before[id] = view.drawn(id)
-	view.set_flat(true)
-	view.settle_now()
-	view.set_flat(false)
-	view.settle_now()
-	for id: String in view.stars():
-		assert_almost_eq(view.drawn(id), before[id] as Vector3, Vector3.ONE * 1e-4, id)
 
 
 ## I5: a link with no figure is as wide as the links it stands for.

@@ -1,11 +1,11 @@
 class_name TableCompass
 extends Control
 ## THE WAR TABLE's compass (owner 2026-10-01): the map's compass art (library
-## I-73, aged oak, a ship's wheel, brass gears) lying on the table under the
-## report — the wheel turning while time runs as it did on the map, the needle
-## pointing to the map's north as the view turns, a press easing the view back
-## to north. Its shadow falls down-right like everything on the table. When a
-## card fills the column the paper lies over it (it is drawn under the column).
+## I-73, aged oak, a ship's wheel, brass gears) lying on the table at the
+## report's foot, below the paper — the wheel turning while time runs as it
+## did on the map, the needle pointing to the map's north as the view turns, a
+## press easing the view back to north. Its shadow falls down-right like everything on the table. It is
+## drawn under the column, but lies clear of it, so no card covers it.
 
 var view: Map3DView
 var _art: Texture2D = null
@@ -19,7 +19,10 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	offset_left = ScreenLayout.margin() + inset
 	offset_right = offset_left + px
-	offset_bottom = -(BottomBar.BAR_HEIGHT + 8.0)
+	# at the table's foot under the report, in the bookmarks' band left of
+	# them: the report fills its column and hid it there (owner 2026-10-01:
+	# 指南针被盖住了，往下挪，露出来)
+	offset_bottom = -WarTable._num("ui_table_compass_bottom_px", 4.0)
 	offset_top = offset_bottom - px
 	tooltip_text = "The compass — press to turn the map north"
 	mouse_filter = Control.MOUSE_FILTER_STOP

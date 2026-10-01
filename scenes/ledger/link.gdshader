@@ -20,7 +20,6 @@ render_mode unshaded, blend_mix, cull_disabled, depth_draw_never, shadows_disabl
 #include "res://scenes/ledger/star_motion.gdshaderinc"
 
 uniform float px_per_dist = 0.001;
-uniform float ortho_m_per_px = 0.0;
 uniform float star_cap_px = 1e6;   // no star is drawn with a radius over this (SubViewport px)
 uniform float pulses = 4.0;
 uniform float dashes_per_m = 0.5;
@@ -40,7 +39,7 @@ vec3 to_linear(vec3 c) {
 
 // Metres per SubViewport px at a point.
 float m_per_px_at(vec3 p, vec3 cam) {
-	return ortho_m_per_px > 0.0 ? ortho_m_per_px : length(p - cam) * px_per_dist;
+	return length(p - cam) * px_per_dist;
 }
 
 // A star at `p` as its link end sees it: moved by its wobble, its radius the
@@ -56,10 +55,8 @@ void vertex() {
 	vec3 dir = there - here;
 	v_len = length(dir);
 	dir = v_len > 1e-5 ? dir / v_len : vec3(1.0, 0.0, 0.0);
-	// toward the eye: under the flat chart's orthographic camera every point
-	// sees the camera straight back along its direction (LedgerView3D.seg_ends
-	// mirrors this rule)
-	vec3 to_cam = ortho_m_per_px > 0.0 ? -CAMERA_DIRECTION_WORLD : normalize(CAMERA_POSITION_WORLD - here);
+	// toward the eye (LedgerView3D.seg_ends mirrors this rule)
+	vec3 to_cam = normalize(CAMERA_POSITION_WORLD - here);
 	vec3 across = cross(dir, to_cam);
 	across = length(across) < 1e-4 ? vec3(0.0, 1.0, 0.0) : normalize(across);
 	float m_per_px = m_per_px_at(here, CAMERA_POSITION_WORLD);

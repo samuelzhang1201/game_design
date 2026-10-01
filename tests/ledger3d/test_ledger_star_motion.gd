@@ -267,6 +267,5 @@ func test_the_selected_current_clears_its_ring() -> void:
 	var ws := maxf(view.get_viewport().get_final_transform().get_scale().x, 1.0)
 	assert_almost_eq(ring, repo.bal("ledger_ring_px") * (LedgerView3D.RING_GAP_RINGS + 1.0) * ws, 1e-4)
 	assert_gt(ring, repo.bal("ledger_ring_px") * LedgerView3D.RING_GAP_RINGS * ws, "past the ring's centre line")
-	assert_eq(float(view.spark_material().get_shader_parameter("ortho_m_per_px")), 0.0, "perspective at rest")
 	assert_almost_eq(float(view.spark_material().get_shader_parameter("ring_band_px")), repo.bal("ledger_ring_px") * ws, 1e-4,
 		"its sparks keep within one ring width past it")

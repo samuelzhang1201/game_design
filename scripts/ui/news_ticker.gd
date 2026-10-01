@@ -109,7 +109,8 @@ func _dress_war_table(bg: Panel) -> void:
 		_quiet.add_theme_font_override("font", italic)
 		_label.add_theme_font_override("font", italic)
 	_quiet.add_theme_font_size_override("font_size", 13)
-	_quiet.text = "No tidings yet from the roads."
+	# the slip lies in the narrow gap between the bookmark groups: a short line
+	_quiet.text = "No tidings yet."
 	_label.add_theme_font_size_override("font_size", 14)
 	var flat := StyleBoxEmpty.new()
 	flat.content_margin_left = 8
@@ -119,10 +120,11 @@ func _dress_war_table(bg: Panel) -> void:
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
 		_log_button.add_theme_color_override(state, UiPalette.ink("rubric"))
 
-## Lie in `band` (a global rect: the gap between the bookmark groups), centred
-## and ui_slip_width_px wide at most, just under the sheet's edge.
+## Lie in `band` (a global rect: the gap between the bookmark groups,
+## BottomBar.slip_band), centred and ui_slip_width_px wide at most, just
+## under the sheet's edge.
 func place_on_table(band: Rect2) -> void:
-	var w := minf(WarTable._num("ui_slip_width_px", 380.0), band.size.x - 12.0)
+	var w := minf(WarTable._num("ui_slip_width_px", 380.0), band.size.x)
 	var h := WarTable._num("ui_slip_height_px", 32.0)
 	var origin := (get_parent() as Control).global_position if get_parent() is Control else Vector2.ZERO
 	set_anchors_preset(Control.PRESET_TOP_LEFT)

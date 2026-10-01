@@ -230,7 +230,12 @@ and tonemap, so the map's environment is untouched.
   star pins it, wheel and pinch zoom about the pointer — as today.
 - **2D / 3D**: a button beside Front. 2D is an orthographic camera looking
   straight down on the flat layout; turning is off, panning and zoom stay.
-  The choice is remembered for the session only.
+  The choice is remembered for the session only. *The flat 2D view was
+  removed (owner 2026-10-01).*
+- **Search** (owner 2026-10-01): a box in the top row finds a star, or an
+  instance folded into a province's star, by its label (`LedgerSearch`);
+  picking one does what a double click does, opening a folded one's
+  province first.
 
 ## 7. Names
 

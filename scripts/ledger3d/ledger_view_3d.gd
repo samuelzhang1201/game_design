@@ -18,7 +18,6 @@ signal orders_requested(id: String, at: Vector2)
 
 const CLICK_SLOP := 10.0
 const EGO_AT_REST := "character:you"  # the player, whose ties are lit while no one is selected
-const FLAT_PITCH := -89.9          # the flat chart, seen straight down
 const STAR_SEGMENTS := 24          # a star sphere's radial segments
 const STAR_RINGS := 12             # and its rings
 const TITLE_INK_BLEND := 0.45      # a cluster's title: its colour this far toward the label ink
@@ -51,14 +50,10 @@ var _nodes: Dictionary = {}
 var _order: Array[String] = []
 var _size: Dictionary = {}
 var _drawn: Dictionary = {}
-var _from: Dictionary = {}
-var _mode_left := 0.0
-var _flat := false
 var _segs: Array = []                 # the links drawn now: every styled strand whose two ends are apart
 var _styled: Array = []               # every strand of every link, styled at the last restyle (ends refreshed as the chart moves)
 var _link_arrays: Array = []          # LedgerLinkMesh.arrays of _styled, its ends moved in place while settling
 var _styled_ws := 0.0                 # the window scale _styled was styled at
-var _mode_pos: Dictionary = {}        # true (flat) / false (3D) -> {"pos": the layout's places, "settled": bool}
 var _frame_ids: Array = []            # what the camera frames while _framed
 var _title_font: Font
 var _star_cols := PackedColorArray()  # what each star wears, in _order (the MultiMesh's own copy is the renderer's)
@@ -216,7 +211,7 @@ func show_snapshot(snap: Dictionary, keep_camera: bool, select_id: String = "") 
 	_size.clear()
 	for id: String in _order:
 		_size[id] = drawn_radius(_nodes[id], int(degree.get(id, 0)))
-	_lay.setup(_repo, snap, _flat)
+	_lay.setup(_repo, snap)
 	for id: String in _drawn.keys():
 		if not _nodes.has(id):
 			_drawn.erase(id)
@@ -297,56 +292,6 @@ func frame_opened(province_id: String) -> void:
 		if String((_nodes[id] as Dictionary).get("home_id", "")) == province_id:
 			ids.append(id)
 	_frame_on(ids, false)
-
-
-## Lay the chart flat (2D, seen straight down) or stand it up again; the
-## stars ease between their two places over ledger_galaxy_mode_ease_s.
-func set_flat(on: bool) -> void:
-	if on == _flat:
-		return
-	_flat = on
-	_sky_mat.set_shader_parameter("flat_mode", 1.0 if on else 0.0)
-	if _snap.is_empty():
-		_orbit.pitch = FLAT_PITCH if on else _repo.bal("ledger_camera_pitch_deg")
-		_apply_camera()
-		return
-	_from = _drawn.duplicate()
-	_mode_pos[not on] = {"pos": _lay.pos.duplicate(), "settled": _lay.settled()}
-	_lay.setup(_repo, _snap, on)
-	_restore_mode_places(on)
-	_mode_left = _repo.bal("ledger_galaxy_mode_ease_s")
-	_orbit.yaw = 0.0
-	_orbit.pitch = FLAT_PITCH if on else _repo.bal("ledger_camera_pitch_deg")
-	_frame_on(_cluster_ids(), true)
-
-
-## Each mode keeps its own places (a round trip 3D → 2D → 3D gives back the
-## chart as it stood, not a flattened one): the places this mode last held
-## come back for every star still drawn — a star pinned meanwhile keeps
-## where the pointer put it, lifted to its old height in 3D — and a chart
-## that came back whole and settled stays settled.
-func _restore_mode_places(on: bool) -> void:
-	var saved: Dictionary = _mode_pos.get(on, {})
-	if saved.is_empty():
-		return
-	var pos: Dictionary = saved["pos"]
-	var whole := true
-	for id: String in _order:
-		if not pos.has(id):
-			whole = false
-			continue
-		var was: Vector3 = pos[id]
-		if _lay.pinned.has(id):
-			var now: Vector3 = _lay.pos[id]
-			_lay.pos[id] = Vector3(now.x, 0.0, now.z) if on else Vector3(now.x, was.y, now.z)
-		else:
-			_lay.pos[id] = was
-	if whole and bool(saved["settled"]):
-		_lay.passes_left = 0
-
-
-func is_flat() -> bool:
-	return _flat
 
 
 func cluster() -> String:
@@ -432,7 +377,6 @@ func star_colour(id: String) -> Color:
 func settle_now() -> void:
 	while not _lay.settled():
 		_lay.step(10)
-	_mode_left = 0.0
 	_sync_drawn()
 	_place_stars()
 	_relay_links()
@@ -456,11 +400,8 @@ func screen_pos_of(id: String) -> Variant:
 # --- stars, links, haze ------------------------------------------------------
 
 func _sync_drawn() -> void:
-	var total := maxf(_repo.bal("ledger_galaxy_mode_ease_s"), 0.001)
-	var t := 1.0 if _mode_left <= 0.0 else 1.0 - _mode_left / total
 	for id: String in _order:
-		var to: Vector3 = _lay.pos[id]
-		_drawn[id] = (_from.get(id, to) as Vector3).lerp(to, t) if t < 1.0 else to
+		_drawn[id] = _lay.pos[id]
 
 
 func _build_stars() -> void:
@@ -563,9 +504,9 @@ func _place_stars() -> void:
 
 ## How much of a star stands as the camera nears it: 1, down to 0 between
 ## ledger_near_fade_start and _end of the camera's distance to its target
-## (a share, so it holds at every zoom); the flat chart's camera never nears.
+## (a share, so it holds at every zoom).
 func near_fade(id: String) -> float:
-	if _flat or not _drawn.has(id):
+	if not _drawn.has(id):
 		return 1.0
 	var ref := maxf(_orbit.distance, 1e-3)
 	var d := (_drawn[id] as Vector3).distance_to(_camera.transform.origin)
@@ -658,7 +599,6 @@ func _update_link_uniforms() -> void:
 	var h := float(maxi(_viewport.size.y, 1))
 	for m: ShaderMaterial in [_link_mat, _spark_mat]:
 		m.set_shader_parameter("px_per_dist", 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / h)
-		m.set_shader_parameter("ortho_m_per_px", _camera.size / h if _flat else 0.0)
 	_link_mat.set_shader_parameter("star_cap_px", _repo.bal("ledger_star_max_px") * _window_scale())
 	_spark_mat.set_shader_parameter("ring_out_px", LedgerStarMotion.ring_out_px(_repo, RING_GAP_RINGS, _window_scale()))
 	_spark_mat.set_shader_parameter("ring_band_px", LedgerStarMotion.ring_band_px(_repo, _window_scale()))
@@ -923,7 +863,7 @@ func _frame_target(ids: Array) -> Array:
 	var top := (_repo.bal("ledger_frame_top_px") + _title_reach_px()) / sz.y
 	var bottom := _repo.bal("ledger_frame_bottom_px") / sz.y
 	var safe := Rect2(side, top, maxf(1.0 - 2.0 * side, 0.1), maxf(1.0 - top - bottom, 0.1))
-	var pitch := FLAT_PITCH if _flat else _repo.bal("ledger_camera_pitch_deg")
+	var pitch := _repo.bal("ledger_camera_pitch_deg")
 	var f := LedgerOrbit.frame(points, 0.0, pitch, _camera.fov, sz.x / sz.y, safe)
 	if f.is_empty():
 		return []
@@ -947,23 +887,15 @@ func _ease_camera(t: float) -> void:
 
 
 func _apply_camera() -> void:
-	_camera.projection = Camera3D.PROJECTION_ORTHOGONAL if _flat else Camera3D.PROJECTION_PERSPECTIVE
-	if _flat:
-		_camera.size = _orbit.distance * 2.0 * tan(deg_to_rad(_camera.fov) * 0.5)
 	_camera.transform = _orbit.pose()
 
 
 func _process(delta: float) -> void:
 	if _repo == null or _snap.is_empty():
 		return
-	var moved := false
-	if not _lay.settled():
-		_lay.step_within(_repo.bal("ledger_galaxy_ms_per_frame"))
-		moved = true
-	if _mode_left > 0.0:
-		_mode_left = maxf(_mode_left - delta, 0.0)
-		moved = true
+	var moved := not _lay.settled()
 	if moved:
+		_lay.step_within(_repo.bal("ledger_galaxy_ms_per_frame"))
 		_settle_frame()
 	if _fly_left > 0.0:
 		_fly_left = maxf(_fly_left - delta, 0.0)
@@ -976,7 +908,7 @@ func _process(delta: float) -> void:
 		_update_hud()
 
 
-## One frame of a moving chart (settling, or easing between 2D and 3D): the
+## One frame of a moving chart (settling): the
 ## stars, the links' ends and the haze follow, and a framed camera frames
 ## what it framed again — mid-flight, the flight's end is re-aimed instead.
 func _settle_frame() -> void:
@@ -1002,8 +934,6 @@ func _settle_frame() -> void:
 ## Metres per SubViewport px at a point.
 func _m_per_px_at(p: Vector3) -> float:
 	var h := float(maxi(_viewport.size.y, 1))
-	if _flat:
-		return _camera.size / h
 	return p.distance_to(_camera.global_position) * 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / h
 
 
@@ -1257,9 +1187,8 @@ func seg_ends(seg: Dictionary) -> Array:
 	if shift == 0.0:
 		return [a, b]
 	var mid := (a + b) * 0.5
-	# link.gdshader's rule: toward the eye, which for the flat chart's
-	# orthographic camera is the camera's own back, not the eye's position
-	var to_cam := _camera.global_transform.basis.z if _flat else _camera.global_position - mid
+	# link.gdshader's rule: toward the eye
+	var to_cam := _camera.global_position - mid
 	var across := (b - a).cross(to_cam)
 	if across.length_squared() < 1e-8:
 		return [a, b]
@@ -1324,7 +1253,7 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _pan_m_per_px() -> float:
-	return _camera.size / maxf(size.y, 1.0) if _flat else _orbit.metres_per_px(_camera.fov, size.y)
+	return _orbit.metres_per_px(_camera.fov, size.y)
 
 
 ## The hovered star's id, or "".
@@ -1414,8 +1343,7 @@ func _on_drag(mm: InputEventMouseMotion) -> void:
 	# held under the pointer must not have the camera re-frame beneath it
 	_framed = false
 	if _button == MOUSE_BUTTON_RIGHT:
-		if not _flat:
-			_orbit.turn(mm.relative.x, mm.relative.y, _repo.bal("ledger_turn_deg_per_px"))
+		_orbit.turn(mm.relative.x, mm.relative.y, _repo.bal("ledger_turn_deg_per_px"))
 	elif _drag_id != "":
 		_drag_to(_drag_id, mm.position)
 	else:
@@ -1424,8 +1352,7 @@ func _on_drag(mm: InputEventMouseMotion) -> void:
 	accept_event()
 
 
-## A dragged star slides in the plane through it facing the camera (in the
-## flat chart, on the plane) and is PINNED there for this viewing; the rest
+## A dragged star slides in the plane through it facing the camera and is PINNED there for this viewing; the rest
 ## settle round it.
 func _drag_to(id: String, pos: Vector2) -> void:
 	if not _drawn.has(id):
@@ -1442,8 +1369,6 @@ func _drag_to(id: String, pos: Vector2) -> void:
 	if t <= 0.0:
 		return
 	var at := o + d * t
-	if _flat:
-		at.y = 0.0
 	_lay.pin(id, at)
 	_drawn[id] = _lay.pos[id]
 	_place_stars()

@@ -114,14 +114,15 @@ func _ready() -> void:
 ## THE WAR TABLE (owner 2026-10-01): no bar — every tab a silk bookmark hanging
 ## from under the sheet in its group's colour (data/ui_bookmarks.csv), the
 ## lit one a little longer; the rules go (the colours divide the groups), and
-## the gap between the groups is where the news slip lies.
+## the gap between the groups — MEASUREMENT to REALM — is where the news slip
+## lies (slip_band).
 func _dress_war_table(row: HBoxContainer) -> void:
 	# drawn under the screen's papers (z -1 above the table's -2), so the map
 	# sheet's lower edge lies across the bookmarks' tops
 	z_index = -1
 	var clear := StyleBoxEmpty.new()
 	# every bookmark hangs from under the map sheet; the report's foot of table
-	# holds the news slip
+	# holds the compass
 	clear.content_margin_left = ScreenLayout.margin() + ScreenLayout.LEFT_WIDTH + ScreenLayout.gap() + 18.0
 	clear.content_margin_right = ScreenLayout.margin() + 18.0
 	_bar.add_theme_stylebox_override("panel", clear)
@@ -150,12 +151,28 @@ func _dress_war_table(row: HBoxContainer) -> void:
 	resized.connect(_emit_slip)
 
 func _emit_slip() -> void:
-	var row := _bar.get_node_or_null("Row") as HBoxContainer
-	if row == null:
-		return
-	# the table below the report: the column's own width at the screen's foot
-	var m := ScreenLayout.margin()
-	slip_moved.emit(Rect2(global_position + Vector2(m, 0.0), Vector2(ScreenLayout.LEFT_WIDTH, BAR_HEIGHT)))
+	slip_moved.emit(slip_band())
+
+## The free band between the two bookmark groups (global rect): from the last
+## map tab (MEASUREMENT) to the first screen tab (REALM), ui_slip_pad_px kept
+## clear of each (owner 2026-10-01: log界面挪到measurement和 realm tab中间 —
+## it had lain under the report, covering the compass).
+func slip_band() -> Rect2:
+	var left: Button = null
+	var right: Button = null
+	for tab: String in MAP_TABS:
+		if _buttons.has(tab):
+			left = _buttons[tab]
+	for tab: String in TABS:
+		if not tab in MAP_TABS and _buttons.has(tab):
+			right = _buttons[tab]
+			break
+	if left == null or right == null:
+		return Rect2(global_position, Vector2(size.x, BAR_HEIGHT))
+	var pad := WarTable._num("ui_slip_pad_px", 8.0)
+	var x0 := left.get_global_rect().end.x + pad
+	var x1 := right.get_global_rect().position.x - pad
+	return Rect2(Vector2(x0, global_position.y), Vector2(maxf(x1 - x0, 0.0), BAR_HEIGHT))
 
 ## A drawn ruler, white so the button's icon colours tint it: a bar with
 ## ticks standing on one side, the long ones every fifth (MapRuler's own

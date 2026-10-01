@@ -60,8 +60,7 @@ uniform float full_px = 14.0;      // and from this size its whole current
 uniform float sel_out = 1.0;       // 1: the selected star's current sits outside its ring
 uniform float ring_out_px = 0.0;   // the selection ring's outer edge past the disc (SubViewport px)
 uniform float ring_band_px = 0.0;  // the selected star's sparks run within this band past it (SubViewport px)
-uniform float px_per_dist = 0.001; // SubViewport px per metre at one metre (perspective)
-uniform float ortho_m_per_px = 0.0;
+uniform float px_per_dist = 0.001; // SubViewport px per metre at one metre
 
 varying vec2 v_p;      // this point in units of the star's radius from its centre
 varying vec4 v_seed;
@@ -92,7 +91,7 @@ float pnoise(float x, float p, float s) {
 void vertex() {
 	float r = length(MODEL_MATRIX[0].xyz);
 	vec3 centre = MODEL_MATRIX[3].xyz + star_wobble(INSTANCE_CUSTOM, length(MODEL_MATRIX[0].xyz), INV_VIEW_MATRIX, TIME);
-	float m_per_px = ortho_m_per_px > 0.0 ? ortho_m_per_px : length(centre - CAMERA_POSITION_WORLD) * px_per_dist;
+	float m_per_px = length(centre - CAMERA_POSITION_WORLD) * px_per_dist;
 	float px_r = m_per_px / max(r, 1e-6);   // one SubViewport px in units of the radius
 	float sel = INSTANCE_CUSTOM.a * sel_out;
 	v_out = sel * ring_out_px * px_r;
