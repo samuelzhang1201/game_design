@@ -79,8 +79,8 @@ func preview_build(p_ctx: Map3DContext) -> void:
 ## Every piece placed, sized and turned for the camera, cut once per camera
 ## pose; the MARCH between two days is step()'s.
 func refresh() -> void:
-	if ctx == null or not shown or ctx.camera == null:
-		return
+	if ctx == null or not shown or ctx.camera == null or not is_inside_tree():
+		return  # out of the tree: a view handed between screens (the title's)
 	var live: Dictionary = {}
 	_tops.clear()
 	_rects.clear()

@@ -828,7 +828,7 @@ ledger_spark_glow,0.55,"LEDGER galaxy: a spark's halo light against its core's 1
 ledger_spark_jag,0.35,"LEDGER galaxy: how uneven a spark's straight jags run (0 even; critic, fix round 1: even steps read as a Greek-key meander)"
 ledger_spark_selected_out,1,"LEDGER galaxy: 1 lays the selected star's current just outside its gold selection ring, 0 at its disc like the rest"
 ui_title_living,1,"TITLE (owner 2026-10-01, plan A 'The Living Realm'): 1 shows the live 3D map of the home province behind the title menu while the war table is on and the world is built (TitleRealm); 0 keeps the painted page"
-ui_title_seed,42,"TITLE: the seed of the preview reign the title shows — the one Start begins (Game.start_campaign's default), so the picture is the reign the player takes"
+ui_title_seed,44,"TITLE: the seed of the preview reign the title shows — the one Start begins (Game.start_campaign's default), so the picture is the reign the player takes"
 ui_title_distance_m,5000,"TITLE: the camera's distance from the home province's middle while the title stands, world metres (the opening view is ~24 km; nearer shows fields, towns and woods)"
 ui_title_yaw_deg,185,"TITLE: the camera's bearing when the title opens, degrees (0 north up)"
 ui_title_drift_deg_per_s,0.8,TITLE: degrees a second the camera drifts round the home province while the title stands
@@ -840,3 +840,15 @@ ui_title_shade_reach,0.62,"TITLE: how far across the screen the reading side's s
 map_compass_size_px_table,0,"WAR TABLE (owner 2026-10-01): the compass lies on the table (TableCompass), so the map draws none and its corner takes no click"
 ui_table_compass_px,104,WAR TABLE: design px across the compass lying on the table under the report
 ui_table_compass_inset_px,18,WAR TABLE: design px from the table's left edge to the compass
+ui_landing_lift_s,0.4,"LANDING (owner 2026-10-01: the map is picked up and laid on the table): seconds the title's frame is lifted like a sheet — drawing back, the vellum margin and a shadow appearing"
+ui_landing_carry_s,0.9,"LANDING: seconds it is carried down onto the table to the map sheet's place, turning square"
+ui_landing_settle_s,0.25,LANDING: seconds it settles on the wood (ui_landing_give)
+ui_landing_cross_s,0.45,LANDING: seconds the laid sheet crossfades into the real map sheet
+ui_landing_lift_scale,0.9,LANDING: the share of the screen the lifted sheet draws back to
+ui_landing_tilt_deg,-2.5,"LANDING: degrees the sheet is tilted while held, square again on the table"
+ui_landing_give,0.012,"LANDING: the share the sheet swells past its place as it meets the wood, then settles (a sine of one settle)"
+ui_landing_ui_start_s,0.9,LANDING: seconds before the table's other pieces begin to come
+ui_landing_ui_stagger_s,0.09,LANDING: seconds between one piece coming and the next
+ui_landing_ui_s,0.45,LANDING: seconds each piece takes to come (a fade and a slide)
+ui_landing_ui_slide_px,48,"LANDING: design px each piece slides in from (the report from the left, the board from above, the bookmarks from below)"
+ui_landing_voice_after_s,0.3,LANDING: seconds after the sheet is down before the window that speaks comes (the landing seen first)
