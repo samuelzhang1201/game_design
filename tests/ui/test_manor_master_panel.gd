@@ -53,6 +53,25 @@ func test_the_manors_tab_lists_the_realms_manors_biggest_first() -> void:
 	panel.sort_by(0)
 	assert_true(String(panel.rows()[0]["label"]) >= first)
 
+## Perf 2026-10-02: the table is rebuilt when something it shows can have
+## moved, not on every game day.
+func test_a_quiet_day_leaves_the_table_alone() -> void:
+	var r: GameRoot = await _court()
+	var screen: CourtScreen = r.current_screen
+	var panel: ManorMasterPanel = screen.manor_master()
+	r.bottom_bar().button("MANORS").pressed.emit()
+	await wait_process_frames(2)
+	var built := panel.rebuilds
+	Game.advance_day()
+	await wait_process_frames(1)
+	assert_eq(panel.rebuilds, built, "a day that moved nothing it shows")
+	var cell := int(panel.rows()[0]["cell"])
+	Game.state.manor_focus[str(cell)] = {"code": "x", "tick": Game.state.tick}
+	Game.state_changed.emit()
+	await wait_process_frames(1)
+	assert_eq(panel.rebuilds, built + 1, "a manor's work changed: rebuilt")
+
+
 ## Each row's house carries its arms before its name (owner 2026-09-15).
 func test_each_row_wears_its_houses_arms() -> void:
 	var r: GameRoot = await _court()
