@@ -11,8 +11,19 @@ const FALLBACK := Color(0.6, 0.6, 0.6)
 
 ## A named palette entry (state_border, hover_border, ...), or FALLBACK.
 static func named(data: DataRepository, key: String) -> Color:
-	var hex := String(data.palette.get(key, ""))
+	var hex := String(data.palette.get(table_key(data, data.palette, key), ""))
 	return Color(hex) if hex != "" else FALLBACK
+
+## THE WAR TABLE (owner 2026-10-01): the map is printed on a vellum sheet, so
+## its marks wear paper ink — while balance ui_war_table is on, a palette row
+## `<key>_table` stands in for `<key>` when one is authored. Data only.
+static func war_table(data: DataRepository) -> bool:
+	return data != null and data.balance.has("ui_war_table") and data.bal("ui_war_table") > 0.0
+
+static func table_key(data: DataRepository, table: Dictionary, key: String) -> String:
+	if war_table(data) and table.has(key + "_table"):
+		return key + "_table"
+	return key
 
 ## A kingdom's colour cannot change while a pack is loaded — it is read from
 ## realm_bindings, the palette and the pack's own kingdoms, all load-time data

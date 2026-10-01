@@ -82,3 +82,27 @@ func test_tally_marks_count_whole_tens() -> void:
 	assert_eq(BarChart.tally_marks(49.0, 10.0), 4, "49 is four strokes")
 	assert_eq(BarChart.tally_marks(50.0, 10.0), 5, "50 is a gate")
 	assert_eq(BarChart.tally_marks(0.0, 10.0), 0)
+
+func test_the_seal_shows_who_waits_until_the_council_is_entered() -> void:
+	var r := _root()
+	var court := _court(r)
+	await wait_frames(2)
+	var seal := court.council_handle() as WaxSeal
+	WaxSeal.heard_tick = -1
+	# the opening months are calm: give two ministers a matter — the church
+	# and the army below their concern marks — and turn the month
+	Game.state.metrics["church_opinion"] = Game.data.bal("concern_church_low") - 5.0
+	Game.state.metrics["army_quality"] = Game.data.bal("concern_army_low") - 5.0
+	Game.next_tick()
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+	var waiting := ConversationBeats.waiting(Game.current_report, Game.state, Game.data)
+	gut.p("waiting at tick %d: %s" % [Game.state.tick, waiting])
+	assert_false(waiting.is_empty(), "some month brings a minister with a matter")
+	seal.refresh()
+	assert_eq(seal.waiting_ids(), waiting, "the seal's miniatures are this month's speakers")
+	for id in waiting:
+		assert_true(Game.state.characters.has(id), "each a living minister")
+	seal.pressed.emit()
+	seal.refresh()
+	assert_eq(seal.waiting_ids().size(), 0, "entering the council hears them")
