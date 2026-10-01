@@ -17,12 +17,12 @@
   },
   "2": {
     "class_type": "CLIPLoader",
-    "_meta": {"title": "Qwen3 4B text encoder (shared with klein)"},
+    "_meta": {"title": "Qwen3 4B text encoder"},
     "inputs": {"clip_name": "qwen_3_4b.safetensors", "type": "lumina2", "device": "default"}
   },
   "3": {
     "class_type": "VAELoader",
-    "_meta": {"title": "Flux.1 VAE (ae)"},
+    "_meta": {"title": "Z-Image VAE (ae.safetensors, the FLUX.1 autoencoder Z-Image ships with)"},
     "inputs": {"vae_name": "ae.safetensors"}
   },
   "4": {
