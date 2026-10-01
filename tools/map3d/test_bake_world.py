@@ -261,10 +261,36 @@ def test_the_fields_table_loads_with_its_textures():
     f = bw.load_fields(os.path.join(bw.ROOT, "data", "map3d_fields.csv"), bw.TEXTURE_KEYS)
     assert "*" in f and "grain" in f, sorted(f)
     for focus, e in f.items():
-        assert e["reach"] > 0, focus
-        for share, tex, tint in e["crops"]:
-            assert share > 0 and 0 <= tex < bw.NT
-            assert np.all(tint <= 1.0), "a tint can only darken the colour map"
+        assert e["reach"] > e["croft"] > 0, focus
+        assert 0 < e["arable"] < 1, focus
+        assert e["zones"]["arable"], "%s has no rotation" % focus
+        assert len(e["zones"]["arable"]) <= 3, "great_field() seats at most three great fields"
+        if any(r[3] > 0 for r in e["zones"]["arable"]):
+            assert e["zones"]["bare"], "%s ploughs furlongs but has no bare row" % focus
+        for zone, rows in e["zones"].items():
+            for share, tex, tint, bare in rows:
+                assert share > 0 and 0 <= tex < bw.NT and 0 <= bare < 1
+                assert np.all(tint <= 1.0), "a tint can only darken the colour map"
+
+
+def test_the_arable_wears_the_crop_layer():
+    """The crops read only on the pale crop ground (a tint can only darken:
+    on the grass layer no crop could be gold)."""
+    f = bw.load_fields(os.path.join(bw.ROOT, "data", "map3d_fields.csv"), bw.TEXTURE_KEYS)
+    for focus, e in f.items():
+        for share, tex, tint, bare in e["zones"]["arable"]:
+            assert tex == bw.CROP, focus
+
+
+def test_furlongs_are_whole_blocks_with_edges():
+    xs, ys = np.mgrid[0:80, 0:80].astype(np.float64)
+    fid, sx, sy, edge = bw.jitter_cells(xs, ys, 16.0)
+    assert 15 < len(np.unique(fid)) < 45, "about one furlong per 16 x 16"
+    assert edge.min() >= 0.0 and edge.max() < 16.0
+    # a furlong's seed is its own: every point of one id shares one seed
+    for i in np.unique(fid)[:10]:
+        sel = fid == i
+        assert np.ptp(sx[sel]) == 0 and np.ptp(sy[sel]) == 0
 
 
 def test_the_field_map_packs_colour_and_direction():

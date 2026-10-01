@@ -85,6 +85,8 @@ func prepare(scene_path: String) -> void:
 		mat.call("set_shader_param", "field_m_per_texel", FIELD_MAP_M_PER_TEXEL)
 		mat.call("set_shader_param", "furrow_m", repo.bal("map3d_furrow_m"))
 		mat.call("set_shader_param", "furrow_depth", repo.bal("map3d_furrow_depth"))
+		mat.call("set_shader_param", "strip_m", repo.bal("map3d_strip_m"))
+		mat.call("set_shader_param", "strip_shade", repo.bal("map3d_strip_shade"))
 		mat.call("set_shader_param", "field_fade", repo.bal("map3d_field_fade"))
 		mat.call("set_shader_param", "field_fade_near_m", repo.bal("map3d_field_fade_near_m"))
 		mat.call("set_shader_param", "field_fade_far_m", repo.bal("map3d_field_fade_far_m"))

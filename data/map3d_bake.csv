@@ -42,30 +42,23 @@ snow_scree_band,0.07,"3D bake (2026-09-30): the band under the snow line, as a s
 snow_scree_weight,1.5,3D bake: that band's scree weight against the grounds under it (the grass is 1)
 snow_north_gain,0.03,"3D bake (2026-09-30): how far a north face (turned from the sun) lowers the snow line, as a share of the highest ground — a cap runs down its shaded side (0 = height only)"
 snow_edge_wave_m,500,3D bake: that noise's wavelength
-field_cell_m,160,"3D bake fields (owner 2026-09-19): the mean size of one field — a Voronoi cell of a jittered grid in a frame that turns slowly across the land — 160 since 2026-09-24 (look route Phase 2; was 240): smaller plots, the reference's patchwork"
-field_stretch,1.35,3D bake fields: how much longer than wide a field is (strip fields) — 1.35 since 2026-09-24 (was 3.0): long strips read as a striped rug against the reference\'s irregular patchwork
-field_turn_wave_m,5000,3D bake fields: the wavelength over which the fields' orientation turns
 field_edge_noise_m,700,"3D bake fields: the wavelength of the noise that frays where the farmland ends, so its edge is no circle round the village"
 field_edge_noise,0.45,3D bake fields: how far (as a share of reach_m) that noise pulls the farmland's edge in or out
 field_strength,2.2,3D bake fields: a field's texture weight against the natural ground under it (the grass is 1) at the heart of the farmland
 field_slope_max,0.35,"3D bake fields: the rock-slope share (0..1, the bake's own t_rock) above which no field is ploughed"
-hedge_m,40,"3D bake fields: the width of the darker hedge between two fields, metres"
-hedge_depth,0.07,3D bake fields: how much a hedge darkens the ground (the colour map multiplies by 1 - this)
 manor_jitter_value,0.07,"3D bake (owner 2026-09-19): each manor cell's own brightness shift, +- this share — neighbouring estates read apart like a satellite map's patchwork"
 manor_jitter_hue,0.05,"3D bake: each manor cell's own green-yellow shift, +- this share"
 footprint_tint,#D6CBBE,"3D bake village footprints: the built ground's multiplier on the dirt and soil under it — roofs, yards and trodden earth"
 footprint_block_m,70,3D bake village footprints: the wavelength of the blocky light and dark within it (houses and yards)
 footprint_block_depth,0.32,3D bake village footprints: how far the blocks darken
 footprint_edge_noise,0.5,3D bake village footprints: how far (as a share of its radius) the edge frays
-field_edge_soft_m,90,"3D bake fields: over this many metres before its edge a field's crop gives way to the ground under it, so neighbouring crops blend instead of switching texture in a 20 m staircase"
+field_edge_soft_m,12,"3D bake fields: over this many metres before a furlong's edge its crop gives way to the ground under it — the grass BALK between furlongs (90 until the open fields of 2026-10-01; 30 drew a dark line round every furlong, a tiled floor at 3 km)"
 field_warp_m,100,"3D bake fields (critic round 1): how far, in metres, the field layout is displaced by noise, so the hedges wander instead of ruling straight Voronoi edges"
 field_warp_wave_m,420,3D bake fields: the wavelength of that displacement
 field_shade,0.06,"3D bake fields: each field its own brightness, +- this share"
 field_grain,0.05,"3D bake fields: a fine grain of light and dark inside every field, +- this share"
 field_grain_m,70,3D bake fields: the wavelength of that grain
 footprint_fade,0.7,3D bake village footprints (critic round 1: a dark disc with a halo): the share of its radius over which the built ground thins out
-field_thin_power,1.6,"3D bake fields (critic round 2): the share of fields sown falls with the distance from the village as (1 - d/reach) to this power, times field_thin_gain (capped at all): a clustered farmland that thins outward into the ground, not an even carpet"
-field_thin_gain,3.4,3D bake fields: the multiplier on that share — 1.3 with power 0.8 left 13% of the land sown and the far view barely changed; this keeps ~a quarter
 river_bank_rock_hold,2.5,"3D bake (2026-09-19): how strongly the band beside a river (the carve's wet, 0..1) holds the cliff and scree textures off its banks — a carved bank is steep by construction, and the cliff texture drew a pixelated scar at the capital's river mouth"
 low_rock_free_m,60,"3D bake (2026-09-19): below this many metres over the sea no ground wears cliff or scree (fading out over the 30 m above): on this map a low steep bank is a carved river mouth meeting the shore ramp, and the cliff texture drew a pixelated blue-grey scar there"
 river_bank_rock_reach_m,240,"3D bake: how far from the water the carve's walls are held off rock — the gorge wall by the capital stood 250 m out, beyond the wet band, and kept its pixelated cliff"
@@ -142,3 +135,17 @@ moist_green,0.1,"3D bake moisture: how far wet country turns green — red down 
 dry_gold,0.3,"3D bake moisture: how far dry high ground turns golden — blue down this share, green by 0.35 of it"
 dry_from_m,60,3D bake moisture: dry ground starts turning golden this many metres over the sea
 dry_full_m,700,3D bake moisture: ...fully by here
+furlong_m,320,"3D bake OPEN FIELDS (owner 2026-10-01: 田地的布局要更合理真实): the mean size of a FURLONG, a block of strips one crop and one strip direction (a jittered-grid Voronoi, decided at its seed so it is never cut in two); the strips themselves are the terrain shader's (map3d_strip_m)"
+furlong_waste_share,0.06,3D bake open fields: the share of the arable's furlongs left to grass (waste and odd corners)
+great_warp_m,250,"3D bake open fields: how far noise bends the edges between the great fields (two or three round each settlement, one in each state of the rotation)"
+great_warp_wave_m,1500,3D bake open fields: the wavelength of that bending
+croft_close_m,90,"3D bake open fields: the size of a croft close — the small hedged plots and gardens behind the houses (data/map3d_farm_zones.csv croft_m is how far they reach); 70 was under four vertices and read as noise"
+croft_hedge_m,20,3D bake open fields: the width of the hedge round a croft close (12 was under a vertex and never showed)
+croft_hedge_depth,0.2,3D bake open fields: how far a croft's hedge darkens the ground
+meadow_reach_m,300,"3D bake open fields: the wet ground (the river's wet band, blurred this far) that is hay MEADOW rather than arable"
+meadow_gain,1.6,3D bake open fields: the gain on that blurred wetness before it passes 0.35 and becomes meadow
+zone_weight_croft,1.0,"3D bake open fields: each zone's texture weight against the natural ground (x field_strength): the crofts"
+zone_weight_meadow,0.8,3D bake open fields: the meadow's
+zone_weight_pasture,0.05,"3D bake open fields: the common pasture's — barely more than its tint: the natural ground IS the pasture"
+croft_edge_noise,0.6,"3D bake open fields: how far (as a share of its width) noise pulls the crofts' edge in or out — a plain radius drew a ring round every village"
+croft_edge_wave_m,260,3D bake open fields: the wavelength of that noise

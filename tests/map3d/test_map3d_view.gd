@@ -30,9 +30,20 @@ func before_all() -> void:
 ## behind even when an assert fails before their own cleanup line (final
 ## review, owner 2026-09-18).
 func after_each() -> void:
+	if _table_was >= 0.0:
+		Game.data.balance["ui_war_table"] = _table_was
+		_table_was = -1.0
 	if FileAccess.file_exists(_rivers_json):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(_rivers_json))
 
+
+## The map's own compass is the leather look's: on the war table it lies on
+## the table (TableCompass) and the map draws none — these tests take leather.
+var _table_was := -1.0
+
+func _leather() -> void:
+	_table_was = Game.data.bal("ui_war_table")
+	Game.data.balance["ui_war_table"] = 0.0
 
 func _view(path: String = _fixture) -> Map3DView:
 	var v := Map3DView.create(Game.data, path)
@@ -624,6 +635,7 @@ func _open_land() -> Dictionary:
 
 
 func test_the_hud_is_over_the_view_and_the_compass_turns_it_north() -> void:
+	_leather()
 	var v := _view()
 	v.activate()
 	var hud := v.get_node("Hud") as Map3DHud
@@ -640,6 +652,7 @@ func test_the_hud_is_over_the_view_and_the_compass_turns_it_north() -> void:
 
 
 func test_a_compass_press_that_moves_does_not_pan_or_select() -> void:
+	_leather()
 	var v := _view()
 	v.activate()
 	var hud := v.get_node("Hud") as Map3DHud
