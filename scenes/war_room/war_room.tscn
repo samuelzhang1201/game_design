@@ -92,11 +92,6 @@ transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.8, -0.001, -0.9)
 cast_shadow = 0
 
 [node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
-light_color = Color(1, 0.706, 0.42, 1)
-light_energy = 0.8
-shadow_enabled = true
-omni_range = 2.5
 
 [node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick1"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.441, 0.0)
@@ -123,11 +118,6 @@ transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.8, -0.001, -0.9)
 cast_shadow = 0
 
 [node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
-light_color = Color(1, 0.706, 0.42, 1)
-light_energy = 0.8
-shadow_enabled = true
-omni_range = 2.5
 
 [node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick2"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.441, 0.0)
@@ -154,11 +144,6 @@ transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.8, -0.001, 0.6)
 cast_shadow = 0
 
 [node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
-light_color = Color(1, 0.706, 0.42, 1)
-light_energy = 0.8
-shadow_enabled = true
-omni_range = 2.5
 
 [node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick3"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.441, 0.0)
@@ -185,11 +170,6 @@ transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.8, -0.001, 0.6)
 cast_shadow = 0
 
 [node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
-light_color = Color(1, 0.706, 0.42, 1)
-light_energy = 0.8
-shadow_enabled = true
-omni_range = 2.5
 
 [node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick4"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.441, 0.0)

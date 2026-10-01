@@ -25,7 +25,7 @@ func test_every_balance_key_the_room_reads_is_there() -> void:
 
 func test_the_palette_has_every_ink_the_room_draws() -> void:
 	for key in ["paper", "paper_age", "ink", "ink_faint", "rubric", "sea_ink", "river_ink",
-			"chalk", "brass", "pennant", "arrow", "table_wood", "background"]:
+			"chalk", "brass", "arrow", "candle", "background"]:
 		assert_true(repo.war_palette.has(key), key)
 		assert_true(repo.war_palette[key] is Color, key)
 

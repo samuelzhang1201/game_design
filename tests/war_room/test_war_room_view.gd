@@ -502,6 +502,65 @@ func test_the_sheet_and_the_chart_lie_on_the_oak_table() -> void:
 	var chart: MeshInstance3D = view.get_node("%IndexChart")
 	assert_between(chart.position.y, top - 0.004, top + 0.004, "the chart lies on the oak, not above it")
 	assert_almost_eq(chart.rotation_degrees.x, -90.0, 0.01, "flat")
-	var near: Vector3 = oak.transform * Vector3(0.0, -0.8, 0.0)
-	assert_almost_eq(near.y, -0.8, 0.002, "and its feet still stand on the floor")
+	var feet := INF
+	for m: MeshInstance3D in Map3DUnits.meshes(oak):
+		feet = minf(feet, (oak.transform * (m.transform * m.get_aabb())).position.y)
+	var room := view.get_node("Viewport/Room/Chamber") as Node3D
+	var floor_y := INF
+	for m: MeshInstance3D in Map3DUnits.meshes(room):
+		floor_y = minf(floor_y, (room.transform * (m.transform * m.get_aabb())).position.y)
+	assert_almost_eq(feet, floor_y, 0.002, "and its feet still stand on the room's floor")
+
+
+## One KEY candle rakes the relief; the rest are short warm accents (fix round 1).
+func test_one_key_candle_and_short_accents_from_the_balance_keys() -> void:
+	var lights := view.candles()
+	assert_eq(lights.size(), 4, "a light at each candlestick")
+	var key := lights[WarRoomLights.key_index(repo, lights.size())]
+	assert_almost_eq(key.light_energy, repo.bal("war_candle_key_energy"), 0.0001)
+	assert_almost_eq(key.omni_range, repo.bal("war_candle_key_range_m"), 0.0001)
+	assert_almost_eq(key.global_position.y, repo.bal("war_candle_key_y_m"), 0.001, "over the table")
+	var stick := key.get_parent() as Node3D
+	assert_gt(Vector2(key.global_position.x, key.global_position.z).length(),
+		Vector2(stick.position.x, stick.position.z).length(), "out beyond its corner: a raking light")
+	for l: OmniLight3D in lights:
+		assert_eq(l.light_color, repo.war_palette["candle"])
+		if l != key:
+			assert_almost_eq(l.light_energy, repo.bal("war_candle_accent_energy"), 0.0001)
+			assert_almost_eq(l.omni_range, repo.bal("war_candle_accent_range_m"), 0.0001)
+			assert_lt(l.light_energy, key.light_energy, "an accent is no fill")
+
+
+func test_the_tier_says_how_many_candles_cast_a_shadow_key_first() -> void:
+	var lights := view.candles()
+	var key := lights[WarRoomLights.key_index(repo, lights.size())]
+	for tier: String in ["low", "medium", "high", "ultra"]:
+		view.set_tier(tier)
+		var row := Map3DQuality.row(repo, tier)
+		var want := int(Map3DQuality.num(row, "war_candle_shadows", -1.0))
+		assert_gte(want, 0, "%s has the column" % tier)
+		var n := 0
+		for l: OmniLight3D in lights:
+			n += 1 if l.shadow_enabled else 0
+		assert_eq(n, want, tier)
+		assert_eq(key.shadow_enabled, want > 0, "%s: the key candle casts the first shadow" % tier)
+		var cube := Map3DQuality.num(row, "war_candle_shadow_cube", 0.0) >= 1.0
+		assert_eq(key.omni_shadow_mode, OmniLight3D.SHADOW_CUBE if cube else OmniLight3D.SHADOW_DUAL_PARABOLOID, tier)
+
+
+
+
+func test_a_pennant_with_no_model_still_plants_its_slip() -> void:
+	var pennants: WarPennants = view.get_node("%Pennants")
+	pennants.model = null
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	var p := _first_land_piece()
+	var code := String(p["code"])
+	ArmySystem.set_march(repo, state, code, (p["at"] as Vector2) + Vector2(6.0, 0.0))
+	view.refresh()
+	var node := pennants.pennant(code)
+	assert_not_null(node, "planted without its art")
+	assert_null(node.get_node_or_null("Art"))
+	assert_not_null(node.get_node_or_null("Slip"))
+	assert_eq(pennants.screen_hits(view.get_node("%Camera"), view.window_scale()).size(), 1, "and still picked")
 

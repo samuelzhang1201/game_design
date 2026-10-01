@@ -9,6 +9,9 @@ extends Node
 ## The same Forward+/Metal floor applies: no row reads under ~8.33 ms on this
 ## Mac (see tools/map3d/bench.gd's note), so a row at it means "holds the
 ## refresh". The clock is held short of the month's end like that bench.
+## A last row, `pushed`, stands at the opening distance with one land piece
+## moved a little every measured frame — as the plotter's rake moves it — so a
+## candle's shadow is dirty each frame and re-rendered (the still rows reuse it).
 ##   Godot --path . res://tools/war_room/bench.tscn -- --size 3024x1964 --quality high
 ##
 ## Flags: --size WxH, --quality TIER (default high), --out FILE (append rows to
@@ -21,6 +24,8 @@ const FRAMES := 120
 const WARM := 30
 const BUDGET_MS := 8.0
 const DAY_CEILING := 25
+const PUSH_M := 0.004      # the pushed row: how far the piece swings each way, metres
+const PUSH_STEP := 0.3     # radians of the swing per frame
 const STOPS := [["far", "war_cam_max_m"], ["opening", "war_cam_distance_m"], ["near", "war_cam_min_m"]]
 
 var _root: GameRoot
@@ -83,6 +88,9 @@ func _ready() -> void:
 	for stop: Array in STOPS:
 		await _lean_to(view, Game.data.bal(String(stop[1])))
 		worst = maxf(worst, await _measure(view, "%s  (%.2f m)" % [stop[0], view.camera_rig().distance]))
+	await _lean_to(view, Game.data.bal("war_cam_distance_m"))
+	var moved := _a_land_piece(view)
+	worst = maxf(worst, await _measure(view, "pushed  (%.2f m)" % view.camera_rig().distance, moved))
 	print("WORST %.2f ms (%.0f fps), budget %.2f ms (%s, still)" % [worst, 1000.0 / worst, budget, _tier])
 	_write_rows()
 	get_tree().quit(0 if worst <= budget else 3)
@@ -107,7 +115,18 @@ func _lean_to(view: WarRoomView, want: float) -> void:
 		await get_tree().process_frame
 
 
-func _measure(view: WarRoomView, label: String) -> float:
+## The first land piece on the laid sheet (a figure-carrying one, so its
+## shadow is a real cost), null when none.
+func _a_land_piece(view: WarRoomView) -> Node3D:
+	var pieces := view.get_node("%Pieces") as WarPieces
+	for p: Dictionary in WarRoom.on_sheet(Game.data, Game.state, view.sheet_index()):
+		var code := String(p["code"])
+		if MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code)) != "fleet":
+			return pieces.piece(code)
+	return null
+
+
+func _measure(view: WarRoomView, label: String, moved: Node3D = null) -> float:
 	for i in WARM:
 		await get_tree().process_frame
 		_root.hold_clock_before_month_end(DAY_CEILING)
@@ -118,7 +137,10 @@ func _measure(view: WarRoomView, label: String) -> float:
 	var calls := 0
 	var prims := 0
 	var t_prev := Time.get_ticks_usec()
+	var home := moved.position if moved != null else Vector3.ZERO
 	for i in FRAMES:
+		if moved != null:   # a push: a few millimetres along the table, every frame
+			moved.position = home + Vector3(PUSH_M * sin(float(i) * PUSH_STEP), 0.0, PUSH_M * cos(float(i) * PUSH_STEP))
 		await get_tree().process_frame
 		_root.hold_clock_before_month_end(DAY_CEILING)
 		var t_now := Time.get_ticks_usec()
@@ -130,6 +152,8 @@ func _measure(view: WarRoomView, label: String) -> float:
 			+ RenderingServer.get_frame_setup_time_cpu()
 			+ RenderingServer.viewport_get_measured_render_time_cpu(view_rid)
 			+ RenderingServer.viewport_get_measured_render_time_cpu(root_rid))
+	if moved != null:
+		moved.position = home
 	var median := _percentile(frame_ms, 0.5)
 	print("%-24s median %6.2f ms  mean %6.2f ms  p95 %6.2f ms  (%5.1f fps)  draw calls %4d  primitives %8d  cpu %5.2f ms"
 		% [label, median, _mean(frame_ms), _percentile(frame_ms, 0.95), 1000.0 / median, calls, prims,

@@ -89,6 +89,7 @@ func bind(repo: DataRepository, state_fn: Callable, paused_fn: Callable) -> void
 	_rig.min_distance = repo.bal("war_cam_min_m")
 	_rig.max_distance = repo.bal("war_cam_max_m")
 	_rig.yaw_max = repo.bal("war_cam_yaw_max_deg")
+	WarRoomLights.bind(repo, candles())
 	set_tier(Map3DQuality.resolve_here(GameRoot.settings_path))
 	var env: WorldEnvironment = %Env
 	env.environment.background_color = repo.war_palette["background"]
@@ -105,7 +106,13 @@ func set_tier(tier: String) -> void:
 	_render_scale = Map3DQuality.num(row, "render_scale")
 	if is_node_ready():
 		Map3DEnvironment.apply_viewport_quality(_viewport, row)
+		WarRoomLights.apply_tier(_repo, candles(), row)
 		_fit_viewport()
+
+
+## The candlesticks' lights (WarRoomLights: one key candle, the rest accents).
+func candles() -> Array[OmniLight3D]:
+	return WarRoomLights.candles(%Room)
 
 
 func camera_rig() -> WarCamera:
