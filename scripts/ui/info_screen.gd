@@ -139,9 +139,6 @@ func _rows_for(tab: String) -> Array:
 				rows2.append(["Street preacher", "%s (%d)" %
 					[cassian.display_name, cassian.opinion]])
 			return rows2
-		"WAR ROOM":
-			# Owner 2026-09-17: a placeholder until the war room is designed.
-			return [["War Room", "The war room is being prepared."]]
 	return []
 
 ## The noble houses of the player's own realm, richest first, then by name so

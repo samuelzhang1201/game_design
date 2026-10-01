@@ -257,6 +257,11 @@ func refresh() -> void:
 	pass  # Task 10 rebuilds the pieces here; Task 11 the pennants
 
 
+## The rake's march was refused: let go of the piece (Task 11 draws the rake).
+func cancel_rake() -> void:
+	pass
+
+
 func selected_army() -> String:
 	return _selected
 
