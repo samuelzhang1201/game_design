@@ -71,6 +71,8 @@ var _faint_mat: ShaderMaterial
 var _link_mat: ShaderMaterial
 var _sky_mat: ShaderMaterial
 var _haze: Dictionary = {}
+var _ids_of_cluster: Dictionary = {}  # cluster -> its stars' ids, in _order (read once a snapshot)
+var _hub_type: Dictionary = {}        # type -> whether its stars may be hubs (`hub` not 0), read once a snapshot
 var _looks: Dictionary = {}         # link type -> its look (ledger_link_types.csv), read once a snapshot
 var _cluster := "all"
 var _selected := ""
@@ -178,6 +180,9 @@ func show_snapshot(snap: Dictionary, keep_camera: bool, select_id: String = "") 
 	_looks.clear()
 	for r: Dictionary in _repo.ledger_links:
 		_looks[String(r["link_id"])] = String(r.get("look", "flow"))
+	_hub_type.clear()
+	for r: Dictionary in _repo.ledger_types:
+		_hub_type[String(r["type_id"])] = String(r.get("hub", "1")) != "0"
 	var degree := {}
 	for n: Dictionary in snap["nodes"]:
 		_nodes[String(n["id"])] = n
@@ -189,8 +194,13 @@ func show_snapshot(snap: Dictionary, keep_camera: bool, select_id: String = "") 
 		_order.append(id)
 	_order.sort()
 	_index_of.clear()
+	_ids_of_cluster.clear()
 	for i in _order.size():
 		_index_of[_order[i]] = i
+		var c := _cluster_of(_order[i])
+		if not _ids_of_cluster.has(c):
+			_ids_of_cluster[c] = []
+		(_ids_of_cluster[c] as Array).append(_order[i])
 	_size.clear()
 	for id: String in _order:
 		_size[id] = drawn_radius(_nodes[id], int(degree.get(id, 0)))
@@ -746,20 +756,18 @@ func _build_haze() -> void:
 func _place_haze() -> void:
 	for c: String in _haze:
 		var mi: MeshInstance3D = _haze[c]
+		var ids: Array = _ids_of_cluster.get(c, [])
 		var sum := Vector3.ZERO
-		var n := 0
-		for id: String in _order:
-			if _cluster_of(id) == c:
-				sum += _drawn[id]
-				n += 1
+		var n := ids.size()
+		for id: String in ids:
+			sum += _drawn[id]
 		mi.visible = n > 0
 		if n == 0:
 			continue
 		var mid := sum / float(n)
 		var rad := 0.0
-		for id: String in _order:
-			if _cluster_of(id) == c:
-				rad += (_drawn[id] as Vector3).distance_to(mid)
+		for id: String in ids:
+			rad += (_drawn[id] as Vector3).distance_to(mid)
 		rad = maxf(rad / float(n), HAZE_MIN_RADIUS_M)
 		(mi.mesh as QuadMesh).size = Vector2.ONE * rad * _repo.bal("ledger_haze_scale")
 		mi.position = mid
@@ -1037,7 +1045,7 @@ func _dash_paths() -> Array:
 func _may_be_hub(id: String) -> bool:
 	if _cluster != "all" and _cluster_of(id) != _cluster:
 		return false
-	return String(Ledger.type_row(_repo, String(_nodes[id]["type"])).get("hub", "1")) != "0"
+	return bool(_hub_type.get(String(_nodes[id]["type"]), true))
 
 
 ## The name a star is DRAWN with in the galaxy: its label less the words its
@@ -1066,13 +1074,22 @@ func drawn_name(id: String) -> String:
 	return label
 
 
-## The stars in view: id -> [its screen place (design px), its screen radius].
+## The stars in view: id -> [its screen place (design px), its screen radius]
+## (screen_pos_of and _screen_radius, the window's scale read once).
 func _seen() -> Dictionary:
 	var seen := {}
+	var ws := _window_scale()
+	var view := Rect2(Vector2.ZERO, size)
+	var cap_px := _repo.bal("ledger_star_max_px") * ws
 	for id: String in _order:
-		var at: Variant = screen_pos_of(id)
-		if _in_view(at):
-			seen[id] = [at, _screen_radius(id)]
+		var p: Vector3 = _drawn[id]
+		if _camera.is_position_behind(p):
+			continue
+		var at := _camera.unproject_position(p) / ws
+		if not view.has_point(at):
+			continue
+		var mpp := _m_per_px_at(p)
+		seen[id] = [at, minf(float(_size[id]), cap_px * mpp) / mpp / ws]
 	return seen
 
 
@@ -1086,12 +1103,25 @@ func _hubs(seen: Dictionary = {}) -> Array[String]:
 	# a type whose stars only mirror another's (`hub` 0 in
 	# ledger_object_types.csv: a supply line mirrors its regiment) is never
 	# an always-named hub; it is named on hover and selection (R2)
-	var by_size := _order.filter(func(id: String) -> bool: return seen.has(id) and _may_be_hub(id))
-	by_size.sort_custom(func(a: String, b: String) -> bool:
-		return float(_size[a]) > float(_size[b]) if float(_size[a]) != float(_size[b]) else a < b)
+	# the largest few kept in order as the stars go by (no sort of every
+	# star: final wave I1d) — largest first, ties by id
+	var want := int(_repo.bal("ledger_label_hubs"))
 	var out: Array[String] = []
-	for id: String in by_size.slice(0, int(_repo.bal("ledger_label_hubs"))):
-		out.append(id)
+	var sizes: Array[float] = []
+	for id: String in _order:
+		if not seen.has(id) or not _may_be_hub(id):
+			continue
+		var r := float(_size[id])
+		var at := out.size()
+		while at > 0 and (sizes[at - 1] < r or (sizes[at - 1] == r and out[at - 1] > id)):
+			at -= 1
+		if at >= want:
+			continue
+		out.insert(at, id)
+		sizes.insert(at, r)
+		if out.size() > want:
+			out.resize(want)
+			sizes.resize(want)
 	return out
 
 

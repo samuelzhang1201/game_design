@@ -847,3 +847,18 @@ func test_a_short_name_that_leaves_nothing_keeps_the_label() -> void:
 	_show()
 	var reg := _first("regiment:")
 	assert_eq(view.drawn_name(reg), String(view._nodes[reg]["label"]))
+
+
+## Final wave I1d: the hubs are found without sorting every star — still
+## the largest few in view that may be hubs, largest first, ties by id.
+func test_the_hubs_are_the_largest_in_view() -> void:
+	var home := MapManors.home_province(repo, s)
+	_show({home: true})
+	for c: String in ["all", "economy", "court"]:
+		view.focus_cluster(c)
+		view.settle_now()
+		var seen := view._seen()
+		var want := view._order.filter(func(id: String) -> bool: return seen.has(id) and view._may_be_hub(id))
+		want.sort_custom(func(a: String, b: String) -> bool:
+			return float(view._size[a]) > float(view._size[b]) if float(view._size[a]) != float(view._size[b]) else a < b)
+		assert_eq(view._hubs(seen), want.slice(0, int(repo.bal("ledger_label_hubs"))) as Array[String], c)

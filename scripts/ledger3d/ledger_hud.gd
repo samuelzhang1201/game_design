@@ -17,6 +17,7 @@ const GAUGE_SPACING_EM := 0.9   # between two gauges of one row, in caption ems
 const GAUGE_CAPTION_GAP := 3.0  # design px between a ring and its caption
 const RINGS := 5                # how many distances round its star a name tries, RING_STEP_EM apart
 const RING_STEP_EM := 0.6       # between two of those distances, in the name's ems
+const DISC_CELL_PX := 48.0      # the disc grid's cell (design px): only speed, never which place wins
 
 var _entries: Array = []
 var _rings: Array = []
@@ -177,12 +178,14 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 		dashes: Array = []) -> Array:
 	var kept: Array = []
 	var names: Array[Rect2] = []   # every box kept: never overlapped by an ordinary name
+	var name_grid := {}            # the same boxes by DISC_CELL_PX cell (only speed: _cover_in)
 	var hard: Array[Rect2] = []    # the walls: never entered
 	var discs: Array[Rect2] = []   # the stars: never under another star's name
 	for w in walls:
 		hard.append(w)
 	for o in obstacles:
 		discs.append(o)
+	var disc_grid := _disc_grid(discs)
 	for e: Dictionary in entries:
 		var px := float(e.get("px", font_px))
 		var entry_font := _font_of(e, font, title_font)
@@ -216,23 +219,36 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 				b.position.x += dx
 				pl[0] = at + Vector2(dx, 0.0)
 			boxes.append(b)
-		var order: Array = range(boxes.size())
-		if bool(e.get("dim", false)):
-			order = order.filter(func(k: int) -> bool: return int(places[k][2]) == 0)
+		# the places in the order they are tried — no lambda here: the cull
+		# runs once a camera move over every named star (final wave I1d)
+		var dim := bool(e.get("dim", false))
+		var order: Array[int] = []
+		for k in boxes.size():
+			if not dim or int(places[k][2]) == 0:
+				order.append(k)
 		if bool(e.get("lit", false)) and not dashes.is_empty():
-			var key := {}
+			# by ring, a place no planned link's dashes cross first in each,
+			# the list's own order within a key (a stable bucket sort)
+			var key := PackedInt32Array()
+			key.resize(boxes.size())
+			var top := 0
 			for k: int in order:
 				key[k] = int(places[k][2]) * 2 + (1 if _crossed(boxes[k], dashes) else 0)
-			order.sort_custom(func(a: int, b: int) -> bool:
-				return key[a] < key[b] if key[a] != key[b] else a < b)
+				top = maxi(top, key[k])
+			var sorted: Array[int] = []
+			for want in top + 1:
+				for k: int in order:
+					if key[k] == want:
+						sorted.append(k)
+			order = sorted
 		var pick := -1
 		var least := INF
 		for k: int in order:
-			if _meets(boxes[k], hard) or _on_other_disc(boxes[k], discs, own):
+			if _meets(boxes[k], hard) or _on_other_disc_in(boxes[k], discs, disc_grid, own):
 				continue
 			if bounds.has_area() and not bounds.encloses(boxes[k]):
 				continue  # never clipped by the view's edge (Task 11 fix round 3, S1d)
-			var cover := _cover(boxes[k], names)
+			var cover := _cover_in(boxes[k], names, name_grid)
 			if cover <= 0.0:
 				pick = k
 				break
@@ -247,6 +263,7 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 		if pick < 0:
 			continue
 		names.append(boxes[pick])
+		_grid_add(name_grid, boxes[pick], names.size() - 1)
 		if bool(e.get("first", false)):
 			hard.append(boxes[pick])  # no other name touches the selected label
 		var put := e.duplicate()
@@ -303,11 +320,79 @@ static func _crossed(box: Rect2, dashes: Array) -> bool:
 	for seg: Array in dashes:
 		var a: Vector2 = seg[0]
 		var b: Vector2 = seg[1]
+		# a segment whose own box misses `box` neither ends in it nor crosses
+		# an edge of it (final wave I1d: the edge tests ran for every place)
+		if not Rect2(a, Vector2.ZERO).expand(b).intersects(box, true):
+			continue
 		if box.has_point(a) or box.has_point(b):
 			return true
 		for i in 4:
 			if Geometry2D.segment_intersects_segment(a, b, corners[i], corners[(i + 1) % 4]) != null:
 				return true
+	return false
+
+
+## The discs by the DISC_CELL_PX cells they touch: cell -> their indices
+## (final wave I1d: every star open, every place against every disc cost
+## ~12 ms a camera move).
+static func _disc_grid(discs: Array[Rect2]) -> Dictionary:
+	var grid := {}
+	for i in discs.size():
+		_grid_add(grid, discs[i], i)
+	return grid
+
+
+## Files box `i` under every DISC_CELL_PX cell it touches.
+static func _grid_add(grid: Dictionary, box: Rect2, i: int) -> void:
+	var lo := Vector2i((box.position / DISC_CELL_PX).floor())
+	var hi := Vector2i((box.end / DISC_CELL_PX).floor())
+	for y in range(lo.y, hi.y + 1):
+		for x in range(lo.x, hi.x + 1):
+			var key := Vector2i(x, y)
+			if grid.has(key):
+				(grid[key] as Array).append(i)
+			else:
+				grid[key] = [i]
+
+
+## _cover through the grid: the kept names in the cells `box` touches, each
+## once, summed in the order they were kept — the scan's own sum.
+static func _cover_in(box: Rect2, others: Array[Rect2], grid: Dictionary) -> float:
+	var lo := Vector2i((box.position / DISC_CELL_PX).floor())
+	var hi := Vector2i((box.end / DISC_CELL_PX).floor())
+	var near := {}
+	for y in range(lo.y, hi.y + 1):
+		for x in range(lo.x, hi.x + 1):
+			var got: Variant = grid.get(Vector2i(x, y))
+			if got == null:
+				continue
+			for i: int in got as Array:
+				near[i] = true
+	if near.is_empty():
+		return 0.0
+	var ids: Array = near.keys()
+	ids.sort()
+	var area := 0.0
+	for i: int in ids:
+		var o := others[i]
+		if o.intersects(box):
+			area += o.intersection(box).get_area()
+	return area
+
+
+## _on_other_disc through the grid: only the discs in the cells `box` touches.
+static func _on_other_disc_in(box: Rect2, discs: Array[Rect2], grid: Dictionary, own: Rect2) -> bool:
+	var lo := Vector2i((box.position / DISC_CELL_PX).floor())
+	var hi := Vector2i((box.end / DISC_CELL_PX).floor())
+	for y in range(lo.y, hi.y + 1):
+		for x in range(lo.x, hi.x + 1):
+			var near: Variant = grid.get(Vector2i(x, y))
+			if near == null:
+				continue
+			for i: int in near as Array:
+				var d := discs[i]
+				if d.intersects(box) and not d.is_equal_approx(own):
+					return true
 	return false
 
 

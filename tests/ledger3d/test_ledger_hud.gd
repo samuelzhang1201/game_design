@@ -252,3 +252,36 @@ func test_the_first_label_walls_off_lit_avoids_dashes_dim_stays_near() -> void:
 	assert_eq(slid.size(), 1)
 	assert_lt((slid[0]["at"] as Vector2).x, 395.0, "slid inside the edge")
 	assert_almost_eq((slid[0]["at"] as Vector2).y, 200.0 - 4.0 - 14.0 * 0.35 - 14.0 * 0.6, 0.001, "still over its star")
+
+
+## Final wave I1d: the cull finds the discs near a box through a grid (624
+## stars with every province open cost ~12 ms a camera move testing every
+## disc against every place) — and answers exactly as the scan does.
+func test_the_disc_grid_answers_as_the_scan() -> void:
+	var discs: Array[Rect2] = []
+	for i in 400:
+		var h := ("d%d" % i).hash()
+		var r := 2.0 + float(h & 7)
+		discs.append(Rect2(Vector2(float((h >> 4) & 1023), float((h >> 14) & 511)) - Vector2(r, r), Vector2(r, r) * 2.0))
+	var grid := LedgerHud._disc_grid(discs)
+	for i in 300:
+		var h := ("b%d" % i).hash()
+		var box := Rect2(Vector2(float(h & 1023) - 60.0, float((h >> 10) & 511) - 10.0),
+			Vector2(40.0 + float((h >> 20) & 127), 18.0 + float((h >> 27) & 15)))
+		var own: Rect2 = discs[i % discs.size()]
+		assert_eq(LedgerHud._on_other_disc_in(box, discs, grid, own), LedgerHud._on_other_disc(box, discs, own),
+			"box %d" % i)
+
+
+func test_the_name_grid_covers_as_the_scan() -> void:
+	var names: Array[Rect2] = []
+	var grid := {}
+	for i in 120:
+		var h := ("n%d" % i).hash()
+		var box := Rect2(Vector2(float(h & 1023), float((h >> 10) & 511)), Vector2(30.0 + float((h >> 20) & 127), 18.0))
+		names.append(box)
+		LedgerHud._grid_add(grid, box, i)
+	for i in 300:
+		var h := ("q%d" % i).hash()
+		var box := Rect2(Vector2(float(h & 1023) - 60.0, float((h >> 10) & 511) - 10.0), Vector2(90.0, 20.0))
+		assert_eq(LedgerHud._cover_in(box, names, grid), LedgerHud._cover(box, names), "box %d" % i)
