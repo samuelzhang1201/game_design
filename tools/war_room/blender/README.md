@@ -37,10 +37,11 @@ every Blender step in the owner's instance, never headless). They are plain
    `.glb`, +Y up, apply modifiers, materials exported with their images, no
    animation, no skin — to `assets/3D/war_room/<name>/<name>.glb`. The `.blend`
    is saved beside it as `model_wip/<name>_wip.blend`.
-5. In Godot, `Godot --headless --path . --import` once; the importer extracts
-   each embedded image beside the `.glb` (git-ignored build output); the room
-   and table's extracted images are VRAM-compressed (see
-   `assets/3D/war_room/README.md`).
+5. In Godot, `Godot --headless --path . --import` once. The room's and the
+   table's `.import` carry `gltf/embedded_image_handling=2` (their textures stay
+   INSIDE the imported scene as Basis Universal, VRAM-compressed — see
+   `assets/3D/war_room/README.md`); the small props extract theirs beside the
+   `.glb` (git-ignored build output) as the units do.
 
 ## The 1k re-export (Ruling 24)
 

@@ -21,5 +21,15 @@ Embedded in `room.glb` and `table.glb` (2k; the sources in `model_wip/textures/`
 - `weathered_planks` — the floor — https://polyhaven.com/a/weathered_planks
 - `dark_wooden_planks` — the oak table (diffuse re-toned to oak) — https://polyhaven.com/a/dark_wooden_planks
 
+`room.glb.import` and `table.glb.import` set `gltf/embedded_image_handling=2`
+(Embed as Basis Universal): the 2k textures are kept in the imported scene
+VRAM-compressed (BC7 on this Mac, ~5.6 MB each with mips) instead of being
+extracted beside the `.glb` and imported lossless like the units' (~22 MB
+each) — ~170 MB of VRAM down to ~40 MB. The extracted-image route could not be
+VRAM-compressed in a committed `.import`: the glTF importer leaves a
+hand-edited image `.import` alone and then never writes the image itself, so a
+fresh clone would have none. The candlestick, rake and pennant still extract
+theirs (small).
+
 All three are CC0 (public domain); no attribution is required, it is given here
 as a record. The leaded glass and the pennant's atlas were painted in Blender.

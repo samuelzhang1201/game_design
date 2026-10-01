@@ -58,6 +58,8 @@ func _height() -> float:
 
 ## The model's box at its own scale (measured once).
 func _model_box() -> AABB:
+	if model == null:
+		return AABB(Vector3.ZERO, Vector3(_height() * 0.5, _height(), 0.0))   # no art: the pole's own box
 	if _box.size.y <= 0.0:
 		var art := model.instantiate() as Node3D
 		for m: MeshInstance3D in Map3DUnits.meshes(art):
@@ -73,10 +75,13 @@ func _build(code: String, at: Vector2, status: String, issued: int) -> Node3D:
 	root.set_meta("code", code)
 	root.position = _view.table_point(at)
 	var h := _height()
-	var art := model.instantiate() as Node3D
-	art.name = "Art"
-	art.scale = Vector3.ONE * (h / _model_box().size.y)
-	root.add_child(art)
+	if model != null:
+		var art := model.instantiate() as Node3D
+		art.name = "Art"
+		art.scale = Vector3.ONE * (h / _model_box().size.y)
+		root.add_child(art)
+	else:
+		push_warning("WarPennants: no pennant model set in the scene; the slip stands alone")
 	var slip := Label3D.new()
 	slip.name = "Slip"
 	slip.text = SLIPS[status] % CourierCard.date_of(issued) if SLIPS[status].contains("%s") else SLIPS[status]
