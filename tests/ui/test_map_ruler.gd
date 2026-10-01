@@ -53,6 +53,17 @@ func test_cancel_puts_the_ruler_away_and_says_whether_there_was_one() -> void:
 
 
 ## 2D: the pack's distance_scale and distance_unit (map_info.csv).
+## The dashes as one segment list (perf 2026-10-02: one draw call a path),
+## running on across a joint: 10 px dashes over an L of 15 + 15 px.
+func test_the_dashes_run_on_across_a_joint() -> void:
+	var pts := PackedVector2Array([Vector2(0, 0), Vector2(15, 0), Vector2(15, 15)])
+	assert_eq(MapRuler.dash_pieces(pts, 10.0), PackedVector2Array([
+		Vector2(0, 0), Vector2(10, 0),  # the first dash
+		# a 10 px gap: the last 5 of the first leg and the first 5 of the second
+		Vector2(15, 5), Vector2(15, 15),  # the second dash, on the second leg
+	]))
+
+
 func test_a_reading_in_the_packs_unit() -> void:
 	assert_eq(MapRuler.reading(123.4, "km"), "123 km", "whole units from 10 up")
 	assert_eq(MapRuler.reading(2.46, "km"), "2.5 km", "one decimal under 10")
