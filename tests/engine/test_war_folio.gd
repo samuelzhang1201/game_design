@@ -12,7 +12,8 @@ func before_each() -> void:
 	state = GameState.new_campaign(repo, 42)
 	WarSheets.forget()
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, r) > 0:
+		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, r) > 0 \
+				and int(float(r.get("infantry", 0))) > 0:
 			code = String(r["regiment_code"])
 			break
 
@@ -44,8 +45,8 @@ func test_composition_counts_each_arm_and_the_figures() -> void:
 	assert_eq(rows["Wounded"], "0", "a new campaign has none")
 	assert_eq(rows["Formation"], "9 figures — full strength")
 	var infantry := int(float(reg.get("infantry", 0)))
-	if infantry > 0:
-		assert_eq(rows["Infantry"], WarRoom.group(infantry))
+	assert_gt(infantry, 0, "the fixture regiment has infantry")
+	assert_eq(rows["Infantry"], WarRoom.group(infantry))
 
 
 func test_morale_names_its_mark_and_the_months_drift() -> void:
@@ -55,7 +56,7 @@ func test_morale_names_its_mark_and_the_months_drift() -> void:
 	var mark := ArmySystem.morale_mark(repo, score, false)
 	var rows := _rows("morale")
 	assert_eq(rows["Morale"], "%d / 100" % int(st["morale"]))
-	assert_eq(rows["Heading for"], "%d — the ranks are %s" % [mark, ArmySystem.morale_word(repo, score)])
+	assert_eq(rows["Heading for (by today's stores)"], "%d — the ranks are %s" % [mark, ArmySystem.morale_word(repo, score)])
 	assert_eq(rows["Drift"], "%d a month" % int(repo.bal("army_morale_drift_per_month")))
 
 
@@ -97,3 +98,69 @@ func test_figures_follow_the_strength_tiers() -> void:
 	assert_eq(WarFolio.figures(repo, state, code), 6)
 	state.regiments[code]["wounded"] = heads - heads / 10   # ~100 -> remnants
 	assert_eq(WarFolio.figures(repo, state, code), 3)
+
+
+func _foreign() -> String:
+	for r: Dictionary in repo.world_table("military", "regiments").values():
+		if String(r["kingdom_code"]) != repo.resolve_realm("player_realm"):
+			return String(r["regiment_code"])
+	return ""
+
+
+func test_dev_mode_foreign_regiment_gets_all_six_sections() -> void:
+	var was := Intel.dev_all
+	Intel.dev_all = true
+	var secs := WarFolio.sections(repo, state, _foreign())
+	Intel.dev_all = was
+	var keys: Array = secs.map(func(s: Dictionary) -> String: return String(s["key"]))
+	assert_eq(keys, ["composition", "arms", "morale", "supply", "ground", "march"])
+
+
+func test_supply_gives_stores_and_line() -> void:
+	var rows := _rows("supply")
+	assert_true(rows.has("In hand"))
+	assert_true(rows.has("Line"), "a regiment with state has a supply line row")
+	assert_true(rows.has("Governed by"))
+
+
+func test_march_under_orders_names_destination_and_arrival() -> void:
+	var reg := ArmySystem.regiment(repo, code)
+	var from := ArmySystem.position_of(repo, state, reg)
+	ArmySystem.set_march(repo, state, code, from + Vector2(30, 0))
+	var rows := _rows("march")
+	var dest := ArmySystem.destination_of(repo, state, code)
+	var sheet: Dictionary = WarSheets.series(repo)[WarSheets.sheet_of(repo, dest)]
+	assert_eq(rows["Bound for"], WarSheets.grid_ref(repo, sheet, dest))
+	assert_true(rows.has("Arrives"))
+	assert_true(rows.has("Readiness weights"))
+
+
+func test_garrison_adds_its_morale_row() -> void:
+	var held := ""   # a land regiment standing in a town of a province the crown controls
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		var c := String(r["regiment_code"])
+		if String(r.get("is_naval", "0")) != "1" and SupplySystem.stronghold_of(repo, state, c) != "":
+			held = c
+			break
+	assert_ne(held, "", "the pack has a land regiment at a crown town")
+	var before := WarFolio.sections(repo, state, held)
+	ArmySystem.set_garrison(repo, state, held)
+	var morale := {}
+	var supply := {}
+	for sec: Dictionary in WarFolio.sections(repo, state, held):
+		var out := {}
+		for row: Dictionary in sec["rows"]:
+			out[String(row["label"])] = String(row["text"])
+		if String(sec["key"]) == "morale":
+			morale = out
+		elif String(sec["key"]) == "supply":
+			supply = out
+	assert_true(morale.has("In garrison"))
+	assert_eq(morale["In garrison"], "+%d" % int(repo.bal("army_morale_garrison_bonus")))
+	assert_true(String(supply["Line"]).begins_with("in garrison at "))
+	assert_gt(before.size(), 0)
+
+
+func test_matchups_are_named_per_arm() -> void:
+	var rows := _rows("arms")
+	assert_true(rows.has("Matchups — Infantry"))

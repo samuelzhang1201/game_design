@@ -52,6 +52,13 @@ static func _label_of(repo: DataRepository, key: String) -> String:
 	return key.capitalize()
 
 
+## A regiment's state for the page: the stored one, else what it would start
+## with (a foreign regiment under DEV MODE has none; ArmySystem.bars_of does the same).
+static func _state_of(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Dictionary:
+	var st := ArmySystem.state_of(repo, state, code)
+	return st if not st.is_empty() else ArmySystem.starting_state(repo, reg)
+
+
 static func _row(label: String, text: String) -> Dictionary:
 	return {"label": label, "text": text}
 
@@ -89,7 +96,7 @@ static func _tier_word(n: int) -> String:
 
 
 static func _composition(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
-	var st := ArmySystem.state_of(repo, state, code)
+	var st := _state_of(repo, state, code, reg)
 	var rows: Array = [_row("Under arms", WarRoom.group(ArmySystem.headcount(repo, reg)))]
 	for a: Dictionary in arms_of(repo, code):
 		rows.append(_row(_arm_label(repo, String(a["arm"])), WarRoom.group(int(a["heads"]))))
@@ -110,28 +117,35 @@ static func _arms(repo: DataRepository, _state: GameState, code: String, _reg: D
 		for k: Dictionary in kit_of(repo, arm):
 			rows.append(_row(String(k["label"]), String(k["note"])))
 		var good: Array[String] = []
+		var holds: Array[String] = []
 		var wary: Array[String] = []
 		for m: Dictionary in repo.army_matchups.get(arm, []):
+			var vs := _arm_label(repo, String(m["vs"])).to_lower()
 			if int(m["attack"]) > 1000:
-				good.append(_arm_label(repo, String(m["vs"])).to_lower())
+				good.append(vs)
+			if int(m["defense"]) > 1000:
+				holds.append(vs)
 			if int(m["defense"]) < 1000:
-				wary.append(_arm_label(repo, String(m["vs"])).to_lower())
-		var line := _arm_label(repo, arm)
+				wary.append(vs)
+		var parts: Array[String] = []
 		if not good.is_empty():
-			line += ": good against " + ", ".join(good)
+			parts.append("good against " + ", ".join(good))
+		if not holds.is_empty():
+			parts.append("holds against " + ", ".join(holds))
 		if not wary.is_empty():
-			line += ("; " if not good.is_empty() else ": ") + "wary of " + ", ".join(wary)
-		rows.append(_row("Matchups", line))
+			parts.append("wary of " + ", ".join(wary))
+		if not parts.is_empty():
+			rows.append(_row("Matchups — " + _arm_label(repo, arm), "; ".join(parts)))
 	return rows
 
 
 static func _morale(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
-	var st := ArmySystem.state_of(repo, state, code)
+	var st := _state_of(repo, state, code, reg)
 	var score := ArmySystem.supply_score(repo, int(st["supplies"]), ArmySystem.supply_use(repo, reg, state))
 	var garrison := SupplySystem.garrisoned_in(repo, state, code) != ""
 	var mark := ArmySystem.morale_mark(repo, score, garrison)
 	var rows: Array = [_row("Morale", "%d / 100" % int(st["morale"])),
-		_row("Heading for", "%d — the ranks are %s" % [mark, ArmySystem.morale_word(repo, score)])]
+		_row("Heading for (by today's stores)", "%d — the ranks are %s" % [mark, ArmySystem.morale_word(repo, score)])]
 	if garrison:
 		rows.append(_row("In garrison", "+%d" % int(repo.bal("army_morale_garrison_bonus"))))
 	rows.append(_row("Drift", "%d a month" % int(repo.bal("army_morale_drift_per_month"))))
@@ -139,7 +153,7 @@ static func _morale(repo: DataRepository, state: GameState, code: String, reg: D
 
 
 static func _supply(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
-	var st := ArmySystem.state_of(repo, state, code)
+	var st := _state_of(repo, state, code, reg)
 	var use := ArmySystem.supply_use(repo, reg, state)
 	var supplies := int(st["supplies"])
 	var rows: Array = [
@@ -191,14 +205,14 @@ static func _ground(repo: DataRepository, state: GameState, code: String, reg: D
 
 
 static func _march(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
-	var st := ArmySystem.state_of(repo, state, code)
+	var st := _state_of(repo, state, code, reg)
 	var bars := ArmySystem.bars_of(repo, state, code)
 	var score := ArmySystem.supply_score(repo, int(st["supplies"]), ArmySystem.supply_use(repo, reg, state))
 	@warning_ignore("integer_division")
 	var readiness := bars.x / 10
 	var rows: Array = [_row("Pace", "%.1f km a day" % ArmySystem.speed_km_per_day(repo, state, code)),
 		_row("Readiness", "%d%%" % readiness),
-		_row("— of which", "arm %d, supplies %d, morale %d, training %d (weights)" % [
+		_row("Readiness weights", "arm %d, supplies %d, morale %d, training %d (weights)" % [
 			int(repo.bal("army_speed_w_arm")), int(repo.bal("army_speed_w_supply")),
 			int(repo.bal("army_speed_w_morale")), int(repo.bal("army_speed_w_training"))]),
 		_row("Supplies score", "%d‰" % score),
