@@ -337,6 +337,16 @@ battle (LEDGER M4); the debrief wall (intel P3); sound.
 `scripts/war_room/`); `2026-09-28-intelligence-layer-alignment.md` §5.9 (the
 WAR ROOM is a physical plotting table; ghosts are translucent tin on it).
 
+The intelligence spec is untracked in the main checkout, so it is not edited
+on this branch (Ruling 18); whoever merges applies this by hand —
+replacement text for intel §5.9:
+
+> Replace "It holds the belief map, north-up, with ghosts, wax-crayon rings
+> and the debrief wall." (the spec's lines 334–335) with: "It is a physical
+> plotting table (spec 2026-10-01-war-room-design): ghosts are translucent
+> tin on it over inked rings, through `WarRoom.believed_hosts`; the debrief
+> wall is P3's."
+
 ## 12. Changed while building (2026-10-01)
 
 Controller rulings of the build (`.superpowers/sdd/2026-10-01-war-room/
@@ -382,5 +392,13 @@ where they said otherwise.
 - **Ruling 8**: scenes are authored as text `.tscn` files, not through the
   gdai MCP (which drives the editor open on the shared checkout).
 - **Ruling 18**: the intelligence spec §5.9 edit (§11) is not made on this
-  branch; the replacement text sits in `task-16-report.md` and is applied by
-  hand at merge.
+  branch; the replacement text is quoted in §11 and is applied by hand at
+  merge.
+- **Ruling 22 (final review)**: the margin's scale bar, compass rose and
+  legend (§2) are one paper slip in the screen's top-right corner under the
+  close button (`WarMarginKey`, `war_key_*`): the shared `ScaleBar` reading
+  `WarRoomView.units_per_px` (restated on every zoom), an ink rose turned
+  with the officer's yaw, and eight drawn ink marks. The sheet's ink is kept
+  for the laid sheet and one other only, its viewport 2x2 at rest and sized
+  to the sheet (not square) while it draws; the graphics tier sets the
+  room's and the folio figure's MSAA.
