@@ -128,8 +128,23 @@ func test_the_selected_stars_current_is_stronger() -> void:
 	_show()
 	view.select("character:you")
 	assert_almost_eq(view.star_custom("character:you").b, repo.bal("ledger_spark_selected"), 1e-6)
+	assert_eq(view.star_custom("character:you").a, 1.0, "its current is laid outside its ring")
+	assert_gt(repo.bal("ledger_spark_selected"), 1.6, "stronger than the 1.6 the ring and its links hid")
 	view.select("")
 	assert_almost_eq(view.star_custom("character:you").b, 1.0, 1e-6, "and back once let go")
+	assert_eq(view.star_custom("character:you").a, 0.0)
+
+
+## The selected star's current starts just past its gold ring: the ring's own
+## width and gap off the disc, in SubViewport px.
+func test_the_selected_current_clears_its_ring() -> void:
+	_view()
+	_show()
+	var ring := float(view.spark_material().get_shader_parameter("ring_out_px"))
+	var ws := maxf(view.get_viewport().get_final_transform().get_scale().x, 1.0)
+	assert_almost_eq(ring, repo.bal("ledger_ring_px") * (LedgerView3D.RING_GAP_RINGS + 1.0) * ws, 1e-4)
+	assert_gt(ring, repo.bal("ledger_ring_px") * LedgerView3D.RING_GAP_RINGS * ws, "past the ring's centre line")
+	assert_eq(float(view.spark_material().get_shader_parameter("ortho_m_per_px")), 0.0, "perspective at rest")
 
 
 ## The wobble never reaches the edge of a star's own disc, so the links drawn

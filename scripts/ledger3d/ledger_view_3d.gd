@@ -610,8 +610,10 @@ func _update_link_uniforms() -> void:
 	if _link_mat == null:
 		return
 	var h := float(maxi(_viewport.size.y, 1))
-	_link_mat.set_shader_parameter("px_per_dist", 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / h)
-	_link_mat.set_shader_parameter("ortho_m_per_px", _camera.size / h if _flat else 0.0)
+	for m: ShaderMaterial in [_link_mat, _spark_mat]:
+		m.set_shader_parameter("px_per_dist", 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / h)
+		m.set_shader_parameter("ortho_m_per_px", _camera.size / h if _flat else 0.0)
+	_spark_mat.set_shader_parameter("ring_out_px", LedgerStarMotion.ring_out_px(_repo, RING_GAP_RINGS, _window_scale()))
 
 
 func _running_links() -> Dictionary:

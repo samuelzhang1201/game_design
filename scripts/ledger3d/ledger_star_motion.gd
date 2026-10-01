@@ -30,6 +30,12 @@ const SPARK := {
 	"ledger_spark_lift": "lift",
 	"ledger_spark_min_px": "min_px",
 	"ledger_spark_full_px": "full_px",
+	"ledger_spark_saturation": "saturation",
+	"ledger_spark_core_px": "core_px",
+	"ledger_spark_glow_px": "glow_px",
+	"ledger_spark_glow": "glow",
+	"ledger_spark_jag": "jag",
+	"ledger_spark_selected_out": "sel_out",
 }
 
 
@@ -59,17 +65,26 @@ static func seed_of(id: String) -> Color:
 	return Color(float(h & 0xFFFF) / 65535.0, float((h >> 16) & 0xFFFF) / 65535.0, 0.0, 0.0)
 
 
-## A star's custom data: its seed, and its current's weight in z — the
+## A star's custom data: its seed, its current's weight in z — the
 ## selected star's ledger_spark_selected, a dimmed star's (alpha under 1)
 ## ledger_spark_dimmed × its own perceived opacity (pow 2.2, as
 ## star_faint.gdshader draws its body: a current never outshines the star it
-## rings), any other 1.
+## rings), any other 1 — and in w 1 on the selected star, whose current
+## spark.gdshader lays just outside its selection ring.
 static func custom_of(repo: DataRepository, id: String, alpha: float, selected: bool) -> Color:
 	var c := seed_of(id)
 	if selected:
 		c.b = repo.bal("ledger_spark_selected")
+		c.a = 1.0
 	elif alpha < 1.0:
 		c.b = repo.bal("ledger_spark_dimmed") * pow(clampf(alpha, 0.0, 1.0), 2.2)
 	else:
 		c.b = 1.0
 	return c
+
+
+## How far past a star's disc its selection ring reaches, in SubViewport px
+## (LedgerHud draws the ring ledger_ring_px wide, `gap_rings` ring widths off
+## the disc, in design px): the selected star's current starts there.
+static func ring_out_px(repo: DataRepository, gap_rings: float, window_scale: float) -> float:
+	return repo.bal("ledger_ring_px") * (gap_rings + 1.0) * window_scale

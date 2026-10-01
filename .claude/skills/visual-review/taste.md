@@ -389,10 +389,9 @@ add it here as a principle with its why — not as a changelog entry.
   context, not every line at full weight. A fade is set as the eye reads it:
   under linear blending an "alpha 0.25" line on a dark ground reads nearly
   whole.
-  Its stars may MOVE, but only as breathing (owner 2026-10-01): a wobble of
-  about a tenth of a star's own disc on its own slow loop, never a group
-  shake, and a current round its rim faint enough to be felt rather than read
-  — a speck of a star wears none, a dimmed star almost none.
+  Its stars move (owner 2026-10-01: 轻微小幅度晃动，周边带有类似细微电流的感觉):
+  a slight wobble, every star on its own phase, never a group shake; and a
+  faint current at the rim.
 
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols
