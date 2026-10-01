@@ -85,10 +85,14 @@ func bind(repo: DataRepository, state_fn: Callable, paused_fn: Callable) -> void
 		"arrows": _arrows, "chart": _chart})
 	_table_w = repo.bal("war_table_w_m")
 	_rig.distance = repo.bal("war_cam_distance_m")
-	_rig.pitch_deg = repo.bal("war_cam_pitch_deg")
+	_rig.pitch_near_deg = repo.bal("war_cam_pitch_near_deg")
+	_rig.pitch_far_deg = repo.bal("war_cam_pitch_far_deg")
 	_rig.min_distance = repo.bal("war_cam_min_m")
 	_rig.max_distance = repo.bal("war_cam_max_m")
-	_rig.yaw_max = repo.bal("war_cam_yaw_max_deg")
+	var clear := repo.bal("war_cam_wall_clear_m")
+	var half := repo.bal("war_room_floor_x_m") - clear
+	var z0 := repo.bal("war_room_floor_z_min_m") + clear
+	_rig.room = Rect2(-half, z0, half * 2.0, repo.bal("war_room_floor_z_max_m") - clear - z0)
 	WarRoomLights.bind(repo, candles())
 	set_tier(Map3DQuality.resolve_here(GameRoot.settings_path))
 	var env: WorldEnvironment = %Env
