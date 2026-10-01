@@ -825,3 +825,25 @@ func test_a_cluster_with_an_unknown_colour_draws() -> void:
 	view.bind(repo)
 	_show()
 	assert_gt(view.stars().size(), 0)
+
+
+## Final review minors: leaving the view clears the hover (its tooltip, its
+## gauges, its name); a short name that would leave nothing keeps the label.
+func test_leaving_the_view_clears_the_hover() -> void:
+	_show()
+	var id := "character:you"
+	var mm := InputEventMouseMotion.new()
+	mm.position = view.screen_pos_of(id) as Vector2
+	view._gui_input(mm)
+	assert_eq(view.hovered(), id)
+	assert_ne(view.tooltip_text, "")
+	view.mouse_exited.emit()
+	assert_eq(view.hovered(), "", "the pointer left: nothing hovered")
+	assert_eq(view.tooltip_text, "")
+
+
+func test_a_short_name_that_leaves_nothing_keeps_the_label() -> void:
+	Ledger.type_row(repo, "regiment")["short_name"] = "* Regiment -> "
+	_show()
+	var reg := _first("regiment:")
+	assert_eq(view.drawn_name(reg), String(view._nodes[reg]["label"]))

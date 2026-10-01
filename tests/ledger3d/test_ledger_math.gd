@@ -22,12 +22,10 @@ func test_a_zero_length_thread_is_a_point() -> void:
 	var hit := LedgerPick.ray_segment(Vector3(0, 0, 10), Vector3(0, 0, -1), Vector3(0, 2, 0), Vector3(0, 2, 0))
 	assert_almost_eq(hit.x, 2.0, 1e-5)
 
-func test_a_sphere_beats_the_thread_behind_it() -> void:
-	var spheres := [{"id": "a", "pos": Vector3.ZERO, "radius": 1.0}]
-	var threads := [{"id": "t", "a": Vector3(-5, 0, -2), "b": Vector3(5, 0, -2), "radius": 0.3}]
-	assert_eq(LedgerPick.pick(Vector3(0, 0, 10), Vector3(0, 0, -1), spheres, threads), {"kind": "sphere", "id": "a"})
-	assert_eq(LedgerPick.pick(Vector3(3, 0, 10), Vector3(0, 0, -1), spheres, threads), {"kind": "thread", "id": "t"})
-	assert_eq(LedgerPick.pick(Vector3(3, 9, 10), Vector3(0, 0, -1), spheres, threads), {})
+func test_a_ray_picks_the_nearest_star() -> void:
+	var spheres := [{"id": "a", "pos": Vector3.ZERO, "radius": 1.0}, {"id": "b", "pos": Vector3(0, 0, 4), "radius": 1.0}]
+	assert_eq(LedgerPick.pick(Vector3(0, 0, 10), Vector3(0, 0, -1), spheres), {"kind": "sphere", "id": "b"})
+	assert_eq(LedgerPick.pick(Vector3(3, 9, 10), Vector3(0, 0, -1), spheres), {})
 
 func test_screen_to_viewport_uses_the_window_scale() -> void:
 	assert_eq(LedgerPick.screen_to_viewport(Vector2(100, 50), 2.0), Vector2(200, 100))

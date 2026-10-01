@@ -2,8 +2,9 @@
 class_name LedgerPick
 extends RefCounted
 ## Picking in the LEDGER without physics (the map's practice since
-## Terrain3D's collision was turned off): a ray against spheres and against
-## threads as segments. Spheres beat threads.
+## Terrain3D's collision was turned off): a ray against spheres, and the
+## closest approach of a ray to a segment (the view picks a link by its
+## screen distance, nearest first, once no star is under the pointer).
 
 
 ## The nearest t >= 0 at which a ray (d normalised) meets a sphere, or -1.
@@ -38,7 +39,8 @@ static func ray_segment(o: Vector3, d: Vector3, a: Vector3, b: Vector3) -> Vecto
 	return Vector2((o + d * s).distance_to(a + u * tu), s)
 
 
-static func pick(o: Vector3, d: Vector3, spheres: Array, threads: Array) -> Dictionary:
+## The sphere a ray meets first ({"kind": "sphere", "id": ...}), or {}.
+static func pick(o: Vector3, d: Vector3, spheres: Array) -> Dictionary:
 	var best := INF
 	var hit := {}
 	for sp: Dictionary in spheres:
@@ -46,13 +48,6 @@ static func pick(o: Vector3, d: Vector3, spheres: Array, threads: Array) -> Dict
 		if t >= 0.0 and t < best:
 			best = t
 			hit = {"kind": "sphere", "id": String(sp["id"])}
-	if not hit.is_empty():
-		return hit
-	for th: Dictionary in threads:
-		var q := ray_segment(o, d, th["a"], th["b"])
-		if q.x <= float(th["radius"]) and q.y < best:
-			best = q.y
-			hit = {"kind": "thread", "id": String(th["id"])}
 	return hit
 
 

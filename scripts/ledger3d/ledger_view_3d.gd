@@ -89,6 +89,7 @@ var _last_pose := Transform3D()
 func _ready() -> void:
 	_display.texture = _viewport.get_texture()
 	resized.connect(_fit_viewport)
+	mouse_exited.connect(_on_exit)
 	_fit_viewport()
 	set_process(false)
 
@@ -1045,8 +1046,8 @@ func _may_be_hub(id: String) -> bool:
 ## optionally followed by " -> " and a template the kept part is set in
 ## ("Supply line to * Regiment -> Supplies for *": "Supplies for 8th
 ## (Canceswest)", so a supply line never reads as its regiment); a label
-## that does not match is kept whole. The card and the tooltip keep the full
-## label (Task 11 fix rounds 2-3, R2 / S1b).
+## that does not match — or would leave a blank name — is kept whole. The
+## card and the tooltip keep the full label (Task 11 fix rounds 2-3, R2 / S1b).
 func drawn_name(id: String) -> String:
 	var label := String(_nodes[id]["label"])
 	var rule := String(Ledger.type_row(_repo, String(_nodes[id]["type"])).get("short_name", ""))
@@ -1059,7 +1060,9 @@ func drawn_name(id: String) -> String:
 	var tail := pattern.substr(star + 1)
 	if label.length() > head.length() + tail.length() and label.begins_with(head) and label.ends_with(tail):
 		var kept := label.substr(head.length(), label.length() - head.length() - tail.length()).strip_edges()
-		return template.replace("*", kept)
+		var short := template.replace("*", kept).strip_edges()
+		if short != "":
+			return short
 	return label
 
 
@@ -1142,7 +1145,7 @@ func _pick(pos: Vector2) -> Dictionary:
 	for id: String in _order:
 		spheres.append({"id": id, "pos": _drawn[id],
 			"radius": maxf(_draw_r(id), least_px * _m_per_px_at(_drawn[id]))})
-	var hit := LedgerPick.pick(o, d, spheres, [])
+	var hit := LedgerPick.pick(o, d, spheres)
 	if not hit.is_empty():
 		return hit
 	var best := INF
@@ -1184,6 +1187,22 @@ func _gui_input(event: InputEvent) -> void:
 
 func _pan_m_per_px() -> float:
 	return _camera.size / maxf(size.y, 1.0) if _flat else _orbit.metres_per_px(_camera.fov, size.y)
+
+
+## The hovered star's id, or "".
+func hovered() -> String:
+	return _hovered
+
+
+## The pointer left the view: nothing is hovered — its tooltip, its gauges
+## and its name go with it.
+func _on_exit() -> void:
+	if _hovered == "":
+		return
+	_hovered = ""
+	tooltip_text = ""
+	if _repo != null:
+		_update_hud()
 
 
 ## Hover names a star (it draws nothing: only a clicked object is ringed).

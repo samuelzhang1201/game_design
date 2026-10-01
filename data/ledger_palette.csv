@@ -8,9 +8,9 @@ thread_pos,#7FA36B,warm ties
 thread_neg,#A8453A,cold ties
 loop_virtuous,#F2D27A,a virtuous loop running
 loop_vicious,#B0322A,a vicious loop running
-label_ink,#EEE3CB,sphere names
+label_ink,#EEE3CB,star names
 label_halo,#14100C,the halo under a name
-focus_ring,#E0BB6A,the selected sphere
+focus_ring,#E0BB6A,the selected star
 gauge_fill,#E0BB6A,a property gauge's filled arc
 gauge_track,#4A3C2C,a property gauge's empty ring
 sky_top,#120E0B,the warm black night over the galaxy (palette D)

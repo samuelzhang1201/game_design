@@ -597,6 +597,7 @@ func _open_ledger_on(flow: String) -> void:
 	for c: Dictionary in Game.data.ledger_clusters:
 		if String(c["cluster"]) == cluster:
 			_ledger_screen.set_lens(String(c["lens"]))
+			break
 
 ## Bottom bar routing: MAP is the default view (close every overlay — the
 ## live world map sits in the court screen's middle zone, user ruling

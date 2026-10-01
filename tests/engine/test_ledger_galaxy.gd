@@ -273,3 +273,28 @@ func test_the_opened_galaxys_governors_are_the_readers() -> void:
 		assert_eq(String(l["governor"]), Ledger._governor(data, s, Ledger.link_row(data, String(l["type"]))), String(l["id"]))
 		n += 1
 	assert_gt(n, 0)
+
+
+## Final review minors: _merge_into on its own — a worse-level account
+## brings its own words, source and level; a better one merged into words
+## keeps the words and their source; two figures at one level sum.
+func test_a_merge_takes_the_worse_accounts_words_and_source() -> void:
+	var full := {"value": 120, "text": "120", "source": "own records", "day": 10, "level": "full"}
+	var general := {"value": null, "text": "hundreds", "source": "common knowledge", "day": 7, "level": "general"}
+	var m := {"count": 1, "flow": 120, "accounts": [full.duplicate()]}
+	Ledger._merge_into(m, {"flow": null, "accounts": [general.duplicate()]})
+	assert_eq(int(m["count"]), 2)
+	assert_null(m["flow"], "words and a figure make words")
+	assert_eq(m["accounts"], [{"value": null, "text": "hundreds", "source": "common knowledge", "day": 7,
+		"level": "general"}], "the worse account's words travel with its source")
+	var w := {"count": 1, "flow": null, "accounts": [general.duplicate()]}
+	Ledger._merge_into(w, {"flow": 120, "accounts": [full.duplicate()]})
+	assert_eq(w["accounts"], [{"value": null, "text": "hundreds", "source": "common knowledge", "day": 7,
+		"level": "general"}], "a better account adds nothing to the words")
+	var f := {"count": 1, "flow": 120, "accounts": [full.duplicate()]}
+	var other := full.duplicate()
+	other["source"] = "steward's report"
+	other["value"] = 30
+	Ledger._merge_into(f, {"flow": 30, "accounts": [other]})
+	assert_eq(int(f["flow"]), 150)
+	assert_eq(String(f["accounts"][0]["source"]), "own records", "a tie keeps the first source")

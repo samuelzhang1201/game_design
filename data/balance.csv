@@ -633,7 +633,7 @@ courier_paint_foul_permille,700,"the courier card shows the foul-weather paintin
 ui_missive_art_px_per_design,3,"the Missive board's art is installed at this many texture px per design px (sized for the ~3x window scale); a nine-slice border and the cork tile are drawn at texture px / this"
 ui_missive_desk_painting_aspect,1.6,"the desk's %DeskPainting box (width / this = its drawn height) — was a fixed 150 design px, far wider and shallower than the delivered.png paintings' own 5:4 (1.25), so the KEEP_ASPECT_COVERED crop cut the mounted courier's head off; the box now follows the desk's own (flexible) width instead"
 ledger_thread_flow_ref,5000,"LEDGER: the flow at which a thread reaches its widest (log scale)"
-ledger_tie_ref,80,"LEDGER (owner 2026-09-30: the court's 49 thick ties tangled): the strength of feeling (|sentiment|) at which a court tie reaches ledger_tie_width_max"
+ledger_tie_ref,80,"LEDGER (owner 2026-09-30: the court's 49 thick ties tangled): the strength of feeling (|sentiment|) at which a court tie reaches ledger_tie_max_px"
 ledger_tie_rest_fade,0.18,"LEDGER: opacity of a court tie that does not touch the player while nothing is selected (the court is read one person's web at a time; selecting anyone makes them the one)"
 ledger_light_speed,0.6,LEDGER: pulses per second along a thread at its widest
 ledger_light_pulses,4,LEDGER: pulses along one thread
@@ -642,7 +642,6 @@ ledger_ink_basic,0.35,LEDGER: ink of a figure the crown barely knows (Intel basi
 ledger_age_full_days,90,LEDGER: days after which a report's thread has fully yellowed
 ledger_focus_fade,0.15,LEDGER: opacity of what is not linked to the selected sphere
 ledger_instance_cap,24,LEDGER: neighbours shown per link type before the rest fold into one +N more sphere
-ledger_list_cap,60,LEDGER: rows of a type's instance list in the left column
 ledger_camera_distance,160,"LEDGER: the camera's distance when there is nothing to frame (metres); otherwise the opening view and Front frame the spheres and discs drawn (LedgerOrbit.frame)"
 ledger_camera_min_m,20,LEDGER: closest zoom
 ledger_camera_max_m,420,LEDGER: farthest zoom
