@@ -6,8 +6,17 @@ extends Button
 ## whole of it is the button; hover warms the wax, a press sinks it. Its text
 ## stays the order (tests and tooltips read it) and is written on the tag.
 
+const ART_PATH := "res://assets/2D/ui/war_table/council_seal.png"
+
 var _tag: PanelContainer
 var _word: Label
+var _waiting_line: Label
+## The ministers this month's report would have speak (ConversationBeats.waiting);
+## once the council is entered for that report they have been heard.
+var _waiting: Array[String] = []
+var _art: Texture2D = null
+## The tick whose council the player last entered: its ministers are heard.
+static var heard_tick := -1
 
 func _init(order: String = "ENTER THE COUNCIL") -> void:
 	name = "CouncilHandle"
@@ -36,16 +45,77 @@ func _init(order: String = "ENTER THE COUNCIL") -> void:
 	_word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UiPalette.style_header(_word, 15, UiPalette.table_color("ink", Color("2b1f15")))
 	_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_tag.add_child(_word)
+	var words := VBoxContainer.new()
+	words.add_theme_constant_override("separation", -2)
+	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	words.add_child(_word)
+	_waiting_line = Label.new()
+	_waiting_line.name = "Waiting"
+	_waiting_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_waiting_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var italic := UiPalette.role_font("body_italic")
+	if italic != null:
+		_waiting_line.add_theme_font_override("font", italic)
+	_waiting_line.add_theme_font_size_override("font_size", 13)
+	_waiting_line.add_theme_color_override("font_color", UiPalette.table_color("ink_muted", Color("5a4632")))
+	words.add_child(_waiting_line)
+	_tag.add_child(words)
 	add_child(_tag)
-	var tag_min := _tag.get_combined_minimum_size()
-	custom_minimum_size = Vector2(maxf(seal + 8.0, tag_min.x), seal + tag_min.y - 6.0)
+	if ResourceLoader.exists(ART_PATH):
+		_art = load(ART_PATH)
 	resized.connect(_place_tag)
+	pressed.connect(func() -> void:
+		if Game != null and Game.state != null:
+			heard_tick = Game.state.tick)
+	_refit()
+
+func _ready() -> void:
+	if Game != null:
+		Game.report_ready.connect(func(_r: TickReport) -> void: refresh())
+		Game.state_changed.connect(refresh)
+	refresh()
+
+## Who waits: this month's speakers, until the council is entered for them.
+func refresh() -> void:
+	_waiting = []
+	if Game != null and Game.state != null and Game.current_report != null \
+			and heard_tick != Game.state.tick:
+		_waiting = ConversationBeats.waiting(Game.current_report, Game.state, Game.data)
+	var n := _waiting.size()
+	var count_words := ["none", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+	if n == 0:
+		_waiting_line.text = "the council is quiet"
+	elif n == 1:
+		_waiting_line.text = "one waits to be heard"
+	else:
+		_waiting_line.text = "%s wait to be heard" % (count_words[n] if n < count_words.size() else str(n))
+	var names: Array[String] = []
+	for id in _waiting:
+		names.append(Game.state.characters[id].display_name)
+	tooltip_text = "Go before your council" + ("" if names.is_empty() else "\nWaiting: " + ", ".join(names))
+	_refit()
+	queue_redraw()
+
+## Test seam.
+func waiting_ids() -> Array[String]:
+	return _waiting
+
+func _minis() -> int:
+	return mini(_waiting.size(), int(WarTable._num("ui_seal_minis", 3.0)))
+
+func _refit() -> void:
+	var seal := WarTable._num("ui_seal_px", 100.0)
+	var tag_min := _tag.get_combined_minimum_size()
+	var mini_px := WarTable._num("ui_seal_mini_px", 40.0)
+	var minis := _minis()
+	var row := (mini_px * minis + 6.0 * maxf(minis - 1, 0) + 10.0) if minis > 0 else 0.0
+	custom_minimum_size = Vector2(maxf(seal + 8.0, tag_min.x), seal + tag_min.y - 6.0 + row)
+	_place_tag()
 
 func _place_tag() -> void:
 	var tm := _tag.get_combined_minimum_size()
 	_tag.size = tm
-	_tag.position = Vector2((size.x - tm.x) * 0.5, size.y - tm.y)
+	_tag.position = Vector2((size.x - tm.x) * 0.5, WarTable._num("ui_seal_px", 100.0) - 6.0)
 
 func _draw() -> void:
 	var seal := WarTable._num("ui_seal_px", 100.0)
@@ -60,6 +130,14 @@ func _draw() -> void:
 		mid = mid.lightened(0.06)
 	var shadow_a := WarTable._num("ui_table_shadow_alpha", 0.34)
 	var off := Vector2(WarTable._num("ui_table_shadow_dx", 6.0), WarTable._num("ui_table_shadow_dy", 10.0)) * 0.5
+	_draw_minis()
+	if _art != null:
+		# the photographed seal (library U-60), its own shadow baked soft
+		for i in 3:
+			draw_circle(c + off, r * (0.98 + 0.06 * float(i)), Color(0, 0, 0, shadow_a * [0.4, 0.25, 0.12][i]))
+		var tint := Color(1.08, 1.04, 1.04) if is_hovered() else Color.WHITE
+		draw_texture_rect(_art, Rect2(c - Vector2(r, r), Vector2(seal, seal)), false, tint)
+		return
 	for i in 3:
 		draw_colored_polygon(_blob(c + off, r * (1.0 + 0.07 * float(i)), 7, -0.4), Color(0, 0, 0, shadow_a * [0.5, 0.3, 0.18][i]))
 	# two pours of wax, their rims irregular, each rim smoothed by an
@@ -89,6 +167,33 @@ func _closed(pts: PackedVector2Array) -> PackedVector2Array:
 	var out := pts.duplicate()
 	out.append(pts[0])
 	return out
+
+## The waiting ministers as round miniatures in brass rings, a column under
+## the tag (the approved mock's council miniatures).
+func _draw_minis() -> void:
+	var n := _minis()
+	if n == 0:
+		return
+	var px := WarTable._num("ui_seal_mini_px", 40.0)
+	var r := px * 0.5
+	var y := _tag.position.y + _tag.size.y + 10.0 + r
+	var brass := [UiPalette.table_color("brass_light", Color("f4db9a")),
+		UiPalette.table_color("brass_mid", Color("b08a3e")),
+		UiPalette.table_color("brass_dark", Color("6b4e1c"))]
+	for i in n:
+		var c := Vector2(size.x * 0.5, y + float(i) * (px + 6.0))
+		BrassStyle.draw_brass(get_canvas_item(), c, r, brass, WarTable._num("ui_table_shadow_alpha", 0.34), false)
+		var tex := CharacterPortrait.texture_for(_waiting[i])
+		if tex == null:
+			continue
+		var pts := PackedVector2Array()
+		var uvs := PackedVector2Array()
+		for k in 32:
+			var a := TAU * float(k) / 32.0
+			var u := Vector2(cos(a), sin(a))
+			pts.append(c + u * (r - 3.0))
+			uvs.append(Vector2(0.5, 0.42) + u * 0.46)
+		draw_polygon(pts, PackedColorArray([Color.WHITE]), uvs, tex)
 
 ## A wax pour's rim: a circle of `lobes` soft bulges turned by `phase`.
 func _blob(c: Vector2, r: float, lobes: int, phase: float) -> PackedVector2Array:

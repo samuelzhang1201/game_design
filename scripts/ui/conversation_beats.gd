@@ -59,6 +59,18 @@ static func build(report: TickReport, state: GameState, data: DataRepository) ->
 	beats.append({"kind": "summary", "portrait_id": "round_table", "speaker": "The Council"})
 	return beats
 
+## The ministers this report would have speak, in the order they would —
+## the WAR TABLE's seal shows them waiting to be heard (owner 2026-10-01).
+static func waiting(report: TickReport, state: GameState, data: DataRepository) -> Array[String]:
+	var out: Array[String] = []
+	if report == null:
+		return out
+	for b: Dictionary in build(report, state, data):
+		var id := String(b.get("portrait_id", ""))
+		if String(b.get("kind", "")) == "minister" and state.characters.has(id) and not id in out:
+			out.append(id)
+	return out
+
 ## Composes the summary line at the moment it's shown (called from
 ## ConversationScene._advance, not from build): last-tick's already-decided
 ## outcomes (report.outcomes, prefixed once by council_summary_open) followed

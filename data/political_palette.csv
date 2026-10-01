@@ -57,3 +57,7 @@ envelope_ink,#7A5A30,"missive envelope fallback: the fold lines' ink"
 envelope_wax,#8B1E1E,"missive envelope fallback: the wax seal"
 missive_ink,#2E2418,"Missive board art follow-up: dark umber ink for the desk's title/meta/facts once the cream parchment art is installed — the theme's light ink is unreadable on it"
 missive_ink_soft,#6B5A45,"Missive board art follow-up: the softer umber for the desk's meta line and, once the frame's wood is installed, an empty column's hint"
+army_count_box,#2A1D14,"WAR TABLE (owner 2026-10-01): a regiment's headcount token printed on the map sheet — dark leather; its RING carries the realm's hue (ArmyCounters.draw); read only while ui_war_table is on"
+army_icon_bg_table,#2A1D14,WAR TABLE: the glyph square of a counter on the map sheet (as the token)
+army_count_ink_table,#F1E6CC,WAR TABLE: the headcount on a token — parchment
+army_glyph_table,#E0BE6E,WAR TABLE: a counter's glyph — old gold
