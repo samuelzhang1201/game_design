@@ -1,6 +1,6 @@
 # Chapter 0 — The Bond of the Louthton
 
-Status: Built — the 20 entries below are live (`data/chapter_events.csv`, `data/chapter_event_choices.csv`, `data/chapter_branches.csv`, `EventSystem`). Design doc: `docs/design/CHAPTER_0.md`.
+Status: Built — the 21 entries below are live (`data/chapter_events.csv`, `data/chapter_event_choices.csv`, `data/chapter_branches.csv`, `EventSystem`). Design doc: `docs/design/CHAPTER_0.md`.
 
 **This file is loaded at runtime.** `StorySource` reads each `### C0-NN` heading — the title after the `·` and the prose after the `**Scene:**` label on the Trigger line — and the game shows both verbatim. Keep the headings and the labels intact. The `**Choices:**` line is design description only; the implemented choices are the CSV's.
 
@@ -56,10 +56,10 @@ Everyone in the chapter is a character the game already has (`data/roles.csv`, `
 | The Warden of the Louthton | `char_duke_tomas` — Duke Tomas Valorin, 44 | the half-brother who openly covets the throne; `amb_ruthless`, `silver_tongued` |
 | The king's cousin | `char_lady_ysolde` — Lady Ysolde Valorin, 27 | `beloved_of_crowds`, `trusting`: the one who would fund a bread guild and not say so |
 | The Brotherhood's voice | `char_prophet_cassian` — Cassian the Barefoot, 33 | already the man rallying the hungry (`game_start.md`); `firebrand_preacher`, `compassionate`, `lowborn` |
-| The Spymaster | `char_spymaster` — Quill | the seat; his `amb_ruthless` (or its absence) picks the investigation's branch |
+| The Spymaster | `char_spymaster` — Quill | the seat; the investigation's branch is `chapter_branches.csv` `c0_br_spy`: a council that was heard first (C0-01) gets C0-03L, else a `schemer` Quill (the founding one is) makes C0-03A |
 | The Chancellor | `char_chancellor` — Aldwin Reeve | `venal`, `schemer`: the internal-affairs minister with something hanging over him |
 | The Steward | `char_steward` — Mirella of the Weighhouse | `blunt`, `shrewd_trader`: the one who knows what Reeve did, and detests him for it |
-| The captain at the door | `char_captain_hale` — Captain Hale Fenwick | his `veteran` trait is the vigilance check |
+| The captain at the door | `char_captain_hale` — Captain Hale Fenwick | his `veteran` trait is what offers "let Hale strip the hall first" at C0-02; taking it is what makes C0-04S rather than C0-04A |
 | The old counsellor | `char_lord_malvern` — Lord Malvern, 71 | `sickly`, opinion 70: the tutor who will not see chapter 2 |
 | The northern envoy | `char_envoy_petra` — Envoy Petra Kolev | already `{neighbor_realm}`'s envoy; `schemer`, `silver_tongued` |
 
@@ -150,7 +150,7 @@ Places are the pack's own: **Bineterston Department**, the small grain-and-river
 **Choices:** ① Read it out — every column. ② Walk the fields first; the figures will keep. ③ Let the Steward read it to the council without me.
 
 ### C0-12 · The Last Reckoning — `chapter · template`
-**Trigger:** chained from C0-11, the first month of winter. **Scene:** He comes to you privately, which he has not done since you were boys. There is one candle and the ledger is closed on the table between you, and his hand with the ring on it lies beside it, not quite still. He does not deny the arithmetic. He says — and this is the part you will remember — that he took the valley's grain because somebody had to feed the valley through your father's war, that he sold it because coin keeps and grain does not, and that if you put the book on the council table tomorrow morning you will be right — and his son, who is nineteen and standing in the corridor outside, will inherit the grudge along with nothing else.
+**Trigger:** chained from C0-11, the first month of winter. **Scene:** He comes to you privately, which he has not done since you were boys. There is one candle on the table between you, and his hand with the ring on it lies beside it, not quite still. He does not deny the arithmetic, whether or not you have ever read it. He says — and this is the part you will remember — that he took the valley's grain because somebody had to feed the valley through your father's war, that he sold it because coin keeps and grain does not, and that if that book is ever put on the council table you will be right — and his son, who is seventeen and standing in the corridor outside, will inherit the grudge along with nothing else.
 
 **Choices:** ① Put it on the table in the morning. ② Settle it between us — fifteen hundred gold and his resignation. ③ There is nothing left to settle.
 
