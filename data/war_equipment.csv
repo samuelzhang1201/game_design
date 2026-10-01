@@ -1,0 +1,15 @@
+arm,part,label,note
+infantry,helmet,Close helm,"WAR ROOM (owner 2026-10-01, spec §4): one row per piece of kit the folio's exploded view names; part = the object in assets/3D/units/<arm>/<arm>_parts.glb. Steel, an eye slit and a pointed visor"
+infantry,cuirass,Breastplate,riveted plate over a padded coat
+infantry,arms,Arm harness,"vambraces, couters and gauntlets"
+infantry,legs,Leg harness,cuisses and knee plates over leather
+infantry,shield,Heater shield,"painted wood, green with a white pale"
+infantry,spear,Spear,"ash shaft, steel head; 2.6 m"
+archers,helmet,Close helm,the spearman stands in for the bow line until it has its own model
+archers,cuirass,Breastplate,
+archers,shield,Heater shield,
+cavalry,helmet,Great helm,"a knight's helm, the visor down"
+cavalry,cuirass,Plate harness,full plate over mail
+cavalry,shield,Heater shield,"green with a white pale; carried on his back, taken to the arm on guard"
+cavalry,lance,Lance,"ash with a vamplate; 3.3 m"
+cavalry,horse,Destrier,the horse under him
