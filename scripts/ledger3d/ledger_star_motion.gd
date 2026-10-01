@@ -3,12 +3,14 @@ class_name LedgerStarMotion
 extends RefCounted
 ## The galaxy stars' motion (owner 2026-10-01: 给光球在godot里设置一些animation，
 ## 轻微小幅度晃动，周边带有类似细微电流的感觉): a slight wobble of every star round
-## its layout place and a faint electric current round its rim. Both run on the
+## its layout place and an electric current round its rim (owner 2026-10-01,
+## later the same day: 电流可以更大更明显一点，晃动幅度也可以更大更明显). Both run on the
 ## shaders' real TIME (presentation only: the LEDGER holds the game clock), so
 ## nothing here runs per frame — this only binds the `ledger_star_wobble_*` /
 ## `ledger_spark_*` numbers to the materials and deals each star its seed and
-## its current's weight (INSTANCE_CUSTOM). Picking, the links and the layout
-## stay on the layout place: the wobble is a share of a star's own disc.
+## its current's weight (INSTANCE_CUSTOM). The links' ends move with their
+## stars (link.gdshader, the same formula, each end's seed and drawn radius
+## per vertex — `link_star`); picking and the layout stay on the layout place.
 
 ## Floats per star in a MultiMesh buffer: a 3D transform (12), its colour (4)
 ## and its custom data (4) — the star MultiMeshes use colours and custom data.
@@ -17,6 +19,7 @@ const STRIDE := 20
 ## balance.csv key -> the shared wobble uniform (star_motion.gdshaderinc).
 const WOBBLE := {
 	"ledger_star_wobble_share": "wobble_share",
+	"ledger_star_wobble_selected": "wobble_selected_share",
 	"ledger_star_wobble_period_min": "wobble_period_min",
 	"ledger_star_wobble_period_max": "wobble_period_max",
 	"ledger_star_wobble_ratio": "wobble_ratio",
@@ -28,6 +31,8 @@ const SPARK := {
 	"ledger_spark_arcs": "arcs",
 	"ledger_spark_speed": "speed",
 	"ledger_spark_cover": "cover",
+	"ledger_spark_max_cover": "max_cover",
+	"ledger_spark_glow_share": "glow_share",
 	"ledger_spark_flicker": "flicker",
 	"ledger_spark_flicker_hz": "flicker_hz",
 	"ledger_spark_lift": "lift",
@@ -42,7 +47,8 @@ const SPARK := {
 }
 
 
-## Binds the wobble to a star material (whole, dimmed or the current's).
+## Binds the wobble to a star material (whole, dimmed or the current's) or
+## to the links', whose ends move with their stars.
 static func bind_wobble(m: ShaderMaterial, repo: DataRepository) -> void:
 	for key: String in WOBBLE:
 		m.set_shader_parameter(WOBBLE[key], repo.bal(key))
@@ -66,6 +72,14 @@ static func sparks_on(repo: DataRepository) -> bool:
 static func seed_of(id: String) -> Color:
 	var h := id.hash()
 	return Color(float(h & 0xFFFF) / 65535.0, float((h >> 16) & 0xFFFF) / 65535.0, 0.0, 0.0)
+
+
+## One end of a link as link.gdshader reads it (LedgerLinkMesh's `a_star` /
+## `b_star`): the star's seed, its drawn radius (before the screen cap, which
+## the shader applies as the stars are drawn) and 1 when it is the selected one.
+static func link_star(id: String, drawn_r: float, selected: bool) -> Color:
+	var c := seed_of(id)
+	return Color(c.r, c.g, drawn_r, 1.0 if selected else 0.0)
 
 
 ## A star's custom data: its seed, its current's weight in z — the

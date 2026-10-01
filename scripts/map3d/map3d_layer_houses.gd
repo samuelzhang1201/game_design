@@ -163,6 +163,12 @@ func refresh(camera_xz: Vector2) -> bool:
 	var samples := int(ctx.repo.bal("map3d_house_ground_samples"))
 	_transforms.clear()
 	_variants.clear()
+	var sea_y := float(ctx.meta.get("sea_y", 0.0))
+	var deck := ctx.repo.bal("map3d_pier_deck_m")
+	var piers: Dictionary = {}
+	for t: String in ctx.repo.map3d_houses:
+		if String(ctx.repo.map3d_houses[t].get("role", "")) == "pier":
+			piers[t] = true
 	for type: String in _instances:
 		var mmi: MultiMeshInstance3D = _instances[type]
 		var rows: Array = buckets.get(type, [])
@@ -179,6 +185,12 @@ func refresh(camera_xz: Vector2) -> bool:
 			var ground: Vector2
 			if h.has("_seat"):
 				ground = h["_seat"]
+			elif piers.has(type):
+				# a pier's deck lies on the SEA (owner 2026-10-01: 码头延伸到海里),
+				# not on the highest ground under it, which is the bank at one
+				# end and the sea floor along the rest
+				ground = Vector2(sea_y, sea_y + deck)
+				h["_seat"] = ground
 			else:
 				ground = Map3DHouses.seat(
 					Map3DHouses.ground_under(h, box, ground_inset, samples, ctx.height_at), clear)

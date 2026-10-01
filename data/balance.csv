@@ -589,6 +589,7 @@ map3d_wood_mottle_m,160,"3D MAP woods: the wavelength of the canopy's light and 
 map3d_wood_mottle,0.45,3D MAP woods: how far the mottle lightens and darkens the canopy
 map3d_house_rebuild_move_m,300,"3D MAP houses: the camera must move this far before the house MultiMeshes are rebuilt — cut once per camera pose, never per frame"
 map3d_house_seat_clear_m,0.1,"3D MAP houses (owner 2026-09-24: 要垂直于地面，不可以被地面遮住部分): a house stands this far above the HIGHEST ground sampled under its footprint (Map3DHouses.seat) — the drawn Terrain3D surface is triangles between 20 m vertices, the sampled one bilinear, and they part by centimetres on a slope. Replaced map3d_house_sink_m (0.5), which sank every house into the ground"
+map3d_pier_deck_m,1.6,"3D MAP piers (owner 2026-10-01: 码头延伸到海里): a pier's deck stands this far over the sea (Map3DLayerHouses seats a `pier` row at the water, not on the ground under it)"
 map3d_house_ground_samples,5,"3D MAP houses (owner 2026-09-24): the ground under a house is sampled on an N x N grid over its footprint (Map3DHouses.footprint_grid), corners included — sampling the four corners alone let a crest between them come up through the floor"
 map3d_house_ground_inset,1.0,"3D MAP houses (owner 2026-09-24): the share of a mesh's own AABB the ground is sampled over — the WHOLE box, eaves included, so no wall or chimney foot can be below the ground it stands on"
 map3d_unit_ref_px,12,"MILITARY's 3D piece (owner 2026-09-30: 12, chosen over 30 and 20 from shots at 600 m / 1500 m / 5000 m — at 30 a horse stood bigger than a whole town close in; owner 2026-09-27 first): the height of its model box (lance tip included, so the figure reads ~3/4 of it, and less seen from above) DRAWN in design px at the opening view's distance (map3d_zoom_start_scale) — 26 read as a ~20 px figure as the game opens (owner: ~20 px); raised 15% the same day (owner: 骑兵和步兵的size稍微再调大一点点; 33 bracketed as too much). A real man is two px even at the closest zoom, so a piece is a wargame MINIATURE on a table map: ONE world height at every zoom, growing and shrinking with the camera like the ground (Map3DUnits.height_m; owner 2026-09-30: 比例缩放需要和游戏视角缩放一致 — the close-in cap map3d_unit_max_px is gone). Replaced map3d_unit_px 40 held constant at every zoom (the owner: 随着镜头的缩放，兵人大小没有变化这是不对的)"
@@ -842,10 +843,16 @@ ui_bookmark_tuck_px,8,WAR TABLE: design px of each bookmark's top hidden under t
 ui_seal_minis,3,"WAR TABLE: at most this many ministers' miniatures stand under the council's seal, those this month's report would have speak (ConversationBeats.waiting); the tag counts them all"
 ui_seal_mini_px,40,WAR TABLE: design px across a waiting minister's miniature (a round portrait in a brass ring)
 map_army_outline_px_table,1.5,WAR TABLE: design px of the realm-hued ring round a counter's token on the map sheet
-ledger_galaxy_repel,2,"LEDGER galaxy (spec 2026-09-30-ledger-galaxy-design §4): repulsion between two stars, scaled by their sizes"
+ledger_galaxy_repel,3.5,"LEDGER galaxy (spec 2026-09-30-ledger-galaxy-design §4): repulsion between two stars, scaled by their sizes (2 until owner 2026-10-01: node更分散一点 — each cluster spreads ~30% wider, its stars' mean nearest neighbour 11-16 m → 14-21 m)"
+ledger_galaxy_cross_repel,0.2,"LEDGER galaxy (owner 2026-10-01: 3个cluster布局可以靠的再近一点): two stars of different clusters repel this share as hard as two of one — the long reach of every pair's repulsion, not the anchors, held the clusters ~110 m apart; 1 is the old chart"
+ledger_galaxy_cross_repel_flat,0.6,"LEDGER galaxy: ledger_galaxy_cross_repel for the flat (2D) chart, where every cluster lies in one plane and at 0.2 they bled together (critic, owner 2026-10-01 round 2)"
 ledger_galaxy_spring,0.05,LEDGER galaxy: a link's spring within a cluster
 ledger_galaxy_cross_spring,0.15,LEDGER galaxy: a link's spring across clusters as a share of ledger_galaxy_spring
-ledger_galaxy_rest_m,4,LEDGER galaxy: a link spring's rest length (metres)
+ledger_galaxy_rest_m,7,"LEDGER galaxy: a link spring's rest length (metres; 4 until owner 2026-10-01, the nodes more spread)"
+ledger_galaxy_rest_per_link,4,"LEDGER galaxy (owner 2026-10-01, critic round 2: the King's inner ring crowded while the court's edge spread): a link's rest length grows by this many metres per square root of its busier end's links, so a hub's neighbours have room round it"
+ledger_galaxy_rest_busy_cap,16,"LEDGER galaxy: the most links ledger_galaxy_rest_per_link counts at a star (every province opened, a province's dozens of manors pushed its stars into the next cluster)"
+ledger_galaxy_gap_m,2,"LEDGER galaxy (owner 2026-10-01: node更分散一点): two stars whose layout radii come within this many metres of touching are pushed apart besides their repulsion"
+ledger_galaxy_gap_push,0.3,"LEDGER galaxy: the push apart, this share of the overlap a pass (with ledger_galaxy_gap_m; 0 none)"
 ledger_galaxy_home,0.06,LEDGER galaxy: the pull of a star toward its cluster's anchor (an opened manor's toward its province)
 ledger_galaxy_step_max_m,3,LEDGER galaxy: the most a star moves in one pass
 ledger_galaxy_passes,150,LEDGER galaxy: passes that settle the chart after a snapshot
@@ -857,8 +864,10 @@ ledger_galaxy_repel_cutoff_m,12,"LEDGER galaxy (final review I1c): beyond this d
 ledger_galaxy_mode_ease_s,0.6,LEDGER galaxy: seconds the stars ease between the 3D and 2D places
 ledger_galaxy_fly_s,0.6,LEDGER galaxy: seconds the camera flies to a cluster
 ledger_galaxy_other_fade,0.25,LEDGER galaxy: perceived opacity of the other clusters while one is chosen
+ledger_near_fade_start,0.8,"LEDGER galaxy (critic, owner 2026-10-01 round 2): a DIMMED star nearer the camera than this share of the camera's distance to its target starts to fade (another cluster's star seen from inside the chosen one read as a blurred disc)"
+ledger_near_fade_end,0.5,"LEDGER galaxy: and is gone at this share"
 ledger_cross_rest_fade,0.3,LEDGER galaxy: perceived opacity of a link crossing clusters while nothing is selected (outside the Court tab)
-ledger_focus_width,1.5,LEDGER galaxy: how much wider the selected star's links are drawn
+ledger_focus_width,1.25,"LEDGER galaxy: how much wider the selected star's links — and, at rest, the player's own web — are drawn (1.5 until owner 2026-10-01: the King's ties must read as part of the web around them, lit by opacity rather than set apart)"
 ledger_star_min,0.45,LEDGER galaxy: the smallest star's radius (metres)
 ledger_star_max,2.8,LEDGER galaxy: the largest star's radius (metres)
 ledger_star_pool,2.6,LEDGER galaxy: a goods pool's radius (gold / civil / strategic)
@@ -886,7 +895,7 @@ ledger_label_strong_px,16,"LEDGER galaxy: the larger name size, for the selected
 ledger_title_px,20,LEDGER galaxy: a cluster title's font size (design px)
 ledger_ring_px,3,LEDGER galaxy: the selected star's ring width (screen px)
 ledger_light_gain,1.5,"LEDGER galaxy: how much a link's running light brightens its own colour (Task 11 fix round 1: a mix toward white read as grey chips)"
-ledger_star_draw_scale,0.6,"LEDGER galaxy: a star is drawn at this share of its layout radius (Task 11 fix round 1: small stars whose glow carries the size, not pearls); the layout keeps the full radius"
+ledger_star_draw_scale,0.7,"LEDGER galaxy: a star is drawn at this share of its layout radius (Task 11 fix round 1: small stars whose glow carries the size, not pearls; 0.6 until owner 2026-10-01 spread each cluster ~30% wider, which drew every star smaller in its own tab); the layout keeps the full radius"
 ledger_star_planned_max,0.9,"LEDGER galaxy: a planned (ghost) star's radius at most (metres, before ledger_star_draw_scale): an ordinary small star's, never a pool's (Task 11 fix round 1)"
 ledger_star_planned_sat,0.75,"LEDGER galaxy: a planned star wears its own cluster's colour at this share of its saturation"
 ledger_star_planned_fade,0.5,"LEDGER galaxy: a planned star's perceived opacity (faint: not yet built)"
@@ -1018,26 +1027,29 @@ war_explode_note_px,14,"(art pass: 15 -> 14) WAR ROOM (Task 14 fix): the explode
 war_explode_note_w_px,110,"(art pass: 230 -> 110: a note wraps no wider than its name, so the columns stay narrow on the folio's page) WAR ROOM (Task 14 fix): the width a part's note wraps at, Label3D px"
 war_explode_note_drop,1.1,"WAR ROOM (Task 14 fix): how far under its name a note hangs, in name-label heights"
 war_explode_fit_margin,1.08,"WAR ROOM (art pass): the exploded kit's camera stands back just far enough that the kit and its columns of names fit the page, this much to spare"
-ledger_star_wobble_share,0.1,"LEDGER galaxy: each star drifts in a small Lissajous loop round its place, this share of its DRAWN radius (owner 2026-10-01: 轻微小幅度晃动; ~1-2 screen px, below its disc so a link's end stays hidden in it); 0 holds every star still"
+ledger_star_wobble_share,0.45,"LEDGER galaxy: each star drifts in a Lissajous loop round its place, this share of its DRAWN radius (owner 2026-10-01: 轻微小幅度晃动 at 0.1, then the same day 晃动幅度也可以更大更明显，现在太小了像静止的 — 0.3 and 0.45 shot, 0.4 in round 1, 0.45 at the critic's preference, ~2-5 screen px each way at the Court tab; its links' ends move with it, link.gdshader); 0 holds every star still"
+ledger_star_wobble_selected,0.12,"LEDGER galaxy: the selected star's wobble, a share of its drawn radius — smaller, so it keeps inside its gold ring (the HUD draws the ring at its layout place)"
 ledger_star_wobble_period_min,3,"LEDGER galaxy: the shortest wobble loop (s, real time); each star's own between min and max, from its id's hash"
 ledger_star_wobble_period_max,6,"LEDGER galaxy: the longest wobble loop (s, real time)"
 ledger_star_wobble_ratio,1.3,"LEDGER galaxy: the wobble's up-down rate against its side-to-side rate (a Lissajous loop, never a line)"
-ledger_spark_strength,0.6,"LEDGER galaxy: the faint electric current round each star (owner 2026-10-01: 周边带有类似细微电流的感觉), its opacity; 0 draws none"
-ledger_spark_width,0.35,"LEDGER galaxy: the current's ring just outside the disc, a share of the star's drawn radius"
-ledger_spark_arcs,6,"LEDGER galaxy: the current's filaments round the rim"
+ledger_spark_strength,1.3,"LEDGER galaxy: the electric current round each star (owner 2026-10-01: 周边带有类似细微电流的感觉, 0.6; then owner 2026-10-01: 球体周边电流可以更大更明显一点 — 1.0 and 1.3 shot), its opacity; 0 draws none"
+ledger_spark_width,0.7,"LEDGER galaxy: the current's ring just outside the disc, a share of the star's drawn radius (0.35; 0.9 in round 1 of the owner's 更大更明显, narrowed after the critic's round 2)"
+ledger_spark_arcs,5,"LEDGER galaxy: the current's filaments round the rim (6 until 更大更明显: fewer, longer runs)"
 ledger_spark_speed,0.1,"LEDGER galaxy: how fast the filaments crawl round the rim (turns a second, real time)"
-ledger_spark_cover,0.45,"LEDGER galaxy: the share of the rim the filaments run along"
+ledger_spark_cover,0.5,"LEDGER galaxy: the share of the rim the filaments run along (0.45; 0.6 in round 1 of 更大更明显, which on a 10 px star closed into a ring — critic, round 2)"
+ledger_spark_max_cover,0.66,"LEDGER galaxy: the most of the rim the current ever lights — a dark sector of the rest turns with the filaments (critic, round 2: never a closed ring)"
 ledger_spark_flicker,0.6,"LEDGER galaxy: how deep the filaments flicker (0 steady, 1 out and in)"
 ledger_spark_flicker_hz,6,"LEDGER galaxy: how fast the filaments flicker"
 ledger_spark_lift,0.3,"LEDGER galaxy: a spark's bright CORE, the star's saturated hue this far toward white (its halo keeps the hue)"
 ledger_spark_selected,1.7,"LEDGER galaxy: the selected star's current, this many times a whole star's (1.6 under its ring was lost; 2.2 outside it reached across its threads: critic, fix rounds 1-2)"
 ledger_spark_dimmed,0.5,"LEDGER galaxy: a dimmed star's current, this share of a whole star's times the star's own perceived opacity (pow 2.2 of its fade: a ghost at 0.5 keeps ~1/9, a star off the web at 0.15 almost none)"
-ledger_spark_min_px,3,"LEDGER galaxy: a star drawn with a radius under this many SCREEN px wears no current (a hair on a speck reads as a grey smudge)"
-ledger_spark_full_px,8,"LEDGER galaxy: from this drawn radius (screen px) a star wears its whole current, faded in from ledger_spark_min_px"
+ledger_spark_min_px,2,"LEDGER galaxy: a star drawn with a radius under this many SCREEN px wears no current (a hair on a speck reads as a grey smudge; 3 until 更大更明显, so the Court tab's small stars wear one)"
+ledger_spark_full_px,5,"LEDGER galaxy: from this drawn radius (screen px) a star wears its whole current, faded in from ledger_spark_min_px (8 until 更大更明显)"
 ledger_spark_saturation,1.6,"LEDGER galaxy: a spark's halo wears the star's colour pushed this far from grey, at full value (critic, fix round 1: a grey-white wire on the pale court stars)"
-ledger_spark_core_px,0.6,"LEDGER galaxy: a spark's bright core, its half width in screen px"
-ledger_spark_glow_px,2,"LEDGER galaxy: a spark's soft additive halo, its falloff in screen px (a few px: the spark is the softest thing round the star, never a crisp line)"
-ledger_spark_glow,0.55,"LEDGER galaxy: a spark's halo light against its core's 1"
+ledger_spark_core_px,1,"LEDGER galaxy: a spark's bright core, its half width in screen px (0.6 until 更大更明显)"
+ledger_spark_glow_px,3.5,"LEDGER galaxy: a spark's soft additive halo, its falloff in screen px (the softest thing round the star, never a crisp line; 2 until 更大更明显), held to ledger_spark_glow_share of the star's own radius"
+ledger_spark_glow_share,0.25,"LEDGER galaxy: a spark's halo falloff at most this share of its star's drawn radius in screen px (critic, round 2: on a 10 px star a 3.5 px falloff fanned a radius wide and merged between neighbours)"
+ledger_spark_glow,0.8,"LEDGER galaxy: a spark's halo light against its core's 1 (0.55 until 更大更明显)"
 ledger_spark_jag,0.35,"LEDGER galaxy: how uneven a spark's straight jags run (0 even; critic, fix round 1: even steps read as a Greek-key meander)"
 ledger_spark_selected_out,1,"LEDGER galaxy: 1 lays the selected star's current just outside its gold selection ring, 0 at its disc like the rest"
 ui_title_living,1,"TITLE (owner 2026-10-01, plan A 'The Living Realm'): 1 shows the live 3D map of the home province behind the title menu while the war table is on and the world is built (TitleRealm); 0 keeps the painted page"

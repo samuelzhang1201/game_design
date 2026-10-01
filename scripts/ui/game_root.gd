@@ -992,7 +992,12 @@ func _on_start_requested() -> void:
 		beats.push_front({"kind": "narration", "portrait_id": "round_table",
 			"speaker": "", "text": story})
 	current_screen.start(beats, _pending_report)
-	# THE MAP LAID ON THE TABLE (owner 2026-10-01): from the title's last frame
+	_land_on_table()
+
+## THE MAP LAID ON THE TABLE (owner 2026-10-01): from the title's last frame,
+## when the title left through its sweep (Take the Throne or Continue the
+## Chronicle); nothing otherwise.
+func _land_on_table() -> void:
 	var frame := MainMenu.landing_frame
 	MainMenu.landing_frame = null
 	var table_pieces: Array[Control] = [_bottom_bar, _news_ticker]
@@ -1015,8 +1020,14 @@ func _load_background_story() -> String:
 		lines.append(l.replace("**", ""))
 	return Game.data.fill_realms("\n".join(lines).strip_edges())
 
-## Load Game from the title screen: same resume rules as the pause menu.
+## Load Game from the title screen: same resume rules as the pause menu. On
+## the living title the save is read first (a missing one says so and the
+## title stays), then the title leaves exactly as Take the Throne does — the
+## sweep to the loaded reign's home, the map laid on the table (owner
+## 2026-10-01). A save of another pack swaps the world under the title, so
+## that one goes straight in.
 func _on_menu_load_from_title() -> void:
+	var pack := Game.data.map_id
 	if not Game.load_campaign():
 		if current_screen is MainMenu:
 			current_screen.show_load_failed()
@@ -1024,6 +1035,14 @@ func _on_menu_load_from_title() -> void:
 	_reset_reports()
 	_pending_report = null
 	refresh_missive_badge()
+	var menu := current_screen as MainMenu
+	if menu != null and Game.data.map_id == pack and menu.leave(_resume_loaded, Game.state):
+		return
+	_resume_loaded()
+
+## The loaded reign resumes: a decision still pending on the conversation
+## stage, else the court; laid on the table when the title swept into it.
+func _resume_loaded() -> void:
 	if not Game.state.pending_event.is_empty():
 		_switch_to(State.CONVERSATION)
 		current_screen.start([{"kind": "event", "portrait_id": "round_table",
@@ -1032,6 +1051,7 @@ func _on_menu_load_from_title() -> void:
 	else:
 		_switch_to(State.COURT)
 		current_screen.enter_court(null)
+	_land_on_table()
 
 ## The conversation stage already spoke the event/concerns/pitches/outcomes
 ## (spec §3, R2); COURT re-entered after it shows only the order-bar state

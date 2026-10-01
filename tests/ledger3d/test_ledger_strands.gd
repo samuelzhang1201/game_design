@@ -63,9 +63,19 @@ func test_a_strand_is_picked_by_its_own_id() -> void:
 	view.settle_now()
 	var seg: Dictionary = _strands(g)[1]
 	var ends := view.seg_ends(seg)
-	var mid: Vector3 = ((ends[0] as Vector3) + (ends[1] as Vector3)) * 0.5
-	var at := view.camera().unproject_position(mid) / view._window_scale()
-	assert_eq(view._pick(at), {"kind": "thread", "id": String(seg["id"])})
+	# the first point along it, from its middle out, that lies on no star (a
+	# star is picked before a link, and the layout may set one on the middle)
+	var tried := 0
+	for t: float in [0.5, 0.4, 0.6, 0.3, 0.7, 0.25, 0.75]:
+		var p: Vector3 = (ends[0] as Vector3).lerp(ends[1], t)
+		var at := view.camera().unproject_position(p) / view._window_scale()
+		var hit := view._pick(at)
+		if String(hit.get("kind", "")) == "sphere":
+			continue
+		tried += 1
+		assert_eq(hit, {"kind": "thread", "id": String(seg["id"])})
+		break
+	assert_eq(tried, 1, "a point of the strand clear of every star")
 
 
 ## Review focus 5 / M-c: at a fractional window scale (1.5) the SubViewport

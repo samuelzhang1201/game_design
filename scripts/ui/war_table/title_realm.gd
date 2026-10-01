@@ -6,7 +6,8 @@ extends Control
 ## GameState of the same seed, never Game.state) — the camera drifting slowly
 ## round the home province, the sun turning, the clouds and the wind moving.
 ## No HUD, no picking: it is a picture. Start sweeps the camera down to the
-## game's own opening view (`sweep`) so the reign opens where the title left it.
+## game's own opening view (`sweep`) so the reign opens where the title left it;
+## Continue the Chronicle sweeps the same way, to the loaded reign's home.
 ## Every number is balance.csv ui_title_*; with no built world it is not made
 ## (TitleRealm.available) and the menu keeps its painted page.
 
@@ -25,6 +26,9 @@ var _distance := 0.0
 var _sweep_t := -1.0
 var _sweep_from := Vector3.ZERO  # distance, yaw, day share at the sweep's start
 var _view_filter := Control.MOUSE_FILTER_STOP
+var _centre := Vector2.ZERO   # where the camera looks; the sweep carries it home
+var _sweep_home := Vector2.ZERO  # the sweep's start and end centres
+var _sweep_to := Vector2.ZERO
 
 ## Whether the title can show the realm: the war table on, the 3D map on and
 ## the pack's world built.
@@ -55,6 +59,7 @@ func _ready() -> void:
 	_day = Game.data.bal("ui_title_day_share")
 	_distance = Game.data.bal("ui_title_distance_m")
 	_yaw = Game.data.bal("ui_title_yaw_deg")
+	_centre = ctx.home()
 	_place()
 
 func _process(delta: float) -> void:
@@ -70,16 +75,20 @@ func _process(delta: float) -> void:
 
 func _place() -> void:
 	var ctx := view.context()
-	(view.get_node("Viewport/CameraRig") as Map3DCameraRig).place(ctx.home(), _distance, _yaw)
+	(view.get_node("Viewport/CameraRig") as Map3DCameraRig).place(_centre, _distance, _yaw)
 
 ## Start: down from the title's height to the game's opening view (its scale
 ## bar's distance, north up), over ui_title_sweep_s; `swept` when it lands.
-func sweep() -> void:
+## `to` is the reign the game opens on — a loaded save (Continue the
+## Chronicle), whose home the camera is carried to; null is the preview's own.
+func sweep(to: GameState = null) -> void:
 	var ctx := view.context() if view != null else null
 	if ctx == null:
 		swept.emit.call_deferred()
 		return
 	_sweep_from = Vector3(_distance, wrapf(_yaw, -180.0, 180.0), _day)
+	_sweep_home = _centre
+	_sweep_to = ctx.home(to)
 	_sweep_t = 0.0
 
 func _step_sweep(delta: float) -> void:
@@ -88,6 +97,7 @@ func _step_sweep(delta: float) -> void:
 	var rig := view.get_node("Viewport/CameraRig") as Map3DCameraRig
 	_distance = lerpf(_sweep_from.x, rig.start_distance(), k)
 	_yaw = lerpf(_sweep_from.y, 0.0, k)
+	_centre = _sweep_home.lerp(_sweep_to, k)
 	_place()
 	if _sweep_t >= 1.0:
 		_sweep_t = -2.0

@@ -87,13 +87,20 @@ func test_the_current_is_laid_as_its_stars() -> void:
 	for k in faint.size():
 		var id := String(faint[k])
 		assert_eq(LedgerStarMotion.transform_at(sparks, whole.size() + k), LedgerStarMotion.transform_at(dim, k))
-		assert_eq(LedgerStarMotion.custom_at(dim, k), view.star_custom(id))
+		# a dimmed star the camera stands close to is faded, body and current
+		# alike (near_fade: 1 unless it is)
+		var want := view.star_custom(id)
+		want.b *= view.near_fade(id)
+		var got := LedgerStarMotion.custom_at(dim, k)
+		assert_almost_eq(Vector4(got.r, got.g, got.b, got.a), Vector4(want.r, want.g, want.b, want.a), Vector4.ONE * 1e-6)
+		assert_almost_eq(LedgerStarMotion.colour_at(dim, k).a, view.star_colour(id).a * view.near_fade(id), 1e-6)
 		assert_eq(LedgerStarMotion.colour_at(sparks, whole.size() + k), LedgerStarMotion.colour_at(dim, k))
 	# the seed is the star's own wherever it is dealt, and the weight its state
 	var c := LedgerStarMotion.custom_at(dim, 0)
 	var seed := LedgerStarMotion.seed_of(String(faint[0]))
 	assert_eq(Vector2(c.r, c.g), Vector2(seed.r, seed.g))
-	assert_almost_eq(c.b, repo.bal("ledger_spark_dimmed") * pow(view.star_colour(String(faint[0])).a, 2.2), 1e-6,
+	assert_almost_eq(c.b, repo.bal("ledger_spark_dimmed") * pow(view.star_colour(String(faint[0])).a, 2.2)
+		* view.near_fade(String(faint[0])), 1e-6,
 		"a dimmed star's current is its share of its perceived opacity")
 	assert_almost_eq(LedgerStarMotion.custom_at(stars, 0).b, 1.0, 1e-6)
 
@@ -120,6 +127,78 @@ func test_every_star_shader_wobbles_by_the_shared_formula() -> void:
 		var text := FileAccess.get_file_as_string(path)
 		assert_true(text.contains('#include "res://scenes/ledger/star_motion.gdshaderinc"'), path)
 		assert_true(text.contains(call), path + " calls " + call)
+
+
+## Owner 2026-10-01 (晃动幅度也可以更大更明显): a link's two ends move by the
+## same wobble as their stars — link.gdshader includes the shared formula and
+## moves each end by it, from that end's own star data per vertex.
+func test_the_links_wobble_with_their_stars() -> void:
+	var text := FileAccess.get_file_as_string("res://scenes/ledger/link.gdshader")
+	assert_true(text.contains('#include "res://scenes/ledger/star_motion.gdshaderinc"'))
+	assert_true(text.contains("star_wobble("), "moves by the shared formula")
+	assert_true(text.contains("wobbled(VERTEX, CUSTOM2"), "this end by its own star")
+	assert_true(text.contains("wobbled(CUSTOM0.xyz, CUSTOM3"), "the far end by the far star")
+	_view()
+	_show()
+	for key: String in LedgerStarMotion.WOBBLE:
+		assert_almost_eq(float(view.link_material().get_shader_parameter(LedgerStarMotion.WOBBLE[key])),
+			repo.bal(key), 1e-5, "the links bind " + key)
+	assert_almost_eq(float(view.link_material().get_shader_parameter("star_cap_px")),
+		repo.bal("ledger_star_max_px") * view._window_scale(), 1e-4, "the stars' screen cap")
+	view.select("character:you")
+	var segs := view.segments()
+	assert_gt(segs.size(), 0)
+	for seg: Dictionary in segs:
+		for end: String in ["a", "b"]:
+			var id := String(seg[end + "_id"])
+			var st: Color = seg[end + "_star"]
+			var seed := LedgerStarMotion.seed_of(id)
+			assert_eq(Vector2(st.r, st.g), Vector2(seed.r, seed.g), "%s: its seed" % id)
+			assert_almost_eq(st.b, float(view._size[id]), 1e-5, "%s: its drawn radius" % id)
+			assert_eq(st.a, 1.0 if id == "character:you" else 0.0, "%s: selected or not" % id)
+
+
+## The selected star keeps a smaller wobble (inside its gold ring), its links'
+## ends with it.
+func test_the_selected_star_wobbles_less() -> void:
+	assert_lt(repo.bal("ledger_star_wobble_selected"), repo.bal("ledger_star_wobble_share"))
+	var text := FileAccess.get_file_as_string("res://scenes/ledger/star_motion.gdshaderinc")
+	assert_true(text.contains("mix(wobble_share, wobble_selected_share, clamp(seed.w, 0.0, 1.0))"))
+
+
+## Critic, round 2: on a small star the current closed into a ring and its
+## halo fanned a radius wide — it lights at most ledger_spark_max_cover of the
+## rim (a dark sector turns with it) and its halo is held to a share of the
+## star's radius.
+func test_the_current_never_closes_a_ring() -> void:
+	var text := FileAccess.get_file_as_string("res://scenes/ledger/spark.gdshader")
+	assert_true(text.contains("run *= 1.0 - smoothstep(max_cover - SECTOR_SOFT, max_cover, sector)"))
+	assert_true(text.contains("min(glow_px, glow_share / px)"), "the halo held to the radius")
+	assert_lt(repo.bal("ledger_spark_max_cover"), 0.75)
+
+
+## Critic, round 2: a dimmed star (another cluster's, seen from inside the
+## chosen one) the camera has come right up to fades out, body and current.
+func test_a_dimmed_star_at_the_camera_fades_out() -> void:
+	_view()
+	_show()
+	view.focus_cluster("court")
+	view.settle_now()
+	var faint: Array = view.dealt()[1]
+	var id := String(faint[0])
+	var cam := view.camera()
+	var forward := -cam.transform.basis.z
+	# the target just past the star: the star stands a tenth of the camera's
+	# distance in front of it
+	view._framed = false
+	view.orbit().target = view.drawn(id) + forward * view.orbit().distance * 0.9
+	view._apply_camera()
+	view._place_stars()
+	assert_almost_eq(view.near_fade(id), 0.0, 1e-4)
+	var k := faint.find(id)
+	assert_almost_eq(LedgerStarMotion.colour_at(view.instance_buffer("FaintStars"), k).a, 0.0, 1e-4, "its body gone")
+	var sk := view.spark_ids().find(id)
+	assert_almost_eq(LedgerStarMotion.custom_at(view.instance_buffer("Sparks"), sk).b, 0.0, 1e-4, "its current gone")
 
 
 func test_the_current_is_rebuilt_with_the_stars() -> void:
@@ -149,7 +228,7 @@ func test_strength_zero_draws_no_current() -> void:
 func test_share_zero_holds_every_star_still() -> void:
 	repo.balance["ledger_star_wobble_share"] = 0.0
 	_view()
-	for m: ShaderMaterial in view.star_materials() + [view.spark_material()]:
+	for m: ShaderMaterial in view.star_materials() + [view.spark_material(), view.link_material()]:
 		assert_eq(float(m.get_shader_parameter("wobble_share")), 0.0)
 
 

@@ -112,9 +112,10 @@ func to_pack(xz: Vector2) -> Vector2:
 
 
 ## Where the view opens (world XZ): the middle of the player's home province
-## (MapManors.home_province), else the capital, else the map's centre.
-func home() -> Vector2:
-	var p: Dictionary = repo.provinces.get(MapManors.home_province(repo, state()), {})
+## (MapManors.home_province), else the capital, else the map's centre — of
+## `of` when given (the title aiming at a loaded reign), else the live state.
+func home(of: GameState = null) -> Vector2:
+	var p: Dictionary = repo.provinces.get(MapManors.home_province(repo, of if of != null else state()), {})
 	if p.has("center_x"):
 		return to_world(Vector2(float(p["center_x"]), float(p["center_y"])))
 	var realm: Dictionary = repo.kingdoms.get(repo.resolve_realm("player_realm"), {})

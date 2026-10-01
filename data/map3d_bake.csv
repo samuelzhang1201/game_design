@@ -149,3 +149,19 @@ zone_weight_meadow,0.8,3D bake open fields: the meadow's
 zone_weight_pasture,0.05,"3D bake open fields: the common pasture's — barely more than its tint: the natural ground IS the pasture"
 croft_edge_noise,0.6,"3D bake open fields: how far (as a share of its width) noise pulls the crofts' edge in or out — a plain radius drew a ring round every village"
 croft_edge_wave_m,260,3D bake open fields: the wavelength of that noise
+wall_bins,64,"3D bake WALLS (owner 2026-10-01: 城镇的外围能增加城墙): bearings round a walled settlement's centre at which the wall's line is measured (bake_houses.wall_ring)"
+wall_dilate_bins,2,walls: each bearing's farthest building spread this many bearings either way before smoothing (a wall never cuts a corner off a house)
+wall_smooth_passes,4,walls: circular [1 2 1] smoothing passes over the line — a medieval wall curves round its town
+wall_margin_m,18,walls: the wall's line this far out beyond the farthest building's corner (a lane inside the wall)
+wall_min_r_m,60,walls: no wall ring smaller than this radius
+wall_len_m,24,walls: a wall module's length when data/map3d_houses.csv has no `wall` row (it does: its footprint_m)
+wall_tower_turn_deg,24,walls: a tower stands at every joint the line turns by this much or more
+wall_tower_every,4,walls: and at every this-many-th joint regardless
+wall_min_houses,8,walls: a walled settlement with fewer buildings than this gets no wall
+pier_len_m,60,"3D bake PIERS (owner 2026-10-01: 码头延伸到海里): a pier's length, metres — data/map3d_houses.csv pier footprint_m; this much water must lie beyond the shore on its bearing"
+pier_root_m,6,piers: the pier's landward end this far inland of the shore (its deck meets the bank)
+pier_search_m,700,piers: how far from a port's centre its shore is looked for
+pier_step_m,10,piers: the march step along a bearing
+pier_bearing_step_deg,5,piers: the bearings tried
+pier_max_shore_m,6,piers: the shore's ground at most this far over the sea (a pier never runs off a cliff)
+wall_shore_m,30,"3D bake WALLS: a wall module stands only where every vertex within this far is land (the bake's 20 m mask against the game's 50 m cell index: at the bare point a module on the shore's last vertex read as in the sea)"

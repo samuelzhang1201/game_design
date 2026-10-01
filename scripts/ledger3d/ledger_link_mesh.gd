@@ -5,10 +5,24 @@ extends RefCounted
 ## design §5): a quad per link, its four vertices at the two ends; link.gdshader
 ## widens each quad across the view by its width in SCREEN px, so a link keeps
 ## its weight at every zoom. Colour runs from the source's end to the far end
-## (the clusters' shading), its alpha the drawn opacity. Pure arrays.
+## (the clusters' shading), its alpha the drawn opacity. Each vertex also
+## carries its own end's star and the far end's — seed, drawn radius and
+## whether it is the selected one (CUSTOM2 here, CUSTOM3 there) — so the shader
+## moves both ends by the very wobble their stars are drawn with (owner
+## 2026-10-01: a larger wobble must not leave a link's end behind). Pure arrays.
 
 const FORMAT := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) \
-	| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
+	| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT) \
+	| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM2_SHIFT) \
+	| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM3_SHIFT)
+
+
+## One end's star as a vertex reads it: [seed x, seed y, drawn radius,
+## selected]. A segment with no star data (`a_star` / `b_star` absent) holds
+## still.
+static func _star(s: Dictionary, key: String) -> Array:
+	var c: Color = s.get(key, Color(0, 0, 0, 0))
+	return [c.r, c.g, c.b, c.a]
 
 
 static func arrays(segments: Array) -> Array:
@@ -18,9 +32,13 @@ static func arrays(segments: Array) -> Array:
 	var uv2 := PackedVector2Array()
 	var c0 := PackedFloat32Array()
 	var c1 := PackedFloat32Array()
+	var c2 := PackedFloat32Array()
+	var c3 := PackedFloat32Array()
 	var idx := PackedInt32Array()
 	for s: Dictionary in segments:
 		var base := verts.size()
+		var star_a := _star(s, "a_star")
+		var star_b := _star(s, "b_star")
 		for end in 2:
 			var here: Vector3 = s["a"] if end == 0 else s["b"]
 			var there: Vector3 = s["b"] if end == 0 else s["a"]
@@ -33,6 +51,8 @@ static func arrays(segments: Array) -> Array:
 				uv2.append(Vector2(float(s["speed"]), 1.0 if bool(s["dashed"]) else 0.0))
 				c0.append_array([there.x, there.y, there.z, side * end_sign])
 				c1.append_array([float(s["width_px"]), float(s["shift_px"]) * end_sign, float(s["glow"]), 0.0])
+				c2.append_array(star_a if end == 0 else star_b)
+				c3.append_array(star_b if end == 0 else star_a)
 		idx.append_array([base, base + 1, base + 2, base + 1, base + 3, base + 2])
 	var arr := []
 	arr.resize(Mesh.ARRAY_MAX)
@@ -42,6 +62,8 @@ static func arrays(segments: Array) -> Array:
 	arr[Mesh.ARRAY_TEX_UV2] = uv2
 	arr[Mesh.ARRAY_CUSTOM0] = c0
 	arr[Mesh.ARRAY_CUSTOM1] = c1
+	arr[Mesh.ARRAY_CUSTOM2] = c2
+	arr[Mesh.ARRAY_CUSTOM3] = c3
 	arr[Mesh.ARRAY_INDEX] = idx
 	return arr
 

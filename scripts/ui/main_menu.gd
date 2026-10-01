@@ -125,9 +125,20 @@ func _start() -> void:
 	if _starting:
 		return
 	Game.player_setup = {}
-	if _realm == null or _realm.view == null or _realm.view.context() == null:
+	if not leave(func() -> void: start_requested.emit()):
 		start_requested.emit()
-		return
+
+## The living title's way into the game, the SAME for Take the Throne and
+## Continue the Chronicle (owner 2026-10-01: 点击Continue the Chronicle时，也要有
+## 同样的动画效果): the column fades, the camera sweeps down to the opening view
+## over the home of `to` (the loaded reign; null the preview's), the map as it
+## lies then is kept for TableLanding and the live view handed to the game,
+## then `done`. False — nothing done — without a living map: the caller goes on.
+func leave(done: Callable, to: GameState = null) -> bool:
+	if _starting:
+		return true
+	if _realm == null or _realm.view == null or _realm.view.context() == null:
+		return false
 	_starting = true
 	var fade := create_tween().set_parallel(true)
 	for node_name in ["TitleColumn", "Caption", "Shade"]:
@@ -138,8 +149,9 @@ func _start() -> void:
 		# the map as it lies now becomes the sheet that is laid on the table
 		landing_frame = ImageTexture.create_from_image(get_viewport().get_texture().get_image())
 		_realm.hand_over()
-		start_requested.emit(), CONNECT_ONE_SHOT)
-	_realm.sweep()
+		done.call(), CONNECT_ONE_SHOT)
+	_realm.sweep(to)
+	return true
 
 ## THE LIVING REALM (owner 2026-10-01, title plan A): the live map of the home
 ## province behind (TitleRealm; the painted page when no world is built), the
@@ -337,8 +349,10 @@ func _draw_shade(c: Control) -> void:
 	c.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, band * 0.6), Vector2(0, band * 0.6)]),
 		PackedColorArray([edge, edge, edge0, edge0]))
 
+## Continue the Chronicle: GameRoot loads the save, then leaves through `leave`.
 func _on_load_pressed() -> void:
-	load_requested.emit()
+	if not _starting:
+		load_requested.emit()
 
 func show_load_failed() -> void:
 	_status.text = "No saved realm found."

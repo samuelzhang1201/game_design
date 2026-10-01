@@ -7,13 +7,21 @@
 // border_line.gdshader practice. COLOR is sRGB (turned linear here, Forward+
 // blends in linear light), its alpha the drawn opacity; light runs along a
 // flow at its speed (UV2.x) as a brightening of its own colour, a planned link is dashed (UV2.y), a running
-// loop glows (CUSTOM1.z: 1 virtuous, 2 vicious). Every number is a uniform.
+// loop glows (CUSTOM1.z: 1 virtuous, 2 vicious). Each end moves with its
+// star's WOBBLE (star_motion.gdshaderinc; owner 2026-10-01, a wobble large
+// enough to read would otherwise leave the link's end behind): CUSTOM2 is this
+// end's star — seed, drawn radius, selected — and CUSTOM3 the far end's, each
+// radius held to the screen cap the stars are drawn under (`star_cap_px`).
+// Every number is a uniform.
 shader_type spatial;
 render_mode unshaded, blend_mix, cull_disabled, depth_draw_never, shadows_disabled, fog_disabled,
 	world_vertex_coords;
 
+#include "res://scenes/ledger/star_motion.gdshaderinc"
+
 uniform float px_per_dist = 0.001;
 uniform float ortho_m_per_px = 0.0;
+uniform float star_cap_px = 1e6;   // no star is drawn with a radius over this (SubViewport px)
 uniform float pulses = 4.0;
 uniform float dashes_per_m = 0.5;
 uniform float edge_soft = 0.35;
@@ -30,9 +38,21 @@ vec3 to_linear(vec3 c) {
 	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
 }
 
+// Metres per SubViewport px at a point.
+float m_per_px_at(vec3 p, vec3 cam) {
+	return ortho_m_per_px > 0.0 ? ortho_m_per_px : length(p - cam) * px_per_dist;
+}
+
+// A star at `p` as its link end sees it: moved by its wobble, its radius the
+// one it is drawn with (LedgerView3D._draw_r: its own, held to the screen cap).
+vec3 wobbled(vec3 p, vec4 star, vec3 cam, mat4 inv_view, float t) {
+	float r = min(star.z, star_cap_px * m_per_px_at(p, cam));
+	return p + star_wobble(vec4(star.xy, 0.0, star.w), r, inv_view, t);
+}
+
 void vertex() {
-	vec3 here = VERTEX;
-	vec3 there = CUSTOM0.xyz;
+	vec3 here = wobbled(VERTEX, CUSTOM2, CAMERA_POSITION_WORLD, INV_VIEW_MATRIX, TIME);
+	vec3 there = wobbled(CUSTOM0.xyz, CUSTOM3, CAMERA_POSITION_WORLD, INV_VIEW_MATRIX, TIME);
 	vec3 dir = there - here;
 	v_len = length(dir);
 	dir = v_len > 1e-5 ? dir / v_len : vec3(1.0, 0.0, 0.0);
@@ -42,8 +62,8 @@ void vertex() {
 	vec3 to_cam = ortho_m_per_px > 0.0 ? -CAMERA_DIRECTION_WORLD : normalize(CAMERA_POSITION_WORLD - here);
 	vec3 across = cross(dir, to_cam);
 	across = length(across) < 1e-4 ? vec3(0.0, 1.0, 0.0) : normalize(across);
-	float m_per_px = ortho_m_per_px > 0.0 ? ortho_m_per_px : length(here - CAMERA_POSITION_WORLD) * px_per_dist;
-	VERTEX += across * (CUSTOM0.w * 0.5 * CUSTOM1.x + CUSTOM1.y) * m_per_px;
+	float m_per_px = m_per_px_at(here, CAMERA_POSITION_WORLD);
+	VERTEX = here + across * (CUSTOM0.w * 0.5 * CUSTOM1.x + CUSTOM1.y) * m_per_px;
 	v_speed = UV2.x;
 	v_dashed = UV2.y;
 	v_glow = CUSTOM1.z;
