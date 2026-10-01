@@ -101,11 +101,30 @@ static func _fits(points: Array, target: Vector3, distance: float, yaw_deg: floa
 	return true
 
 
-## The least distance at which every point fits, the target held: a point
-## only draws toward the screen's middle as the eye backs away, so the fit
-## is monotone and a bisection finds it.
+## The least distance at which every point fits, the target held. A point
+## only draws toward the screen's middle as the eye backs away, so each
+## point and each edge of the safe rect give a least distance in closed form
+## — ndc.x = v·x / ((D − v·z)·tan·aspect) reaches the edge `e` (on the side
+## the point lies) at D = v·z + v·x / (e·tan·aspect) — and the fit is their
+## greatest: one pass over the points, called on every frame a framed chart
+## settles. When the safe rect does not straddle the screen's middle the
+## closed form does not hold and a bisection finds it.
 static func _fit_distance(points: Array, target: Vector3, yaw_deg: float, pitch_deg: float,
 		fov_deg: float, aspect: float, lo: Vector2, hi: Vector2) -> float:
+	if lo.x < 0.0 and hi.x > 0.0 and lo.y < 0.0 and hi.y > 0.0:
+		var b := _basis(yaw_deg, pitch_deg)
+		var tv := tan(deg_to_rad(fov_deg) * 0.5)
+		var need := 0.0
+		for p: Vector3 in points:
+			var v := p - target
+			var vx := v.dot(b.x)
+			var vy := v.dot(b.y)
+			var vz := v.dot(b.z)
+			var d := vz + 1e-6  # the eye stays in front of every point
+			d = maxf(d, vz + vx / ((hi.x if vx > 0.0 else lo.x) * tv * aspect))
+			d = maxf(d, vz + vy / ((hi.y if vy > 0.0 else lo.y) * tv))
+			need = maxf(need, d)
+		return need
 	var near := 0.0
 	var far := 1.0
 	while not _fits(points, target, far, yaw_deg, pitch_deg, fov_deg, aspect, lo, hi) and far < 1e6:

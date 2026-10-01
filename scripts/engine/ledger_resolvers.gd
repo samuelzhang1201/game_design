@@ -22,9 +22,9 @@ extends RefCounted
 const NAMES := ["works", "part_of", "yields_civil", "yields_strategic", "taxed", "trade_gold",
 	"rations", "stands_on", "holds", "member", "sits", "based_in", "carries", "spies_on",
 	"describes", "court_relations", "converts_in", "converts_out", "supplies_in", "supplies_out", "garrisons",
-	"governs", "skims", "builds", "consumes", "trades", "routes"]
+	"governs", "skims", "builds", "consumes", "trades", "routes", "static"]
 const INSTANCE_LISTS := ["peasants", "manors", "provinces", "regiments", "characters", "houses",
-	"seats", "reports", "couriers", "workshops", "supply_lines", "artisans", "markets", "trade_routes"]
+	"seats", "reports", "couriers", "workshops", "supply_lines", "artisans", "markets", "trade_routes", "static"]
 const REPORT_KINDS := {"describes_province": "province", "describes_manor": "manor",
 	"describes_regiment": "regiment", "describes_town": "burg"}
 
@@ -51,6 +51,37 @@ static func memo_active() -> bool:
 	return _memo_on
 
 
+## One named cache of the running memo (a Dictionary kept by reference, made
+## on first ask); callers check `memo_active()` first — outside a memo the
+## bucket is thrown away at the next begin_memo.
+static func memo_bucket(bucket: String) -> Dictionary:
+	if not _memo.has(bucket):
+		_memo[bucket] = {}
+	return _memo[bucket]
+
+
+## A value remembered within the memo under a SUBJECT dictionary (an Intel
+## subject: kind and code or cell): keyed by the dictionary's hash and
+## confirmed by equality, so two subjects whose hashes collide never share
+## an answer, and no subject is stringified (str() of a dictionary per call
+## cost the opened galaxy ~6 ms; Task 11 fix round 1, F7). Returns [found,
+## value].
+static func memo_subject(bucket: String, subj: Dictionary) -> Array:
+	var hits: Array = memo_bucket(bucket).get(subj.hash(), [])
+	for e: Array in hits:
+		if e[0] == subj:
+			return [true, e[1]]
+	return [false, null]
+
+
+static func memo_subject_put(bucket: String, subj: Dictionary, value: Variant) -> void:
+	var cache := memo_bucket(bucket)
+	var h := subj.hash()
+	var hits: Array = cache.get(h, [])
+	hits.append([subj.duplicate(true), value])
+	cache[h] = hits
+
+
 static func _supply_plan(repo: DataRepository, state: GameState) -> Array:
 	if not _memo_on:
 		return SupplySystem.plan(repo, state)
@@ -65,6 +96,56 @@ static func _workshop_plan(repo: DataRepository, state: GameState) -> Array:
 	if not _memo.has("workshop"):
 		_memo["workshop"] = WorkshopSystem.plan(repo, state)
 	return _memo["workshop"]
+
+
+## A house's manors (MapManors.manors_of_house), from ONE index of every
+## manor by its holder built per memo — the scan per house cost ~136 ms a
+## galaxy (spec 2026-09-30-ledger-galaxy-design §3). Outside a memo, the scan.
+static func _manors_of_house(repo: DataRepository, state: GameState, family: String) -> Array:
+	if not _memo_on:
+		return MapManors.manors_of_house(repo, state, family)
+	if not _memo.has("house_manors"):
+		var idx := {}
+		var ids: Array = repo.manors.keys()
+		ids.sort()
+		for cell: int in ids:
+			var owner := String(MapManors.owner_of(repo, state, cell))
+			if owner != "":
+				(idx.get_or_add(owner, []) as Array).append(cell)
+		_memo["house_manors"] = idx
+	return (_memo["house_manors"] as Dictionary).get(family, [])
+
+
+## Intel.level, cached per subject within one memo (Ledger._account calls
+## this instead of Intel.level directly). A pure function of repo + state +
+## subj while the memo's state stands still, so caching it is safe; `holds`'
+## house index alone asks it once per manor a house owns anywhere, and
+## `_account` asked it again for every believed link the galaxy read.
+static func intel_level(repo: DataRepository, state: GameState, subj: Dictionary) -> String:
+	if not _memo_on:
+		return Intel.level(repo, state, subj)
+	var got := memo_subject("intel_level", subj)
+	if bool(got[0]):
+		return String(got[1])
+	var lvl := Intel.level(repo, state, subj)
+	memo_subject_put("intel_level", subj, lvl)
+	return lvl
+
+
+## MarketSystem.province_of_burg, cached per burg within one memo
+## (Ledger._province_code's `town` branch calls this instead). The
+## uncached call scans every entry of `state.manor_province` looking for
+## one that names this burg; a town's LEDGER links (`stands_on`,
+## `garrisons`, `describes_town`) ask its province up to four times over
+## (fix round 1, controller ruling).
+static func burg_province(repo: DataRepository, state: GameState, burg: String) -> String:
+	if not _memo_on:
+		return MarketSystem.province_of_burg(repo, state, burg)
+	var cache: Dictionary = _memo.get("burg_province", {})
+	if not cache.has(burg):
+		cache[burg] = MarketSystem.province_of_burg(repo, state, burg)
+		_memo["burg_province"] = cache
+	return cache[burg]
 
 
 static func _industry_plan(repo: DataRepository, state: GameState) -> Array:
@@ -152,6 +233,8 @@ static func run(row: Dictionary, repo: DataRepository, state: GameState, focus: 
 			return _trades(repo, state, id, to_t)
 		"routes":
 			return _routes_to_gold(repo, state, id)
+		"static":
+			return _static_links(row, repo, id, all)
 	return []
 
 
@@ -170,7 +253,47 @@ static func _rest(id: String) -> String:
 	return id.substr(id.get_slice(":", 0).length() + 1)
 
 
+## A link type whose links are written down (data/ledger_static_links.csv,
+## spec 2026-09-30-ledger-galaxy-design §3b): the crown's own figure, no
+## Intel subject. The type level is one link counting them.
+static func _static_links(row: Dictionary, repo: DataRepository, id: String, all: bool) -> Array:
+	var out: Array = []
+	for l: Dictionary in repo.ledger_static_links:
+		if String(l["link_id"]) != String(row["link_id"]):
+			continue
+		if all or id == "" or id == String(l["from"]) or id == String(l["to"]):
+			out.append(_link(String(l["from"]), String(l["to"]), int(l["flow"]), "count"))
+	if id == "" and not all:
+		return [_type_link(String(row["from_type"]), String(row["to_type"]), out.size(), "count")] \
+			if not out.is_empty() else []
+	return out
+
+
+## The written-down node `id` (data/ledger_static_nodes.csv), or {}.
+static func static_node(repo: DataRepository, id: String) -> Dictionary:
+	for n: Dictionary in repo.ledger_static_nodes:
+		if String(n["node_id"]) == id:
+			return n
+	return {}
+
+
+## A manor's Intel subject, from ONE build per cell per memo — a galaxy asks
+## for the same manor's subject from several readers (works, yields, holds,
+## stands_on, part_of), each rebuilding MapTerrain.cell_center's vertex
+## average afresh; a pure function of repo + cell, safe to cache for the
+## length of one memo. The cached Dictionary is SHARED across every caller
+## within that memo — callers must not mutate the returned `subj`.
 static func _manor_subj(repo: DataRepository, cell: int) -> Dictionary:
+	if not _memo_on:
+		return _manor_subj_raw(repo, cell)
+	var subjs: Dictionary = _memo.get("manor_subj", {})
+	if not subjs.has(cell):
+		subjs[cell] = _manor_subj_raw(repo, cell)
+		_memo["manor_subj"] = subjs
+	return subjs[cell]
+
+
+static func _manor_subj_raw(repo: DataRepository, cell: int) -> Dictionary:
 	return MissiveLog.subject("manor", MapManors.code_of(repo, cell), cell,
 		MapTerrain.cell_center(repo, repo.cells[cell]))
 
@@ -278,7 +401,7 @@ static func _holds(repo: DataRepository, state: GameState, id: String) -> Array:
 		return [_type_link("house", "manor", _controlled_manors(repo, state).size(), "count")]
 	if id.begins_with("house:"):
 		var out: Array = []
-		for cell: int in MapManors.manors_of_house(repo, state, _rest(id)):
+		for cell: int in _manors_of_house(repo, state, _rest(id)):
 			out.append(_link(id, "manor:%d" % cell, -1, "count", _manor_subj(repo, cell)))
 		return out
 	if id.begins_with("manor:"):
@@ -331,17 +454,38 @@ static func _province_now(repo: DataRepository, state: GameState, reg: Dictionar
 	return Intel.province_of(repo, state, MissiveLog.subject("point", "", -1, at))
 
 
+## Every regiment's province NOW (_province_now) plus its own row, from ONE
+## pass — a galaxy asks `_based_in` once per province AND once per regiment,
+## and each call scanned every regiment's position afresh (the costliest
+## reader after `holds`'s house index, spec 2026-09-30-ledger-galaxy-design
+## §3). Built once regardless of the memo (fix round 1, M2: no duplicated
+## loop) and cached only while a memo is on, so `_based_in` never has to
+## call `MapObjects.regiments_of` a second time to get at the regiment rows.
+static func _regiment_provinces(repo: DataRepository, state: GameState) -> Dictionary:
+	if _memo_on and _memo.has("regiment_provinces"):
+		return _memo["regiment_provinces"]
+	var idx := {}
+	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		idx[String(reg["regiment_code"])] = {"province": _province_now(repo, state, reg), "reg": reg}
+	if _memo_on:
+		_memo["regiment_provinces"] = idx
+	return idx
+
+
 static func _based_in(repo: DataRepository, state: GameState, id: String) -> Array:
-	var regs := MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
+	var here_of := _regiment_provinces(repo, state)
 	if id == "":
-		return [_type_link("regiment", "province", regs.size(), "count")]
+		return [_type_link("regiment", "province", here_of.size(), "count")]
 	var out: Array = []
-	for reg: Dictionary in regs:
-		var code := String(reg["regiment_code"])
-		var here := _province_now(repo, state, reg)
+	var codes: Array = here_of.keys()
+	codes.sort()
+	for code: String in codes:
+		var entry: Dictionary = here_of[code]
+		var here := String(entry["province"])
 		if here == "":
 			continue
 		if id == "regiment:" + code or id == "province:" + here:
+			var reg: Dictionary = entry["reg"]
 			out.append(_link("regiment:" + code, "province:" + here, ArmySystem.headcount(repo, reg), "heads",
 				MissiveLog.subject("regiment", code, -1, ArmySystem.position_of(repo, state, reg))))
 	return out
@@ -752,7 +896,7 @@ static func _stock(repo: DataRepository, state: GameState, pool: String, metrics
 
 # --- instances and names ---------------------------------------------------
 
-static func instances(name: String, repo: DataRepository, state: GameState) -> Array:
+static func instances(name: String, repo: DataRepository, state: GameState, type_id: String = "") -> Array:
 	var out: Array = []
 	var realm := repo.resolve_realm("player_realm")
 	match name:
@@ -806,6 +950,10 @@ static func instances(name: String, repo: DataRepository, state: GameState) -> A
 		"trade_routes":
 			for r: Dictionary in _routes(repo, state):
 				out.append({"id": "trade_route:" + String(r["kingdom"]), "strain": int(r["value"])})
+		"static":
+			for n: Dictionary in repo.ledger_static_nodes:
+				if String(n["type_id"]) == type_id:
+					out.append({"id": String(n["node_id"]), "strain": 0})
 	for row: Dictionary in out:
 		row["label"] = label_of(repo, state, String(row["id"]))
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -815,8 +963,26 @@ static func instances(name: String, repo: DataRepository, state: GameState) -> A
 	return out
 
 
-## A node's name, or "" when what it names no longer exists.
+## A node's name, or "" when what it names no longer exists, cached per id
+## within one memo (fix round: the galaxy's worklist checks a new end's
+## label once to tell whether it still exists, then `_node` asked for the
+## same label again to build it — a manor's or a building's label rebuilds
+## MapManors.label_of's lookups each time, doubling the cost of every newly
+## discovered node and pushing the galaxy over its ms budget).
 static func label_of(repo: DataRepository, state: GameState, id: String) -> String:
+	if not _memo_on:
+		return _label_of_raw(repo, state, id)
+	var cache: Dictionary = _memo.get("label_of", {})
+	if not cache.has(id):
+		cache[id] = _label_of_raw(repo, state, id)
+		_memo["label_of"] = cache
+	return cache[id]
+
+
+static func _label_of_raw(repo: DataRepository, state: GameState, id: String) -> String:
+	var written := static_node(repo, id)
+	if not written.is_empty():
+		return String(written["label"])
 	var kind := id.get_slice(":", 0)
 	var rest := _rest(id)
 	match kind:

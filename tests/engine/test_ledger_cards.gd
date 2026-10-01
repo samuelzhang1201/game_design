@@ -63,3 +63,42 @@ func test_show_on_map_has_a_place_for_places_only() -> void:
 	assert_eq(float(subj["x"]), float(roundi(float(data.provinces[home]["center_x"]))))
 	assert_true(LedgerCards.subject_of(data, s, "type:gold").is_empty())
 	assert_true(LedgerCards.subject_of(data, s, "character:you").is_empty())
+
+
+## Final review I2: what a province folds reaches its card — counted in the
+## types' own names, one or many — and a merged thread names how many it
+## stands for, on the province's card and on its own.
+func test_a_provinces_card_names_what_it_folds() -> void:
+	var g := Ledger.galaxy(data, s, {})
+	var home := MapManors.home_province(data, s)
+	var folded := {}
+	for n: Dictionary in g["nodes"]:
+		if String(n["id"]) == "province:" + home:
+			folded = n.get("folded", {})
+	assert_gt(int(folded.get("manor", 0)), 1, "the home province folds its manors")
+	var e := LedgerCards.entry(data, s, "province:" + home, g)
+	var line := String((e["lines"] as Array).filter(func(t: String) -> bool: return t.begins_with("Folds "))[0])
+	assert_string_contains(line, "%d manors" % int(folded["manor"]))
+	var one := LedgerCards.entry(data, s, "province:x",
+		{"nodes": [{"id": "province:x", "folded": {"town": 1, "manor": 3}}], "links": []})
+	assert_has(one["lines"], "Folds 3 manors, 1 town", "in the types' order, one named as one")
+	assert_false("\n".join(LedgerCards.entry(data, s, "province:" + home, {})["lines"]).contains("Folds"),
+		"a snapshot with nothing folded says nothing of it")
+
+
+func test_a_merged_thread_names_how_many_it_stands_for() -> void:
+	var g := Ledger.galaxy(data, s, {})
+	var home := "province:" + MapManors.home_province(data, s)
+	var merged := {}
+	for l: Dictionary in g["links"]:
+		if int(l.get("count", 1)) > 1 and String(l["from"]) == home:
+			merged = l
+			break
+	assert_false(merged.is_empty(), "the home province carries a merged thread")
+	var row := Ledger.link_row(data, String(merged["type"]))
+	var label := String(Ledger.type_row(data, String(row["from_type"]))["label"]).to_lower()
+	var prefix := "%d %s: " % [int(merged["count"]), label]
+	var lines: Array = LedgerCards.entry(data, s, home, g)["lines"]
+	assert_true(lines.any(func(t: String) -> bool: return t.begins_with(prefix + String(merged["verb"]))),
+		"the province's card: " + prefix)
+	assert_true(String(LedgerCards.thread_entry(data, s, merged)["title"]).begins_with(prefix), "the thread's own card")

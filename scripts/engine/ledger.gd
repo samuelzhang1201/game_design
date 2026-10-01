@@ -55,6 +55,37 @@ static func validate(repo: DataRepository) -> Array[String]:
 		var it := String(lenses[lens]["instance_type"])
 		if it != "" and not types.has(it):
 			errors.append("lens %s: unknown instance type %s" % [lens, it])
+	var clusters := {}
+	for c: Dictionary in repo.ledger_clusters:
+		var cid := String(c["cluster"])
+		clusters[cid] = true
+		if not repo.ledger_palette.has(String(c["colour"])):
+			errors.append("cluster %s: unknown colour %s" % [cid, c["colour"]])
+		if not lenses.has(String(c["lens"])):
+			errors.append("cluster %s: unknown lens %s" % [cid, c["lens"]])
+	var governed := {}
+	for flow: String in repo.ledger_governance:
+		governed[String(repo.ledger_governance[flow]["ledger_type"])] = true
+	for r: Dictionary in repo.ledger_types:
+		var id := String(r["type_id"])
+		if not clusters.has(String(r.get("cluster", ""))):
+			errors.append("%s: unknown cluster %s" % [id, r.get("cluster", "")])
+		# folding is open only as far as _province_code can place a star
+		# (final review I3, option b)
+		var fold := String(r.get("fold_to", ""))
+		if fold != "" and not types.has(fold):
+			errors.append("%s: folds into unknown type %s" % [id, fold])
+		elif fold != "" and fold != FOLD_INTO:
+			errors.append("%s: folds into %s; only a %s can be folded into" % [id, fold, FOLD_INTO])
+		elif fold != "" and not PLACED.has(id):
+			errors.append("%s: folds into a %s, but nothing places a %s in one" % [id, FOLD_INTO, id])
+		if fold != "" and governed.has(id):
+			errors.append("%s: a governed flow (ledger_governance.csv) must not fold" % id)
+		if not String(r.get("star", "")) in ["pool", "instance"]:
+			errors.append("%s: unknown star %s" % [id, r.get("star", "")])
+	for r: Dictionary in repo.ledger_links:
+		if not String(r.get("look", "")) in ["flow", "tie", "kin", "structure"]:
+			errors.append("%s: unknown look %s" % [r["link_id"], r.get("look", "")])
 	var links := {}
 	for r: Dictionary in repo.ledger_links:
 		var id := String(r["link_id"])
@@ -89,6 +120,25 @@ static func validate(repo: DataRepository) -> Array[String]:
 				errors.append("loop %s: unknown link %s" % [lp["loop_id"], l])
 		if not String(lp["kind"]) in ["virtuous", "vicious"]:
 			errors.append("loop %s: unknown kind %s" % [lp["loop_id"], lp["kind"]])
+	for n: Dictionary in repo.ledger_static_nodes:
+		var tid := String(n["type_id"])
+		if not types.has(tid):
+			errors.append("static node %s: unknown type %s" % [n["node_id"], tid])
+		elif String(types[tid]["instances"]) != "static":
+			errors.append("static node %s: type %s does not list static instances" % [n["node_id"], tid])
+		elif type_of(String(n["node_id"])) != tid:
+			errors.append("static node %s: its id must begin %s:" % [n["node_id"], tid])
+	for l: Dictionary in repo.ledger_static_links:
+		var lid := String(l["link_id"])
+		if not links.has(lid):
+			errors.append("static link %s: unknown link type" % lid)
+			continue
+		if String(links[lid]["resolver"]) != "static":
+			errors.append("static link %s: its link type is not read from the table" % lid)
+		for end: String in ["from", "to"]:
+			var want := String(links[lid]["from_type" if end == "from" else "to_type"])
+			if type_of(String(l[end])) != want:
+				errors.append("static link %s: %s %s is not a %s" % [lid, end, l[end], want])
 	return errors
 
 
@@ -137,6 +187,291 @@ static func snapshot(repo: DataRepository, state: GameState, lens: String, focus
 	return out
 
 
+## The whole realm as ONE picture (spec 2026-09-30-ledger-galaxy-design
+## §3): every listed instance, every pool, every planned type as a ghost,
+## and the links that are the union of their egos — read by a worklist that
+## expands every node it finds EXCEPT a foldable one (a manor, building or
+## town) outside a controlled or opened province. Then the fold: each
+## foldable node not in an opened province becomes its province's, its links
+## re-pointed there and merged (counted; flows summed within one Intel
+## level). `opened` is a set of province codes. Nodes and links by id.
+static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -> Dictionary:
+	var out := {"lens": "galaxy", "focus_id": "", "focus_lost": false, "day": state.absolute_day(),
+		"nodes": [], "links": [], "loops": []}
+	LedgerResolvers.begin_memo()
+	var controlled := {}
+	for code: String in MapManors.controlled_provinces(repo, state):
+		controlled[code] = true
+	var nodes := {}
+	var raw := {}
+	var queue: Array = []
+	# _fold_target / _province_code once per node id (fix round 1, IMPORTANT
+	# 1b): the skip below and the fold loop each asked a busy id's province
+	# afresh every time it turned up as an edge's end.
+	var fold_cache := {}
+	var fold_of := func(id: String) -> String:
+		if not fold_cache.has(id):
+			fold_cache[id] = _fold_target(repo, state, id, opened)
+		return fold_cache[id]
+	var prov_cache := {}
+	var prov_of := func(id: String) -> String:
+		if not prov_cache.has(id):
+			prov_cache[id] = _province_code(repo, state, id)
+		return prov_cache[id]
+	for r: Dictionary in repo.ledger_types:
+		var tid := String(r["type_id"])
+		if String(r["status"]) == "planned":
+			nodes["type:" + tid] = _galaxy_node(repo, state, "type:" + tid)
+			continue
+		var list := String(r["instances"])
+		if list == "":
+			if String(r["fold_to"]) == "":
+				nodes["type:" + tid] = _galaxy_node(repo, state, "type:" + tid)
+			continue
+		for row: Dictionary in LedgerResolvers.instances(list, repo, state, tid):
+			var id := String(row["id"])
+			if not nodes.has(id):
+				nodes[id] = _galaxy_node(repo, state, id)
+				queue.append(id)
+	# each type's live rows, once a read rather than a scan of every row per
+	# node (Task 11 fix round 1, F7)
+	var rows_of := {}
+	for r: Dictionary in repo.ledger_links:
+		if String(r["status"]) != "live":
+			continue
+		for end: String in [String(r["from_type"]), String(r["to_type"])]:
+			var rows: Array = rows_of.get(end, [])
+			if not rows.has(r):
+				rows.append(r)
+			rows_of[end] = rows
+	var i := 0
+	while i < queue.size():
+		var id: String = queue[i]
+		i += 1
+		for r: Dictionary in rows_of.get(type_of(id), []):
+			for l: Dictionary in LedgerResolvers.run(r, repo, state, {"id": id}):
+				var a := String(l["from"])
+				var b := String(l["to"])
+				if a != id and b != id:
+					continue
+				var gone := false
+				for e: String in [a, b]:
+					if not nodes.has(e) and not e.begins_with("type:") \
+							and LedgerResolvers.label_of(repo, state, e) == "":
+						gone = true
+				if gone:
+					continue
+				# a link both of whose ends fold to the same province is
+				# dropped at the merge below (`a == b`) however it is
+				# believed — skip believing it now (province -> its own
+				# manors is most of the worklist's edges, and its belief is
+				# never read).
+				var fa: String = fold_of.call(a)
+				var fb: String = fold_of.call(b)
+				if (fa if fa != "" else a) != (fb if fb != "" else b):
+					var bl := _believed(repo, state, r, l)
+					raw[String(bl["id"])] = bl
+				for e: String in [a, b]:
+					if nodes.has(e):
+						continue
+					nodes[e] = _galaxy_node(repo, state, e)
+					if _expands(repo, state, e, controlled, opened):
+						queue.append(e)
+	# a row between two types that have no instances (pool to pool) once
+	for r: Dictionary in repo.ledger_links:
+		if String(r["status"]) != "live":
+			continue
+		if not nodes.has("type:" + String(r["from_type"])) or not nodes.has("type:" + String(r["to_type"])):
+			continue
+		for l: Dictionary in LedgerResolvers.run(r, repo, state, {}):
+			var bl := _believed(repo, state, r, l)
+			raw[String(bl["id"])] = bl
+	# the fold
+	var fold := {}
+	for id: String in nodes:
+		var p: String = fold_of.call(id)
+		if p != "":
+			fold[id] = p
+	for id: String in fold:
+		var pid := String(fold[id])
+		if not nodes.has(pid):
+			nodes[pid] = _galaxy_node(repo, state, pid)
+		var f: Dictionary = nodes[pid].get("folded", {})
+		f[type_of(id)] = int(f.get(type_of(id), 0)) + 1
+		nodes[pid]["folded"] = f
+	for id: String in nodes:
+		var fold_to := String(type_row(repo, type_of(id)).get("fold_to", ""))
+		if fold_to != "" and not fold.has(id):
+			nodes[id]["home_id"] = "province:" + String(prov_of.call(id))
+	var merged := {}
+	var keys: Array = raw.keys()
+	keys.sort()
+	for k: String in keys:
+		var l: Dictionary = raw[k]
+		var a := String(fold.get(String(l["from"]), String(l["from"])))
+		var b := String(fold.get(String(l["to"]), String(l["to"])))
+		if a == b:
+			continue
+		var mid := "%s|%s|%s" % [l["type"], a, b]
+		if merged.has(mid):
+			_merge_into(merged[mid], l)
+		else:
+			var m: Dictionary = l.duplicate(true)
+			m["id"] = mid
+			m["from"] = a
+			m["to"] = b
+			m["count"] = 1
+			merged[mid] = m
+	for id: String in fold:
+		nodes.erase(id)
+	# a planned row touching at least one ghost (planned) type (owner
+	# ruling, fix round 1, IMPORTANT 2): its ghost end is its type sphere;
+	# its other end is that type's pool sphere if one stands, else the
+	# instance of that type with the most links in the galaxy (ties: lowest
+	# id); the row is left out if neither end can be found. `commands` and
+	# `contradicts` touch no ghost type and are never drawn.
+	var link_counts := {}
+	for lid: String in merged:
+		var m: Dictionary = merged[lid]
+		link_counts[String(m["from"])] = int(link_counts.get(String(m["from"]), 0)) + 1
+		link_counts[String(m["to"])] = int(link_counts.get(String(m["to"]), 0)) + 1
+	for r: Dictionary in repo.ledger_links:
+		if String(r["status"]) != "planned":
+			continue
+		var from_ghost := String(type_row(repo, String(r["from_type"])).get("status", "live")) == "planned"
+		var to_ghost := String(type_row(repo, String(r["to_type"])).get("status", "live")) == "planned"
+		if not from_ghost and not to_ghost:
+			continue
+		var from_id := _planned_end(repo, nodes, link_counts, String(r["from_type"]))
+		var to_id := _planned_end(repo, nodes, link_counts, String(r["to_type"]))
+		if from_id == "" or to_id == "":
+			continue
+		var pl := _planned(repo, state, r)
+		pl["id"] = "%s|%s|%s" % [r["link_id"], from_id, to_id]
+		pl["from"] = from_id
+		pl["to"] = to_id
+		merged[String(pl["id"])] = pl
+	var ids: Array = nodes.keys()
+	ids.sort()
+	for id: String in ids:
+		out["nodes"].append(nodes[id])
+	var lids: Array = merged.keys()
+	lids.sort()
+	for lid: String in lids:
+		out["links"].append(merged[lid])
+	_loops(repo, state, out)
+	LedgerResolvers.end_memo()
+	return out
+
+
+## The node a planned row's `type_id` end draws as: its own ghost sphere if
+## the type itself is planned, else that type's pool sphere if one stands
+## in `nodes`, else the instance of that type with the most links (ties:
+## the lowest id) — "" when nothing of that type stands at all.
+static func _planned_end(repo: DataRepository, nodes: Dictionary, link_counts: Dictionary, type_id: String) -> String:
+	if String(type_row(repo, type_id).get("status", "live")) == "planned":
+		return "type:" + type_id
+	if nodes.has("type:" + type_id):
+		return "type:" + type_id
+	var best := ""
+	var best_n := -1
+	var ids: Array = nodes.keys()
+	ids.sort()
+	for id: String in ids:
+		if id.begins_with("type:") or type_of(id) != type_id:
+			continue
+		var n := int(link_counts.get(id, 0))
+		if n > best_n:
+			best_n = n
+			best = id
+	return best
+
+
+static func _galaxy_node(repo: DataRepository, state: GameState, id: String) -> Dictionary:
+	var n := _node(repo, state, id)
+	n["cluster"] = String(type_row(repo, type_of(id)).get("cluster", "economy"))
+	return n
+
+
+## Whether the worklist reads a node's own ego: a foldable node only inside a
+## controlled or opened province (elsewhere it only folds); a pool never
+## (its links come from the other end).
+static func _expands(repo: DataRepository, state: GameState, id: String, controlled: Dictionary,
+		opened: Dictionary) -> bool:
+	if id.begins_with("type:") or id.begins_with("more:"):
+		return false
+	if String(type_row(repo, type_of(id)).get("fold_to", "")) == "":
+		return true
+	var code := _province_code(repo, state, id)
+	return controlled.has(code) or opened.has(code)
+
+
+## The one type a node folds into (`fold_to`): its province's star.
+const FOLD_INTO := "province"
+## The types _province_code can place in a province — all that may fold
+## (validate names any other foldable row).
+const PLACED := ["manor", "building", "town"]
+
+
+## The province a foldable node stands in (live state), or "".
+static func _province_code(repo: DataRepository, state: GameState, id: String) -> String:
+	var rest := id.substr(id.get_slice(":", 0).length() + 1)
+	match type_of(id):
+		"manor":
+			return MapManors.province_of(repo, int(rest), state)
+		"building":
+			return MapManors.province_of(repo, int(rest.get_slice(":", 0)), state)
+		"town":
+			return LedgerResolvers.burg_province(repo, state, rest)
+	return ""
+
+
+## The province node a node folds into, or "" (not foldable, no province,
+## its province is opened, or a type sphere — a `type:` id is never
+## foldable, however its type_id happens to parse; fix round 1, M6).
+static func _fold_target(repo: DataRepository, state: GameState, id: String, opened: Dictionary) -> String:
+	if id.begins_with("type:"):
+		return ""
+	if String(type_row(repo, type_of(id)).get("fold_to", "")) == "":
+		return ""
+	var code := _province_code(repo, state, id)
+	if code == "" or opened.has(code):
+		return ""
+	return "province:" + code
+
+
+const _LEVELS := ["full", "general", "basic"]
+
+
+## Adds a folded link into the one it merges with: one more counted; the
+## flow sums only while both are figures at one Intel level — else the
+## merged figure is words at the worse level (never words added to numbers).
+## When the incoming link is the strictly worse one, its SOURCE travels with
+## its words (fix round 1, M5: provenance follows the words) — a tie keeps
+## the accumulator's own source, as it always has.
+static func _merge_into(m: Dictionary, l: Dictionary) -> void:
+	m["count"] = int(m["count"]) + 1
+	var ma: Dictionary = (m["accounts"] as Array)[0]
+	var la: Dictionary = (l["accounts"] as Array)[0] if not (l["accounts"] as Array).is_empty() else ma
+	var from_la := _LEVELS.find(String(la["level"])) > _LEVELS.find(String(ma["level"]))
+	var worse := String(la["level"]) if from_la else String(ma["level"])
+	var f: Variant = null
+	if m["flow"] != null and l["flow"] != null and String(ma["level"]) == String(la["level"]):
+		var a := int(m["flow"])
+		var b := int(l["flow"])
+		f = -1 if a < 0 and b < 0 else maxi(a, 0) + maxi(b, 0)
+	m["flow"] = f
+	var text := String(ma["text"])
+	var source := String(ma["source"])
+	if f == null and from_la:
+		text = String(la["text"])
+		source = String(la["source"])
+	elif f != null:
+		text = Intel.num(int(f)) if int(f) >= 0 else ""
+	m["accounts"] = [{"value": f, "text": text, "source": source,
+		"day": mini(int(ma["day"]), int(la["day"])), "level": worse}]
+
+
 static func exists(repo: DataRepository, state: GameState, node_id: String) -> bool:
 	if node_id.begins_with("type:"):
 		return not type_row(repo, node_id.substr(5)).is_empty()
@@ -168,7 +503,7 @@ static func _type_level(repo: DataRepository, state: GameState, lens: String, ou
 static func _all_instances(repo: DataRepository, state: GameState, lens: String, inst_type: String,
 		out: Dictionary) -> void:
 	var list := String(type_row(repo, inst_type).get("instances", ""))
-	for row: Dictionary in LedgerResolvers.instances(list, repo, state):
+	for row: Dictionary in LedgerResolvers.instances(list, repo, state, inst_type):
 		out["nodes"].append(_node(repo, state, String(row["id"])))
 	for r: Dictionary in repo.ledger_links:
 		if String(r["status"]) != "live" or not in_lens(r, lens):
@@ -327,14 +662,14 @@ static func _date_words(abs_day: int) -> String:
 static func _account(repo: DataRepository, state: GameState, t: Dictionary) -> Dictionary:
 	var subj: Dictionary = t["subj"]
 	var flow := int(t["flow"])
-	var lvl := "full" if subj.is_empty() else Intel.level(repo, state, subj)
+	var lvl := "full" if subj.is_empty() else LedgerResolvers.intel_level(repo, state, subj)
 	if flow < 0:
 		return {"value": -1, "text": "", "source": "own records" if lvl == "full" else "common knowledge",
 			"day": state.absolute_day(), "level": lvl}
 	if subj.is_empty():
 		return {"value": flow, "text": Intel.num(flow), "source": "own records",
 			"day": state.absolute_day(), "level": "full"}
-	var f := Intel.fact(repo, state, subj, String(t["key"]), flow)
+	var f := _fact(repo, state, subj, String(t["key"]), flow)
 	return {"value": flow if lvl == "full" else null, "text": String(f["text"]),
 		"source": String(f["source"]), "day": int(f["day"]), "level": lvl}
 
@@ -344,6 +679,31 @@ static func _account(repo: DataRepository, state: GameState, t: Dictionary) -> D
 ## governs it NOW, given or not (Governance.governor_of); otherwise its
 ## seat's holder.
 static func _governor(repo: DataRepository, state: GameState, r: Dictionary) -> String:
+	# once per link row within one read (Task 11 fix round 1, F7: asked
+	# ~1,800 times opening three provinces, ~40 rows)
+	if LedgerResolvers.memo_active():
+		var cache := LedgerResolvers.memo_bucket("governor")
+		var k := String(r["link_id"])
+		if not cache.has(k):
+			cache[k] = _governor_now(repo, state, r)
+		return cache[k]
+	return _governor_now(repo, state, r)
+
+
+## Intel.fact, remembered within one read per subject, key and figure (F7).
+static func _fact(repo: DataRepository, state: GameState, subj: Dictionary, key: String, flow: int) -> Dictionary:
+	if not LedgerResolvers.memo_active():
+		return Intel.fact(repo, state, subj, key, flow)
+	var probe := {"s": subj, "k": key, "f": flow}
+	var got := LedgerResolvers.memo_subject("fact", probe)
+	if bool(got[0]):
+		return got[1]
+	var f := Intel.fact(repo, state, subj, key, flow)
+	LedgerResolvers.memo_subject_put("fact", probe, f)
+	return f
+
+
+static func _governor_now(repo: DataRepository, state: GameState, r: Dictionary) -> String:
 	var flow := governed_flow(repo, r)
 	if flow != "":
 		return Governance.governor_of(repo, state, flow)

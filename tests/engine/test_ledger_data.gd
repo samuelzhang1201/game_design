@@ -34,11 +34,11 @@ func test_every_court_relation_type_has_a_link_row() -> void:
 
 func test_the_palette_is_colours() -> void:
 	assert_true(data.ledger_palette["thread_live"] is Color)
-	assert_true(data.ledger_palette.has("background"))
+	assert_true(data.ledger_palette.has("sky_top"))
 
 func test_the_look_numbers_are_balance() -> void:
-	for key in ["ledger_layer_gap_m", "ledger_instance_cap", "ledger_camera_distance",
-			"ledger_layout_iterations", "ledger_thread_width_max"]:
+	for key in ["ledger_galaxy_passes", "ledger_instance_cap", "ledger_camera_distance",
+			"ledger_link_max_px", "ledger_star_max"]:
 		assert_true(data.balance.has(key), key)
 
 ## Final fix I3: an order that needs the map promises only what it does —
