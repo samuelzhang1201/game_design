@@ -55,6 +55,12 @@ func _fit_viewport() -> void:
 		_parts_mat.set_shader_parameter("stroke_px", _stroke_px * s)
 
 
+## The graphics tier's MSAA and anisotropy on the figure's viewport (a
+## graphics_quality.csv row).
+func set_tier_row(row: Dictionary) -> void:
+	Map3DEnvironment.apply_viewport_quality(_viewport, row)
+
+
 func window_scale() -> float:
 	return maxf(get_viewport().get_final_transform().get_scale().x, 1.0)
 

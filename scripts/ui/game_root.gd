@@ -384,6 +384,8 @@ func _cycle_quality() -> void:
 		var v: Map3DView = current_screen.map3d_view()
 		if v != null:
 			v.set_quality(Map3DQuality.resolve_here(settings_path))
+	if _war_room_screen != null:
+		_war_room_screen.set_tier(Map3DQuality.resolve_here(settings_path))
 
 func _load_settings() -> void:
 	var cfg := ConfigFile.new()

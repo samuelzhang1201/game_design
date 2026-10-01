@@ -46,6 +46,11 @@ func _ready() -> void:
 			close())
 
 
+## The graphics tier reaches the figure's own viewport.
+func set_tier(repo: DataRepository, tier: String) -> void:
+	(%Figure as WarInkFigure).set_tier_row(Map3DQuality.row(repo, tier))
+
+
 func code() -> String:
 	return _code
 

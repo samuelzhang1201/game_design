@@ -462,3 +462,12 @@ func test_the_hud_draws_a_pennants_line_and_its_min_length_is_data() -> void:
 	var short := repo.bal("war_hud_min_len_px") - 1.0
 	hud.draw_state(Vector2(10, 10), Vector2(10 + short, 10), "", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null)
 	assert_false(hud.drawing())
+
+
+func test_the_tier_sets_the_rooms_msaa_from_the_table() -> void:
+	var vp: SubViewport = view.get_node("%Viewport")
+	var want := {0: Viewport.MSAA_DISABLED, 2: Viewport.MSAA_2X, 4: Viewport.MSAA_4X, 8: Viewport.MSAA_8X}
+	for tier: String in ["low", "high"]:
+		view.set_tier(tier)
+		var msaa := int(Map3DQuality.num(Map3DQuality.row(repo, tier), "msaa", 0.0))
+		assert_eq(vp.msaa_3d, want[msaa], tier)

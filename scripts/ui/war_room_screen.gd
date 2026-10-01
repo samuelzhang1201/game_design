@@ -52,6 +52,7 @@ func open(detail: MapDetailPanel) -> void:
 		_orders.follow(_view)
 		Game.state_changed.connect(refresh)
 		(%Key as WarMarginKey).setup(Game.data, _view)
+		_folio.set_tier(Game.data, Map3DQuality.resolve_here(GameRoot.settings_path))
 		_view.camera_moved.connect((%Key as WarMarginKey).queue_redraw)
 	if detail != _detail:
 		_card_mine = false
@@ -69,6 +70,14 @@ func _home_sheet() -> int:
 	var row: Dictionary = Game.data.provinces.get(home, {})
 	return maxi(0, WarSheets.sheet_of(Game.data, Vector2(
 		float(row.get("center_x", 0)), float(row.get("center_y", 0)))))
+
+
+## A new graphics tier (the menu's Graphics button): the room and the folio's figure.
+func set_tier(tier: String) -> void:
+	if not _bound:
+		return   # bind reads the tier itself
+	_view.set_tier(tier)
+	_folio.set_tier(Game.data, tier)
 
 
 func lay_sheet(index: int) -> void:

@@ -288,3 +288,16 @@ func test_the_margin_slip_is_a_scrolling_slip_of_at_most_war_margin_rows() -> vo
 	var slip := screen.get_node("%Slip") as Control
 	assert_lt(slip.position.y, screen.size.y * 0.25)
 	assert_lt(slip.position.x, screen.size.x * 0.2)
+
+
+func test_a_new_graphics_tier_reaches_the_room_and_the_folio() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(2)
+	var screen := r.war_room_screen()
+	var want := {0: Viewport.MSAA_DISABLED, 2: Viewport.MSAA_2X, 4: Viewport.MSAA_4X, 8: Viewport.MSAA_8X}
+	for tier: String in ["low", "ultra"]:
+		screen.set_tier(tier)
+		var msaa: int = want[int(Map3DQuality.num(Map3DQuality.row(Game.data, tier), "msaa", 0.0))]
+		assert_eq((screen.view().get_node("%Viewport") as SubViewport).msaa_3d, msaa, tier + ": the room")
+		assert_eq((screen.get_node("%Folio").get_node("%FigViewport") as SubViewport).msaa_3d, msaa, tier + ": the figure")

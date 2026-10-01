@@ -98,10 +98,13 @@ func bind(repo: DataRepository, state_fn: Callable, paused_fn: Callable) -> void
 		_relief.decompress()
 
 
-## The graphics tier's render scale (spec §1): the view renders at window px x it.
+## The graphics tier (spec §1): the view renders at window px x its render
+## scale, with its MSAA and anisotropy (graphics_quality.csv, as the 3D map).
 func set_tier(tier: String) -> void:
-	_render_scale = Map3DQuality.num(Map3DQuality.row(_repo, tier), "render_scale")
+	var row := Map3DQuality.row(_repo, tier)
+	_render_scale = Map3DQuality.num(row, "render_scale")
 	if is_node_ready():
+		Map3DEnvironment.apply_viewport_quality(_viewport, row)
 		_fit_viewport()
 
 
