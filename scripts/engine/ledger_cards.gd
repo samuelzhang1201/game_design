@@ -20,6 +20,9 @@ static func entry(repo: DataRepository, state: GameState, node_id: String, snap:
 		"courier":
 			return {"obj": {"kind": "courier", "id": int(rest)}}
 	var lines: Array[String] = []
+	var written := LedgerResolvers.static_node(repo, node_id)
+	if not written.is_empty() and String(written["note"]) != "":
+		lines.append(String(written["note"]))
 	var t := Ledger.type_of(node_id)
 	var row := Ledger.type_row(repo, t)
 	if String(row.get("status", "")) == "planned":
@@ -27,6 +30,9 @@ static func entry(repo: DataRepository, state: GameState, node_id: String, snap:
 	var head := _head(repo, state, kind, rest)
 	if head != "":
 		lines.append(head)
+	var folds := _folds_line(repo, node_id, snap)
+	if folds != "":
+		lines.append(folds)
 	# A governor's ties to each workshop or supply line fold into ONE line
 	# per flow, carrying his factors (final review M4).
 	var governs := {}
@@ -93,9 +99,48 @@ static func _head(repo: DataRepository, state: GameState, kind: String, rest: St
 	return ""
 
 
+## What a province's star folds (spec 2026-09-30-ledger-galaxy-design §3:
+## "for its size and its card"), named by the types' own labels in their
+## table's order — "Folds 37 manors, 2 towns, 1 building" (a type's
+## `label_one` for one of it) — or "" when it folds nothing.
+static func _folds_line(repo: DataRepository, node_id: String, snap: Dictionary) -> String:
+	var folded := {}
+	for n: Dictionary in snap.get("nodes", []):
+		if String(n["id"]) == node_id:
+			folded = n.get("folded", {})
+			break
+	var parts: Array[String] = []
+	for r: Dictionary in repo.ledger_types:
+		var n := int(folded.get(String(r["type_id"]), 0))
+		if n > 0:
+			parts.append("%d %s" % [n, _type_words(r, n)])
+	return "" if parts.is_empty() else "Folds " + ", ".join(parts)
+
+
+## A type named for `n` of it: its label, or its `label_one` for one, in
+## lower case ("manors", "1 town").
+static func _type_words(row: Dictionary, n: int) -> String:
+	var one := String(row.get("label_one", ""))
+	return (one if n == 1 and one != "" else String(row["label"])).to_lower()
+
+
+## "37 manors: " for a link the galaxy merged from 37 (its folded end's
+## type named), "" for a link that stands for one.
+static func _count_prefix(repo: DataRepository, l: Dictionary) -> String:
+	var n := int(l.get("count", 1))
+	if n <= 1:
+		return ""
+	var row := Ledger.link_row(repo, String(l["type"]))
+	for end: String in ["from_type", "to_type"]:
+		var t := Ledger.type_row(repo, String(row.get(end, "")))
+		if String(t.get("fold_to", "")) != "":
+			return "%d %s: " % [n, _type_words(t, n)]
+	return "%d × " % n
+
+
 static func thread_entry(repo: DataRepository, state: GameState, link: Dictionary) -> Dictionary:
-	var title := "%s %s %s" % [LedgerResolvers.label_of(repo, state, String(link["from"])), link["verb"],
-		LedgerResolvers.label_of(repo, state, String(link["to"]))]
+	var title := "%s%s %s %s" % [_count_prefix(repo, link), LedgerResolvers.label_of(repo, state, String(link["from"])),
+		link["verb"], LedgerResolvers.label_of(repo, state, String(link["to"]))]
 	var lines: Array[String] = []
 	if String(link["status"]) == "planned":
 		var milestone := String(Ledger.link_row(repo, String(link["type"])).get("milestone", ""))
@@ -171,7 +216,7 @@ static func subject_of(repo: DataRepository, state: GameState, node_id: String) 
 static func _line(repo: DataRepository, state: GameState, l: Dictionary, node_id: String, today: int) -> String:
 	var outward := String(l["from"]) == node_id
 	var other := LedgerResolvers.label_of(repo, state, String(l["to"] if outward else l["from"]))
-	var head := ("%s %s" % [l["verb"], other]) if outward else ("%s: %s" % [other, l["verb"]])
+	var head := _count_prefix(repo, l) + (("%s %s" % [l["verb"], other]) if outward else ("%s: %s" % [other, l["verb"]]))
 	if String(l["status"]) == "planned":
 		return "%s — not yet built" % head
 	var accs: Array = l["accounts"]

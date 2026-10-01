@@ -56,3 +56,45 @@ func test_type_of_reads_every_id_shape() -> void:
 	assert_eq(Ledger.type_of("regiment:abc"), "regiment")
 	assert_eq(Ledger.type_of("building:12:chapel"), "building")
 	assert_eq(Ledger.type_of("works|peasants:a|manor:3"), "")
+
+
+func test_every_type_has_a_known_cluster() -> void:
+	var clusters := {}
+	for c: Dictionary in data.ledger_clusters:
+		clusters[String(c["cluster"])] = c
+	assert_eq(clusters.keys().size(), 4, "economy, war, court, intelligence")
+	for r: Dictionary in data.ledger_types:
+		assert_true(clusters.has(String(r["cluster"])), "%s: cluster %s" % [r["type_id"], r["cluster"]])
+
+
+func test_the_economy_folds_manors_buildings_and_towns_into_provinces() -> void:
+	for r: Dictionary in data.ledger_types:
+		var id := String(r["type_id"])
+		var want := "province" if id in ["manor", "building", "town"] else ""
+		assert_eq(String(r["fold_to"]), want, id)
+	assert_eq(String(Ledger.type_row(data, "province")["cluster"]), "economy", "owner: economy by province")
+
+
+func test_every_type_says_how_its_star_is_sized_and_every_link_how_it_is_drawn() -> void:
+	for r: Dictionary in data.ledger_types:
+		assert_true(String(r["star"]) in ["pool", "instance"], "%s: star %s" % [r["type_id"], r["star"]])
+	for r: Dictionary in data.ledger_links:
+		assert_true(String(r["look"]) in ["flow", "tie", "kin", "structure"], "%s: look %s" % [r["link_id"], r["look"]])
+	assert_eq(String(Ledger.link_row(data, "kin")["look"]), "kin")
+	assert_eq(String(Ledger.link_row(data, "rival")["look"]), "tie")
+	assert_eq(String(Ledger.link_row(data, "yields_civil")["look"]), "flow")
+
+
+func test_a_cluster_anchor_is_read_as_vectors() -> void:
+	var c: Dictionary = data.ledger_clusters[0]
+	assert_true(c["at"] is Vector3 and c["at2"] is Vector3)
+	assert_eq((c["at2"] as Vector3).y, 0.0, "the 2D anchor lies in the plane")
+	assert_true(data.ledger_palette.has(String(c["colour"])), "its colour is a palette key")
+
+
+func test_validate_names_an_unknown_cluster() -> void:
+	var r: Dictionary = data.ledger_types[0]
+	var was := String(r["cluster"])
+	r["cluster"] = "astrology"
+	assert_has(Ledger.validate(data), "%s: unknown cluster astrology" % r["type_id"])
+	r["cluster"] = was

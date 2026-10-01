@@ -1,14 +1,21 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/ledger3d/ledger_view_3d.gd" id="1_view"]
 [ext_resource type="Script" path="res://scripts/ledger3d/ledger_hud.gd" id="2_hud"]
+[ext_resource type="Material" path="res://scenes/ledger/materials/sky.tres" id="3_sky"]
+
+[sub_resource type="Sky" id="Sky_ledger"]
+sky_material = ExtResource("3_sky")
 
 [sub_resource type="Environment" id="Environment_ledger"]
-background_mode = 1
-background_color = Color(0.078, 0.063, 0.047, 1)
+background_mode = 2
+sky = SubResource("Sky_ledger")
 ambient_light_source = 2
 ambient_light_color = Color(0.62, 0.56, 0.48, 1)
-ambient_light_energy = 0.7
+ambient_light_energy = 0.4
+tonemap_mode = 4
+glow_enabled = true
+glow_blend_mode = 1
 
 [node name="LedgerView3D" type="Control"]
 clip_contents = true
@@ -32,20 +39,28 @@ environment = SubResource("Environment_ledger")
 
 [node name="Sun" type="DirectionalLight3D" parent="Viewport"]
 transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 12, 0)
-light_energy = 1.1
+light_color = Color(1, 0.945, 0.84, 1)
+light_energy = 1.6
 
 [node name="Camera" type="Camera3D" parent="Viewport"]
 unique_name_in_owner = true
-fov = 40.0
+fov = 45.0
+far = 4000.0
 
-[node name="Discs" type="Node3D" parent="Viewport"]
+[node name="Haze" type="Node3D" parent="Viewport"]
 unique_name_in_owner = true
 
-[node name="Threads" type="Node3D" parent="Viewport"]
+[node name="Links" type="MeshInstance3D" parent="Viewport"]
 unique_name_in_owner = true
+cast_shadow = 0
 
-[node name="Spheres" type="Node3D" parent="Viewport"]
+[node name="Stars" type="MultiMeshInstance3D" parent="Viewport"]
 unique_name_in_owner = true
+cast_shadow = 0
+
+[node name="FaintStars" type="MultiMeshInstance3D" parent="Viewport"]
+unique_name_in_owner = true
+cast_shadow = 0
 
 [node name="Display" type="TextureRect" parent="."]
 unique_name_in_owner = true

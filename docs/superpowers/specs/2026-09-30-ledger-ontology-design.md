@@ -230,6 +230,8 @@ second way to pick a point.
 
 ### 6.2 The view
 
+Superseded for the view by `2026-09-30-ledger-galaxy-design.md` (the galaxy).
+
 - **Three floating discs**, translucent: KNOW on top, PEOPLE in the middle,
   THINGS at the bottom. Seen from the front they read as three bands; turned,
   they show depth within a layer. The layers are what keeps a 3D graph
@@ -257,6 +259,8 @@ second way to pick a point.
   A drag moves a sphere for this viewing only; it is never saved.
 
 ### 6.3 The look: the realm's orrery
+
+Superseded for the view by `2026-09-30-ledger-galaxy-design.md` (the galaxy).
 
 - Spheres of brass and glass, threads of gold wire, over the dark leather
   UI — a medieval armillary, not a neon network. The art is settled through
