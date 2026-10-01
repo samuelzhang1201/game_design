@@ -566,3 +566,30 @@ func test_a_pennant_with_no_model_still_plants_its_slip() -> void:
 	assert_not_null(node.get_node_or_null("Slip"))
 	assert_eq(pennants.screen_hits(view.get_node("%Camera"), view.window_scale()).size(), 1, "and still picked")
 
+
+
+func test_wasd_pans_but_not_while_a_text_box_has_focus() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var box := LineEdit.new()
+	add_child_autofree(box)
+	var before := view.camera_rig().target
+	Input.parse_input_event(_key(KEY_A, true))
+	await wait_process_frames(1)   # the input buffer is flushed on the frame
+	assert_true(view.key_pan(0.1), "A pans the room")
+	box.grab_focus()
+	var moved := view.camera_rig().target
+	assert_false(view.key_pan(0.1), "the talk box keeps its keys")
+	await wait_process_frames(1)
+	Input.parse_input_event(_key(KEY_A, false))
+	await wait_process_frames(1)
+	assert_ne(moved, before)
+	assert_eq(view.camera_rig().target, moved, "nor does the room's own frame pan it")
+
+
+func _key(code: Key, down: bool) -> InputEventKey:
+	var e := InputEventKey.new()
+	e.keycode = code
+	e.physical_keycode = code
+	e.pressed = down
+	return e

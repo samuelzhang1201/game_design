@@ -62,6 +62,7 @@ var _font: Font
 var _chart_built := false
 var _swap := WarSheetSwap.new()
 var _rake := WarRoomRake.new()
+var _gestures := WarRoomGestures.new()
 
 
 func _ready() -> void:
@@ -215,6 +216,8 @@ func swap_to(index: int) -> void:
 
 
 func _process(delta: float) -> void:
+	if _rig.step(delta, _repo.bal("war_cam_north_s")) or key_pan(delta):
+		_apply_camera()
 	if not _swap.active():
 		return
 	if _swap.step(delta):
@@ -222,6 +225,21 @@ func _process(delta: float) -> void:
 	_table.scale = Vector3(1.0, 1.0, _swap.z_scale())
 	_pieces.visible = not _swap.active()   # the pieces and pennants are put away while a sheet rolls
 	_pennants.visible = _pieces.visible
+
+
+## WASD / arrows pan the room (spec 2026-10-02-war-room-v2 §1.1), never while
+## a text box (the council's talk box) has the focus; true when it moved.
+func key_pan(delta: float) -> bool:
+	if _sheet < 0 or not is_visible_in_tree():
+		return false
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus is LineEdit or focus is TextEdit:
+		return false
+	var dir := WarRoomGestures.key_dir()
+	if dir == Vector2.ZERO:
+		return false
+	_rig.pan_view(dir * _rig.distance * _repo.bal("war_key_pan_screens_per_s") * delta)
+	return true
 
 
 ## A roll cut short (the room closed) lays its sheet and stands the table up.
@@ -369,13 +387,19 @@ func _gui_input(event: InputEvent) -> void:
 	if _sheet < 0:
 		return
 	var mb := event as InputEventMouseButton
+	var mm := event as InputEventMouseMotion
 	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
 		_rake.on_left(mb)
-	elif event is InputEventMouseMotion and not ((event as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_MIDDLE):
-		_rake.on_motion(event as InputEventMouseMotion)
-	elif mb != null and mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed and piece_under(mb.position) != "":
-		army_menu_requested.emit(piece_under(mb.position), mb.position)
+	elif mm != null and (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) and _rake.empty_press():
+		pass   # an open-table drag: the gestures pan below
+	elif mm != null and not (mm.button_mask & (MOUSE_BUTTON_MASK_MIDDLE | MOUSE_BUTTON_MASK_RIGHT)):
+		_rake.on_motion(mm)
+	var did := _gestures.handle(event, _rig, _repo, _ground_under, _rake.empty_press())
+	if did == WarRoomGestures.RIGHT_CLICK:
+		var code := piece_under(mb.position)
+		if code != "":
+			army_menu_requested.emit(code, mb.position)
 		accept_event()
-	elif WarRoomGestures.apply(event, _rig, _repo, _ground_under):
+	elif did == WarRoomGestures.MOVED:
 		_apply_camera()
 		accept_event()

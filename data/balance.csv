@@ -790,6 +790,8 @@ war_ink_peak_drop,0.6,"WAR ROOM (owner 2026-10-01, spec §1-2): a peak mark's ba
 war_ink_border_dot_ratio,0.6,"WAR ROOM (owner 2026-10-01, spec §1-2): the dot between a border's dashes: radius as a share of war_ink_border_px"
 war_pan_drag_speed,0.0015,"WAR ROOM (owner 2026-10-01, spec §1-2): the middle-button drag's pan: table metres per screen px per metre of camera distance"
 war_pan_gesture_speed,0.01,"WAR ROOM (owner 2026-10-01, spec §1-2): a trackpad two-finger drag's pan: table metres per gesture unit per metre of camera distance"
+war_key_pan_screens_per_s,0.7,"WAR ROOM v2 (owner 2026-10-02, spec §1.1): WASD / arrows pan this many camera-distances a second (the 3D map's map3d_key_pan_screens_per_s)"
+war_click_slop_px,10,"WAR ROOM v2 (spec §1.1): a right press and release further apart than this, or one that turned the room, is a drag, not a click (Map3DInput.CLICK_SLOP)"
 war_sea_hatch_reach_m,0.30,"WAR ROOM (owner 2026-10-01, spec §1-2): the sea is hatched only in a coastal band: the hatching fades out this many table metres off the shore (the relief has no depth below the waterline — open sea is one value — so the reach is a distance, ~143 km of a 670 km sheet)"
 war_sea_hatch_per_m,90,"WAR ROOM (owner 2026-10-01, spec §1-2): sea hatch lines per table metre (a diagonal; table terms, so it holds at any sheet)"
 war_sea_hatch_alpha,0.9,"WAR ROOM (owner 2026-10-01, spec §1-2): the sea hatching's ink strength at the shore"

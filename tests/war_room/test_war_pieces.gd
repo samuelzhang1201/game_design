@@ -185,6 +185,10 @@ func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_its_orders() ->
 	right.pressed = true
 	right.position = at
 	view._gui_input(right)
+	assert_signal_not_emitted(view, "army_menu_requested", "the press alone is not yet a click (v2: a right drag turns)")
+	var right_up := right.duplicate() as InputEventMouseButton
+	right_up.pressed = false
+	view._gui_input(right_up)
 	assert_signal_emitted_with_parameters(view, "army_menu_requested", [String(hit["code"]), at])
 
 

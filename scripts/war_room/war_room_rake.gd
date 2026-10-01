@@ -177,3 +177,9 @@ func _routes() -> Array:
 		if a != null and b != null:
 			out.append([a, b])
 	return out
+
+
+## A left press on open table with nothing in hand and no march armed: a drag
+## from it pans the room (spec 2026-10-02-war-room-v2 §1.1), as on the 3D map.
+func empty_press() -> bool:
+	return _pressed and _press_code == "" and code == "" and not _view.aiming

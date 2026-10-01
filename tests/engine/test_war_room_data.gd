@@ -16,7 +16,7 @@ func test_every_balance_key_the_room_reads_is_there() -> void:
 			"war_contour_index_every", "war_sheet_texture_px", "war_sheet_swap_s",
 			"war_cam_distance_m", "war_cam_min_m", "war_cam_max_m", "war_cam_pitch_near_deg",
 			"war_cam_pitch_far_deg", "war_cam_turn_deg_per_px", "war_cam_north_s", "war_cam_wall_clear_m",
-			"war_room_floor_x_m", "war_room_floor_z_min_m", "war_room_floor_z_max_m", "war_cam_zoom_step", "war_piece_base_mm", "war_piece_base_h_mm",
+			"war_room_floor_x_m", "war_key_pan_screens_per_s", "war_click_slop_px", "war_room_floor_z_min_m", "war_room_floor_z_max_m", "war_cam_zoom_step", "war_piece_base_mm", "war_piece_base_h_mm",
 			"war_piece_figure_mm", "war_piece_gap", "war_pose_frame_march", "war_pose_frame_garrison",
 			"war_pose_frame_standby", "war_plot_push_s", "war_pick_px", "war_rake_min_px",
 			"war_explode_s", "war_explode_m", "war_ink_road_px", "war_ink_trail_px", "war_ink_river_px",
