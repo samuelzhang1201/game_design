@@ -75,6 +75,67 @@ static func _chart_or(key: String, fallback: Color) -> Color:
 			return Color(hex)
 	return fallback
 
+## THE WAR TABLE (owner 2026-10-01, B3 + C1's bookmarks; spec
+## docs/superpowers/specs/2026-10-01-war-table-ui-design.md): the main screens
+## laid out as objects on an oak table by daylight. balance ui_war_table 1 is
+## on; 0 keeps the dark leather chrome.
+static func war_table() -> bool:
+	return Game != null and Game.data != null \
+		and Game.data.balance.has("ui_war_table") and Game.data.bal("ui_war_table") > 0.0
+
+## The ground a card is drawn on: the war table's paper when an ancestor is a
+## paper column (meta "paper_ground"), else the leather (PANEL_BG) — for fades
+## that melt a card's edge into what lies under it.
+static func card_ground(n: Node) -> Color:
+	var p := n
+	while p != null:
+		if p.has_meta("paper_ground"):
+			return p.get_meta("paper_ground")
+		p = p.get_parent()
+	return PANEL_BG
+
+## A WAR TABLE colour from data/ui_table_palette.csv (#rrggbb or #rrggbbaa).
+static func table_color(key: String, fallback := Color.MAGENTA) -> Color:
+	if Game != null and Game.data != null:
+		var hex := String(Game.data.ui_table_palette.get(key, ""))
+		if hex != "":
+			return Color(hex)
+	return fallback
+
+## A bottom-bar tab's bookmark colour (data/ui_bookmarks.csv).
+static func bookmark_color(tab: String) -> Color:
+	if Game != null and Game.data != null:
+		var hex := String(Game.data.ui_bookmarks.get(tab, ""))
+		if hex != "":
+			return Color(hex)
+	return BORDER_GOLD
+
+## The INK a left-column card writes in, by role: on the war table the column
+## is paper, so dark ink (ui_table_palette.csv); otherwise the leather's light
+## ink. Roles: soft (body), muted (labels), dim (hints), accent (names, the
+## title), rubric (section headers), track / fill (a bar), good / bad.
+static func ink(role: String) -> Color:
+	if war_table():
+		match role:
+			"soft": return table_color("ink", TEXT_SOFT)
+			"muted": return table_color("ink_muted", TEXT_MUTED)
+			"dim": return table_color("ink_dim", TEXT_DIM)
+			"accent", "rubric": return table_color("rubric", GOLD)
+			"track": return table_color("track", TROUGH)
+			"fill": return table_color("fill", GOLD)
+			"good": return table_color("good", POSITIVE)
+			"bad": return table_color("bad", NEGATIVE)
+	match role:
+		"soft": return TEXT_SOFT
+		"muted": return TEXT_MUTED
+		"dim": return TEXT_DIM
+		"accent", "rubric": return GOLD
+		"track": return chart_color("track") if Game != null and Game.data != null and Game.data.chart_palette.has("track") else TROUGH
+		"fill": return chart_color("sequential") if Game != null and Game.data != null and Game.data.chart_palette.has("sequential") else GOLD
+		"good": return good_color()
+		"bad": return bad_color()
+	return TEXT_SOFT
+
 ## A skill's colour: data/chart_palette.csv skill_<key> (owner 2026-09-28: the
 ## colours are data, muted to the heraldic set), SKILL_COLORS the fallback.
 static func skill_color(sk: String) -> Color:
@@ -716,6 +777,20 @@ static func style_section(label: Label, size: int, color: Color = TEXT_MUTED) ->
 	rule.content_margin_bottom = _bal_or("ui_section_rule_gap_px", 3.0)
 	rule.content_margin_top = _bal_or("ui_section_rule_gap_px", 3.0)
 	label.add_theme_stylebox_override("normal", rule)
+
+## A section header in a left-column card: on THE WAR TABLE the report's red
+## rubric — "¶ " before the words, a faint ink rule under them; otherwise
+## style_section. `label.text` must be set first.
+static func style_rubric(label: Label, size: int) -> void:
+	if not war_table():
+		style_section(label, size)
+		return
+	if not label.text.begins_with("¶"):
+		label.text = "¶ " + label.text
+	style_section(label, size, ink("rubric"))
+	var rule := label.get_theme_stylebox("normal") as StyleBoxFlat
+	if rule != null:
+		rule.border_color = Color(ink("muted"), 0.45)
 
 static func _style_role(label: Label, size: int, color: Color, role: String) -> void:
 	label.add_theme_color_override("font_color", color)

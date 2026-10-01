@@ -192,7 +192,7 @@ func test_right_slot_is_empty_until_the_council_or_a_map_click_takes_it() -> voi
 	assert_false(c.detail_panel().visible, "nothing selected: no detail column")
 	assert_true(c.council_handle().visible, "the ENTER THE COUNCIL handle shows on the right")
 	var wide := map_rect.end.x
-	assert_gt(wide, c.size.x - 12.0, "the map runs to the right edge")
+	assert_gt(wide, c.size.x - ScreenLayout.margin() - 4.0, "the map runs to the right edge")
 	c.council_handle().pressed.emit()
 	await wait_frames(2)
 	assert_true(c.council_open())

@@ -54,6 +54,9 @@ func test_campaign_opens_with_nameless_background_narration() -> void:
 	var replies := scene.reply_buttons()
 	assert_eq(replies.size(), 1)
 	var btn: Button = replies[0]
+	# revealed by a zero-second timer: on the next PROCESS frame, which a
+	# count of physics frames does not promise
+	await wait_until(func() -> bool: return btn.visible, 1.0)
 	assert_true(btn.visible, "continue button revealed")
 	var btn_bottom: float = btn.get_global_rect().position.y + btn.get_global_rect().size.y
 	assert_between(btn.get_global_rect().position.y, 0.0, viewport_h, "button on screen")

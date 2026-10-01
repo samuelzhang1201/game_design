@@ -147,7 +147,7 @@ func _ready() -> void:
 	_scroll_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_scroll_fade.draw.connect(func() -> void:
 		var r := Rect2(Vector2.ZERO, _scroll_fade.size)
-		var solid := UiPalette.PANEL_BG
+		var solid := UiPalette.card_ground(self)
 		_scroll_fade.draw_polygon(PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end,
 			Vector2(r.position.x, r.end.y)]), PackedColorArray([Color(solid, 0.0), Color(solid, 0.0), solid, solid])))
 	scroll.add_child(_scroll_fade)
@@ -838,7 +838,7 @@ func _draw_painting_fade(on: Control) -> void:
 		# Framed like the audience window's portrait: a gilt hairline.
 		on.draw_rect(r.grow(-0.5), UiPalette.BORDER_GOLD, false, 1.0)
 		return
-	var solid := UiPalette.PANEL_BG
+	var solid := UiPalette.card_ground(self)
 	var clear := Color(solid, 0.0)
 	var quads := [
 		[r.position, Vector2(r.end.x, r.position.y), Vector2(r.end.x, r.position.y + d), Vector2(r.position.x, r.position.y + d), true],

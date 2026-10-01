@@ -85,7 +85,10 @@ func test_refreshes_in_one_frame_rebuild_once() -> void:
 	screen.refresh()
 	screen.refresh()
 	assert_eq(screen._rebuilds, before, "nothing is drawn inside the calls")
-	await wait_frames(2)
+	# drained in _process: wait for a process frame, not a count of physics
+	# frames (several can run inside one slow process frame)
+	await wait_until(func() -> bool: return screen._rebuilds > before, 1.0)
+	await wait_process_frames(2)
 	assert_eq(screen._rebuilds, before + 1, "drawn once")
 
 ## Final fix I2: a focus that vanished takes its card with it and the
@@ -105,7 +108,8 @@ func test_a_lost_focus_closes_its_card_and_reframes() -> void:
 	screen.view()._framed = false
 	Game.state.missives = Game.state.missives.filter(func(m: Dictionary) -> bool: return int(m["id"]) != rid)
 	screen.refresh()
-	await wait_frames(2)
+	await wait_until(func() -> bool: return String(screen.snapshot()["focus_id"]) == "", 1.0)
+	await wait_process_frames(1)
 	assert_eq(String(screen.snapshot()["focus_id"]), "")
 	assert_false(detail.has_content(), "the vanished focus's card went with it")
 	assert_true(screen.view()._framed, "the camera framed the realm again")

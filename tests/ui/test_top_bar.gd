@@ -18,7 +18,9 @@ func test_the_crowns_arms_mark_the_lords_purse_and_the_date() -> void:
 	assert_not_null(arms, "the crown has arms")
 	assert_same(bar.lord_crest().texture, arms)
 	assert_same(bar.date_arms().texture, arms)
-	assert_true(bar.date_arms().visible)
+	# THE WAR TABLE (2026-10-01): the brass dial takes the date's place and the
+	# arms stay on the tally board's house row alone (twice was noise).
+	assert_eq(bar.date_arms().visible, not UiPalette.war_table())
 
 func test_shows_date_and_metric_values() -> void:
 	Game.start_campaign(42)
@@ -74,8 +76,18 @@ func test_the_clock_buttons_set_the_speed_and_the_date_reads_the_day() -> void:
 	Game.set_clock_speed(0)
 	var t := _bar()
 	await wait_frames(1)
-	assert_eq(t.find_child("DateLabel", true, false).text,
-		Calendar.date_string(Game.state.tick, Game.state.day))
+	if UiPalette.war_table():
+		# THE WAR TABLE: the day on the brass dial (its tooltip the full date),
+		# the season and year written beside it
+		var dial: BrassDial = t.find_child("DateDial", true, false)
+		assert_not_null(dial, "the date is a brass dial")
+		assert_eq(dial.day, Game.state.day)
+		assert_eq(dial.tooltip_text, Calendar.date_string(Game.state.tick, Game.state.day))
+		assert_string_contains(t.find_child("DateLabel", true, false).text,
+			Calendar.season_name(Game.state.tick))
+	else:
+		assert_eq(t.find_child("DateLabel", true, false).text,
+			Calendar.date_string(Game.state.tick, Game.state.day))
 	assert_not_null(t.clock_button(0))
 	assert_not_null(t.clock_button(1))
 	assert_not_null(t.clock_button(2))

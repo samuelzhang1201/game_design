@@ -21,11 +21,23 @@ func test_ticker_hidden_on_menu_pinned_bottom_and_transparent_in_game() -> void:
 	var ticker := r.news_ticker()
 	assert_true(ticker.visible, "the strip shows on every gameplay screen")
 	var rect := ticker.get_global_rect()
-	assert_almost_eq(rect.position.y + rect.size.y,
-		r.size.y - BottomBar.BAR_HEIGHT, 1.0,
-		"the strip rests directly above the bottom tab bar")
 	var bg: Panel = ticker.find_child("TickerBg", true, false)
-	assert_lt((bg.get_theme_stylebox("panel") as StyleBoxFlat).bg_color.a, 0.7, "the bar is translucent glass")
+	if UiPalette.war_table():
+		# THE WAR TABLE: a paper slip lying in the bookmarks' band, between the groups
+		assert_gt(rect.position.y, r.size.y - BottomBar.BAR_HEIGHT - 1.0, "the slip lies in the bookmarks' band")
+		assert_lt(rect.end.y, r.size.y + 1.0, "and on the screen")
+		# on the table below the report, clear of every bookmark
+		assert_lt(rect.end.x, ScreenLayout.margin() + ScreenLayout.LEFT_WIDTH + 1.0, "under the report's column")
+		for tab: String in BottomBar.TABS:
+			var b := r.bottom_bar().button(tab)
+			if b != null and b.visible:
+				assert_false(rect.intersects(b.get_global_rect()), "clear of the " + tab + " bookmark")
+		assert_true(bg.get_theme_stylebox("panel") is PaperStyle, "the slip is paper")
+	else:
+		assert_almost_eq(rect.position.y + rect.size.y,
+			r.size.y - BottomBar.BAR_HEIGHT, 1.0,
+			"the strip rests directly above the bottom tab bar")
+		assert_lt((bg.get_theme_stylebox("panel") as StyleBoxFlat).bg_color.a, 0.7, "the bar is translucent glass")
 	assert_almost_eq(ticker.speed(), Game.data.bal("news_ticker_speed"), 0.001,
 		"crawl speed is balance data, not a hardcoded constant")
 

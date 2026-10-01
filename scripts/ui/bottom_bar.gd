@@ -42,6 +42,9 @@ const BAR_HEIGHT := 56.0
 
 var _buttons: Dictionary = {}
 var _bar: PanelContainer
+## THE WAR TABLE: emitted with the free band between the two bookmark groups
+## (global rect) whenever the row lays out, so the news slip can lie in it.
+signal slip_moved(rect: Rect2)
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -105,6 +108,54 @@ func _ready() -> void:
 		btn.pressed.connect(func() -> void: tab_selected.emit(tab))
 		row.add_child(btn)
 		_buttons[tab] = btn
+	if UiPalette.war_table():
+		_dress_war_table(row)
+
+## THE WAR TABLE (owner 2026-10-01): no bar — every tab a silk bookmark hanging
+## from under the sheet in its group's colour (data/ui_bookmarks.csv), the
+## lit one a little longer; the rules go (the colours divide the groups), and
+## the gap between the groups is where the news slip lies.
+func _dress_war_table(row: HBoxContainer) -> void:
+	# drawn under the screen's papers (z -1 above the table's -2), so the map
+	# sheet's lower edge lies across the bookmarks' tops
+	z_index = -1
+	var clear := StyleBoxEmpty.new()
+	# every bookmark hangs from under the map sheet; the report's foot of table
+	# holds the news slip
+	clear.content_margin_left = ScreenLayout.margin() + ScreenLayout.LEFT_WIDTH + ScreenLayout.gap() + 18.0
+	clear.content_margin_right = ScreenLayout.margin() + 18.0
+	_bar.add_theme_stylebox_override("panel", clear)
+	row.add_theme_constant_override("separation", 6)
+	for rule_name in ["Rule", "ToolRule"]:
+		var rule := row.get_node_or_null(rule_name)
+		if rule != null:
+			rule.visible = false
+	var ink := Color("f6ebd2")
+	for tab: String in _buttons:
+		var btn: Button = _buttons[tab]
+		var c := UiPalette.bookmark_color(tab)
+		btn.add_theme_stylebox_override("normal", RibbonStyle.make(c, false, false))
+		btn.add_theme_stylebox_override("hover", RibbonStyle.make(c, false, true))
+		btn.add_theme_stylebox_override("pressed", RibbonStyle.make(c, true, false))
+		btn.add_theme_stylebox_override("hover_pressed", RibbonStyle.make(c, true, true))
+		btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		UiPalette.style_tab(btn, 11, -1.0)
+		for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+			btn.add_theme_color_override(state, ink)
+		for state in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_hover_pressed_color", "icon_focus_color"]:
+			btn.add_theme_color_override(state, ink)
+		btn.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.35))
+	row.sort_children.connect(_emit_slip)
+	resized.connect(_emit_slip)
+
+func _emit_slip() -> void:
+	var row := _bar.get_node_or_null("Row") as HBoxContainer
+	if row == null:
+		return
+	# the table below the report: the column's own width at the screen's foot
+	var m := ScreenLayout.margin()
+	slip_moved.emit(Rect2(global_position + Vector2(m, 0.0), Vector2(ScreenLayout.LEFT_WIDTH, BAR_HEIGHT)))
 
 ## A drawn ruler, white so the button's icon colours tint it: a bar with
 ## ticks standing on one side, the long ones every fifth (MapRuler's own

@@ -713,3 +713,35 @@ ui_fps_bar_px,44,"UI: DEV MODE's FPS counter — the band from the window's top 
 ui_fps_refresh_s,0.25,"UI: DEV MODE's FPS counter — seconds between rereads of Engine.get_frames_per_second"
 ui_fps_good,55,"UI: DEV MODE's FPS counter — at or above this many frames a second it reads in the good colour"
 ui_fps_poor,30,"UI: DEV MODE's FPS counter — under this many frames a second it reads in the bad colour; between the two, gold"
+ui_war_table,1,"UI (owner 2026-10-01, B3 + C1 bookmarks): 1 lays the main screens on the WAR TABLE — oak planks by daylight, the map a vellum sheet, the realm dashboard the steward's pinned report, the purses a tally board, the date a brass dial, ENTER THE COUNCIL a wax seal, the tabs silk bookmarks (spec docs/superpowers/specs/2026-10-01-war-table-ui-design.md); 0 keeps the dark leather chrome of 2026-09-28"
+ui_table_tile_px,560,"WAR TABLE: design px of one repeat of the oak planks (assets/2D/ui/war_table/table_oak.jpg, 2048 px)"
+ui_table_light_angle_deg,28,"WAR TABLE: the window-light shaft's slant from vertical, degrees (it falls from the upper left)"
+ui_table_light_width,0.3,WAR TABLE: the shaft's width as a share of the screen's width
+ui_table_light_center,0.5,"WAR TABLE: where the shaft crosses the screen's middle, as a share of its width"
+ui_table_shadow_dx,6,WAR TABLE: design px every object's shadow falls to the right (the light is upper left)
+ui_table_shadow_dy,10,WAR TABLE: design px every object's shadow falls down
+ui_table_shadow_alpha,0.34,WAR TABLE: the darkest of an object's shadow (three soft layers step out from it)
+ui_table_shadow_soft_px,7,WAR TABLE: design px each of the shadow's three layers grows by
+ui_paper_deckle_px,2.5,WAR TABLE: design px a paper edge wanders in and out (the deckle)
+ui_paper_deckle_step_px,11,WAR TABLE: design px between the deckle's points
+ui_sheet_margin_px,13,WAR TABLE: design px of vellum round the map on the sheet (the ink rule sits inside it)
+ui_sheet_rule_px,1.5,WAR TABLE: design px of the sheet's inner ink rule round the map
+ui_sheet_rule_gap_px,4,WAR TABLE: design px between the sheet's two ink rules
+ui_report_tilt_deg,-1.2,WAR TABLE: degrees the report's PAPER is drawn off square (its text and buttons stay square: nothing that takes input turns)
+ui_report_margin_px,22,WAR TABLE: design px inside the report's paper to its text
+ui_pin_px,12,WAR TABLE: design px across the brass pin at the report's head
+ui_dial_px,52,WAR TABLE: design px across the brass date dial
+ui_stud_px,20,WAR TABLE: design px across each brass clock stud
+ui_board_nail_px,9,WAR TABLE: design px across a tally-board nail
+ui_seal_px,100,WAR TABLE: design px across the council's wax seal
+ui_bookmark_tail_px,8,WAR TABLE: design px of a bookmark's swallow-tail notch
+ui_bookmark_drop_px,14,WAR TABLE: design px a bookmark hangs below its label (the silk past the words)
+ui_tally_per_mark,10,WAR TABLE: points of a temper gauge one tally mark stands for (gated in fives)
+ui_slip_width_px,420,WAR TABLE: design px wide the news slip lies between the two bookmark groups (at most the gap between them)
+ui_slip_height_px,32,WAR TABLE: design px tall the news slip
+ui_slip_drop_px,6,WAR TABLE: design px below the sheet's lower edge the news slip lies
+ui_table_margin_px,12,WAR TABLE: design px of table between the screen's edge and the papers (leather keeps ScreenLayout.MARGIN 8)
+ui_table_gap_px,16,WAR TABLE: design px of table between the report and the map sheet (leather keeps ScreenLayout.GAP 8)
+ui_table_right_gap_px,8,"WAR TABLE: design px between the map sheet and the council column while it is open (the column is leather, and the audience window needs the map's width: at 1280 it must keep ~668 design px)"
+ui_sheet_deckle_px,4,"WAR TABLE: design px the map sheet's edge wanders (a bigger sheet, a bolder deckle than the report's ui_paper_deckle_px)"
+ui_bookmark_tuck_px,8,WAR TABLE: design px of each bookmark's top hidden under the map sheet's lower edge (the sheet draws over the bookmarks by z order; input keeps the tree's order)
