@@ -143,6 +143,7 @@ func bind(repo: DataRepository) -> void:
 	_link_mat.set_shader_parameter("light_gain", repo.bal("ledger_light_gain"))
 	_link_mat.set_shader_parameter("glow_virtuous", _pal["loop_virtuous"])
 	_link_mat.set_shader_parameter("glow_vicious", _pal["loop_vicious"])
+	LedgerStarMotion.bind_wobble(_link_mat, repo)   # a link's ends move with its stars
 	_links.material_override = _link_mat
 	_hud.style(UiPalette.role_font("body"), repo.bal("ledger_label_px"), _pal["label_ink"], _pal["label_halo"],
 		int(repo.bal("ledger_label_halo_px")))
@@ -523,17 +524,52 @@ func _place_stars() -> void:
 		for id: String in ids:
 			var r := _draw_r(id)
 			laid[id] = Transform3D(Basis().scaled(Vector3(r, r, r)), _drawn[id])
+	# a dimmed star the camera has come right up to (another cluster's, seen
+	# from inside the chosen one) fades out rather than fill the view as a
+	# blurred disc (critic, round 2): its body's alpha and its current's weight
+	var faint_cols := _faint_cols
+	var spark_cols := _spark_cols
+	var custom := _custom
+	var near := {}
+	for k in _faint.size():
+		var f := near_fade(_faint[k])
+		if f < 1.0:
+			near[k] = f
+	if not near.is_empty():
+		faint_cols = _faint_cols.duplicate()
+		custom = _custom.duplicate()
+		for k: int in near:
+			var id := _faint[k]
+			var c: Color = faint_cols[k]
+			c.a *= float(near[k])
+			faint_cols[k] = c
+			var u: Color = custom[id]
+			u.b *= float(near[k])
+			custom[id] = u
+		if not _spark_ids.is_empty():
+			spark_cols = _whole_cols + faint_cols
 	_buffers.clear()
-	for group: Array in [[_stars, _whole, _whole_cols], [_faint_stars, _faint, _faint_cols],
-			[_sparks, _spark_ids, _spark_cols]]:
+	for group: Array in [[_stars, _whole, _whole_cols], [_faint_stars, _faint, faint_cols],
+			[_sparks, _spark_ids, spark_cols]]:
 		var mi: MultiMeshInstance3D = group[0]
 		var ids: Array[String] = group[1]
 		if mi.multimesh == null or mi.multimesh.instance_count != ids.size():
 			continue
-		var buf := LedgerStarMotion.pack(ids, laid, group[2], _custom)
+		var buf := LedgerStarMotion.pack(ids, laid, group[2], custom)
 		_buffers[String(mi.name)] = buf
 		if not ids.is_empty():
 			mi.multimesh.buffer = buf
+
+
+## How much of a star stands as the camera nears it: 1, down to 0 between
+## ledger_near_fade_start and _end of the camera's distance to its target
+## (a share, so it holds at every zoom); the flat chart's camera never nears.
+func near_fade(id: String) -> float:
+	if _flat or not _drawn.has(id):
+		return 1.0
+	var ref := maxf(_orbit.distance, 1e-3)
+	var d := (_drawn[id] as Vector3).distance_to(_camera.transform.origin)
+	return smoothstep(ref * _repo.bal("ledger_near_fade_end"), ref * _repo.bal("ledger_near_fade_start"), d)
 
 
 ## A star's radius as drawn NOW (metres): its drawn radius, held to
@@ -623,6 +659,7 @@ func _update_link_uniforms() -> void:
 	for m: ShaderMaterial in [_link_mat, _spark_mat]:
 		m.set_shader_parameter("px_per_dist", 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / h)
 		m.set_shader_parameter("ortho_m_per_px", _camera.size / h if _flat else 0.0)
+	_link_mat.set_shader_parameter("star_cap_px", _repo.bal("ledger_star_max_px") * _window_scale())
 	_spark_mat.set_shader_parameter("ring_out_px", LedgerStarMotion.ring_out_px(_repo, RING_GAP_RINGS, _window_scale()))
 	_spark_mat.set_shader_parameter("ring_band_px", LedgerStarMotion.ring_band_px(_repo, _window_scale()))
 
@@ -672,6 +709,8 @@ func _segments() -> Array:
 		var glow := {"virtuous": 1, "vicious": 2}.get(String(running.get(String(l["type"]), "")), 0) as int
 		for st: Array in _split(l):
 			out.append({"id": String(st[0]), "link": String(l["id"]), "a_id": a_id, "b_id": b_id, "a": a, "b": b,
+				"a_star": LedgerStarMotion.link_star(a_id, float(_size[a_id]), a_id == _selected),
+				"b_star": LedgerStarMotion.link_star(b_id, float(_size[b_id]), b_id == _selected),
 				"ca": Color(cols[0] as Color, alpha), "cb": Color(cols[1] as Color, alpha),
 				"width_px": _width_px(st[1]) * wide * ws, "shift_px": (float(st[2]) + pair_shift) * ws,
 				"dashed": planned, "speed": speed, "glow": glow})
@@ -738,15 +777,13 @@ func _count_width_px(l: Dictionary) -> float:
 	return lerpf(_repo.bal("ledger_link_min_px"), _repo.bal("ledger_link_max_px"), t)
 
 
+## A link's two colours: its ends' clusters', yellowing with its report's
+## age; a planned or vacant one grey. A court tie is no exception (owner
+## 2026-10-01: King Aldric's ties in tan, red and green "非常突兀，应该和周边类似"):
+## its feeling is its width and its card, never a hue of its own.
 func _link_colours(l: Dictionary) -> Array:
 	if String(l["status"]) == "planned" or bool(l.get("vacant", false)):
 		return [_pal["thread_planned"], _pal["thread_planned"]]
-	match _look(l):
-		"kin":
-			return [_pal["thread_kin"], _pal["thread_kin"]]
-		"tie":
-			var c: Color = _pal["thread_pos"] if int(l.get("sentiment", 0)) >= 0 else _pal["thread_neg"]
-			return [c, c]
 	var ca: Color = _cluster_col.get(_cluster_of(String(l["from"])), _pal["thread_live"])
 	var cb: Color = _cluster_col.get(_cluster_of(String(l["to"])), _pal["thread_live"])
 	var accs: Array = l["accounts"]

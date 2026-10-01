@@ -3,9 +3,6 @@ sphere_planned,#5A5550,a thing not yet built
 thread_live,#E0BB6A,gold wire
 thread_planned,#6E6862,not yet built
 thread_aged,#B89A5A,a report yellowing with age
-thread_kin,#E0BB6A,kin and marriage
-thread_pos,#7FA36B,warm ties
-thread_neg,#A8453A,cold ties
 loop_virtuous,#F2D27A,a virtuous loop running
 loop_vicious,#B0322A,a vicious loop running
 label_ink,#EEE3CB,star names

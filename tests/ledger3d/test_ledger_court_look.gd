@@ -3,7 +3,10 @@ extends GutTest
 ## The LEDGER's look rulings of 2026-09-30 (owner, choosing variant A): the
 ## court is read one person's web at a time — thin cords whose width follows
 ## the feeling, the player's own ties lit while no one is selected and the
-## rest standing back, the selected person's ties lit once one is.
+## rest standing back, the selected person's ties lit once one is. And
+## (owner 2026-10-01: King Aldric's tan, red and green ties "非常突兀，应该和周边
+## 类似") a tie wears its two clusters' colours like every other link — the
+## feeling is its width and its card, never a hue.
 
 var repo: DataRepository
 var view: LedgerView3D
@@ -58,3 +61,20 @@ func test_selecting_someone_makes_them_the_lit_one() -> void:
 	for seg: Dictionary in _ties():
 		if String(seg["a_id"]) == other or String(seg["b_id"]) == other:
 			assert_gt((seg["ca"] as Color).a, pow(repo.bal("ledger_focus_fade"), 2.2) + 0.01, String(seg["id"]))
+
+
+func test_a_court_tie_wears_its_clusters_colours_not_a_feeling() -> void:
+	var court: Color = view._cluster_col["court"]
+	var ties := _ties()
+	assert_gt(ties.size(), 0)
+	for seg: Dictionary in ties:
+		for k: String in ["ca", "cb"]:
+			var c: Color = seg[k]
+			var id := String(seg["a_id"] if k == "ca" else seg["b_id"])
+			var want: Color = view._cluster_col.get(view._cluster_of(id), court)
+			# a tie whose accounts have aged leans toward thread_aged like any
+			# other link; at the reign's first day none has
+			assert_almost_eq(Vector3(c.r, c.g, c.b), Vector3(want.r, want.g, want.b), Vector3.ONE * 0.002,
+				"%s %s" % [String(seg["id"]), k])
+	for key: String in ["thread_pos", "thread_neg", "thread_kin"]:
+		assert_false(repo.ledger_palette.has(key), key + " is gone with the sentiment hues")
