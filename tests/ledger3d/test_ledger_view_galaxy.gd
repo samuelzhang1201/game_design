@@ -816,3 +816,12 @@ func test_a_changed_redraw_keeps_the_survivors_and_the_camera() -> void:
 			assert_eq(view.drawn(id), places[id], "a survivor keeps its place: " + id)
 	view.settle_now()
 	assert_eq(view.camera().transform, pose, "the camera stays while the new stars settle")
+
+
+## Final review minors: a cluster whose colour is not in the palette (a hand
+## edit validate names) still draws, in the planned grey.
+func test_a_cluster_with_an_unknown_colour_draws() -> void:
+	(repo.ledger_clusters[0] as Dictionary)["colour"] = "no_such_colour"
+	view.bind(repo)
+	_show()
+	assert_gt(view.stars().size(), 0)

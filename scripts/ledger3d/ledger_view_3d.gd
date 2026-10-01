@@ -97,7 +97,8 @@ func bind(repo: DataRepository) -> void:
 	_repo = repo
 	_pal = repo.ledger_palette
 	for c: Dictionary in repo.ledger_clusters:
-		_cluster_col[String(c["cluster"])] = _pal[String(c["colour"])]
+		# a colour not in the palette (validate names it) draws in the planned grey
+		_cluster_col[String(c["cluster"])] = _pal.get(String(c["colour"]), _pal["sphere_planned"])
 	_orbit.distance = repo.bal("ledger_camera_distance")
 	_orbit.pitch = repo.bal("ledger_camera_pitch_deg")
 	_orbit.min_distance = repo.bal("ledger_camera_min_m")
@@ -733,7 +734,7 @@ func _build_haze() -> void:
 		var mi := MeshInstance3D.new()
 		mi.mesh = QuadMesh.new()
 		var m := HAZE_MAT.duplicate() as ShaderMaterial
-		m.set_shader_parameter("tint", _pal[String(row["colour"])])
+		m.set_shader_parameter("tint", _pal.get(String(row["colour"]), _pal["sphere_planned"]))
 		mi.material_override = m
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_haze_root.add_child(mi)

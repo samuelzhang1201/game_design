@@ -99,3 +99,34 @@ func test_a_static_node_has_a_card() -> void:
 	var card := LedgerCards.entry(data, s, "shrine:saint_odo", g)
 	assert_eq(String(card["title"]), "Shrine of St Odo")
 	assert_has(card["lines"], "Pilgrims leave coin here.")
+
+
+## Final review I3 (option b): folding is open only as far as the code can
+## place a star — validate names a row that folds into anything but a
+## province, a foldable type nothing places in a province, and a governed
+## flow's type that folds (its threads carry a governor's word).
+func test_validate_refuses_what_cannot_fold() -> void:
+	_add_shrines()
+	data.ledger_types[-1]["fold_to"] = "house"
+	assert_has(Ledger.validate(data), "shrine: folds into house; only a province can be folded into")
+	data.ledger_types[-1]["fold_to"] = "province"
+	assert_has(Ledger.validate(data), "shrine: folds into a province, but nothing places a shrine in one")
+	data.ledger_types[-1]["fold_to"] = ""
+	assert_eq(Ledger.validate(data), [] as Array[String], "unfolded again, it validates")
+	var flow_type := String((data.ledger_governance.values()[0] as Dictionary)["ledger_type"])
+	for r: Dictionary in data.ledger_types:
+		if String(r["type_id"]) == flow_type:
+			r["fold_to"] = "province"
+	assert_has(Ledger.validate(data),
+		"%s: a governed flow (ledger_governance.csv) must not fold" % flow_type)
+
+
+## Final review minors: a cluster row names a ledger_palette.csv colour and a
+## ledger_lenses.csv lens — a message, never a crash where it is drawn.
+func test_validate_names_a_clusters_unknown_colour_and_lens() -> void:
+	var c: Dictionary = data.ledger_clusters[0]
+	c["colour"] = "no_such_colour"
+	c["lens"] = "no_such_lens"
+	var errors := Ledger.validate(data)
+	assert_has(errors, "cluster %s: unknown colour no_such_colour" % c["cluster"])
+	assert_has(errors, "cluster %s: unknown lens no_such_lens" % c["cluster"])

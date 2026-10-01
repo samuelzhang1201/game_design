@@ -57,14 +57,30 @@ static func validate(repo: DataRepository) -> Array[String]:
 			errors.append("lens %s: unknown instance type %s" % [lens, it])
 	var clusters := {}
 	for c: Dictionary in repo.ledger_clusters:
-		clusters[String(c["cluster"])] = true
+		var cid := String(c["cluster"])
+		clusters[cid] = true
+		if not repo.ledger_palette.has(String(c["colour"])):
+			errors.append("cluster %s: unknown colour %s" % [cid, c["colour"]])
+		if not lenses.has(String(c["lens"])):
+			errors.append("cluster %s: unknown lens %s" % [cid, c["lens"]])
+	var governed := {}
+	for flow: String in repo.ledger_governance:
+		governed[String(repo.ledger_governance[flow]["ledger_type"])] = true
 	for r: Dictionary in repo.ledger_types:
 		var id := String(r["type_id"])
 		if not clusters.has(String(r.get("cluster", ""))):
 			errors.append("%s: unknown cluster %s" % [id, r.get("cluster", "")])
+		# folding is open only as far as _province_code can place a star
+		# (final review I3, option b)
 		var fold := String(r.get("fold_to", ""))
 		if fold != "" and not types.has(fold):
 			errors.append("%s: folds into unknown type %s" % [id, fold])
+		elif fold != "" and fold != FOLD_INTO:
+			errors.append("%s: folds into %s; only a %s can be folded into" % [id, fold, FOLD_INTO])
+		elif fold != "" and not PLACED.has(id):
+			errors.append("%s: folds into a %s, but nothing places a %s in one" % [id, FOLD_INTO, id])
+		if fold != "" and governed.has(id):
+			errors.append("%s: a governed flow (ledger_governance.csv) must not fold" % id)
 		if not String(r.get("star", "")) in ["pool", "instance"]:
 			errors.append("%s: unknown star %s" % [id, r.get("star", "")])
 	for r: Dictionary in repo.ledger_links:
@@ -388,6 +404,13 @@ static func _expands(repo: DataRepository, state: GameState, id: String, control
 		return true
 	var code := _province_code(repo, state, id)
 	return controlled.has(code) or opened.has(code)
+
+
+## The one type a node folds into (`fold_to`): its province's star.
+const FOLD_INTO := "province"
+## The types _province_code can place in a province — all that may fold
+## (validate names any other foldable row).
+const PLACED := ["manor", "building", "town"]
 
 
 ## The province a foldable node stands in (live state), or "".
