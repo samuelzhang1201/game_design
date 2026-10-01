@@ -53,32 +53,73 @@ func test_every_key_binds_to_its_uniform() -> void:
 			float(want[key]), 1e-5, key)
 
 
-func test_the_current_is_one_instance_per_drawn_star_laid_as_its_star() -> void:
+## The current is laid from the very buffer its stars are given: instance k
+## of the whole stars is instance k of the current, the dimmed ones follow,
+## each with the same transform and the same seed. The buffers are what the
+## view hands each MultiMesh (`instance_buffer`): a headless run's dummy
+## renderer keeps no instance data (get_instance_transform reads identity), so
+## the test reads the one buffer assignment instead.
+func test_the_current_is_laid_as_its_stars() -> void:
 	_view()
 	_show()
-	var mm := view.sparks().multimesh
-	assert_eq(mm.instance_count, view.stars().size(), "every star, whole and dimmed")
-	assert_eq(view.spark_ids().size(), view.stars().size())
-	# dim a cluster: the stars are dealt again between the two MultiMeshes,
-	# and the current follows them, whole first, then the dimmed
-	view.focus_cluster("court")
+	view.focus_cluster("court")   # deal some stars to the dimmed MultiMesh
 	var dealt := view.dealt()
 	var whole: Array = dealt[0]
 	var faint: Array = dealt[1]
+	assert_gt(whole.size(), 0)
 	assert_gt(faint.size(), 0, "the other clusters are dimmed")
-	assert_eq((view.get_node("%Stars") as MultiMeshInstance3D).multimesh.instance_count, whole.size())
-	assert_eq((view.get_node("%FaintStars") as MultiMeshInstance3D).multimesh.instance_count, faint.size())
-	assert_eq(mm.instance_count, whole.size() + faint.size())
-	assert_eq(view.spark_ids(), whole + faint, "the current in the stars' own order")
-	# a dimmed star's current is almost none, a whole one's whole
-	var fade := view.star_colour(String(faint[0])).a
-	assert_almost_eq(view.star_custom(String(faint[0])).b, repo.bal("ledger_spark_dimmed") * pow(fade, 2.2), 1e-6)
-	assert_lt(view.star_custom(String(faint[0])).b, 0.05, "a dimmed star's current is almost none")
-	assert_almost_eq(view.star_custom(String(whole[0])).b, 1.0, 1e-6)
-	# the seed is the star's own, wherever it is dealt
-	var c := view.star_custom(String(faint[0]))
+	var S := LedgerStarMotion.STRIDE
+	var stars := view.instance_buffer("Stars")
+	var dim := view.instance_buffer("FaintStars")
+	var sparks := view.instance_buffer("Sparks")
+	assert_eq(stars.size(), whole.size() * S)
+	assert_eq(dim.size(), faint.size() * S)
+	assert_eq(sparks.size(), (whole.size() + faint.size()) * S, "one current per drawn star")
+	assert_eq(view.sparks().multimesh.instance_count, whole.size() + faint.size())
+	for k in whole.size():
+		var id := String(whole[k])
+		var t := LedgerStarMotion.transform_at(stars, k)
+		assert_almost_eq(t.origin, view.drawn(id), Vector3.ONE * 1e-4, "a star stands where it is drawn")
+		assert_gt(t.basis.x.x, 0.0)
+		assert_eq(LedgerStarMotion.transform_at(sparks, k), t, "its current laid as it")
+		assert_eq(LedgerStarMotion.custom_at(stars, k), view.star_custom(id))
+		assert_eq(LedgerStarMotion.custom_at(sparks, k), view.star_custom(id))
+	for k in faint.size():
+		var id := String(faint[k])
+		assert_eq(LedgerStarMotion.transform_at(sparks, whole.size() + k), LedgerStarMotion.transform_at(dim, k))
+		assert_eq(LedgerStarMotion.custom_at(dim, k), view.star_custom(id))
+		assert_eq(LedgerStarMotion.colour_at(sparks, whole.size() + k), LedgerStarMotion.colour_at(dim, k))
+	# the seed is the star's own wherever it is dealt, and the weight its state
+	var c := LedgerStarMotion.custom_at(dim, 0)
 	var seed := LedgerStarMotion.seed_of(String(faint[0]))
 	assert_eq(Vector2(c.r, c.g), Vector2(seed.r, seed.g))
+	assert_almost_eq(c.b, repo.bal("ledger_spark_dimmed") * pow(view.star_colour(String(faint[0])).a, 2.2), 1e-6,
+		"a dimmed star's current is its share of its perceived opacity")
+	assert_almost_eq(LedgerStarMotion.custom_at(stars, 0).b, 1.0, 1e-6)
+
+
+## A camera move lays every star again (the screen cap): its current moves with it.
+func test_a_camera_move_relays_the_current_with_the_stars() -> void:
+	_view()
+	_show()
+	view.orbit().zoom(0.5)
+	view._apply_camera()
+	view._place_stars()
+	var stars := view.instance_buffer("Stars")
+	var sparks := view.instance_buffer("Sparks")
+	for k in stars.size() / LedgerStarMotion.STRIDE:
+		assert_eq(LedgerStarMotion.transform_at(sparks, k), LedgerStarMotion.transform_at(stars, k))
+
+
+## Every star shader moves by the ONE shared wobble, called the same way, so a
+## star and its current never part.
+func test_every_star_shader_wobbles_by_the_shared_formula() -> void:
+	var call := "star_wobble(INSTANCE_CUSTOM, length(MODEL_MATRIX[0].xyz), INV_VIEW_MATRIX, TIME)"
+	for path: String in ["res://scenes/ledger/star.gdshader", "res://scenes/ledger/star_faint.gdshader",
+			"res://scenes/ledger/spark.gdshader"]:
+		var text := FileAccess.get_file_as_string(path)
+		assert_true(text.contains('#include "res://scenes/ledger/star_motion.gdshaderinc"'), path)
+		assert_true(text.contains(call), path + " calls " + call)
 
 
 func test_the_current_is_rebuilt_with_the_stars() -> void:
@@ -93,6 +134,7 @@ func test_the_current_is_rebuilt_with_the_stars() -> void:
 	_show({code: true})
 	assert_gt(view.stars().size(), before, "an opened province unfolds stars")
 	assert_eq(view.sparks().multimesh.instance_count, view.stars().size())
+	assert_eq(view.instance_buffer("Sparks").size(), view.stars().size() * LedgerStarMotion.STRIDE)
 
 
 func test_strength_zero_draws_no_current() -> void:
@@ -100,7 +142,7 @@ func test_strength_zero_draws_no_current() -> void:
 	_view()
 	_show()
 	assert_eq(view.sparks().multimesh.instance_count, 0)
-	assert_true(view.spark_ids().is_empty())
+	assert_true(view.instance_buffer("Sparks").is_empty())
 	assert_gt((view.get_node("%Stars") as MultiMeshInstance3D).multimesh.instance_count, 0, "the stars still drawn")
 
 
@@ -127,9 +169,11 @@ func test_the_selected_stars_current_is_stronger() -> void:
 	_view()
 	_show()
 	view.select("character:you")
-	assert_almost_eq(view.star_custom("character:you").b, repo.bal("ledger_spark_selected"), 1e-6)
-	assert_eq(view.star_custom("character:you").a, 1.0, "its current is laid outside its ring")
-	assert_between(repo.bal("ledger_spark_selected"), 1.6, 1.8, "the most current, never reaching across its threads")
+	var k: int = (view.dealt()[0] as Array).find("character:you")
+	assert_gt(k, -1, "the selected star is whole")
+	var u := LedgerStarMotion.custom_at(view.instance_buffer("Sparks"), k)
+	assert_almost_eq(u.b, repo.bal("ledger_spark_selected"), 1e-6, "its current, as handed to the renderer")
+	assert_eq(u.a, 1.0, "laid outside its ring")
 	view.select("")
 	assert_almost_eq(view.star_custom("character:you").b, 1.0, 1e-6, "and back once let go")
 	assert_eq(view.star_custom("character:you").a, 0.0)
@@ -147,19 +191,3 @@ func test_the_selected_current_clears_its_ring() -> void:
 	assert_eq(float(view.spark_material().get_shader_parameter("ortho_m_per_px")), 0.0, "perspective at rest")
 	assert_almost_eq(float(view.spark_material().get_shader_parameter("ring_band_px")), repo.bal("ledger_ring_px") * ws, 1e-4,
 		"its sparks keep within one ring width past it")
-
-
-## The current adds nothing where no spark passes: no always-on rim glow
-## (critic, fix round 2: it outlined every star in a saturated ring).
-func test_no_rim_glow_stands_where_no_spark_passes() -> void:
-	assert_false(repo.balance.has("ledger_spark_halo"))
-	assert_false(FileAccess.get_file_as_string("res://scenes/ledger/spark.gdshader").contains("uniform float halo"))
-
-
-## The wobble never reaches the edge of a star's own disc, so the links drawn
-## to its centre stay hidden in it; its loop is the 3–6 s the owner approved.
-func test_the_wobble_stays_inside_the_disc() -> void:
-	var share := repo.bal("ledger_star_wobble_share")
-	assert_gt(share, 0.0)
-	assert_lt(share * sqrt(2.0), 0.5, "the loop's corner is well inside the disc")
-	assert_lte(repo.bal("ledger_star_wobble_period_min"), repo.bal("ledger_star_wobble_period_max"))

@@ -69,6 +69,8 @@ var _whole: Array[String] = []        # the stars drawn whole (opaque), in _orde
 var _faint: Array[String] = []        # the dimmed stars (alpha under 1), drawn blended, in _order
 var _spark_ids: Array[String] = []    # the stars the current is dealt to: _whole then _faint (none at strength 0)
 var _custom: Dictionary = {}          # id -> its seed and its current's weight (LedgerStarMotion.custom_of)
+var _spark_cols := PackedColorArray() # the colours dealt to the current, in _spark_ids
+var _buffers: Dictionary = {}         # MultiMesh node name -> the instance buffer last handed to it
 var _near: Dictionary = {}
 var _star_mat: ShaderMaterial
 var _faint_mat: ShaderMaterial
@@ -401,6 +403,13 @@ func star_custom(id: String) -> Color:
 	return _custom.get(id, Color(0, 0, 0, 0))
 
 
+## The instance buffer last handed to a star MultiMesh ("Stars",
+## "FaintStars" or "Sparks"), in LedgerStarMotion.pack's layout: what the
+## renderer was given (a headless run's dummy renderer keeps none of it).
+func instance_buffer(node_name: String) -> PackedFloat32Array:
+	return _buffers.get(node_name, PackedFloat32Array())
+
+
 func stars() -> Array[String]:
 	return _order
 
@@ -491,39 +500,40 @@ func _fill_stars() -> void:
 	for i in _order.size():
 		_custom[_order[i]] = LedgerStarMotion.custom_of(_repo, _order[i], _star_cols[i].a, _order[i] == _selected)
 	_spark_ids = []
+	_spark_cols = PackedColorArray()
 	if LedgerStarMotion.sparks_on(_repo):
 		_spark_ids.append_array(_whole)
 		_spark_ids.append_array(_faint)
-	for group: Array in [[_stars, whole_cols, _whole], [_faint_stars, faint_cols, _faint],
-			[_sparks, whole_cols + faint_cols, _spark_ids]]:
-		var mm: MultiMesh = (group[0] as MultiMeshInstance3D).multimesh
-		if mm == null:
-			continue
-		var ids: Array[String] = group[2]
-		var cols: PackedColorArray = group[1]
-		if mm.instance_count != ids.size():
-			mm.instance_count = ids.size()
-		for k in ids.size():
-			mm.set_instance_color(k, cols[k])
-			mm.set_instance_custom_data(k, _custom[ids[k]])
+		_spark_cols = whole_cols + faint_cols
+	for pair: Array in [[_stars, _whole], [_faint_stars, _faint], [_sparks, _spark_ids]]:
+		var mm: MultiMesh = (pair[0] as MultiMeshInstance3D).multimesh
+		var n: int = (pair[1] as Array).size()
+		if mm != null and mm.instance_count != n:
+			mm.instance_count = n
 	_place_stars()
 
 
+## Lays every star where it is drawn now, and its current with it: ONE
+## buffer per MultiMesh (transform, colour, seed and weight per instance,
+## LedgerStarMotion.pack), the current's built from the very transforms its
+## stars are given.
 func _place_stars() -> void:
-	var spark_mm := _sparks.multimesh
-	var whole_n := _whole.size()
-	var with_sparks := spark_mm != null and not _spark_ids.is_empty() and spark_mm.instance_count == _spark_ids.size()
-	for pair: Array in [[_stars, _whole, 0], [_faint_stars, _faint, whole_n]]:
-		var mm: MultiMesh = (pair[0] as MultiMeshInstance3D).multimesh
-		var ids: Array[String] = pair[1]
-		if mm == null or mm.instance_count != ids.size():
+	var laid := {}   # id -> its transform now
+	for ids: Array[String] in [_whole, _faint]:
+		for id: String in ids:
+			var r := _draw_r(id)
+			laid[id] = Transform3D(Basis().scaled(Vector3(r, r, r)), _drawn[id])
+	_buffers.clear()
+	for group: Array in [[_stars, _whole, _whole_cols], [_faint_stars, _faint, _faint_cols],
+			[_sparks, _spark_ids, _spark_cols]]:
+		var mi: MultiMeshInstance3D = group[0]
+		var ids: Array[String] = group[1]
+		if mi.multimesh == null or mi.multimesh.instance_count != ids.size():
 			continue
-		for k in ids.size():
-			var r := _draw_r(ids[k])
-			var t := Transform3D(Basis().scaled(Vector3(r, r, r)), _drawn[ids[k]])
-			mm.set_instance_transform(k, t)
-			if with_sparks:
-				spark_mm.set_instance_transform(int(pair[2]) + k, t)   # the current laid as its star
+		var buf := LedgerStarMotion.pack(ids, laid, group[2], _custom)
+		_buffers[String(mi.name)] = buf
+		if not ids.is_empty():
+			mi.multimesh.buffer = buf
 
 
 ## A star's radius as drawn NOW (metres): its drawn radius, held to

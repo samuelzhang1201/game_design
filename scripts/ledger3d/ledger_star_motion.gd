@@ -10,6 +10,10 @@ extends RefCounted
 ## its current's weight (INSTANCE_CUSTOM). Picking, the links and the layout
 ## stay on the layout place: the wobble is a share of a star's own disc.
 
+## Floats per star in a MultiMesh buffer: a 3D transform (12), its colour (4)
+## and its custom data (4) — the star MultiMeshes use colours and custom data.
+const STRIDE := 20
+
 ## balance.csv key -> the shared wobble uniform (star_motion.gdshaderinc).
 const WOBBLE := {
 	"ledger_star_wobble_share": "wobble_share",
@@ -94,3 +98,41 @@ static func ring_out_px(repo: DataRepository, gap_rings: float, window_scale: fl
 ## reached twice its radius out, across its threads and near its name).
 static func ring_band_px(repo: DataRepository, window_scale: float) -> float:
 	return repo.bal("ledger_ring_px") * window_scale
+
+
+## The instance buffer of a star MultiMesh: for each id, in order, its laid
+## transform (rows of the basis with the origin, Godot's layout), its colour
+## and its custom data. One assignment hands the renderer every star.
+static func pack(ids: Array[String], laid: Dictionary, cols: PackedColorArray, custom: Dictionary) -> PackedFloat32Array:
+	var buf := PackedFloat32Array()
+	buf.resize(ids.size() * STRIDE)
+	for k in ids.size():
+		var t: Transform3D = laid[ids[k]]
+		var c: Color = cols[k]
+		var u: Color = custom[ids[k]]
+		var o := k * STRIDE
+		var b := t.basis
+		var row := [b.x.x, b.y.x, b.z.x, t.origin.x, b.x.y, b.y.y, b.z.y, t.origin.y,
+			b.x.z, b.y.z, b.z.z, t.origin.z, c.r, c.g, c.b, c.a, u.r, u.g, u.b, u.a]
+		for j in STRIDE:
+			buf[o + j] = row[j]
+	return buf
+
+
+## Instance k's transform in a buffer `pack` built.
+static func transform_at(buf: PackedFloat32Array, k: int) -> Transform3D:
+	var o := k * STRIDE
+	return Transform3D(Vector3(buf[o], buf[o + 4], buf[o + 8]), Vector3(buf[o + 1], buf[o + 5], buf[o + 9]),
+		Vector3(buf[o + 2], buf[o + 6], buf[o + 10]), Vector3(buf[o + 3], buf[o + 7], buf[o + 11]))
+
+
+## Instance k's colour in a buffer `pack` built.
+static func colour_at(buf: PackedFloat32Array, k: int) -> Color:
+	var o := k * STRIDE + 12
+	return Color(buf[o], buf[o + 1], buf[o + 2], buf[o + 3])
+
+
+## Instance k's custom data (seed, weight, selected) in a buffer `pack` built.
+static func custom_at(buf: PackedFloat32Array, k: int) -> Color:
+	var o := k * STRIDE + 16
+	return Color(buf[o], buf[o + 1], buf[o + 2], buf[o + 3])
