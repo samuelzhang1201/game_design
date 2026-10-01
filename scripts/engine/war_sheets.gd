@@ -72,9 +72,11 @@ static func series(repo: DataRepository) -> Array:
 			if best == "" or int(tally[kd]) > int(tally[best]) or (int(tally[kd]) == int(tally[best]) and kd < best):
 				best = kd
 		var i := out.size()
+		@warning_ignore("integer_division")
+		var row := n / cols
 		out.append({"index": i, "numeral": roman(i + 1), "kingdom": best,
 			"name": String((repo.kingdoms.get(best, {}) as Dictionary).get("label", best)), "rect": r,
-			"col": n % cols, "row": n / cols})
+			"col": n % cols, "row": row})
 	_cache[key] = out
 	return out
 

@@ -43,6 +43,7 @@ func test_composition_counts_each_arm_and_the_figures() -> void:
 	var rows := _rows("composition")
 	assert_eq(rows["Under arms"], WarRoom.group(ArmySystem.headcount(repo, reg)))
 	assert_eq(rows["Wounded"], "0", "a new campaign has none")
+	assert_eq(rows["Fit"], WarRoom.group(ArmySystem.headcount(repo, reg)), "fit = headcount less the wounded")
 	assert_eq(rows["Formation"], "9 figures — full strength")
 	var infantry := int(float(reg.get("infantry", 0)))
 	assert_gt(infantry, 0, "the fixture regiment has infantry")
@@ -133,6 +134,8 @@ func test_march_under_orders_names_destination_and_arrival() -> void:
 	assert_eq(rows["Bound for"], WarSheets.grid_ref(repo, sheet, dest))
 	assert_true(rows.has("Arrives"))
 	assert_true(rows.has("Readiness weights"))
+	assert_false(rows["Readiness weights"].contains("(weights)"))
+	assert_eq(rows["Order"], "On the march", "a word, never the raw id")
 
 
 func test_garrison_adds_its_morale_row() -> void:
@@ -173,3 +176,44 @@ func test_a_piece_of_kit_two_arms_share_is_shown_once() -> void:
 			var label := String(row["label"])
 			assert_false(seen.has(label), "%s listed twice" % label)
 			seen[label] = true
+
+
+func test_the_readiness_row_gives_its_four_parts_and_hides_training() -> void:
+	var st := ArmySystem.state_of(repo, state, code)
+	var reg := ArmySystem.regiment(repo, code)
+	var score := ArmySystem.supply_score(repo, int(st["supplies"]), ArmySystem.supply_use(repo, reg, state))
+	var rows := _rows("march")
+	@warning_ignore("integer_division")
+	var pct := score / 10
+	assert_eq(rows["Readiness parts"], "arm 100%%, supplies %d%%, morale %d%%, training %s" % [
+		pct, int(st["morale"]), ArmySystem.training_grade(repo, int(st["training"]))])
+	assert_eq(rows["Supplies score"], "%d%%" % pct, "a percentage, not per mille")
+	assert_false(rows["Readiness parts"].contains(str(int(st["training"])) + "%"), "training stays a word")
+
+
+func test_every_order_has_a_word() -> void:
+	for order: String in [ArmySystem.ORDER_MARCH, ArmySystem.ORDER_GARRISON, ArmySystem.ORDER_STANDBY]:
+		assert_true(repo.war_order_words.has(order), order)
+	assert_eq(WarFolio.order_word(repo, ArmySystem.ORDER_GARRISON), "In garrison")
+	assert_eq(WarFolio.order_word(repo, ArmySystem.ORDER_STANDBY), "Standing by")
+
+
+func test_the_line_names_the_depot_town() -> void:
+	var name := WarFolio.depot_name(repo, state)
+	assert_ne(name, "the depot", "the capital is a town")
+	var realm := repo.resolve_realm("player_realm")
+	var cap := String(repo.kingdoms[realm]["capital_burg"])
+	assert_eq(name, String(repo.burgs[cap]["label"]))
+	# a regiment out on the road reads its line from that town
+	var reg := ArmySystem.regiment(repo, code)
+	var from := ArmySystem.position_of(repo, state, reg)
+	ArmySystem.set_march(repo, state, code, from + Vector2(30, 0))
+	var line := String(_rows("supply").get("Line", ""))
+	if line.contains(" km from "):
+		assert_true(line.contains(name), line)
+
+
+func test_the_archers_kit_is_not_hidden_by_the_infantrys_names() -> void:
+	var inf: Array = WarFolio.kit_of(repo, "infantry").map(func(r: Dictionary) -> String: return String(r["label"]))
+	for r: Dictionary in WarFolio.kit_of(repo, "archers"):
+		assert_false(String(r["label"]) in inf, "archers' %s shares the infantry's name" % r["part"])

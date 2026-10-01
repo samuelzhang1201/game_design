@@ -112,6 +112,8 @@ var war_drills: Array = []
 var war_equipment: Array = []
 ## data/war_folio_sections.csv, file order: [{key, label}].
 var war_folio_sections: Array = []
+## data/war_order_words.csv: order key (ArmySystem.ORDER_*) -> the folio's word for it.
+var war_order_words: Dictionary = {}
 ## data/workshop_rates.csv: [{rate_permille, word, ledger_label}], lowest
 ## rate first — the rates WORKSHOP_RATE accepts and how each is said
 ## (WorkshopSystem; spec 2026-09-30-ledger-supply-design §2).
@@ -760,6 +762,9 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/war_folio_sections.csv", ["key", "label"],
 			func(r): war_folio_sections.append({"key": String(r["key"]), "label": String(r["label"])})):
+		return false
+	if not _load_if_present(dir + "/war_order_words.csv", ["key", "word"],
+			func(r): war_order_words[String(r["key"])] = String(r["word"])):
 		return false
 	if not _load_if_present(dir + "/army_height_supply.csv", ["tier", "min_height", "supply_permille"],
 			func(r): army_height_supply.append({"tier": String(r["tier"]),

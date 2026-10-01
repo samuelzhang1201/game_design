@@ -100,7 +100,9 @@ static func _composition(repo: DataRepository, state: GameState, code: String, r
 	var rows: Array = [_row("Under arms", WarRoom.group(ArmySystem.headcount(repo, reg)))]
 	for a: Dictionary in arms_of(repo, code):
 		rows.append(_row(_arm_label(repo, String(a["arm"])), WarRoom.group(int(a["heads"]))))
-	rows.append(_row("Wounded", WarRoom.group(int(st.get("wounded", 0)))))
+	var wounded := int(st.get("wounded", 0))
+	rows.append(_row("Fit", WarRoom.group(maxi(0, ArmySystem.headcount(repo, reg) - wounded))))
+	rows.append(_row("Wounded", WarRoom.group(wounded)))
 	var n := figures(repo, state, code)
 	rows.append(_row("Formation", "%d figures — %s" % [n, _tier_word(n)]))
 	return rows
@@ -173,17 +175,31 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 			rows.append(_row("Line", "at home, through %s, nothing lost" % town))
 		else:
 			@warning_ignore("integer_division")
-			rows.append(_row("Line", "%d km from the capital, %d%% lost" % [int(line["length_km"]),
-				int(line["loss_permille"]) / 10]))
+			var lost := int(line["loss_permille"]) / 10
+			rows.append(_row("Line", "%d km from %s, %d%% lost" % [int(line["length_km"]), depot_name(repo, state), lost]))
 	var f := Governance.factors(repo, state, "supply_line")
 	var gid := String(f["governor"])
 	if gid == "":
 		rows.append(_row("Governed by", "no one"))
 	else:
 		@warning_ignore("integer_division")
+		var runs := int(f["efficiency"]) / 10
 		rows.append(_row("Governed by", "%s — runs it at %d%%, skill %d" % [
-			(state.characters[gid] as Character).display_name, int(f["efficiency"]) / 10, int(f["skill"])]))
+			(state.characters[gid] as Character).display_name, runs, int(f["skill"])]))
 	return rows
+
+
+## The town the supply line runs from (CourierSystem.origin: the capital while
+## the realm holds it, else its stand-in), "the depot" when no town stands there.
+static func depot_name(repo: DataRepository, state: GameState) -> String:
+	var at := CourierSystem.origin(repo, state)
+	var codes: Array = repo.burgs.keys()
+	codes.sort()
+	for b: String in codes:
+		var row: Dictionary = repo.burgs[b]
+		if Vector2(float(row["x"]), float(row["y"])) == at:
+			return String(row["label"])
+	return "the depot"
 
 
 static func _ground(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
@@ -202,8 +218,11 @@ static func _ground(repo: DataRepository, state: GameState, code: String, reg: D
 		var t: Dictionary = repo.army_terrain.get("%s|%s" % [terrain, String(a["arm"])], {})
 		if not t.is_empty():
 			@warning_ignore("integer_division")
+			var defends := int(t["defend"]) / 10
+			@warning_ignore("integer_division")
+			var attacks := int(t["attack"]) / 10
 			rows.append(_row(_arm_label(repo, String(a["arm"])), "defends at %d%%, attacks at %d%%" % [
-				int(t["defend"]) / 10, int(t["attack"]) / 10]))
+				defends, attacks]))
 	rows.append(_row("Weather", Weather.describe_kind(repo, Weather.at(repo, state, at, state.absolute_day()))))
 	return rows
 
@@ -214,15 +233,22 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 	var score := ArmySystem.supply_score(repo, int(st["supplies"]), ArmySystem.supply_use(repo, reg, state))
 	@warning_ignore("integer_division")
 	var readiness := bars.x / 10
+	@warning_ignore("integer_division")
+	var supplies_pct := clampi(score, 0, 1000) / 10
+	var grade := ArmySystem.training_grade(repo, int(st["training"]))
+	# the four parts of readiness (ArmySystem.readiness_permille): the arm is
+	# always whole; training stays hidden, its grade word only (spec §4)
 	var rows: Array = [_row("Pace", "%.1f km a day" % ArmySystem.speed_km_per_day(repo, state, code)),
 		_row("Readiness", "%d%%" % readiness),
-		_row("Readiness weights", "arm %d, supplies %d, morale %d, training %d (weights)" % [
+		_row("Readiness parts", "arm 100%%, supplies %d%%, morale %d%%, training %s" % [
+			supplies_pct, clampi(int(st["morale"]), 0, 100), grade]),
+		_row("Readiness weights", "arm %d, supplies %d, morale %d, training %d" % [
 			int(repo.bal("army_speed_w_arm")), int(repo.bal("army_speed_w_supply")),
 			int(repo.bal("army_speed_w_morale")), int(repo.bal("army_speed_w_training"))]),
-		_row("Supplies score", "%d‰" % score),
-		_row("Training", ArmySystem.training_grade(repo, int(st["training"])))]
+		_row("Supplies score", "%d%%" % supplies_pct),
+		_row("Training", grade)]
 	var order := ArmySystem.order_of(repo, state, code)
-	rows.append(_row("Order", order))
+	rows.append(_row("Order", order_word(repo, order)))
 	if order == ArmySystem.ORDER_MARCH:
 		var dest := ArmySystem.destination_of(repo, state, code)
 		var si := WarSheets.sheet_of(repo, dest)
@@ -231,6 +257,11 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 		var days := ArmySystem.days_out(repo, state, code)
 		rows.append(_row("Arrives", "in %d day%s" % [days, "" if days == 1 else "s"]))
 	return rows
+
+
+## The folio's word for a standing order (data/war_order_words.csv).
+static func order_word(repo: DataRepository, order: String) -> String:
+	return String(repo.war_order_words.get(order, order.capitalize()))
 
 
 ## Whether an arm has a figure of its own to drill: some war_drills row lists
