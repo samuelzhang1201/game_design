@@ -275,7 +275,10 @@ func _name_of(code: String) -> String:
 ## Escape gives an aimed order up — the player changed their mind and should
 ## not have to click the map to get out of it.
 func _unhandled_input(event: InputEvent) -> void:
-	if _aiming == "" and _map != null and _map.has_method("selected_army") \
+	# A map that is hidden (the WAR ROOM closed, the LEDGER over the map) never
+	# takes Escape: only a map on screen lets its selection go.
+	var map_shown := not (_map is CanvasItem) or (_map as CanvasItem).is_visible_in_tree()
+	if _aiming == "" and _map != null and map_shown and _map.has_method("selected_army") \
 			and String(_map.call("selected_army")) != "" and event is InputEventKey \
 			and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
 		_map.call("clear_selection")   # Escape lets the selected regiment go

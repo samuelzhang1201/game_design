@@ -65,8 +65,11 @@ func _home_sheet() -> int:
 
 
 func lay_sheet(index: int) -> void:
+	var series: Array = WarSheets.series(Game.data)
+	if index < 0 or index >= series.size():
+		return
 	_view.lay_sheet(index)
-	var s: Dictionary = WarSheets.series(Game.data)[index]
+	var s: Dictionary = series[index]
 	%Title.text = "Sheet %s · %s" % [s["numeral"], s["name"]]
 
 
@@ -79,6 +82,7 @@ func close() -> void:
 	visible = false
 	_dirty = false
 	_view.set_active(false)
+	_view.clear_selection()   # a closed room's selection must never take Escape
 	_clear_card()
 	closed.emit()
 

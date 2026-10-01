@@ -58,3 +58,37 @@ func test_a_selected_piece_puts_its_card_in_the_left_column_and_closing_takes_it
 	assert_eq(detail.title_label().text, String(MapObjects.army_card(Game.data, code, Game.state)["title"]))
 	r.war_room_screen().close()
 	assert_false(detail.has_content())
+
+
+func test_opening_the_room_withdraws_an_aim_armed_on_the_map() -> void:
+	var r: GameRoot = await _court()
+	var map_orders := r.current_screen.find_child("ArmyOrders", true, false) as ArmyOrderMenu
+	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
+	Game.set_clock_speed(0)
+	assert_eq(map_orders.aim_for(code), "", "the aim is armed on a paused clock")
+	assert_eq(map_orders.aiming(), code)
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(2)
+	assert_eq(map_orders.aiming(), "")
+
+
+func test_closing_the_room_lets_its_selection_go() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(2)
+	var view := r.war_room_screen().view()
+	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
+	view._selected = code
+	r.war_room_screen().close()
+	assert_eq(view.selected_army(), "")
+
+
+func test_an_out_of_range_sheet_is_ignored() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(2)
+	var screen := r.war_room_screen()
+	var was := screen.view().sheet_index()
+	screen.lay_sheet(-1)
+	screen.lay_sheet(9999)
+	assert_eq(screen.view().sheet_index(), was)

@@ -546,6 +546,11 @@ func toggle_war_room() -> void:
 	var map_view: Map3DView = current_screen.map3d_view() if current_screen.has_method("map3d_view") else null
 	if map_view != null:
 		map_view.deactivate()
+	# An aim armed on the map's own menu (piece, MARCH…) must not survive into
+	# the room: both menus would hold one.
+	var map_orders := current_screen.find_child("ArmyOrders", true, false) as ArmyOrderMenu
+	if map_orders != null:
+		map_orders.withdraw_aim()
 	_war_room_screen.open(current_screen.detail_panel())
 
 func _fit_war_room() -> void:
