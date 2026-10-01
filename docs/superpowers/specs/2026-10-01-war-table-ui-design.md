@@ -44,11 +44,15 @@ the same two percentages, the host bars one line with the same counts.
   its text and buttons stay square.
 - The deckle is deterministic (a seed per surface), presentation only.
 
+## Follow-ups (owner 2026-10-01: "1-3 都ok", "用qwen-3")
+
+- The marks over the 3D map in the sheet's ink (`<key>_table` palette rows).
+- The seal as photographed art (Qwen-2512 #3 of eight) with the code-drawn wax as fallback.
+- The waiting ministers' miniatures under the seal (`ConversationBeats.waiting`).
+
 ## Not in this round
 
 - The compass stays in the map (its click turns the view north); moving it onto
   the table is a follow-up.
-- The minister miniatures beside the seal wait for a real "who waits to be
-  heard" source; the seal's tag says only the order.
 - The conversation screen shares the table, sheet, top bar, report and
   bookmarks; its right-hand dialogue column stays dark leather this round.
