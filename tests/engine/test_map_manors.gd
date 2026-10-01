@@ -181,6 +181,32 @@ func test_provinces_that_touch_take_different_shades() -> void:
 
 ## Character creation renames the royal house; the pack still binds the
 ## demesne to the old name, so those manors are the crown's under the new.
+## Perf 2026-10-02: manors_of_house is kept between asks (it walked every
+## manor twice a month), so it must follow every change it depends on.
+func test_a_houses_manors_follow_every_change_they_depend_on() -> void:
+	var r := _repo()
+	var s := _state()
+	assert_eq(MapManors.manors_of_house(r, s, "Valorin"), [1, 2])
+	assert_eq(MapManors.manors_of_house(r, s, "Valorin"), [1, 2], "asked again")
+	s.manor_owner["2"] = "Rex"  # a manor sold
+	assert_eq(MapManors.manors_of_house(r, s, "Valorin"), [1])
+	assert_eq(MapManors.manors_of_house(r, s, "Rex"), [2])
+	s.manor_province["4"] = "p"  # annexed: now it is Valorin's province's
+	assert_eq(MapManors.manors_of_house(r, s, "Valorin"), [1, 4])
+	assert_eq(MapManors.manors_of_house(r, s, "Valorin", "k"), [1, 4])
+	s.province_owner["p"] = "k2"  # conquered
+	assert_eq(MapManors.manors_of_house(r, s, "Valorin", "k"), [])
+	s.player_setup["house_was"] = "Valorin"  # the crown was Valorin
+	assert_eq(MapManors.manors_of_house(r, s, "Rex"), [1, 2, 4])
+	var you := Character.new()
+	you.id = "you"
+	you.family_name = "Regis"
+	s.characters["you"] = you  # the player character's live name
+	assert_eq(MapManors.manors_of_house(r, s, "Regis"), [1, 4])
+	var got := MapManors.manors_of_house(r, s, "Regis")
+	got.append(99)
+	assert_eq(MapManors.manors_of_house(r, s, "Regis"), [1, 4], "a caller's copy, never the kept one")
+
 func test_a_renamed_royal_house_keeps_its_manors() -> void:
 	var r := _repo()
 	var s := _state()

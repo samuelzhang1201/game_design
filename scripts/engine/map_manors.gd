@@ -27,6 +27,7 @@ static func invalidate() -> void:
 	_cache.clear()
 	_people_cache.clear()
 	_annex_cache.clear()
+	_house_cache.clear()
 
 static func _repo_cache(repo: DataRepository) -> Dictionary:
 	var key := repo.get_instance_id()
@@ -318,6 +319,17 @@ static func holdings_of_province(repo: DataRepository, state: GameState, provinc
 ## named, in which case only its provinces' manors.
 static func manors_of_house(repo: DataRepository, state: GameState, family: String,
 		kingdom_code: String = "") -> Array:
+	# Kept between asks on everything the answer reads (perf 2026-10-02: the
+	# month's settlement walked all ~3,500 manors twice, ~3 ms a walk): the
+	# moved manors and provinces, the conquered provinces, and what names the
+	# crown (owner_of's default falls to it, default_owner).
+	var key := [repo.get_instance_id(), repo.manors.size(), family, kingdom_code,
+		state.manor_owner.hash() if state != null else 0,
+		state.manor_province.hash() if state != null else 0,
+		state.province_owner.hash() if state != null else 0,
+		state.player_setup.hash() if state != null else 0, crown(state)]
+	if _house_cache.has(key):
+		return (_house_cache[key] as Array).duplicate()
 	var out: Array = []
 	var ids: Array = repo.manors.keys()
 	ids.sort()
@@ -326,7 +338,12 @@ static func manors_of_house(repo: DataRepository, state: GameState, family: Stri
 			continue
 		if owner_of(repo, state, id) == family:
 			out.append(id)
+	if _house_cache.size() > 64:
+		_house_cache.clear()
+	_house_cache[key] = out.duplicate()
 	return out
+
+static var _house_cache: Dictionary = {}
 
 # ---- buying land (owner 2026-09-14) ------------------------------------------
 
