@@ -729,3 +729,57 @@ func test_the_war_names_are_short_near_and_only_the_selected_has_gauges() -> voi
 			mine = e
 	assert_false((mine.get("props", []) as Array).is_empty(), "the selected regiment carries its gauges")
 	assert_false(bool(mine["gauges_up"]), "under its name")
+
+
+## Task 11 fix round 4 (T1): in the War view with a regiment selected (its
+## web framed), its label (name and gauges) sits within one name-height of
+## its ring and no other drawn name touches it; framing a web ignores a
+## planned link's far end.
+func test_the_selected_label_sits_at_its_ring_and_nothing_touches_it() -> void:
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
+	_settle_by_frames()
+	view.focus_cluster("war")
+	for i in 60:
+		view._process(1.0 / 60.0)
+	var reg := "regiment:kelvarn_10th_rothbridbu_regiment"
+	assert_true(view._nodes.has(reg))
+	view.frame_web(reg)
+	for f: String in view._frame_ids:
+		assert_ne(String(view._nodes[f].get("status", "live")), "planned", "a planned end is not framed: " + f)
+	var planned_end := false
+	for l: Dictionary in view._snap["links"]:
+		if String(l["status"]) == "planned" and (String(l["from"]) == reg or String(l["to"]) == reg):
+			planned_end = true
+	assert_true(planned_end, "the set-up has a planned tie to leave out")
+	view.select(reg)
+	for i in 90:
+		view._process(1.0 / 60.0)
+	var font: Font = view._hud._font
+	var gauge: Dictionary = view._hud._gauge
+	var boxes := {}
+	var mine := Rect2()
+	var ring := 0.0
+	var centre := Vector2.ZERO
+	for e: Dictionary in view._hud._entries:
+		var px := float(e["px"])
+		var f: Font = view._hud._title_font if bool(e.get("title", false)) else font
+		var w := f.get_string_size(String(e["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
+		var props: Array = e.get("props", [])
+		if not props.is_empty():
+			w = maxf(w, LedgerHud.gauge_row_w(props, gauge, font))
+		var b := Rect2((e["at"] as Vector2) - Vector2(w * 0.5, px * 0.45),
+			Vector2(w, px * 1.05 + LedgerHud.gauge_row_h(props, gauge)))
+		if String(e.get("id", "")) == reg:
+			mine = b
+			ring = float(e["ring"])
+			centre = e["ring_at"]
+		else:
+			boxes[String(e["text"])] = b
+	assert_true(mine.has_area(), "the selected regiment is named")
+	var px_sel := repo.bal("ledger_label_strong_px")
+	var dx := maxf(maxf(mine.position.x - centre.x, centre.x - mine.end.x), 0.0)
+	var dy := maxf(maxf(mine.position.y - centre.y, centre.y - mine.end.y), 0.0)
+	var gap := Vector2(dx, dy).length() - ring
+	assert_lte(gap, px_sel * 1.05, "within one name-height of its ring (%.1f px)" % gap)
+	for t: String in boxes:
+		assert_false((boxes[t] as Rect2).intersects(mine), "%s touches the selected label" % t)

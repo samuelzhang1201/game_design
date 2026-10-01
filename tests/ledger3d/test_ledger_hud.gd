@@ -215,3 +215,40 @@ func test_a_name_takes_the_nearest_ring_and_is_never_clipped() -> void:
 	for k: Dictionary in gone:
 		var q: Vector2 = k["at"]
 		assert_true(Rect2(0, 0, 400, 400).encloses(Rect2(q - Vector2(w * 0.5 + 3.5, 14.0 * 0.45), Vector2(w + 7.0, 14.0 * 1.05))))
+
+
+## Task 11 fix round 4 (T1): a `first` label becomes a wall; a `lit` label
+## prefers a place in its ring that no planned dash crosses; a `dim` name only
+## tries its nearest ring; over and under its star a name slides inside the
+## view's edge.
+func test_the_first_label_walls_off_lit_avoids_dashes_dim_stays_near() -> void:
+	var sel := {"text": "10th (Rothbridbu)", "at": Vector2(200, 160), "strong": true, "first": true,
+		"beside": [Vector2(200, 200), 10.0]}
+	var other := {"text": "Enemy hosts", "at": Vector2(200, 170), "strong": false, "keep": true,
+		"beside": [Vector2(200, 210), 1.0]}
+	var kept := LedgerHud.cull([sel, other], 14.0)
+	var w := 17.0 * 14.0 * 0.55
+	var mine := Rect2((kept[0]["at"] as Vector2) - Vector2(w * 0.5, 14.0 * 0.45), Vector2(w, 14.0 * 1.05))
+	for k: Dictionary in kept.slice(1):
+		var w2 := 11.0 * 14.0 * 0.55
+		var b := Rect2((k["at"] as Vector2) - Vector2(w2 * 0.5, 14.0 * 0.45), Vector2(w2, 14.0 * 1.05))
+		assert_false(b.intersects(mine), "nothing touches the selected label")
+	var lit := sel.duplicate()
+	lit.erase("first")
+	lit["lit"] = true
+	var dash := [[Vector2(100, 175), Vector2(300, 175)]]   # a dashed link right over its star
+	var off := LedgerHud.cull([lit], 14.0, null, LedgerHud.DEFAULT_GAUGE, [], null, [], Rect2(), dash)
+	var at: Vector2 = off[0]["at"]
+	assert_gt(at.y, 200.0, "it takes the place under its star, off the dashes")
+	var dim := {"text": "Enemy hosts", "at": Vector2(200, 160), "strong": false, "dim": true,
+		"beside": [Vector2(200, 200), 6.0]}
+	var walls := [Rect2(0, 0, 400, 400)]
+	walls[0] = Rect2(140, 150, 120, 100)   # its whole nearest ring taken
+	assert_eq(LedgerHud.cull([dim], 14.0, null, LedgerHud.DEFAULT_GAUGE, [], null, walls).size(), 0,
+		"a ghost name drops rather than wander")
+	var edge := {"text": "10th (Rothbridbu)", "at": Vector2(395, 160), "strong": true,
+		"beside": [Vector2(395, 200), 4.0]}
+	var slid := LedgerHud.cull([edge], 14.0, null, LedgerHud.DEFAULT_GAUGE, [], null, [], Rect2(0, 0, 400, 400))
+	assert_eq(slid.size(), 1)
+	assert_lt((slid[0]["at"] as Vector2).x, 395.0, "slid inside the edge")
+	assert_almost_eq((slid[0]["at"] as Vector2).y, 200.0 - 4.0 - 14.0 * 0.35 - 14.0 * 0.6, 0.001, "still over its star")

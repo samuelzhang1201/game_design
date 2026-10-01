@@ -240,12 +240,16 @@ func focus_cluster(cluster_id: String) -> void:
 	_update_hud()
 
 
-## Frame a star and its neighbours.
+## Frame a star and its neighbours by its live ties.
 func frame_web(id: String) -> void:
 	if not _nodes.has(id):
 		return
 	var ids: Array = [id]
 	for l: Dictionary in _snap.get("links", []):
+		# its LIVE ties only: a planned (ghost) link's far end does not pull
+		# the camera (Task 11 fix round 4, T1c)
+		if String(l.get("status", "live")) == "planned":
+			continue
 		if String(l["from"]) == id:
 			ids.append(String(l["to"]))
 		elif String(l["to"]) == id:
@@ -985,10 +989,30 @@ func _update_hud() -> void:
 			e["ring"] = r + _repo.bal("ledger_ring_px") * RING_GAP_RINGS
 			e["ring_at"] = at
 			e["beside"] = [at, float(e["ring"]) + _repo.bal("ledger_ring_px")]  # clear of its ring
+			e["first"] = true  # placed first; no other name touches its label (T1a)
+		if id == _selected or _near.has(id):
+			e["lit"] = true    # off the planned dashes where a near place allows (T1b)
+		elif fade < 1.0:
+			e["dim"] = true    # a ghost name drops rather than wander (T1a)
 		entries.append(e)
 	var first := 1 if _selected != "" and not entries.is_empty() and entries[0].has("ring") else 0
 	entries = entries.slice(0, first) + titles + entries.slice(first)
-	_hud.show_entries(entries, obstacles, [Rect2(0.0, -size.y, size.x, size.y + chrome)], Rect2(Vector2.ZERO, size))
+	_hud.show_entries(entries, obstacles, [Rect2(0.0, -size.y, size.x, size.y + chrome)], Rect2(Vector2.ZERO, size),
+		_dash_paths())
+
+
+## The planned (dashed) links on the screen, [a, b] in design px: a lit label
+## keeps off them where a near place allows (Task 11 fix round 4, T1b).
+func _dash_paths() -> Array:
+	var out: Array = []
+	for seg: Dictionary in _segs:
+		if not bool(seg["dashed"]):
+			continue
+		var a: Variant = screen_pos_of(String(seg["a_id"]))
+		var b: Variant = screen_pos_of(String(seg["b_id"]))
+		if a != null and b != null:
+			out.append([a, b])
+	return out
 
 
 ## Whether a star may be an always-named hub: its type's `hub` is not 0, and

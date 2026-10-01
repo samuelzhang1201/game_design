@@ -86,8 +86,9 @@ func style_ring(colour: Color, width_px: float) -> void:
 	_ring_w = width_px
 
 
-func show_entries(entries: Array, obstacles: Array = [], walls: Array = [], bounds: Rect2 = Rect2()) -> void:
-	_entries = cull(entries, _px, _font, _gauge, obstacles, _title_font, walls, bounds)
+func show_entries(entries: Array, obstacles: Array = [], walls: Array = [], bounds: Rect2 = Rect2(),
+		dashes: Array = []) -> void:
+	_entries = cull(entries, _px, _font, _gauge, obstacles, _title_font, walls, bounds, dashes)
 	_rings.clear()
 	for e: Dictionary in entries:
 		if e.has("ring"):
@@ -164,8 +165,16 @@ static func _font_of(e: Dictionary, font: Font, title_font: Font) -> Font:
 ## taken by names takes the least-covered place that is on no other star; a
 ## kept TITLE may cross a star when nothing else is clear. `walls` (the
 ## screen's top chrome) are never entered by anything.
+## Task 11 fix round 4 (T1): an entry with `first: true` (the selected star,
+## put first by the view) becomes a wall once placed, so no later name touches
+## its label; a `lit: true` entry prefers, within each ring, a place no
+## planned link's dashes (`dashes`: screen segments [a, b]) cross; a `dim:
+## true` (ghost) entry only tries its nearest ring and is dropped rather than
+## moved further off. Over and under its star a name slides along the view's
+## edge to stay inside `bounds` rather than leave its star.
 static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dictionary = DEFAULT_GAUGE,
-		obstacles: Array = [], title_font: Font = null, walls: Array = [], bounds: Rect2 = Rect2()) -> Array:
+		obstacles: Array = [], title_font: Font = null, walls: Array = [], bounds: Rect2 = Rect2(),
+		dashes: Array = []) -> Array:
 	var kept: Array = []
 	var names: Array[Rect2] = []   # every box kept: never overlapped by an ordinary name
 	var hard: Array[Rect2] = []    # the walls: never entered
@@ -194,16 +203,31 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 		var boxes: Array[Rect2] = []
 		for pl: Array in places:
 			var at: Vector2 = pl[0]
-			var up: bool = pl[1]  # a place over the sphere: its gauges go over it
+			var up: bool = pl[1]  # a place over the sphere: the name is lifted over its gauges
 			# the box the name is drawn in (_draw sets its baseline 0.35 em
 			# below the place: capitals reach ~0.45 em above the place,
 			# descenders ~0.6 em below), with a quarter em of air each side
 			# so two names in a row never butt into one another and read as one
-			boxes.append(Rect2(at - Vector2(w * 0.5 + px * 0.25, px * 0.45 + (extra_h if up else 0.0)),
-				Vector2(w + px * 0.5, px * 1.05 + extra_h)))
+			var b := Rect2(at - Vector2(w * 0.5 + px * 0.25, px * 0.45 + (extra_h if up else 0.0)),
+				Vector2(w + px * 0.5, px * 1.05 + extra_h))
+			if bool(pl[3]) and bounds.has_area() and b.size.x <= bounds.size.x:
+				# over or under its star: slide along the view's edge
+				var dx := maxf(bounds.position.x - b.position.x, 0.0) - maxf(b.end.x - bounds.end.x, 0.0)
+				b.position.x += dx
+				pl[0] = at + Vector2(dx, 0.0)
+			boxes.append(b)
+		var order: Array = range(boxes.size())
+		if bool(e.get("dim", false)):
+			order = order.filter(func(k: int) -> bool: return int(places[k][2]) == 0)
+		if bool(e.get("lit", false)) and not dashes.is_empty():
+			var key := {}
+			for k: int in order:
+				key[k] = int(places[k][2]) * 2 + (1 if _crossed(boxes[k], dashes) else 0)
+			order.sort_custom(func(a: int, b: int) -> bool:
+				return key[a] < key[b] if key[a] != key[b] else a < b)
 		var pick := -1
 		var least := INF
-		for k in boxes.size():
+		for k: int in order:
 			if _meets(boxes[k], hard) or _on_other_disc(boxes[k], discs, own):
 				continue
 			if bounds.has_area() and not bounds.encloses(boxes[k]):
@@ -216,13 +240,15 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 				least = cover
 				pick = k
 		if pick < 0 and bool(e.get("keep", false)) and bool(e.get("title", false)):
-			for k in boxes.size():
+			for k: int in order:
 				if not _meets(boxes[k], hard) and not _meets(boxes[k], names):
 					pick = k
 					break
 		if pick < 0:
 			continue
 		names.append(boxes[pick])
+		if bool(e.get("first", false)):
+			hard.append(boxes[pick])  # no other name touches the selected label
 		var put := e.duplicate()
 		# the gauge row always sits UNDER its name, tight to it (Task 11 fix
 		# round 3, S1a): a name over its star is lifted by the row's height,
@@ -233,7 +259,8 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 	return kept
 
 
-## Where an entry's name may stand, in order, each [place, over the star]:
+## Where an entry's name may stand, in order, each [place, over the star,
+## its ring (0 nearest), over or under it (it may slide along the edge)]:
 ## round its `beside` star in eight directions — over, under, level right and
 ## left, the four corners — at a name's gap from the disc and then RINGS-1
 ## more distances RING_STEP_EM apart, nearest first, then its own place and
@@ -241,9 +268,9 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 ## its own place, then its `alt`.
 static func _places(e: Dictionary, w: float, px: float) -> Array:
 	if not e.has("beside"):
-		var own: Array = [[e["at"], true]]
+		var own: Array = [[e["at"], true, 0, false]]
 		if e.has("alt"):
-			own.append([e["alt"], false])
+			own.append([e["alt"], false, 0, false])
 		return own
 	# round its own star, nearest ring first (Task 11 fix round 3, S1c: the
 	# name sits by its star): over, under, level right and left, the corners
@@ -261,13 +288,27 @@ static func _places(e: Dictionary, w: float, px: float) -> Array:
 				y = c.y - (r + gap + far) - px * 0.6
 			elif d.y > 0.0:
 				y = c.y + (r + gap + far) + px * 0.45
-			out.append([Vector2(x, y), d.y < 0.0])
+			out.append([Vector2(x, y), d.y < 0.0, ring, d.x == 0.0])
 	# then its own place and its `alt`, the view's lifted places over and
 	# under it, last
-	out.append([e["at"], true])
+	out.append([e["at"], true, RINGS, true])
 	if e.has("alt"):
-		out.append([e["alt"], false])
+		out.append([e["alt"], false, RINGS, true])
 	return out
+
+
+## Whether any of `dashes` (screen segments [a, b]) crosses `box`.
+static func _crossed(box: Rect2, dashes: Array) -> bool:
+	var corners := [box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)]
+	for seg: Array in dashes:
+		var a: Vector2 = seg[0]
+		var b: Vector2 = seg[1]
+		if box.has_point(a) or box.has_point(b):
+			return true
+		for i in 4:
+			if Geometry2D.segment_intersects_segment(a, b, corners[i], corners[(i + 1) % 4]) != null:
+				return true
+	return false
 
 
 ## Whether `box` lies on any disc but the entry's own.
