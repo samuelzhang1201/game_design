@@ -33,6 +33,7 @@ var _parts_mat: ShaderMaterial     # the kit's ink, kept so a resize can re-pitc
 var _label_h_m := 0.0              # a name label's height in model metres (the note hangs under it)
 var _note_drop := 0.0
 var _model_cam := Transform3D.IDENTITY   # the camera as the drill framed it, for show_drill
+var _plate: Array = []             # [box, right, up, centre, margin]: the kit's plate, refitted on a resize
 
 
 func _ready() -> void:
@@ -53,6 +54,8 @@ func _fit_viewport() -> void:
 		_material.set_shader_parameter("stroke_px", _stroke_px * s)
 	if _parts_mat != null:
 		_parts_mat.set_shader_parameter("stroke_px", _stroke_px * s)
+	if not _plate.is_empty():
+		_fit_camera()   # the page changed shape (the drill tabs make way): the plate still fits
 
 
 ## The graphics tier's MSAA and anisotropy on the figure's viewport (a
@@ -251,7 +254,7 @@ func show_parts_from(repo: DataRepository, arm: String, scene: PackedScene) -> b
 			note.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 			_note_labels.append(note)
 		_part_labels.append(tag)
-		_label_home[tag] = [centres[part], (_part_off[part] as Vector3) * repo.bal("war_explode_label_reach"), note]
+		_label_home[tag] = [centres[part], Vector3.ZERO, note]   # its reach is laid out once the camera frames the kit
 		var line := MeshInstance3D.new()
 		line.name = "Leader_" + part
 		line.mesh = ImmediateMesh.new()
@@ -260,8 +263,90 @@ func show_parts_from(repo: DataRepository, arm: String, scene: PackedScene) -> b
 		_parts.add_child(line)
 		_leaders[part] = line
 	_frame_parts(repo, all, apart)
+	_lay_labels(repo, to_root, all.get_center())
 	explode(0.0)
 	return true
+
+
+## The names stand in two columns flanking the flown-apart kit as the camera
+## sees it — a part flying to the camera's right is named on the right, its
+## text running outward from the leader's end — each column stepped down so no
+## name (with its note) lies over another or over the kit.
+func _lay_labels(repo: DataRepository, to_root: Transform3D, centre: Vector3) -> void:
+	var right := (to_root.basis * _camera.global_transform.basis.x).normalized()
+	var up := (to_root.basis * _camera.global_transform.basis.y).normalized()
+	var box := Rect2()   # the flown-apart kit, then its names too, in right / up coordinates
+	var first := true
+	for m: MeshInstance3D in Map3DUnits.meshes(_parts):
+		if not _part_home.has(String(m.name)):
+			continue   # a leader line, not a part
+		var a := (to_root * m.global_transform) * m.get_aabb()
+		var off := _part_off.get(String(m.name), Vector3.ZERO) as Vector3
+		for i in 8:
+			var e := a.get_endpoint(i) + off
+			var p := Vector2(e.dot(right), e.dot(up))
+			box = Rect2(p, Vector2.ZERO) if first else box.expand(p)
+			first = false
+	var lo := box.position.x
+	var hi := box.end.x
+	var gap := _label_h_m * repo.bal("war_explode_label_gap")
+	var step := _label_h_m * repo.bal("war_explode_label_rows")
+	var columns := {1: [], -1: []}
+	for tag: Label3D in _part_labels:
+		var at: Array = _label_home[tag]
+		var flown := (at[0] as Vector3) + (_part_off[String(tag.get_meta("part"))] as Vector3)
+		var side := 1 if flown.dot(right) >= (lo + hi) * 0.5 else -1
+		(columns[side] as Array).append([tag, flown])
+	for side: int in columns:
+		var col: Array = columns[side]
+		col.sort_custom(func(a: Array, b: Array) -> bool: return (a[1] as Vector3).dot(up) > (b[1] as Vector3).dot(up))
+		var floor_y := INF
+		for entry: Array in col:
+			var tag: Label3D = entry[0]
+			var flown: Vector3 = entry[1]
+			var y := minf(flown.dot(up), floor_y)
+			floor_y = y - step
+			var x := (hi + gap) if side > 0 else (lo - gap)
+			var spot := flown + right * (x - flown.dot(right)) + up * (y - flown.dot(up))
+			var at: Array = _label_home[tag]
+			at[1] = spot - (at[0] as Vector3)
+			var align := HORIZONTAL_ALIGNMENT_LEFT if side > 0 else HORIZONTAL_ALIGNMENT_RIGHT
+			tag.horizontal_alignment = align
+			var reach := _text_w(tag)
+			if at[2] != null:
+				(at[2] as Label3D).horizontal_alignment = align
+				reach = maxf(reach, _text_w(at[2] as Label3D))
+			var bottom := y - step
+			box = box.expand(Vector2(x + reach * side, y + _label_h_m)).expand(Vector2(x, bottom))
+	_plate = [box, right, up, centre, repo.bal("war_explode_fit_margin")]
+	_fit_camera()
+
+
+## A label's text width in model metres (its widest line; a note wraps at its width).
+func _text_w(l: Label3D) -> float:
+	var f := l.font if l.font != null else ThemeDB.fallback_font
+	var w := f.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, l.font_size).x
+	return (minf(w, l.width) if l.autowrap_mode != TextServer.AUTOWRAP_OFF else w) * l.pixel_size
+
+
+## Centre the camera on the kit and its names (the plate's box: right / up
+## coordinates in the parts' space round the kit's centre) and stand it back
+## just far enough that the whole plate fits the page, its margin to spare.
+func _fit_camera() -> void:
+	if _parts == null or _plate.is_empty():
+		return
+	var box: Rect2 = _plate[0]
+	var right: Vector3 = _plate[1]
+	var up: Vector3 = _plate[2]
+	var centre: Vector3 = _plate[3]
+	var to_world := _parts.global_transform
+	var back := (to_world.basis.inverse() * _camera.global_transform.basis.z).normalized()
+	var aspect := float(_viewport.size.x) / maxf(1.0, float(_viewport.size.y))
+	var tan_v := tan(deg_to_rad(_camera.fov) * 0.5)
+	var d := maxf(box.size.y * 0.5 / tan_v, box.size.x * 0.5 / (tan_v * aspect)) * float(_plate[4])
+	var mid := box.get_center()
+	var target := centre + right * (mid.x - centre.dot(right)) + up * (mid.y - centre.dot(up))
+	_camera.global_position = to_world * (target + back * d)
 
 
 func _label3d(text: String, font_px: int, pixel_m: float, colour: Color) -> Label3D:
@@ -346,6 +431,7 @@ func _drop_parts() -> void:
 	_leader_ends = {}
 	_parts_mat = null
 	_leader_mat = null
+	_plate = []
 
 
 func parts_root() -> Node3D:

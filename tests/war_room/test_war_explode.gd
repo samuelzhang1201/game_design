@@ -226,3 +226,31 @@ func test_a_resize_re_pitches_the_kits_hatching_and_the_frame_matches_the_drill(
 	fig._fit_viewport()
 	assert_almost_eq(float(mat.get_shader_parameter("stroke_px")), 11.0 * fig.window_scale(), 0.0001)
 	assert_almost_eq((fig.get_node("%FigCamera") as Camera3D).fov, Game.data.bal("war_figure_fov"), 0.0001)
+
+
+## The names stand in two columns beside the flown-apart kit as the camera
+## sees it, never over it, and no two in a column overlap.
+func test_the_names_flank_the_kit_and_never_overlap() -> void:
+	assert_true(fig.show_parts(Game.data, "infantry"))
+	fig.explode(1.0)
+	var cam := fig.get_node("%FigCamera") as Camera3D
+	var right := cam.global_transform.basis.x
+	var lo := INF
+	var hi := -INF
+	for m: MeshInstance3D in Map3DUnits.meshes(fig.parts_root()):
+		if String(m.name).begins_with("Leader_"):
+			continue
+		var a := m.global_transform * m.get_aabb()
+		for i in 8:
+			lo = minf(lo, a.get_endpoint(i).dot(right))
+			hi = maxf(hi, a.get_endpoint(i).dot(right))
+	var ys := {}
+	for l: Label3D in fig.part_labels():
+		var x := l.global_position.dot(right)
+		assert_true(x >= hi or x <= lo, "%s stands beside the kit (%.3f, kit %.3f..%.3f)" % [l.text, x, lo, hi])
+		var side := 1 if x >= hi else -1
+		for y: float in ys.get(side, []):
+			assert_gt(absf(y - l.global_position.y), Game.data.bal("war_explode_label_px") * Game.data.bal("war_explode_label_pixel_m"),
+				"%s keeps clear of its neighbour" % l.text)
+		ys[side] = (ys.get(side, []) as Array) + [l.global_position.y]
+
