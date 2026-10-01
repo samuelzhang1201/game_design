@@ -157,7 +157,7 @@ func test_the_tier_reaches_clouds_steps_and_shadows() -> void:
 	assert_almost_eq(c.line_step(), 300.0, 0.01)
 	Game.set_clock_speed(1)
 	v._process(0.1)
-	assert_eq(v.cloud_count(), 4)
+	assert_eq(v.cloud_count(), 8, "low tier: 8 clouds over the whole map (graphics_quality.csv, owner 2026-09-30)")
 	Game.set_clock_speed(0)
 	assert_false((v.get_node("Viewport/Clouds/Shadows") as Node3D).visible)
 	assert_false((v.get_node("Viewport/Sun") as DirectionalLight3D).shadow_enabled)

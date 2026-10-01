@@ -33,6 +33,7 @@
 [ext_resource type="Script" uid="uid://ef76stqaenwo" path="res://scripts/map3d/map3d_layer_houses.gd" id="20_houses"]
 [ext_resource type="Script" path="res://scripts/map3d/map3d_layer_trees.gd" id="44_trees"]
 [ext_resource type="Script" path="res://scripts/map3d/map3d_layer_wind.gd" id="45_wind"]
+[ext_resource type="Script" path="res://scripts/map3d/map3d_layer_trails.gd" id="46_trails"]
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_au2na"]
 viewport_path = NodePath("Viewport")
@@ -120,6 +121,9 @@ sky_mode = 1
 
 [node name="Units" type="Node3D" parent="Viewport" unique_id=157155689]
 script = ExtResource("15_exbav")
+
+[node name="Trails" type="Node3D" parent="Viewport" unique_id=1359289302]
+script = ExtResource("46_trails")
 
 [node name="Couriers" type="Node3D" parent="Viewport" unique_id=210987654]
 script = ExtResource("40_cour")

@@ -38,7 +38,7 @@ func _process(delta: float) -> void:
 		if not (on is float and is_equal_approx(on, 1.0)):
 			mat.call("set_shader_param", "wind_on", 1.0)
 			mat.call("set_shader_param", "wind_dir", dir)
-			for key in ["speed_mps", "wave_m", "field_amp", "grass_amp", "near_m", "mid_m", "far_m", "storm_gain", "far_scale", "far_amp"]:
+			for key in ["speed_mps", "wave_m", "field_amp", "grass_amp", "near_m", "mid_m", "far_m", "storm_gain", "far_scale", "far_amp", "sheen_amp", "sheen_sat", "sheen_lift", "sheen_facing", "trough_sat", "streak_amp", "streak_m", "streak_across", "sheen_warm", "band_rise", "band_fall", "band_warp", "gust_len", "gust_width", "gust_cover", "dash_len", "dash_cover"]:
 				mat.call("set_shader_param", "wind_" + key, repo.bal("map3d_wind_" + key))
 		mat.call("set_shader_param", "wind_time", _time)
 	if _trees != null and _trees.material != null:

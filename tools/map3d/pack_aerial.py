@@ -61,6 +61,15 @@ def seamless(a, share=0.15):
     return _wrap(_wrap(a, m, 1), int(a.shape[0] * share), 0)
 
 
+def _lin(c):
+    return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+
+
+def _srgb(c):
+    c = np.clip(c, 0, 1)
+    return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
+
+
 def box(a, r):
     if r <= 0:
         return a
@@ -142,6 +151,10 @@ def main():
                     help="the share of the photograph's own slow light kept (flatten)")
     ap.add_argument("--saturation", type=float, default=1.0,
                     help="the picture's saturation (1 = as generated; a rock's ochre fills read loud at map size)")
+    ap.add_argument("--match-mean", default="",
+                    help="a mean colour (linear light) this picture is scaled to — an sRGB #RRGGBB, or an already "
+                         "packed <key>_alb_ht.png to take it from: bake_world.py's colour map is far colour / the "
+                         "layer's mean, so a new picture that keeps the old mean needs no rebake to show its true colour")
     args = ap.parse_args()
     a = np.asarray(Image.open(args.source).convert("RGB"), dtype=np.float32) / 255.0
     a = np.clip(seamless(flatten(a, keep=args.flatten_keep)), 0, 1)
@@ -166,6 +179,15 @@ def main():
         a = np.clip(a * np.array([1.0 + args.warm, 1.0, 1.0 - args.warm], np.float32), 0, 1)
     if args.black > 0.0:
         a = args.black + a * (1.0 - args.black)
+    if args.match_mean:
+        if args.match_mean.startswith("#"):
+            ref = np.array([[[int(args.match_mean[i:i + 2], 16) / 255.0 for i in (1, 3, 5)]]], np.float32)
+        else:
+            ref = np.asarray(Image.open(args.match_mean).convert("RGB").resize((64, 64)), dtype=np.float32) / 255.0
+        a_lin = _lin(a)
+        gain = _lin(ref).reshape(-1, 3).mean(0) / np.maximum(a_lin.reshape(-1, 3).mean(0), 1e-4)
+        a = np.clip(_srgb(a_lin * gain), 0, 1)
+        lum = a @ np.array([0.2126, 0.7152, 0.0722], np.float32)
     # height: the local light against its neighbourhood (a crown stands, a
     # gap sinks), not the tile's overall brightness
     local = lum - box(lum, 24)

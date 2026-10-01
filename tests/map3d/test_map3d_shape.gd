@@ -59,8 +59,10 @@ func _lines(path: String) -> int:
 ## build line — Map3DLayerTrees does the work.
 ## 578 since the march's road is draped from where its piece is DRAWN
 ## (2026-09-30): one line handing the HUD the pieces' positions.
+## 581 since the march trails (2026-10-01): the trails layer's var, its bind
+## and its step in _process — Map3DLayerTrails does the work.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 578)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 581)
 
 
 func test_every_other_script_is_small() -> void:

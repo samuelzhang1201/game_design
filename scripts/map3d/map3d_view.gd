@@ -73,6 +73,7 @@ var _scene_path := ""
 @onready var _houses: Map3DLayerHouses = $Viewport/Houses
 @onready var _trees: Map3DLayerTrees = $Viewport/Trees
 @onready var _units: Map3DLayerUnits = $Viewport/Units
+@onready var _trails: Map3DLayerTrails = $Viewport/Trails
 @onready var _couriers: Map3DLayerCouriers = $Viewport/Couriers
 @onready var _env: WorldEnvironment = $Viewport/Environment
 @onready var _sun: DirectionalLight3D = $Viewport/Sun
@@ -240,6 +241,7 @@ func _load() -> void:
 	_houses.bind(_ctx)
 	_ctx.dev = _dev
 	_units.bind(_ctx)
+	_trails.bind(_ctx)  # the ground the columns trod (owner 2026-10-01)
 	_couriers.bind(_ctx)
 	_units.set_shown(_military)
 	_ctx.settle_ground()
@@ -395,6 +397,7 @@ func _process(delta: float) -> void:
 		_weather.step()
 		_clouds.step(delta)
 		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
+		_trails.step()  # behind them, the ground they trod
 		if _couriers.step(delta): _hud.refresh()  # the couriers' roads and counters follow them
 		Map3DEnvironment.sweep_sun(_repo, _sun, Game.day_progress, _fill_light)  # a round a game day, the north half dusk
 	_picker.step()

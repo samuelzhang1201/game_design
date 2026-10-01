@@ -305,7 +305,7 @@ map3d_line_lift_px,2.5,"3D MAP borders: every line is lifted this many screen px
 map3d_road_width_px,4.0,"3D MAP roads (owner 2026-09-18): a road's width in screen px — the pack's roads draped on the relief in terrain_palette road, solid with a soft shoulder"
 map3d_trail_width_px,2.5,3D MAP roads: a trail's width in screen px (terrain_palette trail)
 map3d_road_alpha,1.0,3D MAP roads: a road's opacity at its centre
-map3d_trail_alpha,0.9,3D MAP roads: a trail's opacity at its centre
+map3d_trail_alpha,0.6,"3D MAP march trails: the trodden grass's strength over the turf at its freshest, on its lanes"
 map3d_trail_hide_from_m,12000,"3D MAP far-zoom denoise (owner 2026-09-25: 进行远景降噪): trails start fading out this far from the camera — the road web at the opening zoom was the critics' commonest complaint"
 map3d_trail_hide_to_m,22000,3D MAP far-zoom denoise: trails are gone this far from the camera
 map3d_road_hide_from_m,1000000000,3D MAP far-zoom denoise: the roads never fade (the realm's main roads stay the far view's network)
@@ -332,7 +332,7 @@ map3d_dot_min_view_share,0.40,"3D MAP (owner 2026-09-21 ruling, replacing the ab
 map3d_border_skip_coast,1,"3D MAP borders (look route 2026-09-30): 1 draws the kingdom's ink, halo and band only along LAND borders — along the sea or a lake the outline is the coast, which the shore draws (an ink line and a band round every coast read as a tray, taste: nothing ends on a hard cut)"
 map3d_border_coast_probe_m,200,"3D MAP borders: a border point is coast when the ground this many metres to either side of it is water"
 map3d_border_refresh_s,1.0,3D MAP: how often the view checks whether ownership changed and its borders need rebuilding
-map3d_cloud_max,10,"3D MAP clouds: the most in the sky at once — the sky fills when play starts (owner 2026-09-18: 24 was too many while time runs, cut to 10)"
+map3d_cloud_max,14,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): at most this many over the WHOLE map (10 over the view until then, which clumped where play began); graphics_quality.csv clouds caps it per tier"
 map3d_cloud_height_m,3500.0,3D MAP clouds: the deck's height over the sea
 map3d_cloud_size_min_m,3000.0,3D MAP clouds: the smallest cloud across
 map3d_cloud_size_max_m,8000.0,3D MAP clouds: the largest
@@ -340,15 +340,17 @@ map3d_cloud_speed_m_s,40.0,"3D MAP clouds: drift in metres per real second at 1x
 map3d_cloud_wind_deg,12.0,"3D MAP clouds: the wind, degrees from east toward south (the 2D map's map_cloud_wind_deg)"
 map3d_cloud_interval_s,1.5,3D MAP clouds: about this many real seconds between one cloud coming in and the next
 map3d_cloud_fade_s,1.2,3D MAP clouds: seconds to fade in when play starts and out when the clock stops
-map3d_cloud_alpha,0.6,3D MAP clouds: their opacity at the heart
+map3d_cloud_alpha,0.35,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): the deck's opacity (0.6 until then)"
 map3d_cloud_near_fade_m,6000.0,"3D MAP clouds: a cloud closer to the camera than this fades away, so the rig at 800 m looks under the deck, not into it"
-map3d_cloud_shadow_cut,0.7,"[2026-09-27: 0.6 -> 0.7, owner: 云彩阴影太夸张，要更加淡化，让人感觉有即可] 3D MAP clouds: the alpha above which a cloud casts a shadow on the land (within the sun's 60 km shadow reach) — 0.35 until 2026-09-24, when the owner asked for fewer, fainter shadows (云彩阴影减少减淡): only a cloud's dense heart casts now"
-map3d_cloud_shadow_density,0.2,"[2026-09-27: 0.45 -> 0.2 — bracketed 0.45 / 0.2 / 0.12, the middle felt but never dominant] 3D MAP clouds (owner 2026-09-24): the share of a cloud's shadow texels actually cast, in an ordered 4x4 stipple the sun's shadow blur smooths into a half-tone — the one way to lighten the CLOUDS' shadow alone, since map3d_sun_shadow_opacity darkens every shadow the sun casts (houses too)"
+map3d_cloud_shadow_cut,0.8,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): only a cloud's heart denser than this casts a shadow (0.7 until then)"
+map3d_cloud_shadow_density,0.12,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): the share of a cloud's dense heart that casts, by a 4x4 stipple (0.2 until then)"
 map3d_cloud_seed,23,3D MAP clouds: the seed of their own look-only generator (never the engine's stream)
 map3d_cloud_emission_share,0.0,3D MAP clouds: share of ALBEDO also written to EMISSION (Task 8's fix for a lit spatial shader reading dirty/dark under Filmic) — 0 unless the visual check needs it
 map3d_cloud_near_fade_start_ratio,0.3,"3D MAP clouds (fix round 1, owner 2026-09-18): where the near-camera fade starts, as a fraction of map3d_cloud_near_fade_m — was hardcoded in cloud_deck.gdshader"
 map3d_cloud_depth_ratio,0.45,"3D MAP clouds (fix round 1, owner 2026-09-18): a cloud's front-to-back size as a fraction of its width — was hardcoded (0.6) in map3d_view.gd; lowered with the size bracket so individual clouds read as separate puffs rather than fusing into a sheet at 24 km"
-map3d_cloud_min_gap_m,4000.0,"3D MAP clouds (fix round 1, owner 2026-09-18): a new cloud (first fill or spawned) is placed at least this far from every other cloud when the sky has room for it — stops the 24 clouds reading as one landmass of shadow at 24 km"
+map3d_cloud_min_gap_m,18000.0,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): the spacing the placement aims for between clouds over the map, world metres (4000 over the view until then)"
+map3d_cloud_candidates,16,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): each new cloud tries this many spots and takes the one furthest from the others (Mitchell's best candidate), so the sky is even"
+map3d_weather_cloud_pull,0.3,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): how far an overcast province draws the clouds toward it, against the spacing (1 = the old pull that gathered the whole sky over bad weather)"
 map3d_sun_shadow_opacity,0.45,"[2026-09-28: 0.95 -> 0.45, owner 2026-09-28: 日照产生的阴影实在太厚重太大了，让阴影轻一点，小一点，透明度高一点，不要影响玩家的视线; bracketed 0.7 / 0.55 / 0.4 with the sun low in the north, 0.45 lets a house or ridge shadow read as a wash, never a hole] [2026-09-25: 0.35 -> 0.95 with blur 3 -> 1.0, normal bias 2.5 and ambient 0.35 -> 0.25 (at exposure 1.4 the lifted fill washed a 0.65 shadow out — measured), so the houses cast readable shadows up close — owner: 近景加上房屋阴影] 3D MAP (fix round 1, owner 2026-09-18): the Sun's DirectionalLight3D shadow_opacity, applied at load — how dark ANY cast shadow reads (0 none, 1 pitch black); a cloud shadow (and the terrain's own) must read as a cool wash of blocked light, never a hole. Bracketed 0.25/0.35/0.5 at 3000 and 24000 m, picked by look"
 map3d_sun_shadow_blur,2.0,"[2026-09-28: 1.0 -> 2.0 with the lighter shadows — softer edges] [2026-09-25: was 3.0] 3D MAP (fix round 1, owner 2026-09-18): the Sun's DirectionalLight3D shadow_blur, applied at load — softens every cast shadow's edge (cloud shadows and the terrain's own); the shipped cloud shadows read as knife-edged before this"
 map3d_sun_shadow_bias,0.1,"3D MAP (2026-09-25): the Sun's shadow_bias (Godot's default) — raised if the ground shows striped shadow acne"
@@ -523,10 +525,39 @@ map3d_wind_near_m,1500,"3D MAP wind: the crop's own waves (map3d_wind_wave_m) ou
 map3d_wind_mid_m,5000,"[2026-09-30, owner: 我并没有看到麦浪和树摇 — the waves were gone by 9 km, the opening view stands at ~24 km] 3D MAP wind: from here the broad gusts alone, full strength"
 map3d_wind_far_m,40000,"3D MAP wind: ...fading out by here (was 9000: nothing moved at the zooms the map is played at)"
 map3d_wind_far_scale,8,"3D MAP wind: the broad gusts are this many times the crop waves' size and speed — at the opening zoom a pixel is ~20 m, and a true-speed wave would not move one"
-map3d_wind_far_amp,2.0,"3D MAP wind: the broad gusts' strength against the crop waves' (a multiplier on field_amp and grass_amp far out) — the sun's daily round and the cloud shadows change the far view a great deal, and a faint gust drowns in them"
+map3d_wind_far_amp,0.9,"3D MAP wind: the broad gusts' strength against the crop waves' (a multiplier on field_amp and grass_amp far out). 2.0 until 2026-09-30, when the waves became thin light crests: at 2 the far bands read as cloud shadow (critic)"
 map3d_wind_storm_gain,1.2,"3D MAP wind: how much harder the waves run in a wet or overcast province (the weather field's rain and overcast), 0 = the same everywhere"
 map3d_wind_tree_sway_m,2.2,3D MAP wind: how far a crown's top leans down the wind (world metres at the mesh's full height)
 map3d_wind_tree_hz,0.22,3D MAP wind: how many times a second a tree sways
+map3d_trail_on,1,"3D MAP MARCH TRAILS (owner 2026-10-01: 当军事单位路过的时候，希望可以和地形互动，比如留下一段行走印记，后逐步消失): 1 lays the ground a marching column trod behind each piece (Map3DLayerTrails, march_trail.gdshader), fading over game time; 0 = none"
+map3d_trail_days,4,"3D MAP march trails: game days a stretch of trodden ground takes to fade away (the clock's own time: a paused clock holds it). 1.5 at first: the piece is a MINIATURE some 200 m across at the map's scale and a column covers a few hundred metres a day, so a day and a half of trail lay hidden under the piece itself"
+map3d_trail_step_m,25,3D MAP march trails: a point of trail every this many world metres of a piece's walk
+map3d_trail_alpha,0.6,"3D MAP march trails: the trodden grass's strength over the turf at its freshest, on its lanes"
+map3d_trail_half_width_m,50,"3D MAP march trails: the trail's half width, world metres — a piece is a miniature of one world size at every zoom (some 220 m across its nine figures), and a trail as wide as it read as a pad under the piece, not a track behind it"
+map3d_trail_edge_soft,0.5,3D MAP march trails: the share of each side that fades to the grass (a ragged soft edge; never a painted road)
+map3d_trail_print_m,12,3D MAP march trails: the size of the trampled patches along the track (world metres)
+map3d_trail_print_mix,0.55,"3D MAP march trails: how broken into prints the track is (0 an even band, 1 only the patches)"
+map3d_trail_lanes,3,"3D MAP march trails: trodden lanes across the track, one a file of the column (the 3x3 formation)"
+map3d_trail_lane_fill,0.3,"3D MAP march trails: how trodden the grass between the lanes is, against the lanes themselves"
+map3d_trail_lane_wander,0.35,"3D MAP march trails: how far each lane wanders along the track (a share of the lane spacing)"
+map3d_trail_rag,0.6,"3D MAP march trails: how ragged the sides are (a straight-edged band read as a painted road)"
+map3d_wind_sheen_amp,2.0,"3D MAP wind SHEEN (owner 2026-09-30: 草地随风飘扬的质感 — a blade is a metre-wide pixel's fraction, so the grass moves as light): how far a wave's crest turns the grass's pale, greyer side up (Map3DGroundWind); 0 = the plain light-and-shade waves of before"
+map3d_wind_sheen_sat,0.9,"3D MAP wind sheen: the saturation the laid-over grass keeps (0 grey .. 1 its own colour; owner 2026-09-30: greyed crests read as mist drifting by — 0.4 and even 0.75 were too grey)"
+map3d_wind_sheen_lift,0.35,3D MAP wind sheen: how much lighter the laid-over grass is than the standing grass
+map3d_wind_sheen_facing,0.5,"3D MAP wind sheen: how much weaker the sheen is where the wind blows TOWARD the eye (the stalks lie over toward the camera and hide their backs), 0 = the same every way"
+map3d_wind_trough_sat,0.6,3D MAP wind sheen: how much greener (more saturated) a wave's trough stands
+map3d_wind_streak_amp,0.08,"3D MAP wind: the grain — fine streaks combed down the wind over the grass and crops, near only, drifting at a third of the waves' speed; 0 = none"
+map3d_wind_streak_m,24,3D MAP wind grain: a streak's length down the wind (world metres)
+map3d_wind_streak_across,0.15,"3D MAP wind grain: a streak's width as a share of its length (0.15 of 24 m: 3.6 m, two pixels at the closest zoom; it fades out before it is narrower)"
+map3d_wind_sheen_warm,0.08,"3D MAP wind sheen: how far the laid-over grass turns warm (straw), red up and blue down by this share — a lit blade, not a grey veil"
+map3d_wind_band_rise,0.12,"3D MAP wind waves (owner 2026-09-30: 看上去就像是雾气飘过一下，不像是草地的起伏 — round soft noise blobs read as mist): a crest's rise, the share of a wavelength over which the grass lays over at the wave's front"
+map3d_wind_band_fall,3.5,"3D MAP wind waves: how slowly the grass rises again behind a crest (the power of the fall; higher is a thinner crest)"
+map3d_wind_band_warp,1.2,"3D MAP wind waves: how far (in wavelengths) noise bends and breaks the crest lines, so they are never ruled"
+map3d_wind_gust_len,5,"3D MAP wind waves: a gust's length down the wind, in wavelengths — the crests come in runs where one passes"
+map3d_wind_gust_width,2.5,3D MAP wind waves: a gust's width across the wind in wavelengths
+map3d_wind_gust_cover,0.35,"3D MAP wind waves: the gust noise must pass this for crests to show (higher, fewer and shorter runs of waves)"
+map3d_wind_dash_len,2.5,"3D MAP wind waves: each crest is broken into long tapering pieces about this long across the wind (in wavelengths), neighbours unlike, so the lines never run on like furrows or terraces (1.2 read as stitching)"
+map3d_wind_dash_cover,0.4,"3D MAP wind waves: the dash noise must pass this for a stretch of crest to show (higher, shorter and fewer dashes)"
 map3d_wood_floor,0.75,"3D MAP woods: how far the ground under the woods (bake/woods.png's canopy share) goes toward the canopy colour where clumps are drawn — the dark floor between the crowns"
 map3d_wood_far,0.75,"3D MAP woods: the same far out, where no clump is drawn and the canopy colour IS the wood"
 map3d_wood_far_near_m,2500,3D MAP woods: the camera distance where the ground's canopy begins to take over from the floor
