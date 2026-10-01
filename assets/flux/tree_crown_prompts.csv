@@ -1,0 +1,9 @@
+id,chapter,dir,title,canvas,width,height,subject,appearance
+TR-01,T,trees,Oak crown · oak,C-ICON,1024,1024,"a mature English oak with a broad irregular lumpy crown of dark olive green leaves, open gaps of shadow between its big leaf masses",
+TR-02,T,trees,Beech crown · beech,C-ICON,1024,1024,"a mature European beech with a dense smooth rounded dome crown of fresh mid green leaves",
+TR-03,T,trees,Lime crown · lime,C-ICON,1024,1024,"a tall small-leaved lime tree with a dense oval crown of soft yellow-green leaves",
+TR-04,T,trees,Hornbeam crown · hornbeam,C-ICON,1024,1024,"a young hornbeam with a compact rounded crown of dull deep green leaves",
+TR-05,T,trees,Birch crown · birch,C-ICON,1024,1024,"a silver birch with a light airy crown of small pale green leaves and a white trunk",
+TR-06,T,trees,Scots pine crown · pine,C-ICON,1024,1024,"a mature Scots pine with a flat-topped irregular crown of grey-green needle clumps and an orange-brown upper trunk",
+TR-07,T,trees,Spruce crown · spruce,C-ICON,1024,1024,"a Norway spruce with a narrow dark green conical crown of drooping layered branches",
+TR-08,T,trees,Fir crown · fir,C-ICON,1024,1024,"a silver fir with a dense dark blue-green conical crown and a slightly flattened top",

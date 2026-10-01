@@ -167,3 +167,56 @@ static func _ico(subdiv: int) -> Array:
 	for tri in f:
 		out.append([tri[0], tri[2], tri[1]])
 	return [v, out]
+
+
+## The same clump as PHOTO CARDS (owner 2026-10-01: below a 20 km scale the
+## 3D crowns read fake): one camera-facing card per crown, drawn by
+## tree_card.gdshader from the crown atlas. Every corner of a card sits at its
+## crown's centre; CUSTOM0 carries (corner x, corner y, half size m, atlas
+## cell), the cell drawn by the crown's own rng from `cells` (the atlas cells
+## of this kind, data/map3d_tree_crowns.csv). Two triangles a tree.
+static func cards(kind: int, variant: int, cells: PackedInt32Array) -> ArrayMesh:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7919 * (kind + 1) + 104729 * (variant + 1) + 31
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_custom_format(0, SurfaceTool.CUSTOM_RGBA_FLOAT)
+	var count := 3 if kind == LONE else 8
+	var spread := 7.0 if kind == LONE else 15.0
+	var placed: Array[Vector2] = []
+	var reach := 0.0
+	for i in count:
+		var at := Vector2.ZERO
+		for _t in 12:
+			at = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * spread
+			var clear := true
+			for p in placed:
+				if p.distance_to(at) < 6.5:
+					clear = false
+			if clear:
+				break
+		placed.append(at)
+		var half: float
+		var centre: Vector3
+		if kind == CONIFER:
+			var h := rng.randf_range(22.0, 32.0)
+			half = h * 0.55
+			centre = Vector3(at.x, h * 0.5, at.y)
+		else:
+			var r := rng.randf_range(4.2, 7.4)
+			var trunk := rng.randf_range(4.0, 7.0)
+			half = (trunk + 2.0 * r) * 0.62
+			centre = Vector3(at.x, (trunk + 2.0 * r) * 0.5, at.y)
+		var cell := cells[rng.randi() % cells.size()] if not cells.is_empty() else 0
+		reach = maxf(reach, at.length() + half * 1.5)
+		var corners := [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]
+		for idx in [0, 2, 1, 0, 3, 2]:
+			var cn: Vector2 = corners[idx]
+			st.set_custom(0, Color(cn.x, cn.y, half, float(cell)))
+			st.set_normal(Vector3.UP)
+			st.set_color(Color.WHITE)
+			st.add_vertex(centre)
+	var mesh := st.commit()
+	# every vertex sits at its crown's centre: the box must hold the cards
+	mesh.custom_aabb = AABB(Vector3(-reach, -4.0, -reach), Vector3(reach * 2.0, 40.0 + reach, reach * 2.0))
+	return mesh

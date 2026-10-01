@@ -586,3 +586,15 @@ add it here as a principle with its why — not as a changelog entry.
   man's (short) depth apart stacked into one grey totem and nine read as three
   (independent critic). The infantry's ranks stand 1.6× further apart
   (`army_art.csv` `rank_depth`); the horse's own length already spaces its.
+
+## 2026-10-01 rulings
+- **Roads read at a glance** (owner: 道路太细了，请加宽一点). A road ~25 m wide
+  (trail 16 m, screen floor 7 / 4.5 px) — drawn far wider than life, like the
+  rivers and houses; a 14 m road was a hairline at the playing zoom.
+- **Text that floats over paper keeps the chip's own light ink** (owner: the
+  town card's icon tooltip was 完全看不见). A theme set for one surface must
+  never leak into a popup drawn on another.
+- **Woods are photographs on photograph ground** (owner: 树木…非常丑非常假).
+  Smooth low-poly crowns read as CG moss on the aerial ground however they are
+  tinted; crowns are cut-out aerial photographs of real trees, warm olive,
+  over a DARK floor so the gaps between crowns read as depth.
