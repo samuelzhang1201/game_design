@@ -19,6 +19,7 @@ signal rake_started(code: String)
 signal rake_dropped
 signal sheet_requested(index: int)
 signal sheet_laid(index: int)
+signal camera_moved
 
 var aiming := false:
 	set(v):
@@ -233,8 +234,28 @@ func _apply_camera() -> void:
 	_camera.transform = _rig.transform()
 	if _repo != null:
 		_pieces.set_camera_distance(_rig.distance)
-	if _repo != null:
 		_rake.redraw()
+	camera_moved.emit()
+
+
+## The pack's own measure (map_info distance_scale per pack px) one screen px
+## of this view spans at the camera's target: the margin's scale bar (spec §2).
+func units_per_px() -> float:
+	if _sheet < 0 or _repo == null:
+		return 0.0
+	return units_per_px_at(_rig.distance, _camera.fov, size.y, _rect.size.x, _table_w,
+		float(_repo.map_info.get("distance_scale", "1")))
+
+
+## The same, pure: a perspective camera `distance_m` from its target with a
+## vertical `fov_deg` over `view_h_px` px sees 2·d·tan(fov/2) metres of table
+## across that height; the sheet's `sheet_w_px` pack px span `table_w_m`.
+static func units_per_px_at(distance_m: float, fov_deg: float, view_h_px: float, sheet_w_px: float,
+		table_w_m: float, units_per_pack_px: float) -> float:
+	if view_h_px <= 0.0 or table_w_m <= 0.0:
+		return 0.0
+	var metres := 2.0 * distance_m * tan(deg_to_rad(fov_deg) * 0.5) / view_h_px
+	return metres * sheet_w_px / table_w_m * units_per_pack_px
 
 
 ## Put the camera `metres` from the table (held within its limits), looking at

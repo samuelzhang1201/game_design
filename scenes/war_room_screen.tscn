@@ -1,10 +1,11 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/war_room_screen.gd" id="1_screen"]
 [ext_resource type="PackedScene" path="res://scenes/war_room/war_room.tscn" id="2_view"]
 [ext_resource type="Script" path="res://scripts/ui/army_order_menu.gd" id="3_menu"]
 
 [ext_resource type="PackedScene" path="res://scenes/war_room/war_folio.tscn" id="4_folio"]
+[ext_resource type="Script" path="res://scripts/ui/war_margin_key.gd" id="5_key"]
 
 [node name="WarRoomScreen" type="Control"]
 layout_mode = 3
@@ -69,6 +70,25 @@ layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 0
+
+[node name="KeySlip" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -292.0
+offset_top = 46.0
+offset_right = -16.0
+offset_bottom = 46.0
+grow_horizontal = 0
+mouse_filter = 2
+
+[node name="Key" type="Control" parent="KeySlip"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("5_key")
 
 [node name="Orders" type="PopupMenu" parent="."]
 unique_name_in_owner = true

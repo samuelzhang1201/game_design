@@ -51,6 +51,8 @@ func open(detail: MapDetailPanel) -> void:
 		_view.set_font(UiPalette.role_font("body_italic"))
 		_orders.follow(_view)
 		Game.state_changed.connect(refresh)
+		(%Key as WarMarginKey).setup(Game.data, _view)
+		_view.camera_moved.connect((%Key as WarMarginKey).queue_redraw)
 	if detail != _detail:
 		_card_mine = false
 	_detail = detail
@@ -82,6 +84,7 @@ func _on_laid(index: int) -> void:
 	var s: Dictionary = WarSheets.series(Game.data)[index]
 	%Title.text = "Sheet %s · %s" % [s["numeral"], s["name"]]
 	_fill_margin()
+	%Key.queue_redraw()   # a new sheet, a new scale
 
 
 ## The margin's slip (owner ruling 2026-10-01, Task 16): ink on paper in the
@@ -89,11 +92,11 @@ func _on_laid(index: int) -> void:
 ## paper when that UI is on, else a dark card with light type. Never over the
 ## sheet, which fills the frame below it.
 func _dress_slip() -> void:
-	var slip: PanelContainer = %Slip
-	if UiPalette.war_table():
-		slip.add_theme_stylebox_override("panel", PaperStyle.make("paper", 6.0, 11))
-	else:
-		slip.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8, "column"))
+	for slip: PanelContainer in [%Slip, %KeySlip]:
+		if UiPalette.war_table():
+			slip.add_theme_stylebox_override("panel", PaperStyle.make("paper", 6.0, 11))
+		else:
+			slip.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8, "column"))
 
 
 ## One flat button per regiment off this sheet ("label → numeral") that lays
