@@ -32,6 +32,13 @@ func test_every_crown_regiment_is_a_piece_on_exactly_one_side_of_each_sheet() ->
 		var on := WarRoom.on_sheet(repo, state, int(s["index"]))
 		var off := WarRoom.off_sheet(repo, state, int(s["index"]))
 		assert_eq(on.size() + off.size(), all.size())
+		var split := WarRoom.partition(repo, state, int(s["index"]))
+		assert_eq(split["on"].size(), on.size())
+		assert_eq(split["off"].size(), off.size())
+	for p: Dictionary in all:
+		var codes := WarRoom.on_sheet(repo, state, int(p["sheet"])).map(
+			func(q: Dictionary) -> String: return String(q["code"]))
+		assert_true(String(p["code"]) in codes, "%s is on its own sheet" % p["code"])
 
 
 func test_a_piece_on_no_sheet_goes_to_the_nearest() -> void:
@@ -58,8 +65,8 @@ func test_no_order_no_pennant_then_riding_then_received() -> void:
 	var here := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
 	var to := here + Vector2(20.0, 0.0)
 	var dest_m := ArmySystem.pack_to_metres(repo, to)
-	state.couriers.append({"id": 1, "kind": "ordinary", "target": code,
-		"order": {"action_code": "ARMY_MARCH", "x_m": dest_m.x, "y_m": dest_m.y}})
+	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code,
+		{"action_code": "ARMY_MARCH", "dest_x_m": dest_m.x, "dest_y_m": dest_m.y})
 	var p := WarRoom.pennant_of(repo, state, code)
 	assert_eq(String(p["status"]), "riding")
 	assert_almost_eq((p["at"] as Vector2).x, to.x, 0.01)
@@ -68,6 +75,30 @@ func test_no_order_no_pennant_then_riding_then_received() -> void:
 	p = WarRoom.pennant_of(repo, state, code)
 	assert_eq(String(p["status"]), "received")
 	assert_almost_eq((p["at"] as Vector2).x, to.x, 0.01)
+
+
+func test_a_newer_non_march_courier_hides_neither_a_riding_march_nor_a_received_one() -> void:
+	var code := _land_code()
+	var here := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
+	var to := here + Vector2(20.0, 0.0)
+	var dest_m := ArmySystem.pack_to_metres(repo, to)
+	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code,
+		{"action_code": "ARMY_MARCH", "dest_x_m": dest_m.x, "dest_y_m": dest_m.y})
+	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
+	var p := WarRoom.pennant_of(repo, state, code)
+	assert_eq(String(p["status"]), "riding", "the older march still rides under a newer garrison")
+	assert_almost_eq((p["at"] as Vector2).x, to.x, 0.01)
+	state.couriers.clear()
+	ArmySystem.set_march(repo, state, code, to)
+	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
+	p = WarRoom.pennant_of(repo, state, code)
+	assert_eq(String(p["status"]), "received")
+
+
+func test_a_garrison_courier_alone_strikes_no_pennant() -> void:
+	var code := _land_code()
+	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
+	assert_eq(WarRoom.pennant_of(repo, state, code), {})
 
 
 func test_the_tag_reads_heads_and_months_of_stores() -> void:

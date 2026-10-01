@@ -29,19 +29,30 @@ static func pieces(repo: DataRepository, state: GameState) -> Array:
 	return out
 
 
-## On a sheet: inside its rect, or on no sheet at all and this the nearest.
-static func on_sheet(repo: DataRepository, state: GameState, sheet_index: int) -> Array:
+## The pieces split by a sheet, computed once: "on" those inside its rect (or
+## on no sheet at all and this the nearest), "off" the rest.
+static func partition(repo: DataRepository, state: GameState, sheet_index: int) -> Dictionary:
+	var on: Array = []
+	var off: Array = []
 	var all := WarSheets.series(repo)
-	if sheet_index < 0 or sheet_index >= all.size():
-		return []
-	var r: Rect2 = all[sheet_index]["rect"]
-	return pieces(repo, state).filter(func(p: Dictionary) -> bool:
-		return r.has_point(p["at"]) or (not _on_any(all, p["at"]) and int(p["sheet"]) == sheet_index))
+	var rect := Rect2()
+	var valid := sheet_index >= 0 and sheet_index < all.size()
+	if valid:
+		rect = all[sheet_index]["rect"]
+	for p: Dictionary in pieces(repo, state):
+		if valid and (rect.has_point(p["at"]) or (not _on_any(all, p["at"]) and int(p["sheet"]) == sheet_index)):
+			on.append(p)
+		else:
+			off.append(p)
+	return {"on": on, "off": off}
+
+
+static func on_sheet(repo: DataRepository, state: GameState, sheet_index: int) -> Array:
+	return partition(repo, state, sheet_index)["on"]
 
 
 static func off_sheet(repo: DataRepository, state: GameState, sheet_index: int) -> Array:
-	var on := on_sheet(repo, state, sheet_index).map(func(p: Dictionary) -> String: return String(p["code"]))
-	return pieces(repo, state).filter(func(p: Dictionary) -> bool: return not String(p["code"]) in on)
+	return partition(repo, state, sheet_index)["off"]
 
 
 static func _on_any(all: Array, at: Vector2) -> bool:
@@ -61,17 +72,21 @@ static func pose_action(order: String) -> String:
 	return "STANDBY"
 
 
-## The pennant over a march order: where the newest courier carries it
-## ("riding"), else the march the column is under ("received"); {} when
-## neither.
+## The pennant over a march order: where the newest ARMY_MARCH courier for the
+## regiment carries it ("riding"; a newer courier with another order, a
+## garrison say, does not hide it), else the march the column is under
+## ("received"); {} when neither.
 static func pennant_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
-	var c := CourierSystem.pending_for(state, code)
-	if not c.is_empty():
+	var best: Dictionary = {}
+	for c: Dictionary in state.couriers:
 		var order: Dictionary = c.get("order", {})
-		if String(order.get("action_code", "")) == "ARMY_MARCH":
-			return {"at": ArmySystem.metres_to_pack(repo, Vector2i(int(order["x_m"]), int(order["y_m"]))),
-				"status": "riding"}
-		return {}
+		if String(c["target"]) == code and String(order.get("action_code", "")) == "ARMY_MARCH" \
+				and (best.is_empty() or int(c["id"]) > int(best["id"])):
+			best = c
+	if not best.is_empty():
+		var o: Dictionary = best["order"]
+		return {"at": ArmySystem.metres_to_pack(repo, Vector2i(int(o["dest_x_m"]), int(o["dest_y_m"]))),
+			"status": "riding"}
 	if ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH:
 		return {"at": ArmySystem.destination_of(repo, state, code), "status": "received"}
 	return {}
