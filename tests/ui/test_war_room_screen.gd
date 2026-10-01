@@ -55,7 +55,11 @@ func test_a_selected_piece_puts_its_card_in_the_left_column_and_closing_takes_it
 	r.war_room_screen().view().piece_selected.emit(code)
 	await wait_frames(1)
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
-	assert_eq(detail.title_label().text, String(MapObjects.army_card(Game.data, code, Game.state)["title"]))
+	var card := MapObjects.army_card(Game.data, code, Game.state)
+	assert_eq(detail.title_label().text, String(card["title"]))
+	# the BODY is there too, not only the title: a regiment's stat rows
+	assert_gt((card["stats"] as Array).size(), 0, "the fixture card has stats")
+	assert_gt(detail.stats_grid().get_child_count(), 0, "the stat rows are in the column")
 	r.war_room_screen().close()
 	assert_false(detail.has_content())
 
@@ -269,3 +273,18 @@ func test_a_sheet_roll_withdraws_a_rake_in_hand_s_armed_march() -> void:
 	assert_eq(screen.orders().aiming(), String(p["code"]))
 	view.swap_to((view.sheet_index() + 1) % WarSheets.series(Game.data).size())
 	assert_eq(screen.orders().aiming(), "")
+
+
+func test_the_margin_slip_is_a_scrolling_slip_of_at_most_war_margin_rows() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(3)
+	var screen := r.war_room_screen()
+	var scroll := screen.get_node("%MarginScroll") as ScrollContainer
+	var rows := screen.get_node("%Margin").get_children().filter(func(n: Node) -> bool: return n is Button)
+	var row_h := (rows[0] as Control).get_combined_minimum_size().y if not rows.is_empty() else 0.0
+	assert_almost_eq(scroll.custom_minimum_size.y, row_h * minf(float(rows.size()), Game.data.bal("war_margin_rows")), 0.5)
+	# the slip hangs off the screen's top-left, under the title, never from the bottom
+	var slip := screen.get_node("%Slip") as Control
+	assert_lt(slip.position.y, screen.size.y * 0.25)
+	assert_lt(slip.position.x, screen.size.x * 0.2)

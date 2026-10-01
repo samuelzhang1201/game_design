@@ -23,6 +23,7 @@ func _ready() -> void:
 	(%Frame as PanelContainer).add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 0, "map"))
 	UiPalette.style_title(%Title, 18)
+	_dress_slip()
 	%Close.pressed.connect(close)
 	_view.piece_selected.connect(_on_piece)
 	_view.selection_cleared.connect(_clear_card)
@@ -81,6 +82,18 @@ func _on_laid(index: int) -> void:
 	_fill_margin()
 
 
+## The margin's slip (owner ruling 2026-10-01, Task 16): ink on paper in the
+## screen's top-left corner under the title, off the table — the war table's
+## paper when that UI is on, else a dark card with light type. Never over the
+## sheet, which fills the frame below it.
+func _dress_slip() -> void:
+	var slip: PanelContainer = %Slip
+	if UiPalette.war_table():
+		slip.add_theme_stylebox_override("panel", PaperStyle.make("paper", 6.0, 11))
+	else:
+		slip.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8, "column"))
+
+
 ## One flat button per regiment off this sheet ("label → numeral") that lays
 ## its sheet; an empty sheet says so (spec §6).
 func _fill_margin() -> void:
@@ -97,15 +110,31 @@ func _fill_margin() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		var reg := ArmySystem.regiment(Game.data, String(p["code"]))
 		b.text = "%s → %s" % [reg.get("label", p["code"]), series[to]["numeral"]]
-		UiPalette.flat_tab(b, 13, 4.0)
+		UiPalette.flat_tab(b, 12, 3.0)
+		for state: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+			var look := b.get_theme_stylebox(state) as StyleBoxFlat
+			look.content_margin_top = 1.0   # a slip of rows, tight enough to clear the sheet's corner
+			look.content_margin_bottom = 1.0
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.add_theme_color_override("font_color", UiPalette.ink("soft"))
+		b.add_theme_color_override("font_hover_color", UiPalette.ink("accent"))
 		b.pressed.connect(func() -> void: _view.swap_to(to))
 		box.add_child(b)
+	# at most war_margin_rows rows show; a longer list scrolls, so the slip never
+	# grows down over the sheet's corner and its pieces
+	var rows := box.get_child_count()
+	var scroll: ScrollContainer = %MarginScroll
+	var cap := int(Game.data.bal("war_margin_rows"))
+	var row_h := (box.get_child(0) as Control).get_combined_minimum_size().y if rows > 0 else 0.0
+	var height := row_h * float(mini(rows, cap))
 	if WarRoom.on_sheet(Game.data, Game.state, sheet).is_empty():
 		var none := Label.new()
-		none.text = "No regiment of ours stands on this sheet."
-		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		UiPalette.style_header(none, 13)
+		none.text = "No regiment of ours on this sheet."
+		UiPalette.style_header(none, 13, UiPalette.ink("muted"))
 		box.add_child(none)
+		box.move_child(none, 0)
+		height += none.get_combined_minimum_size().y
+	scroll.custom_minimum_size.y = height
 
 
 func close() -> void:
@@ -137,7 +166,7 @@ func _process(_delta: float) -> void:
 func _on_piece(code: String) -> void:
 	if _detail == null or not is_instance_valid(_detail):
 		return
-	_detail.show_entry(MapObjects.army_card(Game.data, code, Game.state))
+	_detail.show_card(MapObjects.army_card(Game.data, code, Game.state))
 	_card_mine = true
 
 

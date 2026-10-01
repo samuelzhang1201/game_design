@@ -153,7 +153,9 @@ var _ledger_open := ""
 var _ledger_select := ""
 var _ledger_mode := ""
 ## --war-room (with --screen root): the WAR ROOM through real input — its tab,
-## then --war-sheet N lays that sheet (WarRoomView.swap_to), --war-piece CODE
+## then --war-sheet N lays that sheet (WarRoomView.swap_to; the later steps wait
+## until it is laid and the roll is over), --war-zoom M leans the camera to M
+## metres (on --war-piece's place when given), --war-piece CODE
 ## clicks that regiment's piece (a chalk ring, its card) or, with
 ## --war-drag fx,fy (a share of the view), RAKES it there: a real left press
 ## on the piece, eight pushed motion events with the left button held, a real
@@ -166,6 +168,9 @@ var _war_sheet := -1
 var _war_piece := ""
 var _war_folio := ""
 var _war_drag := Vector2(-1, -1)
+var _war_zoom := -1.0
+var _war_phase := 0
+var _war_at := 0
 ## --shot-on report|flight|board|card|spymenu takes the shot --shot-delay N
 ## frames (default 6) after that moment rather than at --shot-frame.
 var _shot_on := ""
@@ -260,6 +265,8 @@ func _ready() -> void:
 			_war_sheet = int(args[i + 1])
 		elif args[i] == "--war-piece":
 			_war_piece = args[i + 1]
+		elif args[i] == "--war-zoom":
+			_war_zoom = float(args[i + 1])
 		elif args[i] == "--war-folio":
 			_war_folio = args[i + 1].to_lower()
 		elif args[i] == "--war-drag":
@@ -280,6 +287,8 @@ func _ready() -> void:
 	_war_room = args.has("--war-room")
 	if _war_room and _shot_on == "":
 		_shot_on = "war"
+	if _war_drag.x >= 0.0 and _war_piece == "":
+		push_warning("--war-drag needs --war-piece (the piece to rake); there is nothing to drag")
 	_ruler_open = args.has("--ruler-open")
 	_march_confirm = args.has("--march-confirm")
 	_march_commit = args.has("--march-commit")
@@ -693,46 +702,80 @@ func _ledger_step() -> void:
 		_moment("ledger")
 
 
-## --war-room [--war-sheet N] [--war-piece CODE [--war-drag fx,fy]]
+## --war-room [--war-sheet N] [--war-zoom M] [--war-piece CODE [--war-drag fx,fy]]
 ## [--war-folio DRILL|explode]: the WAR ROOM through its own tab and its own
-## gestures, then the moment `war`.
+## gestures, then the moment `war`. Each step waits for the one before it by
+## CONDITION, never by a fixed frame: the tab opened and a sheet laid, the
+## requested sheet laid and the roll over (then a few frames for its ink), the
+## camera leant, the piece clicked or raked (its screen place read AFTER the
+## camera and the sheet are settled), then the folio, then the shot.
 func _war_room_step() -> void:
-	var start := 30
 	var screen := _root.war_room_screen()
-	if _frames == start:
-		var tab := _root.bottom_bar().button("WAR ROOM")
-		_real_click(tab, tab.size * 0.5)
-		print("war: open=%s sheet=%d" % [screen.visible, screen.view().sheet_index()])
-		print("war: pieces=%s" % [WarRoom.pieces(Game.data, Game.state).map(func(q: Dictionary) -> String:
-			return "%s@%d" % [q["code"], int(q["sheet"])])])
-	elif _frames == start + 10 and _war_sheet >= 0:
-		screen.view().swap_to(_war_sheet)
-		print("war: swapped to sheet %d" % _war_sheet)
-	elif _frames == start + 40 and _war_piece != "":
-		var p := ArmySystem.regiment(Game.data, _war_piece)
-		var at: Variant = screen.view().screen_pos_of_px(WarRoom.believed_position(Game.data, Game.state, p))
-		if at == null:
-			push_error("war: piece %s not in view" % _war_piece)
+	var view := screen.view()
+	if _war_phase == 0:
+		if _frames == 30:
+			var tab := _root.bottom_bar().button("WAR ROOM")
+			_real_click(tab, tab.size * 0.5)
+			print("war: open=%s sheet=%d" % [screen.visible, view.sheet_index()])
+			print("war: pieces=%s" % [WarRoom.pieces(Game.data, Game.state).map(func(q: Dictionary) -> String:
+				return "%s@%d" % [q["code"], int(q["sheet"])])])
+			_war_to(1)
+	elif _war_phase == 1:
+		# the room is open and a sheet is laid and not rolling: ask for the other
+		if screen.visible and view.sheet_index() >= 0 and not view.rolling():
+			if _war_sheet >= 0 and view.sheet_index() != _war_sheet:
+				view.swap_to(_war_sheet)
+				print("war: swapping to sheet %d" % _war_sheet)
+			_war_to(2)
+	elif _war_phase == 2:
+		# the requested sheet is laid, the roll is over; let its ink settle
+		var laid := _war_sheet < 0 or view.sheet_index() == _war_sheet
+		if laid and not view.rolling() and _frames - _war_at >= 12:
+			if _war_zoom > 0.0:
+				var focus := Vector2(-1, -1)
+				if _war_piece != "":
+					focus = WarRoom.believed_position(Game.data, Game.state, ArmySystem.regiment(Game.data, _war_piece))
+				view.lean_to(_war_zoom, focus)
+				print("war: leant to %.2f m" % view.camera_rig().distance)
+			_war_to(3)
+	elif _war_phase == 3:
+		if _frames - _war_at < 6:
 			return
-		if _war_drag.x >= 0.0:
-			_real_drag(screen.view(), at, Vector2(screen.view().size) * _war_drag)
-		else:
-			_real_click(screen.view(), at)
-		print("war: piece=%s at=%s selected=%s aiming=%s" % [_war_piece, at,
-			screen.view().selected_army(), screen.orders().aiming()])
-	elif _frames == start + 50 and _war_folio != "":
-		var folio := screen.get_node_or_null("%Folio")
-		if folio == null:
-			print("war: no folio yet")
-		elif _war_folio == "explode":
-			var b: Button = folio.get_node("%TakeApart")
-			_real_click(b, b.size * 0.5)
-		else:
-			for t: Button in folio.get_node("%Drills").get_children():
-				if String(t.text).to_lower().contains(_war_folio):
-					_real_click(t, t.size * 0.5)
-	elif _frames == start + 90:
+		if _war_piece != "":
+			var p := ArmySystem.regiment(Game.data, _war_piece)
+			var at: Variant = view.screen_pos_of_px(WarRoom.believed_position(Game.data, Game.state, p))
+			if at == null:
+				push_error("war: piece %s not in view" % _war_piece)
+			elif _war_drag.x >= 0.0:
+				_real_drag(view, at, Vector2(view.size) * _war_drag)
+			else:
+				_real_click(view, at)
+			print("war: piece=%s sheet=%d at=%s selected=%s aiming=%s" % [_war_piece, view.sheet_index(), at,
+				view.selected_army(), screen.orders().aiming()])
+		_war_to(4)
+	elif _war_phase == 4:
+		if _frames - _war_at < 6:
+			return
+		if _war_folio != "":
+			var folio := screen.get_node_or_null("%Folio")
+			if folio == null:
+				print("war: no folio yet")
+			elif _war_folio == "explode":
+				var b: Button = folio.get_node("%TakeApart")
+				_real_click(b, b.size * 0.5)
+			else:
+				for t: Button in folio.get_node("%Drills").get_children():
+					if String(t.text).to_lower().contains(_war_folio):
+						_real_click(t, t.size * 0.5)
+		_war_to(5)
+	elif _war_phase == 5 and _frames - _war_at >= 40:
 		_moment("war")
+		_war_to(6)
+
+
+func _war_to(phase: int) -> void:
+	_war_phase = phase
+	_war_at = _frames
 
 
 ## --play-days, then --missives: seal each report as the player would, press

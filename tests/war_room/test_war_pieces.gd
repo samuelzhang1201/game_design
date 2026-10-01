@@ -320,3 +320,41 @@ func test_a_figure_is_measured_through_its_transforms_and_never_taller_than_the_
 	var tall := Map3DUnits.model_size(form.get_child(0) as Node3D).y * form.scale.y
 	assert_lte(tall, want + 0.0001, "a figure is never taller than the target")
 	assert_gt(tall, want * 0.5, "and not shrunk away")
+
+
+func test_the_tags_show_only_near_the_table() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var code := _land_code()
+	var tag := pieces.piece(code).get_node("Tag") as Label3D
+	assert_false(tag.visible, "the opening view is beyond war_tag_view_m: no slips")
+	view.lean_to(repo.bal("war_tag_view_m") * 0.5)
+	assert_true(tag.visible, "leaning in shows the slip")
+	view.lean_to(repo.bal("war_cam_max_m"))
+	assert_false(tag.visible)
+	view.lean_to(repo.bal("war_tag_view_m") * 0.5)
+	view.swap_to((_home_sheet() + 1) % WarSheets.series(repo).size())
+	view._process(10.0)
+	await wait_frames(2)
+	view.lay_sheet(_home_sheet())
+	view.lean_to(repo.bal("war_tag_view_m") * 0.5)
+	assert_true((pieces.piece(code).get_node("Tag") as Label3D).visible, "a rebuilt piece wears the current setting")
+
+
+func test_the_nine_figures_stand_inside_the_base_and_are_centred_on_it() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var node := pieces.piece(_land_code())
+	var form := node.get_node("Figures/Formation") as Node3D
+	var side := repo.bal("war_piece_base_mm") / 1000.0
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for f: Node in form.get_children():
+		var at := (f as Node3D).position * form.scale.x + form.position
+		lo = Vector2(minf(lo.x, at.x), minf(lo.y, at.z))
+		hi = Vector2(maxf(hi.x, at.x), maxf(hi.y, at.z))
+	assert_almost_eq((lo.x + hi.x) * 0.5, 0.0, 0.0005, "centred side to side")
+	assert_almost_eq((lo.y + hi.y) * 0.5, 0.0, 0.0005, "centred front to back")
+	assert_lt(maxf(hi.x - lo.x, hi.y - lo.y), side, "the slots stand within the base")

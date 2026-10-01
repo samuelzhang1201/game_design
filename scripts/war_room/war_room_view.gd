@@ -232,7 +232,21 @@ func _paint_ink(mat: ShaderMaterial) -> void:
 func _apply_camera() -> void:
 	_camera.transform = _rig.transform()
 	if _repo != null:
+		_pieces.set_camera_distance(_rig.distance)
+	if _repo != null:
 		_rake.redraw()
+
+
+## Put the camera `metres` from the table (held within its limits), looking at
+## the table point under `focus_px` (a pack point; (-1, -1) keeps the target).
+## The snapshot tool's --war-zoom and anything that wants a set framing.
+func lean_to(metres: float, focus_px := Vector2(-1, -1)) -> void:
+	if focus_px.x >= 0.0:
+		var p := table_point(focus_px)
+		_rig.target = Vector3(p.x, 0.0, p.z)
+		_rig.pan(Vector2.ZERO)   # clamped to the sheet
+	_rig.distance = clampf(metres, _rig.min_distance, _rig.max_distance)
+	_apply_camera()
 
 
 func y_at(xz: Vector2) -> float:

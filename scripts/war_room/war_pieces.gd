@@ -15,11 +15,29 @@ var _sig: Dictionary = {}     # code -> [pose, figures] it was built with
 var _push: Dictionary = {}    # code -> {from: Vector3, to: Vector3, left: float}
 var _scenes: Dictionary = {}  # model path -> PackedScene
 var _tins: Dictionary = {}    # source material -> its one tin ShaderMaterial
+var _tags_on := true          # the paper tags show only near the table (war_tag_view_m)
 
 
 func setup(repo: DataRepository, view: WarRoomView) -> void:
 	_repo = repo
 	_view = view
+
+
+## The tags are shown only while the camera stands within war_tag_view_m of the
+## table, so the overview is not cluttered with slips (Task 16 ruling).
+func set_camera_distance(metres: float) -> void:
+	var on := metres <= _repo.bal("war_tag_view_m")
+	if on == _tags_on:
+		return
+	_tags_on = on
+	for c: Node in get_children():
+		var tag := c.get_node_or_null("Tag") as Node3D
+		if tag != null:
+			tag.visible = on
+
+
+func tags_shown() -> bool:
+	return _tags_on
 
 
 func piece(code: String) -> Node3D:
@@ -243,6 +261,7 @@ func _build(state: GameState, code: String, naval: bool) -> Node3D:
 	tag.modulate = _repo.war_palette["ink"]
 	tag.outline_modulate = _repo.war_palette["paper"]
 	tag.outline_size = int(_repo.bal("war_tag_outline_px"))
+	tag.visible = _tags_on
 	tag.position = Vector3(side * _repo.bal("war_tag_offset"), _repo.bal("war_piece_figure_mm") / 1000.0 + base_h, 0.0)
 	root.add_child(tag)
 	_sig[code] = _signature(state, code)
@@ -269,12 +288,22 @@ func _fill_figures(state: GameState, code: String, reg: Dictionary, into: Node3D
 	if row.is_empty():
 		push_error("WarPieces: no army_formations row for %d figures (%s)" % [n, code])
 	var offs := Map3DFormation.offsets(row, ext, _repo.bal("war_piece_gap"), Map3DFormation.rank_depth(art))
-	var half := Map3DFormation.half_extent(offs, ext)
+	# The slots run from the front rank at 0 to the rear, so the formation is
+	# CENTRED on its base (Task 16: it stood in the base's rear two thirds) and
+	# its half extent is about that centre.
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for o in offs:
+		lo = Vector2(minf(lo.x, o.x), minf(lo.y, o.y))
+		hi = Vector2(maxf(hi.x, o.x), maxf(hi.y, o.y))
+	var mid := (lo + hi) * 0.5
+	var half := (hi - lo) * 0.5 + ext
 	var fit := (_repo.bal("war_piece_base_mm") / 1000.0 * _repo.bal("war_figure_fill")) \
 		/ maxf(maxf(half.x, half.y) * k, 0.0001)
 	var form := Map3DFormation.build(scene, offs, first)
 	form.name = "Formation"
 	form.scale = Vector3.ONE * k * minf(fit, 1.0)
+	form.position = Vector3(-mid.x, 0.0, -mid.y) * form.scale.x
 	into.add_child(form)
 	for m: MeshInstance3D in Map3DUnits.meshes(form):
 		for i in m.mesh.get_surface_count():

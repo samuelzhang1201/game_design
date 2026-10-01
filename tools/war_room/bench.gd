@@ -12,7 +12,9 @@ extends Node
 ##   Godot --path . res://tools/war_room/bench.tscn -- --size 3024x1964 --quality high
 ##
 ## Flags: --size WxH, --quality TIER (default high), --out FILE (append rows to
-## a CSV, under tools/map3d/baselines/ or a scratch path), --sheet N (lay that
+## a CSV; it must land under tools/map3d/baselines/ — which carries a
+## .gdignore — or a scratch path outside the project, or Godot imports a bare
+## CSV under res:// as a Translation), --sheet N (lay that
 ## sheet instead of the home one).
 
 const FRAMES := 120
