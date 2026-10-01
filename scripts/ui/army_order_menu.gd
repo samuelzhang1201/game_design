@@ -295,6 +295,20 @@ func withdraw_aim() -> void:
 	_withdraw("The order is withdrawn.")
 
 
+## Arm a MARCH for `code` without the menu — the WAR ROOM's rake (spec
+## 2026-10-01-war-room-design §3): the same questions MARCH… asks before it is
+## offered. "" when armed, else why not (nothing is armed).
+func aim_for(code: String) -> String:
+	if Game.state == null:
+		return "No reign is under way."
+	var why := _refusal("ARMY_MARCH", code)
+	if why != "":
+		return why
+	_code = code
+	_set_aim(code)
+	return ""
+
+
 ## Test seam: the regiment an order is being aimed for, "" when none is.
 func aiming() -> String:
 	return _aiming
