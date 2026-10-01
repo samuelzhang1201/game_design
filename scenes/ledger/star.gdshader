@@ -7,7 +7,9 @@
 // is drawn by star_faint.gdshader instead (Task 11 fix round 1, F1: dimmed
 // on an opaque sphere it was a black disc with a white pin over the haze).
 shader_type spatial;
-render_mode specular_schlick_ggx;
+render_mode specular_schlick_ggx, world_vertex_coords;
+
+#include "res://scenes/ledger/star_motion.gdshaderinc"
 
 uniform float emit = 1.4;
 uniform float rim_gain = 1.6;
@@ -22,6 +24,9 @@ vec3 to_linear(vec3 c) {
 
 void vertex() {
 	col = COLOR;
+	// the slight wobble (star_motion.gdshaderinc): the instance's scale is the
+	// star's drawn radius
+	VERTEX += star_wobble(INSTANCE_CUSTOM, length(MODEL_MATRIX[0].xyz), INV_VIEW_MATRIX, TIME);
 }
 
 void fragment() {

@@ -9,6 +9,7 @@ const MATERIALS := {
 	"res://scenes/ledger/materials/star_faint.tres": "res://scenes/ledger/star_faint.gdshader",
 	"res://scenes/ledger/materials/haze.tres": "res://scenes/ledger/haze.gdshader",
 	"res://scenes/ledger/materials/link.tres": "res://scenes/ledger/link.gdshader",
+	"res://scenes/ledger/materials/spark.tres": "res://scenes/ledger/spark.gdshader",
 }
 
 
@@ -28,3 +29,11 @@ func test_the_dimmed_stars_draw_over_the_links() -> void:
 	var link := load("res://scenes/ledger/materials/link.tres") as ShaderMaterial
 	var faint := load("res://scenes/ledger/materials/star_faint.tres") as ShaderMaterial
 	assert_gt(faint.render_priority, link.render_priority)
+
+
+## The current round the stars (owner 2026-10-01) is added to what is behind
+## it after the dimmed stars and the links, whatever the camera.
+func test_the_current_draws_over_the_dimmed_stars_and_the_links() -> void:
+	var spark := load("res://scenes/ledger/materials/spark.tres") as ShaderMaterial
+	var faint := load("res://scenes/ledger/materials/star_faint.tres") as ShaderMaterial
+	assert_gt(spark.render_priority, faint.render_priority)

@@ -138,6 +138,21 @@ add it here as a principle with its why — not as a changelog entry.
   (heraldic tinctures); and a tally that rounds draws 49 and 50 alike (count
   whole tens).
 
+- **Entering play is a MOVE on the table, never a cut** (owner 2026-10-01,
+  approving the landing: "过渡效果不错", after "游戏场景的UI是突然出现的，很突兀"):
+  the title's map is picked up like a sheet (it draws back, a deckled margin
+  and a soft, wide, faint shadow appear, a slight tilt), laid square on the
+  sheet's place with a small swell at contact, then fades onto the real
+  sheet beneath; every other piece comes from the side it lies on, one at a
+  time, and the voice comes last, once the landing has been seen. Lessons:
+  two half-faded copies of one picture let the table through (keep the real
+  one whole under the flying one and fade only the flyer); fade only the
+  print, never its paper, over the real sheet (paper over a map is a wash);
+  a hard offset band beside a lifted sheet is a sticker (many faint layers,
+  wider and fainter the higher it is held); and the map that is laid down
+  must BE the map the title showed (hand the live view over), or the swap
+  costs a frozen frame.
+
 ## Information
 - **Name it; the icon is the anchor, not the word** (owner 2026-09-28,
   reversing "icons, not words" of 2026-09-13/14 for the realm card and the
@@ -418,6 +433,9 @@ add it here as a principle with its why — not as a changelog entry.
   context, not every line at full weight. A fade is set as the eye reads it:
   under linear blending an "alpha 0.25" line on a dark ground reads nearly
   whole.
+  Its stars move (owner 2026-10-01: 轻微小幅度晃动，周边带有类似细微电流的感觉):
+  a slight wobble, every star on its own phase, never a group shake; and a
+  faint current at the rim.
 
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols

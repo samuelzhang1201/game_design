@@ -31,6 +31,9 @@ var _realm: TitleRealm
 var _preview: GameState
 var _left: Control
 var _starting := false
+## The title's last frame, kept as the reign begins for TableLanding (GameRoot
+## takes it once, after the switch).
+static var landing_frame: Texture2D
 
 func _ready() -> void:
 	if UiPalette.war_table():
@@ -131,7 +134,11 @@ func _start() -> void:
 		var n := get_node_or_null(node_name) as CanvasItem
 		if n != null:
 			fade.tween_property(n, "modulate:a", 0.0, Game.data.bal("ui_title_sweep_s") * 0.35)
-	_realm.swept.connect(func() -> void: start_requested.emit(), CONNECT_ONE_SHOT)
+	_realm.swept.connect(func() -> void:
+		# the map as it lies now becomes the sheet that is laid on the table
+		landing_frame = ImageTexture.create_from_image(get_viewport().get_texture().get_image())
+		_realm.hand_over()
+		start_requested.emit(), CONNECT_ONE_SHOT)
 	_realm.sweep()
 
 ## THE LIVING REALM (owner 2026-10-01, title plan A): the live map of the home

@@ -140,8 +140,8 @@ static func create(repo: DataRepository, scene_path: String = "") -> Map3DView:
 ## screen's _ready, put in `panel` and wired to its `detail`, `country` and
 ## `orders` and to `on_hover`; it loads the built world on its first activate().
 static func attach(panel: Control, detail: MapDetailPanel = null, country: CountryPanel = null,
-		on_hover: Callable = Callable(), orders: ArmyOrderMenu = null) -> Map3DView:
-	var view := Map3DView.create(Game.data)
+		on_hover: Callable = Callable(), orders: ArmyOrderMenu = null, given: Map3DView = null) -> Map3DView:
+	var view := given if given != null else Map3DView.create(Game.data)  # given: the title's, already loaded
 	panel.add_child(view)
 	view.visible = false
 	if detail != null:
