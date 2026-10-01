@@ -26,7 +26,7 @@ func test_laying_a_sheet_builds_the_table_at_the_sheets_ratio() -> void:
 	var aabb := table.mesh.get_aabb()
 	var r: Rect2 = WarSheets.series(repo)[0]["rect"]
 	assert_almost_eq(aabb.size.x, repo.bal("war_table_w_m"), 0.001)
-	assert_almost_eq(aabb.size.z, WarTable.depth_m(r, repo.bal("war_table_w_m")), 0.001)
+	assert_almost_eq(aabb.size.z, WarRoomTable.depth_m(r, repo.bal("war_table_w_m")), 0.001)
 
 
 func test_a_point_on_the_sheet_projects_into_the_view() -> void:
@@ -52,7 +52,7 @@ func test_a_second_lay_supersedes_the_first() -> void:
 	assert_eq(view.sheet_index(), 1)
 	var r: Rect2 = WarSheets.series(repo)[1]["rect"]
 	var table: MeshInstance3D = view.get_node("%Table")
-	assert_almost_eq(table.mesh.get_aabb().size.z, WarTable.depth_m(r, repo.bal("war_table_w_m")), 0.001)
+	assert_almost_eq(table.mesh.get_aabb().size.z, WarRoomTable.depth_m(r, repo.bal("war_table_w_m")), 0.001)
 
 
 func test_the_ink_cache_holds_one_entry_per_sheet() -> void:

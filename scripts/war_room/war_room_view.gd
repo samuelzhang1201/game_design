@@ -152,18 +152,18 @@ func lay_sheet(index: int) -> void:
 		return
 	_sheet = index
 	_rect = all[index]["rect"]
-	_depth = WarTable.depth_m(_rect, _table_w)
+	_depth = WarRoomTable.depth_m(_rect, _table_w)
 	_nx = int(_repo.bal("war_relief_grid"))
 	@warning_ignore("narrowing_conversion")
 	_nz = maxi(2, roundi(float(_nx) * _rect.size.y / _rect.size.x))
-	_heights = WarTable.heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else _flat()
-	_y_scale = WarTable.table_y(_repo, _rect, _table_w, 1.0)
-	var raw := WarTable.raw_heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else _heights
+	_heights = WarRoomTable.heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else _flat()
+	_y_scale = WarRoomTable.table_y(_repo, _rect, _table_w, 1.0)
+	var raw := WarRoomTable.raw_heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else _heights
 	var reach := maxf(_repo.bal("war_sea_hatch_reach_m"), 0.001)
-	var shore := WarTable.shore_distance(raw, _nx, _nz, _table_w / float(_nx - 1), _depth / float(_nz - 1), reach)
+	var shore := WarRoomTable.shore_distance(raw, _nx, _nz, _table_w / float(_nx - 1), _depth / float(_nz - 1), reach)
 	for k in shore.size():
 		shore[k] = minf(shore[k] / reach, 1.0)
-	_table.mesh = WarTable.build_mesh(_heights, _nx, _nz, _table_w, _depth, _y_scale, raw, shore)
+	_table.mesh = WarRoomTable.build_mesh(_heights, _nx, _nz, _table_w, _depth, _y_scale, raw, shore)
 	var mat := _table.get_active_material(0) as ShaderMaterial
 	var pal: Dictionary = _repo.war_palette
 	for key in ["paper", "paper_age", "ink", "sea_ink"]:
@@ -227,11 +227,11 @@ func _apply_camera() -> void:
 
 
 func y_at(xz: Vector2) -> float:
-	return WarTable.height_at(_heights, _nx, _nz, _table_w, _depth, xz) * _y_scale
+	return WarRoomTable.height_at(_heights, _nx, _nz, _table_w, _depth, xz) * _y_scale
 
 
 func table_point(pack_px: Vector2) -> Vector3:
-	var xz := WarTable.to_table(_rect, _table_w, pack_px)
+	var xz := WarRoomTable.to_table(_rect, _table_w, pack_px)
 	return Vector3(xz.x, y_at(xz), xz.y)
 
 
@@ -247,10 +247,10 @@ func screen_pos_of_px(pack_px: Vector2) -> Variant:
 ## The pack point under a screen px, Vector2(-1, -1) off the table.
 func pack_at(screen_px: Vector2) -> Vector2:
 	var s := screen_px * _window_scale()
-	var hit := WarTable.ray_hit(_camera.project_ray_origin(s), _camera.project_ray_normal(s), y_at)
+	var hit := WarRoomTable.ray_hit(_camera.project_ray_origin(s), _camera.project_ray_normal(s), y_at)
 	if hit == Vector3.INF or not _rig.bounds.has_point(Vector2(hit.x, hit.z)):
 		return Vector2(-1, -1)
-	return WarTable.from_table(_rect, _table_w, Vector2(hit.x, hit.z))
+	return WarRoomTable.from_table(_rect, _table_w, Vector2(hit.x, hit.z))
 
 
 func refresh() -> void:

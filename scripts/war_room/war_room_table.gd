@@ -1,4 +1,4 @@
-class_name WarTable
+class_name WarRoomTable
 extends RefCounted
 ## The plotting table's maths (owner 2026-10-01, spec 2026-10-01-war-room-design
 ## §2): a sheet laid war_table_w_m wide, centred on the table's origin, x east
