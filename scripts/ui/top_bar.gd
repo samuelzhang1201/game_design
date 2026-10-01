@@ -50,6 +50,8 @@ var _lord_crest: HeraldicShield
 var _date_arms: HeraldicShield
 ## The lord's row's name (the crown's family), when the rows are named.
 var _house_name: Label
+## THE WAR TABLE's brass date dial (null on leather).
+var _dial: BrassDial
 
 func _ready() -> void:
 	%Bar.add_theme_stylebox_override("panel",
@@ -127,11 +129,62 @@ func _ready() -> void:
 		%Purses.add_child(lord_cell)
 	Game.state_changed.connect(refresh)
 	Game.report_ready.connect(func(_r: TickReport) -> void: refresh())
+	if UiPalette.war_table():
+		_dress_war_table()
 	refresh()
 	# The bar is exactly as tall as its content, so the columns below can
 	# start under it instead of guessing (user report 2026-09-09: the left
 	# column overlapped the header).
 	offset_bottom = bar_height()
+
+## THE WAR TABLE (owner 2026-10-01): no bar — the date a brass dial with the
+## season and year written beside it on the wood, the clock four brass studs,
+## the purses on a dark oak tally board, Menu plain words on the table.
+func _dress_war_table() -> void:
+	var clear := StyleBoxEmpty.new()
+	clear.content_margin_left = 12
+	clear.content_margin_right = 12
+	clear.content_margin_top = 6
+	clear.content_margin_bottom = 4
+	%Bar.add_theme_stylebox_override("panel", clear)
+	var ink := UiPalette.table_color("table_ink", UiPalette.TEXT_SOFT)
+	_dial = BrassDial.new()
+	%DateLabel.add_sibling(_dial)
+	%DateLabel.get_parent().move_child(_dial, %DateLabel.get_index())
+	_date_arms.visible = false
+	UiPalette.style_header(%DateLabel, 18, ink)
+	%DateLabel.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+	%DateLabel.add_theme_constant_override("shadow_offset_y", 1)
+	var stud := WarTable._num("ui_stud_px", 20.0)
+	for b: Button in _clock_buttons.values():
+		b.add_theme_stylebox_override("normal", BrassStyle.make(false, false))
+		b.add_theme_stylebox_override("hover", BrassStyle.make(false, true))
+		b.add_theme_stylebox_override("pressed", BrassStyle.make(true, false))
+		b.add_theme_stylebox_override("hover_pressed", BrassStyle.make(true, true))
+		b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		b.custom_minimum_size = Vector2(stud + 6.0, stud + 6.0)
+		# an engraved mark reads at 20 px where the painted art did not
+		b.icon = null
+		b.text = String({0: "||", 1: "›", 2: "»", 4: "»»"}.get(_clock_buttons.find_key(b), b.text))
+		b.add_theme_font_size_override("font_size", 13)
+		for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+			b.add_theme_color_override(state, UiPalette.table_color("ink", Color("2b1f15")))
+	var board := PanelContainer.new()
+	board.name = "TallyBoard"
+	board.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	board.add_theme_stylebox_override("panel", BoardStyle.make(26.0, 6.0))
+	var purses: Control = %Purses
+	var row := purses.get_parent()
+	var at := purses.get_index()
+	row.add_child(board)
+	row.move_child(board, at)
+	purses.reparent(board)
+	purses.owner = self  # %Purses stays reachable by its unique name
+	var flat := StyleBoxEmpty.new()
+	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+		%MenuButton.add_theme_stylebox_override(state, flat)
+	%MenuButton.add_theme_color_override("font_color", ink)
+	%MenuButton.add_theme_color_override("font_hover_color", UiPalette.table_color("brass_light", ink))
 
 ## A button that shows its key's painted art in place of its text, when the
 ## art is installed; the text stays as the fallback and the tooltip.
@@ -210,12 +263,17 @@ func refresh() -> void:
 	if Game.state == null:
 		return
 	%DateLabel.text = Calendar.date_string(Game.state.tick, Game.state.day)
+	if _dial != null:
+		# the day on the brass, the season and year on the wood
+		_dial.set_day(Game.state.day, %DateLabel.text)
+		%DateLabel.text = "%s · Year %d" % [Calendar.season_name(Game.state.tick),
+			Calendar.year_of(Game.state.tick)]
 	# The crown's arms (owner 2026-09-15) fly beside the date and mark the
 	# lord's purse; without art the purse keeps the realm's colour and the
 	# house's initial.
 	var family := MapManors.crown(Game.state)
 	var arms := HouseArms.texture_of_house(Game.data, Game.state, family)
-	_date_arms.visible = arms != null
+	_date_arms.visible = arms != null and _dial == null
 	_date_arms.set_texture(arms)
 	_lord_crest.set_arms(MapPalette.color_of(Game.data, Game.data.resolve_realm("player_realm")),
 		family.substr(0, 1).to_upper())

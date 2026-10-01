@@ -19,6 +19,21 @@ extends RefCounted
 
 const MARGIN := 8.0
 const GAP := 8.0
+
+## The screen's edge margin and the gap between its columns: THE WAR TABLE
+## spreads its papers apart so the table shows between them (balance
+## ui_table_margin_px / ui_table_gap_px); leather keeps MARGIN / GAP.
+static func margin() -> float:
+	return WarTable._num("ui_table_margin_px", MARGIN) if UiPalette.war_table() else MARGIN
+
+static func gap() -> float:
+	return WarTable._num("ui_table_gap_px", GAP) if UiPalette.war_table() else GAP
+
+## The gap between the map and the council column when it is open: the column
+## is leather held up to the eye, not paper on the table, and the audience
+## window needs the map's width (ui_table_right_gap_px).
+static func right_gap() -> float:
+	return WarTable._num("ui_table_right_gap_px", GAP) if UiPalette.war_table() else GAP
 const LEFT_WIDTH := 240.0
 ## The council and dialogue column. 300 left the talk a narrow strip once the
 ## transcript went back to a readable size (owner 2026-09-13).
@@ -34,6 +49,10 @@ const HANDLE_INSET := 14.0
 
 ## Room the bottom chrome needs: the news strip and the tab bar.
 static func bottom_inset() -> float:
+	# On THE WAR TABLE the news is a slip between the bookmarks, which hang
+	# straight from under the sheet: only the bookmarks' band is kept.
+	if UiPalette.war_table():
+		return BottomBar.BAR_HEIGHT
 	return NewsTicker.STRIP_HEIGHT + BottomBar.BAR_HEIGHT + 6.0
 
 ## Lay out one screen. `top` is where the columns start (below the top bar);
@@ -44,19 +63,27 @@ static func bottom_inset() -> float:
 static func apply(top: float, left: Control, map: Control, right_panels: Array,
 		right_open: bool, right_width: float = RIGHT_WIDTH) -> void:
 	var bottom := bottom_inset()
-	var right_inset := MARGIN + (right_width + GAP if right_open else 0.0)
-	var middle_left := MARGIN + LEFT_WIDTH + GAP
+	var m := margin()
+	var g := gap()
+	var right_inset := m + (right_width + right_gap() if right_open else 0.0)
+	var middle_left := m + LEFT_WIDTH + g
 	if left != null:
-		_place(left, Vector2(0, 0), Vector2(0, 1), MARGIN, top, MARGIN + LEFT_WIDTH, -bottom)
+		_place(left, Vector2(0, 0), Vector2(0, 1), m, top, m + LEFT_WIDTH, -bottom)
 	if map != null:
-		_place(map, Vector2(0, 0), Vector2(1, 1), middle_left, top, -right_inset, -bottom)
+		# on THE WAR TABLE the bookmarks hang from under the map sheet: the
+		# sheet alone reaches down over their tops (ui_bookmark_tuck_px)
+		var tuck := WarTable._num("ui_bookmark_tuck_px", 8.0) if UiPalette.war_table() else 0.0
+		_place(map, Vector2(0, 0), Vector2(1, 1), middle_left, top, -right_inset, -(bottom - tuck))
 	for panel in right_panels:
 		if panel != null:
-			_place(panel, Vector2(1, 0), Vector2(1, 1), -(MARGIN + right_width), top, -MARGIN, -bottom)
+			_place(panel, Vector2(1, 0), Vector2(1, 1), -(m + right_width), top, -m, -bottom)
 
 ## The ENTER THE COUNCIL handle: a tab standing on the right edge, its text
 ## running upward, shown only while the right slot is empty.
 static func make_handle(text: String) -> Button:
+	if UiPalette.war_table() and _handle_is_button():
+		# THE WAR TABLE (owner 2026-10-01): the order as the council's wax seal.
+		return WaxSeal.new(text)
 	var b := Button.new()
 	b.name = "CouncilHandle"
 	b.text = text
@@ -82,16 +109,17 @@ static func place_handle(handle: Control, top: float) -> void:
 		var h := handle.get_combined_minimum_size().y
 		handle.anchor_left = 1.0
 		handle.anchor_right = 1.0
-		handle.offset_right = -MARGIN - HANDLE_INSET
+		var inset := HANDLE_INSET + (WarTable._num("ui_sheet_margin_px", 13.0) if UiPalette.war_table() else 0.0)
+		handle.offset_right = -margin() - inset
 		handle.offset_left = handle.offset_right - w
-		handle.offset_top = top + HANDLE_INSET
+		handle.offset_top = top + inset
 		handle.offset_bottom = handle.offset_top + h
 		return
 	# Rotated -90° about its top-left corner, a (length x thickness) button
 	# occupies x in [0, thickness] and y in [-length, 0] from its position.
 	handle.anchor_left = 1.0
 	handle.anchor_right = 1.0
-	handle.offset_left = -MARGIN - HANDLE_THICKNESS
+	handle.offset_left = -margin() - HANDLE_THICKNESS
 	handle.offset_top = top + HANDLE_LENGTH + 12.0
 	handle.offset_right = handle.offset_left + HANDLE_LENGTH
 	handle.offset_bottom = handle.offset_top + HANDLE_THICKNESS

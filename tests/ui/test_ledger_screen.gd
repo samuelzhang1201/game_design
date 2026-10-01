@@ -100,7 +100,10 @@ func test_refreshes_in_one_frame_rebuild_once() -> void:
 	screen.refresh()
 	screen.refresh()
 	assert_eq(screen._rebuilds, before, "nothing is drawn inside the calls")
-	await wait_frames(2)
+	# drained in _process: wait for a process frame, not a count of physics
+	# frames (several can run inside one slow process frame)
+	await wait_until(func() -> bool: return screen._rebuilds > before, 1.0)
+	await wait_process_frames(2)
 	assert_eq(screen._rebuilds, before + 1, "drawn once")
 
 
@@ -113,8 +116,12 @@ func test_a_vanished_selection_takes_its_card() -> void:
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
 	assert_true(detail.has_content(), "the report's card")
 	Game.state.missives = Game.state.missives.filter(func(m: Dictionary) -> bool: return int(m["id"]) != rid)
+	var before := screen._rebuilds
 	screen.refresh()
-	await wait_frames(2)
+	# drained in _process: wait for a process frame, not a count of physics
+	# frames (several can run inside one slow process frame)
+	await wait_until(func() -> bool: return screen._rebuilds > before, 1.0)
+	await wait_process_frames(2)
 	assert_eq(screen.view().selected(), "")
 	assert_false(detail.has_content(), "the vanished star's card went with it")
 
@@ -226,7 +233,10 @@ func test_an_order_while_open_is_drawn_on_the_next_frame() -> void:
 	await wait_frames(2)
 	var before := screen._rebuilds
 	Game.state_changed.emit()
-	await wait_frames(2)
+	# drained in _process: wait for a process frame, not a count of physics
+	# frames (several can run inside one slow process frame)
+	await wait_until(func() -> bool: return screen._rebuilds > before, 1.0)
+	await wait_process_frames(2)
 	assert_eq(screen._rebuilds, before + 1, "the chart shows the state as it is now")
 
 
@@ -270,7 +280,11 @@ func test_the_selected_stars_card_follows_a_redraw() -> void:
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
 	var title := detail.title_label().text
 	detail.title_label().text = "stale"
+	var before := screen._rebuilds
 	screen.refresh()
-	await wait_frames(2)
+	# drained in _process: wait for a process frame, not a count of physics
+	# frames (several can run inside one slow process frame)
+	await wait_until(func() -> bool: return screen._rebuilds > before, 1.0)
+	await wait_process_frames(2)
 	assert_eq(detail.title_label().text, title, "the card was drawn again with the chart")
 	assert_eq(screen.view().selected(), "character:you")

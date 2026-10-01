@@ -39,9 +39,13 @@ func test_an_envelope_lands_on_the_tab() -> void:
 	var r: GameRoot = await _root()
 	var tab := r.bottom_bar().button("MISSIVE")
 	var f := EnvelopeFlight.fly(r, Rect2(400, 300, 300, 200), tab.get_global_rect(), true, Game.data)
-	watch_signals(f)
-	await wait_for_signal(f.landed, 2.0)
-	assert_signal_emitted(f, "landed")
+	# a flag, not watch_signals: at the test's 0.05 s timings one slow frame
+	# lets the flight land AND free itself before the awaiter resumes, and a
+	# freed object cannot be asked what it emitted (2026-10-01)
+	var landed := [false]
+	f.landed.connect(func() -> void: landed[0] = true)
+	await wait_until(func() -> bool: return landed[0], 2.0)
+	assert_true(landed[0], "the envelope lands on the tab")
 
 
 func test_a_spy_report_stops_the_clock_and_opens_the_dialog() -> void:

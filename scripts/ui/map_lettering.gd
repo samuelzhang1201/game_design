@@ -10,6 +10,8 @@ extends RefCounted
 ## Ink, not gold (owner 2026-09-12, after docs/references/mapSample.jpg:
 ## realm names are set in dark serif capitals over the wash).
 static func ink(repo: DataRepository) -> Color:
+	if MapPalette.war_table(repo) and repo.terrain_palette.has("map_label_ink_table"):
+		return MapTerrain.palette_color(repo, "map_label_ink_table", MapTerrain.FALLBACK)
 	var color := MapTerrain.palette_color(repo, "coast_line", MapTerrain.FALLBACK)
 	color.a = repo.bal("map_label_alpha")
 	return color
@@ -20,6 +22,9 @@ static func ink(repo: DataRepository) -> Color:
 ## sank into it; the ink stays ink (the owner's 2026-09-12 ruling) and the
 ## halo lifts it — terrain_palette map_label_halo at map_label_halo_alpha.
 static func halo(repo: DataRepository) -> Color:
+	if MapPalette.war_table(repo) and repo.terrain_palette.has("map_label_halo_table"):
+		# its alpha is the row's own (#rrggbbaa)
+		return Color(String(repo.terrain_palette["map_label_halo_table"]))
 	var color := MapTerrain.palette_color(repo, "map_label_halo", Color(0.94, 0.9, 0.82))
 	color.a = repo.bal("map_label_halo_alpha")
 	return color
