@@ -51,21 +51,68 @@ func test_the_tab_again_closes_it_and_another_tab_closes_it_too() -> void:
 	assert_true(r.ledger_screen().visible)
 
 
-func test_a_selected_piece_puts_its_card_in_the_left_column_and_closing_takes_it_away() -> void:
+func test_a_picked_piece_unrolls_its_card_over_the_room_and_closing_gives_it_back() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(2)
-	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
-	r.war_room_screen().view().piece_selected.emit(code)
-	await wait_process_frames(1)
+	var screen := r.war_room_screen()
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
+	var home := detail.get_parent()
+	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
+	screen.view().piece_selected.emit(code)
+	await wait_process_frames(1)
 	var card := MapObjects.army_card(Game.data, code, Game.state)
+	assert_eq(detail.get_parent(), screen.card_roll(), "the card is borrowed into the room's roll")
+	assert_true(screen.card_roll().visible)
 	assert_eq(detail.title_label().text, String(card["title"]))
 	# the BODY is there too, not only the title: a regiment's stat rows
 	assert_gt((card["stats"] as Array).size(), 0, "the fixture card has stats")
-	assert_gt(detail.stats_grid().get_child_count(), 0, "the stat rows are in the column")
-	r.war_room_screen().close()
+	assert_gt(detail.stats_grid().get_child_count(), 0, "the stat rows are there")
+	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.2)
+	var roll := screen.card_roll()
+	var body := detail.stats_grid().get_combined_minimum_size().y
+	assert_gt(detail.content_height(), detail.get_combined_minimum_size().y + body * 0.9, "the card's height counts its scrolled body")
+	assert_gt(roll.size.y, detail.get_combined_minimum_size().y + body * 0.9, "unrolled past the pinned parts: the body shows")
+	var folio := screen.get_node("%Folio") as Control
+	assert_gte(folio.get_global_rect().position.x, roll.get_global_rect().end.x, "the folio stands clear of the card")
+	screen.close()
+	assert_eq(detail.get_parent(), home, "given back to the column")
+	assert_almost_eq(folio.offset_left, 0.0, 0.01, "and the folio has the room again")
 	assert_false(detail.has_content())
+
+
+func test_clearing_the_pick_rolls_the_card_away_and_gives_it_back() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	var detail: MapDetailPanel = r.current_screen.detail_panel()
+	var home := detail.get_parent()
+	var index := detail.get_index()
+	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
+	screen.view().piece_selected.emit(code)
+	await wait_process_frames(1)
+	screen.view().clear_selection()
+	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.2)
+	assert_eq(detail.get_parent(), home)
+	assert_eq(detail.get_index(), index, "at its old place among the column's cards")
+	assert_false(screen.card_roll().visible)
+
+
+func test_after_the_room_the_courts_own_card_still_lands_in_the_column() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
+	screen.view().piece_selected.emit(code)
+	await wait_process_frames(1)
+	screen.close()
+	var detail: MapDetailPanel = r.current_screen.detail_panel()
+	detail.show_card(MapObjects.army_card(Game.data, code, Game.state))
+	await wait_process_frames(1)
+	assert_true(detail.is_visible_in_tree(), "the column shows the card again")
+	assert_true(r.current_screen.left_column().is_ancestor_of(detail))
 
 
 func test_opening_the_room_withdraws_an_aim_armed_on_the_map() -> void:

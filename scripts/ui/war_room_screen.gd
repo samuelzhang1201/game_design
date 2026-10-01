@@ -14,6 +14,9 @@ var _bound := false
 var _dirty := false
 var _card_mine := false
 var _capture: Texture2D
+var _home: Node                # the column the card was borrowed from
+var _home_index := -1
+var _roll_tween: Tween
 var _column_rect := Rect2()
 var _margin_sig: Array = []   # [sheet, the off-sheet (code, sheet) pairs, none on this sheet] last filled
 
@@ -36,6 +39,15 @@ func _ready() -> void:
 	_view.sheet_requested.connect(_view.swap_to)
 	_view.sheet_laid.connect(_on_laid)
 	_folio.closed.connect(_view.clear_selection)
+	var roll: PanelContainer = %CardRoll
+	if UiPalette.war_table():
+		roll.add_theme_stylebox_override("panel", WarTable.report_style())
+		WarTable.ink_column(roll)
+	else:
+		roll.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
+	roll.draw.connect(func() -> void:
+		var px := Game.data.bal("war_report_roller_px")
+		WarReportRoll.draw_roller(roll, Rect2(0.0, roll.size.y - px, roll.size.x, px)))
 
 
 func view() -> WarRoomView:
@@ -181,6 +193,10 @@ func close() -> void:
 	_view.set_active(false)
 	_view.clear_selection()   # a closed room's selection must never take Escape
 	_clear_card()
+	if _roll_tween != null:
+		_roll_tween.kill()
+	%CardRoll.visible = false
+	_give_back()   # the room is gone at once: the column has its card back now
 	closed.emit()
 	if _column_rect.size.x > 0.0 and get_parent() != null:
 		WarReportRoll.play(get_parent(), _column_rect, _capture, false,
@@ -207,6 +223,7 @@ func _on_piece(code: String) -> void:
 		return
 	_detail.show_card(MapObjects.army_card(Game.data, code, Game.state))
 	_card_mine = true
+	_unroll_card()
 	_folio.open_for(code)
 
 
@@ -214,6 +231,81 @@ func _clear_card() -> void:
 	if _card_mine and _detail != null and is_instance_valid(_detail):
 		_detail.show_entry({})
 	_card_mine = false
+	_roll_card_away()
+
+
+func card_roll() -> PanelContainer:
+	return %CardRoll
+
+
+## Unroll the card over the room's left, where the column was (spec
+## 2026-10-02-war-room-v2 §1.2): the column's MapDetailPanel is BORROWED into
+## %CardRoll (the same node, so its signals and the screen's references hold)
+## and the roll grows to the card's height; the margin slip steps right of it.
+func _unroll_card() -> void:
+	var roll: PanelContainer = %CardRoll
+	if _detail.get_parent() != roll:
+		_home = _detail.get_parent()
+		_home_index = _detail.get_index()
+		_detail.reparent(roll, false)
+		if not _detail.closed.is_connected(_view.clear_selection):
+			_detail.closed.connect(_view.clear_selection)
+	_detail.visible = true
+	if not roll.visible:
+		roll.position = Vector2(16.0, %Slip.offset_top)
+		roll.size = Vector2(ScreenLayout.LEFT_WIDTH, 0.0)
+		roll.visible = true
+	var right := roll.position.x + ScreenLayout.LEFT_WIDTH + 12.0
+	%Slip.offset_left = right
+	%Slip.offset_right = right + 236.0
+	_folio.offset_left = right   # the folio's book centres in the room right of the card
+	_fit_roll.call_deferred()
+
+
+## The card's height is known once its new rows are laid out (a frame after
+## show_card): unroll to it, held inside the room.
+func _fit_roll() -> void:
+	var roll: PanelContainer = %CardRoll
+	if not roll.visible or _detail == null or _detail.get_parent() != roll:
+		return
+	var px := Game.data.bal("war_report_roller_px")
+	var margins := roll.get_theme_stylebox("panel").get_minimum_size().y if roll.has_theme_stylebox("panel") else 0.0
+	_tween_roll(minf(_detail.content_height() + margins + px, size.y - roll.position.y - 16.0), Callable())
+
+
+func _roll_card_away() -> void:
+	var roll: PanelContainer = %CardRoll
+	if not roll.visible:
+		_give_back()
+		return
+	_tween_roll(0.0, func() -> void:
+		roll.visible = false
+		_give_back())
+
+
+func _tween_roll(to_h: float, done: Callable) -> void:
+	if _roll_tween != null:
+		_roll_tween.kill()
+	_roll_tween = create_tween()
+	_roll_tween.tween_property(%CardRoll, "size:y", to_h, Game.data.bal("war_report_roll_s") * 0.6)
+	_roll_tween.tween_callback(%CardRoll.queue_redraw)
+	if done.is_valid():
+		_roll_tween.finished.connect(done)
+
+
+## The card back where it came from (the court's column), at its old place.
+func _give_back() -> void:
+	%Slip.offset_left = 16.0
+	%Slip.offset_right = 252.0
+	_folio.offset_left = 0.0
+	if _home == null or _detail == null or not is_instance_valid(_detail) or _detail.get_parent() == _home:
+		_home = null
+		return
+	if _detail.closed.is_connected(_view.clear_selection):
+		_detail.closed.disconnect(_view.clear_selection)
+	_detail.reparent(_home, false)
+	_home.move_child(_detail, _home_index)
+	_home = null
 
 
 ## The rake took hold of a piece: arm the march, or say why not.
