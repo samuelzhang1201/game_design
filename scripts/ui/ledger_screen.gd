@@ -9,7 +9,8 @@ extends Control
 ## after a state change while open (an order, DEV MODE — at most once a
 ## frame), fills the left column with a star's or a thread's card, and runs
 ## an order through Game.try_execute. It clears only a card it put in the
-## left column.
+## left column. Its search box finds a star — or an instance folded into a
+## province's star — by its label (LedgerSearch).
 
 signal show_requested(subject: Dictionary)
 signal closed
@@ -24,9 +25,15 @@ var _dirty := false        # a state change waits to be drawn (drained in _proce
 var _card_mine := false    # the left column's card is the LEDGER's own
 var _card_star := ""       # the star whose card it is ("" for a thread's or an order's)
 var _rebuilds := 0         # snapshots drawn (the tests' seam)
+var _search_index: Array = []   # LedgerSearch.index of _snap, built on the first search after a redraw
+var _search_found: Array = []   # the matches listed now
+var _search_pick := 0           # the listed match Enter picks
 
 @onready var _view: LedgerView3D = %View
 @onready var _orders: LedgerOrderMenu = %Orders
+@onready var _search: LineEdit = %Search
+@onready var _search_list: PanelContainer = %SearchList
+@onready var _search_rows: VBoxContainer = %SearchRows
 
 
 func _ready() -> void:
@@ -34,15 +41,23 @@ func _ready() -> void:
 	(%Frame as PanelContainer).add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 0, "map"))
 	UiPalette.style_title(%Title, 18)
+	_search_list.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 4, "window"))
 	%Close.pressed.connect(close)
 	%Front.pressed.connect(func() -> void: _view.front_view())
-	%Mode.pressed.connect(toggle_flat)
 	%Back.pressed.connect(back)
 	_view.sphere_selected.connect(_on_sphere)
 	_view.thread_selected.connect(_on_thread)
 	_view.drill_requested.connect(drill)
 	_view.orders_requested.connect(_on_orders)
 	_orders.chosen.connect(_on_order)
+	_search.text_changed.connect(_on_search_text)
+	_search.text_submitted.connect(func(_t: String) -> void: pick_match(_search_pick))
+	_search.gui_input.connect(_on_search_key)
+	# a press on the chart puts the list away and gives the keys back
+	_view.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
+			_search_list.visible = false
+			_search.release_focus())
 
 
 ## Freed while open (the game quits, a test ends): the clock is let go, never
@@ -75,6 +90,7 @@ func open(detail: MapDetailPanel) -> void:
 			push_error("LEDGER data: " + err)
 		_view.bind(Game.data)
 		_build_lenses()
+		_search.custom_minimum_size.x = Game.data.bal("ledger_search_width_px")
 		Game.state_changed.connect(refresh)
 	if not _has_detail() or detail != _detail:
 		_card_mine = false  # a new screen's column holds nothing of the LEDGER's
@@ -96,6 +112,7 @@ func close() -> void:
 	_opened.clear()       # the provinces opened belong to this viewing
 	_open_order.clear()
 	_view.set_active(false)
+	clear_search()
 	_clear_card()
 	# let go, but not restarted: the player starts the clock again (owner
 	# 2026-10-01)
@@ -176,11 +193,6 @@ func back() -> void:
 	_rebuild(true)
 
 
-func toggle_flat() -> void:
-	_view.set_flat(not _view.is_flat())
-	%Mode.text = "3D" if _view.is_flat() else "2D"
-
-
 func _has_detail() -> bool:
 	return _detail != null and is_instance_valid(_detail)
 
@@ -208,6 +220,7 @@ func _rebuild(keep_camera: bool, select_id: String = "") -> void:
 	_rebuilds += 1
 	var selected := _view.selected()
 	_snap = Ledger.galaxy(Game.data, Game.state, _opened)
+	_search_index = []
 	_view.show_snapshot(_snap, keep_camera, select_id)
 	if selected != "" and _view.selected() == "":
 		_clear_card()  # the selected star is gone (a courier arrived, a report aged out)
@@ -226,6 +239,141 @@ func _crumb() -> void:
 		parts.append(LedgerResolvers.label_of(Game.data, Game.state, "province:" + code))
 	%Crumb.text = " › ".join(parts)
 	%Back.visible = not _open_order.is_empty()
+
+
+# --- search (owner 2026-10-01: 在ledger界面新增一个搜索栏，可以搜索node) ------
+
+func search_box() -> LineEdit:
+	return _search
+
+
+## The matches listed now (LedgerSearch.matches entries).
+func search_matches() -> Array:
+	return _search_found
+
+
+## The listed matches for `text`: the stars of this snapshot and the
+## instances folded into a province's star, by label (LedgerSearch).
+func search(text: String) -> Array:
+	if _search_index.is_empty():
+		_search_index = LedgerSearch.index(Game.data, Game.state, _snap)
+	if text.strip_edges().length() < int(Game.data.bal("ledger_search_min_chars")):
+		return []
+	return LedgerSearch.matches(_search_index, text, int(Game.data.bal("ledger_search_max_matches")))
+
+
+## Empties the box and puts the list away (Escape, a pick, closing).
+func clear_search() -> void:
+	_search.text = ""
+	_search_found = []
+	_search_list.visible = false
+	_search.release_focus()
+
+
+## Goes to the listed match `i` as a double click would: a folded instance's
+## province is opened first, so its star exists; then the star is selected,
+## its web framed and its card put in the left column. A province already
+## open is only selected (a pick never closes one).
+func pick_match(i: int) -> void:
+	if i < 0 or i >= _search_found.size():
+		return
+	var e: Dictionary = _search_found[i]
+	clear_search()
+	go_to(String(e["id"]), String(e["fold"]))
+
+
+## Selects `id` (opening `fold`, its province's star, first when it is folded).
+func go_to(id: String, fold: String = "") -> void:
+	if fold != "" and not _opened.has(fold.substr(9)):
+		drill(fold)
+	if id.begins_with("province:") and _opened.has(id.substr(9)):
+		_view.frame_web(id)
+		_view.select(id)
+		_show_card(LedgerCards.entry(Game.data, Game.state, id, _snap), id)
+		return
+	drill(id)
+
+
+func _on_search_text(text: String) -> void:
+	_search_found = search(text)
+	_search_pick = 0
+	_fill_search_list()
+
+
+func _on_search_key(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key == null or not key.pressed:
+		return
+	match key.keycode:
+		KEY_ESCAPE:
+			clear_search()
+			_search.accept_event()
+		KEY_DOWN, KEY_UP:
+			if not _search_found.is_empty():
+				var step := 1 if key.keycode == KEY_DOWN else -1
+				_search_pick = posmod(_search_pick + step, _search_found.size())
+				_fill_search_list()
+			_search.accept_event()
+
+
+## The list under the box: one row per match, its label and what it is, the
+## one Enter picks lit.
+func _fill_search_list() -> void:
+	for c: Node in _search_rows.get_children():
+		_search_rows.remove_child(c)
+		c.queue_free()
+	_search_list.visible = not _search_found.is_empty()
+	if _search_found.is_empty():
+		return
+	var font_px := int(Game.data.bal("ledger_search_font_px"))
+	var row_px := Game.data.bal("ledger_search_row_px")
+	for i in _search_found.size():
+		var e: Dictionary = _search_found[i]
+		var b := Button.new()
+		b.name = "Match%d" % i
+		b.text = "%s — %s" % [e["label"], e["kind"]]
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		b.clip_text = true
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(0.0, row_px)
+		b.add_theme_font_size_override("font_size", font_px)
+		var lit := i == _search_pick
+		var rest := StyleBoxFlat.new()
+		rest.bg_color = UiPalette.CHIP_PRESSED if lit else Color(0, 0, 0, 0)
+		rest.border_color = UiPalette.GOLD
+		rest.border_width_left = 3 if lit else 0
+		rest.content_margin_left = 10.0
+		rest.content_margin_right = 8.0
+		var hover := UiPalette.chip_style(UiPalette.CHIP_HOVER, UiPalette.GOLD)
+		hover.set_border_width_all(0)
+		hover.border_width_left = 3
+		hover.content_margin_left = 10.0
+		hover.content_margin_right = 8.0
+		hover.content_margin_top = 0.0
+		hover.content_margin_bottom = 0.0
+		b.add_theme_stylebox_override("normal", rest)
+		b.add_theme_stylebox_override("hover", hover)
+		b.add_theme_stylebox_override("pressed", hover)
+		b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		b.add_theme_color_override("font_color", UiPalette.GOLD if lit else UiPalette.TEXT_SOFT)
+		b.add_theme_color_override("font_hover_color", UiPalette.GOLD)
+		b.pressed.connect(pick_match.bind(i))
+		_search_rows.add_child(b)
+	_place_search_list()
+
+
+## Under the box, left-aligned with it, ledger_search_list_width_px wide —
+## held inside the screen.
+func _place_search_list() -> void:
+	var box := _search.get_global_rect()
+	var origin := get_global_rect().position
+	var w := Game.data.bal("ledger_search_list_width_px")
+	var x := minf(box.position.x - origin.x, size.x - w - 8.0)
+	_search_list.position = Vector2(maxf(x, 8.0), box.end.y - origin.y + 4.0)
+	_search_list.size = Vector2(w, 0.0)
+	_search_list.reset_size()
+	_search_list.size.x = w
 
 
 ## One flat tab per data/ledger_lenses.csv row, so a new lens needs no scene edit.

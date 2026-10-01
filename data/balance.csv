@@ -835,6 +835,7 @@ ui_tally_per_mark,10,WAR TABLE: points of a temper gauge one tally mark stands f
 ui_slip_width_px,420,WAR TABLE: design px wide the news slip lies between the two bookmark groups (at most the gap between them)
 ui_slip_height_px,32,WAR TABLE: design px tall the news slip
 ui_slip_drop_px,6,WAR TABLE: design px below the sheet's lower edge the news slip lies
+ui_slip_pad_px,6,"WAR TABLE: design px the news slip keeps clear of the MEASUREMENT and REALM bookmarks it lies between (owner 2026-10-01: log界面挪到measurement和 realm tab中间)"
 ui_table_margin_px,12,WAR TABLE: design px of table between the screen's edge and the papers (leather keeps ScreenLayout.MARGIN 8)
 ui_table_gap_px,16,WAR TABLE: design px of table between the report and the map sheet (leather keeps ScreenLayout.GAP 8)
 ui_table_right_gap_px,8,"WAR TABLE: design px between the map sheet and the council column while it is open (the column is leather, and the audience window needs the map's width: at 1280 it must keep ~668 design px)"
@@ -845,7 +846,6 @@ ui_seal_mini_px,40,WAR TABLE: design px across a waiting minister's miniature (a
 map_army_outline_px_table,1.5,WAR TABLE: design px of the realm-hued ring round a counter's token on the map sheet
 ledger_galaxy_repel,3.5,"LEDGER galaxy (spec 2026-09-30-ledger-galaxy-design §4): repulsion between two stars, scaled by their sizes (2 until owner 2026-10-01: node更分散一点 — each cluster spreads ~30% wider, its stars' mean nearest neighbour 11-16 m → 14-21 m)"
 ledger_galaxy_cross_repel,0.2,"LEDGER galaxy (owner 2026-10-01: 3个cluster布局可以靠的再近一点): two stars of different clusters repel this share as hard as two of one — the long reach of every pair's repulsion, not the anchors, held the clusters ~110 m apart; 1 is the old chart"
-ledger_galaxy_cross_repel_flat,0.6,"LEDGER galaxy: ledger_galaxy_cross_repel for the flat (2D) chart, where every cluster lies in one plane and at 0.2 they bled together (critic, owner 2026-10-01 round 2)"
 ledger_galaxy_spring,0.05,LEDGER galaxy: a link's spring within a cluster
 ledger_galaxy_cross_spring,0.15,LEDGER galaxy: a link's spring across clusters as a share of ledger_galaxy_spring
 ledger_galaxy_rest_m,7,"LEDGER galaxy: a link spring's rest length (metres; 4 until owner 2026-10-01, the nodes more spread)"
@@ -861,7 +861,6 @@ ledger_galaxy_resettle_passes,40,"LEDGER galaxy (final review I1b): passes a red
 ledger_galaxy_pin_share,0.3,"LEDGER galaxy: share of ledger_galaxy_passes a settled chart runs again when a star is dragged and pinned"
 ledger_galaxy_grid_min_stars,300,"LEDGER galaxy (final review I1c): at this many stars a pass repels only pairs nearer than ledger_galaxy_repel_cutoff_m, found through a uniform grid, so one pass fits ledger_galaxy_ms_per_frame (every pair of 629 stars cost ~9 ms a pass)"
 ledger_galaxy_repel_cutoff_m,12,"LEDGER galaxy (final review I1c): beyond this distance two stars do not repel (only at ledger_galaxy_grid_min_stars and above); the grid's cell size. Measured 2026-10-01, every realm province opened one by one (629 stars): worst pass 3.0 ms at 12, 3.6 at 16, 2.5 at 8"
-ledger_galaxy_mode_ease_s,0.6,LEDGER galaxy: seconds the stars ease between the 3D and 2D places
 ledger_galaxy_fly_s,0.6,LEDGER galaxy: seconds the camera flies to a cluster
 ledger_galaxy_other_fade,0.25,LEDGER galaxy: perceived opacity of the other clusters while one is chosen
 ledger_near_fade_start,0.8,"LEDGER galaxy (critic, owner 2026-10-01 round 2): a DIMMED star nearer the camera than this share of the camera's distance to its target starts to fade (another cluster's star seen from inside the chosen one read as a blurred disc)"
@@ -1063,8 +1062,10 @@ ui_title_sweep_s,1.8,TITLE: seconds the camera sweeps from the title's height do
 ui_title_shade,0.92,"TITLE: the darkness of the reading side (left) at its darkest, 0..1"
 ui_title_shade_reach,0.62,"TITLE: how far across the screen the reading side's shade reaches, a share of its width"
 map_compass_size_px_table,0,"WAR TABLE (owner 2026-10-01): the compass lies on the table (TableCompass), so the map draws none and its corner takes no click"
-ui_table_compass_px,104,WAR TABLE: design px across the compass lying on the table under the report
+ui_table_compass_px,104,"WAR TABLE: design px across the compass lying on the table below the report's drawn foot, at most — smaller only as far as the free band there demands (owner 2026-10-01: 指南针被盖住了，往下挪，露出来; it had lain under the report, which now fills its column)"
 ui_table_compass_inset_px,18,WAR TABLE: design px from the table's left edge to the compass
+ui_table_compass_bottom_px,4,WAR TABLE: design px from the screen's foot to the bottom of the compass's band
+ui_table_compass_clear_px,8,"WAR TABLE: design px the compass keeps off the report's drawn foot (its deckle, its tilt and its shadow)"
 ui_landing_lift_s,0.4,"LANDING (owner 2026-10-01: the map is picked up and laid on the table): seconds the title's frame is lifted like a sheet — drawing back, the vellum margin and a shadow appearing"
 ui_landing_carry_s,0.9,"LANDING: seconds it is carried down onto the table to the map sheet's place, turning square"
 ui_landing_settle_s,0.25,LANDING: seconds it settles on the wood (ui_landing_give)
@@ -1077,3 +1078,11 @@ ui_landing_ui_stagger_s,0.09,LANDING: seconds between one piece coming and the n
 ui_landing_ui_s,0.45,LANDING: seconds each piece takes to come (a fade and a slide)
 ui_landing_ui_slide_px,48,"LANDING: design px each piece slides in from (the report from the left, the board from above, the bookmarks from below)"
 ui_landing_voice_after_s,0.3,LANDING: seconds after the sheet is down before the window that speaks comes (the landing seen first)
+ledger_search_width_px,180,"LEDGER search (owner 2026-10-01: 在ledger界面新增一个搜索栏，可以搜索node): design px wide the search box in the LEDGER's top row"
+ledger_search_list_width_px,300,LEDGER search: design px wide the list of matches under the box
+ledger_search_max_matches,8,LEDGER search: at most this many matches listed (a label that begins with the text first)
+ledger_search_min_chars,1,LEDGER search: characters typed before any match is listed
+ledger_search_font_px,15,LEDGER search: design px font of a listed match
+ledger_search_row_px,28,LEDGER search: design px tall each listed match
+ledger_lineage_tie_hops,2,"LEDGER lineage (owner 2026-10-01: 我需要点击一个node的时候，highlight整个lineage — the hybrid): a selected star's tie and kin links walked this many hops (LedgerLineage); its own links and its flow chain are always lit, structure past the first hop never"
+ledger_lineage_far_fade,0.45,"LEDGER lineage: perceived opacity of the ties of its ties (the hops past the first) — dimmer than the lineage proper, brighter than ledger_focus_fade"

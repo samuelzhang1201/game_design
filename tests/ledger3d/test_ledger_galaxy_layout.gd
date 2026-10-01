@@ -25,8 +25,8 @@ func _snap() -> Dictionary:
 func test_one_snapshot_always_lays_out_the_same_way() -> void:
 	var a := LedgerGalaxyLayout.new()
 	var b := LedgerGalaxyLayout.new()
-	a.setup(repo, _snap(), false)
-	b.setup(repo, _snap(), false)
+	a.setup(repo, _snap())
+	b.setup(repo, _snap())
 	a.step(40)
 	b.step(40)
 	for id: String in a.pos:
@@ -35,10 +35,10 @@ func test_one_snapshot_always_lays_out_the_same_way() -> void:
 
 func test_a_star_keeps_its_place_across_a_snapshot() -> void:
 	var lay := LedgerGalaxyLayout.new()
-	lay.setup(repo, _snap(), false)
+	lay.setup(repo, _snap())
 	lay.step(lay.passes_left)
 	var before: Dictionary = lay.pos.duplicate()
-	lay.setup(repo, _snap(), false)
+	lay.setup(repo, _snap())
 	for id: String in before:
 		assert_eq(lay.pos[id], before[id], "kept: " + id)
 	assert_eq(lay.passes_left, 0, "the same stars: nothing settles again (final review I1b)")
@@ -47,25 +47,17 @@ func test_a_star_keeps_its_place_across_a_snapshot() -> void:
 func test_a_new_star_starts_round_its_home() -> void:
 	var lay := LedgerGalaxyLayout.new()
 	var snap := _snap()
-	lay.setup(repo, snap, false)
+	lay.setup(repo, snap)
 	lay.step(lay.passes_left)
 	snap["nodes"].append({"id": "manor:2", "type": "manor", "cluster": "economy", "home_id": "province:p"})
-	lay.setup(repo, snap, false)
+	lay.setup(repo, snap)
 	var d := (lay.pos["manor:2"] as Vector3).distance_to(lay.pos["province:p"])
 	assert_lt(d, 3.0 * repo.bal("ledger_galaxy_rest_m"), "a newly opened manor appears by its province")
 
 
-func test_the_flat_chart_lies_in_the_plane() -> void:
-	var lay := LedgerGalaxyLayout.new()
-	lay.setup(repo, _snap(), true)
-	lay.step(30)
-	for id: String in lay.pos:
-		assert_eq((lay.pos[id] as Vector3).y, 0.0, id)
-
-
 func test_a_pinned_star_stays_where_it_is_held() -> void:
 	var lay := LedgerGalaxyLayout.new()
-	lay.setup(repo, _snap(), false)
+	lay.setup(repo, _snap())
 	lay.pin("character:c0", Vector3(1, 2, 3))
 	lay.step(20)
 	assert_eq(lay.pos["character:c0"], Vector3(1, 2, 3))
@@ -75,7 +67,7 @@ func test_the_clusters_settle_apart() -> void:
 	var s := GameState.new_campaign(repo, 42)
 	var g := Ledger.galaxy(repo, s, {})
 	var lay := LedgerGalaxyLayout.new()
-	lay.setup(repo, g, false)
+	lay.setup(repo, g)
 	lay.step(lay.passes_left)
 	var sums := {}
 	var counts := {}
@@ -106,7 +98,7 @@ func test_the_clusters_settle_apart() -> void:
 ## cluster's stars stand further apart — the court's mean nearest neighbour
 ## over 13 m (11.2 before) — while the clusters still settle apart (above).
 func test_the_clusters_stand_nearer_and_their_stars_spread() -> void:
-	var at := LedgerGalaxyLayout.anchors(repo, false)
+	var at := LedgerGalaxyLayout.anchors(repo)
 	for a: String in ["economy", "war", "court"]:
 		for b: String in ["economy", "war", "court"]:
 			if a < b:
@@ -115,7 +107,7 @@ func test_the_clusters_stand_nearer_and_their_stars_spread() -> void:
 	var s := GameState.new_campaign(repo, 42)
 	var g := Ledger.galaxy(repo, s, {})
 	var lay := LedgerGalaxyLayout.new()
-	lay.setup(repo, g, false)
+	lay.setup(repo, g)
 	lay.step(lay.passes_left)
 	var court: Array[Vector3] = []
 	var sums := {}
@@ -151,7 +143,7 @@ func test_the_kings_core_opens_and_no_discs_touch() -> void:
 	var s := GameState.new_campaign(repo, 42)
 	var g := Ledger.galaxy(repo, s, {})
 	var lay := LedgerGalaxyLayout.new()
-	lay.setup(repo, g, false)
+	lay.setup(repo, g)
 	lay.step(lay.passes_left)
 	var deg := {}
 	var core := {"character:you": true}
@@ -195,26 +187,6 @@ func test_the_kings_core_opens_and_no_discs_touch() -> void:
 	assert_gt(nn / extent, 0.23, "and take more of the court's framed view")
 
 
-## Critic, round 2: the flat chart lays every cluster in one plane, where at
-## the 3D share they bled together — it has its own cross-cluster share, and
-## the 3D chart does not read it.
-func test_the_flat_chart_has_its_own_cross_share() -> void:
-	var s := GameState.new_campaign(repo, 42)
-	var g := Ledger.galaxy(repo, s, {})
-	var lays := []
-	for v: float in [0.2, 1.0]:
-		repo.balance["ledger_galaxy_cross_repel_flat"] = v
-		var flat := LedgerGalaxyLayout.new()
-		flat.setup(repo, g, true)
-		flat.step(30)
-		var deep := LedgerGalaxyLayout.new()
-		deep.setup(repo, g, false)
-		deep.step(30)
-		lays.append([flat, deep])
-	assert_ne(lays[0][0].pos["character:you"], lays[1][0].pos["character:you"], "the flat chart reads it")
-	assert_eq(lays[0][1].pos["character:you"], lays[1][1].pos["character:you"], "the 3D chart does not")
-
-
 func test_a_star_is_sized_by_its_kind() -> void:
 	var pool := LedgerGalaxyLayout.size_of(repo, {"type": "gold"}, 30)
 	assert_eq(pool, repo.bal("ledger_star_pool"), "a pool is one fixed size")
@@ -233,7 +205,7 @@ func test_a_star_is_sized_by_its_kind() -> void:
 func test_a_frame_never_starts_a_pass_past_its_budget() -> void:
 	var snap := _snap()
 	var lay := LedgerGalaxyLayout.new()
-	lay.setup(repo, snap, false)
+	lay.setup(repo, snap)
 	var total := lay.passes_left
 	assert_eq(lay.step_within(0.0), 1, "no budget to spare: one pass")
 	assert_eq(lay.passes_left, total - 1)
@@ -251,33 +223,25 @@ func test_a_frame_never_starts_a_pass_past_its_budget() -> void:
 func test_a_changed_redraw_keeps_the_survivors_and_settles_briefly() -> void:
 	var lay := LedgerGalaxyLayout.new()
 	var snap := _snap()
-	lay.setup(repo, snap, false)
+	lay.setup(repo, snap)
 	assert_eq(lay.passes_left, int(repo.bal("ledger_galaxy_passes")), "the first draw settles fully")
 	lay.step(lay.passes_left)
 	var before: Dictionary = lay.pos.duplicate()
 	snap["nodes"].append({"id": "manor:2", "type": "manor", "cluster": "economy", "home_id": "province:p"})
-	lay.setup(repo, snap, false)
+	lay.setup(repo, snap)
 	for id: String in before:
 		assert_eq(lay.pos[id], before[id], "a survivor keeps its place: " + id)
 	assert_eq(lay.passes_left, int(repo.bal("ledger_galaxy_resettle_passes")), "a short settle")
 	assert_lt(repo.bal("ledger_galaxy_resettle_passes"), repo.bal("ledger_galaxy_passes"))
 	lay.step(5)
 	var left := lay.passes_left
-	lay.setup(repo, snap, false)
+	lay.setup(repo, snap)
 	assert_eq(lay.passes_left, left, "the same stars mid-settle: the settle goes on, not again")
-
-
-func test_laying_the_chart_flat_settles_it_fully() -> void:
-	var lay := LedgerGalaxyLayout.new()
-	lay.setup(repo, _snap(), false)
-	lay.step(lay.passes_left)
-	lay.setup(repo, _snap(), true)
-	assert_eq(lay.passes_left, int(repo.bal("ledger_galaxy_passes")), "another mode is another chart")
 
 
 func test_a_pin_on_a_settled_chart_runs_a_share_of_the_settle() -> void:
 	var lay := LedgerGalaxyLayout.new()
-	lay.setup(repo, _snap(), false)
+	lay.setup(repo, _snap())
 	lay.step(lay.passes_left)
 	lay.pin("character:c0", Vector3(1, 2, 3))
 	assert_eq(lay.passes_left, int(repo.bal("ledger_galaxy_passes") * repo.bal("ledger_galaxy_pin_share")))
@@ -291,12 +255,12 @@ func test_the_grid_pass_is_the_all_pairs_pass_within_its_reach() -> void:
 	var s := GameState.new_campaign(repo, 42)
 	var g := Ledger.galaxy(repo, s, {})
 	var a := LedgerGalaxyLayout.new()
-	a.setup(repo, g, false)
+	a.setup(repo, g)
 	a.step(20)
 	repo.balance["ledger_galaxy_grid_min_stars"] = 0.0
 	repo.balance["ledger_galaxy_repel_cutoff_m"] = 100000.0
 	var b := LedgerGalaxyLayout.new()
-	b.setup(repo, g, false)
+	b.setup(repo, g)
 	b.step(20)
 	for id: String in a.pos:
 		assert_almost_eq(b.pos[id], a.pos[id], Vector3.ONE * 1e-3, id)
@@ -308,8 +272,8 @@ func test_the_grid_layout_is_deterministic() -> void:
 	var g := Ledger.galaxy(repo, s, {})
 	var a := LedgerGalaxyLayout.new()
 	var b := LedgerGalaxyLayout.new()
-	a.setup(repo, g, false)
-	b.setup(repo, g, false)
+	a.setup(repo, g)
+	b.setup(repo, g)
 	a.step(30)
 	b.step(30)
 	for id: String in a.pos:
@@ -324,7 +288,7 @@ func test_the_grid_layout_still_separates_the_clusters() -> void:
 		all[code] = true
 	var g := Ledger.galaxy(repo, s, all)
 	var lay := LedgerGalaxyLayout.new()
-	lay.setup(repo, g, false)
+	lay.setup(repo, g)
 	lay.step(lay.passes_left)
 	var sums := {}
 	var counts := {}

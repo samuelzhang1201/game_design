@@ -1,7 +1,7 @@
 // scenes/ledger/star_motion.gdshaderinc
 // A galaxy star's slight WOBBLE (owner 2026-10-01: 轻微小幅度晃动): each star
 // drifts in a Lissajous loop round its layout place, in the plane facing the
-// camera (so the flat chart's straight-down camera sees it too), its
+// camera, its
 // amplitude `wobble_share` of its DRAWN radius (the instance's scale; owner
 // 2026-10-01, 晃动幅度也可以更大更明显: large enough to read as motion, so
 // link.gdshader moves each link's ends by this same formula), the selected

@@ -70,13 +70,14 @@ func test_a_double_clicked_person_opens_their_card_and_is_selected() -> void:
 	assert_eq(screen.view().selected(), "character:you")
 
 
-func test_the_mode_button_lays_the_chart_flat() -> void:
+## The flat 2D view was removed (owner 2026-10-01: 删掉2D按钮和2d view吧).
+func test_there_is_no_2d_mode() -> void:
 	var r: GameRoot = await _court()
 	var screen := await _open(r)
-	(screen.find_child("Mode", true, false) as Button).pressed.emit()
-	assert_true(screen.view().is_flat())
-	(screen.find_child("Mode", true, false) as Button).pressed.emit()
-	assert_false(screen.view().is_flat())
+	assert_null(screen.find_child("Mode", true, false), "no Mode button")
+	assert_false(screen.has_method("toggle_flat"))
+	assert_false(screen.view().has_method("set_flat"))
+	assert_false(screen.view().has_method("is_flat"))
 
 
 func test_an_order_on_a_pool_runs_through_the_engine() -> void:

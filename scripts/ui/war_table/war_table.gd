@@ -34,16 +34,20 @@ static func dress_screen(screen: Control, bg: ColorRect, map_panel: PanelContain
 	ink_column(column)
 	return true
 
-## The compass lies on the table, not on the map (owner 2026-10-01): under the
-## report's foot, above the news slip; the paper covers it when a card fills
-## the column. `view` is the screen's map, which it turns north on a click.
+## The compass lies on the table, not on the map (owner 2026-10-01): below the
+## report's drawn foot, where the news slip lay before it moved between the
+## bookmark groups — sized to the band left there, never covered. `view` is the screen's map, which it turns north on a click.
 static func place_compass(screen: Control, column: Control, view: Map3DView) -> TableCompass:
 	if not UiPalette.war_table() or view == null:
 		return null
 	var c := TableCompass.new()
 	c.view = view
+	c.column = column
 	screen.add_child(c)
-	screen.move_child(c, column.get_index())  # under the paper
+	# over the column in the tree, so a press on the wheel reaches it where
+	# the column's rect runs on below its drawn paper; it is never drawn over
+	# the paper (TableCompass.fit keeps it below the drawn foot)
+	screen.move_child(c, column.get_index() + 1)
 	return c
 
 ## The map's vellum sheet: a deckled edge, two ink rules round the map.

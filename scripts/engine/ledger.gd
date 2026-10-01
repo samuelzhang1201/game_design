@@ -194,10 +194,11 @@ static func snapshot(repo: DataRepository, state: GameState, lens: String, focus
 ## town) outside a controlled or opened province. Then the fold: each
 ## foldable node not in an opened province becomes its province's, its links
 ## re-pointed there and merged (counted; flows summed within one Intel
-## level). `opened` is a set of province codes. Nodes and links by id.
+## level). `opened` is a set of province codes. Nodes and links by id;
+## `folded` maps each folded instance's id to its province's star id.
 static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -> Dictionary:
 	var out := {"lens": "galaxy", "focus_id": "", "focus_lost": false, "day": state.absolute_day(),
-		"nodes": [], "links": [], "loops": []}
+		"nodes": [], "links": [], "loops": [], "folded": {}}
 	LedgerResolvers.begin_memo()
 	var controlled := {}
 	for code: String in MapManors.controlled_provinces(repo, state):
@@ -324,6 +325,9 @@ static func galaxy(repo: DataRepository, state: GameState, opened: Dictionary) -
 			merged[mid] = m
 	for id: String in fold:
 		nodes.erase(id)
+	# what each folded instance folded into (its province's star), for the
+	# LEDGER's search: a folded manor is found by opening its province
+	out["folded"] = fold
 	# a planned row touching at least one ghost (planned) type (owner
 	# ruling, fix round 1, IMPORTANT 2): its ghost end is its type sphere;
 	# its other end is that type's pool sphere if one stands, else the

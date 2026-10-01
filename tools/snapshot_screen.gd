@@ -159,12 +159,14 @@ var _show_on_map := false
 ## intelligence). --ledger-open CODE then opens that province and
 ## --ledger-select ID selects that star (its web framed) — both by emitting
 ## the view's drill_requested, what a double click on the star emits, not by
-## a real double click — and --ledger-mode 2d presses Mode. The moment is
-## `ledger`, once the chart has settled.
+## a real double click. --ledger-search TEXT clicks the search box and types
+## TEXT into it key by key (its list of matches shown); --ledger-search-pick
+## then presses Enter. The moment is `ledger`, once the chart has settled.
 var _ledger := ""
+var _ledger_search := ""
+var _ledger_search_pick := false
 var _ledger_open := ""
 var _ledger_select := ""
-var _ledger_mode := ""
 ## --war-room (with --screen root): the WAR ROOM through real input — its tab,
 ## then --war-sheet N lays that sheet (WarRoomView.swap_to; the later steps wait
 ## until it is laid and the roll is over), --war-zoom M leans the camera to M
@@ -280,10 +282,10 @@ func _ready() -> void:
 			_ledger = args[i + 1]
 		elif args[i] == "--ledger-open":
 			_ledger_open = args[i + 1]
+		elif args[i] == "--ledger-search":
+			_ledger_search = args[i + 1]
 		elif args[i] == "--ledger-select":
 			_ledger_select = args[i + 1]
-		elif args[i] == "--ledger-mode":
-			_ledger_mode = args[i + 1]
 		elif args[i] == "--war-sheet":
 			_war_sheet = int(args[i + 1])
 		elif args[i] == "--war-piece":
@@ -321,6 +323,7 @@ func _ready() -> void:
 		push_warning("--war-drag needs --war-piece (the piece to rake); there is nothing to drag")
 	_ruler_open = args.has("--ruler-open")
 	_march_confirm = args.has("--march-confirm")
+	_ledger_search_pick = args.has("--ledger-search-pick")
 	_march_commit = args.has("--march-commit")
 	_dev = args.has("--dev")
 	_pause_menu = args.has("--pause-menu")
@@ -414,6 +417,16 @@ func _real_click(c: Control, local: Vector2) -> void:
 		e.pressed = down
 		e.position = c.get_global_transform_with_canvas() * local
 		e.global_position = e.position
+		c.get_viewport().push_input(e, true)
+
+
+func _real_key(c: Control, code: Key, unicode: int) -> void:
+	for down in [true, false]:
+		var e := InputEventKey.new()
+		e.keycode = code
+		e.physical_keycode = code
+		e.unicode = unicode if down else 0
+		e.pressed = down
 		c.get_viewport().push_input(e, true)
 
 
@@ -730,7 +743,8 @@ func _spy_step() -> void:
 				Game.state.couriers.size(), int(Game.state.metrics.get("treasury", 0))])
 
 
-## --ledger LENS [--ledger-open CODE] [--ledger-select ID] [--ledger-mode 2d]:
+## --ledger LENS [--ledger-open CODE] [--ledger-select ID] [--ledger-search TEXT
+## [--ledger-search-pick]]:
 ## the LEDGER through its own controls, then the moment `ledger`.
 func _ledger_step() -> void:
 	var start := 30
@@ -753,11 +767,20 @@ func _ledger_step() -> void:
 	elif _frames == start + 14 and _ledger_select != "":
 		screen.view().drill_requested.emit(_ledger_select)
 		print("ledger: selected %s" % screen.view().selected())
-	elif _frames == start + 16 and _ledger_mode == "2d":
-		var mode := screen.find_child("Mode", true, false) as Button
-		_real_click(mode, mode.size * 0.5)
-		print("ledger: flat=%s" % screen.view().is_flat())
 	elif _frames == start + 20:
+		screen.view().settle_now()
+	elif _frames == start + 24 and _ledger_search != "":
+		var box := screen.search_box()
+		_real_click(box, box.size * 0.5)
+		for ch in _ledger_search:
+			_real_key(box, OS.find_keycode_from_string(ch.to_upper()) if ch != " " else KEY_SPACE, ch.unicode_at(0))
+	elif _frames == start + 26 and _ledger_search != "":
+		print("ledger: search '%s' -> %s" % [screen.search_box().text, screen.search_matches().map(
+			func(e: Dictionary) -> String: return "%s (%s)" % [e["label"], e["kind"]])])
+	elif _frames == start + 28 and _ledger_search_pick:
+		_real_key(screen.search_box(), KEY_ENTER, 0)
+		print("ledger: picked %s, opened %s" % [screen.view().selected(), screen.opened().keys()])
+	elif _frames == start + 32 and _ledger_search_pick:
 		screen.view().settle_now()
 	elif _frames == start + 40:
 		_moment("ledger")

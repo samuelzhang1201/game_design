@@ -18,7 +18,6 @@ signal orders_requested(id: String, at: Vector2)
 
 const CLICK_SLOP := 10.0
 const EGO_AT_REST := "character:you"  # the player, whose ties are lit while no one is selected
-const FLAT_PITCH := -89.9          # the flat chart, seen straight down
 const STAR_SEGMENTS := 24          # a star sphere's radial segments
 const STAR_RINGS := 12             # and its rings
 const TITLE_INK_BLEND := 0.45      # a cluster's title: its colour this far toward the label ink
@@ -51,14 +50,10 @@ var _nodes: Dictionary = {}
 var _order: Array[String] = []
 var _size: Dictionary = {}
 var _drawn: Dictionary = {}
-var _from: Dictionary = {}
-var _mode_left := 0.0
-var _flat := false
 var _segs: Array = []                 # the links drawn now: every styled strand whose two ends are apart
 var _styled: Array = []               # every strand of every link, styled at the last restyle (ends refreshed as the chart moves)
 var _link_arrays: Array = []          # LedgerLinkMesh.arrays of _styled, its ends moved in place while settling
 var _styled_ws := 0.0                 # the window scale _styled was styled at
-var _mode_pos: Dictionary = {}        # true (flat) / false (3D) -> {"pos": the layout's places, "settled": bool}
 var _frame_ids: Array = []            # what the camera frames while _framed
 var _title_font: Font
 var _star_cols := PackedColorArray()  # what each star wears, in _order (the MultiMesh's own copy is the renderer's)
@@ -71,7 +66,8 @@ var _spark_ids: Array[String] = []    # the stars the current is dealt to: _whol
 var _custom: Dictionary = {}          # id -> its seed and its current's weight (LedgerStarMotion.custom_of)
 var _spark_cols := PackedColorArray() # the colours dealt to the current, in _spark_ids
 var _buffers: Dictionary = {}         # MultiMesh node name -> the instance buffer last handed to it
-var _near: Dictionary = {}
+var _near: Dictionary = {}           # the selected star's lineage: id -> LedgerLineage.FULL / FAR
+var _lineage_links: Dictionary = {}  # and its links: link id -> LedgerLineage.FULL / FAR
 var _star_mat: ShaderMaterial
 var _faint_mat: ShaderMaterial
 var _spark_mat: ShaderMaterial
@@ -216,7 +212,7 @@ func show_snapshot(snap: Dictionary, keep_camera: bool, select_id: String = "") 
 	_size.clear()
 	for id: String in _order:
 		_size[id] = drawn_radius(_nodes[id], int(degree.get(id, 0)))
-	_lay.setup(_repo, snap, _flat)
+	_lay.setup(_repo, snap)
 	for id: String in _drawn.keys():
 		if not _nodes.has(id):
 			_drawn.erase(id)
@@ -269,21 +265,26 @@ func focus_cluster(cluster_id: String) -> void:
 	_update_hud()
 
 
-## Frame a star and its neighbours by its live ties.
+## Frame a star and its lineage at full strength (LedgerLineage: its links,
+## its flow chain, its own ties — not the dimmer ties of its ties), by LIVE
+## links only: a planned (ghost) link's far end does not pull the camera
+## (Task 11 fix round 4, T1c).
 func frame_web(id: String) -> void:
 	if not _nodes.has(id):
 		return
 	var ids: Array = [id]
-	for l: Dictionary in _snap.get("links", []):
-		# its LIVE ties only: a planned (ghost) link's far end does not pull
-		# the camera (Task 11 fix round 4, T1c)
-		if String(l.get("status", "live")) == "planned":
-			continue
-		if String(l["from"]) == id:
-			ids.append(String(l["to"]))
-		elif String(l["to"]) == id:
-			ids.append(String(l["from"]))
+	var stars: Dictionary = lineage(id, false)["stars"]
+	for s: String in stars:
+		if s != id and int(stars[s]) == LedgerLineage.FULL:
+			ids.append(s)
 	_frame_on(ids, false)
+
+
+## The lineage a selection of `id` lights (LedgerLineage.of over this
+## snapshot, ledger_lineage_tie_hops); `with_planned` false leaves out a
+## planned link's far end.
+func lineage(id: String, with_planned: bool = true) -> Dictionary:
+	return LedgerLineage.of(_snap, id, _look, int(_repo.bal("ledger_lineage_tie_hops")), with_planned)
 
 
 ## Frame an opened province and the stars it unfolded (its manors, towns
@@ -297,56 +298,6 @@ func frame_opened(province_id: String) -> void:
 		if String((_nodes[id] as Dictionary).get("home_id", "")) == province_id:
 			ids.append(id)
 	_frame_on(ids, false)
-
-
-## Lay the chart flat (2D, seen straight down) or stand it up again; the
-## stars ease between their two places over ledger_galaxy_mode_ease_s.
-func set_flat(on: bool) -> void:
-	if on == _flat:
-		return
-	_flat = on
-	_sky_mat.set_shader_parameter("flat_mode", 1.0 if on else 0.0)
-	if _snap.is_empty():
-		_orbit.pitch = FLAT_PITCH if on else _repo.bal("ledger_camera_pitch_deg")
-		_apply_camera()
-		return
-	_from = _drawn.duplicate()
-	_mode_pos[not on] = {"pos": _lay.pos.duplicate(), "settled": _lay.settled()}
-	_lay.setup(_repo, _snap, on)
-	_restore_mode_places(on)
-	_mode_left = _repo.bal("ledger_galaxy_mode_ease_s")
-	_orbit.yaw = 0.0
-	_orbit.pitch = FLAT_PITCH if on else _repo.bal("ledger_camera_pitch_deg")
-	_frame_on(_cluster_ids(), true)
-
-
-## Each mode keeps its own places (a round trip 3D → 2D → 3D gives back the
-## chart as it stood, not a flattened one): the places this mode last held
-## come back for every star still drawn — a star pinned meanwhile keeps
-## where the pointer put it, lifted to its old height in 3D — and a chart
-## that came back whole and settled stays settled.
-func _restore_mode_places(on: bool) -> void:
-	var saved: Dictionary = _mode_pos.get(on, {})
-	if saved.is_empty():
-		return
-	var pos: Dictionary = saved["pos"]
-	var whole := true
-	for id: String in _order:
-		if not pos.has(id):
-			whole = false
-			continue
-		var was: Vector3 = pos[id]
-		if _lay.pinned.has(id):
-			var now: Vector3 = _lay.pos[id]
-			_lay.pos[id] = Vector3(now.x, 0.0, now.z) if on else Vector3(now.x, was.y, now.z)
-		else:
-			_lay.pos[id] = was
-	if whole and bool(saved["settled"]):
-		_lay.passes_left = 0
-
-
-func is_flat() -> bool:
-	return _flat
 
 
 func cluster() -> String:
@@ -432,7 +383,6 @@ func star_colour(id: String) -> Color:
 func settle_now() -> void:
 	while not _lay.settled():
 		_lay.step(10)
-	_mode_left = 0.0
 	_sync_drawn()
 	_place_stars()
 	_relay_links()
@@ -456,11 +406,8 @@ func screen_pos_of(id: String) -> Variant:
 # --- stars, links, haze ------------------------------------------------------
 
 func _sync_drawn() -> void:
-	var total := maxf(_repo.bal("ledger_galaxy_mode_ease_s"), 0.001)
-	var t := 1.0 if _mode_left <= 0.0 else 1.0 - _mode_left / total
 	for id: String in _order:
-		var to: Vector3 = _lay.pos[id]
-		_drawn[id] = (_from.get(id, to) as Vector3).lerp(to, t) if t < 1.0 else to
+		_drawn[id] = _lay.pos[id]
 
 
 func _build_stars() -> void:
@@ -563,9 +510,9 @@ func _place_stars() -> void:
 
 ## How much of a star stands as the camera nears it: 1, down to 0 between
 ## ledger_near_fade_start and _end of the camera's distance to its target
-## (a share, so it holds at every zoom); the flat chart's camera never nears.
+## (a share, so it holds at every zoom).
 func near_fade(id: String) -> float:
-	if _flat or not _drawn.has(id):
+	if not _drawn.has(id):
 		return 1.0
 	var ref := maxf(_orbit.distance, 1e-3)
 	var d := (_drawn[id] as Vector3).distance_to(_camera.transform.origin)
@@ -591,12 +538,11 @@ func _look(l: Dictionary) -> String:
 ## Colours and fades from the selection and the chosen cluster, then the links.
 func _restyle() -> void:
 	_near.clear()
+	_lineage_links.clear()
 	if _selected != "":
-		_near[_selected] = true
-		for l: Dictionary in _snap.get("links", []):
-			if String(l["from"]) == _selected or String(l["to"]) == _selected:
-				_near[String(l["from"])] = true
-				_near[String(l["to"])] = true
+		var lin := lineage(_selected)
+		_near = lin["stars"]
+		_lineage_links = lin["links"]
 	_star_cols.resize(_order.size())
 	for i in _order.size():
 		_star_cols[i] = _star_colour(_order[i])
@@ -614,7 +560,13 @@ func _star_colour(id: String) -> Color:
 	if String(n.get("status", "live")) == "planned":
 		c = Color.from_hsv(c.h, c.s * _repo.bal("ledger_star_planned_sat"), c.v)
 		f = _repo.bal("ledger_star_planned_fade")
-	if _selected != "" and not _near.has(id):
+	if _selected != "" and _near.has(id):
+		# the selected lineage reads WHOLE, whatever the tab (owner
+		# 2026-10-01): at its own level, never under the tab's dimming
+		if int(_near[id]) == LedgerLineage.FAR:
+			f = minf(f, _repo.bal("ledger_lineage_far_fade"))
+		return Color(c, f)
+	if _selected != "":
 		f = minf(f, _repo.bal("ledger_focus_fade"))
 	if _cluster != "all" and _cluster_of(id) != _cluster:
 		f = minf(f, _repo.bal("ledger_galaxy_other_fade"))
@@ -658,7 +610,6 @@ func _update_link_uniforms() -> void:
 	var h := float(maxi(_viewport.size.y, 1))
 	for m: ShaderMaterial in [_link_mat, _spark_mat]:
 		m.set_shader_parameter("px_per_dist", 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / h)
-		m.set_shader_parameter("ortho_m_per_px", _camera.size / h if _flat else 0.0)
 	_link_mat.set_shader_parameter("star_cap_px", _repo.bal("ledger_star_max_px") * _window_scale())
 	_spark_mat.set_shader_parameter("ring_out_px", LedgerStarMotion.ring_out_px(_repo, RING_GAP_RINGS, _window_scale()))
 	_spark_mat.set_shader_parameter("ring_band_px", LedgerStarMotion.ring_band_px(_repo, _window_scale()))
@@ -813,7 +764,7 @@ func _lit_web(l: Dictionary) -> bool:
 	var a := String(l["from"])
 	var b := String(l["to"])
 	if _selected != "":
-		return a == _selected or b == _selected
+		return int(_lineage_links.get(String(l["id"]), 0)) == LedgerLineage.FULL
 	if not _nodes.has(EGO_AT_REST) or (a != EGO_AT_REST and b != EGO_AT_REST):
 		return false
 	var c := _cluster_of(EGO_AT_REST)
@@ -821,7 +772,8 @@ func _lit_web(l: Dictionary) -> bool:
 
 
 ## How much of a link shows, as the EYE reads it (spec §6): the selected
-## star's web lit, the rest at ledger_focus_fade; at rest the court is read
+## star's lineage lit (its far ties at ledger_lineage_far_fade) whatever the
+## tab, the rest at ledger_focus_fade; at rest the court is read
 ## one person's web at a time (the player's ties lit, other ties at
 ## ledger_tie_rest_fade) and a link crossing clusters stands back at
 ## ledger_cross_rest_fade; a chosen cluster dims links that do not touch it.
@@ -830,7 +782,15 @@ func _link_fade(l: Dictionary) -> float:
 	var b := String(l["to"])
 	var f := 1.0
 	if _selected != "":
-		f = 1.0 if a == _selected or b == _selected else _repo.bal("ledger_focus_fade")
+		# a link of the selected lineage reads at its own level, whatever the
+		# tab: the tab's dimming is only for what lies outside it
+		match int(_lineage_links.get(String(l["id"]), 0)):
+			LedgerLineage.FULL:
+				return 1.0
+			LedgerLineage.FAR:
+				return _repo.bal("ledger_lineage_far_fade")
+			_:
+				f = _repo.bal("ledger_focus_fade")
 	elif _nodes.has(EGO_AT_REST) and (_look(l) in ["tie", "kin"] or (_cluster_of(a) == _cluster_of(EGO_AT_REST)
 			and _cluster_of(b) == _cluster_of(EGO_AT_REST))):
 		# at rest the player's own cluster (the court) is read one web at a
@@ -923,7 +883,7 @@ func _frame_target(ids: Array) -> Array:
 	var top := (_repo.bal("ledger_frame_top_px") + _title_reach_px()) / sz.y
 	var bottom := _repo.bal("ledger_frame_bottom_px") / sz.y
 	var safe := Rect2(side, top, maxf(1.0 - 2.0 * side, 0.1), maxf(1.0 - top - bottom, 0.1))
-	var pitch := FLAT_PITCH if _flat else _repo.bal("ledger_camera_pitch_deg")
+	var pitch := _repo.bal("ledger_camera_pitch_deg")
 	var f := LedgerOrbit.frame(points, 0.0, pitch, _camera.fov, sz.x / sz.y, safe)
 	if f.is_empty():
 		return []
@@ -947,23 +907,15 @@ func _ease_camera(t: float) -> void:
 
 
 func _apply_camera() -> void:
-	_camera.projection = Camera3D.PROJECTION_ORTHOGONAL if _flat else Camera3D.PROJECTION_PERSPECTIVE
-	if _flat:
-		_camera.size = _orbit.distance * 2.0 * tan(deg_to_rad(_camera.fov) * 0.5)
 	_camera.transform = _orbit.pose()
 
 
 func _process(delta: float) -> void:
 	if _repo == null or _snap.is_empty():
 		return
-	var moved := false
-	if not _lay.settled():
-		_lay.step_within(_repo.bal("ledger_galaxy_ms_per_frame"))
-		moved = true
-	if _mode_left > 0.0:
-		_mode_left = maxf(_mode_left - delta, 0.0)
-		moved = true
+	var moved := not _lay.settled()
 	if moved:
+		_lay.step_within(_repo.bal("ledger_galaxy_ms_per_frame"))
 		_settle_frame()
 	if _fly_left > 0.0:
 		_fly_left = maxf(_fly_left - delta, 0.0)
@@ -976,7 +928,7 @@ func _process(delta: float) -> void:
 		_update_hud()
 
 
-## One frame of a moving chart (settling, or easing between 2D and 3D): the
+## One frame of a moving chart (settling): the
 ## stars, the links' ends and the haze follow, and a framed camera frames
 ## what it framed again — mid-flight, the flight's end is re-aimed instead.
 func _settle_frame() -> void:
@@ -1002,8 +954,6 @@ func _settle_frame() -> void:
 ## Metres per SubViewport px at a point.
 func _m_per_px_at(p: Vector3) -> float:
 	var h := float(maxi(_viewport.size.y, 1))
-	if _flat:
-		return _camera.size / h
 	return p.distance_to(_camera.global_position) * 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / h
 
 
@@ -1057,9 +1007,12 @@ func _update_hud() -> void:
 		if star_colour(id).a >= 1.0:
 			keep[id] = true
 	if _selected != "":
-		for id: String in _near:
-			if not named.has(id):
-				named.append(id)
+		# its lineage at full strength first; the far ties only where there
+		# is room (they are dimmer, and a dimmed name drops rather than wander)
+		for level: int in [LedgerLineage.FULL, LedgerLineage.FAR]:
+			for id: String in _near:
+				if int(_near[id]) == level and not named.has(id):
+					named.append(id)
 	if _hovered != "" and not named.has(_hovered):
 		named.append(_hovered)
 	var titles: Array = []
@@ -1108,7 +1061,7 @@ func _update_hud() -> void:
 		var px := strong_px if big.has(id) else label_px
 		var e := {"id": id, "text": drawn_name(id), "px": px, "at": (at as Vector2) - Vector2(0, r + lift),
 			"alt": (at as Vector2) + Vector2(0, r + lift + px), "beside": [at, r],
-			"strong": id == _selected or _near.has(id),
+			"strong": id == _selected or int(_near.get(id, 0)) == LedgerLineage.FULL,
 			# a star's gauges only for the selected and the hovered star (Task
 			# 11 fix round 3, S1a: a row on every hub only repeated the next)
 			"props": _nodes[id].get("props", []) if id == _selected or id == _hovered else []}
@@ -1123,7 +1076,7 @@ func _update_hud() -> void:
 			e["ring_at"] = at
 			e["beside"] = [at, float(e["ring"]) + _repo.bal("ledger_ring_px")]  # clear of its ring
 			e["first"] = true  # placed first; no other name touches its label (T1a)
-		if id == _selected or _near.has(id):
+		if id == _selected or int(_near.get(id, 0)) == LedgerLineage.FULL:
 			e["lit"] = true    # off the planned dashes where a near place allows (T1b)
 		elif fade < 1.0:
 			e["dim"] = true    # a ghost name drops rather than wander (T1a)
@@ -1257,9 +1210,8 @@ func seg_ends(seg: Dictionary) -> Array:
 	if shift == 0.0:
 		return [a, b]
 	var mid := (a + b) * 0.5
-	# link.gdshader's rule: toward the eye, which for the flat chart's
-	# orthographic camera is the camera's own back, not the eye's position
-	var to_cam := _camera.global_transform.basis.z if _flat else _camera.global_position - mid
+	# link.gdshader's rule: toward the eye
+	var to_cam := _camera.global_position - mid
 	var across := (b - a).cross(to_cam)
 	if across.length_squared() < 1e-8:
 		return [a, b]
@@ -1324,7 +1276,7 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _pan_m_per_px() -> float:
-	return _camera.size / maxf(size.y, 1.0) if _flat else _orbit.metres_per_px(_camera.fov, size.y)
+	return _orbit.metres_per_px(_camera.fov, size.y)
 
 
 ## The hovered star's id, or "".
@@ -1414,8 +1366,7 @@ func _on_drag(mm: InputEventMouseMotion) -> void:
 	# held under the pointer must not have the camera re-frame beneath it
 	_framed = false
 	if _button == MOUSE_BUTTON_RIGHT:
-		if not _flat:
-			_orbit.turn(mm.relative.x, mm.relative.y, _repo.bal("ledger_turn_deg_per_px"))
+		_orbit.turn(mm.relative.x, mm.relative.y, _repo.bal("ledger_turn_deg_per_px"))
 	elif _drag_id != "":
 		_drag_to(_drag_id, mm.position)
 	else:
@@ -1424,8 +1375,7 @@ func _on_drag(mm: InputEventMouseMotion) -> void:
 	accept_event()
 
 
-## A dragged star slides in the plane through it facing the camera (in the
-## flat chart, on the plane) and is PINNED there for this viewing; the rest
+## A dragged star slides in the plane through it facing the camera and is PINNED there for this viewing; the rest
 ## settle round it.
 func _drag_to(id: String, pos: Vector2) -> void:
 	if not _drawn.has(id):
@@ -1442,8 +1392,6 @@ func _drag_to(id: String, pos: Vector2) -> void:
 	if t <= 0.0:
 		return
 	var at := o + d * t
-	if _flat:
-		at.y = 0.0
 	_lay.pin(id, at)
 	_drawn[id] = _lay.pos[id]
 	_place_stars()

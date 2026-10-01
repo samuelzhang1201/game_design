@@ -13,13 +13,11 @@ extends RefCounted
 ## or drops stars only a short settle (final review I1b) — and `step` runs a
 ## few passes at a time so the chart settles over some frames and then stops.
 ## Past ledger_galaxy_grid_min_stars a pass repels only pairs within
-## ledger_galaxy_repel_cutoff_m, found through a uniform grid (I1c). The flat
-## chart is the same model in the plane. No nodes; the FORCES use no clock
+## ledger_galaxy_repel_cutoff_m, found through a uniform grid (I1c). No nodes; the FORCES use no clock
 ## (only `step_within` reads one, to stop a frame's share inside its budget).
 
 var pos: Dictionary = {}        # node id -> Vector3, where it stands now
 var pinned: Dictionary = {}     # node id -> true: held where the pointer put it (this viewing only)
-var flat := false
 var passes_left := 0
 
 var _repo: DataRepository
@@ -49,34 +47,31 @@ static func size_of(repo: DataRepository, node: Dictionary, degree: int) -> floa
 	return clampf(r, repo.bal("ledger_star_min"), repo.bal("ledger_star_max"))
 
 
-## cluster -> its anchor (data/ledger_clusters.csv), the 2D one when flat.
-static func anchors(repo: DataRepository, as_flat: bool) -> Dictionary:
+## cluster -> its anchor (data/ledger_clusters.csv).
+static func anchors(repo: DataRepository) -> Dictionary:
 	var out := {}
 	for c: Dictionary in repo.ledger_clusters:
-		out[String(c["cluster"])] = c["at2"] if as_flat else c["at"]
+		out[String(c["cluster"])] = c["at"]
 	return out
 
 
 ## An offset of about `r` hashed from the id: where a new star first stands.
-static func jitter(id: String, r: float, as_flat: bool) -> Vector3:
+static func jitter(id: String, r: float) -> Vector3:
 	var h := id.hash()
 	var a := float(h & 0xFFFF) / 65535.0 * TAU
 	var b := float((h >> 16) & 0xFFFF) / 65535.0
 	var reach := r * (0.5 + 0.5 * b)
-	return Vector3(cos(a) * reach, 0.0 if as_flat else (b - 0.5) * r, sin(a) * reach)
+	return Vector3(cos(a) * reach, (b - 0.5) * r, sin(a) * reach)
 
 
-## Takes a snapshot: every star it already placed keeps its place (flattened
-## when flat), a new one starts round its home star (or its cluster's
+## Takes a snapshot: every star it already placed keeps its place, a new one starts round its home star (or its cluster's
 ## anchor), and a pin on a star no longer drawn is let go. What runs then
-## (final review I1b): the first chart, or the chart laid flat or stood up,
-## settles fully (ledger_galaxy_passes); the same stars as before run nothing
+## (final review I1b): the first chart settles fully (ledger_galaxy_passes); the same stars as before run nothing
 ## more than they had left; other stars, ledger_galaxy_resettle_passes.
-func setup(repo: DataRepository, snap: Dictionary, as_flat: bool) -> void:
+func setup(repo: DataRepository, snap: Dictionary) -> void:
 	_repo = repo
-	var fresh := pos.is_empty() or as_flat != flat
-	flat = as_flat
-	var at := anchors(repo, as_flat)
+	var fresh := pos.is_empty()
+	var at := anchors(repo)
 	var degree := {}
 	for l: Dictionary in snap["links"]:
 		for e: String in [String(l["from"]), String(l["to"])]:
@@ -107,7 +102,7 @@ func setup(repo: DataRepository, snap: Dictionary, as_flat: bool) -> void:
 	var kept := {}
 	for id: String in _ids:
 		if pos.has(id):
-			kept[id] = _flat(pos[id])
+			kept[id] = pos[id]
 	var unchanged := not fresh and kept.size() == _ids.size() and pos.size() == _ids.size()
 	for i in _ids.size():
 		if kept.has(_ids[i]):
@@ -116,7 +111,7 @@ func setup(repo: DataRepository, snap: Dictionary, as_flat: bool) -> void:
 		var base: Vector3 = _anchor[i]
 		if h >= 0:
 			base = kept.get(_ids[h], _anchor[h])
-		kept[_ids[i]] = _flat(base + jitter(_ids[i], repo.bal("ledger_galaxy_rest_m") * 2.0, as_flat))
+		kept[_ids[i]] = base + jitter(_ids[i], repo.bal("ledger_galaxy_rest_m") * 2.0)
 	pos = kept
 	for id: String in pinned.keys():
 		if not _index.has(id):
@@ -163,7 +158,7 @@ func pin(id: String, at: Vector3) -> void:
 	if not _index.has(id):
 		return
 	pinned[id] = true
-	pos[id] = _flat(at)
+	pos[id] = at
 	if passes_left <= 0:
 		_total = int(_repo.bal("ledger_galaxy_passes"))
 		passes_left = int(_total * _repo.bal("ledger_galaxy_pin_share"))
@@ -212,9 +207,7 @@ func step(passes: int) -> void:
 	f.resize(n)
 	var grid := float(n) >= _repo.bal("ledger_galaxy_grid_min_stars")
 	var cut := _repo.bal("ledger_galaxy_repel_cutoff_m")
-	# the flat chart lays every cluster in one plane, where they spread wider
-	# and bled together at the 3D share (critic, round 2): its own share
-	var cross := _repo.bal("ledger_galaxy_cross_repel_flat" if flat else "ledger_galaxy_cross_repel")
+	var cross := _repo.bal("ledger_galaxy_cross_repel")
 	var cl := _cluster_of
 	# two stars nearer than their radii and ledger_galaxy_gap_m are pushed
 	# apart by ledger_galaxy_gap_push of the overlap besides (owner 2026-10-01:
@@ -261,10 +254,7 @@ func step(passes: int) -> void:
 		for i in n:
 			if pinned.has(_ids[i]):
 				continue
-			var s := (f[i] * cool).limit_length(cap)
-			if flat:
-				s.y = 0.0
-			p[i] += s
+			p[i] += (f[i] * cool).limit_length(cap)
 		passes_left -= 1
 	for i in n:
 		pos[_ids[i]] = p[i]
@@ -341,6 +331,3 @@ func _repel_near(p: PackedVector3Array, half: PackedFloat32Array, f: PackedVecto
 					f[j] -= push
 			f[i] = fi
 
-
-func _flat(v: Vector3) -> Vector3:
-	return Vector3(v.x, 0.0, v.z) if flat else v
