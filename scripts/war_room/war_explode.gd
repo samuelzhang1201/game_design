@@ -10,12 +10,13 @@ extends RefCounted
 static var overrides: Dictionary = {}
 
 
-## The parts model of `arm` (archers wear the spearman's kit).
+## The parts model of `arm`, its own file only: archers get none until they
+## have their own model (Ruling 23 — their kit rows, sallet, jack and buckler,
+## would label a spearman's close helm and heater).
 static func parts_path(arm: String) -> String:
-	var a := "infantry" if arm == "archers" else arm
-	if overrides.has(a):
-		return String(overrides[a])
-	return "res://assets/3D/units/%s/%s_parts.glb" % [a, a]
+	if overrides.has(arm):
+		return String(overrides[arm])
+	return "res://assets/3D/units/%s/%s_parts.glb" % [arm, arm]
 
 
 ## Part name -> its offset when fully apart: straight out from `centre` by

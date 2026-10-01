@@ -343,6 +343,17 @@ func test_take_apart_shows_only_when_the_arms_parts_exist() -> void:
 	assert_eq((panel.get_node("%TakeApart") as Button).visible, want)
 
 
+## The owner's parts exports are installed: infantry and cavalry take apart,
+## archers do not until they have their own model (Ruling 23).
+func test_take_apart_shows_for_the_installed_arms_only() -> void:
+	panel.open_for(code)
+	for arm: String in ["infantry", "cavalry"]:
+		panel._show_arm(arm)
+		assert_true((panel.get_node("%TakeApart") as Button).visible, arm)
+	panel._show_arm("archers")
+	assert_false((panel.get_node("%TakeApart") as Button).visible, "archers")
+
+
 func test_take_apart_is_hidden_for_an_unmodelled_arm() -> void:
 	panel.open_for(code)
 	panel._show_arm("artillery")

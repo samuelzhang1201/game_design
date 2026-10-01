@@ -46,9 +46,40 @@ func test_parts_fly_straight_out_from_the_centre() -> void:
 	assert_almost_eq((offs["core"] as Vector3).y, 0.5, 0.0001, "a part at the centre goes up")
 
 
-func test_archers_take_the_spearmans_parts() -> void:
-	assert_eq(WarExplode.parts_path("archers"), WarExplode.parts_path("infantry"))
+func test_archers_do_not_borrow_the_spearmans_parts() -> void:
+	assert_ne(WarExplode.parts_path("archers"), WarExplode.parts_path("infantry"), "Ruling 23")
+	assert_false(ResourceLoader.exists(WarExplode.parts_path("archers")), "no take-apart until they have their own model")
 	assert_eq(WarExplode.parts_path("infantry"), "res://assets/3D/units/infantry/infantry_parts.glb")
+
+
+## The owner's Blender export: every installed arm's parts file holds one
+## object per war_equipment.csv row of that arm, named exactly by its `part`.
+func test_the_real_parts_files_carry_every_kit_row() -> void:
+	for arm: String in ["infantry", "cavalry"]:
+		var path := WarExplode.parts_path(arm)
+		assert_true(ResourceLoader.exists(path), "%s's parts are installed" % arm)
+		var root := (load(path) as PackedScene).instantiate() as Node3D
+		var names: Array[String] = []
+		for m: MeshInstance3D in Map3DUnits.meshes(root):
+			names.append(String(m.name))
+		var rows := WarFolio.kit_of(Game.data, arm)
+		assert_gt(rows.size(), 0)
+		for row: Dictionary in rows:
+			assert_true(names.has(String(row["part"])), "%s has its %s" % [arm, row["part"]])
+		assert_eq(names.size(), rows.size(), "%s: no part the kit does not name (%s)" % [arm, names])
+		root.free()
+
+
+func test_the_real_parts_fly_apart_in_the_figure() -> void:
+	for arm: String in ["infantry", "cavalry"]:
+		assert_true(fig.show_parts(Game.data, arm), arm)
+		assert_eq(fig.part_labels().size(), WarFolio.kit_of(Game.data, arm).size(), "%s: a label per part" % arm)
+		var helm := _part("helmet")
+		var home := helm.position
+		fig.explode(1.0)
+		assert_almost_eq((helm.position - home).length(), Game.data.bal("war_explode_m"), 0.0001)
+		assert_gt(helm.position.y, home.y, "%s: the helmet flies up" % arm)
+		fig.show_drill()
 
 
 func test_a_missing_parts_file_shows_nothing() -> void:
