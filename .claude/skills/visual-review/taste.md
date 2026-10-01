@@ -380,15 +380,15 @@ add it here as a principle with its why — not as a changelog entry.
   dimmed parchment over a soft shadow — a black disc with a white glyph, and
   then a gold-rimmed leather disc, were both stickers on the ground.
 
-- **The LEDGER is an orrery of brass and glass, read one web at a time**
-  (owner 2026-09-30, choosing variant A over a darker bronze and a
-  silver-gilt: built things warm brass, unbuilt dark, the wire the brass's
-  own gold — one metal family, and built-against-planned is carried by both
-  hue and value). Its layer discs are pools that fade out over their rim,
-  never trays; a web too dense to read (the court's 49 ties) shows one
-  person's ties lit and the rest as faint context, not every line at full
-  weight. A fade is set as the eye reads it: under linear blending an
-  "alpha 0.25" line on a dark ground reads nearly whole.
+- **The LEDGER is a star chart, read one web at a time** (owner 2026-09-30:
+  a warm black night, one cluster per tab in brass, gules, purpure and
+  steel-azure, small stars with a real shine, links shading between
+  clusters; it replaces the palette part of the earlier "orrery of brass and
+  glass" ruling and keeps its "one web at a time"). A web too dense to read
+  (the court's 49 ties) shows one person's ties lit and the rest as faint
+  context, not every line at full weight. A fade is set as the eye reads it:
+  under linear blending an "alpha 0.25" line on a dark ground reads nearly
+  whole.
 
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols

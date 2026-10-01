@@ -90,6 +90,7 @@ func _ready() -> void:
 		_clock_buttons[speed] = b
 	%DateLabel.add_sibling(clock)
 	Game.clock_changed.connect(func(_s: int) -> void: _refresh_clock())
+	Game.clock_held_changed.connect(func(_h: bool) -> void: _refresh_clock())
 	_refresh_clock()
 	_date_arms = HeraldicShield.new()
 	_date_arms.name = "DateArms"
@@ -257,7 +258,10 @@ func refresh() -> void:
 ## The lit clock button is the speed the game runs at.
 func _refresh_clock() -> void:
 	for speed: int in _clock_buttons:
-		(_clock_buttons[speed] as Button).set_pressed_no_signal(speed == Game.clock_speed)
+		var b := _clock_buttons[speed] as Button
+		b.set_pressed_no_signal(speed == Game.clock_speed)
+		# held still (the LEDGER is open, owner 2026-10-01): no play button starts it
+		b.disabled = speed > 0 and Game.clock_held
 
 ## Test seam: the clock button for a speed (0 is pause).
 func clock_button(speed: int) -> Button:
