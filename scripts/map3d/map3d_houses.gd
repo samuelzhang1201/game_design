@@ -203,3 +203,30 @@ static func tints_of(variants: Array, part: String) -> PackedVector3Array:
 	if out.is_empty():
 		out.append(Vector3.ONE)
 	return out
+
+
+## The world transform for one baked house row: yaw about the vertical,
+## scaled HORIZONTALLY by `scale` and VERTICALLY by `scale * height_scale`
+## (the bake's own per-house bias, tallest at a settlement's core, jittered
+## per house — 高低层次不齐), standing upright at `height` (Map3DHouses.seat:
+## the highest ground under its footprint, so nothing of it is buried). Pure,
+## so a test can check the maths directly rather than reading it back off a
+## MultiMesh.
+static func transform_of(h: Dictionary, height: float) -> Transform3D:
+	var at: Vector2 = h["at"]
+	var s: float = float(h["scale"])
+	var height_scale: float = float(h["height_scale"])
+	var turn := Basis(Vector3.UP, deg_to_rad(float(h["yaw_deg"])))
+	turn = turn.scaled(Vector3(s, s * height_scale, s))
+	return Transform3D(turn, Vector3(at.x, height, at.y))
+
+
+## The first mesh in a house .glb's scene (Map3DLayerHouses._mesh_of).
+static func first_mesh(node: Node) -> Mesh:
+	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
+		return (node as MeshInstance3D).mesh
+	for c in node.get_children():
+		var m := first_mesh(c)
+		if m != null:
+			return m
+	return null
