@@ -164,6 +164,7 @@ func _process(_delta: float) -> void:
 		_dirty = false
 		_view.refresh()
 		_fill_margin()
+		_folio.refresh()   # the clock runs under an open folio
 
 
 func _on_piece(code: String) -> void:

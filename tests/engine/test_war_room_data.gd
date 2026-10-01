@@ -45,6 +45,10 @@ func test_every_equipment_row_names_a_real_arm() -> void:
 	for row: Dictionary in repo.war_equipment:
 		assert_true(arms.has(String(row["arm"])), String(row["part"]))
 		assert_ne(String(row["label"]), "")
+		# shown to the player: a plain description, never empty, never a design note
+		assert_ne(String(row["note"]), "", "%s %s has no note" % [row["arm"], row["part"]])
+		assert_false(String(row["note"]).contains("stands in"), String(row["part"]))
+		assert_false(String(row["note"]).contains("WAR ROOM"), String(row["part"]))
 
 
 func test_the_folio_sections_are_the_six_of_the_spec_in_order() -> void:

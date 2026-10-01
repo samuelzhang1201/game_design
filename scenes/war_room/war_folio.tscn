@@ -20,27 +20,21 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 0
-color = Color(0, 0, 0, 0.4)
 
 [node name="Book" type="PanelContainer" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(920, 560)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -460.0
-offset_top = -280.0
-offset_right = 460.0
-offset_bottom = 280.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Pages" type="HBoxContainer" parent="Book"]
+unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 28
 
 [node name="LeftPage" type="PanelContainer" parent="Book/Pages"]
 unique_name_in_owner = true
@@ -58,15 +52,15 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="RightScroll" type="ScrollContainer" parent="Book/Pages/RightPage"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 horizontal_scroll_mode = 0
 
-[node name="Right" type="VBoxContainer" parent="Book/Pages/RightPage/RightScroll"]
+[node name="Right" type="HBoxContainer" parent="Book/Pages/RightPage/RightScroll"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 10
 
 [node name="Close" type="Button" parent="."]
 unique_name_in_owner = true
@@ -76,10 +70,7 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = 420.0
-offset_top = -274.0
-offset_right = 454.0
-offset_bottom = -246.0
 grow_horizontal = 2
 grow_vertical = 2
 text = "×"
+flat = true

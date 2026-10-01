@@ -112,9 +112,13 @@ static func kit_of(repo: DataRepository, arm: String) -> Array:
 
 static func _arms(repo: DataRepository, _state: GameState, code: String, _reg: Dictionary) -> Array:
 	var rows: Array = []
+	var seen: Dictionary = {}   # two arms that share a piece of kit show it once, the first arm's
 	for a: Dictionary in arms_of(repo, code):
 		var arm := String(a["arm"])
 		for k: Dictionary in kit_of(repo, arm):
+			if seen.has(String(k["label"])):
+				continue
+			seen[String(k["label"])] = true
 			rows.append(_row(String(k["label"]), String(k["note"])))
 		var good: Array[String] = []
 		var holds: Array[String] = []

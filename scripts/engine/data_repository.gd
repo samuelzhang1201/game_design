@@ -751,6 +751,9 @@ func _load(dir: String) -> bool:
 			func(r): war_drills.append({"key": String(r["key"]), "clip": String(r["clip"]),
 				"label": String(r["label"]), "arms": PackedStringArray(String(r["arms"]).split("|", false))})):
 		return false
+	# war_equipment.csv: one row per piece of kit the folio's exploded view names;
+	# part = the object's name in assets/3D/units/<arm>/<arm>_parts.glb; note is
+	# SHOWN to the player, so it is a plain description, never empty, never a design note.
 	if not _load_if_present(dir + "/war_equipment.csv", ["arm", "part", "label", "note"],
 			func(r): war_equipment.append({"arm": String(r["arm"]), "part": String(r["part"]),
 				"label": String(r["label"]), "note": String(r["note"])})):

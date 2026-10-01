@@ -162,3 +162,14 @@ func test_garrison_adds_its_morale_row() -> void:
 func test_matchups_are_named_per_arm() -> void:
 	var rows := _rows("arms")
 	assert_true(rows.has("Matchups — Infantry"))
+
+
+func test_a_piece_of_kit_two_arms_share_is_shown_once() -> void:
+	var seen := {}
+	for s: Dictionary in WarFolio.sections(repo, state, code):
+		if String(s["key"]) != "arms":
+			continue
+		for row: Dictionary in s["rows"]:
+			var label := String(row["label"])
+			assert_false(seen.has(label), "%s listed twice" % label)
+			seen[label] = true
