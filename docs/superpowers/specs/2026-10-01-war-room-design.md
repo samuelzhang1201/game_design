@@ -59,8 +59,9 @@ pieces; bases exist only on the war-room table.
   too.
 - **The room**: a stone chamber seen from a standing officer's place; the
   table fills about seven tenths of the frame. At its edges: iron
-  candlesticks at the table's corners, the sheet index chart on the far
-  wall (clickable, §2), the rake leaning on the table's edge, cold light
+  candlesticks at the table's corners, the sheet index chart (a drafting
+  board behind the sheet's far edge today, see the end of this spec;
+  clickable, §2), the rake leaning on the table's edge, cold light
   from a window. Warm candle light and the cool window light. No people:
   the plotter appears only as his rake.
 - **The camera** opens oblique over the whole sheet. The wheel and a
@@ -115,7 +116,7 @@ pieces; bases exist only on the war-room table.
 - The margin carries the sheet's title, a scale bar on the 1-2-5 ladder
   (`MapGeometry.nice_step`), a compass rose and a legend.
 
-**Changing sheets**: a click on the wall's index chart (the island's outline
+**Changing sheets**: a click on the index chart (the island's outline
 with every sheet's frame) or on a small ink arrow at a sheet's edge
 ("→ IV") rolls the sheet up and lays the other, about 0.6 s
 (`war_sheet_swap_s`). The room opens on the sheet holding the home
@@ -127,7 +128,8 @@ the session, not saved. A regiment on another sheet is listed in the margin
 
 **A piece** stands for each land regiment of the crown. A fleet has no
 model: it is a flat tin token engraved with waves.
-- **The base**: `war_piece_base_mm` square,
+- **The base**: `war_piece_base_mm` 56 mm square (`war_piece_base_h_mm`
+  thick),
   wood painted the realm's colour, a brass plate at the front with the
   regiment's label, the house's arms on its side (`HouseArms`).
 - **The figures**: the `.glb` of the regiment's largest arm among
@@ -179,19 +181,26 @@ the left column and opens the folio (§4).
 
 - A two-page manuscript opens centred over the room, the table dimmed
   behind it; ×, Escape or a click outside closes it. The left column's card
-  stays.
+  stays. It is MODAL: a click outside only closes it, never picks the piece
+  under the pointer.
 - **The left page — the ink figure**: a SubViewport holding the chief
   arm's `.glb` under `ink_drawing.gdshader` (an inverted-hull outline,
   screen-space hatching by light, sepia ink on vellum), looping the clip of
-  the regiment's current order.
+  the regiment's current order (the loop set on a DUPLICATED `Animation`,
+  never the imported one the 3D map shares), seen three-quarter and framed
+  by the body (the head bone), not the lance's tip.
   - **Drill tabs** from `data/war_drills.csv` (key, clip, label, arms);
     a row whose clip the model lacks is not shown (`Map3DUnits.clip_named`),
     so a clip added later in Blender (the infantry's ATTACK) appears by
     itself.
-  - **The arms**: a small still ink drawing per arm in the regiment with
-    its headcount; artillery, which has no model, draws a glyph. A click
-    puts that arm's figure on the page.
-  - **The formation**: 9 / 6 / 3 ink dots, the front marked.
+  - **The arms**: a row of each arm's existing resource icon
+    (`resource_icons.csv`) redrawn in sepia ink (`WarInkIcon`) with its
+    headcount — not a new drawing of the model. An arm no `war_drills` row
+    lists (artillery, which has no model; `WarFolio.modelled`) shows its
+    inked icon large in place of the 3D figure, with no drill tabs and no
+    Take apart. A click puts that arm's figure on the page.
+  - **The formation**: 9 / 6 / 3 ink dots (`WarFormationDots`), the front
+    marked.
   - **Take apart**: a button beside the tabs swaps the figure for an
     EXPLODED view — helmet, plate, shield, spear moving outward over
     `war_explode_s`, each on a leader line with its name and note
@@ -203,7 +212,9 @@ the left column and opens the folio (§4).
 - **The right page — the data**, sections from
   `data/war_folio_sections.csv`, headers in rubric small capitals, the body
   in the reading face (`UiPalette.role_font`), whole figures grouped by
-  thousands (`UiPalette.format_int`):
+  thousands (`UiPalette.format_int`), laid in `war_folio_columns` columns so
+  all six sections show without scrolling at 1512x982; every size a
+  `war_folio_*` key:
 
   | Section | Rows |
   |---|---|
@@ -310,8 +321,10 @@ ink contours and a lettered grid on the relief.
 4. The player's rake: arrow, COMMIT, pennant.
 5. The folio's right page (`WarFolio`).
 6. The ink figure and the drill tabs.
-7. Take apart (`_parts.glb`).
-8. The room's final art.
+7. Take apart (`_parts.glb`): the code is built; the `_parts.glb` export
+   from the owner's Blender is still to do, and the button stays hidden
+   until the files exist.
+8. The room's final art (still to do, the owner's call to generate).
 
 ## 10. Out of scope
 
@@ -323,3 +336,51 @@ battle (LEDGER M4); the debrief wall (intel P3); sound.
 `CLAUDE.md` (the WAR ROOM entry, the thematic tabs paragraph, the layout's
 `scripts/war_room/`); `2026-09-28-intelligence-layer-alignment.md` §5.9 (the
 WAR ROOM is a physical plotting table; ghosts are translucent tin on it).
+
+## 12. Changed while building (2026-10-01)
+
+Controller rulings of the build (`.superpowers/sdd/2026-10-01-war-room/
+progress.md`) that changed the design above; the sections are corrected
+where they said otherwise.
+
+- **Ruling 10 / the table's name**: the pure table maths are `WarRoomTable`,
+  not `WarTable` (main's war-table UI owns that name); the branch merged
+  main for it.
+- **Ruling 12**: the clock keeps running while the room is open (§1), unlike
+  the LEDGER, which holds it; pieces are pushed once a day.
+- **Ruling 14**: the index chart is a drafting board leaning behind the
+  sheet's far edge, not on the far wall — at the officer's 52 degree pitch the
+  wall is never in frame, so a wall chart could never be clicked (§1, §2).
+  Task 15's art may move it to the wall with a new camera framing.
+- **Ruling 15**: a piece seats at the MAX relief under its base's four
+  corners; its pick region is its projected base-and-figures box grown by
+  `war_pick_px`, nearest to the camera first (§3).
+- **Ruling 16**: a committed march keeps a DASHED ink line from piece to
+  pennant; a riding pennant opens the route menu; a NEWER garrison courier
+  after the march courier turns the slip "countermand riding" (amending
+  Ruling 6, which read the newest march courier's `dest_x_m` / `dest_y_m`);
+  a rake dropped off the table or cut by a sheet roll withdraws the armed
+  march (`rake_dropped`) (§3).
+- **Ruling 17 (look check)**: the figures fill the base
+  (`war_figure_fill`), the base grew to `war_piece_base_mm` 56 (from 40),
+  and the paper tags show only within `war_tag_view_m` of the table; the
+  margin list is a paper slip under the title with `war_margin_rows` rows.
+- **Ruling 19**: the folio's right page shows all six sections without
+  scrolling at 1512x982, in `war_folio_columns` columns with every size a
+  `war_folio_*` key; the folio is modal (§4).
+- **Ruling 20**: the arms row is each arm's existing resource icon redrawn in
+  ink, not a per-arm drawing; an arm with no `war_drills` row (artillery)
+  shows its icon large and no tabs; the clip's loop is set on a duplicated
+  `Animation`; the figure is three-quarter, framed by the body (§4).
+- **Ruling 7**: the folio's morale row scores TODAY's stores and says so, not
+  the month-end resupply (§4).
+- **Ruling 21 / Ruling 2**: the `_parts.glb` export (Task 14's Blender step)
+  and the room's final art (Task 15) wait for the owner — Blender was not
+  reachable and generation is asked for first. The code for both ends is
+  built; Take apart stays hidden until the files exist and the room stays
+  stand-in boxes (§6, §8, §9).
+- **Ruling 8**: scenes are authored as text `.tscn` files, not through the
+  gdai MCP (which drives the editor open on the shared checkout).
+- **Ruling 18**: the intelligence spec §5.9 edit (§11) is not made on this
+  branch; the replacement text sits in `task-16-report.md` and is applied by
+  hand at merge.
