@@ -14,6 +14,8 @@ signal closed
 
 var _code := ""
 var _shown: Array = []   # the sections last laid, so a refresh that changes nothing rebuilds nothing
+var _arm := ""           # the arm the figure shows
+var _left_key: Array = []   # [order, figures, arms] the left page was last laid for
 
 
 func _ready() -> void:
@@ -26,6 +28,9 @@ func _ready() -> void:
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, int(margin), "window"))
 	(%Pages as HBoxContainer).add_theme_constant_override("separation", int(_px("war_folio_pages_sep_px")))
 	(%RightPage as Control).size_flags_stretch_ratio = _px("war_folio_right_ratio")
+	(%Left as VBoxContainer).add_theme_constant_override("separation", int(_px("war_folio_left_sep_px")))
+	(%Figure as Control).custom_minimum_size = Vector2(_px("war_figure_w_px"), _px("war_figure_h_px"))
+	(%Formation as Control).custom_minimum_size = Vector2(_px("war_formation_w_px"), _px("war_formation_h_px"))
 	(%Right as HBoxContainer).add_theme_constant_override("separation", int(_px("war_folio_col_sep_px")))
 	_dress_pages()
 	_dress_close(book)
@@ -43,6 +48,7 @@ func open_for(code: String) -> void:
 	_code = code
 	_shown = []
 	_fill_right()
+	_fill_left()
 	(%RightScroll as ScrollContainer).scroll_vertical = 0
 	visible = true
 
@@ -51,6 +57,7 @@ func close() -> void:
 	if not visible:
 		return
 	visible = false
+	(%Figure as WarInkFigure).set_active(false)
 	closed.emit()
 
 
@@ -59,6 +66,7 @@ func close() -> void:
 func refresh() -> void:
 	if not visible or _code == "":
 		return
+	_refresh_left()
 	var scroll: ScrollContainer = %RightScroll
 	var at := scroll.scroll_vertical
 	if _fill_right():
@@ -208,3 +216,115 @@ func _section_box(s: Dictionary) -> VBoxContainer:
 		rows.add_child(line)
 	box.add_child(rows)
 	return box
+
+
+## The left page, laid whole: the chief arm's figure and its drills, the arms
+## row, the formation. Only open_for lays it whole; refresh moves what changed.
+func _fill_left() -> void:
+	_show_arm(MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, _code)))
+	_left_key = _left_state()
+	_fill_arms()
+	_fill_formation()
+	(%Figure as WarInkFigure).set_active(true)
+
+
+## What the left page depends on: the order (which drill plays), the figure
+## count (the formation) and the arms with their heads (the row).
+func _left_state() -> Array:
+	return [ArmySystem.order_of(Game.data, Game.state, _code),
+		WarFolio.figures(Game.data, Game.state, _code), WarFolio.arms_of(Game.data, _code)]
+
+
+## The clock runs under the folio: a new order replays the current drill, a new
+## strength redraws the dots, new arms relabel the row — the 3D figure is never
+## reloaded here (a new regiment is open_for's).
+func _refresh_left() -> void:
+	var now := _left_state()
+	if now == _left_key:
+		return
+	var was := _left_key
+	_left_key = now
+	if now[0] != was[0]:
+		_play_current()
+	if now[1] != was[1]:
+		_fill_formation()
+	if now[2] != was[2]:
+		_fill_arms()
+
+
+func _fill_arms() -> void:
+	var arms: Container = %Arms
+	for c in arms.get_children():
+		arms.remove_child(c)
+		c.queue_free()
+	for a: Dictionary in WarFolio.arms_of(Game.data, _code):
+		var arm := String(a["arm"])
+		var b := Button.new()
+		b.toggle_mode = true
+		b.set_pressed_no_signal(arm == _arm)
+		b.set_meta("arm", arm)
+		b.text = "%s %s" % [String((Game.data.resource_icons.get(arm, {}) as Dictionary)
+			.get("label", arm.capitalize())), UiPalette.format_int(int(a["heads"]))]
+		_ink_tab(b)
+		b.pressed.connect(func() -> void:
+			_show_arm(arm)
+			for t: Button in arms.get_children():
+				t.set_pressed_no_signal(String(t.get_meta("arm")) == arm))
+		arms.add_child(b)
+
+
+func _fill_formation() -> void:
+	var form: Control = %Formation
+	form.set_meta("figures", WarFolio.figures(Game.data, Game.state, _code))
+	form.queue_redraw()
+
+
+func _show_arm(arm: String) -> void:
+	_arm = arm
+	var fig: WarInkFigure = %Figure
+	var drills := WarFolio.drills_for(Game.data, arm, fig.show_arm(Game.data, arm))
+	var tabs: Container = %Drills
+	for c in tabs.get_children():
+		tabs.remove_child(c)
+		c.queue_free()
+	for d: Dictionary in drills:
+		var clip := String(d["clip_name"])
+		var b := Button.new()
+		b.toggle_mode = true
+		b.text = String(d["label"])
+		b.set_meta("clip", clip)
+		_ink_tab(b)
+		b.pressed.connect(func() -> void:
+			fig.play(clip)
+			_light_tab(clip))
+		tabs.add_child(b)
+	_play_current()
+
+
+## Play the drill the regiment's order calls for, and light its tab.
+func _play_current() -> void:
+	var fig: WarInkFigure = %Figure
+	var drills := WarFolio.drills_for(Game.data, _arm, fig.clips())
+	if drills.is_empty():
+		return
+	var cur := WarFolio.current_drill(drills, ArmySystem.order_of(Game.data, Game.state, _code))
+	fig.play(String(drills[cur]["clip_name"]))
+	_light_tab(String(drills[cur]["clip_name"]))
+
+
+func _light_tab(clip: String) -> void:
+	for t: Button in (%Drills as Container).get_children():
+		t.set_pressed_no_signal(String(t.get_meta("clip")) == clip)
+
+
+## A tab on the vellum: ink words, the lit one red rubric under a rubric rule
+## (UiPalette.flat_tab's gold is for the leather).
+func _ink_tab(b: Button) -> void:
+	UiPalette.flat_tab(b, int(_px("war_folio_tab_px")), _px("war_folio_tab_pad_px"))
+	var ink: Color = Game.data.war_palette["ink"]
+	var rubric: Color = Game.data.war_palette["rubric"]
+	b.add_theme_color_override("font_color", Color(ink, _px("war_folio_label_alpha")))
+	for state: String in ["font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+		b.add_theme_color_override(state, rubric)
+	for state: String in ["hover", "pressed", "hover_pressed"]:
+		(b.get_theme_stylebox(state) as StyleBoxFlat).border_color = rubric

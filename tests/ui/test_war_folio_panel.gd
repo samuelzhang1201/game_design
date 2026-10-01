@@ -181,3 +181,66 @@ func test_the_screens_refresh_lays_an_open_folio_again() -> void:
 			if (line.get_child(0) as Label).text == "Morale":
 				found = (line.get_child(1) as Label).text.begins_with(str(int(st["morale"])))
 	assert_true(found)
+
+
+func test_the_drill_tabs_are_the_arms_clips_and_the_current_order_plays() -> void:
+	panel.open_for(code)
+	var fig: WarInkFigure = panel.get_node("%Figure")
+	var arm := MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code))
+	var clips := fig.show_arm(Game.data, arm)
+	var drills := WarFolio.drills_for(Game.data, arm, clips)
+	var tabs := panel.get_node("%Drills").get_children()
+	assert_gt(drills.size(), 0, "the arm's model has clips")
+	assert_eq(tabs.size(), drills.size())
+	var cur := WarFolio.current_drill(drills, ArmySystem.order_of(Game.data, Game.state, code))
+	assert_eq(fig.playing(), String(drills[cur]["clip_name"]))
+
+
+func test_a_drill_tab_plays_its_clip() -> void:
+	panel.open_for(code)
+	var tabs := panel.get_node("%Drills").get_children()
+	if tabs.size() < 2:
+		pass_test("this arm's model has one clip")
+		return
+	(tabs[1] as Button).pressed.emit()
+	assert_eq((panel.get_node("%Figure") as WarInkFigure).playing(), String(tabs[1].get_meta("clip")))
+
+
+func test_one_arms_button_per_arm_and_the_formation_draws_its_figures() -> void:
+	panel.open_for(code)
+	assert_eq(panel.get_node("%Arms").get_child_count(), WarFolio.arms_of(Game.data, code).size())
+	assert_eq(int(panel.get_node("%Formation").get_meta("figures")), WarFolio.figures(Game.data, Game.state, code))
+
+
+func test_a_refresh_does_not_rebuild_the_figure_while_nothing_changed() -> void:
+	panel.open_for(code)
+	var fig: WarInkFigure = panel.get_node("%Figure")
+	var tab := (panel.get_node("%Drills").get_child(0) as Button)
+	var before := fig.loads()
+	panel.refresh()
+	panel.refresh()
+	assert_eq(fig.loads(), before)
+	assert_eq(panel.get_node("%Drills").get_child(0), tab, "the tabs stand")
+
+
+func test_the_figure_renders_only_while_the_folio_is_open() -> void:
+	panel.open_for(code)
+	var vp: SubViewport = panel.get_node("%FigViewport")
+	assert_eq(vp.render_target_update_mode, SubViewport.UPDATE_ALWAYS)
+	panel.close()
+	assert_eq(vp.render_target_update_mode, SubViewport.UPDATE_DISABLED)
+
+
+func test_a_changed_order_replays_the_current_drill_without_a_reload() -> void:
+	panel.open_for(code)
+	var fig: WarInkFigure = panel.get_node("%Figure")
+	var before := fig.loads()
+	var st := ArmySystem.state_of(Game.data, Game.state, code).duplicate()
+	st["order"] = ArmySystem.ORDER_MARCH
+	Game.state.regiments[code] = st
+	panel.refresh()
+	assert_eq(fig.loads(), before)
+	var arm := MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code))
+	var drills := WarFolio.drills_for(Game.data, arm, fig.clips())
+	var cur := WarFolio.current_drill(drills, ArmySystem.ORDER_MARCH)
+	assert_eq(fig.playing(), String(drills[cur]["clip_name"]))
