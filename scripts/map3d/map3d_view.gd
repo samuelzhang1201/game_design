@@ -228,7 +228,7 @@ func _load() -> void:
 	_ctx = Map3DContext.new(_repo, _meta, _world)
 	_ctx.viewport = _viewport
 	_ctx.view_size = size
-	_ctx.state_fn = func() -> GameState: return Game.state
+	_ctx.state_fn = get_meta("state_fn") if has_meta("state_fn") else func() -> GameState: return Game.state  # meta: the title's preview reign
 	_ctx.clock_fn = func() -> int: return Game.clock_speed
 	_ctx.day_fn = func() -> float: return Game.day_progress
 	_ctx.window_scale_fn = _window_scale

@@ -186,7 +186,7 @@ static func needle_angle(yaw_deg: float) -> float:
 func compass_rect() -> Rect2:
 	if ctx == null:
 		return Rect2()
-	var d := ctx.repo.bal("map_compass_size_px")
+	var d := ctx.repo.bal(MapPalette.table_key(ctx.repo, ctx.repo.balance, "map_compass_size_px"))
 	var m := ctx.repo.bal("map_compass_margin_px")
 	return Rect2(Vector2(m, m), Vector2(d, d)) if d > 0.0 else Rect2()
 
