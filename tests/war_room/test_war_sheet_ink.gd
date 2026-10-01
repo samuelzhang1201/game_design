@@ -33,6 +33,8 @@ func test_only_what_touches_the_sheet_is_inked_in_texture_px() -> void:
 	assert_eq(ink["towns"].size(), inside)
 	for key in ["roads", "trails", "rivers", "coasts", "seams", "peaks", "borders"]:
 		assert_true(ink.has(key), key)
+	for p: Dictionary in ink["peaks"]:
+		assert_true(p.has("lod"), "each peak carries its lod, so the painter can thin them")
 
 
 func test_a_conquest_changes_the_cache_key() -> void:

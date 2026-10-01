@@ -81,7 +81,7 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 			continue
 		var at: Vector2 = m["pos"]
 		if r.has_point(at):
-			(out["peaks"] as Array).append({"at": (at - r.position) * k, "metres": int(m["metres"])})
+			(out["peaks"] as Array).append({"at": (at - r.position) * k, "metres": int(m["metres"]), "lod": int(m["lod"])})
 	return out
 
 
