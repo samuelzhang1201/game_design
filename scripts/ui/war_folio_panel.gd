@@ -17,6 +17,8 @@ var _shown: Array = []   # the sections last laid, so a refresh that changes not
 var _arm := ""           # the arm the figure shows
 var _inked: Dictionary = {}   # arm -> its icon redrawn in ink
 var _left_key: Array = []   # [order, figures, arms] the left page was last laid for
+var _apart := false         # the figure shows the kit taken apart, not the drill
+var _fly: Tween
 
 
 func _ready() -> void:
@@ -36,6 +38,9 @@ func _ready() -> void:
 	_dress_pages()
 	_dress_close(book)
 	%Close.pressed.connect(close)
+	_ink_tab(%TakeApart)
+	(%TakeApart as Button).pressed.connect(toggle_take_apart)
+	(%Figure as WarInkFigure).label_font = UiPalette.role_font("body_italic")
 	(%Dim as ColorRect).gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
 			close())
@@ -284,6 +289,9 @@ func _fill_formation() -> void:
 
 func _show_arm(arm: String) -> void:
 	_arm = arm
+	_set_apart(false)
+	(%TakeApart as Button).visible = WarFolio.modelled(Game.data, arm) \
+		and ResourceLoader.exists(WarExplode.parts_path(arm))
 	var fig: WarInkFigure = %Figure
 	var drills := WarFolio.drills_for(Game.data, arm, fig.show_arm(Game.data, arm))
 	var tabs: Container = %Drills
@@ -302,6 +310,35 @@ func _show_arm(arm: String) -> void:
 			_light_tab(clip))
 		tabs.add_child(b)
 	_play_current()
+
+
+## The Take apart button: the drill's figure gives way to the arm's kit flying
+## apart, each part named; pressed again, it comes back. `scene` is a seam for
+## tests (and any other source of a parts model); the game reads the arm's file.
+func toggle_take_apart(scene: PackedScene = null) -> void:
+	var fig: WarInkFigure = %Figure
+	if _apart:
+		_set_apart(false)
+		return
+	var ok := fig.show_parts_from(Game.data, _arm, scene) if scene != null else fig.show_parts(Game.data, _arm)
+	if not ok:
+		return
+	_set_apart(true, false)
+	_fly = create_tween()
+	_fly.tween_method(fig.explode, 0.0, 1.0, _px("war_explode_s"))
+
+
+## Switch the figure between the drill and the exploded kit (the drill tabs
+## make way for the kit); `reset` also puts the figure itself back.
+func _set_apart(on: bool, reset := true) -> void:
+	if _fly != null:
+		_fly.kill()
+		_fly = null
+	_apart = on
+	(%Drills as Control).visible = not on
+	(%TakeApart as Button).text = "Put together" if on else "Take apart"
+	if reset and not on:
+		(%Figure as WarInkFigure).show_drill()
 
 
 ## Play the drill the regiment's order calls for, and light its tab.

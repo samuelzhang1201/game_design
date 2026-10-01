@@ -332,3 +332,54 @@ func test_playing_a_clip_loops_a_copy_never_the_shared_animation() -> void:
 	assert_eq(Map3DUnits.find_anim(again).get_animation(attack).loop_mode, was, "the shared clip is untouched")
 	fresh.free()
 	again.free()
+
+
+func test_take_apart_shows_only_when_the_arms_parts_exist() -> void:
+	panel.open_for(code)
+	var arm := MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code))
+	var want := WarFolio.modelled(Game.data, arm) and ResourceLoader.exists(WarExplode.parts_path(arm))
+	assert_eq((panel.get_node("%TakeApart") as Button).visible, want)
+
+
+func test_take_apart_is_hidden_for_an_unmodelled_arm() -> void:
+	panel.open_for(code)
+	panel._show_arm("artillery")
+	assert_false((panel.get_node("%TakeApart") as Button).visible)
+
+
+func test_take_apart_toggles_the_exploded_view() -> void:
+	panel.open_for(code)
+	var arm := MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code))
+	var btn: Button = panel.get_node("%TakeApart")
+	var fig: WarInkFigure = panel.get_node("%Figure")
+	panel._show_arm(arm)
+	panel.toggle_take_apart(_stand_in())   # the seam: the real file is the owner's Blender step
+	assert_not_null(fig.parts_root(), "apart")
+	assert_eq(btn.text, "Put together")
+	assert_false((panel.get_node("%Drills") as Control).visible, "the drill tabs make way")
+	panel.toggle_take_apart(null)
+	assert_null(fig.parts_root(), "together again")
+	assert_true((panel.get_node("%Drills") as Control).visible)
+
+
+func test_another_arm_puts_the_kit_back_together() -> void:
+	panel.open_for(code)
+	var arm := MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code))
+	panel._show_arm(arm)
+	panel.toggle_take_apart(_stand_in())
+	panel._show_arm(arm)
+	assert_null((panel.get_node("%Figure") as WarInkFigure).parts_root())
+	assert_true((panel.get_node("%Drills") as Control).visible)
+
+
+func _stand_in() -> PackedScene:
+	var root := Node3D.new()
+	var m := MeshInstance3D.new()
+	m.name = "helmet"
+	m.mesh = BoxMesh.new()
+	root.add_child(m)
+	m.owner = root
+	var ps := PackedScene.new()
+	ps.pack(root)
+	root.free()
+	return ps
