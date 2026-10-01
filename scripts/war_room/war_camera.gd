@@ -2,17 +2,22 @@ class_name WarCamera
 extends RefCounted
 ## The officer's view over the plotting table (spec 2026-10-02-war-room-v2
 ## §1.1, after the 3D map): an orbit about a point on the table that turns all
-## the way round, its pitch following the distance — oblique close in,
-## overhead stepped back (Map3DGeometry.pitch_for's log scale) — and kept
-## inside the room's walls. The compass eases it back to the sheet's foot.
+## the way round, its pitch following the distance on two log segments
+## (Map3DGeometry.pitch_for): oblique leaning in over the pieces, the
+## officer's steep look at the opening distance, and flatter again stepped
+## back, so the room — its easel and furniture — comes into view (a ruling of
+## plan A's Task 9: a steeper far pitch never showed anything beyond the
+## table). Kept inside the room's walls; the compass eases it to the foot.
 
 var target := Vector3.ZERO
 var distance := 1.6
 var yaw_deg := 0.0
 var min_distance := 0.12
-var max_distance := 2.4
+var mid_distance := 1.6
+var max_distance := 3.0
 var pitch_near_deg := 30.0
-var pitch_far_deg := 55.0
+var pitch_mid_deg := 52.0
+var pitch_far_deg := 28.0
 var bounds := Rect2(-0.7, -0.5, 1.4, 1.0)
 ## The floor the camera may stand over (x, z), the walls less their clearance;
 ## an empty rect keeps no walls.
@@ -26,7 +31,9 @@ func pitch_deg() -> float:
 
 
 func _pitch_at(d: float) -> float:
-	return Map3DGeometry.pitch_for(d, min_distance, max_distance, pitch_near_deg, pitch_far_deg)
+	if d <= mid_distance:
+		return Map3DGeometry.pitch_for(d, min_distance, mid_distance, pitch_near_deg, pitch_mid_deg)
+	return Map3DGeometry.pitch_for(d, mid_distance, max_distance, pitch_mid_deg, pitch_far_deg)
 
 
 func _back(d: float) -> Vector3:

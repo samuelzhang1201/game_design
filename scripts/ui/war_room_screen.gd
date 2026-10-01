@@ -36,8 +36,8 @@ func _ready() -> void:
 	%Close.pressed.connect(close)
 	UiPalette.command_button(%BackToTable)
 	%BackToTable.pressed.connect(func() -> void: _view.leave_board())
-	_view.board_entered.connect(func() -> void: %BackToTable.visible = true)
-	_view.board_left.connect(func() -> void: %BackToTable.visible = false)
+	_view.board_entered.connect(_show_board_chrome.bind(true))
+	_view.board_left.connect(_show_board_chrome.bind(false))
 	_view.piece_selected.connect(_on_piece)
 	_view.selection_cleared.connect(_clear_card)
 	_view.rake_started.connect(_on_rake)
@@ -96,6 +96,14 @@ func set_report_capture(capture: Texture2D, rect: Rect2) -> void:
 	_column_rect = rect
 
 
+## Facing the easel, the margin's slips would lie over the board: they make
+## way, and Back to the table stands in the top row (spec §1.3).
+func _show_board_chrome(on: bool) -> void:
+	%BackToTable.visible = on
+	%Slip.visible = not on
+	%KeySlip.visible = not on
+
+
 func board_screen() -> MissiveScreen:
 	return _board_screen
 
@@ -108,6 +116,10 @@ func _build_board() -> void:
 	_board_vp.name = "BoardViewport"
 	var w := int(Game.data.bal("war_board_px"))
 	_board_vp.size = Vector2i(w, int(round(float(w) * 0.8 / 1.2)))
+	# laid out at war_board_layout_px, drawn at war_board_px: larger type, still sharp
+	var lw := int(Game.data.bal("war_board_layout_px"))
+	_board_vp.size_2d_override = Vector2i(lw, int(round(float(lw) * 0.8 / 1.2)))
+	_board_vp.size_2d_override_stretch = true
 	_board_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_board_vp.gui_embed_subwindows = true
 	add_child(_board_vp)
@@ -126,14 +138,19 @@ func _build_board() -> void:
 ## A ray's hit on the panel, pushed into the board's viewport as real input.
 func _push_board_click(uv: Vector2, mb: InputEventMouseButton) -> void:
 	var e := mb.duplicate() as InputEventMouseButton
-	e.position = uv * Vector2(_board_vp.size)
+	e.position = uv * _board_input_size()
 	e.global_position = e.position
 	_board_vp.push_input(e, true)
 
 
+## The board's input space: its layout size when overridden, else its size.
+func _board_input_size() -> Vector2:
+	return Vector2(_board_vp.size_2d_override) if _board_vp.size_2d_override != Vector2i.ZERO else Vector2(_board_vp.size)
+
+
 func _push_board_hover(uv: Vector2) -> void:
 	var e := InputEventMouseMotion.new()
-	e.position = uv * Vector2(_board_vp.size)
+	e.position = uv * _board_input_size()
 	e.global_position = e.position
 	_board_vp.push_input(e, true)
 

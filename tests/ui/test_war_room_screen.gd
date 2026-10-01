@@ -435,3 +435,27 @@ func test_escape_in_board_view_returns_to_the_table_not_the_pause_menu() -> void
 	await wait_process_frames(2)
 	assert_eq(view.board_mode(), "to_table")
 	assert_false(r._pause_menu.visible, "Escape went to the board, not the pause menu")
+
+
+func test_a_click_on_the_easel_at_a_notes_place_opens_that_letter() -> void:
+	var r: GameRoot = await _court()
+	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", 3,
+		MissiveLog.subject("point", "", -1, Vector2(500, 300)), "A letter", []))
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	screen.refresh_board()
+	await wait_process_frames(2)
+	var note := screen.board_screen().find_child("Note%d" % id, true, false) as Button
+	var layout := Vector2(screen.board_screen().get_viewport().size_2d_override)
+	if layout == Vector2.ZERO:
+		layout = Vector2(screen.board_screen().get_viewport().size)
+	var uv := note.get_global_rect().get_center() / layout
+	for down in [true, false]:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.pressed = down
+		screen._push_board_click(uv, e)
+	await wait_process_frames(1)
+	assert_true(r.missive_screen().visible, "a real click through the panel")
+	assert_eq(r.missive_screen().selected(), id)

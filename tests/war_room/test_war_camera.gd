@@ -7,22 +7,29 @@ func _cam() -> WarCamera:
 	var c := WarCamera.new()
 	c.distance = 1.6
 	c.min_distance = 0.12
-	c.max_distance = 2.4
+	c.mid_distance = 1.6
+	c.max_distance = 3.0
 	c.pitch_near_deg = 30.0
-	c.pitch_far_deg = 55.0
+	c.pitch_mid_deg = 52.0
+	c.pitch_far_deg = 28.0
 	c.bounds = Rect2(-0.7, -0.5, 1.4, 1.0)
 	return c
 
 
-func test_pitch_follows_the_distance_on_a_log_scale() -> void:
+func test_pitch_rises_to_the_officers_look_then_flattens_to_show_the_room() -> void:
 	var c := _cam()
 	c.distance = 0.12
-	assert_almost_eq(c.pitch_deg(), 30.0, 0.0001, "closest: oblique")
-	c.distance = 2.4
-	assert_almost_eq(c.pitch_deg(), 55.0, 0.0001, "farthest: overhead")
+	assert_almost_eq(c.pitch_deg(), 30.0, 0.0001, "leaning in: oblique over the pieces")
 	c.distance = 1.6
-	# t = ln(1.6/0.12) / ln(2.4/0.12) = 2.5903 / 2.9957 = 0.86467
-	assert_almost_eq(c.pitch_deg(), 51.617, 0.01)
+	assert_almost_eq(c.pitch_deg(), 52.0, 0.0001, "the opening officer's look")
+	c.distance = 3.0
+	assert_almost_eq(c.pitch_deg(), 28.0, 0.0001, "stepped back: the room comes into view")
+	c.distance = 0.4
+	# t = ln(0.4/0.12) / ln(1.6/0.12) = 1.2040 / 2.5903 = 0.46480
+	assert_almost_eq(c.pitch_deg(), 40.226, 0.01)
+	c.distance = 2.2
+	# t = ln(2.2/1.6) / ln(3.0/1.6) = 0.31845 / 0.62861 = 0.50660
+	assert_almost_eq(c.pitch_deg(), 39.842, 0.01)
 
 
 func test_the_camera_looks_at_its_target_from_the_south_at_yaw_zero() -> void:
@@ -81,13 +88,13 @@ func test_zoom_about_a_ground_point_keeps_it_under_the_pointer_direction() -> vo
 func test_the_camera_is_kept_inside_the_room() -> void:
 	var c := _cam()
 	c.room = Rect2(-1.0, -1.0, 2.0, 2.0)
-	c.distance = 2.4   # horizontal reach 2.4 * cos 55 = 1.377 > 1
+	c.distance = 3.0   # horizontal reach 3.0 * cos 28 = 2.65 > 1
 	var d := c.clear_distance()
-	assert_lt(d, 2.4, "shortened")
+	assert_lt(d, 3.0, "shortened")
 	var o := c.transform().origin
 	assert_almost_eq(o.z, 1.0, 0.001, "stands at the wall")
 	c.room = Rect2()
-	assert_almost_eq(c.clear_distance(), 2.4, 0.0001, "no room, no walls")
+	assert_almost_eq(c.clear_distance(), 3.0, 0.0001, "no room, no walls")
 
 
 func test_the_compass_eases_the_yaw_back_to_zero() -> void:

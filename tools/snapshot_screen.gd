@@ -182,6 +182,11 @@ var _ledger_select := ""
 ## and skips while the folio, its drill tabs or its Take apart button are not
 ## built; an explode waits out its flight (war_explode_s) before the moment.
 ## The moment is `war`, taken at frame +90 unless --shot-on says otherwise.
+## v2 (spec 2026-10-02-war-room-v2 §1): --war-turn DEG turns the room by a
+## REAL right drag (after any --war-zoom); --war-board clicks the easel's
+## board (the camera flies to it); --war-board-click fx,fy (implies
+## --war-board) then clicks that share of the view — a note there opens the
+## full Missive board over the room.
 var _war_room := false
 var _war_focus := ""
 var _war_commit := false
@@ -190,6 +195,9 @@ var _war_piece := ""
 var _war_folio := ""
 var _war_drag := Vector2(-1, -1)
 var _war_zoom := -1.0
+var _war_turn := 0.0
+var _war_board := false
+var _war_board_click := Vector2(-1, -1)
 var _war_phase := 0
 var _war_at := 0
 ## --shot-on report|flight|board|card|spymenu takes the shot --shot-delay N
@@ -294,6 +302,11 @@ func _ready() -> void:
 			_war_focus = args[i + 1]
 		elif args[i] == "--war-zoom":
 			_war_zoom = float(args[i + 1])
+		elif args[i] == "--war-turn":
+			_war_turn = float(args[i + 1])
+		elif args[i] == "--war-board-click":
+			var bparts := args[i + 1].split(",")
+			_war_board_click = Vector2(float(bparts[0]), float(bparts[1]))
 		elif args[i] == "--war-folio":
 			_war_folio = args[i + 1].to_lower()
 		elif args[i] == "--war-drag":
@@ -317,6 +330,7 @@ func _ready() -> void:
 		i += 1
 	_war_room = args.has("--war-room")
 	_war_commit = args.has("--war-commit")
+	_war_board = args.has("--war-board") or _war_board_click.x >= 0.0
 	if _war_room and _shot_on == "":
 		_shot_on = "war"
 	if _war_drag.x >= 0.0 and _war_piece == "":
@@ -455,6 +469,36 @@ func _real_drag(c: Control, from: Vector2, to: Vector2) -> void:
 		c.get_viewport().push_input(m, true)
 	var release := InputEventMouseButton.new()
 	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	release.position = origin * to
+	release.global_position = release.position
+	c.get_viewport().push_input(release, true)
+
+
+## A real RIGHT drag across a control (the WAR ROOM's turn): press, eight
+## motions with the right button held, release — pushed through the viewport.
+func _real_right_drag(c: Control, from: Vector2, to: Vector2) -> void:
+	_real_move(c, from)
+	var origin := c.get_global_transform_with_canvas()
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_RIGHT
+	press.pressed = true
+	press.button_mask = MOUSE_BUTTON_MASK_RIGHT
+	press.position = origin * from
+	press.global_position = press.position
+	c.get_viewport().push_input(press, true)
+	var last := from
+	for i in range(1, 9):
+		var at := from.lerp(to, float(i) / 8.0)
+		var m := InputEventMouseMotion.new()
+		m.button_mask = MOUSE_BUTTON_MASK_RIGHT
+		m.position = origin * at
+		m.global_position = m.position
+		m.relative = at - last
+		last = at
+		c.get_viewport().push_input(m, true)
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_RIGHT
 	release.pressed = false
 	release.position = origin * to
 	release.global_position = release.position
@@ -822,10 +866,21 @@ func _war_room_step() -> void:
 					focus = WarRoom.believed_position(Game.data, Game.state, ArmySystem.regiment(Game.data, on))
 				view.lean_to(_war_zoom, focus)
 				print("war: leant to %.2f m" % view.camera_rig().distance)
+			if _war_turn != 0.0:
+				var mid := Vector2(view.size) * 0.5
+				var px := -_war_turn / Game.data.bal("war_cam_turn_deg_per_px")
+				_real_right_drag(view, mid - Vector2(px * 0.5, 0.0), mid + Vector2(px * 0.5, 0.0))
+				print("war: yaw=%.1f" % view.camera_rig().yaw_deg)
 			_war_to(3)
 	elif _war_phase == 3:
 		if _frames - _war_at < 6:
 			return
+		if _war_board:
+			var cam := view.get_node("%Camera") as Camera3D
+			var panel := view.get_node("%BoardPanel") as Node3D
+			var at := cam.unproject_position(panel.global_position) / view.window_scale()
+			_real_click(view, at)
+			print("war: board click at %s mode=%s" % [at, view.board_mode()])
 		if _war_piece != "":
 			var p := ArmySystem.regiment(Game.data, _war_piece)
 			var at: Variant = view.screen_pos_of_px(WarRoom.believed_position(Game.data, Game.state, p))
@@ -841,6 +896,12 @@ func _war_room_step() -> void:
 	elif _war_phase == 4:
 		if _frames - _war_at < 6:
 			return
+		if _war_board and _frames - _war_at < ceili(Game.data.bal("war_board_fly_s") * 120.0) + 10:
+			return   # a 120 Hz display's frames: the flight to the easel is over
+		if _war_board_click.x >= 0.0:
+			_real_click(view, Vector2(view.size) * _war_board_click)
+			print("war: board mode=%s missive open=%s selected=%d" % [view.board_mode(),
+				_root.missive_screen().visible, _root.missive_screen().selected()])
 		if _war_commit:
 			var menu := screen.orders()
 			menu.hide()   # PopupMenu.activate_item's order: hidden first, then id_pressed
