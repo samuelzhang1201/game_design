@@ -135,10 +135,11 @@ var _missives := ""
 var _show_on_map := false
 ## --ledger LENS (with --screen root): the LEDGER through real clicks — its
 ## tab, then the lens chip (a ledger_lenses.csv id: all, economy, war, court,
-## intelligence). --ledger-open CODE then opens that province (a double click
-## on its star), --ledger-select ID double-clicks that star (selected, its web
-## framed), --ledger-mode 2d presses Mode. The moment is `ledger`, once the
-## chart has settled.
+## intelligence). --ledger-open CODE then opens that province and
+## --ledger-select ID selects that star (its web framed) — both by emitting
+## the view's drill_requested, what a double click on the star emits, not by
+## a real double click — and --ledger-mode 2d presses Mode. The moment is
+## `ledger`, once the chart has settled.
 var _ledger := ""
 var _ledger_open := ""
 var _ledger_select := ""
@@ -610,7 +611,7 @@ func _ledger_step() -> void:
 		print("ledger: opened %s -> stars=%d" % [_ledger_open, (screen.snapshot()["nodes"] as Array).size()])
 	elif _frames == start + 14 and _ledger_select != "":
 		screen.view().drill_requested.emit(_ledger_select)
-		print("ledger: selected %s" % screen.view()._selected)
+		print("ledger: selected %s" % screen.view().selected())
 	elif _frames == start + 16 and _ledger_mode == "2d":
 		var mode := screen.find_child("Mode", true, false) as Button
 		_real_click(mode, mode.size * 0.5)

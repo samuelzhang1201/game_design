@@ -688,6 +688,10 @@ ledger_galaxy_home,0.06,LEDGER galaxy: the pull of a star toward its cluster's a
 ledger_galaxy_step_max_m,3,LEDGER galaxy: the most a star moves in one pass
 ledger_galaxy_passes,150,LEDGER galaxy: passes that settle the chart after a snapshot
 ledger_galaxy_ms_per_frame,4,LEDGER galaxy: milliseconds of layout a frame while settling
+ledger_galaxy_resettle_passes,40,"LEDGER galaxy (final review I1b): passes a redraw runs when its star set differs from the drawn one (a province opened, a courier gone) — the surviving stars keep their places and only the new ones are warm-started; an unchanged set runs none"
+ledger_galaxy_pin_share,0.3,"LEDGER galaxy: share of ledger_galaxy_passes a settled chart runs again when a star is dragged and pinned"
+ledger_galaxy_grid_min_stars,300,"LEDGER galaxy (final review I1c): at this many stars a pass repels only pairs nearer than ledger_galaxy_repel_cutoff_m, found through a uniform grid, so one pass fits ledger_galaxy_ms_per_frame (every pair of 629 stars cost ~9 ms a pass)"
+ledger_galaxy_repel_cutoff_m,12,"LEDGER galaxy (final review I1c): beyond this distance two stars do not repel (only at ledger_galaxy_grid_min_stars and above); the grid's cell size. Measured 2026-10-01, every realm province opened one by one (629 stars): worst pass 3.0 ms at 12, 3.6 at 16, 2.5 at 8"
 ledger_galaxy_mode_ease_s,0.6,LEDGER galaxy: seconds the stars ease between the 3D and 2D places
 ledger_galaxy_fly_s,0.6,LEDGER galaxy: seconds the camera flies to a cluster
 ledger_galaxy_other_fade,0.25,LEDGER galaxy: perceived opacity of the other clusters while one is chosen

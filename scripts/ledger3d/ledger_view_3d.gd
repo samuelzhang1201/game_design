@@ -164,9 +164,12 @@ func set_active(on: bool) -> void:
 
 
 ## Draw a snapshot. Stars already placed keep their places (the layout is
-## warm); a star under a drag or the selection that is no longer drawn lets go.
-## `select_id`, when given, is selected as the chart is drawn (one restyle,
-## not a second by select()).
+## warm: the same stars settle no further, other stars only briefly — final
+## review I1b); a star under a drag or the selection that is no longer drawn
+## lets go. `keep_camera` holds the camera where it stands — no framing, and a
+## framing in hand stops following the chart — else the camera frames the
+## chosen cluster. `select_id`, when given, is selected as the chart is drawn
+## (one restyle, not a second by select()).
 func show_snapshot(snap: Dictionary, keep_camera: bool, select_id: String = "") -> void:
 	_snap = snap
 	_nodes.clear()
@@ -205,7 +208,9 @@ func show_snapshot(snap: Dictionary, keep_camera: bool, select_id: String = "") 
 	_build_stars()
 	_build_haze()
 	_restyle()
-	if not keep_camera:
+	if keep_camera:
+		_framed = false
+	else:
 		_frame_on(_cluster_ids(), true)
 	_update_hud()
 
@@ -322,6 +327,16 @@ func is_flat() -> bool:
 
 func cluster() -> String:
 	return _cluster
+
+
+## The selected star's id, or "".
+func selected() -> String:
+	return _selected
+
+
+## Where the stars stand and how much settling is left (tests, tools).
+func layout() -> LedgerGalaxyLayout:
+	return _lay
 
 
 func orbit() -> LedgerOrbit:

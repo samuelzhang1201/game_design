@@ -88,7 +88,7 @@ func test_a_vanished_selection_clears() -> void:
 	g2["links"] = (g2["links"] as Array).filter(func(l: Dictionary) -> bool:
 		return String(l["from"]) != "character:you" and String(l["to"]) != "character:you")
 	view.show_snapshot(g2, true)
-	assert_eq(view._selected, "")
+	assert_eq(view.selected(), "")
 
 
 func test_a_star_is_picked_in_3d_and_in_2d() -> void:
@@ -560,13 +560,13 @@ func test_a_chosen_clusters_hubs_are_its_own_and_dim_names_dim() -> void:
 func test_a_snapshot_can_be_drawn_with_its_selection() -> void:
 	var g := Ledger.galaxy(repo, s, {})
 	view.show_snapshot(g, false, "character:you")
-	assert_eq(view._selected, "character:you")
+	assert_eq(view.selected(), "character:you")
 	var with_arg := view.segments().map(func(seg: Dictionary) -> Color: return seg["ca"])
 	view.show_snapshot(g, false)
 	view.select("character:you")
 	assert_eq(view.segments().map(func(seg: Dictionary) -> Color: return seg["ca"]), with_arg)
 	view.show_snapshot(g, false, "no:such")
-	assert_eq(view._selected, "", "a star not drawn is not selected")
+	assert_eq(view.selected(), "", "a star not drawn is not selected")
 
 
 ## Task 11 fix round 2 (R1): a star is picked within ledger_star_pick_min_px
@@ -783,3 +783,36 @@ func test_the_selected_label_sits_at_its_ring_and_nothing_touches_it() -> void:
 	assert_lte(gap, px_sel * 1.05, "within one name-height of its ring (%.1f px)" % gap)
 	for t: String in boxes:
 		assert_false((boxes[t] as Rect2).intersects(mine), "%s touches the selected label" % t)
+
+
+## Final review I1b: a redraw of the same stars keeps every place, runs no
+## settle and leaves the camera; one with new stars (a province opened)
+## keeps the survivors' places and the camera and settles only briefly.
+func test_an_unchanged_redraw_keeps_every_place_and_the_camera() -> void:
+	_show()
+	var places := {}
+	for id: String in view.stars():
+		places[id] = view.drawn(id)
+	var pose := view.camera().transform
+	view.show_snapshot(Ledger.galaxy(repo, s, {}), true)
+	assert_eq(view.layout().passes_left, 0, "nothing to settle")
+	for id: String in places:
+		assert_eq(view.drawn(id), places[id], id)
+	assert_eq(view.camera().transform, pose, "the camera stays")
+
+
+func test_a_changed_redraw_keeps_the_survivors_and_the_camera() -> void:
+	_show()
+	var places := {}
+	for id: String in view.stars():
+		places[id] = view.drawn(id)
+	var pose := view.camera().transform
+	var home := MapManors.home_province(repo, s)
+	view.show_snapshot(Ledger.galaxy(repo, s, {home: true}), true)
+	assert_gt(view.stars().size(), places.size(), "the province's manors stand")
+	assert_eq(view.layout().passes_left, int(repo.bal("ledger_galaxy_resettle_passes")), "a short settle")
+	for id: String in places:
+		if view.stars().has(id):
+			assert_eq(view.drawn(id), places[id], "a survivor keeps its place: " + id)
+	view.settle_now()
+	assert_eq(view.camera().transform, pose, "the camera stays while the new stars settle")

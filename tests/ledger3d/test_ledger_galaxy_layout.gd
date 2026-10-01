@@ -41,7 +41,7 @@ func test_a_star_keeps_its_place_across_a_snapshot() -> void:
 	lay.setup(repo, _snap(), false)
 	for id: String in before:
 		assert_eq(lay.pos[id], before[id], "kept: " + id)
-	assert_gt(lay.passes_left, 0, "a new snapshot settles again")
+	assert_eq(lay.passes_left, 0, "the same stars: nothing settles again (final review I1b)")
 
 
 func test_a_new_star_starts_round_its_home() -> void:
@@ -125,3 +125,113 @@ func test_a_frame_never_starts_a_pass_past_its_budget() -> void:
 	assert_true(lay.settled())
 	assert_eq(lay.step_within(1.0e9), 0, "a settled chart runs nothing")
 
+
+
+## Final review I1b: a redraw whose stars are the drawn ones keeps every
+## place and runs no pass; one that adds a star keeps the survivors where
+## they stood and runs only ledger_galaxy_resettle_passes, never the full
+## settle; a chart still settling keeps the passes it had left.
+func test_a_changed_redraw_keeps_the_survivors_and_settles_briefly() -> void:
+	var lay := LedgerGalaxyLayout.new()
+	var snap := _snap()
+	lay.setup(repo, snap, false)
+	assert_eq(lay.passes_left, int(repo.bal("ledger_galaxy_passes")), "the first draw settles fully")
+	lay.step(lay.passes_left)
+	var before: Dictionary = lay.pos.duplicate()
+	snap["nodes"].append({"id": "manor:2", "type": "manor", "cluster": "economy", "home_id": "province:p"})
+	lay.setup(repo, snap, false)
+	for id: String in before:
+		assert_eq(lay.pos[id], before[id], "a survivor keeps its place: " + id)
+	assert_eq(lay.passes_left, int(repo.bal("ledger_galaxy_resettle_passes")), "a short settle")
+	assert_lt(repo.bal("ledger_galaxy_resettle_passes"), repo.bal("ledger_galaxy_passes"))
+	lay.step(5)
+	var left := lay.passes_left
+	lay.setup(repo, snap, false)
+	assert_eq(lay.passes_left, left, "the same stars mid-settle: the settle goes on, not again")
+
+
+func test_laying_the_chart_flat_settles_it_fully() -> void:
+	var lay := LedgerGalaxyLayout.new()
+	lay.setup(repo, _snap(), false)
+	lay.step(lay.passes_left)
+	lay.setup(repo, _snap(), true)
+	assert_eq(lay.passes_left, int(repo.bal("ledger_galaxy_passes")), "another mode is another chart")
+
+
+func test_a_pin_on_a_settled_chart_runs_a_share_of_the_settle() -> void:
+	var lay := LedgerGalaxyLayout.new()
+	lay.setup(repo, _snap(), false)
+	lay.step(lay.passes_left)
+	lay.pin("character:c0", Vector3(1, 2, 3))
+	assert_eq(lay.passes_left, int(repo.bal("ledger_galaxy_passes") * repo.bal("ledger_galaxy_pin_share")))
+
+
+## Final review I1c: past ledger_galaxy_grid_min_stars a pass repels only
+## pairs within ledger_galaxy_repel_cutoff_m (a uniform grid). With a cut-off
+## wider than the chart it is the all-pairs pass; it stays deterministic; and
+## the realm's clusters still settle apart.
+func test_the_grid_pass_is_the_all_pairs_pass_within_its_reach() -> void:
+	var s := GameState.new_campaign(repo, 42)
+	var g := Ledger.galaxy(repo, s, {})
+	var a := LedgerGalaxyLayout.new()
+	a.setup(repo, g, false)
+	a.step(20)
+	repo.balance["ledger_galaxy_grid_min_stars"] = 0.0
+	repo.balance["ledger_galaxy_repel_cutoff_m"] = 100000.0
+	var b := LedgerGalaxyLayout.new()
+	b.setup(repo, g, false)
+	b.step(20)
+	for id: String in a.pos:
+		assert_almost_eq(b.pos[id], a.pos[id], Vector3.ONE * 1e-3, id)
+
+
+func test_the_grid_layout_is_deterministic() -> void:
+	repo.balance["ledger_galaxy_grid_min_stars"] = 0.0
+	var s := GameState.new_campaign(repo, 42)
+	var g := Ledger.galaxy(repo, s, {})
+	var a := LedgerGalaxyLayout.new()
+	var b := LedgerGalaxyLayout.new()
+	a.setup(repo, g, false)
+	b.setup(repo, g, false)
+	a.step(30)
+	b.step(30)
+	for id: String in a.pos:
+		assert_eq(a.pos[id], b.pos[id], id)
+
+
+func test_the_grid_layout_still_separates_the_clusters() -> void:
+	repo.balance["ledger_galaxy_grid_min_stars"] = 0.0
+	var s := GameState.new_campaign(repo, 42)
+	var all := {}
+	for code: String in MapOwnership.provinces_of(repo, s, repo.resolve_realm("player_realm")):
+		all[code] = true
+	var g := Ledger.galaxy(repo, s, all)
+	var lay := LedgerGalaxyLayout.new()
+	lay.setup(repo, g, false)
+	lay.step(lay.passes_left)
+	var sums := {}
+	var counts := {}
+	for n: Dictionary in g["nodes"]:
+		var c := String(n["cluster"])
+		sums[c] = (sums.get(c, Vector3.ZERO) as Vector3) + (lay.pos[String(n["id"])] as Vector3)
+		counts[c] = int(counts.get(c, 0)) + 1
+	var mid := {}
+	for c: String in sums:
+		mid[c] = (sums[c] as Vector3) / float(counts[c])
+	var spread := {}
+	for n: Dictionary in g["nodes"]:
+		var c := String(n["cluster"])
+		spread[c] = float(spread.get(c, 0.0)) + (lay.pos[String(n["id"])] as Vector3).distance_to(mid[c]) / float(counts[c])
+	for a: String in mid:
+		for b: String in mid:
+			if a < b:
+				assert_gt((mid[a] as Vector3).distance_to(mid[b]), float(spread[a]) + float(spread[b]),
+					"%s and %s read as two clusters with every province open" % [a, b])
+	# and the stars of a cluster do not collapse onto one another
+	var ids: Array = lay.pos.keys()
+	var close := 0
+	for i in ids.size():
+		for j in range(i + 1, ids.size()):
+			if (lay.pos[ids[i]] as Vector3).distance_to(lay.pos[ids[j]]) < repo.bal("ledger_star_min"):
+				close += 1
+	assert_lt(close, ids.size() / 20, "hardly any two stars on top of each other")

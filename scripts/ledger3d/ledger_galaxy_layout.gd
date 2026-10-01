@@ -7,9 +7,13 @@ extends RefCounted
 ## cluster's anchor — an opened manor to its province's star. A new star's
 ## first place is hashed from its id (no RNG) and passes run over sorted ids,
 ## so one snapshot always lays out the same way; a star keeps its place
-## across snapshots, and `step` runs a few passes at a time so the chart
-## settles over some frames and then stops. The flat chart is the same model
-## in the plane. Pure: no nodes, no clock.
+## across snapshots — a redraw of the same stars runs no pass, one that adds
+## or drops stars only a short settle (final review I1b) — and `step` runs a
+## few passes at a time so the chart settles over some frames and then stops.
+## Past ledger_galaxy_grid_min_stars a pass repels only pairs within
+## ledger_galaxy_repel_cutoff_m, found through a uniform grid (I1c). The flat
+## chart is the same model in the plane. No nodes; the FORCES use no clock
+## (only `step_within` reads one, to stop a frame's share inside its budget).
 
 var pos: Dictionary = {}        # node id -> Vector3, where it stands now
 var pinned: Dictionary = {}     # node id -> true: held where the pointer put it (this viewing only)
@@ -60,10 +64,13 @@ static func jitter(id: String, r: float, as_flat: bool) -> Vector3:
 
 ## Takes a snapshot: every star it already placed keeps its place (flattened
 ## when flat), a new one starts round its home star (or its cluster's
-## anchor), a pin on a star no longer drawn is let go, and
-## ledger_galaxy_passes are set to run.
+## anchor), and a pin on a star no longer drawn is let go. What runs then
+## (final review I1b): the first chart, or the chart laid flat or stood up,
+## settles fully (ledger_galaxy_passes); the same stars as before run nothing
+## more than they had left; other stars, ledger_galaxy_resettle_passes.
 func setup(repo: DataRepository, snap: Dictionary, as_flat: bool) -> void:
 	_repo = repo
+	var fresh := pos.is_empty() or as_flat != flat
 	flat = as_flat
 	var at := anchors(repo, as_flat)
 	var degree := {}
@@ -91,6 +98,7 @@ func setup(repo: DataRepository, snap: Dictionary, as_flat: bool) -> void:
 	for id: String in _ids:
 		if pos.has(id):
 			kept[id] = _flat(pos[id])
+	var unchanged := not fresh and kept.size() == _ids.size() and pos.size() == _ids.size()
 	for i in _ids.size():
 		if kept.has(_ids[i]):
 			continue
@@ -115,8 +123,14 @@ func setup(repo: DataRepository, snap: Dictionary, as_flat: bool) -> void:
 		_edges.append(b)
 		var same := String(by_id[_ids[a]].get("cluster", "")) == String(by_id[_ids[b]].get("cluster", ""))
 		_edge_k.append(k if same else k * repo.bal("ledger_galaxy_cross_spring"))
-	_total = int(repo.bal("ledger_galaxy_passes"))
-	passes_left = _total
+	if fresh:
+		_total = int(repo.bal("ledger_galaxy_passes"))
+		passes_left = _total
+	elif not unchanged:
+		var short := int(repo.bal("ledger_galaxy_resettle_passes"))
+		if passes_left < short:
+			_total = short
+			passes_left = short
 
 
 func settled() -> bool:
@@ -130,7 +144,8 @@ func pin(id: String, at: Vector3) -> void:
 	pinned[id] = true
 	pos[id] = _flat(at)
 	if passes_left <= 0:
-		passes_left = int(_total * 0.3)
+		_total = int(_repo.bal("ledger_galaxy_passes"))
+		passes_left = int(_total * _repo.bal("ledger_galaxy_pin_share"))
 
 
 const PASS_MARGIN := 1.25   # a pass on a busy machine can cost a quarter more than the dearest yet
@@ -175,23 +190,28 @@ func step(passes: int) -> void:
 		half[i] = rep * _size[i] * 0.5
 	var f := PackedVector3Array()
 	f.resize(n)
+	var grid := float(n) >= _repo.bal("ledger_galaxy_grid_min_stars")
+	var cut := _repo.bal("ledger_galaxy_repel_cutoff_m")
 	for _k in mini(passes, passes_left):
 		for i in n:
 			var h := _home_of[i]
 			var target: Vector3 = p[h] if h >= 0 else _anchor[i]
 			f[i] = (target - p[i]) * home
-		# every pair repels (the hot loop: each star's own place, share and
-		# force held in locals, one read and one write of the other's a pair)
-		for i in n:
-			var pi := p[i]
-			var hi := half[i]
-			var fi := f[i]
-			for j in range(i + 1, n):
-				var d := pi - p[j]
-				var push := d * ((hi + half[j]) / (d.length_squared() + 0.5))
-				fi += push
-				f[j] -= push
-			f[i] = fi
+		if grid:
+			_repel_near(p, half, f, cut)
+		else:
+			# every pair repels (the hot loop: each star's own place, share and
+			# force held in locals, one read and one write of the other's a pair)
+			for i in n:
+				var pi := p[i]
+				var hi := half[i]
+				var fi := f[i]
+				for j in range(i + 1, n):
+					var d := pi - p[j]
+					var push := d * ((hi + half[j]) / (d.length_squared() + 0.5))
+					fi += push
+					f[j] -= push
+				f[i] = fi
 		for e in range(0, _edges.size(), 2):
 			var a := _edges[e]
 			var b := _edges[e + 1]
@@ -211,6 +231,65 @@ func step(passes: int) -> void:
 		passes_left -= 1
 	for i in n:
 		pos[_ids[i]] = p[i]
+
+
+## The 13 neighbour cells half of a cell's 26 (the other half see it from
+## their side), so each pair of cells is visited once.
+const _FORWARD: Array[Vector3i] = [Vector3i(1, -1, -1), Vector3i(1, -1, 0), Vector3i(1, -1, 1),
+	Vector3i(1, 0, -1), Vector3i(1, 0, 0), Vector3i(1, 0, 1), Vector3i(1, 1, -1), Vector3i(1, 1, 0),
+	Vector3i(1, 1, 1), Vector3i(0, 1, -1), Vector3i(0, 1, 0), Vector3i(0, 1, 1), Vector3i(0, 0, 1)]
+
+
+## Repulsion between the pairs nearer than `cut` only (final review I1c): the
+## stars dealt into cells `cut` wide in index (sorted id) order, every cell
+## met with itself and its 13 forward neighbours (gathered once a cell, in
+## _FORWARD's order) in the order it was first filled — the same sums in the
+## same order for the same places.
+func _repel_near(p: PackedVector3Array, half: PackedFloat32Array, f: PackedVector3Array, cut: float) -> void:
+	var inv := 1.0 / maxf(cut, 1e-6)
+	var cut2 := cut * cut
+	var cells := {}
+	var order: Array[Vector3i] = []
+	for i in p.size():
+		var v := p[i]
+		var key := Vector3i(floori(v.x * inv), floori(v.y * inv), floori(v.z * inv))
+		var bucket: Variant = cells.get(key)
+		if bucket == null:
+			cells[key] = PackedInt32Array([i])
+			order.append(key)
+		else:
+			var grown: PackedInt32Array = bucket
+			grown.append(i)
+			cells[key] = grown
+	for key: Vector3i in order:
+		var mine: PackedInt32Array = cells[key]
+		var near := PackedInt32Array()   # the forward neighbours' stars
+		for off: Vector3i in _FORWARD:
+			var other: Variant = cells.get(key + off)
+			if other != null:
+				near.append_array(other as PackedInt32Array)
+		var m := mine.size()
+		for a in m:
+			var i := mine[a]
+			var pi := p[i]
+			var hi := half[i]
+			var fi := f[i]
+			for b in range(a + 1, m):
+				var j := mine[b]
+				var d := pi - p[j]
+				var dd := d.length_squared()
+				if dd < cut2:
+					var push := d * ((hi + half[j]) / (dd + 0.5))
+					fi += push
+					f[j] -= push
+			for j in near:
+				var d := pi - p[j]
+				var dd := d.length_squared()
+				if dd < cut2:
+					var push := d * ((hi + half[j]) / (dd + 0.5))
+					fi += push
+					f[j] -= push
+			f[i] = fi
 
 
 func _flat(v: Vector3) -> Vector3:

@@ -67,7 +67,7 @@ func test_a_double_clicked_person_opens_their_card_and_is_selected() -> void:
 	await wait_frames(1)
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
 	assert_eq(detail.title_label().text, LedgerResolvers.label_of(Game.data, Game.state, "character:you"))
-	assert_eq(screen.view()._selected, "character:you")
+	assert_eq(screen.view().selected(), "character:you")
 
 
 func test_the_mode_button_lays_the_chart_flat() -> void:
@@ -115,7 +115,7 @@ func test_a_vanished_selection_takes_its_card() -> void:
 	Game.state.missives = Game.state.missives.filter(func(m: Dictionary) -> bool: return int(m["id"]) != rid)
 	screen.refresh()
 	await wait_frames(2)
-	assert_eq(screen.view()._selected, "")
+	assert_eq(screen.view().selected(), "")
 	assert_false(detail.has_content(), "the vanished star's card went with it")
 
 
@@ -171,3 +171,81 @@ func test_opening_a_province_frames_it_and_what_it_unfolded() -> void:
 	screen.view().drill_requested.emit("province:" + home)
 	await wait_frames(1)
 	assert_eq(screen.view()._frame_ids, framed, "closing frames nothing new")
+
+
+## Final review I1a: while the clock runs, a day's state change does not
+## redraw the LEDGER; the month's turn does; a change on a paused clock (an
+## order, DEV MODE) is drawn on the next frame; and a day skipped while the
+## clock ran is drawn when the clock stops.
+func test_a_running_clock_redraws_only_at_the_months_turn() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	await wait_frames(2)
+	var before := screen._rebuilds
+	Game.clock_speed = 1   # running (set directly: GameRoot's clock is not driven here)
+	Game.state_changed.emit()
+	await wait_frames(2)
+	assert_eq(screen._rebuilds, before, "a day while the clock runs: no redraw")
+	Game.state.tick += 1
+	Game.state_changed.emit()
+	await wait_frames(2)
+	assert_eq(screen._rebuilds, before + 1, "the month turned: one redraw")
+	Game.state_changed.emit()
+	await wait_frames(2)
+	assert_eq(screen._rebuilds, before + 1, "the same month again: none")
+	Game.clock_speed = 0
+	Game.clock_changed.emit(0)
+	await wait_frames(2)
+	assert_eq(screen._rebuilds, before + 2, "the clock stopped on a day not drawn: drawn now")
+	Game.state_changed.emit()
+	await wait_frames(2)
+	assert_eq(screen._rebuilds, before + 3, "paused: every change is drawn on the next frame")
+	Game.clock_changed.emit(0)
+	await wait_frames(2)
+	assert_eq(screen._rebuilds, before + 3, "nothing skipped, nothing to draw")
+
+
+## Final review minors: the crumb names the realm, the chosen cluster and
+## each opened province in order, and Back shows only while one is open;
+## closing the LEDGER forgets what this viewing opened.
+func test_the_crumb_and_back_follow_the_opened_provinces() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	var crumb := screen.find_child("Crumb", true, false) as Label
+	var back := screen.find_child("Back", true, false) as Button
+	assert_eq(crumb.text, "Realm")
+	assert_false(back.visible, "nothing opened: no Back")
+	screen.set_lens("economy")
+	var cluster_label := ""
+	for c: Dictionary in Game.data.ledger_clusters:
+		if String(c["lens"]) == "economy":
+			cluster_label = String(c["label"])
+	assert_eq(crumb.text, "Realm › " + cluster_label)
+	var home := MapManors.home_province(Game.data, Game.state)
+	screen.drill("province:" + home)
+	assert_eq(crumb.text, "Realm › %s › %s" % [cluster_label,
+		LedgerResolvers.label_of(Game.data, Game.state, "province:" + home)])
+	assert_true(back.visible, "a province open: Back")
+	back.pressed.emit()
+	assert_eq(crumb.text, "Realm › " + cluster_label)
+	assert_false(back.visible)
+	screen.drill("province:" + home)
+	screen.close()
+	assert_true(screen.opened().is_empty(), "closing forgets this viewing's opened provinces")
+	screen = await _open(r)
+	assert_false((screen.find_child("Back", true, false) as Button).visible)
+
+
+## Final review minors: the selected star's card follows a redraw (its
+## figures are the day's it was redrawn on).
+func test_the_selected_stars_card_follows_a_redraw() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	screen.drill("character:you")
+	var detail: MapDetailPanel = r.current_screen.detail_panel()
+	var title := detail.title_label().text
+	detail.title_label().text = "stale"
+	screen.refresh()
+	await wait_frames(2)
+	assert_eq(detail.title_label().text, title, "the card was drawn again with the chart")
+	assert_eq(screen.view().selected(), "character:you")
