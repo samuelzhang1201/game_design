@@ -61,6 +61,7 @@ func test_a_point_finds_its_sheet_and_a_point_off_the_map_the_nearest() -> void:
 	var far := Vector2(-5000.0, -5000.0)
 	var got := WarSheets.sheet_of(repo, far)
 	assert_between(got, 0, series.size() - 1, "nothing is off every sheet: the nearest takes it")
+	assert_eq(got, 0, "the north-west corner is nearest the first sheet")
 
 
 func test_neighbours_are_symmetric() -> void:
@@ -70,3 +71,24 @@ func test_neighbours_are_symmetric() -> void:
 		var back := {"n": "s", "s": "n", "e": "w", "w": "e"}
 		for d: String in nb:
 			assert_eq(int(WarSheets.neighbours(repo, int(nb[d])).get(back[d], -1)), int(s["index"]))
+
+
+func test_a_hole_in_the_grid_leaves_no_neighbour_and_no_diagonal() -> void:
+	# a 2 x 2 grid whose (1, 0) was all sea and skipped
+	var cells := {Vector2i(0, 0): 0, Vector2i(0, 1): 1, Vector2i(1, 1): 2}
+	assert_eq(WarSheets.grid_neighbours(cells, Vector2i(0, 0)), {"s": 1})
+	assert_eq(WarSheets.grid_neighbours(cells, Vector2i(1, 1)), {"w": 1})
+	assert_false(WarSheets.grid_neighbours(cells, Vector2i(1, 1)).has("n"))
+	assert_eq(WarSheets.grid_neighbours(cells, Vector2i(0, 1)), {"n": 0, "e": 2})
+
+
+func test_the_series_records_each_sheets_grid_place() -> void:
+	for s: Dictionary in WarSheets.series(repo):
+		assert_true(int(s["col"]) >= 0 and int(s["row"]) >= 0)
+
+
+func test_load_map_forgets_the_series() -> void:
+	var first: Array = WarSheets.series(repo)
+	(first[0] as Dictionary)["name"] = "stale"
+	repo.load_map(repo.default_pack_id())
+	assert_ne(String((WarSheets.series(repo)[0] as Dictionary)["name"]), "stale", "rebuilt after the pack was swapped")

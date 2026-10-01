@@ -44,17 +44,23 @@ static func _starts(span: float, size: float, overlap: float) -> Array[float]:
 	return out
 
 
-## The series: sheets with land, in order, numbered and named.
+## The series: sheets with land, in order, numbered and named. "Most land"
+## counts land-cell CENTRES inside the sheet (not area), by the starting
+## border. `col` / `row` are the sheet's place in the FULL layout grid, which
+## a skipped sea sheet leaves a hole in.
 static func series(repo: DataRepository) -> Array:
 	var key := repo.get_instance_id()
 	if _cache.has(key):
 		return _cache[key]
 	var k := px_per_unit(repo)
-	var rects := layout(float(repo.map_info.get("width", "0")), float(repo.map_info.get("height", "0")),
+	var width := float(repo.map_info.get("width", "0"))
+	var rects := layout(width, float(repo.map_info.get("height", "0")),
 		repo.bal("war_sheet_w_km") * k, repo.bal("war_sheet_h_km") * k, repo.bal("war_sheet_overlap_km") * k)
+	var cols := _starts(width, repo.bal("war_sheet_w_km") * k, repo.bal("war_sheet_overlap_km") * k).size()
 	var centres := _land_centres(repo)
 	var out: Array = []
-	for r: Rect2 in rects:
+	for n in rects.size():
+		var r: Rect2 = rects[n]
 		var tally: Dictionary = {}
 		for c: Dictionary in centres:
 			if r.has_point(c["at"]):
@@ -67,7 +73,8 @@ static func series(repo: DataRepository) -> Array:
 				best = kd
 		var i := out.size()
 		out.append({"index": i, "numeral": roman(i + 1), "kingdom": best,
-			"name": String((repo.kingdoms.get(best, {}) as Dictionary).get("label", best)), "rect": r})
+			"name": String((repo.kingdoms.get(best, {}) as Dictionary).get("label", best)), "rect": r,
+			"col": n % cols, "row": n / cols})
 	_cache[key] = out
 	return out
 
@@ -133,31 +140,26 @@ static func grid_ref(repo: DataRepository, sheet: Dictionary, px: Vector2) -> St
 	return "%s · %s%d" % [sheet["numeral"], char(65 + col), row]
 
 
-## The sheets beside `index`: the nearest one each way whose rect overlaps
-## this one's edge band.
+## The sheets beside `index` by GRID position only: the kept sheet at
+## (col +- 1, row) or (col, row +- 1), nothing where the grid holds none (a
+## skipped sea sheet, the map's edge). Never a diagonal.
 static func neighbours(repo: DataRepository, index: int) -> Dictionary:
 	var all := series(repo)
 	if index < 0 or index >= all.size():
 		return {}
-	var me: Rect2 = all[index]["rect"]
-	var out: Dictionary = {}
-	var dists: Dictionary = {}
+	var cells: Dictionary = {}
 	for s: Dictionary in all:
-		var r: Rect2 = s["rect"]
-		if int(s["index"]) == index:
-			continue
-		var dc := r.get_center() - me.get_center()
-		var dir := ""
-		if absf(dc.x) > absf(dc.y):
-			dir = "e" if dc.x > 0.0 else "w"
-			if r.position.y >= me.end.y or r.end.y <= me.position.y:
-				continue
-		else:
-			dir = "s" if dc.y > 0.0 else "n"
-			if r.position.x >= me.end.x or r.end.x <= me.position.x:
-				continue
-		var d := dc.length()
-		if not dists.has(dir) or d < float(dists[dir]):
-			dists[dir] = d
-			out[dir] = int(s["index"])
+		cells[Vector2i(int(s["col"]), int(s["row"]))] = int(s["index"])
+	var me: Dictionary = all[index]
+	return grid_neighbours(cells, Vector2i(int(me["col"]), int(me["row"])))
+
+
+## Pure: `cells` maps Vector2i(col, row) to a sheet index; the four that stand
+## beside `at`, as {"n"|"s"|"e"|"w": index}, only those that exist.
+static func grid_neighbours(cells: Dictionary, at: Vector2i) -> Dictionary:
+	var out: Dictionary = {}
+	for d: Array in [["n", Vector2i(0, -1)], ["s", Vector2i(0, 1)], ["e", Vector2i(1, 0)], ["w", Vector2i(-1, 0)]]:
+		var key: Vector2i = at + (d[1] as Vector2i)
+		if cells.has(key):
+			out[d[0]] = int(cells[key])
 	return out
