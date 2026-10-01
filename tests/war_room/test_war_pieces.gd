@@ -22,6 +22,31 @@ func _home_sheet() -> int:
 	return int(WarRoom.pieces(repo, state)[0]["sheet"])
 
 
+func _land_code() -> String:
+	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
+		if not bool(p["naval"]):
+			return String(p["code"])
+	return ""
+
+
+## The highest relief under a base's four corners, from the view's own heights.
+func _corner_ys(xz: Vector2, naval: bool) -> Array:
+	var side := repo.bal("war_piece_base_mm") / 1000.0
+	var half := Vector2(side, side * (repo.bal("war_base_naval_depth") if naval else 1.0)) * 0.5
+	var out: Array = []
+	for dx in [-half.x, half.x]:
+		for dz in [-half.y, half.y]:
+			out.append(view.y_at(xz + Vector2(dx, dz)))
+	return out
+
+
+func _move_to(code: String, pack_px: Vector2) -> void:
+	ArmySystem.ensure(repo, state)
+	var m := ArmySystem.pack_to_metres(repo, pack_px)
+	state.regiments[code]["x_m"] = m.x
+	state.regiments[code]["y_m"] = m.y
+
+
 func test_every_regiment_on_the_sheet_stands_as_a_piece_where_we_know_it_is() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_frames(2)
@@ -119,8 +144,7 @@ func test_a_piece_is_frozen_in_its_orders_pose() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
-	var p: Dictionary = WarRoom.on_sheet(repo, state, _home_sheet())[0]
-	var code := String(p["code"])
+	var code := _land_code()
 	var action := WarRoom.pose_action(ArmySystem.order_of(repo, state, code))
 	var anims := Map3DFormation.anims_of(pieces.piece(code).get_node("Figures/Formation"))
 	assert_gt(anims.size(), 0)
@@ -158,3 +182,141 @@ func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_its_orders() ->
 	right.position = at
 	view._gui_input(right)
 	assert_signal_emitted_with_parameters(view, "army_menu_requested", [String(hit["code"]), at])
+
+
+func test_a_piece_sits_level_on_the_highest_relief_under_its_base() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
+		var node := pieces.piece(String(p["code"]))
+		var ys := _corner_ys(Vector2(node.position.x, node.position.z), bool(p["naval"]))
+		assert_almost_eq(node.position.y, ys.max(), 0.00001)
+		for y: float in ys:
+			assert_lte(y, node.position.y + 0.00001, "no corner stands above the base's underside")
+
+
+func test_a_piece_moved_onto_a_slope_rests_on_its_highest_corner() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var code := _land_code()
+	var rect: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
+	var found := Vector2(-1, -1)
+	var gain := 0.0
+	for ix in 40:
+		for iy in 40:
+			var px := rect.position + rect.size * Vector2((ix + 0.5) / 40.0, (iy + 0.5) / 40.0)
+			var xz := WarRoomTable.to_table(rect, repo.bal("war_table_w_m"), px)
+			var ys := _corner_ys(xz, false)
+			if ys.max() - view.y_at(xz) > gain:
+				gain = ys.max() - view.y_at(xz)
+				found = px
+	assert_gt(gain, 0.0001, "the relief has a slope under a base")
+	_move_to(code, found)
+	view.refresh()
+	pieces.settle()
+	var node := pieces.piece(code)
+	var ys := _corner_ys(Vector2(node.position.x, node.position.z), false)
+	assert_almost_eq(node.position.y, ys.max(), 0.00001)
+	assert_gt(node.position.y, view.y_at(Vector2(node.position.x, node.position.z)), "above the centre's own height")
+
+
+func test_a_click_on_the_figures_top_picks_the_piece_and_the_nearer_one_wins() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var cam: Camera3D = view.get_node("%Camera")
+	var sc: float = view._window_scale()
+	var code := _land_code()
+	var node := pieces.piece(code)
+	var top := node.global_position + Vector3(0.0, (repo.bal("war_piece_base_h_mm") + repo.bal("war_piece_figure_mm")) / 1000.0, 0.0)
+	var at := cam.unproject_position(top) / sc
+	var centre := cam.unproject_position(node.global_position) / sc
+	assert_gt(centre.distance_to(at), 1.0, "the figures' top is off the base's centre")
+	assert_eq(pieces.pick(cam, sc, at, 0.0), code, "a click on the figures picks the piece")
+	var near := Node3D.new()
+	near.set_meta("code", "zz_nearer")
+	pieces.add_child(near)
+	near.global_position = node.global_position + Vector3(0.0, 0.0, 0.002)
+	assert_eq(pieces.pick(cam, sc, centre, repo.bal("war_pick_px")), "zz_nearer", "the piece nearest the camera wins")
+	pieces.remove_child(near)
+	near.free()
+
+
+func test_a_fleet_stands_as_a_flat_tin_token() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var seen := 0
+	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
+		if bool(p["naval"]):
+			var token := pieces.piece(String(p["code"])).get_node("Figures/Token") as MeshInstance3D
+			assert_not_null(token)
+			assert_true(token.material_override is ShaderMaterial, "under the tin shader")
+			seen += 1
+	assert_gt(seen, 0, "the home sheet holds a fleet")
+
+
+func test_a_regiment_leaving_the_sheet_loses_its_piece() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var n := pieces.get_child_count()
+	var code := _land_code()
+	var other := (_home_sheet() + 1) % WarSheets.series(repo).size()
+	var away: Rect2 = WarSheets.series(repo)[other]["rect"]
+	var here: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
+	var spot := away.get_center()
+	assert_false(here.has_point(spot), "the spot is off this sheet")
+	_move_to(code, spot)
+	view.refresh()
+	assert_null(pieces.piece(code))
+	assert_eq(pieces.get_child_count(), n - 1)
+
+
+func test_a_regiment_that_loses_men_is_rebuilt_with_fewer_figures() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var code := _land_code()
+	assert_eq(pieces.piece(code).get_node("Figures/Formation").get_child_count(), 9)
+	var before := pieces.piece(code)
+	ArmySystem.ensure(repo, state)
+	@warning_ignore("integer_division")
+	state.regiments[code]["wounded"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)) * 4 / 10
+	assert_eq(WarFolio.figures(repo, state, code), 6)
+	view.refresh()
+	assert_ne(pieces.piece(code), before)
+	assert_eq(pieces.piece(code).get_node("Figures/Formation").get_child_count(), 6)
+
+
+func test_a_push_in_flight_to_the_same_place_is_not_restarted() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var code := _land_code()
+	var at: Vector2 = WarRoom.on_sheet(repo, state, _home_sheet())[0]["at"]
+	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
+		if String(p["code"]) == code:
+			at = p["at"]
+	_move_to(code, at + Vector2(5.0, 0.0))
+	view.refresh()
+	pieces._process(repo.bal("war_plot_push_s") * 0.5)
+	var mid := pieces.piece(code).position
+	view.refresh()   # same believed place again: the push carries on
+	pieces._process(0.0)
+	assert_eq(pieces.piece(code).position.x, mid.x, "the running push was not restarted")
+	pieces._process(repo.bal("war_plot_push_s"))
+	assert_almost_eq(pieces.piece(code).position.x, view.table_point(at + Vector2(5.0, 0.0)).x, 0.0001)
+
+
+func test_a_figure_is_measured_through_its_transforms_and_never_taller_than_the_target() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var want := repo.bal("war_piece_figure_mm") / 1000.0
+	var form := pieces.piece(_land_code()).get_node("Figures/Formation") as Node3D
+	var tall := Map3DUnits.model_size(form.get_child(0) as Node3D).y * form.scale.y
+	assert_lte(tall, want + 0.0001, "a figure is never taller than the target")
+	assert_gt(tall, want * 0.5, "and not shrunk away")

@@ -899,3 +899,5 @@ war_tag_width_px,1100,"WAR ROOM (Task 10): how many tag font px span a base's si
 war_tag_outline_px,10,"WAR ROOM (Task 10): the tag's paper-coloured outline, font px"
 war_tag_offset,0.7,"WAR ROOM (Task 10): the tag stands this many base sides to the piece's right"
 war_arms_inset_m,0.0005,"WAR ROOM (Task 10): how far a base's name plate and arms stand proud of its face, metres (no z-fight)"
+war_token_h_mm,3,"WAR ROOM (Task 10 fix 1): a fleet's flat tin token on its base: its thickness, millimetres"
+war_token_radius_ratio,0.32,"WAR ROOM (Task 10 fix 1): a fleet's tin token's radius as a share of the base's side"

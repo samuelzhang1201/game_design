@@ -14,6 +14,7 @@ var _view: WarRoomView
 var _sig: Dictionary = {}     # code -> [pose, figures] it was built with
 var _push: Dictionary = {}    # code -> {from: Vector3, to: Vector3, left: float}
 var _scenes: Dictionary = {}  # model path -> PackedScene
+var _tins: Dictionary = {}    # source material -> its one tin ShaderMaterial
 
 
 func setup(repo: DataRepository, view: WarRoomView) -> void:
@@ -33,7 +34,7 @@ func piece(code: String) -> Node3D:
 func rebuild(state: GameState) -> void:
 	_clear()
 	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index()):
-		_add(state, String(p["code"]), bool(p["naval"]), _view.table_point(p["at"]))
+		_add(state, String(p["code"]), bool(p["naval"]), _seated(p["at"], bool(p["naval"])))
 
 
 ## A state change: a moved piece is pushed over war_plot_push_s, a new piece
@@ -43,7 +44,7 @@ func update(state: GameState) -> void:
 	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index()):
 		var code := String(p["code"])
 		keep[code] = true
-		var want := _view.table_point(p["at"])
+		var want := _seated(p["at"], bool(p["naval"]))
 		var node := piece(code)
 		if node != null and _signature(state, code) != _sig.get(code, []):
 			var at := node.position
@@ -51,7 +52,9 @@ func update(state: GameState) -> void:
 			node = _add(state, code, bool(p["naval"]), at)
 		elif node == null:
 			node = _add(state, code, bool(p["naval"]), want)
-		if node.position.distance_to(want) > 0.00001:
+		if _push.has(code) and (_push[code]["to"] as Vector3).distance_to(want) <= 0.00001:
+			pass   # already being pushed there: let the push finish
+		elif node.position.distance_to(want) > 0.00001:
 			_push[code] = {"from": node.position, "to": want, "left": _repo.bal("war_plot_push_s")}
 			_face(node, code, Vector2(want.x - node.position.x, want.z - node.position.z))
 		(node.get_node("Tag") as Label3D).text = WarRoom.tag_text(_repo, state, code)
@@ -80,33 +83,69 @@ func _process(delta: float) -> void:
 			continue
 		var t := clampf(1.0 - float(j["left"]) / total, 0.0, 1.0)
 		var pos: Vector3 = (j["from"] as Vector3).lerp(j["to"], t)
-		pos.y = _view.y_at(Vector2(pos.x, pos.z))
+		pos.y = _seat_y(Vector2(pos.x, pos.z), bool(n.get_meta("naval", false)))
 		n.position = pos
 		if t >= 1.0:
 			_push.erase(code)
 
 
-## Every piece's base centre on the screen (the view's design px), for picking.
+## Every piece on the screen (the view's design px): its base centre `at`, the
+## `rect` its projected base box and figures' top cover (grown by nothing:
+## pick() grows it), and its `depth` from the camera.
 func screen_hits(camera: Camera3D, scale: float) -> Array:
 	var out: Array = []
+	var side := _repo.bal("war_piece_base_mm") / 1000.0
+	var base_h := _repo.bal("war_piece_base_h_mm") / 1000.0
 	for c: Node3D in get_children():
 		if camera.is_position_behind(c.global_position):
 			continue
-		out.append({"code": String(c.get_meta("code")), "at": camera.unproject_position(c.global_position) / scale})
+		var naval := bool(c.get_meta("naval", false))
+		var half := Vector2(side, side * (_repo.bal("war_base_naval_depth") if naval else 1.0)) * 0.5
+		var top := base_h + (_repo.bal("war_token_h_mm") if naval else _repo.bal("war_piece_figure_mm")) / 1000.0
+		var at := camera.unproject_position(c.global_position) / scale
+		var rect := Rect2(at, Vector2.ZERO)
+		for dx in [-half.x, half.x]:
+			for dz in [-half.y, half.y]:
+				for dy in [0.0, base_h, top]:
+					var corner: Vector3 = c.global_position + Vector3(dx, dy, dz)
+					if not camera.is_position_behind(corner):
+						rect = rect.expand(camera.unproject_position(corner) / scale)
+		out.append({"code": String(c.get_meta("code")), "at": at, "rect": rect,
+			"depth": camera.global_position.distance_to(c.global_position)})
 	return out
 
 
-## The code of the piece whose base centre is nearest `at` (design px) within
-## `radius`, "" when none is.
+## The code of the piece under `at` (design px): a click inside a piece's rect
+## (base box and figures) grown by `radius` picks it, the one nearest the
+## camera when several overlap; "" when none.
 func pick(camera: Camera3D, scale: float, at: Vector2, radius: float) -> String:
 	var best := ""
-	var best_d := radius
+	var best_depth := INF
 	for h: Dictionary in screen_hits(camera, scale):
-		var d := (h["at"] as Vector2).distance_to(at)
-		if d <= best_d:
-			best_d = d
+		if (h["rect"] as Rect2).grow(radius).has_point(at) and float(h["depth"]) < best_depth:
+			best_depth = float(h["depth"])
 			best = String(h["code"])
 	return best
+
+
+## A base's resting height at table point `xz`: level on the HIGHEST relief
+## under its four corners (the base stays square to the table), so no corner
+## sinks into the ground. The piece's origin is the base's underside.
+func _seat_y(xz: Vector2, naval: bool) -> float:
+	var side := _repo.bal("war_piece_base_mm") / 1000.0
+	var half := Vector2(side, side * (_repo.bal("war_base_naval_depth") if naval else 1.0)) * 0.5
+	var y := -INF
+	for dx in [-half.x, half.x]:
+		for dz in [-half.y, half.y]:
+			y = maxf(y, _view.y_at(xz + Vector2(dx, dz)))
+	return y
+
+
+## Where a piece at pack point `pack_px` stands on the table, seated.
+func _seated(pack_px: Vector2, naval := false) -> Vector3:
+	var p := _view.table_point(pack_px)
+	p.y = _seat_y(Vector2(p.x, p.z), naval)
+	return p
 
 
 func _clear() -> void:
@@ -191,7 +230,9 @@ func _build(state: GameState, code: String, naval: bool) -> Node3D:
 	figures.name = "Figures"
 	figures.position.y = base_h
 	root.add_child(figures)
-	if not naval:
+	if naval:
+		_fill_token(reg, figures)
+	else:
 		_fill_figures(state, code, reg, figures)
 	var tag := Label3D.new()
 	tag.name = "Tag"
@@ -219,12 +260,14 @@ func _fill_figures(state: GameState, code: String, reg: Dictionary, into: Node3D
 	var scene: PackedScene = _scenes[model]
 	var first := scene.instantiate() as Node3D
 	var ext := Map3DUnits.stand_extent(first)
-	var k := (_repo.bal("war_piece_figure_mm") / 1000.0) / maxf(_model_height(first), 0.001)
+	var k := (_repo.bal("war_piece_figure_mm") / 1000.0) / maxf(Map3DUnits.model_size(first).y, 0.001)
 	var n := WarFolio.figures(_repo, state, code)
 	var row: Dictionary = {}
 	for f: Dictionary in _repo.army_formations:
 		if int(f["figures"]) == n:
 			row = f
+	if row.is_empty():
+		push_error("WarPieces: no army_formations row for %d figures (%s)" % [n, code])
 	var offs := Map3DFormation.offsets(row, ext, _repo.bal("war_piece_gap"), Map3DFormation.rank_depth(art))
 	var half := Map3DFormation.half_extent(offs, ext)
 	var fit := (_repo.bal("war_piece_base_mm") / 1000.0 * _repo.bal("war_figure_fill")) \
@@ -233,19 +276,47 @@ func _fill_figures(state: GameState, code: String, reg: Dictionary, into: Node3D
 	form.name = "Formation"
 	form.scale = Vector3.ONE * k * minf(fit, 1.0)
 	into.add_child(form)
-	var tin: Color = _repo.war_palette["tin"]
 	for m: MeshInstance3D in Map3DUnits.meshes(form):
 		for i in m.mesh.get_surface_count():
-			var src := m.mesh.surface_get_material(i) as BaseMaterial3D
-			var mat := TIN.duplicate() as ShaderMaterial
-			mat.set_shader_parameter("levels", _repo.bal("war_tin_levels"))
-			mat.set_shader_parameter("wear", _repo.bal("war_tin_wear"))
-			mat.set_shader_parameter("tin", tin)
-			mat.set_shader_parameter("has_tex", src != null and src.albedo_texture != null)
-			if src != null:
-				mat.set_shader_parameter("albedo_tex", src.albedo_texture)
-				mat.set_shader_parameter("albedo_tint", src.albedo_color)
-			m.set_surface_override_material(i, mat)
+			m.set_surface_override_material(i, _tin_of(m.mesh.surface_get_material(i) as BaseMaterial3D))
+
+
+## The tin paint over a source material's own albedo: one ShaderMaterial per
+## source, shared by every figure that wears it (null: untextured white tin).
+func _tin_of(src: BaseMaterial3D) -> ShaderMaterial:
+	if _tins.has(src):
+		return _tins[src]
+	var mat := TIN.duplicate() as ShaderMaterial
+	mat.set_shader_parameter("levels", _repo.bal("war_tin_levels"))
+	mat.set_shader_parameter("wear", _repo.bal("war_tin_wear"))
+	mat.set_shader_parameter("tin", _repo.war_palette["tin"])
+	mat.set_shader_parameter("has_tex", src != null and src.albedo_texture != null)
+	if src != null:
+		mat.set_shader_parameter("albedo_tex", src.albedo_texture)
+		mat.set_shader_parameter("albedo_tint", src.albedo_color)
+	_tins[src] = mat
+	return mat
+
+
+## A fleet's piece: a flat tin token on its base, painted the realm's colour.
+func _fill_token(reg: Dictionary, into: Node3D) -> void:
+	var token := MeshInstance3D.new()
+	token.name = "Token"
+	var cyl := CylinderMesh.new()
+	var h := _repo.bal("war_token_h_mm") / 1000.0
+	cyl.top_radius = _repo.bal("war_piece_base_mm") / 1000.0 * _repo.bal("war_token_radius_ratio")
+	cyl.bottom_radius = cyl.top_radius
+	cyl.height = h
+	token.mesh = cyl
+	var mat := TIN.duplicate() as ShaderMaterial
+	mat.set_shader_parameter("levels", _repo.bal("war_tin_levels"))
+	mat.set_shader_parameter("wear", _repo.bal("war_tin_wear"))
+	mat.set_shader_parameter("tin", _repo.war_palette["tin"])
+	mat.set_shader_parameter("has_tex", false)
+	mat.set_shader_parameter("albedo_tint", MapPalette.color_of(_repo, String(reg["kingdom_code"])))
+	token.material_override = mat
+	token.position.y = h * 0.5
+	into.add_child(token)
 
 
 ## Freeze a piece's figures in its order's pose.
@@ -261,10 +332,3 @@ func _pose(state: GameState, code: String, node: Node3D) -> void:
 			a.play(clip)
 			a.seek(a.get_animation(clip).length * frame, true)
 			a.pause()
-
-
-func _model_height(node: Node3D) -> float:
-	var top := 0.0
-	for m: MeshInstance3D in Map3DUnits.meshes(node):
-		top = maxf(top, m.get_aabb().end.y)
-	return top
