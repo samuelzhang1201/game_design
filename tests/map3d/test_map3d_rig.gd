@@ -56,6 +56,30 @@ func test_the_rig_pans_zooms_and_turns_through_the_context() -> void:
 	assert_eq(v.yaw(), c.yaw)
 
 
+## Perf 2026-10-02: a trackpad sends several gestures a frame; each moved the
+## camera at once but told the listeners (pieces, houses, HUD) every time.
+## Through the view's input they hear ONE camera_moved a frame.
+func test_a_frames_gestures_tell_the_listeners_once() -> void:
+	var v := _view()
+	var c := v.context()
+	await wait_process_frames(2)
+	var heard := [0]
+	c.camera_moved.connect(func() -> void: heard[0] += 1)
+	var t0 := c.target
+	for i in 4:
+		var g := InputEventPanGesture.new()
+		g.delta = Vector2(3, 0)
+		g.position = v.size * 0.5
+		v._gui_input(g)
+	assert_ne(c.target, t0, "the camera moved at once")
+	assert_eq(heard[0], 0, "the listeners wait for the frame")
+	await wait_process_frames(1)
+	assert_eq(heard[0], 1, "and hear it once")
+	var rig := v.component("rig") as Map3DCameraRig
+	rig.pan_by(Vector2(10, 0))
+	assert_eq(heard[0], 2, "a direct pan (a tool, the keys) is told at once")
+
+
 func test_the_north_ease_runs_on_step() -> void:
 	var v := _view()
 	var rig := v.component("rig") as Map3DCameraRig

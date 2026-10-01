@@ -127,7 +127,25 @@ func apply() -> void:
 	pitch = Map3DGeometry.clear_pitch(ground, ctx.distance, ctx.yaw, pitch, ctx.height_at,
 		r.bal("map3d_camera_clear_m"), r.bal("map3d_camera_clear_step_deg"), int(r.bal("map3d_camera_clear_samples")))
 	_camera.transform = Map3DGeometry.pose(ground, ctx.distance, ctx.yaw, pitch)
-	ctx.camera_moved.emit()
+	if hold_moved:
+		_moved_held = true
+	else:
+		ctx.camera_moved.emit()
+
+
+## While true (the view handling a frame's input events), apply() moves the
+## camera at once but holds camera_moved; flush() tells the listeners once
+## (perf 2026-10-02: a trackpad sends several gestures a frame, and each
+## re-placed every piece, re-checked the houses and redrew the HUD).
+var hold_moved := false
+var _moved_held := false
+
+
+## The held camera_moved, once, if the camera moved while it was held.
+func flush() -> void:
+	if _moved_held:
+		_moved_held = false
+		ctx.camera_moved.emit()
 
 
 func pan_by(screen_delta: Vector2) -> void:
