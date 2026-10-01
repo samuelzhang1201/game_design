@@ -16,6 +16,16 @@ Writes:
   model files, size, steps, CFG, sampler, LoRA and seed come from
   generate.py's own presets. Only Z-Image Turbo and Qwen-Image-2512 — no
   Flux (owner 2026-10-01).
+* kit/comfyui_cloud/<名字>.json — the same workflows for Comfy Cloud, for
+  when her own machine cannot run Qwen (owner 2026-10-01: 如果她的本地电脑
+  无法跑的话，需要购买comfy cloud). Checked against the Cloud catalog that
+  day: Z-Image Turbo, its text encoder and VAE are there under the same
+  names, so those graphs are unchanged; Qwen-Image-2512 is there only as
+  the full bf16 weights (the local Q6_K is quantized from them) and Cloud
+  has no GGUF loader, so the Qwen graphs load qwen_image_2512_bf16 with the
+  core UNETLoader. The 2512 Lightning 8-step LoRA is not in the public
+  catalog: she imports it into her Cloud account once, under the same file
+  name (Apache 2.0, huggingface.co/lightx2v/Qwen-Image-2512-Lightning).
 * kit/blender/cc_art_check.zip — the Blender add-on (tools/art_kit/blender/),
   installed with Edit › Preferences › Add-ons › Install from Disk.
 
@@ -180,16 +190,35 @@ def graph(k: dict) -> dict:
     return g
 
 
+CLOUD_QWEN = "qwen_image_2512_bf16.safetensors"
+
+
+def cloud(g: dict) -> dict:
+    """The Comfy Cloud copy of a graph: the GGUF loader (not on Cloud)
+    becomes the core UNETLoader on the bf16 weights; nothing else changes."""
+    g = json.loads(json.dumps(g))
+    for node in g.values():
+        if node["class_type"] == "UnetLoaderGGUF":
+            node["class_type"] = "UNETLoader"
+            node["inputs"] = {"unet_name": CLOUD_QWEN, "weight_dtype": "default"}
+            node["_meta"] = {"title": "Qwen-Image-2512 bf16（Comfy Cloud）"}
+    return g
+
+
 def main() -> int:
     comfy = OUT / "comfyui"
-    comfy.mkdir(parents=True, exist_ok=True)
-    for old in comfy.glob("*.json"):
-        old.unlink()
+    clouds = OUT / "comfyui_cloud"
+    for d in (comfy, clouds):
+        d.mkdir(parents=True, exist_ok=True)
+        for old in d.glob("*.json"):
+            old.unlink()
     index = []
     for k in kinds():
         g = graph(k)
         (comfy / (k["key"] + ".json")).write_text(json.dumps(g, ensure_ascii=False, indent=1) + "\n",
                                                   encoding="utf-8")
+        (clouds / (k["key"] + ".json")).write_text(json.dumps(cloud(g), ensure_ascii=False, indent=1) + "\n",
+                                                   encoding="utf-8")
         preset = gen.MODEL_PRESETS[k["model"]]
         index.append("| %s | %s | %d×%d | %d | %s | %s |" % (
             k["key"], "Qwen-Image-2512" if k["model"].startswith("qwen") else "Z-Image Turbo",
@@ -202,6 +231,15 @@ def main() -> int:
         "第一次打开时把采样节点种子下面的 control after generate 设为 increment。\n\n"
         "| 工作流 | 模型 | 尺寸 | 起始种子 | 示例主体 | 说明 |\n| --- | --- | --- | --- | --- | --- |\n"
         + "\n".join(index) + "\n", encoding="utf-8")
+    (clouds / "README.md").write_text(
+        "# Comfy Cloud 版锁定工作流\n\n本地电脑跑不动 Qwen 时用这一套（owner 2026-10-01）。和 `../comfyui/` "
+        "的同名工作流只差一处：Qwen 的模型换成 Comfy Cloud 上的原版全精度 `%s`（本地用的 Q6_K 就是从它量化来的；"
+        "Cloud 没有 GGUF 加载器）。风格、画幅、负面词、尺寸、步数、种子都一样；Z-Image 的工作流完全相同。\n\n"
+        "**第一次用之前**：Qwen 的 8 步加速 LoRA 不在 Comfy Cloud 的公共模型库里，要导入到自己的 Cloud 账户一次——"
+        "从 Hugging Face 的 `lightx2v/Qwen-Image-2512-Lightning` 导入 `Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors`，"
+        "文件名不要改（Apache 2.0，可商用）。导入不了就告诉开发。\n\n"
+        "同一个种子在云端和本地出的图不会逐像素相同（量化不同），但风格一致；同一个资源的候选图请在同一边出完。\n"
+        % CLOUD_QWEN, encoding="utf-8")
     blender = OUT / "blender"
     blender.mkdir(parents=True, exist_ok=True)
     zpath = blender / "cc_art_check.zip"

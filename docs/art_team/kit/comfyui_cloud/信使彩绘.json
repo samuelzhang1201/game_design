@@ -1,0 +1,219 @@
+{
+ "1": {
+  "class_type": "UNETLoader",
+  "_meta": {
+   "title": "Qwen-Image-2512 bf16（Comfy Cloud）"
+  },
+  "inputs": {
+   "unet_name": "qwen_image_2512_bf16.safetensors",
+   "weight_dtype": "default"
+  }
+ },
+ "2": {
+  "class_type": "CLIPLoader",
+  "_meta": {
+   "title": "Qwen2.5-VL 7B text encoder"
+  },
+  "inputs": {
+   "clip_name": "qwen_2.5_vl_7b.safetensors",
+   "type": "qwen_image",
+   "device": "default"
+  }
+ },
+ "3": {
+  "class_type": "VAELoader",
+  "_meta": {
+   "title": "Qwen-Image VAE"
+  },
+  "inputs": {
+   "vae_name": "qwen_image_vae.safetensors"
+  }
+ },
+ "4": {
+  "class_type": "LoraLoaderModelOnly",
+  "_meta": {
+   "title": "Lightning 8-step LoRA (strength 0 = off)"
+  },
+  "inputs": {
+   "lora_name": "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors",
+   "strength_model": 1.0,
+   "model": [
+    "1",
+    0
+   ]
+  }
+ },
+ "5": {
+  "class_type": "ModelSamplingAuraFlow",
+  "_meta": {
+   "title": "Shift 3 (ComfyUI template)"
+  },
+  "inputs": {
+   "shift": 3,
+   "model": [
+    "4",
+    0
+   ]
+  }
+ },
+ "6": {
+  "class_type": "CLIPTextEncode",
+  "_meta": {
+   "title": "正面提示词（由上面三格拼成）"
+  },
+  "inputs": {
+   "text": [
+    "111",
+    0
+   ],
+   "clip": [
+    "2",
+    0
+   ]
+  }
+ },
+ "7": {
+  "class_type": "CLIPTextEncode",
+  "_meta": {
+   "title": "负面词（锁定）"
+  },
+  "inputs": {
+   "text": "digital airbrush, glossy, smooth gradient, neon, oversaturated, high contrast, anime, manga, cel shading, comic book, 3d render, cgi, plastic, vector art, flat color fill, thick ink outline, oil painting impasto, watercolor bleed, photograph, modern clothing, zipper, buttons on medieval garments, eyeglasses, wristwatch, printed typography, lettering, watermark, signature, logo, lens flare, bokeh, HDR, fisheye, extra fingers, deformed hands, plate armour before 1400, full gothic plate, horned helmet, longsword crossguard anachronism, aged paper, foxing, yellowed paper, heavy grain, smudged graphite, antique print, sepia, coarse features, haggard, fuzzy fabric, fibrous texture, felted wool, furry cloth, bare line drawing, unpainted sketch, outline only, pale washed-out, architectural line art",
+   "clip": [
+    "2",
+    0
+   ]
+  }
+ },
+ "8": {
+  "class_type": "EmptySD3LatentImage",
+  "_meta": {
+   "title": "尺寸（锁定）"
+  },
+  "inputs": {
+   "width": 1280,
+   "height": 1024,
+   "batch_size": 1
+  }
+ },
+ "9": {
+  "class_type": "KSampler",
+  "_meta": {
+   "title": "采样（锁定；种子每次 +1）"
+  },
+  "inputs": {
+   "seed": 954159497,
+   "steps": 8,
+   "cfg": 1.0,
+   "sampler_name": "euler",
+   "scheduler": "simple",
+   "denoise": 1.0,
+   "model": [
+    "5",
+    0
+   ],
+   "positive": [
+    "6",
+    0
+   ],
+   "negative": [
+    "7",
+    0
+   ],
+   "latent_image": [
+    "8",
+    0
+   ]
+  }
+ },
+ "10": {
+  "class_type": "VAEDecode",
+  "_meta": {
+   "title": "Decode"
+  },
+  "inputs": {
+   "samples": [
+    "9",
+    0
+   ],
+   "vae": [
+    "3",
+    0
+   ]
+  }
+ },
+ "11": {
+  "class_type": "SaveImage",
+  "_meta": {
+   "title": "④ 文件名（把「编号」改成需求卡编号）"
+  },
+  "inputs": {
+   "filename_prefix": "CrownCouncil/编号_qwen2512fast_s%KSampler.seed%",
+   "images": [
+    "10",
+    0
+   ]
+  }
+ },
+ "100": {
+  "class_type": "PrimitiveStringMultiline",
+  "inputs": {
+   "value": "clean colored pencil illustration on bright smooth cream paper, crisp confident contour lines in dark umber pencil, light decorative directional hatching used only for shading, fabrics rendered as smooth woven cloth with clean folds and no fibrous or fuzzy texture, smooth evenly blended skin, every surface fully coloured with solid local colour and soft shading, the same painted treatment for buildings, objects and terrain as for people, no bare unpainted linework, fresh and luminous, flat clean paper background with no grain and no aging, muted earthen palette of raw umber, yellow ochre, burnt sienna, moss green, slate blue and oxblood red, restrained color, warm diffuse overcast daylight, historically accurate 12th to 14th century European material culture, naturalistic anatomy and proportion, appealing idealised faces with fine features, youthful where the age allows, contemporary character concept illustration quality, matte finish"
+  },
+  "_meta": {
+   "title": "① 风格（锁定，不要改）"
+  }
+ },
+ "101": {
+  "class_type": "PrimitiveStringMultiline",
+  "inputs": {
+   "value": "a herald messenger in a bright blue tabard with a gold cross on the chest, a soft brimmed hat with a white feather, white hose and tall dark riding boots, a brown leather dispatch case on a strap at his side, riding a white dappled horse with a blue gold-trimmed saddle cloth bearing a gold cross, a short pole fixed to his saddle carrying a small swallow-tailed blue pennon with a gold crown, galloping along a dirt road between green fields and hedgerows, the pennon streaming behind him, shown as one painted scene in its own countryside"
+  },
+  "_meta": {
+   "title": "② 主体（只改这里）"
+  }
+ },
+ "102": {
+  "class_type": "PrimitiveStringMultiline",
+  "inputs": {
+   "value": "a painted vignette of one rider on the road seen from a gentle raised three-quarter view, the whole rider and mount inside the frame with a little road, ground and sky around them, the edges fading softly into plain cream paper, no text, no border, no frame, 5:4 horizontal"
+  },
+  "_meta": {
+   "title": "③ 画幅（锁定，不要改）"
+  }
+ },
+ "110": {
+  "class_type": "StringConcatenate",
+  "inputs": {
+   "string_a": [
+    "100",
+    0
+   ],
+   "string_b": [
+    "101",
+    0
+   ],
+   "delimiter": ", "
+  },
+  "_meta": {
+   "title": "拼接（不要动）"
+  }
+ },
+ "111": {
+  "class_type": "StringConcatenate",
+  "inputs": {
+   "string_a": [
+    "110",
+    0
+   ],
+   "string_b": [
+    "102",
+    0
+   ],
+   "delimiter": ", "
+  },
+  "_meta": {
+   "title": "拼接（不要动）"
+  }
+ }
+}
