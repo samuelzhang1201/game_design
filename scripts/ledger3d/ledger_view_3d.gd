@@ -28,6 +28,7 @@ const STAR_MAT := preload("res://scenes/ledger/materials/star.tres")
 const STAR_FAINT_MAT := preload("res://scenes/ledger/materials/star_faint.tres")
 const LINK_MAT := preload("res://scenes/ledger/materials/link.tres")
 const HAZE_MAT := preload("res://scenes/ledger/materials/haze.tres")
+const SPARK_MAT := preload("res://scenes/ledger/materials/spark.tres")
 
 @onready var _viewport: SubViewport = %Viewport
 @onready var _display: TextureRect = %Display
@@ -35,6 +36,7 @@ const HAZE_MAT := preload("res://scenes/ledger/materials/haze.tres")
 @onready var _camera: Camera3D = %Camera
 @onready var _stars: MultiMeshInstance3D = %Stars
 @onready var _faint_stars: MultiMeshInstance3D = %FaintStars   # the dimmed ones, blended toward the sky (F1)
+@onready var _sparks: MultiMeshInstance3D = %Sparks   # the current round every star, whole then dimmed (LedgerStarMotion)
 @onready var _links: MeshInstance3D = %Links
 @onready var _haze_root: Node3D = %Haze
 @onready var _hud: LedgerHud = %Hud
@@ -65,9 +67,12 @@ var _whole_cols := PackedColorArray()  # the colours dealt to the whole MultiMes
 var _faint_cols := PackedColorArray()  # and to the blended one, in _faint
 var _whole: Array[String] = []        # the stars drawn whole (opaque), in _order
 var _faint: Array[String] = []        # the dimmed stars (alpha under 1), drawn blended, in _order
+var _spark_ids: Array[String] = []    # the stars the current is dealt to: _whole then _faint (none at strength 0)
+var _custom: Dictionary = {}          # id -> its seed and its current's weight (LedgerStarMotion.custom_of)
 var _near: Dictionary = {}
 var _star_mat: ShaderMaterial
 var _faint_mat: ShaderMaterial
+var _spark_mat: ShaderMaterial
 var _link_mat: ShaderMaterial
 var _sky_mat: ShaderMaterial
 var _haze: Dictionary = {}
@@ -123,8 +128,12 @@ func bind(repo: DataRepository) -> void:
 		m.set_shader_parameter("rim_gain", repo.bal("ledger_star_rim"))
 		m.set_shader_parameter("metal", repo.bal("ledger_star_metallic"))
 		m.set_shader_parameter("rough", repo.bal("ledger_star_roughness"))
+		LedgerStarMotion.bind_wobble(m, repo)
 	_stars.material_override = _star_mat
 	_faint_stars.material_override = _faint_mat
+	_spark_mat = SPARK_MAT.duplicate() as ShaderMaterial
+	LedgerStarMotion.bind_spark(_spark_mat, repo)
+	_sparks.material_override = _spark_mat
 	_link_mat = LINK_MAT.duplicate() as ShaderMaterial
 	_link_mat.set_shader_parameter("pulses", repo.bal("ledger_light_pulses"))
 	_link_mat.set_shader_parameter("dashes_per_m", repo.bal("ledger_dashes_per_m"))
@@ -363,6 +372,35 @@ func link_material() -> ShaderMaterial:
 	return _link_mat
 
 
+func star_materials() -> Array[ShaderMaterial]:
+	return [_star_mat, _faint_mat]
+
+
+func spark_material() -> ShaderMaterial:
+	return _spark_mat
+
+
+## The current round the stars: one instance per drawn star, the whole ones
+## then the dimmed ones, laid as they are (tests, tools).
+func sparks() -> MultiMeshInstance3D:
+	return _sparks
+
+
+## The stars the current is dealt to, in its instances' order.
+func spark_ids() -> Array[String]:
+	return _spark_ids
+
+
+## The stars drawn whole, then the dimmed ones, in their MultiMeshes' order.
+func dealt() -> Array:
+	return [_whole, _faint]
+
+
+## A star's custom data: its seed (x, y) and its current's weight (z).
+func star_custom(id: String) -> Color:
+	return _custom.get(id, Color(0, 0, 0, 0))
+
+
 func stars() -> Array[String]:
 	return _order
 
@@ -421,11 +459,15 @@ func _build_stars() -> void:
 	sphere.height = 2.0
 	sphere.radial_segments = STAR_SEGMENTS
 	sphere.rings = STAR_RINGS
-	for mi: MultiMeshInstance3D in [_stars, _faint_stars]:
+	# the current round each star: a quad the shader turns to the camera
+	var quad := QuadMesh.new()
+	quad.size = Vector2(2.0, 2.0)
+	for mi: MultiMeshInstance3D in [_stars, _faint_stars, _sparks]:
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_colors = true
-		mm.mesh = sphere
+		mm.use_custom_data = true   # the star's seed (and its current's weight)
+		mm.mesh = quad if mi == _sparks else sphere
 		mi.multimesh = mm
 
 
@@ -445,27 +487,43 @@ func _fill_stars() -> void:
 			faint_cols.append(_star_cols[i])
 	_whole_cols = whole_cols
 	_faint_cols = faint_cols
-	for pair: Array in [[_stars, whole_cols], [_faint_stars, faint_cols]]:
-		var mm: MultiMesh = (pair[0] as MultiMeshInstance3D).multimesh
+	_custom.clear()
+	for i in _order.size():
+		_custom[_order[i]] = LedgerStarMotion.custom_of(_repo, _order[i], _star_cols[i].a, _order[i] == _selected)
+	_spark_ids = []
+	if LedgerStarMotion.sparks_on(_repo):
+		_spark_ids.append_array(_whole)
+		_spark_ids.append_array(_faint)
+	for group: Array in [[_stars, whole_cols, _whole], [_faint_stars, faint_cols, _faint],
+			[_sparks, whole_cols + faint_cols, _spark_ids]]:
+		var mm: MultiMesh = (group[0] as MultiMeshInstance3D).multimesh
 		if mm == null:
 			continue
-		var cols: PackedColorArray = pair[1]
-		if mm.instance_count != cols.size():
-			mm.instance_count = cols.size()
-		for k in cols.size():
+		var ids: Array[String] = group[2]
+		var cols: PackedColorArray = group[1]
+		if mm.instance_count != ids.size():
+			mm.instance_count = ids.size()
+		for k in ids.size():
 			mm.set_instance_color(k, cols[k])
+			mm.set_instance_custom_data(k, _custom[ids[k]])
 	_place_stars()
 
 
 func _place_stars() -> void:
-	for pair: Array in [[_stars, _whole], [_faint_stars, _faint]]:
+	var spark_mm := _sparks.multimesh
+	var whole_n := _whole.size()
+	var with_sparks := spark_mm != null and not _spark_ids.is_empty() and spark_mm.instance_count == _spark_ids.size()
+	for pair: Array in [[_stars, _whole, 0], [_faint_stars, _faint, whole_n]]:
 		var mm: MultiMesh = (pair[0] as MultiMeshInstance3D).multimesh
 		var ids: Array[String] = pair[1]
 		if mm == null or mm.instance_count != ids.size():
 			continue
 		for k in ids.size():
 			var r := _draw_r(ids[k])
-			mm.set_instance_transform(k, Transform3D(Basis().scaled(Vector3(r, r, r)), _drawn[ids[k]]))
+			var t := Transform3D(Basis().scaled(Vector3(r, r, r)), _drawn[ids[k]])
+			mm.set_instance_transform(k, t)
+			if with_sparks:
+				spark_mm.set_instance_transform(int(pair[2]) + k, t)   # the current laid as its star
 
 
 ## A star's radius as drawn NOW (metres): its drawn radius, held to

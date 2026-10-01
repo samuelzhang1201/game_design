@@ -7,7 +7,9 @@
 // it, and its specular pin fades with it. It writes no depth: the haze and
 // the links behind it still show through.
 shader_type spatial;
-render_mode specular_schlick_ggx, blend_mix, depth_draw_never;
+render_mode specular_schlick_ggx, blend_mix, depth_draw_never, world_vertex_coords;
+
+#include "res://scenes/ledger/star_motion.gdshaderinc"
 
 uniform float emit = 1.4;
 uniform float rim_gain = 1.6;
@@ -22,6 +24,9 @@ vec3 to_linear(vec3 c) {
 
 void vertex() {
 	col = COLOR;
+	// the slight wobble (star_motion.gdshaderinc): the instance's scale is the
+	// star's drawn radius
+	VERTEX += star_wobble(INSTANCE_CUSTOM, length(MODEL_MATRIX[0].xyz), INV_VIEW_MATRIX, TIME);
 }
 
 void fragment() {
