@@ -57,13 +57,13 @@ func test_a_second_lay_supersedes_the_first() -> void:
 
 func test_the_ink_cache_holds_one_entry_per_sheet() -> void:
 	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
-	view._store_ink(0, 111, img)
-	view._store_ink(0, 222, img.duplicate())
-	view._store_ink(1, 333, img.duplicate())
-	assert_eq(view._ink_cache.size(), 2, "sheets 0 and 1, not three keys")
-	assert_eq(view._ink_cache[0]["key"], 222, "a new key replaces the old texture")
-	view._store_ink(2, 1, Image.new())
-	assert_false(view._ink_cache.has(2), "an empty readback (headless) stores nothing")
+	view._inks.store(0, 111, img)
+	view._inks.store(0, 222, img.duplicate())
+	view._inks.store(1, 333, img.duplicate())
+	assert_eq(view._inks.cache.size(), 2, "sheets 0 and 1, not three keys")
+	assert_eq(view._inks.cache[0]["key"], 222, "a new key replaces the old texture")
+	view._inks.store(2, 1, Image.new())
+	assert_false(view._inks.cache.has(2), "an empty readback (headless) stores nothing")
 
 
 func test_a_sheet_out_of_range_is_ignored() -> void:
@@ -133,24 +133,56 @@ func test_a_click_on_an_edge_arrow_requests_its_sheet() -> void:
 	assert_signal_emitted_with_parameters(view, "sheet_requested", [int(arrow.get_meta("sheet"))])
 
 
-func test_a_click_on_the_wall_chart_requests_the_sheet_under_it() -> void:
+func test_every_numeral_on_the_wall_chart_is_in_the_opening_view_and_picks_its_sheet() -> void:
+	var cam: Camera3D = view.get_node("%Camera")
+	var inside := Rect2(Vector2.ZERO, view.size)
+	for laid in WarSheets.series(repo).size():   # whichever sheet is laid, its arrows must not shadow the chart
+		view.lay_sheet(laid)
+		await wait_frames(2)
+		var numerals := view.get_node("%IndexChart").get_children()
+		assert_eq(numerals.size(), WarSheets.series(repo).size(), "a numeral a sheet")
+		for k in numerals.size():
+			var l := numerals[k] as Label3D
+			assert_false(cam.is_position_behind(l.global_position), "%s is in front of the camera" % l.text)
+			var at := cam.unproject_position(l.global_position) / view._window_scale()
+			assert_true(inside.has_point(at), "numeral %s at %s is inside the view %s" % [l.text, at, inside])
+			assert_eq(view._pick_sheet_target(at), k, "sheet %d laid: numeral %s picks its own sheet" % [laid, l.text])
+
+
+func test_every_chart_corner_stands_in_the_opening_view() -> void:
 	view.lay_sheet(0)
 	await wait_frames(2)
 	var cam: Camera3D = view.get_node("%Camera")
 	var chart: MeshInstance3D = view.get_node("%IndexChart")
-	var numerals := chart.get_children()
-	assert_eq(numerals.size(), WarSheets.series(repo).size(), "a numeral a sheet")
-	var checked := 0
-	for k in numerals.size():
-		var l := numerals[k] as Label3D
-		if cam.is_position_behind(l.global_position):
-			continue
-		var at := cam.unproject_position(l.global_position) / view._window_scale()
-		if not Rect2(Vector2.ZERO, view.size).has_point(at) or view._pick_sheet_target(at) < 0:
-			continue
-		assert_eq(view._pick_sheet_target(at), k, "the numeral %s picks its sheet" % l.text)
-		checked += 1
-	assert_gt(checked, 0, "the chart is in the opening view")
+	var half := (chart.mesh as QuadMesh).size * 0.5
+	for c: Vector2 in [Vector2(-half.x, -half.y), Vector2(half.x, -half.y), Vector2(-half.x, half.y), Vector2(half.x, half.y)]:
+		var at := cam.unproject_position(chart.global_transform * Vector3(c.x, c.y, 0.0)) / view._window_scale()
+		assert_true(Rect2(Vector2.ZERO, view.size).has_point(at), "corner %s at %s" % [c, at])
+
+
+func test_a_ray_that_misses_the_chart_picks_nothing() -> void:
+	view.lay_sheet(0)
+	await wait_frames(2)
+	var cam: Camera3D = view.get_node("%Camera")
+	var chart: MeshInstance3D = view.get_node("%IndexChart")
+	var far_left := chart.global_transform * Vector3(-(chart.mesh as QuadMesh).size.x, 0.0, 0.0)
+	assert_eq(WarRoomWall.pick_chart(chart, cam, repo, cam.unproject_position(far_left)), -1, "beside the board")
+	# a ray parallel to the board's face
+	var flat := Camera3D.new()
+	add_child_autofree(flat)
+	flat.global_transform = Transform3D(chart.global_transform.basis, chart.global_position + chart.global_transform.basis.z * 0.5)
+	flat.global_transform = flat.global_transform.looking_at(flat.global_position + chart.global_transform.basis.x, chart.global_transform.basis.y)
+	assert_eq(WarRoomWall.pick_chart(chart, flat, repo, Vector2(0, 0)), -1, "grazing along the face")
+
+
+func test_a_swap_requested_mid_roll_is_ignored() -> void:
+	view.lay_sheet(0)
+	await wait_frames(2)
+	view.swap_to(1)
+	view._process(0.01)
+	view.swap_to(2)
+	view._process(repo.bal("war_sheet_swap_s"))
+	assert_eq(view.sheet_index(), 1, "the roll in progress was not redirected")
 
 
 func test_a_drag_is_not_a_click_on_the_chart() -> void:

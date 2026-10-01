@@ -38,7 +38,7 @@ metallic = 0.8
 roughness = 0.4
 
 [sub_resource type="QuadMesh" id="Quad_chart"]
-size = Vector2(1, 0.363)
+size = Vector2(0.8, 0.29)
 
 [sub_resource type="StandardMaterial3D" id="Mat_chart"]
 albedo_color = Color(1, 1, 1, 1)
@@ -136,8 +136,6 @@ material_override = ExtResource("3_table")
 
 [node name="IndexChart" type="MeshInstance3D" parent="Viewport/Room"]
 unique_name_in_owner = true
-position = Vector3(0, 0.1, -0.9)
-rotation_degrees = Vector3(-55, 0, 0)
 mesh = SubResource("Quad_chart")
 material_override = SubResource("Mat_chart")
 

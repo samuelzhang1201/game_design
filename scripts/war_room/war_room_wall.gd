@@ -17,6 +17,8 @@ static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font)
 	var quad := chart.mesh.duplicate() as QuadMesh
 	quad.size = size
 	chart.mesh = quad
+	chart.position = Vector3(0.0, repo.bal("war_chart_y_m"), repo.bal("war_chart_z_m"))
+	chart.rotation_degrees = Vector3(-(90.0 - repo.bal("war_chart_tilt_deg")), 0.0, 0.0)
 	var mat := chart.material_override.duplicate() as StandardMaterial3D
 	mat.albedo_texture = ImageTexture.create_from_image(WarIndexChart.image(repo, int(repo.bal("war_chart_px"))))
 	chart.material_override = mat
@@ -25,7 +27,7 @@ static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font)
 		n.queue_free()
 	for s: Dictionary in WarSheets.series(repo):
 		var c: Vector2 = (s["rect"] as Rect2).get_center()
-		var at := Vector3((c.x / w - 0.5) * size.x, (0.5 - c.y / h) * size.y, 0.002)
+		var at := Vector3((c.x / w - 0.5) * size.x, (0.5 - c.y / h) * size.y, repo.bal("war_chart_numeral_lift_m"))
 		chart.add_child(_label(String(s["numeral"]), font, repo.war_palette["rubric"], at,
 			int(repo.bal("war_chart_numeral_font_px")), repo.bal("war_chart_numeral_pixel_m"), false))
 

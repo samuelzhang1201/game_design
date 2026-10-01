@@ -182,3 +182,26 @@ static func build_mesh(heights_m: PackedFloat32Array, nx: int, nz: int, table_w:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return mesh
+
+
+## Relief rows for `nx` columns at the sheet's own ratio (at least 2).
+static func rows_for(sheet_rect: Rect2, nx: int) -> int:
+	@warning_ignore("narrowing_conversion")
+	return maxi(2, roundi(float(nx) * sheet_rect.size.y / sheet_rect.size.x))
+
+
+## Each vertex's distance from the shore as a share (0..1) of the sea-hatch
+## reach: the mesh's COLOR.r.
+static func shore_share(repo: DataRepository, raw_m: PackedFloat32Array, nx: int, nz: int, table_w: float, depth: float) -> PackedFloat32Array:
+	var reach := maxf(repo.bal("war_sea_hatch_reach_m"), 0.001)
+	var shore := shore_distance(raw_m, nx, nz, table_w / float(nx - 1), depth / float(nz - 1), reach)
+	for k in shore.size():
+		shore[k] = minf(shore[k] / reach, 1.0)
+	return shore
+
+
+## A level relief (no relief image): zero metres everywhere.
+static func flat(nx: int, nz: int) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(nx * nz)
+	return out

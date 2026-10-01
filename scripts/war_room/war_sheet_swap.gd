@@ -5,13 +5,15 @@ extends RefCounted
 ## sheet is laid at the midpoint. Pure timing; the view applies the scale.
 
 var left := 0.0
-var total := 0.6
+var total := 0.0
+var floor_scale := 0.0
 var to := -1
 
 
-func start(index: int, seconds: float) -> void:
+func start(index: int, repo: DataRepository) -> void:
 	to = index
-	total = maxf(seconds, 0.001)
+	total = maxf(repo.bal("war_sheet_swap_s"), 0.001)
+	floor_scale = repo.bal("war_roll_floor")
 	left = total
 
 
@@ -30,7 +32,7 @@ func step(delta: float) -> bool:
 func z_scale() -> float:
 	if left <= 0.0:
 		return 1.0
-	return maxf(absf(left / total - 0.5) * 2.0, 0.02)
+	return maxf(absf(left / total - 0.5) * 2.0, floor_scale)
 
 
 func cancel() -> void:

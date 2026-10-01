@@ -23,23 +23,6 @@ var aiming := false
 var aim_dest := Vector2(-1, -1)
 var aim_code := ""
 
-## Shader uniform -> the balance key it is bound from at lay (every tuned
-## number is data; the shader's own defaults are only a fallback).
-const SHADER_KEYS := {
-	"contour_m": "war_contour_m", "index_every": "war_contour_index_every",
-	"contour_alpha": "war_contour_alpha", "contour_index_alpha": "war_contour_index_alpha",
-	"contour_px": "war_contour_px", "contour_index_px": "war_contour_index_px",
-	"sea_hatch_per_m": "war_sea_hatch_per_m",
-	"sea_hatch_alpha": "war_sea_hatch_alpha", "sea_hatch_px": "war_sea_hatch_px",
-	"grid_alpha": "war_grid_alpha", "grid_px": "war_grid_px", "line_crowd_k": "war_line_crowd_k",
-	"paper_age_from": "war_paper_age_from", "paper_age_mix": "war_paper_age_mix",
-	"paper_roughness": "war_paper_roughness", "crease_alpha": "war_crease_alpha", "crease_px": "war_crease_px",
-}
-## The painter's widths (war_ink_<k>_px) and ratios (war_ink_<k>), by short key.
-const INK_PX := ["road", "trail", "river", "coast", "border", "band", "seam", "town", "label", "dash", "gap"]
-const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_dot_ratio", "label_gap_ratio",
-	"label_drop_ratio", "peak_label_ratio", "peak_half_w", "peak_drop", "border_dot_ratio"]
-
 @onready var _viewport: SubViewport = %Viewport
 @onready var _display: TextureRect = %Display
 @onready var _camera: Camera3D = %Camera
@@ -62,7 +45,7 @@ var _nx := 2
 var _nz := 2
 var _y_scale := 0.0
 var _relief: Image
-var _ink_cache: Dictionary = {}   # sheet index -> {key, tex}: one entry a sheet, a new key replaces it
+var _inks := WarRoomInk.new()
 var _render_scale := 1.0
 var _selected := ""
 var _font: Font
@@ -163,26 +146,14 @@ func lay_sheet(index: int) -> void:
 	_rect = all[index]["rect"]
 	_depth = WarRoomTable.depth_m(_rect, _table_w)
 	_nx = int(_repo.bal("war_relief_grid"))
-	@warning_ignore("narrowing_conversion")
-	_nz = maxi(2, roundi(float(_nx) * _rect.size.y / _rect.size.x))
-	_heights = WarRoomTable.heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else _flat()
+	_nz = WarRoomTable.rows_for(_rect, _nx)
+	_heights = WarRoomTable.heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else WarRoomTable.flat(_nx, _nz)
 	_y_scale = WarRoomTable.table_y(_repo, _rect, _table_w, 1.0)
 	var raw := WarRoomTable.raw_heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else _heights
-	var reach := maxf(_repo.bal("war_sea_hatch_reach_m"), 0.001)
-	var shore := WarRoomTable.shore_distance(raw, _nx, _nz, _table_w / float(_nx - 1), _depth / float(_nz - 1), reach)
-	for k in shore.size():
-		shore[k] = minf(shore[k] / reach, 1.0)
+	var shore := WarRoomTable.shore_share(_repo, raw, _nx, _nz, _table_w, _depth)
 	_table.mesh = WarRoomTable.build_mesh(_heights, _nx, _nz, _table_w, _depth, _y_scale, raw, shore)
 	var mat := _table.get_active_material(0) as ShaderMaterial
-	var pal: Dictionary = _repo.war_palette
-	for key in ["paper", "paper_age", "ink", "sea_ink"]:
-		mat.set_shader_parameter(key, pal[key])
-	for uniform: String in SHADER_KEYS:
-		mat.set_shader_parameter(uniform, _repo.bal(String(SHADER_KEYS[uniform])))
-	mat.set_shader_parameter("table_m", Vector2(_table_w, _depth))
-	var grid := _repo.bal("war_grid_km") * WarSheets.px_per_unit(_repo)
-	mat.set_shader_parameter("grid_cells", _rect.size / grid)
-	mat.set_shader_parameter("tex_aspect", _rect.size.y / _rect.size.x)
+	WarRoomMaterial.bind(mat, _repo, _rect, _table_w, _depth)
 	_rig.bounds = Rect2(-_table_w * 0.5, -_depth * 0.5, _table_w, _depth)
 	_rig.target = Vector3.ZERO
 	_rig.yaw_deg = 0.0
@@ -205,7 +176,7 @@ func swap_to(index: int) -> void:
 	if _sheet < 0 or not is_processing():
 		lay_sheet(index)
 		return
-	_swap.start(index, _repo.bal("war_sheet_swap_s"))
+	_swap.start(index, _repo)
 
 
 func _process(delta: float) -> void:
@@ -225,44 +196,13 @@ func _finish_swap() -> void:
 	_table.scale = Vector3.ONE
 
 
-func _flat() -> PackedFloat32Array:
-	var out := PackedFloat32Array()
-	out.resize(_nx * _nz)
-	return out
-
-
-## The sheet's ink, drawn once per ownership signature and kept as a texture —
-## one entry per sheet, a new key replacing the old texture. A headless run
-## reads back nothing: no texture is set and nothing errors.
+## The sheet's ink onto the table's material (WarRoomInk draws and keeps it).
 func _paint_ink(mat: ShaderMaterial) -> void:
 	var sheet := _sheet
-	var key := WarSheetInk.cache_key(state(), sheet)
-	var held: Dictionary = _ink_cache.get(sheet, {})
-	if held.get("key", -1) != key:
-		var tex_px := int(_repo.bal("war_sheet_texture_px"))
-		_ink_viewport.size = Vector2i(tex_px, tex_px)
-		var widths := {}
-		for k: String in INK_PX:
-			widths[k] = _repo.bal("war_ink_%s_px" % k)
-		for k: String in INK_RATIOS:
-			widths[k] = _repo.bal("war_ink_%s" % k)
-		_ink.paint(WarSheetInk.strokes(_repo, state(), WarSheets.series(_repo)[sheet], tex_px),
-			_repo.war_palette, widths, _font_or_default())
-		_ink_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
-		await RenderingServer.frame_post_draw
-		if not is_inside_tree() or sheet != _sheet:
-			return  # taken out of the tree, or another sheet laid, while the ink was drawn
-		_store_ink(sheet, key, _ink_viewport.get_texture().get_image())
-		held = _ink_cache.get(sheet, {})
-	if held.has("tex"):
-		mat.set_shader_parameter("ink_tex", held["tex"])
-
-
-func _store_ink(sheet: int, key: int, img: Image) -> void:
-	if img == null or img.is_empty():
-		return
-	img.generate_mipmaps()
-	_ink_cache[sheet] = {"key": key, "tex": ImageTexture.create_from_image(img)}
+	var tex := await _inks.texture_for(_repo, state(), sheet, _ink_viewport, _ink, _font_or_default(),
+		func() -> bool: return is_inside_tree() and sheet == _sheet)
+	if tex != null:
+		mat.set_shader_parameter("ink_tex", tex)
 
 
 func _apply_camera() -> void:
