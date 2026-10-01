@@ -27,7 +27,8 @@ func _ready() -> void:
 	_view.piece_selected.connect(_on_piece)
 	_view.selection_cleared.connect(_clear_card)
 	_view.rake_started.connect(_on_rake)
-	_view.sheet_requested.connect(lay_sheet)
+	_view.sheet_requested.connect(_view.swap_to)
+	_view.sheet_laid.connect(_on_laid)
 
 
 func view() -> WarRoomView:
@@ -69,8 +70,41 @@ func lay_sheet(index: int) -> void:
 	if index < 0 or index >= series.size():
 		return
 	_view.lay_sheet(index)
-	var s: Dictionary = series[index]
+
+
+## A sheet was laid (at once, or at the roll-up's midpoint): its title, and
+## the margin of the regiments standing on the others.
+func _on_laid(index: int) -> void:
+	var s: Dictionary = WarSheets.series(Game.data)[index]
 	%Title.text = "Sheet %s · %s" % [s["numeral"], s["name"]]
+	_fill_margin()
+
+
+## One flat button per regiment off this sheet ("label → numeral") that lays
+## its sheet; an empty sheet says so (spec §6).
+func _fill_margin() -> void:
+	var box: VBoxContainer = %Margin
+	for c in box.get_children():
+		box.remove_child(c)
+		c.queue_free()
+	var series := WarSheets.series(Game.data)
+	var sheet := _view.sheet_index()
+	for p: Dictionary in WarRoom.off_sheet(Game.data, Game.state, sheet):
+		var to := int(p["sheet"])
+		var b := Button.new()
+		b.flat = true
+		b.focus_mode = Control.FOCUS_NONE
+		var reg := ArmySystem.regiment(Game.data, String(p["code"]))
+		b.text = "%s → %s" % [reg.get("label", p["code"]), series[to]["numeral"]]
+		UiPalette.flat_tab(b, 13, 4.0)
+		b.pressed.connect(func() -> void: _view.swap_to(to))
+		box.add_child(b)
+	if WarRoom.on_sheet(Game.data, Game.state, sheet).is_empty():
+		var none := Label.new()
+		none.text = "No regiment of ours stands on this sheet."
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		UiPalette.style_header(none, 13)
+		box.add_child(none)
 
 
 func close() -> void:
@@ -96,6 +130,7 @@ func _process(_delta: float) -> void:
 	if _dirty and visible:
 		_dirty = false
 		_view.refresh()
+		_fill_margin()
 
 
 func _on_piece(code: String) -> void:

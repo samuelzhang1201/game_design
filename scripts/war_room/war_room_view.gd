@@ -17,6 +17,7 @@ signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
 signal route_clicked(code: String, at: Vector2)
 signal rake_started(code: String)
 signal sheet_requested(index: int)
+signal sheet_laid(index: int)
 
 var aiming := false
 var aim_dest := Vector2(-1, -1)
@@ -45,6 +46,8 @@ const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_
 @onready var _table: MeshInstance3D = %Table
 @onready var _ink_viewport: SubViewport = %InkViewport
 @onready var _ink: WarInkPainter = %Ink
+@onready var _chart: MeshInstance3D = %IndexChart
+@onready var _arrows: Node3D = %EdgeArrows
 
 var _repo: DataRepository
 var _state_fn: Callable
@@ -63,6 +66,10 @@ var _ink_cache: Dictionary = {}   # sheet index -> {key, tex}: one entry a sheet
 var _render_scale := 1.0
 var _selected := ""
 var _font: Font
+var _chart_built := false
+var _swap := WarSheetSwap.new()
+var _press_at := Vector2.ZERO
+var _pressed := false
 
 
 func _ready() -> void:
@@ -141,6 +148,8 @@ func set_active(on: bool) -> void:
 	visible = on
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 	set_process(on)
+	if not on:
+		_finish_swap()
 	if on:
 		_fit_viewport()
 
@@ -179,7 +188,41 @@ func lay_sheet(index: int) -> void:
 	_rig.yaw_deg = 0.0
 	_rig.distance = _repo.bal("war_cam_distance_m")
 	_apply_camera()
+	if not _chart_built:
+		_chart_built = true
+		WarRoomWall.build_chart(_chart, _repo, _font_or_default())
+	WarRoomWall.lay_arrows(_arrows, _repo, index, _table_w, _depth, _font_or_default())
+	sheet_laid.emit(index)
 	await _paint_ink(mat)
+
+
+## Roll the laid sheet up and lay `index` at the midpoint (spec §2). With no
+## sheet laid yet, or the room not drawing, it is laid at once; a roll in
+## progress is not interrupted.
+func swap_to(index: int) -> void:
+	if index == _sheet or index < 0 or _swap.active():
+		return
+	if _sheet < 0 or not is_processing():
+		lay_sheet(index)
+		return
+	_swap.start(index, _repo.bal("war_sheet_swap_s"))
+
+
+func _process(delta: float) -> void:
+	if not _swap.active():
+		return
+	if _swap.step(delta):
+		lay_sheet(_swap.to)
+	_table.scale = Vector3(1.0, 1.0, _swap.z_scale())
+
+
+## A roll cut short (the room closed) lays its sheet and stands the table up.
+func _finish_swap() -> void:
+	if _swap.active():
+		_swap.cancel()
+		if _swap.to != _sheet:
+			lay_sheet(_swap.to)
+	_table.scale = Vector3.ONE
 
 
 func _flat() -> PackedFloat32Array:
@@ -271,31 +314,42 @@ func clear_selection() -> void:
 	selection_cleared.emit()
 
 
+## The sheet a left click at `screen_px` asks for: an edge arrow, then the wall
+## chart; -1 when it is neither (the pennant, piece and ground picks follow in
+## their own tasks, in that order).
+func _pick_sheet_target(screen_px: Vector2) -> int:
+	var i := WarRoomWall.pick_arrow(_arrows, _camera, screen_px, _window_scale(), _repo.bal("war_pick_px"))
+	if i < 0:
+		i = WarRoomWall.pick_chart(_chart, _camera, _repo, screen_px * _window_scale())
+	return i
+
+
+func _on_left(mb: InputEventMouseButton) -> void:
+	if mb.pressed:
+		_press_at = mb.position
+		_pressed = true
+		return
+	if not _pressed:
+		return
+	_pressed = false
+	if mb.position.distance_to(_press_at) >= _repo.bal("war_rake_min_px"):
+		return
+	var i := _pick_sheet_target(mb.position)
+	if i >= 0:
+		sheet_requested.emit(i)
+		accept_event()
+
+
+func _ground_under(screen_px: Vector2) -> Vector3:
+	var at := pack_at(screen_px)
+	return table_point(at) if at.x >= 0.0 else _rig.target
+
+
 func _gui_input(event: InputEvent) -> void:
 	if _sheet < 0:
 		return
-	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
-		var mb := event as InputEventMouseButton
-		if mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
-			var at := pack_at(mb.position)
-			var ground := table_point(at) if at.x >= 0.0 else _rig.target
-			var step := _repo.bal("war_cam_zoom_step")
-			_rig.zoom_about(ground, 1.0 / step if mb.button_index == MOUSE_BUTTON_WHEEL_UP else step)
-			_apply_camera()
-			accept_event()
-	elif event is InputEventMagnifyGesture:
-		var g := event as InputEventMagnifyGesture
-		var at := pack_at(g.position)
-		_rig.zoom_about(table_point(at) if at.x >= 0.0 else _rig.target, 1.0 / maxf(g.factor, 0.01))
-		_apply_camera()
-		accept_event()
-	elif event is InputEventPanGesture:
-		var pg := event as InputEventPanGesture
-		_rig.pan(pg.delta * _rig.distance * _repo.bal("war_pan_gesture_speed"))
-		_apply_camera()
-		accept_event()
-	elif event is InputEventMouseMotion and ((event as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_MIDDLE):
-		var mm := event as InputEventMouseMotion
-		_rig.pan(-mm.relative * _rig.distance * _repo.bal("war_pan_drag_speed"))
+	if event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		_on_left(event as InputEventMouseButton)
+	elif WarRoomGestures.apply(event, _rig, _repo, _ground_under):
 		_apply_camera()
 		accept_event()

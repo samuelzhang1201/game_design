@@ -92,3 +92,25 @@ func test_an_out_of_range_sheet_is_ignored() -> void:
 	screen.lay_sheet(-1)
 	screen.lay_sheet(9999)
 	assert_eq(screen.view().sheet_index(), was)
+
+
+func test_a_regiment_on_another_sheet_is_listed_and_its_row_lays_that_sheet() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_frames(2)
+	var screen := r.war_room_screen()
+	var off := WarRoom.off_sheet(Game.data, Game.state, screen.view().sheet_index())
+	if off.is_empty():
+		pass_test("every regiment stands on the home sheet in this pack")
+		return
+	var rows := screen.get_node("%Margin").get_children().filter(func(n: Node) -> bool: return n is Button)
+	assert_eq(rows.size(), off.size())
+	(rows[0] as Button).pressed.emit()
+	_roll(screen.view())
+	await wait_frames(2)
+	assert_eq(screen.view().sheet_index(), int(off[0]["sheet"]))
+
+
+## Run the roll-up's seconds at once, as the clock would over time.
+func _roll(view: WarRoomView) -> void:
+	view._process(10.0)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/war_room/war_room_view.gd" id="1_view"]
 [ext_resource type="Script" path="res://scripts/war_room/war_ink_painter.gd" id="2_ink"]
@@ -21,7 +21,7 @@ albedo_color = Color(0.36, 0.35, 0.33, 1)
 roughness = 0.95
 
 [sub_resource type="BoxMesh" id="Box_slab"]
-size = Vector3(1.8, 0.08, 1.4)
+size = Vector3(1.8, 0.08, 1.9)
 
 [sub_resource type="StandardMaterial3D" id="Mat_oak"]
 albedo_color = Color(0.36, 0.23, 0.12, 1)
@@ -36,6 +36,13 @@ height = 0.18
 albedo_color = Color(0.72, 0.56, 0.24, 1)
 metallic = 0.8
 roughness = 0.4
+
+[sub_resource type="QuadMesh" id="Quad_chart"]
+size = Vector2(1, 0.363)
+
+[sub_resource type="StandardMaterial3D" id="Mat_chart"]
+albedo_color = Color(1, 1, 1, 1)
+roughness = 0.9
 
 [sub_resource type="BoxMesh" id="Box_floor"]
 size = Vector3(6, 0.02, 5)
@@ -99,7 +106,7 @@ cast_shadow = 0
 surface_material_override/0 = SubResource("Mat_floor")
 
 [node name="Slab" type="MeshInstance3D" parent="Viewport/Room"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.045, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.045, -0.25)
 mesh = SubResource("Box_slab")
 surface_material_override/0 = SubResource("Mat_oak")
 
@@ -126,6 +133,16 @@ surface_material_override/0 = SubResource("Mat_brass")
 [node name="Table" type="MeshInstance3D" parent="Viewport"]
 unique_name_in_owner = true
 material_override = ExtResource("3_table")
+
+[node name="IndexChart" type="MeshInstance3D" parent="Viewport/Room"]
+unique_name_in_owner = true
+position = Vector3(0, 0.1, -0.9)
+rotation_degrees = Vector3(-55, 0, 0)
+mesh = SubResource("Quad_chart")
+material_override = SubResource("Mat_chart")
+
+[node name="EdgeArrows" type="Node3D" parent="Viewport"]
+unique_name_in_owner = true
 
 [node name="Pieces" type="Node3D" parent="Viewport"]
 unique_name_in_owner = true

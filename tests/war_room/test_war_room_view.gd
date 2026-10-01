@@ -100,3 +100,96 @@ func test_two_views_do_not_share_a_material_or_an_environment() -> void:
 	add_child_autofree(other)
 	assert_ne(other.get_node("%Table").material_override, view.get_node("%Table").material_override)
 	assert_ne((other.get_node("%Env") as WorldEnvironment).environment, (view.get_node("%Env") as WorldEnvironment).environment)
+
+
+func test_a_laid_sheet_stands_an_arrow_at_each_neighbouring_side() -> void:
+	view.lay_sheet(0)
+	await wait_frames(2)
+	var near := WarSheets.neighbours(repo, 0)
+	var arrows: Array = view.get_node("%EdgeArrows").get_children()
+	assert_eq(arrows.size(), near.size())
+	var want: Array = near.values()
+	for a: Node in arrows:
+		assert_true(int(a.get_meta("sheet")) in want)
+		assert_true((a as Label3D).text.ends_with(String(WarSheets.series(repo)[int(a.get_meta("sheet"))]["numeral"])))
+
+
+func _click(at: Vector2) -> void:
+	for pressed in [true, false]:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.pressed = pressed
+		e.position = at
+		view._gui_input(e)
+
+
+func test_a_click_on_an_edge_arrow_requests_its_sheet() -> void:
+	view.lay_sheet(0)
+	await wait_frames(2)
+	watch_signals(view)
+	var arrow := view.get_node("%EdgeArrows").get_child(0) as Label3D
+	var at: Vector2 = (view.get_node("%Camera") as Camera3D).unproject_position(arrow.global_position) / view._window_scale()
+	_click(at)
+	assert_signal_emitted_with_parameters(view, "sheet_requested", [int(arrow.get_meta("sheet"))])
+
+
+func test_a_click_on_the_wall_chart_requests_the_sheet_under_it() -> void:
+	view.lay_sheet(0)
+	await wait_frames(2)
+	var cam: Camera3D = view.get_node("%Camera")
+	var chart: MeshInstance3D = view.get_node("%IndexChart")
+	var numerals := chart.get_children()
+	assert_eq(numerals.size(), WarSheets.series(repo).size(), "a numeral a sheet")
+	var checked := 0
+	for k in numerals.size():
+		var l := numerals[k] as Label3D
+		if cam.is_position_behind(l.global_position):
+			continue
+		var at := cam.unproject_position(l.global_position) / view._window_scale()
+		if not Rect2(Vector2.ZERO, view.size).has_point(at) or view._pick_sheet_target(at) < 0:
+			continue
+		assert_eq(view._pick_sheet_target(at), k, "the numeral %s picks its sheet" % l.text)
+		checked += 1
+	assert_gt(checked, 0, "the chart is in the opening view")
+
+
+func test_a_drag_is_not_a_click_on_the_chart() -> void:
+	view.lay_sheet(0)
+	await wait_frames(2)
+	watch_signals(view)
+	var arrow := view.get_node("%EdgeArrows").get_child(0) as Label3D
+	var at: Vector2 = (view.get_node("%Camera") as Camera3D).unproject_position(arrow.global_position) / view._window_scale()
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = at
+	view._gui_input(press)
+	var release := press.duplicate() as InputEventMouseButton
+	release.pressed = false
+	release.position = at + Vector2(repo.bal("war_rake_min_px") + 2.0, 0.0)
+	view._gui_input(release)
+	assert_signal_not_emitted(view, "sheet_requested")
+
+
+func test_swap_to_lays_the_new_sheet_at_the_midpoint_and_stands_the_table_up_again() -> void:
+	view.lay_sheet(0)
+	await wait_frames(2)
+	var swap_s := repo.bal("war_sheet_swap_s")
+	view.swap_to(1)
+	view._process(swap_s * 0.25)
+	assert_eq(view.sheet_index(), 0, "still the first sheet before the midpoint")
+	assert_lt((view.get_node("%Table") as Node3D).scale.z, 0.6, "rolling up")
+	view._process(swap_s * 0.3)
+	assert_eq(view.sheet_index(), 1, "laid at the midpoint")
+	view._process(swap_s)
+	assert_eq((view.get_node("%Table") as Node3D).scale, Vector3.ONE)
+
+
+func test_closing_the_room_mid_roll_lays_the_sheet_and_stands_the_table_up() -> void:
+	view.lay_sheet(0)
+	await wait_frames(2)
+	view.swap_to(1)
+	view._process(0.01)
+	view.set_active(false)
+	assert_eq(view.sheet_index(), 1)
+	assert_eq((view.get_node("%Table") as Node3D).scale, Vector3.ONE)
