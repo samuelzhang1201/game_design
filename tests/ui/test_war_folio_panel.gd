@@ -52,15 +52,15 @@ func test_a_click_on_the_dim_closes_it() -> void:
 func _court() -> GameRoot:
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var menu: MainMenu = r.current_screen
 	menu.menu_column().get_node("StartGame").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	return r
 
 
@@ -82,7 +82,7 @@ func test_all_six_sections_are_laid_in_columns_of_the_balance_key() -> void:
 
 func test_a_long_label_keeps_its_fixed_width_and_is_present() -> void:
 	panel.open_for(code)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var found := false
 	var w := Game.data.bal("war_folio_label_w_px")
 	for sec in panel.section_nodes():
@@ -145,7 +145,7 @@ func test_a_piece_selected_in_the_war_room_opens_the_folio_and_closing_clears_it
 	assert_false(folio.visible)
 	var c := _own_code()
 	screen.view().select(c)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(folio.visible)
 	assert_eq(folio.code(), c)
 	assert_eq(screen.view().selected_army(), c)
@@ -159,7 +159,7 @@ func test_closing_the_war_room_closes_the_folio() -> void:
 	var screen := r.war_room_screen()
 	var folio: WarFolioPanel = screen.get_node("%Folio")
 	screen.view().select(_own_code())
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_true(folio.visible)
 	screen.close()
 	assert_false(folio.visible)
@@ -171,12 +171,12 @@ func test_the_screens_refresh_lays_an_open_folio_again() -> void:
 	var folio: WarFolioPanel = screen.get_node("%Folio")
 	var c := _own_code()
 	screen.view().select(c)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var st := ArmySystem.state_of(Game.data, Game.state, c).duplicate()
 	st["morale"] = int(st["morale"]) - 9
 	Game.state.regiments[c] = st
 	screen.refresh()
-	await wait_frames(3)
+	await wait_process_frames(2)
 	var found := false
 	for sec in folio.section_nodes():
 		for line in sec.get_node("Rows").get_children():

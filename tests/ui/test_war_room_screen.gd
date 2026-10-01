@@ -4,13 +4,13 @@ extends GutTest
 func _court() -> GameRoot:
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var menu: MainMenu = r.current_screen
 	menu.menu_column().get_node("StartGame").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
-	await wait_frames(2)
+	await wait_process_frames(2)
 	return r
 
 
@@ -21,7 +21,7 @@ func test_war_room_is_no_longer_a_placeholder() -> void:
 func test_the_tab_lays_the_home_provinces_sheet_over_the_map() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(3)
+	await wait_process_frames(3)
 	var screen := r.war_room_screen()
 	assert_true(screen.visible)
 	var map: Control = r.current_screen.map_panel()
@@ -35,14 +35,14 @@ func test_the_tab_lays_the_home_provinces_sheet_over_the_map() -> void:
 func test_the_tab_again_closes_it_and_another_tab_closes_it_too() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_false(r.war_room_screen().visible)
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	r.bottom_bar().button("LEDGER").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_false(r.war_room_screen().visible)
 	assert_true(r.ledger_screen().visible)
 
@@ -50,10 +50,10 @@ func test_the_tab_again_closes_it_and_another_tab_closes_it_too() -> void:
 func test_a_selected_piece_puts_its_card_in_the_left_column_and_closing_takes_it_away() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
 	r.war_room_screen().view().piece_selected.emit(code)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
 	var card := MapObjects.army_card(Game.data, code, Game.state)
 	assert_eq(detail.title_label().text, String(card["title"]))
@@ -72,14 +72,14 @@ func test_opening_the_room_withdraws_an_aim_armed_on_the_map() -> void:
 	assert_eq(map_orders.aim_for(code), "", "the aim is armed on a paused clock")
 	assert_eq(map_orders.aiming(), code)
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_eq(map_orders.aiming(), "")
 
 
 func test_closing_the_room_lets_its_selection_go() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var view := r.war_room_screen().view()
 	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
 	view._selected = code
@@ -90,7 +90,7 @@ func test_closing_the_room_lets_its_selection_go() -> void:
 func test_an_out_of_range_sheet_is_ignored() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var screen := r.war_room_screen()
 	var was := screen.view().sheet_index()
 	screen.lay_sheet(-1)
@@ -101,7 +101,7 @@ func test_an_out_of_range_sheet_is_ignored() -> void:
 func test_a_regiment_on_another_sheet_is_listed_and_its_row_lays_that_sheet() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var screen := r.war_room_screen()
 	var off := WarRoom.off_sheet(Game.data, Game.state, screen.view().sheet_index())
 	if off.is_empty():
@@ -111,7 +111,7 @@ func test_a_regiment_on_another_sheet_is_listed_and_its_row_lays_that_sheet() ->
 	assert_eq(rows.size(), off.size())
 	(rows[0] as Button).pressed.emit()
 	_roll(screen.view())
-	await wait_frames(2)
+	await wait_process_frames(2)
 	assert_eq(screen.view().sheet_index(), int(off[0]["sheet"]))
 
 
@@ -123,7 +123,7 @@ func _roll(view: WarRoomView) -> void:
 func test_the_rake_on_a_running_clock_says_why_and_arms_nothing() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	Game.set_clock_speed(1)
 	var screen := r.war_room_screen()
 	var code := String(WarRoom.on_sheet(Game.data, Game.state, screen.view().sheet_index())[0]["code"])
@@ -137,7 +137,7 @@ func test_the_rake_on_a_running_clock_says_why_and_arms_nothing() -> void:
 func test_a_committed_rake_plants_a_pennant_with_a_riding_slip() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	Game.set_clock_speed(0)
 	var screen := r.war_room_screen()
 	var p: Dictionary = {}
@@ -190,7 +190,7 @@ func _land_near(screen: WarRoomScreen, at: Vector2) -> Vector2:
 func test_a_real_drag_from_a_piece_commits_a_march_and_plants_a_riding_pennant() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(3)
+	await wait_process_frames(3)
 	Game.set_clock_speed(0)
 	var screen := r.war_room_screen()
 	var view := screen.view()
@@ -215,7 +215,7 @@ func test_a_real_drag_from_a_piece_commits_a_march_and_plants_a_riding_pennant()
 func test_a_click_on_a_riding_pennant_opens_edit_route_and_cancel_march() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(3)
+	await wait_process_frames(3)
 	Game.set_clock_speed(0)
 	var screen := r.war_room_screen()
 	var view := screen.view()
@@ -240,7 +240,7 @@ func test_a_click_on_a_riding_pennant_opens_edit_route_and_cancel_march() -> voi
 func test_a_rake_released_off_the_table_withdraws_the_armed_march() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(3)
+	await wait_process_frames(3)
 	Game.set_clock_speed(0)
 	var screen := r.war_room_screen()
 	var view := screen.view()
@@ -259,7 +259,7 @@ func test_a_rake_released_off_the_table_withdraws_the_armed_march() -> void:
 func test_a_sheet_roll_withdraws_a_rake_in_hand_s_armed_march() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(3)
+	await wait_process_frames(3)
 	Game.set_clock_speed(0)
 	var screen := r.war_room_screen()
 	var view := screen.view()
@@ -278,7 +278,7 @@ func test_a_sheet_roll_withdraws_a_rake_in_hand_s_armed_march() -> void:
 func test_the_margin_slip_is_a_scrolling_slip_of_at_most_war_margin_rows() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(3)
+	await wait_process_frames(3)
 	var screen := r.war_room_screen()
 	var scroll := screen.get_node("%MarginScroll") as ScrollContainer
 	var rows := screen.get_node("%Margin").get_children().filter(func(n: Node) -> bool: return n is Button)
@@ -293,7 +293,7 @@ func test_the_margin_slip_is_a_scrolling_slip_of_at_most_war_margin_rows() -> vo
 func test_a_new_graphics_tier_reaches_the_room_and_the_folio() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var screen := r.war_room_screen()
 	var want := {0: Viewport.MSAA_DISABLED, 2: Viewport.MSAA_2X, 4: Viewport.MSAA_4X, 8: Viewport.MSAA_8X}
 	for tier: String in ["low", "ultra"]:
@@ -307,7 +307,7 @@ func test_a_new_graphics_tier_reaches_the_room_and_the_folio() -> void:
 func test_the_margin_keeps_its_buttons_while_the_list_stands_and_refills_on_reopen() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var screen := r.war_room_screen()
 	var box := screen.get_node("%Margin")
 	var first := box.get_children()
@@ -315,7 +315,7 @@ func test_the_margin_keeps_its_buttons_while_the_list_stands_and_refills_on_reop
 	assert_eq(box.get_children(), first, "an unchanged list keeps the very same buttons")
 	# shut, a regiment walks onto another sheet, and the room opens again
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var sheet := screen.view().sheet_index()
 	var mover := ""
 	for p: Dictionary in WarRoom.on_sheet(Game.data, Game.state, sheet):
@@ -334,7 +334,7 @@ func test_the_margin_keeps_its_buttons_while_the_list_stands_and_refills_on_reop
 	Game.state.regiments[mover]["x_m"] = m.x
 	Game.state.regiments[mover]["y_m"] = m.y
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_frames(2)
+	await wait_process_frames(2)
 	var texts: Array = box.get_children().filter(func(n: Node) -> bool: return n is Button) \
 		.map(func(b: Button) -> String: return b.text)
 	var label := String(ArmySystem.regiment(Game.data, mover).get("label", mover))
