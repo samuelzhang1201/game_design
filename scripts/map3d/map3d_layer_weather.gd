@@ -21,6 +21,10 @@ var _next: Dictionary = {}
 var _tex: Dictionary = {}  # ground_now, ground_next, fall_now, fall_next
 var _blend := 0.0
 var _key_changed := false
+## The next spell's field being built on a worker: its task id (-1: none) and
+## the Dictionary the job writes its result into.
+var _job_id := -1
+var _job: Dictionary = {}
 
 
 ## The falling rain and snow (the scene's Viewport/Precip), stepped with the
@@ -98,15 +102,25 @@ func step() -> void:
 		var kinds := override.split(",", false)
 		var pick_kind := Callable() if kinds.is_empty() else func(p: String) -> String:
 			return kinds[posmod(p.hash(), kinds.size())]
+		_take_next()  # nothing re-indexes the field under a worker
 		if key == _key and now_spell == _spell + 1 and not _next.is_empty():
+			# The spell turned as spells do: the next field is this one, and the
+			# one after it is built on a worker (perf 2026-10-02: ~13 ms on the
+			# frame the spell turned). Until it lands the next slot wears this
+			# spell's images; the blend toward it starts only at the spell's end.
 			_now = _next
+			var next_kinds := field.kinds_for(ctx.repo, st, now_spell + 1, pick_kind)
+			_next = {"ground": _now["ground"], "fall": _now["fall"], "kinds": next_kinds}
+			_start_next(next_kinds)
 		else:
 			_now = field.build(ctx.repo, st, now_spell, pick_kind)
-		_next = field.build(ctx.repo, st, now_spell + 1, pick_kind)
+			_next = field.build(ctx.repo, st, now_spell + 1, pick_kind)
 		_key = key
 		_spell = now_spell
 		_key_changed = true
 		_upload()
+	if _job_id >= 0 and (float(b["t"]) > 0.0 or WorkerThreadPool.is_task_completed(_job_id)):
+		finish_next()  # it has landed — or the blend needs it now and waits
 	var turned := not is_equal_approx(_blend, float(b["t"])) or _key_changed
 	_key_changed = false
 	_blend = float(b["t"])
@@ -122,6 +136,55 @@ func step() -> void:
 		if not (lit is float and is_equal_approx(lit, 1.0)):
 			_apply_uniforms()
 		_mat.call("set_shader_param", "weather_blend", _blend)
+
+
+## Builds the next spell's field from `kinds` on the WorkerThreadPool. The job
+## holds the field and the repository, never this layer, so a layer let go
+## mid-build is still freed (and waits for it, NOTIFICATION_PREDELETE).
+func _start_next(kinds: Dictionary) -> void:
+	var f := field
+	var repo := ctx.repo
+	var job := {}
+	_job = job
+	_job_id = WorkerThreadPool.add_task(func() -> void: job["field"] = f.build_kinds(repo, kinds),
+		false, "map3d weather field")
+
+
+## The next spell's ground field as it stands (a test seam: a headless
+## texture cannot be read back).
+func next_ground() -> Image:
+	return _next.get("ground")
+
+
+## Whether the next spell's field is still a worker's job.
+func building_next() -> bool:
+	return _job_id >= 0
+
+
+## Waits for the next spell's field (if one is being built) and puts it on
+## the ground as the next slot.
+func finish_next() -> void:
+	if _take_next():
+		_key_changed = true
+		_upload()
+
+
+## Waits for the worker's field and takes it as the next slot (not uploaded);
+## false when none was being built.
+func _take_next() -> bool:
+	if _job_id < 0:
+		return false
+	WorkerThreadPool.wait_for_task_completion(_job_id)
+	_job_id = -1
+	if _job.has("field"):
+		_next = _job["field"]
+	_job = {}
+	return true
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE and _job_id >= 0:
+		WorkerThreadPool.wait_for_task_completion(_job_id)
 
 
 ## The houses' share of the weather: the same field, its blend, snow's colour.

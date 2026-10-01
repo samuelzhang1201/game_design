@@ -78,6 +78,37 @@ func test_a_forced_sky_covers_every_province() -> void:
 	assert_eq(kinds.keys().size(), 2, "a list is shared out among the provinces")
 
 
+## Perf 2026-10-02: when a spell turns, the field after it is built OFF the
+## main thread (it cost ~13 ms on that frame); once it lands it is exactly the
+## field a synchronous build gives.
+func test_the_spell_after_next_is_built_off_the_main_thread_and_lands_whole() -> void:
+	var w := _layer()
+	w.step()
+	var days := int(repo.bal("weather_spell_days"))
+	state.day = 1 + days  # the next spell's first day
+	w.step()
+	assert_true(w.building_next(), "the next spell's field is a worker's job")
+	w.finish_next()
+	assert_false(w.building_next())
+	var want := Map3DWeatherField.new(repo).build(repo, state, w.spell() + 1)
+	assert_true(w.next_ground().get_data() == (want["ground"] as Image).get_data(),
+		"the worker's field is the synchronous one")
+
+
+func test_a_blend_never_turns_toward_a_field_still_being_built() -> void:
+	var w := _layer()
+	w.step()
+	var days := int(repo.bal("weather_spell_days"))
+	state.day = 1 + days
+	w.step()
+	state.day = 2 * days  # the spell's last day, its blend under way
+	share = 0.9
+	w.step()
+	assert_false(w.building_next(), "the blend waited for its field")
+	var want := Map3DWeatherField.new(repo).build(repo, state, w.spell() + 1)
+	assert_true(w.next_ground().get_data() == (want["ground"] as Image).get_data())
+
+
 func test_off_leaves_the_ground_alone() -> void:
 	repo.balance["map3d_weather_look"] = 0.0
 	_layer().step()
