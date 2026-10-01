@@ -908,3 +908,83 @@ def test_the_world_bake_hands_the_landmark_height_scale_through():
     for t in ("palace", "palace_b", "palace_c"):
         assert bake_houses.landmark_height_scale(types[t], RULES) == 1.0
     assert bake_houses.landmark_height_scale(types["church"], RULES) == RULES["house_height_max"]
+
+
+# -- walls and piers (owner 2026-10-01) ------------------------------------------------
+WALL_RULES = dict(RULES, wall_bins=64, wall_dilate_bins=2, wall_smooth_passes=4, wall_margin_m=18,
+                  wall_min_r_m=60, wall_len_m=24, wall_tower_turn_deg=24, wall_tower_every=4,
+                  wall_min_houses=8, wall_shore_m=30, pier_len_m=60, pier_root_m=6, pier_search_m=700,
+                  pier_step_m=10, pier_bearing_step_deg=5, pier_max_shore_m=6)
+WALL_TYPES = dict(TYPES,
+                  wall={"role": "wall", "weight": 1.0, "footprint_m": 24.0, "width_m": 24.0, "depth_m": 5.0, "min_group": "village"},
+                  wall_gate={"role": "wall", "weight": 1.0, "footprint_m": 23.0, "width_m": 23.0, "depth_m": 15.0, "min_group": "village"},
+                  wall_tower={"role": "wall", "weight": 1.0, "footprint_m": 14.0, "width_m": 14.0, "depth_m": 14.0, "min_group": "village"},
+                  pier={"role": "pier", "weight": 1.0, "footprint_m": 60.0, "width_m": 60.0, "depth_m": 15.0, "min_group": "village"})
+
+
+def _toy_town(n=30, r=90.0):
+    rows = [{"burg_code": "toy", "rank": 0, "x_m": 0.0, "z_m": 0.0, "yaw_deg": 0.0, "type": "chapel",
+             "scale": 1.0, "height_scale": 1.5}]
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        d = r * (0.4 + 0.6 * ((i * 7) % n) / n)
+        rows.append({"burg_code": "toy", "rank": i + 1, "x_m": d * math.cos(a), "z_m": d * math.sin(a),
+                     "yaw_deg": 0.0, "type": "cottage_a", "scale": 1.0, "height_scale": 1.0})
+    return rows
+
+
+def test_a_walled_town_is_ringed_outside_its_houses_with_a_gate_on_its_road():
+    _, land, _ = flat_world()
+    rows = _toy_town()
+    b = dict(burg(), features="walls|plaza")
+    road = [[(0.0, 0.0), (600.0, 0.0)]]          # a road leaving due east
+    out = bake_houses.fortify(b, rows, WALL_RULES, WALL_TYPES, land, None, K, VW, VH, road)
+    kinds = {r["type"] for r in out}
+    assert {"wall", "wall_gate", "wall_tower"} <= kinds
+    for r in out:
+        # outside every house on its own bearing (within the wall_dilate_bins spread, ~11 degrees)
+        a = math.atan2(r["z_m"], r["x_m"])
+        near = [h for h in rows if abs((math.atan2(h["z_m"], h["x_m"]) - a + math.pi) % (2 * math.pi) - math.pi) < 0.19]
+        far = max((math.hypot(h["x_m"], h["z_m"]) + bake_houses._half_reach(WALL_TYPES[h["type"]]) for h in near), default=0.0)
+        assert math.hypot(r["x_m"], r["z_m"]) > far, f"{r['type']} stands outside the houses on its bearing"
+        # its front (+Z after the yaw) faces away from the town
+        yaw = math.radians(r["yaw_deg"])
+        assert math.sin(yaw) * r["x_m"] + math.cos(yaw) * r["z_m"] > 0
+    gates = [r for r in out if r["type"] == "wall_gate"]
+    assert any(abs(math.atan2(g["z_m"], g["x_m"])) < 0.35 for g in gates), "a gate stands on the east road"
+    ranks = [r["rank"] for r in out]
+    assert ranks == list(range(len(rows), len(rows) + len(out))), "ranks run on densely after the houses"
+
+
+def test_a_town_without_walls_gets_none_and_a_wall_stops_at_the_sea():
+    _, land, _ = flat_world()
+    rows = _toy_town()
+    assert bake_houses.fortify(burg(), rows, WALL_RULES, WALL_TYPES, land, None, K, VW, VH, []) == []
+    sea = land.copy()
+    sea[:, : CENTRE_COL - 3] = 0.0                # the sea comes to 60 m west of the centre
+    b = dict(burg(), features="walls")
+    out = bake_houses.fortify(b, rows, WALL_RULES, WALL_TYPES, sea, None, K, VW, VH, [])
+    assert out, "the land side is still walled"
+    for r in out:
+        vx = CENTRE + r["x_m"] / bake_houses.VERTEX_M
+        assert vx >= CENTRE_COL - 3 - 0.5, f"{r['type']} stands in the sea"
+    assert any(r["type"] == "wall_gate" for r in out), "a wall with no road still has a gate"
+
+
+def test_a_port_runs_its_pier_from_the_shore_out_to_sea():
+    _, land, height = flat_world()
+    height[:] = 6.0
+    sea = land.copy()
+    sea[:, : CENTRE_COL - 8] = 0.0                # the shore 160 m west of the centre
+    rows = _toy_town()
+    assert bake_houses.harbour(burg(), rows, WALL_RULES, sea, height, K, VW, VH, 5.0) == []
+    out = bake_houses.harbour(burg(port=1), rows, WALL_RULES, sea, height, K, VW, VH, 5.0)
+    assert len(out) == 1 and out[0]["type"] == "pier"
+    p = out[0]
+    yaw = math.radians(p["yaw_deg"])
+    along = (math.cos(yaw), -math.sin(yaw))       # the mesh's +X: out to sea
+    assert along[0] < -0.9, "the pier runs west, out to the sea"
+    head_vx = CENTRE + (p["x_m"] + along[0] * 28.0) / bake_houses.VERTEX_M
+    root_vx = CENTRE + (p["x_m"] - along[0] * 30.0) / bake_houses.VERTEX_M
+    assert head_vx < CENTRE_COL - 8, "its head is over the water"
+    assert root_vx >= CENTRE_COL - 8 - 0.5, "its landward end meets the bank"

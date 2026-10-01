@@ -26,6 +26,14 @@ func before_all() -> void:
 	_picker.ctx = ctx
 
 
+## A town's wall and a port's pier (owner 2026-10-01) are laid by their own
+## rules, not by the house passes: the cluster and the sea tests below take
+## houses only, and these two kinds have their own tests at the end.
+func _laid(r: Dictionary) -> bool:
+	var row: Dictionary = Game.data.map3d_houses.get(String(r["type"]), {})
+	return ["wall", "pier"].has(String(row.get("role", "")))
+
+
 func _skip() -> bool:
 	if _rows.is_empty() or _meta.is_empty():
 		pass_test("no 3D build in this checkout (tools/map3d/build_pack.sh) — skipped")
@@ -39,6 +47,8 @@ func test_no_house_stands_in_the_sea() -> void:
 	var wet := 0
 	var worst := ""
 	for r: Dictionary in _rows:
+		if String(r["type"]) == "pier":
+			continue
 		var pack := Map3DGeometry.world_to_pack(_meta,
 			Vector2(float(r["x_m"]), float(r["z_m"])))
 		if _picker.cell_at(pack) < 0:
@@ -61,7 +71,7 @@ func test_every_house_is_inside_its_own_cluster() -> void:
 	for r: Dictionary in _rows:
 		var code := String(r["burg_code"])
 		assert_true(Game.data.burgs.has(code), code + " is a burg of this pack")
-		if not Game.data.burgs.has(code) or not landmark_of.has(code):
+		if not Game.data.burgs.has(code) or not landmark_of.has(code) or _laid(r):
 			continue
 		var b: Dictionary = Game.data.burgs[code]
 		var lm: Dictionary = landmark_of[code]
@@ -100,3 +110,61 @@ func test_every_type_used_is_in_the_table() -> void:
 	for r: Dictionary in _rows:
 		assert_true(Game.data.map3d_houses.has(String(r["type"])),
 			String(r["type"]) + " is a known house type")
+
+
+## Owner 2026-10-01 (城镇的外围能增加城墙): every settlement with `walls` in its
+## features and a cluster to ring wears a wall with at least one gate, and
+## every module of it stands outside its houses, round them.
+func test_a_walled_town_wears_a_wall_with_a_gate_round_its_houses() -> void:
+	if _skip():
+		return
+	var by_burg: Dictionary = {}
+	for r: Dictionary in _rows:
+		var code := String(r["burg_code"])
+		if not by_burg.has(code):
+			by_burg[code] = []
+		(by_burg[code] as Array).append(r)
+	var walled := 0
+	for code: String in by_burg:
+		var rows: Array = by_burg[code]
+		var walls: Array = rows.filter(func(r): return String(r["type"]).begins_with("wall"))
+		var houses: Array = rows.filter(func(r): return not _laid(r))
+		if walls.is_empty():
+			continue
+		walled += 1
+		assert_true(String(Game.data.burgs[code].get("features", "")).contains("walls"),
+			code + " has walls only because its features say so")
+		assert_true(walls.any(func(r): return String(r["type"]) == "wall_gate"), code + "'s wall has a gate")
+		# every module stands farther out than every house on its own
+		# bearing (a town may be long: the wall follows it, not a circle)
+		var c := Vector2(float(houses[0]["x_m"]), float(houses[0]["z_m"]))
+		for w: Dictionary in walls:
+			var wv := Vector2(float(w["x_m"]), float(w["z_m"])) - c
+			for h: Dictionary in houses:
+				var hv := Vector2(float(h["x_m"]), float(h["z_m"])) - c
+				if hv.length() > 1.0 and absf(wv.angle_to(hv)) < 0.15:
+					assert_gt(wv.length(), hv.length(),
+						code + "'s wall stands outside its houses on every bearing")
+	assert_gt(walled, 20, "the pack's walled towns are walled")
+
+
+## Owner 2026-10-01 (码头延伸到海里): a pier runs from the bank out to sea — its
+## landward end on land or at the shore, its head over water — and only a
+## port has one.
+func test_a_pier_runs_from_the_shore_out_to_sea() -> void:
+	if _skip():
+		return
+	var piers := 0
+	for r: Dictionary in _rows:
+		if String(r["type"]) != "pier":
+			continue
+		piers += 1
+		var code := String(r["burg_code"])
+		assert_eq(int(Game.data.burgs[code].get("is_port", 0)), 1, code + " has a pier because it is a port")
+		var at := Vector2(float(r["x_m"]), float(r["z_m"]))
+		var yaw := deg_to_rad(float(r["yaw_deg"]))
+		var along := Vector2(cos(yaw), -sin(yaw))   # the mesh's +X after the yaw
+		var half := float(Game.data.map3d_houses["pier"]["footprint_m"]) * 0.5
+		var head := Map3DGeometry.world_to_pack(_meta, at + along * (half - 2.0))
+		assert_lt(_picker.cell_at(head), 0, code + "'s pier head is over the water")
+	assert_gt(piers, 20, "the pack's ports have piers")

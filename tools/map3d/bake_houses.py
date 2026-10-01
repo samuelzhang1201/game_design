@@ -929,3 +929,265 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
     if debug_counts is not None:
         debug_counts.update(pass_counts)
     return rows
+
+
+# -- walls and piers ------------------------------------------------------------------
+# Owner 2026-10-01: 城镇里的feature如果有城墙我希望城镇的外围能增加城墙；城镇的feature里
+# 如果有码头，我希望城镇能够延伸出去一个码头到海里. Both are extra rows of the
+# settlement's houses.csv (roles `wall` / `pier` in data/map3d_houses.csv), so the
+# runtime's houses layer draws them with no new layer; every number is
+# data/map3d_bake.csv's wall_* / pier_*.
+
+def smooth_open(pts, steps):
+    """MapGeometry.smooth_open, the runtime's road smoothing, in Python: a
+    uniform cubic B-spline through the polyline, the ends clamped, so a gate
+    stands where the DRAWN road crosses the wall."""
+    n = len(pts)
+    if n < 3 or steps < 1:
+        return list(pts)
+    out = []
+    for i in range(-2, n - 1):
+        p0 = pts[min(max(i, 0), n - 1)]
+        p1 = pts[min(max(i + 1, 0), n - 1)]
+        p2 = pts[min(max(i + 2, 0), n - 1)]
+        p3 = pts[min(max(i + 3, 0), n - 1)]
+        for j in range(steps):
+            t = j / steps
+            t2, t3 = t * t, t * t * t
+            a, b = 1 - 3 * t + 3 * t2 - t3, 4 - 6 * t2 + 3 * t3
+            c, d = 1 + 3 * t + 3 * t2 - 3 * t3, t3
+            out.append(((p0[0] * a + p1[0] * b + p2[0] * c + p3[0] * d) / 6.0,
+                        (p0[1] * a + p1[1] * b + p2[1] * c + p3[1] * d) / 6.0))
+    out.append(pts[-1])
+    return out
+
+
+def _seg_cross(a, b, c, d):
+    """The point where segment ab crosses segment cd, or None."""
+    r = (b[0] - a[0], b[1] - a[1])
+    s = (d[0] - c[0], d[1] - c[1])
+    den = r[0] * s[1] - r[1] * s[0]
+    if abs(den) < 1e-9:
+        return None
+    t = ((c[0] - a[0]) * s[1] - (c[1] - a[1]) * s[0]) / den
+    u = ((c[0] - a[0]) * r[1] - (c[1] - a[1]) * r[0]) / den
+    if 0.0 <= t <= 1.0 and 0.0 <= u <= 1.0:
+        return (a[0] + t * r[0], a[1] + t * r[1])
+    return None
+
+
+def _half_reach(t):
+    """Half a building's diagonal, metres: how far its corners reach."""
+    w = float(t.get("width_m") or t["footprint_m"])
+    d = float(t.get("depth_m") or t["footprint_m"])
+    return 0.5 * math.hypot(w, d)
+
+
+def _on_land(land, wet, vx, vy, vw, vh):
+    ix, iy = int(round(vx)), int(round(vy))
+    if ix < 0 or iy < 0 or ix >= vw or iy >= vh:
+        return False
+    if land[iy, ix] < 0.5:
+        return False
+    return wet is None or wet[iy, ix] < 0.5
+
+
+def wall_ring(rows, types, rules, centre):
+    """The wall's line round a settlement's houses: for each of wall_bins
+    bearings from `centre` the farthest corner of any building, spread over
+    wall_dilate_bins either way and smoothed (a circular [1, 2, 1] pass,
+    wall_smooth_passes times) — never pulled back inside that spread, so never
+    inside a building — plus wall_margin_m,
+    never under wall_min_r_m. Returns the ring's points, offsets in metres."""
+    n = max(int(rules["wall_bins"]), 8)
+    raw = np.zeros(n)
+    cx, cz = centre
+    for r in rows:
+        t = types.get(r["type"])
+        if t is None:
+            continue
+        dx, dz = r["x_m"] - cx, r["z_m"] - cz
+        reach = math.hypot(dx, dz) + _half_reach(t)
+        b = int(round(math.atan2(dz, dx) / (2 * math.pi) * n)) % n
+        raw[b] = max(raw[b], reach)
+    k = int(rules["wall_dilate_bins"])
+    env = np.max(np.stack([np.roll(raw, i) for i in range(-k, k + 1)]), axis=0)
+    r = env.copy()
+    for _ in range(int(rules["wall_smooth_passes"])):
+        r = 0.25 * np.roll(r, 1) + 0.5 * r + 0.25 * np.roll(r, -1)
+    r = np.maximum(r, env)   # never pulled back inside a building's spread bearings
+    r = np.maximum(r + float(rules["wall_margin_m"]), float(rules["wall_min_r_m"]))
+    return [(cx + r[i] * math.cos(2 * math.pi * i / n), cz + r[i] * math.sin(2 * math.pi * i / n))
+            for i in range(n)]
+
+
+def fortify(burg, rows, rules, types, land, wet, k, vw, vh, roads):
+    """A walled settlement's wall as house rows: its modules round wall_ring,
+    each `wall` module wall_len_m along the line (the ring cut into whole
+    modules, so they meet), a `wall_gate` where a drawn road crosses the line
+    (at least one, on the side facing the nearest road), a `wall_tower` at
+    every joint the line turns by wall_tower_turn_deg or more, every
+    wall_tower_every modules, and at each end of a run the water cuts — a
+    module whose middle or ends stand in the sea or a river is left out, so a
+    harbour town's wall stops at the shore. Every row faces OUT (yaw puts the
+    module's front, +Z, along its outward normal). `roads` are polylines of
+    offsets in metres from the burg's point. [] for a settlement without
+    walls or with too few houses to ring."""
+    feats = str(burg.get("features", "")).split("|")
+    if "walls" not in feats or len(rows) < int(rules["wall_min_houses"]):
+        return []
+    centre = (rows[0]["x_m"], rows[0]["z_m"])
+    ring = wall_ring(rows, types, rules, centre)
+    seg_len = float(types["wall"]["footprint_m"]) if "wall" in types else float(rules["wall_len_m"])
+    per = [math.hypot(ring[(i + 1) % len(ring)][0] - ring[i][0], ring[(i + 1) % len(ring)][1] - ring[i][1])
+           for i in range(len(ring))]
+    total = sum(per)
+    m = max(int(math.ceil(total / seg_len)), 6)
+
+    def at(s):
+        s %= total
+        for i, L in enumerate(per):
+            if s <= L:
+                a, b = ring[i], ring[(i + 1) % len(ring)]
+                f = s / max(L, 1e-9)
+                return (a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1]))
+            s -= L
+        return ring[0]
+    joints = [at(total * j / m) for j in range(m)]
+    bx, bz = float(burg["x"]) * k, float(burg["y"]) * k
+
+    shore = float(rules["wall_shore_m"])
+
+    def dry(p):
+        # land with a shore buffer, as a house's own test (_dry): at the bare
+        # point a module on the shore's last vertex stood in a cell the game
+        # counts as sea (the cell index is 50 m a pixel, the bake 20)
+        vx, vy = bx + p[0] / VERTEX_M, bz + p[1] / VERTEX_M
+        return _on_land(land, wet, vx, vy, vw, vh) and _dry(land, vx, vy, vw, vh, shore)
+    segs = []
+    for j in range(m):
+        a, b = joints[j], joints[(j + 1) % m]
+        mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+        tx, tz = b[0] - a[0], b[1] - a[1]
+        tl = math.hypot(tx, tz) or 1.0
+        ox, oz = tz / tl, -tx / tl
+        if (mid[0] - centre[0]) * ox + (mid[1] - centre[1]) * oz < 0:
+            ox, oz = -ox, -oz
+        segs.append({"a": a, "b": b, "mid": mid, "out": (ox, oz),
+                     "ok": dry(mid) and dry(a) and dry(b), "gate": False})
+    # gates where a drawn road crosses the line
+    for line in roads:
+        for p, q in zip(line, line[1:]):
+            for s in segs:
+                if s["ok"] and _seg_cross(p, q, s["a"], s["b"]) is not None:
+                    s["gate"] = True
+    if not any(s["gate"] for s in segs if s["ok"]):
+        best, bd = None, None
+        for line in roads:
+            for p in line:
+                for s in segs:
+                    if not s["ok"]:
+                        continue
+                    d = math.hypot(p[0] - s["mid"][0], p[1] - s["mid"][1])
+                    if bd is None or d < bd:
+                        best, bd = s, d
+        if best is None:
+            best = next((s for s in segs if s["ok"]), None)
+        if best is not None:
+            best["gate"] = True
+    out = []
+    rank = max((int(r["rank"]) for r in rows), default=0) + 1
+    code = str(burg["burg_code"])
+
+    def add(kind, p, out_dir):
+        nonlocal rank
+        out.append({"burg_code": code, "rank": rank, "x_m": float(round(p[0], 2)),
+                    "z_m": float(round(p[1], 2)),
+                    "yaw_deg": float(round(math.degrees(math.atan2(out_dir[0], out_dir[1])), 2)),
+                    "type": kind, "scale": 1.0, "height_scale": 1.0})
+        rank += 1
+    for s in segs:
+        if s["ok"]:
+            add("wall_gate" if s["gate"] else "wall", s["mid"], s["out"])
+    turn_min = math.radians(float(rules["wall_tower_turn_deg"]))
+    every = max(int(rules["wall_tower_every"]), 1)
+    for j in range(m):
+        prev, nxt = segs[j - 1], segs[j]
+        if not (prev["ok"] or nxt["ok"]):
+            continue
+        if prev["gate"] or nxt["gate"]:
+            continue
+        end_of_run = prev["ok"] != nxt["ok"]
+        t0 = math.atan2(prev["b"][1] - prev["a"][1], prev["b"][0] - prev["a"][0])
+        t1 = math.atan2(nxt["b"][1] - nxt["a"][1], nxt["b"][0] - nxt["a"][0])
+        turn = abs((t1 - t0 + math.pi) % (2 * math.pi) - math.pi)
+        if end_of_run or turn >= turn_min or j % every == 0:
+            o = ((prev["out"][0] + nxt["out"][0]) / 2, (prev["out"][1] + nxt["out"][1]) / 2)
+            add("wall_tower", joints[j], o)
+    return out
+
+
+def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None):
+    """A port's pier as one house row: from the settlement's centre the
+    bearing (every pier_bearing_step_deg) whose shore is nearest, within
+    pier_search_m, where the next pier_len_m out is all water and the
+    shore's ground stands no more than pier_max_shore_m over the sea; the
+    pier's landward end pier_root_m inland of the shore, its head out to
+    sea. `water`, when given, is where BOTH the coastline and the game's cell
+    index say water (a pier head over coastline sea inside a game cell read
+    as standing on land); without it, water is wherever `land` is not.
+    [] for a settlement that is not a port or finds no such shore."""
+    if not int(burg.get("is_port", 0) or 0) or not rows:
+        return []
+    cx, cz = rows[0]["x_m"], rows[0]["z_m"]
+    bx, bz = float(burg["x"]) * k, float(burg["y"]) * k
+    step = float(rules["pier_step_m"])
+    plen = float(rules["pier_len_m"])
+    reach = float(rules["pier_search_m"])
+    max_shore = float(rules["pier_max_shore_m"])
+
+    def land_at(x, z):
+        ix, iy = int(round(bx + x / VERTEX_M)), int(round(bz + z / VERTEX_M))
+        if ix < 0 or iy < 0 or ix >= vw or iy >= vh:
+            return None
+        is_land = (not water[iy, ix]) if water is not None else land[iy, ix] >= 0.5
+        return is_land, float(height[iy, ix])
+    best = None
+    deg = 0.0
+    while deg < 360.0:
+        a = math.radians(deg)
+        dx, dz = math.cos(a), math.sin(a)
+        d = 0.0
+        shore = None
+        last_h = None
+        while d <= reach:
+            v = land_at(cx + dx * d, cz + dz * d)
+            if v is None:
+                break
+            if not v[0]:
+                shore = d
+                break
+            last_h = v[1]
+            d += step
+        if shore is not None and last_h is not None and last_h - sea_y <= max_shore:
+            clear = True
+            s = shore
+            while s <= shore + plen:
+                v = land_at(cx + dx * s, cz + dz * s)
+                if v is None or v[0]:
+                    clear = False
+                    break
+                s += step
+            if clear and (best is None or shore < best[0]):
+                best = (shore, dx, dz)
+        deg += float(rules["pier_bearing_step_deg"])
+    if best is None:
+        return []
+    shore, dx, dz = best
+    mid = shore - float(rules["pier_root_m"]) + plen / 2
+    rank = max((int(r["rank"]) for r in rows), default=0) + 1
+    return [{"burg_code": str(burg["burg_code"]), "rank": rank,
+             "x_m": float(round(cx + dx * mid, 2)), "z_m": float(round(cz + dz * mid, 2)),
+             # the pier runs along the mesh's +X: yaw turns +X onto (dx, dz)
+             "yaw_deg": float(round(math.degrees(math.atan2(-dz, dx)), 2)),
+             "type": "pier", "scale": 1.0, "height_scale": 1.0}]

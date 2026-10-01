@@ -120,6 +120,11 @@ var _pause_menu := false
 ## as the player meets it (GameRoot hands it its settings rows; --screen
 ## main_menu shows the bare scene without them).
 var _title := false
+## --title-click ROW@F (with --title): at frame F a real left click on the title
+## menu's row ROW (StartGame, LoadGame, ...) — Take the Throne or Continue the
+## Chronicle, so --also can follow the sweep and the landing.
+var _title_click := ""
+var _title_click_frame := -1
 ## --look3d x,y,M,F (with --screen root) frames pack px (x,y) M metres away at
 ## frame F — after an order, to follow its courier from the capital.
 var _look3d := PackedFloat32Array()
@@ -260,6 +265,10 @@ func _ready() -> void:
 			_shot_on = args[i + 1]
 		elif args[i] == "--shot-delay":
 			_shot_delay = int(args[i + 1])
+		elif args[i] == "--title-click":
+			var rf := args[i + 1].split("@")
+			_title_click = rf[0]
+			_title_click_frame = int(rf[1]) if rf.size() > 1 else 20
 		elif args[i] == "--also":
 			var fp := args[i + 1].split(":")
 			_also[int(fp[0])] = fp[1]
@@ -399,6 +408,12 @@ func _process(_delta: float) -> void:
 	_frames += 1
 	if _root != null and _pause_menu and _frames == 20:
 		_root.toggle_pause_menu()
+	if _root != null and _frames == _title_click_frame and _root.current_screen is MainMenu:
+		var row := (_root.current_screen as MainMenu).menu_column().get_node_or_null(_title_click) as Control
+		if row == null:
+			push_error("--title-click: no title row %s" % _title_click)
+		else:
+			_real_click(row, row.size * 0.5)
 	if _day_share >= 0.0:
 		Game.day_progress = _day_share
 	# GameRoot boots into the menu; step it into the court so the shot shows
