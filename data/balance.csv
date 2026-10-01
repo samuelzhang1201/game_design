@@ -727,7 +727,7 @@ war_relief_grid,256,"WAR ROOM (owner 2026-10-01, spec §2): vertices across the 
 war_relief_exaggeration,12,"WAR ROOM (owner 2026-10-01, spec §2): the relief's vertical exaggeration over the table's true scale (2400 m reads ~6 cm)"
 war_contour_m,200,"WAR ROOM (owner 2026-10-01, spec §2): metres between contour lines inked on the relief"
 war_contour_index_every,5,"WAR ROOM (owner 2026-10-01, spec §2): every Nth contour is an index contour, drawn heavier"
-war_sheet_texture_px,4096,"WAR ROOM (owner 2026-10-01, spec §2): the side of the inked sheet texture (roads, rivers, borders, towns), drawn once per lay"
+war_sheet_texture_px,4096,"WAR ROOM (owner 2026-10-01, spec §2): the WIDTH of the inked sheet texture (roads, rivers, borders, towns), its height at the same scale; drawn once per lay into an ink viewport that is 2x2 at rest, and kept for the laid sheet and one other only"
 war_sheet_swap_s,0.6,"WAR ROOM (owner 2026-10-01, spec §2): seconds to roll a sheet up and lay another"
 war_cam_distance_m,1.6,"WAR ROOM (owner 2026-10-01, spec §1): the camera's opening distance from the table's centre, metres"
 war_cam_min_m,0.12,"WAR ROOM (owner 2026-10-01, spec §1): closest lean — a base's brass plate reads"

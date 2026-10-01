@@ -37,7 +37,7 @@ uniform float paper_roughness = 0.9;
 uniform float crease_alpha = 0.12;
 uniform float crease_px = 1.5;
 uniform vec2 grid_cells = vec2(16.75, 12.125); // sheet size / grid square
-uniform float tex_aspect = 0.724;              // sheet h / w: the ink texture's used height
+uniform float tex_aspect = 1.0;                // the share of the ink texture's height the sheet fills
 uniform vec2 table_m = vec2(1.4, 1.0);         // the sheet's width and depth in table metres
 
 varying float metres;

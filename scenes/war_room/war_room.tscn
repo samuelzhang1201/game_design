@@ -168,7 +168,7 @@ expand_mode = 1
 unique_name_in_owner = true
 transparent_bg = true
 render_target_update_mode = 0
-size = Vector2i(4096, 4096)
+size = Vector2i(2, 2)
 
 [node name="Ink" type="Node2D" parent="InkViewport"]
 unique_name_in_owner = true

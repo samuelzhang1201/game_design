@@ -67,6 +67,33 @@ func test_the_ink_cache_holds_one_entry_per_sheet() -> void:
 	assert_false(view._inks.cache.has(2), "an empty readback (headless) stores nothing")
 
 
+func test_the_ink_cache_keeps_the_laid_sheet_and_one_other() -> void:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	for sheet in [0, 1, 2]:
+		view._inks.store(sheet, 10 + sheet, img.duplicate())
+	assert_lte(view._inks.cache.size(), 2, "three sheets laid, at most two kept")
+	assert_true(view._inks.cache.has(2), "the laid sheet is kept")
+	assert_true(view._inks.cache.has(1), "and the one before it")
+	assert_false(view._inks.cache.has(0), "the oldest is let go")
+
+
+func test_the_ink_viewport_is_smallest_at_rest_and_after_a_paint() -> void:
+	var ink: SubViewport = view.get_node("%InkViewport")
+	assert_eq(ink.size, WarRoomInk.REST, "nothing is allocated before a sheet is laid")
+	view._inks.frame_done = get_tree().process_frame   # headless never posts a draw
+	view.lay_sheet(0)
+	await wait_seconds(1.0)
+	assert_eq(ink.size, WarRoomInk.REST, "the render target is given back after the paint")
+
+
+func test_the_ink_texture_is_sized_to_the_sheet_not_square() -> void:
+	var r: Rect2 = WarSheets.series(repo)[0]["rect"]
+	var s := WarRoomInk.tex_size(repo, r)
+	assert_eq(s.x, int(repo.bal("war_sheet_texture_px")))
+	assert_almost_eq(float(s.y) / float(s.x), r.size.y / r.size.x, 1.0 / float(s.x) + 0.0001)
+	assert_almost_eq(WarRoomInk.used_share(repo, r), 1.0, 0.001, "the sheet fills its texture's height")
+
+
 func test_a_sheet_out_of_range_is_ignored() -> void:
 	view.lay_sheet(999)
 	await wait_frames(1)
