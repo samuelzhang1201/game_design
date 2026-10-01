@@ -32,32 +32,18 @@ SAMPLE_ID = "I-04"
 # and "id" the library row the sample prompt is built from.
 # name, template, preset / slot overrides, note
 EXPORTS = [
-    ("CC Flux Bulk T2I", "flux_template.json", {"model": "schnell"},
-     "Flux.1 schnell (Apache 2.0). No negative-prompt path: node 6 zeroes the conditioning.\n"
-     "schnell: 4 steps, guidance ignored. Bulk: python3 assets/flux/generate.py --model schnell ..."),
-    ("CC Flux2 Klein Bulk T2I", "flux2_klein_template.json", {"model": "klein"},
-     "Flux.2 [klein] 4B base (Apache 2.0, commercial OK). Undistilled: CFG works and the\n"
-     "negative box carries NEGATIVE.txt. 20 steps, cfg 4.0. Never klein 9B (non-commercial).\n"
-     "Bulk: python3 assets/flux/generate.py --model klein --ids C-01 --canvas C-FULL --pose P-05"),
     ("CC Z-Image Turbo T2I", "zimage_turbo_template.json", {"model": "zimage", "id": "K-01"},
-     "Z-Image Turbo (Tongyi-MAI, 6B, Apache 2.0) - UNDER EVALUATION 2026-09-24, not yet a game-asset model.\n"
+     "Z-Image Turbo (Tongyi-MAI, 6B, Apache 2.0) - the aerial ground, tree crowns and 3D references.\n"
      "8 steps, CFG 1, res_multistep; distilled, so no negative path (NEGATIVE.txt not applied).\n"
      "Bulk: python3 assets/flux/generate.py --model zimage --ids K-01"),
     ("CC Qwen-Image-2512 T2I", "qwen2512_template.json", {"model": "qwen2512fast", "id": "K-01"},
-     "Qwen-Image-2512 Q6_K GGUF (Alibaba, 20B, Apache 2.0) - UNDER EVALUATION 2026-09-24.\n"
+     "Qwen-Image-2512 Q6_K GGUF (Alibaba, 20B, Apache 2.0) - the game's main 2D model (owner 2026-09-30).\n"
      "Needs the ComfyUI-GGUF node. Lightning LoRA strength 1 = 8 steps CFG 1 (qwen2512fast);\n"
      "strength 0 + 50 steps + CFG 4 = full quality with NEGATIVE.txt (qwen2512). GGUF, not fp8: MPS upcasts fp8 to 16-bit.\n"
      "Bulk: python3 assets/flux/generate.py --model qwen2512fast --ids K-01"),
     ("CC Post Cutout", "post_cutout_template.json", {"width": 0, "height": 660},
      "A generated portrait becomes a game asset: BiRefNet mask -> InvertMask -> RGBA ->\n"
      "lanczos resize (full: height 660; chip: 96x96). Driven by assets/flux/post.py."),
-    ("CC Sepia Map Mark T2I", "flux2_klein_template.json",
-     {"model": "klein", "style": "STYLE_CORE_map_sepia.txt", "id": "D-16"},
-     "Library 6.9 map symbols (D-): monochrome sepia hand-drawn map vignettes on PURE WHITE,\n"
-     "for the world map. Style core STYLE_CORE_map_sepia.txt + NEGATIVE_map_sepia.txt (the\n"
-     "default negative bans sepia and aged paper, so it cannot be used here) + [C-MAPMARK].\n"
-     "The white ground is not decoration: CC Post Sepia Alpha keys transparency off it.\n"
-     "Bulk: python3 assets/flux/generate.py --chapter D --style-file STYLE_CORE_map_sepia.txt"),
     ("CC Post Sepia Alpha", "sepia_alpha_template.json", {"width": 256, "height": 256},
      "A D- symbol becomes a transparent map sprite: blue channel (white paper 1.0, umber ink\n"
      "~0.15) -> InvertMask -> MaskComposite add with itself (coverage x2, clamped) -> InvertMask\n"
@@ -78,13 +64,13 @@ def sample_values(overrides: dict) -> dict:
     style_path = HERE / overrides["style"] if "style" in overrides else gen.STYLE_CORE
     style = " ".join(style_path.read_text(encoding="utf-8").split())
     negative = " ".join(gen.negative_for(style_path).read_text(encoding="utf-8").split())
-    preset = gen.MODEL_PRESETS[overrides.get("model", "klein")]
+    preset = gen.MODEL_PRESETS[overrides.get("model", "qwen2512fast")]
     row = rows[overrides.get("id", SAMPLE_ID)]
     values = {"unet": preset["unet"], "prompt": gen.assemble(row, canvas, style),
               "negative": negative, "guidance": preset["guidance"], "cfg": preset["cfg"],
               "steps": preset["steps"], "lora_strength": preset.get("lora_strength", 0.0),
               "width": 1024, "height": 1024, "seed": 954159497,
-              "prefix": "flux/manual/test", "image": "example.png"}
+              "prefix": "manual/test", "image": "example.png"}
     values.update({k: v for k, v in overrides.items() if k not in ("model", "style", "id")})
     return values
 
