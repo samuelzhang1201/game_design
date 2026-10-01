@@ -4,8 +4,8 @@ extends Control
 ## exactly over the map panel (GameRoot fits it), so the left column keeps
 ## FACTS and the right column keeps the council (invariant 10). The only
 ## LEDGER piece that touches Game: opening it STOPS the clock and holds it
-## still while it is open (owner 2026-10-01: the chart reflects the present),
-## closing resumes the speed it had; it reads the galaxy (Ledger.galaxy) again
+## still while it is open, and it stays stopped until the player starts it
+## again (owner 2026-10-01: the chart reflects the present); it reads the galaxy (Ledger.galaxy) again
 ## after a state change while open (an order, DEV MODE — at most once a
 ## frame), fills the left column with a star's or a thread's card, and runs
 ## an order through Game.try_execute. It clears only a card it put in the
@@ -21,8 +21,6 @@ var _snap: Dictionary = {}
 var _detail: MapDetailPanel
 var _bound := false
 var _dirty := false        # a state change waits to be drawn (drained in _process)
-var _resume_speed := 0    # the clock's speed when the LEDGER opened (0: it was paused)
-var _held_state: GameState  # the campaign the clock was held in (a restart or a load resumes nothing)
 var _card_mine := false    # the left column's card is the LEDGER's own
 var _card_star := ""       # the star whose card it is ("" for a thread's or an order's)
 var _rebuilds := 0         # snapshots drawn (the tests' seam)
@@ -81,11 +79,8 @@ func open(detail: MapDetailPanel) -> void:
 	if not _has_detail() or detail != _detail:
 		_card_mine = false  # a new screen's column holds nothing of the LEDGER's
 	_detail = detail
-	if not visible:
-		# the clock stops and stays stopped while the LEDGER is open
-		_resume_speed = Game.clock_speed
-		_held_state = Game.state
-		Game.hold_clock(true)
+	# the clock stops and nothing starts it while the LEDGER is open
+	Game.hold_clock(true)
 	visible = true
 	_dirty = false
 	_view.set_active(true)
@@ -102,14 +97,9 @@ func close() -> void:
 	_open_order.clear()
 	_view.set_active(false)
 	_clear_card()
-	# the clock goes on at the speed it had when the LEDGER opened; paused
-	# then, it stays paused (a controller ruling, 2026-10-01) — and only in
-	# the campaign it was stopped in
+	# let go, but not restarted: the player starts the clock again (owner
+	# 2026-10-01)
 	Game.hold_clock(false)
-	if _resume_speed > 0 and Game.state != null and Game.state == _held_state:
-		Game.set_clock_speed(_resume_speed)
-	_resume_speed = 0
-	_held_state = null
 	closed.emit()
 
 

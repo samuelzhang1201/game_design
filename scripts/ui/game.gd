@@ -75,7 +75,8 @@ func set_clock_speed(speed: int) -> void:
 ## start it, whoever asks.
 var clock_held := false
 
-## Holds the clock still (stopping it) or lets it go; the caller resumes it.
+## Holds the clock still (stopping it) or lets it go — stopped: letting go
+## starts nothing, the player does (owner 2026-10-01).
 func hold_clock(on: bool) -> void:
 	if on:
 		set_clock_speed(0)

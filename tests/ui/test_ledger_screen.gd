@@ -174,9 +174,9 @@ func test_opening_a_province_frames_it_and_what_it_unfolded() -> void:
 
 
 ## Owner 2026-10-01 (replacing final review I1a): entering the LEDGER stops
-## the clock, even a running one, and nothing starts it while the LEDGER is
-## open — not Space, not the top bar's play buttons; closing resumes the
-## speed it had (a controller ruling: paused then, it stays paused).
+## the clock, even a running one; nothing starts it while the LEDGER is open
+## — not Space, not the top bar's play buttons; closing leaves it paused, and
+## the player starts it again.
 func _space() -> void:
 	var key := InputEventKey.new()
 	key.keycode = KEY_SPACE
@@ -188,7 +188,7 @@ func _space() -> void:
 	get_viewport().push_input(up)
 
 
-func test_opening_the_ledger_stops_a_running_clock_and_closing_resumes_it() -> void:
+func test_opening_the_ledger_stops_the_clock_until_the_player_starts_it() -> void:
 	var r: GameRoot = await _court()
 	var fast := int(Game.data.bal("time_speed_fast"))
 	Game.set_clock_speed(fast)
@@ -207,21 +207,16 @@ func test_opening_the_ledger_stops_a_running_clock_and_closing_resumes_it() -> v
 	Game.set_clock_speed(1)
 	assert_eq(Game.clock_speed, 0, "nor does anyone else")
 	screen.close()
-	assert_eq(Game.clock_speed, fast, "closing resumes the speed it had")
-	assert_false(bar.clock_button(1).disabled)
-	Game.set_clock_speed(0)
-
-
-func test_opened_on_a_paused_clock_it_closes_paused() -> void:
-	var r: GameRoot = await _court()
-	Game.set_clock_speed(0)
-	var screen := await _open(r)
-	assert_eq(Game.clock_speed, 0)
-	screen.close()
-	assert_eq(Game.clock_speed, 0, "paused before, paused after")
-	assert_false(Game.clock_held, "and the clock is let go")
-	Game.set_clock_speed(1)
-	assert_eq(Game.clock_speed, 1, "free to run again")
+	assert_eq(Game.clock_speed, 0, "closing leaves it paused")
+	assert_false(Game.clock_held)
+	assert_false(bar.clock_button(1).disabled, "the play buttons are back")
+	if Game.has_method("toggle_clock"):  # Space pauses and resumes play (main, 2026-09-30)
+		_space()
+		await wait_frames(1)
+		assert_gt(Game.clock_speed, 0, "after closing, Space starts it again")
+	else:
+		bar.clock_button(1).pressed.emit()
+		assert_eq(Game.clock_speed, 1, "after closing, play starts it again")
 	Game.set_clock_speed(0)
 
 
