@@ -3,7 +3,6 @@ ComfyUI from assets/flux/house_ref_prompts.csv, one picture per type per
 model, into assets/3D/buildings/<type>/model_wip/<type>_ref_<model>.png.
 
   python3 tools/map3d/gen_house_refs.py [--model zimage,qwen2512fast] [--only a,b] [--seed N] [--variants N] [--force] [--front]
-      [--prompts CSV] [--out DIR]
 
 The models are Z-Image Turbo and Qwen-Image-2512 (owner 2026-09-30: no Flux
 any more; both side by side for the owner to pick), filled from
@@ -16,16 +15,6 @@ collected after; it waits its turn in ComfyUI's one shared queue unless
 --front the first model listed runs first). --variants N renders N seeds
 (seed, seed+1, ...) as <type>_ref_<model>_v1.png .. _vN.png beside the one
 picture.
-
---prompts CSV reads another table of the same shape (type, subject,
-features) and --out DIR writes to DIR/<type>/model_wip/ instead of
-assets/3D/buildings/ — the WAR ROOM's furniture is
-  python3 tools/map3d/gen_house_refs.py --model qwen2512fast --seed 20261001 \
-      --prompts assets/flux/war_room_ref_prompts.csv --out assets/3D/war_room
-A table may add optional columns: `prompt_template` (formatted with
-{subject} and {features}, in place of the houses' PROMPT), `negative` (in
-place of NEGATIVE) and `width` / `height` (in place of 1024); a table
-without them renders exactly as the houses always have.
 
 A file already there is kept unless --force. The pictures are what the
 hand-modelled houses (tools/map3d/blender_houses/) are modelled against.
@@ -70,8 +59,8 @@ def _generate_module():
     return mod
 
 
-def rows(only, prompts=PROMPTS):
-    with open(prompts, newline="") as f:
+def rows(only):
+    with open(PROMPTS, newline="") as f:
         out = [r for r in csv.DictReader(f)]
     return [r for r in out if not only or r["type"] in only]
 
@@ -106,10 +95,9 @@ def image_graph(gen, model, row, seed):
     with open(os.path.join(FLUX_DIR, preset["template"])) as f:
         template = json.load(f)
     values = {"unet": preset["unet"], "steps": preset["steps"], "cfg": preset["cfg"],
-              "guidance": preset["guidance"], "width": int(row.get("width") or 1024),
-              "height": int(row.get("height") or 1024), "seed": seed,
-              "prompt": (row.get("prompt_template") or PROMPT).format(subject=row["subject"], features=row["features"]),
-              "negative": row.get("negative") or NEGATIVE, "prefix": "house_ref/%s_%s" % (row["type"], model)}
+              "guidance": preset["guidance"], "width": 1024, "height": 1024, "seed": seed,
+              "prompt": PROMPT.format(subject=row["subject"], features=row["features"]),
+              "negative": NEGATIVE, "prefix": "house_ref/%s_%s" % (row["type"], model)}
     if "lora_strength" in preset:
         values["lora_strength"] = preset["lora_strength"]
     return gen.make_graph(template, values)
@@ -133,13 +121,11 @@ def main():
             sys.exit("not a model for the house references: %s" % m)
     variants = int(args[args.index("--variants") + 1]) if "--variants" in args else 1
     front = "--front" in args
-    prompts = os.path.join(ROOT, args[args.index("--prompts") + 1]) if "--prompts" in args else PROMPTS
-    out_root = os.path.join(ROOT, args[args.index("--out") + 1]) if "--out" in args else BUILDINGS
     jobs = []
     for model in (list(reversed(models)) if front else models):
-        for row in rows(only, prompts):
+        for row in rows(only):
             t = row["type"]
-            wip = os.path.join(out_root, t, "model_wip")
+            wip = os.path.join(BUILDINGS, t, "model_wip")
             os.makedirs(wip, exist_ok=True)
             for v in range(variants):
                 name = "%s_ref_%s%s.png" % (t, model, "_v%d" % (v + 1) if variants > 1 else "")

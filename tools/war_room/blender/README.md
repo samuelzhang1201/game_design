@@ -55,8 +55,7 @@ image) and re-export; nothing in the game names the texture size.
 The Qwen-Image-2512 pictures these were modelled against are each object's
 `model_wip/<name>_ref_qwen2512fast.png` (git-ignored), rendered by
 
-    python3 tools/map3d/gen_house_refs.py --model qwen2512fast --seed 20261001 \
-        --prompts assets/flux/war_room_ref_prompts.csv --out assets/3D/war_room
+    python3 tools/war_room/gen_room_refs.py --model qwen2512fast --seed 20261001
 
 (ask the owner before queuing any generation). The concept the owner chose is
 `assets/3D/war_room/model_wip/concept/room_qwen2512fast.png`.
