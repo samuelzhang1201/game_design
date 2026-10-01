@@ -173,36 +173,66 @@ func test_opening_a_province_frames_it_and_what_it_unfolded() -> void:
 	assert_eq(screen.view()._frame_ids, framed, "closing frames nothing new")
 
 
-## Final review I1a: while the clock runs, a day's state change does not
-## redraw the LEDGER; the month's turn does; a change on a paused clock (an
-## order, DEV MODE) is drawn on the next frame; and a day skipped while the
-## clock ran is drawn when the clock stops.
-func test_a_running_clock_redraws_only_at_the_months_turn() -> void:
+## Owner 2026-10-01 (replacing final review I1a): entering the LEDGER stops
+## the clock, even a running one, and nothing starts it while the LEDGER is
+## open — not Space, not the top bar's play buttons; closing resumes the
+## speed it had (a controller ruling: paused then, it stays paused).
+func _space() -> void:
+	var key := InputEventKey.new()
+	key.keycode = KEY_SPACE
+	key.physical_keycode = KEY_SPACE
+	key.pressed = true
+	get_viewport().push_input(key)
+	var up := key.duplicate() as InputEventKey
+	up.pressed = false
+	get_viewport().push_input(up)
+
+
+func test_opening_the_ledger_stops_a_running_clock_and_closing_resumes_it() -> void:
+	var r: GameRoot = await _court()
+	var fast := int(Game.data.bal("time_speed_fast"))
+	Game.set_clock_speed(fast)
+	assert_eq(Game.clock_speed, fast)
+	var screen := await _open(r)
+	assert_eq(Game.clock_speed, 0, "the LEDGER stops the clock")
+	_space()
+	await wait_frames(1)
+	assert_eq(Game.clock_speed, 0, "Space does not start it while the LEDGER is open")
+	var bar: TopBar = r.current_screen.top_bar()
+	for speed: int in [1, fast, int(Game.data.bal("time_speed_faster"))]:
+		var b := bar.clock_button(speed)
+		assert_true(b.disabled, "the %d button is greyed" % speed)
+		b.pressed.emit()
+		assert_eq(Game.clock_speed, 0, "the %d button does not start it" % speed)
+	Game.set_clock_speed(1)
+	assert_eq(Game.clock_speed, 0, "nor does anyone else")
+	screen.close()
+	assert_eq(Game.clock_speed, fast, "closing resumes the speed it had")
+	assert_false(bar.clock_button(1).disabled)
+	Game.set_clock_speed(0)
+
+
+func test_opened_on_a_paused_clock_it_closes_paused() -> void:
+	var r: GameRoot = await _court()
+	Game.set_clock_speed(0)
+	var screen := await _open(r)
+	assert_eq(Game.clock_speed, 0)
+	screen.close()
+	assert_eq(Game.clock_speed, 0, "paused before, paused after")
+	assert_false(Game.clock_held, "and the clock is let go")
+	Game.set_clock_speed(1)
+	assert_eq(Game.clock_speed, 1, "free to run again")
+	Game.set_clock_speed(0)
+
+
+func test_an_order_while_open_is_drawn_on_the_next_frame() -> void:
 	var r: GameRoot = await _court()
 	var screen := await _open(r)
 	await wait_frames(2)
 	var before := screen._rebuilds
-	Game.clock_speed = 1   # running (set directly: GameRoot's clock is not driven here)
 	Game.state_changed.emit()
 	await wait_frames(2)
-	assert_eq(screen._rebuilds, before, "a day while the clock runs: no redraw")
-	Game.state.tick += 1
-	Game.state_changed.emit()
-	await wait_frames(2)
-	assert_eq(screen._rebuilds, before + 1, "the month turned: one redraw")
-	Game.state_changed.emit()
-	await wait_frames(2)
-	assert_eq(screen._rebuilds, before + 1, "the same month again: none")
-	Game.clock_speed = 0
-	Game.clock_changed.emit(0)
-	await wait_frames(2)
-	assert_eq(screen._rebuilds, before + 2, "the clock stopped on a day not drawn: drawn now")
-	Game.state_changed.emit()
-	await wait_frames(2)
-	assert_eq(screen._rebuilds, before + 3, "paused: every change is drawn on the next frame")
-	Game.clock_changed.emit(0)
-	await wait_frames(2)
-	assert_eq(screen._rebuilds, before + 3, "nothing skipped, nothing to draw")
+	assert_eq(screen._rebuilds, before + 1, "the chart shows the state as it is now")
 
 
 ## Final review minors: the crumb names the realm, the chosen cluster and

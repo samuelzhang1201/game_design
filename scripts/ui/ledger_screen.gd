@@ -3,12 +3,13 @@ extends Control
 ## The LEDGER screen (spec 2026-09-30-ledger-ontology-design §6.1): laid
 ## exactly over the map panel (GameRoot fits it), so the left column keeps
 ## FACTS and the right column keeps the council (invariant 10). The only
-## LEDGER piece that touches Game: it reads the galaxy (Ledger.galaxy) after
-## a state change while open — while the clock runs only once the month has
-## turned since the last draw, while it is paused on the next frame, and
-## never more than once a frame (final review I1a) — fills the left column
-## with a star's or a thread's card, and runs an order through
-## Game.try_execute. It clears only a card it put in the left column.
+## LEDGER piece that touches Game: opening it STOPS the clock and holds it
+## still while it is open (owner 2026-10-01: the chart reflects the present),
+## closing resumes the speed it had; it reads the galaxy (Ledger.galaxy) again
+## after a state change while open (an order, DEV MODE — at most once a
+## frame), fills the left column with a star's or a thread's card, and runs
+## an order through Game.try_execute. It clears only a card it put in the
+## left column.
 
 signal show_requested(subject: Dictionary)
 signal closed
@@ -20,8 +21,8 @@ var _snap: Dictionary = {}
 var _detail: MapDetailPanel
 var _bound := false
 var _dirty := false        # a state change waits to be drawn (drained in _process)
-var _stale := false        # a day's change was let pass while the clock ran (drawn when it stops)
-var _drawn_tick := -1      # the month the chart was last read in
+var _resume_speed := 0    # the clock's speed when the LEDGER opened (0: it was paused)
+var _held_state: GameState  # the campaign the clock was held in (a restart or a load resumes nothing)
 var _card_mine := false    # the left column's card is the LEDGER's own
 var _card_star := ""       # the star whose card it is ("" for a thread's or an order's)
 var _rebuilds := 0         # snapshots drawn (the tests' seam)
@@ -44,6 +45,13 @@ func _ready() -> void:
 	_view.drill_requested.connect(drill)
 	_view.orders_requested.connect(_on_orders)
 	_orders.chosen.connect(_on_order)
+
+
+## Freed while open (the game quits, a test ends): the clock is let go, never
+## left held for whatever comes next.
+func _exit_tree() -> void:
+	if visible:
+		Game.hold_clock(false)
 
 
 func view() -> LedgerView3D:
@@ -70,13 +78,16 @@ func open(detail: MapDetailPanel) -> void:
 		_view.bind(Game.data)
 		_build_lenses()
 		Game.state_changed.connect(refresh)
-		Game.clock_changed.connect(_on_clock)
 	if not _has_detail() or detail != _detail:
 		_card_mine = false  # a new screen's column holds nothing of the LEDGER's
 	_detail = detail
+	if not visible:
+		# the clock stops and stays stopped while the LEDGER is open
+		_resume_speed = Game.clock_speed
+		_held_state = Game.state
+		Game.hold_clock(true)
 	visible = true
 	_dirty = false
-	_stale = false
 	_view.set_active(true)
 	_rebuild(false)
 	set_lens(_lens)
@@ -87,32 +98,27 @@ func close() -> void:
 		return
 	visible = false
 	_dirty = false
-	_stale = false
 	_opened.clear()       # the provinces opened belong to this viewing
 	_open_order.clear()
 	_view.set_active(false)
 	_clear_card()
+	# the clock goes on at the speed it had when the LEDGER opened; paused
+	# then, it stays paused (a controller ruling, 2026-10-01) — and only in
+	# the campaign it was stopped in
+	Game.hold_clock(false)
+	if _resume_speed > 0 and Game.state != null and Game.state == _held_state:
+		Game.set_clock_speed(_resume_speed)
+	_resume_speed = 0
+	_held_state = null
 	closed.emit()
 
 
-## Draw the live state again, keeping the camera (a state change, DEV MODE).
-## Only marks the LEDGER dirty: Game.state_changed fires once a game day,
-## several times a frame at high speed, and one snapshot a frame is enough.
-## While the clock runs a day's change waits for the month's turn (final
-## review I1a: every day re-read the whole realm, 160 ms with every province
-## open); on a paused clock every change is drawn.
+## Draw the live state again, keeping the camera (an order, DEV MODE). Only
+## marks the LEDGER dirty: several changes in one frame are one snapshot.
+## (The clock is held still while the LEDGER is open, so no day passes under
+## it — owner 2026-10-01.)
 func refresh() -> void:
-	if not visible:
-		return
-	if Game.clock_speed > 0 and Game.state.tick == _drawn_tick:
-		_stale = true
-		return
-	_dirty = true
-
-
-## The clock stopped on a day the LEDGER let pass: draw it now.
-func _on_clock(speed: int) -> void:
-	if speed == 0 and _stale and visible:
+	if visible:
 		_dirty = true
 
 
@@ -210,8 +216,6 @@ func _clear_card() -> void:
 
 func _rebuild(keep_camera: bool, select_id: String = "") -> void:
 	_rebuilds += 1
-	_drawn_tick = Game.state.tick
-	_stale = false
 	var selected := _view.selected()
 	_snap = Ledger.galaxy(Game.data, Game.state, _opened)
 	_view.show_snapshot(_snap, keep_camera, select_id)

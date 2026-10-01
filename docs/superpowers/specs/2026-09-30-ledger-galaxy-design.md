@@ -200,6 +200,10 @@ and tonemap, so the map's environment is untouched.
 
 ## 6. Interaction
 
+- **Opening the LEDGER stops the clock** (owner 2026-10-01: the chart reflects
+  the present); closing resumes the speed it had. While it is open nothing
+  starts the clock (Space, the play buttons), so the chart is read again only
+  after an order, DEV MODE or a province opened or closed.
 - **Tabs are clusters.** Economy / War / Court / Intelligence fly the camera
   (`ledger_galaxy_fly_s`) to frame that cluster and dim the others' stars
   and haze to `ledger_galaxy_other_fade`; links leaving it stay lit at its

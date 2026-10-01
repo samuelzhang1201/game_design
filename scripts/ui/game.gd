@@ -19,6 +19,8 @@ signal menu_requested
 signal news_published(text: String)
 ## The clock's speed changed (owner 2026-09-13): 0 paused, 1, 2 or 4.
 signal clock_changed(speed: int)
+## The clock was held still, or let go (the LEDGER: owner 2026-10-01).
+signal clock_held_changed(held: bool)
 
 var data: DataRepository
 var state: GameState
@@ -37,6 +39,7 @@ var player_setup: Dictionary = {}
 
 func start_campaign(seed_value: int = 42) -> void:
 	_reset_llm()
+	hold_clock(false)  # a reign never begins held (the LEDGER's hold is its viewing's)
 	state = GameState.new_campaign(data, seed_value)
 	if not player_setup.is_empty():
 		state.apply_player_setup(player_setup)
@@ -59,10 +62,28 @@ func set_clock_speed(speed: int) -> void:
 	var allowed := [0, 1, int(data.bal("time_speed_fast")), int(data.bal("time_speed_faster"))]
 	if not speed in allowed:
 		return
+	if speed > 0 and clock_held:
+		return  # held still: nothing starts it (the play buttons, Space)
 	if clock_speed == speed:
 		return
 	clock_speed = speed
 	clock_changed.emit(speed)
+
+## Whether the clock is held still: while the LEDGER is open (owner
+## 2026-10-01: entering the LEDGER stops the clock, which stays stopped while
+## it is open — the chart reflects the present), set_clock_speed refuses to
+## start it, whoever asks.
+var clock_held := false
+
+## Holds the clock still (stopping it) or lets it go; the caller resumes it.
+func hold_clock(on: bool) -> void:
+	if on:
+		set_clock_speed(0)
+	if clock_held == on:
+		return
+	clock_held = on
+	clock_held_changed.emit(on)
+
 
 ## Tools only (tools/map3d/bench.gd, through GameRoot): roll the day back
 ## to 1 once it passes `day_ceiling`, so a timed run never reaches the
@@ -165,6 +186,7 @@ func load_campaign(path: String = "") -> bool:
 ## GameRoot's global R handler.
 func restart() -> void:
 	set_clock_speed(0)
+	hold_clock(false)
 	_reset_llm()
 	state = null
 	engine = null
