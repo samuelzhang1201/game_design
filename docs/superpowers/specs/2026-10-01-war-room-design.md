@@ -80,9 +80,13 @@ pieces; bases exist only on the war-room table.
 
 **The series** (all generated from the pack; no pack is named; values
 `balance.csv` `war_*`):
-- Sheets of `war_sheet_w_km` 640 × `war_sheet_h_km` 465 overlapping their
+- Sheets of `war_sheet_w_km` 670 × `war_sheet_h_km` 485 overlapping their
   neighbours by `war_sheet_overlap_km` 40 — on beria (2560 × 929 km) a
-  4 × 2 series. A sheet with no land is skipped.
+  4 × 2 series (columns at 0 / 630 / 1260 / 1890, rows at 0 / 444: the last
+  of each is held to the map's edge). The count follows from the size, so
+  another pack gets its own count at the same scale. A sheet with no land
+  is skipped. (The brainstorm's 640 × 465 left 120 km uncovered at the east
+  edge; corrected while planning.)
 - Numbered in Roman numerals row by row from the north-west; named after
   the KINGDOM with the most land on it by the starting border ("Sheet III ·
   <kingdom label>").
@@ -238,8 +242,9 @@ shaders and textures only — every tuned number is data, bound at load.
 
 **The screen**: `scripts/ui/war_room_screen.gd` + its scene; WAR ROOM leaves
 `BottomBar.PLACEHOLDER_TABS` and `info_screen.gd`'s placeholder case goes.
-A headless run cannot render 3D, so `tests/pre_run.gd` holds the room's 3D
-scene unloaded (`war_room_3d` 0), as it does `map3d_default`.
+The room is plain Godot meshes, like the LEDGER's orrery — no Terrain3D —
+so it loads in the headless suite as the LEDGER does; no unload flag is
+needed (corrected while planning).
 
 **Data**: `balance.csv` `war_*`; `data/war_palette.csv` (ink, rubric,
 paper, sea ink, river ink, chalk); `data/war_drills.csv`;
