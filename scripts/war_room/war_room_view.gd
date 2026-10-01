@@ -63,6 +63,7 @@ var _chart_built := false
 var _swap := WarSheetSwap.new()
 var _rake := WarRoomRake.new()
 var _gestures := WarRoomGestures.new()
+var _hold_size := false
 
 
 func _ready() -> void:
@@ -159,7 +160,17 @@ func window_scale() -> float:
 	return maxf(get_viewport().get_final_transform().get_scale().x, 1.0) * _render_scale
 
 
+## While the room's rect animates, keep the SubViewport's size (the Display
+## stretches); on release it is fitted once (spec §1.2: no reallocation a frame).
+func hold_size(on: bool) -> void:
+	_hold_size = on
+	if not on:
+		_fit_viewport()
+
+
 func _fit_viewport() -> void:
+	if _hold_size:
+		return
 	var s := window_scale()
 	_viewport.size = Vector2i(maxi(1, int(size.x * s)), maxi(1, int(size.y * s)))
 

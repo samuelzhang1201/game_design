@@ -13,6 +13,8 @@ var _detail: MapDetailPanel
 var _bound := false
 var _dirty := false
 var _card_mine := false
+var _capture: Texture2D
+var _column_rect := Rect2()
 var _margin_sig: Array = []   # [sheet, the off-sheet (code, sheet) pairs, none on this sheet] last filled
 
 @onready var _view: WarRoomView = %View
@@ -66,6 +68,13 @@ func open(detail: MapDetailPanel) -> void:
 	else:
 		_view.refresh()
 		_fill_margin()   # the regiments moved while the room was shut
+
+
+## The report as it lay when the room opened, and where (GameRoot): closing
+## unrolls it over the column again (spec 2026-10-02-war-room-v2 §1.2).
+func set_report_capture(capture: Texture2D, rect: Rect2) -> void:
+	_capture = capture
+	_column_rect = rect
 
 
 func _home_sheet() -> int:
@@ -173,6 +182,11 @@ func close() -> void:
 	_view.clear_selection()   # a closed room's selection must never take Escape
 	_clear_card()
 	closed.emit()
+	if _column_rect.size.x > 0.0 and get_parent() != null:
+		WarReportRoll.play(get_parent(), _column_rect, _capture, false,
+			Game.data.bal("war_report_roll_s"), Game.data.bal("war_report_roller_px"), UiPalette.war_table())
+	_capture = null
+	_column_rect = Rect2()
 
 
 func refresh() -> void:

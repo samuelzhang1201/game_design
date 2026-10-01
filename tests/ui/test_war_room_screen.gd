@@ -22,11 +22,14 @@ func test_war_room_is_no_longer_a_placeholder() -> void:
 func test_the_tab_lays_the_home_provinces_sheet_over_the_map() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_process_frames(3)
+	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.1)   # the room widens over that time
 	var screen := r.war_room_screen()
 	assert_true(screen.visible)
 	var map: Control = r.current_screen.map_panel()
-	assert_eq(screen.size, map.size)
+	var column: Control = r.current_screen.left_column()
+	var wide := Rect2(column.global_position, Vector2(map.global_position.x + map.size.x - column.global_position.x, map.size.y))
+	assert_eq(screen.size, wide.size, "the room runs from the column's left edge to the map's right edge")
+	assert_eq(screen.position, Vector2(column.global_position.x, map.global_position.y))
 	var home := MapManors.home_province(Game.data, Game.state)
 	var row: Dictionary = Game.data.provinces[home]
 	var at := Vector2(float(row["center_x"]), float(row["center_y"]))
@@ -340,3 +343,13 @@ func test_the_margin_keeps_its_buttons_while_the_list_stands_and_refills_on_reop
 		.map(func(b: Button) -> String: return b.text)
 	var label := String(ArmySystem.regiment(Game.data, mover).get("label", mover))
 	assert_true(texts.any(func(t: String) -> bool: return t.begins_with(label)), "%s is in the margin now" % label)
+
+
+func test_closing_the_room_hands_the_column_its_place_back() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	r.war_room_screen().close()
+	await wait_process_frames(1)
+	assert_false(r.war_room_screen().visible)
+	assert_true(r.current_screen.left_column().is_visible_in_tree())

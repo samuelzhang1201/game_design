@@ -240,6 +240,10 @@ func top_bar() -> TopBar:
 ## The map panel's own Control (fix round 1 finding 4): GameRoot centres the
 ## spy report dialog over it, the way conversation_scene.gd already exposes
 ## its own %MapPanel.
+## The left column (the FACTS column, invariant 10): the WAR ROOM widens over it.
+func left_column() -> PanelContainer:
+	return %LogPanel
+
 func map_panel() -> PanelContainer:
 	return %MapPanel
 

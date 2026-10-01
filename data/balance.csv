@@ -755,6 +755,8 @@ war_cam_wall_clear_m,0.35,"WAR ROOM v2 (owner 2026-10-02, spec §1.1): the camer
 war_room_floor_x_m,3.0,"WAR ROOM v2 (spec §1.1): the room's half width (x), metres — assets/3D/war_room/room is x ±3"
 war_room_floor_z_min_m,-2.0,"WAR ROOM v2 (spec §1.1): the room's north wall (z), metres"
 war_room_floor_z_max_m,3.0,"WAR ROOM v2 (spec §1.1): the room's south wall (z), metres"
+war_report_roll_s,0.45,"WAR ROOM v2 (owner 2026-10-02, spec §1.2): seconds the steward's report takes to roll up as the room opens over its column, and down as it closes; the room widens over the same time"
+war_report_roller_px,12,"WAR ROOM v2 (spec §1.2): the report's roller's thickness, design px"
 war_piece_base_mm,56,"WAR ROOM (owner 2026-10-01, spec §3): a piece's square base, millimetres on the table (~27 km of a 670 km sheet; Task 16 ruling: 40 -> 56 so nine cavalry stand near the figure cap)"
 war_piece_base_h_mm,6,"WAR ROOM (owner 2026-10-01, spec §3): the base's thickness"
 war_piece_figure_mm,22,"WAR ROOM (owner 2026-10-01, spec §3): one tin figure's height on the base, lance or spear tip included"
