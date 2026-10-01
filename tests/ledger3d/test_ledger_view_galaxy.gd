@@ -111,6 +111,45 @@ func test_a_regiment_lights_and_frames_its_supply_chain() -> void:
 	assert_gt(framed.size(), 3, "more than its neighbours")
 
 
+## Owner 2026-10-01: the selected lineage reads WHOLE whatever the tab — in
+## War, a regiment's chain through the Economy cluster is not dimmed by the
+## tab; only what lies outside the lineage is.
+func test_the_lineage_reads_whole_in_any_tab() -> void:
+	_show()
+	var reg := ""
+	for id: String in view.stars():
+		if id.begins_with("regiment:") and view.stars().has("supply_line:" + id.substr(9)):
+			reg = id
+			break
+	view.focus_cluster("war")
+	view.select(reg)
+	var lin: Dictionary = view.lineage(reg)
+	var other := 0
+	for id: String in lin["stars"]:
+		var want := 1.0 if int(lin["stars"][id]) == LedgerLineage.FULL else repo.bal("ledger_lineage_far_fade")
+		if String((view._nodes[id] as Dictionary).get("status", "live")) == "planned":
+			want = minf(want, repo.bal("ledger_star_planned_fade"))
+		assert_almost_eq(view.star_colour(id).a, want, 0.001, "at its lineage level: " + id)
+		if view._cluster_of(id) != "war":
+			other += 1
+	assert_gt(other, 0, "the chain reaches another cluster")
+	var by_id := {}
+	for l: Dictionary in view._snap["links"]:
+		by_id[String(l["id"])] = l
+	for seg: Dictionary in view.segments():
+		var level := int((lin["links"] as Dictionary).get(String(seg["link"]), 0))
+		if level == LedgerLineage.FULL and not bool(seg["dashed"]):
+			assert_almost_eq((seg["ca"] as Color).a, view._ink(by_id[String(seg["link"])]), 0.001,
+				"a lineage link undimmed by the tab: " + String(seg["link"]))
+	var outside := ""
+	for id: String in view.stars():
+		if not (lin["stars"] as Dictionary).has(id) and view._cluster_of(id) != "war":
+			outside = id
+			break
+	assert_almost_eq(view.star_colour(outside).a,
+		minf(repo.bal("ledger_focus_fade"), repo.bal("ledger_galaxy_other_fade")), 0.001, "outside it the tab still dims")
+
+
 func test_a_vanished_selection_clears() -> void:
 	var g := _show()
 	view.select("character:you")

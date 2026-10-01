@@ -560,10 +560,14 @@ func _star_colour(id: String) -> Color:
 	if String(n.get("status", "live")) == "planned":
 		c = Color.from_hsv(c.h, c.s * _repo.bal("ledger_star_planned_sat"), c.v)
 		f = _repo.bal("ledger_star_planned_fade")
-	if _selected != "" and not _near.has(id):
+	if _selected != "" and _near.has(id):
+		# the selected lineage reads WHOLE, whatever the tab (owner
+		# 2026-10-01): at its own level, never under the tab's dimming
+		if int(_near[id]) == LedgerLineage.FAR:
+			f = minf(f, _repo.bal("ledger_lineage_far_fade"))
+		return Color(c, f)
+	if _selected != "":
 		f = minf(f, _repo.bal("ledger_focus_fade"))
-	elif _selected != "" and int(_near[id]) == LedgerLineage.FAR:
-		f = minf(f, _repo.bal("ledger_lineage_far_fade"))
 	if _cluster != "all" and _cluster_of(id) != _cluster:
 		f = minf(f, _repo.bal("ledger_galaxy_other_fade"))
 	return Color(c, f)
@@ -768,8 +772,8 @@ func _lit_web(l: Dictionary) -> bool:
 
 
 ## How much of a link shows, as the EYE reads it (spec §6): the selected
-## star's lineage lit (its far ties at ledger_lineage_far_fade), the rest at
-## ledger_focus_fade; at rest the court is read
+## star's lineage lit (its far ties at ledger_lineage_far_fade) whatever the
+## tab, the rest at ledger_focus_fade; at rest the court is read
 ## one person's web at a time (the player's ties lit, other ties at
 ## ledger_tie_rest_fade) and a link crossing clusters stands back at
 ## ledger_cross_rest_fade; a chosen cluster dims links that do not touch it.
@@ -778,11 +782,13 @@ func _link_fade(l: Dictionary) -> float:
 	var b := String(l["to"])
 	var f := 1.0
 	if _selected != "":
+		# a link of the selected lineage reads at its own level, whatever the
+		# tab: the tab's dimming is only for what lies outside it
 		match int(_lineage_links.get(String(l["id"]), 0)):
 			LedgerLineage.FULL:
-				f = 1.0
+				return 1.0
 			LedgerLineage.FAR:
-				f = _repo.bal("ledger_lineage_far_fade")
+				return _repo.bal("ledger_lineage_far_fade")
 			_:
 				f = _repo.bal("ledger_focus_fade")
 	elif _nodes.has(EGO_AT_REST) and (_look(l) in ["tie", "kin"] or (_cluster_of(a) == _cluster_of(EGO_AT_REST)

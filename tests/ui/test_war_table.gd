@@ -107,25 +107,49 @@ func test_the_seal_shows_who_waits_until_the_council_is_entered() -> void:
 	seal.refresh()
 	assert_eq(seal.waiting_ids().size(), 0, "entering the council hears them")
 
-## Owner 2026-10-01: 指南针被盖住了，往下挪，露出来 — the report fills its
-## column, so the compass lies below it, wholly on the screen and clear of the
-## paper, the news slip and every bookmark.
+## Owner 2026-10-01: 指南针被盖住了，往下挪，露出来 — the compass lies in the
+## free band below the report's DRAWN foot, as big as that band allows up to
+## ui_table_compass_px, wholly on the screen and clear of the paper, the news
+## slip and every bookmark — at 1280x720 and at a 16:10 window (1280x800).
 func test_the_compass_lies_on_the_table_below_the_report() -> void:
-	var r := _root()
-	var court := _court(r)
-	await wait_frames(3)
-	var compass: TableCompass = court.find_child("TableCompass", false, false)
-	assert_not_null(compass, "the compass lies on the table")
-	var rect := compass.get_global_rect()
-	assert_true(Rect2(Vector2.ZERO, r.size).encloses(rect), "wholly on the screen")
-	assert_false(rect.intersects(court.get_node("%LogPanel").get_global_rect()), "clear of the report's paper")
-	assert_false(rect.intersects(r.news_ticker().get_global_rect()), "clear of the news slip")
-	for tab: String in BottomBar.TABS:
-		var b := r.bottom_bar().button(tab)
-		if b != null and b.visible:
-			assert_false(rect.intersects(b.get_global_rect()), "clear of the " + tab + " bookmark")
-	assert_eq(Game.data.bal(MapPalette.table_key(Game.data, Game.data.balance, "map_compass_size_px")), 0.0,
-		"and the map draws none of its own")
+	var was := get_tree().root.size
+	for shape: Vector2i in [Vector2i(1280, 720), Vector2i(2560, 1600)]:
+		get_tree().root.size = shape
+		var r := _root()
+		var court := _court(r)
+		await wait_frames(4)
+		var compass: TableCompass = court.find_child("TableCompass", false, false)
+		assert_not_null(compass, "the compass lies on the table")
+		var rect := compass.wheel_global_rect()
+		var tag := " at %s (design %s)" % [shape, r.size]
+		assert_true(Rect2(Vector2.ZERO, r.size).encloses(rect), "wholly on the screen" + tag)
+		var col := court.get_node("%LogPanel") as Control
+		var paper := Rect2(col.global_position, Vector2(col.size.x, compass.paper_bottom() - col.global_position.y))
+		assert_false(rect.intersects(paper), "clear of the report's drawn paper" + tag)
+		assert_false(rect.intersects(r.news_ticker().get_global_rect()), "clear of the news slip" + tag)
+		for tab: String in BottomBar.TABS:
+			var b := r.bottom_bar().button(tab)
+			if b != null and b.visible:
+				assert_false(rect.intersects(b.get_global_rect()), "clear of the " + tab + " bookmark" + tag)
+		if r.size.y >= 799.0:
+			assert_gte(rect.size.x, 90.0, "near its full size where the band allows" + tag)
+		gut.p("compass %s: %s, paper foot %.0f" % [tag, rect, compass.paper_bottom()])
+		r.free()
+	get_tree().root.size = was
+
+
+## The fit itself: as big as the band allows, up to ui_table_compass_px.
+func test_the_compass_fits_the_band_below_the_report() -> void:
+	var full := Game.data.bal("ui_table_compass_px")
+	var clear := Game.data.bal("ui_table_compass_clear_px")
+	var wide := TableCompass.fit(640.0, 796.0, ScreenLayout.LEFT_WIDTH)
+	assert_eq(wide.size.x, full, "a 16:10 band (~150 px) takes the whole compass")
+	assert_gte(wide.position.y, 640.0 + clear)
+	var tight := TableCompass.fit(664.0, 716.0, ScreenLayout.LEFT_WIDTH)
+	assert_eq(tight.size.x, 716.0 - 664.0 - clear, "a tight band, as large as it allows")
+	assert_lte(tight.end.y, 716.0)
+	assert_eq(TableCompass.fit(716.0, 716.0, 240.0).size.x, 0.0, "no band, no wheel")
+
 
 func test_a_tooltip_over_the_paper_keeps_the_chip_light_ink() -> void:
 	# Godot resolves a tooltip's label through the HOVERED control's theme,

@@ -4,26 +4,31 @@ extends Control
 ## I-73, aged oak, a ship's wheel, brass gears) lying on the table at the
 ## report's foot, below the paper — the wheel turning while time runs as it
 ## did on the map, the needle pointing to the map's north as the view turns, a
-## press easing the view back to north. Its shadow falls down-right like everything on the table. It is
-## drawn under the column, but lies clear of it, so no card covers it.
+## press easing the view back to north. Its shadow falls down-right like
+## everything on the table. It is drawn under the column, in the free band
+## between the report's drawn foot and the screen's (owner 2026-10-01:
+## 指南针被盖住了，往下挪，露出来): ui_table_compass_px across while the band
+## allows, smaller only as far as the band demands — so a card that fills the
+## column shrinks it rather than covering it. The control spans the column's
+## strip of table (its place never moves, so the landing can slide it); the
+## wheel is drawn, and pressed, in wheel_rect().
 
 var view: Map3DView
+var column: Control   # the report it lies under (WarTable.place_compass)
 var _art: Texture2D = null
 var _wheel := 0.0
 
 func _ready() -> void:
 	name = "TableCompass"
 	_art = UiPalette.load_art(CompassLayer.ART_PATH)
-	var px := WarTable._num("ui_table_compass_px", 104.0)
-	var inset := WarTable._num("ui_table_compass_inset_px", 18.0)
-	set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	offset_left = ScreenLayout.margin() + inset
-	offset_right = offset_left + px
-	# at the table's foot under the report, in the bookmarks' band left of
-	# them: the report fills its column and hid it there (owner 2026-10-01:
-	# 指南针被盖住了，往下挪，露出来)
+	# the column's strip of table, top to the screen's foot (less
+	# ui_table_compass_bottom_px); the wheel is drawn in the band below the
+	# report's drawn foot (wheel_rect)
+	set_anchors_preset(Control.PRESET_LEFT_WIDE)
+	offset_left = ScreenLayout.margin()
+	offset_right = offset_left + ScreenLayout.LEFT_WIDTH
+	offset_top = 0.0
 	offset_bottom = -WarTable._num("ui_table_compass_bottom_px", 4.0)
-	offset_top = offset_bottom - px
 	tooltip_text = "The compass — press to turn the map north"
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
@@ -32,6 +37,44 @@ func _process(delta: float) -> void:
 		_wheel = fposmod(_wheel + deg_to_rad(Game.data.bal("map_compass_turn_deg_per_s"))
 			* float(Game.clock_speed) * delta, TAU)
 	queue_redraw()
+
+## Where the wheel lies (local): `fit` over this strip and the report's
+## drawn foot.
+func wheel_rect() -> Rect2:
+	return fit(paper_bottom() - global_position.y, size.y, size.x)
+
+## The wheel's rect in a strip `width` wide whose free band runs from `foot`
+## (the report's drawn foot) to `bottom` (local y): ui_table_compass_clear_px
+## off the paper, ui_table_compass_px across at most — less only as the band
+## demands — ui_table_compass_inset_px in from the strip's left, centred in
+## the band. Pure (the tests' seam).
+static func fit(foot: float, bottom: float, width: float) -> Rect2:
+	var inset := WarTable._num("ui_table_compass_inset_px", 18.0)
+	var top := foot + WarTable._num("ui_table_compass_clear_px", 8.0)
+	var band := maxf(bottom - top, 0.0)
+	var px := minf(minf(WarTable._num("ui_table_compass_px", 104.0), band), maxf(width - inset, 0.0))
+	return Rect2(Vector2(inset, top + (band - px) * 0.5), Vector2(px, px))
+
+## The report's drawn foot (global y): its paper as tall as it is drawn
+## (PaperStyle.fit_height); the strip's top with no report.
+func paper_bottom() -> float:
+	if column == null or not is_instance_valid(column) or not column.is_visible_in_tree():
+		return global_position.y
+	var r := column.get_global_rect()
+	var style := column.get_theme_stylebox("panel") as PaperStyle
+	var h := r.size.y
+	if style != null and style.fit_height > 0.0 and style.fit_height < h:
+		h = style.fit_height
+	return r.position.y + h
+
+## The wheel's rect on the screen (global): what the tests hold clear of the
+## report, the slip and the bookmarks.
+func wheel_global_rect() -> Rect2:
+	var w := wheel_rect()
+	return Rect2(global_position + w.position, w.size)
+
+func _has_point(point: Vector2) -> bool:
+	return wheel_rect().has_point(point)
 
 func _gui_input(event: InputEvent) -> void:
 	var mb := event as InputEventMouseButton
@@ -47,8 +90,12 @@ func needle() -> float:
 	return Map3DHud.needle_angle(view.context().yaw) if _yaw_known() else 0.0
 
 func _draw() -> void:
-	var r := size.x * 0.5
-	var c := size * 0.5
+	var wr := wheel_rect()
+	if wr.size.x < 1.0:
+		return
+	var r := wr.size.x * 0.5
+	var c := wr.get_center()
+	var wsize := wr.size
 	var shadow_a := WarTable._num("ui_table_shadow_alpha", 0.34)
 	var off := Vector2(WarTable._num("ui_table_shadow_dx", 6.0), WarTable._num("ui_table_shadow_dy", 10.0)) * 0.45
 	if _art != null:
@@ -56,9 +103,9 @@ func _draw() -> void:
 		# spokes as a base plate): the art in black, offset, in soft layers
 		for i in 3:
 			draw_set_transform(c + off * (0.7 + 0.3 * float(i)), _wheel, Vector2.ONE * (1.0 + 0.02 * float(i)))
-			draw_texture_rect(_art, Rect2(-size * 0.5, size), false, Color(0, 0, 0, shadow_a * [0.5, 0.3, 0.15][i]))
+			draw_texture_rect(_art, Rect2(-wsize * 0.5, wsize), false, Color(0, 0, 0, shadow_a * [0.5, 0.3, 0.15][i]))
 		draw_set_transform(c, _wheel, Vector2.ONE)
-		draw_texture_rect(_art, Rect2(-size * 0.5, size), false)
+		draw_texture_rect(_art, Rect2(-wsize * 0.5, wsize), false)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	else:
 		draw_circle(c + off, r, Color(0, 0, 0, shadow_a))

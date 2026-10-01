@@ -869,9 +869,10 @@ ui_title_sweep_s,1.8,TITLE: seconds the camera sweeps from the title's height do
 ui_title_shade,0.92,"TITLE: the darkness of the reading side (left) at its darkest, 0..1"
 ui_title_shade_reach,0.62,"TITLE: how far across the screen the reading side's shade reaches, a share of its width"
 map_compass_size_px_table,0,"WAR TABLE (owner 2026-10-01): the compass lies on the table (TableCompass), so the map draws none and its corner takes no click"
-ui_table_compass_px,52,"WAR TABLE: design px across the compass lying on the table at the report's foot (104 under the report until 2026-10-01, when the report filled its column and hid it: 指南针被盖住了，往下挪，露出来 — the band under the report is ~56 px)"
+ui_table_compass_px,104,"WAR TABLE: design px across the compass lying on the table below the report's drawn foot, at most — smaller only as far as the free band there demands (owner 2026-10-01: 指南针被盖住了，往下挪，露出来; it had lain under the report, which now fills its column)"
 ui_table_compass_inset_px,18,WAR TABLE: design px from the table's left edge to the compass
-ui_table_compass_bottom_px,2,WAR TABLE: design px from the screen's foot to the compass's lower edge (it lies in the bookmarks' band left of them; the report ends BottomBar.BAR_HEIGHT above the foot)
+ui_table_compass_bottom_px,4,WAR TABLE: design px from the screen's foot to the bottom of the compass's band
+ui_table_compass_clear_px,8,"WAR TABLE: design px the compass keeps off the report's drawn foot (its deckle, its tilt and its shadow)"
 ui_landing_lift_s,0.4,"LANDING (owner 2026-10-01: the map is picked up and laid on the table): seconds the title's frame is lifted like a sheet — drawing back, the vellum margin and a shadow appearing"
 ui_landing_carry_s,0.9,"LANDING: seconds it is carried down onto the table to the map sheet's place, turning square"
 ui_landing_settle_s,0.25,LANDING: seconds it settles on the wood (ui_landing_give)
