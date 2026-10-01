@@ -35,7 +35,11 @@ func bind(p_ctx: Map3DContext) -> void:
 	var c := MapTerrain.palette_color(repo, "map3d_march_trail", Color("#A89468"))
 	c.a = repo.bal("map3d_trail_alpha")
 	_mat.set_shader_parameter("colour", c)
+	_mat.set_shader_parameter("crop_colour", MapTerrain.palette_color(repo, "map3d_march_trail_crop", Color("#6E6440")))
+	_mat.set_shader_parameter("has_field_map", false)
 	_mat.set_shader_parameter("life_days", repo.bal("map3d_trail_days"))
+	_mat.set_shader_parameter("hold_share", repo.bal("map3d_trail_hold_share"))
+	_mat.set_shader_parameter("crop_gain", repo.bal("map3d_trail_crop_gain"))
 	_mat.set_shader_parameter("edge_soft", repo.bal("map3d_trail_edge_soft"))
 	_mat.set_shader_parameter("print_m", repo.bal("map3d_trail_print_m"))
 	_mat.set_shader_parameter("print_mix", repo.bal("map3d_trail_print_mix"))
@@ -122,6 +126,7 @@ func step() -> void:
 	if _dirty:
 		_rebuild()
 		_dirty = false
+	_take_field_map()
 	_mat.set_shader_parameter("now_days", now)
 	_mat.set_shader_parameter("px_per_dist", ctx.px_per_dist())
 	_mat.set_shader_parameter("lift_px", repo.bal("map3d_line_lift_px") * ctx.viewport_px_scale())
@@ -175,3 +180,19 @@ func _rebuild() -> void:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	_mesh.mesh = mesh
+
+
+## The bake's field map, once the themes layer has handed it to the terrain
+## (Map3DLayerThemes.prepare): where the corn is, the trail reads darker.
+func _take_field_map() -> void:
+	if bool(_mat.get_shader_parameter("has_field_map")) or ctx.terrain == null:
+		return
+	var tmat: Resource = ctx.terrain.get("material")
+	var fm: Variant = tmat.call("get_shader_param", "field_map") if tmat != null else null
+	if not (fm is Texture2D):
+		return
+	var origin: Array = ctx.meta.get("pack_origin", [0.0, 0.0])
+	_mat.set_shader_parameter("field_map", fm)
+	_mat.set_shader_parameter("pack_origin", Vector2(float(origin[0]), float(origin[1])))
+	_mat.set_shader_parameter("field_m_per_texel", Map3DLayerThemes.FIELD_MAP_M_PER_TEXEL)
+	_mat.set_shader_parameter("has_field_map", true)

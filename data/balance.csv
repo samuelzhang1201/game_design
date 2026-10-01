@@ -533,8 +533,9 @@ map3d_wind_tree_sway_m,2.2,3D MAP wind: how far a crown's top leans down the win
 map3d_wind_tree_hz,0.22,3D MAP wind: how many times a second a tree sways
 map3d_trail_on,1,"3D MAP MARCH TRAILS (owner 2026-10-01: 当军事单位路过的时候，希望可以和地形互动，比如留下一段行走印记，后逐步消失): 1 lays the ground a marching column trod behind each piece (Map3DLayerTrails, march_trail.gdshader), fading over game time; 0 = none"
 map3d_trail_days,4,"3D MAP march trails: game days a stretch of trodden ground takes to fade away (the clock's own time: a paused clock holds it). 1.5 at first: the piece is a MINIATURE some 200 m across at the map's scale and a column covers a few hundred metres a day, so a day and a half of trail lay hidden under the piece itself"
+map3d_trail_hold_share,0.4,"3D MAP march trails: the share of map3d_trail_days a stretch holds at full strength before it fades (owner 2026-10-01: a fade from the first moment left even the freshest track faint)"
+map3d_trail_crop_gain,1.8,"3D MAP march trails: on the corn (the bake's field map) the track is this much stronger and its lanes run together (a trail of the turf's strength vanished on the pale crop)"
 map3d_trail_step_m,25,3D MAP march trails: a point of trail every this many world metres of a piece's walk
-map3d_trail_alpha,0.6,"3D MAP march trails: the trodden grass's strength over the turf at its freshest, on its lanes"
 map3d_trail_half_width_m,50,"3D MAP march trails: the trail's half width, world metres — a piece is a miniature of one world size at every zoom (some 220 m across its nine figures), and a trail as wide as it read as a pad under the piece, not a track behind it"
 map3d_trail_edge_soft,0.5,3D MAP march trails: the share of each side that fades to the grass (a ragged soft edge; never a painted road)
 map3d_trail_print_m,12,3D MAP march trails: the size of the trampled patches along the track (world metres)
