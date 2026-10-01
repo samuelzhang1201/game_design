@@ -99,7 +99,7 @@ cast_shadow = 0
 surface_material_override/0 = SubResource("Mat_floor")
 
 [node name="Slab" type="MeshInstance3D" parent="Viewport/Room"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.04, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.045, 0)
 mesh = SubResource("Box_slab")
 surface_material_override/0 = SubResource("Mat_oak")
 

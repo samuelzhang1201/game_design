@@ -66,3 +66,42 @@ func test_the_mesh_carries_metres_in_uv2() -> void:
 	assert_almost_eq(uv2[3].x, 300.0, 0.001)
 	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	assert_almost_eq(verts[3].y, 0.3, 0.0001)
+
+
+func test_raw_heights_keep_the_sea_negative_while_heights_stay_flat() -> void:
+	var img := Image.create(2560, 929, false, Image.FORMAT_L8)
+	img.fill(Color8(10, 10, 10))
+	var clamped := WarTable.heights(repo, img, R, 3, 3)
+	var raw := WarTable.raw_heights(repo, img, R, 3, 3)
+	assert_almost_eq(clamped[0], 0.0, 0.001)
+	# 10/255 of 100 = 3.92 units; (3.92 - 20) * 30 m a unit = -482.4 m
+	assert_almost_eq(raw[0], (10.0 * 100.0 / 255.0 - repo.bal("elevation_sea_level")) * repo.bal("elevation_m_per_unit"), 0.01)
+	assert_lt(raw[0], 0.0)
+
+
+func test_the_mesh_carries_the_unclamped_metres_in_uv2_y() -> void:
+	var h := PackedFloat32Array([0.0, 0.0, 0.0, 300.0])
+	var raw := PackedFloat32Array([-120.0, -40.0, 0.0, 300.0])
+	var uv2: PackedVector2Array = WarTable.build_mesh(h, 2, 2, 1.0, 1.0, 0.001, raw).surface_get_arrays(0)[Mesh.ARRAY_TEX_UV2]
+	assert_almost_eq(uv2[0].y, -120.0, 0.001)
+	assert_almost_eq(uv2[0].x, 0.0, 0.001, "x stays clamped")
+	var plain: PackedVector2Array = WarTable.build_mesh(h, 2, 2, 1.0, 1.0, 0.001).surface_get_arrays(0)[Mesh.ARRAY_TEX_UV2]
+	assert_almost_eq(plain[3].y, 300.0, 0.001, "without raw, y repeats the clamped metres")
+
+
+func test_shore_distance_counts_table_metres_off_the_nearest_land() -> void:
+	# 5 x 1 row, land at the west end only; vertices 0.25 m apart
+	var raw := PackedFloat32Array([10.0, -5.0, -5.0, -5.0, -5.0])
+	var d := WarTable.shore_distance(raw, 5, 1, 0.25, 1.0, 9.0)
+	assert_almost_eq(d[0], 0.0, 0.0001)
+	assert_almost_eq(d[1], 0.25, 0.0001)
+	assert_almost_eq(d[4], 1.0, 0.0001)
+	var all_sea := WarTable.shore_distance(PackedFloat32Array([-1.0, -1.0]), 2, 1, 0.25, 1.0, 9.0)
+	assert_almost_eq(all_sea[0], 9.0, 0.0001, "no land anywhere reads as far")
+
+
+func test_the_mesh_carries_the_shore_fade_in_color_r() -> void:
+	var h := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
+	var cols: PackedColorArray = WarTable.build_mesh(h, 2, 2, 1.0, 1.0, 0.001, h, PackedFloat32Array([0.0, 0.5, 1.0, 1.0])).surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+	assert_almost_eq(cols[1].r, 0.5, 0.01)
+	assert_almost_eq(cols[2].r, 1.0, 0.01)
