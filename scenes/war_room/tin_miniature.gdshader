@@ -25,7 +25,10 @@ void fragment() {
 	if (has_tex) {
 		base *= texture(albedo_tex, UV).rgb;
 	}
-	vec3 painted = floor(base * levels + 0.5) / levels;
+	// posterised in display (sRGB) space: a linear step crushes every dark paint
+	// on the units' atlases to black (art pass 2026-10-01)
+	vec3 shown = pow(max(base, vec3(0.0)), vec3(1.0 / 2.2));
+	vec3 painted = pow(floor(shown * levels + 0.5) / levels, vec3(2.2));
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), rim_power);
 	float edge = clamp(length(fwidth(NORMAL)) * edge_gain, 0.0, 1.0);
 	float worn = clamp(max(edge, rim * rim_weight) * wear, 0.0, 1.0);
