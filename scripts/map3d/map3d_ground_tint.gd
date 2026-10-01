@@ -31,6 +31,10 @@ uniform highp sampler2D field_map : filter_linear, repeat_disable;
 uniform float field_m_per_texel = 40.0;
 uniform float furrow_m = 9.0;
 uniform float furrow_depth = 0.0;
+// The open fields' STRIPS (owner 2026-10-01): each furlong is long narrow
+// strips along its direction, each strip a farmer's, a shade of its own.
+uniform float strip_m = 22.0;
+uniform float strip_shade = 0.0;
 uniform float field_fade = 0.0;
 uniform float field_fade_near_m = 15000.0;
 uniform float field_fade_far_m = 60000.0;
@@ -127,6 +131,13 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 		float aa = 1.0 - smoothstep(0.2, 0.45, fwidth(ph));
 		float stripe = 0.5 + 0.5 * sin(ph * 6.2831853);
 		base_albedo *= 1.0 - furrow_depth * sown * aa * stripe;
+		if (strip_shade > 0.0) {
+			float sp = dot(v_vertex.xz, vec2(-sin(ang), cos(ang))) / strip_m;
+			float sa = dot(v_vertex.xz, vec2(cos(ang), sin(ang))) / (strip_m * 9.0);
+			float sh = wx_hash(vec2(floor(sp), floor(sa + wx_hash(vec2(floor(sp), 3.7)))));
+			float saa = 1.0 - smoothstep(0.25, 0.6, fwidth(sp));
+			base_albedo *= 1.0 + strip_shade * sown * saa * (sh - 0.5) * 2.0;
+		}
 	}
 	if (wood_on > 0.0) {
 		vec2 wuv0 = (v_vertex.xz - pack_origin) / wood_m_per_texel / vec2(textureSize(wood_map, 0));
