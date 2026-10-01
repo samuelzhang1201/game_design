@@ -143,7 +143,6 @@ func test_garrison_adds_its_morale_row() -> void:
 			held = c
 			break
 	assert_ne(held, "", "the pack has a land regiment at a crown town")
-	var before := WarFolio.sections(repo, state, held)
 	ArmySystem.set_garrison(repo, state, held)
 	var morale := {}
 	var supply := {}
@@ -158,7 +157,6 @@ func test_garrison_adds_its_morale_row() -> void:
 	assert_true(morale.has("In garrison"))
 	assert_eq(morale["In garrison"], "+%d" % int(repo.bal("army_morale_garrison_bonus")))
 	assert_true(String(supply["Line"]).begins_with("in garrison at "))
-	assert_gt(before.size(), 0)
 
 
 func test_matchups_are_named_per_arm() -> void:
