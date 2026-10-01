@@ -117,3 +117,20 @@ func test_the_compass_lies_on_the_table_under_the_report() -> void:
 	assert_lt(compass.get_global_rect().end.y, r.size.y - BottomBar.BAR_HEIGHT + 1.0, "above the bookmarks")
 	assert_eq(Game.data.bal(MapPalette.table_key(Game.data, Game.data.balance, "map_compass_size_px")), 0.0,
 		"and the map draws none of its own")
+
+func test_a_tooltip_over_the_paper_keeps_the_chip_light_ink() -> void:
+	# Godot resolves a tooltip's label through the HOVERED control's theme,
+	# and TooltipLabel falls back to Label — the paper's dark ink drew the
+	# town card's icon tooltips dark on their dark chip (owner 2026-10-01).
+	var holder := Control.new()
+	holder.theme = WarTable.paper_theme()
+	var tip := Label.new()
+	tip.theme_type_variation = &"TooltipLabel"
+	var on_paper := Label.new()
+	holder.add_child(tip)
+	holder.add_child(on_paper)
+	add_child_autofree(holder)
+	assert_eq(tip.get_theme_color("font_color", "TooltipLabel"), UiPalette.TEXT_SOFT,
+		"a tooltip over the paper reads light on its dark chip")
+	assert_ne(on_paper.get_theme_color("font_color"), UiPalette.TEXT_SOFT,
+		"the paper's own labels keep their dark ink")
