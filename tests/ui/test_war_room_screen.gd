@@ -460,3 +460,40 @@ func test_a_click_on_the_easel_at_a_notes_place_opens_that_letter() -> void:
 	await wait_process_frames(1)
 	assert_true(r.missive_screen().visible, "a real click through the panel")
 	assert_eq(r.missive_screen().selected(), id)
+
+
+func test_show_on_map_from_the_board_over_the_room_leaves_the_room() -> void:
+	var r: GameRoot = await _court()
+	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", 3,
+		MissiveLog.subject("point", "", -1, Vector2(500, 300)), "A letter", []))
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	r.open_missive_over_war_room(id)
+	r.missive_screen().show_requested.emit(MissiveLog.find(Game.state, id)["subject"])
+	await wait_process_frames(1)
+	assert_false(r.war_room_screen().visible, "the map the letter points at is shown, not hidden under the room")
+
+
+func test_a_screen_switch_under_the_room_unrolls_no_stale_report() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.2)
+	r._switch_to(GameRoot.State.COURT)
+	await wait_process_frames(1)
+	var rolls := r.get_children().filter(func(n: Node) -> bool: return n is WarReportRoll and not n.is_queued_for_deletion())
+	assert_eq(rolls.size(), 0, "the old column's picture is not drawn over the new screen")
+
+
+func test_the_host_from_the_borrowed_card_leaves_the_room_for_the_column() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	var detail: MapDetailPanel = r.current_screen.detail_panel()
+	var home := detail.get_parent()
+	screen.view().piece_selected.emit(String(WarRoom.pieces(Game.data, Game.state)[0]["code"]))
+	await wait_process_frames(1)
+	detail.host_requested.emit()
+	await wait_process_frames(1)
+	assert_false(screen.visible, "the host is shown in the column, so the room steps aside")
+	assert_eq(detail.get_parent(), home)

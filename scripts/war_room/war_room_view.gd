@@ -79,6 +79,7 @@ var _table_pose := Transform3D()
 var _board_dist := 1.0
 var _board_offset := Vector2.ZERO
 var _board_dragged := false
+var _board_press := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -349,20 +350,27 @@ func _board_input(event: InputEvent) -> void:
 			_repo.bal("war_board_min_m"), _repo.bal("war_board_max_m"))
 		_camera.transform = _board_pose()
 	elif mm != null and (mm.button_mask & MOUSE_BUTTON_MASK_LEFT):
-		_board_offset = WarBoard.clamp_offset(_board_offset + Vector2(-mm.relative.x, mm.relative.y)
-			* _board_dist * _repo.bal("war_pan_drag_speed"), _board_size())
-		_camera.transform = _board_pose()
-		_board_dragged = true
+		if mm.position.distance_to(_board_press) > _repo.bal("war_click_slop_px"):
+			_board_dragged = true   # past the slop a press is a pan, not a click
+		if _board_dragged:
+			_board_offset = WarBoard.clamp_offset(_board_offset + Vector2(-mm.relative.x, mm.relative.y)
+				* _board_dist * _repo.bal("war_pan_drag_speed"), _board_size())
+			_camera.transform = _board_pose()
 	elif mm != null:
 		var uv := _board_uv(mm.position)
 		if uv.x >= 0.0:
 			board_hovered.emit(uv)
 	elif mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
+		var uv := _board_uv(mb.position)
 		if mb.pressed:
 			_board_dragged = false
-		var uv := _board_uv(mb.position)
-		if uv.x >= 0.0 and not _board_dragged:
-			board_clicked.emit(uv, mb)
+			_board_press = mb.position
+			if uv.x >= 0.0:
+				board_clicked.emit(uv, mb)
+		else:
+			# the release always reaches the board, so its button is never left
+			# held; a pan's lands off the board, where no note fires (review I1)
+			board_clicked.emit(Vector2(-1, -1) if _board_dragged else uv, mb)
 
 
 ## WASD / arrows pan the room (spec 2026-10-02-war-room-v2 §1.1), never while
@@ -437,6 +445,7 @@ func lean_to(metres: float, focus_px := Vector2(-1, -1)) -> void:
 		_rig.target = Vector3(p.x, 0.0, p.z)
 		_rig.pan(Vector2.ZERO)   # clamped to the sheet
 	_rig.distance = clampf(metres, _rig.min_distance, _rig.max_distance)
+	_rig.pan(Vector2.ZERO)   # held on the table and inside the room
 	_apply_camera()
 
 

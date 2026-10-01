@@ -76,12 +76,14 @@ func zoom_about(ground: Vector3, factor: float) -> void:
 	target = target.lerp(Vector3(ground.x, target.y, ground.z), share)
 	distance = d
 	_clamp()
+	_settle()
 
 
 ## Move the target by a table-plane delta (world x, z).
 func pan(delta_xz: Vector2) -> void:
 	target += Vector3(delta_xz.x, 0.0, delta_xz.y)
 	_clamp()
+	_settle()
 
 
 ## Move the target by a delta in SCREEN directions (x right, y down), turned
@@ -94,6 +96,7 @@ func pan_view(delta: Vector2) -> void:
 func turn(delta_deg: float) -> void:
 	_north_t = -1.0
 	yaw_deg = wrapf(yaw_deg + delta_deg, -180.0, 180.0)
+	_settle()
 
 
 func start_north() -> void:
@@ -115,6 +118,13 @@ func step(delta: float, seconds: float) -> bool:
 		_north_t = -1.0
 		yaw_deg = 0.0
 	return true
+
+
+## The rig holds only a distance it can stand at: against a wall it IS the
+## shortened one, so the scale bar, the tag cutoff and the next notch all read
+## the camera where it is drawn (final review I4).
+func _settle() -> void:
+	distance = clear_distance()
 
 
 func _clamp() -> void:

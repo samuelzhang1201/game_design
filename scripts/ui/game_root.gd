@@ -753,6 +753,9 @@ func _on_missive_show(subject: Dictionary) -> void:
 	if String(subject.get("kind", "")) == "ledger":
 		_open_ledger_on(String(subject.get("code", "")))
 		return
+	if _war_room_screen != null and _war_room_screen.visible:
+		_war_room_screen.close()   # the board opened over the room: the place is on the map, not under the room
+		_sync_map_view()
 	var view: Map3DView = current_screen.map3d_view() if current_screen != null and current_screen.has_method("map3d_view") else null
 	if view == null:
 		return
@@ -1020,7 +1023,7 @@ func _switch_to(new_state: State) -> void:
 		_ledger_screen.close()
 		move_child(_ledger_screen, get_child_count() - 1)
 	if _war_room_screen != null:
-		_war_room_screen.close()
+		_war_room_screen.close(false)   # the old column is gone: nothing to unroll over the new screen
 		move_child(_war_room_screen, get_child_count() - 1)
 	if _missive_screen != null:
 		_missive_screen.visible = false

@@ -633,3 +633,45 @@ func test_in_board_view_a_left_click_on_the_panel_is_the_boards_not_the_rooms() 
 	assert_signal_emitted(view, "board_clicked")
 	assert_signal_not_emitted(view, "piece_selected")
 	assert_signal_not_emitted(view, "selection_cleared")
+
+
+func _board_click(at: Vector2, jitter: Vector2) -> void:
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = at
+	view._gui_input(press)
+	if jitter != Vector2.ZERO:
+		var m := InputEventMouseMotion.new()
+		m.button_mask = MOUSE_BUTTON_MASK_LEFT
+		m.position = at + jitter
+		m.relative = jitter
+		view._gui_input(m)
+	var release := press.duplicate() as InputEventMouseButton
+	release.pressed = false
+	release.position = at + jitter
+	view._gui_input(release)
+
+
+func test_a_board_click_with_a_little_jitter_is_still_a_click() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	view.enter_board()
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	watch_signals(view)
+	_board_click(view.size * 0.5, Vector2(1, 0))
+	assert_signal_emit_count(view, "board_clicked", 2, "the press and the release both reach the board")
+	var release: Array = get_signal_parameters(view, "board_clicked", 1)
+	assert_gte((release[0] as Vector2).x, 0.0, "released on the board")
+
+
+func test_a_board_drag_still_releases_the_button_but_off_the_board() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	view.enter_board()
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	watch_signals(view)
+	_board_click(view.size * 0.5, Vector2(60, 0))
+	assert_signal_emit_count(view, "board_clicked", 2, "the button is never left held in the board")
+	var release: Array = get_signal_parameters(view, "board_clicked", 1)
+	assert_lt((release[0] as Vector2).x, 0.0, "a pan's release lands off the board, so no note fires")

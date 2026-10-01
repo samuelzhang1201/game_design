@@ -116,3 +116,16 @@ func test_a_turn_cancels_the_ease() -> void:
 	c.start_north()
 	c.turn(10.0)
 	assert_false(c.easing())
+
+
+func test_near_a_wall_the_distance_is_the_one_drawn_and_no_notch_is_dead() -> void:
+	var c := _cam()
+	c.room = Rect2(-1.0, -1.0, 2.0, 2.0)
+	c.distance = 1.0
+	for i in 6:
+		c.zoom_about(c.target, 1.12)   # step back into the wall
+	assert_almost_eq(c.distance, c.clear_distance(), 0.0001, "the rig never holds a distance it cannot stand at")
+	assert_almost_eq(c.transform().origin.distance_to(c.target), c.distance, 0.001)
+	var held := c.distance
+	c.zoom_about(c.target, 1.0 / 1.12)
+	assert_lt(c.distance, held, "the first notch back in moves the camera")

@@ -272,7 +272,9 @@ func _fill_margin() -> void:
 	scroll.custom_minimum_size.y = height
 
 
-func close() -> void:
+## `animate` false when the screen under the room is being replaced: its
+## column (and the report captured from it) is gone (final review I3).
+func close(animate := true) -> void:
 	if not visible:
 		return
 	if _orders.visible:
@@ -289,7 +291,7 @@ func close() -> void:
 	%CardRoll.visible = false
 	_give_back()   # the room is gone at once: the column has its card back now
 	closed.emit()
-	if _column_rect.size.x > 0.0 and get_parent() != null:
+	if animate and _column_rect.size.x > 0.0 and get_parent() != null:
 		WarReportRoll.play(get_parent(), _column_rect, _capture, false,
 			Game.data.bal("war_report_roll_s"), Game.data.bal("war_report_roller_px"), UiPalette.war_table())
 	_capture = null
@@ -346,6 +348,8 @@ func _unroll_card() -> void:
 		_detail.reparent(roll, false)
 		if not _detail.closed.is_connected(_view.clear_selection):
 			_detail.closed.connect(_view.clear_selection)
+		if not _detail.host_requested.is_connected(close):
+			_detail.host_requested.connect(close)   # the host takes the column the room covers (review I5)
 	_detail.visible = true
 	if not roll.visible:
 		roll.position = Vector2(16.0, %Slip.offset_top)
@@ -399,6 +403,8 @@ func _give_back() -> void:
 		return
 	if _detail.closed.is_connected(_view.clear_selection):
 		_detail.closed.disconnect(_view.clear_selection)
+	if _detail.host_requested.is_connected(close):
+		_detail.host_requested.disconnect(close)
 	_detail.reparent(_home, false)
 	_home.move_child(_detail, _home_index)
 	_home = null
