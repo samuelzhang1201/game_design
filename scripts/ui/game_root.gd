@@ -659,6 +659,17 @@ func refresh_missive_badge(and_board := true) -> void:
 		_bottom_bar.set_badge("MISSIVE", MissiveLog.unread(Game.state))
 	if and_board and _missive_screen != null and _missive_screen.visible and Game.state != null:
 		_missive_screen.refresh()
+	if and_board and _war_room_screen != null and _war_room_screen.visible:
+		_war_room_screen.refresh_board()
+
+## A note on the WAR ROOM's easel (spec 2026-10-02-war-room-v2 §1.3): the
+## Missive board opens on that letter OVER the room, which stays open, so
+## closing the board returns to the easel.
+func open_missive_over_war_room(id: int) -> void:
+	_info_screen.hide()
+	_missive_screen.visible = true
+	_missive_screen.set_top_inset(_active_top_bar_height())
+	_missive_screen.select(id)
 
 ## Test/tool seam.
 func report_popup() -> MissiveReportPopup:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=21 format=3]
 
 [ext_resource type="Script" path="res://scripts/war_room/war_room_view.gd" id="1_view"]
 [ext_resource type="Script" path="res://scripts/war_room/war_ink_painter.gd" id="2_ink"]
@@ -39,6 +39,20 @@ size = Vector2(0.8, 0.29)
 [sub_resource type="StandardMaterial3D" id="Mat_chart"]
 albedo_color = Color(1, 1, 1, 1)
 roughness = 0.9
+
+[sub_resource type="QuadMesh" id="Quad_board"]
+size = Vector2(1.2, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_board"]
+albedo_color = Color(1, 1, 1, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="Box_easel_leg"]
+size = Vector3(0.05, 1.7, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="Mat_easel"]
+albedo_color = Color(0.36, 0.24, 0.14, 1)
+roughness = 0.8
 
 [node name="WarRoomView" type="Control"]
 clip_contents = true
@@ -84,6 +98,27 @@ transform = Transform3D(1, 0, 0, 0, 1.05828, 0, 0, 0, 1, 0, 0.04662, 0)
 
 [node name="Rake" parent="Viewport/Room" instance=ExtResource("10_rake")]
 transform = Transform3D(0.99863, 0, 0.052336, 0, 1, 0, -0.052336, 0, 0.99863, 0.8, -0.001, -0.62)
+
+
+[node name="Easel" type="Node3D" parent="Viewport/Room"]
+unique_name_in_owner = true
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -2.1, -0.8, -0.2)
+
+[node name="LegL" type="MeshInstance3D" parent="Viewport/Room/Easel"]
+transform = Transform3D(0.996, 0.087, 0, -0.087, 0.996, 0, 0, 0, 1, -0.5, 0.85, -0.05)
+mesh = SubResource("Box_easel_leg")
+material_override = SubResource("Mat_easel")
+
+[node name="LegR" type="MeshInstance3D" parent="Viewport/Room/Easel"]
+transform = Transform3D(0.996, -0.087, 0, 0.087, 0.996, 0, 0, 0, 1, 0.5, 0.85, -0.05)
+mesh = SubResource("Box_easel_leg")
+material_override = SubResource("Mat_easel")
+
+[node name="BoardPanel" type="MeshInstance3D" parent="Viewport/Room/Easel"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0.02)
+mesh = SubResource("Quad_board")
+material_override = SubResource("Mat_board")
 
 [node name="Candlestick1" parent="Viewport/Room" instance=ExtResource("9_candle")]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.8, -0.001, -0.9)

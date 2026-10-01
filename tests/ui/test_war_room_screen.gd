@@ -400,3 +400,38 @@ func test_closing_the_room_hands_the_column_its_place_back() -> void:
 	await wait_process_frames(1)
 	assert_false(r.war_room_screen().visible)
 	assert_true(r.current_screen.left_column().is_visible_in_tree())
+
+
+func test_the_easel_shows_the_missive_board_and_a_note_opens_the_full_board_over_the_room() -> void:
+	var r: GameRoot = await _court()
+	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", 3,
+		MissiveLog.subject("point", "", -1, Vector2(500, 300)), "A letter", []))
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	var board := screen.board_screen()
+	assert_not_null(board)
+	assert_true(board.board_only())
+	assert_not_null(board.find_child("Note%d" % id, true, false), "the easel carries the real letters")
+	board.note_chosen.emit(id)
+	await wait_process_frames(1)
+	assert_true(r.missive_screen().visible, "the full board opens")
+	assert_eq(r.missive_screen().selected(), id, "on that letter")
+	assert_true(screen.visible, "over the room, which stays open")
+
+
+func test_escape_in_board_view_returns_to_the_table_not_the_pause_menu() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var view := r.war_room_screen().view()
+	view.enter_board()
+	await wait_seconds(Game.data.bal("war_board_fly_s") + 0.2)
+	var e := InputEventKey.new()
+	e.keycode = KEY_ESCAPE
+	e.physical_keycode = KEY_ESCAPE
+	e.pressed = true
+	r.get_viewport().push_input(e)
+	await wait_process_frames(2)
+	assert_eq(view.board_mode(), "to_table")
+	assert_false(r._pause_menu.visible, "Escape went to the board, not the pause menu")

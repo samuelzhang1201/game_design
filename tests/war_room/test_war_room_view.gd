@@ -593,3 +593,43 @@ func _key(code: Key, down: bool) -> InputEventKey:
 	e.physical_keycode = code
 	e.pressed = down
 	return e
+
+
+func test_the_easels_board_faces_the_table() -> void:
+	var panel := (view.get_node("%BoardPanel") as Node3D).global_transform
+	assert_gt(panel.basis.z.normalized().dot((Vector3.ZERO - panel.origin) * Vector3(1, 0, 1)), 0.0)
+
+
+func test_entering_the_board_flies_the_camera_square_in_front_of_it_and_back() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var cam := view.get_node("%Camera") as Camera3D
+	var before := cam.transform
+	view.enter_board()
+	assert_eq(view.board_mode(), "to_board")
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	assert_eq(view.board_mode(), "board")
+	var panel := (view.get_node("%BoardPanel") as Node3D).global_transform
+	assert_almost_eq((-cam.global_transform.basis.z).dot(-panel.basis.z.normalized()), 1.0, 0.001, "square to the panel")
+	view.leave_board()
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	assert_eq(view.board_mode(), "table")
+	assert_almost_eq(cam.transform.origin.distance_to(before.origin), 0.0, 0.001, "back where it left")
+
+
+func test_in_board_view_a_left_click_on_the_panel_is_the_boards_not_the_rooms() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	view.enter_board()
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	watch_signals(view)
+	var at := view.size * 0.5   # the panel's centre is under the view's centre
+	for down in [true, false]:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.pressed = down
+		e.position = at
+		view._gui_input(e)
+	assert_signal_emitted(view, "board_clicked")
+	assert_signal_not_emitted(view, "piece_selected")
+	assert_signal_not_emitted(view, "selection_cleared")

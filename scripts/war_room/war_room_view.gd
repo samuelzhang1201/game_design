@@ -20,6 +20,13 @@ signal rake_dropped
 signal sheet_requested(index: int)
 signal sheet_laid(index: int)
 signal camera_moved
+## The easel's Missive board (spec 2026-10-02-war-room-v2 §1.3): the camera
+## has flown to it / back to the table; a click or a hover on its panel, as a
+## UV of the board's SubViewport (the screen pushes it in as real input).
+signal board_entered
+signal board_left
+signal board_clicked(uv: Vector2, event: InputEventMouseButton)
+signal board_hovered(uv: Vector2)
 
 var aiming := false:
 	set(v):
@@ -41,6 +48,7 @@ var aim_code := ""
 @onready var _arrows: Node3D = %EdgeArrows
 @onready var _pieces: WarPieces = %Pieces
 @onready var _pennants: WarPennants = %Pennants
+@onready var _board: MeshInstance3D = %BoardPanel
 
 var _repo: DataRepository
 var _state_fn: Callable
@@ -64,6 +72,13 @@ var _swap := WarSheetSwap.new()
 var _rake := WarRoomRake.new()
 var _gestures := WarRoomGestures.new()
 var _hold_size := false
+var _board_mode := "table"      # table, to_board, board, to_table
+var _fly_t := 0.0
+var _fly_from := Transform3D()
+var _table_pose := Transform3D()
+var _board_dist := 1.0
+var _board_offset := Vector2.ZERO
+var _board_dragged := false
 
 
 func _ready() -> void:
@@ -232,7 +247,8 @@ func swap_to(index: int) -> void:
 
 
 func _process(delta: float) -> void:
-	if _rig.step(delta, _repo.bal("war_cam_north_s")) or key_pan(delta):
+	var flying := _step_board(delta)
+	if not flying and (_rig.step(delta, _repo.bal("war_cam_north_s")) or key_pan(delta)):
 		_apply_camera()
 	if not _swap.active():
 		return
@@ -241,6 +257,110 @@ func _process(delta: float) -> void:
 	_table.scale = Vector3(1.0, 1.0, _swap.z_scale())
 	_pieces.visible = not _swap.active()   # the pieces and pennants are put away while a sheet rolls
 	_pennants.visible = _pieces.visible
+
+
+func board_mode() -> String:
+	return _board_mode
+
+
+## The easel's panel shows `tex` (the board-only MissiveScreen's viewport).
+func set_board_texture(tex: Texture2D) -> void:
+	var mat := (_board.material_override as StandardMaterial3D).duplicate() as StandardMaterial3D
+	mat.albedo_texture = tex
+	_board.material_override = mat
+
+
+func _board_size() -> Vector2:
+	return (_board.mesh as QuadMesh).size
+
+
+## True when the panel's centre is in view, or the camera is the board's (the
+## screen renders the board's viewport only then).
+func board_visible() -> bool:
+	if _board_mode != "table":
+		return true
+	if _camera.is_position_behind(_board.global_position):
+		return false
+	return Rect2(Vector2.ZERO, size).has_point(_camera.unproject_position(_board.global_position) / window_scale())
+
+
+func _board_pose() -> Transform3D:
+	return WarBoard.pose(_board.global_transform, _board_dist, _board_offset)
+
+
+## Fly the camera to the easel's board (spec §1.3); the table's pose is kept
+## for the flight back.
+func enter_board() -> void:
+	if _board_mode != "table":
+		return
+	_rake.drop()
+	_table_pose = _camera.transform
+	_fly_from = _table_pose
+	_board_dist = _repo.bal("war_board_distance_m")
+	_board_offset = Vector2.ZERO
+	_fly_t = 0.0
+	_board_mode = "to_board"
+	board_entered.emit()
+
+
+func leave_board() -> void:
+	if _board_mode != "board" and _board_mode != "to_board":
+		return
+	_fly_from = _camera.transform
+	_fly_t = 0.0
+	_board_mode = "to_table"
+
+
+## One frame of a flight; true while the camera belongs to the board.
+func _step_board(delta: float) -> bool:
+	if _board_mode == "to_board" or _board_mode == "to_table":
+		_fly_t += delta / maxf(_repo.bal("war_board_fly_s"), 0.01)
+		var to := _board_pose() if _board_mode == "to_board" else _table_pose
+		_camera.transform = WarBoard.fly(_fly_from, to, _fly_t)
+		if _fly_t >= 1.0:
+			if _board_mode == "to_table":
+				_board_mode = "table"
+				_apply_camera()
+				board_left.emit()
+				return false
+			_board_mode = "board"
+		return true
+	return _board_mode == "board"
+
+
+func _board_uv(screen_px: Vector2) -> Vector2:
+	var s := screen_px * window_scale()
+	return WarBoard.uv_of(_board.global_transform, _board_size(), _camera.project_ray_origin(s), _camera.project_ray_normal(s))
+
+
+## Input while the board holds the camera: a left click (not a drag) on the
+## panel is the board's, the wheel leans, a left drag pans in its plane.
+func _board_input(event: InputEvent) -> void:
+	accept_event()
+	if _board_mode != "board":
+		return
+	var mb := event as InputEventMouseButton
+	var mm := event as InputEventMouseMotion
+	if mb != null and mb.pressed and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		var step := _repo.bal("war_cam_zoom_step")
+		_board_dist = clampf(_board_dist * (1.0 / step if mb.button_index == MOUSE_BUTTON_WHEEL_UP else step),
+			_repo.bal("war_board_min_m"), _repo.bal("war_board_max_m"))
+		_camera.transform = _board_pose()
+	elif mm != null and (mm.button_mask & MOUSE_BUTTON_MASK_LEFT):
+		_board_offset = WarBoard.clamp_offset(_board_offset + Vector2(-mm.relative.x, mm.relative.y)
+			* _board_dist * _repo.bal("war_pan_drag_speed"), _board_size())
+		_camera.transform = _board_pose()
+		_board_dragged = true
+	elif mm != null:
+		var uv := _board_uv(mm.position)
+		if uv.x >= 0.0:
+			board_hovered.emit(uv)
+	elif mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
+		if mb.pressed:
+			_board_dragged = false
+		var uv := _board_uv(mb.position)
+		if uv.x >= 0.0 and not _board_dragged:
+			board_clicked.emit(uv, mb)
 
 
 ## WASD / arrows pan the room (spec 2026-10-02-war-room-v2 §1.1), never while
@@ -402,6 +522,20 @@ func _ground_under(screen_px: Vector2) -> Vector3:
 func _gui_input(event: InputEvent) -> void:
 	if _sheet < 0:
 		return
+	if _board_mode != "table":
+		_board_input(event)
+		return
+	# a click (not a pan) on the easel's board flies there; nothing behind it is picked
+	var press := event as InputEventMouseButton
+	if press != null and press.button_index == MOUSE_BUTTON_LEFT and not press.pressed \
+			and not _rake.empty_press_moved(press.position) and piece_under(press.position) == "" \
+			and _board_uv(press.position).x >= 0.0 and _rake.code == "":
+		_rake.forget_press()
+		enter_board()
+		accept_event()
+		return
+	if event is InputEventMouseMotion:
+		tooltip_text = "Study the board" if _board_uv((event as InputEventMouseMotion).position).x >= 0.0 else ""
 	var mb := event as InputEventMouseButton
 	var mm := event as InputEventMouseMotion
 	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:

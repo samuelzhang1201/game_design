@@ -17,6 +17,8 @@ var _capture: Texture2D
 var _home: Node                # the column the card was borrowed from
 var _home_index := -1
 var _roll_tween: Tween
+var _board_vp: SubViewport
+var _board_screen: MissiveScreen
 var _column_rect := Rect2()
 var _margin_sig: Array = []   # [sheet, the off-sheet (code, sheet) pairs, none on this sheet] last filled
 
@@ -32,6 +34,10 @@ func _ready() -> void:
 	UiPalette.style_title(%Title, 18)
 	_dress_slip()
 	%Close.pressed.connect(close)
+	UiPalette.command_button(%BackToTable)
+	%BackToTable.pressed.connect(func() -> void: _view.leave_board())
+	_view.board_entered.connect(func() -> void: %BackToTable.visible = true)
+	_view.board_left.connect(func() -> void: %BackToTable.visible = false)
 	_view.piece_selected.connect(_on_piece)
 	_view.selection_cleared.connect(_clear_card)
 	_view.rake_started.connect(_on_rake)
@@ -64,6 +70,7 @@ func open(detail: MapDetailPanel) -> void:
 		_view.bind(Game.data, func() -> GameState: return Game.state,
 			func() -> bool: return Game.clock_speed <= 0)
 		_view.set_font(UiPalette.role_font("body_italic"))
+		_build_board()
 		_orders.follow(_view)
 		Game.state_changed.connect(refresh)
 		(%Key as WarMarginKey).setup(Game.data, _view)
@@ -87,6 +94,71 @@ func open(detail: MapDetailPanel) -> void:
 func set_report_capture(capture: Texture2D, rect: Rect2) -> void:
 	_capture = capture
 	_column_rect = rect
+
+
+func board_screen() -> MissiveScreen:
+	return _board_screen
+
+
+## The easel's board (spec 2026-10-02-war-room-v2 §1.3): the Missive screen,
+## board-only, in its own SubViewport whose texture the panel wears; rendered
+## only while it is seen (_process).
+func _build_board() -> void:
+	_board_vp = SubViewport.new()
+	_board_vp.name = "BoardViewport"
+	var w := int(Game.data.bal("war_board_px"))
+	_board_vp.size = Vector2i(w, int(round(float(w) * 0.8 / 1.2)))
+	_board_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	_board_vp.gui_embed_subwindows = true
+	add_child(_board_vp)
+	_board_screen = load("res://scenes/missive_screen.tscn").instantiate()
+	_board_screen.theme = UiPalette.build_theme()
+	_board_vp.add_child(_board_screen)
+	_board_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_board_screen.set_board_only(true)
+	_board_screen.visible = true
+	_board_screen.note_chosen.connect(_on_note)
+	_view.set_board_texture(_board_vp.get_texture())
+	_view.board_clicked.connect(_push_board_click)
+	_view.board_hovered.connect(_push_board_hover)
+
+
+## A ray's hit on the panel, pushed into the board's viewport as real input.
+func _push_board_click(uv: Vector2, mb: InputEventMouseButton) -> void:
+	var e := mb.duplicate() as InputEventMouseButton
+	e.position = uv * Vector2(_board_vp.size)
+	e.global_position = e.position
+	_board_vp.push_input(e, true)
+
+
+func _push_board_hover(uv: Vector2) -> void:
+	var e := InputEventMouseMotion.new()
+	e.position = uv * Vector2(_board_vp.size)
+	e.global_position = e.position
+	_board_vp.push_input(e, true)
+
+
+## A note on the easel: the full Missive board opens on it, over the room.
+func _on_note(id: int) -> void:
+	var root := get_parent() as GameRoot
+	if root != null:
+		root.open_missive_over_war_room(id)
+
+
+func refresh_board() -> void:
+	if _board_screen != null:
+		_board_screen.refresh()
+
+
+## Escape in the board's view flies back to the table (before GameRoot's
+## pause menu, which takes it in its own _unhandled_input).
+func _unhandled_input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if not visible or key == null or not key.pressed or key.keycode != KEY_ESCAPE:
+		return
+	if _view.board_mode() == "board" or _view.board_mode() == "to_board":
+		_view.leave_board()
+		get_viewport().set_input_as_handled()
 
 
 func _home_sheet() -> int:
@@ -216,6 +288,11 @@ func _process(_delta: float) -> void:
 		_view.refresh()
 		_fill_margin()
 		_folio.refresh()   # the clock runs under an open folio
+		refresh_board()
+	if _board_vp != null:
+		var want := SubViewport.UPDATE_ALWAYS if visible and _view.board_visible() else SubViewport.UPDATE_DISABLED
+		if _board_vp.render_target_update_mode != want:
+			_board_vp.render_target_update_mode = want
 
 
 func _on_piece(code: String) -> void:

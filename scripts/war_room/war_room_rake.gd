@@ -183,3 +183,14 @@ func _routes() -> Array:
 ## from it pans the room (spec 2026-10-02-war-room-v2 §1.1), as on the 3D map.
 func empty_press() -> bool:
 	return _pressed and _press_code == "" and code == "" and not _view.aiming
+
+
+## A left release that ends a press which moved (a pan), so it is no click.
+func empty_press_moved(at: Vector2) -> bool:
+	return _pressed and at.distance_to(_press_at) >= _repo.bal("war_rake_min_px")
+
+
+## The press was taken by something else (the easel): the rake forgets it.
+func forget_press() -> void:
+	_pressed = false
+	_press_code = ""
