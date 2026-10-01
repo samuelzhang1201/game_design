@@ -361,7 +361,8 @@ where they said otherwise.
 - **Ruling 14**: the index chart is a drafting board leaning behind the
   sheet's far edge, not on the far wall — at the officer's 52 degree pitch the
   wall is never in frame, so a wall chart could never be clicked (§1, §2).
-  Task 15's art may move it to the wall with a new camera framing.
+  Task 15's art may move it to the wall with a new camera framing. (It did
+  not: Ruling 24 lays it flat on the oak table, below.)
 - **Ruling 15**: a piece seats at the MAX relief under its base's four
   corners; its pick region is its projected base-and-figures box grown by
   `war_pick_px`, nearest to the camera first (§3).
@@ -388,7 +389,9 @@ where they said otherwise.
   and the room's final art (Task 15) wait for the owner — Blender was not
   reachable and generation is asked for first. The code for both ends is
   built; Take apart stays hidden until the files exist and the room stays
-  stand-in boxes (§6, §8, §9).
+  stand-in boxes (§6, §8, §9). Both landed the same day from the owner's
+  Blender: the infantry and cavalry `_parts.glb` and the room, table,
+  candlesticks, rake and pennant under `assets/3D/war_room/`.
 - **Ruling 8**: scenes are authored as text `.tscn` files, not through the
   gdai MCP (which drives the editor open on the shared checkout).
 - **Ruling 18**: the intelligence spec §5.9 edit (§11) is not made on this
@@ -402,3 +405,18 @@ where they said otherwise.
   for the laid sheet and one other only, its viewport 2x2 at rest and sized
   to the sheet (not square) while it draws; the graphics tier sets the
   room's and the folio figure's MSAA.
+- **Ruling 23**: archers get NO take-apart until they have their own model —
+  their kit rows (sallet, jack, buckler) would label a spearman's close helm
+  and heater; `WarExplode.parts_path` no longer maps archers to the
+  infantry's file (§4).
+- **Ruling 24**: the oak table's top is 1.8 × 1.7 m and carries the index
+  chart on its north band beyond the laid sheet: the chart lies FLAT on the
+  oak (`war_chart_tilt_deg` 0, `war_chart_y_m` 0.0005), not ~6 cm over it on
+  nothing; the table is set in the scene with its top just under the sheet's
+  sea. The 2k-textured `.glb` files (room 14.6 MB, table 8.4 MB) are committed
+  as built (§2, §9).
+- **Art pass (look check)**: the pieces' tin shader posterises in display
+  space and wears only the sharpest edges (a linear posterise and a strong
+  wear read every figure as bronze); the exploded kit's names stand in two
+  columns beside the kit with the camera fitted to both; the candlesticks
+  cast no shadow (their arms threw a hand across the sheet) (§3, §4).
