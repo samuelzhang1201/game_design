@@ -129,7 +129,7 @@ func test_the_selected_stars_current_is_stronger() -> void:
 	view.select("character:you")
 	assert_almost_eq(view.star_custom("character:you").b, repo.bal("ledger_spark_selected"), 1e-6)
 	assert_eq(view.star_custom("character:you").a, 1.0, "its current is laid outside its ring")
-	assert_gt(repo.bal("ledger_spark_selected"), 1.6, "stronger than the 1.6 the ring and its links hid")
+	assert_between(repo.bal("ledger_spark_selected"), 1.6, 1.8, "the most current, never reaching across its threads")
 	view.select("")
 	assert_almost_eq(view.star_custom("character:you").b, 1.0, 1e-6, "and back once let go")
 	assert_eq(view.star_custom("character:you").a, 0.0)
@@ -145,6 +145,15 @@ func test_the_selected_current_clears_its_ring() -> void:
 	assert_almost_eq(ring, repo.bal("ledger_ring_px") * (LedgerView3D.RING_GAP_RINGS + 1.0) * ws, 1e-4)
 	assert_gt(ring, repo.bal("ledger_ring_px") * LedgerView3D.RING_GAP_RINGS * ws, "past the ring's centre line")
 	assert_eq(float(view.spark_material().get_shader_parameter("ortho_m_per_px")), 0.0, "perspective at rest")
+	assert_almost_eq(float(view.spark_material().get_shader_parameter("ring_band_px")), repo.bal("ledger_ring_px") * ws, 1e-4,
+		"its sparks keep within one ring width past it")
+
+
+## The current adds nothing where no spark passes: no always-on rim glow
+## (critic, fix round 2: it outlined every star in a saturated ring).
+func test_no_rim_glow_stands_where_no_spark_passes() -> void:
+	assert_false(repo.balance.has("ledger_spark_halo"))
+	assert_false(FileAccess.get_file_as_string("res://scenes/ledger/spark.gdshader").contains("uniform float halo"))
 
 
 ## The wobble never reaches the edge of a star's own disc, so the links drawn

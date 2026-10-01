@@ -26,7 +26,6 @@ const SPARK := {
 	"ledger_spark_cover": "cover",
 	"ledger_spark_flicker": "flicker",
 	"ledger_spark_flicker_hz": "flicker_hz",
-	"ledger_spark_halo": "halo",
 	"ledger_spark_lift": "lift",
 	"ledger_spark_min_px": "min_px",
 	"ledger_spark_full_px": "full_px",
@@ -88,3 +87,10 @@ static func custom_of(repo: DataRepository, id: String, alpha: float, selected: 
 ## the disc, in design px): the selected star's current starts there.
 static func ring_out_px(repo: DataRepository, gap_rings: float, window_scale: float) -> float:
 	return repo.bal("ledger_ring_px") * (gap_rings + 1.0) * window_scale
+
+
+## The band, in SubViewport px, the selected star's sparks keep to past its
+## ring: one ring width (critic, fix round 2: at the star's own width they
+## reached twice its radius out, across its threads and near its name).
+static func ring_band_px(repo: DataRepository, window_scale: float) -> float:
+	return repo.bal("ledger_ring_px") * window_scale

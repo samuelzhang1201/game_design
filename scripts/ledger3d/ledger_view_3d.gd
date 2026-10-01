@@ -614,6 +614,7 @@ func _update_link_uniforms() -> void:
 		m.set_shader_parameter("px_per_dist", 2.0 * tan(deg_to_rad(_camera.fov) * 0.5) / h)
 		m.set_shader_parameter("ortho_m_per_px", _camera.size / h if _flat else 0.0)
 	_spark_mat.set_shader_parameter("ring_out_px", LedgerStarMotion.ring_out_px(_repo, RING_GAP_RINGS, _window_scale()))
+	_spark_mat.set_shader_parameter("ring_band_px", LedgerStarMotion.ring_band_px(_repo, _window_scale()))
 
 
 func _running_links() -> Dictionary:

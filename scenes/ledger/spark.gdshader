@@ -1,8 +1,10 @@
 // scenes/ledger/spark.gdshader
 // A faint electric CURRENT round each galaxy star (owner 2026-10-01: 周边带有类似
 // 细微电流的感觉): one quad per star facing the camera, ADDED to what is behind
-// it — a soft glow hugging the rim and a few jagged sparks in a narrow ring
-// just outside the disc, which crawl round the edge and flicker. Each spark is
+// it — a few jagged sparks in a narrow ring just outside the disc, which
+// crawl round the edge and flicker, and NOTHING where no spark passes (critic,
+// fix round 2: an always-on coloured rim outlined every star; the rim keeps
+// the star's own pale bloom, untouched). Each spark is
 // LIGHT, not ink (critic, fix round 1: a crisp grey hair read as a pencil
 // scribble round a glowing star): a thin bright core inside a soft halo a few
 // screen px wide, the halo in the star's own SATURATED hue and only the core
@@ -15,7 +17,8 @@
 // seed, .z its weight (1 a whole star, ledger_spark_selected the selected one,
 // ledger_spark_dimmed × its perceived opacity a dimmed one) and .w 1 on the
 // selected star, whose current sits just outside its selection ring
-// (`ring_out_px`, set by the view). Nothing is drawn inside the disc. Real
+// (`ring_out_px`, set by the view) in a band one ring wide (`ring_band_px`).
+// Nothing is drawn inside the disc. Real
 // TIME: presentation only.
 shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled, fog_disabled,
@@ -30,7 +33,6 @@ uniform float speed = 0.1;         // how fast they crawl round it (turns a seco
 uniform float cover = 0.45;        // the share of the rim they run along
 uniform float flicker = 0.6;       // how deep they flicker (0 steady)
 uniform float flicker_hz = 6.0;    // how fast
-uniform float halo = 0.25;         // the soft glow hugging the rim, beside the sparks
 uniform float lift = 0.5;          // a spark's CORE, the star's hue this far toward white
 uniform float saturation = 1.6;    // the star's colour pushed this far from grey for the halo
 uniform float core_px = 0.6;       // a spark's bright core (screen px, half width)
@@ -41,6 +43,7 @@ uniform float min_px = 6.0;        // a star drawn smaller than this (radius, sc
 uniform float full_px = 14.0;      // and from this size its whole current
 uniform float sel_out = 1.0;       // 1: the selected star's current sits outside its ring
 uniform float ring_out_px = 0.0;   // the selection ring's outer edge past the disc (SubViewport px)
+uniform float ring_band_px = 0.0;  // the selected star's sparks run within this band past it (SubViewport px)
 uniform float px_per_dist = 0.001; // SubViewport px per metre at one metre (perspective)
 uniform float ortho_m_per_px = 0.0;
 
@@ -49,6 +52,7 @@ varying vec4 v_seed;
 varying vec4 v_col;
 varying float v_out;   // how far past the disc the sparks start, in units of the radius
 varying float v_reach; // the quad's half size, in units of the radius
+varying float v_band;  // the sparks' band, in units of the radius
 
 vec3 to_linear(vec3 c) {
 	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
@@ -73,8 +77,10 @@ void vertex() {
 	vec3 centre = MODEL_MATRIX[3].xyz + star_wobble(INSTANCE_CUSTOM, r, INV_VIEW_MATRIX, TIME);
 	float m_per_px = ortho_m_per_px > 0.0 ? ortho_m_per_px : length(centre - CAMERA_POSITION_WORLD) * px_per_dist;
 	float px_r = m_per_px / max(r, 1e-6);   // one SubViewport px in units of the radius
-	v_out = INSTANCE_CUSTOM.a * sel_out * ring_out_px * px_r;
-	v_reach = 1.0 + v_out + width * 1.2 + glow_px * 4.0 * px_r;
+	float sel = INSTANCE_CUSTOM.a * sel_out;
+	v_out = sel * ring_out_px * px_r;
+	v_band = mix(width, min(width, ring_band_px * px_r), sel);
+	v_reach = 1.0 + v_out + v_band * 1.2 + glow_px * 4.0 * px_r;
 	v_p = (UV * 2.0 - 1.0) * v_reach;
 	VERTEX = centre + (INV_VIEW_MATRIX[0].xyz * v_p.x + INV_VIEW_MATRIX[1].xyz * v_p.y) * r;
 	v_seed = INSTANCE_CUSTOM;
@@ -103,10 +109,10 @@ void fragment() {
 	float h0 = h1(mod(i, fine) + s + 13.0);
 	float h_1 = h1(mod(i + 1.0, fine) + s + 13.0);
 	float base = 1.0 + v_out;
-	float at_r = base + width * (0.15 + 0.6 * mix(h0, h_1, f));
+	float at_r = base + v_band * (0.15 + 0.6 * mix(h0, h_1, f));
 	// distance ACROSS the jag, not along the radius, so a steep jag is as
 	// thick as a flat one (in screen px)
-	float slope = width * 0.6 * (h_1 - h0) * fine / (6.2831853 * max(rr, 1e-3));
+	float slope = v_band * 0.6 * (h_1 - h0) * fine / (6.2831853 * max(rr, 1e-3));
 	float d = abs(rr - at_r) / sqrt(1.0 + slope * slope) / px;
 	float thin = mix(0.4, 1.0, run);   // thinner toward its tapered ends
 	float core = exp(-pow(d / (core_px * thin), 2.0));
@@ -121,8 +127,7 @@ void fragment() {
 	vec3 hue = max(mix(vec3(lum), c, saturation), vec3(0.0));
 	hue /= max(max(hue.r, max(hue.g, hue.b)), 1e-4);
 	vec3 core_col = mix(hue, vec3(1.0), lift);
-	float rim = halo * exp(-max(rr - 1.0, 0.0) / (width * 0.45));
-	vec3 light = energy * (core_col * core + hue * soft * glow) + hue * rim;
+	vec3 light = energy * (core_col * core + hue * soft * glow);
 	float mask = smoothstep(1.0 - px, 1.0 + px, rr) * (1.0 - smoothstep(v_reach * 0.85, v_reach, rr));
 	// a speck of a star carries no current: a hair on a few px reads as a smudge
 	mask *= smoothstep(min_px, max(full_px, min_px + 0.01), 1.0 / px);
