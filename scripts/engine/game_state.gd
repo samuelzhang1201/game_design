@@ -294,6 +294,9 @@ var regiments: Dictionary = {}
 var couriers: Array = []
 ## The last courier id handed out; a higher id is a NEWER order.
 var next_courier_id := 0
+## The WAR ROOM's pencilled orders (spec 2026-10-02-war-room-v2 §3.1,
+## WarDrafts): regiment code -> {order, dest_x_m, dest_y_m, tick, day, refused}.
+var war_drafts: Dictionary = {}
 ## The letters the crown has received (owner 2026-09-28, MissiveLog): an Array
 ## of Dictionaries, whole numbers and strings only.
 var missives: Array = []
@@ -346,6 +349,7 @@ func to_dict() -> Dictionary:
 		"manor_log": _encode_values(manor_log.duplicate(true)),
 		"regiments": _encode_values(regiments.duplicate(true)),
 		"couriers": _encode_values(couriers.duplicate(true)),
+		"war_drafts": _encode_values(war_drafts.duplicate(true)),
 		"next_courier_id": _encode_values(next_courier_id),
 		"missives": _encode_values(missives.duplicate(true)),
 		"next_missive_id": _encode_values(next_missive_id),
@@ -423,6 +427,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.regiments = _decode_values(d.get("regiments", {}))
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))
+	s.war_drafts = _decode_values(d.get("war_drafts", {}))
 	s.next_courier_id = int(_decode_values(d.get("next_courier_id", 0)))
 	# Saves from before the Missive board carry neither key: an empty board.
 	s.missives = _decode_values(d.get("missives", []))

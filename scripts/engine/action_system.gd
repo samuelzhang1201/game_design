@@ -540,6 +540,9 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		"ARMY_MARCH":
 			var code := String(req.params["regiment"])
 			var reg := ArmySystem.regiment(data, code)
+			if state.war_drafts.erase(code):
+				effects.append({"metric": "war_draft", "delta": 0.0,
+					"reason": "%s's draft in the war room is set aside" % String(reg["label"])})
 			var dest := Vector2(float(req.params["x"]), float(req.params["y"]))
 			if CourierSystem.carries_orders(reg):
 				var m := ArmySystem.pack_to_metres(data, dest)
@@ -554,6 +557,9 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		"ARMY_GARRISON":
 			var code := String(req.params["regiment"])
 			var reg := ArmySystem.regiment(data, code)
+			if state.war_drafts.erase(code):
+				effects.append({"metric": "war_draft", "delta": 0.0,
+					"reason": "%s's draft in the war room is set aside" % String(reg["label"])})
 			if CourierSystem.carries_orders(reg):
 				_send_courier(state, effects, code, {"action_code": "ARMY_GARRISON"}, "with orders to stand")
 			else:
