@@ -73,9 +73,8 @@ var _scene_path := ""
 @onready var _units: Map3DLayerUnits = $Viewport/World/Units
 @onready var _trails: Map3DLayerTrails = $Viewport/World/Trails
 @onready var _couriers: Map3DLayerCouriers = $Viewport/World/Couriers
-@onready var _env: WorldEnvironment = $Viewport/World/Environment
-@onready var _sun: DirectionalLight3D = $Viewport/World/Sun
-@onready var _fill_light: DirectionalLight3D = $Viewport/World/FillLight
+@onready var _env: Map3DSky = $Viewport/World/Environment
+@onready var _sun: Map3DSun = $Viewport/World/Sun
 @onready var _display: TextureRect = $Display
 @onready var _notice: Label = $Notice
 ## The HUD waits hidden until a world loads; _load binds and shows it.
@@ -253,12 +252,10 @@ func _load() -> void:
 	_trees.build(_ctx)  # once: fixed chunks, Godot's visibility ranges do the rest
 	($Viewport/World/Wind as Map3DLayerWind).bind(_ctx)  # the waves and the sway; steps itself
 	_sea.build(_ctx)
-	# The sky and sun are the scene's, their numbers data (Task 14); the
-	# environment is this view's own copy of the shared .tres.
+	# The sky and sun are the world scene's, edited in the editor (owner
+	# 2026-10-02); the environment is this view's own copy of the shared .tres.
 	_env.environment = _env.environment.duplicate(true)
-	Map3DEnvironment.apply_environment(_repo, _env.environment)
-	Map3DEnvironment.apply_sun(_repo, _sun)
-	_ctx.camera_moved.connect(func() -> void: Map3DEnvironment.follow_camera(_repo, _env.environment, _sun, _ctx))
+	_ctx.camera_moved.connect(func() -> void: Map3DEnvironment.follow_camera(_repo, _env, _sun, _ctx))
 	_clouds.build(_ctx, _weather)
 	_lines.bind(_ctx)
 	_roads.bind(_ctx, _lines, _viewport)
@@ -308,9 +305,8 @@ func _apply_quality() -> void:
 		return
 	_ctx.quality = Map3DQuality.merged(_repo, _tier, _overrides)
 	_fit_viewport()  # the SubViewport's pixels, then every px uniform
-	Map3DEnvironment.apply_view_quality(_viewport, _sun, _ctx.terrain, _ctx.quality,
-		_repo, _env.environment)
-	Map3DEnvironment.follow_camera(_repo, _env.environment, _sun, _ctx)
+	Map3DEnvironment.apply_view_quality(_viewport, _sun, _ctx.terrain, _ctx.quality, _env)
+	Map3DEnvironment.follow_camera(_repo, _env, _sun, _ctx)
 	_clouds.apply_quality(_ctx.quality)
 	_weather.apply_quality(_ctx.quality)
 	_hud.apply_quality(_ctx.quality)
@@ -402,7 +398,7 @@ func _process(delta: float) -> void:
 		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
 		_trails.step()  # behind them, the ground they trod
 		if _couriers.step(delta): _hud.refresh()  # the couriers' roads and counters follow them
-		Map3DEnvironment.sweep_sun(_repo, _sun, Game.day_progress, _fill_light)  # a round a game day, the north half dusk
+		_sun.sweep(Game.day_progress)  # a round a game day, the north half dusk
 	_picker.step()
 	if not _hovered:
 		return

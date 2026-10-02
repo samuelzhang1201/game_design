@@ -30,7 +30,7 @@ func _ready() -> void:
 ## Every layer's `preview` switch under the world, on or off.
 func preview_all(on: bool) -> void:
 	for c: Node in find_children("*", "", true, false):
-		if c.owner == self and "preview" in c and bool(c.get("preview")) != on:
+		if is_instance_valid(c) and c.owner == self and "preview" in c and bool(c.get("preview")) != on:
 			c.set("preview", on)
 
 

@@ -83,11 +83,15 @@ func test_the_sea_layer_is_the_scenes_own_plane() -> void:
 	assert_false((sea as Node3D).visible)
 
 
-func test_the_suns_shadow_look_is_data() -> void:
+func test_the_suns_shadow_look_is_the_scenes() -> void:
 	var v := _view(_sea_fixture)
-	var sun := v.world().get_node("Sun") as DirectionalLight3D
-	assert_almost_eq(sun.shadow_opacity, Game.data.bal("map3d_sun_shadow_opacity"), 0.0001)
-	assert_almost_eq(sun.shadow_blur, Game.data.bal("map3d_sun_shadow_blur"), 0.0001)
+	var sun := v.world().get_node("Sun") as Map3DSun
+	var authored := (load(Map3DEnvironment.WORLD_SCENE) as PackedScene).instantiate()
+	var own := authored.get_node("Sun") as Map3DSun
+	assert_almost_eq(sun.shadow_blur, own.shadow_blur, 0.0001)
+	assert_almost_eq(sun.shadow_normal_bias, own.shadow_normal_bias, 0.0001)
+	assert_lte(sun.shadow_opacity, own.day_shadow_opacity + 0.0001, "the day's opacity, or dusk's under it")
+	authored.free()
 
 
 func test_the_clouds_are_their_own_layer_with_a_shadow_twin() -> void:

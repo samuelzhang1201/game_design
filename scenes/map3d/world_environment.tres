@@ -1,5 +1,12 @@
 [gd_resource type="Environment" format=3 uid="uid://c3ufh1051rmw3"]
 
+[sub_resource type="Gradient" id="Gradient_uth4a"]
+offsets = PackedFloat32Array(0, 0.0625, 0.125, 0.1875, 0.25, 0.3125, 0.375, 0.4375, 0.5, 0.5625, 0.625, 0.6875, 0.75, 0.8125, 0.875, 0.9375, 1)
+colors = PackedColorArray(0, 0, 0, 1, 0.08246925, 0.06606363, 0.047366142, 1, 0.15389305, 0.13030823, 0.10153155, 1, 0.22166705, 0.19388367, 0.15859935, 1, 0.28717458, 0.25702846, 0.21763764, 1, 0.3510468, 0.31985492, 0.27818584, 1, 0.41364536, 0.38242885, 0.33996513, 1, 0.47520417, 0.44479355, 0.4027874, 1, 0.5358867, 0.50697976, 0.4665165, 1, 0.5958134, 0.56901026, 0.53104925, 1, 0.6550765, 0.63090277, 0.5963044, 1, 0.7137489, 0.69267136, 0.6622165, 1, 0.7718895, 0.75432765, 0.7287312, 1, 0.82954705, 0.81588113, 0.79580325, 1, 0.8867624, 0.8773399, 0.86339366, 1, 0.9435701, 0.93871087, 0.931469, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_5b4d1"]
+gradient = SubResource("Gradient_uth4a")
+
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_uth4a"]
 sky_top_color = Color(0.18431373, 0.34509805, 0.47058824, 1)
 sky_horizon_color = Color(0.6627451, 0.7490196, 0.8, 1)
@@ -16,7 +23,18 @@ sky = SubResource("Sky_5b4d1")
 ambient_light_source = 3
 ambient_light_sky_contribution = 0.6
 ambient_light_energy = 0.35
-tonemap_mode = 2
+tonemap_mode = 4
+tonemap_exposure = 1.4
+ssao_enabled = true
+ssao_radius = 2.0
+ssao_intensity = 1.2
+glow_intensity = 0.8
 fog_enabled = true
 fog_light_color = Color(0.6627451, 0.7490196, 0.8, 1)
 fog_density = 8e-07
+fog_aerial_perspective = 1.0
+fog_sky_affect = 0.0
+adjustment_enabled = true
+adjustment_contrast = 1.1
+adjustment_saturation = 1.15
+adjustment_color_correction = SubResource("GradientTexture1D_5b4d1")

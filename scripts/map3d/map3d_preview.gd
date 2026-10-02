@@ -5,10 +5,8 @@ extends RefCounted
 ## in the editor shows the real picture"): a repository loaded straight from
 ## data/ — never the Game autoload, which does not exist in the editor — the
 ## built world's metadata, a blank GameState, and the high tier's row. Every
-## layer node of scenes/map3d/world_map_3d.tscn is @tool with a `preview`
-## switch that asks for one of these contexts and then builds itself exactly
-## as the game would, adding its children with NO owner, so nothing generated
-## is ever saved into the scene.
+## layer of scenes/map3d/map3d_world.tscn is @tool with a `preview` switch
+## that builds it as the game would, its children with NO owner (never saved).
 ##
 ## Pure and editor-only by use, not by guard: the tests drive preview_build
 ## headless, so nothing here asks Engine.is_editor_hint() — the layers' own
@@ -196,7 +194,7 @@ static func sync_viewport(node: Node) -> void:
 	# what stands under WorldSlot.
 	if on or not Engine.is_editor_hint():
 		return
-	for w: Node in vp.find_children("*", "", true, false):
+	for w: Node in authored(vp):
 		if w is Map3DWorld:
 			Map3DWorld.give_back(w.get_node_or_null("WorldSlot"))
 
@@ -257,17 +255,16 @@ static func authored_texture(display: TextureRect, vp: SubViewport) -> Texture2D
 ## texture. The view calls it on NOTIFICATION_EDITOR_PRE_SAVE, so a save can
 ## never write preview state.
 static func reset(root: Node) -> void:
-	# The root's two are exported and would otherwise be SAVED (final review
-	# 2026-09-20): a scene written while previewing another pack would open
-	# every checkout on that pack, and with its terrain, for good.
-	# the world's own switches, wherever it stands, back to the scene's defaults
-	for w: Node in [root] + root.find_children("*", "", true, false):
+	# the world's exported switches would otherwise be SAVED (final review
+	# 2026-09-20): back to the scene's defaults, wherever the world stands
+	for w: Node in [root] + authored(root):
 		if w is Map3DWorld:
 			(w as Map3DWorld).preview_pack = ""
 			(w as Map3DWorld).preview_terrain = true
-	for c: Node in root.find_children("*", "", true, false):
-		if "preview" in c and bool(c.get("preview")):
-			c.set("preview", false)  # each layer clears what it drew
+	for c: Node in authored(root):
+		# a layer switched off frees what it drew: the scene's own, still alive
+		if is_instance_valid(c) and "preview" in c and bool(c.get("preview")):
+			c.set("preview", false)
 	var vp := root.get_node_or_null("Viewport") as SubViewport
 	if vp != null:
 		sync_viewport(vp)
@@ -280,10 +277,16 @@ static func reset(root: Node) -> void:
 
 
 static func _any_preview(vp: Node) -> bool:
-	for c: Node in vp.find_children("*", "", true, false):
+	for c: Node in authored(vp):
 		if "preview" in c and bool(c.get("preview")):
 			return true
 	return false
+
+
+## The scene's own nodes under `node` (an owner: never what a preview built).
+static func authored(node: Node) -> Array[Node]:
+	return node.find_children("*", "", true, false).filter(
+		func(c: Node) -> bool: return c.owner != null)
 
 
 ## Forgets the loaded repositories and worlds (a pack's data changed on disk).

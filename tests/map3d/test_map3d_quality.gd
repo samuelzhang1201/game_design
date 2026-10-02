@@ -34,7 +34,9 @@ func test_high_is_todays_look() -> void:
 	for col: String in ["render_scale", "line_step_mul", "road_step_mul", "river_step_mul"]:
 		assert_eq(Map3DQuality.num(r, col), 1.0, col)
 	assert_eq(Map3DQuality.num(r, "clouds"), Game.data.bal("map3d_cloud_max"))
-	assert_eq(Map3DQuality.num(r, "shadow_max_m"), Game.data.bal("map3d_sun_shadow_max_m"))
+	var world := (load(Map3DEnvironment.WORLD_SCENE) as PackedScene).instantiate()
+	assert_eq(Map3DQuality.num(r, "shadow_max_m"), (world.get_node("Sun") as Map3DSun).shadow_max_m)
+	world.free()
 	assert_eq(Map3DQuality.num(r, "hud_hz"), 0.0)
 
 
@@ -193,20 +195,28 @@ func test_the_pause_menu_remembers_the_tier() -> void:
 
 ## Forward+'s screen effects are per tier (2026-09-24): low has no SSAO,
 ## only ultra has SSIL, and a tier can only take an effect away — with the
-## balance switch off, no tier turns it on.
+## sky's own switch off, no tier turns it on.
 func test_a_tier_only_takes_effects_away() -> void:
-	var env := Environment.new()
-	Map3DEnvironment.apply_effects_quality(Game.data, env, Map3DQuality.row(Game.data, "low"))
-	assert_false(env.ssao_enabled, "low: no SSAO")
-	assert_false(env.ssil_enabled)
-	assert_true(env.fog_enabled, "the haze stays on every tier")
-	Map3DEnvironment.apply_effects_quality(Game.data, env, Map3DQuality.row(Game.data, "high"))
-	assert_eq(env.ssao_enabled, Game.data.bal("map3d_env_ssao") > 0.0)
-	var saved: float = Game.data.balance["map3d_env_ssao"]
-	Game.data.balance["map3d_env_ssao"] = 0.0
-	Map3DEnvironment.apply_effects_quality(Game.data, env, Map3DQuality.row(Game.data, "ultra"))
-	assert_false(env.ssao_enabled, "the balance switch off wins over every tier")
-	Game.data.balance["map3d_env_ssao"] = saved
+	var sky := _sky(true)
+	Map3DEnvironment.apply_effects_quality(sky, Map3DQuality.row(Game.data, "low"))
+	assert_false(sky.environment.ssao_enabled, "low: no SSAO")
+	assert_false(sky.environment.ssil_enabled)
+	assert_true(sky.environment.fog_enabled, "the haze stays on every tier")
+	Map3DEnvironment.apply_effects_quality(sky, Map3DQuality.row(Game.data, "high"))
+	assert_true(sky.environment.ssao_enabled)
+	var off := _sky(false)
+	Map3DEnvironment.apply_effects_quality(off, Map3DQuality.row(Game.data, "ultra"))
+	assert_false(off.environment.ssao_enabled, "the sky's own switch off wins over every tier")
+	sky.free()
+	off.free()
+
+
+func _sky(ssao: bool) -> Map3DSky:
+	var sky := Map3DSky.new()
+	sky.environment = Environment.new()
+	sky.environment.ssao_enabled = ssao
+	sky.remember()
+	return sky
 
 
 ## Owner 2026-10-02 (按缩放切换): high wears MSAA 4x and SSAO up close and
@@ -214,32 +224,22 @@ func test_a_tier_only_takes_effects_away() -> void:
 ## zoom (its far_* are blank).
 func test_the_finishing_effects_are_spent_up_close() -> void:
 	var vp := SubViewport.new()
-	var env := Environment.new()
+	var sky := _sky(true)
+	var env := sky.environment
 	var high := Map3DQuality.row(Game.data, "high")
 	var edge := Game.data.bal("map3d_close_effects_m")
-	Map3DCloseEffects.apply(Game.data, vp, env, high, edge * 0.5)
+	Map3DCloseEffects.apply(Game.data, vp, sky, high, edge * 0.5)
 	assert_eq(vp.msaa_3d, Viewport.MSAA_4X, "up close: MSAA 4x")
 	assert_eq(vp.screen_space_aa, Viewport.SCREEN_SPACE_AA_DISABLED)
-	assert_eq(env.ssao_enabled, Game.data.bal("map3d_env_ssao") > 0.0)
-	Map3DCloseEffects.apply(Game.data, vp, env, high, edge * 2.0)
+	assert_true(env.ssao_enabled)
+	Map3DCloseEffects.apply(Game.data, vp, sky, high, edge * 2.0)
 	assert_eq(vp.msaa_3d, Viewport.MSAA_DISABLED, "far out: no MSAA")
 	assert_eq(vp.screen_space_aa, Viewport.SCREEN_SPACE_AA_SMAA, "but SMAA")
 	assert_false(env.ssao_enabled, "and no SSAO")
-	Map3DCloseEffects.apply(Game.data, vp, env, Map3DQuality.row(Game.data, "ultra"), edge * 2.0)
+	Map3DCloseEffects.apply(Game.data, vp, sky, Map3DQuality.row(Game.data, "ultra"), edge * 2.0)
 	assert_eq(vp.msaa_3d, Viewport.MSAA_4X, "ultra keeps its MSAA far out")
 	vp.free()
-
-
-## The grade's warm curve (2026-09-24): no curve at 1 / 1 / 1, and each
-## channel through x^gamma otherwise.
-func test_the_warm_curve_is_per_channel() -> void:
-	assert_null(Map3DEnvironment.warm_curve(1.0, 1.0, 1.0), "no curve at all")
-	var t := Map3DEnvironment.warm_curve(0.5, 1.0, 2.0) as GradientTexture1D
-	assert_not_null(t)
-	var mid := t.gradient.sample(0.25)
-	assert_almost_eq(mid.r, 0.5, 0.01, "0.25^0.5 lifts red")
-	assert_almost_eq(mid.g, 0.25, 0.01)
-	assert_almost_eq(mid.b, 0.0625, 0.01, "0.25^2 takes blue out")
+	sky.free()
 
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.

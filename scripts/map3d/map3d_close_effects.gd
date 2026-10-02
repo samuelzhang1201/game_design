@@ -9,8 +9,9 @@ extends RefCounted
 ## move costs nothing and only a crossing reallocates MSAA's targets.
 
 
-static func apply(repo: DataRepository, vp: SubViewport, env: Environment, row: Dictionary,
+static func apply(repo: DataRepository, vp: SubViewport, sky: Map3DSky, row: Dictionary,
 		distance_m: float) -> void:
+	var env: Environment = sky.environment if sky != null else null
 	var far := distance_m > repo.bal("map3d_close_effects_m")
 	var pick := func(key: String) -> float:
 		var near_v := Map3DQuality.num(row, key, 0.0)
@@ -25,7 +26,7 @@ static func apply(repo: DataRepository, vp: SubViewport, env: Environment, row: 
 		if vp.screen_space_aa != aa:
 			vp.screen_space_aa = aa
 	if env != null:
-		var ao := repo.bal("map3d_env_ssao") > 0.0 and Map3DQuality.num(row, "ssao", 1.0) > 0.0 \
+		var ao := sky.wants("ssao") and Map3DQuality.num(row, "ssao", 1.0) > 0.0 \
 			and (not far or Map3DQuality.num(row, "far_ssao", 1.0) > 0.0)
 		if env.ssao_enabled != ao:
 			env.ssao_enabled = ao

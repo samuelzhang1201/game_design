@@ -17,6 +17,8 @@
 [ext_resource type="Script" uid="uid://dc5gcghnvvyf6" path="res://scripts/map3d/map3d_layer_wind.gd" id="15_gbaj8"]
 [ext_resource type="Environment" uid="uid://c3ufh1051rmw3" path="res://scenes/map3d/world_environment.tres" id="16_7kg3e"]
 [ext_resource type="Script" uid="uid://bjo6rt75kqwum" path="res://scripts/map3d/map3d_layer_units.gd" id="17_1wqa2"]
+[ext_resource type="Script" uid="uid://dw4nycj86fxmj" path="res://scripts/map3d/map3d_sky.gd" id="17_w2qt7"]
+[ext_resource type="Script" uid="uid://xi5cbfr3ejwl" path="res://scripts/map3d/map3d_sun.gd" id="18_07fot"]
 [ext_resource type="Script" uid="uid://bq3gusv0v5st0" path="res://scripts/map3d/map3d_layer_trails.gd" id="18_vfx2u"]
 [ext_resource type="Script" uid="uid://bgwhiybi1dien" path="res://scripts/map3d/map3d_layer_couriers.gd" id="19_e48lp"]
 [ext_resource type="Script" uid="uid://826sps2k5kcg" path="res://scripts/map3d/map3d_layer_precip.gd" id="20_efdo1"]
@@ -76,12 +78,19 @@ script = ExtResource("15_gbaj8")
 
 [node name="Environment" type="WorldEnvironment" parent="." unique_id=1880847201]
 environment = ExtResource("16_7kg3e")
+script = ExtResource("17_w2qt7")
 
-[node name="Sun" type="DirectionalLight3D" parent="." unique_id=2026147674]
-transform = Transform3D(0.70710677, -0.4055798, 0.579228, 0, 0.81915206, 0.57357645, -0.70710677, -0.4055798, 0.579228, 0, 0, 0)
-light_energy = 1.1
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=2026147674 node_paths=PackedStringArray("fill")]
+transform = Transform3D(0.7071067, 0.4055798, -0.579228, 0, 0.81915206, 0.57357645, 0.7071067, -0.4055798, 0.579228, 0, 0, 0)
+light_energy = 1.4
+light_specular = 0.5
 shadow_enabled = true
+shadow_normal_bias = 2.5
+shadow_opacity = 0.45
+shadow_blur = 2.0
 directional_shadow_max_distance = 60000.0
+script = ExtResource("18_07fot")
+fill = NodePath("../FillLight")
 
 [node name="FillLight" type="DirectionalLight3D" parent="." unique_id=1733042906]
 visible = false

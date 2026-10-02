@@ -125,26 +125,32 @@ func test_an_old_builds_sun_sky_sea_and_cameras_step_aside() -> void:
 	assert_true("Shadows" in v.layer_names())
 
 
-func test_the_sky_and_sun_are_data() -> void:
+## The sky and sun are the world SCENE's (owner 2026-10-02: edited in the
+## editor): what the game draws is what the scene and its environment .tres
+## say, the view taking only its own copy and following the camera.
+func test_the_sky_and_sun_are_the_scenes() -> void:
 	var v := Map3DView.create(Game.data, _fixture)
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
 	v.activate()
-	var env := (v.get_node("Viewport/World/Environment") as WorldEnvironment).environment
-	assert_almost_eq(env.ambient_light_energy, Game.data.bal("map3d_ambient_energy"), 0.0001)
+	var authored := load(Map3DEnvironment.ENVIRONMENT) as Environment
+	var sky := v.get_node("Viewport/World/Environment") as Map3DSky
+	var env := sky.environment
+	assert_ne(env, authored, "the view's own copy")
+	assert_almost_eq(env.ambient_light_energy, authored.ambient_light_energy, 0.0001)
+	assert_eq(int(env.tonemap_mode), int(authored.tonemap_mode))
 	# depth haze (Phase 0, 2026-09-24): the fog follows the camera's distance
 	assert_eq(env.fog_mode, Environment.FOG_MODE_DEPTH)
-	assert_almost_eq(env.fog_density, Game.data.bal("map3d_fog_depth_density"), 1e-9)
-	assert_eq(int(env.tonemap_mode), int(Game.data.bal("map3d_env_tonemap")))
+	assert_almost_eq(env.fog_density, sky.fog_depth_density, 1e-9)
 	# SSAO is spent up close (owner 2026-10-02): on at a zoom inside
 	# map3d_close_effects_m, else as the tier's far_ssao says (blank: as near)
 	var row: Dictionary = v.context().quality
 	var far := v.distance() > Game.data.bal("map3d_close_effects_m")
-	assert_eq(env.ssao_enabled, Game.data.bal("map3d_env_ssao") > 0.0 and Map3DQuality.num(row, "ssao", 1.0) > 0.0
+	assert_eq(env.ssao_enabled, authored.ssao_enabled and Map3DQuality.num(row, "ssao", 1.0) > 0.0
 		and (not far or Map3DQuality.num(row, "far_ssao", 1.0) > 0.0))
-	var sun := v.get_node("Viewport/World/Sun") as DirectionalLight3D
-	assert_almost_eq(sun.light_energy, Game.data.bal("map3d_sun_energy"), 0.0001)
-	assert_almost_eq(sun.rotation_degrees.x, Game.data.bal("map3d_sun_pitch_deg"), 0.01)
+	var sun := v.get_node("Viewport/World/Sun") as Map3DSun
+	assert_not_null(sun, "the sun is a Map3DSun")
+	assert_eq(sun.fill, v.get_node("Viewport/World/FillLight"), "its fill is the scene's")
 	var sea := v.get_node("Viewport/World/Sea") as MeshInstance3D
 	assert_not_null(sea.mesh, "the sea plane is the scene's own")
 	assert_almost_eq(sea.global_position.y, 5.0, 0.001)
