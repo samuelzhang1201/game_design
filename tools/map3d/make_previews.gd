@@ -37,10 +37,11 @@ func _run() -> void:
 		push_error("make_previews: data failed to load: " + DataRepository.last_error)
 		quit(1)
 		return
-	# CloudLayer names the Game autoload, which a -s script cannot compile
-	# against: load it once the tree (and its autoloads) is up.
-	var cloud_layer: GDScript = load("res://scripts/ui/cloud_layer.gd")
-	var tex := cloud_layer.call("cloud_texture", int(repo.bal("map3d_cloud_seed"))) as Texture2D
+	# the deck's own seed (scenes/map3d/map3d_world.tscn's Clouds)
+	var world := (load("res://scenes/map3d/map3d_world.tscn") as PackedScene).instantiate()
+	var seed_v := int((world.get_node("Clouds") as Map3DLayerClouds).cloud_seed)
+	world.free()
+	var tex := Map3DCloudField.cloud_texture(seed_v) as Texture2D
 	var cloud := tex.get_image()
 	var longest := maxi(cloud.get_width(), cloud.get_height())
 	if longest > PREVIEW_PX:

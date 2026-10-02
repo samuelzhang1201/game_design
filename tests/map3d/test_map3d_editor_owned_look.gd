@@ -20,6 +20,9 @@ const CODE_OWNED := {
 	# sea is the sea's (below); the camera's natural share
 	"water_river": ["px_per_dist", "min_px", "natural", "ripples",
 		"mouth_water", "sky", "nat_mouth", "lod_near_m", "lod_far_m"],
+	# the deck's shape is generated from the Clouds node's own seed
+	"cloud_deck": ["shape"],
+	"cloud_shadow": ["shape"],
 }
 ## The river's water that IS the sea's: river parameter -> sea parameter.
 const RIVER_FROM_SEA := {"mouth_water": "sea_near", "sky": "sky", "nat_mouth": "nat_shallow",
@@ -31,7 +34,11 @@ const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3
 	"map_manor_line_", "map3d_road_width_px", "map3d_trail_width_px", "map3d_road_alpha",
 	"map3d_road_edge_soft", "map3d_road_tile_m", "map3d_road_near_mpp", "map3d_road_far_mpp",
 	"map3d_road_fray", "map3d_road_texture_gain", "map3d_road_hide_", "map3d_trail_hide_",
-	"map3d_bridge_max_view_m"]
+	"map3d_bridge_max_view_m", "map3d_cloud_max", "map3d_cloud_seed", "map3d_cloud_height_m",
+	"map3d_cloud_size_", "map3d_cloud_speed_m_s", "map3d_cloud_interval_s", "map3d_cloud_fade_s",
+	"map3d_cloud_alpha", "map3d_cloud_near_", "map3d_cloud_shadow_", "map3d_cloud_emission_share",
+	"map3d_cloud_depth_ratio", "map3d_cloud_min_gap_m", "map3d_cloud_candidates", "map3d_weather_cloud_",
+	"weather_storm_cloud"]
 
 
 func before_all() -> void:
@@ -54,6 +61,14 @@ func _view() -> Map3DView:
 	add_child_autofree(v)
 	v.activate()
 	return v
+
+
+func test_the_clouds_draw_what_their_tres_say() -> void:
+	var v := _view()
+	var deck := v.world().get_node("Clouds") as Map3DLayerClouds
+	_assert_material_holds(deck.material_override as ShaderMaterial, "cloud_deck", 6)
+	_assert_material_holds((deck.get_node("Shadows") as GeometryInstance3D).material_override as ShaderMaterial,
+		"cloud_shadow", 1)
 
 
 func test_the_waters_draw_what_their_tres_say() -> void:
@@ -122,7 +137,7 @@ func test_no_script_reads_a_key_that_went_to_the_editor() -> void:
 				assert_false(text.contains('"%s' % prefix), "%s reads a %s* key, which is the editor's now" % [f, prefix])
 
 
-func _assert_material_holds(live: ShaderMaterial, key: String) -> void:
+func _assert_material_holds(live: ShaderMaterial, key: String, at_least := 10) -> void:
 	assert_not_null(live, key)
 	var authored := load("res://scenes/map3d/materials/%s.tres" % key) as ShaderMaterial
 	var owned: Array = CODE_OWNED[key]
@@ -138,4 +153,4 @@ func _assert_material_holds(live: ShaderMaterial, key: String) -> void:
 		assert_eq(live.get_shader_parameter(name), want,
 			"%s.%s: the .tres says %s, the game drew %s — set in code?" % [key, name, want,
 				live.get_shader_parameter(name)])
-	assert_gt(checked, 10, key + ": the guard compared the material's look")
+	assert_gte(checked, at_least, key + ": the guard compared the material's look")

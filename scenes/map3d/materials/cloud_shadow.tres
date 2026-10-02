@@ -7,3 +7,5 @@
 render_priority = 0
 shader = ExtResource("1_spn5g")
 shader_parameter/shape = ExtResource("2_ouo6o")
+shader_parameter/shadow_cut = 0.8
+shader_parameter/shadow_density = 0.12

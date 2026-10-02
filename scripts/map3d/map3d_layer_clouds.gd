@@ -14,13 +14,43 @@ extends MultiMeshInstance3D
 ## anywhere pushes the whole material into an alpha-scissor pipeline under GL
 ## Compatibility and silently blanks its blended rendering.
 
-## The deck's and the twin's looks — two materials over two shader files. Their
-## `shape` is the editor's preview; build() sets the seeded one.
+## The deck's and the twin's looks — two materials over two shader files
+## (owner 2026-10-02: edited in the inspector — the deck's opacity, its fade
+## near the camera, its glow, a storm's slate and how overcast turns it; the
+## shadow's dense heart and stipple). Their `shape` is the editor's preview;
+## build() sets the seeded one.
 const CLOUD_MAT := preload("res://scenes/map3d/materials/cloud_deck.tres")
 const CLOUD_SHADOW_MAT := preload("res://scenes/map3d/materials/cloud_shadow.tres")
 
 ## Editor preview (Task 22): one still frame of the drifting deck.
 @export var preview := false: set = set_preview
+
+## The deck (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中):
+## at most `max_clouds` (a graphics tier may cap it lower), each its seeded
+## shape, `height_m` up, `size_min_m`..`size_max_m` across and
+## `depth_ratio` as deep.
+@export_group("Deck")
+@export var max_clouds := 14
+@export var cloud_seed := 23
+@export var height_m := 3500.0
+@export var size_min_m := 3000.0
+@export var size_max_m := 8000.0
+@export var depth_ratio := 0.45
+## How they drift and come and go: a new one each `interval_s` while the
+## clock runs, fading in and out over `fade_s`, spread over the whole map by
+## Mitchell's best of `candidates` at `min_gap_m`.
+@export_group("Drift")
+@export var speed_m_s := 40.0
+@export var interval_s := 1.5
+@export var fade_s := 1.2
+@export var min_gap_m := 18000.0
+@export var candidates := 16
+## Over bad weather: how hard the overcast pulls the deck, darkens and
+## thickens a cloud (spec 2026-09-29-weather-visuals).
+@export_group("Weather")
+@export var weather_pull := 0.3
+@export var weather_dark := 1.0
+@export var weather_thick := 0.0
 
 var ctx: Map3DContext
 ## The weather's look (the view hands it over): clouds gather over bad weather
@@ -67,15 +97,12 @@ func preview_build(p_ctx: Map3DContext) -> void:
 func build(p_ctx: Map3DContext, p_weather: Map3DLayerWeather = null) -> void:
 	ctx = p_ctx
 	weather = p_weather
-	_field = Map3DCloudField.new(int(ctx.repo.bal("map3d_cloud_seed")))
-	_params = {"max": int(ctx.repo.bal("map3d_cloud_max")),
-		"size_min": ctx.repo.bal("map3d_cloud_size_min_m"), "size_max": ctx.repo.bal("map3d_cloud_size_max_m"),
-		"speed_m_s": ctx.repo.bal("map3d_cloud_speed_m_s"), "wind_deg": ctx.repo.bal("map3d_cloud_wind_deg"),
-		"fade_s": ctx.repo.bal("map3d_cloud_fade_s"), "interval_s": ctx.repo.bal("map3d_cloud_interval_s"),
-		"min_gap_m": ctx.repo.bal("map3d_cloud_min_gap_m"), "spread": true,
-		"candidates": int(ctx.repo.bal("map3d_cloud_candidates")),
-		"weight_pull": ctx.repo.bal("map3d_weather_cloud_pull"), "wrap": true}
-	_depth_ratio = ctx.repo.bal("map3d_cloud_depth_ratio")
+	_field = Map3DCloudField.new(cloud_seed)
+	_params = {"max": max_clouds, "size_min": size_min_m, "size_max": size_max_m,
+		"speed_m_s": speed_m_s, "wind_deg": ctx.repo.bal("map3d_cloud_wind_deg"),
+		"fade_s": fade_s, "interval_s": interval_s, "min_gap_m": min_gap_m, "spread": true,
+		"candidates": candidates, "weight_pull": weather_pull, "wrap": true}
+	_depth_ratio = depth_ratio
 	var quad := PlaneMesh.new()
 	quad.size = Vector2.ONE
 	var mm := MultiMesh.new()
@@ -85,7 +112,7 @@ func build(p_ctx: Map3DContext, p_weather: Map3DLayerWeather = null) -> void:
 	mm.instance_count = int(_params["max"])
 	mm.visible_instance_count = 0
 	self.multimesh = mm
-	var shape := Map3DCloudField.cloud_texture(int(ctx.repo.bal("map3d_cloud_seed")))
+	var shape := Map3DCloudField.cloud_texture(cloud_seed)
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	material_override = _cloud_material(shape)
 	extra_cull_margin = 16384.0
@@ -106,12 +133,6 @@ func _cloud_material(shape: Texture2D) -> ShaderMaterial:
 	var mat := (CLOUD_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	mat.render_priority = Map3DPriority.CLOUDS
 	mat.set_shader_parameter("shape", shape)
-	mat.set_shader_parameter("opacity", ctx.repo.bal("map3d_cloud_alpha"))
-	mat.set_shader_parameter("near_fade_m", ctx.repo.bal("map3d_cloud_near_fade_m"))
-	mat.set_shader_parameter("near_fade_start_ratio", ctx.repo.bal("map3d_cloud_near_fade_start_ratio"))
-	mat.set_shader_parameter("emission_share", ctx.repo.bal("map3d_cloud_emission_share"))
-	mat.set_shader_parameter("storm_color", MapTerrain.palette_color(ctx.repo, "weather_storm_cloud", Color("#5C636B")))
-	mat.set_shader_parameter("storm_full", ctx.repo.bal("map3d_weather_cloud_full"))
 	return mat
 
 
@@ -121,8 +142,6 @@ func _cloud_material(shape: Texture2D) -> ShaderMaterial:
 func _cloud_shadow_material(shape: Texture2D) -> ShaderMaterial:
 	var mat := (CLOUD_SHADOW_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	mat.set_shader_parameter("shape", shape)
-	mat.set_shader_parameter("shadow_cut", ctx.repo.bal("map3d_cloud_shadow_cut"))
-	mat.set_shader_parameter("shadow_density", ctx.repo.bal("map3d_cloud_shadow_density"))
 	return mat
 
 
@@ -161,9 +180,9 @@ func step(delta: float) -> void:
 	else:
 		_params.erase("weight_fn")
 	_field.step(delta, ctx.clock_speed() > 0, ctx.clock_speed(), _sky_rect(), _params)
-	var h := ctx.repo.bal("map3d_cloud_height_m")
-	var dark := ctx.repo.bal("map3d_weather_cloud_dark")
-	var thick := ctx.repo.bal("map3d_weather_cloud_thick")
+	var h := height_m
+	var dark := weather_dark
+	var thick := weather_thick
 	var n := _field.clouds.size()
 	multimesh.visible_instance_count = n
 	for i in n:
@@ -219,7 +238,7 @@ func set_quality(max_clouds: int, shadows: bool) -> void:
 
 
 ## A tier's sky (graphics_quality clouds, cloud_shadows), never more clouds
-## than balance map3d_cloud_max.
+## than the deck's own `max_clouds`.
 func apply_quality(row: Dictionary) -> void:
-	set_quality(mini(int(ctx.repo.bal("map3d_cloud_max")), int(Map3DQuality.num(row, "clouds"))),
+	set_quality(mini(max_clouds, int(Map3DQuality.num(row, "clouds"))),
 		Map3DQuality.num(row, "cloud_shadows") > 0.0)

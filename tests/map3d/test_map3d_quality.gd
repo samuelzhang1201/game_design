@@ -33,8 +33,8 @@ func test_high_is_todays_look() -> void:
 	var r := Map3DQuality.row(Game.data, "high")
 	for col: String in ["render_scale", "line_step_mul", "road_step_mul", "river_step_mul"]:
 		assert_eq(Map3DQuality.num(r, col), 1.0, col)
-	assert_eq(Map3DQuality.num(r, "clouds"), Game.data.bal("map3d_cloud_max"))
 	var world := (load(Map3DEnvironment.WORLD_SCENE) as PackedScene).instantiate()
+	assert_eq(Map3DQuality.num(r, "clouds"), float((world.get_node("Clouds") as Map3DLayerClouds).max_clouds))
 	assert_eq(Map3DQuality.num(r, "shadow_max_m"), (world.get_node("Sun") as Map3DSun).shadow_max_m)
 	world.free()
 	assert_eq(Map3DQuality.num(r, "hud_hz"), 0.0)

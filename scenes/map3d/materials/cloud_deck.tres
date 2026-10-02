@@ -7,3 +7,9 @@
 render_priority = 9
 shader = ExtResource("1_5xh7i")
 shader_parameter/shape = ExtResource("2_ih54x")
+shader_parameter/opacity = 0.35
+shader_parameter/near_fade_m = 6000.0
+shader_parameter/near_fade_start_ratio = 0.3
+shader_parameter/emission_share = 0.0
+shader_parameter/storm_color = Color(0.36078432, 0.3882353, 0.41960785, 1)
+shader_parameter/storm_full = 0.6

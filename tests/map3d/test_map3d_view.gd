@@ -345,9 +345,10 @@ func test_clouds_come_with_play_and_go_with_pause() -> void:
 	assert_true("Clouds" in v.layer_names())
 	Game.set_clock_speed(1)
 	v._process(0.1)
-	assert_eq(v.cloud_count(), int(Game.data.bal("map3d_cloud_max")))
+	var deck := v.world().get_node("Clouds") as Map3DLayerClouds
+	assert_eq(v.cloud_count(), deck.max_clouds)
 	Game.set_clock_speed(0)
-	v._process(Game.data.bal("map3d_cloud_fade_s") + 0.1)
+	v._process(deck.fade_s + 0.1)
 	assert_eq(v.cloud_count(), 0)
 
 

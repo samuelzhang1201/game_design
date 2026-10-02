@@ -294,25 +294,7 @@ map3d_dot_min_view_share,0.40,"3D MAP (owner 2026-09-21 ruling, replacing the ab
 map3d_border_skip_coast,1,"3D MAP borders (look route 2026-09-30): 1 draws the kingdom's ink, halo and band only along LAND borders — along the sea or a lake the outline is the coast, which the shore draws (an ink line and a band round every coast read as a tray, taste: nothing ends on a hard cut)"
 map3d_border_coast_probe_m,200,"3D MAP borders: a border point is coast when the ground this many metres to either side of it is water"
 map3d_border_refresh_s,1.0,3D MAP: how often the view checks whether ownership changed and its borders need rebuilding
-map3d_cloud_max,14,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): at most this many over the WHOLE map (10 over the view until then, which clumped where play began); graphics_quality.csv clouds caps it per tier"
-map3d_cloud_height_m,3500.0,3D MAP clouds: the deck's height over the sea
-map3d_cloud_size_min_m,3000.0,3D MAP clouds: the smallest cloud across
-map3d_cloud_size_max_m,8000.0,3D MAP clouds: the largest
-map3d_cloud_speed_m_s,40.0,"3D MAP clouds: drift in metres per real second at 1x, times the clock speed"
 map3d_cloud_wind_deg,12.0,"3D MAP clouds: the wind, degrees from east toward south (the 2D map's map_cloud_wind_deg)"
-map3d_cloud_interval_s,1.5,3D MAP clouds: about this many real seconds between one cloud coming in and the next
-map3d_cloud_fade_s,1.2,3D MAP clouds: seconds to fade in when play starts and out when the clock stops
-map3d_cloud_alpha,0.35,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): the deck's opacity (0.6 until then)"
-map3d_cloud_near_fade_m,6000.0,"3D MAP clouds: a cloud closer to the camera than this fades away, so the rig at 800 m looks under the deck, not into it"
-map3d_cloud_shadow_cut,0.8,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): only a cloud's heart denser than this casts a shadow (0.7 until then)"
-map3d_cloud_shadow_density,0.12,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): the share of a cloud's dense heart that casts, by a 4x4 stipple (0.2 until then)"
-map3d_cloud_seed,23,3D MAP clouds: the seed of their own look-only generator (never the engine's stream)
-map3d_cloud_emission_share,0.0,3D MAP clouds: share of ALBEDO also written to EMISSION (Task 8's fix for a lit spatial shader reading dirty/dark under Filmic) — 0 unless the visual check needs it
-map3d_cloud_near_fade_start_ratio,0.3,"3D MAP clouds (fix round 1, owner 2026-09-18): where the near-camera fade starts, as a fraction of map3d_cloud_near_fade_m — was hardcoded in cloud_deck.gdshader"
-map3d_cloud_depth_ratio,0.45,"3D MAP clouds (fix round 1, owner 2026-09-18): a cloud's front-to-back size as a fraction of its width — was hardcoded (0.6) in map3d_view.gd; lowered with the size bracket so individual clouds read as separate puffs rather than fusing into a sheet at 24 km"
-map3d_cloud_min_gap_m,18000.0,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): the spacing the placement aims for between clouds over the map, world metres (4000 over the view until then)"
-map3d_cloud_candidates,16,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): each new cloud tries this many spots and takes the one furthest from the others (Mitchell's best candidate), so the sky is even"
-map3d_weather_cloud_pull,0.3,"3D MAP clouds (owner 2026-09-30: 云的效果请再淡一点，稀疏的分布在大地图，不要集中): how far an overcast province draws the clouds toward it, against the spacing (1 = the old pull that gathered the whole sky over bad weather)"
 map3d_river_mesh_step_m,12.0,"3D MAP rivers (final review, owner 2026-09-18: at 800 m the ribbon read as ruled straight segments between the bake's ~50 m samples): Map3DRivers.ribbon_arrays densifies each course along a centripetal Catmull-Rom curve through its samples to a point at least every this many metres"
 map3d_river_split_rise_m,10.0,"3D MAP rivers (fix round 1, owner 2026-09-18): a course breaks into a separate strip wherever the bake's water line rises by more than this between two samples — a river leaving or entering a lake — instead of drawing a vertical wall of water. Raised from 2.0, which also split on a tributary's ordinary bed rise (checked against the pack: 2.0 caught a 2.6m rise at a river's own source that was never a lake; 10.0 keeps only the 4 genuine lake jumps of 14-88m, in 2 rivers)"
 map3d_river_end_fade_m,80.0,"3D MAP rivers (fix round 1, owner 2026-09-18): a strip's cut ends (and a river's true source) fade in/out over this many metres of arc length, so a split reads as a fade rather than a hard edge; the true mouth, running into the sea, never fades"
@@ -500,9 +482,6 @@ map3d_weather_snow_soft,0.35,"3D MAP weather look: the half-width of snow's edge
 map3d_weather_mud_dark,0.18,"3D MAP weather look: mud ground is this much darker again, so it reads wet, not drought-ochre"
 map3d_weather_wet_cool,0.3,"3D MAP weather look: rain moves the ground this share toward terrain_palette weather_wet (a cool blue-grey at the ground's own value)"
 map3d_weather_haze,0.65,"3D MAP weather look: a blizzard (overcast to snow 1:1, where a snowfall is 0.6:1) veils the ground this far toward terrain_palette weather_haze — what tells a blizzard from snow on a paused clock"
-map3d_weather_cloud_dark,1.0,"3D MAP weather look: how far a cloud over full overcast turns to terrain_palette weather_storm_cloud (a slate grey, so a cloud never matches the snow under it)"
-map3d_weather_cloud_thick,0.0,"3D MAP weather look: a cloud over full overcast is this much more opaque (capped at 1) — 0: a thicker cloud crosses the shadow cut and its ordered-dither shadow draws a lattice on the snow (critic, 2026-09-29)"
-map3d_weather_cloud_full,0.6,"3D MAP weather look: from this much overcast up a cloud is wholly terrain_palette weather_storm_cloud (the sun and sky light the deck ~3x, so a cloud only partly grey read white)"
 map3d_weather_rain_count,12000,"3D MAP weather look: the most rain drops falling at once (x graphics_quality weather_particles)"
 map3d_weather_snow_count,20000,"3D MAP weather look: the most snow flakes falling at once (x graphics_quality weather_particles)"
 map3d_weather_rain_life_s,0.8,"3D MAP weather look: seconds a drop takes from the top of the box to the ground — its fall speed follows from the box's height"
