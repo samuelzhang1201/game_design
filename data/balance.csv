@@ -823,7 +823,6 @@ ledger_search_width_px,180,"LEDGER search (owner 2026-10-01: 在ledger界面新�
 ledger_search_list_width_px,300,LEDGER search: design px wide the list of matches under the box
 ledger_search_max_matches,8,LEDGER search: at most this many matches listed (a label that begins with the text first)
 ledger_search_min_chars,1,LEDGER search: characters typed before any match is listed
-ledger_search_font_px,15,LEDGER search: design px font of a listed match
 ledger_search_row_px,28,LEDGER search: design px tall each listed match
 ledger_lineage_tie_hops,2,"LEDGER lineage (owner 2026-10-01: 我需要点击一个node的时候，highlight整个lineage — the hybrid): a selected star's tie and kin links walked this many hops (LedgerLineage); its own links and its flow chain are always lit, structure past the first hop never"
 ledger_lineage_far_fade,0.45,"LEDGER lineage: perceived opacity of the ties of its ties (the hops past the first) — dimmer than the lineage proper, brighter than ledger_focus_fade"

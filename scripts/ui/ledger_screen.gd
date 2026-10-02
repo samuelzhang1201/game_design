@@ -37,11 +37,9 @@ var _search_pick := 0           # the listed match Enter picks
 
 
 func _ready() -> void:
+	# its look is scenes/ledger_screen.tscn (owner 2026-10-02): the frame
+	# (ledger_frame.tres), the title, the search list (ledger_search.tres)
 	visible = false
-	(%Frame as PanelContainer).add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 0, "map"))
-	UiPalette.style_title(%Title, 18)
-	_search_list.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 4, "window"))
 	%Close.pressed.connect(close)
 	%Front.pressed.connect(func() -> void: _view.front_view())
 	%Back.pressed.connect(back)
@@ -325,7 +323,6 @@ func _fill_search_list() -> void:
 	_search_list.visible = not _search_found.is_empty()
 	if _search_found.is_empty():
 		return
-	var font_px := int(Game.data.bal("ledger_search_font_px"))
 	var row_px := Game.data.bal("ledger_search_row_px")
 	for i in _search_found.size():
 		var e: Dictionary = _search_found[i]
@@ -337,27 +334,8 @@ func _fill_search_list() -> void:
 		b.clip_text = true
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = Vector2(0.0, row_px)
-		b.add_theme_font_size_override("font_size", font_px)
-		var lit := i == _search_pick
-		var rest := StyleBoxFlat.new()
-		rest.bg_color = UiPalette.CHIP_PRESSED if lit else Color(0, 0, 0, 0)
-		rest.border_color = UiPalette.GOLD
-		rest.border_width_left = 3 if lit else 0
-		rest.content_margin_left = 10.0
-		rest.content_margin_right = 8.0
-		var hover := UiPalette.chip_style(UiPalette.CHIP_HOVER, UiPalette.GOLD)
-		hover.set_border_width_all(0)
-		hover.border_width_left = 3
-		hover.content_margin_left = 10.0
-		hover.content_margin_right = 8.0
-		hover.content_margin_top = 0.0
-		hover.content_margin_bottom = 0.0
-		b.add_theme_stylebox_override("normal", rest)
-		b.add_theme_stylebox_override("hover", hover)
-		b.add_theme_stylebox_override("pressed", hover)
-		b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-		b.add_theme_color_override("font_color", UiPalette.GOLD if lit else UiPalette.TEXT_SOFT)
-		b.add_theme_color_override("font_hover_color", UiPalette.GOLD)
+		# the match Enter picks is lit in gold (the theme's LedgerMatch kinds)
+		b.theme_type_variation = &"LedgerMatchLit" if i == _search_pick else &"LedgerMatch"
 		b.pressed.connect(pick_match.bind(i))
 		_search_rows.add_child(b)
 	_place_search_list()

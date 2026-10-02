@@ -105,6 +105,36 @@ corner_radius_bottom_left = 3
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_sqgyy"]
 color = Color(0.29411766, 0.24313726, 0.1882353, 1)
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_yfb1m"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qv1ew"]
+content_margin_left = 10.0
+content_margin_top = 0.0
+content_margin_right = 8.0
+content_margin_bottom = 0.0
+bg_color = Color(0.20392157, 0.16470589, 0.1254902, 1)
+border_width_left = 3
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3untb"]
+content_margin_left = 10.0
+content_margin_right = 8.0
+bg_color = Color(0, 0, 0, 0)
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_y7x3b"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gsq7j"]
+content_margin_left = 10.0
+content_margin_right = 8.0
+bg_color = Color(0.23529412, 0.1882353, 0.14117648, 1)
+border_width_left = 3
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_li8qq"]
 content_margin_left = 16.0
 content_margin_top = 6.0
@@ -342,6 +372,22 @@ HeaderLabel/colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
 HeaderLabel/fonts/font = ExtResource("1_on7wr")
 Label/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
 Label/constants/line_spacing = 0
+LedgerMatch/base_type = &"Button"
+LedgerMatch/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+LedgerMatch/colors/font_hover_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+LedgerMatch/font_sizes/font_size = 15
+LedgerMatch/styles/focus = SubResource("StyleBoxEmpty_yfb1m")
+LedgerMatch/styles/hover = SubResource("StyleBoxFlat_qv1ew")
+LedgerMatch/styles/normal = SubResource("StyleBoxFlat_3untb")
+LedgerMatch/styles/pressed = SubResource("StyleBoxFlat_qv1ew")
+LedgerMatchLit/base_type = &"Button"
+LedgerMatchLit/colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+LedgerMatchLit/colors/font_hover_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+LedgerMatchLit/font_sizes/font_size = 15
+LedgerMatchLit/styles/focus = SubResource("StyleBoxEmpty_y7x3b")
+LedgerMatchLit/styles/hover = SubResource("StyleBoxFlat_qv1ew")
+LedgerMatchLit/styles/normal = SubResource("StyleBoxFlat_gsq7j")
+LedgerMatchLit/styles/pressed = SubResource("StyleBoxFlat_qv1ew")
 LineEdit/colors/caret_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
 LineEdit/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
 LineEdit/colors/font_placeholder_color = Color(0.5411765, 0.49019608, 0.40784314, 1)

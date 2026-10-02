@@ -1,16 +1,17 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://dj037yq6eibew"]
 
-[ext_resource type="Script" path="res://scripts/ui/ledger_screen.gd" id="1_screen"]
+[ext_resource type="Script" uid="uid://gwaaucadc43n" path="res://scripts/ui/ledger_screen.gd" id="1_screen"]
+[ext_resource type="StyleBox" uid="uid://dmgtj5dq4d8hu" path="res://assets/2D/ui/panels/styles/ledger_frame.tres" id="2_badtm"]
 [ext_resource type="PackedScene" path="res://scenes/ledger/ledger_view.tscn" id="2_view"]
-[ext_resource type="Script" path="res://scripts/ui/ledger_order_menu.gd" id="3_menu"]
+[ext_resource type="Script" uid="uid://mssebfdmj1mq" path="res://scripts/ui/ledger_order_menu.gd" id="3_menu"]
+[ext_resource type="StyleBox" uid="uid://bklvmae2882o2" path="res://assets/2D/ui/panels/styles/ledger_search.tres" id="4_vc1il"]
 
-[node name="LedgerScreen" type="Control"]
+[node name="LedgerScreen" type="Control" unique_id=1474602325]
 layout_mode = 3
 anchors_preset = 0
-mouse_filter = 0
 script = ExtResource("1_screen")
 
-[node name="Frame" type="PanelContainer" parent="."]
+[node name="Frame" type="PanelContainer" parent="." unique_id=967986303]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -18,12 +19,13 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/panel = ExtResource("2_badtm")
 
-[node name="View" parent="Frame" instance=ExtResource("2_view")]
+[node name="View" parent="Frame" unique_id=1688843890 instance=ExtResource("2_view")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Top" type="HBoxContainer" parent="."]
+[node name="Top" type="HBoxContainer" parent="." unique_id=679318088]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 10
@@ -32,22 +34,26 @@ offset_left = 16.0
 offset_top = 12.0
 offset_right = -16.0
 offset_bottom = 44.0
+grow_horizontal = 2
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="Title" type="Label" parent="Top"]
+[node name="Title" type="Label" parent="Top" unique_id=670389518]
 unique_name_in_owner = true
 layout_mode = 2
-text = "THE LEDGER OF THE REALM"
+theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+theme_override_font_sizes/font_size = 22
+text = "The Ledger of the Realm"
 
-[node name="Lenses" type="HBoxContainer" parent="Top"]
+[node name="Lenses" type="HBoxContainer" parent="Top" unique_id=962987785]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 2
 size_flags_horizontal = 3
+mouse_filter = 2
 alignment = 1
 
-[node name="Search" type="LineEdit" parent="Top"]
+[node name="Search" type="LineEdit" parent="Top" unique_id=599964020]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
@@ -55,17 +61,17 @@ placeholder_text = "Search…"
 clear_button_enabled = true
 caret_blink = true
 
-[node name="Front" type="Button" parent="Top"]
+[node name="Front" type="Button" parent="Top" unique_id=984024300]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Front"
 
-[node name="Close" type="Button" parent="Top"]
+[node name="Close" type="Button" parent="Top" unique_id=906048503]
 unique_name_in_owner = true
 layout_mode = 2
 text = "×"
 
-[node name="Crumbs" type="HBoxContainer" parent="."]
+[node name="Crumbs" type="HBoxContainer" parent="." unique_id=2053345618]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 10
@@ -74,29 +80,31 @@ offset_left = 16.0
 offset_top = 50.0
 offset_right = -16.0
 offset_bottom = 74.0
+grow_horizontal = 2
 mouse_filter = 2
 
-[node name="Back" type="Button" parent="Crumbs"]
+[node name="Back" type="Button" parent="Crumbs" unique_id=888873276]
 unique_name_in_owner = true
 layout_mode = 2
 text = "‹ Close"
 
-[node name="Crumb" type="Label" parent="Crumbs"]
+[node name="Crumb" type="Label" parent="Crumbs" unique_id=944878121]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="SearchList" type="PanelContainer" parent="."]
+[node name="SearchList" type="PanelContainer" parent="." unique_id=1374148373]
 unique_name_in_owner = true
 visible = false
 layout_mode = 0
 offset_right = 300.0
 offset_bottom = 40.0
+theme_override_styles/panel = ExtResource("4_vc1il")
 
-[node name="SearchRows" type="VBoxContainer" parent="SearchList"]
+[node name="SearchRows" type="VBoxContainer" parent="SearchList" unique_id=543787545]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Orders" type="PopupMenu" parent="."]
+[node name="Orders" type="PopupMenu" parent="." unique_id=904924581]
 unique_name_in_owner = true
 script = ExtResource("3_menu")
