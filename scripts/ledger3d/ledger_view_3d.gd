@@ -173,6 +173,8 @@ func set_active(on: bool) -> void:
 	set_process(on)
 	if on:
 		_fit_viewport()
+	else:
+		_viewport.size = Vector2i(2, 2)  # its render targets freed while shut (perf 2026-10-02)
 
 
 ## Draw a snapshot. Stars already placed keep their places (the layout is

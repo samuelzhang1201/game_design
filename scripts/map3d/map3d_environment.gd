@@ -99,6 +99,7 @@ static func follow_camera(repo: DataRepository, env: Environment, sun: Direction
 		ctx: Map3DContext) -> void:
 	fog_for_distance(repo, env, ctx.distance)
 	shadow_for_distance(repo, sun, ctx.distance, Map3DQuality.num(ctx.quality, "shadow_max_m", 0.0))
+	Map3DCloseEffects.apply(repo, ctx.viewport, env, ctx.quality, ctx.distance)
 
 
 ## The sun's shadow reach follows the zoom too (owner 2026-09-25: house
@@ -252,12 +253,14 @@ static func apply_terrain_quality(terrain: Node, row: Dictionary) -> void:
 			terrain.set(String(pair[0]), v)
 
 
-## A tier's SubViewport: MSAA (0 / 2 / 4 / 8) and anisotropic filtering
-## (1 / 2 / 4 / 8 / 16x, Viewport.anisotropic_filtering_level 0..4).
+## A tier's SubViewport: MSAA (0 / 2 / 4 / 8), screen_aa (0 / 1 FXAA / 2 SMAA;
+## by zoom, Map3DCloseEffects) and anisotropic filtering (1..16x, level 0..4).
 static func apply_viewport_quality(vp: SubViewport, row: Dictionary) -> void:
 	var msaa := int(Map3DQuality.num(row, "msaa", 0.0))
 	vp.msaa_3d = {2: Viewport.MSAA_2X, 4: Viewport.MSAA_4X, 8: Viewport.MSAA_8X}.get(
 		msaa, Viewport.MSAA_DISABLED)
+	vp.screen_space_aa = {1: Viewport.SCREEN_SPACE_AA_FXAA, 2: Viewport.SCREEN_SPACE_AA_SMAA}.get(
+		int(Map3DQuality.num(row, "screen_aa", 0.0)), Viewport.SCREEN_SPACE_AA_DISABLED)
 	if "anisotropic_filtering_level" in vp:
 		vp.set("anisotropic_filtering_level",
 			{1: 0, 2: 1, 4: 2, 8: 3, 16: 4}.get(int(Map3DQuality.num(row, "aniso", 16.0)), 4))

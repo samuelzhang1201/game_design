@@ -136,7 +136,12 @@ func test_the_sky_and_sun_are_data() -> void:
 	assert_eq(env.fog_mode, Environment.FOG_MODE_DEPTH)
 	assert_almost_eq(env.fog_density, Game.data.bal("map3d_fog_depth_density"), 1e-9)
 	assert_eq(int(env.tonemap_mode), int(Game.data.bal("map3d_env_tonemap")))
-	assert_eq(env.ssao_enabled, Game.data.bal("map3d_env_ssao") > 0.0)
+	# SSAO is spent up close (owner 2026-10-02): on at a zoom inside
+	# map3d_close_effects_m, else as the tier's far_ssao says (blank: as near)
+	var row: Dictionary = v.context().quality
+	var far := v.distance() > Game.data.bal("map3d_close_effects_m")
+	assert_eq(env.ssao_enabled, Game.data.bal("map3d_env_ssao") > 0.0 and Map3DQuality.num(row, "ssao", 1.0) > 0.0
+		and (not far or Map3DQuality.num(row, "far_ssao", 1.0) > 0.0))
 	var sun := v.get_node("Viewport/Sun") as DirectionalLight3D
 	assert_almost_eq(sun.light_energy, Game.data.bal("map3d_sun_energy"), 0.0001)
 	assert_almost_eq(sun.rotation_degrees.x, Game.data.bal("map3d_sun_pitch_deg"), 0.01)

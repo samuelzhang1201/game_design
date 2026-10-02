@@ -32,12 +32,11 @@ var houses_override: Dictionary = {}
 var surface_mats: Array = []
 var weather: Dictionary = {}
 
-const HOUSE_SHADER := preload("res://scripts/map3d/house_surface.gdshader")
-
 var ctx: Map3DContext
 var _built := false
 var _built_at := Vector2.INF
-var _instances: Dictionary = {}       # type -> MultiMeshInstance3D
+var _instances: Dictionary = {}       # type -> MultiMeshInstance3D, the near settlements' (shadows)
+var _far: Dictionary = {}             # type -> MultiMeshInstance3D, the rest (no shadows)
 var _aabbs: Dictionary = {}           # type -> its mesh's AABB, for the footprint
 ## Test seam (fix round 1): the Transform3D actually handed to
 ## set_instance_transform for each type's MultiMesh in the last refresh(),
@@ -71,7 +70,15 @@ func bind(p_ctx: Map3DContext) -> void:
 ## Cut once per camera pose, never per frame — the rig's own ground target,
 ## not the camera's eye, which swings with the pitch (spec §3).
 func _on_camera_moved() -> void:
+	var shadows := ctx.distance <= ctx.repo.bal("map3d_house_shadow_view_m")
+	if shadows != _shadows:  # zoomed across the shadows' reach: rebuild at once
+		_shadows = shadows
+		_built_at = Vector2.INF
 	refresh(ctx.target)
+
+
+## Whether the camera is near enough for houses to cast (map3d_house_shadow_view_m).
+var _shadows := true
 
 
 func set_preview(on: bool) -> void:
@@ -82,6 +89,7 @@ func set_preview(on: bool) -> void:
 		preview_build(Map3DPreview.context_for(self))
 	else:
 		_instances.clear()
+		_far.clear()
 		_transforms.clear()
 		_built = false
 		_built_at = Vector2.INF
@@ -119,24 +127,20 @@ func build() -> void:
 	ctx.houses()
 	_wall_tints = Map3DHouses.tints_of(ctx.repo.map3d_house_variants, "wall")
 	_roof_tints = Map3DHouses.tints_of(ctx.repo.map3d_house_variants, "roof")
+	_far.clear()
 	for type: String in ctx.repo.map3d_houses:
 		var mesh := _mesh_of(type)
 		if mesh == null:
 			continue
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.use_custom_data = true
-		mm.mesh = _tinted(mesh)
-		mm.instance_count = 0
-		var mmi := MultiMeshInstance3D.new()
+		var drawn := Map3DHouseMaterials.tinted(mesh, _wall_tints, _roof_tints, weather, surface_mats)
 		# Task 6 override 4: the type itself, not type.capitalize() — capitalize()
 		# turns an underscore into a space ("cottage_a" -> "Cottage A"), which is
 		# neither a legible node name nor round-trippable back to the CSV's type.
-		mmi.name = type
-		mmi.multimesh = mm
-		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-		add_child(mmi)  # no owner: never saved
-		_instances[type] = mmi
+		# Each type twice: near settlements cast shadows, the rest do not (refresh).
+		_instances[type] = Map3DHouseMaterials.multimesh_instance(type, drawn, true)
+		_far[type] = Map3DHouseMaterials.multimesh_instance(type + "__far", drawn, false)
+		add_child(_instances[type])  # no owner: never saved
+		add_child(_far[type])
 		_aabbs[type] = mesh.get_aabb()
 
 
@@ -162,29 +166,41 @@ func refresh(camera_xz: Vector2) -> bool:
 		_chunks.clear()
 	var shown := Map3DHouses.visible_burgs(houses, _burg_pos, camera_xz,
 		ctx.repo.bal("map3d_house_view_m"), _budget())
+	# Only the settlements within map3d_house_shadow_m cast their shadows
+	# (perf 2026-10-02: every house drawn into every cascade was half the
+	# geometry drawn); the rest go to each type's unshadowed MultiMesh.
+	var reach := ctx.repo.bal("map3d_house_shadow_m") if ctx.distance <= ctx.repo.bal("map3d_house_shadow_view_m") else -1.0
+	var near := shown.filter(func(c: String) -> bool: return (_burg_pos[c] as Vector2).distance_to(camera_xz) <= reach)
+	var far := shown.filter(func(c: String) -> bool: return (_burg_pos[c] as Vector2).distance_to(camera_xz) > reach)
 	_transforms.clear()
 	_variants.clear()
-	# Each settlement's houses of a type are packed ONCE (perf 2026-10-02:
-	# ~2,500 single-instance calls a rebuild, ~3.7 ms a pan step); a rebuild
-	# joins the chunks of the settlements in view, in visible_set's order.
 	for type: String in _instances:
-		var mmi: MultiMeshInstance3D = _instances[type]
-		var buf := PackedFloat32Array()
 		var xforms: Array[Transform3D] = []
 		var picks: Array[Vector2i] = []
-		for code: String in shown:
-			var chunk := _chunk(code, type, houses[code])
-			if (chunk["xf"] as Array).is_empty():
-				continue
-			buf.append_array(chunk["buf"])
-			xforms.append_array(chunk["xf"])
-			picks.append_array(chunk["picks"])
-		mmi.multimesh.instance_count = xforms.size()
-		if not xforms.is_empty():
-			mmi.multimesh.buffer = buf
+		_fill(_instances[type], type, near, houses, xforms, picks)
+		_fill(_far[type], type, far, houses, xforms, picks)
 		_transforms[type] = xforms
 		_variants[type] = picks
 	return true
+
+
+## One MultiMesh filled with `codes`' houses of `type`, in that order; their
+## transforms and variants appended to `xforms` and `picks`. Each settlement's
+## houses of a type are packed ONCE (perf 2026-10-02: ~2,500 single-instance
+## calls a rebuild, ~3.7 ms a pan step); a rebuild joins the chunks.
+func _fill(mmi: MultiMeshInstance3D, type: String, codes: Array, houses: Dictionary,
+		xforms: Array[Transform3D], picks: Array[Vector2i]) -> void:
+	var buf := PackedFloat32Array()
+	var n := 0
+	for code: String in codes:
+		var chunk := _chunk(code, type, houses[code])
+		buf.append_array(chunk["buf"])
+		xforms.append_array(chunk["xf"])
+		picks.append_array(chunk["picks"])
+		n += (chunk["xf"] as Array).size()
+	mmi.multimesh.instance_count = n
+	if n > 0:
+		mmi.multimesh.buffer = buf
 
 
 ## Each settlement's world XZ, kept for the houses dictionary `_pos_of`.
@@ -226,7 +242,8 @@ func _seat(h: Dictionary, type: String) -> Vector2:
 func counts() -> Dictionary:
 	var out: Dictionary = {}
 	for type: String in _instances:
-		out[type] = (_instances[type] as MultiMeshInstance3D).multimesh.instance_count
+		out[type] = (_instances[type] as MultiMeshInstance3D).multimesh.instance_count \
+			+ (_far[type] as MultiMeshInstance3D).multimesh.instance_count
 	return out
 
 
@@ -243,47 +260,6 @@ func transforms_of(type: String) -> Array:
 ## last refresh(), in instance order.
 func variants_of(type: String) -> Array:
 	return _variants.get(type, [])
-
-
-## A copy of `mesh` whose every surface is drawn by house_surface.gdshader
-## with that surface's own imported texture, roughness, vertex-colour use and
-## normal map when it has one (the palaces):
-## a wall surface (material hh_wall_*) takes the wall tints, a tile roof
-## (hh_roof_*, not slate) the roof tints, anything else none.
-func _tinted(mesh: Mesh) -> Mesh:
-	var out := mesh.duplicate() as Mesh
-	if not (out is ArrayMesh):
-		return mesh
-	for i in out.get_surface_count():
-		var src := out.surface_get_material(i) as StandardMaterial3D
-		if src == null:
-			continue
-		var mat := ShaderMaterial.new()
-		mat.shader = HOUSE_SHADER
-		mat.set_shader_parameter("albedo_tex", src.albedo_texture)
-		mat.set_shader_parameter("albedo_color", src.albedo_color)
-		mat.set_shader_parameter("roughness", src.roughness)
-		mat.set_shader_parameter("use_vertex_color", src.vertex_color_use_as_albedo)
-		# a surface that brought a normal map (the palaces) draws it; the rest have none
-		mat.set_shader_parameter("use_normal", src.normal_enabled and src.normal_texture != null)
-		if src.normal_texture != null:
-			mat.set_shader_parameter("normal_tex", src.normal_texture)
-			mat.set_shader_parameter("normal_depth", src.normal_scale)
-		var mat_name := src.resource_name
-		var role := 0
-		if mat_name.begins_with("hh_wall_"):
-			role = 1
-		elif mat_name.begins_with("hh_roof_") and mat_name != "hh_roof_slate":
-			role = 2
-		mat.set_shader_parameter("role", role)
-		mat.set_shader_parameter("wall_tints", _wall_tints)
-		mat.set_shader_parameter("roof_tints", _roof_tints)
-		mat.set_shader_parameter("wall_count", _wall_tints.size())
-		mat.set_shader_parameter("roof_count", _roof_tints.size())
-		surface_mats.append(mat)
-		for key: String in weather: mat.set_shader_parameter(key, weather[key])
-		(out as ArrayMesh).surface_set_material(i, mat)
-	return out
 
 
 func _budget() -> int:
