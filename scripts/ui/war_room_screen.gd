@@ -13,6 +13,13 @@ var _detail: MapDetailPanel
 var _bound := false
 var _dirty := false
 var _card_mine := false
+var _capture: Texture2D
+var _home: Node                # the column the card was borrowed from
+var _home_index := -1
+var _roll_tween: Tween
+var _board_vp: SubViewport
+var _board_screen: MissiveScreen
+var _column_rect := Rect2()
 var _margin_sig: Array = []   # [sheet, the off-sheet (code, sheet) pairs, none on this sheet] last filled
 
 @onready var _view: WarRoomView = %View
@@ -27,6 +34,10 @@ func _ready() -> void:
 	UiPalette.style_title(%Title, 18)
 	_dress_slip()
 	%Close.pressed.connect(close)
+	UiPalette.command_button(%BackToTable)
+	%BackToTable.pressed.connect(func() -> void: _view.leave_board())
+	_view.board_entered.connect(_show_board_chrome.bind(true))
+	_view.board_left.connect(_show_board_chrome.bind(false))
 	_view.piece_selected.connect(_on_piece)
 	_view.selection_cleared.connect(_clear_card)
 	_view.rake_started.connect(_on_rake)
@@ -34,6 +45,17 @@ func _ready() -> void:
 	_view.sheet_requested.connect(_view.swap_to)
 	_view.sheet_laid.connect(_on_laid)
 	_folio.closed.connect(_view.clear_selection)
+	var roll: PanelContainer = %CardRoll
+	if UiPalette.war_table():
+		roll.add_theme_stylebox_override("panel", WarTable.report_style())
+		WarTable.ink_column(roll)
+		# the card's scroll fades into this paper, as it does in the column
+		roll.set_meta("paper_ground", UiPalette.table_color("paper_ground", UiPalette.PANEL_BG))
+	else:
+		roll.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
+	roll.draw.connect(func() -> void:
+		var px := Game.data.bal("war_report_roller_px")
+		WarReportRoll.draw_roller(roll, Rect2(0.0, roll.size.y - px, roll.size.x, px)))
 
 
 func view() -> WarRoomView:
@@ -50,11 +72,13 @@ func open(detail: MapDetailPanel) -> void:
 		_view.bind(Game.data, func() -> GameState: return Game.state,
 			func() -> bool: return Game.clock_speed <= 0)
 		_view.set_font(UiPalette.role_font("body_italic"))
+		_build_board()
 		_orders.follow(_view)
 		Game.state_changed.connect(refresh)
 		(%Key as WarMarginKey).setup(Game.data, _view)
 		_folio.set_tier(Game.data, Map3DQuality.resolve_here(GameRoot.settings_path))
 		_view.camera_moved.connect((%Key as WarMarginKey).queue_redraw)
+		(%Key as WarMarginKey).north_pressed.connect(_view.start_north)
 	if detail != _detail:
 		_card_mine = false
 	_detail = detail
@@ -65,6 +89,95 @@ func open(detail: MapDetailPanel) -> void:
 	else:
 		_view.refresh()
 		_fill_margin()   # the regiments moved while the room was shut
+
+
+## The report as it lay when the room opened, and where (GameRoot): closing
+## unrolls it over the column again (spec 2026-10-02-war-room-v2 §1.2).
+func set_report_capture(capture: Texture2D, rect: Rect2) -> void:
+	_capture = capture
+	_column_rect = rect
+
+
+## Facing the easel, the margin's slips would lie over the board: they make
+## way, and Back to the table stands in the top row (spec §1.3).
+func _show_board_chrome(on: bool) -> void:
+	%BackToTable.visible = on
+	%Slip.visible = not on
+	%KeySlip.visible = not on
+
+
+func board_screen() -> MissiveScreen:
+	return _board_screen
+
+
+## The easel's board (spec 2026-10-02-war-room-v2 §1.3): the Missive screen,
+## board-only, in its own SubViewport whose texture the panel wears; rendered
+## only while it is seen (_process).
+func _build_board() -> void:
+	_board_vp = SubViewport.new()
+	_board_vp.name = "BoardViewport"
+	var w := int(Game.data.bal("war_board_px"))
+	_board_vp.size = Vector2i(w, int(round(float(w) * 0.8 / 1.2)))
+	# laid out at war_board_layout_px, drawn at war_board_px: larger type, still sharp
+	var lw := int(Game.data.bal("war_board_layout_px"))
+	_board_vp.size_2d_override = Vector2i(lw, int(round(float(lw) * 0.8 / 1.2)))
+	_board_vp.size_2d_override_stretch = true
+	_board_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	_board_vp.gui_embed_subwindows = true
+	add_child(_board_vp)
+	_board_screen = load("res://scenes/missive_screen.tscn").instantiate()
+	_board_screen.theme = UiPalette.build_theme()
+	_board_vp.add_child(_board_screen)
+	_board_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_board_screen.set_board_only(true)
+	_board_screen.visible = true
+	_board_screen.note_chosen.connect(_on_note)
+	_view.set_board_texture(_board_vp.get_texture())
+	_view.board_clicked.connect(_push_board_click)
+	_view.board_hovered.connect(_push_board_hover)
+
+
+## A ray's hit on the panel, pushed into the board's viewport as real input.
+func _push_board_click(uv: Vector2, mb: InputEventMouseButton) -> void:
+	var e := mb.duplicate() as InputEventMouseButton
+	e.position = uv * _board_input_size()
+	e.global_position = e.position
+	_board_vp.push_input(e, true)
+
+
+## The board's input space: its layout size when overridden, else its size.
+func _board_input_size() -> Vector2:
+	return Vector2(_board_vp.size_2d_override) if _board_vp.size_2d_override != Vector2i.ZERO else Vector2(_board_vp.size)
+
+
+func _push_board_hover(uv: Vector2) -> void:
+	var e := InputEventMouseMotion.new()
+	e.position = uv * _board_input_size()
+	e.global_position = e.position
+	_board_vp.push_input(e, true)
+
+
+## A note on the easel: the full Missive board opens on it, over the room.
+func _on_note(id: int) -> void:
+	var root := get_parent() as GameRoot
+	if root != null:
+		root.open_missive_over_war_room(id)
+
+
+func refresh_board() -> void:
+	if _board_screen != null:
+		_board_screen.refresh()
+
+
+## Escape in the board's view flies back to the table (before GameRoot's
+## pause menu, which takes it in its own _unhandled_input).
+func _unhandled_input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if not visible or key == null or not key.pressed or key.keycode != KEY_ESCAPE:
+		return
+	if _view.board_mode() == "board" or _view.board_mode() == "to_board":
+		_view.leave_board()
+		get_viewport().set_input_as_handled()
 
 
 func _home_sheet() -> int:
@@ -159,7 +272,9 @@ func _fill_margin() -> void:
 	scroll.custom_minimum_size.y = height
 
 
-func close() -> void:
+## `animate` false when the screen under the room is being replaced: its
+## column (and the report captured from it) is gone (final review I3).
+func close(animate := true) -> void:
 	if not visible:
 		return
 	if _orders.visible:
@@ -171,7 +286,16 @@ func close() -> void:
 	_view.set_active(false)
 	_view.clear_selection()   # a closed room's selection must never take Escape
 	_clear_card()
+	if _roll_tween != null:
+		_roll_tween.kill()
+	%CardRoll.visible = false
+	_give_back()   # the room is gone at once: the column has its card back now
 	closed.emit()
+	if animate and _column_rect.size.x > 0.0 and get_parent() != null:
+		WarReportRoll.play(get_parent(), _column_rect, _capture, false,
+			Game.data.bal("war_report_roll_s"), Game.data.bal("war_report_roller_px"), UiPalette.war_table())
+	_capture = null
+	_column_rect = Rect2()
 
 
 func refresh() -> void:
@@ -185,6 +309,11 @@ func _process(_delta: float) -> void:
 		_view.refresh()
 		_fill_margin()
 		_folio.refresh()   # the clock runs under an open folio
+		refresh_board()
+	if _board_vp != null:
+		var want := SubViewport.UPDATE_ALWAYS if visible and _view.board_visible() else SubViewport.UPDATE_DISABLED
+		if _board_vp.render_target_update_mode != want:
+			_board_vp.render_target_update_mode = want
 
 
 func _on_piece(code: String) -> void:
@@ -192,6 +321,7 @@ func _on_piece(code: String) -> void:
 		return
 	_detail.show_card(MapObjects.army_card(Game.data, code, Game.state))
 	_card_mine = true
+	_unroll_card()
 	_folio.open_for(code)
 
 
@@ -199,6 +329,85 @@ func _clear_card() -> void:
 	if _card_mine and _detail != null and is_instance_valid(_detail):
 		_detail.show_entry({})
 	_card_mine = false
+	_roll_card_away()
+
+
+func card_roll() -> PanelContainer:
+	return %CardRoll
+
+
+## Unroll the card over the room's left, where the column was (spec
+## 2026-10-02-war-room-v2 §1.2): the column's MapDetailPanel is BORROWED into
+## %CardRoll (the same node, so its signals and the screen's references hold)
+## and the roll grows to the card's height; the margin slip steps right of it.
+func _unroll_card() -> void:
+	var roll: PanelContainer = %CardRoll
+	if _detail.get_parent() != roll:
+		_home = _detail.get_parent()
+		_home_index = _detail.get_index()
+		_detail.reparent(roll, false)
+		if not _detail.closed.is_connected(_view.clear_selection):
+			_detail.closed.connect(_view.clear_selection)
+		if not _detail.host_requested.is_connected(close):
+			_detail.host_requested.connect(close)   # the host takes the column the room covers (review I5)
+	_detail.visible = true
+	if not roll.visible:
+		roll.position = Vector2(16.0, %Slip.offset_top)
+		roll.size = Vector2(ScreenLayout.LEFT_WIDTH, 0.0)
+		roll.visible = true
+	var right := roll.position.x + ScreenLayout.LEFT_WIDTH + 12.0
+	%Slip.offset_left = right
+	%Slip.offset_right = right + 236.0
+	_folio.offset_left = right   # the folio's book centres in the room right of the card
+	_fit_roll.call_deferred()
+
+
+## The card's height is known once its new rows are laid out (a frame after
+## show_card): unroll to it, held inside the room.
+func _fit_roll() -> void:
+	var roll: PanelContainer = %CardRoll
+	if not roll.visible or _detail == null or _detail.get_parent() != roll:
+		return
+	var px := Game.data.bal("war_report_roller_px")
+	var margins := roll.get_theme_stylebox("panel").get_minimum_size().y if roll.has_theme_stylebox("panel") else 0.0
+	_tween_roll(minf(_detail.content_height() + margins + px, size.y - roll.position.y - 16.0), Callable())
+
+
+func _roll_card_away() -> void:
+	var roll: PanelContainer = %CardRoll
+	if not roll.visible:
+		_give_back()
+		return
+	_tween_roll(0.0, func() -> void:
+		roll.visible = false
+		_give_back())
+
+
+func _tween_roll(to_h: float, done: Callable) -> void:
+	if _roll_tween != null:
+		_roll_tween.kill()
+	_roll_tween = create_tween()
+	_roll_tween.tween_property(%CardRoll, "size:y", to_h, Game.data.bal("war_report_roll_s") * 0.6)
+	_roll_tween.tween_callback(%CardRoll.queue_redraw)
+	if done.is_valid():
+		_roll_tween.finished.connect(done)
+
+
+## The card back where it came from (the court's column), at its old place.
+func _give_back() -> void:
+	%Slip.offset_left = 16.0
+	%Slip.offset_right = 252.0
+	_folio.offset_left = 0.0
+	if _home == null or _detail == null or not is_instance_valid(_detail) or _detail.get_parent() == _home:
+		_home = null
+		return
+	if _detail.closed.is_connected(_view.clear_selection):
+		_detail.closed.disconnect(_view.clear_selection)
+	if _detail.host_requested.is_connected(close):
+		_detail.host_requested.disconnect(close)
+	_detail.reparent(_home, false)
+	_home.move_child(_detail, _home_index)
+	_home = null
 
 
 ## The rake took hold of a piece: arm the march, or say why not.

@@ -73,3 +73,16 @@ func test_the_key_sizes_itself_from_data() -> void:
 	assert_eq(m.x, repo.bal("war_key_width_px"))
 	var rows := ceili(8.0 / repo.bal("war_key_columns"))
 	assert_almost_eq(m.y, repo.bal("war_key_rose_px") + repo.bal("war_key_gap_px") + float(rows) * repo.bal("war_key_row_px"), 0.01)
+
+
+func test_a_click_on_the_rose_asks_for_north_and_nowhere_else_is_taken() -> void:
+	watch_signals(key)
+	var r := key.rose_rect()
+	assert_true(key._has_point(r.get_center()))
+	assert_false(key._has_point(Vector2(r.end.x + 20.0, r.end.y + 20.0)), "the legend lets clicks through to the room")
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = true
+	e.position = r.get_center()
+	key._gui_input(e)
+	assert_signal_emitted(key, "north_pressed")

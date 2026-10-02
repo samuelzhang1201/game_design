@@ -257,6 +257,19 @@ func _ready() -> void:
 
 ## Whether a card is open. The screen's left column asks this rather than
 ## reading `visible`, which it owns.
+## The card's whole height with its body unscrolled: the pinned parts plus the
+## scroll's content (the WAR ROOM's roll unrolls exactly this far).
+func content_height() -> float:
+	var h := get_combined_minimum_size().y
+	if _scroll == null:
+		return h
+	var body := 0.0
+	for c in _scroll.get_children():
+		if c is Control and not (c as Control).top_level:   # the ScrollFade floats over the foot
+			body = maxf(body, (c as Control).get_combined_minimum_size().y)
+	return h + body - _scroll.get_combined_minimum_size().y
+
+
 func has_content() -> bool:
 	return _open
 

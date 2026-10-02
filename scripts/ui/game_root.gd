@@ -26,6 +26,7 @@ var _pause_menu: Control
 var _pause_status: Label
 var _ledger_screen: LedgerScreen
 var _war_room_screen: WarRoomScreen
+var _war_room_tween: Tween
 var _missive_screen: MissiveScreen
 var _report_popup: MissiveReportPopup
 ## Spy report ids waiting to open, oldest first (a new letter's id is always
@@ -546,7 +547,9 @@ func toggle_war_room() -> void:
 	var map: Control = current_screen.map_panel()
 	if not map.item_rect_changed.is_connected(_fit_war_room):
 		map.item_rect_changed.connect(_fit_war_room)
-	_fit_war_room()
+	var capture := _capture_column()
+	var wide := war_room_rect()
+	var map_rect := Rect2(map.global_position, map.size)
 	var map_view: Map3DView = current_screen.map3d_view() if current_screen.has_method("map3d_view") else null
 	if map_view != null:
 		map_view.deactivate()
@@ -555,14 +558,63 @@ func toggle_war_room() -> void:
 	var map_orders := current_screen.find_child("ArmyOrders", true, false) as ArmyOrderMenu
 	if map_orders != null:
 		map_orders.withdraw_aim()
+	# The room opens over the map and widens over the left column while the
+	# steward's report rolls up (spec 2026-10-02-war-room-v2 §1.2).
+	var secs := Game.data.bal("war_report_roll_s")
+	if _war_room_tween != null:
+		_war_room_tween.kill()
+	_war_room_screen.position = map_rect.position
+	_war_room_screen.size = map_rect.size
 	_war_room_screen.open(current_screen.detail_panel())
+	if current_screen.has_method("left_column"):
+		var col: Control = current_screen.left_column()
+		var col_rect := Rect2(col.global_position, col.size)
+		WarReportRoll.play(self, col_rect, capture, true, secs, Game.data.bal("war_report_roller_px"), UiPalette.war_table())
+		_war_room_screen.set_report_capture(capture, col_rect)
+	_war_room_screen.view().hold_size(true)
+	_war_room_tween = create_tween()
+	_war_room_tween.tween_property(_war_room_screen, "position", wide.position, secs)
+	_war_room_tween.parallel().tween_property(_war_room_screen, "size", wide.size, secs)
+	_war_room_tween.finished.connect(func() -> void:
+		_war_room_screen.view().hold_size(false)
+		_fit_war_room())
 
 func _fit_war_room() -> void:
 	if current_screen == null or not current_screen.has_method("map_panel"):
 		return
+	if _war_room_tween != null and _war_room_tween.is_running():
+		return   # the widening animation owns the rect until it ends
+	var r := war_room_rect()
+	_war_room_screen.position = r.position
+	_war_room_screen.size = r.size
+
+## The WAR ROOM's rect (spec 2026-10-02-war-room-v2 §1.2): from the left
+## column's left edge to the map's right edge, the map's height; the map's own
+## rect on a screen without a left column.
+func war_room_rect() -> Rect2:
 	var map: Control = current_screen.map_panel()
-	_war_room_screen.position = map.global_position
-	_war_room_screen.size = map.size
+	var r := Rect2(map.global_position, map.size)
+	if current_screen.has_method("left_column"):
+		var col: Control = current_screen.left_column()
+		r = Rect2(Vector2(col.global_position.x, map.global_position.y),
+			Vector2(map.global_position.x + map.size.x - col.global_position.x, map.size.y))
+	return r
+
+## The left column as it is drawn now, for the report's roll (null headless,
+## where nothing renders).
+func _capture_column() -> Texture2D:
+	if DisplayServer.get_name() == "headless" or not current_screen.has_method("left_column"):
+		return null
+	var col: Control = current_screen.left_column()
+	var img := get_viewport().get_texture().get_image()
+	if img == null or img.is_empty():
+		return null
+	var k := get_viewport().get_final_transform().get_scale().x
+	var px := Rect2i(Vector2i(col.global_position * k), Vector2i(col.size * k)).intersection(
+		Rect2i(Vector2i.ZERO, img.get_size()))
+	if px.size.x <= 0 or px.size.y <= 0:
+		return null
+	return ImageTexture.create_from_image(img.get_region(px))
 
 func war_room_screen() -> WarRoomScreen:
 	return _war_room_screen
@@ -607,6 +659,17 @@ func refresh_missive_badge(and_board := true) -> void:
 		_bottom_bar.set_badge("MISSIVE", MissiveLog.unread(Game.state))
 	if and_board and _missive_screen != null and _missive_screen.visible and Game.state != null:
 		_missive_screen.refresh()
+	if and_board and _war_room_screen != null and _war_room_screen.visible:
+		_war_room_screen.refresh_board()
+
+## A note on the WAR ROOM's easel (spec 2026-10-02-war-room-v2 §1.3): the
+## Missive board opens on that letter OVER the room, which stays open, so
+## closing the board returns to the easel.
+func open_missive_over_war_room(id: int) -> void:
+	_info_screen.hide()
+	_missive_screen.visible = true
+	_missive_screen.set_top_inset(_active_top_bar_height())
+	_missive_screen.select(id)
 
 ## Test/tool seam.
 func report_popup() -> MissiveReportPopup:
@@ -690,6 +753,9 @@ func _on_missive_show(subject: Dictionary) -> void:
 	if String(subject.get("kind", "")) == "ledger":
 		_open_ledger_on(String(subject.get("code", "")))
 		return
+	if _war_room_screen != null and _war_room_screen.visible:
+		_war_room_screen.close()   # the board opened over the room: the place is on the map, not under the room
+		_sync_map_view()
 	var view: Map3DView = current_screen.map3d_view() if current_screen != null and current_screen.has_method("map3d_view") else null
 	if view == null:
 		return
@@ -957,7 +1023,7 @@ func _switch_to(new_state: State) -> void:
 		_ledger_screen.close()
 		move_child(_ledger_screen, get_child_count() - 1)
 	if _war_room_screen != null:
-		_war_room_screen.close()
+		_war_room_screen.close(false)   # the old column is gone: nothing to unroll over the new screen
 		move_child(_war_room_screen, get_child_count() - 1)
 	if _missive_screen != null:
 		_missive_screen.visible = false

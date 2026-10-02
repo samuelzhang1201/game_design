@@ -10,6 +10,10 @@ extends Control
 ## the screen's top-right corner under the close button. Every size a
 ## balance.csv war_key_* key.
 
+## A click on the compass rose: ease the room back to the sheet's foot (spec
+## 2026-10-02-war-room-v2 §1.1).
+signal north_pressed
+
 ## The legend's entries in reading order (the sheet's ink, spec §2).
 const LEGEND := [
 	{"key": "road", "label": "Road"}, {"key": "trail", "label": "Trail"},
@@ -25,7 +29,8 @@ var _view: WarRoomView
 func setup(repo: DataRepository, view: WarRoomView) -> void:
 	_repo = repo
 	_view = view
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mouse_filter = Control.MOUSE_FILTER_STOP   # the rose only (_has_point)
+	tooltip_text = "Turn to the sheet's foot"
 	update_minimum_size()
 	queue_redraw()
 
@@ -36,6 +41,25 @@ static func legend_keys() -> PackedStringArray:
 	for e: Dictionary in LEGEND:
 		out.append(String(e["key"]))
 	return out
+
+
+## The compass rose's box, this Control's px (the top-left square of
+## war_key_rose_px, as _draw places it).
+func rose_rect() -> Rect2:
+	var rose := _repo.bal("war_key_rose_px") if _repo != null else 0.0
+	return Rect2(Vector2.ZERO, Vector2(rose, rose))
+
+
+## Only the rose takes a click; the legend and the bar let it through.
+func _has_point(point: Vector2) -> bool:
+	return rose_rect().has_point(point)
+
+
+func _gui_input(event: InputEvent) -> void:
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed and rose_rect().has_point(mb.position):
+		north_pressed.emit()
+		accept_event()
 
 
 ## {distance, text, width_px} the scale bar shows now ({} with no sheet laid).

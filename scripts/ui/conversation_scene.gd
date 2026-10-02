@@ -772,6 +772,10 @@ func top_bar() -> TopBar:
 func minister_panel() -> PanelContainer:
 	return %MinisterPanel
 
+## The left column (the FACTS column, invariant 10): the WAR ROOM widens over it.
+func left_column() -> PanelContainer:
+	return %MinisterPanel
+
 func map_panel() -> PanelContainer:
 	return %MapPanel
 

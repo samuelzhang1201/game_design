@@ -22,11 +22,14 @@ func test_war_room_is_no_longer_a_placeholder() -> void:
 func test_the_tab_lays_the_home_provinces_sheet_over_the_map() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_process_frames(3)
+	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.1)   # the room widens over that time
 	var screen := r.war_room_screen()
 	assert_true(screen.visible)
 	var map: Control = r.current_screen.map_panel()
-	assert_eq(screen.size, map.size)
+	var column: Control = r.current_screen.left_column()
+	var wide := Rect2(column.global_position, Vector2(map.global_position.x + map.size.x - column.global_position.x, map.size.y))
+	assert_eq(screen.size, wide.size, "the room runs from the column's left edge to the map's right edge")
+	assert_eq(screen.position, Vector2(column.global_position.x, map.global_position.y))
 	var home := MapManors.home_province(Game.data, Game.state)
 	var row: Dictionary = Game.data.provinces[home]
 	var at := Vector2(float(row["center_x"]), float(row["center_y"]))
@@ -48,21 +51,69 @@ func test_the_tab_again_closes_it_and_another_tab_closes_it_too() -> void:
 	assert_true(r.ledger_screen().visible)
 
 
-func test_a_selected_piece_puts_its_card_in_the_left_column_and_closing_takes_it_away() -> void:
+func test_a_picked_piece_unrolls_its_card_over_the_room_and_closing_gives_it_back() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(2)
-	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
-	r.war_room_screen().view().piece_selected.emit(code)
-	await wait_process_frames(1)
+	var screen := r.war_room_screen()
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
+	var home := detail.get_parent()
+	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
+	screen.view().piece_selected.emit(code)
+	await wait_process_frames(1)
 	var card := MapObjects.army_card(Game.data, code, Game.state)
+	assert_eq(detail.get_parent(), screen.card_roll(), "the card is borrowed into the room's roll")
+	assert_eq(UiPalette.card_ground(detail), UiPalette.card_ground(home), "its scroll fades into the same paper as in the column")
+	assert_true(screen.card_roll().visible)
 	assert_eq(detail.title_label().text, String(card["title"]))
 	# the BODY is there too, not only the title: a regiment's stat rows
 	assert_gt((card["stats"] as Array).size(), 0, "the fixture card has stats")
-	assert_gt(detail.stats_grid().get_child_count(), 0, "the stat rows are in the column")
-	r.war_room_screen().close()
+	assert_gt(detail.stats_grid().get_child_count(), 0, "the stat rows are there")
+	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.2)
+	var roll := screen.card_roll()
+	var body := detail.stats_grid().get_combined_minimum_size().y
+	assert_gt(detail.content_height(), detail.get_combined_minimum_size().y + body * 0.9, "the card's height counts its scrolled body")
+	assert_gt(roll.size.y, detail.get_combined_minimum_size().y + body * 0.9, "unrolled past the pinned parts: the body shows")
+	var folio := screen.get_node("%Folio") as Control
+	assert_gte(folio.get_global_rect().position.x, roll.get_global_rect().end.x, "the folio stands clear of the card")
+	screen.close()
+	assert_eq(detail.get_parent(), home, "given back to the column")
+	assert_almost_eq(folio.offset_left, 0.0, 0.01, "and the folio has the room again")
 	assert_false(detail.has_content())
+
+
+func test_clearing_the_pick_rolls_the_card_away_and_gives_it_back() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	var detail: MapDetailPanel = r.current_screen.detail_panel()
+	var home := detail.get_parent()
+	var index := detail.get_index()
+	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
+	screen.view().piece_selected.emit(code)
+	await wait_process_frames(1)
+	screen.view().clear_selection()
+	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.2)
+	assert_eq(detail.get_parent(), home)
+	assert_eq(detail.get_index(), index, "at its old place among the column's cards")
+	assert_false(screen.card_roll().visible)
+
+
+func test_after_the_room_the_courts_own_card_still_lands_in_the_column() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
+	screen.view().piece_selected.emit(code)
+	await wait_process_frames(1)
+	screen.close()
+	var detail: MapDetailPanel = r.current_screen.detail_panel()
+	detail.show_card(MapObjects.army_card(Game.data, code, Game.state))
+	await wait_process_frames(1)
+	assert_true(detail.is_visible_in_tree(), "the column shows the card again")
+	assert_true(r.current_screen.left_column().is_ancestor_of(detail))
 
 
 func test_opening_the_room_withdraws_an_aim_armed_on_the_map() -> void:
@@ -340,3 +391,109 @@ func test_the_margin_keeps_its_buttons_while_the_list_stands_and_refills_on_reop
 		.map(func(b: Button) -> String: return b.text)
 	var label := String(ArmySystem.regiment(Game.data, mover).get("label", mover))
 	assert_true(texts.any(func(t: String) -> bool: return t.begins_with(label)), "%s is in the margin now" % label)
+
+
+func test_closing_the_room_hands_the_column_its_place_back() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	r.war_room_screen().close()
+	await wait_process_frames(1)
+	assert_false(r.war_room_screen().visible)
+	assert_true(r.current_screen.left_column().is_visible_in_tree())
+
+
+func test_the_easel_shows_the_missive_board_and_a_note_opens_the_full_board_over_the_room() -> void:
+	var r: GameRoot = await _court()
+	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", 3,
+		MissiveLog.subject("point", "", -1, Vector2(500, 300)), "A letter", []))
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	var board := screen.board_screen()
+	assert_not_null(board)
+	assert_true(board.board_only())
+	assert_not_null(board.find_child("Note%d" % id, true, false), "the easel carries the real letters")
+	board.note_chosen.emit(id)
+	await wait_process_frames(1)
+	assert_true(r.missive_screen().visible, "the full board opens")
+	assert_eq(r.missive_screen().selected(), id, "on that letter")
+	assert_true(screen.visible, "over the room, which stays open")
+
+
+func test_escape_in_board_view_returns_to_the_table_not_the_pause_menu() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var view := r.war_room_screen().view()
+	view.enter_board()
+	await wait_seconds(Game.data.bal("war_board_fly_s") + 0.2)
+	var e := InputEventKey.new()
+	e.keycode = KEY_ESCAPE
+	e.physical_keycode = KEY_ESCAPE
+	e.pressed = true
+	r.get_viewport().push_input(e)
+	await wait_process_frames(2)
+	assert_eq(view.board_mode(), "to_table")
+	assert_false(r._pause_menu.visible, "Escape went to the board, not the pause menu")
+
+
+func test_a_click_on_the_easel_at_a_notes_place_opens_that_letter() -> void:
+	var r: GameRoot = await _court()
+	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", 3,
+		MissiveLog.subject("point", "", -1, Vector2(500, 300)), "A letter", []))
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	screen.refresh_board()
+	await wait_process_frames(2)
+	var note := screen.board_screen().find_child("Note%d" % id, true, false) as Button
+	var layout := Vector2(screen.board_screen().get_viewport().size_2d_override)
+	if layout == Vector2.ZERO:
+		layout = Vector2(screen.board_screen().get_viewport().size)
+	var uv := note.get_global_rect().get_center() / layout
+	for down in [true, false]:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.pressed = down
+		screen._push_board_click(uv, e)
+	await wait_process_frames(1)
+	assert_true(r.missive_screen().visible, "a real click through the panel")
+	assert_eq(r.missive_screen().selected(), id)
+
+
+func test_show_on_map_from_the_board_over_the_room_leaves_the_room() -> void:
+	var r: GameRoot = await _court()
+	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", 3,
+		MissiveLog.subject("point", "", -1, Vector2(500, 300)), "A letter", []))
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	r.open_missive_over_war_room(id)
+	r.missive_screen().show_requested.emit(MissiveLog.find(Game.state, id)["subject"])
+	await wait_process_frames(1)
+	assert_false(r.war_room_screen().visible, "the map the letter points at is shown, not hidden under the room")
+
+
+func test_a_screen_switch_under_the_room_unrolls_no_stale_report() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.2)
+	r._switch_to(GameRoot.State.COURT)
+	await wait_process_frames(1)
+	var rolls := r.get_children().filter(func(n: Node) -> bool: return n is WarReportRoll and not n.is_queued_for_deletion())
+	assert_eq(rolls.size(), 0, "the old column's picture is not drawn over the new screen")
+
+
+func test_the_host_from_the_borrowed_card_leaves_the_room_for_the_column() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	var detail: MapDetailPanel = r.current_screen.detail_panel()
+	var home := detail.get_parent()
+	screen.view().piece_selected.emit(String(WarRoom.pieces(Game.data, Game.state)[0]["code"]))
+	await wait_process_frames(1)
+	detail.host_requested.emit()
+	await wait_process_frames(1)
+	assert_false(screen.visible, "the host is shown in the column, so the room steps aside")
+	assert_eq(detail.get_parent(), home)

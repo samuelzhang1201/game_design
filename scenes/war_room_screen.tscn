@@ -43,6 +43,12 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="BackToTable" type="Button" parent="Top"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Back to the table"
+
 [node name="Close" type="Button" parent="Top"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -70,6 +76,13 @@ layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 0
+
+[node name="CardRoll" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+clip_contents = true
+layout_mode = 0
+offset_right = 240.0
 
 [node name="KeySlip" type="PanelContainer" parent="."]
 unique_name_in_owner = true

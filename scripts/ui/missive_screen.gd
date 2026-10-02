@@ -7,6 +7,10 @@ extends Control
 ## — nothing is dragged.
 
 signal show_requested(subject: Dictionary)
+## A note's press on the WAR ROOM's easel (board-only mode, spec
+## 2026-10-02-war-room-v2 §1.3): the room opens the letter on the full board;
+## the easel's own board never reads it.
+signal note_chosen(id: int)
 
 const HEADERS := {"truth": "Ground truth", "credible": "Highly credible",
 	"consult": "Worth consulting", "rumour": "Rumour"}
@@ -38,6 +42,7 @@ const FRAME_MARGIN := 48.0
 const FRAME_TOP_GAP := 8.0
 
 var _selected := -1
+var _board_only := false
 
 @onready var _columns: Dictionary = {
 	"truth": %TruthNotes, "credible": %CredibleNotes, "consult": %ConsultNotes, "rumour": %RumourNotes}
@@ -146,6 +151,22 @@ func _fit_desk_painting() -> void:
 ## purse row's lower half at the fixed 48 px margin, shorter than a two-line
 ## TopBar). GameRoot calls this with that screen's TopBar.bar_height() —
 ## 0.0 before one is known, which keeps the fixed margin.
+## The board alone, filling this control, for the WAR ROOM's easel (spec
+## 2026-10-02-war-room-v2 §1.3): no desk, no close, no dim.
+func set_board_only(on: bool) -> void:
+	_board_only = on
+	%Desk.visible = not on
+	%Close.visible = not on
+	get_node("Dim").visible = not on
+	if on:
+		%Frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	refresh()
+
+
+func board_only() -> bool:
+	return _board_only
+
+
 func set_top_inset(top_bar_bottom: float) -> void:
 	%Frame.offset_top = maxf(FRAME_MARGIN, top_bar_bottom + FRAME_TOP_GAP)
 
@@ -239,7 +260,11 @@ func _note(m: Dictionary) -> Button:
 		var ink := MapPalette.named(Game.data, "missive_ink")
 		for c: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 			b.add_theme_color_override(c, ink)
-	b.pressed.connect(func() -> void: select(id))
+	b.pressed.connect(func() -> void:
+		if _board_only:
+			note_chosen.emit(id)
+		else:
+			select(id))
 	var pin := MissiveArt.texture(Game.data, "pin")
 	if pin != null:
 		var chip := TextureRect.new()

@@ -580,3 +580,112 @@ func test_a_pennant_with_no_model_still_plants_its_slip() -> void:
 	assert_not_null(node.get_node_or_null("Slip"))
 	assert_eq(pennants.screen_hits(view.get_node("%Camera"), view.window_scale()).size(), 1, "and still picked")
 
+
+
+func test_wasd_pans_but_not_while_a_text_box_has_focus() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var box := LineEdit.new()
+	add_child_autofree(box)
+	var before := view.camera_rig().target
+	Input.parse_input_event(_key(KEY_A, true))
+	await wait_process_frames(1)   # the input buffer is flushed on the frame
+	assert_true(view.key_pan(0.1), "A pans the room")
+	box.grab_focus()
+	var moved := view.camera_rig().target
+	assert_false(view.key_pan(0.1), "the talk box keeps its keys")
+	await wait_process_frames(1)
+	Input.parse_input_event(_key(KEY_A, false))
+	await wait_process_frames(1)
+	assert_ne(moved, before)
+	assert_eq(view.camera_rig().target, moved, "nor does the room's own frame pan it")
+
+
+func _key(code: Key, down: bool) -> InputEventKey:
+	var e := InputEventKey.new()
+	e.keycode = code
+	e.physical_keycode = code
+	e.pressed = down
+	return e
+
+
+func test_the_easels_board_faces_the_table() -> void:
+	var panel := (view.get_node("%BoardPanel") as Node3D).global_transform
+	assert_gt(panel.basis.z.normalized().dot((Vector3.ZERO - panel.origin) * Vector3(1, 0, 1)), 0.0)
+
+
+func test_entering_the_board_flies_the_camera_square_in_front_of_it_and_back() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var cam := view.get_node("%Camera") as Camera3D
+	var before := cam.transform
+	view.enter_board()
+	assert_eq(view.board_mode(), "to_board")
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	assert_eq(view.board_mode(), "board")
+	var panel := (view.get_node("%BoardPanel") as Node3D).global_transform
+	assert_almost_eq((-cam.global_transform.basis.z).dot(-panel.basis.z.normalized()), 1.0, 0.001, "square to the panel")
+	view.leave_board()
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	assert_eq(view.board_mode(), "table")
+	assert_almost_eq(cam.transform.origin.distance_to(before.origin), 0.0, 0.001, "back where it left")
+
+
+func test_in_board_view_a_left_click_on_the_panel_is_the_boards_not_the_rooms() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	view.enter_board()
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	watch_signals(view)
+	var at := view.size * 0.5   # the panel's centre is under the view's centre
+	for down in [true, false]:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.pressed = down
+		e.position = at
+		view._gui_input(e)
+	assert_signal_emitted(view, "board_clicked")
+	assert_signal_not_emitted(view, "piece_selected")
+	assert_signal_not_emitted(view, "selection_cleared")
+
+
+func _board_click(at: Vector2, jitter: Vector2) -> void:
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = at
+	view._gui_input(press)
+	if jitter != Vector2.ZERO:
+		var m := InputEventMouseMotion.new()
+		m.button_mask = MOUSE_BUTTON_MASK_LEFT
+		m.position = at + jitter
+		m.relative = jitter
+		view._gui_input(m)
+	var release := press.duplicate() as InputEventMouseButton
+	release.pressed = false
+	release.position = at + jitter
+	view._gui_input(release)
+
+
+func test_a_board_click_with_a_little_jitter_is_still_a_click() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	view.enter_board()
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	watch_signals(view)
+	_board_click(view.size * 0.5, Vector2(1, 0))
+	assert_signal_emit_count(view, "board_clicked", 2, "the press and the release both reach the board")
+	var release: Array = get_signal_parameters(view, "board_clicked", 1)
+	assert_gte((release[0] as Vector2).x, 0.0, "released on the board")
+
+
+func test_a_board_drag_still_releases_the_button_but_off_the_board() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	view.enter_board()
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	watch_signals(view)
+	_board_click(view.size * 0.5, Vector2(60, 0))
+	assert_signal_emit_count(view, "board_clicked", 2, "the button is never left held in the board")
+	var release: Array = get_signal_parameters(view, "board_clicked", 1)
+	assert_lt((release[0] as Vector2).x, 0.0, "a pan's release lands off the board, so no note fires")
