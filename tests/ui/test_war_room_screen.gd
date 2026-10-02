@@ -172,18 +172,20 @@ func _roll(view: WarRoomView) -> void:
 	view._process(10.0)
 
 
-func test_the_rake_on_a_running_clock_says_why_and_arms_nothing() -> void:
+## The clock is held in the room (owner 2026-10-02), so the map's "pause the
+## clock first" never stands between the rake and its march.
+func test_the_clock_cannot_run_in_the_room_so_the_rake_always_arms() -> void:
 	var r: GameRoot = await _court()
+	Game.set_clock_speed(1)
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(2)
 	Game.set_clock_speed(1)
+	assert_eq(Game.clock_speed, 0, "nothing starts the clock in the room")
 	var screen := r.war_room_screen()
-	var code := String(WarRoom.on_sheet(Game.data, Game.state, screen.view().sheet_index())[0]["code"])
-	watch_signals(Game)
+	var code := String(_land_piece(screen)["code"])
 	screen.view().rake_started.emit(code)
-	Game.set_clock_speed(0)
-	assert_eq(screen.orders().aiming(), "")
-	assert_signal_emitted(Game, "news_published", "the reason is published")
+	assert_eq(screen.orders().aiming(), code, "the march is armed")
+	screen.orders().withdraw_aim()
 
 
 func test_a_committed_rake_pencils_a_draft_pennant() -> void:
@@ -776,3 +778,184 @@ func test_pencilling_into_the_sea_is_refused_at_once_but_an_empty_chest_is_not()
 	screen.view().ground_clicked.emit(_land_near(screen, p["at"]), Vector2(100, 100))
 	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
 	assert_true(WarDrafts.any(Game.state), "a draft costs nothing yet")
+
+
+
+## Space pressed as the player presses it.
+func _space() -> void:
+	var key := InputEventKey.new()
+	key.keycode = KEY_SPACE
+	key.physical_keycode = KEY_SPACE
+	key.pressed = true
+	get_viewport().push_input(key)
+	var up := key.duplicate() as InputEventKey
+	up.pressed = false
+	get_viewport().push_input(up)
+
+
+## Owner 2026-10-02: 进入war room时间也一直是暂停的，无法继续，直到下达命令并退出.
+func test_entering_the_room_stops_the_clock_and_nothing_starts_it_until_it_is_left() -> void:
+	var r: GameRoot = await _court()
+	var fast := int(Game.data.bal("time_speed_fast"))
+	Game.set_clock_speed(fast)
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	assert_eq(Game.clock_speed, 0, "the room stops the clock")
+	assert_true(Game.clock_held)
+	assert_true(Game.holds_clock("war_room"))
+	_space()
+	await wait_process_frames(2)
+	assert_eq(Game.clock_speed, 0, "Space does not start it in the room")
+	var bar: TopBar = r.current_screen.top_bar()
+	for speed: int in [1, fast, int(Game.data.bal("time_speed_faster"))]:
+		var b := bar.clock_button(speed)
+		assert_true(b.disabled, "the %d button is greyed" % speed)
+		b.pressed.emit()
+		assert_eq(Game.clock_speed, 0, "the %d button does not start it" % speed)
+	var day := Game.state.absolute_day()
+	await wait_process_frames(10)
+	assert_eq(Game.state.absolute_day(), day, "no day passes in the room")
+	(r.war_room_screen().get_node("%Close") as Button).pressed.emit()
+	await wait_process_frames(1)
+	assert_false(r.war_room_screen().visible)
+	assert_eq(Game.clock_speed, 0, "leaving starts nothing")
+	assert_false(Game.clock_held, "but lets the clock go")
+	assert_false(bar.clock_button(1).disabled, "the play buttons are back")
+	_space()
+	await wait_process_frames(2)
+	assert_gt(Game.clock_speed, 0, "after leaving, Space starts it again")
+	Game.set_clock_speed(0)
+
+
+## Every way out of the room lets go of its hold — once: the next holder (the
+## LEDGER) keeps its own.
+func test_every_way_out_of_the_room_lets_the_clock_go() -> void:
+	var id_of := func() -> int:
+		return MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", 3,
+			MissiveLog.subject("point", "", -1, Vector2(500, 300)), "A letter", []))
+	var doors := {
+		"the WAR ROOM tab again": func(r: GameRoot) -> void: r.bottom_bar().button("WAR ROOM").pressed.emit(),
+		"the close button": func(r: GameRoot) -> void: (r.war_room_screen().get_node("%Close") as Button).pressed.emit(),
+		"a map lens": func(r: GameRoot) -> void: r.bottom_bar().button("HEIGHTS").pressed.emit(),
+		"an info tab": func(r: GameRoot) -> void: r.bottom_bar().button("FAMILIES").pressed.emit(),
+		"the MISSIVE tab": func(r: GameRoot) -> void: r.bottom_bar().button("MISSIVE").pressed.emit(),
+		"the LEDGER tab": func(r: GameRoot) -> void: r.bottom_bar().button("LEDGER").pressed.emit(),
+		"Show on map from the board over the room": func(r: GameRoot) -> void:
+			var id: int = id_of.call()
+			r.open_missive_over_war_room(id)
+			r.missive_screen().show_requested.emit(MissiveLog.find(Game.state, id)["subject"]),
+		"an event's switch": func(r: GameRoot) -> void: r._switch_to(GameRoot.State.COURT),
+		"Quit's door": func(r: GameRoot) -> void: r.leave_war_room(func() -> void: pass),
+		"the host from the card": func(r: GameRoot) -> void:
+			r.war_room_screen().view().piece_selected.emit(String(WarRoom.pieces(Game.data, Game.state)[0]["code"]))
+			r.current_screen.detail_panel().host_requested.emit(),
+	}
+	for name: String in doors:
+		var r: GameRoot = await _court()
+		r.bottom_bar().button("WAR ROOM").pressed.emit()
+		await wait_process_frames(2)
+		assert_true(Game.holds_clock("war_room"), name + ": held on entering")
+		watch_signals(Game)
+		(doors[name] as Callable).call(r)
+		await wait_process_frames(2)
+		assert_false(r.war_room_screen().visible, name + " leaves the room")
+		assert_false(Game.holds_clock("war_room"), name + " lets the room's hold go")
+		assert_eq(Game.clock_held, r.ledger_screen().visible, name + ": held only while the LEDGER is open")
+		assert_eq(Game.clock_speed, 0, name + " starts nothing")
+		if r.ledger_screen().visible:
+			r.ledger_screen().close()
+			assert_false(Game.clock_held, "the LEDGER opened from the room lets go on closing")
+		r.queue_free()
+		await wait_process_frames(1)
+
+
+## The Missive board opened OVER the room is not a way out: the hold stands.
+func test_the_board_over_the_room_keeps_the_clock_held() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", 3,
+		MissiveLog.subject("point", "", -1, Vector2(500, 300)), "A letter", []))
+	r.open_missive_over_war_room(id)
+	await wait_process_frames(1)
+	assert_true(r.war_room_screen().visible)
+	assert_true(Game.holds_clock("war_room"))
+	Game.set_clock_speed(1)
+	assert_eq(Game.clock_speed, 0)
+	r.missive_screen().visible = false   # the board's own close: back to the room
+	await wait_process_frames(1)
+	assert_true(Game.holds_clock("war_room"), "still in the room")
+
+
+## The leave prompt's every answer that leaves lets the hold go; Stay keeps it.
+func test_the_leave_prompts_answers_let_the_clock_go_only_when_they_leave() -> void:
+	for choice: String in ["stay", "keep", "discard"]:
+		var r: GameRoot = await _room_with_a_draft()
+		r.war_room_screen().request_close()
+		await wait_process_frames(1)
+		_prompt(r).chosen.emit(choice)
+		await wait_process_frames(1)
+		assert_eq(Game.holds_clock("war_room"), choice == "stay", choice)
+		r.queue_free()
+		await wait_process_frames(1)
+
+
+## Deploy works while the clock is held: the resolutions are sealed and their
+## couriers wait at the capital for play; the room stays open and held.
+func test_deploy_seals_and_sends_under_the_held_clock() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	assert_true(Game.clock_held)
+	var couriers := Game.state.couriers.size()
+	var scroll := r.war_room_screen().get_node("%Deploy") as WarDeployScroll
+	scroll.unroll()
+	scroll.seal()
+	await wait_until(func() -> bool: return not WarDrafts.any(Game.state), 8.0)
+	assert_false(WarDrafts.any(Game.state), "every draft ran as its order")
+	assert_gt(Game.state.couriers.size(), couriers, "its courier is dispatched")
+	assert_true(r.war_room_screen().visible, "the room stays open")
+	assert_true(Game.holds_clock("war_room"), "and held")
+	assert_eq(Game.clock_speed, 0)
+
+
+## Freed while open (the game quits, a test ends): the hold goes with it.
+func test_a_room_freed_while_open_lets_the_clock_go() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	assert_true(Game.clock_held)
+	r.queue_free()
+	await wait_process_frames(1)
+	assert_false(Game.clock_held)
+
+
+## Owner 2026-10-02: war room的军队单位位置一定要和大地图一致 — a piece stands
+## where the 3D map DRAWS its regiment (mid-day ahead of the engine's spot),
+## and the margin sorts by that place too.
+func test_the_pieces_stand_where_the_map_draws_them() -> void:
+	var r: GameRoot = await _court()
+	var screen := r.war_room_screen()
+	var code := ""
+	var engine := Vector2.ZERO
+	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+		if String(reg.get("is_naval", "0")) != "1":
+			code = String(reg["regiment_code"])
+			engine = ArmySystem.position_of(Game.data, Game.state, reg)
+			break
+	var drawn := engine + Vector2(4.5, -1.25)   # mid-day: part of a day's march ahead
+	screen.drawn_source = func() -> Dictionary: return {code: drawn}
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	screen.view().lay_sheet(WarSheets.sheet_of(Game.data, drawn))
+	await wait_process_frames(3)
+	var at: Dictionary = screen.view().piece_pack_positions()
+	assert_true(at.has(code))
+	assert_almost_eq((at[code] as Vector2).distance_to(drawn), 0.0, 0.001, "the piece stands on the map's spot")
+	assert_almost_eq(screen.view().position_of(code).distance_to(drawn), 0.0, 0.001, "and the rake measures from it")
+	var other := ""
+	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+		var c := String(reg["regiment_code"])
+		if c != code and at.has(c):
+			other = c
+			assert_almost_eq((at[c] as Vector2).distance_to(ArmySystem.position_of(Game.data, Game.state, reg)),
+				0.0, 0.001, "a regiment the map does not name stands at the engine's spot")
+	assert_ne(other, "", "the sheet holds another piece to compare")

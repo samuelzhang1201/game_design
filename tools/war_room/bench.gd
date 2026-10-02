@@ -1,7 +1,7 @@
 extends Node
 ## Frame time of the WAR ROOM as the player sees it (spec 2026-10-01-war-room-
-## design): the real GameRoot, the court, the WAR ROOM tab pressed, the clock at
-## 4x, the home sheet laid — at the camera's three distances (war_cam_max_m,
+## design): the real GameRoot, the court, the WAR ROOM tab pressed (which holds
+## the clock still, owner 2026-10-02), the home sheet laid — at the camera's three distances (war_cam_max_m,
 ## war_cam_distance_m, war_cam_min_m, reached by the real wheel on the view),
 ## median / mean / p95 against the tier's bench_budget_ms exactly as
 ## tools/map3d/bench.gd prints its rows (it is a sibling because that bench's
@@ -77,7 +77,6 @@ func _ready() -> void:
 		view.swap_to(int(args[si + 1]))
 	for i in 20:
 		await get_tree().process_frame   # the sheet's ink paints over a few frames
-	Game.set_clock_speed(4)
 	var row := Map3DQuality.row(Game.data, _tier)
 	var budget := Map3DQuality.num(row, "bench_budget_ms", BUDGET_MS)
 	if "%dx%d" % [size.x, size.y] != String(row.get("bench_size", "")):
@@ -120,7 +119,7 @@ func _lean_to(view: WarRoomView, want: float) -> void:
 ## shadow is a real cost), null when none.
 func _a_land_piece(view: WarRoomView) -> Node3D:
 	var pieces := view.get_node("%Pieces") as WarPieces
-	for p: Dictionary in WarRoom.on_sheet(Game.data, Game.state, view.sheet_index()):
+	for p: Dictionary in WarRoom.on_sheet(Game.data, Game.state, view.sheet_index(), view.drawn()):
 		var code := String(p["code"])
 		if MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code)) != "fleet":
 			return pieces.piece(code)

@@ -59,7 +59,7 @@ func drop() -> void:
 ## the pack's own measure; "cannot march" for a banner with no one to march.
 func reading(regiment: String, to_px: Vector2) -> String:
 	var state := _view.state()
-	var from := WarRoom.believed_position(_repo, state, ArmySystem.regiment(_repo, regiment))
+	var from := _view.position_of(regiment)
 	var unit := String(_repo.map_info.get("distance_unit", "")).strip_edges()
 	var dist := from.distance_to(to_px) * float(_repo.map_info.get("distance_scale", "1"))
 	var text := "%s %s" % [WarRoom.group(int(round(dist))), unit if unit != "" else "km"]
@@ -144,7 +144,7 @@ func redraw() -> void:
 	if _view.rolling():
 		who = ""   # the table is rolling up: the pieces, pennants and their marks are put away
 	if who != "":
-		var home := WarRoom.believed_position(_repo, _view.state(), ArmySystem.regiment(_repo, who))
+		var home := _view.position_of(who)
 		var at: Variant = _view.screen_pos_of_px(home) if _view.sheet_rect().has_point(home) else null
 		if at != null:
 			from = at
@@ -172,7 +172,7 @@ func _routes() -> Array:
 	if _view.rolling():
 		return out
 	var state := _view.state()
-	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index()):
+	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
 		var pen := WarRoom.pennant_of(_repo, state, String(p["code"]))
 		if pen.is_empty() or not _view.sheet_rect().has_point(pen["at"]):
 			continue
@@ -192,7 +192,7 @@ func _drafts() -> Array:
 	if _view.rolling():
 		return out
 	var state := _view.state()
-	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index()):
+	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
 		var d := WarDrafts.of(state, String(p["code"]))
 		if String(d.get("order", "")) != WarDrafts.MARCH:
 			continue

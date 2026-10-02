@@ -54,6 +54,7 @@ var aim_code := ""
 var _repo: DataRepository
 var _state_fn: Callable
 var _paused_fn: Callable
+var _drawn_fn: Callable   # -> {code: pack px} where the 3D map draws each regiment (bind)
 var _rig := WarCamera.new()
 var _sheet := -1
 var _rect := Rect2()
@@ -98,10 +99,14 @@ func _ready() -> void:
 	set_process(false)
 
 
-func bind(repo: DataRepository, state_fn: Callable, paused_fn: Callable) -> void:
+## `drawn_fn` gives where the 3D map DRAWS each regiment, pack px (owner
+## 2026-10-02: the room's pieces stand exactly where the map shows them); a
+## regiment it does not name stands at WarRoom.believed_position.
+func bind(repo: DataRepository, state_fn: Callable, paused_fn: Callable, drawn_fn := Callable()) -> void:
 	_repo = repo
 	_state_fn = state_fn
 	_paused_fn = paused_fn
+	_drawn_fn = drawn_fn
 	_pieces.setup(repo, self)
 	_pennants.setup(repo, self)
 	_rake.setup(self, repo, {"hud": %Hud, "pieces": _pieces, "pennants": _pennants, "camera": _camera,
@@ -163,6 +168,17 @@ func state() -> GameState:
 
 func paused() -> bool:
 	return bool(_paused_fn.call())
+
+
+## Where the 3D map draws each regiment, pack px ({} with no map).
+func drawn() -> Dictionary:
+	return _drawn_fn.call() as Dictionary if _drawn_fn.is_valid() else {}
+
+
+## Where a regiment's piece stands, pack px: the map's drawn spot, else the
+## engine's believed one.
+func position_of(code: String) -> Vector2:
+	return WarRoom.believed_position(_repo, state(), ArmySystem.regiment(_repo, code), drawn())
 
 
 ## The lettering face is handed in by the screen (UiPalette's body_italic
@@ -556,6 +572,19 @@ func screen_pos_of_px(pack_px: Vector2) -> Variant:
 	if _camera.is_position_behind(p):
 		return null
 	return _camera.unproject_position(p) / window_scale()
+
+
+## Where each piece of the laid sheet stands, in pack px (its base's centre,
+## mid-push included): code -> Vector2.
+func piece_pack_positions() -> Dictionary:
+	var out: Dictionary = {}
+	if _sheet < 0:
+		return out
+	for c: Node in _pieces.get_children():
+		if c is Node3D and not c.is_queued_for_deletion():
+			var p := (c as Node3D).position
+			out[String(c.get_meta("code", ""))] = WarRoomTable.from_table(_rect, _table_w, Vector2(p.x, p.z))
+	return out
 
 
 ## The pack point under a screen px, Vector2(-1, -1) off the table.

@@ -6,9 +6,21 @@ extends RefCounted
 ## stands: believed_position is the one place the table reads, so intel P2's
 ## blur (the last ARRIVED report's place) lands here and nowhere else. The
 ## enemy's ghosts are believed_hosts — empty until the raid host exists.
+##
+## `drawn` (code -> pack px) is where the 3D map DRAWS each regiment — its
+## piece walks the engine's next day by the day's share, so mid-day it stands
+## up to a day's march ahead of ArmySystem.position_of (measured 6.5 pack px
+## on 2026-10-02). The owner ruled the room's pieces must stand exactly where
+## the map shows them (2026-10-02: war room的军队单位位置一定要和大地图一致), so
+## a drawn spot wins; the screen hands it in (presentation only — the engine
+## never reads it, and a regiment the map does not draw keeps the engine's).
 
 
-static func believed_position(repo: DataRepository, state: GameState, reg: Dictionary) -> Vector2:
+static func believed_position(repo: DataRepository, state: GameState, reg: Dictionary,
+		drawn: Dictionary = {}) -> Vector2:
+	var code := String(reg.get("regiment_code", ""))
+	if drawn.has(code):
+		return drawn[code]
 	return ArmySystem.position_of(repo, state, reg)
 
 
@@ -19,10 +31,10 @@ static func believed_hosts(_repo: DataRepository, _state: GameState) -> Array:
 
 
 ## The crown's regiments as pieces: code, believed place, naval, home sheet.
-static func pieces(repo: DataRepository, state: GameState) -> Array:
+static func pieces(repo: DataRepository, state: GameState, drawn: Dictionary = {}) -> Array:
 	var out: Array = []
 	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		var at := believed_position(repo, state, reg)
+		var at := believed_position(repo, state, reg, drawn)
 		out.append({"code": String(reg["regiment_code"]), "at": at,
 			"naval": String(reg.get("is_naval", "0")) == "1", "sheet": WarSheets.sheet_of(repo, at)})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return String(a["code"]) < String(b["code"]))
@@ -31,7 +43,8 @@ static func pieces(repo: DataRepository, state: GameState) -> Array:
 
 ## The pieces split by a sheet, computed once: "on" those inside its rect (or
 ## on no sheet at all and this the nearest), "off" the rest.
-static func partition(repo: DataRepository, state: GameState, sheet_index: int) -> Dictionary:
+static func partition(repo: DataRepository, state: GameState, sheet_index: int,
+		drawn: Dictionary = {}) -> Dictionary:
 	var on: Array = []
 	var off: Array = []
 	var all := WarSheets.series(repo)
@@ -39,7 +52,7 @@ static func partition(repo: DataRepository, state: GameState, sheet_index: int) 
 	var valid := sheet_index >= 0 and sheet_index < all.size()
 	if valid:
 		rect = all[sheet_index]["rect"]
-	for p: Dictionary in pieces(repo, state):
+	for p: Dictionary in pieces(repo, state, drawn):
 		if valid and (rect.has_point(p["at"]) or (not _on_any(all, p["at"]) and int(p["sheet"]) == sheet_index)):
 			on.append(p)
 		else:
@@ -47,12 +60,14 @@ static func partition(repo: DataRepository, state: GameState, sheet_index: int) 
 	return {"on": on, "off": off}
 
 
-static func on_sheet(repo: DataRepository, state: GameState, sheet_index: int) -> Array:
-	return partition(repo, state, sheet_index)["on"]
+static func on_sheet(repo: DataRepository, state: GameState, sheet_index: int,
+		drawn: Dictionary = {}) -> Array:
+	return partition(repo, state, sheet_index, drawn)["on"]
 
 
-static func off_sheet(repo: DataRepository, state: GameState, sheet_index: int) -> Array:
-	return partition(repo, state, sheet_index)["off"]
+static func off_sheet(repo: DataRepository, state: GameState, sheet_index: int,
+		drawn: Dictionary = {}) -> Array:
+	return partition(repo, state, sheet_index, drawn)["off"]
 
 
 static func _on_any(all: Array, at: Vector2) -> bool:

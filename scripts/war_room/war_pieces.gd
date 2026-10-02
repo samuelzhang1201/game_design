@@ -4,7 +4,8 @@ extends Node3D
 ## spec 2026-10-01-war-room-design §3): 9 / 6 / 3 figures of the regiment's
 ## chief arm frozen in its order's pose, a base painted the realm's colour with
 ## a brass name plate and the house's arms, a paper tag on a pin. Each stands
-## where WarRoom.believed_position puts it; when that moves, the plotter's rake
+## where the 3D map draws it (WarRoomView.drawn, else WarRoom.believed_position;
+## owner 2026-10-02); when that moves, the plotter's rake
 ## pushes it there over war_plot_push_s. Never reaches the Game autoload.
 
 
@@ -50,7 +51,7 @@ func piece(code: String) -> Node3D:
 ## is (no push): a laid sheet, a changed regiment set.
 func rebuild(state: GameState) -> void:
 	_clear()
-	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index()):
+	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
 		_add(state, String(p["code"]), bool(p["naval"]), _seated(p["at"], bool(p["naval"])))
 
 
@@ -58,7 +59,7 @@ func rebuild(state: GameState) -> void:
 ## built and a gone one freed, a changed pose or figure count rebuilt in place.
 func update(state: GameState) -> void:
 	var keep: Dictionary = {}
-	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index()):
+	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
 		var code := String(p["code"])
 		keep[code] = true
 		var want := _seated(p["at"], bool(p["naval"]))

@@ -22,6 +22,18 @@ static func world_to_pack(world: Dictionary, xz: Vector2) -> Vector2:
 	return (xz - Vector2(float(o[0]), float(o[1]))) / float(world["m_per_px"])
 
 
+## Every world XZ of a dictionary as its pack pixel, keyed the same. The WAR
+## ROOM's pieces stand where the 3D map DRAWS each regiment (owner 2026-10-02:
+## 位置一定要和大地图一致): Map3DView.unit_pack_positions steps the units layer
+## at no time passed first, so a view put away under the room answers where it
+## WILL draw each piece the moment it is shown again at this share of the day.
+static func world_to_pack_all(world: Dictionary, xz_by_key: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	for k: Variant in xz_by_key:
+		out[k] = world_to_pack(world, xz_by_key[k])
+	return out
+
+
 ## The pack's whole canvas in world XZ.
 static func world_bounds(world: Dictionary) -> Rect2:
 	var p: Array = world["pack_px"]

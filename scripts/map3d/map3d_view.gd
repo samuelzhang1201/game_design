@@ -438,6 +438,9 @@ func set_military(on: bool) -> void:
 # MILITARY's 3D pieces: heads (the chip hangs there), boxes (clicks), count, motion.
 func unit_tops() -> Dictionary: return _units.screen_tops() if _loaded else {}
 func unit_positions() -> Dictionary: return _units.shown_positions() if _loaded else {}
+func unit_pack_positions() -> Dictionary:  # the WAR ROOM's pieces (Map3DGeometry.world_to_pack_all)
+	if _loaded: _units.step(0.0)
+	return Map3DGeometry.world_to_pack_all(_meta, _units.shown_positions()) if _loaded else {}
 func unit_rects() -> Dictionary: return _units.screen_rects() if _loaded else {}
 func unit_count() -> int: return _units.drawn_count() if _loaded else 0
 func unit_moves() -> int: return _units.moves() if _loaded else 0

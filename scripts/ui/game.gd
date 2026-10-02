@@ -38,7 +38,7 @@ func _ready() -> void:
 
 func start_campaign(seed_value: int = 42) -> void:
 	_reset_llm()
-	hold_clock(false)  # a reign never begins held (the LEDGER's hold is its viewing's)
+	release_clock_holds()  # a reign never begins held (each hold is its screen's viewing's)
 	state = campaign_maker.call(data, seed_value)
 	engine = TickEngine.new(data)
 
@@ -79,19 +79,38 @@ func toggle_clock() -> void:
 
 ## Whether the clock is held still: while the LEDGER is open (owner
 ## 2026-10-01: entering the LEDGER stops the clock, which stays stopped while
-## it is open — the chart reflects the present), set_clock_speed refuses to
-## start it, whoever asks.
+## it is open — the chart reflects the present) or the WAR ROOM (owner
+## 2026-10-02: 进入war room时间也一直是暂停的，无法继续，直到下达命令并退出),
+## set_clock_speed refuses to start it, whoever asks.
 var clock_held := false
+## Who holds it ("ledger", "war_room"): each lets go of its own hold only, so
+## the clock runs again (when the player starts it) once NO holder is left.
+var _clock_holders: Dictionary = {}
 
 ## Holds the clock still (stopping it) or lets it go — stopped: letting go
-## starts nothing, the player does (owner 2026-10-01).
-func hold_clock(on: bool) -> void:
+## starts nothing, the player does (owner 2026-10-01). `who` names the holder.
+func hold_clock(on: bool, who := "ledger") -> void:
 	if on:
 		set_clock_speed(0)
-	if clock_held == on:
+		_clock_holders[who] = true
+	else:
+		_clock_holders.erase(who)
+	_set_held(not _clock_holders.is_empty())
+
+## Every hold let go (a new reign, a restart): nothing is open any more.
+func release_clock_holds() -> void:
+	_clock_holders.clear()
+	_set_held(false)
+
+## Whether `who` holds the clock now (tests, tools).
+func holds_clock(who: String) -> bool:
+	return _clock_holders.has(who)
+
+func _set_held(held: bool) -> void:
+	if clock_held == held:
 		return
-	clock_held = on
-	clock_held_changed.emit(on)
+	clock_held = held
+	clock_held_changed.emit(held)
 
 
 ## Tools only (tools/map3d/bench.gd, through GameRoot): roll the day back
@@ -276,7 +295,7 @@ func load_campaign(path: String = "") -> bool:
 ## GameRoot's global R handler.
 func restart() -> void:
 	set_clock_speed(0)
-	hold_clock(false)
+	release_clock_holds()
 	_reset_llm()
 	state = null
 	engine = null
