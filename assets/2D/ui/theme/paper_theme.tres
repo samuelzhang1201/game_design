@@ -2,8 +2,16 @@
 
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/figures.tres" id="1_fuys7"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/header.tres" id="2_pd6rl"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="3_pd6rl"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_aqemf"]
+content_margin_top = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 1
+border_color = Color(0.3529412, 0.27450982, 0.19607843, 0.45)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3tuu4"]
 content_margin_top = 3.0
 content_margin_bottom = 3.0
 bg_color = Color(0, 0, 0, 0)
@@ -58,6 +66,29 @@ CardValue/font_sizes/font_size = 13
 CardWarn/base_type = &"Label"
 CardWarn/colors/font_color = Color(0.7529412, 0.47843137, 0.4, 1)
 CardWarn/font_sizes/font_size = 11
+DashCaption/base_type = &"Label"
+DashCaption/colors/font_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
+DashCaption/font_sizes/font_size = 11
+DashCaption/fonts/font = ExtResource("3_pd6rl")
+DashFigure/base_type = &"Label"
+DashFigure/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
+DashFigure/font_sizes/font_size = 19
+DashLine/base_type = &"Label"
+DashLine/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
+DashLine/font_sizes/font_size = 15
+DashSection/base_type = &"SectionLabel"
+DashSection/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
+DashSection/font_sizes/font_size = 14
+DashSection/fonts/font = ExtResource("2_pd6rl")
+DashSection/styles/normal = SubResource("StyleBoxFlat_3tuu4")
+DashSub/base_type = &"Label"
+DashSub/colors/font_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
+DashSub/font_sizes/font_size = 14
+DashSub/fonts/font = ExtResource("3_pd6rl")
+DashTitle/base_type = &"Label"
+DashTitle/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
+DashTitle/font_sizes/font_size = 24
+DashTitle/fonts/font = ExtResource("2_pd6rl")
 Label/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 LinkButton/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
 RichTextLabel/colors/default_color = Color(0.16862746, 0.12156863, 0.08235294, 1)

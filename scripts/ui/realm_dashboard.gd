@@ -32,90 +32,49 @@ var _body: VBoxContainer
 ## sizes the report's paper to it).
 signal content_resized
 
+## The card is scenes/realm_dashboard.tscn (owner 2026-10-02: the look lives
+## in the editor): its lines name Dash* theme kinds, which the report's paper
+## theme writes in the paper's ink and size and game_theme.tres in the
+## leather's — so the same card is the steward's report on the war table and
+## the leather card otherwise. What differs beyond the ink (the report's
+## sentences for the pie and the host's bars, the ¶ before a heading, the
+## tally marks) is set here by mode.
 static func attach(column: BoxContainer) -> RealmDashboard:
-	var d := RealmDashboard.new()
+	var d: RealmDashboard = (load("res://scenes/realm_dashboard.tscn") as PackedScene).instantiate()
 	column.add_child(d)
 	column.move_child(d, 0)
 	return d
 
-func _init() -> void:
-	name = "RealmDashboard"
-	mouse_filter = Control.MOUSE_FILTER_PASS
-	size_flags_vertical = Control.SIZE_EXPAND_FILL
+func _ready() -> void:
 	var table := UiPalette.war_table()
-	_scroll = ScrollContainer.new()
-	_scroll.name = "Scroll"
-	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
-	add_child(_scroll)
-	_body = VBoxContainer.new()
-	_body.name = "Body"
-	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_body.add_theme_constant_override("separation", 6)
-	_scroll.add_child(_body)
+	_scroll = $Scroll
+	_body = $Scroll/Body
 	_body.minimum_size_changed.connect(func() -> void: content_resized.emit())
-	_title = Label.new()
-	_title.name = "Title"
-	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	if table:
-		UiPalette.style_header(_title, 24, UiPalette.ink("rubric"))
-	else:
-		UiPalette.style_header(_title, 16)
-	_body.add_child(_title)
-	_sub = Label.new()
-	_sub.name = "Sub"
-	_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var italic := UiPalette.role_font("body_italic")
-	if italic != null:
-		_sub.add_theme_font_override("font", italic)
-	_sub.add_theme_font_size_override("font_size", 14)
-	_sub.add_theme_color_override("font_color", UiPalette.ink("muted"))
+	_title = _body.get_node("Title")
+	_sub = _body.get_node("Sub")
 	_sub.visible = table
-	_body.add_child(_sub)
-	if not table:
-		_body.add_child(HSeparator.new())
-	var grid := GridContainer.new()
-	grid.name = "Resources"
-	grid.columns = 4
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 4)
-	_body.add_child(grid)
+	_body.get_node("Rule").visible = not table
 	var named_figures: bool = Game.data != null and float(Game.data.balance.get("ui_dimension_labels", 0.0)) > 0.0
 	for key in RESOURCES:
-		grid.add_child(ResourceIcon.create(key))
-		var v := Label.new()
-		v.name = "Value_" + key
-		v.add_theme_font_size_override("font_size", 19 if table else 16)
-		v.add_theme_color_override("font_color", UiPalette.ink("soft"))
-		v.custom_minimum_size = Vector2(66, 0)
-		_resource_values[key] = v
-		if not named_figures:
-			grid.add_child(v)
-			continue
+		_resource_values[key] = _body.get_node("Resources/Pair_%s/Value_%s" % [key, key])
+		var cap: Label = _body.get_node("Resources/Pair_%s/Name_%s" % [key, key])
 		# Each figure names itself under it (owner 2026-09-28, second
-		# critique: the four figures were the card's last icon-only reading).
-		var pair := VBoxContainer.new()
-		pair.add_theme_constant_override("separation", -4)
-		pair.add_child(v)
-		var cap := Label.new()
-		cap.name = "Name_" + key
-		cap.text = String((Game.data.resource_icons.get(key, {}) as Dictionary).get("label", key))
-		cap.add_theme_font_size_override("font_size", 11)
-		cap.add_theme_color_override("font_color", UiPalette.ink("muted"))
-		if table:
-			var cap_italic := UiPalette.role_font("body_italic")
-			if cap_italic != null:
-				cap.add_theme_font_override("font", cap_italic)
-			cap.text = cap.text.to_lower()
-		pair.add_child(cap)
-		grid.add_child(pair)
-	_temper = _section("TEMPER OF THE REALM", BarChart.new(), "Temper")
-	_people = _section("THE PEOPLE", PieChart.new(), "People")
-	_people_line = _line("PeopleLine")
-	_host = _section("THE HOST", BarChart.new(), "Host")
-	_host_line = _line("HostLine")
-	_provinces = _section("LARGEST PROVINCES", BarChart.new(), "Provinces")
+		# critique); on the report in the paper's lower case
+		cap.visible = named_figures
+		var word := String((Game.data.resource_icons.get(key, {}) as Dictionary).get("label", key))
+		cap.text = word.to_lower() if table else word
+	for head in ["TemperHead", "PeopleHead", "HostHead", "ProvincesHead"]:
+		var h: Label = _body.get_node(head)
+		if not table:
+			h.text = h.text.trim_prefix("¶ ")
+	_temper = _body.get_node("Temper")
+	_people = _body.get_node("People")
+	_people_line = _body.get_node("PeopleLine")
+	_host = _body.get_node("Host")
+	_host_line = _body.get_node("HostLine")
+	_provinces = _body.get_node("Provinces")
+	_people_line.visible = table
+	_host_line.visible = table
 	_temper.tally = table
 	_people.visible = not table
 	_host.visible = not table
@@ -125,29 +84,6 @@ func _init() -> void:
 	_temper.named = named
 	_host.named = named
 	(_people as PieChart).named = named
-
-func _section(heading: String, chart: Control, chart_name: String) -> Control:
-	var h := Label.new()
-	h.text = heading
-	UiPalette.style_rubric(h, 14)
-	_body.add_child(h)
-	chart.name = chart_name
-	chart.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_body.add_child(chart)
-	return chart
-
-## A sentence of the report (the war table's people and host), hidden on leather.
-func _line(line_name: String) -> Label:
-	var l := Label.new()
-	l.name = line_name
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.add_theme_font_size_override("font_size", 15)
-	l.add_theme_color_override("font_color", UiPalette.ink("soft"))
-	l.visible = UiPalette.war_table()
-	_body.add_child(l)
-	return l
-
-func _ready() -> void:
 	Game.state_changed.connect(func() -> void:
 		if is_inside_tree():
 			refresh())

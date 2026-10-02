@@ -1,0 +1,188 @@
+[gd_scene format=3 uid="uid://b4n82yggknm12"]
+
+[ext_resource type="Script" uid="uid://c1xjp74pnmjbj" path="res://scripts/ui/realm_dashboard.gd" id="1_ui71v"]
+[ext_resource type="Script" uid="uid://xdngnt6rq1do" path="res://scripts/ui/resource_icon.gd" id="2_0ta0f"]
+[ext_resource type="Script" uid="uid://byt2li5wggtmt" path="res://scripts/ui/bar_chart.gd" id="3_515pd"]
+[ext_resource type="Script" uid="uid://cnnc1bnj518vu" path="res://scripts/ui/pie_chart.gd" id="4_2y3hb"]
+
+[node name="RealmDashboard" type="VBoxContainer" unique_id=821285809]
+size_flags_vertical = 3
+script = ExtResource("1_ui71v")
+
+[node name="Scroll" type="ScrollContainer" parent="." unique_id=1645303790]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Body" type="VBoxContainer" parent="Scroll" unique_id=1722482264]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Scroll/Body" unique_id=238244274]
+layout_mode = 2
+theme_type_variation = &"DashTitle"
+text = "Kelvarn"
+autowrap_mode = 3
+
+[node name="Sub" type="Label" parent="Scroll/Body" unique_id=902869508]
+layout_mode = 2
+theme_type_variation = &"DashSub"
+text = "The steward's account
+Spring of year 1"
+autowrap_mode = 3
+
+[node name="Rule" type="HSeparator" parent="Scroll/Body" unique_id=76705403]
+layout_mode = 2
+
+[node name="Resources" type="GridContainer" parent="Scroll/Body" unique_id=686459373]
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 4
+columns = 4
+
+[node name="Icon_treasury" type="Control" parent="Scroll/Body/Resources" unique_id=1918260002]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 1
+script = ExtResource("2_0ta0f")
+key = "treasury"
+
+[node name="Pair_treasury" type="VBoxContainer" parent="Scroll/Body/Resources" unique_id=596869455]
+layout_mode = 2
+theme_override_constants/separation = -4
+
+[node name="Value_treasury" type="Label" parent="Scroll/Body/Resources/Pair_treasury" unique_id=392479036]
+custom_minimum_size = Vector2(66, 0)
+layout_mode = 2
+theme_type_variation = &"DashFigure"
+text = "0"
+
+[node name="Name_treasury" type="Label" parent="Scroll/Body/Resources/Pair_treasury" unique_id=1340875742]
+layout_mode = 2
+theme_type_variation = &"DashCaption"
+text = "crown gold"
+
+[node name="Icon_grain" type="Control" parent="Scroll/Body/Resources" unique_id=1621165888]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 1
+script = ExtResource("2_0ta0f")
+key = "grain"
+
+[node name="Pair_grain" type="VBoxContainer" parent="Scroll/Body/Resources" unique_id=183093744]
+layout_mode = 2
+theme_override_constants/separation = -4
+
+[node name="Value_grain" type="Label" parent="Scroll/Body/Resources/Pair_grain" unique_id=2140423512]
+custom_minimum_size = Vector2(66, 0)
+layout_mode = 2
+theme_type_variation = &"DashFigure"
+text = "0"
+
+[node name="Name_grain" type="Label" parent="Scroll/Body/Resources/Pair_grain" unique_id=1351329625]
+layout_mode = 2
+theme_type_variation = &"DashCaption"
+text = "civil goods"
+
+[node name="Icon_population" type="Control" parent="Scroll/Body/Resources" unique_id=394620965]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 1
+script = ExtResource("2_0ta0f")
+key = "population"
+
+[node name="Pair_population" type="VBoxContainer" parent="Scroll/Body/Resources" unique_id=1472756052]
+layout_mode = 2
+theme_override_constants/separation = -4
+
+[node name="Value_population" type="Label" parent="Scroll/Body/Resources/Pair_population" unique_id=1139000373]
+custom_minimum_size = Vector2(66, 0)
+layout_mode = 2
+theme_type_variation = &"DashFigure"
+text = "0"
+
+[node name="Name_population" type="Label" parent="Scroll/Body/Resources/Pair_population" unique_id=705371187]
+layout_mode = 2
+theme_type_variation = &"DashCaption"
+text = "people"
+
+[node name="Icon_army" type="Control" parent="Scroll/Body/Resources" unique_id=2056602360]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 1
+script = ExtResource("2_0ta0f")
+key = "army"
+
+[node name="Pair_army" type="VBoxContainer" parent="Scroll/Body/Resources" unique_id=448079815]
+layout_mode = 2
+theme_override_constants/separation = -4
+
+[node name="Value_army" type="Label" parent="Scroll/Body/Resources/Pair_army" unique_id=1034029426]
+custom_minimum_size = Vector2(66, 0)
+layout_mode = 2
+theme_type_variation = &"DashFigure"
+text = "0"
+
+[node name="Name_army" type="Label" parent="Scroll/Body/Resources/Pair_army" unique_id=149507301]
+layout_mode = 2
+theme_type_variation = &"DashCaption"
+text = "host"
+
+[node name="TemperHead" type="Label" parent="Scroll/Body" unique_id=1331021231]
+layout_mode = 2
+theme_type_variation = &"DashSection"
+text = "¶ TEMPER OF THE REALM"
+
+[node name="Temper" type="Control" parent="Scroll/Body" unique_id=1657288359]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+script = ExtResource("3_515pd")
+
+[node name="PeopleHead" type="Label" parent="Scroll/Body" unique_id=875274007]
+layout_mode = 2
+theme_type_variation = &"DashSection"
+text = "¶ THE PEOPLE"
+
+[node name="People" type="Control" parent="Scroll/Body" unique_id=1466559463]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+script = ExtResource("4_2y3hb")
+
+[node name="PeopleLine" type="Label" parent="Scroll/Body" unique_id=1708140502]
+layout_mode = 2
+theme_type_variation = &"DashLine"
+autowrap_mode = 3
+
+[node name="HostHead" type="Label" parent="Scroll/Body" unique_id=1393006077]
+layout_mode = 2
+theme_type_variation = &"DashSection"
+text = "¶ THE HOST"
+
+[node name="Host" type="Control" parent="Scroll/Body" unique_id=1801768639]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+script = ExtResource("3_515pd")
+
+[node name="HostLine" type="Label" parent="Scroll/Body" unique_id=1600168089]
+layout_mode = 2
+theme_type_variation = &"DashLine"
+autowrap_mode = 3
+
+[node name="ProvincesHead" type="Label" parent="Scroll/Body" unique_id=213358797]
+layout_mode = 2
+theme_type_variation = &"DashSection"
+text = "¶ LARGEST PROVINCES"
+
+[node name="Provinces" type="Control" parent="Scroll/Body" unique_id=1600601140]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+script = ExtResource("3_515pd")

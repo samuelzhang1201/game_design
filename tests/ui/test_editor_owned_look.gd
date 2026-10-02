@@ -10,7 +10,8 @@ extends GutTest
 
 const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversation_scene.gd",
 	"res://scripts/ui/top_bar.gd", "res://scripts/ui/main_menu.gd", "res://scripts/ui/bottom_bar.gd",
-	"res://scripts/ui/news_ticker.gd", "res://scripts/ui/map_detail_panel.gd"]
+	"res://scripts/ui/news_ticker.gd", "res://scripts/ui/map_detail_panel.gd",
+	"res://scripts/ui/realm_dashboard.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",
@@ -87,6 +88,8 @@ func test_the_court_keeps_its_scenes_look() -> void:
 	_assert_scene_holds(r.bottom_bar(), "res://scenes/bottom_bar.tscn", "BottomBar/")
 	_assert_scene_holds(r.current_screen.get_node("%CouncilHandle"), "res://scenes/war_table/council_seal.tscn", "Seal/", 8)
 	_assert_scene_holds(r.news_ticker(), "res://scenes/news_ticker.tscn", "NewsTicker/")
+	_assert_scene_holds(r.current_screen.find_child("RealmDashboard", true, false),
+		"res://scenes/realm_dashboard.tscn", "Dashboard/")
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
 	detail.show_manor(int(MapManors.manors_of_province(Game.data,
 		MapManors.home_province(Game.data, Game.state), Game.state)[0]))

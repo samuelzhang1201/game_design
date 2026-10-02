@@ -81,6 +81,13 @@ bg_color = Color(0, 0, 0, 0)
 border_width_bottom = 1
 border_color = Color(0.65882355, 0.5411765, 0.29803923, 0.35)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8x4xl"]
+content_margin_top = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 1
+border_color = Color(0.65882355, 0.5411765, 0.29803923, 0.35)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3rsyk"]
 bg_color = Color(0.65882355, 0.5411765, 0.29803923, 0.55)
 corner_radius_top_left = 3
@@ -260,6 +267,28 @@ CardValue/font_sizes/font_size = 13
 CardWarn/base_type = &"Label"
 CardWarn/colors/font_color = Color(0.7529412, 0.47843137, 0.4, 1)
 CardWarn/font_sizes/font_size = 11
+DashCaption/base_type = &"Label"
+DashCaption/colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+DashCaption/font_sizes/font_size = 11
+DashFigure/base_type = &"Label"
+DashFigure/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+DashFigure/font_sizes/font_size = 16
+DashLine/base_type = &"Label"
+DashLine/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+DashLine/font_sizes/font_size = 15
+DashSection/base_type = &"SectionLabel"
+DashSection/colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+DashSection/font_sizes/font_size = 14
+DashSection/fonts/font = ExtResource("1_on7wr")
+DashSection/styles/normal = SubResource("StyleBoxFlat_8x4xl")
+DashSub/base_type = &"Label"
+DashSub/colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+DashSub/font_sizes/font_size = 14
+DashSub/fonts/font = ExtResource("3_8x4xl")
+DashTitle/base_type = &"Label"
+DashTitle/colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+DashTitle/font_sizes/font_size = 16
+DashTitle/fonts/font = ExtResource("1_on7wr")
 HScrollBar/styles/grabber = SubResource("StyleBoxFlat_3rsyk")
 HScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_3rsyk")
 HScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_3rsyk")
