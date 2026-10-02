@@ -49,14 +49,19 @@ func _ready() -> void:
 		if m != null and m.pressed:
 			withdraw())
 	if not UiPalette.war_table():
-		# the leather (ui_war_table 0): a dark window in the game's own ink
-		var review: PanelContainer = %Review
-		review.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "window"))
-		review.theme = null
+		_dress_leather()
 	(%Seal as Button).pressed.connect(seal)
 	(%NotYet as Button).pressed.connect(withdraw)
 	(%SealLayer as Control).draw.connect(_draw_seal)
 	refresh()
+
+
+## The leather (ui_war_table 0): the resolutions are a dark window in the
+## game's own ink, not paper.
+func _dress_leather() -> void:
+	var review: PanelContainer = %Review
+	review.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "window"))
+	review.theme = null
 
 
 func button() -> Button:
