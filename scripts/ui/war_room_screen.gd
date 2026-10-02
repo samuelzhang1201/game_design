@@ -26,18 +26,19 @@ var _margin_sig: Array = []   # [sheet, the off-sheet (code, sheet) pairs, none 
 
 
 func _ready() -> void:
+	# its look is scenes/war_room_screen.tscn (owner 2026-10-02): the frame,
+	# the title, the paper slips (war_slip.tres) and the card's roll, each
+	# under the paper's theme so their words write in its ink; the leather of
+	# ui_war_table 0 is put on in code (_dress_leather)
 	visible = false
-	(%Frame as PanelContainer).add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 0, "map"))
-	UiPalette.style_title(%Title, 18)
-	_dress_slip()
+	if not UiPalette.war_table():
+		_dress_leather()
 	%Close.pressed.connect(request_close)
 	(%LeavePrompt as WarLeavePrompt).chosen.connect(_on_leave)
 	(%Deploy as WarDeployScroll).sealed.connect(_on_sealed)
 	(%Deploy as WarDeployScroll).withdrawn.connect(func() -> void:
 		_deploy_leaving = false   # Not yet: the player stays in the room
 		_deploy_then = Callable())
-	UiPalette.command_button(%BackToTable)
 	%BackToTable.pressed.connect(func() -> void: _view.leave_board())
 	_view.board_entered.connect(_show_board_chrome.bind(true))
 	_view.board_left.connect(_show_board_chrome.bind(false))
@@ -51,14 +52,7 @@ func _ready() -> void:
 	_folio.closed.connect(_view.clear_selection)
 	var roll: PanelContainer = %CardRoll
 	if UiPalette.war_table():
-		roll.add_theme_stylebox_override("panel", WarTable.report_style())
-		# the paper's own theme: the card's kinds write in the paper's ink
-		roll.theme = load("res://assets/2D/ui/theme/paper_theme.tres")
-		WarTable.ink_column(roll)
-		# the card's scroll fades into this paper, as it does in the column
-		roll.set_meta("paper_ground", UiPalette.table_color("paper_ground", UiPalette.PANEL_BG))
-	else:
-		roll.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
+		WarTable.ink_column(roll)   # the cards not yet written in theme kinds
 	roll.draw.connect(func() -> void:
 		var px := Game.data.bal("war_report_roller_px")
 		WarScrollReveal.draw_roller(roll, Rect2(0.0, roll.size.y - px, roll.size.x, px)))
@@ -211,16 +205,17 @@ func _on_laid(index: int) -> void:
 	%Key.queue_redraw()   # a new sheet, a new scale
 
 
-## The margin's slip (owner ruling 2026-10-01, Task 16): ink on paper in the
-## screen's top-left corner under the title, off the table — the war table's
-## paper when that UI is on, else a dark card with light type. Never over the
-## sheet, which fills the frame below it.
-func _dress_slip() -> void:
+## The leather (`ui_war_table` 0): the margin's slips and the card's roll are
+## dark cards with light type (the game theme's), not paper. The slips stand
+## in the screen's top-left and top-right corners, never over the sheet.
+func _dress_leather() -> void:
 	for slip: PanelContainer in [%Slip, %KeySlip]:
-		if UiPalette.war_table():
-			slip.add_theme_stylebox_override("panel", PaperStyle.make("paper", 6.0, 11))
-		else:
-			slip.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8, "column"))
+		slip.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8, "column"))
+		slip.theme = null
+	var roll: PanelContainer = %CardRoll
+	roll.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
+	roll.theme = null
+	roll.remove_meta("paper_ground")
 
 
 ## One flat button per regiment off this sheet ("label → numeral") that lays
@@ -245,14 +240,9 @@ func _fill_margin() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		var reg := ArmySystem.regiment(Game.data, String(p["code"]))
 		b.text = "%s → %s" % [reg.get("label", p["code"]), series[to]["id"]]
-		UiPalette.flat_tab(b, 12, 3.0)
-		for state: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
-			var look := b.get_theme_stylebox(state) as StyleBoxFlat
-			look.content_margin_top = 1.0   # a slip of rows, tight enough to clear the sheet's corner
-			look.content_margin_bottom = 1.0
+		# a slip of tight rows in the slip's ink (the WarMarginRow kind)
+		b.theme_type_variation = &"WarMarginRow"
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.add_theme_color_override("font_color", UiPalette.ink("soft"))
-		b.add_theme_color_override("font_hover_color", UiPalette.ink("accent"))
 		b.pressed.connect(func() -> void: _view.swap_to(to))
 		box.add_child(b)
 	# at most war_margin_rows rows show; a longer list scrolls, so the slip never
@@ -265,7 +255,7 @@ func _fill_margin() -> void:
 	if bool(sig[2]):
 		var none := Label.new()
 		none.text = "No regiment of ours on this sheet."
-		UiPalette.style_header(none, 13, UiPalette.ink("muted"))
+		none.theme_type_variation = &"WarMarginNone"
 		box.add_child(none)
 		box.move_child(none, 0)
 		height += none.get_combined_minimum_size().y

@@ -242,6 +242,49 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_y7x3b"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_gsq7j"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_m0ttl"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 1
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 0.45)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lwx1g"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 2
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0578s"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6hjtm"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 2
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+
 [resource]
 default_font = ExtResource("4_66g1x")
 default_font_size = 20
@@ -506,3 +549,20 @@ VScrollBar/styles/grabber = SubResource("StyleBoxFlat_3rsyk")
 VScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_3rsyk")
 VScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_3rsyk")
 VScrollBar/styles/scroll = SubResource("StyleBoxFlat_0d8ra")
+WarMarginNone/base_type = &"Label"
+WarMarginNone/colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+WarMarginNone/font_sizes/font_size = 13
+WarMarginNone/fonts/font = ExtResource("1_on7wr")
+WarMarginRow/base_type = &"Button"
+WarMarginRow/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+WarMarginRow/colors/font_hover_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+WarMarginRow/colors/font_hover_pressed_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+WarMarginRow/colors/font_pressed_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+WarMarginRow/font_sizes/font_size = 12
+WarMarginRow/fonts/font = ExtResource("1_el5ut")
+WarMarginRow/styles/disabled = SubResource("StyleBoxFlat_y7x3b")
+WarMarginRow/styles/focus = SubResource("StyleBoxEmpty_gsq7j")
+WarMarginRow/styles/hover = SubResource("StyleBoxFlat_m0ttl")
+WarMarginRow/styles/hover_pressed = SubResource("StyleBoxFlat_lwx1g")
+WarMarginRow/styles/normal = SubResource("StyleBoxFlat_0578s")
+WarMarginRow/styles/pressed = SubResource("StyleBoxFlat_6hjtm")

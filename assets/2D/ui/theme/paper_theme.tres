@@ -3,6 +3,7 @@
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/figures.tres" id="1_fuys7"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/header.tres" id="2_pd6rl"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="3_pd6rl"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="4_aqemf"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_aqemf"]
 content_margin_top = 3.0
@@ -53,6 +54,49 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_j3ky5"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_j6kgu"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_32psp"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 1
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 0.45)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jkyxd"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 2
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kjki1"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5qeic"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 2
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
 
 [resource]
 CardFigure/base_type = &"Label"
@@ -146,3 +190,20 @@ ManorTable/styles/title_button_normal = SubResource("StyleBoxFlat_6i8mq")
 ManorTable/styles/title_button_pressed = SubResource("StyleBoxFlat_6i8mq")
 RichTextLabel/colors/default_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 TooltipLabel/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+WarMarginNone/base_type = &"Label"
+WarMarginNone/colors/font_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
+WarMarginNone/font_sizes/font_size = 13
+WarMarginNone/fonts/font = ExtResource("2_pd6rl")
+WarMarginRow/base_type = &"Button"
+WarMarginRow/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
+WarMarginRow/colors/font_hover_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
+WarMarginRow/colors/font_hover_pressed_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+WarMarginRow/colors/font_pressed_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+WarMarginRow/font_sizes/font_size = 12
+WarMarginRow/fonts/font = ExtResource("4_aqemf")
+WarMarginRow/styles/disabled = SubResource("StyleBoxFlat_j3ky5")
+WarMarginRow/styles/focus = SubResource("StyleBoxEmpty_j6kgu")
+WarMarginRow/styles/hover = SubResource("StyleBoxFlat_32psp")
+WarMarginRow/styles/hover_pressed = SubResource("StyleBoxFlat_jkyxd")
+WarMarginRow/styles/normal = SubResource("StyleBoxFlat_kjki1")
+WarMarginRow/styles/pressed = SubResource("StyleBoxFlat_5qeic")

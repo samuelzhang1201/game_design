@@ -1,0 +1,17 @@
+[gd_resource type="StyleBox" script_class="PaperStyle" format=3 uid="uid://c4rntxxfax7n8"]
+
+[ext_resource type="Script" uid="uid://bc5sd3g0mtq6o" path="res://scripts/ui/war_table/paper_style.gd" id="1_gc3x4"]
+[ext_resource type="Texture2D" uid="uid://cqk8fxup7pk4v" path="res://assets/2D/ui/missive_board/letter_aged.png" id="2_7lxjx"]
+
+[resource]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+script = ExtResource("1_gc3x4")
+texture = ExtResource("2_7lxjx")
+tint = Color(0.9019608, 0.8392157, 0.6901961, 1)
+seed = 11
+lift = Color(0.9647059, 0.93333334, 0.8627451, 0.32156864)

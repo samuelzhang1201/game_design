@@ -1,21 +1,23 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene format=3 uid="uid://db584ltgxy5k2"]
 
-[ext_resource type="Script" path="res://scripts/ui/war_room_screen.gd" id="1_screen"]
+[ext_resource type="Script" uid="uid://ohlmo0ocqnm" path="res://scripts/ui/war_room_screen.gd" id="1_screen"]
+[ext_resource type="StyleBox" uid="uid://dmgtj5dq4d8hu" path="res://assets/2D/ui/panels/styles/ledger_frame.tres" id="2_3s70a"]
 [ext_resource type="PackedScene" path="res://scenes/war_room/war_room.tscn" id="2_view"]
-[ext_resource type="Script" path="res://scripts/ui/army_order_menu.gd" id="3_menu"]
-
+[ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="3_menu"]
 [ext_resource type="PackedScene" path="res://scenes/war_room/war_folio.tscn" id="4_folio"]
-[ext_resource type="Script" path="res://scripts/ui/war_margin_key.gd" id="5_key"]
-[ext_resource type="Script" path="res://scripts/ui/war_leave_prompt.gd" id="6_leave"]
+[ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="4_i1y7d"]
+[ext_resource type="StyleBox" uid="uid://c4rntxxfax7n8" path="res://assets/2D/ui/war_table/styles/war_slip.tres" id="5_2odns"]
+[ext_resource type="Script" uid="uid://4r7bjqgxwvn5" path="res://scripts/ui/war_margin_key.gd" id="5_key"]
+[ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="6_0wshm"]
+[ext_resource type="Script" uid="uid://buo18m7j8xhkt" path="res://scripts/ui/war_leave_prompt.gd" id="6_leave"]
 [ext_resource type="PackedScene" path="res://scenes/war_room/war_deploy_scroll.tscn" id="7_deploy"]
 
-[node name="WarRoomScreen" type="Control"]
+[node name="WarRoomScreen" type="Control" unique_id=166001307]
 layout_mode = 3
 anchors_preset = 0
-mouse_filter = 0
 script = ExtResource("1_screen")
 
-[node name="Frame" type="PanelContainer" parent="."]
+[node name="Frame" type="PanelContainer" parent="." unique_id=1788661062]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -23,12 +25,13 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/panel = ExtResource("2_3s70a")
 
-[node name="View" parent="Frame" instance=ExtResource("2_view")]
+[node name="View" parent="Frame" unique_id=972336576 instance=ExtResource("2_view")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Top" type="HBoxContainer" parent="."]
+[node name="Top" type="HBoxContainer" parent="." unique_id=1055089792]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 10
@@ -37,56 +40,65 @@ offset_left = 16.0
 offset_top = 12.0
 offset_right = -16.0
 offset_bottom = 44.0
+grow_horizontal = 2
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="Title" type="Label" parent="Top"]
+[node name="Title" type="Label" parent="Top" unique_id=1035109976]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+theme_override_font_sizes/font_size = 22
 
-[node name="BackToTable" type="Button" parent="Top"]
+[node name="BackToTable" type="Button" parent="Top" unique_id=1017474763]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-text = "Back to the table"
+theme_type_variation = &"Command"
+text = "Back to the Table"
 
-[node name="Close" type="Button" parent="Top"]
+[node name="Close" type="Button" parent="Top" unique_id=1149444042]
 unique_name_in_owner = true
 layout_mode = 2
 text = "×"
 
-[node name="Slip" type="PanelContainer" parent="."]
+[node name="Slip" type="PanelContainer" parent="." unique_id=520952468]
 unique_name_in_owner = true
 layout_mode = 1
 offset_left = 16.0
 offset_top = 46.0
 offset_right = 252.0
 offset_bottom = 46.0
-grow_vertical = 1
 mouse_filter = 2
+theme = ExtResource("4_i1y7d")
+theme_override_styles/panel = ExtResource("5_2odns")
 
-[node name="MarginScroll" type="ScrollContainer" parent="Slip"]
+[node name="MarginScroll" type="ScrollContainer" parent="Slip" unique_id=1939202220]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 horizontal_scroll_mode = 0
 
-[node name="Margin" type="VBoxContainer" parent="Slip/MarginScroll"]
+[node name="Margin" type="VBoxContainer" parent="Slip/MarginScroll" unique_id=597996405]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="CardRoll" type="PanelContainer" parent="."]
+[node name="CardRoll" type="PanelContainer" parent="." unique_id=937931141]
 unique_name_in_owner = true
 visible = false
 clip_contents = true
 layout_mode = 0
 offset_right = 240.0
+theme = ExtResource("4_i1y7d")
+theme_override_styles/panel = ExtResource("6_0wshm")
+metadata/paper_ground = Color(0.8235294, 0.7411765, 0.5647059, 1)
 
-[node name="KeySlip" type="PanelContainer" parent="."]
+[node name="KeySlip" type="PanelContainer" parent="." unique_id=503831731]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 1
@@ -98,26 +110,28 @@ offset_right = -16.0
 offset_bottom = 46.0
 grow_horizontal = 0
 mouse_filter = 2
+theme = ExtResource("4_i1y7d")
+theme_override_styles/panel = ExtResource("5_2odns")
 
-[node name="Key" type="Control" parent="KeySlip"]
+[node name="Key" type="Control" parent="KeySlip" unique_id=673870640]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 script = ExtResource("5_key")
 
-[node name="Orders" type="PopupMenu" parent="."]
+[node name="Orders" type="PopupMenu" parent="." unique_id=528411805]
 unique_name_in_owner = true
 script = ExtResource("3_menu")
 
-[node name="Folio" parent="." instance=ExtResource("4_folio")]
+[node name="Folio" parent="." unique_id=489917749 instance=ExtResource("4_folio")]
 unique_name_in_owner = true
 layout_mode = 1
 
-[node name="Deploy" parent="." instance=ExtResource("7_deploy")]
+[node name="Deploy" parent="." unique_id=1733647706 instance=ExtResource("7_deploy")]
 unique_name_in_owner = true
 layout_mode = 1
 
-[node name="LeavePrompt" type="Control" parent="."]
+[node name="LeavePrompt" type="Control" parent="." unique_id=1878891802]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -128,7 +142,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("6_leave")
 
-[node name="LeaveDim" type="ColorRect" parent="LeavePrompt"]
+[node name="LeaveDim" type="ColorRect" parent="LeavePrompt" unique_id=2019624919]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -138,7 +152,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.4)
 
-[node name="LeaveWindow" type="PanelContainer" parent="LeavePrompt"]
+[node name="LeaveWindow" type="PanelContainer" parent="LeavePrompt" unique_id=1486653153]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -153,11 +167,11 @@ offset_bottom = 80.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Col" type="VBoxContainer" parent="LeavePrompt/LeaveWindow"]
+[node name="Col" type="VBoxContainer" parent="LeavePrompt/LeaveWindow" unique_id=2001794386]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="LeaveQuestion" type="Label" parent="LeavePrompt/LeaveWindow/Col"]
+[node name="LeaveQuestion" type="Label" parent="LeavePrompt/LeaveWindow/Col" unique_id=117267810]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -165,27 +179,27 @@ text = "Orders are still pencilled on the table."
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Row" type="HBoxContainer" parent="LeavePrompt/LeaveWindow/Col"]
+[node name="Row" type="HBoxContainer" parent="LeavePrompt/LeaveWindow/Col" unique_id=1266185956]
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="LeaveDeploy" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row"]
+[node name="LeaveDeploy" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row" unique_id=155375642]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Deploy…"
 
-[node name="LeaveDiscard" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row"]
+[node name="LeaveDiscard" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row" unique_id=1111704665]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Discard"
 
-[node name="LeaveKeep" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row"]
+[node name="LeaveKeep" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row" unique_id=529610785]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Keep"
 
-[node name="LeaveStay" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row"]
+[node name="LeaveStay" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row" unique_id=1077314722]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Stay"
