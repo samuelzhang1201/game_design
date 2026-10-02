@@ -33,7 +33,8 @@ func _ready() -> void:
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 0, "map"))
 	UiPalette.style_title(%Title, 18)
 	_dress_slip()
-	%Close.pressed.connect(close)
+	%Close.pressed.connect(request_close)
+	(%LeavePrompt as WarLeavePrompt).chosen.connect(_on_leave)
 	UiPalette.command_button(%BackToTable)
 	%BackToTable.pressed.connect(func() -> void: _view.leave_board())
 	_view.board_entered.connect(_show_board_chrome.bind(true))
@@ -273,11 +274,52 @@ func _fill_margin() -> void:
 	scroll.custom_minimum_size.y = height
 
 
+## Where to go once the room is left by its leave prompt (GameRoot.leave_war_room).
+var _leave_then := Callable()
+
+
+## The × button: leave through GameRoot's one door (it asks when drafts stand).
+func request_close() -> void:
+	var root := get_parent() as GameRoot
+	if root != null:
+		root.leave_war_room(Callable())
+	else:
+		close()
+
+
+## Ask before leaving with drafts on the table (spec 2026-10-02-war-room-v2
+## §3.2); `then` runs once the room is left.
+func ask_leave(then: Callable) -> void:
+	_leave_then = then
+	(%LeavePrompt as WarLeavePrompt).open()
+
+
+func asking_leave() -> bool:
+	return (%LeavePrompt as WarLeavePrompt).visible
+
+
+func _on_leave(choice: String) -> void:
+	var then := _leave_then
+	_leave_then = Callable()
+	match choice:
+		"discard":
+			Game.discard_drafts()
+			close()
+		"keep":
+			close()
+		_:
+			return   # stay ("deploy" is Task 6's: it unrolls the scroll)
+	if then.is_valid():
+		then.call()
+
+
 ## `animate` false when the screen under the room is being replaced: its
 ## column (and the report captured from it) is gone (final review I3).
 func close(animate := true) -> void:
 	if not visible:
 		return
+	(%LeavePrompt as WarLeavePrompt).visible = false   # a forced close answers no question
+	_leave_then = Callable()
 	if _orders.visible:
 		_orders.hide()
 	_orders.withdraw_aim()

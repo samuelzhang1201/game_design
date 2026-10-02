@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/war_room_screen.gd" id="1_screen"]
 [ext_resource type="PackedScene" path="res://scenes/war_room/war_room.tscn" id="2_view"]
@@ -6,6 +6,7 @@
 
 [ext_resource type="PackedScene" path="res://scenes/war_room/war_folio.tscn" id="4_folio"]
 [ext_resource type="Script" path="res://scripts/ui/war_margin_key.gd" id="5_key"]
+[ext_resource type="Script" path="res://scripts/ui/war_leave_prompt.gd" id="6_leave"]
 
 [node name="WarRoomScreen" type="Control"]
 layout_mode = 3
@@ -110,3 +111,76 @@ script = ExtResource("3_menu")
 [node name="Folio" parent="." instance=ExtResource("4_folio")]
 unique_name_in_owner = true
 layout_mode = 1
+
+[node name="LeavePrompt" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_leave")
+
+[node name="Dim" type="ColorRect" parent="LeavePrompt"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.4)
+
+[node name="Window" type="PanelContainer" parent="LeavePrompt"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -240.0
+offset_top = -80.0
+offset_right = 240.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Col" type="VBoxContainer" parent="LeavePrompt/Window"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Question" type="Label" parent="LeavePrompt/Window/Col"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+text = "Orders are still pencilled on the table."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Row" type="HBoxContainer" parent="LeavePrompt/Window/Col"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Deploy" type="Button" parent="LeavePrompt/Window/Col/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Deploy…"
+
+[node name="Discard" type="Button" parent="LeavePrompt/Window/Col/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Discard"
+
+[node name="Keep" type="Button" parent="LeavePrompt/Window/Col/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Keep"
+
+[node name="Stay" type="Button" parent="LeavePrompt/Window/Col/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Stay"

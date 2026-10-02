@@ -555,3 +555,115 @@ func test_the_host_from_the_borrowed_card_leaves_the_room_for_the_column() -> vo
 	await wait_process_frames(1)
 	assert_false(screen.visible, "the host is shown in the column, so the room steps aside")
 	assert_eq(detail.get_parent(), home)
+
+
+func _room_with_a_draft() -> GameRoot:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var code := String(_land_piece(r.war_room_screen())["code"])
+	Game.plant_draft(code, "march", ArmySystem.position_of(Game.data, Game.state,
+		ArmySystem.regiment(Game.data, code)) + Vector2(10, 0))
+	return r
+
+
+func _prompt(r: GameRoot) -> WarLeavePrompt:
+	return r.war_room_screen().get_node("%LeavePrompt") as WarLeavePrompt
+
+
+func test_another_tab_with_drafts_asks_and_stay_keeps_the_room() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	r.bottom_bar().button("LEDGER").pressed.emit()
+	await wait_process_frames(1)
+	assert_true(_prompt(r).visible, "asked")
+	assert_true(r.war_room_screen().visible)
+	assert_false(r.ledger_screen().visible, "not gone yet")
+	_prompt(r).chosen.emit("stay")
+	await wait_process_frames(1)
+	assert_true(r.war_room_screen().visible)
+	assert_false(r.ledger_screen().visible)
+	assert_true(WarDrafts.any(Game.state), "nothing lost")
+
+
+func test_escape_on_the_prompt_stays() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	r.war_room_screen().request_close()
+	await wait_process_frames(1)
+	var e := InputEventKey.new()
+	e.keycode = KEY_ESCAPE
+	e.pressed = true
+	Input.parse_input_event(e)
+	await wait_process_frames(2)
+	assert_false(_prompt(r).visible)
+	assert_true(r.war_room_screen().visible, "Escape keeps the player in the room")
+	assert_false(r._pause_menu.visible, "and opens no pause menu")
+	assert_true(WarDrafts.any(Game.state))
+
+
+func test_keep_leaves_and_goes_on_and_the_drafts_stay() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	r.bottom_bar().button("LEDGER").pressed.emit()
+	await wait_process_frames(1)
+	_prompt(r).chosen.emit("keep")
+	await wait_process_frames(2)
+	assert_false(r.war_room_screen().visible)
+	assert_true(r.ledger_screen().visible, "the tab the player chose opens")
+	assert_true(WarDrafts.any(Game.state))
+
+
+func test_discard_leaves_with_none() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	r.war_room_screen().request_close()
+	await wait_process_frames(1)
+	_prompt(r).chosen.emit("discard")
+	await wait_process_frames(1)
+	assert_false(r.war_room_screen().visible)
+	assert_false(WarDrafts.any(Game.state))
+
+
+func test_every_door_out_asks() -> void:
+	var doors := {
+		"the WAR ROOM tab again": func(r: GameRoot) -> void: r.bottom_bar().button("WAR ROOM").pressed.emit(),
+		"the MISSIVE tab": func(r: GameRoot) -> void: r.bottom_bar().button("MISSIVE").pressed.emit(),
+		"a map lens": func(r: GameRoot) -> void: r.bottom_bar().button("HEIGHTS").pressed.emit(),
+		"the close button": func(r: GameRoot) -> void: (r.war_room_screen().get_node("%Close") as Button).pressed.emit(),
+		"Quit to Desktop": func(r: GameRoot) -> void: r.leave_war_room(func() -> void: pass),
+	}
+	for name: String in doors:
+		var r: GameRoot = await _room_with_a_draft()
+		(doors[name] as Callable).call(r)
+		await wait_process_frames(1)
+		assert_true(_prompt(r).visible, name + " asks")
+		assert_true(r.war_room_screen().visible, name + " leaves the room standing")
+		r.queue_free()
+		await wait_process_frames(1)
+
+
+func test_quit_goes_through_the_rooms_door() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	var quit := r.quit_button()
+	add_child_autofree(quit)
+	quit.pressed.emit()   # with a draft standing it ASKS: the tree does not quit
+	await wait_process_frames(1)
+	assert_true(_prompt(r).visible, "Quit with drafts asks before the tree quits")
+
+
+func test_no_drafts_no_question() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	r.bottom_bar().button("LEDGER").pressed.emit()
+	await wait_process_frames(1)
+	assert_false(r.war_room_screen().visible)
+	assert_true(r.ledger_screen().visible)
+	assert_false(_prompt(r).visible)
+
+
+func test_a_forced_switch_keeps_the_drafts_and_says_so() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	watch_signals(Game)
+	r._switch_to(GameRoot.State.COURT)
+	await wait_process_frames(1)
+	assert_false(r.war_room_screen().visible)
+	assert_true(WarDrafts.any(Game.state), "an event's switch keeps the drafts")
+	assert_signal_emitted(Game, "news_published")

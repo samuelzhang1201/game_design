@@ -445,7 +445,7 @@ func settings_buttons() -> Array[Button]:
 
 ## Both menus' last row, the same words in both.
 func quit_button() -> Button:
-	var b := _menu_button("Quit to Desktop", func() -> void: get_tree().quit())
+	var b := _menu_button("Quit to Desktop", func() -> void: leave_war_room(get_tree().quit))
 	b.name = "Quit"
 	return b
 
@@ -499,6 +499,9 @@ func pause_menu() -> Control:
 func toggle_ledger() -> void:
 	if state == State.MENU:
 		return
+	if _room_must_ask():
+		leave_war_room(toggle_ledger)
+		return
 	_missive_screen.visible = false
 	_info_screen.hide()
 	_war_room_screen.close()
@@ -531,17 +534,38 @@ func _fit_ledger() -> void:
 func ledger_screen() -> LedgerScreen:
 	return _ledger_screen
 
+## The one door out of the WAR ROOM (spec 2026-10-02-war-room-v2 §3.2):
+## with drafts on the table the room asks first (Deploy / Discard / Keep /
+## Stay); `then` runs once it is left — never if the player stays.
+func leave_war_room(then: Callable) -> void:
+	if _war_room_screen == null or not _war_room_screen.visible:
+		if then.is_valid():
+			then.call()
+		return
+	if Game.state == null or not WarDrafts.any(Game.state):
+		_war_room_screen.close()
+		if then.is_valid():
+			then.call()
+		return
+	_war_room_screen.ask_leave(then)
+
+## True when leaving the room must ask first: every door checks it and goes
+## round through leave_war_room.
+func _room_must_ask() -> bool:
+	return _war_room_screen != null and _war_room_screen.visible and Game.state != null \
+		and WarDrafts.any(Game.state)
+
 ## WAR ROOM (spec 2026-10-01-war-room-design §1): the plotting room, laid over
 ## the map panel like the LEDGER; the map stops rendering under it.
 func toggle_war_room() -> void:
 	if state == State.MENU:
 		return
+	if _war_room_screen.visible:
+		leave_war_room(Callable())
+		return
 	_missive_screen.visible = false
 	_info_screen.hide()
 	_ledger_screen.close()
-	if _war_room_screen.visible:
-		_war_room_screen.close()
-		return
 	if current_screen == null or not current_screen.has_method("map_panel"):
 		return
 	var map: Control = current_screen.map_panel()
@@ -632,6 +656,9 @@ func missive_screen() -> MissiveScreen:
 
 func toggle_missives() -> void:
 	if state == State.MENU:
+		return
+	if _room_must_ask():
+		leave_war_room(toggle_missives)
 		return
 	_ledger_screen.close()
 	_war_room_screen.close()
@@ -753,6 +780,10 @@ func _on_missive_show(subject: Dictionary) -> void:
 	if String(subject.get("kind", "")) == "ledger":
 		_open_ledger_on(String(subject.get("code", "")))
 		return
+	if _room_must_ask():
+		_missive_screen.visible = false   # the question is asked in the room, over nothing
+		leave_war_room(_on_missive_show.bind(subject))
+		return
 	if _war_room_screen != null and _war_room_screen.visible:
 		_war_room_screen.close()   # the board opened over the room: the place is on the map, not under the room
 		_sync_map_view()
@@ -794,6 +825,9 @@ func _open_ledger_on(flow: String) -> void:
 ## 2026-09-03), LEDGER and MISSIVE toggle their screens, the rest open
 ## their info table.
 func _on_bottom_tab(tab: String) -> void:
+	if tab != "WAR ROOM" and _room_must_ask():
+		leave_war_room(_on_bottom_tab.bind(tab))
+		return
 	match tab:
 		"HEIGHTS":
 			_info_screen.hide()
@@ -1023,6 +1057,8 @@ func _switch_to(new_state: State) -> void:
 		_ledger_screen.close()
 		move_child(_ledger_screen, get_child_count() - 1)
 	if _war_room_screen != null:
+		if _war_room_screen.visible and Game.state != null and WarDrafts.any(Game.state):
+			Game.publish_news("The war room's drafts are kept on the table.")   # an event's switch never asks
 		_war_room_screen.close(false)   # the old column is gone: nothing to unroll over the new screen
 		move_child(_war_room_screen, get_child_count() - 1)
 	if _missive_screen != null:
