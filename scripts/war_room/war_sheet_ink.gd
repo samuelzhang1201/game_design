@@ -4,8 +4,10 @@ extends RefCounted
 ## §2), in TEXTURE px — tex_px across the sheet's width, its height at the same
 ## scale — so WarInkPainter only draws. Roads solid, trails dashed, rivers in
 ## blue ink, the coast, each kingdom's LIVE outline (MapOwnership), the province
-## seams, towns by tier with names, peaks with heights. Contours and the grid
-## are the shader's, not here.
+## seams, towns by tier with names, peaks with heights; since v2 B (spec
+## 2026-10-02-war-room-v2 §2.4) hollows, woods from the build's canopy
+## (WarBake), the manors' own edges and names, walled towns and ports.
+## Contours and the grid are the shader's, not here.
 
 ## A burg's `group` column to its tier (capital 3, city 2, town / fort 1, village 0).
 const TOWN_TIERS := {"village": 0, "town": 1, "fort": 1, "city": 2, "capital": 3}
@@ -30,11 +32,11 @@ static func _touches(r: Rect2, poly: PackedVector2Array) -> bool:
 	return false
 
 
-static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int) -> Dictionary:
+static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int, bake: WarBake = null) -> Dictionary:
 	var r: Rect2 = sheet["rect"]
 	var k := float(tex_px) / r.size.x
 	var out := {"roads": [], "trails": [], "rivers": [], "coasts": [], "borders": [], "seams": [],
-		"towns": [], "peaks": []}
+		"towns": [], "peaks": [], "hollows": [], "woods": [], "manor_edges": [], "manors": []}
 	var route_codes: Array = repo.routes.keys()
 	route_codes.sort()
 	for code: String in route_codes:
@@ -75,14 +77,72 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if not r.has_point(at):
 			continue
 		var tier := 3 if String(b.get("is_capital", "0")) == "1" else int(TOWN_TIERS.get(String(b.get("group", "")), 0))
-		(out["towns"] as Array).append({"at": (at - r.position) * k, "tier": tier, "label": String(b["label"])})
+		(out["towns"] as Array).append({"at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
+			"walls": String(b.get("features", "")).split("|").has("walls"), "port": String(b.get("is_port", "0")) == "1"})
 	for m: Dictionary in Elevation.landmarks(repo):
 		if String(m["kind"]) != "high":
 			continue
 		var at: Vector2 = m["pos"]
 		if r.has_point(at):
 			(out["peaks"] as Array).append({"at": (at - r.position) * k, "metres": int(m["metres"]), "lod": int(m["lod"])})
+	for m: Dictionary in Elevation.landmarks(repo):
+		if String(m["kind"]) == "low" and r.has_point(m["pos"]):
+			(out["hollows"] as Array).append({"at": ((m["pos"] as Vector2) - r.position) * k,
+				"metres": int(m["metres"]), "lod": int(m["lod"])})
+	if bake != null:
+		var step := repo.bal("war_ink_wood_step_km") * WarSheets.px_per_unit(repo)
+		var min_cover := repo.bal("war_ink_wood_min_cover")
+		for w: Dictionary in bake.woods(r, step):
+			var at: Vector2 = w["at"]
+			# a glyph where the canopy is thick enough, chosen by a fixed hash so
+			# a sheet always draws the same woods
+			var roll := float(absi(hash(Vector2i(roundi(at.x * 100.0), roundi(at.y * 100.0)))) % 1000) / 1000.0
+			if float(w["cover"]) >= min_cover and roll < float(w["cover"]):
+				var jitter := Vector2(float(absi(hash([at.x, 1])) % 100) - 50.0, float(absi(hash([at.y, 2])) % 100) - 50.0) / 100.0 * step
+				(out["woods"] as Array).append({"at": (at + jitter - r.position) * k, "conifer": float(w["conifer"]) > 0.5})
+	_manors(repo, state, r, k, out)
 	return out
+
+
+## The manors' own edges — a cell edge between two land cells of ONE province
+## (a province seam or the coast is drawn already) — and each manor's name at
+## its centre unless a town stands within war_ink_manor_clear_px of it.
+static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, out: Dictionary) -> void:
+	var first: Dictionary = {}   # edge key -> the cell that met it first
+	var ids: Array = repo.cells.keys()
+	ids.sort()
+	var clear := repo.bal("war_ink_manor_clear_px")
+	var reach := r.grow(r.size.x * 0.05)
+	for id: int in ids:
+		var cell: Dictionary = repo.cells[id]
+		if MapTerrain.is_water(cell):
+			continue
+		var vids: PackedInt32Array = cell["vertex_ids"]
+		if vids.size() < 3:
+			continue
+		var centre := MapTerrain.cell_center(repo, cell)
+		if not reach.has_point(centre):
+			continue
+		var prov := MapManors.province_of(repo, id, state)
+		for i in vids.size():
+			var a := vids[i]
+			var b := vids[(i + 1) % vids.size()]
+			var key := Vector2i(mini(a, b), maxi(a, b))
+			if first.has(key):
+				if MapManors.province_of(repo, int(first[key]), state) == prov:
+					(out["manor_edges"] as Array).append(PackedVector2Array([
+						((repo.vertices[a] as Vector2) - r.position) * k, ((repo.vertices[b] as Vector2) - r.position) * k]))
+			else:
+				first[key] = id
+		if r.has_point(centre):
+			var at := (centre - r.position) * k
+			var near_town := false
+			for t: Dictionary in out["towns"]:
+				if (t["at"] as Vector2).distance_to(at) < clear:
+					near_town = true
+					break
+			if not near_town:
+				(out["manors"] as Array).append({"at": at, "label": MapManors.label_of(repo, id)})
 
 
 ## The line cut into dashes: `on` px drawn, `off` px left, along its whole

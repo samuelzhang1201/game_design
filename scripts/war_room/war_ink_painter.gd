@@ -41,6 +41,21 @@ func _draw() -> void:
 				draw_polyline(parts[i], c_ink, float(px["border"]), true)
 				if i + 1 < parts.size():  # the dot between dashes
 					draw_circle(parts[i][parts[i].size() - 1].lerp(parts[i + 1][0], 0.5), float(px["border"]) * float(px["border_dot_ratio"]), c_ink)
+	var c_wood: Color = pal.get("wood_ink", c_faint)
+	for wd: Dictionary in ink.get("woods", []):
+		var wat: Vector2 = wd["at"]
+		var ws := float(px["wood"])
+		if bool(wd["conifer"]):
+			draw_colored_polygon(PackedVector2Array([wat + Vector2(0, -ws), wat + Vector2(ws * 0.55, ws * 0.35), wat + Vector2(-ws * 0.55, ws * 0.35)]), c_wood)
+		else:
+			draw_circle(wat + Vector2(0, -ws * 0.25), ws * 0.5, c_wood)
+		draw_line(wat + Vector2(0, ws * 0.2), wat + Vector2(0, ws * 0.6), c_wood, maxf(ws * 0.15, 1.0), true)
+	for e: PackedVector2Array in ink.get("manor_edges", []):
+		for d: PackedVector2Array in WarSheetInk.dashed(e, float(px["manor_dash"]), float(px["manor_gap"])):
+			draw_polyline(d, c_faint, float(px["manor"]), true)
+	for mn: Dictionary in ink.get("manors", []):
+		draw_string(font, (mn["at"] as Vector2) + Vector2(0, float(px["manor_label"]) * 0.35), String(mn["label"]),
+			HORIZONTAL_ALIGNMENT_CENTER, -1, int(px["manor_label"]), c_faint)
 	for poly: PackedVector2Array in ink["trails"]:
 		for d: PackedVector2Array in WarSheetInk.dashed(poly, float(px["dash"]), float(px["gap"])):
 			draw_polyline(d, c_ink, float(px["trail"]), true)
@@ -51,6 +66,21 @@ func _draw() -> void:
 		draw_arc(t["at"], r, 0.0, TAU, 32, c_ink, float(px["town"]) * float(px["town_ring_ratio"]), true)
 		if int(t["tier"]) >= 2:
 			draw_circle(t["at"], r * float(px["town_dot_ratio"]), c_ink)
+		var ring_w := float(px["town"]) * float(px["town_ring_ratio"])
+		if bool(t.get("walls", false)):
+			var wr := r * float(px["wall_ratio"])
+			var tc: Vector2 = t["at"]
+			draw_rect(Rect2(tc - Vector2(wr, wr), Vector2(wr, wr) * 2.0), c_ink, false, ring_w, true)
+			for q in 4:   # a tower at each corner
+				var corner := tc + Vector2(wr if q % 2 == 0 else -wr, wr if q < 2 else -wr)
+				draw_rect(Rect2(corner - Vector2.ONE * wr * 0.22, Vector2.ONE * wr * 0.44), c_ink)
+		if bool(t.get("port", false)):
+			var an := (t["at"] as Vector2) + Vector2(-r * 2.2, 0.0)
+			var aa := r * float(px["anchor_ratio"])
+			var aw := maxf(aa * 0.16, 1.0)
+			draw_line(an + Vector2(0, -aa), an + Vector2(0, aa), c_ink, aw, true)
+			draw_line(an + Vector2(-aa * 0.45, -aa * 0.55), an + Vector2(aa * 0.45, -aa * 0.55), c_ink, aw, true)
+			draw_arc(an + Vector2(0, aa * 0.2), aa * 0.75, 0.15 * PI, 0.85 * PI, 10, c_ink, aw, true)
 		draw_string(font, (t["at"] as Vector2) + Vector2(r + float(px["town"]) * float(px["label_gap_ratio"]),
 			float(px["label"]) * float(px["label_drop_ratio"])), String(t["label"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["label"]), c_ink)
@@ -62,6 +92,22 @@ func _draw() -> void:
 		var hw := s * float(px["peak_half_w"])
 		var drop := s * float(px["peak_drop"])
 		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -s), at + Vector2(hw, drop), at + Vector2(-hw, drop)]), c_ink)
+		draw_string(font, at + Vector2(hw + s * float(px["label_gap_ratio"]), drop), "%d m" % int(p["metres"]),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, int(float(px["label"]) * float(px["peak_label_ratio"])), c_ink)
+	_draw_hollows(c_ink)
+
+
+## The hollows: a ▽ outlined, with its depth.
+func _draw_hollows(c_ink: Color) -> void:
+	for p: Dictionary in ink.get("hollows", []):
+		if int(p.get("lod", 0)) != 0:
+			continue
+		var at: Vector2 = p["at"]
+		var s := float(px["town"])
+		var hw := s * float(px["peak_half_w"])
+		var drop := s * float(px["peak_drop"])
+		draw_polyline(PackedVector2Array([at + Vector2(-hw, -drop), at + Vector2(hw, -drop), at + Vector2(0, s), at + Vector2(-hw, -drop)]),
+			c_ink, maxf(s * 0.12, 1.0), true)
 		draw_string(font, at + Vector2(hw + s * float(px["label_gap_ratio"]), drop), "%d m" % int(p["metres"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(float(px["label"]) * float(px["peak_label_ratio"])), c_ink)
 

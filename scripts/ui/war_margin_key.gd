@@ -20,6 +20,8 @@ const LEGEND := [
 	{"key": "river", "label": "River"}, {"key": "border", "label": "Border"},
 	{"key": "seam", "label": "Seam"}, {"key": "town", "label": "Town"},
 	{"key": "peak", "label": "Peak"}, {"key": "contour", "label": "Contour"},
+	{"key": "wood", "label": "Woods"}, {"key": "manor", "label": "Manor"},
+	{"key": "walls", "label": "Walled town"}, {"key": "port", "label": "Port"},
 ]
 
 var _repo: DataRepository
@@ -187,6 +189,29 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 			var s := r.size.y * 0.5
 			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -s), c + Vector2(s * 0.9, s * 0.6),
 				c + Vector2(-s * 0.9, s * 0.6)]), ink)
+		"wood":
+			var c := r.get_center()
+			var s := r.size.y * 0.45
+			var wood: Color = pal.get("wood_ink", ink)
+			draw_circle(c + Vector2(-s * 0.7, -s * 0.15), s * 0.45, wood)
+			draw_colored_polygon(PackedVector2Array([c + Vector2(s * 0.6, -s), c + Vector2(s * 1.1, s * 0.4), c + Vector2(s * 0.1, s * 0.4)]), wood)
+		"manor":
+			var faint := Color(ink, ink.a * _repo.bal("war_key_faint_alpha"))
+			for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([a, b]), dash * 0.6, dash * 0.5):
+				draw_polyline(d, faint, line * 0.6, true)
+		"walls":
+			var c := r.get_center()
+			var s := r.size.y * 0.4
+			draw_rect(Rect2(c - Vector2(s, s), Vector2(s, s) * 2.0), ink, false, line, true)
+			for q in 4:
+				var corner := c + Vector2(s if q % 2 == 0 else -s, s if q < 2 else -s)
+				draw_rect(Rect2(corner - Vector2.ONE * s * 0.25, Vector2.ONE * s * 0.5), ink)
+		"port":
+			var c := r.get_center()
+			var s := r.size.y * 0.42
+			draw_line(c + Vector2(0, -s), c + Vector2(0, s), ink, line, true)
+			draw_line(c + Vector2(-s * 0.45, -s * 0.55), c + Vector2(s * 0.45, -s * 0.55), ink, line, true)
+			draw_arc(c + Vector2(0, s * 0.2), s * 0.75, 0.15 * PI, 0.85 * PI, 10, ink, line, true)
 		"contour":
 			var faint := Color(ink, ink.a * _repo.bal("war_contour_alpha"))
 			draw_arc(Vector2(r.get_center().x, r.end.y + r.size.y * 0.6), r.size.x * 0.55, PI * 1.15, PI * 1.85,

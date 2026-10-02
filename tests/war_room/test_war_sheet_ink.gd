@@ -53,3 +53,70 @@ func test_a_dash_or_gap_of_no_length_gives_the_whole_line() -> void:
 		var parts := WarSheetInk.dashed(line, float(pair[0]), float(pair[1]))
 		assert_eq(parts.size(), 1, str(pair))
 		assert_eq(parts[0], line, "the line itself, uncut")
+
+
+func _richest_sheet() -> Dictionary:
+	var best: Dictionary = {}
+	var most := -1
+	for s: Dictionary in WarSheets.series(repo):
+		var n := 0
+		for code: String in repo.burgs:
+			var b: Dictionary = repo.burgs[code]
+			if (s["rect"] as Rect2).has_point(Vector2(float(b["x"]), float(b["y"]))):
+				n += 1
+		if n > most:
+			most = n
+			best = s
+	return best
+
+
+func test_towns_say_whether_they_are_walled_and_ports() -> void:
+	var s := _richest_sheet()
+	var ink := WarSheetInk.strokes(repo, state, s, 1024)
+	var walled := 0
+	for t: Dictionary in ink["towns"]:
+		assert_true(t.has("walls") and t.has("port"))
+		walled += 1 if bool(t["walls"]) else 0
+	var want := 0
+	for code: String in repo.burgs:
+		var b: Dictionary = repo.burgs[code]
+		if (s["rect"] as Rect2).has_point(Vector2(float(b["x"]), float(b["y"]))) and String(b.get("features", "")).split("|").has("walls"):
+			want += 1
+	assert_eq(walled, want)
+
+
+func test_manor_edges_run_between_land_cells_of_one_province_only() -> void:
+	var s := _richest_sheet()
+	var ink := WarSheetInk.strokes(repo, state, s, 1024)
+	assert_gt((ink["manor_edges"] as Array).size(), 0)
+	for e: PackedVector2Array in ink["manor_edges"]:
+		assert_eq(e.size(), 2)
+	assert_gt((ink["manors"] as Array).size(), 0, "manors are named")
+
+
+func test_hollows_are_the_low_landmarks_on_the_sheet() -> void:
+	var s := _richest_sheet()
+	var ink := WarSheetInk.strokes(repo, state, s, 1024)
+	var want := 0
+	for m: Dictionary in Elevation.landmarks(repo):
+		if String(m["kind"]) == "low" and (s["rect"] as Rect2).has_point(m["pos"]):
+			want += 1
+	assert_eq((ink["hollows"] as Array).size(), want)
+
+
+func test_no_bake_no_woods_and_nothing_breaks() -> void:
+	var ink := WarSheetInk.strokes(repo, state, WarSheets.series(repo)[0], 1024, null)
+	assert_eq((ink["woods"] as Array).size(), 0)
+
+
+func test_the_bake_plants_woods_on_a_wooded_sheet() -> void:
+	var bake := WarBake.of(repo)
+	if bake == null:
+		pending("no built bake in this checkout")
+		return
+	var most := 0
+	for s: Dictionary in WarSheets.series(repo):
+		most = maxi(most, (WarSheetInk.strokes(repo, state, s, 1024, bake)["woods"] as Array).size())
+		if most > 0:
+			break
+	assert_gt(most, 0, "some sheet has woods")

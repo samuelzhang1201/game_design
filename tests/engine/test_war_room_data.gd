@@ -11,7 +11,7 @@ func before_all() -> void:
 
 
 func test_every_balance_key_the_room_reads_is_there() -> void:
-	for key in ["war_sheet_deg", "war_sheet_collar_km", "war_grid_deg", "war_collar_ink", "war_collar_shade", "war_neat_px", "war_neat_gap_px", "war_chart_sea_shade", "war_chart_axis_margin_m", "war_toss_apex_m", "war_toss_fly_s", "war_toss_turns_min", "war_toss_turns_max", "war_toss_bounces", "war_toss_bounce_ratio", "war_toss_settle_s", "war_toss_margin", "war_toss_hand_m",
+	for key in ["war_sheet_deg", "war_sheet_collar_km", "war_grid_deg", "war_collar_ink", "war_collar_shade", "war_neat_px", "war_neat_gap_px", "war_chart_sea_shade", "war_chart_axis_margin_m", "war_toss_apex_m", "war_toss_fly_s", "war_toss_turns_min", "war_toss_turns_max", "war_toss_bounces", "war_toss_bounce_ratio", "war_toss_settle_s", "war_toss_margin", "war_toss_hand_m", "war_ink_wood_px", "war_ink_wood_step_km", "war_ink_wood_min_cover", "war_ink_manor_px", "war_ink_manor_dash_px", "war_ink_manor_gap_px", "war_ink_manor_label_px", "war_ink_manor_clear_px", "war_ink_wall_ratio", "war_ink_anchor_ratio",
 			"war_table_w_m", "war_relief_grid", "war_relief_exaggeration", "war_contour_m",
 			"war_contour_index_every", "war_sheet_texture_px", "war_sheet_swap_s",
 			"war_cam_distance_m", "war_cam_min_m", "war_cam_max_m", "war_cam_pitch_near_deg",

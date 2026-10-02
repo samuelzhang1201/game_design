@@ -34,9 +34,9 @@ func _is_125(d: float) -> bool:
 	return false
 
 
-func test_the_legend_lists_the_eight_inks() -> void:
+func test_the_legend_lists_the_sheets_inks() -> void:
 	assert_eq(WarMarginKey.legend_keys(), PackedStringArray(
-		["road", "trail", "river", "border", "seam", "town", "peak", "contour"]))
+		["road", "trail", "river", "border", "seam", "town", "peak", "contour", "wood", "manor", "walls", "port"]))
 	for e: Dictionary in WarMarginKey.LEGEND:
 		assert_false(String(e["label"]).is_empty(), String(e["key"]))
 
@@ -71,7 +71,7 @@ func test_the_bar_restates_on_zoom_on_the_125_ladder() -> void:
 func test_the_key_sizes_itself_from_data() -> void:
 	var m := key.get_combined_minimum_size()
 	assert_eq(m.x, repo.bal("war_key_width_px"))
-	var rows := ceili(8.0 / repo.bal("war_key_columns"))
+	var rows := ceili(float(WarMarginKey.LEGEND.size()) / repo.bal("war_key_columns"))
 	assert_almost_eq(m.y, repo.bal("war_key_rose_px") + repo.bal("war_key_gap_px") + float(rows) * repo.bal("war_key_row_px"), 0.01)
 
 

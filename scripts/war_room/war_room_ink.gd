@@ -10,9 +10,10 @@ extends RefCounted
 ## returned and nothing errors.
 
 ## The painter's widths (war_ink_<k>_px) and ratios (war_ink_<k>), by short key.
-const INK_PX := ["road", "trail", "river", "coast", "border", "band", "seam", "town", "label", "dash", "gap"]
+const INK_PX := ["road", "trail", "river", "coast", "border", "band", "seam", "town", "label", "dash", "gap",
+	"wood", "manor", "manor_label", "manor_dash", "manor_gap"]
 const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_dot_ratio", "label_gap_ratio",
-	"label_drop_ratio", "peak_label_ratio", "peak_half_w", "peak_drop", "border_dot_ratio"]
+	"label_drop_ratio", "peak_label_ratio", "peak_half_w", "peak_drop", "border_dot_ratio", "wall_ratio", "anchor_ratio"]
 ## How many sheets' ink are kept: the laid one and one more.
 const KEEP := 2
 ## The ink viewport's size at rest (the smallest a viewport takes).
@@ -58,7 +59,7 @@ func texture_for(repo: DataRepository, state: GameState, sheet: int, viewport: S
 			widths[k] = repo.bal("war_ink_%s_px" % k)
 		for k: String in INK_RATIOS:
 			widths[k] = repo.bal("war_ink_%s" % k)
-		painter.paint(WarSheetInk.strokes(repo, state, row, size.x), repo.war_palette, widths, font)
+		painter.paint(WarSheetInk.strokes(repo, state, row, size.x, WarBake.of(repo)), repo.war_palette, widths, font)
 		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 		await frame_done
 		if gen != _gen:
