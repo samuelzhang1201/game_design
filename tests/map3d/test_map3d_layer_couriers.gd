@@ -64,13 +64,28 @@ func test_a_stand_in_without_the_couriers_clips_falls_back() -> void:
 	assert_eq(Map3DLayerCouriers.clip_or_fallback(null, "IDLE"), "", "no AnimationPlayer at all")
 
 
-## Owner 2026-09-30 (信使送到信息后要立即淡化消失): he fades the moment his
-## delivering ride is done, over the Couriers node's fade_s of real time.
+## Owner 2026-09-30 (信使送到信息后要立即淡化消失): he fades the moment he
+## delivers, over the Couriers node's fade_s of real time — since 2026-10-02 as
+## the day ends, when the engine lets him go: a GHOST of his piece stays where
+## he reached the column until it has faded; a courier whose ride did not
+## deliver (lost, the fuse) or who was not drawn is simply gone.
 func test_a_courier_fades_out_the_moment_he_delivers() -> void:
-	var delivering := {"ends": true, "share": 0.4}
-	assert_false(Map3DCourierRide.delivered(delivering, 0.39), "still riding up to the column")
-	assert_true(Map3DCourierRide.delivered(delivering, 0.4), "there: delivered")
-	assert_false(Map3DCourierRide.delivered({"ends": false, "share": 1.0}, 1.0), "a whole day's ride that does not deliver")
+	var node := Node3D.new()
+	add_child_autofree(node)
+	var pieces := {7: {"node": node, "anim": null, "alpha": 1.0}}
+	var ghosts: Dictionary = {}
+	assert_false(Map3DCourierRide.ghost(ghosts, 7, {"ends": false}, pieces[7], 0.0), "lost: no ghost")
+	assert_true(Map3DCourierRide.ghost(ghosts, 7, {"ends": true}, pieces[7], 0.0), "delivered: he fades there")
+	Map3DCourierRide.fade_ghosts(ghosts, pieces, 0.3, 0.6)
+	assert_almost_eq(float(pieces[7]["alpha"]), 0.5, 0.0001, "half way through the fade")
+	Map3DCourierRide.fade_ghosts(ghosts, pieces, 0.3, 0.6)
+	assert_eq(pieces, {}, "faded: his piece is let go")
+	assert_eq(ghosts, {})
+	assert_true(node.is_queued_for_deletion())
+	var hidden := Node3D.new()
+	add_child_autofree(hidden)
+	hidden.visible = false
+	assert_false(Map3DCourierRide.ghost({}, 8, {"ends": true}, {"node": hidden}, 0.0), "not drawn: nothing to fade")
 	assert_eq(Map3DCourierRide.alpha(-1.0, 0.6), 1.0, "not delivered: whole")
 	assert_almost_eq(Map3DCourierRide.alpha(0.3, 0.6), 0.5, 0.0001, "half way through the fade")
 	assert_eq(Map3DCourierRide.alpha(0.6, 0.6), 0.0, "gone")

@@ -92,9 +92,10 @@ static func along_day(day: Dictionary, share: float) -> Vector2:
 
 
 ## Whether a piece WALKS its day's march at the day's `share`: it has somewhere
-## to go and its start has come (a column ordered today stands until its
-## courier reaches it, s0). Not "it moved this frame": a frame that happened
-## not to move it read as a halt and blended the gait out and back.
+## to go and its start has come (s0: the share at which its day was reckoned —
+## an order taking effect mid-day, a fleet's). Not "it moved this frame": a
+## frame that happened not to move it read as a halt and blended the gait out
+## and back.
 static func walking(day: Dictionary, share: float) -> bool:
 	# a few world metres: the last frame of a day lands just short of its end
 	return (day["from"] as Vector2).distance_to(day["to"]) > 0.5 and share >= float(day["s0"])
@@ -102,18 +103,17 @@ static func walking(day: Dictionary, share: float) -> bool:
 
 ## A piece's day's march for along_day, reckoned at the day's `share`: from
 ## where it is `drawn` — or the engine's spot `here`, when farther than the
-## snap — to where the engine's next day leaves it, a courier delivering that
-## day included, the march starting when he reaches it
-## (CourierSystem.day_ahead_of). World XZ.
+## snap — to where the engine's next day leaves it (CourierSystem.day_ahead_of;
+## a courier delivering that day changes nothing until the day ends, owner
+## 2026-10-02). World XZ.
 static func day_march(repo: DataRepository, state: GameState, code: String, meta: Dictionary,
 		here: Vector2, drawn: Vector2, share: float) -> Dictionary:
 	if state == null:
 		return {"from": here, "to": here, "s0": 0.0}
 	var from := here if drawn.distance_to(here) > snap_m(repo, state, code, meta) else drawn
-	var day := CourierSystem.day_ahead_of(repo, state, code)
-	# a column ordered today stands until its courier reaches it
-	return {"from": from, "s0": share + float(day["from"]) * (1.0 - share),
-		"to": Map3DGeometry.pack_to_world(meta, ArmySystem.metres_to_pack(repo, day["m"]))}
+	var to := CourierSystem.day_ahead_of(repo, state, code)
+	return {"from": from, "s0": share,
+		"to": Map3DGeometry.pack_to_world(meta, ArmySystem.metres_to_pack(repo, to))}
 
 
 ## A day's march in the built world's metres.

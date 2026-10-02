@@ -608,8 +608,8 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 
 
 ## Where the NEXT day's march leaves a regiment whose state row is `entry`
-## (a copy, with any order a courier delivers that day already on it —
-## CourierSystem.day_ahead_of), in whole metres; the map draws the piece
+## (a copy — CourierSystem.day_ahead_of; a courier's order takes effect only
+## as the day ends, owner 2026-10-02), in whole metres; the map draws the piece
 ## walking it as the day runs (owner 2026-09-28: it lagged a day behind).
 ## Nothing is written but `entry`.
 static func march_ahead(repo: DataRepository, state: GameState, code: String, entry: Dictionary) -> Vector2i:

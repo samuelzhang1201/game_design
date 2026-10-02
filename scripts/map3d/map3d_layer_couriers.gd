@@ -3,9 +3,11 @@ extends Node3D
 ## The couriers on the 3D map (spec 2026-09-27-courier-core §2): one small rider
 ## per courier of GameState.couriers, drawn RIDING the day the clock is running
 ## (CourierSystem.ride_ahead), walked by the day's share (owner 2026-09-28: drawn
-## a day behind before). Map3DUnits sizes him: gallops while the clock runs and
-## idles paused or not set out, a counter past the counter scale, and fades out
-## on delivery (Map3DCourierRide). Model:
+## a day behind before) — at one pace over the whole day, reaching the column as
+## the day ends (owner 2026-10-02). Map3DUnits sizes him: gallops while the
+## clock runs and idles paused or not set out, a counter past the counter scale,
+## and fades out where he delivered once the engine lets him go
+## (Map3DCourierRide). Model:
 ## courier_art.csv, cavalry stand-in until sub-project D. Never the Game autoload.
 
 const GALLOP := "GALLOP"
@@ -33,7 +35,7 @@ static func clip_or_fallback(anim: AnimationPlayer, action: String) -> String:
 ## (edited on the node, owner 2026-10-02).
 @export var counter_px := 16.0
 ## The real seconds he takes to fade out once he delivers (owner 2026-09-30:
-## 信使送到信息后要立即淡化消失) — the engine keeps him to the day's end.
+## 信使送到信息后要立即淡化消失) — as the day ends, when the engine lets him go.
 @export var fade_s := 0.6
 ## His GALLOP's playback rate, held within these: a slow road still reads as
 ## a gallop, and past the ceiling the rider slides.
@@ -51,7 +53,7 @@ var _rides: Dictionary = {}
 var _left: Dictionary = {}
 ## id -> the day's share when a courier not yet ridden was first seen (sent mid-day).
 var _start: Dictionary = {}
-var _fade: Dictionary = {}  # id -> real seconds since he delivered
+var _ghosts: Dictionary = {}  # id -> real seconds fading where he delivered (Map3DCourierRide.ghost)
 
 
 func bind(p_ctx: Map3DContext) -> void:
@@ -59,6 +61,11 @@ func bind(p_ctx: Map3DContext) -> void:
 	if not ctx.camera_moved.is_connected(refresh):
 		ctx.camera_moved.connect(refresh)
 	refresh()
+
+
+## id -> where he is drawn, world XZ.
+func shown_positions() -> Dictionary:
+	return _shown_xz
 
 
 ## id -> {rect: Rect2 design px, counter: bool, lead: road ahead (Map3DHudCouriers), waiting: bool}.
@@ -78,7 +85,7 @@ func refresh() -> void:
 			_shown_xz[id] = _drawn_xz(c)
 		_place(c, _shown_xz[id])
 	for id in _pieces.keys():
-		if not live.has(id):
+		if not live.has(id) and not _ghost(id):
 			(_pieces[id]["node"] as Node3D).queue_free()
 			_pieces.erase(id)
 	for id in _shown_xz.keys():
@@ -87,7 +94,10 @@ func refresh() -> void:
 			_rides.erase(id)
 			_left.erase(id)
 			_start.erase(id)
-			_fade.erase(id)
+
+
+func _ghost(id: int) -> bool:  # Map3DCourierRide.ghost, his fade carried on
+	return Map3DCourierRide.ghost(_ghosts, id, _rides.get(id, {}), _pieces[id], 0.0)
 
 
 ## Draw each rider where the day's share has him on today's ride; true when
@@ -95,6 +105,7 @@ func refresh() -> void:
 func step(delta: float) -> bool:
 	if ctx == null or ctx.camera == null:
 		return false
+	Map3DCourierRide.fade_ghosts(_ghosts, _pieces, delta, fade_s)
 	var list := ctx.couriers()
 	var dirty := list.size() != _rects.size()
 	for c: Dictionary in list:
@@ -102,17 +113,13 @@ func step(delta: float) -> bool:
 		var xz := _drawn_xz(c)
 		var moving: bool = _shown_xz.has(id) and _shown_xz[id] != xz
 		var prev: Vector2 = _shown_xz.get(id, xz)
-		if Map3DCourierRide.delivered(_ride_of(c), _share_of(c)):
-			_fade[id] = float(_fade.get(id, 0.0)) + delta
-			dirty = dirty or _fade[id] - delta < fade_s  # still fading
-			moving = false
 		if _pieces.has(id):
 			var piece: Dictionary = _pieces[id]
 			var k := (piece["node"] as Node3D).transform.basis.get_scale().x
 			var pace := Map3DUnitRig.gait_rate(prev.distance_to(xz) / maxf(delta, 0.001), k,
 				float(piece["clip_s"]), float(piece["stride_m"]),
 				anim_min, anim_max)
-			_sync(piece, action_for(moving or not (_waiting(c, xz) or _fade.has(id)), ctx.clock_speed() > 0.0), pace)
+			_sync(piece, action_for(moving or not _waiting(c, xz), ctx.clock_speed() > 0.0), pace)
 		if not _shown_xz.has(id) or _shown_xz[id] != xz:
 			_shown_xz[id] = xz
 			dirty = true
@@ -197,12 +204,6 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 	var repo := ctx.repo
 	var s_px := ctx.viewport_px_scale()
 	var centre := Vector3(xz.x, ctx.height_at(xz), xz.y)
-	var alpha := Map3DCourierRide.alpha(float(_fade.get(id, -1.0)), fade_s)
-	if alpha <= 0.0:  # delivered and faded: nothing drawn, nothing to click
-		if _pieces.has(id):
-			(_pieces[id]["node"] as Node3D).visible = false
-		_rects[id] = {"rect": Rect2(), "counter": false, "lead": [], "waiting": false, "gone": true, "alpha": 0.0}
-		return
 	if ctx.camera.is_position_behind(centre):
 		if _pieces.has(id):
 			(_pieces[id]["node"] as Node3D).visible = false
@@ -215,11 +216,10 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 		var at: Vector2 = ctx.camera.unproject_position(centre) / s_px
 		var half := counter_px * 0.5
 		_rects[id] = {"rect": Rect2(at - Vector2(half, half), Vector2(half, half) * 2.0), "counter": true,
-			"lead": _lead(id, xz), "waiting": _waiting(c, xz), "gone": alpha < 1.0, "alpha": alpha}
+			"lead": _lead(id, xz), "waiting": _waiting(c, xz)}
 		return
 	var node: Node3D = piece["node"]
 	node.visible = true
-	Map3DCourierRide.apply(piece, alpha)
 	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
 		float(piece["height_m"]), float(piece["size"]))
@@ -234,7 +234,7 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 	node.transform = Transform3D((Basis(Quaternion(Vector3.UP, up)) * Basis(Vector3.UP, yaw))
 		.scaled(Vector3(k, k, k)), ground)
 	_rects[id] = {"rect": Map3DUnits.screen_box(ctx.camera, ground, high, float(piece["half_w_m"]) * k, s_px),
-		"counter": false, "lead": _lead(id, xz), "waiting": _waiting(c, xz), "gone": alpha < 1.0, "alpha": alpha}
+		"counter": false, "lead": _lead(id, xz), "waiting": _waiting(c, xz)}
 
 
 func _waiting(c: Dictionary, xz: Vector2) -> bool:  # not yet set out

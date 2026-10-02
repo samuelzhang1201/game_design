@@ -7,6 +7,16 @@ extends RefCounted
 ## the stretch's kind, the height tier it starts on and the province's
 ## weather (Weather). Whole metres and whole per-mille throughout; couriers
 ## ride in id order.
+##
+## A courier rides EVENLY to the end of the day he arrives (owner 2026-10-02:
+## 信使移动的逻辑不对，应该是收到命令-》游戏开始信使出发，如果是一天的话，意味着这天
+## 结束的时候到达目的地。而不是一下子就飞快的到达！游戏显示的到达天数全部以当天结束为准):
+## each day he rides only his share of what is left — the clear-road metres
+## still ahead over the whole days they take (day_pace) — so a trip of N days
+## is covered at one pace over all N and ends exactly as the Nth day ends; the
+## order takes effect then, AFTER that day's march (TickEngine), so the column
+## acts on it from the next day. Every day count shown is a count of day-ends,
+## the day the clock is started on being the first.
 
 const ORDINARY := "ordinary"
 const SECRET := "secret"
@@ -180,10 +190,19 @@ static func dispatch_spy(repo: DataRepository, state: GameState, to_px: Vector2)
 	return c
 
 
-## Days a courier still has to ride, today's weather held.
+## The absolute day a courier rides next: advance_day moves the calendar
+## before he rides (and a tick, day 30 -> day 1, is the next day as well), so
+## the day now running is ridden under the NEXT day's weather. The ETAs read it
+## so they agree with the ride.
+static func _ride_day_of(state: GameState) -> int:
+	return state.absolute_day() + 1
+
+
+## Days a courier still has to ride — the day now running the first, his last
+## ending as he delivers — the weather of his next day held.
 static func days_left(repo: DataRepository, state: GameState, c: Dictionary) -> int:
 	return days_for(repo, String(c["kind"]), need_along(repo, state,
-		Vector2i(int(c["x_m"]), int(c["y_m"])), c["path"], state.absolute_day()))
+		Vector2i(int(c["x_m"]), int(c["y_m"])), c["path"], _ride_day_of(state)))
 
 
 ## Days a spy sent now would ride to reach `to_px`, the route and today's
@@ -192,11 +211,12 @@ static func spy_eta_days(repo: DataRepository, state: GameState, to_px: Vector2)
 	var from := origin(repo, state)
 	var path := path_between(repo, from, to_px)
 	return days_for(repo, SPY, need_along(repo, state, ArmySystem.pack_to_metres(repo, from),
-		path, state.absolute_day()))
+		path, _ride_day_of(state)))
 
 
 ## The aim ruler's estimate (spec §1): days for a courier sent now to reach
-## the regiment, the route and today's weather held. 0 for no regiment.
+## the regiment — counted in day-ends, the day now running (or about to run)
+## the first — the route and his first day's weather held. 0 for no regiment.
 static func eta_days(repo: DataRepository, state: GameState, kind: String, code: String) -> int:
 	var reg := ArmySystem.regiment(repo, code)
 	if reg.is_empty():
@@ -204,11 +224,13 @@ static func eta_days(repo: DataRepository, state: GameState, kind: String, code:
 	var from := origin(repo, state)
 	var path := path_between(repo, from, ArmySystem.position_of(repo, state, reg))
 	return days_for(repo, kind, need_along(repo, state, ArmySystem.pack_to_metres(repo, from),
-		path, state.absolute_day()))
+		path, _ride_day_of(state)))
 
 
-## One DAY on the road for every courier, in id order (TickEngine, before the
-## regiments march). Returns the day's events for the news bar.
+## One DAY on the road for every courier, in id order (TickEngine, at the
+## day's END, after the regiments march: an order delivered today is marched
+## on from tomorrow). Returns the day's events for the news bar; his setting
+## out is said when the day he rides begins (setting_out), not here.
 static func ride_day(repo: DataRepository, state: GameState) -> Array:
 	var events: Array = []
 	var today := state.absolute_day()
@@ -230,13 +252,6 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 		events.append(_event("lost", c))
 		return false
 	c["days"] = int(c.get("days", 0)) + 1
-	if int(c["days"]) == 1:  # his first day on the road: the news bar says he left
-		var e := _event("set_out", c)
-		e["capital"] = 1 if _at_capital(repo, c) else 0
-		if _is_spy(c):
-			e["place"] = Intel.place_label(repo, state, ArmySystem.metres_to_pack(repo,
-				Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))))
-		events.append(e)
 	if int(c["days"]) > int(repo.bal("courier_max_days")):
 		events.append(_spy_placed(repo, state, c, _event("fuse", c)))
 		return false
@@ -250,6 +265,26 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 	return true
 
 
+## The news bar's "he leaves" lines for the couriers whose FIRST day is the
+## one now running (days 0), in id order, past `after` (the last id already
+## said) — said when the clock runs that day, so the leaving and a one-day
+## delivery are never the same moment. Nothing is written.
+static func setting_out(repo: DataRepository, state: GameState, after: int) -> Array:
+	var out: Array = []
+	var list: Array = state.couriers.duplicate()
+	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["id"]) < int(b["id"]))
+	for c: Dictionary in list:
+		if int(c["id"]) <= after or int(c.get("days", 0)) > 0:
+			continue
+		var e := _event("set_out", c)
+		e["capital"] = 1 if _at_capital(repo, c) else 0
+		if _is_spy(c):
+			e["place"] = Intel.place_label(repo, state, ArmySystem.metres_to_pack(repo,
+				Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))))
+		out.append(e)
+	return out
+
+
 ## A spy courier (SPY_SEND): he rides for a point, not a regiment.
 static func _is_spy(c: Dictionary) -> bool:
 	return String(c.get("kind", "")) == SPY
@@ -260,10 +295,10 @@ static func _is_spy(c: Dictionary) -> bool:
 ## day behind (owner 2026-09-28: he stood still a whole day after play was
 ## pressed). {points: the points he passes in whole metres, ending where the
 ## day leaves him ([] when he will not ride); share: the share of the day his
-## ride takes — under 1 only on the day he reaches the column; ends: true when
-## that day's ride delivers (the map fades him out the moment he arrives,
-## owner 2026-09-30: 信使送到信息后要立即淡化消失)}. Nothing of `state` or `c`
-## is written.
+## ride takes — the whole day, since he rides evenly to the day's end (owner
+## 2026-10-02); ends: true when that day's ride delivers, AS THE DAY ENDS (the
+## map fades him out then, owner 2026-09-30: 信使送到信息后要立即淡化消失)}.
+## Nothing of `state` or `c` is written.
 static func ride_ahead(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
 	var before: Array = []
 	var copy := _ride_copy(repo, state, c, before)
@@ -287,45 +322,20 @@ static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, be
 	if not _is_spy(c):
 		_reaim(repo, state, copy, reg)
 	before.append_array((copy["path"] as Array).duplicate(true))
-	# advance_day moves the calendar before the couriers ride, and a tick
-	# (day 30 -> day 1) is the next absolute day as well
-	var budget := day_budget(repo, String(copy["kind"]))
-	var left := _advance(repo, state, copy, state.absolute_day() + 1, [])
-	copy["ride_share"] = 1.0 - float(left) / float(budget) if budget > 0 else 1.0
+	var day := _ride_day_of(state)
+	var pace := day_pace(repo, state, copy, day)
+	var left := _advance(repo, state, copy, day, [])
+	copy["ride_share"] = 1.0 - float(left) / float(pace) if pace > 0 else 1.0
 	return copy
 
 
-## Where the next day leaves a regiment: {m: whole metres; from: the share of
-## the day its march starts at — the couriers ride first, so an order one of
-## them delivers that day is marched on that day (TickEngine.advance_day),
-## from the moment he reaches it}, then ArmySystem.march_ahead. Nothing is
-## written.
-static func day_ahead_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
-	var from := 0.0
+## Where the next day leaves a regiment, in whole metres (ArmySystem.march_ahead
+## on a copy of its row). A courier delivering that day changes nothing: his
+## order takes effect as the day ENDS, after the march (owner 2026-10-02), so
+## the column marches on it from the next day. Nothing is written.
+static func day_ahead_of(repo: DataRepository, state: GameState, code: String) -> Vector2i:
 	var entry: Dictionary = (state.regiments.get(code, {}) as Dictionary).duplicate(true)
-	var list: Array = state.couriers.duplicate()
-	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["id"]) < int(b["id"]))
-	for c: Dictionary in list:
-		if String(c["target"]) != code or int(entry.get("order_id", 0)) > int(c["id"]) \
-				or int(c.get("days", 0)) + 1 > int(repo.bal("courier_max_days")):
-			continue
-		var done := _ride_copy(repo, state, c, [])
-		if done.is_empty() or not (done["path"] as Array).is_empty():
-			continue
-		var order: Dictionary = c["order"]
-		match String(order.get("action_code", "")):
-			"ARMY_MARCH":
-				# the round trip through pack px _deliver's set_march takes
-				var dest := ArmySystem.pack_to_metres(repo, ArmySystem.metres_to_pack(repo,
-					Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"]))))
-				entry["order"] = ArmySystem.ORDER_MARCH
-				entry["dest_x_m"] = dest.x
-				entry["dest_y_m"] = dest.y
-			"ARMY_GARRISON":
-				entry["order"] = ArmySystem.ORDER_GARRISON
-		entry["order_id"] = int(c["id"])
-		from = float(done["ride_share"])
-	return {"m": ArmySystem.march_ahead(repo, state, code, entry), "from": from}
+	return ArmySystem.march_ahead(repo, state, code, entry)
 
 
 ## The points (whole metres) a courier passed on a day: the waypoints his road
@@ -338,20 +348,38 @@ static func passed_points(old_path: Array, new_size: int, now: Vector2i) -> Arra
 	return out
 
 
+## The clear-road metres a courier rides on `today` (owner 2026-10-02): what
+## is still ahead of him, under `today`'s weather, over the whole days it takes
+## (days_for), rounded up — never more than his day_budget — so he keeps one
+## pace to the end of his last day and reaches the column as it ends, never
+## part-way through it. A day of worse weather adds a day and slows him; each
+## day re-reckons, so the count only ever falls by one a day while the
+## weather and the column hold.
+static func day_pace(repo: DataRepository, state: GameState, c: Dictionary, today: int) -> int:
+	var need := need_along(repo, state, Vector2i(int(c["x_m"]), int(c["y_m"])), c["path"], today)
+	var days := days_for(repo, String(c["kind"]), need)
+	@warning_ignore("integer_division")  # whole metres, rounded up
+	return mini(day_budget(repo, String(c["kind"])), (need + days - 1) / days)
+
+
 ## One day's ride along `c`'s road, which it writes: his spot, his road, day_m.
-## Returns the day's budget left unridden (he arrived with some to spare).
+## He rides day_pace, not his whole day_budget. Returns the pace left unridden
+## (0 but for rounding: on his last day the pace is exactly what was left).
 static func _advance(repo: DataRepository, state: GameState, c: Dictionary, today: int, events: Array) -> int:
-	var budget := day_budget(repo, String(c["kind"]))
+	var budget := day_pace(repo, state, c, today)
 	var here := Vector2i(int(c["x_m"]), int(c["y_m"]))
 	var start := here
 	var path: Array = c["path"]
-	while not path.is_empty() and budget > 0:
+	# a stretch needing nothing (no length) is passed even on a spent pace
+	while not path.is_empty():
 		var to := Vector2i(int(path[0][0]), int(path[0][1]))
 		var wx := Weather.at(repo, state, ArmySystem.metres_to_pack(repo, here), today)
-		_note_slow(repo, state, c, wx, today, events)
 		var f := stretch_factor(repo, String(path[0][2]), here, wx)
 		var length := int(round(Vector2(here).distance_to(Vector2(to))))
 		var need := RoadGraph.stretch_need(length, f)
+		if budget <= 0 and need > 0:
+			break  # the day's pace is ridden
+		_note_slow(repo, state, c, wx, today, events)
 		if need <= budget:
 			budget -= need
 			here = to
@@ -363,6 +391,7 @@ static func _advance(repo: DataRepository, state: GameState, c: Dictionary, toda
 			var way := (Vector2(to) - Vector2(here)) / float(length)
 			here = Vector2i(roundi(float(here.x) + way.x * float(adv)), roundi(float(here.y) + way.y * float(adv)))
 		budget = 0
+		break
 	c["day_m"] = int(round(Vector2(start).distance_to(Vector2(here))))
 	c["x_m"] = here.x
 	c["y_m"] = here.y
