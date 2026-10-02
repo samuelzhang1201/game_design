@@ -1,0 +1,16 @@
+[gd_resource type="StyleBox" script_class="ScaledNineSlice" format=3 uid="uid://timupw33b37n"]
+
+[ext_resource type="Script" uid="uid://d17mapyjoo8um" path="res://scripts/ui/scaled_nine_slice.gd" id="1_b88s4"]
+[ext_resource type="Texture2D" uid="uid://cqk8fxup7pk4v" path="res://assets/2D/ui/missive_board/letter_aged.png" id="2_wt8ja"]
+
+[resource]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 32.0
+content_margin_top = 32.0
+content_margin_right = 32.0
+content_margin_bottom = 32.0
+script = ExtResource("1_b88s4")
+texture = ExtResource("2_wt8ja")
+source_inset = 64.0
+scale = 3.0

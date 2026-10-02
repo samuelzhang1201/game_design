@@ -1,8 +1,9 @@
+@tool
 class_name ScaledNineSlice
 extends StyleBox
 ## A nine-slice StyleBox for art installed at more than one texture px per
 ## design px (the Missive board's pieces, library U-20..U-26: hi-res for the
-## game's ~3x window scale, per balance.csv ui_missive_art_px_per_design).
+## game's ~3x window scale; each piece's `scale` is on its .tres).
 ##
 ## Godot's own StyleBoxTexture draws one texture px per design px — it has no
 ## scale (CLAUDE.md notes the same trap for the vellum panel plate) — so a
@@ -18,18 +19,36 @@ extends StyleBox
 ## `scale` in design px: the cork board's weave at its real texel density,
 ## however large the board is drawn.
 
-var texture: Texture2D = null
+@export var texture: Texture2D = null:
+	set(v):
+		texture = v
+		emit_changed()
 ## How much of the art is corner, in TEXTURE px. 0 tiles instead of slicing.
-var source_inset := 0.0
+@export var source_inset := 0.0:
+	set(v):
+		source_inset = v
+		emit_changed()
 ## Texture px per design px the art was authored at.
-var scale := 1.0
-var tint := Color.WHITE
+@export var scale := 1.0:
+	set(v):
+		scale = v
+		emit_changed()
+@export var tint := Color.WHITE:
+	set(v):
+		tint = v
+		emit_changed()
 ## A style drawn FIRST, under the art, over the box shrunk by `fill_inset`
 ## TEXTURE px (scaled like the corners): what shows through a frame whose
 ## opening is clear — the Missive board's wood under its carved frame (owner
 ## 2026-09-30). null draws nothing under.
-var fill: StyleBox = null
-var fill_inset := 0.0
+@export var fill: StyleBox = null:
+	set(v):
+		fill = v
+		emit_changed()
+@export var fill_inset := 0.0:
+	set(v):
+		fill_inset = v
+		emit_changed()
 
 
 ## The corner's drawn size in design px (source_inset scaled down); what a
@@ -72,7 +91,7 @@ func _draw(to_canvas_item: RID, rect: Rect2) -> void:
 ## Tiled at the art's own size / scale a design-px tile (VellumPanelStyle's
 ## grain drawing, the same idea: a texel is `1 / scale` design px), the last
 ## row and column cut to the box. A non-positive `scale` (misconfigured data,
-## never a real ui_missive_art_px_per_design) is treated as 1 rather than
+## never a real installed scale) is treated as 1 rather than
 ## dividing by it — the same fallback draw_inset() uses — since a step that
 ## never advances (0) or runs backwards (negative) would loop forever.
 func _draw_tiled(ci: RID, rect: Rect2) -> void:

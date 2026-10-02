@@ -30,6 +30,9 @@ static func fly(host: Control, from: Rect2, to: Rect2, big: bool, repo: DataRepo
 	return f
 
 
+## The wax-sealed envelope that flies to the tab (library U-26).
+const ENVELOPE := preload("res://assets/2D/ui/missive_board/envelope.png")
+
 func _start(from: Rect2, to: Rect2, big: bool, repo: DataRepository) -> void:
 	var env := ENVELOPE_PX if big else SMALL_PX
 	size = from.size if big else env
@@ -71,7 +74,7 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	var tex: Texture2D = UiPalette.load_art(String(Game.data.missive_art.get("envelope", "")))
+	var tex: Texture2D = ENVELOPE
 	if tex != null:
 		draw_texture_rect(tex, Rect2(Vector2.ZERO, size), false)
 		return

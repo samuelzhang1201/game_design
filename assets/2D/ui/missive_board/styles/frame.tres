@@ -1,0 +1,19 @@
+[gd_resource type="StyleBox" script_class="ScaledNineSlice" format=3 uid="uid://bq3tdt8l7m5ss"]
+
+[ext_resource type="StyleBox" uid="uid://bjdb015446hxu" path="res://assets/2D/ui/missive_board/styles/board_wood.tres" id="1_dum5j"]
+[ext_resource type="Script" uid="uid://d17mapyjoo8um" path="res://scripts/ui/scaled_nine_slice.gd" id="2_fvy8a"]
+[ext_resource type="Texture2D" uid="uid://gahbswbxe4vb" path="res://assets/2D/ui/missive_board/frame_open.png" id="3_shrj0"]
+
+[resource]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 32.0
+content_margin_top = 32.0
+content_margin_right = 32.0
+content_margin_bottom = 32.0
+script = ExtResource("2_fvy8a")
+texture = ExtResource("3_shrj0")
+source_inset = 72.0
+scale = 3.0
+fill = ExtResource("1_dum5j")
+fill_inset = 62.0

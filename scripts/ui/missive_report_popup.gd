@@ -7,13 +7,9 @@ extends Control
 signal sealed(from: Rect2)
 
 
+## The dialog's look is scenes/missive_report_popup.tscn (the letter's
+## parchment, report_letter.tres; the title face; Seal a Command).
 func _ready() -> void:
-	# a floating dialog: a window, titled in the title face
-	%Window.add_theme_stylebox_override("panel",
-		MissiveArt.style(Game.data, "letter", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 20, "window")))
-	UiPalette.style_title(%ReportTitle, 20)
-	%ReportMeta.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	UiPalette.command_button(%Seal)
 	%Seal.pressed.connect(func() -> void:
 		var r: Rect2 = %Window.get_global_rect()
 		visible = false

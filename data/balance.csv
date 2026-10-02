@@ -366,7 +366,6 @@ missive_seal_s,0.5,the report dialog's shrink into its envelope (EnvelopeFlight)
 missive_fly_s,0.9,the envelope's flight to the Missive tab
 missive_fly_turns,2,whole turns the envelope spins in flight
 courier_paint_foul_permille,700,"the courier card shows the foul-weather painting when the weather where he is slows a rider to this share or less (weather.csv speed_permille: mud 700, snow 650, blizzard 400)"
-ui_missive_art_px_per_design,3,"the Missive board's art is installed at this many texture px per design px (sized for the ~3x window scale); a nine-slice border and the cork tile are drawn at texture px / this"
 ui_missive_desk_painting_aspect,1.6,"the desk's %DeskPainting box (width / this = its drawn height) — was a fixed 150 design px, far wider and shallower than the delivered.png paintings' own 5:4 (1.25), so the KEEP_ASPECT_COVERED crop cut the mounted courier's head off; the box now follows the desk's own (flexible) width instead"
 ledger_thread_flow_ref,5000,"LEDGER: the flow at which a thread reaches its widest (log scale)"
 ledger_tie_ref,80,"LEDGER (owner 2026-09-30: the court's 49 thick ties tangled): the strength of feeling (|sentiment|) at which a court tie reaches ledger_tie_max_px"

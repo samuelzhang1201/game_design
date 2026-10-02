@@ -1,0 +1,23 @@
+[gd_resource type="StyleBox" script_class="ScaledNineSlice" format=3 uid="uid://dyqvrkth4n4g3"]
+
+[ext_resource type="Script" uid="uid://d17mapyjoo8um" path="res://scripts/ui/scaled_nine_slice.gd" id="1_u37wo"]
+[ext_resource type="Texture2D" uid="uid://dd1tlfgut5hj6" path="res://assets/2D/ui/missive_board/plaque.png" id="2_jo7mo"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_af3l4"]
+bg_color = Color(0, 0, 0, 0)
+shadow_color = Color(0, 0, 0, 0.55)
+shadow_size = 6
+shadow_offset = Vector2(0, 3)
+
+[resource]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 12.0
+content_margin_top = 12.0
+content_margin_right = 12.0
+content_margin_bottom = 12.0
+script = ExtResource("1_u37wo")
+texture = ExtResource("2_jo7mo")
+source_inset = 24.0
+scale = 3.0
+fill = SubResource("StyleBoxFlat_af3l4")

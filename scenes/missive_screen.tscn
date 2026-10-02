@@ -1,153 +1,211 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://chp0gby3ocq5a"]
 
-[ext_resource type="Script" path="res://scripts/ui/missive_screen.gd" id="1"]
+[ext_resource type="Script" uid="uid://c4fmhu5b5iw1k" path="res://scripts/ui/missive_screen.gd" id="1"]
+[ext_resource type="StyleBox" uid="uid://bq3tdt8l7m5ss" path="res://assets/2D/ui/missive_board/styles/frame.tres" id="2_btnb2"]
+[ext_resource type="StyleBox" uid="uid://dyqvrkth4n4g3" path="res://assets/2D/ui/missive_board/styles/plaque.tres" id="3_hsa34"]
+[ext_resource type="StyleBox" uid="uid://cav78rt7atsg4" path="res://assets/2D/ui/missive_board/styles/desk.tres" id="4_ef5a2"]
 
-[node name="MissiveScreen" type="Control"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_dmsej"]
+
+[node name="MissiveScreen" type="Control" unique_id=944432866]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-mouse_filter = 0
 script = ExtResource("1")
 
-[node name="Dim" type="ColorRect" parent="."]
+[node name="Dim" type="ColorRect" parent="." unique_id=2054643550]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0, 0.55)
 
-[node name="Frame" type="PanelContainer" parent="."]
+[node name="Frame" type="PanelContainer" parent="." unique_id=785070078]
 unique_name_in_owner = true
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 48.0
 offset_top = 48.0
 offset_right = -48.0
 offset_bottom = -48.0
+theme_override_styles/panel = ExtResource("2_btnb2")
 
-[node name="Col" type="VBoxContainer" parent="Frame"]
+[node name="Col" type="VBoxContainer" parent="Frame" unique_id=151976297]
+layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Head" type="HBoxContainer" parent="Frame/Col"]
+[node name="Head" type="HBoxContainer" parent="Frame/Col" unique_id=801173713]
+layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Title" type="Label" parent="Frame/Col/Head"]
+[node name="Title" type="Label" parent="Frame/Col/Head" unique_id=533894930]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+theme_override_font_sizes/font_size = 26
 text = "Missives"
 
-[node name="Close" type="Button" parent="Frame/Col/Head"]
+[node name="Close" type="Button" parent="Frame/Col/Head" unique_id=1284920204]
 unique_name_in_owner = true
+layout_mode = 2
 focus_mode = 0
-text = "CLOSE"
+theme_type_variation = &"Command"
+text = "Close"
 
-[node name="Body" type="HBoxContainer" parent="Frame/Col"]
+[node name="Body" type="HBoxContainer" parent="Frame/Col" unique_id=1047052113]
+layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 16
 
-[node name="BoardPanel" type="PanelContainer" parent="Frame/Col/Body"]
+[node name="BoardPanel" type="PanelContainer" parent="Frame/Col/Body" unique_id=1803693240]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 2.0
+theme_override_styles/panel = SubResource("StyleBoxEmpty_dmsej")
 
-[node name="Board" type="HBoxContainer" parent="Frame/Col/Body/BoardPanel"]
+[node name="Board" type="HBoxContainer" parent="Frame/Col/Body/BoardPanel" unique_id=126690744]
+layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Truth" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board"]
+[node name="Truth" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board" unique_id=1506632132]
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="TruthPlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Truth"]
+[node name="TruthPlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Truth" unique_id=1421801406]
 unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MissivePlaque"
+theme_override_styles/normal = ExtResource("3_hsa34")
 text = "Ground truth"
+autowrap_mode = 2
 
-[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Truth"]
+[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Truth" unique_id=1746514684]
+layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="TruthNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Truth/Scroll"]
+[node name="TruthNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Truth/Scroll" unique_id=554683046]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="Credible" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board"]
+[node name="Credible" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board" unique_id=3426136]
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="CrediblePlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Credible"]
+[node name="CrediblePlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Credible" unique_id=2142396751]
 unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MissivePlaque"
+theme_override_styles/normal = ExtResource("3_hsa34")
 text = "Highly credible"
+autowrap_mode = 2
 
-[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Credible"]
+[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Credible" unique_id=285889903]
+layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="CredibleNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Credible/Scroll"]
+[node name="CredibleNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Credible/Scroll" unique_id=272256158]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="Consult" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board"]
+[node name="Consult" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board" unique_id=1217552105]
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="ConsultPlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Consult"]
+[node name="ConsultPlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Consult" unique_id=400580111]
 unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MissivePlaque"
+theme_override_styles/normal = ExtResource("3_hsa34")
 text = "Worth consulting"
+autowrap_mode = 2
 
-[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Consult"]
+[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Consult" unique_id=1270069989]
+layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="ConsultNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Consult/Scroll"]
+[node name="ConsultNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Consult/Scroll" unique_id=1157137681]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="Rumour" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board"]
+[node name="Rumour" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board" unique_id=209649762]
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="RumourPlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Rumour"]
+[node name="RumourPlaque" type="Label" parent="Frame/Col/Body/BoardPanel/Board/Rumour" unique_id=970850633]
 unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MissivePlaque"
+theme_override_styles/normal = ExtResource("3_hsa34")
 text = "Rumour"
+autowrap_mode = 2
 
-[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Rumour"]
+[node name="Scroll" type="ScrollContainer" parent="Frame/Col/Body/BoardPanel/Board/Rumour" unique_id=755263083]
+layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="RumourNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Rumour/Scroll"]
+[node name="RumourNotes" type="VBoxContainer" parent="Frame/Col/Body/BoardPanel/Board/Rumour/Scroll" unique_id=1039543447]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="Desk" type="PanelContainer" parent="Frame/Col/Body"]
+[node name="Desk" type="PanelContainer" parent="Frame/Col/Body" unique_id=1759297378]
 unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 1.0
+theme_override_styles/panel = ExtResource("4_ef5a2")
 
-[node name="Letter" type="VBoxContainer" parent="Frame/Col/Body/Desk"]
+[node name="Letter" type="VBoxContainer" parent="Frame/Col/Body/Desk" unique_id=207404099]
+layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="DeskPainting" type="TextureRect" parent="Frame/Col/Body/Desk/Letter"]
+[node name="DeskPainting" type="TextureRect" parent="Frame/Col/Body/Desk/Letter" unique_id=768363173]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 150)
 clip_contents = true
+layout_mode = 2
 expand_mode = 1
 stretch_mode = 6
 
-[node name="LetterTitle" type="Label" parent="Frame/Col/Body/Desk/Letter"]
+[node name="LetterTitle" type="Label" parent="Frame/Col/Body/Desk/Letter" unique_id=690936415]
 unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MissiveLetterTitle"
 autowrap_mode = 3
 
-[node name="LetterMeta" type="Label" parent="Frame/Col/Body/Desk/Letter"]
+[node name="LetterMeta" type="Label" parent="Frame/Col/Body/Desk/Letter" unique_id=458497625]
 unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MissiveLetterMeta"
 autowrap_mode = 3
 
-[node name="LetterFacts" type="VBoxContainer" parent="Frame/Col/Body/Desk/Letter"]
+[node name="LetterFacts" type="VBoxContainer" parent="Frame/Col/Body/Desk/Letter" unique_id=99530901]
 unique_name_in_owner = true
+layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="ShowOnMap" type="Button" parent="Frame/Col/Body/Desk/Letter"]
+[node name="ShowOnMap" type="Button" parent="Frame/Col/Body/Desk/Letter" unique_id=1390984967]
 unique_name_in_owner = true
+layout_mode = 2
 focus_mode = 0
-text = "Show on map"
+theme_type_variation = &"Command"
+text = "Show on Map"

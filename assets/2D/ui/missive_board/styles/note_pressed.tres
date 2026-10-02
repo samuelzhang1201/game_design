@@ -1,0 +1,17 @@
+[gd_resource type="StyleBox" script_class="ScaledNineSlice" format=3 uid="uid://cigo80yce6c6l"]
+
+[ext_resource type="Script" uid="uid://d17mapyjoo8um" path="res://scripts/ui/scaled_nine_slice.gd" id="1_6ocfo"]
+[ext_resource type="Texture2D" uid="uid://bbou86dexkeqy" path="res://assets/2D/ui/missive_board/note_lit.png" id="2_tshki"]
+
+[resource]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 11.0
+content_margin_top = 11.0
+content_margin_right = 11.0
+content_margin_bottom = 11.0
+script = ExtResource("1_6ocfo")
+texture = ExtResource("2_tshki")
+source_inset = 40.0
+scale = 3.0
+tint = Color(0.84, 0.8, 0.74, 1)

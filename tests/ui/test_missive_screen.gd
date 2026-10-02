@@ -193,13 +193,9 @@ func test_the_selected_note_stands_out_and_its_date_never_breaks() -> void:
 	var os := other.get_theme_stylebox("normal")
 	# with note art installed every note is an aged slip (owner 2026-09-30):
 	# the one on the desk wears the gold-ruled slip, the rest the ink-ruled one
-	if MissiveArt.texture(Game.data, "note") != null:
-		assert_true(ps is ScaledNineSlice and os is ScaledNineSlice, "both are slips")
-		assert_ne((ps as ScaledNineSlice).texture, (os as ScaledNineSlice).texture,
-			"the note on the desk is ruled in gold")
-	else:
-		assert_true(ps is StyleBoxFlat and os is StyleBoxFlat)
-		assert_ne((ps as StyleBoxFlat).bg_color, (os as StyleBoxFlat).bg_color, "the note on the desk is lit")
+	assert_true(ps is ScaledNineSlice and os is ScaledNineSlice, "both are slips")
+	assert_ne((ps as ScaledNineSlice).texture, (os as ScaledNineSlice).texture,
+		"the note on the desk is ruled in gold")
 	var date := CourierCard.date_of(3)
 	assert_string_contains(picked.text, date.replace(" ", "\u00a0"), "the date is one unbreakable unit")
 	# ...and a long one still fits a column's note (at the body's 18 px the
@@ -261,98 +257,37 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	var title_font := UiPalette.role_font("title")
 	assert_eq(ms.get_node("%Title").get_theme_font("font"), title_font, "the board's title is a title")
 	assert_eq(rp.get_node("%ReportTitle").get_theme_font("font"), title_font, "the report's title is a title")
-	var saved_plaque := String(Game.data.missive_art.get("plaque", ""))
-	Game.data.missive_art["plaque"] = "res://icon.png"
-	var ms2: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
-	add_child_autofree(ms2)
-	var plaque2 := ms2.get_node("%TruthPlaque") as Label
-	assert_true(plaque2.get_theme_stylebox("normal") is ScaledNineSlice,
-		"installed plaque art nine-slices over the rule")
-	Game.data.missive_art["plaque"] = saved_plaque
+	assert_true((ms.get_node("%TruthPlaque") as Label).get_theme_stylebox("normal") is ScaledNineSlice,
+		"the plaque is its carved art")
 	ms.refresh()
 	assert_eq(ms.get_node("%ConsultNotes").get_child_count(), 0, "no description under an empty column")
 
 
-## Board art follow-up: with the letter parchment installed, the desk's
-## title/meta/facts must use dark ink (missive_ink/_soft) instead of the
-## theme's light ink, which is unreadable on cream; without it, unchanged.
-## _fill_desk re-creates the fact labels every call, so each call must
-## re-apply the colour, not just the first.
-func test_ink_on_parchment_once_the_letter_art_is_installed() -> void:
+## The desk is cream parchment and the notes aged slips, so their words are
+## the letter's dark ink (missive_ink): the theme's MissiveLetter*,
+## MissiveFact and MissiveNote kinds. _fill_desk makes the fact labels every
+## call, so a second fill must ink its fresh labels too.
+func test_the_desk_and_the_notes_write_in_the_letters_ink() -> void:
 	Game.start_campaign(42)
 	var id := _letter("credible")
-	var saved := String(Game.data.missive_art.get("letter", ""))
-
-	Game.data.missive_art["letter"] = ""
-	var plain: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
-	add_child_autofree(plain)
-	plain.select(id)
-	assert_eq(plain.get_node("%LetterMeta").get_theme_color("font_color"), UiPalette.TEXT_SOFT,
-		"the game's own ink without letter art")
-	var plain_fact := plain.get_node("%LetterFacts").get_child(0) as Label
-	assert_false(plain_fact.has_theme_color_override("font_color"), "the theme's own colour, untouched")
-
-	Game.data.missive_art["letter"] = "res://icon.png"
-	var inked: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
-	add_child_autofree(inked)
-	inked.select(id)
+	var ms: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	add_child_autofree(ms)
+	ms.select(id)
 	var ink := MapPalette.named(Game.data, "missive_ink")
-	var ink_soft := MapPalette.named(Game.data, "missive_ink_soft")
-	assert_eq(inked.get_node("%LetterTitle").get_theme_color("font_color"), ink, "the title")
-	assert_eq(inked.get_node("%LetterMeta").get_theme_color("font_color"), ink,
+	assert_eq(ms.get_node("%LetterTitle").get_theme_color("font_color"), ink, "the title")
+	assert_eq(ms.get_node("%LetterMeta").get_theme_color("font_color"), ink,
 		"the meta line in the letter's own ink (owner 2026-09-30: the paler grey read out of place)")
-	assert_ne(ink, ink_soft)
-	var inked_fact := inked.get_node("%LetterFacts").get_child(0) as Label
-	assert_eq(inked_fact.get_theme_color("font_color"), ink, "a fact, freshly created by _fill_desk")
-	# re-select (a fresh set of fact labels) to prove the colour is applied
-	# every time, not just the first _fill_desk call. Board art fix round
-	# finding #3: _fill_desk only queue_free()d the old facts, so without
-	# remove_child() first, get_child(0) right after re-filling could still
-	# read the FIRST call's (already-inked) label — assert instance
-	# inequality too, so a regression here cannot pass by reading stale data.
-	inked.select(-1)
-	inked.select(id)
-	var inked_fact2 := inked.get_node("%LetterFacts").get_child(0) as Label
-	assert_ne(inked_fact2, inked_fact, "a fresh label from the second fill, not the first's")
-	assert_eq(inked_fact2.get_theme_color("font_color"), ink, "still inked after a second fill")
-
-	Game.data.missive_art["letter"] = saved
-
-
-## Board art fix round finding #5 (the install look check): a note's
-## title/date kept the theme's light chip text, unreadable once the note
-## wears the pale parchment art — dark ink stands in, the same pattern as the
-## desk. Owner 2026-09-30 (每一个信息框都有边框，做旧的感觉，size再小一点): every
-## note is an aged, ruled slip — the one on the desk ruled in gold, in the
-## same ink — narrower than its column.
-func test_an_unselected_note_inks_over_installed_parchment() -> void:
-	Game.start_campaign(42)
-	var id := _letter("credible")
-	var saved := String(Game.data.missive_art.get("note", ""))
-
-	Game.data.missive_art["note"] = ""
-	var plain: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
-	add_child_autofree(plain)
-	plain.refresh()
-	var plain_note := plain.find_child("Note%d" % id, true, false) as Button
-	assert_false(plain_note.has_theme_color_override("font_color"), "unchanged without note art")
-
-	Game.data.missive_art["note"] = "res://icon.png"
-	var inked: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
-	add_child_autofree(inked)
-	inked.refresh()
-	var inked_note := inked.find_child("Note%d" % id, true, false) as Button
-	assert_eq(inked_note.get_theme_color("font_color"), MapPalette.named(Game.data, "missive_ink"),
-		"reads on the installed parchment")
-	inked.select(id)
-	var selected_note := inked.find_child("Note%d" % id, true, false) as Button
-	assert_eq(selected_note.get_theme_color("font_color"), MapPalette.named(Game.data, "missive_ink"),
-		"the note on the desk is a slip too, in the same ink")
-	var lit := selected_note.get_theme_stylebox("normal") as ScaledNineSlice
-	if lit != null and MissiveArt.texture(Game.data, "note_lit") != null:
-		assert_eq(lit.texture, MissiveArt.texture(Game.data, "note_lit"), "the gold-ruled slip")
-
-	Game.data.missive_art["note"] = saved
+	var fact := ms.get_node("%LetterFacts").get_child(0) as Label
+	assert_eq(fact.get_theme_color("font_color"), ink, "a fact, freshly created by _fill_desk")
+	ms.select(-1)
+	ms.select(id)
+	var fact2 := ms.get_node("%LetterFacts").get_child(0) as Label
+	assert_ne(fact2, fact, "a fresh label from the second fill, not the first's")
+	assert_eq(fact2.get_theme_color("font_color"), ink, "still inked after a second fill")
+	var note := ms.find_child("Note%d" % id, true, false) as Button
+	assert_eq(note.get_theme_color("font_color"), ink, "the note on the desk is a slip in the same ink")
+	var lit := note.get_theme_stylebox("normal") as ScaledNineSlice
+	assert_eq(lit, MissiveScreen.NOTE_LIT, "the gold-ruled slip")
 
 
 func test_a_receipt_on_the_desk_wears_the_delivered_painting() -> void:
