@@ -337,7 +337,7 @@ add it here as a principle with its why — not as a changelog entry.
   to a DARK opening. A lighter first cut averaged to a mauve patch.
 - **Variety within the palette, never outside it** (owner 2026-09-25:
   "颜色可以多样化一点，主色调不变，但可以有不同variant"). Each house wears one
-  of a few wall and roof tints (`data/map3d_house_variants.csv`), multiplied
+  of a few wall and roof tints (the world scene's Houses node, `wall_tints` / `roof_tints`), multiplied
   into its own texture. A tint may be warmer, cooler, greyer or a shade
   deeper, never lighter (pink roofs, white limewash) and never so dark that
   a tile reads maroon or brown.

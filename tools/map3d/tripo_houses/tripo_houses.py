@@ -24,7 +24,7 @@ The sources are git-ignored: assets/3D/buildings/<type>/model_wip/tripo/*.glb
   * SPLIT into two surfaces by face: a roof (faces tilted up, above the
     eaves' share of the height) and a wall. They share ONE baked atlas, but
     their material NAMES are the runtime's roles (Map3DLayerHouses._tinted):
-    hh_roof_<type> takes the roof tints of data/map3d_house_variants.csv,
+    hh_roof_<type> takes the roof tints of the world scene's Houses node,
     hh_slate_<type> (a slate roof) none, hh_wall_<type> the wall tints. The
     roof is surface 0 because Godot's glTF import leaves vertex colour off
     on a mesh's FIRST surface (kit.House), and the wall carries the grime.

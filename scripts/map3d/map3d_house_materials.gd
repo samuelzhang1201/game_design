@@ -3,7 +3,7 @@ extends RefCounted
 ## The house meshes' surfaces as Map3DLayerHouses draws them (moved out of the
 ## layer, perf 2026-10-02, to keep it small): every surface keeps its OWN
 ## imported texture, drawn by house_surface.gdshader, which also multiplies a
-## wall or a roof by one of data/map3d_house_variants.csv's tints, picked per
+## wall or a roof by one of Map3DLayerHouses' tints, picked per
 ## house and handed over as instance custom data.
 
 const HOUSE_SHADER := preload("res://scripts/map3d/house_surface.gdshader")

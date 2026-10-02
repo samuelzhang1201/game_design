@@ -182,7 +182,7 @@ static func footprint_grid(h: Dictionary, box: AABB, inset: float, n: int) -> Pa
 	return out
 
 
-## Which of `count` variants a house wears (data/map3d_house_variants.csv,
+## Which of `count` variants a house wears (Map3DLayerHouses' tints,
 ## owner 2026-09-25: 颜色可以多样化一点): a hash of where it stands and of
 ## `salt` (0 the wall, 1 the roof, so the two vary apart), so a house keeps
 ## its colours across every rebuild and every run. Pure.
@@ -197,15 +197,11 @@ static func variant_of(h: Dictionary, count: int, salt: int) -> int:
 	return absi(k ^ (k >> 16)) % count
 
 
-## The tints of one `part` ("wall" or "roof") in variant order, as LINEAR
-## multipliers: the table's hexes are sRGB, and a multiplier on an sRGB
-## albedo is its linear power on the linear one.
-static func tints_of(variants: Array, part: String) -> PackedVector3Array:
-	var rows: Array = variants.filter(func(r): return String(r["part"]) == part)
-	rows.sort_custom(func(a, b): return int(a["variant"]) < int(b["variant"]))
+## `tints` in order as LINEAR multipliers: the colours are sRGB, and a
+## multiplier on an sRGB albedo is its linear power on the linear one.
+static func tints_of(tints: PackedColorArray) -> PackedVector3Array:
 	var out := PackedVector3Array()
-	for r: Dictionary in rows:
-		var c := Color(String(r["tint"]))
+	for c: Color in tints:
 		out.append(Vector3(pow(c.r, 2.2), pow(c.g, 2.2), pow(c.b, 2.2)))
 	if out.is_empty():
 		out.append(Vector3.ONE)

@@ -58,9 +58,6 @@ var map3d_settlements: Dictionary = {}
 ## data/map3d_houses.csv rows keyed by type: the 3D MAP's house meshes,
 ## their role, weight, size and roof colour (spec 2026-09-20 §2).
 var map3d_houses: Dictionary = {}
-## data/map3d_house_variants.csv rows (part, variant, tint): the per-house
-## wall and roof tints the 3D map's houses wear (owner 2026-09-25).
-var map3d_house_variants: Array = []
 ## data/map3d_tree_crowns.csv rows (cell, kind, ...): which cell of the woods'
 ## crown atlas shows which kind of tree (0 broadleaf, 1 conifer, 2 lone) —
 ## the photo cards of 2026-10-01 (tree_card.gdshader).
@@ -636,9 +633,6 @@ func _load(dir: String) -> bool:
 	if not _load_if_present("res://data/map3d_houses.csv",
 			["type", "mesh", "role", "weight", "footprint_m", "height_m", "roof", "min_group"],
 			func(r): map3d_houses[String(r["type"])] = r):
-		return false
-	if not _load_if_present("res://data/map3d_house_variants.csv", ["part", "variant", "tint"],
-			func(r): map3d_house_variants.append(r)):
 		return false
 	if not _load_if_present("res://data/map3d_tree_crowns.csv", ["cell", "kind"],
 			func(r): map3d_tree_crowns.append(r)):

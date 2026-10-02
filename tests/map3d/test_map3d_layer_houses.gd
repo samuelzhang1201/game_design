@@ -227,11 +227,14 @@ func test_far_out_no_house_casts() -> void:
 
 
 ## Owner 2026-09-25 (颜色可以多样化一点，主色调不变): every house wears one of
-## the table's wall and roof variants, kept across rebuilds, and a settlement's
+## the Houses node's wall and roof variants, kept across rebuilds, and a settlement's
 ## houses do not all wear the same one.
 func test_houses_wear_their_own_colour_variants() -> void:
-	var walls := Map3DHouses.tints_of(Game.data.map3d_house_variants, "wall").size()
-	var roofs := Map3DHouses.tints_of(Game.data.map3d_house_variants, "roof").size()
+	var node: Map3DLayerHouses = (load("res://scenes/map3d/map3d_world.tscn") as PackedScene) \
+		.instantiate().get_node("Houses")
+	var walls := Map3DHouses.tints_of(node.wall_tints).size()
+	var roofs := Map3DHouses.tints_of(node.roof_tints).size()
+	node.get_parent().free()
 	assert_gt(walls, 1, "the table offers wall variants")
 	assert_gt(roofs, 1, "and roof variants")
 	var seen := {}

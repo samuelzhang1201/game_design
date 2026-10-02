@@ -2,7 +2,7 @@
 // 可以多样化一点，主色调不变，但可以有不同variant"). It draws exactly what the
 // .glb's own imported material drew — its albedo texture, its roughness, the
 // grime baked into its vertex colour, double-sided — and multiplies a WALL or
-// ROOF surface by one of data/map3d_house_variants.csv's tints, picked per
+// ROOF surface by one of Map3DLayerHouses' tints (edited on the node), picked per
 // house (Map3DHouses.variant_of) and handed over as the MultiMesh instance's
 // custom data: r the wall variant, g the roof's. Map3DLayerHouses binds it.
 shader_type spatial;

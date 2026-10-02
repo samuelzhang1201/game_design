@@ -14,7 +14,7 @@ extends Node3D
 ## timber), each with its own texture. A shared material_override would
 ## flatten them to one colour, so every surface keeps its OWN texture, drawn
 ## by house_surface.gdshader, which also multiplies a wall or a roof by one
-## of data/map3d_house_variants.csv's tints, picked per house
+## of this node's `wall_tints` / `roof_tints`, picked per house
 ## (Map3DHouses.variant_of) and handed over as instance custom data (owner
 ## 2026-09-25: 颜色可以多样化一点，主色调不变，但可以有不同variant).
 ##
@@ -24,6 +24,23 @@ extends Node3D
 
 ## Editor preview: the clusters from the pack and its build alone.
 @export var preview := false: set = set_preview
+
+@export_group("Colour variants")
+## The WALL tints (owner 2026-09-25: 房屋墙壁和房顶的颜色可以多样化一点，主色调
+## 不变，但可以有不同variant), each multiplied into a wall's own texture, one
+## per house (Map3DHouses.variant_of hashes its spot, so a house keeps it):
+## as built, a warmer ochre wash, cooler and greyer, older and darker, a
+## yellower ochre, a faintly rosy lime. Every tint is at most 1 in every
+## channel — warmer, cooler or darker than the mesh, never lighter (the owner
+## found limewash too bright twice).
+@export var wall_tints: PackedColorArray = [Color("FFFFFF"), Color("F7E9D2"), Color("E6E3DC"),
+	Color("DCD0BE"), Color("F4E0C0"), Color("EDE6E0")]
+## The ROOF tints (tile only: slate takes none): as fired, redder, weathered
+## and greyer, a warmer orange, a burnt red a shade deeper. Never lighter than
+## the mesh — a lighter tile reads PINK under the map's sun (taste.md).
+@export var roof_tints: PackedColorArray = [Color("FFFFFF"), Color("FFE6D8"), Color("ECE6DE"),
+	Color("FFEFD2"), Color("F4E2D4")]
+@export_group("")
 
 ## Test seam: the baked houses, in place of the build's own houses.csv.
 var houses_override: Dictionary = {}
@@ -125,8 +142,8 @@ func build() -> void:
 	_built_at = Vector2.INF
 	_built = true
 	ctx.houses()
-	_wall_tints = Map3DHouses.tints_of(ctx.repo.map3d_house_variants, "wall")
-	_roof_tints = Map3DHouses.tints_of(ctx.repo.map3d_house_variants, "roof")
+	_wall_tints = Map3DHouses.tints_of(wall_tints)
+	_roof_tints = Map3DHouses.tints_of(roof_tints)
 	_far.clear()
 	for type: String in ctx.repo.map3d_houses:
 		var mesh := _mesh_of(type)
