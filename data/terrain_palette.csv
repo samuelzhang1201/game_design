@@ -48,8 +48,6 @@ weather_wet,#737F8C,"3D MAP weather look: the cool blue-grey rain moves the grou
 weather_haze,#8C96A0,"3D MAP weather look: the grey veil of a blizzard over the ground"
 map3d_wood_broadleaf,#34461F,"3D MAP woods (look route 2026-09-30): the broadleaf canopy the ground wears under and beyond the drawn clumps (bake/woods.png), sRGB — darkened from #4E6A30 on 2026-10-01 with the photo cards: the floor between the crowns must read dark, and a far wood 20-30% darker than the grass (a critic)"
 map3d_wood_conifer,#2C3F26,3D MAP woods: the conifer canopy (#44643A until 2026-10-01)
-map3d_march_trail,#A89468,"3D MAP march trails (owner 2026-10-01): trampled, flattened grass behind a marching column — pale straw and earth, LIGHTER than the turf (a dark #5E5236 vanished on the olive grass), laid over the ground at map3d_trail_alpha, sRGB"
 map_label_ink_table,#F1E6CCE6,"WAR TABLE (owner 2026-10-01, the approved mock): kingdom names on the vellum map sheet in parchment over a dark halo, alpha in the row; the sea-blue ink of the leather map read as a sticker on paper"
 map_label_halo_table,#2B1F158C,WAR TABLE: the kingdom name's halo — dark ink at the row's own alpha
 scale_bar_table,#2B1F15,WAR TABLE: the scale bar in the paper's ink rather than slate
-map3d_march_trail_crop,#3A2E14,"3D MAP march trails (owner 2026-10-01): on the open fields' corn the trail is the stalks beaten down, DARKER than the crop — a pale trail vanished on the pale corn; the bake's field map says where the ground is sown, sRGB"

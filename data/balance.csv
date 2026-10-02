@@ -277,8 +277,6 @@ map3d_field_fade_far_m,22000,3D MAP fields: the camera distance where it is full
 map3d_army_badge_min_px,18,"3D MAP MILITARY (owner 2026-09-19: '注意兵棋大小'): the smallest a regiment's counter gets, design px — map_army_badge_native_px of the map at the scale the camera's target is seen at, held between this and map3d_army_badge_max_px"
 map3d_army_chip_px,15,"3D MAP MILITARY (2026-09-27 critic: the chip outranked the soldier): the headcount chip that hangs over a 3D PIECE is at most this tall, design px — the piece is the counter, the chip only its tag; a flat counter (far out, a fleet) keeps map3d_army_badge_min_px..max_px"
 map3d_army_badge_max_px,30,"3D MAP MILITARY: the largest a counter gets close in, design px, so the counters never swamp the ground"
-map3d_line_lift_px,2.5,"3D MAP borders: every line is lifted this many screen px off the ground at its distance, so it clears the relief between its samples"
-map3d_trail_alpha,0.6,"3D MAP march trails: the trodden grass's strength over the turf at its freshest, on its lanes"
 map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its ring — only while it is shown, see map3d_ring_fade_start) picks it; otherwise the province under the click"
 map3d_compass_needle_reach,0.62,"3D MAP compass (owner 2026-09-18): the north needle's half-length as a share of the compass radius — the needle turns with the view, gold tip to north"
 map3d_compass_needle_width,0.12,3D MAP compass: the needle's half-width as a share of the compass radius
@@ -368,19 +366,6 @@ map3d_wind_far_amp,0.9,"3D MAP wind: the broad gusts' strength against the crop 
 map3d_wind_storm_gain,1.2,"3D MAP wind: how much harder the waves run in a wet or overcast province (the weather field's rain and overcast), 0 = the same everywhere"
 map3d_wind_tree_sway_m,2.2,3D MAP wind: how far a crown's top leans down the wind (world metres at the mesh's full height)
 map3d_wind_tree_hz,0.22,3D MAP wind: how many times a second a tree sways
-map3d_trail_on,1,"3D MAP MARCH TRAILS (owner 2026-10-01: 当军事单位路过的时候，希望可以和地形互动，比如留下一段行走印记，后逐步消失): 1 lays the ground a marching column trod behind each piece (Map3DLayerTrails, march_trail.gdshader), fading over game time; 0 = none"
-map3d_trail_days,4,"3D MAP march trails: game days a stretch of trodden ground takes to fade away (the clock's own time: a paused clock holds it). 1.5 at first: the piece is a MINIATURE some 200 m across at the map's scale and a column covers a few hundred metres a day, so a day and a half of trail lay hidden under the piece itself"
-map3d_trail_hold_share,0.4,"3D MAP march trails: the share of map3d_trail_days a stretch holds at full strength before it fades (owner 2026-10-01: a fade from the first moment left even the freshest track faint)"
-map3d_trail_crop_gain,1.8,"3D MAP march trails: on the corn (the bake's field map) the track is this much stronger and its lanes run together (a trail of the turf's strength vanished on the pale crop)"
-map3d_trail_step_m,25,3D MAP march trails: a point of trail every this many world metres of a piece's walk
-map3d_trail_half_width_m,50,"3D MAP march trails: the trail's half width, world metres — a piece is a miniature of one world size at every zoom (some 220 m across its nine figures), and a trail as wide as it read as a pad under the piece, not a track behind it"
-map3d_trail_edge_soft,0.5,3D MAP march trails: the share of each side that fades to the grass (a ragged soft edge; never a painted road)
-map3d_trail_print_m,12,3D MAP march trails: the size of the trampled patches along the track (world metres)
-map3d_trail_print_mix,0.55,"3D MAP march trails: how broken into prints the track is (0 an even band, 1 only the patches)"
-map3d_trail_lanes,3,"3D MAP march trails: trodden lanes across the track, one a file of the column (the 3x3 formation)"
-map3d_trail_lane_fill,0.3,"3D MAP march trails: how trodden the grass between the lanes is, against the lanes themselves"
-map3d_trail_lane_wander,0.35,"3D MAP march trails: how far each lane wanders along the track (a share of the lane spacing)"
-map3d_trail_rag,0.6,"3D MAP march trails: how ragged the sides are (a straight-edged band read as a painted road)"
 map3d_wind_sheen_amp,2.0,"3D MAP wind SHEEN (owner 2026-09-30: 草地随风飘扬的质感 — a blade is a metre-wide pixel's fraction, so the grass moves as light): how far a wave's crest turns the grass's pale, greyer side up (Map3DGroundWind); 0 = the plain light-and-shade waves of before"
 map3d_wind_sheen_sat,0.9,"3D MAP wind sheen: the saturation the laid-over grass keeps (0 grey .. 1 its own colour; owner 2026-09-30: greyed crests read as mist drifting by — 0.4 and even 0.75 were too grey)"
 map3d_wind_sheen_lift,0.35,3D MAP wind sheen: how much lighter the laid-over grass is than the standing grass

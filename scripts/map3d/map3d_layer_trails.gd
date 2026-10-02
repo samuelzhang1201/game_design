@@ -3,16 +3,30 @@ extends Node3D
 ## MARCH TRAILS (owner 2026-10-01: 当军事单位路过的时候，希望可以和地形互动，比如
 ## 留下一段行走印记，后逐步消失; node Viewport/Trails): the ground a marching
 ## column trod, laid on the relief behind each piece and fading out over
-## `map3d_trail_days` of GAME time — so a paused clock holds it, and a 4x
+## the material's `life_days` of GAME time — so a paused clock holds it, and a 4x
 ## clock wears it away four times as fast. Presentation only: nothing here is
 ## saved or read by the engine (a loaded game starts with clean ground). It
 ## follows the pieces where Map3DLayerUnits draws them (shown_positions): a
-## piece that moved this frame is walking; a point every `map3d_trail_step_m`
-## of its walk, a new stretch each time a column sets off again. A piece is a
+## piece that moved this frame is walking; a point every `step_m` of its
+## walk, a new stretch each time a column sets off again. A piece is a
 ## miniature of ONE world size at every zoom, so the trail's width is a number
-## of world metres (`map3d_trail_half_width_m`), not read off the model. Takes everything from Map3DContext — never the Game autoload.
+## of world metres (`half_width_m`), not read off the model. Takes everything
+## from Map3DContext — never the Game autoload.
+##
+## The look is edited in the inspector (owner 2026-10-02): the trodden grass
+## (lighter than the turf), the corn beaten down (darker), the lanes, prints,
+## rags and fade are scenes/map3d/materials/march_trail.tres — `lift_px`
+## there in design px; the width and the sampling are this node's.
 
 const MATERIAL := preload("res://scenes/map3d/materials/march_trail.tres")
+
+## Draw the trails at all.
+@export var trails_on := true
+## A point of trail every this many world metres of a piece's walk.
+@export var step_m := 25.0
+## The trail's half width, world metres (a piece is a miniature some 200 m
+## across, so a few files' width).
+@export var half_width_m := 50.0
 
 var ctx: Map3DContext
 var _units: Map3DLayerUnits
@@ -31,20 +45,7 @@ func bind(p_ctx: Map3DContext) -> void:
 	_units = get_node_or_null("../Units") as Map3DLayerUnits
 	_mat = MATERIAL.duplicate() as ShaderMaterial
 	_mat.render_priority = Map3DPriority.MARCH_TRAILS
-	var repo := ctx.repo
-	var c := MapTerrain.palette_color(repo, "map3d_march_trail", Color("#A89468"))
-	c.a = repo.bal("map3d_trail_alpha")
-	_mat.set_shader_parameter("colour", c)
-	_mat.set_shader_parameter("crop_colour", MapTerrain.palette_color(repo, "map3d_march_trail_crop", Color("#6E6440")))
 	_mat.set_shader_parameter("has_field_map", false)
-	_mat.set_shader_parameter("life_days", repo.bal("map3d_trail_days"))
-	_mat.set_shader_parameter("hold_share", repo.bal("map3d_trail_hold_share"))
-	_mat.set_shader_parameter("crop_gain", repo.bal("map3d_trail_crop_gain"))
-	_mat.set_shader_parameter("edge_soft", repo.bal("map3d_trail_edge_soft"))
-	_mat.set_shader_parameter("print_m", repo.bal("map3d_trail_print_m"))
-	_mat.set_shader_parameter("print_mix", repo.bal("map3d_trail_print_mix"))
-	for key in ["lanes", "lane_fill", "lane_wander", "rag"]:
-		_mat.set_shader_parameter(key, repo.bal("map3d_trail_" + key))
 	if _mesh == null:
 		_mesh = MeshInstance3D.new()
 		_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -77,8 +78,7 @@ func stretches() -> Dictionary:
 func step() -> void:
 	if ctx == null or _units == null or _mat == null:
 		return
-	var repo := ctx.repo
-	var on := repo.bal("map3d_trail_on") > 0.0
+	var on := trails_on
 	visible = on
 	var st := ctx.state()
 	if not on or st == null:
@@ -90,8 +90,7 @@ func step() -> void:
 		clear()
 	now = maxf(now, _last_now)
 	_last_now = now
-	var step_m := repo.bal("map3d_trail_step_m")
-	var half_w := repo.bal("map3d_trail_half_width_m")
+	var half_w := half_width_m
 	var shown := _units.shown_positions()
 	for code: String in shown:
 		var xz: Vector2 = shown[code]
@@ -122,14 +121,19 @@ func step() -> void:
 			s["t"] = ts
 			s["pts"] = pts
 			_dirty = true
-	_forget_older_than(now - repo.bal("map3d_trail_days"))
+	_forget_older_than(now - life_days())
 	if _dirty:
 		_rebuild()
 		_dirty = false
 	_take_field_map()
 	_mat.set_shader_parameter("now_days", now)
 	_mat.set_shader_parameter("px_per_dist", ctx.px_per_dist())
-	_mat.set_shader_parameter("lift_px", repo.bal("map3d_line_lift_px") * ctx.viewport_px_scale())
+	_mat.set_shader_parameter("lift_px", float(MATERIAL.get_shader_parameter("lift_px")) * ctx.viewport_px_scale())
+
+
+## Game days a stretch of trodden ground takes to fade away (the material's).
+static func life_days() -> float:
+	return float(MATERIAL.get_shader_parameter("life_days"))
 
 
 ## Drops the points worn away before `cut`, keeping the last worn one of a

@@ -31,6 +31,9 @@ const CODE_OWNED := {
 	# to the window; the selection's gold is the HUD's selection colour
 	"settlement_ring": ["colour", "dot_px", "inner_px", "ring_px", "line_px", "lift_px", "px_per_dist",
 		"max_view_m", "min_view_m"],
+	# the clock, the camera and the bake's field map; lift_px scaled
+	"march_trail": ["has_field_map", "field_map", "pack_origin", "field_m_per_texel", "now_days",
+		"px_per_dist", "lift_px"],
 	"selection_ring": ["colour", "dot_px", "inner_px", "ring_px", "line_px", "lift_px", "px_per_dist",
 		"max_view_m", "min_view_m"],
 }
@@ -52,7 +55,10 @@ const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3
 	"map3d_tree_value", "map3d_tree_roughness", "map3d_tree_specular", "map3d_tree_card_alpha",
 	"map3d_tree_card_sphere", "map3d_tree_card_lift", "map3d_tree_card_saturation",
 	"map3d_tree_card_value", "map3d_tree_card_tint", "map3d_tree_card_far_value",
-	"map3d_ring_", "map3d_selected_ring_scale"]
+	"map3d_ring_", "map3d_selected_ring_scale", "map3d_trail_alpha", "map3d_trail_days",
+	"map3d_trail_hold", "map3d_trail_crop", "map3d_trail_step", "map3d_trail_half", "map3d_trail_edge",
+	"map3d_trail_print", "map3d_trail_lane", "map3d_trail_rag", "map3d_trail_on", "map3d_line_lift_px",
+	"map3d_march_trail"]
 
 
 func before_all() -> void:
@@ -98,6 +104,15 @@ func test_the_rings_draw_what_their_tres_say() -> void:
 		var look := load("res://scenes/map3d/materials/%s.tres" % key) as ShaderMaterial
 		assert_almost_eq(float(live.get_shader_parameter("lift_px")),
 			float(look.get_shader_parameter("lift_px")) * s, 0.0001, String(mmi.name) + ".lift_px, scaled")
+
+
+## The march trails wear their .tres but for the clock, the camera, the field
+## map and the lift (scaled).
+func test_the_march_trails_draw_what_their_tres_say() -> void:
+	var v := _view()
+	var trails := v.world().get_node("Trails") as Map3DLayerTrails
+	var mesh := trails.get_child(0) as MeshInstance3D
+	_assert_material_holds(mesh.material_override as ShaderMaterial, "march_trail", 12)
 
 
 ## The woods wear their .tres but for the wind's uniforms.
