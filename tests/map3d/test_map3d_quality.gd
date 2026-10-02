@@ -209,6 +209,27 @@ func test_a_tier_only_takes_effects_away() -> void:
 	Game.data.balance["map3d_env_ssao"] = saved
 
 
+## Owner 2026-10-02 (按缩放切换): high wears MSAA 4x and SSAO up close and
+## SMAA without SSAO past map3d_close_effects_m; ultra keeps its own at every
+## zoom (its far_* are blank).
+func test_the_finishing_effects_are_spent_up_close() -> void:
+	var vp := SubViewport.new()
+	var env := Environment.new()
+	var high := Map3DQuality.row(Game.data, "high")
+	var edge := Game.data.bal("map3d_close_effects_m")
+	Map3DEnvironment.effects_for_distance(Game.data, vp, env, high, edge * 0.5)
+	assert_eq(vp.msaa_3d, Viewport.MSAA_4X, "up close: MSAA 4x")
+	assert_eq(vp.screen_space_aa, Viewport.SCREEN_SPACE_AA_DISABLED)
+	assert_eq(env.ssao_enabled, Game.data.bal("map3d_env_ssao") > 0.0)
+	Map3DEnvironment.effects_for_distance(Game.data, vp, env, high, edge * 2.0)
+	assert_eq(vp.msaa_3d, Viewport.MSAA_DISABLED, "far out: no MSAA")
+	assert_eq(vp.screen_space_aa, Viewport.SCREEN_SPACE_AA_SMAA, "but SMAA")
+	assert_false(env.ssao_enabled, "and no SSAO")
+	Map3DEnvironment.effects_for_distance(Game.data, vp, env, Map3DQuality.row(Game.data, "ultra"), edge * 2.0)
+	assert_eq(vp.msaa_3d, Viewport.MSAA_4X, "ultra keeps its MSAA far out")
+	vp.free()
+
+
 ## The grade's warm curve (2026-09-24): no curve at 1 / 1 / 1, and each
 ## channel through x^gamma otherwise.
 func test_the_warm_curve_is_per_channel() -> void:
