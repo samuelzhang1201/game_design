@@ -1,0 +1,43 @@
+[gd_resource type="StyleBox" script_class="VellumPanelStyle" format=3 uid="uid://dkmwlf8acscqq"]
+
+[ext_resource type="Texture2D" uid="uid://p1jqgjgkq1pm" path="res://assets/2D/ui/panels/leather_grain_light.png" id="1_ypp8x"]
+[ext_resource type="Texture2D" uid="uid://cnctm0nndn0qh" path="res://assets/2D/ui/panels/leather_grain_dark.png" id="2_d7sg7"]
+[ext_resource type="Script" uid="uid://c44j2v837vlnv" path="res://scripts/ui/vellum_panel_style.gd" id="3_n33oe"]
+[ext_resource type="Texture2D" uid="uid://j7yuhn4h33wi" path="res://assets/2D/ui/panels/panel_ornament.png" id="4_6lvy1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5uov3"]
+content_margin_left = 20.0
+content_margin_top = 20.0
+content_margin_right = 20.0
+content_margin_bottom = 20.0
+bg_color = Color(0.12156863, 0.101960786, 0.08235294, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.65882355, 0.5411765, 0.29803923, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 8
+shadow_offset = Vector2(0, 3)
+
+[resource]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 20.0
+content_margin_top = 20.0
+content_margin_right = 20.0
+content_margin_bottom = 20.0
+script = ExtResource("3_n33oe")
+texture = ExtResource("4_6lvy1")
+draw_inset = 40.0
+base = SubResource("StyleBoxFlat_5uov3")
+tint = Color(0.7882353, 0.6431373, 0.3529412, 1)
+grain = ExtResource("1_ypp8x")
+grain_dark = ExtResource("2_d7sg7")
+grain_alpha = 0.1
+shade_top = 0.05
+shade_bottom = 0.14

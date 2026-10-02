@@ -2,59 +2,174 @@
 
 [ext_resource type="Script" uid="uid://bjfj0a5io4f7y" path="res://scripts/ui/conversation_scene.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/top_bar.tscn" id="2"]
+[ext_resource type="Script" uid="uid://gl63edwhrq2g" path="res://scripts/ui/war_table/war_table_backdrop.gd" id="2_re25w"]
 [ext_resource type="Script" uid="uid://dgo56mr5okaon" path="res://scripts/ui/audience_backdrop.gd" id="3"]
+[ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="3_mcr13"]
 [ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="4_jcdsd"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/map_sheet.tres" id="4_qiomc"]
 [ext_resource type="Script" uid="uid://dq7am4164rjll" path="res://scripts/ui/spy_order_menu.gd" id="5_spy01"]
+[ext_resource type="Theme" path="res://assets/2D/ui/theme/paper_theme.tres" id="6_s1f5y"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_qawe0"]
+[ext_resource type="Script" uid="uid://bbrp2ldvjuip0" path="res://scripts/ui/war_table/table_compass.gd" id="8_me260"]
+[ext_resource type="Texture2D" uid="uid://bd7f6xayv2ffr" path="res://assets/2D/ui/compass/compass.png" id="9_ljhws"]
+[ext_resource type="StyleBox" uid="uid://dkmwlf8acscqq" path="res://assets/2D/ui/panels/styles/leather_window.tres" id="10_exqs4"]
+[ext_resource type="StyleBox" uid="uid://bjddf0cjlcs34" path="res://assets/2D/ui/panels/styles/audience_banner.tres" id="11_kjli4"]
+[ext_resource type="StyleBox" uid="uid://36epxikbc22a" path="res://assets/2D/ui/panels/styles/portrait_frame.tres" id="12_4cycb"]
+[ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="14_xhpf2"]
+[ext_resource type="StyleBox" uid="uid://clgvpa72i73d2" path="res://assets/2D/ui/panels/styles/bar_track.tres" id="15_jpvuw"]
+[ext_resource type="StyleBox" uid="uid://x16loajcjew1" path="res://assets/2D/ui/panels/styles/leather_council.tres" id="16_ta68s"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="17_p0mqs"]
+[ext_resource type="StyleBox" uid="uid://dqadyp0wbwm2i" path="res://assets/2D/ui/panels/styles/leather_popup.tres" id="18_ypg0k"]
+[ext_resource type="Script" uid="uid://ce7myfubis2yw" path="res://scripts/ui/war_table/wax_seal.gd" id="21_c3dut"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bwxhs"]
+content_margin_left = 14.0
+content_margin_top = 1.0
+content_margin_right = 14.0
+content_margin_bottom = 1.0
+bg_color = Color(0.1764706, 0.14509805, 0.11372549, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tu635"]
+content_margin_left = 14.0
+content_margin_top = 1.0
+content_margin_right = 14.0
+content_margin_bottom = 1.0
+bg_color = Color(0.23529412, 0.1882353, 0.14117648, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0ixgi"]
+content_margin_left = 14.0
+content_margin_top = 1.0
+content_margin_right = 14.0
+content_margin_bottom = 1.0
+bg_color = Color(0.20392157, 0.16470589, 0.1254902, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_73ewc"]
+content_margin_left = 14.0
+content_margin_top = 1.0
+content_margin_right = 14.0
+content_margin_bottom = 1.0
+bg_color = Color(0.12156863, 0.101960786, 0.08235294, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.29411766, 0.24313726, 0.1882353, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_mmkcl"]
 
 [node name="ConversationScene" type="Control" unique_id=1715265354]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1")
 
 [node name="Bg" type="ColorRect" parent="." unique_id=87825667]
 unique_name_in_owner = true
+z_index = -2
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.16470589, 0.10980392, 0.07058824, 1)
+
+[node name="Table" type="Control" parent="." unique_id=612954662]
+unique_name_in_owner = true
+z_index = -2
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("2_re25w")
+texture = ExtResource("3_mcr13")
+tone = Color(0.627451, 0.4392157, 0.22745098, 0.13333334)
+light = Color(1, 0.9490196, 0.8156863, 0.14117648)
+vignette = Color(0, 0, 0, 0.17254902)
 
 [node name="MapPanel" type="PanelContainer" parent="." unique_id=1804200223]
 unique_name_in_owner = true
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 128.0
-offset_top = 30.0
-offset_right = -4.0
-offset_bottom = -40.0
+offset_left = 268.0
+offset_top = 67.0
+offset_right = -12.0
+offset_bottom = -48.0
+theme_override_styles/panel = ExtResource("4_qiomc")
 
 [node name="TopBar" parent="." unique_id=1742348619 instance=ExtResource("2")]
 unique_name_in_owner = true
-anchors_preset = 0
 
 [node name="MinisterPanel" type="PanelContainer" parent="." unique_id=1501378524]
 unique_name_in_owner = true
 layout_mode = 0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 30.0
-offset_right = 124.0
-offset_bottom = -40.0
+offset_left = 12.0
+offset_top = 67.0
+offset_right = 252.0
+offset_bottom = -56.0
+theme = ExtResource("6_s1f5y")
+theme_override_styles/panel = ExtResource("7_qawe0")
+metadata/paper_ground = Color(0.8235294, 0.7411765, 0.5647059, 1)
 
 [node name="MVBox" type="VBoxContainer" parent="MinisterPanel" unique_id=1601692104]
 layout_mode = 2
 theme_override_constants/separation = 4
+
+[node name="TableCompass" type="Control" parent="." unique_id=297773124 node_paths=PackedStringArray("column")]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_right = 252.0
+offset_bottom = -4.0
+tooltip_text = "The compass — press to turn the map north"
+script = ExtResource("8_me260")
+column = NodePath("../MinisterPanel")
+art = ExtResource("9_ljhws")
 
 [node name="AudienceLayer" type="Control" parent="." unique_id=732824053]
 unique_name_in_owner = true
 anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 128.0
-offset_top = 30.0
-offset_right = -4.0
-offset_bottom = -40.0
+offset_left = 268.0
+offset_top = 67.0
+offset_right = -12.0
+offset_bottom = -48.0
 mouse_filter = 2
 
 [node name="AudienceDim" type="ColorRect" parent="AudienceLayer" unique_id=1829424282]
@@ -63,6 +178,7 @@ layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
+color = Color(0, 0, 0, 0.35)
 
 [node name="AudienceCenter" type="CenterContainer" parent="AudienceLayer" unique_id=728702222]
 layout_mode = 0
@@ -74,6 +190,7 @@ mouse_filter = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(760, 500)
 layout_mode = 2
+theme_override_styles/panel = ExtResource("10_exqs4")
 
 [node name="AudienceCol" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow" unique_id=5494348]
 layout_mode = 2
@@ -82,10 +199,13 @@ theme_override_constants/separation = 10
 [node name="AudienceBanner" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol" unique_id=1193525787]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_styles/panel = ExtResource("11_kjli4")
 
 [node name="AudienceTitle" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBanner" unique_id=1782393403]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 24
 horizontal_alignment = 1
 text_overrun_behavior = 3
 
@@ -113,6 +233,7 @@ theme_override_constants/separation = 6
 [node name="PortraitFrame" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide" unique_id=309489969]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_styles/panel = ExtResource("12_4cycb")
 
 [node name="FrameStack" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/PortraitFrame" unique_id=2044004590]
 custom_minimum_size = Vector2(222, 250)
@@ -140,15 +261,33 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="MinisterName" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead" unique_id=1198441752]
+[node name="PlateRow" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead" unique_id=526732014]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PlateArms" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/PlateRow" unique_id=689386084]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(30.6, 36)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("14_xhpf2")
+
+[node name="MinisterName" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/PlateRow" unique_id=1198441752]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 24
 horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="MinisterTitle" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead" unique_id=89395367]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_colors/font_color = Color(0.5411765, 0.49019608, 0.40784314, 1)
+theme_override_font_sizes/font_size = 14
 horizontal_alignment = 1
 
 [node name="OpinionRow" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead" unique_id=1856260727]
@@ -159,6 +298,8 @@ theme_override_constants/separation = 8
 [node name="OpinionCaption" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/OpinionRow" unique_id=339850126]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+theme_override_font_sizes/font_size = 13
 text = "Opinion"
 
 [node name="OpinionBar" type="ProgressBar" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/OpinionRow" unique_id=133462869]
@@ -167,6 +308,7 @@ custom_minimum_size = Vector2(40, 8)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
+theme_override_styles/background = ExtResource("15_jpvuw")
 min_value = -100.0
 show_percentage = false
 
@@ -174,6 +316,7 @@ show_percentage = false
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 0
+theme_override_font_sizes/font_size = 16
 
 [node name="TraitChips" type="HFlowContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead" unique_id=2109190645]
 unique_name_in_owner = true
@@ -201,6 +344,8 @@ theme_override_constants/separation = 8
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 20
 autowrap_mode = 3
 
 [node name="TabsRow" type="HBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/NameRow" unique_id=450382933]
@@ -222,6 +367,10 @@ horizontal_scroll_mode = 0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_colors/default_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+theme_override_font_sizes/normal_font_size = 18
+theme_override_font_sizes/bold_font_size = 18
+theme_override_font_sizes/italics_font_size = 18
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
@@ -269,6 +418,8 @@ layout_mode = 2
 [node name="ToolsTitle" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/SkillsTab" unique_id=1627078635]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"SectionLabel"
+theme_override_font_sizes/font_size = 14
 text = "TOOLS"
 
 [node name="ToolsList" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/SkillsTab" unique_id=1129259270]
@@ -285,6 +436,7 @@ theme_override_constants/separation = 5
 [node name="TiesText" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/DossierPages/PagesBox/TiesTab" unique_id=1594497305]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_font_sizes/font_size = 16
 autowrap_mode = 3
 
 [node name="RepliesBox" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide" unique_id=1386643097]
@@ -299,14 +451,23 @@ theme_override_constants/separation = 8
 
 [node name="FreeText" type="LineEdit" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/TalkRow" unique_id=514208069]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 15
 placeholder_text = "Speak your mind..."
 
 [node name="ContinueButton" type="Button" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/WordsSide/TalkRow" unique_id=1730821104]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
+size_flags_vertical = 4
 focus_mode = 0
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_bwxhs")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_tu635")
+theme_override_styles/hover = SubResource("StyleBoxFlat_0ixgi")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_73ewc")
 text = "Wave them on"
 
 [node name="DialoguePanel" type="PanelContainer" parent="." unique_id=1370593479]
@@ -316,10 +477,11 @@ layout_mode = 0
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -154.0
-offset_top = 30.0
-offset_right = -4.0
-offset_bottom = -40.0
+offset_left = -332.0
+offset_top = 67.0
+offset_right = -12.0
+offset_bottom = -56.0
+theme_override_styles/panel = ExtResource("16_ta68s")
 
 [node name="Col" type="VBoxContainer" parent="DialoguePanel" unique_id=746815519]
 layout_mode = 2
@@ -329,7 +491,9 @@ theme_override_constants/separation = 6
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
-text = "LEAVE THE COUNCIL"
+theme_override_fonts/font = ExtResource("17_p0mqs")
+theme_override_font_sizes/font_size = 14
+text = "Leave the Council"
 
 [node name="LocationBox" type="VBoxContainer" parent="DialoguePanel/Col" unique_id=254172670]
 unique_name_in_owner = true
@@ -352,7 +516,9 @@ theme_override_constants/v_separation = 4
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
-text = "MOVE"
+theme_override_fonts/font = ExtResource("17_p0mqs")
+theme_override_font_sizes/font_size = 16
+text = "Move"
 
 [node name="LocSep" type="HSeparator" parent="DialoguePanel/Col" unique_id=1461910330]
 layout_mode = 2
@@ -360,6 +526,8 @@ layout_mode = 2
 [node name="RecordTitle" type="Label" parent="DialoguePanel/Col" unique_id=512739130]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"SectionLabel"
+theme_override_font_sizes/font_size = 14
 text = "The Record"
 
 [node name="DialogueScroll" type="ScrollContainer" parent="DialoguePanel/Col" unique_id=1831272121]
@@ -378,6 +546,10 @@ theme_override_constants/separation = 4
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_colors/default_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+theme_override_font_sizes/normal_font_size = 15
+theme_override_font_sizes/bold_font_size = 15
+theme_override_font_sizes/italics_font_size = 15
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
@@ -395,6 +567,7 @@ layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
+color = Color(0.02, 0.015, 0.01, 0.62)
 
 [node name="PopupPanel" type="PanelContainer" parent="EventPopup" unique_id=1576759606]
 unique_name_in_owner = true
@@ -405,6 +578,7 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/panel = ExtResource("18_ypg0k")
 
 [node name="PopupCol" type="VBoxContainer" parent="EventPopup/PopupPanel" unique_id=414715254]
 layout_mode = 2
@@ -413,6 +587,8 @@ theme_override_constants/separation = 6
 [node name="PopupTitle" type="Label" parent="EventPopup/PopupPanel/PopupCol" unique_id=182209970]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 22
 horizontal_alignment = 1
 
 [node name="PopupScroll" type="ScrollContainer" parent="EventPopup/PopupPanel/PopupCol" unique_id=212775023]
@@ -439,3 +615,30 @@ script = ExtResource("4_jcdsd")
 [node name="SpyOrders" type="PopupMenu" parent="." unique_id=2035525363]
 unique_name_in_owner = true
 script = ExtResource("5_spy01")
+
+[node name="CouncilHandle" type="Button" parent="." unique_id=1006859578]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(137, 96)
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -204.0
+offset_top = 80.0
+offset_right = -25.0
+offset_bottom = 176.0
+tooltip_text = "Go before your council"
+focus_mode = 0
+theme_override_colors/font_color = Color(0, 0, 0, 0)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 0)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 0)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 0)
+theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 0)
+theme_override_styles/normal = SubResource("StyleBoxEmpty_mmkcl")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_mmkcl")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_mmkcl")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_mmkcl")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_mmkcl")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_mmkcl")
+text = "ENTER THE COUNCIL"
+flat = true
+script = ExtResource("21_c3dut")

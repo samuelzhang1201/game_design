@@ -34,11 +34,6 @@ const HISTORY_CAP := 60
 var _said := 0
 var _beat_start := 0
 var _report: TickReport
-## The name plate's house arms, design px tall.
-const PLATE_ARMS_PX := 36.0
-## How far in from the window's edges the title band stops, clear of the
-## corner flourishes (design px).
-const BANNER_CLEAR_PX := 24.0
 var _plate_arms: HeraldicShield
 var _name_label: Label
 var _text_label: RichTextLabel
@@ -77,28 +72,26 @@ const REPLY_REVEAL_STEP := 0.3
 ## window that fits it less AUDIENCE_MARGIN on every side.
 const AUDIENCE_MAX := Vector2(780.0, 520.0)
 const AUDIENCE_MARGIN := 16.0
-## How much the map darkens behind the window: enough to lift the window,
-## little enough that the realm still reads beneath it.
-const AUDIENCE_DIM := Color(0.0, 0.0, 0.0, 0.35)
 ## Tall figure art is cut to its upper part — head to waist, CK3's framing —
 ## rather than showing the whole figure small; these are shares of its height.
 const PORTRAIT_TOP := 0.03
 const PORTRAIT_HEIGHT := 0.56
 
-## Static structure and layout live in scenes/conversation.tscn (editable in
-## the editor); _ready only fetches the nodes, paints them from UiPalette,
-## and wires signals. Dynamic content (portraits, trait chips, reply
-## buttons) is spawned at runtime below.
+## The screen's look lives in scenes/conversation.tscn and is edited in the
+## editor (owner 2026-10-02): THE WAR TABLE's oak, sheet, report, compass and
+## seal as on the court, the audience window's leather, banner, gilt portrait
+## frame and name plate, the label kinds, the council column. _ready fetches
+## the nodes and wires signals; dynamic content (portraits, trait chips,
+## reply buttons) is spawned at runtime below. Under balance ui_war_table 0
+## it puts the 2026-09-28 leather on instead (_dress_leather).
 func _ready() -> void:
-	%Bg.color = UiPalette.BG_SCREEN
-	%MapPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4, "map"))
 	# The council column is hidden until the player enters it (user ruling
-	# 2026-09-09): a handle on the right edge opens it, LEAVE closes it.
-	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
+	# 2026-09-09): the seal opens it, LEAVE closes it.
+	if UiPalette.war_table():
+		_handle = %CouncilHandle
+	else:
+		_dress_leather()
 	_handle.pressed.connect(enter_council)
-	add_child(_handle)
-	UiPalette.command_button(%LeaveButton, 14)
 	%LeaveButton.pressed.connect(leave_council)
 	# %MinisterPanel is the LEFT column — the facts column (owner ruling
 	# 2026-09-10). Hovering a country swaps the column to its card and back
@@ -130,56 +123,27 @@ func _ready() -> void:
 		_detail.show_card({})
 		set_military_view(true))
 	_military.closed.connect(func() -> void: set_military_view(false))
-	%MinisterPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "column"))
-	if WarTable.dress_screen(self, %Bg, %MapPanel, %MinisterPanel):
+	if UiPalette.war_table():
+		# the report writes in paper ink and is drawn only as tall as the
+		# realm's card; the compass turns the map north
+		WarTable.ink_column(%MinisterPanel)
 		WarTable.fit_report(%MinisterPanel, _dashboard)
-		WarTable.place_compass(self, %MinisterPanel, _map3d)
-	_style_audience()
+		%TableCompass.view = _map3d
+	_plate_arms = %PlateArms
 	_show_dossier(false)
 	_build_skill_rows()
 	_build_dossier_tabs()
-	UiPalette.style_section(%ToolsTitle, 14)
-	%TiesText.add_theme_font_size_override("font_size", 16)
-	%PopupPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.GOLD, 2, 24))
-	UiPalette.style_title(%PopupTitle, 18)
-	var popup_dim: ColorRect = %EventPopup.get_node("PopupDim")
-	popup_dim.color = UiPalette.DIM_OVERLAY
 	_panel = %DialoguePanel
-	_panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 20, "column"))
-	UiPalette.style_section(%RecordTitle, 14)
 	_name_label = %NameLabel
 	_scroll = %DialogueScroll
 	_text_label = %TextLabel
 	_speech_label = %SpeechLabel
-	# Owner report 2026-09-13: the 8 px transcript (user request 2026-08-31)
-	# was unreadable and drew in the default white. The size and the ink come
-	# from the theme (UiPalette.build_theme); set here too so the text reads
-	# right even under a screen that was built without that theme.
-	for label: RichTextLabel in [_text_label, _speech_label]:
-		label.add_theme_font_size_override("normal_font_size", UiPalette.DIALOGUE_FONT_SIZE)
-		label.add_theme_font_size_override("bold_font_size", UiPalette.DIALOGUE_FONT_SIZE)
-		label.add_theme_font_size_override("italics_font_size", UiPalette.DIALOGUE_FONT_SIZE)
-		label.add_theme_color_override("default_color", UiPalette.TEXT_SOFT)
-	# The record is the smaller voice now: the window carries the words.
-	_text_label.add_theme_font_size_override("normal_font_size", 15)
-	_text_label.add_theme_font_size_override("bold_font_size", 15)
-	_text_label.add_theme_font_size_override("italics_font_size", 15)
 	_replies_box = %RepliesBox
 	_free_text = %FreeText
 	_free_text.max_length = int(Game.data.bal("prompt_max_chars"))
 	_free_text.text_submitted.connect(_on_free_text)
 	_continue_btn = %ContinueButton
 	_continue_btn.pressed.connect(_on_continue)
-	# The talk box keeps a line's worth of room beside the button: at the
-	# theme's size the button took half the row and cut the placeholder off.
-	UiPalette.compact_button(_continue_btn, 36.0, 15, 14.0)
-	_free_text.custom_minimum_size.x = 240.0
-	# Never larger than the speech it answers (owner 2026-09-28, second critique).
-	_free_text.add_theme_font_size_override("font_size", 15)
-	UiPalette.command_button(%MoveButton, 16)
 	%MoveButton.pressed.connect(_open_move_popup)
 	%AudienceLayer.resized.connect(_fit_audience)
 	%AudienceLayer.visible = false
@@ -191,66 +155,24 @@ func _ready() -> void:
 	_set_right("")
 	_refresh_left()
 
-## The window's chrome: the framed card, the title banner, the portrait's
-## gilt frame, the name plate and the speaker's name.
-func _style_audience() -> void:
-	%AudienceDim.color = AUDIENCE_DIM
-	%AudienceWindow.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 20))
-	# The title stands on the window's own leather over one gold rule (owner
-	# 2026-09-28, second critique: a black band inside the ornament was a
-	# frame inside a frame, and it cut the corner scrolls).
-	var banner := StyleBoxFlat.new()
-	banner.bg_color = Color(0, 0, 0, 0)
-	banner.border_color = Color(UiPalette.BORDER_GOLD, 0.7)
-	banner.border_width_bottom = 1
-	banner.content_margin_top = 4.0
-	banner.content_margin_bottom = 4.0
-	banner.content_margin_left = 12.0
-	banner.content_margin_right = 12.0
-	# The band stops short of the window's corner flourishes (owner
-	# 2026-09-28, second critique: it cut the top-left scroll in half).
-	banner.expand_margin_left = -BANNER_CLEAR_PX
-	banner.expand_margin_right = -BANNER_CLEAR_PX
-	%AudienceBanner.add_theme_stylebox_override("panel", banner)
-	UiPalette.style_title(%AudienceTitle, 20)
-	var frame := StyleBoxFlat.new()
-	frame.bg_color = UiPalette.BG_SCREEN
-	frame.border_color = UiPalette.BORDER_GOLD
-	frame.set_border_width_all(2)
-	frame.set_corner_radius_all(2)
-	frame.shadow_color = UiPalette.SHADOW
-	frame.shadow_size = 6
-	%PortraitFrame.add_theme_stylebox_override("panel", frame)
-	# The name is the plate (owner 2026-09-28, second critique: name and seat
-	# read as one size and one ink): the name large in gold, the seat a
-	# small muted line under it in the book face.
-	UiPalette.style_header(%MinisterName, 24)
-	%MinisterTitle.add_theme_font_size_override("font_size", 14)
-	%MinisterTitle.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
-	%OpinionCaption.add_theme_font_size_override("font_size", 13)
-	%OpinionCaption.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	%OpinionBar.add_theme_stylebox_override("background", UiPalette.bar_bg())
-	%OpinionValue.add_theme_font_size_override("font_size", 16)
-	UiPalette.style_header(%NameLabel, 20)
-	# The person's house arms beside the name on the plate (owner 2026-09-15).
-	var name_label: Label = %MinisterName
-	var head := name_label.get_parent()
-	var plate := HBoxContainer.new()
-	plate.name = "PlateRow"
-	plate.add_theme_constant_override("separation", 8)
-	head.add_child(plate)
-	head.move_child(plate, name_label.get_index())
-	plate.owner = self
-	_plate_arms = HeraldicShield.new()
-	_plate_arms.name = "PlateArms"
-	_plate_arms.custom_minimum_size = Vector2(PLATE_ARMS_PX * 0.85, PLATE_ARMS_PX)
-	_plate_arms.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_plate_arms.visible = false
-	plate.add_child(_plate_arms)
-	name_label.reparent(plate)
-	name_label.owner = self
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+## The leather chrome (balance ui_war_table 0): no table, no compass, no seal;
+## the map and the facts column in the 2026-09-28 dark leather, and ENTER THE
+## COUNCIL the screen's primary button. The audience window, the popup and
+## the council column are leather either way (scenes/conversation.tscn).
+func _dress_leather() -> void:
+	%Bg.color = UiPalette.BG_SCREEN
+	%Bg.z_index = 0
+	%Table.queue_free()
+	%TableCompass.queue_free()
+	%CouncilHandle.queue_free()
+	%MapPanel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4, "map"))
+	%MinisterPanel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 16, "column"))
+	%MinisterPanel.theme = null
+	%MinisterPanel.remove_meta("paper_ground")
+	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
+	add_child(_handle)
 
 ## What holds the right slot: "" (nothing, the map runs to the edge) or
 ## "council". The fact card lives in the left column, so it never competes
