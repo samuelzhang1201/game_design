@@ -234,7 +234,7 @@ func cell_ground(id: int) -> Vector3:
 ## Every marked settlement as the camera sees it now, cut once per pose:
 ## {code, spec, world, screen (design px), behind, shown}. `shown` is what
 ## settlement_ring.gdshader still draws: before the camera and short of its
-## tier's max_view_m x map3d_ring_fade_start (where the ring begins to fade).
+## tier's max_view_m x the ring's fade_start (where the ring begins to fade).
 func projected_settlements() -> Array:
 	if camera == null:
 		return []
@@ -244,7 +244,7 @@ func projected_settlements() -> Array:
 	var out: Array = []
 	var s := viewport_px_scale()
 	var eye := camera.global_position
-	var fade_start := repo.bal("map3d_ring_fade_start")
+	var fade_start := Map3DLayerSettlements.fade_start()
 	for code: String in marked_burgs():
 		var spec: Dictionary = repo.map3d_settlements[String(repo.burgs[code].get("group", ""))]
 		var w := burg_ground(code)

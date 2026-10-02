@@ -48,7 +48,8 @@ func test_the_previews_are_committed_and_small() -> void:
 
 ## The materials whose tuned numbers live in the .tres (owner 2026-10-02):
 ## test_map3d_editor_owned_look.gd holds them; the others are not yet converted.
-const EDITOR_OWNED := ["water_sea", "water_river", "road_line", "trail_line", "cloud_deck", "cloud_shadow"]
+const EDITOR_OWNED := ["water_sea", "water_river", "road_line", "trail_line", "cloud_deck", "cloud_shadow",
+	"settlement_ring", "selection_ring"]
 
 
 func test_an_unconverted_material_carries_no_tuned_number() -> void:

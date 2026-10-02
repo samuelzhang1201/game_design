@@ -161,14 +161,14 @@ func test_a_clicked_settlement_wears_the_gold_ring_until_cleared() -> void:
 ## confirms both a capital and a village still show a selection ring at all
 ## — fix round 1 asked to verify, not change, this: the village's own outer
 ## diameter comes out at 5.25 design px (dot_px 1.75 x 2 x
-## map3d_selected_ring_scale 1.5), against a 2 px stroke, which is small
+## selected_ring_scale 1.5), against a 2 px stroke, which is small
 ## enough that it may read as a filled dot rather than a ring — a look call
 ## for the owner, not fixed here.
 func test_the_selection_ring_falls_back_to_dot_px_for_every_group() -> void:
 	var v := _view()
 	v.activate()
 	var markers := v.world().get_node("Markers") as Map3DLayerSettlements
-	var k := Game.data.bal("map3d_selected_ring_scale")
+	var k := markers.selected_ring_scale
 	for group: String in ["capital", "village"]:
 		var code := ""
 		for c: String in Game.data.burgs:
@@ -195,7 +195,7 @@ func test_a_far_village_carries_its_max_view_m_from_the_table() -> void:
 	var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 	var spec: Dictionary = Game.data.map3d_settlements["village"]
 	assert_almost_eq(float(mat.get_shader_parameter("max_view_m")), float(spec["max_view_m"]), 0.001)
-	assert_almost_eq(float(mat.get_shader_parameter("fade_start")), Game.data.bal("map3d_ring_fade_start"),
+	assert_almost_eq(float(mat.get_shader_parameter("fade_start")), Map3DLayerSettlements.fade_start(),
 		0.001, "the shader and pick_at read one fade start")
 
 
@@ -218,12 +218,12 @@ func test_every_tier_has_a_nonempty_draw_window() -> void:
 		Game.data.bal("map3d_zoom_max_scale"), Map3DGeometry.map_units_per_metre(Game.data.map_info, WORLD),
 		Game.data.bal("map_scale_bar_max_px"), Game.data.bal("map3d_fov_deg"), 450.0)
 	var min_m := Map3DGeometry.settlement_dot_min_view_m(Game.data, WORLD, 450.0)
-	var fade_start: float = Game.data.bal("map3d_ring_fade_start")
+	var fade_start: float = Map3DLayerSettlements.fade_start()
 	for group: String in Game.data.map3d_settlements:
 		var spec: Dictionary = Game.data.map3d_settlements[group]
 		var max_m := float(spec["max_view_m"])
 		assert_gt(minf(max_m * fade_start, ceiling), min_m,
-			group + "'s draw window (max_view_m x map3d_ring_fade_start, capped at the "
+			group + "'s draw window (max_view_m x the ring's fade_start, capped at the "
 			+ "reachable ceiling) must clear the dot's near threshold or the tier is never "
 			+ "drawn at any camera distance the rig can actually reach")
 
@@ -417,7 +417,7 @@ func test_a_thinned_village_is_not_picked_at_a_far_zoom() -> void:
 ## and with no burg of a tier still shown at `at_m` within 150 pack px.
 func _lone_village(at_m: float) -> Dictionary:
 	var img := (load(Game.data.province_texture_path) as Texture2D).get_image()
-	var fade := Game.data.bal("map3d_ring_fade_start")
+	var fade := Map3DLayerSettlements.fade_start()
 	var codes: Array = Game.data.burgs.keys()
 	codes.sort()
 	for code: String in codes:

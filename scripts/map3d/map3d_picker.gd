@@ -34,7 +34,7 @@ func bind(p_ctx: Map3DContext, p_view: Map3DView, p_tooltip: Label,
 ## for the province under it, {} for the sea or the sky.
 ##
 ## Only a SHOWN ring is picked (final review, owner 2026-09-18): a burg whose
-## camera distance has reached its tier's max_view_m x map3d_ring_fade_start
+## camera distance has reached its tier's max_view_m x the ring's fade_start
 ## — where settlement_ring.gdshader begins to fade it — is skipped, so a
 ## click on a thinned village's empty spot names the province under it.
 ##

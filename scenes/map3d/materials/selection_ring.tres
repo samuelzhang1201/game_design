@@ -5,3 +5,14 @@
 [resource]
 render_priority = 10
 shader = ExtResource("1_58680")
+shader_parameter/colour = Color(1, 1, 1, 1)
+shader_parameter/keyline = Color(0.08, 0.08, 0.08, 0.95)
+shader_parameter/dot_px = 0.0
+shader_parameter/inner_px = 0.0
+shader_parameter/ring_px = 14.0
+shader_parameter/line_px = 2.0
+shader_parameter/lift_px = 3.0
+shader_parameter/px_per_dist = 0.001
+shader_parameter/max_view_m = 1000000.0
+shader_parameter/min_view_m = 0.0
+shader_parameter/fade_start = 0.8

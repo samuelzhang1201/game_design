@@ -7,13 +7,21 @@ extends Node3D
 ## current selection (was Map3DView._place_markers / _ring_material /
 ## _show_selected_ring / _sorted_burgs).
 
-## The tier rings' and the selection ring's looks (one shader); each ring's
-## colour, sizes, fade and render priority are bound per group below.
+## The tier rings' and the selection ring's looks (one shader), edited in the
+## inspector (owner 2026-10-02): the keyline, where a ring begins to fade
+## (`fade_start`, which the picker reads too — fade_start()) and how far it
+## floats over its ground (`lift_px`, design px). Each ring's colour, sizes,
+## view range and render priority are its group's (data/map3d_settlements.csv,
+## which the picker reads as well) and are bound per group below.
 const RING_MAT := preload("res://scenes/map3d/materials/settlement_ring.tres")
 const SELECTION_RING_MAT := preload("res://scenes/map3d/materials/selection_ring.tres")
 ## The selection ring never thins by distance (fix round 1, owner 2026-09-18):
 ## whatever the player clicked stays marked regardless of zoom.
 const SELECTED_RING_ALWAYS_M := 1000000.0
+
+## The clicked settlement's ring is this much larger than its dot (fix round
+## 1, owner 2026-09-18).
+@export var selected_ring_scale := 1.5
 
 ## Editor preview (Task 22): every marked burg's ring, from the pack alone.
 @export var preview := false: set = set_preview
@@ -136,7 +144,7 @@ func show_selected(code: String) -> void:
 	_selected_ring.multimesh.set_instance_transform(0,
 		Transform3D(Basis.IDENTITY, ctx.burg_ground(code)))
 	var mat := _selected_ring.multimesh.mesh.surface_get_material(0) as ShaderMaterial
-	var k := ctx.repo.bal("map3d_selected_ring_scale")
+	var k := selected_ring_scale
 	# A gold ring round the dot (or round the capital's own ring).
 	mat.set_meta("ring_px", maxf(float(spec["ring_px"]), float(spec.get("dot_px", 0.0)) * 2.0) * k)
 	mat.set_meta("line_px", maxf(float(spec["line_px"]), 2.0))
@@ -162,7 +170,7 @@ func counts() -> Dictionary:
 ## other layers' by apply_scale (base values kept as meta). max_view_m and
 ## min_view_m are world metres, never rescaled. The keyline is a fixed data
 ## value (fix round 1: a pale ring was nearly invisible on bright grass at
-## the old 0.55 default). min_view_m is 0 (never hidden) for the selection
+## the old 0.55 default; the .tres's now). min_view_m is 0 (never hidden) for the selection
 ## ring, which must keep showing at any zoom once something is clicked;
 ## `dynamic_min` (false for it) marks a tier ring's material so apply_scale
 ## knows which ones to keep re-pointed at the live threshold.
@@ -174,9 +182,7 @@ func _ring_material(colour: Color, ring_px: float, line_px: float, max_view_m: f
 	mat.set_shader_parameter("colour", colour)
 	mat.set_shader_parameter("max_view_m", max_view_m)
 	mat.set_shader_parameter("min_view_m", min_view_m)
-	mat.set_shader_parameter("fade_start", ctx.repo.bal("map3d_ring_fade_start"))
-	var keyline := Color(0.08, 0.08, 0.08, ctx.repo.bal("map3d_ring_keyline_alpha"))
-	mat.set_shader_parameter("keyline", keyline)
+	mat.set_meta("lift_px", float(look.get_shader_parameter("lift_px")))
 	mat.set_meta("ring_px", ring_px)
 	mat.set_meta("line_px", line_px)
 	mat.set_meta("dot_px", dot_px)
@@ -202,13 +208,19 @@ func apply_scale() -> void:
 	var min_view_m := Map3DGeometry.settlement_dot_min_view_m(ctx.repo, ctx.meta, ctx.view_size.y)
 	for mat: ShaderMaterial in _ring_mats:
 		mat.set_shader_parameter("px_per_dist", per_dist)
-		mat.set_shader_parameter("lift_px", ctx.repo.bal("map3d_ring_lift_px") * s)
+		mat.set_shader_parameter("lift_px", float(mat.get_meta("lift_px")) * s)
 		mat.set_shader_parameter("ring_px", float(mat.get_meta("ring_px")) * s)
 		mat.set_shader_parameter("line_px", float(mat.get_meta("line_px")) * s)
 		mat.set_shader_parameter("dot_px", float(mat.get_meta("dot_px", 0.0)) * s)
 		mat.set_shader_parameter("inner_px", float(mat.get_meta("inner_px", 0.0)) * s)
 		if bool(mat.get_meta("dynamic_min", false)):
 			mat.set_shader_parameter("min_view_m", min_view_m)
+
+
+## Where a ring begins to fade, a share of its tier's max_view_m: the
+## ring's .tres, read by the picker too so a fading ring is never picked.
+static func fade_start() -> float:
+	return float(RING_MAT.get_shader_parameter("fade_start"))
 
 
 ## The settlement's DRAWN marker's diameter, design px: max(ring_px, dot_px,

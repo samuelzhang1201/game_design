@@ -11,7 +11,7 @@
 // unoccluded (no depth test) — hundreds of far rings, proven by bench (see
 // task-3-report.md). Each tier now carries max_view_m (camera-to-settlement
 // distance): the ring fades out from fade_start x max_view_m
-// (balance.csv map3d_ring_fade_start, which Map3DView.pick_at reads too, so
+// (settlement_ring.tres, which Map3DView.pick_at reads too, so
 // a ring that has begun to fade is no longer picked) and the vertex stage
 // collapses the quad to zero size at/beyond it, so a culled ring costs no
 // fill at all, not just zero alpha.

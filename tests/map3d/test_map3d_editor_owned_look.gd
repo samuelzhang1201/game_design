@@ -26,6 +26,13 @@ const CODE_OWNED := {
 	# the wind's uniforms are Map3DLayerWind's, every frame
 	"tree_sway": ["wind_time", "wind_dir", "sway_m", "sway_height_m", "sway_hz", "flutter"],
 	"tree_card": ["wind_time", "wind_dir", "sway_m", "sway_hz"],
+	# a ring's colour, sizes and view range are its group's
+	# (map3d_settlements.csv, which the picker reads too); its px are scaled
+	# to the window; the selection's gold is the HUD's selection colour
+	"settlement_ring": ["colour", "dot_px", "inner_px", "ring_px", "line_px", "lift_px", "px_per_dist",
+		"max_view_m", "min_view_m"],
+	"selection_ring": ["colour", "dot_px", "inner_px", "ring_px", "line_px", "lift_px", "px_per_dist",
+		"max_view_m", "min_view_m"],
 }
 ## The river's water that IS the sea's: river parameter -> sea parameter.
 const RIVER_FROM_SEA := {"mouth_water": "sea_near", "sky": "sky", "nat_mouth": "nat_shallow",
@@ -44,7 +51,8 @@ const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3
 	"weather_storm_cloud", "map3d_tree_leaf_", "map3d_tree_hue_", "map3d_tree_saturation",
 	"map3d_tree_value", "map3d_tree_roughness", "map3d_tree_specular", "map3d_tree_card_alpha",
 	"map3d_tree_card_sphere", "map3d_tree_card_lift", "map3d_tree_card_saturation",
-	"map3d_tree_card_value", "map3d_tree_card_tint", "map3d_tree_card_far_value"]
+	"map3d_tree_card_value", "map3d_tree_card_tint", "map3d_tree_card_far_value",
+	"map3d_ring_", "map3d_selected_ring_scale"]
 
 
 func before_all() -> void:
@@ -75,6 +83,21 @@ func test_the_clouds_draw_what_their_tres_say() -> void:
 	_assert_material_holds(deck.material_override as ShaderMaterial, "cloud_deck", 6)
 	_assert_material_holds((deck.get_node("Shadows") as GeometryInstance3D).material_override as ShaderMaterial,
 		"cloud_shadow", 1)
+
+
+## Every ring wears its .tres's keyline and fade, and floats its lift scaled.
+func test_the_rings_draw_what_their_tres_say() -> void:
+	var v := _view()
+	var markers := v.world().get_node("Markers") as Map3DLayerSettlements
+	var s := v.context().viewport_px_scale()
+	assert_gt(markers.get_child_count(), 1, "the tiers' rings and the selection ring")
+	for mmi: MultiMeshInstance3D in markers.get_children():
+		var live := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
+		var key := "selection_ring" if mmi.name == "Selected" else "settlement_ring"
+		_assert_material_holds(live, key, 2)
+		var look := load("res://scenes/map3d/materials/%s.tres" % key) as ShaderMaterial
+		assert_almost_eq(float(live.get_shader_parameter("lift_px")),
+			float(look.get_shader_parameter("lift_px")) * s, 0.0001, String(mmi.name) + ".lift_px, scaled")
 
 
 ## The woods wear their .tres but for the wind's uniforms.
