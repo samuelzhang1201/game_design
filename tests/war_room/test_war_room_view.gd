@@ -695,3 +695,18 @@ func test_a_board_drag_still_releases_the_button_but_off_the_board() -> void:
 	assert_signal_emit_count(view, "board_clicked", 2, "the button is never left held in the board")
 	var release: Array = get_signal_parameters(view, "board_clicked", 1)
 	assert_lt((release[0] as Vector2).x, 0.0, "a pan's release lands off the board, so no note fires")
+
+
+func test_the_table_knows_its_neat_line() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
+	var s: Dictionary = WarSheets.series(repo)[0]
+	var r: Rect2 = s["rect"]
+	var c: Rect2 = s["cell"]
+	var want := Vector4((c.position.x - r.position.x) / r.size.x, (c.position.y - r.position.y) / r.size.y,
+		(c.end.x - r.position.x) / r.size.x, (c.end.y - r.position.y) / r.size.y)
+	var got: Vector4 = mat.get_shader_parameter("neat_uv")
+	assert_almost_eq(got.x, want.x, 0.0001)
+	assert_almost_eq(got.w, want.w, 0.0001)
+	assert_almost_eq(float(mat.get_shader_parameter("collar_ink")), repo.bal("war_collar_ink"), 0.0001)

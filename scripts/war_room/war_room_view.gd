@@ -223,7 +223,7 @@ func lay_sheet(index: int) -> void:
 	var shore := WarRoomTable.shore_share(_repo, raw, _nx, _nz, _table_w, _depth)
 	_table.mesh = WarRoomTable.build_mesh(_heights, _nx, _nz, _table_w, _depth, _y_scale, raw, shore)
 	var mat := _table.get_active_material(0) as ShaderMaterial
-	WarRoomMaterial.bind(mat, _repo, _rect, _table_w, _depth)
+	WarRoomMaterial.bind(mat, _repo, all[index], _table_w, _depth)
 	_rig.bounds = Rect2(-_table_w * 0.5, -_depth * 0.5, _table_w, _depth)
 	_rig.target = Vector3.ZERO
 	_rig.yaw_deg = 0.0

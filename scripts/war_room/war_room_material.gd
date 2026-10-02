@@ -24,10 +24,18 @@ const SHADER_KEYS := {
 	"grid_alpha": "war_grid_alpha", "grid_px": "war_grid_px", "line_crowd_k": "war_line_crowd_k",
 	"paper_age_from": "war_paper_age_from", "paper_age_mix": "war_paper_age_mix",
 	"paper_roughness": "war_paper_roughness", "crease_alpha": "war_crease_alpha", "crease_px": "war_crease_px",
+	"collar_ink": "war_collar_ink", "collar_shade": "war_collar_shade", "neat_px": "war_neat_px",
+	"neat_gap_px": "war_neat_gap_px",
 }
 
 
-static func bind(mat: ShaderMaterial, repo: DataRepository, sheet_rect: Rect2, table_w: float, depth: float) -> void:
+## Bind a laid SHEET (its `rect`, the table, and its `cell`, the neat line).
+static func bind(mat: ShaderMaterial, repo: DataRepository, sheet: Dictionary, table_w: float, depth: float) -> void:
+	var sheet_rect: Rect2 = sheet["rect"]
+	var c: Rect2 = sheet.get("cell", sheet_rect)
+	mat.set_shader_parameter("neat_uv", Vector4((c.position.x - sheet_rect.position.x) / sheet_rect.size.x,
+		(c.position.y - sheet_rect.position.y) / sheet_rect.size.y,
+		(c.end.x - sheet_rect.position.x) / sheet_rect.size.x, (c.end.y - sheet_rect.position.y) / sheet_rect.size.y))
 	var pal: Dictionary = repo.war_palette
 	for key in ["paper", "paper_age", "ink", "sea_ink"]:
 		mat.set_shader_parameter(key, pal[key])

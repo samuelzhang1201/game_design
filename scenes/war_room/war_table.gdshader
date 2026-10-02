@@ -40,6 +40,13 @@ uniform vec2 grid_cells = vec2(16.75, 12.125); // sheet size / grid square
 uniform vec2 grid_phase = vec2(0.0);           // the grid stays on whole degrees whatever the collar
 uniform float tex_aspect = 1.0;                // the share of the ink texture's height the sheet fills
 uniform vec2 table_m = vec2(1.4, 1.0);         // the sheet's width and depth in table metres
+uniform vec4 neat_uv = vec4(0.0, 0.0, 1.0, 1.0); // the sheet's neat line in the table's UV (v2 B)
+uniform float collar_ink = 0.35;   // ink and contours beyond the neat line, as a share
+uniform float collar_shade = 0.12; // the collar's paper a touch darker
+uniform float neat_px = 1.6;       // the neat line's rule, screen px
+uniform float neat_gap_px = 4.0;   // its inner hairline, screen px inside it
+// the intelligence layer (v2 B Task 9): premultiplied sRGB bytes, as ink_tex
+uniform sampler2D intel_tex : filter_linear_mipmap_anisotropic, hint_default_transparent;
 
 varying float metres;
 varying float raw_metres;
@@ -68,13 +75,20 @@ void fragment() {
 	float edge = max(abs(UV.x - 0.5), abs(UV.y - 0.5)) * 2.0;
 	col = mix(col, paper_age.rgb, smoothstep(paper_age_from, 1.0, edge) * paper_age_mix);
 
+	// beyond the neat line: the collar — the neighbouring ground, faint (spec §2.2)
+	vec2 inside2 = step(neat_uv.xy, UV) * step(UV, neat_uv.zw);
+	float inside = inside2.x * inside2.y;
+	float collar = 1.0 - inside;
+	float collar_k = mix(1.0, collar_ink, collar);
+	col *= 1.0 - collar * collar_shade;
+
 	// land or sea, with a soft shore from the interpolated unclamped metres
 	float shore = max(fwidth(raw_metres), 1e-3);
 	float land = smoothstep(-shore, shore, raw_metres);
 
 	float c = line_at(metres / contour_m, contour_px);
 	float idx = line_at(metres / (contour_m * index_every), contour_index_px);
-	float contour = max(c * contour_alpha, idx * contour_index_alpha) * land;
+	float contour = max(c * contour_alpha, idx * contour_index_alpha) * land * collar_k;
 	col = mix(col, ink.rgb, contour);
 
 	// the sea's hatching: diagonal lines in table metres, strongest at the shore
@@ -92,7 +106,23 @@ void fragment() {
 
 	vec4 inked = texture(ink_tex, vec2(UV.x, UV.y * tex_aspect));
 	vec3 straight = srgb_to_linear(inked.rgb / max(inked.a, 1e-4));
-	col = col * (1.0 - inked.a) + straight * inked.a;
+	float ink_a = inked.a * collar_k;
+	col = col * (1.0 - ink_a) + straight * ink_a;
+
+	// the neat line: a rule on the cell's edge and a hairline neat_gap_px inside
+	// it, in screen px by fwidth (computed outside any branch)
+	vec2 nu = (UV - neat_uv.xy) / max(neat_uv.zw - neat_uv.xy, vec2(1e-5));
+	vec2 fwn = max(fwidth(nu), vec2(1e-6));
+	vec2 d0 = min(abs(nu), abs(nu - 1.0)) / fwn;
+	vec2 inb = step(vec2(0.0), nu) * step(nu, vec2(1.0));
+	float rule = max((1.0 - clamp(d0.x - neat_px * 0.5, 0.0, 1.0)) * inb.y, (1.0 - clamp(d0.y - neat_px * 0.5, 0.0, 1.0)) * inb.x);
+	vec2 d1 = abs(d0 - neat_gap_px);
+	float hair = max((1.0 - clamp(d1.x - 0.4, 0.0, 1.0)) * inb.y, (1.0 - clamp(d1.y - 0.4, 0.0, 1.0)) * inb.x) * inside;
+	col = mix(col, ink.rgb, max(rule, hair * 0.6));
+
+	vec4 intel = texture(intel_tex, vec2(UV.x, UV.y * tex_aspect));
+	vec3 intel_straight = srgb_to_linear(intel.rgb / max(intel.a, 1e-4));
+	col = col * (1.0 - intel.a) + intel_straight * intel.a;
 	ALBEDO = col;
 	ROUGHNESS = paper_roughness;
 }
