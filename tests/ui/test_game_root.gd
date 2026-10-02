@@ -221,6 +221,46 @@ func test_the_menu_switches_the_music_off_and_remembers() -> void:
 	assert_false(again.bgm_player().stream_paused, "and back on")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(GameRoot.settings_path))
 
+## Owner 2026-10-02 (开启游戏后的GPU占用很快又是100%): the menus' Frame rate
+## row caps Engine.max_fps at a first run's ui_frame_cap_default, cycles the
+## balance.csv choices (0 = unlimited) and is remembered; the suite forces 0
+## (tests/pre_run.gd) and a cap forced over the setting is the one that runs.
+func test_the_frame_rate_row_caps_the_engine_and_remembers() -> void:
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(GameRoot.settings_path))
+	var bal: Dictionary = Game.data.balance
+	var was_forced := FrameCap.forced
+	FrameCap.forced = -1
+	var r := _root()
+	await wait_process_frames(2)
+	assert_eq(r.frame_cap_setting(), int(bal["ui_frame_cap_default"]), "a first run's default")
+	assert_eq(Engine.max_fps, int(bal["ui_frame_cap_default"]), "and the engine runs at it")
+	var button := _menu_btn(r, "FrameCap")
+	assert_not_null(button, "the pause menu carries the row")
+	button.pressed.emit()
+	var next := FrameCap.next_setting(int(bal["ui_frame_cap_default"]), bal)
+	assert_eq(r.frame_cap_setting(), next, "a press takes the next choice")
+	assert_eq(Engine.max_fps, next, "and caps the engine at once")
+	assert_eq(button.text, FrameCap.label(next))
+	var again := _root()
+	await wait_process_frames(2)
+	assert_eq(again.frame_cap_setting(), next, "remembered by the next session")
+	FrameCap.forced = 0
+	again._cycle_frame_cap()
+	assert_eq(Engine.max_fps, 0, "a forced cap wins over the setting")
+	FrameCap.forced = was_forced
+	FrameCap.apply(0)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(GameRoot.settings_path))
+
+func test_the_frame_cap_choices_cycle_and_read() -> void:
+	var bal := {"ui_frame_cap_default": 60.0, "ui_frame_cap_choice_1": 30.0,
+		"ui_frame_cap_choice_2": 60.0, "ui_frame_cap_choice_3": 0.0}
+	assert_eq(FrameCap.choices(bal), [30, 60, 0] as Array[int])
+	assert_eq(FrameCap.next_setting(30, bal), 60)
+	assert_eq(FrameCap.next_setting(0, bal), 30, "the last wraps to the first")
+	assert_eq(FrameCap.next_setting(45, bal), 30, "an unknown value starts the cycle")
+	assert_eq(FrameCap.label(0), "Frame rate: Unlimited")
+	assert_eq(FrameCap.label(60), "Frame rate: 60")
+
 func _space() -> InputEventKey:
 	var key := InputEventKey.new()
 	key.keycode = KEY_SPACE
@@ -258,7 +298,7 @@ func test_the_title_and_pause_menus_share_their_settings() -> void:
 	var r := _root()
 	await wait_process_frames(2)
 	var title: MainMenu = r.current_screen
-	for n: String in ["MusicToggle", "GraphicsQuality", "DevMode", "Quit"]:
+	for n: String in ["MusicToggle", "GraphicsQuality", "FrameCap", "DevMode", "Quit"]:
 		var a := title.menu_column().get_node_or_null(n) as Button
 		var b := _menu_btn(r, n)
 		assert_not_null(a, "the title screen has " + n)

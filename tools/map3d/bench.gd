@@ -47,6 +47,8 @@ extends Node
 ##                       house clusters are always on — it only tags the rows and
 ##                       relies on the STOPS loop's own "near" framing (below).
 ##   --pan               measure a MOVING view instead of a still one (below).
+##   --frame-cap N       run under the menus' frame-rate cap N (FrameCap; default 0,
+##                       uncapped) to read the GPU's load under it, not a frame's cost.
 ##
 ## STILL vs PAN (final review 2026-09-20). Without --pan the camera stands
 ## still for the whole row, so everything the view cuts once per camera pose —
@@ -113,6 +115,10 @@ func _ready() -> void:
 	var tier := args[qi + 1] if qi >= 0 and qi + 1 < args.size() else "high"
 	_tier = tier
 	Map3DQuality.forced = tier  # before GameRoot exists, so the view's first load wears it
+	# a bench row reads the frame's own cost, never the player's cap — unless
+	# --frame-cap N asks to price the cap itself (the GPU's load under it)
+	var fi := args.find("--frame-cap")
+	FrameCap.forced = int(args[fi + 1]) if fi >= 0 and fi + 1 < args.size() else 0
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(size)
 	get_window().size = size

@@ -15,6 +15,8 @@ func run() -> void:
 	Game.campaign_maker = SuiteData.campaign
 	# the suite runs at high, today's look (Ruling 7)
 	Map3DQuality.forced = "high"
+	# never a frame-rate cap: it would slow every wait in a headless run
+	FrameCap.forced = 0
 	# The player's settings (music on/off) live in user://; the suite reads
 	# its own file so a developer's choice never reaches a test — in this
 	# run's own directory (tests/run_dir.gd), which no other suite running

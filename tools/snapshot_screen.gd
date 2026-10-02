@@ -224,6 +224,7 @@ var _also: Dictionary = {}
 
 
 func _ready() -> void:
+	FrameCap.forced = 0  # a shot waits frames; the player's cap would only slow it
 	var args := OS.get_cmdline_user_args()
 	var i := 0
 	while i < args.size() - 1:
