@@ -1,15 +1,16 @@
 class_name WarRoomWall
 extends RefCounted
 ## The room's changing-sheets furniture (spec 2026-10-01-war-room-design §2):
-## the index chart's picture and numerals, the ink arrows at the laid sheet's
+## the index chart's picture and its graticule's letters and numbers, the ink arrows at the laid sheet's
 ## edges, and the picks of both. Built into nodes the authored scene holds
 ## (%IndexChart, %EdgeArrows); no state of its own.
 
 const SIDES := {"n": "↑", "s": "↓", "e": "→", "w": "←"}
 
 
-## Dress the chart quad: its size from the map's ratio, the picture, and one
-## numeral lying on it at each sheet's centre.
+## Dress the chart quad: its size from the map's ratio, the picture, and the
+## graticule's column letters along its north edge and row numbers down its
+## west edge (v2 B: 76 sheet ids crowded the chart unread).
 static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font) -> void:
 	var w := float(repo.map_info.get("width", "1"))
 	var h := float(repo.map_info.get("height", "1"))
@@ -25,27 +26,55 @@ static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font)
 	for n in chart.get_children():
 		chart.remove_child(n)
 		n.queue_free()
-	for s: Dictionary in WarSheets.series(repo):
-		var c: Vector2 = (s["rect"] as Rect2).get_center()
-		var at := Vector3((c.x / w - 0.5) * size.x, (0.5 - c.y / h) * size.y, repo.bal("war_chart_numeral_lift_m"))
-		chart.add_child(_label(String(s["id"]), font, repo.war_palette["rubric"], at,
-			int(repo.bal("war_chart_numeral_font_px")), repo.bal("war_chart_numeral_pixel_m"), false))
+	var deg := repo.bal("war_sheet_deg")
+	var g := MapCoords.grid_size(repo, deg)
+	var lift := repo.bal("war_chart_numeral_lift_m")
+	var margin := repo.bal("war_chart_axis_margin_m")
+	var font_px := int(repo.bal("war_chart_numeral_font_px"))
+	var pixel_m := repo.bal("war_chart_numeral_pixel_m")
+	for col in g.x:
+		var cx := (minf(MapCoords.cell_rect(repo, Vector2i(col, 0), deg).get_center().x, w) / w - 0.5) * size.x
+		var l := _label(char(65 + col), font, repo.war_palette["rubric"], Vector3(cx, size.y * 0.5 + margin, lift),
+			font_px, pixel_m, false)
+		l.set_meta("axis", "col")
+		l.set_meta("n", col)
+		chart.add_child(l)
+	for row in g.y:
+		var cy := (0.5 - minf(MapCoords.cell_rect(repo, Vector2i(0, row), deg).get_center().y, h) / h) * size.y
+		var l := _label(str(row + 1), font, repo.war_palette["rubric"], Vector3(-size.x * 0.5 - margin, cy, lift),
+			font_px, pixel_m, false)
+		l.set_meta("axis", "row")
+		l.set_meta("n", row)
+		chart.add_child(l)
 
 
 ## The sheet under a screen px on the chart, -1 off it. `screen_px` is already
 ## in the viewport's own px (the view multiplies its window scale in).
-static func pick_chart(chart: MeshInstance3D, camera: Camera3D, repo: DataRepository, screen_px: Vector2) -> int:
+## The chart UV (0..1 across the map, v down) under a screen px, (-1, -1) off
+## its plane or behind the camera.
+static func chart_uv(chart: MeshInstance3D, camera: Camera3D, screen_px: Vector2) -> Vector2:
 	var inv := chart.global_transform.affine_inverse()
 	var lo := inv * camera.project_ray_origin(screen_px)
 	var ld := (inv.basis * camera.project_ray_normal(screen_px)).normalized()
 	if absf(ld.z) < 0.00001:
-		return -1
+		return Vector2(-1, -1)
 	var t := -lo.z / ld.z
 	if t < 0.0:
-		return -1
+		return Vector2(-1, -1)
 	var hit := lo + ld * t
 	var size := (chart.mesh as QuadMesh).size
-	return WarIndexChart.sheet_at_uv(repo, Vector2(hit.x / size.x + 0.5, 0.5 - hit.y / size.y))
+	return Vector2(hit.x / size.x + 0.5, 0.5 - hit.y / size.y)
+
+
+static func pick_chart(chart: MeshInstance3D, camera: Camera3D, repo: DataRepository, screen_px: Vector2) -> int:
+	var uv := chart_uv(chart, camera, screen_px)
+	return -1 if uv.x < 0.0 else WarIndexChart.sheet_at_uv(repo, uv)
+
+
+## A chart UV as a world point on the chart's face (the war marker lands here).
+static func chart_point(chart: MeshInstance3D, uv: Vector2) -> Vector3:
+	var size := (chart.mesh as QuadMesh).size
+	return chart.global_transform * Vector3((uv.x - 0.5) * size.x, (0.5 - uv.y) * size.y, 0.0)
 
 
 ## Replace the arrows: one at each side of the laid sheet that has a neighbour.

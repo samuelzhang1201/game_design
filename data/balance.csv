@@ -916,6 +916,8 @@ ledger_star_pick_min_px,8,"LEDGER galaxy: a star is picked within its drawn disc
 ledger_star_max_px,14,"LEDGER galaxy: no star is drawn with a radius over this many design px, however close the camera (Task 11 fix round 2: about twice an ordinary hub)"
 war_chart_w_m,0.8,"WAR ROOM (owner 2026-10-01, spec §2, Task 9): the sheet index chart's width on its apron, metres; its height follows the map's ratio. Sized so the WHOLE chart stands in the opening view (fix round 1: 0.8 x 0.29 m)"
 war_chart_px,1024,"WAR ROOM (Task 9): the side of the index chart's image across the map (dots of land cells, every sheet's frame)"
+war_chart_sea_shade,0.08,"WAR ROOM v2 B (spec §2.3): a sea cell of the index chart washed this much darker than the paper; only land cells can be chosen"
+war_chart_axis_margin_m,0.012,"WAR ROOM v2 B (spec §2.3): the chart's column letters and row numbers stand this far outside its edge, metres"
 war_chart_numeral_font_px,48,"WAR ROOM (Task 9): a sheet numeral's lettering size on the index chart (Label3D font_size)"
 war_chart_numeral_pixel_m,0.0008,"WAR ROOM (Task 9): metres a numeral's font px covers on the chart (Label3D pixel_size): 48 px reads ~4 cm on a 1 m chart"
 war_arrow_font_px,48,"WAR ROOM (Task 9): an edge arrow's lettering size (Label3D font_size)"

@@ -181,23 +181,32 @@ func test_a_click_on_an_edge_arrow_requests_its_sheet() -> void:
 	assert_signal_emitted_with_parameters(view, "sheet_requested", [int(arrow.get_meta("sheet"))])
 
 
-func test_every_numeral_on_the_wall_chart_is_in_the_opening_view_and_picks_its_sheet() -> void:
-	pending("v2 B: the chart's numerals become the graticule's letters and numbers (plan B Task 5)")
-	return
-	var cam: Camera3D = view.get_node("%Camera")
-	var inside := Rect2(Vector2.ZERO, view.size)
-	for laid in WarSheets.series(repo).size():   # whichever sheet is laid, its arrows must not shadow the chart
-		view.lay_sheet(laid)
-		await wait_process_frames(2)
-		var numerals := view.get_node("%IndexChart").get_children()
-		assert_eq(numerals.size(), WarSheets.series(repo).size(), "a numeral a sheet")
-		for k in numerals.size():
-			var l := numerals[k] as Label3D
-			assert_false(cam.is_position_behind(l.global_position), "%s is in front of the camera" % l.text)
-			var at := cam.unproject_position(l.global_position) / view.window_scale()
-			assert_true(inside.has_point(at), "numeral %s at %s is inside the view %s" % [l.text, at, inside])
-			assert_eq(WarRoomPicks.sheet_target(view.get_node("%EdgeArrows"), view.get_node("%IndexChart"), cam, repo, at, view.window_scale()), k, "sheet %d laid: numeral %s picks its own sheet" % [laid, l.text])
+func test_the_chart_letters_its_columns_and_numbers_its_rows() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var g := MapCoords.grid_size(repo, repo.bal("war_sheet_deg"))
+	var labels := view.get_node("%IndexChart").get_children()
+	assert_eq(labels.size(), g.x + g.y)
+	var cols := labels.filter(func(l: Node) -> bool: return String(l.get_meta("axis")) == "col")
+	assert_eq(cols.size(), g.x)
+	assert_eq((cols[0] as Label3D).text, "A")
 
+
+func test_a_click_on_a_land_cell_of_the_chart_asks_for_its_sheet() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var cam: Camera3D = view.get_node("%Camera")
+	var chart: MeshInstance3D = view.get_node("%IndexChart")
+	var tried := 0
+	for s: Dictionary in WarSheets.series(repo):
+		var uv := WarIndexChart.uv_of_cell(repo, s).get_center()
+		var p := WarRoomWall.chart_point(chart, uv)
+		var at := cam.unproject_position(p) / view.window_scale()
+		if not Rect2(Vector2.ZERO, view.size).has_point(at):
+			continue
+		assert_eq(WarRoomWall.pick_chart(chart, cam, repo, at * view.window_scale()), int(s["index"]), String(s["id"]))
+		tried += 1
+	assert_gt(tried, 0, "the chart is in the opening view")
 
 func test_every_chart_corner_stands_in_the_opening_view() -> void:
 	view.lay_sheet(0)
