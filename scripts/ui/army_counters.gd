@@ -149,8 +149,6 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 		var icon: Rect2 = m["icon"]
 		var count: Rect2 = m["count"]
 		_draw_bars(ci, repo, m)
-		# The painted 3D piece (owner 2026-09-15, data/army_art.csv) stands in the
-		# counter's square on its own base; the glyph square only without art.
 		if bool(m.get("solo", false)):
 			# The 3D piece is the counter; this is only its headcount.
 			ci.draw_rect(count.grow(line), m["color"] if table else outline)
@@ -160,23 +158,14 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 			if String(m["code"]) == selected and selected != "":
 				ci.draw_rect(rect.grow(line + 1.5), UiPalette.GOLD, false, 2.0)
 			continue
-		var art := UiPalette.load_art(String((repo.army_art.get(String(m["piece"]), {}) as Dictionary).get("texture", "")))
-		if art != null:
-			ci.draw_rect(count.grow(line), outline)
-			ci.draw_rect(count, m["color"])
-			# Fitted to the square's HEIGHT: a piece is wider than tall, and fitted
-			# to its width it read as a flat disc; the overhang is a few px.
-			var ts := art.get_size()
-			var drawn := ts * (icon.size.y / ts.y)
-			ci.draw_texture_rect(art, Rect2(icon.position + (icon.size - drawn) * Vector2(0.5, 1.0), drawn), false)
-		else:
-			ci.draw_rect(icon.merge(count).grow(line), m["color"] if table else outline)
-			ci.draw_rect(icon, icon_bg)
-			ci.draw_rect(count, token if table else m["color"])
-			ci.draw_line(Vector2(icon.end.x, icon.position.y), Vector2(icon.end.x, icon.end.y),
-				outline, line)
-			ResourceIcon.draw_glyph(ci, String(m["glyph"]), icon.get_center(),
-				icon.size.y * glyph_frac, glyph_ink)
+		# the glyph square (the 2D counter art went 2026-09-29, Hunyuan's licence)
+		ci.draw_rect(icon.merge(count).grow(line), m["color"] if table else outline)
+		ci.draw_rect(icon, icon_bg)
+		ci.draw_rect(count, token if table else m["color"])
+		ci.draw_line(Vector2(icon.end.x, icon.position.y), Vector2(icon.end.x, icon.end.y),
+			outline, line)
+		ResourceIcon.draw_glyph(ci, String(m["glyph"]), icon.get_center(),
+			icon.size.y * glyph_frac, glyph_ink)
 		ManorBadges.draw_centered_text(ci, font, count, String(m["text"]), int(m["font_px"]), count_ink)
 		if String(m["code"]) == selected and selected != "":
 			ci.draw_rect(rect.grow(repo.bal("map_army_outline_px") + 1.5), UiPalette.GOLD, false, 2.0)

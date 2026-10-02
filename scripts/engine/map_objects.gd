@@ -994,7 +994,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		"kind": "army", "code": code, "title": label,
 		"subtitle": "%s of %s" % ["Fleet" if naval else "Regiment", _label(repo.kingdoms, kingdom)],
 		"kingdom_code": kingdom, "initial": label.substr(0, 1), "piece": piece,
-		"painting": String((repo.army_art.get(piece, {}) as Dictionary).get("painting", "")),
+		"painting": GameArt.path(GameArt.ARMY_PAINTINGS, piece),
 		"stats": stats, "rates": [], "fields": fields, "features": [], "production": [],
 		"actions": [], "known": "army", "center": ArmySystem.position_of(repo, state, r),
 		"ask": "What is the state of the %s?" % label,

@@ -227,8 +227,8 @@ func _fill_desk() -> void:
 	%ShowOnMap.text = "Open the LEDGER" if about_books else "Show on map"
 	%LetterTitle.text = String(m["title"])
 	%LetterMeta.text = "%s · %s" % [CourierCard.date_of(int(m["day"])), HEADERS[String(m["column"])]]
-	var art := String(Game.data.courier_paintings.get("delivered", "")) if String(m.get("kind", "")) == "receipt" else ""
-	var tex: Texture2D = UiPalette.load_art(art) if art != "" else null
+	var tex: Texture2D = GameArt.table(GameArt.COURIER_PAINTINGS).of("delivered") as Texture2D \
+		if String(m.get("kind", "")) == "receipt" else null
 	%DeskPainting.texture = tex
 	%DeskPainting.visible = tex != null
 	# the facts in the letter's dark ink (the MissiveFact kind)

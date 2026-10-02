@@ -25,7 +25,7 @@ blender -b --factory-startup --python tools/units3d/measure_units.py -- OUTDIR
 | `measure_units.py` | prints each source's slice profile and shoots four orthographic views — **run this first for a new source**; every number in the CSV is read off it |
 | `make_units.py` | the build: retopo → bake → skeleton → skin → lock the props → actions → `assets/3D/units/<code>/<code>.glb` |
 | `shoot_units.py` | photographs the BUILT glb (contact sheet + a strip per action), so a shot also proves the export round-trips |
-| `data/army_art.csv` | which .glb each arm wears in the game (`model`) |
+| `assets/3D/units/army_models.tres` | which .glb each arm wears in the game (an ArtTable, picked in the inspector) |
 | `data/army_orders.csv` | the rows of the right-click order menu |
 | `unit_common.py` | import, place, measure |
 | `assets/3D/units/units3d.json` | what was built: tris, bones, which weighting was used, the action frame ranges |
@@ -89,7 +89,7 @@ The units are drawn on the 3D map's MILITARY layer by `Map3DLayerUnits` +
 ordered by right click (`ArmyOrderMenu`). Two things bind them to this
 pipeline:
 
-* `data/army_art.csv`'s `model` column names the .glb an arm wears. A fleet
+* `assets/3D/units/army_models.tres` names the .glb an arm wears. A fleet
   names none and keeps its flat 2D counter.
 * the runtime MEASURES each model's own height and half width off its meshes
   (`Map3DUnits.model_size`), so rebuilding a .glb at another size needs

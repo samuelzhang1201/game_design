@@ -1,7 +1,7 @@
 # The courier rider (sub-project D)
 
 The mounted courier the 3D map draws for every `ordinary` and `secret` courier
-(`data/courier_art.csv`): the owner's design C4 (`assets/3D/units/courier/model_wip/designs/zimage_C4_s2.png`,
+(`assets/3D/units/courier_models.tres`): the owner's design C4 (`assets/3D/units/courier/model_wip/designs/zimage_C4_s2.png`,
 spec `docs/superpowers/specs/2026-09-28-courier-art-design.md` §2) — a herald on a white dapple
 horse, blue tabard with gold shoulder pieces, grey hat and feather, dispatch case, and a pennon on a
 staff — as the owner modelled it in **Tripo 3D** from that pick.

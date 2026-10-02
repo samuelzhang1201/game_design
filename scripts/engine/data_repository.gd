@@ -67,9 +67,9 @@ var map3d_bake: Dictionary = {}
 ## data/graphics_quality.csv rows keyed by tier (low/medium/high/ultra): the
 ## 3D map's graphics tiers (Map3DQuality, spec 2026-09-20 §4).
 var graphics_quality: Dictionary = {}
-## data/army_art.csv: piece -> {piece, texture, painting, model, stand_deg, size} — the painted 3D
-## counter a regiment is drawn with and the painting heading its card
-## (MapObjects.army_piece / army_card, owner 2026-09-15).
+## data/army_art.csv: piece -> {piece, stand_deg, size, stride_m, rank_depth} —
+## how a regiment's 3D piece stands and walks (MapObjects.army_piece); its
+## model and its card's painting are GameArt's tables (owner 2026-10-02).
 var army_art: Dictionary = {}
 ## data/army_terrain_biomes.csv: biome id -> the terrain a regiment on it
 ## stands on (ArmySystem.terrain_of, owner 2026-09-17).
@@ -152,14 +152,13 @@ var ledger_static_nodes: Array = []
 ## data/ledger_static_links.csv: single edges written down — {link_id, from,
 ## to, flow (-1 when blank), note}; the link type's row names the reader `static`.
 var ledger_static_links: Array = []
-## data/courier_art.csv: kind -> its row (model, painting, size).
+## data/courier_art.csv: kind -> its row (size, stride_m); its model and its
+## painting are GameArt's tables.
 var courier_art: Dictionary = {}
 ## data/intel_facts.csv: key -> {label, round_to, tiers} (spec 2026-09-28 §1).
 var intel_facts: Dictionary = {}
 ## data/spy_difficulty.csv: key -> per mille added to a spy's quality roll.
 var spy_difficulty: Dictionary = {}
-## data/courier_paintings.csv: a courier state's painting — foul, delivered ("" until installed).
-var courier_paintings: Dictionary = {}
 ## data/road_speed.csv: key -> per mille (road, trail, offroad, sea, tier_<tier>).
 var road_speed: Dictionary = {}
 ## data/weather.csv: kind -> {speed_permille, icon, label, and the look: overcast,
@@ -627,7 +626,7 @@ func _load(dir: String) -> bool:
 	if not _load_if_present("res://data/graphics_quality.csv", ["tier", "render_scale"],
 			func(r): graphics_quality[String(r["tier"])] = r):
 		return false
-	if not _load_if_present(dir + "/army_art.csv", ["piece", "texture", "painting"],
+	if not _load_if_present(dir + "/army_art.csv", ["piece", "stand_deg"],
 			func(r): army_art[String(r["piece"])] = r):
 		return false
 	if not _load_if_present(dir + "/army_terrain_biomes.csv", ["biome_id", "terrain"],
@@ -698,7 +697,7 @@ func _load(dir: String) -> bool:
 				"ledger_type": String(r["flow_type"]) if String(r["ledger_type"]) == "" \
 					else String(r["ledger_type"])}):
 		return false
-	if not _load_if_present(dir + "/courier_art.csv", ["kind", "model", "painting", "size"],
+	if not _load_if_present(dir + "/courier_art.csv", ["kind", "size"],
 			func(r): courier_art[String(r["kind"])] = r):
 		return false
 	if not _load_if_present(dir + "/road_speed.csv", ["key", "permille"],
@@ -721,9 +720,6 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/spy_difficulty.csv", ["key", "permille"],
 			func(r): spy_difficulty[String(r["key"])] = int(r["permille"])):
-		return false
-	if not _load_if_present(dir + "/courier_paintings.csv", ["key", "texture"],
-			func(r): courier_paintings[String(r["key"])] = String(r["texture"])):
 		return false
 	if not _load_if_present(dir + "/army_orders.csv", ["action_code", "label", "hint"],
 			func(r): army_orders.append({"action_code": String(r["action_code"]),

@@ -41,8 +41,7 @@ func open(m: Dictionary) -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.text = "%s: %s" % [String(f["label"]), Intel.text_of(f)]
 		%ReportFacts.add_child(l)
-	var art := String((Game.data.courier_art.get("spy", {}) as Dictionary).get("painting", ""))
-	var tex: Texture2D = UiPalette.load_art(art) if art != "" else null
+	var tex := GameArt.table(GameArt.COURIER_PAINTINGS).of("spy") as Texture2D
 	%Painting.texture = tex
 	%Painting.visible = tex != null
 	visible = true

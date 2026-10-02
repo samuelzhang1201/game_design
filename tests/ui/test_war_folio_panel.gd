@@ -325,7 +325,7 @@ func test_playing_a_clip_loops_a_copy_never_the_shared_animation() -> void:
 		if n.to_upper().ends_with("ATTACK"):
 			attack = n
 	assert_ne(attack, "", "the cavalry model has an ATTACK clip")
-	var path := String(Game.data.army_art["cavalry"]["model"])
+	var path := GameArt.path(GameArt.ARMY_MODELS, "cavalry")
 	var fresh := (load(path) as PackedScene).instantiate() as Node3D
 	var shared := Map3DUnits.find_anim(fresh).get_animation(attack)
 	var was := shared.loop_mode

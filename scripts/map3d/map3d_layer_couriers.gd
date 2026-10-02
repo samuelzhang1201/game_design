@@ -267,7 +267,7 @@ func _piece_of(c: Dictionary) -> Dictionary:
 	if _pieces.has(id):
 		return _pieces[id]
 	var art: Dictionary = ctx.repo.courier_art.get(String(c["kind"]), {})
-	var path := String(art.get("model", ""))
+	var path := GameArt.path(GameArt.COURIER_MODELS, String(c["kind"]))
 	var scene := _scene(path) if path != "" else null
 	if scene == null:
 		return {}

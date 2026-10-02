@@ -169,7 +169,7 @@ func test_the_action_is_matched_on_the_tail_of_the_clip_name() -> void:
 
 func test_every_arm_that_should_have_a_model_names_one_that_exists() -> void:
 	for piece: String in repo.army_art:
-		var path := String((repo.army_art[piece] as Dictionary).get("model", ""))
+		var path := GameArt.path(GameArt.ARMY_MODELS, piece)
 		if path == "":
 			continue   # a fleet keeps the flat counter
 		assert_true(ResourceLoader.exists(path), "%s names a model that is not there: %s" % [piece, path])

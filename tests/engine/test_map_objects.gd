@@ -182,7 +182,7 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 		else:
 			assert_eq(piece, MapObjects.regiment_arm(Game.data, r))
 		assert_true(Game.data.army_art.has(piece), "%s has art" % piece)
-		assert_eq(String(card["painting"]), String(Game.data.army_art[piece]["painting"]))
+		assert_eq(String(card["painting"]), GameArt.path(GameArt.ARMY_PAINTINGS, piece))
 		var keys: Dictionary = {}
 		for st: Dictionary in card["stats"]:
 			keys[String(st["key"])] = String(st["text"])
@@ -195,13 +195,8 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 		checked += 1
 	assert_gt(checked, 0)
 	assert_true(MapObjects.army_card(Game.data, "no_such_regiment").is_empty())
-	for row: Dictionary in Game.data.army_art.values():
-		# a piece may have no counter art (the Hunyuan renders were deleted 2026-09-29):
-		# the counter draws its glyph; but art that is named must be installed
-		var tex := String(row["texture"])
-		if tex != "":
-			assert_true(ResourceLoader.exists(tex), "%s's piece is installed" % row["piece"])
-		assert_true(ResourceLoader.exists(String(row["painting"])), "%s's card painting is installed" % row["piece"])
+	for piece: String in Game.data.army_art:
+		assert_true(GameArt.table(GameArt.ARMY_PAINTINGS).of(piece) is Texture2D, "%s's card painting is installed" % piece)
 
 ## The card of a player's regiment reads its state (owner 2026-09-17): the
 ## ground, morale, the wounded beside the headcount, the month's recovery

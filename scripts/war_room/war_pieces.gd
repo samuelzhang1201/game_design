@@ -278,7 +278,7 @@ func _build(state: GameState, code: String, naval: bool) -> Node3D:
 func _fill_figures(state: GameState, code: String, reg: Dictionary, into: Node3D) -> void:
 	var arm := MapObjects.regiment_arm(_repo, reg)
 	var art: Dictionary = _repo.army_art.get(arm, {})
-	var model := String(art.get("model", ""))
+	var model := GameArt.path(GameArt.ARMY_MODELS, arm)
 	if model == "" or not ResourceLoader.exists(model):
 		return
 	if not _scenes.has(model):

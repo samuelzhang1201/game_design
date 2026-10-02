@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://bfif74m8wdatx"]
+
+[ext_resource type="Texture2D" uid="uid://jvbo5rjx7tsp" path="res://assets/2D/paintings/armies/infantry.png" id="1_88ddi"]
+[ext_resource type="Texture2D" uid="uid://cnne6dtu813b8" path="res://assets/2D/paintings/armies/archers.png" id="2_lywa6"]
+[ext_resource type="Texture2D" uid="uid://dw176wrb2scso" path="res://assets/2D/paintings/armies/cavalry.png" id="3_vnnhe"]
+[ext_resource type="Texture2D" uid="uid://cwrjpu75c2vfd" path="res://assets/2D/paintings/armies/artillery.png" id="4_1k65g"]
+[ext_resource type="Texture2D" uid="uid://diwt0dreungof" path="res://assets/2D/paintings/armies/fleet.png" id="5_wnlwr"]
+[ext_resource type="Texture2D" uid="uid://dfrhajllw4lct" path="res://assets/2D/paintings/armies/royal.png" id="6_s66fj"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="7_yjuvn"]
+
+[resource]
+script = ExtResource("7_yjuvn")
+art = Dictionary[String, Resource]({
+"archers": ExtResource("2_lywa6"),
+"artillery": ExtResource("4_1k65g"),
+"cavalry": ExtResource("3_vnnhe"),
+"fleet": ExtResource("5_wnlwr"),
+"infantry": ExtResource("1_88ddi"),
+"royal": ExtResource("6_s66fj")
+})

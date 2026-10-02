@@ -147,9 +147,8 @@ func _place(code: String, piece: Dictionary) -> void:
 		float(piece["half_w_m"]) * k, s_px)
 
 
-## Per FRAME: draw every piece where the day's share has it on its day's
-## march (_day_of) and turn it toward its facing. True when any piece moved,
-## so the view redraws the headcount chips hanging over them.
+## Per FRAME: draw every piece where the day's share has it on its march
+## (_day_of), turned to its facing; true when one moved (the chips redraw).
 func step(delta: float) -> bool:
 	if ctx == null or not shown:
 		return false
@@ -239,8 +238,9 @@ func _piece_of(code: String) -> Dictionary:
 	if _pieces.has(code):  # its strength crossed a tier: the formation is built anew
 		(_pieces[code]["node"] as Node3D).queue_free()
 		_pieces.erase(code)
-	var art: Dictionary = ctx.repo.army_art.get(MapObjects.army_piece(ctx.repo, reg), {})
-	var path := String(art.get("model", ""))
+	var piece := MapObjects.army_piece(ctx.repo, reg)
+	var art: Dictionary = ctx.repo.army_art.get(piece, {})
+	var path := GameArt.path(GameArt.ARMY_MODELS, piece)
 	var scene := _scene(path) if path != "" else null
 	if scene == null:
 		return {}

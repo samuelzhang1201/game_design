@@ -47,8 +47,8 @@ static func weather_short(repo: DataRepository, kind: String) -> String:
 ## rider to courier_paint_foul_permille or less and that art is installed,
 ## else the kind's own (spec 2026-09-28-courier-art §4).
 static func painting_for(repo: DataRepository, kind: String, weather: String) -> String:
-	var own := String((repo.courier_art.get(kind, {}) as Dictionary).get("painting", ""))
-	var foul := String(repo.courier_paintings.get("foul", ""))
+	var own := GameArt.path(GameArt.COURIER_PAINTINGS, kind)
+	var foul := GameArt.path(GameArt.COURIER_PAINTINGS, "foul")
 	var row: Dictionary = repo.weather_kinds.get(weather, {})
 	if foul != "" and not row.is_empty() \
 			and int(row.get("speed_permille", 1000)) <= int(repo.bal("courier_paint_foul_permille")):

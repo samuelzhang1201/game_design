@@ -292,8 +292,6 @@ func test_the_desk_and_the_notes_write_in_the_letters_ink() -> void:
 
 func test_a_receipt_on_the_desk_wears_the_delivered_painting() -> void:
 	Game.start_campaign(42)
-	var saved := String(Game.data.courier_paintings.get("delivered", ""))
-	Game.data.courier_paintings["delivered"] = "res://icon.png"
 	var subj := MissiveLog.subject("point", "", -1, Vector2(500, 300))
 	var receipt := MissiveLog.add(Game.data, Game.state,
 		MissiveLog.make("receipt", "credible", 3, subj, "Receipt", []))
@@ -309,7 +307,6 @@ func test_a_receipt_on_the_desk_wears_the_delivered_painting() -> void:
 	assert_true(ms.desk_painting().clip_contents, "a covered painting never spills out of its box")
 	ms.select(monthly)
 	assert_false(ms.desk_painting().visible, "other letters show none")
-	Game.data.courier_paintings["delivered"] = saved
 
 
 ## Desk painting aspect fix: the box was a fixed 150 design px tall
@@ -319,8 +316,6 @@ func test_a_receipt_on_the_desk_wears_the_delivered_painting() -> void:
 ## height now follows its OWN width at ui_missive_desk_painting_aspect.
 func test_the_desk_paintings_height_follows_its_width_at_the_aspect_key() -> void:
 	Game.start_campaign(42)
-	var saved := String(Game.data.courier_paintings.get("delivered", ""))
-	Game.data.courier_paintings["delivered"] = "res://icon.png"
 	var subj := MissiveLog.subject("point", "", -1, Vector2(500, 300))
 	var receipt := MissiveLog.add(Game.data, Game.state,
 		MissiveLog.make("receipt", "credible", 3, subj, "Receipt", []))
@@ -337,7 +332,6 @@ func test_the_desk_paintings_height_follows_its_width_at_the_aspect_key() -> voi
 	assert_almost_eq(painting.size.y, painting.size.x / aspect, 1.0,
 		"the box's height (%.1f) follows its own width (%.1f) at the aspect key (%.2f)" %
 			[painting.size.y, painting.size.x, aspect])
-	Game.data.courier_paintings["delivered"] = saved
 
 
 ## Final review M1 (LEDGER M3): an audit letter is about the LEDGER's books,

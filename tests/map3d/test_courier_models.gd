@@ -7,7 +7,7 @@ const SuiteData := preload("res://tests/suite_data.gd")
 func test_every_courier_model_gallops_and_idles() -> void:
 	var repo := SuiteData.repo()
 	for kind: String in repo.courier_art:
-		var path := String((repo.courier_art[kind] as Dictionary)["model"])
+		var path := GameArt.path(GameArt.COURIER_MODELS, kind)
 		if path.ends_with("cavalry.glb"):
 			continue  # a row still on the stand-in (the spy until Task 8)
 		assert_true(ResourceLoader.exists(path), path)

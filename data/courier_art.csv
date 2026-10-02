@@ -1,4 +1,4 @@
-kind,model,painting,size,stride_m,notes
-ordinary,res://assets/3D/units/courier/courier.glb,res://assets/2D/paintings/couriers/ordinary.png,0.7,2.338,"the courier: the owner's Tripo 3D model of design C4 zimage_s2 (spec 2026-09-28-courier-art §2), rigged by tools/units3d/courier_build.py"
-secret,res://assets/3D/units/courier/courier.glb,res://assets/2D/paintings/couriers/secret.png,0.7,2.338,"the courier: the owner's Tripo 3D model of design C4 zimage_s2 (spec 2026-09-28-courier-art §2), rigged by tools/units3d/courier_build.py"
-spy,res://assets/3D/units/cavalry/cavalry.glb,res://assets/2D/paintings/couriers/spy.png,0.7,0,the same INTERIM stand-in until sub-project D
+kind,size,stride_m,notes
+ordinary,0.7,2.338,"the courier: the owner's Tripo 3D model of design C4 zimage_s2 (spec 2026-09-28-courier-art §2), rigged by tools/units3d/courier_build.py"
+secret,0.7,2.338,"the courier: the owner's Tripo 3D model of design C4 zimage_s2 (spec 2026-09-28-courier-art §2), rigged by tools/units3d/courier_build.py"
+spy,0.7,0,the same INTERIM stand-in until sub-project D

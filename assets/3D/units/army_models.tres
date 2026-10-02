@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://murh1637vv8w"]
+
+[ext_resource type="PackedScene" uid="uid://l4or76m7axlc" path="res://assets/3D/units/infantry/infantry.glb" id="1_33jbd"]
+[ext_resource type="PackedScene" uid="uid://dhnqk36nm38fi" path="res://assets/3D/units/cavalry/cavalry.glb" id="2_0vt4k"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="3_y4xoy"]
+
+[resource]
+script = ExtResource("3_y4xoy")
+art = Dictionary[String, Resource]({
+"archers": ExtResource("1_33jbd"),
+"artillery": ExtResource("1_33jbd"),
+"cavalry": ExtResource("2_0vt4k"),
+"infantry": ExtResource("1_33jbd"),
+"royal": ExtResource("2_0vt4k")
+})

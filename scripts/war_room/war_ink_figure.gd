@@ -85,7 +85,7 @@ func _sync_render() -> void:
 ## A drill that was playing resumes on the new model when it has the clip.
 func show_arm(repo: DataRepository, arm: String) -> PackedStringArray:
 	_drop_model()
-	var path := String((repo.army_art.get(arm, {}) as Dictionary).get("model", ""))
+	var path := GameArt.path(GameArt.ARMY_MODELS, arm)
 	if not WarFolio.modelled(repo, arm) or path == "" or not ResourceLoader.exists(path):
 		_playing = ""
 		_show_glyph(repo, arm)
