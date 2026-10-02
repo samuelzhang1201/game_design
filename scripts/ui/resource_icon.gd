@@ -18,7 +18,7 @@ const SIDE := 24.0
 @export var key := "":
 	set(v):
 		key = v
-		if is_inside_tree():
+		if is_inside_tree() and not Engine.is_editor_hint():
 			tooltip_text = tooltip_of(key)
 		queue_redraw()
 ## The glyph's ink, for a key with no art.
@@ -43,8 +43,12 @@ func _init() -> void:
 	if mouse_filter == Control.MOUSE_FILTER_STOP:
 		mouse_filter = Control.MOUSE_FILTER_PASS
 
+## The key's tooltip, unless the scene gives the icon its own (the top bar's
+## crown says whose purse it marks); never written in the editor, where it
+## would land in the scene.
 func _ready() -> void:
-	tooltip_text = tooltip_of(key)
+	if tooltip_text == "" and not Engine.is_editor_hint():
+		tooltip_text = tooltip_of(key)
 	queue_redraw()
 
 ## The tooltip a key carries: "Label — what it means", or "" for no row.

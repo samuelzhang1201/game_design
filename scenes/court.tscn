@@ -1,22 +1,24 @@
 [gd_scene format=3 uid="uid://c383jbakpc7d8"]
 
 [ext_resource type="Script" uid="uid://bkm0g1bago8lo" path="res://scripts/ui/court_screen.gd" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/top_bar.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://cbqhq1qgdyef8" path="res://scenes/top_bar.tscn" id="2"]
 [ext_resource type="Script" uid="uid://gl63edwhrq2g" path="res://scripts/ui/war_table/war_table_backdrop.gd" id="2_2768l"]
 [ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="3_i1kge"]
 [ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="3_rnrgf"]
 [ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/map_sheet.tres" id="4_i5cvy"]
 [ext_resource type="Script" uid="uid://dq7am4164rjll" path="res://scripts/ui/spy_order_menu.gd" id="4_sy0rd"]
 [ext_resource type="Theme" path="res://assets/2D/ui/theme/paper_theme.tres" id="6_c6ra0"]
-[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_d0d5a"]
+[ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_d0d5a"]
 [ext_resource type="Script" uid="uid://bbrp2ldvjuip0" path="res://scripts/ui/war_table/table_compass.gd" id="8_4enwl"]
 [ext_resource type="Texture2D" uid="uid://bd7f6xayv2ffr" path="res://assets/2D/ui/compass/compass.png" id="9_lc033"]
 [ext_resource type="StyleBox" uid="uid://cvlyoynpedxif" path="res://assets/2D/ui/panels/styles/leather_column.tres" id="10_revm4"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="11_rnrgf"]
 [ext_resource type="Script" uid="uid://ce7myfubis2yw" path="res://scripts/ui/war_table/wax_seal.gd" id="13_cn0p0"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_b3dk5"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_i5cvy"]
 
 [node name="CourtScreen" type="Control" unique_id=626180433]
+editor_description = "Under balance ui_war_table 0 the screen strips the table, compass and seal and lays out the 2026-09-28 leather in code (_dress_leather)."
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -49,6 +51,7 @@ vignette = Color(0, 0, 0, 0.17254902)
 
 [node name="MapPanel" type="PanelContainer" parent="." unique_id=1468847440]
 unique_name_in_owner = true
+editor_description = "Its right edge is brought in to council_gap (on the screen's root) short of SidePanel while the council column is open (ScreenLayout.open_right); every other place and look is this scene's. The 3D map is put inside it at runtime."
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -60,10 +63,11 @@ theme_override_styles/panel = ExtResource("4_i5cvy")
 
 [node name="TopBar" parent="." unique_id=1122720887 instance=ExtResource("2")]
 unique_name_in_owner = true
-anchors_preset = 0
+layout_mode = 1
 
 [node name="LogPanel" type="PanelContainer" parent="." unique_id=290478157]
 unique_name_in_owner = true
+editor_description = "At runtime its cards write in paper ink (WarTable.ink_column) and its paper is drawn only as tall as the realm's card (WarTable.fit_report); the cards themselves are added in code."
 layout_mode = 0
 anchor_bottom = 1.0
 offset_left = 12.0
@@ -80,6 +84,7 @@ theme_override_constants/separation = 5
 
 [node name="TableCompass" type="Control" parent="." unique_id=1743797370 node_paths=PackedStringArray("column")]
 unique_name_in_owner = true
+editor_description = "The wheel turns with the clock and its needle with the map at runtime; in the editor it lies at the strip's foot."
 anchors_preset = 0
 anchor_bottom = 1.0
 offset_left = 12.0
@@ -92,6 +97,7 @@ art = ExtResource("9_lc033")
 
 [node name="SidePanel" type="PanelContainer" parent="." unique_id=1631763932]
 unique_name_in_owner = true
+editor_description = "The council column: shown by the seal, hidden by Leave the Council. Its record lines and suggestions are added at runtime."
 visible = false
 layout_mode = 0
 anchor_left = 1.0
@@ -111,11 +117,15 @@ theme_override_constants/separation = 4
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
-text = "LEAVE THE COUNCIL"
+theme_override_fonts/font = ExtResource("11_rnrgf")
+theme_override_font_sizes/font_size = 14
+text = "Leave the Council"
 
 [node name="LogHeader" type="Label" parent="SidePanel/SVBox" unique_id=1746705682]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 14
 text = "THE COURT RECORD"
 
 [node name="LogScroll" type="ScrollContainer" parent="SidePanel/SVBox" unique_id=2097251120]
@@ -141,6 +151,8 @@ layout_mode = 2
 [node name="SideHeader" type="Label" parent="SidePanel/SVBox" unique_id=1246033178]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 14
 text = "THE COUNCIL ADVISES"
 autowrap_mode = 3
 
@@ -159,14 +171,16 @@ script = ExtResource("4_sy0rd")
 
 [node name="CouncilHandle" type="Button" parent="." unique_id=1962685662]
 unique_name_in_owner = true
+editor_description = "Grows leftward and downward with its tag: who waits to be heard (WaxSeal.refresh) and their miniatures are set at runtime. Hidden while the council column is open."
 custom_minimum_size = Vector2(137, 96)
 layout_mode = 0
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -184.0
+offset_left = -204.0
 offset_top = 80.0
 offset_right = -25.0
 offset_bottom = 176.0
+grow_horizontal = 0
 tooltip_text = "Go before your council"
 focus_mode = 0
 theme_override_colors/font_color = Color(0, 0, 0, 0)
@@ -174,12 +188,12 @@ theme_override_colors/font_focus_color = Color(0, 0, 0, 0)
 theme_override_colors/font_pressed_color = Color(0, 0, 0, 0)
 theme_override_colors/font_hover_color = Color(0, 0, 0, 0)
 theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 0)
-theme_override_styles/normal = SubResource("StyleBoxEmpty_b3dk5")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_b3dk5")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_b3dk5")
-theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_b3dk5")
-theme_override_styles/disabled = SubResource("StyleBoxEmpty_b3dk5")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_b3dk5")
+theme_override_styles/normal = SubResource("StyleBoxEmpty_i5cvy")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_i5cvy")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_i5cvy")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_i5cvy")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_i5cvy")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_i5cvy")
 text = "ENTER THE COUNCIL"
 flat = true
 script = ExtResource("13_cn0p0")

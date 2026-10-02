@@ -69,10 +69,6 @@ func _ready() -> void:
 	Game.state_changed.connect(refresh)
 	Game.report_ready.connect(func(_r: TickReport) -> void: refresh())
 	refresh()
-	# The bar is exactly as tall as its content, so the columns below can
-	# start under it instead of guessing (user report 2026-09-09: the left
-	# column overlapped the header).
-	offset_bottom = bar_height()
 
 ## The leather chrome (balance ui_war_table 0): the 2026-09-28 bar — a leather
 ## strip, the arms beside the date, the clock and Menu as dark chips wearing

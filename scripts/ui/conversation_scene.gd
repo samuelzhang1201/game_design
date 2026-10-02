@@ -152,6 +152,7 @@ func _ready() -> void:
 		if is_inside_tree():
 			_refresh_location())
 	_refresh_location()
+	_map_right = %MapPanel.offset_right
 	_set_right("")
 	_refresh_left()
 
@@ -160,6 +161,7 @@ func _ready() -> void:
 ## COUNCIL the screen's primary button. The audience window, the popup and
 ## the council column are leather either way (scenes/conversation.tscn).
 func _dress_leather() -> void:
+	_leather = true
 	%Bg.color = UiPalette.BG_SCREEN
 	%Bg.z_index = 0
 	%Table.queue_free()
@@ -179,6 +181,13 @@ func _dress_leather() -> void:
 ## for this slot (owner ruling 2026-09-10: left = facts, right = people).
 var _right := ""
 var _handle: Button
+## The table between the map and the council column while it is open, design
+## px — the scene's (owner 2026-10-02: the layout is edited in the editor).
+@export var council_gap := 8.0
+## The map's right edge with the council column shut, from the scene.
+var _map_right := 0.0
+## The 2026-09-28 leather (ui_war_table 0) lays itself out in code.
+var _leather := false
 
 func _set_right(mode: String) -> void:
 	_right = mode
@@ -238,10 +247,16 @@ func map3d_view() -> Map3DView:
 ## itself moved into the audience window, so the map — and the window over
 ## it — gets the room back. The audience layer lies exactly over the map.
 func _layout() -> void:
-	var top: float = %TopBar.bar_height() + 3.0
-	ScreenLayout.apply(top, %MinisterPanel, %MapPanel, [%DialoguePanel], _right != "",
-		ScreenLayout.TALK_WIDTH)
-	ScreenLayout.place_handle(_handle, top)
+	if _leather:
+		var top: float = %TopBar.bar_height() + 3.0
+		ScreenLayout.apply(top, %MinisterPanel, %MapPanel, [%DialoguePanel], _right != "",
+			ScreenLayout.TALK_WIDTH)
+		ScreenLayout.place_handle(_handle, top)
+	else:
+		# where the scene puts them (owner 2026-10-02), the map's right edge
+		# brought in while the council is open
+		ScreenLayout.open_right(%MapPanel, _map_right, %DialoguePanel, council_gap, _right != "")
+	# the audience window lies exactly over the map, wherever it is
 	var map: Control = %MapPanel
 	var layer: Control = %AudienceLayer
 	layer.anchor_left = map.anchor_left

@@ -1,18 +1,18 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://cbqhq1qgdyef8"]
 
-[ext_resource type="Script" path="res://scripts/ui/top_bar.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/ui/heraldic_shield.gd" id="2_bvebp"]
-[ext_resource type="Texture2D" path="res://assets/2D/arms/beria/seat_walbover.png" id="3_coqo5"]
-[ext_resource type="Script" path="res://scripts/ui/war_table/brass_dial.gd" id="4_65lof"]
+[ext_resource type="Script" uid="uid://cldctgj1xhk1e" path="res://scripts/ui/top_bar.gd" id="1"]
+[ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="2_bvebp"]
+[ext_resource type="Texture2D" uid="uid://bx6cc1qqqdwns" path="res://assets/2D/arms/beria/seat_walbover.png" id="3_coqo5"]
+[ext_resource type="Script" uid="uid://h5h3yt2h3rjo" path="res://scripts/ui/war_table/brass_dial.gd" id="4_65lof"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_bold.tres" id="5_k4d5w"]
 [ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_normal.tres" id="7_rjjja"]
 [ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_pressed.tres" id="8_tb6ui"]
 [ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_hover.tres" id="9_hl2lw"]
 [ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_hover_pressed.tres" id="10_b6fhy"]
 [ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/tally_board.tres" id="11_mc1i8"]
-[ext_resource type="Script" path="res://scripts/ui/resource_icon.gd" id="12_f3mk8"]
+[ext_resource type="Script" uid="uid://xdngnt6rq1do" path="res://scripts/ui/resource_icon.gd" id="12_f3mk8"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="13_sr6fu"]
-[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/menu.png" id="14_k14br"]
+[ext_resource type="Texture2D" uid="uid://b11n6evd7paun" path="res://assets/2D/icons/resources/menu.png" id="14_k14br"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_aabl5"]
 content_margin_left = 12.0
@@ -127,9 +127,12 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
 [node name="TopBar" type="Control" unique_id=1089395372]
-anchors_preset = 0
+editor_description = "Its height is the bar's own; the screens lay out under the scene's top. Under balance ui_war_table 0 the bar puts the 2026-09-28 leather on in code (_dress_leather)."
+layout_mode = 3
+anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 64.0
+grow_horizontal = 2
 script = ExtResource("1")
 
 [node name="Bar" type="PanelContainer" parent="." unique_id=418093736]
@@ -160,6 +163,7 @@ texture = ExtResource("3_coqo5")
 
 [node name="DateDial" type="Control" parent="Bar/Row" unique_id=932564032]
 unique_name_in_owner = true
+editor_description = "The day on the dial and the season beside it are set at runtime."
 custom_minimum_size = Vector2(52, 52)
 layout_mode = 2
 size_flags_vertical = 4
@@ -180,6 +184,7 @@ text = "Spring · Year 1"
 
 [node name="Clock" type="HBoxContainer" parent="Bar/Row" unique_id=392958445]
 unique_name_in_owner = true
+editor_description = "Each stud sets the clock to the speed in its name (Clock_<speed>); the running one is lit at runtime."
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 3
@@ -289,6 +294,7 @@ theme_override_styles/panel = ExtResource("11_mc1i8")
 
 [node name="Purses" type="GridContainer" parent="Bar/Row/TallyBoard" unique_id=1005042893]
 unique_name_in_owner = true
+editor_description = "The figures, their monthly changes, the house's name and arms are filled at runtime (TopBar.refresh); what the editor shows is a preview of the opening month."
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/h_separation = 18
@@ -314,9 +320,9 @@ key = "crown"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(104, 0)
 layout_mode = 2
-theme_type_variation = &"HeaderLabel"
 tooltip_text = "The crown's — the realm's treasury and stores, which pay the court and buy land across the border"
 mouse_filter = 1
+theme_type_variation = &"HeaderLabel"
 theme_override_colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
 theme_override_font_sizes/font_size = 12
 text = "Crown"
@@ -329,7 +335,6 @@ theme_override_constants/separation = 4
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
-tooltip_text = "Crown gold — Gold in the CROWN's treasury — the realm's, not your house's. The crown's share of the realm's taxes fills it; salaries, the court and your orders empty it; it alone buys land across the border."
 mouse_filter = 1
 script = ExtResource("12_f3mk8")
 key = "treasury"
@@ -357,7 +362,6 @@ theme_override_constants/separation = 4
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
-tooltip_text = "Strategic goods — Strategic goods, in gold: iron, horses, arms and ships. Your provinces fill them each month; the levy and the campaign spend them — the army goes as far as they stretch."
 mouse_filter = 1
 script = ExtResource("12_f3mk8")
 key = "strategic"
@@ -385,7 +389,6 @@ theme_override_constants/separation = 4
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
-tooltip_text = "Civil goods — Civil goods, in gold: food, timber, cloth and wares. The harvest and your provinces fill them each month; the court eats from them and building spends them."
 mouse_filter = 1
 script = ExtResource("12_f3mk8")
 key = "grain"
@@ -426,9 +429,9 @@ texture = ExtResource("3_coqo5")
 unique_name_in_owner = true
 custom_minimum_size = Vector2(104, 0)
 layout_mode = 2
-theme_type_variation = &"HeaderLabel"
 tooltip_text = "Your house's own — what your provinces pay you as their lord, yours to spend: it buys and builds manors inside the realm"
 mouse_filter = 1
+theme_type_variation = &"HeaderLabel"
 theme_override_colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
 theme_override_font_sizes/font_size = 12
 text = "House Valorin"
@@ -442,7 +445,6 @@ modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
-tooltip_text = "Your gold — Gold in your OWN house's purse, apart from the crown's treasury. Your own provinces' manors fill it each month; it buys and builds manors inside the realm."
 mouse_filter = 1
 script = ExtResource("12_f3mk8")
 key = "lord_gold"
@@ -471,7 +473,6 @@ modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
-tooltip_text = "Your strategic goods — Strategic goods your own provinces make, yours to spend as their lord."
 mouse_filter = 1
 script = ExtResource("12_f3mk8")
 key = "lord_strategic"
@@ -500,7 +501,6 @@ modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
-tooltip_text = "Your civil goods — Civil goods your own provinces make — timber, cloth and food for building on your own manors."
 mouse_filter = 1
 script = ExtResource("12_f3mk8")
 key = "lord_civil"
@@ -548,13 +548,13 @@ icon = ExtResource("14_k14br")
 unique_name_in_owner = true
 visible = false
 layout_mode = 0
-theme_type_variation = &"HeaderLabel"
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -60.0
 offset_top = 28.0
 offset_right = -4.0
 offset_bottom = 40.0
+theme_type_variation = &"HeaderLabel"
 theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
 theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("StyleBoxFlat_aru37")

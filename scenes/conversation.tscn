@@ -9,7 +9,7 @@
 [ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/map_sheet.tres" id="4_qiomc"]
 [ext_resource type="Script" uid="uid://dq7am4164rjll" path="res://scripts/ui/spy_order_menu.gd" id="5_spy01"]
 [ext_resource type="Theme" path="res://assets/2D/ui/theme/paper_theme.tres" id="6_s1f5y"]
-[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_qawe0"]
+[ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_qawe0"]
 [ext_resource type="Script" uid="uid://bbrp2ldvjuip0" path="res://scripts/ui/war_table/table_compass.gd" id="8_me260"]
 [ext_resource type="Texture2D" uid="uid://bd7f6xayv2ffr" path="res://assets/2D/ui/compass/compass.png" id="9_ljhws"]
 [ext_resource type="StyleBox" uid="uid://dkmwlf8acscqq" path="res://assets/2D/ui/panels/styles/leather_window.tres" id="10_exqs4"]
@@ -89,6 +89,7 @@ corner_radius_bottom_left = 3
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_mmkcl"]
 
 [node name="ConversationScene" type="Control" unique_id=1715265354]
+editor_description = "Under balance ui_war_table 0 the screen strips the table, compass and seal and lays out the 2026-09-28 leather in code (_dress_leather)."
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -121,6 +122,7 @@ vignette = Color(0, 0, 0, 0.17254902)
 
 [node name="MapPanel" type="PanelContainer" parent="." unique_id=1804200223]
 unique_name_in_owner = true
+editor_description = "Its right edge is brought in to council_gap (on the screen's root) short of DialoguePanel while the council column is open (ScreenLayout.open_right); every other place and look is this scene's. The 3D map is put inside it at runtime."
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -135,6 +137,7 @@ unique_name_in_owner = true
 
 [node name="MinisterPanel" type="PanelContainer" parent="." unique_id=1501378524]
 unique_name_in_owner = true
+editor_description = "At runtime its cards write in paper ink (WarTable.ink_column) and its paper is drawn only as tall as the realm's card (WarTable.fit_report); the cards themselves are added in code."
 layout_mode = 0
 anchor_bottom = 1.0
 offset_left = 12.0
@@ -151,6 +154,7 @@ theme_override_constants/separation = 4
 
 [node name="TableCompass" type="Control" parent="." unique_id=297773124 node_paths=PackedStringArray("column")]
 unique_name_in_owner = true
+editor_description = "The wheel turns with the clock and its needle with the map at runtime; in the editor it lies at the strip's foot."
 anchors_preset = 0
 anchor_bottom = 1.0
 offset_left = 12.0
@@ -163,6 +167,7 @@ art = ExtResource("9_ljhws")
 
 [node name="AudienceLayer" type="Control" parent="." unique_id=732824053]
 unique_name_in_owner = true
+editor_description = "Laid exactly over MapPanel at runtime (it follows the map when the council column opens) and shown only while someone speaks or an event stands; the speaker, words, portrait, chips, skills and replies are filled at runtime."
 anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -472,6 +477,7 @@ text = "Wave them on"
 
 [node name="DialoguePanel" type="PanelContainer" parent="." unique_id=1370593479]
 unique_name_in_owner = true
+editor_description = "The council column: shown by the seal, hidden by Leave the Council. The room, its occupants and the record are filled at runtime."
 visible = false
 layout_mode = 0
 anchor_left = 1.0
@@ -618,6 +624,7 @@ script = ExtResource("5_spy01")
 
 [node name="CouncilHandle" type="Button" parent="." unique_id=1006859578]
 unique_name_in_owner = true
+editor_description = "Grows leftward and downward with its tag: who waits to be heard (WaxSeal.refresh) and their miniatures are set at runtime. Hidden while the council column is open."
 custom_minimum_size = Vector2(137, 96)
 layout_mode = 0
 anchor_left = 1.0
@@ -626,6 +633,7 @@ offset_left = -204.0
 offset_top = 80.0
 offset_right = -25.0
 offset_bottom = 176.0
+grow_horizontal = 0
 tooltip_text = "Go before your council"
 focus_mode = 0
 theme_override_colors/font_color = Color(0, 0, 0, 0)

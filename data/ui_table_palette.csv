@@ -8,7 +8,6 @@ fill,#9A7433,a bar's fill on paper (old gold one shade deeper than on leather)
 good,#3E6B2F,a gain written on paper
 bad,#A8321E,a loss written on paper
 paper,#E6D6B0,the colour a paper surface multiplies its texture by
-sheet,#DDCBA2,the map sheet's vellum (a shade deeper than the report)
 paper_rule,#3B2A1B,the ink rules drawn round the map on the sheet
 brass_light,#F4DB9A,brass (dial / studs / pin / nails): the lit side
 brass_mid,#B08A3E,brass: the body
@@ -21,10 +20,6 @@ board_ink,#F4EAD2,figures on the tally board
 board_label,#C7AE7F,labels (CROWN / HOUSE) on the tally board
 table_ink,#F0E3C4,words written straight on the table (the season and Menu)
 table_ink_soft,#CDBB93,the year line beside the dial
-table_tone,#A0703A22,a warm darkening laid over the oak planks (with alpha)
-light,#FFF2D024,the window's shaft of light across the table (with alpha)
-vignette,#0000002C,the table's darkening toward the far corners (with alpha)
 shadow,#000000,every object's shadow on the table (its alpha is ui_table_shadow_alpha)
 paper_lift,#F6EEDC52,"a pale wash over the report's paper art, so it reads cream rather than ochre (the critic of 2026-10-01: report, slip and sheet sat at one mid-gold value)"
-sheet_lift,#F4EAD440,a paler wash over the map sheet's vellum
 paper_ground,#D2BD90,"the report paper as it reads on screen, for fades that melt a card into the paper (MapDetailPanels scroll and painting fades; sampled from the 2026-10-01 shot)"

@@ -78,6 +78,15 @@ static func apply(top: float, left: Control, map: Control, right_panels: Array,
 		if panel != null:
 			_place(panel, Vector2(1, 0), Vector2(1, 1), -(m + right_width), top, -m, -bottom)
 
+## A screen whose layout is AUTHORED in its scene (owner 2026-10-02: the
+## editor's layout is the game's): the columns, the map, the seal and the
+## right slot keep the places the scene gives them, and opening the slot only
+## brings the map's right edge in to `gap` short of the panel's left edge;
+## `closed_right` is the map's own offset_right from the scene.
+static func open_right(map: Control, closed_right: float, panel: Control, gap: float,
+		open: bool) -> void:
+	map.offset_right = panel.offset_left - gap if open else closed_right
+
 ## The ENTER THE COUNCIL handle: a tab standing on the right edge, its text
 ## running upward, shown only while the right slot is empty.
 static func make_handle(text: String) -> Button:

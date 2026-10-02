@@ -1,4 +1,4 @@
-[gd_resource type="Theme" format=3]
+[gd_resource type="Theme" format=3 uid="uid://b4xbt0npqul2u"]
 
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/header.tres" id="1_on7wr"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_bold.tres" id="2_el5ut"]

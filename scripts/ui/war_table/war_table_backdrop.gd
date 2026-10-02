@@ -10,8 +10,7 @@ extends Control
 
 const ART_PATH := "res://assets/2D/ui/war_table/table_oak.jpg"
 
-## The look, edited on the node (scenes/court.tscn) or, for a screen not yet
-## converted, set from the tables by install().
+## The look, edited on the node (scenes/court.tscn, conversation.tscn).
 @export var texture: Texture2D = null:
 	set(v):
 		texture = v
@@ -44,30 +43,6 @@ const ART_PATH := "res://assets/2D/ui/war_table/table_oak.jpg"
 	set(v):
 		vignette = v
 		queue_redraw()
-
-## Put a table under `screen`'s panels in place of its flat background colour
-## (`bg`, the screen's full-rect ColorRect), or leave the screen as it is when
-## the war table is off. Returns the table, or null.
-static func install(screen: Control, bg: ColorRect) -> WarTableBackdrop:
-	if not UiPalette.war_table():
-		return null
-	var t := WarTableBackdrop.new()
-	t.name = "WarTable"
-	t.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if ResourceLoader.exists(ART_PATH):
-		t.texture = load(ART_PATH)
-	t.tile_px = _num("ui_table_tile_px", 560.0)
-	t.tone = UiPalette.table_color("table_tone", Color(0, 0, 0, 0.2))
-	t.light = UiPalette.table_color("light", Color(1, 1, 1, 0.1))
-	t.light_angle_deg = _num("ui_table_light_angle_deg", 28.0)
-	t.light_width = _num("ui_table_light_width", 0.3)
-	t.light_center = _num("ui_table_light_center", 0.5)
-	t.vignette = UiPalette.table_color("vignette", Color(0, 0, 0, 0.3))
-	screen.add_child(t)
-	screen.move_child(t, bg.get_index() + 1)
-	bg.color = UiPalette.table_color("board", bg.color)
-	return t
 
 func _ready() -> void:
 	resized.connect(queue_redraw)
@@ -122,9 +97,3 @@ func _draw_vignette(r: Rect2) -> void:
 		PackedColorArray([c, clear, clear, c]))
 	draw_polygon(PackedVector2Array([Vector2(r.size.x - band, 0), Vector2(r.size.x, 0), Vector2(r.size.x, r.size.y), Vector2(r.size.x - band, r.size.y)]),
 		PackedColorArray([clear, c, c, clear]))
-
-static func _num(key: String, fallback: float) -> float:
-	var repo := UiPalette.data()
-	if repo != null and repo.balance.has(key):
-		return repo.bal(key)
-	return fallback

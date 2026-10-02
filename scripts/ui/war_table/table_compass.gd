@@ -15,7 +15,7 @@ extends Control
 ## wheel is drawn, and pressed, in wheel_rect().
 
 var view: Map3DView
-## The report it lies under (scenes/court.tscn, or WarTable.place_compass).
+## The report it lies under.
 @export var column: Control
 ## The wheel's art (library I-73).
 @export var art: Texture2D = null:
@@ -24,22 +24,12 @@ var view: Map3DView
 		queue_redraw()
 var _wheel := 0.0
 
+## Its place — the column's strip of table, top to the screen's foot — is
+## the scene's (scenes/court.tscn, conversation.tscn); the wheel is drawn in
+## the band below the report's drawn foot (wheel_rect).
 func _ready() -> void:
-	name = "TableCompass"
 	if art == null:
 		art = UiPalette.load_art(CompassLayer.ART_PATH)
-	if Engine.is_editor_hint():
-		return
-	# the column's strip of table, top to the screen's foot (less
-	# ui_table_compass_bottom_px); the wheel is drawn in the band below the
-	# report's drawn foot (wheel_rect)
-	set_anchors_preset(Control.PRESET_LEFT_WIDE)
-	offset_left = ScreenLayout.margin()
-	offset_right = offset_left + ScreenLayout.LEFT_WIDTH
-	offset_top = 0.0
-	offset_bottom = -WarTable._num("ui_table_compass_bottom_px", 4.0)
-	tooltip_text = "The compass — press to turn the map north"
-	mouse_filter = Control.MOUSE_FILTER_STOP
 
 func _process(delta: float) -> void:
 	if Engine.is_editor_hint():

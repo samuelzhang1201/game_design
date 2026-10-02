@@ -1,10 +1,10 @@
-[gd_resource type="StyleBox" script_class="PaperStyle" format=3]
+[gd_resource type="StyleBox" script_class="PaperStyle" format=3 uid="uid://07pg2yfvp206"]
 
-[ext_resource type="Script" path="res://scripts/ui/war_table/paper_style.gd" id="1_7djfe"]
-[ext_resource type="Texture2D" path="res://assets/2D/ui/missive_board/letter_aged.png" id="2_em7hf"]
+[ext_resource type="Script" uid="uid://bc5sd3g0mtq6o" path="res://scripts/ui/war_table/paper_style.gd" id="1_7djfe"]
+[ext_resource type="Texture2D" uid="uid://cqk8fxup7pk4v" path="res://assets/2D/ui/missive_board/letter_aged.png" id="2_em7hf"]
 
 [resource]
-resource_local_to_scene = false
+resource_local_to_scene = true
 resource_name = ""
 content_margin_left = 22.0
 content_margin_top = 29.2

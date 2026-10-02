@@ -21,7 +21,7 @@ func _court(r: GameRoot) -> CourtScreen:
 	return r.current_screen as CourtScreen
 
 func test_the_tables_palette_loads() -> void:
-	for key in ["ink", "ink_muted", "rubric", "paper", "sheet", "brass_mid", "wax_mid", "board", "light"]:
+	for key in ["ink", "ink_muted", "rubric", "paper", "brass_mid", "wax_mid", "board"]:
 		assert_true(Game.data.ui_table_palette.has(key), "ui_table_palette.csv has " + key)
 
 func test_paper_takes_dark_ink_that_reads_on_it() -> void:

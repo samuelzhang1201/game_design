@@ -1,11 +1,11 @@
 class_name WarTable
 extends RefCounted
 ## THE WAR TABLE (owner 2026-10-01, B3 + C1's bookmarks; spec
-## docs/superpowers/specs/2026-10-01-war-table-ui-design.md): one place that
-## lays a main screen on the table — the oak behind it, the map as a vellum
-## sheet, the left column as the steward's pinned report. Every screen calls
-## dress_screen once from _ready; with balance ui_war_table 0 it does nothing
-## and the screen keeps its leather.
+## docs/superpowers/specs/2026-10-01-war-table-ui-design.md): the oak, the
+## map's vellum sheet, the steward's pinned report. Since 2026-10-02 the
+## screens carry them in their scenes (scenes/court.tscn, conversation.tscn);
+## what is left here is the paper column's live work (ink_column, fit_report)
+## and the paper styles the unconverted pieces still make in code.
 
 ## Seeds for each surface's deckle (presentation only).
 const SEED_SHEET := 11
@@ -13,65 +13,18 @@ const SEED_REPORT := 23
 const SEED_SLIP := 37
 const SEED_TAG := 41
 
-## Lay `screen` on the table: `bg` its flat background, `map_panel` the map's
-## panel, `column` the left facts column. True when the table is on.
-static func dress_screen(screen: Control, bg: ColorRect, map_panel: PanelContainer,
-		column: PanelContainer) -> bool:
-	if not UiPalette.war_table():
-		return false
-	var table := WarTableBackdrop.install(screen, bg)
-	# the table lies under everything the screen draws AND under the bookmarks
-	# (z -1, GameRoot's), which lie under the papers: the sheet's edge and shadow
-	# fall across the bookmarks' tops. z orders only the drawing; input still
-	# follows the tree, so the bookmarks keep their clicks.
-	bg.z_index = -2
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	table.z_index = -2
-	map_panel.add_theme_stylebox_override("panel", sheet_style())
-	column.add_theme_stylebox_override("panel", report_style())
-	column.theme = paper_theme()
-	column.set_meta("paper_ground", UiPalette.table_color("paper_ground", UiPalette.PANEL_BG))
-	ink_column(column)
-	return true
+## The map's vellum sheet and the steward's report: the scenes' own looks
+## (assets/2D/ui/war_table/styles/, edited in the editor), a fresh copy each,
+## for a piece that makes one in code (the landing's print, the WAR ROOM's
+## card roll).
+const SHEET_PATH := "res://assets/2D/ui/war_table/styles/map_sheet.tres"
+const REPORT_PATH := "res://assets/2D/ui/war_table/styles/report_paper.tres"
 
-## The compass lies on the table, not on the map (owner 2026-10-01): below the
-## report's drawn foot, where the news slip lay before it moved between the
-## bookmark groups — sized to the band left there, never covered. `view` is the screen's map, which it turns north on a click.
-static func place_compass(screen: Control, column: Control, view: Map3DView) -> TableCompass:
-	if not UiPalette.war_table() or view == null:
-		return null
-	var c := TableCompass.new()
-	c.view = view
-	c.column = column
-	screen.add_child(c)
-	# over the column in the tree, so a press on the wheel reaches it where
-	# the column's rect runs on below its drawn paper; it is never drawn over
-	# the paper (TableCompass.fit keeps it below the drawn foot)
-	screen.move_child(c, column.get_index() + 1)
-	return c
-
-## The map's vellum sheet: a deckled edge, two ink rules round the map.
 static func sheet_style() -> PaperStyle:
-	var s := PaperStyle.make("sheet", _num("ui_sheet_margin_px", 17.0), SEED_SHEET)
-	s.rules = 2
-	s.uv_inset = Vector2(0.075, 0.05)
-	s.deckle_px = _num("ui_sheet_deckle_px", 4.0)
-	s.rule_width = _num("ui_sheet_rule_px", 1.5)
-	s.rule_gap = _num("ui_sheet_rule_gap_px", 4.0)
-	s.rule_out = 3.0
-	# a big sheet lies flat on the table: a short, close shadow (a long one
-	# darkened the bookmarks hanging from under it)
-	s.shadow_offset *= 0.4
-	s.shadow_soft = 3.5
-	return s
+	return (load(SHEET_PATH) as PaperStyle).duplicate()
 
-## The steward's report: paper turned ui_report_tilt_deg, pinned at its head.
 static func report_style() -> PaperStyle:
-	var s := PaperStyle.make("paper", _num("ui_report_margin_px", 22.0), SEED_REPORT)
-	s.tilt_deg = _num("ui_report_tilt_deg", -1.2)
-	s.pin = true
-	s.content_margin_top = _num("ui_report_margin_px", 22.0) + _num("ui_pin_px", 12.0) * 0.6
-	return s
+	return (load(REPORT_PATH) as PaperStyle).duplicate()
 
 ## The report is paper only as tall as what is written on it while the
 ## realm's card holds the column (the table shows below it); a card that fills

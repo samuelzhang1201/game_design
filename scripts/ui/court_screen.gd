@@ -60,7 +60,6 @@ func _ready() -> void:
 	else:
 		_dress_leather()
 	_handle.pressed.connect(enter_council)
-	UiPalette.command_button(%LeaveButton, 14)
 	%LeaveButton.pressed.connect(leave_council)
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the column's own content returns when it leaves.
@@ -104,14 +103,13 @@ func _ready() -> void:
 		WarTable.ink_column(%LogPanel)
 		WarTable.fit_report(%LogPanel, _dashboard)
 		%TableCompass.view = _map3d
-	UiPalette.style_header(%LogHeader, 14)
-	UiPalette.style_header(%SideHeader, 14)
 	_log_scroll = %LogScroll
 	log_box = %LogBox
 	suggestions_box = %SuggestionsBox
 	free_text = %FreeText
 	free_text.max_length = int(Game.data.bal("prompt_max_chars"))
 	free_text.text_submitted.connect(_on_free_text_submitted)
+	_map_right = %MapPanel.offset_right
 	_set_right("")
 	_refresh_left()
 
@@ -119,6 +117,7 @@ func _ready() -> void:
 ## the map, the column and the council in the 2026-09-28 dark leather, and
 ## ENTER THE COUNCIL the screen's primary button.
 func _dress_leather() -> void:
+	_leather = true
 	%Bg.color = UiPalette.BG_SCREEN
 	%Bg.z_index = 0
 	%Table.queue_free()
@@ -138,6 +137,13 @@ func _dress_leather() -> void:
 ## 2026-09-10).
 var _right := ""
 var _handle: Button
+## The table between the map and the council column while it is open, design
+## px — the scene's (owner 2026-10-02: the layout is edited in the editor).
+@export var council_gap := 8.0
+## The map's right edge with the council column shut, from the scene.
+var _map_right := 0.0
+## The 2026-09-28 leather (ui_war_table 0) lays itself out in code.
+var _leather := false
 
 func _set_right(mode: String) -> void:
 	_right = mode
@@ -207,11 +213,16 @@ func manor_master() -> ManorMasterPanel:
 func manor_view() -> bool:
 	return _manor_view
 
-## Columns, map, and whichever panel holds the right slot (ScreenLayout).
+## Columns, map, and whichever panel holds the right slot: where the scene
+## puts them (owner 2026-10-02), the map's right edge brought in while the
+## council is open; the leather lays itself out in code (ScreenLayout.apply).
 func _layout() -> void:
-	var top: float = %TopBar.bar_height() + 3.0
-	ScreenLayout.apply(top, %LogPanel, %MapPanel, [%SidePanel], _right != "")
-	ScreenLayout.place_handle(_handle, top)
+	if _leather:
+		var top: float = %TopBar.bar_height() + 3.0
+		ScreenLayout.apply(top, %LogPanel, %MapPanel, [%SidePanel], _right != "")
+		ScreenLayout.place_handle(_handle, top)
+		return
+	ScreenLayout.open_right(%MapPanel, _map_right, %SidePanel, council_gap, _right != "")
 
 func enter_council() -> void:
 	_set_right("council")
