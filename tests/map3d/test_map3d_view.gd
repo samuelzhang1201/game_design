@@ -636,10 +636,7 @@ func test_a_compass_press_that_moves_does_not_pan_or_select() -> void:
 	assert_signal_not_emitted(v, "province_selected")
 
 
-## The build's Sea wears the banded water, and (final review, owner
-## 2026-09-18) the palette hex goes in RAW — a Color uniform set from GDScript
-## passes straight through (measured), so the old srgb_to_linear() only fought
-## the emission gamma. The tonemap's lift is undone by map3d_sea_emission_gamma.
+## The build's Sea wears the banded water.
 func test_the_builds_sea_wears_the_banded_water_in_raw_colours() -> void:
 	var root := Node3D.new()
 	root.set_meta("map3d_world", WORLD)
@@ -656,14 +653,7 @@ func test_the_builds_sea_wears_the_banded_water_in_raw_colours() -> void:
 	v.activate()
 	assert_true("Sea" in v.layer_names())
 	var mat := v.sea_material()
-	assert_not_null(mat)
-	assert_eq(mat.get_shader_parameter("band_near"), Game.data.bal("map_sea_band_near_px"))
-	var raw: Color = MapTerrain.palette_color(Game.data, "sea_near", MapTerrain.FALLBACK)
-	assert_eq(mat.get_shader_parameter("sea_near"), raw, "the palette hex, unconverted")
-	assert_eq(mat.get_shader_parameter("emission_share"), Game.data.bal("map3d_sea_emission_share"))
-	assert_eq(mat.get_shader_parameter("emission_gamma"), Game.data.bal("map3d_sea_emission_gamma"))
-	for key: String in ["ripple_near_m", "ripple_emission_gain", "emission_share_near", "shore_warp_px"]:
-		assert_eq(mat.get_shader_parameter(key), Game.data.bal("map3d_sea_" + key), key + " is data")
+	assert_not_null(mat, "the sea wears its water (its look: test_map3d_editor_owned_look.gd)")
 
 
 ## Natural water near, the bands far (owner 2026-09-24, look route Phase 3):
@@ -676,24 +666,14 @@ func test_the_sea_turns_natural_near_and_banded_far() -> void:
 	assert_eq(Map3DLayerSea.natural_share(30000.0, 20000.0, 20000.0), 0.0, "no blend range: a cut")
 
 
-## Same for the river material: water goes in raw, and the emission
-## share/gamma are wired from balance.csv.
-func test_the_rivers_colours_go_in_raw() -> void:
+## The rivers wear their water (its look: test_map3d_editor_owned_look.gd).
+func test_the_rivers_wear_their_water() -> void:
 	var f := FileAccess.open(_rivers_json, FileAccess.WRITE)
 	f.store_string('{"rivers": [{"code": "a", "points": [[0, 0, 10, 6, 0], [500, 0, 9, 40, 1]]}]}')
 	f.close()
 	var v := _view()
 	v.activate()
-	var mat := v.river_material()
-	assert_not_null(mat)
-	var raw: Color = MapTerrain.palette_color(Game.data, "river", MapTerrain.FALLBACK)
-	assert_eq(mat.get_shader_parameter("water"), raw, "the palette hex, unconverted")
-	assert_eq(mat.get_shader_parameter("emission_share"), Game.data.bal("map3d_river_emission_share"))
-	assert_eq(mat.get_shader_parameter("emission_gamma"), Game.data.bal("map3d_river_emission_gamma"))
-	for key: String in ["fresnel_sky_mix", "roughness", "specular", "normal_depth", "bank_wobble_amp"]:
-		assert_eq(mat.get_shader_parameter(key), Game.data.bal("map3d_river_" + key), key + " is data")
-	assert_eq(mat.get_shader_parameter("lod_far_m"), Game.data.bal("map3d_sea_ripple_lod_far_m"),
-		"one LOD for both waters")
+	assert_not_null(v.river_material())
 
 
 func _button(v: Control, button: MouseButton, pressed: bool, at: Vector2) -> void:

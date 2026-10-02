@@ -15,16 +15,10 @@ sea_deep,#255C7C,"the DEEP band: open sea beyond map_sea_band_far_px, a deep ind
 sea_far,#3D7A93,"the FAR band, out to map_sea_band_far_px: open water"
 sea_nearer,#6FA3A0,"the NEARER band, out to map_sea_band_nearer_px: shelf water turning"
 sea_near,#A8C4B4,"the NEAR band along the shore, out to map_sea_band_near_px: the green of a shallow shelf (owner 2026-09-17, sea scheme C, with the satellite ground — the old flat bright blue read as cut paper against photographic land)"
-map3d_sea_nat_shallow,#3A6A78,"3D MAP natural sea (owner 2026-09-24, look route Phase 3): the shallows along the shore, a muted green-teal"
-map3d_sea_nat_mid,#1F4F77,3D MAP natural sea: open water off the coast
-map3d_sea_nat_deep,#153D66,"3D MAP natural sea: deep water, a dark navy (the reference's sea is dark, deep and textured)"
-map3d_sea_foam,#EDF1EC,3D MAP natural sea: the shore foam
-map3d_river_nat,#3A6A78,"3D MAP natural river (owner 2026-09-24, Phase 3): a river where the sea is natural — the natural sea's own shallows colour, so a river and the sea it runs into are one water (a darker river read as a separate slate ribbon at its mouth)"
 map_label_halo,#EFE6D2,"kingdom names (2026-09-24, Phase 4): the parchment halo under the ink — the border halo's own parchment"
 lake,#9DD3F2,freshwater: between the two
 coast_line,#1E4257,"the shore stroke, and the ink of the map's kingdom lettering and paper grain: deepened with sea scheme C so the coast holds against the darker water"
 river,#7FB8DD,"river water: the sea's own family (owner 2026-09-17: ""太蓝了"" — a river and the mouth it runs into must read as one water), one step deeper than sea_far so a tapered ribbon still shows over the pale land. #1E6FB5 was the deep blue"
-map3d_sky,#A9BFCC,"3D MAP (owner 2026-09-18): the sky the water reflects by fresnel — the build's horizon colour"
 road,#C2A981,"roads: a worn sand track (owner 2026-09-17, after the reference painting) — pale warm earth with a soft shoulder (map_road_soft_ratio), not the slate line #4B5563 ruled across the sheet"
 map3d_road,#9C8058,"3D MAP roads (owner 2026-09-18): a darker, warmer sand than the 2D road — the 2D colour vanished on the 3D map's sunlit green"
 map3d_trail,#AE9670,3D MAP trails: the same track a shade lighter

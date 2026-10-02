@@ -1,9 +1,10 @@
 extends GutTest
 ## The 3D map's look as editor-visible assets (spec 2026-09-20 §2): each
-## material a .tres holding its shader, textures and render priority — never
-## a tuned number, which stays in data/*.csv and is bound at load — with
-## committed 512 px preview textures for a checkout without the git-ignored
-## full-resolution ones.
+## material a .tres of its shader, with committed 512 px preview textures for
+## a checkout without the git-ignored full-resolution ones. Since 2026-10-02
+## (owner: the look lives in the editor) a CONVERTED material carries its
+## tuned numbers too — test_map3d_editor_owned_look.gd holds those — and the
+## rest still hold only their look assets until they are converted.
 
 const RunDir := preload("res://tests/run_dir.gd")
 const MATERIALS := {
@@ -44,8 +45,15 @@ func test_the_previews_are_committed_and_small() -> void:
 		assert_lte(maxi(tex.get_width(), tex.get_height()), 512, key)
 
 
-func test_no_material_carries_a_tuned_number() -> void:
+## The materials whose tuned numbers live in the .tres (owner 2026-10-02):
+## test_map3d_editor_owned_look.gd holds them; the others are not yet converted.
+const EDITOR_OWNED := ["water_sea", "water_river"]
+
+
+func test_an_unconverted_material_carries_no_tuned_number() -> void:
 	for key: String in MATERIALS:
+		if key in EDITOR_OWNED:
+			continue
 		var text := FileAccess.get_file_as_string("res://scenes/map3d/materials/%s.tres" % key)
 		for line: String in text.split("\n"):
 			if not line.begins_with("shader_parameter/"):

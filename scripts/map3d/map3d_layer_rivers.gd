@@ -102,37 +102,20 @@ func build_baked(p_ctx: Map3DContext, baked: ArrayMesh) -> void:
 	material_override = _mat
 
 
+## The river's own look is water_river.tres (owner 2026-10-02: edited in
+## the inspector); what it shares with the sea it READS from the sea's
+## material, so a river and its mouth are one water at every zoom — the
+## mouth's colour (the sea's nearest band), the sky it reflects, the natural
+## shallows its mouth turns to, the ripples' level of detail — and it turns
+## natural with the sea's own share (Map3DContext.sea_natural).
 func _make_material() -> void:
 	_mat = (RIVER_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	_mat.render_priority = Map3DPriority.RIVERS
-	# The palette hex goes in RAW, as the sea's does (see Map3DLayerSea.build).
-	_mat.set_shader_parameter("water",
-		MapTerrain.palette_color(ctx.repo, "river", MapTerrain.FALLBACK))
-	_mat.set_shader_parameter("mouth_water",
-		MapTerrain.palette_color(ctx.repo, "sea_near", MapTerrain.FALLBACK))
-	_mat.set_shader_parameter("sky",
-		MapTerrain.palette_color(ctx.repo, "map3d_sky", MapTerrain.FALLBACK))
+	var sea := Map3DLayerSea.SEA_MAT as ShaderMaterial
+	for pair: Array in [["mouth_water", "sea_near"], ["sky", "sky"], ["nat_mouth", "nat_shallow"],
+			["lod_near_m", "ripple_lod_near_m"], ["lod_far_m", "ripple_lod_far_m"]]:
+		_mat.set_shader_parameter(String(pair[0]), sea.get_shader_parameter(String(pair[1])))
 	_mat.set_shader_parameter("ripples", ctx.water_normals())
-	_mat.set_shader_parameter("ripple_m", ctx.repo.bal("map3d_river_ripple_m"))
-	_mat.set_shader_parameter("flow_m_s", ctx.repo.bal("map3d_river_flow_m_s"))
-	_mat.set_shader_parameter("opacity", ctx.repo.bal("map3d_river_opacity"))
-	_mat.set_shader_parameter("edge_soft_floor", ctx.repo.bal("map3d_river_edge_soft_floor"))
-	_mat.set_shader_parameter("emission_share", ctx.repo.bal("map3d_river_emission_share"))
-	_mat.set_shader_parameter("emission_gamma", ctx.repo.bal("map3d_river_emission_gamma"))
-	for key: String in ["fresnel_sky_mix", "fresnel_power", "roughness", "specular", "normal_depth",
-			"ripple_emission_gain", "bank_wobble_m", "bank_wobble_amp"]:
-		_mat.set_shader_parameter(key, ctx.repo.bal("map3d_river_" + key))
-	# One LOD for both waters: the river's near detail comes and goes with the sea's.
-	_mat.set_shader_parameter("lod_near_m", ctx.repo.bal("map3d_sea_ripple_lod_near_m"))
-	_mat.set_shader_parameter("lod_far_m", ctx.repo.bal("map3d_sea_ripple_lod_far_m"))
-	# Natural water near, as the sea (owner 2026-09-24): the river turns to
-	# its natural colour, its mouth to the natural sea's shallows, by the
-	# sea's own share — water is one water at every zoom.
-	_mat.set_shader_parameter("nat_water",
-		MapTerrain.palette_color(ctx.repo, "map3d_river_nat", MapTerrain.FALLBACK))
-	_mat.set_shader_parameter("nat_mouth",
-		MapTerrain.palette_color(ctx.repo, "map3d_sea_nat_shallow", MapTerrain.FALLBACK))
-	_mat.set_shader_parameter("nat_emission_share", ctx.repo.bal("map3d_river_nat_emission_share"))
 	if not ctx.camera_moved.is_connected(_on_camera_moved):
 		ctx.camera_moved.connect(_on_camera_moved)
 	_on_camera_moved()
@@ -141,8 +124,7 @@ func _make_material() -> void:
 func _on_camera_moved() -> void:
 	if _mat == null or ctx == null:
 		return
-	_mat.set_shader_parameter("natural", Map3DLayerSea.natural_share(ctx.distance,
-		ctx.repo.bal("map3d_sea_natural_full_m"), ctx.repo.bal("map3d_sea_bands_full_m")))
+	_mat.set_shader_parameter("natural", ctx.sea_natural)
 
 
 ## The lines' screen-px values in SubViewport px, and the metres per px per
@@ -153,7 +135,7 @@ func apply_scale() -> void:
 	var s := ctx.viewport_px_scale()
 	var per_dist := ctx.px_per_dist()
 	_mat.set_shader_parameter("px_per_dist", per_dist)
-	_mat.set_shader_parameter("min_px", ctx.repo.bal("map3d_river_min_px") * s)
+	_mat.set_shader_parameter("min_px", float((RIVER_MAT as ShaderMaterial).get_shader_parameter("min_px")) * s)
 
 
 func material() -> ShaderMaterial:

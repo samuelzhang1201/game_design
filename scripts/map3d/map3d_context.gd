@@ -24,6 +24,8 @@ var view_size := Vector2.ONE
 ## The rig's pose: Map3DCameraRig writes these, then emits camera_moved.
 var target := Vector2.ZERO
 var distance := 1.0
+## How natural the water reads at this distance (the sea's share; the rivers follow).
+var sea_natural := 0.0
 var yaw := 0.0
 ## The graphics tier's row (Map3DQuality.row); {} reads as full quality.
 var quality: Dictionary = {}
@@ -179,12 +181,10 @@ func river_step() -> float:
 
 
 ## The ripple normal map both waters share (was Map3DView.water_normals): the
-## generator is scenes/map3d/materials/water_ripples.tres, its seed data.
+## generator is scenes/map3d/materials/water_ripples.tres (its seed set there).
 func water_normals() -> Texture2D:
 	if _water_normals == null:
-		_water_normals = (load("res://scenes/map3d/materials/water_ripples.tres") as NoiseTexture2D) \
-			.duplicate(true) as NoiseTexture2D
-		_water_normals.noise.seed = int(repo.bal("map3d_water_seed"))
+		_water_normals = load("res://scenes/map3d/materials/water_ripples.tres") as NoiseTexture2D
 	return _water_normals
 
 
