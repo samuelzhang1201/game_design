@@ -118,7 +118,7 @@ func _ready() -> void:
 	add_child(_bottom_bar)
 	# The persistent transparent news strip (user request 2026-08-31): pinned
 	# just above the bottom tab bar on every gameplay screen.
-	_news_ticker = NewsTicker.new()
+	_news_ticker = load("res://scenes/news_ticker.tscn").instantiate()
 	_news_ticker.name = "NewsTicker"
 	_news_ticker.visible = false
 	add_child(_news_ticker)

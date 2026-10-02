@@ -28,97 +28,53 @@ var _history_panel: PanelContainer
 var _history_list: VBoxContainer
 var _quiet: Label
 
+## The slip is the scene's (owner 2026-10-02: the look lives in the editor —
+## scenes/news_ticker.tscn: the paper slip news_slip.tres, the rubric LOG, the
+## crawl and the quiet line in the paper's ink, the log window
+## leather_news_log.tres). _ready finds and wires it; the glass bar of
+## `ui_war_table` 0 is still dressed in code.
 func _ready() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	offset_top = -(BottomBar.BAR_HEIGHT + STRIP_HEIGHT)
-	offset_bottom = -BottomBar.BAR_HEIGHT
-	offset_left = ScreenLayout.MARGIN
-	offset_right = -ScreenLayout.MARGIN
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_log_button = $Row/LogButton
+	_clip = $Row/Crawl
+	_label = $Row/Crawl/CrawlLabel
+	_quiet = $Row/Crawl/Quiet
+	_history_panel = $History
+	_history_list = $History/Scroll/Entries
 	if Game.data != null:
 		_speed = Game.data.bal("news_ticker_speed")
-	var bg := Panel.new()
-	bg.name = "TickerBg"
+	_log_button.toggled.connect(func(on: bool) -> void: show_history(on))
+	_clip.resized.connect(_centre_label)
+	Game.news_published.connect(add_item)
+	if not UiPalette.war_table():
+		_dress_leather()
+
+## The glass bar (`ui_war_table` 0, owner 2026-09-14): translucent and
+## rounded, a gold hairline while the nav is grouped (owner 2026-09-28: LOG
+## sat alone in an unmarked dark gap), LOG a compact chip.
+func _dress_leather() -> void:
 	var glass := StyleBoxFlat.new()
 	glass.bg_color = GLASS
 	glass.set_corner_radius_all(8)
 	var framed := Game.data != null and float(Game.data.balance.get("ui_nav_grouped", 0.0)) > 0.0
 	if framed:
-		# A hairline so the bar reads as a place even while it is empty
-		# (owner 2026-09-28: LOG sat alone in an unmarked dark gap).
 		glass.border_color = Color(UiPalette.BORDER_GOLD, 0.35)
 		glass.set_border_width_all(1)
-	bg.add_theme_stylebox_override("panel", glass)
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(bg)
-	var row := HBoxContainer.new()
-	row.name = "Row"
-	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	row.offset_left = 4.0
-	row.offset_right = -8.0
-	row.add_theme_constant_override("separation", 8)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(row)
-	_log_button = Button.new()
-	_log_button.name = "LogButton"
+	($TickerBg as Panel).add_theme_stylebox_override("panel", glass)
+	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+		_log_button.remove_theme_stylebox_override(state)
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+		_log_button.remove_theme_color_override(state)
 	_log_button.text = "LOG"
-	_log_button.toggle_mode = true
-	_log_button.focus_mode = Control.FOCUS_NONE
-	_log_button.tooltip_text = "What has been heard, newest first"
 	UiPalette.compact_button(_log_button, STRIP_HEIGHT - 8.0, 12, 8.0)
 	UiPalette.command_button(_log_button)
-	_log_button.toggled.connect(func(on: bool) -> void: show_history(on))
-	row.add_child(_log_button)
-	_clip = Control.new()
-	_clip.name = "Crawl"
-	_clip.clip_contents = true
-	_clip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(_clip)
-	_label = Label.new()
-	_label.name = "CrawlLabel"
+	_label.remove_theme_font_override("font")
 	_label.add_theme_font_size_override("font_size", 16)
 	_label.add_theme_color_override("font_color", INK)
-	_clip.add_child(_label)
-	_clip.resized.connect(_centre_label)
-	# Before the first headline the bar says so instead of lying empty.
-	_quiet = Label.new()
-	_quiet.name = "Quiet"
+	_quiet.remove_theme_font_override("font")
 	_quiet.text = "No tidings yet. Word will come as the days pass."
 	_quiet.add_theme_font_size_override("font_size", 14)
 	_quiet.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
-	_quiet.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_quiet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_quiet.visible = framed
-	_clip.add_child(_quiet)
-	_build_history()
-	Game.news_published.connect(add_item)
-	if UiPalette.war_table():
-		_dress_war_table(bg)
-
-## THE WAR TABLE (owner 2026-10-01): the news is a paper slip lying on the
-## table between the two groups of bookmarks, written in the paper's ink, its
-## LOG a red rubric word. GameRoot hands it the free band (place_on_table).
-func _dress_war_table(bg: Panel) -> void:
-	bg.add_theme_stylebox_override("panel", WarTable.slip_style(0.0, WarTable.SEED_SLIP))
-	_label.add_theme_color_override("font_color", UiPalette.ink("soft"))
-	_quiet.add_theme_color_override("font_color", UiPalette.ink("muted"))
-	var italic := UiPalette.role_font("body_italic")
-	if italic != null:
-		_quiet.add_theme_font_override("font", italic)
-		_label.add_theme_font_override("font", italic)
-	_quiet.add_theme_font_size_override("font_size", 13)
-	# the slip lies in the narrow gap between the bookmark groups: a short line
-	_quiet.text = "No tidings yet."
-	_label.add_theme_font_size_override("font_size", 14)
-	var flat := StyleBoxEmpty.new()
-	flat.content_margin_left = 8
-	flat.content_margin_right = 4
-	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
-		_log_button.add_theme_stylebox_override(state, flat)
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
-		_log_button.add_theme_color_override(state, UiPalette.ink("rubric"))
 
 ## Lie in `band` (a global rect: the gap between the bookmark groups,
 ## BottomBar.slip_band), centred and ui_slip_width_px wide at most, just
@@ -130,27 +86,6 @@ func place_on_table(band: Rect2) -> void:
 	set_anchors_preset(Control.PRESET_TOP_LEFT)
 	position = Vector2(band.get_center().x - w * 0.5, band.position.y + WarTable._num("ui_slip_drop_px", 6.0)) - origin
 	size = Vector2(maxf(w, 0.0), h)
-
-func _build_history() -> void:
-	_history_panel = PanelContainer.new()
-	_history_panel.name = "History"
-	_history_panel.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 10))
-	_history_panel.anchor_top = 0.0
-	_history_panel.anchor_bottom = 0.0
-	_history_panel.offset_left = 0.0
-	_history_panel.offset_right = HISTORY_SIZE.x
-	_history_panel.offset_top = -HISTORY_SIZE.y - 6.0
-	_history_panel.offset_bottom = -6.0
-	_history_panel.visible = false
-	add_child(_history_panel)
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_history_panel.add_child(scroll)
-	_history_list = VBoxContainer.new()
-	_history_list.name = "Entries"
-	_history_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_history_list.add_theme_constant_override("separation", 4)
-	scroll.add_child(_history_list)
 
 ## One headline: dated, added to the crawl (oldest fall off past MAX_ITEMS)
 ## and to the history. The crawl position is left alone so a new item never
@@ -202,16 +137,14 @@ func _fill_history() -> void:
 	if _history.is_empty():
 		var none := Label.new()
 		none.text = "Nothing has been heard yet."
-		none.add_theme_font_size_override("font_size", 14)
-		none.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+		none.theme_type_variation = &"LogEmpty"
 		_history_list.add_child(none)
 		return
 	for entry: Dictionary in _history:
 		var l := Label.new()
 		l.text = ("%s — %s" % [entry["date"], entry["text"]]) if String(entry["date"]) != "" else String(entry["text"])
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.add_theme_font_size_override("font_size", 14)
-		l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+		l.theme_type_variation = &"LogEntry"
 		_history_list.add_child(l)
 
 ## Test seams.

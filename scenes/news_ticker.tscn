@@ -1,0 +1,102 @@
+[gd_scene format=3 uid="uid://8yrt47pfpshb"]
+
+[ext_resource type="Script" uid="uid://hoys11qnwtaq" path="res://scripts/ui/news_ticker.gd" id="1_pikf7"]
+[ext_resource type="StyleBox" uid="uid://dy3p1rnkk4n0o" path="res://assets/2D/ui/war_table/styles/news_slip.tres" id="2_5k673"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="3_suc5g"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="4_xrwcj"]
+[ext_resource type="StyleBox" uid="uid://dwohus0vev53k" path="res://assets/2D/ui/panels/styles/leather_news_log.tres" id="5_khnha"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cmxxj"]
+content_margin_left = 8.0
+content_margin_right = 4.0
+
+[node name="NewsTicker" type="Control" unique_id=575292069]
+layout_mode = 3
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -88.0
+offset_right = -8.0
+offset_bottom = -56.0
+mouse_filter = 2
+script = ExtResource("1_pikf7")
+
+[node name="TickerBg" type="Panel" parent="." unique_id=609225708]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("2_5k673")
+
+[node name="Row" type="HBoxContainer" parent="." unique_id=1817819881]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_right = -8.0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="LogButton" type="Button" parent="Row" unique_id=1293184005]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_vertical = 4
+tooltip_text = "What has been heard, newest first"
+focus_mode = 0
+theme_override_colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
+theme_override_colors/font_pressed_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
+theme_override_colors/font_hover_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
+theme_override_fonts/font = ExtResource("3_suc5g")
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxEmpty_cmxxj")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_cmxxj")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_cmxxj")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_cmxxj")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_cmxxj")
+toggle_mode = true
+text = "Log"
+
+[node name="Crawl" type="Control" parent="Row" unique_id=339955012]
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="CrawlLabel" type="Label" parent="Row/Crawl" unique_id=1304311156]
+layout_mode = 0
+theme_override_colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
+theme_override_fonts/font = ExtResource("4_xrwcj")
+theme_override_font_sizes/font_size = 14
+
+[node name="Quiet" type="Label" parent="Row/Crawl" unique_id=168985411]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_colors/font_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
+theme_override_fonts/font = ExtResource("4_xrwcj")
+theme_override_font_sizes/font_size = 13
+text = "No tidings yet."
+vertical_alignment = 1
+
+[node name="History" type="PanelContainer" parent="." unique_id=2096339590]
+visible = false
+layout_mode = 1
+offset_top = -226.0
+offset_right = 420.0
+offset_bottom = -6.0
+theme_override_styles/panel = ExtResource("5_khnha")
+
+[node name="Scroll" type="ScrollContainer" parent="History" unique_id=126437663]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Entries" type="VBoxContainer" parent="History/Scroll" unique_id=1578837376]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4

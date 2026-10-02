@@ -9,7 +9,8 @@ extends GutTest
 ##    screen's _ready, but for the CODE-OWNED ones listed below with why.
 
 const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversation_scene.gd",
-	"res://scripts/ui/top_bar.gd", "res://scripts/ui/main_menu.gd", "res://scripts/ui/bottom_bar.gd"]
+	"res://scripts/ui/top_bar.gd", "res://scripts/ui/main_menu.gd", "res://scripts/ui/bottom_bar.gd",
+	"res://scripts/ui/news_ticker.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",
@@ -44,6 +45,9 @@ const CODE_OWNED := {
 	# the crown's arms and the house's colour are the live house's
 	"TopBar/Bar/Row/DateArms": ["texture"],
 	"TopBar/Bar/Row/TallyBoard/Purses/HouseNameBox/LordCrest": ["texture", "color"],
+	# the slip lies in the band between the bookmark groups (place_on_table)
+	"NewsTicker/": ["anchor_left", "anchor_top", "anchor_right", "anchor_bottom", "offset_left",
+		"offset_top", "offset_right", "offset_bottom"],
 	# the title's arms are the preview reign's crown's
 	"TitleColumn/Col/TitleArms": ["texture", "color"],
 }
@@ -69,6 +73,7 @@ func test_the_court_keeps_its_scenes_look() -> void:
 	_assert_scene_holds(r.current_screen, "res://scenes/court.tscn")
 	_assert_scene_holds(r.current_screen.get_node("%TopBar"), "res://scenes/top_bar.tscn", "TopBar/")
 	_assert_scene_holds(r.bottom_bar(), "res://scenes/bottom_bar.tscn", "BottomBar/")
+	_assert_scene_holds(r.news_ticker(), "res://scenes/news_ticker.tscn", "NewsTicker/")
 	# the scene's layout, moved in the editor, still starts the columns under the bar
 	var bar: TopBar = r.current_screen.get_node("%TopBar")
 	for n in ["%LogPanel", "%MapPanel", "%SidePanel"]:
