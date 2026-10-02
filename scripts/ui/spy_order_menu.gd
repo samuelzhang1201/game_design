@@ -33,10 +33,8 @@ func _open_at(pack_px: Vector2, at: Vector2) -> void:
 	_target = pack_px
 	clear()
 	var fee := CourierSystem.fee_gold(Game.data, CourierSystem.SPY)
-	var from := CourierSystem.origin(Game.data, Game.state)
-	var days := CourierSystem.days_for(Game.data, CourierSystem.SPY, CourierSystem.need_along(Game.data,
-		Game.state, ArmySystem.pack_to_metres(Game.data, from),
-		CourierSystem.path_between(Game.data, from, pack_px), Game.state.absolute_day()))
+	# day-ends, the day now running the first (owner 2026-10-02), as the ride counts them
+	var days := CourierSystem.spy_eta_days(Game.data, Game.state, pack_px)
 	add_item("Send a spy here — ≈%d day%s · %d gold" % [days, "" if days == 1 else "s", fee], SEND)
 	set_item_tooltip(0, Intel.place_label(Game.data, Game.state, pack_px))
 	_pop(at)

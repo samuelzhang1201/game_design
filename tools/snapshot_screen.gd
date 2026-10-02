@@ -139,6 +139,11 @@ var _look3d := PackedFloat32Array()
 ## first courier drawn inside the 3D map at frame F and prints the card the
 ## left column then shows.
 var _click_courier := -1
+## --trace-couriers (with --screen root): every frame while a courier rides or
+## the clock runs, print the day, the day's share, each courier's engine spot
+## and where he is DRAWN, and his regiment's drawn spot — the courier's pace
+## and the column's start read off the running window.
+var _trace_couriers := false
 var _shot_frame := 40
 ## The Missive board and spies (2026-09-28), all with --screen root:
 ## --quiet drops the chapter's scheduled beats, rolls no random event and runs the
@@ -369,6 +374,7 @@ func _ready() -> void:
 	_march_confirm = args.has("--march-confirm")
 	_ledger_search_pick = args.has("--ledger-search-pick")
 	_march_commit = args.has("--march-commit")
+	_trace_couriers = args.has("--trace-couriers")
 	_dev = args.has("--dev")
 	_pause_menu = args.has("--pause-menu")
 	_title = args.has("--title")
@@ -734,6 +740,8 @@ func _process(_delta: float) -> void:
 			+ Vector2(float(_frames % 2), 0.0))
 		ev.global_position = ev.position
 		get_viewport().push_input(ev)
+	if _trace_couriers and _root != null:
+		_trace_courier_frame()
 	if _also.has(_frames):
 		_save_shot(String(_also[_frames]))
 	if (_shot_on == "" and _frames == _shot_frame) or (_shot_at >= 0 and _frames == _shot_at):
@@ -747,6 +755,37 @@ func _process(_delta: float) -> void:
 			int(ProjectSettings.get_setting("rendering/textures/canvas_textures/default_texture_filter", 0))])
 		Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
 		get_tree().quit()
+
+
+## One --trace-couriers line: the frame, day, share, and every courier's
+## engine and drawn spot against his regiment's drawn spot (world XZ metres).
+func _trace_courier_frame() -> void:
+	if Game.state == null or not _root.current_screen.has_method("map3d_view") \
+			or _root.current_screen.map3d_view() == null:
+		return
+	var v: Map3DView = _root.current_screen.map3d_view()
+	var units := v.unit_positions()
+	var drawn := v.courier_positions()
+	if Game.state.couriers.is_empty() and Game.clock_speed == 0:
+		return
+	var line := "trace f=%d day=%d share=%.3f clock=%d" % [_frames, Game.state.absolute_day(),
+		Game.day_progress, Game.clock_speed]
+	for c: Dictionary in Game.state.couriers:
+		var id := int(c["id"])
+		var at: Vector2 = drawn.get(id, Vector2(-1, -1))
+		var has_reg := units.has(String(c["target"]))
+		var reg: Vector2 = units.get(String(c["target"]), Vector2.ZERO)
+		line += " | courier %d rode=%d engine=(%d,%d) legs=%d drawn=(%.0f,%.0f) to_column=%.0f" % [
+			id, int(c.get("days", 0)), int(c["x_m"]), int(c["y_m"]), (c["path"] as Array).size(),
+			at.x, at.y, at.distance_to(reg) if has_reg and drawn.has(id) else -1.0]
+	for code: String in units:
+		var e: Dictionary = Game.state.regiments.get(code, {})
+		var targeted := Game.state.couriers.any(func(c: Dictionary) -> bool: return String(c["target"]) == code)
+		if String(e.get("order", "")) == ArmySystem.ORDER_MARCH or targeted:
+			var p: Vector2 = units[code]
+			line += " | %s %s engine=(%d,%d) drawn=(%.0f,%.0f)" % [code, String(e.get("order", "")),
+				int(e.get("x_m", -1)), int(e.get("y_m", -1)), p.x, p.y]
+	print(line)
 
 
 func _save_shot(path: String) -> int:

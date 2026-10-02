@@ -22,6 +22,10 @@ var current_screen: Node
 var _pending_report: TickReport
 ## Seconds of the clock not yet spent as days (owner 2026-09-13).
 var _clock_acc := 0.0
+## The last courier id whose setting out the news bar has said (presentation
+## only: a loaded reign says it again for a courier not yet on the road).
+var _said_set_out := 0
+var _said_state: GameState  # the reign _said_set_out counts in (a new one starts again)
 var _pause_menu: Control
 var _pause_status: Label
 var _ledger_screen: LedgerScreen
@@ -160,6 +164,15 @@ func _process(delta: float) -> void:
 	# the frame after its Seal (final review M6).
 	if not _pending_reports.is_empty() or _report_popup.visible:
 		return
+	# A courier sets out as the clock starts the day he rides (owner
+	# 2026-10-02: 收到命令-》游戏开始信使出发), so the news says so now — not at
+	# the day's end, when a one-day courier is already delivering.
+	if _said_state != Game.state:
+		_said_state = Game.state
+		_said_set_out = 0
+	for e: Dictionary in CourierSystem.setting_out(Game.data, Game.state, _said_set_out):
+		Game.publish_news(CourierSystem.headline(Game.data, e))
+		_said_set_out = maxi(_said_set_out, int(e["courier"]))
 	var per_day := maxf(Game.data.bal("time_day_seconds") / float(Game.clock_speed), 0.001)
 	_clock_acc += delta
 	var steps := 0

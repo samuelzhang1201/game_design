@@ -2,16 +2,10 @@ class_name Map3DCourierRide
 extends RefCounted
 ## The pure maths of a courier's drawn ride, read by Map3DLayerCouriers: how
 ## far along his road the day's share puts him, and his FADE the moment he
-## delivers (owner 2026-09-30: 信使送到信息后要立即淡化消失) — the engine keeps
-## him to the day's end, the map does not. Pure but for `apply`, which only
-## sets his meshes' transparency. Never the Game autoload.
-
-
-## True once the drawn rider has done the whole of a ride that delivers:
-## `ride` is the layer's day (CourierSystem.ride_ahead's `ends` and `share`),
-## `done` the share of the day he has ridden.
-static func delivered(ride: Dictionary, done: float) -> bool:
-	return bool(ride.get("ends", false)) and done >= float(ride.get("share", 1.0))
+## delivers (owner 2026-09-30: 信使送到信息后要立即淡化消失) — as the day ends,
+## since he rides evenly to its end (owner 2026-10-02). Pure but for `apply`,
+## `ghost` and `fade_ghosts`, which only set his meshes' transparency, pause
+## his clip and free a faded piece. Never the Game autoload.
 
 
 ## 1 before he delivered (`elapsed` < 0), falling to 0 over `fade_s` real seconds.
@@ -28,6 +22,36 @@ static func apply(piece: Dictionary, a: float) -> void:
 	piece["alpha"] = a
 	for m: MeshInstance3D in Map3DUnits.meshes(piece["node"]):
 		m.transparency = 1.0 - a
+
+
+## Whether courier `id`, gone from the state, fades where he delivered — his
+## last ride (`ride`) ended on the column and his `piece` is drawn — noting it
+## in `ghosts` (id -> real seconds fading, from `faded`): the engine lets him go
+## as the day ends (owner 2026-10-02), his piece stays to fade out there.
+static func ghost(ghosts: Dictionary, id: int, ride: Dictionary, piece: Dictionary, faded: float) -> bool:
+	if ghosts.has(id):
+		return true
+	if not bool(ride.get("ends", false)) or not (piece["node"] as Node3D).visible:
+		return false
+	ghosts[id] = faded
+	var anim: AnimationPlayer = piece.get("anim")
+	if anim != null:
+		anim.pause()  # he has arrived: no gallop in place
+	return true
+
+
+## Every ghost a `delta` further faded, freed (from `pieces` too) once gone.
+static func fade_ghosts(ghosts: Dictionary, pieces: Dictionary, delta: float, fade_s: float) -> void:
+	for id in ghosts.keys():
+		ghosts[id] = float(ghosts[id]) + delta
+		var a := alpha(float(ghosts[id]), fade_s)
+		if pieces.has(id) and a > 0.0:
+			apply(pieces[id], a)
+			continue
+		if pieces.has(id):
+			(pieces[id]["node"] as Node3D).queue_free()
+			pieces.erase(id)
+		ghosts.erase(id)
 
 
 ## `dist` along the points of `queue` from `now`, dropping each point reached.

@@ -1,7 +1,9 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 ## A day's ride and delivery (spec 2026-09-27-courier-core §1). Every
-## height tier and the weather are forced so the hand sums hold.
+## height tier and the weather are forced so the hand sums hold. Since
+## 2026-10-02 (owner: a one-day courier arrives as the day ENDS) he rides
+## EVENLY: each day what is left over the whole days it takes (day_pace).
 
 var repo: DataRepository
 
@@ -55,17 +57,24 @@ func test_a_days_ride_by_hand() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var c := _courier(s, 1, _marcher(), [[100000, 0, "road"], [400000, 0, "offroad"]],
 		{"action_code": "ARMY_GARRISON"})
-	# Day 1: 160,000 of budget. 100 km of road costs 100,000; 60,000 left at
-	# 500‰ across country carries him 30 km more.
-	assert_eq(CourierSystem.ride_day(repo, s), [{"type": "set_out", "courier": 1,
-		"regiment": String(c["target"]), "weather": "", "capital": 0}], "he sets out, and says so")
-	assert_eq(Vector2i(int(c["x_m"]), int(c["y_m"])), Vector2i(130000, 0))
-	assert_eq(int(c["day_m"]), 130000)
-	# Days 2-4: 80 km each across country.
+	# The whole road: 100 km of road costs 100,000 and 300 km across country
+	# at 500‰ costs 600,000 — 700,000, five days at 160,000 a day, so he rides
+	# 700,000 / 5 = 140,000 a day and ends on the fifth day's end.
+	assert_eq(CourierSystem.day_pace(repo, s, c, s.absolute_day() + 1), 140000)
+	assert_eq(CourierSystem.days_left(repo, s, c), 5)
+	# Day 1: the road's 100,000, then 40,000 at 500‰ carries him 20 km more.
+	# His setting out is said when the day begins (setting_out), not here.
+	assert_eq(CourierSystem.ride_day(repo, s), [], "nothing to say at the first day's end")
+	assert_eq(Vector2i(int(c["x_m"]), int(c["y_m"])), Vector2i(120000, 0))
+	assert_eq(int(c["day_m"]), 120000)
+	assert_eq(CourierSystem.days_left(repo, s, c), 4, "one day fewer, every day")
+	# Days 2-4: 560,000 left over 4 days, then 420,000 over 3, 280,000 over 2:
+	# 140,000 = 70 km across country each.
 	for i in 3:
 		CourierSystem.ride_day(repo, s)
-	assert_eq(int(c["x_m"]), 370000)
-	# Day 5: 30 km left costs 60,000; he arrives and delivers.
+	assert_eq(int(c["x_m"]), 330000)
+	assert_eq(CourierSystem.days_left(repo, s, c), 1)
+	# Day 5: the last 70 km cost exactly the day's 140,000; he arrives as it ends.
 	var ev := CourierSystem.ride_day(repo, s)
 	assert_eq(ev.size(), 1)
 	assert_eq(String(ev[0]["type"]), "delivered")
@@ -91,9 +100,10 @@ func test_an_older_order_arriving_late_is_set_aside() -> void:
 	# id 1 (march) has far to go; id 2 (garrison, newer) arrives first.
 	_courier(s, 1, code, [[400000, 0, "road"]], {"action_code": "ARMY_MARCH", "dest_x_m": 5000, "dest_y_m": 5000})
 	_courier(s, 2, code, [[10000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
+	assert_eq(_types(CourierSystem.setting_out(repo, s, 0)), ["set_out", "set_out"], "both set out")
 	var first := CourierSystem.ride_day(repo, s)
-	assert_eq(_types(first), ["set_out", "set_out", "delivered"], "both set out; the newer arrives")
-	assert_eq(int(first[2]["courier"]), 2)
+	assert_eq(_types(first), ["delivered"], "the newer arrives as the first day ends")
+	assert_eq(int(first[0]["courier"]), 2)
 	var later: Array = []
 	for i in 3:
 		later.append_array(CourierSystem.ride_day(repo, s))
@@ -113,7 +123,7 @@ func test_the_fuse() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	repo.balance["courier_max_days"] = 2.0
 	_courier(s, 1, _marcher(), [[9000000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
-	assert_eq(_types(CourierSystem.ride_day(repo, s)), ["set_out"])
+	assert_eq(CourierSystem.ride_day(repo, s), [])
 	assert_eq(CourierSystem.ride_day(repo, s), [])
 	assert_eq(String(CourierSystem.ride_day(repo, s)[0]["type"]), "fuse")
 	assert_eq(s.couriers, [])
@@ -129,10 +139,12 @@ func test_bad_weather_slows_him_and_is_announced_once_a_spell() -> void:
 	c["x_m"] = at.x
 	c["y_m"] = at.y
 	var ev := CourierSystem.ride_day(repo, s)
-	assert_eq(_types(ev), ["set_out", "slow"])
-	assert_eq(String(ev[1]["weather"]), "blizzard")
-	# 160,000 x 400‰ = 64 km in a blizzard, the tiers forced to 1000.
-	assert_eq(int(c["x_m"]) - at.x, 64000)
+	assert_eq(_types(ev), ["slow"])
+	assert_eq(String(ev[0]["weather"]), "blizzard")
+	# 900 km of road at 400‰ costs 2,250,000: 15 days at 160,000, so he rides
+	# 2,250,000 / 15 = 150,000 a day — x 400‰ = 60 km in a blizzard, the
+	# tiers forced to 1000.
+	assert_eq(int(c["x_m"]) - at.x, 60000)
 	assert_eq(CourierSystem.ride_day(repo, s), [], "said once for the spell")
 
 
@@ -144,11 +156,11 @@ func test_a_courier_catches_a_column_on_the_march() -> void:
 	var far := home + Vector2(300.0, 0.0)
 	ArmySystem.set_march(repo, s, code, far)
 	CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
-	for day in int(repo.bal("courier_max_days")):
+	for day in int(repo.bal("courier_max_days")):  # advance_day's order: the march, then the ride
+		ArmySystem.march_day(repo, s)
 		CourierSystem.ride_day(repo, s)
 		if s.couriers.is_empty():
 			break
-		ArmySystem.march_day(repo, s)
 	assert_eq(s.couriers, [], "he caught them")
 	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON)
 	assert_lt(ArmySystem.position_of(repo, s, reg).distance_to(home), 300.0, "halted short of where they were going")
@@ -174,28 +186,32 @@ func _types(events: Array) -> Array:
 	return out
 
 
-## Spec §2's news line (fix round 1, 2026-09-28): once, on his first day on
-## the road, before anything else that day; "the capital" only when he rode
-## from it.
+## Spec §2's news line (fix round 1, 2026-09-28): once, as the day he rides
+## begins (owner 2026-10-02: 游戏开始信使出发 — said at the day's end, a
+## one-day courier left and delivered in the same breath); "the capital" only
+## when he rode from it. GameRoot asks while the clock runs, past the last id
+## it has said.
 func test_he_is_seen_to_leave_the_capital_once() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	var c := CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
-	var ev := CourierSystem.ride_day(repo, s)
-	assert_eq(String(ev[0]["type"]), "set_out", "first that day")
+	var ev := CourierSystem.setting_out(repo, s, 0)
+	assert_eq(_types(ev), ["set_out"], "he sets out as his first day begins")
 	assert_eq(int(ev[0]["courier"]), int(c["id"]))
 	assert_eq(int(ev[0]["capital"]), 1, "dispatch put him on the capital's spot")
 	var label := String(ArmySystem.regiment(repo, code)["label"])
 	assert_eq(CourierSystem.headline(repo, ev[0]), "A courier leaves the capital for %s." % label)
-	assert_false(s.couriers.is_empty(), "still riding after a day")
-	assert_false(_types(CourierSystem.ride_day(repo, s)).has("set_out"), "said once")
+	assert_eq(CourierSystem.setting_out(repo, s, int(c["id"])), [], "said once")
+	assert_eq(c, s.couriers[0], "nothing written")
+	assert_false(_types(CourierSystem.ride_day(repo, s)).has("set_out"), "never at a day's end")
+	assert_eq(CourierSystem.setting_out(repo, s, 0), [], "on the road: no longer setting out")
 
 
 func test_a_courier_not_from_the_capital_just_rides() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	_courier(s, 1, code, [[100000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
-	var ev := CourierSystem.ride_day(repo, s)
+	var ev := CourierSystem.setting_out(repo, s, 0)
 	assert_eq(int(ev[0]["capital"]), 0)
 	var label := String(ArmySystem.regiment(repo, code)["label"])
 	assert_eq(CourierSystem.headline(repo, ev[0]), "A courier rides for %s." % label)
@@ -221,7 +237,7 @@ func test_ride_ahead_previews_the_day_exactly_and_writes_nothing() -> void:
 	var before: Dictionary = c.duplicate(true)
 	var day := CourierSystem.ride_ahead(repo, s, c)
 	var ahead: Array = day["points"]
-	assert_eq(ahead, [Vector2i(100000, 0), Vector2i(130000, 0)], "the waypoint he passes, then where the day leaves him")
+	assert_eq(ahead, [Vector2i(100000, 0), Vector2i(120000, 0)], "the waypoint he passes, then where the day leaves him")
 	assert_eq(day["share"], 1.0, "a whole day on the road")
 	assert_false(bool(day["ends"]), "he rides on tomorrow")
 	assert_eq(c, before, "the courier is untouched")
@@ -236,17 +252,20 @@ func test_ride_ahead_on_the_delivery_day_ends_on_the_column() -> void:
 	_courier(s, 1, code, [[50000, 0, "road"]], {"action_code": "ARMY_GARRISON"})
 	var day := CourierSystem.ride_ahead(repo, s, s.couriers[0])
 	assert_eq(day["points"], [Vector2i(50000, 0), Vector2i(50000, 0)])
-	# 50 km of road costs 50,000 of the day's 160,000
-	assert_almost_eq(float(day["share"]), 50000.0 / 160000.0, 0.0001, "he arrives with most of the day to spare")
-	assert_true(bool(day["ends"]), "the day delivers: the map fades him out on arrival")
+	# 50 km of road costs 50,000 of the day's 160,000: one day, so he rides
+	# 50,000 that day, at an even pace to its end (owner 2026-10-02)
+	assert_eq(float(day["share"]), 1.0, "the whole day, never a dash in part of it")
+	assert_true(bool(day["ends"]), "the day delivers as it ends: the map fades him out then")
 	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY)
 	assert_eq(s.couriers.size(), 1, "a preview delivers nothing")
 
 
-## The couriers ride before the columns march: the day's preview of a
-## regiment (day_ahead_of) marches on an order its courier delivers that day,
-## and lands where advance_day's own order of events then puts it.
-func test_day_ahead_of_marches_on_an_order_delivered_that_day() -> void:
+## Owner 2026-10-02: the courier arrives as the day ENDS, after the columns
+## march — so the column stands the whole day its order reaches it
+## (day_ahead_of: where it stands) and marches on it from the next day, which
+## day_ahead_of then previews exactly as advance_day's order of events (the
+## calendar, the columns, the couriers) plays it.
+func test_an_order_delivered_today_is_marched_on_from_tomorrow() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	ArmySystem.ensure(repo, s)
@@ -256,15 +275,20 @@ func test_day_ahead_of_marches_on_an_order_delivered_that_day() -> void:
 		{"action_code": "ARMY_MARCH", "dest_x_m": dest.x, "dest_y_m": dest.y})
 	c["x_m"] = at.x - 10000
 	c["y_m"] = at.y
-	var day := CourierSystem.day_ahead_of(repo, s, code)
-	var ahead: Vector2i = day["m"]
-	assert_ne(ahead, at, "the column is seen marching on the day the order reaches it")
-	assert_almost_eq(float(day["from"]), 10000.0 / 160000.0, 0.0001, "from the moment the courier reaches it")
-	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_STANDBY, "nothing written")
-	assert_eq(s.couriers.size(), 1)
-	s.day += 1  # advance_day's order: the calendar, the couriers, the columns
-	CourierSystem.ride_day(repo, s)
+	assert_eq(CourierSystem.day_ahead_of(repo, s, code), at, "the column stands the day its courier rides")
+	assert_true(bool(CourierSystem.ride_ahead(repo, s, c)["ends"]), "he delivers as that day ends")
+	s.day += 1  # advance_day's order: the calendar, the columns, the couriers
 	ArmySystem.march_day(repo, s)
+	CourierSystem.ride_day(repo, s)
+	assert_eq(s.couriers, [], "delivered at the day's end")
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_MARCH)
+	assert_eq(ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code))), at,
+		"it has not moved yet")
+	var ahead := CourierSystem.day_ahead_of(repo, s, code)
+	assert_ne(ahead, at, "the next day it marches")
+	s.day += 1
+	ArmySystem.march_day(repo, s)
+	CourierSystem.ride_day(repo, s)
 	assert_eq(ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code))), ahead)
 
 
@@ -272,4 +296,33 @@ func test_day_ahead_of_a_garrison_is_where_it_stands() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	var at := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)))
-	assert_eq(CourierSystem.day_ahead_of(repo, s, code), {"m": at, "from": 0.0})
+	assert_eq(CourierSystem.day_ahead_of(repo, s, code), at)
+
+
+## Owner 2026-10-02, through the engine's own day (TickEngine.advance_day): an
+## order given on day d whose courier is shown "N days" is delivered as the
+## Nth day ends — not before — and the column marches from the next day.
+func test_the_shown_days_are_day_ends_through_the_tick_engine() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var engine := TickEngine.new(repo)
+	var code := _marcher()
+	var reg := ArmySystem.regiment(repo, code)
+	var home: Vector2 = ArmySystem.position_of(repo, s, reg)
+	# far enough that the courier needs several days (a column marches ~10 km a day)
+	repo.balance["courier_base_km_per_day"] = 20.0
+	repo.balance["courier_max_days"] = 1000.0
+	var eta := CourierSystem.eta_days(repo, s, CourierSystem.ORDINARY, code)
+	assert_gt(eta, 1, "a trip of several days")
+	CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, code,
+		{"action_code": "ARMY_MARCH", "dest_x_m": int(ArmySystem.pack_to_metres(repo, home).x) + 100000,
+		"dest_y_m": int(ArmySystem.pack_to_metres(repo, home).y)})
+	for day in eta - 1:
+		engine.advance_day(s)
+		assert_eq(s.couriers.size(), 1, "still riding at the end of day %d of %d" % [day + 1, eta])
+		assert_eq(CourierSystem.days_left(repo, s, s.couriers[0]), eta - day - 1, "one day fewer each day")
+	engine.advance_day(s)
+	assert_eq(s.couriers, [], "delivered as day %d ends" % eta)
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_MARCH)
+	assert_eq(ArmySystem.position_of(repo, s, reg), home, "the column has not marched on its delivery day")
+	engine.advance_day(s)
+	assert_ne(ArmySystem.position_of(repo, s, reg), home, "it marches from the next day")

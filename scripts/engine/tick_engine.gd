@@ -19,14 +19,15 @@ func _init(d: DataRepository) -> void:
 func advance_day(state: GameState) -> Array:
 	state.day = mini(state.day + 1, Calendar.DAYS_PER_TICK)
 	var done := MapManors.advance_works(data, state)
-	# The couriers ride before the columns march (owner 2026-09-27): an order
-	# delivered today is marched on today.
-	day_couriers = CourierSystem.ride_day(data, state)
 	# A day on the road for every regiment under a march order (owner
 	# 2026-09-22). The arrivals go on day_arrivals rather than into the
 	# return value, which is the finished WORKS and is asserted as such by
 	# tests/engine/test_tick_engine.gd.
 	day_arrivals = ArmySystem.march_day(data, state)
+	# The couriers ride AFTER the columns march (owner 2026-10-02: a one-day
+	# courier arrives as the day ENDS): he reaches the column where its day
+	# left it, and the order he delivers is marched on from tomorrow.
+	day_couriers = CourierSystem.ride_day(data, state)
 	# The host eats a day of its month (owner 2026-09-30).
 	ArmySystem.eat_day(data, state)
 	# The month's economy is computed a bucket a day (spec §11.2).
@@ -110,13 +111,12 @@ func advance(state: GameState) -> TickReport:
 	state.tick += 1
 	state.day = 1
 	r.finished_works = MapManors.advance_works(data, state)
-	# The couriers ride before the columns march (owner 2026-09-27): an order
-	# delivered today is marched on today.
-	day_couriers = CourierSystem.ride_day(data, state)
 	# The tick IS a day on the road too (owner 2026-09-24: 行进速度必须和给定
 	# 的速度相符): without this a regiment marched 29 days in every 30 and
 	# its piece stood still for one day each month.
 	day_arrivals = ArmySystem.march_day(data, state)
+	# ...and the couriers ride after it, as on every day (owner 2026-10-02).
+	day_couriers = CourierSystem.ride_day(data, state)
 	# ...and the first day of the new month is eaten like any other.
 	ArmySystem.eat_day(data, state)
 	r.tick = state.tick

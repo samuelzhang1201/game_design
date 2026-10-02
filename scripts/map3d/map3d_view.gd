@@ -442,6 +442,8 @@ func unit_rects() -> Dictionary: return _units.screen_rects() if _loaded else {}
 func unit_count() -> int: return _units.drawn_count() if _loaded else 0
 func unit_moves() -> int: return _units.moves() if _loaded else 0
 func courier_rects() -> Dictionary: return _couriers.screen_rects() if _loaded else {}
+## Where each courier is DRAWN, {id: world XZ} (snapshot_screen's --trace-couriers).
+func courier_positions() -> Dictionary: return _couriers.shown_positions() if _loaded else {}
 
 func military() -> bool: return _military
 

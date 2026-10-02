@@ -5,9 +5,9 @@ extends Map3DHudPiece
 ## march line; a march order still on the road as a faint dotted line from
 ## the column to where it will go, an envelope in its end ring; and, past the
 ## counter scale, each courier as a small square counter with a letter. A
-## courier who has delivered draws no road and no pending order, and his
-## counter fades with his rider (Map3DLayerCouriers, `gone` / `alpha`). Its
-## look is edited on the node (owner 2026-10-02).
+## courier delivers as the day ends (owner 2026-10-02) and leaves the state
+## then, his road and pending order with him; only his rider fades
+## (Map3DLayerCouriers). Its look is edited on the node (owner 2026-10-02).
 
 ## His road ahead, design px wide — finer than a march's.
 @export var route_px := 1.2
@@ -25,13 +25,11 @@ func _draw() -> void:
 	var rects: Dictionary = view.courier_rects()
 	for c: Dictionary in ctx.couriers():
 		var r: Dictionary = rects.get(int(c["id"]), {})
-		if bool(r.get("gone", false)):
-			continue
 		_draw_road(c, r.get("lead", []), ink, w)
 		_draw_pending(c, ink, w)
 	for id in rects:
 		if bool(rects[id]["counter"]):
-			_draw_counter(rects[id]["rect"], ink, float(rects[id].get("alpha", 1.0)))
+			_draw_counter(rects[id]["rect"], ink)
 
 
 ## From where he is DRAWN along the whole road still ahead of him (`lead`,
@@ -105,13 +103,12 @@ func pending_rects() -> Array:
 	return out
 
 
-func _draw_counter(rect: Rect2, ink: Color, alpha := 1.0) -> void:
-	var a := func(c: Color) -> Color: return Color(c, c.a * alpha)
-	draw_rect(rect, a.call(MapPalette.named(ctx.repo, "army_icon_bg")))
-	draw_rect(rect, a.call(MapPalette.named(ctx.repo, "army_outline")), false, 1.0)
-	draw_rect(Rect2(rect.position.x, rect.end.y - 2.0, rect.size.x, 2.0), a.call(ink))
+func _draw_counter(rect: Rect2, ink: Color) -> void:
+	draw_rect(rect, MapPalette.named(ctx.repo, "army_icon_bg"))
+	draw_rect(rect, MapPalette.named(ctx.repo, "army_outline"), false, 1.0)
+	draw_rect(Rect2(rect.position.x, rect.end.y - 2.0, rect.size.x, 2.0), ink)
 	ResourceIcon.draw_glyph(self, "letter", rect.get_center(), rect.size.x * 0.8,
-		a.call(MapPalette.named(ctx.repo, "army_glyph")))
+		MapPalette.named(ctx.repo, "army_glyph"))
 
 
 func _screen_of(pack: Vector2) -> Variant:
