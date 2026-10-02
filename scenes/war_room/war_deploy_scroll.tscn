@@ -1,0 +1,97 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/war_deploy_scroll.gd" id="1_scroll"]
+
+[node name="WarDeployScroll" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_scroll")
+
+[node name="Dim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.4)
+
+[node name="ScrollButton" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -108.0
+offset_top = -74.0
+offset_right = -18.0
+offset_bottom = -18.0
+grow_horizontal = 0
+grow_vertical = 0
+tooltip_text = "Resolutions of the council"
+flat = true
+
+[node name="Review" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Col" type="VBoxContainer" parent="Review"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Review/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Resolutions of the council"
+horizontal_alignment = 1
+
+[node name="Lines" type="VBoxContainer" parent="Review/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Total" type="Label" parent="Review/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 2
+
+[node name="Gap" type="Control" parent="Review/Col"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="Review/Col"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Seal" type="Button" parent="Review/Col/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Seal and send"
+
+[node name="NotYet" type="Button" parent="Review/Col/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Not yet"
+
+[node name="SealLayer" type="Control" parent="Review"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2

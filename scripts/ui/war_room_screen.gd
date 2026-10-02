@@ -35,6 +35,10 @@ func _ready() -> void:
 	_dress_slip()
 	%Close.pressed.connect(request_close)
 	(%LeavePrompt as WarLeavePrompt).chosen.connect(_on_leave)
+	(%Deploy as WarDeployScroll).sealed.connect(_on_sealed)
+	(%Deploy as WarDeployScroll).withdrawn.connect(func() -> void:
+		_deploy_leaving = false   # Not yet: the player stays in the room
+		_deploy_then = Callable())
 	UiPalette.command_button(%BackToTable)
 	%BackToTable.pressed.connect(func() -> void: _view.leave_board())
 	_view.board_entered.connect(_show_board_chrome.bind(true))
@@ -91,6 +95,7 @@ func open(detail: MapDetailPanel) -> void:
 	else:
 		_view.refresh()
 		_fill_margin()   # the regiments moved while the room was shut
+	(%Deploy as WarDeployScroll).refresh()   # kept drafts light it at once
 
 
 ## The report as it lay when the room opened, and where (GameRoot): closing
@@ -276,6 +281,10 @@ func _fill_margin() -> void:
 
 ## Where to go once the room is left by its leave prompt (GameRoot.leave_war_room).
 var _leave_then := Callable()
+## Deploy… was chosen on the way out: once the resolutions are sent the room
+## is left, and `_deploy_then` (where the player was going) runs.
+var _deploy_leaving := false
+var _deploy_then := Callable()
 
 
 ## The × button: leave through GameRoot's one door (it asks when drafts stand).
@@ -307,10 +316,28 @@ func _on_leave(choice: String) -> void:
 			close()
 		"keep":
 			close()
+		"deploy":
+			_deploy_leaving = true   # the seal closes the room and goes on (_on_sealed)
+			_deploy_then = then
+			(%Deploy as WarDeployScroll).unroll()
+			return
 		_:
-			return   # stay ("deploy" is Task 6's: it unrolls the scroll)
+			return   # stay
 	if then.is_valid():
 		then.call()
+
+
+## The resolutions are sent: when they were sealed on the way out (the leave
+## prompt's Deploy…), leave and go on.
+func _on_sealed(_result: Dictionary) -> void:
+	var then := _deploy_then
+	var leaving := _deploy_leaving
+	_deploy_then = Callable()
+	_deploy_leaving = false
+	if leaving:
+		close()
+		if then.is_valid():
+			then.call()
 
 
 ## `animate` false when the screen under the room is being replaced: its
@@ -320,6 +347,7 @@ func close(animate := true) -> void:
 		return
 	(%LeavePrompt as WarLeavePrompt).visible = false   # a forced close answers no question
 	_leave_then = Callable()
+	(%Deploy as WarDeployScroll).withdraw()   # an unrolled, unsealed scroll is put away
 	if _orders.visible:
 		_orders.hide()
 	_orders.withdraw_aim()
@@ -352,6 +380,7 @@ func _process(_delta: float) -> void:
 		_view.refresh()
 		_fill_margin()
 		_folio.refresh()   # the clock runs under an open folio
+		(%Deploy as WarDeployScroll).refresh()
 		refresh_board()
 	if _board_vp != null:
 		var want := SubViewport.UPDATE_ALWAYS if visible and _view.board_visible() else SubViewport.UPDATE_DISABLED

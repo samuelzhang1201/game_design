@@ -667,3 +667,40 @@ func test_a_forced_switch_keeps_the_drafts_and_says_so() -> void:
 	assert_false(r.war_room_screen().visible)
 	assert_true(WarDrafts.any(Game.state), "an event's switch keeps the drafts")
 	assert_signal_emitted(Game, "news_published")
+
+
+func test_deploy_from_the_leave_prompt_seals_then_leaves_for_the_chosen_tab() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	r.bottom_bar().button("LEDGER").pressed.emit()
+	await wait_process_frames(1)
+	_prompt(r).chosen.emit("deploy")
+	var scroll := r.war_room_screen().get_node("%Deploy") as WarDeployScroll
+	assert_true(scroll.review_open())
+	scroll.seal()
+	await wait_until(func() -> bool: return not r.war_room_screen().visible, 8.0)
+	assert_true(r.ledger_screen().visible)
+	assert_false(WarDrafts.any(Game.state))
+
+
+func test_not_yet_from_the_leave_prompt_stays_in_the_room() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	r.war_room_screen().request_close()
+	await wait_process_frames(1)
+	_prompt(r).chosen.emit("deploy")
+	var scroll := r.war_room_screen().get_node("%Deploy") as WarDeployScroll
+	scroll.withdraw()
+	await wait_process_frames(1)
+	assert_true(r.war_room_screen().visible)
+	assert_true(WarDrafts.any(Game.state))
+
+
+func test_the_rooms_scroll_greys_and_lights_with_the_drafts() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var scroll := r.war_room_screen().get_node("%Deploy") as WarDeployScroll
+	assert_true(scroll.button().disabled)
+	var code := String(_land_piece(r.war_room_screen())["code"])
+	Game.plant_draft(code, "garrison", Vector2.ZERO)
+	await wait_process_frames(1)
+	assert_false(scroll.button().disabled, "the room refreshes it on a state change")
