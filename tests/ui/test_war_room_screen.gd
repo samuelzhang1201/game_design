@@ -6,6 +6,10 @@ extends GutTest
 func _court() -> GameRoot:
 	Game.start_campaign(44)   # the seed Start Game begins
 	Game.next_tick()
+	# the opening event waits on the table and holds the clock (owner
+	# 2026-10-02): answer it, so these tests measure the room's own hold
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
 	await wait_process_frames(2)
