@@ -291,3 +291,23 @@ func test_only_a_garrison_order_earns_the_garrison_morale() -> void:
 	assert_eq(int(s.regiments[standing]["morale"]), fed, "standing by at home: the fed mark")
 	assert_eq(int(s.regiments[holding]["morale"]), mini(fed + bonus, fed - 1 + drift),
 		"in garrison: toward the fed mark and the bonus")
+
+
+func test_a_route_runs_from_the_depot_to_the_regiment() -> void:
+	for code: String in s.regiments:
+		var reg := ArmySystem.regiment(data, code)
+		if String(reg.get("is_naval", "0")) == "1" or SupplySystem.stronghold_of(data, s, code) != "":
+			continue
+		var route := SupplySystem.route_px(data, s, code)
+		assert_gte(route.size(), 2)
+		assert_almost_eq(route[route.size() - 1].distance_to(ArmySystem.position_of(data, s, reg)), 0.0, 0.01)
+		return
+	pending("no regiment stands away from a stronghold in this fixture")
+
+
+func test_a_regiment_supplied_through_a_stronghold_has_no_route() -> void:
+	for code: String in s.regiments:
+		if SupplySystem.stronghold_of(data, s, code) != "":
+			assert_eq(SupplySystem.route_px(data, s, code).size(), 0)
+			return
+	pending("no regiment stands in a stronghold in this fixture")

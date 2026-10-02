@@ -111,6 +111,25 @@ static func _path_from_ctx(repo: DataRepository, ctx: Dictionary, to_px: Vector2
 	return way
 
 
+## The supply road a regiment is fed along, pack px from the depot to where it
+## stands (spec 2026-10-02-war-room-v2 §2.4, the WAR ROOM's intel ink) — the
+## road _line_of measures; empty for a regiment supplied through a stronghold
+## (no road) or at sea.
+static func route_px(repo: DataRepository, state: GameState, code: String) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var reg := ArmySystem.regiment(repo, code)
+	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1" or stronghold_of(repo, state, code) != "":
+		return out
+	var ctx := _road_context(repo, state)
+	var to := ArmySystem.position_of(repo, state, reg)
+	out.append(ArmySystem.metres_to_pack(repo, ctx["a"]))
+	for p: Array in _path_from_ctx(repo, ctx, to):
+		out.append(ArmySystem.metres_to_pack(repo, Vector2i(int(p[0]), int(p[1]))))
+	if out[out.size() - 1].distance_to(to) > 0.001:
+		out.append(to)
+	return out
+
+
 static func line_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	return _line_of(repo, state, code, _road_context(repo, state))
 

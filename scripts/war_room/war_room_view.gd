@@ -244,6 +244,7 @@ func lay_sheet(index: int) -> void:
 	_rake.redraw()
 	sheet_laid.emit(index)
 	await _paint_ink(mat)
+	await _paint_intel(mat)
 
 
 ## Roll the laid sheet up and lay `index` at the midpoint (spec §2). With no
@@ -452,11 +453,31 @@ func _finish_swap() -> void:
 	_pennants.visible = true
 
 
+## The laid sheet's intelligence layer onto the table's material (redrawn only
+## when its key turns: WarRoomInk.intel_for). Never two draws at once.
+var _intel_busy := false
+var _ink_busy := 0   # sheet ink draws in flight: the intel layer waits (one ink viewport, one draw at a time)
+
+
+func _paint_intel(mat: ShaderMaterial) -> void:
+	if _intel_busy or _ink_busy > 0 or mat == null or _sheet < 0:
+		return
+	_intel_busy = true
+	var sheet := _sheet
+	var tex := await _inks.intel_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(),
+		func() -> bool: return is_inside_tree() and sheet == _sheet)
+	_intel_busy = false
+	if tex != null and sheet == _sheet:
+		mat.set_shader_parameter("intel_tex", tex)
+
+
 ## The sheet's ink onto the table's material (WarRoomInk draws and keeps it).
 func _paint_ink(mat: ShaderMaterial) -> void:
 	var sheet := _sheet
+	_ink_busy += 1
 	var tex := await _inks.texture_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(),
 		func() -> bool: return is_inside_tree() and sheet == _sheet)
+	_ink_busy -= 1
 	if tex != null:
 		mat.set_shader_parameter("ink_tex", tex)
 
@@ -530,6 +551,8 @@ func pack_at(screen_px: Vector2) -> Vector2:
 
 
 func refresh() -> void:
+	if _sheet >= 0:
+		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
 	_pieces.update(state())
 	_pennants.rebuild(state())
 	_rake.redraw()

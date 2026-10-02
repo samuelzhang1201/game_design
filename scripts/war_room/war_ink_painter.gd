@@ -8,9 +8,11 @@ var ink: Dictionary = {}
 var pal: Dictionary = {}
 var px: Dictionary = {}   # the war_ink_* widths and ratios, by short key
 var font: Font
+var intel := false   # the intelligence layer (WarIntelInk), not the sheet's ink
 
 
-func paint(p_ink: Dictionary, p_pal: Dictionary, p_px: Dictionary, p_font: Font) -> void:
+func paint(p_ink: Dictionary, p_pal: Dictionary, p_px: Dictionary, p_font: Font, as_intel := false) -> void:
+	intel = as_intel
 	ink = p_ink
 	pal = p_pal
 	px = p_px
@@ -20,6 +22,9 @@ func paint(p_ink: Dictionary, p_pal: Dictionary, p_px: Dictionary, p_font: Font)
 
 func _draw() -> void:
 	if ink.is_empty():
+		return
+	if intel:
+		_draw_intel()
 		return
 	var c_ink: Color = pal["ink"]
 	var c_faint: Color = pal["ink_faint"]
@@ -117,6 +122,50 @@ func _draw() -> void:
 		draw_string(font, at + Vector2(hw + s * float(px["label_gap_ratio"]), drop), "%d m" % int(p["metres"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(float(px["label"]) * float(px["peak_label_ratio"])), c_ink)
 	_draw_hollows(c_ink)
+
+
+## What we know (WarIntelInk), in the intel ink: supply roads dashed and
+## fading with their loss, couriers with their road ahead and a pennon (a spy's
+## in rubric), weather marks, spy reports as dashed rings with their words.
+func _draw_intel() -> void:
+	var c: Color = pal["intel_ink"]
+	for s: Dictionary in ink["supply"]:
+		var col := c
+		col.a *= clampf(1.0 - float(s["loss_permille"]) / 1000.0 * float(px["supply_loss_fade"]), 0.25, 1.0)
+		for d: PackedVector2Array in WarSheetInk.dashed(s["poly"], float(px["supply_dash"]), float(px["supply_gap"])):
+			draw_polyline(d, col, float(px["supply"]), true)
+	for cr: Dictionary in ink["couriers"]:
+		for d: PackedVector2Array in WarSheetInk.dashed(cr["poly"], 2.0, float(px["supply_gap"])):
+			draw_polyline(d, c, float(px["supply"]) * 0.7, true)
+		var at: Vector2 = cr["at"]
+		var s := float(px["courier"])
+		draw_circle(at, s * 0.5, c)
+		draw_line(at, at + Vector2(0, -s * 1.3), c, maxf(s * 0.15, 1.0), true)
+		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -s * 1.3), at + Vector2(s * 0.8, -s * 1.1), at + Vector2(0, -s * 0.9)]),
+			pal["rubric"] if bool(cr["spy"]) else c)
+	for w: Dictionary in ink["weather"]:
+		var at: Vector2 = w["at"]
+		var s := float(px["weather"])
+		var lw := maxf(s * 0.1, 1.0)
+		if float(w["overcast"]) >= 0.5:
+			draw_arc(at + Vector2(-s * 0.3, 0), s * 0.45, PI, TAU, 10, c, lw, true)
+			draw_arc(at + Vector2(s * 0.3, -s * 0.1), s * 0.55, PI, TAU, 10, c, lw, true)
+		for i in int(round(float(w["rain"]) * 3.0)):
+			var x := -s * 0.4 + float(i) * s * 0.4
+			draw_line(at + Vector2(x, s * 0.2), at + Vector2(x - s * 0.15, s * 0.7), c, lw, true)
+		if float(w["snow"]) > 0.0:
+			for a in 3:
+				var dir := Vector2.from_angle(float(a) * PI / 3.0) * s * 0.35
+				draw_line(at + Vector2(0, s * 0.45) - dir, at + Vector2(0, s * 0.45) + dir, c, lw, true)
+	for sp: Dictionary in ink["spies"]:
+		var at: Vector2 = sp["at"]
+		var ring := PackedVector2Array()
+		for i in 49:
+			ring.append(at + Vector2.from_angle(TAU * float(i) / 48.0) * float(sp["radius"]))
+		for d: PackedVector2Array in WarSheetInk.dashed(ring, float(px["supply_dash"]), float(px["supply_gap"])):
+			draw_polyline(d, pal["rubric"], float(px["supply"]), true)
+		draw_string(font, at + Vector2(float(sp["radius"]) + 4.0, 0), String(sp["text"]),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["intel_label"]), pal["rubric"])
 
 
 ## The hollows: a ▽ outlined, with its depth.

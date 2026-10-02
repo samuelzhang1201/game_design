@@ -14,12 +14,16 @@ const INK_PX := ["road", "trail", "river", "coast", "border", "band", "seam", "t
 	"wood", "manor", "manor_label", "manor_dash", "manor_gap", "river_label", "bridge"]
 const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_dot_ratio", "label_gap_ratio",
 	"label_drop_ratio", "peak_label_ratio", "peak_half_w", "peak_drop", "border_dot_ratio", "wall_ratio", "anchor_ratio"]
+## The intelligence layer's widths (war_intel_<k>_px) and ratios (war_intel_<k>).
+const INTEL_PX := ["supply", "supply_dash", "supply_gap", "courier", "weather", "label", "spy_ring"]
+const INTEL_RATIOS := ["supply_loss_fade"]
 ## How many sheets' ink are kept: the laid one and one more.
 const KEEP := 2
 ## The ink viewport's size at rest (the smallest a viewport takes).
 const REST := Vector2i(2, 2)
 
 var cache: Dictionary = {}   # sheet index -> {key, tex}
+var intel: Dictionary = {}   # the laid sheet's intelligence layer: {sheet, key, tex}
 var _order: Array[int] = []  # cached sheets, least recently laid first
 ## The frame the draw is read back after (a headless run never draws, so a
 ## test hands in the tree's process_frame).
@@ -91,3 +95,38 @@ func _touch(sheet: int) -> void:
 	_order.append(sheet)
 	while _order.size() > KEEP:
 		cache.erase(_order.pop_front())
+
+
+## The laid sheet's intelligence layer (WarIntelInk), redrawn when its key
+## turns (a new day, a courier moved, a report came in); null when none is to
+## be had (headless) or a later draw took the viewport over.
+func intel_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubViewport,
+		painter: WarInkPainter, font: Font, still_wanted: Callable) -> Texture2D:
+	var key := WarIntelInk.cache_key(state, sheet)
+	if int(intel.get("key", -1)) == key and int(intel.get("sheet", -1)) == sheet:
+		return intel.get("tex") as Texture2D
+	var row: Dictionary = WarSheets.series(repo)[sheet]
+	var rect: Rect2 = row["rect"]
+	var w := int(repo.bal("war_intel_texture_px"))
+	var size := Vector2i(w, maxi(1, ceili(w * rect.size.y / rect.size.x)))
+	_gen += 1
+	var gen := _gen
+	viewport.size = size
+	var widths := {}
+	for k: String in INTEL_PX:
+		widths[k if k != "label" else "intel_label"] = repo.bal("war_intel_%s_px" % k)
+	for k: String in INTEL_RATIOS:
+		widths[k] = repo.bal("war_intel_%s" % k)
+	painter.paint(WarIntelInk.strokes(repo, state, row, size.x), repo.war_palette, widths, font, true)
+	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	await frame_done
+	if gen != _gen:
+		return null
+	var img: Image = viewport.get_texture().get_image() if bool(still_wanted.call()) else null
+	if is_instance_valid(viewport):
+		viewport.size = REST
+	if img == null or img.is_empty():
+		return null
+	img.generate_mipmaps()
+	intel = {"sheet": sheet, "key": key, "tex": ImageTexture.create_from_image(img)}
+	return intel["tex"]
