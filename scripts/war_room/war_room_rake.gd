@@ -93,7 +93,8 @@ func on_left(mb: InputEventMouseButton) -> void:
 	if moved and not (_view.aiming and _press_code == ""):
 		return
 	var scale := _view.window_scale()
-	var i := WarRoomPicks.sheet_target(_arrows, _chart, _camera, _repo, mb.position, scale)
+	var arrow := WarRoomWall.pick_arrow(_arrows, _camera, mb.position, scale, _repo.bal("war_pick_px"))
+	var chart := -1 if arrow >= 0 else WarRoomWall.pick_chart(_chart, _camera, _repo, mb.position * scale)
 	var radius := _repo.bal("war_pick_px")
 	var pennant := "" if _view.rolling() else WarRoomPicks.nearest(_pennants.screen_hits(_camera, scale), mb.position, radius)
 	var piece := _view.piece_under(mb.position)
@@ -104,8 +105,10 @@ func on_left(mb: InputEventMouseButton) -> void:
 		_view.route_clicked.emit(pennant, mb.position)
 	elif piece != "":
 		_view.select(piece)
-	elif i >= 0:
-		_view.sheet_requested.emit(i)
+	elif arrow >= 0:
+		_view.sheet_requested.emit(arrow)   # an edge arrow lays at once
+	elif chart >= 0:
+		_view.toss_to(chart)                # a chart cell: the marker is tossed first
 	elif _view.aiming and _view.pack_at(mb.position).x >= 0.0:
 		_view.ground_clicked.emit(_view.pack_at(mb.position), mb.position)
 	elif _view.selected_army() != "":

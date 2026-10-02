@@ -719,3 +719,24 @@ func test_the_table_knows_its_neat_line() -> void:
 	assert_almost_eq(got.x, want.x, 0.0001)
 	assert_almost_eq(got.w, want.w, 0.0001)
 	assert_almost_eq(float(mat.get_shader_parameter("collar_ink")), repo.bal("war_collar_ink"), 0.0001)
+
+
+func test_a_chart_pick_tosses_then_lays_and_a_second_pick_mid_toss_is_ignored() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	watch_signals(view)
+	var other := 1 if WarSheets.series(repo).size() > 1 else 0
+	view.toss_to(other)
+	assert_true(view.tossing())
+	view.toss_to(0)   # ignored while the marker flies
+	assert_signal_not_emitted(view, "sheet_requested", "not laid before it lands")
+	await wait_seconds(float(WarToss.plan(Vector3.ZERO, Vector3.ONE, 1, WarToss.rules(repo))["duration"]) + 0.3)
+	assert_false(view.tossing())
+	assert_signal_emit_count(view, "sheet_requested", 1)
+	assert_signal_emitted_with_parameters(view, "sheet_requested", [other])
+	var marker := view.get_node("%Marker") as Node3D
+	var chart := view.get_node("%IndexChart") as MeshInstance3D
+	var local := chart.global_transform.affine_inverse() * marker.global_position
+	var size := (chart.mesh as QuadMesh).size
+	var uv := Vector2(local.x / size.x + 0.5, 0.5 - local.y / size.y)
+	assert_true(WarIndexChart.uv_of_cell(repo, WarSheets.series(repo)[other]).has_point(uv), "the marker stands on the chosen cell")

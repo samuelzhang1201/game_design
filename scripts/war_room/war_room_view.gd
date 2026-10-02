@@ -49,6 +49,7 @@ var aim_code := ""
 @onready var _pieces: WarPieces = %Pieces
 @onready var _pennants: WarPennants = %Pennants
 @onready var _board: MeshInstance3D = %BoardPanel
+@onready var _marker: Node3D = %Marker
 
 var _repo: DataRepository
 var _state_fn: Callable
@@ -80,6 +81,10 @@ var _board_dist := 1.0
 var _board_offset := Vector2.ZERO
 var _board_dragged := false
 var _board_press := Vector2.ZERO
+var _toss: Dictionary = {}
+var _toss_t := 0.0
+var _toss_to := -1
+var _toss_n := 0
 
 
 func _ready() -> void:
@@ -233,6 +238,7 @@ func lay_sheet(index: int) -> void:
 		_chart_built = true
 		WarRoomWall.build_chart(_chart, _repo, lettering())
 	WarRoomWall.lay_arrows(_arrows, _repo, index, _table_w, _depth, lettering())
+	_stand_marker(index)
 	_pieces.rebuild(state())
 	_pennants.rebuild(state(), true)
 	_rake.redraw()
@@ -254,6 +260,7 @@ func swap_to(index: int) -> void:
 
 
 func _process(delta: float) -> void:
+	_step_toss(delta)
 	var flying := _step_board(delta)
 	if not flying and (_rig.step(delta, _repo.bal("war_cam_north_s")) or key_pan(delta)):
 		_apply_camera()
@@ -264,6 +271,48 @@ func _process(delta: float) -> void:
 	_table.scale = Vector3(1.0, 1.0, _swap.z_scale())
 	_pieces.visible = not _swap.active()   # the pieces and pennants are put away while a sheet rolls
 	_pennants.visible = _pieces.visible
+
+
+func tossing() -> bool:
+	return not _toss.is_empty()
+
+
+## Toss the war marker onto sheet `index`'s cell of the index chart, then lay
+## the sheet (spec 2026-10-02-war-room-v2 §2.3). Ignored mid-toss or mid-roll.
+func toss_to(index: int) -> void:
+	if tossing() or rolling() or index < 0 or index >= WarSheets.series(_repo).size():
+		return
+	_toss_n += 1
+	var uv := WarToss.landing(WarIndexChart.uv_of_cell(_repo, WarSheets.series(_repo)[index]),
+		hash([index, _toss_n]), _repo.bal("war_toss_margin"))
+	var to := WarRoomWall.chart_point(_chart, uv)
+	var hand := to + (_camera.global_position - to).normalized() * _repo.bal("war_toss_hand_m")
+	_toss = WarToss.plan(hand, to, hash([index, _toss_n, "toss"]), WarToss.rules(_repo))
+	_toss_t = 0.0
+	_toss_to = index
+	_marker.visible = true
+	_marker.global_transform = WarToss.pose(_toss, 0.0)
+
+
+func _step_toss(delta: float) -> void:
+	if not tossing():
+		return
+	_toss_t += delta
+	_marker.global_transform = WarToss.pose(_toss, _toss_t)
+	if _toss_t >= float(_toss["duration"]):
+		var to := _toss_to
+		_toss = {}
+		sheet_requested.emit(to)
+
+
+## The marker stands on the laid sheet's cell of the chart (no toss: the first
+## lay, a lay by an edge arrow or the margin).
+func _stand_marker(index: int) -> void:
+	if tossing():
+		return
+	var uv := WarIndexChart.uv_of_cell(_repo, WarSheets.series(_repo)[index]).get_center()
+	_marker.global_transform = Transform3D(Basis.IDENTITY, WarRoomWall.chart_point(_chart, uv))
+	_marker.visible = true
 
 
 func board_mode() -> String:

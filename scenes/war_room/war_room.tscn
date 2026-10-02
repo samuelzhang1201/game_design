@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=24 format=3]
 
 [ext_resource type="Script" path="res://scripts/war_room/war_room_view.gd" id="1_view"]
 [ext_resource type="Script" path="res://scripts/war_room/war_ink_painter.gd" id="2_ink"]
@@ -54,6 +54,20 @@ size = Vector3(0.05, 1.5, 0.05)
 albedo_color = Color(0.36, 0.24, 0.14, 1)
 roughness = 0.8
 
+[sub_resource type="CylinderMesh" id="Marker_body"]
+top_radius = 0.006
+bottom_radius = 0.008
+height = 0.02
+
+[sub_resource type="CylinderMesh" id="Marker_base"]
+top_radius = 0.01
+bottom_radius = 0.011
+height = 0.006
+
+[sub_resource type="StandardMaterial3D" id="Mat_marker"]
+albedo_color = Color(0.608, 0.173, 0.122, 1)
+roughness = 0.55
+
 [node name="WarRoomView" type="Control"]
 clip_contents = true
 layout_mode = 3
@@ -99,6 +113,20 @@ transform = Transform3D(1, 0, 0, 0, 1.05828, 0, 0, 0, 1, 0, 0.04662, 0)
 [node name="Rake" parent="Viewport/Room" instance=ExtResource("10_rake")]
 transform = Transform3D(0.99863, 0, 0.052336, 0, 1, 0, -0.052336, 0, 0.99863, 0.8, -0.001, -0.62)
 
+
+[node name="Marker" type="Node3D" parent="Viewport/Room"]
+unique_name_in_owner = true
+visible = false
+
+[node name="Body" type="MeshInstance3D" parent="Viewport/Room/Marker"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.016, 0)
+mesh = SubResource("Marker_body")
+material_override = SubResource("Mat_marker")
+
+[node name="Base" type="MeshInstance3D" parent="Viewport/Room/Marker"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.003, 0)
+mesh = SubResource("Marker_base")
+material_override = SubResource("Mat_marker")
 
 [node name="Easel" type="Node3D" parent="Viewport/Room"]
 unique_name_in_owner = true
