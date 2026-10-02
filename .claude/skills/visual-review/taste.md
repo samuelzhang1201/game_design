@@ -621,3 +621,10 @@ add it here as a principle with its why — not as a changelog entry.
   战略纸图，隐藏房屋和树 — 不同意). Performance at the far zoom is won by LOD,
   shadow distance, instance budgets and CPU work, never by swapping the
   landscape for a flat stylised map or hiding houses and woods wholesale.
+- **Costly finishing effects are spent where they show: up close** (owner,
+  choosing "按缩放切换" from the AA / SSAO sheets). MSAA 4x — the 2026-09-24
+  ruling against stair-stepped house edges — and SSAO stay at the zooms where
+  a house or a crown is big enough to show them; at the opening view and
+  beyond, where matched shots showed no difference, the high tier draws SMAA
+  and no SSAO. A finishing effect that cannot be seen at a zoom is not paid
+  for at that zoom.

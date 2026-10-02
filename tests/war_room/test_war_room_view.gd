@@ -78,6 +78,20 @@ func test_the_ink_cache_keeps_the_laid_sheet_and_one_other() -> void:
 	assert_false(view._inks.cache.has(0), "the oldest is let go")
 
 
+## Perf 2026-10-02: the room shut gives its render targets back and keeps
+## only the laid sheet's ink; opened again it is the window's size.
+func test_a_shut_room_gives_back_its_render_targets_and_all_but_the_laid_ink() -> void:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	for sheet in [0, 1]:
+		view._inks.store(sheet, 10 + sheet, img.duplicate())
+	view.set_active(false)
+	var vp: SubViewport = view.get_node("%Viewport")
+	assert_eq(vp.size, Vector2i(2, 2), "nothing rendered, nothing held")
+	assert_eq(view._inks.cache.keys(), [1], "the laid sheet's ink alone")
+	view.set_active(true)
+	assert_gt(vp.size.x, 2, "open again, the window's size")
+
+
 func test_the_ink_viewport_is_smallest_at_rest_and_after_a_paint() -> void:
 	var ink: SubViewport = view.get_node("%InkViewport")
 	assert_eq(ink.size, WarRoomInk.REST, "nothing is allocated before a sheet is laid")

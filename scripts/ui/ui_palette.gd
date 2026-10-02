@@ -545,6 +545,8 @@ static func chip_style(bg: Color = CHIP_BG, border: Color = EDGE) -> StyleBoxFla
 ## editor import yet and for headless runs. Cached; null when absent.
 static func load_art(path: String) -> Texture2D:
 	if _art_cache.has(path):
+		_art_lru.erase(path)
+		_art_lru.append(path)
 		return _art_cache[path]
 	var tex: Texture2D = null
 	if ResourceLoader.exists(path):
@@ -554,7 +556,31 @@ static func load_art(path: String) -> Texture2D:
 		if img != null:
 			tex = ImageTexture.create_from_image(img)
 	_art_cache[path] = tex
+	_keep_art(path, tex)
 	return tex
+
+
+## The art load_art keeps, least recently asked first, and its bytes: every
+## portrait, painting and icon a session ever drew stayed in video memory
+## (perf 2026-10-02, up to ~330 MB). Past ui_art_cache_mb the oldest go; one
+## still on screen lives on through its own references, and asked again it
+## is loaded again.
+static var _art_lru: Array[String] = []
+static var _art_bytes: Dictionary = {}
+static var _art_total := 0
+
+
+static func _keep_art(path: String, tex: Texture2D) -> void:
+	var bytes := tex.get_width() * tex.get_height() * 4 if tex != null else 0
+	_art_bytes[path] = bytes
+	_art_total += bytes
+	_art_lru.append(path)
+	var cap := int(_bal_or("ui_art_cache_mb", 160.0) * 1048576.0)
+	while _art_total > cap and _art_lru.size() > 1:
+		var old: String = _art_lru.pop_front()
+		_art_total -= int(_art_bytes.get(old, 0))
+		_art_bytes.erase(old)
+		_art_cache.erase(old)
 
 ## The shared map backdrop, edge-cropped. Null when the file is missing
 ## (screens fall back to their flat ground color).
