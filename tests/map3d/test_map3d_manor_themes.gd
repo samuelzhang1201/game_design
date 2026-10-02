@@ -86,7 +86,7 @@ func test_a_conquest_recolours_the_lut() -> void:
 # --- the edges ------------------------------------------------------------------
 
 func _edges_node(v: Map3DView) -> MeshInstance3D:
-	return v.viewport().get_node_or_null("Lines/ManorEdges") as MeshInstance3D
+	return v.world().get_node_or_null("Lines/ManorEdges") as MeshInstance3D
 
 
 func test_the_edges_are_ruled_only_under_a_theme() -> void:

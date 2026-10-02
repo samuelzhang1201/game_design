@@ -85,7 +85,7 @@ func _has_point(point: Vector2) -> bool:
 func _gui_input(event: InputEvent) -> void:
 	var mb := event as InputEventMouseButton
 	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and _yaw_known():
-		(view.get_node("Viewport/CameraRig") as Map3DCameraRig).start_north()
+		(view.get_node("Viewport/World/CameraRig") as Map3DCameraRig).start_north()
 		accept_event()
 
 func _yaw_known() -> bool:

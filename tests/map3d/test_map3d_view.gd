@@ -115,7 +115,7 @@ func test_every_settlement_gets_a_marker_by_group() -> void:
 func test_rings_take_their_size_from_the_table() -> void:
 	var v := _view()
 	v.activate()
-	var mmi := v.viewport().get_node("Markers/Capital") as MultiMeshInstance3D
+	var mmi := v.world().get_node("Markers/Capital") as MultiMeshInstance3D
 	var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 	var spec: Dictionary = Game.data.map3d_settlements["capital"]
 	assert_almost_eq(float(mat.get_shader_parameter("ring_px")), float(spec["ring_px"]), 0.001,
@@ -135,10 +135,10 @@ func test_rings_take_their_size_from_the_table() -> void:
 func test_the_selection_ring_never_hides_by_distance() -> void:
 	var v := _view()
 	v.activate()
-	var markers := v.viewport().get_node("Markers") as Map3DLayerSettlements
+	var markers := v.world().get_node("Markers") as Map3DLayerSettlements
 	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
 	markers.show_selected(String(realm["capital_burg"]))
-	var mmi := v.viewport().get_node("Markers/Selected") as MultiMeshInstance3D
+	var mmi := v.world().get_node("Markers/Selected") as MultiMeshInstance3D
 	var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 	assert_eq(float(mat.get_shader_parameter("min_view_m")), 0.0)
 
@@ -167,7 +167,7 @@ func test_a_clicked_settlement_wears_the_gold_ring_until_cleared() -> void:
 func test_the_selection_ring_falls_back_to_dot_px_for_every_group() -> void:
 	var v := _view()
 	v.activate()
-	var markers := v.viewport().get_node("Markers") as Map3DLayerSettlements
+	var markers := v.world().get_node("Markers") as Map3DLayerSettlements
 	var k := Game.data.bal("map3d_selected_ring_scale")
 	for group: String in ["capital", "village"]:
 		var code := ""
@@ -178,7 +178,7 @@ func test_the_selection_ring_falls_back_to_dot_px_for_every_group() -> void:
 		assert_ne(code, "", "the pack has a " + group)
 		markers.show_selected(code)
 		assert_true(markers.selected_visible(), group + "'s ring shows")
-		var mmi := v.viewport().get_node("Markers/Selected") as MultiMeshInstance3D
+		var mmi := v.world().get_node("Markers/Selected") as MultiMeshInstance3D
 		var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 		var spec: Dictionary = Game.data.map3d_settlements[group]
 		var want_ring := float(spec["dot_px"]) * 2.0 * k
@@ -191,7 +191,7 @@ func test_the_selection_ring_falls_back_to_dot_px_for_every_group() -> void:
 func test_a_far_village_carries_its_max_view_m_from_the_table() -> void:
 	var v := _view()
 	v.activate()
-	var mmi := v.viewport().get_node("Markers/Village") as MultiMeshInstance3D
+	var mmi := v.world().get_node("Markers/Village") as MultiMeshInstance3D
 	var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 	var spec: Dictionary = Game.data.map3d_settlements["village"]
 	assert_almost_eq(float(mat.get_shader_parameter("max_view_m")), float(spec["max_view_m"]), 0.001)
@@ -254,7 +254,7 @@ func test_the_tier_materials_carry_the_computed_threshold_inside_the_reachable_r
 		assert_gt(expected, Game.data.bal("map3d_zoom_min_m"),
 			"view height %d: the computed threshold must sit above the closest zoom" % h)
 		for group: String in Game.data.map3d_settlements:
-			var mmi := v.viewport().get_node("Markers/%s" % group.capitalize()) as MultiMeshInstance3D
+			var mmi := v.world().get_node("Markers/%s" % group.capitalize()) as MultiMeshInstance3D
 			var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 			assert_almost_eq(float(mat.get_shader_parameter("min_view_m")), expected, 0.001,
 				"view height %d: %s's ring material must carry the computed threshold, not the "
@@ -265,7 +265,7 @@ func test_ring_render_priority_rises_with_tier() -> void:
 	var v := _view()
 	v.activate()
 	var priority := func(group: String) -> int:
-		var mmi := v.viewport().get_node("Markers/%s" % group.capitalize()) as MultiMeshInstance3D
+		var mmi := v.world().get_node("Markers/%s" % group.capitalize()) as MultiMeshInstance3D
 		var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 		return mat.render_priority
 	assert_lt(priority.call("village"), priority.call("town"), "village < town")
@@ -289,9 +289,9 @@ func test_the_render_priority_table_orders_every_layer() -> void:
 		assert_lt(order[i - 1], order[i], "row %d under row %d" % [i - 1, i])
 	var v := _view()
 	v.activate()
-	var clouds := v.viewport().get_node("Clouds") as MultiMeshInstance3D
+	var clouds := v.world().get_node("Clouds") as MultiMeshInstance3D
 	assert_eq((clouds.material_override as ShaderMaterial).render_priority, Map3DView.PRIORITY_CLOUDS)
-	for mmi: MultiMeshInstance3D in v.viewport().get_node("Markers").get_children():
+	for mmi: MultiMeshInstance3D in v.world().get_node("Markers").get_children():
 		var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 		assert_gt(mat.render_priority, Map3DView.PRIORITY_CLOUDS, "%s over the clouds" % mmi.name)
 	v.refresh_borders()
@@ -556,7 +556,7 @@ func test_the_bench_can_switch_each_layer_off() -> void:
 	var names := v.layer_names()
 	assert_true("Markers" in names and "Lines" in names)
 	v.set_layer_visible("Markers", false)
-	assert_false((v.viewport().get_node("Markers") as Node3D).visible)
+	assert_false((v.world().get_node("Markers") as Node3D).visible)
 	v.set_layer_visible("Markers", true)
 	v.look_at_home(5000.0)
 	assert_almost_eq(v.distance(), 5000.0, 0.01)

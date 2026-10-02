@@ -75,7 +75,7 @@ func _process(delta: float) -> void:
 
 func _place() -> void:
 	var ctx := view.context()
-	(view.get_node("Viewport/CameraRig") as Map3DCameraRig).place(_centre, _distance, _yaw)
+	(view.get_node("Viewport/World/CameraRig") as Map3DCameraRig).place(_centre, _distance, _yaw)
 
 ## Start: down from the title's height to the game's opening view (its scale
 ## bar's distance, north up), over ui_title_sweep_s; `swept` when it lands.
@@ -94,7 +94,7 @@ func sweep(to: GameState = null) -> void:
 func _step_sweep(delta: float) -> void:
 	_sweep_t = minf(_sweep_t + delta / maxf(Game.data.bal("ui_title_sweep_s"), 0.01), 1.0)
 	var k := _sweep_t * _sweep_t * (3.0 - 2.0 * _sweep_t)  # smoothstep
-	var rig := view.get_node("Viewport/CameraRig") as Map3DCameraRig
+	var rig := view.get_node("Viewport/World/CameraRig") as Map3DCameraRig
 	_distance = lerpf(_sweep_from.x, rig.start_distance(), k)
 	_yaw = lerpf(_sweep_from.y, 0.0, k)
 	_centre = _sweep_home.lerp(_sweep_to, k)

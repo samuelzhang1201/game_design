@@ -32,7 +32,7 @@ func test_off_is_off() -> void:
 func test_its_two_emitters_are_the_scenes_and_start_still() -> void:
 	var view := (load("res://scenes/map3d/world_map_3d.tscn") as PackedScene).instantiate()
 	add_child_autofree(view)
-	var precip := view.get_node("Viewport/Precip") as Map3DLayerPrecip
+	var precip := view.get_node("Viewport/World/Precip") as Map3DLayerPrecip
 	assert_not_null(precip, "the authored scene carries Viewport/Precip")
 	var ctx := Map3DContext.new(repo, {"pack_origin": [0.0, 0.0], "m_per_px": 50.0})
 	var weather := Map3DLayerWeather.new()

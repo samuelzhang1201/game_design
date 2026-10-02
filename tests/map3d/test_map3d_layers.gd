@@ -60,7 +60,7 @@ func test_the_rivers_are_their_own_layer() -> void:
 	f.store_string('{"rivers": [{"code": "a", "points": [[0, 0, 10, 6, 0], [500, 0, 9, 40, 1]]}]}')
 	f.close()
 	var v := _view()
-	var rivers := v.viewport().get_node("Rivers")
+	var rivers := v.world().get_node("Rivers")
 	assert_true(rivers is Map3DLayerRivers)
 	assert_eq((rivers as Map3DLayerRivers).material(), v.river_material())
 	assert_gt((rivers as Map3DLayerRivers).courses().size(), 0, "the bridges read the courses")
@@ -74,7 +74,7 @@ func test_no_rivers_file_no_rivers_layer_listed() -> void:
 
 func test_the_sea_layer_is_the_scenes_own_plane() -> void:
 	var v := _view(_sea_fixture)
-	var sea := v.viewport().get_node("Sea")
+	var sea := v.world().get_node("Sea")
 	assert_true(sea is Map3DLayerSea)
 	assert_eq((sea as Map3DLayerSea).material_override, v.sea_material())
 	assert_not_null((sea as Map3DLayerSea).mesh, "the scene's own plane")
@@ -85,14 +85,14 @@ func test_the_sea_layer_is_the_scenes_own_plane() -> void:
 
 func test_the_suns_shadow_look_is_data() -> void:
 	var v := _view(_sea_fixture)
-	var sun := v.viewport().get_node("Sun") as DirectionalLight3D
+	var sun := v.world().get_node("Sun") as DirectionalLight3D
 	assert_almost_eq(sun.shadow_opacity, Game.data.bal("map3d_sun_shadow_opacity"), 0.0001)
 	assert_almost_eq(sun.shadow_blur, Game.data.bal("map3d_sun_shadow_blur"), 0.0001)
 
 
 func test_the_clouds_are_their_own_layer_with_a_shadow_twin() -> void:
 	var v := _view()
-	var clouds := v.viewport().get_node("Clouds")
+	var clouds := v.world().get_node("Clouds")
 	assert_true(clouds is Map3DLayerClouds)
 	var twin := clouds.get_node("Shadows") as MultiMeshInstance3D
 	assert_eq(twin.multimesh, (clouds as MultiMeshInstance3D).multimesh, "one shape, one shadow")
@@ -108,7 +108,7 @@ func test_the_clouds_are_their_own_layer_with_a_shadow_twin() -> void:
 
 func test_the_markers_are_their_own_layer() -> void:
 	var v := _view()
-	var markers := v.viewport().get_node("Markers")
+	var markers := v.world().get_node("Markers")
 	assert_true(markers is Map3DLayerSettlements)
 	assert_eq((markers as Map3DLayerSettlements).counts(), v.marker_counts())
 	var spec: Dictionary = Game.data.map3d_settlements["capital"]
@@ -123,7 +123,7 @@ func test_a_camera_move_refreshes_the_houses() -> void:
 	# the clusters over the player's capital (_view's home) are populated by
 	# the time the view is loaded.
 	var v := _view()
-	var node := v.viewport().get_node("Houses")
+	var node := v.world().get_node("Houses")
 	assert_true(node is Map3DLayerHouses, "the view owns a houses layer")
 	var houses := node as Map3DLayerHouses
 	assert_eq(houses.counts(), v.house_counts())
@@ -194,7 +194,7 @@ func test_the_themes_are_one_layer_that_works_before_load() -> void:
 	v.set_manor_theme("manors")
 	assert_false(v.heat_on())
 	assert_not_null(v.cell_lut())
-	assert_not_null(v.viewport().get_node_or_null("Lines/ManorEdges"))
+	assert_not_null(v.world().get_node_or_null("Lines/ManorEdges"))
 	assert_eq(Map3DView.load_field_map("user://nowhere/world.tscn"), null)
 
 

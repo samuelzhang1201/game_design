@@ -105,7 +105,7 @@ func test_a_waiting_courier_yields_the_click_to_the_town_under_him() -> void:
 			break
 	var c := CourierSystem.dispatch(Game.data, Game.state, CourierSystem.ORDINARY, code,
 		{"action_code": "ARMY_GARRISON"})
-	var layer := v.get_node("Viewport/Couriers") as Map3DLayerCouriers
+	var layer := v.get_node("Viewport/World/Couriers") as Map3DLayerCouriers
 	var at := Vector2.ZERO
 	for e: Dictionary in v.context().projected_settlements():
 		if String(e["code"]) == _capital():

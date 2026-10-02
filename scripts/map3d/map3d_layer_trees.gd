@@ -1,3 +1,4 @@
+@tool
 class_name Map3DLayerTrees
 extends Node3D
 ## The 3D map's woods (look route 2026-09-30, node Viewport/Trees): the
@@ -19,6 +20,22 @@ const ROW := 6
 var ctx: Map3DContext
 var _count := 0
 var _nodes := 0
+## Editor preview (owner 2026-10-02: the world opened in the editor's 3D
+## view): the woods from the pack's bake alone, unowned, never saved.
+@export var preview := false: set = set_preview
+
+
+func set_preview(on: bool) -> void:
+	preview = on
+	if not Engine.is_editor_hint() or not is_inside_tree():
+		return
+	Map3DPreview.clear_generated(self)
+	if on:
+		var c := Map3DPreview.context_for(self)
+		Map3DPreview.prepare(self, c)
+		if not c.meta.is_empty():
+			build(c)
+	Map3DPreview.sync_viewport(self)
 
 
 func counts() -> Dictionary:
@@ -28,7 +45,8 @@ func counts() -> Dictionary:
 func build(p_ctx: Map3DContext) -> void:
 	ctx = p_ctx
 	for c in get_children():
-		c.queue_free()
+		if c.owner == null:
+			c.queue_free()
 	_count = 0
 	_nodes = 0
 	var repo := ctx.repo

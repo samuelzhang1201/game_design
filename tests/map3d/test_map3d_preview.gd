@@ -99,10 +99,11 @@ func test_an_editor_save_puts_every_preview_back() -> void:
 	add_child_autofree(v)
 	var vp := v.get_node("Viewport") as SubViewport
 	var display := v.get_node("Display") as TextureRect
-	var lines := vp.get_node("Lines") as Map3DLayerLines
-	var rig := vp.get_node("CameraRig") as Map3DCameraRig
-	v.preview_pack = "some_other_pack"
-	v.preview_terrain = true
+	var world := vp.get_node("World") as Map3DWorld
+	var lines := world.get_node("Lines") as Map3DLayerLines
+	var rig := world.get_node("CameraRig") as Map3DCameraRig
+	world.preview_pack = "some_other_pack"
+	world.preview_terrain = false
 	lines.preview = true
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	Map3DPreview.show_live(display, vp, true)
@@ -115,8 +116,8 @@ func test_an_editor_save_puts_every_preview_back() -> void:
 		"the authored camera's `current` is the scene's own: false")
 	# final review 2026-09-20: the root's own two are EXPORTED, so a save while
 	# previewing another pack would pin every checkout to it.
-	assert_eq(v.preview_pack, "", "the root's preview pack is never saved")
-	assert_false(v.preview_terrain, "nor its preview terrain")
+	assert_eq(world.preview_pack, "", "the world's preview pack is never saved")
+	assert_true(world.preview_terrain, "and its terrain switch goes back to the scene's own")
 
 
 ## Ruling (spec 2026-09-20 §1): Map3DContext is what every piece shares, and no
@@ -133,3 +134,34 @@ func test_no_script_under_the_view_reads_game() -> void:
 		assert_false(FileAccess.get_file_as_string("res://scripts/map3d/" + f).contains("Game."),
 			f + " must take what it needs from Map3DContext, never from the Game autoload")
 	assert_gt(checked, 30, "every script under the view was scanned")
+
+
+## The world is its OWN scene (owner 2026-10-02: 优先处理3d地图的场景), so the
+## editor's 3D view opens it: every 3D node of the map under one Map3DWorld,
+## instanced into the view's SubViewport, and nothing under it saved by a
+## preview.
+func test_the_world_is_its_own_scene_inside_the_view() -> void:
+	var v := (load(Map3DView.VIEW_SCENE) as PackedScene).instantiate() as Map3DView
+	add_child_autofree(v)
+	var world := v.get_node_or_null("Viewport/World") as Map3DWorld
+	assert_not_null(world, "the view instances the world")
+	assert_eq(world.scene_file_path, "res://scenes/map3d/map3d_world.tscn")
+	for n in ["WorldSlot", "CameraRig", "Sea", "Rivers", "Bridges", "Lines", "Clouds", "Markers",
+			"Houses", "Trees", "Wind", "Environment", "Sun", "FillLight", "Units", "Trails",
+			"Couriers", "Precip"]:
+		assert_not_null(world.get_node_or_null(n), n + " is the world's")
+	assert_eq((v.get_node("Viewport") as SubViewport).get_child_count(), 1, "the world is the viewport's one child")
+
+
+## Opened on its own, a world's previews go back before a save like the view's.
+func test_a_world_on_its_own_puts_every_preview_back() -> void:
+	var world := (load("res://scenes/map3d/map3d_world.tscn") as PackedScene).instantiate() as Map3DWorld
+	add_child_autofree(world)
+	var lines := world.get_node("Lines") as Map3DLayerLines
+	world.preview_pack = "some_other_pack"
+	lines.preview = true
+	world.notification(Node.NOTIFICATION_EDITOR_PRE_SAVE)
+	assert_false(lines.preview)
+	assert_eq(world.preview_pack, "")
+	for c: Node in lines.get_children():
+		assert_not_null(c.owner, "nothing a preview built is left to save")

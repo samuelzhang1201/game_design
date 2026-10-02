@@ -159,11 +159,11 @@ func test_the_tier_reaches_clouds_steps_and_shadows() -> void:
 	v._process(0.1)
 	assert_eq(v.cloud_count(), int(Map3DQuality.num(low, "clouds")), "the low tier's clouds over the whole map (owner 2026-09-30)")
 	Game.set_clock_speed(0)
-	assert_false((v.get_node("Viewport/Clouds/Shadows") as Node3D).visible)
-	assert_false((v.get_node("Viewport/Sun") as DirectionalLight3D).shadow_enabled)
+	assert_false((v.get_node("Viewport/World/Clouds/Shadows") as Node3D).visible)
+	assert_false((v.get_node("Viewport/World/Sun") as DirectionalLight3D).shadow_enabled)
 	v.set_quality("ultra")
 	assert_eq(v.viewport().msaa_3d, Viewport.MSAA_4X)
-	assert_true((v.get_node("Viewport/Sun") as DirectionalLight3D).shadow_enabled)
+	assert_true((v.get_node("Viewport/World/Sun") as DirectionalLight3D).shadow_enabled)
 
 
 func test_a_throttled_hud_redraws_at_most_at_its_rate() -> void:

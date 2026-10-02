@@ -56,7 +56,7 @@ func _view(path: String = _fixture) -> Map3DView:
 
 
 func _world_of(v: Map3DView) -> Node:
-	return v.viewport().get_node("WorldSlot").get_child(0)
+	return v.world().get_node("WorldSlot").get_child(0)
 
 
 func test_a_new_view_reuses_the_last_views_world() -> void:

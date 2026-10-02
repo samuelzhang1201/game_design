@@ -55,29 +55,27 @@ const CLICK_SLOP := Map3DInput.CLICK_SLOP
 const TOOLTIP_OFFSET := Map3DPicker.TOOLTIP_OFFSET
 const FIELD_MAP_M_PER_TEXEL := Map3DLayerThemes.FIELD_MAP_M_PER_TEXEL
 
-## EDITOR previews (Task 22): the pack a layer's `preview` draws ("" = the
-## default) and whether it loads the terrain; nothing in a running game.
-@export var preview_pack := ""
-@export var preview_terrain := false
+## The 3D nodes are the WORLD's scene (Map3DWorld, owner 2026-10-02), opened
+## on its own in the editor's 3D view; its preview switches are the world's.
 
 var _repo: DataRepository
 var _scene_path := ""
 @onready var _viewport: SubViewport = $Viewport
-@onready var _world_slot: Node3D = $Viewport/WorldSlot
-@onready var _rig: Map3DCameraRig = $Viewport/CameraRig
-@onready var _sea: Map3DLayerSea = $Viewport/Sea
-@onready var _rivers: Map3DLayerRivers = $Viewport/Rivers
-@onready var _lines: Map3DLayerLines = $Viewport/Lines
-@onready var _clouds: Map3DLayerClouds = $Viewport/Clouds
-@onready var _markers: Map3DLayerSettlements = $Viewport/Markers
-@onready var _houses: Map3DLayerHouses = $Viewport/Houses
-@onready var _trees: Map3DLayerTrees = $Viewport/Trees
-@onready var _units: Map3DLayerUnits = $Viewport/Units
-@onready var _trails: Map3DLayerTrails = $Viewport/Trails
-@onready var _couriers: Map3DLayerCouriers = $Viewport/Couriers
-@onready var _env: WorldEnvironment = $Viewport/Environment
-@onready var _sun: DirectionalLight3D = $Viewport/Sun
-@onready var _fill_light: DirectionalLight3D = $Viewport/FillLight
+@onready var _world_slot: Node3D = $Viewport/World/WorldSlot
+@onready var _rig: Map3DCameraRig = $Viewport/World/CameraRig
+@onready var _sea: Map3DLayerSea = $Viewport/World/Sea
+@onready var _rivers: Map3DLayerRivers = $Viewport/World/Rivers
+@onready var _lines: Map3DLayerLines = $Viewport/World/Lines
+@onready var _clouds: Map3DLayerClouds = $Viewport/World/Clouds
+@onready var _markers: Map3DLayerSettlements = $Viewport/World/Markers
+@onready var _houses: Map3DLayerHouses = $Viewport/World/Houses
+@onready var _trees: Map3DLayerTrees = $Viewport/World/Trees
+@onready var _units: Map3DLayerUnits = $Viewport/World/Units
+@onready var _trails: Map3DLayerTrails = $Viewport/World/Trails
+@onready var _couriers: Map3DLayerCouriers = $Viewport/World/Couriers
+@onready var _env: WorldEnvironment = $Viewport/World/Environment
+@onready var _sun: DirectionalLight3D = $Viewport/World/Sun
+@onready var _fill_light: DirectionalLight3D = $Viewport/World/FillLight
 @onready var _display: TextureRect = $Display
 @onready var _notice: Label = $Notice
 ## The HUD waits hidden until a world loads; _load binds and shows it.
@@ -253,7 +251,7 @@ func _load() -> void:
 	_markers.build()
 	_houses.build()  # warm here (~91 ms), not on the first refresh() mid-play
 	_trees.build(_ctx)  # once: fixed chunks, Godot's visibility ranges do the rest
-	($Viewport/Wind as Map3DLayerWind).bind(_ctx)  # the waves and the sway; steps itself
+	($Viewport/World/Wind as Map3DLayerWind).bind(_ctx)  # the waves and the sway; steps itself
 	_sea.build(_ctx)
 	# The sky and sun are the scene's, their numbers data (Task 14); the
 	# environment is this view's own copy of the shared .tres.
@@ -268,7 +266,7 @@ func _load() -> void:
 	_borders.bind(_ctx, _lines)
 	_themes.bind(_ctx, _lines)
 	_themes.prepare(_scene_path)
-	_weather.bind(_ctx, _themes.tint_material(), $Viewport/Precip as Map3DLayerPrecip, _houses)
+	_weather.bind(_ctx, _themes.tint_material(), $Viewport/World/Precip as Map3DLayerPrecip, _houses)
 	_picker.bind(_ctx, self, _tooltip, _borders)
 	_selection.bind(_ctx, _lines, _markers, self)
 	_loaded = true
@@ -539,6 +537,8 @@ func component(key: String) -> Object:
 func is_loaded() -> bool: return _loaded
 func notice() -> Label: return _notice
 func viewport() -> SubViewport: return _viewport
+## The map's 3D world (scenes/map3d/map3d_world.tscn): every layer, the rig, the sky and the sun.
+func world() -> Map3DWorld: return _viewport.get_node("World") as Map3DWorld
 func camera() -> Camera3D: return _rig.camera() if _loaded else null
 func cloud_count() -> int: return _clouds.count() if _loaded else 0
 func target() -> Vector2: return _ctx.target if _ctx != null else Vector2.ZERO
@@ -574,7 +574,7 @@ func set_layer_visible(layer: String, on: bool) -> void:
 		"Hud":
 			_hud.visible = on
 		_:
-			(_viewport.get_node(layer) as Node3D).visible = on
+			(world().get_node(layer) as Node3D).visible = on
 
 func line_mesh(line_name: String) -> ArrayMesh: return _lines.line_mesh(line_name) if _loaded else null
 func marker_counts() -> Dictionary: return _markers.counts() if _loaded else {}

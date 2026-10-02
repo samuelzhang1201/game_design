@@ -82,7 +82,7 @@ func test_the_key_follows_its_inputs() -> void:
 func test_a_view_uses_a_matching_bake() -> void:
 	_bake()
 	var v := _view()
-	var rivers := v.viewport().get_node("Rivers") as MeshInstance3D
+	var rivers := v.world().get_node("Rivers") as MeshInstance3D
 	assert_true(rivers.mesh.resource_path.ends_with(".res"), "the baked rivers")
 	assert_eq(rivers.material_override, v.river_material())
 	assert_true(v.line_mesh("Roads").resource_path.ends_with(".res"), "the baked roads")
@@ -93,7 +93,7 @@ func test_a_stale_bake_is_ignored() -> void:
 	var was: float = Game.data.balance["map3d_bridge_abut_m"]
 	Game.data.balance["map3d_bridge_abut_m"] = float(was) + 1.0
 	var v := _view()
-	var rivers := v.viewport().get_node("Rivers") as MeshInstance3D
+	var rivers := v.world().get_node("Rivers") as MeshInstance3D
 	assert_eq(rivers.mesh.resource_path, "", "built at runtime")
 	Game.data.balance["map3d_bridge_abut_m"] = was
 

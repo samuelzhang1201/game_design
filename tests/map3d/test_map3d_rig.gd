@@ -29,7 +29,7 @@ func _view() -> Map3DView:
 
 func test_the_camera_hangs_from_the_rig() -> void:
 	var v := _view()
-	var rig := v.viewport().get_node("CameraRig") as Map3DCameraRig
+	var rig := v.world().get_node("CameraRig") as Map3DCameraRig
 	assert_not_null(rig)
 	assert_eq(rig.camera(), v.camera())
 	assert_eq(String(v.camera().name), "RigCamera")
@@ -132,7 +132,7 @@ func test_zooming_out_stops_before_the_scale_bar_passes_its_cap() -> void:
 		v._fit_viewport()
 		# Ask for far more than the ceiling: the rig takes what it may.
 		v.look_at_home(Game.data.bal("map3d_zoom_max_m") * 10.0)
-		var rig := v.viewport().get_node("CameraRig") as Map3DCameraRig
+		var rig := v.world().get_node("CameraRig") as Map3DCameraRig
 		assert_almost_eq(v.distance(), rig.max_distance(), 1.0,
 			"the far stop is the rig's own ceiling at %d px" % int(view_h))
 		assert_lte(v.distance(), Game.data.bal("map3d_zoom_max_m"),
@@ -149,6 +149,6 @@ func test_a_taller_view_may_zoom_out_farther() -> void:
 	var tall_v := _view()
 	tall_v.size = Vector2(800, 800)
 	tall_v._fit_viewport()
-	var short_rig := short_v.viewport().get_node("CameraRig") as Map3DCameraRig
-	var tall_rig := tall_v.viewport().get_node("CameraRig") as Map3DCameraRig
+	var short_rig := short_v.world().get_node("CameraRig") as Map3DCameraRig
+	var tall_rig := tall_v.world().get_node("CameraRig") as Map3DCameraRig
 	assert_gt(tall_rig.max_distance(), short_rig.max_distance())

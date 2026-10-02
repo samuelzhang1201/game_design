@@ -197,7 +197,7 @@ func test_settlement_rects_sizes_on_the_drawn_dot_not_the_footprint() -> void:
 	var c := v.context()
 	var capital := String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
 	var min_m := Map3DGeometry.settlement_dot_min_view_m(Game.data, c.meta, c.view_size.y)
-	var mmi := v.viewport().get_node("Markers/Capital") as MultiMeshInstance3D
+	var mmi := v.world().get_node("Markers/Capital") as MultiMeshInstance3D
 	var mat := mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial
 	assert_almost_eq(float(mat.get_shader_parameter("min_view_m")), min_m, 0.001,
 		"the capital's ring material must carry the same threshold settlement_rects() uses")

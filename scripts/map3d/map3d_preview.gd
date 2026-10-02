@@ -153,16 +153,19 @@ static func prepare(node: Node, ctx: Map3DContext) -> void:
 	if vp != null:
 		ctx.viewport = vp
 		ctx.view_size = Vector2(vp.size)
+	elif Map3DWorld.editor_viewport_3d() != null:
+		# the world on its own: the editor's 3D view draws it (read, never driven)
+		ctx.view_size = Vector2(Map3DWorld.editor_viewport_3d().size)
 	attach_world(node, ctx)
 
 
-## The built world under the view's Viewport/WorldSlot, so a preview with the
-## terrain on shows the ground too; unowned, so it is never saved.
+## The built world under the world's WorldSlot (Map3DWorld), so a preview
+## with the terrain on shows the ground too; unowned, so it is never saved.
 static func attach_world(node: Node, ctx: Map3DContext) -> void:
 	if ctx.world == null or ctx.world.get_parent() != null:
 		return
 	var r := root_of(node)
-	var slot := r.get_node_or_null("Viewport/WorldSlot") if r != null else null
+	var slot := r.get_node_or_null("WorldSlot") if r != null else null
 	if slot != null:
 		slot.add_child(ctx.world)  # no owner: never saved
 
@@ -181,19 +184,21 @@ static func viewport_of(node: Node) -> SubViewport:
 static func sync_viewport(node: Node) -> void:
 	var vp := viewport_of(node)
 	if vp == null:
+		var w := root_of(node)  # the world on its own: give its terrain back with the last preview
+		if w != null and Engine.is_editor_hint() and not _any_preview(w):
+			Map3DWorld.give_back(w.get_node_or_null("WorldSlot"))
 		return
 	var on := _any_preview(vp)
 	vp.render_target_update_mode = (SubViewport.UPDATE_ALWAYS if on
 		else SubViewport.UPDATE_DISABLED)
 	show_live(display_of(vp), vp, on)
-	var slot := vp.get_node_or_null("WorldSlot")
 	# Only the editor's preview hands the world back; at runtime the view owns
 	# what stands under WorldSlot.
-	if on or slot == null or not Engine.is_editor_hint():
+	if on or not Engine.is_editor_hint():
 		return
-	for c: Node in slot.get_children():
-		if c.owner == null:
-			slot.remove_child(c)  # kept for the next preview, never freed here
+	for w: Node in vp.find_children("*", "", true, false):
+		if w is Map3DWorld:
+			Map3DWorld.give_back(w.get_node_or_null("WorldSlot"))
 
 
 ## The view's Display beside `vp`, or null.
@@ -255,19 +260,21 @@ static func reset(root: Node) -> void:
 	# The root's two are exported and would otherwise be SAVED (final review
 	# 2026-09-20): a scene written while previewing another pack would open
 	# every checkout on that pack, and with its terrain, for good.
-	if "preview_pack" in root:
-		root.set("preview_pack", "")
-	if "preview_terrain" in root:
-		root.set("preview_terrain", false)
-	var vp := root.get_node_or_null("Viewport") as SubViewport
-	if vp == null:
-		return
-	for c: Node in vp.find_children("*", "", true, false):
+	# the world's own switches, wherever it stands, back to the scene's defaults
+	for w: Node in [root] + root.find_children("*", "", true, false):
+		if w is Map3DWorld:
+			(w as Map3DWorld).preview_pack = ""
+			(w as Map3DWorld).preview_terrain = true
+	for c: Node in root.find_children("*", "", true, false):
 		if "preview" in c and bool(c.get("preview")):
 			c.set("preview", false)  # each layer clears what it drew
-	sync_viewport(vp)
+	var vp := root.get_node_or_null("Viewport") as SubViewport
+	if vp != null:
+		sync_viewport(vp)
+	else:
+		Map3DWorld.give_back(root.get_node_or_null("WorldSlot"))
 	# `current` is the authored camera's own saved property: the scene has none.
-	for cam: Node in vp.find_children("*", "Camera3D", true, false):
+	for cam: Node in root.find_children("*", "Camera3D", true, false):
 		if cam.owner != null:
 			(cam as Camera3D).current = false
 

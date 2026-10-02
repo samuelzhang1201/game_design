@@ -8,17 +8,17 @@ const RunDir := preload("res://tests/run_dir.gd")
 var _fixture := RunDir.dir("map3d_scene").path_join("test_map3d_scene_world.tscn")
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
-const TREE := ["Viewport", "Viewport/WorldSlot", "Viewport/CameraRig",
-	"Viewport/CameraRig/RigCamera", "Viewport/Sea", "Viewport/Rivers", "Viewport/Bridges",
-	"Viewport/Lines", "Viewport/Clouds", "Viewport/Clouds/Shadows", "Viewport/Markers",
-	"Viewport/Houses", "Viewport/Couriers",
+const TREE := ["Viewport", "Viewport/World/WorldSlot", "Viewport/World/CameraRig",
+	"Viewport/World/CameraRig/RigCamera", "Viewport/World/Sea", "Viewport/World/Rivers", "Viewport/World/Bridges",
+	"Viewport/World/Lines", "Viewport/World/Clouds", "Viewport/World/Clouds/Shadows", "Viewport/World/Markers",
+	"Viewport/World/Houses", "Viewport/World/Couriers",
 	"Display", "Notice", "Hud", "Hud/Labels", "Hud/Landmarks", "Hud/Weather", "Hud/HeatLegend",
 	"Hud/Badges", "Hud/Armies", "Hud/Couriers", "Hud/Backdrop", "Hud/ScaleBar", "Hud/Ruler",
 	"Hud/Compass", "Hud/Needle", "Tooltip"]
 ## What the layers build under the view at load (+ refresh_borders).
-const BUILT := ["Viewport/Markers/Selected", "Viewport/Markers/Capital", "Viewport/Markers/Village",
-	"Viewport/Lines/Kingdoms", "Viewport/Lines/KingdomHalo", "Viewport/Lines/KingdomBand",
-	"Viewport/Lines/Seams", "Viewport/Lines/Roads"]
+const BUILT := ["Viewport/World/Markers/Selected", "Viewport/World/Markers/Capital", "Viewport/World/Markers/Village",
+	"Viewport/World/Lines/Kingdoms", "Viewport/World/Lines/KingdomHalo", "Viewport/World/Lines/KingdomBand",
+	"Viewport/World/Lines/Seams", "Viewport/World/Lines/Roads"]
 
 
 func before_all() -> void:
@@ -44,7 +44,7 @@ func test_create_instances_the_authored_scene() -> void:
 	var display := v.get_node("Display") as TextureRect
 	assert_eq(display.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 	assert_eq(display.expand_mode, TextureRect.EXPAND_IGNORE_SIZE)
-	assert_eq((v.get_node("Viewport/Clouds/Shadows") as GeometryInstance3D).cast_shadow,
+	assert_eq((v.get_node("Viewport/World/Clouds/Shadows") as GeometryInstance3D).cast_shadow,
 		GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY)
 	assert_eq(v.get_child(v.get_child_count() - 1).name, &"Tooltip", "the name over everything")
 	# what the layers build at load (+ refresh_borders), at the paths tests and
@@ -54,8 +54,8 @@ func test_create_instances_the_authored_scene() -> void:
 	v.refresh_borders()
 	for path: String in BUILT:
 		assert_not_null(v.get_node_or_null(path), path)
-	assert_true(v.get_node("Viewport/Markers/Capital") is MultiMeshInstance3D)
-	assert_true(v.get_node("Viewport/Clouds") is MultiMeshInstance3D)
+	assert_true(v.get_node("Viewport/World/Markers/Capital") is MultiMeshInstance3D)
+	assert_true(v.get_node("Viewport/World/Clouds") is MultiMeshInstance3D)
 	assert_true(v.get_node("Hud") is Map3DHud)
 	assert_eq(String(v.camera().name), "RigCamera")
 	assert_true(v.viewport().is_ancestor_of(v.camera()))
@@ -115,10 +115,10 @@ func test_an_old_builds_sun_sky_sea_and_cameras_step_aside() -> void:
 	var lights := vp.find_children("*", "DirectionalLight3D", true, false)
 	assert_eq(lights.map(func(n: Node) -> String: return String(n.name)), ["Sun", "FillLight"],
 		"the scene's sun and its shadowless fill light only")
-	assert_false((vp.get_node("FillLight") as DirectionalLight3D).shadow_enabled)
+	assert_false((v.world().get_node("FillLight") as DirectionalLight3D).shadow_enabled)
 	assert_eq(vp.find_children("*", "WorldEnvironment", true, false).size(), 1, "one sky")
 	assert_eq(vp.find_children("*", "Camera3D", true, false).size(), 1, "the rig's camera only")
-	var world := vp.get_node("WorldSlot").get_child(0)
+	var world := v.world().get_node("WorldSlot").get_child(0)
 	for n: String in Map3DWorldLoader.OLD_BUILD_NODES:
 		assert_null(world.get_node_or_null(n), n + " of the old build is gone")
 	assert_true("Sea" in v.layer_names())
@@ -130,7 +130,7 @@ func test_the_sky_and_sun_are_data() -> void:
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
 	v.activate()
-	var env := (v.get_node("Viewport/Environment") as WorldEnvironment).environment
+	var env := (v.get_node("Viewport/World/Environment") as WorldEnvironment).environment
 	assert_almost_eq(env.ambient_light_energy, Game.data.bal("map3d_ambient_energy"), 0.0001)
 	# depth haze (Phase 0, 2026-09-24): the fog follows the camera's distance
 	assert_eq(env.fog_mode, Environment.FOG_MODE_DEPTH)
@@ -142,10 +142,10 @@ func test_the_sky_and_sun_are_data() -> void:
 	var far := v.distance() > Game.data.bal("map3d_close_effects_m")
 	assert_eq(env.ssao_enabled, Game.data.bal("map3d_env_ssao") > 0.0 and Map3DQuality.num(row, "ssao", 1.0) > 0.0
 		and (not far or Map3DQuality.num(row, "far_ssao", 1.0) > 0.0))
-	var sun := v.get_node("Viewport/Sun") as DirectionalLight3D
+	var sun := v.get_node("Viewport/World/Sun") as DirectionalLight3D
 	assert_almost_eq(sun.light_energy, Game.data.bal("map3d_sun_energy"), 0.0001)
 	assert_almost_eq(sun.rotation_degrees.x, Game.data.bal("map3d_sun_pitch_deg"), 0.01)
-	var sea := v.get_node("Viewport/Sea") as MeshInstance3D
+	var sea := v.get_node("Viewport/World/Sea") as MeshInstance3D
 	assert_not_null(sea.mesh, "the sea plane is the scene's own")
 	assert_almost_eq(sea.global_position.y, 5.0, 0.001)
 
