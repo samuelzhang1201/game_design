@@ -366,4 +366,18 @@ room; drafts on the 3D map; pathfinding.
   over the index chart). The exaggeration is 5 (the critic's pick of 3/5/8).
 - **Plan B, §2.3:** the room picks a pennant or a piece before the flat
   index chart (a piece at a sheet's north edge throws its head over it).
+- **Plan C, §3.1:** every order given in the room is a draft, Cancel march
+  included — it pencils a halt (the real pennant's slip reads "halt
+  pencilled"). A draft pennant offers Edit route… and Strike the draft. The
+  pencil is a SOLID graphite stroke with an open arrowhead, not dashes (the
+  critic: dashes are the map's own language).
+- **Plan C, §3.3:** the review measures each line's gold by running its order
+  on a copy of the state, so the scroll and the seal can never disagree; a
+  line the engine or the chest would refuse shows its reason and no price.
+  The wax is the photographed council seal with the crown's live family's
+  arms pressed in.
+- **Plan C, §3.2:** the leave prompt is a modal layer over the whole room (a
+  click on its veil stays). Deploy… chosen from it seals, then leaves for
+  where the player was going; Not yet stays in the room. An event's forced
+  switch keeps the drafts and says so in the news.
 
