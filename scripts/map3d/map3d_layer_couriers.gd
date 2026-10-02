@@ -32,6 +32,13 @@ static func clip_or_fallback(anim: AnimationPlayer, action: String) -> String:
 ## His square counter past the counter scale, and its click box, design px
 ## (edited on the node, owner 2026-10-02).
 @export var counter_px := 16.0
+## The real seconds he takes to fade out once he delivers (owner 2026-09-30:
+## 信使送到信息后要立即淡化消失) — the engine keeps him to the day's end.
+@export var fade_s := 0.6
+## His GALLOP's playback rate, held within these: a slow road still reads as
+## a gallop, and past the ceiling the rider slides.
+@export var anim_min := 0.8
+@export var anim_max := 3.0
 
 var ctx: Map3DContext
 var _pieces: Dictionary = {}
@@ -97,14 +104,14 @@ func step(delta: float) -> bool:
 		var prev: Vector2 = _shown_xz.get(id, xz)
 		if Map3DCourierRide.delivered(_ride_of(c), _share_of(c)):
 			_fade[id] = float(_fade.get(id, 0.0)) + delta
-			dirty = dirty or _fade[id] - delta < ctx.repo.bal("map3d_courier_fade_s")  # still fading
+			dirty = dirty or _fade[id] - delta < fade_s  # still fading
 			moving = false
 		if _pieces.has(id):
 			var piece: Dictionary = _pieces[id]
 			var k := (piece["node"] as Node3D).transform.basis.get_scale().x
 			var pace := Map3DUnitRig.gait_rate(prev.distance_to(xz) / maxf(delta, 0.001), k,
 				float(piece["clip_s"]), float(piece["stride_m"]),
-				ctx.repo.bal("map3d_courier_anim_min"), ctx.repo.bal("map3d_courier_anim_max"))
+				anim_min, anim_max)
 			_sync(piece, action_for(moving or not (_waiting(c, xz) or _fade.has(id)), ctx.clock_speed() > 0.0), pace)
 		if not _shown_xz.has(id) or _shown_xz[id] != xz:
 			_shown_xz[id] = xz
@@ -190,7 +197,7 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 	var repo := ctx.repo
 	var s_px := ctx.viewport_px_scale()
 	var centre := Vector3(xz.x, ctx.height_at(xz), xz.y)
-	var alpha := Map3DCourierRide.alpha(float(_fade.get(id, -1.0)), repo.bal("map3d_courier_fade_s"))
+	var alpha := Map3DCourierRide.alpha(float(_fade.get(id, -1.0)), fade_s)
 	if alpha <= 0.0:  # delivered and faded: nothing drawn, nothing to click
 		if _pieces.has(id):
 			(_pieces[id]["node"] as Node3D).visible = false
@@ -249,7 +256,8 @@ func _sync(piece: Dictionary, action: String, pace: float) -> void:
 	if clip == "":
 		return
 	if String(piece["action"]) != action:
-		anim.play(clip, ctx.repo.bal("map3d_unit_blend_s"))
+		var units := get_node_or_null("../Units") as Map3DLayerUnits
+		anim.play(clip, units.blend_s if units != null else 0.3)
 		piece["action"] = action
 	anim.speed_scale = pace if action == GALLOP else 1.0
 

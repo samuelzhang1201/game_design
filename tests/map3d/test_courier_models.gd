@@ -19,7 +19,9 @@ func test_every_courier_model_gallops_and_idles() -> void:
 		assert_ne(Map3DUnits.clip_named(anim, "IDLE"), "", path)
 		assert_gt(float((repo.courier_art[kind] as Dictionary).get("stride_m", "0")), 0.0, kind)
 	# the gallop is timed by the stride, held within its rate range
-	assert_gt(repo.bal("map3d_courier_anim_max"), repo.bal("map3d_courier_anim_min"))
+	var couriers := Map3DLayerCouriers.new()
+	autofree(couriers)
+	assert_gt(couriers.anim_max, couriers.anim_min)
 
 
 func test_the_courier_models_are_within_budget() -> void:

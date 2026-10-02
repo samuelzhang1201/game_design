@@ -65,7 +65,7 @@ func test_a_stand_in_without_the_couriers_clips_falls_back() -> void:
 
 
 ## Owner 2026-09-30 (信使送到信息后要立即淡化消失): he fades the moment his
-## delivering ride is done, over map3d_courier_fade_s of real time.
+## delivering ride is done, over the Couriers node's fade_s of real time.
 func test_a_courier_fades_out_the_moment_he_delivers() -> void:
 	var delivering := {"ends": true, "share": 0.4}
 	assert_false(Map3DCourierRide.delivered(delivering, 0.39), "still riding up to the column")

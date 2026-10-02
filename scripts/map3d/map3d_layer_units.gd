@@ -10,12 +10,18 @@ extends Node3D
 ## the facing, seating, measuring and screen box are Map3DUnits, the pure half.
 ## Takes everything from Map3DContext, never the Game autoload (a test scans).
 
-## Editor preview: the player's regiments from the pack alone.
-@export var preview := false: set = set_preview
+@export var preview := false: set = set_preview  ## the regiments from the pack alone
 
 const GARRISON := "GARRISON"
 const STANDBY := "STANDBY"
 const MARCH := "MARCH"
+
+## Figure spacing, × a figure's footprint (owner 2026-09-30: 可以适当分开一些).
+@export var formation_gap := 1.6
+## Seconds a clip blends into the next (owner 2026-09-27: 行进的动作非常突兀).
+@export var blend_s := 0.3
+## Degrees a second a piece turns (instant turning read as a glitch).
+@export var turn_deg_per_s := 220.0
 
 var ctx: Map3DContext
 ## Whether the pieces show; Map3DView sets it from set_military.
@@ -26,12 +32,10 @@ var _pieces: Dictionary = {}
 var _rects: Dictionary = {}
 ## code -> the screen point of the piece's TOP, design px (the chip hangs there).
 var _tops: Dictionary = {}
-## code -> the yaw it is turning toward, and the one it is at.
-var _want_yaw: Dictionary = {}
-var _yaw: Dictionary = {}
+var _want_yaw: Dictionary = {}  ## code -> the yaw it turns toward
+var _yaw: Dictionary = {}  ## code -> the yaw it is at
 var _scenes: Dictionary = {}
-## code -> where the piece is DRAWN, world XZ, on its day's march (step).
-var _shown_xz: Dictionary = {}
+var _shown_xz: Dictionary = {}  ## code -> where it is DRAWN, world XZ (step)
 var _days: Dictionary = {}  ## code -> {key, from, to, s0}: its day's march (Map3DUnits.along_day)
 var _moves := 0
 
@@ -100,9 +104,8 @@ func _target_xz(reg: Dictionary) -> Vector2:
 	return ctx.to_world(ArmySystem.position_of(ctx.repo, ctx.state(), reg))
 
 
-## Stand one piece where it is SHOWN: at the camera's scale, facing the way it
-## walks (or the camera at rest), SEATED under its whole footprint, tilted with
-## the slope and lifted clear (Map3DUnits.seat; owner 2026-09-24: 斜面上兵人的一部分会被地图盖住).
+## Stand one piece where it is SHOWN, at the camera's scale, facing its way,
+## SEATED on its footprint (Map3DUnits.seat; owner 2026-09-24: 斜面上兵人的一部分会被地图盖住).
 func _place(code: String, piece: Dictionary) -> void:
 	var repo := ctx.repo
 	var xz: Vector2 = _shown_xz[code]
@@ -171,7 +174,7 @@ func step(delta: float) -> bool:
 			anim.speed_scale = pace
 		_sync_action(code)
 		if node.visible and float(_yaw.get(code, 0.0)) != float(_want_yaw.get(code, 0.0)):
-			var rate := deg_to_rad(repo.bal("map3d_unit_turn_deg_per_s")) * delta
+			var rate := deg_to_rad(turn_deg_per_s) * delta
 			_yaw[code] = rotate_toward(float(_yaw.get(code, 0.0)),
 				float(_want_yaw.get(code, 0.0)), rate)
 			_place(code, _pieces[code])  # re-seated: a long piece turned across a slope meets other ground
@@ -219,7 +222,7 @@ func play(code: String, action: String) -> void:
 		var clip := Map3DUnits.clip_named(anim, action)
 		if clip == "" or anim.current_animation == clip:
 			continue
-		anim.play(clip, ctx.repo.bal("map3d_unit_blend_s"))  # blended, never a snap
+		anim.play(clip, blend_s)  # blended, never a snap
 		if action != MARCH:  # men at rest are not clones; a column marches in step
 			anim.seek(fposmod(i * 0.37, anim.current_animation_length))
 
@@ -247,7 +250,7 @@ func _piece_of(code: String) -> Dictionary:
 	# One figure measured, then its FORMATION by strength (Map3DFormation).
 	var span := Map3DUnits.model_size(one)
 	var ext := Map3DUnits.stand_extent(one)
-	var offs := Map3DFormation.offsets(tier, ext, ctx.repo.bal("map3d_unit_formation_gap"), Map3DFormation.rank_depth(art))
+	var offs := Map3DFormation.offsets(tier, ext, formation_gap, Map3DFormation.rank_depth(art))
 	var node := Map3DFormation.build(scene, offs, one)
 	node.name = code
 	add_child(node)  # no owner: never saved into the authored scene

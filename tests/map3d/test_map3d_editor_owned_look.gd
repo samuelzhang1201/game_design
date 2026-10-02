@@ -75,7 +75,8 @@ const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3
 	"map3d_army_badge_", "map3d_army_chip_px", "map3d_compass_needle_", "map3d_hud_halo",
 	"map3d_compass_backdrop", "map3d_landmark_", "map3d_heat_legend_", "map3d_courier_counter_px",
 	"map3d_courier_route_px", "map3d_courier_pending", "map3d_unit_route_px", "map3d_weather_view_m",
-	"map3d_weather_icon_px", "map3d_selection\""]
+	"map3d_weather_icon_px", "map3d_selection\"", "map3d_unit_formation_gap", "map3d_unit_blend_s",
+	"map3d_unit_turn_deg_per_s", "map3d_courier_fade_s", "map3d_courier_anim_"]
 
 
 func before_all() -> void:

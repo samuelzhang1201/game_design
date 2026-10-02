@@ -340,11 +340,8 @@ map3d_unit_seat_ring,8,"MILITARY's 3D piece (owner 2026-09-24: 斜面上兵人�
 map3d_unit_tilt_max_deg,14,"how far a piece tilts with the slope it stands on, at most — a miniature on a sloping table leans with it, but a man lying on a cliff reads as fallen; past this it stays at this tilt and is lifted clear instead (Map3DUnits.seat)"
 map3d_unit_seat_clear,0.015,"how far a seated piece is lifted over the highest ground under its base, as a share of its drawn height — far out Terrain3D DRAWS the ground from a coarser mesh than the heightmap the base is sampled on, and this covers the difference"
 map3d_unit_sink_m,0.0,metres the piece's base is sunk into the ground so it bites into a slope
-map3d_unit_formation_gap,1.6,"MILITARY's 3D piece (owner 2026-09-30, later: 3X3的时候9个模型紧贴在一起非常难看，可以适当分开一些 — 0.85 packed the figures shoulder to shoulder; shot at 1.4 / 1.6 / 1.8, 1.4 still ran each file of horses together and 1.8 spread the block past a village; 9 / 6 / 3 figures by strength, data/army_formations.csv; 1.1 until the 3x3 of full strength, where it split the block into three squads wider than a town, and 0.7 ran the lances through the next horse): the distance between figures in a formation, as a multiple of one figure's own footprint (its width across, its length front to back)"
 map3d_unit_anim_min,0.3,"MILITARY's 3D piece (owner 2026-09-27: 步幅和实际移动的距离不符): the slowest the MARCH clip plays, x its own speed, however slowly the column goes (Map3DUnits.march_rate); tuned 2026-10-02 to 0.3 to pair with stride_m adjustment"
 map3d_unit_anim_max,2.0,"the fastest the MARCH clip plays, x its own speed: a miniature crosses kilometres a second, which no leg can match, so past this the piece slides rather than turning its legs into a blur; tuned 2026-10-02 to 2.0 for stride_m match (was 1.5 since 2026-09-30)"
-map3d_unit_blend_s,0.3,"seconds a piece takes to blend from GARRISON into MARCH and back, so the start and the halt are not a snap (owner 2026-09-27: 行进的动作非常突兀)"
-map3d_unit_turn_deg_per_s,220.0,"how fast a piece turns to face its heading (or the camera at rest) — instant turning reads as a glitch when the camera orbits"
 courier_base_km_per_day,160,"owner 2026-09-27: an ordinary courier's km a day on a clear road on the plain — four times the cavalry's 40 (spec 2026-09-27-courier-core)"
 courier_graph_snap_px,2,"RoadGraph: route vertices within this many pack px merge into one node — routes join each other mid-line, so without it the network falls into dozens of pieces"
 courier_offroad_max_km,80,"a place farther than this from every road node is ridden to straight across country"
@@ -353,7 +350,6 @@ courier_max_days,60,"the fuse: a courier out this many days is lost and his orde
 courier_slow_news_permille,500,"a day's weather slower than this raises one news line per courier per spell"
 courier_sea_sample_km,5,"a leg is sampled every this many km; any point off the land grid makes it a sea crossing"
 weather_spell_days,3,"days a province's weather holds (Weather.spell_of) so it does not flicker daily"
-map3d_courier_fade_s,0.6,"owner 2026-09-30 (信使送到信息后要立即淡化消失): the real seconds a courier takes to fade out once he reaches the column he rode for (or a spy his point) — the engine keeps him to the day's end, the map does not (Map3DLayerCouriers); his road and pending order vanish at once"
 map3d_weather_look,1,"3D MAP weather look (spec 2026-09-29-weather-visuals): 1 draws the weather on the ground, the clouds and the falling rain and snow; 0 leaves only the HUD marks"
 missive_keep_per_column,40,"spec 2026-09-28 §1: letters kept per board column; the oldest leaves when one more arrives"
 spy_radius_km,25,a spy counts the troops within this distance of his point
@@ -369,8 +365,6 @@ intel_magnitude_many,5000,"under this 'thousands', else 'many thousands'"
 missive_seal_s,0.5,the report dialog's shrink into its envelope (EnvelopeFlight)
 missive_fly_s,0.9,the envelope's flight to the Missive tab
 missive_fly_turns,2,whole turns the envelope spins in flight
-map3d_courier_anim_min,0.8,"a courier's GALLOP playback rate floor (Map3DUnitRig.gait_rate): a slow road still reads as a gallop"
-map3d_courier_anim_max,3,"a courier's GALLOP playback rate ceiling — past it the rider slides, as the regiments do past map3d_unit_anim_max"
 courier_paint_foul_permille,700,"the courier card shows the foul-weather painting when the weather where he is slows a rider to this share or less (weather.csv speed_permille: mud 700, snow 650, blizzard 400)"
 ui_missive_art_px_per_design,3,"the Missive board's art is installed at this many texture px per design px (sized for the ~3x window scale); a nine-slice border and the cork tile are drawn at texture px / this"
 ui_missive_desk_painting_aspect,1.6,"the desk's %DeskPainting box (width / this = its drawn height) — was a fixed 150 design px, far wider and shallower than the delivered.png paintings' own 5:4 (1.25), so the KEEP_ASPECT_COVERED crop cut the mounted courier's head off; the box now follows the desk's own (flexible) width instead"
