@@ -101,3 +101,42 @@ func test_deploy_works_on_a_running_clock() -> void:
 	scroll.unroll()
 	assert_true(scroll.review_open())
 	Game.set_clock_speed(0)
+
+
+func test_the_crowns_arms_are_read_when_sealing_not_when_built() -> void:
+	scroll._seal_tex = null   # built before any reign existed, as GameRoot builds it
+	_draft(0)
+	scroll.unroll()
+	scroll.seal()
+	assert_not_null(scroll.seal_texture(), "the arms of the reign being played")
+
+
+func test_a_seal_in_flight_never_sends_another_reigns_drafts() -> void:
+	_draft(0)
+	scroll.unroll()
+	watch_signals(scroll)
+	scroll.seal()
+	Game.start_campaign(45)   # a load or restart under the flying envelope
+	var other := String(codes[0])
+	Game.plant_draft(other, "garrison", Vector2.ZERO)
+	var riders := Game.state.couriers.size()
+	await wait_seconds(Game.data.bal("war_deploy_wax_s") + Game.data.bal("war_deploy_press_s")
+		+ Game.data.bal("war_deploy_roll_s") + Game.data.bal("missive_seal_s") + Game.data.bal("missive_fly_s") + 0.6)
+	assert_signal_not_emitted(scroll, "sealed")
+	assert_eq(Game.state.couriers.size(), riders, "nothing rode for the new reign")
+	assert_true(WarDrafts.any(Game.state), "its drafts untouched")
+	assert_false(scroll.sealing())
+
+
+func test_cancelling_a_seal_puts_it_away_and_sends_nothing() -> void:
+	_draft(0)
+	scroll.unroll()
+	watch_signals(scroll)
+	scroll.seal()
+	scroll.cancel()
+	assert_false(scroll.sealing())
+	assert_false(scroll.review_open())
+	await wait_seconds(Game.data.bal("war_deploy_wax_s") + Game.data.bal("war_deploy_press_s")
+		+ Game.data.bal("war_deploy_roll_s") + Game.data.bal("missive_seal_s") + Game.data.bal("missive_fly_s") + 0.6)
+	assert_signal_not_emitted(scroll, "sealed")
+	assert_true(WarDrafts.any(Game.state))

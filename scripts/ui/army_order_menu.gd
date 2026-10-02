@@ -163,7 +163,9 @@ func _refusal(action_code: String, code: String) -> String:
 			ArmySystem.regiment(Game.data, code))
 		req.params["x"] = here.x
 		req.params["y"] = here.y + 1.0   # anywhere but here, so "already there" is not the answer
-	var err := Game.engine.actions.validate(req, Game.state)
+	# a draft costs nothing until sealed: in the war room only the place can refuse it
+	var err := Game.engine.actions.validate_place(req, Game.state) if drafting \
+		else Game.engine.actions.validate(req, Game.state)
 	# The one refusal a MARCH cannot answer yet is about the ground it has not
 	# been aimed at; everything else is a real reason to grey the row out.
 	if action_code == "ARMY_MARCH" and (err.contains("into the sea") or err.contains("off the map")):
@@ -230,6 +232,12 @@ func _commit() -> void:
 	var to := _pending
 	_set_aim("")
 	if drafting:
+		# a draft costs nothing yet, but no seal could ever send one into the sea
+		var why := Game.engine.actions.validate_place(
+			ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": to.x, "y": to.y}), Game.state)
+		if why != "":
+			Game.publish_news(why)
+			return
 		Game.plant_draft(code, WarDrafts.MARCH, to)
 		Game.publish_news("%s's march is pencilled in." % _name_of(code))
 		return

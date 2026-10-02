@@ -704,3 +704,75 @@ func test_the_rooms_scroll_greys_and_lights_with_the_drafts() -> void:
 	Game.plant_draft(code, "garrison", Vector2.ZERO)
 	await wait_process_frames(1)
 	assert_false(scroll.button().disabled, "the room refreshes it on a state change")
+
+
+func test_quit_from_the_pause_menu_asks_in_plain_sight() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	r.toggle_pause_menu()
+	await wait_process_frames(1)
+	assert_true(r._pause_menu.visible)
+	(r._pause_menu.find_child("Quit", true, false) as Button).pressed.emit()   # asks: the tree does not quit
+	await wait_process_frames(1)
+	assert_true(_prompt(r).visible)
+	assert_false(r._pause_menu.visible, "the menu steps aside so the question can be answered")
+
+
+func test_a_tab_with_the_board_over_the_room_asks_in_plain_sight() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", 3,
+		MissiveLog.subject("point", "", -1, Vector2(500, 300)), "A letter", []))
+	r.open_missive_over_war_room(id)
+	await wait_process_frames(1)
+	r.bottom_bar().button("LEDGER").pressed.emit()
+	await wait_process_frames(1)
+	assert_true(_prompt(r).visible)
+	assert_false(r.missive_screen().visible, "the board steps aside so the question can be answered")
+	_prompt(r).chosen.emit("keep")
+	await wait_process_frames(2)
+	assert_true(r.ledger_screen().visible)
+
+
+func test_an_audit_letters_ledger_from_the_room_asks_then_opens_its_lens() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	r._on_missive_show({"kind": "ledger", "code": "supply_line"})
+	await wait_process_frames(1)
+	assert_true(_prompt(r).visible)
+	_prompt(r).chosen.emit("keep")
+	await wait_process_frames(2)
+	assert_true(r.ledger_screen().visible, "the letter's LEDGER opens once the room is left")
+
+
+func test_closing_the_room_mid_seal_sends_nothing_and_keeps_the_drafts() -> void:
+	var r: GameRoot = await _room_with_a_draft()
+	var scroll := r.war_room_screen().get_node("%Deploy") as WarDeployScroll
+	scroll.unroll()
+	scroll.seal()
+	r._switch_to(GameRoot.State.COURT)   # an event takes the screen
+	await wait_seconds(3.0)
+	assert_false(scroll.sealing())
+	assert_true(WarDrafts.any(Game.state), "kept, not sent behind the player's back")
+
+
+func test_pencilling_into_the_sea_is_refused_at_once_but_an_empty_chest_is_not() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(3)
+	Game.set_clock_speed(0)
+	var screen := r.war_room_screen()
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	var sea := Vector2(-1, -1)
+	for x: int in range(0, 2560, 7):   # the map's top row is open sea on any pack with a coast
+		if MapEconomy.cell_at(Game.data, Vector2(x, 5)) < 0:
+			sea = Vector2(x, 5)
+			break
+	assert_gte(sea.x, 0.0, "the map has sea")
+	screen.orders().aim_for(code)
+	screen.view().ground_clicked.emit(sea, Vector2(100, 100))
+	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	assert_false(WarDrafts.any(Game.state), "no pennant in the sea")
+	Game.state.metrics["treasury"] = 0.0
+	screen.orders().aim_for(code)
+	screen.view().ground_clicked.emit(_land_near(screen, p["at"]), Vector2(100, 100))
+	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	assert_true(WarDrafts.any(Game.state), "a draft costs nothing yet")

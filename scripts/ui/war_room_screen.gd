@@ -347,7 +347,7 @@ func close(animate := true) -> void:
 		return
 	(%LeavePrompt as WarLeavePrompt).visible = false   # a forced close answers no question
 	_leave_then = Callable()
-	(%Deploy as WarDeployScroll).withdraw()   # an unrolled, unsealed scroll is put away
+	(%Deploy as WarDeployScroll).cancel()   # an unrolled scroll is put away, a seal in hand given up: nothing rides behind the player's back
 	if _orders.visible:
 		_orders.hide()
 	_orders.withdraw_aim()

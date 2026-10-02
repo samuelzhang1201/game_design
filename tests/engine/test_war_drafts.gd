@@ -82,3 +82,46 @@ func test_a_real_order_sets_the_draft_aside_and_says_so() -> void:
 func test_an_order_with_no_draft_says_nothing_of_drafts() -> void:
 	var out := ActionSystem.new(repo).execute(ActionRequest.make("ARMY_GARRISON", {"regiment": code}), state)
 	assert_true((out["effects"] as Array).all(func(e: Dictionary) -> bool: return String(e.get("metric", "")) != "war_draft"))
+
+
+func test_a_pencilled_halt_is_struck_when_its_column_arrives() -> void:
+	ArmySystem.set_march(repo, state, code, _somewhere())
+	WarDrafts.plant(repo, state, code, "garrison", Vector2.ZERO)
+	for i: int in 400:
+		if not ArmySystem.march_day(repo, state).is_empty():
+			break
+	assert_eq(ArmySystem.order_of(repo, state, code), ArmySystem.ORDER_GARRISON, "it arrived")
+	assert_false(WarDrafts.any(state), "a halt with nothing left to halt is gone")
+
+
+func test_a_march_draft_survives_its_column_arriving() -> void:
+	ArmySystem.set_march(repo, state, code, _somewhere())
+	WarDrafts.plant(repo, state, code, "march", _somewhere() + Vector2(10, 0))
+	for i: int in 400:
+		if not ArmySystem.march_day(repo, state).is_empty():
+			break
+	assert_true(WarDrafts.any(state), "a new route still stands")
+
+
+func test_the_place_check_ignores_the_purse() -> void:
+	var actions := ActionSystem.new(repo)
+	state.metrics["treasury"] = 0.0
+	var ok := ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": _somewhere().x, "y": _somewhere().y})
+	assert_ne(actions.validate(ok, state), "", "the chest is empty")
+	assert_eq(actions.validate_place(ok, state), "", "but the place is fine")
+	var sea := Vector2(-1, -1)
+	for x: int in range(0, 2560, 7):
+		if MapEconomy.cell_at(repo, Vector2(x, 5)) < 0:
+			sea = Vector2(x, 5)
+			break
+	var wet := ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": sea.x, "y": sea.y})
+	assert_string_contains(actions.validate_place(wet, state), "sea")
+
+
+func test_a_quiet_copy_leaves_the_live_border_caches_alone() -> void:
+	MapOwnership.outline_of(repo, state, repo.resolve_realm("player_realm"))
+	var v := MapOwnership._cache_owner_version
+	assert_ne(v, -1, "the live cache is warm")
+	var copy := GameState.from_dict(state.to_dict(), false)
+	assert_eq(MapOwnership._cache_owner_version, v)
+	assert_eq(copy.tick, state.tick)

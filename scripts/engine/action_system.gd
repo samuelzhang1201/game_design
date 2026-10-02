@@ -172,7 +172,15 @@ func validate(req: ActionRequest, state: GameState) -> String:
 ## A banner with nobody under arms is refused outright rather than left
 ## crawling toward a place it can never reach, because day_step_m is 0 for it
 ## and march_day would carry the order forever.
-func _validate_army(req: ActionRequest, state: GameState) -> String:
+## An army order's PLACE alone — whose regiment, whether it can march, where
+## to — never the purse: a war-room draft costs nothing until it is sealed
+## (spec 2026-10-02-war-room-v2 §3.1), so a pencil is refused only for a
+## place no seal could ever send it to.
+func validate_place(req: ActionRequest, state: GameState) -> String:
+	return _validate_army(req, state, false)
+
+
+func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -> String:
 	var code := String(req.params.get("regiment", ""))
 	var reg := ArmySystem.regiment(data, code)
 	if reg.is_empty():
@@ -185,7 +193,7 @@ func _validate_army(req: ActionRequest, state: GameState) -> String:
 	# order could still drive it negative — MANOR_BUY's own pattern, gold_of
 	# summed with the extra spend, is the fix), so an order the chest cannot
 	# cover in full is refused, not sent into the red.
-	if CourierSystem.carries_orders(reg) and float(state.metrics["treasury"]) \
+	if check_purse and CourierSystem.carries_orders(reg) and float(state.metrics["treasury"]) \
 			< OrderCosts.gold_of(data, req.action_code) + float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)):
 		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
 	if req.action_code == "ARMY_GARRISON":

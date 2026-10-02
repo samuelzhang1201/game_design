@@ -16,7 +16,9 @@ signal withdrawn
 
 var _phase := ""   # "", "wax", "press", "roll", "fly"
 var _t := 0.0
-var _seal_tex: Texture2D   # the crown's own arms, pressed into the wax
+var _seal_tex: Texture2D   # the crown's own arms, pressed into the wax (read at seal: the room is built before any reign)
+var _sealing_state: GameState = null   # the reign whose drafts this seal will send
+var _flight: EnvelopeFlight = null
 var _wax_tex: Texture2D    # the photographed wax seal (library U-60), the wax itself
 
 
@@ -54,8 +56,6 @@ func _ready() -> void:
 	(%Seal as Button).pressed.connect(seal)
 	(%NotYet as Button).pressed.connect(withdraw)
 	(%SealLayer as Control).draw.connect(_draw_seal)
-	_seal_tex = HouseArms.texture_of_house(Game.data, Game.state, MapManors.crown(Game.state)) \
-		if Game.state != null else null
 	_wax_tex = UiPalette.load_art("res://assets/2D/ui/war_table/council_seal.png")
 	refresh()
 
@@ -143,8 +143,28 @@ func seal() -> void:
 		return
 	_phase = "wax"
 	_t = 0.0
+	_sealing_state = Game.state
+	_seal_tex = HouseArms.texture_of_house(Game.data, Game.state, MapManors.crown(Game.state))
 	(%Seal as Button).disabled = true
 	(%NotYet as Button).disabled = true
+	refresh()
+
+
+func seal_texture() -> Texture2D:
+	return _seal_tex
+
+
+## Give a seal up wherever it has got to (the room closed under it, an event,
+## a load): the drafts stay, nothing is sent, the scroll is put away.
+func cancel() -> void:
+	if _flight != null and is_instance_valid(_flight):
+		_flight.queue_free()
+	_flight = null
+	_phase = ""
+	_sealing_state = null
+	(%Seal as Button).disabled = false
+	(%NotYet as Button).disabled = false
+	_put_away()
 	refresh()
 
 
@@ -178,13 +198,18 @@ func _fly() -> void:
 		review.size * review.scale)
 	var to := Rect2(Vector2(get_global_rect().end.x + 80.0, from.position.y), from.size * 0.2)
 	_put_away()
-	var f := EnvelopeFlight.fly(self, from, to, true, Game.data)
-	f.landed.connect(_send)
+	_flight = EnvelopeFlight.fly(self, from, to, true, Game.data)
+	_flight.landed.connect(_send)
 
 
 func _send() -> void:
+	_flight = null
+	if _phase != "fly" or Game.state == null or Game.state != _sealing_state:
+		cancel()   # another reign took the table while the envelope flew: it sends nothing of its own
+		return
 	var result := Game.deploy_drafts()
 	_phase = ""
+	_sealing_state = null
 	(%Seal as Button).disabled = false
 	(%NotYet as Button).disabled = false
 	refresh()

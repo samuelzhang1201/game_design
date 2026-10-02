@@ -600,6 +600,10 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 		var code := String(c)
 		if _march_one(repo, state, code, state.regiments[code], state.absolute_day()):
 			arrived.append(code)
+			# the column holds its ground: a halt pencilled in the war room has
+			# nothing left to stop (a pencilled new march still stands)
+			if String(WarDrafts.of(state, code).get("order", "")) == WarDrafts.GARRISON:
+				WarDrafts.strike(state, code)
 	return arrived
 
 

@@ -12,7 +12,8 @@ extends Node3D
 
 ## A pennant's slip by status (the dated ones take the day their courier left).
 const SLIPS := {"riding": "courier riding · %s", "countermanded": "countermand riding · %s",
-		"received": "order received", "draft": "draft", "halt_draft": "halt pencilled"}
+		"received": "order received", "draft": "draft", "halt_draft": "halt pencilled",
+		"refused": "not sent: %s"}
 
 ## The pennant's model (assets/3D/war_room/pennant: a red swallowtail on a
 ## brass pin with a paper slip, its foot at the origin), set in the scene;
@@ -40,13 +41,16 @@ func rebuild(state: GameState, force := false) -> void:
 		var pen := WarRoom.pennant_of(_repo, state, code)
 		var draft := WarDrafts.of(state, code)
 		var order := String(draft.get("order", ""))
+		var why := String(draft.get("refused", ""))
 		if not pen.is_empty() and rect.has_point(pen["at"]):
-			want.append([code, pen["at"], "halt_draft" if order == WarDrafts.GARRISON else String(pen["status"]),
-				int(pen.get("issued", 0))])
+			var status := String(pen["status"])
+			if order == WarDrafts.GARRISON:
+				status = "halt_draft" if why == "" else "refused"
+			want.append([code, pen["at"], status, int(pen.get("issued", 0)), why])
 		if order == WarDrafts.MARCH:
 			var to := WarDrafts.dest_px(_repo, draft)
 			if rect.has_point(to):
-				want.append([code + "_draft", to, "draft", 0])
+				want.append([code + "_draft", to, "draft" if why == "" else "refused", 0, why])
 	var sig: Array = [_view.sheet_index(), want]
 	if not force and sig == _sig:
 		return
@@ -55,7 +59,7 @@ func rebuild(state: GameState, force := false) -> void:
 		remove_child(c)
 		c.queue_free()
 	for w: Array in want:
-		add_child(_build(String(w[0]), w[1], String(w[2]), int(w[3])))
+		add_child(_build(String(w[0]), w[1], String(w[2]), int(w[3]), String(w[4])))
 
 
 func pennant(code: String) -> Node3D:
@@ -79,11 +83,13 @@ func _model_box() -> AABB:
 	return _box
 
 
-func _build(code: String, at: Vector2, status: String, issued: int) -> Node3D:
+## `why`: a refused draft's reason (spec §3.3: it stays a draft with its
+## reason on its slip).
+func _build(code: String, at: Vector2, status: String, issued: int, why := "") -> Node3D:
 	var root := Node3D.new()
 	root.name = code
 	root.set_meta("code", code.trim_suffix("_draft"))
-	root.set_meta("draft", status == "draft")
+	root.set_meta("draft", code.ends_with("_draft"))
 	root.position = _view.table_point(at)
 	var h := _height()
 	if model != null:
@@ -95,7 +101,10 @@ func _build(code: String, at: Vector2, status: String, issued: int) -> Node3D:
 		push_warning("WarPennants: no pennant model set in the scene; the slip stands alone")
 	var slip := Label3D.new()
 	slip.name = "Slip"
-	slip.text = SLIPS[status] % CourierCard.date_of(issued) if SLIPS[status].contains("%s") else SLIPS[status]
+	if status == "refused":
+		slip.text = SLIPS[status] % why
+	else:
+		slip.text = SLIPS[status] % CourierCard.date_of(issued) if SLIPS[status].contains("%s") else SLIPS[status]
 	slip.font_size = int(_repo.bal("war_pennant_font_px"))
 	slip.pixel_size = h / _repo.bal("war_pennant_pixel_ratio")
 	slip.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -104,7 +113,7 @@ func _build(code: String, at: Vector2, status: String, issued: int) -> Node3D:
 	slip.outline_size = int(_repo.bal("war_pennant_outline_px"))
 	slip.position.y = h * _repo.bal("war_pennant_slip_y")
 	root.add_child(slip)
-	if status == "draft":   # pencilled, not planted
+	if code.ends_with("_draft"):   # pencilled, not planted
 		var alpha := _repo.bal("war_draft_alpha")
 		for m: MeshInstance3D in Map3DUnits.meshes(root):
 			m.transparency = 1.0 - alpha

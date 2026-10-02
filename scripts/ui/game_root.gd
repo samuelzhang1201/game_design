@@ -547,6 +547,10 @@ func leave_war_room(then: Callable) -> void:
 		if then.is_valid():
 			then.call()
 		return
+	# the question must be seen: what lies over the room steps aside
+	if _pause_menu != null and _pause_menu.visible:
+		toggle_pause_menu()
+	_missive_screen.visible = false
 	_war_room_screen.ask_leave(then)
 
 ## True when leaving the room must ask first: every door checks it and goes
@@ -810,6 +814,9 @@ func _on_missive_show(subject: Dictionary) -> void:
 ## An audit letter's "Open the LEDGER" (final review M1): the LEDGER opens
 ## on the cluster that holds the audited flow's type.
 func _open_ledger_on(flow: String) -> void:
+	if _room_must_ask():
+		leave_war_room(_open_ledger_on.bind(flow))
+		return
 	if not _ledger_screen.visible:
 		toggle_ledger()
 	if not _ledger_screen.visible:

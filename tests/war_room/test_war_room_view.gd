@@ -845,3 +845,21 @@ func test_a_resized_view_redraws_its_lines_where_the_pennants_now_stand() -> voi
 	var hud := view.get_node("%Hud") as WarHud
 	var end: Vector2 = hud.draft_lines()[0][1]
 	assert_almost_eq(end.distance_to(view.screen_pos_of_px(to)), 0.0, 1.0, "the line follows the view's new projection")
+
+
+func test_a_refused_draft_says_why_on_its_slip() -> void:
+	var p: Dictionary = {}
+	for q: Dictionary in WarRoom.pieces(repo, state):
+		if not bool(q["naval"]):
+			p = q
+			break
+	var code := String(p["code"])
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	var rect: Rect2 = WarSheets.series(repo)[int(p["sheet"])]["rect"]
+	WarDrafts.plant(repo, state, code, "march", (p["at"] as Vector2).move_toward(rect.get_center(), 10.0))
+	state.war_drafts[code]["refused"] = "The chancery cannot pay"
+	view.refresh()
+	await wait_process_frames(1)
+	var slip := (view.get_node("%Pennants") as WarPennants).pennant(code + "_draft").get_node("Slip") as Label3D
+	assert_string_contains(slip.text, "The chancery cannot pay")

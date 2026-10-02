@@ -163,15 +163,16 @@ func discard_drafts() -> void:
 
 ## The resolutions as they would be sealed now (spec §3.3): each draft's
 ## line — who, the order, where to, days, its gold — and why it would be
-## refused. The gold is MEASURED, not summed from tables: each order is run on
-## a copy of the state as the drafts before it leave it (the order's own cost,
-## its always-rows and its courier's fee, whatever they are), so the review
-## and the seal can never disagree; a line the chest cannot pay is refused and
-## spends nothing, and the lines after it are counted without it.
+## refused. The gold is MEASURED, not summed from tables: the orders run in
+## code order on ONE quiet copy of the state (the order's own cost, its
+## always-rows and its courier's fee, whatever they are), each line spending
+## before the next is weighed, so the review and the seal agree on a paused
+## clock; a line validate refuses (the chest included: _validate_army counts
+## the order and its courier) spends nothing.
 func review_drafts() -> Dictionary:
 	var lines: Array = []
 	var total := 0
-	var sim := GameState.from_dict(state.to_dict())
+	var sim := GameState.from_dict(state.to_dict(), false)
 	for code: String in WarDrafts.codes(state):
 		var d := WarDrafts.of(state, code)
 		var req := WarDrafts.request_from(data, code, d)
@@ -179,16 +180,11 @@ func review_drafts() -> Dictionary:
 		var refusal := engine.actions.validate(req, sim)
 		var gold := 0
 		if refusal == "":
-			var trial := GameState.from_dict(sim.to_dict())
-			var chest := float(trial.metrics.get("treasury", 0.0))
-			trial.war_drafts.erase(code)
-			engine.actions.execute(req, trial)
-			gold = int(round(chest - float(trial.metrics.get("treasury", 0.0))))
-			if gold > int(chest):
-				refusal = "The chest cannot pay for this one too."
-			else:
-				sim = trial
-				total += gold
+			var chest := float(sim.metrics.get("treasury", 0.0))
+			sim.war_drafts.erase(code)
+			engine.actions.execute(req, sim)
+			gold = int(round(chest - float(sim.metrics.get("treasury", 0.0))))
+			total += gold
 		var to := "where it stands"
 		var days := 0
 		if req.action_code == "ARMY_MARCH":

@@ -356,7 +356,9 @@ func to_dict() -> Dictionary:
 		"wealth_tiers": _encode_values(wealth_tiers.duplicate()),
 	}
 
-static func from_dict(d: Dictionary) -> GameState:
+## `invalidate` false for a scratch copy of the live state (Game.review_drafts):
+## the live border caches stay warm, since the copy changes no owner.
+static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	# Pre-versioning saves carry no field and count as version 1. A newer
 	# save fails closed (null) rather than half-loading; push_warning (not
 	# push_error) so the refusal path stays testable under run_tests.sh's
@@ -435,5 +437,6 @@ static func from_dict(d: Dictionary) -> GameState:
 	# Saves from before the tiers were state carry none: Game.load_campaign
 	# computes them once from the loaded state (Intel.ensure_wealth_tiers).
 	s.wealth_tiers = _decode_values(d.get("wealth_tiers", {}))
-	MapOwnership.invalidate()
+	if invalidate:
+		MapOwnership.invalidate()
 	return s
