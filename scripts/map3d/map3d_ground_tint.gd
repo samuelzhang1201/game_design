@@ -39,7 +39,7 @@ uniform float field_fade = 0.0;
 uniform float field_fade_near_m = 15000.0;
 uniform float field_fade_far_m = 60000.0;
 // The HEIGHTS heat (owner 2026-09-19): the ground's world height ramped
-// through terrain_palette heat_1..6 (sRGB, turned linear below).
+// through the ground look's heat_ramp (sRGB, turned linear below).
 uniform float heat_mix = 0.0;
 uniform float heat_sea_y = 0.0;
 uniform float heat_top_m = 2400.0;

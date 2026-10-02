@@ -24,12 +24,6 @@ trail,#D0BC99,"land trails: the same track, lighter and thinner"
 contour,#8A6A46,the HEIGHTS view's iso-lines
 scale_bar,#334155,the scale bar in the bottom-right corner
 map3d_hud_halo,#F3EEDF,"3D MAP (owner 2026-09-18): the pale halo under the 3D map's scale bar and compass needle, so they read on snow and sea alike"
-heat_1,#6DBE6A,"the HEIGHTS view's height ramp (owner 2026-09-13): lowland green at sea level — brightened with the theme"
-heat_2,#C4D35E,rising ground
-heat_3,#F0C04E,upland yellow
-heat_4,#E08A45,hill orange
-heat_5,#B55A3C,mountain
-heat_6,#FFFFFF,"the summit, snow"
 house_roof_thatch,#9A8459,"3D MAP houses (spec 2026-09-20 §2, widened 2026-09-21 for the mesh remake): weathered thatch. At 17-35 px (400 m closest zoom) the roof colour is most of what a house says, so it is data"
 house_roof_thatch_fresh,#B99A5E,"3D MAP houses (2026-09-21): fresh thatch, lighter and warmer than the weathered kind — a second thatch tone so a village's cottages don't read as one repeated roof"
 house_roof_tile,#8C5A45,3D MAP houses: fired clay tile
@@ -40,8 +34,6 @@ house_wall_daub,#8C7856,"3D MAP houses (2026-09-21): plain unlimewashed daub, da
 house_wall_stone,#A29C89,"3D MAP houses (2026-09-21): bare dressed stone, greyer than house_wall — the grander material (a landmark, a merchant's house) alongside house_roof_slate"
 house_beam,#3E2A1D,"3D MAP houses (v4, 2026-09-21): dark weathered oak — corner posts, a mid rail and a couple of studs standing proud of a daub/plaster wall (TIMBER_TYPES in make_houses.py), the third of up to four material slots (wall, roof, beam, void)"
 house_void,#211C19,"3D MAP houses (v4, 2026-09-21): a door or window's recess — no frame, no mullions, just a dark box let a few centimetres into the wall (make_houses.py's opening()), the fourth material slot"
-map3d_wood_broadleaf,#34461F,"3D MAP woods (look route 2026-09-30): the broadleaf canopy the ground wears under and beyond the drawn clumps (bake/woods.png), sRGB — darkened from #4E6A30 on 2026-10-01 with the photo cards: the floor between the crowns must read dark, and a far wood 20-30% darker than the grass (a critic)"
-map3d_wood_conifer,#2C3F26,3D MAP woods: the conifer canopy (#44643A until 2026-10-01)
 map_label_ink_table,#F1E6CCE6,"WAR TABLE (owner 2026-10-01, the approved mock): kingdom names on the vellum map sheet in parchment over a dark halo, alpha in the row; the sea-blue ink of the leather map read as a sticker on paper"
 map_label_halo_table,#2B1F158C,WAR TABLE: the kingdom name's halo — dark ink at the row's own alpha
 scale_bar_table,#2B1F15,WAR TABLE: the scale bar in the paper's ink rather than slate

@@ -418,7 +418,7 @@ add it here as a principle with its why — not as a changelog entry.
   approving the recommendation). Pastel pink, lemon and cyan at 0.8 over the
   photographic ground read as marker pen; each house keeps its hue at
   `map_manor_saturation` 0.75 and `map_manor_value` 0.8, mixed
-  `map3d_manor_tint` 0.6, so the relief and fields read through it. Desaturating
+  `manor_tint` 0.6 (`ground_look.tres`), so the relief and fields read through it. Desaturating
   alone only made paler pastels — depth (value) is what makes a tincture.
 - **A map mark is ink, not a badge.** The weather mark is a bare glyph in
   dimmed parchment over a soft shadow — a black disc with a white glyph, and

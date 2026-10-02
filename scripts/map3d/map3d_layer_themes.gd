@@ -13,6 +13,9 @@ const FIELD_MAP_M_PER_TEXEL := 40.0
 
 var ctx: Map3DContext
 var lines: Map3DLayerLines
+## How the ground wears the themes, the fields and the woods
+## (scenes/map3d/ground_look.tres, edited in the inspector).
+var look := Map3DGroundLook.shared()
 ## The theme: "", "manors" or "heights" — GameRoot hands it down.
 var _theme := ""
 ## HEIGHTS' heat mix (owner 2026-09-19, spec 2026-09-19-map3d-heights): a
@@ -64,7 +67,7 @@ func prepare(scene_path: String) -> void:
 		mat.call("set_shader_param", "cell_index", load(repo.cell_texture_path))
 	mat.call("set_shader_param", "tint_mix", 0.0)
 	# HEIGHTS (owner 2026-09-19): the ground's world height ramped through
-	# terrain_palette heat_1..6, over 0..elevation_m_per_unit x
+	# the look's heat_ramp, over 0..elevation_m_per_unit x
 	# (100 - elevation_sea_level) metres.
 	mat.call("set_shader_param", "heat_mix", 0.0)
 	mat.call("set_shader_param", "heat_sea_y", float(ctx.meta.get("sea_y", 0.0)))
@@ -72,7 +75,7 @@ func prepare(scene_path: String) -> void:
 		repo.bal("elevation_m_per_unit") * (100.0 - repo.bal("elevation_sea_level")))
 	for i in 6:
 		mat.call("set_shader_param", "heat_c%d" % i,
-			MapTerrain.palette_color(repo, "heat_%d" % (i + 1), MapTerrain.FALLBACK))
+			look.heat_ramp[i] if i < look.heat_ramp.size() else MapTerrain.FALLBACK)
 	_apply_woods(scene_path)
 	# the bake's field map (owner 2026-09-19): furrows up close, the crops'
 	# colour eased back far out; without it both stay off
@@ -83,13 +86,9 @@ func prepare(scene_path: String) -> void:
 	else:
 		mat.call("set_shader_param", "field_map", fields)
 		mat.call("set_shader_param", "field_m_per_texel", FIELD_MAP_M_PER_TEXEL)
-		mat.call("set_shader_param", "furrow_m", repo.bal("map3d_furrow_m"))
-		mat.call("set_shader_param", "furrow_depth", repo.bal("map3d_furrow_depth"))
-		mat.call("set_shader_param", "strip_m", repo.bal("map3d_strip_m"))
-		mat.call("set_shader_param", "strip_shade", repo.bal("map3d_strip_shade"))
-		mat.call("set_shader_param", "field_fade", repo.bal("map3d_field_fade"))
-		mat.call("set_shader_param", "field_fade_near_m", repo.bal("map3d_field_fade_near_m"))
-		mat.call("set_shader_param", "field_fade_far_m", repo.bal("map3d_field_fade_far_m"))
+		for key: String in ["furrow_m", "furrow_depth", "strip_m", "strip_shade", "field_fade",
+				"field_fade_near_m", "field_fade_far_m"]:
+			mat.call("set_shader_param", key, float(look.get(key)))
 
 
 ## The bake's field map beside a built scene (bake/fields.png — the bake dir
@@ -117,11 +116,9 @@ func _apply_woods(scene_path: String) -> void:
 		return
 	_tint_mat.call("set_shader_param", "wood_map", ImageTexture.create_from_image(img))
 	_tint_mat.call("set_shader_param", "wood_on", 1.0)
-	for key in ["floor", "far", "far_near_m", "far_far_m", "mottle_m", "mottle"]:
-		_tint_mat.call("set_shader_param", "wood_" + key, repo.bal("map3d_wood_" + key))
-	for c in ["broadleaf", "conifer"]:
-		_tint_mat.call("set_shader_param", "wood_" + c,
-			MapTerrain.palette_color(repo, "map3d_wood_" + c, MapTerrain.FALLBACK))
+	for key: String in ["floor", "far", "far_near_m", "far_far_m", "mottle_m", "mottle", "broadleaf",
+			"conifer"]:
+		_tint_mat.call("set_shader_param", "wood_" + key, look.get("wood_" + key))
 
 
 ## Store the theme: "manors", "heights", or "" for none. refresh() puts it
@@ -158,9 +155,9 @@ func refresh() -> void:
 			_build_manor_edges()
 	if _tint_mat != null:
 		_tint_mat.call("set_shader_param", "tint_mix",
-			ctx.repo.bal("map3d_manor_tint") if manors else 0.0)
+			look.manor_tint if manors else 0.0)
 		_tint_mat.call("set_shader_param", "heat_mix",
-			ctx.repo.bal("map3d_heat_tint") if _heat else 0.0)
+			look.heat_tint if _heat else 0.0)
 	var edges := lines.get_node_or_null("ManorEdges") as MeshInstance3D
 	if edges != null:
 		edges.visible = manors

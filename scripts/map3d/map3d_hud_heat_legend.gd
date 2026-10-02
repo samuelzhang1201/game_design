@@ -1,7 +1,7 @@
 class_name Map3DHudHeatLegend
 extends Map3DHudPiece
 ## The HEIGHTS legend, bottom-left of the 3D map's HUD (owner 2026-09-19):
-## the heat ramp (terrain_palette heat_1..6) bottom to top, the tier lines
+## the heat ramp (the ground look's heat_ramp) bottom to top, the tier lines
 ## ticked and named with their metres; faint (map3d_heat_legend_yield_alpha)
 ## while a MEASUREMENT ruler crosses it.
 
@@ -92,11 +92,12 @@ func _draw() -> void:
 		if yields() else Color.WHITE
 	var x0 := box.position.x
 	var x1 := box.end.x
-	for i in 5:
+	var ramp := Map3DGroundLook.shared().heat_ramp
+	for i in mini(5, ramp.size() - 1):
 		var y0 := box.end.y - box.size.y * float(i) / 5.0
 		var y1 := box.end.y - box.size.y * float(i + 1) / 5.0
-		var c0 := MapTerrain.palette_color(repo, "heat_%d" % (i + 1), MapTerrain.FALLBACK) * fade
-		var c1 := MapTerrain.palette_color(repo, "heat_%d" % (i + 2), MapTerrain.FALLBACK) * fade
+		var c0 := ramp[i] * fade
+		var c1 := ramp[i + 1] * fade
 		draw_polygon(PackedVector2Array([Vector2(x0, y0), Vector2(x1, y0),
 			Vector2(x1, y1), Vector2(x0, y1)]), PackedColorArray([c0, c0, c1, c1]))
 	var font := UiPalette.display_font()

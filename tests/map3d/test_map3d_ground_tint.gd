@@ -56,7 +56,7 @@ func test_code_without_the_albedo_line_is_not_patched() -> void:
 
 
 ## The HEIGHTS heat ramp (owner 2026-09-19, spec 2026-09-19-map3d-heights):
-## the ground's world height mixed toward terrain_palette heat_1..6.
+## the ground's world height mixed toward the ground look's heat_ramp.
 func test_the_patch_carries_the_heat_ramp() -> void:
 	var code := "shader_type spatial;\nrender_mode blend_mix;\nvoid fragment() {\n\t" \
 		+ Map3DGroundTint.ALBEDO_LINE + "\n}\n"

@@ -93,7 +93,7 @@ shared by every pack and built once. The steps one by one:
    sown densest near the village and thinning outward, soft hedges; and
    every manor cell its own slight shade. Its noise has its own random
    stream, so the rest of the look is untouched; `map3d_bake.csv`
-   `field_*`, `hedge_*`, `footprint_*`, `manor_jitter_*`. It also writes `bake/fields.png` (RGB each field's own colour multiplier, A its strip direction, `FIELD_MAP_STEP` vertices a texel), read at runtime — not imported — for the terrain shader's furrows and far fade (`Map3DGroundTint`, balance `map3d_furrow_*` / `map3d_field_fade*`). **The same pass now also places every settlement's houses** (spec 2026-09-20 §1; `tools/map3d/bake_houses.py`, called from `sow_patchwork` right where the land mask, each burg's population and footprint radius already live, so "never in the sea" is structural) and writes `bake/houses.csv` (world metres, no `y`, plus `rank` and `height_scale`; tuned by `map3d_bake.csv`'s `house_*` keys and `data/map3d_houses.csv`'s type table) — see "House meshes" below for the models those rows place.
+   `field_*`, `hedge_*`, `footprint_*`, `manor_jitter_*`. It also writes `bake/fields.png` (RGB each field's own colour multiplier, A its strip direction, `FIELD_MAP_STEP` vertices a texel), read at runtime — not imported — for the terrain shader's furrows and far fade (`Map3DGroundTint`, `scenes/map3d/ground_look.tres` `furrow_*` / `field_fade*`). **The same pass now also places every settlement's houses** (spec 2026-09-20 §1; `tools/map3d/bake_houses.py`, called from `sow_patchwork` right where the land mask, each burg's population and footprint radius already live, so "never in the sea" is structural) and writes `bake/houses.csv` (world metres, no `y`, plus `rank` and `height_scale`; tuned by `map3d_bake.csv`'s `house_*` keys and `data/map3d_houses.csv`'s type table) — see "House meshes" below for the models those rows place.
 5. **Scene** — `GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/build_world.gd [-- --map ID]`
    (~2 s, no editor; every tool defaults to `data/maps.csv`'s `is_default` pack). Nothing visual is baked into the scene beyond the
    terrain: headless, a MultiMesh saves without its transforms, which is one
@@ -462,7 +462,7 @@ by the same margin.
   square, kind, variant and level, shown by Godot's own visibility ranges
   (`map3d_tree_near_m` / `_far_m`): built once at load, nothing per frame.
   Past the far range the ground's canopy tint (`Map3DGroundTint`'s woods
-  stage, `map3d_wood_*`) carries the wood. Measured primitive cost on high:
+  stage, `ground_look.tres` `wood_*`) carries the wood. Measured primitive cost on high:
   ~+2.5 M near, ~+1.9 M mid.
 - **Aerial ground layers** (`aerial_meadow`, `aerial_canopy`,
   `aerial_upland`) replace `leafy_grass` and `rocky_trail` — see

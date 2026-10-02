@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="Map3DGroundLook" format=3 uid="uid://cs74mcvj2ptpn"]
+
+[ext_resource type="Script" uid="uid://geuiuq5r858u" path="res://scripts/map3d/map3d_ground_look.gd" id="1_sj1ad"]
+
+[resource]
+script = ExtResource("1_sj1ad")
+heat_ramp = PackedColorArray(0.42745098, 0.74509805, 0.41568628, 1, 0.76862746, 0.827451, 0.36862746, 1, 0.9411765, 0.7529412, 0.30588236, 1, 0.8784314, 0.5411765, 0.27058825, 1, 0.70980394, 0.3529412, 0.23529412, 1, 1, 1, 1, 1)

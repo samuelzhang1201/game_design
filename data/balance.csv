@@ -263,17 +263,8 @@ map3d_key_pan_screens_per_s,0.7,3D MAP: WASD / arrow keys pan this many view-hei
 map3d_near_m,20.0,3D MAP: the camera's near clip plane
 map3d_far_m,400000.0,3D MAP: the camera's far clip plane — past the sea plane's edge
 map3d_line_step_m,150.0,"3D MAP borders: borders and seams are resampled to a point every this many metres so they drape over the relief (a Terrain3D vertex is 20 m, a pack px 50 m)"
-map3d_manor_tint,0.6,"3D MAP MANORS (owner 2026-09-19; ECONOMY folded into it): how far the ground's albedo mixes toward its manor's ManorPalette colour under a theme (Map3DGroundTint, the patched Terrain3D shader) — the colour is lit by the relief and the sun like the ground; 0 without a theme"
 map_manor_saturation,0.75,"MANORS: every house colour's saturation is scaled by this before it washes the ground (ManorPalette.house_color; owner 2026-09-28, second critique: the pastel pink / lemon / cyan read as highlighter over the photographic ground); 1 is the colours as the palette gives them"
 map_manor_value,0.8,"MANORS: every house colour's value (brightness) is scaled by this after map_manor_saturation — a tincture is deeper than a pastel; 1 is the palette's own"
-map3d_heat_tint,0.85,"3D MAP HEIGHTS (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §4): how far the ground's albedo mixes toward the height ramp (terrain_palette heat_1..6 over 0..elevation_m_per_unit x (100 - elevation_sea_level) m) — lit by the relief like the ground"
-map3d_furrow_m,9.0,"3D MAP fields (owner 2026-09-19): the furrows' spacing in metres, drawn by the patched terrain shader along each estate's strips from the bake's field map (bake/fields.png) — only on sown ground, and faded out before their spacing falls under ~3 screen px"
-map3d_furrow_depth,0.14,3D MAP fields: how far a furrow darkens the field (0 = none)
-map3d_strip_m,22,"3D MAP OPEN FIELDS (owner 2026-10-01: 田地的布局要更合理真实): each furlong is long narrow strips along its direction (bake/fields.png alpha), this many metres wide, each its own shade (Map3DGroundTint); gone before a strip is under a pixel or two"
-map3d_strip_shade,0.25,"3D MAP open fields: how far a strip's own shade lifts or darkens it, +- this share (0 = no strips)"
-map3d_field_fade,0.35,"3D MAP fields: how much of the fields' own colour the shader takes back far out (0 = none, 1 = all). 0.9 until the open fields of 2026-10-01: the crops came out weak and only the ploughed patches read; whole great fields read as country, not speckle"
-map3d_field_fade_near_m,5000,3D MAP fields: the camera distance where that fade begins
-map3d_field_fade_far_m,22000,3D MAP fields: the camera distance where it is full (15-60 km took back only ~16% at 30 km)
 map3d_army_badge_min_px,18,"3D MAP MILITARY (owner 2026-09-19: '注意兵棋大小'): the smallest a regiment's counter gets, design px — map_army_badge_native_px of the map at the scale the camera's target is seen at, held between this and map3d_army_badge_max_px"
 map3d_army_chip_px,15,"3D MAP MILITARY (2026-09-27 critic: the chip outranked the soldier): the headcount chip that hangs over a 3D PIECE is at most this tall, design px — the piece is the counter, the chip only its tag; a flat counter (far out, a fleet) keeps map3d_army_badge_min_px..max_px"
 map3d_army_badge_max_px,30,"3D MAP MILITARY: the largest a counter gets close in, design px, so the counters never swamp the ground"
@@ -351,12 +342,6 @@ map3d_tree_margin_m,400,3D MAP woods: the visibility ranges' hysteresis margin
 map3d_tree_size_spread,0.3,"3D MAP woods: each clump drawn up to this share bigger or smaller than its baked size, by its own row — old trees and young, not one even carpet"
 map3d_tree_cards,1,"3D MAP woods (owner 2026-10-01): 1 draws every crown as a PHOTO CARD (tree_card.gdshader over assets/3D/vegetation/crowns/crowns_atlas.png, cells by data/map3d_tree_crowns.csv), 0 the procedural 3D crowns; without the atlas or the table the 3D crowns stay"
 map3d_tree_card_far_m,20000,"3D MAP woods: the photo cards are drawn out to this camera distance to their square (two triangles a tree, so farther than the 3D crowns' 12 km)"
-map3d_wood_floor,0.75,"3D MAP woods: how far the ground under the woods (bake/woods.png's canopy share) goes toward the canopy colour where clumps are drawn — the dark floor between the crowns"
-map3d_wood_far,0.75,"3D MAP woods: the same far out, where no clump is drawn and the canopy colour IS the wood"
-map3d_wood_far_near_m,2500,3D MAP woods: the camera distance where the ground's canopy begins to take over from the floor
-map3d_wood_far_far_m,10000,3D MAP woods: ...and where it has
-map3d_wood_mottle_m,160,"3D MAP woods: the wavelength of the canopy's light and dark mottle, metres (crowns and gaps read from afar)"
-map3d_wood_mottle,0.45,3D MAP woods: how far the mottle lightens and darkens the canopy
 map3d_house_rebuild_move_m,300,"3D MAP houses: the camera must move this far before the house MultiMeshes are rebuilt — cut once per camera pose, never per frame"
 map3d_house_seat_clear_m,0.1,"3D MAP houses (owner 2026-09-24: 要垂直于地面，不可以被地面遮住部分): a house stands this far above the HIGHEST ground sampled under its footprint (Map3DHouses.seat) — the drawn Terrain3D surface is triangles between 20 m vertices, the sampled one bilinear, and they part by centimetres on a slope. Replaced map3d_house_sink_m (0.5), which sank every house into the ground"
 map3d_pier_deck_m,1.6,"3D MAP piers (owner 2026-10-01: 码头延伸到海里): a pier's deck stands this far over the sea (Map3DLayerHouses seats a `pier` row at the water, not on the ground under it)"
