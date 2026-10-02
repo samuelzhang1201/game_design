@@ -349,3 +349,21 @@ room; drafts on the 3D map; pathfinding.
 `CLAUDE.md`'s WAR ROOM paragraph; `assets/3D/war_room/README.md`;
 `balance.csv` (the keys named above, the retired ones removed);
 `tools/NEW_MAP.md` (the coordinates rows).
+
+## 12. Changed while building
+
+- **Plan A (merged 2026-10-02):** the pitch runs on THREE points — near 30°
+  leaning in, the officer's 52° at the opening distance, far 24° stepped back
+  to `war_cam_max_m` 3.0 — because a steeper far look never showed anything
+  beyond the table (the easel, the furniture); the easel stands at x −1.5,
+  just off the table's west edge, until D's model.
+- **Plan B, §2.4's relief source:** the relief is read from the build's own
+  `bake/height.r32` by `WarBake` (the very heights Terrain3D was built from)
+  rather than from Terrain3D through a screen-handed `height_fn` — the same
+  data with no dependence on the 3D map being loaded, and testable headless.
+- **Plan B, §2.2:** unclaimed land counts toward a sheet; a sheet of it names
+  no kingdom. The collar's relief is tapered flat (exaggerated, it reared up
+  over the index chart). The exaggeration is 5 (the critic's pick of 3/5/8).
+- **Plan B, §2.3:** the room picks a pennant or a piece before the flat
+  index chart (a piece at a sheet's north edge throws its head over it).
+
