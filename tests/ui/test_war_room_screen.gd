@@ -186,7 +186,7 @@ func test_the_rake_on_a_running_clock_says_why_and_arms_nothing() -> void:
 	assert_signal_emitted(Game, "news_published", "the reason is published")
 
 
-func test_a_committed_rake_plants_a_pennant_with_a_riding_slip() -> void:
+func test_a_committed_rake_pencils_a_draft_pennant() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(2)
@@ -206,9 +206,11 @@ func test_a_committed_rake_plants_a_pennant_with_a_riding_slip() -> void:
 	screen.view().ground_clicked.emit(to, Vector2(100, 100))
 	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
 	await wait_process_frames(2)
-	assert_eq(String(WarRoom.pennant_of(Game.data, Game.state, code).get("status", "")), "riding")
+	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "march", "the war room pencils a draft")
+	assert_true(WarRoom.pennant_of(Game.data, Game.state, code).is_empty(), "no courier rides for a draft")
 	var pennants: WarPennants = screen.view().get_node("%Pennants")
-	assert_not_null(pennants.get_node_or_null(NodePath(code)))
+	assert_not_null(pennants.pennant(code + "_draft"))
+	assert_eq((pennants.pennant(code + "_draft").get_node("Slip") as Label3D).text, "draft")
 
 
 func _real_press(view: WarRoomView, at: Vector2, pressed: bool) -> void:
@@ -239,7 +241,7 @@ func _land_near(screen: WarRoomScreen, at: Vector2) -> Vector2:
 	return at
 
 
-func test_a_real_drag_from_a_piece_commits_a_march_and_plants_a_riding_pennant() -> void:
+func test_a_real_drag_from_a_piece_pencils_a_draft() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(3)
@@ -260,11 +262,12 @@ func test_a_real_drag_from_a_piece_commits_a_march_and_plants_a_riding_pennant()
 	assert_true(screen.orders().pending().x >= 0.0, "the release named a destination and asked COMMIT / CANCEL")
 	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
 	await wait_process_frames(2)
-	assert_eq(String(WarRoom.pennant_of(Game.data, Game.state, code).get("status", "")), "riding")
-	assert_not_null((view.get_node("%Pennants") as WarPennants).pennant(code))
+	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "march", "the war room pencils a draft")
+	assert_true(WarRoom.pennant_of(Game.data, Game.state, code).is_empty(), "no courier rides for a draft")
+	assert_not_null((view.get_node("%Pennants") as WarPennants).pennant(code + "_draft"))
 
 
-func test_a_click_on_a_riding_pennant_opens_edit_route_and_cancel_march() -> void:
+func test_a_click_on_a_riding_pennant_offers_edit_and_a_pencilled_cancel() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(3)
@@ -274,9 +277,8 @@ func test_a_click_on_a_riding_pennant_opens_edit_route_and_cancel_march() -> voi
 	var p := _land_piece(screen)
 	var code := String(p["code"])
 	var to := _land_near(screen, p["at"])
-	screen.orders().aim_for(code)
-	view.ground_clicked.emit(to, Vector2(100, 100))
-	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	assert_true(bool(Game.try_execute(ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": to.x, "y": to.y}))["ok"]),
+		"a march sent from the 3D map")
 	await wait_process_frames(2)
 	var hit: Dictionary = (view.get_node("%Pennants") as WarPennants).screen_hits(
 		view.get_node("%Camera"), view.window_scale())[0]
@@ -287,6 +289,62 @@ func test_a_click_on_a_riding_pennant_opens_edit_route_and_cancel_march() -> voi
 	assert_gte(menu.get_item_index(ArmyOrderMenu.EDIT), 0, "Edit route is offered over a march whose courier still rides")
 	assert_gte(menu.get_item_index(ArmyOrderMenu.HALT), 0, "and Cancel march")
 	assert_false(menu.is_item_disabled(menu.get_item_index(ArmyOrderMenu.HALT)), "Cancel march can be chosen")
+	var riders := Game.state.couriers.size()
+	menu.id_pressed.emit(ArmyOrderMenu.HALT)
+	await wait_process_frames(2)
+	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "garrison", "in the room Cancel march is pencilled too")
+	assert_eq(Game.state.couriers.size(), riders, "and sends no courier")
+	assert_eq(((view.get_node("%Pennants") as WarPennants).pennant(code).get_node("Slip") as Label3D).text, "halt pencilled")
+
+
+func test_a_click_on_a_draft_pennant_offers_edit_and_strike() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(3)
+	Game.set_clock_speed(0)
+	var screen := r.war_room_screen()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	screen.orders().aim_for(code)
+	view.ground_clicked.emit(_land_near(screen, p["at"]), Vector2(100, 100))
+	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	await wait_process_frames(2)
+	var hit: Dictionary = (view.get_node("%Pennants") as WarPennants).screen_hits(
+		view.get_node("%Camera"), view.window_scale())[0]
+	assert_eq(String(hit["code"]), code, "a draft pennant is picked as its regiment's")
+	var at := (hit["rect"] as Rect2).get_center()
+	_real_press(view, at, true)
+	_real_press(view, at, false)
+	var menu := screen.orders()
+	assert_gte(menu.get_item_index(ArmyOrderMenu.EDIT), 0)
+	assert_gte(menu.get_item_index(ArmyOrderMenu.STRIKE), 0, "Strike the draft")
+	assert_lt(menu.get_item_index(ArmyOrderMenu.HALT), 0, "no Cancel march over a mere draft")
+	menu.id_pressed.emit(ArmyOrderMenu.STRIKE)
+	await wait_process_frames(2)
+	assert_false(WarDrafts.any(Game.state))
+	assert_null((view.get_node("%Pennants") as WarPennants).pennant(code + "_draft"))
+
+
+func test_an_order_on_the_map_sets_the_rooms_draft_aside_and_says_so() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	Game.set_clock_speed(0)
+	var code := String(_land_piece(r.war_room_screen())["code"])
+	Game.plant_draft(code, "march", _land_near(r.war_room_screen(),
+		ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))))
+	r.war_room_screen().close(false)
+	await wait_process_frames(1)
+	var heard: Array = []
+	var listen := func(t: String) -> void: heard.append(t)
+	Game.news_published.connect(listen)
+	var map_menu := r.current_screen.find_child("ArmyOrders", true, false) as ArmyOrderMenu
+	assert_false(map_menu.drafting, "the 3D map's orders are sent at once")
+	map_menu._run(ActionRequest.make("ARMY_GARRISON", {"regiment": code}))
+	Game.news_published.disconnect(listen)
+	assert_false(WarDrafts.any(Game.state))
+	assert_true(heard.any(func(t: String) -> bool: return t.contains("draft")), "the news says the draft is set aside")
 
 
 func test_a_rake_released_off_the_table_withdraws_the_armed_march() -> void:

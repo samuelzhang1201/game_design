@@ -162,7 +162,7 @@ func redraw() -> void:
 	if node != null and not _view.rolling() and not _camera.is_position_behind(node.global_position):
 		chalk = _camera.unproject_position(node.global_position) / _view.window_scale()
 	_hud.draw_state(from, tip, text, chalk, _repo.bal("war_pick_px") * _repo.bal("war_hud_chalk_ratio"),
-		pal["ink"], pal["arrow"], pal["chalk"], _view.lettering(), held, _routes())
+		pal["ink"], pal["arrow"], pal["chalk"], _view.lettering(), held, _routes(), _drafts(), pal["pencil"])
 
 
 ## Each pennant's dashed line from its piece (where we know it stands) to the
@@ -180,6 +180,29 @@ func _routes() -> Array:
 		var a: Variant = _view.screen_pos_of_px(p["at"]) if node == null or _camera.is_position_behind(node.global_position) \
 			else _camera.unproject_position(node.global_position) / _view.window_scale()
 		var b: Variant = _view.screen_pos_of_px(pen["at"])
+		if a != null and b != null:
+			out.append([a, b])
+	return out
+
+
+## Each march draft's pencil line from its piece to its draft pennant, in
+## screen px (spec 2026-10-02-war-room-v2 §3.1); none while the table rolls.
+func _drafts() -> Array:
+	var out: Array = []
+	if _view.rolling():
+		return out
+	var state := _view.state()
+	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index()):
+		var d := WarDrafts.of(state, String(p["code"]))
+		if String(d.get("order", "")) != WarDrafts.MARCH:
+			continue
+		var to := WarDrafts.dest_px(_repo, d)
+		if not _view.sheet_rect().has_point(to):
+			continue
+		var node := _pieces.piece(String(p["code"]))
+		var a: Variant = _view.screen_pos_of_px(p["at"]) if node == null or _camera.is_position_behind(node.global_position) \
+			else _camera.unproject_position(node.global_position) / _view.window_scale()
+		var b: Variant = _view.screen_pos_of_px(to)
 		if a != null and b != null:
 			out.append([a, b])
 	return out

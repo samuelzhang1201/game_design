@@ -18,6 +18,8 @@ var _chalk_c := Color.WHITE
 var _font: Font
 var _held := false
 var _routes: Array = []   # [from, to] screen px of each piece's dashed line to its pennant
+var _drafts: Array = []   # [from, to] screen px of each draft's pencil line (spec 2026-10-02-war-room-v2 §3.1)
+var _pencil := Color.GRAY
 
 
 func setup(repo: DataRepository) -> void:
@@ -25,7 +27,8 @@ func setup(repo: DataRepository) -> void:
 
 
 func draw_state(rake_from: Vector2, rake_to: Vector2, reading: String, chalk: Vector2, chalk_r: float,
-		ink: Color, arrow: Color, chalk_c: Color, font: Font, held := false, routes: Array = []) -> void:
+		ink: Color, arrow: Color, chalk_c: Color, font: Font, held := false, routes: Array = [],
+		drafts: Array = [], pencil := Color.GRAY) -> void:
 	_from = rake_from
 	_to = rake_to
 	_reading = reading
@@ -37,22 +40,31 @@ func draw_state(rake_from: Vector2, rake_to: Vector2, reading: String, chalk: Ve
 	_font = font
 	_held = held
 	_routes = routes
+	_drafts = drafts
+	_pencil = pencil
 	queue_redraw()
+
+
+## The draft lines being drawn (tests read it).
+func draft_lines() -> Array:
+	return _drafts
 
 
 ## True when anything is drawn: the arrow, the chalk ring or a pennant's line.
 func drawing() -> bool:
-	return _chalk.x >= 0.0 or not _routes.is_empty() or _has_arrow()
+	return _chalk.x >= 0.0 or not _routes.is_empty() or not _drafts.is_empty() or _has_arrow()
 
 
 func _has_arrow() -> bool:
 	return _from.x >= 0.0 and _to.x >= 0.0 and _from.distance_to(_to) >= _repo.bal("war_hud_min_len_px")
 
 
-## A dashed line from `a` to `b` (the dash war_hud_dash_px, the gap its own length).
-func _dashed(a: Vector2, b: Vector2, color: Color, width: float) -> void:
+## A dashed line from `a` to `b` (the dash war_hud_dash_px unless `dash` is
+## given, the gap its own length).
+func _dashed(a: Vector2, b: Vector2, color: Color, width: float, dash := -1.0) -> void:
 	var dir := (b - a).normalized()
-	var dash := _repo.bal("war_hud_dash_px")
+	if dash <= 0.0:
+		dash = _repo.bal("war_hud_dash_px")
 	var run := a.distance_to(b)
 	var at := 0.0
 	while at < run:
@@ -67,6 +79,8 @@ func _draw() -> void:
 		draw_arc(_chalk, _chalk_r, 0.0, TAU, 48, _chalk_c, _repo.bal("war_hud_chalk_px"), true)
 	for r: Array in _routes:
 		_dashed(r[0], r[1], _ink, _repo.bal("war_hud_arrow_px"))
+	for r: Array in _drafts:
+		_dashed(r[0], r[1], _pencil, _repo.bal("war_draft_pencil_px"), _repo.bal("war_draft_pencil_dash_px"))
 	if not _has_arrow():
 		return
 	var dir := (_to - _from).normalized()

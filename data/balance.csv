@@ -1139,3 +1139,6 @@ ledger_search_font_px,15,LEDGER search: design px font of a listed match
 ledger_search_row_px,28,LEDGER search: design px tall each listed match
 ledger_lineage_tie_hops,2,"LEDGER lineage (owner 2026-10-01: 我需要点击一个node的时候，highlight整个lineage — the hybrid): a selected star's tie and kin links walked this many hops (LedgerLineage); its own links and its flow chain are always lit, structure past the first hop never"
 ledger_lineage_far_fade,0.45,"LEDGER lineage: perceived opacity of the ties of its ties (the hops past the first) — dimmer than the lineage proper, brighter than ledger_focus_fade"
+war_draft_alpha,0.45,"WAR ROOM v2 C (owner 2026-10-02, spec 2026-10-02-war-room-v2 §3.1): a draft pennant's opacity — pencilled, not planted"
+war_draft_pencil_px,1.4,"WAR ROOM v2 C (spec §3.1): the pencil line from a piece to its draft pennant, screen px"
+war_draft_pencil_dash_px,5,"WAR ROOM v2 C (spec §3.1): its dashes, screen px"

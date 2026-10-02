@@ -6,3 +6,6 @@ halt,Cancel march,Send a courier to halt the column where it has got to,"the rou
 paused_only,,Pause the clock to plan a march,"owner 2026-09-27: 兵人行进路线只能在暂停模式下选择 — the reason MARCH, Edit and Cancel march are greyed out while time runs"
 commit_fleet,Commit march,Send the fleet along this route,"final review 2026-09-28: a fleet takes no courier yet (CourierSystem.carries_orders), so its COMMIT keeps the pre-courier words"
 halt_fleet,Cancel march,Halt the fleet where it has got to,"final review 2026-09-28: a fleet's Cancel march, no courier"
+commit_draft,Pencil it in,"A draft: no courier and no fee until the council's resolutions are sealed","WAR ROOM v2 C (owner 2026-10-02, spec 2026-10-02-war-room-v2 §3.1): in the war room COMMIT plants a draft (ArmyOrderMenu.drafting)"
+halt_draft,Cancel march,"Pencil a halt: it rides when the council's resolutions are sealed","WAR ROOM v2 C (spec §3.1): the war room's Cancel march is a garrison draft too — every order given in the room waits for the seal"
+strike,Strike the draft,Rub the pencilled order out,"WAR ROOM v2 C (spec §3.1): the route menu over a regiment with a draft (a draft pennant, or a march with a pencilled halt)"

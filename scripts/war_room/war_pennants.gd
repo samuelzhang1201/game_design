@@ -5,11 +5,14 @@ extends Node3D
 ## <the day he left>" until the courier hands the order over, then "order
 ## received" (a newer garrison courier turns it to "countermand riding");
 ## struck when the column arrives (WarRoom.pennant_of turns {}).
+## A war-room DRAFT (spec 2026-10-02-war-room-v2 §3.1, WarDrafts) is a pale
+## pennant of its own, `<code>_draft`, its slip "draft" (war_draft_alpha); a
+## pencilled halt turns the real pennant's slip to "halt pencilled".
 ## Never reaches the Game autoload.
 
 ## A pennant's slip by status (the dated ones take the day their courier left).
 const SLIPS := {"riding": "courier riding · %s", "countermanded": "countermand riding · %s",
-		"received": "order received"}
+		"received": "order received", "draft": "draft", "halt_draft": "halt pencilled"}
 
 ## The pennant's model (assets/3D/war_room/pennant: a red swallowtail on a
 ## brass pin with a paper slip, its foot at the origin), set in the scene;
@@ -35,8 +38,15 @@ func rebuild(state: GameState, force := false) -> void:
 	for p: Dictionary in WarRoom.pieces(_repo, state):
 		var code := String(p["code"])
 		var pen := WarRoom.pennant_of(_repo, state, code)
+		var draft := WarDrafts.of(state, code)
+		var order := String(draft.get("order", ""))
 		if not pen.is_empty() and rect.has_point(pen["at"]):
-			want.append([code, pen["at"], String(pen["status"]), int(pen.get("issued", 0))])
+			want.append([code, pen["at"], "halt_draft" if order == WarDrafts.GARRISON else String(pen["status"]),
+				int(pen.get("issued", 0))])
+		if order == WarDrafts.MARCH:
+			var to := WarDrafts.dest_px(_repo, draft)
+			if rect.has_point(to):
+				want.append([code + "_draft", to, "draft", 0])
 	var sig: Array = [_view.sheet_index(), want]
 	if not force and sig == _sig:
 		return
@@ -72,7 +82,8 @@ func _model_box() -> AABB:
 func _build(code: String, at: Vector2, status: String, issued: int) -> Node3D:
 	var root := Node3D.new()
 	root.name = code
-	root.set_meta("code", code)
+	root.set_meta("code", code.trim_suffix("_draft"))
+	root.set_meta("draft", status == "draft")
 	root.position = _view.table_point(at)
 	var h := _height()
 	if model != null:
@@ -93,6 +104,12 @@ func _build(code: String, at: Vector2, status: String, issued: int) -> Node3D:
 	slip.outline_size = int(_repo.bal("war_pennant_outline_px"))
 	slip.position.y = h * _repo.bal("war_pennant_slip_y")
 	root.add_child(slip)
+	if status == "draft":   # pencilled, not planted
+		var alpha := _repo.bal("war_draft_alpha")
+		for m: MeshInstance3D in Map3DUnits.meshes(root):
+			m.transparency = 1.0 - alpha
+		slip.modulate.a = alpha
+		slip.outline_modulate.a = alpha
 	return root
 
 

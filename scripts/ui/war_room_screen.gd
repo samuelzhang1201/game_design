@@ -42,6 +42,7 @@ func _ready() -> void:
 	_view.selection_cleared.connect(_clear_card)
 	_view.rake_started.connect(_on_rake)
 	_view.rake_dropped.connect(_orders.withdraw_aim)   # a rake given up takes its armed march with it
+	_orders.drafting = true   # orders given in the room are drafts until sealed (spec 2026-10-02-war-room-v2 §3.1)
 	_view.sheet_requested.connect(_view.swap_to)
 	_view.sheet_laid.connect(_on_laid)
 	_folio.closed.connect(_view.clear_selection)

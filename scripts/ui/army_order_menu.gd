@@ -31,6 +31,14 @@ const COMMIT := 100
 const CANCEL := 101
 const EDIT := 200
 const HALT := 201
+const STRIKE := 202
+
+## The WAR ROOM's menu (owner 2026-10-02, spec 2026-10-02-war-room-v2 §3.1):
+## every order given here is a DRAFT — COMMIT pencils a march, Cancel march
+## pencils a halt, no courier and no fee until the council's resolutions are
+## sealed (Game.deploy_drafts) — and the route menu opens over a draft too,
+## offering Edit route… and Strike the draft. The 3D map's menu leaves it off.
+var drafting := false
 
 var _map: Node = null
 var _code := ""
@@ -81,22 +89,28 @@ func _open_for(code: String, at: Vector2) -> void:
 ## over a march whose courier still rides) was clicked: Edit route… or Cancel
 ## march.
 func _open_route(code: String, at: Vector2) -> void:
-	if Game.state == null or (ArmySystem.order_of(Game.data, Game.state, code) != ArmySystem.ORDER_MARCH \
-			and WarRoom.pennant_of(Game.data, Game.state, code).is_empty()):
+	if Game.state == null:
+		return
+	var draft := drafting and not WarDrafts.of(Game.state, code).is_empty()
+	if not draft and ArmySystem.order_of(Game.data, Game.state, code) != ArmySystem.ORDER_MARCH \
+			and WarRoom.pennant_of(Game.data, Game.state, code).is_empty():
 		return
 	_set_aim("")
 	_code = code
 	clear()
 	_add_row("edit", EDIT, _paused_reason())
-	_add_row(_row_key("halt", code), HALT, _paused_reason() if _paused_reason() != "" \
-		else _refusal("ARMY_GARRISON", code))
+	if draft:
+		_add_row("strike", STRIKE, "")
+	else:
+		_add_row("halt_draft" if drafting else _row_key("halt", code), HALT,
+			_paused_reason() if _paused_reason() != "" else _refusal("ARMY_GARRISON", code))
 	_pop(at)
 
 
 ## The destination was clicked: ask COMMIT or CANCEL there.
 func _open_confirm(at: Vector2) -> void:
 	clear()
-	_add_row(_row_key("commit", _aiming), COMMIT, "")
+	_add_row("commit_draft" if drafting else _row_key("commit", _aiming), COMMIT, "")
 	_add_row("cancel", CANCEL, "")
 	_pop(at)
 
@@ -171,8 +185,16 @@ func _on_chosen(id: int) -> void:
 				Game.publish_news("%s awaits a new route — click where to send it." % _name_of(_code))
 			return
 		HALT:
-			if _code != "":
+			if _code != "" and drafting:
+				Game.plant_draft(_code, WarDrafts.GARRISON, Vector2.ZERO)
+				Game.publish_news("A halt for %s is pencilled in." % _name_of(_code))
+			elif _code != "":
 				_run(ActionRequest.make("ARMY_GARRISON", {"regiment": _code}))
+			return
+		STRIKE:
+			if _code != "":
+				Game.strike_draft(_code)
+				Game.publish_news("%s's draft is struck out." % _name_of(_code))
 			return
 	if _code == "" or id < 0 or id >= Game.data.army_orders.size():
 		return
@@ -207,6 +229,10 @@ func _commit() -> void:
 	var code := _aiming
 	var to := _pending
 	_set_aim("")
+	if drafting:
+		Game.plant_draft(code, WarDrafts.MARCH, to)
+		Game.publish_news("%s's march is pencilled in." % _name_of(code))
+		return
 	_run(ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": to.x, "y": to.y}))
 
 
@@ -240,6 +266,12 @@ func _run(req: ActionRequest) -> void:
 	if not bool(out.get("ok", false)):
 		Game.publish_news(String(out.get("error", "That order cannot be given.")))
 		return
+	# A draft the order set aside is said even on a stopped clock (spec
+	# 2026-10-02-war-room-v2 §3.1).
+	var said: Dictionary = out.get("outcome", {})
+	for e: Dictionary in said.get("effects", []):
+		if String(e.get("metric", "")) == "war_draft":
+			Game.publish_news(String(e["reason"]))
 	# An order on a stopped clock waits for play (owner 2026-09-24) — and since
 	# 2026-09-27 it rides by courier, who waits in the capital with it.
 	if Game.clock_speed <= 0 and req.action_code in ["ARMY_MARCH", "ARMY_GARRISON"]:

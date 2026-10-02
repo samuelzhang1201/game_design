@@ -782,3 +782,46 @@ func test_a_new_lay_lets_go_of_the_last_sheets_intelligence() -> void:
 	mat.set_shader_parameter("intel_tex", ImageTexture.create_from_image(Image.create(2, 2, false, Image.FORMAT_RGBA8)))
 	view.lay_sheet(1)
 	assert_null(mat.get_shader_parameter("intel_tex"), "no sheet wears another's supply roads")
+
+
+func test_a_draft_plants_a_pale_pennant_with_a_draft_slip() -> void:
+	var p: Dictionary = {}
+	for q: Dictionary in WarRoom.pieces(repo, state):
+		if not bool(q["naval"]):
+			p = q
+			break
+	var code := String(p["code"])
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	var rect: Rect2 = WarSheets.series(repo)[int(p["sheet"])]["rect"]
+	var to: Vector2 = (p["at"] as Vector2).move_toward(rect.get_center(), 10.0)
+	WarDrafts.plant(repo, state, code, "march", to)
+	view.refresh()
+	await wait_process_frames(1)
+	var pen := (view.get_node("%Pennants") as WarPennants).pennant(code + "_draft")
+	assert_not_null(pen)
+	assert_eq(String(pen.get_meta("code")), code)
+	assert_eq((pen.get_node("Slip") as Label3D).text, "draft")
+	for m: MeshInstance3D in Map3DUnits.meshes(pen):
+		assert_almost_eq(m.transparency, 1.0 - repo.bal("war_draft_alpha"), 0.001)
+	WarDrafts.strike(state, code)
+	view.refresh()
+	await wait_process_frames(1)
+	assert_null((view.get_node("%Pennants") as WarPennants).pennant(code + "_draft"))
+
+
+func test_a_draft_is_drawn_as_a_pencil_line_from_its_piece() -> void:
+	var p: Dictionary = {}
+	for q: Dictionary in WarRoom.pieces(repo, state):
+		if not bool(q["naval"]):
+			p = q
+			break
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	var rect: Rect2 = WarSheets.series(repo)[int(p["sheet"])]["rect"]
+	WarDrafts.plant(repo, state, String(p["code"]), "march", (p["at"] as Vector2).move_toward(rect.get_center(), 10.0))
+	view.refresh()
+	await wait_process_frames(2)
+	var hud := view.get_node("%Hud") as WarHud
+	assert_eq(hud.draft_lines().size(), 1)
+	assert_true(hud.drawing())
