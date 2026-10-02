@@ -1,0 +1,13 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://hbcsw3occqy0"]
+
+[ext_resource type="Shader" uid="uid://cujgdkftpvcre" path="res://scripts/map3d/precip_drop.gdshader" id="1_xs5l8"]
+
+[resource]
+render_priority = 9
+shader = ExtResource("1_xs5l8")
+shader_parameter/kind = 1.0
+shader_parameter/tint = Color(0.95686275, 0.9647059, 0.96862745, 1)
+shader_parameter/opacity = 0.7
+shader_parameter/gain = 1.9
+shader_parameter/length_m = 40.0
+shader_parameter/width_m = 4.0

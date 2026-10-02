@@ -34,6 +34,11 @@ const CODE_OWNED := {
 	# the clock, the camera and the bake's field map; lift_px scaled
 	"march_trail": ["has_field_map", "field_map", "pack_origin", "field_m_per_texel", "now_days",
 		"px_per_dist", "lift_px"],
+	# the box, the sizes and the speeds follow the camera; the field, the pack
+	"precip_fall": ["kind", "box_center", "box_half", "box_height", "fall_m_s", "wind_m_s", "wind_dir",
+		"sway_m_s", "strength", "fall_now", "fall_next", "blend", "pack_origin", "m_per_px", "step_px"],
+	"precip_drop_rain": ["kind", "length_m", "width_m"],
+	"precip_drop_snow": ["kind", "length_m", "width_m"],
 	"selection_ring": ["colour", "dot_px", "inner_px", "ring_px", "line_px", "lift_px", "px_per_dist",
 		"max_view_m", "min_view_m"],
 }
@@ -58,7 +63,10 @@ const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3
 	"map3d_ring_", "map3d_selected_ring_scale", "map3d_trail_alpha", "map3d_trail_days",
 	"map3d_trail_hold", "map3d_trail_crop", "map3d_trail_step", "map3d_trail_half", "map3d_trail_edge",
 	"map3d_trail_print", "map3d_trail_lane", "map3d_trail_rag", "map3d_trail_on", "map3d_line_lift_px",
-	"map3d_march_trail"]
+	"map3d_march_trail", "map3d_weather_rain_", "map3d_weather_snow_count", "map3d_weather_snow_life",
+	"map3d_weather_snow_length", "map3d_weather_snow_width", "map3d_weather_snow_opacity",
+	"map3d_weather_snow_slant", "map3d_weather_snow_sway", "map3d_weather_snow_gain", "map3d_weather_fall_",
+	"map3d_weather_gust_", "weather_rain", "weather_flake"]
 
 
 func before_all() -> void:
@@ -113,6 +121,18 @@ func test_the_march_trails_draw_what_their_tres_say() -> void:
 	var trails := v.world().get_node("Trails") as Map3DLayerTrails
 	var mesh := trails.get_child(0) as MeshInstance3D
 	_assert_material_holds(mesh.material_override as ShaderMaterial, "march_trail", 12)
+
+
+## Each kind of falling weather wears its node's materials; the node holds
+## its count and life.
+func test_the_rain_and_snow_draw_what_their_scene_says() -> void:
+	var v := _view()
+	for kind: String in ["Rain", "Snow"]:
+		var node := v.world().get_node("Precip/" + kind) as Map3DPrecipKind
+		_assert_material_holds(node.process_material as ShaderMaterial, "precip_fall", 2)
+		_assert_material_holds((node.draw_pass_1 as QuadMesh).material as ShaderMaterial,
+			"precip_drop_" + kind.to_lower(), 3)
+		assert_gt(node.amount, 1000, kind + "'s count is the scene's")
 
 
 ## The woods wear their .tres but for the wind's uniforms.

@@ -1,7 +1,0 @@
-[gd_resource type="ShaderMaterial" format=3]
-
-[ext_resource type="Shader" path="res://scripts/map3d/precip_drop.gdshader" id="1_drop"]
-
-[resource]
-render_priority = 9
-shader = ExtResource("1_drop")

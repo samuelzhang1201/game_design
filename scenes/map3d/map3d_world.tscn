@@ -22,6 +22,16 @@
 [ext_resource type="Script" uid="uid://bq3gusv0v5st0" path="res://scripts/map3d/map3d_layer_trails.gd" id="18_vfx2u"]
 [ext_resource type="Script" uid="uid://bgwhiybi1dien" path="res://scripts/map3d/map3d_layer_couriers.gd" id="19_e48lp"]
 [ext_resource type="Script" uid="uid://826sps2k5kcg" path="res://scripts/map3d/map3d_layer_precip.gd" id="20_efdo1"]
+[ext_resource type="Material" uid="uid://btf3lxc1xv1rp" path="res://scenes/map3d/materials/precip_fall.tres" id="23_cqqwl"]
+[ext_resource type="Material" uid="uid://bhsqih8uox5ar" path="res://scenes/map3d/materials/precip_drop_rain.tres" id="24_05tsl"]
+[ext_resource type="Script" uid="uid://d0j1615g26j72" path="res://scripts/map3d/map3d_precip_kind.gd" id="25_g52bs"]
+[ext_resource type="Material" uid="uid://hbcsw3occqy0" path="res://scenes/map3d/materials/precip_drop_snow.tres" id="26_4rkuw"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_qhspj"]
+material = ExtResource("24_05tsl")
+
+[sub_resource type="QuadMesh" id="QuadMesh_jxnve"]
+material = ExtResource("26_4rkuw")
 
 [node name="World" type="Node3D" unique_id=660259412]
 script = ExtResource("1_jaa02")
@@ -69,6 +79,8 @@ script = ExtResource("12_jxnve")
 
 [node name="Houses" type="Node3D" parent="." unique_id=1359289226]
 script = ExtResource("13_sespq")
+wall_tints = PackedColorArray(1, 1, 1, 1, 0.96862745, 0.9137255, 0.8235294, 1, 0.9019608, 0.8901961, 0.8627451, 1, 0.8627451, 0.8156863, 0.74509805, 1, 0.95686275, 0.8784314, 0.7529412, 1, 0.92941177, 0.9019608, 0.8784314, 1)
+roof_tints = PackedColorArray(1, 1, 1, 1, 1, 0.9019608, 0.84705883, 1, 0.9254902, 0.9019608, 0.87058824, 1, 1, 0.9372549, 0.8235294, 1, 0.95686275, 0.8862745, 0.83137256, 1)
 
 [node name="Trees" type="Node3D" parent="." unique_id=1359289300]
 script = ExtResource("14_ynap6")
@@ -113,7 +125,26 @@ script = ExtResource("20_efdo1")
 [node name="Rain" type="GPUParticles3D" parent="Precip" unique_id=1414213562]
 cast_shadow = 0
 emitting = false
+amount = 12000
+lifetime = 0.8
+fixed_fps = 0
+visibility_aabb = AABB(-10000000, -100000, -10000000, 20000000, 200000, 20000000)
+process_material = ExtResource("23_cqqwl")
+draw_pass_1 = SubResource("QuadMesh_qhspj")
+script = ExtResource("25_g52bs")
 
 [node name="Snow" type="GPUParticles3D" parent="Precip" unique_id=1732050807]
 cast_shadow = 0
 emitting = false
+amount = 20000
+lifetime = 3.0
+fixed_fps = 0
+visibility_aabb = AABB(-10000000, -100000, -10000000, 20000000, 200000, 20000000)
+process_material = ExtResource("23_cqqwl")
+draw_pass_1 = SubResource("QuadMesh_jxnve")
+script = ExtResource("25_g52bs")
+kind = 1
+slant = 0.35
+length_share = 0.0026
+width_share = 0.0026
+sway = 0.12

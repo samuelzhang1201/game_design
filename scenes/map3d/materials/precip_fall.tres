@@ -1,6 +1,21 @@
-[gd_resource type="ShaderMaterial" format=3]
+[gd_resource type="ShaderMaterial" format=3 uid="uid://btf3lxc1xv1rp"]
 
-[ext_resource type="Shader" path="res://scripts/map3d/precip_fall.gdshader" id="1_fall"]
+[ext_resource type="Shader" uid="uid://bgaw6v6v82mg8" path="res://scripts/map3d/precip_fall.gdshader" id="1_fall"]
 
 [resource]
 shader = ExtResource("1_fall")
+shader_parameter/kind = 0.0
+shader_parameter/box_center = Vector3(0, 0, 0)
+shader_parameter/box_half = Vector2(1000, 1000)
+shader_parameter/box_height = 400.0
+shader_parameter/fall_m_s = 400.0
+shader_parameter/wind_m_s = Vector2(0, 0)
+shader_parameter/wind_dir = Vector2(1, 0)
+shader_parameter/gust_push = 1.6
+shader_parameter/gust_stretch = 2.5
+shader_parameter/sway_m_s = 0.0
+shader_parameter/strength = 0.0
+shader_parameter/blend = 0.0
+shader_parameter/pack_origin = Vector2(0, 0)
+shader_parameter/m_per_px = 50.0
+shader_parameter/step_px = 8.0

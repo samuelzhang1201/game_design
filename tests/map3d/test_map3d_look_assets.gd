@@ -18,7 +18,11 @@ const MATERIALS := {
 	"settlement_ring": "res://scripts/map3d/settlement_ring.gdshader",
 	"selection_ring": "res://scripts/map3d/settlement_ring.gdshader",
 	"precip_fall": "res://scripts/map3d/precip_fall.gdshader",
-	"precip_drop": "res://scripts/map3d/precip_drop.gdshader",
+	"precip_drop_rain": "res://scripts/map3d/precip_drop.gdshader",
+	"precip_drop_snow": "res://scripts/map3d/precip_drop.gdshader",
+	"march_trail": "res://scripts/map3d/march_trail.gdshader",
+	"tree_sway": "res://scripts/map3d/tree_sway.gdshader",
+	"tree_card": "res://scripts/map3d/tree_card.gdshader",
 }
 const PREVIEWS := ["rocky_trail_02_alb_ht", "rocky_trail_02_nrm_rgh", "medieval_blocks_03_alb_ht",
 	"medieval_blocks_03_nrm_rgh", "cloud_shape"]
@@ -49,7 +53,8 @@ func test_the_previews_are_committed_and_small() -> void:
 ## The materials whose tuned numbers live in the .tres (owner 2026-10-02):
 ## test_map3d_editor_owned_look.gd holds them; the others are not yet converted.
 const EDITOR_OWNED := ["water_sea", "water_river", "road_line", "trail_line", "cloud_deck", "cloud_shadow",
-	"settlement_ring", "selection_ring"]
+	"settlement_ring", "selection_ring", "precip_fall", "precip_drop_rain", "precip_drop_snow",
+	"march_trail", "tree_sway", "tree_card"]
 
 
 func test_an_unconverted_material_carries_no_tuned_number() -> void:
