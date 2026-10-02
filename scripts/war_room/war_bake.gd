@@ -107,7 +107,7 @@ func woods(rect: Rect2, step_px: float) -> Array:
 		var path := _dir + "/woods.png"
 		if not FileAccess.file_exists(path):
 			return out
-		_woods = Image.load_from_file(ProjectSettings.globalize_path(path))
+		_woods = Image.load_from_file(path)  # res://: exported, the res:// tree is the pack
 		if _woods == null:
 			return out
 	var k := _m_per_px / (_vm * 2.0)   # woods texels per pack px
