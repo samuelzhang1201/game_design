@@ -1,0 +1,84 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://u7jgsq4o4b3m"]
+
+[ext_resource type="Texture2D" uid="uid://b6kwimpla2014" path="res://assets/2D/goods/marks/preserved_food.png" id="1_2mib2"]
+[ext_resource type="Texture2D" uid="uid://deqfdua5dyc07" path="res://assets/2D/goods/marks/cloth.png" id="2_ux1b8"]
+[ext_resource type="Texture2D" uid="uid://cx3u347mlsi6" path="res://assets/2D/goods/marks/glass.png" id="3_yv2lr"]
+[ext_resource type="Texture2D" uid="uid://d1joioqnp5k0d" path="res://assets/2D/goods/marks/grain.png" id="4_oa3xp"]
+[ext_resource type="Texture2D" uid="uid://c3jacraw4ytqt" path="res://assets/2D/goods/marks/liquor.png" id="5_cwjyd"]
+[ext_resource type="Texture2D" uid="uid://n784leidmyga" path="res://assets/2D/goods/marks/boots.png" id="6_uhsku"]
+[ext_resource type="Texture2D" uid="uid://dctjqe3ltoah0" path="res://assets/2D/goods/marks/ink.png" id="7_43u4b"]
+[ext_resource type="Texture2D" uid="uid://bji4fhykqck1t" path="res://assets/2D/goods/marks/hemp.png" id="8_rtbfg"]
+[ext_resource type="Texture2D" uid="uid://cec2kd17kwmx5" path="res://assets/2D/goods/marks/candles.png" id="9_v6qdo"]
+[ext_resource type="Texture2D" uid="uid://cvvqeavfqlmwe" path="res://assets/2D/goods/marks/honey.png" id="10_o0n5g"]
+[ext_resource type="Texture2D" uid="uid://crkfvm5rmklyl" path="res://assets/2D/goods/marks/coal.png" id="11_ksfbs"]
+[ext_resource type="Texture2D" uid="uid://bt4548444l7wj" path="res://assets/2D/goods/marks/iron.png" id="12_awikj"]
+[ext_resource type="Texture2D" uid="uid://s8niv0oslst8" path="res://assets/2D/goods/marks/wood.png" id="13_0ekxr"]
+[ext_resource type="Texture2D" uid="uid://bmvhj5cfyjq6c" path="res://assets/2D/goods/marks/cheese.png" id="14_8fxng"]
+[ext_resource type="Texture2D" uid="uid://c0gvt0g1j8n7y" path="res://assets/2D/goods/marks/silver.png" id="15_5gofe"]
+[ext_resource type="Texture2D" uid="uid://gm20m43qu78d" path="res://assets/2D/goods/marks/dyes.png" id="16_ua18s"]
+[ext_resource type="Texture2D" uid="uid://b5fkadhkrgnd6" path="res://assets/2D/goods/marks/paper.png" id="17_xi1u7"]
+[ext_resource type="Texture2D" uid="uid://8sr5hgsdiiuk" path="res://assets/2D/goods/marks/slaves.png" id="18_325ky"]
+[ext_resource type="Texture2D" uid="uid://daacl3bof7xx7" path="res://assets/2D/goods/marks/ceramics.png" id="19_pj67y"]
+[ext_resource type="Texture2D" uid="uid://miado35jy714" path="res://assets/2D/goods/marks/clay.png" id="20_42ina"]
+[ext_resource type="Texture2D" uid="uid://dx085bydtcjbe" path="res://assets/2D/goods/marks/gemstones.png" id="21_mbc0w"]
+[ext_resource type="Texture2D" uid="uid://cjrlw36r6keu" path="res://assets/2D/goods/marks/cattle.png" id="22_olld7"]
+[ext_resource type="Texture2D" uid="uid://b2hjqhqmw7jub" path="res://assets/2D/goods/marks/white_sand.png" id="23_3smkb"]
+[ext_resource type="Texture2D" uid="uid://b08dkyn4ji3nu" path="res://assets/2D/goods/marks/wine.png" id="24_x6eqg"]
+[ext_resource type="Texture2D" uid="uid://dy2egd87suh3a" path="res://assets/2D/goods/marks/leather.png" id="25_g1hxp"]
+[ext_resource type="Texture2D" uid="uid://dhlboc21fbxju" path="res://assets/2D/goods/marks/tin.png" id="26_4mq12"]
+[ext_resource type="Texture2D" uid="uid://cjd6o56hans3x" path="res://assets/2D/goods/marks/sugarcane.png" id="27_wqbh7"]
+[ext_resource type="Texture2D" uid="uid://cn08bpfnplfmp" path="res://assets/2D/goods/marks/marble.png" id="28_cg18n"]
+[ext_resource type="Texture2D" uid="uid://c57hk6ov4dqjr" path="res://assets/2D/goods/marks/furs.png" id="29_0iypy"]
+[ext_resource type="Texture2D" uid="uid://bukp4j078eujw" path="res://assets/2D/goods/marks/elephants.png" id="30_5rjpx"]
+[ext_resource type="Texture2D" uid="uid://bfqniubgedbi6" path="res://assets/2D/goods/marks/game.png" id="31_2sxv7"]
+[ext_resource type="Texture2D" uid="uid://dasxsqle7hi3n" path="res://assets/2D/goods/marks/soap.png" id="32_b52ae"]
+[ext_resource type="Texture2D" uid="uid://btew6f0u0ywrd" path="res://assets/2D/goods/marks/harnesses.png" id="33_en6fi"]
+[ext_resource type="Texture2D" uid="uid://binatgxyx4xa0" path="res://assets/2D/goods/marks/amber.png" id="34_kskav"]
+[ext_resource type="Texture2D" uid="uid://cwqpqlgpa8e6e" path="res://assets/2D/goods/marks/tools.png" id="35_p0y2l"]
+[ext_resource type="Texture2D" uid="uid://b2t64ca4i1pri" path="res://assets/2D/goods/marks/jewelry.png" id="36_wcxes"]
+[ext_resource type="Texture2D" uid="uid://c42ilthej63rg" path="res://assets/2D/goods/marks/copper.png" id="37_g522o"]
+[ext_resource type="Texture2D" uid="uid://cwmnxyw0jqgd6" path="res://assets/2D/goods/marks/sheep.png" id="38_cdxn8"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="39_7v5m5"]
+
+[resource]
+script = ExtResource("39_7v5m5")
+art = Dictionary[String, Resource]({
+"amber": ExtResource("34_kskav"),
+"boots": ExtResource("6_uhsku"),
+"candles": ExtResource("9_v6qdo"),
+"cattle": ExtResource("22_olld7"),
+"ceramics": ExtResource("19_pj67y"),
+"cheese": ExtResource("14_8fxng"),
+"clay": ExtResource("20_42ina"),
+"cloth": ExtResource("2_ux1b8"),
+"coal": ExtResource("11_ksfbs"),
+"copper": ExtResource("37_g522o"),
+"dyes": ExtResource("16_ua18s"),
+"elephants": ExtResource("30_5rjpx"),
+"furs": ExtResource("29_0iypy"),
+"game": ExtResource("31_2sxv7"),
+"gemstones": ExtResource("21_mbc0w"),
+"glass": ExtResource("3_yv2lr"),
+"grain": ExtResource("4_oa3xp"),
+"harnesses": ExtResource("33_en6fi"),
+"hemp": ExtResource("8_rtbfg"),
+"honey": ExtResource("10_o0n5g"),
+"ink": ExtResource("7_43u4b"),
+"iron": ExtResource("12_awikj"),
+"jewelry": ExtResource("36_wcxes"),
+"leather": ExtResource("25_g1hxp"),
+"liquor": ExtResource("5_cwjyd"),
+"marble": ExtResource("28_cg18n"),
+"paper": ExtResource("17_xi1u7"),
+"preserved_food": ExtResource("1_2mib2"),
+"sheep": ExtResource("38_cdxn8"),
+"silver": ExtResource("15_5gofe"),
+"slaves": ExtResource("18_325ky"),
+"soap": ExtResource("32_b52ae"),
+"sugarcane": ExtResource("27_wqbh7"),
+"tin": ExtResource("26_4mq12"),
+"tools": ExtResource("35_p0y2l"),
+"white_sand": ExtResource("23_3smkb"),
+"wine": ExtResource("24_x6eqg"),
+"wood": ExtResource("13_0ekxr")
+})

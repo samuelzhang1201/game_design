@@ -43,13 +43,13 @@ static func place(repo: DataRepository, manors: Array, with_label: bool) -> Arra
 			continue
 		placed.append(whole)
 		var tex: Texture2D = null
-		var path := String(repo.goods_art.get(String(m["good"]), ""))
+		var path := GameArt.path(GameArt.GOODS_MARKS, String(m["good"]))
 		if path != "":
 			if not _textures.has(path):
 				_textures[path] = UiPalette.load_art(path)
 			tex = _textures[path]
 		var tag := MapEconomy.good_tag(repo, String(m["good"]))
-		# Not every good has a drawing yet (data/goods_art.csv); those wear
+		# Not every good has a drawing yet (goods_marks.tres); those wear
 		# their category's glyph from data/resource_icons.csv instead.
 		var glyph := String((repo.resource_icons.get("tag_" + tag, {}) as Dictionary).get("icon", ""))
 		var entry := m.duplicate()

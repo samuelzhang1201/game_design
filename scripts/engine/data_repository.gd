@@ -52,8 +52,9 @@ var resource_icons: Dictionary = {}
 ## data/map3d_settlements.csv rows keyed by burg group: the 3D MAP's
 ## placeholder marker for each settlement (Map3DView).
 var map3d_settlements: Dictionary = {}
-## data/map3d_houses.csv rows keyed by type: the 3D MAP's house meshes,
-## their role, weight, size and roof colour (spec 2026-09-20 §2).
+## data/map3d_houses.csv rows keyed by type: the 3D MAP's house types, their
+## role, weight, size and roof colour (spec 2026-09-20 §2); the mesh each is
+## drawn with is GameArt's HOUSE_MODELS.
 var map3d_houses: Dictionary = {}
 ## data/map3d_tree_crowns.csv rows (cell, kind, ...): which cell of the woods'
 ## crown atlas shows which kind of tree (0 broadleaf, 1 conifer, 2 lone) —
@@ -174,11 +175,6 @@ var landmark_names: Dictionary = {}
 ## the work takes in civil goods, how long it takes and what it does once it
 ## stands.
 var manor_buildings: Dictionary = {}
-## data/goods_art.csv: good_code -> the produce icon the ECONOMY view draws.
-var goods_art: Dictionary = {}
-## data/goods_art.csv `icon`: good_code -> the COLOUR icon the manor card's
-## output rows show (owner 2026-09-14, the painting style); "" for none.
-var goods_icons: Dictionary = {}
 ## data/goods_economy.csv: good_code -> {pool, price_gold, growth_permille}
 ## (spec 2026-09-14 §3); goods_economy_defaults.csv: tag -> the same, for a
 ## good the table does not name.
@@ -190,7 +186,7 @@ var goods_economy_defaults: Dictionary = {}
 var manor_focus: Dictionary = {}
 ## data/manor_estates.csv rows, in file order then ascending by min_people:
 ## the estate a manor is by its industry (focus_code) and its people (owner
-## 2026-09-14) — the manor card's size and painting.
+## 2026-09-14) — the manor card's size; its painting is GameArt's.
 var manor_estates: Array[Dictionary] = []
 ## data/goods_palette.csv: a good's first tag -> the colour its province wears
 ## in the ECONOMY view.
@@ -579,13 +575,6 @@ func _load(dir: String) -> bool:
 	if not _load_if_present("res://data/goods_palette.csv", ["tag", "color"],
 			func(r): goods_palette[String(r["tag"])] = String(r["color"])):
 		return false
-	if not _load_if_present("res://data/goods_art.csv", ["good_code", "texture"],
-			func(r):
-				if String(r["texture"]) != "":
-					goods_art[String(r["good_code"])] = String(r["texture"])
-				if String(r.get("icon", "")) != "":
-					goods_icons[String(r["good_code"])] = String(r["icon"])):
-		return false
 	if not _load_if_present("res://data/goods_economy.csv",
 			["good_code", "pool", "price_gold", "growth_permille"],
 			func(r): goods_economy[String(r["good_code"])] = r):
@@ -606,7 +595,7 @@ func _load(dir: String) -> bool:
 			func(r): manor_focus[String(r["focus_code"])] = r):
 		return false
 	if not _load_if_present("res://data/manor_estates.csv",
-			["focus_code", "tier", "min_people", "painting"],
+			["focus_code", "tier", "min_people"],
 			func(r): manor_estates.append(r)):
 		return false
 	if not _load_if_present("res://data/map3d_settlements.csv",
@@ -614,7 +603,7 @@ func _load(dir: String) -> bool:
 			func(r): map3d_settlements[String(r["group"])] = r):
 		return false
 	if not _load_if_present("res://data/map3d_houses.csv",
-			["type", "mesh", "role", "weight", "footprint_m", "height_m", "roof", "min_group"],
+			["type", "role", "weight", "footprint_m", "height_m", "roof", "min_group"],
 			func(r): map3d_houses[String(r["type"])] = r):
 		return false
 	if not _load_if_present("res://data/map3d_tree_crowns.csv", ["cell", "kind"],

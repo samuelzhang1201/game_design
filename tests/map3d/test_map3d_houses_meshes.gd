@@ -15,7 +15,7 @@ var _meshes: Dictionary = {}
 func before_all() -> void:
 	Game.start_campaign(42)
 	for type: String in Game.data.map3d_houses:
-		var path := String(Game.data.map3d_houses[type]["mesh"])
+		var path := GameArt.path(GameArt.HOUSE_MODELS, type)
 		var scene: PackedScene = load(path) as PackedScene if ResourceLoader.exists(path) else null
 		_scenes[type] = scene
 		_meshes[type] = null
@@ -27,7 +27,7 @@ func before_all() -> void:
 
 func test_every_type_has_a_mesh_on_disk() -> void:
 	for type: String in Game.data.map3d_houses:
-		var path := String(Game.data.map3d_houses[type]["mesh"])
+		var path := GameArt.path(GameArt.HOUSE_MODELS, type)
 		assert_true(ResourceLoader.exists(path), type + " has a mesh at " + path)
 
 

@@ -284,7 +284,7 @@ func _budget() -> int:
 
 
 func _mesh_of(type: String) -> Mesh:
-	var path := String(ctx.repo.map3d_houses[type]["mesh"])
+	var path := GameArt.path(GameArt.HOUSE_MODELS, type)
 	if not ResourceLoader.exists(path):
 		Map3DWorldLoader.warn_once("houses:" + path, "map3d houses: no mesh at " + path)
 		return null

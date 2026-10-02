@@ -111,10 +111,10 @@ func test_every_dimension_has_its_art() -> void:
 		assert_true(ResourceIconSet.has_art(key), key + " has its art (assets/2D/icons/resource_icons.tres)")
 
 ## Every good the manor card can list has its colour icon installed
-## (goods_art.csv `icon`, owner 2026-09-14: every icon on the card is game art).
+## (goods_icons.tres, owner 2026-09-14: every icon on the card is game art).
 func test_every_good_has_its_colour_icon() -> void:
 	Game.start_campaign(42)
-	assert_false(Game.data.goods_icons.is_empty())
-	for good: String in Game.data.goods_icons:
-		var path := String(Game.data.goods_icons[good])
-		assert_true(ResourceLoader.exists(path), "%s's colour icon exists: %s" % [good, path])
+	var icons := GameArt.table(GameArt.GOODS_ICONS)
+	assert_false(icons.art.is_empty())
+	for good: String in Game.data.world_table("economy", "goods"):
+		assert_true(icons.of(good) is Texture2D, "%s's colour icon is installed" % good)

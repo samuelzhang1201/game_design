@@ -1,0 +1,150 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://blltnb24kuek2"]
+
+[ext_resource type="Texture2D" uid="uid://dn1ib0x1vbo2r" path="res://assets/2D/icons/goods/preserved_food.png" id="1_oou6f"]
+[ext_resource type="Texture2D" uid="uid://jlqnoe5vxb2r" path="res://assets/2D/icons/goods/cloth.png" id="2_ptll2"]
+[ext_resource type="Texture2D" uid="uid://ynytt33b8chq" path="res://assets/2D/icons/goods/glass.png" id="3_cq7co"]
+[ext_resource type="Texture2D" uid="uid://bv2igrv3fh27s" path="res://assets/2D/icons/goods/grain.png" id="4_o0stt"]
+[ext_resource type="Texture2D" uid="uid://bvy422qlaf6ne" path="res://assets/2D/icons/goods/liquor.png" id="5_hw8ej"]
+[ext_resource type="Texture2D" uid="uid://dnj010bpfnsyu" path="res://assets/2D/icons/goods/boots.png" id="6_5ycx3"]
+[ext_resource type="Texture2D" uid="uid://bumx2pj3pmm2k" path="res://assets/2D/icons/goods/ink.png" id="7_36cbf"]
+[ext_resource type="Texture2D" uid="uid://pxv1c1pw7a8m" path="res://assets/2D/icons/goods/hemp.png" id="8_x3t0c"]
+[ext_resource type="Texture2D" uid="uid://kobcb0n8p6bf" path="res://assets/2D/icons/goods/candles.png" id="9_y3c82"]
+[ext_resource type="Texture2D" uid="uid://dko6pyqyrsm4p" path="res://assets/2D/icons/goods/honey.png" id="10_luib8"]
+[ext_resource type="Texture2D" uid="uid://8c7wd7hmr0fp" path="res://assets/2D/icons/goods/coal.png" id="11_i5smk"]
+[ext_resource type="Texture2D" uid="uid://b1koqrfx3trju" path="res://assets/2D/icons/goods/iron.png" id="12_erk0l"]
+[ext_resource type="Texture2D" uid="uid://c64h7ik3cr1y2" path="res://assets/2D/icons/goods/wood.png" id="13_ea1ye"]
+[ext_resource type="Texture2D" uid="uid://xj7ppfxdt0on" path="res://assets/2D/icons/goods/cheese.png" id="14_eimdr"]
+[ext_resource type="Texture2D" uid="uid://dgy3aax8a34o6" path="res://assets/2D/icons/goods/silver.png" id="15_xau86"]
+[ext_resource type="Texture2D" uid="uid://db482bvkb44x2" path="res://assets/2D/icons/goods/dyes.png" id="16_f4m1l"]
+[ext_resource type="Texture2D" uid="uid://kcsxvae12053" path="res://assets/2D/icons/goods/paper.png" id="17_iebd4"]
+[ext_resource type="Texture2D" uid="uid://dywmbhv1ry8i6" path="res://assets/2D/icons/goods/slaves.png" id="18_fw2c5"]
+[ext_resource type="Texture2D" uid="uid://hil0t2onnhgq" path="res://assets/2D/icons/goods/ceramics.png" id="19_nierj"]
+[ext_resource type="Texture2D" uid="uid://bbe077bv64jir" path="res://assets/2D/icons/goods/clay.png" id="20_twppx"]
+[ext_resource type="Texture2D" uid="uid://ban0lmgk3ij3r" path="res://assets/2D/icons/goods/gemstones.png" id="21_0didx"]
+[ext_resource type="Texture2D" uid="uid://5pevxerlk4nr" path="res://assets/2D/icons/goods/cattle.png" id="22_8wfus"]
+[ext_resource type="Texture2D" uid="uid://dgh2eyjmiju02" path="res://assets/2D/icons/goods/white_sand.png" id="23_66u7a"]
+[ext_resource type="Texture2D" uid="uid://lifordqhvam5" path="res://assets/2D/icons/goods/wine.png" id="24_fattu"]
+[ext_resource type="Texture2D" uid="uid://doai7k51rwt1a" path="res://assets/2D/icons/goods/leather.png" id="25_rqbij"]
+[ext_resource type="Texture2D" uid="uid://b8qnj52o42fyt" path="res://assets/2D/icons/goods/tin.png" id="26_qqovy"]
+[ext_resource type="Texture2D" uid="uid://coo3lcyfc5hqf" path="res://assets/2D/icons/goods/sugarcane.png" id="27_2tfve"]
+[ext_resource type="Texture2D" uid="uid://bsrllcwld50eb" path="res://assets/2D/icons/goods/marble.png" id="28_txtu7"]
+[ext_resource type="Texture2D" uid="uid://vsqxlyjdlei6" path="res://assets/2D/icons/goods/furs.png" id="29_o1s4v"]
+[ext_resource type="Texture2D" uid="uid://bmqkbvg6xlklo" path="res://assets/2D/icons/goods/elephants.png" id="30_6b1r6"]
+[ext_resource type="Texture2D" uid="uid://c781co8uei6q8" path="res://assets/2D/icons/goods/game.png" id="31_bdayj"]
+[ext_resource type="Texture2D" uid="uid://cxvo2dxoef4lo" path="res://assets/2D/icons/goods/soap.png" id="32_jcgne"]
+[ext_resource type="Texture2D" uid="uid://8pv4pymntf76" path="res://assets/2D/icons/goods/harnesses.png" id="33_5h7n6"]
+[ext_resource type="Texture2D" uid="uid://ci45y0yra6we1" path="res://assets/2D/icons/goods/amber.png" id="34_min1r"]
+[ext_resource type="Texture2D" uid="uid://b5imfca41p5ko" path="res://assets/2D/icons/goods/tools.png" id="35_8xost"]
+[ext_resource type="Texture2D" uid="uid://dhwfhjprleeiw" path="res://assets/2D/icons/goods/jewelry.png" id="36_kqc2a"]
+[ext_resource type="Texture2D" uid="uid://dqnwggh0p2bs" path="res://assets/2D/icons/goods/copper.png" id="37_d8l6n"]
+[ext_resource type="Texture2D" uid="uid://d14w8enx8rh8b" path="res://assets/2D/icons/goods/sheep.png" id="38_xhran"]
+[ext_resource type="Texture2D" uid="uid://ipgpocopr1h0" path="res://assets/2D/icons/goods/arms.png" id="39_0mdw3"]
+[ext_resource type="Texture2D" uid="uid://bh28egtup6mdg" path="res://assets/2D/icons/goods/beer.png" id="40_4nwi4"]
+[ext_resource type="Texture2D" uid="uid://qap68xgoshbb" path="res://assets/2D/icons/goods/books.png" id="41_eroyd"]
+[ext_resource type="Texture2D" uid="uid://btapold15vfe7" path="res://assets/2D/icons/goods/dates.png" id="42_7rw0e"]
+[ext_resource type="Texture2D" uid="uid://xd2v2qjo7llr" path="res://assets/2D/icons/goods/fish.png" id="43_bwxci"]
+[ext_resource type="Texture2D" uid="uid://bp3vtwgc73y1q" path="res://assets/2D/icons/goods/salt.png" id="44_kww5q"]
+[ext_resource type="Texture2D" uid="uid://dj02siuuhfyjx" path="res://assets/2D/icons/goods/ships.png" id="45_pwr81"]
+[ext_resource type="Texture2D" uid="uid://dc2dpkqfbdrc6" path="res://assets/2D/icons/goods/stone.png" id="46_4reg2"]
+[ext_resource type="Texture2D" uid="uid://diqk48i7ph0un" path="res://assets/2D/icons/goods/artillery.png" id="47_rptea"]
+[ext_resource type="Texture2D" uid="uid://bpttew72ohpir" path="res://assets/2D/icons/goods/garments.png" id="48_km6to"]
+[ext_resource type="Texture2D" uid="uid://haufk6ibyl6y" path="res://assets/2D/icons/goods/gold.png" id="49_m4nwk"]
+[ext_resource type="Texture2D" uid="uid://bymdehf0ocyol" path="res://assets/2D/icons/goods/olives.png" id="50_8141n"]
+[ext_resource type="Texture2D" uid="uid://dewg2j7u1guo8" path="res://assets/2D/icons/goods/horses.png" id="51_kdkjg"]
+[ext_resource type="Texture2D" uid="uid://7kxo7g6jcpld" path="res://assets/2D/icons/goods/camels.png" id="52_oljgt"]
+[ext_resource type="Texture2D" uid="uid://bj85x8lk6mqwr" path="res://assets/2D/icons/goods/pearls.png" id="53_3f7q1"]
+[ext_resource type="Texture2D" uid="uid://dtg4nx12yy6s" path="res://assets/2D/icons/goods/incense.png" id="54_67gr4"]
+[ext_resource type="Texture2D" uid="uid://be645eiplo6ig" path="res://assets/2D/icons/goods/silk.png" id="55_huxiw"]
+[ext_resource type="Texture2D" uid="uid://b1i7rvf1nsxof" path="res://assets/2D/icons/goods/spices.png" id="56_5o4e2"]
+[ext_resource type="Texture2D" uid="uid://dg7y3q161huit" path="res://assets/2D/icons/goods/tar.png" id="57_xqh86"]
+[ext_resource type="Texture2D" uid="uid://bkgs5qotecltj" path="res://assets/2D/icons/goods/saltpeter.png" id="58_75j4r"]
+[ext_resource type="Texture2D" uid="uid://cwmh0eqd6ufsp" path="res://assets/2D/icons/goods/oil.png" id="59_iytu6"]
+[ext_resource type="Texture2D" uid="uid://c3kpy5p2wgqtn" path="res://assets/2D/icons/goods/mahogany.png" id="60_hfd2x"]
+[ext_resource type="Texture2D" uid="uid://b1ukrvbo4ya1t" path="res://assets/2D/icons/goods/whales.png" id="61_jt4ma"]
+[ext_resource type="Texture2D" uid="uid://nh7srjunrqk7" path="res://assets/2D/icons/goods/tea.png" id="62_v5v6e"]
+[ext_resource type="Texture2D" uid="uid://ku6cxemh7xg0" path="res://assets/2D/icons/goods/tobacco.png" id="63_uorae"]
+[ext_resource type="Texture2D" uid="uid://b0rcj2vikgh3h" path="res://assets/2D/icons/goods/ropes.png" id="64_1chs1"]
+[ext_resource type="Texture2D" uid="uid://bvw0qxp71kadh" path="res://assets/2D/icons/goods/sails.png" id="65_3ie4r"]
+[ext_resource type="Texture2D" uid="uid://bdxbqdode7yl" path="res://assets/2D/icons/goods/barrels.png" id="66_x848g"]
+[ext_resource type="Texture2D" uid="uid://ptbf8lsviy8p" path="res://assets/2D/icons/goods/bronze.png" id="67_870p8"]
+[ext_resource type="Texture2D" uid="uid://bk705ixdktu47" path="res://assets/2D/icons/goods/gunpowder.png" id="68_s1och"]
+[ext_resource type="Texture2D" uid="uid://by1q8cgxh5gko" path="res://assets/2D/icons/goods/coins.png" id="69_waq6s"]
+[ext_resource type="Texture2D" uid="uid://u2dmihb5b05v" path="res://assets/2D/icons/goods/vinegar.png" id="70_b8iej"]
+[ext_resource type="Texture2D" uid="uid://ca22l02ds6onp" path="res://assets/2D/icons/goods/perfume.png" id="71_trufc"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="72_s2ecw"]
+
+[resource]
+script = ExtResource("72_s2ecw")
+art = Dictionary[String, Resource]({
+"amber": ExtResource("34_min1r"),
+"arms": ExtResource("39_0mdw3"),
+"artillery": ExtResource("47_rptea"),
+"barrels": ExtResource("66_x848g"),
+"beer": ExtResource("40_4nwi4"),
+"books": ExtResource("41_eroyd"),
+"boots": ExtResource("6_5ycx3"),
+"bronze": ExtResource("67_870p8"),
+"camels": ExtResource("52_oljgt"),
+"candles": ExtResource("9_y3c82"),
+"cattle": ExtResource("22_8wfus"),
+"ceramics": ExtResource("19_nierj"),
+"cheese": ExtResource("14_eimdr"),
+"clay": ExtResource("20_twppx"),
+"cloth": ExtResource("2_ptll2"),
+"coal": ExtResource("11_i5smk"),
+"coins": ExtResource("69_waq6s"),
+"copper": ExtResource("37_d8l6n"),
+"dates": ExtResource("42_7rw0e"),
+"dyes": ExtResource("16_f4m1l"),
+"elephants": ExtResource("30_6b1r6"),
+"fish": ExtResource("43_bwxci"),
+"furs": ExtResource("29_o1s4v"),
+"game": ExtResource("31_bdayj"),
+"garments": ExtResource("48_km6to"),
+"gemstones": ExtResource("21_0didx"),
+"glass": ExtResource("3_cq7co"),
+"gold": ExtResource("49_m4nwk"),
+"grain": ExtResource("4_o0stt"),
+"gunpowder": ExtResource("68_s1och"),
+"harnesses": ExtResource("33_5h7n6"),
+"hemp": ExtResource("8_x3t0c"),
+"honey": ExtResource("10_luib8"),
+"horses": ExtResource("51_kdkjg"),
+"incense": ExtResource("54_67gr4"),
+"ink": ExtResource("7_36cbf"),
+"iron": ExtResource("12_erk0l"),
+"jewelry": ExtResource("36_kqc2a"),
+"leather": ExtResource("25_rqbij"),
+"liquor": ExtResource("5_hw8ej"),
+"mahogany": ExtResource("60_hfd2x"),
+"marble": ExtResource("28_txtu7"),
+"oil": ExtResource("59_iytu6"),
+"olives": ExtResource("50_8141n"),
+"paper": ExtResource("17_iebd4"),
+"pearls": ExtResource("53_3f7q1"),
+"perfume": ExtResource("71_trufc"),
+"preserved_food": ExtResource("1_oou6f"),
+"ropes": ExtResource("64_1chs1"),
+"sails": ExtResource("65_3ie4r"),
+"salt": ExtResource("44_kww5q"),
+"saltpeter": ExtResource("58_75j4r"),
+"sheep": ExtResource("38_xhran"),
+"ships": ExtResource("45_pwr81"),
+"silk": ExtResource("55_huxiw"),
+"silver": ExtResource("15_xau86"),
+"slaves": ExtResource("18_fw2c5"),
+"soap": ExtResource("32_jcgne"),
+"spices": ExtResource("56_5o4e2"),
+"stone": ExtResource("46_4reg2"),
+"sugarcane": ExtResource("27_2tfve"),
+"tar": ExtResource("57_xqh86"),
+"tea": ExtResource("62_v5v6e"),
+"tin": ExtResource("26_qqovy"),
+"tobacco": ExtResource("63_uorae"),
+"tools": ExtResource("35_8xost"),
+"vinegar": ExtResource("70_b8iej"),
+"whales": ExtResource("61_jt4ma"),
+"white_sand": ExtResource("23_66u7a"),
+"wine": ExtResource("24_fattu"),
+"wood": ExtResource("13_ea1ye")
+})

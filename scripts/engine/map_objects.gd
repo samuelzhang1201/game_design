@@ -692,14 +692,15 @@ static func _short_num(v: float) -> String:
 		digits = digits.substr(0, digits.length() - 3) + "," + digits.substr(digits.length() - 3)
 	return ("-" if n < 0 else "") + digits
 
-## The painting of a manor's estate (library B-, owner 2026-09-14): the
-## `painting` of the manor_estates.csv row its industry and people choose —
-## the same row as its map drawing, so the card and the map show one estate.
-## "" when there are no rows or the row names none.
+## The painting of a manor's estate (library B-, owner 2026-09-14): the one
+## GameArt's estate table holds for the manor_estates.csv row its industry and
+## people choose. "" when there are no rows or the table holds none.
 static func estate_painting(repo: DataRepository, state: GameState, cell: int) -> String:
 	var row := estate_tier(repo, MapManors.focus_of(repo, state, cell),
 		float(MapManors.people_of(repo, state, cell)))
-	return String(row.get("painting", ""))
+	if row.is_empty():
+		return ""
+	return GameArt.path(GameArt.ESTATE_PAINTINGS, "%s_%s" % [row["focus_code"], row["tier"]])
 
 ## A manor's output a month, good by good, from its ManorEconomy line:
 ## [{good, label, units, gold, pool, tag, texture}], most units first, ties
@@ -715,8 +716,8 @@ static func production_rates(repo: DataRepository, line: Dictionary) -> Array:
 		out.append({"good": good, "units": n,
 			"label": String(repo.world_row("economy", "goods", good).get("label", good)),
 			"gold": n * int(ge["price_gold"]), "pool": String(ge["pool"]),
-			"tag": good_tag(repo, good), "texture": String(repo.goods_art.get(good, "")),
-			"icon": String(repo.goods_icons.get(good, ""))})
+			"tag": good_tag(repo, good), "texture": GameArt.path(GameArt.GOODS_MARKS, good),
+			"icon": GameArt.path(GameArt.GOODS_ICONS, good)})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return String(a["good"]) < String(b["good"]) if int(a["units"]) == int(b["units"]) \
 			else int(a["units"]) > int(b["units"]))

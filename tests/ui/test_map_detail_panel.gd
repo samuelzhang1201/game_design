@@ -353,7 +353,7 @@ func test_a_manor_card_shows_its_painting_its_facts_as_icons_and_its_output_rate
 		if row != null:
 			# Under "Each Month" the figure alone (2026-09-28: the heading says it).
 			assert_eq((row.find_child("Rate", true, false) as Label).text, UiPalette.format_int(int(units[good])))
-			var icon_path := String(Game.data.goods_icons.get(good, ""))
+			var icon_path := GameArt.path(GameArt.GOODS_ICONS, good)
 			if icon_path != "" and ResourceLoader.exists(icon_path):
 				var pic := row.get_child(0) as TextureRect
 				assert_not_null(pic, "%s draws its art" % good)

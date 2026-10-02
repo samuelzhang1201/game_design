@@ -1,0 +1,80 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://cj8b422q31tx0"]
+
+[ext_resource type="Texture2D" uid="uid://de64m5hyb324o" path="res://assets/2D/paintings/estates/grain_1.png" id="1_hovk3"]
+[ext_resource type="Texture2D" uid="uid://bcdorfy2irjyp" path="res://assets/2D/paintings/estates/grain_2.png" id="2_s4pic"]
+[ext_resource type="Texture2D" uid="uid://boqdidiccap35" path="res://assets/2D/paintings/estates/grain_3.png" id="3_3uv2l"]
+[ext_resource type="Texture2D" uid="uid://ddnb2pplmp1y0" path="res://assets/2D/paintings/estates/cattle_1.png" id="4_67q54"]
+[ext_resource type="Texture2D" uid="uid://co68j2nwrirtl" path="res://assets/2D/paintings/estates/cattle_2.png" id="5_flvan"]
+[ext_resource type="Texture2D" uid="uid://v7qxoxtwaknw" path="res://assets/2D/paintings/estates/cattle_3.png" id="6_ocb8b"]
+[ext_resource type="Texture2D" uid="uid://b7wgh8k8mdkwr" path="res://assets/2D/paintings/estates/sheep_1.png" id="7_lnnds"]
+[ext_resource type="Texture2D" uid="uid://w46piyw7yu2j" path="res://assets/2D/paintings/estates/sheep_2.png" id="8_dxrxu"]
+[ext_resource type="Texture2D" uid="uid://d357kr506cp45" path="res://assets/2D/paintings/estates/sheep_3.png" id="9_owytb"]
+[ext_resource type="Texture2D" uid="uid://vbjpksvu52m6" path="res://assets/2D/paintings/estates/wood_1.png" id="10_yfu7u"]
+[ext_resource type="Texture2D" uid="uid://tmgdat42dcj3" path="res://assets/2D/paintings/estates/wood_2.png" id="11_6xfgf"]
+[ext_resource type="Texture2D" uid="uid://3ui8542lxw3p" path="res://assets/2D/paintings/estates/wood_3.png" id="12_fgdky"]
+[ext_resource type="Texture2D" uid="uid://cnfx2duqhenr1" path="res://assets/2D/paintings/estates/honey_1.png" id="13_26r5t"]
+[ext_resource type="Texture2D" uid="uid://db4wujrfpkvlg" path="res://assets/2D/paintings/estates/honey_2.png" id="14_7m2m1"]
+[ext_resource type="Texture2D" uid="uid://cbh8ca3in31m3" path="res://assets/2D/paintings/estates/honey_3.png" id="15_sskue"]
+[ext_resource type="Texture2D" uid="uid://dcsti70pjlj13" path="res://assets/2D/paintings/estates/wine_1.png" id="16_f6kx7"]
+[ext_resource type="Texture2D" uid="uid://dlhb3bvykwq1d" path="res://assets/2D/paintings/estates/wine_2.png" id="17_470na"]
+[ext_resource type="Texture2D" uid="uid://brn8b68ovo2rj" path="res://assets/2D/paintings/estates/wine_3.png" id="18_ncv00"]
+[ext_resource type="Texture2D" uid="uid://bho5bal8mlvdx" path="res://assets/2D/paintings/estates/dates_1.png" id="19_mfl6b"]
+[ext_resource type="Texture2D" uid="uid://c1yie8cwksc7u" path="res://assets/2D/paintings/estates/dates_2.png" id="20_aoads"]
+[ext_resource type="Texture2D" uid="uid://dkq5ne83jmmcg" path="res://assets/2D/paintings/estates/dates_3.png" id="21_137og"]
+[ext_resource type="Texture2D" uid="uid://ihj3grqhnvdv" path="res://assets/2D/paintings/estates/furs_1.png" id="22_ueobj"]
+[ext_resource type="Texture2D" uid="uid://b24f468mndcwr" path="res://assets/2D/paintings/estates/furs_2.png" id="23_c5s15"]
+[ext_resource type="Texture2D" uid="uid://dnoy7js3epben" path="res://assets/2D/paintings/estates/furs_3.png" id="24_ael1t"]
+[ext_resource type="Texture2D" uid="uid://duusfx8xnlbha" path="res://assets/2D/paintings/estates/fish_1.png" id="25_lfxfu"]
+[ext_resource type="Texture2D" uid="uid://cppwyos1inwrk" path="res://assets/2D/paintings/estates/fish_2.png" id="26_vfusa"]
+[ext_resource type="Texture2D" uid="uid://bbupd7m6fo1b7" path="res://assets/2D/paintings/estates/fish_3.png" id="27_5gw07"]
+[ext_resource type="Texture2D" uid="uid://dkgbdo8albl1u" path="res://assets/2D/paintings/estates/salt_1.png" id="28_t3u8g"]
+[ext_resource type="Texture2D" uid="uid://c4wqd81dflls4" path="res://assets/2D/paintings/estates/salt_2.png" id="29_6b4e3"]
+[ext_resource type="Texture2D" uid="uid://loaw6x6il182" path="res://assets/2D/paintings/estates/salt_3.png" id="30_brje5"]
+[ext_resource type="Texture2D" uid="uid://ccsxgsrqjan7u" path="res://assets/2D/paintings/estates/stone_1.png" id="31_qqqaj"]
+[ext_resource type="Texture2D" uid="uid://dmpc6o3v0ltlg" path="res://assets/2D/paintings/estates/stone_2.png" id="32_0sd6v"]
+[ext_resource type="Texture2D" uid="uid://b4fgkw3cr16ll" path="res://assets/2D/paintings/estates/stone_3.png" id="33_srtl6"]
+[ext_resource type="Texture2D" uid="uid://r6lv5cq8kh2i" path="res://assets/2D/paintings/estates/iron_1.png" id="34_pjfm2"]
+[ext_resource type="Texture2D" uid="uid://dhvuqhrv0hfdo" path="res://assets/2D/paintings/estates/iron_2.png" id="35_dbnip"]
+[ext_resource type="Texture2D" uid="uid://qh6yf01oltnt" path="res://assets/2D/paintings/estates/iron_3.png" id="36_u40wu"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="37_ewad7"]
+
+[resource]
+script = ExtResource("37_ewad7")
+art = Dictionary[String, Resource]({
+"cattle_1": ExtResource("4_67q54"),
+"cattle_2": ExtResource("5_flvan"),
+"cattle_3": ExtResource("6_ocb8b"),
+"dates_1": ExtResource("19_mfl6b"),
+"dates_2": ExtResource("20_aoads"),
+"dates_3": ExtResource("21_137og"),
+"fish_1": ExtResource("25_lfxfu"),
+"fish_2": ExtResource("26_vfusa"),
+"fish_3": ExtResource("27_5gw07"),
+"furs_1": ExtResource("22_ueobj"),
+"furs_2": ExtResource("23_c5s15"),
+"furs_3": ExtResource("24_ael1t"),
+"grain_1": ExtResource("1_hovk3"),
+"grain_2": ExtResource("2_s4pic"),
+"grain_3": ExtResource("3_3uv2l"),
+"honey_1": ExtResource("13_26r5t"),
+"honey_2": ExtResource("14_7m2m1"),
+"honey_3": ExtResource("15_sskue"),
+"iron_1": ExtResource("34_pjfm2"),
+"iron_2": ExtResource("35_dbnip"),
+"iron_3": ExtResource("36_u40wu"),
+"salt_1": ExtResource("28_t3u8g"),
+"salt_2": ExtResource("29_6b4e3"),
+"salt_3": ExtResource("30_brje5"),
+"sheep_1": ExtResource("7_lnnds"),
+"sheep_2": ExtResource("8_dxrxu"),
+"sheep_3": ExtResource("9_owytb"),
+"stone_1": ExtResource("31_qqqaj"),
+"stone_2": ExtResource("32_0sd6v"),
+"stone_3": ExtResource("33_srtl6"),
+"wine_1": ExtResource("16_f6kx7"),
+"wine_2": ExtResource("17_470na"),
+"wine_3": ExtResource("18_ncv00"),
+"wood_1": ExtResource("10_yfu7u"),
+"wood_2": ExtResource("11_6xfgf"),
+"wood_3": ExtResource("12_fgdky")
+})
