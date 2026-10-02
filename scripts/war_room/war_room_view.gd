@@ -187,7 +187,7 @@ func hold_size(on: bool) -> void:
 
 
 func _fit_viewport() -> void:
-	if _hold_size:
+	if _hold_size or not visible:  # shut, it holds no render targets (set_active)
 		return
 	var s := window_scale()
 	_viewport.size = Vector2i(maxi(1, int(size.x * s)), maxi(1, int(size.y * s)))
