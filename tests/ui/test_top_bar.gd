@@ -50,8 +50,8 @@ func test_event_chip_tracks_pending_event() -> void:
 	assert_false(t.find_child("EventChip", true, false).visible)
 	Game.engine.events._fire("ev_01", Game.state)
 	t.refresh()
-	assert_true(t.find_child("EventChip", true, false).visible,
-		"a pending event shows the chip")
+	assert_eq(t.find_child("EventChip", true, false).visible, not UiPalette.war_table(),
+		"a pending event shows the chip — on the leather; the war table's seal bubble says it")
 	Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
 	await wait_process_frames(1)
 	assert_false(t.find_child("EventChip", true, false).visible,

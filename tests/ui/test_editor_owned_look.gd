@@ -38,8 +38,9 @@ const CODE_OWNED := {
 	# and downward from the corner the screen puts it in
 	"CouncilHandle": ["custom_minimum_size", "offset_left", "offset_bottom"],
 	"Seal/": ["custom_minimum_size"],
-	# the tag sits under the seal at its own size (WaxSeal._place_tag)
-	"Seal/Tag": ["offset_left", "offset_top", "offset_right", "offset_bottom"],
+	# the bubble sizes itself to its words (SpeechBubble._fit) and stands under
+	# the councillor it speaks for (WaxSeal._place_bubble)
+	"Seal/Bubble": ["offset_left", "offset_top", "offset_right", "offset_bottom"],
 	# the top bar: the figures' change ink is good / bad by the month
 	"TopBar/Bar/Row/TallyBoard/Purses/Cell_treasury/Change": ["theme_override_colors/font_color"],
 	"TopBar/Bar/Row/TallyBoard/Purses/Cell_strategic/Change": ["theme_override_colors/font_color"],

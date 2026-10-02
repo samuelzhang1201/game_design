@@ -644,3 +644,12 @@ add it here as a principle with its why — not as a changelog entry.
 - **An index chart shows the land it indexes** (owner: 选择地图的格子那个纸也换成羊皮
   纸，然后画上整个大陆地图的形状). The sheet index is parchment with the continent's
   inked coast and water lines, not a grid of dots.
+- **The people stand by their seal, not over the map** (owner 2026-10-02: 选A2 横列
+  布局). The council's miniatures run in one row from the seal along the map's top
+  edge — the independent critic's first choice too, because a column down the right
+  edge outweighed the seal and sat on the map's towns. A marked minister is told
+  by light and by wax (a gold ring, a drop of the seal's own oxblood, the others a
+  shade darker), never by a bright notification dot.
+- **An order the eye already knows needs no caption** (owner 2026-10-02: 移除蜡封下面的
+  enter the council的字，改为tooltip). The seal says what it does on hover; words
+  under it were a label on a label.

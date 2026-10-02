@@ -2,13 +2,13 @@
 
 [ext_resource type="Script" uid="uid://ce7myfubis2yw" path="res://scripts/ui/war_table/wax_seal.gd" id="1_fte7t"]
 [ext_resource type="Texture2D" uid="uid://b747ccpmsw8fp" path="res://assets/2D/ui/war_table/council_seal.png" id="2_xu7t3"]
-[ext_resource type="StyleBox" uid="uid://br4xt0cpcih7o" path="res://assets/2D/ui/war_table/styles/seal_tag.tres" id="3_waw4p"]
-[ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="4_ntnks"]
+[ext_resource type="Script" path="res://scripts/ui/war_table/speech_bubble.gd" id="3_bubble"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="4_bfont"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_af5e7"]
 
 [node name="CouncilHandle" type="Button" unique_id=1423902817]
-tooltip_text = "Go before your council"
+tooltip_text = "Enter the Council"
 focus_mode = 0
 theme_override_colors/font_color = Color(0, 0, 0, 0)
 theme_override_colors/font_focus_color = Color(0, 0, 0, 0)
@@ -23,31 +23,15 @@ theme_override_styles/disabled = SubResource("StyleBoxEmpty_af5e7")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_af5e7")
 text = "ENTER THE COUNCIL"
 flat = true
+clip_text = true
 script = ExtResource("1_fte7t")
 art = ExtResource("2_xu7t3")
 
-[node name="Tag" type="PanelContainer" parent="." unique_id=697952003]
+[node name="Bubble" type="Control" parent="."]
+visible = false
+editor_description = "A minister's word: placed under the first councillor with a matter and made to rise at runtime (WaxSeal._show_bubble); its look is these exports."
 layout_mode = 0
-mouse_filter = 2
-theme_override_styles/panel = ExtResource("3_waw4p")
-
-[node name="Words" type="VBoxContainer" parent="Tag" unique_id=570528294]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = -2
-
-[node name="Order" type="Label" parent="Tag/Words" unique_id=953420621]
-layout_mode = 2
-theme_type_variation = &"HeaderLabel"
-theme_override_colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
-theme_override_font_sizes/font_size = 12
-text = "Enter the Council"
-horizontal_alignment = 1
-
-[node name="Waiting" type="Label" parent="Tag/Words" unique_id=2024769966]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
-theme_override_fonts/font = ExtResource("4_ntnks")
-theme_override_font_sizes/font_size = 11
-text = "the council is quiet"
-horizontal_alignment = 1
+offset_right = 190.0
+offset_bottom = 32.0
+script = ExtResource("3_bubble")
+font = ExtResource("4_bfont")

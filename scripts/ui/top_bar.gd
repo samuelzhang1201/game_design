@@ -162,7 +162,10 @@ func refresh() -> void:
 			dl.text = UiPalette.format_delta(delta) + per_month if delta != 0 else ""
 			dl.add_theme_color_override("font_color",
 				UiPalette.good_color() if delta > 0 else UiPalette.bad_color())
-	%EventChip.visible = not Game.state.pending_event.is_empty()
+	# On the war table the waiting event is its presenter's bubble by the seal
+	# (owner 2026-10-02); the chip, which ran off the screen's edge there, is
+	# the leather chrome's.
+	%EventChip.visible = not Game.state.pending_event.is_empty() and not UiPalette.war_table()
 	# What the month brings (RealmEconomy.purses). Right after the month's
 	# settlement every province's line is stale and the first read recomputes
 	# the realm (~9 ms, perf 2026-10-02): a settled month shows its report's

@@ -17,6 +17,10 @@ extends Control
 ## map click never displaces the council, and _refresh_left decides which
 ## of the four holds the left column.
 
+## A councillor's miniature by the seal was clicked (owner 2026-10-02): GameRoot
+## takes the player to the conversation stage for an audience with them.
+signal audience_requested(id: String)
+
 ## There is no End Turn (owner 2026-09-14): the top bar's play button is the
 ## only thing that moves time, and the month's end comes on its own.
 
@@ -57,9 +61,12 @@ var _map3d_military := false
 func _ready() -> void:
 	if UiPalette.war_table():
 		_handle = %CouncilHandle
+		var seal := _handle as WaxSeal
+		seal.council_requested.connect(enter_council)
+		seal.councillor_chosen.connect(func(id: String) -> void: audience_requested.emit(id))
 	else:
 		_dress_leather()
-	_handle.pressed.connect(enter_council)
+		_handle.pressed.connect(enter_council)
 	%LeaveButton.pressed.connect(leave_council)
 	# Hovering a country swaps the left column to its card and back again
 	# (user request 2026-09-09); the column's own content returns when it leaves.

@@ -158,3 +158,11 @@ event_c0_14_on,,"The winter passes without a hard word said anywhere, which is w
 event_c0_15_on,,"The tax grain comes in on the day it is due, every year, for as long as the spears are there."
 event_c0_16_on,,The council stops bringing you things. Malvern sends word that you should sleep in the keep this winter.
 event_c0_02_summon_searched,,"A safe conduct is written out and sealed, and Captain Hale goes to empty the side chamber himself, which he does not treat as a formality."
+audience_open,,"You sent for me, Majesty. I am listening."
+audience_open,,"Majesty. What would you have of me?"
+audience_open,cynical,"Majesty. If this is about money, I already know the answer you will not like."
+audience_open,bold,"Majesty. Say the word and it is done — what word is it?"
+audience_open,schemer,"Majesty. A private word — how pleasant. Who else knows we are speaking?"
+audience_open,pious,"God keep you, Majesty. What weighs on you?"
+audience_open,paranoid,"Majesty. Shut the door first, if you would. Now — what is it?"
+audience_open,blunt,"Majesty. I have work waiting. What do you need?"

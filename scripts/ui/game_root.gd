@@ -57,7 +57,6 @@ var _manor_view := false
 var _army_view := false
 ## DEV MODE (the pause menu's switch, owner 2026-09-27).
 var _dev_mode := false
-var _ruler_view := false
 ## Which map the panel shows (owner 2026-09-18: the 3D map is the default):
 ## the last result of _sync_map_view, never set by hand.
 var _map3d_view := false
@@ -144,7 +143,17 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not state in [State.COURT, State.CONVERSATION] or Game.state == null or Game.clock_speed <= 0:
 		return
-	if (_pause_menu != null and _pause_menu.visible) or not Game.state.pending_event.is_empty():
+	if _pause_menu != null and _pause_menu.visible:
+		return
+	if not Game.state.pending_event.is_empty():
+		# Play pressed with a matter unheard: the clock will not run past it,
+		# so it stops again and the news says who waits.
+		Game.set_clock_speed(0)
+		_announce_waiting_matter()
+		if current_screen != null and current_screen.has_method("council_handle"):
+			var seal := current_screen.council_handle() as WaxSeal
+			if seal != null:
+				seal.nudge()
 		return
 	# A spy's report open or waiting (a sealed one may still be flying to the
 	# tab): no time banks behind it, or the days it held back would all run
@@ -188,13 +197,13 @@ func _process(delta: float) -> void:
 			_pending_report = Game.current_report
 			announce_month(_pending_report)
 			if not Game.state.pending_event.is_empty():
+				# The event stops the clock and WAITS on the table as its
+				# presenter's matter (owner 2026-10-02: 统一改成由大臣头像提示):
+				# the screen stays, the presenter's miniature is marked and a
+				# bubble rises under it; a click on them brings it on.
 				Game.set_clock_speed(0)
 				_clock_acc = 0.0
 				Game.day_progress = 0.0
-				_switch_to(State.CONVERSATION)
-				current_screen.start([{"kind": "event", "portrait_id": "round_table",
-					"speaker": "The Council",
-					"event": Game.state.pending_event.duplicate(true)}], _pending_report)
 				return
 
 	Game.day_progress = clampf(_clock_acc / per_day, 0.0, 1.0)
@@ -242,8 +251,7 @@ func announce_month(report: TickReport) -> void:
 			"lord_gold":
 				lord += float(d["delta"])
 	Game.publish_news("The month closes: the crown's treasury %+d gold, your purse %+d gold." % [roundi(crown), roundi(lord)])
-	if Game.state != null and not Game.state.pending_event.is_empty():
-		Game.publish_news("An event awaits the council.")
+	_announce_waiting_matter()
 
 ## Space pauses and resumes the game (owner 2026-09-30: 空格键可以暂停或者继续
 ## 游戏) on every screen of play — taken in _input, before a focused button
@@ -797,12 +805,6 @@ func _on_bottom_tab(tab: String) -> void:
 			_war_room_screen.close()
 			_missive_screen.visible = false
 			set_manor_view(not _manor_view)
-		"MEASUREMENT":
-			_info_screen.hide()
-			_ledger_screen.close()
-			_war_room_screen.close()
-			_missive_screen.visible = false
-			set_ruler_view(not _ruler_view)
 		"LEDGER":
 			_info_screen.hide()
 			_missive_screen.visible = false
@@ -866,26 +868,6 @@ func set_army_view(on: bool) -> void:
 func army_view() -> bool:
 	return _army_view
 
-## The MEASUREMENT tab (owner 2026-09-18): the ruler over whichever map is
-## showing, 2D or 3D, on every screen with a map. It changes no layer; the
-## maps route their clicks to the ruler while it is on (MapRuler).
-func set_ruler_view(on: bool) -> void:
-	_ruler_view = on
-	if _bottom_bar != null:
-		_bottom_bar.set_toggled("MEASUREMENT", on)
-	_apply_ruler()
-
-func ruler_view() -> bool:
-	return _ruler_view
-
-## The current screen's map takes the tab's state — called on every
-## map sync too, so a screen swap or a 3D view made on first use follows it.
-func _apply_ruler() -> void:
-	if current_screen != null and current_screen.has_method("map3d_view"):
-		var v: Map3DView = current_screen.map3d_view()
-		if v != null:
-			v.ruler_on = _ruler_view
-
 ## The one rule for the map panel (the 2D map was deleted 2026-09-24): the
 ## 3D map is shown on every screen with a map, handed the theme and the
 ## counters; without a built scene it shows its notice naming build_pack.sh.
@@ -904,7 +886,6 @@ func _sync_map_view() -> void:
 		var covered := (_ledger_screen != null and _ledger_screen.visible) \
 			or (_war_room_screen != null and _war_room_screen.visible)
 		current_screen.set_map3d_view(on and not covered)
-	_apply_ruler()
 	_apply_dev_mode()
 
 func map3d_available() -> bool:
@@ -955,17 +936,12 @@ func _on_menu_load() -> void:
 	_pause_menu.visible = false
 	_pending_report = null
 	refresh_missive_badge()
-	# A loaded save with a decision still pending resumes on the conversation
-	# stage (the only screen that renders event choices); otherwise the court
-	# reconvenes on the loaded state, suggestions returning next tick.
-	if not Game.state.pending_event.is_empty():
-		_switch_to(State.CONVERSATION)
-		current_screen.start([{"kind": "event", "portrait_id": "round_table",
-			"speaker": "The Council",
-			"event": Game.state.pending_event.duplicate(true)}], TickReport.new())
-	else:
-		_switch_to(State.COURT)
-		current_screen.enter_court(null)
+	# The court reconvenes on the loaded state, suggestions returning next
+	# tick; a decision still pending waits on the table with its presenter,
+	# as it does in play (owner 2026-10-02).
+	_switch_to(State.COURT)
+	current_screen.enter_court(null)
+	_announce_waiting_matter()
 
 func _on_menu_restart() -> void:
 	_reset_reports()
@@ -992,8 +968,10 @@ func _switch_to(new_state: State) -> void:
 		State.CONVERSATION:
 			current_screen = CONVERSATION_SCENE.instantiate()
 			current_screen.finished.connect(_on_conversation_finished)
+			current_screen.audience_requested.connect(audience_with)
 		State.COURT:
 			current_screen = COURT_SCENE.instantiate()
+			current_screen.audience_requested.connect(audience_with)
 	add_child(current_screen)
 	if current_screen != null and current_screen.has_method("set_military_view"):
 		current_screen.set_military_view(_army_view)
@@ -1041,16 +1019,38 @@ func _on_start_requested() -> void:
 	Game.start_campaign(44)
 	refresh_missive_badge()
 	_pending_report = Game.next_tick()
-	_switch_to(State.CONVERSATION)
 	# The reign opens with the game background as a nameless narration beat
-	# (user ruling 2026-08-30) so the player knows the challenge ahead.
-	var beats := ConversationBeats.build(_pending_report, Game.state, Game.data)
+	# (user ruling 2026-08-30) so the player knows the challenge ahead — and
+	# only that (owner 2026-10-02: 背景介绍之后，不要立即开始剧情): the
+	# council's matters, the chapter's first event among them, then wait on
+	# the table by the seal, each with its minister marked, until the player
+	# clicks that minister (audience_with).
 	var story := _load_background_story()
 	if story != "":
-		beats.push_front({"kind": "narration", "portrait_id": "round_table",
-			"speaker": "", "text": story})
-	current_screen.start(beats, _pending_report)
+		_switch_to(State.CONVERSATION)
+		current_screen.start([{"kind": "narration", "portrait_id": "round_table",
+			"speaker": "", "text": story}], _pending_report)
+	else:
+		_switch_to(State.COURT)
+		current_screen.enter_court(_pending_report)
+		_pending_report = null
+	_announce_waiting_matter()
 	_land_on_table()
+
+## The news bar names who waits with the event on the table (owner
+## 2026-10-02): the clock stands still until it is heard. Once per event, so
+## pressing play again does not repeat it.
+var _announced_event := ""
+func _announce_waiting_matter() -> void:
+	if Game.state == null or Game.state.pending_event.is_empty():
+		return
+	var key := "%d|%s" % [Game.state.tick, String(Game.state.pending_event.get("event_id", ""))]
+	if key == _announced_event:
+		return
+	_announced_event = key
+	var p := ConversationBeats.event_presenter(Game.state, Game.data)
+	if p != "":
+		Game.publish_news("%s waits to put a matter before you." % Game.state.characters[p].display_name)
 
 ## THE MAP LAID ON THE TABLE (owner 2026-10-01): from the title's last frame,
 ## when the title left through its sweep (Take the Throne or Continue the
@@ -1098,18 +1098,47 @@ func _on_menu_load_from_title() -> void:
 		return
 	_resume_loaded()
 
-## The loaded reign resumes: a decision still pending on the conversation
-## stage, else the court; laid on the table when the title swept into it.
+## The loaded reign resumes on the court (a decision still pending waiting
+## with its presenter); laid on the table when the title swept into it.
 func _resume_loaded() -> void:
-	if not Game.state.pending_event.is_empty():
-		_switch_to(State.CONVERSATION)
-		current_screen.start([{"kind": "event", "portrait_id": "round_table",
-			"speaker": "The Council",
-			"event": Game.state.pending_event.duplicate(true)}], TickReport.new())
-	else:
-		_switch_to(State.COURT)
-		current_screen.enter_court(null)
+	# A decision still pending waits on the table with its presenter, as it
+	# does in play (owner 2026-10-02).
+	_switch_to(State.COURT)
+	current_screen.enter_court(null)
+	_announce_waiting_matter()
 	_land_on_table()
+
+## An audience with councillor `id` from the court (owner 2026-10-02: a click
+## on their miniature by the seal): the conversation stage opens on them —
+## their own matter from this month's report if they have one (then they are
+## heard), else they greet the crown — and the player is taken to where they
+## stand. Waving them on returns to the court.
+func audience_with(id: String) -> void:
+	if Game.state == null or not Game.state.characters.has(id):
+		return
+	if _room_must_ask():
+		leave_war_room(audience_with.bind(id))
+		return
+	var c: Character = Game.state.characters[id]
+	var beats: Array = []
+	# The event waiting on the table is the presenter's matter (owner
+	# 2026-10-02): it stands in the window first, their own matter after.
+	if not Game.state.pending_event.is_empty() and id == ConversationBeats.event_presenter(Game.state, Game.data):
+		beats.append({"kind": "event", "portrait_id": "round_table",
+			"speaker": "The Council", "event": Game.state.pending_event.duplicate(true)})
+	if Game.current_report != null:
+		for b: Dictionary in ConversationBeats.build(Game.current_report, Game.state, Game.data):
+			if String(b.get("kind", "")) == "minister" and String(b.get("portrait_id", "")) == id:
+				beats.append(b)
+	if beats.is_empty():
+		beats.append({"kind": "minister", "portrait_id": id, "speaker": c.display_name,
+			"text": TemplateVoicer.line_for(Game.data, "audience_open", c.traits, Game.state.tick),
+			"suggestions": []})
+	_pending_report = null
+	_switch_to(State.CONVERSATION)
+	var stage := current_screen as ConversationScene
+	stage.seek(id, String(beats[0]["kind"]) != "event")
+	stage.start(beats, Game.current_report if Game.current_report != null else TickReport.new())
 
 ## The conversation stage already spoke the event/concerns/pitches/outcomes
 ## (spec §3, R2); COURT re-entered after it shows only the order-bar state

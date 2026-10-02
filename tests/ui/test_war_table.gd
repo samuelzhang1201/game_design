@@ -44,7 +44,17 @@ func test_every_tab_hangs_a_bookmark_in_its_groups_colour() -> void:
 	var lens: Color = colour.call("HEIGHTS")
 	for tab: String in BottomBar.MAP_TABS:
 		assert_eq(colour.call(tab), lens)
-	assert_ne(colour.call("REALM"), lens)
+	assert_ne(colour.call("WAR ROOM"), lens)
+	# owner 2026-10-02: WAR ROOM and LEDGER red at the right end, MISSIVE and
+	# RELIGION purple
+	assert_eq(colour.call("WAR ROOM"), colour.call("LEDGER"))
+	assert_eq(colour.call("MISSIVE"), colour.call("RELIGION"))
+	assert_ne(colour.call("WAR ROOM"), colour.call("MISSIVE"))
+	var red: Color = colour.call("LEDGER")
+	assert_gt(red.r, red.b, "the war tabs are red")
+	var purple: Color = colour.call("MISSIVE")
+	assert_gt(purple.b, purple.g, "the letters' tabs are purple")
+	assert_eq(BottomBar.TABS.slice(-2), ["WAR ROOM", "LEDGER"], "WAR ROOM and LEDGER close the row")
 
 func test_the_report_ends_above_the_bookmarks_and_scrolls() -> void:
 	var r := _root()
@@ -93,6 +103,8 @@ func test_the_seal_shows_who_waits_until_the_council_is_entered() -> void:
 	await wait_process_frames(2)
 	var seal := court.council_handle() as WaxSeal
 	WaxSeal.heard_tick = -1
+	WaxSeal.heard_all = false
+	WaxSeal.heard_ids = []
 	# the opening months are calm: give two ministers a matter — the church
 	# and the army below their concern marks — and turn the month
 	Game.state.metrics["church_opinion"] = Game.data.bal("concern_church_low") - 5.0
@@ -110,6 +122,103 @@ func test_the_seal_shows_who_waits_until_the_council_is_entered() -> void:
 	seal.pressed.emit()
 	seal.refresh()
 	assert_eq(seal.waiting_ids().size(), 0, "entering the council hears them")
+
+## Owner 2026-10-02 (plan A, A2): the whole council stands in a row by the
+## seal in seat order, each miniature naming its councillor; the order is the
+## seal's tooltip, no longer words under it.
+func test_the_council_stands_in_a_row_by_the_seal() -> void:
+	var r := _root()
+	var court := _court(r)
+	await wait_process_frames(2)
+	var seal := court.council_handle() as WaxSeal
+	seal.refresh()
+	var seated: Array[String] = []
+	for seat: String in Game.state.council:
+		var id := String(Game.state.council[seat])
+		if id != "" and not id in seated:
+			seated.append(id)
+	assert_eq(seal.council_ids(), seated, "every sitting councillor, in seat order")
+	assert_null(seal.get_node_or_null("Tag"), "no words under the seal")
+	assert_string_contains(seal.tooltip_text, "Enter the Council")
+	var cs := seal.mini_centres()
+	assert_eq(cs.size(), seated.size())
+	for i in range(1, cs.size()):
+		assert_almost_eq(cs[i].y, cs[0].y, 0.01, "one row")
+		assert_lt(cs[i].x, cs[i - 1].x, "running leftward from the seal")
+	assert_eq(seal.councillor_at(cs[0]), seated[0])
+	var tip := seal._get_tooltip(cs[0])
+	assert_string_contains(tip, Game.state.characters[seated[0]].display_name)
+	assert_eq(seal.councillor_at(Vector2(seal.size.x - seal.seal_px * 0.5, seal.seal_px * 0.5)), "",
+		"the seal itself is no councillor")
+
+## Owner 2026-10-02 (b): a click on a councillor's miniature opens an audience
+## with them alone; waving them on returns to the court.
+func test_a_councillor_miniature_opens_an_audience() -> void:
+	var r := _root()
+	var court := _court(r)
+	await wait_process_frames(2)
+	var seal := court.council_handle() as WaxSeal
+	seal.refresh()
+	var id: String = seal.council_ids()[1]
+	seal.councillor_chosen.emit(id)
+	await wait_process_frames(2)
+	var stage := r.current_screen as ConversationScene
+	assert_not_null(stage, "the conversation stage opens")
+	assert_eq(String(stage.current_beat().get("portrait_id", "")), id, "they speak")
+	assert_has(LocationSystem.occupants(Game.data, Game.state, Game.state.current_location), id,
+		"the player stands where they are")
+	assert_false(String(stage.current_beat().get("text", "")).begins_with("[missing"), "a greeting")
+	stage.continue_button().pressed.emit()
+	await wait_process_frames(2)
+	assert_true(r.current_screen is CourtScreen, "waving them on returns to the court")
+
+## Owner 2026-10-02: after the opening narration the reign does not run into
+## its first event; the event waits on the table with its presenter marked,
+## and clicking the presenter brings it before the crown.
+func test_the_first_event_waits_with_its_presenter() -> void:
+	var r := _root()
+	await wait_process_frames(2)
+	r._on_start_requested()
+	await wait_process_frames(2)
+	assert_false(Game.state.pending_event.is_empty(), "the chapter's first event is pending")
+	var stage := r.current_screen as ConversationScene
+	assert_not_null(stage, "the narration plays first")
+	assert_eq(String(stage.current_beat().get("kind", "")), "narration")
+	stage._advance()
+	await wait_process_frames(2)
+	var court := r.current_screen as CourtScreen
+	assert_not_null(court, "after the narration, the table — not the event")
+	var presenter := ConversationBeats.event_presenter(Game.state, Game.data)
+	assert_eq(presenter, String(Game.state.council["chancellor"]), "the Chancellor presents events")
+	var seal := court.council_handle() as WaxSeal
+	seal.refresh()
+	assert_has(seal.waiting_ids(), presenter, "marked as having a matter")
+	assert_eq(seal.bubble_for(), presenter, "the cream bubble rises under the presenter")
+	assert_true(seal.get_node("Bubble").visible)
+	seal.councillor_chosen.emit(presenter)
+	await wait_process_frames(2)
+	stage = r.current_screen as ConversationScene
+	assert_eq(String(stage.current_beat().get("kind", "")), "event", "the event stands in the window")
+
+## Owner 2026-10-02 (统一改成由大臣头像提示): an event at the month's end no
+## longer takes the screen — the clock stops, the table stays and the event's
+## presenter (event_presenters.csv by id, then category) is marked; play will
+## not run past it.
+func test_a_months_event_waits_on_the_table() -> void:
+	var r := _root()
+	var court := _court(r)
+	await wait_process_frames(2)
+	Game.engine.events._fire("ev_10", Game.state)   # church: the Chaplain's to bring
+	assert_false(Game.state.pending_event.is_empty())
+	assert_eq(ConversationBeats.event_presenter(Game.state, Game.data),
+		String(Game.state.council["chaplain"]), "a church event is the Chaplain's")
+	Game.set_clock_speed(1)
+	r._process(0.01)
+	assert_eq(Game.clock_speed, 0, "play will not run past an unheard event")
+	assert_true(r.current_screen is CourtScreen, "the table stays")
+	var seal := court.council_handle() as WaxSeal
+	seal.refresh()
+	assert_eq(seal.bubble_for(), String(Game.state.council["chaplain"]))
 
 ## Owner 2026-10-01: 指南针被盖住了，往下挪，露出来 — the compass lies in the
 ## free band below the report's DRAWN foot, as big as that band allows up to

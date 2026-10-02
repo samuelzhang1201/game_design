@@ -101,16 +101,6 @@ var _border_clock := 0.0
 var _military := true
 ## DEV MODE (owner 2026-09-27): every realm's regiments, set from the pause menu.
 var _dev := false
-## MEASUREMENT (owner 2026-09-18): left clicks lay the ruler, a right CLICK clears it.
-var ruler_on := false:
-	set(v):
-		if v == ruler_on:
-			return
-		ruler_on = v
-		_ruler.cancel()
-		if _loaded:
-			_hud.refresh()
-var _ruler := MapRuler.new()
 ## The graphics tier worn ("" until the first load resolves one), overrides over it.
 var _tier := ""
 var _overrides: Dictionary = {}
@@ -414,23 +404,9 @@ func refresh_hud() -> void: if _loaded: _hud.refresh()
 
 func compass_rect() -> Rect2: return _hud.compass_rect() if _loaded else Rect2()
 
-# --- ruler ---------------------------------------------------------------------
-## A ruler click at `pos` (design px): the ground under it, or nothing on the sky.
-func ruler_click(pos: Vector2) -> void:
-	var hit: Variant = ground_at(pos)
-	if hit == null:
-		return
-	_ruler.click(Vector2((hit as Vector3).x, (hit as Vector3).z))
-	if _loaded:
-		_hud.refresh()
-
-func _ruler_click(pos: Vector2) -> void: ruler_click(pos)
-func ruler_reading() -> String: return MapRuler.reading(_ruler.length() * map_units_per_metre(), map_unit())
-
 ## The 3D map MEASURES LIKE THE 2D MAP (owner 2026-09-18; Map3DGeometry).
 func map_units_per_metre() -> float: return Map3DGeometry.map_units_per_metre(_repo.map_info, _meta)
 func map_unit() -> String: return Map3DGeometry.map_unit(_repo.map_info, _meta)
-func ruler() -> MapRuler: return _ruler
 
 # --- the HUD's pieces (Map3DHud: one per job) -------------------------------------
 func label_entries() -> Array: return (_hud.piece("Labels") as Map3DHudLabels).entries() if _loaded else []
@@ -448,8 +424,6 @@ func heat_legend_rect() -> Rect2:
 	return (_hud.piece("HeatLegend") as Map3DHudHeatLegend).rect() if _loaded else Rect2()
 func heat_legend_ticks() -> Array:
 	return (_hud.piece("HeatLegend") as Map3DHudHeatLegend).ticks() if _loaded else []
-func heat_legend_yields() -> bool:
-	return (_hud.piece("HeatLegend") as Map3DHudHeatLegend).yields() if _loaded else false
 
 # --- MILITARY (owner 2026-09-19) ---------------------------------------------------
 ## The player's regiments as counters — GameRoot hands it down with the tab.

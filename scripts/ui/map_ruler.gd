@@ -1,57 +1,14 @@
 class_name MapRuler
 extends RefCounted
-## The MEASUREMENT tab's ruler (owner 2026-09-18), one per map view. A left
-## click drops the anchor, the pointer stretches the ruler, a second click
-## fixes it (a click after that starts a new one) and a right click puts it
-## away. The points are in the view's own measuring space — the 2D map's
-## native px, the 3D map's world XZ metres — and both views read a length
-## in the pack's own measure (map_info.csv distance_scale, distance_unit),
-## so the same two towns read the same on either map (owner 2026-09-18).
+## The ruler's look and arithmetic, all static: the MARCH aim's ruler on the
+## 3D map (owner 2026-09-24) and the march routes' dashes draw with it. Lengths
+## read in the pack's own measure (map_info.csv distance_scale, distance_unit).
+## The MEASUREMENT tab's free ruler, whose state this class also held, went
+## 2026-10-02 (owner: 移除measurement tab和相关功能).
 ##
-## draw() is the one look both views share: an ink dashed line on a pale
-## halo, a dot and a crossbar at each end, a one-sided tick at every 1-2-5
-## step, the reading at the middle (political_palette ruler_*, balance map_ruler_*).
-
-enum Phase { IDLE, STRETCHING, FIXED }
-
-var phase := Phase.IDLE
-var start := Vector2.ZERO
-var end := Vector2.ZERO
-
-
-## A left click (not a drag) at `p`.
-func click(p: Vector2) -> void:
-	if phase == Phase.STRETCHING:
-		end = p
-		phase = Phase.FIXED
-	else:
-		start = p
-		end = p
-		phase = Phase.STRETCHING
-
-
-## The pointer at `p`; true when the ruler changed and wants a redraw.
-func move(p: Vector2) -> bool:
-	if phase != Phase.STRETCHING or p == end:
-		return false
-	end = p
-	return true
-
-
-## A right click: puts the ruler away. True when there was one to put away.
-func cancel() -> bool:
-	var had := active()
-	phase = Phase.IDLE
-	return had
-
-
-func active() -> bool:
-	return phase != Phase.IDLE
-
-
-## The ruler's length in its measuring space.
-func length() -> float:
-	return start.distance_to(end)
+## draw() is the look: an ink dashed line on a pale halo, a dot and a crossbar
+## at each end (or an arrowhead), a one-sided tick at every 1-2-5 step, the
+## reading at the middle (political_palette ruler_*, balance map_ruler_*).
 
 
 ## A length in the pack's unit: whole from 10 up, one decimal under it.

@@ -1,7 +1,7 @@
 class_name InfoScreen
 extends Control
-## Centered table overlay for the bottom bar's REALM / LAWS / RELIGION /
-## FAMILIES tabs: a titled two-column table of engine truth (metrics and
+## Centered table overlay for the bottom bar's LAWS / RELIGION / FAMILIES
+## tabs (REALM went 2026-10-02, owner): a titled two-column table of engine truth (metrics and
 ## office holders), refreshed live on state_changed while visible.
 ##
 ## MILITARY is no longer one of them (user request 2026-09-10): it is a map
@@ -69,24 +69,6 @@ func _seat_holder(seat: String) -> Character:
 func _rows_for(tab: String) -> Array:
 	var m: Dictionary = Game.state.metrics
 	match tab:
-		"REALM":
-			var realm_rows := [
-				["Treasury", "%d gold" % int(m["treasury"])],
-				["Tax income", "%d / tick" % int(m["tax_income"])],
-				["Grain", str(int(m["grain"]))],
-				["Unrest", str(int(m["unrest"]))],
-				["Legitimacy", str(int(m["legitimacy"]))],
-				["Peasant contentment", str(int(m["peasant_contentment"]))],
-				["Admin capacity", str(int(m["admin_capacity"]))],
-			]
-			# The pack's population, live through the ledger (spec 2026-09-09).
-			for spec in [["Urban population", "urban_population"],
-					["Rural population", "rural_population"]]:
-				var v: Variant = WorldLedger.value_of(Game.data, Game.state,
-					"economy.kingdoms.player_realm." + String(spec[1]))
-				if v != null:
-					realm_rows.append([String(spec[0]), str(int(v))])
-			return realm_rows
 		"FAMILIES":
 			return _family_rows()
 		"LAWS":

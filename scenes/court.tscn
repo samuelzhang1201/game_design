@@ -169,7 +169,7 @@ script = ExtResource("4_sy0rd")
 
 [node name="CouncilHandle" parent="." unique_id=1423902817 instance=ExtResource("14_rnrgf")]
 unique_name_in_owner = true
-editor_description = "Grows leftward and downward with its tag: who waits to be heard (WaxSeal.refresh) and their miniatures are set at runtime. Hidden while the council column is open."
+editor_description = "Grows leftward with the council row: the councillors, who waits to be heard (WaxSeal.refresh) and their miniatures are set at runtime. Hidden while the council column is open."
 custom_minimum_size = Vector2(137, 96)
 layout_mode = 0
 anchor_left = 1.0

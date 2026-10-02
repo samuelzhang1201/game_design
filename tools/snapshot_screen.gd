@@ -40,7 +40,7 @@ var _res := Vector2i.ZERO
 var _viewport: SubViewport
 var _frames := 0
 var _root: GameRoot = null
-## --layer manors|heights|military|measurement lights that bottom-bar tab once
+## --layer manors|heights lights that bottom-bar tab once
 ## the root is up, so a shot can show a thematic view and its left column.
 var _layer := ""
 ## --speaker <portrait_id> opens the council on the conversation screen and
@@ -93,11 +93,6 @@ var _day_share := -1.0
 ## the 3D map (spec 2026-09-29-weather-visuals) — the look only, the engine's
 ## weather is untouched.
 var _weather := ""
-## --ruler fx1,fy1,fx2,fy2 (with --screen root) lights the MEASUREMENT tab
-## and clicks the showing map at those shares of its size, so the shot shows
-## a fixed ruler; --ruler-open leaves it stretching to the second point.
-var _ruler := PackedFloat32Array()
-var _ruler_open := false
 ## --march3d fx,fy (with --screen root) plays the player's march as the owner
 ## specified it (2026-09-24, 2026-09-27): a left click on the first regiment's
 ## piece opens its orders, MARCH is chosen, the pointer is put at that share of
@@ -125,6 +120,18 @@ var _title := false
 ## Chronicle, so --also can follow the sweep and the landing.
 var _title_click := ""
 var _title_click_frame := -1
+## --council-click N@F (with --screen root): at frame F a real left click on the
+## Nth councillor's miniature by the council seal (0 the nearest the seal), so
+## the shot shows the audience it opens (owner 2026-10-02); --council-hover N@F
+## rests the pointer on it instead, for its tooltip.
+var _council_click := -1
+## --click-reply N@F (with --screen root): at frame F a real left click on the
+## conversation stage's Nth option (0 the first) — the opening narration's
+## "I am ready", an event's choice.
+var _reply_click := -1
+var _reply_click_frame := -1
+var _council_click_frame := -1
+var _council_hover := false
 ## --look3d x,y,M,F (with --screen root) frames pack px (x,y) M metres away at
 ## frame F — after an order, to follow its courier from the capital.
 var _look3d := PackedFloat32Array()
@@ -285,9 +292,6 @@ func _ready() -> void:
 			_click_courier = int(args[i + 1])
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
-		elif args[i] == "--ruler":
-			for part in args[i + 1].split(","):
-				_ruler.append(float(part))
 		elif args[i] == "--speed":
 			_speed = int(args[i + 1])
 		elif args[i] == "--spy3d":
@@ -334,6 +338,15 @@ func _ready() -> void:
 			_shot_on = args[i + 1]
 		elif args[i] == "--shot-delay":
 			_shot_delay = int(args[i + 1])
+		elif args[i] == "--click-reply":
+			var rcf := args[i + 1].split("@")
+			_reply_click = int(rcf[0])
+			_reply_click_frame = int(rcf[1]) if rcf.size() > 1 else 20
+		elif args[i] == "--council-click" or args[i] == "--council-hover":
+			var cf := args[i + 1].split("@")
+			_council_click = int(cf[0])
+			_council_click_frame = int(cf[1]) if cf.size() > 1 else 20
+			_council_hover = args[i] == "--council-hover"
 		elif args[i] == "--title-click":
 			var rf := args[i + 1].split("@")
 			_title_click = rf[0]
@@ -353,7 +366,6 @@ func _ready() -> void:
 		_shot_on = "war"
 	if _war_drag.x >= 0.0 and _war_piece == "":
 		push_warning("--war-drag needs --war-piece (the piece to rake); there is nothing to drag")
-	_ruler_open = args.has("--ruler-open")
 	_march_confirm = args.has("--march-confirm")
 	_ledger_search_pick = args.has("--ledger-search-pick")
 	_march_commit = args.has("--march-commit")
@@ -551,6 +563,23 @@ func _process(_delta: float) -> void:
 			push_error("--title-click: no title row %s" % _title_click)
 		else:
 			_real_click(row, row.size * 0.5)
+	if _root != null and _frames == _reply_click_frame and _root.current_screen is ConversationScene:
+		var replies: Array = (_root.current_screen as ConversationScene).reply_buttons()
+		var shown: Array = replies.filter(func(b: Variant) -> bool: return (b as Control).is_visible_in_tree())
+		if _reply_click >= shown.size():
+			push_error("--click-reply: no option %d (%d shown)" % [_reply_click, shown.size()])
+		else:
+			var rb: Control = shown[_reply_click]
+			_real_click(rb, rb.size * 0.5)
+	if _root != null and _frames == _council_click_frame and _root.current_screen != null \
+			and _root.current_screen.has_method("council_handle"):
+		var seal := _root.current_screen.council_handle() as WaxSeal
+		if seal == null or _council_click >= seal.mini_centres().size():
+			push_error("--council-click: no councillor %d by the seal" % _council_click)
+		elif _council_hover:
+			_real_move(seal, seal.mini_centres()[_council_click])
+		else:
+			_real_click(seal, seal.mini_centres()[_council_click])
 	if _day_share >= 0.0:
 		Game.day_progress = _day_share
 	# GameRoot boots into the menu; step it into the court so the shot shows
@@ -633,23 +662,6 @@ func _process(_delta: float) -> void:
 		var at := hv.size * _hover3d
 		hv.hover_pick(hv.pick_at(at), at)
 		print("hover3d: kingdom=%s name=%s" % [hv.hovered_kingdom(), hv.hover_tooltip()])
-	if _root != null and _frames == 12 and _ruler.size() == 4:
-		_root.set_ruler_view(true)
-		var v: Control = _root.current_screen.map3d_view()
-		var a := v.size * Vector2(_ruler[0], _ruler[1])
-		var b := v.size * Vector2(_ruler[2], _ruler[3])
-		for at in [a, b]:
-			var hover := InputEventMouseMotion.new()
-			hover.position = at
-			v._gui_input(hover)
-			if at == b and _ruler_open:
-				break
-			for down in [true, false]:
-				var e := InputEventMouseButton.new()
-				e.button_index = MOUSE_BUTTON_LEFT
-				e.pressed = down
-				e.position = at
-				v._gui_input(e)
 	if _root != null and _march3d.x >= 0.0 and _frames in [14, 16, 18, 20, 22] \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:

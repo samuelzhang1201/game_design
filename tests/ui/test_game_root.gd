@@ -92,10 +92,10 @@ func test_pause_menu_save_then_load_resumes_at_court() -> void:
 	assert_eq(Game.state.tick, saved_tick, "the loaded realm keeps its date")
 	assert_false(r.pause_menu().visible)
 
-## A save carrying an unresolved event must resume on the conversation
-## stage, the only screen that renders event choices - otherwise the
-## loaded campaign would be stuck behind court's End-Turn event gate.
-func test_load_with_pending_event_resumes_on_conversation() -> void:
+## A save carrying an unresolved event resumes on the court with the event
+## waiting as its presenter's matter, as in play (owner 2026-10-02: 统一改成
+## 由大臣头像提示); clicking the presenter brings its choices on.
+func test_load_with_pending_event_waits_with_its_presenter() -> void:
 	var r := _root()
 	await wait_process_frames(2)
 	r.current_screen.start_requested.emit()
@@ -107,8 +107,11 @@ func test_load_with_pending_event_resumes_on_conversation() -> void:
 	_menu_btn(r, "SaveGame").pressed.emit()
 	_menu_btn(r, "LoadGame").pressed.emit()
 	await wait_process_frames(2)
-	assert_eq(r.state, GameRoot.State.CONVERSATION,
-		"a pending event resumes on the conversation stage")
+	assert_eq(r.state, GameRoot.State.COURT, "the loaded reign waits on the table")
+	assert_false(Game.state.pending_event.is_empty(), "the event still waits")
+	r.audience_with(ConversationBeats.event_presenter(Game.state, Game.data))
+	await wait_process_frames(2)
+	assert_eq(r.state, GameRoot.State.CONVERSATION)
 	assert_gt(r.current_screen.reply_buttons().size(), 0,
 		"the loaded event's choices are live")
 

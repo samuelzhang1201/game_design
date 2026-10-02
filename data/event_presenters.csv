@@ -1,0 +1,11 @@
+key,seat,notes
+chapter,chancellor,"The prologue's council business: the Chancellor is the crown's primary voice and runs year one's briefings."
+court,chancellor,"Matters of the court and its nobles."
+folk,chancellor,"The common people's affairs reach the crown through the Chancellor, who answers for unrest."
+realm,steward,"Granaries, roads, debts and the realm's purse."
+windfall,steward,"Found money and goods: the Steward counts them."
+church,chaplain,"Faith, prophets and the clergy."
+personal,spymaster,"The king's own affairs and their secrets."
+ev_02,spymaster,"The Steward's new cloak is a matter about the Steward: someone else brings it."
+ev_03,marshal,"A duel is the Marshal's to report."
+ev_07,marshal,"Bandits on the salt road are a matter for the sword."

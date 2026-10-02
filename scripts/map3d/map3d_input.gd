@@ -3,9 +3,8 @@ extends RefCounted
 ## The 3D map's pointer and keys (spec 2026-09-20 §1; was Map3DView._gui_input
 ## and the key half of _process). Left or middle drag pans, right drag turns,
 ## the wheel and a trackpad pinch zoom about the pointer, a two-finger drag
-## pans, WASD / arrows pan. A press on the compass eases north. With the
-## ruler on, a left click measures and a right CLICK (not a turn) puts it
-## away. handle() returns true exactly where the view used to accept_event().
+## pans, WASD / arrows pan. A press on the compass eases north (the MEASUREMENT
+## ruler went 2026-10-02, owner). handle() returns true exactly where the view used to accept_event().
 
 ## A press and release further apart than this is a drag (WorldMapView.CLICK_SLOP).
 const CLICK_SLOP := 10.0
@@ -79,34 +78,23 @@ func _button(mb: InputEventMouseButton) -> bool:
 			_press_pos = mb.position
 			_dragging = false
 		elif not _dragging:
-			if view.ruler_on:
-				view.ruler_click(mb.position)
-			else:
-				view.select_at(mb.position)
+			view.select_at(mb.position)
 		return true
 	if mb.button_index == MOUSE_BUTTON_RIGHT:
 		if mb.pressed:
 			_rpress_pos = mb.position
 			_rdragged = false
 		elif not _rdragged:
-			# A right CLICK, never a turn. With the ruler up it puts the ruler
-			# away; otherwise it asks for the order menu of the regiment under
-			# it, or — since fix round 1, 2026-09-28 — offers to send a spy
+			# A right CLICK, never a turn: the order menu of the regiment under
+			# it, or — since fix round 1, 2026-09-28 — an offer to send a spy
 			# there when the ground was hit instead; only a click on the sky
 			# still falls through untouched.
-			if view.ruler_on:
-				if view.ruler().cancel():
-					view.refresh_hud()
-			elif view.right_click(mb.position):
+			if view.right_click(mb.position):
 				return true
 	return false
 
 
 func _motion(mm: InputEventMouseMotion) -> bool:
-	if view.ruler_on and view.ruler().phase == MapRuler.Phase.STRETCHING:
-		var hit: Variant = view.ground_at(mm.position)
-		if hit != null and view.ruler().move(Vector2((hit as Vector3).x, (hit as Vector3).z)):
-			view.refresh_hud()
 	if mm.button_mask == 0:
 		view.request_hover(mm.position)
 	else:

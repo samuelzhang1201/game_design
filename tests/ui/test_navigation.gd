@@ -36,7 +36,7 @@ func test_the_bottom_bar_groups_lenses_left_and_screens_right() -> void:
 	assert_gt(rule, -1, "a rule divides the groups")
 	for tab: String in BottomBar.MAP_TABS:
 		assert_lt(names.find(String(tab.capitalize())), rule, "%s is a lens, left of the rule" % tab)
-	for tab: String in ["REALM", "FAMILIES", "LEDGER"]:
+	for tab: String in ["FAMILIES", "MISSIVE", "WAR ROOM", "LEDGER"]:
 		assert_gt(names.find(String(tab.capitalize())), rule, "%s is a screen, right of it" % tab)
 	assert_not_null(bar.button("WAR ROOM"), "the WAR ROOM tab is on the bar")
 	# BAR_HEIGHT is a constant NewsTicker and ScreenLayout place themselves

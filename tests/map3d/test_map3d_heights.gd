@@ -232,26 +232,6 @@ func test_marks_keep_off_the_legend() -> void:
 	for mk: Dictionary in v.landmark_marks():
 		assert_false((mk["rect"] as Rect2).intersects(box), "mark %d over the legend" % int(mk["cell"]))
 
-## The legend steps back (drawn faint) while a MEASUREMENT ruler crosses it,
-## so the ruler's reading is never printed over a tier's name (Task 7 look pass).
-func test_the_legend_yields_to_a_ruler_across_it() -> void:
-	var v := _view()
-	v.set_manor_theme("heights")
-	v.look_at_home(40000.0)
-	assert_false(v.heat_legend_yields(), "no ruler, no yielding")
-	v.ruler_on = true
-	var box := v.heat_legend_rect()
-	# a ruler far from the legend, top-right
-	v._ruler_click(v.size * Vector2(0.6, 0.2))
-	v._ruler_click(v.size * Vector2(0.8, 0.3))
-	assert_false(v.heat_legend_yields(), "a ruler elsewhere leaves the legend alone")
-	# one from the legend's foot out across its labels
-	v._ruler_click(box.position + Vector2(4.0, box.size.y - 4.0))
-	v._ruler_click(box.position + Vector2(260.0, -120.0))
-	assert_true(v.heat_legend_yields())
-	v.ruler_on = false
-	assert_false(v.heat_legend_yields(), "the tab off, the legend back")
-
 ## The marks are cut once per camera pose (Task 7 bench): asked again at the
 ## same pose they are the same cut; a moved camera cuts them anew.
 func test_marks_are_cut_once_per_pose() -> void:

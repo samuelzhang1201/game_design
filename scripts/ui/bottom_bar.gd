@@ -1,10 +1,12 @@
 class_name BottomBar
 extends Control
 ## Bottom tab strip on every gameplay screen (user ruling 2026-08-30),
-## outside the map: HEIGHTS | MANORS | REALM | MEASUREMENT |
-## WAR ROOM (the plotting room, owner 2026-10-01) | FAMILIES | LAWS |
-## RELIGION | LEDGER (the realm's ontology, spec 2026-09-30) | MISSIVE (the
-## Missive board, owner 2026-09-28).
+## outside the map: HEIGHTS | MANORS | FAMILIES | LAWS | RELIGION | MISSIVE
+## (the Missive board, owner 2026-09-28) | WAR ROOM (the plotting room, owner
+## 2026-10-01) | LEDGER (the realm's ontology, spec 2026-09-30). REALM and
+## MEASUREMENT went 2026-10-02 (owner: 移除measurement tab和相关功能 / 移除realm
+## tab), and WAR ROOM and LEDGER moved to the right end in red, MISSIVE and
+## RELIGION in purple (owner the same day).
 ## MAP and PROVINCES went 2026-09-13 (owner):
 ## the province view is always on, and MAP did nothing a tab needed.
 ## Pure chrome — GameRoot owns it and decides what each tab opens (MAP
@@ -14,8 +16,8 @@ extends Control
 
 signal tab_selected(tab: String)
 
-const TABS := ["HEIGHTS", "MANORS", "REALM", "MEASUREMENT",
-	"WAR ROOM", "FAMILIES", "LAWS", "RELIGION", "LEDGER", "MISSIVE"]
+const TABS := ["HEIGHTS", "MANORS",
+	"FAMILIES", "LAWS", "RELIGION", "MISSIVE", "WAR ROOM", "LEDGER"]
 ## Tabs that stay lit while their view is on rather than opening an overlay
 ## (MILITARY went 2026-09-27: the regiments are always on the map): HEIGHTS
 ## the height ramp over the land (owner request 2026-09-12, remade
@@ -23,13 +25,12 @@ const TABS := ["HEIGHTS", "MANORS", "REALM", "MEASUREMENT",
 ## since ECONOMY was folded into it on 2026-09-19, the output badges),
 ## exclusive with HEIGHTS — GameRoot keeps them so. The 3D map (owner
 ## 2026-09-18) is the default and has no tab: GameRoot shows it unless
-## HEIGHTS is lit. MEASUREMENT (owner 2026-09-18) lays the ruler over whichever map
-## is showing, 2D or 3D, and changes no layer.
-const TOGGLES := ["HEIGHTS", "MANORS", "MEASUREMENT"]
+## HEIGHTS is lit.
+const TOGGLES := ["HEIGHTS", "MANORS"]
 ## Grouped (owner 2026-09-28, balance ui_nav_grouped): the ways of looking at
 ## the map on the left, the screens on the right, a gold rule between — the
 ## strip had put a lens, a tool and five screens in one undifferentiated row.
-const MAP_TABS := ["HEIGHTS", "MANORS", "MEASUREMENT"]
+const MAP_TABS := ["HEIGHTS", "MANORS"]
 ## Tabs that open a page still to be built; balance ui_show_placeholder_tabs
 ## 0 leaves them out of the strip. None now: WAR ROOM left the placeholders
 ## 2026-10-01 (it opens the plotting room).
@@ -49,8 +50,9 @@ signal slip_moved(rect: Rect2)
 
 ## The strip is the scene's (owner 2026-10-02: the look lives in the editor —
 ## scenes/bottom_bar.tscn): every tab a silk bookmark of
-## assets/2D/ui/war_table/styles/ribbons/ in its group's colour, MEASUREMENT
-## wearing its ruler, the gap between the groups where the news slip lies
+## assets/2D/ui/war_table/styles/ribbons/ in its group's colour (lens green;
+## FAMILIES and LAWS blue; RELIGION and MISSIVE purple; WAR ROOM and LEDGER
+## red), the gap between the groups where the news slip lies
 ## (slip_band). _ready only finds the tabs and wires them; the leather strip of
 ## `ui_war_table` 0 is still dressed in code.
 func _ready() -> void:
@@ -77,7 +79,7 @@ func _dress_leather(row: HBoxContainer) -> void:
 	var grouped := Game.data != null and float(Game.data.balance.get("ui_nav_grouped", 0.0)) > 0.0
 	var show_placeholders := Game.data == null \
 		or float(Game.data.balance.get("ui_show_placeholder_tabs", 1.0)) > 0.0
-	for node_name in ["Rule", "ToolRule", "Gap", "Gap2"]:
+	for node_name in ["Rule", "Gap", "Gap2"]:
 		var n := row.get_node_or_null(node_name) as Control
 		if n == null:
 			continue
@@ -105,24 +107,15 @@ func _dress_leather(row: HBoxContainer) -> void:
 			# inside the 1280 px row.
 			UiPalette.style_tab(btn, 16, 10.0)
 			btn.size_flags_vertical = Control.SIZE_FILL
-		if tab == "MEASUREMENT":
-			if not grouped:
-				btn.icon = null
-			else:
-				# A tool, not a lens: its ruler in the word's own ink.
-				var inks := {"icon_normal_color": "font_color", "icon_hover_color": "font_hover_color",
-					"icon_pressed_color": "font_pressed_color", "icon_hover_pressed_color": "font_hover_pressed_color",
-					"icon_focus_color": "font_color"}
-				for state: String in inks:
-					btn.add_theme_color_override(state, btn.get_theme_color(String(inks[state])))
 
 func _emit_slip() -> void:
 	slip_moved.emit(slip_band())
 
 ## The free band between the two bookmark groups (global rect): from the last
-## map tab (MEASUREMENT) to the first screen tab (REALM), ui_slip_pad_px kept
+## map tab (MANORS) to the first screen tab (FAMILIES), ui_slip_pad_px kept
 ## clear of each (owner 2026-10-01: log界面挪到measurement和 realm tab中间 —
-## it had lain under the report, covering the compass).
+## it had lain under the report, covering the compass; 2026-10-02: 拉长log
+## tab — with MEASUREMENT and REALM gone the band is the width of both).
 func slip_band() -> Rect2:
 	var left: Button = null
 	var right: Button = null

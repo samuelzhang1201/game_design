@@ -36,6 +36,10 @@ const PAPER_PATH := "res://assets/2D/ui/missive_board/letter_aged.png"
 ## (the letter art's own ruled border and burnt rim: the map sheet draws its
 ## own rules, so it takes only the paper's middle).
 @export var uv_inset := Vector2.ZERO
+## Slides that window across the texture (a long slip taking one quarter of
+## the letter, clear of its folds — owner 2026-10-02: 拉长log tab showed the
+## centre fold as a seam).
+@export var uv_shift := Vector2.ZERO
 ## A pale wash laid over the texture (paler paper than the art's own ochre).
 @export var lift := Color(1, 1, 1, 0)
 ## When > 0, the paper is drawn only this tall from the top of its rect (a
@@ -130,7 +134,7 @@ func _draw(ci: RID, rect: Rect2) -> void:
 		var q := c + t_inv * (p - c)
 		var u := (q.x - rect.position.x) / maxf(rect.size.x, 1.0)
 		var v := (q.y - rect.position.y) / maxf(rect.size.y, 1.0)
-		uvs.append(Vector2(lerpf(uv_inset.x, 1.0 - uv_inset.x, u), lerpf(uv_inset.y, 1.0 - uv_inset.y, v)))
+		uvs.append(Vector2(lerpf(uv_inset.x, 1.0 - uv_inset.x, u), lerpf(uv_inset.y, 1.0 - uv_inset.y, v)) + uv_shift)
 	var cols := PackedColorArray([tint])
 	if texture != null:
 		RenderingServer.canvas_item_add_polygon(ci, pts, cols, uvs, texture.get_rid())

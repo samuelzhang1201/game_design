@@ -20,7 +20,7 @@ extends Control
 ## One child per job (spec 2026-09-20 §1), in PAINT ORDER — a CanvasItem
 ## child draws over its earlier siblings (Ruling 17): the kingdom names, then
 ## HEIGHTS' landmarks and legend, MANORS' badges, MILITARY's counters, the
-## wheel's backdrop, the scale bar, the MEASUREMENT ruler, the wheel
+## wheel's backdrop, the scale bar, the MARCH aim's ruler, the wheel
 ## (CompassLayer) and last its needle. Every piece reads the context the view
 ## binds — never the Game autoload — and draws nothing until bound.
 const PIECES := ["Labels", "Landmarks", "Weather", "HeatLegend", "Badges", "Armies",

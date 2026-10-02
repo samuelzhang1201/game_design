@@ -122,14 +122,11 @@ func test_bottom_bar_tabs_and_info_tables() -> void:
 	assert_true(r.bottom_bar().visible, "shown on gameplay screens")
 	for tab in BottomBar.TABS:
 		assert_not_null(r.bottom_bar().button(tab), tab + " button exists")
-	r.bottom_bar().button("REALM").pressed.emit()
+	r.bottom_bar().button("FAMILIES").pressed.emit()
 	await wait_process_frames(2)
 	assert_true(r.info_screen().visible)
-	assert_eq(r.info_screen().current_tab(), "REALM")
-	var names := []
-	for i in range(0, r.info_screen().table().get_child_count(), 2):
-		names.append(r.info_screen().table().get_child(i).text)
-	assert_has(names, "Treasury")
+	assert_eq(r.info_screen().current_tab(), "FAMILIES")
+	assert_gt(r.info_screen().table().get_child_count(), 0, "the families' table is filled")
 	r.bottom_bar().button("LEDGER").pressed.emit()
 	await wait_process_frames(1)
 	assert_false(r.info_screen().visible, "info yields to the ledger")

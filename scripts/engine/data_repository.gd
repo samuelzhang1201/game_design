@@ -89,6 +89,10 @@ var army_orders: Array = []
 ## confirm menu (commit / cancel) and route menu (edit / halt), and the
 ## paused-only reason (owner 2026-09-27, ArmyOrderMenu).
 var army_route_orders: Dictionary = {}
+## data/event_presenters.csv: an event id or an event category -> the council
+## seat whose holder brings that event before the crown (owner 2026-10-02:
+## every event waits on the table as a minister's matter); an id wins.
+var event_presenters: Dictionary = {}
 ## data/army_formations.csv, by min_fit_permille: [{figures, min_fit_permille,
 ## slots: [Vector2]}] — how many figures a regiment's piece shows by its
 ## strength (Map3DFormation).
@@ -713,6 +717,9 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/army_orders.csv", ["action_code", "label", "hint"],
 			func(r): army_orders.append({"action_code": String(r["action_code"]),
 				"label": String(r["label"]), "hint": String(r["hint"])})):
+		return false
+	if not _load_if_present(dir + "/event_presenters.csv", ["key", "seat"],
+			func(r): event_presenters[String(r["key"])] = String(r["seat"])):
 		return false
 	if not _load_if_present(dir + "/army_route_orders.csv", ["key", "label", "hint"],
 			func(r): army_route_orders[String(r["key"])] = {"label": String(r["label"]),

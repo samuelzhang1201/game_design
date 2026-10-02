@@ -71,6 +71,30 @@ static func waiting(report: TickReport, state: GameState, data: DataRepository) 
 			out.append(id)
 	return out
 
+## The councillor who brings the pending event before the crown (owner
+## 2026-10-02: every event waits on the table, its presenter marked, until the
+## player clicks them): the holder of event_presenters.csv's seat for the
+## event's id, else for its category; failing that (a seat empty, an event the
+## table does not name) the holder of the first council_seats.csv seat with
+## `presents_events` 1. "" when there is no event or nobody to bring it.
+static func event_presenter(state: GameState, data: DataRepository) -> String:
+	if state.pending_event.is_empty():
+		return ""
+	var event_id := String(state.pending_event.get("event_id", ""))
+	var category := String((data.events_by_id.get(event_id, {}) as Dictionary).get("category", ""))
+	for key in [event_id, category]:
+		var seat := String(data.event_presenters.get(key, ""))
+		var holder := _seat_char(seat, state) if seat != "" else ""
+		if holder != "" and state.characters.has(holder):
+			return holder
+	for seat: String in data.seats:
+		if String(data.seats[seat].get("presents_events", "0")) != "1":
+			continue
+		var id := _seat_char(seat, state)
+		if id != "" and state.characters.has(id):
+			return id
+	return ""
+
 ## Composes the summary line at the moment it's shown (called from
 ## ConversationScene._advance, not from build): last-tick's already-decided
 ## outcomes (report.outcomes, prefixed once by council_summary_open) followed

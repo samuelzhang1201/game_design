@@ -24,9 +24,9 @@ const METHODS := {
 	"heat_on": 0, "cell_lut": 0, "lut_color": 1, "bridge_rules": 0, "bridges": 0,
 	"metres_per_pixel": 0, "label_entries": 0, "manor_badges": 0, "set_military": 1,
 	"military": 0, "army_badge_height": 0, "army_markers": 0, "landmark_marks": 0,
-	"heat_legend_rect": 0, "heat_legend_ticks": 0, "heat_legend_yields": 0,
+	"heat_legend_rect": 0, "heat_legend_ticks": 0,
 	"drawn_army_count": 0, "selected_army": 0, "drawn_badge_count": 0, "drawn_labels": 0,
-	"ruler_reading": 0, "map_units_per_metre": 0, "map_unit": 0, "ruler": 0,
+	"map_units_per_metre": 0, "map_unit": 0,
 	"ground_at": 1, "pick_at": 1, "hover_pick": 2, "clear_hover": 0, "hovered_kingdom": 0,
 	"hover_tooltip": 0, "tooltip_rect": 0, "select_at": 1, "clear_selection": 0,
 	"is_loaded": 0, "notice": 0, "viewport": 0, "camera": 0, "cloud_count": 0,
@@ -34,7 +34,7 @@ const METHODS := {
 	"selected_manor": 0, "selected_ring_visible": 0, "look_at_pack": 2, "look_at_home": 1,
 	"layer_names": 0, "set_layer_visible": 2, "line_mesh": 1, "marker_counts": 0,
 	"_gui_input": 1, "_process": 1, "_render_scale": 0, "_burg_xz": 1, "_height_at": 1,
-	"_pan_by": 1, "_zoom_at": 2, "_ruler_click": 1,
+	"_pan_by": 1, "_zoom_at": 2,
 }
 const SIGNALS := {"object_selected": 1, "province_selected": 1, "country_hovered": 1}
 

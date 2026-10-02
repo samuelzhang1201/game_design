@@ -26,13 +26,13 @@ func test_ticker_hidden_on_menu_pinned_bottom_and_transparent_in_game() -> void:
 		# THE WAR TABLE: a paper slip lying in the bookmarks' band, between the groups
 		assert_gt(rect.position.y, r.size.y - BottomBar.BAR_HEIGHT - 1.0, "the slip lies in the bookmarks' band")
 		assert_lt(rect.end.y, r.size.y + 1.0, "and on the screen")
-		# between MEASUREMENT and REALM (owner 2026-10-01: log界面挪到measurement和
-		# realm tab中间), clear of every bookmark
+		# between the lenses and the screens (owner 2026-10-01: log界面挪到measurement和
+		# realm tab中间; 2026-10-02: 拉长log tab, both tabs gone), clear of every bookmark
 		assert_eq(r.size.x, 1280.0, "measured at the design width (the gap is a width; an earlier test may leave the window taller)")
-		assert_gt(rect.position.x, r.bottom_bar().button("MEASUREMENT").get_global_rect().end.x - 0.5,
-			"right of MEASUREMENT")
-		assert_lt(rect.end.x, r.bottom_bar().button("REALM").get_global_rect().position.x + 0.5, "left of REALM")
-		assert_gt(rect.size.x, 100.0, "wide enough for its LOG and a line")
+		assert_gt(rect.position.x, r.bottom_bar().button("MANORS").get_global_rect().end.x - 0.5,
+			"right of MANORS")
+		assert_lt(rect.end.x, r.bottom_bar().button("FAMILIES").get_global_rect().position.x + 0.5, "left of FAMILIES")
+		assert_gt(rect.size.x, 300.0, "long (owner 2026-10-02: 拉长log tab)")
 		assert_true(ticker.find_child("LogButton", true, false).is_visible_in_tree(), "its LOG kept")
 		for tab: String in BottomBar.TABS:
 			var b := r.bottom_bar().button(tab)
@@ -50,6 +50,9 @@ func test_ticker_hidden_on_menu_pinned_bottom_and_transparent_in_game() -> void:
 func test_published_news_joins_the_crawl_and_moves_leftward() -> void:
 	Game.start_campaign(42)
 	Game.next_tick()
+	# an unheard event holds the clock and speaks on the news (owner 2026-10-02)
+	if not Game.state.pending_event.is_empty():
+		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
 	var r := _root()
 	await wait_process_frames(2)
 	r._switch_to(GameRoot.State.COURT)

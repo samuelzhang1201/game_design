@@ -17,6 +17,9 @@ extends Control
 ## Beats advance on Continue / reply / choice.
 
 signal finished
+## A councillor's miniature by the seal was clicked while they bring an event
+## (owner 2026-10-02): GameRoot opens it in an audience with them.
+signal audience_requested(id: String)
 
 var _beats: Array = []
 var _index := -1
@@ -89,9 +92,16 @@ func _ready() -> void:
 	# 2026-09-09): the seal opens it, LEAVE closes it.
 	if UiPalette.war_table():
 		_handle = %CouncilHandle
+		var seal := _handle as WaxSeal
+		seal.council_requested.connect(enter_council)
+		seal.councillor_chosen.connect(func(id: String) -> void:
+			if Game.state != null and id == ConversationBeats.event_presenter(Game.state, Game.data):
+				audience_requested.emit(id)
+			else:
+				seek(id))
 	else:
 		_dress_leather()
-	_handle.pressed.connect(enter_council)
+		_handle.pressed.connect(enter_council)
 	%LeaveButton.pressed.connect(leave_council)
 	# %MinisterPanel is the LEFT column — the facts column (owner ruling
 	# 2026-09-10). Hovering a country swaps the column to its card and back
@@ -312,6 +322,16 @@ func start(beats: Array, report: TickReport) -> void:
 	_history = []
 	_said = 0
 	_beat_start = 0
+	# A council the game opens by itself (the reign's first, the summary
+	# beats) hears its ministers as surely as one entered through the seal,
+	# so the seal stops marking them as waiting.
+	if Game.state != null:
+		var spoke: Array = []
+		for b: Dictionary in beats:
+			if String(b.get("kind", "")) == "minister":
+				spoke.append(String(b.get("portrait_id", "")))
+		if not spoke.is_empty():
+			WaxSeal.hear(Game.state.tick, spoke)
 	_advance()
 
 ## Appends one line to the transcript and re-renders it, scrolled to the
@@ -582,6 +602,32 @@ func _show_event_art(b: Dictionary) -> void:
 ## whole room, so deselecting the last target quietly returns to addressing
 ## everyone. The window follows the click so you still see who you are
 ## dealing with.
+## An audience with `id` (owner 2026-10-02: a click on a councillor's
+## miniature by the seal): the player goes to where they are, if it is in
+## reach, and the window turns to them alone (`address` false: the player only
+## goes to them — an event they bring speaks to the whole room, and a narrowed
+## transcript would hide its scene). False when they cannot be met.
+func seek(id: String, address := true) -> bool:
+	if Game.state == null or not Game.state.characters.has(id):
+		return false
+	# an event or the opening narration holds the stage until it is answered
+	if String(current_beat().get("kind", "")) in ["event", "narration"]:
+		return false
+	if not id in LocationSystem.occupants(Game.data, Game.state, Game.state.current_location):
+		var to := ""
+		for code: String in LocationSystem.reachable(Game.data, Game.state):
+			if id in LocationSystem.occupants(Game.data, Game.state, code):
+				to = code
+				break
+		if to == "" or not Game.move_to(to):
+			return false
+	_refresh_location()
+	if address:
+		_selected_ids.clear()
+		_toggle_target(id)
+		_refresh_location()
+	return true
+
 func _toggle_target(id: String) -> void:
 	if id in _selected_ids:
 		_selected_ids.erase(id)
