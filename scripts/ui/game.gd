@@ -142,6 +142,91 @@ func try_execute(req: ActionRequest) -> Dictionary:
 	state_changed.emit()
 	return {"ok": true, "error": "", "outcome": outcome}
 
+
+## The WAR ROOM's drafts (spec 2026-10-02-war-room-v2 §3): pencilled, not
+## sent. Game is their only writer.
+func plant_draft(code: String, order: String, dest_px: Vector2) -> void:
+	WarDrafts.plant(data, state, code, order, dest_px)
+	state_changed.emit()
+
+
+func strike_draft(code: String) -> void:
+	if WarDrafts.strike(state, code):
+		state_changed.emit()
+
+
+func discard_drafts() -> void:
+	if WarDrafts.any(state):
+		state.war_drafts.clear()
+		state_changed.emit()
+
+
+## The resolutions as they would be sealed now (spec §3.3): each draft's
+## line — who, the order, where to, days, its gold — and why it would be
+## refused. The gold is MEASURED, not summed from tables: each order is run on
+## a copy of the state as the drafts before it leave it (the order's own cost,
+## its always-rows and its courier's fee, whatever they are), so the review
+## and the seal can never disagree; a line the chest cannot pay is refused and
+## spends nothing, and the lines after it are counted without it.
+func review_drafts() -> Dictionary:
+	var lines: Array = []
+	var total := 0
+	var sim := GameState.from_dict(state.to_dict())
+	for code: String in WarDrafts.codes(state):
+		var d := WarDrafts.of(state, code)
+		var req := WarDrafts.request_from(data, code, d)
+		var reg := ArmySystem.regiment(data, code)
+		var refusal := engine.actions.validate(req, sim)
+		var gold := 0
+		if refusal == "":
+			var trial := GameState.from_dict(sim.to_dict())
+			var chest := float(trial.metrics.get("treasury", 0.0))
+			trial.war_drafts.erase(code)
+			engine.actions.execute(req, trial)
+			gold = int(round(chest - float(trial.metrics.get("treasury", 0.0))))
+			if gold > int(chest):
+				refusal = "The chest cannot pay for this one too."
+			else:
+				sim = trial
+				total += gold
+		var to := "where it stands"
+		var days := 0
+		if req.action_code == "ARMY_MARCH":
+			var dest := WarDrafts.dest_px(data, d)
+			to = Intel.place_label(data, state, dest)
+			var from := ArmySystem.position_of(data, state, reg)
+			days = ArmySystem.march_days(data, state, code,
+				from.distance_to(dest) * float(ArmySystem.metres_per_pack_px(data)))
+		lines.append({"code": code, "label": String(reg.get("label", code)), "order": String(d["order"]),
+			"to": to, "days": days, "gold": gold, "refusal": refusal})
+	return {"lines": lines, "total": total}
+
+
+## Seal and send (spec §3.3): every draft the review passes runs through
+## try_execute as its real order, in code order — a courier and a fee each;
+## one the review refuses stays a draft with its reason. A draft is struck
+## BEFORE its order runs, so ActionSystem's set-aside note never fires for its
+## own deploy.
+func deploy_drafts() -> Dictionary:
+	var sent: Array = []
+	var refused: Dictionary = {}
+	for line: Dictionary in review_drafts()["lines"]:
+		var code := String(line["code"])
+		var d := WarDrafts.of(state, code)
+		var why := String(line["refusal"])
+		if why == "":
+			state.war_drafts.erase(code)
+			var out := try_execute(WarDrafts.request_from(data, code, d))
+			if bool(out.get("ok", false)):
+				sent.append(code)
+				continue
+			why = String(out.get("error", ""))
+		d["refused"] = why
+		state.war_drafts[code] = d
+		refused[code] = why
+	state_changed.emit()
+	return {"sent": sent, "refused": refused}
+
 ## Free movement within the current region (user ruling 2026-08-30: no time
 ## cost). Returns false (and moves nothing) for an unknown or out-of-region
 ## location. No tick advances.
