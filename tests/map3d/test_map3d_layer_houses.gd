@@ -188,11 +188,42 @@ func test_a_steep_site_still_buries_nothing() -> void:
 
 
 ## No box is laid under a house any more (owner 2026-09-25: ugly and strange):
-## the layer's only children are the per-type MultiMeshes.
+## the layer's only children are the per-type MultiMeshes (each type's
+## shadowed and unshadowed pair, perf 2026-10-02).
 func test_no_foundation_box_is_laid() -> void:
 	_layer.refresh(_home())
 	for c in _layer.get_children():
-		assert_true(_layer._instances.values().has(c), "%s is not a house type's MultiMesh" % c.name)
+		assert_true(_layer._instances.values().has(c) or _layer._far.values().has(c),
+			"%s is not a house type's MultiMesh" % c.name)
+
+
+## Perf 2026-10-02: a settlement within map3d_house_shadow_m of the camera's
+## target casts its houses' shadows; past it they stand in the type's
+## unshadowed MultiMesh (a house a few px tall, its shadow a pixel, drawn into
+## every cascade was half the geometry drawn).
+func test_only_a_near_settlement_casts_shadows() -> void:
+	var at := _home()
+	_layer.refresh(at)
+	var near: MultiMeshInstance3D = _layer._instances["chapel"]
+	var far: MultiMeshInstance3D = _layer._far["chapel"]
+	assert_eq(near.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
+	assert_eq(far.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+	assert_eq(near.multimesh.instance_count, 1, "at the camera: it casts")
+	assert_eq(far.multimesh.instance_count, 0)
+	var off := Game.data.bal("map3d_house_shadow_m") + 500.0
+	_layer.refresh(at + Vector2(off, 0.0))
+	assert_eq(near.multimesh.instance_count, 0)
+	assert_eq(far.multimesh.instance_count, 1, "beyond the shadow reach: drawn, no shadow")
+	assert_eq(_layer.counts().get("chapel", 0), 1, "counted as one type either way")
+	assert_eq(_layer.transforms_of("chapel").size(), 1)
+
+
+## ... and with the camera far out (a house a few px, its shadow one) none does.
+func test_far_out_no_house_casts() -> void:
+	_ctx.distance = Game.data.bal("map3d_house_shadow_view_m") + 1000.0
+	_layer.refresh(_home())
+	assert_eq((_layer._instances["chapel"] as MultiMeshInstance3D).multimesh.instance_count, 0)
+	assert_eq((_layer._far["chapel"] as MultiMeshInstance3D).multimesh.instance_count, 1, "drawn, unshadowed")
 
 
 ## Owner 2026-09-25 (颜色可以多样化一点，主色调不变): every house wears one of

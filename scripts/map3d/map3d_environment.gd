@@ -252,12 +252,16 @@ static func apply_terrain_quality(terrain: Node, row: Dictionary) -> void:
 			terrain.set(String(pair[0]), v)
 
 
-## A tier's SubViewport: MSAA (0 / 2 / 4 / 8) and anisotropic filtering
-## (1 / 2 / 4 / 8 / 16x, Viewport.anisotropic_filtering_level 0..4).
+## A tier's SubViewport: MSAA (0 / 2 / 4 / 8), the screen-space edge filter
+## (screen_aa: 0 none, 1 FXAA, 2 SMAA — perf 2026-10-02: on Apple's GPUs MSAA
+## at window size cost ~7 ms at the opening view, SMAA under 1) and
+## anisotropic filtering (1 / 2 / 4 / 8 / 16x, anisotropic_filtering_level 0..4).
 static func apply_viewport_quality(vp: SubViewport, row: Dictionary) -> void:
 	var msaa := int(Map3DQuality.num(row, "msaa", 0.0))
 	vp.msaa_3d = {2: Viewport.MSAA_2X, 4: Viewport.MSAA_4X, 8: Viewport.MSAA_8X}.get(
 		msaa, Viewport.MSAA_DISABLED)
+	vp.screen_space_aa = {1: Viewport.SCREEN_SPACE_AA_FXAA, 2: Viewport.SCREEN_SPACE_AA_SMAA}.get(
+		int(Map3DQuality.num(row, "screen_aa", 0.0)), Viewport.SCREEN_SPACE_AA_DISABLED)
 	if "anisotropic_filtering_level" in vp:
 		vp.set("anisotropic_filtering_level",
 			{1: 0, 2: 1, 4: 2, 8: 3, 16: 4}.get(int(Map3DQuality.num(row, "aniso", 16.0)), 4))
