@@ -4,7 +4,7 @@ extends RefCounted
 ## 草缓缓的随风摇摆…麦穗摇曳), spliced in by Map3DGroundTint.patch: waves of
 ## light and shade rolling down the wind over the crops (bake/fields.png's
 ## sown share) and, fainter, open level grass away from the woods — near, the
-## crop's own waves; far out, broad gusts map3d_wind_far_scale times as big
+## crop's own waves; far out, broad gusts the Wind node's far_scale times as big
 ## and as fast, so the wind still reads at the opening zoom (owner: 我并没有
 ## 看到麦浪和树摇 — the first cut was gone by 9 km). Map3DLayerWind advances
 ## wind_time only while the clock runs. Runs after the woods' stage and

@@ -94,12 +94,18 @@ func preview_build(p_ctx: Map3DContext) -> void:
 	deck.step(0.1)
 
 
+## The clouds drift down the map's one wind (the world's Wind node).
+func _wind_deg() -> float:
+	var wind := get_node_or_null("../Wind") as Map3DLayerWind
+	return wind.deg if wind != null else 0.0
+
+
 func build(p_ctx: Map3DContext, p_weather: Map3DLayerWeather = null) -> void:
 	ctx = p_ctx
 	weather = p_weather
 	_field = Map3DCloudField.new(cloud_seed)
 	_params = {"max": max_clouds, "size_min": size_min_m, "size_max": size_max_m,
-		"speed_m_s": speed_m_s, "wind_deg": ctx.repo.bal("map3d_cloud_wind_deg"),
+		"speed_m_s": speed_m_s, "wind_deg": _wind_deg(),
 		"fade_s": fade_s, "interval_s": interval_s, "min_gap_m": min_gap_m, "spread": true,
 		"candidates": candidates, "weight_pull": weather_pull, "wrap": true}
 	_depth_ratio = depth_ratio

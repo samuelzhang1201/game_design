@@ -288,7 +288,6 @@ map3d_dot_min_view_share,0.40,"3D MAP (owner 2026-09-21 ruling, replacing the ab
 map3d_border_skip_coast,1,"3D MAP borders (look route 2026-09-30): 1 draws the kingdom's ink, halo and band only along LAND borders — along the sea or a lake the outline is the coast, which the shore draws (an ink line and a band round every coast read as a tray, taste: nothing ends on a hard cut)"
 map3d_border_coast_probe_m,200,"3D MAP borders: a border point is coast when the ground this many metres to either side of it is water"
 map3d_border_refresh_s,1.0,3D MAP: how often the view checks whether ownership changed and its borders need rebuilding
-map3d_cloud_wind_deg,12.0,"3D MAP clouds: the wind, degrees from east toward south (the 2D map's map_cloud_wind_deg)"
 map3d_river_mesh_step_m,12.0,"3D MAP rivers (final review, owner 2026-09-18: at 800 m the ribbon read as ruled straight segments between the bake's ~50 m samples): Map3DRivers.ribbon_arrays densifies each course along a centripetal Catmull-Rom curve through its samples to a point at least every this many metres"
 map3d_river_split_rise_m,10.0,"3D MAP rivers (fix round 1, owner 2026-09-18): a course breaks into a separate strip wherever the bake's water line rises by more than this between two samples — a river leaving or entering a lake — instead of drawing a vertical wall of water. Raised from 2.0, which also split on a tributary's ordinary bed rise (checked against the pack: 2.0 caught a 2.6m rise at a river's own source that was never a lake; 10.0 keeps only the 4 genuine lake jumps of 14-88m, in 2 rivers)"
 map3d_river_end_fade_m,80.0,"3D MAP rivers (fix round 1, owner 2026-09-18): a strip's cut ends (and a river's true source) fade in/out over this many metres of arc length, so a split reads as a fade rather than a hard edge; the true mouth, running into the sea, never fades"
@@ -352,37 +351,6 @@ map3d_tree_margin_m,400,3D MAP woods: the visibility ranges' hysteresis margin
 map3d_tree_size_spread,0.3,"3D MAP woods: each clump drawn up to this share bigger or smaller than its baked size, by its own row — old trees and young, not one even carpet"
 map3d_tree_cards,1,"3D MAP woods (owner 2026-10-01): 1 draws every crown as a PHOTO CARD (tree_card.gdshader over assets/3D/vegetation/crowns/crowns_atlas.png, cells by data/map3d_tree_crowns.csv), 0 the procedural 3D crowns; without the atlas or the table the 3D crowns stay"
 map3d_tree_card_far_m,20000,"3D MAP woods: the photo cards are drawn out to this camera distance to their square (two triangles a tree, so farther than the 3D crowns' 12 km)"
-map3d_wind_on,1,"3D MAP wind (owner 2026-09-30: 草缓缓的随风摇摆…麦穗摇曳): 1 rolls waves of light and shade over the crops and grass (Map3DGroundTint) and sways the woods (tree_sway.gdshader), Map3DLayerWind; presentation only, running only while the clock does"
-map3d_wind_deg,12,"3D MAP wind: the wind, degrees from east toward south (the clouds' map3d_cloud_wind_deg)"
-map3d_wind_speed_mps,7,3D MAP wind: how fast a wave runs down the wind over the ground (world metres a real second)
-map3d_wind_wave_m,55,3D MAP wind: the wavelength of the waves over the crops (world metres)
-map3d_wind_field_amp,0.25,3D MAP wind: how far a wave lightens and darkens a sown field (bake/fields.png) — wheat shows its pale bent side
-map3d_wind_grass_amp,0.12,"3D MAP wind: the same over open, level grass away from the woods"
-map3d_wind_near_m,1500,"3D MAP wind: the crop's own waves (map3d_wind_wave_m) out to about this distance from the camera, giving way to the broad gusts by map3d_wind_mid_m"
-map3d_wind_mid_m,5000,"[2026-09-30, owner: 我并没有看到麦浪和树摇 — the waves were gone by 9 km, the opening view stands at ~24 km] 3D MAP wind: from here the broad gusts alone, full strength"
-map3d_wind_far_m,40000,"3D MAP wind: ...fading out by here (was 9000: nothing moved at the zooms the map is played at)"
-map3d_wind_far_scale,8,"3D MAP wind: the broad gusts are this many times the crop waves' size and speed — at the opening zoom a pixel is ~20 m, and a true-speed wave would not move one"
-map3d_wind_far_amp,0.9,"3D MAP wind: the broad gusts' strength against the crop waves' (a multiplier on field_amp and grass_amp far out). 2.0 until 2026-09-30, when the waves became thin light crests: at 2 the far bands read as cloud shadow (critic)"
-map3d_wind_storm_gain,1.2,"3D MAP wind: how much harder the waves run in a wet or overcast province (the weather field's rain and overcast), 0 = the same everywhere"
-map3d_wind_tree_sway_m,2.2,3D MAP wind: how far a crown's top leans down the wind (world metres at the mesh's full height)
-map3d_wind_tree_hz,0.22,3D MAP wind: how many times a second a tree sways
-map3d_wind_sheen_amp,2.0,"3D MAP wind SHEEN (owner 2026-09-30: 草地随风飘扬的质感 — a blade is a metre-wide pixel's fraction, so the grass moves as light): how far a wave's crest turns the grass's pale, greyer side up (Map3DGroundWind); 0 = the plain light-and-shade waves of before"
-map3d_wind_sheen_sat,0.9,"3D MAP wind sheen: the saturation the laid-over grass keeps (0 grey .. 1 its own colour; owner 2026-09-30: greyed crests read as mist drifting by — 0.4 and even 0.75 were too grey)"
-map3d_wind_sheen_lift,0.35,3D MAP wind sheen: how much lighter the laid-over grass is than the standing grass
-map3d_wind_sheen_facing,0.5,"3D MAP wind sheen: how much weaker the sheen is where the wind blows TOWARD the eye (the stalks lie over toward the camera and hide their backs), 0 = the same every way"
-map3d_wind_trough_sat,0.6,3D MAP wind sheen: how much greener (more saturated) a wave's trough stands
-map3d_wind_streak_amp,0.08,"3D MAP wind: the grain — fine streaks combed down the wind over the grass and crops, near only, drifting at a third of the waves' speed; 0 = none"
-map3d_wind_streak_m,24,3D MAP wind grain: a streak's length down the wind (world metres)
-map3d_wind_streak_across,0.15,"3D MAP wind grain: a streak's width as a share of its length (0.15 of 24 m: 3.6 m, two pixels at the closest zoom; it fades out before it is narrower)"
-map3d_wind_sheen_warm,0.08,"3D MAP wind sheen: how far the laid-over grass turns warm (straw), red up and blue down by this share — a lit blade, not a grey veil"
-map3d_wind_band_rise,0.12,"3D MAP wind waves (owner 2026-09-30: 看上去就像是雾气飘过一下，不像是草地的起伏 — round soft noise blobs read as mist): a crest's rise, the share of a wavelength over which the grass lays over at the wave's front"
-map3d_wind_band_fall,3.5,"3D MAP wind waves: how slowly the grass rises again behind a crest (the power of the fall; higher is a thinner crest)"
-map3d_wind_band_warp,1.2,"3D MAP wind waves: how far (in wavelengths) noise bends and breaks the crest lines, so they are never ruled"
-map3d_wind_gust_len,5,"3D MAP wind waves: a gust's length down the wind, in wavelengths — the crests come in runs where one passes"
-map3d_wind_gust_width,2.5,3D MAP wind waves: a gust's width across the wind in wavelengths
-map3d_wind_gust_cover,0.35,"3D MAP wind waves: the gust noise must pass this for crests to show (higher, fewer and shorter runs of waves)"
-map3d_wind_dash_len,2.5,"3D MAP wind waves: each crest is broken into long tapering pieces about this long across the wind (in wavelengths), neighbours unlike, so the lines never run on like furrows or terraces (1.2 read as stitching)"
-map3d_wind_dash_cover,0.4,"3D MAP wind waves: the dash noise must pass this for a stretch of crest to show (higher, shorter and fewer dashes)"
 map3d_wood_floor,0.75,"3D MAP woods: how far the ground under the woods (bake/woods.png's canopy share) goes toward the canopy colour where clumps are drawn — the dark floor between the crowns"
 map3d_wood_far,0.75,"3D MAP woods: the same far out, where no clump is drawn and the canopy colour IS the wood"
 map3d_wood_far_near_m,2500,3D MAP woods: the camera distance where the ground's canopy begins to take over from the floor

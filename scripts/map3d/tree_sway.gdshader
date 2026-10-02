@@ -2,7 +2,7 @@ shader_type spatial;
 // The woods' clumps (Map3DTreeMesh) swaying in the wind (owner 2026-09-30):
 // each crown leans down the wind and back on its own phase, more the higher
 // up the tree, the trunk's foot still. Map3DLayerWind sets wind_time (it
-// runs only while the clock does) and the rest from balance.csv map3d_wind_*.
+// runs only while the clock does) and the rest from the world's Wind node.
 // Colour is the mesh's vertex colour times the instance's tint, both sRGB:
 // Forward+ hands COLOR over unconverted, so it is turned linear here.
 //

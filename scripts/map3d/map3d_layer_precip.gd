@@ -77,7 +77,8 @@ func step() -> void:
 	_strength = strength_of(repo, ctx.clock_speed() > 0, ctx.distance) * (1.0 if _ratio > 0.0 else 0.0)
 	var d := ctx.distance
 	var ground := ctx.height_at(ctx.target)
-	var wind := Vector2.from_angle(deg_to_rad(repo.bal("map3d_cloud_wind_deg")))
+	var wind_node := get_node_or_null("../Wind") as Map3DLayerWind
+	var wind := wind_node.direction() if wind_node != null else Vector2.RIGHT
 	for kind: String in _parts:
 		var node: Map3DPrecipKind = _parts[kind]["node"]
 		var on := _strength > 0.01 and weather.falls(kind)

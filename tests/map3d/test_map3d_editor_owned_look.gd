@@ -66,7 +66,7 @@ const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3
 	"map3d_march_trail", "map3d_weather_rain_", "map3d_weather_snow_count", "map3d_weather_snow_life",
 	"map3d_weather_snow_length", "map3d_weather_snow_width", "map3d_weather_snow_opacity",
 	"map3d_weather_snow_slant", "map3d_weather_snow_sway", "map3d_weather_snow_gain", "map3d_weather_fall_",
-	"map3d_weather_gust_", "weather_rain", "weather_flake"]
+	"map3d_weather_gust_", "weather_rain", "weather_flake", "map3d_wind_", "map3d_cloud_wind_deg"]
 
 
 func before_all() -> void:
@@ -133,6 +133,25 @@ func test_the_rain_and_snow_draw_what_their_scene_says() -> void:
 		_assert_material_holds((node.draw_pass_1 as QuadMesh).material as ShaderMaterial,
 			"precip_drop_" + kind.to_lower(), 3)
 		assert_gt(node.amount, 1000, kind + "'s count is the scene's")
+
+
+## The ground's wind stage has no material to save: each of its uniforms is
+## an export of the world's Wind node, and every one is handed over.
+func test_every_ground_wind_uniform_is_the_wind_nodes() -> void:
+	var world := (load("res://scenes/map3d/map3d_world.tscn") as PackedScene).instantiate()
+	autofree(world)
+	var wind := world.get_node("Wind") as Map3DLayerWind
+	var uniforms := RegEx.create_from_string("uniform float wind_([a-z_]+)")
+	var named := []
+	for m: RegExMatch in uniforms.search_all(Map3DGroundWind.UNIFORMS):
+		if m.get_string(1) not in ["on", "time"]:
+			named.append(m.get_string(1))
+	named.sort()
+	var handed: Array = Map3DLayerWind.GROUND.duplicate()
+	handed.sort()
+	assert_eq(handed, named, "every wind uniform is handed over, and only those")
+	for key: String in handed:
+		assert_true(wind.get(key) is float, "the Wind node's " + key)
 
 
 ## The woods wear their .tres but for the wind's uniforms.
